@@ -6,94 +6,9 @@ import type {
   ImportItem,
   MatchedItem,
   PreMatchingResult,
-  StudentMatchingMethod,
 } from "../../../../../src/types/examArchive.types"
 import prisma from "../../../prisma/client"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
-import type { MatchResult, MatchStudentData } from "./types"
-
-/**
- * 生徒データのマッチングを実行
- *
- * 照合の流れ:
- * 1. まずUUIDで照合（同じPCでエクスポート/インポートした場合に一致）
- * 2. UUIDが一致しない場合、methodで指定された二次照合を実行
- *    - "none": 二次照合しない（新規として扱う）
- *    - "studentNumber": 学籍番号で照合
- *    - "name": 氏名で照合
- */
-export async function matchStudents(
-  importData: ExtractedArchiveData,
-  method: StudentMatchingMethod
-): Promise<MatchResult<MatchStudentData>[]> {
-  const results: MatchResult<MatchStudentData>[] = []
-
-  // 既存の生徒を全て取得
-  const existingStudents = await prisma.student.findMany()
-
-  for (const importStudent of importData.studentsData.students) {
-    let matchedStudent: (typeof existingStudents)[0] | null = null
-    let isExactMatch = false
-
-    // Step 1: UUIDで照合
-    const uuidMatch = existingStudents.find(
-      (student) => student.id === importStudent.id
-    )
-    if (uuidMatch) {
-      matchedStudent = uuidMatch
-      isExactMatch = true
-    }
-
-    // Step 2: UUIDが一致しない場合、二次照合を実行
-    if (!matchedStudent && method !== "none") {
-      switch (method) {
-        case "studentNumber":
-          matchedStudent =
-            existingStudents.find(
-              (student) => student.studentNumber === importStudent.studentNumber
-            ) ?? null
-          break
-
-        case "name":
-          matchedStudent =
-            existingStudents.find(
-              (student) =>
-                student.lastName === importStudent.lastName &&
-                student.firstName === importStudent.firstName
-            ) ?? null
-          break
-      }
-    }
-
-    results.push({
-      importData: {
-        id: importStudent.id,
-        studentNumber: importStudent.studentNumber,
-        lastName: importStudent.lastName,
-        firstName: importStudent.firstName,
-        lastNameKana: importStudent.lastNameKana,
-        firstNameKana: importStudent.firstNameKana,
-        enrollmentYear: importStudent.enrollmentYear,
-        updatedAt: importStudent.updatedAt,
-      },
-      existingData: matchedStudent
-        ? {
-            id: matchedStudent.id,
-            studentNumber: matchedStudent.studentNumber,
-            lastName: matchedStudent.lastName,
-            firstName: matchedStudent.firstName,
-            lastNameKana: matchedStudent.lastNameKana,
-            firstNameKana: matchedStudent.firstNameKana,
-            enrollmentYear: matchedStudent.enrollmentYear,
-            updatedAt: matchedStudent.updatedAt,
-          }
-        : null,
-      matchType: matchedStudent ? (isExactMatch ? "exact" : "fuzzy") : "new",
-    })
-  }
-
-  return results
-}
 
 /**
  * 生徒の事前照合

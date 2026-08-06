@@ -79,8 +79,6 @@ export function createGradeApi() {
       ) =>
         ipcRenderer.invoke("grade:updateStudentOrders", gradeId, studentOrders),
       // GradeItem
-      getGradeItems: (gradeId: string) =>
-        ipcRenderer.invoke("grade:getGradeItems", gradeId),
       createGradeItem: (data: { gradeId: string; name: string }) =>
         ipcRenderer.invoke("grade:createGradeItem", data),
       updateGradeItem: (id: string, data: { name?: string }) =>
@@ -173,8 +171,6 @@ export function createGradeApi() {
         ipcRenderer.invoke("grade:getGradeItemExclusions", gradeId),
       setGradeItemExclusion: (input: GradeItemExclusionInput) =>
         ipcRenderer.invoke("grade:setGradeItemExclusion", input),
-      batchUpdateGradeItemExclusions: (updates: GradeItemExclusionInput[]) =>
-        ipcRenderer.invoke("grade:batchUpdateGradeItemExclusions", updates),
       calculateGrades: (gradeId: string) =>
         ipcRenderer.invoke("grade:calculateGrades", gradeId),
       computeSourceFits: (gradeId: string) =>

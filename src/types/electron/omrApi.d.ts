@@ -15,19 +15,6 @@ import type {
 
 export interface OmrAPI {
   omr: {
-    detectMarkers: (
-      imagePath: string,
-      colorThreshold?: number
-    ) => Promise<MarkerDetectionResult>
-    recognizeSheet: (args: {
-      imagePath: string
-      cells: ComputedCell[]
-      cellConfigs: Record<string, OMRCellConfig>
-      expectedCorners: [Point, Point, Point, Point]
-      params: OMRRecognitionParams
-      pageIndex?: number
-      examStudentId?: string
-    }) => Promise<OMRSheetResult>
     batchRecognize: (args: {
       imagePaths: {
         path: string

@@ -33,10 +33,4 @@ export interface UserAuthAPI {
     error?: string
   }>
   clearAuthToken: () => Promise<{ success: boolean; error?: string }>
-  getAuthStoreStatus: () => Promise<{
-    success: boolean
-    hasToken: boolean
-    storePath: string
-    error?: string
-  }>
 }

@@ -28,8 +28,6 @@ export function createExamClassroomApi() {
       remove: (id: string) => ipcRenderer.invoke("exam-class:remove", id),
       reorder: (options: { examId: string; orderedIds: string[] }) =>
         ipcRenderer.invoke("exam-class:reorder", options),
-      removeByIds: (examId: string, classroomId: string) =>
-        ipcRenderer.invoke("exam-class:remove-by-ids", examId, classroomId),
       addStudentsFromClassroom: (
         examId: string,
         classroomId: string,

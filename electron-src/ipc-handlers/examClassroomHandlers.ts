@@ -6,7 +6,6 @@ import {
   getAvailableClassroomsForExam,
   getExamClassrooms,
   removeExamClassroom,
-  removeExamClassroomByIds,
   reorderExamClassrooms,
   ReorderExamClassroomsOptions,
   updateExamClassroom,
@@ -46,14 +45,6 @@ export function setupExamClassroomHandlers(): void {
   registerHandler("exam-class:remove", async (id: string) => {
     return await removeExamClassroom(id)
   })
-
-  // Remove a exam class by examId and classroomId
-  registerHandler(
-    "exam-class:remove-by-ids",
-    async (examId: string, classroomId: string) => {
-      return await removeExamClassroomByIds(examId, classroomId)
-    }
-  )
 
   // Get available classrooms (not yet in ExamClassroom)
   registerHandler("exam-class:get-available", async (examId: string) => {

@@ -173,37 +173,6 @@ const copyDirectory = async (src: string, dest: string): Promise<void> => {
   }
 }
 
-/** データディレクトリ全体のサイズをバイト単位で再帰的に計算する */
-export const calculateDataSize = async (): Promise<number> => {
-  const dataDir = getDataDirectory()
-  return await getDirectorySize(dataDir)
-}
-
-// ディレクトリサイズの再帰計算
-const getDirectorySize = async (dirPath: string): Promise<number> => {
-  let totalSize = 0
-
-  try {
-    const entries = await fsPromises.readdir(dirPath, { withFileTypes: true })
-
-    for (const entry of entries) {
-      const fullPath = path.join(dirPath, entry.name)
-
-      if (entry.isDirectory()) {
-        totalSize += await getDirectorySize(fullPath)
-      } else {
-        const stats = await fsPromises.stat(fullPath)
-        totalSize += stats.size
-      }
-    }
-  } catch {
-    // ディレクトリが存在しない場合など
-    console.warn("Could not read directory:", dirPath)
-  }
-
-  return totalSize
-}
-
 /** 絶対パスをデータディレクトリ基準の相対パスに変換する */
 export const getRelativePathFromData = (absolutePath: string): string => {
   const dataDir = getDataDirectory()

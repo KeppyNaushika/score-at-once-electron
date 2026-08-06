@@ -3,80 +3,12 @@
  */
 
 import type {
-  ClassroomMatchingMethod,
   ImportItem,
   MatchedItem,
   PreMatchingResult,
 } from "../../../../../src/types/examArchive.types"
 import prisma from "../../../prisma/client"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
-import type { ClassroomData, MatchResult } from "./types"
-
-/**
- * 学級データのマッチングを実行
- *
- * 照合の流れ:
- * 1. まずUUIDで照合
- * 2. UUIDが一致しない場合、methodで指定された二次照合を実行
- */
-export async function matchClassrooms(
-  importData: ExtractedArchiveData,
-  method: ClassroomMatchingMethod
-): Promise<MatchResult<ClassroomData>[]> {
-  const results: MatchResult<ClassroomData>[] = []
-
-  const existingClassrooms = await prisma.classroom.findMany()
-
-  for (const importClassroom of importData.classesData.classrooms) {
-    let matchedClassroom: (typeof existingClassrooms)[0] | null = null
-    let isExactMatch = false
-
-    // Step 1: UUIDで照合
-    const uuidMatch = existingClassrooms.find(
-      (classroom) => classroom.id === importClassroom.id
-    )
-    if (uuidMatch) {
-      matchedClassroom = uuidMatch
-      isExactMatch = true
-    }
-
-    // Step 2: UUIDが一致しない場合、二次照合を実行
-    if (!matchedClassroom && method !== "none") {
-      switch (method) {
-        case "name":
-          matchedClassroom =
-            existingClassrooms.find(
-              (classroom) => classroom.name === importClassroom.name
-            ) ?? null
-          break
-      }
-    }
-
-    results.push({
-      importData: {
-        id: importClassroom.id,
-        name: importClassroom.name,
-        classroomCode: importClassroom.classroomCode,
-        grade: importClassroom.grade,
-        description: importClassroom.description,
-        updatedAt: importClassroom.updatedAt,
-      },
-      existingData: matchedClassroom
-        ? {
-            id: matchedClassroom.id,
-            name: matchedClassroom.name,
-            classroomCode: matchedClassroom.classroomCode,
-            grade: matchedClassroom.grade,
-            description: matchedClassroom.description,
-            updatedAt: matchedClassroom.updatedAt,
-          }
-        : null,
-      matchType: matchedClassroom ? (isExactMatch ? "exact" : "fuzzy") : "new",
-    })
-  }
-
-  return results
-}
 
 /**
  * 学級の事前照合

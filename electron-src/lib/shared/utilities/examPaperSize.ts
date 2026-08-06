@@ -9,7 +9,7 @@
  */
 
 /** 用紙サイズの判定に必要なページの情報 */
-export interface PaperSizeCandidatePage {
+interface PaperSizeCandidatePage {
   pageNumber: number
   /** 模範解答画像のパス。旧バージョンで模範解答だけを削除されたページは null */
   imagePath: string | null
@@ -17,7 +17,7 @@ export interface PaperSizeCandidatePage {
 }
 
 /** ページを1枚も特定できなかったときの用紙サイズ */
-export const DEFAULT_PAPER_SIZE = "A4"
+const DEFAULT_PAPER_SIZE = "A4"
 
 /**
  * 試験の用紙サイズを決める。

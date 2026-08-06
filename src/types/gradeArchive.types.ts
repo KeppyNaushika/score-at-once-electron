@@ -297,7 +297,7 @@ export interface ArchiveGradeCropRegionRef {
  * uuid 一次 → 学籍番号 / 学級名 のフォールバックで取り込み先の実体へ解決する。
  * 試験・小計・採点領域は carry できないので同定情報だけを添える。
  */
-export interface GradeExternalSections {
+interface GradeExternalSections {
   studentsData: ArchiveCwStudent[]
   classesData: ArchiveCwClass[]
   membershipsData: ArchiveCwMembership[]

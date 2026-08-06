@@ -1,6 +1,6 @@
 import { ipcRenderer } from "electron"
 
-/** 答案用紙のIPC API（アップロード・生徒紐付け・配置管理・一括更新） */
+/** 答案用紙のIPC API（アップロード・一覧取得・削除・配置管理） */
 export function createAnswerSheetApi() {
   return {
     // Student answer related
@@ -24,19 +24,6 @@ export function createAnswerSheetApi() {
       ipcRenderer.invoke("get-answer-sheet-score-summary", answerSheetId),
     deleteStudentAnswer: (answerSheetId: string) =>
       ipcRenderer.invoke("delete-answer-sheet", answerSheetId),
-    associateStudentAnswerWithStudent: (
-      answerSheetId: string,
-      examStudentId: string
-    ) =>
-      ipcRenderer.invoke(
-        "associate-answer-sheet-with-student",
-        answerSheetId,
-        examStudentId
-      ),
-    setStudentAnswerAbsent: (answerSheetId: string, isAbsent: boolean) =>
-      ipcRenderer.invoke("set-answer-sheet-absent", answerSheetId, isAbsent),
-    getStudentAnswerById: (answerSheetId: string) =>
-      ipcRenderer.invoke("get-answer-sheet-by-id", answerSheetId),
     applyStudentAnswerPlacements: (
       moves: Array<{
         fileId: string

@@ -25,13 +25,8 @@ import {
 } from "../lib/prisma/student"
 import {
   addStudentToClassroom,
-  createStudentClassroomMembership,
   deleteStudentClassroomMembership,
   endStudentMembership,
-  getAllMembershipsByStudentId,
-  getCurrentMembershipsByClassroomId,
-  getCurrentMembershipsByStudentId,
-  getMembershipsByDateRange,
   updateStudentClassroomMembership,
 } from "../lib/prisma/studentClassroomMembership"
 import {
@@ -66,13 +61,6 @@ export function setupStudentHandlers(): void {
 
   // Student Classroom Membership handlers
   registerHandler(
-    "create-student-class-membership",
-    async (membershipData: Prisma.StudentClassroomMembershipCreateInput) => {
-      return await createStudentClassroomMembership(membershipData)
-    }
-  )
-
-  registerHandler(
     "update-student-class-membership",
     async (
       id: string,
@@ -85,27 +73,6 @@ export function setupStudentHandlers(): void {
   registerHandler("delete-student-class-membership", async (id: string) => {
     return await deleteStudentClassroomMembership(id)
   })
-
-  registerHandler(
-    "get-current-memberships-by-student-id",
-    async (studentId: string) => {
-      return await getCurrentMembershipsByStudentId(studentId)
-    }
-  )
-
-  registerHandler(
-    "get-all-memberships-by-student-id",
-    async (studentId: string) => {
-      return await getAllMembershipsByStudentId(studentId)
-    }
-  )
-
-  registerHandler(
-    "get-current-memberships-by-class-id",
-    async (classroomId: string) => {
-      return await getCurrentMembershipsByClassroomId(classroomId)
-    }
-  )
 
   registerHandler(
     "add-student-to-class",
@@ -133,13 +100,6 @@ export function setupStudentHandlers(): void {
     "end-student-membership",
     async (membershipId: string, endDate?: Date) => {
       return await endStudentMembership(membershipId, endDate)
-    }
-  )
-
-  registerHandler(
-    "get-memberships-by-date-range",
-    async (startDate: Date, endDate?: Date) => {
-      return await getMembershipsByDateRange(startDate, endDate)
     }
   )
 

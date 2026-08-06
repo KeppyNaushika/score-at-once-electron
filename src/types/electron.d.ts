@@ -16,7 +16,6 @@ import type { AuditLogAPI } from "./electron/auditLogApi"
 import type { ClassroomStudentAPI } from "./electron/classroomStudentApi"
 import type { CourseworkAPI } from "./electron/courseworkApi"
 import type { CropRegionAPI } from "./electron/cropRegionApi"
-import type { DataManagementAPI } from "./electron/dataManagementApi"
 import type { DrawingAPI } from "./electron/drawingApi"
 import type { ExamAPI } from "./electron/examApi"
 import type { ExamClassroomAPI } from "./electron/examClassroomApi"
@@ -93,7 +92,6 @@ export interface MyAPI
     TagAPI,
     AnswerSheetBuilderAPI,
     OmrAPI,
-    DataManagementAPI,
     SyncAPI,
     NavigationAPI,
     AuditLogAPI {}

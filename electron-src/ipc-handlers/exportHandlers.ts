@@ -17,7 +17,6 @@ import { resolveExamScope } from "../lib/prisma/auditScope"
 import {
   addPageToStreamingSession,
   cancelStreamingSession,
-  createPdfFromRenderedImages,
   createPdfStreamingSession,
   finalizeStreamingSession,
   getPdfExportData,
@@ -412,27 +411,6 @@ export function setupExportHandlers(): void {
     }
   )
 
-  // Canvas描画済み画像からPDF作成
-  registerSafeHandler(
-    "export:createPdfFromRenderedImages",
-    async (options: {
-      examId: string
-      renderedPages: Array<{
-        examStudentId: string
-        pageNumber: number
-        imageData: ArrayBuffer
-      }>
-      pdfOrientation?: "portrait" | "landscape"
-    }) => {
-      // プログレスコールバックは渡さない（React側で管理するため）
-      // Electron側のprogressCallbackはReact側のプログレス更新と競合し、
-      // プログレスバーが0%にリセットされて2周するように見える問題を引き起こしていた
-      return await createPdfFromRenderedImages({
-        ...options,
-      })
-    }
-  )
-
   // PDF保存先選択ダイアログ（Canvas描画前に呼び出す）
   registerSafeHandler(
     "export:selectPdfSavePath",
@@ -571,52 +549,6 @@ export function setupExportHandlers(): void {
     }
   )
 
-  // 個人成績表PDF保存先選択ダイアログ
-  registerSafeHandler(
-    "export:selectIndividualReportSavePath",
-    async (options: {
-      examName?: string
-    }): Promise<{
-      success: boolean
-      filePath?: string
-      canceled?: boolean
-    }> => {
-      const dateStr = new Date().toISOString().split("T")[0]
-      const safeExamName = options.examName
-        ? options.examName.replace(/[<>:"/\\|?*]/g, "_")
-        : null
-      const defaultFileName = safeExamName
-        ? `個人成績表_${safeExamName}_${dateStr}.pdf`
-        : `個人成績表_${dateStr}.pdf`
-
-      const result = await dialog.showSaveDialog({
-        title: "個人成績表PDFの保存先",
-        defaultPath: defaultFileName,
-        filters: [{ name: "PDF Files", extensions: ["pdf"] }],
-      })
-
-      if (result.canceled || !result.filePath) {
-        return { success: false, canceled: true }
-      }
-
-      return { success: true, filePath: result.filePath }
-    }
-  )
-
-  // 個人成績表PDFバッファを保存
-  registerSafeHandler(
-    "export:saveIndividualReportPdf",
-    async (options: {
-      filePath: string
-      pdfBuffer: ArrayBuffer
-    }): Promise<{ success: boolean; error?: string }> => {
-      const fs = require("fs").promises
-      await fs.writeFile(options.filePath, Buffer.from(options.pdfBuffer))
-      return { success: true }
-    },
-    "ファイル保存に失敗しました"
-  )
-
   // HTMLからPDFを生成（ブラウザ印刷機能を使用）
   // NOTE: Uses BrowserWindow with try-finally for cleanup, kept as manual ipcMain.handle
   ipcMain.handle(
@@ -711,96 +643,6 @@ export function setupExportHandlers(): void {
         } catch {
           // 削除に失敗しても無視
         }
-      }
-    }
-  )
-
-  // 複数のHTMLページからPDFを生成（バッチ処理）
-  // NOTE: Uses BrowserWindow with try-finally for cleanup, kept as manual ipcMain.handle
-  ipcMain.handle(
-    "export:printMultipleHtmlToPdf",
-    async (
-      _event,
-      options: {
-        htmlPages: string[]
-        filePath: string
-        pageSize?: "A4" | "Letter"
-        landscape?: boolean
-        onProgress?: (current: number, total: number) => void
-      }
-    ): Promise<{ success: boolean; error?: string }> => {
-      const win = new BrowserWindow({
-        width: 794,
-        height: 1123,
-        show: false,
-        webPreferences: {
-          offscreen: true,
-        },
-      })
-
-      try {
-        // 全ページを1つのHTMLに結合（ページ区切り付き）
-        const combinedHtml = `
-          <!DOCTYPE html>
-          <html lang="ja">
-          <head>
-            <meta charset="UTF-8">
-            <style>
-              @page { size: A4; margin: 5mm; }
-              .page-break { page-break-after: always; }
-              .page-break:last-child { page-break-after: auto; }
-            </style>
-          </head>
-          <body>
-            ${options.htmlPages
-              .map(
-                (html, index) => `
-              <div class="${index < options.htmlPages.length - 1 ? "page-break" : ""}">
-                ${html}
-              </div>
-            `
-              )
-              .join("")}
-          </body>
-          </html>
-        `
-
-        const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(combinedHtml)}`
-        await win.loadURL(dataUri)
-
-        // レンダリング完了を待つ
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        // PDFを生成（マージンはインチ単位、5mm ≈ 0.2インチ）
-        const pdfBuffer = await win.webContents.printToPDF({
-          pageSize: options.pageSize || "A4",
-          landscape: options.landscape || false,
-          printBackground: true,
-          margins: {
-            marginType: "custom",
-            top: 0.2,
-            bottom: 0.2,
-            left: 0.2,
-            right: 0.2,
-          },
-        })
-
-        // ファイルに保存
-        const fs = require("fs").promises
-        await fs.writeFile(options.filePath, pdfBuffer)
-
-        return { success: true }
-      } catch (err) {
-        console.error(
-          "Error in IPC handler [export:printMultipleHtmlToPdf]:",
-          err
-        )
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "PDF生成に失敗しました",
-        }
-      } finally {
-        win.destroy()
       }
     }
   )

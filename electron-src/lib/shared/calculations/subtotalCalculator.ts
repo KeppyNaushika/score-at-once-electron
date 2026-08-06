@@ -27,7 +27,7 @@ export type QuestionScoreForSubtotal = Omit<
  * Prisma の `CropRegion` はそのまま渡せる。成績算出は事前取得したキャッシュから
  * この3列だけを持つので、全列を要求すると呼び出し側に `as` を強いることになる。
  */
-export interface CropRegionForSubtotal {
+interface CropRegionForSubtotal {
   id: string
   type: string
   points: number | null
@@ -50,7 +50,7 @@ export interface QuestionAssignmentForSubtotal {
 }
 
 /** 小計点領域（SUBTOTAL_SCORE）に紐づく小計1件。グループ判定と割り当てを併せ持つ */
-export interface SubtotalForCropRegionScore {
+interface SubtotalForCropRegionScore {
   subtotalGroupId: string
   cropSubtotals: QuestionAssignmentForSubtotal[]
 }
@@ -169,7 +169,7 @@ function computeStudentTotalScore(
  * @param cropRegions フォールバック（全設問合計）で読む、その試験の設問領域
  * @param assignedSubtotals 小計点領域に紐づく小計（所属グループと割り当てを併せ持つ）
  */
-export function computeSubtotalScoreForCropRegion(
+function computeSubtotalScoreForCropRegion(
   examStudentId: string,
   examId: string,
   allQuestionScores: QuestionScoreForSubtotal[],

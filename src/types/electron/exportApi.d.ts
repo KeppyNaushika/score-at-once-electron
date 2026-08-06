@@ -50,22 +50,6 @@ export interface ExportAPI {
       error?: string
     }>
 
-    // Canvas描画済み画像からPDF作成
-    createPdfFromRenderedImages: (options: {
-      examId: string
-      renderedPages: Array<{
-        examStudentId: string
-        pageNumber: number
-        imageData: ArrayBuffer
-      }>
-      pdfOrientation?: "portrait" | "landscape"
-      outputPath?: string
-    }) => Promise<{
-      success: boolean
-      outputPath?: string
-      error?: string
-    }>
-
     // SVG→PNG変換（MathJaxテキストのtaint問題回避用）
     convertSvgToPng: (options: {
       svgString: string
@@ -143,24 +127,6 @@ export interface ExportAPI {
       examId: string
     ) => Promise<SubtotalGroupsForReportResult>
 
-    // 個人成績表PDF保存先選択ダイアログ
-    selectIndividualReportSavePath: (options: {
-      examName?: string
-    }) => Promise<{
-      success: boolean
-      filePath?: string
-      canceled?: boolean
-    }>
-
-    // 個人成績表PDFバッファを保存
-    saveIndividualReportPdf: (options: {
-      filePath: string
-      pdfBuffer: ArrayBuffer
-    }) => Promise<{
-      success: boolean
-      error?: string
-    }>
-
     // HTMLからPDFを生成（ブラウザ印刷機能を使用）
     printHtmlToPdf: (options: {
       html: string
@@ -173,17 +139,6 @@ export interface ExportAPI {
         left?: number
         right?: number
       }
-    }) => Promise<{
-      success: boolean
-      error?: string
-    }>
-
-    // 複数のHTMLページからPDFを生成（バッチ処理）
-    printMultipleHtmlToPdf: (options: {
-      htmlPages: string[]
-      filePath: string
-      pageSize?: "A4" | "Letter"
-      landscape?: boolean
     }) => Promise<{
       success: boolean
       error?: string

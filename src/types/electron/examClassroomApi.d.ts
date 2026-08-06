@@ -66,11 +66,6 @@ export interface ExamClassroomAPI {
     }) => Promise<void>
 
     /**
-     * ExamClassroomを削除 (examIdとclassroomIdで指定)
-     */
-    removeByIds: (examId: string, classroomId: string) => Promise<ExamClassroom>
-
-    /**
      * クラスから生徒を試験に追加（B案: 統合型フロー）
      */
     addStudentsFromClassroom: (

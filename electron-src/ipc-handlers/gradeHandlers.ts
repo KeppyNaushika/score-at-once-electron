@@ -48,7 +48,6 @@ import {
 import {
   createGradeItem,
   deleteGradeItem,
-  getGradeItemsByExamId,
   reorderGradeItems,
   updateGradeItem,
 } from "../lib/prisma/gradeItem"
@@ -57,7 +56,6 @@ import {
   replaceGradeItemBoundaries,
 } from "../lib/prisma/gradeItemBoundary"
 import {
-  batchUpdateGradeItemExclusions,
   getGradeItemExclusions,
   setGradeItemExclusion,
 } from "../lib/prisma/gradeItemExclusion"
@@ -225,10 +223,6 @@ export function setupGradeHandlers(): void {
   // =====================================================================
   // GradeItem
   // =====================================================================
-
-  registerHandler("grade:getGradeItems", async (gradeId: string) => {
-    return getGradeItemsByExamId(gradeId)
-  })
 
   registerHandler(
     "grade:createGradeItem",
@@ -405,13 +399,6 @@ export function setupGradeHandlers(): void {
     "grade:setGradeItemExclusion",
     async (input: GradeItemExclusionInput) => {
       return setGradeItemExclusion(input)
-    }
-  )
-
-  registerHandler(
-    "grade:batchUpdateGradeItemExclusions",
-    async (updates: GradeItemExclusionInput[]) => {
-      return batchUpdateGradeItemExclusions(updates)
     }
   )
 

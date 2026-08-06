@@ -72,10 +72,7 @@ export interface ArchiveGradeBoundaryRowV1_13_0 {
 }
 
 /** v1.13.0 の成績本体セクション群 */
-export type GradeSectionsV1_13_0 = Omit<
-  GradeSections,
-  "gradeItemBoundaries"
-> & {
+type GradeSectionsV1_13_0 = Omit<GradeSections, "gradeItemBoundaries"> & {
   gradeBoundarySets: ArchiveGradeBoundarySetRowV1_13_0[]
   gradeBoundaries: ArchiveGradeBoundaryRowV1_13_0[]
 }
@@ -308,7 +305,7 @@ const toOptionalDecimalString = (
  * v1.10.0+ は uuid を持つのでそれを使う。無い場合は学籍番号から組み立てる
  * （取り込み先の実 uuid には当たらないので、学籍番号の二次照合へ落ちる＝旧来の挙動）。
  */
-export const legacyStudentId = (reference: {
+const legacyStudentId = (reference: {
   id?: string
   studentNumber: string
 }): string => reference.id ?? `legacy-student:${reference.studentNumber}`
@@ -318,7 +315,7 @@ const legacyClassroomId = (reference: { id?: string; name: string }): string =>
   reference.id ?? `legacy-classroom:${reference.name}`
 
 /** 展開結果。セクション群と外部参照、および失われたものの警告 */
-export interface FlattenedLegacyGrade {
+interface FlattenedLegacyGrade {
   sections: GradeSectionsV1_13_0
   studentsData: ArchiveCwStudent[]
   classesData: ArchiveCwClass[]

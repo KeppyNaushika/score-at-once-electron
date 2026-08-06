@@ -19,17 +19,13 @@ import {
   batchUpdateQuestionScores,
   createQuestionScore,
   CreateQuestionScoreData,
-  deleteQuestionScore,
-  getAnswerSheetProgress,
   getQuestionScoreById,
   getQuestionScoresForExam,
-  getQuestionScoresForExamStudent,
   updateQuestionScore,
   UpdateQuestionScoreData,
 } from "../lib/prisma/questionScore"
 import { upsertScoreDecision } from "../lib/prisma/scoreDecision"
 import { getExamDecisionSummary } from "../lib/prisma/scoreDecisionSummary"
-import { initializeScoringRecords } from "../lib/prisma/scoringInitializer"
 import { measureAnswerWhiteness } from "../lib/scoring/regionWhiteness"
 import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
 
@@ -66,23 +62,6 @@ export function setupScoringHandlers(): void {
     "get-question-scores-for-exam",
     async (examId: string, userId?: string) => {
       const result = await getQuestionScoresForExam(examId, userId)
-
-      if (!result.success) {
-        return result
-      }
-
-      const scores = result.scores?.map(serializeScore) || []
-      return { success: true, scores }
-    }
-  )
-
-  registerHandler(
-    "get-question-scores-for-exam-student",
-    async (examStudentId: string, userId?: string) => {
-      const result = await getQuestionScoresForExamStudent(
-        examStudentId,
-        userId
-      )
 
       if (!result.success) {
         return result
@@ -133,10 +112,6 @@ export function setupScoringHandlers(): void {
     }
   )
 
-  registerHandler("delete-question-score", async (id: string) => {
-    return await deleteQuestionScore(id)
-  })
-
   registerHandler(
     "finalize-question-score",
     async (
@@ -180,13 +155,6 @@ export function setupScoringHandlers(): void {
           score: result.decision.score ? Number(result.decision.score) : null,
         },
       }
-    }
-  )
-
-  registerHandler(
-    "get-answer-sheet-progress",
-    async (answerSheetId: string) => {
-      return await getAnswerSheetProgress(answerSheetId)
     }
   )
 
@@ -242,11 +210,6 @@ export function setupScoringHandlers(): void {
       return await batchUpdateQuestionScores(entries)
     }
   )
-
-  // Scoring initialization handler
-  registerHandler("initialize-scoring-records", async (examId: string) => {
-    return await initializeScoringRecords(examId)
-  })
 
   // グリッド採点の白さ順ソート用: 答案画像ごとに全採点領域の白さを算出する
   registerSafeHandler(

@@ -107,41 +107,6 @@ export async function extractAsbArchive(archivePath: string): Promise<{
   }
 }
 
-/**
- * マニフェストのみを読み込む（プレビュー用）
- */
-export async function readAsbManifestOnly(archivePath: string): Promise<{
-  success: boolean
-  manifest?: AsbArchiveManifest
-  error?: string
-}> {
-  try {
-    if (!fs.existsSync(archivePath)) {
-      return { success: false, error: "ファイルが見つかりません" }
-    }
-
-    const zip = new AdmZip(archivePath)
-    const manifestEntry = zip.getEntry("manifest.json")
-    if (!manifestEntry) {
-      return { success: false, error: "マニフェストファイルが見つかりません" }
-    }
-
-    const manifest: AsbArchiveManifest = JSON.parse(
-      zip.readAsText(manifestEntry)
-    )
-    return { success: true, manifest }
-  } catch (error) {
-    console.error("Error reading ASB manifest:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "マニフェストの読み込みに失敗しました",
-    }
-  }
-}
-
 function collectImagePaths(dir: string): string[] {
   if (!fs.existsSync(dir)) return []
   const paths: string[] = []

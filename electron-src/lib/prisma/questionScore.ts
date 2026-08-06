@@ -155,41 +155,6 @@ export const getQuestionScoresForExam = async (
 }
 
 /**
- * 特定の受験者の採点データを取得
- * @param examStudentId 試験の受験者ID（ExamStudent.id）
- * @param userId 採点者のユーザーID（指定時はそのユーザーの採点データのみ取得）
- */
-export const getQuestionScoresForExamStudent = async (
-  examStudentId: string,
-  userId?: string
-) => {
-  try {
-    const scores = await prisma.questionScore.findMany({
-      where: {
-        examStudentId,
-        // userIdが指定されている場合、そのユーザーの採点データのみ取得
-        ...(userId && { userId: userId }),
-      },
-      include: {
-        cropRegion: true,
-        user: true,
-      },
-      orderBy: {
-        cropRegion: { orderIndex: "asc" },
-      },
-    })
-
-    return { success: true, scores }
-  } catch (error) {
-    console.error("Failed to get question scores for student:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
-}
-
-/**
  * 単一の採点データをIDで取得
  * @param id QuestionScoreのID
  */
@@ -440,60 +405,6 @@ export const updateQuestionScore = async (
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
     }
-  }
-}
-
-/**
- * 採点データを削除
- */
-export const deleteQuestionScore = async (id: string) => {
-  try {
-    // 監査ログ用に削除前の情報を取得
-    const before = await prisma.questionScore.findUnique({
-      where: { id },
-    })
-
-    await prisma.questionScore.delete({
-      where: { id },
-    })
-
-    if (before) {
-      await recordScoreAudit({
-        action: "exam.score.delete",
-        scoreId: id,
-        cropRegionId: before.cropRegionId,
-        examStudentId: before.examStudentId,
-        userId: before.userId,
-        changes: [
-          {
-            field: "status",
-            label: "採点",
-            before: scoreStatusLabel(before.status),
-            after: null,
-          },
-        ],
-      })
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error("Failed to delete question score:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
-}
-
-/**
- * 答案シートの採点進捗を取得
- * TODO: 新スキーマに合わせて再実装が必要
- */
-export const getAnswerSheetProgress = async (_answerSheetId: string) => {
-  console.warn("getAnswerSheetProgress function needs rewriting for new schema")
-  return {
-    success: false as const,
-    error: "Function not yet updated for new schema",
   }
 }
 

@@ -1,5 +1,4 @@
 import * as crypto from "crypto"
-import { dialog } from "electron"
 import * as fs from "fs"
 import * as path from "path"
 import { PageSizes, PDFDocument } from "pdf-lib"
@@ -17,15 +16,6 @@ import { getStudentsForExam } from "./examStudent"
 import { getQuestionScoresForExam } from "./questionScore"
 import { getScoreDecisionsForExam } from "./scoreDecision"
 import { getStudentAnswersByExamId } from "./studentAnswer/crud"
-
-/**
- * ファイル名として安全でない文字を置換する
- * @param name - 元の名前
- * @returns サニタイズされた名前
- */
-function sanitizeFileName(name: string): string {
-  return name.replace(/[\\/:*?"<>|]/g, "_").trim()
-}
 
 // ============================================================
 // Canvas描画エンジン用API
@@ -366,166 +356,6 @@ export async function getPdfExportData(options: {
     }
   } catch (error) {
     console.error("Error getting PDF export data:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
-}
-
-/**
- * Canvas描画済み画像からPDFを作成（バッチ処理版）
- */
-export async function createPdfFromRenderedImages(options: {
-  examId: string
-  renderedPages: Array<{
-    examStudentId: string
-    pageNumber: number
-    imageData: ArrayBuffer
-  }>
-  pdfOrientation?: "portrait" | "landscape"
-  outputPath?: string
-  progressCallback?: (progress: {
-    current: number
-    total: number
-    step: string
-    percentage: number
-    currentStepIndex: number
-    totalSteps: number
-  }) => void
-}): Promise<{ success: boolean; outputPath?: string; error?: string }> {
-  const {
-    examId,
-    renderedPages,
-    pdfOrientation = "portrait",
-    outputPath: providedOutputPath,
-    progressCallback,
-  } = options
-
-  try {
-    // 試験情報を取得
-    const exam = await getExamById(examId)
-    if (!exam) {
-      return { success: false, error: "試験が見つかりません" }
-    }
-
-    // 保存先を決定（事前に指定されている場合はダイアログをスキップ）
-    let outputPath = providedOutputPath
-    if (!outputPath) {
-      const sanitizedExamName = sanitizeFileName(
-        exam.examName || "採点済み答案"
-      )
-      const { filePath, canceled } = await dialog.showSaveDialog({
-        title: "採点済み答案PDFの保存先",
-        defaultPath: `${sanitizedExamName}_採点済み.pdf`,
-        filters: [{ name: "PDF", extensions: ["pdf"] }],
-      })
-
-      if (canceled || !filePath) {
-        return { success: false, error: "保存がキャンセルされました" }
-      }
-      outputPath = filePath
-    }
-
-    progressCallback?.({
-      current: 0,
-      total: renderedPages.length,
-      step: "PDFを作成中...",
-      percentage: 0,
-      currentStepIndex: 1,
-      totalSteps: 2,
-    })
-
-    // PDFドキュメントを作成
-    const pdfDoc = await PDFDocument.create()
-    const pageSize =
-      pdfOrientation === "landscape"
-        ? ([PageSizes.A4[1], PageSizes.A4[0]] as [number, number])
-        : PageSizes.A4
-
-    // バッチサイズ（並列embedPng）
-    const BATCH_SIZE = 4
-
-    // 各ページを追加（バッチ処理）
-    for (
-      let batchStart = 0;
-      batchStart < renderedPages.length;
-      batchStart += BATCH_SIZE
-    ) {
-      const batch = renderedPages.slice(batchStart, batchStart + BATCH_SIZE)
-
-      progressCallback?.({
-        current: batchStart,
-        total: renderedPages.length,
-        step: `画像埋め込み中... (${batchStart + 1}-${Math.min(batchStart + BATCH_SIZE, renderedPages.length)}/${renderedPages.length})`,
-        percentage: Math.round((batchStart / renderedPages.length) * 90),
-        currentStepIndex: 1,
-        totalSteps: 2,
-      })
-
-      // バッチ内で並列embedPng
-      const embedPromises = batch.map(async (pageData) => {
-        try {
-          const imageBytes = new Uint8Array(pageData.imageData)
-          const image = await pdfDoc.embedPng(imageBytes)
-          return { success: true, image, pageData }
-        } catch (error) {
-          console.error(`Error embedding image:`, error)
-          return { success: false, image: null, pageData }
-        }
-      })
-
-      const embedResults = await Promise.all(embedPromises)
-
-      // 順序通りにページを追加
-      for (const result of embedResults) {
-        if (!result.success || !result.image) continue
-
-        const page = pdfDoc.addPage(pageSize)
-        const { width: pageWidth, height: pageHeight } = page.getSize()
-
-        const imageAspectRatio = result.image.width / result.image.height
-        const pageAspectRatio = pageWidth / pageHeight
-
-        let imageWidth: number
-        let imageHeight: number
-
-        if (imageAspectRatio > pageAspectRatio) {
-          imageWidth = pageWidth
-          imageHeight = pageWidth / imageAspectRatio
-        } else {
-          imageHeight = pageHeight
-          imageWidth = pageHeight * imageAspectRatio
-        }
-
-        const imageX = (pageWidth - imageWidth) / 2
-        const imageY = (pageHeight - imageHeight) / 2
-
-        page.drawImage(result.image, {
-          x: imageX,
-          y: imageY,
-          width: imageWidth,
-          height: imageHeight,
-        })
-      }
-    }
-
-    progressCallback?.({
-      current: renderedPages.length,
-      total: renderedPages.length,
-      step: "PDFを保存中...",
-      percentage: 100,
-      currentStepIndex: 2,
-      totalSteps: 2,
-    })
-
-    // PDFを保存
-    const pdfBytes = await pdfDoc.save()
-    fs.writeFileSync(outputPath, pdfBytes)
-
-    return { success: true, outputPath }
-  } catch (error) {
-    console.error("Error creating PDF from rendered images:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

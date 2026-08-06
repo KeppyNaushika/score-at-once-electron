@@ -15,7 +15,7 @@
  * `id` は重複排除に、`examPage.examId` は試験の絞り込みに要る。
  * SubtotalGroup は複数の試験で共有されうるので、どちらも省けない。
  */
-export interface AssignedCropRegionRef {
+interface AssignedCropRegionRef {
   id: string
   examPage: { examId: string }
 }

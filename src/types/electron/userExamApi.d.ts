@@ -1,11 +1,6 @@
 import type { UserExam } from "@prisma/client"
 
-import type { UserRole } from "@/electron-src/lib/prisma/userExam"
-
-import type {
-  UserExamWithExam,
-  UserExamWithUserAndInviter,
-} from "../prismaExtensions"
+import type { UserExamWithUserAndInviter } from "../prismaExtensions"
 
 /**
  * UserExam権限管理関連API
@@ -18,24 +13,9 @@ export interface UserExamAPI {
     getMembers: (examId: string) => Promise<UserExamWithUserAndInviter[]>
 
     /**
-     * ユーザーの試験内ロールを取得
-     */
-    getRole: (userId: string, examId: string) => Promise<UserRole | null>
-
-    /**
      * ユーザーが試験のオーナーか確認
      */
     isOwner: (userId: string, examId: string) => Promise<boolean>
-
-    /**
-     * ユーザーが試験のメンバーか確認
-     */
-    isMember: (userId: string, examId: string) => Promise<boolean>
-
-    /**
-     * 試験のオーナーを設定（試験作成時）
-     */
-    setOwner: (options: { examId: string; userId: string }) => Promise<UserExam>
 
     /**
      * メンバーを招待（GRADERとして追加）
@@ -54,28 +34,6 @@ export interface UserExamAPI {
       userId: string,
       removedBy: string
     ) => Promise<UserExam>
-
-    /**
-     * オーナー権限を移譲
-     */
-    transferOwnership: (
-      examId: string,
-      newOwnerId: string,
-      currentOwnerId: string
-    ) => Promise<{
-      previousOwner: UserExam
-      newOwner: UserExam
-    }>
-
-    /**
-     * ユーザーが参加している全試験を取得
-     */
-    getUserExams: (userId: string) => Promise<UserExamWithExam[]>
-
-    /**
-     * 試験のオーナーを取得
-     */
-    getOwner: (examId: string) => Promise<UserExamWithUserAndInviter | null>
 
     /**
      * 招待可能なユーザーを検索（既存メンバー除外）

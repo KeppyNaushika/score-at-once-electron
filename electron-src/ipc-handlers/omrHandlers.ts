@@ -21,7 +21,7 @@ import { correctImage } from "../lib/omr/imageCorrector"
 import { loadImageRaw } from "../lib/omr/imageProcessor"
 import { recognizeCells } from "../lib/omr/markRecognizer"
 import prisma from "../lib/prisma/client"
-import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
+import { registerSafeHandler } from "./ipcHandlerUtils"
 
 /**
  * マスターマーカー検出キャッシュ (キー: "examPageId:colorThreshold")
@@ -64,121 +64,8 @@ function getCachedMarkerResult(
   return null
 }
 
-/** OMR（光学マーク認識）のマーカー検出・シート認識・バッチ処理に関するIPCチャンネルを登録する */
+/** OMR（光学マーク認識）のバッチ処理・マスターマーカー検出・画像補正のIPCチャンネルを登録する */
 export function setupOMRHandlers(): void {
-  // ────────────────────────────────────────
-  // 単一画像のコーナーマーカー検出
-  // ────────────────────────────────────────
-  registerHandler(
-    "omr:detect-markers",
-    async (
-      imagePath: string,
-      colorThreshold?: number
-    ): Promise<MarkerDetectionResult> => {
-      return detectCornerMarkers(imagePath, colorThreshold)
-    }
-  )
-
-  // ────────────────────────────────────────
-  // 1枚の答案シート認識
-  // NOTE: Has custom error return format (OMRSheetResult), kept as manual ipcMain.handle
-  // ────────────────────────────────────────
-  ipcMain.handle(
-    "omr:recognize-sheet",
-    async (
-      _event,
-      args: {
-        imagePath: string
-        cells: ComputedCell[]
-        cellConfigs: Record<string, OMRCellConfig>
-        expectedCorners: [
-          { x: number; y: number },
-          { x: number; y: number },
-          { x: number; y: number },
-          { x: number; y: number },
-        ]
-        params: OMRRecognitionParams
-        pageIndex?: number
-        examStudentId?: string
-      }
-    ): Promise<OMRSheetResult> => {
-      try {
-        // 1. マーカー検出
-        // マーカー検出の閾値は据え置き（印刷された黒マーカーは鉛筆と最適値が違う）。
-        // null=自動 はバブル判定側だけに効かせ、検出結果キャッシュのキーを安定させる
-        const markerResult = await detectCornerMarkers(
-          args.imagePath,
-          args.params.colorThreshold ?? undefined
-        )
-        if (!markerResult.success) {
-          return {
-            success: false,
-            pageIndex: args.pageIndex ?? 0,
-            markerDetection: markerResult,
-            cellResults: [],
-            error: markerResult.error,
-          }
-        }
-
-        // 2. 座標変換を構築
-        const sortedMarkers = {
-          TL: markerResult.markers.find((marker) => marker.corner === "TL")!,
-          TR: markerResult.markers.find((marker) => marker.corner === "TR")!,
-          BL: markerResult.markers.find((marker) => marker.corner === "BL")!,
-          BR: markerResult.markers.find((marker) => marker.corner === "BR")!,
-        }
-
-        const transform = createTransform(
-          [
-            { x: sortedMarkers.TL.centerX, y: sortedMarkers.TL.centerY },
-            { x: sortedMarkers.TR.centerX, y: sortedMarkers.TR.centerY },
-            { x: sortedMarkers.BL.centerX, y: sortedMarkers.BL.centerY },
-            { x: sortedMarkers.BR.centerX, y: sortedMarkers.BR.centerY },
-          ],
-          args.expectedCorners,
-          markerResult.imageWidth,
-          markerResult.imageHeight
-        )
-
-        // 3. 画像読み込み
-        const rawImage = await loadImageRaw(args.imagePath)
-
-        // 4. マーク認識
-        const cellResults = await recognizeCells(
-          args.cells,
-          args.cellConfigs,
-          rawImage,
-          transform,
-          args.params
-        )
-
-        return {
-          success: true,
-          examStudentId: args.examStudentId,
-          pageIndex: args.pageIndex ?? 0,
-          markerDetection: markerResult,
-          cellResults,
-        }
-      } catch (error) {
-        console.error("Error in IPC handler [omr:recognize-sheet]:", error)
-        return {
-          success: false,
-          pageIndex: args.pageIndex ?? 0,
-          markerDetection: {
-            success: false,
-            markers: [],
-            imageWidth: 0,
-            imageHeight: 0,
-            error: String(error),
-          },
-          cellResults: [],
-          error:
-            error instanceof Error ? error.message : "OMR認識に失敗しました",
-        }
-      }
-    }
-  )
-
   // ────────────────────────────────────────
   // バッチ認識（試験全答案）
   // NOTE: Has complex loop with progress reporting via BrowserWindow.send, kept as manual ipcMain.handle

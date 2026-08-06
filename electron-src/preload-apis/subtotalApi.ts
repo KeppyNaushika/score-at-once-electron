@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client"
 import { ipcRenderer } from "electron"
 
-/** 小計グループ・小計・採点領域-小計紐付けのIPC API（CRUD・試験への割り当て管理） */
+/** 小計グループ・採点領域-小計紐付けのIPC API（CRUD・試験への割り当て管理） */
 export function createSubtotalApi() {
   return {
     // SubtotalGroup related (new management API with correct parameter format)
@@ -44,27 +44,10 @@ export function createSubtotalApi() {
         boxPlotGroupIds
       ),
 
-    // Subtotal related (renamed from QuestionGroupItem)
-    createSubtotal: (data: Prisma.SubtotalUncheckedCreateInput) =>
-      ipcRenderer.invoke("create-subtotal", data),
-    createManySubtotals: (items: Prisma.SubtotalUncheckedCreateInput[]) =>
-      ipcRenderer.invoke("create-many-subtotals", items),
-    updateSubtotal: (id: string, data: Prisma.SubtotalUpdateInput) =>
-      ipcRenderer.invoke("update-subtotal", id, data),
-    deleteSubtotal: (id: string) => ipcRenderer.invoke("delete-subtotal", id),
-    getSubtotalsByGroupId: (subtotalGroupId: string) =>
-      ipcRenderer.invoke("get-subtotals-by-group-id", subtotalGroupId),
-    getSubtotalById: (id: string) =>
-      ipcRenderer.invoke("get-subtotal-by-id", id),
-
     // CropSubtotal related (unified from QuestionSubtotalAssignment + SubtotalDefinition)
-    createCropSubtotal: (data: Prisma.CropSubtotalUncheckedCreateInput) =>
-      ipcRenderer.invoke("create-crop-subtotal", data),
     createManyCropSubtotals: (
       assignments: Prisma.CropSubtotalUncheckedCreateInput[]
     ) => ipcRenderer.invoke("create-many-crop-subtotals", assignments),
-    deleteCropSubtotal: (id: string) =>
-      ipcRenderer.invoke("delete-crop-subtotal", id),
     deleteCropSubtotalsByCropRegionId: (cropRegionId: string) =>
       ipcRenderer.invoke(
         "delete-crop-subtotals-by-crop-region-id",
@@ -72,14 +55,5 @@ export function createSubtotalApi() {
       ),
     getCropSubtotalsByCropRegionId: (cropRegionId: string) =>
       ipcRenderer.invoke("get-crop-subtotals-by-crop-region-id", cropRegionId),
-    getCropSubtotalsBySubtotalId: (subtotalId: string) =>
-      ipcRenderer.invoke("get-crop-subtotals-by-subtotal-id", subtotalId),
-
-    // 互換性関数（旧SubtotalDefinition用、CropSubtotalでの統合エイリアス）
-    getSubtotalDefinitionsByCropRegionId: (cropRegionId: string) =>
-      ipcRenderer.invoke(
-        "get-subtotal-definitions-by-crop-region-id",
-        cropRegionId
-      ),
   }
 }

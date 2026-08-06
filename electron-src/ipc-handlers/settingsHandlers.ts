@@ -13,7 +13,6 @@ import {
   bulkUpsertUserKeyboardShortcuts,
   getUserKeyboardShortcuts,
   getUserPreference,
-  getUserPreferences,
   resetUserKeyboardShortcuts,
   setUserPreference,
 } from "../lib/prisma/userSettings"
@@ -132,11 +131,6 @@ export function registerSettingsHandlers() {
       return { success: true }
     }
   )
-
-  registerSafeHandler("settings:getUserPreferences", async (userId: string) => {
-    const preferences = await getUserPreferences(userId)
-    return { success: true, preferences }
-  })
 
   // =========================================================================
   // ExamExportSettings

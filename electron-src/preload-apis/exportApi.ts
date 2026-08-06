@@ -25,16 +25,6 @@ export function createExportApi() {
         examId: string
         selectedExamStudentIds: string[]
       }) => ipcRenderer.invoke("export:getPdfExportData", options),
-      createPdfFromRenderedImages: (options: {
-        examId: string
-        renderedPages: Array<{
-          examStudentId: string
-          pageNumber: number
-          imageData: ArrayBuffer
-        }>
-        pdfOrientation?: "portrait" | "landscape"
-        outputPath?: string
-      }) => ipcRenderer.invoke("export:createPdfFromRenderedImages", options),
       convertSvgToPng: (options: {
         svgString: string
         width?: number
@@ -67,12 +57,6 @@ export function createExportApi() {
       }) => ipcRenderer.invoke("export:getIndividualReportData", options),
       getSubtotalGroupsForReport: (examId: string) =>
         ipcRenderer.invoke("export:getSubtotalGroupsForReport", examId),
-      selectIndividualReportSavePath: (options: { examName?: string }) =>
-        ipcRenderer.invoke("export:selectIndividualReportSavePath", options),
-      saveIndividualReportPdf: (options: {
-        filePath: string
-        pdfBuffer: ArrayBuffer
-      }) => ipcRenderer.invoke("export:saveIndividualReportPdf", options),
       // HTML to PDF (ブラウザ印刷機能)
       printHtmlToPdf: (options: {
         html: string
@@ -86,12 +70,6 @@ export function createExportApi() {
           right?: number
         }
       }) => ipcRenderer.invoke("export:printHtmlToPdf", options),
-      printMultipleHtmlToPdf: (options: {
-        htmlPages: string[]
-        filePath: string
-        pageSize?: "A4" | "Letter"
-        landscape?: boolean
-      }) => ipcRenderer.invoke("export:printMultipleHtmlToPdf", options),
       // Excelプレビューデータ取得
       getExcelPreviewData: (options: {
         examId: string

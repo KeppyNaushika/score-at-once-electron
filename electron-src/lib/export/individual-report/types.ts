@@ -12,7 +12,7 @@ import type { ScoringData, StudentExportPlacement } from "../../shared/types"
 // ================== 表示モード関連 ==================
 
 /** 表示モード */
-export const REPORT_DISPLAY_MODES = ["detail", "subtotal_only"] as const
+const REPORT_DISPLAY_MODES = ["detail", "subtotal_only"] as const
 export type ReportDisplayMode = (typeof REPORT_DISPLAY_MODES)[number]
 export const { to: toReportDisplayMode } = defineStringUnion(
   REPORT_DISPLAY_MODES,
@@ -56,14 +56,14 @@ export type StatisticVisibility = Record<
 
 /** 順位表示タイプ */
 /** テーブル列数（最大10列） */
-export const REPORT_PAGE_LAYOUTS = ["auto", "single", "double"] as const
+const REPORT_PAGE_LAYOUTS = ["auto", "single", "double"] as const
 export type ReportPageLayout = (typeof REPORT_PAGE_LAYOUTS)[number]
 export const { to: toReportPageLayout } = defineStringUnion(
   REPORT_PAGE_LAYOUTS,
   "auto"
 )
 
-export const REPORT_PAGE_ORIENTATIONS = ["portrait", "landscape"] as const
+const REPORT_PAGE_ORIENTATIONS = ["portrait", "landscape"] as const
 export type ReportPageOrientation = (typeof REPORT_PAGE_ORIENTATIONS)[number]
 export const { to: toReportPageOrientation } = defineStringUnion(
   REPORT_PAGE_ORIENTATIONS,

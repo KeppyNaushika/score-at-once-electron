@@ -7,10 +7,7 @@
  */
 
 import { examWithExportSettingsInclude } from "../../../src/types/prismaExtensions"
-import type {
-  AnswerOverlaySettings,
-  OverlayKind,
-} from "../../../src/types/scoringOverlay.types"
+import type { AnswerOverlaySettings } from "../../../src/types/scoringOverlay.types"
 import {
   DEFAULT_ANSWER_OVERLAY_SETTINGS,
   OVERLAY_KINDS,

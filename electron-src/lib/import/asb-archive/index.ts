@@ -2,14 +2,9 @@
  * ASB定義インポート機能
  */
 
-import type { AsbArchiveManifest } from "../../../../src/types/asbArchive.types"
 import { recordAuditLog } from "../../prisma/auditLog"
 import { transformAsbToLatest } from "../asb-transformers"
-import {
-  cleanupAsbTempDir,
-  extractAsbArchive,
-  readAsbManifestOnly,
-} from "./archiveExtractor"
+import { cleanupAsbTempDir, extractAsbArchive } from "./archiveExtractor"
 import {
   copyImagesAndUpdatePaths,
   createImportedAsbDefinition,
@@ -17,17 +12,6 @@ import {
 } from "./dataCreator"
 import { generateAsbIdMappings, remapDefinitionIds } from "./idRemapper"
 import { validateAsbManifest } from "./manifestValidator"
-
-/**
- * ASBアーカイブを分析（プレビュー用）
- */
-export async function analyzeAsbArchive(filePath: string): Promise<{
-  success: boolean
-  manifest?: AsbArchiveManifest
-  error?: string
-}> {
-  return readAsbManifestOnly(filePath)
-}
 
 /**
  * ASBアーカイブをインポート
