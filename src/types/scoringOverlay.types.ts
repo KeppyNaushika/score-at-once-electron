@@ -124,7 +124,7 @@ export function toAnswerOverlaySettings(
 // =============================================================================
 
 /** 既定色 */
-export const DEFAULT_MARK_COLOR = "#ef4444" // 採点記号マーク（赤）
+const DEFAULT_MARK_COLOR = "#ef4444" // 採点記号マーク（赤）
 const DEFAULT_PARTIAL_SCORE_COLOR = "#ef4444" // 設問の点数（赤）
 const DEFAULT_SUBTOTAL_SCORE_COLOR = "#2563eb" // 小計（青）
 const DEFAULT_TOTAL_SCORE_COLOR = "#16a34a" // 合計（緑）

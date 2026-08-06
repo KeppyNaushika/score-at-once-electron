@@ -8,14 +8,11 @@ import type {
   ASBConvertToExamArgs,
   ASBDefinitionListItem,
   ASBDeleteImageArgs,
-  ASBExportPdfArgs,
   ASBExportPngArgs,
   ASBExportResult,
-  ASBPrintArgs,
   ASBUploadImageArgs,
   ASBUploadImageResult,
 } from "../answerSheetBuilder.types"
-import type { AsbArchiveManifest } from "../asbArchive.types"
 
 export interface AnswerSheetBuilderAPI {
   answerSheetBuilder: {
@@ -36,7 +33,6 @@ export interface AnswerSheetBuilderAPI {
     deleteDefinition: (
       id: string
     ) => Promise<{ success: boolean; error?: string }>
-    exportPdf: (args: ASBExportPdfArgs) => Promise<ASBExportResult>
     exportPng: (args: ASBExportPngArgs) => Promise<ASBExportResult>
     selectSavePath: (options: {
       type: "pdf" | "png"
@@ -48,7 +44,6 @@ export interface AnswerSheetBuilderAPI {
       error?: string
     }>
     convertToExam: (args: ASBConvertToExamArgs) => Promise<ASBConvertResult>
-    print: (args: ASBPrintArgs) => Promise<{ success: boolean; error?: string }>
     uploadImage: (args: ASBUploadImageArgs) => Promise<ASBUploadImageResult>
     deleteImage: (
       args: ASBDeleteImageArgs
@@ -57,11 +52,6 @@ export interface AnswerSheetBuilderAPI {
       success: boolean
       filePath?: string
       canceled?: boolean
-      error?: string
-    }>
-    analyzeAsbArchive: (filePath: string) => Promise<{
-      success: boolean
-      manifest?: AsbArchiveManifest
       error?: string
     }>
     exportDefinition: (

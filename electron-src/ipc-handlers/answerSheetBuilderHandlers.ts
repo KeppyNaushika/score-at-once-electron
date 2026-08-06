@@ -2,17 +2,14 @@
  * 解答用紙作成機能のIPCハンドラー
  */
 
-import { BrowserWindow, dialog, ipcMain, shell } from "electron"
+import { dialog } from "electron"
 import * as fs from "fs"
-import * as os from "os"
 import * as path from "path"
 
 import type {
   ASBConvertToExamArgs,
   ASBDeleteImageArgs,
-  ASBExportPdfArgs,
   ASBExportPngArgs,
-  ASBPrintArgs,
   ASBUploadImageArgs,
 } from "../../src/types/answerSheetBuilder.types"
 import type { AnswerSheetDefinition } from "../../src/types/answerSheetDefinition.types"
@@ -23,10 +20,7 @@ import {
   getRelativePathFromData,
 } from "../lib/dataManager"
 import { exportAsbDefinition } from "../lib/export/asb-archive"
-import {
-  analyzeAsbArchive,
-  importAsbDefinition,
-} from "../lib/import/asb-archive"
+import { importAsbDefinition } from "../lib/import/asb-archive"
 import { htmlToPngBuffer } from "../lib/printUtils"
 import {
   deleteAsbDefinition,
@@ -36,7 +30,7 @@ import {
 } from "../lib/prisma/asbDefinition"
 import { registerSafeHandler } from "./ipcHandlerUtils"
 
-/** 解答用紙作成機能のIPCチャンネル（定義CRUD・画像管理・PDF/PNG出力・印刷・インポート/エクスポート）を登録する */
+/** 解答用紙作成機能のIPCチャンネル（定義CRUD・画像管理・PNG出力・インポート/エクスポート）を登録する */
 export function setupAnswerSheetBuilderHandlers(): void {
   // 定義一覧取得
   registerSafeHandler(
@@ -135,58 +129,6 @@ export function setupAnswerSheetBuilderHandlers(): void {
     "画像の削除に失敗しました"
   )
 
-  // PDF出力: HTMLを受け取り → 一時ファイル → BrowserWindow → printToPDF
-  // NOTE: Uses BrowserWindow with try-finally for cleanup, kept as manual ipcMain.handle
-  ipcMain.handle("asb:export-pdf", async (_event, args: ASBExportPdfArgs) => {
-    let tempHtmlPath: string | null = null
-    let win: BrowserWindow | null = null
-    try {
-      tempHtmlPath = path.join(os.tmpdir(), `asb-pdf-${Date.now()}.html`)
-      fs.writeFileSync(tempHtmlPath, args.html, "utf-8")
-
-      win = new BrowserWindow({
-        show: false,
-        webPreferences: { offscreen: true },
-      })
-      await win.loadFile(tempHtmlPath)
-
-      // レンダリング完了を待つ
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      const pdfBuffer = await win.webContents.printToPDF({
-        pageSize: {
-          width: args.pageWidthMm / 25.4, // mm → inches
-          height: args.pageHeightMm / 25.4,
-        },
-        printBackground: true,
-        margins: { marginType: "custom", top: 0, bottom: 0, left: 0, right: 0 },
-      })
-
-      const outputDir = path.dirname(args.outputPath)
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true })
-      }
-      fs.writeFileSync(args.outputPath, pdfBuffer)
-
-      return { success: true, filePath: args.outputPath }
-    } catch (error) {
-      console.error("Error in IPC handler [asb:export-pdf]:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "PDF出力に失敗しました",
-      }
-    } finally {
-      win?.destroy()
-      if (tempHtmlPath) {
-        try {
-          fs.unlinkSync(tempHtmlPath)
-        } catch {
-          // ignore
-        }
-      }
-    }
-  })
-
   // PNG出力: HTML文字列を受け取り → BrowserWindow + capturePage でラスタライズ
   registerSafeHandler(
     "asb:export-png",
@@ -263,58 +205,6 @@ export function setupAnswerSheetBuilderHandlers(): void {
     "試験変換に失敗しました"
   )
 
-  // 印刷: HTMLを受け取り → printToPDF → プレビューで開く
-  // NOTE: Uses BrowserWindow with try-finally for cleanup, kept as manual ipcMain.handle
-  ipcMain.handle("asb:print", async (_event, args: ASBPrintArgs) => {
-    let tempHtmlPath: string | null = null
-    let win: BrowserWindow | null = null
-    try {
-      tempHtmlPath = path.join(os.tmpdir(), `asb-print-${Date.now()}.html`)
-      // プレビュー中は削除しないので finally からは参照しない
-      const tempPdfPath = path.join(os.tmpdir(), `asb-print-${Date.now()}.pdf`)
-      fs.writeFileSync(tempHtmlPath, args.html, "utf-8")
-
-      win = new BrowserWindow({
-        show: false,
-        webPreferences: { offscreen: true },
-      })
-      await win.loadFile(tempHtmlPath)
-
-      // レンダリング完了を待つ
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      const pdfBuffer = await win.webContents.printToPDF({
-        pageSize: {
-          width: args.pageWidthMm / 25.4, // mm → inches
-          height: args.pageHeightMm / 25.4,
-        },
-        printBackground: true,
-        margins: { marginType: "custom", top: 0, bottom: 0, left: 0, right: 0 },
-      })
-
-      fs.writeFileSync(tempPdfPath, pdfBuffer)
-      await shell.openPath(tempPdfPath)
-
-      return { success: true }
-    } catch (error) {
-      console.error("Error in IPC handler [asb:print]:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "印刷に失敗しました",
-      }
-    } finally {
-      win?.destroy()
-      if (tempHtmlPath) {
-        try {
-          fs.unlinkSync(tempHtmlPath)
-        } catch {
-          // ignore
-        }
-      }
-      // tempPdfPath はプレビュー中なので削除しない
-    }
-  })
-
   // 定義のインポートファイル選択
   registerSafeHandler(
     "asb:select-import-file",
@@ -331,15 +221,6 @@ export function setupAnswerSheetBuilderHandlers(): void {
       return { success: true, filePath: result.filePaths[0] }
     },
     "ファイル選択に失敗しました"
-  )
-
-  // アーカイブ分析（プレビュー用）
-  registerSafeHandler(
-    "asb:analyze-asb-archive",
-    async (filePath: string) => {
-      return await analyzeAsbArchive(filePath)
-    },
-    "アーカイブ分析に失敗しました"
   )
 
   // 定義エクスポート

@@ -22,7 +22,6 @@ export type AsbDefinitionTagWithTag = Prisma.AsbDefinitionTagGetPayload<{
 
 export interface TagAPI {
   tagGetAll: () => Promise<TagWithAllRelations[]>
-  tagGetById: (id: string) => Promise<Tag | null>
   tagCreate: (data: { name: string; color?: string }) => Promise<Tag>
   tagUpdate: (
     id: string,
@@ -42,7 +41,6 @@ export interface TagAPI {
 
   examTagGetByExamId: (examId: string) => Promise<ExamTagWithTag[]>
   examTagCreate: (data: { examId: string; tagId: string }) => Promise<ExamTag>
-  examTagDelete: (id: string) => Promise<void>
   examTagSetExamTags: (
     examId: string,
     tagIds: string[]
@@ -55,7 +53,6 @@ export interface TagAPI {
     asbDefinitionId: string
     tagId: string
   }) => Promise<AsbDefinitionTag>
-  asbDefinitionTagDelete: (id: string) => Promise<void>
   asbDefinitionTagSetDefinitionTags: (
     asbDefinitionId: string,
     tagIds: string[]

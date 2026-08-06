@@ -1,13 +1,7 @@
 import { Prisma } from "@prisma/client"
-import { shell } from "electron"
 import * as fsPromises from "fs/promises"
-import * as path from "path"
 
-import {
-  calculateDataSize,
-  getAbsolutePathFromData,
-  getDataDirectory,
-} from "../lib/dataManager"
+import { getAbsolutePathFromData } from "../lib/dataManager"
 import {
   createClassroom,
   deleteClassroom,
@@ -24,9 +18,7 @@ import {
   uploadMasterAnswers,
 } from "../lib/prisma/masterAnswer"
 import {
-  associateStudentAnswerWithStudent,
   deleteStudentAnswer,
-  getStudentAnswerById,
   getStudentAnswersByExamId,
   getStudentAnswerScoreSummary,
   getStudentAnswersDataset,
@@ -36,7 +28,6 @@ import {
   applyStudentAnswerPlacements,
   type StudentAnswerPlacementMove,
 } from "../lib/prisma/studentAnswer/placementApply"
-import { setStudentAnswerAbsent } from "../lib/prisma/studentAnswer/status"
 import {
   createUser,
   fetchUsers,
@@ -160,34 +151,6 @@ export function setupMiscHandlers(): void {
   })
 
   registerHandler(
-    "associate-answer-sheet-with-student",
-    async (answerSheetId: string, examStudentId: string) => {
-      return await associateStudentAnswerWithStudent(
-        answerSheetId,
-        examStudentId
-      )
-    }
-  )
-
-  registerHandler(
-    "set-answer-sheet-absent",
-    async (answerSheetId: string, isAbsent: boolean) => {
-      return await setStudentAnswerAbsent(answerSheetId, isAbsent)
-    }
-  )
-
-  registerHandler("get-answer-sheet-by-id", async (answerSheetId: string) => {
-    const result = await getStudentAnswerById(answerSheetId)
-    if (!result.success) {
-      throw new Error(result.error)
-    }
-    if (!result.answerSheet) return null
-    return {
-      ...result.answerSheet,
-    }
-  })
-
-  registerHandler(
     "apply-answer-sheet-placements",
     async (moves: StudentAnswerPlacementMove[]) => {
       const result = await applyStudentAnswerPlacements(moves)
@@ -267,46 +230,6 @@ export function setupMiscHandlers(): void {
     }
   )
 
-  registerSafeHandler("read-file-as-base64", async (filePath: string) => {
-    // 相対パスの場合はdataディレクトリからの相対パスとして解決
-    const resolvedPath = path.isAbsolute(filePath)
-      ? filePath
-      : path.join(getDataDirectory(), filePath)
-
-    // ファイルの存在確認
-    try {
-      await fsPromises.access(resolvedPath)
-    } catch {
-      return {
-        success: false,
-        error: "File not found",
-      }
-    }
-
-    // ファイルを読み込んでBase64に変換
-    const buffer = await fsPromises.readFile(resolvedPath)
-    const base64Data = buffer.toString("base64")
-
-    // MIMEタイプを推定
-    const ext = path.extname(resolvedPath).toLowerCase()
-    const mimeType =
-      ext === ".png"
-        ? "image/png"
-        : ext === ".jpg" || ext === ".jpeg"
-          ? "image/jpeg"
-          : ext === ".gif"
-            ? "image/gif"
-            : ext === ".webp"
-              ? "image/webp"
-              : "application/octet-stream"
-
-    return {
-      success: true,
-      data: `data:${mimeType};base64,${base64Data}`,
-      mimeType,
-    }
-  })
-
   registerHandler(
     "get-student-answer-images-by-exam-id",
     async (examId: string) => {
@@ -317,37 +240,6 @@ export function setupMiscHandlers(): void {
 
   registerHandler("get-master-images-by-exam-id", async (examId: string) => {
     return await getMasterAnswersByExamId(examId)
-  })
-
-  // Data management handlers
-  registerSafeHandler("get-data-directory-info", async () => {
-    const dataDirectory = getDataDirectory()
-    const size = await calculateDataSize()
-
-    return {
-      success: true,
-      directory: dataDirectory,
-      size,
-    }
-  })
-
-  registerSafeHandler("open-data-directory", async () => {
-    const dataDirectory = getDataDirectory()
-    await shell.openPath(dataDirectory)
-
-    return { success: true }
-  })
-
-  registerSafeHandler("delete-all-data", async () => {
-    const dataDirectory = getDataDirectory()
-
-    // データフォルダを完全削除
-    await fsPromises.rm(dataDirectory, { recursive: true, force: true })
-
-    // データディレクトリを再作成
-    await fsPromises.mkdir(dataDirectory, { recursive: true })
-
-    return { success: true }
   })
 
   // 画像ファイル読み込みハンドラー
@@ -387,21 +279,5 @@ export function setupMiscHandlers(): void {
         error: err instanceof Error ? err.message : "Unknown error",
       }
     }
-  })
-
-  // アセットパス解決ハンドラー
-  registerSafeHandler("get-asset-path", async (assetPath: string) => {
-    const { app } = require("electron")
-    const path = require("path")
-
-    // パッケージ化されたアプリかどうかで分岐
-    const publicDir = app.isPackaged
-      ? path.join(app.getAppPath(), "public")
-      : path.join(process.cwd(), "public")
-
-    const fullPath = path.join(publicDir, assetPath)
-
-    // appimg:/// プロトコルを使用してパスを返す（webSecurity有効時のローカルファイルアクセス用）
-    return { success: true, path: `appimg:///${fullPath}` }
   })
 }

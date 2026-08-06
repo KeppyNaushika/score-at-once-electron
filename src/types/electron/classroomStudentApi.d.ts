@@ -74,23 +74,11 @@ export interface ClassroomStudentAPI {
   }>
 
   // Student Classroom Membership related
-  createStudentClassroomMembership: (
-    membershipData: Prisma.StudentClassroomMembershipCreateInput
-  ) => Promise<StudentClassroomMembershipWithStudentAndClassroom>
   updateStudentClassroomMembership: (
     id: string,
     membershipData: Prisma.StudentClassroomMembershipUpdateInput
   ) => Promise<StudentClassroomMembershipWithStudentAndClassroom>
   deleteStudentClassroomMembership: (id: string) => Promise<void>
-  getCurrentMembershipsByStudentId: (
-    studentId: string
-  ) => Promise<StudentClassroomMembershipWithStudentAndClassroom[]>
-  getAllMembershipsByStudentId: (
-    studentId: string
-  ) => Promise<StudentClassroomMembershipWithStudentAndClassroom[]>
-  getCurrentMembershipsByClassroomId: (
-    classroomId: string
-  ) => Promise<StudentClassroomMembershipWithStudentAndClassroom[]>
   addStudentToClassroom: (
     studentId: string,
     classroomId: string,
@@ -102,8 +90,4 @@ export interface ClassroomStudentAPI {
     membershipId: string,
     endDate?: Date
   ) => Promise<StudentClassroomMembershipWithStudentAndClassroom>
-  getMembershipsByDateRange: (
-    startDate: Date,
-    endDate?: Date
-  ) => Promise<StudentClassroomMembershipWithStudentAndClassroom[]>
 }

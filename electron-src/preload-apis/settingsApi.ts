@@ -33,8 +33,6 @@ export function createSettingsApi() {
         ipcRenderer.invoke("settings:getUserPreference", userId, key),
       setUserPreference: (userId: string, key: string, value: string) =>
         ipcRenderer.invoke("settings:setUserPreference", userId, key, value),
-      getUserPreferences: (userId: string) =>
-        ipcRenderer.invoke("settings:getUserPreferences", userId),
 
       // ExamExportSettings
       getExamExportSettings: (examId: string) =>

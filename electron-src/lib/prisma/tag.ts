@@ -36,15 +36,6 @@ export async function getAllTags() {
 }
 
 /**
- * IDでタグを取得
- */
-export async function getTagById(id: string) {
-  return prisma.tag.findUnique({
-    where: { id },
-  })
-}
-
-/**
  * タグを作成（orderは自動採番）
  */
 export async function createTag(data: { name: string; color?: string }) {

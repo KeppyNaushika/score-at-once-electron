@@ -26,15 +26,6 @@ export async function createExamTag(data: { examId: string; tagId: string }) {
 }
 
 /**
- * 試験-タグ関連を削除
- */
-export async function deleteExamTag(id: string) {
-  return prisma.examTag.delete({
-    where: { id },
-  })
-}
-
-/**
  * 試験のタグを一括設定（既存を全削除して再作成）
  */
 export async function setExamTags(examId: string, tagIds: string[]) {

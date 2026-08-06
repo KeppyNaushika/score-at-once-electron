@@ -32,14 +32,4 @@ export function setupAuthHandlers(): void {
     },
     "Failed to clear auth token"
   )
-
-  // 認証ストアの状態を取得（デバッグ用）
-  registerSafeHandler(
-    "auth:getStoreStatus",
-    async () => {
-      const status = AuthStoreManager.getStoreStatus()
-      return { success: true, ...status }
-    },
-    "Failed to get store status"
-  )
 }

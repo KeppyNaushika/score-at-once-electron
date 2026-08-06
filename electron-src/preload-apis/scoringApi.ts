@@ -9,7 +9,7 @@ import type {
   UpdateQuestionScoreArgs,
 } from "../../src/types/electron/scoringApi"
 
-/** 採点スコアのIPC API（設問スコアCRUD・一括更新・進捗取得・採点初期化） */
+/** 採点スコアのIPC API（設問スコアCRUD・一括更新・確定・採点担当割当） */
 export function createScoringApi() {
   return {
     // QuestionScore related functions
@@ -17,8 +17,6 @@ export function createScoringApi() {
       ipcRenderer.invoke("get-question-score", id),
     getQuestionScoresForExam: (examId: string, userId?: string) =>
       ipcRenderer.invoke("get-question-scores-for-exam", examId, userId),
-    getQuestionScoresForAnswerSheet: (answerSheetId: string) =>
-      ipcRenderer.invoke("get-question-scores-for-answer-sheet", answerSheetId),
     createQuestionScore: (data: CreateQuestionScoreArgs) =>
       ipcRenderer.invoke("create-question-score", data),
     updateQuestionScore: (
@@ -26,8 +24,6 @@ export function createScoringApi() {
       data: UpdateQuestionScoreArgs,
       expectedVersion: number
     ) => ipcRenderer.invoke("update-question-score", id, data, expectedVersion),
-    deleteQuestionScore: (id: string) =>
-      ipcRenderer.invoke("delete-question-score", id),
     finalizeQuestionScore: (
       answerSheetId: string,
       cropRegionId: string,
@@ -41,8 +37,6 @@ export function createScoringApi() {
         userId,
         scoreData
       ),
-    getAnswerSheetProgress: (answerSheetId: string) =>
-      ipcRenderer.invoke("get-answer-sheet-progress", answerSheetId),
     getExamDecisionSummary: (examId: string, userId: string) =>
       ipcRenderer.invoke("get-exam-decision-summary", examId, userId),
     getCropRegionAssignments: (examId: string, userId: string) =>
@@ -69,8 +63,6 @@ export function createScoringApi() {
         userId,
         requestedByUserId
       ),
-    initializeScoringRecords: (examId: string) =>
-      ipcRenderer.invoke("initialize-scoring-records", examId),
     batchUpdateQuestionScores: (
       entries: Array<{
         examStudentId: string

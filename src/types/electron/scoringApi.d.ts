@@ -1,5 +1,3 @@
-import type { QuestionScore } from "@prisma/client"
-
 import type { SCORE_TARGET_DELETED } from "@/electron-src/lib/prisma/questionScore"
 
 import type {
@@ -71,11 +69,6 @@ export interface ScoringAPI {
     scores?: SerializedQuestionScore[]
     error?: string
   }>
-  getQuestionScoresForAnswerSheet: (answerSheetId: string) => Promise<{
-    success: boolean
-    scores?: SerializedQuestionScore[]
-    error?: string
-  }>
   createQuestionScore: (data: {
     cropRegionId: string
     examStudentId: string
@@ -94,7 +87,6 @@ export interface ScoringAPI {
     },
     expectedVersion?: number
   ) => Promise<QuestionScoreOperationResult>
-  deleteQuestionScore: (id: string) => Promise<QuestionScore | void>
   finalizeQuestionScore: (
     examStudentId: string,
     cropRegionId: string,
@@ -110,12 +102,6 @@ export interface ScoringAPI {
     success: boolean
     decision?: ScoreDecisionForComparison
     error?: string
-  }>
-
-  getAnswerSheetProgress: (answerSheetId: string) => Promise<{
-    totalQuestions: number
-    completedQuestions: number
-    percentage: number
   }>
   /** 裁定サマリ（解決できなかった競合・確定後に新提案が入ったセル） */
   getExamDecisionSummary: (
@@ -148,12 +134,6 @@ export interface ScoringAPI {
     userId: string,
     requestedByUserId: string
   ) => Promise<{ success: boolean; error?: string }>
-  initializeScoringRecords: (examId: string) => Promise<{
-    success: boolean
-    initialized?: number
-    message?: string
-    error?: string
-  }>
   batchUpdateQuestionScores: (
     entries: Array<{
       examStudentId: string

@@ -6,71 +6,10 @@ import type {
   ImportItem,
   MatchedItem,
   PreMatchingResult,
-  SubtotalGroupMatchingMethod,
   SubtotalInfo,
 } from "../../../../../src/types/examArchive.types"
 import prisma from "../../../prisma/client"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
-import type { MatchResult, MatchSubtotalGroupData } from "./types"
-
-/**
- * 小計グループデータのマッチングを実行
- *
- * 照合の流れ:
- * 1. まずUUIDで照合
- * 2. UUIDが一致しない場合、methodで指定された二次照合を実行
- */
-export async function matchSubtotalGroups(
-  importData: ExtractedArchiveData,
-  method: SubtotalGroupMatchingMethod
-): Promise<MatchResult<MatchSubtotalGroupData>[]> {
-  const results: MatchResult<MatchSubtotalGroupData>[] = []
-
-  const existingGroups = await prisma.subtotalGroup.findMany()
-
-  for (const importGroup of importData.subtotalsData.subtotalGroups) {
-    let matchedGroup: (typeof existingGroups)[0] | null = null
-    let isExactMatch = false
-
-    // Step 1: UUIDで照合
-    const uuidMatch = existingGroups.find(
-      (group) => group.id === importGroup.id
-    )
-    if (uuidMatch) {
-      matchedGroup = uuidMatch
-      isExactMatch = true
-    }
-
-    // Step 2: UUIDが一致しない場合、二次照合を実行
-    if (!matchedGroup && method !== "none") {
-      switch (method) {
-        case "name":
-          matchedGroup =
-            existingGroups.find((group) => group.name === importGroup.name) ??
-            null
-          break
-      }
-    }
-
-    results.push({
-      importData: {
-        id: importGroup.id,
-        name: importGroup.name,
-        updatedAt: importGroup.updatedAt,
-      },
-      existingData: matchedGroup
-        ? {
-            id: matchedGroup.id,
-            name: matchedGroup.name,
-            updatedAt: matchedGroup.updatedAt,
-          }
-        : null,
-      matchType: matchedGroup ? (isExactMatch ? "exact" : "fuzzy") : "new",
-    })
-  }
-
-  return results
-}
 
 /**
  * 小計グループの事前照合

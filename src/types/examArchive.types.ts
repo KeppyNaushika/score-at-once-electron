@@ -217,36 +217,6 @@ export interface ExamChainTransformResult {
 }
 
 // =============================================================================
-// Matching Configuration
-// =============================================================================
-
-/**
- * マッチング方法
- *
- * 照合の流れ:
- * 1. まずUUIDで自動照合（同じPCでエクスポート/インポートした場合）
- * 2. UUIDが一致しない場合、以下の二次照合方法で照合
- *    - "none": 二次照合しない（全て新規登録）
- *    - その他: 指定されたフィールドで照合
- */
-export type StudentMatchingMethod = "studentNumber" | "name" | "none"
-export type ClassroomMatchingMethod = "name" | "none"
-export type UserMatchingMethod = "username" | "none"
-export type ExamMatchingMethod = "always_new"
-export type SubtotalGroupMatchingMethod = "name" | "none"
-
-/**
- * マッチング設定
- */
-export interface MatchingConfig {
-  student: StudentMatchingMethod
-  classroom: ClassroomMatchingMethod
-  user: UserMatchingMethod
-  exam: ExamMatchingMethod
-  subtotalGroup: SubtotalGroupMatchingMethod
-}
-
-// =============================================================================
 // Step 2: ファイル概要説明 用の型
 // =============================================================================
 

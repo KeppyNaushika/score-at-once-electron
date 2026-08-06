@@ -56,11 +56,6 @@ export interface SettingsAPI {
       success: boolean
       error?: string
     }>
-    getUserPreferences: (userId: string) => Promise<{
-      success: boolean
-      preferences?: Record<string, string>
-      error?: string
-    }>
 
     // ExamExportSettings
     getExamExportSettings: (examId: string) => Promise<{

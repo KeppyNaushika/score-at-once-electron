@@ -279,13 +279,6 @@ export interface StudentAnswersDataset {
 // =============================================================================
 
 /**
- * 試験を含むUserExam型
- */
-export type UserExamWithExam = Prisma.UserExamGetPayload<{
-  include: { exam: true }
-}>
-
-/**
  * ユーザーと招待者を含むUserExam型。
  * メンバー一覧・オーナー取得（userExam.getMembers/getOwner）が返す実形状の SSOT。
  * main（`lib/prisma/userExam.ts`）と renderer 契約（`userExamApi.d.ts`）の双方が参照する。
@@ -315,8 +308,3 @@ export const examWithExportSettingsInclude = {
   individualReportGraphSettings: true,
   individualReportStatisticVisibilities: true,
 } satisfies Prisma.ExamInclude
-
-/** 出力設定5テーブルを含む Exam */
-export type ExamWithExportSettings = Prisma.ExamGetPayload<{
-  include: typeof examWithExportSettingsInclude
-}>

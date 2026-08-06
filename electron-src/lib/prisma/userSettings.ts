@@ -93,20 +93,3 @@ export async function setUserPreference(
     create: { userId, key, value },
   })
 }
-
-/**
- * ユーザーの全設定を取得
- * @param userId - ユーザーID
- * @returns key -> value のマッピング
- */
-export async function getUserPreferences(
-  userId: string
-): Promise<Record<string, string>> {
-  const records = await prisma.userPreference.findMany({
-    where: { userId },
-  })
-  return records.reduce<Record<string, string>>((acc, record) => {
-    acc[record.key] = record.value
-    return acc
-  }, {})
-}

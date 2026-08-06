@@ -29,15 +29,6 @@ export async function createAsbDefinitionTag(data: {
 }
 
 /**
- * 解答用紙定義-タグ関連を削除
- */
-export async function deleteAsbDefinitionTag(id: string) {
-  return prisma.asbDefinitionTag.delete({
-    where: { id },
-  })
-}
-
-/**
  * 解答用紙定義のタグを一括設定（既存を全削除して再作成）
  */
 export async function setAsbDefinitionTags(

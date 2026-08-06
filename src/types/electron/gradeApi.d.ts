@@ -162,11 +162,6 @@ export interface GradeAPI {
       studentOrders: { studentId: string; customOrder: number }[]
     ) => Promise<{ success: boolean; error?: string }>
     // GradeItem
-    getGradeItems: (gradeId: string) => Promise<{
-      success: boolean
-      gradeItems?: GradeItemWithDataSources[]
-      error?: string
-    }>
     createGradeItem: (data: { gradeId: string; name: string }) => Promise<{
       success: boolean
       gradeItem?: GradeItemWithDataSources
@@ -280,9 +275,6 @@ export interface GradeAPI {
     }>
     setGradeItemExclusion: (
       input: GradeItemExclusionInput
-    ) => Promise<{ success: boolean; error?: string }>
-    batchUpdateGradeItemExclusions: (
-      updates: GradeItemExclusionInput[]
     ) => Promise<{ success: boolean; error?: string }>
     calculateGrades: (gradeId: string) => Promise<{
       success: boolean

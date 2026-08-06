@@ -41,12 +41,10 @@ export const LINE_STYLES = [
 export type LineStyle = (typeof LINE_STYLES)[number]
 
 const ANNOTATION_HORIZONTAL_ALIGNS = ["left", "center", "right"] as const
-export type AnnotationHorizontalAlign =
-  (typeof ANNOTATION_HORIZONTAL_ALIGNS)[number]
+type AnnotationHorizontalAlign = (typeof ANNOTATION_HORIZONTAL_ALIGNS)[number]
 
 const ANNOTATION_VERTICAL_ALIGNS = ["top", "center", "bottom"] as const
-export type AnnotationVerticalAlign =
-  (typeof ANNOTATION_VERTICAL_ALIGNS)[number]
+type AnnotationVerticalAlign = (typeof ANNOTATION_VERTICAL_ALIGNS)[number]
 
 export const ANCHOR_DIRECTIONS = [
   "top-left",

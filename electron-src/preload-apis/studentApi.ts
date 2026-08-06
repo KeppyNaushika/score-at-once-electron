@@ -45,9 +45,6 @@ export function createStudentApi() {
       }>,
 
     // Student Classroom Membership related
-    createStudentClassroomMembership: (
-      membershipData: Prisma.StudentClassroomMembershipCreateInput
-    ) => ipcRenderer.invoke("create-student-class-membership", membershipData),
     updateStudentClassroomMembership: (
       id: string,
       membershipData: Prisma.StudentClassroomMembershipUpdateInput
@@ -55,12 +52,6 @@ export function createStudentApi() {
       ipcRenderer.invoke("update-student-class-membership", id, membershipData),
     deleteStudentClassroomMembership: (id: string) =>
       ipcRenderer.invoke("delete-student-class-membership", id),
-    getCurrentMembershipsByStudentId: (studentId: string) =>
-      ipcRenderer.invoke("get-current-memberships-by-student-id", studentId),
-    getAllMembershipsByStudentId: (studentId: string) =>
-      ipcRenderer.invoke("get-all-memberships-by-student-id", studentId),
-    getCurrentMembershipsByClassroomId: (classroomId: string) =>
-      ipcRenderer.invoke("get-current-memberships-by-class-id", classroomId),
     addStudentToClassroom: (
       studentId: string,
       classroomId: string,
@@ -78,7 +69,5 @@ export function createStudentApi() {
       ),
     endStudentMembership: (membershipId: string, endDate?: Date) =>
       ipcRenderer.invoke("end-student-membership", membershipId, endDate),
-    getMembershipsByDateRange: (startDate: Date, endDate?: Date) =>
-      ipcRenderer.invoke("get-memberships-by-date-range", startDate, endDate),
   }
 }

@@ -60,27 +60,6 @@ export interface StudentAnswerAPI {
     deletedSummary?: StudentAnswerScoreSummary
     error?: string
   }>
-  associateStudentAnswerWithStudent: (
-    studentAnswerId: string,
-    examStudentId: string
-  ) => Promise<{
-    success: boolean
-    answerSheet?: StudentAnswerImageWithExamPageAndStudent
-    error?: string
-  }>
-  setStudentAnswerAbsent: (
-    studentAnswerId: string,
-    isAbsent: boolean
-  ) => Promise<{
-    success: boolean
-    answerSheet?: StudentAnswerImageWithExamPageAndStudent
-    error?: string
-  }>
-  getStudentAnswerById: (studentAnswerId: string) => Promise<{
-    success: boolean
-    answerSheet?: StudentAnswerImageWithExamPageAndStudent
-    error?: string
-  }>
   applyStudentAnswerPlacements: (
     moves: Array<{
       fileId: string
@@ -95,11 +74,6 @@ export interface StudentAnswerAPI {
   getImageData: (relativePath: string) => Promise<{
     success: boolean
     data?: string
-    error?: string
-  }>
-  getAssetPath: (assetPath: string) => Promise<{
-    success: boolean
-    path?: string
     error?: string
   }>
 }

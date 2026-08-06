@@ -195,10 +195,10 @@ export function computeFilteredSubtotalStats(
  * 合計点箱ひげ図の統計を受験状態フィルタ付きで計算
  */
 /** 合計点を母集団全体で見る行のid */
-export const OVERALL_STAT_ID = "__overall__"
+const OVERALL_STAT_ID = "__overall__"
 
 /** 学級ごとの合計点を見る行のid接頭辞 */
-export const CLASSROOM_STAT_ID_PREFIX = "__classroom__:"
+const CLASSROOM_STAT_ID_PREFIX = "__classroom__:"
 
 /**
  * その行が合計点を対象にしているか（全体・学級のいずれも合計点）。

@@ -264,44 +264,6 @@ export const removeExamClassroom = async (
 }
 
 /**
- * Remove a class from a exam by examId and classroomId
- */
-export const removeExamClassroomByIds = async (
-  examId: string,
-  classroomId: string
-): Promise<ExamClassroom> => {
-  try {
-    const classroom = await prisma.classroom.findUnique({
-      where: { id: classroomId },
-    })
-
-    const deleted = await prisma.examClassroom.delete({
-      where: {
-        examId_classroomId: { examId, classroomId },
-      },
-    })
-
-    const scope = await resolveExamScope(examId)
-    await recordAuditLog({
-      action: "exam.class.unassign",
-      entityType: "ExamClassroom",
-      entityId: deleted.id,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      target: classroom?.name ?? null,
-    })
-
-    return deleted
-  } catch (error) {
-    console.error(
-      `Failed to remove class ${classroomId} from exam ${examId}:`,
-      error
-    )
-    throw error
-  }
-}
-
-/**
  * Get all classrooms that are NOT in ExamClassroom for a exam
  * Used by ClassroomExamManager to show available classrooms to add
  */

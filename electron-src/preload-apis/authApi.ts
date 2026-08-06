@@ -37,6 +37,5 @@ export function createAuthApi() {
       ipcRenderer.invoke("auth:saveToken", token),
     getAuthToken: () => ipcRenderer.invoke("auth:getToken"),
     clearAuthToken: () => ipcRenderer.invoke("auth:clearToken"),
-    getAuthStoreStatus: () => ipcRenderer.invoke("auth:getStoreStatus"),
   }
 }

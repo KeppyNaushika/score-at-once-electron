@@ -15,12 +15,6 @@ import type { StudentAnswerImageWithExamPageAndStudent } from "../prismaExtensio
  */
 export interface MasterImageAPI {
   resolveFileProtocolPath: (relativePath: string) => Promise<string>
-  readFileAsBase64: (filePath: string) => Promise<{
-    success: boolean
-    data?: string
-    mimeType?: string
-    error?: string
-  }>
   checkFileExists: (relativePath: string) => Promise<{
     success: boolean
     exists: boolean

@@ -10,13 +10,6 @@ import type { Tag } from "@prisma/client"
 import type { AnswerSheetDefinition } from "./answerSheetDefinition.types"
 import type { ComputedMultiPageLayout } from "./answerSheetLayout.types"
 
-export interface ASBExportPdfArgs {
-  html: string
-  outputPath: string
-  pageWidthMm: number
-  pageHeightMm: number
-}
-
 export interface ASBExportPngArgs {
   htmlPages: string[]
   outputPath: string
@@ -31,12 +24,6 @@ export interface ASBConvertToExamArgs {
   multiPageLayout: ComputedMultiPageLayout
   answerSheetHtmlPages: string[]
   modelAnswerHtmlPages: string[]
-}
-
-export interface ASBPrintArgs {
-  html: string
-  pageWidthMm: number
-  pageHeightMm: number
 }
 
 export interface ASBExportResult {

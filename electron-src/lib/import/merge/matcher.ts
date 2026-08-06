@@ -7,47 +7,12 @@
 import type {
   ExamPreMatchingResult,
   FileOverviewData,
-  MatchingConfig,
 } from "../../../../src/types/examArchive.types"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
-import {
-  matchClassrooms,
-  preMatchClassrooms,
-} from "./matchers/classroomMatcher"
-import { matchStudents, preMatchStudents } from "./matchers/studentMatcher"
-import {
-  matchSubtotalGroups,
-  preMatchSubtotalGroups,
-} from "./matchers/subtotalGroupMatcher"
-import type { AllMatchResults } from "./matchers/types"
-import { matchUsers } from "./matchers/userMatcher"
-
-/**
- * 全カテゴリのマッチングを実行
- */
-export async function performAllMatching(
-  importData: ExtractedArchiveData,
-  config: MatchingConfig
-): Promise<AllMatchResults> {
-  const [students, classes, users, subtotalGroups] = await Promise.all([
-    matchStudents(importData, config.student),
-    matchClassrooms(importData, config.classroom),
-    matchUsers(importData, config.user),
-    matchSubtotalGroups(importData, config.subtotalGroup),
-  ])
-
-  return {
-    students,
-    classes,
-    users,
-    subtotalGroups,
-  }
-}
-
-// =============================================================================
-// 事前照合（Step 2: ファイル概要表示用）
-// =============================================================================
+import { preMatchClassrooms } from "./matchers/classroomMatcher"
+import { preMatchStudents } from "./matchers/studentMatcher"
+import { preMatchSubtotalGroups } from "./matchers/subtotalGroupMatcher"
 
 /**
  * 事前照合を実行し、FileOverviewData形式で返す

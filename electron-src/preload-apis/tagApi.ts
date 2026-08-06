@@ -5,7 +5,6 @@ export function createTagApi() {
   return {
     // Tag（タグ）
     tagGetAll: () => ipcRenderer.invoke("tag:getAll"),
-    tagGetById: (id: string) => ipcRenderer.invoke("tag:getById", id),
     tagCreate: (data: { name: string; color?: string }) =>
       ipcRenderer.invoke("tag:create", data),
     tagUpdate: (id: string, data: { name?: string; color?: string | null }) =>
@@ -26,7 +25,6 @@ export function createTagApi() {
       ipcRenderer.invoke("examTag:getByExamId", examId),
     examTagCreate: (data: { examId: string; tagId: string }) =>
       ipcRenderer.invoke("examTag:create", data),
-    examTagDelete: (id: string) => ipcRenderer.invoke("examTag:delete", id),
     examTagSetExamTags: (examId: string, tagIds: string[]) =>
       ipcRenderer.invoke("examTag:setExamTags", examId, tagIds),
 
@@ -37,8 +35,6 @@ export function createTagApi() {
       asbDefinitionId: string
       tagId: string
     }) => ipcRenderer.invoke("asbDefinitionTag:create", data),
-    asbDefinitionTagDelete: (id: string) =>
-      ipcRenderer.invoke("asbDefinitionTag:delete", id),
     asbDefinitionTagSetDefinitionTags: (
       asbDefinitionId: string,
       tagIds: string[]

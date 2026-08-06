@@ -7,7 +7,7 @@
  */
 
 /** 箱ひげ図データ（Tukey法） */
-export interface BoxPlotData {
+interface BoxPlotData {
   min: number
   q1: number
   median: number
