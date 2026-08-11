@@ -38,6 +38,10 @@ function convert(value: unknown): unknown {
   // Date は structured clone を渡れる。列挙可能な自前プロパティを持たないので、
   // 下の Object.entries へ落とすと `{}` になってしまう。ここで複製して返す。
   if (value instanceof Date) return new Date(value.getTime())
+  // バイナリも structured clone を渡れる。下の Object.entries へ落とすと
+  // `{ 0: 137, 1: 80, … }` という巨大なオブジェクトになる（Buffer は Uint8Array の
+  // 派生なので ArrayBuffer.isView が拾う）。複製せずそのまま返す。
+  if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) return value
   if (Array.isArray(value)) return value.map(convert)
   const result: Record<string, unknown> = {}
   for (const [key, child] of Object.entries(value)) {

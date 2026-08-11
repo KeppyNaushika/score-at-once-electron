@@ -22,16 +22,21 @@ import type { ScoringStatus } from "./scoringStatus.types"
  *
  * `Date` は変換しない。structured clone がそのまま渡すので、IPC を越えても `Date` の
  * ままである（以前は旧 `JSON.stringify` 挙動を踏襲して string へ倒していた）。
+ *
+ * バイナリ（`ArrayBuffer` / `Uint8Array` / `Buffer` 等）も変換しない。これを下の
+ * マップ型へ落とすと添字ごとのプロパティに展開されてしまうため、明示的に素通しする。
  */
 export type Serialized<T> = T extends Prisma.Decimal
   ? number
   : T extends Date
     ? Date
-    : T extends Array<infer Element>
-      ? Serialized<Element>[]
-      : T extends object
-        ? { [Key in keyof T]: Serialized<T[Key]> }
-        : T
+    : T extends ArrayBuffer | ArrayBufferView
+      ? T
+      : T extends Array<infer Element>
+        ? Serialized<Element>[]
+        : T extends object
+          ? { [Key in keyof T]: Serialized<T[Key]> }
+          : T
 
 // =============================================================================
 // Student関連型
