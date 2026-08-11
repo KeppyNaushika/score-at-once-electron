@@ -150,10 +150,7 @@ describe("removeStudentsFromExam", () => {
     expect(before.compoundAnswerScores).toBeGreaterThan(0)
     expect(before.returnSnapshots).toBeGreaterThan(0)
 
-    const result = await removeStudentsFromExam(exam.exam.id, [
-      examStudentA.studentId,
-    ])
-    expect(result.success).toBe(true)
+    await removeStudentsFromExam(exam.exam.id, [examStudentA.studentId])
 
     expect(await countScoringRows(examStudentA.id)).toEqual({
       studentAnswerImages: 0,

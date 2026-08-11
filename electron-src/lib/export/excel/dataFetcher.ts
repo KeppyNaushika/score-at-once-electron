@@ -84,10 +84,7 @@ export async function fetchExportData(
       return { success: false, error: "試験が見つかりません" }
     }
 
-    const studentsResult = await getStudentsForExam(examId)
-    if (!studentsResult.success) {
-      return { success: false, error: "生徒データの取得に失敗しました" }
-    }
+    const examStudents = await getStudentsForExam(examId)
 
     const cropRegions = await getCropRegionsByExamId(examId)
     const questionScoresResult = await getQuestionScoresForExam(examId)
@@ -110,9 +107,7 @@ export async function fetchExportData(
     // 空配列の場合は全受験者を取得（統計計算用）
     // ExamStudent 実体をそのまま保持し、表示学級（grade/className/attendanceNumber）だけを
     // renderer が採番解決して渡した studentPlacements から graft する（採番学級の SSOT は renderer）。
-    const selectedExamStudents: ExportExamStudent[] = (
-      studentsResult.students || []
-    )
+    const selectedExamStudents: ExportExamStudent[] = examStudents
       .filter(
         (examStudent) =>
           selectedExamStudentIds.length === 0 ||

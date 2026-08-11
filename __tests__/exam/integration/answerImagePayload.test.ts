@@ -51,8 +51,7 @@ describe("答案画像の供給形", () => {
 
     const result = await getStudentsForExam(fixture.exam.id)
 
-    expect(result.success).toBe(true)
-    for (const examStudent of result.students!) {
+    for (const examStudent of result) {
       const expected = fixture.studentAnswerImages.filter(
         (studentAnswerImage) =>
           studentAnswerImage.examStudentId === examStudent.id
@@ -69,7 +68,7 @@ describe("答案画像の供給形", () => {
 
     const result = await getStudentsForExam(fixture.exam.id)
 
-    for (const examStudent of result.students!) {
+    for (const examStudent of result) {
       expect(examStudent.studentAnswerImages).toEqual([])
     }
   })

@@ -24,117 +24,94 @@ export async function getExamReferenceDate(
  * 試験に関連する生徒を取得
  */
 export async function getStudentsForExam(examId: string) {
-  try {
-    // 試験に参加している生徒を取得
-    const examStudents = await prisma.examStudent.findMany({
-      where: { examId },
-      orderBy: [
-        { customOrder: "asc" }, // カスタム順序を優先
-        { student: { studentNumber: "asc" } }, // 学籍番号順をフォールバック
-      ],
-      include: {
-        student: {
-          include: {
-            memberships: {
-              include: {
-                classroom: true,
-              },
-              // endDate制限を削除 - 過去の所属も含めて取得
-              orderBy: {
-                startDate: "desc",
-              },
+  // 試験に参加している生徒を取得
+  const examStudents = await prisma.examStudent.findMany({
+    where: { examId },
+    orderBy: [
+      { customOrder: "asc" }, // カスタム順序を優先
+      { student: { studentNumber: "asc" } }, // 学籍番号順をフォールバック
+    ],
+    include: {
+      student: {
+        include: {
+          memberships: {
+            include: {
+              classroom: true,
+            },
+            // endDate制限を削除 - 過去の所属も含めて取得
+            orderBy: {
+              startDate: "desc",
             },
           },
         },
-        // 答案は ExamStudent の子なので、この試験の分がそのまま得られる。
-        // 行のまま渡し切り、枚数は renderer が `.length` で取る
-        studentAnswerImages: true,
       },
-    })
+      // 答案は ExamStudent の子なので、この試験の分がそのまま得られる。
+      // 行のまま渡し切り、枚数は renderer が `.length` で取る
+      studentAnswerImages: true,
+    },
+  })
 
-    // ExamStudent をそのまま返し、status のみ ExamStudentStatus へ narrowing する。
-    // 生徒識別・学級所属・答案は examStudent.student(.memberships) / .studentAnswerImages 配下に
-    // Prisma スキーマのまま保持する（フラットな畳み込みはしない）。
-    const examStudentsWithMemberships: ExamStudentWithMemberships[] =
-      examStudents.map((examStudent) => ({
-        ...examStudent,
-        status: toExamStudentStatus(examStudent.status),
-      }))
+  // ExamStudent をそのまま返し、status のみ ExamStudentStatus へ narrowing する。
+  // 生徒識別・学級所属・答案は examStudent.student(.memberships) / .studentAnswerImages 配下に
+  // Prisma スキーマのまま保持する（フラットな畳み込みはしない）。
+  const examStudentsWithMemberships: ExamStudentWithMemberships[] =
+    examStudents.map((examStudent) => ({
+      ...examStudent,
+      status: toExamStudentStatus(examStudent.status),
+    }))
 
-    return {
-      success: true,
-      students: examStudentsWithMemberships,
-    }
-  } catch (error) {
-    console.error("Error fetching students for exam:", error)
-    return {
-      success: false,
-      error: "Failed to fetch students for exam",
-    }
-  }
+  return examStudentsWithMemberships
 }
 
 /**
  * 試験に生徒を追加
  */
 export async function addStudentsToExam(examId: string, studentIds: string[]) {
-  try {
-    // 既に参加している生徒を除外
-    const existingExamStudents = await prisma.examStudent.findMany({
-      where: {
-        examId,
-        studentId: { in: studentIds },
-      },
+  // 既に参加している生徒を除外
+  const existingExamStudents = await prisma.examStudent.findMany({
+    where: {
+      examId,
+      studentId: { in: studentIds },
+    },
+  })
+
+  const existingStudentIds = new Set(
+    existingExamStudents.map((examStudent) => examStudent.studentId)
+  )
+  const newStudentIds = studentIds.filter((id) => !existingStudentIds.has(id))
+
+  // 新しい生徒を試験に追加
+  if (newStudentIds.length > 0) {
+    const createData = newStudentIds.map((studentId) => ({
+      examId,
+      studentId,
+      status: "participating",
+    }))
+
+    await prisma.examStudent.createMany({
+      data: createData,
     })
 
-    const existingStudentIds = new Set(
-      existingExamStudents.map((examStudent) => examStudent.studentId)
-    )
-    const newStudentIds = studentIds.filter((id) => !existingStudentIds.has(id))
-
-    // 新しい生徒を試験に追加
-    if (newStudentIds.length > 0) {
-      const createData = newStudentIds.map((studentId) => ({
-        examId,
-        studentId,
-        status: "participating",
-      }))
-
-      await prisma.examStudent.createMany({
-        data: createData,
-      })
-
-      // 監査ログ: 受験生徒の追加（追加分をまとめて1件）
-      const scope = await resolveExamScope(examId)
-      const firstLabel = await resolveStudentLabel(newStudentIds[0])
-      const summary =
-        newStudentIds.length === 1 && firstLabel
-          ? `受験生徒「${firstLabel}」を追加しました`
-          : `受験生徒を${newStudentIds.length}名追加しました`
-      await recordAuditLog({
-        action: "exam.student.add",
-        entityType: "ExamStudent",
-        entityId: examId,
-        scopeId: scope.scopeId,
-        scopeLabel: scope.scopeLabel,
-        summary,
-        extra: { studentIds: newStudentIds, count: newStudentIds.length },
-      })
-    }
-    return {
-      success: true,
-      addedCount: newStudentIds.length,
-      skippedCount: studentIds.length - newStudentIds.length,
-    }
-  } catch (error) {
-    console.error("Error adding students to exam:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to add students to exam",
-    }
+    // 監査ログ: 受験生徒の追加（追加分をまとめて1件）
+    const scope = await resolveExamScope(examId)
+    const firstLabel = await resolveStudentLabel(newStudentIds[0])
+    const summary =
+      newStudentIds.length === 1 && firstLabel
+        ? `受験生徒「${firstLabel}」を追加しました`
+        : `受験生徒を${newStudentIds.length}名追加しました`
+    await recordAuditLog({
+      action: "exam.student.add",
+      entityType: "ExamStudent",
+      entityId: examId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      summary,
+      extra: { studentIds: newStudentIds, count: newStudentIds.length },
+    })
+  }
+  return {
+    addedCount: newStudentIds.length,
+    skippedCount: studentIds.length - newStudentIds.length,
   }
 }
 
@@ -149,41 +126,29 @@ export async function removeStudentsFromExam(
   examId: string,
   studentIds: string[]
 ) {
-  try {
-    await prisma.examStudent.deleteMany({
-      where: {
-        examId,
-        studentId: { in: studentIds },
-      },
-    })
+  await prisma.examStudent.deleteMany({
+    where: {
+      examId,
+      studentId: { in: studentIds },
+    },
+  })
 
-    // 監査ログ: 受験生徒の削除
-    const scope = await resolveExamScope(examId)
-    const firstLabel = await resolveStudentLabel(studentIds[0])
-    const summary =
-      studentIds.length === 1 && firstLabel
-        ? `受験生徒「${firstLabel}」を削除しました`
-        : `受験生徒を${studentIds.length}名削除しました`
-    await recordAuditLog({
-      action: "exam.student.remove",
-      entityType: "ExamStudent",
-      entityId: examId,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      summary,
-      extra: { studentIds, count: studentIds.length },
-    })
-
-    return {
-      success: true,
-    }
-  } catch (error) {
-    console.error("Error removing students from exam:", error)
-    return {
-      success: false,
-      error: "Failed to remove students from exam",
-    }
-  }
+  // 監査ログ: 受験生徒の削除
+  const scope = await resolveExamScope(examId)
+  const firstLabel = await resolveStudentLabel(studentIds[0])
+  const summary =
+    studentIds.length === 1 && firstLabel
+      ? `受験生徒「${firstLabel}」を削除しました`
+      : `受験生徒を${studentIds.length}名削除しました`
+  await recordAuditLog({
+    action: "exam.student.remove",
+    entityType: "ExamStudent",
+    entityId: examId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    summary,
+    extra: { studentIds, count: studentIds.length },
+  })
 }
 
 /**
@@ -194,47 +159,35 @@ export async function updateStudentExamStatus(
   studentId: string,
   status: ExamStudentStatus
 ) {
-  try {
-    await prisma.examStudent.updateMany({
-      where: {
-        examId,
-        studentId,
-      },
-      data: {
-        status,
-      },
-    })
+  await prisma.examStudent.updateMany({
+    where: {
+      examId,
+      studentId,
+    },
+    data: {
+      status,
+    },
+  })
 
-    // 監査ログ: 受験状態の変更
-    const scope = await resolveExamScope(examId)
-    const studentLabel = await resolveStudentLabel(studentId)
-    const statusJa: Record<string, string> = {
-      participating: "受験",
-      expected: "見込",
-      absent: "欠席",
-    }
-    await recordAuditLog({
-      action: "exam.student.attendance_update",
-      entityType: "ExamStudent",
-      entityId: examId,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      target: studentLabel,
-      summary: studentLabel
-        ? `「${studentLabel}」の受験状態を「${statusJa[status] ?? status}」に変更しました`
-        : `受験状態を「${statusJa[status] ?? status}」に変更しました`,
-    })
-
-    return {
-      success: true,
-    }
-  } catch (error) {
-    console.error("Error updating student exam status:", error)
-    return {
-      success: false,
-      error: "Failed to update student exam status",
-    }
+  // 監査ログ: 受験状態の変更
+  const scope = await resolveExamScope(examId)
+  const studentLabel = await resolveStudentLabel(studentId)
+  const statusJa: Record<string, string> = {
+    participating: "受験",
+    expected: "見込",
+    absent: "欠席",
   }
+  await recordAuditLog({
+    action: "exam.student.attendance_update",
+    entityType: "ExamStudent",
+    entityId: examId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    target: studentLabel,
+    summary: studentLabel
+      ? `「${studentLabel}」の受験状態を「${statusJa[status] ?? status}」に変更しました`
+      : `受験状態を「${statusJa[status] ?? status}」に変更しました`,
+  })
 }
 
 /**
@@ -244,42 +197,30 @@ export async function updateStudentOrders(
   examId: string,
   studentOrders: { studentId: string; customOrder: number }[]
 ) {
-  try {
-    // 各生徒の並び順を単一トランザクションで更新
-    await prisma.$transaction(
-      studentOrders.map(({ studentId, customOrder }) =>
-        prisma.examStudent.updateMany({
-          where: {
-            examId,
-            studentId,
-          },
-          data: {
-            customOrder,
-          },
-        })
-      )
+  // 各生徒の並び順を単一トランザクションで更新
+  await prisma.$transaction(
+    studentOrders.map(({ studentId, customOrder }) =>
+      prisma.examStudent.updateMany({
+        where: {
+          examId,
+          studentId,
+        },
+        data: {
+          customOrder,
+        },
+      })
     )
+  )
 
-    const scope = await resolveExamScope(examId)
-    await recordAuditLog({
-      action: "exam.student.reorder",
-      entityType: "ExamStudent",
-      entityId: examId,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      coalesceKey: `student_reorder:${examId}`,
-    })
-
-    return {
-      success: true,
-    }
-  } catch (error) {
-    console.error("Error updating student orders:", error)
-    return {
-      success: false,
-      error: "Failed to update student orders",
-    }
-  }
+  const scope = await resolveExamScope(examId)
+  await recordAuditLog({
+    action: "exam.student.reorder",
+    entityType: "ExamStudent",
+    entityId: examId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    coalesceKey: `student_reorder:${examId}`,
+  })
 }
 
 /**

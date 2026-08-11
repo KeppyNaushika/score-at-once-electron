@@ -280,12 +280,12 @@ export function useExportPage() {
         setExam(examResponse)
       }
 
-      if (studentsResponse && studentsResponse.success) {
+      if (studentsResponse) {
         // 受験生徒順の SSOT は ExamStudent.customOrder（05 で定義）。08 は下流の
         // 読み手なので customOrder のみで並べ、出席番号・氏名などの独自フォールバックは
         // 加えない。getStudentsForExam は customOrder 昇順（同着は studentNumber）で返すため、
         // 同着・未設定は安定ソートでその順序を保つ。未設定（null）は末尾へ。
-        const sortedStudents = (studentsResponse.students || []).sort(
+        const sortedStudents = [...studentsResponse].sort(
           (examStudentA, examStudentB) =>
             (examStudentA.customOrder ?? Number.MAX_SAFE_INTEGER) -
             (examStudentB.customOrder ?? Number.MAX_SAFE_INTEGER)

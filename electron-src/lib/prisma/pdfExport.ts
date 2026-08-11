@@ -124,8 +124,7 @@ export async function getPdfExportData(options: {
     )
 
     // 受験者を取得（ExamStudent 実体のまま保持する）
-    const studentsResult = await getStudentsForExam(examId)
-    const allExamStudents = studentsResult.students || []
+    const allExamStudents = await getStudentsForExam(examId)
 
     // 答案画像を取得
     const studentAnswersResult = await getStudentAnswersByExamId(examId)

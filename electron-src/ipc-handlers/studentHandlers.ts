@@ -33,7 +33,7 @@ import {
   applyCellStyle,
   autoFitColumns,
 } from "../lib/shared/utilities/excelUtilities"
-import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
+import { registerHandler } from "./ipcHandlerUtils"
 
 /** 生徒CRUD・学級所属・試験生徒関連・Excelエクスポートに関するIPCチャンネルを登録する */
 export function setupStudentHandlers(): void {
@@ -143,12 +143,10 @@ export function setupStudentHandlers(): void {
     }
   )
 
-  registerSafeHandler(
+  registerHandler(
     "check-grading-data-for-students",
-    async (examId: string, studentIds: string[]) => {
-      const result = await checkGradingDataForStudents(examId, studentIds)
-      return { success: true, ...result }
-    }
+    (examId: string, studentIds: string[]) =>
+      checkGradingDataForStudents(examId, studentIds)
   )
 
   registerHandler(

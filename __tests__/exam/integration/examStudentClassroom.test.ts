@@ -116,8 +116,8 @@ describe("Exam 在籍フィルタ", () => {
       expect(result.added).toBe(1)
 
       const students = await getStudentsForExam(exam.id)
-      expect(students.students).toHaveLength(1)
-      expect(students.students![0].student.studentNumber).toBe("E001")
+      expect(students).toHaveLength(1)
+      expect(students[0].student.studentNumber).toBe("E001")
     })
 
     it("activeOnly=false は在籍終了の生徒も追加する", async () => {
@@ -190,9 +190,7 @@ describe("Exam 在籍フィルタ", () => {
       expect(result.added).toBe(1)
       const students = await getStudentsForExam(exam.id)
       expect(
-        students.students!.map(
-          (examStudent) => examStudent.student.studentNumber
-        )
+        students.map((examStudent) => examStudent.student.studentNumber)
       ).toEqual(["E001"])
     })
 

@@ -24,11 +24,8 @@ export function useExamDetail(examId: string) {
         setExam(result)
 
         // 生徒数を取得
-        const studentsResult =
-          await window.electronAPI.getStudentsForExam(examId)
-        if (studentsResult.success) {
-          setStudentCount(studentsResult.students?.length || 0)
-        }
+        const examStudents = await window.electronAPI.getStudentsForExam(examId)
+        setStudentCount(examStudents.length)
 
         // 設問領域数を取得
         const regionsResult =

@@ -81,30 +81,21 @@ export function ExamStudentAddModalContainer({
         }
       },
       addStudents: async (studentIds) => {
-        const result = await window.electronAPI.addStudentsToExam(
-          examId,
-          studentIds
-        )
-        if (!result.success) {
-          throw new Error(result.error || "生徒の追加に失敗しました")
-        }
+        await window.electronAPI.addStudentsToExam(examId, studentIds)
 
         // 既存生徒の末尾に customOrder を付与
         const existing = await window.electronAPI.getStudentsForExam(examId)
-        let startOrder = 0
-        if (existing.success && existing.students) {
-          const others = existing.students.filter(
-            (examStudent) => !studentIds.includes(examStudent.studentId)
-          )
-          const maxOrder = others.reduce(
-            (max, examStudent) =>
-              examStudent.customOrder != null
-                ? Math.max(max, examStudent.customOrder)
-                : max,
-            -1
-          )
-          startOrder = maxOrder + 1
-        }
+        const others = existing.filter(
+          (examStudent) => !studentIds.includes(examStudent.studentId)
+        )
+        const maxOrder = others.reduce(
+          (max, examStudent) =>
+            examStudent.customOrder != null
+              ? Math.max(max, examStudent.customOrder)
+              : max,
+          -1
+        )
+        const startOrder = maxOrder + 1
         const studentOrders = studentIds.map((studentId, index) => ({
           studentId,
           customOrder: startOrder + index,

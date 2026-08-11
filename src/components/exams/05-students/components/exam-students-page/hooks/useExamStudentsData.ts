@@ -100,40 +100,36 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   // データの再読み込み
   const refreshStudentData = useCallback(async () => {
     try {
-      const [studentsResult, administeredClassrooms] = await Promise.all([
+      const [examStudentRows, administeredClassrooms] = await Promise.all([
         window.electronAPI.getStudentsForExam(examId),
         window.electronAPI.examClassroom.getAdministered(examId),
       ])
 
-      if (studentsResult.success && studentsResult.students) {
-        // 採番学級は administered 学級（DB 構造）から renderer 側で解決する
-        const placement = resolveExamClassroomPlacement(administeredClassrooms)
+      // 採番学級は administered 学級（DB 構造）から renderer 側で解決する
+      const placement = resolveExamClassroomPlacement(administeredClassrooms)
 
-        // 受験生徒を customOrder 順で並び替え（ExamStudent テーブルの順序が基準）
-        const sortedExamStudents = [...studentsResult.students].sort(
-          compareExamStudents(placement)
-        )
+      // 受験生徒を customOrder 順で並び替え（ExamStudent テーブルの順序が基準）
+      const sortedExamStudents = [...examStudentRows].sort(
+        compareExamStudents(placement)
+      )
 
-        setExamStudents(sortedExamStudents)
-        setPlacementByStudent(placement)
+      setExamStudents(sortedExamStudents)
+      setPlacementByStudent(placement)
 
-        // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（id/name のみ）
-        const uniqueClasses = new Map<string, RosterClassroomOption>()
-        sortedExamStudents.forEach((examStudent) => {
-          // 各生徒の全所属履歴を確認
-          examStudent.student.memberships?.forEach((membership) => {
-            if (!uniqueClasses.has(membership.classroom.id)) {
-              uniqueClasses.set(membership.classroom.id, {
-                id: membership.classroom.id,
-                name: membership.classroom.name,
-              })
-            }
-          })
+      // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（id/name のみ）
+      const uniqueClasses = new Map<string, RosterClassroomOption>()
+      sortedExamStudents.forEach((examStudent) => {
+        // 各生徒の全所属履歴を確認
+        examStudent.student.memberships?.forEach((membership) => {
+          if (!uniqueClasses.has(membership.classroom.id)) {
+            uniqueClasses.set(membership.classroom.id, {
+              id: membership.classroom.id,
+              name: membership.classroom.name,
+            })
+          }
         })
-        setClassrooms(Array.from(uniqueClasses.values()))
-      } else {
-        console.error("Failed to refresh student data:", studentsResult.error)
-      }
+      })
+      setClassrooms(Array.from(uniqueClasses.values()))
     } finally {
       setLoadedExamId(examId)
     }
@@ -150,14 +146,11 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
     newStatus: ExamStudentStatus
   ) => {
     try {
-      const result = await window.electronAPI.updateStudentExamStatus(
+      await window.electronAPI.updateStudentExamStatus(
         examId,
         studentId,
         newStatus
       )
-      if (!result.success) {
-        throw new Error(result.error || "Failed to update student status")
-      }
 
       // 受験生徒リストのステータスを更新
       setExamStudents((prevExamStudents) =>
@@ -178,13 +171,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
     studentOrders: { studentId: string; customOrder: number }[]
   ) => {
     try {
-      const result = await window.electronAPI.updateStudentOrders(
-        examId,
-        studentOrders
-      )
-      if (!result.success) {
-        throw new Error(result.error || "Failed to update student orders")
-      }
+      await window.electronAPI.updateStudentOrders(examId, studentOrders)
 
       // 成功した場合、受験生徒リストの customOrder を更新し、再ソート
       const orderMap = new Map(
@@ -270,13 +257,11 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
 
     // 採点データの存在を確認
     try {
-      const gradingResult =
-        await window.electronAPI.checkGradingDataForStudents(examId, studentIds)
-      if (gradingResult.success) {
-        setGradingItemCount(gradingResult.totalGradingItems || 0)
-      } else {
-        setGradingItemCount(0)
-      }
+      const gradingData = await window.electronAPI.checkGradingDataForStudents(
+        examId,
+        studentIds
+      )
+      setGradingItemCount(gradingData.totalGradingItems)
     } catch (error) {
       console.error("Failed to check grading data:", error)
       setGradingItemCount(0)
@@ -288,13 +273,7 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   // 生徒削除の確定実行
   const confirmStudentRemoval = async () => {
     try {
-      const result = await window.electronAPI.removeStudentsFromExam(
-        examId,
-        studentsToRemove
-      )
-      if (!result.success) {
-        throw new Error(result.error || "Failed to remove students from exam")
-      }
+      await window.electronAPI.removeStudentsFromExam(examId, studentsToRemove)
 
       // データを再読み込み（新しいアーキテクチャに対応）
       await refreshStudentData()

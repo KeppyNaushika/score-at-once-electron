@@ -45,47 +45,30 @@ export interface ExamAPI {
   deleteExam: (examId: string) => Promise<Exam | void>
 
   // Exam-Student relationship
-  getStudentsForExam: (examId: string) => Promise<{
-    success: boolean
-    students?: ExamStudentWithMemberships[]
-    error?: string
-  }>
+  getStudentsForExam: (examId: string) => Promise<ExamStudentWithMemberships[]>
   addStudentsToExam: (
     examId: string,
     studentIds: string[]
-  ) => Promise<{
-    success: boolean
-    error?: string
-  }>
+  ) => Promise<{ addedCount: number; skippedCount: number }>
   removeStudentsFromExam: (
     examId: string,
     studentIds: string[]
-  ) => Promise<{
-    success: boolean
-    error?: string
-  }>
+  ) => Promise<void>
   updateStudentExamStatus: (
     examId: string,
     studentId: string,
     status: ExamStudentStatus
-  ) => Promise<{
-    success: boolean
-    error?: string
-  }>
+  ) => Promise<void>
   updateStudentOrders: (
     examId: string,
     studentOrders: { studentId: string; customOrder: number }[]
-  ) => Promise<{
-    success: boolean
-    error?: string
-  }>
+  ) => Promise<void>
   checkGradingDataForStudents: (
     examId: string,
     studentIds: string[]
   ) => Promise<{
-    success: boolean
-    hasAnyData?: boolean
-    totalGradingItems?: number
+    hasAnyData: boolean
+    totalGradingItems: number
     // main 側の SSOT をそのまま参照する（手書きで写すと今回のように
     // フィールド名と数える範囲がずれ、削除確認の表示が実態とずれる）
     studentData?: Record<string, GradingDataInfo>
