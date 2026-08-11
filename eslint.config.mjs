@@ -112,22 +112,19 @@ export default [
       "react-hooks/static-components": "error",
       "react-hooks/immutability": "error",
       "react-hooks/refs": "error",
-      // 警告の分類と対処は docs/coding-style.md「effect の中で setState しない」を参照。
-      // A群（42件）= effect から非同期ローダーを呼ぶ形。ルールは setState への到達可能性
-      // だけを見るため await 後の更新も警告になるが、Suspense を使わない現構成では
-      // 代替手段がないので許容する。
-      // B群（同期 setState）はゼロ件。新しく出たら直せるので、増やさずに潰すこと。
+      // effect の使いどころは docs/coding-style.md「effect の使いどころ」を参照。
       //
-      // C群（作り直しが要るもの・現在1件）:
-      // - components/exams/07-score-at-once/ScoringMain/hooks/useScoringFilter.ts
-      //   表示中の答案リストと、それを使う選択復元用スナップショット（版番号つきの ref）を
-      //   同じ瞬間に作る作り。リストだけを派生値にするとスナップショットの生成が
-      //   レンダー中の ref 書き込みになり（react-hooks/refs 違反）、版番号は
-      //   StrictMode の二重レンダーで余分に進んで選択の消去判定が壊れる。
-      //   選択プロトコルごとの作り直しになるため別に扱う。
-      // C群へ入れるのは所有者の明示的な判断のみ。「難しい場合は例外」という
-      // 判断基準は書かず、上のようにファイルを名指しして理由を残す。
-      "react-hooks/set-state-in-effect": "warn", // 43件（A群42 + C群1）
+      // このルールが判定しているのは setState を含む関数の定義位置であって、await の
+      // 有無ではない。effect の外で定義した関数を effect から呼ぶと警告になり、同じ
+      // 処理を effect の中に書けば出ない。したがって警告の有無とコードの良し悪しは
+      // 一致しない。effect の中の関数へ包み直して警告だけ消すことは禁止（実行時の
+      // 挙動が変わらないため、痕跡の残らない eslint-disable になる）。
+      //
+      // 現在の43件は全て「effect からデータを取っている」もので、useQuery への移行で
+      // 消える。手順は docs/ipc-and-data-fetching-plan.md。移行中の増加を止めるため、
+      // package.json の lint に --max-warnings で件数の上限を置いている。移行完了時に
+      // 上限を外し、このルールを error へ引き上げること。
+      "react-hooks/set-state-in-effect": "warn", // 43件（useQuery 移行で 0 になる）
       // 違反ゼロにしたので error（再混入を止める）
       "react-hooks/error-boundaries": "error",
       "react-hooks/globals": "error",
