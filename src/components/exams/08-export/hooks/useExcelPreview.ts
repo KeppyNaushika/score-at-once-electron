@@ -52,7 +52,7 @@ interface UseExcelPreviewProps {
   selectedExamStudentIds: string[]
   enabled: boolean
   /**
-   * タブへ戻るたびに増える読み直しの合図。出力は実データを読み直すので、
+   * タブへ戻るたびに増える読み直しの合図。出力はデータを読み直すので、
    * プレビューを取得済みのまま据え置くと表示と出力が食い違う。
    */
   reloadKey: number
@@ -98,30 +98,19 @@ export function useExcelPreview({
           studentPlacements,
         })
 
-        if (!result.success || !result.scoringData) {
-          setFetched({
-            examId,
-            selectedExamStudentIds,
-            reloadKey,
-            previewData: null,
-            error: result.error || "データの取得に失敗しました",
-          })
-          return
-        }
-
         const headers: ExcelPreviewHeader = {
           questionLabels:
-            result.questionRegions?.map(
+            result.questionRegions.map(
               (questionRegion) =>
                 questionRegion.label ||
                 `問${(questionRegion.orderIndex ?? 0) + 1}`
             ) || [],
           questionMaxScores:
-            result.questionRegions?.map(
+            result.questionRegions.map(
               (questionRegion) => questionRegion.points ?? 0
             ) || [],
           subtotalLabels:
-            result.subtotalColumns?.map(
+            result.subtotalColumns.map(
               (subtotalColumn) => subtotalColumn.label
             ) || [],
         }

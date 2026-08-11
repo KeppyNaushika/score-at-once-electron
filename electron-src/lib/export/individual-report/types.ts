@@ -296,23 +296,10 @@ export interface GetIndividualReportDataOptions {
 
 /** 個人成績表データ取得結果 */
 export interface GetIndividualReportDataResult {
-  success: boolean
-  reports?: IndividualReportData[]
-  examInfo?: ExamInfoForReport
+  reports: IndividualReportData[]
+  examInfo: ExamInfoForReport
   /** 統計の母集団（試験に1つ） */
-  population?: ReportPopulation
-  error?: string
-  warnings?: {
-    noScoringData: string[]
-    ungraded: string[]
-  }
-}
-
-/** SubtotalGroup一覧取得結果 */
-export interface SubtotalGroupsForReportResult {
-  success: boolean
-  subtotalGroups?: SubtotalGroupInfo[]
-  error?: string
+  population: ReportPopulation
 }
 
 // ================== デフォルト値 ==================

@@ -40,7 +40,7 @@ export function useAnswerSheetExport() {
       const multiLayout = computeMultiPageLayoutFromDefinition(definition)
       const html = await generateAnswerSheetPrintHtml(definition, multiLayout)
 
-      const result = await exportApi.printHtmlToPdf({
+      await exportApi.printHtmlToPdf({
         html,
         filePath: pathResult.filePath,
         pageSize: {
@@ -50,11 +50,7 @@ export function useAnswerSheetExport() {
         margins: { top: 0, bottom: 0, left: 0, right: 0 },
       })
 
-      if (result.success) {
-        toast.success("PDFを出力しました")
-      } else {
-        toast.error(`PDF出力エラー: ${result.error}`)
-      }
+      toast.success("PDFを出力しました")
     } catch (error) {
       toast.error(
         `PDF出力エラー: ${error instanceof Error ? error.message : "不明なエラー"}`
@@ -119,7 +115,7 @@ export function useAnswerSheetExport() {
       const multiLayout = computeMultiPageLayoutFromDefinition(definition)
       const html = await generateAnswerSheetPrintHtml(definition, multiLayout)
 
-      const result = await exportApi.openPrintDialog({
+      await exportApi.openPrintDialog({
         html,
         title: definition.name,
         pageSize: {
@@ -128,11 +124,7 @@ export function useAnswerSheetExport() {
         },
       })
 
-      if (result.success) {
-        toast.success("印刷プレビューを開きました")
-      } else if (result.error) {
-        toast.error(`印刷エラー: ${result.error}`)
-      }
+      toast.success("印刷プレビューを開きました")
     } catch (error) {
       toast.error(
         `印刷エラー: ${error instanceof Error ? error.message : "不明なエラー"}`

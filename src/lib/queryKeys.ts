@@ -27,4 +27,10 @@ export const queryKeys = {
   fullScreen: {
     all: ["fullScreen"] as const,
   },
+  returnDiff: {
+    detail: (examId: string) => ["returnDiff", examId] as const,
+  },
+  subtotalGroupsForReport: {
+    detail: (examId: string) => ["subtotalGroupsForReport", examId] as const,
+  },
 } as const

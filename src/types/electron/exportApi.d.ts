@@ -1,7 +1,7 @@
 import type {
   GetIndividualReportDataResult,
   IndividualReportOptions,
-  SubtotalGroupsForReportResult,
+  SubtotalGroupInfo,
 } from "@/electron-src/lib/export/individual-report/types"
 import type { ExportRDataOptions } from "@/electron-src/lib/export/r-exametrika/rDataExporter"
 import type { PdfExportPageData } from "@/electron-src/lib/prisma/pdfExport"
@@ -9,7 +9,10 @@ import type {
   CaptureReturnSnapshotResult,
   ReturnDiffResult,
 } from "@/electron-src/lib/prisma/returnSnapshot"
-import type { StudentExportPlacement } from "@/electron-src/lib/shared/types"
+import type {
+  FileExportResult,
+  StudentExportPlacement,
+} from "@/electron-src/lib/shared/types"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ScoringValidationResult } from "@/types/exportValidation.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
@@ -25,10 +28,7 @@ export interface ExportAPI {
       examId: string
       selectedExamStudentIds: string[]
       userId: string
-    }) => Promise<
-      | { success: false; error: string }
-      | ({ success: true } & ScoringValidationResult)
-    >
+    }) => Promise<ScoringValidationResult>
 
     /** 未解決の食い違いを含めて出力したことを監査ログに残す（出力は止めない） */
     recordUnresolvedConflicts: (options: {
@@ -37,18 +37,13 @@ export interface ExportAPI {
       exportType: string
       conflicts: Array<{ studentName: string; questionLabel: string }>
       scoreImpact: number
-    }) => Promise<{ success: boolean; error?: string }>
+    }) => Promise<void>
 
     // PDF出力に必要なデータを取得
     getPdfExportData: (options: {
       examId: string
       selectedExamStudentIds: string[]
-    }) => Promise<{
-      success: boolean
-      examName?: string
-      pages?: PdfExportPageData[]
-      error?: string
-    }>
+    }) => Promise<{ examName: string; pages: PdfExportPageData[] }>
 
     // SVG→PNG変換（MathJaxテキストのtaint問題回避用）
     convertSvgToPng: (options: {
@@ -56,19 +51,16 @@ export interface ExportAPI {
       width?: number
       height?: number
     }) => Promise<{
-      success: boolean
-      dataUrl?: string
-      width?: number // 描画時に使用すべき論理サイズ（Retinaでimg.widthは2倍になるため）
-      height?: number
-      error?: string
+      dataUrl: string
+      /** 描画時に使用すべき論理サイズ（Retinaでimg.widthは2倍になるため） */
+      width: number
+      height: number
     }>
 
     // PDF保存先選択ダイアログ（Canvas描画前に呼び出す）
-    selectPdfSavePath: (options: { examName?: string }) => Promise<{
-      success: boolean
-      filePath?: string
-      canceled?: boolean
-    }>
+    selectPdfSavePath: (options: {
+      examName?: string
+    }) => Promise<{ canceled: true } | { canceled: false; filePath: string }>
 
     // ============================================================
     // ストリーミングPDF生成API
@@ -78,37 +70,24 @@ export interface ExportAPI {
     createPdfStreamingSession: (options: {
       totalPages: number
       pdfOrientation?: "portrait" | "landscape"
-    }) => Promise<{
-      success: boolean
-      sessionId?: string
-      error?: string
-    }>
+      /** @returns セッションID */
+    }) => Promise<string>
 
     // ストリーミングセッションにページを追加（Canvas描画完了次第呼び出し）
     addPageToStreamingSession: (options: {
       sessionId: string
       pageIndex: number
       imageData: ArrayBuffer
-    }) => Promise<{
-      success: boolean
-      error?: string
-    }>
+    }) => Promise<void>
 
     // ストリーミングセッションを完了してPDF保存
     finalizeStreamingSession: (options: {
       sessionId: string
       outputPath: string
-    }) => Promise<{
-      success: boolean
-      outputPath?: string
-      error?: string
-    }>
+    }) => Promise<void>
 
     // ストリーミングセッションをキャンセル
-    cancelStreamingSession: (sessionId: string) => Promise<{
-      success: boolean
-      error?: string
-    }>
+    cancelStreamingSession: (sessionId: string) => Promise<void>
 
     // ============================================================
     // 個人成績表PDF API
@@ -123,9 +102,7 @@ export interface ExportAPI {
     }) => Promise<GetIndividualReportDataResult>
 
     // 個人成績表用小計点グループ一覧取得
-    getSubtotalGroupsForReport: (
-      examId: string
-    ) => Promise<SubtotalGroupsForReportResult>
+    getSubtotalGroupsForReport: (examId: string) => Promise<SubtotalGroupInfo[]>
 
     // HTMLからPDFを生成（ブラウザ印刷機能を使用）
     printHtmlToPdf: (options: {
@@ -139,10 +116,7 @@ export interface ExportAPI {
         left?: number
         right?: number
       }
-    }) => Promise<{
-      success: boolean
-      error?: string
-    }>
+    }) => Promise<void>
 
     // Excelプレビューデータ取得
     getExcelPreviewData: (options: {
@@ -150,18 +124,17 @@ export interface ExportAPI {
       selectedExamStudentIds: string[]
       studentPlacements?: Record<string, StudentExportPlacement>
     }) => Promise<{
-      success: boolean
-      questionRegions?: Array<{
+      questionRegions: Array<{
         id: string
         label: string | null
         points: number | null
         orderIndex: number | null
       }>
-      subtotalColumns?: Array<{
+      subtotalColumns: Array<{
         subtotalId: string
         label: string
       }>
-      scoringData?: Array<{
+      scoringData: Array<{
         examStudentId: string
         studentName: string
         studentNumber: string
@@ -185,7 +158,6 @@ export interface ExportAPI {
           maxScore: number
         }>
       }>
-      error?: string
     }>
 
     // 印刷ダイアログを開く
@@ -194,10 +166,7 @@ export interface ExportAPI {
       title?: string
       pageSize?: "A4" | "Letter" | { width: number; height: number }
       landscape?: boolean
-    }) => Promise<{
-      success: boolean
-      error?: string
-    }>
+    }) => Promise<void>
 
     // 答案返却スナップショット: 現在の有効スコア＋注釈を返却版として記録
     captureReturnSnapshot: (options: {
@@ -214,33 +183,9 @@ export interface ExportAPI {
     examId: string
     selectedExamStudentIds: string[]
     outputPath?: string
-    forceExport?: boolean
     studentPlacements?: Record<string, StudentExportPlacement>
-  }) => Promise<{
-    success: boolean
-    outputPath?: string
-    error?: string
-    warnings?: {
-      noScoringData: string[]
-      unscored: string[]
-      missingPartialScore: string[]
-      conflicted?: string[]
-    }
-    validationResult?: {
-      hasWarnings: boolean
-      warnings: {
-        noScoringData: string[]
-        unscored: string[]
-        missingPartialScore: string[]
-        conflicted?: string[]
-      }
-    }
-  }>
+  }) => Promise<FileExportResult>
 
   // R / exametrika 向けデータ出力（#834）
-  exportRData: (options: ExportRDataOptions) => Promise<{
-    success: boolean
-    outputPath?: string
-    error?: string
-  }>
+  exportRData: (options: ExportRDataOptions) => Promise<FileExportResult>
 }

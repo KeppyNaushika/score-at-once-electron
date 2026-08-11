@@ -105,7 +105,7 @@ export default function ExportMainView() {
       ? pickedStudentId
       : (selectedExamStudentIds[0] ?? null)
 
-  // タブへ戻るたびに増やす読み直しの合図。出力は実データを読み直すので、
+  // タブへ戻るたびに増やす読み直しの合図。出力はデータを読み直すので、
   // 取得済みのまま据え置くとプレビューと出力が食い違う。
   const [previewReloadKey, setPreviewReloadKey] = useState(0)
   const handleTabChange = (tab: ExportTabType) => {
@@ -257,10 +257,6 @@ export default function ExportMainView() {
       selectedExamStudentIds,
       userId: user.id,
     })
-
-    if (!result.success) {
-      throw new Error(result.error || "バリデーションに失敗しました")
-    }
 
     if (result.hasWarnings) {
       setWarningData(result.warnings)

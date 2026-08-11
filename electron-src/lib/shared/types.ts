@@ -1,10 +1,6 @@
 // Excel・PDF出力で共通的に使用される型定義
 
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
-import type {
-  ScoringValidationResult,
-  ScoringValidationWarnings,
-} from "@/types/exportValidation.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /**
@@ -24,7 +20,6 @@ export interface ExportGradingDataOptions {
   examId: string
   selectedExamStudentIds: string[]
   outputPath?: string
-  forceExport?: boolean // 警告を無視して強制実行
   /**
    * renderer が採番解決して渡す表示学級情報。**キーは Student.id**
    * （学級所属は人に紐づくので、採番学級の解決も Student キーになる）。
@@ -78,13 +73,14 @@ export interface ScoreDetail {
   status: ScoringStatus
 }
 
-export interface ExportResult {
-  success: boolean
-  outputPath?: string
-  error?: string
-  warnings?: ScoringValidationWarnings
-  validationResult?: ScoringValidationResult
-}
+/**
+ * ファイルへの書き出し結果。
+ *
+ * 保存ダイアログのキャンセルは失敗ではないので値で返す。書き出しそのものが
+ * 失敗したときは例外になる（`canceled: false` は必ず保存済みを意味する）。
+ */
+export type FileExportResult =
+  { canceled: true } | { canceled: false; outputPath: string }
 
 // 問題分析関連の型定義
 export type DiscriminationLevel =

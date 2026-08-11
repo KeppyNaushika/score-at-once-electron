@@ -69,13 +69,13 @@ export function useIndividualReportPreview({
         studentPlacements,
       })
 
-      if (result.success && result.reports?.length && result.population) {
+      if (result.reports.length > 0) {
         setPreviewReport({
           report: result.reports[0],
           population: result.population,
         })
       } else {
-        setError(result.error || "プレビューデータの取得に失敗しました")
+        setError("プレビュー対象の生徒が見つかりませんでした")
         setPreviewReport(null)
       }
     } catch (err) {

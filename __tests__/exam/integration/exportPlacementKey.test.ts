@@ -66,8 +66,7 @@ describe("書き出しの採番学級の引き当て", () => {
       }
     )
 
-    expect(result.success).toBe(true)
-    const [scoringData] = result.scoringData!
+    const [scoringData] = result.scoringData
     expect(scoringData.grade).toBe("3")
     expect(scoringData.className).toBe("3年A組")
     expect(scoringData.attendanceNumber).toBe(7)
@@ -90,8 +89,7 @@ describe("書き出しの採番学級の引き当て", () => {
       },
     })
 
-    expect(result.success).toBe(true)
-    const [scoringData] = result.scoringData!
+    const [scoringData] = result.scoringData
     // 引き当たらず memberships[0] へフォールバックするので、渡した値にはならない
     expect(scoringData.className).not.toBe("3年A組")
     expect(scoringData.attendanceNumber).not.toBe(7)

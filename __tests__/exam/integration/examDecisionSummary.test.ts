@@ -75,14 +75,10 @@ describe("試験の裁定サマリ", () => {
   it("裁定対象が無くても全ての設問を配点つきで返す", async () => {
     const fixture = await createFullTestExam(testPrisma, {})
 
-    const result = await getExamDecisionSummary(
+    const summary = await getExamDecisionSummary(
       fixture.exam.id,
       fixture.user.id
     )
-
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    const { summary } = result
 
     expect(summary.questions).toHaveLength(fixture.cropRegions.length)
     for (const [index, question] of summary.questions.entries()) {
@@ -114,12 +110,10 @@ describe("試験の裁定サマリ", () => {
       },
     })
 
-    const result = await getExamDecisionSummary(
+    const summary = await getExamDecisionSummary(
       fixture.exam.id,
       fixture.user.id
     )
-    if (!result.success) throw new Error(result.error)
-    const { summary } = result
 
     expect(summary.conflictCount).toBe(1)
     expect(summary.graderCount).toBe(2)
@@ -165,12 +159,10 @@ describe("試験の裁定サマリ", () => {
       },
     })
 
-    const result = await getExamDecisionSummary(
+    const summary = await getExamDecisionSummary(
       fixture.exam.id,
       fixture.user.id
     )
-    if (!result.success) throw new Error(result.error)
-    const { summary } = result
 
     expect(summary.staleCount).toBe(1)
     expect(summary.conflictCount).toBe(0)
@@ -197,12 +189,10 @@ describe("試験の裁定サマリ", () => {
     await assignGrader(firstCropRegion.id, member.id)
     await assignGrader(secondCropRegion.id, nonMember.id)
 
-    const result = await getExamDecisionSummary(
+    const summary = await getExamDecisionSummary(
       fixture.exam.id,
       fixture.user.id
     )
-    if (!result.success) throw new Error(result.error)
-    const { summary } = result
 
     const assigned = summary.questions.find(
       (question) => question.cropRegionId === firstCropRegion.id
@@ -254,19 +244,18 @@ describe("試験の裁定サマリ", () => {
       ],
     })
 
-    const result = await getExamDecisionSummary(
+    const summary = await getExamDecisionSummary(
       fixture.exam.id,
       fixture.user.id
     )
-    if (!result.success) throw new Error(result.error)
 
-    const question = result.summary.questions.find(
+    const question = summary.questions.find(
       (candidate) => candidate.cropRegionId === firstCropRegion.id
     )!
     // 初期化が作る unscored 行は採点の意思表示ではない
     expect(question.assignees[0].scoredCount).toBe(1)
     expect(question.scoredCount).toBe(1)
-    expect(result.summary.graderCount).toBe(1)
+    expect(summary.graderCount).toBe(1)
   })
 
   it("進捗の分母は答案がある受験者数", async () => {
@@ -274,13 +263,12 @@ describe("試験の裁定サマリ", () => {
       includeStudentAnswerImages: true,
     })
 
-    const result = await getExamDecisionSummary(
+    const summary = await getExamDecisionSummary(
       fixture.exam.id,
       fixture.user.id
     )
-    if (!result.success) throw new Error(result.error)
 
-    for (const question of result.summary.questions) {
+    for (const question of summary.questions) {
       // 答案は受験者×ページぶんあるが、分母は受験者の人数
       expect(question.totalStudents).toBe(fixture.examStudents.length)
       expect(question.scoredCount).toBe(fixture.examStudents.length)
@@ -297,8 +285,7 @@ describe("試験の裁定サマリ", () => {
     )
     const asGrader = await getExamDecisionSummary(fixture.exam.id, grader.id)
 
-    if (!asOwner.success || !asGrader.success) throw new Error("failed")
-    expect(asOwner.summary.canDecide).toBe(true)
-    expect(asGrader.summary.canDecide).toBe(false)
+    expect(asOwner.canDecide).toBe(true)
+    expect(asGrader.canDecide).toBe(false)
   })
 })

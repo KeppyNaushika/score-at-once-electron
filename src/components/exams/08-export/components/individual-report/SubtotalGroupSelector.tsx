@@ -1,14 +1,13 @@
 "use client"
 
-import { useEffect, useEffectEvent, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useEffect, useEffectEvent } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import type {
-  SubtotalGroupInfo,
-  SubtotalGroupSelection,
-} from "@/electron-src/lib/export/individual-report/types"
+import type { SubtotalGroupSelection } from "@/electron-src/lib/export/individual-report/types"
+import { queryKeys } from "@/lib/queryKeys"
 
 interface SubtotalGroupSelectorProps {
   examId: string
@@ -21,8 +20,10 @@ export function SubtotalGroupSelector({
   selection,
   onChange,
 }: SubtotalGroupSelectorProps) {
-  const [groups, setGroups] = useState<SubtotalGroupInfo[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: groups, isPending } = useQuery({
+    queryKey: queryKeys.subtotalGroupsForReport.detail(examId),
+    queryFn: () => window.electronAPI.export.getSubtotalGroupsForReport(examId),
+  })
 
   // 保存済みの選択を、実在するグループだけに整える。取得直後に一度だけ走る初期化であり、
   // 以後の選択変更で再実行してはならない（全解除を打ち消してしまう）ため Effect Event にする
@@ -47,37 +48,14 @@ export function SubtotalGroupSelector({
     }
   })
 
-  // グループ一覧を取得する
+  // 取得できたグループへ、保存済みの選択を合わせる
   useEffect(() => {
-    let cancelled = false
-    const fetchGroups = async () => {
-      try {
-        setLoading(true)
-        const result =
-          await window.electronAPI.export.getSubtotalGroupsForReport(examId)
-        if (cancelled) return
-        if (result.success && result.subtotalGroups) {
-          setGroups(result.subtotalGroups)
-          if (result.subtotalGroups.length > 0) {
-            reconcileSelection(
-              result.subtotalGroups.map((subtotalGroup) => subtotalGroup.id)
-            )
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch subtotal groups:", error)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    fetchGroups()
-    return () => {
-      cancelled = true
-    }
-  }, [examId])
+    if (!groups || groups.length === 0) return
+    reconcileSelection(groups.map((subtotalGroup) => subtotalGroup.id))
+  }, [groups])
 
   // グループがない場合は表示しない
-  if (loading || groups.length === 0) {
+  if (isPending || !groups || groups.length === 0) {
     return null
   }
 
@@ -88,10 +66,12 @@ export function SubtotalGroupSelector({
         selectedGroupIds: [...selection.selectedGroupIds, groupId],
       })
     } else {
-      const newIds = selection.selectedGroupIds.filter((id) => id !== groupId)
+      const remainingGroupIds = selection.selectedGroupIds.filter(
+        (selectedGroupId) => selectedGroupId !== groupId
+      )
       onChange({
-        enabled: newIds.length > 0,
-        selectedGroupIds: newIds,
+        enabled: remainingGroupIds.length > 0,
+        selectedGroupIds: remainingGroupIds,
       })
     }
   }
@@ -151,7 +131,9 @@ export function SubtotalGroupSelector({
             >
               <Checkbox
                 checked={isSelected}
-                onCheckedChange={(v) => handleGroupToggle(group.id, v === true)}
+                onCheckedChange={(value) =>
+                  handleGroupToggle(group.id, value === true)
+                }
                 onClick={(e) => e.stopPropagation()}
               />
               <Label className="cursor-pointer text-xs">{group.name}</Label>

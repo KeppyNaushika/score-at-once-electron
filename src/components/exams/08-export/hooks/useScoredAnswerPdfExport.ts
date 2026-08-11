@@ -55,12 +55,11 @@ export function useScoredAnswerPdfExport({
   const [pdfExportPages, setPdfExportPages] = useState<PdfExportPageData[]>([])
   const [startCanvasRendering, setStartCanvasRendering] = useState(false)
 
-  // 保存先選択のPromiseを保持（並行処理用）
-  const savePathPromiseRef = useRef<Promise<{
-    success: boolean
-    filePath?: string
-    canceled?: boolean
-  }> | null>(null)
+  // 保存先選択のPromiseを保持（並行処理用）。
+  // 形は境界の宣言から導く（手で書き写すとチャンネルの変更に追随できない）
+  const savePathPromiseRef = useRef<ReturnType<
+    typeof window.electronAPI.export.selectPdfSavePath
+  > | null>(null)
 
   // ストリーミングセッション用の状態
   const streamingSessionIdRef = useRef<string | null>(null)
@@ -88,37 +87,25 @@ export function useScoredAnswerPdfExport({
       const selectedExamStudentIds = Array.from(selectedStudents)
 
       // 1. データ取得
-      const dataResult = await window.electronAPI.export.getPdfExportData({
+      const pdfExportData = await window.electronAPI.export.getPdfExportData({
         examId: exam.id,
         selectedExamStudentIds,
       })
 
-      if (!dataResult.success || !dataResult.pages) {
-        throw new Error(dataResult.error || "データ取得に失敗しました")
-      }
-
-      if (dataResult.pages.length === 0) {
+      if (pdfExportData.pages.length === 0) {
         throw new Error("出力対象のページがありません")
       }
 
-      setTotalPagesCount(dataResult.pages.length)
+      setTotalPagesCount(pdfExportData.pages.length)
       setExportProgress(5)
 
       // 2. ストリーミングセッション作成（空ページを事前に作成）
       setCurrentStep("PDFセッションを作成中...")
-      const sessionResult =
+      streamingSessionIdRef.current =
         await window.electronAPI.export.createPdfStreamingSession({
-          totalPages: dataResult.pages.length,
+          totalPages: pdfExportData.pages.length,
           pdfOrientation: exportOptions.pdfOrientation,
         })
-
-      if (!sessionResult.success || !sessionResult.sessionId) {
-        throw new Error(
-          sessionResult.error || "PDFセッションの作成に失敗しました"
-        )
-      }
-
-      streamingSessionIdRef.current = sessionResult.sessionId
 
       // 3. 保存先選択を並行で開始
       setCurrentStep("保存先を選択してください...")
@@ -129,7 +116,7 @@ export function useScoredAnswerPdfExport({
 
       // キャンセル監視：Canvas描画完了前にキャンセルされたら即座に中断
       savePathPromise.then((result) => {
-        if (!result.success || result.canceled || !result.filePath) {
+        if (result.canceled) {
           // キャンセルフラグを立てる
           isExportCancelledRef.current = true
           // キャンセルされた場合、Canvas描画中なら中断
@@ -153,7 +140,7 @@ export function useScoredAnswerPdfExport({
       })
 
       // 4. Canvas描画を開始（onPageCompleteでPDFに逐次埋め込み）
-      setPdfExportPages(dataResult.pages)
+      setPdfExportPages(pdfExportData.pages)
       setStartCanvasRendering(true)
 
       // handlePageComplete と handleCanvasComplete がストリーミング処理を実行
@@ -230,20 +217,12 @@ export function useScoredAnswerPdfExport({
     }
 
     try {
-      const result = await window.electronAPI.export.addPageToStreamingSession({
+      await window.electronAPI.export.addPageToStreamingSession({
         sessionId: streamingSessionIdRef.current,
         pageIndex: pageData.pageIndex,
         imageData: pageData.imageData,
       })
-
-      if (result.success) {
-        setEmbeddedPagesCount((prev) => prev + 1)
-      } else {
-        console.error(
-          `Failed to embed page ${pageData.pageIndex}:`,
-          result.error
-        )
-      }
+      setEmbeddedPagesCount((prev) => prev + 1)
     } catch (error) {
       console.error(`Error embedding page ${pageData.pageIndex}:`, error)
     }
@@ -295,11 +274,7 @@ export function useScoredAnswerPdfExport({
       const savePathResult = await savePathPromiseRef.current
       savePathPromiseRef.current = null
 
-      if (
-        !savePathResult.success ||
-        savePathResult.canceled ||
-        !savePathResult.filePath
-      ) {
+      if (savePathResult.canceled) {
         // キャンセルされた場合 - 全状態をリセット
         setShowProgressModal(false)
         setIsExporting(false)
@@ -364,26 +339,19 @@ export function useScoredAnswerPdfExport({
         setExportProgress(95)
         setCurrentStep("PDFを保存中...")
 
-        const result = await window.electronAPI.export.finalizeStreamingSession(
-          {
-            sessionId: streamingSessionIdRef.current,
-            outputPath: savePathResultRef.current.filePath,
-          }
-        )
+        await window.electronAPI.export.finalizeStreamingSession({
+          sessionId: streamingSessionIdRef.current,
+          outputPath: savePathResultRef.current.filePath,
+        })
 
         streamingSessionIdRef.current = null
         savePathResultRef.current = null
         setCanvasRenderingComplete(false)
 
-        if (result.success) {
-          setExportProgress(100)
-          setExportStatus("completed")
-          setCurrentStep("完了しました")
-          onExportCompleted?.()
-        } else {
-          setExportStatus("error")
-          setCurrentStep(`エラー: ${result.error}`)
-        }
+        setExportProgress(100)
+        setExportStatus("completed")
+        setCurrentStep("完了しました")
+        onExportCompleted?.()
       } catch (error) {
         console.error("PDF finalization error:", error)
         setExportStatus("error")

@@ -103,16 +103,12 @@ export interface ReturnStudentDiff {
 }
 
 export interface ReturnDiffResult {
-  success: boolean
-  error?: string
   /** 1件でも返却版スナップショットが存在するか */
   hasAnySnapshot: boolean
   diffs: ReturnStudentDiff[]
 }
 
 export interface CaptureReturnSnapshotResult {
-  success: boolean
-  error?: string
   /** 記録した生徒数 */
   capturedCount: number
 }
@@ -266,73 +262,63 @@ export const captureReturnSnapshot = async (options: {
   capturedByUserId?: string | null
 }): Promise<CaptureReturnSnapshotResult> => {
   const { examId, examStudentIds, capturedByUserId = null } = options
-  try {
-    const state = await loadExamState(examId)
-    const now = new Date()
+  const state = await loadExamState(examId)
+  const now = new Date()
 
-    // 渡された受験者が本当にこの試験のものかを確かめる。
-    // 旧スキーマは @@unique([examId, studentId]) で構造的に保証していたが、
-    // examStudentId 単独キーになった今は自分で確かめないと、他の試験の
-    // 返却版を空スコアで上書きしうる（08 で試験を切り替えた直後の stale な選択など）。
-    const scopedExamStudents = await prisma.examStudent.findMany({
-      where: { examId, id: { in: examStudentIds } },
+  // 渡された受験者が本当にこの試験のものかを確かめる。
+  // 旧スキーマは @@unique([examId, studentId]) で構造的に保証していたが、
+  // examStudentId 単独キーになった今は自分で確かめないと、他の試験の
+  // 返却版を空スコアで上書きしうる（08 で試験を切り替えた直後の stale な選択など）。
+  const scopedExamStudents = await prisma.examStudent.findMany({
+    where: { examId, id: { in: examStudentIds } },
+  })
+  const scopedExamStudentIds = new Set(
+    scopedExamStudents.map((examStudent) => examStudent.id)
+  )
+
+  let capturedCount = 0
+  for (const examStudentId of examStudentIds) {
+    if (!scopedExamStudentIds.has(examStudentId)) continue
+    const effective = state.effectiveByExamStudent.get(examStudentId) ?? []
+    const annotations = state.annotationsByExamStudent.get(examStudentId) ?? []
+    const content = buildContent(effective, annotations)
+    const scoresJson = serializeContent(content)
+    const total = computeTotal(effective, state.regions)
+    const totalScore = total !== null ? new Decimal(total) : null
+
+    await prisma.returnSnapshot.upsert({
+      where: { examStudentId },
+      create: {
+        examStudentId,
+        scoresJson,
+        totalScore,
+        capturedByUserId,
+        capturedAt: now,
+      },
+      update: {
+        scoresJson,
+        totalScore,
+        capturedByUserId,
+        capturedAt: now,
+      },
     })
-    const scopedExamStudentIds = new Set(
-      scopedExamStudents.map((examStudent) => examStudent.id)
-    )
-
-    let capturedCount = 0
-    for (const examStudentId of examStudentIds) {
-      if (!scopedExamStudentIds.has(examStudentId)) continue
-      const effective = state.effectiveByExamStudent.get(examStudentId) ?? []
-      const annotations =
-        state.annotationsByExamStudent.get(examStudentId) ?? []
-      const content = buildContent(effective, annotations)
-      const scoresJson = serializeContent(content)
-      const total = computeTotal(effective, state.regions)
-      const totalScore = total !== null ? new Decimal(total) : null
-
-      await prisma.returnSnapshot.upsert({
-        where: { examStudentId },
-        create: {
-          examStudentId,
-          scoresJson,
-          totalScore,
-          capturedByUserId,
-          capturedAt: now,
-        },
-        update: {
-          scoresJson,
-          totalScore,
-          capturedByUserId,
-          capturedAt: now,
-        },
-      })
-      capturedCount++
-    }
-
-    // 監査ログ: 返却版として記録（生徒ごとではなく操作単位で1件）
-    const scope = await resolveExamScope(examId)
-    await recordAuditLog({
-      action: "exam.return.capture",
-      userId: capturedByUserId,
-      entityType: "ReturnSnapshot",
-      entityId: examId,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      summary: `${capturedCount}名の答案を返却版として記録しました`,
-      extra: { studentCount: capturedCount },
-    })
-
-    return { success: true, capturedCount }
-  } catch (error) {
-    console.error("Failed to capture return snapshot:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      capturedCount: 0,
-    }
+    capturedCount++
   }
+
+  // 監査ログ: 返却版として記録（生徒ごとではなく操作単位で1件）
+  const scope = await resolveExamScope(examId)
+  await recordAuditLog({
+    action: "exam.return.capture",
+    userId: capturedByUserId,
+    entityType: "ReturnSnapshot",
+    entityId: examId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    summary: `${capturedCount}名の答案を返却版として記録しました`,
+    extra: { studentCount: capturedCount },
+  })
+
+  return { capturedCount }
 }
 
 const toCellState = (
@@ -357,123 +343,108 @@ const toCellState = (
 export const getReturnDiff = async (
   examId: string
 ): Promise<ReturnDiffResult> => {
-  try {
-    const state = await loadExamState(examId)
+  const state = await loadExamState(examId)
 
-    const snapshots = await prisma.returnSnapshot.findMany({
-      where: { examStudent: { examId } },
-    })
-    const snapshotByExamStudent = new Map(
-      snapshots.map((snapshot) => [snapshot.examStudentId, snapshot])
-    )
+  const snapshots = await prisma.returnSnapshot.findMany({
+    where: { examStudent: { examId } },
+  })
+  const snapshotByExamStudent = new Map(
+    snapshots.map((snapshot) => [snapshot.examStudentId, snapshot])
+  )
 
-    // スナップショットを持つ生徒 ∪ 現在の採点データを持つ生徒
-    const examStudentIds = new Set<string>([
-      ...snapshotByExamStudent.keys(),
-      ...state.effectiveByExamStudent.keys(),
-    ])
+  // スナップショットを持つ生徒 ∪ 現在の採点データを持つ生徒
+  const examStudentIds = new Set<string>([
+    ...snapshotByExamStudent.keys(),
+    ...state.effectiveByExamStudent.keys(),
+  ])
 
-    const diffs: ReturnStudentDiff[] = []
-    for (const examStudentId of examStudentIds) {
-      const effective = state.effectiveByExamStudent.get(examStudentId) ?? []
-      const annotations =
-        state.annotationsByExamStudent.get(examStudentId) ?? []
-      const currentContent = buildContent(effective, annotations)
-      const currentTotal = computeTotal(effective, state.regions)
+  const diffs: ReturnStudentDiff[] = []
+  for (const examStudentId of examStudentIds) {
+    const effective = state.effectiveByExamStudent.get(examStudentId) ?? []
+    const annotations = state.annotationsByExamStudent.get(examStudentId) ?? []
+    const currentContent = buildContent(effective, annotations)
+    const currentTotal = computeTotal(effective, state.regions)
 
-      const snapshot = snapshotByExamStudent.get(examStudentId)
-      if (!snapshot) {
-        diffs.push({
-          examStudentId,
-          hasSnapshot: false,
-          changed: false,
-          capturedAt: null,
-          scoreChanges: [],
-          annotationChanged: false,
-          currentTotal,
-          snapshotTotal: null,
-        })
-        continue
-      }
+    const snapshot = snapshotByExamStudent.get(examStudentId)
+    if (!snapshot) {
+      diffs.push({
+        examStudentId,
+        hasSnapshot: false,
+        changed: false,
+        capturedAt: null,
+        scoreChanges: [],
+        annotationChanged: false,
+        currentTotal,
+        snapshotTotal: null,
+      })
+      continue
+    }
 
-      let snapshotContent: SnapshotContent
-      try {
-        snapshotContent = JSON.parse(snapshot.scoresJson) as SnapshotContent
-      } catch {
-        // 壊れたスナップショットは差分不能 → 変更扱いで安全側に倒す
-        diffs.push({
-          examStudentId,
-          hasSnapshot: true,
-          changed: true,
-          capturedAt: toIso(snapshot.capturedAt),
-          scoreChanges: [],
-          annotationChanged: false,
-          currentTotal,
-          snapshotTotal:
-            snapshot.totalScore !== null ? Number(snapshot.totalScore) : null,
-        })
-        continue
-      }
-
-      // スコアのセル単位差分
-      const beforeScores = new Map(
-        snapshotContent.scores.map((cell) => [cell.r, cell])
-      )
-      const afterScores = new Map(
-        currentContent.scores.map((cell) => [cell.r, cell])
-      )
-      const cellIds = new Set<string>([
-        ...beforeScores.keys(),
-        ...afterScores.keys(),
-      ])
-      const scoreChanges: ReturnScoreChange[] = []
-      for (const cropRegionId of cellIds) {
-        const before = beforeScores.get(cropRegionId)
-        const after = afterScores.get(cropRegionId)
-        const same =
-          before && after && before.s === after.s && before.p === after.p
-        if (same) continue
-        const maxScore = state.regions.get(cropRegionId)?.maxScore ?? null
-        scoreChanges.push({
-          cropRegionId,
-          label: state.regions.get(cropRegionId)?.label ?? null,
-          before: toCellState(before, maxScore),
-          after: toCellState(after, maxScore),
-        })
-      }
-
-      // 注釈差分（内容ベースの直接比較）
-      const annotationChanged =
-        JSON.stringify(snapshotContent.annotations) !==
-        JSON.stringify(currentContent.annotations)
-
+    let snapshotContent: SnapshotContent
+    try {
+      snapshotContent = JSON.parse(snapshot.scoresJson) as SnapshotContent
+    } catch {
+      // 壊れたスナップショットは差分不能 → 変更扱いで安全側に倒す
       diffs.push({
         examStudentId,
         hasSnapshot: true,
-        changed: scoreChanges.length > 0 || annotationChanged,
+        changed: true,
         capturedAt: toIso(snapshot.capturedAt),
-        scoreChanges,
-        annotationChanged,
+        scoreChanges: [],
+        annotationChanged: false,
         currentTotal,
         snapshotTotal:
           snapshot.totalScore !== null ? Number(snapshot.totalScore) : null,
       })
+      continue
     }
 
-    return {
-      success: true,
-      hasAnySnapshot: snapshots.length > 0,
-      diffs,
+    // スコアのセル単位差分
+    const beforeScores = new Map(
+      snapshotContent.scores.map((cell) => [cell.r, cell])
+    )
+    const afterScores = new Map(
+      currentContent.scores.map((cell) => [cell.r, cell])
+    )
+    const cellIds = new Set<string>([
+      ...beforeScores.keys(),
+      ...afterScores.keys(),
+    ])
+    const scoreChanges: ReturnScoreChange[] = []
+    for (const cropRegionId of cellIds) {
+      const before = beforeScores.get(cropRegionId)
+      const after = afterScores.get(cropRegionId)
+      const same =
+        before && after && before.s === after.s && before.p === after.p
+      if (same) continue
+      const maxScore = state.regions.get(cropRegionId)?.maxScore ?? null
+      scoreChanges.push({
+        cropRegionId,
+        label: state.regions.get(cropRegionId)?.label ?? null,
+        before: toCellState(before, maxScore),
+        after: toCellState(after, maxScore),
+      })
     }
-  } catch (error) {
-    console.error("Failed to compute return diff:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      hasAnySnapshot: false,
-      diffs: [],
-    }
+
+    // 注釈差分（内容ベースの直接比較）
+    const annotationChanged =
+      JSON.stringify(snapshotContent.annotations) !==
+      JSON.stringify(currentContent.annotations)
+
+    diffs.push({
+      examStudentId,
+      hasSnapshot: true,
+      changed: scoreChanges.length > 0 || annotationChanged,
+      capturedAt: toIso(snapshot.capturedAt),
+      scoreChanges,
+      annotationChanged,
+      currentTotal,
+      snapshotTotal:
+        snapshot.totalScore !== null ? Number(snapshot.totalScore) : null,
+    })
   }
+
+  return { hasAnySnapshot: snapshots.length > 0, diffs }
 }
 
 const toIso = (value: Date | string): string =>

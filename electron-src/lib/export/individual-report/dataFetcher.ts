@@ -35,7 +35,6 @@ import type {
   ReportPopulation,
   StudentInfoForReport,
   SubtotalGroupInfo,
-  SubtotalGroupsForReportResult,
 } from "./types"
 
 /**
@@ -52,60 +51,59 @@ export async function fetchIndividualReportData(
     studentPlacements,
   } = options
 
-  try {
-    // 全生徒のデータを取得（平均計算等に必要）。採番学級は renderer が解決して渡す。
-    const allDataResult = await fetchExportData(examId, [], studentPlacements)
-    if (!allDataResult.success || !allDataResult.exam) {
-      return {
-        success: false,
-        error: allDataResult.error || "試験データの取得に失敗しました",
-      }
-    }
+  // 全生徒のデータを取得（平均計算等に必要）。採番学級は renderer が解決して渡す。
+  const allExportData = await fetchExportData(examId, [], studentPlacements)
 
-    // 選択された生徒のデータを取得
-    const selectedDataResult = await fetchExportData(
+  // 選択された生徒のデータを取得
+  const selectedExportData = await fetchExportData(
+    examId,
+    selectedExamStudentIds,
+    studentPlacements
+  )
+
+  const exam = allExportData.exam
+  const allScoringDataFromExcel = allExportData.scoringData
+  const selectedScoringDataFromExcel = selectedExportData.scoringData
+
+  // 試験に紐づくタグを取得
+  const examTags = await prisma.examTag.findMany({
+    where: { examId },
+    include: { tag: true },
+  })
+
+  // 試験情報
+  const examInfo: ExamInfoForReport = {
+    examName: exam.examName,
+    examDate: exam.examDate,
+    tags: examTags.map((examTag) => examTag.tag.name),
+  }
+
+  // 試験のactiveなSubtotalGroupsとSubtotalsを取得
+  const subtotalGroupsData = await getSubtotalGroupsWithSubtotals(examId)
+
+  // 採点データを取得（小計の配点は割り当て行が持つので設問領域は引かない）
+  const questionScoresResult = await getQuestionScoresForExam(examId)
+  const decisionsResult = await getScoreDecisionsForExam(examId)
+  // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
+  const { resolved: allQuestionScores } = resolveEffectiveScores(
+    questionScoresResult,
+    decisionsResult
+  )
+
+  // 全生徒の小計点を計算（Subtotal単位）
+  const allScoringData = allScoringDataFromExcel.map((scoringData) => ({
+    ...scoringData,
+    subtotalScores: buildSubtotalScoresFromGroups(
+      scoringData.examStudentId,
       examId,
-      selectedExamStudentIds,
-      studentPlacements
-    )
-    if (!selectedDataResult.success || !selectedDataResult.scoringData) {
-      return {
-        success: false,
-        error: selectedDataResult.error || "生徒データの取得に失敗しました",
-      }
-    }
+      subtotalGroupsData,
+      allQuestionScores
+    ),
+  }))
 
-    const exam = allDataResult.exam
-    const allScoringDataFromExcel = allDataResult.scoringData || []
-    const selectedScoringDataFromExcel = selectedDataResult.scoringData || []
-
-    // 試験に紐づくタグを取得
-    const examTags = await prisma.examTag.findMany({
-      where: { examId },
-      include: { tag: true },
-    })
-
-    // 試験情報
-    const examInfo: ExamInfoForReport = {
-      examName: exam.examName,
-      examDate: exam.examDate,
-      tags: examTags.map((examTag) => examTag.tag.name),
-    }
-
-    // 試験のactiveなSubtotalGroupsとSubtotalsを取得
-    const subtotalGroupsData = await getSubtotalGroupsWithSubtotals(examId)
-
-    // 採点データを取得（小計の配点は割り当て行が持つので設問領域は引かない）
-    const questionScoresResult = await getQuestionScoresForExam(examId)
-    const decisionsResult = await getScoreDecisionsForExam(examId)
-    // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
-    const { resolved: allQuestionScores } = resolveEffectiveScores(
-      questionScoresResult,
-      decisionsResult
-    )
-
-    // 全生徒の小計点を計算（Subtotal単位）
-    const allScoringData = allScoringDataFromExcel.map((scoringData) => ({
+  // 選択された生徒の小計点を計算
+  const selectedScoringData = selectedScoringDataFromExcel.map(
+    (scoringData) => ({
       ...scoringData,
       subtotalScores: buildSubtotalScoresFromGroups(
         scoringData.examStudentId,
@@ -113,101 +111,72 @@ export async function fetchIndividualReportData(
         subtotalGroupsData,
         allQuestionScores
       ),
+    })
+  )
+
+  // 設問別正答率・得点率を計算（全生徒データを使用）
+  const questionCorrectRates = calculateQuestionCorrectRates(allScoringData)
+  const questionScoreRates = calculateQuestionScoreRates(allScoringData)
+
+  // 生徒表示（studentReport）対象の登録学級と、その受験日所属生徒を取得。
+  // 各生徒の学級比較は「studentReport 選択学級 ∩ 本人の所属学級」（複数学級対応）で、
+  // その交差は renderer が memberStudentIds から求める。
+  const reportClassrooms: ReportClassroom[] = (
+    await getClassroomMembersForExam(examId)
+  )
+    .filter((examClassroom) => examClassroom.studentReport)
+    .map((examClassroom) => ({
+      classroomId: examClassroom.classroomId,
+      className: examClassroom.classroom.name,
+      grade:
+        examClassroom.classroom.grade != null
+          ? String(examClassroom.classroom.grade)
+          : null,
+      memberStudentIds: examClassroom.classroom.memberships.map(
+        (membership) => membership.studentId
+      ),
     }))
 
-    // 選択された生徒の小計点を計算
-    const selectedScoringData = selectedScoringDataFromExcel.map(
-      (scoringData) => ({
-        ...scoringData,
-        subtotalScores: buildSubtotalScoresFromGroups(
-          scoringData.examStudentId,
-          examId,
-          subtotalGroupsData,
-          allQuestionScores
-        ),
-      })
-    )
-
-    // 設問別正答率・得点率を計算（全生徒データを使用）
-    const questionCorrectRates = calculateQuestionCorrectRates(allScoringData)
-    const questionScoreRates = calculateQuestionScoreRates(allScoringData)
-
-    // 生徒表示（studentReport）対象の登録学級と、その受験日所属生徒を取得。
-    // 各生徒の学級比較は「studentReport 選択学級 ∩ 本人の所属学級」（複数学級対応）で、
-    // その交差は renderer が memberStudentIds から求める。
-    const reportClassrooms: ReportClassroom[] = (
-      await getClassroomMembersForExam(examId)
-    )
-      .filter((examClassroom) => examClassroom.studentReport)
-      .map((examClassroom) => ({
-        classroomId: examClassroom.classroomId,
-        className: examClassroom.classroom.name,
-        grade:
-          examClassroom.classroom.grade != null
-            ? String(examClassroom.classroom.grade)
-            : null,
-        memberStudentIds: examClassroom.classroom.memberships.map(
-          (membership) => membership.studentId
-        ),
-      }))
-
-    // 統計の母集団。生徒ごとには変わらないので試験に1つだけ返す
-    const population: ReportPopulation = {
-      rawTotalScores: collectRawTotalScores(allScoringData),
-      subtotalRawScores: collectSubtotalRawScores(allScoringData),
-      subtotals: collectReportSubtotals(allScoringData),
-      classrooms: reportClassrooms,
-      questionCorrectRates,
-      questionScoreRates,
-    }
-
-    // 各生徒のレポートデータを構築
-    const reports: IndividualReportData[] = selectedScoringData.map(
-      (scoringData) => {
-        // 生徒情報
-        const studentInfo: StudentInfoForReport = {
-          id: scoringData.studentId,
-          fullName: scoringData.studentName,
-          studentNumber: scoringData.studentNumber,
-          grade: scoringData.grade || null,
-          className: scoringData.className || null,
-          attendanceNumber: scoringData.attendanceNumber ?? null,
-        }
-
-        // 学習アドバイス
-        const learningAdvice = generateLearningAdvice(
-          scoringData.scores,
-          questionCorrectRates,
-          reportOptions.adviceOptions
-        )
-
-        return {
-          studentInfo,
-          examInfo,
-          scoringData,
-          learningAdvice,
-        }
-      }
-    )
-
-    // 警告の収集
-    const warnings = collectWarnings(selectedScoringData)
-
-    return {
-      success: true,
-      reports,
-      examInfo,
-      population,
-      warnings: warnings.hasWarnings ? warnings.data : undefined,
-    }
-  } catch (error) {
-    console.error("Error fetching individual report data:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "データ取得に失敗しました",
-    }
+  // 統計の母集団。生徒ごとには変わらないので試験に1つだけ返す
+  const population: ReportPopulation = {
+    rawTotalScores: collectRawTotalScores(allScoringData),
+    subtotalRawScores: collectSubtotalRawScores(allScoringData),
+    subtotals: collectReportSubtotals(allScoringData),
+    classrooms: reportClassrooms,
+    questionCorrectRates,
+    questionScoreRates,
   }
+
+  // 各生徒のレポートデータを構築
+  const reports: IndividualReportData[] = selectedScoringData.map(
+    (scoringData) => {
+      // 生徒情報
+      const studentInfo: StudentInfoForReport = {
+        id: scoringData.studentId,
+        fullName: scoringData.studentName,
+        studentNumber: scoringData.studentNumber,
+        grade: scoringData.grade || null,
+        className: scoringData.className || null,
+        attendanceNumber: scoringData.attendanceNumber ?? null,
+      }
+
+      // 学習アドバイス
+      const learningAdvice = generateLearningAdvice(
+        scoringData.scores,
+        questionCorrectRates,
+        reportOptions.adviceOptions
+      )
+
+      return {
+        studentInfo,
+        examInfo,
+        scoringData,
+        learningAdvice,
+      }
+    }
+  )
+
+  return { reports, examInfo, population }
 }
 
 /**
@@ -266,69 +235,16 @@ function buildSubtotalScoresFromGroups(
 }
 
 /**
- * 警告情報を収集
- */
-function collectWarnings(
-  scoringData: {
-    studentId: string
-    studentName: string
-    scores: { status: string }[]
-  }[]
-): {
-  hasWarnings: boolean
-  data: { noScoringData: string[]; ungraded: string[] }
-} {
-  const noScoringData: string[] = []
-  const ungraded: string[] = []
-
-  for (const scoringDatum of scoringData) {
-    const hasScores = scoringDatum.scores.length > 0
-    if (!hasScores) {
-      noScoringData.push(scoringDatum.studentName)
-      continue
-    }
-
-    const hasUngradedScores = scoringDatum.scores.some(
-      (score) => score.status === "unscored"
-    )
-    if (hasUngradedScores) {
-      ungraded.push(scoringDatum.studentName)
-    }
-  }
-
-  return {
-    hasWarnings: noScoringData.length > 0 || ungraded.length > 0,
-    data: { noScoringData, ungraded },
-  }
-}
-
-/**
  * 試験の小計点グループ一覧を取得（個人成績表用）
  * CropRegionに依存せず、Subtotal単位で管理
  */
 export async function fetchSubtotalGroupsForReport(
   examId: string
-): Promise<SubtotalGroupsForReportResult> {
-  try {
-    const activeExamSubtotalGroups =
-      await getActiveSubtotalGroupsForExam(examId)
+): Promise<SubtotalGroupInfo[]> {
+  const activeExamSubtotalGroups = await getActiveSubtotalGroupsForExam(examId)
 
-    const subtotalGroups: SubtotalGroupInfo[] = activeExamSubtotalGroups.map(
-      (examSubtotalGroup) => ({
-        id: examSubtotalGroup.subtotalGroup.id,
-        name: examSubtotalGroup.subtotalGroup.name,
-      })
-    )
-
-    return {
-      success: true,
-      subtotalGroups,
-    }
-  } catch (error) {
-    console.error("Error fetching subtotal groups for report:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return activeExamSubtotalGroups.map((examSubtotalGroup) => ({
+    id: examSubtotalGroup.subtotalGroup.id,
+    name: examSubtotalGroup.subtotalGroup.name,
+  }))
 }

@@ -2,6 +2,7 @@
 
 import { Download } from "lucide-react"
 import { useState } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 
@@ -22,11 +23,14 @@ export function ExcelExportTab({
       const result = await window.electronAPI.grade.exportExcel(gradeId, {
         studentIds: selectedStudentIds,
       })
-      if (!result.success) {
-        console.error("Export failed:", result.error)
+      if (!result.canceled) {
+        toast.success(`Excelを出力しました: ${result.outputPath}`)
       }
-    } catch (err) {
-      console.error("Export error:", err)
+    } catch (error) {
+      console.error("Export error:", error)
+      toast.error(
+        `Excel出力に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}`
+      )
     } finally {
       setExporting(false)
     }

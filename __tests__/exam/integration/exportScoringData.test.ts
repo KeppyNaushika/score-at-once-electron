@@ -73,13 +73,12 @@ describe("Excel 出力の採点データ", () => {
 
     const result = await fetchExportData(fixture.exam.id, [examStudent.id])
 
-    expect(result.success).toBe(true)
     expect(result.questionRegions).toHaveLength(fixture.cropRegions.length)
     expect(
-      result.questionRegions!.map((cropRegion) => cropRegion.label)
+      result.questionRegions.map((cropRegion) => cropRegion.label)
     ).toEqual(fixture.cropRegions.map((cropRegion) => cropRegion.label))
 
-    const [scoringData] = result.scoringData!
+    const [scoringData] = result.scoringData
     // 配点が 0 に落ちると成績表の満点欄が全て 0 になる
     for (const [index, score] of scoringData.scores.entries()) {
       expect(score.maxScore).toBe(fixture.cropRegions[index].points)
@@ -99,7 +98,7 @@ describe("Excel 出力の採点データ", () => {
     ])
 
     const result = await fetchExportData(fixture.exam.id, [examStudent.id])
-    const [scoringData] = result.scoringData!
+    const [scoringData] = result.scoringData
 
     // 正答は満点、誤答は 0、部分点は入力値、未採点は null
     expect(scoringData.scores.map((score) => score.score)).toEqual([
@@ -129,7 +128,7 @@ describe("Excel 出力の採点データ", () => {
     )
 
     const result = await fetchExportData(fixture.exam.id, [examStudent.id])
-    const [scoringData] = result.scoringData!
+    const [scoringData] = result.scoringData
 
     expect(scoringData.totalScore).toBeNull()
     // 満点は採点状況に依らず設問の配点合計
@@ -150,12 +149,12 @@ describe("Excel 出力の採点データ", () => {
 
     const result = await fetchExportData(fixture.exam.id, [examStudent.id])
 
-    expect(result.subtotalColumns!.map((column) => column.label)).toEqual([
+    expect(result.subtotalColumns.map((column) => column.label)).toEqual([
       "前半",
       "後半",
     ])
 
-    const [scoringData] = result.scoringData!
+    const [scoringData] = result.scoringData
     const [firstSubtotal, secondSubtotal] = fixture.subtotals
     const firstHalf = scoringData.subtotalScores.find(
       (subtotalScore) => subtotalScore.subtotalId === firstSubtotal.id
@@ -177,7 +176,7 @@ describe("Excel 出力の採点データ", () => {
     await testPrisma.cropSubtotal.deleteMany({})
 
     const result = await fetchExportData(fixture.exam.id, [examStudent.id])
-    const [scoringData] = result.scoringData!
+    const [scoringData] = result.scoringData
 
     for (const subtotalScore of scoringData.subtotalScores) {
       expect(subtotalScore.hasQuestionAssignments).toBe(false)
@@ -215,7 +214,7 @@ describe("Excel 出力の採点データ", () => {
     expect(result.scoreConflicts).toHaveLength(1)
     expect(result.scoreConflicts![0].cropRegionId).toBe(firstCropRegion.id)
 
-    const [scoringData] = result.scoringData!
+    const [scoringData] = result.scoringData
     // 解決できないので値を出さない（未採点として書き出す）
     expect(scoringData.scores[0].score).toBeNull()
     expect(scoringData.scores[0].status).toBe("unscored")
@@ -239,7 +238,7 @@ describe("Excel 出力の採点データ", () => {
     })
 
     const result = await fetchExportData(fixture.exam.id, [examStudent.id])
-    const [scoringData] = result.scoringData!
+    const [scoringData] = result.scoringData
 
     expect(scoringData.scores[0].status).toBe("partial")
     expect(scoringData.scores[0].score).toBe(3)

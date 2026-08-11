@@ -1,4 +1,6 @@
-import { BrowserWindow, dialog, ipcMain } from "electron"
+import { BrowserWindow, dialog } from "electron"
+
+import type { ConflictWarning } from "@/types/exportValidation.types"
 
 import { fetchExportData } from "../lib/export/excel/dataFetcher"
 import { exportGradingDataExcel } from "../lib/export/excel/excelExportMain"
@@ -31,7 +33,7 @@ import {
   buildConflictWarnings,
   validateScoringData,
 } from "../lib/shared/utilities/validateScoringData"
-import { registerSafeHandler } from "./ipcHandlerUtils"
+import { registerHandler } from "./ipcHandlerUtils"
 
 // ============================================================
 // SVG→PNG変換用の共有オフスクリーンウィンドウ
@@ -158,11 +160,10 @@ const SVG_CONVERT_MAX_ATTEMPTS = 4
  * capturePage は Viz コンポジタの一過性エラー（`UnknownVizError` 等）を稀に
  * 投げるため、投げられたら共有ウィンドウを作り直して数回までリトライする。 */
 async function convertSvgToPngInternal(svgString: string): Promise<{
-  success: boolean
-  dataUrl?: string
-  width?: number
-  height?: number
-  error?: string
+  dataUrl: string
+  /** 描画時に使用すべき論理サイズ（Retinaでimg.widthは2倍になるため） */
+  width: number
+  height: number
 }> {
   const widthMatch = svgString.match(/width="([\d.]+)"/)
   const heightMatch = svgString.match(/height="([\d.]+)"/)
@@ -223,7 +224,7 @@ async function convertSvgToPngInternal(svgString: string): Promise<{
       }
 
       const dataUrl = `data:image/png;base64,${image.toPNG().toString("base64")}`
-      return { success: true, dataUrl, width, height }
+      return { dataUrl, width, height }
     } catch (err) {
       // capturePage/loadURL の一過性エラー（UnknownVizError・GPUストール等）。
       // 共有ウィンドウを破棄して作り直し、次の試行で回復を図る。
@@ -233,60 +234,60 @@ async function convertSvgToPngInternal(svgString: string): Promise<{
     }
   }
 
-  return {
-    success: false,
-    error:
-      lastError instanceof Error
-        ? lastError.message
-        : "SVG to PNG conversion failed",
-  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("SVG to PNG conversion failed")
 }
 
 /** Excel・PDF出力・個人成績表・ストリーミングPDF生成に関するIPCチャンネルを登録する */
 export function setupExportHandlers(): void {
   // 採点データバリデーション（全エクスポート共通）
-  registerSafeHandler(
+  registerHandler(
     "export:validateScoringData",
     async (options: {
       examId: string
       selectedExamStudentIds: string[]
       userId: string
     }) => {
-      const result = await fetchExportData(
+      const exportData = await fetchExportData(
         options.examId,
         options.selectedExamStudentIds
       )
-      if (!result.success || !result.scoringData) {
-        return {
-          success: false,
-          error: result.error || "データ取得に失敗しました",
-        }
-      }
 
       // 食い違いの内訳（採点者ごとの判定・点数影響）は裁定サマリから供給する。
       // 確定パネルと同じ計算を通すことで、警告と裁定画面の件数がずれない。
-      const decisionSummary = await getExamDecisionSummary(
-        options.examId,
-        options.userId
-      )
-      const validationResult = decisionSummary.success
-        ? validateScoringData(
-            result.scoringData,
-            buildConflictWarnings(
-              decisionSummary.summary,
-              options.selectedExamStudentIds
-            )
-          )
-        : // 検査できなかったことを空配列（＝食い違いなし）に化けさせない
-          validateScoringData(result.scoringData, [], decisionSummary.error)
+      //
+      // 裁定サマリだけが落ちても出力は止めない（止めずに伝える）。ただし検査できな
+      // かったことを空配列＝食い違いなしへ化けさせず、結果に載せて画面へ出す。
+      let conflictWarnings: ConflictWarning[] = []
+      let conflictCheckError: string | undefined
+      try {
+        const decisionSummary = await getExamDecisionSummary(
+          options.examId,
+          options.userId
+        )
+        conflictWarnings = buildConflictWarnings(
+          decisionSummary,
+          options.selectedExamStudentIds
+        )
+      } catch (error) {
+        conflictCheckError =
+          error instanceof Error
+            ? error.message
+            : "採点者間の食い違いを検査できませんでした"
+      }
 
-      return { success: true, ...validationResult }
+      return validateScoringData(
+        exportData.scoringData,
+        conflictWarnings,
+        conflictCheckError
+      )
     }
   )
 
   // 未解決の食い違いを含んだまま出力したことを監査ログに残す。
   // 出力そのものは止めない（配布物も汚さない）が、後から辿れるようにする。
-  registerSafeHandler(
+  registerHandler(
     "export:recordUnresolvedConflicts",
     async (options: {
       examId: string
@@ -311,12 +312,11 @@ export function setupExportHandlers(): void {
           ),
         },
       })
-      return { success: true }
     }
   )
 
   // Excel Export handlers
-  registerSafeHandler(
+  registerHandler(
     "export-grading-data-excel",
     async (options: {
       examId: string
@@ -329,40 +329,41 @@ export function setupExportHandlers(): void {
   )
 
   // R / exametrika 向けデータ出力（#834）
-  registerSafeHandler("export-r-data", async (options: ExportRDataOptions) => {
+  registerHandler("export-r-data", async (options: ExportRDataOptions) => {
     return await exportRData(options)
   })
 
   // Excelプレビュー用データ取得
-  registerSafeHandler(
+  registerHandler(
     "export:getExcelPreviewData",
     async (options: {
       examId: string
       selectedExamStudentIds: string[]
       studentPlacements?: Record<string, StudentExportPlacement>
     }) => {
-      const result = await fetchExportData(
+      const exportData = await fetchExportData(
         options.examId,
         options.selectedExamStudentIds,
         options.studentPlacements
       )
-      if (!result.success) {
-        return { success: false, error: result.error }
-      }
       // Prismaの Decimal/Date 型はIPC経由でcloneできないため、
       // プレーンなJSオブジェクトに変換して返す
-      const questionRegions = result.questionRegions?.map((questionRegion) => ({
-        id: questionRegion.id,
-        label: questionRegion.label,
-        points:
-          questionRegion.points != null ? Number(questionRegion.points) : null,
-        orderIndex:
-          questionRegion.orderIndex != null
-            ? Number(questionRegion.orderIndex)
-            : null,
-      }))
+      const questionRegions = exportData.questionRegions.map(
+        (questionRegion) => ({
+          id: questionRegion.id,
+          label: questionRegion.label,
+          points:
+            questionRegion.points != null
+              ? Number(questionRegion.points)
+              : null,
+          orderIndex:
+            questionRegion.orderIndex != null
+              ? Number(questionRegion.orderIndex)
+              : null,
+        })
+      )
 
-      const scoringData = result.scoringData?.map((studentScoring) => ({
+      const scoringData = exportData.scoringData.map((studentScoring) => ({
         examStudentId: studentScoring.examStudentId,
         studentName: studentScoring.studentName,
         studentNumber: studentScoring.studentNumber,
@@ -395,16 +396,15 @@ export function setupExportHandlers(): void {
       }))
 
       return {
-        success: true,
         questionRegions,
-        subtotalColumns: result.subtotalColumns,
+        subtotalColumns: exportData.subtotalColumns,
         scoringData,
       }
     }
   )
 
   // Canvas描画用PDF出力データ取得
-  registerSafeHandler(
+  registerHandler(
     "export:getPdfExportData",
     async (options: { examId: string; selectedExamStudentIds: string[] }) => {
       return await getPdfExportData(options)
@@ -412,15 +412,11 @@ export function setupExportHandlers(): void {
   )
 
   // PDF保存先選択ダイアログ（Canvas描画前に呼び出す）
-  registerSafeHandler(
+  registerHandler(
     "export:selectPdfSavePath",
     async (options: {
       examName?: string
-    }): Promise<{
-      success: boolean
-      filePath?: string
-      canceled?: boolean
-    }> => {
+    }): Promise<{ canceled: true } | { canceled: false; filePath: string }> => {
       const dateStr = new Date().toISOString().split("T")[0]
       const safeExamName = options.examName
         ? options.examName.replace(/[<>:"/\\|?*]/g, "_")
@@ -436,50 +432,28 @@ export function setupExportHandlers(): void {
       })
 
       if (result.canceled || !result.filePath) {
-        return { success: false, canceled: true }
+        return { canceled: true }
       }
 
-      return { success: true, filePath: result.filePath }
+      return { canceled: false, filePath: result.filePath }
     }
   )
 
   // SVG→PNG変換ハンドラ（MathJaxテキストのtaint問題回避用）
-  // NOTE: 共有オフスクリーンウィンドウ（convertSvgToPngInternal）を直列利用する。
+  // 共有オフスクリーンウィンドウ（convertSvgToPngInternal）を直列利用する。
   // 要求が並列に来ても svgConvertChain で順序化し、リソース競合を防ぐ。
-  ipcMain.handle(
+  registerHandler(
     "export:convertSvgToPng",
-    (
-      _event,
-      options: {
-        svgString: string
-        width?: number
-        height?: number
-      }
-    ): Promise<{
-      success: boolean
-      dataUrl?: string
-      width?: number
-      height?: number
-      error?: string
-    }> => {
+    (options: { svgString: string; width?: number; height?: number }) => {
       pendingSvgConversions++
       const run = svgConvertChain
-        .then(() =>
-          convertSvgToPngInternal(options.svgString).catch((err) => {
-            console.error("Error in IPC handler [export:convertSvgToPng]:", err)
-            return {
-              success: false,
-              error:
-                err instanceof Error ? err.message : "Unknown error occurred",
-            }
-          })
-        )
+        .then(() => convertSvgToPngInternal(options.svgString))
         .finally(() => {
           pendingSvgConversions--
           // 要求が掃けたら共有ウィンドウのアイドル破棄を予約する
           if (pendingSvgConversions === 0) scheduleSvgWindowTeardown()
         })
-      // チェーンが例外で途切れないようにする（runは常にresolveするが念のため）
+      // 変換1件の失敗で直列チェーンを途切れさせない（失敗は run 側で伝わる）
       svgConvertChain = run.catch(() => undefined)
       return run
     }
@@ -490,7 +464,7 @@ export function setupExportHandlers(): void {
   // ============================================================
 
   // ストリーミングセッション作成
-  registerSafeHandler(
+  registerHandler(
     "export:createPdfStreamingSession",
     async (options: {
       totalPages: number
@@ -501,7 +475,7 @@ export function setupExportHandlers(): void {
   )
 
   // ストリーミングセッションにページを追加
-  registerSafeHandler(
+  registerHandler(
     "export:addPageToStreamingSession",
     async (options: {
       sessionId: string
@@ -513,7 +487,7 @@ export function setupExportHandlers(): void {
   )
 
   // ストリーミングセッションを完了してPDF保存
-  registerSafeHandler(
+  registerHandler(
     "export:finalizeStreamingSession",
     async (options: { sessionId: string; outputPath: string }) => {
       return await finalizeStreamingSession(options)
@@ -521,11 +495,10 @@ export function setupExportHandlers(): void {
   )
 
   // ストリーミングセッションをキャンセル
-  registerSafeHandler(
+  registerHandler(
     "export:cancelStreamingSession",
     async (sessionId: string) => {
       cancelStreamingSession(sessionId)
-      return { success: true }
     }
   )
 
@@ -534,7 +507,7 @@ export function setupExportHandlers(): void {
   // ============================================================
 
   // 個人成績表用データ取得
-  registerSafeHandler(
+  registerHandler(
     "export:getIndividualReportData",
     async (options: GetIndividualReportDataOptions) => {
       return await fetchIndividualReportData(options)
@@ -542,7 +515,7 @@ export function setupExportHandlers(): void {
   )
 
   // 個人成績表用小計点グループ一覧取得
-  registerSafeHandler(
+  registerHandler(
     "export:getSubtotalGroupsForReport",
     async (examId: string) => {
       return await fetchSubtotalGroupsForReport(examId)
@@ -550,24 +523,20 @@ export function setupExportHandlers(): void {
   )
 
   // HTMLからPDFを生成（ブラウザ印刷機能を使用）
-  // NOTE: Uses BrowserWindow with try-finally for cleanup, kept as manual ipcMain.handle
-  ipcMain.handle(
+  registerHandler(
     "export:printHtmlToPdf",
-    async (
-      _event,
-      options: {
-        html: string
-        filePath: string
-        pageSize?: "A4" | "Letter" | { width: number; height: number }
-        landscape?: boolean
-        margins?: {
-          top?: number
-          bottom?: number
-          left?: number
-          right?: number
-        }
+    async (options: {
+      html: string
+      filePath: string
+      pageSize?: "A4" | "Letter" | { width: number; height: number }
+      landscape?: boolean
+      margins?: {
+        top?: number
+        bottom?: number
+        left?: number
+        right?: number
       }
-    ): Promise<{ success: boolean; error?: string }> => {
+    }): Promise<void> => {
       const fs = require("fs").promises
       const path = require("path")
       const { app } = require("electron")
@@ -627,14 +596,6 @@ export function setupExportHandlers(): void {
 
         // ファイルに保存
         await fs.writeFile(options.filePath, pdfBuffer)
-
-        return { success: true }
-      } catch (err) {
-        console.error("Error in IPC handler [export:printHtmlToPdf]:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "PDF生成に失敗しました",
-        }
       } finally {
         win.destroy()
         // 一時ファイルを削除
@@ -652,18 +613,14 @@ export function setupExportHandlers(): void {
   // ============================================================
 
   // HTMLからPDFを生成してプレビューで開く
-  // NOTE: Uses BrowserWindow with try-finally for cleanup, kept as manual ipcMain.handle
-  ipcMain.handle(
+  registerHandler(
     "export:openPrintDialog",
-    async (
-      _event,
-      options: {
-        html: string
-        title?: string
-        pageSize?: "A4" | "Letter" | { width: number; height: number }
-        landscape?: boolean
-      }
-    ): Promise<{ success: boolean; error?: string }> => {
+    async (options: {
+      html: string
+      title?: string
+      pageSize?: "A4" | "Letter" | { width: number; height: number }
+      landscape?: boolean
+    }): Promise<void> => {
       const fs = require("fs").promises
       const path = require("path")
       const { app, shell } = require("electron")
@@ -728,14 +685,6 @@ export function setupExportHandlers(): void {
 
         // プレビュー.appで開く（ユーザーがそこから印刷・保存可能）
         await shell.openPath(tempPdfPath)
-
-        return { success: true }
-      } catch (err) {
-        console.error("Error in IPC handler [export:openPrintDialog]:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "PDF生成に失敗しました",
-        }
       } finally {
         win.destroy()
         // HTMLの一時ファイルを削除
@@ -750,7 +699,7 @@ export function setupExportHandlers(): void {
   )
 
   // 答案返却スナップショット: 現在の有効スコア＋注釈を返却版として記録する
-  registerSafeHandler(
+  registerHandler(
     "export:captureReturnSnapshot",
     async (options: { examId: string; examStudentIds: string[] }) => {
       return await captureReturnSnapshot({
@@ -761,7 +710,7 @@ export function setupExportHandlers(): void {
   )
 
   // 返却版と現在状態の差分（変更があった生徒の検出）
-  registerSafeHandler("export:getReturnDiff", async (examId: string) => {
+  registerHandler("export:getReturnDiff", async (examId: string) => {
     return await getReturnDiff(examId)
   })
 }

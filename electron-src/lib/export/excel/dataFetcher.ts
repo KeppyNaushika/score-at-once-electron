@@ -50,19 +50,17 @@ export interface SubtotalColumn {
 }
 
 /**
- * 出力用データの取得結果
+ * 出力用データ
  */
-interface ExportDataResult {
-  success: boolean
-  error?: string
-  exam?: Exam
-  selectedExamStudents?: ExportExamStudent[]
-  questionRegions?: CropRegion[]
-  subtotalRegions?: CropRegion[]
-  subtotalColumns?: SubtotalColumn[]
-  scoringData?: ScoringData[]
+export interface ExportData {
+  exam: Exam
+  selectedExamStudents: ExportExamStudent[]
+  questionRegions: CropRegion[]
+  subtotalRegions: CropRegion[]
+  subtotalColumns: SubtotalColumn[]
+  scoringData: ScoringData[]
   /** 複数採点者の値が食い違い解決できなかった生徒×設問（出力上は未採点扱い） */
-  scoreConflicts?: ScoreConflict[]
+  scoreConflicts: ScoreConflict[]
 }
 
 /**
@@ -70,141 +68,131 @@ interface ExportDataResult {
  *
  * @param examId - 試験ID
  * @param selectedExamStudentIds - 選択された受験者のID配列（ExamStudent.id）
- * @returns 出力用データまたはエラー情報
+ * @returns 出力用データ。試験・対象生徒が無ければ例外
  */
 export async function fetchExportData(
   examId: string,
   selectedExamStudentIds: string[],
   studentPlacements?: Record<string, StudentExportPlacement>
-): Promise<ExportDataResult> {
-  try {
-    // 基本データの取得
-    const exam = await getExamById(examId)
-    if (!exam) {
-      return { success: false, error: "試験が見つかりません" }
-    }
+): Promise<ExportData> {
+  // 基本データの取得
+  const exam = await getExamById(examId)
+  if (!exam) {
+    throw new Error("試験が見つかりません")
+  }
 
-    const examStudents = await getStudentsForExam(examId)
+  const examStudents = await getStudentsForExam(examId)
 
-    const cropRegions = await getCropRegionsByExamId(examId)
-    const questionScoresResult = await getQuestionScoresForExam(examId)
-    const decisionsResult = await getScoreDecisionsForExam(examId)
+  const cropRegions = await getCropRegionsByExamId(examId)
+  const questionScoresResult = await getQuestionScoresForExam(examId)
+  const decisionsResult = await getScoreDecisionsForExam(examId)
 
-    // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
-    const { resolved: questionScores, conflicts: scoreConflicts } =
-      resolveEffectiveScores(questionScoresResult, decisionsResult)
-    if (scoreConflicts.length > 0) {
-      console.warn(
-        `Export: ${scoreConflicts.length}件の採点競合を検出しました（未採点として出力されます）`,
-        scoreConflicts
-      )
-    }
+  // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
+  const { resolved: questionScores, conflicts: scoreConflicts } =
+    resolveEffectiveScores(questionScoresResult, decisionsResult)
+  if (scoreConflicts.length > 0) {
+    console.warn(
+      `Export: ${scoreConflicts.length}件の採点競合を検出しました（未採点として出力されます）`,
+      scoreConflicts
+    )
+  }
 
-    // 選択された受験者のフィルタリングとソート
-    // 空配列の場合は全受験者を取得（統計計算用）
-    // ExamStudent 実体をそのまま保持し、表示学級（grade/className/attendanceNumber）だけを
-    // renderer が採番解決して渡した studentPlacements から graft する（採番学級の SSOT は renderer）。
-    const selectedExamStudents: ExportExamStudent[] = examStudents
-      .filter(
-        (examStudent) =>
-          selectedExamStudentIds.length === 0 ||
-          selectedExamStudentIds.includes(examStudent.id)
-      )
-      .map((examStudent) => {
-        // studentPlacements のキーは Student.id（学級所属は人に紐づくため、
-        // 採番学級を解決する resolveExamClassroomPlacement も Student キー）。
-        // ここで examStudent.id を使うと全件 undefined になり、黙って
-        // memberships[0] へフォールバックする（＝学級名・出席番号が誤る）。
-        const resolved = studentPlacements?.[examStudent.student.id]
+  // 選択された受験者のフィルタリングとソート
+  // 空配列の場合は全受験者を取得（統計計算用）
+  // ExamStudent 実体をそのまま保持し、表示学級（grade/className/attendanceNumber）だけを
+  // renderer が採番解決して渡した studentPlacements から graft する（採番学級の SSOT は renderer）。
+  const selectedExamStudents: ExportExamStudent[] = examStudents
+    .filter(
+      (examStudent) =>
+        selectedExamStudentIds.length === 0 ||
+        selectedExamStudentIds.includes(examStudent.id)
+    )
+    .map((examStudent) => {
+      // studentPlacements のキーは Student.id（学級所属は人に紐づくため、
+      // 採番学級を解決する resolveExamClassroomPlacement も Student キー）。
+      // ここで examStudent.id を使うと全件 undefined になり、黙って
+      // memberships[0] へフォールバックする（＝学級名・出席番号が誤る）。
+      const resolved = studentPlacements?.[examStudent.student.id]
 
-        // 未指定（administered学級に未所属等）は memberships[0] へフォールバック
-        const fallbackMembership = examStudent.student.memberships?.[0]
-        const fallbackClassroom = fallbackMembership?.classroom
+      // 未指定（administered学級に未所属等）は memberships[0] へフォールバック
+      const fallbackMembership = examStudent.student.memberships?.[0]
+      const fallbackClassroom = fallbackMembership?.classroom
 
-        const grade = resolved?.grade ?? fallbackClassroom?.grade ?? null
-        const className = resolved?.className ?? fallbackClassroom?.name
-        const attendanceNumber =
-          resolved?.attendanceNumber ?? fallbackMembership?.attendanceNumber
+      const grade = resolved?.grade ?? fallbackClassroom?.grade ?? null
+      const className = resolved?.className ?? fallbackClassroom?.name
+      const attendanceNumber =
+        resolved?.attendanceNumber ?? fallbackMembership?.attendanceNumber
 
-        return {
-          ...examStudent,
-          grade: grade != null ? grade.toString() : undefined,
-          className: className ?? undefined,
-          attendanceNumber: attendanceNumber ?? undefined,
-        }
-      })
-      .sort((examStudentA, examStudentB) => {
-        const aOrder = examStudentA.customOrder ?? 999999
-        const bOrder = examStudentB.customOrder ?? 999999
-        return aOrder - bOrder
-      })
-
-    if (selectedExamStudents.length === 0) {
-      return { success: false, error: "選択された生徒が見つかりません" }
-    }
-
-    // 設問領域と小計領域の分離・ソート
-    const sortByOrderIndex = (regionA: CropRegion, regionB: CropRegion) => {
-      const orderA = regionA.orderIndex ?? Number.MAX_SAFE_INTEGER
-      const orderB = regionB.orderIndex ?? Number.MAX_SAFE_INTEGER
-      if (orderA !== orderB) {
-        return orderA - orderB
+      return {
+        ...examStudent,
+        grade: grade != null ? grade.toString() : undefined,
+        className: className ?? undefined,
+        attendanceNumber: attendanceNumber ?? undefined,
       }
-      if (Math.abs(regionA.y - regionB.y) < 0.01) {
-        return regionA.x - regionB.x
-      }
-      return regionA.y - regionB.y
+    })
+    .sort((examStudentA, examStudentB) => {
+      const aOrder = examStudentA.customOrder ?? 999999
+      const bOrder = examStudentB.customOrder ?? 999999
+      return aOrder - bOrder
+    })
+
+  if (selectedExamStudents.length === 0) {
+    throw new Error("選択された生徒が見つかりません")
+  }
+
+  // 設問領域と小計領域の分離・ソート
+  const sortByOrderIndex = (regionA: CropRegion, regionB: CropRegion) => {
+    const orderA = regionA.orderIndex ?? Number.MAX_SAFE_INTEGER
+    const orderB = regionB.orderIndex ?? Number.MAX_SAFE_INTEGER
+    if (orderA !== orderB) {
+      return orderA - orderB
     }
-
-    const questionRegions = cropRegions
-      .filter((region: CropRegion) => region.type === "QUESTION_ANSWER")
-      .sort(sortByOrderIndex)
-
-    const subtotalRegions = cropRegions
-      .filter((region: CropRegion) => region.type === "SUBTOTAL_SCORE")
-      .sort(sortByOrderIndex)
-
-    // SubtotalGroupsを取得（Subtotal単位の小計点計算用）
-    const examSubtotalGroups = await getActiveSubtotalGroupsForExam(examId)
-    const subtotalGroups: SubtotalGroupForScoring[] = examSubtotalGroups.map(
-      (examSubtotalGroup) => examSubtotalGroup.subtotalGroup
-    )
-
-    // SubtotalGroupから小計列情報を構築
-    const subtotalColumns: SubtotalColumn[] = subtotalGroups.flatMap(
-      (subtotalGroup) =>
-        subtotalGroup.subtotals.map((subtotal) => ({
-          subtotalId: subtotal.id,
-          label: subtotal.name,
-        }))
-    )
-
-    // 採点データの構造化
-    const scoringData = buildScoringData(
-      examId,
-      selectedExamStudents,
-      questionRegions,
-      subtotalGroups,
-      questionScores
-    )
-
-    return {
-      success: true,
-      exam,
-      selectedExamStudents,
-      questionRegions,
-      subtotalRegions,
-      subtotalColumns,
-      scoringData,
-      scoreConflicts,
+    if (Math.abs(regionA.y - regionB.y) < 0.01) {
+      return regionA.x - regionB.x
     }
-  } catch (error) {
-    console.error("Error fetching export data:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "データ取得に失敗しました",
-    }
+    return regionA.y - regionB.y
+  }
+
+  const questionRegions = cropRegions
+    .filter((region: CropRegion) => region.type === "QUESTION_ANSWER")
+    .sort(sortByOrderIndex)
+
+  const subtotalRegions = cropRegions
+    .filter((region: CropRegion) => region.type === "SUBTOTAL_SCORE")
+    .sort(sortByOrderIndex)
+
+  // SubtotalGroupsを取得（Subtotal単位の小計点計算用）
+  const examSubtotalGroups = await getActiveSubtotalGroupsForExam(examId)
+  const subtotalGroups: SubtotalGroupForScoring[] = examSubtotalGroups.map(
+    (examSubtotalGroup) => examSubtotalGroup.subtotalGroup
+  )
+
+  // SubtotalGroupから小計列情報を構築
+  const subtotalColumns: SubtotalColumn[] = subtotalGroups.flatMap(
+    (subtotalGroup) =>
+      subtotalGroup.subtotals.map((subtotal) => ({
+        subtotalId: subtotal.id,
+        label: subtotal.name,
+      }))
+  )
+
+  // 採点データの構造化
+  const scoringData = buildScoringData(
+    examId,
+    selectedExamStudents,
+    questionRegions,
+    subtotalGroups,
+    questionScores
+  )
+
+  return {
+    exam,
+    selectedExamStudents,
+    questionRegions,
+    subtotalRegions,
+    subtotalColumns,
+    scoringData,
+    scoreConflicts,
   }
 }
 

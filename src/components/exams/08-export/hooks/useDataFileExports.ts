@@ -39,18 +39,14 @@ export function useDataFileExports({
       const result = await window.electronAPI.exportGradingDataExcel({
         examId: exam.id,
         selectedExamStudentIds,
-        forceExport: true,
         studentPlacements,
       })
 
-      if (result.success) {
-        alert(
-          `採点データExcelの出力が完了しました。\n保存先: ${result.outputPath}`
-        )
-        return true
-      }
-      alert(`出力に失敗しました: ${result.error}`)
-      return false
+      if (result.canceled) return false
+      alert(
+        `採点データExcelの出力が完了しました。\n保存先: ${result.outputPath}`
+      )
+      return true
     } catch (error) {
       console.error("Export error:", error)
       alert("出力中にエラーが発生しました")
@@ -70,10 +66,8 @@ export function useDataFileExports({
         selectedExamStudentIds,
         format,
       })
-      if (result.success) {
+      if (!result.canceled) {
         toast.success(`分析用データを出力しました: ${result.outputPath}`)
-      } else if (result.error !== "出力がキャンセルされました") {
-        toast.error(`出力に失敗しました: ${result.error ?? ""}`)
       }
     } catch (error) {
       console.error("R data export error:", error)
@@ -93,7 +87,7 @@ export function useDataFileExports({
       const studentPlacements = await loadStudentExportPlacements(exam.id)
 
       // 1. データ取得（統計・アドバイス含む）
-      const dataResult =
+      const reportData =
         await window.electronAPI.export.getIndividualReportData({
           examId: exam.id,
           selectedExamStudentIds,
@@ -101,30 +95,18 @@ export function useDataFileExports({
           studentPlacements,
         })
 
-      if (
-        !dataResult.success ||
-        !dataResult.reports ||
-        !dataResult.population
-      ) {
-        throw new Error(dataResult.error || "データ取得に失敗しました")
-      }
-
       // 2. HTMLを生成（プレビューと同じ構造）
       const html = generatePrintHtml(
-        dataResult.reports,
-        dataResult.population,
+        reportData.reports,
+        reportData.population,
         individualReportOptions
       )
 
       // 3. 印刷ダイアログを開く
-      const result = await window.electronAPI.export.openPrintDialog({
+      await window.electronAPI.export.openPrintDialog({
         html,
         title: `個人成績表 - ${exam?.examName || ""}`,
       })
-
-      if (!result.success) {
-        throw new Error(result.error || "印刷ダイアログを開けませんでした")
-      }
       return true
     } catch (error) {
       console.error("Individual report export error:", error)

@@ -97,31 +97,30 @@ export async function drawElement(
               svgString: svgData,
             })
 
-            if (result.success && result.dataUrl) {
-              const img = new Image()
-              await new Promise<void>((resolve, reject) => {
-                img.onload = () => resolve()
-                img.onerror = () =>
-                  reject(new Error("Failed to load converted PNG"))
-                img.src = result.dataUrl!
-              })
+            const img = new Image()
+            await new Promise<void>((resolve, reject) => {
+              img.onload = () => resolve()
+              img.onerror = () =>
+                reject(new Error("Failed to load converted PNG"))
+              img.src = result.dataUrl
+            })
 
-              // 論理サイズで描画（Retinaではimg.width/heightが2倍になるため）
-              const width = result.width ?? img.width
-              const height = result.height ?? img.height
+            // 論理サイズで描画（Retinaではimg.width/heightが2倍になるため）
+            const textPosition = getTextPositionFromAnchor(
+              currentX,
+              currentY,
+              result.width,
+              result.height,
+              anchorDir
+            )
 
-              const textPosition = getTextPositionFromAnchor(
-                currentX,
-                currentY,
-                width,
-                height,
-                anchorDir
-              )
-
-              ctx.drawImage(img, textPosition.x, textPosition.y, width, height)
-            } else {
-              throw new Error(result.error || "SVG to PNG conversion failed")
-            }
+            ctx.drawImage(
+              img,
+              textPosition.x,
+              textPosition.y,
+              result.width,
+              result.height
+            )
           } else {
             throw new Error("Failed to generate SVG")
           }

@@ -4,6 +4,8 @@
 
 import type { GradeItemExclusion } from "@prisma/client"
 
+import type { FileExportResult } from "@/electron-src/lib/shared/types"
+
 import type {
   GradeCalculationResult,
   GradeCellTarget,
@@ -333,11 +335,7 @@ export interface GradeAPI {
     exportExcel: (
       gradeId: string,
       options?: { studentIds?: string[] }
-    ) => Promise<{
-      success: boolean
-      outputPath?: string
-      error?: string
-    }>
+    ) => Promise<FileExportResult>
     getExportSettings: (gradeId: string) => Promise<{
       success: boolean
       settings?: Record<string, unknown> | null

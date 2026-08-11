@@ -85,15 +85,12 @@ describe("個人成績表のデータ取得", () => {
       fixture.examStudents.map((examStudent) => examStudent.id)
     )
 
-    expect(oneStudent.success).toBe(true)
-    expect(allStudents.success).toBe(true)
-
     // 選択1名でも母集団は全受験者ぶん。生徒ごとに複製していた頃はここが1件だった
-    expect(oneStudent.population!.rawTotalScores).toHaveLength(
+    expect(oneStudent.population.rawTotalScores).toHaveLength(
       fixture.examStudents.length
     )
-    expect(oneStudent.population!.rawTotalScores).toEqual(
-      allStudents.population!.rawTotalScores
+    expect(oneStudent.population.rawTotalScores).toEqual(
+      allStudents.population.rawTotalScores
     )
 
     // レポートは選択した生徒の分だけ
@@ -111,7 +108,7 @@ describe("個人成績表のデータ取得", () => {
       fixture.examStudents.map((examStudent) => examStudent.id)
     )
 
-    const rawTotalScores = result.population!.rawTotalScores
+    const rawTotalScores = result.population.rawTotalScores
     for (const examStudent of fixture.examStudents) {
       const entry = rawTotalScores.find(
         (rawTotalScore) => rawTotalScore.studentId === examStudent.studentId
@@ -136,7 +133,7 @@ describe("個人成績表のデータ取得", () => {
       fixture.examStudents.map((examStudent) => examStudent.id)
     )
 
-    const reported = result.population!.subtotals.find(
+    const reported = result.population.subtotals.find(
       (reportSubtotal) => reportSubtotal.subtotalId === subtotal.id
     )
     expect(reported).toBeDefined()
@@ -148,7 +145,7 @@ describe("個人成績表のデータ取得", () => {
       )
     )
 
-    const subtotalRawScores = result.population!.subtotalRawScores.find(
+    const subtotalRawScores = result.population.subtotalRawScores.find(
       (entry) => entry.subtotalId === subtotal.id
     )
     expect(subtotalRawScores).toBeDefined()
@@ -167,7 +164,7 @@ describe("個人成績表のデータ取得", () => {
       fixture.examStudents.map((examStudent) => examStudent.id)
     )
 
-    for (const reportSubtotal of result.population!.subtotals) {
+    for (const reportSubtotal of result.population.subtotals) {
       expect(reportSubtotal.maxScore).toBe(0)
     }
   })
@@ -182,7 +179,7 @@ describe("個人成績表のデータ取得", () => {
       fixture.examStudents.map((examStudent) => examStudent.id)
     )
 
-    const classrooms = result.population!.classrooms
+    const classrooms = result.population.classrooms
     expect(classrooms).toHaveLength(1)
     expect(classrooms[0].classroomId).toBe(fixture.classroom.id)
     expect(classrooms[0].className).toBe(fixture.classroom.name)
@@ -206,7 +203,7 @@ describe("個人成績表のデータ取得", () => {
       fixture.examStudents.map((examStudent) => examStudent.id)
     )
 
-    expect(result.population!.classrooms).toHaveLength(0)
+    expect(result.population.classrooms).toHaveLength(0)
   })
 
   it("main は統計を算出しない（母集団と元データだけを返す）", async () => {
@@ -221,7 +218,7 @@ describe("個人成績表のデータ取得", () => {
 
     // 平均・偏差値・順位・箱ひげ図は renderer（computeReportData）の担当。
     // main が算出して返していた頃の形が復活していないことを固定する
-    const report = result.reports![0] as unknown as Record<string, unknown>
+    const report = result.reports[0] as unknown as Record<string, unknown>
     expect(report.statistics).toBeUndefined()
     expect(
       (result.population as unknown as Record<string, unknown>).overall
@@ -239,14 +236,11 @@ describe("個人成績表のデータ取得", () => {
       fixture.examStudents.map((examStudent) => examStudent.id)
     )
 
-    expect(result.examInfo!.examName).toBe(fixture.exam.examName)
-    expect(Array.isArray(result.examInfo!.tags)).toBe(true)
+    expect(result.examInfo.examName).toBe(fixture.exam.examName)
+    expect(Array.isArray(result.examInfo.tags)).toBe(true)
   })
 
-  it("存在しない試験ではエラーを返す", async () => {
-    const result = await fetchReport("non-existent-exam", [])
-
-    expect(result.success).toBe(false)
-    expect(result.error).toBeTruthy()
+  it("存在しない試験では例外を投げる", async () => {
+    await expect(fetchReport("non-existent-exam", [])).rejects.toThrow()
   })
 })

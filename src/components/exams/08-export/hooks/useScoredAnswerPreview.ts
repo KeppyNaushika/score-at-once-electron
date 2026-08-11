@@ -19,7 +19,7 @@ interface UseScoredAnswerPreviewProps {
   answerOverlaySettings: AnswerOverlaySettings
   enabled: boolean
   /**
-   * タブへ戻るたびに増える読み直しの合図。出力は実データを読み直すので、
+   * タブへ戻るたびに増える読み直しの合図。出力はデータを読み直すので、
    * プレビューを取得済みのまま据え置くと表示と出力が食い違う。
    */
   reloadKey: number
@@ -128,17 +128,6 @@ export function useScoredAnswerPreview({
         })
 
         if (cancelled) return
-
-        if (!dataResult.success || !dataResult.pages) {
-          setFetched({
-            examId,
-            previewStudentId,
-            reloadKey,
-            pages: null,
-            error: dataResult.error || "データの取得に失敗しました",
-          })
-          return
-        }
 
         if (dataResult.pages.length === 0) {
           setFetched({

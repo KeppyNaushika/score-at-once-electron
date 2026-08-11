@@ -1,7 +1,7 @@
 import { dialog } from "electron"
 import type * as ExcelJS from "exceljs"
 
-import type { ExportResult } from "../../shared/types"
+import type { FileExportResult } from "../../shared/types"
 
 /**
  * ファイル名として安全でない文字を置換する
@@ -18,48 +18,35 @@ function sanitizeFileName(name: string): string {
  * @param workbook - 保存するワークブック
  * @param outputPath - 出力パス（省略可能）
  * @param examName - 試験名（省略可能）
- * @returns 保存結果
+ * @returns 保存先。ダイアログがキャンセルされたときは `{ canceled: true }`
  */
 export async function saveWorkbook(
   workbook: ExcelJS.Workbook,
   outputPath?: string,
   examName?: string
-): Promise<ExportResult> {
-  try {
-    let finalOutputPath = outputPath
+): Promise<FileExportResult> {
+  let finalOutputPath = outputPath
 
-    if (!finalOutputPath) {
-      const dateStr = new Date().toISOString().slice(0, 10)
-      const safeExamName = examName ? sanitizeFileName(examName) : null
-      const fileName = safeExamName
-        ? `採点結果_${safeExamName}_${dateStr}.xlsx`
-        : `採点結果_${dateStr}.xlsx`
+  if (!finalOutputPath) {
+    const dateStr = new Date().toISOString().slice(0, 10)
+    const safeExamName = examName ? sanitizeFileName(examName) : null
+    const fileName = safeExamName
+      ? `採点結果_${safeExamName}_${dateStr}.xlsx`
+      : `採点結果_${dateStr}.xlsx`
 
-      const result = await dialog.showSaveDialog({
-        title: "Excel出力先を選択",
-        defaultPath: fileName,
-        filters: [{ name: "Excelファイル", extensions: ["xlsx"] }],
-      })
+    const result = await dialog.showSaveDialog({
+      title: "Excel出力先を選択",
+      defaultPath: fileName,
+      filters: [{ name: "Excelファイル", extensions: ["xlsx"] }],
+    })
 
-      if (result.canceled) {
-        return { success: false, error: "出力がキャンセルされました" }
-      }
-
-      finalOutputPath = result.filePath
+    if (result.canceled || !result.filePath) {
+      return { canceled: true }
     }
 
-    if (!finalOutputPath) {
-      return { success: false, error: "出力パスが指定されていません" }
-    }
-
-    await workbook.xlsx.writeFile(finalOutputPath)
-    return { success: true, outputPath: finalOutputPath }
-  } catch (error) {
-    console.error("Error saving workbook:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "ファイル保存に失敗しました",
-    }
+    finalOutputPath = result.filePath
   }
+
+  await workbook.xlsx.writeFile(finalOutputPath)
+  return { canceled: false, outputPath: finalOutputPath }
 }

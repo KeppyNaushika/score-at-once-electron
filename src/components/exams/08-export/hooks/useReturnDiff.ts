@@ -1,12 +1,10 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import type {
-  ReturnDiffResult,
-  ReturnStudentDiff,
-} from "@/electron-src/lib/prisma/returnSnapshot"
+import { queryKeys } from "@/lib/queryKeys"
 
 /**
  * 答案返却スナップショットの記録と差分検出を管理するフック。
@@ -16,33 +14,21 @@ import type {
  * - changedExamStudentIds: 返却版から変更があった生徒IDの集合
  */
 export function useReturnDiff(examId: string) {
-  const [diffByExamStudent, setDiffByStudent] = useState<
-    Map<string, ReturnStudentDiff>
-  >(new Map())
-  const [hasAnySnapshot, setHasAnySnapshot] = useState(false)
+  const queryClient = useQueryClient()
   const [capturing, setCapturing] = useState(false)
 
-  const refresh = useCallback(async () => {
-    if (!examId || !window.electronAPI?.export?.getReturnDiff) return
-    try {
-      const result: ReturnDiffResult =
-        await window.electronAPI.export.getReturnDiff(examId)
-      if (result.success) {
-        setDiffByStudent(
-          new Map(result.diffs.map((diff) => [diff.examStudentId, diff]))
-        )
-        setHasAnySnapshot(result.hasAnySnapshot)
-      } else {
-        console.error("返却差分の取得に失敗しました:", result.error)
-      }
-    } catch (error) {
-      console.error("返却差分の取得に失敗しました:", error)
-    }
-  }, [examId])
+  const { data: returnDiff } = useQuery({
+    queryKey: queryKeys.returnDiff.detail(examId),
+    queryFn: () => window.electronAPI.export.getReturnDiff(examId),
+  })
 
-  useEffect(() => {
-    refresh()
-  }, [refresh])
+  const diffByExamStudent = useMemo(
+    () =>
+      new Map(
+        (returnDiff?.diffs ?? []).map((diff) => [diff.examStudentId, diff])
+      ),
+    [returnDiff]
+  )
 
   /** 指定生徒を返却版として記録する */
   const capture = useCallback(
@@ -50,17 +36,16 @@ export function useReturnDiff(examId: string) {
       if (!examId || examStudentIds.length === 0) return false
       setCapturing(true)
       try {
-        const result = await window.electronAPI.export.captureReturnSnapshot({
-          examId,
-          examStudentIds,
+        const { capturedCount } =
+          await window.electronAPI.export.captureReturnSnapshot({
+            examId,
+            examStudentIds,
+          })
+        toast.success(`${capturedCount}名を返却版として記録しました`)
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.returnDiff.detail(examId),
         })
-        if (result.success) {
-          toast.success(`${result.capturedCount}名を返却版として記録しました`)
-          await refresh()
-          return true
-        }
-        toast.error(`返却版の記録に失敗しました: ${result.error ?? ""}`)
-        return false
+        return true
       } catch (error) {
         console.error("返却版の記録に失敗しました:", error)
         toast.error("返却版の記録に失敗しました")
@@ -69,7 +54,7 @@ export function useReturnDiff(examId: string) {
         setCapturing(false)
       }
     },
-    [examId, refresh]
+    [examId, queryClient]
   )
 
   const changedExamStudentIds = useMemo(() => {
@@ -83,7 +68,7 @@ export function useReturnDiff(examId: string) {
   return {
     diffByExamStudent,
     changedExamStudentIds,
-    hasAnySnapshot,
+    hasAnySnapshot: returnDiff?.hasAnySnapshot ?? false,
     capturing,
     capture,
   }
