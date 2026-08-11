@@ -25,14 +25,10 @@ export {
  */
 export async function previewCourseworkImport(
   data: AnyCourseworkArchiveData
-): Promise<{
-  success: boolean
-  preview?: CourseworkArchiveImportPreview
-  error?: string
-}> {
+): Promise<CourseworkArchiveImportPreview> {
   const validation = validateCourseworkManifest(data.manifest)
   if (!validation.compatible || !validation.manifest) {
-    return { success: false, error: validation.error }
+    throw new Error(validation.error)
   }
 
   const { data: normalized, warnings } = transformCourseworkToLatest(data)
@@ -60,12 +56,9 @@ export async function previewCourseworkImport(
   }
 
   return {
-    success: true,
-    preview: {
-      manifest: validation.manifest,
-      matches,
-      warnings: [...validation.warnings, ...warnings],
-    },
+    manifest: validation.manifest,
+    matches,
+    warnings: [...validation.warnings, ...warnings],
   }
 }
 
@@ -76,43 +69,33 @@ export async function importCourseworkArchive(
   data: AnyCourseworkArchiveData,
   options: CourseworkImportOptions = {}
 ): Promise<CourseworkArchiveImportResult> {
-  try {
-    const validation = validateCourseworkManifest(data.manifest)
-    if (!validation.compatible) {
-      return { success: false, error: validation.error }
-    }
-    const { data: normalized, warnings: transformWarnings } =
-      transformCourseworkToLatest(data)
+  const validation = validateCourseworkManifest(data.manifest)
+  if (!validation.compatible) {
+    throw new Error(validation.error)
+  }
+  const { data: normalized, warnings: transformWarnings } =
+    transformCourseworkToLatest(data)
 
-    const result = await prisma.$transaction(async (tx) => {
-      return importCourseworkData(tx, normalized, {
-        allowCreate: true,
-        ...options,
-      })
+  const result = await prisma.$transaction(async (tx) => {
+    return importCourseworkData(tx, normalized, {
+      allowCreate: true,
+      ...options,
     })
+  })
 
-    // 監査ログ（ベストエフォート）
-    for (const coursework of normalized.courseworks) {
-      void recordAuditLog({
-        action: "coursework.import",
-        entityType: "Coursework",
-        entityId: coursework.id,
-        scopeLabel: coursework.name,
-        target: coursework.name,
-      })
-    }
+  // 監査ログ（ベストエフォート）
+  for (const coursework of normalized.courseworks) {
+    void recordAuditLog({
+      action: "coursework.import",
+      entityType: "Coursework",
+      entityId: coursework.id,
+      scopeLabel: coursework.name,
+      target: coursework.name,
+    })
+  }
 
-    return {
-      success: true,
-      createdCourseworkIds: result.createdCourseworkIds,
-      warnings: [...transformWarnings, ...result.warnings],
-    }
-  } catch (error) {
-    console.error("Error importing coursework archive:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "インポートに失敗しました",
-    }
+  return {
+    createdCourseworkIds: result.createdCourseworkIds,
+    warnings: [...transformWarnings, ...result.warnings],
   }
 }

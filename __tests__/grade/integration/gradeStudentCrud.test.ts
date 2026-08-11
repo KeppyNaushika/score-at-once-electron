@@ -129,8 +129,6 @@ describe("GradeStudent / GradeClassroom", () => {
         grade.id,
         classroomA.id
       )
-
-      expect(result.success).toBe(true)
       expect(result.added).toBe(2)
       expect(result.skipped).toBe(0)
     })
@@ -143,8 +141,6 @@ describe("GradeStudent / GradeClassroom", () => {
         grade.id,
         classroomA.id
       )
-
-      expect(result.success).toBe(true)
       expect(result.added).toBe(0)
       expect(result.skipped).toBe(2)
     })
@@ -155,7 +151,6 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const classrooms = await getGradeClassrooms(grade.id)
-      expect(classrooms.success).toBe(true)
       expect(classrooms.classrooms).toHaveLength(1)
       expect(classrooms.classrooms![0].className).toBe("1年A組")
     })
@@ -178,7 +173,6 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const students = await getStudentsByGradeId(grade.id)
-      expect(students.success).toBe(true)
       expect(students.students).toHaveLength(2)
       expect(students.students![0].customOrder).toBe(1)
       expect(students.students![1].customOrder).toBe(2)
@@ -191,8 +185,6 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const result = await getStudentsByGradeId(grade.id)
-
-      expect(result.success).toBe(true)
       expect(result.students).toHaveLength(2)
       expect(result.students![0].student.lastName).toBe("山田")
     })
@@ -203,8 +195,6 @@ describe("GradeStudent / GradeClassroom", () => {
       })
 
       const result = await getStudentsByGradeId(grade.id)
-
-      expect(result.success).toBe(true)
       expect(result.students).toHaveLength(0)
     })
 
@@ -227,8 +217,6 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const result = await getGradeClassrooms(grade.id)
-
-      expect(result.success).toBe(true)
       expect(result.classrooms).toHaveLength(1)
       expect(result.classrooms![0].className).toBe("1年A組")
       expect(result.classrooms![0].studentCount).toBe(2)
@@ -241,8 +229,6 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const result = await getAvailableClassroomsForGrade(grade.id)
-
-      expect(result.success).toBe(true)
       // classroomAは登録済みなので、classroomBのみ
       expect(result.classrooms).toHaveLength(1)
       expect(result.classrooms![0].name).toBe("1年B組")
@@ -254,8 +240,6 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomB.id)
 
       const result = await getAvailableClassroomsForGrade(grade.id)
-
-      expect(result.success).toBe(true)
       expect(result.classrooms).toHaveLength(0)
     })
   })
@@ -265,8 +249,6 @@ describe("GradeStudent / GradeClassroom", () => {
       const { grade, student3 } = await createTestData()
 
       const result = await addStudentsToGrade(grade.id, [student3.id])
-
-      expect(result.success).toBe(true)
       expect(result.addedCount).toBe(1)
       expect(result.skippedCount).toBe(0)
 
@@ -339,8 +321,6 @@ describe("GradeStudent / GradeClassroom", () => {
       await addEdgeCaseStudents(classroomA.id)
 
       const result = await getAvailableStudentsForGrade(grade.id, true)
-
-      expect(result.success).toBe(true)
       // student1,2,3 + 未所属S100（過去在籍=卒業済みS101のみ除外）。
       // activeOnly は「未在籍または在籍中」を残し過去在籍だけを除外する仕様
       // （availableStudents.ts）。
@@ -356,8 +336,6 @@ describe("GradeStudent / GradeClassroom", () => {
       await addEdgeCaseStudents(classroomA.id)
 
       const result = await getAvailableStudentsForGrade(grade.id, false)
-
-      expect(result.success).toBe(true)
       // 3 + 未所属 + 卒業済み = 5
       expect(result.students).toHaveLength(5)
     })
@@ -485,12 +463,10 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       // student2を先頭に
-      const result = await updateGradeStudentOrders(grade.id, [
+      await updateGradeStudentOrders(grade.id, [
         { studentId: student2.id, customOrder: 1 },
         { studentId: student1.id, customOrder: 2 },
       ])
-
-      expect(result.success).toBe(true)
 
       const students = await getStudentsByGradeId(grade.id)
       expect(students.students![0].student.lastName).toBe("佐藤")
@@ -504,8 +480,6 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const result = await removeClassroomFromGrade(grade.id, classroomA.id)
-
-      expect(result.success).toBe(true)
       expect(result.removedStudents).toBe(2)
 
       const students = await getStudentsByGradeId(grade.id)
@@ -529,8 +503,6 @@ describe("GradeStudent / GradeClassroom", () => {
 
       // classroomAを削除
       const result = await removeClassroomFromGrade(grade.id, classroomA.id)
-
-      expect(result.success).toBe(true)
       // student1はclassroomBにも属しているので削除されない、student2のみ削除
       expect(result.removedStudents).toBe(1)
 
@@ -558,8 +530,6 @@ describe("GradeStudent / GradeClassroom", () => {
         classroomA.id,
         false
       )
-
-      expect(result.success).toBe(true)
       expect(result.removedStudents).toBe(0)
 
       // GradeClassroom は外れるが、生徒は対象に残る
@@ -579,8 +549,6 @@ describe("GradeStudent / GradeClassroom", () => {
         grade.id,
         classroomA.id
       )
-
-      expect(preview.success).toBe(true)
       // classroomA の student1,2 は他学級に属さない → 2名が削除対象
       expect(preview.exclusiveCount).toBe(2)
     })
@@ -614,11 +582,7 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomB.id)
 
       // 初期は classroomA(0), classroomB(1)。逆順にする
-      const result = await setGradeClassroomOrders(grade.id, [
-        classroomB.id,
-        classroomA.id,
-      ])
-      expect(result.success).toBe(true)
+      await setGradeClassroomOrders(grade.id, [classroomB.id, classroomA.id])
 
       const classrooms = await getGradeClassrooms(grade.id)
       const byName = new Map(

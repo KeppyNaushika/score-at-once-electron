@@ -153,12 +153,7 @@ describe("成績から生徒を外したときのセルの削除", () => {
   it("学級ごと外すと、その生徒の上書き・確定値・除外設定が全て消える", async () => {
     const fixture = await buildFixture()
 
-    const result = await removeClassroomFromGrade(
-      fixture.gradeId,
-      fixture.classroomId,
-      true
-    )
-    expect(result.success).toBe(true)
+    await removeClassroomFromGrade(fixture.gradeId, fixture.classroomId, true)
 
     expect(await countCells(fixture.removedGradeStudentId)).toEqual({
       overrides: 0,
@@ -184,11 +179,7 @@ describe("成績から生徒を外したときのセルの削除", () => {
     const fixture = await buildFixture()
 
     await removeClassroomFromGrade(fixture.gradeId, fixture.classroomId, true)
-    const added = await addStudentsFromClassroomToGrade(
-      fixture.gradeId,
-      fixture.classroomId
-    )
-    expect(added.success).toBe(true)
+    await addStudentsFromClassroomToGrade(fixture.gradeId, fixture.classroomId)
 
     const readded = await testPrisma.gradeStudent.findFirstOrThrow({
       where: { gradeId: fixture.gradeId, studentId: fixture.removedStudentId },

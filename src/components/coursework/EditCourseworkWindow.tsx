@@ -76,30 +76,21 @@ export function EditCourseworkWindow({
     if (!name.trim()) return
     setSaving(true)
     try {
-      const result = await window.electronAPI.coursework.update(courseworkId, {
+      await window.electronAPI.coursework.update(courseworkId, {
         name: name.trim(),
         description: description.trim() || null,
         date: date || null,
       })
-      if (!result.success) {
-        toast.error("保存に失敗しました", { description: result.error })
-        return
-      }
-      const tagResult = await window.electronAPI.coursework.setTags(
-        courseworkId,
-        [...selectedTagIds]
-      )
-      if (!tagResult.success) {
-        toast.error("タグの保存に失敗しました", {
-          description: tagResult.error,
-        })
-        return
-      }
+      await window.electronAPI.coursework.setTags(courseworkId, [
+        ...selectedTagIds,
+      ])
       onSaved()
       onClose()
     } catch (error) {
       console.error("Error saving coursework setup:", error)
-      toast.error("保存に失敗しました")
+      toast.error("保存に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setSaving(false)
     }

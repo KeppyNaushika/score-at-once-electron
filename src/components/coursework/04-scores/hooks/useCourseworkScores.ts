@@ -88,46 +88,38 @@ export function useCourseworkScores(courseworkId: string) {
 
   const loadData = useCallback(async () => {
     try {
-      const [courseworkResult, studentsResult, classroomsResult] =
+      const [coursework, courseworkStudents, courseworkClassrooms] =
         await Promise.all([
           window.electronAPI.coursework.getById(courseworkId),
           window.electronAPI.coursework.getStudents(courseworkId),
           window.electronAPI.coursework.getClassrooms(courseworkId),
         ])
-      if (!courseworkResult.success || !courseworkResult.coursework) return
 
-      const sortedItems = courseworkResult.coursework.items
+      const sortedItems = coursework.items
         .slice()
         .sort((itemA, itemB) => itemA.order - itemB.order)
       setItems(sortedItems)
 
-      if (!studentsResult.success || !studentsResult.students) return
-
       const registeredClassroomIds = new Set(
-        classroomsResult.success && classroomsResult.classrooms
-          ? classroomsResult.classrooms.map(
-              (courseworkClassroom) => courseworkClassroom.classroomId
-            )
-          : []
+        courseworkClassrooms.map(
+          (courseworkClassroom) => courseworkClassroom.classroomId
+        )
       )
 
       // 各評価項目の点数を並列取得（項目間は独立なので逐次にしない）
       const allScores: Record<string, CourseworkScoreWithCourseworkStudent[]> =
         {}
-      const scoreResults = await Promise.all(
+      const scoresPerItem = await Promise.all(
         sortedItems.map((item) =>
           window.electronAPI.coursework.getScores(item.id)
         )
       )
-      sortedItems.forEach((item, i) => {
-        const result = scoreResults[i]
-        if (result.success && result.scores) {
-          allScores[item.id] = result.scores
-        }
+      sortedItems.forEach((item, itemIndex) => {
+        allScores[item.id] = scoresPerItem[itemIndex]
       })
 
       // 生徒×評価項目のマトリックスを構築
-      const rows: CourseworkStudentRow[] = studentsResult.students.map(
+      const rows: CourseworkStudentRow[] = courseworkStudents.map(
         (courseworkStudent) => {
           const cells: Record<string, CourseworkCell> = {}
           for (const item of sortedItems) {

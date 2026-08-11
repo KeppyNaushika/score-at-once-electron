@@ -200,16 +200,15 @@ export function CourseworkItemsContainer({
 
   const loadItems = useCallback(async () => {
     try {
-      const result = await window.electronAPI.coursework.getById(courseworkId)
-      if (result.success && result.coursework) {
-        const sorted = result.coursework.items
-          .slice()
-          .sort((itemA, itemB) => itemA.order - itemB.order)
-        setItems(sorted)
-        setDraftsSynced(
-          Object.fromEntries(sorted.map((item) => [item.id, toDraft(item)]))
-        )
-      }
+      const coursework =
+        await window.electronAPI.coursework.getById(courseworkId)
+      const sorted = coursework.items
+        .slice()
+        .sort((itemA, itemB) => itemA.order - itemB.order)
+      setItems(sorted)
+      setDraftsSynced(
+        Object.fromEntries(sorted.map((item) => [item.id, toDraft(item)]))
+      )
     } catch (error) {
       console.error("Error loading coursework items:", error)
     } finally {
@@ -225,14 +224,17 @@ export function CourseworkItemsContainer({
   const saveItem = useCallback(async (itemId: string) => {
     const draft = draftsRef.current[itemId]
     if (!draft || !isDraftValid(draft)) return
-    const result = await window.electronAPI.coursework.updateItem(itemId, {
-      name: draft.name.trim(),
-      maxScore: Number(draft.maxScore),
-      inputMode: draft.inputMode,
-      letterScales: draftsToLetterScales(draft.letterScales),
-    })
-    if (!result.success) {
-      toast.error("保存に失敗しました", { description: result.error })
+    try {
+      await window.electronAPI.coursework.updateItem(itemId, {
+        name: draft.name.trim(),
+        maxScore: Number(draft.maxScore),
+        inputMode: draft.inputMode,
+        letterScales: draftsToLetterScales(draft.letterScales),
+      })
+    } catch (error) {
+      toast.error("保存に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }, [])
 
@@ -285,32 +287,38 @@ export function CourseworkItemsContainer({
   const handleAddItem = async () => {
     if (!newItemName.trim()) return
     await flushAll()
-    const result = await window.electronAPI.coursework.createItem({
-      courseworkId,
-      name: newItemName.trim(),
-      maxScore: 100,
-      inputMode: "numeric",
-    })
-    if (result.success) {
+    try {
+      await window.electronAPI.coursework.createItem({
+        courseworkId,
+        name: newItemName.trim(),
+        maxScore: 100,
+        inputMode: "numeric",
+      })
       setNewItemName("")
       await loadItems()
-    } else {
-      toast.error("評価項目の追加に失敗しました", { description: result.error })
+    } catch (error) {
+      toast.error("評価項目の追加に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }
 
   const handleDelete = async (item: CourseworkItemWithLetterScales) => {
     await flushAll()
-    const result = await window.electronAPI.coursework.deleteItem(item.id)
-    if (result.success) {
+    try {
+      const result = await window.electronAPI.coursework.deleteItem(item.id)
+      if (!result.deleted) {
+        toast.error("削除できません", {
+          description: `次の成績算出で参照されています: ${result.usedBy.join("、")}`,
+        })
+        return
+      }
       await loadItems()
       toast.success("評価項目を削除しました", { description: item.name })
-    } else if (result.usedBy && result.usedBy.length > 0) {
-      toast.error("削除できません", {
-        description: `次の成績算出で参照されています: ${result.usedBy.join("、")}`,
+    } catch (error) {
+      toast.error("削除に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
       })
-    } else {
-      toast.error("削除に失敗しました", { description: result.error })
     }
   }
 
@@ -322,11 +330,14 @@ export function CourseworkItemsContainer({
     if (oldIndex < 0 || newIndex < 0) return
     const reordered = arrayMove(items, oldIndex, newIndex)
     setItems(reordered)
-    const result = await window.electronAPI.coursework.reorderItems(
-      reordered.map((item, i) => ({ id: item.id, order: i }))
-    )
-    if (!result.success) {
-      toast.error("並べ替えに失敗しました", { description: result.error })
+    try {
+      await window.electronAPI.coursework.reorderItems(
+        reordered.map((item, order) => ({ id: item.id, order }))
+      )
+    } catch (error) {
+      toast.error("並べ替えに失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
       await loadItems()
     }
   }

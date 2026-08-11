@@ -2,6 +2,8 @@
  * Coursework（試験外成績資料）関連 API
  */
 
+import type { CourseworkDeleteResult } from "@/electron-src/lib/prisma/coursework"
+
 import type {
   CourseworkItemWithLetterScales,
   CourseworkScoreUpsertInput,
@@ -21,25 +23,13 @@ import type {
 export interface CourseworkAPI {
   coursework: {
     // Coursework（トップレベル）
-    getAll: () => Promise<{
-      success: boolean
-      courseworks?: CourseworkSummary[]
-      error?: string
-    }>
-    getById: (id: string) => Promise<{
-      success: boolean
-      coursework?: CourseworkWithRelations
-      error?: string
-    }>
+    getAll: () => Promise<CourseworkSummary[]>
+    getById: (id: string) => Promise<CourseworkWithRelations>
     create: (data: {
       name: string
       description?: string | null
       date?: string | null
-    }) => Promise<{
-      success: boolean
-      coursework?: CourseworkWithRelations
-      error?: string
-    }>
+    }) => Promise<CourseworkWithRelations>
     update: (
       id: string,
       data: {
@@ -47,19 +37,11 @@ export interface CourseworkAPI {
         description?: string | null
         date?: string | null
       }
-    ) => Promise<{
-      success: boolean
-      coursework?: CourseworkWithRelations
-      error?: string
-    }>
-    delete: (id: string) => Promise<{
-      success: boolean
-      error?: string
-      usedBy?: string[]
-    }>
-    getCandidates: () => Promise<{
-      success: boolean
-      courseworks?: {
+    ) => Promise<CourseworkWithRelations>
+    /** 成績算出から参照されているときは消さず、参照元の成績名を返す */
+    delete: (id: string) => Promise<CourseworkDeleteResult>
+    getCandidates: () => Promise<
+      {
         id: string
         name: string
         date: string | null
@@ -71,8 +53,7 @@ export interface CourseworkAPI {
           order: number
         }[]
       }[]
-      error?: string
-    }>
+    >
 
     // 評価項目
     createItem: (data: {
@@ -81,11 +62,7 @@ export interface CourseworkAPI {
       maxScore: number
       inputMode?: string
       letterScales?: { label: string; score: number; order: number }[]
-    }) => Promise<{
-      success: boolean
-      item?: CourseworkItemWithLetterScales
-      error?: string
-    }>
+    }) => Promise<CourseworkItemWithLetterScales>
     updateItem: (
       id: string,
       data: {
@@ -94,147 +71,97 @@ export interface CourseworkAPI {
         inputMode?: string
         letterScales?: { label: string; score: number; order: number }[]
       }
-    ) => Promise<{
-      success: boolean
-      item?: CourseworkItemWithLetterScales
-      error?: string
-    }>
-    deleteItem: (id: string) => Promise<{
-      success: boolean
-      error?: string
-      usedBy?: string[]
-    }>
-    reorderItems: (
-      items: { id: string; order: number }[]
-    ) => Promise<{ success: boolean; error?: string }>
+    ) => Promise<CourseworkItemWithLetterScales>
+    /** 成績算出から参照されているときは消さず、参照元の成績名を返す */
+    deleteItem: (id: string) => Promise<CourseworkDeleteResult>
+    reorderItems: (items: { id: string; order: number }[]) => Promise<void>
 
     // 点数
-    getScores: (courseworkItemId: string) => Promise<{
-      success: boolean
-      scores?: CourseworkScoreWithCourseworkStudent[]
-      error?: string
-    }>
-    batchUpsertScores: (
-      scores: CourseworkScoreUpsertInput[]
-    ) => Promise<{ success: boolean; error?: string }>
+    getScores: (
+      courseworkItemId: string
+    ) => Promise<CourseworkScoreWithCourseworkStudent[]>
+    batchUpsertScores: (scores: CourseworkScoreUpsertInput[]) => Promise<void>
 
     // 名簿
-    getStudents: (courseworkId: string) => Promise<{
-      success: boolean
-      students?: CourseworkStudentWithMemberships[]
-      error?: string
-    }>
-    getClassrooms: (courseworkId: string) => Promise<{
-      success: boolean
-      classrooms?: {
+    getStudents: (
+      courseworkId: string
+    ) => Promise<CourseworkStudentWithMemberships[]>
+    getClassrooms: (courseworkId: string) => Promise<
+      {
         id: string
         classroomId: string
         className: string
         order: number
         studentCount: number
       }[]
-      error?: string
-    }>
+    >
     getAvailableClassrooms: (
       courseworkId: string,
       activeOnly?: boolean
-    ) => Promise<{
-      success: boolean
-      classrooms?: {
+    ) => Promise<
+      {
         id: string
         name: string
         studentCount: number
       }[]
-      error?: string
-    }>
+    >
     getAvailableStudents: (
       courseworkId: string,
       activeOnly?: boolean
-    ) => Promise<{
-      success: boolean
-      students?: {
+    ) => Promise<
+      {
         id: string
         studentNumber: string
         lastName: string
         firstName: string
         className: string | null
       }[]
-      error?: string
-    }>
+    >
     addStudentsFromClassroom: (
       courseworkId: string,
       classroomId: string,
       activeOnly?: boolean
-    ) => Promise<{
-      success: boolean
-      added?: number
-      skipped?: number
-      error?: string
-    }>
+    ) => Promise<{ added: number; skipped: number }>
     addStudents: (
       courseworkId: string,
       studentIds: string[]
-    ) => Promise<{
-      success: boolean
-      addedCount?: number
-      skippedCount?: number
-      error?: string
-    }>
+    ) => Promise<{ addedCount: number; skippedCount: number }>
     updateStudentOrders: (
       courseworkId: string,
       studentOrders: { studentId: string; customOrder: number }[]
-    ) => Promise<{ success: boolean; error?: string }>
+    ) => Promise<void>
     removeStudents: (
       courseworkId: string,
       studentIds: string[]
-    ) => Promise<{ success: boolean; removedCount?: number; error?: string }>
+    ) => Promise<{ removedCount: number }>
     removeClassroom: (
       courseworkId: string,
       classroomId: string,
       deleteStudents?: boolean
-    ) => Promise<{
-      success: boolean
-      removedStudents?: number
-      error?: string
-    }>
+    ) => Promise<{ removedStudents: number }>
     classroomRemovalPreview: (
       courseworkId: string,
       classroomId: string
-    ) => Promise<{
-      success: boolean
-      exclusiveCount?: number
-      error?: string
-    }>
+    ) => Promise<{ exclusiveCount: number }>
     setClassroomOrders: (
       courseworkId: string,
       orderedClassroomIds: string[]
-    ) => Promise<{ success: boolean; error?: string }>
+    ) => Promise<void>
 
     // タグ
-    setTags: (
-      courseworkId: string,
-      tagIds: string[]
-    ) => Promise<{ success: boolean; error?: string }>
-    addTag: (
-      courseworkId: string,
-      tagId: string
-    ) => Promise<{ success: boolean; error?: string }>
+    setTags: (courseworkId: string, tagIds: string[]) => Promise<void>
+    addTag: (courseworkId: string, tagId: string) => Promise<void>
 
     // アーカイブ（.coursework のエクスポート／インポート）
     exportArchive: (
       courseworkId: string
     ) => Promise<ExportCourseworkArchiveResult>
-    selectImportFile: () => Promise<{
-      success: boolean
-      filePath?: string
-      canceled?: boolean
-      error?: string
-    }>
-    analyzeArchive: (options: { archivePath: string }) => Promise<{
-      success: boolean
-      preview?: CourseworkArchiveImportPreview
-      error?: string
-    }>
+    selectImportFile: () => Promise<
+      { canceled: true } | { canceled: false; filePath: string }
+    >
+    analyzeArchive: (options: {
+      archivePath: string
+    }) => Promise<CourseworkArchiveImportPreview>
     importArchive: (options: {
       archivePath: string
       courseworkDecisions?: CourseworkImportDecisions

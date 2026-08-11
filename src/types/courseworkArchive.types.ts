@@ -257,20 +257,18 @@ export interface ExportCourseworkArchiveOptions {
   outputPath?: string
 }
 
-export interface ExportCourseworkArchiveResult {
-  success: boolean
-  outputPath?: string
-  canceled?: boolean
-  manifest?: CourseworkArchiveManifest
-  error?: string
-  warnings?: string[]
-}
+/** 保存ダイアログのキャンセルは失敗ではないので値で返す */
+export type ExportCourseworkArchiveResult =
+  | { canceled: true }
+  | {
+      canceled: false
+      outputPath: string
+      manifest: CourseworkArchiveManifest
+    }
 
 export interface CourseworkArchiveImportResult {
-  success: boolean
-  createdCourseworkIds?: string[]
-  warnings?: string[]
-  error?: string
+  createdCourseworkIds: string[]
+  warnings: string[]
 }
 
 // バージョン変換の型（旧版の形・変換器・チェーン）は

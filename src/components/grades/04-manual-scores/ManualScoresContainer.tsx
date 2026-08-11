@@ -64,9 +64,7 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
         const enteredByItem: Record<string, number> = {}
         await Promise.all(
           distinctItemIds.map(async (itemId) => {
-            const scoreResult =
-              await window.electronAPI.coursework.getScores(itemId)
-            const scores = scoreResult.success ? (scoreResult.scores ?? []) : []
+            const scores = await window.electronAPI.coursework.getScores(itemId)
             enteredByItem[itemId] = scores.filter(
               // 成績の対象生徒は人（Student）で数えるので、対象者から生徒へ1段辿る
               (courseworkScore) =>

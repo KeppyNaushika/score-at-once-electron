@@ -144,8 +144,7 @@ describe("coursework-archive ラウンドトリップ", () => {
     expect(collected.tagsData[0].name).toBe(`タグ_${suffix}`)
 
     // UUID一致での再インポート → 重複生成されない
-    const result = await importCourseworkArchive(toArchive(collected))
-    expect(result.success).toBe(true)
+    await importCourseworkArchive(toArchive(collected))
 
     const courseworkCount = await prisma.coursework.count()
     const studentCount = await prisma.student.count()
@@ -163,8 +162,7 @@ describe("coursework-archive ラウンドトリップ", () => {
     // 別環境想定: 関連レコードを全削除
     await cleanupTestDatabase()
 
-    const result = await importCourseworkArchive(toArchive(collected))
-    expect(result.success).toBe(true)
+    await importCourseworkArchive(toArchive(collected))
 
     const item = await prisma.courseworkItem.findFirst({
       where: { name: "提出物" },
@@ -214,10 +212,9 @@ describe("coursework-archive ラウンドトリップ", () => {
       },
     })
 
-    const result = await importCourseworkArchive(toArchive(collected), {
+    await importCourseworkArchive(toArchive(collected), {
       studentMatching: "studentNumber",
     })
-    expect(result.success).toBe(true)
 
     // 生徒は新規作成されず、既存（別UUID）へ統合
     const students = await prisma.student.findMany({
@@ -249,8 +246,7 @@ describe("coursework-archive ラウンドトリップ", () => {
     archive.courseworkScores[0].updatedAt = new Date(
       "2000-01-01T00:00:00.000Z"
     ).toISOString()
-    const oldResult = await importCourseworkArchive(archive)
-    expect(oldResult.success).toBe(true)
+    await importCourseworkArchive(archive)
     const afterOld = await prisma.courseworkScore.findUnique({
       where: { id: seeded.score.id },
     })
@@ -260,8 +256,7 @@ describe("coursework-archive ラウンドトリップ", () => {
     archive.courseworkScores[0].updatedAt = new Date(
       "2099-01-01T00:00:00.000Z"
     ).toISOString()
-    const newResult = await importCourseworkArchive(archive)
-    expect(newResult.success).toBe(true)
+    await importCourseworkArchive(archive)
     const afterNew = await prisma.courseworkScore.findUnique({
       where: { id: seeded.score.id },
     })
@@ -279,9 +274,8 @@ describe("coursework-archive ラウンドトリップ", () => {
     const result = await importCourseworkArchive(toArchive(collected), {
       allowCreate: false,
     })
-    expect(result.success).toBe(true)
 
-    const warnings = result.warnings ?? []
+    const warnings = result.warnings
     // 名簿には載っているが取り込み先に居ない ＝ アーカイブの不整合ではない
     expect(
       warnings.some((warning) => warning.includes("この環境に存在しない生徒"))
@@ -299,8 +293,7 @@ describe("coursework-archive ラウンドトリップ", () => {
     const collected = await collectCourseworkArchiveData([seeded.coursework.id])
 
     const preview = await previewCourseworkImport(toArchive(collected))
-    expect(preview.success).toBe(true)
-    expect(preview.preview!.matches).toHaveLength(1)
-    expect(preview.preview!.matches[0].uuidMatch?.id).toBe(seeded.coursework.id)
+    expect(preview.matches).toHaveLength(1)
+    expect(preview.matches[0].uuidMatch?.id).toBe(seeded.coursework.id)
   })
 })

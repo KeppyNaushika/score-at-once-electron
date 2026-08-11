@@ -61,50 +61,34 @@ const courseworkWithRelationsInclude = {
 
 /** 試験外成績資料の一覧（サマリ）を取得 */
 export async function getCourseworks() {
-  try {
-    const courseworks = await prisma.coursework.findMany({
-      include: {
-        // 評価項目・名簿は行のまま渡し切る。件数は renderer が `.length` で取る
-        items: { orderBy: { order: "asc" } },
-        students: true,
-        tags: {
-          include: { tag: true },
-        },
-        classrooms: {
-          include: { classroom: true },
-          orderBy: { order: "asc" },
-        },
+  const courseworks = await prisma.coursework.findMany({
+    include: {
+      // 評価項目・名簿は行のまま渡し切る。件数は renderer が `.length` で取る
+      items: { orderBy: { order: "asc" } },
+      students: true,
+      tags: {
+        include: { tag: true },
       },
-      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-    })
-    return { success: true, courseworks: serializePrisma(courseworks) }
-  } catch (error) {
-    console.error("Error getting courseworks:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+      classrooms: {
+        include: { classroom: true },
+        orderBy: { order: "asc" },
+      },
+    },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+  })
+  return serializePrisma(courseworks)
 }
 
 /** 試験外成績資料を1件取得（詳細） */
 export async function getCourseworkById(id: string) {
-  try {
-    const coursework = await prisma.coursework.findUnique({
-      where: { id },
-      include: courseworkWithRelationsInclude,
-    })
-    if (!coursework) {
-      return { success: false, error: "Coursework not found" }
-    }
-    return { success: true, coursework: serializePrisma(coursework) }
-  } catch (error) {
-    console.error("Error getting coursework:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+  const coursework = await prisma.coursework.findUnique({
+    where: { id },
+    include: courseworkWithRelationsInclude,
+  })
+  if (!coursework) {
+    throw new Error("Coursework not found")
   }
+  return serializePrisma(coursework)
 }
 
 /** 試験外成績資料を作成 */
@@ -113,33 +97,25 @@ export async function createCoursework(data: {
   description?: string | null
   date?: string | null
 }) {
-  try {
-    const coursework = await prisma.coursework.create({
-      data: {
-        name: data.name,
-        description: data.description ?? null,
-        date: data.date ? new Date(data.date) : null,
-      },
-      include: courseworkWithRelationsInclude,
-    })
+  const coursework = await prisma.coursework.create({
+    data: {
+      name: data.name,
+      description: data.description ?? null,
+      date: data.date ? new Date(data.date) : null,
+    },
+    include: courseworkWithRelationsInclude,
+  })
 
-    await recordAuditLog({
-      action: "coursework.create",
-      entityType: "Coursework",
-      entityId: coursework.id,
-      scopeId: coursework.id,
-      scopeLabel: coursework.name,
-      target: coursework.name,
-    })
+  await recordAuditLog({
+    action: "coursework.create",
+    entityType: "Coursework",
+    entityId: coursework.id,
+    scopeId: coursework.id,
+    scopeLabel: coursework.name,
+    target: coursework.name,
+  })
 
-    return { success: true, coursework: serializePrisma(coursework) }
-  } catch (error) {
-    console.error("Error creating coursework:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return serializePrisma(coursework)
 }
 
 /** 試験外成績資料を更新（基本設定） */
@@ -151,82 +127,70 @@ export async function updateCoursework(
     date?: string | null
   }
 ) {
-  try {
-    const updateData: {
-      name?: string
-      description?: string | null
-      date?: Date | null
-    } = {}
-    if (data.name !== undefined) updateData.name = data.name
-    if (data.description !== undefined)
-      updateData.description = data.description
-    if (data.date !== undefined)
-      updateData.date = data.date ? new Date(data.date) : null
+  const updateData: {
+    name?: string
+    description?: string | null
+    date?: Date | null
+  } = {}
+  if (data.name !== undefined) updateData.name = data.name
+  if (data.description !== undefined) updateData.description = data.description
+  if (data.date !== undefined)
+    updateData.date = data.date ? new Date(data.date) : null
 
-    const coursework = await prisma.coursework.update({
-      where: { id },
-      data: updateData,
-      include: courseworkWithRelationsInclude,
-    })
+  const coursework = await prisma.coursework.update({
+    where: { id },
+    data: updateData,
+    include: courseworkWithRelationsInclude,
+  })
 
-    await recordAuditLog({
-      action: "coursework.update",
-      entityType: "Coursework",
-      entityId: coursework.id,
-      scopeId: coursework.id,
-      scopeLabel: coursework.name,
-      target: coursework.name,
-    })
+  await recordAuditLog({
+    action: "coursework.update",
+    entityType: "Coursework",
+    entityId: coursework.id,
+    scopeId: coursework.id,
+    scopeLabel: coursework.name,
+    target: coursework.name,
+  })
 
-    return { success: true, coursework: serializePrisma(coursework) }
-  } catch (error) {
-    console.error("Error updating coursework:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return serializePrisma(coursework)
 }
+
+/**
+ * 参照されていて消せなかったことは失敗ではなく結果なので、値で返す。
+ * 呼び出し側は参照元の成績名を並べて知らせる。
+ */
+export type CourseworkDeleteResult =
+  { deleted: true } | { deleted: false; usedBy: string[] }
 
 /**
  * 試験外成績資料を削除。
  * いずれかの評価項目が成績算出（GradeDataSource）から参照されている場合は削除をブロックし、
  * 使用中の成績名を返す（deleteSubtotalGroup と同型）。
  */
-export async function deleteCoursework(id: string) {
-  try {
-    const usedBy = await getReferencingGradeNamesForCoursework(id)
-    if (usedBy.length > 0) {
-      return {
-        success: false,
-        error: `この資料は成績算出で使用されているため削除できません: ${usedBy.join(", ")}`,
-        usedBy,
-      }
-    }
-
-    const before = await prisma.coursework.findUnique({
-      where: { id },
-    })
-
-    await prisma.coursework.delete({ where: { id } })
-
-    await recordAuditLog({
-      action: "coursework.delete",
-      entityType: "Coursework",
-      entityId: id,
-      scopeId: id,
-      scopeLabel: before?.name ?? null,
-      target: before?.name ?? null,
-    })
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error deleting coursework:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+export async function deleteCoursework(
+  id: string
+): Promise<CourseworkDeleteResult> {
+  const usedBy = await getReferencingGradeNamesForCoursework(id)
+  if (usedBy.length > 0) {
+    return { deleted: false, usedBy }
   }
+
+  const before = await prisma.coursework.findUnique({
+    where: { id },
+  })
+
+  await prisma.coursework.delete({ where: { id } })
+
+  await recordAuditLog({
+    action: "coursework.delete",
+    entityType: "Coursework",
+    entityId: id,
+    scopeId: id,
+    scopeLabel: before?.name ?? null,
+    target: before?.name ?? null,
+  })
+
+  return { deleted: true }
 }
 
 /** 資料を参照している成績名の一覧を返す（重複排除） */
@@ -271,52 +235,44 @@ export async function createCourseworkItem(data: {
   inputMode?: string
   letterScales?: { label: string; score: number; order: number }[]
 }) {
-  try {
-    const maxOrder = await prisma.courseworkItem.aggregate({
-      where: { courseworkId: data.courseworkId },
-      _max: { order: true },
-    })
-    const nextOrder = (maxOrder._max.order ?? -1) + 1
+  const maxOrder = await prisma.courseworkItem.aggregate({
+    where: { courseworkId: data.courseworkId },
+    _max: { order: true },
+  })
+  const nextOrder = (maxOrder._max.order ?? -1) + 1
 
-    const item = await prisma.courseworkItem.create({
-      data: {
-        courseworkId: data.courseworkId,
-        name: data.name,
-        maxScore: data.maxScore,
-        order: nextOrder,
-        ...(data.inputMode !== undefined && { inputMode: data.inputMode }),
-        ...(data.letterScales !== undefined &&
-          data.letterScales.length > 0 && {
-            letterScales: {
-              create: data.letterScales.map((letterScale) => ({
-                label: letterScale.label,
-                score: letterScale.score,
-                order: letterScale.order,
-              })),
-            },
-          }),
-      },
-      include: { letterScales: { orderBy: { order: "asc" } } },
-    })
+  const item = await prisma.courseworkItem.create({
+    data: {
+      courseworkId: data.courseworkId,
+      name: data.name,
+      maxScore: data.maxScore,
+      order: nextOrder,
+      ...(data.inputMode !== undefined && { inputMode: data.inputMode }),
+      ...(data.letterScales !== undefined &&
+        data.letterScales.length > 0 && {
+          letterScales: {
+            create: data.letterScales.map((letterScale) => ({
+              label: letterScale.label,
+              score: letterScale.score,
+              order: letterScale.order,
+            })),
+          },
+        }),
+    },
+    include: { letterScales: { orderBy: { order: "asc" } } },
+  })
 
-    const scope = await resolveCourseworkScope(data.courseworkId)
-    await recordAuditLog({
-      action: "coursework.item.create",
-      entityType: "CourseworkItem",
-      entityId: item.id,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      target: data.name,
-    })
+  const scope = await resolveCourseworkScope(data.courseworkId)
+  await recordAuditLog({
+    action: "coursework.item.create",
+    entityType: "CourseworkItem",
+    entityId: item.id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    target: data.name,
+  })
 
-    return { success: true, item: serializePrisma(item) }
-  } catch (error) {
-    console.error("Error creating coursework item:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return serializePrisma(item)
 }
 
 /** 評価項目を更新（letterScales は全置換） */
@@ -329,107 +285,80 @@ export async function updateCourseworkItem(
     letterScales?: { label: string; score: number; order: number }[]
   }
 ) {
-  try {
-    const { letterScales, ...rest } = data
-    const updateData: Record<string, unknown> = { ...rest }
-    if (letterScales !== undefined) {
-      updateData.letterScales = {
-        deleteMany: {},
-        create: letterScales.map((letterScale) => ({
-          label: letterScale.label,
-          score: letterScale.score,
-          order: letterScale.order,
-        })),
-      }
-    }
-
-    const item = await prisma.courseworkItem.update({
-      where: { id },
-      data: updateData,
-      include: { letterScales: { orderBy: { order: "asc" } } },
-    })
-
-    const scope = await resolveCourseworkScopeByItem(id)
-    await recordAuditLog({
-      action: "coursework.item.update",
-      entityType: "CourseworkItem",
-      entityId: id,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      target: item.name,
-    })
-
-    return { success: true, item: serializePrisma(item) }
-  } catch (error) {
-    console.error("Error updating coursework item:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+  const { letterScales, ...rest } = data
+  const updateData: Record<string, unknown> = { ...rest }
+  if (letterScales !== undefined) {
+    updateData.letterScales = {
+      deleteMany: {},
+      create: letterScales.map((letterScale) => ({
+        label: letterScale.label,
+        score: letterScale.score,
+        order: letterScale.order,
+      })),
     }
   }
+
+  const item = await prisma.courseworkItem.update({
+    where: { id },
+    data: updateData,
+    include: { letterScales: { orderBy: { order: "asc" } } },
+  })
+
+  const scope = await resolveCourseworkScopeByItem(id)
+  await recordAuditLog({
+    action: "coursework.item.update",
+    entityType: "CourseworkItem",
+    entityId: id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    target: item.name,
+  })
+
+  return serializePrisma(item)
 }
 
 /**
  * 評価項目を削除。成績算出から参照されている場合はブロックし使用中の成績名を返す。
  */
-export async function deleteCourseworkItem(id: string) {
-  try {
-    const usedBy = await getReferencingGradeNamesForItem(id)
-    if (usedBy.length > 0) {
-      return {
-        success: false,
-        error: `この評価項目は成績算出で使用されているため削除できません: ${usedBy.join(", ")}`,
-        usedBy,
-      }
-    }
-
-    const before = await prisma.courseworkItem.findUnique({
-      where: { id },
-    })
-    const scope = await resolveCourseworkScopeByItem(id)
-
-    await prisma.courseworkItem.delete({ where: { id } })
-
-    await recordAuditLog({
-      action: "coursework.item.delete",
-      entityType: "CourseworkItem",
-      entityId: id,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      target: before?.name ?? null,
-    })
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error deleting coursework item:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+export async function deleteCourseworkItem(
+  id: string
+): Promise<CourseworkDeleteResult> {
+  const usedBy = await getReferencingGradeNamesForItem(id)
+  if (usedBy.length > 0) {
+    return { deleted: false, usedBy }
   }
+
+  const before = await prisma.courseworkItem.findUnique({
+    where: { id },
+  })
+  const scope = await resolveCourseworkScopeByItem(id)
+
+  await prisma.courseworkItem.delete({ where: { id } })
+
+  await recordAuditLog({
+    action: "coursework.item.delete",
+    entityType: "CourseworkItem",
+    entityId: id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    target: before?.name ?? null,
+  })
+
+  return { deleted: true }
 }
 
 /** 評価項目の並び順を更新 */
 export async function reorderCourseworkItems(
   items: { id: string; order: number }[]
 ) {
-  try {
-    await prisma.$transaction(
-      items.map((item) =>
-        prisma.courseworkItem.update({
-          where: { id: item.id },
-          data: { order: item.order },
-        })
-      )
+  await prisma.$transaction(
+    items.map((item) =>
+      prisma.courseworkItem.update({
+        where: { id: item.id },
+        data: { order: item.order },
+      })
     )
-    return { success: true }
-  } catch (error) {
-    console.error("Error reordering coursework items:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  )
 }
 
 // =============================================================================
@@ -438,22 +367,14 @@ export async function reorderCourseworkItems(
 
 /** 評価項目の全点数（資料の対象者・生徒情報付き）を取得 */
 export async function getCourseworkScoresByItemId(courseworkItemId: string) {
-  try {
-    const scores = await prisma.courseworkScore.findMany({
-      where: { courseworkItemId },
-      include: {
-        courseworkStudent: { include: { student: true } },
-      },
-      orderBy: { courseworkStudent: { student: { studentNumber: "asc" } } },
-    })
-    return { success: true, scores: serializePrisma(scores) }
-  } catch (error) {
-    console.error("Error getting coursework scores:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  const scores = await prisma.courseworkScore.findMany({
+    where: { courseworkItemId },
+    include: {
+      courseworkStudent: { include: { student: true } },
+    },
+    orderBy: { courseworkStudent: { student: { studentNumber: "asc" } } },
+  })
+  return serializePrisma(scores)
 }
 
 /**
@@ -516,65 +437,53 @@ async function assertSameCoursework(
 export async function batchUpsertCourseworkScores(
   scores: CourseworkScoreUpsertInput[]
 ) {
-  try {
-    if (scores.length > 0) await assertSameCoursework(scores)
+  if (scores.length > 0) await assertSameCoursework(scores)
 
-    await prisma.$transaction(
-      scores.map((score) => {
-        const fields: {
-          score?: number | null
-          letterValue?: string | null
-          adjustment?: number | null
-          adjustmentReason?: string | null
-          comment?: string | null
-        } = {}
-        if (score.score !== undefined) fields.score = score.score
-        if (score.letterValue !== undefined)
-          fields.letterValue = score.letterValue
-        if (score.adjustment !== undefined) fields.adjustment = score.adjustment
-        if (score.adjustmentReason !== undefined)
-          fields.adjustmentReason = score.adjustmentReason
-        if (score.comment !== undefined) fields.comment = score.comment
+  await prisma.$transaction(
+    scores.map((score) => {
+      const fields: {
+        score?: number | null
+        letterValue?: string | null
+        adjustment?: number | null
+        adjustmentReason?: string | null
+        comment?: string | null
+      } = {}
+      if (score.score !== undefined) fields.score = score.score
+      if (score.letterValue !== undefined)
+        fields.letterValue = score.letterValue
+      if (score.adjustment !== undefined) fields.adjustment = score.adjustment
+      if (score.adjustmentReason !== undefined)
+        fields.adjustmentReason = score.adjustmentReason
+      if (score.comment !== undefined) fields.comment = score.comment
 
-        return prisma.courseworkScore.upsert({
-          where: {
-            courseworkItemId_courseworkStudentId: {
-              courseworkItemId: score.courseworkItemId,
-              courseworkStudentId: score.courseworkStudentId,
-            },
-          },
-          create: {
+      return prisma.courseworkScore.upsert({
+        where: {
+          courseworkItemId_courseworkStudentId: {
             courseworkItemId: score.courseworkItemId,
             courseworkStudentId: score.courseworkStudentId,
-            ...fields,
           },
-          update: fields,
-        })
+        },
+        create: {
+          courseworkItemId: score.courseworkItemId,
+          courseworkStudentId: score.courseworkStudentId,
+          ...fields,
+        },
+        update: fields,
       })
-    )
+    })
+  )
 
-    if (scores.length > 0) {
-      const scope = await resolveCourseworkScopeByItem(
-        scores[0].courseworkItemId
-      )
-      await recordAuditLog({
-        action: "coursework.score.update",
-        entityType: "CourseworkScore",
-        entityId: scores[0].courseworkItemId,
-        scopeId: scope.scopeId,
-        scopeLabel: scope.scopeLabel,
-        summary: `資料の点数を更新しました（${scores.length}件）`,
-        extra: { count: scores.length },
-      })
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error batch upserting coursework scores:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+  if (scores.length > 0) {
+    const scope = await resolveCourseworkScopeByItem(scores[0].courseworkItemId)
+    await recordAuditLog({
+      action: "coursework.score.update",
+      entityType: "CourseworkScore",
+      entityId: scores[0].courseworkItemId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      summary: `資料の点数を更新しました（${scores.length}件）`,
+      extra: { count: scores.length },
+    })
   }
 }
 
@@ -584,64 +493,45 @@ export async function batchUpsertCourseworkScores(
 
 /** 対象生徒一覧を取得 */
 export async function getCourseworkStudents(courseworkId: string) {
-  try {
-    const students = await prisma.courseworkStudent.findMany({
-      where: { courseworkId },
-      include: {
-        student: {
-          include: {
-            memberships: {
-              include: { classroom: true },
-            },
+  const students = await prisma.courseworkStudent.findMany({
+    where: { courseworkId },
+    include: {
+      student: {
+        include: {
+          memberships: {
+            include: { classroom: true },
           },
         },
       },
-      orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
-    })
-    return { success: true, students: serializePrisma(students) }
-  } catch (error) {
-    console.error("Error getting coursework students:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+    },
+    orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
+  })
+  return serializePrisma(students)
 }
 
 /** 登録学級一覧を取得 */
 export async function getCourseworkClassrooms(courseworkId: string) {
-  try {
-    const referenceDate = await getCourseworkDate(courseworkId)
-    const classrooms = await prisma.courseworkClassroom.findMany({
-      where: { courseworkId },
-      include: {
-        classroom: {
-          include: {
-            memberships: {
-              where: membershipFilterAt(referenceDate),
-            },
+  const referenceDate = await getCourseworkDate(courseworkId)
+  const classrooms = await prisma.courseworkClassroom.findMany({
+    where: { courseworkId },
+    include: {
+      classroom: {
+        include: {
+          memberships: {
+            where: membershipFilterAt(referenceDate),
           },
         },
       },
-      orderBy: { order: "asc" },
-    })
-    return {
-      success: true,
-      classrooms: classrooms.map((courseworkClassroom) => ({
-        id: courseworkClassroom.id,
-        classroomId: courseworkClassroom.classroomId,
-        className: courseworkClassroom.classroom.name,
-        order: courseworkClassroom.order,
-        studentCount: courseworkClassroom.classroom.memberships.length,
-      })),
-    }
-  } catch (error) {
-    console.error("Error getting coursework classrooms:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+    },
+    orderBy: { order: "asc" },
+  })
+  return classrooms.map((courseworkClassroom) => ({
+    id: courseworkClassroom.id,
+    classroomId: courseworkClassroom.classroomId,
+    className: courseworkClassroom.classroom.name,
+    order: courseworkClassroom.order,
+    studentCount: courseworkClassroom.classroom.memberships.length,
+  }))
 }
 
 /** まだ登録されていない学級一覧を取得 */
@@ -649,36 +539,28 @@ export async function getAvailableClassroomsForCoursework(
   courseworkId: string,
   activeOnly = true
 ) {
-  try {
-    const referenceDate = await getCourseworkDate(courseworkId)
-    const [existing, courseworkStudents] = await Promise.all([
-      prisma.courseworkClassroom.findMany({
-        where: { courseworkId },
-      }),
-      prisma.courseworkStudent.findMany({
-        where: { courseworkId },
-      }),
-    ])
+  const referenceDate = await getCourseworkDate(courseworkId)
+  const [existing, courseworkStudents] = await Promise.all([
+    prisma.courseworkClassroom.findMany({
+      where: { courseworkId },
+    }),
+    prisma.courseworkStudent.findMany({
+      where: { courseworkId },
+    }),
+  ])
 
-    const classrooms = await getAvailableClassroomsForTarget({
-      existingClassroomIds: existing.map(
-        (existingClassroom) => existingClassroom.classroomId
-      ),
-      excludeStudentIds: courseworkStudents.map(
-        (courseworkStudent) => courseworkStudent.studentId
-      ),
-      referenceDate,
-      activeOnly,
-    })
+  const classrooms = await getAvailableClassroomsForTarget({
+    existingClassroomIds: existing.map(
+      (existingClassroom) => existingClassroom.classroomId
+    ),
+    excludeStudentIds: courseworkStudents.map(
+      (courseworkStudent) => courseworkStudent.studentId
+    ),
+    referenceDate,
+    activeOnly,
+  })
 
-    return { success: true, classrooms }
-  } catch (error) {
-    console.error("Error getting available classrooms:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return classrooms
 }
 
 /** まだ追加されていない生徒一覧を取得（個別追加用） */
@@ -686,28 +568,20 @@ export async function getAvailableStudentsForCoursework(
   courseworkId: string,
   activeOnly = true
 ) {
-  try {
-    const referenceDate = await getCourseworkDate(courseworkId)
-    const courseworkStudents = await prisma.courseworkStudent.findMany({
-      where: { courseworkId },
-    })
+  const referenceDate = await getCourseworkDate(courseworkId)
+  const courseworkStudents = await prisma.courseworkStudent.findMany({
+    where: { courseworkId },
+  })
 
-    const students = await getAvailableStudentsForTarget({
-      excludeStudentIds: courseworkStudents.map(
-        (courseworkStudent) => courseworkStudent.studentId
-      ),
-      referenceDate,
-      activeOnly,
-    })
+  const students = await getAvailableStudentsForTarget({
+    excludeStudentIds: courseworkStudents.map(
+      (courseworkStudent) => courseworkStudent.studentId
+    ),
+    referenceDate,
+    activeOnly,
+  })
 
-    return { success: true, students }
-  } catch (error) {
-    console.error("Error getting available students:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return students
 }
 
 /**
@@ -849,30 +723,22 @@ export async function removeStudentsFromCoursework(
   courseworkId: string,
   studentIds: string[]
 ) {
-  try {
-    await prisma.courseworkStudent.deleteMany({
-      where: { courseworkId, studentId: { in: studentIds } },
-    })
+  await prisma.courseworkStudent.deleteMany({
+    where: { courseworkId, studentId: { in: studentIds } },
+  })
 
-    const scope = await resolveCourseworkScope(courseworkId)
-    await recordAuditLog({
-      action: "coursework.student.remove",
-      entityType: "CourseworkStudent",
-      entityId: courseworkId,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      summary: `資料対象生徒を${studentIds.length}名削除しました`,
-      extra: { count: studentIds.length },
-    })
+  const scope = await resolveCourseworkScope(courseworkId)
+  await recordAuditLog({
+    action: "coursework.student.remove",
+    entityType: "CourseworkStudent",
+    entityId: courseworkId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    summary: `資料対象生徒を${studentIds.length}名削除しました`,
+    extra: { count: studentIds.length },
+  })
 
-    return { success: true, removedCount: studentIds.length }
-  } catch (error) {
-    console.error("Error removing students from coursework:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return { removedCount: studentIds.length }
 }
 
 /** 学級の並び順を更新 */
@@ -926,41 +792,23 @@ export async function setCourseworkTags(
   courseworkId: string,
   tagIds: string[]
 ) {
-  try {
-    await prisma.$transaction(async (tx) => {
-      await tx.courseworkTag.deleteMany({ where: { courseworkId } })
-      if (tagIds.length > 0) {
-        await tx.courseworkTag.createMany({
-          data: tagIds.map((tagId) => ({ courseworkId, tagId })),
-        })
-      }
-    })
-    return { success: true }
-  } catch (error) {
-    console.error("Error setting coursework tags:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+  await prisma.$transaction(async (tx) => {
+    await tx.courseworkTag.deleteMany({ where: { courseworkId } })
+    if (tagIds.length > 0) {
+      await tx.courseworkTag.createMany({
+        data: tagIds.map((tagId) => ({ courseworkId, tagId })),
+      })
     }
-  }
+  })
 }
 
 /** 資料にタグを1件追加（既存タグは保持・冪等）。一括付与での既存タグ消失を避ける */
 export async function addCourseworkTag(courseworkId: string, tagId: string) {
-  try {
-    await prisma.courseworkTag.upsert({
-      where: { courseworkId_tagId: { courseworkId, tagId } },
-      update: {},
-      create: { courseworkId, tagId },
-    })
-    return { success: true }
-  } catch (error) {
-    console.error("Error adding coursework tag:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  await prisma.courseworkTag.upsert({
+    where: { courseworkId_tagId: { courseworkId, tagId } },
+    update: {},
+    create: { courseworkId, tagId },
+  })
 }
 
 // =============================================================================
@@ -969,17 +817,9 @@ export async function addCourseworkTag(courseworkId: string, tagId: string) {
 
 /** 成績データソースの参照候補として、資料と評価項目の一覧を取得 */
 export async function getCourseworkCandidates() {
-  try {
-    const courseworks = await prisma.coursework.findMany({
-      include: { items: { orderBy: { order: "asc" } } },
-      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-    })
-    return { success: true, courseworks: serializePrisma(courseworks) }
-  } catch (error) {
-    console.error("Error getting coursework candidates:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  const courseworks = await prisma.coursework.findMany({
+    include: { items: { orderBy: { order: "asc" } } },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+  })
+  return serializePrisma(courseworks)
 }

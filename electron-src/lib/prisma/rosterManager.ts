@@ -11,12 +11,6 @@ import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
 import { membershipFilterAt } from "./membershipFilter"
 
-/** 名簿操作の結果型 */
-interface RosterMutationResult {
-  success: boolean
-  error?: string
-}
-
 /**
  * ドメイン（成績 / 資料）ごとの名簿 I/O・監査メタデータ。
  * 各メソッドは自ドメインの Prisma delegate を閉じ込めて型安全に実装する。
@@ -85,75 +79,61 @@ export async function rosterAddStudentsFromClassroom(
   targetId: string,
   classroomId: string,
   activeOnly = true
-): Promise<{
-  success: boolean
-  added?: number
-  skipped?: number
-  error?: string
-}> {
-  try {
-    const referenceDate = await adapter.getReferenceDate(targetId)
-    const nextOrder = (await adapter.classroomMaxOrder(targetId)) ?? -1
-    await adapter.upsertClassroom(targetId, classroomId, nextOrder + 1)
+): Promise<{ added: number; skipped: number }> {
+  const referenceDate = await adapter.getReferenceDate(targetId)
+  const nextOrder = (await adapter.classroomMaxOrder(targetId)) ?? -1
+  await adapter.upsertClassroom(targetId, classroomId, nextOrder + 1)
 
-    const memberships = await prisma.studentClassroomMembership.findMany({
-      where: {
-        classroomId,
-        ...(activeOnly ? membershipFilterAt(referenceDate) : {}),
-      },
-      orderBy: [
-        { attendanceNumber: "asc" },
-        { student: { studentNumber: "asc" } },
-      ],
-      include: { student: true },
-    })
+  const memberships = await prisma.studentClassroomMembership.findMany({
+    where: {
+      classroomId,
+      ...(activeOnly ? membershipFilterAt(referenceDate) : {}),
+    },
+    orderBy: [
+      { attendanceNumber: "asc" },
+      { student: { studentNumber: "asc" } },
+    ],
+    include: { student: true },
+  })
 
-    const existing = await adapter.listExistingStudents(targetId)
-    const existingIds = new Set(
-      existing.map((existingStudent) => existingStudent.studentId)
-    )
-    const maxCustomOrder = existing.reduce(
-      (max, existingStudent) => Math.max(max, existingStudent.customOrder ?? 0),
-      0
-    )
+  const existing = await adapter.listExistingStudents(targetId)
+  const existingIds = new Set(
+    existing.map((existingStudent) => existingStudent.studentId)
+  )
+  const maxCustomOrder = existing.reduce(
+    (max, existingStudent) => Math.max(max, existingStudent.customOrder ?? 0),
+    0
+  )
 
-    const toAdd: { studentId: string; customOrder: number }[] = []
-    let orderOffset = maxCustomOrder + 1
-    for (const membership of memberships) {
-      if (!existingIds.has(membership.studentId)) {
-        toAdd.push({
-          studentId: membership.studentId,
-          customOrder: orderOffset++,
-        })
-        existingIds.add(membership.studentId)
-      }
-    }
-
-    if (toAdd.length > 0) {
-      await adapter.createStudents(targetId, toAdd)
-      const scope = await adapter.scope(targetId)
-      await recordAuditLog({
-        action: adapter.audit.addAction,
-        entityType: adapter.audit.studentEntity,
-        entityId: targetId,
-        scopeId: scope.scopeId,
-        scopeLabel: scope.scopeLabel,
-        summary: adapter.audit.addFromClassroomSummary(toAdd.length),
-        extra: { count: toAdd.length, classroomId },
+  const toAdd: { studentId: string; customOrder: number }[] = []
+  let orderOffset = maxCustomOrder + 1
+  for (const membership of memberships) {
+    if (!existingIds.has(membership.studentId)) {
+      toAdd.push({
+        studentId: membership.studentId,
+        customOrder: orderOffset++,
       })
+      existingIds.add(membership.studentId)
     }
+  }
 
-    return {
-      success: true,
-      added: toAdd.length,
-      skipped: memberships.length - toAdd.length,
-    }
-  } catch (error) {
-    console.error("Error adding students from class:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+  if (toAdd.length > 0) {
+    await adapter.createStudents(targetId, toAdd)
+    const scope = await adapter.scope(targetId)
+    await recordAuditLog({
+      action: adapter.audit.addAction,
+      entityType: adapter.audit.studentEntity,
+      entityId: targetId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      summary: adapter.audit.addFromClassroomSummary(toAdd.length),
+      extra: { count: toAdd.length, classroomId },
+    })
+  }
+
+  return {
+    added: toAdd.length,
+    skipped: memberships.length - toAdd.length,
   }
 }
 
@@ -162,54 +142,40 @@ export async function rosterAddStudents(
   adapter: RosterAdapter,
   targetId: string,
   studentIds: string[]
-): Promise<{
-  success: boolean
-  addedCount?: number
-  skippedCount?: number
-  error?: string
-}> {
-  try {
-    const existing = await adapter.listExistingStudents(targetId)
-    const existingIds = new Set(
-      existing.map((existingStudent) => existingStudent.studentId)
-    )
-    const maxCustomOrder = existing.reduce(
-      (max, existingStudent) => Math.max(max, existingStudent.customOrder ?? 0),
-      0
-    )
+): Promise<{ addedCount: number; skippedCount: number }> {
+  const existing = await adapter.listExistingStudents(targetId)
+  const existingIds = new Set(
+    existing.map((existingStudent) => existingStudent.studentId)
+  )
+  const maxCustomOrder = existing.reduce(
+    (max, existingStudent) => Math.max(max, existingStudent.customOrder ?? 0),
+    0
+  )
 
-    const newStudentIds = studentIds.filter((id) => !existingIds.has(id))
-    let orderOffset = maxCustomOrder + 1
-    const rows = newStudentIds.map((studentId) => ({
-      studentId,
-      customOrder: orderOffset++,
-    }))
+  const newStudentIds = studentIds.filter((id) => !existingIds.has(id))
+  let orderOffset = maxCustomOrder + 1
+  const rows = newStudentIds.map((studentId) => ({
+    studentId,
+    customOrder: orderOffset++,
+  }))
 
-    if (rows.length > 0) {
-      await adapter.createStudents(targetId, rows)
-      const scope = await adapter.scope(targetId)
-      await recordAuditLog({
-        action: adapter.audit.addAction,
-        entityType: adapter.audit.studentEntity,
-        entityId: targetId,
-        scopeId: scope.scopeId,
-        scopeLabel: scope.scopeLabel,
-        summary: adapter.audit.addIndividualSummary(rows.length),
-        extra: { count: rows.length },
-      })
-    }
+  if (rows.length > 0) {
+    await adapter.createStudents(targetId, rows)
+    const scope = await adapter.scope(targetId)
+    await recordAuditLog({
+      action: adapter.audit.addAction,
+      entityType: adapter.audit.studentEntity,
+      entityId: targetId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      summary: adapter.audit.addIndividualSummary(rows.length),
+      extra: { count: rows.length },
+    })
+  }
 
-    return {
-      success: true,
-      addedCount: rows.length,
-      skippedCount: studentIds.length - rows.length,
-    }
-  } catch (error) {
-    console.error("Error adding students:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+  return {
+    addedCount: rows.length,
+    skippedCount: studentIds.length - rows.length,
   }
 }
 
@@ -218,26 +184,17 @@ export async function rosterUpdateStudentOrders(
   adapter: RosterAdapter,
   targetId: string,
   studentOrders: { studentId: string; customOrder: number }[]
-): Promise<RosterMutationResult> {
-  try {
-    await adapter.setStudentOrders(targetId, studentOrders)
-    const scope = await adapter.scope(targetId)
-    await recordAuditLog({
-      action: adapter.audit.reorderAction,
-      entityType: adapter.audit.studentEntity,
-      entityId: targetId,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      coalesceKey: `${adapter.audit.reorderCoalescePrefix}:${targetId}`,
-    })
-    return { success: true }
-  } catch (error) {
-    console.error("Error updating student orders:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+): Promise<void> {
+  await adapter.setStudentOrders(targetId, studentOrders)
+  const scope = await adapter.scope(targetId)
+  await recordAuditLog({
+    action: adapter.audit.reorderAction,
+    entityType: adapter.audit.studentEntity,
+    entityId: targetId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    coalesceKey: `${adapter.audit.reorderCoalescePrefix}:${targetId}`,
+  })
 }
 
 /** 学級の並び順を更新 */
@@ -245,20 +202,11 @@ export async function rosterSetClassroomOrders(
   adapter: RosterAdapter,
   targetId: string,
   orderedClassroomIds: string[]
-): Promise<RosterMutationResult> {
-  try {
-    await adapter.setClassroomOrders(
-      targetId,
-      orderedClassroomIds.map((classroomId, order) => ({ classroomId, order }))
-    )
-    return { success: true }
-  } catch (error) {
-    console.error("Error updating class orders:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+): Promise<void> {
+  await adapter.setClassroomOrders(
+    targetId,
+    orderedClassroomIds.map((classroomId, order) => ({ classroomId, order }))
+  )
 }
 
 /**
@@ -299,21 +247,13 @@ export async function rosterClassroomRemovalPreview(
   adapter: RosterAdapter,
   targetId: string,
   classroomId: string
-): Promise<{ success: boolean; exclusiveCount?: number; error?: string }> {
-  try {
-    const exclusive = await computeExclusiveStudents(
-      adapter,
-      targetId,
-      classroomId
-    )
-    return { success: true, exclusiveCount: exclusive.length }
-  } catch (error) {
-    console.error("Error computing class removal preview:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+): Promise<{ exclusiveCount: number }> {
+  const exclusive = await computeExclusiveStudents(
+    adapter,
+    targetId,
+    classroomId
+  )
+  return { exclusiveCount: exclusive.length }
 }
 
 /**
@@ -327,35 +267,27 @@ export async function rosterRemoveClassroom(
   targetId: string,
   classroomId: string,
   deleteStudents = true
-): Promise<{ success: boolean; removedStudents?: number; error?: string }> {
-  try {
-    const studentsToRemove = deleteStudents
-      ? await computeExclusiveStudents(adapter, targetId, classroomId)
-      : []
+): Promise<{ removedStudents: number }> {
+  const studentsToRemove = deleteStudents
+    ? await computeExclusiveStudents(adapter, targetId, classroomId)
+    : []
 
-    await adapter.removeClassroomAndStudents(
-      targetId,
-      classroomId,
-      studentsToRemove
-    )
+  await adapter.removeClassroomAndStudents(
+    targetId,
+    classroomId,
+    studentsToRemove
+  )
 
-    const scope = await adapter.scope(targetId)
-    await recordAuditLog({
-      action: adapter.audit.removeAction,
-      entityType: adapter.audit.classroomEntity,
-      entityId: targetId,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      summary: adapter.audit.removeClassroomSummary(studentsToRemove.length),
-      extra: { removedStudents: studentsToRemove.length, classroomId },
-    })
+  const scope = await adapter.scope(targetId)
+  await recordAuditLog({
+    action: adapter.audit.removeAction,
+    entityType: adapter.audit.classroomEntity,
+    entityId: targetId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    summary: adapter.audit.removeClassroomSummary(studentsToRemove.length),
+    extra: { removedStudents: studentsToRemove.length, classroomId },
+  })
 
-    return { success: true, removedStudents: studentsToRemove.length }
-  } catch (error) {
-    console.error("Error removing class:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return { removedStudents: studentsToRemove.length }
 }

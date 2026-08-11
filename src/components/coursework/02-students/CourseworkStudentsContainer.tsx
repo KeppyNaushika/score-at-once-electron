@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useMemo, useState } from "react"
 
 import {
   type ClassroomRosterEntry,
@@ -19,14 +20,7 @@ import type {
   AddPanelStudentItem,
   StudentAddPanelAdapter,
 } from "@/components/common/student-add-panel/types"
-
-interface CourseworkClassroom {
-  id: string
-  classroomId: string
-  className: string
-  order: number
-  studentCount: number
-}
+import { queryKeys } from "@/lib/queryKeys"
 
 interface CourseworkStudentsContainerProps {
   courseworkId: string
@@ -40,51 +34,32 @@ interface CourseworkStudentsContainerProps {
 export function CourseworkStudentsContainer({
   courseworkId,
 }: CourseworkStudentsContainerProps) {
-  const [classrooms, setClassrooms] = useState<CourseworkClassroom[]>([])
+  const queryClient = useQueryClient()
+  const { data: classrooms = [] } = useQuery({
+    queryKey: queryKeys.coursework.classrooms(courseworkId),
+    queryFn: () => window.electronAPI.coursework.getClassrooms(courseworkId),
+  })
   const [studentCount, setStudentCount] = useState(0)
   const [rosterHandle, setRosterHandle] = useState<RosterTableHandle | null>(
     null
   )
 
-  const loadClassrooms = useCallback(async () => {
-    try {
-      const result =
-        await window.electronAPI.coursework.getClassrooms(courseworkId)
-      if (result.success && result.classrooms) {
-        setClassrooms(result.classrooms)
-      }
-    } catch (error) {
-      console.error("Error loading coursework classrooms:", error)
-    }
-  }, [courseworkId])
-
-  useEffect(() => {
-    loadClassrooms()
-  }, [loadClassrooms])
-
   // 名簿テーブルのアダプター（資料）
   const rosterAdapter = useMemo<RosterTableAdapter>(
     () => ({
       fetchRows: async () => {
-        const [classroomResult, studentResult] = await Promise.all([
+        const [courseworkClassrooms, courseworkStudents] = await Promise.all([
           window.electronAPI.coursework.getClassrooms(courseworkId),
           window.electronAPI.coursework.getStudents(courseworkId),
         ])
         const classroomOrderMap = new Map(
-          (classroomResult.success && classroomResult.classrooms
-            ? classroomResult.classrooms
-            : []
-          ).map((courseworkClassroom) => [
+          courseworkClassrooms.map((courseworkClassroom) => [
             courseworkClassroom.classroomId,
             courseworkClassroom.order,
           ])
         )
         const registeredClassroomIds = new Set(classroomOrderMap.keys())
-        const students =
-          studentResult.success && studentResult.students
-            ? studentResult.students
-            : []
-        return students.map((courseworkStudent): RosterRow => {
+        return courseworkStudents.map((courseworkStudent): RosterRow => {
           const membership = courseworkStudent.student.memberships.find(
             (membership) => registeredClassroomIds.has(membership.classroomId)
           )
@@ -106,10 +81,9 @@ export function CourseworkStudentsContainer({
         })
       },
       fetchClassrooms: async () => {
-        const result =
+        const courseworkClassrooms =
           await window.electronAPI.coursework.getClassrooms(courseworkId)
-        if (!result.success || !result.classrooms) return []
-        return result.classrooms.map(
+        return courseworkClassrooms.map(
           (courseworkClassroom): RosterClassroomOption => ({
             id: courseworkClassroom.classroomId,
             name: courseworkClassroom.className,
@@ -136,13 +110,12 @@ export function CourseworkStudentsContainer({
   const addPanelAdapter = useMemo<StudentAddPanelAdapter>(
     () => ({
       fetchAvailableClassrooms: async (activeOnly) => {
-        const result =
+        const classrooms =
           await window.electronAPI.coursework.getAvailableClassrooms(
             courseworkId,
             activeOnly
           )
-        if (!result.success || !result.classrooms) return []
-        return result.classrooms.map((classroom): AddPanelClassroomItem => ({
+        return classrooms.map((classroom): AddPanelClassroomItem => ({
           id: classroom.id,
           name: classroom.name,
           studentCount: classroom.studentCount,
@@ -150,12 +123,12 @@ export function CourseworkStudentsContainer({
         }))
       },
       fetchAvailableStudents: async (activeOnly) => {
-        const result = await window.electronAPI.coursework.getAvailableStudents(
-          courseworkId,
-          activeOnly
-        )
-        if (!result.success || !result.students) return []
-        return result.students.map((student): AddPanelStudentItem => ({
+        const students =
+          await window.electronAPI.coursework.getAvailableStudents(
+            courseworkId,
+            activeOnly
+          )
+        return students.map((student): AddPanelStudentItem => ({
           id: student.id,
           studentNumber: student.studentNumber,
           lastName: student.lastName,
@@ -174,36 +147,29 @@ export function CourseworkStudentsContainer({
       },
       addClassrooms: async (orderedClassroomIds, activeOnly) => {
         for (const classroomId of orderedClassroomIds) {
-          const result =
-            await window.electronAPI.coursework.addStudentsFromClassroom(
-              courseworkId,
-              classroomId,
-              activeOnly
-            )
-          if (!result.success) {
-            throw new Error(
-              result.error || `学級 ${classroomId} の追加に失敗しました`
-            )
-          }
+          await window.electronAPI.coursework.addStudentsFromClassroom(
+            courseworkId,
+            classroomId,
+            activeOnly
+          )
         }
       },
       addStudents: async (studentIds) => {
-        const result = await window.electronAPI.coursework.addStudents(
+        await window.electronAPI.coursework.addStudents(
           courseworkId,
           studentIds
         )
-        if (!result.success) {
-          throw new Error(result.error || "生徒の追加に失敗しました")
-        }
       },
     }),
     [courseworkId]
   )
 
   const reloadAll = useCallback(async () => {
-    await loadClassrooms()
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.coursework.classrooms(courseworkId),
+    })
     await rosterHandle?.refresh()
-  }, [loadClassrooms, rosterHandle])
+  }, [queryClient, courseworkId, rosterHandle])
 
   const classroomEntries = useMemo<ClassroomRosterEntry[]>(
     () =>
@@ -243,16 +209,12 @@ export function CourseworkStudentsContainer({
               "加減点とその理由",
               "成績通知書に載せるコメント",
             ]}
+            // 失敗は例外で伝わり、ClassroomRosterManager の楽観更新がロールバックする
             onReorder={async (orderedClassroomIds) => {
-              const result =
-                await window.electronAPI.coursework.setClassroomOrders(
-                  courseworkId,
-                  orderedClassroomIds
-                )
-              // 失敗時は throw して ClassroomRosterManager の楽観更新をロールバックさせる
-              if (!result.success) {
-                throw new Error(result.error || "学級の並び替えに失敗しました")
-              }
+              await window.electronAPI.coursework.setClassroomOrders(
+                courseworkId,
+                orderedClassroomIds
+              )
             }}
             fetchRemovalPreview={async (entry) => {
               const result =
@@ -260,19 +222,15 @@ export function CourseworkStudentsContainer({
                   courseworkId,
                   entry.classroomId
                 )
-              return { exclusiveCount: result.exclusiveCount ?? 0 }
+              return { exclusiveCount: result.exclusiveCount }
             }}
+            // 失敗は例外で伝わり、ダイアログが成功扱いで閉じない
             onRemove={async (entry, deleteStudents) => {
-              const result =
-                await window.electronAPI.coursework.removeClassroom(
-                  courseworkId,
-                  entry.classroomId,
-                  deleteStudents
-                )
-              // 失敗時は throw し、ダイアログを成功扱いで閉じさせない
-              if (!result.success) {
-                throw new Error(result.error || "学級の削除に失敗しました")
-              }
+              await window.electronAPI.coursework.removeClassroom(
+                courseworkId,
+                entry.classroomId,
+                deleteStudents
+              )
             }}
             onChanged={reloadAll}
           />

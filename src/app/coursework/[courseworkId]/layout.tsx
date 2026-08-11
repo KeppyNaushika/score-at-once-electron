@@ -35,10 +35,9 @@ export default function CourseworkWorkflowLayout({
   useEffect(() => {
     const loadCoursework = async () => {
       try {
-        const result = await window.electronAPI.coursework.getById(courseworkId)
-        if (result.success && result.coursework) {
-          setCourseworkName(result.coursework.name)
-        }
+        const coursework =
+          await window.electronAPI.coursework.getById(courseworkId)
+        setCourseworkName(coursework.name)
       } catch (error) {
         console.error("Error loading coursework:", error)
       }

@@ -32,13 +32,11 @@ export function CourseworkCreateDialog({
 
     setCreating(true)
     try {
-      const result = await window.electronAPI.coursework.create({
+      const coursework = await window.electronAPI.coursework.create({
         name: name.trim(),
       })
-      if (result.success && result.coursework) {
-        setName("")
-        onCreated(result.coursework.id)
-      }
+      setName("")
+      onCreated(coursework.id)
     } catch (error) {
       console.error("Error creating coursework:", error)
     } finally {

@@ -88,24 +88,21 @@ describe("Coursework CRUD", () => {
       description: "説明",
       date: "2026-06-01T00:00:00.000+00:00",
     })
-    expect(created.success).toBe(true)
-    const id = created.coursework!.id
+    const id = created.id
 
     const fetched = await getCourseworkById(id)
-    expect(fetched.success).toBe(true)
-    expect(fetched.coursework!.name).toBe("第2回レポート")
+    expect(fetched.name).toBe("第2回レポート")
 
     const updated = await updateCoursework(id, { name: "改題レポート" })
-    expect(updated.success).toBe(true)
-    expect(updated.coursework!.name).toBe("改題レポート")
+    expect(updated.name).toBe("改題レポート")
   })
 
   it("一覧と詳細は件数表示が読む評価項目・名簿を行として返す", async () => {
     const created = await createCoursework({ name: "件数の出る資料" })
-    const courseworkId = created.coursework!.id
+    const courseworkId = created.id
     // 作成直後の返り値も一覧・詳細と同じ形（型がそう名乗っている）
-    expect(created.coursework!.items).toEqual([])
-    expect(created.coursework!.students).toEqual([])
+    expect(created.items).toEqual([])
+    expect(created.students).toEqual([])
 
     await createCourseworkItem({ courseworkId, name: "知識", maxScore: 100 })
     await createCourseworkItem({ courseworkId, name: "技能", maxScore: 50 })
@@ -122,15 +119,13 @@ describe("Coursework CRUD", () => {
 
     // 件数を数えるのは renderer。main は `_count` を作らず行を渡し切る
     const list = await getCourseworks()
-    const listed = list.courseworks!.find(
-      (coursework) => coursework.id === courseworkId
-    )!
+    const listed = list.find((coursework) => coursework.id === courseworkId)!
     expect(listed.items.length).toBe(2)
     expect(listed.students.length).toBe(1)
 
     const detail = await getCourseworkById(courseworkId)
-    expect(detail.coursework!.items.length).toBe(2)
-    expect(detail.coursework!.students.length).toBe(1)
+    expect(detail.items.length).toBe(2)
+    expect(detail.students.length).toBe(1)
 
     // 満点は Decimal のまま渡すと renderer 側で壊れる
     expect(typeof listed.items[0].maxScore).toBe("number")
@@ -138,20 +133,20 @@ describe("Coursework CRUD", () => {
 
   it("更新後の返り値も評価項目・名簿を保つ", async () => {
     const created = await createCoursework({ name: "更新される資料" })
-    const courseworkId = created.coursework!.id
+    const courseworkId = created.id
     await createCourseworkItem({ courseworkId, name: "知識", maxScore: 100 })
 
     const updated = await updateCoursework(courseworkId, { name: "改題" })
 
-    expect(updated.coursework!.name).toBe("改題")
-    expect(updated.coursework!.items.length).toBe(1)
-    expect(updated.coursework!.students).toEqual([])
+    expect(updated.name).toBe("改題")
+    expect(updated.items.length).toBe(1)
+    expect(updated.students).toEqual([])
   })
 
   it("評価項目を作成（変換表付き）・更新・削除できる", async () => {
     const courseworkResult = await createCoursework({ name: "資料" })
     const itemRes = await createCourseworkItem({
-      courseworkId: courseworkResult.coursework!.id,
+      courseworkId: courseworkResult.id,
       name: "知識",
       maxScore: 100,
       inputMode: "letter",
@@ -160,37 +155,35 @@ describe("Coursework CRUD", () => {
         { label: "B", score: 80, order: 1 },
       ],
     })
-    expect(itemRes.success).toBe(true)
-    expect(itemRes.item!.letterScales).toHaveLength(2)
+    expect(itemRes.letterScales).toHaveLength(2)
 
-    const updated = await updateCourseworkItem(itemRes.item!.id, {
+    const updated = await updateCourseworkItem(itemRes.id, {
       letterScales: [{ label: "○", score: 100, order: 0 }],
     })
-    expect(updated.item!.letterScales).toHaveLength(1)
-    expect(updated.item!.letterScales[0].label).toBe("○")
+    expect(updated.letterScales).toHaveLength(1)
+    expect(updated.letterScales[0].label).toBe("○")
 
-    const deleted = await deleteCourseworkItem(itemRes.item!.id)
-    expect(deleted.success).toBe(true)
+    await deleteCourseworkItem(itemRes.id)
   })
 
   it("点数を一括 upsert・部分更新・取得できる", async () => {
     const { student1, student2 } = await createStudents()
     const courseworkResult = await createCoursework({ name: "資料" })
-    const courseworkId = courseworkResult.coursework!.id
+    const courseworkId = courseworkResult.id
     const item = await createCourseworkItem({
       courseworkId,
       name: "知識",
       maxScore: 100,
     })
-    const itemId = item.item!.id
+    const itemId = item.id
 
     // 点数は資料の対象者にぶら下がるため、先に名簿へ載せる
     await addStudentsToCoursework(courseworkId, [student1.id, student2.id])
     const roster = await getCourseworkStudents(courseworkId)
-    const courseworkStudent1 = roster.students!.find(
+    const courseworkStudent1 = roster.find(
       (courseworkStudent) => courseworkStudent.studentId === student1.id
     )!
-    const courseworkStudent2 = roster.students!.find(
+    const courseworkStudent2 = roster.find(
       (courseworkStudent) => courseworkStudent.studentId === student2.id
     )!
 
@@ -209,7 +202,7 @@ describe("Coursework CRUD", () => {
     ])
 
     let scores = await getCourseworkScoresByItemId(itemId)
-    expect(scores.scores).toHaveLength(2)
+    expect(scores).toHaveLength(2)
 
     // 部分更新（adjustment のみ。score/comment は保持）
     await batchUpsertCourseworkScores([
@@ -220,7 +213,7 @@ describe("Coursework CRUD", () => {
       },
     ])
     scores = await getCourseworkScoresByItemId(itemId)
-    const student1Score = scores.scores!.find(
+    const student1Score = scores.find(
       (score) => score.courseworkStudentId === courseworkStudent1.id
     )!
     expect(Number(student1Score.score)).toBe(85)
@@ -231,20 +224,20 @@ describe("Coursework CRUD", () => {
   it("資料から生徒を外すと、その生徒の点数も消える（#962）", async () => {
     const { student1, student2 } = await createStudents()
     const courseworkResult = await createCoursework({ name: "資料" })
-    const courseworkId = courseworkResult.coursework!.id
+    const courseworkId = courseworkResult.id
     const item = await createCourseworkItem({
       courseworkId,
       name: "知識",
       maxScore: 100,
     })
-    const itemId = item.item!.id
+    const itemId = item.id
 
     await addStudentsToCoursework(courseworkId, [student1.id, student2.id])
     const roster = await getCourseworkStudents(courseworkId)
-    const courseworkStudent1 = roster.students!.find(
+    const courseworkStudent1 = roster.find(
       (courseworkStudent) => courseworkStudent.studentId === student1.id
     )!
-    const courseworkStudent2 = roster.students!.find(
+    const courseworkStudent2 = roster.find(
       (courseworkStudent) => courseworkStudent.studentId === student2.id
     )!
 
@@ -265,13 +258,13 @@ describe("Coursework CRUD", () => {
 
     // 外した生徒の点数だけが消え、残った生徒は巻き添えにならない
     const remaining = await getCourseworkScoresByItemId(itemId)
-    expect(remaining.scores).toHaveLength(1)
-    expect(remaining.scores![0].courseworkStudentId).toBe(courseworkStudent2.id)
+    expect(remaining).toHaveLength(1)
+    expect(remaining[0].courseworkStudentId).toBe(courseworkStudent2.id)
 
     // 同じ生徒を追加し直しても、以前の点数は復活しない
     await addStudentsToCoursework(courseworkId, [student1.id])
     const afterReadd = await getCourseworkScoresByItemId(itemId)
-    expect(afterReadd.scores).toHaveLength(1)
+    expect(afterReadd).toHaveLength(1)
   })
 
   it("別の資料の対象者に点数を書こうとすると拒否される", async () => {
@@ -279,57 +272,58 @@ describe("Coursework CRUD", () => {
     const courseworkA = await createCoursework({ name: "資料A" })
     const courseworkB = await createCoursework({ name: "資料B" })
     const itemA = await createCourseworkItem({
-      courseworkId: courseworkA.coursework!.id,
+      courseworkId: courseworkA.id,
       name: "知識",
       maxScore: 100,
     })
 
     // 生徒は資料Bの名簿にだけ載せる
-    await addStudentsToCoursework(courseworkB.coursework!.id, [student1.id])
-    const rosterB = await getCourseworkStudents(courseworkB.coursework!.id)
+    await addStudentsToCoursework(courseworkB.id, [student1.id])
+    const rosterB = await getCourseworkStudents(courseworkB.id)
 
     // 資料Aの評価項目 × 資料Bの対象者。FK は両方の実在しか見ないので通ってしまう
-    const result = await batchUpsertCourseworkScores([
-      {
-        courseworkItemId: itemA.item!.id,
-        courseworkStudentId: rosterB.students![0].id,
-        score: 85,
-      },
-    ])
+    await expect(
+      batchUpsertCourseworkScores([
+        {
+          courseworkItemId: itemA.id,
+          courseworkStudentId: rosterB[0].id,
+          score: 85,
+        },
+      ])
+    ).rejects.toThrow()
 
-    expect(result.success).toBe(false)
-    const written = await getCourseworkScoresByItemId(itemA.item!.id)
-    expect(written.scores).toHaveLength(0)
+    const written = await getCourseworkScoresByItemId(itemA.id)
+    expect(written).toHaveLength(0)
   })
 
   it("名簿に生徒を追加・並べ替え・削除できる", async () => {
     const { student1, student2 } = await createStudents()
     const courseworkResult = await createCoursework({ name: "資料" })
-    const id = courseworkResult.coursework!.id
+    const id = courseworkResult.id
 
     const added = await addStudentsToCoursework(id, [student1.id, student2.id])
     expect(added.addedCount).toBe(2)
 
     let roster = await getCourseworkStudents(id)
-    expect(roster.students).toHaveLength(2)
+    expect(roster).toHaveLength(2)
 
     await updateCourseworkStudentOrders(id, [
       { studentId: student1.id, customOrder: 1 },
       { studentId: student2.id, customOrder: 0 },
     ])
     roster = await getCourseworkStudents(id)
-    expect(roster.students![0].studentId).toBe(student2.id)
+    expect(roster[0].studentId).toBe(student2.id)
 
     const removed = await removeStudentsFromCoursework(id, [student1.id])
     expect(removed.removedCount).toBe(1)
     roster = await getCourseworkStudents(id)
-    expect(roster.students).toHaveLength(1)
+    expect(roster).toHaveLength(1)
   })
 
   it("成績算出から参照中の資料・評価項目は削除できない", async () => {
     const courseworkResult = await createCoursework({ name: "参照される資料" })
     const item = await createCourseworkItem({
-      courseworkId: courseworkResult.coursework!.id,
+      courseworkId: courseworkResult.id,
       name: "知識",
       maxScore: 100,
     })
@@ -343,36 +337,36 @@ describe("Coursework CRUD", () => {
     await createDataSource({
       gradeItemId: gradeItem.gradeItem!.id,
       type: "coursework",
-      courseworkItemId: item.item!.id,
+      courseworkItemId: item.id,
       name: "資料(知識)",
       weight: 100,
     })
 
     // 評価項目の削除はブロックされ、使用中の成績名を返す
-    const deleteItemResult = await deleteCourseworkItem(item.item!.id)
-    expect(deleteItemResult.success).toBe(false)
+    const deleteItemResult = await deleteCourseworkItem(item.id)
+    expect(deleteItemResult.deleted).toBe(false)
+    if (deleteItemResult.deleted) throw new Error("削除がブロックされていない")
     expect(deleteItemResult.usedBy).toContain("成績A")
 
     // 資料の削除もブロックされる
-    const deleteCourseworkResult = await deleteCoursework(
-      courseworkResult.coursework!.id
-    )
-    expect(deleteCourseworkResult.success).toBe(false)
+    const deleteCourseworkResult = await deleteCoursework(courseworkResult.id)
+    expect(deleteCourseworkResult.deleted).toBe(false)
+    if (deleteCourseworkResult.deleted)
+      throw new Error("削除がブロックされていない")
     expect(deleteCourseworkResult.usedBy).toContain("成績A")
   })
 
   it("getCourseworkCandidates が資料と評価項目を返す", async () => {
     const courseworkResult = await createCoursework({ name: "候補資料" })
     await createCourseworkItem({
-      courseworkId: courseworkResult.coursework!.id,
+      courseworkId: courseworkResult.id,
       name: "知識",
       maxScore: 50,
     })
 
     const res = await getCourseworkCandidates()
-    expect(res.success).toBe(true)
-    const target = res.courseworks!.find(
-      (candidate) => candidate.id === courseworkResult.coursework!.id
+    const target = res.find(
+      (candidate) => candidate.id === courseworkResult.id
     )!
     expect(target.items).toHaveLength(1)
     expect(target.items[0].name).toBe("知識")
@@ -383,7 +377,7 @@ describe("Coursework CRUD", () => {
     /** 資料 + classroomA(s1,s2) + classroomB(s3) を作り、両学級を資料へ登録する */
     async function createClassData() {
       const courseworkResult = await createCoursework({ name: "学級操作資料" })
-      const courseworkId = courseworkResult.coursework!.id
+      const courseworkId = courseworkResult.id
       const classroomA = await testPrisma.classroom.create({
         data: { name: "1年A組", grade: 1 },
       })
@@ -436,18 +430,14 @@ describe("Coursework CRUD", () => {
     it("setCourseworkClassroomOrders で学級の並び順を更新できる", async () => {
       const { courseworkId, classroomA, classroomB } = await createClassData()
 
-      const result = await setCourseworkClassroomOrders(courseworkId, [
+      await setCourseworkClassroomOrders(courseworkId, [
         classroomB.id,
         classroomA.id,
       ])
-      expect(result.success).toBe(true)
 
       const classrooms = await getCourseworkClassrooms(courseworkId)
       const byName = new Map(
-        classrooms.classrooms!.map((classroom) => [
-          classroom.className,
-          classroom.order,
-        ])
+        classrooms.map((classroom) => [classroom.className, classroom.order])
       )
       expect(byName.get("1年B組")).toBe(0)
       expect(byName.get("1年A組")).toBe(1)
@@ -460,7 +450,6 @@ describe("Coursework CRUD", () => {
         courseworkId,
         classroomA.id
       )
-      expect(preview.success).toBe(true)
       // classroomA の s1,s2 は他学級に属さない → 2名
       expect(preview.exclusiveCount).toBe(2)
     })
@@ -473,13 +462,12 @@ describe("Coursework CRUD", () => {
         classroomA.id,
         false
       )
-      expect(result.success).toBe(true)
       expect(result.removedStudents).toBe(0)
 
       const classrooms = await getCourseworkClassrooms(courseworkId)
-      expect(classrooms.classrooms).toHaveLength(1) // classroomB のみ
+      expect(classrooms).toHaveLength(1) // classroomB のみ
       const students = await getCourseworkStudents(courseworkId)
-      expect(students.students).toHaveLength(3) // 生徒は全員残る
+      expect(students).toHaveLength(3) // 生徒は全員残る
     })
 
     it("deleteStudents=true（既定）なら専属生徒を削除する", async () => {
@@ -489,11 +477,10 @@ describe("Coursework CRUD", () => {
         courseworkId,
         classroomA.id
       )
-      expect(result.success).toBe(true)
       expect(result.removedStudents).toBe(2) // s1,s2
 
       const students = await getCourseworkStudents(courseworkId)
-      expect(students.students).toHaveLength(1) // s3 のみ
+      expect(students).toHaveLength(1) // s3 のみ
     })
   })
 })

@@ -54,11 +54,9 @@ function readJsonArray(dir: string, name: string): unknown[] {
  * .coursework アーカイブを一時ディレクトリへ展開し、各 JSON を読み込む。
  * 呼び出し側は data.tempDir を cleanupCourseworkTempDir で必ず後始末すること。
  */
-export async function extractCourseworkArchive(archivePath: string): Promise<{
-  success: boolean
-  data?: ExtractedCourseworkArchive
-  error?: string
-}> {
+export async function extractCourseworkArchive(
+  archivePath: string
+): Promise<ExtractedCourseworkArchive> {
   const tempDir = path.join(
     os.tmpdir(),
     `coursework-archive-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
@@ -66,7 +64,7 @@ export async function extractCourseworkArchive(archivePath: string): Promise<{
 
   try {
     if (!fs.existsSync(archivePath)) {
-      return { success: false, error: "アーカイブファイルが見つかりません" }
+      throw new Error("アーカイブファイルが見つかりません")
     }
 
     const zip = new AdmZip(archivePath)
@@ -77,8 +75,7 @@ export async function extractCourseworkArchive(archivePath: string): Promise<{
       "manifest.json"
     )
     if (!manifest) {
-      cleanupCourseworkTempDir(tempDir)
-      return { success: false, error: "マニフェストファイルが見つかりません" }
+      throw new Error("マニフェストファイルが見つかりません")
     }
 
     // 学級リネーム前の旧キー（classId/classes/className/classCode）は読取り時に現行キー（classroom*）へ正規化
@@ -138,30 +135,21 @@ export async function extractCourseworkArchive(archivePath: string): Promise<{
         }
 
     return {
-      success: true,
+      manifest,
       data: {
         manifest,
-        data: {
-          manifest,
-          ...sections,
-          studentsData,
-          classesData,
-          membershipsData,
-          tagsData,
-        },
-        tempDir,
+        ...sections,
+        studentsData,
+        classesData,
+        membershipsData,
+        tagsData,
       },
+      tempDir,
     }
   } catch (error) {
+    // 展開途中で落ちたら一時ディレクトリは呼び出し側へ渡らないのでここで捨てる
     cleanupCourseworkTempDir(tempDir)
-    console.error("Error extracting coursework archive:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "アーカイブの展開に失敗しました",
-    }
+    throw error
   }
 }
 

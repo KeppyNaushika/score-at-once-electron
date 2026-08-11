@@ -25,7 +25,7 @@ export async function exportCoursework(
     where: { id: options.courseworkId },
   })
   if (!coursework) {
-    return { success: false, error: "試験外成績資料が見つかりません" }
+    throw new Error("試験外成績資料が見つかりません")
   }
 
   let outputPath = options.outputPath
@@ -36,23 +36,16 @@ export async function exportCoursework(
       filters: [{ name: "試験外成績資料", extensions: ["coursework"] }],
     })
     if (result.canceled || !result.filePath) {
-      return { success: true, canceled: true }
+      return { canceled: true }
     }
     outputPath = result.filePath
   }
 
-  const created = await createCourseworkArchive(
+  const manifest = await createCourseworkArchive(
     coursework.id,
     coursework.name,
     outputPath
   )
-  if (!created.success) {
-    return { success: false, error: created.error }
-  }
 
-  return {
-    success: true,
-    outputPath,
-    manifest: created.manifest,
-  }
+  return { canceled: false, outputPath, manifest }
 }

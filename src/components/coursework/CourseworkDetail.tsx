@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   BarChart3,
   ChevronRight,
@@ -13,7 +14,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
@@ -26,7 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import type { CourseworkWithRelations } from "@/types/coursework.types"
+import { queryKeys } from "@/lib/queryKeys"
 
 import { EditCourseworkWindow } from "./EditCourseworkWindow"
 
@@ -49,42 +50,44 @@ interface WorkflowStep {
 export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [coursework, setCoursework] = useState<CourseworkWithRelations | null>(
-    null
-  )
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const { data: coursework, isPending: loading } = useQuery({
+    queryKey: queryKeys.coursework.detail(courseworkId),
+    queryFn: () => window.electronAPI.coursework.getById(courseworkId),
+  })
   // 新規作成直後（?setup=1）は基本設定を促すため編集モーダルを開く
   const [showEditModal, setShowEditModal] = useState(
     () => searchParams.get("setup") === "1"
   )
 
-  const loadCoursework = useCallback(async () => {
-    try {
-      const result = await window.electronAPI.coursework.getById(courseworkId)
-      if (result.success && result.coursework) {
-        setCoursework(result.coursework)
-      }
-    } catch (error) {
-      console.error("Error loading coursework:", error)
-    } finally {
-      setLoading(false)
-    }
-  }, [courseworkId])
-
-  useEffect(() => {
-    void loadCoursework()
-  }, [loadCoursework])
-
   const handleDelete = async () => {
-    const result = await window.electronAPI.coursework.delete(courseworkId)
-    if (result.success) {
-      router.push("/coursework")
-    } else if (result.usedBy && result.usedBy.length > 0) {
+    try {
+      const result = await window.electronAPI.coursework.delete(courseworkId)
+      if (result.deleted) {
+        router.push("/coursework")
+        return
+      }
       toast.error("削除できません", {
         description: `成績算出から参照されています: ${result.usedBy.join("、")}`,
       })
-    } else {
-      toast.error("削除に失敗しました", { description: result.error })
+    } catch (error) {
+      toast.error("削除に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
+    }
+  }
+
+  const handleExportArchive = async () => {
+    try {
+      const result =
+        await window.electronAPI.coursework.exportArchive(courseworkId)
+      if (!result.canceled) {
+        toast.success(`書き出しました: ${result.outputPath}`)
+      }
+    } catch (error) {
+      toast.error("書き出しに失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }
 
@@ -195,11 +198,7 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() =>
-                  window.electronAPI.coursework.exportArchive(courseworkId)
-                }
-              >
+              <DropdownMenuItem onClick={handleExportArchive}>
                 <FolderOutput className="mr-2 h-4 w-4" />
                 .coursework 書き出し
               </DropdownMenuItem>
@@ -256,7 +255,11 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
             (courseworkTag) => courseworkTag.tagId
           )}
           onClose={() => setShowEditModal(false)}
-          onSaved={loadCoursework}
+          onSaved={() =>
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.coursework.detail(courseworkId),
+            })
+          }
         />
       )}
     </div>

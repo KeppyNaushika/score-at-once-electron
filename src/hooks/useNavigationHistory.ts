@@ -128,8 +128,8 @@ async function resolveEntityName(
       const result = await window.electronAPI.grade.getById(id)
       name = result.grade?.name ?? null
     } else if (kind === "coursework") {
-      const result = await window.electronAPI.coursework.getById(id)
-      name = result.coursework?.name ?? null
+      const coursework = await window.electronAPI.coursework.getById(id)
+      name = coursework.name
     } else if (kind === "asb") {
       const result =
         await window.electronAPI.answerSheetBuilder.loadDefinition(id)

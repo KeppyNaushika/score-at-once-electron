@@ -84,10 +84,7 @@ export function CourseworkListContainer() {
 
   const loadCourseworks = useCallback(async () => {
     try {
-      const result = await window.electronAPI.coursework.getAll()
-      if (result.success && result.courseworks) {
-        setCourseworks(result.courseworks)
-      }
+      setCourseworks(await window.electronAPI.coursework.getAll())
     } catch (error) {
       console.error("Error loading courseworks:", error)
     } finally {
@@ -119,23 +116,23 @@ export function CourseworkListContainer() {
   const handleDelete = async (coursework: CourseworkSummary) => {
     try {
       const result = await window.electronAPI.coursework.delete(coursework.id)
-      if (result.success) {
-        setCourseworks((prev) =>
-          prev.filter(
-            (existingCoursework) => existingCoursework.id !== coursework.id
-          )
-        )
-        toast.success("資料を削除しました", { description: coursework.name })
-      } else if (result.usedBy && result.usedBy.length > 0) {
+      if (!result.deleted) {
         toast.error("削除できません", {
           description: `次の成績算出で参照されています: ${result.usedBy.join("、")}`,
         })
-      } else {
-        toast.error("削除に失敗しました", { description: result.error })
+        return
       }
+      setCourseworks((prev) =>
+        prev.filter(
+          (existingCoursework) => existingCoursework.id !== coursework.id
+        )
+      )
+      toast.success("資料を削除しました", { description: coursework.name })
     } catch (error) {
       console.error("Error deleting coursework:", error)
-      toast.error("削除に失敗しました")
+      toast.error("削除に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }
 
@@ -144,35 +141,33 @@ export function CourseworkListContainer() {
       const result = await window.electronAPI.coursework.exportArchive(
         coursework.id
       )
-      if (result.success && !result.canceled) {
+      if (!result.canceled) {
         toast.success("資料をエクスポートしました", {
           description: coursework.name,
-        })
-      } else if (!result.success) {
-        toast.error("エクスポートに失敗しました", {
-          description: result.error,
         })
       }
     } catch (error) {
       console.error("Error exporting coursework:", error)
-      toast.error("エクスポートに失敗しました")
+      toast.error("エクスポートに失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }
 
   const handleImport = async () => {
     const selected = await window.electronAPI.coursework.selectImportFile()
-    if (!selected.success || selected.canceled || !selected.filePath) return
-    const analyzed = await window.electronAPI.coursework.analyzeArchive({
-      archivePath: selected.filePath,
-    })
-    if (!analyzed.success || !analyzed.preview) {
-      toast.error("アーカイブの解析に失敗しました", {
-        description: analyzed.error,
+    if (selected.canceled) return
+    try {
+      const preview = await window.electronAPI.coursework.analyzeArchive({
+        archivePath: selected.filePath,
       })
-      return
+      setImportArchivePath(selected.filePath)
+      setImportPreview(preview)
+    } catch (error) {
+      toast.error("アーカイブの解析に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
-    setImportArchivePath(selected.filePath)
-    setImportPreview(analyzed.preview)
   }
 
   const handleImportConfirm = async (
@@ -185,23 +180,23 @@ export function CourseworkListContainer() {
         archivePath: importArchivePath,
         courseworkDecisions: decisions,
       })
-      if (result.success) {
-        if (result.warnings && result.warnings.length > 0) {
-          toast.warning(
-            `インポートは完了しましたが ${result.warnings.length} 件の警告があります`,
-            {
-              description: result.warnings.join("\n"),
-              duration: Infinity,
-              closeButton: true,
-            }
-          )
-        } else {
-          toast.success("資料をインポートしました")
-        }
-        await loadCourseworks()
+      if (result.warnings.length > 0) {
+        toast.warning(
+          `インポートは完了しましたが ${result.warnings.length} 件の警告があります`,
+          {
+            description: result.warnings.join("\n"),
+            duration: Infinity,
+            closeButton: true,
+          }
+        )
       } else {
-        toast.error("インポートに失敗しました", { description: result.error })
+        toast.success("資料をインポートしました")
       }
+      await loadCourseworks()
+    } catch (error) {
+      toast.error("インポートに失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setImporting(false)
       setImportPreview(null)
@@ -223,13 +218,7 @@ export function CourseworkListContainer() {
       )
       for (const coursework of targetCourseworks) {
         // 既存タグを保持したまま1件追加（全置換 setTags による stale 消失を回避）
-        const result = await window.electronAPI.coursework.addTag(
-          coursework.id,
-          tag.id
-        )
-        if (!result.success) {
-          throw new Error(result.error ?? "タグの追加に失敗しました")
-        }
+        await window.electronAPI.coursework.addTag(coursework.id, tag.id)
       }
       toast.success("タグを追加しました", {
         description: `${targetCourseworks.length}件の資料に「${tagName}」を追加`,

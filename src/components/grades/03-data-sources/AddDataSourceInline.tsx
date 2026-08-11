@@ -90,10 +90,7 @@ export function AddDataSourceInline({
   useEffect(() => {
     if (!open) return
     const load = async () => {
-      const result = await window.electronAPI.coursework.getCandidates()
-      if (result.success && result.courseworks) {
-        setCourseworks(result.courseworks)
-      }
+      setCourseworks(await window.electronAPI.coursework.getCandidates())
     }
     load()
   }, [open])
