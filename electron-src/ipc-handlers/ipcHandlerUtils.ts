@@ -2,6 +2,7 @@
  * IPC ハンドラーのボイラープレートを削減するユーティリティ
  */
 
+import type { IpcMainInvokeEvent } from "electron"
 import { ipcMain } from "electron"
 
 import type { Serialized } from "@/types/prismaExtensions"
@@ -34,6 +35,45 @@ export function registerHandler<HandlerArgs extends unknown[], HandlerResult>(
     ): Promise<IpcEnvelope<Serialized<HandlerResult>>> => {
       try {
         return { __ipc: "ok", value: serializePrisma(await handler(...args)) }
+      } catch (err) {
+        console.error(`Error in IPC handler [${channel}]:`, err)
+        return {
+          __ipc: "failed",
+          error: toIpcErrorMessage(err, "Unknown error"),
+        }
+      }
+    }
+  )
+}
+
+/**
+ * `event` を必要とするハンドラーを登録する。
+ *
+ * `event.sender` からウィンドウや履歴を取る経路（フルスクリーン制御・印刷・
+ * アーカイブの進捗通知など）は第1引数に `event` が要るため `registerHandler` の
+ * 形に収まらない。搬送形式と `serializePrisma` は同じように掛かる。
+ */
+export function registerEventHandler<
+  HandlerArgs extends unknown[],
+  HandlerResult,
+>(
+  channel: string,
+  handler: (
+    event: IpcMainInvokeEvent,
+    ...args: HandlerArgs
+  ) => HandlerResult | Promise<HandlerResult>
+): void {
+  ipcMain.handle(
+    channel,
+    async (
+      event,
+      ...args: HandlerArgs
+    ): Promise<IpcEnvelope<Serialized<HandlerResult>>> => {
+      try {
+        return {
+          __ipc: "ok",
+          value: serializePrisma(await handler(event, ...args)),
+        }
       } catch (err) {
         console.error(`Error in IPC handler [${channel}]:`, err)
         return {

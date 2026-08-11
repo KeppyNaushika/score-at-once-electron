@@ -91,18 +91,13 @@ export function useExportPage() {
     const loadExamSettings = async () => {
       if (examId && window.electronAPI?.settings) {
         try {
-          const result =
+          const settings =
             await window.electronAPI.settings.getExamExportSettings(examId)
-          if (result.success && result.settings) {
-            setAnswerOverlaySettingsState(result.settings.answerOverlay)
-          }
+          setAnswerOverlaySettingsState(settings.answerOverlay)
 
           // 小計グループ選択は source of truth である
           // ExamSubtotalGroup フラグから hydrate する（P5: 亡霊ID排除）
-          let baseOptions =
-            result.success && result.settings
-              ? result.settings.individualReport
-              : DEFAULT_INDIVIDUAL_REPORT_OPTIONS
+          let baseOptions = settings.individualReport
           const selection =
             await window.electronAPI.getSubtotalGroupSelection(examId)
           if (selection.success) {

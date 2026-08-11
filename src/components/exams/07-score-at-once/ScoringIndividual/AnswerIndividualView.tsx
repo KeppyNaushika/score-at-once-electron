@@ -75,11 +75,9 @@ export default function AnswerIndividualView({
   useEffect(() => {
     if (!examId || !window.electronAPI?.settings) return
     ;(async () => {
-      const result =
+      const settings =
         await window.electronAPI.settings.getExamExportSettings(examId)
-      if (result.success && result.settings) {
-        setAnswerOverlaySettings(result.settings.answerOverlay)
-      }
+      setAnswerOverlaySettings(settings.answerOverlay)
     })()
   }, [examId])
 

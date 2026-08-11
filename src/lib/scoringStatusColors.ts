@@ -143,7 +143,7 @@ export async function loadScoringStatusColors(userId: string): Promise<void> {
 
   try {
     currentUserId = userId
-    const [colorsResult, presetIdResult] = await Promise.all([
+    const [storedColors, storedPresetId] = await Promise.all([
       window.electronAPI.settings.getUserPreference(
         userId,
         "scoringStatusColors"
@@ -154,13 +154,9 @@ export async function loadScoringStatusColors(userId: string): Promise<void> {
       ),
     ])
 
-    if (
-      colorsResult.success &&
-      colorsResult.value &&
-      colorsResult.value !== "null"
-    ) {
+    if (storedColors && storedColors !== "null") {
       try {
-        const parsed: unknown = JSON.parse(colorsResult.value)
+        const parsed: unknown = JSON.parse(storedColors)
         if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
           cachedColors = migrateUngradedKey(
             parsed as Record<string, StatusColorConfig>
@@ -171,14 +167,10 @@ export async function loadScoringStatusColors(userId: string): Promise<void> {
       }
     }
 
-    if (
-      presetIdResult.success &&
-      presetIdResult.value &&
-      presetIdResult.value !== "null"
-    ) {
-      let parsed = presetIdResult.value
+    if (storedPresetId && storedPresetId !== "null") {
+      let parsed = storedPresetId
       try {
-        parsed = JSON.parse(presetIdResult.value)
+        parsed = JSON.parse(storedPresetId)
       } catch {
         // keep raw value
       }

@@ -35,10 +35,7 @@ export function ScreenControlTab() {
     const loadSettings = async () => {
       // プロジェクターモードの現在状態を取得
       if (window.electronAPI?.settings?.getProjectorMode) {
-        const pmResult = await window.electronAPI.settings.getProjectorMode()
-        if (pmResult.success) {
-          setProjectorMode(pmResult.active ?? false)
-        }
+        setProjectorMode(await window.electronAPI.settings.getProjectorMode())
       }
 
       // 画面消灯の設定を読み込み
@@ -83,21 +80,20 @@ export function ScreenControlTab() {
     setProjectorMode(enabled)
     if (window.electronAPI?.settings?.setProjectorMode) {
       try {
-        const result =
+        // 切り替え後の実際の状態を返すので、要求値ではなくそちらを採る
+        setProjectorMode(
           await window.electronAPI.settings.setProjectorMode(enabled)
-        if (result.success) {
-          toast.success(
-            enabled
-              ? "プロジェクターモードを有効にしました"
-              : "プロジェクターモードを無効にしました"
-          )
-        } else {
-          setProjectorMode(!enabled)
-          toast.error("プロジェクターモードの切り替えに失敗しました")
-        }
-      } catch {
+        )
+        toast.success(
+          enabled
+            ? "プロジェクターモードを有効にしました"
+            : "プロジェクターモードを無効にしました"
+        )
+      } catch (error) {
         setProjectorMode(!enabled)
-        toast.error("プロジェクターモードの切り替えに失敗しました")
+        toast.error("プロジェクターモードの切り替えに失敗しました", {
+          description: error instanceof Error ? error.message : undefined,
+        })
       }
     }
   }, [])

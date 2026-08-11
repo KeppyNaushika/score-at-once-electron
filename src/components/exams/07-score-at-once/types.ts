@@ -6,6 +6,12 @@
 /** Prismaから基本型とPayload型をインポート */
 import type { Prisma } from "@prisma/client"
 
+import type {
+  ANSWER_SORT_ORDERS,
+  LAYOUT_DIRECTIONS,
+  MASTER_ANSWER_DISPLAY_MODES,
+  MASTER_ANSWER_KEY_BEHAVIORS,
+} from "@/lib/userPreferences"
 /** Prisma拡張型をprismaExtensions.tsからインポート */
 import type {
   SerializedQuestionScore,
@@ -42,8 +48,7 @@ export type GradingMode = "grid" | "individual"
 /**
  * レイアウト方向
  */
-export type LayoutDirection =
-  "right-down" | "left-down" | "down-right" | "down-left"
+export type LayoutDirection = (typeof LAYOUT_DIRECTIONS)[number]
 
 /**
  * 一覧表示の並び順
@@ -53,7 +58,7 @@ export type LayoutDirection =
  *
  * 白さ順・濃さ順は一覧表示でのみ適用される。
  */
-export type AnswerSortOrder = "custom" | "whiteness" | "darkness"
+export type AnswerSortOrder = (typeof ANSWER_SORT_ORDERS)[number]
 
 /**
  * 採点データの基本インターフェース
@@ -101,12 +106,13 @@ export type MouseBrushAction =
  * 模範解答表示モード
  */
 export type MasterAnswerDisplayMode =
-  "off" | "overlay" | "split-horizontal" | "split-vertical"
+  (typeof MASTER_ANSWER_DISPLAY_MODES)[number]
 
 /**
  * 模範解答キー動作モード
  */
-export type MasterAnswerKeyBehavior = "toggle" | "hold-to-show"
+export type MasterAnswerKeyBehavior =
+  (typeof MASTER_ANSWER_KEY_BEHAVIORS)[number]
 
 export type MasterStatus = "master"
 

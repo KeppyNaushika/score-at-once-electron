@@ -3,6 +3,33 @@
  * @description UserPreference KVテーブルの設定キー・デフォルト値・型パースを一元管理
  */
 
+/**
+ * union を持つ設定の取りうる値。
+ *
+ * 型の実体をここに置き、利用側（07 採点画面の `LayoutDirection` 等）はここから導く。
+ * 検証の一覧と型が同じ配列を指すので、片方だけ増えることが起きない。
+ */
+export const LAYOUT_DIRECTIONS = [
+  "right-down",
+  "left-down",
+  "down-right",
+  "down-left",
+] as const
+export const ANSWER_SORT_ORDERS = ["custom", "whiteness", "darkness"] as const
+export const MASTER_ANSWER_DISPLAY_MODES = [
+  "off",
+  "overlay",
+  "split-horizontal",
+  "split-vertical",
+] as const
+export const MASTER_ANSWER_KEY_BEHAVIORS = ["toggle", "hold-to-show"] as const
+
+/** 一覧に含まれるかを、要素の型を保ったまま判定する */
+const isOneOf = <TValue extends string>(
+  candidates: readonly TValue[],
+  value: string
+): value is TValue => candidates.some((candidate) => candidate === value)
+
 /** 設定キーごとのスキーマ定義 */
 export const USER_PREFERENCE_SCHEMA = {
   showStudentNames: { type: "boolean" as const, default: true },
@@ -11,13 +38,12 @@ export const USER_PREFERENCE_SCHEMA = {
   layoutDirection: {
     type: "string" as const,
     default: "right-down",
-    validate: (v: string) =>
-      ["right-down", "left-down", "down-right", "down-left"].includes(v),
+    validate: (value: string) => isOneOf(LAYOUT_DIRECTIONS, value),
   },
   answerSortOrder: {
     type: "string" as const,
     default: "custom",
-    validate: (v: string) => ["custom", "whiteness", "darkness"].includes(v),
+    validate: (value: string) => isOneOf(ANSWER_SORT_ORDERS, value),
   },
   expandMargin: { type: "number" as const, default: 0 },
   selectionBorderColor: {
@@ -35,14 +61,13 @@ export const USER_PREFERENCE_SCHEMA = {
   masterAnswerDisplayMode: {
     type: "string" as const,
     default: "off",
-    validate: (v: string) =>
-      ["off", "overlay", "split-horizontal", "split-vertical"].includes(v),
+    validate: (value: string) => isOneOf(MASTER_ANSWER_DISPLAY_MODES, value),
   },
   masterAnswerOpacity: { type: "number" as const, default: 50 },
   masterAnswerKeyBehavior: {
     type: "string" as const,
     default: "toggle",
-    validate: (v: string) => ["toggle", "hold-to-show"].includes(v),
+    validate: (value: string) => isOneOf(MASTER_ANSWER_KEY_BEHAVIORS, value),
   },
   clickScoringConfig: {
     type: "string?" as const,
@@ -56,22 +81,22 @@ export const USER_PREFERENCE_SCHEMA = {
 } as const
 
 /** 設定キーの型 */
-type PreferenceKey = keyof typeof USER_PREFERENCE_SCHEMA
+export type PreferenceKey = keyof typeof USER_PREFERENCE_SCHEMA
 
 /** 各キーのランタイム型マッピング */
-type PreferenceValueType = {
+export type PreferenceValueType = {
   showStudentNames: boolean
   autoScroll: boolean
   itemsPerLine: number
-  layoutDirection: string
-  answerSortOrder: string
+  layoutDirection: (typeof LAYOUT_DIRECTIONS)[number]
+  answerSortOrder: (typeof ANSWER_SORT_ORDERS)[number]
   expandMargin: number
   selectionBorderColor: string | null
   scoringStatusColors: string | null
   scoringColorPresetId: string | null
-  masterAnswerDisplayMode: string
+  masterAnswerDisplayMode: (typeof MASTER_ANSWER_DISPLAY_MODES)[number]
   masterAnswerOpacity: number
-  masterAnswerKeyBehavior: string
+  masterAnswerKeyBehavior: (typeof MASTER_ANSWER_KEY_BEHAVIORS)[number]
   clickScoringConfig: string | null
   clickScoringDebounceMs: number
   sidePanelCollapsedSections: string | null

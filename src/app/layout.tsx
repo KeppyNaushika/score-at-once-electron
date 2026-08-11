@@ -6,6 +6,7 @@ import { Inter } from "next/font/google"
 import AppShell from "@/components/layout/AppShell"
 import { AuthProvider } from "@/contexts/AuthContext"
 import { NavigationGuardProvider } from "@/contexts/NavigationGuardContext"
+import { QueryProvider } from "@/contexts/QueryProvider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -76,11 +77,13 @@ export default function RootLayout({
         <script id="MathJax-script" async src="/js/mathjax/tex-svg.js" />
       </head>
       <body className={inter.className}>
-        <AuthProvider>
-          <NavigationGuardProvider>
-            <AppShell>{children}</AppShell>
-          </NavigationGuardProvider>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <NavigationGuardProvider>
+              <AppShell>{children}</AppShell>
+            </NavigationGuardProvider>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   )

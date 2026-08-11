@@ -2,70 +2,41 @@ import type { ExamExportSettings } from "@/electron-src/lib/prisma/examSettings"
 
 /**
  * 設定関連API
+ *
+ * 失敗は例外で届く（preload の `invoke` が搬送形式をほどいて投げ直す）。
+ * 契約が宣言するのは payload の型だけで、`success` / `error` は書かない。
  */
 export interface SettingsAPI {
   settings: {
-    // プロジェクターモード（スクリーンセーバー無効化）
-    setProjectorMode: (enabled: boolean) => Promise<{
-      success: boolean
-      active?: boolean
-      error?: string
-    }>
-    getProjectorMode: () => Promise<{
-      success: boolean
-      active?: boolean
-      error?: string
-    }>
-    getFullScreen: () => Promise<{
-      success: boolean
-      fullScreen?: boolean
-      error?: string
-    }>
-    setFullScreen: (
-      enabled: boolean
-    ) => Promise<{ success: boolean; error?: string }>
+    /** プロジェクターモードを切り替え、切り替え後に有効かどうかを返す */
+    setProjectorMode: (enabled: boolean) => Promise<boolean>
+    getProjectorMode: () => Promise<boolean>
 
-    // UserKeyboardShortcut
-    getUserKeyboardShortcuts: (userId: string) => Promise<{
-      success: boolean
-      shortcuts?: Record<string, string>
-      error?: string
-    }>
+    getFullScreen: () => Promise<boolean>
+    setFullScreen: (enabled: boolean) => Promise<void>
+
+    /** action -> key のマッピング */
+    getUserKeyboardShortcuts: (
+      userId: string
+    ) => Promise<Record<string, string>>
     saveUserKeyboardShortcuts: (
       userId: string,
       shortcuts: Record<string, string>
-    ) => Promise<{ success: boolean; error?: string }>
-    resetUserKeyboardShortcuts: (
-      userId: string
-    ) => Promise<{ success: boolean; error?: string }>
+    ) => Promise<void>
+    resetUserKeyboardShortcuts: (userId: string) => Promise<void>
 
-    // UserPreference（KV方式）
-    getUserPreference: (
-      userId: string,
-      key: string
-    ) => Promise<{
-      success: boolean
-      value?: string | null
-      error?: string
-    }>
+    /** 未設定なら null */
+    getUserPreference: (userId: string, key: string) => Promise<string | null>
     setUserPreference: (
       userId: string,
       key: string,
       value: string
-    ) => Promise<{
-      success: boolean
-      error?: string
-    }>
+    ) => Promise<void>
 
-    // ExamExportSettings
-    getExamExportSettings: (examId: string) => Promise<{
-      success: boolean
-      settings?: ExamExportSettings
-      error?: string
-    }>
+    getExamExportSettings: (examId: string) => Promise<ExamExportSettings>
     saveExamExportSettings: (
       examId: string,
       settings: ExamExportSettings
-    ) => Promise<{ success: boolean; error?: string }>
+    ) => Promise<void>
   }
 }

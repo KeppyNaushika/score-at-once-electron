@@ -3,99 +3,42 @@
  * @description 閉じたセクションIDをUserPreferenceに永続化（既定は全展開）
  */
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback } from "react"
 
-import { useAuth } from "@/contexts/AuthContext"
-import { parsePreference, serializePreference } from "@/lib/userPreferences"
+import { useUserPreference } from "@/hooks/useUserPreference"
+
+/** 保存文字列を閉じているセクションIDの集合へ倒す。壊れていれば全展開に戻す */
+const toCollapsedSections = (stored: string | null): Set<string> => {
+  if (!stored) return new Set()
+
+  try {
+    const parsed: unknown = JSON.parse(stored)
+    if (!Array.isArray(parsed)) return new Set()
+    return new Set(parsed.filter((item) => typeof item === "string"))
+  } catch {
+    return new Set()
+  }
+}
 
 /** セクション折りたたみ状態をユーザー設定として永続化するフック */
 export function useSidePanelCollapse() {
-  const { user } = useAuth()
-  const userId = user?.id
+  const { value, setValue } = useUserPreference("sidePanelCollapsedSections")
 
-  // 閉じているセクションIDのSet（既定は空＝全展開）
-  const [collapsedSections, setCollapsedSectionsState] = useState<Set<string>>(
-    new Set()
-  )
-  const initializedUserIdRef = useRef<string | undefined>(undefined)
+  const collapsedSections = toCollapsedSections(value)
 
-  useEffect(() => {
-    if (initializedUserIdRef.current === userId) return
-    if (!userId) return
-
-    initializedUserIdRef.current = userId
-
-    const load = async () => {
-      if (!window.electronAPI?.settings) return
-
-      try {
-        const result = await window.electronAPI.settings.getUserPreference(
-          userId,
-          "sidePanelCollapsedSections"
-        )
-        if (result.success) {
-          const raw = parsePreference(
-            "sidePanelCollapsedSections",
-            result.value ?? null
-          )
-          if (raw) {
-            try {
-              const parsed = JSON.parse(raw)
-              if (Array.isArray(parsed)) {
-                setCollapsedSectionsState(new Set(parsed))
-              }
-            } catch {
-              // keep default
-            }
-          }
-        }
-      } catch (error) {
-        console.error("パネル折りたたみ設定の読み込みに失敗しました:", error)
-      }
-    }
-
-    load()
-  }, [userId])
-
-  /** 保存処理 */
-  const save = useCallback(
-    (next: Set<string>) => {
-      if (userId && window.electronAPI?.settings) {
-        window.electronAPI.settings
-          .setUserPreference(
-            userId,
-            "sidePanelCollapsedSections",
-            serializePreference(
-              "sidePanelCollapsedSections",
-              JSON.stringify(Array.from(next))
-            )
-          )
-          .catch((error) =>
-            console.error("パネル折りたたみ設定の保存に失敗しました:", error)
-          )
-      }
-    },
-    [userId]
-  )
-
-  /** セクションの開閉をトグル */
   const toggleSection = useCallback(
     (sectionId: string) => {
-      setCollapsedSectionsState((prev) => {
-        const next = new Set(prev)
-        if (next.has(sectionId)) {
-          next.delete(sectionId)
-        } else {
-          next.add(sectionId)
-        }
-        save(next)
-        return next
-      })
+      const next = toCollapsedSections(value)
+      if (next.has(sectionId)) {
+        next.delete(sectionId)
+      } else {
+        next.add(sectionId)
+      }
+      setValue(JSON.stringify(Array.from(next)))
     },
-    [save]
+    [value, setValue]
   )
 
-  /** セクションが開いているか */
   const isSectionOpen = useCallback(
     (sectionId: string) => !collapsedSections.has(sectionId),
     [collapsedSections]

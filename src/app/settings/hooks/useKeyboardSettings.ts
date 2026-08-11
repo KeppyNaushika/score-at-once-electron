@@ -25,11 +25,9 @@ export function useKeyboardSettings() {
 
       if (userId && window.electronAPI?.settings) {
         try {
-          const result =
+          const stored =
             await window.electronAPI.settings.getUserKeyboardShortcuts(userId)
-          if (result.success && result.shortcuts) {
-            setShortcuts({ ...DEFAULT_KEYBINDINGS, ...result.shortcuts })
-          }
+          setShortcuts({ ...DEFAULT_KEYBINDINGS, ...stored })
         } catch (error) {
           console.error("キーバインディングの読み込みに失敗しました:", error)
         }

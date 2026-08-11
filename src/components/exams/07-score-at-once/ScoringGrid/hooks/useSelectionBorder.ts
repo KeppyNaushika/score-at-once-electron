@@ -1,86 +1,19 @@
 /**
- * 選択枠の色を取得・監視するフック
- * KV方式ユーザー設定の永続化
+ * 選択枠の色を取得するフック
  */
 
-import { useEffect, useRef, useState } from "react"
-
-import { useAuth } from "@/contexts/AuthContext"
-import { parsePreference } from "@/lib/userPreferences"
+import { useUserPreference } from "@/hooks/useUserPreference"
 
 const DEFAULT_SELECTION_BORDER_COLOR = "#F97316" // orange-500
 
-/** 選択枠のボーダー色をユーザー設定から読み込み、設定変更イベントを監視するフック */
+/**
+ * 選択枠のボーダー色をユーザー設定から読むフック。
+ *
+ * 設定画面での変更は、同じキーのキャッシュを共有しているだけで伝わる。
+ * 以前は `selectionBorderColorChanged` という自作イベントで通知していた。
+ */
 export function useSelectionBorder(): string {
-  const { user } = useAuth()
-  const userId = user?.id
-  const [color, setColor] = useState(DEFAULT_SELECTION_BORDER_COLOR)
-  const initializedUserIdRef = useRef<string | undefined>(undefined)
+  const { value } = useUserPreference("selectionBorderColor")
 
-  // 設定を読み込む（KV方式）
-  useEffect(() => {
-    if (initializedUserIdRef.current === userId) return
-    if (!userId) return
-
-    initializedUserIdRef.current = userId
-
-    const loadColor = async () => {
-      if (window.electronAPI?.settings) {
-        try {
-          const result = await window.electronAPI.settings.getUserPreference(
-            userId,
-            "selectionBorderColor"
-          )
-          if (result.success) {
-            const parsed = parsePreference(
-              "selectionBorderColor",
-              result.value ?? null
-            )
-            if (parsed) {
-              setColor(parsed)
-            }
-          }
-        } catch (error) {
-          console.error("選択枠色の読み込みに失敗しました:", error)
-        }
-      }
-    }
-
-    loadColor()
-  }, [userId])
-
-  // 選択枠色の設定変更を監視（設定画面からの変更）
-  useEffect(() => {
-    const handleColorChange = async () => {
-      if (userId && window.electronAPI?.settings) {
-        try {
-          const result = await window.electronAPI.settings.getUserPreference(
-            userId,
-            "selectionBorderColor"
-          )
-          if (result.success) {
-            const parsed = parsePreference(
-              "selectionBorderColor",
-              result.value ?? null
-            )
-            if (parsed) {
-              setColor(parsed)
-            }
-          }
-        } catch (error) {
-          console.error("選択枠色の読み込みに失敗しました:", error)
-        }
-      }
-    }
-
-    window.addEventListener("selectionBorderColorChanged", handleColorChange)
-    return () => {
-      window.removeEventListener(
-        "selectionBorderColorChanged",
-        handleColorChange
-      )
-    }
-  }, [userId])
-
-  return color
+  return value ?? DEFAULT_SELECTION_BORDER_COLOR
 }

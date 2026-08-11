@@ -88,10 +88,8 @@ export function ScreenBlackout() {
   const enterFullScreenIfNeeded = useCallback(async () => {
     const current = getBlackoutSettings()
     if (current.autoFullScreen && window.electronAPI?.settings?.setFullScreen) {
-      const result = await window.electronAPI.settings.getFullScreen()
-      wasFullScreenBeforeRef.current = result.success
-        ? (result.fullScreen ?? false)
-        : false
+      wasFullScreenBeforeRef.current =
+        await window.electronAPI.settings.getFullScreen()
       window.electronAPI.settings.setFullScreen(true)
     }
   }, [])

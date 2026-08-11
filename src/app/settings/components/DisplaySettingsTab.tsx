@@ -4,11 +4,16 @@ import { RotateCcw } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
+import {
+  toClickScoringAction,
+  useClickScoringConfig,
+} from "@/components/exams/07-score-at-once/ScoringMain/hooks/useClickScoringConfig"
 import { Button } from "@/components/ui/button"
 import { ColorPicker } from "@/components/ui/color-picker"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { useAuth } from "@/contexts/AuthContext"
+import { useUserPreference } from "@/hooks/useUserPreference"
 import {
   applyScoringColorPreset,
   getCurrentPresetId,
@@ -20,11 +25,6 @@ import {
   SCORING_STATUS_ORDER,
   type ScoringStatusColors,
 } from "@/lib/scoringStatusColors"
-import {
-  parsePreference,
-  serializePreference,
-  USER_PREFERENCE_SCHEMA,
-} from "@/lib/userPreferences"
 import { cn } from "@/lib/utils"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -43,20 +43,18 @@ export function DisplaySettingsTab() {
   const userId = user?.id
   const initializedUserIdRef = useRef<string | undefined>(undefined)
 
-  // 選択枠色の状態
-  const [selectionBorderColor, setSelectionBorderColor] = useState(
-    DEFAULT_SELECTION_BORDER_COLOR
-  )
+  // 選択枠色・クリック採点設定は採点画面と同じフックを使う。ここで読み書きすると
+  // 採点画面のキャッシュも同時に更新されるので、変更を伝える自作イベントは要らない
+  const storedSelectionBorderColor = useUserPreference("selectionBorderColor")
+  const selectionBorderColor =
+    storedSelectionBorderColor.value ?? DEFAULT_SELECTION_BORDER_COLOR
 
-  // クリック採点設定の状態
-  const [clickScoringConfig, setClickScoringConfig] = useState({
-    2: "incorrect" as string,
-    3: "partial_modal" as string,
-    4: "individual" as string,
-  })
-  const [clickScoringDebounceMs, setClickScoringDebounceMs] = useState<number>(
-    USER_PREFERENCE_SCHEMA.clickScoringDebounceMs.default
-  )
+  const {
+    clickScoringConfig,
+    clickScoringDebounceMs,
+    setClickAction,
+    setClickScoringDebounceMs,
+  } = useClickScoringConfig()
 
   // 採点状態色の状態
   const [scoringColors, setScoringColors] = useState<ScoringStatusColors>(
@@ -74,66 +72,6 @@ export function DisplaySettingsTab() {
     initializedUserIdRef.current = userId
 
     const loadSettings = async () => {
-      if (window.electronAPI?.settings) {
-        try {
-          const result = await window.electronAPI.settings.getUserPreference(
-            userId,
-            "selectionBorderColor"
-          )
-          if (result.success && result.value && result.value !== "null") {
-            let parsed = result.value
-            try {
-              parsed = JSON.parse(result.value)
-            } catch {
-              // keep raw
-            }
-            if (parsed) {
-              setSelectionBorderColor(parsed)
-            }
-          }
-        } catch (error) {
-          console.error("選択枠色の読み込みに失敗しました:", error)
-        }
-      }
-
-      // クリック採点設定の読み込み
-      try {
-        const [configResult, debounceResult] = await Promise.all([
-          window.electronAPI.settings.getUserPreference(
-            userId,
-            "clickScoringConfig"
-          ),
-          window.electronAPI.settings.getUserPreference(
-            userId,
-            "clickScoringDebounceMs"
-          ),
-        ])
-        if (configResult.success) {
-          const raw = parsePreference(
-            "clickScoringConfig",
-            configResult.value ?? null
-          )
-          if (raw) {
-            try {
-              const parsed = JSON.parse(raw)
-              setClickScoringConfig((prev) => ({ ...prev, ...parsed }))
-            } catch {
-              // keep default
-            }
-          }
-        }
-        if (debounceResult.success) {
-          setClickScoringDebounceMs(
-            parsePreference(
-              "clickScoringDebounceMs",
-              debounceResult.value ?? null
-            )
-          )
-        }
-      } catch (error) {
-        console.error("クリック採点設定の読み込みに失敗しました:", error)
-      }
-
       await loadScoringStatusColors(userId)
       setScoringColors(getScoringStatusColors())
       setCurrentPresetId(getCurrentPresetId())
@@ -144,66 +82,17 @@ export function DisplaySettingsTab() {
 
   // 選択枠色の変更（KV方式・楽観的更新）
   const handleSelectionBorderColorChange = useCallback(
-    async (color: string) => {
-      const upperColor = color.toUpperCase()
-      setSelectionBorderColor(upperColor)
-
-      if (userId && window.electronAPI?.settings) {
-        try {
-          await window.electronAPI.settings.setUserPreference(
-            userId,
-            "selectionBorderColor",
-            JSON.stringify(upperColor)
-          )
-          window.dispatchEvent(new CustomEvent("selectionBorderColorChanged"))
-          toast.success("選択枠色が変更されました")
-        } catch (error) {
-          console.error("選択枠色の保存に失敗しました:", error)
-          toast.error("選択枠色の保存に失敗しました")
-        }
-      }
+    (color: string) => {
+      storedSelectionBorderColor.setValue(color.toUpperCase())
+      toast.success("選択枠色が変更されました")
     },
-    [userId]
+    [storedSelectionBorderColor]
   )
 
   // クリック採点アクション変更
-  const handleClickActionChange = useCallback(
-    async (clickCount: 2 | 3 | 4, action: string) => {
-      const next = { ...clickScoringConfig, [clickCount]: action }
-      setClickScoringConfig(next)
-      if (userId && window.electronAPI?.settings) {
-        try {
-          await window.electronAPI.settings.setUserPreference(
-            userId,
-            "clickScoringConfig",
-            serializePreference("clickScoringConfig", JSON.stringify(next))
-          )
-        } catch (error) {
-          console.error("クリック採点設定の保存に失敗しました:", error)
-        }
-      }
-    },
-    [userId, clickScoringConfig]
-  )
+  const handleClickActionChange = setClickAction
 
-  // クリック採点デバウンス時間変更
-  const handleDebounceMsChange = useCallback(
-    async (value: number) => {
-      setClickScoringDebounceMs(value)
-      if (userId && window.electronAPI?.settings) {
-        try {
-          await window.electronAPI.settings.setUserPreference(
-            userId,
-            "clickScoringDebounceMs",
-            serializePreference("clickScoringDebounceMs", value)
-          )
-        } catch (error) {
-          console.error("デバウンス時間の保存に失敗しました:", error)
-        }
-      }
-    },
-    [userId]
-  )
+  const handleDebounceMsChange = setClickScoringDebounceMs
 
   // プリセット選択
   const handlePresetSelect = useCallback(
@@ -287,7 +176,10 @@ export function DisplaySettingsTab() {
                     ]
                   }
                   onChange={(e) =>
-                    handleClickActionChange(clickCount, e.target.value)
+                    handleClickActionChange(
+                      clickCount,
+                      toClickScoringAction(e.target.value)
+                    )
                   }
                 >
                   {actionOptions.map((opt) => (

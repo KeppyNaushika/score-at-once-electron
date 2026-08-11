@@ -234,11 +234,9 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
     const loadKeyBindings = async () => {
       if (userId && window.electronAPI?.settings) {
         try {
-          const result =
+          const stored =
             await window.electronAPI.settings.getUserKeyboardShortcuts(userId)
-          if (result.success && result.shortcuts) {
-            setKeyBindings({ ...DEFAULT_KEYBINDINGS, ...result.shortcuts })
-          }
+          setKeyBindings({ ...DEFAULT_KEYBINDINGS, ...stored })
         } catch (error) {
           console.error("キーバインディングの読み込みに失敗しました:", error)
         }
