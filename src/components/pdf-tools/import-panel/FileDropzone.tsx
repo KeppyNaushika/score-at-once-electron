@@ -35,7 +35,7 @@ export default function FileDropzone({
 
     try {
       const result = await window.electronAPI.pdfTools.selectFiles()
-      if (result.canceled || !result.filePaths?.length) return
+      if (result.canceled || result.filePaths.length === 0) return
 
       setIsLoading(true)
       const processedFiles = await processFilePaths(result.filePaths)
@@ -44,8 +44,9 @@ export default function FileDropzone({
         toast.success(`${processedFiles.length}件のファイルを追加しました`)
       }
     } catch (error) {
-      console.error("File selection error:", error)
-      toast.error("ファイルの選択中にエラーが発生しました")
+      toast.error("ファイルを選択できませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setIsLoading(false)
     }

@@ -8,13 +8,13 @@ export interface PdfToolsAPI {
     mergePdfs: (options: {
       pages: PdfPageInput[]
       outputPath: string
-    }) => Promise<{ success: boolean; outputPath?: string; error?: string }>
+    }) => Promise<string>
     /** 出力ページを1ページ1ファイルのPDFへ書き出す */
     splitPdf: (options: {
       pages: PdfPageInput[]
       outputDir: string
       prefix?: string
-    }) => Promise<{ success: boolean; outputPaths?: string[]; error?: string }>
+    }) => Promise<string[]>
     exportAsPng: (options: {
       imageBuffers: Array<{
         buffer: Buffer
@@ -22,31 +22,29 @@ export interface PdfToolsAPI {
         rotation?: RotationDegree
       }>
       outputDir: string
-    }) => Promise<{ success: boolean; outputPaths?: string[]; error?: string }>
+    }) => Promise<string[]>
     /** パスワード保護PDFの復号済み複製（一時ファイル）を復号済みページ画像から作成 */
     createDecryptedCopy: (options: {
       pageImages: Uint8Array[]
       pixelsPerPoint: number
-    }) => Promise<{ success: boolean; path?: string; error?: string }>
+    }) => Promise<string>
+    /** 選ばずに閉じた場合は canceled で返る（失敗ではない） */
     selectSavePath: (options: {
       type: "pdf" | "directory"
       defaultName?: string
-    }) => Promise<{ success: boolean; path?: string; canceled?: boolean }>
-    selectFiles: () => Promise<{
-      success: boolean
-      filePaths?: string[]
-      canceled?: boolean
-    }>
+    }) => Promise<{ canceled: true } | { canceled: false; path: string }>
+    /** 選ばずに閉じた場合は canceled で返る（失敗ではない） */
+    selectFiles: () => Promise<
+      { canceled: true } | { canceled: false; filePaths: string[] }
+    >
     getPdfInfo: (filePath: string) => Promise<{
-      success: boolean
-      pageCount?: number
-      name?: string
+      pageCount: number
+      name: string
       /** 1ページ目の幅（ポイント） */
-      pageWidth?: number
+      pageWidth: number
       /** 1ページ目の高さ（ポイント） */
-      pageHeight?: number
-      isEncrypted?: boolean
-      error?: string
+      pageHeight: number
+      isEncrypted: boolean
     }>
     /** ドラッグ&ドロップされたFileオブジェクトからパスを取得 */
     getPathForFile: (file: File) => string

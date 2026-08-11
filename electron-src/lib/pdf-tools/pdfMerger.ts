@@ -17,12 +17,6 @@ import type {
 const A4_WIDTH = 595.28 // 210mm
 const A4_HEIGHT = 841.89 // 297mm
 
-interface MergeResult {
-  success: boolean
-  outputPath?: string
-  error?: string
-}
-
 /**
  * 相対パスを絶対パスに解決
  */
@@ -112,27 +106,19 @@ export async function appendPageToPdf(
 export async function mergePdfs(
   pages: PdfPageInput[],
   outputPath: string
-): Promise<MergeResult> {
-  try {
-    const mergedPdf = await PDFDocument.create()
-    const pdfCache: SourcePdfCache = new Map()
+): Promise<string> {
+  const mergedPdf = await PDFDocument.create()
+  const pdfCache: SourcePdfCache = new Map()
 
-    for (const page of pages) {
-      await appendPageToPdf(mergedPdf, page, pdfCache)
-    }
-
-    // PDFを保存
-    const pdfBytes = await mergedPdf.save()
-    fs.writeFileSync(outputPath, pdfBytes)
-
-    return { success: true, outputPath }
-  } catch (error) {
-    console.error("PDF merge error:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+  for (const page of pages) {
+    await appendPageToPdf(mergedPdf, page, pdfCache)
   }
+
+  // PDFを保存
+  const pdfBytes = await mergedPdf.save()
+  fs.writeFileSync(outputPath, pdfBytes)
+
+  return outputPath
 }
 
 /**

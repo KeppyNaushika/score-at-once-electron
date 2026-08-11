@@ -10,12 +10,6 @@ import type { PdfPageInput } from "@/types/pdfTools.types"
 
 import { appendPageToPdf, type SourcePdfCache } from "./pdfMerger"
 
-interface SplitResult {
-  success: boolean
-  outputPaths?: string[]
-  error?: string
-}
-
 /**
  * 出力ページを1ページ1ファイルのPDFへ分割して書き出す。
  *
@@ -30,35 +24,27 @@ export async function splitPdf(
   pages: PdfPageInput[],
   outputDir: string,
   prefix?: string
-): Promise<SplitResult> {
-  try {
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true })
-    }
-
-    const baseName = prefix || "page"
-    // 元ファイルの読み込みは全ページで共有する
-    const pdfCache: SourcePdfCache = new Map()
-    const outputPaths: string[] = []
-
-    for (const [index, page] of pages.entries()) {
-      const singlePagePdf = await PDFDocument.create()
-      const appended = await appendPageToPdf(singlePagePdf, page, pdfCache)
-      // 元ファイル欠損・ページ番号不正で1ページも入らなかったら空PDFを作らずに飛ばす
-      if (!appended) continue
-
-      const paddedIndex = String(index + 1).padStart(3, "0")
-      const outputPath = path.join(outputDir, `${baseName}_${paddedIndex}.pdf`)
-      fs.writeFileSync(outputPath, await singlePagePdf.save())
-      outputPaths.push(outputPath)
-    }
-
-    return { success: true, outputPaths }
-  } catch (error) {
-    console.error("PDF split error:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+): Promise<string[]> {
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true })
   }
+
+  const baseName = prefix || "page"
+  // 元ファイルの読み込みは全ページで共有する
+  const pdfCache: SourcePdfCache = new Map()
+  const outputPaths: string[] = []
+
+  for (const [index, page] of pages.entries()) {
+    const singlePagePdf = await PDFDocument.create()
+    const appended = await appendPageToPdf(singlePagePdf, page, pdfCache)
+    // 元ファイル欠損・ページ番号不正で1ページも入らなかったら空PDFを作らずに飛ばす
+    if (!appended) continue
+
+    const paddedIndex = String(index + 1).padStart(3, "0")
+    const outputPath = path.join(outputDir, `${baseName}_${paddedIndex}.pdf`)
+    fs.writeFileSync(outputPath, await singlePagePdf.save())
+    outputPaths.push(outputPath)
+  }
+
+  return outputPaths
 }

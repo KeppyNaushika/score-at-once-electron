@@ -160,21 +160,12 @@ async function readSourcePdfMetadata(
   filePath: string
 ): Promise<SourcePdfMetadata | null> {
   try {
-    const pdfInfoResult = await window.electronAPI.pdfTools.getPdfInfo(filePath)
-    if (
-      !pdfInfoResult.success ||
-      pdfInfoResult.pageCount === undefined ||
-      pdfInfoResult.pageWidth === undefined ||
-      pdfInfoResult.pageHeight === undefined ||
-      pdfInfoResult.isEncrypted === undefined
-    ) {
-      return null
-    }
+    const pdfInfo = await window.electronAPI.pdfTools.getPdfInfo(filePath)
     return {
-      pageCount: pdfInfoResult.pageCount,
-      pageWidth: pdfInfoResult.pageWidth,
-      pageHeight: pdfInfoResult.pageHeight,
-      isEncrypted: pdfInfoResult.isEncrypted,
+      pageCount: pdfInfo.pageCount,
+      pageWidth: pdfInfo.pageWidth,
+      pageHeight: pdfInfo.pageHeight,
+      isEncrypted: pdfInfo.isEncrypted,
     }
   } catch (error) {
     console.error(`Failed to read PDF info for ${filePath}:`, error)
@@ -184,14 +175,10 @@ async function readSourcePdfMetadata(
 
 /** 復号済みページ画像から一時PDF（復号済み複製）を作成し、そのパスを返す */
 async function createDecryptedCopy(images: ConvertedImage[]): Promise<string> {
-  const result = await window.electronAPI.pdfTools.createDecryptedCopy({
+  return window.electronAPI.pdfTools.createDecryptedCopy({
     pageImages: images.map((image) => new Uint8Array(image.buffer)),
     pixelsPerPoint: PDF_RENDER_SCALE,
   })
-  if (!result.success || !result.path) {
-    throw new Error(result.error || "復号済みPDFの作成に失敗しました")
-  }
-  return result.path
 }
 
 /** ローカルパスからFileオブジェクトを読み込む */

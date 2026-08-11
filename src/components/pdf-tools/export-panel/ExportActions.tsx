@@ -59,27 +59,21 @@ export default function ExportActions({
       defaultName: "output.pdf",
     })
 
-    if (pathResult.canceled || !pathResult.path) {
-      return
-    }
+    if (pathResult.canceled) return
 
     setExportKind("merged-pdf")
     onProcessingChange(true)
 
     try {
-      const result = await window.electronAPI.pdfTools.mergePdfs({
+      const outputPath = await window.electronAPI.pdfTools.mergePdfs({
         pages: buildPageInputs(),
         outputPath: pathResult.path,
       })
-
-      if (result.success) {
-        toast.success(`PDFを保存しました: ${pathResult.path}`)
-      } else {
-        toast.error(`PDF出力エラー: ${result.error}`)
-      }
+      toast.success(`PDFを保存しました: ${outputPath}`)
     } catch (error) {
-      console.error("PDF export error:", error)
-      toast.error("PDF出力中にエラーが発生しました")
+      toast.error("PDFを出力できませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setExportKind(null)
       onProcessingChange(false)
@@ -97,29 +91,23 @@ export default function ExportActions({
       type: "directory",
     })
 
-    if (pathResult.canceled || !pathResult.path) {
-      return
-    }
+    if (pathResult.canceled) return
 
     setExportKind("split-pdf")
     onProcessingChange(true)
 
     try {
-      const result = await window.electronAPI.pdfTools.splitPdf({
+      const outputPaths = await window.electronAPI.pdfTools.splitPdf({
         pages: buildPageInputs(),
         outputDir: pathResult.path,
       })
-
-      if (result.success) {
-        toast.success(
-          `${result.outputPaths?.length ?? 0}個のPDFを保存しました: ${pathResult.path}`
-        )
-      } else {
-        toast.error(`PDF分割出力エラー: ${result.error}`)
-      }
+      toast.success(
+        `${outputPaths.length}個のPDFを保存しました: ${pathResult.path}`
+      )
     } catch (error) {
-      console.error("PDF split export error:", error)
-      toast.error("PDFのページ別出力中にエラーが発生しました")
+      toast.error("PDFをページ別に出力できませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setExportKind(null)
       onProcessingChange(false)
@@ -137,9 +125,7 @@ export default function ExportActions({
       type: "directory",
     })
 
-    if (pathResult.canceled || !pathResult.path) {
-      return
-    }
+    if (pathResult.canceled) return
 
     setExportKind("png")
     onProcessingChange(true)
@@ -186,19 +172,15 @@ export default function ExportActions({
         })
       )
 
-      const result = await window.electronAPI.pdfTools.exportAsPng({
+      const outputPaths = await window.electronAPI.pdfTools.exportAsPng({
         imageBuffers,
         outputDir: pathResult.path,
       })
-
-      if (result.success) {
-        toast.success(`${outputPages.length}枚のPNGを保存しました`)
-      } else {
-        toast.error(`PNG出力エラー: ${result.error}`)
-      }
+      toast.success(`${outputPaths.length}枚のPNGを保存しました`)
     } catch (error) {
-      console.error("PNG export error:", error)
-      toast.error("PNG出力中にエラーが発生しました")
+      toast.error("PNGを出力できませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setExportKind(null)
       onProcessingChange(false)
