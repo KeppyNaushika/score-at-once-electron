@@ -19,19 +19,14 @@ import { validateAsbManifest } from "./manifestValidator"
 export async function importAsbDefinition(
   filePath: string,
   userId: string
-): Promise<{
-  success: boolean
-  definitionId?: string
-  warnings?: string[]
-  error?: string
-}> {
+): Promise<{ definitionId: string; warnings: string[] }> {
   let tempDir: string | undefined
 
   try {
     // 1. 展開
     const extractResult = await extractAsbArchive(filePath)
     if (!extractResult.success || !extractResult.data) {
-      return { success: false, error: extractResult.error }
+      throw new Error(extractResult.error ?? "アーカイブを展開できません")
     }
     tempDir = extractResult.data.tempDir
 
@@ -41,7 +36,7 @@ export async function importAsbDefinition(
     // 2. マニフェスト検証
     const validation = validateAsbManifest(manifest)
     if (!validation.valid) {
-      return { success: false, error: validation.error }
+      throw new Error(validation.error ?? "アーカイブの形式が不正です")
     }
 
     // 3. バージョン変換
@@ -85,18 +80,10 @@ export async function importAsbDefinition(
       target: remapped.name,
     })
 
-    return {
-      success: true,
-      definitionId: remapped.id,
-      ...(warnings.length > 0 ? { warnings } : {}),
-    }
+    return { definitionId: remapped.id, warnings }
   } catch (error) {
     console.error("Error importing ASB definition:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "インポートに失敗しました",
-    }
+    throw error
   } finally {
     if (tempDir) {
       cleanupAsbTempDir(tempDir)

@@ -64,16 +64,16 @@ export function ImageElementEditor({
       // Electron の webUtils.getPathForFile でローカルパスを取得
       const filePath = window.electronAPI?.pdfTools?.getPathForFile(file)
       if (!filePath) return
-      const result = await api.answerSheetBuilder.uploadImage({
+      const uploadedPath = await api.answerSheetBuilder.uploadImage({
         definitionId,
         filePath,
         originalName: file.name,
       })
 
-      if (result.success && result.imagePath) {
+      {
         const newElement: CellImageElement = {
           id: generateId(),
-          imagePath: result.imagePath,
+          imagePath: uploadedPath,
           originalName: file.name,
           objectFit: "contain",
           horizontalAlign: "center",

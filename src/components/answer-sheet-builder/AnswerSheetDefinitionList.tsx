@@ -220,13 +220,7 @@ export function AnswerSheetDefinitionList() {
       const definition = createDefaultDefinition()
       definition.id = newId
 
-      const result = await api.saveDefinition(definition, userId)
-      if (!result.success) {
-        toast.error("解答用紙の作成に失敗しました", {
-          description: result.error,
-        })
-        return
-      }
+      await api.saveDefinition(definition, userId)
       // 作成直後は編集したいので作成ページへ直行
       router.push(`/answer-sheet-builder/${newId}/01-edit`)
     } catch (error) {
@@ -265,11 +259,15 @@ export function AnswerSheetDefinitionList() {
     const api = requireBuilderApi()
     if (!api) return
 
-    const result = await api.exportDefinition(definitionId)
-    if (result.success) {
-      toast.success("定義を書き出しました")
-    } else if (result.error !== "キャンセルされました") {
-      toast.error(result.error ?? "書き出しに失敗しました")
+    try {
+      const result = await api.exportDefinition(definitionId)
+      if (!result.canceled) {
+        toast.success("定義を書き出しました")
+      }
+    } catch (error) {
+      toast.error("定義を書き出せませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }, [])
 
@@ -280,20 +278,23 @@ export function AnswerSheetDefinitionList() {
 
     // 1. ファイル選択
     const fileResult = await api.selectImportFile()
-    if (!fileResult.success || !fileResult.filePath) return
+    if (fileResult.canceled) return
 
     // 2. インポート実行
-    const importResult = await api.importDefinition(fileResult.filePath, userId)
-    if (importResult.success) {
+    try {
+      const { warnings } = await api.importDefinition(
+        fileResult.filePath,
+        userId
+      )
       toast.success("定義を読み込みました")
-      if (importResult.warnings?.length) {
-        for (const warning of importResult.warnings) {
-          toast.warning(warning)
-        }
+      for (const warning of warnings) {
+        toast.warning(warning)
       }
       await loadDefinitions()
-    } else {
-      toast.error(importResult.error ?? "読み込みに失敗しました")
+    } catch (error) {
+      toast.error("定義を読み込めませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }, [user?.id, loadDefinitions])
 

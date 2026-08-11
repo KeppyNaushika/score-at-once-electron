@@ -28,146 +28,121 @@ import {
   listAsbDefinitions,
   saveAsbDefinition,
 } from "../lib/prisma/asbDefinition"
-import { registerSafeHandler } from "./ipcHandlerUtils"
+import { registerHandler } from "./ipcHandlerUtils"
 
 /** 解答用紙作成機能のIPCチャンネル（定義CRUD・画像管理・PNG出力・インポート/エクスポート）を登録する */
 export function setupAnswerSheetBuilderHandlers(): void {
   // 定義一覧取得
-  registerSafeHandler(
-    "asb:list-definitions",
-    async (userId: string) => {
-      const data = await listAsbDefinitions(userId)
-      return { success: true, data }
-    },
-    "定義一覧の取得に失敗しました"
-  )
+  registerHandler("asb:list-definitions", async (userId: string) => {
+    const data = await listAsbDefinitions(userId)
+    return data
+  })
 
   // 定義読込
-  registerSafeHandler(
-    "asb:load-definition",
-    async (id: string) => {
-      const definition = await getAsbDefinition(id)
-      if (!definition) {
-        return { success: false, error: "定義が見つかりません" }
-      }
-      return { success: true, data: definition }
-    },
-    "定義の読込に失敗しました"
-  )
+  registerHandler("asb:load-definition", async (id: string) => {
+    const definition = await getAsbDefinition(id)
+    if (!definition) {
+      throw new Error("定義が見つかりません")
+    }
+    return definition
+  })
 
   // 定義保存
-  registerSafeHandler(
+  registerHandler(
     "asb:save-definition",
     async (definition: AnswerSheetDefinition, userId: string) => {
       await saveAsbDefinition(definition, userId)
-      return { success: true }
-    },
-    "定義の保存に失敗しました"
+    }
   )
 
   // 定義削除（画像ディレクトリも削除）
-  registerSafeHandler(
-    "asb:delete-definition",
-    async (id: string) => {
-      const deleted = await deleteAsbDefinition(id)
-      if (deleted) {
-        // 画像ディレクトリの削除
-        const imagesDir = getAsbImagesDirectory(id)
-        try {
-          // ディレクトリの親（definitionId ディレクトリ）ごと削除
-          const definitionDir = path.dirname(imagesDir)
-          if (fs.existsSync(definitionDir)) {
-            fs.rmSync(definitionDir, { recursive: true, force: true })
-          }
-        } catch (cleanupError) {
-          console.warn(
-            "asb:delete-definition image cleanup warning:",
-            cleanupError
-          )
+  registerHandler("asb:delete-definition", async (id: string) => {
+    const deleted = await deleteAsbDefinition(id)
+    if (deleted) {
+      // 画像ディレクトリの削除
+      const imagesDir = getAsbImagesDirectory(id)
+      try {
+        // ディレクトリの親（definitionId ディレクトリ）ごと削除
+        const definitionDir = path.dirname(imagesDir)
+        if (fs.existsSync(definitionDir)) {
+          fs.rmSync(definitionDir, { recursive: true, force: true })
         }
+      } catch (cleanupError) {
+        console.warn(
+          "asb:delete-definition image cleanup warning:",
+          cleanupError
+        )
       }
-      return { success: deleted }
-    },
-    "定義の削除に失敗しました"
-  )
+    }
+    if (!deleted) {
+      throw new Error("定義が見つかりません")
+    }
+  })
 
   // 画像アップロード
-  registerSafeHandler(
-    "asb:upload-image",
-    async (args: ASBUploadImageArgs) => {
-      const imagesDir = getAsbImagesDirectory(args.definitionId)
-      if (!fs.existsSync(imagesDir)) {
-        fs.mkdirSync(imagesDir, { recursive: true })
-      }
+  registerHandler("asb:upload-image", async (args: ASBUploadImageArgs) => {
+    const imagesDir = getAsbImagesDirectory(args.definitionId)
+    if (!fs.existsSync(imagesDir)) {
+      fs.mkdirSync(imagesDir, { recursive: true })
+    }
 
-      // ユニークなファイル名を生成
-      const ext = path.extname(args.originalName)
-      const baseName = path.basename(args.originalName, ext)
-      const uniqueName = `${baseName}_${Date.now()}${ext}`
-      const destPath = path.join(imagesDir, uniqueName)
+    // ユニークなファイル名を生成
+    const ext = path.extname(args.originalName)
+    const baseName = path.basename(args.originalName, ext)
+    const uniqueName = `${baseName}_${Date.now()}${ext}`
+    const destPath = path.join(imagesDir, uniqueName)
 
-      // ファイルコピー
-      fs.copyFileSync(args.filePath, destPath)
+    // ファイルコピー
+    fs.copyFileSync(args.filePath, destPath)
 
-      // data/ からの相対パスを返す
-      const relativePath = getRelativePathFromData(destPath)
-      return { success: true, imagePath: relativePath }
-    },
-    "画像のアップロードに失敗しました"
-  )
+    // data/ からの相対パスを返す
+    const relativePath = getRelativePathFromData(destPath)
+    return relativePath
+  })
 
   // 画像削除
-  registerSafeHandler(
-    "asb:delete-image",
-    async (args: ASBDeleteImageArgs) => {
-      const absolutePath = getAbsolutePathFromData(args.imagePath)
-      if (fs.existsSync(absolutePath)) {
-        fs.unlinkSync(absolutePath)
-      }
-      return { success: true }
-    },
-    "画像の削除に失敗しました"
-  )
+  registerHandler("asb:delete-image", async (args: ASBDeleteImageArgs) => {
+    const absolutePath = getAbsolutePathFromData(args.imagePath)
+    if (fs.existsSync(absolutePath)) {
+      fs.unlinkSync(absolutePath)
+    }
+  })
 
   // PNG出力: HTML文字列を受け取り → BrowserWindow + capturePage でラスタライズ
-  registerSafeHandler(
-    "asb:export-png",
-    async (args: ASBExportPngArgs) => {
-      const outputDir = path.dirname(args.outputPath)
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true })
-      }
+  registerHandler("asb:export-png", async (args: ASBExportPngArgs) => {
+    const outputDir = path.dirname(args.outputPath)
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true })
+    }
 
-      if (args.htmlPages.length === 1) {
+    if (args.htmlPages.length === 1) {
+      const buf = await htmlToPngBuffer(
+        args.htmlPages[0],
+        args.pageWidthMm,
+        args.pageHeightMm,
+        args.dpi
+      )
+      fs.writeFileSync(args.outputPath, buf)
+    } else {
+      const ext = path.extname(args.outputPath)
+      const base = args.outputPath.slice(0, -ext.length)
+      for (let i = 0; i < args.htmlPages.length; i++) {
+        const pagePath = `${base}-${i + 1}${ext}`
         const buf = await htmlToPngBuffer(
-          args.htmlPages[0],
+          args.htmlPages[i],
           args.pageWidthMm,
           args.pageHeightMm,
           args.dpi
         )
-        fs.writeFileSync(args.outputPath, buf)
-      } else {
-        const ext = path.extname(args.outputPath)
-        const base = args.outputPath.slice(0, -ext.length)
-        for (let i = 0; i < args.htmlPages.length; i++) {
-          const pagePath = `${base}-${i + 1}${ext}`
-          const buf = await htmlToPngBuffer(
-            args.htmlPages[i],
-            args.pageWidthMm,
-            args.pageHeightMm,
-            args.dpi
-          )
-          fs.writeFileSync(pagePath, buf)
-        }
+        fs.writeFileSync(pagePath, buf)
       }
+    }
 
-      return { success: true, filePath: args.outputPath }
-    },
-    "PNG出力に失敗しました"
-  )
+    return args.outputPath
+  })
 
   // 保存先ダイアログ
-  registerSafeHandler(
+  registerHandler(
     "asb:select-save-path",
     async (options: { type: "pdf" | "png"; defaultName?: string }) => {
       const filters =
@@ -181,73 +156,60 @@ export function setupAnswerSheetBuilderHandlers(): void {
         filters,
       })
 
-      if (result.canceled || !result.filePath) {
-        return { success: false, canceled: true }
-      }
-      return { success: true, filePath: result.filePath }
-    },
-    "保存先選択に失敗しました"
+      // 選ばずに閉じたのは失敗ではない
+      if (result.canceled || !result.filePath)
+        return { canceled: true as const }
+      return { canceled: false as const, filePath: result.filePath }
+    }
   )
 
   // 試験変換: multiPageLayout + HTML文字列を受け取り
-  registerSafeHandler(
-    "asb:convert-to-exam",
-    async (args: ASBConvertToExamArgs) => {
-      const result = await convertToExam(
-        args.definition,
-        args.userId,
-        args.multiPageLayout,
-        args.answerSheetHtmlPages,
-        args.modelAnswerHtmlPages
-      )
-      return result
-    },
-    "試験変換に失敗しました"
-  )
+  registerHandler("asb:convert-to-exam", async (args: ASBConvertToExamArgs) => {
+    const result = await convertToExam(
+      args.definition,
+      args.userId,
+      args.multiPageLayout,
+      args.answerSheetHtmlPages,
+      args.modelAnswerHtmlPages
+    )
+    return result
+  })
 
   // 定義のインポートファイル選択
-  registerSafeHandler(
-    "asb:select-import-file",
-    async () => {
-      const result = await dialog.showOpenDialog({
-        title: "解答用紙定義を読み込み",
-        filters: [{ name: "解答用紙定義", extensions: ["asb"] }],
-        properties: ["openFile"],
-      })
+  registerHandler("asb:select-import-file", async () => {
+    const result = await dialog.showOpenDialog({
+      title: "解答用紙定義を読み込み",
+      filters: [{ name: "解答用紙定義", extensions: ["asb"] }],
+      properties: ["openFile"],
+    })
 
-      if (result.canceled || result.filePaths.length === 0) {
-        return { success: false, canceled: true }
-      }
-      return { success: true, filePath: result.filePaths[0] }
-    },
-    "ファイル選択に失敗しました"
-  )
+    // 選ばずに閉じたのは失敗ではない
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true as const }
+    }
+    return { canceled: false as const, filePath: result.filePaths[0] }
+  })
 
   // 定義エクスポート
-  registerSafeHandler(
-    "asb:export-definition",
-    async (definitionId: string) => {
-      return await exportAsbDefinition(definitionId)
-    },
-    "書き出しに失敗しました"
-  )
+  registerHandler("asb:export-definition", async (definitionId: string) => {
+    return await exportAsbDefinition(definitionId)
+  })
 
   // 定義インポート
-  registerSafeHandler(
+  registerHandler(
     "asb:import-definition",
     async (filePath: string, userId: string) => {
       return await importAsbDefinition(filePath, userId)
-    },
-    "インポートに失敗しました"
+    }
   )
 
   // 定義複製（画像ファイルもコピー）
-  registerSafeHandler(
+  registerHandler(
     "asb:duplicate-definition",
     async (id: string, userId: string) => {
       const definition = await getAsbDefinition(id)
       if (!definition) {
-        return { success: false, error: "定義が見つかりません" }
+        throw new Error("定義が見つかりません")
       }
 
       const newId = crypto.randomUUID()
@@ -342,8 +304,7 @@ export function setupAnswerSheetBuilderHandlers(): void {
       }
 
       await saveAsbDefinition(duplicated, userId)
-      return { success: true, definitionId: newId }
-    },
-    "複製に失敗しました"
+      return newId
+    }
   )
 }

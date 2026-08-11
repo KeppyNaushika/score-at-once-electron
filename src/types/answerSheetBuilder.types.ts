@@ -26,28 +26,10 @@ export interface ASBConvertToExamArgs {
   modelAnswerHtmlPages: string[]
 }
 
-export interface ASBExportResult {
-  success: boolean
-  filePath?: string
-  error?: string
-}
-
-export interface ASBConvertResult {
-  success: boolean
-  examId?: string
-  error?: string
-}
-
 export interface ASBUploadImageArgs {
   definitionId: string
   filePath: string
   originalName: string
-}
-
-export interface ASBUploadImageResult {
-  success: boolean
-  imagePath?: string // data/ からの相対パス
-  error?: string
 }
 
 export interface ASBDeleteImageArgs {

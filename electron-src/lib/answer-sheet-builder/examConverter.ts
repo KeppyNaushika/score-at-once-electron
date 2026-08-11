@@ -24,12 +24,6 @@ import { upsertOmrConfig } from "../prisma/cropRegionOmrConfig"
 import { createExam } from "../prisma/exam"
 import { createExamPage } from "../prisma/examPage"
 
-interface ConvertToExamResult {
-  success: boolean
-  examId?: string
-  error?: string
-}
-
 /**
  * 解答用紙定義を採点試験に変換
  * renderer側からmultiPageLayout + HTML文字列を受け取り、PNGバッファ生成→DB作成
@@ -40,7 +34,7 @@ export async function convertToExam(
   multiPageLayout: ComputedMultiPageLayout,
   answerSheetHtmlPages: string[],
   modelAnswerHtmlPages: string[]
-): Promise<ConvertToExamResult> {
+): Promise<string> {
   try {
     // 0. OMR設定を問題定義から抽出
     const omrCellConfigs: Record<string, OMRCellConfig> = {}
@@ -254,12 +248,9 @@ export async function convertToExam(
 
     // OMR設定はCropRegionOmrConfigテーブルに保存済み（omr-template.json不要）
 
-    return { success: true, examId: exam.id }
+    return exam.id
   } catch (error) {
     console.error("Failed to convert answer sheet to exam:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "試験変換に失敗しました",
-    }
+    throw error
   }
 }

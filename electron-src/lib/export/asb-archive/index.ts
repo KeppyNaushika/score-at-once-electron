@@ -16,12 +16,12 @@ import { collectAsbData } from "./dataCollector"
  */
 export async function exportAsbDefinition(
   definitionId: string
-): Promise<{ success: boolean; outputPath?: string; error?: string }> {
+): Promise<{ canceled: true } | { canceled: false; outputPath: string }> {
   try {
     // 1. 定義を取得
     const definition = await getAsbDefinition(definitionId)
     if (!definition) {
-      return { success: false, error: "定義が見つかりません" }
+      throw new Error("定義が見つかりません")
     }
 
     // 2. データ収集（タグ本体を同梱）
@@ -44,14 +44,19 @@ export async function exportAsbDefinition(
       filters: [{ name: "解答用紙定義", extensions: ["asb"] }],
     })
 
+    // 保存先を選ばずに閉じたのは失敗ではない
     if (result.canceled || !result.filePath) {
-      return { success: false, error: "キャンセルされました" }
+      return { canceled: true }
     }
 
     // 4. アーカイブを作成
     const archiveResult = await createAsbArchive(collected, result.filePath)
 
-    if (archiveResult.success) {
+    if (!archiveResult.success || !archiveResult.outputPath) {
+      throw new Error(archiveResult.error ?? "書き出しに失敗しました")
+    }
+
+    {
       await recordAuditLog({
         action: "answer_sheet.export",
         entityType: "AsbDefinition",
@@ -63,12 +68,9 @@ export async function exportAsbDefinition(
       })
     }
 
-    return archiveResult
+    return { canceled: false, outputPath: archiveResult.outputPath }
   } catch (error) {
     console.error("Error exporting ASB definition:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "書き出しに失敗しました",
-    }
+    throw error
   }
 }

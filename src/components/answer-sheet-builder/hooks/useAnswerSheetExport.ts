@@ -35,7 +35,7 @@ export function useAnswerSheetExport() {
         type: "pdf",
         defaultName: `${definition.name}.pdf`,
       })
-      if (!pathResult.success || !pathResult.filePath) return
+      if (pathResult.canceled) return
 
       const multiLayout = computeMultiPageLayoutFromDefinition(definition)
       const html = await generateAnswerSheetPrintHtml(definition, multiLayout)
@@ -79,7 +79,7 @@ export function useAnswerSheetExport() {
           type: "png",
           defaultName: `${definition.name}.png`,
         })
-        if (!pathResult.success || !pathResult.filePath) return
+        if (pathResult.canceled) return
 
         const multiLayout = computeMultiPageLayoutFromDefinition(definition)
         const htmlPages = await generateAnswerSheetPageHtmls(
@@ -87,19 +87,14 @@ export function useAnswerSheetExport() {
           multiLayout
         )
 
-        const result = await api.exportPng({
+        await api.exportPng({
           htmlPages,
           outputPath: pathResult.filePath,
           dpi,
           pageWidthMm: multiLayout.pageWidthMm,
           pageHeightMm: multiLayout.pageHeightMm,
         })
-
-        if (result.success) {
-          toast.success("PNGを出力しました")
-        } else {
-          toast.error(`PNG出力エラー: ${result.error}`)
-        }
+        toast.success("PNGを出力しました")
       } catch (error) {
         toast.error(
           `PNG出力エラー: ${error instanceof Error ? error.message : "不明なエラー"}`

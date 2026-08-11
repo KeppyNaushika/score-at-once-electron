@@ -49,7 +49,7 @@ export function useExamIntegration() {
           "model-answer"
         )
 
-        const result = await api.convertToExam({
+        const examId = await api.convertToExam({
           definition,
           userId: user.id,
           multiPageLayout,
@@ -57,12 +57,8 @@ export function useExamIntegration() {
           modelAnswerHtmlPages,
         })
 
-        if (result.success && result.examId) {
-          toast.success("試験に変換しました")
-          router.push(`/exams/${result.examId}`)
-        } else {
-          toast.error(`変換エラー: ${result.error}`)
-        }
+        toast.success("試験に変換しました")
+        router.push(`/exams/${examId}`)
       } catch (error) {
         toast.error(
           `変換エラー: ${error instanceof Error ? error.message : "不明なエラー"}`

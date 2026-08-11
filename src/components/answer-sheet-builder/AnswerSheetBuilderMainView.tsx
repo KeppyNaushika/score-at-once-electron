@@ -98,13 +98,14 @@ export function AnswerSheetBuilderMainView({
     if (!api || !user?.id) return
 
     showSaving()
-    api.saveDefinition(definition, user.id).then((result) => {
-      if (result.success) {
-        showSaved()
-      } else {
-        toast.error(`保存エラー: ${result.error}`)
-      }
-    })
+    api
+      .saveDefinition(definition, user.id)
+      .then(showSaved)
+      .catch((error: unknown) => {
+        toast.error("解答用紙を保存できませんでした", {
+          description: error instanceof Error ? error.message : undefined,
+        })
+      })
   }, [definition, isLoaded, user?.id, showSaving, showSaved])
 
   const layout = useAnswerSheetLayout(definition)

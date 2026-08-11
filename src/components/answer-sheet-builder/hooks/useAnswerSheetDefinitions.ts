@@ -20,14 +20,11 @@ export function useAnswerSheetDefinitions(userId: string | undefined) {
 
     setIsLoading(true)
     try {
-      const result = await api.listDefinitions(userId)
-      if (result.success && result.data) {
-        setDefinitions(result.data)
-      } else {
-        toast.error(result.error ?? "定義一覧の取得に失敗しました")
-      }
-    } catch {
-      toast.error("定義一覧の取得に失敗しました")
+      setDefinitions(await api.listDefinitions(userId))
+    } catch (error) {
+      toast.error("定義一覧を取得できませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setIsLoading(false)
     }
@@ -41,14 +38,16 @@ export function useAnswerSheetDefinitions(userId: string | undefined) {
     const api = window.electronAPI?.answerSheetBuilder
     if (!api) return
 
-    const result = await api.deleteDefinition(id)
-    if (result.success) {
+    try {
+      await api.deleteDefinition(id)
       setDefinitions((prev) =>
         prev.filter((definition) => definition.id !== id)
       )
       toast.success("定義を削除しました")
-    } else {
-      toast.error(result.error ?? "削除に失敗しました")
+    } catch (error) {
+      toast.error("定義を削除できませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }, [])
 
@@ -58,12 +57,14 @@ export function useAnswerSheetDefinitions(userId: string | undefined) {
       const api = window.electronAPI?.answerSheetBuilder
       if (!api) return
 
-      const result = await api.duplicateDefinition(id, userId)
-      if (result.success) {
+      try {
+        await api.duplicateDefinition(id, userId)
         toast.success("定義を複製しました")
         await loadDefinitions()
-      } else {
-        toast.error(result.error ?? "複製に失敗しました")
+      } catch (error) {
+        toast.error("定義を複製できませんでした", {
+          description: error instanceof Error ? error.message : undefined,
+        })
       }
     },
     [userId, loadDefinitions]
