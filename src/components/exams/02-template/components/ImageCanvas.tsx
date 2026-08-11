@@ -16,13 +16,13 @@
 
 import { useMemo } from "react"
 
-import { CropRegionArea } from "@/components/exams/02-template/types"
+import type { CropRegionArea } from "@/components/exams/02-template/types"
 import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
 import { useImageCanvasInteraction } from "../hooks/useImageCanvasInteraction"
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts"
 import { useZoomControls } from "../hooks/useZoomControls"
-import { DetectedRect, DetectionMode, DragSelectionResult } from "../types"
+import type { DetectedRect, DetectionMode, DragSelectionResult } from "../types"
 import { AreaRenderer } from "./AreaRenderer"
 import { DetectedRectOverlay } from "./DetectedRectOverlay"
 import { DragPreview } from "./DragPreview"

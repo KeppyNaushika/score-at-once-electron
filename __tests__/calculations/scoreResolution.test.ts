@@ -9,10 +9,12 @@
 import { describe, expect, it } from "vitest"
 
 import { calculateActualScore } from "@/electron-src/lib/shared/calculations/actualScore"
-import {
-  calculateEffectiveScoreValue,
+import type {
   ResolvableDecision,
   ResolvableScore,
+} from "@/electron-src/lib/shared/calculations/scoreResolution"
+import {
+  calculateEffectiveScoreValue,
   resolveEffectiveScores,
 } from "@/electron-src/lib/shared/calculations/scoreResolution"
 

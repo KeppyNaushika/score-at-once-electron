@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import type { PrismaClient } from "@prisma/client"
 
 /** 指定テーブルのカラム名一覧をPRAGMA table_infoで取得する */
 export const getTableColumns = async (

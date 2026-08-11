@@ -1,4 +1,4 @@
-import { UserExam } from "@prisma/client"
+import type { UserExam } from "@prisma/client"
 
 import type { UserExamWithUserAndInviter } from "@/types/prismaExtensions"
 

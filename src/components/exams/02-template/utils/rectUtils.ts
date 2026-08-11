@@ -2,7 +2,7 @@
  * 長方形計算ユーティリティ
  */
 
-import { DetectedRect, DragSelectionResult } from "../types"
+import type { DetectedRect, DragSelectionResult } from "../types"
 
 /**
  * 矩形座標のインターフェース

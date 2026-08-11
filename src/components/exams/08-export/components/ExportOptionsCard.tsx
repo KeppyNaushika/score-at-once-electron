@@ -5,7 +5,7 @@ import { Download } from "lucide-react"
 import { CaptureReturnVersionButton } from "@/components/exams/08-export/components/CaptureReturnVersionButton"
 import { IndividualReportSettings } from "@/components/exams/08-export/components/IndividualReportSettings"
 import { ScoringMarkSettingsContainer } from "@/components/exams/08-export/components/scoring-mark-settings/components/ScoringMarkSettingsContainer"
-import {
+import type {
   ExportOptions,
   PdfOrientation,
 } from "@/components/exams/08-export/types"

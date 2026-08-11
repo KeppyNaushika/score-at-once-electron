@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 import { recordAuditLog } from "./auditLog"
 import prisma from "./client"

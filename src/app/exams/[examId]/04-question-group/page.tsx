@@ -13,7 +13,7 @@ import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
-import { ExamSubtotalGroupWithSubtotalGroup } from "@/types/prismaExtensions"
+import type { ExamSubtotalGroupWithSubtotalGroup } from "@/types/prismaExtensions"
 
 export default function SubtotalGroupPage() {
   const params = useParams()

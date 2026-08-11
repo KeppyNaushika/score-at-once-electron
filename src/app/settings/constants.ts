@@ -1,4 +1,4 @@
-import { DEFAULT_KEYBINDINGS } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
+import type { DEFAULT_KEYBINDINGS } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
 
 // 各コマンドの日本語名（新しいコマンドID形式）
 export const SHORTCUT_LABELS: {

@@ -6,7 +6,7 @@
  * 終了済み）だけを除外する。未在籍・在籍中と過去在籍は全生徒の直和（非交和）。
  */
 
-import { Prisma } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 import prisma from "./client"
 import { membershipFilterAt } from "./membershipFilter"

@@ -1,5 +1,5 @@
 import type { CropRegion } from "@prisma/client"
-import * as ExcelJS from "exceljs"
+import type * as ExcelJS from "exceljs"
 
 import {
   computeItemAnalysis,

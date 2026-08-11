@@ -4,7 +4,7 @@
  * 各バージョンのスキーマ状態のDBを作成し、
  * ブリッジマイグレーション → ベースライン → 最終スキーマ検証を行う
  */
-import { PrismaClient } from "@prisma/client"
+import type { PrismaClient } from "@prisma/client"
 import * as fs from "fs"
 import * as path from "path"
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
@@ -15,10 +15,8 @@ import {
 } from "../../electron-src/lib/prisma/databaseUtils"
 import { createBaseline } from "../../electron-src/lib/prisma/schema/baselineMigrations"
 import { runBridgeMigration } from "../../electron-src/lib/prisma/schema/bridgeMigrations"
-import {
-  detectSchemaVersion,
-  SchemaVersion,
-} from "../../electron-src/lib/prisma/schema/versionDetector"
+import type { SchemaVersion } from "../../electron-src/lib/prisma/schema/versionDetector"
+import { detectSchemaVersion } from "../../electron-src/lib/prisma/schema/versionDetector"
 import { createPrismaClientForPath } from "../helpers/testPrismaClient"
 
 const TEST_DB_DIR = path.resolve(__dirname, "../../data")

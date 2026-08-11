@@ -1,4 +1,4 @@
-import { RefObject } from "react"
+import type { RefObject } from "react"
 
 import type { GridAnswerItem } from "@/components/exams/07-score-at-once/ScoringGrid/types"
 

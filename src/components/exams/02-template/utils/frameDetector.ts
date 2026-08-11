@@ -15,7 +15,7 @@
  * - 出力: 相対座標（0-1、画像サイズ非依存）
  */
 
-import { DetectedRect, DetectionSettings } from "../types"
+import type { DetectedRect, DetectionSettings } from "../types"
 import type {
   DetectionRequest,
   DetectionResponse,

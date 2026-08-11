@@ -2,7 +2,7 @@ import type { ExamPage } from "@prisma/client"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
-import {
+import type {
   CropRegionArea,
   ImageDimensions,
   InitialDataState,

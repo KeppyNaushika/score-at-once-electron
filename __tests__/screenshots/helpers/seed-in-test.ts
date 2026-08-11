@@ -5,7 +5,7 @@
  * Electronのメインプロセスは経由しない。
  */
 
-import { PrismaClient } from "@prisma/client"
+import type { PrismaClient } from "@prisma/client"
 import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"

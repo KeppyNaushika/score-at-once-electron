@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 import { ipcRenderer } from "electron"
 
 /** 小計グループ・採点領域-小計紐付けのIPC API（CRUD・試験への割り当て管理） */

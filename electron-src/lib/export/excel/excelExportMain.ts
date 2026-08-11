@@ -1,7 +1,7 @@
 import * as ExcelJS from "exceljs"
 
 import { getClassroomMembersForExam } from "../../prisma/examClassroom"
-import { ExportGradingDataOptions, ExportResult } from "../../shared/types"
+import type { ExportGradingDataOptions, ExportResult } from "../../shared/types"
 import { validateScoringData } from "../../shared/utilities/validateScoringData"
 import { fetchExportData } from "./dataFetcher"
 import { saveWorkbook } from "./fileSaver"

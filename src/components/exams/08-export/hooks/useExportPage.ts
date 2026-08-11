@@ -5,7 +5,7 @@ import { useParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useStudentSelection } from "@/components/exams/08-export/hooks/useStudentSelection"
-import { ExportOptions, Student } from "@/components/exams/08-export/types"
+import type { ExportOptions, Student } from "@/components/exams/08-export/types"
 import {
   DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
   type IndividualReportOptions,

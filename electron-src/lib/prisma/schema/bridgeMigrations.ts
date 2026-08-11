@@ -1,10 +1,10 @@
-import { PrismaClient } from "@prisma/client"
+import type { PrismaClient } from "@prisma/client"
 import * as fs from "fs"
 import * as path from "path"
 
 import { getDatabasePath } from "../databaseInitializer"
 import { getTableColumns, tableExists } from "../databaseUtils"
-import { SchemaVersion } from "./versionDetector"
+import type { SchemaVersion } from "./versionDetector"
 
 /** SQLを文単位で分割して順次実行する */
 const executeSqlStatements = async (

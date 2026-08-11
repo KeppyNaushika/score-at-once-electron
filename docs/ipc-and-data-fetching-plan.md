@@ -285,20 +285,39 @@ if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) return value
 
 renderer から main へ型を通す設計は、**値も通せてしまう**。`tsc` に区別する機能は無いので ESLint で塞ぐ。
 
-`no-restricted-imports` の `allowTypeImports` で `@/electron-src/**` を型のみに制限。例外は
-**判断基準ではなく名指しの一覧**で持つ。現在の値 import 7件を登録すれば、今日の状態がそのまま通る。
+`src/**` に対して `@typescript-eslint/no-restricted-imports` で `@/electron-src/**` を
+`allowTypeImports: true` に制限する。素の ESLint 版にこのオプションは無く、typescript-eslint 版だけが
+AST の `importKind` を見る。宣言レベルの `import type` も指定子レベルの `import { type X }` も通る。
+
+あわせて `@typescript-eslint/consistent-type-imports` を入れる（現在未設定）。これは制限の前提ではなく
+（`no-restricted-imports` は単独で型のつもりの値 import を捕まえる）、既存の104件を `--fix` で片付け、
+境界とは無関係な場所も含めて書き方を揃えるために入れる。
+
+**例外は「読む側のファイル」を名指しする。** モジュールの一覧で書きたいところだが、
+`no-restricted-imports` の `group` は gitignore 記法で、`@/electron-src/**` が中間ディレクトリごと
+除外してしまうため `!` で個別に再包含できない（実測で確認）。そのため許可の単位がファイルになる。
+
+値 import を持つ7ファイル（実測。いずれも DB を触らない純粋計算を main と共有するもの）:
 
 ```
-electron-src/lib/shared/utilities/examPaperSize
-electron-src/lib/shared/calculations/numericStats
-electron-src/lib/shared/calculations/itemAnalysis
-electron-src/lib/shared/calculations/spAnalysis
-electron-src/lib/shared/calculations/gradeDataSourceMaxScore
-electron-src/lib/export/individual-report/types
+src/components/exams/07-score-at-once/ScoringMain/ScoringMainView.tsx
+src/components/exams/08-export/components/IndividualReportSettings.tsx
+src/components/exams/08-export/components/individual-report/computeReportData.ts
+src/components/exams/08-export/hooks/useExportPage.ts
+src/components/exams/08-export/hooks/useItemAnalysis.ts
+src/components/exams/08-export/hooks/useSpAnalysis.ts
+src/components/grades/03-data-sources/hooks/useDataSourceDefaults.ts
 ```
 
-併せて `@typescript-eslint/consistent-type-imports` を入れる（現在未設定）。これが無いと
-「型のつもりが値 import」を止められない。
+参照先は6モジュール（`lib/shared/utilities/examPaperSize`、`lib/shared/calculations/` の
+`numericStats` / `itemAnalysis` / `spAnalysis` / `gradeDataSourceMaxScore`、
+`lib/export/individual-report/types` の定数）。
+
+> **この一覧を消す道**: 上記6モジュールを `electron-src` の外へ出せば例外は0になる。
+> 5つは41〜248行で利用者も少ない（main 1〜2 / src 1〜3）が、`individual-report/types` は
+> main から167箇所参照されており、renderer が値として要るのは `STATISTIC_KINDS` /
+> `STATISTIC_SCOPES` / `DEFAULT_INDIVIDUAL_REPORT_OPTIONS` の3つだけ。定数の切り出しが要る。
+> 本計画の対象外とし、別途扱う。
 
 > **注意**: `electron-src/lib/shared/` は安全ではない。`lib/shared/calculations/gradeCalculator.ts:17`
 > が `prisma`（DB 接続の実体）を import している。ディレクトリ名では守れないため**ファイル名で列挙する**。

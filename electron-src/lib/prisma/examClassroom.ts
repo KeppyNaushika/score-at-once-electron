@@ -1,4 +1,4 @@
-import { ExamClassroom, Prisma } from "@prisma/client"
+import type { ExamClassroom, Prisma } from "@prisma/client"
 
 import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 

@@ -16,7 +16,7 @@ import {
 import { useCallback, useEffect, useRef } from "react"
 
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
-import { QuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/types"
+import type { QuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/types"
 import { IndividualModePanel } from "@/components/exams/07-score-at-once/ScoringIndividual/IndividualModePanel"
 import type {
   ClickScoringAction,

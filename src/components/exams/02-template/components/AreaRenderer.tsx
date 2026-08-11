@@ -1,15 +1,9 @@
 "use client"
 
-import {
-  MouseEvent as ReactMouseEvent,
-  RefObject,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
+import type { MouseEvent as ReactMouseEvent, RefObject } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { CropRegionArea } from "@/components/exams/02-template/types"
+import type { CropRegionArea } from "@/components/exams/02-template/types"
 
 interface AreaRendererProps {
   areas: CropRegionArea[]

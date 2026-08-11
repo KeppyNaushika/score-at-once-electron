@@ -2,9 +2,10 @@
  * Mouse event handlers for canvas interactions
  */
 
-import { MouseEvent as ReactMouseEvent, useCallback, useRef } from "react"
+import type { MouseEvent as ReactMouseEvent } from "react"
+import { useCallback, useRef } from "react"
 
-import {
+import type {
   DetectionMode,
   DragSelectionResult,
   DragState,

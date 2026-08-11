@@ -2,7 +2,8 @@
  * 02-template (採点領域作成) 関連の型定義統合ファイル
  */
 
-import { type CropRegion, type ExamPage, User } from "@prisma/client"
+import type { User } from "@prisma/client"
+import { type CropRegion, type ExamPage } from "@prisma/client"
 
 import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 

@@ -1,15 +1,17 @@
+import type {
+  AddExamClassroomOptions,
+  ReorderExamClassroomsOptions,
+  UpdateExamClassroomOptions,
+} from "../lib/prisma/examClassroom"
 import {
   addExamClassroom,
-  AddExamClassroomOptions,
   addStudentsFromClassroom,
   getAdministeredClassrooms,
   getAvailableClassroomsForExam,
   getExamClassrooms,
   removeExamClassroom,
   reorderExamClassrooms,
-  ReorderExamClassroomsOptions,
   updateExamClassroom,
-  UpdateExamClassroomOptions,
 } from "../lib/prisma/examClassroom"
 import { registerHandler } from "./ipcHandlerUtils"
 

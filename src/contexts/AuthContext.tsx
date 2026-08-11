@@ -1,13 +1,8 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from "react"
+import type { ReactNode } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 interface User {

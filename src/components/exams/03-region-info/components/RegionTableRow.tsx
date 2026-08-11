@@ -29,10 +29,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
-import {
-  CROP_REGION_AREA_TYPES,
-  CropRegionAreaType,
-} from "@/types/cropRegionAreaType.types"
+import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
+import { CROP_REGION_AREA_TYPES } from "@/types/cropRegionAreaType.types"
 import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
 
 // AreaTypeの日本語表示マッピング

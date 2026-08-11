@@ -1,8 +1,8 @@
-import * as ExcelJS from "exceljs"
+import type * as ExcelJS from "exceljs"
 
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
-import { ScoringData } from "../../shared/types"
+import type { ScoringData } from "../../shared/types"
 import {
   applyCellStyle,
   getExcelColumnLetter,

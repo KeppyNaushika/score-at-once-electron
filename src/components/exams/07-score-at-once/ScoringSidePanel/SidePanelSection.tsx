@@ -1,7 +1,8 @@
 "use client"
 
-import { ChevronDown, ChevronRight, LucideIcon } from "lucide-react"
-import { ReactNode } from "react"
+import type { LucideIcon } from "lucide-react"
+import { ChevronDown, ChevronRight } from "lucide-react"
+import type { ReactNode } from "react"
 
 interface SidePanelSectionProps {
   icon: LucideIcon

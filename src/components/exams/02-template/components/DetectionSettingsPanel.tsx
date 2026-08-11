@@ -6,7 +6,7 @@
 
 import { memo, useCallback } from "react"
 
-import { DetectionSettings } from "../types"
+import type { DetectionSettings } from "../types"
 
 interface DetectionSettingsPanelProps {
   settings: DetectionSettings

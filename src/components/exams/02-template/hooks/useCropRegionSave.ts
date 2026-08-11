@@ -1,13 +1,13 @@
-import { User } from "@prisma/client"
+import type { User } from "@prisma/client"
 import { useCallback, useRef } from "react"
 import { toast } from "sonner"
 
-import {
+import type {
   AreaType,
   DatabaseOperation,
   RegionCoordinates,
 } from "@/components/exams/02-template/types"
-import { CropRegionArea } from "@/components/exams/02-template/types"
+import type { CropRegionArea } from "@/components/exams/02-template/types"
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 
 /**

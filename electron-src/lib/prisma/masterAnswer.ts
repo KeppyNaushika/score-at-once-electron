@@ -7,7 +7,7 @@
  * ページを他の画面向けに読み出す include は examPage.ts 側にある。
  */
 
-import { ExamPage, Prisma } from "@prisma/client"
+import type { ExamPage, Prisma } from "@prisma/client"
 import * as fsPromises from "fs/promises"
 import * as path from "path"
 

@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import { MasterAnswersState } from "@/components/exams/01-upload/types"
+import type { MasterAnswersState } from "@/components/exams/01-upload/types"
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
 import { usePdfPasswordConversion } from "@/hooks/usePdfPasswordConversion"
-import { ConvertedImage } from "@/lib/pdfConverter"
+import type { ConvertedImage } from "@/lib/pdfConverter"
 
 import {
   createUploadData,

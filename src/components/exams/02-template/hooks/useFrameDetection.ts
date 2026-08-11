@@ -8,7 +8,7 @@ import {
   DEFAULT_DETECTION_MODE,
   DEFAULT_DETECTION_SETTINGS,
 } from "../constants/detection"
-import {
+import type {
   DetectedRect,
   DetectionMode,
   DetectionSettings,

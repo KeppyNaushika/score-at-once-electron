@@ -1,11 +1,5 @@
-import type { IncomingMessage } from "electron"
-import {
-  app,
-  BrowserWindow,
-  Event,
-  Menu,
-  RenderProcessGoneDetails,
-} from "electron"
+import type { Event, IncomingMessage, RenderProcessGoneDetails } from "electron"
+import { app, BrowserWindow, Menu } from "electron"
 import * as path from "path"
 
 import menu from "./menu"

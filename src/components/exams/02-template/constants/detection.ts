@@ -2,7 +2,7 @@
  * 採点枠自動認識機能の定数
  */
 
-import { DetectionMode, DetectionSettings } from "../types"
+import type { DetectionMode, DetectionSettings } from "../types"
 
 /**
  * デフォルトの検出設定（シンプル版）

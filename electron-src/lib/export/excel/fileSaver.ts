@@ -1,7 +1,7 @@
 import { dialog } from "electron"
-import * as ExcelJS from "exceljs"
+import type * as ExcelJS from "exceljs"
 
-import { ExportResult } from "../../shared/types"
+import type { ExportResult } from "../../shared/types"
 
 /**
  * ファイル名として安全でない文字を置換する

@@ -8,7 +8,7 @@
  * (「学級追加→生徒0名」バグ)。本テストは migration が integer を ISO text へ正規化し、
  * 在籍フィルタが本番と同じ経路(Prismaクエリ + driver adapter)で正しく動くことを検証する。
  */
-import { PrismaClient } from "@prisma/client"
+import type { PrismaClient } from "@prisma/client"
 import * as fs from "fs"
 import * as path from "path"
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"

@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 
 import { DETECTION_MODE_LABELS } from "../constants/detection"
-import { DetectionMode } from "../types"
+import type { DetectionMode } from "../types"
 
 interface DetectionModeToggleProps {
   /** 現在のモード */

@@ -1,6 +1,6 @@
 "use client"
 
-import { ExamPage, User } from "@prisma/client"
+import type { ExamPage, User } from "@prisma/client"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"

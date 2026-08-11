@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 import { dialog } from "electron"
 import * as ExcelJS from "exceljs"
 

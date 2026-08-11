@@ -1,4 +1,5 @@
-import { BrowserWindow, Menu, MenuItemConstructorOptions } from "electron"
+import type { BrowserWindow, MenuItemConstructorOptions } from "electron"
+import { Menu } from "electron"
 
 const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
   const mainMenus: MenuItemConstructorOptions[] = [

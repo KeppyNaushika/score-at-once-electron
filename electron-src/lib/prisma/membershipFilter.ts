@@ -6,7 +6,7 @@
  * または基準日以降に終了予定）でしか定義できない。
  */
 
-import { Prisma } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 /**
  * 基準日時点で有効なmembershipの条件

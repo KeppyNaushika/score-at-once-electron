@@ -1,4 +1,5 @@
-import { RefObject, useCallback, useEffect, useMemo, useRef } from "react"
+import type { RefObject } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 
 interface UseAutoScrollProps {
   selectedAnswers: Set<string>

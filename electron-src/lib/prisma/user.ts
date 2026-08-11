@@ -1,4 +1,4 @@
-import { User } from "@prisma/client"
+import type { User } from "@prisma/client"
 import bcrypt from "bcrypt"
 
 import { diffFields, recordAuditLog } from "./auditLog"

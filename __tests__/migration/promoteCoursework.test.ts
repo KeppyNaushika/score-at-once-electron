@@ -6,7 +6,7 @@
  * CourseworkStudent / CourseworkClass / CourseworkLetterScale へ正しく移送されること、
  * 特に「点数未入力の生徒も名簿（CourseworkStudent）に保護される」ことを検証する。
  */
-import { PrismaClient } from "@prisma/client"
+import type { PrismaClient } from "@prisma/client"
 import * as fs from "fs"
 import * as path from "path"
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"

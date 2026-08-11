@@ -1,5 +1,5 @@
 // Excel操作で共通的に使用されるユーティリティ関数
-import * as ExcelJS from "exceljs"
+import type * as ExcelJS from "exceljs"
 
 /**
  * Excel列番号を列文字に変換する関数

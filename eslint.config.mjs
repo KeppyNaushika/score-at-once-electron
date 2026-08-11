@@ -178,6 +178,17 @@ export default [
       "simple-import-sort/imports": "error",
       "simple-import-sort/exports": "error",
 
+      // 型として使うだけの import を `import type` で明示させる。消える import で
+      // あることを読む側に示し、リポジトリ全体で書き方を揃える。
+      //
+      // 下の no-restricted-imports の前提ではない（あちらは単独で importKind を
+      // 見るので、型のつもりの値 import は素で捕まる）。ここで揃えておく利点は、
+      // 境界に引っかかった分を1件ずつ手で直さずに --fix で済むこと。
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        { prefer: "type-imports", fixStyle: "separate-type-imports" },
+      ],
+
       // 型注釈に埋め込むインライン型 import（`import("./x").Foo`）を禁止する。
       // 型の一部でありモジュール解決の走査から漏れるため、knip 等の静的解析が
       // 参照を検出できず、実際には使われている型を未使用と誤判定する（#1082/#1083）。
@@ -216,6 +227,63 @@ export default [
             '同期版の `fs` と区別がつかないため、`import * as fsPromises from "fs/promises"` としてください。',
         },
       ],
+    },
+  },
+  {
+    // renderer から main へは型しか通さない。値を import すると、DB 接続や
+    // ネイティブモジュールを抱えた main のモジュールが renderer のバンドルへ
+    // 入り込む。型を通す設計は値も通せてしまい、tsc に両者を区別する機能は
+    // 無いのでここで塞ぐ（`@typescript-eslint/consistent-type-imports` が前提）。
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/electron-src/**", "**/electron-src/**"],
+              allowTypeImports: true,
+              message:
+                "src から electron-src へは型のみ import できます（`import type` を使う）。値が必要なら eslint.config.mjs の例外一覧へファイルを名指しで足してください。",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // main の純粋計算を renderer からも値として使うファイル。DB を触らない式を
+    // main と renderer で二重に持たないための例外で、対象は以下の6モジュール。
+    //
+    //   lib/shared/utilities/examPaperSize
+    //   lib/shared/calculations/numericStats
+    //   lib/shared/calculations/itemAnalysis
+    //   lib/shared/calculations/spAnalysis
+    //   lib/shared/calculations/gradeDataSourceMaxScore
+    //   lib/export/individual-report/types（STATISTIC_KINDS 等の定数）
+    //
+    // 例外は判断基準ではなく対象の名指しで管理する。増やすときはこの files に足す。
+    //
+    // 本来は「どのモジュールを許すか」で書きたいが、no-restricted-imports の
+    // group は gitignore 記法で、親ディレクトリを除外した後に `!` で個別に
+    // 再包含できない（`@/electron-src/**` が中間ディレクトリごと除外するため）。
+    // そのため許可の単位が「読む側のファイル」になっている。上記6モジュールを
+    // electron-src の外へ出せば、この一覧ごと不要になる。
+    //
+    // 注意: `lib/shared/` はディレクトリ名では守れない。
+    // `lib/shared/calculations/gradeCalculator.ts` が prisma（DB 接続の実体）を
+    // import している。
+    files: [
+      "src/components/exams/07-score-at-once/ScoringMain/ScoringMainView.tsx",
+      "src/components/exams/08-export/components/IndividualReportSettings.tsx",
+      "src/components/exams/08-export/components/individual-report/computeReportData.ts",
+      "src/components/exams/08-export/hooks/useExportPage.ts",
+      "src/components/exams/08-export/hooks/useItemAnalysis.ts",
+      "src/components/exams/08-export/hooks/useSpAnalysis.ts",
+      "src/components/grades/03-data-sources/hooks/useDataSourceDefaults.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": "off",
     },
   },
   {

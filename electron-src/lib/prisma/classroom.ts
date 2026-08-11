@@ -1,4 +1,4 @@
-import { Classroom, Prisma } from "@prisma/client"
+import type { Classroom, Prisma } from "@prisma/client"
 
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"

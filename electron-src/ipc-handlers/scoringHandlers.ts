@@ -14,15 +14,17 @@ import {
   getAssignmentsForExam,
   unassignCropRegion,
 } from "../lib/prisma/cropRegionAssignment"
+import type {
+  CreateQuestionScoreData,
+  UpdateQuestionScoreData,
+} from "../lib/prisma/questionScore"
 import {
   type BatchScoreEntry,
   batchUpdateQuestionScores,
   createQuestionScore,
-  CreateQuestionScoreData,
   getQuestionScoreById,
   getQuestionScoresForExam,
   updateQuestionScore,
-  UpdateQuestionScoreData,
 } from "../lib/prisma/questionScore"
 import { upsertScoreDecision } from "../lib/prisma/scoreDecision"
 import { getExamDecisionSummary } from "../lib/prisma/scoreDecisionSummary"

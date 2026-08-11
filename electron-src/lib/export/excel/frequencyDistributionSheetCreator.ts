@@ -1,4 +1,4 @@
-import * as ExcelJS from "exceljs"
+import type * as ExcelJS from "exceljs"
 
 import { computeFrequencyDistribution } from "../../shared/calculations/spAnalysis"
 import type { ScoringData } from "../../shared/types"

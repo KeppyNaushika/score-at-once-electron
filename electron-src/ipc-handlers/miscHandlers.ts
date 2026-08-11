@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 import * as fsPromises from "fs/promises"
 
 import { getAbsolutePathFromData } from "../lib/dataManager"

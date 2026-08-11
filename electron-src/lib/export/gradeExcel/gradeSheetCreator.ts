@@ -2,7 +2,7 @@
  * 成績算出Excel シート作成
  */
 
-import * as ExcelJS from "exceljs"
+import type * as ExcelJS from "exceljs"
 
 import type { GradeCalculationResult } from "../../../../src/types/grade.types"
 

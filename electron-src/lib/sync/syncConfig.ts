@@ -13,7 +13,8 @@ import * as path from "path"
 
 import { getDataDirectory } from "../dataManager"
 import { listLocalMigrationNames } from "../prisma/schema/migrationDeployer"
-import { DEFAULT_SYNC_CONFIG, SyncAppConfig } from "./types"
+import type { SyncAppConfig } from "./types"
+import { DEFAULT_SYNC_CONFIG } from "./types"
 
 /**
  * prisma/migrationsから最新マイグレーション名を取得し、schemaVersionとして返す。

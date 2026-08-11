@@ -1,4 +1,5 @@
-import { contextBridge, IpcRenderer, ipcRenderer } from "electron"
+import type { IpcRenderer } from "electron"
+import { contextBridge, ipcRenderer } from "electron"
 
 import { createAnswerSheetApi } from "./preload-apis/answerSheetApi"
 import { createAnswerSheetBuilderApi } from "./preload-apis/answerSheetBuilderApi"

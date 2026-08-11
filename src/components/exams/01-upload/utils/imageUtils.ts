@@ -1,5 +1,5 @@
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
-import { ConvertedImage } from "@/lib/pdfConverter"
+import type { ConvertedImage } from "@/lib/pdfConverter"
 
 /**
  * 模範解答ページをページ番号順にソートする

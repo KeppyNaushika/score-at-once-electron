@@ -10,10 +10,8 @@ import {
   getActiveSubtotalGroupsForExam,
   type SubtotalGroupForScoring,
 } from "../../prisma/subtotalGroup"
-import {
-  EffectiveScore,
-  resolveEffectiveScores,
-} from "../../shared/calculations/scoreResolution"
+import type { EffectiveScore } from "../../shared/calculations/scoreResolution"
+import { resolveEffectiveScores } from "../../shared/calculations/scoreResolution"
 import {
   computeSubtotalScore,
   type QuestionScoreForSubtotal,

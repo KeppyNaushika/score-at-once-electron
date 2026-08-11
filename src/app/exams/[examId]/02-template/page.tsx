@@ -9,11 +9,11 @@ import { TemplateStatus } from "@/components/exams/02-template/components/Templa
 import { useCropRegionSave } from "@/components/exams/02-template/hooks/useCropRegionSave"
 import { useTemplateData } from "@/components/exams/02-template/hooks/useTemplateData"
 // Refactored imports
-import {
+import type {
   AreaType,
   RegionCoordinates,
 } from "@/components/exams/02-template/types"
-import { CropRegionArea } from "@/components/exams/02-template/types"
+import type { CropRegionArea } from "@/components/exams/02-template/types"
 import { canProceedToNextStep } from "@/components/exams/02-template/utils/templateActions"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"

@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Membership } from "@/hooks/useClassroomManagement"
+import type { Membership } from "@/hooks/useClassroomManagement"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
 import { cn } from "@/lib/utils"

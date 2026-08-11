@@ -8,7 +8,7 @@
 import { memo, useCallback, useState } from "react"
 
 import { OVERLAY_STYLES } from "../constants/detection"
-import { DetectedRect, ImageDimensions } from "../types"
+import type { DetectedRect, ImageDimensions } from "../types"
 
 interface DetectedRectOverlayProps {
   /** 検出された矩形 */

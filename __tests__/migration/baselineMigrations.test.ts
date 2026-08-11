@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client"
+import type { PrismaClient } from "@prisma/client"
 import * as fs from "fs"
 import * as path from "path"
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"

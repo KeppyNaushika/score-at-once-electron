@@ -1,7 +1,7 @@
+import type { InviteMemberOptions } from "../lib/prisma/userExam"
 import {
   getExamMembers,
   inviteExamMember,
-  InviteMemberOptions,
   isExamOwner,
   removeExamMember,
   searchUsersForInvitation,

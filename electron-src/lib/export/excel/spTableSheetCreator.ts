@@ -1,4 +1,4 @@
-import * as ExcelJS from "exceljs"
+import type * as ExcelJS from "exceljs"
 
 import {
   computeSpTable,

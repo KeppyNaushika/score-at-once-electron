@@ -12,17 +12,17 @@ import {
   getActiveSubtotalGroupsForExam,
   type SubtotalGroupForScoring,
 } from "../../prisma/subtotalGroup"
-import {
-  calculateEffectiveScoreValue,
+import type {
   EffectiveScore,
-  resolveEffectiveScores,
   ScoreConflict,
 } from "../../shared/calculations/scoreResolution"
 import {
-  computeSubtotalScore,
-  QuestionScoreForSubtotal,
-} from "../../shared/calculations/subtotalCalculator"
-import {
+  calculateEffectiveScoreValue,
+  resolveEffectiveScores,
+} from "../../shared/calculations/scoreResolution"
+import type { QuestionScoreForSubtotal } from "../../shared/calculations/subtotalCalculator"
+import { computeSubtotalScore } from "../../shared/calculations/subtotalCalculator"
+import type {
   ScoreDetail,
   ScoringData,
   StudentExportPlacement,
