@@ -71,7 +71,8 @@ function compareExamStudents(
 
 /** 試験の受験生徒一覧の取得・フィルタ・ステータス更新・並び替え・削除を管理するフック */
 export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
-  const [loading, setLoading] = useState(true)
+  // 読み込みが済んだ試験。表示中の examId と食い違っている間が読み込み中
+  const [loadedExamId, setLoadedExamId] = useState<string | null>(null)
   const [examStudents, setExamStudents] = useState<
     ExamStudentWithMemberships[]
   >([]) // 順序付き受験生徒リスト
@@ -94,48 +95,53 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   >(new Set())
   const [gradingItemCount, setGradingItemCount] = useState(0)
 
+  const loading = loadedExamId !== examId
+
   // データの再読み込み
   const refreshStudentData = useCallback(async () => {
-    const [studentsResult, administeredClassrooms] = await Promise.all([
-      window.electronAPI.getStudentsForExam(examId),
-      window.electronAPI.examClassroom.getAdministered(examId),
-    ])
+    try {
+      const [studentsResult, administeredClassrooms] = await Promise.all([
+        window.electronAPI.getStudentsForExam(examId),
+        window.electronAPI.examClassroom.getAdministered(examId),
+      ])
 
-    if (studentsResult.success && studentsResult.students) {
-      // 採番学級は administered 学級（DB 構造）から renderer 側で解決する
-      const placement = resolveExamClassroomPlacement(administeredClassrooms)
+      if (studentsResult.success && studentsResult.students) {
+        // 採番学級は administered 学級（DB 構造）から renderer 側で解決する
+        const placement = resolveExamClassroomPlacement(administeredClassrooms)
 
-      // 受験生徒を customOrder 順で並び替え（ExamStudent テーブルの順序が基準）
-      const sortedExamStudents = [...studentsResult.students].sort(
-        compareExamStudents(placement)
-      )
+        // 受験生徒を customOrder 順で並び替え（ExamStudent テーブルの順序が基準）
+        const sortedExamStudents = [...studentsResult.students].sort(
+          compareExamStudents(placement)
+        )
 
-      setExamStudents(sortedExamStudents)
-      setPlacementByStudent(placement)
+        setExamStudents(sortedExamStudents)
+        setPlacementByStudent(placement)
 
-      // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（id/name のみ）
-      const uniqueClasses = new Map<string, RosterClassroomOption>()
-      sortedExamStudents.forEach((examStudent) => {
-        // 各生徒の全所属履歴を確認
-        examStudent.student.memberships?.forEach((membership) => {
-          if (!uniqueClasses.has(membership.classroom.id)) {
-            uniqueClasses.set(membership.classroom.id, {
-              id: membership.classroom.id,
-              name: membership.classroom.name,
-            })
-          }
+        // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（id/name のみ）
+        const uniqueClasses = new Map<string, RosterClassroomOption>()
+        sortedExamStudents.forEach((examStudent) => {
+          // 各生徒の全所属履歴を確認
+          examStudent.student.memberships?.forEach((membership) => {
+            if (!uniqueClasses.has(membership.classroom.id)) {
+              uniqueClasses.set(membership.classroom.id, {
+                id: membership.classroom.id,
+                name: membership.classroom.name,
+              })
+            }
+          })
         })
-      })
-      setClassrooms(Array.from(uniqueClasses.values()))
-    } else {
-      console.error("Failed to refresh student data:", studentsResult.error)
+        setClassrooms(Array.from(uniqueClasses.values()))
+      } else {
+        console.error("Failed to refresh student data:", studentsResult.error)
+      }
+    } finally {
+      setLoadedExamId(examId)
     }
   }, [examId])
 
   // データの取得（実際のAPIから）
   useEffect(() => {
-    setLoading(true)
-    refreshStudentData().finally(() => setLoading(false))
+    refreshStudentData()
   }, [refreshStudentData])
 
   // 生徒の状態を更新

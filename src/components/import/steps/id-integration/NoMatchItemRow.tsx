@@ -1,7 +1,7 @@
 "use client"
 
 import { ChevronDown, ChevronRight } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 
 import {
   Select,
@@ -11,7 +11,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import type { IdChoice, SubtotalInfo } from "@/types/examArchive.types"
+import type {
+  IdChoice,
+  IdIntegrationConfig,
+  SubtotalInfo,
+} from "@/types/examArchive.types"
 
 import { SubtotalMappingEditor } from "./SubtotalMappingEditor"
 import { SubtotalPreview } from "./SubtotalPreview"
@@ -34,12 +38,63 @@ export function NoMatchItemRow({
 }: NoMatchItemRowProps) {
   const isSubtotalGroup = entityType === "subtotalGroup"
 
-  // subtotalGroupは空選択（強制選択）、それ以外はcreate_newデフォルト
-  const [decision, setDecision] = useState<
-    NoMatchDecisionType | DecisionType | ""
-  >(isSubtotalGroup ? "" : "create_new")
-  const [selectedExistingId, setSelectedExistingId] = useState<string>("")
-  const [idChoice, setIdChoice] = useState<IdChoice>("use_existing_id")
+  // 設問グループの決定は wizard が持つ。ここではその写しを持たず、選択のたびに
+  // 引き直す（一括設定でクリアされたときも、状態を消す effect なしで追従する）
+  const idIntegrationConfig = isSubtotalGroup
+    ? wizard?.state.idIntegrationConfig
+    : undefined
+  const storedDecision = idIntegrationConfig?.subtotalGroup.decisions.find(
+    (storedDecision) => storedDecision.importId === item.importId
+  )
+
+  // 設問グループは空選択（強制選択）、それ以外は create_new が既定
+  const storedSelection: {
+    decision: NoMatchDecisionType | DecisionType | ""
+    selectedExistingId: string
+    idChoice: IdChoice
+  } = idIntegrationConfig
+    ? {
+        decision: storedDecision?.decisionType ?? "",
+        selectedExistingId: storedDecision?.existingId ?? "",
+        idChoice: storedDecision?.idChoice ?? "use_existing_id",
+      }
+    : {
+        decision: "create_new",
+        selectedExistingId: "",
+        idChoice: "use_existing_id",
+      }
+
+  // 画面で選んだだけでまだ wizard へ渡していない選択（既存グループ未指定の
+  // 「同一」など）。wizard の設定が入れ替わったら捨てて保存側に従う
+  const [pickedSelection, setPickedSelection] = useState<{
+    idIntegrationConfig: IdIntegrationConfig | undefined
+    decision: NoMatchDecisionType | DecisionType | ""
+    selectedExistingId: string
+    idChoice: IdChoice
+  } | null>(null)
+
+  const selection =
+    pickedSelection !== null &&
+    pickedSelection.idIntegrationConfig === idIntegrationConfig
+      ? pickedSelection
+      : storedSelection
+  const { decision, selectedExistingId, idChoice } = selection
+
+  const updateSelection = (
+    changes: Partial<{
+      decision: NoMatchDecisionType | DecisionType | ""
+      selectedExistingId: string
+      idChoice: IdChoice
+    }>
+  ) =>
+    setPickedSelection({
+      idIntegrationConfig,
+      decision,
+      selectedExistingId,
+      idChoice,
+      ...changes,
+    })
+
   const [showPreview, setShowPreview] = useState(false)
 
   const canManualLink =
@@ -67,44 +122,21 @@ export function NoMatchItemRow({
     importSubtotals?.length &&
     selectedExistingSubtotals?.length
 
-  // currentDecisionの復元（wizardのstateから）
-  useEffect(() => {
-    if (!wizard || !isSubtotalGroup) return
-    const config = wizard.state.idIntegrationConfig.subtotalGroup
-    const existing = config.decisions.find(
-      (decision) => decision.importId === item.importId
-    )
-    if (existing) {
-      setDecision(existing.decisionType as DecisionType)
-      if (existing.existingId) setSelectedExistingId(existing.existingId)
-      if (existing.idChoice) setIdChoice(existing.idChoice)
-    } else if (isSubtotalGroup) {
-      // stateにない場合は空選択に戻す（一括設定のクリア等に対応）
-      setDecision("")
-      setSelectedExistingId("")
-    }
-  }, [
-    wizard,
-    isSubtotalGroup,
-    item.importId,
-    wizard?.state.idIntegrationConfig,
-  ])
-
   const handleDecisionChange = (value: string) => {
     const newDecision = value as NoMatchDecisionType | DecisionType
-    setDecision(newDecision)
     if (newDecision === "same_person") {
+      updateSelection({ decision: newDecision })
       if (selectedExistingId) {
         onDecisionChange(newDecision, selectedExistingId, idChoice)
       }
     } else {
-      setSelectedExistingId("")
+      updateSelection({ decision: newDecision, selectedExistingId: "" })
       onDecisionChange(newDecision)
     }
   }
 
   const handleExistingGroupChange = (existingId: string) => {
-    setSelectedExistingId(existingId)
+    updateSelection({ selectedExistingId: existingId })
     onDecisionChange("same_person", existingId, idChoice)
     // 既存グループが変わったら小計マッピングをクリア
     if (wizard && importSubtotals) {
@@ -116,7 +148,7 @@ export function NoMatchItemRow({
 
   const handleIdChoiceChange = (value: string) => {
     const newIdChoice = value as IdChoice
-    setIdChoice(newIdChoice)
+    updateSelection({ idChoice: newIdChoice })
     if (selectedExistingId) {
       onDecisionChange("same_person", selectedExistingId, newIdChoice)
     }

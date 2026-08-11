@@ -15,6 +15,8 @@
 9. [import文の書き方](#import文の書き方)
 10. [コメント規約](#コメント規約)
 
+> コンポーネント設計原則の中に「[effect の中で setState しない](#effect-の中で-setstate-しないreact-hooksset-state-in-effect)」がある。`react-hooks/set-state-in-effect` の警告を直す前に読むこと。
+
 ---
 
 ## フォーマッター・リンター
@@ -622,6 +624,56 @@ const [items, setItems] = useState<Item[]>([])
 const [completedCount, setCompletedCount] = useState(0) // 同期が必要になる
 ```
 
+### effect の中で setState しない（`react-hooks/set-state-in-effect`）
+
+このルールの警告は3つに分かれる。**A群は許容、B群は必ず直す、C群は名指しで管理する。**
+
+| 群  | 形                                         | 扱い                       |
+| --- | ------------------------------------------ | -------------------------- |
+| A   | effect から非同期ローダーを呼ぶ            | 許容（現構成では代替なし） |
+| B   | effect の中で**同期的に** setState する    | **禁止**（下記の型で直す） |
+| C   | 直すには周辺の仕組みごと作り直しが要るもの | eslint 設定に名指しで記録  |
+
+**A群** — `useEffect(() => { loadData() }, [loadData])` の形。ルールは setState への到達可能性だけを見るため `await` の後の更新も警告になるが、Suspense を使わない現構成では代替手段がない。
+
+**B群** — props→state のミラーリング、開くたびのリセット、読み込み中フラグの先出しなど。**結果に「どの入力に対するものか」を同梱して状態に持ち、表示時に引き直す**形へ置き換える。入力が変われば一致しなくなるので、リセットの effect が要らなくなる。
+
+```typescript
+// ❌ B群: 入力が変わったら状態を作り直す effect
+const [data, setData] = useState<T | null>(null)
+const [isLoading, setIsLoading] = useState(false)
+useEffect(() => {
+  if (!enabled) {
+    setData(null) // ← 同期 setState
+    return
+  }
+  setIsLoading(true) // ← 同期 setState
+  fetchData(examId)
+    .then(setData)
+    .finally(() => setIsLoading(false))
+}, [examId, enabled])
+
+// ✅ 取得結果に入力を同梱し、表示時に引き直す
+const [fetched, setFetched] = useState<{ examId: string; data: T } | null>(null)
+const isCurrent = fetched?.examId === examId
+const data = enabled && isCurrent ? fetched.data : null
+const isLoading = enabled && !isCurrent // 読み込み中フラグも派生値
+useEffect(() => {
+  if (!enabled || isCurrent) return
+  fetchData(examId).then((data) => setFetched({ examId, data }))
+}, [enabled, isCurrent, examId])
+```
+
+同梱するキーは**識別子そのもの**（`examId` 等）か、`useMemo` で作った**安定した参照**にする。毎レンダー作り直される配列やオブジェクトを比較すると永久に一致せず、取得が止まらない。
+
+派生に落とせない B群には、ほかに次の受け皿がある。
+
+- **開いている間だけの状態** → ダイアログの中身の子コンポーネントへ移す。Radix は閉じている間 `DialogContent` / `AlertDialogContent` をマウントしないので、開くたびの初期化は作り直しで済む
+- **props をそのまま写していただけの state** → 撤去して制御コンポーネントにする（親が状態を持つ）
+- **「選択が消えたら先頭へ寄せる」** → 選択は利用者が選んだものだけを持ち、表示対象は `find(...) ?? first ?? null` で引き直す。消えた選択を状態へ書き戻さない
+
+**C群** — 現在1件のみ。`components/exams/07-score-at-once/ScoringMain/hooks/useScoringFilter.ts`。理由と作り直しの範囲は `eslint.config.mjs` の該当ルールのコメントに書く。**「難しいから例外」という判断基準は書かない**（必ず当てはめに使われて拡大する）。C群へ入れるのは所有者の明示的な判断のみで、対象はファイル名で名指しする。
+
 ---
 
 ## import文の書き方
@@ -835,3 +887,4 @@ export async function exportToExcel(
 | 2026-07-04 | 命名規則に「実体名の原則・高階関数優先・慣例例外 A/B」を追加     |
 | 2026-07-05 | 命名規則に「id ではなく実体を持つ原則（`xxxIds` の扱い）」を追加 |
 | 2026-08-02 | 「IPC の粒度（意図を運ぶ／状態を運ばない）」を追加               |
+| 2026-08-09 | 「effect の中で setState しない」（A/B/C群の分類）を追加         |

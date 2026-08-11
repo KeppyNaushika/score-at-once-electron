@@ -63,10 +63,18 @@ export function IndividualReportPreview({
   const fontScale = 1
 
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([])
-  const [pages, setPages] = useState<PageAllocation[]>([
-    { pageIndex: 0, sectionIndices: [] },
-  ])
-  const [measured, setMeasured] = useState(false)
+  // 測定結果は「どの入力に対するものか」を一緒に持つ。表示設定や対象生徒が
+  // 変われば一致しなくなるので、測り直しのフラグを別に持たなくてよい
+  const [measurement, setMeasurement] = useState<{
+    report: IndividualReportData
+    options: IndividualReportOptions
+    pages: PageAllocation[]
+  } | null>(null)
+
+  const pages =
+    measurement?.report === report && measurement.options === options
+      ? measurement.pages
+      : null
 
   const mmToPx = useCallback((mm: number) => mm * 3.7795275591, [])
 
@@ -104,16 +112,8 @@ export function IndividualReportPreview({
   )
 
   useEffect(() => {
-    setMeasured(false)
-  }, [options, report])
-
-  useEffect(() => {
-    if (measured) return
-    if (!showPageBreaks) {
-      setPages([{ pageIndex: 0, sectionIndices: [0, 1, 2, 3, 4, 5, 6, 7, 8] }])
-      setMeasured(true)
-      return
-    }
+    // 改ページを出さないときは1枚に流し込むだけなので測る必要がない
+    if (!showPageBreaks || pages) return
 
     const measureAndAllocate = () => {
       const pageHeightPx = mmToPx(CONTENT_HEIGHT_MM)
@@ -150,15 +150,16 @@ export function IndividualReportPreview({
         allocatedPages.length > 0
           ? allocatedPages
           : [{ pageIndex: 0, sectionIndices: [] }]
-      setPages(finalPages)
-      setMeasured(true)
+      setMeasurement({ report, options, pages: finalPages })
       onPagesCalculated?.(finalPages)
     }
 
     const timer = setTimeout(measureAndAllocate, 100)
     return () => clearTimeout(timer)
   }, [
-    measured,
+    pages,
+    report,
+    options,
     showPageBreaks,
     mmToPx,
     onPagesCalculated,
@@ -259,7 +260,7 @@ export function IndividualReportPreview({
   }
 
   // ページ分割プレビューモード
-  if (showPageBreaks && measured) {
+  if (showPageBreaks && pages) {
     return (
       <div
         className={cn("individual-report-pages", className)}

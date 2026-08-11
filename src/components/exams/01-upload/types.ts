@@ -74,7 +74,6 @@ export interface MasterAnswerCardProps {
  * マスター解答管理の状態
  */
 export interface MasterAnswersState {
-  answers: ExamPageWithContent[]
   imageUrls: Record<string, string>
   isUploading: boolean
   uploadProgress: number

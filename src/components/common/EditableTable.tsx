@@ -6,7 +6,8 @@ import { flexRender, getCoreRowModel } from "@tanstack/react-table"
 import type { TableOptions, TableOptionsResolved } from "@tanstack/table-core"
 import { createTable } from "@tanstack/table-core"
 import { Plus, Trash2 } from "lucide-react"
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useMemo, useRef, useState } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 
@@ -28,15 +29,36 @@ function EditableCell<T>({
   column,
   table,
 }: EditableCellProps<T>) {
-  const initialValue = getValue()
-  // 編集中の下書き。null なら確定済みのセル値をそのまま表示する
-  const [draftValue, setDraftValue] = useState<string | null>(null)
-  const strValue = draftValue ?? String(initialValue ?? "")
+  const committedValue = String(getValue() ?? "")
+  // 編集中の下書きは「どの確定値に対して打ったものか」を一緒に持つ。確定値が
+  // 入れ替われば一致しなくなって自然に外れるので、blur で消さなくてよい。
+  // 消してしまうと、親が受け付けなかった値（満点超過・未定義の評価記号など）が
+  // 無言で消え、赤い警告を出す機会が無くなる。
+  const [draft, setDraft] = useState<{
+    committedValue: string
+    text: string
+  } | null>(null)
+  const strValue =
+    draft?.committedValue === committedValue ? draft.text : committedValue
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const meta = column.columnDef.meta
+
+  // 非空かつ検証NGのセルは赤背景で警告（保存されない入力を可視化）
+  const isInvalid =
+    strValue.trim() !== "" && meta?.validate ? !meta.validate(strValue) : false
 
   const onBlur = () => {
     table.options.meta?.updateData?.(row.index, column.id, strValue)
-    setDraftValue(null)
+    // 下書きは残す。親が受け付ければ確定値が変わって外れ、弾かれれば残って赤いまま。
+    // 赤背景だけでは何が悪いか伝わらず、title はホバーしないと出ないので通知する
+    if (isInvalid) {
+      toast.warning(`「${strValue}」は保存されません`, {
+        description: meta?.placeholder
+          ? `入力できる値: ${meta.placeholder}`
+          : undefined,
+      })
+    }
   }
 
   const moveFocus = (target: HTMLInputElement) => {
@@ -93,17 +115,11 @@ function EditableCell<T>({
     }
   }
 
-  const meta = column.columnDef.meta
-
-  // 非空かつ検証NGのセルは赤背景で警告（保存されない入力を可視化）
-  const isInvalid =
-    strValue.trim() !== "" && meta?.validate ? !meta.validate(strValue) : false
-
   return (
     <input
       ref={inputRef}
       value={strValue}
-      onChange={(e) => setDraftValue(e.target.value)}
+      onChange={(e) => setDraft({ committedValue, text: e.target.value })}
       onBlur={onBlur}
       onKeyDown={onKeyDown}
       className={`absolute inset-0 h-full w-full border-none px-4 py-2 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none ${
@@ -156,19 +172,11 @@ export function EditableTable<T extends object>({
   className = "",
   getRowProps,
 }: EditableTableProps<T>) {
-  const [tableData, setTableData] = useState(data)
-
-  useEffect(() => {
-    setTableData(data)
-  }, [data])
-
   const deleteRow = useCallback(
     (rowIndex: number) => {
-      const newData = tableData.filter((_, index) => index !== rowIndex)
-      setTableData(newData)
-      setTimeout(() => onDataChange(newData), 0)
+      onDataChange(data.filter((_, index) => index !== rowIndex))
     },
-    [tableData, setTableData, onDataChange]
+    [data, onDataChange]
   )
 
   const addRowAfter = useCallback(
@@ -178,15 +186,13 @@ export function EditableTable<T extends object>({
         return acc
       }, {}) as T
 
-      const newData = [
-        ...tableData.slice(0, index + 1),
+      onDataChange([
+        ...data.slice(0, index + 1),
         newRow,
-        ...tableData.slice(index + 1),
-      ]
-      setTableData(newData)
-      setTimeout(() => onDataChange(newData), 0)
+        ...data.slice(index + 1),
+      ])
     },
-    [columns, tableData, setTableData, onDataChange]
+    [columns, data, onDataChange]
   )
 
   const hasReadOnlyColumns = useMemo(
@@ -245,7 +251,7 @@ export function EditableTable<T extends object>({
   )
 
   const table = useLocalReactTable({
-    data: tableData,
+    data,
     columns: editableColumns,
     getCoreRowModel: getCoreRowModel(),
     meta: {
@@ -254,20 +260,11 @@ export function EditableTable<T extends object>({
         const column = columns.find((candidate) => candidate.id === columnId)
         if (column?.meta?.readOnly) return
 
-        setTableData((old) => {
-          const newData = old.map((row, index) => {
-            if (index === rowIndex) {
-              return {
-                ...row,
-                [columnId]: value,
-              }
-            }
-            return row
-          })
-          // Defer the onDataChange call to avoid state update during render
-          setTimeout(() => onDataChange(newData), 0)
-          return newData
-        })
+        onDataChange(
+          data.map((row, index) =>
+            index === rowIndex ? { ...row, [columnId]: value } : row
+          )
+        )
       },
     },
   })
@@ -278,9 +275,7 @@ export function EditableTable<T extends object>({
       return acc
     }, {}) as T
 
-    const newData = [...tableData, newRow]
-    setTableData(newData)
-    setTimeout(() => onDataChange(newData), 0)
+    onDataChange([...data, newRow])
   }
 
   const addMultipleRows = (count: number) => {
@@ -293,10 +288,27 @@ export function EditableTable<T extends object>({
         }, {}) as T
     )
 
-    const newData = [...tableData, ...newRows]
-    setTableData(newData)
-    setTimeout(() => onDataChange(newData), 0)
+    onDataChange([...data, ...newRows])
   }
+
+  /**
+   * 貼り付けで弾かれた件数を伝える。
+   *
+   * 貼り付けは EditableCell を経由しないので下書きが残らず、赤背景も出せない。
+   * 位置がずれていれば「ほぼ全件」が弾かれるので、件数だけで気づける。
+   */
+  const notifyRejectedPaste = (rejectedCount: number) => {
+    if (rejectedCount === 0) return
+    toast.warning(`${rejectedCount}件の値が保存されませんでした`, {
+      description: "貼り付ける位置がずれていませんか？",
+    })
+  }
+
+  /** その列の検証に照らして保存されない値か */
+  const isRejected = (column: ColumnDef<T>, value: string) =>
+    value.trim() !== "" && column.meta?.validate
+      ? !column.meta.validate(value)
+      : false
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault()
@@ -339,7 +351,8 @@ export function EditableTable<T extends object>({
         }
       }
 
-      const newData = [...tableData]
+      const newData = [...data]
+      let rejectedCount = 0
       for (let ri = 0; ri < rows.length; ri++) {
         const targetRow = startRowIndex + ri
         if (targetRow >= newData.length) break
@@ -349,28 +362,35 @@ export function EditableTable<T extends object>({
         for (let ci = 0; ci < cells.length; ci++) {
           const targetCol = startEditableColIndex + ci
           if (targetCol >= editableCols.length) break
-          const colId = editableCols[targetCol].id
+          const targetColumn = editableCols[targetCol]
+          const colId = targetColumn.id
           if (colId) {
             ;(updatedRow as Record<string, unknown>)[colId] = cells[ci]
+            if (isRejected(targetColumn, cells[ci])) rejectedCount++
           }
         }
         newData[targetRow] = updatedRow
       }
 
-      setTableData(newData)
       onDataChange(newData)
+      notifyRejectedPaste(rejectedCount)
     } else {
       // 全置換型ペースト（後方互換）
+      let rejectedCount = 0
       const pastedData = rows.map((row) => {
         const cells = row.split("\t")
         return columns.reduce<Record<string, string>>((acc, column, index) => {
-          if (column.id) acc[column.id] = cells[index] || ""
+          if (column.id) {
+            const value = cells[index] || ""
+            acc[column.id] = value
+            if (isRejected(column, value)) rejectedCount++
+          }
           return acc
         }, {}) as T
       })
 
-      setTableData(pastedData)
       onDataChange(pastedData)
+      notifyRejectedPaste(rejectedCount)
     }
   }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef } from "react"
 
 import type { AnswerTableRow } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type {
@@ -16,6 +16,64 @@ interface UseMarkerCorrectionArgs {
 
 interface UseMarkerCorrectionResult {
   correctingFileIds: Set<string>
+}
+
+/** 1ファイル分の補正作業。target が undefined なら元へ戻す */
+interface CorrectionTask {
+  file: UnsavedAnswerImage
+  buffer: ArrayBuffer
+  target: ExamPageColumn | undefined
+}
+
+/**
+ * いま補正・復元が必要なファイルを洗い出す。
+ *
+ * files と配置（tableRows）だけから決まる純粋な導出なので、実行中フラグも
+ * ここから引ける（状態として別に持つと files との同期がずれる）。
+ */
+function collectCorrectionTasks({
+  files,
+  tableRows,
+  markerCorrectionEnabled,
+  markerAvailableExamPageIds,
+}: Omit<UseMarkerCorrectionArgs, "onFilesChange">): CorrectionTask[] {
+  // ファイルID → 補正対象ページ（マスが持つ列の ExamPage 実体）のマップを構築。
+  // 同定は id、ログの「ページN」表示は pageNumber と、実体をそのまま持ち回って使い分ける。
+  const targetMap = new Map<string, ExamPageColumn>()
+  if (markerCorrectionEnabled) {
+    for (const row of tableRows) {
+      for (const cell of row.cells) {
+        if (cell.file) {
+          targetMap.set(cell.file.id, cell.examPage)
+        }
+      }
+    }
+  }
+
+  const tasks: CorrectionTask[] = []
+  for (const file of files) {
+    // DB読み込み済みの既存答案（imagePathあり）や buffer 無しは対象外
+    if (file.imagePath || !file.buffer) continue
+    const buffer = file.buffer
+    const rawTarget = targetMap.get(file.id)
+    // マスターが存在しないページは対象外（undefined扱いで復元）
+    const target =
+      rawTarget !== undefined && markerAvailableExamPageIds.has(rawTarget.id)
+        ? rawTarget
+        : undefined
+
+    if (target === undefined) {
+      if (
+        file.correctedForExamPageId !== undefined ||
+        file.correctionStatus !== undefined
+      ) {
+        tasks.push({ file, buffer, target: undefined })
+      }
+    } else if (file.correctedForExamPageId !== target.id) {
+      tasks.push({ file, buffer, target })
+    }
+  }
+  return tasks
 }
 
 /**
@@ -39,8 +97,27 @@ export function useMarkerCorrection({
   useEffect(() => {
     filesRef.current = files
   })
-  const [correctingFileIds, setCorrectingFileIds] = useState<Set<string>>(
-    new Set()
+  const tasks = useMemo(
+    () =>
+      collectCorrectionTasks({
+        files,
+        tableRows,
+        markerCorrectionEnabled,
+        markerAvailableExamPageIds,
+      }),
+    [files, tableRows, markerCorrectionEnabled, markerAvailableExamPageIds]
+  )
+
+  // 補正を実行するファイル（復元は待たせない）。補正が終われば onFilesChange で
+  // files が入れ替わり、その回の作業が消えて自然に解除される
+  const correctingFileIds = useMemo(
+    () =>
+      new Set(
+        tasks
+          .filter((task) => task.target !== undefined)
+          .map((task) => task.file.id)
+      ),
+    [tasks]
   )
 
   // 削除されたファイルの元バッファ参照を解放（メモリリーク防止）
@@ -56,64 +133,7 @@ export function useMarkerCorrection({
   useEffect(() => {
     const runId = ++runIdRef.current
 
-    // ファイルID → 補正対象ページ（マスが持つ列の ExamPage 実体）のマップを構築。
-    // 同定は id、ログの「ページN」表示は pageNumber と、実体をそのまま持ち回って使い分ける。
-    const targetMap = new Map<string, ExamPageColumn>()
-    if (markerCorrectionEnabled) {
-      for (const row of tableRows) {
-        for (const cell of row.cells) {
-          if (cell.file) {
-            targetMap.set(cell.file.id, cell.examPage)
-          }
-        }
-      }
-    }
-
-    // 処理が必要なファイルを抽出
-    type Task = {
-      file: UnsavedAnswerImage
-      buffer: ArrayBuffer
-      target: ExamPageColumn | undefined
-    }
-    const tasks: Task[] = []
-    for (const file of files) {
-      // DB読み込み済みの既存答案（imagePathあり）や buffer 無しは対象外
-      if (file.imagePath || !file.buffer) continue
-      const buffer = file.buffer
-      const rawTarget = targetMap.get(file.id)
-      // マスターが存在しないページは対象外（undefined扱いで復元）
-      const target =
-        rawTarget !== undefined && markerAvailableExamPageIds.has(rawTarget.id)
-          ? rawTarget
-          : undefined
-
-      if (target === undefined) {
-        if (
-          file.correctedForExamPageId !== undefined ||
-          file.correctionStatus !== undefined
-        ) {
-          tasks.push({ file, buffer, target: undefined })
-        }
-      } else if (file.correctedForExamPageId !== target.id) {
-        tasks.push({ file, buffer, target })
-      }
-    }
-
     if (tasks.length === 0) return
-
-    // 補正対象のIDを loading 状態として公開（補正実行のもののみ）
-    const correctingIds = new Set(
-      tasks
-        .filter((task) => task.target !== undefined)
-        .map((task) => task.file.id)
-    )
-    if (correctingIds.size > 0) {
-      setCorrectingFileIds((prev) => {
-        const next = new Set(prev)
-        for (const id of correctingIds) next.add(id)
-        return next
-      })
-    }
 
     const processTasks = async () => {
       const processed = await Promise.all(
@@ -194,25 +214,10 @@ export function useMarkerCorrection({
       )
       const merged = filesRef.current.map((file) => byId.get(file.id) ?? file)
       onFilesChange(merged)
-
-      // loading終了
-      if (correctingIds.size > 0) {
-        setCorrectingFileIds((prev) => {
-          const next = new Set(prev)
-          for (const id of correctingIds) next.delete(id)
-          return next
-        })
-      }
     }
 
     processTasks()
-  }, [
-    files,
-    tableRows,
-    markerCorrectionEnabled,
-    markerAvailableExamPageIds,
-    onFilesChange,
-  ])
+  }, [tasks, onFilesChange])
 
   return { correctingFileIds }
 }

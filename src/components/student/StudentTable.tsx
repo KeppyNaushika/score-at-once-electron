@@ -577,6 +577,7 @@ export default function StudentTable() {
         <SpreadsheetImportModal
           isOpen={isSpreadsheetImportModalOpen}
           onClose={() => setIsSpreadsheetImportModalOpen(false)}
+          existingStudents={students}
           onImportSuccess={onStudentsImported}
         />
       )}

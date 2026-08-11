@@ -25,6 +25,25 @@ interface ScoreRow {
   [key: string]: string
 }
 
+/**
+ * 表記ゆれを吸収する（全角英数・全角記号を半角へ、前後の空白を落とす）。
+ *
+ * Excel から貼り付けた `１０` や `ａ` は間違いではなく表記の違いなので、弾かずに
+ * 受け入れる。文字評価の照合では変換表のラベル側にも同じ正規化を通すこと
+ * （入力側だけ半角化すると、ラベルが全角で登録されている場合に一致しなくなる）。
+ */
+const normalizeInput = (value: string): string =>
+  value
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (fullWidthChar) =>
+      String.fromCharCode(fullWidthChar.charCodeAt(0) - 0xfee0)
+    )
+    .replace(/[－ー−]/g, "-")
+    .replace(/[．]/g, ".")
+    .trim()
+
+/** 文字評価の照合キー（両側に同じ正規化を通し、大小文字は無視する） */
+const letterKey = (value: string): string => normalizeInput(value).toUpperCase()
+
 /** 評価項目ごとの列ID（value列はitem.id、補助列は接尾辞付き） */
 const adjColId = (itemId: string) => `${itemId}::adj`
 const reasonColId = (itemId: string) => `${itemId}::reason`
@@ -109,32 +128,31 @@ export function CourseworkScoresContainer({
         const validLabels = item.letterScales
           .map((letterScale) => letterScale.label)
           .join("/")
-        const validLabelSet = new Set(
-          item.letterScales.map((letterScale) => letterScale.label)
+        // 照合は正規化キーで行い、保存する値は変換表のラベルそのものにする
+        const labelByKey = new Map(
+          item.letterScales.map((letterScale) => [
+            letterKey(letterScale.label),
+            letterScale.label,
+          ])
         )
         return [
           {
             id: item.id,
             header: isLetter
               ? `${item.name} (評価)`
-              : `${item.name} (/${item.maxScore})`,
+              : `${item.name} (満点${item.maxScore})`,
             accessorKey: item.id,
             size: 110,
             meta: {
-              placeholder: isLetter
-                ? validLabels || "評価記号"
-                : `0-${item.maxScore}`,
-              // 文字評価は定義済みラベル、数値は0〜満点の範囲のみ有効
+              placeholder: isLetter ? validLabels || "評価記号" : "数値",
+              // 文字評価は変換表のラベル、数値は有限の数値なら有効。
+              // 満点超過も負数も許容する（配点の枠を超えて成績へ加減できる仕様）。
               validate: (value: string) => {
-                const trimmed = value.trim()
-                if (trimmed === "") return true
-                if (isLetter) return validLabelSet.has(trimmed)
-                const parsedValue = Number(trimmed)
-                return (
-                  !isNaN(parsedValue) &&
-                  parsedValue >= 0 &&
-                  parsedValue <= item.maxScore
-                )
+                const normalized = normalizeInput(value)
+                if (normalized === "") return true
+                if (isLetter) return labelByKey.has(letterKey(value))
+                const parsedValue = Number(normalized)
+                return !isNaN(parsedValue) && isFinite(parsedValue)
               },
             },
           },
@@ -147,9 +165,9 @@ export function CourseworkScoresContainer({
               placeholder: "±0",
               // 加減点は有限の数値のみ有効
               validate: (value: string) => {
-                const trimmed = value.trim()
-                if (trimmed === "") return true
-                const parsedValue = Number(trimmed)
+                const normalized = normalizeInput(value)
+                if (normalized === "") return true
+                const parsedValue = Number(normalized)
                 return !isNaN(parsedValue) && isFinite(parsedValue)
               },
             },
@@ -204,34 +222,37 @@ export function CourseworkScoresContainer({
 
         const courseworkStudentId = newRow._courseworkStudentId
         for (const item of items) {
-          const validLabels = new Set(
-            item.letterScales.map((letterScale) => letterScale.label)
+          const labelByKey = new Map(
+            item.letterScales.map((letterScale) => [
+              letterKey(letterScale.label),
+              letterScale.label,
+            ])
           )
 
           // value列（数値 or 文字評価）
           const valueColumnId = item.id
           if (newRow[valueColumnId] !== oldRow[valueColumnId]) {
-            const trimmed = (newRow[valueColumnId] ?? "").trim()
+            const trimmed = normalizeInput(newRow[valueColumnId] ?? "")
             if (item.inputMode === "letter") {
               if (trimmed === "") {
                 pushPatch(item, courseworkStudentId, { letterValue: null })
-              } else if (validLabels.has(trimmed)) {
-                pushPatch(item, courseworkStudentId, { letterValue: trimmed })
+              } else {
+                const label = labelByKey.get(letterKey(newRow[valueColumnId]))
+                if (label !== undefined) {
+                  pushPatch(item, courseworkStudentId, { letterValue: label })
+                }
+                // 変換表に無い記号は無視
               }
-              // 未定義の評価記号は無視
             } else {
               if (trimmed === "") {
                 pushPatch(item, courseworkStudentId, { score: null })
               } else {
                 const parsedValue = Number(trimmed)
-                if (
-                  !isNaN(parsedValue) &&
-                  parsedValue >= 0 &&
-                  parsedValue <= item.maxScore
-                ) {
+                // 満点超過・負数も入力どおり保存する
+                if (!isNaN(parsedValue) && isFinite(parsedValue)) {
                   pushPatch(item, courseworkStudentId, { score: parsedValue })
                 }
-                // 範囲外・無効値は無視
+                // 数値として読めない値は無視
               }
             }
           }
@@ -239,7 +260,7 @@ export function CourseworkScoresContainer({
           // 加減点列
           const adjustmentColumnId = adjColId(item.id)
           if (newRow[adjustmentColumnId] !== oldRow[adjustmentColumnId]) {
-            const trimmed = (newRow[adjustmentColumnId] ?? "").trim()
+            const trimmed = normalizeInput(newRow[adjustmentColumnId] ?? "")
             if (trimmed === "") {
               pushPatch(item, courseworkStudentId, { adjustment: null })
             } else {

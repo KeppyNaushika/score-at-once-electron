@@ -22,6 +22,9 @@ import { useZoomAndScroll } from "./hooks/view/useZoomAndScroll"
 import { RichTextEditorModal } from "./RichTextEditorModal"
 import type { AnswerIndividualViewProps } from "./types"
 
+/** 未読み込み時の空配列（毎レンダー作り直すと下流の再描画を誘発するため定数で持つ） */
+const NO_OVERLAY_IMAGES: HTMLImageElement[] = []
+
 export default function AnswerIndividualView({
   scoringDatas,
   currentScoringDataId,
@@ -388,19 +391,24 @@ export default function AnswerIndividualView({
     [favoriteElementIds, drawingState]
   )
 
-  // 模範解答オーバーレイ用の画像読み込み（全ページ）
-  const [masterOverlayImages, setMasterOverlayImages] = useState<
-    HTMLImageElement[]
-  >([])
+  // 模範解答オーバーレイ用の画像読み込み（全ページ）。
+  // 読み込み結果はどのURL列のものかを一緒に持ち、URLが差し替わったら（＝
+  // オーバーレイOFFや別の試験）自然に外れるようにする
+  const [loadedOverlay, setLoadedOverlay] = useState<{
+    urls: string[]
+    images: HTMLImageElement[]
+  } | null>(null)
+  const masterOverlayImages =
+    loadedOverlay !== null && loadedOverlay.urls === masterOverlayImageUrls
+      ? loadedOverlay.images
+      : NO_OVERLAY_IMAGES
   useEffect(() => {
-    if (!masterOverlayImageUrls || masterOverlayImageUrls.length === 0) {
-      setMasterOverlayImages([])
-      return
-    }
+    const urls = masterOverlayImageUrls
+    if (!urls || urls.length === 0) return
     let cancelled = false
     const loadAll = async () => {
       const results = await Promise.allSettled(
-        masterOverlayImageUrls.map(
+        urls.map(
           (url) =>
             new Promise<HTMLImageElement>((resolve, reject) => {
               const image = new Image()
@@ -411,14 +419,15 @@ export default function AnswerIndividualView({
         )
       )
       if (cancelled) return
-      setMasterOverlayImages(
-        results
+      setLoadedOverlay({
+        urls,
+        images: results
           .filter(
             (result): result is PromiseFulfilledResult<HTMLImageElement> =>
               result.status === "fulfilled"
           )
-          .map((result) => result.value)
-      )
+          .map((result) => result.value),
+      })
     }
     loadAll()
     return () => {

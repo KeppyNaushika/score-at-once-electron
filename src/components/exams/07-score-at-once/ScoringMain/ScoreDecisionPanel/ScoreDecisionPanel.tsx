@@ -1,7 +1,7 @@
 "use client"
 
 import { AlertTriangle, CheckCircle2, Gavel, RefreshCw } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -59,37 +59,29 @@ export function ScoreDecisionPanel({
     [summary]
   )
 
+  // 未選択、または裁定済みで対象から消えたら先頭へ寄せる。選択は「利用者が選んだ
+  // セル」だけを持ち、実際に表示する対象はそこから引き直す（消えたセルを状態に
+  // 書き戻すと、裁定のたびに再描画が二重に走る）
   const selectedEntry = useMemo(
     () =>
       cellEntries.find(
         (entry) =>
           entry.cell.cropRegionId === selected?.cropRegionId &&
           entry.cell.examStudentId === selected?.examStudentId
-      ) ?? null,
+      ) ??
+      cellEntries[0] ??
+      null,
     [cellEntries, selected]
   )
-
-  // 未選択、または裁定済みで対象から消えたら先頭へ寄せる
-  useEffect(() => {
-    if (!isOpen) return
-    if (selectedEntry) return
-    const first = cellEntries[0]
-    setSelected(
-      first
-        ? {
-            cropRegionId: first.cell.cropRegionId,
-            examStudentId: first.cell.examStudentId,
-          }
-        : null
-    )
-  }, [isOpen, selectedEntry, cellEntries])
 
   const pendingCount =
     (summary?.conflictCount ?? 0) + (summary?.staleCount ?? 0)
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex h-[85vh] max-w-5xl flex-col gap-0 p-0">
+      {/* 幅は sm: 付きで指定する。DialogContent の基底が sm:max-w-lg を持つため、
+          修飾なしの max-w-* はメディアクエリ側に負けて 32rem に潰れる */}
+      <DialogContent className="flex h-[85vh] w-[92vw] flex-col gap-0 p-0 sm:max-w-none">
         <DialogHeader className="border-b border-gray-200 px-6 py-4">
           <DialogTitle className="flex items-center gap-2">
             <Gavel className="h-5 w-5" />
