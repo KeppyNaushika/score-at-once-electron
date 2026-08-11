@@ -1,29 +1,86 @@
 "use client"
 "use no memo"
 
-import type { CellContext, ColumnDef, Row } from "@tanstack/react-table"
-import { flexRender, getCoreRowModel } from "@tanstack/react-table"
-import type { TableOptions, TableOptionsResolved } from "@tanstack/table-core"
-import { createTable } from "@tanstack/table-core"
+import type {
+  CellContext,
+  ColumnDef,
+  Row,
+  RowData,
+} from "@tanstack/react-table"
+import {
+  columnSizingFeature,
+  columnVisibilityFeature,
+  flexRender,
+  tableFeatures,
+  useTable,
+} from "@tanstack/react-table"
 import { Plus, Trash2 } from "lucide-react"
 import React, { useCallback, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 
-interface EditableTableProps<T> {
+/** 編集セルの確定値をテーブルの外へ渡すために `meta` へ載せる項目 */
+interface EditableTableMeta {
+  updateData: (rowIndex: number, columnId: string, value: string) => void
+}
+
+/** 列ごとの振る舞いを `meta` へ載せる項目 */
+interface EditableColumnMeta {
+  /** 編集不可の列。セルは元のレンダラーのまま、貼り付けの対象からも外れる */
+  readOnly?: boolean
+  /** 編集セルの入力欄に出すプレースホルダ */
+  placeholder?: string
+  /** 非空の入力の検証。false なら赤背景で「保存されない」ことを示す */
+  validate?: (value: string) => boolean
+}
+
+/**
+ * このテーブルが使う機能と、`meta` の型。
+ *
+ * `tableMeta` / `columnMeta` は型専用スロットで、値は実行時に捨てられるので
+ * `{} as` で型だけ渡す。この宣言はこのテーブルにしか効かないため、
+ * `updateData` を必須にできる（EditableTable が必ず渡す）。テーブルごとに
+ * 分かれていない宣言マージでは、`meta` を持つ無関係なテーブルまで
+ * この契約を満たす義務を負ってしまうので必須にできなかった。
+ *
+ * 機能は使う API の分だけ入れる（v9 は既定で何も入らない）。
+ * `columnSizingFeature` が `columnDef.size` と `header.getSize()` を、
+ * `columnVisibilityFeature` が `row.getVisibleCells()` と
+ * `table.getVisibleLeafColumns()` を生やす。
+ */
+const editableTableFeatures = tableFeatures({
+  columnSizingFeature,
+  columnVisibilityFeature,
+  tableMeta: {} as EditableTableMeta,
+  columnMeta: {} as EditableColumnMeta,
+})
+
+type EditableTableFeatures = typeof editableTableFeatures
+
+/** EditableTable に渡す列定義。`meta` はこのテーブル専用の型が付く */
+export type EditableColumnDef<TData extends RowData> = ColumnDef<
+  EditableTableFeatures,
+  TData
+>
+
+interface EditableTableProps<T extends RowData> {
   data: T[]
-  columns: ColumnDef<T>[]
+  columns: EditableColumnDef<T>[]
   onDataChange: (data: T[]) => void
   allowInsertRow?: boolean
   allowDeleteRow?: boolean
   className?: string
-  getRowProps?: (row: Row<T>) => { className?: string }
+  getRowProps?: (row: Row<EditableTableFeatures, T>) => { className?: string }
 }
 
-type EditableCellProps<T> = CellContext<T, unknown>
+type EditableCellProps<T extends RowData> = CellContext<
+  EditableTableFeatures,
+  T,
+  unknown
+>
 
-function EditableCell<T>({
+function EditableCell<T extends RowData>({
   getValue,
   row,
   column,
@@ -49,7 +106,7 @@ function EditableCell<T>({
     strValue.trim() !== "" && meta?.validate ? !meta.validate(strValue) : false
 
   const onBlur = () => {
-    table.options.meta?.updateData?.(row.index, column.id, strValue)
+    table.options.meta?.updateData(row.index, column.id, strValue)
     // 下書きは残す。親が受け付ければ確定値が変わって外れ、弾かれれば残って赤いまま。
     // 赤背景だけでは何が悪いか伝わらず、title はホバーしないと出ないので通知する
     if (isInvalid) {
@@ -135,35 +192,7 @@ function EditableCell<T>({
   )
 }
 
-function useLocalReactTable<TData>(options: TableOptions<TData>) {
-  const [table] = useState(() =>
-    createTable<TData>({
-      state: {},
-      onStateChange: () => {},
-      renderFallbackValue: null,
-      ...options,
-    } as TableOptionsResolved<TData>)
-  )
-
-  const [internalState, setInternalState] = useState(() => table.initialState)
-
-  table.setOptions((prev) => ({
-    ...prev,
-    ...options,
-    state: {
-      ...internalState,
-      ...options.state,
-    },
-    onStateChange: (updater) => {
-      setInternalState(updater)
-      options.onStateChange?.(updater)
-    },
-  }))
-
-  return table
-}
-
-export function EditableTable<T extends object>({
+export function EditableTable<T extends RowData>({
   data,
   columns,
   onDataChange,
@@ -201,7 +230,7 @@ export function EditableTable<T extends object>({
   )
 
   const editableColumns = useMemo(
-    () => [
+    (): EditableColumnDef<T>[] => [
       ...columns.map((column) => {
         if (column.meta?.readOnly) return column // readOnlyカラムは元のセルレンダラーを維持
         return { ...column, cell: EditableCell }
@@ -212,7 +241,7 @@ export function EditableTable<T extends object>({
             {
               id: "addRow",
               header: "",
-              cell: ({ row }: { row: Row<T> }) => (
+              cell: ({ row }: { row: Row<EditableTableFeatures, T> }) => (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -232,7 +261,7 @@ export function EditableTable<T extends object>({
             {
               id: "actions",
               header: "",
-              cell: ({ row }: { row: Row<T> }) => (
+              cell: ({ row }: { row: Row<EditableTableFeatures, T> }) => (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -250,10 +279,11 @@ export function EditableTable<T extends object>({
     [columns, allowInsertRow, allowDeleteRow, deleteRow, addRowAfter]
   )
 
-  const table = useLocalReactTable({
+  // コア行モデルは v9 では常に自動で作られるので、明示的に渡す必要はない
+  const table = useTable({
+    features: editableTableFeatures,
     data,
     columns: editableColumns,
-    getCoreRowModel: getCoreRowModel(),
     meta: {
       updateData: (rowIndex: number, columnId: string, value: string) => {
         // readOnlyカラムへの変更を無視
@@ -305,7 +335,7 @@ export function EditableTable<T extends object>({
   }
 
   /** その列の検証に照らして保存されない値か */
-  const isRejected = (column: ColumnDef<T>, value: string) =>
+  const isRejected = (column: EditableColumnDef<T>, value: string) =>
     value.trim() !== "" && column.meta?.validate
       ? !column.meta.validate(value)
       : false

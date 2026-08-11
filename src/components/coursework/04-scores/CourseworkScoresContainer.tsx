@@ -1,10 +1,12 @@
 "use client"
 
-import type { ColumnDef } from "@tanstack/react-table"
 import Link from "next/link"
 import { useCallback, useMemo } from "react"
 
-import { EditableTable } from "@/components/common/EditableTable"
+import {
+  type EditableColumnDef,
+  EditableTable,
+} from "@/components/common/EditableTable"
 import { Button } from "@/components/ui/button"
 import type { CourseworkItemWithLetterScales } from "@/types/coursework.types"
 
@@ -88,8 +90,8 @@ export function CourseworkScoresContainer({
     return data
   }, [studentRows, items])
 
-  const columns = useMemo((): ColumnDef<ScoreRow>[] => {
-    const readOnlyCols: ColumnDef<ScoreRow>[] = [
+  const columns = useMemo((): EditableColumnDef<ScoreRow>[] => {
+    const readOnlyCols: EditableColumnDef<ScoreRow>[] = [
       {
         id: "attendanceNumber",
         header: "出席番号",
@@ -122,8 +124,8 @@ export function CourseworkScoresContainer({
       },
     ]
 
-    const scoreCols: ColumnDef<ScoreRow>[] = items.flatMap(
-      (item): ColumnDef<ScoreRow>[] => {
+    const scoreCols: EditableColumnDef<ScoreRow>[] = items.flatMap(
+      (item): EditableColumnDef<ScoreRow>[] => {
         const isLetter = item.inputMode === "letter"
         const validLabels = item.letterScales
           .map((letterScale) => letterScale.label)
