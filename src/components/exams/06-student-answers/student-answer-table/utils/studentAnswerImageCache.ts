@@ -35,14 +35,9 @@ export async function loadStudentAnswerImageSource(
   }
 
   try {
-    const result = await window.electronAPI.getImageData(imagePath)
-
-    if (result.success && result.data) {
-      imageDataUrlCache.set(imagePath, result.data)
-      return result.data
-    } else {
-      throw new Error(result.error || "Failed to load image")
-    }
+    const dataUrl = await window.electronAPI.getImageData(imagePath)
+    imageDataUrlCache.set(imagePath, dataUrl)
+    return dataUrl
   } catch (error) {
     console.error("画像読み込みエラー:", error)
     throw error

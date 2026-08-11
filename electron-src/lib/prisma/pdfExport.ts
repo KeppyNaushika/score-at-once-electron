@@ -127,16 +127,9 @@ export async function getPdfExportData(options: {
     const allExamStudents = await getStudentsForExam(examId)
 
     // 答案画像を取得
-    const studentAnswersResult = await getStudentAnswersByExamId(examId)
-    if (
-      !studentAnswersResult.success ||
-      !studentAnswersResult.studentAnswerImages
-    ) {
-      return { success: false, error: "答案画像の取得に失敗しました" }
-    }
     // include が作ったグラフ（examStudent{student} / examPage 同梱）をそのまま持つ。
     // pageNumber・氏名は出力データを組み立てる時点でエンティティから導出する。
-    const studentAnswers = studentAnswersResult.studentAnswerImages
+    const studentAnswers = await getStudentAnswersByExamId(examId)
 
     // 選択された受験者のみフィルタリング
     const selectedExamStudents = allExamStudents.filter((examStudent) =>

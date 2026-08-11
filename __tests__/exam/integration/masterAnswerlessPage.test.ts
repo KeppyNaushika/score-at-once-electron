@@ -8,7 +8,7 @@
  * 答案アップロードと OMR マーカー検出が丸ごと落ちていた。
  *
  * ここでは「画像の無いページが混ざっていても、画像のあるページの処理は完走する」ことを
- * 実データ経路で確かめる。
+ * データ経路で確かめる。
  */
 import * as fsPromises from "fs/promises"
 import * as os from "os"
@@ -136,11 +136,9 @@ describe("模範解答画像を持たないページが混ざった試験", () =
     const { exam, pageWithoutImage, examStudent } =
       await seedExamWithImagelessPage()
 
-    const result = await uploadStudentAnswers(exam.id, [
+    await uploadStudentAnswers(exam.id, [
       await answerFileData(pageWithoutImage.id, examStudent.id),
     ])
-
-    expect(result.success).toBe(true)
     expect(await prisma.studentAnswerImage.count()).toBe(1)
   })
 
@@ -148,12 +146,10 @@ describe("模範解答画像を持たないページが混ざった試験", () =
     const { exam, pageWithImage, pageWithoutImage, examStudent } =
       await seedExamWithImagelessPage()
 
-    const result = await uploadStudentAnswers(exam.id, [
+    await uploadStudentAnswers(exam.id, [
       await answerFileData(pageWithImage.id, examStudent.id),
       await answerFileData(pageWithoutImage.id, examStudent.id),
     ])
-
-    expect(result.success).toBe(true)
     expect(await prisma.studentAnswerImage.count()).toBe(2)
   })
 

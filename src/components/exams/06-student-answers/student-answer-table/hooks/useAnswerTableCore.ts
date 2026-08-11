@@ -113,25 +113,22 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
   const handleDeleteAnswerSheet = useCallback(
     async (fileId: string) => {
       try {
-        const result = await window.electronAPI.deleteStudentAnswer(fileId)
+        const { deletedSummary } =
+          await window.electronAPI.deleteStudentAnswer(fileId)
 
-        if (result.success) {
-          if (onReloadData) {
-            await onReloadData()
-          }
-          // 件数は出さない（未採点の初期化行を含む行数とモーダルの表示件数がずれるため）
-          toast.success(
-            result.deletedSummary?.hasScoreData
-              ? "答案画像と採点データを削除しました"
-              : "答案画像を削除しました"
-          )
-        } else {
-          console.error("答案削除エラー:", result.error)
-          toast.error(result.error || "答案削除に失敗しました")
+        if (onReloadData) {
+          await onReloadData()
         }
+        // 件数は出さない（未採点の初期化行を含む行数とモーダルの表示件数がずれるため）
+        toast.success(
+          deletedSummary.hasScoreData
+            ? "答案画像と採点データを削除しました"
+            : "答案画像を削除しました"
+        )
       } catch (error) {
-        console.error("答案削除例外:", error)
-        toast.error("答案削除に失敗しました")
+        toast.error("答案を削除できませんでした", {
+          description: error instanceof Error ? error.message : undefined,
+        })
       }
     },
     [onReloadData]

@@ -67,18 +67,17 @@ function DeleteConfirmationBody({
 
     const loadSummary = async () => {
       try {
-        const result =
+        const summary =
           await window.electronAPI.getStudentAnswerScoreSummary(fileId)
         if (!isCurrent) return
-        if (result.success) {
-          setSummary(result.summary)
-        } else {
-          setSummaryError(result.error ?? "採点データの確認に失敗しました")
-        }
+        setSummary(summary)
       } catch (error) {
         if (!isCurrent) return
-        console.error("採点データ照会エラー:", error)
-        setSummaryError("採点データの確認に失敗しました")
+        setSummaryError(
+          error instanceof Error
+            ? error.message
+            : "採点データの確認に失敗しました"
+        )
       } finally {
         if (isCurrent) setIsLoadingSummary(false)
       }

@@ -26,39 +26,25 @@ export interface StudentAnswerAPI {
   uploadStudentAnswers: (
     examId: string,
     filesData: UploadStudentAnswerFileData[]
-  ) => Promise<{
-    success: boolean
-    answerSheets?: Array<{
+  ) => Promise<
+    Array<{
       id: string
       imagePath: string
       isOverwrite: boolean
-      correctionStatus: "corrected" | "skipped" | "not_requested"
-      correctionError?: string
+      examStudentId: string | null
+      examPageId: string
     }>
-    error?: string
-  }>
-  getStudentAnswersByExamId: (examId: string) => Promise<{
-    success: boolean
-    studentAnswerImages?: StudentAnswerImageWithExamPageAndStudent[]
-    error?: string
-  }>
-  getStudentAnswersDataset: (
-    examId: string
-  ) => Promise<
-    | ({ success: true } & StudentAnswersDataset)
-    | { success: false; error?: string }
   >
+  getStudentAnswersByExamId: (
+    examId: string
+  ) => Promise<StudentAnswerImageWithExamPageAndStudent[]>
+  getStudentAnswersDataset: (examId: string) => Promise<StudentAnswersDataset>
   getStudentAnswerScoreSummary: (
     studentAnswerId: string
-  ) => Promise<
-    | { success: true; summary: StudentAnswerScoreSummary }
-    | { success: false; error?: string }
-  >
+  ) => Promise<StudentAnswerScoreSummary>
   deleteStudentAnswer: (studentAnswerId: string) => Promise<{
-    success: boolean
     /** 削除直前に数えた採点実績（削除確認モーダルと同じ定義） */
-    deletedSummary?: StudentAnswerScoreSummary
-    error?: string
+    deletedSummary: StudentAnswerScoreSummary
   }>
   applyStudentAnswerPlacements: (
     moves: Array<{
@@ -67,13 +53,7 @@ export interface StudentAnswerAPI {
       finalExamPageId: string
       scorePolicy: PlacementScorePolicy | "discard"
     }>
-  ) => Promise<{
-    success: boolean
-    error?: string
-  }>
-  getImageData: (relativePath: string) => Promise<{
-    success: boolean
-    data?: string
-    error?: string
-  }>
+  ) => Promise<void>
+  /** data: URI 形式で返る */
+  getImageData: (relativePath: string) => Promise<string>
 }

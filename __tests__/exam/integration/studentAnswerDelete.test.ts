@@ -155,10 +155,7 @@ describe("deleteStudentAnswer", () => {
       },
     })
 
-    const result = await deleteStudentAnswer(
-      image(page1.id, examStudentA.id).id
-    )
-    expect(result.success).toBe(true)
+    await deleteStudentAnswer(image(page1.id, examStudentA.id).id)
 
     // 画像本体
     expect(
@@ -225,10 +222,7 @@ describe("deleteStudentAnswer", () => {
       },
     })
 
-    const result = await deleteStudentAnswer(
-      image(page1.id, examStudentA.id).id
-    )
-    expect(result.success).toBe(true)
+    await deleteStudentAnswer(image(page1.id, examStudentA.id).id)
 
     // 削除の伝搬は sqlite-nas-sync の `_tombstone` が担うため、
     // アプリ側で削除記録を持つ必要はない（issue #918）
@@ -242,12 +236,11 @@ describe("deleteStudentAnswer", () => {
   it("削除直前の採点実績を返す（モーダルと同じ定義）", async () => {
     const { examStudentA, page1, image } = await buildSimpleExam()
 
-    const result = await deleteStudentAnswer(
+    const { deletedSummary } = await deleteStudentAnswer(
       image(page1.id, examStudentA.id).id
     )
-    expect(result.success).toBe(true)
-    expect(result.deletedSummary?.hasScoreData).toBe(true)
-    expect(result.deletedSummary?.scoredQuestionCount).toBe(1)
+    expect(deletedSummary.hasScoreData).toBe(true)
+    expect(deletedSummary.scoredQuestionCount).toBe(1)
   })
 
   it("未採点の答案では採点実績なしを返す（トーストの文言が変わる）", async () => {
@@ -258,11 +251,10 @@ describe("deleteStudentAnswer", () => {
       data: { status: "unscored", partialScore: null },
     })
 
-    const result = await deleteStudentAnswer(
+    const { deletedSummary } = await deleteStudentAnswer(
       image(page1.id, examStudentA.id).id
     )
-    expect(result.success).toBe(true)
-    expect(result.deletedSummary?.hasScoreData).toBe(false)
+    expect(deletedSummary.hasScoreData).toBe(false)
   })
 
   it("協調採点では全教員分の採点行が消える（自分の行だけ残さない）", async () => {
@@ -299,10 +291,7 @@ describe("deleteStudentAnswer", () => {
       })
     ).toBe(3)
 
-    const result = await deleteStudentAnswer(
-      image(page1.id, examStudentA.id).id
-    )
-    expect(result.success).toBe(true)
+    await deleteStudentAnswer(image(page1.id, examStudentA.id).id)
 
     // 教員を問わず全滅している（userId で絞っていないことの保証）
     expect(
@@ -329,9 +318,7 @@ describe("deleteStudentAnswer", () => {
     const scoreId = score(region1.id, examStudentA.id).id
 
     // 教員Aが答案を削除 → 教員Bが開いたままの採点を保存しようとする
-    expect(
-      (await deleteStudentAnswer(image(page1.id, examStudentA.id).id)).success
-    ).toBe(true)
+    await deleteStudentAnswer(image(page1.id, examStudentA.id).id)
 
     const result = await updateQuestionScore(scoreId, { status: "correct" })
     // 例外ではなく「対象が消えている」という結果が値で返る（協調採点で他教員が
@@ -339,11 +326,10 @@ describe("deleteStudentAnswer", () => {
     expect(result.status).toBe(SCORE_TARGET_DELETED)
   })
 
-  it("存在しない答案は失敗し、DB は変化しない", async () => {
+  it("存在しない答案は例外を投げ、DB は変化しない", async () => {
     const { region1, examStudentA } = await buildSimpleExam()
 
-    const result = await deleteStudentAnswer(crypto.randomUUID())
-    expect(result.success).toBe(false)
+    await expect(deleteStudentAnswer(crypto.randomUUID())).rejects.toThrow()
     expect(
       await testPrisma.questionScore.count({
         where: { cropRegionId: region1.id, examStudentId: examStudentA.id },
@@ -380,12 +366,10 @@ describe("getStudentAnswerScoreSummary", () => {
     const result = await getStudentAnswerScoreSummary(
       image(page1.id, examStudentA.id).id
     )
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    expect(result.summary.hasScoreData).toBe(true)
-    expect(result.summary.scoredQuestionCount).toBe(1)
-    expect(result.summary.drawingAnnotationCount).toBe(1)
-    expect(result.summary.scoreDecisionCount).toBe(0)
+    expect(result.hasScoreData).toBe(true)
+    expect(result.scoredQuestionCount).toBe(1)
+    expect(result.drawingAnnotationCount).toBe(1)
+    expect(result.scoreDecisionCount).toBe(0)
   })
 
   it("協調採点で1設問に複数教員の行があっても設問数で数える", async () => {
@@ -412,10 +396,8 @@ describe("getStudentAnswerScoreSummary", () => {
     const result = await getStudentAnswerScoreSummary(
       image(page1.id, examStudentA.id).id
     )
-    expect(result.success).toBe(true)
-    if (!result.success) return
     // 行数は2だが設問は1問
-    expect(result.summary.scoredQuestionCount).toBe(1)
+    expect(result.scoredQuestionCount).toBe(1)
   })
 
   it("部分点のみ入力された複合回答も採点済みとして数える", async () => {
@@ -452,10 +434,8 @@ describe("getStudentAnswerScoreSummary", () => {
     const result = await getStudentAnswerScoreSummary(
       image(page1.id, examStudentA.id).id
     )
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    expect(result.summary.scoredCompoundAnswerCount).toBe(1)
-    expect(result.summary.hasScoreData).toBe(true)
+    expect(result.scoredCompoundAnswerCount).toBe(1)
+    expect(result.hasScoreData).toBe(true)
   })
 
   it("unscored の初期化行だけなら hasScoreData=false", async () => {
@@ -470,10 +450,8 @@ describe("getStudentAnswerScoreSummary", () => {
     const result = await getStudentAnswerScoreSummary(
       image(page1.id, examStudentA.id).id
     )
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    expect(result.summary.hasScoreData).toBe(false)
-    expect(result.summary.scoredQuestionCount).toBe(0)
+    expect(result.hasScoreData).toBe(false)
+    expect(result.scoredQuestionCount).toBe(0)
   })
 
   it("未採点でも削除時は初期化行ごと消える", async () => {
@@ -484,10 +462,7 @@ describe("getStudentAnswerScoreSummary", () => {
       data: { status: "unscored", partialScore: null },
     })
 
-    const result = await deleteStudentAnswer(
-      image(page1.id, examStudentA.id).id
-    )
-    expect(result.success).toBe(true)
+    await deleteStudentAnswer(image(page1.id, examStudentA.id).id)
     expect(
       await testPrisma.questionScore.count({
         where: { cropRegionId: region1.id, examStudentId: examStudentA.id },

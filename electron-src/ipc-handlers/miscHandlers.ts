@@ -36,7 +36,7 @@ import {
   updateUserPasscode,
   verifyPasscode,
 } from "../lib/prisma/user"
-import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
+import { registerHandler } from "./ipcHandlerUtils"
 
 /** ユーザー・認証・答案・学級・模範画像・ファイル操作など汎用的なIPCチャンネルを登録する */
 export function setupMiscHandlers(): void {
@@ -111,39 +111,18 @@ export function setupMiscHandlers(): void {
     }
   )
 
-  registerSafeHandler(
-    "get-answer-sheets-by-exam-id",
-    async (examId: string) => {
-      const result = await getStudentAnswersByExamId(examId)
-      if (!result.success) {
-        return { success: false, error: result.error }
-      }
-      return {
-        success: true,
-        studentAnswerImages: result.studentAnswerImages ?? [],
-      }
-    }
+  registerHandler("get-answer-sheets-by-exam-id", (examId: string) =>
+    getStudentAnswersByExamId(examId)
   )
 
   // 06 生徒答案ページ専用の複合データセット（Exam 根の 1 include）
-  registerSafeHandler("get-student-answers-dataset", async (examId: string) => {
-    const result = await getStudentAnswersDataset(examId)
-    if (!result.success) {
-      return { success: false, error: result.error }
-    }
-    return {
-      success: true,
-      examStudents: result.examStudents,
-      examPages: result.examPages,
-    }
-  })
+  registerHandler("get-student-answers-dataset", (examId: string) =>
+    getStudentAnswersDataset(examId)
+  )
 
   // 削除確認モーダルで「何が消えるか」を提示するための事前照会
-  registerSafeHandler(
-    "get-answer-sheet-score-summary",
-    async (answerSheetId: string) => {
-      return await getStudentAnswerScoreSummary(answerSheetId)
-    }
+  registerHandler("get-answer-sheet-score-summary", (answerSheetId: string) =>
+    getStudentAnswerScoreSummary(answerSheetId)
   )
 
   registerHandler("delete-answer-sheet", async (answerSheetId: string) => {
@@ -153,12 +132,7 @@ export function setupMiscHandlers(): void {
   registerHandler(
     "apply-answer-sheet-placements",
     async (moves: StudentAnswerPlacementMove[]) => {
-      const result = await applyStudentAnswerPlacements(moves)
-      if (!result.success) {
-        const errorMessage = "error" in result ? result.error : "Unknown error"
-        throw new Error(errorMessage)
-      }
-      return result
+      await applyStudentAnswerPlacements(moves)
     }
   )
 
@@ -230,12 +204,8 @@ export function setupMiscHandlers(): void {
     }
   )
 
-  registerHandler(
-    "get-student-answer-images-by-exam-id",
-    async (examId: string) => {
-      const result = await getStudentAnswersByExamId(examId)
-      return result.success ? (result.studentAnswerImages ?? []) : []
-    }
+  registerHandler("get-student-answer-images-by-exam-id", (examId: string) =>
+    getStudentAnswersByExamId(examId)
   )
 
   registerHandler("get-master-images-by-exam-id", async (examId: string) => {
@@ -243,7 +213,7 @@ export function setupMiscHandlers(): void {
   })
 
   // 画像ファイル読み込みハンドラー
-  registerSafeHandler("get-image-data", async (relativePath: string) => {
+  registerHandler("get-image-data", async (relativePath: string) => {
     const absolutePath = getAbsolutePathFromData(relativePath)
     const imageBuffer = await fsPromises.readFile(absolutePath)
     const base64 = imageBuffer.toString("base64")
@@ -259,10 +229,7 @@ export function setupMiscHandlers(): void {
       mimeType = "image/webp"
     }
 
-    return {
-      success: true,
-      data: `data:${mimeType};base64,${base64}`,
-    }
+    return `data:${mimeType};base64,${base64}`
   })
 
   // ファイル存在確認ハンドラー

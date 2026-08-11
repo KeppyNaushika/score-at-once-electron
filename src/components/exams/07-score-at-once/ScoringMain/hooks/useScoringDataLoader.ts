@@ -39,13 +39,9 @@ export function useScoringDataLoader(
         setExam(examData)
 
         // 答案データの読み込み
-        const answersResult =
+        setStudentAnswerImages(
           await window.electronAPI.getStudentAnswersByExamId(examId)
-        if (!answersResult.success) {
-          throw new Error("答案データの読み込みに失敗しました")
-        }
-
-        setStudentAnswerImages(answersResult.studentAnswerImages ?? [])
+        )
 
         // 設問領域データの読み込み
         const regionsResult =

@@ -29,10 +29,7 @@ export async function resolveImageDataUris(
   await Promise.all(
     [...paths].map(async (imagePath) => {
       try {
-        const result = await api.getImageData(imagePath)
-        if (result.success && result.data) {
-          map.set(imagePath, result.data)
-        }
+        map.set(imagePath, await api.getImageData(imagePath))
       } catch {
         console.warn("Failed to resolve image data URI:", imagePath)
       }

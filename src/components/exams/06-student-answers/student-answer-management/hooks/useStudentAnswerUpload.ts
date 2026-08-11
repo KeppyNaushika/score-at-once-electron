@@ -279,27 +279,21 @@ export function useStudentAnswerUpload(
           }
         }
 
-        const result = await window.electronAPI.uploadStudentAnswers(
+        const uploaded = await window.electronAPI.uploadStudentAnswers(
           examId,
           uploadData
         )
 
-        if (result.success && result.answerSheets) {
-          const successCount = result.answerSheets.length
-
-          toast.success(`${successCount}件の答案をアップロードしました`)
-          setFiles([])
-          if (correctionMap.size > 0) {
-            onCorrectionStatusUpdate?.(correctionMap)
-          }
-          onUploadComplete?.()
-        } else {
-          console.error("Upload failed:", result.error)
-          toast.error(result.error || "アップロードに失敗しました")
+        toast.success(`${uploaded.length}件の答案をアップロードしました`)
+        setFiles([])
+        if (correctionMap.size > 0) {
+          onCorrectionStatusUpdate?.(correctionMap)
         }
+        onUploadComplete?.()
       } catch (error) {
-        console.error("Upload error:", error)
-        toast.error("アップロードに失敗しました")
+        toast.error("答案をアップロードできませんでした", {
+          description: error instanceof Error ? error.message : undefined,
+        })
       } finally {
         setIsUploading(false)
       }

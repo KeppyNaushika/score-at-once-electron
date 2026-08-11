@@ -33,16 +33,13 @@ export function useStudentAnswersData(examId: string) {
       }
 
       // Exam 根の複合 1 クエリ（examStudents + examPages(+answers)）をそのまま保持する。
-      const result = await window.electronAPI.getStudentAnswersDataset(examId)
-      if (result.success) {
-        setStudents(result.examStudents)
-        setExamPages(result.examPages)
-      } else {
-        toast.error(result.error || "データの読み込みに失敗しました")
-      }
+      const dataset = await window.electronAPI.getStudentAnswersDataset(examId)
+      setStudents(dataset.examStudents)
+      setExamPages(dataset.examPages)
     } catch (error) {
-      console.error("Error loading data:", error)
-      toast.error("データの読み込みに失敗しました")
+      toast.error("データを読み込めませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       hasLoadedRef.current = true
       setIsLoading(false)
@@ -163,12 +160,7 @@ export function usePendingChanges(
           }
         })
 
-        const result =
-          await window.electronAPI.applyStudentAnswerPlacements(moves)
-
-        if (!result || !result.success) {
-          throw new Error(result?.error || "配置変更の適用に失敗しました")
-        }
+        await window.electronAPI.applyStudentAnswerPlacements(moves)
 
         setPendingChanges([])
         setAffectedCells(new Set())

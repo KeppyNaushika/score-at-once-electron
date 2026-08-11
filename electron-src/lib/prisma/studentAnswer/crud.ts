@@ -91,222 +91,203 @@ export async function uploadStudentAnswers(
     correctWithMarkers?: boolean
   }[]
 ) {
-  try {
-    // 配置先 ExamPage が当該試験に属することを書き込み前に検証する。
-    // （id 直指定に切り替えたため、他教員のページ削除等で stale な examPageId が来ると
-    //  raw な FK エラーで途中まで書き込んだ部分適用になる。ここで早期に弾く。
-    //  applyStudentAnswerPlacements と同じく id 一次検証。）
-    const requestedExamPageIds = [
-      ...new Set(filesData.map((fileData) => fileData.examPageId)),
-    ]
-    const validExamPages = await prisma.examPage.findMany({
-      where: { examId, id: { in: requestedExamPageIds } },
+  // 配置先 ExamPage が当該試験に属することを書き込み前に検証する。
+  // （id 直指定に切り替えたため、他教員のページ削除等で stale な examPageId が来ると
+  //  raw な FK エラーで途中まで書き込んだ部分適用になる。ここで早期に弾く。
+  //  applyStudentAnswerPlacements と同じく id 一次検証。）
+  const requestedExamPageIds = [
+    ...new Set(filesData.map((fileData) => fileData.examPageId)),
+  ]
+  const validExamPages = await prisma.examPage.findMany({
+    where: { examId, id: { in: requestedExamPageIds } },
+  })
+  const validExamPageIds = new Set(validExamPages.map((page) => page.id))
+  const staleExamPageId = requestedExamPageIds.find(
+    (examPageId) => !validExamPageIds.has(examPageId)
+  )
+  if (staleExamPageId) {
+    throw new Error(
+      "配置先ページが見つかりません（他の教員がページを変更した可能性があります）。ページを再読み込みしてください。"
+    )
+  }
+
+  // 受験者も当該試験のものであること。ページと受験者は別々の FK なので、
+  // 片方だけ検証しても「試験Aのページに試験Bの受験者の答案」が書けてしまう。
+  const requestedExamStudentIds = [
+    ...new Set(
+      filesData
+        .map((fileData) => fileData.examStudentId)
+        .filter((examStudentId): examStudentId is string => !!examStudentId)
+    ),
+  ]
+  if (requestedExamStudentIds.length > 0) {
+    const validExamStudents = await prisma.examStudent.findMany({
+      where: { examId, id: { in: requestedExamStudentIds } },
     })
-    const validExamPageIds = new Set(validExamPages.map((page) => page.id))
-    const staleExamPageId = requestedExamPageIds.find(
-      (examPageId) => !validExamPageIds.has(examPageId)
-    )
-    if (staleExamPageId) {
-      return {
-        success: false,
-        error:
-          "配置先ページが見つかりません（他の教員がページを変更した可能性があります）。ページを再読み込みしてください。",
-      }
-    }
-
-    // 受験者も当該試験のものであること。ページと受験者は別々の FK なので、
-    // 片方だけ検証しても「試験Aのページに試験Bの受験者の答案」が書けてしまう。
-    const requestedExamStudentIds = [
-      ...new Set(
-        filesData
-          .map((fileData) => fileData.examStudentId)
-          .filter((examStudentId): examStudentId is string => !!examStudentId)
-      ),
-    ]
-    if (requestedExamStudentIds.length > 0) {
-      const validExamStudents = await prisma.examStudent.findMany({
-        where: { examId, id: { in: requestedExamStudentIds } },
-      })
-      if (validExamStudents.length !== requestedExamStudentIds.length) {
-        return {
-          success: false,
-          error:
-            "配置先の受験者が見つかりません（他の教員が受験生徒を変更した可能性があります）。再読み込みしてください。",
-        }
-      }
-    }
-
-    const examDir = getAnswerSheetsDirectory(examId)
-
-    // 試験ディレクトリを作成
-    await fsPromises.mkdir(examDir, { recursive: true })
-
-    const uploadedSheets: Array<{
-      id: string
-      imagePath: string
-      isOverwrite: boolean
-      correctionStatus: "corrected" | "skipped" | "not_requested"
-      correctionError?: string
-    }> = []
-
-    // 補正用のマスターマーカーキャッシュ（examPageId→マーカー情報）
-    const masterMarkerCache = new Map<string, MasterMarkerInfo | null>()
-
-    // ================================================================
-    // Phase 1: 画像補正を並列実行（CPU集中処理）
-    // ================================================================
-    // マスターマーカーキャッシュの初期化（全 ExamPage 分を事前取得）
-    const examPageIds = [
-      ...new Set(filesData.map((fileData) => fileData.examPageId)),
-    ]
-    await Promise.all(
-      examPageIds.map((examPageId) =>
-        getMasterMarkersForExamPage(examPageId, masterMarkerCache)
+    if (validExamStudents.length !== requestedExamStudentIds.length) {
+      throw new Error(
+        "配置先の受験者が見つかりません（他の教員が受験生徒を変更した可能性があります）。再読み込みしてください。"
       )
+    }
+  }
+
+  const examDir = getAnswerSheetsDirectory(examId)
+
+  // 試験ディレクトリを作成
+  await fsPromises.mkdir(examDir, { recursive: true })
+
+  const uploadedSheets: Array<{
+    id: string
+    imagePath: string
+    isOverwrite: boolean
+    correctionStatus: "corrected" | "skipped" | "not_requested"
+    correctionError?: string
+  }> = []
+
+  // 補正用のマスターマーカーキャッシュ（examPageId→マーカー情報）
+  const masterMarkerCache = new Map<string, MasterMarkerInfo | null>()
+
+  // ================================================================
+  // Phase 1: 画像補正を並列実行（CPU集中処理）
+  // ================================================================
+  // マスターマーカーキャッシュの初期化（全 ExamPage 分を事前取得）
+  const examPageIds = [
+    ...new Set(filesData.map((fileData) => fileData.examPageId)),
+  ]
+  await Promise.all(
+    examPageIds.map((examPageId) =>
+      getMasterMarkersForExamPage(examPageId, masterMarkerCache)
     )
+  )
 
-    // 各ファイルの補正を並列実行
-    const correctedFiles = await Promise.all(
-      filesData.map(async (fileData) => {
-        let buffer = Buffer.from(fileData.buffer)
-        let correctionStatus: "corrected" | "skipped" | "not_requested" =
-          "not_requested"
-        let correctionError: string | undefined
+  // 各ファイルの補正を並列実行
+  const correctedFiles = await Promise.all(
+    filesData.map(async (fileData) => {
+      let buffer = Buffer.from(fileData.buffer)
+      let correctionStatus: "corrected" | "skipped" | "not_requested" =
+        "not_requested"
+      let correctionError: string | undefined
 
-        if (fileData.correctWithMarkers) {
-          const masterInfo = masterMarkerCache.get(fileData.examPageId)
+      if (fileData.correctWithMarkers) {
+        const masterInfo = masterMarkerCache.get(fileData.examPageId)
 
-          if (masterInfo) {
-            const result = await correctImage(
-              buffer,
-              masterInfo.markers,
-              masterInfo.width,
-              masterInfo.height
-            )
+        if (masterInfo) {
+          const result = await correctImage(
+            buffer,
+            masterInfo.markers,
+            masterInfo.width,
+            masterInfo.height
+          )
 
-            if (result.success && result.correctedBuffer) {
-              buffer = Buffer.from(result.correctedBuffer)
-              correctionStatus = "corrected"
-            } else {
-              correctionStatus = "skipped"
-              correctionError = result.error
-              console.warn(
-                `画像補正スキップ (${fileData.name}): ${result.error}`
-              )
-            }
+          if (result.success && result.correctedBuffer) {
+            buffer = Buffer.from(result.correctedBuffer)
+            correctionStatus = "corrected"
           } else {
             correctionStatus = "skipped"
-            correctionError = "マスター画像のマーカーが検出できませんでした"
+            correctionError = result.error
+            console.warn(`画像補正スキップ (${fileData.name}): ${result.error}`)
           }
+        } else {
+          correctionStatus = "skipped"
+          correctionError = "マスター画像のマーカーが検出できませんでした"
         }
-
-        return { fileData, buffer, correctionStatus, correctionError }
-      })
-    )
-
-    // ================================================================
-    // Phase 2: DB書き込み + ファイル保存（順次実行、SQLite制約）
-    // ================================================================
-    for (const {
-      fileData,
-      buffer,
-      correctionStatus,
-      correctionError,
-    } of correctedFiles) {
-      if (!fileData.examStudentId) {
-        throw new Error(`ExamStudent ID is required for file: ${fileData.name}`)
       }
 
-      // 配置先 ExamPage は id 直指定（列＝ExamPage 実体から供給される）。
-      // pageNumber からの find/create はしない（id 一次同定）。
-      const existingRecord = await prisma.studentAnswerImage.findFirst({
-        where: {
-          examPageId: fileData.examPageId,
-          examStudentId: fileData.examStudentId,
-        },
-      })
+      return { fileData, buffer, correctionStatus, correctionError }
+    })
+  )
 
-      const timestamp = Date.now()
-      const sanitizedName = fileData.name.replace(/[^a-zA-Z0-9\-_.]/g, "_")
-      const fileName = `${timestamp}_${sanitizedName}`
-      const filePath = path.join(examDir, fileName)
-      const relativePath = getRelativePathFromData(filePath)
+  // ================================================================
+  // Phase 2: DB書き込み + ファイル保存（順次実行、SQLite制約）
+  // ================================================================
+  for (const {
+    fileData,
+    buffer,
+    correctionStatus,
+    correctionError,
+  } of correctedFiles) {
+    if (!fileData.examStudentId) {
+      throw new Error(`ExamStudent ID is required for file: ${fileData.name}`)
+    }
 
-      if (existingRecord) {
-        if (fileData.overwrite) {
-          await fsPromises.writeFile(filePath, buffer)
+    // 配置先 ExamPage は id 直指定（列＝ExamPage 実体から供給される）。
+    // pageNumber からの find/create はしない（id 一次同定）。
+    const existingRecord = await prisma.studentAnswerImage.findFirst({
+      where: {
+        examPageId: fileData.examPageId,
+        examStudentId: fileData.examStudentId,
+      },
+    })
 
-          try {
-            const oldFilePath = getAbsolutePathFromData(
-              existingRecord.imagePath
-            )
-            await fsPromises.unlink(oldFilePath)
-          } catch {
-            // ファイルが存在しない場合は無視
-          }
+    const timestamp = Date.now()
+    const sanitizedName = fileData.name.replace(/[^a-zA-Z0-9\-_.]/g, "_")
+    const fileName = `${timestamp}_${sanitizedName}`
+    const filePath = path.join(examDir, fileName)
+    const relativePath = getRelativePathFromData(filePath)
 
-          const answerSheet = await prisma.studentAnswerImage.update({
-            where: { id: existingRecord.id },
-            data: { imagePath: relativePath },
-          })
-
-          uploadedSheets.push({
-            ...answerSheet,
-            isOverwrite: true,
-            correctionStatus,
-            correctionError,
-          })
-        } else {
-          uploadedSheets.push({
-            ...existingRecord,
-            isOverwrite: false,
-            correctionStatus: "not_requested",
-          })
-        }
-      } else {
+    if (existingRecord) {
+      if (fileData.overwrite) {
         await fsPromises.writeFile(filePath, buffer)
 
-        const answerSheet = await prisma.studentAnswerImage.create({
-          data: {
-            examPageId: fileData.examPageId,
-            examStudentId: fileData.examStudentId,
-            imagePath: relativePath,
-          },
+        try {
+          const oldFilePath = getAbsolutePathFromData(existingRecord.imagePath)
+          await fsPromises.unlink(oldFilePath)
+        } catch {
+          // ファイルが存在しない場合は無視
+        }
+
+        const answerSheet = await prisma.studentAnswerImage.update({
+          where: { id: existingRecord.id },
+          data: { imagePath: relativePath },
         })
 
         uploadedSheets.push({
           ...answerSheet,
-          isOverwrite: false,
+          isOverwrite: true,
           correctionStatus,
           correctionError,
         })
+      } else {
+        uploadedSheets.push({
+          ...existingRecord,
+          isOverwrite: false,
+          correctionStatus: "not_requested",
+        })
       }
-    }
+    } else {
+      await fsPromises.writeFile(filePath, buffer)
 
-    if (uploadedSheets.length > 0) {
-      const scope = await resolveExamScope(examId)
-      await recordAuditLog({
-        action: "exam.answer.upload",
-        entityType: "StudentAnswerImage",
-        entityId: examId,
-        scopeId: scope.scopeId,
-        scopeLabel: scope.scopeLabel,
-        summary: `生徒答案を${uploadedSheets.length}件アップロードしました`,
-        extra: { count: uploadedSheets.length },
+      const answerSheet = await prisma.studentAnswerImage.create({
+        data: {
+          examPageId: fileData.examPageId,
+          examStudentId: fileData.examStudentId,
+          imagePath: relativePath,
+        },
+      })
+
+      uploadedSheets.push({
+        ...answerSheet,
+        isOverwrite: false,
+        correctionStatus,
+        correctionError,
       })
     }
-
-    return { success: true, answerSheets: uploadedSheets }
-  } catch (error) {
-    console.error("Error uploading answer sheets:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "答案のアップロードに失敗しました",
-    }
   }
+
+  if (uploadedSheets.length > 0) {
+    const scope = await resolveExamScope(examId)
+    await recordAuditLog({
+      action: "exam.answer.upload",
+      entityType: "StudentAnswerImage",
+      entityId: examId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      summary: `生徒答案を${uploadedSheets.length}件アップロードしました`,
+      extra: { count: uploadedSheets.length },
+    })
+  }
+
+  return uploadedSheets
 }
 
 /**
@@ -314,44 +295,35 @@ export async function uploadStudentAnswers(
  * Prismaの型をそのまま返す（StudentAnswerImageWithExamStudents互換）
  */
 export async function getStudentAnswersByExamId(examId: string) {
-  try {
-    const studentAnswerImages = await prisma.studentAnswerImage.findMany({
-      where: {
-        examPage: {
-          examId: examId,
-        },
+  const studentAnswerImages = await prisma.studentAnswerImage.findMany({
+    where: {
+      examPage: {
+        examId: examId,
       },
-      include: {
-        examStudent: { include: { student: true } },
-        examPage: true,
-      },
-      orderBy: [
-        { examStudentId: "asc" },
-        { examPage: { pageNumber: "asc" } },
-        { id: "asc" },
-      ],
-    })
+    },
+    include: {
+      examStudent: { include: { student: true } },
+      examPage: true,
+    },
+    orderBy: [
+      { examStudentId: "asc" },
+      { examPage: { pageNumber: "asc" } },
+      { id: "asc" },
+    ],
+  })
 
-    // 重複除去フォールバック（@@unique制約適用前のデータ対策）
-    const seen = new Map<string, (typeof studentAnswerImages)[0]>()
-    for (const studentAnswerImage of studentAnswerImages) {
-      const key = `${studentAnswerImage.examStudentId}-${studentAnswerImage.examPageId}`
-      const existing = seen.get(key)
-      if (!existing || studentAnswerImage.updatedAt > existing.updatedAt) {
-        seen.set(key, studentAnswerImage)
-      }
-    }
-    const deduplicated = Array.from(seen.values())
-
-    return { success: true, studentAnswerImages: deduplicated }
-  } catch (error) {
-    console.error("Error fetching student answer images:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "答案の取得に失敗しました",
+  // 重複除去フォールバック（@@unique制約適用前のデータ対策）
+  const seen = new Map<string, (typeof studentAnswerImages)[0]>()
+  for (const studentAnswerImage of studentAnswerImages) {
+    const key = `${studentAnswerImage.examStudentId}-${studentAnswerImage.examPageId}`
+    const existing = seen.get(key)
+    if (!existing || studentAnswerImage.updatedAt > existing.updatedAt) {
+      seen.set(key, studentAnswerImage)
     }
   }
+  const deduplicated = Array.from(seen.values())
+
+  return deduplicated
 }
 
 /**
@@ -364,83 +336,71 @@ export async function getStudentAnswersByExamId(examId: string) {
  * 05/07/08 が共有する getStudentsForExam / getStudentAnswersByExamId は変更しない。
  */
 export async function getStudentAnswersDataset(examId: string) {
-  try {
-    const exam = await prisma.exam.findUnique({
-      where: { id: examId },
-      include: {
-        examStudents: {
-          orderBy: [
-            { customOrder: "asc" },
-            { student: { studentNumber: "asc" } },
-          ],
-          include: {
-            student: {
-              include: {
-                memberships: { include: { classroom: true } },
-              },
-            },
-          },
-        },
-        examPages: {
-          // id をタイブレークに入れて並びを決定的にする。
-          //
-          // pageNumber は表示上の序数であって一意ではない。sync 構成では各端末が
-          // 自分のローカル DB へ書き、NAS への反映は行レベルマージ（LWW）なので、
-          // 2台が同時にページを追加すると同じ番号の行が別 id で並ぶ。これは
-          // `@@unique([examId, pageNumber])` では防げない（各端末では制約が満たされ、
-          // 衝突はマージ時に現れる。id 以外の unique は同期違反）。
-          //
-          // 同定は全経路で id なので重複自体は害にならないが、06 の自動配置だけは
-          // この配列の**順序**でファイルを割り当てる（useTableDataGeneration.ts）。
-          // 同値の順序が保証されないと、同じ操作でも答案の配置先が変わってしまう。
-          orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
-          include: {
-            studentAnswerImages: {
-              include: { examStudent: { include: { student: true } } },
+  const exam = await prisma.exam.findUnique({
+    where: { id: examId },
+    include: {
+      examStudents: {
+        orderBy: [
+          { customOrder: "asc" },
+          { student: { studentNumber: "asc" } },
+        ],
+        include: {
+          student: {
+            include: {
+              memberships: { include: { classroom: true } },
             },
           },
         },
       },
-    })
+      examPages: {
+        // id をタイブレークに入れて並びを決定的にする。
+        //
+        // pageNumber は表示上の序数であって一意ではない。sync 構成では各端末が
+        // 自分のローカル DB へ書き、NAS への反映は行レベルマージ（LWW）なので、
+        // 2台が同時にページを追加すると同じ番号の行が別 id で並ぶ。これは
+        // `@@unique([examId, pageNumber])` では防げない（各端末では制約が満たされ、
+        // 衝突はマージ時に現れる。id 以外の unique は同期違反）。
+        //
+        // 同定は全経路で id なので重複自体は害にならないが、06 の自動配置だけは
+        // この配列の**順序**でファイルを割り当てる（useTableDataGeneration.ts）。
+        // 同値の順序が保証されないと、同じ操作でも答案の配置先が変わってしまう。
+        orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
+        include: {
+          studentAnswerImages: {
+            include: { examStudent: { include: { student: true } } },
+          },
+        },
+      },
+    },
+  })
 
-    if (!exam) {
-      return { success: false as const, error: "試験が見つかりません" }
-    }
+  if (!exam) {
+    throw new Error("試験が見つかりません")
+  }
 
-    // 重複除去フォールバック（@@unique 適用前データ・NAS sync 由来の重複対策）。
-    // getStudentAnswersByExamId と同じ (examStudentId, examPageId) 単位で updatedAt 最新のみ残す。
-    // 05/07/08（getStudentAnswersByExamId 経由）と 06 で表示が食い違わないようにする。
-    const examPages = exam.examPages.map((examPage) => {
-      const latestByExamStudentId = new Map<
-        string,
-        (typeof examPage.studentAnswerImages)[number]
-      >()
-      for (const answerImage of examPage.studentAnswerImages) {
-        const existing = latestByExamStudentId.get(answerImage.examStudentId)
-        if (!existing || answerImage.updatedAt > existing.updatedAt) {
-          latestByExamStudentId.set(answerImage.examStudentId, answerImage)
-        }
+  // 重複除去フォールバック（@@unique 適用前データ・NAS sync 由来の重複対策）。
+  // getStudentAnswersByExamId と同じ (examStudentId, examPageId) 単位で updatedAt 最新のみ残す。
+  // 05/07/08（getStudentAnswersByExamId 経由）と 06 で表示が食い違わないようにする。
+  const examPages = exam.examPages.map((examPage) => {
+    const latestByExamStudentId = new Map<
+      string,
+      (typeof examPage.studentAnswerImages)[number]
+    >()
+    for (const answerImage of examPage.studentAnswerImages) {
+      const existing = latestByExamStudentId.get(answerImage.examStudentId)
+      if (!existing || answerImage.updatedAt > existing.updatedAt) {
+        latestByExamStudentId.set(answerImage.examStudentId, answerImage)
       }
-      return {
-        ...examPage,
-        studentAnswerImages: Array.from(latestByExamStudentId.values()),
-      }
-    })
+    }
+    return {
+      ...examPage,
+      studentAnswerImages: Array.from(latestByExamStudentId.values()),
+    }
+  })
 
-    return {
-      success: true as const,
-      examStudents: exam.examStudents,
-      examPages,
-    }
-  } catch (error) {
-    console.error("Error fetching student answers dataset:", error)
-    return {
-      success: false as const,
-      error:
-        error instanceof Error
-          ? error.message
-          : "答案データセットの取得に失敗しました",
-    }
+  return {
+    examStudents: exam.examStudents,
+    examPages,
   }
 }
 
@@ -553,33 +513,22 @@ async function countStudentAnswerScoreData(
  * 答案1枚に紐づく採点データの件数を取得する（削除確認モーダルの事前照会）。
  */
 export async function getStudentAnswerScoreSummary(answerSheetId: string) {
-  try {
-    const answerSheet = await prisma.studentAnswerImage.findUnique({
-      where: { id: answerSheetId },
-    })
+  const answerSheet = await prisma.studentAnswerImage.findUnique({
+    where: { id: answerSheetId },
+  })
 
-    if (!answerSheet) {
-      throw new Error("答案が見つかりません")
-    }
-
-    const scope = await getPageScoreScope(prisma, answerSheet.examPageId)
-    const summary = await countStudentAnswerScoreData(
-      prisma,
-      scope,
-      answerSheet.examStudentId
-    )
-
-    return { success: true as const, summary }
-  } catch (error) {
-    console.error("Error loading answer sheet score summary:", error)
-    return {
-      success: false as const,
-      error:
-        error instanceof Error
-          ? error.message
-          : "採点データの確認に失敗しました",
-    }
+  if (!answerSheet) {
+    throw new Error("答案が見つかりません")
   }
+
+  const scope = await getPageScoreScope(prisma, answerSheet.examPageId)
+  const summary = await countStudentAnswerScoreData(
+    prisma,
+    scope,
+    answerSheet.examStudentId
+  )
+
+  return summary
 }
 
 /**
@@ -594,112 +543,103 @@ export async function getStudentAnswerScoreSummary(answerSheetId: string) {
  * 失われて復旧できない（孤立ファイルが残る方が害が小さい）。
  */
 export async function deleteStudentAnswer(answerSheetId: string) {
-  try {
-    const answerSheet = await prisma.studentAnswerImage.findUnique({
-      where: { id: answerSheetId },
-    })
+  const answerSheet = await prisma.studentAnswerImage.findUnique({
+    where: { id: answerSheetId },
+  })
 
-    if (!answerSheet) {
-      throw new Error("答案が見つかりません")
-    }
+  if (!answerSheet) {
+    throw new Error("答案が見つかりません")
+  }
 
-    const { summary, removedRows } = await prisma.$transaction(
-      async (tx) => {
-        const scope = await getPageScoreScope(tx, answerSheet.examPageId)
-        const { examStudentId } = answerSheet
-        const { cropRegionIds, compoundAnswerIds } = scope
+  const { summary, removedRows } = await prisma.$transaction(
+    async (tx) => {
+      const scope = await getPageScoreScope(tx, answerSheet.examPageId)
+      const { examStudentId } = answerSheet
+      const { cropRegionIds, compoundAnswerIds } = scope
 
-        // 削除前に「利用者から見た採点実績」を数えておく（モーダルの表示と同じ定義）。
-        // 削除自体は unscored の初期化行も含めて全て消すので、行数とは一致しない。
-        const scoreSummary = await countStudentAnswerScoreData(
-          tx,
-          scope,
-          examStudentId
+      // 削除前に「利用者から見た採点実績」を数えておく（モーダルの表示と同じ定義）。
+      // 削除自体は unscored の初期化行も含めて全て消すので、行数とは一致しない。
+      const scoreSummary = await countStudentAnswerScoreData(
+        tx,
+        scope,
+        examStudentId
+      )
+
+      let questionScoreRows = 0
+      let drawingAnnotationRows = 0
+      let scoreDecisionRows = 0
+      let compoundAnswerScoreRows = 0
+
+      if (cropRegionIds.length > 0) {
+        // QuestionScore を削除（子の DrawingAnnotation は cascade で道連れ）
+        const questionScores = await tx.questionScore.findMany({
+          where: { examStudentId, cropRegionId: { in: cropRegionIds } },
+        })
+        const questionScoreIds = questionScores.map(
+          (questionScore) => questionScore.id
         )
 
-        let questionScoreRows = 0
-        let drawingAnnotationRows = 0
-        let scoreDecisionRows = 0
-        let compoundAnswerScoreRows = 0
-
-        if (cropRegionIds.length > 0) {
-          // QuestionScore を削除（子の DrawingAnnotation は cascade で道連れ）
-          const questionScores = await tx.questionScore.findMany({
-            where: { examStudentId, cropRegionId: { in: cropRegionIds } },
+        if (questionScoreIds.length > 0) {
+          drawingAnnotationRows = await tx.drawingAnnotation.count({
+            where: { questionScoreId: { in: questionScoreIds } },
           })
-          const questionScoreIds = questionScores.map(
-            (questionScore) => questionScore.id
-          )
-
-          if (questionScoreIds.length > 0) {
-            drawingAnnotationRows = await tx.drawingAnnotation.count({
-              where: { questionScoreId: { in: questionScoreIds } },
-            })
-            const removed = await tx.questionScore.deleteMany({
-              where: { id: { in: questionScoreIds } },
-            })
-            questionScoreRows = removed.count
-          }
-
-          const removedDecisions = await tx.scoreDecision.deleteMany({
-            where: { examStudentId, cropRegionId: { in: cropRegionIds } },
+          const removed = await tx.questionScore.deleteMany({
+            where: { id: { in: questionScoreIds } },
           })
-          scoreDecisionRows = removedDecisions.count
+          questionScoreRows = removed.count
         }
 
-        if (compoundAnswerIds.length > 0) {
-          const removedCompound = await tx.compoundAnswerScore.deleteMany({
-            where: {
-              examStudentId,
-              compoundAnswerId: { in: compoundAnswerIds },
-            },
-          })
-          compoundAnswerScoreRows = removedCompound.count
-        }
+        const removedDecisions = await tx.scoreDecision.deleteMany({
+          where: { examStudentId, cropRegionId: { in: cropRegionIds } },
+        })
+        scoreDecisionRows = removedDecisions.count
+      }
 
-        await tx.studentAnswerImage.delete({ where: { id: answerSheetId } })
-
-        return {
-          summary: scoreSummary,
-          removedRows: {
-            questionScoreRows,
-            scoreDecisionRows,
-            drawingAnnotationRows,
-            compoundAnswerScoreRows,
+      if (compoundAnswerIds.length > 0) {
+        const removedCompound = await tx.compoundAnswerScore.deleteMany({
+          where: {
+            examStudentId,
+            compoundAnswerId: { in: compoundAnswerIds },
           },
-        }
-      },
-      // 採点済み答案では削除対象の行数が多く、既定の 5s を超えうる
-      // （超えると P2028 で削除ごとロールバックする）。
-      { timeout: 30000 }
-    )
+        })
+        compoundAnswerScoreRows = removedCompound.count
+      }
 
-    // ファイル削除は DB コミット後。失敗しても孤立ファイルが残るだけなので警告に留める
-    // （パス解決の失敗も含めて握る。ここで例外を投げると削除済みの DB と矛盾する）。
-    try {
-      await fsPromises.unlink(getAbsolutePathFromData(answerSheet.imagePath))
-    } catch (fileError) {
-      console.warn("Failed to delete file:", fileError)
-    }
+      await tx.studentAnswerImage.delete({ where: { id: answerSheetId } })
 
-    const auditScope = await resolveExamScopeByPage(answerSheet.examPageId)
-    await recordAuditLog({
-      action: "exam.answer.delete",
-      entityType: "StudentAnswerImage",
-      entityId: answerSheetId,
-      scopeId: auditScope.scopeId,
-      scopeLabel: auditScope.scopeLabel,
-      // 監査ログには実際に消えた行数を残す（未採点の初期化行を含む実データの記録）
-      summary: `答案画像を削除（QuestionScore ${removedRows.questionScoreRows} 行 / ScoreDecision ${removedRows.scoreDecisionRows} 行 / DrawingAnnotation ${removedRows.drawingAnnotationRows} 行 / CompoundAnswerScore ${removedRows.compoundAnswerScoreRows} 行を同時削除）`,
-    })
+      return {
+        summary: scoreSummary,
+        removedRows: {
+          questionScoreRows,
+          scoreDecisionRows,
+          drawingAnnotationRows,
+          compoundAnswerScoreRows,
+        },
+      }
+    },
+    // 採点済み答案では削除対象の行数が多く、既定の 5s を超えうる
+    // （超えると P2028 で削除ごとロールバックする）。
+    { timeout: 30000 }
+  )
 
-    return { success: true, deletedSummary: summary }
-  } catch (error) {
-    console.error("Error deleting answer sheet:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "答案の削除に失敗しました",
-    }
+  // ファイル削除は DB コミット後。失敗しても孤立ファイルが残るだけなので警告に留める
+  // （パス解決の失敗も含めて握る。ここで例外を投げると削除済みの DB と矛盾する）。
+  try {
+    await fsPromises.unlink(getAbsolutePathFromData(answerSheet.imagePath))
+  } catch (fileError) {
+    console.warn("Failed to delete file:", fileError)
   }
+
+  const auditScope = await resolveExamScopeByPage(answerSheet.examPageId)
+  await recordAuditLog({
+    action: "exam.answer.delete",
+    entityType: "StudentAnswerImage",
+    entityId: answerSheetId,
+    scopeId: auditScope.scopeId,
+    scopeLabel: auditScope.scopeLabel,
+    // 監査ログには実際に消えた行数を残す（未採点の初期化行を含むデータの記録）
+    summary: `答案画像を削除（QuestionScore ${removedRows.questionScoreRows} 行 / ScoreDecision ${removedRows.scoreDecisionRows} 行 / DrawingAnnotation ${removedRows.drawingAnnotationRows} 行 / CompoundAnswerScore ${removedRows.compoundAnswerScoreRows} 行を同時削除）`,
+  })
+
+  return { deletedSummary: summary }
 }

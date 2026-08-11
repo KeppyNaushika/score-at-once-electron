@@ -79,8 +79,6 @@ describe("答案画像の供給形", () => {
     })
 
     const result = await getStudentAnswersDataset(fixture.exam.id)
-
-    expect(result.success).toBe(true)
     const columnImages = result.examPages!.flatMap(
       (examPage) => examPage.studentAnswerImages
     )
