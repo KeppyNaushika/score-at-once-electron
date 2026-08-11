@@ -1,8 +1,9 @@
 "use client"
 
-import { ColumnDef } from "@tanstack/react-table"
-
-import { EditableTable } from "@/components/common/EditableTable"
+import {
+  type EditableColumnDef,
+  EditableTable,
+} from "@/components/common/EditableTable"
 
 interface StudentImportRow {
   studentNumber: string
@@ -23,7 +24,7 @@ export default function StudentImportTable({
   data,
   onDataChange,
 }: StudentImportTableProps) {
-  const columns: ColumnDef<StudentImportRow>[] = [
+  const columns: EditableColumnDef<StudentImportRow>[] = [
     {
       id: "studentNumber",
       header: "学籍番号",
