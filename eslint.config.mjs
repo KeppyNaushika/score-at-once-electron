@@ -128,22 +128,24 @@ export default [
       // C群へ入れるのは所有者の明示的な判断のみ。「難しい場合は例外」という
       // 判断基準は書かず、上のようにファイルを名指しして理由を残す。
       "react-hooks/set-state-in-effect": "warn", // 43件（A群42 + C群1）
-      // 現時点で違反ゼロ（将来の混入を防ぐ保険）
-      "react-hooks/error-boundaries": "warn",
-      "react-hooks/globals": "warn",
-      "react-hooks/purity": "warn",
-      "react-hooks/use-memo": "warn",
-      "react-hooks/config": "warn",
-      "react-hooks/gating": "warn",
-      "react-hooks/incompatible-library": "warn",
-      "react-hooks/unsupported-syntax": "warn",
+      // 違反ゼロにしたので error（再混入を止める）
+      "react-hooks/error-boundaries": "error",
+      "react-hooks/globals": "error",
+      "react-hooks/purity": "error",
+      "react-hooks/use-memo": "error",
+      "react-hooks/config": "error",
+      "react-hooks/gating": "error",
+      "react-hooks/incompatible-library": "error",
+      "react-hooks/unsupported-syntax": "error",
       // React Compiler 未導入のため実害なし。導入を決めたら有効化する
       // "react-hooks/preserve-manual-memoization": "warn",  // 3件
 
       // TypeScript
       "no-unused-vars": "off",
+      // 違反ゼロにしたので error。warn だと check-all が通ってしまい、
+      // 消し忘れた import が残ったままコミットまで到達する
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         {
           argsIgnorePattern: "^_",
           varsIgnorePattern: "^_",
@@ -155,10 +157,10 @@ export default [
 
       // Next.js
       // プラグインを登録するだけではルールは有効にならないため個別に指定する。
-      // core-web-vitals を丸ごと入れると no-img-element が9件出るが、答案画像は
-      // Canvas 描画のため ref から生の HTMLImageElement が必要で next/image に
-      // 置き換えられない。Electron アプリで LCP 最適化の対象でもないので入れない。
       "@next/next/no-html-link-for-pages": "off",
+      // 画像は next/image を使う。生の <img> が要るのは canvas 描画のために
+      // HTMLImageElement を ref で掴む場合だけで、そのファイルは下で名指しする。
+      "@next/next/no-img-element": "error",
       "@next/next/no-assign-module-variable": "error",
       "@next/next/no-sync-scripts": "error",
       "@next/next/no-document-import-in-page": "error",
@@ -217,6 +219,19 @@ export default [
             '同期版の `fs` と区別がつかないため、`import * as fsPromises from "fs/promises"` としてください。',
         },
       ],
+    },
+  },
+  {
+    // canvas 描画のために生の HTMLImageElement を ref で掴む必要があるファイル。
+    // data 配下の画像を DB のパス（appimg:///）で読み、canvas へ描き込む経路に限る。
+    // 表示するだけの画像は next/image を使うこと（ここへ足さない）。
+    // 例外は判断基準ではなく対象の名指しで管理する。増やすときはこの files に足す。
+    files: [
+      "src/components/exams/07-score-at-once/ScoringIndividual/AnswerIndividualView.tsx",
+      "src/components/exams/07-score-at-once/ScoringMain/CroppedAnswerImage.tsx",
+    ],
+    rules: {
+      "@next/next/no-img-element": "off",
     },
   },
   {

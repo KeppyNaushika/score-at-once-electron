@@ -1,6 +1,7 @@
 "use client"
 
 import { ImagePlus, Trash2 } from "lucide-react"
+import Image from "next/image"
 import { useCallback } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -128,9 +129,12 @@ export function ImageElementEditor({
         <div key={element.id} className="space-y-1.5 rounded border p-1.5">
           {/* Row 1: サムネイル + ファイル名 + 削除 */}
           <div className="flex items-center gap-1.5">
-            <img
+            <Image
               src={`appimg:///${element.imagePath}`}
               alt={element.originalName}
+              width={32}
+              height={32}
+              unoptimized
               className="h-8 w-8 shrink-0 rounded border object-contain"
             />
             <span className="min-w-0 flex-1 truncate text-xs">

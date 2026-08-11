@@ -159,7 +159,7 @@ export default function ExportMainView() {
 
   // 採点済み答案プレビュー
   const {
-    previewImageUrls: scoredAnswerPreviewUrls,
+    previewPages: scoredAnswerPreviewPages,
     isLoading: isScoredAnswerPreviewLoading,
     error: scoredAnswerPreviewError,
   } = useScoredAnswerPreview({
@@ -418,7 +418,7 @@ export default function ExportMainView() {
               previewStudentList={previewStudentList}
               individualReportOptions={individualReportOptions}
               // 採点済み答案プレビュー
-              scoredAnswerPreviewUrls={scoredAnswerPreviewUrls}
+              scoredAnswerPreviewPages={scoredAnswerPreviewPages}
               isScoredAnswerPreviewLoading={isScoredAnswerPreviewLoading}
               scoredAnswerPreviewError={scoredAnswerPreviewError}
               // Excelプレビュー

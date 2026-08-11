@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
@@ -411,7 +412,7 @@ export default function AnswerIndividualView({
         urls.map(
           (url) =>
             new Promise<HTMLImageElement>((resolve, reject) => {
-              const image = new Image()
+              const image = document.createElement("img")
               image.onload = () => resolve(image)
               image.onerror = reject
               image.src = url
@@ -631,10 +632,16 @@ export default function AnswerIndividualView({
                 : masterImage.naturalHeight
 
               return (
-                <img
+                <Image
                   key={`master-overlay-${pageIndex}`}
                   src={masterImage.src}
                   alt={`模範解答 ページ${pageIndex + 1}`}
+                  width={pageWidth}
+                  height={pageHeight}
+                  unoptimized
+                  // appimg:// は next/image の既定で lazy になる。重ね表示は
+                  // ズーム・スクロールされる領域にあり、素の <img> は eager だった
+                  loading="eager"
                   className="pointer-events-none absolute left-0 block"
                   style={{
                     top: `${pageOffsetY * zoom}px`,

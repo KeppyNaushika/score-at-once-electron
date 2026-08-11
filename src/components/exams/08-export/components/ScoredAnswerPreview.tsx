@@ -1,13 +1,17 @@
 "use client"
 
+import Image from "next/image"
+
+import type { ScoredAnswerPreviewPage } from "../types"
+
 interface ScoredAnswerPreviewProps {
-  imageUrls: string[]
+  pages: ScoredAnswerPreviewPage[]
   isLoading: boolean
   error: string | null
 }
 
 export function ScoredAnswerPreview({
-  imageUrls,
+  pages,
   isLoading,
   error,
 }: ScoredAnswerPreviewProps) {
@@ -27,7 +31,7 @@ export function ScoredAnswerPreview({
     )
   }
 
-  if (imageUrls.length === 0) {
+  if (pages.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center">
         <p className="text-sm text-muted-foreground">
@@ -39,13 +43,16 @@ export function ScoredAnswerPreview({
 
   return (
     <div className="flex flex-col items-center gap-2">
-      {imageUrls.map((url, index) => (
-        <img
+      {pages.map((page, index) => (
+        <Image
           key={index}
-          src={url}
+          src={page.dataUrl}
           alt={`採点済み答案 ページ${index + 1}`}
+          width={page.width}
+          height={page.height}
+          unoptimized
           className="w-full rounded shadow-sm"
-          style={{ maxWidth: "100%" }}
+          style={{ maxWidth: "100%", height: "auto" }}
         />
       ))}
     </div>
