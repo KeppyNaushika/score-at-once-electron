@@ -36,11 +36,9 @@ export function useAssignedCropRegions({
         examId,
         userId
       )
-      if (result.success) {
-        setAssignments(result.assignments ?? [])
-        setCanManage(result.canManage ?? false)
-        setMemberCount(result.memberCount ?? 0)
-      }
+      setAssignments(result.assignments)
+      setCanManage(result.canManage)
+      setMemberCount(result.memberCount)
     } catch (error) {
       console.error("Failed to fetch crop region assignments:", error)
     }

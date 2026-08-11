@@ -42,40 +42,35 @@ export interface ScoreDecisionForComparison {
   decidedBy: { id: string; name: string; username: string }
 }
 
-// QuestionScore operation result type (create/update)
-export interface QuestionScoreOperationResult {
-  success: boolean
-  score?: SerializedQuestionScore
-  error?: string
-  /**
-   * 失敗理由の機械可読コード。"target-deleted" は対象の採点が既に無い＝答案ごと
-   * 削除された場合（協調採点で他教員が削除）。単なる保存失敗と区別して扱うこと。
-   */
-  reason?: typeof SCORE_TARGET_DELETED
-  conflictData?: SerializedQuestionScore
-}
+/**
+ * 採点の保存結果。
+ *
+ * "target-deleted" は対象の採点が既に無い＝答案ごと削除された場合（協調採点で
+ * 他教員が削除）。保存の失敗ではなく予期される結果なので、例外ではなく値で返る。
+ * それ以外の失敗は例外になる。
+ */
+export type QuestionScoreOperationResult =
+  | { status: "saved"; score: SerializedQuestionScore }
+  | { status: typeof SCORE_TARGET_DELETED }
 
 /**
  * 採点（QuestionScore）関連API
  */
 export interface ScoringAPI {
   // QuestionScore関連のAPI
-  getQuestionScore: (id: string) => Promise<QuestionScoreOperationResult>
+  /** 見つからなければ null（協調採点で他教員が答案ごと削除した場合） */
+  getQuestionScore: (id: string) => Promise<SerializedQuestionScore | null>
   getQuestionScoresForExam: (
     examId: string,
     userId?: string
-  ) => Promise<{
-    success: boolean
-    scores?: SerializedQuestionScore[]
-    error?: string
-  }>
+  ) => Promise<SerializedQuestionScore[]>
   createQuestionScore: (data: {
     cropRegionId: string
     examStudentId: string
     partialScore?: number
     status: ScoringStatus
     userId: string // v0.4.0+: required
-  }) => Promise<QuestionScoreOperationResult>
+  }) => Promise<SerializedQuestionScore>
 
   updateQuestionScore: (
     id: string,
@@ -98,42 +93,32 @@ export interface ScoringAPI {
       comment?: string
       sourceQuestionScoreId?: string
     }
-  ) => Promise<{
-    success: boolean
-    decision?: ScoreDecisionForComparison
-    error?: string
-  }>
+  ) => Promise<ScoreDecisionForComparison>
   /** 裁定サマリ（解決できなかった競合・確定後に新提案が入ったセル） */
   getExamDecisionSummary: (
     examId: string,
     userId: string
-  ) => Promise<{
-    success: boolean
-    summary?: ExamDecisionSummary
-    error?: string
-  }>
+  ) => Promise<ExamDecisionSummary>
   /** 設問ごとの採点担当（採点画面の設問絞り込み用の軽量版） */
   getCropRegionAssignments: (
     examId: string,
     userId: string
   ) => Promise<{
-    success: boolean
-    assignments?: CropRegionAssignmentSummary[]
-    canManage?: boolean
+    assignments: CropRegionAssignmentSummary[]
+    canManage: boolean
     /** 試験のメンバー数（協調採点かの安価な判定材料） */
-    memberCount?: number
-    error?: string
+    memberCount: number
   }>
   assignCropRegion: (
     cropRegionId: string,
     userId: string,
     assignedByUserId: string
-  ) => Promise<{ success: boolean; error?: string }>
+  ) => Promise<void>
   unassignCropRegion: (
     cropRegionId: string,
     userId: string,
     requestedByUserId: string
-  ) => Promise<{ success: boolean; error?: string }>
+  ) => Promise<void>
   batchUpdateQuestionScores: (
     entries: Array<{
       examStudentId: string
@@ -142,18 +127,10 @@ export interface ScoringAPI {
       partialScore: number | null
       userId: string
     }>
-  ) => Promise<{
-    success: boolean
-    updatedCount: number
-    error?: string
-  }>
+  ) => Promise<{ updatedCount: number }>
   /** 答案画像ごとに、指定した全採点領域の白さ（空欄らしさ）を算出する */
   measureAnswerWhiteness: (args: {
     answerImages: WhitenessTargetAnswerImage[]
     regions: WhitenessTargetRegion[]
-  }) => Promise<{
-    success: boolean
-    answers?: AnswerWhiteness[]
-    error?: string
-  }>
+  }) => Promise<{ answers: AnswerWhiteness[] }>
 }

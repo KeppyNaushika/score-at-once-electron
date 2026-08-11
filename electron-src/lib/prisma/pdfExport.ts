@@ -119,8 +119,8 @@ export async function getPdfExportData(options: {
     const scoresResult = await getQuestionScoresForExam(examId)
     const decisionsResult = await getScoreDecisionsForExam(examId)
     const { resolved: allScores } = resolveEffectiveScores(
-      scoresResult.scores ?? [],
-      decisionsResult.success ? (decisionsResult.decisions ?? []) : []
+      scoresResult,
+      decisionsResult
     )
 
     // 受験者を取得（ExamStudent 実体のまま保持する）

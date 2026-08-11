@@ -64,7 +64,7 @@ export function useAutoCreateQuestionScore({
     creatingRef.current = key
 
     try {
-      const result = await window.electronAPI.createQuestionScore({
+      await window.electronAPI.createQuestionScore({
         examStudentId: currentExamStudentId,
         cropRegionId: currentCropRegionId,
         userId: currentUserId,
@@ -72,12 +72,8 @@ export function useAutoCreateQuestionScore({
         partialScore: undefined,
       })
 
-      if (result.success) {
-        // 作成成功 - 親コンポーネントに通知してリストを更新
-        onQuestionScoreCreated?.()
-      } else {
-        console.error("QuestionScore作成失敗:", result.error)
-      }
+      // 作成成功 - 親コンポーネントに通知してリストを更新
+      onQuestionScoreCreated?.()
     } catch (error) {
       console.error("QuestionScore作成エラー:", error)
     } finally {

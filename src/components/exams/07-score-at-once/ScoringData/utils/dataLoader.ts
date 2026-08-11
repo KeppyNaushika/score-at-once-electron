@@ -15,14 +15,7 @@ export async function loadQuestionScores(
       userId
     )
 
-    // Handle both direct array and { success, scores } format
-    if (Array.isArray(result)) {
-      return result
-    }
-    if (result?.success && Array.isArray(result.scores)) {
-      return result.scores
-    }
-    return []
+    return result
   } catch (error) {
     console.error("Failed to load question scores:", error)
     return []

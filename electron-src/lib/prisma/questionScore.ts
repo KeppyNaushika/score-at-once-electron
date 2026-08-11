@@ -18,10 +18,6 @@ import { isRecordNotFoundError } from "./prismaErrors"
  */
 export const SCORE_TARGET_DELETED = "target-deleted" as const
 
-/** 上記を利用者へ伝える文言（renderer はこれをそのまま表示してよい） */
-const SCORE_TARGET_DELETED_MESSAGE =
-  "この答案は削除されたため採点を保存できません"
-
 /** QuestionScore.status を日本語表示に変換（監査ログ差分用） */
 const scoreStatusLabel = (status: string | null | undefined): string => {
   switch (status) {
@@ -144,13 +140,10 @@ export const getQuestionScoresForExam = async (
       ],
     })
 
-    return { success: true, scores }
+    return scores
   } catch (error) {
     console.error("Failed to get question scores for exam:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+    throw error
   }
 }
 
@@ -169,17 +162,12 @@ export const getQuestionScoreById = async (id: string) => {
       },
     })
 
-    if (!score) {
-      return { success: false, error: "Question score not found" }
-    }
-
-    return { success: true, score }
+    // 見つからないのは失敗ではない。協調採点では他教員が答案ごと削除した後に
+    // 引かれることがあり、呼び出し側はそれを「消えた」と読む
+    return score
   } catch (error) {
     console.error("Failed to get question score by id:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+    throw error
   }
 }
 
@@ -251,7 +239,7 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
         ],
       })
 
-      return { success: true, score: updated }
+      return updated
     } else {
       // 新規作成
       const created = await prisma.questionScore.create({
@@ -288,14 +276,11 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
         ],
       })
 
-      return { success: true, score: created }
+      return created
     }
   } catch (error) {
     console.error("Failed to create question score:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+    throw error
   }
 }
 
@@ -315,25 +300,8 @@ export const updateQuestionScore = async (
       })
 
       if (!current) {
-        return {
-          success: false,
-          reason: SCORE_TARGET_DELETED,
-          error: SCORE_TARGET_DELETED_MESSAGE,
-        }
+        return { status: SCORE_TARGET_DELETED } as const
       }
-
-      // Version checking removed - scoreVersion field doesn't exist in new schema
-      // TODO: Implement optimistic locking with a different approach if needed
-      /*
-      if (current.scoreVersion !== expectedVersion) {
-        return {
-          success: false,
-          error:
-            "Version conflict: The score has been modified by another user",
-          conflictData: current,
-        }
-      }
-      */
     }
 
     // 差分記録用に変更前を取得。ここで無ければ答案ごと削除された後なので、
@@ -343,11 +311,7 @@ export const updateQuestionScore = async (
     })
 
     if (!before) {
-      return {
-        success: false,
-        reason: SCORE_TARGET_DELETED,
-        error: SCORE_TARGET_DELETED_MESSAGE,
-      }
+      return { status: SCORE_TARGET_DELETED } as const
     }
 
     const updated = await prisma.questionScore.update({
@@ -390,21 +354,14 @@ export const updateQuestionScore = async (
       ],
     })
 
-    return { success: true, score: updated }
+    return { status: "saved", score: updated } as const
   } catch (error) {
-    // 上の存在チェックとの隙間で削除された場合（P2025: 更新対象が無い）
+    // 上の存在チェックとの隙間で削除された場合（P2025: 更新対象が無い）。
+    // 協調採点で他教員が答案ごと消したケースで、保存の失敗とは区別する
     if (isRecordNotFoundError(error)) {
-      return {
-        success: false,
-        reason: SCORE_TARGET_DELETED,
-        error: SCORE_TARGET_DELETED_MESSAGE,
-      }
+      return { status: SCORE_TARGET_DELETED } as const
     }
-    console.error("Failed to update question score:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+    throw error
   }
 }
 
@@ -419,7 +376,7 @@ export interface BatchScoreEntry {
 /** 採点データをトランザクション内で一括upsertする（OMR自動採点結果の反映用） */
 export async function batchUpdateQuestionScores(
   entries: BatchScoreEntry[]
-): Promise<{ success: boolean; updatedCount: number; error?: string }> {
+): Promise<{ updatedCount: number }> {
   try {
     let updatedCount = 0
 
@@ -482,13 +439,9 @@ export async function batchUpdateQuestionScores(
       })
     }
 
-    return { success: true, updatedCount }
+    return { updatedCount }
   } catch (error) {
     console.error("Error batch updating question scores:", error)
-    return {
-      success: false,
-      updatedCount: 0,
-      error: error instanceof Error ? error.message : "一括更新に失敗しました",
-    }
+    throw error
   }
 }

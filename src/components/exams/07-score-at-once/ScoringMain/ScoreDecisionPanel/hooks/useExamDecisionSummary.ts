@@ -29,18 +29,11 @@ export function useExamDecisionSummary(
     }
     try {
       setError(null)
-      const result = await window.electronAPI.getExamDecisionSummary(
-        examId,
-        userId
+      setSummary(
+        await window.electronAPI.getExamDecisionSummary(examId, userId)
       )
-      if (result.success && result.summary) {
-        setSummary(result.summary)
-      } else {
-        setError(result.error ?? "裁定状況の取得に失敗しました")
-      }
     } catch (err) {
-      console.error("Failed to fetch exam decision summary:", err)
-      setError(err instanceof Error ? err.message : "Unknown error")
+      setError(err instanceof Error ? err.message : "裁定状況を取得できません")
     } finally {
       setLoading(false)
     }

@@ -182,16 +182,14 @@ export function AnnotationBrowserPanel({
       // なければ作成
       if (!currentUserId) return null
       try {
-        const result = await window.electronAPI.createQuestionScore({
+        const created = await window.electronAPI.createQuestionScore({
           cropRegionId,
           examStudentId,
           userId: currentUserId,
           status: "unscored",
         })
-        if (result?.success && result.score?.id) {
-          onQuestionScoreCreated?.()
-          return result.score.id
-        }
+        onQuestionScoreCreated?.()
+        return created.id
       } catch (error) {
         console.error("QuestionScore作成エラー:", error)
       }

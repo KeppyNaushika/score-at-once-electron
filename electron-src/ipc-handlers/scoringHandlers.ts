@@ -24,12 +24,13 @@ import {
   createQuestionScore,
   getQuestionScoreById,
   getQuestionScoresForExam,
+  SCORE_TARGET_DELETED,
   updateQuestionScore,
 } from "../lib/prisma/questionScore"
 import { upsertScoreDecision } from "../lib/prisma/scoreDecision"
 import { getExamDecisionSummary } from "../lib/prisma/scoreDecisionSummary"
 import { measureAnswerWhiteness } from "../lib/scoring/regionWhiteness"
-import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
+import { registerHandler } from "./ipcHandlerUtils"
 
 /**
  * QuestionScoreをIPC用に変換（Decimal→number、Dateはそのまま、
@@ -63,38 +64,20 @@ export function setupScoringHandlers(): void {
   registerHandler(
     "get-question-scores-for-exam",
     async (examId: string, userId?: string) => {
-      const result = await getQuestionScoresForExam(examId, userId)
-
-      if (!result.success) {
-        return result
-      }
-
-      const scores = result.scores?.map(serializeScore) || []
-      return { success: true, scores }
+      const scores = await getQuestionScoresForExam(examId, userId)
+      return scores.map(serializeScore)
     }
   )
 
   registerHandler("get-question-score", async (id: string) => {
-    const result = await getQuestionScoreById(id)
-
-    if (!result.success || !result.score) {
-      return result
-    }
-
-    return { success: true, score: serializeScore(result.score) }
+    const score = await getQuestionScoreById(id)
+    return score ? serializeScore(score) : null
   })
 
   registerHandler(
     "create-question-score",
-    async (data: CreateQuestionScoreData) => {
-      const result = await createQuestionScore(data)
-
-      if (!result.success || !result.score) {
-        return result
-      }
-
-      return { success: true, score: serializeScore(result.score) }
-    }
+    async (data: CreateQuestionScoreData) =>
+      serializeScore(await createQuestionScore(data))
   )
 
   registerHandler(
@@ -106,11 +89,12 @@ export function setupScoringHandlers(): void {
     ) => {
       const result = await updateQuestionScore(id, data, expectedVersion)
 
-      if (!result.success || !result.score) {
-        return result
+      // 「他教員が答案ごと削除した」は保存の失敗ではないので値で返す
+      if (result.status === SCORE_TARGET_DELETED) {
+        return { status: SCORE_TARGET_DELETED } as const
       }
 
-      return { success: true, score: serializeScore(result.score) }
+      return { status: "saved" as const, score: serializeScore(result.score) }
     }
   )
 
@@ -136,7 +120,7 @@ export function setupScoringHandlers(): void {
             : "partial"
           : scoreData.status
 
-      const result = await upsertScoreDecision({
+      const decision = await upsertScoreDecision({
         cropRegionId,
         examStudentId,
         verdict,
@@ -146,40 +130,29 @@ export function setupScoringHandlers(): void {
         sourceQuestionScoreId: scoreData.sourceQuestionScoreId ?? null,
       })
 
-      if (!result.success || !result.decision) {
-        return { success: false, error: result.error }
-      }
-
       return {
-        success: true,
-        decision: {
-          ...result.decision,
-          score: result.decision.score ? Number(result.decision.score) : null,
-        },
+        ...decision,
+        score: decision.score ? Number(decision.score) : null,
       }
     }
   )
 
   // 裁定サマリ（競合・確定後の新提案）— 確定パネルと出力前警告が共有する
-  registerSafeHandler(
+  registerHandler(
     "get-exam-decision-summary",
-    async (examId: string, userId: string) => {
-      return await getExamDecisionSummary(examId, userId)
-    }
+    (examId: string, userId: string) => getExamDecisionSummary(examId, userId)
   )
 
   // 設問ごとの採点担当。採点画面の設問絞り込みが使う軽量な取得
-  registerSafeHandler(
+  registerHandler(
     "get-crop-region-assignments",
     async (examId: string, userId: string) => {
-      const [result, permission] = await Promise.all([
+      const [assignments, permission] = await Promise.all([
         getAssignmentsForExam(examId),
         canManageAssignments(examId, userId),
       ])
-      if (!result.success) return result
       return {
-        success: true as const,
-        assignments: result.assignments.map((assignment) => ({
+        assignments: assignments.map((assignment) => ({
           cropRegionId: assignment.cropRegionId,
           userId: assignment.userId,
           userName: assignment.user.name,
@@ -191,18 +164,16 @@ export function setupScoringHandlers(): void {
     }
   )
 
-  registerSafeHandler(
+  registerHandler(
     "assign-crop-region",
-    async (cropRegionId: string, userId: string, assignedByUserId: string) => {
-      return await assignCropRegion(cropRegionId, userId, assignedByUserId)
-    }
+    (cropRegionId: string, userId: string, assignedByUserId: string) =>
+      assignCropRegion(cropRegionId, userId, assignedByUserId)
   )
 
-  registerSafeHandler(
+  registerHandler(
     "unassign-crop-region",
-    async (cropRegionId: string, userId: string, requestedByUserId: string) => {
-      return await unassignCropRegion(cropRegionId, userId, requestedByUserId)
-    }
+    (cropRegionId: string, userId: string, requestedByUserId: string) =>
+      unassignCropRegion(cropRegionId, userId, requestedByUserId)
   )
 
   // QuestionScore 一括更新（OMR自動採点結果反映）
@@ -214,7 +185,7 @@ export function setupScoringHandlers(): void {
   )
 
   // グリッド採点の白さ順ソート用: 答案画像ごとに全採点領域の白さを算出する
-  registerSafeHandler(
+  registerHandler(
     "measure-answer-whiteness",
     async (args: {
       answerImages: WhitenessTargetAnswerImage[]
@@ -228,10 +199,8 @@ export function setupScoringHandlers(): void {
       }))
 
       return {
-        success: true,
         answers: await measureAnswerWhiteness(answerImages, args.regions),
       }
-    },
-    "答案の白さ算出に失敗しました"
+    }
   )
 }

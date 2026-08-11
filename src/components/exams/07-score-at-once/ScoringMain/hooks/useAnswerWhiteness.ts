@@ -116,13 +116,6 @@ export function useAnswerWhiteness({
         // 算出中に別ページへ移った場合は破棄する
         if (token !== measurementTokenRef.current) return
 
-        if (!result.success || !result.answers) {
-          // 失敗したページは次に開いたときに再試行する
-          measuredSignatureRef.current.delete(examPageId)
-          console.error("答案の白さ算出に失敗しました:", result.error)
-          return
-        }
-
         const answers = result.answers
         setWhitenessByAnswerId((prev) => {
           const next = new Map(prev)

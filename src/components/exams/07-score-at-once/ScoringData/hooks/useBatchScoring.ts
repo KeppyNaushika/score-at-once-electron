@@ -55,9 +55,8 @@ export function useBatchScoring({
   const rollbackUpdate = useCallback(
     async (scoreId: string) => {
       try {
-        const result = await window.electronAPI.getQuestionScore(scoreId)
-        if (result.success && result.score) {
-          const dbScore = result.score
+        const dbScore = await window.electronAPI.getQuestionScore(scoreId)
+        if (dbScore) {
           setQuestionScores((prev) =>
             prev.map((questionScore) =>
               questionScore.id === scoreId
@@ -235,29 +234,24 @@ export function useBatchScoring({
           window.electronAPI
             .updateQuestionScore(scoreId, updateData)
             .then((result) => {
-              if (result.success && result.score) {
-                // 成功時: updatedAtを反映
-                const updatedScore = result.score
-                setQuestionScores((prev) =>
-                  prev.map((questionScore) =>
-                    questionScore.id === scoreId
-                      ? {
-                          ...questionScore,
-                          updatedAt: updatedScore.updatedAt,
-                        }
-                      : questionScore
-                  )
-                )
-              } else if (result.reason === "target-deleted") {
+              if (result.status === "target-deleted") {
                 // 他の教員が答案ごと削除した。再照会しても無いので即座に取り除く。
                 removeScoreFromState(scoreId)
                 toast.error(
                   "この答案は削除されたため採点を保存できません（Shift+R で再読み込みしてください）"
                 )
-              } else {
-                // DB保存失敗 → ロールバック
-                rollbackUpdate(scoreId)
+                return
               }
+
+              // 成功時: updatedAtを反映
+              const updatedScore = result.score
+              setQuestionScores((prev) =>
+                prev.map((questionScore) =>
+                  questionScore.id === scoreId
+                    ? { ...questionScore, updatedAt: updatedScore.updatedAt }
+                    : questionScore
+                )
+              )
             })
             .catch(() => {
               rollbackUpdate(scoreId)
@@ -293,10 +287,9 @@ export function useBatchScoring({
           }
           window.electronAPI
             .createQuestionScore(scoreData)
-            .then((result) => {
-              if (result.success && result.score) {
+            .then((createdScore) => {
+              {
                 // 成功時: 仮IDを本物のIDに差し替え
-                const createdScore = result.score
                 setQuestionScores((prev) =>
                   prev.map((questionScore) =>
                     questionScore.id === tempId
@@ -309,8 +302,6 @@ export function useBatchScoring({
                       : questionScore
                   )
                 )
-              } else {
-                rollbackCreate(tempId)
               }
             })
             .catch(() => {

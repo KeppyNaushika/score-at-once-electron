@@ -58,19 +58,16 @@ export function QuestionAssignmentRow({
     if (!user) return
     setIsSaving(true)
     try {
-      const result = await window.electronAPI.assignCropRegion(
+      await window.electronAPI.assignCropRegion(
         question.cropRegionId,
         member.userId,
         user.id
       )
-      if (result.success) {
-        onAssignmentChanged()
-      } else {
-        toast.error(result.error ?? "採点担当の割り当てに失敗しました")
-      }
+      onAssignmentChanged()
     } catch (error) {
-      console.error("Failed to assign crop region:", error)
-      toast.error("採点担当の割り当てに失敗しました")
+      toast.error("採点担当を割り当てられませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setIsSaving(false)
     }
@@ -80,19 +77,16 @@ export function QuestionAssignmentRow({
     if (!user) return
     setIsSaving(true)
     try {
-      const result = await window.electronAPI.unassignCropRegion(
+      await window.electronAPI.unassignCropRegion(
         question.cropRegionId,
         userId,
         user.id
       )
-      if (result.success) {
-        onAssignmentChanged()
-      } else {
-        toast.error(result.error ?? "採点担当の解除に失敗しました")
-      }
+      onAssignmentChanged()
     } catch (error) {
-      console.error("Failed to unassign crop region:", error)
-      toast.error("採点担当の解除に失敗しました")
+      toast.error("採点担当を解除できませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setIsSaving(false)
     }

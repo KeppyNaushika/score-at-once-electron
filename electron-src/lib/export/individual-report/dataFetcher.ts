@@ -100,8 +100,8 @@ export async function fetchIndividualReportData(
     const decisionsResult = await getScoreDecisionsForExam(examId)
     // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
     const { resolved: allQuestionScores } = resolveEffectiveScores(
-      questionScoresResult.success ? (questionScoresResult.scores ?? []) : [],
-      decisionsResult.success ? (decisionsResult.decisions ?? []) : []
+      questionScoresResult,
+      decisionsResult
     )
 
     // 全生徒の小計点を計算（Subtotal単位）

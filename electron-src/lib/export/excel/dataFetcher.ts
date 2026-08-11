@@ -92,10 +92,7 @@ export async function fetchExportData(
 
     // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
     const { resolved: questionScores, conflicts: scoreConflicts } =
-      resolveEffectiveScores(
-        questionScoresResult.success ? (questionScoresResult.scores ?? []) : [],
-        decisionsResult.success ? (decisionsResult.decisions ?? []) : []
-      )
+      resolveEffectiveScores(questionScoresResult, decisionsResult)
     if (scoreConflicts.length > 0) {
       console.warn(
         `Export: ${scoreConflicts.length}件の採点競合を検出しました（未採点として出力されます）`,

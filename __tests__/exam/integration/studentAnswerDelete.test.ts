@@ -334,10 +334,9 @@ describe("deleteStudentAnswer", () => {
     ).toBe(true)
 
     const result = await updateQuestionScore(scoreId, { status: "correct" })
-    expect(result.success).toBe(false)
-    // 生の Prisma エラーではなく機械可読な理由が返る
-    expect(result.reason).toBe(SCORE_TARGET_DELETED)
-    expect(result.error).toContain("削除")
+    // 例外ではなく「対象が消えている」という結果が値で返る（協調採点で他教員が
+    // 答案ごと削除したケース）
+    expect(result.status).toBe(SCORE_TARGET_DELETED)
   })
 
   it("存在しない答案は失敗し、DB は変化しない", async () => {

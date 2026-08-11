@@ -100,7 +100,7 @@ export function ScoreDecisionForm({
     if (!user) return
     setDeciding(true)
     try {
-      const result = await window.electronAPI.finalizeQuestionScore(
+      await window.electronAPI.finalizeQuestionScore(
         cell.examStudentId,
         cell.cropRegionId,
         user.id,
@@ -111,15 +111,12 @@ export function ScoreDecisionForm({
           sourceQuestionScoreId: sourceQuestionScoreId ?? undefined,
         }
       )
-      if (result.success) {
-        toast.success("採点結果を確定しました")
-        onDecided()
-      } else {
-        toast.error(result.error ?? "採点結果の確定に失敗しました")
-      }
+      toast.success("採点結果を確定しました")
+      onDecided()
     } catch (error) {
-      console.error("Failed to finalize score:", error)
-      toast.error("採点結果の確定に失敗しました")
+      toast.error("採点結果を確定できませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setDeciding(false)
     }

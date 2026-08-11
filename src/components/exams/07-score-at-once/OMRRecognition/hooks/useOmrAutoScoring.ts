@@ -373,20 +373,9 @@ export function useOmrAutoScoring(examId: string) {
           return false
         }
 
-        const result =
-          await window.electronAPI.batchUpdateQuestionScores(entries)
-
-        if (result.success) {
-          setState((prev) => ({ ...prev, isApplying: false }))
-          return true
-        }
-
-        setState((prev) => ({
-          ...prev,
-          isApplying: false,
-          error: result.error ?? "採点反映に失敗しました",
-        }))
-        return false
+        await window.electronAPI.batchUpdateQuestionScores(entries)
+        setState((prev) => ({ ...prev, isApplying: false }))
+        return true
       } catch (error) {
         setState((prev) => ({
           ...prev,

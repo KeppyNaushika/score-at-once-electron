@@ -89,21 +89,22 @@ describe("採点対象と受験者の試験スコープ", () => {
       userId: examA.user.id,
     })
 
-    expect(result.success).toBe(true)
+    expect(result.id).toBeDefined()
     expect(await testPrisma.questionScore.count()).toBe(1)
   })
 
   it("別の試験の受験者への採点は拒否され、行も残らない", async () => {
     const { examA, cropRegionA, examStudentB } = await buildTwoExams()
 
-    const result = await createQuestionScore({
-      cropRegionId: cropRegionA.id,
-      examStudentId: examStudentB.id,
-      status: "correct",
-      userId: examA.user.id,
-    })
+    await expect(
+      createQuestionScore({
+        cropRegionId: cropRegionA.id,
+        examStudentId: examStudentB.id,
+        status: "correct",
+        userId: examA.user.id,
+      })
+    ).rejects.toThrow()
 
-    expect(result.success).toBe(false)
     expect(await testPrisma.questionScore.count()).toBe(0)
   })
 
@@ -111,24 +112,25 @@ describe("採点対象と受験者の試験スコープ", () => {
     const { examA, cropRegionA, examStudentA, examStudentB } =
       await buildTwoExams()
 
-    const result = await batchUpdateQuestionScores([
-      {
-        cropRegionId: cropRegionA.id,
-        examStudentId: examStudentA.id,
-        status: "correct",
-        partialScore: null,
-        userId: examA.user.id,
-      },
-      {
-        cropRegionId: cropRegionA.id,
-        examStudentId: examStudentB.id,
-        status: "correct",
-        partialScore: null,
-        userId: examA.user.id,
-      },
-    ])
+    await expect(
+      batchUpdateQuestionScores([
+        {
+          cropRegionId: cropRegionA.id,
+          examStudentId: examStudentA.id,
+          status: "correct",
+          partialScore: null,
+          userId: examA.user.id,
+        },
+        {
+          cropRegionId: cropRegionA.id,
+          examStudentId: examStudentB.id,
+          status: "correct",
+          partialScore: null,
+          userId: examA.user.id,
+        },
+      ])
+    ).rejects.toThrow()
 
-    expect(result.success).toBe(false)
     // 正しい1件も書かれない（検査は書き込み前に全件分を見る）
     expect(await testPrisma.questionScore.count()).toBe(0)
   })
@@ -136,16 +138,17 @@ describe("採点対象と受験者の試験スコープ", () => {
   it("確定（ScoreDecision）でも別の試験の受験者は拒否される", async () => {
     const { examA, cropRegionA, examStudentB } = await buildTwoExams()
 
-    const result = await upsertScoreDecision({
-      cropRegionId: cropRegionA.id,
-      examStudentId: examStudentB.id,
-      verdict: "correct",
-      score: null,
-      comment: null,
-      decidedByUserId: examA.user.id,
-    })
+    await expect(
+      upsertScoreDecision({
+        cropRegionId: cropRegionA.id,
+        examStudentId: examStudentB.id,
+        verdict: "correct",
+        score: null,
+        comment: null,
+        decidedByUserId: examA.user.id,
+      })
+    ).rejects.toThrow()
 
-    expect(result.success).toBe(false)
     expect(await testPrisma.scoreDecision.count()).toBe(0)
   })
 
