@@ -96,9 +96,9 @@ describe("useDrawingState", () => {
       ]
 
       mockAPI.getByQuestionScore.mockImplementation(async (qsId: string) => {
-        if (qsId === "qs-1") return { success: true, data: annotations1 }
-        if (qsId === "qs-2") return { success: true, data: annotations2 }
-        return { success: true, data: [] }
+        if (qsId === "qs-1") return annotations1
+        if (qsId === "qs-2") return annotations2
+        return []
       })
 
       const { result, rerender } = renderHook(
@@ -117,10 +117,9 @@ describe("useDrawingState", () => {
     })
 
     it("questionScoreIdがnullになるとdrawingElementsがクリアされる", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1" })],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+      ])
 
       const { result, rerender } = renderHook(
         ({ qsId }) => useDrawingState(qsId, true),
@@ -135,10 +134,9 @@ describe("useDrawingState", () => {
     })
 
     it("同一questionScoreIdの再設定ではDB再読み込みしない", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1" })],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+      ])
 
       const { result, rerender } = renderHook(
         ({ qsId }) => useDrawingState(qsId, true),
@@ -186,10 +184,7 @@ describe("useDrawingState", () => {
 
       // DB応答を完了
       await act(async () => {
-        resolveCreate!({
-          success: true,
-          data: createMockAnnotation({ id: "new-1" }),
-        })
+        resolveCreate!(createMockAnnotation({ id: "new-1" }))
         await addPromise!
       })
     })
@@ -197,10 +192,7 @@ describe("useDrawingState", () => {
     it("DB保存失敗時もオプティミスティック更新は残る（useDrawingAnnotationsがエラーを吸収）", async () => {
       // 注: useDrawingAnnotations.saveElementが内部でtry-catchしnullを返すため、
       // useDrawingStateのcatch節に到達せずロールバックが発動しない
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([])
       mockAPI.create.mockRejectedValue(new Error("保存失敗"))
 
       const { result } = renderHook(() => useDrawingState("qs-1", true))
@@ -250,10 +242,9 @@ describe("useDrawingState", () => {
   // =========================================================================
   describe("updateDrawingElement（単一要素更新）", () => {
     it("要素が即座に更新される（オプティミスティック更新）", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1", x: 0.1 })],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1", x: 0.1 }),
+      ])
 
       const { result } = renderHook(() => useDrawingState("qs-1", true))
 
@@ -270,10 +261,9 @@ describe("useDrawingState", () => {
     it("DB更新失敗時もオプティミスティック更新は残る", async () => {
       // 注: useDrawingAnnotations.updateElementが内部でtry-catchしnullを返すため、
       // useDrawingStateのcatch節に到達せずロールバックが発動しない
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1", x: 0.1 })],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1", x: 0.1 }),
+      ])
       mockAPI.update.mockRejectedValue(new Error("更新失敗"))
 
       const { result } = renderHook(() => useDrawingState("qs-1", true))
@@ -294,14 +284,11 @@ describe("useDrawingState", () => {
   // =========================================================================
   describe("updateDrawingElements（一括更新）", () => {
     it("複数要素が1回のsetStateで更新される", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotation({ id: "a1", x: 0.1 }),
-          createMockAnnotation({ id: "a2", x: 0.2 }),
-          createMockAnnotation({ id: "a3", x: 0.3 }),
-        ],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1", x: 0.1 }),
+        createMockAnnotation({ id: "a2", x: 0.2 }),
+        createMockAnnotation({ id: "a3", x: 0.3 }),
+      ])
 
       const { result } = renderHook(() => useDrawingState("qs-1", true))
 
@@ -331,13 +318,10 @@ describe("useDrawingState", () => {
   // =========================================================================
   describe("removeDrawingElement（アノテーション削除）", () => {
     it("要素が即座にdrawingElementsから削除される", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotation({ id: "a1" }),
-          createMockAnnotation({ id: "a2" }),
-        ],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+        createMockAnnotation({ id: "a2" }),
+      ])
 
       const { result } = renderHook(() => useDrawingState("qs-1", true))
 
@@ -352,10 +336,9 @@ describe("useDrawingState", () => {
     })
 
     it("選択状態からも同時に除去される", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1" })],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+      ])
 
       const { result } = renderHook(() => useDrawingState("qs-1", true))
 
@@ -374,10 +357,9 @@ describe("useDrawingState", () => {
     })
 
     it("DB削除失敗時もオプティミスティック削除は残る", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1" })],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+      ])
       mockAPI.delete.mockRejectedValue(new Error("削除失敗"))
 
       const { result } = renderHook(() => useDrawingState("qs-1", true))
@@ -398,14 +380,11 @@ describe("useDrawingState", () => {
   // =========================================================================
   describe("clearDrawing（全クリア）", () => {
     it("drawingElementsが空になりDB同期される", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotation({ id: "a1" }),
-          createMockAnnotation({ id: "a2" }),
-        ],
-      })
-      mockAPI.batchCreate.mockResolvedValue({ success: true, data: [] })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+        createMockAnnotation({ id: "a2" }),
+      ])
+      mockAPI.batchCreate.mockResolvedValue([])
 
       const { result } = renderHook(() => useDrawingState("qs-1", true))
 
@@ -425,23 +404,19 @@ describe("useDrawingState", () => {
   // =========================================================================
   describe("loadFromDatabase（明示的再読み込み）", () => {
     it("現在のquestionScoreIdでDBから再読み込みされる", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1" })],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+      ])
 
       const { result } = renderHook(() => useDrawingState("qs-1", true))
 
       await waitForDrawingElements(result, 1)
 
       // 別のアノテーションが追加された想定
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotation({ id: "a1" }),
-          createMockAnnotation({ id: "a2" }),
-        ],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+        createMockAnnotation({ id: "a2" }),
+      ])
 
       await act(async () => {
         await result.current.loadFromDatabase()
@@ -457,10 +432,7 @@ describe("useDrawingState", () => {
   describe("onAnnotationChangedコールバック", () => {
     it("addDrawingElementでonAnnotationChangedが呼ばれる", async () => {
       const onChanged = vi.fn()
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([])
 
       const { result } = renderHook(() =>
         useDrawingState("qs-1", true, onChanged)
@@ -478,10 +450,9 @@ describe("useDrawingState", () => {
     })
 
     it("updateDrawingElementでローカル状態が即座に更新される", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1", x: 0.1 })],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1", x: 0.1 }),
+      ])
 
       const { result } = renderHook(() => useDrawingState("qs-1", true))
 
@@ -498,10 +469,9 @@ describe("useDrawingState", () => {
 
     it("removeDrawingElementでonAnnotationChangedが呼ばれる", async () => {
       const onChanged = vi.fn()
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1" })],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+      ])
 
       const { result } = renderHook(() =>
         useDrawingState("qs-1", true, onChanged)

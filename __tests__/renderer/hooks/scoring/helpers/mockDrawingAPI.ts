@@ -62,46 +62,26 @@ export function createMockDrawingAPI(): MockDrawingAPI {
     // 作成も更新も行そのものを受け取り、そのまま返す
     create: vi
       .fn()
-      .mockImplementation(async (annotation: DrawingAnnotation) => ({
-        success: true,
-        data: annotation,
-      })),
+      .mockImplementation(async (annotation: DrawingAnnotation) => annotation),
     update: vi
       .fn()
-      .mockImplementation(async (annotation: DrawingAnnotation) => ({
-        success: true,
-        data: annotation,
-      })),
-    delete: vi.fn().mockResolvedValue({ success: true }),
-    getByQuestionScore: vi.fn().mockResolvedValue({
-      success: true,
-      data: [],
-    }),
-    getByExamStudent: vi.fn().mockResolvedValue({
-      success: true,
-      data: [],
-    }),
-    getByCropRegion: vi.fn().mockResolvedValue({
-      success: true,
-      data: [],
-    }),
+      .mockImplementation(async (annotation: DrawingAnnotation) => annotation),
+    delete: vi.fn().mockResolvedValue(undefined),
+    getByQuestionScore: vi.fn().mockResolvedValue([]),
+    getByExamStudent: vi.fn().mockResolvedValue([]),
+    getByCropRegion: vi.fn().mockResolvedValue([]),
     batchCreate: vi
       .fn()
-      .mockImplementation(async (annotations: DrawingAnnotation[]) => ({
-        success: true,
-        data: annotations,
-      })),
-    deleteByQuestionScore: vi.fn().mockResolvedValue({ success: true }),
+      .mockImplementation(
+        async (annotations: DrawingAnnotation[]) => annotations
+      ),
+    deleteByQuestionScore: vi.fn().mockResolvedValue(undefined),
     toggleFavorite: vi
       .fn()
-      .mockImplementation(async (id: string, isFavorite: boolean) => ({
-        success: true,
-        data: createMockAnnotation({ id, isFavorite }),
-      })),
-    getForBrowse: vi.fn().mockResolvedValue({
-      success: true,
-      data: [],
-    }),
+      .mockImplementation(async (id: string, isFavorite: boolean) =>
+        createMockAnnotation({ id, isFavorite })
+      ),
+    getForBrowse: vi.fn().mockResolvedValue([]),
   }
 
   Object.defineProperty(window, "electronAPI", {

@@ -94,16 +94,11 @@ export function useDrawingAnnotations(
       try {
         // 採点者で絞る余地は無い。QuestionScore は「生徒×設問×採点者」で1行なので、
         // この questionScoreId の注釈は全部同じ採点者のものである
-        const result = await window.electronAPI.drawing.getByQuestionScore(
+        const annotations = await window.electronAPI.drawing.getByQuestionScore(
           questionScoreId,
           type
         )
-        if (result.success && result.data) {
-          return result.data
-        } else {
-          handleError(result.error || "アノテーション読み込みに失敗しました")
-          return []
-        }
+        return annotations
       } catch (error) {
         handleError("アノテーション読み込み中にエラーが発生しました", error)
         return []
@@ -125,15 +120,10 @@ export function useDrawingAnnotations(
 
       try {
         // 採点者は渡さない。注釈の持ち主は親 QuestionScore から決まる
-        const result = await window.electronAPI.drawing.create(element)
+        const annotations = await window.electronAPI.drawing.create(element)
 
-        if (result.success && result.data) {
-          callbacksRef.current.onAnnotationCreated?.(result.data!)
-          return result.data!
-        } else {
-          handleError(result.error || "描画要素の保存に失敗しました")
-          return null
-        }
+        callbacksRef.current.onAnnotationCreated?.(annotations)
+        return annotations
       } catch (error) {
         handleError("描画要素保存中にエラーが発生しました", error)
         return null
@@ -154,15 +144,10 @@ export function useDrawingAnnotations(
 
       try {
         // 行をそのまま送り返す。列を選んで詰め替えないので、列を足しても永続化から漏れない
-        const result = await window.electronAPI.drawing.update(element)
+        const annotations = await window.electronAPI.drawing.update(element)
 
-        if (result.success && result.data) {
-          callbacksRef.current.onAnnotationUpdated?.(result.data!)
-          return result.data!
-        } else {
-          handleError(result.error || "描画要素の更新に失敗しました")
-          return null
-        }
+        callbacksRef.current.onAnnotationUpdated?.(annotations)
+        return annotations
       } catch (error) {
         handleError("描画要素更新中にエラーが発生しました", error)
         return null
@@ -182,15 +167,10 @@ export function useDrawingAnnotations(
       setError(null)
 
       try {
-        const result = await window.electronAPI.drawing.delete(elementId)
+        await window.electronAPI.drawing.delete(elementId)
 
-        if (result.success) {
-          callbacksRef.current.onAnnotationDeleted?.(elementId)
-          return true
-        } else {
-          handleError(result.error || "描画要素の削除に失敗しました")
-          return false
-        }
+        callbacksRef.current.onAnnotationDeleted?.(elementId)
+        return true
       } catch (error) {
         handleError("描画要素削除中にエラーが発生しました", error)
         return false
@@ -210,17 +190,12 @@ export function useDrawingAnnotations(
       setError(null)
 
       try {
-        const result = await window.electronAPI.drawing.deleteByQuestionScore(
+        await window.electronAPI.drawing.deleteByQuestionScore(
           questionScoreId,
           type
         )
 
-        if (result.success) {
-          return true
-        } else {
-          handleError(result.error || "タイプ別削除に失敗しました")
-          return false
-        }
+        return true
       } catch (error) {
         handleError("タイプ別削除中にエラーが発生しました", error)
         return false
@@ -248,14 +223,10 @@ export function useDrawingAnnotations(
         await deleteByType(questionScoreId)
 
         // 新しい要素を一括作成（採点者は親 QuestionScore から決まる）
-        const result = await window.electronAPI.drawing.batchCreate(elements)
+        const annotations =
+          await window.electronAPI.drawing.batchCreate(elements)
 
-        if (result.success && result.data) {
-          return result.data
-        } else {
-          handleError(result.error || "描画要素の同期に失敗しました")
-          return []
-        }
+        return annotations
       } catch (error) {
         handleError("描画要素同期中にエラーが発生しました", error)
         return []

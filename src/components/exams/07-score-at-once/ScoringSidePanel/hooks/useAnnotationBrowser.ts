@@ -154,9 +154,9 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
   const loadAnnotations = useCallback(async (examId: string) => {
     setIsLoading(true)
     try {
-      const result = await window.electronAPI.drawing.getForBrowse(examId)
-      if (result.success && result.data) {
-        setAllAnnotations(result.data)
+      const annotations = await window.electronAPI.drawing.getForBrowse(examId)
+      if (annotations) {
+        setAllAnnotations(annotations)
       }
     } catch (error) {
       console.error("アノテーション読み込みエラー:", error)
@@ -234,11 +234,11 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
   const toggleFavorite = useCallback(
     async (id: string, currentFavorite: boolean) => {
       try {
-        const result = await window.electronAPI.drawing.toggleFavorite(
+        const annotations = await window.electronAPI.drawing.toggleFavorite(
           id,
           !currentFavorite
         )
-        if (result.success) {
+        if (annotations) {
           // ローカル状態を即時更新
           setAllAnnotations((prev) =>
             prev.map((annotation) =>
@@ -321,24 +321,14 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
 
       try {
         if (newAnnotations.length === 1) {
-          const result = await window.electronAPI.drawing.create(
+          const created = await window.electronAPI.drawing.create(
             newAnnotations[0]
           )
-          if (result.success && result.data) {
-            setAllAnnotations((prev) => [
-              result.data as AnnotationWithContext,
-              ...prev,
-            ])
-          }
+          setAllAnnotations((prev) => [created, ...prev])
         } else if (newAnnotations.length > 1) {
-          const result =
+          const created =
             await window.electronAPI.drawing.batchCreate(newAnnotations)
-          if (result.success && result.data) {
-            setAllAnnotations((prev) => [
-              ...(result.data as AnnotationWithContext[]),
-              ...prev,
-            ])
-          }
+          setAllAnnotations((prev) => [...created, ...prev])
         }
         return { created: newAnnotations.length, skipped }
       } catch (error) {

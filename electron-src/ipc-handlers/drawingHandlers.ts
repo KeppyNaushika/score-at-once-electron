@@ -8,7 +8,7 @@ import type {
   DrawingType,
 } from "../../src/types/drawingAnnotation.types"
 import * as drawingService from "../lib/prisma/drawingAnnotation"
-import { registerSafeHandler } from "./ipcHandlerUtils"
+import { registerHandler } from "./ipcHandlerUtils"
 
 /**
  * 描画アノテーション関連のIPCハンドラーを設定する
@@ -18,30 +18,25 @@ export function setupDrawingHandlers() {
   // 基本CRUD操作
 
   /** 描画アノテーション作成 */
-  registerSafeHandler(
-    "drawing:create",
-    async (annotation: DrawingAnnotation) => {
-      const result = await drawingService.createDrawingAnnotation(annotation)
-      return { success: true, data: result }
-    },
-    "描画アノテーション作成に失敗しました"
-  )
+  registerHandler("drawing:create", async (annotation: DrawingAnnotation) => {
+    const result = await drawingService.createDrawingAnnotation(annotation)
+    return result
+  })
 
   /** QuestionScoreに紐づく描画アノテーション取得 */
-  registerSafeHandler(
+  registerHandler(
     "drawing:getByQuestionScore",
     async (questionScoreId: string, type?: DrawingType) => {
       const result = await drawingService.getDrawingAnnotationsByQuestionScore(
         questionScoreId,
         type
       )
-      return { success: true, data: result }
-    },
-    "描画アノテーション取得に失敗しました"
+      return result
+    }
   )
 
   /** 特定の受験者の全描画アノテーション取得（透明度制御用） */
-  registerSafeHandler(
+  registerHandler(
     "drawing:getByExamStudent",
     async (examStudentId: string, type?: DrawingType, userId?: string) => {
       const result = await drawingService.getDrawingAnnotationsByExamStudent(
@@ -49,92 +44,73 @@ export function setupDrawingHandlers() {
         type,
         userId
       )
-      return { success: true, data: result }
-    },
-    "受験者別描画アノテーション取得に失敗しました"
+      return result
+    }
   )
 
   /** CropRegion（設問）に紐づく全学生の描画アノテーション取得（Grid表示用） */
-  registerSafeHandler(
+  registerHandler(
     "drawing:getByCropRegion",
     async (cropRegionId: string, userId?: string) => {
       const result = await drawingService.getDrawingAnnotationsByCropRegion(
         cropRegionId,
         userId
       )
-      return { success: true, data: result }
-    },
-    "設問別描画アノテーション取得に失敗しました"
+      return result
+    }
   )
 
   /** 描画アノテーション更新 */
-  registerSafeHandler(
-    "drawing:update",
-    async (annotation: DrawingAnnotation) => {
-      const result = await drawingService.updateDrawingAnnotation(annotation)
-      return { success: true, data: result }
-    },
-    "描画アノテーション更新に失敗しました"
-  )
+  registerHandler("drawing:update", async (annotation: DrawingAnnotation) => {
+    const result = await drawingService.updateDrawingAnnotation(annotation)
+    return result
+  })
 
   /** 描画アノテーション削除 */
-  registerSafeHandler(
-    "drawing:delete",
-    async (id: string) => {
-      await drawingService.deleteDrawingAnnotation(id)
-      return { success: true }
-    },
-    "描画アノテーション削除に失敗しました"
-  )
+  registerHandler("drawing:delete", async (id: string) => {
+    await drawingService.deleteDrawingAnnotation(id)
+  })
 
   /** QuestionScoreに紐づく描画アノテーション一括削除 */
-  registerSafeHandler(
+  registerHandler(
     "drawing:deleteByQuestionScore",
     async (questionScoreId: string, type?: DrawingType) => {
       await drawingService.deleteDrawingAnnotationsByQuestionScore(
         questionScoreId,
         type
       )
-      return { success: true }
-    },
-    "描画アノテーション一括削除に失敗しました"
+    }
   )
 
   // バッチ操作
 
   /** 描画アノテーション一括作成 */
-  registerSafeHandler(
+  registerHandler(
     "drawing:batchCreate",
     async (annotations: DrawingAnnotation[]) => {
       const result =
         await drawingService.batchCreateDrawingAnnotations(annotations)
-      return { success: true, data: result }
-    },
-    "描画アノテーション一括作成に失敗しました"
+      return result
+    }
   )
 
   // ユーティリティ操作
 
   /** アノテーションお気に入り切替 */
-  registerSafeHandler(
+  registerHandler(
     "drawing:toggleFavorite",
     async (id: string, isFavorite: boolean) => {
       const result = await drawingService.toggleAnnotationFavorite(
         id,
         isFavorite
       )
-      return { success: true, data: result }
-    },
-    "アノテーションお気に入り切替に失敗しました"
+      return result
+    }
   )
 
   /** ブラウズ用アノテーション取得 */
-  registerSafeHandler(
-    "drawing:getForBrowse",
-    async (examId: string) => {
-      const result = await drawingService.getAnnotationsForBrowse(examId)
-      return { success: true, data: result }
-    },
-    "ブラウズ用アノテーション取得に失敗しました"
-  )
+  registerHandler("drawing:getForBrowse", async (examId: string) => {
+    const result = await drawingService.getAnnotationsForBrowse(examId)
+    return result
+  })
 }

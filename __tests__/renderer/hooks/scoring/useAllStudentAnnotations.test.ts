@@ -62,10 +62,7 @@ describe("useAllStudentAnnotations", () => {
         createMockAnnotation({ id: "a1", questionScoreId: "qs-1" }),
         createMockAnnotation({ id: "a2", questionScoreId: "qs-2" }),
       ]
-      mockAPI.getByExamStudent.mockResolvedValue({
-        success: true,
-        data: annotations,
-      })
+      mockAPI.getByExamStudent.mockResolvedValue(annotations)
 
       const { result } = renderHook(() =>
         useAllStudentAnnotations({
@@ -87,10 +84,9 @@ describe("useAllStudentAnnotations", () => {
     })
 
     it("生徒IDが変更されるとデータが再取得される", async () => {
-      mockAPI.getByExamStudent.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1" })],
-      })
+      mockAPI.getByExamStudent.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+      ])
 
       const { result, rerender } = renderHook(
         ({ examStudentId }) =>
@@ -106,14 +102,11 @@ describe("useAllStudentAnnotations", () => {
         expect(result.current.allStudentAnnotations).toHaveLength(1)
       })
 
-      mockAPI.getByExamStudent.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotation({ id: "b1" }),
-          createMockAnnotation({ id: "b2" }),
-          createMockAnnotation({ id: "b3" }),
-        ],
-      })
+      mockAPI.getByExamStudent.mockResolvedValue([
+        createMockAnnotation({ id: "b1" }),
+        createMockAnnotation({ id: "b2" }),
+        createMockAnnotation({ id: "b3" }),
+      ])
 
       rerender({ examStudentId: "student-2" })
 
@@ -125,10 +118,9 @@ describe("useAllStudentAnnotations", () => {
 
   describe("currentCropRegion変更（設問切り替え）", () => {
     it("cropRegion.idが変わると再取得される", async () => {
-      mockAPI.getByExamStudent.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1" })],
-      })
+      mockAPI.getByExamStudent.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+      ])
 
       const { rerender } = renderHook(
         ({ cropRegion }) =>
@@ -156,10 +148,9 @@ describe("useAllStudentAnnotations", () => {
     })
 
     it("examIdが変わると再取得される", async () => {
-      mockAPI.getByExamStudent.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1" })],
-      })
+      mockAPI.getByExamStudent.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+      ])
 
       const { rerender } = renderHook(
         ({ cropRegion }) =>
@@ -189,10 +180,9 @@ describe("useAllStudentAnnotations", () => {
 
   describe("refreshKey変更（アノテーション変更通知）", () => {
     it("refreshKey変更で再取得される", async () => {
-      mockAPI.getByExamStudent.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1" })],
-      })
+      mockAPI.getByExamStudent.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+      ])
 
       const { result, rerender } = renderHook(
         ({ refreshKey }) =>
@@ -209,13 +199,10 @@ describe("useAllStudentAnnotations", () => {
         expect(result.current.allStudentAnnotations).toHaveLength(1)
       })
 
-      mockAPI.getByExamStudent.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotation({ id: "a1" }),
-          createMockAnnotation({ id: "a2" }),
-        ],
-      })
+      mockAPI.getByExamStudent.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+        createMockAnnotation({ id: "a2" }),
+      ])
 
       rerender({ refreshKey: 1 })
 
@@ -263,10 +250,7 @@ describe("useAllStudentAnnotations", () => {
 
   describe("API失敗時", () => {
     it("失敗時に空配列を返す", async () => {
-      mockAPI.getByExamStudent.mockResolvedValue({
-        success: false,
-        error: "取得エラー",
-      })
+      mockAPI.getByExamStudent.mockRejectedValue(new Error("取得エラー"))
 
       const { result } = renderHook(() =>
         useAllStudentAnnotations({

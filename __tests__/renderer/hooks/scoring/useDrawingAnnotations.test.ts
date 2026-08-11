@@ -61,10 +61,7 @@ describe("useDrawingAnnotations", () => {
         createMockAnnotation({ id: "a1" }),
         createMockAnnotation({ id: "a2" }),
       ]
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: annotations,
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue(annotations)
 
       const { result } = renderHook(() => useDrawingAnnotations())
 
@@ -79,10 +76,9 @@ describe("useDrawingAnnotations", () => {
     })
 
     it("typeフィルタ付きで読み込む", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ type: "line" })],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ type: "line" }),
+      ])
 
       const { result } = renderHook(() => useDrawingAnnotations())
 
@@ -96,10 +92,7 @@ describe("useDrawingAnnotations", () => {
     })
 
     it("読み込み失敗時にerror状態が設定される", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: false,
-        error: "読み込みエラー",
-      })
+      mockAPI.getByQuestionScore.mockRejectedValue(new Error("読み込みエラー"))
 
       const { result } = renderHook(() => useDrawingAnnotations())
 
@@ -156,10 +149,7 @@ describe("useDrawingAnnotations", () => {
     })
 
     it("API失敗時にnullを返す", async () => {
-      mockAPI.create.mockResolvedValue({
-        success: false,
-        error: "作成失敗",
-      })
+      mockAPI.create.mockRejectedValue(new Error("作成失敗"))
 
       const { result } = renderHook(() => useDrawingAnnotations())
 
@@ -178,7 +168,7 @@ describe("useDrawingAnnotations", () => {
   describe("updateElement（既存アノテーション更新）", () => {
     it("更新すると更新後のアノテーションを返す", async () => {
       const updated = createMockAnnotation({ id: "a1", x: 0.9 })
-      mockAPI.update.mockResolvedValue({ success: true, data: updated })
+      mockAPI.update.mockResolvedValue(updated)
 
       const { result } = renderHook(() => useDrawingAnnotations())
 
@@ -194,14 +184,10 @@ describe("useDrawingAnnotations", () => {
 
     it("コールバックonAnnotationUpdatedが呼ばれる", async () => {
       const onUpdated = vi.fn()
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1" })],
-      })
-      mockAPI.update.mockResolvedValue({
-        success: true,
-        data: createMockAnnotation({ id: "a1" }),
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+      ])
+      mockAPI.update.mockResolvedValue(createMockAnnotation({ id: "a1" }))
 
       const { result } = renderHook(() =>
         useDrawingAnnotations({ onAnnotationUpdated: onUpdated })
@@ -234,10 +220,9 @@ describe("useDrawingAnnotations", () => {
 
     it("コールバックonAnnotationDeletedが呼ばれる", async () => {
       const onDeleted = vi.fn()
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1" })],
-      })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+      ])
 
       const { result } = renderHook(() =>
         useDrawingAnnotations({ onAnnotationDeleted: onDeleted })
@@ -258,11 +243,10 @@ describe("useDrawingAnnotations", () => {
   // =========================================================================
   describe("syncElements（全要素同期）", () => {
     it("空配列で同期するとannotationsがクリアされる", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotation({ id: "a1" })],
-      })
-      mockAPI.batchCreate.mockResolvedValue({ success: true, data: [] })
+      mockAPI.getByQuestionScore.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+      ])
+      mockAPI.batchCreate.mockResolvedValue([])
 
       const { result } = renderHook(() => useDrawingAnnotations())
       await act(async () => {
@@ -280,10 +264,7 @@ describe("useDrawingAnnotations", () => {
         createMockAnnotation({ id: "new-1" }),
         createMockAnnotation({ id: "new-2" }),
       ]
-      mockAPI.batchCreate.mockResolvedValue({
-        success: true,
-        data: newAnnotations,
-      })
+      mockAPI.batchCreate.mockResolvedValue(newAnnotations)
 
       const { result } = renderHook(() => useDrawingAnnotations())
       await act(async () => {
@@ -320,7 +301,7 @@ describe("useDrawingAnnotations", () => {
 
       // 読み込み完了
       await act(async () => {
-        resolvePromise!({ success: true, data: [] })
+        resolvePromise!([])
         await loadPromise!
       })
 

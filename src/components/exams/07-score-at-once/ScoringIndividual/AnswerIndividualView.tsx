@@ -367,11 +367,11 @@ export default function AnswerIndividualView({
       for (const elementId of elementIds) {
         const isFavorite = favoriteElementIds.has(elementId)
         try {
-          const result = await window.electronAPI.drawing.toggleFavorite(
+          const annotations = await window.electronAPI.drawing.toggleFavorite(
             elementId,
             !isFavorite
           )
-          if (result.success) {
+          if (annotations) {
             // ローカル状態を更新
             drawingState.setDrawingElements(
               (prev: typeof drawingState.drawingElements) =>

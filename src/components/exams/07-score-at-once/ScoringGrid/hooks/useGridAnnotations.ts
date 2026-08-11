@@ -40,16 +40,16 @@ export function useGridAnnotations({
     if (lastFetchedRef.current === fetchKey) return
 
     try {
-      const result = await window.electronAPI.drawing.getByCropRegion(
+      const annotations = await window.electronAPI.drawing.getByCropRegion(
         cropRegionId,
         currentUserId
       )
 
-      if (result.success && result.data) {
+      if (annotations) {
         // フェッチ成功後にキーを設定（失敗時のリトライを阻害しない）
         lastFetchedRef.current = fetchKey
         const grouped = new Map<string, AnnotationWithContext[]>()
-        for (const annotation of result.data) {
+        for (const annotation of annotations) {
           // グリッドの行は受験者なので questionScore.examStudentId でまとめる
           const examStudentId = annotation.questionScore?.examStudentId
           if (!examStudentId) continue

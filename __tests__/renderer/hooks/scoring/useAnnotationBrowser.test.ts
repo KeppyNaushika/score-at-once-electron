@@ -85,10 +85,7 @@ describe("useAnnotationBrowser", () => {
         createMockAnnotationWithContext({ id: "a1" }),
         createMockAnnotationWithContext({ id: "a2" }),
       ]
-      mockAPI.getForBrowse.mockResolvedValue({
-        success: true,
-        data: annotations,
-      })
+      mockAPI.getForBrowse.mockResolvedValue(annotations)
 
       const { result } = renderHook(() => useAnnotationBrowser())
 
@@ -103,22 +100,18 @@ describe("useAnnotationBrowser", () => {
     it("再読み込みでallAnnotationsが完全に置換される", async () => {
       const { result } = renderHook(() => useAnnotationBrowser())
 
-      mockAPI.getForBrowse.mockResolvedValue({
-        success: true,
-        data: [createMockAnnotationWithContext({ id: "a1" })],
-      })
+      mockAPI.getForBrowse.mockResolvedValue([
+        createMockAnnotationWithContext({ id: "a1" }),
+      ])
       await act(async () => {
         await result.current.loadAnnotations("exam-1")
       })
       expect(result.current.allAnnotations).toHaveLength(1)
 
-      mockAPI.getForBrowse.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotationWithContext({ id: "b1" }),
-          createMockAnnotationWithContext({ id: "b2" }),
-        ],
-      })
+      mockAPI.getForBrowse.mockResolvedValue([
+        createMockAnnotationWithContext({ id: "b1" }),
+        createMockAnnotationWithContext({ id: "b2" }),
+      ])
       await act(async () => {
         await result.current.loadAnnotations("exam-1")
       })
@@ -131,29 +124,26 @@ describe("useAnnotationBrowser", () => {
   // =========================================================================
   describe("フィルタ変更", () => {
     it("cropRegionIdフィルタでdisplayItemsが絞り込まれる", async () => {
-      mockAPI.getForBrowse.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotationWithContext({
-            id: "a1",
-            questionScore: {
-              id: "qs-1",
-              examStudentId: "s1",
-              cropRegionId: "cr-1",
-              cropRegion: { id: "cr-1", label: "問1" },
-            },
-          } as Partial<AnnotationWithContext>),
-          createMockAnnotationWithContext({
-            id: "a2",
-            questionScore: {
-              id: "qs-2",
-              examStudentId: "s1",
-              cropRegionId: "cr-2",
-              cropRegion: { id: "cr-2", label: "問2" },
-            },
-          } as Partial<AnnotationWithContext>),
-        ],
-      })
+      mockAPI.getForBrowse.mockResolvedValue([
+        createMockAnnotationWithContext({
+          id: "a1",
+          questionScore: {
+            id: "qs-1",
+            examStudentId: "s1",
+            cropRegionId: "cr-1",
+            cropRegion: { id: "cr-1", label: "問1" },
+          },
+        } as Partial<AnnotationWithContext>),
+        createMockAnnotationWithContext({
+          id: "a2",
+          questionScore: {
+            id: "qs-2",
+            examStudentId: "s1",
+            cropRegionId: "cr-2",
+            cropRegion: { id: "cr-2", label: "問2" },
+          },
+        } as Partial<AnnotationWithContext>),
+      ])
 
       const { result } = renderHook(() => useAnnotationBrowser())
       await act(async () => {
@@ -177,13 +167,10 @@ describe("useAnnotationBrowser", () => {
     })
 
     it("typeフィルタ", async () => {
-      mockAPI.getForBrowse.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotationWithContext({ id: "t1", type: "text" }),
-          createMockAnnotationWithContext({ id: "l1", type: "line" }),
-        ],
-      })
+      mockAPI.getForBrowse.mockResolvedValue([
+        createMockAnnotationWithContext({ id: "t1", type: "text" }),
+        createMockAnnotationWithContext({ id: "l1", type: "line" }),
+      ])
 
       const { result } = renderHook(() => useAnnotationBrowser())
       await act(async () => {
@@ -198,13 +185,10 @@ describe("useAnnotationBrowser", () => {
     })
 
     it("favoritesOnlyフィルタ", async () => {
-      mockAPI.getForBrowse.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotationWithContext({ id: "a1", isFavorite: true }),
-          createMockAnnotationWithContext({ id: "a2", isFavorite: false }),
-        ],
-      })
+      mockAPI.getForBrowse.mockResolvedValue([
+        createMockAnnotationWithContext({ id: "a1", isFavorite: true }),
+        createMockAnnotationWithContext({ id: "a2", isFavorite: false }),
+      ])
 
       const { result } = renderHook(() => useAnnotationBrowser())
       await act(async () => {
@@ -242,14 +226,11 @@ describe("useAnnotationBrowser", () => {
         endY: 0,
       }
 
-      mockAPI.getForBrowse.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotationWithContext({ id: "a1", ...baseProps }),
-          createMockAnnotationWithContext({ id: "a2", ...baseProps }),
-          createMockAnnotationWithContext({ id: "a3", ...baseProps }),
-        ],
-      })
+      mockAPI.getForBrowse.mockResolvedValue([
+        createMockAnnotationWithContext({ id: "a1", ...baseProps }),
+        createMockAnnotationWithContext({ id: "a2", ...baseProps }),
+        createMockAnnotationWithContext({ id: "a3", ...baseProps }),
+      ])
 
       const { result } = renderHook(() => useAnnotationBrowser())
       await act(async () => {
@@ -263,21 +244,18 @@ describe("useAnnotationBrowser", () => {
     })
 
     it("異なるプロパティのアノテーションは別グループ", async () => {
-      mockAPI.getForBrowse.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotationWithContext({
-            id: "a1",
-            type: "text",
-            text: "テスト1",
-          }),
-          createMockAnnotationWithContext({
-            id: "a2",
-            type: "text",
-            text: "テスト2",
-          }),
-        ],
-      })
+      mockAPI.getForBrowse.mockResolvedValue([
+        createMockAnnotationWithContext({
+          id: "a1",
+          type: "text",
+          text: "テスト1",
+        }),
+        createMockAnnotationWithContext({
+          id: "a2",
+          type: "text",
+          text: "テスト2",
+        }),
+      ])
 
       const { result } = renderHook(() => useAnnotationBrowser())
       await act(async () => {
@@ -305,21 +283,18 @@ describe("useAnnotationBrowser", () => {
         endY: 0,
       }
 
-      mockAPI.getForBrowse.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotationWithContext({
-            id: "a1",
-            isFavorite: false,
-            ...baseProps,
-          }),
-          createMockAnnotationWithContext({
-            id: "a2",
-            isFavorite: true,
-            ...baseProps,
-          }),
-        ],
-      })
+      mockAPI.getForBrowse.mockResolvedValue([
+        createMockAnnotationWithContext({
+          id: "a1",
+          isFavorite: false,
+          ...baseProps,
+        }),
+        createMockAnnotationWithContext({
+          id: "a2",
+          isFavorite: true,
+          ...baseProps,
+        }),
+      ])
 
       const { result } = renderHook(() => useAnnotationBrowser())
       await act(async () => {
@@ -335,12 +310,9 @@ describe("useAnnotationBrowser", () => {
   // =========================================================================
   describe("toggleFavorite（お気に入り切り替え）", () => {
     it("ローカル状態が即時更新される", async () => {
-      mockAPI.getForBrowse.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotationWithContext({ id: "a1", isFavorite: false }),
-        ],
-      })
+      mockAPI.getForBrowse.mockResolvedValue([
+        createMockAnnotationWithContext({ id: "a1", isFavorite: false }),
+      ])
 
       const { result } = renderHook(() => useAnnotationBrowser())
       await act(async () => {
@@ -493,23 +465,20 @@ describe("useAnnotationBrowser", () => {
   // =========================================================================
   describe("ソート順", () => {
     it("お気に入りが優先表示される", async () => {
-      mockAPI.getForBrowse.mockResolvedValue({
-        success: true,
-        data: [
-          createMockAnnotationWithContext({
-            id: "a1",
-            isFavorite: false,
-            text: "通常",
-            updatedAt: new Date("2026-01-02"),
-          }),
-          createMockAnnotationWithContext({
-            id: "a2",
-            isFavorite: true,
-            text: "お気に入り",
-            updatedAt: new Date("2026-01-01"),
-          }),
-        ],
-      })
+      mockAPI.getForBrowse.mockResolvedValue([
+        createMockAnnotationWithContext({
+          id: "a1",
+          isFavorite: false,
+          text: "通常",
+          updatedAt: new Date("2026-01-02"),
+        }),
+        createMockAnnotationWithContext({
+          id: "a2",
+          isFavorite: true,
+          text: "お気に入り",
+          updatedAt: new Date("2026-01-01"),
+        }),
+      ])
 
       const { result } = renderHook(() => useAnnotationBrowser())
       await act(async () => {

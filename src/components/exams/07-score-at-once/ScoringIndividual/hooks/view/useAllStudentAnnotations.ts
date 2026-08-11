@@ -62,20 +62,20 @@ export function useAllStudentAnnotations({
 
         // ElectronAPIを直接呼び出してフック依存関係を回避
         // currentUserIdを渡してログインユーザーのアノテーションのみ取得
-        const result = await window.electronAPI.drawing.getByExamStudent(
+        const annotations = await window.electronAPI.drawing.getByExamStudent(
           currentExamStudentId,
           undefined, // type
           currentUserId
         )
 
-        if (result.success && result.data) {
+        if (annotations) {
           console.log("🎨 透明度制御: 読み込み完了", {
-            annotationCount: result.data.length,
+            annotationCount: annotations.length,
             currentCropRegionId: currentCropRegion?.id,
           })
-          setAllStudentAnnotations(result.data)
+          setAllStudentAnnotations(annotations)
         } else {
-          console.error("全設問アノテーション読み込みエラー:", result.error)
+          console.error("全設問アノテーション読み込みエラー:", null)
           setAllStudentAnnotations([])
         }
       } catch (error) {

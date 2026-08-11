@@ -69,10 +69,7 @@ describe("useGridAnnotations", () => {
           },
         },
       ]
-      mockAPI.getByCropRegion.mockResolvedValue({
-        success: true,
-        data: annotations,
-      })
+      mockAPI.getByCropRegion.mockResolvedValue(annotations)
 
       const { result } = renderHook(() =>
         useGridAnnotations({
@@ -90,19 +87,16 @@ describe("useGridAnnotations", () => {
     })
 
     it("cropRegionIdが変更されると新しいデータを取得する", async () => {
-      mockAPI.getByCropRegion.mockResolvedValue({
-        success: true,
-        data: [
-          {
-            ...createMockAnnotation({ id: "a1" }),
-            questionScore: {
-              examStudentId: "s1",
-              cropRegionId: "cr-1",
-              id: "qs-1",
-            },
+      mockAPI.getByCropRegion.mockResolvedValue([
+        {
+          ...createMockAnnotation({ id: "a1" }),
+          questionScore: {
+            examStudentId: "s1",
+            cropRegionId: "cr-1",
+            id: "qs-1",
           },
-        ],
-      })
+        },
+      ])
 
       const { result, rerender } = renderHook(
         ({ cropRegionId }) =>
@@ -114,27 +108,24 @@ describe("useGridAnnotations", () => {
         expect(result.current.annotationsByExamStudent.size).toBe(1)
       })
 
-      mockAPI.getByCropRegion.mockResolvedValue({
-        success: true,
-        data: [
-          {
-            ...createMockAnnotation({ id: "b1" }),
-            questionScore: {
-              examStudentId: "s2",
-              cropRegionId: "cr-2",
-              id: "qs-4",
-            },
+      mockAPI.getByCropRegion.mockResolvedValue([
+        {
+          ...createMockAnnotation({ id: "b1" }),
+          questionScore: {
+            examStudentId: "s2",
+            cropRegionId: "cr-2",
+            id: "qs-4",
           },
-          {
-            ...createMockAnnotation({ id: "b2" }),
-            questionScore: {
-              examStudentId: "s3",
-              cropRegionId: "cr-2",
-              id: "qs-5",
-            },
+        },
+        {
+          ...createMockAnnotation({ id: "b2" }),
+          questionScore: {
+            examStudentId: "s3",
+            cropRegionId: "cr-2",
+            id: "qs-5",
           },
-        ],
-      })
+        },
+      ])
 
       rerender({ cropRegionId: "cr-2" })
 
@@ -163,19 +154,16 @@ describe("useGridAnnotations", () => {
 
   describe("refreshKey変更（外部からのアノテーション変更通知）", () => {
     it("refreshKey変更で同一cropRegionIdのデータを再取得する", async () => {
-      mockAPI.getByCropRegion.mockResolvedValue({
-        success: true,
-        data: [
-          {
-            ...createMockAnnotation({ id: "a1" }),
-            questionScore: {
-              examStudentId: "s1",
-              cropRegionId: "cr-1",
-              id: "qs-1",
-            },
+      mockAPI.getByCropRegion.mockResolvedValue([
+        {
+          ...createMockAnnotation({ id: "a1" }),
+          questionScore: {
+            examStudentId: "s1",
+            cropRegionId: "cr-1",
+            id: "qs-1",
           },
-        ],
-      })
+        },
+      ])
 
       const { result, rerender } = renderHook(
         ({ refreshKey }) =>
@@ -191,27 +179,24 @@ describe("useGridAnnotations", () => {
         expect(result.current.annotationsByExamStudent.size).toBe(1)
       })
 
-      mockAPI.getByCropRegion.mockResolvedValue({
-        success: true,
-        data: [
-          {
-            ...createMockAnnotation({ id: "a1" }),
-            questionScore: {
-              examStudentId: "s1",
-              cropRegionId: "cr-1",
-              id: "qs-1",
-            },
+      mockAPI.getByCropRegion.mockResolvedValue([
+        {
+          ...createMockAnnotation({ id: "a1" }),
+          questionScore: {
+            examStudentId: "s1",
+            cropRegionId: "cr-1",
+            id: "qs-1",
           },
-          {
-            ...createMockAnnotation({ id: "a2" }),
-            questionScore: {
-              examStudentId: "s1",
-              cropRegionId: "cr-1",
-              id: "qs-2",
-            },
+        },
+        {
+          ...createMockAnnotation({ id: "a2" }),
+          questionScore: {
+            examStudentId: "s1",
+            cropRegionId: "cr-1",
+            id: "qs-2",
           },
-        ],
-      })
+        },
+      ])
 
       rerender({ refreshKey: 1 })
 
@@ -225,10 +210,7 @@ describe("useGridAnnotations", () => {
 
   describe("API失敗時", () => {
     it("失敗時に空のMapを返す", async () => {
-      mockAPI.getByCropRegion.mockResolvedValue({
-        success: false,
-        error: "取得エラー",
-      })
+      mockAPI.getByCropRegion.mockRejectedValue(new Error("取得エラー"))
 
       const { result } = renderHook(() =>
         useGridAnnotations({
