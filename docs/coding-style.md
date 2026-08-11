@@ -15,7 +15,9 @@
 9. [import文の書き方](#import文の書き方)
 10. [コメント規約](#コメント規約)
 
-> コンポーネント設計原則の中に「[effect の中で setState しない](#effect-の中で-setstate-しないreact-hooksset-state-in-effect)」がある。`react-hooks/set-state-in-effect` の警告を直す前に読むこと。
+> コンポーネント設計原則の中に「[effect の使いどころ](#effect-の使いどころ厳守)」と
+> 「[データ取得は `useQuery`](#データ取得は-usequery厳守)」がある。effect を書く前と、
+> `react-hooks/set-state-in-effect` の警告を直す前に読むこと。
 
 ---
 
@@ -409,6 +411,48 @@ delete → recreate していた。編集画面を開くだけで保存が走る
 保存されない**。「一覧に書き足す運用」に依存する設計は、この試験では既に破れている実績がある
 （同期除外リストで2回）。
 
+### IPC の失敗の伝え方（厳守）
+
+**失敗は例外で伝える。予期される結果は値で返す。**
+
+キャンセル・未検出・空は失敗ではない。保存ダイアログを閉じたことを例外にしない。これらは
+payload の一部として素直に返す（`null` / `{ canceled: true }` 等）。
+
+`{ success, error }` のエンベロープは、**IPC の境界と preload の間だけで使う搬送形式**である。
+プロセスをまたぐと例外がそのままでは渡らないため、境界で値へ詰め替え、preload で例外へ戻す。
+
+| 層                           | 扱うもの                                                     |
+| ---------------------------- | ------------------------------------------------------------ |
+| main の `lib/`               | payload を返す。失敗は `throw`                               |
+| 境界（ハンドラ登録ラッパー） | 例外を捕まえてエンベロープへ詰める。`serializePrisma` もここ |
+| preload の `invoke`          | エンベロープをほどく。失敗は `throw`                         |
+| renderer                     | payload を受け取る。失敗は reject                            |
+
+**エンベロープを宣言する場所は1つ、消費する場所は1つ。** 両端の型からは見えない。
+
+```typescript
+// ❌ lib が失敗を値で返す（呼び出し側が見落としても型が止めない）
+export async function getGrade(id: string) {
+  const grade = await prisma.grade.findUnique({ where: { id } })
+  if (!grade) return { success: false, error: "成績が見つかりません" }
+  return { success: true, grade }
+}
+
+// ✅ payload を返し、失敗は投げる
+export async function getGrade(id: string): Promise<GradeWithRelations> {
+  const grade = await prisma.grade.findUnique({ where: { id }, include: … })
+  if (!grade) throw new Error("成績が見つかりません")
+  return grade
+}
+```
+
+**理由**: 値で返す失敗は、呼び出し側が `success` を見なくてもコンパイルが通る。main の内部呼び出し
+でも renderer でも、見落としが型で止まらない。例外は握り潰すほうに明示的な記述（`try`）が要るので、
+既定が安全側に倒れる。
+
+> **移行中**: 契約 `src/types/electron/*.d.ts` に `success` が残っているドメインは未移行。
+> `tag` / `examClassroom` / `userExam` / `navigation` / `auditLog` は既に移行後の形。
+
 ### IPC通信における型の一貫性（厳守）
 
 Main process（electron-src）と Renderer process（components, hooks）間のIPC通信では、**同一の型定義を参照すること**。
@@ -438,6 +482,23 @@ interface ExamData { ... }  // Renderer独自（微妙に違う可能性）
 ```
 
 **理由**: IPC通信のデータは Structured Clone で受け渡されるため、型定義が一致していないと実行時エラーや型の不整合が発生する。
+
+**契約はエンベロープを宣言しない。** `src/types/electron/*.d.ts` が宣言するのは payload の型だけで、
+`success` / `error` と、それに伴う payload の `?` は書かない。失敗は preload が例外へ戻すため、
+renderer の型には現れない（「[IPC の失敗の伝え方](#ipc-の失敗の伝え方厳守)」）。
+
+```typescript
+// ❌ エンベロープを契約に書く（payload が optional になり、全呼び出し側が握りを書く）
+getById: (id: string) =>
+  Promise<{
+    success: boolean
+    grade?: GradeWithRelations
+    error?: string
+  }>
+
+// ✅ payload だけを宣言する
+getById: (id: string) => Promise<GradeWithRelations>
+```
 
 ### 型定義の配置ルール
 
@@ -624,22 +685,48 @@ const [items, setItems] = useState<Item[]>([])
 const [completedCount, setCompletedCount] = useState(0) // 同期が必要になる
 ```
 
-### effect の中で setState しない（`react-hooks/set-state-in-effect`）
+### effect の使いどころ（厳守）
 
-このルールの警告は3つに分かれる。**A群は許容、B群は必ず直す、C群は名指しで管理する。**
+effect の用途は2つだけ。
 
-| 群  | 形                                         | 扱い                       |
-| --- | ------------------------------------------ | -------------------------- |
-| A   | effect から非同期ローダーを呼ぶ            | 許容（現構成では代替なし） |
-| B   | effect の中で**同期的に** setState する    | **禁止**（下記の型で直す） |
-| C   | 直すには周辺の仕組みごと作り直しが要るもの | eslint 設定に名指しで記録  |
+1. **React の state を外部システムへ押し出す** — canvas への描画、DOM の直接操作、`focus()` など
+2. **外部システムを購読し、コールバックの中で setState する** — `addEventListener`、各種 Observer など
 
-**A群** — `useEffect(() => { loadData() }, [loadData])` の形。ルールは setState への到達可能性だけを見るため `await` の後の更新も警告になるが、Suspense を使わない現構成では代替手段がない。
+2 で `addEventListener` のコールバックの中で setState するのは正しい。**effect の本体で setState
+するのが問題**である。
 
-**B群** — props→state のミラーリング、開くたびのリセット、読み込み中フラグの先出しなど。**結果に「どの入力に対するものか」を同梱して状態に持ち、表示時に引き直す**形へ置き換える。入力が変われば一致しなくなるので、リセットの effect が要らなくなる。
+effect でやってはいけないもの:
+
+| やりたいこと                       | 正しい手段                   |
+| ---------------------------------- | ---------------------------- |
+| props/state から値を導く           | レンダー中に計算する         |
+| prop が変わったら state をリセット | `key` を渡してマウントし直す |
+| ユーザー操作に反応する             | イベントハンドラ             |
+| データ取得                         | `useQuery`（次節）           |
+
+#### `react-hooks/set-state-in-effect` が見ているもの
+
+このルールが判定しているのは **setState を含む関数がどこで定義されているか**であって、`await` の
+有無ではない。
+
+- effect の**外**で定義した関数（`useCallback` でも素の関数でも）を effect から呼ぶ → 警告
+- effect の**中**で定義した関数の中の setState → 追わないので警告は出ない
+
+したがって `await` の後でしか setState しない取得処理も、ローダーを外へ切り出していれば警告になる。
+同じ処理を effect の中に書けば警告は出ない。**警告の有無でコードの良し悪しは決まらない。** 判断は
+上の表で行う。
+
+このため、effect の中で作った関数へ包み直して警告だけ消すことは**禁止**する。実行時の挙動は
+変わらず、痕跡の残らない `eslint-disable` を書いたことになる。
+
+#### 派生に落とす
+
+props→state のミラーリング、開くたびのリセット、読み込み中フラグの先出しは、**結果に「どの入力に
+対するものか」を同梱して状態に持ち、表示時に引き直す**形へ置き換える。入力が変われば一致しなく
+なるので、リセットの effect が要らなくなる。
 
 ```typescript
-// ❌ B群: 入力が変わったら状態を作り直す effect
+// ❌ 入力が変わったら状態を作り直す effect
 const [data, setData] = useState<T | null>(null)
 const [isLoading, setIsLoading] = useState(false)
 useEffect(() => {
@@ -664,15 +751,51 @@ useEffect(() => {
 }, [enabled, isCurrent, examId])
 ```
 
-同梱するキーは**識別子そのもの**（`examId` 等）か、`useMemo` で作った**安定した参照**にする。毎レンダー作り直される配列やオブジェクトを比較すると永久に一致せず、取得が止まらない。
+同梱するキーは**識別子そのもの**（`examId` 等）か、`useMemo` で作った**安定した参照**にする。
+毎レンダー作り直される配列やオブジェクトを比較すると永久に一致せず、取得が止まらない。
 
-派生に落とせない B群には、ほかに次の受け皿がある。
+> データ取得そのものは `useQuery` へ移すため、上の形が要るのは取得以外の派生に限る。
 
-- **開いている間だけの状態** → ダイアログの中身の子コンポーネントへ移す。Radix は閉じている間 `DialogContent` / `AlertDialogContent` をマウントしないので、開くたびの初期化は作り直しで済む
+派生に落とせないものには、ほかに次の受け皿がある。
+
+- **開いている間だけの状態** → ダイアログの中身の子コンポーネントへ移す。Radix は閉じている間
+  `DialogContent` / `AlertDialogContent` をマウントしないので、開くたびの初期化は作り直しで済む
 - **props をそのまま写していただけの state** → 撤去して制御コンポーネントにする（親が状態を持つ）
-- **「選択が消えたら先頭へ寄せる」** → 選択は利用者が選んだものだけを持ち、表示対象は `find(...) ?? first ?? null` で引き直す。消えた選択を状態へ書き戻さない
+- **「選択が消えたら先頭へ寄せる」** → 選択は利用者が選んだものだけを持ち、表示対象は
+  `find(...) ?? first ?? null` で引き直す。消えた選択を状態へ書き戻さない
 
-**C群** — 現在1件のみ。`components/exams/07-score-at-once/ScoringMain/hooks/useScoringFilter.ts`。理由と作り直しの範囲は `eslint.config.mjs` の該当ルールのコメントに書く。**「難しいから例外」という判断基準は書かない**（必ず当てはめに使われて拡大する）。C群へ入れるのは所有者の明示的な判断のみで、対象はファイル名で名指しする。
+### データ取得は `useQuery`（厳守）
+
+**effect でデータを取らない。** 取得は TanStack Query に載せる。
+
+```typescript
+const {
+  data: grade,
+  isLoading,
+  error,
+} = useQuery({
+  queryKey: queryKeys.grade.detail(gradeId),
+  queryFn: () => window.electronAPI.grade.getById(gradeId),
+})
+```
+
+- **`queryKey` は `src/lib/queryKeys.ts` を経由する。** 文字列リテラルを画面側に書かない。同定は
+  **id** で行い、順序・表示名・添字を混ぜない。キーは配列の前方一致で無効化されるので、キーの構造が
+  そのまま無効化の粒度になる
+- **変更後の再取得は `invalidateQueries`。** `loadData()` の手撃ちは禁止。手撃ちは自分の画面しか
+  更新せず、同じデータを見ている別の画面が古いまま残る
+- **フックが返す名前は `isLoading` / `error`。** ライブラリの名前をそのまま通し、翻訳層を作らない
+- **失敗を `console.error` で握り潰さない。** `error` に載せて画面が判断する
+- 既定は `refetchOnWindowFocus: false` / `retry: false`（`src/contexts/QueryProvider.tsx`）。IPC は
+  ネットワークを跨がないので再試行しても結果は変わらない。窓の復帰で他端末の変更を拾いたい画面だけ、
+  その `useQuery` で有効にする
+
+**競合の始末はライブラリが持つ。** 入力が変わって再取得が走ったとき、古い応答が新しい結果を
+上書きしない。自前の effect で取ると、この取り消しを1件ずつ手で書くことになり、実際には
+ほとんど書かれていなかった。
+
+> **移行中**: `useEffect` から `window.electronAPI` を呼んでいる箇所は未移行。手順は
+> [docs/ipc-and-data-fetching-plan.md](./ipc-and-data-fetching-plan.md)。
 
 ---
 
@@ -888,3 +1011,6 @@ export async function exportToExcel(
 | 2026-07-05 | 命名規則に「id ではなく実体を持つ原則（`xxxIds` の扱い）」を追加 |
 | 2026-08-02 | 「IPC の粒度（意図を運ぶ／状態を運ばない）」を追加               |
 | 2026-08-09 | 「effect の中で setState しない」（A/B/C群の分類）を追加         |
+| 2026-08-11 | 「IPC の失敗の伝え方」を追加。契約はエンベロープを宣言しない     |
+| 2026-08-11 | effect の節を「使いどころ」へ改訂（A/B/C群を廃止・判定の訂正）   |
+| 2026-08-11 | 「データ取得は `useQuery`」を追加                                |
