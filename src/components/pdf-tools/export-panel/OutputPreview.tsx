@@ -18,6 +18,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, RotateCcw, RotateCw, Trash2 } from "lucide-react"
+import Image from "next/image"
 
 import { cn } from "@/lib/utils"
 import type { OutputPage, RotationDegree } from "@/types/pdfTools.types"
@@ -174,12 +175,14 @@ function SortablePageItem({
       {...listeners}
     >
       {/* サムネイル */}
-      <div className="h-full w-full overflow-hidden">
+      <div className="relative h-full w-full overflow-hidden">
         {page.thumbnail ? (
-          <img
+          <Image
             src={page.thumbnail}
             alt={`Page ${index + 1}`}
-            className="h-full w-full object-cover"
+            fill
+            unoptimized
+            className="object-cover"
             style={page.rotation !== 0 ? rotationStyle : undefined}
           />
         ) : (

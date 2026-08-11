@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 
+import type { ScoredAnswerPreviewPage } from "../types"
 import {
   preloadScoringMarkImages,
   renderAnswerSheetToCanvas,
@@ -41,7 +42,7 @@ interface LoadedPage {
 const RENDER_DEBOUNCE_MS = 150
 
 /** 出力対象が無いときの空配列（毎レンダー作り直すと下流の再描画を誘発する） */
-const NO_PREVIEW_IMAGE_URLS: string[] = []
+const NO_PREVIEW_PAGES: ScoredAnswerPreviewPage[] = []
 
 /**
  * 採点済み答案のCanvas描画プレビューを生成するフック
@@ -69,7 +70,7 @@ export function useScoredAnswerPreview({
   const [rendered, setRendered] = useState<{
     pages: LoadedPage[]
     renderConfig: AnswerOverlaySettings
-    urls: string[]
+    previewPages: ScoredAnswerPreviewPage[]
     error: string | null
   } | null>(null)
 
@@ -93,10 +94,10 @@ export function useScoredAnswerPreview({
 
   // 描画中は前回の画像を出したままにする（生徒を替えるたびに白くしない）。
   // 出力対象が無いとき（未選択・答案なし・無効）だけ空にする
-  const previewImageUrls =
+  const previewPages =
     !enabled || !previewStudentId || loadedPages?.length === 0
-      ? NO_PREVIEW_IMAGE_URLS
-      : (rendered?.urls ?? NO_PREVIEW_IMAGE_URLS)
+      ? NO_PREVIEW_PAGES
+      : (rendered?.previewPages ?? NO_PREVIEW_PAGES)
   // 描画時のエラーは、その描画対象がまだ現役のときだけ出す（生徒を替えた後に
   // 前の生徒の失敗が残らないようにする）
   const renderError =
@@ -224,7 +225,7 @@ export function useScoredAnswerPreview({
         }
         const canvas = canvasRef.current
 
-        const urls: string[] = []
+        const previewPages: ScoredAnswerPreviewPage[] = []
         for (const { page, img } of loadedPages) {
           // main が組み立てた形をそのまま描画エンジンへ渡す（PdfCanvasRenderer と同じ経路）
           const scoringDataForPdf = page.scoringData
@@ -267,14 +268,18 @@ export function useScoredAnswerPreview({
 
           if (cancelled) return
 
-          urls.push(canvas.toDataURL("image/png"))
+          previewPages.push({
+            dataUrl: canvas.toDataURL("image/png"),
+            width: canvas.width,
+            height: canvas.height,
+          })
         }
 
         if (!cancelled) {
           setRendered({
             pages: loadedPages,
             renderConfig,
-            urls,
+            previewPages,
             error: null,
           })
         }
@@ -284,7 +289,7 @@ export function useScoredAnswerPreview({
           setRendered({
             pages: loadedPages,
             renderConfig,
-            urls: [],
+            previewPages: [],
             error:
               err instanceof Error
                 ? err.message
@@ -301,5 +306,5 @@ export function useScoredAnswerPreview({
     }
   }, [loadedPages, renderConfig, enabled, rendered])
 
-  return { previewImageUrls, isLoading, error }
+  return { previewPages, isLoading, error }
 }

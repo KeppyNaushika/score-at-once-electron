@@ -8,6 +8,7 @@ import {
   RotateCw,
   Trash2,
 } from "lucide-react"
+import Image from "next/image"
 import { useMemo, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -230,10 +231,12 @@ export default function ImportedFileItem({
                     )}
                   >
                     {thumbnail ? (
-                      <img
+                      <Image
                         src={thumbnail}
                         alt={`Page ${pageNumber}`}
-                        className="h-full w-full object-cover"
+                        fill
+                        unoptimized
+                        className="object-cover"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-muted">

@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 
+import type { ScoredAnswerPreviewPage } from "@/components/exams/08-export/types"
 import { Student } from "@/components/exams/08-export/types"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -83,7 +84,7 @@ interface StudentSelectionCardProps {
   previewStudentList?: Array<{ id: string; name: string }>
   individualReportOptions?: IndividualReportOptions
   // 採点済み答案プレビュー
-  scoredAnswerPreviewUrls?: string[]
+  scoredAnswerPreviewPages?: ScoredAnswerPreviewPage[]
   isScoredAnswerPreviewLoading?: boolean
   scoredAnswerPreviewError?: string | null
   // Excelプレビュー
@@ -122,7 +123,7 @@ export function StudentSelectionCard({
   onPreviewStudentChange,
   previewStudentList,
   individualReportOptions,
-  scoredAnswerPreviewUrls,
+  scoredAnswerPreviewPages,
   isScoredAnswerPreviewLoading,
   scoredAnswerPreviewError,
   excelPreviewData,
@@ -437,7 +438,7 @@ export function StudentSelectionCard({
           ) : previewType === "scored-answers" ? (
             // 採点済み答案プレビュー
             <ScoredAnswerPreview
-              imageUrls={scoredAnswerPreviewUrls || []}
+              pages={scoredAnswerPreviewPages ?? []}
               isLoading={isScoredAnswerPreviewLoading || false}
               error={scoredAnswerPreviewError || null}
             />

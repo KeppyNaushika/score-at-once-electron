@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import {
   forwardRef,
   useCallback,
@@ -91,7 +92,7 @@ export const MasterAnswerView = forwardRef<
         urls.map(
           (url) =>
             new Promise<HTMLImageElement>((resolve, reject) => {
-              const image = new Image()
+              const image = document.createElement("img")
               image.onload = () => resolve(image)
               image.onerror = reject
               image.src = url
@@ -231,10 +232,16 @@ export const MasterAnswerView = forwardRef<
           }
 
           return (
-            <img
+            <Image
               key={`master-page-${pageIndex}`}
               src={image.src}
               alt={`模範解答 ページ${pageIndex + 1}`}
+              width={displayWidth}
+              height={displayHeight}
+              unoptimized
+              // appimg:// は next/image の既定で lazy になる。ページを並べて
+              // 表示する領域にあり、素の <img> は eager だった
+              loading="eager"
               className="pointer-events-none absolute left-0 block"
               style={{
                 top: `${offsetY * zoom}px`,

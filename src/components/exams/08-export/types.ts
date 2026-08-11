@@ -37,3 +37,15 @@ export interface RenderedPageData {
   pageNumber: number
   imageData: ArrayBuffer
 }
+
+/**
+ * 採点済み答案プレビューの1ページ。
+ *
+ * 実寸は canvas から出たそのままの値。next/image が要求する width/height に
+ * 当て推量を置かないため、生成元から一緒に持ち回る。
+ */
+export interface ScoredAnswerPreviewPage {
+  dataUrl: string
+  width: number
+  height: number
+}
