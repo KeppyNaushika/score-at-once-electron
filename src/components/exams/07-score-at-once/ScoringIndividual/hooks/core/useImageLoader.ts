@@ -87,7 +87,7 @@ export function useImageLoader({
           window.electronAPI
             .checkFileExists(imageInfo.path)
             .then((result) => {
-              if (result.success && result.exists) {
+              if (result.exists) {
                 // 相対パスを使用（appimg:// プロトコルハンドラー内で絶対パスに変換される）
                 // 絶対パスを使うと appimg:////Users/... となりURL正規化でパスが壊れる
                 image.src = `appimg:///${imageInfo.path}`

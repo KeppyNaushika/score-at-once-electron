@@ -20,9 +20,8 @@ export interface ClassroomStudentAPI {
   getClassroomsNotInExam: (
     examId: string,
     activeOnly?: boolean
-  ) => Promise<{
-    success: boolean
-    classrooms?: Array<{
+  ) => Promise<
+    Array<{
       id: string
       name: string
       classroomCode: string | null
@@ -30,16 +29,11 @@ export interface ClassroomStudentAPI {
       studentCount: number
       studentNames: string[]
     }>
-    error?: string
-  }>
+  >
   getStudentsNotInExam: (
     examId: string,
     activeOnly?: boolean
-  ) => Promise<{
-    success: boolean
-    students?: StudentWithMemberships[]
-    error?: string
-  }>
+  ) => Promise<StudentWithMemberships[]>
   createClassroom: (
     classroomData: Prisma.ClassroomCreateWithoutTeachersInput
   ) => Promise<ClassroomWithMemberships>
@@ -62,16 +56,13 @@ export interface ClassroomStudentAPI {
   getClassroomExamResults: (
     classroomId: string
   ) => Promise<ClassroomStudentExamResult[]>
-  exportStudentsExcel: (selectedStudentIds: string[]) => Promise<{
-    success: boolean
-    outputPath?: string
-    error?: string
-  }>
-  exportClassroomsExcel: (selectedClassroomIds: string[]) => Promise<{
-    success: boolean
-    outputPath?: string
-    error?: string
-  }>
+  /** 保存先を選ばずに閉じた場合は canceled で返る（失敗ではない） */
+  exportStudentsExcel: (
+    selectedStudentIds: string[]
+  ) => Promise<{ canceled: true } | { canceled: false; outputPath: string }>
+  exportClassroomsExcel: (
+    selectedClassroomIds: string[]
+  ) => Promise<{ canceled: true } | { canceled: false; outputPath: string }>
 
   // Student Classroom Membership related
   updateStudentClassroomMembership: (

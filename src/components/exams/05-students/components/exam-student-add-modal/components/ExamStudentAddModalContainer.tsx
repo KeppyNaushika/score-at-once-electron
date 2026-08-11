@@ -34,12 +34,11 @@ export function ExamStudentAddModalContainer({
   const adapter = useMemo<StudentAddPanelAdapter>(
     () => ({
       fetchAvailableClassrooms: async (activeOnly) => {
-        const result = await window.electronAPI.getClassroomsNotInExam(
+        const classrooms = await window.electronAPI.getClassroomsNotInExam(
           examId,
           activeOnly
         )
-        if (!result.success || !result.classrooms) return []
-        return result.classrooms.map((classroom): AddPanelClassroomItem => ({
+        return classrooms.map((classroom): AddPanelClassroomItem => ({
           id: classroom.id,
           name: classroom.name,
           studentCount: classroom.studentCount,
@@ -47,12 +46,11 @@ export function ExamStudentAddModalContainer({
         }))
       },
       fetchAvailableStudents: async (activeOnly) => {
-        const result = await window.electronAPI.getStudentsNotInExam(
+        const students = await window.electronAPI.getStudentsNotInExam(
           examId,
           activeOnly
         )
-        if (!result.success || !result.students) return []
-        return result.students.map((student): AddPanelStudentItem => ({
+        return students.map((student): AddPanelStudentItem => ({
           id: student.id,
           studentNumber: student.studentNumber,
           lastName: student.lastName,

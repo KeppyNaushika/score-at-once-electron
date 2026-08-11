@@ -190,16 +190,15 @@ export default function ClassroomManagementTable() {
       const result = await window.electronAPI.exportClassroomsExcel(
         Array.from(selectedClassroomIds)
       )
-      if (result.success) {
+      if (!result.canceled) {
         toast.success(
           `${selectedClassroomIds.size}学級のデータをExcelに出力しました`
         )
-      } else if (result.error !== "出力がキャンセルされました") {
-        toast.error(`エクスポートに失敗しました: ${result.error}`)
       }
     } catch (error) {
-      console.error("Failed to export classrooms:", error)
-      toast.error("エクスポート中にエラーが発生しました")
+      toast.error("エクスポートに失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setIsExporting(false)
     }

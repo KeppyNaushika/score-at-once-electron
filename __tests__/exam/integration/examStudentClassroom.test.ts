@@ -143,14 +143,12 @@ describe("Exam 在籍フィルタ", () => {
       })
 
       const activeResult = await getClassroomsNotInExam(exam.id, true)
-      expect(
-        activeResult.classrooms!.map((classroom) => classroom.name)
-      ).not.toContain("3年A組")
+      expect(activeResult.map((classroom) => classroom.name)).not.toContain(
+        "3年A組"
+      )
 
       const allResult = await getClassroomsNotInExam(exam.id, false)
-      expect(
-        allResult.classrooms!.map((classroom) => classroom.name)
-      ).toContain("3年A組")
+      expect(allResult.map((classroom) => classroom.name)).toContain("3年A組")
     })
   })
 
@@ -204,9 +202,7 @@ describe("Exam 在籍フィルタ", () => {
 
       const result = await getStudentsNotInExam(exam.id, true)
 
-      expect(result.students!.map((student) => student.studentNumber)).toEqual([
-        "E001",
-      ])
+      expect(result.map((student) => student.studentNumber)).toEqual(["E001"])
     })
 
     it("activeOnly=false なら将来始まる所属の生徒も対象になる", async () => {
@@ -215,9 +211,7 @@ describe("Exam 在籍フィルタ", () => {
 
       const result = await getStudentsNotInExam(exam.id, false)
 
-      const numbers = result
-        .students!.map((student) => student.studentNumber)
-        .sort()
+      const numbers = result.map((student) => student.studentNumber).sort()
       expect(numbers).toEqual(["E001", "E002", "E003"])
     })
   })
@@ -228,10 +222,7 @@ describe("Exam 在籍フィルタ", () => {
 
       const result = await getStudentsNotInExam(exam.id, true)
 
-      expect(result.success).toBe(true)
-      expect(result.students!.map((student) => student.studentNumber)).toEqual([
-        "E001",
-      ])
+      expect(result.map((student) => student.studentNumber)).toEqual(["E001"])
     })
 
     it("activeOnly=false は在籍終了の生徒も返す", async () => {
@@ -239,9 +230,7 @@ describe("Exam 在籍フィルタ", () => {
 
       const result = await getStudentsNotInExam(exam.id, false)
 
-      const numbers = result
-        .students!.map((student) => student.studentNumber)
-        .sort()
+      const numbers = result.map((student) => student.studentNumber).sort()
       expect(numbers).toEqual(["E001", "E002"])
     })
 
@@ -252,7 +241,7 @@ describe("Exam 在籍フィルタ", () => {
       const result = await getStudentsNotInExam(exam.id, true)
 
       // active は追加済みなので候補に残らない
-      expect(result.students).toHaveLength(0)
+      expect(result).toHaveLength(0)
     })
   })
 

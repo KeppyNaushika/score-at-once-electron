@@ -293,29 +293,17 @@ export async function getClassroomsNotInExam(
   examId: string,
   activeOnly = true
 ) {
-  try {
-    const referenceDate = await getExamReferenceDate(examId)
-    const examStudents = await prisma.examStudent.findMany({
-      where: { examId },
-    })
+  const referenceDate = await getExamReferenceDate(examId)
+  const examStudents = await prisma.examStudent.findMany({
+    where: { examId },
+  })
 
-    const classrooms = await getAvailableClassroomsForTarget({
-      existingClassroomIds: [],
-      excludeStudentIds: examStudents.map(
-        (examStudent) => examStudent.studentId
-      ),
-      referenceDate,
-      activeOnly,
-    })
-
-    return { success: true, classrooms }
-  } catch (error) {
-    console.error("Error fetching classrooms not in exam:", error)
-    return {
-      success: false,
-      error: "Failed to fetch available classrooms",
-    }
-  }
+  return getAvailableClassroomsForTarget({
+    existingClassroomIds: [],
+    excludeStudentIds: examStudents.map((examStudent) => examStudent.studentId),
+    referenceDate,
+    activeOnly,
+  })
 }
 
 /**
@@ -324,26 +312,14 @@ export async function getClassroomsNotInExam(
  * @param activeOnly true なら「終了していない所属が1件以上ある生徒」のみ（既定）。
  */
 export async function getStudentsNotInExam(examId: string, activeOnly = true) {
-  try {
-    const referenceDate = await getExamReferenceDate(examId)
-    const examStudents = await prisma.examStudent.findMany({
-      where: { examId },
-    })
+  const referenceDate = await getExamReferenceDate(examId)
+  const examStudents = await prisma.examStudent.findMany({
+    where: { examId },
+  })
 
-    const students = await getAvailableStudentsForTarget({
-      excludeStudentIds: examStudents.map(
-        (examStudent) => examStudent.studentId
-      ),
-      referenceDate,
-      activeOnly,
-    })
-
-    return { success: true, students }
-  } catch (error) {
-    console.error("Error fetching students not in exam:", error)
-    return {
-      success: false,
-      error: "Failed to fetch available students",
-    }
-  }
+  return getAvailableStudentsForTarget({
+    excludeStudentIds: examStudents.map((examStudent) => examStudent.studentId),
+    referenceDate,
+    activeOnly,
+  })
 }

@@ -267,16 +267,15 @@ export default function StudentTable() {
       const result = await window.electronAPI.exportStudentsExcel(
         Array.from(selectedStudentIds)
       )
-      if (result.success) {
+      if (!result.canceled) {
         toast.success(
           `${selectedStudentIds.size}名の生徒データをExcelに出力しました`
         )
-      } else if (result.error !== "出力がキャンセルされました") {
-        toast.error(`エクスポートに失敗しました: ${result.error}`)
       }
     } catch (error) {
-      console.error("Failed to export students:", error)
-      toast.error("エクスポート中にエラーが発生しました")
+      toast.error("エクスポートに失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setIsExporting(false)
     }

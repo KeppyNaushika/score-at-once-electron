@@ -266,18 +266,14 @@ export function setupMiscHandlers(): void {
   })
 
   // ファイル存在確認ハンドラー
-  registerSafeHandler("check-file-exists", async (relativePath: string) => {
+  // 存在しないことは失敗ではないので、例外にせず値で返す
+  registerHandler("check-file-exists", async (relativePath: string) => {
     const absolutePath = getAbsolutePathFromData(relativePath)
     try {
       await fsPromises.access(absolutePath)
-      return { success: true, exists: true, path: absolutePath }
-    } catch (err) {
-      return {
-        success: true,
-        exists: false,
-        path: absolutePath,
-        error: err instanceof Error ? err.message : "Unknown error",
-      }
+      return { exists: true, path: absolutePath }
+    } catch {
+      return { exists: false, path: absolutePath }
     }
   })
 }

@@ -170,7 +170,7 @@ export function setupStudentHandlers(): void {
   })
 
   // 生徒データExcelエクスポート（選択された生徒のみ）
-  registerSafeHandler(
+  registerHandler(
     "export-students-excel",
     async (selectedStudentIds: string[]) => {
       const allStudents = await fetchStudents()
@@ -180,7 +180,7 @@ export function setupStudentHandlers(): void {
       )
 
       if (students.length === 0) {
-        return { success: false, error: "出力する生徒が選択されていません" }
+        throw new Error("出力する生徒が選択されていません")
       }
 
       const dateStr = new Date().toISOString().slice(0, 10)
@@ -190,8 +190,9 @@ export function setupStudentHandlers(): void {
         filters: [{ name: "Excelファイル", extensions: ["xlsx"] }],
       })
 
+      // キャンセルは失敗ではないので値で返す
       if (result.canceled || !result.filePath) {
-        return { success: false, error: "出力がキャンセルされました" }
+        return { canceled: true as const }
       }
 
       const workbook = new ExcelJS.Workbook()
@@ -228,13 +229,12 @@ export function setupStudentHandlers(): void {
       autoFitColumns(worksheet)
       await workbook.xlsx.writeFile(result.filePath)
 
-      return { success: true, outputPath: result.filePath }
-    },
-    "不明なエラーが発生しました"
+      return { canceled: false as const, outputPath: result.filePath }
+    }
   )
 
   // 学級データExcelエクスポート（選択された学級の所属データ）
-  registerSafeHandler(
+  registerHandler(
     "export-classrooms-excel",
     async (selectedClassroomIds: string[]) => {
       const allClassrooms = await fetchClassrooms()
@@ -244,7 +244,7 @@ export function setupStudentHandlers(): void {
       )
 
       if (classrooms.length === 0) {
-        return { success: false, error: "出力する学級が選択されていません" }
+        throw new Error("出力する学級が選択されていません")
       }
 
       const dateStr = new Date().toISOString().slice(0, 10)
@@ -254,8 +254,9 @@ export function setupStudentHandlers(): void {
         filters: [{ name: "Excelファイル", extensions: ["xlsx"] }],
       })
 
+      // キャンセルは失敗ではないので値で返す
       if (result.canceled || !result.filePath) {
-        return { success: false, error: "出力がキャンセルされました" }
+        return { canceled: true as const }
       }
 
       // 全生徒を取得（学籍番号逆引き用）
@@ -320,8 +321,7 @@ export function setupStudentHandlers(): void {
 
       await workbook.xlsx.writeFile(result.filePath)
 
-      return { success: true, outputPath: result.filePath }
-    },
-    "不明なエラーが発生しました"
+      return { canceled: false as const, outputPath: result.filePath }
+    }
   )
 }

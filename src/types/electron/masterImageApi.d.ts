@@ -15,12 +15,10 @@ import type { StudentAnswerImageWithExamPageAndStudent } from "../prismaExtensio
  */
 export interface MasterImageAPI {
   resolveFileProtocolPath: (relativePath: string) => Promise<string>
-  checkFileExists: (relativePath: string) => Promise<{
-    success: boolean
-    exists: boolean
-    path: string
-    error?: string
-  }>
+  /** 存在しないことは失敗ではないので値で返る */
+  checkFileExists: (
+    relativePath: string
+  ) => Promise<{ exists: boolean; path: string }>
   getExamPagesByExamId: (examId: string) => Promise<ExamPageWithContent[]>
   getMasterImagesByExamId: (examId: string) => Promise<ExamPage[]>
   getStudentAnswerImagesByExamId: (
