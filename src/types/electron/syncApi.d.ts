@@ -11,21 +11,11 @@ import type {
 
 export interface SyncAPI {
   sync: {
-    getConfig(): Promise<{
-      success: boolean
-      config?: SyncAppConfig
-      syncPath?: string
-      error?: string
-    }>
-    setConfig(
-      config: Partial<SyncAppConfig>
-    ): Promise<{ success: boolean; error?: string }>
-    triggerNow(): Promise<{ success: boolean; error?: string }>
-    getStatus(): Promise<{
-      success: boolean
-      status?: SyncAppStatus
-      error?: string
-    }>
+    /** 未設定なら config は null */
+    getConfig(): Promise<{ config: SyncAppConfig | null; syncPath: string }>
+    setConfig(config: Partial<SyncAppConfig>): Promise<void>
+    triggerNow(): Promise<void>
+    getStatus(): Promise<SyncAppStatus>
     onStatusChanged(callback: (status: SyncAppStatus) => void): () => void
   }
 }

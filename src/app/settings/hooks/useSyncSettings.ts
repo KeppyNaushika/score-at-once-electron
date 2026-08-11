@@ -25,19 +25,13 @@ export function useSyncSettings() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [configResult, statusResult] = await Promise.all([
+        const [{ config, syncPath }, syncStatus] = await Promise.all([
           window.electronAPI.sync.getConfig(),
           window.electronAPI.sync.getStatus(),
         ])
-        if (configResult.success && configResult.config) {
-          setConfig(configResult.config)
-        }
-        if (configResult.success && configResult.syncPath) {
-          setSyncPath(configResult.syncPath)
-        }
-        if (statusResult.success && statusResult.status) {
-          setStatus(statusResult.status)
-        }
+        if (config) setConfig(config)
+        setSyncPath(syncPath)
+        setStatus(syncStatus)
       } catch (error) {
         console.error("Failed to load sync settings:", error)
       } finally {
@@ -58,15 +52,9 @@ export function useSyncSettings() {
   }, [])
 
   const updateConfig = useCallback(async (partial: Partial<SyncAppConfig>) => {
-    const result = await window.electronAPI.sync.setConfig(partial)
-    if (result.success) {
-      setConfig((prev) => (prev ? { ...prev, ...partial } : prev))
-      const statusResult = await window.electronAPI.sync.getStatus()
-      if (statusResult.success && statusResult.status) {
-        setStatus(statusResult.status)
-      }
-    }
-    return result
+    await window.electronAPI.sync.setConfig(partial)
+    setConfig((prev) => (prev ? { ...prev, ...partial } : prev))
+    setStatus(await window.electronAPI.sync.getStatus())
   }, [])
 
   const triggerSync = useCallback(async () => {

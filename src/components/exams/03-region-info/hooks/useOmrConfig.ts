@@ -15,14 +15,12 @@ export function useOmrConfig(examId: string) {
   const loadOmrConfigs = useCallback(async () => {
     if (!examId) return
     try {
-      const result = await window.electronAPI.omrConfig.getByExam(examId)
-      if (result.success && result.configs) {
-        const map = new Map<string, CropRegionOmrConfigWithOptions>()
-        for (const config of result.configs) {
-          map.set(config.cropRegionId, config)
-        }
-        setOmrConfigs(map)
+      const configs = await window.electronAPI.omrConfig.getByExam(examId)
+      const map = new Map<string, CropRegionOmrConfigWithOptions>()
+      for (const config of configs) {
+        map.set(config.cropRegionId, config)
       }
+      setOmrConfigs(map)
     } catch (error) {
       console.error("Failed to load OMR configs:", error)
     }
@@ -46,16 +44,13 @@ export function useOmrConfig(examId: string) {
       }>
     }) => {
       try {
-        const result = await window.electronAPI.omrConfig.upsert(data)
-        if (result.success && result.config) {
-          setOmrConfigs((prev) => {
-            const next = new Map(prev)
-            next.set(data.cropRegionId, result.config!)
-            return next
-          })
-          return true
-        }
-        return false
+        const config = await window.electronAPI.omrConfig.upsert(data)
+        setOmrConfigs((prev) => {
+          const next = new Map(prev)
+          next.set(data.cropRegionId, config)
+          return next
+        })
+        return true
       } catch (error) {
         console.error("Failed to upsert OMR config:", error)
         return false
@@ -67,16 +62,13 @@ export function useOmrConfig(examId: string) {
   /** OMR設定を削除 */
   const deleteOmrConfig = useCallback(async (cropRegionId: string) => {
     try {
-      const result = await window.electronAPI.omrConfig.delete(cropRegionId)
-      if (result.success) {
-        setOmrConfigs((prev) => {
-          const next = new Map(prev)
-          next.delete(cropRegionId)
-          return next
-        })
-        return true
-      }
-      return false
+      await window.electronAPI.omrConfig.delete(cropRegionId)
+      setOmrConfigs((prev) => {
+        const next = new Map(prev)
+        next.delete(cropRegionId)
+        return next
+      })
+      return true
     } catch (error) {
       console.error("Failed to delete OMR config:", error)
       return false

@@ -40,9 +40,7 @@ import {
 const prisma = getTestPrismaClient()
 
 interface DetectResult {
-  success: boolean
   pages: Array<{ examPageId: string; pageNumber: number }>
-  error?: string
 }
 
 const detectMasterMarkers = () =>
@@ -99,27 +97,24 @@ describe("omr:detect-master-markers", () => {
     expect(result.pages.map((page) => page.examPageId)).toEqual([withImage.id])
   })
 
-  it("画像を持つページが1枚も無ければエラーを返す", async () => {
+  it("画像を持つページが1枚も無ければ例外を投げる", async () => {
     const exam = await prisma.exam.create({ data: { examName: "画像なし" } })
     await prisma.examPage.create({
       data: { examId: exam.id, pageNumber: 1, imagePath: null },
     })
 
-    const result = (await detectMasterMarkers()(exam.id)) as DetectResult
-
     // ページ数ではなく検出対象の数で判定する。ページはあるが画像が無い状態を
     // 「検出0件で成功」にしてしまうと、UI が沈黙して原因が分からなくなる
-    expect(result.success).toBe(false)
-    expect(result.pages).toEqual([])
-    expect(result.error).toBe("マスター画像が見つかりません")
+    await expect(detectMasterMarkers()(exam.id)).rejects.toThrow(
+      "マスター画像が見つかりません"
+    )
   })
 
-  it("ページが1枚も無ければエラーを返す", async () => {
+  it("ページが1枚も無ければ例外を投げる", async () => {
     const exam = await prisma.exam.create({ data: { examName: "ページなし" } })
 
-    const result = (await detectMasterMarkers()(exam.id)) as DetectResult
-
-    expect(result.success).toBe(false)
-    expect(result.error).toBe("マスター画像が見つかりません")
+    await expect(detectMasterMarkers()(exam.id)).rejects.toThrow(
+      "マスター画像が見つかりません"
+    )
   })
 })

@@ -157,7 +157,7 @@ export function useMarkerCorrection({
               target.id,
               sendBuffer
             )
-            if (result.success && result.correctedBuffer) {
+            if (result.status === "corrected") {
               const correctedAB = result.correctedBuffer.buffer.slice(
                 result.correctedBuffer.byteOffset,
                 result.correctedBuffer.byteOffset +
@@ -177,7 +177,7 @@ export function useMarkerCorrection({
                 correctionError: undefined,
               }
             }
-            const reason = result.error ?? "不明なエラー"
+            const reason = result.reason
             console.warn(
               `補正スキップ (${file.name}, 対象ページ${target.pageNumber}): ${reason}`
             )

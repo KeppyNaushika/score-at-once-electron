@@ -21,7 +21,7 @@ import { correctImage } from "../lib/omr/imageCorrector"
 import { loadImageRaw } from "../lib/omr/imageProcessor"
 import { recognizeCells } from "../lib/omr/markRecognizer"
 import prisma from "../lib/prisma/client"
-import { registerSafeHandler } from "./ipcHandlerUtils"
+import { registerHandler } from "./ipcHandlerUtils"
 
 /**
  * マスターマーカー検出キャッシュ (キー: "examPageId:colorThreshold")
@@ -217,19 +217,17 @@ export function setupOMRHandlers(): void {
   // ────────────────────────────────────────
   // マスター画像のコーナーマーカー一括検出
   // ────────────────────────────────────────
-  registerSafeHandler(
+  registerHandler(
     "omr:detect-master-markers",
     async (
       examId: string,
       colorThreshold?: number
     ): Promise<{
-      success: boolean
       pages: Array<{
         examPageId: string
         pageNumber: number
         result: MarkerDetectionResult
       }>
-      error?: string
     }> => {
       // 模範解答ページを取得
       const examPages = await prisma.examPage.findMany({
@@ -274,53 +272,34 @@ export function setupOMRHandlers(): void {
       // 画像を持つページが1枚も無ければ検出しようがない。
       // ページ数ではなく検出対象の数で判定する（画像の無いページは上で飛ばしている）
       if (pages.length === 0) {
-        return {
-          success: false,
-          pages: [],
-          error: "マスター画像が見つかりません",
-        }
+        throw new Error("マスター画像が見つかりません")
       }
 
-      // 全ページで4マーカー検出できたか
-      const allSuccess = pages.every((page) => page.result.success)
-
-      return {
-        success: allSuccess,
-        pages,
-        error: allSuccess
-          ? undefined
-          : "一部のページでマーカーを検出できませんでした",
-      }
-    },
-    "マスターマーカー検出に失敗しました"
+      // 「全ページで4マーカー検出できたか」は pages から導けるので返さない
+      return { pages }
+    }
   )
 
   // ────────────────────────────────────────
   // 単一画像補正（クライアント側プレビュー用）
   // ────────────────────────────────────────
-  registerSafeHandler(
+  registerHandler(
     "omr:correct-image",
     async (
       examPageId: string,
       buffer: Uint8Array,
       colorThreshold?: number
-    ): Promise<{
-      success: boolean
-      correctedBuffer?: Uint8Array
-      status: "corrected" | "skipped"
-      error?: string
-    }> => {
+    ): Promise<
+      | { status: "corrected"; correctedBuffer: Uint8Array }
+      | { status: "skipped"; reason: string }
+    > => {
       const cacheKey = markerCacheKey(examPageId, colorThreshold)
       // 模範解答画像は ExamPage.id 直指定で引く（序数 pageNumber では引かない）。
       const examPage = await prisma.examPage.findUnique({
         where: { id: examPageId },
       })
       if (!examPage?.imagePath) {
-        return {
-          success: false,
-          status: "skipped",
-          error: "マスター画像が見つかりません",
-        }
+        return { status: "skipped", reason: "マスター画像が見つかりません" }
       }
       const dataDir = getDataDirectory()
       const imagePath = path.join(dataDir, examPage.imagePath)
@@ -336,9 +315,8 @@ export function setupOMRHandlers(): void {
 
       if (!masterResult.success) {
         return {
-          success: false,
           status: "skipped",
-          error: "マスター画像のマーカーが検出できませんでした",
+          reason: "マスター画像のマーカーが検出できませんでした",
         }
       }
 
@@ -352,17 +330,14 @@ export function setupOMRHandlers(): void {
 
       if (result.success && result.correctedBuffer) {
         return {
-          success: true,
-          correctedBuffer: new Uint8Array(result.correctedBuffer),
           status: "corrected",
+          correctedBuffer: new Uint8Array(result.correctedBuffer),
         }
       }
       return {
-        success: false,
         status: "skipped",
-        error: result.error,
+        reason: result.error ?? "画像補正に失敗しました",
       }
-    },
-    "画像補正に失敗しました"
+    }
   )
 }

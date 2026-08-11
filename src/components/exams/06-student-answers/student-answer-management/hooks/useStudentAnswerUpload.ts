@@ -197,7 +197,8 @@ export function useStudentAnswerUpload(
           return availableExamPageIds
         })
         setMarkerCorrectionAvailable(availableExamPageIds.size > 0)
-        if (!result.success && result.pages) {
+        // 全ページで4マーカー検出できたかは pages から導く
+        if (result.pages.some((page) => !page.result.success)) {
           const lines: string[] = []
           for (const page of result.pages) {
             if (!page.result.success && page.result.diagnostics) {

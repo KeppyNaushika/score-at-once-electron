@@ -31,8 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuth = async () => {
     try {
       // electron-storeから認証トークンを取得
-      const result = await window.electronAPI.getAuthToken()
-      const userId = result.success ? result.token : null
+      const userId = await window.electronAPI.getAuthToken()
 
       if (userId) {
         // userIdから直接ユーザー情報を取得

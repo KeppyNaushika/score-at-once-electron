@@ -24,13 +24,8 @@ export interface UserAuthAPI {
   ) => Promise<User>
 
   // Auth token persistence (electron-store)
-  saveAuthToken: (
-    token: string
-  ) => Promise<{ success: boolean; error?: string }>
-  getAuthToken: () => Promise<{
-    success: boolean
-    token: string | null
-    error?: string
-  }>
-  clearAuthToken: () => Promise<{ success: boolean; error?: string }>
+  saveAuthToken: (token: string) => Promise<void>
+  /** 未ログインなら null */
+  getAuthToken: () => Promise<string | null>
+  clearAuthToken: () => Promise<void>
 }

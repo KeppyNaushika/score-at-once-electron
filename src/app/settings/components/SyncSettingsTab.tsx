@@ -58,15 +58,17 @@ export function SyncSettingsTab() {
       if (!confirmed) return
     }
 
-    const result = await updateConfig({ enabled })
-    if (result.success) {
+    try {
+      await updateConfig({ enabled })
       toast.success(
         enabled
           ? "同期を有効にしました（ローカルDBを作成）"
           : "同期を無効にしました（ローカルDBをNASに書き戻し）"
       )
-    } else {
-      toast.error(result.error ?? "設定の保存に失敗しました")
+    } catch (error) {
+      toast.error("設定を保存できませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }
 
@@ -77,11 +79,13 @@ export function SyncSettingsTab() {
   }
 
   const handleTriggerSync = async () => {
-    const result = await triggerSync()
-    if (result.success) {
+    try {
+      await triggerSync()
       toast.success("同期が完了しました")
-    } else {
-      toast.error(result.error ?? "同期に失敗しました")
+    } catch (error) {
+      toast.error("同期に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }
 

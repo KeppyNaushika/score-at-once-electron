@@ -31,25 +31,21 @@ export interface OmrAPI {
       examId: string,
       colorThreshold?: number
     ) => Promise<{
-      success: boolean
       // 同定は examPageId。pageNumber は診断メッセージの表示用。
       pages: Array<{
         examPageId: string
         pageNumber: number
         result: MarkerDetectionResult
       }>
-      error?: string
     }>
     correctImage: (
       examPageId: string,
       buffer: Uint8Array,
       colorThreshold?: number
-    ) => Promise<{
-      success: boolean
-      correctedBuffer?: Uint8Array
-      status: "corrected" | "skipped"
-      error?: string
-    }>
+    ) => Promise<
+      | { status: "corrected"; correctedBuffer: Uint8Array }
+      | { status: "skipped"; reason: string }
+    >
     onBatchProgress: (
       callback: (progress: OMRBatchProgress) => void
     ) => () => void
@@ -73,19 +69,8 @@ export interface OmrAPI {
         normalizedWidth?: number | null
         normalizedHeight?: number | null
       }>
-    }) => Promise<{
-      success: boolean
-      config?: CropRegionOmrConfigWithOptions
-      error?: string
-    }>
-    delete: (cropRegionId: string) => Promise<{
-      success: boolean
-      error?: string
-    }>
-    getByExam: (examId: string) => Promise<{
-      success: boolean
-      configs?: CropRegionOmrConfigWithOptions[]
-      error?: string
-    }>
+    }) => Promise<CropRegionOmrConfigWithOptions>
+    delete: (cropRegionId: string) => Promise<void>
+    getByExam: (examId: string) => Promise<CropRegionOmrConfigWithOptions[]>
   }
 }

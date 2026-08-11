@@ -82,21 +82,9 @@ export function useOmrAutoScoring(examId: string) {
   /** OMR設定をDBから読み込み */
   const loadOmrConfigs = useCallback(async () => {
     try {
-      const result = await window.electronAPI.omrConfig.getByExam(examId)
-      if (result.success && result.configs) {
-        setState((prev) => ({
-          ...prev,
-          omrConfigs: result.configs!,
-          error: null,
-        }))
-        return result.configs
-      }
-      setState((prev) => ({
-        ...prev,
-        omrConfigs: [],
-        error: result.error ?? "OMR設定が見つかりません",
-      }))
-      return []
+      const configs = await window.electronAPI.omrConfig.getByExam(examId)
+      setState((prev) => ({ ...prev, omrConfigs: configs, error: null }))
+      return configs
     } catch (error) {
       setState((prev) => ({
         ...prev,
@@ -149,11 +137,12 @@ export function useOmrAutoScoring(examId: string) {
       // 2. マスターマーカー検出
       const markerResult =
         await window.electronAPI.omr.detectMasterMarkers(examId)
-      if (!markerResult.success || markerResult.pages.length === 0) {
+      // 4マーカー揃ったページが1枚も無ければ認識できない
+      if (markerResult.pages.every((page) => !page.result.success)) {
         setState((prev) => ({
           ...prev,
           isRecognizing: false,
-          error: markerResult.error ?? "マーカーを検出できませんでした",
+          error: "マーカーを検出できませんでした",
         }))
         return
       }
