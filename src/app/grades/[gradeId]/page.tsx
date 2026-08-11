@@ -16,6 +16,7 @@ import {
 import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 
 import { EditGradeWindow } from "@/components/grades/EditGradeWindow"
 import { Badge } from "@/components/ui/badge"
@@ -203,10 +204,7 @@ export default function GradeDetailPage() {
 
   const loadExam = useCallback(async () => {
     try {
-      const result = await window.electronAPI.grade.getById(gradeId)
-      if (result.success && result.grade) {
-        setExam(result.grade)
-      }
+      setExam(await window.electronAPI.grade.getById(gradeId))
     } catch (error) {
       console.error("Error loading grade exam:", error)
     } finally {
@@ -219,9 +217,13 @@ export default function GradeDetailPage() {
   }, [loadExam])
 
   const handleDelete = async () => {
-    const result = await window.electronAPI.grade.delete(gradeId)
-    if (result.success) {
+    try {
+      await window.electronAPI.grade.delete(gradeId)
       router.push("/grades")
+    } catch (error) {
+      toast.error("削除に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }
 

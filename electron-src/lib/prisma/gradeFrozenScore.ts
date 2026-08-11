@@ -18,17 +18,13 @@ import { resolveGradeScope } from "./auditScope"
 import prisma from "./client"
 
 interface FreezeGradeScoresResult {
-  success: boolean
   /** 確定した（＝書き込んだ）セル数 */
-  frozenCount?: number
-  error?: string
+  frozenCount: number
 }
 
 interface UnfreezeGradeScoresResult {
-  success: boolean
   /** 解除した確定行の件数 */
-  unfrozenCount?: number
-  error?: string
+  unfrozenCount: number
 }
 
 /** 対象セルの同定キー。id の組でキーし、行・列の並び順には依存しない */
@@ -48,112 +44,98 @@ export async function freezeGradeScores(options: {
   frozenByUserId?: string | null
 }): Promise<FreezeGradeScoresResult> {
   const { gradeId, targets, frozenByUserId = null } = options
-  try {
-    // 確定値を適用しないライブ算出（自動算出 ＋ 手動上書き）を取り込む。
-    const calculation = await calculateGrades(gradeId, { applyFrozen: false })
-    if (!calculation.success || !calculation.result) {
-      return {
-        success: false,
-        error: calculation.error ?? "成績の算出に失敗しました",
+  // 確定値を適用しないライブ算出（自動算出 ＋ 手動上書き）を取り込む。
+  const calculation = await calculateGrades(gradeId, { applyFrozen: false })
+
+  const requestedKeys =
+    targets !== undefined ? new Set(targets.map(targetKey)) : null
+
+  const rows: {
+    gradeStudentId: string
+    gradeItemId: string
+    weightedScore: Decimal | null
+    weightedMaxScore: Decimal
+    percentage: Decimal | null
+    gradeLabel: string | null
+    frozenByUserId: string | null
+    frozenAt: Date
+  }[] = []
+  const frozenAt = new Date()
+
+  for (const student of calculation.students) {
+    for (const gradeItemResult of student.gradeItemResults) {
+      const target: GradeCellTarget = {
+        gradeStudentId: student.gradeStudentId,
+        gradeItemId: gradeItemResult.gradeItemId,
       }
-    }
-
-    const requestedKeys =
-      targets !== undefined ? new Set(targets.map(targetKey)) : null
-
-    const rows: {
-      gradeStudentId: string
-      gradeItemId: string
-      weightedScore: Decimal | null
-      weightedMaxScore: Decimal
-      percentage: Decimal | null
-      gradeLabel: string | null
-      frozenByUserId: string | null
-      frozenAt: Date
-    }[] = []
-    const frozenAt = new Date()
-
-    for (const student of calculation.result.students) {
-      for (const gradeItemResult of student.gradeItemResults) {
-        const target: GradeCellTarget = {
-          gradeStudentId: student.gradeStudentId,
-          gradeItemId: gradeItemResult.gradeItemId,
-        }
-        if (requestedKeys !== null && !requestedKeys.has(targetKey(target))) {
-          continue
-        }
-        // 除外セルは値そのものが無いので確定しない（解除後に再び算出値が出る）
-        if (gradeItemResult.isExcluded) continue
-
-        rows.push({
-          gradeStudentId: target.gradeStudentId,
-          gradeItemId: target.gradeItemId,
-          weightedScore:
-            gradeItemResult.weightedScore !== null
-              ? new Decimal(gradeItemResult.weightedScore)
-              : null,
-          weightedMaxScore: new Decimal(gradeItemResult.weightedMaxScore),
-          percentage:
-            gradeItemResult.percentage !== null
-              ? new Decimal(gradeItemResult.percentage)
-              : null,
-          gradeLabel: gradeItemResult.gradeLabel,
-          frozenByUserId,
-          frozenAt,
-        })
+      if (requestedKeys !== null && !requestedKeys.has(targetKey(target))) {
+        continue
       }
-    }
+      // 除外セルは値そのものが無いので確定しない（解除後に再び算出値が出る）
+      if (gradeItemResult.isExcluded) continue
 
-    if (targets !== undefined && targets.length === 0) {
-      return { success: true, frozenCount: 0 }
-    }
-
-    // 削除条件は「書き込む行」ではなく「確定を要求された範囲」から作る。
-    // 除外セルは rows に入らないので、rows から作ると確定→除外→再確定の後に
-    // 古い確定行が残り、除外を解除した瞬間に過去の値が甦ってしまう。
-    const deleteWhere =
-      targets === undefined
-        ? { gradeStudent: { gradeId } }
-        : {
-            gradeStudent: { gradeId },
-            OR: targets.map((target) => ({
-              gradeStudentId: target.gradeStudentId,
-              gradeItemId: target.gradeItemId,
-            })),
-          }
-
-    // 再確定を上書きではなく「消して入れ直す」で表現する。
-    // unique(gradeStudentId, gradeItemId) の1行1セルなので、対象範囲を削除してから
-    // 作り直せば新規確定・再確定のどちらも同じ経路で扱える。
-    await prisma.$transaction(async (tx) => {
-      await tx.gradeFrozenScore.deleteMany({ where: deleteWhere })
-      if (rows.length > 0) {
-        await tx.gradeFrozenScore.createMany({ data: rows })
-      }
-    })
-
-    const scope = await resolveGradeScope(gradeId)
-    await recordAuditLog({
-      action: "grade.frozenScore.freeze",
-      // 呼び出し側が操作者を渡していなければ認証ストアからの自動補完に任せる
-      // （null を明示すると「システム操作」として actor 無しで記録されてしまう）
-      userId: frozenByUserId ?? undefined,
-      entityType: "GradeFrozenScore",
-      entityId: gradeId,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      summary: `${rows.length}件の成績値を確定しました`,
-      extra: { cellCount: rows.length, scopeKind: targets ? "cells" : "all" },
-    })
-
-    return { success: true, frozenCount: rows.length }
-  } catch (error) {
-    console.error("Error freezing grade scores:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      rows.push({
+        gradeStudentId: target.gradeStudentId,
+        gradeItemId: target.gradeItemId,
+        weightedScore:
+          gradeItemResult.weightedScore !== null
+            ? new Decimal(gradeItemResult.weightedScore)
+            : null,
+        weightedMaxScore: new Decimal(gradeItemResult.weightedMaxScore),
+        percentage:
+          gradeItemResult.percentage !== null
+            ? new Decimal(gradeItemResult.percentage)
+            : null,
+        gradeLabel: gradeItemResult.gradeLabel,
+        frozenByUserId,
+        frozenAt,
+      })
     }
   }
+
+  if (targets !== undefined && targets.length === 0) {
+    return { frozenCount: 0 }
+  }
+
+  // 削除条件は「書き込む行」ではなく「確定を要求された範囲」から作る。
+  // 除外セルは rows に入らないので、rows から作ると確定→除外→再確定の後に
+  // 古い確定行が残り、除外を解除した瞬間に過去の値が甦ってしまう。
+  const deleteWhere =
+    targets === undefined
+      ? { gradeStudent: { gradeId } }
+      : {
+          gradeStudent: { gradeId },
+          OR: targets.map((target) => ({
+            gradeStudentId: target.gradeStudentId,
+            gradeItemId: target.gradeItemId,
+          })),
+        }
+
+  // 再確定を上書きではなく「消して入れ直す」で表現する。
+  // unique(gradeStudentId, gradeItemId) の1行1セルなので、対象範囲を削除してから
+  // 作り直せば新規確定・再確定のどちらも同じ経路で扱える。
+  await prisma.$transaction(async (tx) => {
+    await tx.gradeFrozenScore.deleteMany({ where: deleteWhere })
+    if (rows.length > 0) {
+      await tx.gradeFrozenScore.createMany({ data: rows })
+    }
+  })
+
+  const scope = await resolveGradeScope(gradeId)
+  await recordAuditLog({
+    action: "grade.frozenScore.freeze",
+    // 呼び出し側が操作者を渡していなければ認証ストアからの自動補完に任せる
+    // （null を明示すると「システム操作」として actor 無しで記録されてしまう）
+    userId: frozenByUserId ?? undefined,
+    entityType: "GradeFrozenScore",
+    entityId: gradeId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    summary: `${rows.length}件の成績値を確定しました`,
+    extra: { cellCount: rows.length, scopeKind: targets ? "cells" : "all" },
+  })
+
+  return { frozenCount: rows.length }
 }
 
 /**
@@ -166,48 +148,40 @@ export async function unfreezeGradeScores(options: {
   userId?: string | null
 }): Promise<UnfreezeGradeScoresResult> {
   const { gradeId, targets, userId = null } = options
-  try {
-    if (targets !== undefined && targets.length === 0) {
-      return { success: true, unfrozenCount: 0 }
-    }
+  if (targets !== undefined && targets.length === 0) {
+    return { unfrozenCount: 0 }
+  }
 
-    const deleted = await prisma.gradeFrozenScore.deleteMany({
-      where: {
-        gradeStudent: { gradeId },
-        ...(targets !== undefined
-          ? {
-              OR: targets.map((target) => ({
-                gradeStudentId: target.gradeStudentId,
-                gradeItemId: target.gradeItemId,
-              })),
-            }
-          : {}),
+  const deleted = await prisma.gradeFrozenScore.deleteMany({
+    where: {
+      gradeStudent: { gradeId },
+      ...(targets !== undefined
+        ? {
+            OR: targets.map((target) => ({
+              gradeStudentId: target.gradeStudentId,
+              gradeItemId: target.gradeItemId,
+            })),
+          }
+        : {}),
+    },
+  })
+
+  if (deleted.count > 0) {
+    const scope = await resolveGradeScope(gradeId)
+    await recordAuditLog({
+      action: "grade.frozenScore.unfreeze",
+      userId: userId ?? undefined,
+      entityType: "GradeFrozenScore",
+      entityId: gradeId,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      summary: `${deleted.count}件の成績値の確定を解除しました`,
+      extra: {
+        cellCount: deleted.count,
+        scopeKind: targets ? "cells" : "all",
       },
     })
-
-    if (deleted.count > 0) {
-      const scope = await resolveGradeScope(gradeId)
-      await recordAuditLog({
-        action: "grade.frozenScore.unfreeze",
-        userId: userId ?? undefined,
-        entityType: "GradeFrozenScore",
-        entityId: gradeId,
-        scopeId: scope.scopeId,
-        scopeLabel: scope.scopeLabel,
-        summary: `${deleted.count}件の成績値の確定を解除しました`,
-        extra: {
-          cellCount: deleted.count,
-          scopeKind: targets ? "cells" : "all",
-        },
-      })
-    }
-
-    return { success: true, unfrozenCount: deleted.count }
-  } catch (error) {
-    console.error("Error unfreezing grade scores:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
   }
+
+  return { unfrozenCount: deleted.count }
 }

@@ -335,7 +335,7 @@ describe("Coursework CRUD", () => {
       name: "観点1",
     })
     await createDataSource({
-      gradeItemId: gradeItem.gradeItem!.id,
+      gradeItemId: gradeItem.id,
       type: "coursework",
       courseworkItemId: item.id,
       name: "資料(知識)",

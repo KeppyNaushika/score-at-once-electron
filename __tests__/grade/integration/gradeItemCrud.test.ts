@@ -67,12 +67,10 @@ describe("GradeItem CRUD", () => {
         gradeId: grade.id,
         name: "知識・技能",
       })
-
-      expect(result.success).toBe(true)
-      expect(result.gradeItem).toBeDefined()
-      expect(result.gradeItem!.name).toBe("知識・技能")
-      expect(result.gradeItem!.order).toBe(0)
-      expect(result.gradeItem!.gradeId).toBe(grade.id)
+      expect(result).toBeDefined()
+      expect(result.name).toBe("知識・技能")
+      expect(result.order).toBe(0)
+      expect(result.gradeId).toBe(grade.id)
     })
 
     it("orderが自動インクリメントされる", async () => {
@@ -91,9 +89,9 @@ describe("GradeItem CRUD", () => {
         name: "主体的に学習に取り組む態度",
       })
 
-      expect(gradeItemResult1.gradeItem!.order).toBe(0)
-      expect(gradeItemResult2.gradeItem!.order).toBe(1)
-      expect(gradeItemResult3.gradeItem!.order).toBe(2)
+      expect(gradeItemResult1.order).toBe(0)
+      expect(gradeItemResult2.order).toBe(1)
+      expect(gradeItemResult3.order).toBe(2)
     })
   })
 
@@ -104,11 +102,9 @@ describe("GradeItem CRUD", () => {
       await createGradeItem({ gradeId: grade.id, name: "項目B" })
 
       const result = await getGradeItemsByExamId(grade.id)
-
-      expect(result.success).toBe(true)
-      expect(result.gradeItems).toHaveLength(2)
-      expect(result.gradeItems![0].name).toBe("項目A")
-      expect(result.gradeItems![1].name).toBe("項目B")
+      expect(result).toHaveLength(2)
+      expect(result[0].name).toBe("項目A")
+      expect(result[1].name).toBe("項目B")
     })
 
     it("dataSourcesも含めて取得できる", async () => {
@@ -118,7 +114,7 @@ describe("GradeItem CRUD", () => {
         name: "項目A",
       })
       await createDataSource({
-        gradeItemId: gradeItemResult.gradeItem!.id,
+        gradeItemId: gradeItemResult.id,
         type: "manual",
         name: "レポート",
         weight: 50,
@@ -126,8 +122,8 @@ describe("GradeItem CRUD", () => {
 
       const result = await getGradeItemsByExamId(grade.id)
 
-      expect(result.gradeItems![0].dataSources).toHaveLength(1)
-      expect(result.gradeItems![0].dataSources[0].name).toBe("レポート")
+      expect(result[0].dataSources).toHaveLength(1)
+      expect(result[0].dataSources[0].name).toBe("レポート")
     })
   })
 
@@ -139,12 +135,10 @@ describe("GradeItem CRUD", () => {
         name: "旧名",
       })
 
-      const result = await updateGradeItem(gradeItemResult.gradeItem!.id, {
+      const result = await updateGradeItem(gradeItemResult.id, {
         name: "新名",
       })
-
-      expect(result.success).toBe(true)
-      expect(result.gradeItem!.name).toBe("新名")
+      expect(result.name).toBe("新名")
     })
   })
 
@@ -156,20 +150,19 @@ describe("GradeItem CRUD", () => {
         name: "削除対象",
       })
       await createDataSource({
-        gradeItemId: gradeItemResult.gradeItem!.id,
+        gradeItemId: gradeItemResult.id,
         type: "manual",
         name: "ソース",
         weight: 10,
       })
 
-      const result = await deleteGradeItem(gradeItemResult.gradeItem!.id)
-      expect(result.success).toBe(true)
+      await deleteGradeItem(gradeItemResult.id)
 
       // GradeItem配下のDataSourceも削除されている
       const dataSourceResult = await getDataSourcesByGradeItemId(
-        gradeItemResult.gradeItem!.id
+        gradeItemResult.id
       )
-      expect(dataSourceResult.dataSources ?? []).toHaveLength(0)
+      expect(dataSourceResult ?? []).toHaveLength(0)
     })
   })
 
@@ -186,15 +179,14 @@ describe("GradeItem CRUD", () => {
       })
 
       // 順序を入れ替え
-      const result = await reorderGradeItems([
-        { id: gradeItemResult1.gradeItem!.id, order: 1 },
-        { id: gradeItemResult2.gradeItem!.id, order: 0 },
+      await reorderGradeItems([
+        { id: gradeItemResult1.id, order: 1 },
+        { id: gradeItemResult2.id, order: 0 },
       ])
-      expect(result.success).toBe(true)
 
       const items = await getGradeItemsByExamId(grade.id)
-      expect(items.gradeItems![0].name).toBe("B")
-      expect(items.gradeItems![1].name).toBe("A")
+      expect(items[0].name).toBe("B")
+      expect(items[1].name).toBe("A")
     })
   })
 })
@@ -216,22 +208,18 @@ describe("GradeDataSource CRUD", () => {
     })
 
     const dataSourceResult = await createDataSource({
-      gradeItemId: gradeItemResult.gradeItem!.id,
+      gradeItemId: gradeItemResult.id,
       type: "manual",
       name: "手動入力",
       weight: 30,
     })
-
-    expect(dataSourceResult.success).toBe(true)
-    expect(dataSourceResult.dataSource!.type).toBe("manual")
+    expect(dataSourceResult.type).toBe("manual")
     // 満点は元データからライブ算出（manual型は対応ソースなしのため0）
-    expect(Number(dataSourceResult.dataSource!.maxScore)).toBe(0)
-    expect(Number(dataSourceResult.dataSource!.weight)).toBe(30)
+    expect(Number(dataSourceResult.maxScore)).toBe(0)
+    expect(Number(dataSourceResult.weight)).toBe(30)
 
-    const list = await getDataSourcesByGradeItemId(
-      gradeItemResult.gradeItem!.id
-    )
-    expect(list.dataSources).toHaveLength(1)
+    const list = await getDataSourcesByGradeItemId(gradeItemResult.id)
+    expect(list).toHaveLength(1)
   })
 
   it("DataSourceの名前・換算満点を更新できる（満点は元データ追従で編集不可）", async () => {
@@ -241,20 +229,18 @@ describe("GradeDataSource CRUD", () => {
       name: "項目",
     })
     const dataSourceResult = await createDataSource({
-      gradeItemId: gradeItemResult.gradeItem!.id,
+      gradeItemId: gradeItemResult.id,
       type: "manual",
       name: "旧",
       weight: 10,
     })
 
-    const updated = await updateDataSource(dataSourceResult.dataSource!.id, {
+    const updated = await updateDataSource(dataSourceResult.id, {
       name: "新",
       weight: 50,
     })
-
-    expect(updated.success).toBe(true)
-    expect(updated.dataSource!.name).toBe("新")
-    expect(Number(updated.dataSource!.weight)).toBe(50)
+    expect(updated.name).toBe("新")
+    expect(Number(updated.weight)).toBe(50)
   })
 
   it("DataSourceを削除できる", async () => {
@@ -264,19 +250,16 @@ describe("GradeDataSource CRUD", () => {
       name: "項目",
     })
     const dataSourceResult = await createDataSource({
-      gradeItemId: gradeItemResult.gradeItem!.id,
+      gradeItemId: gradeItemResult.id,
       type: "manual",
       name: "削除対象",
       weight: 10,
     })
 
-    const result = await deleteDataSource(dataSourceResult.dataSource!.id)
-    expect(result.success).toBe(true)
+    await deleteDataSource(dataSourceResult.id)
 
-    const list = await getDataSourcesByGradeItemId(
-      gradeItemResult.gradeItem!.id
-    )
-    expect(list.dataSources).toHaveLength(0)
+    const list = await getDataSourcesByGradeItemId(gradeItemResult.id)
+    expect(list).toHaveLength(0)
   })
 
   it("同一GradeItem内でorderが自動インクリメントされる", async () => {
@@ -287,20 +270,20 @@ describe("GradeDataSource CRUD", () => {
     })
 
     const dataSource1 = await createDataSource({
-      gradeItemId: gradeItemResult.gradeItem!.id,
+      gradeItemId: gradeItemResult.id,
       type: "manual",
       name: "A",
       weight: 10,
     })
     const dataSource2 = await createDataSource({
-      gradeItemId: gradeItemResult.gradeItem!.id,
+      gradeItemId: gradeItemResult.id,
       type: "manual",
       name: "B",
       weight: 20,
     })
 
-    expect(dataSource1.dataSource!.order).toBe(0)
-    expect(dataSource2.dataSource!.order).toBe(1)
+    expect(dataSource1.order).toBe(0)
+    expect(dataSource2.order).toBe(1)
   })
 })
 
@@ -329,19 +312,14 @@ describe("GradeItemBoundary CRUD", () => {
       name: "知識・技能",
     })
 
-    const result = await replaceGradeItemBoundaries({
-      gradeItemId: gradeItemResult.gradeItem!.id,
+    await replaceGradeItemBoundaries({
+      gradeItemId: gradeItemResult.id,
       boundaries: [
         { label: "A", minPercentage: 90, order: 0 },
         { label: "B", minPercentage: 70, order: 1 },
       ],
     })
-
-    expect(result.success).toBe(true)
-    expect(await readBoundaryLabels(gradeItemResult.gradeItem!.id)).toEqual([
-      "A",
-      "B",
-    ])
+    expect(await readBoundaryLabels(gradeItemResult.id)).toEqual(["A", "B"])
   })
 
   it("同じ評価項目へ再度書くと境界が置換される", async () => {
@@ -352,21 +330,19 @@ describe("GradeItemBoundary CRUD", () => {
     })
 
     await replaceGradeItemBoundaries({
-      gradeItemId: gradeItemResult.gradeItem!.id,
+      gradeItemId: gradeItemResult.id,
       boundaries: [{ label: "A", minPercentage: 80, order: 0 }],
     })
 
-    const result = await replaceGradeItemBoundaries({
-      gradeItemId: gradeItemResult.gradeItem!.id,
+    await replaceGradeItemBoundaries({
+      gradeItemId: gradeItemResult.id,
       boundaries: [
         { label: "S", minPercentage: 95, order: 0 },
         { label: "A", minPercentage: 80, order: 1 },
         { label: "B", minPercentage: 60, order: 2 },
       ],
     })
-
-    expect(result.success).toBe(true)
-    expect(await readBoundaryLabels(gradeItemResult.gradeItem!.id)).toEqual([
+    expect(await readBoundaryLabels(gradeItemResult.id)).toEqual([
       "S",
       "A",
       "B",
@@ -381,16 +357,14 @@ describe("GradeItemBoundary CRUD", () => {
     })
 
     await replaceGradeItemBoundaries({
-      gradeItemId: gradeItemResult.gradeItem!.id,
+      gradeItemId: gradeItemResult.id,
       boundaries: [{ label: "A", minPercentage: 80, order: 0 }],
     })
-    const result = await replaceGradeItemBoundaries({
-      gradeItemId: gradeItemResult.gradeItem!.id,
+    await replaceGradeItemBoundaries({
+      gradeItemId: gradeItemResult.id,
       boundaries: [],
     })
-
-    expect(result.success).toBe(true)
-    expect(await readBoundaryLabels(gradeItemResult.gradeItem!.id)).toEqual([])
+    expect(await readBoundaryLabels(gradeItemResult.id)).toEqual([])
   })
 
   // 境界は専用APIでなく評価項目の子として降ってくる。境界0本の項目も
@@ -408,21 +382,19 @@ describe("GradeItemBoundary CRUD", () => {
     await createGradeItem({ gradeId: grade.id, name: "項目3" })
 
     await replaceGradeItemBoundaries({
-      gradeItemId: firstItem.gradeItem!.id,
+      gradeItemId: firstItem.id,
       boundaries: [{ label: "A", minPercentage: 80, order: 0 }],
     })
     await replaceGradeItemBoundaries({
-      gradeItemId: secondItem.gradeItem!.id,
+      gradeItemId: secondItem.id,
       boundaries: [{ label: "B", minPercentage: 70, order: 0 }],
     })
 
     const result = await getGradeItemsByExamId(grade.id)
-
-    expect(result.success).toBe(true)
-    expect(result.gradeItems).toHaveLength(3)
-    expect(
-      result.gradeItems!.map((gradeItem) => gradeItem.boundaries.length)
-    ).toEqual([1, 1, 0])
+    expect(result).toHaveLength(3)
+    expect(result.map((gradeItem) => gradeItem.boundaries.length)).toEqual([
+      1, 1, 0,
+    ])
   })
 })
 
@@ -482,8 +454,6 @@ describe("評価項目の削除と制約ルール（issue #1063）", () => {
     ])
 
     const result = await deleteGradeItem(thinking.id)
-
-    expect(result.success).toBe(true)
     expect(result.disabledConstraintNames).toEqual(["評定と観点の整合"])
 
     const after = await testPrisma.gradeConstraint.findUnique({
@@ -512,8 +482,6 @@ describe("評価項目の削除と制約ルール（issue #1063）", () => {
     ])
 
     const result = await deleteGradeItem(hyotei.id)
-
-    expect(result.success).toBe(true)
     // 比較先の欠落は評価時に「未選択」として検知されるので、無効化はしない
     expect(result.disabledConstraintNames).toEqual([])
 

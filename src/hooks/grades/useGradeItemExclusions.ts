@@ -20,11 +20,9 @@ export function useGradeItemExclusions(gradeId: string) {
   const loadExclusions = useCallback(async () => {
     setLoading(true)
     try {
-      const result =
+      const exclusions =
         await window.electronAPI.grade.getGradeItemExclusions(gradeId)
-      if (result.success && result.exclusions) {
-        setExclusionSet(new Set(result.exclusions.map(buildKey)))
-      }
+      setExclusionSet(new Set(exclusions.map(buildKey)))
     } catch (error) {
       console.error("Failed to load grade item exclusions:", error)
     } finally {
@@ -71,11 +69,10 @@ export function useGradeItemExclusions(gradeId: string) {
       }
 
       try {
-        const result = await window.electronAPI.grade.setGradeItemExclusion({
+        await window.electronAPI.grade.setGradeItemExclusion({
           ...target,
           excluded: newExcluded,
         })
-        if (!result.success) rollback()
       } catch {
         rollback()
       }

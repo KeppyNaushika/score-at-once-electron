@@ -59,20 +59,17 @@ describe("GradeBoundary 追加テスト", () => {
       })
 
       await replaceGradeItemBoundaries({
-        gradeItemId: gradeItemResult.gradeItem!.id,
+        gradeItemId: gradeItemResult.id,
         boundaries: [
           { label: "A", minPercentage: 80, order: 0 },
           { label: "B", minPercentage: 60, order: 1 },
         ],
       })
 
-      const result = await deleteGradeItemBoundaries(
-        gradeItemResult.gradeItem!.id
-      )
-      expect(result.success).toBe(true)
+      await deleteGradeItemBoundaries(gradeItemResult.id)
 
       const remaining = await testPrisma.gradeItemBoundary.findMany({
-        where: { gradeItemId: gradeItemResult.gradeItem!.id },
+        where: { gradeItemId: gradeItemResult.id },
       })
       expect(remaining).toHaveLength(0)
     })
@@ -87,7 +84,7 @@ describe("GradeBoundary 追加テスト", () => {
       })
 
       await replaceGradeItemBoundaries({
-        gradeItemId: gradeItemResult.gradeItem!.id,
+        gradeItemId: gradeItemResult.id,
         boundaries: [
           { label: "A", minPercentage: 80, order: 0 },
           { label: "B", minPercentage: 60, order: 1 },
@@ -95,11 +92,11 @@ describe("GradeBoundary 追加テスト", () => {
       })
 
       await testPrisma.gradeItem.delete({
-        where: { id: gradeItemResult.gradeItem!.id },
+        where: { id: gradeItemResult.id },
       })
 
       const boundaries = await testPrisma.gradeItemBoundary.findMany({
-        where: { gradeItemId: gradeItemResult.gradeItem!.id },
+        where: { gradeItemId: gradeItemResult.id },
       })
       expect(boundaries).toHaveLength(0)
     })
@@ -124,7 +121,7 @@ describe("GradeDataSource reorder テスト", () => {
         gradeId: grade.id,
         name: "項目",
       })
-      const gradeItem = gradeItemResult.gradeItem!
+      const gradeItem = gradeItemResult
 
       const dataSource1 = await createDataSource({
         gradeItemId: gradeItem.id,
@@ -140,16 +137,14 @@ describe("GradeDataSource reorder テスト", () => {
       })
 
       // 順序を入れ替え
-      const result = await reorderDataSources([
-        { id: dataSource1.dataSource!.id, order: 1 },
-        { id: dataSource2.dataSource!.id, order: 0 },
+      await reorderDataSources([
+        { id: dataSource1.id, order: 1 },
+        { id: dataSource2.id, order: 0 },
       ])
 
-      expect(result.success).toBe(true)
-
       const dataSources = await getDataSourcesByGradeItemId(gradeItem.id)
-      expect(dataSources.dataSources![0].name).toBe("B")
-      expect(dataSources.dataSources![1].name).toBe("A")
+      expect(dataSources[0].name).toBe("B")
+      expect(dataSources[1].name).toBe("A")
     })
   })
 })

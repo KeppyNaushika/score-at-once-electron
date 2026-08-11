@@ -44,8 +44,8 @@ interface DataSourceRowProps {
       estimationMode?: string
       estimationSourceIds?: string[]
     }
-  ) => Promise<{ success: boolean }>
-  onDelete: (id: string) => Promise<{ success: boolean }>
+  ) => Promise<unknown>
+  onDelete: (id: string) => Promise<void>
 }
 
 export function DataSourceRow({

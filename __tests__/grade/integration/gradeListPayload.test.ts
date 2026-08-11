@@ -36,7 +36,7 @@ const testPrisma = createPrismaClientForPath(TEST_DB_PATH)
 /** 生徒1名・評価項目1つ・資料ソース1本を持つ成績を作る */
 async function createGradeWithCourseworkSource() {
   const created = await createGrade({ name: "1学期成績" })
-  const gradeId = created.grade!.id
+  const gradeId = created.id
 
   const student = await testPrisma.student.create({
     data: {
@@ -100,9 +100,7 @@ describe("成績一覧の供給形", () => {
     const fixture = await createGradeWithCourseworkSource()
 
     const result = await getAllGrades()
-    const grade = result.grades!.find(
-      (candidate) => candidate.id === fixture.gradeId
-    )!
+    const grade = result.find((candidate) => candidate.id === fixture.gradeId)!
 
     // 件数を数えるのは renderer。main は `_count` を作らない
     expect(grade.gradeStudents.length).toBe(1)
@@ -114,9 +112,7 @@ describe("成績一覧の供給形", () => {
     const fixture = await createGradeWithCourseworkSource()
 
     const result = await getAllGrades()
-    const grade = result.grades!.find(
-      (candidate) => candidate.id === fixture.gradeId
-    )!
+    const grade = result.find((candidate) => candidate.id === fixture.gradeId)!
     const dataSource = grade.gradeItems[0].dataSources[0] as unknown as Record<
       string,
       unknown
@@ -136,7 +132,7 @@ describe("成績一覧の供給形", () => {
     const fixture = await createGradeWithCourseworkSource()
 
     const before = await getAllGrades()
-    const gradeBefore = before.grades!.find(
+    const gradeBefore = before.find(
       (candidate) => candidate.id === fixture.gradeId
     )!
     // 点数が1件も無ければ「外部成績の入力」へ誘導する
@@ -154,7 +150,7 @@ describe("成績一覧の供給形", () => {
     })
 
     const after = await getAllGrades()
-    const gradeAfter = after.grades!.find(
+    const gradeAfter = after.find(
       (candidate) => candidate.id === fixture.gradeId
     )!
     expect(
@@ -168,9 +164,7 @@ describe("成績一覧の供給形", () => {
     const created = await createGrade({ name: "空の成績" })
 
     const result = await getAllGrades()
-    const grade = result.grades!.find(
-      (candidate) => candidate.id === created.grade!.id
-    )!
+    const grade = result.find((candidate) => candidate.id === created.id)!
 
     expect(grade.gradeStudents).toEqual([])
     expect(getGradeStatus(grade).step).toBe(2)
@@ -180,7 +174,7 @@ describe("成績一覧の供給形", () => {
     // 作成結果をそのまま一覧・詳細へ渡せると型が言う以上、対象者は必ず来る
     const created = await createGrade({ name: "作った直後" })
 
-    expect(created.grade!.gradeStudents).toEqual([])
-    expect(getGradeStatus(created.grade!).step).toBe(2)
+    expect(created.gradeStudents).toEqual([])
+    expect(getGradeStatus(created).step).toBe(2)
   })
 })

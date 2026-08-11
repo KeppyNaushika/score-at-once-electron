@@ -13,12 +13,7 @@ export async function exportGradeExcel(
   gradeId: string,
   options?: { outputPath?: string; studentIds?: string[] }
 ): Promise<FileExportResult> {
-  const fetchResult = await fetchGradeExportData(gradeId)
-  if (!fetchResult.success || !fetchResult.data) {
-    throw new Error(fetchResult.error ?? "データ取得に失敗しました")
-  }
-
-  const { result, examName } = fetchResult.data
+  const { result, examName } = await fetchGradeExportData(gradeId)
 
   // 生徒フィルタ
   const filteredResult =

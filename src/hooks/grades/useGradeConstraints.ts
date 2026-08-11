@@ -11,10 +11,9 @@ export function useGradeConstraints(gradeId: string) {
 
   const loadData = useCallback(async () => {
     try {
-      const result = await window.electronAPI.grade.getGradeConstraints(gradeId)
-      if (result.success && result.constraints) {
-        setConstraints(result.constraints)
-      }
+      setConstraints(
+        await window.electronAPI.grade.getGradeConstraints(gradeId)
+      )
     } catch (error) {
       console.error("Error loading grade constraints:", error)
     }
@@ -26,33 +25,32 @@ export function useGradeConstraints(gradeId: string) {
 
   const createConstraint = useCallback(
     async (constraint: GradeConstraintInput) => {
-      const result = await window.electronAPI.grade.createGradeConstraint({
+      const created = await window.electronAPI.grade.createGradeConstraint({
         gradeId,
         constraint,
       })
-      if (result.success) await loadData()
-      return result
+      await loadData()
+      return created
     },
     [gradeId, loadData]
   )
 
   const updateConstraint = useCallback(
     async (id: string, constraint: Partial<GradeConstraintInput>) => {
-      const result = await window.electronAPI.grade.updateGradeConstraint({
+      const updated = await window.electronAPI.grade.updateGradeConstraint({
         id,
         constraint,
       })
-      if (result.success) await loadData()
-      return result
+      await loadData()
+      return updated
     },
     [loadData]
   )
 
   const deleteConstraint = useCallback(
     async (id: string) => {
-      const result = await window.electronAPI.grade.deleteGradeConstraint(id)
-      if (result.success) await loadData()
-      return result
+      await window.electronAPI.grade.deleteGradeConstraint(id)
+      await loadData()
     },
     [loadData]
   )

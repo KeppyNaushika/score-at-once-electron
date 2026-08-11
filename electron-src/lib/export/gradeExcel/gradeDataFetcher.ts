@@ -15,42 +15,25 @@ interface GradeExportData {
 /** 成績算出の計算結果と関連情報を取得し、Excel出力用データとして返す */
 export async function fetchGradeExportData(
   gradeId: string
-): Promise<{ success: boolean; data?: GradeExportData; error?: string }> {
-  try {
-    const calcResult = await calculateGrades(gradeId)
-    if (!calcResult.success || !calcResult.result) {
-      return {
-        success: false,
-        error: calcResult.error ?? "成績算出に失敗しました",
-      }
-    }
+): Promise<GradeExportData> {
+  const result = await calculateGrades(gradeId)
 
-    const grade = await prisma.grade.findUnique({
-      where: { id: gradeId },
-      include: {
-        gradeClassrooms: {
-          include: { classroom: true },
-          orderBy: { order: "asc" },
-        },
+  const grade = await prisma.grade.findUnique({
+    where: { id: gradeId },
+    include: {
+      gradeClassrooms: {
+        include: { classroom: true },
+        orderBy: { order: "asc" },
       },
-    })
+    },
+  })
 
-    return {
-      success: true,
-      data: {
-        result: calcResult.result,
-        examName: grade?.name ?? "",
-        classNames:
-          grade?.gradeClassrooms.map(
-            (gradeClassroom) => gradeClassroom.classroom.name
-          ) ?? [],
-      },
-    }
-  } catch (error) {
-    console.error("Error fetching grade export data:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+  return {
+    result,
+    examName: grade?.name ?? "",
+    classNames:
+      grade?.gradeClassrooms.map(
+        (gradeClassroom) => gradeClassroom.classroom.name
+      ) ?? [],
   }
 }

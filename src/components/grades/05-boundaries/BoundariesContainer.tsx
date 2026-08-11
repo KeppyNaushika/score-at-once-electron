@@ -54,10 +54,11 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
   }
 
   const handleDelete = async (targetGradeItem: GradeItemWithDataSources) => {
-    const result = await deleteBoundaries(targetGradeItem.id)
-    if (!result.success) {
+    try {
+      await deleteBoundaries(targetGradeItem.id)
+    } catch (error) {
       toast.error("成績境界を削除できませんでした", {
-        description: result.error,
+        description: error instanceof Error ? error.message : undefined,
       })
     }
     setDeletionTargetGradeItem(null)

@@ -47,12 +47,10 @@ describe("Grade CRUD", () => {
   describe("createGrade", () => {
     it("成績試験を作成できる", async () => {
       const result = await createGrade({ name: "1学期期末成績" })
-
-      expect(result.success).toBe(true)
-      expect(result.grade).toBeDefined()
-      expect(result.grade!.name).toBe("1学期期末成績")
-      expect(result.grade!.gradeItems).toEqual([])
-      expect(result.grade!.gradeClassrooms).toEqual([])
+      expect(result).toBeDefined()
+      expect(result.name).toBe("1学期期末成績")
+      expect(result.gradeItems).toEqual([])
+      expect(result.gradeClassrooms).toEqual([])
     })
 
     it("descriptionとreferenceDateを指定して作成できる", async () => {
@@ -61,10 +59,8 @@ describe("Grade CRUD", () => {
         description: "テスト用の成績試験",
         referenceDate: "2026-03-01",
       })
-
-      expect(result.success).toBe(true)
-      expect(result.grade!.description).toBe("テスト用の成績試験")
-      expect(result.grade!.referenceDate).toBeTruthy()
+      expect(result.description).toBe("テスト用の成績試験")
+      expect(result.referenceDate).toBeTruthy()
     })
 
     it("referenceDateがnullの場合はnullで作成される", async () => {
@@ -72,9 +68,7 @@ describe("Grade CRUD", () => {
         name: "PJ",
         referenceDate: null,
       })
-
-      expect(result.success).toBe(true)
-      expect(result.grade!.referenceDate).toBeNull()
+      expect(result.referenceDate).toBeNull()
     })
   })
 
@@ -84,23 +78,19 @@ describe("Grade CRUD", () => {
       await createGrade({ name: "PJ-B" })
 
       const result = await getAllGrades()
-
-      expect(result.success).toBe(true)
-      expect(result.grades).toHaveLength(2)
+      expect(result).toHaveLength(2)
     })
 
     it("試験が0件のとき空配列を返す", async () => {
       const result = await getAllGrades()
-
-      expect(result.success).toBe(true)
-      expect(result.grades).toHaveLength(0)
+      expect(result).toHaveLength(0)
     })
 
     it("gradeItems数とgradeStudents数のカウントが含まれる", async () => {
       const created = await createGrade({ name: "PJ" })
       await testPrisma.gradeItem.create({
         data: {
-          gradeId: created.grade!.id,
+          gradeId: created.id,
           name: "知識",
           order: 0,
         },
@@ -108,8 +98,8 @@ describe("Grade CRUD", () => {
 
       const result = await getAllGrades()
 
-      expect(result.grades![0].gradeItems.length).toBe(1)
-      expect(result.grades![0].gradeStudents.length).toBe(0)
+      expect(result[0].gradeItems.length).toBe(1)
+      expect(result[0].gradeStudents.length).toBe(0)
     })
   })
 
@@ -117,33 +107,30 @@ describe("Grade CRUD", () => {
     it("IDで取得できる", async () => {
       const created = await createGrade({ name: "対象PJ" })
 
-      const result = await getGradeById(created.grade!.id)
-
-      expect(result.success).toBe(true)
-      expect(result.grade!.name).toBe("対象PJ")
+      const result = await getGradeById(created.id)
+      expect(result.name).toBe("対象PJ")
     })
 
-    it("存在しないIDの場合はエラーを返す", async () => {
-      const result = await getGradeById("non-existent-id")
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe("Grade exam not found")
+    it("存在しないIDの場合は例外を投げる", async () => {
+      await expect(getGradeById("non-existent-id")).rejects.toThrow(
+        "Grade exam not found"
+      )
     })
 
     it("関連するgradeItemsとgradeClassroomsが含まれる", async () => {
       const created = await createGrade({ name: "PJ" })
       await testPrisma.gradeItem.create({
         data: {
-          gradeId: created.grade!.id,
+          gradeId: created.id,
           name: "思考",
           order: 0,
         },
       })
 
-      const result = await getGradeById(created.grade!.id)
+      const result = await getGradeById(created.id)
 
-      expect(result.grade!.gradeItems).toHaveLength(1)
-      expect(result.grade!.gradeItems[0].name).toBe("思考")
+      expect(result.gradeItems).toHaveLength(1)
+      expect(result.gradeItems[0].name).toBe("思考")
     })
   })
 
@@ -151,34 +138,28 @@ describe("Grade CRUD", () => {
     it("名前を更新できる", async () => {
       const created = await createGrade({ name: "旧名" })
 
-      const result = await updateGrade(created.grade!.id, {
+      const result = await updateGrade(created.id, {
         name: "新名",
       })
-
-      expect(result.success).toBe(true)
-      expect(result.grade!.name).toBe("新名")
+      expect(result.name).toBe("新名")
     })
 
     it("descriptionを更新できる", async () => {
       const created = await createGrade({ name: "PJ" })
 
-      const result = await updateGrade(created.grade!.id, {
+      const result = await updateGrade(created.id, {
         description: "更新された説明",
       })
-
-      expect(result.success).toBe(true)
-      expect(result.grade!.description).toBe("更新された説明")
+      expect(result.description).toBe("更新された説明")
     })
 
     it("referenceDateを更新できる", async () => {
       const created = await createGrade({ name: "PJ" })
 
-      const result = await updateGrade(created.grade!.id, {
+      const result = await updateGrade(created.id, {
         referenceDate: "2026-04-01",
       })
-
-      expect(result.success).toBe(true)
-      expect(result.grade!.referenceDate).toBeTruthy()
+      expect(result.referenceDate).toBeTruthy()
     })
 
     it("referenceDateをnullにリセットできる", async () => {
@@ -187,12 +168,10 @@ describe("Grade CRUD", () => {
         referenceDate: "2026-04-01",
       })
 
-      const result = await updateGrade(created.grade!.id, {
+      const result = await updateGrade(created.id, {
         referenceDate: null,
       })
-
-      expect(result.success).toBe(true)
-      expect(result.grade!.referenceDate).toBeNull()
+      expect(result.referenceDate).toBeNull()
     })
   })
 
@@ -200,27 +179,25 @@ describe("Grade CRUD", () => {
     it("試験を削除できる", async () => {
       const created = await createGrade({ name: "削除対象" })
 
-      const result = await deleteGrade(created.grade!.id)
-      expect(result.success).toBe(true)
+      await deleteGrade(created.id)
 
-      const found = await getGradeById(created.grade!.id)
-      expect(found.success).toBe(false)
+      await expect(getGradeById(created.id)).rejects.toThrow()
     })
 
     it("関連するGradeItemもカスケード削除される", async () => {
       const created = await createGrade({ name: "PJ" })
       await testPrisma.gradeItem.create({
         data: {
-          gradeId: created.grade!.id,
+          gradeId: created.id,
           name: "削除対象項目",
           order: 0,
         },
       })
 
-      await deleteGrade(created.grade!.id)
+      await deleteGrade(created.id)
 
       const items = await testPrisma.gradeItem.findMany({
-        where: { gradeId: created.grade!.id },
+        where: { gradeId: created.id },
       })
       expect(items).toHaveLength(0)
     })

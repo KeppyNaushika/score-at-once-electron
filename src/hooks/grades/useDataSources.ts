@@ -22,10 +22,7 @@ export function useDataSources(gradeId: string) {
 
   const loadSourceFits = useCallback(async () => {
     try {
-      const result = await window.electronAPI.grade.computeSourceFits(gradeId)
-      if (result.success && result.fits) {
-        setSourceFits(result.fits)
-      }
+      setSourceFits(await window.electronAPI.grade.computeSourceFits(gradeId))
     } catch (error) {
       console.error("Error computing source fits:", error)
     }
@@ -33,10 +30,7 @@ export function useDataSources(gradeId: string) {
 
   const loadData = useCallback(async () => {
     try {
-      const gpResult = await window.electronAPI.grade.getById(gradeId)
-      if (gpResult.success && gpResult.grade) {
-        setExam(gpResult.grade)
-      }
+      setExam(await window.electronAPI.grade.getById(gradeId))
     } catch (error) {
       console.error("Error loading data sources:", error)
     } finally {
@@ -57,27 +51,23 @@ export function useDataSources(gradeId: string) {
 
   const createGradeItem = useCallback(
     async (name: string) => {
-      const result = await window.electronAPI.grade.createGradeItem({
+      const gradeItem = await window.electronAPI.grade.createGradeItem({
         gradeId,
         name,
       })
-      if (result.success) {
-        await loadData()
-      }
-      return result
+      await loadData()
+      return gradeItem
     },
     [gradeId, loadData]
   )
 
   const updateGradeItem = useCallback(
     async (id: string, name: string) => {
-      const result = await window.electronAPI.grade.updateGradeItem(id, {
+      const gradeItem = await window.electronAPI.grade.updateGradeItem(id, {
         name,
       })
-      if (result.success) {
-        await loadData()
-      }
-      return result
+      await loadData()
+      return gradeItem
     },
     [loadData]
   )
@@ -85,11 +75,9 @@ export function useDataSources(gradeId: string) {
   const deleteGradeItem = useCallback(
     async (id: string) => {
       const result = await window.electronAPI.grade.deleteGradeItem(id)
-      if (result.success) {
-        await loadData()
-        // 評価項目削除は配下ソース（＝予測変数の集合）を減らすため R を再算出
-        void loadSourceFits()
-      }
+      await loadData()
+      // 評価項目削除は配下ソース（＝予測変数の集合）を減らすため R を再算出
+      void loadSourceFits()
       return result
     },
     [loadData, loadSourceFits]
@@ -97,26 +85,20 @@ export function useDataSources(gradeId: string) {
 
   const reorderGradeItems = useCallback(
     async (gradeItemOrders: { id: string; order: number }[]) => {
-      const result =
-        await window.electronAPI.grade.reorderGradeItems(gradeItemOrders)
-      if (result.success) {
-        await loadData()
-      }
-      return result
+      await window.electronAPI.grade.reorderGradeItems(gradeItemOrders)
+      await loadData()
     },
     [loadData]
   )
 
   const createDataSource = useCallback(
     async (dataSourceInput: GradeDataSourceInput) => {
-      const result =
+      const dataSource =
         await window.electronAPI.grade.createDataSource(dataSourceInput)
-      if (result.success) {
-        await loadData()
-        // ソース追加は予測変数/対象を増やすため R を再算出
-        void loadSourceFits()
-      }
-      return result
+      await loadData()
+      // ソース追加は予測変数/対象を増やすため R を再算出
+      void loadSourceFits()
+      return dataSource
     },
     [loadData, loadSourceFits]
   )
@@ -135,21 +117,22 @@ export function useDataSources(gradeId: string) {
         estimationSourceIds?: string[]
       }
     ) => {
-      const result = await window.electronAPI.grade.updateDataSource(id, data)
-      if (result.success) {
-        await loadData()
-        // 推定に影響する変更（推定法・ソース選択・見込→欠測）のときのみ R を再算出。
-        // 名前・換算満点のみの編集では R は変わらないので重い再算出をしない。
-        if (
-          data.absentMethod !== undefined ||
-          data.estimationMode !== undefined ||
-          data.estimationSourceIds !== undefined ||
-          data.treatExpectedAsMissing !== undefined
-        ) {
-          void loadSourceFits()
-        }
+      const dataSource = await window.electronAPI.grade.updateDataSource(
+        id,
+        data
+      )
+      await loadData()
+      // 推定に影響する変更（推定法・ソース選択・見込→欠測）のときのみ R を再算出。
+      // 名前・換算満点のみの編集では R は変わらないので重い再算出をしない。
+      if (
+        data.absentMethod !== undefined ||
+        data.estimationMode !== undefined ||
+        data.estimationSourceIds !== undefined ||
+        data.treatExpectedAsMissing !== undefined
+      ) {
+        void loadSourceFits()
       }
-      return result
+      return dataSource
     },
     [loadData, loadSourceFits]
   )
@@ -176,11 +159,9 @@ export function useDataSources(gradeId: string) {
         }
       }[]
     ) => {
-      // 個別更新IPC(grade:updateDataSource)は registerHandler 登録のため、
-      // backend例外時は reject する。allSettled で reject を吸収しないと
-      // 直後の loadData()/return に到達せず、呼び出し側の toast も再読込も
-      // 走らないまま無反応になる。allSettled なら reject も「失敗した1件」
-      // として畳み込め、下の「必ず再読込」の不変条件を守れる。
+      // 個別更新IPC(grade:updateDataSource)は失敗を reject で返す。allSettled で
+      // 受けないと直後の loadData()/return に到達せず、呼び出し側の toast も
+      // 再読込も走らないまま無反応になる。
       const results = await Promise.allSettled(
         updates.map((update) =>
           window.electronAPI.grade.updateDataSource(update.id, update.data)
@@ -192,10 +173,9 @@ export function useDataSources(gradeId: string) {
       // 一括設定は推定法・ソース選択を変えるため R を再算出
       void loadSourceFits()
       return {
-        success: results.every(
-          (settledResult) =>
-            settledResult.status === "fulfilled" && settledResult.value.success
-        ),
+        failedCount: results.filter(
+          (settledResult) => settledResult.status === "rejected"
+        ).length,
       }
     },
     [loadData, loadSourceFits]
@@ -203,24 +183,18 @@ export function useDataSources(gradeId: string) {
 
   const deleteDataSource = useCallback(
     async (id: string) => {
-      const result = await window.electronAPI.grade.deleteDataSource(id)
-      if (result.success) {
-        await loadData()
-        // ソース削除は予測変数の集合を減らすため R を再算出
-        void loadSourceFits()
-      }
-      return result
+      await window.electronAPI.grade.deleteDataSource(id)
+      await loadData()
+      // ソース削除は予測変数の集合を減らすため R を再算出
+      void loadSourceFits()
     },
     [loadData, loadSourceFits]
   )
 
   const reorderDataSources = useCallback(
     async (items: { id: string; order: number }[]) => {
-      const result = await window.electronAPI.grade.reorderDataSources(items)
-      if (result.success) {
-        await loadData()
-      }
-      return result
+      await window.electronAPI.grade.reorderDataSources(items)
+      await loadData()
     },
     [loadData]
   )

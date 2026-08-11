@@ -31,24 +31,19 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
   useEffect(() => {
     const load = async () => {
       try {
-        const [gradeResult, studentsResult] = await Promise.all([
+        const [grade, gradeStudents] = await Promise.all([
           window.electronAPI.grade.getById(gradeId),
           window.electronAPI.grade.getStudents(gradeId),
         ])
-        if (!gradeResult.success || !gradeResult.grade) return
 
-        const sources = gradeResult.grade.gradeItems
+        const sources = grade.gradeItems
           .flatMap((gradeItem) => gradeItem.dataSources)
           .filter((dataSource) => dataSource.type === "coursework")
         setCourseworkSources(sources)
 
         // この成績の対象生徒ID（資料の名簿ではなく成績側の名簿で数える）
         const gradeStudentIds = new Set(
-          studentsResult.success && studentsResult.students
-            ? studentsResult.students.map(
-                (gradeStudent) => gradeStudent.student.id
-              )
-            : []
+          gradeStudents.map((gradeStudent) => gradeStudent.student.id)
         )
         setStudentCount(gradeStudentIds.size)
 

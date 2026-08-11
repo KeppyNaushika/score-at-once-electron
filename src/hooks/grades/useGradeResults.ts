@@ -29,15 +29,10 @@ export function useGradeResults(gradeId: string) {
       if (!options?.silent) setLoading(true)
       setError(null)
       try {
-        const response = await window.electronAPI.grade.calculateGrades(gradeId)
-        if (response.success && response.result) {
-          setResult(response.result)
-        } else {
-          setError(response.error ?? "計算に失敗しました")
-        }
+        setResult(await window.electronAPI.grade.calculateGrades(gradeId))
       } catch (err) {
         console.error("Error calculating grades:", err)
-        setError("計算中にエラーが発生しました")
+        setError(err instanceof Error ? err.message : "計算に失敗しました")
       } finally {
         if (!options?.silent) setLoading(false)
       }
@@ -95,28 +90,24 @@ export function useGradeResults(gradeId: string) {
         })
       }
 
-      // DB 永続化
+      // DB 永続化。失敗は例外で届くので、書けていない上書きが楽観更新のまま
+      // 画面に残り続けることはない（catch で再計算して実DBへ戻す）。
       try {
-        // 保存の失敗は例外ではなく success:false で返る（DB 層が捕まえて畳むため）。
-        // 見落とすと、書けていない上書きが楽観更新のまま画面に残り続ける。
-        const persisted = params.overrideLabel
-          ? await window.electronAPI.grade.upsertGradeOverride({
-              gradeStudentId: params.gradeStudentId,
-              gradeItemId: params.gradeItemId,
-              overrideLabel: params.overrideLabel,
-            })
-          : await window.electronAPI.grade.deleteGradeOverride({
-              gradeStudentId: params.gradeStudentId,
-              gradeItemId: params.gradeItemId,
-            })
-        if (!persisted.success) {
-          setError(persisted.error ?? "評定の保存に失敗しました")
-          await calculate({ silent: true })
-          return
+        if (params.overrideLabel) {
+          await window.electronAPI.grade.upsertGradeOverride({
+            gradeStudentId: params.gradeStudentId,
+            gradeItemId: params.gradeItemId,
+            overrideLabel: params.overrideLabel,
+          })
+        } else {
+          await window.electronAPI.grade.deleteGradeOverride({
+            gradeStudentId: params.gradeStudentId,
+            gradeItemId: params.gradeItemId,
+          })
         }
 
         if (wasFrozen) {
-          const refrozen = await window.electronAPI.grade.freezeGradeScores({
+          await window.electronAPI.grade.freezeGradeScores({
             gradeId,
             targets: [
               {
@@ -126,15 +117,15 @@ export function useGradeResults(gradeId: string) {
             ],
             frozenByUserId: user?.id ?? null,
           })
-          if (!refrozen.success) {
-            setError(refrozen.error ?? "成績値の再確定に失敗しました")
-          }
           await calculate({ silent: true })
         }
       } catch (err) {
         console.error("Error persisting grade override:", err)
+        setError(
+          err instanceof Error ? err.message : "評定の保存に失敗しました"
+        )
         // エラー時は再計算して整合性を回復
-        calculate()
+        await calculate({ silent: true })
       }
     },
     [gradeId, result, calculate, user]
@@ -147,19 +138,17 @@ export function useGradeResults(gradeId: string) {
   const freezeScores = useCallback(
     async (targets?: GradeCellTarget[]) => {
       try {
-        const response = await window.electronAPI.grade.freezeGradeScores({
+        await window.electronAPI.grade.freezeGradeScores({
           gradeId,
           targets,
           frozenByUserId: user?.id ?? null,
         })
-        if (!response.success) {
-          setError(response.error ?? "成績値の確定に失敗しました")
-          return
-        }
         await calculate({ silent: true })
       } catch (err) {
         console.error("Error freezing grade scores:", err)
-        setError("成績値の確定中にエラーが発生しました")
+        setError(
+          err instanceof Error ? err.message : "成績値の確定に失敗しました"
+        )
       }
     },
     [gradeId, calculate, user]
@@ -169,19 +158,17 @@ export function useGradeResults(gradeId: string) {
   const unfreezeScores = useCallback(
     async (targets?: GradeCellTarget[]) => {
       try {
-        const response = await window.electronAPI.grade.unfreezeGradeScores({
+        await window.electronAPI.grade.unfreezeGradeScores({
           gradeId,
           targets,
           userId: user?.id ?? null,
         })
-        if (!response.success) {
-          setError(response.error ?? "確定の解除に失敗しました")
-          return
-        }
         await calculate({ silent: true })
       } catch (err) {
         console.error("Error unfreezing grade scores:", err)
-        setError("確定の解除中にエラーが発生しました")
+        setError(
+          err instanceof Error ? err.message : "確定の解除に失敗しました"
+        )
       }
     },
     [gradeId, calculate, user]

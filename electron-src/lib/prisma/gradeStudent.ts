@@ -29,66 +29,47 @@ async function getExamReferenceDate(gradeId: string): Promise<Date | null> {
  * 成績算出試験の対象生徒一覧を取得
  */
 export async function getStudentsByGradeId(gradeId: string) {
-  try {
-    const students = await prisma.gradeStudent.findMany({
-      where: { gradeId },
-      include: {
-        student: {
-          include: {
-            memberships: {
-              include: { classroom: true },
-            },
+  const students = await prisma.gradeStudent.findMany({
+    where: { gradeId },
+    include: {
+      student: {
+        include: {
+          memberships: {
+            include: { classroom: true },
           },
         },
       },
-      orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
-    })
-    return { success: true, students }
-  } catch (error) {
-    console.error("Error getting grade exam students:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+    },
+    orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
+  })
+  return students
 }
 
 /**
  * 成績算出試験の登録学級一覧を取得
  */
 export async function getGradeClassrooms(gradeId: string) {
-  try {
-    const referenceDate = await getExamReferenceDate(gradeId)
-    const classrooms = await prisma.gradeClassroom.findMany({
-      where: { gradeId },
-      include: {
-        classroom: {
-          include: {
-            memberships: {
-              where: membershipFilterAt(referenceDate),
-            },
+  const referenceDate = await getExamReferenceDate(gradeId)
+  const classrooms = await prisma.gradeClassroom.findMany({
+    where: { gradeId },
+    include: {
+      classroom: {
+        include: {
+          memberships: {
+            where: membershipFilterAt(referenceDate),
           },
         },
       },
-      orderBy: { order: "asc" },
-    })
-    return {
-      success: true,
-      classrooms: classrooms.map((gradeClassroom) => ({
-        id: gradeClassroom.id,
-        classroomId: gradeClassroom.classroomId,
-        className: gradeClassroom.classroom.name,
-        order: gradeClassroom.order,
-        studentCount: gradeClassroom.classroom.memberships.length,
-      })),
-    }
-  } catch (error) {
-    console.error("Error getting grade exam classrooms:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+    },
+    orderBy: { order: "asc" },
+  })
+  return classrooms.map((gradeClassroom) => ({
+    id: gradeClassroom.id,
+    classroomId: gradeClassroom.classroomId,
+    className: gradeClassroom.classroom.name,
+    order: gradeClassroom.order,
+    studentCount: gradeClassroom.classroom.memberships.length,
+  }))
 }
 
 /**
@@ -102,36 +83,28 @@ export async function getAvailableClassroomsForGrade(
   gradeId: string,
   activeOnly = true
 ) {
-  try {
-    const referenceDate = await getExamReferenceDate(gradeId)
-    const [existing, gradeStudents] = await Promise.all([
-      prisma.gradeClassroom.findMany({
-        where: { gradeId },
-      }),
-      prisma.gradeStudent.findMany({
-        where: { gradeId },
-      }),
-    ])
+  const referenceDate = await getExamReferenceDate(gradeId)
+  const [existing, gradeStudents] = await Promise.all([
+    prisma.gradeClassroom.findMany({
+      where: { gradeId },
+    }),
+    prisma.gradeStudent.findMany({
+      where: { gradeId },
+    }),
+  ])
 
-    const classrooms = await getAvailableClassroomsForTarget({
-      existingClassroomIds: existing.map(
-        (gradeClassroom) => gradeClassroom.classroomId
-      ),
-      excludeStudentIds: gradeStudents.map(
-        (gradeStudent) => gradeStudent.studentId
-      ),
-      referenceDate,
-      activeOnly,
-    })
+  const classrooms = await getAvailableClassroomsForTarget({
+    existingClassroomIds: existing.map(
+      (gradeClassroom) => gradeClassroom.classroomId
+    ),
+    excludeStudentIds: gradeStudents.map(
+      (gradeStudent) => gradeStudent.studentId
+    ),
+    referenceDate,
+    activeOnly,
+  })
 
-    return { success: true, classrooms }
-  } catch (error) {
-    console.error("Error getting available classrooms:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return classrooms
 }
 
 /**
@@ -143,28 +116,20 @@ export async function getAvailableStudentsForGrade(
   gradeId: string,
   activeOnly = true
 ) {
-  try {
-    const referenceDate = await getExamReferenceDate(gradeId)
-    const gradeStudents = await prisma.gradeStudent.findMany({
-      where: { gradeId },
-    })
+  const referenceDate = await getExamReferenceDate(gradeId)
+  const gradeStudents = await prisma.gradeStudent.findMany({
+    where: { gradeId },
+  })
 
-    const students = await getAvailableStudentsForTarget({
-      excludeStudentIds: gradeStudents.map(
-        (gradeStudent) => gradeStudent.studentId
-      ),
-      referenceDate,
-      activeOnly,
-    })
+  const students = await getAvailableStudentsForTarget({
+    excludeStudentIds: gradeStudents.map(
+      (gradeStudent) => gradeStudent.studentId
+    ),
+    referenceDate,
+    activeOnly,
+  })
 
-    return { success: true, students }
-  } catch (error) {
-    console.error("Error getting available students:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return students
 }
 
 /**

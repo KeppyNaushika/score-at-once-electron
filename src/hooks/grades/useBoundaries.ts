@@ -13,10 +13,7 @@ export function useBoundaries(gradeId: string) {
 
   const loadData = useCallback(async () => {
     try {
-      const result = await window.electronAPI.grade.getById(gradeId)
-      if (result.success && result.grade) {
-        setGrade(result.grade)
-      }
+      setGrade(await window.electronAPI.grade.getById(gradeId))
     } catch (error) {
       console.error("Error loading boundaries:", error)
     } finally {
@@ -33,24 +30,16 @@ export function useBoundaries(gradeId: string) {
       gradeItemId: string
       boundaries: { label: string; minPercentage: number; order: number }[]
     }) => {
-      const result =
-        await window.electronAPI.grade.replaceGradeItemBoundaries(data)
-      if (result.success) {
-        await loadData()
-      }
-      return result
+      await window.electronAPI.grade.replaceGradeItemBoundaries(data)
+      await loadData()
     },
     [loadData]
   )
 
   const deleteBoundaries = useCallback(
     async (gradeItemId: string) => {
-      const result =
-        await window.electronAPI.grade.deleteGradeItemBoundaries(gradeItemId)
-      if (result.success) {
-        await loadData()
-      }
-      return result
+      await window.electronAPI.grade.deleteGradeItemBoundaries(gradeItemId)
+      await loadData()
     },
     [loadData]
   )

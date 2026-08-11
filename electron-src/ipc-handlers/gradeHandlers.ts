@@ -79,7 +79,7 @@ import {
   calculateGrades,
   computeSourceFits,
 } from "../lib/shared/calculations/gradeCalculator"
-import { registerHandler, registerSafeHandler } from "./ipcHandlerUtils"
+import { registerHandler } from "./ipcHandlerUtils"
 
 /** 成績（Grade）のCRUD・生徒管理・データソース・成績算出・Excel出力・アーカイブに関するIPCチャンネルを登録する */
 export function setupGradeHandlers(): void {
@@ -128,16 +128,14 @@ export function setupGradeHandlers(): void {
     return duplicateGrade(id)
   })
 
-  registerSafeHandler("grade:getExportSettings", async (gradeId: string) => {
-    const settings = await getGradeExportSettings(gradeId)
-    return { success: true, settings }
+  registerHandler("grade:getExportSettings", async (gradeId: string) => {
+    return getGradeExportSettings(gradeId)
   })
 
-  registerSafeHandler(
+  registerHandler(
     "grade:saveExportSettings",
     async (gradeId: string, settings: Record<string, unknown>) => {
       await upsertGradeExportSettings(gradeId, settings)
-      return { success: true }
     }
   )
 
@@ -465,9 +463,10 @@ export function setupGradeHandlers(): void {
       filters: [{ name: "成績アーカイブ", extensions: ["grade"] }],
     })
     if (result.canceled || !result.filePath) {
-      return { success: false, error: "キャンセルされました" }
+      return { canceled: true as const }
     }
-    return createGradeArchive(gradeId, result.filePath)
+    await createGradeArchive(gradeId, result.filePath)
+    return { canceled: false as const, outputPath: result.filePath }
   })
 
   registerHandler("grade:importArchive", async () => {
@@ -477,16 +476,12 @@ export function setupGradeHandlers(): void {
       properties: ["openFile"],
     })
     if (result.canceled || result.filePaths.length === 0) {
-      return { success: false, error: "キャンセルされました" }
+      return { canceled: true as const }
     }
 
-    const extractResult = await extractGradeArchive(result.filePaths[0])
-    if (!extractResult.success || !extractResult.data) {
-      return extractResult
-    }
-
-    const preview = await previewGradeArchiveImport(extractResult.data)
-    return { success: true, preview, archiveData: extractResult.data }
+    const archiveData = await extractGradeArchive(result.filePaths[0])
+    const preview = await previewGradeArchiveImport(archiveData)
+    return { canceled: false as const, preview, archiveData }
   })
 
   registerHandler(

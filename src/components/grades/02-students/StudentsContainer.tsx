@@ -1,7 +1,8 @@
 "use client"
 
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import {
   type ClassroomRosterEntry,
@@ -21,14 +22,7 @@ import type {
   StudentAddPanelAdapter,
 } from "@/components/common/student-add-panel/types"
 import { Button } from "@/components/ui/button"
-
-interface GradeClassroom {
-  id: string
-  classroomId: string
-  className: string
-  order: number
-  studentCount: number
-}
+import { queryKeys } from "@/lib/queryKeys"
 
 interface StudentsContainerProps {
   gradeId: string
@@ -40,51 +34,33 @@ interface StudentsContainerProps {
  * 学級の追加/削除と、共通 roster-table による対象生徒一覧の並び替えを提供する。
  */
 export function StudentsContainer({ gradeId }: StudentsContainerProps) {
-  const [classrooms, setClassrooms] = useState<GradeClassroom[]>([])
+  const queryClient = useQueryClient()
+  const { data: classrooms = [] } = useQuery({
+    queryKey: queryKeys.grade.classrooms(gradeId),
+    queryFn: () => window.electronAPI.grade.getClassrooms(gradeId),
+  })
   const [studentCount, setStudentCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [rosterHandle, setRosterHandle] = useState<RosterTableHandle | null>(
     null
   )
 
-  const loadClassrooms = useCallback(async () => {
-    try {
-      const result = await window.electronAPI.grade.getClassrooms(gradeId)
-      if (result.success && result.classrooms) {
-        setClassrooms(result.classrooms)
-      }
-    } catch (error) {
-      console.error("Error loading grade classrooms:", error)
-    }
-  }, [gradeId])
-
-  useEffect(() => {
-    loadClassrooms()
-  }, [loadClassrooms])
-
   // 名簿テーブルのアダプター（成績）
   const rosterAdapter = useMemo<RosterTableAdapter>(
     () => ({
       fetchRows: async () => {
-        const [classroomResult, studentResult] = await Promise.all([
+        const [gradeClassrooms, gradeStudents] = await Promise.all([
           window.electronAPI.grade.getClassrooms(gradeId),
           window.electronAPI.grade.getStudents(gradeId),
         ])
         const classroomOrderMap = new Map(
-          (classroomResult.success && classroomResult.classrooms
-            ? classroomResult.classrooms
-            : []
-          ).map((gradeClassroom) => [
+          gradeClassrooms.map((gradeClassroom) => [
             gradeClassroom.classroomId,
             gradeClassroom.order,
           ])
         )
         const registeredClassroomIds = new Set(classroomOrderMap.keys())
-        const students =
-          studentResult.success && studentResult.students
-            ? studentResult.students
-            : []
-        return students.map((examStudent): RosterRow => {
+        return gradeStudents.map((examStudent): RosterRow => {
           const membership = examStudent.student.memberships.find(
             (membership) => registeredClassroomIds.has(membership.classroomId)
           )
@@ -106,14 +82,12 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
         })
       },
       fetchClassrooms: async () => {
-        const result = await window.electronAPI.grade.getClassrooms(gradeId)
-        if (!result.success || !result.classrooms) return []
-        return result.classrooms.map(
-          (gradeClassroom): RosterClassroomOption => ({
-            id: gradeClassroom.classroomId,
-            name: gradeClassroom.className,
-          })
-        )
+        const gradeClassrooms =
+          await window.electronAPI.grade.getClassrooms(gradeId)
+        return gradeClassrooms.map((gradeClassroom): RosterClassroomOption => ({
+          id: gradeClassroom.classroomId,
+          name: gradeClassroom.className,
+        }))
       },
       updateRowOrder: async (rowOrders) => {
         await window.electronAPI.grade.updateStudentOrders(gradeId, rowOrders)
@@ -129,12 +103,12 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
   const addPanelAdapter = useMemo<StudentAddPanelAdapter>(
     () => ({
       fetchAvailableClassrooms: async (activeOnly) => {
-        const result = await window.electronAPI.grade.getAvailableClassrooms(
-          gradeId,
-          activeOnly
-        )
-        if (!result.success || !result.classrooms) return []
-        return result.classrooms.map((classroom): AddPanelClassroomItem => ({
+        const classrooms =
+          await window.electronAPI.grade.getAvailableClassrooms(
+            gradeId,
+            activeOnly
+          )
+        return classrooms.map((classroom): AddPanelClassroomItem => ({
           id: classroom.id,
           name: classroom.name,
           studentCount: classroom.studentCount,
@@ -142,12 +116,11 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
         }))
       },
       fetchAvailableStudents: async (activeOnly) => {
-        const result = await window.electronAPI.grade.getAvailableStudents(
+        const students = await window.electronAPI.grade.getAvailableStudents(
           gradeId,
           activeOnly
         )
-        if (!result.success || !result.students) return []
-        return result.students.map((student): AddPanelStudentItem => ({
+        return students.map((student): AddPanelStudentItem => ({
           id: student.id,
           studentNumber: student.studentNumber,
           lastName: student.lastName,
@@ -165,36 +138,26 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
       },
       addClassrooms: async (orderedClassroomIds, activeOnly) => {
         for (const classroomId of orderedClassroomIds) {
-          const result =
-            await window.electronAPI.grade.addStudentsFromClassroom(
-              gradeId,
-              classroomId,
-              activeOnly
-            )
-          if (!result.success) {
-            throw new Error(
-              result.error || `学級 ${classroomId} の追加に失敗しました`
-            )
-          }
+          await window.electronAPI.grade.addStudentsFromClassroom(
+            gradeId,
+            classroomId,
+            activeOnly
+          )
         }
       },
       addStudents: async (studentIds) => {
-        const result = await window.electronAPI.grade.addStudentsToGrade(
-          gradeId,
-          studentIds
-        )
-        if (!result.success) {
-          throw new Error(result.error || "生徒の追加に失敗しました")
-        }
+        await window.electronAPI.grade.addStudentsToGrade(gradeId, studentIds)
       },
     }),
     [gradeId]
   )
 
   const reloadAll = useCallback(async () => {
-    await loadClassrooms()
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.grade.classrooms(gradeId),
+    })
     await rosterHandle?.refresh()
-  }, [loadClassrooms, rosterHandle])
+  }, [queryClient, gradeId, rosterHandle])
 
   const classroomEntries = useMemo<ClassroomRosterEntry[]>(
     () =>
@@ -234,15 +197,12 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
               "手動で上書きした評定",
               "評価項目ごとの除外設定",
             ]}
+            // 失敗は例外で伝わり、ClassroomRosterManager の楽観更新がロールバックする
             onReorder={async (orderedClassroomIds) => {
-              const result = await window.electronAPI.grade.setClassroomOrders(
+              await window.electronAPI.grade.setClassroomOrders(
                 gradeId,
                 orderedClassroomIds
               )
-              // 失敗時は throw して ClassroomRosterManager の楽観更新をロールバックさせる
-              if (!result.success) {
-                throw new Error(result.error || "学級の並び替えに失敗しました")
-              }
             }}
             fetchRemovalPreview={async (entry) => {
               const result =
@@ -250,18 +210,15 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
                   gradeId,
                   entry.classroomId
                 )
-              return { exclusiveCount: result.exclusiveCount ?? 0 }
+              return { exclusiveCount: result.exclusiveCount }
             }}
+            // 失敗は例外で伝わり、ダイアログが成功扱いで閉じない
             onRemove={async (entry, deleteStudents) => {
-              const result = await window.electronAPI.grade.removeClassroom(
+              await window.electronAPI.grade.removeClassroom(
                 gradeId,
                 entry.classroomId,
                 deleteStudents
               )
-              // 失敗時は throw し、ダイアログを成功扱いで閉じさせない
-              if (!result.success) {
-                throw new Error(result.error || "学級の削除に失敗しました")
-              }
             }}
             onChanged={reloadAll}
           />

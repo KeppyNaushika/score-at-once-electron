@@ -142,23 +142,12 @@ export function hydrateGrade<
  * GradeItem配下のデータソース一覧を取得
  */
 export async function getDataSourcesByGradeItemId(gradeItemId: string) {
-  try {
-    const dataSources = await prisma.gradeDataSource.findMany({
-      where: { gradeItemId },
-      include: gradeDataSourceInclude,
-      orderBy: { order: "asc" },
-    })
-    return {
-      success: true,
-      dataSources: serializePrisma(dataSources).map(hydrateGradeDataSource),
-    }
-  } catch (error) {
-    console.error("Error getting data sources:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  const dataSources = await prisma.gradeDataSource.findMany({
+    where: { gradeItemId },
+    include: gradeDataSourceInclude,
+    orderBy: { order: "asc" },
+  })
+  return serializePrisma(dataSources).map(hydrateGradeDataSource)
 }
 
 /**
@@ -181,78 +170,67 @@ export async function createDataSource(data: {
   estimationMode?: string
   estimationSourceIds?: string[]
 }) {
-  try {
-    // order を自動計算（gradeItem 内）
-    const maxOrder = await prisma.gradeDataSource.aggregate({
-      where: { gradeItemId: data.gradeItemId },
-      _max: { order: true },
-    })
-    const nextOrder = (maxOrder._max.order ?? -1) + 1
+  // order を自動計算（gradeItem 内）
+  const maxOrder = await prisma.gradeDataSource.aggregate({
+    where: { gradeItemId: data.gradeItemId },
+    _max: { order: true },
+  })
+  const nextOrder = (maxOrder._max.order ?? -1) + 1
 
-    // 自分自身を集計元に選ぶのを弾くため、作成前に自分のidを確定させる
-    const dataSourceId = crypto.randomUUID()
+  // 自分自身を集計元に選ぶのを弾くため、作成前に自分のidを確定させる
+  const dataSourceId = crypto.randomUUID()
 
-    const dataSource = await prisma.gradeDataSource.create({
-      data: {
-        id: dataSourceId,
-        gradeItemId: data.gradeItemId,
-        type: data.type,
-        examId: data.examId,
-        subtotalId: data.subtotalId,
-        cropRegionId: data.cropRegionId,
-        courseworkItemId: data.courseworkItemId,
-        courseworkId: data.courseworkId,
-        name: data.name,
-        weight: data.weight,
-        order: nextOrder,
-        ...(data.absentMethod !== undefined && {
-          absentMethod: data.absentMethod,
-        }),
-        ...(data.absentRatio !== undefined && {
-          absentRatio: data.absentRatio,
-        }),
-        ...(data.absentOffset !== undefined && {
-          absentOffset: data.absentOffset,
-        }),
-        ...(data.treatExpectedAsMissing !== undefined && {
-          treatExpectedAsMissing: data.treatExpectedAsMissing,
-        }),
-        ...(data.estimationMode !== undefined && {
-          estimationMode: data.estimationMode,
-        }),
-        ...(data.estimationSourceIds !== undefined && {
-          estimationSources: {
-            create: buildEstimationSourceRows(
-              dataSourceId,
-              data.estimationSourceIds
-            ),
-          },
-        }),
-      },
-      include: gradeDataSourceInclude,
-    })
+  const dataSource = await prisma.gradeDataSource.create({
+    data: {
+      id: dataSourceId,
+      gradeItemId: data.gradeItemId,
+      type: data.type,
+      examId: data.examId,
+      subtotalId: data.subtotalId,
+      cropRegionId: data.cropRegionId,
+      courseworkItemId: data.courseworkItemId,
+      courseworkId: data.courseworkId,
+      name: data.name,
+      weight: data.weight,
+      order: nextOrder,
+      ...(data.absentMethod !== undefined && {
+        absentMethod: data.absentMethod,
+      }),
+      ...(data.absentRatio !== undefined && {
+        absentRatio: data.absentRatio,
+      }),
+      ...(data.absentOffset !== undefined && {
+        absentOffset: data.absentOffset,
+      }),
+      ...(data.treatExpectedAsMissing !== undefined && {
+        treatExpectedAsMissing: data.treatExpectedAsMissing,
+      }),
+      ...(data.estimationMode !== undefined && {
+        estimationMode: data.estimationMode,
+      }),
+      ...(data.estimationSourceIds !== undefined && {
+        estimationSources: {
+          create: buildEstimationSourceRows(
+            dataSourceId,
+            data.estimationSourceIds
+          ),
+        },
+      }),
+    },
+    include: gradeDataSourceInclude,
+  })
 
-    const scope = await resolveGradeScopeByItem(data.gradeItemId)
-    await recordAuditLog({
-      action: "grade.data_source.add",
-      entityType: "GradeDataSource",
-      entityId: dataSource.id,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      target: data.name,
-    })
+  const scope = await resolveGradeScopeByItem(data.gradeItemId)
+  await recordAuditLog({
+    action: "grade.data_source.add",
+    entityType: "GradeDataSource",
+    entityId: dataSource.id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    target: data.name,
+  })
 
-    return {
-      success: true,
-      dataSource: hydrateGradeDataSource(serializePrisma(dataSource)),
-    }
-  } catch (error) {
-    console.error("Error creating data source:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return hydrateGradeDataSource(serializePrisma(dataSource))
 }
 
 /**
@@ -271,76 +249,55 @@ export async function updateDataSource(
     estimationSourceIds?: string[]
   }
 ) {
-  try {
-    const { estimationSourceIds, ...rest } = data
-    const updateData: Prisma.GradeDataSourceUpdateInput = { ...rest }
-    if (estimationSourceIds !== undefined) {
-      // 選択の総入れ替え。idは uuidv4 なので、選び直すと別idの行になる。
-      updateData.estimationSources = {
-        deleteMany: {},
-        create: buildEstimationSourceRows(id, estimationSourceIds),
-      }
-    }
-    const dataSource = await prisma.gradeDataSource.update({
-      where: { id },
-      data: updateData,
-      include: gradeDataSourceInclude,
-    })
-
-    const scope = await resolveGradeScopeByItem(dataSource.gradeItemId)
-    await recordAuditLog({
-      action: "grade.data_source.update",
-      entityType: "GradeDataSource",
-      entityId: dataSource.id,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-      target: dataSource.name,
-    })
-
-    return {
-      success: true,
-      dataSource: hydrateGradeDataSource(serializePrisma(dataSource)),
-    }
-  } catch (error) {
-    console.error("Error updating data source:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+  const { estimationSourceIds, ...rest } = data
+  const updateData: Prisma.GradeDataSourceUpdateInput = { ...rest }
+  if (estimationSourceIds !== undefined) {
+    // 選択の総入れ替え。idは uuidv4 なので、選び直すと別idの行になる。
+    updateData.estimationSources = {
+      deleteMany: {},
+      create: buildEstimationSourceRows(id, estimationSourceIds),
     }
   }
+  const dataSource = await prisma.gradeDataSource.update({
+    where: { id },
+    data: updateData,
+    include: gradeDataSourceInclude,
+  })
+
+  const scope = await resolveGradeScopeByItem(dataSource.gradeItemId)
+  await recordAuditLog({
+    action: "grade.data_source.update",
+    entityType: "GradeDataSource",
+    entityId: dataSource.id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    target: dataSource.name,
+  })
+
+  return hydrateGradeDataSource(serializePrisma(dataSource))
 }
 
 /**
  * データソースを削除
  */
 export async function deleteDataSource(id: string) {
-  try {
-    const before = await prisma.gradeDataSource.findUnique({
-      where: { id },
-    })
+  const before = await prisma.gradeDataSource.findUnique({
+    where: { id },
+  })
 
-    await prisma.gradeDataSource.delete({ where: { id } })
+  await prisma.gradeDataSource.delete({ where: { id } })
 
-    const scope = before
-      ? await resolveGradeScopeByItem(before.gradeItemId)
-      : null
-    await recordAuditLog({
-      action: "grade.data_source.remove",
-      entityType: "GradeDataSource",
-      entityId: id,
-      scopeId: scope?.scopeId ?? null,
-      scopeLabel: scope?.scopeLabel ?? null,
-      target: before?.name ?? null,
-    })
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error deleting data source:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  const scope = before
+    ? await resolveGradeScopeByItem(before.gradeItemId)
+    : null
+  await recordAuditLog({
+    action: "grade.data_source.remove",
+    entityType: "GradeDataSource",
+    entityId: id,
+    scopeId: scope?.scopeId ?? null,
+    scopeLabel: scope?.scopeLabel ?? null,
+    target: before?.name ?? null,
+  })
 }
 
 /**
@@ -349,69 +306,41 @@ export async function deleteDataSource(id: string) {
 export async function reorderDataSources(
   dataSourceOrders: { id: string; order: number }[]
 ) {
-  try {
-    await prisma.$transaction(
-      dataSourceOrders.map((dataSourceOrder) =>
-        prisma.gradeDataSource.update({
-          where: { id: dataSourceOrder.id },
-          data: { order: dataSourceOrder.order },
-        })
-      )
+  await prisma.$transaction(
+    dataSourceOrders.map((dataSourceOrder) =>
+      prisma.gradeDataSource.update({
+        where: { id: dataSourceOrder.id },
+        data: { order: dataSourceOrder.order },
+      })
     )
-    return { success: true }
-  } catch (error) {
-    console.error("Error reordering data sources:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  )
 }
 
 /**
  * 全試験試験候補を取得（SubtotalGroupフィルタなし）
  */
 export async function getExamCandidates() {
-  try {
-    const exams = await prisma.exam.findMany({
-      orderBy: { examDate: "desc" },
-    })
-    return { success: true, exams }
-  } catch (error) {
-    console.error("Error getting exam exam candidates:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  const exams = await prisma.exam.findMany({
+    orderBy: { examDate: "desc" },
+  })
+  return exams
 }
 
 /**
  * 試験のSubtotalGroups取得（ExamSubtotalGroup経由）
  */
 export async function getExamSubtotalGroups(examId: string) {
-  try {
-    const examSubtotalGroups = await prisma.examSubtotalGroup.findMany({
-      where: { examId },
-      include: {
-        subtotalGroup: {
-          include: { subtotals: { orderBy: { order: "asc" } } },
-        },
+  const examSubtotalGroups = await prisma.examSubtotalGroup.findMany({
+    where: { examId },
+    include: {
+      subtotalGroup: {
+        include: { subtotals: { orderBy: { order: "asc" } } },
       },
-    })
-    return {
-      success: true,
-      subtotalGroups: examSubtotalGroups.map(
-        (examSubtotalGroup) => examSubtotalGroup.subtotalGroup
-      ),
-    }
-  } catch (error) {
-    console.error("Error getting exam subtotal groups:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+    },
+  })
+  return examSubtotalGroups.map(
+    (examSubtotalGroup) => examSubtotalGroup.subtotalGroup
+  )
 }
 
 /**
@@ -421,29 +350,21 @@ export async function getExamSubtotalGroups(examId: string) {
  * 追加クエリ無しで算出できるようにするため（規約: 計算は renderer 側で行う）。
  */
 export async function getExamCropRegions(examId: string) {
-  try {
-    const examPages = await prisma.examPage.findMany({
-      where: { examId },
-      include: {
-        cropRegions: {
-          where: { type: "QUESTION_ANSWER" },
-          orderBy: { orderIndex: "asc" },
-          include: {
-            cropSubtotals: {
-              where: { assignmentType: "QUESTION_ASSIGNMENT" },
-            },
+  const examPages = await prisma.examPage.findMany({
+    where: { examId },
+    include: {
+      cropRegions: {
+        where: { type: "QUESTION_ANSWER" },
+        orderBy: { orderIndex: "asc" },
+        include: {
+          cropSubtotals: {
+            where: { assignmentType: "QUESTION_ASSIGNMENT" },
           },
         },
       },
-      orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
-    })
-    const cropRegions = examPages.flatMap((examPage) => examPage.cropRegions)
-    return { success: true, cropRegions: serializePrisma(cropRegions) }
-  } catch (error) {
-    console.error("Error getting exam crop regions:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+    },
+    orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
+  })
+  const cropRegions = examPages.flatMap((examPage) => examPage.cropRegions)
+  return serializePrisma(cropRegions)
 }

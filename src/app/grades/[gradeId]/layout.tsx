@@ -40,10 +40,8 @@ export default function GradeWorkflowLayout({
   useEffect(() => {
     const loadExam = async () => {
       try {
-        const result = await window.electronAPI.grade.getById(gradeId)
-        if (result.success && result.grade) {
-          setExamName(result.grade.name)
-        }
+        const grade = await window.electronAPI.grade.getById(gradeId)
+        setExamName(grade.name)
       } catch (error) {
         console.error("Error loading grade exam:", error)
       }

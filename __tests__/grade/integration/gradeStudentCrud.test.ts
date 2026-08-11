@@ -151,8 +151,8 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const classrooms = await getGradeClassrooms(grade.id)
-      expect(classrooms.classrooms).toHaveLength(1)
-      expect(classrooms.classrooms![0].className).toBe("1年A組")
+      expect(classrooms).toHaveLength(1)
+      expect(classrooms[0].className).toBe("1年A組")
     })
 
     it("複数学級の追加でorderが正しく設定される", async () => {
@@ -162,9 +162,9 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomB.id)
 
       const classrooms = await getGradeClassrooms(grade.id)
-      expect(classrooms.classrooms).toHaveLength(2)
-      expect(classrooms.classrooms![0].order).toBe(0)
-      expect(classrooms.classrooms![1].order).toBe(1)
+      expect(classrooms).toHaveLength(2)
+      expect(classrooms[0].order).toBe(0)
+      expect(classrooms[1].order).toBe(1)
     })
 
     it("customOrderが出席番号順で連番になる", async () => {
@@ -173,9 +173,9 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const students = await getStudentsByGradeId(grade.id)
-      expect(students.students).toHaveLength(2)
-      expect(students.students![0].customOrder).toBe(1)
-      expect(students.students![1].customOrder).toBe(2)
+      expect(students).toHaveLength(2)
+      expect(students[0].customOrder).toBe(1)
+      expect(students[1].customOrder).toBe(2)
     })
   })
 
@@ -185,8 +185,8 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const result = await getStudentsByGradeId(grade.id)
-      expect(result.students).toHaveLength(2)
-      expect(result.students![0].student.lastName).toBe("山田")
+      expect(result).toHaveLength(2)
+      expect(result[0].student.lastName).toBe("山田")
     })
 
     it("生徒0人の場合は空配列を返す", async () => {
@@ -195,7 +195,7 @@ describe("GradeStudent / GradeClassroom", () => {
       })
 
       const result = await getStudentsByGradeId(grade.id)
-      expect(result.students).toHaveLength(0)
+      expect(result).toHaveLength(0)
     })
 
     it("memberships情報が含まれる", async () => {
@@ -204,10 +204,8 @@ describe("GradeStudent / GradeClassroom", () => {
 
       const result = await getStudentsByGradeId(grade.id)
 
-      expect(result.students![0].student.memberships.length).toBeGreaterThan(0)
-      expect(result.students![0].student.memberships[0].classroom.name).toBe(
-        "1年A組"
-      )
+      expect(result[0].student.memberships.length).toBeGreaterThan(0)
+      expect(result[0].student.memberships[0].classroom.name).toBe("1年A組")
     })
   })
 
@@ -217,9 +215,9 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
       const result = await getGradeClassrooms(grade.id)
-      expect(result.classrooms).toHaveLength(1)
-      expect(result.classrooms![0].className).toBe("1年A組")
-      expect(result.classrooms![0].studentCount).toBe(2)
+      expect(result).toHaveLength(1)
+      expect(result[0].className).toBe("1年A組")
+      expect(result[0].studentCount).toBe(2)
     })
   })
 
@@ -230,8 +228,8 @@ describe("GradeStudent / GradeClassroom", () => {
 
       const result = await getAvailableClassroomsForGrade(grade.id)
       // classroomAは登録済みなので、classroomBのみ
-      expect(result.classrooms).toHaveLength(1)
-      expect(result.classrooms![0].name).toBe("1年B組")
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe("1年B組")
     })
 
     it("全学級が登録済みのとき空配列を返す", async () => {
@@ -240,7 +238,7 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomB.id)
 
       const result = await getAvailableClassroomsForGrade(grade.id)
-      expect(result.classrooms).toHaveLength(0)
+      expect(result).toHaveLength(0)
     })
   })
 
@@ -253,8 +251,8 @@ describe("GradeStudent / GradeClassroom", () => {
       expect(result.skippedCount).toBe(0)
 
       const students = await getStudentsByGradeId(grade.id)
-      expect(students.students).toHaveLength(1)
-      expect(students.students![0].student.lastName).toBe("鈴木")
+      expect(students).toHaveLength(1)
+      expect(students[0].student.lastName).toBe("鈴木")
     })
 
     it("既に追加済みの生徒はスキップされる", async () => {
@@ -276,7 +274,7 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsToGrade(grade.id, [student3.id])
 
       const students = await getStudentsByGradeId(grade.id)
-      const target = students.students!.find(
+      const target = students.find(
         (student) => student.studentId === student3.id
       )
       expect(target?.customOrder).toBe(3)
@@ -324,10 +322,8 @@ describe("GradeStudent / GradeClassroom", () => {
       // student1,2,3 + 未所属S100（過去在籍=卒業済みS101のみ除外）。
       // activeOnly は「未在籍または在籍中」を残し過去在籍だけを除外する仕様
       // （availableStudents.ts）。
-      expect(result.students).toHaveLength(4)
-      const numbers = result
-        .students!.map((student) => student.studentNumber)
-        .sort()
+      expect(result).toHaveLength(4)
+      const numbers = result.map((student) => student.studentNumber).sort()
       expect(numbers).toEqual(["S001", "S002", "S003", "S100"])
     })
 
@@ -337,7 +333,7 @@ describe("GradeStudent / GradeClassroom", () => {
 
       const result = await getAvailableStudentsForGrade(grade.id, false)
       // 3 + 未所属 + 卒業済み = 5
-      expect(result.students).toHaveLength(5)
+      expect(result).toHaveLength(5)
     })
 
     it("既に成績へ追加済みの生徒は候補から除外される", async () => {
@@ -348,8 +344,8 @@ describe("GradeStudent / GradeClassroom", () => {
       const result = await getAvailableStudentsForGrade(grade.id, true)
 
       // 残りは student3 のみ
-      expect(result.students).toHaveLength(1)
-      expect(result.students![0].studentNumber).toBe("S003")
+      expect(result).toHaveLength(1)
+      expect(result[0].studentNumber).toBe("S003")
     })
 
     it("activeOnly=true は基準日より後に始まる所属の生徒を除外する", async () => {
@@ -400,18 +396,16 @@ describe("GradeStudent / GradeClassroom", () => {
       })
 
       const activeResult = await getAvailableStudentsForGrade(grade.id, true)
-      const activeNumbers = activeResult.students!.map(
-        (student) => student.studentNumber
-      )
+      const activeNumbers = activeResult.map((student) => student.studentNumber)
       // 在籍中の S301 のみ。将来開始の S300 は除外
       expect(activeNumbers).toContain("S301")
       expect(activeNumbers).not.toContain("S300")
 
       const allResult = await getAvailableStudentsForGrade(grade.id, false)
       // activeOnly=false なら将来開始の生徒も含む
-      expect(
-        allResult.students!.map((student) => student.studentNumber)
-      ).toContain("S300")
+      expect(allResult.map((student) => student.studentNumber)).toContain(
+        "S300"
+      )
     })
   })
 
@@ -443,15 +437,13 @@ describe("GradeStudent / GradeClassroom", () => {
       })
 
       const activeResult = await getAvailableClassroomsForGrade(grade.id, true)
-      const activeNames = activeResult.classrooms!.map(
-        (classroom) => classroom.name
-      )
+      const activeNames = activeResult.map((classroom) => classroom.name)
       // classC は在籍中0名なので非表示（classroomA, classroomB は表示）
       expect(activeNames).not.toContain("1年C組")
       expect(activeNames).toEqual(expect.arrayContaining(["1年A組", "1年B組"]))
 
       const allResult = await getAvailableClassroomsForGrade(grade.id, false)
-      const allNames = allResult.classrooms!.map((classroom) => classroom.name)
+      const allNames = allResult.map((classroom) => classroom.name)
       // activeOnly=false なら在籍終了の生徒も数えるので classC も表示
       expect(allNames).toContain("1年C組")
     })
@@ -469,8 +461,8 @@ describe("GradeStudent / GradeClassroom", () => {
       ])
 
       const students = await getStudentsByGradeId(grade.id)
-      expect(students.students![0].student.lastName).toBe("佐藤")
-      expect(students.students![1].student.lastName).toBe("山田")
+      expect(students[0].student.lastName).toBe("佐藤")
+      expect(students[1].student.lastName).toBe("山田")
     })
   })
 
@@ -483,7 +475,7 @@ describe("GradeStudent / GradeClassroom", () => {
       expect(result.removedStudents).toBe(2)
 
       const students = await getStudentsByGradeId(grade.id)
-      expect(students.students).toHaveLength(0)
+      expect(students).toHaveLength(0)
     })
 
     it("他の学級にも所属する生徒は削除されない", async () => {
@@ -508,7 +500,7 @@ describe("GradeStudent / GradeClassroom", () => {
 
       const students = await getStudentsByGradeId(grade.id)
       // student1（classroomAとclassroomBに所属）+ student3（classroomBのみ） = 2人残る
-      expect(students.students!.length).toBe(2)
+      expect(students.length).toBe(2)
     })
 
     it("削除後にGradeClassroomも削除される", async () => {
@@ -518,7 +510,7 @@ describe("GradeStudent / GradeClassroom", () => {
       await removeClassroomFromGrade(grade.id, classroomA.id)
 
       const classrooms = await getGradeClassrooms(grade.id)
-      expect(classrooms.classrooms).toHaveLength(0)
+      expect(classrooms).toHaveLength(0)
     })
 
     it("deleteStudents=false なら登録解除のみで生徒は残る", async () => {
@@ -534,9 +526,9 @@ describe("GradeStudent / GradeClassroom", () => {
 
       // GradeClassroom は外れるが、生徒は対象に残る
       const classrooms = await getGradeClassrooms(grade.id)
-      expect(classrooms.classrooms).toHaveLength(0)
+      expect(classrooms).toHaveLength(0)
       const students = await getStudentsByGradeId(grade.id)
-      expect(students.students).toHaveLength(2)
+      expect(students).toHaveLength(2)
     })
   })
 
@@ -586,10 +578,7 @@ describe("GradeStudent / GradeClassroom", () => {
 
       const classrooms = await getGradeClassrooms(grade.id)
       const byName = new Map(
-        classrooms.classrooms!.map((classroom) => [
-          classroom.className,
-          classroom.order,
-        ])
+        classrooms.map((classroom) => [classroom.className, classroom.order])
       )
       expect(byName.get("1年B組")).toBe(0)
       expect(byName.get("1年A組")).toBe(1)

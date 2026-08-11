@@ -234,10 +234,9 @@ describe("calculateGrades", () => {
   it("試験が見つからない場合はエラー", async () => {
     mockFindUnique.mockResolvedValue(null)
 
-    const result = await calculateGrades("non-existent")
-
-    expect(result.success).toBe(false)
-    expect(result.error).toBe("Grade exam not found")
+    await expect(calculateGrades("non-existent")).rejects.toThrow(
+      "Grade exam not found"
+    )
   })
 
   it("生徒0人の場合は空配列を返す", async () => {
@@ -255,11 +254,9 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([])
 
     const result = await calculateGrades("gp1")
-
-    expect(result.success).toBe(true)
-    expect(result.result!.students).toHaveLength(0)
-    expect(result.result!.gradeItems).toHaveLength(1)
-    expect(result.result!.gradeItems[0].name).toBe("知識")
+    expect(result.students).toHaveLength(0)
+    expect(result.gradeItems).toHaveLength(1)
+    expect(result.gradeItems[0].name).toBe("知識")
   })
 
   it("manualタイプのDataSourceでスコアを正しく算出する", async () => {
@@ -298,9 +295,7 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-
-    expect(result.success).toBe(true)
-    const student = result.result!.students[0]
+    const student = result.students[0]
 
     // manualスコア: 85/100 → 85%
     expect(student.gradeItemResults).toHaveLength(1)
@@ -366,9 +361,7 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-
-    expect(result.success).toBe(true)
-    const student = result.result!.students[0]
+    const student = result.students[0]
 
     // gi1: 80/100 * 50 = 40 (50max → 80%)
     expect(student.gradeItemResults[0].weightedScore).toBeCloseTo(40)
@@ -410,7 +403,7 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-    const student = result.result!.students[0]
+    const student = result.students[0]
 
     expect(student.gradeItemResults[0].sourceScores[0].rawScore).toBeNull()
     expect(student.gradeItemResults[0].weightedScore).toBe(0)
@@ -456,7 +449,7 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-    const student = result.result!.students[0]
+    const student = result.students[0]
 
     // 65% → B (60以上80未満)
     expect(student.gradeItemResults[0].gradeLabel).toBe("B")
@@ -508,7 +501,7 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-    const student = result.result!.students[0]
+    const student = result.students[0]
 
     // ds1: 90/100 * 60 = 54
     // ds2: 30/50 * 40 = 24
@@ -558,8 +551,7 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-    const sourceScore =
-      result.result!.students[0].gradeItemResults[0].sourceScores[0]
+    const sourceScore = result.students[0].gradeItemResults[0].sourceScores[0]
     expect(sourceScore.rawScore).toBeNull()
     expect(sourceScore.isEstimated).toBe(false)
   })
@@ -598,8 +590,7 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-    const sourceScore =
-      result.result!.students[0].gradeItemResults[0].sourceScores[0]
+    const sourceScore = result.students[0].gradeItemResults[0].sourceScores[0]
     expect(sourceScore.rawScore).toBe(0)
     expect(sourceScore.isEstimated).toBe(true)
   })
@@ -664,9 +655,7 @@ describe("calculateGrades", () => {
     ])
 
     const result = await calculateGrades("gp1")
-
-    expect(result.success).toBe(true)
-    const student = result.result!.students[0]
+    const student = result.students[0]
 
     // gi1は通常計算
     expect(student.gradeItemResults[0].isExcluded).toBe(false)
@@ -718,7 +707,7 @@ describe("calculateGrades", () => {
     ])
 
     const result = await calculateGrades("gp1")
-    const student = result.result!.students[0]
+    const student = result.students[0]
 
     expect(student.gradeItemResults[0].isExcluded).toBe(true)
     expect(student.gradeItemResults[0].weightedMaxScore).toBe(0)
@@ -757,7 +746,7 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-    const student = result.result!.students[0]
+    const student = result.students[0]
 
     expect(student.gradeItemResults[0].isExcluded).toBe(false)
     expect(student.gradeItemResults[0].weightedScore).toBeCloseTo(80)
@@ -810,17 +799,14 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-    const sourceScore =
-      result.result!.students[0].gradeItemResults[0].sourceScores[0]
+    const sourceScore = result.students[0].gradeItemResults[0].sourceScores[0]
 
     // B → 80点
     expect(sourceScore.rawScore).toBe(80)
     expect(sourceScore.letterValue).toBe("B")
-    expect(
-      result.result!.students[0].gradeItemResults[0].percentage
-    ).toBeCloseTo(80)
+    expect(result.students[0].gradeItemResults[0].percentage).toBeCloseTo(80)
     // 80% → 評価B
-    expect(result.result!.students[0].gradeItemResults[0].gradeLabel).toBe("B")
+    expect(result.students[0].gradeItemResults[0].gradeLabel).toBe("B")
   })
 
   it("letterモード: 未定義の評価記号はnull", async () => {
@@ -856,8 +842,7 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-    const sourceScore =
-      result.result!.students[0].gradeItemResults[0].sourceScores[0]
+    const sourceScore = result.students[0].gradeItemResults[0].sourceScores[0]
     expect(sourceScore.rawScore).toBeNull()
   })
 
@@ -900,8 +885,7 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-    const sourceScore =
-      result.result!.students[0].gradeItemResults[0].sourceScores[0]
+    const sourceScore = result.students[0].gradeItemResults[0].sourceScores[0]
 
     // 85 - 10 = 75
     expect(sourceScore.rawScore).toBe(75)
@@ -944,8 +928,7 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-    const sourceScore =
-      result.result!.students[0].gradeItemResults[0].sourceScores[0]
+    const sourceScore = result.students[0].gradeItemResults[0].sourceScores[0]
 
     // A(100) + 20 = 120。上限クランプを行わないため配点(100)超えがそのまま反映される
     expect(sourceScore.rawScore).toBe(120)
@@ -985,8 +968,7 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-    const sourceScore =
-      result.result!.students[0].gradeItemResults[0].sourceScores[0]
+    const sourceScore = result.students[0].gradeItemResults[0].sourceScores[0]
 
     // 10 - 30 = -20。下限クランプを行わないため負値もそのまま反映される
     expect(sourceScore.rawScore).toBe(-20)
@@ -1030,8 +1012,7 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-    const sourceScore =
-      result.result!.students[0].gradeItemResults[0].sourceScores[0]
+    const sourceScore = result.students[0].gradeItemResults[0].sourceScores[0]
     expect(sourceScore.comment).toBe("とても良い内容でした")
   })
 
@@ -1069,8 +1050,7 @@ describe("calculateGrades", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-    const sourceScore =
-      result.result!.students[0].gradeItemResults[0].sourceScores[0]
+    const sourceScore = result.students[0].gradeItemResults[0].sourceScores[0]
     expect(sourceScore.rawScore).toBe(75)
     expect(sourceScore.isEstimated).toBe(false)
   })
@@ -1151,13 +1131,13 @@ describe("calculateGrades", () => {
 
     // s1: 合算 70点 / 満点 80点 → 換算 70/80*100 = 87.5
     const student1SourceScore =
-      result.result!.students[0].gradeItemResults[0].sourceScores[0]
+      result.students[0].gradeItemResults[0].sourceScores[0]
     expect(student1SourceScore.rawScore).toBe(70)
     expect(student1SourceScore.maxScore).toBe(80)
     expect(student1SourceScore.weightedScore).toBe(87.5)
 
     // s2: 全項目未入力 → rawScore は null（absentMethod="null" のため推定なし）
-    const student2Item = result.result!.students[1].gradeItemResults[0]
+    const student2Item = result.students[1].gradeItemResults[0]
     expect(student2Item.sourceScores[0].rawScore).toBeNull()
     expect(student2Item.isAllMissing).toBe(true)
   })
@@ -1743,10 +1723,7 @@ describe("calculateGrades - subtotal 型データソース", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-
-    expect(result.success).toBe(true)
-    const sourceScore =
-      result.result!.students[0].gradeItemResults[0].sourceScores[0]
+    const sourceScore = result.students[0].gradeItemResults[0].sourceScores[0]
     // q1 正答10点 + q2 誤答0点 = 10点
     expect(sourceScore.rawScore).toBe(10)
     // 満点も同じ割り当て行から出る（q1・q2 の配点合計 = 20）
@@ -1776,10 +1753,8 @@ describe("calculateGrades - subtotal 型データソース", () => {
     mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
 
     const result = await calculateGrades("gp1")
-
-    expect(result.success).toBe(true)
     expect(
-      result.result!.students[0].gradeItemResults[0].sourceScores[0].rawScore
+      result.students[0].gradeItemResults[0].sourceScores[0].rawScore
     ).toBeNull()
   })
 })

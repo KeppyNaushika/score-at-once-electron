@@ -90,14 +90,13 @@ describe("GradeConstraint の renderer 境界（issue #1063）", () => {
         viewpointGradeItemIds: [knowledge.id],
       }),
     })
-    expect(created.success).toBe(true)
-    expect(typeof created.constraint!.tolerance).toBe("number")
-    expect(created.constraint!.tolerance).toBe(1.5)
-    for (const labelValue of created.constraint!.labelValues) {
+    expect(typeof created.tolerance).toBe("number")
+    expect(created.tolerance).toBe(1.5)
+    for (const labelValue of created.labelValues) {
       expect(typeof labelValue.value).toBe("number")
     }
     expect(
-      created.constraint!.labelValues.map((labelValue) => [
+      created.labelValues.map((labelValue) => [
         labelValue.label,
         labelValue.value,
       ])
@@ -108,15 +107,15 @@ describe("GradeConstraint の renderer 境界（issue #1063）", () => {
     ])
 
     const listed = await getGradeConstraints(grade.id)
-    expect(typeof listed.constraints![0].tolerance).toBe("number")
-    expect(typeof listed.constraints![0].labelValues[0].value).toBe("number")
+    expect(typeof listed[0].tolerance).toBe("number")
+    expect(typeof listed[0].labelValues[0].value).toBe("number")
 
     const updated = await updateGradeConstraint({
-      id: created.constraint!.id,
+      id: created.id,
       constraint: { tolerance: 2.25 },
     })
-    expect(typeof updated.constraint!.tolerance).toBe("number")
-    expect(updated.constraint!.tolerance).toBe(2.25)
+    expect(typeof updated.tolerance).toBe("number")
+    expect(updated.tolerance).toBe(2.25)
   })
 
   // 本体だけ作られて設定リレーションが入らないと、viewpoints ゼロ＝
@@ -124,16 +123,16 @@ describe("GradeConstraint の renderer 境界（issue #1063）", () => {
   it("設定リレーションの書き込みに失敗したら制約ごと作られない", async () => {
     const { grade, hyotei } = await createGradeWithItems()
 
-    const result = await createGradeConstraint({
-      gradeId: grade.id,
-      constraint: buildInput({
-        targetGradeItemId: hyotei.id,
-        // 存在しない評価項目を集計対象に指定 → FK違反で設定の書き込みが失敗する
-        viewpointGradeItemIds: ["gi-does-not-exist"],
-      }),
-    })
-
-    expect(result.success).toBe(false)
+    await expect(
+      createGradeConstraint({
+        gradeId: grade.id,
+        constraint: buildInput({
+          targetGradeItemId: hyotei.id,
+          // 存在しない評価項目を集計対象に指定 → FK違反で設定の書き込みが失敗する
+          viewpointGradeItemIds: ["gi-does-not-exist"],
+        }),
+      })
+    ).rejects.toThrow()
     const remaining = await testPrisma.gradeConstraint.findMany({
       where: { gradeId: grade.id },
     })
@@ -156,7 +155,7 @@ describe("GradeConstraint の renderer 境界（issue #1063）", () => {
       }),
     })
     const before = await testPrisma.gradeConstraintViewpoint.findMany({
-      where: { constraintId: created.constraint!.id },
+      where: { constraintId: created.id },
       orderBy: { order: "asc" },
     })
     const knowledgeRowCreatedAt = before.find(
@@ -165,12 +164,12 @@ describe("GradeConstraint の renderer 境界（issue #1063）", () => {
 
     // 態度を外して知識・技能だけにする
     await updateGradeConstraint({
-      id: created.constraint!.id,
+      id: created.id,
       constraint: { viewpointGradeItemIds: [knowledge.id] },
     })
 
     const after = await testPrisma.gradeConstraintViewpoint.findMany({
-      where: { constraintId: created.constraint!.id },
+      where: { constraintId: created.id },
     })
     expect(after).toHaveLength(1)
     expect(after[0].gradeItemId).toBe(knowledge.id)
@@ -189,16 +188,16 @@ describe("GradeConstraint の renderer 境界（issue #1063）", () => {
       }),
     })
     const beforeA = await testPrisma.gradeConstraintLabelValue.findFirst({
-      where: { constraintId: created.constraint!.id, label: "A" },
+      where: { constraintId: created.id, label: "A" },
     })
 
     await updateGradeConstraint({
-      id: created.constraint!.id,
+      id: created.id,
       constraint: { labelValues: { A: 4, B: 3 } },
     })
 
     const after = await testPrisma.gradeConstraintLabelValue.findMany({
-      where: { constraintId: created.constraint!.id },
+      where: { constraintId: created.id },
       orderBy: { order: "asc" },
     })
     expect(after.map((labelValue) => labelValue.label)).toEqual(["A", "B"])

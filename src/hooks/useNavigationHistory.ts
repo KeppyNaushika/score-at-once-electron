@@ -125,8 +125,8 @@ async function resolveEntityName(
       const exam = await window.electronAPI.getExam(id)
       name = exam?.examName ?? null
     } else if (kind === "grade") {
-      const result = await window.electronAPI.grade.getById(id)
-      name = result.grade?.name ?? null
+      const grade = await window.electronAPI.grade.getById(id)
+      name = grade.name
     } else if (kind === "coursework") {
       const coursework = await window.electronAPI.coursework.getById(id)
       name = coursework.name

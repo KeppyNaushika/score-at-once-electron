@@ -68,10 +68,10 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
     const loadSettings = async () => {
       if (!window.electronAPI?.grade) return
       try {
-        const result = await window.electronAPI.grade.getExportSettings(gradeId)
-        if (result.success && result.settings?.reportOptions) {
-          const saved = result.settings
-            .reportOptions as Partial<GradeReportOptions>
+        const settings =
+          await window.electronAPI.grade.getExportSettings(gradeId)
+        if (settings?.reportOptions) {
+          const saved = settings.reportOptions as Partial<GradeReportOptions>
           // ネストした列選択は新フィールド欠落を防ぐためデフォルトと深くマージ
           setReportOptionsState({
             ...DEFAULT_GRADE_REPORT_OPTIONS,
@@ -111,14 +111,12 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
         if (window.electronAPI?.grade) {
           window.electronAPI.grade
             .getExportSettings(gradeId)
-            .then((result) => {
-              const currentSettings =
-                result.success && result.settings ? result.settings : {}
-              return window.electronAPI.grade.saveExportSettings(gradeId, {
+            .then((currentSettings) =>
+              window.electronAPI.grade.saveExportSettings(gradeId, {
                 ...currentSettings,
                 reportOptions: newOptions,
               })
-            })
+            )
             .catch((error: unknown) => {
               console.error("成績算出エクスポート設定の保存に失敗:", error)
             })

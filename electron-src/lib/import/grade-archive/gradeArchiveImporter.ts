@@ -221,502 +221,477 @@ export async function importGradeArchive(
   rawData: AnyGradeArchiveData,
   options: GradeArchiveImportOptions = {}
 ): Promise<{
-  success: boolean
-  gradeId?: string
-  error?: string
-  /** 取り込み時の警告（点数スキップ・参照先未検出など）。空なら省略 */
-  warnings?: string[]
+  gradeId: string
+  /** 取り込み時の警告（点数スキップ・参照先未検出など） */
+  warnings: string[]
 }> {
-  try {
-    const { examMapping, courseworkDecisions = {} } = options
-    // 旧バージョン（1.3.0 manual / 1.4.0 名前ベース / 1.12.0 射影形式）を現行へ正規化
-    const { data, warnings: transformWarnings } =
-      transformGradeToLatest(rawData)
-    const warnings: string[] = [...transformWarnings]
+  const { examMapping, courseworkDecisions = {} } = options
+  // 旧バージョン（1.3.0 manual / 1.4.0 名前ベース / 1.12.0 射影形式）を現行へ正規化
+  const { data, warnings: transformWarnings } = transformGradeToLatest(rawData)
+  const warnings: string[] = [...transformWarnings]
 
-    const archiveGrade = data.grades[0]
-    if (!archiveGrade) {
-      return { success: false, error: "アーカイブに成績が含まれていません" }
-    }
+  const archiveGrade = data.grades[0]
+  if (!archiveGrade) {
+    throw new Error("アーカイブに成績が含まれていません")
+  }
 
-    const result = await prisma.$transaction(
-      async (tx: Prisma.TransactionClient) => {
-        // ── 1. 内包する試験外成績資料の復元（coursework モジュールへ委譲） ──
-        // 成績の生徒解決より先に走らせる。旧 .grade は生徒の氏名を持たないため
-        // 成績側だけでは生徒を作れないが、内包資料は氏名を持っている。先に資料を
-        // 取り込んでおけば、成績側は作られた生徒へ学籍番号で当たれる
-        // （逆順だと、生徒は DB に居るのに成績の名簿だけ空という結果になる）。
-        // 単体の .coursework と同じく未一致は作る。ここだけ lookup のみにすると、
-        // 同じ資料が単体では点数まで復元されるのに .grade 経由だと空になる
-        const courseworkResult = await importCourseworkData(
-          tx,
-          data.courseworkArchive,
-          {
-            allowCreate: true,
-            studentMatching: "studentNumber",
-            courseworkDecisions,
-          }
-        )
-        warnings.push(...courseworkResult.warnings)
-
-        // ── 2. 外部参照の解決 ──────────────────────────────────
-        // 生徒・学級は uuid 一次 → 学籍番号 / 学級名 二次で既存を探し、
-        // どちらにも当たらなければ作る（.exam / .coursework と同じ挙動）。
-        const studentResolution = await resolveStudents(tx, data.studentsData, {
-          method: "studentNumber",
+  const result = await prisma.$transaction(
+    async (tx: Prisma.TransactionClient) => {
+      // ── 1. 内包する試験外成績資料の復元（coursework モジュールへ委譲） ──
+      // 成績の生徒解決より先に走らせる。旧 .grade は生徒の氏名を持たないため
+      // 成績側だけでは生徒を作れないが、内包資料は氏名を持っている。先に資料を
+      // 取り込んでおけば、成績側は作られた生徒へ学籍番号で当たれる
+      // （逆順だと、生徒は DB に居るのに成績の名簿だけ空という結果になる）。
+      // 単体の .coursework と同じく未一致は作る。ここだけ lookup のみにすると、
+      // 同じ資料が単体では点数まで復元されるのに .grade 経由だと空になる
+      const courseworkResult = await importCourseworkData(
+        tx,
+        data.courseworkArchive,
+        {
           allowCreate: true,
+          studentMatching: "studentNumber",
+          courseworkDecisions,
+        }
+      )
+      warnings.push(...courseworkResult.warnings)
+
+      // ── 2. 外部参照の解決 ──────────────────────────────────
+      // 生徒・学級は uuid 一次 → 学籍番号 / 学級名 二次で既存を探し、
+      // どちらにも当たらなければ作る（.exam / .coursework と同じ挙動）。
+      const studentResolution = await resolveStudents(tx, data.studentsData, {
+        method: "studentNumber",
+        allowCreate: true,
+      })
+      warnings.push(...studentResolution.warnings)
+      const classroomResolution = await resolveClassrooms(
+        tx,
+        data.classesData,
+        { allowCreate: true }
+      )
+      warnings.push(...classroomResolution.warnings)
+      // 学級所属を戻すのは「この取り込みで新規作成した生徒」だけ。既存生徒にも
+      // 適用すると、取り込み先で別学級へ異動済みの生徒に旧学級の在籍行が復活し、
+      // 取り込みと無関係な試験の学級別集計・受験日スナップショットまで変わる
+      await restoreMemberships(
+        tx,
+        data.membershipsData,
+        studentResolution.map,
+        classroomResolution.map,
+        studentResolution.createdIds
+      )
+      const examIdMap = await resolveExams(
+        tx,
+        data.examRefs,
+        examMapping,
+        warnings
+      )
+
+      // 小計・採点領域は uuid 一次、当該試験内の名前・ラベル二次。
+      // 小計名はグループ内、領域ラベルは試験内でしか一意でないので必ず試験で絞る
+      const subtotalIdMap: IdMap = new Map()
+      for (const subtotalRef of data.subtotalRefs) {
+        const byId = await tx.subtotal.findUnique({
+          where: { id: subtotalRef.id },
         })
-        warnings.push(...studentResolution.warnings)
-        const classroomResolution = await resolveClassrooms(
-          tx,
-          data.classesData,
-          { allowCreate: true }
+        if (byId) {
+          subtotalIdMap.set(subtotalRef.id, byId.id)
+          continue
+        }
+        const examId = examIdMap.get(subtotalRef.examId)
+        if (!examId) continue
+        const byName = await tx.subtotal.findFirst({
+          where: {
+            name: subtotalRef.name,
+            subtotalGroup: { examSubtotalGroups: { some: { examId } } },
+          },
+        })
+        if (byName) subtotalIdMap.set(subtotalRef.id, byName.id)
+      }
+
+      const cropRegionIdMap: IdMap = new Map()
+      for (const cropRegionRef of data.cropRegionRefs) {
+        const byId = await tx.cropRegion.findUnique({
+          where: { id: cropRegionRef.id },
+        })
+        if (byId) {
+          cropRegionIdMap.set(cropRegionRef.id, byId.id)
+          continue
+        }
+        const examId = examIdMap.get(cropRegionRef.examId)
+        if (!examId) continue
+        const byLabel = await tx.cropRegion.findFirst({
+          where: { label: cropRegionRef.label, examPage: { examId } },
+        })
+        if (byLabel) cropRegionIdMap.set(cropRegionRef.id, byLabel.id)
+      }
+
+      // 資料そのものの参照（coursework_total 型）は資料を直接引いて解決する。
+      // 評価項目経由でしか作らないと、評価項目が0件の資料への参照が
+      // 取り込み先に実在していても解決できず「参照なし」で作られてしまう。
+      const courseworkItemIdMap = courseworkResult.itemIdMap
+      /** アーカイブ資料uuid → 実 Coursework.id（coursework_total 型の参照解決用） */
+      const courseworkIdMap: IdMap = new Map()
+      for (const archiveCoursework of data.courseworkArchive.courseworks) {
+        const byId = await tx.coursework.findUnique({
+          where: { id: archiveCoursework.id },
+        })
+        if (byId) {
+          courseworkIdMap.set(archiveCoursework.id, byId.id)
+          continue
+        }
+        const byName = await tx.coursework.findFirst({
+          where: { name: archiveCoursework.name },
+        })
+        if (byName) courseworkIdMap.set(archiveCoursework.id, byName.id)
+      }
+      // 評価項目から親を辿れるものは、そちらの結果を優先する
+      // （ユーザーがウィザードで別の資料へ寄せた場合に追従する）
+      for (const [archiveItemId, actualItemId] of courseworkItemIdMap) {
+        const archiveItem = data.courseworkArchive.courseworkItems.find(
+          (item) => item.id === archiveItemId
         )
-        warnings.push(...classroomResolution.warnings)
-        // 学級所属を戻すのは「この取り込みで新規作成した生徒」だけ。既存生徒にも
-        // 適用すると、取り込み先で別学級へ異動済みの生徒に旧学級の在籍行が復活し、
-        // 取り込みと無関係な試験の学級別集計・受験日スナップショットまで変わる
-        await restoreMemberships(
-          tx,
-          data.membershipsData,
-          studentResolution.map,
-          classroomResolution.map,
-          studentResolution.createdIds
-        )
-        const examIdMap = await resolveExams(
-          tx,
-          data.examRefs,
-          examMapping,
-          warnings
-        )
-
-        // 小計・採点領域は uuid 一次、当該試験内の名前・ラベル二次。
-        // 小計名はグループ内、領域ラベルは試験内でしか一意でないので必ず試験で絞る
-        const subtotalIdMap: IdMap = new Map()
-        for (const subtotalRef of data.subtotalRefs) {
-          const byId = await tx.subtotal.findUnique({
-            where: { id: subtotalRef.id },
-          })
-          if (byId) {
-            subtotalIdMap.set(subtotalRef.id, byId.id)
-            continue
-          }
-          const examId = examIdMap.get(subtotalRef.examId)
-          if (!examId) continue
-          const byName = await tx.subtotal.findFirst({
-            where: {
-              name: subtotalRef.name,
-              subtotalGroup: { examSubtotalGroups: { some: { examId } } },
-            },
-          })
-          if (byName) subtotalIdMap.set(subtotalRef.id, byName.id)
+        if (!archiveItem) continue
+        const actualItem = await tx.courseworkItem.findUnique({
+          where: { id: actualItemId },
+        })
+        if (actualItem) {
+          courseworkIdMap.set(archiveItem.courseworkId, actualItem.courseworkId)
         }
+      }
 
-        const cropRegionIdMap: IdMap = new Map()
-        for (const cropRegionRef of data.cropRegionRefs) {
-          const byId = await tx.cropRegion.findUnique({
-            where: { id: cropRegionRef.id },
-          })
-          if (byId) {
-            cropRegionIdMap.set(cropRegionRef.id, byId.id)
-            continue
-          }
-          const examId = examIdMap.get(cropRegionRef.examId)
-          if (!examId) continue
-          const byLabel = await tx.cropRegion.findFirst({
-            where: { label: cropRegionRef.label, examPage: { examId } },
-          })
-          if (byLabel) cropRegionIdMap.set(cropRegionRef.id, byLabel.id)
-        }
+      // ── 3. 成績本体を写す（アーカイブ uuid → 新 id の対応を作りながら） ──
+      const grade = await tx.grade.create({
+        data: {
+          name: archiveGrade.name,
+          description: archiveGrade.description,
+          referenceDate: archiveGrade.referenceDate
+            ? new Date(archiveGrade.referenceDate)
+            : null,
+        },
+      })
 
-        // 資料そのものの参照（coursework_total 型）は資料を直接引いて解決する。
-        // 評価項目経由でしか作らないと、評価項目が0件の資料への参照が
-        // 取り込み先に実在していても解決できず「参照なし」で作られてしまう。
-        const courseworkItemIdMap = courseworkResult.itemIdMap
-        /** アーカイブ資料uuid → 実 Coursework.id（coursework_total 型の参照解決用） */
-        const courseworkIdMap: IdMap = new Map()
-        for (const archiveCoursework of data.courseworkArchive.courseworks) {
-          const byId = await tx.coursework.findUnique({
-            where: { id: archiveCoursework.id },
-          })
-          if (byId) {
-            courseworkIdMap.set(archiveCoursework.id, byId.id)
-            continue
-          }
-          const byName = await tx.coursework.findFirst({
-            where: { name: archiveCoursework.name },
-          })
-          if (byName) courseworkIdMap.set(archiveCoursework.id, byName.id)
-        }
-        // 評価項目から親を辿れるものは、そちらの結果を優先する
-        // （ユーザーがウィザードで別の資料へ寄せた場合に追従する）
-        for (const [archiveItemId, actualItemId] of courseworkItemIdMap) {
-          const archiveItem = data.courseworkArchive.courseworkItems.find(
-            (item) => item.id === archiveItemId
-          )
-          if (!archiveItem) continue
-          const actualItem = await tx.courseworkItem.findUnique({
-            where: { id: actualItemId },
-          })
-          if (actualItem) {
-            courseworkIdMap.set(
-              archiveItem.courseworkId,
-              actualItem.courseworkId
-            )
-          }
-        }
-
-        // ── 3. 成績本体を写す（アーカイブ uuid → 新 id の対応を作りながら） ──
-        const grade = await tx.grade.create({
+      for (const exportSettings of data.gradeExportSettings) {
+        await tx.gradeExportSettings.create({
           data: {
-            name: archiveGrade.name,
-            description: archiveGrade.description,
-            referenceDate: archiveGrade.referenceDate
-              ? new Date(archiveGrade.referenceDate)
+            gradeId: grade.id,
+            settingsJson: exportSettings.settingsJson,
+          },
+        })
+      }
+
+      for (const gradeClassroom of data.gradeClassrooms) {
+        const classroomId = classroomResolution.map.get(
+          gradeClassroom.classroomId
+        )
+        if (!classroomId) continue
+        await tx.gradeClassroom.create({
+          data: {
+            gradeId: grade.id,
+            classroomId,
+            order: gradeClassroom.order,
+          },
+        })
+      }
+
+      const gradeStudentIdMap: IdMap = new Map()
+      // アーカイブの別々の生徒が取り込み先の同じ生徒へ解決することがある
+      // （片方が uuid で、もう片方が学籍番号で当たる場合）。@@unique(gradeId, studentId)
+      // があるので素直に作ると2回目で落ちて取り込み全体がロールバックする。
+      // 先に作った対象者へ寄せ、寄せたことを伝える
+      const gradeStudentIdByStudentId = new Map<string, string>()
+      let mergedGradeStudents = 0
+      for (const archiveGradeStudent of data.gradeStudents) {
+        const studentId = studentResolution.map.get(
+          archiveGradeStudent.studentId
+        )
+        if (!studentId) continue
+        const alreadyCreated = gradeStudentIdByStudentId.get(studentId)
+        if (alreadyCreated) {
+          gradeStudentIdMap.set(archiveGradeStudent.id, alreadyCreated)
+          mergedGradeStudents++
+          continue
+        }
+        const created = await tx.gradeStudent.create({
+          data: {
+            gradeId: grade.id,
+            studentId,
+            customOrder: archiveGradeStudent.customOrder,
+          },
+        })
+        gradeStudentIdMap.set(archiveGradeStudent.id, created.id)
+        gradeStudentIdByStudentId.set(studentId, created.id)
+      }
+      if (mergedGradeStudents > 0) {
+        warnings.push(
+          `アーカイブの対象生徒${mergedGradeStudents}名が取り込み先の同じ生徒に一致したため、1名にまとめました`
+        )
+      }
+
+      const gradeItemIdMap: IdMap = new Map()
+      for (const archiveGradeItem of data.gradeItems) {
+        const created = await tx.gradeItem.create({
+          data: {
+            gradeId: grade.id,
+            name: archiveGradeItem.name,
+            order: archiveGradeItem.order,
+          },
+        })
+        gradeItemIdMap.set(archiveGradeItem.id, created.id)
+      }
+
+      const dataSourceIdMap: IdMap = new Map()
+      for (const archiveDataSource of data.gradeDataSources) {
+        const gradeItemId = gradeItemIdMap.get(archiveDataSource.gradeItemId)
+        if (!gradeItemId) continue
+        const created = await tx.gradeDataSource.create({
+          data: {
+            gradeItemId,
+            type: archiveDataSource.type,
+            examId: archiveDataSource.examId
+              ? (examIdMap.get(archiveDataSource.examId) ?? null)
               : null,
+            subtotalId: archiveDataSource.subtotalId
+              ? (subtotalIdMap.get(archiveDataSource.subtotalId) ?? null)
+              : null,
+            cropRegionId: archiveDataSource.cropRegionId
+              ? (cropRegionIdMap.get(archiveDataSource.cropRegionId) ?? null)
+              : null,
+            courseworkItemId: archiveDataSource.courseworkItemId
+              ? (courseworkItemIdMap.get(archiveDataSource.courseworkItemId) ??
+                null)
+              : null,
+            courseworkId: archiveDataSource.courseworkId
+              ? (courseworkIdMap.get(archiveDataSource.courseworkId) ?? null)
+              : null,
+            name: archiveDataSource.name,
+            weight: archiveDataSource.weight,
+            order: archiveDataSource.order,
+            absentMethod: archiveDataSource.absentMethod,
+            absentRatio: archiveDataSource.absentRatio,
+            absentOffset: archiveDataSource.absentOffset,
+            treatExpectedAsMissing: archiveDataSource.treatExpectedAsMissing,
+            estimationMode: archiveDataSource.estimationMode,
+          },
+        })
+        dataSourceIdMap.set(archiveDataSource.id, created.id)
+      }
+
+      // 推定の参照は全データソース作成後に張る（同一成績内の前方参照があるため）
+      const estimationSourceIdsByDataSource = new Map<string, string[]>()
+      let droppedEstimationSources = 0
+      for (const estimationSource of data.gradeDataSourceEstimationSources) {
+        const dataSourceId = dataSourceIdMap.get(estimationSource.dataSourceId)
+        const sourceDataSourceId = dataSourceIdMap.get(
+          estimationSource.sourceDataSourceId
+        )
+        if (!dataSourceId || !sourceDataSourceId) {
+          droppedEstimationSources++
+          continue
+        }
+        const existing = estimationSourceIdsByDataSource.get(dataSourceId)
+        if (existing) existing.push(sourceDataSourceId)
+        else
+          estimationSourceIdsByDataSource.set(dataSourceId, [
+            sourceDataSourceId,
+          ])
+      }
+      if (droppedEstimationSources > 0) {
+        warnings.push(
+          `欠損推定の参照${droppedEstimationSources}件を解決できなかったため取り込みませんでした。` +
+            `該当データソースの推定設定を確認してください。`
+        )
+      }
+      for (const [
+        dataSourceId,
+        sourceDataSourceIds,
+      ] of estimationSourceIdsByDataSource) {
+        await tx.gradeDataSource.update({
+          where: { id: dataSourceId },
+          data: {
+            estimationSources: {
+              create: buildEstimationSourceRows(
+                dataSourceId,
+                sourceDataSourceIds
+              ),
+            },
+          },
+        })
+      }
+
+      // ── 4. 成績境界 ──────────────────────────────────────
+      const boundaryRows = data.gradeItemBoundaries.flatMap(
+        (archiveBoundary) => {
+          const gradeItemId = gradeItemIdMap.get(archiveBoundary.gradeItemId)
+          if (!gradeItemId) return []
+          return [
+            {
+              gradeItemId,
+              label: archiveBoundary.label,
+              minPercentage: archiveBoundary.minPercentage,
+              order: archiveBoundary.order,
+            },
+          ]
+        }
+      )
+      if (boundaryRows.length > 0) {
+        await tx.gradeItemBoundary.createMany({ data: boundaryRows })
+      }
+
+      // ── 5. セル3種 ──────────────────────────────────────
+      // 名簿に載らなかった生徒（照合できなかった生徒）のセルは作らない。
+      // 作れてしまうと、どの画面にも出ない孤児が復活する（#962）
+      let droppedCells = 0
+      const resolveCell = (archiveCell: {
+        gradeStudentId: string
+        gradeItemId: string
+      }): { gradeStudentId: string; gradeItemId: string } | null => {
+        const gradeStudentId = gradeStudentIdMap.get(archiveCell.gradeStudentId)
+        const gradeItemId = gradeItemIdMap.get(archiveCell.gradeItemId)
+        if (!gradeStudentId || !gradeItemId) {
+          droppedCells++
+          return null
+        }
+        return { gradeStudentId, gradeItemId }
+      }
+
+      for (const archiveOverride of data.gradeOverrides) {
+        const cell = resolveCell(archiveOverride)
+        if (!cell) continue
+        await tx.gradeOverride.create({
+          data: { ...cell, overrideLabel: archiveOverride.overrideLabel },
+        })
+      }
+
+      for (const archiveFrozenScore of data.gradeFrozenScores) {
+        const cell = resolveCell(archiveFrozenScore)
+        if (!cell) continue
+        // 確定操作者は取り込み先に同じ User が居る保証が無い。
+        // 居なければ null（操作者不明）にして値そのものは残す
+        const frozenByUserId = archiveFrozenScore.frozenByUserId
+          ? ((
+              await tx.user.findUnique({
+                where: { id: archiveFrozenScore.frozenByUserId },
+              })
+            )?.id ?? null)
+          : null
+        await tx.gradeFrozenScore.create({
+          data: {
+            ...cell,
+            weightedScore: archiveFrozenScore.weightedScore,
+            weightedMaxScore: archiveFrozenScore.weightedMaxScore,
+            percentage: archiveFrozenScore.percentage,
+            gradeLabel: archiveFrozenScore.gradeLabel,
+            frozenByUserId,
+            frozenAt: new Date(archiveFrozenScore.frozenAt),
+          },
+        })
+      }
+
+      for (const archiveExclusion of data.gradeItemExclusions) {
+        const cell = resolveCell(archiveExclusion)
+        if (!cell) continue
+        await tx.gradeItemExclusion.create({ data: cell })
+      }
+
+      if (droppedCells > 0) {
+        warnings.push(
+          `対象生徒または評価項目を解決できない上書き・確定値・除外設定 ${droppedCells}件を取り込みませんでした`
+        )
+      }
+
+      // ── 6. 観点間の制約ルール ─────────────────────────────
+      // 参照を1つでも失うと判定の意味が変わる（集計対象が減れば平均が動き、
+      // 空になれば「比較先以外の全項目」という別の設定に化ける）。
+      // 黙って別物として動かさず、無効化して再設定を促す。
+      for (const archiveConstraint of data.gradeConstraints) {
+        const targetGradeItemId = archiveConstraint.targetGradeItemId
+          ? (gradeItemIdMap.get(archiveConstraint.targetGradeItemId) ?? null)
+          : null
+        const lostTarget =
+          archiveConstraint.targetGradeItemId !== null &&
+          targetGradeItemId === null
+
+        const archiveViewpoints = data.gradeConstraintViewpoints
+          .filter(
+            (viewpoint) => viewpoint.constraintId === archiveConstraint.id
+          )
+          .sort((left, right) => left.order - right.order)
+        const resolvedViewpointIds = archiveViewpoints.flatMap((viewpoint) => {
+          const gradeItemId = gradeItemIdMap.get(viewpoint.gradeItemId)
+          return gradeItemId ? [gradeItemId] : []
+        })
+        const lostViewpoint =
+          resolvedViewpointIds.length !== archiveViewpoints.length
+
+        const brokenReason = lostTarget
+          ? "取り込み時に比較先の評価項目を解決できなかったため無効化しました。再設定してください。"
+          : lostViewpoint
+            ? "取り込み時に集計対象の観点を解決できなかったため無効化しました。再設定してください。"
+            : archiveConstraint.disabledReason
+        if (lostTarget || lostViewpoint) {
+          warnings.push(
+            `制約ルール「${archiveConstraint.name}」: ${brokenReason}`
+          )
+        }
+
+        const createdConstraint = await tx.gradeConstraint.create({
+          data: {
+            gradeId: grade.id,
+            name: archiveConstraint.name,
+            kind: archiveConstraint.kind,
+            targetGradeItemId,
+            aggregate: archiveConstraint.aggregate,
+            tolerance: archiveConstraint.tolerance,
+            expression: archiveConstraint.expression,
+            color: archiveConstraint.color,
+            // 診断は disabledReason へ。message は教員が書いた違反の説明で、
+            // 結果表のツールチップに出るため汚さない。
+            message: archiveConstraint.message,
+            disabledReason: brokenReason,
+            enabled: archiveConstraint.enabled && !brokenReason,
+            order: archiveConstraint.order,
           },
         })
 
-        for (const exportSettings of data.gradeExportSettings) {
-          await tx.gradeExportSettings.create({
-            data: {
-              gradeId: grade.id,
-              settingsJson: exportSettings.settingsJson,
-            },
-          })
-        }
-
-        for (const gradeClassroom of data.gradeClassrooms) {
-          const classroomId = classroomResolution.map.get(
-            gradeClassroom.classroomId
-          )
-          if (!classroomId) continue
-          await tx.gradeClassroom.create({
-            data: {
-              gradeId: grade.id,
-              classroomId,
-              order: gradeClassroom.order,
-            },
-          })
-        }
-
-        const gradeStudentIdMap: IdMap = new Map()
-        // アーカイブの別々の生徒が取り込み先の同じ生徒へ解決することがある
-        // （片方が uuid で、もう片方が学籍番号で当たる場合）。@@unique(gradeId, studentId)
-        // があるので素直に作ると2回目で落ちて取り込み全体がロールバックする。
-        // 先に作った対象者へ寄せ、寄せたことを伝える
-        const gradeStudentIdByStudentId = new Map<string, string>()
-        let mergedGradeStudents = 0
-        for (const archiveGradeStudent of data.gradeStudents) {
-          const studentId = studentResolution.map.get(
-            archiveGradeStudent.studentId
-          )
-          if (!studentId) continue
-          const alreadyCreated = gradeStudentIdByStudentId.get(studentId)
-          if (alreadyCreated) {
-            gradeStudentIdMap.set(archiveGradeStudent.id, alreadyCreated)
-            mergedGradeStudents++
-            continue
-          }
-          const created = await tx.gradeStudent.create({
-            data: {
-              gradeId: grade.id,
-              studentId,
-              customOrder: archiveGradeStudent.customOrder,
-            },
-          })
-          gradeStudentIdMap.set(archiveGradeStudent.id, created.id)
-          gradeStudentIdByStudentId.set(studentId, created.id)
-        }
-        if (mergedGradeStudents > 0) {
-          warnings.push(
-            `アーカイブの対象生徒${mergedGradeStudents}名が取り込み先の同じ生徒に一致したため、1名にまとめました`
-          )
-        }
-
-        const gradeItemIdMap: IdMap = new Map()
-        for (const archiveGradeItem of data.gradeItems) {
-          const created = await tx.gradeItem.create({
-            data: {
-              gradeId: grade.id,
-              name: archiveGradeItem.name,
-              order: archiveGradeItem.order,
-            },
-          })
-          gradeItemIdMap.set(archiveGradeItem.id, created.id)
-        }
-
-        const dataSourceIdMap: IdMap = new Map()
-        for (const archiveDataSource of data.gradeDataSources) {
-          const gradeItemId = gradeItemIdMap.get(archiveDataSource.gradeItemId)
-          if (!gradeItemId) continue
-          const created = await tx.gradeDataSource.create({
-            data: {
-              gradeItemId,
-              type: archiveDataSource.type,
-              examId: archiveDataSource.examId
-                ? (examIdMap.get(archiveDataSource.examId) ?? null)
-                : null,
-              subtotalId: archiveDataSource.subtotalId
-                ? (subtotalIdMap.get(archiveDataSource.subtotalId) ?? null)
-                : null,
-              cropRegionId: archiveDataSource.cropRegionId
-                ? (cropRegionIdMap.get(archiveDataSource.cropRegionId) ?? null)
-                : null,
-              courseworkItemId: archiveDataSource.courseworkItemId
-                ? (courseworkItemIdMap.get(
-                    archiveDataSource.courseworkItemId
-                  ) ?? null)
-                : null,
-              courseworkId: archiveDataSource.courseworkId
-                ? (courseworkIdMap.get(archiveDataSource.courseworkId) ?? null)
-                : null,
-              name: archiveDataSource.name,
-              weight: archiveDataSource.weight,
-              order: archiveDataSource.order,
-              absentMethod: archiveDataSource.absentMethod,
-              absentRatio: archiveDataSource.absentRatio,
-              absentOffset: archiveDataSource.absentOffset,
-              treatExpectedAsMissing: archiveDataSource.treatExpectedAsMissing,
-              estimationMode: archiveDataSource.estimationMode,
-            },
-          })
-          dataSourceIdMap.set(archiveDataSource.id, created.id)
-        }
-
-        // 推定の参照は全データソース作成後に張る（同一成績内の前方参照があるため）
-        const estimationSourceIdsByDataSource = new Map<string, string[]>()
-        let droppedEstimationSources = 0
-        for (const estimationSource of data.gradeDataSourceEstimationSources) {
-          const dataSourceId = dataSourceIdMap.get(
-            estimationSource.dataSourceId
-          )
-          const sourceDataSourceId = dataSourceIdMap.get(
-            estimationSource.sourceDataSourceId
-          )
-          if (!dataSourceId || !sourceDataSourceId) {
-            droppedEstimationSources++
-            continue
-          }
-          const existing = estimationSourceIdsByDataSource.get(dataSourceId)
-          if (existing) existing.push(sourceDataSourceId)
-          else
-            estimationSourceIdsByDataSource.set(dataSourceId, [
-              sourceDataSourceId,
-            ])
-        }
-        if (droppedEstimationSources > 0) {
-          warnings.push(
-            `欠損推定の参照${droppedEstimationSources}件を解決できなかったため取り込みませんでした。` +
-              `該当データソースの推定設定を確認してください。`
-          )
-        }
-        for (const [
-          dataSourceId,
-          sourceDataSourceIds,
-        ] of estimationSourceIdsByDataSource) {
-          await tx.gradeDataSource.update({
-            where: { id: dataSourceId },
-            data: {
-              estimationSources: {
-                create: buildEstimationSourceRows(
-                  dataSourceId,
-                  sourceDataSourceIds
-                ),
-              },
-            },
-          })
-        }
-
-        // ── 4. 成績境界 ──────────────────────────────────────
-        const boundaryRows = data.gradeItemBoundaries.flatMap(
-          (archiveBoundary) => {
-            const gradeItemId = gradeItemIdMap.get(archiveBoundary.gradeItemId)
-            if (!gradeItemId) return []
-            return [
-              {
-                gradeItemId,
-                label: archiveBoundary.label,
-                minPercentage: archiveBoundary.minPercentage,
-                order: archiveBoundary.order,
-              },
-            ]
-          }
-        )
-        if (boundaryRows.length > 0) {
-          await tx.gradeItemBoundary.createMany({ data: boundaryRows })
-        }
-
-        // ── 5. セル3種 ──────────────────────────────────────
-        // 名簿に載らなかった生徒（照合できなかった生徒）のセルは作らない。
-        // 作れてしまうと、どの画面にも出ない孤児が復活する（#962）
-        let droppedCells = 0
-        const resolveCell = (archiveCell: {
-          gradeStudentId: string
-          gradeItemId: string
-        }): { gradeStudentId: string; gradeItemId: string } | null => {
-          const gradeStudentId = gradeStudentIdMap.get(
-            archiveCell.gradeStudentId
-          )
-          const gradeItemId = gradeItemIdMap.get(archiveCell.gradeItemId)
-          if (!gradeStudentId || !gradeItemId) {
-            droppedCells++
-            return null
-          }
-          return { gradeStudentId, gradeItemId }
-        }
-
-        for (const archiveOverride of data.gradeOverrides) {
-          const cell = resolveCell(archiveOverride)
-          if (!cell) continue
-          await tx.gradeOverride.create({
-            data: { ...cell, overrideLabel: archiveOverride.overrideLabel },
-          })
-        }
-
-        for (const archiveFrozenScore of data.gradeFrozenScores) {
-          const cell = resolveCell(archiveFrozenScore)
-          if (!cell) continue
-          // 確定操作者は取り込み先に同じ User が居る保証が無い。
-          // 居なければ null（操作者不明）にして値そのものは残す
-          const frozenByUserId = archiveFrozenScore.frozenByUserId
-            ? ((
-                await tx.user.findUnique({
-                  where: { id: archiveFrozenScore.frozenByUserId },
-                })
-              )?.id ?? null)
-            : null
-          await tx.gradeFrozenScore.create({
-            data: {
-              ...cell,
-              weightedScore: archiveFrozenScore.weightedScore,
-              weightedMaxScore: archiveFrozenScore.weightedMaxScore,
-              percentage: archiveFrozenScore.percentage,
-              gradeLabel: archiveFrozenScore.gradeLabel,
-              frozenByUserId,
-              frozenAt: new Date(archiveFrozenScore.frozenAt),
-            },
-          })
-        }
-
-        for (const archiveExclusion of data.gradeItemExclusions) {
-          const cell = resolveCell(archiveExclusion)
-          if (!cell) continue
-          await tx.gradeItemExclusion.create({ data: cell })
-        }
-
-        if (droppedCells > 0) {
-          warnings.push(
-            `対象生徒または評価項目を解決できない上書き・確定値・除外設定 ${droppedCells}件を取り込みませんでした`
-          )
-        }
-
-        // ── 6. 観点間の制約ルール ─────────────────────────────
-        // 参照を1つでも失うと判定の意味が変わる（集計対象が減れば平均が動き、
-        // 空になれば「比較先以外の全項目」という別の設定に化ける）。
-        // 黙って別物として動かさず、無効化して再設定を促す。
-        for (const archiveConstraint of data.gradeConstraints) {
-          const targetGradeItemId = archiveConstraint.targetGradeItemId
-            ? (gradeItemIdMap.get(archiveConstraint.targetGradeItemId) ?? null)
-            : null
-          const lostTarget =
-            archiveConstraint.targetGradeItemId !== null &&
-            targetGradeItemId === null
-
-          const archiveViewpoints = data.gradeConstraintViewpoints
-            .filter(
-              (viewpoint) => viewpoint.constraintId === archiveConstraint.id
-            )
-            .sort((left, right) => left.order - right.order)
-          const resolvedViewpointIds = archiveViewpoints.flatMap(
-            (viewpoint) => {
-              const gradeItemId = gradeItemIdMap.get(viewpoint.gradeItemId)
-              return gradeItemId ? [gradeItemId] : []
-            }
-          )
-          const lostViewpoint =
-            resolvedViewpointIds.length !== archiveViewpoints.length
-
-          const brokenReason = lostTarget
-            ? "取り込み時に比較先の評価項目を解決できなかったため無効化しました。再設定してください。"
-            : lostViewpoint
-              ? "取り込み時に集計対象の観点を解決できなかったため無効化しました。再設定してください。"
-              : archiveConstraint.disabledReason
-          if (lostTarget || lostViewpoint) {
-            warnings.push(
-              `制約ルール「${archiveConstraint.name}」: ${brokenReason}`
-            )
-          }
-
-          const createdConstraint = await tx.gradeConstraint.create({
-            data: {
-              gradeId: grade.id,
-              name: archiveConstraint.name,
-              kind: archiveConstraint.kind,
-              targetGradeItemId,
-              aggregate: archiveConstraint.aggregate,
-              tolerance: archiveConstraint.tolerance,
-              expression: archiveConstraint.expression,
-              color: archiveConstraint.color,
-              // 診断は disabledReason へ。message は教員が書いた違反の説明で、
-              // 結果表のツールチップに出るため汚さない。
-              message: archiveConstraint.message,
-              disabledReason: brokenReason,
-              enabled: archiveConstraint.enabled && !brokenReason,
-              order: archiveConstraint.order,
-            },
-          })
-
-          // 設定リレーションのidは親idから決定論的に作るため本体作成後に書く
-          await writeConstraintConfig(tx, createdConstraint.id, {
-            viewpointGradeItemIds: resolvedViewpointIds,
-            labelValues: Object.fromEntries(
-              data.gradeConstraintLabelValues
-                .filter(
-                  (labelValue) =>
-                    labelValue.constraintId === archiveConstraint.id
-                )
-                .sort((left, right) => left.order - right.order)
-                .map((labelValue) => [
-                  labelValue.label,
-                  Number(labelValue.value),
-                ])
-            ),
-            exclusionLabels: data.gradeConstraintExclusionLabels
+        // 設定リレーションのidは親idから決定論的に作るため本体作成後に書く
+        await writeConstraintConfig(tx, createdConstraint.id, {
+          viewpointGradeItemIds: resolvedViewpointIds,
+          labelValues: Object.fromEntries(
+            data.gradeConstraintLabelValues
               .filter(
-                (exclusionLabel) =>
-                  exclusionLabel.constraintId === archiveConstraint.id
+                (labelValue) => labelValue.constraintId === archiveConstraint.id
               )
               .sort((left, right) => left.order - right.order)
-              .map((exclusionLabel) => exclusionLabel.label),
-          })
-        }
-
-        return { success: true, gradeId: grade.id }
+              .map((labelValue) => [labelValue.label, Number(labelValue.value)])
+          ),
+          exclusionLabels: data.gradeConstraintExclusionLabels
+            .filter(
+              (exclusionLabel) =>
+                exclusionLabel.constraintId === archiveConstraint.id
+            )
+            .sort((left, right) => left.order - right.order)
+            .map((exclusionLabel) => exclusionLabel.label),
+        })
       }
-    )
 
-    if (warnings.length > 0) {
-      console.warn("Grade archive import warnings:", warnings)
+      return { gradeId: grade.id }
     }
+  )
 
-    // 監査ログ: 成績インポート
-    await recordAuditLog({
-      action: "grade.import",
-      entityType: "Grade",
-      entityId: result.gradeId ?? "",
-      scopeId: result.gradeId ?? null,
-      scopeLabel: archiveGrade.name,
-      target: archiveGrade.name,
-    })
-
-    // 警告は呼び出し側（UI）へ返して通知する
-    return { ...result, warnings: warnings.length > 0 ? warnings : undefined }
-  } catch (error) {
-    console.error("Error importing grade archive:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+  if (warnings.length > 0) {
+    console.warn("Grade archive import warnings:", warnings)
   }
+
+  // 監査ログ: 成績インポート
+  await recordAuditLog({
+    action: "grade.import",
+    entityType: "Grade",
+    entityId: result.gradeId,
+    scopeId: result.gradeId,
+    scopeLabel: archiveGrade.name,
+    target: archiveGrade.name,
+  })
+
+  // 警告は呼び出し側（UI）へ返して通知する
+  return { ...result, warnings }
 }

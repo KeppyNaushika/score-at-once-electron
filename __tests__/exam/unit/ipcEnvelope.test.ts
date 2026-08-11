@@ -1,7 +1,7 @@
 /**
  * IPC の搬送形式の往復テスト。
  *
- * 境界（`registerHandler` / `registerSafeHandler`）が詰めた形を、preload の
+ * 境界（`registerHandler` / `registerEventHandler`）が詰めた形を、preload の
  * `invoke` がほどけることを固定する。ここが食い違うと全チャンネルが同時に壊れるが、
  * 他の単体テストは prisma クライアントを直接叩くのでこの層を一切通らない。
  *
@@ -37,7 +37,6 @@ vi.mock("electron", () => ({
 
 import {
   registerHandler,
-  registerSafeHandler,
 } from "../../../electron-src/ipc-handlers/ipcHandlerUtils"
 import { invoke } from "../../../electron-src/preload-apis/invoke"
 
@@ -78,36 +77,6 @@ describe("IPC 搬送形式の往復", () => {
 
     const result = await invoke("test:binary")
     expect(result).toEqual({ image: new Uint8Array([137, 80]) })
-  })
-
-  it("registerSafeHandler の例外は payload の { success: false } として届く", async () => {
-    registerSafeHandler(
-      "test:safe",
-      async () => {
-        throw new Error("保存に失敗しました")
-      },
-      "既定の文言"
-    )
-
-    await expect(invoke("test:safe")).resolves.toEqual({
-      success: false,
-      error: "保存に失敗しました",
-    })
-  })
-
-  it("registerSafeHandler は文言の無い例外で fallbackError を使う", async () => {
-    registerSafeHandler(
-      "test:safe-fallback",
-      async () => {
-        throw new Error("")
-      },
-      "既定の文言"
-    )
-
-    await expect(invoke("test:safe-fallback")).resolves.toEqual({
-      success: false,
-      error: "既定の文言",
-    })
   })
 
   it("エンベロープでない戻り値はそのまま通す（生 ipcMain.handle のチャンネル）", async () => {

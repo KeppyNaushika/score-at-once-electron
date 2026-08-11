@@ -33,6 +33,11 @@ export const queryKeys = {
   subtotalGroupsForReport: {
     detail: (examId: string) => ["subtotalGroupsForReport", examId] as const,
   },
+  grade: {
+    all: ["grade"] as const,
+    detail: (gradeId: string) => ["grade", gradeId] as const,
+    classrooms: (gradeId: string) => ["grade", gradeId, "classrooms"] as const,
+  },
   coursework: {
     all: ["coursework"] as const,
     list: () => ["coursework", "list"] as const,

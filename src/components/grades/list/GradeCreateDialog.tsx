@@ -32,13 +32,11 @@ export function GradeCreateDialog({
 
     setCreating(true)
     try {
-      const result = await window.electronAPI.grade.create({
+      const grade = await window.electronAPI.grade.create({
         name: name.trim(),
       })
-      if (result.success && result.grade) {
-        setName("")
-        onCreated(result.grade.id)
-      }
+      setName("")
+      onCreated(grade.id)
     } catch (error) {
       console.error("Error creating grade exam:", error)
     } finally {

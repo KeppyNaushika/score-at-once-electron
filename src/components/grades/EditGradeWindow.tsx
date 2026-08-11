@@ -47,20 +47,18 @@ export function EditGradeWindow({
     if (!name.trim()) return
     setSaving(true)
     try {
-      const result = await window.electronAPI.grade.update(gradeId, {
+      await window.electronAPI.grade.update(gradeId, {
         name: name.trim(),
         description: description.trim() || null,
         referenceDate: referenceDate || null,
       })
-      if (result.success) {
-        onSaved()
-        onClose()
-      } else {
-        toast.error("保存に失敗しました", { description: result.error })
-      }
+      onSaved()
+      onClose()
     } catch (error) {
       console.error("Error saving grade setup:", error)
-      toast.error("保存に失敗しました")
+      toast.error("保存に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setSaving(false)
     }

@@ -135,22 +135,14 @@ export async function writeConstraintConfig(
  * 成績の全制約ルールを取得（order昇順）
  */
 export async function getGradeConstraints(gradeId: string) {
-  try {
-    const constraints = await prisma.gradeConstraint.findMany({
-      where: { gradeId },
-      include: gradeConstraintInclude,
-      orderBy: { order: "asc" },
-    })
-    // tolerance / labelValues.value は Decimal 列。IPC を跨ぐ前に number へ倒さないと
-    // renderer 側の数値比較が黙って壊れる（型は number を主張するので気づけない）。
-    return { success: true, constraints: serializePrisma(constraints) }
-  } catch (error) {
-    console.error("Error getting grade constraints:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  const constraints = await prisma.gradeConstraint.findMany({
+    where: { gradeId },
+    include: gradeConstraintInclude,
+    orderBy: { order: "asc" },
+  })
+  // tolerance / labelValues.value は Decimal 列。IPC を跨ぐ前に number へ倒さないと
+  // renderer 側の数値比較が黙って壊れる（型は number を主張するので気づけない）。
+  return serializePrisma(constraints)
 }
 
 /**
@@ -160,51 +152,43 @@ export async function createGradeConstraint(data: {
   gradeId: string
   constraint: GradeConstraintInput
 }) {
-  try {
-    // 本体と設定は同一トランザクションで書く。設定の書き込みが失敗したときに
-    // 本体だけ残ると、viewpointsゼロ＝「比較先以外の全項目」という設定していない
-    // ルールが結果表を着色しはじめる。
-    const created = await prisma.$transaction(async (tx) => {
-      const constraint = await tx.gradeConstraint.create({
-        data: {
-          gradeId: data.gradeId,
-          name: data.constraint.name,
-          kind: data.constraint.kind,
-          targetGradeItemId: data.constraint.targetGradeItemId,
-          aggregate: data.constraint.aggregate,
-          tolerance: data.constraint.tolerance,
-          expression: data.constraint.expression,
-          color: data.constraint.color,
-          message: data.constraint.message,
-          enabled: data.constraint.enabled,
-          order: data.constraint.order,
-        },
-      })
-      // 設定リレーションは本体への FK を持つため、本体作成後に書く
-      await writeConstraintConfig(tx, constraint.id, data.constraint)
-      return tx.gradeConstraint.findUniqueOrThrow({
-        where: { id: constraint.id },
-        include: gradeConstraintInclude,
-      })
+  // 本体と設定は同一トランザクションで書く。設定の書き込みが失敗したときに
+  // 本体だけ残ると、viewpointsゼロ＝「比較先以外の全項目」という設定していない
+  // ルールが結果表を着色しはじめる。
+  const created = await prisma.$transaction(async (tx) => {
+    const constraint = await tx.gradeConstraint.create({
+      data: {
+        gradeId: data.gradeId,
+        name: data.constraint.name,
+        kind: data.constraint.kind,
+        targetGradeItemId: data.constraint.targetGradeItemId,
+        aggregate: data.constraint.aggregate,
+        tolerance: data.constraint.tolerance,
+        expression: data.constraint.expression,
+        color: data.constraint.color,
+        message: data.constraint.message,
+        enabled: data.constraint.enabled,
+        order: data.constraint.order,
+      },
     })
-
-    const scope = await resolveGradeScope(data.gradeId)
-    await recordAuditLog({
-      action: "grade.constraint.create",
-      entityType: "GradeConstraint",
-      entityId: created.id,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
+    // 設定リレーションは本体への FK を持つため、本体作成後に書く
+    await writeConstraintConfig(tx, constraint.id, data.constraint)
+    return tx.gradeConstraint.findUniqueOrThrow({
+      where: { id: constraint.id },
+      include: gradeConstraintInclude,
     })
+  })
 
-    return { success: true, constraint: serializePrisma(created) }
-  } catch (error) {
-    console.error("Error creating grade constraint:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  const scope = await resolveGradeScope(data.gradeId)
+  await recordAuditLog({
+    action: "grade.constraint.create",
+    entityType: "GradeConstraint",
+    entityId: created.id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+  })
+
+  return serializePrisma(created)
 }
 
 /**
@@ -214,75 +198,58 @@ export async function updateGradeConstraint(data: {
   id: string
   constraint: Partial<GradeConstraintInput>
 }) {
-  try {
-    const updated = await prisma.$transaction(async (tx) => {
-      await tx.gradeConstraint.update({
-        where: { id: data.id },
-        data: {
-          name: data.constraint.name,
-          kind: data.constraint.kind,
-          targetGradeItemId: data.constraint.targetGradeItemId,
-          aggregate: data.constraint.aggregate,
-          tolerance: data.constraint.tolerance,
-          expression: data.constraint.expression,
-          color: data.constraint.color,
-          message: data.constraint.message,
-          enabled: data.constraint.enabled,
-          order: data.constraint.order,
-          // 自動で無効化した理由は、利用者が有効へ戻した時点で役目を終える
-          ...(data.constraint.enabled === true && { disabledReason: null }),
-        },
-      })
-      await writeConstraintConfig(tx, data.id, data.constraint)
-      return tx.gradeConstraint.findUniqueOrThrow({
-        where: { id: data.id },
-        include: gradeConstraintInclude,
-      })
+  const updated = await prisma.$transaction(async (tx) => {
+    await tx.gradeConstraint.update({
+      where: { id: data.id },
+      data: {
+        name: data.constraint.name,
+        kind: data.constraint.kind,
+        targetGradeItemId: data.constraint.targetGradeItemId,
+        aggregate: data.constraint.aggregate,
+        tolerance: data.constraint.tolerance,
+        expression: data.constraint.expression,
+        color: data.constraint.color,
+        message: data.constraint.message,
+        enabled: data.constraint.enabled,
+        order: data.constraint.order,
+        // 自動で無効化した理由は、利用者が有効へ戻した時点で役目を終える
+        ...(data.constraint.enabled === true && { disabledReason: null }),
+      },
     })
-
-    const scope = await resolveGradeScope(updated.gradeId)
-    await recordAuditLog({
-      action: "grade.constraint.update",
-      entityType: "GradeConstraint",
-      entityId: updated.id,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
+    await writeConstraintConfig(tx, data.id, data.constraint)
+    return tx.gradeConstraint.findUniqueOrThrow({
+      where: { id: data.id },
+      include: gradeConstraintInclude,
     })
+  })
 
-    return { success: true, constraint: serializePrisma(updated) }
-  } catch (error) {
-    console.error("Error updating grade constraint:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  const scope = await resolveGradeScope(updated.gradeId)
+  await recordAuditLog({
+    action: "grade.constraint.update",
+    entityType: "GradeConstraint",
+    entityId: updated.id,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+  })
+
+  return serializePrisma(updated)
 }
 
 /**
  * 制約ルールを削除
  */
 export async function deleteGradeConstraint(id: string) {
-  try {
-    const existing = await prisma.gradeConstraint.findUnique({ where: { id } })
-    if (existing) {
-      await prisma.gradeConstraint.delete({ where: { id } })
+  const existing = await prisma.gradeConstraint.findUnique({ where: { id } })
+  if (existing) {
+    await prisma.gradeConstraint.delete({ where: { id } })
 
-      const scope = await resolveGradeScope(existing.gradeId)
-      await recordAuditLog({
-        action: "grade.constraint.delete",
-        entityType: "GradeConstraint",
-        entityId: id,
-        scopeId: scope.scopeId,
-        scopeLabel: scope.scopeLabel,
-      })
-    }
-    return { success: true }
-  } catch (error) {
-    console.error("Error deleting grade constraint:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+    const scope = await resolveGradeScope(existing.gradeId)
+    await recordAuditLog({
+      action: "grade.constraint.delete",
+      entityType: "GradeConstraint",
+      entityId: id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+    })
   }
 }

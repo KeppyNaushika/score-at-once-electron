@@ -91,10 +91,7 @@ export function GradeListContainer() {
 
   const loadGrades = useCallback(async () => {
     try {
-      const result = await window.electronAPI.grade.getAll()
-      if (result.success && result.grades) {
-        setGrades(result.grades)
-      }
+      setGrades(await window.electronAPI.grade.getAll())
     } catch (error) {
       console.error("Error loading grade exams:", error)
     } finally {
@@ -114,36 +111,40 @@ export function GradeListContainer() {
 
   const handleDelete = async (id: string) => {
     try {
-      const result = await window.electronAPI.grade.delete(id)
-      if (result.success) {
-        setGrades((prev) => prev.filter((grade) => grade.id !== id))
-      }
+      await window.electronAPI.grade.delete(id)
+      setGrades((prev) => prev.filter((grade) => grade.id !== id))
     } catch (error) {
       console.error("Error deleting grade exam:", error)
+      toast.error("削除に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }
 
   const handleDuplicate = async (id: string) => {
     try {
-      const result = await window.electronAPI.grade.duplicate(id)
-      if (result.success && result.grade) {
-        await loadGrades()
-        toast.success(`「${result.grade.name}」を複製しました`)
-      } else if (!result.success) {
-        toast.error("複製に失敗しました", { description: result.error })
-      }
+      const duplicated = await window.electronAPI.grade.duplicate(id)
+      await loadGrades()
+      toast.success(`「${duplicated.name}」を複製しました`)
     } catch (error) {
       console.error("Error duplicating grade exam:", error)
-      toast.error("複製に失敗しました")
+      toast.error("複製に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }
 
   const handleImport = async () => {
-    const result = await window.electronAPI.grade.importArchive()
-    if (result.success && result.archiveData && result.preview) {
+    try {
+      const result = await window.electronAPI.grade.importArchive()
+      if (result.canceled) return
       // ファイル選択後はウィザードを開き、照合方法をユーザーに判断させる
       setImportArchiveData(result.archiveData)
       setImportPreview(result.preview)
+    } catch (error) {
+      toast.error("アーカイブを読み込めませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }
 
@@ -163,25 +164,23 @@ export function GradeListContainer() {
         importArchiveData,
         { examMapping, courseworkDecisions: decisions }
       )
-      if (importResult.success && importResult.gradeId) {
-        // 取り込み警告（点数スキップ・参照先未検出など）があれば通知する。
-        // 自動で消えると見落とすため手動で閉じるまで表示し、全件を本文に載せる。
-        if (importResult.warnings && importResult.warnings.length > 0) {
-          toast.warning(
-            `インポートは完了しましたが ${importResult.warnings.length} 件の警告があります`,
-            {
-              description: importResult.warnings.join("\n"),
-              duration: Infinity,
-              closeButton: true,
-            }
-          )
-        }
-        router.push(`/grades/${importResult.gradeId}`)
-      } else if (!importResult.success) {
-        toast.error("インポートに失敗しました", {
-          description: importResult.error,
-        })
+      // 取り込み警告（点数スキップ・参照先未検出など）があれば通知する。
+      // 自動で消えると見落とすため手動で閉じるまで表示し、全件を本文に載せる。
+      if (importResult.warnings.length > 0) {
+        toast.warning(
+          `インポートは完了しましたが ${importResult.warnings.length} 件の警告があります`,
+          {
+            description: importResult.warnings.join("\n"),
+            duration: Infinity,
+            closeButton: true,
+          }
+        )
       }
+      router.push(`/grades/${importResult.gradeId}`)
+    } catch (error) {
+      toast.error("インポートに失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setImporting(false)
       setImportPreview(null)

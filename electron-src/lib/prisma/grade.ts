@@ -72,46 +72,27 @@ export const gradeSummaryInclude = {
  * 全成績算出試験を取得
  */
 export async function getAllGrades() {
-  try {
-    const grades = await prisma.grade.findMany({
-      include: gradeSummaryInclude,
-      orderBy: { createdAt: "desc" },
-    })
-    // 一覧は満点を表示しないので hydrate（maxScore の付与）は通さない。
-    // 元データを引いていないため、通しても 0 を並べるだけになる。
-    return { success: true, grades: serializePrisma(grades) }
-  } catch (error) {
-    console.error("Error getting grade exams:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  const grades = await prisma.grade.findMany({
+    include: gradeSummaryInclude,
+    orderBy: { createdAt: "desc" },
+  })
+  // 一覧は満点を表示しないので hydrate（maxScore の付与）は通さない。
+  // 元データを引いていないため、通しても 0 を並べるだけになる。
+  return serializePrisma(grades)
 }
 
 /**
  * IDで成績算出試験を取得
  */
 export async function getGradeById(id: string) {
-  try {
-    const grade = await prisma.grade.findUnique({
-      where: { id },
-      include: gradeWithRelationsInclude,
-    })
-    if (!grade) {
-      return { success: false, error: "Grade exam not found" }
-    }
-    return {
-      success: true,
-      grade: hydrateGrade(serializePrisma(grade)),
-    }
-  } catch (error) {
-    console.error("Error getting grade exam:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+  const grade = await prisma.grade.findUnique({
+    where: { id },
+    include: gradeWithRelationsInclude,
+  })
+  if (!grade) {
+    throw new Error("Grade exam not found")
   }
+  return hydrateGrade(serializePrisma(grade))
 }
 
 /**
@@ -122,36 +103,25 @@ export async function createGrade(data: {
   description?: string
   referenceDate?: string | null
 }) {
-  try {
-    const grade = await prisma.grade.create({
-      data: {
-        name: data.name,
-        description: data.description,
-        referenceDate: data.referenceDate ? new Date(data.referenceDate) : null,
-      },
-      include: gradeWithRelationsInclude,
-    })
+  const grade = await prisma.grade.create({
+    data: {
+      name: data.name,
+      description: data.description,
+      referenceDate: data.referenceDate ? new Date(data.referenceDate) : null,
+    },
+    include: gradeWithRelationsInclude,
+  })
 
-    await recordAuditLog({
-      action: "grade.create",
-      entityType: "Grade",
-      entityId: grade.id,
-      scopeId: grade.id,
-      scopeLabel: grade.name,
-      target: grade.name,
-    })
+  await recordAuditLog({
+    action: "grade.create",
+    entityType: "Grade",
+    entityId: grade.id,
+    scopeId: grade.id,
+    scopeLabel: grade.name,
+    target: grade.name,
+  })
 
-    return {
-      success: true,
-      grade: hydrateGrade(serializePrisma(grade)),
-    }
-  } catch (error) {
-    console.error("Error creating grade exam:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return hydrateGrade(serializePrisma(grade))
 }
 
 /**
@@ -165,78 +135,56 @@ export async function updateGrade(
     referenceDate?: string | null
   }
 ) {
-  try {
-    const updateData: Record<string, unknown> = {}
-    if (data.name !== undefined) updateData.name = data.name
-    if (data.description !== undefined)
-      updateData.description = data.description
-    if (data.referenceDate !== undefined) {
-      updateData.referenceDate = data.referenceDate
-        ? new Date(data.referenceDate)
-        : null
-    }
-    const before = await prisma.grade.findUnique({
-      where: { id },
-    })
-    const grade = await prisma.grade.update({
-      where: { id },
-      data: updateData,
-      include: gradeWithRelationsInclude,
-    })
-
-    await recordAuditLog({
-      action: "grade.update",
-      entityType: "Grade",
-      entityId: grade.id,
-      scopeId: grade.id,
-      scopeLabel: grade.name,
-      target: grade.name,
-      changes: diffFields(before ?? undefined, grade, [
-        { field: "name", label: "成績名" },
-        { field: "description", label: "説明" },
-      ]),
-    })
-
-    return {
-      success: true,
-      grade: hydrateGrade(serializePrisma(grade)),
-    }
-  } catch (error) {
-    console.error("Error updating grade exam:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+  const updateData: Record<string, unknown> = {}
+  if (data.name !== undefined) updateData.name = data.name
+  if (data.description !== undefined) updateData.description = data.description
+  if (data.referenceDate !== undefined) {
+    updateData.referenceDate = data.referenceDate
+      ? new Date(data.referenceDate)
+      : null
   }
+  const before = await prisma.grade.findUnique({
+    where: { id },
+  })
+  const grade = await prisma.grade.update({
+    where: { id },
+    data: updateData,
+    include: gradeWithRelationsInclude,
+  })
+
+  await recordAuditLog({
+    action: "grade.update",
+    entityType: "Grade",
+    entityId: grade.id,
+    scopeId: grade.id,
+    scopeLabel: grade.name,
+    target: grade.name,
+    changes: diffFields(before ?? undefined, grade, [
+      { field: "name", label: "成績名" },
+      { field: "description", label: "説明" },
+    ]),
+  })
+
+  return hydrateGrade(serializePrisma(grade))
 }
 
 /**
  * 成績算出試験を削除
  */
 export async function deleteGrade(id: string) {
-  try {
-    const before = await prisma.grade.findUnique({
-      where: { id },
-    })
-    await prisma.grade.delete({ where: { id } })
+  const before = await prisma.grade.findUnique({
+    where: { id },
+  })
+  await prisma.grade.delete({ where: { id } })
 
-    await recordAuditLog({
-      action: "grade.delete",
-      entityType: "Grade",
-      entityId: id,
-      scopeId: id,
-      scopeLabel: before?.name ?? null,
-      target: before?.name ?? null,
-    })
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error deleting grade exam:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  await recordAuditLog({
+    action: "grade.delete",
+    entityType: "Grade",
+    entityId: id,
+    scopeId: id,
+    scopeLabel: before?.name ?? null,
+    target: before?.name ?? null,
+  })
 }
 
 /**
@@ -271,279 +219,271 @@ function buildCopyName(base: string, existingNames: Set<string>): string {
  * 対する一貫性を確保する。行数が多い独立テーブルは createMany でまとめて挿入する。
  */
 export async function duplicateGrade(id: string) {
-  try {
-    const result = await prisma.$transaction(
-      async (tx) => {
-        const source = await tx.grade.findUnique({
-          where: { id },
-          include: {
-            gradeClassrooms: { orderBy: { order: "asc" } },
-            // 対象者は上書き・除外設定を子として持つ。複製先の対象者へ張り替えるため
-            // 一緒に引く（確定値は複製しない。後述）
-            gradeStudents: {
-              include: { overrides: true, itemExclusions: true },
-            },
-            gradeItems: {
-              include: {
-                dataSources: {
-                  include: { estimationSources: { orderBy: { order: "asc" } } },
-                  orderBy: { order: "asc" },
-                },
-                boundaries: { orderBy: { order: "asc" } },
-              },
-              orderBy: { order: "asc" },
-            },
-            gradeConstraints: {
-              include: gradeConstraintInclude,
-              orderBy: { order: "asc" },
-            },
-            exportSettings: true,
+  const result = await prisma.$transaction(
+    async (tx) => {
+      const source = await tx.grade.findUnique({
+        where: { id },
+        include: {
+          gradeClassrooms: { orderBy: { order: "asc" } },
+          // 対象者は上書き・除外設定を子として持つ。複製先の対象者へ張り替えるため
+          // 一緒に引く（確定値は複製しない。後述）
+          gradeStudents: {
+            include: { overrides: true, itemExclusions: true },
           },
-        })
-        if (!source) return null
+          gradeItems: {
+            include: {
+              dataSources: {
+                include: { estimationSources: { orderBy: { order: "asc" } } },
+                orderBy: { order: "asc" },
+              },
+              boundaries: { orderBy: { order: "asc" } },
+            },
+            orderBy: { order: "asc" },
+          },
+          gradeConstraints: {
+            include: gradeConstraintInclude,
+            orderBy: { order: "asc" },
+          },
+          exportSettings: true,
+        },
+      })
+      if (!source) return null
 
-        // 重複しないコピー名（Grade.name にDB制約は無く、UX目的の best-effort）
-        const allGrades = await tx.grade.findMany()
-        const copyName = buildCopyName(
-          source.name,
-          new Set(allGrades.map((grade) => grade.name))
-        )
+      // 重複しないコピー名（Grade.name にDB制約は無く、UX目的の best-effort）
+      const allGrades = await tx.grade.findMany()
+      const copyName = buildCopyName(
+        source.name,
+        new Set(allGrades.map((grade) => grade.name))
+      )
 
-        // 旧gradeItemId → 新gradeItemId。解決できなければ複製元が壊れているため
-        // throw してロールバックする（矛盾した行を作らない）。
-        const itemIdMap = new Map<string, string>()
-        const remapItemId = (oldId: string): string => {
-          const newId = itemIdMap.get(oldId)
-          if (!newId) {
-            throw new Error(`GradeItem ${oldId} の複製先が見つかりません`)
-          }
-          return newId
+      // 旧gradeItemId → 新gradeItemId。解決できなければ複製元が壊れているため
+      // throw してロールバックする（矛盾した行を作らない）。
+      const itemIdMap = new Map<string, string>()
+      const remapItemId = (oldId: string): string => {
+        const newId = itemIdMap.get(oldId)
+        if (!newId) {
+          throw new Error(`GradeItem ${oldId} の複製先が見つかりません`)
         }
+        return newId
+      }
 
-        // 1. Grade 本体
-        const grade = await tx.grade.create({
+      // 1. Grade 本体
+      const grade = await tx.grade.create({
+        data: {
+          name: copyName,
+          description: source.description,
+          referenceDate: source.referenceDate,
+        },
+      })
+
+      // 2. エクスポート設定（1:1）
+      if (source.exportSettings) {
+        await tx.gradeExportSettings.create({
           data: {
-            name: copyName,
-            description: source.description,
-            referenceDate: source.referenceDate,
+            gradeId: grade.id,
+            settingsJson: source.exportSettings.settingsJson,
+          },
+        })
+      }
+
+      // 3. 対象学級（独立行）
+      if (source.gradeClassrooms.length > 0) {
+        await tx.gradeClassroom.createMany({
+          data: source.gradeClassrooms.map((gradeClassroom) => ({
+            gradeId: grade.id,
+            classroomId: gradeClassroom.classroomId,
+            order: gradeClassroom.order,
+          })),
+        })
+      }
+
+      // 4. 対象生徒。上書き・除外設定は対象者の子なので、新しい対象者の id を
+      //    後続で使えるよう1件ずつ作って旧→新の対応を持つ。
+      const gradeStudentIdMap = new Map<string, string>()
+      for (const gradeStudent of source.gradeStudents) {
+        const newGradeStudent = await tx.gradeStudent.create({
+          data: {
+            gradeId: grade.id,
+            studentId: gradeStudent.studentId,
+            customOrder: gradeStudent.customOrder,
+          },
+        })
+        gradeStudentIdMap.set(gradeStudent.id, newGradeStudent.id)
+      }
+
+      // 5. 評価項目 + データソース。
+      //    新IDを後続の再リンクに使うため個別 create し、旧→新の
+      //    gradeItemId / dataSourceId マップを両方構築する。
+      //    estimationSourceIds は同一Grade内の他DataSource IDを指し前方参照が
+      //    あり得るため、この時点では元値のままコピーし、全DataSource作成後（5.5）
+      //    に新IDへ remap する。
+      const dataSourceIdMap = new Map<string, string>()
+      const dataSourcesToRelink: {
+        newId: string
+        oldEstimationSourceIds: string[]
+      }[] = []
+      for (const gradeItem of source.gradeItems) {
+        const newItem = await tx.gradeItem.create({
+          data: {
+            gradeId: grade.id,
+            name: gradeItem.name,
+            order: gradeItem.order,
+          },
+        })
+        itemIdMap.set(gradeItem.id, newItem.id)
+
+        for (const dataSource of gradeItem.dataSources) {
+          const newDataSource = await tx.gradeDataSource.create({
+            data: {
+              gradeItemId: newItem.id,
+              type: dataSource.type,
+              examId: dataSource.examId,
+              subtotalId: dataSource.subtotalId,
+              cropRegionId: dataSource.cropRegionId,
+              courseworkItemId: dataSource.courseworkItemId,
+              courseworkId: dataSource.courseworkId,
+              name: dataSource.name,
+              weight: dataSource.weight,
+              order: dataSource.order,
+              absentMethod: dataSource.absentMethod,
+              absentRatio: dataSource.absentRatio,
+              absentOffset: dataSource.absentOffset,
+              treatExpectedAsMissing: dataSource.treatExpectedAsMissing,
+              estimationMode: dataSource.estimationMode,
+            },
+          })
+          dataSourceIdMap.set(dataSource.id, newDataSource.id)
+          const oldEstimationSourceIds = dataSource.estimationSources.map(
+            (estimationSource) => estimationSource.sourceDataSourceId
+          )
+          if (oldEstimationSourceIds.length > 0) {
+            dataSourcesToRelink.push({
+              newId: newDataSource.id,
+              oldEstimationSourceIds,
+            })
+          }
+        }
+      }
+
+      // 5.5. 推定に使う他データソースを新DataSource IDへ remap
+      //   （元Grade内に見つからないID＝不整合は落とす）。
+      for (const relink of dataSourcesToRelink) {
+        const remapped = relink.oldEstimationSourceIds
+          .map((oldSourceId) => dataSourceIdMap.get(oldSourceId))
+          .filter((newSourceId): newSourceId is string => !!newSourceId)
+        await tx.gradeDataSource.update({
+          where: { id: relink.newId },
+          data: {
+            estimationSources: {
+              create: buildEstimationSourceRows(relink.newId, remapped),
+            },
+          },
+        })
+      }
+
+      // 6. 成績境界（gradeItemId を再リンク）
+      const boundaryRows = source.gradeItems.flatMap((sourceGradeItem) =>
+        sourceGradeItem.boundaries.map((boundary) => ({
+          gradeItemId: remapItemId(sourceGradeItem.id),
+          label: boundary.label,
+          minPercentage: boundary.minPercentage,
+          order: boundary.order,
+        }))
+      )
+      if (boundaryRows.length > 0) {
+        await tx.gradeItemBoundary.createMany({ data: boundaryRows })
+      }
+
+      // 7-8. 評定の手動上書きと評価項目ごとの除外。どちらも対象者×評価項目のセルなので、
+      //   複製先の対象者 id と評価項目 id の両方へ再リンクする。解決できなければ
+      //   複製元が壊れているため throw してロールバックする（矛盾した行を作らない）。
+      const remapGradeStudentId = (oldId: string): string => {
+        const newId = gradeStudentIdMap.get(oldId)
+        if (!newId) {
+          throw new Error(`GradeStudent ${oldId} の複製先が見つかりません`)
+        }
+        return newId
+      }
+      const overrideRows = source.gradeStudents.flatMap((gradeStudent) =>
+        gradeStudent.overrides.map((override) => ({
+          gradeStudentId: remapGradeStudentId(gradeStudent.id),
+          gradeItemId: remapItemId(override.gradeItemId),
+          overrideLabel: override.overrideLabel,
+        }))
+      )
+      if (overrideRows.length > 0) {
+        await tx.gradeOverride.createMany({ data: overrideRows })
+      }
+
+      const exclusionRows = source.gradeStudents.flatMap((gradeStudent) =>
+        gradeStudent.itemExclusions.map((itemExclusion) => ({
+          gradeStudentId: remapGradeStudentId(gradeStudent.id),
+          gradeItemId: remapItemId(itemExclusion.gradeItemId),
+        }))
+      )
+      if (exclusionRows.length > 0) {
+        await tx.gradeItemExclusion.createMany({ data: exclusionRows })
+      }
+
+      // 9. 観点間の制約ルール。
+      //   比較先・集計対象は評価項目への参照なので新gradeItemIdへ再マップする
+      //   （旧configの観点名参照だったころは再マップ不要だった）。
+      //   式（expression）だけは自由記述で項目名を含むため、文字列のまま複製する。
+      for (const gradeConstraint of source.gradeConstraints) {
+        const newConstraint = await tx.gradeConstraint.create({
+          data: {
+            gradeId: grade.id,
+            name: gradeConstraint.name,
+            kind: gradeConstraint.kind,
+            targetGradeItemId: gradeConstraint.targetGradeItemId
+              ? remapItemId(gradeConstraint.targetGradeItemId)
+              : null,
+            aggregate: gradeConstraint.aggregate,
+            tolerance: gradeConstraint.tolerance,
+            expression: gradeConstraint.expression,
+            color: gradeConstraint.color,
+            message: gradeConstraint.message,
+            enabled: gradeConstraint.enabled,
+            order: gradeConstraint.order,
           },
         })
 
-        // 2. エクスポート設定（1:1）
-        if (source.exportSettings) {
-          await tx.gradeExportSettings.create({
-            data: {
-              gradeId: grade.id,
-              settingsJson: source.exportSettings.settingsJson,
-            },
-          })
-        }
+        // 設定リレーションのidは親idから決定論的に作るため本体作成後に書く
+        await writeConstraintConfig(tx, newConstraint.id, {
+          viewpointGradeItemIds: gradeConstraint.viewpoints.map((viewpoint) =>
+            remapItemId(viewpoint.gradeItemId)
+          ),
+          labelValues: Object.fromEntries(
+            gradeConstraint.labelValues.map((labelValue) => [
+              labelValue.label,
+              Number(labelValue.value),
+            ])
+          ),
+          exclusionLabels: gradeConstraint.exclusionLabels.map(
+            (exclusionLabel) => exclusionLabel.label
+          ),
+        })
+      }
 
-        // 3. 対象学級（独立行）
-        if (source.gradeClassrooms.length > 0) {
-          await tx.gradeClassroom.createMany({
-            data: source.gradeClassrooms.map((gradeClassroom) => ({
-              gradeId: grade.id,
-              classroomId: gradeClassroom.classroomId,
-              order: gradeClassroom.order,
-            })),
-          })
-        }
+      return { gradeId: grade.id, name: copyName }
+    },
+    { timeout: 30000 }
+  )
 
-        // 4. 対象生徒。上書き・除外設定は対象者の子なので、新しい対象者の id を
-        //    後続で使えるよう1件ずつ作って旧→新の対応を持つ。
-        const gradeStudentIdMap = new Map<string, string>()
-        for (const gradeStudent of source.gradeStudents) {
-          const newGradeStudent = await tx.gradeStudent.create({
-            data: {
-              gradeId: grade.id,
-              studentId: gradeStudent.studentId,
-              customOrder: gradeStudent.customOrder,
-            },
-          })
-          gradeStudentIdMap.set(gradeStudent.id, newGradeStudent.id)
-        }
-
-        // 5. 評価項目 + データソース。
-        //    新IDを後続の再リンクに使うため個別 create し、旧→新の
-        //    gradeItemId / dataSourceId マップを両方構築する。
-        //    estimationSourceIds は同一Grade内の他DataSource IDを指し前方参照が
-        //    あり得るため、この時点では元値のままコピーし、全DataSource作成後（5.5）
-        //    に新IDへ remap する。
-        const dataSourceIdMap = new Map<string, string>()
-        const dataSourcesToRelink: {
-          newId: string
-          oldEstimationSourceIds: string[]
-        }[] = []
-        for (const gradeItem of source.gradeItems) {
-          const newItem = await tx.gradeItem.create({
-            data: {
-              gradeId: grade.id,
-              name: gradeItem.name,
-              order: gradeItem.order,
-            },
-          })
-          itemIdMap.set(gradeItem.id, newItem.id)
-
-          for (const dataSource of gradeItem.dataSources) {
-            const newDataSource = await tx.gradeDataSource.create({
-              data: {
-                gradeItemId: newItem.id,
-                type: dataSource.type,
-                examId: dataSource.examId,
-                subtotalId: dataSource.subtotalId,
-                cropRegionId: dataSource.cropRegionId,
-                courseworkItemId: dataSource.courseworkItemId,
-                courseworkId: dataSource.courseworkId,
-                name: dataSource.name,
-                weight: dataSource.weight,
-                order: dataSource.order,
-                absentMethod: dataSource.absentMethod,
-                absentRatio: dataSource.absentRatio,
-                absentOffset: dataSource.absentOffset,
-                treatExpectedAsMissing: dataSource.treatExpectedAsMissing,
-                estimationMode: dataSource.estimationMode,
-              },
-            })
-            dataSourceIdMap.set(dataSource.id, newDataSource.id)
-            const oldEstimationSourceIds = dataSource.estimationSources.map(
-              (estimationSource) => estimationSource.sourceDataSourceId
-            )
-            if (oldEstimationSourceIds.length > 0) {
-              dataSourcesToRelink.push({
-                newId: newDataSource.id,
-                oldEstimationSourceIds,
-              })
-            }
-          }
-        }
-
-        // 5.5. 推定に使う他データソースを新DataSource IDへ remap
-        //   （元Grade内に見つからないID＝不整合は落とす）。
-        for (const relink of dataSourcesToRelink) {
-          const remapped = relink.oldEstimationSourceIds
-            .map((oldSourceId) => dataSourceIdMap.get(oldSourceId))
-            .filter((newSourceId): newSourceId is string => !!newSourceId)
-          await tx.gradeDataSource.update({
-            where: { id: relink.newId },
-            data: {
-              estimationSources: {
-                create: buildEstimationSourceRows(relink.newId, remapped),
-              },
-            },
-          })
-        }
-
-        // 6. 成績境界（gradeItemId を再リンク）
-        const boundaryRows = source.gradeItems.flatMap((sourceGradeItem) =>
-          sourceGradeItem.boundaries.map((boundary) => ({
-            gradeItemId: remapItemId(sourceGradeItem.id),
-            label: boundary.label,
-            minPercentage: boundary.minPercentage,
-            order: boundary.order,
-          }))
-        )
-        if (boundaryRows.length > 0) {
-          await tx.gradeItemBoundary.createMany({ data: boundaryRows })
-        }
-
-        // 7-8. 評定の手動上書きと評価項目ごとの除外。どちらも対象者×評価項目のセルなので、
-        //   複製先の対象者 id と評価項目 id の両方へ再リンクする。解決できなければ
-        //   複製元が壊れているため throw してロールバックする（矛盾した行を作らない）。
-        const remapGradeStudentId = (oldId: string): string => {
-          const newId = gradeStudentIdMap.get(oldId)
-          if (!newId) {
-            throw new Error(`GradeStudent ${oldId} の複製先が見つかりません`)
-          }
-          return newId
-        }
-        const overrideRows = source.gradeStudents.flatMap((gradeStudent) =>
-          gradeStudent.overrides.map((override) => ({
-            gradeStudentId: remapGradeStudentId(gradeStudent.id),
-            gradeItemId: remapItemId(override.gradeItemId),
-            overrideLabel: override.overrideLabel,
-          }))
-        )
-        if (overrideRows.length > 0) {
-          await tx.gradeOverride.createMany({ data: overrideRows })
-        }
-
-        const exclusionRows = source.gradeStudents.flatMap((gradeStudent) =>
-          gradeStudent.itemExclusions.map((itemExclusion) => ({
-            gradeStudentId: remapGradeStudentId(gradeStudent.id),
-            gradeItemId: remapItemId(itemExclusion.gradeItemId),
-          }))
-        )
-        if (exclusionRows.length > 0) {
-          await tx.gradeItemExclusion.createMany({ data: exclusionRows })
-        }
-
-        // 9. 観点間の制約ルール。
-        //   比較先・集計対象は評価項目への参照なので新gradeItemIdへ再マップする
-        //   （旧configの観点名参照だったころは再マップ不要だった）。
-        //   式（expression）だけは自由記述で項目名を含むため、文字列のまま複製する。
-        for (const gradeConstraint of source.gradeConstraints) {
-          const newConstraint = await tx.gradeConstraint.create({
-            data: {
-              gradeId: grade.id,
-              name: gradeConstraint.name,
-              kind: gradeConstraint.kind,
-              targetGradeItemId: gradeConstraint.targetGradeItemId
-                ? remapItemId(gradeConstraint.targetGradeItemId)
-                : null,
-              aggregate: gradeConstraint.aggregate,
-              tolerance: gradeConstraint.tolerance,
-              expression: gradeConstraint.expression,
-              color: gradeConstraint.color,
-              message: gradeConstraint.message,
-              enabled: gradeConstraint.enabled,
-              order: gradeConstraint.order,
-            },
-          })
-
-          // 設定リレーションのidは親idから決定論的に作るため本体作成後に書く
-          await writeConstraintConfig(tx, newConstraint.id, {
-            viewpointGradeItemIds: gradeConstraint.viewpoints.map((viewpoint) =>
-              remapItemId(viewpoint.gradeItemId)
-            ),
-            labelValues: Object.fromEntries(
-              gradeConstraint.labelValues.map((labelValue) => [
-                labelValue.label,
-                Number(labelValue.value),
-              ])
-            ),
-            exclusionLabels: gradeConstraint.exclusionLabels.map(
-              (exclusionLabel) => exclusionLabel.label
-            ),
-          })
-        }
-
-        return { gradeId: grade.id, name: copyName }
-      },
-      { timeout: 30000 }
-    )
-
-    if (!result) {
-      return { success: false, error: "Grade exam not found" }
-    }
-
-    await recordAuditLog({
-      action: "grade.duplicate",
-      entityType: "Grade",
-      entityId: result.gradeId,
-      scopeId: result.gradeId,
-      scopeLabel: result.name,
-      target: result.name,
-    })
-
-    return getGradeById(result.gradeId)
-  } catch (error) {
-    console.error("Error duplicating grade exam:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+  if (!result) {
+    throw new Error("Grade exam not found")
   }
+
+  await recordAuditLog({
+    action: "grade.duplicate",
+    entityType: "Grade",
+    entityId: result.gradeId,
+    scopeId: result.gradeId,
+    scopeLabel: result.name,
+    target: result.name,
+  })
+
+  return getGradeById(result.gradeId)
 }
 
 // =============================================================================

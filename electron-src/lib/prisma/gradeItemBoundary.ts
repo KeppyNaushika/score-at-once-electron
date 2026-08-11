@@ -22,41 +22,31 @@ export async function replaceGradeItemBoundaries(data: {
   gradeItemId: string
   boundaries: { label: string; minPercentage: number; order: number }[]
 }) {
-  try {
-    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      await tx.gradeItemBoundary.deleteMany({
-        where: { gradeItemId: data.gradeItemId },
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.gradeItemBoundary.deleteMany({
+      where: { gradeItemId: data.gradeItemId },
+    })
+
+    if (data.boundaries.length > 0) {
+      await tx.gradeItemBoundary.createMany({
+        data: data.boundaries.map((boundary) => ({
+          gradeItemId: data.gradeItemId,
+          label: boundary.label,
+          minPercentage: boundary.minPercentage,
+          order: boundary.order,
+        })),
       })
-
-      if (data.boundaries.length > 0) {
-        await tx.gradeItemBoundary.createMany({
-          data: data.boundaries.map((boundary) => ({
-            gradeItemId: data.gradeItemId,
-            label: boundary.label,
-            minPercentage: boundary.minPercentage,
-            order: boundary.order,
-          })),
-        })
-      }
-    })
-
-    const scope = await resolveGradeScopeByItem(data.gradeItemId)
-    await recordAuditLog({
-      action: "grade.boundary.update",
-      entityType: "GradeItemBoundary",
-      entityId: data.gradeItemId,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-    })
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error replacing grade item boundaries:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
     }
-  }
+  })
+
+  const scope = await resolveGradeScopeByItem(data.gradeItemId)
+  await recordAuditLog({
+    action: "grade.boundary.update",
+    entityType: "GradeItemBoundary",
+    entityId: data.gradeItemId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+  })
 }
 
 /**
@@ -66,24 +56,14 @@ export async function replaceGradeItemBoundaries(data: {
  * 監査ログへ別アクションで残す（自動保存による更新と混ざらないようにする）。
  */
 export async function deleteGradeItemBoundaries(gradeItemId: string) {
-  try {
-    await prisma.gradeItemBoundary.deleteMany({ where: { gradeItemId } })
+  await prisma.gradeItemBoundary.deleteMany({ where: { gradeItemId } })
 
-    const scope = await resolveGradeScopeByItem(gradeItemId)
-    await recordAuditLog({
-      action: "grade.boundary.delete",
-      entityType: "GradeItemBoundary",
-      entityId: gradeItemId,
-      scopeId: scope.scopeId,
-      scopeLabel: scope.scopeLabel,
-    })
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error deleting grade item boundaries:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  const scope = await resolveGradeScopeByItem(gradeItemId)
+  await recordAuditLog({
+    action: "grade.boundary.delete",
+    entityType: "GradeItemBoundary",
+    entityId: gradeItemId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+  })
 }

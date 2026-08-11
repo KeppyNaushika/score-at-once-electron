@@ -60,26 +60,18 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
   // 対象生徒モーダル
   const [exclusionModalOpen, setExclusionModalOpen] = useState(false)
   const [students, setStudents] =
-    useState<
-      Awaited<
-        ReturnType<typeof window.electronAPI.grade.getStudents>
-      >["students"]
-    >()
+    useState<Awaited<ReturnType<typeof window.electronAPI.grade.getStudents>>>()
   const [classroomIds, setClassroomIds] = useState<string[]>([])
 
   const loadStudentsAndClassrooms = useCallback(async () => {
-    const [studentsResult, classroomsResult] = await Promise.all([
+    const [gradeStudents, gradeClassrooms] = await Promise.all([
       window.electronAPI.grade.getStudents(gradeId),
       window.electronAPI.grade.getClassrooms(gradeId),
     ])
-    if (studentsResult.success) {
-      setStudents(studentsResult.students)
-    }
-    if (classroomsResult.success && classroomsResult.classrooms) {
-      setClassroomIds(
-        classroomsResult.classrooms.map((classroom) => classroom.classroomId)
-      )
-    }
+    setStudents(gradeStudents)
+    setClassroomIds(
+      gradeClassrooms.map((gradeClassroom) => gradeClassroom.classroomId)
+    )
   }, [gradeId])
 
   const handleOpenExclusionModal = useCallback(async () => {
@@ -143,7 +135,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
       const result = await deleteGradeItem(gradeItemId)
       // 制約ルールの集計対象が変わると判定の意味が変わるため無効化される。
       // 黙って着色が消えるのを避け、その場で知らせる。
-      if (result.disabledConstraintNames?.length) {
+      if (result.disabledConstraintNames.length > 0) {
         toast.warning(
           `制約ルール「${result.disabledConstraintNames.join("」「")}」を無効化しました（集計対象が変わったため再設定してください）`
         )
@@ -223,10 +215,12 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
         }),
       },
     }))
-    const result = await batchUpdateDataSources(updates)
-    if (!result.success) {
+    const { failedCount } = await batchUpdateDataSources(updates)
+    if (failedCount > 0) {
       // 一部だけ適用済みの可能性がある。パネルと選択は保持し再適用できるようにする。
-      toast.error("一部のデータソースに一括設定を適用できませんでした")
+      toast.error(
+        `${failedCount}件のデータソースに一括設定を適用できませんでした`
+      )
       return
     }
     setBatchMode(false)

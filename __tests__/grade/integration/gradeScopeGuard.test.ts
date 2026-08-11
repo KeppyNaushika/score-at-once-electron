@@ -88,53 +88,50 @@ describe("成績のセルのスコープ検査", () => {
   it("同じ成績の対象者・評価項目なら書ける", async () => {
     const fixture = await buildFixture()
 
-    const result = await upsertGradeOverride({
+    await upsertGradeOverride({
       gradeStudentId: fixture.gradeStudentId,
       gradeItemId: fixture.gradeItemId,
       overrideLabel: "A",
     })
-
-    expect(result.success).toBe(true)
     expect(await testPrisma.gradeOverride.count()).toBe(1)
   })
 
   it("別の成績の評価項目には上書きを書けない", async () => {
     const fixture = await buildFixture()
 
-    const result = await upsertGradeOverride({
-      gradeStudentId: fixture.gradeStudentId,
-      gradeItemId: fixture.otherGradeItemId,
-      overrideLabel: "A",
-    })
-
-    expect(result.success).toBe(false)
-    expect(result.error).toContain("別の成績")
+    await expect(
+      upsertGradeOverride({
+        gradeStudentId: fixture.gradeStudentId,
+        gradeItemId: fixture.otherGradeItemId,
+        overrideLabel: "A",
+      })
+    ).rejects.toThrow(/別の成績/)
     expect(await testPrisma.gradeOverride.count()).toBe(0)
   })
 
   it("別の成績の評価項目には除外設定を書けない", async () => {
     const fixture = await buildFixture()
 
-    const result = await setGradeItemExclusion({
-      gradeStudentId: fixture.gradeStudentId,
-      gradeItemId: fixture.otherGradeItemId,
-      excluded: true,
-    })
-
-    expect(result.success).toBe(false)
+    await expect(
+      setGradeItemExclusion({
+        gradeStudentId: fixture.gradeStudentId,
+        gradeItemId: fixture.otherGradeItemId,
+        excluded: true,
+      })
+    ).rejects.toThrow()
     expect(await testPrisma.gradeItemExclusion.count()).toBe(0)
   })
 
   it("存在しない対象者を指した書き込みは弾かれる", async () => {
     const fixture = await buildFixture()
 
-    const result = await upsertGradeOverride({
-      gradeStudentId: "missing-grade-student",
-      gradeItemId: fixture.gradeItemId,
-      overrideLabel: "A",
-    })
-
-    expect(result.success).toBe(false)
+    await expect(
+      upsertGradeOverride({
+        gradeStudentId: "missing-grade-student",
+        gradeItemId: fixture.gradeItemId,
+        overrideLabel: "A",
+      })
+    ).rejects.toThrow()
     expect(await testPrisma.gradeOverride.count()).toBe(0)
   })
 })

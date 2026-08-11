@@ -60,7 +60,7 @@ interface EstimationSettingsPopoverProps {
       estimationMode?: string
       estimationSourceIds?: string[]
     }
-  ) => Promise<{ success: boolean }>
+  ) => Promise<unknown>
 }
 
 export function EstimationSettingsPopover({

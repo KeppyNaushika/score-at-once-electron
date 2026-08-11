@@ -154,7 +154,8 @@ const rows = await prisma.asbDefinition.findMany({
 ### 4.1 チャンネル一覧
 
 実体 × 操作で31本。命名は既存の ASB に合わせて `asb:` 接頭辞・ケバブケース。すべて
-`registerSafeHandler`（`{ success, error }` を返す既存の ASB 流儀）で登録する。
+`registerHandler` で登録する（payload を返し、失敗は例外。
+[ipc-and-data-fetching-plan.md](./ipc-and-data-fetching-plan.md) 参照）。
 
 | 実体                 | チャンネル                                                                                                            | 本数 |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------- | ---- |

@@ -28,82 +28,65 @@ async function resolveGradeIdOf(
 export async function upsertGradeOverride(
   data: GradeCellTarget & { overrideLabel: string }
 ) {
-  try {
-    // 対象者と評価項目が同じ成績のものであることを書き込み前に検査する。
-    // FK は「それぞれが実在すること」しか保証しない。
-    await assertGradeCellsInSameGrade([data])
+  // 対象者と評価項目が同じ成績のものであることを書き込み前に検査する。
+  // FK は「それぞれが実在すること」しか保証しない。
+  await assertGradeCellsInSameGrade([data])
 
-    const result = await prisma.gradeOverride.upsert({
-      where: {
-        gradeStudentId_gradeItemId: {
-          gradeStudentId: data.gradeStudentId,
-          gradeItemId: data.gradeItemId,
-        },
-      },
-      create: {
+  const result = await prisma.gradeOverride.upsert({
+    where: {
+      gradeStudentId_gradeItemId: {
         gradeStudentId: data.gradeStudentId,
         gradeItemId: data.gradeItemId,
-        overrideLabel: data.overrideLabel,
       },
-      update: { overrideLabel: data.overrideLabel },
+    },
+    create: {
+      gradeStudentId: data.gradeStudentId,
+      gradeItemId: data.gradeItemId,
+      overrideLabel: data.overrideLabel,
+    },
+    update: { overrideLabel: data.overrideLabel },
+  })
+
+  const gradeId = await resolveGradeIdOf(data.gradeStudentId)
+  if (gradeId) {
+    const scope = await resolveGradeScope(gradeId)
+    await recordAuditLog({
+      action: "grade.override.update",
+      entityType: "GradeOverride",
+      entityId: result.id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
     })
-
-    const gradeId = await resolveGradeIdOf(data.gradeStudentId)
-    if (gradeId) {
-      const scope = await resolveGradeScope(gradeId)
-      await recordAuditLog({
-        action: "grade.override.update",
-        entityType: "GradeOverride",
-        entityId: result.id,
-        scopeId: scope.scopeId,
-        scopeLabel: scope.scopeLabel,
-      })
-    }
-
-    return { success: true, override: result }
-  } catch (error) {
-    console.error("Error upserting grade override:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
   }
+
+  return result
 }
 
 /**
  * 上書きを削除（自動計算に戻す）
  */
 export async function deleteGradeOverride(target: GradeCellTarget) {
-  try {
-    const existing = await prisma.gradeOverride.findUnique({
-      where: {
-        gradeStudentId_gradeItemId: {
-          gradeStudentId: target.gradeStudentId,
-          gradeItemId: target.gradeItemId,
-        },
+  const existing = await prisma.gradeOverride.findUnique({
+    where: {
+      gradeStudentId_gradeItemId: {
+        gradeStudentId: target.gradeStudentId,
+        gradeItemId: target.gradeItemId,
       },
-    })
-    if (existing) {
-      await prisma.gradeOverride.delete({ where: { id: existing.id } })
+    },
+  })
+  if (existing) {
+    await prisma.gradeOverride.delete({ where: { id: existing.id } })
 
-      const gradeId = await resolveGradeIdOf(target.gradeStudentId)
-      if (gradeId) {
-        const scope = await resolveGradeScope(gradeId)
-        await recordAuditLog({
-          action: "grade.override.delete",
-          entityType: "GradeOverride",
-          entityId: existing.id,
-          scopeId: scope.scopeId,
-          scopeLabel: scope.scopeLabel,
-        })
-      }
-    }
-    return { success: true }
-  } catch (error) {
-    console.error("Error deleting grade override:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+    const gradeId = await resolveGradeIdOf(target.gradeStudentId)
+    if (gradeId) {
+      const scope = await resolveGradeScope(gradeId)
+      await recordAuditLog({
+        action: "grade.override.delete",
+        entityType: "GradeOverride",
+        entityId: existing.id,
+        scopeId: scope.scopeId,
+        scopeLabel: scope.scopeLabel,
+      })
     }
   }
 }

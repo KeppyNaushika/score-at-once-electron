@@ -106,8 +106,7 @@ async function buildFixture(): Promise<Fixture> {
 /** 対象セル（生徒1名・評価項目1つ）の参照元スコアを取り出す */
 async function readSourceScore(gradeId: string) {
   const calculation = await calculateGrades(gradeId)
-  expect(calculation.success).toBe(true)
-  return calculation.result!.students[0].gradeItemResults[0].sourceScores[0]
+  return calculation.students[0].gradeItemResults[0].sourceScores[0]
 }
 
 describe("成績算出の資料対象者スコープ", () => {

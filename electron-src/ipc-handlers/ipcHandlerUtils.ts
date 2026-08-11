@@ -84,35 +84,3 @@ export function registerEventHandler<
     }
   )
 }
-
-/**
- * IPC ハンドラーを登録し、例外時に payload として `{ success: false, error }` を返す。
- *
- * 搬送形式には成功として載せる。renderer 側がまだ `.success` を見ているチャンネルが
- * あるため、例外へ倒すと分岐が壊れる。ドメインを payload / throw へ移すとき
- * （docs/ipc-and-data-fetching-plan.md 段階4）に `registerHandler` へ寄せて、
- * 最終的にこの関数は無くなる。
- */
-export function registerSafeHandler<
-  HandlerArgs extends unknown[],
-  HandlerResult,
->(
-  channel: string,
-  handler: (...args: HandlerArgs) => HandlerResult | Promise<HandlerResult>,
-  fallbackError?: string
-): void {
-  ipcMain.handle(channel, async (_event, ...args: HandlerArgs) => {
-    try {
-      return { __ipc: "ok", value: serializePrisma(await handler(...args)) }
-    } catch (err) {
-      console.error(`Error in IPC handler [${channel}]:`, err)
-      return {
-        __ipc: "ok",
-        value: {
-          success: false,
-          error: toIpcErrorMessage(err, fallbackError || "Unknown error"),
-        },
-      }
-    }
-  })
-}

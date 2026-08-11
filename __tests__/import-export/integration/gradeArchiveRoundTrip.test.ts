@@ -270,7 +270,6 @@ describe("grade-archive ラウンドトリップ", () => {
 
     // インポート（新規Gradeとして作成される）
     const result = await importGradeArchive(toArchive(grade.id, collected))
-    expect(result.success).toBe(true)
     expect(result.gradeId).toBeDefined()
 
     const imported = await prisma.grade.findUnique({
@@ -431,7 +430,6 @@ describe("grade-archive ラウンドトリップ", () => {
     // 別名でないため findFirst で既存を再利用する → 名前を変えて検証する。
     // ここでは元データを削除せず、import が既存同名を再利用することを確認する。
     const result = await importGradeArchive(toArchive(grade.id, collected))
-    expect(result.success).toBe(true)
 
     // import 後、coursework 型データソースが courseworkItem を正しく解決していること
     const importedDs = await prisma.gradeDataSource.findFirst({
@@ -558,7 +556,6 @@ describe("grade-archive ラウンドトリップ", () => {
     }
 
     const result = await importGradeArchive(archive)
-    expect(result.success).toBe(true)
 
     const importedItem = await prisma.courseworkItem.findFirst({
       where: { coursework: { name: `埋込資料_${suffix}` }, name: "課題1" },
@@ -665,7 +662,6 @@ describe("grade-archive ラウンドトリップ", () => {
     }
 
     const result = await importGradeArchive(legacy)
-    expect(result.success).toBe(true)
 
     // manual DataSource → Coursework(1項目) へ変換されている
     const importedItem = await prisma.courseworkItem.findFirst({
@@ -777,7 +773,6 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(preview.courseworkMatches).toHaveLength(1)
 
     const result = await importGradeArchive(archive)
-    expect(result.success).toBe(true)
 
     // スコアが失われず復元される
     const item = await prisma.courseworkItem.findFirst({
@@ -845,7 +840,6 @@ describe("grade-archive ラウンドトリップ", () => {
     }
 
     const result = await importGradeArchive(archive)
-    expect(result.success).toBe(true)
 
     const dataSource = await prisma.gradeDataSource.findFirst({
       where: { gradeItem: { gradeId: result.gradeId! }, name: "観察" },
@@ -866,7 +860,6 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(collected.courseworkArchive.courseworks).toHaveLength(0)
 
     const result = await importGradeArchive(toArchive(grade.id, collected))
-    expect(result.success).toBe(true)
 
     const imported = await prisma.grade.findUnique({
       where: { id: result.gradeId! },
@@ -979,8 +972,7 @@ describe("grade-archive ラウンドトリップ", () => {
     })
 
     // 1回目: decision未指定 → 元uuidを保持して新規作成
-    const r1 = await importGradeArchive(buildArchive())
-    expect(r1.success).toBe(true)
+    await importGradeArchive(buildArchive())
     const created = await prisma.coursework.findUnique({ where: { id: cwId } })
     expect(created).not.toBeNull()
 
@@ -990,7 +982,6 @@ describe("grade-archive ラウンドトリップ", () => {
 
     // 2回目: decision未指定 → uuid一致で流用（複製しない=冪等）
     const r2 = await importGradeArchive(buildArchive())
-    expect(r2.success).toBe(true)
     const afterReuse = await prisma.coursework.findMany({
       where: { name: cwName },
     })
@@ -1002,10 +993,9 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(ds2!.courseworkItemId).toBe(itemId)
 
     // 3回目: 明示的 new → ユーザー判断で別資料として複製（新uuid）
-    const r3 = await importGradeArchive(buildArchive(), {
+    await importGradeArchive(buildArchive(), {
       courseworkDecisions: { [cwId]: { action: "new" } },
     })
-    expect(r3.success).toBe(true)
     const afterNew = await prisma.coursework.findMany({
       where: { name: cwName },
     })
@@ -1121,7 +1111,6 @@ describe("grade-archive ラウンドトリップ", () => {
         [`arch_cw_${suffix}`]: { action: "reuse", existingId: existing.id },
       },
     })
-    expect(result.success).toBe(true)
 
     // 複製されず既存資料に項目が補完される（既存「既存」＋補完「新規項目」=2）
     const items = await prisma.courseworkItem.findMany({
@@ -1240,7 +1229,6 @@ describe("grade-archive ラウンドトリップ", () => {
 
     // インポート（新規Gradeとして作成される）
     const result = await importGradeArchive(toArchive(grade.id, collected))
-    expect(result.success).toBe(true)
     expect(exclusionConstraint.gradeId).toBe(grade.id)
 
     const imported = await prisma.gradeConstraint.findMany({
@@ -1342,7 +1330,6 @@ describe("grade-archive ラウンドトリップ", () => {
 
     // インポート（新規Gradeとして作成される）
     const result = await importGradeArchive(toArchive(grade.id, collected))
-    expect(result.success).toBe(true)
 
     const imported = await prisma.gradeFrozenScore.findMany({
       where: { gradeStudent: { gradeId: result.gradeId! } },
@@ -1423,7 +1410,6 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(collected.gradeFrozenScores[0].gradeItemId).toBe(secondItem.id)
 
     const result = await importGradeArchive(toArchive(grade.id, collected))
-    expect(result.success).toBe(true)
 
     // 取り込み先でも「2つ目」の評価項目に付いていること（1つ目へ寄らない）
     const importedItems = await prisma.gradeItem.findMany({
@@ -1492,7 +1478,6 @@ describe("grade-archive ラウンドトリップ", () => {
     ]
 
     const result = await importGradeArchive(archive)
-    expect(result.success).toBe(true)
 
     // どちらの項目か決められないので取り込まず、その旨を警告する
     const overrides = await prisma.gradeOverride.findMany({
@@ -1570,7 +1555,6 @@ describe("grade-archive ラウンドトリップ", () => {
     })
 
     const result = await importGradeArchive(toArchive(grade.id, collected))
-    expect(result.success).toBe(true)
 
     // 学級・生徒・試験すべてが uuid で解決されている
     const importedClassrooms = await prisma.gradeClassroom.findMany({
@@ -1628,7 +1612,6 @@ describe("grade-archive ラウンドトリップ", () => {
     )
 
     const result = await importGradeArchive(archive)
-    expect(result.success).toBe(true)
 
     expect(
       await prisma.gradeStudent.findMany({
@@ -1700,7 +1683,6 @@ describe("grade-archive ラウンドトリップ", () => {
 
     // uuid あり: 一次照合で対象の小計に当たる
     const withUuid = await importGradeArchive(toArchive(grade.id, collected))
-    expect(withUuid.success).toBe(true)
     const uuidSources = await prisma.gradeDataSource.findMany({
       where: { gradeItem: { gradeId: withUuid.gradeId! } },
     })
@@ -1719,7 +1701,6 @@ describe("grade-archive ラウンドトリップ", () => {
       })
     )
     const legacy = await importGradeArchive(legacyArchive)
-    expect(legacy.success).toBe(true)
     const legacySources = await prisma.gradeDataSource.findMany({
       where: { gradeItem: { gradeId: legacy.gradeId! } },
     })
@@ -1735,7 +1716,6 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(collected.gradeFrozenScores).toHaveLength(0)
 
     const result = await importGradeArchive(toArchive(grade.id, collected))
-    expect(result.success).toBe(true)
     const imported = await prisma.gradeFrozenScore.findMany({
       where: { gradeStudent: { gradeId: result.gradeId! } },
     })
@@ -1781,7 +1761,6 @@ describe("grade-archive ラウンドトリップ", () => {
     collected.gradeItemExclusions = [{ id: "exclusion-1", ...cell }]
 
     const result = await importGradeArchive(toArchive(grade.id, collected))
-    expect(result.success).toBe(true)
 
     const [overrides, frozenScores, itemExclusions] = await Promise.all([
       prisma.gradeOverride.count({
@@ -1858,7 +1837,6 @@ describe("grade-archive ラウンドトリップ", () => {
     await prisma.classroom.delete({ where: { id: classroom.id } })
 
     const result = await importGradeArchive(toArchive(grade.id, collected))
-    expect(result.success).toBe(true)
 
     // 生徒・学級が作られ、学級所属（出席番号つき）まで戻る
     const restoredStudent = await prisma.student.findUniqueOrThrow({
@@ -1936,7 +1914,6 @@ describe("grade-archive ラウンドトリップ", () => {
 
     // 往復しても対象者・評価項目の対応が保たれる
     const result = await importGradeArchive(toArchive(grade.id, collected))
-    expect(result.success).toBe(true)
     const importedExclusions = await prisma.gradeItemExclusion.findMany({
       where: { gradeStudent: { gradeId: result.gradeId! } },
       include: {
@@ -2047,8 +2024,7 @@ describe("grade-archive ラウンドトリップ", () => {
       data: { studentId: student.id, classroomId: newClassroom.id },
     })
 
-    const result = await importGradeArchive(toArchive(grade.id, collected))
-    expect(result.success).toBe(true)
+    await importGradeArchive(toArchive(grade.id, collected))
 
     // 既存生徒なので学級所属は触らない。旧学級の在籍が復活してはいけない
     const memberships = await prisma.studentClassroomMembership.findMany({
@@ -2096,7 +2072,6 @@ describe("grade-archive ラウンドトリップ", () => {
     const result = await importGradeArchive(toArchive(grade.id, collected))
 
     // unique 違反で全体がロールバックせず、1名にまとめたことを伝える
-    expect(result.success).toBe(true)
     expect(
       await prisma.gradeStudent.count({
         where: { gradeId: result.gradeId! },
@@ -2117,8 +2092,7 @@ describe("grade-archive ラウンドトリップ", () => {
     // v1.10.0 未満を再現: 学級参照から uuid を落とす
     legacy.gradeData.classroomRefs = [{ name: `合成id学級_${suffix}` }]
 
-    const result = await importGradeArchive(legacy)
-    expect(result.success).toBe(true)
+    await importGradeArchive(legacy)
 
     const created = await prisma.classroom.findUniqueOrThrow({
       where: { name: `合成id学級_${suffix}` },
@@ -2137,7 +2111,6 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(collected.gradeConstraints).toHaveLength(0)
 
     const result = await importGradeArchive(toArchive(grade.id, collected))
-    expect(result.success).toBe(true)
     const imported = await prisma.gradeConstraint.findMany({
       where: { gradeId: result.gradeId! },
     })
@@ -2244,7 +2217,6 @@ describe("grade-archive ラウンドトリップ", () => {
     }
 
     const result = await importGradeArchive(legacy)
-    expect(result.success).toBe(true)
 
     // 旧形式でも Coursework と点数が復元され、DataSource が解決される
     const score = await prisma.courseworkScore.findFirst({

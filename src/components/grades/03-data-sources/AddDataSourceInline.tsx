@@ -40,9 +40,7 @@ interface ExamScopedOptions {
 
 interface AddDataSourceInlineProps {
   gradeItemId: string
-  onCreate: (
-    dataSourceInput: GradeDataSourceInput
-  ) => Promise<{ success: boolean }>
+  onCreate: (dataSourceInput: GradeDataSourceInput) => Promise<unknown>
   onCreated: () => void
 }
 
@@ -78,10 +76,7 @@ export function AddDataSourceInline({
   useEffect(() => {
     if (!open) return
     const load = async () => {
-      const result = await window.electronAPI.grade.getExamCandidates()
-      if (result.success && result.exams) {
-        setExams(result.exams)
-      }
+      setExams(await window.electronAPI.grade.getExamCandidates())
     }
     load()
   }, [open])
@@ -101,16 +96,15 @@ export function AddDataSourceInline({
     if (!selectedExamId) return
     let cancelled = false
     const load = async () => {
-      const [subtotalGroupResult, cropRegionResult] = await Promise.all([
+      const [subtotalGroups, cropRegions] = await Promise.all([
         window.electronAPI.grade.getExamSubtotalGroups(selectedExamId),
         window.electronAPI.grade.getExamCropRegions(selectedExamId),
       ])
       if (cancelled) return
       setExamScopedOptions({
         examId: selectedExamId,
-        subtotalGroups:
-          subtotalGroupResult.subtotalGroups ?? EMPTY_SUBTOTAL_GROUPS,
-        cropRegions: cropRegionResult.cropRegions ?? EMPTY_CROP_REGIONS,
+        subtotalGroups,
+        cropRegions,
       })
     }
     load()
@@ -202,11 +196,9 @@ export function AddDataSourceInline({
             selectedCourseworkItemId || undefined
         }
       }
-      const result = await onCreate(dataSourceInput)
-      if (result.success) {
-        resetForm()
-        onCreated()
-      }
+      await onCreate(dataSourceInput)
+      resetForm()
+      onCreated()
     } finally {
       setAdding(false)
     }

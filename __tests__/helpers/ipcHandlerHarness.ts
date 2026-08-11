@@ -42,7 +42,7 @@ export function captureIpcHandler(
 
   const handler = registration![1] as RegisteredHandler
   // 境界が詰めた搬送形式をほどく。preload の `invoke` と同じ扱いにして、
-  // テストが見るのは payload だけにする（`registerHandler` / `registerSafeHandler`
+  // テストが見るのは payload だけにする（`registerHandler` / `registerEventHandler`
   // のどちらで登録されていても呼び出し側の書き方が変わらない）。
   return async (...args: unknown[]) => {
     const result: unknown = await handler({}, ...args)

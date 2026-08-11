@@ -136,8 +136,7 @@ async function buildFixture(): Promise<Fixture> {
 /** 対象セル（生徒1名・評価項目1つ）の結果を取り出す */
 async function readCell(gradeId: string) {
   const calculation = await calculateGrades(gradeId)
-  expect(calculation.success).toBe(true)
-  const itemResult = calculation.result!.students[0].gradeItemResults[0]
+  const itemResult = calculation.students[0].gradeItemResults[0]
   return itemResult
 }
 
@@ -175,7 +174,6 @@ describe("成績値の確定（凍結）", () => {
     expect(before.frozen).toBeNull()
 
     const frozen = await freezeGradeScores({ gradeId: fixture.gradeId })
-    expect(frozen.success).toBe(true)
     expect(frozen.frozenCount).toBe(1)
 
     // 元資料を 80 → 30 に変更。確定していなければ 30% C に落ちる変更。
@@ -294,7 +292,6 @@ describe("成績値の確定（凍結）", () => {
     await updateSourceScore(fixture, 30)
 
     const unfrozen = await unfreezeGradeScores({ gradeId: fixture.gradeId })
-    expect(unfrozen.success).toBe(true)
     expect(unfrozen.unfrozenCount).toBe(1)
 
     const cell = await readCell(fixture.gradeId)
@@ -313,7 +310,6 @@ describe("成績値の確定（凍結）", () => {
     })
 
     const result = await freezeGradeScores({ gradeId: fixture.gradeId })
-    expect(result.success).toBe(true)
     expect(result.frozenCount).toBe(0)
 
     const cell = await readCell(fixture.gradeId)
