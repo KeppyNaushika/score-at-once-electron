@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 import { loadStudentExportPlacements } from "@/components/exams/08-export/utils/loadStudentExportPlacements"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
@@ -51,6 +51,11 @@ interface UseExcelPreviewProps {
   /** 呼び出し側で安定した参照を渡すこと（毎レンダー新しい配列だと再取得が止まらない） */
   selectedExamStudentIds: string[]
   enabled: boolean
+  /**
+   * タブへ戻るたびに増える読み直しの合図。出力は実データを読み直すので、
+   * プレビューを取得済みのまま据え置くと表示と出力が食い違う。
+   */
+  reloadKey: number
 }
 
 /** Excel出力用のプレビューデータ（設問別得点・小計・合計）をデバウンス付きで取得するフック */
@@ -58,30 +63,33 @@ export function useExcelPreview({
   examId,
   selectedExamStudentIds,
   enabled,
+  reloadKey,
 }: UseExcelPreviewProps) {
-  const [previewData, setPreviewData] = useState<ExcelPreviewData | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // 取得結果は「どの試験・どの生徒選択に対するものか」を一緒に持つ。入力が
+  // 変われば一致しなくなるので、読み込み中フラグや消去の effect が要らない
+  const [fetched, setFetched] = useState<{
+    examId: string
+    selectedExamStudentIds: string[]
+    reloadKey: number
+    previewData: ExcelPreviewData | null
+    error: string | null
+  } | null>(null)
+
+  const active = enabled && !!examId && selectedExamStudentIds.length > 0
+  const isCurrent =
+    fetched?.examId === examId &&
+    fetched.selectedExamStudentIds === selectedExamStudentIds &&
+    fetched.reloadKey === reloadKey
+
+  const previewData = active && isCurrent ? fetched.previewData : null
+  const error = active && isCurrent ? fetched.error : null
+  const isLoading = active && !isCurrent
 
   useEffect(() => {
-    if (!enabled || !examId || selectedExamStudentIds.length === 0) {
-      setPreviewData(null)
-      setError(null)
-      setIsLoading(false)
-      return
-    }
+    if (!active || isCurrent) return
 
     // デバウンス: 生徒選択変更時に300ms待機
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-    }
-
-    setIsLoading(true)
-
-    debounceTimerRef.current = setTimeout(async () => {
-      setError(null)
-
+    const timer = setTimeout(async () => {
       try {
         const studentPlacements = await loadStudentExportPlacements(examId)
         const result = await window.electronAPI.export.getExcelPreviewData({
@@ -91,8 +99,13 @@ export function useExcelPreview({
         })
 
         if (!result.success || !result.scoringData) {
-          setError(result.error || "データの取得に失敗しました")
-          setPreviewData(null)
+          setFetched({
+            examId,
+            selectedExamStudentIds,
+            reloadKey,
+            previewData: null,
+            error: result.error || "データの取得に失敗しました",
+          })
           return
         }
 
@@ -127,24 +140,28 @@ export function useExcelPreview({
           subtotalScores: data.subtotalScores,
         }))
 
-        setPreviewData({ headers, rows })
+        setFetched({
+          examId,
+          selectedExamStudentIds,
+          reloadKey,
+          previewData: { headers, rows },
+          error: null,
+        })
       } catch (err) {
         console.error("Excel preview data fetch error:", err)
-        setError(
-          err instanceof Error ? err.message : "データの取得に失敗しました"
-        )
-        setPreviewData(null)
-      } finally {
-        setIsLoading(false)
+        setFetched({
+          examId,
+          selectedExamStudentIds,
+          reloadKey,
+          previewData: null,
+          error:
+            err instanceof Error ? err.message : "データの取得に失敗しました",
+        })
       }
     }, 300)
 
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
-      }
-    }
-  }, [examId, selectedExamStudentIds, enabled])
+    return () => clearTimeout(timer)
+  }, [active, isCurrent, examId, selectedExamStudentIds, reloadKey])
 
   return { previewData, isLoading, error }
 }

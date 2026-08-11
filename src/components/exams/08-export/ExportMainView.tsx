@@ -97,15 +97,39 @@ export default function ExportMainView() {
     capture: captureReturn,
   } = useReturnDiff(exam?.id ?? "")
 
+  // プレビュー対象の生徒は個人成績表と採点済み答案で共通。生徒セレクタは1つしか
+  // 無いので、タブごとに別々の状態を持つと「別の生徒を見ている」状態が生まれる。
+  const [pickedStudentId, setPickedStudentId] = useState<string | null>(null)
+  const previewStudentId =
+    pickedStudentId && selectedExamStudentIds.includes(pickedStudentId)
+      ? pickedStudentId
+      : (selectedExamStudentIds[0] ?? null)
+
+  // タブへ戻るたびに増やす読み直しの合図。出力は実データを読み直すので、
+  // 取得済みのまま据え置くとプレビューと出力が食い違う。
+  const [previewReloadKey, setPreviewReloadKey] = useState(0)
+  const handleTabChange = (tab: ExportTabType) => {
+    setExportTab(tab)
+    setPreviewReloadKey((key) => key + 1)
+  }
+
+  /** 出力対象から外れた生徒はプレビューの選択ごと捨てる（戻したときに跳ばない） */
+  const dropPickIfRemoved = (
+    isStillSelected: (studentId: string) => boolean
+  ) => {
+    if (pickedStudentId && !isStillSelected(pickedStudentId)) {
+      setPickedStudentId(null)
+    }
+  }
+
   const {
     previewReport,
     isLoading: isPreviewLoading,
     error: previewError,
-    previewStudentId,
-    setPreviewStudentId,
   } = useIndividualReportPreview({
     examId: exam?.id || "",
     selectedExamStudentIds,
+    previewStudentId,
     options: individualReportOptions,
     enabled: !!exam?.id && selectedStudents.size > 0,
   })
@@ -120,6 +144,7 @@ export default function ExportMainView() {
     selectedExamStudentIds,
     enabled:
       !!exam?.id && selectedStudents.size > 0 && exportTab === "grading-data",
+    reloadKey: previewReloadKey,
   })
 
   // プレビュー用の生徒リスト
@@ -137,14 +162,13 @@ export default function ExportMainView() {
     previewImageUrls: scoredAnswerPreviewUrls,
     isLoading: isScoredAnswerPreviewLoading,
     error: scoredAnswerPreviewError,
-    previewStudentId: scoredAnswerPreviewStudentId,
-    setPreviewStudentId: setScoredAnswerPreviewStudentId,
   } = useScoredAnswerPreview({
     examId: exam?.id || "",
-    selectedExamStudentIds,
+    previewStudentId,
     answerOverlaySettings,
     enabled:
       !!exam?.id && selectedStudents.size > 0 && exportTab === "scored-answers",
+    reloadKey: previewReloadKey,
   })
 
   /**
@@ -354,14 +378,31 @@ export default function ExportMainView() {
               selectedStatuses={selectedStatuses}
               setSelectedStatuses={setSelectedStatuses}
               selectedStudents={selectedStudents}
-              toggleStudent={toggleStudent}
+              toggleStudent={(examStudentId) => {
+                dropPickIfRemoved(
+                  (pickedId) =>
+                    pickedId !== examStudentId ||
+                    !selectedStudents.has(examStudentId)
+                )
+                toggleStudent(examStudentId)
+              }}
               addStudents={addStudents}
-              removeStudents={removeStudents}
+              removeStudents={(examStudentIds) => {
+                dropPickIfRemoved(
+                  (pickedId) => !examStudentIds.includes(pickedId)
+                )
+                removeStudents(examStudentIds)
+              }}
               // 答案返却・差分（生徒選択タブ内に表示）
               // 差分の件数・詳細は表示フィルタと独立させるため未フィルタの全生徒を渡す
               allStudents={allStudents}
               selectedExamStudentIds={selectedExamStudentIds}
-              onSelectExamStudentIds={replaceSelection}
+              onSelectExamStudentIds={(examStudentIds) => {
+                dropPickIfRemoved((pickedId) =>
+                  examStudentIds.includes(pickedId)
+                )
+                replaceSelection(examStudentIds)
+              }}
               diffByExamStudent={diffByExamStudent}
               changedExamStudentIds={changedExamStudentIds}
               hasAnySnapshot={hasAnySnapshot}
@@ -373,17 +414,13 @@ export default function ExportMainView() {
               isPreviewLoading={isPreviewLoading}
               previewError={previewError}
               previewStudentId={previewStudentId ?? undefined}
-              onPreviewStudentChange={setPreviewStudentId}
+              onPreviewStudentChange={setPickedStudentId}
               previewStudentList={previewStudentList}
               individualReportOptions={individualReportOptions}
               // 採点済み答案プレビュー
               scoredAnswerPreviewUrls={scoredAnswerPreviewUrls}
               isScoredAnswerPreviewLoading={isScoredAnswerPreviewLoading}
               scoredAnswerPreviewError={scoredAnswerPreviewError}
-              scoredAnswerPreviewStudentId={scoredAnswerPreviewStudentId}
-              onScoredAnswerPreviewStudentChange={
-                setScoredAnswerPreviewStudentId
-              }
               // Excelプレビュー
               excelPreviewData={excelPreviewData}
               isExcelPreviewLoading={isExcelPreviewLoading}
@@ -409,7 +446,7 @@ export default function ExportMainView() {
               captureReturn={captureReturn}
               capturingReturn={capturingReturn}
               activeTab={exportTab}
-              onTabChange={setExportTab}
+              onTabChange={handleTabChange}
             />
           </div>
         </div>

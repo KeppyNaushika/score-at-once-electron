@@ -72,12 +72,15 @@ function ValidationMessages({
 interface SpreadsheetImportModalProps {
   isOpen: boolean
   onClose: () => void
+  /** 既に登録済みの生徒。重複行の判定に使う（呼び出し元が読み込み済みのものを渡す） */
+  existingStudents: StudentWithMemberships[]
   onImportSuccess: (importedStudents: StudentWithMemberships[]) => void
 }
 
 export default function SpreadsheetImportModal({
   isOpen,
   onClose,
+  existingStudents,
   onImportSuccess,
 }: SpreadsheetImportModalProps) {
   const {
@@ -86,7 +89,7 @@ export default function SpreadsheetImportModal({
     isProcessing,
     handleStudentDataChange,
     handleImportStudents,
-  } = useStudentImport()
+  } = useStudentImport(existingStudents)
 
   const handleStudentImport = async () => {
     try {

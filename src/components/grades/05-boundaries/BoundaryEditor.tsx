@@ -29,7 +29,8 @@ interface EditableBoundary {
   minPercentage: string
 }
 
-let nextId = 1
+/** 未保存の追加行に振る一時id（DB の境界 id と混ざらないよう接頭辞で分ける） */
+let nextAddedRowId = 1
 
 /**
  * 成績境界の編集コンポーネント
@@ -38,24 +39,37 @@ let nextId = 1
  * DnDで行を並び替え可能。minPercentageが降順でない場合は赤い枠線で警告する。
  */
 export function BoundaryEditor({ gradeItem, onSave }: BoundaryEditorProps) {
-  const [items, setItems] = useState<EditableBoundary[]>([])
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // サーバから読み直した境界だけを依存に取る。再取得は保存が済んだ後にしか起きないので、
-  // 入力中の行がレンダリングのたびに消えることはない。
-  useEffect(() => {
-    const sorted = [...gradeItem.boundaries].sort(
-      (firstBoundary, secondBoundary) =>
-        secondBoundary.minPercentage - firstBoundary.minPercentage
-    )
-    setItems(
-      sorted.map((boundary) => ({
-        id: `boundary-${nextId++}`,
-        label: boundary.label,
-        minPercentage: String(boundary.minPercentage),
-      }))
-    )
-  }, [gradeItem.boundaries])
+  // サーバから読み直した境界。行の同定は DB の id で行う（並べ替えるので添字は使えない）
+  const savedItems = useMemo(
+    () =>
+      [...gradeItem.boundaries]
+        .sort(
+          (firstBoundary, secondBoundary) =>
+            secondBoundary.minPercentage - firstBoundary.minPercentage
+        )
+        .map((boundary) => ({
+          id: boundary.id,
+          label: boundary.label,
+          minPercentage: String(boundary.minPercentage),
+        })),
+    [gradeItem.boundaries]
+  )
+
+  // 編集中の行は「どの読み込み結果から始めたか」を一緒に持つ。サーバから読み直せば
+  // 一致しなくなって最新に従う（再取得は保存が済んだ後にしか起きないので、入力中の
+  // 行がレンダリングのたびに消えることはない）
+  const [draft, setDraft] = useState<{
+    savedItems: EditableBoundary[]
+    items: EditableBoundary[]
+  } | null>(null)
+
+  const items = draft?.savedItems === savedItems ? draft.items : savedItems
+  const setItems = useCallback(
+    (newItems: EditableBoundary[]) => setDraft({ savedItems, items: newItems }),
+    [savedItems]
+  )
 
   const debouncedSave = useCallback(
     (updatedItems: EditableBoundary[]) => {
@@ -100,7 +114,7 @@ export function BoundaryEditor({ gradeItem, onSave }: BoundaryEditorProps) {
   const addRow = () => {
     const newItems = [
       ...items,
-      { id: `boundary-${nextId++}`, label: "", minPercentage: "0" },
+      { id: `added-${nextAddedRowId++}`, label: "", minPercentage: "0" },
     ]
     setItems(newItems)
   }
@@ -134,7 +148,7 @@ export function BoundaryEditor({ gradeItem, onSave }: BoundaryEditorProps) {
       setItems(newItems)
       debouncedSave(newItems)
     },
-    [items, debouncedSave]
+    [items, debouncedSave, setItems]
   )
 
   const itemIds = useMemo(() => items.map((item) => item.id), [items])

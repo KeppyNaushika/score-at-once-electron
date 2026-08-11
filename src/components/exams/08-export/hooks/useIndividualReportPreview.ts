@@ -12,6 +12,8 @@ import type {
 interface UseIndividualReportPreviewOptions {
   examId: string
   selectedExamStudentIds: string[]
+  /** プレビュー対象の生徒。個人成績表と採点済み答案で共通なので呼び出し側が持つ */
+  previewStudentId: string | null
   options: IndividualReportOptions
   enabled?: boolean
 }
@@ -26,8 +28,6 @@ interface UseIndividualReportPreviewResult {
   previewReport: PreviewReport | null
   isLoading: boolean
   error: string | null
-  previewStudentId: string | null
-  setPreviewStudentId: (id: string | null) => void
 }
 
 /**
@@ -37,37 +37,19 @@ interface UseIndividualReportPreviewResult {
  */
 export function useIndividualReportPreview({
   examId,
-  selectedExamStudentIds,
+  previewStudentId,
   options,
   enabled = true,
 }: UseIndividualReportPreviewOptions): UseIndividualReportPreviewResult {
   const [previewReport, setPreviewReport] = useState<PreviewReport | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // プレビュー対象の生徒ID（デフォルトは選択リストの最初）
-  const [previewStudentId, setPreviewStudentId] = useState<string | null>(null)
 
   // optionsの最新値を保持（データ取得時に使用）
   const optionsRef = useRef(options)
   useEffect(() => {
     optionsRef.current = options
   })
-
-  // 選択された生徒が変わったらプレビュー対象をリセット
-  useEffect(() => {
-    if (selectedExamStudentIds.length > 0) {
-      // 現在のプレビュー対象が選択リストにない場合、最初の生徒にリセット
-      if (
-        !previewStudentId ||
-        !selectedExamStudentIds.includes(previewStudentId)
-      ) {
-        setPreviewStudentId(selectedExamStudentIds[0])
-      }
-    } else {
-      setPreviewStudentId(null)
-      setPreviewReport(null)
-    }
-  }, [selectedExamStudentIds, previewStudentId])
 
   const fetchPreviewData = useCallback(async () => {
     if (!enabled || !examId || !previewStudentId) {
@@ -111,11 +93,5 @@ export function useIndividualReportPreview({
     fetchPreviewData()
   }, [fetchPreviewData])
 
-  return {
-    previewReport,
-    isLoading,
-    error,
-    previewStudentId,
-    setPreviewStudentId,
-  }
+  return { previewReport, isLoading, error }
 }

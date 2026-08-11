@@ -43,27 +43,27 @@ function buildScoreDetails(summary: StudentAnswerScoreSummary): string[] {
   return details
 }
 
-export function DeleteConfirmationModal({
-  isOpen,
+/**
+ * 採点データの照会（開いている間だけの状態）。
+ *
+ * AlertDialog は閉じている間 Content をマウントしないので、開くたびの初期化は
+ * 作り直しで済む。全マス分を先読みすると採点データ量に比例して重くなるため、
+ * 開いたときだけ照会する。
+ */
+function DeleteConfirmationBody({
   onClose,
   onConfirm,
   fileId,
   studentName,
   pageNumber,
-}: DeleteConfirmationModalProps) {
+}: Omit<DeleteConfirmationModalProps, "isOpen">) {
   const [summary, setSummary] = useState<StudentAnswerScoreSummary | null>(null)
-  const [isLoadingSummary, setIsLoadingSummary] = useState(false)
+  const [isLoadingSummary, setIsLoadingSummary] = useState(true)
   const [summaryError, setSummaryError] = useState<string | null>(null)
 
-  // 開いたときだけ照会する（全マス分を先読みすると採点データ量に比例して重くなる）。
   // async 関数内で完結させ、preload が古い等で同期例外が飛んでも loading を必ず解除する。
   useEffect(() => {
-    if (!isOpen) return
-
     let isCurrent = true
-    setIsLoadingSummary(true)
-    setSummaryError(null)
-    setSummary(null)
 
     const loadSummary = async () => {
       try {
@@ -89,7 +89,7 @@ export function DeleteConfirmationModal({
     return () => {
       isCurrent = false
     }
-  }, [isOpen, fileId])
+  }, [fileId])
 
   const handleConfirm = () => {
     onConfirm()
@@ -99,77 +99,88 @@ export function DeleteConfirmationModal({
   const scoreDetails = summary ? buildScoreDetails(summary) : []
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-red-600">
-            <AlertTriangle className="h-5 w-5" />
-            答案画像の削除確認
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            以下の答案画像を削除しようとしています。この操作は取り消せません。
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+    <>
+      <AlertDialogHeader>
+        <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+          <AlertTriangle className="h-5 w-5" />
+          答案画像の削除確認
+        </AlertDialogTitle>
+        <AlertDialogDescription>
+          以下の答案画像を削除しようとしています。この操作は取り消せません。
+        </AlertDialogDescription>
+      </AlertDialogHeader>
 
-        <div className="space-y-4">
-          {studentName && (
-            <div className="rounded bg-gray-50 p-2">
-              <p className="font-medium">生徒名: {studentName}</p>
-              {pageNumber && <p>ページ: {pageNumber}</p>}
-            </div>
-          )}
-
-          <div className="rounded bg-red-50 p-3 text-red-800">
-            <p className="font-medium">⚠️ 警告</p>
-            <ul className="mt-1 list-inside list-disc space-y-1 text-sm">
-              <li>この操作は取り消せません</li>
-              <li>答案画像ファイルが完全に削除されます</li>
-              {isLoadingSummary && (
-                <li className="flex items-center gap-1">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  採点データを確認しています…
-                </li>
-              )}
-              {/* 照会に失敗したら「採点データは無い」と誤解させないよう、
-                  安全側に倒して無条件の警告を出す */}
-              {summaryError && (
-                <>
-                  <li>{summaryError}</li>
-                  <li className="font-medium">
-                    この答案に採点データがあれば全て削除されます
-                  </li>
-                </>
-              )}
-              {summary?.hasScoreData && (
-                <li className="font-medium">
-                  この答案の採点データも全て削除されます
-                  <ul className="mt-1 list-inside list-[circle] space-y-0.5 pl-4 font-normal">
-                    {scoreDetails.map((detail) => (
-                      <li key={detail}>{detail}</li>
-                    ))}
-                  </ul>
-                </li>
-              )}
-              {summary && !summary.hasScoreData && (
-                <li>この答案にはまだ採点データがありません</li>
-              )}
-            </ul>
+      <div className="space-y-4">
+        {studentName && (
+          <div className="rounded bg-gray-50 p-2">
+            <p className="font-medium">生徒名: {studentName}</p>
+            {pageNumber && <p>ページ: {pageNumber}</p>}
           </div>
+        )}
 
-          <p className="text-sm text-gray-600">
-            本当に削除してもよろしいですか？
-          </p>
+        <div className="rounded bg-red-50 p-3 text-red-800">
+          <p className="font-medium">⚠️ 警告</p>
+          <ul className="mt-1 list-inside list-disc space-y-1 text-sm">
+            <li>この操作は取り消せません</li>
+            <li>答案画像ファイルが完全に削除されます</li>
+            {isLoadingSummary && (
+              <li className="flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                採点データを確認しています…
+              </li>
+            )}
+            {/* 照会に失敗したら「採点データは無い」と誤解させないよう、
+                安全側に倒して無条件の警告を出す */}
+            {summaryError && (
+              <>
+                <li>{summaryError}</li>
+                <li className="font-medium">
+                  この答案に採点データがあれば全て削除されます
+                </li>
+              </>
+            )}
+            {summary?.hasScoreData && (
+              <li className="font-medium">
+                この答案の採点データも全て削除されます
+                <ul className="mt-1 list-inside list-[circle] space-y-0.5 pl-4 font-normal">
+                  {scoreDetails.map((detail) => (
+                    <li key={detail}>{detail}</li>
+                  ))}
+                </ul>
+              </li>
+            )}
+            {summary && !summary.hasScoreData && (
+              <li>この答案にはまだ採点データがありません</li>
+            )}
+          </ul>
         </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>キャンセル</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleConfirm}
-            disabled={isLoadingSummary}
-            className="bg-red-600 hover:bg-red-700"
-          >
-            削除する
-          </AlertDialogAction>
-        </AlertDialogFooter>
+
+        <p className="text-sm text-gray-600">
+          本当に削除してもよろしいですか？
+        </p>
+      </div>
+      <AlertDialogFooter>
+        <AlertDialogCancel onClick={onClose}>キャンセル</AlertDialogCancel>
+        <AlertDialogAction
+          onClick={handleConfirm}
+          disabled={isLoadingSummary}
+          className="bg-red-600 hover:bg-red-700"
+        >
+          削除する
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </>
+  )
+}
+
+export function DeleteConfirmationModal({
+  isOpen,
+  ...bodyProps
+}: DeleteConfirmationModalProps) {
+  return (
+    <AlertDialog open={isOpen} onOpenChange={bodyProps.onClose}>
+      <AlertDialogContent>
+        <DeleteConfirmationBody {...bodyProps} />
       </AlertDialogContent>
     </AlertDialog>
   )

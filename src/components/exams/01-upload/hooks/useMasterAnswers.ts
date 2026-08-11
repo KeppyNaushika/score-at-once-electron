@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { MasterAnswersState } from "@/components/exams/01-upload/types"
@@ -32,7 +32,6 @@ export function useMasterAnswers(
   onAnswersChange: (answers: ExamPageWithContent[]) => void
 ) {
   const [state, setState] = useState<MasterAnswersState>({
-    answers: [],
     imageUrls: {},
     isUploading: false,
     uploadProgress: 0,
@@ -49,13 +48,17 @@ export function useMasterAnswers(
     handlePasswordCancel,
   } = usePdfPasswordConversion()
 
-  useEffect(() => {
-    const sortedAnswers = sortImagesByPageNumber(initialAnswers)
-    setState((prev) => ({ ...prev, answers: sortedAnswers }))
+  // 一覧は親が持つ initialAnswers そのもの。編集はすべて onAnswersChange で
+  // 親へ返して引き直すので、ここで写しを持つと二重管理になる
+  const answers = useMemo(
+    () => sortImagesByPageNumber(initialAnswers),
+    [initialAnswers]
+  )
 
+  useEffect(() => {
     const fetchUrls = async () => {
-      if (sortedAnswers.length > 0) {
-        const urls = await generateImageUrls(sortedAnswers)
+      if (answers.length > 0) {
+        const urls = await generateImageUrls(answers)
         setState((prev) => ({ ...prev, imageUrls: urls }))
       } else {
         setState((prev) => ({ ...prev, imageUrls: {} }))
@@ -63,7 +66,7 @@ export function useMasterAnswers(
     }
 
     fetchUrls()
-  }, [initialAnswers])
+  }, [answers])
 
   /**
    * DBを引き直して一覧と画像URLを差し替える。
@@ -74,7 +77,7 @@ export function useMasterAnswers(
     const sortedAnswers = sortImagesByPageNumber(fetchedPages ?? [])
     const urls = await generateImageUrls(sortedAnswers)
 
-    setState((prev) => ({ ...prev, answers: sortedAnswers, imageUrls: urls }))
+    setState((prev) => ({ ...prev, imageUrls: urls }))
     onAnswersChange(sortedAnswers)
     return sortedAnswers
   }, [examId, onAnswersChange])
@@ -212,8 +215,14 @@ export function useMasterAnswers(
 
   const moveAnswer = useCallback(
     async (fromIndex: number, direction: "left" | "right") => {
-      const newAnswers = moveImageInList(state.answers, fromIndex, direction)
-      if (!newAnswers) return
+      const movedAnswers = moveImageInList(answers, fromIndex, direction)
+      if (!movedAnswers) return
+      // 手元の pageNumber も振り直す。一覧は pageNumber で並べ直すので、
+      // 番号を DB へ書くだけだと表示が元の順序へ戻ってしまう
+      const newAnswers = movedAnswers.map((answer, index) => ({
+        ...answer,
+        pageNumber: index + 1,
+      }))
 
       setState((prev) => ({ ...prev, isMoving: true }))
 
@@ -222,7 +231,6 @@ export function useMasterAnswers(
           generatePageNumberUpdateRequests(newAnswers)
         )
 
-        setState((prev) => ({ ...prev, answers: newAnswers }))
         onAnswersChange(newAnswers)
       } catch (error) {
         console.error("Failed to move image:", error)
@@ -231,17 +239,16 @@ export function useMasterAnswers(
         setState((prev) => ({ ...prev, isMoving: false }))
       }
     },
-    [state.answers, onAnswersChange]
+    [answers, onAnswersChange]
   )
 
   const updatePageSize = useCallback(
     async (examPageId: string, pageSize: string) => {
       try {
         await window.electronAPI.updateExamPagePageSize(examPageId, pageSize)
-        const updatedAnswers = state.answers.map((answer) =>
+        const updatedAnswers = answers.map((answer) =>
           answer.id === examPageId ? { ...answer, pageSize } : answer
         )
-        setState((prev) => ({ ...prev, answers: updatedAnswers }))
         onAnswersChange(updatedAnswers)
         toast.success("用紙サイズを変更しました")
       } catch (error) {
@@ -249,11 +256,12 @@ export function useMasterAnswers(
         toast.error("用紙サイズの変更に失敗しました")
       }
     },
-    [state.answers, onAnswersChange]
+    [answers, onAnswersChange]
   )
 
   return {
     ...state,
+    answers,
     passwordDialog,
     uploadAnswers,
     replaceAnswerImage,

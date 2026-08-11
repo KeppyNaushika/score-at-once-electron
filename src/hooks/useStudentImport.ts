@@ -18,8 +18,13 @@ interface ValidationResult {
   warnings: string[]
 }
 
-/** 生徒データの手動入力・バリデーション・一括インポートを管理するフック */
-export function useStudentImport() {
+/**
+ * 生徒データの手動入力・バリデーション・一括インポートを管理するフック
+ *
+ * @param existingStudents 既に登録済みの生徒。重複判定と警告文に使う。呼び出し元の
+ *   画面が読み込み済みのものをそのまま渡す（セルを離れるたびに全件を取り直さない）
+ */
+export function useStudentImport(existingStudents: StudentWithMemberships[]) {
   const [studentData, setStudentData] = useState<StudentImportRow[]>([
     {
       studentNumber: "",
@@ -38,51 +43,26 @@ export function useStudentImport() {
   })
   const [isProcessing, setIsProcessing] = useState(false)
 
-  const handleStudentDataChange = (data: StudentImportRow[]) => {
-    // 重複チェックとフラグ設定
-    markDuplicateStudents(data).then((updatedData) => {
-      setStudentData(updatedData)
-      validateStudentData(updatedData).catch((error) => {
-        console.error("Validation failed:", error)
-      })
-    })
+  const existingStudentNumbers = new Set(
+    existingStudents.map((student) => student.studentNumber)
+  )
+
+  const handleStudentDataChange = (rows: StudentImportRow[]) => {
+    setStudentData(markDuplicateStudents(rows))
+    validateStudentData(rows)
   }
 
-  const markDuplicateStudents = async (data: StudentImportRow[]) => {
-    // 既存の生徒データを取得
-    let existingStudentNumbers: Set<string> = new Set()
-    try {
-      const existingStudents = await window.electronAPI.fetchStudents()
-      existingStudentNumbers = new Set(
-        existingStudents.map((student) => student.studentNumber)
-      )
-    } catch (error) {
-      console.warn("既存生徒の取得に失敗しました:", error)
-    }
-
-    // 重複フラグを設定
-    return data.map((row) => ({
+  const markDuplicateStudents = (data: StudentImportRow[]) =>
+    data.map((row) => ({
       ...row,
       isDuplicate: existingStudentNumbers.has(row.studentNumber?.trim() || ""),
     }))
-  }
 
-  const validateStudentData = async (data: StudentImportRow[]) => {
+  const validateStudentData = (data: StudentImportRow[]) => {
     const errors: string[] = []
     const warnings: string[] = []
     const seenStudentNumbers = new Set<string>()
     let validCount = 0
-
-    // 既存の生徒データを取得
-    let existingStudentNumbers: Set<string> = new Set()
-    try {
-      const existingStudents = await window.electronAPI.fetchStudents()
-      existingStudentNumbers = new Set(
-        existingStudents.map((student) => student.studentNumber)
-      )
-    } catch (error) {
-      console.warn("既存生徒の取得に失敗しました:", error)
-    }
 
     const filteredData = data.filter(
       (row) =>

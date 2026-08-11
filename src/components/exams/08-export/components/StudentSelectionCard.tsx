@@ -86,8 +86,6 @@ interface StudentSelectionCardProps {
   scoredAnswerPreviewUrls?: string[]
   isScoredAnswerPreviewLoading?: boolean
   scoredAnswerPreviewError?: string | null
-  scoredAnswerPreviewStudentId?: string | null
-  onScoredAnswerPreviewStudentChange?: (examStudentId: string) => void
   // Excelプレビュー
   excelPreviewData?: ExcelPreviewData | null
   isExcelPreviewLoading?: boolean
@@ -127,8 +125,6 @@ export function StudentSelectionCard({
   scoredAnswerPreviewUrls,
   isScoredAnswerPreviewLoading,
   scoredAnswerPreviewError,
-  scoredAnswerPreviewStudentId,
-  onScoredAnswerPreviewStudentChange,
   excelPreviewData,
   isExcelPreviewLoading,
   excelPreviewError,
@@ -391,16 +387,8 @@ export function StudentSelectionCard({
             <div className="mb-2 flex items-center gap-2">
               <Label className="text-sm whitespace-nowrap">生徒:</Label>
               <Select
-                value={
-                  previewType === "scored-answers"
-                    ? scoredAnswerPreviewStudentId || ""
-                    : previewStudentId || ""
-                }
-                onValueChange={(v) =>
-                  previewType === "scored-answers"
-                    ? onScoredAnswerPreviewStudentChange?.(v)
-                    : onPreviewStudentChange?.(v)
-                }
+                value={previewStudentId || ""}
+                onValueChange={(v) => onPreviewStudentChange?.(v)}
               >
                 <SelectTrigger className="h-8 flex-1">
                   <SelectValue placeholder="選択" />
