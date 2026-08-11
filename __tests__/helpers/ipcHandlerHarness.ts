@@ -2,8 +2,11 @@
  * IPCハンドラをテストから直接呼ぶためのハーネス
  *
  * `__tests__/setup.ts` が electron の `ipcMain.handle` を `vi.fn()` に差し替えているので、
- * `registerXxxHandlers()` を呼ぶとコールバックはモックに記録されるだけで実行できない。
- * 記録された呼び出しからチャンネル名でコールバックを取り出し、`_event` を補って呼ぶ。
+ * 登録簿の実装を `registerChannel` へ通すとコールバックはモックに記録されるだけで
+ * 実行できない。記録された呼び出しからコールバックを取り出し、`_event` を補って呼ぶ。
+ *
+ * 実装を直接呼ばず境界を通すのは、`serializePrisma` と搬送形式を本番と同じ経路で
+ * 通すため（Decimal → number の変換が抜けた状態でテストが通ってしまわないように）。
  *
  * これが無いと、ハンドラに書いた分岐（「対象が1件も無ければエラーを返す」等）を
  * 実行時に検証できない。main の関数に切り出せる処理はそちらでテストする方が軽いので、
@@ -13,6 +16,8 @@ import { ipcMain } from "electron"
 import { expect, vi } from "vitest"
 
 import { isIpcEnvelope } from "@/electron-src/ipc-handlers/ipcEnvelope"
+import type { HandlerMap } from "@/electron-src/ipc-handlers/ipcHandlerUtils"
+import { registerChannel } from "@/electron-src/ipc-handlers/ipcHandlerUtils"
 
 type RegisteredHandler = (
   event: unknown,
@@ -20,19 +25,24 @@ type RegisteredHandler = (
 ) => unknown | Promise<unknown>
 
 /**
- * 登録済みハンドラを取り出す。
+ * 登録簿の1チャンネルを境界ごと呼べる関数にする。
  *
- * @param registerHandlers - `registerOmrHandlers` 等の登録関数。呼ぶ前にモックを初期化する
+ * @param handlers - `omrHandlers` 等のチャンネル登録簿
  * @param channel - `omr:detect-master-markers` 等のチャンネル名
  */
 export function captureIpcHandler(
-  registerHandlers: () => void,
+  handlers: HandlerMap,
   channel: string
 ): (...args: unknown[]) => Promise<unknown> {
   const handleMock = vi.mocked(ipcMain.handle)
   handleMock.mockClear()
 
-  registerHandlers()
+  const implementation = handlers[channel]
+  expect(
+    implementation,
+    `IPCチャンネル ${channel} が登録簿に無い`
+  ).toBeDefined()
+  registerChannel(channel, implementation)
 
   const registration = handleMock.mock.calls.find((call) => call[0] === channel)
   expect(
@@ -42,8 +52,7 @@ export function captureIpcHandler(
 
   const handler = registration![1] as RegisteredHandler
   // 境界が詰めた搬送形式をほどく。preload の `invoke` と同じ扱いにして、
-  // テストが見るのは payload だけにする（`registerHandler` / `registerEventHandler`
-  // のどちらで登録されていても呼び出し側の書き方が変わらない）。
+  // テストが見るのは payload だけにする。
   return async (...args: unknown[]) => {
     const result: unknown = await handler({}, ...args)
 

@@ -7,17 +7,14 @@ import {
   getAuditLogs,
   getAuditLogScopes,
 } from "../lib/prisma/auditQuery"
-import { registerHandler } from "./ipcHandlerUtils"
+import { type HandlerMap } from "./ipcHandlerUtils"
 
-export function setupAuditLogHandlers(): void {
-  registerHandler(
-    "audit:getLogs",
-    async (options: AuditLogQueryOptions = {}) => {
-      return await getAuditLogs(options)
-    }
-  )
+export const auditLogHandlers = {
+  "audit:getLogs": async (options: AuditLogQueryOptions = {}) => {
+    return await getAuditLogs(options)
+  },
 
-  registerHandler("audit:getScopes", async () => {
+  "audit:getScopes": async () => {
     return await getAuditLogScopes()
-  })
-}
+  },
+} satisfies HandlerMap

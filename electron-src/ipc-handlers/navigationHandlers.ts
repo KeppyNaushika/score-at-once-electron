@@ -1,4 +1,4 @@
-import { ipcMain } from "electron"
+import { type HandlerMap, withEvent } from "./ipcHandlerUtils"
 
 /** ナビゲーション履歴の1エントリ（URLと履歴内インデックス） */
 interface NavigationHistoryEntry {
@@ -19,8 +19,8 @@ interface NavigationState {
  * Chromium のセッション履歴（Next.js の pushState 遷移を含む）をそのまま利用するため、
  * renderer 側で独自の履歴スタックを再実装する必要がない。
  */
-export function setupNavigationHandlers(): void {
-  ipcMain.handle("navigation:get-state", (event): NavigationState => {
+export const navigationHandlers = {
+  "navigation:get-state": withEvent((event): NavigationState => {
     const history = event.sender.navigationHistory
     const entries = history.getAllEntries().map((entry, index) => ({
       index,
@@ -32,9 +32,9 @@ export function setupNavigationHandlers(): void {
       activeIndex: history.getActiveIndex(),
       entries,
     }
-  })
+  }),
 
-  ipcMain.handle("navigation:go-to-index", (event, index: number) => {
+  "navigation:go-to-index": withEvent((event, index: number) => {
     event.sender.navigationHistory.goToIndex(index)
-  })
-}
+  }),
+} satisfies HandlerMap

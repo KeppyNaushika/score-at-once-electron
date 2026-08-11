@@ -62,70 +62,56 @@ import {
   deleteCropSubtotalsByCropRegionId,
   getCropSubtotalsByCropRegionId,
 } from "../lib/prisma/cropSubtotal"
-import { registerHandler } from "./ipcHandlerUtils"
+import { type HandlerMap } from "./ipcHandlerUtils"
 
 /** 採点領域（CropRegion）・領域小計点紐付け（CropSubtotal）のCRUD用IPCチャンネルを登録する */
-export function setupCropRegionHandlers(): void {
+export const cropRegionHandlers = {
   // --- CropRegion Handlers ---
-  registerHandler(
-    "create-crop-region",
-    async (data: Prisma.CropRegionUncheckedCreateInput) => {
-      return await createCropRegion(data)
-    }
-  )
+  "create-crop-region": async (data: Prisma.CropRegionUncheckedCreateInput) => {
+    return await createCropRegion(data)
+  },
 
-  registerHandler(
-    "update-crop-region",
-    async (id: string, data: Prisma.CropRegionUpdateInput) => {
-      return await updateCropRegion(id, data)
-    }
-  )
+  "update-crop-region": async (
+    id: string,
+    data: Prisma.CropRegionUpdateInput
+  ) => {
+    return await updateCropRegion(id, data)
+  },
 
-  registerHandler(
-    "update-crop-region-orders",
-    async (updates: Array<{ id: string; orderIndex: number }>) => {
-      return await updateCropRegionOrders(updates)
-    }
-  )
+  "update-crop-region-orders": async (
+    updates: Array<{ id: string; orderIndex: number }>
+  ) => {
+    return await updateCropRegionOrders(updates)
+  },
 
-  registerHandler("delete-crop-region", async (id: string) => {
+  "delete-crop-region": async (id: string) => {
     return await deleteCropRegion(id)
-  })
+  },
 
-  registerHandler("get-crop-regions-by-exam-id", async (examId: string) => {
+  "get-crop-regions-by-exam-id": async (examId: string) => {
     const result = await getCropRegionsByExamId(examId)
     // questionScoresのDecimalをnumberに変換
     return result?.map(serializeCropRegion) || []
-  })
+  },
 
-  registerHandler(
-    "get-question-answer-regions-by-exam-id",
-    async (examId: string) => {
-      const result = await getQuestionAnswerRegionsByExamId(examId)
-      // questionScoresのDecimalをnumberに変換
-      return result?.map(serializeCropRegion) || []
-    }
-  )
+  "get-question-answer-regions-by-exam-id": async (examId: string) => {
+    const result = await getQuestionAnswerRegionsByExamId(examId)
+    // questionScoresのDecimalをnumberに変換
+    return result?.map(serializeCropRegion) || []
+  },
 
   // --- CropSubtotal Handlers ---
-  registerHandler(
-    "create-many-crop-subtotals",
-    async (data: Prisma.CropSubtotalUncheckedCreateInput[]) => {
-      return await createManyCropSubtotals(data)
-    }
-  )
+  "create-many-crop-subtotals": async (
+    data: Prisma.CropSubtotalUncheckedCreateInput[]
+  ) => {
+    return await createManyCropSubtotals(data)
+  },
 
-  registerHandler(
-    "delete-crop-subtotals-by-crop-region-id",
-    async (cropRegionId: string) => {
-      return await deleteCropSubtotalsByCropRegionId(cropRegionId)
-    }
-  )
+  "delete-crop-subtotals-by-crop-region-id": async (cropRegionId: string) => {
+    return await deleteCropSubtotalsByCropRegionId(cropRegionId)
+  },
 
-  registerHandler(
-    "get-crop-subtotals-by-crop-region-id",
-    async (cropRegionId: string) => {
-      return await getCropSubtotalsByCropRegionId(cropRegionId)
-    }
-  )
-}
+  "get-crop-subtotals-by-crop-region-id": async (cropRegionId: string) => {
+    return await getCropSubtotalsByCropRegionId(cropRegionId)
+  },
+} satisfies HandlerMap

@@ -1,11 +1,11 @@
 /**
  * IPC の搬送形式の往復テスト。
  *
- * 境界（`registerHandler` / `registerEventHandler`）が詰めた形を、preload の
- * `invoke` がほどけることを固定する。ここが食い違うと全チャンネルが同時に壊れるが、
- * 他の単体テストは prisma クライアントを直接叩くのでこの層を一切通らない。
+ * 境界（`registerChannel`）が詰めた形を preload の `invoke` がほどけることを固定する。
+ * ここが食い違うと全チャンネルが同時に壊れるが、他の単体テストは prisma クライアントを
+ * 直接叩くのでこの層を一切通らない。
  *
- * 詳細は docs/ipc-and-data-fetching-plan.md 段階2・3。
+ * 詳細は docs/ipc-and-data-fetching-plan.md 段階2・3・5。
  */
 
 import { Prisma } from "@prisma/client"
@@ -35,10 +35,17 @@ vi.mock("electron", () => ({
   },
 }))
 
-import {
-  registerHandler,
-} from "../../../electron-src/ipc-handlers/ipcHandlerUtils"
+import { registerChannel } from "../../../electron-src/ipc-handlers/ipcHandlerUtils"
 import { invoke } from "../../../electron-src/preload-apis/invoke"
+
+/**
+ * 搬送形式そのものを見るテストなので、実在しないチャンネル名を使う。
+ * 本番の `invoke` はチャンネル名を登録簿（`Handlers`）に縛るため、ここだけ緩める。
+ */
+const invokeAnyChannel = invoke as unknown as (
+  channel: string,
+  ...args: unknown[]
+) => Promise<unknown>
 
 describe("IPC 搬送形式の往復", () => {
   beforeEach(() => {
@@ -46,60 +53,64 @@ describe("IPC 搬送形式の往復", () => {
     vi.spyOn(console, "error").mockImplementation(() => {})
   })
 
-  it("registerHandler の戻り値が payload として届く", async () => {
-    registerHandler("test:ok", async (examId: string) => ({ examId }))
+  it("チャンネルの戻り値が payload として届く", async () => {
+    registerChannel("test:ok", async (examId: string) => ({ examId }))
 
-    await expect(invoke("test:ok", "exam-1")).resolves.toEqual({
+    await expect(invokeAnyChannel("test:ok", "exam-1")).resolves.toEqual({
       examId: "exam-1",
     })
   })
 
-  it("registerHandler の例外は文言を保って reject になる", async () => {
-    registerHandler("test:throws", async () => {
+  it("チャンネルの例外は文言を保って reject になる", async () => {
+    registerChannel("test:throws", async () => {
       throw new Error("設問が見つかりません")
     })
 
-    await expect(invoke("test:throws")).rejects.toThrow("設問が見つかりません")
+    await expect(invokeAnyChannel("test:throws")).rejects.toThrow(
+      "設問が見つかりません"
+    )
   })
 
   it("境界で Decimal が number へ倒れる", async () => {
-    registerHandler("test:decimal", async () => ({
+    registerChannel("test:decimal", async () => ({
       partialScore: new Prisma.Decimal(2.5),
     }))
 
-    await expect(invoke("test:decimal")).resolves.toEqual({ partialScore: 2.5 })
+    await expect(invokeAnyChannel("test:decimal")).resolves.toEqual({
+      partialScore: 2.5,
+    })
   })
 
   it("境界でバイナリが展開されない", async () => {
-    registerHandler("test:binary", async () => ({
+    registerChannel("test:binary", async () => ({
       image: new Uint8Array([137, 80]),
     }))
 
-    const result = await invoke("test:binary")
+    const result = await invokeAnyChannel("test:binary")
     expect(result).toEqual({ image: new Uint8Array([137, 80]) })
   })
 
-  it("エンベロープでない戻り値はそのまま通す（生 ipcMain.handle のチャンネル）", async () => {
+  it("エンベロープでない戻り値はそのまま通す", async () => {
     listeners.set("test:raw", async () => ({ raw: true }))
 
-    await expect(invoke("test:raw")).resolves.toEqual({ raw: true })
+    await expect(invokeAnyChannel("test:raw")).resolves.toEqual({ raw: true })
   })
 
   it("payload が偶然 success を持っていてもほどきに影響しない", async () => {
-    registerHandler("test:legacy-shape", async () => ({
+    registerChannel("test:legacy-shape", async () => ({
       success: true,
       grade: { id: "grade-1" },
     }))
 
-    await expect(invoke("test:legacy-shape")).resolves.toEqual({
+    await expect(invokeAnyChannel("test:legacy-shape")).resolves.toEqual({
       success: true,
       grade: { id: "grade-1" },
     })
   })
 
   it("null を返すハンドラの結果が null のまま届く", async () => {
-    registerHandler("test:null", async () => null)
+    registerChannel("test:null", async () => null)
 
-    await expect(invoke("test:null")).resolves.toBeNull()
+    await expect(invokeAnyChannel("test:null")).resolves.toBeNull()
   })
 })

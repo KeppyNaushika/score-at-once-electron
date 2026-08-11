@@ -1,9 +1,6 @@
-import type {
-  DrawingAnnotation,
-  DrawingType,
-} from "@/types/drawingAnnotation.types"
+import type {} from "@/types/drawingAnnotation.types"
 
-import { invoke } from "./invoke"
+import { bind } from "./invoke"
 
 /**
  * 描画アノテーションのIPC API（CRUD・一括作成・お気に入り・ブラウズ取得）
@@ -17,27 +14,16 @@ export function createDrawingApi() {
   return {
     // Drawing Annotation related
     drawing: {
-      create: (annotation: DrawingAnnotation) =>
-        invoke("drawing:create", annotation),
-      getByQuestionScore: (questionScoreId: string, type?: DrawingType) =>
-        invoke("drawing:getByQuestionScore", questionScoreId, type),
-      getByExamStudent: (
-        examStudentId: string,
-        type?: DrawingType,
-        userId?: string
-      ) => invoke("drawing:getByExamStudent", examStudentId, type, userId),
-      getByCropRegion: (cropRegionId: string, userId?: string) =>
-        invoke("drawing:getByCropRegion", cropRegionId, userId),
-      update: (annotation: DrawingAnnotation) =>
-        invoke("drawing:update", annotation),
-      delete: (id: string) => invoke("drawing:delete", id),
-      deleteByQuestionScore: (questionScoreId: string, type?: DrawingType) =>
-        invoke("drawing:deleteByQuestionScore", questionScoreId, type),
-      batchCreate: (annotations: DrawingAnnotation[]) =>
-        invoke("drawing:batchCreate", annotations),
-      toggleFavorite: (id: string, isFavorite: boolean) =>
-        invoke("drawing:toggleFavorite", id, isFavorite),
-      getForBrowse: (examId: string) => invoke("drawing:getForBrowse", examId),
+      create: bind("drawing:create"),
+      getByQuestionScore: bind("drawing:getByQuestionScore"),
+      getByExamStudent: bind("drawing:getByExamStudent"),
+      getByCropRegion: bind("drawing:getByCropRegion"),
+      update: bind("drawing:update"),
+      delete: bind("drawing:delete"),
+      deleteByQuestionScore: bind("drawing:deleteByQuestionScore"),
+      batchCreate: bind("drawing:batchCreate"),
+      toggleFavorite: bind("drawing:toggleFavorite"),
+      getForBrowse: bind("drawing:getForBrowse"),
     },
   }
 }

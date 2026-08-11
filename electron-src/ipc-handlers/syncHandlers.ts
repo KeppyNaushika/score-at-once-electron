@@ -9,19 +9,19 @@ import {
   updateSyncConfig,
 } from "../lib/sync/syncService"
 import type { SyncAppConfig } from "../lib/sync/types"
-import { registerHandler } from "./ipcHandlerUtils"
+import { type HandlerMap } from "./ipcHandlerUtils"
 
-export function setupSyncHandlers(): void {
-  registerHandler("sync:getConfig", async () => ({
+export const syncHandlers = {
+  "sync:getConfig": async () => ({
     config: loadSyncConfig(),
     syncPath: getNasSyncPath(),
-  }))
+  }),
 
-  registerHandler("sync:setConfig", async (partial: Partial<SyncAppConfig>) => {
+  "sync:setConfig": async (partial: Partial<SyncAppConfig>) => {
     await updateSyncConfig(partial)
-  })
+  },
 
-  registerHandler("sync:triggerNow", () => triggerSyncNow())
+  "sync:triggerNow": () => triggerSyncNow(),
 
-  registerHandler("sync:getStatus", async () => getSyncStatus())
-}
+  "sync:getStatus": async () => getSyncStatus(),
+} satisfies HandlerMap

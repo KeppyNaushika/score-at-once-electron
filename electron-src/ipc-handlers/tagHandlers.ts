@@ -20,91 +20,79 @@ import {
   getTagSubtotalGroups,
   setSubtotalGroupTags,
 } from "../lib/prisma/tagSubtotalGroup"
-import { registerHandler } from "./ipcHandlerUtils"
+import { type HandlerMap } from "./ipcHandlerUtils"
 
 /** タグ・タグ小計点グループ紐付け・試験タグ紐付けのCRUD用IPCチャンネルを登録する */
-export function setupTagHandlers(): void {
+export const tagHandlers = {
   // Tag CRUD
-  registerHandler("tag:getAll", async () => {
+  "tag:getAll": async () => {
     return getAllTags()
-  })
+  },
 
-  registerHandler(
-    "tag:create",
-    async (data: { name: string; color?: string }) => {
-      return createTag(data)
-    }
-  )
+  "tag:create": async (data: { name: string; color?: string }) => {
+    return createTag(data)
+  },
 
-  registerHandler(
-    "tag:update",
-    async (id: string, data: { name?: string; color?: string | null }) => {
-      return updateTag(id, data)
-    }
-  )
+  "tag:update": async (
+    id: string,
+    data: { name?: string; color?: string | null }
+  ) => {
+    return updateTag(id, data)
+  },
 
-  registerHandler("tag:reorder", async (tagIds: string[]) => {
+  "tag:reorder": async (tagIds: string[]) => {
     return reorderTags(tagIds)
-  })
+  },
 
-  registerHandler("tag:delete", async (id: string) => {
+  "tag:delete": async (id: string) => {
     return deleteTag(id)
-  })
+  },
 
-  registerHandler("tag:findOrCreate", async (name: string) => {
+  "tag:findOrCreate": async (name: string) => {
     return findOrCreateTag(name)
-  })
+  },
 
   // TagSubtotalGroup CRUD
-  registerHandler("tagSubtotalGroup:getByTagId", async (tagId: string) => {
+  "tagSubtotalGroup:getByTagId": async (tagId: string) => {
     return getTagSubtotalGroups(tagId)
-  })
+  },
 
-  registerHandler(
-    "tagSubtotalGroup:setTags",
-    async (subtotalGroupId: string, tagIds: string[]) => {
-      return setSubtotalGroupTags(subtotalGroupId, tagIds)
-    }
-  )
+  "tagSubtotalGroup:setTags": async (
+    subtotalGroupId: string,
+    tagIds: string[]
+  ) => {
+    return setSubtotalGroupTags(subtotalGroupId, tagIds)
+  },
 
   // ExamTag CRUD
-  registerHandler("examTag:getByExamId", async (examId: string) => {
+  "examTag:getByExamId": async (examId: string) => {
     return getExamTags(examId)
-  })
+  },
 
-  registerHandler(
-    "examTag:create",
-    async (data: { examId: string; tagId: string }) => {
-      return createExamTag(data)
-    }
-  )
+  "examTag:create": async (data: { examId: string; tagId: string }) => {
+    return createExamTag(data)
+  },
 
-  registerHandler(
-    "examTag:setExamTags",
-    async (examId: string, tagIds: string[]) => {
-      return setExamTags(examId, tagIds)
-    }
-  )
+  "examTag:setExamTags": async (examId: string, tagIds: string[]) => {
+    return setExamTags(examId, tagIds)
+  },
 
   // AsbDefinitionTag CRUD
-  registerHandler(
-    "asbDefinitionTag:getByDefinitionId",
-    async (asbDefinitionId: string) => {
-      return getAsbDefinitionTags(asbDefinitionId)
-    }
-  )
+  "asbDefinitionTag:getByDefinitionId": async (asbDefinitionId: string) => {
+    return getAsbDefinitionTags(asbDefinitionId)
+  },
 
-  registerHandler(
-    "asbDefinitionTag:create",
-    async (data: { asbDefinitionId: string; tagId: string }) => {
-      return createAsbDefinitionTag(data)
-    }
-  )
+  "asbDefinitionTag:create": async (data: {
+    asbDefinitionId: string
+    tagId: string
+  }) => {
+    return createAsbDefinitionTag(data)
+  },
 
-  registerHandler(
-    "asbDefinitionTag:setDefinitionTags",
-    async (asbDefinitionId: string, tagIds: string[]) => {
-      return setAsbDefinitionTags(asbDefinitionId, tagIds)
-    }
-  )
-}
+  "asbDefinitionTag:setDefinitionTags": async (
+    asbDefinitionId: string,
+    tagIds: string[]
+  ) => {
+    return setAsbDefinitionTags(asbDefinitionId, tagIds)
+  },
+} satisfies HandlerMap

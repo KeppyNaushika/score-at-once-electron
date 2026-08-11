@@ -27,7 +27,7 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
   }
 })
 
-import { setupOMRHandlers } from "@/electron-src/ipc-handlers/omrHandlers"
+import { omrHandlers } from "@/electron-src/ipc-handlers/omrHandlers"
 import { getAbsolutePathFromData } from "@/electron-src/lib/dataManager"
 
 import { captureIpcHandler } from "../../helpers/ipcHandlerHarness"
@@ -44,7 +44,7 @@ interface DetectResult {
 }
 
 const detectMasterMarkers = () =>
-  captureIpcHandler(setupOMRHandlers, "omr:detect-master-markers")
+  captureIpcHandler(omrHandlers, "omr:detect-master-markers")
 
 /** 白紙PNGを置き、data からの相対パスを返す（マーカーは無いので検出は失敗する） */
 async function writeBlankPng(relativePath: string): Promise<string> {

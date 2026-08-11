@@ -40,9 +40,11 @@ export default function AnswerSheetBuilderDefinitionLayout({
     const load = async () => {
       const api = window.electronAPI?.answerSheetBuilder
       if (!api) return
-      const result = await api.loadDefinition(definitionId)
-      if (result.success && result.data) {
-        setDefinitionName(result.data.name)
+      try {
+        const definition = await api.loadDefinition(definitionId)
+        setDefinitionName(definition.name)
+      } catch (error) {
+        console.error("解答用紙定義の読み込みに失敗しました:", error)
       }
     }
     void load()

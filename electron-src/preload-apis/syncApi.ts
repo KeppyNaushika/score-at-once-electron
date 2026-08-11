@@ -4,20 +4,19 @@
 
 import { ipcRenderer } from "electron"
 
-import type { SyncAppConfig, SyncAppStatus } from "../lib/sync/types"
-import { invoke } from "./invoke"
+import type { SyncAppStatus } from "../lib/sync/types"
+import { bind } from "./invoke"
 
 export function createSyncApi() {
   return {
     sync: {
-      getConfig: () => invoke("sync:getConfig"),
+      getConfig: bind("sync:getConfig"),
 
-      setConfig: (config: Partial<SyncAppConfig>) =>
-        invoke("sync:setConfig", config),
+      setConfig: bind("sync:setConfig"),
 
-      triggerNow: () => invoke("sync:triggerNow"),
+      triggerNow: bind("sync:triggerNow"),
 
-      getStatus: () => invoke("sync:getStatus"),
+      getStatus: bind("sync:getStatus"),
 
       onStatusChanged: (
         callback: (status: SyncAppStatus) => void

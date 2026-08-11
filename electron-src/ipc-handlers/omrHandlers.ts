@@ -2,7 +2,7 @@
  * OMR（光学マーク認識）IPC ハンドラー
  */
 
-import { BrowserWindow, ipcMain } from "electron"
+import { BrowserWindow } from "electron"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -21,7 +21,7 @@ import { correctImage } from "../lib/omr/imageCorrector"
 import { loadImageRaw } from "../lib/omr/imageProcessor"
 import { recognizeCells } from "../lib/omr/markRecognizer"
 import prisma from "../lib/prisma/client"
-import { registerHandler } from "./ipcHandlerUtils"
+import { type HandlerMap } from "./ipcHandlerUtils"
 
 /**
  * マスターマーカー検出キャッシュ (キー: "examPageId:colorThreshold")
@@ -65,279 +65,259 @@ function getCachedMarkerResult(
 }
 
 /** OMR（光学マーク認識）のバッチ処理・マスターマーカー検出・画像補正のIPCチャンネルを登録する */
-export function setupOMRHandlers(): void {
+export const omrHandlers = {
   // ────────────────────────────────────────
   // バッチ認識（試験全答案）
-  // NOTE: Has complex loop with progress reporting via BrowserWindow.send, kept as manual ipcMain.handle
+  // 進捗は BrowserWindow.send で押し出す（戻り値は最後の結果だけ）
   // ────────────────────────────────────────
-  ipcMain.handle(
-    "omr:batch-recognize",
-    async (
-      _event,
-      args: {
-        imagePaths: {
-          path: string
-          examStudentId?: string
-          studentName?: string
-        }[]
-        cells: ComputedCell[]
-        cellConfigs: Record<string, OMRCellConfig>
-        expectedCorners: [
-          { x: number; y: number },
-          { x: number; y: number },
-          { x: number; y: number },
-          { x: number; y: number },
-        ]
-        params: OMRRecognitionParams
-        pageIndex?: number
+  "omr:batch-recognize": async (args: {
+    imagePaths: {
+      path: string
+      examStudentId?: string
+      studentName?: string
+    }[]
+    cells: ComputedCell[]
+    cellConfigs: Record<string, OMRCellConfig>
+    expectedCorners: [
+      { x: number; y: number },
+      { x: number; y: number },
+      { x: number; y: number },
+      { x: number; y: number },
+    ]
+    params: OMRRecognitionParams
+    pageIndex?: number
+  }): Promise<OMRSheetResult[]> => {
+    const results: OMRSheetResult[] = []
+    const total = args.imagePaths.length
+    let processed = 0
+    let succeeded = 0
+    let failed = 0
+
+    for (const entry of args.imagePaths) {
+      // プログレス通知
+      const progress: OMRBatchProgress = {
+        total,
+        processed,
+        succeeded,
+        failed,
+        currentStudentName: entry.studentName,
       }
-    ): Promise<OMRSheetResult[]> => {
-      const results: OMRSheetResult[] = []
-      const total = args.imagePaths.length
-      let processed = 0
-      let succeeded = 0
-      let failed = 0
+      const windows = BrowserWindow.getAllWindows()
+      for (const win of windows) {
+        win.webContents.send("omr:batch-progress", progress)
+      }
 
-      for (const entry of args.imagePaths) {
-        // プログレス通知
-        const progress: OMRBatchProgress = {
-          total,
-          processed,
-          succeeded,
-          failed,
-          currentStudentName: entry.studentName,
-        }
-        const windows = BrowserWindow.getAllWindows()
-        for (const win of windows) {
-          win.webContents.send("omr:batch-progress", progress)
-        }
+      try {
+        // 相対パスを絶対パスに解決
+        const absolutePath = path.isAbsolute(entry.path)
+          ? entry.path
+          : path.join(getDataDirectory(), entry.path)
 
-        try {
-          // 相対パスを絶対パスに解決
-          const absolutePath = path.isAbsolute(entry.path)
-            ? entry.path
-            : path.join(getDataDirectory(), entry.path)
+        const markerResult = await detectCornerMarkers(
+          absolutePath,
+          args.params.colorThreshold ?? undefined
+        )
 
-          const markerResult = await detectCornerMarkers(
-            absolutePath,
-            args.params.colorThreshold ?? undefined
-          )
-
-          if (!markerResult.success) {
-            results.push({
-              success: false,
-              examStudentId: entry.examStudentId,
-              pageIndex: args.pageIndex ?? 0,
-              markerDetection: markerResult,
-              cellResults: [],
-              error: markerResult.error,
-            })
-            failed++
-          } else {
-            const sortedMarkers = {
-              TL: markerResult.markers.find(
-                (marker) => marker.corner === "TL"
-              )!,
-              TR: markerResult.markers.find(
-                (marker) => marker.corner === "TR"
-              )!,
-              BL: markerResult.markers.find(
-                (marker) => marker.corner === "BL"
-              )!,
-              BR: markerResult.markers.find(
-                (marker) => marker.corner === "BR"
-              )!,
-            }
-
-            const transform = createTransform(
-              [
-                { x: sortedMarkers.TL.centerX, y: sortedMarkers.TL.centerY },
-                { x: sortedMarkers.TR.centerX, y: sortedMarkers.TR.centerY },
-                { x: sortedMarkers.BL.centerX, y: sortedMarkers.BL.centerY },
-                { x: sortedMarkers.BR.centerX, y: sortedMarkers.BR.centerY },
-              ],
-              args.expectedCorners,
-              markerResult.imageWidth,
-              markerResult.imageHeight
-            )
-
-            const rawImage = await loadImageRaw(absolutePath)
-            const cellResults = await recognizeCells(
-              args.cells,
-              args.cellConfigs,
-              rawImage,
-              transform,
-              args.params
-            )
-
-            results.push({
-              success: true,
-              examStudentId: entry.examStudentId,
-              pageIndex: args.pageIndex ?? 0,
-              markerDetection: markerResult,
-              cellResults,
-            })
-            succeeded++
-          }
-        } catch (error) {
+        if (!markerResult.success) {
           results.push({
             success: false,
             examStudentId: entry.examStudentId,
             pageIndex: args.pageIndex ?? 0,
-            markerDetection: {
-              success: false,
-              markers: [],
-              imageWidth: 0,
-              imageHeight: 0,
-            },
+            markerDetection: markerResult,
             cellResults: [],
-            error: String(error),
+            error: markerResult.error,
           })
           failed++
+        } else {
+          const sortedMarkers = {
+            TL: markerResult.markers.find((marker) => marker.corner === "TL")!,
+            TR: markerResult.markers.find((marker) => marker.corner === "TR")!,
+            BL: markerResult.markers.find((marker) => marker.corner === "BL")!,
+            BR: markerResult.markers.find((marker) => marker.corner === "BR")!,
+          }
+
+          const transform = createTransform(
+            [
+              { x: sortedMarkers.TL.centerX, y: sortedMarkers.TL.centerY },
+              { x: sortedMarkers.TR.centerX, y: sortedMarkers.TR.centerY },
+              { x: sortedMarkers.BL.centerX, y: sortedMarkers.BL.centerY },
+              { x: sortedMarkers.BR.centerX, y: sortedMarkers.BR.centerY },
+            ],
+            args.expectedCorners,
+            markerResult.imageWidth,
+            markerResult.imageHeight
+          )
+
+          const rawImage = await loadImageRaw(absolutePath)
+          const cellResults = await recognizeCells(
+            args.cells,
+            args.cellConfigs,
+            rawImage,
+            transform,
+            args.params
+          )
+
+          results.push({
+            success: true,
+            examStudentId: entry.examStudentId,
+            pageIndex: args.pageIndex ?? 0,
+            markerDetection: markerResult,
+            cellResults,
+          })
+          succeeded++
         }
-
-        processed++
-      }
-
-      // 完了通知
-      const windows = BrowserWindow.getAllWindows()
-      for (const win of windows) {
-        win.webContents.send("omr:batch-progress", {
-          total,
-          processed,
-          succeeded,
-          failed,
+      } catch (error) {
+        results.push({
+          success: false,
+          examStudentId: entry.examStudentId,
+          pageIndex: args.pageIndex ?? 0,
+          markerDetection: {
+            success: false,
+            markers: [],
+            imageWidth: 0,
+            imageHeight: 0,
+          },
+          cellResults: [],
+          error: String(error),
         })
+        failed++
       }
 
-      return results
+      processed++
     }
-  )
+
+    // 完了通知
+    const windows = BrowserWindow.getAllWindows()
+    for (const win of windows) {
+      win.webContents.send("omr:batch-progress", {
+        total,
+        processed,
+        succeeded,
+        failed,
+      })
+    }
+
+    return results
+  },
 
   // ────────────────────────────────────────
   // マスター画像のコーナーマーカー一括検出
   // ────────────────────────────────────────
-  registerHandler(
-    "omr:detect-master-markers",
-    async (
-      examId: string,
-      colorThreshold?: number
-    ): Promise<{
-      pages: Array<{
-        examPageId: string
-        pageNumber: number
-        result: MarkerDetectionResult
-      }>
-    }> => {
-      // 模範解答ページを取得
-      const examPages = await prisma.examPage.findMany({
-        where: { examId },
-        orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
-      })
+  "omr:detect-master-markers": async (
+    examId: string,
+    colorThreshold?: number
+  ): Promise<{
+    pages: Array<{
+      examPageId: string
+      pageNumber: number
+      result: MarkerDetectionResult
+    }>
+  }> => {
+    // 模範解答ページを取得
+    const examPages = await prisma.examPage.findMany({
+      where: { examId },
+      orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
+    })
 
-      const pages: Array<{
-        examPageId: string
-        pageNumber: number
-        result: MarkerDetectionResult
-      }> = []
+    const pages: Array<{
+      examPageId: string
+      pageNumber: number
+      result: MarkerDetectionResult
+    }> = []
 
-      const dataDir = getDataDirectory()
+    const dataDir = getDataDirectory()
 
-      for (const examPage of examPages) {
-        // 模範解答画像の無いページは検出できない。飛ばさないと例外が
-        // ハンドラ全体を落とし、他ページの検出結果ごと失われる
-        if (!examPage.imagePath) continue
+    for (const examPage of examPages) {
+      // 模範解答画像の無いページは検出できない。飛ばさないと例外が
+      // ハンドラ全体を落とし、他ページの検出結果ごと失われる
+      if (!examPage.imagePath) continue
 
-        const examPageId = examPage.id
-        const pageNumber = examPage.pageNumber
-        const cacheKey = markerCacheKey(examPageId, colorThreshold)
-        const imagePath = path.join(dataDir, examPage.imagePath)
-        const mtimeMs = getMtimeMs(imagePath)
+      const examPageId = examPage.id
+      const pageNumber = examPage.pageNumber
+      const cacheKey = markerCacheKey(examPageId, colorThreshold)
+      const imagePath = path.join(dataDir, examPage.imagePath)
+      const mtimeMs = getMtimeMs(imagePath)
 
-        // キャッシュチェック（ファイル差し替えを検知したら再検出）
-        const cached = getCachedMarkerResult(cacheKey, mtimeMs)
-        if (cached) {
-          pages.push({ examPageId, pageNumber, result: cached })
-          continue
-        }
-
-        const result = await detectCornerMarkers(imagePath, colorThreshold)
-
-        if (mtimeMs !== null) {
-          masterMarkerCache.set(cacheKey, { mtimeMs, result })
-        }
-        pages.push({ examPageId, pageNumber, result })
+      // キャッシュチェック（ファイル差し替えを検知したら再検出）
+      const cached = getCachedMarkerResult(cacheKey, mtimeMs)
+      if (cached) {
+        pages.push({ examPageId, pageNumber, result: cached })
+        continue
       }
 
-      // 画像を持つページが1枚も無ければ検出しようがない。
-      // ページ数ではなく検出対象の数で判定する（画像の無いページは上で飛ばしている）
-      if (pages.length === 0) {
-        throw new Error("マスター画像が見つかりません")
-      }
+      const result = await detectCornerMarkers(imagePath, colorThreshold)
 
-      // 「全ページで4マーカー検出できたか」は pages から導けるので返さない
-      return { pages }
+      if (mtimeMs !== null) {
+        masterMarkerCache.set(cacheKey, { mtimeMs, result })
+      }
+      pages.push({ examPageId, pageNumber, result })
     }
-  )
+
+    // 画像を持つページが1枚も無ければ検出しようがない。
+    // ページ数ではなく検出対象の数で判定する（画像の無いページは上で飛ばしている）
+    if (pages.length === 0) {
+      throw new Error("マスター画像が見つかりません")
+    }
+
+    // 「全ページで4マーカー検出できたか」は pages から導けるので返さない
+    return { pages }
+  },
 
   // ────────────────────────────────────────
   // 単一画像補正（クライアント側プレビュー用）
   // ────────────────────────────────────────
-  registerHandler(
-    "omr:correct-image",
-    async (
-      examPageId: string,
-      buffer: Uint8Array,
-      colorThreshold?: number
-    ): Promise<
-      | { status: "corrected"; correctedBuffer: Uint8Array }
-      | { status: "skipped"; reason: string }
-    > => {
-      const cacheKey = markerCacheKey(examPageId, colorThreshold)
-      // 模範解答画像は ExamPage.id 直指定で引く（序数 pageNumber では引かない）。
-      const examPage = await prisma.examPage.findUnique({
-        where: { id: examPageId },
-      })
-      if (!examPage?.imagePath) {
-        return { status: "skipped", reason: "マスター画像が見つかりません" }
-      }
-      const dataDir = getDataDirectory()
-      const imagePath = path.join(dataDir, examPage.imagePath)
-      const mtimeMs = getMtimeMs(imagePath)
+  "omr:correct-image": async (
+    examPageId: string,
+    buffer: Uint8Array,
+    colorThreshold?: number
+  ): Promise<
+    | { status: "corrected"; correctedBuffer: Uint8Array }
+    | { status: "skipped"; reason: string }
+  > => {
+    const cacheKey = markerCacheKey(examPageId, colorThreshold)
+    // 模範解答画像は ExamPage.id 直指定で引く（序数 pageNumber では引かない）。
+    const examPage = await prisma.examPage.findUnique({
+      where: { id: examPageId },
+    })
+    if (!examPage?.imagePath) {
+      return { status: "skipped", reason: "マスター画像が見つかりません" }
+    }
+    const dataDir = getDataDirectory()
+    const imagePath = path.join(dataDir, examPage.imagePath)
+    const mtimeMs = getMtimeMs(imagePath)
 
-      let masterResult = getCachedMarkerResult(cacheKey, mtimeMs)
-      if (!masterResult) {
-        masterResult = await detectCornerMarkers(imagePath, colorThreshold)
-        if (mtimeMs !== null) {
-          masterMarkerCache.set(cacheKey, { mtimeMs, result: masterResult })
-        }
-      }
-
-      if (!masterResult.success) {
-        return {
-          status: "skipped",
-          reason: "マスター画像のマーカーが検出できませんでした",
-        }
-      }
-
-      const result = await correctImage(
-        Buffer.from(buffer),
-        masterResult.markers,
-        masterResult.imageWidth,
-        masterResult.imageHeight,
-        colorThreshold ?? 128
-      )
-
-      if (result.success && result.correctedBuffer) {
-        return {
-          status: "corrected",
-          correctedBuffer: new Uint8Array(result.correctedBuffer),
-        }
-      }
-      return {
-        status: "skipped",
-        reason: result.error ?? "画像補正に失敗しました",
+    let masterResult = getCachedMarkerResult(cacheKey, mtimeMs)
+    if (!masterResult) {
+      masterResult = await detectCornerMarkers(imagePath, colorThreshold)
+      if (mtimeMs !== null) {
+        masterMarkerCache.set(cacheKey, { mtimeMs, result: masterResult })
       }
     }
-  )
-}
+
+    if (!masterResult.success) {
+      return {
+        status: "skipped",
+        reason: "マスター画像のマーカーが検出できませんでした",
+      }
+    }
+
+    const result = await correctImage(
+      Buffer.from(buffer),
+      masterResult.markers,
+      masterResult.imageWidth,
+      masterResult.imageHeight,
+      colorThreshold ?? 128
+    )
+
+    if (result.success && result.correctedBuffer) {
+      return {
+        status: "corrected",
+        correctedBuffer: new Uint8Array(result.correctedBuffer),
+      }
+    }
+    return {
+      status: "skipped",
+      reason: result.error ?? "画像補正に失敗しました",
+    }
+  },
+} satisfies HandlerMap

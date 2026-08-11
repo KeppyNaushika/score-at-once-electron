@@ -17,22 +17,21 @@ import {
   extractStudentArchive,
   performStudentPreMatching,
 } from "../lib/import/student-archive"
-import { registerHandler } from "./ipcHandlerUtils"
+import { type HandlerMap } from "./ipcHandlerUtils"
 
 /**
  * 生徒アーカイブ関連のIPCハンドラーを登録
  */
-export function registerStudentArchiveHandlers(): void {
+export const studentArchiveHandlers = {
   // エクスポート
-  registerHandler(
-    "studentArchive:exportStudents",
-    async (options: ExportStudentsArchiveOptions) => {
-      return await exportStudentsArchive(options)
-    }
-  )
+  "studentArchive:exportStudents": async (
+    options: ExportStudentsArchiveOptions
+  ) => {
+    return await exportStudentsArchive(options)
+  },
 
   // インポートファイル選択ダイアログ
-  registerHandler("studentArchive:selectImportFile", async () => {
+  "studentArchive:selectImportFile": async () => {
     const result = await dialog.showOpenDialog({
       title: "生徒データをインポート",
       filters: [
@@ -48,77 +47,68 @@ export function registerStudentArchiveHandlers(): void {
     }
 
     return { canceled: false as const, filePath: result.filePaths[0] }
-  })
+  },
 
   // アーカイブ解析（マニフェスト読み取り）
-  registerHandler(
-    "studentArchive:analyzeArchive",
-    async (options: { archivePath: string }) => {
-      let tempDir: string | null = null
-      try {
-        const extractResult = await extractStudentArchive(options.archivePath)
-        if (!extractResult.success || !extractResult.data) {
-          throw new Error(extractResult.error ?? "アーカイブを展開できません")
-        }
-        tempDir = extractResult.data.tempDir
-        return extractResult.data.manifest
-      } finally {
-        if (tempDir) cleanupStudentTempDir(tempDir)
+  "studentArchive:analyzeArchive": async (options: { archivePath: string }) => {
+    let tempDir: string | null = null
+    try {
+      const extractResult = await extractStudentArchive(options.archivePath)
+      if (!extractResult.success || !extractResult.data) {
+        throw new Error(extractResult.error ?? "アーカイブを展開できません")
       }
+      tempDir = extractResult.data.tempDir
+      return extractResult.data.manifest
+    } finally {
+      if (tempDir) cleanupStudentTempDir(tempDir)
     }
-  )
+  },
 
   // 事前照合
-  registerHandler(
-    "studentArchive:preMatch",
-    async (options: { archivePath: string }) => {
-      let tempDir: string | null = null
-      try {
-        const extractResult = await extractStudentArchive(options.archivePath)
-        if (!extractResult.success || !extractResult.data) {
-          throw new Error(extractResult.error ?? "アーカイブを展開できません")
-        }
-        tempDir = extractResult.data.tempDir
-
-        const fileOverviewData = await performStudentPreMatching(
-          extractResult.data
-        )
-
-        return fileOverviewData
-      } finally {
-        if (tempDir) cleanupStudentTempDir(tempDir)
+  "studentArchive:preMatch": async (options: { archivePath: string }) => {
+    let tempDir: string | null = null
+    try {
+      const extractResult = await extractStudentArchive(options.archivePath)
+      if (!extractResult.success || !extractResult.data) {
+        throw new Error(extractResult.error ?? "アーカイブを展開できません")
       }
+      tempDir = extractResult.data.tempDir
+
+      const fileOverviewData = await performStudentPreMatching(
+        extractResult.data
+      )
+
+      return fileOverviewData
+    } finally {
+      if (tempDir) cleanupStudentTempDir(tempDir)
     }
-  )
+  },
 
   // インポート実行
-  registerHandler(
-    "studentArchive:import",
-    async (options: {
-      archivePath: string
-      preMatchResult: StudentArchiveFileOverviewData
-      integrationConfig: StudentArchiveIdIntegrationConfig
-      updateDecisions?: UpdateDecisions
-    }) => {
-      let tempDir: string | null = null
-      try {
-        const extractResult = await extractStudentArchive(options.archivePath)
-        if (!extractResult.success || !extractResult.data) {
-          throw new Error(extractResult.error ?? "アーカイブを展開できません")
-        }
-        tempDir = extractResult.data.tempDir
-
-        const result = await executeStudentImport(
-          extractResult.data,
-          options.preMatchResult,
-          options.integrationConfig,
-          options.updateDecisions
-        )
-
-        return result
-      } finally {
-        if (tempDir) cleanupStudentTempDir(tempDir)
+  "studentArchive:import": async (options: {
+    archivePath: string
+    preMatchResult: StudentArchiveFileOverviewData
+    integrationConfig: StudentArchiveIdIntegrationConfig
+    updateDecisions?: UpdateDecisions
+  }) => {
+    let tempDir: string | null = null
+    try {
+      const extractResult = await extractStudentArchive(options.archivePath)
+      if (!extractResult.success || !extractResult.data) {
+        throw new Error(extractResult.error ?? "アーカイブを展開できません")
       }
+      tempDir = extractResult.data.tempDir
+
+      const result = await executeStudentImport(
+        extractResult.data,
+        options.preMatchResult,
+        options.integrationConfig,
+        options.updateDecisions
+      )
+
+      return result
+    } finally {
+      if (tempDir) cleanupStudentTempDir(tempDir)
     }
-  )
-}
+  },
+} satisfies HandlerMap

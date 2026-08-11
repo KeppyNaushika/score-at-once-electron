@@ -2,16 +2,14 @@
  * 監査ログ Preload API
  */
 
-import type { AuditLogQueryOptions } from "../lib/prisma/auditQuery"
-import { invoke } from "./invoke"
+import { bind } from "./invoke"
 
 export function createAuditLogApi() {
   return {
     audit: {
-      getLogs: (options?: AuditLogQueryOptions) =>
-        invoke("audit:getLogs", options),
+      getLogs: bind("audit:getLogs"),
 
-      getScopes: () => invoke("audit:getScopes"),
+      getScopes: bind("audit:getScopes"),
     },
   }
 }

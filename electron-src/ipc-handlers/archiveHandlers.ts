@@ -28,7 +28,7 @@ import { executeIdIntegrationImport } from "../lib/import/merge/idIntegrationImp
 import { performPreMatching } from "../lib/import/merge/matcher"
 import { detectScoringConflictsWithUserDecisions } from "../lib/import/merge/scoringConflictDetector"
 import { getExamById } from "../lib/prisma/exam"
-import { registerHandler } from "./ipcHandlerUtils"
+import { type HandlerMap } from "./ipcHandlerUtils"
 
 /**
  * 一括エクスポートのコアロジック
@@ -91,22 +91,19 @@ export async function executeBulkExport(
 /**
  * アーカイブ関連のIPCハンドラーを登録
  */
-export function registerArchiveHandlers(): void {
+export const archiveHandlers = {
   // エクスポート
-  registerHandler(
-    "archive:exportExam",
-    async (options: {
-      examId: string
-      userId: string
-      outputPath?: string
-      exportMode?: ArchiveExportMode
-    }) => {
-      return await exportExam(options)
-    }
-  )
+  "archive:exportExam": async (options: {
+    examId: string
+    userId: string
+    outputPath?: string
+    exportMode?: ArchiveExportMode
+  }) => {
+    return await exportExam(options)
+  },
 
   // インポートファイル選択ダイアログ
-  registerHandler("archive:selectImportFile", async () => {
+  "archive:selectImportFile": async () => {
     const result = await dialog.showOpenDialog({
       title: "試験をインポート",
       filters: [
@@ -159,153 +156,132 @@ export function registerArchiveHandlers(): void {
     }
 
     return { canceled: false as const, filePath, sourceFormat }
-  })
+  },
 
   // .hsz → .score 変換
-  registerHandler(
-    "archive:convertHszToScore",
-    async (options: { hszPath: string }) => {
-      return await convertHszToScore(options.hszPath)
-    }
-  )
+  "archive:convertHszToScore": async (options: { hszPath: string }) => {
+    return await convertHszToScore(options.hszPath)
+  },
 
   // .dat → .score 変換
-  registerHandler(
-    "archive:convertDatToScore",
-    async (options: { datPath: string }) => {
-      return await convertDatToScore(options.datPath)
-    }
-  )
+  "archive:convertDatToScore": async (options: { datPath: string }) => {
+    return await convertDatToScore(options.datPath)
+  },
 
   // アーカイブ解析（プレビュー用）
-  registerHandler(
-    "archive:analyzeArchive",
-    async (options: { archivePath: string }) => {
-      return await analyzeArchive(options)
-    }
-  )
+  "archive:analyzeArchive": async (options: { archivePath: string }) => {
+    return await analyzeArchive(options)
+  },
 
   // 事前照合（Step 2: ファイル概要表示用）
-  registerHandler(
-    "archive:preMatch",
-    async (options: { archivePath: string }) => {
-      let tempDir: string | null = null
+  "archive:preMatch": async (options: { archivePath: string }) => {
+    let tempDir: string | null = null
 
-      try {
-        // アーカイブを展開
-        const extractResult = await extractArchive(options.archivePath)
-        if (!extractResult.success || !extractResult.data) {
-          throw new Error(extractResult.error ?? "アーカイブを展開できません")
-        }
-        tempDir = extractResult.data.tempDir
+    try {
+      // アーカイブを展開
+      const extractResult = await extractArchive(options.archivePath)
+      if (!extractResult.success || !extractResult.data) {
+        throw new Error(extractResult.error ?? "アーカイブを展開できません")
+      }
+      tempDir = extractResult.data.tempDir
 
-        return await performPreMatching(extractResult.data)
-      } finally {
-        if (tempDir) {
-          cleanupTempDir(tempDir)
-        }
+      return await performPreMatching(extractResult.data)
+    } finally {
+      if (tempDir) {
+        cleanupTempDir(tempDir)
       }
     }
-  )
+  },
 
   // 採点競合検出（ユーザーの判断に基づく）
-  registerHandler(
-    "archive:detectScoringConflicts",
-    async (options: {
-      archivePath: string
-      preMatchResult: FileOverviewData
-      integrationConfig: IdIntegrationConfig
-    }) => {
-      let tempDir: string | null = null
+  "archive:detectScoringConflicts": async (options: {
+    archivePath: string
+    preMatchResult: FileOverviewData
+    integrationConfig: IdIntegrationConfig
+  }) => {
+    let tempDir: string | null = null
 
-      try {
-        // アーカイブを展開
-        const extractResult = await extractArchive(options.archivePath)
-        if (!extractResult.success || !extractResult.data) {
-          throw new Error(extractResult.error ?? "アーカイブを展開できません")
-        }
-        tempDir = extractResult.data.tempDir
+    try {
+      // アーカイブを展開
+      const extractResult = await extractArchive(options.archivePath)
+      if (!extractResult.success || !extractResult.data) {
+        throw new Error(extractResult.error ?? "アーカイブを展開できません")
+      }
+      tempDir = extractResult.data.tempDir
 
-        // 採点競合を検出
-        return await detectScoringConflictsWithUserDecisions(
-          extractResult.data,
-          options.preMatchResult,
-          options.integrationConfig
-        )
-      } finally {
-        if (tempDir) {
-          cleanupTempDir(tempDir)
-        }
+      // 採点競合を検出
+      return await detectScoringConflictsWithUserDecisions(
+        extractResult.data,
+        options.preMatchResult,
+        options.integrationConfig
+      )
+    } finally {
+      if (tempDir) {
+        cleanupTempDir(tempDir)
       }
     }
-  )
+  },
 
   // ID統合インポート（新しいフロー）
-  registerHandler(
-    "archive:idIntegrationImport",
-    async (options: {
-      archivePath: string
-      preMatchResult: FileOverviewData
-      integrationConfig: IdIntegrationConfig
-      currentUserId: string
-      scoringConflictConfig?: ScoringConflictConfig
-      updateDecisions?: UpdateDecisions
-    }) => {
-      let tempDir: string | null = null
+  "archive:idIntegrationImport": async (options: {
+    archivePath: string
+    preMatchResult: FileOverviewData
+    integrationConfig: IdIntegrationConfig
+    currentUserId: string
+    scoringConflictConfig?: ScoringConflictConfig
+    updateDecisions?: UpdateDecisions
+  }) => {
+    let tempDir: string | null = null
 
-      try {
-        // アーカイブを展開
-        const extractResult = await extractArchive(options.archivePath)
-        if (!extractResult.success || !extractResult.data) {
-          throw new Error(extractResult.error ?? "アーカイブを展開できません")
-        }
-        tempDir = extractResult.data.tempDir
+    try {
+      // アーカイブを展開
+      const extractResult = await extractArchive(options.archivePath)
+      if (!extractResult.success || !extractResult.data) {
+        throw new Error(extractResult.error ?? "アーカイブを展開できません")
+      }
+      tempDir = extractResult.data.tempDir
 
-        // ID統合インポートを実行
-        return await executeIdIntegrationImport(
-          extractResult.data,
-          options.preMatchResult,
-          options.integrationConfig,
-          options.currentUserId,
-          options.scoringConflictConfig,
-          options.updateDecisions
-        )
-      } finally {
-        if (tempDir) {
-          cleanupTempDir(tempDir)
-        }
+      // ID統合インポートを実行
+      return await executeIdIntegrationImport(
+        extractResult.data,
+        options.preMatchResult,
+        options.integrationConfig,
+        options.currentUserId,
+        options.scoringConflictConfig,
+        options.updateDecisions
+      )
+    } finally {
+      if (tempDir) {
+        cleanupTempDir(tempDir)
       }
     }
-  )
+  },
 
   // 一括エクスポート
-  registerHandler(
-    "archive:bulkExportExams",
-    async (options: {
-      examIds: string[]
-      userId: string
-      exportMode?: ArchiveExportMode
-    }): Promise<BulkExportExamsResult> => {
-      // フォルダ選択ダイアログを表示
-      const dialogResult = await dialog.showOpenDialog({
-        title: "一括書き出し先フォルダを選択",
-        properties: ["openDirectory", "createDirectory"],
-      })
+  "archive:bulkExportExams": async (options: {
+    examIds: string[]
+    userId: string
+    exportMode?: ArchiveExportMode
+  }): Promise<BulkExportExamsResult> => {
+    // フォルダ選択ダイアログを表示
+    const dialogResult = await dialog.showOpenDialog({
+      title: "一括書き出し先フォルダを選択",
+      properties: ["openDirectory", "createDirectory"],
+    })
 
-      // 出力先を選ばずに閉じたのは失敗ではない
-      if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
-        return { canceled: true as const }
-      }
-
-      return {
-        canceled: false as const,
-        ...(await executeBulkExport(
-          options.examIds,
-          options.userId,
-          dialogResult.filePaths[0],
-          options.exportMode
-        )),
-      }
+    // 出力先を選ばずに閉じたのは失敗ではない
+    if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
+      return { canceled: true as const }
     }
-  )
-}
+
+    return {
+      canceled: false as const,
+      ...(await executeBulkExport(
+        options.examIds,
+        options.userId,
+        dialogResult.filePaths[0],
+        options.exportMode
+      )),
+    }
+  },
+} satisfies HandlerMap

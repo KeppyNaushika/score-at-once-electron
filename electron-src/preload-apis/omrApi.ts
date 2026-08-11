@@ -1,36 +1,15 @@
 import { ipcRenderer } from "electron"
 
-import { invoke } from "./invoke"
+import { bind } from "./invoke"
 
 /** OMR（光学マーク認識）のIPC API（一括認識・マスターマーカー検出・画像補正・OMR設定） */
 export function createOmrApi() {
   return {
     // OMR（光学マーク認識）
     omr: {
-      batchRecognize: (args: {
-        imagePaths: {
-          path: string
-          examStudentId?: string
-          studentName?: string
-        }[]
-        cells: unknown[]
-        cellConfigs: Record<string, unknown>
-        expectedCorners: [
-          { x: number; y: number },
-          { x: number; y: number },
-          { x: number; y: number },
-          { x: number; y: number },
-        ]
-        params: { colorThreshold: number; areaThreshold: number }
-        pageIndex?: number
-      }) => invoke("omr:batch-recognize", args),
-      detectMasterMarkers: (examId: string, colorThreshold?: number) =>
-        invoke("omr:detect-master-markers", examId, colorThreshold),
-      correctImage: (
-        examPageId: string,
-        buffer: Uint8Array,
-        colorThreshold?: number
-      ) => invoke("omr:correct-image", examPageId, buffer, colorThreshold),
+      batchRecognize: bind("omr:batch-recognize"),
+      detectMasterMarkers: bind("omr:detect-master-markers"),
+      correctImage: bind("omr:correct-image"),
       onBatchProgress: (
         callback: (progress: {
           total: number
@@ -51,27 +30,9 @@ export function createOmrApi() {
 
     // OMR Config（CropRegion OMR設定）
     omrConfig: {
-      upsert: (data: {
-        cropRegionId: string
-        type: "choice"
-        numChoices?: number | null
-        choiceLayout?: string | null
-        colorThreshold?: number | null
-        areaThreshold?: number | null
-        choiceOptions?: Array<{
-          choiceIndex: number
-          label: string
-          isCorrect: boolean
-          shape?: string | null
-          normalizedCx?: number | null
-          normalizedCy?: number | null
-          normalizedWidth?: number | null
-          normalizedHeight?: number | null
-        }>
-      }) => invoke("omr-config:upsert", data),
-      delete: (cropRegionId: string) =>
-        invoke("omr-config:delete", cropRegionId),
-      getByExam: (examId: string) => invoke("omr-config:get-by-exam", examId),
+      upsert: bind("omr-config:upsert"),
+      delete: bind("omr-config:delete"),
+      getByExam: bind("omr-config:get-by-exam"),
     },
   }
 }

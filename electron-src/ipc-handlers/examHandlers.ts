@@ -12,7 +12,7 @@ import {
 } from "../lib/prisma/exam"
 import { getExamPagesByExamId } from "../lib/prisma/examPage"
 import { serializePrisma } from "../lib/prisma/serializePrisma"
-import { registerHandler } from "./ipcHandlerUtils"
+import { type HandlerMap } from "./ipcHandlerUtils"
 
 /**
  * QuestionScoreをIPC用にシリアライズ（DecimalをnumberにDateはそのまま）
@@ -40,10 +40,10 @@ function serializeQuestionScore(score: {
 }
 
 /** 試験（Exam）のCRUD・一覧取得に関するIPCチャンネルを登録する */
-export function setupExamHandlers(): void {
+export const examHandlers = {
   // 試験一覧用の軽量エンドポイント。進捗は計算せず「元データ」を返し、
   // renderer の getExamProgress → getExamWorkflowStatus が計算する（計算の唯一の実装は renderer）。
-  registerHandler("fetch-exams-summary", async (userId: string) => {
+  "fetch-exams-summary": async (userId: string) => {
     const exams = await getExamsForList(userId)
     return exams.map((exam) => ({
       id: exam.id,
@@ -55,19 +55,19 @@ export function setupExamHandlers(): void {
       updatedAt: exam.updatedAt,
       ...toExamProgressSource(exam),
     }))
-  })
+  },
 
   // 試験の基本スカラーのみ（リレーション無し・軽量）。編集/スカラー参照用途向け。
-  registerHandler("get-exam", async (examId: string) => {
+  "get-exam": async (examId: string) => {
     return getExam(examId)
-  })
+  },
 
   // 試験スカラー + examPages（模範解答画像を含む）を1クエリで。採点画面用。
-  registerHandler("get-exam-with-pages", async (examId: string) => {
+  "get-exam-with-pages": async (examId: string) => {
     return getExamWithPages(examId)
-  })
+  },
 
-  registerHandler("fetch-exam-by-id", async (examId: string) => {
+  "fetch-exam-by-id": async (examId: string) => {
     const exam = await getExamById(examId)
     if (!exam) {
       return null
@@ -111,43 +111,40 @@ export function setupExamHandlers(): void {
             })) || []
         ) || [],
     }
-  })
+  },
 
-  registerHandler(
-    "create-exam",
-    async (examData: Omit<Prisma.ExamCreateInput, "user">, userId: string) => {
-      if (!userId) throw new Error("User ID is required to create a exam.")
-      const exam = await createExam(examData, userId)
+  "create-exam": async (
+    examData: Omit<Prisma.ExamCreateInput, "user">,
+    userId: string
+  ) => {
+    if (!userId) throw new Error("User ID is required to create a exam.")
+    const exam = await createExam(examData, userId)
 
-      // Dateオブジェクトをそのまま返す
-      return {
-        ...exam,
-        cropRegions:
-          exam.examPages?.flatMap(
-            (page) => page.cropRegions?.map((region) => region) || []
-          ) || [],
-      }
+    // Dateオブジェクトをそのまま返す
+    return {
+      ...exam,
+      cropRegions:
+        exam.examPages?.flatMap(
+          (page) => page.cropRegions?.map((region) => region) || []
+        ) || [],
     }
-  )
+  },
 
-  registerHandler(
-    "update-exam",
-    async (examId: string, data: Prisma.ExamUpdateInput) => {
-      const exam = await updateExam(examId, data)
-      // Dateオブジェクトをそのまま返す
-      return exam
-    }
-  )
+  "update-exam": async (examId: string, data: Prisma.ExamUpdateInput) => {
+    const exam = await updateExam(examId, data)
+    // Dateオブジェクトをそのまま返す
+    return exam
+  },
 
-  registerHandler("delete-exam", async (examId: string) => {
+  "delete-exam": async (examId: string) => {
     const exam = await deleteExam(examId)
     // Dateオブジェクトをそのまま返す
     return exam
-  })
+  },
 
-  registerHandler("get-exam-pages-by-exam-id", async (examId: string) => {
+  "get-exam-pages-by-exam-id": async (examId: string) => {
     const examPages = await getExamPagesByExamId(examId)
     // Dateオブジェクトをそのまま返す
     return examPages
-  })
-}
+  },
+} satisfies HandlerMap

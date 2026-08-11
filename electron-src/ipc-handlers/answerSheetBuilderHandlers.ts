@@ -28,35 +28,35 @@ import {
   listAsbDefinitions,
   saveAsbDefinition,
 } from "../lib/prisma/asbDefinition"
-import { registerHandler } from "./ipcHandlerUtils"
+import { type HandlerMap } from "./ipcHandlerUtils"
 
 /** 解答用紙作成機能のIPCチャンネル（定義CRUD・画像管理・PNG出力・インポート/エクスポート）を登録する */
-export function setupAnswerSheetBuilderHandlers(): void {
+export const answerSheetBuilderHandlers = {
   // 定義一覧取得
-  registerHandler("asb:list-definitions", async (userId: string) => {
+  "asb:list-definitions": async (userId: string) => {
     const data = await listAsbDefinitions(userId)
     return data
-  })
+  },
 
   // 定義読込
-  registerHandler("asb:load-definition", async (id: string) => {
+  "asb:load-definition": async (id: string) => {
     const definition = await getAsbDefinition(id)
     if (!definition) {
       throw new Error("定義が見つかりません")
     }
     return definition
-  })
+  },
 
   // 定義保存
-  registerHandler(
-    "asb:save-definition",
-    async (definition: AnswerSheetDefinition, userId: string) => {
-      await saveAsbDefinition(definition, userId)
-    }
-  )
+  "asb:save-definition": async (
+    definition: AnswerSheetDefinition,
+    userId: string
+  ) => {
+    await saveAsbDefinition(definition, userId)
+  },
 
   // 定義削除（画像ディレクトリも削除）
-  registerHandler("asb:delete-definition", async (id: string) => {
+  "asb:delete-definition": async (id: string) => {
     const deleted = await deleteAsbDefinition(id)
     if (deleted) {
       // 画像ディレクトリの削除
@@ -77,10 +77,10 @@ export function setupAnswerSheetBuilderHandlers(): void {
     if (!deleted) {
       throw new Error("定義が見つかりません")
     }
-  })
+  },
 
   // 画像アップロード
-  registerHandler("asb:upload-image", async (args: ASBUploadImageArgs) => {
+  "asb:upload-image": async (args: ASBUploadImageArgs) => {
     const imagesDir = getAsbImagesDirectory(args.definitionId)
     if (!fs.existsSync(imagesDir)) {
       fs.mkdirSync(imagesDir, { recursive: true })
@@ -98,18 +98,18 @@ export function setupAnswerSheetBuilderHandlers(): void {
     // data/ からの相対パスを返す
     const relativePath = getRelativePathFromData(destPath)
     return relativePath
-  })
+  },
 
   // 画像削除
-  registerHandler("asb:delete-image", async (args: ASBDeleteImageArgs) => {
+  "asb:delete-image": async (args: ASBDeleteImageArgs) => {
     const absolutePath = getAbsolutePathFromData(args.imagePath)
     if (fs.existsSync(absolutePath)) {
       fs.unlinkSync(absolutePath)
     }
-  })
+  },
 
   // PNG出力: HTML文字列を受け取り → BrowserWindow + capturePage でラスタライズ
-  registerHandler("asb:export-png", async (args: ASBExportPngArgs) => {
+  "asb:export-png": async (args: ASBExportPngArgs) => {
     const outputDir = path.dirname(args.outputPath)
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true })
@@ -139,32 +139,31 @@ export function setupAnswerSheetBuilderHandlers(): void {
     }
 
     return args.outputPath
-  })
+  },
 
   // 保存先ダイアログ
-  registerHandler(
-    "asb:select-save-path",
-    async (options: { type: "pdf" | "png"; defaultName?: string }) => {
-      const filters =
-        options.type === "pdf"
-          ? [{ name: "PDF", extensions: ["pdf"] }]
-          : [{ name: "PNG", extensions: ["png"] }]
+  "asb:select-save-path": async (options: {
+    type: "pdf" | "png"
+    defaultName?: string
+  }) => {
+    const filters =
+      options.type === "pdf"
+        ? [{ name: "PDF", extensions: ["pdf"] }]
+        : [{ name: "PNG", extensions: ["png"] }]
 
-      const result = await dialog.showSaveDialog({
-        title: `解答用紙を${options.type.toUpperCase()}として保存`,
-        defaultPath: options.defaultName,
-        filters,
-      })
+    const result = await dialog.showSaveDialog({
+      title: `解答用紙を${options.type.toUpperCase()}として保存`,
+      defaultPath: options.defaultName,
+      filters,
+    })
 
-      // 選ばずに閉じたのは失敗ではない
-      if (result.canceled || !result.filePath)
-        return { canceled: true as const }
-      return { canceled: false as const, filePath: result.filePath }
-    }
-  )
+    // 選ばずに閉じたのは失敗ではない
+    if (result.canceled || !result.filePath) return { canceled: true as const }
+    return { canceled: false as const, filePath: result.filePath }
+  },
 
   // 試験変換: multiPageLayout + HTML文字列を受け取り
-  registerHandler("asb:convert-to-exam", async (args: ASBConvertToExamArgs) => {
+  "asb:convert-to-exam": async (args: ASBConvertToExamArgs) => {
     const result = await convertToExam(
       args.definition,
       args.userId,
@@ -173,10 +172,10 @@ export function setupAnswerSheetBuilderHandlers(): void {
       args.modelAnswerHtmlPages
     )
     return result
-  })
+  },
 
   // 定義のインポートファイル選択
-  registerHandler("asb:select-import-file", async () => {
+  "asb:select-import-file": async () => {
     const result = await dialog.showOpenDialog({
       title: "解答用紙定義を読み込み",
       filters: [{ name: "解答用紙定義", extensions: ["asb"] }],
@@ -188,123 +187,115 @@ export function setupAnswerSheetBuilderHandlers(): void {
       return { canceled: true as const }
     }
     return { canceled: false as const, filePath: result.filePaths[0] }
-  })
+  },
 
   // 定義エクスポート
-  registerHandler("asb:export-definition", async (definitionId: string) => {
+  "asb:export-definition": async (definitionId: string) => {
     return await exportAsbDefinition(definitionId)
-  })
+  },
 
   // 定義インポート
-  registerHandler(
-    "asb:import-definition",
-    async (filePath: string, userId: string) => {
-      return await importAsbDefinition(filePath, userId)
-    }
-  )
+  "asb:import-definition": async (filePath: string, userId: string) => {
+    return await importAsbDefinition(filePath, userId)
+  },
 
   // 定義複製（画像ファイルもコピー）
-  registerHandler(
-    "asb:duplicate-definition",
-    async (id: string, userId: string) => {
-      const definition = await getAsbDefinition(id)
-      if (!definition) {
-        throw new Error("定義が見つかりません")
-      }
-
-      const newId = crypto.randomUUID()
-
-      // 全子要素のIDを再生成
-      const regeneratedHeaderFields = definition.settings.headerFields.map(
-        (headerField) => ({ ...headerField, id: crypto.randomUUID() })
-      )
-
-      // 新定義の画像ディレクトリを作成
-      const newImagesDir = getAsbImagesDirectory(newId)
-      fs.mkdirSync(newImagesDir, { recursive: true })
-
-      // 画像コピーとパス更新を行うヘルパー
-      const copyImageElement = <T extends { id: string; imagePath: string }>(
-        imageElement: T
-      ): T => {
-        let newImagePath = imageElement.imagePath
-        if (imageElement.imagePath) {
-          const absoluteSrc = getAbsolutePathFromData(imageElement.imagePath)
-          if (fs.existsSync(absoluteSrc)) {
-            const filename = path.basename(imageElement.imagePath)
-            const destPath = path.join(newImagesDir, filename)
-            fs.copyFileSync(absoluteSrc, destPath)
-            newImagePath = getRelativePathFromData(destPath)
-          }
-        }
-        return {
-          ...imageElement,
-          id: crypto.randomUUID(),
-          imagePath: newImagePath,
-        }
-      }
-
-      const regeneratedMajorQuestions = definition.majorQuestions.map(
-        (majorQuestion) => ({
-          ...majorQuestion,
-          id: crypto.randomUUID(),
-          subQuestions: majorQuestion.subQuestions.map((subQuestion) => ({
-            ...subQuestion,
-            id: crypto.randomUUID(),
-            textElements: subQuestion.textElements.map((textElement) => ({
-              ...textElement,
-              id: crypto.randomUUID(),
-            })),
-            imageElements: subQuestion.imageElements?.map(copyImageElement),
-            branchQuestions: subQuestion.branchQuestions.map(
-              (branchQuestion) => ({
-                ...branchQuestion,
-                id: crypto.randomUUID(),
-                textElements: branchQuestion.textElements.map(
-                  (textElement) => ({
-                    ...textElement,
-                    id: crypto.randomUUID(),
-                  })
-                ),
-                imageElements:
-                  branchQuestion.imageElements?.map(copyImageElement),
-              })
-            ),
-          })),
-        })
-      )
-
-      // 既存の名前と重複しないようサフィックス付与
-      const existing = await listAsbDefinitions(userId)
-      const existingNames = new Set(
-        existing.map((existingDefinition) => existingDefinition.name)
-      )
-      let newName = `${definition.name} (コピー)`
-      if (existingNames.has(newName)) {
-        let suffix = 2
-        while (existingNames.has(`${definition.name} (コピー ${suffix})`)) {
-          suffix++
-        }
-        newName = `${definition.name} (コピー ${suffix})`
-      }
-
-      const duplicated: AnswerSheetDefinition = {
-        ...definition,
-        id: newId,
-        name: newName,
-        settings: {
-          ...definition.settings,
-          headerFields: regeneratedHeaderFields,
-        },
-        majorQuestions: regeneratedMajorQuestions,
-        // 複製元の日時は引き継がない。保存時に DB が採番した値を
-        // dbToDefinition が載せ直すため、ここでは持たない。
-        createdAt: undefined,
-        updatedAt: undefined,
-      }
-
-      await saveAsbDefinition(duplicated, userId)
-      return newId
+  "asb:duplicate-definition": async (id: string, userId: string) => {
+    const definition = await getAsbDefinition(id)
+    if (!definition) {
+      throw new Error("定義が見つかりません")
     }
-  )
-}
+
+    const newId = crypto.randomUUID()
+
+    // 全子要素のIDを再生成
+    const regeneratedHeaderFields = definition.settings.headerFields.map(
+      (headerField) => ({ ...headerField, id: crypto.randomUUID() })
+    )
+
+    // 新定義の画像ディレクトリを作成
+    const newImagesDir = getAsbImagesDirectory(newId)
+    fs.mkdirSync(newImagesDir, { recursive: true })
+
+    // 画像コピーとパス更新を行うヘルパー
+    const copyImageElement = <T extends { id: string; imagePath: string }>(
+      imageElement: T
+    ): T => {
+      let newImagePath = imageElement.imagePath
+      if (imageElement.imagePath) {
+        const absoluteSrc = getAbsolutePathFromData(imageElement.imagePath)
+        if (fs.existsSync(absoluteSrc)) {
+          const filename = path.basename(imageElement.imagePath)
+          const destPath = path.join(newImagesDir, filename)
+          fs.copyFileSync(absoluteSrc, destPath)
+          newImagePath = getRelativePathFromData(destPath)
+        }
+      }
+      return {
+        ...imageElement,
+        id: crypto.randomUUID(),
+        imagePath: newImagePath,
+      }
+    }
+
+    const regeneratedMajorQuestions = definition.majorQuestions.map(
+      (majorQuestion) => ({
+        ...majorQuestion,
+        id: crypto.randomUUID(),
+        subQuestions: majorQuestion.subQuestions.map((subQuestion) => ({
+          ...subQuestion,
+          id: crypto.randomUUID(),
+          textElements: subQuestion.textElements.map((textElement) => ({
+            ...textElement,
+            id: crypto.randomUUID(),
+          })),
+          imageElements: subQuestion.imageElements?.map(copyImageElement),
+          branchQuestions: subQuestion.branchQuestions.map(
+            (branchQuestion) => ({
+              ...branchQuestion,
+              id: crypto.randomUUID(),
+              textElements: branchQuestion.textElements.map((textElement) => ({
+                ...textElement,
+                id: crypto.randomUUID(),
+              })),
+              imageElements:
+                branchQuestion.imageElements?.map(copyImageElement),
+            })
+          ),
+        })),
+      })
+    )
+
+    // 既存の名前と重複しないようサフィックス付与
+    const existing = await listAsbDefinitions(userId)
+    const existingNames = new Set(
+      existing.map((existingDefinition) => existingDefinition.name)
+    )
+    let newName = `${definition.name} (コピー)`
+    if (existingNames.has(newName)) {
+      let suffix = 2
+      while (existingNames.has(`${definition.name} (コピー ${suffix})`)) {
+        suffix++
+      }
+      newName = `${definition.name} (コピー ${suffix})`
+    }
+
+    const duplicated: AnswerSheetDefinition = {
+      ...definition,
+      id: newId,
+      name: newName,
+      settings: {
+        ...definition.settings,
+        headerFields: regeneratedHeaderFields,
+      },
+      majorQuestions: regeneratedMajorQuestions,
+      // 複製元の日時は引き継がない。保存時に DB が採番した値を
+      // dbToDefinition が載せ直すため、ここでは持たない。
+      createdAt: undefined,
+      updatedAt: undefined,
+    }
+
+    await saveAsbDefinition(duplicated, userId)
+    return newId
+  },
+} satisfies HandlerMap

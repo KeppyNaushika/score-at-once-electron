@@ -35,11 +35,14 @@ export function AnswerSheetExportView({
     const load = async () => {
       const api = window.electronAPI?.answerSheetBuilder
       if (!api) return
-      const result = await api.loadDefinition(definitionId)
-      if (result.success && result.data) {
-        setDefinition(result.data)
-      } else {
-        toast.error(result.error ?? "定義の読み込みに失敗しました")
+      try {
+        setDefinition(await api.loadDefinition(definitionId))
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "定義の読み込みに失敗しました"
+        )
       }
       setIsLoaded(true)
     }

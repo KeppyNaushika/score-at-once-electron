@@ -1,34 +1,21 @@
-import { invoke } from "./invoke"
+import { bind } from "./invoke"
 
 /** 認証・ユーザー管理のIPC API（ログイン・ユーザーCRUD・トークン永続化・パスコード） */
 export function createAuthApi() {
   return {
     // User related
-    fetchUsers: () => invoke("fetch-users"),
-    getCurrentUser: () => invoke("get-current-user"),
+    fetchUsers: bind("fetch-users"),
+    getCurrentUser: bind("get-current-user"),
 
     // User management
-    createUser: (userData: {
-      username: string
-      name: string
-      passcode?: string
-      passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
-    }) => invoke("create-user", userData),
-    updateUser: (
-      userId: string,
-      userData: { username?: string; name?: string }
-    ) => invoke("update-user", userId, userData),
-    updateUserPasscode: (
-      userId: string,
-      passcode?: string,
-      passcodeType?: string
-    ) => invoke("update-user-passcode", userId, passcode, passcodeType),
-    verifyPasscode: (userId: string, passcode: string) =>
-      invoke("verify-passcode", userId, passcode),
+    createUser: bind("create-user"),
+    updateUser: bind("update-user"),
+    updateUserPasscode: bind("update-user-passcode"),
+    verifyPasscode: bind("verify-passcode"),
 
     // Auth token persistence (electron-store)
-    saveAuthToken: (token: string) => invoke("auth:saveToken", token),
-    getAuthToken: () => invoke("auth:getToken"),
-    clearAuthToken: () => invoke("auth:clearToken"),
+    saveAuthToken: bind("auth:saveToken"),
+    getAuthToken: bind("auth:getToken"),
+    clearAuthToken: bind("auth:clearToken"),
   }
 }
