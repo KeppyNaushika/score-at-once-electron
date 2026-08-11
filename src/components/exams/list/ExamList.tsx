@@ -182,7 +182,7 @@ const File = () => {
           exportMode,
         })
 
-        if (result.error === "canceled") {
+        if (result.canceled) {
           // フォルダ選択キャンセル時はtoast表示なし
           return
         }

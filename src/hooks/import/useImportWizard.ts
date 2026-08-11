@@ -50,13 +50,8 @@ export function useImportWizard() {
       }
 
       // 事前照合を実行
-      const preMatchResult = await window.electronAPI.archive.preMatch({
-        archivePath,
-      })
-
-      const fileOverviewData: FileOverviewData | null = preMatchResult.success
-        ? (preMatchResult.data ?? null)
-        : null
+      const fileOverviewData: FileOverviewData =
+        await window.electronAPI.archive.preMatch({ archivePath })
 
       setState((prev) => ({
         ...prev,
@@ -85,15 +80,6 @@ export function useImportWizard() {
     try {
       const result = await window.electronAPI.archive.selectImportFile()
 
-      if (!result.success) {
-        setState((prev) => ({
-          ...prev,
-          isProcessing: false,
-          error: result.error || "ファイル選択に失敗しました",
-        }))
-        return false
-      }
-
       if (result.canceled) {
         setState((prev) => ({ ...prev, isProcessing: false }))
         return false
@@ -104,15 +90,15 @@ export function useImportWizard() {
         setState((prev) => ({
           ...prev,
           isProcessing: false,
-          sourceFormat: result.sourceFormat as "hsz" | "dat",
+          sourceFormat: result.sourceFormat,
           showHszDisclaimer: true,
-          hszOriginalPath: result.filePath!,
+          hszOriginalPath: result.filePath,
         }))
         return true
       }
 
       // .scoreファイルの場合は従来通り解析→事前照合
-      return await analyzeAndPreMatch(result.filePath!)
+      return await analyzeAndPreMatch(result.filePath)
     } catch (error) {
       setState((prev) => ({
         ...prev,
@@ -143,17 +129,6 @@ export function useImportWizard() {
               datPath: hszPath,
             })
           : await window.electronAPI.archive.convertHszToScore({ hszPath })
-
-      if (!convertResult.success || !convertResult.scorePath) {
-        setState((prev) => ({
-          ...prev,
-          isProcessing: false,
-          error:
-            convertResult.error ||
-            `${state.sourceFormat === "dat" ? ".dat" : ".hsz"} ファイルの変換に失敗しました`,
-        }))
-        return false
-      }
 
       setState((prev) => ({
         ...prev,
@@ -194,22 +169,13 @@ export function useImportWizard() {
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
     try {
-      const result = await window.electronAPI.archive.preMatch({
+      const fileOverviewData = await window.electronAPI.archive.preMatch({
         archivePath: state.archivePath,
       })
 
-      if (!result.success) {
-        setState((prev) => ({
-          ...prev,
-          isProcessing: false,
-          error: result.error || "事前照合に失敗しました",
-        }))
-        return false
-      }
-
       setState((prev) => ({
         ...prev,
-        fileOverviewData: result.data ?? null,
+        fileOverviewData,
         isProcessing: false,
       }))
 
@@ -442,17 +408,18 @@ export function useImportWizard() {
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
     try {
-      const result = await window.electronAPI.archive.detectScoringConflicts({
-        archivePath: state.archivePath,
-        preMatchResult: state.fileOverviewData,
-        integrationConfig: state.idIntegrationConfig,
-      })
+      const scoringConflicts =
+        await window.electronAPI.archive.detectScoringConflicts({
+          archivePath: state.archivePath,
+          preMatchResult: state.fileOverviewData,
+          integrationConfig: state.idIntegrationConfig,
+        })
 
-      if (result.success && result.data) {
+      if (scoringConflicts) {
         setState((prev) => ({
           ...prev,
           fileOverviewData: prev.fileOverviewData
-            ? { ...prev.fileOverviewData, scoringConflicts: result.data! }
+            ? { ...prev.fileOverviewData, scoringConflicts }
             : prev.fileOverviewData,
           isProcessing: false,
           currentStep: "update_confirm",
@@ -532,14 +499,6 @@ export function useImportWizard() {
       })
 
       setState((prev) => ({ ...prev, isProcessing: false }))
-
-      if (!result.success) {
-        setState((prev) => ({
-          ...prev,
-          error: result.error || "インポートに失敗しました",
-        }))
-        return null
-      }
 
       return result
     } catch (error) {

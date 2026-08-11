@@ -165,15 +165,18 @@ describe("useImportWizard", () => {
 
       // 完了させる
       await act(async () => {
-        resolveSelect!({ success: true, filePath: "/test.score" })
+        resolveSelect!({
+          canceled: false,
+          filePath: "/test.score",
+          sourceFormat: "score",
+        })
       })
     })
 
     it("IW-15: selectImportFile失敗時にerrorが設定される", async () => {
-      mockArchive.selectImportFile.mockResolvedValue({
-        success: false,
-        error: "ファイルが見つかりません",
-      })
+      mockArchive.selectImportFile.mockRejectedValue(
+        new Error("ファイルが見つかりません")
+      )
 
       const { result } = renderHook(() => useImportWizard())
 
@@ -187,10 +190,7 @@ describe("useImportWizard", () => {
     })
 
     it("IW-16: ファイル選択キャンセル時にステップが変わらない", async () => {
-      mockArchive.selectImportFile.mockResolvedValue({
-        success: true,
-        canceled: true,
-      })
+      mockArchive.selectImportFile.mockResolvedValue({ canceled: true })
 
       const { result } = renderHook(() => useImportWizard())
 
@@ -219,21 +219,19 @@ describe("useImportWizard", () => {
       expect(result.current.state.error).toBe("不正なアーカイブです")
     })
 
-    it("IW-18: preMatch失敗時でもfile_overviewに遷移する", async () => {
-      mockArchive.preMatch.mockResolvedValue({
-        success: false,
-        error: "照合エラー",
-      })
+    it("IW-18: preMatch が失敗したらエラーになり、遷移しない", async () => {
+      mockArchive.preMatch.mockRejectedValue(new Error("照合エラー"))
 
       const { result } = renderHook(() => useImportWizard())
 
       await act(async () => {
         const success = await result.current.selectFile()
-        expect(success).toBe(true)
+        expect(success).toBe(false)
       })
 
-      expect(result.current.state.currentStep).toBe("file_overview")
-      expect(result.current.state.fileOverviewData).toBeNull()
+      // 事前照合はファイル概要の中身そのものなので、失敗したまま進ませない
+      expect(result.current.state.error).toBe("照合エラー")
+      expect(result.current.state.currentStep).toBe("file_select")
     })
 
     it("IW-19: 例外発生時にerrorが設定される", async () => {
@@ -286,7 +284,7 @@ describe("useImportWizard", () => {
           noMatch: [],
         },
       })
-      mockArchive.preMatch.mockResolvedValue({ success: true, data: newData })
+      mockArchive.preMatch.mockResolvedValue(newData)
 
       const { result } = renderHook(() => useImportWizard())
 
@@ -296,7 +294,7 @@ describe("useImportWizard", () => {
       })
 
       // preMatchの返り値を更新
-      mockArchive.preMatch.mockResolvedValue({ success: true, data: newData })
+      mockArchive.preMatch.mockResolvedValue(newData)
 
       await act(async () => {
         const success = await result.current.performPreMatching()
@@ -316,10 +314,7 @@ describe("useImportWizard", () => {
         await result.current.selectFile()
       })
 
-      mockArchive.preMatch.mockResolvedValue({
-        success: false,
-        error: "照合エラー",
-      })
+      mockArchive.preMatch.mockRejectedValue(new Error("照合エラー"))
 
       await act(async () => {
         const success = await result.current.performPreMatching()
@@ -762,7 +757,6 @@ describe("useImportWizard", () => {
       })
 
       expect(importResult).not.toBeNull()
-      expect((importResult as { success: boolean }).success).toBe(true)
       expect((importResult as { examId: string }).examId).toBe(
         "imported-exam-id"
       )
@@ -806,7 +800,9 @@ describe("useImportWizard", () => {
 
     it("IW-78: fileOverviewData未設定時にerrorが設定される", async () => {
       // selectFileでpreMatchが失敗し、fileOverviewDataがnullになるケース
-      mockArchive.preMatch.mockResolvedValue({ success: false })
+      mockArchive.preMatch.mockRejectedValue(
+        new Error("事前照合に失敗しました")
+      )
 
       const { result } = renderHook(() => useImportWizard())
 
@@ -821,7 +817,8 @@ describe("useImportWizard", () => {
       })
 
       expect(importResult).toBeNull()
-      expect(result.current.state.error).toBe("事前照合データがありません")
+      // 事前照合が失敗した時点の文言が残る（実行しても上書きしない）
+      expect(result.current.state.error).toBe("事前照合に失敗しました")
     })
 
     it("IW-79: 実行中にisProcessingがtrueになる", async () => {
@@ -856,10 +853,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-80: idIntegrationImport失敗時にerrorが設定される", async () => {
-      mockArchive.idIntegrationImport.mockResolvedValue({
-        success: false,
-        error: "インポート処理に失敗しました",
-      })
+      mockArchive.idIntegrationImport.mockRejectedValue(
+        new Error("インポート処理に失敗しました")
+      )
 
       const { result } = renderHook(() => useImportWizard())
 
@@ -934,10 +930,7 @@ describe("useImportWizard", () => {
     })
 
     it("IW-86: clearErrorでerrorのみnullになる", async () => {
-      mockArchive.selectImportFile.mockResolvedValue({
-        success: false,
-        error: "テストエラー",
-      })
+      mockArchive.selectImportFile.mockRejectedValue(new Error("テストエラー"))
 
       const { result } = renderHook(() => useImportWizard())
 

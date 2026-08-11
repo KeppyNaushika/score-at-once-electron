@@ -96,7 +96,6 @@ describe("executeBulkExport", () => {
       outputDir
     )
 
-    expect(result.success).toBe(true)
     expect(result.results).toHaveLength(2)
     expect(result.results[0].success).toBe(true)
     expect(result.results[0].examName).toBe("数学テスト")
@@ -131,7 +130,6 @@ describe("executeBulkExport", () => {
     )
 
     // 1つ成功しているのでsuccess=true
-    expect(result.success).toBe(true)
     expect(result.results).toHaveLength(2)
 
     // 最初の試験は失敗
@@ -161,7 +159,6 @@ describe("executeBulkExport", () => {
       outputDir
     )
 
-    expect(result.success).toBe(false)
     expect(result.results).toHaveLength(2)
     expect(result.results.every((exportResult) => !exportResult.success)).toBe(
       true
@@ -186,7 +183,6 @@ describe("executeBulkExport", () => {
       outputDir
     )
 
-    expect(result.success).toBe(true)
     expect(result.results).toHaveLength(1)
     expect(result.results[0].success).toBe(true)
     expect(result.results[0].outputPath).toBeDefined()
@@ -202,7 +198,6 @@ describe("executeBulkExport", () => {
     const result = await executeBulkExport([], "dummy-user-id", outputDir)
 
     // results.some(r => r.success)がfalseを返す（空配列）
-    expect(result.success).toBe(false)
     expect(result.results).toHaveLength(0)
   })
 
@@ -224,7 +219,6 @@ describe("executeBulkExport", () => {
       outputDir
     )
 
-    expect(result.success).toBe(true)
     const outputPath = result.results[0].outputPath!
 
     // 指定ディレクトリ内にある
@@ -254,8 +248,6 @@ describe("executeBulkExport", () => {
       exam.user.id,
       outputDir
     )
-
-    expect(result.success).toBe(true)
 
     // ファイルが存在し、サイズ > 0
     const outputPath = result.results[0].outputPath!

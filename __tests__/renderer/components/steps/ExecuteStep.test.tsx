@@ -131,11 +131,13 @@ describe("ExecuteStep", () => {
   })
 
   it("EX-5: 失敗時にエラーメッセージが表示される", async () => {
+    // 失敗時 executeImport は null を返し、文言は wizard の state.error に載る
     const wizard = createMockWizard()
-    wizard.executeImport = vi.fn().mockResolvedValue({
-      success: false,
+    wizard.executeImport = vi.fn().mockResolvedValue(null)
+    wizard.state = {
+      ...wizard.state,
       error: "インポートに失敗しました: DB接続エラー",
-    })
+    }
     const onClose = vi.fn()
 
     render(<ExecuteStep wizard={wizard} onClose={onClose} />)

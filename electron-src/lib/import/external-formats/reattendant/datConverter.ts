@@ -58,21 +58,12 @@ interface CropRegionData {
   updatedAt: string
 }
 
-interface ConvertDatResult {
-  success: boolean
-  /** 変換後の.scoreファイルパス（一時ディレクトリ内） */
-  scorePath?: string
-  /** 元の試験タイトル */
-  originalTitle?: string
-  error?: string
-}
-
 /**
  * .datファイルを.score形式に変換
  */
 export async function convertDatToScore(
   datPath: string
-): Promise<ConvertDatResult> {
+): Promise<{ scorePath: string; originalTitle: string }> {
   try {
     // 1. .datをZIPとして開く
     const datZip = new AdmZip(datPath)
@@ -83,11 +74,9 @@ export async function convertDatToScore(
       entry.entryName.endsWith("RealtendantAppVersion.txt")
     )
     if (!versionEntry) {
-      return {
-        success: false,
-        error:
-          "リアテンダントのデータファイルではありません（RealtendantAppVersion.txt が見つかりません）",
-      }
+      throw new Error(
+        "リアテンダントのデータファイルではありません（RealtendantAppVersion.txt が見つかりません）"
+      )
     }
 
     // 3. contents.json → image_scale取得
@@ -95,14 +84,14 @@ export async function convertDatToScore(
       entry.entryName.endsWith("contents.json")
     )
     if (!contentsEntry) {
-      return { success: false, error: "contents.json が見つかりません" }
+      throw new Error("contents.json が見つかりません")
     }
     const contentsArray: DatContents[] = JSON.parse(
       contentsEntry.getData().toString("utf8")
     )
     const contents = contentsArray[0]
     if (!contents) {
-      return { success: false, error: "contents.json が空です" }
+      throw new Error("contents.json が空です")
     }
     const imageScale = contents.image_scale || 0.5
 
@@ -111,14 +100,14 @@ export async function convertDatToScore(
       entry.entryName.endsWith("workbooks.json")
     )
     if (!workbooksEntry) {
-      return { success: false, error: "workbooks.json が見つかりません" }
+      throw new Error("workbooks.json が見つかりません")
     }
     const workbooks: DatWorkbook[] = JSON.parse(
       workbooksEntry.getData().toString("utf8")
     )
     const workbook = workbooks[0]
     if (!workbook) {
-      return { success: false, error: "workbooks.json が空です" }
+      throw new Error("workbooks.json が空です")
     }
 
     // 5. .jsファイルを発見し、abcDataをパース
@@ -128,10 +117,7 @@ export async function convertDatToScore(
         !entry.entryName.endsWith("_answer.js")
     )
     if (!jsEntry) {
-      return {
-        success: false,
-        error: "座標データの .js ファイルが見つかりません",
-      }
+      throw new Error("座標データの .js ファイルが見つかりません")
     }
     const jsContent = jsEntry.getData().toString("utf8")
     const jsonStr = jsContent.replace(/^var\s+abcData\s*=\s*/, "")
@@ -139,7 +125,7 @@ export async function convertDatToScore(
     try {
       abcData = JSON.parse(jsonStr)
     } catch {
-      return { success: false, error: "座標データのパースに失敗しました" }
+      throw new Error("座標データのパースに失敗しました")
     }
 
     // 6. workbook_infoes.json → abc_xml（スコア印字エリア情報）
@@ -170,7 +156,7 @@ export async function convertDatToScore(
       )
 
     if (masterImageEntries.length === 0) {
-      return { success: false, error: "模範解答画像が見つかりません" }
+      throw new Error("模範解答画像が見つかりません")
     }
 
     // ページ番号 → 画像サイズ（フルスケール）
@@ -382,19 +368,12 @@ export async function convertDatToScore(
     scoreZip.writeZip(scorePath)
 
     return {
-      success: true,
       scorePath,
       originalTitle: examTitle,
     }
   } catch (error) {
     console.error("Error converting DAT to Score:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : ".dat ファイルの変換に失敗しました",
-    }
+    throw error
   }
 }
 

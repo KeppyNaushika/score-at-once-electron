@@ -63,16 +63,14 @@ import { createEmptyCounts } from "./types"
 
 /** インポート結果 */
 interface IdIntegrationImportResult {
-  success: boolean
-  examId?: string
-  summary?: {
+  examId: string
+  summary: {
     created: ArchiveDataCounts
     updated: ArchiveDataCounts
     skipped: ArchiveDataCounts
     unchanged: ArchiveDataCounts
   }
-  warnings?: string[]
-  error?: string
+  warnings: string[]
 }
 
 /**
@@ -321,18 +319,9 @@ export async function executeIdIntegrationImport(
       target: importedExamName,
     })
 
-    return {
-      success: true,
-      examId: newExamId,
-      summary: counts,
-      warnings: warnings.length > 0 ? warnings : undefined,
-    }
+    return { examId: newExamId, summary: counts, warnings }
   } catch (error) {
     console.error("Error executing ID integration import:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "インポートに失敗しました",
-    }
+    throw error
   }
 }

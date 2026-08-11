@@ -446,12 +446,19 @@ export interface BulkExportExamResult {
 /**
  * 一括エクスポート全体の結果
  */
-export interface BulkExportExamsResult {
-  success: boolean
-  results: BulkExportExamResult[]
-  outputDirectory?: string
-  error?: string
-}
+/**
+ * 一括書き出しの結果。
+ *
+ * 出力先を選ばずに閉じた場合は canceled で返る（失敗ではない）。results の各要素が
+ * 持つ success は試験ごとの結果で、これは payload の一部として残る。
+ */
+export type BulkExportExamsResult =
+  | { canceled: true }
+  | {
+      canceled: false
+      results: BulkExportExamResult[]
+      outputDirectory: string
+    }
 
 /**
  * エクスポートオプション

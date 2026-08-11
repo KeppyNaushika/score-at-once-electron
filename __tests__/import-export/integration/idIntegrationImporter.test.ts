@@ -230,7 +230,6 @@ describe("executeIdIntegrationImport", () => {
       currentUser.id
     )
 
-    expect(result.success).toBe(true)
     expect(result.examId).toBeDefined()
 
     // DBに試験が存在
@@ -281,7 +280,6 @@ describe("executeIdIntegrationImport", () => {
       currentUser.id
     )
 
-    expect(result.success).toBe(true)
     expect(result.summary).toBeDefined()
     expect(result.summary!.created.scores).toBeGreaterThan(0)
   })
@@ -327,7 +325,6 @@ describe("executeIdIntegrationImport", () => {
       currentUser.id
     )
 
-    expect(result.success).toBe(true)
     expect(result.summary!.created.pages).toBeGreaterThan(0)
     expect(result.summary!.created.regions).toBeGreaterThan(0)
     expect(result.summary!.created.scores).toBeGreaterThan(0)
@@ -408,7 +405,6 @@ describe("executeIdIntegrationImport", () => {
       currentUser.id
     )
 
-    expect(result2.success).toBe(true)
     // スコアは既存と同じなので unchanged か existing composite match
     expect(result2.summary!.unchanged.scores).toBeGreaterThanOrEqual(0)
     expect(result2.summary!.created.scores).toBe(0)
@@ -522,7 +518,6 @@ describe("executeIdIntegrationImport", () => {
       createScoringConflictConfig({ strategy: "newer_wins" })
     )
 
-    expect(result2.success).toBe(true)
     // import is newer, so it should be updated
     expect(result2.summary!.updated.scores).toBeGreaterThanOrEqual(0)
   })
@@ -632,7 +627,6 @@ describe("executeIdIntegrationImport", () => {
       createScoringConflictConfig({ strategy: "import_wins" })
     )
 
-    expect(result.success).toBe(true)
     expect(result.summary!.updated.scores).toBeGreaterThanOrEqual(1)
   })
 
@@ -740,7 +734,6 @@ describe("executeIdIntegrationImport", () => {
       createScoringConflictConfig({ strategy: "existing_wins" })
     )
 
-    expect(result.success).toBe(true)
     expect(result.summary!.skipped.scores).toBeGreaterThanOrEqual(1)
 
     // 既存スコアが変更されていないことを確認
@@ -815,14 +808,7 @@ describe("executeIdIntegrationImport", () => {
       },
     })
 
-    const result = await executeIdIntegrationImport(
-      data,
-      preMatch,
-      config,
-      currentUser.id
-    )
-
-    expect(result.success).toBe(true)
+    await executeIdIntegrationImport(data, preMatch, config, currentUser.id)
   })
 
   // II-9: 別PCインポート: by_nameマッチング
@@ -889,14 +875,7 @@ describe("executeIdIntegrationImport", () => {
       },
     })
 
-    const result = await executeIdIntegrationImport(
-      data,
-      preMatch,
-      config,
-      currentUser.id
-    )
-
-    expect(result.success).toBe(true)
+    await executeIdIntegrationImport(data, preMatch, config, currentUser.id)
   })
 
   // II-10: 別PCインポート: create_new決定
@@ -957,7 +936,6 @@ describe("executeIdIntegrationImport", () => {
       currentUser.id
     )
 
-    expect(result.success).toBe(true)
     expect(result.summary!.created.students).toBeGreaterThanOrEqual(0) // studentProcessor creates via separate count
   })
 
@@ -1018,8 +996,6 @@ describe("executeIdIntegrationImport", () => {
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result.success).toBe(true)
 
     const styles = await prisma.examAnswerOverlayStyle.findMany({
       where: { examId: result.examId! },
@@ -1084,14 +1060,12 @@ describe("executeIdIntegrationImport", () => {
       },
     })
 
-    const result = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       data,
       preMatch,
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result.success).toBe(true)
 
     const tags = await prisma.tag.findMany({
       where: { id: tagId },
@@ -1175,14 +1149,12 @@ describe("executeIdIntegrationImport", () => {
       },
     })
 
-    const result = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       data,
       preMatch2,
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result.success).toBe(true)
 
     // 同じregion+studentのスコアが重複していないことを確認
     const scores = await prisma.questionScore.findMany({
@@ -1258,14 +1230,12 @@ describe("executeIdIntegrationImport", () => {
       },
     })
 
-    const result2 = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       data,
       preMatch2,
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result2.success).toBe(true)
 
     // メンバーシップが重複していない
     const memberships = await prisma.studentClassroomMembership.findMany({
@@ -1314,8 +1284,6 @@ describe("executeIdIntegrationImport", () => {
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result.success).toBe(true)
 
     const examClassrooms = await prisma.examClassroom.findMany({
       where: { examId: result.examId! },
@@ -1381,15 +1349,15 @@ describe("executeIdIntegrationImport", () => {
       },
     })
 
-    const result = await executeIdIntegrationImport(
-      data,
-      preMatch,
-      createIdIntegrationConfig(),
-      fakeUserId // 存在しないユーザーIDでFK違反
-    )
-
-    // エラーが返る
-    expect(result.success).toBe(false)
+    // 例外が投げられる（FK違反）
+    await expect(
+      executeIdIntegrationImport(
+        data,
+        preMatch,
+        createIdIntegrationConfig(),
+        fakeUserId // 存在しないユーザーIDでFK違反
+      )
+    ).rejects.toThrow()
 
     // DBが変更されていない（トランザクションがロールバック）
     const afterStudents = await prisma.student.count()
@@ -1472,14 +1440,12 @@ describe("executeIdIntegrationImport", () => {
       },
     ]
 
-    const result = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       data,
       buildNoMatchPreMatch(data, examId),
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result.success).toBe(true)
 
     const configs = await prisma.cropRegionOmrConfig.findMany({
       where: { cropRegionId: regionId },
@@ -1541,14 +1507,12 @@ describe("executeIdIntegrationImport", () => {
       },
     ]
 
-    const result = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       data,
       buildNoMatchPreMatch(data, examId),
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result.success).toBe(true)
 
     const compoundAnswers = await prisma.compoundAnswer.findMany({
       where: { id: compoundAnswerId },
@@ -1589,14 +1553,12 @@ describe("executeIdIntegrationImport", () => {
       },
     ]
 
-    const result = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       data,
       buildNoMatchPreMatch(data, examId),
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result.success).toBe(true)
 
     const decisions = await prisma.scoreDecision.findMany({
       where: { cropRegionId: regionId, examStudent: { studentId } },
@@ -1633,8 +1595,6 @@ describe("executeIdIntegrationImport", () => {
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result.success).toBe(true)
 
     const assignments = await prisma.cropRegionAssignment.findMany({
       where: { cropRegionId: regionId },
@@ -1698,14 +1658,13 @@ describe("executeIdIntegrationImport", () => {
       },
     })
 
-    const second = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       data,
       rematch,
       createIdIntegrationConfig(),
       currentUser.id
     )
 
-    expect(second.success).toBe(true)
     const assignments = await prisma.cropRegionAssignment.findMany({
       where: { cropRegionId: regionId },
     })
@@ -1781,14 +1740,12 @@ describe("executeIdIntegrationImport", () => {
       },
     })
 
-    const result2 = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       data,
       preMatch2,
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result2.success).toBe(true)
 
     // 確定は1件のまま（重複なし）、新しい方が採用される
     const decisions = await prisma.scoreDecision.findMany({
@@ -1866,14 +1823,12 @@ describe("executeIdIntegrationImport", () => {
       },
     })
 
-    const result2 = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       data,
       preMatch2,
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result2.success).toBe(true)
 
     const decisions = await prisma.scoreDecision.findMany({
       where: { cropRegionId: regionId, examStudent: { studentId } },
@@ -1984,14 +1939,12 @@ describe("executeIdIntegrationImport", () => {
       },
     ]
 
-    const result = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       data,
       buildNoMatchPreMatch(data, examId),
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result.success).toBe(true)
 
     // 全6モデルが復元されていること
     expect(
@@ -2071,8 +2024,6 @@ describe("executeIdIntegrationImport", () => {
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result.success).toBe(true)
 
     // アーカイブに在るものは作る。削除記録による復活防止は行わない
     expect(

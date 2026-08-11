@@ -3,7 +3,7 @@
  */
 
 import AdmZip from "adm-zip"
-import { dialog, ipcMain } from "electron"
+import { dialog } from "electron"
 import * as path from "path"
 
 import type {
@@ -28,7 +28,7 @@ import { executeIdIntegrationImport } from "../lib/import/merge/idIntegrationImp
 import { performPreMatching } from "../lib/import/merge/matcher"
 import { detectScoringConflictsWithUserDecisions } from "../lib/import/merge/scoringConflictDetector"
 import { getExamById } from "../lib/prisma/exam"
-import { registerSafeHandler } from "./ipcHandlerUtils"
+import { registerHandler } from "./ipcHandlerUtils"
 
 /**
  * 一括エクスポートのコアロジック
@@ -40,7 +40,7 @@ export async function executeBulkExport(
   userId: string,
   outputDirectory: string,
   exportMode?: ArchiveExportMode
-): Promise<BulkExportExamsResult> {
+): Promise<{ results: BulkExportExamResult[]; outputDirectory: string }> {
   const results: BulkExportExamResult[] = []
 
   // 順次処理（SQLite同時書き込み制限のため）
@@ -85,11 +85,7 @@ export async function executeBulkExport(
     }
   }
 
-  return {
-    success: results.some((result) => result.success),
-    results,
-    outputDirectory,
-  }
+  return { results, outputDirectory }
 }
 
 /**
@@ -97,7 +93,7 @@ export async function executeBulkExport(
  */
 export function registerArchiveHandlers(): void {
   // エクスポート
-  registerSafeHandler(
+  registerHandler(
     "archive:exportExam",
     async (options: {
       examId: string
@@ -106,123 +102,104 @@ export function registerArchiveHandlers(): void {
       exportMode?: ArchiveExportMode
     }) => {
       return await exportExam(options)
-    },
-    "エクスポートに失敗しました"
+    }
   )
 
   // インポートファイル選択ダイアログ
-  registerSafeHandler(
-    "archive:selectImportFile",
-    async () => {
-      const result = await dialog.showOpenDialog({
-        title: "試験をインポート",
-        filters: [
-          {
-            name: "対応ファイル (.score, .hsz, .dat)",
-            extensions: ["score", "hsz", "dat"],
-          },
-          {
-            name: "一括採点試験データ (.score)",
-            extensions: ["score"],
-          },
-          {
-            name: "百問繚乱™データ（採点情報のみ）(.hsz)",
-            extensions: ["hsz"],
-          },
-          {
-            name: "リアテンダント™データ（採点情報のみ）(.dat)",
-            extensions: ["dat"],
-          },
-          { name: "すべてのファイル", extensions: ["*"] },
-        ],
-        properties: ["openFile"],
-      })
+  registerHandler("archive:selectImportFile", async () => {
+    const result = await dialog.showOpenDialog({
+      title: "試験をインポート",
+      filters: [
+        {
+          name: "対応ファイル (.score, .hsz, .dat)",
+          extensions: ["score", "hsz", "dat"],
+        },
+        {
+          name: "一括採点試験データ (.score)",
+          extensions: ["score"],
+        },
+        {
+          name: "百問繚乱™データ（採点情報のみ）(.hsz)",
+          extensions: ["hsz"],
+        },
+        {
+          name: "リアテンダント™データ（採点情報のみ）(.dat)",
+          extensions: ["dat"],
+        },
+        { name: "すべてのファイル", extensions: ["*"] },
+      ],
+      properties: ["openFile"],
+    })
 
-      if (result.canceled || result.filePaths.length === 0) {
-        return { success: true, canceled: true }
-      }
+    // 選ばずに閉じたのは失敗ではない
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true as const }
+    }
 
-      const filePath = result.filePaths[0]
-      const ext = path.extname(filePath).toLowerCase()
+    const filePath = result.filePaths[0]
+    const ext = path.extname(filePath).toLowerCase()
 
-      // .datファイルはリアテンダント形式かどうかをZIP内のファイルで判定
-      let sourceFormat: "score" | "hsz" | "dat" =
-        ext === ".hsz" ? "hsz" : "score"
+    // .datファイルはリアテンダント形式かどうかをZIP内のファイルで判定
+    let sourceFormat: "score" | "hsz" | "dat" = ext === ".hsz" ? "hsz" : "score"
 
-      if (ext === ".dat") {
-        try {
-          const zip = new AdmZip(filePath)
-          const hasVersion = zip
-            .getEntries()
-            .some((entry) =>
-              entry.entryName.endsWith("RealtendantAppVersion.txt")
-            )
-          if (hasVersion) {
-            sourceFormat = "dat"
-          }
-        } catch {
-          // ZIPとして開けない場合は.score扱い（後段でエラーになる）
+    if (ext === ".dat") {
+      try {
+        const zip = new AdmZip(filePath)
+        const hasVersion = zip
+          .getEntries()
+          .some((entry) =>
+            entry.entryName.endsWith("RealtendantAppVersion.txt")
+          )
+        if (hasVersion) {
+          sourceFormat = "dat"
         }
+      } catch {
+        // ZIPとして開けない場合は.score扱い（後段でエラーになる）
       }
+    }
 
-      return { success: true, filePath, sourceFormat }
-    },
-    "ダイアログ表示に失敗しました"
-  )
+    return { canceled: false as const, filePath, sourceFormat }
+  })
 
   // .hsz → .score 変換
-  registerSafeHandler(
+  registerHandler(
     "archive:convertHszToScore",
     async (options: { hszPath: string }) => {
       return await convertHszToScore(options.hszPath)
-    },
-    ".hsz ファイルの変換に失敗しました"
+    }
   )
 
   // .dat → .score 変換
-  registerSafeHandler(
+  registerHandler(
     "archive:convertDatToScore",
     async (options: { datPath: string }) => {
       return await convertDatToScore(options.datPath)
-    },
-    ".dat ファイルの変換に失敗しました"
+    }
   )
 
   // アーカイブ解析（プレビュー用）
-  registerSafeHandler(
+  registerHandler(
     "archive:analyzeArchive",
     async (options: { archivePath: string }) => {
       return await analyzeArchive(options)
-    },
-    "アーカイブ解析に失敗しました"
+    }
   )
 
   // 事前照合（Step 2: ファイル概要表示用）
-  // NOTE: Uses finally block for tempDir cleanup, kept as manual ipcMain.handle
-  ipcMain.handle(
+  registerHandler(
     "archive:preMatch",
-    async (_event, options: { archivePath: string }) => {
+    async (options: { archivePath: string }) => {
       let tempDir: string | null = null
 
       try {
         // アーカイブを展開
         const extractResult = await extractArchive(options.archivePath)
         if (!extractResult.success || !extractResult.data) {
-          return { success: false, error: extractResult.error }
+          throw new Error(extractResult.error ?? "アーカイブを展開できません")
         }
         tempDir = extractResult.data.tempDir
 
-        // 事前照合を実行
-        const fileOverviewData = await performPreMatching(extractResult.data)
-
-        return { success: true, data: fileOverviewData }
-      } catch (error) {
-        console.error("Error in IPC handler [archive:preMatch]:", error)
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : "事前照合に失敗しました",
-        }
+        return await performPreMatching(extractResult.data)
       } finally {
         if (tempDir) {
           cleanupTempDir(tempDir)
@@ -232,47 +209,29 @@ export function registerArchiveHandlers(): void {
   )
 
   // 採点競合検出（ユーザーの判断に基づく）
-  // NOTE: Uses finally block for tempDir cleanup, kept as manual ipcMain.handle
-  ipcMain.handle(
+  registerHandler(
     "archive:detectScoringConflicts",
-    async (
-      _event,
-      options: {
-        archivePath: string
-        preMatchResult: FileOverviewData
-        integrationConfig: IdIntegrationConfig
-      }
-    ) => {
+    async (options: {
+      archivePath: string
+      preMatchResult: FileOverviewData
+      integrationConfig: IdIntegrationConfig
+    }) => {
       let tempDir: string | null = null
 
       try {
         // アーカイブを展開
         const extractResult = await extractArchive(options.archivePath)
         if (!extractResult.success || !extractResult.data) {
-          return { success: false, error: extractResult.error }
+          throw new Error(extractResult.error ?? "アーカイブを展開できません")
         }
         tempDir = extractResult.data.tempDir
 
         // 採点競合を検出
-        const scoringConflicts = await detectScoringConflictsWithUserDecisions(
+        return await detectScoringConflictsWithUserDecisions(
           extractResult.data,
           options.preMatchResult,
           options.integrationConfig
         )
-
-        return { success: true, data: scoringConflicts }
-      } catch (error) {
-        console.error(
-          "Error in IPC handler [archive:detectScoringConflicts]:",
-          error
-        )
-        return {
-          success: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "採点競合の検出に失敗しました",
-        }
       } finally {
         if (tempDir) {
           cleanupTempDir(tempDir)
@@ -282,32 +241,28 @@ export function registerArchiveHandlers(): void {
   )
 
   // ID統合インポート（新しいフロー）
-  // NOTE: Uses finally block for tempDir cleanup, kept as manual ipcMain.handle
-  ipcMain.handle(
+  registerHandler(
     "archive:idIntegrationImport",
-    async (
-      _event,
-      options: {
-        archivePath: string
-        preMatchResult: FileOverviewData
-        integrationConfig: IdIntegrationConfig
-        currentUserId: string
-        scoringConflictConfig?: ScoringConflictConfig
-        updateDecisions?: UpdateDecisions
-      }
-    ) => {
+    async (options: {
+      archivePath: string
+      preMatchResult: FileOverviewData
+      integrationConfig: IdIntegrationConfig
+      currentUserId: string
+      scoringConflictConfig?: ScoringConflictConfig
+      updateDecisions?: UpdateDecisions
+    }) => {
       let tempDir: string | null = null
 
       try {
         // アーカイブを展開
         const extractResult = await extractArchive(options.archivePath)
         if (!extractResult.success || !extractResult.data) {
-          return { success: false, error: extractResult.error }
+          throw new Error(extractResult.error ?? "アーカイブを展開できません")
         }
         tempDir = extractResult.data.tempDir
 
         // ID統合インポートを実行
-        const result = await executeIdIntegrationImport(
+        return await executeIdIntegrationImport(
           extractResult.data,
           options.preMatchResult,
           options.integrationConfig,
@@ -315,18 +270,6 @@ export function registerArchiveHandlers(): void {
           options.scoringConflictConfig,
           options.updateDecisions
         )
-
-        return result
-      } catch (error) {
-        console.error(
-          "Error in IPC handler [archive:idIntegrationImport]:",
-          error
-        )
-        return {
-          success: false,
-          error:
-            error instanceof Error ? error.message : "インポートに失敗しました",
-        }
       } finally {
         if (tempDir) {
           cleanupTempDir(tempDir)
@@ -336,7 +279,7 @@ export function registerArchiveHandlers(): void {
   )
 
   // 一括エクスポート
-  registerSafeHandler(
+  registerHandler(
     "archive:bulkExportExams",
     async (options: {
       examIds: string[]
@@ -349,17 +292,20 @@ export function registerArchiveHandlers(): void {
         properties: ["openDirectory", "createDirectory"],
       })
 
+      // 出力先を選ばずに閉じたのは失敗ではない
       if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
-        return { success: false, results: [], error: "canceled" }
+        return { canceled: true as const }
       }
 
-      return await executeBulkExport(
-        options.examIds,
-        options.userId,
-        dialogResult.filePaths[0],
-        options.exportMode
-      )
-    },
-    "一括エクスポートに失敗しました"
+      return {
+        canceled: false as const,
+        ...(await executeBulkExport(
+          options.examIds,
+          options.userId,
+          dialogResult.filePaths[0],
+          options.exportMode
+        )),
+      }
+    }
   )
 }

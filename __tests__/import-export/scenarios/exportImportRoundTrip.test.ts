@@ -95,7 +95,6 @@ describe("exportImportRoundTrip", () => {
       testExam.exam.id,
       testExam.user.id
     )
-    expect(exportResult.success).toBe(true)
 
     // 3. アーカイブ作成
     const archivePath = path.join(tmpDir, "export.score")
@@ -114,7 +113,6 @@ describe("exportImportRoundTrip", () => {
 
     // 6. アーカイブ抽出
     const extractResult = await extractArchive(archivePath)
-    expect(extractResult.success).toBe(true)
 
     // 7. プレマッチング（クリーンDBなので全てnoMatch）
     const preMatch = await performPreMatching(extractResult.data!)
@@ -127,7 +125,6 @@ describe("exportImportRoundTrip", () => {
       importUser.id
     )
 
-    expect(importResult.success).toBe(true)
     expect(importResult.examId).toBeDefined()
 
     // 9. データ検証
@@ -162,7 +159,6 @@ describe("exportImportRoundTrip", () => {
       testExam.exam.id,
       testExam.user.id
     )
-    expect(exportResult.success).toBe(true)
 
     const archivePath = path.join(tmpDir, "merge.score")
     createTestArchive(
@@ -174,7 +170,6 @@ describe("exportImportRoundTrip", () => {
 
     // アーカイブ抽出
     const extractResult = await extractArchive(archivePath)
-    expect(extractResult.success).toBe(true)
 
     // プレマッチング（同一DBなので全てID一致）
     const preMatch = await performPreMatching(extractResult.data!)
@@ -188,7 +183,6 @@ describe("exportImportRoundTrip", () => {
       testExam.user.id
     )
 
-    expect(importResult.success).toBe(true)
     expect(importResult.examId).toBe(testExam.exam.id)
 
     // 試験が重複していないことを確認
@@ -231,13 +225,12 @@ describe("exportImportRoundTrip", () => {
 
     const extractResult = await extractArchive(archivePath)
     const preMatch = await performPreMatching(extractResult.data!)
-    const importResult = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       extractResult.data!,
       preMatch,
       createIdIntegrationConfig(),
       testExam.user.id
     )
-    expect(importResult.success).toBe(true)
 
     const restored = await prisma.examPage.findUnique({
       where: { id: testExam.pages[0].id },
@@ -260,7 +253,6 @@ describe("exportImportRoundTrip", () => {
       testExam.exam.id,
       testExam.user.id
     )
-    expect(exportResult.success).toBe(true)
 
     const archivePath = path.join(tmpDir, "other-user.score")
     createTestArchive(
@@ -272,7 +264,6 @@ describe("exportImportRoundTrip", () => {
 
     // アーカイブ抽出
     const extractResult = await extractArchive(archivePath)
-    expect(extractResult.success).toBe(true)
 
     // 別ユーザー作成
     const otherUser = await createTestUser({
@@ -289,8 +280,6 @@ describe("exportImportRoundTrip", () => {
       createIdIntegrationConfig(),
       otherUser.id
     )
-
-    expect(importResult.success).toBe(true)
 
     // 新ユーザーのUserExamが作成されている
     const userExam = await prisma.userExam.findFirst({
@@ -319,7 +308,6 @@ describe("exportImportRoundTrip", () => {
       testExam.user.id
     )
 
-    expect(exportResult.success).toBe(true)
     expect(exportResult.data!.masterImagePaths.length).toBeGreaterThan(0)
     expect(exportResult.data!.answerSheetPaths.length).toBeGreaterThan(0)
   })
@@ -338,7 +326,6 @@ describe("exportImportRoundTrip", () => {
       testExam.exam.id,
       testExam.user.id
     )
-    expect(exportResult.success).toBe(true)
 
     // v1.4.0データが含まれている
     const data = exportResult.data!
@@ -360,7 +347,6 @@ describe("exportImportRoundTrip", () => {
     const importUser = await createTestUser()
 
     const extractResult = await extractArchive(archivePath)
-    expect(extractResult.success).toBe(true)
 
     const preMatch = await performPreMatching(extractResult.data!)
 
@@ -370,8 +356,6 @@ describe("exportImportRoundTrip", () => {
       createIdIntegrationConfig(),
       importUser.id
     )
-
-    expect(importResult.success).toBe(true)
 
     // v1.4.0データが正しくインポートされた
     const styles = await prisma.examAnswerOverlayStyle.findMany({

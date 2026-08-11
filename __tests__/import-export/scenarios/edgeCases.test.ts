@@ -94,7 +94,6 @@ describe("edgeCases", () => {
       currentUser.id
     )
 
-    expect(result.success).toBe(true)
     expect(result.examId).toBeDefined()
 
     const exam = await prisma.exam.findUnique({
@@ -160,8 +159,6 @@ describe("edgeCases", () => {
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result.success).toBe(true)
 
     const dbStudentCount = await prisma.examStudent.count({
       where: { examId: result.examId! },
@@ -236,8 +233,6 @@ describe("edgeCases", () => {
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result.success).toBe(true)
 
     const scores = await prisma.questionScore.findMany({
       where: {
@@ -346,8 +341,6 @@ describe("edgeCases", () => {
       currentUser.id
     )
 
-    expect(result.success).toBe(true)
-
     const annotations = await prisma.drawingAnnotation.findMany({
       where: {
         questionScore: {
@@ -425,8 +418,6 @@ describe("edgeCases", () => {
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result.success).toBe(true)
 
     const cropSubtotals = await prisma.cropSubtotal.findMany({
       where: { cropRegion: { examPage: { examId: result.examId! } } },
@@ -536,13 +527,12 @@ describe("edgeCases", () => {
       },
     })
 
-    const result1 = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       data,
       preMatch1,
       createIdIntegrationConfig(),
       currentUser.id
     )
-    expect(result1.success).toBe(true)
 
     // 2回目インポート（同一データ）
     const preMatch2 = createFileOverviewData({
@@ -569,14 +559,12 @@ describe("edgeCases", () => {
       },
     })
 
-    const result2 = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       data,
       preMatch2,
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result2.success).toBe(true)
 
     // データが重複していないことを確認
     const studentCount = await prisma.student.count({
@@ -618,14 +606,12 @@ describe("edgeCases", () => {
 
     // 古いバージョンでもインポート自体は成功する
     // (バージョン変換はarchiveExtractorの後、importerの前で行われる)
-    const result = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       data,
       preMatch,
       createIdIntegrationConfig(),
       currentUser.id
     )
-
-    expect(result.success).toBe(true)
   })
 
   // EC-8: 手動解決(manual)の採点競合
@@ -799,15 +785,13 @@ describe("edgeCases", () => {
       },
     })
 
-    const result = await executeIdIntegrationImport(
+    await executeIdIntegrationImport(
       data,
       preMatch,
       createIdIntegrationConfig(),
       currentUser.id,
       conflictConfig
     )
-
-    expect(result.success).toBe(true)
 
     // 既存スコアが保持されている
     const score = await prisma.questionScore.findUnique({

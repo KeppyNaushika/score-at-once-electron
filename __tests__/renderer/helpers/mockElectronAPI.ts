@@ -28,23 +28,19 @@ export interface MockArchive {
 export function createMockElectronAPI() {
   const mockArchive: MockArchive = {
     selectImportFile: vi.fn().mockResolvedValue({
-      success: true,
+      canceled: false,
       filePath: "/path/to/test.score",
+      sourceFormat: "score",
     }),
     analyzeArchive: vi.fn().mockResolvedValue({
       success: true,
       manifest: createMockManifest(),
     }),
-    preMatch: vi.fn().mockResolvedValue({
-      success: true,
-      data: createMockFileOverviewData(),
-    }),
-    detectScoringConflicts: vi.fn().mockResolvedValue({
-      success: true,
-      data: createMockScoringConflictData(),
-    }),
+    preMatch: vi.fn().mockResolvedValue(createMockFileOverviewData()),
+    detectScoringConflicts: vi
+      .fn()
+      .mockResolvedValue(createMockScoringConflictData()),
     idIntegrationImport: vi.fn().mockResolvedValue({
-      success: true,
       examId: "imported-exam-id",
       summary: createMockImportSummary(),
       warnings: [],
@@ -58,10 +54,10 @@ export function createMockElectronAPI() {
   const mockElectronAPI = {
     archive: mockArchive,
     // AuthContext が使用するメソッド
-    getAuthToken: vi.fn().mockResolvedValue({ success: true, token: null }),
+    getAuthToken: vi.fn().mockResolvedValue(null),
     fetchUsers: vi.fn().mockResolvedValue([]),
-    clearAuthToken: vi.fn().mockResolvedValue({ success: true }),
-    saveAuthToken: vi.fn().mockResolvedValue({ success: true }),
+    clearAuthToken: vi.fn().mockResolvedValue(undefined),
+    saveAuthToken: vi.fn().mockResolvedValue(undefined),
   }
 
   Object.defineProperty(window, "electronAPI", {

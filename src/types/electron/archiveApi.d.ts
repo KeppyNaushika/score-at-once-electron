@@ -50,11 +50,7 @@ export interface ArchiveAPI {
     /**
      * 事前照合を実行（Step 2: ファイル概要表示用）
      */
-    preMatch: (options: { archivePath: string }) => Promise<{
-      success: boolean
-      data?: FileOverviewData
-      error?: string
-    }>
+    preMatch: (options: { archivePath: string }) => Promise<FileOverviewData>
 
     /**
      * ID統合インポートを実行（新しいフロー）
@@ -67,16 +63,14 @@ export interface ArchiveAPI {
       scoringConflictConfig?: ScoringConflictConfig
       updateDecisions?: UpdateDecisions
     }) => Promise<{
-      success: boolean
-      examId?: string
-      summary?: {
+      examId: string
+      summary: {
         created: ArchiveDataCounts
         updated: ArchiveDataCounts
         skipped: ArchiveDataCounts
         unchanged: ArchiveDataCounts
       }
-      warnings?: string[]
-      error?: string
+      warnings: string[]
     }>
 
     /**
@@ -86,11 +80,7 @@ export interface ArchiveAPI {
       archivePath: string
       preMatchResult: FileOverviewData
       integrationConfig: IdIntegrationConfig
-    }) => Promise<{
-      success: boolean
-      data?: ScoringConflictData
-      error?: string
-    }>
+    }) => Promise<ScoringConflictData>
 
     /**
      * 複数試験を一括エクスポート
@@ -102,34 +92,30 @@ export interface ArchiveAPI {
     /**
      * インポートファイル選択ダイアログ
      */
-    selectImportFile: () => Promise<{
-      success: boolean
-      filePath?: string
-      canceled?: boolean
-      /** ファイルの元形式 */
-      sourceFormat?: "score" | "hsz" | "dat"
-      error?: string
-    }>
+    /** 選ばずに閉じた場合は canceled で返る（失敗ではない） */
+    selectImportFile: () => Promise<
+      | { canceled: true }
+      | {
+          canceled: false
+          filePath: string
+          /** ファイルの元形式 */
+          sourceFormat: "score" | "hsz" | "dat"
+        }
+    >
 
     /**
      * .hszファイルを.score形式に変換
      */
-    convertHszToScore: (options: { hszPath: string }) => Promise<{
-      success: boolean
-      scorePath?: string
-      originalTitle?: string
-      error?: string
-    }>
+    convertHszToScore: (options: {
+      hszPath: string
+    }) => Promise<{ scorePath: string; originalTitle: string }>
 
     /**
      * .datファイル（リアテンダント）を.score形式に変換
      */
-    convertDatToScore: (options: { datPath: string }) => Promise<{
-      success: boolean
-      scorePath?: string
-      originalTitle?: string
-      error?: string
-    }>
+    convertDatToScore: (options: {
+      datPath: string
+    }) => Promise<{ scorePath: string; originalTitle: string }>
   }
 
   // =============================================================================
@@ -146,30 +132,24 @@ export interface ArchiveAPI {
     /**
      * .studentsファイル選択ダイアログ
      */
-    selectImportFile: () => Promise<{
-      success: boolean
-      filePath?: string
-      canceled?: boolean
-      error?: string
-    }>
+    /** 選ばずに閉じた場合は canceled で返る（失敗ではない） */
+    selectImportFile: () => Promise<
+      { canceled: true } | { canceled: false; filePath: string }
+    >
 
     /**
      * アーカイブ解析（マニフェスト読み取り）
      */
-    analyzeArchive: (options: { archivePath: string }) => Promise<{
-      success: boolean
-      manifest?: StudentArchiveManifest
-      error?: string
-    }>
+    analyzeArchive: (options: {
+      archivePath: string
+    }) => Promise<StudentArchiveManifest>
 
     /**
      * 事前照合を実行
      */
-    preMatch: (options: { archivePath: string }) => Promise<{
-      success: boolean
-      data?: StudentArchiveFileOverviewData
-      error?: string
-    }>
+    preMatch: (options: {
+      archivePath: string
+    }) => Promise<StudentArchiveFileOverviewData>
 
     /**
      * インポートを実行

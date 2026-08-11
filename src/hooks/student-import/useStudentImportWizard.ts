@@ -38,47 +38,26 @@ export function useStudentImportWizard() {
     try {
       const result = await window.electronAPI.studentArchive.selectImportFile()
 
-      if (!result.success) {
-        setState((prev) => ({
-          ...prev,
-          isProcessing: false,
-          error: result.error || "ファイル選択に失敗しました",
-        }))
-        return false
-      }
-
       if (result.canceled) {
         setState((prev) => ({ ...prev, isProcessing: false }))
         return false
       }
 
-      const archivePath = result.filePath!
+      const archivePath = result.filePath
 
       // アーカイブ解析
-      const analyzeResult =
-        await window.electronAPI.studentArchive.analyzeArchive({ archivePath })
-
-      if (!analyzeResult.success) {
-        setState((prev) => ({
-          ...prev,
-          isProcessing: false,
-          error: analyzeResult.error || "アーカイブの解析に失敗しました",
-        }))
-        return false
-      }
-
-      // 事前照合
-      const preMatchResult = await window.electronAPI.studentArchive.preMatch({
+      const manifest = await window.electronAPI.studentArchive.analyzeArchive({
         archivePath,
       })
 
-      const fileOverviewData: StudentArchiveFileOverviewData | null =
-        preMatchResult.success ? (preMatchResult.data ?? null) : null
+      // 事前照合
+      const fileOverviewData: StudentArchiveFileOverviewData =
+        await window.electronAPI.studentArchive.preMatch({ archivePath })
 
       setState((prev) => ({
         ...prev,
         archivePath,
-        manifest: analyzeResult.manifest!,
+        manifest,
         fileOverviewData,
         isProcessing: false,
         currentStep: "file_overview",

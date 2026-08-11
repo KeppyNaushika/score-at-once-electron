@@ -17,16 +17,14 @@ import type { ArchiveDataCounts } from "@/types/examArchive.types"
 
 /** idIntegrationImport の戻り値の型 */
 interface IdIntegrationImportResult {
-  success: boolean
-  examId?: string
-  summary?: {
+  examId: string
+  summary: {
     created: ArchiveDataCounts
     updated: ArchiveDataCounts
     skipped: ArchiveDataCounts
     unchanged: ArchiveDataCounts
   }
-  warnings?: string[]
-  error?: string
+  warnings: string[]
 }
 
 interface ExecuteStepProps {
@@ -36,7 +34,7 @@ interface ExecuteStepProps {
 }
 
 export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
-  const { executeImport } = wizard
+  const { executeImport, state } = wizard
   const [result, setResult] = useState<IdIntegrationImportResult | null>(null)
   const [isExecuting, setIsExecuting] = useState(false)
   const hasStarted = useRef(false)
@@ -59,7 +57,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
   }, [executeImport])
 
   const handleComplete = () => {
-    if (result?.success && result.examId && onComplete) {
+    if (result && onComplete) {
       onComplete(result.examId)
     }
     onClose()
@@ -83,8 +81,8 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
     )
   }
 
-  // 完了（成功）
-  if (result?.success) {
+  // 完了（成功）。失敗は例外で上がるので result は成功時のみ入る
+  if (result) {
     return (
       <div className="flex h-full flex-col items-center justify-center py-8">
         <div className="mb-8 text-center">
@@ -186,7 +184,9 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
           <XCircle className="h-10 w-10 text-destructive" />
         </div>
         <h3 className="mb-2 text-xl font-semibold">インポートに失敗しました</h3>
-        <p className="max-w-md text-destructive">{result?.error}</p>
+        <p className="max-w-md text-destructive">
+          {state.error ?? "詳細は不明です"}
+        </p>
       </div>
 
       <Button onClick={onClose} variant="outline" size="lg">

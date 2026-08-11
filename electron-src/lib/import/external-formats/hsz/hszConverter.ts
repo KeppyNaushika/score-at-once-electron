@@ -26,21 +26,12 @@ import { EXAM_CURRENT_VERSION } from "../../../../../src/types/examArchive.types
 import type { HszDbInfo, HszSheetField } from "./types"
 import { HSZ_KIND_TO_CROP_TYPE, HSZ_SKIP_KINDS, HSZ_SUBJECT_MAP } from "./types"
 
-interface ConvertHszResult {
-  success: boolean
-  /** 変換後の.scoreファイルパス（一時ディレクトリ内） */
-  scorePath?: string
-  /** 元の試験タイトル */
-  originalTitle?: string
-  error?: string
-}
-
 /**
  * .hszファイルを.score形式に変換
  */
 export async function convertHszToScore(
   hszPath: string
-): Promise<ConvertHszResult> {
+): Promise<{ scorePath: string; originalTitle: string }> {
   try {
     // 1. .hszをZIPとして開く
     const hszZip = new AdmZip(hszPath)
@@ -51,7 +42,7 @@ export async function convertHszToScore(
       (entry) => entry.entryName === "db_info.json"
     )
     if (!dbInfoEntry) {
-      return { success: false, error: "db_info.json が見つかりません" }
+      throw new Error("db_info.json が見つかりません")
     }
 
     const dbInfo: HszDbInfo = JSON.parse(dbInfoEntry.getData().toString("utf8"))
@@ -230,19 +221,12 @@ export async function convertHszToScore(
     scoreZip.writeZip(scorePath)
 
     return {
-      success: true,
       scorePath,
       originalTitle: sheets.title_name,
     }
   } catch (error) {
     console.error("Error converting HSZ to Score:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : ".hsz ファイルの変換に失敗しました",
-    }
+    throw error
   }
 }
 
