@@ -1,5 +1,7 @@
 import { ipcRenderer } from "electron"
 
+import { invoke } from "./invoke"
+
 /** OMR（光学マーク認識）のIPC API（一括認識・マスターマーカー検出・画像補正・OMR設定） */
 export function createOmrApi() {
   return {
@@ -21,20 +23,14 @@ export function createOmrApi() {
         ]
         params: { colorThreshold: number; areaThreshold: number }
         pageIndex?: number
-      }) => ipcRenderer.invoke("omr:batch-recognize", args),
+      }) => invoke("omr:batch-recognize", args),
       detectMasterMarkers: (examId: string, colorThreshold?: number) =>
-        ipcRenderer.invoke("omr:detect-master-markers", examId, colorThreshold),
+        invoke("omr:detect-master-markers", examId, colorThreshold),
       correctImage: (
         examPageId: string,
         buffer: Uint8Array,
         colorThreshold?: number
-      ) =>
-        ipcRenderer.invoke(
-          "omr:correct-image",
-          examPageId,
-          buffer,
-          colorThreshold
-        ),
+      ) => invoke("omr:correct-image", examPageId, buffer, colorThreshold),
       onBatchProgress: (
         callback: (progress: {
           total: number
@@ -72,11 +68,10 @@ export function createOmrApi() {
           normalizedWidth?: number | null
           normalizedHeight?: number | null
         }>
-      }) => ipcRenderer.invoke("omr-config:upsert", data),
+      }) => invoke("omr-config:upsert", data),
       delete: (cropRegionId: string) =>
-        ipcRenderer.invoke("omr-config:delete", cropRegionId),
-      getByExam: (examId: string) =>
-        ipcRenderer.invoke("omr-config:get-by-exam", examId),
+        invoke("omr-config:delete", cropRegionId),
+      getByExam: (examId: string) => invoke("omr-config:get-by-exam", examId),
     },
   }
 }

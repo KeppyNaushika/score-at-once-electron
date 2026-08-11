@@ -1,4 +1,4 @@
-import { ipcRenderer } from "electron"
+import { invoke } from "./invoke"
 
 /** 答案用紙のIPC API（アップロード・一覧取得・削除・配置管理） */
 export function createAnswerSheetApi() {
@@ -15,15 +15,15 @@ export function createAnswerSheetApi() {
         overwrite?: boolean
         correctWithMarkers?: boolean
       }[]
-    ) => ipcRenderer.invoke("upload-answer-sheets", examId, filesData),
+    ) => invoke("upload-answer-sheets", examId, filesData),
     getStudentAnswersByExamId: (examId: string) =>
-      ipcRenderer.invoke("get-answer-sheets-by-exam-id", examId),
+      invoke("get-answer-sheets-by-exam-id", examId),
     getStudentAnswersDataset: (examId: string) =>
-      ipcRenderer.invoke("get-student-answers-dataset", examId),
+      invoke("get-student-answers-dataset", examId),
     getStudentAnswerScoreSummary: (answerSheetId: string) =>
-      ipcRenderer.invoke("get-answer-sheet-score-summary", answerSheetId),
+      invoke("get-answer-sheet-score-summary", answerSheetId),
     deleteStudentAnswer: (answerSheetId: string) =>
-      ipcRenderer.invoke("delete-answer-sheet", answerSheetId),
+      invoke("delete-answer-sheet", answerSheetId),
     applyStudentAnswerPlacements: (
       moves: Array<{
         fileId: string
@@ -31,6 +31,6 @@ export function createAnswerSheetApi() {
         finalExamPageId: string
         scorePolicy: "carry" | "discard"
       }>
-    ) => ipcRenderer.invoke("apply-answer-sheet-placements", moves),
+    ) => invoke("apply-answer-sheet-placements", moves),
   }
 }

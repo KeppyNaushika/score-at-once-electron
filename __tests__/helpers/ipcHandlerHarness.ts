@@ -12,6 +12,8 @@
 import { ipcMain } from "electron"
 import { expect, vi } from "vitest"
 
+import { isIpcEnvelope } from "@/electron-src/ipc-handlers/ipcEnvelope"
+
 type RegisteredHandler = (
   event: unknown,
   ...args: unknown[]
@@ -39,5 +41,15 @@ export function captureIpcHandler(
   ).toBeDefined()
 
   const handler = registration![1] as RegisteredHandler
-  return async (...args: unknown[]) => handler({}, ...args)
+  // 境界が詰めた搬送形式をほどく。preload の `invoke` と同じ扱いにして、
+  // テストが見るのは payload だけにする（`registerHandler` / `registerSafeHandler`
+  // のどちらで登録されていても呼び出し側の書き方が変わらない）。
+  return async (...args: unknown[]) => {
+    const result: unknown = await handler({}, ...args)
+
+    if (!isIpcEnvelope(result)) return result
+    if (result.__ipc === "failed") throw new Error(result.error)
+
+    return result.value
+  }
 }

@@ -5,30 +5,19 @@
 import { ipcRenderer } from "electron"
 
 import type { SyncAppConfig, SyncAppStatus } from "../lib/sync/types"
+import { invoke } from "./invoke"
 
 export function createSyncApi() {
   return {
     sync: {
-      getConfig: (): Promise<{
-        success: boolean
-        config?: SyncAppConfig
-        syncPath?: string
-        error?: string
-      }> => ipcRenderer.invoke("sync:getConfig"),
+      getConfig: () => invoke("sync:getConfig"),
 
-      setConfig: (
-        config: Partial<SyncAppConfig>
-      ): Promise<{ success: boolean; error?: string }> =>
-        ipcRenderer.invoke("sync:setConfig", config),
+      setConfig: (config: Partial<SyncAppConfig>) =>
+        invoke("sync:setConfig", config),
 
-      triggerNow: (): Promise<{ success: boolean; error?: string }> =>
-        ipcRenderer.invoke("sync:triggerNow"),
+      triggerNow: () => invoke("sync:triggerNow"),
 
-      getStatus: (): Promise<{
-        success: boolean
-        status?: SyncAppStatus
-        error?: string
-      }> => ipcRenderer.invoke("sync:getStatus"),
+      getStatus: () => invoke("sync:getStatus"),
 
       onStatusChanged: (
         callback: (status: SyncAppStatus) => void

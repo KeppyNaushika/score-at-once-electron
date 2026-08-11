@@ -1,5 +1,3 @@
-import { ipcRenderer } from "electron"
-
 import type {
   ArchiveExportMode,
   FileOverviewData,
@@ -11,6 +9,7 @@ import type {
   StudentArchiveFileOverviewData,
   StudentArchiveIdIntegrationConfig,
 } from "../../src/types/studentArchive.types"
+import { invoke } from "./invoke"
 
 /** 試験・生徒アーカイブのIPC API（エクスポート・インポート・競合検出・ID統合） */
 export function createArchiveApi() {
@@ -22,11 +21,11 @@ export function createArchiveApi() {
         userId: string
         outputPath?: string
         exportMode?: ArchiveExportMode
-      }) => ipcRenderer.invoke("archive:exportExam", options),
+      }) => invoke("archive:exportExam", options),
       analyzeArchive: (options: { archivePath: string }) =>
-        ipcRenderer.invoke("archive:analyzeArchive", options),
+        invoke("archive:analyzeArchive", options),
       preMatch: (options: { archivePath: string }) =>
-        ipcRenderer.invoke("archive:preMatch", options),
+        invoke("archive:preMatch", options),
       idIntegrationImport: (options: {
         archivePath: string
         preMatchResult: FileOverviewData
@@ -34,22 +33,22 @@ export function createArchiveApi() {
         currentUserId: string
         scoringConflictConfig?: ScoringConflictConfig
         updateDecisions?: UpdateDecisions
-      }) => ipcRenderer.invoke("archive:idIntegrationImport", options),
+      }) => invoke("archive:idIntegrationImport", options),
       detectScoringConflicts: (options: {
         archivePath: string
         preMatchResult: FileOverviewData
         integrationConfig: IdIntegrationConfig
-      }) => ipcRenderer.invoke("archive:detectScoringConflicts", options),
+      }) => invoke("archive:detectScoringConflicts", options),
       bulkExportExams: (options: {
         examIds: string[]
         userId: string
         exportMode?: ArchiveExportMode
-      }) => ipcRenderer.invoke("archive:bulkExportExams", options),
-      selectImportFile: () => ipcRenderer.invoke("archive:selectImportFile"),
+      }) => invoke("archive:bulkExportExams", options),
+      selectImportFile: () => invoke("archive:selectImportFile"),
       convertHszToScore: (options: { hszPath: string }) =>
-        ipcRenderer.invoke("archive:convertHszToScore", options),
+        invoke("archive:convertHszToScore", options),
       convertDatToScore: (options: { datPath: string }) =>
-        ipcRenderer.invoke("archive:convertDatToScore", options),
+        invoke("archive:convertDatToScore", options),
     },
 
     // Student Archive (Export/Import) related
@@ -57,19 +56,18 @@ export function createArchiveApi() {
       exportStudents: (options: {
         studentIds: string[]
         classroomIds?: string[]
-      }) => ipcRenderer.invoke("studentArchive:exportStudents", options),
-      selectImportFile: () =>
-        ipcRenderer.invoke("studentArchive:selectImportFile"),
+      }) => invoke("studentArchive:exportStudents", options),
+      selectImportFile: () => invoke("studentArchive:selectImportFile"),
       analyzeArchive: (options: { archivePath: string }) =>
-        ipcRenderer.invoke("studentArchive:analyzeArchive", options),
+        invoke("studentArchive:analyzeArchive", options),
       preMatch: (options: { archivePath: string }) =>
-        ipcRenderer.invoke("studentArchive:preMatch", options),
+        invoke("studentArchive:preMatch", options),
       import: (options: {
         archivePath: string
         preMatchResult: StudentArchiveFileOverviewData
         integrationConfig: StudentArchiveIdIntegrationConfig
         updateDecisions?: UpdateDecisions
-      }) => ipcRenderer.invoke("studentArchive:import", options),
+      }) => invoke("studentArchive:import", options),
     },
   }
 }

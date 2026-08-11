@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client"
-import { ipcRenderer } from "electron"
+
+import { invoke } from "./invoke"
 
 /** 小計グループ・採点領域-小計紐付けのIPC API（CRUD・試験への割り当て管理） */
 export function createSubtotalApi() {
@@ -8,36 +9,31 @@ export function createSubtotalApi() {
     createSubtotalGroup: (data: {
       name: string
       subtotals: { name: string; order: number }[]
-    }) => ipcRenderer.invoke("create-subtotal-group", data),
+    }) => invoke("create-subtotal-group", data),
     updateSubtotalGroup: (
       id: string,
       data: { name: string; subtotals: { name: string; order: number }[] }
-    ) => ipcRenderer.invoke("update-subtotal-group", id, data),
-    deleteSubtotalGroup: (id: string) =>
-      ipcRenderer.invoke("delete-subtotal-group", id),
+    ) => invoke("update-subtotal-group", id, data),
+    deleteSubtotalGroup: (id: string) => invoke("delete-subtotal-group", id),
 
     // New SubtotalGroup management API
-    getSubtotalGroups: () => ipcRenderer.invoke("get-subtotal-groups"),
+    getSubtotalGroups: () => invoke("get-subtotal-groups"),
     getAvailableSubtotalGroupsForExam: (examId: string) =>
-      ipcRenderer.invoke("get-available-subtotal-groups-for-exam", examId),
+      invoke("get-available-subtotal-groups-for-exam", examId),
     getActiveSubtotalGroupsForExam: (examId: string) =>
-      ipcRenderer.invoke("get-active-subtotal-groups-for-exam", examId),
+      invoke("get-active-subtotal-groups-for-exam", examId),
     addSubtotalGroupToExam: (examId: string, subtotalGroupId: string) =>
-      ipcRenderer.invoke("add-subtotal-group-to-exam", examId, subtotalGroupId),
+      invoke("add-subtotal-group-to-exam", examId, subtotalGroupId),
     removeSubtotalGroupFromExam: (examId: string, subtotalGroupId: string) =>
-      ipcRenderer.invoke(
-        "remove-subtotal-group-from-exam",
-        examId,
-        subtotalGroupId
-      ),
+      invoke("remove-subtotal-group-from-exam", examId, subtotalGroupId),
     getSubtotalGroupSelection: (examId: string) =>
-      ipcRenderer.invoke("get-subtotal-group-selection", examId),
+      invoke("get-subtotal-group-selection", examId),
     setSubtotalGroupSelection: (
       examId: string,
       tableGroupIds: string[],
       boxPlotGroupIds: string[]
     ) =>
-      ipcRenderer.invoke(
+      invoke(
         "set-subtotal-group-selection",
         examId,
         tableGroupIds,
@@ -47,13 +43,10 @@ export function createSubtotalApi() {
     // CropSubtotal related (unified from QuestionSubtotalAssignment + SubtotalDefinition)
     createManyCropSubtotals: (
       assignments: Prisma.CropSubtotalUncheckedCreateInput[]
-    ) => ipcRenderer.invoke("create-many-crop-subtotals", assignments),
+    ) => invoke("create-many-crop-subtotals", assignments),
     deleteCropSubtotalsByCropRegionId: (cropRegionId: string) =>
-      ipcRenderer.invoke(
-        "delete-crop-subtotals-by-crop-region-id",
-        cropRegionId
-      ),
+      invoke("delete-crop-subtotals-by-crop-region-id", cropRegionId),
     getCropSubtotalsByCropRegionId: (cropRegionId: string) =>
-      ipcRenderer.invoke("get-crop-subtotals-by-crop-region-id", cropRegionId),
+      invoke("get-crop-subtotals-by-crop-region-id", cropRegionId),
   }
 }
