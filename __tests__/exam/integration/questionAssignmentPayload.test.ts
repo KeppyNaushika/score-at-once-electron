@@ -115,8 +115,7 @@ describe("設問割り当ての供給形", () => {
 
     const result = await getActiveSubtotalGroupsForExam(fixture.exam.id)
 
-    expect(result.success).toBe(true)
-    const subtotals = result.examSubtotalGroups!.flatMap(
+    const subtotals = result.flatMap(
       (examSubtotalGroup) => examSubtotalGroup.subtotalGroup.subtotals
     )
     const target = subtotals.find((candidate) => candidate.id === subtotal.id)
@@ -140,7 +139,7 @@ describe("設問割り当ての供給形", () => {
 
     const result = await getActiveSubtotalGroupsForExam(fixture.exam.id)
 
-    const subtotals = result.examSubtotalGroups!.flatMap(
+    const subtotals = result.flatMap(
       (examSubtotalGroup) => examSubtotalGroup.subtotalGroup.subtotals
     )
     for (const subtotal of subtotals) {

@@ -216,12 +216,9 @@ export async function fetchIndividualReportData(
 async function getSubtotalGroupsWithSubtotals(
   examId: string
 ): Promise<SubtotalGroupForScoring[]> {
-  const result = await getActiveSubtotalGroupsForExam(examId)
-  if (!result.success || !result.examSubtotalGroups) {
-    return []
-  }
+  const examSubtotalGroups = await getActiveSubtotalGroupsForExam(examId)
 
-  return result.examSubtotalGroups.map(
+  return examSubtotalGroups.map(
     (examSubtotalGroup) => examSubtotalGroup.subtotalGroup
   )
 }
@@ -313,19 +310,15 @@ export async function fetchSubtotalGroupsForReport(
   examId: string
 ): Promise<SubtotalGroupsForReportResult> {
   try {
-    const activeGroupsResult = await getActiveSubtotalGroupsForExam(examId)
-    if (!activeGroupsResult.success || !activeGroupsResult.examSubtotalGroups) {
-      return {
-        success: false,
-        error: "小計点グループの取得に失敗しました",
-      }
-    }
+    const activeExamSubtotalGroups =
+      await getActiveSubtotalGroupsForExam(examId)
 
-    const subtotalGroups: SubtotalGroupInfo[] =
-      activeGroupsResult.examSubtotalGroups.map((examSubtotalGroup) => ({
+    const subtotalGroups: SubtotalGroupInfo[] = activeExamSubtotalGroups.map(
+      (examSubtotalGroup) => ({
         id: examSubtotalGroup.subtotalGroup.id,
         name: examSubtotalGroup.subtotalGroup.name,
-      }))
+      })
+    )
 
     return {
       success: true,

@@ -100,7 +100,7 @@ export function useExportPage() {
           let baseOptions = settings.individualReport
           const selection =
             await window.electronAPI.getSubtotalGroupSelection(examId)
-          if (selection.success) {
+          {
             baseOptions = {
               ...baseOptions,
               tableSubtotalGroupSelection: {

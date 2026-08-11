@@ -66,7 +66,6 @@ describe("小計グループ出力選択フラグ", () => {
   it("初期状態は全フラグ false（空配列）", async () => {
     const { exam } = await createTestData()
     const selection = await getSubtotalGroupSelection(exam.id)
-    expect(selection.success).toBe(true)
     expect(selection.tableGroupIds).toEqual([])
     expect(selection.boxPlotGroupIds).toEqual([])
   })
@@ -115,11 +114,9 @@ describe("試験への小計グループ追加", () => {
       data: { name: "国語" },
     })
 
-    const first = await addSubtotalGroupToExam(exam.id, group.id)
-    const second = await addSubtotalGroupToExam(exam.id, group.id)
+    await addSubtotalGroupToExam(exam.id, group.id)
+    await addSubtotalGroupToExam(exam.id, group.id)
 
-    expect(first.success).toBe(true)
-    expect(second.success).toBe(true)
     expect(
       await testPrisma.examSubtotalGroup.count({
         where: { examId: exam.id, subtotalGroupId: group.id },
@@ -137,7 +134,7 @@ describe("試験への小計グループ追加", () => {
 
     const result = await addSubtotalGroupToExam(exam.id, group.id)
 
-    expect(result.examSubtotalGroup?.examId).toBe(exam.id)
-    expect(result.examSubtotalGroup?.subtotalGroupId).toBe(group.id)
+    expect(result.examId).toBe(exam.id)
+    expect(result.subtotalGroupId).toBe(group.id)
   })
 })

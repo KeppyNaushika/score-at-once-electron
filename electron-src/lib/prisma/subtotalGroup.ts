@@ -62,23 +62,12 @@ export type SubtotalGroupWithSubtotalsExamsAndTags =
  * 小計点グループを全て取得
  */
 export async function getSubtotalGroups() {
-  try {
-    const subtotalGroups = await prisma.subtotalGroup.findMany({
-      include: subtotalGroupWithSubtotalsExamsAndTagsInclude,
-      orderBy: { createdAt: "desc" },
-    })
+  const subtotalGroups = await prisma.subtotalGroup.findMany({
+    include: subtotalGroupWithSubtotalsExamsAndTagsInclude,
+    orderBy: { createdAt: "desc" },
+  })
 
-    return {
-      success: true,
-      subtotalGroups,
-    }
-  } catch (error) {
-    console.error("Error getting subtotal groups:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return subtotalGroups
 }
 
 /**
@@ -91,35 +80,24 @@ export async function createSubtotalGroup(data: {
     order: number
   }[]
 }) {
-  try {
-    const subtotalGroup = await prisma.subtotalGroup.create({
-      data: {
-        name: data.name,
-        subtotals: {
-          create: data.subtotals,
-        },
+  const subtotalGroup = await prisma.subtotalGroup.create({
+    data: {
+      name: data.name,
+      subtotals: {
+        create: data.subtotals,
       },
-      include: subtotalGroupWithSubtotalsInclude,
-    })
+    },
+    include: subtotalGroupWithSubtotalsInclude,
+  })
 
-    await recordAuditLog({
-      action: "subtotal_group.create",
-      entityType: "SubtotalGroup",
-      entityId: subtotalGroup.id,
-      target: subtotalGroup.name,
-    })
+  await recordAuditLog({
+    action: "subtotal_group.create",
+    entityType: "SubtotalGroup",
+    entityId: subtotalGroup.id,
+    target: subtotalGroup.name,
+  })
 
-    return {
-      success: true,
-      subtotalGroup,
-    }
-  } catch (error) {
-    console.error("Error creating subtotal group:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return subtotalGroup
 }
 
 /**
@@ -135,194 +113,147 @@ export async function updateSubtotalGroup(
     }[]
   }
 ) {
-  try {
-    // トランザクション内で更新
-    const subtotalGroup = await prisma.$transaction(
-      async (tx: Prisma.TransactionClient) => {
-        // 既存の小計項目を削除
-        await tx.subtotal.deleteMany({
-          where: { subtotalGroupId: id },
-        })
+  // トランザクション内で更新
+  const subtotalGroup = await prisma.$transaction(
+    async (tx: Prisma.TransactionClient) => {
+      // 既存の小計項目を削除
+      await tx.subtotal.deleteMany({
+        where: { subtotalGroupId: id },
+      })
 
-        // 小計点グループを更新
-        return await tx.subtotalGroup.update({
-          where: { id },
-          data: {
-            name: data.name,
-            subtotals: {
-              create: data.subtotals,
-            },
+      // 小計点グループを更新
+      return await tx.subtotalGroup.update({
+        where: { id },
+        data: {
+          name: data.name,
+          subtotals: {
+            create: data.subtotals,
           },
-          include: subtotalGroupWithSubtotalsInclude,
-        })
-      }
-    )
-
-    await recordAuditLog({
-      action: "subtotal_group.update",
-      entityType: "SubtotalGroup",
-      entityId: subtotalGroup.id,
-      target: subtotalGroup.name,
-    })
-
-    return {
-      success: true,
-      subtotalGroup,
+        },
+        include: subtotalGroupWithSubtotalsInclude,
+      })
     }
-  } catch (error) {
-    console.error("Error updating subtotal group:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  )
+
+  await recordAuditLog({
+    action: "subtotal_group.update",
+    entityType: "SubtotalGroup",
+    entityId: subtotalGroup.id,
+    target: subtotalGroup.name,
+  })
+
+  return subtotalGroup
 }
 
 /**
  * 小計点グループを削除
  */
 export async function deleteSubtotalGroup(id: string) {
-  try {
-    // 実際にCropSubtotalで使用されているかを詳細にチェック
-    const usageDetails = await prisma.cropSubtotal.findMany({
-      where: {
-        subtotal: {
-          subtotalGroupId: id,
-        },
+  // 実際にCropSubtotalで使用されているかを詳細にチェック
+  const usageDetails = await prisma.cropSubtotal.findMany({
+    where: {
+      subtotal: {
+        subtotalGroupId: id,
       },
-      include: {
-        cropRegion: { include: { examPage: { include: { exam: true } } } },
-        subtotal: true,
+    },
+    include: {
+      cropRegion: { include: { examPage: { include: { exam: true } } } },
+      subtotal: true,
+    },
+  })
+
+  // 実際に使用されている場合は削除を防ぐ
+  if (usageDetails.length > 0) {
+    // 試験別に使用状況をまとめる
+    const usageByExam = usageDetails.reduce(
+      (acc, usage) => {
+        const examName = usage.cropRegion.examPage.exam.examName
+        const subtotalName = usage.subtotal.name
+        const cropRegionLabel =
+          usage.cropRegion.label ||
+          `設問${(usage.cropRegion.orderIndex || 0) + 1}`
+
+        if (!acc[examName]) {
+          acc[examName] = []
+        }
+        acc[examName].push(`${cropRegionLabel} → ${subtotalName}`)
+        return acc
       },
+      {} as Record<string, string[]>
+    )
+
+    const usageMessages = Object.entries(usageByExam)
+      .map(
+        ([examName, assignments]) => `・${examName}: ${assignments.join(", ")}`
+      )
+      .join("\n")
+
+    throw new Error(
+      `この小計点グループは以下の設問で使用されており、削除できません:\n\n${usageMessages}\n\n設問との関連付けを先に解除してから削除してください。`
+    )
+  }
+
+  const before = await prisma.subtotalGroup.findUnique({
+    where: { id },
+  })
+
+  // 試験に追加されているが実際には使用されていない場合はExamSubtotalGroupも削除
+  await prisma.$transaction(async (tx) => {
+    // ExamSubtotalGroupを削除
+    await tx.examSubtotalGroup.deleteMany({
+      where: { subtotalGroupId: id },
     })
 
-    // 実際に使用されている場合は削除を防ぐ
-    if (usageDetails.length > 0) {
-      // 試験別に使用状況をまとめる
-      const usageByExam = usageDetails.reduce(
-        (acc, usage) => {
-          const examName = usage.cropRegion.examPage.exam.examName
-          const subtotalName = usage.subtotal.name
-          const cropRegionLabel =
-            usage.cropRegion.label ||
-            `設問${(usage.cropRegion.orderIndex || 0) + 1}`
-
-          if (!acc[examName]) {
-            acc[examName] = []
-          }
-          acc[examName].push(`${cropRegionLabel} → ${subtotalName}`)
-          return acc
-        },
-        {} as Record<string, string[]>
-      )
-
-      const usageMessages = Object.entries(usageByExam)
-        .map(
-          ([examName, assignments]) =>
-            `・${examName}: ${assignments.join(", ")}`
-        )
-        .join("\n")
-
-      return {
-        success: false,
-        error: `この小計点グループは以下の設問で使用されており、削除できません:\n\n${usageMessages}\n\n設問との関連付けを先に解除してから削除してください。`,
-      }
-    }
-
-    const before = await prisma.subtotalGroup.findUnique({
+    // 小計点グループを削除（関連する小計項目も CASCADE で削除される）
+    await tx.subtotalGroup.delete({
       where: { id },
     })
+  })
 
-    // 試験に追加されているが実際には使用されていない場合はExamSubtotalGroupも削除
-    await prisma.$transaction(async (tx) => {
-      // ExamSubtotalGroupを削除
-      await tx.examSubtotalGroup.deleteMany({
-        where: { subtotalGroupId: id },
-      })
-
-      // 小計点グループを削除（関連する小計項目も CASCADE で削除される）
-      await tx.subtotalGroup.delete({
-        where: { id },
-      })
-    })
-
-    await recordAuditLog({
-      action: "subtotal_group.delete",
-      entityType: "SubtotalGroup",
-      entityId: id,
-      target: before?.name ?? null,
-    })
-
-    return {
-      success: true,
-    }
-  } catch (error) {
-    console.error("Error deleting subtotal group:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  await recordAuditLog({
+    action: "subtotal_group.delete",
+    entityType: "SubtotalGroup",
+    entityId: id,
+    target: before?.name ?? null,
+  })
 }
 
 /**
  * 試験で利用可能な小計点グループを取得（試験で有効化されていないもの）
  */
 export async function getAvailableSubtotalGroupsForExam(examId: string) {
-  try {
-    const subtotalGroups = await prisma.subtotalGroup.findMany({
-      where: {
-        examSubtotalGroups: {
-          none: {
-            examId,
-          },
+  const subtotalGroups = await prisma.subtotalGroup.findMany({
+    where: {
+      examSubtotalGroups: {
+        none: {
+          examId,
         },
       },
-      include: subtotalGroupWithSubtotalsInclude,
-      orderBy: { name: "asc" },
-    })
+    },
+    include: subtotalGroupWithSubtotalsInclude,
+    orderBy: { name: "asc" },
+  })
 
-    return {
-      success: true,
-      subtotalGroups,
-    }
-  } catch (error) {
-    console.error("Error getting available subtotal groups for exam:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return subtotalGroups
 }
 
 /**
  * 試験で有効化されている小計点グループを取得
  */
 export async function getActiveSubtotalGroupsForExam(examId: string) {
-  try {
-    const examSubtotalGroups = await prisma.examSubtotalGroup.findMany({
-      where: {
-        examId,
+  const examSubtotalGroups = await prisma.examSubtotalGroup.findMany({
+    where: {
+      examId,
+    },
+    include: { subtotalGroup: { include: subtotalGroupForScoringInclude } },
+    orderBy: {
+      subtotalGroup: {
+        name: "asc",
       },
-      include: { subtotalGroup: { include: subtotalGroupForScoringInclude } },
-      orderBy: {
-        subtotalGroup: {
-          name: "asc",
-        },
-      },
-    })
+    },
+  })
 
-    return {
-      success: true,
-      examSubtotalGroups,
-    }
-  } catch (error) {
-    console.error("Error getting active subtotal groups for exam:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return examSubtotalGroups
 }
 
 /**
@@ -337,36 +268,25 @@ export async function addSubtotalGroupToExam(
   examId: string,
   subtotalGroupId: string
 ) {
-  try {
-    const examSubtotalGroup = await prisma.examSubtotalGroup.upsert({
-      where: { examId_subtotalGroupId: { examId, subtotalGroupId } },
-      create: {
-        examId,
-        subtotalGroupId,
-      },
-      update: {},
-      include: {
-        subtotalGroup: {
-          include: {
-            subtotals: {
-              orderBy: { order: "asc" },
-            },
+  const examSubtotalGroup = await prisma.examSubtotalGroup.upsert({
+    where: { examId_subtotalGroupId: { examId, subtotalGroupId } },
+    create: {
+      examId,
+      subtotalGroupId,
+    },
+    update: {},
+    include: {
+      subtotalGroup: {
+        include: {
+          subtotals: {
+            orderBy: { order: "asc" },
           },
         },
       },
-    })
+    },
+  })
 
-    return {
-      success: true,
-      examSubtotalGroup,
-    }
-  } catch (error) {
-    console.error("Error adding subtotal group to exam:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
+  return examSubtotalGroup
 }
 
 /**
@@ -376,55 +296,42 @@ export async function removeSubtotalGroupFromExam(
   examId: string,
   subtotalGroupId: string
 ) {
-  try {
-    // この試験でCropSubtotalによって実際に使用されているかチェック
-    const usageDetails = await prisma.cropSubtotal.findMany({
-      where: {
-        subtotal: {
-          subtotalGroupId,
-        },
-        cropRegion: {
-          examPage: {
-            examId,
-          },
-        },
-      },
-      include: { cropRegion: true, subtotal: true },
-    })
-
-    // 実際に使用されている場合は削除を防ぐ
-    if (usageDetails.length > 0) {
-      const assignments = usageDetails.map((usage) => {
-        const cropRegionLabel =
-          usage.cropRegion.label ||
-          `設問${(usage.cropRegion.orderIndex || 0) + 1}`
-        return `${cropRegionLabel} → ${usage.subtotal.name}`
-      })
-
-      return {
-        success: false,
-        error: `この小計点グループは以下の設問で使用されており、試験から削除できません:\n\n${assignments.join(", ")}\n\n設問との関連付けを先に解除してから削除してください。`,
-      }
-    }
-
-    // 使用されていない場合は削除を実行
-    await prisma.examSubtotalGroup.deleteMany({
-      where: {
-        examId,
+  // この試験でCropSubtotalによって実際に使用されているかチェック
+  const usageDetails = await prisma.cropSubtotal.findMany({
+    where: {
+      subtotal: {
         subtotalGroupId,
       },
+      cropRegion: {
+        examPage: {
+          examId,
+        },
+      },
+    },
+    include: { cropRegion: true, subtotal: true },
+  })
+
+  // 実際に使用されている場合は削除を防ぐ
+  if (usageDetails.length > 0) {
+    const assignments = usageDetails.map((usage) => {
+      const cropRegionLabel =
+        usage.cropRegion.label ||
+        `設問${(usage.cropRegion.orderIndex || 0) + 1}`
+      return `${cropRegionLabel} → ${usage.subtotal.name}`
     })
 
-    return {
-      success: true,
-    }
-  } catch (error) {
-    console.error("Error removing subtotal group from exam:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
+    throw new Error(
+      `この小計点グループは以下の設問で使用されており、試験から削除できません:\n\n${assignments.join(", ")}\n\n設問との関連付けを先に解除してから削除してください。`
+    )
   }
+
+  // 使用されていない場合は削除を実行
+  await prisma.examSubtotalGroup.deleteMany({
+    where: {
+      examId,
+      subtotalGroupId,
+    },
+  })
 }
 
 /**
@@ -432,27 +339,16 @@ export async function removeSubtotalGroupFromExam(
  * source of truth は ExamSubtotalGroup.selectedForTable/selectedForBoxPlot（settingsJson ではない）。
  */
 export async function getSubtotalGroupSelection(examId: string) {
-  try {
-    const links = await prisma.examSubtotalGroup.findMany({
-      where: { examId },
-    })
-    return {
-      success: true as const,
-      tableGroupIds: links
-        .filter((link) => link.selectedForTable)
-        .map((link) => link.subtotalGroupId),
-      boxPlotGroupIds: links
-        .filter((link) => link.selectedForBoxPlot)
-        .map((link) => link.subtotalGroupId),
-    }
-  } catch (error) {
-    console.error("Error getting subtotal group selection:", error)
-    return {
-      success: false as const,
-      error: error instanceof Error ? error.message : "Unknown error",
-      tableGroupIds: [],
-      boxPlotGroupIds: [],
-    }
+  const links = await prisma.examSubtotalGroup.findMany({
+    where: { examId },
+  })
+  return {
+    tableGroupIds: links
+      .filter((link) => link.selectedForTable)
+      .map((link) => link.subtotalGroupId),
+    boxPlotGroupIds: links
+      .filter((link) => link.selectedForBoxPlot)
+      .map((link) => link.subtotalGroupId),
   }
 }
 
@@ -468,40 +364,30 @@ export async function setSubtotalGroupSelection(
   tableGroupIds: string[],
   boxPlotGroupIds: string[]
 ) {
-  try {
-    await prisma.$transaction(async (tx) => {
-      // 一旦全フラグを false にし、指定IDのみ true へ。行ごとの update（N+1）を
-      // 定数本数の updateMany に集約する。
+  await prisma.$transaction(async (tx) => {
+    // 一旦全フラグを false にし、指定IDのみ true へ。行ごとの update（N+1）を
+    // 定数本数の updateMany に集約する。
+    await tx.examSubtotalGroup.updateMany({
+      where: { examId },
+      data: { selectedForTable: false, selectedForBoxPlot: false },
+    })
+    if (tableGroupIds.length > 0) {
       await tx.examSubtotalGroup.updateMany({
-        where: { examId },
-        data: { selectedForTable: false, selectedForBoxPlot: false },
+        where: { examId, subtotalGroupId: { in: tableGroupIds } },
+        data: { selectedForTable: true },
       })
-      if (tableGroupIds.length > 0) {
-        await tx.examSubtotalGroup.updateMany({
-          where: { examId, subtotalGroupId: { in: tableGroupIds } },
-          data: { selectedForTable: true },
-        })
-      }
-      if (boxPlotGroupIds.length > 0) {
-        await tx.examSubtotalGroup.updateMany({
-          where: { examId, subtotalGroupId: { in: boxPlotGroupIds } },
-          data: { selectedForBoxPlot: true },
-        })
-      }
-    })
-
-    await recordAuditLog({
-      action: "subtotal_group.selection_update",
-      entityType: "ExamSubtotalGroup",
-      entityId: examId,
-    })
-
-    return { success: true as const }
-  } catch (error) {
-    console.error("Error setting subtotal group selection:", error)
-    return {
-      success: false as const,
-      error: error instanceof Error ? error.message : "Unknown error",
     }
-  }
+    if (boxPlotGroupIds.length > 0) {
+      await tx.examSubtotalGroup.updateMany({
+        where: { examId, subtotalGroupId: { in: boxPlotGroupIds } },
+        data: { selectedForBoxPlot: true },
+      })
+    }
+  })
+
+  await recordAuditLog({
+    action: "subtotal_group.selection_update",
+    entityType: "ExamSubtotalGroup",
+    entityId: examId,
+  })
 }

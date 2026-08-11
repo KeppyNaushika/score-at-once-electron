@@ -273,29 +273,16 @@ export function SubtotalGroupModal({
         result = await window.electronAPI.createSubtotalGroup(groupData)
       }
 
-      if (result.success) {
-        // タグは他の紐付けと同じく、タグ名から findOrCreate して置換方式で保存する
-        const savedGroupId = result.subtotalGroup?.id
-        if (savedGroupId) {
-          try {
-            const tagIds: string[] = []
-            for (const tagName of tagNames) {
-              const tag = await window.electronAPI.tagFindOrCreate(tagName)
-              tagIds.push(tag.id)
-            }
-            await window.electronAPI.tagSubtotalGroupSetTags(
-              savedGroupId,
-              tagIds
-            )
-          } catch (error) {
-            console.error("Failed to save tags:", error)
-          }
-        }
-        onSave()
-        onClose()
-      } else {
-        alert("保存に失敗しました: " + result.error)
+      // タグは他の紐付けと同じく、タグ名から findOrCreate して置換方式で保存する
+      const tagIds: string[] = []
+      for (const tagName of tagNames) {
+        const tag = await window.electronAPI.tagFindOrCreate(tagName)
+        tagIds.push(tag.id)
       }
+      await window.electronAPI.tagSubtotalGroupSetTags(result.id, tagIds)
+
+      onSave()
+      onClose()
     } catch (error) {
       console.error("Error saving subtotal group:", error)
       alert("保存中にエラーが発生しました。")

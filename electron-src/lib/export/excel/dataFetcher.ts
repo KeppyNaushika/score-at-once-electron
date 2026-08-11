@@ -168,13 +168,10 @@ export async function fetchExportData(
       .sort(sortByOrderIndex)
 
     // SubtotalGroupsを取得（Subtotal単位の小計点計算用）
-    const subtotalGroupsResult = await getActiveSubtotalGroupsForExam(examId)
-    const subtotalGroups: SubtotalGroupForScoring[] =
-      subtotalGroupsResult.success && subtotalGroupsResult.examSubtotalGroups
-        ? subtotalGroupsResult.examSubtotalGroups.map(
-            (examSubtotalGroup) => examSubtotalGroup.subtotalGroup
-          )
-        : []
+    const examSubtotalGroups = await getActiveSubtotalGroupsForExam(examId)
+    const subtotalGroups: SubtotalGroupForScoring[] = examSubtotalGroups.map(
+      (examSubtotalGroup) => examSubtotalGroup.subtotalGroup
+    )
 
     // SubtotalGroupから小計列情報を構築
     const subtotalColumns: SubtotalColumn[] = subtotalGroups.flatMap(

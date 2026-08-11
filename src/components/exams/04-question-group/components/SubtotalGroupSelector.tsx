@@ -3,6 +3,7 @@
 import { Calculator, Plus, Search, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
+import { toast } from "sonner"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { Badge } from "@/components/ui/badge"
@@ -43,11 +44,9 @@ export function SubtotalGroupSelector({
       const fetchAvailableGroups = async () => {
         setLoading(true)
         try {
-          const result =
+          setAvailableGroups(
             await window.electronAPI.getAvailableSubtotalGroupsForExam(examId)
-          if (result.success && result.subtotalGroups) {
-            setAvailableGroups(result.subtotalGroups)
-          }
+          )
         } catch (error) {
           console.error("Error fetching available subtotal groups:", error)
         } finally {
@@ -61,19 +60,13 @@ export function SubtotalGroupSelector({
   // 小計点グループを試験に追加
   const handleAddGroup = async (groupId: string) => {
     try {
-      const result = await window.electronAPI.addSubtotalGroupToExam(
-        examId,
-        groupId
-      )
-      if (result.success) {
-        setShowSelector(false)
-        onRefresh()
-      } else {
-        alert("小計点グループの追加に失敗しました: " + result.error)
-      }
+      await window.electronAPI.addSubtotalGroupToExam(examId, groupId)
+      setShowSelector(false)
+      onRefresh()
     } catch (error) {
-      console.error("Error adding subtotal group to exam:", error)
-      alert("小計点グループの追加中にエラーが発生しました")
+      toast.error("小計点グループを追加できませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }
 
@@ -88,18 +81,12 @@ export function SubtotalGroupSelector({
     }
 
     try {
-      const result = await window.electronAPI.removeSubtotalGroupFromExam(
-        examId,
-        groupId
-      )
-      if (result.success) {
-        onRefresh()
-      } else {
-        alert("小計点グループの削除に失敗しました: " + result.error)
-      }
+      await window.electronAPI.removeSubtotalGroupFromExam(examId, groupId)
+      onRefresh()
     } catch (error) {
-      console.error("Error removing subtotal group from exam:", error)
-      alert("小計点グループの削除中にエラーが発生しました")
+      toast.error("小計点グループを削除できませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }
 

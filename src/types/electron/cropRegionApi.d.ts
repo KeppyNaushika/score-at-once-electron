@@ -89,22 +89,14 @@ export interface CropRegionAPI {
   ) => Promise<CropRegion[]>
 
   // SubtotalGroup related
-  getSubtotalGroups: () => Promise<{
-    success: boolean
-    subtotalGroups?: SubtotalGroupWithSubtotalsExamsAndTags[]
-    error?: string
-  }>
+  getSubtotalGroups: () => Promise<SubtotalGroupWithSubtotalsExamsAndTags[]>
   createSubtotalGroup: (data: {
     name: string
     subtotals: {
       name: string
       order: number
     }[]
-  }) => Promise<{
-    success: boolean
-    subtotalGroup?: SubtotalGroupWithSubtotals
-    error?: string
-  }>
+  }) => Promise<SubtotalGroupWithSubtotals>
   updateSubtotalGroup: (
     id: string,
     data: {
@@ -114,35 +106,23 @@ export interface CropRegionAPI {
         order: number
       }[]
     }
-  ) => Promise<{
-    success: boolean
-    subtotalGroup?: SubtotalGroupWithSubtotals
-    error?: string
-  }>
-  deleteSubtotalGroup: (id: string) => Promise<{
-    success: boolean
-    error?: string
-  }>
-  getAvailableSubtotalGroupsForExam: (examId: string) => Promise<{
-    success: boolean
-    subtotalGroups?: SubtotalGroupWithSubtotals[]
-    error?: string
-  }>
-  getActiveSubtotalGroupsForExam: (examId: string) => Promise<{
-    success: boolean
-    examSubtotalGroups?: Prisma.ExamSubtotalGroupGetPayload<{
+  ) => Promise<SubtotalGroupWithSubtotals>
+  deleteSubtotalGroup: (id: string) => Promise<void>
+  getAvailableSubtotalGroupsForExam: (
+    examId: string
+  ) => Promise<SubtotalGroupWithSubtotals[]>
+  getActiveSubtotalGroupsForExam: (examId: string) => Promise<
+    Prisma.ExamSubtotalGroupGetPayload<{
       include: {
         subtotalGroup: { include: typeof subtotalGroupForScoringInclude }
       }
     }>[]
-    error?: string
-  }>
+  >
   addSubtotalGroupToExam: (
     examId: string,
     subtotalGroupId: string
-  ) => Promise<{
-    success: boolean
-    examSubtotalGroup?: Prisma.ExamSubtotalGroupGetPayload<{
+  ) => Promise<
+    Prisma.ExamSubtotalGroupGetPayload<{
       include: {
         subtotalGroup: {
           include: {
@@ -151,29 +131,19 @@ export interface CropRegionAPI {
         }
       }
     }>
-    error?: string
-  }>
+  >
   removeSubtotalGroupFromExam: (
     examId: string,
     subtotalGroupId: string
-  ) => Promise<{
-    success: boolean
-    error?: string
-  }>
-  getSubtotalGroupSelection: (examId: string) => Promise<{
-    success: boolean
-    tableGroupIds: string[]
-    boxPlotGroupIds: string[]
-    error?: string
-  }>
+  ) => Promise<void>
+  getSubtotalGroupSelection: (
+    examId: string
+  ) => Promise<{ tableGroupIds: string[]; boxPlotGroupIds: string[] }>
   setSubtotalGroupSelection: (
     examId: string,
     tableGroupIds: string[],
     boxPlotGroupIds: string[]
-  ) => Promise<{
-    success: boolean
-    error?: string
-  }>
+  ) => Promise<void>
 
   // CropSubtotal related
   createManyCropSubtotals: (

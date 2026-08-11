@@ -2,6 +2,7 @@
 
 import { Plus } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 
 import { ListFilterBar } from "@/components/common/ListFilterBar"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
@@ -53,12 +54,7 @@ export function SubtotalGroupsPageContainer() {
 
       setIpcError(null)
 
-      const result = await window.electronAPI.getSubtotalGroups()
-      if (result.success && result.subtotalGroups) {
-        setSubtotalGroups(result.subtotalGroups)
-      } else {
-        console.error("Failed to fetch subtotal groups:", result.error)
-      }
+      setSubtotalGroups(await window.electronAPI.getSubtotalGroups())
     } catch (error) {
       console.error("Error fetching subtotal groups:", error)
       setSubtotalGroups([])
@@ -142,17 +138,14 @@ export function SubtotalGroupsPageContainer() {
       return
 
     try {
-      const result = await window.electronAPI.deleteSubtotalGroup(groupId)
-      if (result.success) {
-        await fetchSubtotalGroups() // リストを再読み込み
-        alert(`小計点グループ「${groupName}」を削除しました。`)
-      } else {
-        // 詳細なエラーメッセージを改行付きで表示
-        alert(result.error)
-      }
+      await window.electronAPI.deleteSubtotalGroup(groupId)
+      await fetchSubtotalGroups() // リストを再読み込み
+      toast.success(`小計点グループ「${groupName}」を削除しました`)
     } catch (error) {
-      console.error("Error deleting subtotal group:", error)
-      alert("削除中にエラーが発生しました。")
+      // 使用中で削除できない場合、どの設問で使われているかが文言に載っている
+      toast.error("小計点グループを削除できませんでした", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }
 

@@ -45,17 +45,12 @@ export default function SubtotalGroupPage() {
       const activeSubtotalGroupsResponse =
         await window.electronAPI.getActiveSubtotalGroupsForExam(examId)
 
-      if (
-        activeSubtotalGroupsResponse &&
-        activeSubtotalGroupsResponse.success
-      ) {
-        const activeGroups =
-          activeSubtotalGroupsResponse.examSubtotalGroups?.map(
-            (psg: ExamSubtotalGroupWithSubtotalGroup) =>
-              psg.subtotalGroup as SubtotalGroupWithSubtotals
-          ) || []
-        setActiveSubtotalGroups(activeGroups)
-      }
+      setActiveSubtotalGroups(
+        activeSubtotalGroupsResponse.map(
+          (examSubtotalGroup: ExamSubtotalGroupWithSubtotalGroup) =>
+            examSubtotalGroup.subtotalGroup as SubtotalGroupWithSubtotals
+        )
+      )
 
       if (cropRegionsResponse) {
         // 設問タイプの領域のみフィルタリング
