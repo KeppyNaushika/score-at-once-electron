@@ -388,10 +388,34 @@ DB 上 String の union 列（`inputMode` / `kind` / `aggregate` / `absentMethod
 `estimationMode` / `status`）は、契約で union を名乗るだけで変換していなかった。
 境界（lib の返り値）で `defineStringUnion` の `to*` を通す形へ揃えた。
 
-### 段階6 — lint の締め
+### 段階6 — lint の締め（進行中: 39 → 12）
 
-残る fetch-effect を `useQuery` へ移し、`react-hooks/set-state-in-effect` を `error` へ。
-`package.json` の `--max-warnings` を撤去。
+`useQuery` へ移すたびに `package.json` の `--max-warnings` を実数まで下げる（戻れない）。
+0 になったら `react-hooks/set-state-in-effect` を `error` へ上げ、`--max-warnings` を撤去する。
+
+移し終えたもの: 設定・返却差分・小計点グループ・除外設定・観点間制約・解答用紙定義一覧・
+試験の登録学級・裁定サマリ・設問担当・OMR設定・成績境界・成績算出結果・データソース・
+成績一覧・資料一覧・タグ一覧・認証状態・模範解答ページ・利用者一覧・成績詳細・
+学級統計の選択・グリッドの注釈・個人成績表プレビュー・資料の点数表・試験詳細・メンバー招待。
+
+**残る12件は同じ形をしている**——取得した値を**編集可能なローカル状態の初期値**にしている。
+
+| 場所                                               | 何を編集するか                     |
+| -------------------------------------------------- | ---------------------------------- |
+| `03-region-info/page.tsx`                          | 採点領域（ドラッグと自動保存）     |
+| `04-question-group/page.tsx` と2つの割当マトリクス | 設問割り当てのマス目               |
+| `RosterTable` / `ClassroomRosterManager`           | 並び順と選択                       |
+| `useStudentAddPanel`（2件）                        | 追加候補の選択                     |
+| `CourseworkItemsContainer`                         | 評価項目の編集ドラフト             |
+| `useExportPage`                                    | 出力対象の生徒選択                 |
+| `useAuditLogs`                                     | 追記していくページ                 |
+| `useScoringFilter`                                 | 表示対象の絞り込み（取得ではない） |
+
+これらは `useQuery` への機械的な置き換えでは済まない。「編集中の値をキャッシュに置くのか、
+別のローカル状態に置いて取得結果と突き合わせるのか」を画面ごとに決める必要がある
+（この判断を誤ると、他端末の更新が編集中の入力を上書きする／逆に編集が消える）。
+`useAuditLogs` は `useInfiniteQuery`、`useScoringFilter` はそもそも取得ではなく
+派生値なので `useMemo` が答えになる。
 
 > **変更系（mutation）は本計画では扱わない。** `loadX()` の手撃ちを `invalidateQueries` へ
 > 差し替えるところまでで止める。`useMutation` への移行は消費側の契約が全面的に変わるため別立て。
