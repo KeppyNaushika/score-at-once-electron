@@ -32,6 +32,7 @@ import {
 import { queryKeys } from "@/lib/queryKeys"
 import type {
   CourseworkItemWithLetterScales,
+  CourseworkWithRelations,
   InputMode,
 } from "@/types/coursework.types"
 
@@ -188,16 +189,20 @@ export function CourseworkItemsContainer({
   courseworkId,
 }: CourseworkItemsContainerProps) {
   const queryClient = useQueryClient()
+  // 評価項目は資料の子なので、資料そのもののキャッシュから取り出す。
+  // 別キーに項目だけを複製すると、同じ資料が2つの形でキャッシュに載る
   const queryKey = queryKeys.coursework.detail(courseworkId)
+  const selectItems = useCallback(
+    (coursework: CourseworkWithRelations) =>
+      coursework.items
+        .slice()
+        .sort((itemA, itemB) => itemA.order - itemB.order),
+    []
+  )
   const { data: items = EMPTY_ITEMS, isPending: loading } = useQuery({
     queryKey,
-    queryFn: async () => {
-      const coursework =
-        await window.electronAPI.coursework.getById(courseworkId)
-      return coursework.items
-        .slice()
-        .sort((itemA, itemB) => itemA.order - itemB.order)
-    },
+    queryFn: () => window.electronAPI.coursework.getById(courseworkId),
+    select: selectItems,
   })
   const [drafts, setDrafts] = useState<Record<string, ItemDraft>>({})
   const [newItemName, setNewItemName] = useState("")
@@ -219,15 +224,21 @@ export function CourseworkItemsContainer({
   )
 
   /**
-   * 取り直した項目でドラフトを作り直す。effect ではなくレンダー中に畳む
+   * 取得結果に合わせてドラフトを揃える。effect ではなくレンダー中に畳む
    * （取得直後の1フレームに前の項目のドラフトを出さない）。
-   * 取得結果の同一性で判定するので、同じ内容を取り直しても作り直さない。
+   *
+   * **既にドラフトがある項目は作り直さない。** 入力はデバウンスで保存するので、
+   * 保存が終わるまでキャッシュの行は古い名前を持つ。並べ替えのような
+   * 「項目の中身と無関係な更新」で作り直すと、入力中の名前が古い名前へ戻り、
+   * そのままデバウンスに拾われて DB へ書き戻される。
    */
   const [draftSource, setDraftSource] = useState<typeof items | null>(null)
   if (items !== draftSource) {
     setDraftSource(items)
-    setDrafts(
-      Object.fromEntries(items.map((item) => [item.id, toDraft(item)]))
+    setDrafts((previous) =>
+      Object.fromEntries(
+        items.map((item) => [item.id, previous[item.id] ?? toDraft(item)])
+      )
     )
   }
 
@@ -275,11 +286,10 @@ export function CourseworkItemsContainer({
   /** ドラフトを部分更新し、その項目の保存をデバウンス予約する */
   const updateDraft = useCallback(
     (itemId: string, patch: Partial<ItemDraft>) => {
-      const current = draftsRef.current[itemId]
-      if (!current) return
-      setDrafts({
-        ...draftsRef.current,
-        [itemId]: { ...current, ...patch },
+      setDrafts((previous) => {
+        const current = previous[itemId]
+        if (!current) return previous
+        return { ...previous, [itemId]: { ...current, ...patch } }
       })
 
       const existing = saveTimers.current.get(itemId)
@@ -339,17 +349,26 @@ export function CourseworkItemsContainer({
     const oldIndex = items.findIndex((item) => item.id === active.id)
     const newIndex = items.findIndex((item) => item.id === over.id)
     if (oldIndex < 0 || newIndex < 0) return
-    const reordered = arrayMove(items, oldIndex, newIndex)
-    queryClient.setQueryData(queryKey, reordered)
+    // 並び順の SSOT は行の order。配列の並びだけを変えると select の並べ替えで元へ戻る
+    const reordered = arrayMove(items, oldIndex, newIndex).map(
+      (item, order) => ({ ...item, order })
+    )
+    const previousCoursework =
+      queryClient.getQueryData<CourseworkWithRelations>(queryKey)
+    queryClient.setQueryData<CourseworkWithRelations>(queryKey, (previous) =>
+      previous ? { ...previous, items: reordered } : previous
+    )
     try {
       await window.electronAPI.coursework.reorderItems(
-        reordered.map((item, order) => ({ id: item.id, order }))
+        reordered.map((item) => ({ id: item.id, order: item.order }))
       )
     } catch (error) {
+      if (previousCoursework) {
+        queryClient.setQueryData(queryKey, previousCoursework)
+      }
       toast.error("並べ替えに失敗しました", {
         description: error instanceof Error ? error.message : undefined,
       })
-      await loadItems()
     }
   }
 

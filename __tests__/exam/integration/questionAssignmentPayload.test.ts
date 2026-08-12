@@ -4,7 +4,7 @@
  * 割り当ては用途で2つに分かれる。
  *
  * - 04 設問グループの割り当てマトリクス: どの小計に紐づくか（subtotalId）だけを読む。
- *   領域ごとにループで呼ぶので、割り当てグラフまで送ると領域数ぶん増える
+ *   割り当ては採点領域に同梱されて届くので、領域ごとの追加クエリを立てない
  * - 小計点の算出: 各小計の設問割り当てを辿る必要があり、グラフごと要る
  *
  * 同じ include を共有すると前者が後者の都合を払う。分かれていることを固定する。
@@ -23,10 +23,8 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
   }
 })
 
-import {
-  getCropSubtotalsByCropRegionId,
-  getCropSubtotalsForScoring,
-} from "@/electron-src/lib/prisma/cropSubtotal"
+import { getCropRegionsByExamId } from "@/electron-src/lib/prisma/cropRegion"
+import { getCropSubtotalsForScoring } from "@/electron-src/lib/prisma/cropSubtotal"
 import { getActiveSubtotalGroupsForExam } from "@/electron-src/lib/prisma/subtotalGroup"
 
 import { createFullTestExam } from "../../helpers/testExamBuilder"
@@ -66,24 +64,29 @@ describe("設問割り当ての供給形", () => {
     await disconnectTestPrisma()
   })
 
-  it("04 の割り当てマトリクスは subtotalId を読めるが、割り当てグラフは受け取らない", async () => {
+  it("04 の割り当ては採点領域に同梱されて届き、割り当てグラフは含まない", async () => {
     const fixture = await createFullTestExam(testPrisma, {})
     const [subtotal] = fixture.subtotals
     const cropRegionIds = fixture.cropRegions.map((cropRegion) => cropRegion.id)
     await assignQuestions(subtotal.id, cropRegionIds)
 
-    const cropSubtotals = await getCropSubtotalsByCropRegionId(cropRegionIds[0])
+    const cropRegions = await getCropRegionsByExamId(fixture.exam.id)
 
-    expect(cropSubtotals.length).toBeGreaterThan(0)
-    for (const cropSubtotal of cropSubtotals) {
-      // 04 が読むのはここだけ
-      expect(typeof cropSubtotal.subtotalId).toBe("string")
-      expect(cropSubtotal.subtotal.subtotalGroup).toBeDefined()
-      // 採点用の割り当てグラフは 04 へ送らない
-      expect(
-        (cropSubtotal.subtotal as unknown as Record<string, unknown>)
-          .cropSubtotals
-      ).toBeUndefined()
+    const assigned = cropRegions.filter(
+      (cropRegion) => cropRegion.cropSubtotals.length > 0
+    )
+    expect(assigned.length).toBe(cropRegionIds.length)
+    for (const cropRegion of assigned) {
+      for (const cropSubtotal of cropRegion.cropSubtotals) {
+        // 04 が読むのはこの2つだけ（種類で絞って subtotalId を集める）
+        expect(cropSubtotal.assignmentType).toBe("QUESTION_ASSIGNMENT")
+        expect(typeof cropSubtotal.subtotalId).toBe("string")
+        // 採点用の割り当てグラフは 04 へ送らない
+        expect(
+          (cropSubtotal.subtotal as unknown as Record<string, unknown>)
+            .cropSubtotals
+        ).toBeUndefined()
+      }
     }
   })
 

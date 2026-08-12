@@ -6,10 +6,7 @@
  */
 
 import type { AuditChange } from "@/electron-src/lib/prisma/auditLog"
-import type {
-  AuditLogEntry as BaseAuditLogEntry,
-  AuditLogPage as BaseAuditLogPage,
-} from "@/electron-src/lib/prisma/auditQuery"
+import type { AuditLogEntry as BaseAuditLogEntry } from "@/electron-src/lib/prisma/auditQuery"
 
 /** metadata のパース済み構造 */
 interface AuditMetadata {
@@ -23,9 +20,4 @@ interface AuditMetadata {
 /** 1件分の監査ログ */
 export interface AuditLogEntry extends Omit<BaseAuditLogEntry, "metadata"> {
   metadata: AuditMetadata | null
-}
-
-/** 監査ログの1ページ */
-interface AuditLogPage extends Omit<BaseAuditLogPage, "entries"> {
-  entries: AuditLogEntry[]
 }

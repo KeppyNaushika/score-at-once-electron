@@ -18,7 +18,7 @@ export type ExamForDetail = NonNullable<
 /** 試験詳細ページ用のデータ取得・更新フック（生徒数・設問領域数・答案数等の集計を含む） */
 export function useExamDetail(examId: string) {
   const queryClient = useQueryClient()
-  const queryKey = queryKeys.exam.detail(examId)
+  const queryKey = queryKeys.exam.detailPage(examId)
 
   // 詳細画面が読むのは「試験本体」と「進捗の分母になる件数」。3つとも同じ
   // 表示の一部なので1つの取得にまとめる（片方だけ古い状態にならない）

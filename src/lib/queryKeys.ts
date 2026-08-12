@@ -8,6 +8,11 @@
  * 文字列リテラルを画面側に散らかさないため、キーは必ずここを経由して作る。
  * 同定は必ず id で行い、順序や表示名をキーに混ぜない。
  *
+ * **キーは「格納する形」ごとに分ける。** 同じキーに違う形を書くと、後からマウントした
+ * 画面が `isPending: false` のまま相手のデータで描画される（キャッシュは同期的に返る）。
+ * 型では止まらない。`detail` は「その実体そのもの」を取る用途にだけ使い、画面が
+ * まとめて1回で取る複合ペイロードには `*Page` の名前を与える。
+ *
  * **使う場所ができてから足す。** 使われないキーは「そのうち要る」の形をした
  * デッドコードで、消す判断が誰にもできなくなる。
  */
@@ -39,10 +44,17 @@ export const queryKeys = {
       ["answerSheetDefinition", userId] as const,
   },
   exam: {
-    detail: (examId: string) => ["exam", examId] as const,
-    students: (examId: string) => ["exam", examId, "students"] as const,
+    /** 試験詳細ページが1回で取る形（試験本体＋進捗の分母になる件数） */
+    detailPage: (examId: string) => ["exam", examId, "detailPage"] as const,
+    /** 領域情報ページ(03)が1回で取る形（操作者＋ページ＋背景画像＋採点領域） */
+    regionInfoPage: (examId: string) =>
+      ["exam", examId, "regionInfoPage"] as const,
+    /** 小計点設定ページ(04)が1回で取る形（小計点グループ＋設問領域＋小計欄領域） */
+    questionGroupPage: (examId: string) =>
+      ["exam", examId, "questionGroupPage"] as const,
+    /** 結果出力ページ(08)が1回で取る形（試験＋受験者） */
+    exportPage: (examId: string) => ["exam", examId, "exportPage"] as const,
     classrooms: (examId: string) => ["exam", examId, "classrooms"] as const,
-    cropRegions: (examId: string) => ["exam", examId, "cropRegions"] as const,
     masterAnswers: (examId: string) =>
       ["exam", examId, "masterAnswers"] as const,
     omrConfigs: (examId: string) => ["exam", examId, "omrConfigs"] as const,
@@ -56,7 +68,8 @@ export const queryKeys = {
     list: () => ["grade", "list"] as const,
     detail: (gradeId: string) => ["grade", gradeId] as const,
     classrooms: (gradeId: string) => ["grade", gradeId, "classrooms"] as const,
-    constraints: (gradeId: string) => ["grade", gradeId, "constraints"] as const,
+    constraints: (gradeId: string) =>
+      ["grade", gradeId, "constraints"] as const,
     exclusions: (gradeId: string) => ["grade", gradeId, "exclusions"] as const,
     results: (gradeId: string) => ["grade", gradeId, "results"] as const,
     sourceFits: (gradeId: string) => ["grade", gradeId, "sourceFits"] as const,

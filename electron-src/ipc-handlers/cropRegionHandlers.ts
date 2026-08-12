@@ -60,7 +60,6 @@ function serializeCropRegion<
 import {
   createManyCropSubtotals,
   deleteCropSubtotalsByCropRegionId,
-  getCropSubtotalsByCropRegionId,
 } from "../lib/prisma/cropSubtotal"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
@@ -109,9 +108,5 @@ export const cropRegionHandlers = {
 
   "delete-crop-subtotals-by-crop-region-id": async (cropRegionId: string) => {
     return await deleteCropSubtotalsByCropRegionId(cropRegionId)
-  },
-
-  "get-crop-subtotals-by-crop-region-id": async (cropRegionId: string) => {
-    return await getCropSubtotalsByCropRegionId(cropRegionId)
   },
 } satisfies HandlerMap

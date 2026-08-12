@@ -24,8 +24,5 @@ export function createSubtotalApi() {
     deleteCropSubtotalsByCropRegionId: bind(
       "delete-crop-subtotals-by-crop-region-id"
     ),
-    getCropSubtotalsByCropRegionId: bind(
-      "get-crop-subtotals-by-crop-region-id"
-    ),
   }
 }

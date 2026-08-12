@@ -3,11 +3,7 @@
 // Prisma(sqlite)は enum 非対応のため、この union が唯一の集約点となる。
 import { defineStringUnion } from "./stringUnion"
 
-const EXAM_STUDENT_STATUSES = [
-  "participating",
-  "expected",
-  "absent",
-] as const
+const EXAM_STUDENT_STATUSES = ["participating", "expected", "absent"] as const
 
 export type ExamStudentStatus = (typeof EXAM_STUDENT_STATUSES)[number]
 

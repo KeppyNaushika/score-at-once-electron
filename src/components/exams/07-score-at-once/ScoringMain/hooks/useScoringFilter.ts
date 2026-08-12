@@ -86,7 +86,6 @@ export function useScoringFilter({
     double_mark: false,
   })
 
-
   // 設問ごとに採点履歴を管理（設問IDをキーとするMap）
   // これにより設問変更時に明示的なクリア処理が不要になる
   const [recentlyScoredAnswersByQuestion, setRecentlyScoredAnswersByQuestion] =

@@ -49,8 +49,6 @@ export function useExportPage() {
 
   // 基本状態
 
-
-
   // フィルタ・検索状態
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClassrooms, setSelectedClassrooms] = useState<string[]>([])
@@ -271,7 +269,7 @@ export function useExportPage() {
   const [isExporting, setIsExporting] = useState(false)
 
   // 試験と受験者は必ず対で使うので1つの取得にまとめる
-  const queryKey = queryKeys.exam.students(examId)
+  const queryKey = queryKeys.exam.exportPage(examId)
   const { data, isPending: loading } = useQuery({
     queryKey,
     queryFn: examId

@@ -1,9 +1,8 @@
 "use client"
 
 import type { Subtotal } from "@prisma/client"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Calculator, RotateCcw } from "lucide-react"
-import { useCallback, useMemo, useState } from "react"
+import { useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -16,104 +15,44 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
-import type { CropSubtotalWithSubtotalGroup } from "@/electron-src/lib/prisma/cropSubtotal"
+import type { CropSubtotalAssignmentType } from "@/electron-src/lib/prisma/cropSubtotal"
 import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
 
-import { type FillUpdate, useFillHandleDrag } from "../hooks/useFillHandleDrag"
+import { useCropSubtotalAssignments } from "../hooks/useCropSubtotalAssignments"
+import { useFillHandleDrag } from "../hooks/useFillHandleDrag"
 import { CheckboxCellWithFillHandle } from "./CheckboxCellWithFillHandle"
 
 interface SubtotalAssignmentMatrixWithFillHandleProps {
   subtotalGroups: SubtotalGroupWithSubtotals[]
-  subtotalRegions: CropRegionWithSubtotals[] // SUBTOTAL_SCORE type regions
-  onUpdateSubtotalAssignments: (
-    subtotalCropRegionId: string,
-    subtotalIds: string[]
-  ) => Promise<boolean>
-}
-
-/** 小計欄（CropRegion.id）→ 割り当てた小計id の集合 */
-type SubtotalAssignmentState = Record<string, Set<string>>
-
-/** 未取得のときに毎回新しい値を作らないための空値 */
-const EMPTY_ASSIGNMENTS: SubtotalAssignmentState = {}
-
-/** 1マス分の割り当てを足し引きした新しい集合を返す（元は書き換えない） */
-function toggleAssignment(
-  assignments: SubtotalAssignmentState,
-  regionId: string,
-  subtotalId: string,
-  checked: boolean
-): SubtotalAssignmentState {
-  const next = new Set(assignments[regionId] ?? [])
-  if (checked) next.add(subtotalId)
-  else next.delete(subtotalId)
-  return { ...assignments, [regionId]: next }
+  /** 小計欄領域（SUBTOTAL_SCORE）。割り当ての出所でもある */
+  subtotalRegions: CropRegionWithSubtotals[]
+  onUpdateAssignments: (
+    cropRegionId: string,
+    subtotalIds: string[],
+    assignmentType: CropSubtotalAssignmentType
+  ) => Promise<void>
+  /** 保存済みの割り当てを取り直す */
+  onReload: () => void
 }
 
 export function SubtotalAssignmentMatrixWithFillHandle({
   subtotalGroups,
   subtotalRegions,
-  onUpdateSubtotalAssignments,
+  onUpdateAssignments,
+  onReload,
 }: SubtotalAssignmentMatrixWithFillHandleProps) {
-  const queryClient = useQueryClient()
-  const [saving, setSaving] = useState(false)
-
   // 選択されたセルの状態（rowId-colId形式）
   const [selectedCell, setSelectedCell] = useState<string | null>(null)
 
   // 全ての小計項目をフラットな配列に変換（列データ）
   const allSubtotals = subtotalGroups.flatMap((group) => group.subtotals)
 
-  // 保存済みの割り当てが唯一の出所。編集は楽観更新でキャッシュを差し替え、
-  // 失敗したら元へ戻す（「変更をリセット」は取り直すだけで済む）
-  const subtotalRegionIds = useMemo(
-    () => subtotalRegions.map((cropRegion) => cropRegion.id),
-    [subtotalRegions]
-  )
-  const queryKey = useMemo(
-    () => ["subtotalAssignments", subtotalRegionIds],
-    [subtotalRegionIds]
-  )
-  const { data: assignments = EMPTY_ASSIGNMENTS, isPending: loading } =
-    useQuery({
-      queryKey,
-      queryFn: async () => {
-        const perRegion = await Promise.all(
-          subtotalRegionIds.map(async (cropRegionId) => {
-            const cropSubtotals =
-              await window.electronAPI.getCropSubtotalsByCropRegionId(
-                cropRegionId
-              )
-            return [
-              cropRegionId,
-              new Set(
-                cropSubtotals.map(
-                  (cropSubtotal: CropSubtotalWithSubtotalGroup) =>
-                    cropSubtotal.subtotalId
-                )
-              ),
-            ] as const
-          })
-        )
-        return Object.fromEntries(perRegion) as SubtotalAssignmentState
-      },
+  const { assignments, saving, setCellAssignment, fillCells } =
+    useCropSubtotalAssignments({
+      cropRegions: subtotalRegions,
+      assignmentType: "SUBTOTAL_DEFINITION",
+      onUpdateAssignments,
     })
-
-  const setAssignments = useCallback(
-    (
-      update: (previous: SubtotalAssignmentState) => SubtotalAssignmentState
-    ) => {
-      queryClient.setQueryData<SubtotalAssignmentState>(queryKey, (previous) =>
-        update(previous ?? EMPTY_ASSIGNMENTS)
-      )
-    },
-    [queryClient, queryKey]
-  )
-
-  const loadAssignments = useCallback(
-    () => queryClient.invalidateQueries({ queryKey }),
-    [queryClient, queryKey]
-  )
 
   // フィルハンドルのドラッグ管理
   const {
@@ -124,104 +63,8 @@ export function SubtotalAssignmentMatrixWithFillHandle({
   } = useFillHandleDrag({
     rows: subtotalRegions,
     cols: allSubtotals,
-    onFillComplete: async (updates: FillUpdate[]) => {
-      setSaving(true)
-      try {
-        // 各セルを順次更新
-        for (const update of updates) {
-          const subtotalRegionId = update.rowId
-          const subtotalId = update.colId
-          const newValue = update.value
-
-          // UI状態を即座に更新
-          setAssignments((prev) => {
-            const newAssignments = { ...prev }
-            if (!newAssignments[subtotalRegionId]) {
-              newAssignments[subtotalRegionId] = new Set()
-            }
-
-            if (newValue) {
-              newAssignments[subtotalRegionId].add(subtotalId)
-            } else {
-              newAssignments[subtotalRegionId].delete(subtotalId)
-            }
-
-            return newAssignments
-          })
-
-          // データベースに保存
-          const currentAssignments = assignments[subtotalRegionId] || new Set()
-          const updatedAssignments = new Set(currentAssignments)
-
-          if (newValue) {
-            updatedAssignments.add(subtotalId)
-          } else {
-            updatedAssignments.delete(subtotalId)
-          }
-
-          await onUpdateSubtotalAssignments(
-            subtotalRegionId,
-            Array.from(updatedAssignments)
-          )
-        }
-
-        console.log(`✅ フィルハンドルで${updates.length}セルを更新しました`)
-      } catch (error) {
-        console.error("❌ フィルハンドルでの更新エラー:", error)
-        // エラー時は全体をリロード
-        loadAssignments()
-      } finally {
-        setSaving(false)
-      }
-    },
+    onFillComplete: fillCells,
   })
-
-  // チェックボックスの状態を変更（逐次保存）
-  const handleAssignmentChange = async (
-    subtotalRegionId: string,
-    itemId: string,
-    checked: boolean
-  ) => {
-    // UI状態を即座に更新
-    setAssignments((prev) =>
-      toggleAssignment(prev, subtotalRegionId, itemId, checked)
-    )
-
-    // 逐次保存処理
-    try {
-      setSaving(true)
-
-      // 現在の関連付け状態を取得
-      const currentAssignments = assignments[subtotalRegionId] || new Set()
-      const updatedAssignments = new Set(currentAssignments)
-
-      if (checked) {
-        updatedAssignments.add(itemId)
-      } else {
-        updatedAssignments.delete(itemId)
-      }
-
-      // データベースに即座に保存
-      await onUpdateSubtotalAssignments(
-        subtotalRegionId,
-        Array.from(updatedAssignments)
-      )
-    } catch (error) {
-      console.error("❌ 小計点関連付け保存エラー:", error)
-
-      // エラー時はUIを元に戻す
-      setAssignments((prev) =>
-        toggleAssignment(prev, subtotalRegionId, itemId, !checked)
-      )
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  /** 変更をリセット＝保存済みの状態を取り直す */
-  const handleReset = () => {
-    void loadAssignments()
-  }
 
   // セル選択
   const handleCellClick = (rowId: string, colId: string) => {
@@ -232,17 +75,6 @@ export function SubtotalAssignmentMatrixWithFillHandle({
   // セルが選択されているか判定
   const isCellSelected = (rowId: string, colId: string): boolean => {
     return selectedCell === `${rowId}-${colId}`
-  }
-
-  if (loading) {
-    return (
-      <div className="py-8 text-center">
-        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-        <p className="mt-2 text-muted-foreground">
-          小計点関連付けデータを読み込み中...
-        </p>
-      </div>
-    )
   }
 
   if (subtotalGroups.length === 0) {
@@ -287,7 +119,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
           <Button
             variant="outline"
             size="sm"
-            onClick={handleReset}
+            onClick={onReload}
             disabled={saving}
           >
             <RotateCcw className="mr-2 h-4 w-4" />
@@ -407,7 +239,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
                                 false
                               }
                               onChange={(checked) =>
-                                handleAssignmentChange(
+                                setCellAssignment(
                                   region.id,
                                   subtotal.id,
                                   checked

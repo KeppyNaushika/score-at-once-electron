@@ -21,9 +21,7 @@ const EMPTY_CROP_REGIONS: CropRegionWithSubtotals[] = []
 
 /** この画面が1回の取得で揃える形 */
 interface RegionInfoData {
-  currentUser: Awaited<
-    ReturnType<typeof window.electronAPI.getCurrentUser>
-  >
+  currentUser: Awaited<ReturnType<typeof window.electronAPI.getCurrentUser>>
   examPages: ExamPageWithContent[]
   backgroundImageUrls: Record<string, string>
   cropRegions: CropRegionWithSubtotals[]
@@ -56,7 +54,7 @@ export default function RegionInfoPage() {
   // ページ・背景画像・採点領域・操作者は必ず揃って初めて編集できるので、
   // 1つの取得にまとめる（片方だけ古い状態で描かない）
   const queryKey = useMemo(
-    () => queryKeys.exam.cropRegions(examId ?? ""),
+    () => queryKeys.exam.regionInfoPage(examId ?? ""),
     [examId]
   )
   const { data, isPending: isLoading } = useQuery<RegionInfoData>({
