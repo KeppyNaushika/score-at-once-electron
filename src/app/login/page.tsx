@@ -1,12 +1,14 @@
 "use client"
 
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus, Settings, UserIcon } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useAuth } from "@/contexts/AuthContext"
+import { queryKeys } from "@/lib/queryKeys"
 
 import { PasscodeModal } from "./PasscodeModal"
 import { UserCreateModal } from "./UserCreateModal"
@@ -20,28 +22,21 @@ interface User {
 }
 
 export default function UserSelection() {
-  const [users, setUsers] = useState<User[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showPasscodeModal, setShowPasscodeModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const { quickLogin } = useAuth()
 
-  const loadUsers = async () => {
-    try {
-      const result = await window.electronAPI.fetchUsers()
-      setUsers(result || [])
-    } catch (error) {
-      console.error("Failed to load users:", error)
-      toast.error("ユーザー一覧の読み込みに失敗しました")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const queryClient = useQueryClient()
+  const { data: users = [], isPending: isLoading } = useQuery({
+    queryKey: queryKeys.users.all,
+    queryFn: () => window.electronAPI.fetchUsers(),
+  })
 
-  useEffect(() => {
-    loadUsers()
-  }, [])
+  const loadUsers = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: queryKeys.users.all }),
+    [queryClient]
+  )
 
   const handleUserSelect = async (user: User) => {
     if (user.passcodeType && user.passcodeType !== "none") {

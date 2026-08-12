@@ -1,7 +1,8 @@
 "use client"
 
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback } from "react"
 import { toast } from "sonner"
 
 import { MasterAnswerManager } from "@/components/exams/01-upload/components/MasterAnswerManager"
@@ -10,6 +11,7 @@ import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
+import { queryKeys } from "@/lib/queryKeys"
 
 /**
  * MasterImageStepPage - 模範解答アップロードページ
@@ -32,34 +34,18 @@ export default function MasterAnswerStepPage() {
   const examId =
     typeof paramsExamId === "string" ? paramsExamId : paramsExamId?.[0]
 
-  const [masterAnswers, setMasterAnswers] = useState<ExamPageWithContent[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  /**
-   * 模範解答画像データを読み込む
-   *
-   * 試験IDから模範解答画像のリストを取得し、
-   * ページ番号順にソートして状態を更新します。
-   */
-  const loadMasterAnswers = useCallback(async () => {
-    if (!examId) return
-    setIsLoading(true)
-    try {
-      // 模範解答ページはページそのもの。答案の件数も削除確認で使うので一緒に持つ
-      const fetchedPages = await window.electronAPI.getExamPagesByExamId(examId)
-      setMasterAnswers(sortImagesByPageNumber(fetchedPages ?? []))
-    } catch (error) {
-      console.error("Failed to load master answers:", error)
-      toast.error("模範解答画像の読み込みに失敗しました。")
-      setMasterAnswers([]) // エラー時は空にする
-    } finally {
-      setIsLoading(false)
-    }
-  }, [examId])
-
-  useEffect(() => {
-    loadMasterAnswers()
-  }, [loadMasterAnswers])
+  const queryClient = useQueryClient()
+  const queryKey = queryKeys.exam.masterAnswers(examId ?? "")
+  // 模範解答ページはページそのもの。答案の件数も削除確認で使うので一緒に持つ
+  const { data: masterAnswers = [], isPending: isLoading } = useQuery({
+    queryKey,
+    queryFn: examId
+      ? async () =>
+          sortImagesByPageNumber(
+            await window.electronAPI.getExamPagesByExamId(examId)
+          )
+      : skipToken,
+  })
 
   /**
    * 画像データ変更時のハンドラー
@@ -72,10 +58,10 @@ export default function MasterAnswerStepPage() {
   const handleAnswersChange = useCallback(
     (updatedAnswers: ExamPageWithContent[]) => {
       // 追加・差し替え・削除の結果は MasterAnswerManager 側で DB を引き直して渡ってくる。
-      // ここはそれを受けて画面の状態を合わせるだけ
-      setMasterAnswers(updatedAnswers)
+      // 引き直した結果をそのままキャッシュへ入れる（もう一度取りに行かない）
+      queryClient.setQueryData(queryKey, updatedAnswers)
     },
-    []
+    [queryClient, queryKey]
   )
 
   /**

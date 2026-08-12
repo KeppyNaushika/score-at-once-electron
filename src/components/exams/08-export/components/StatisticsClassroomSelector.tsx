@@ -1,7 +1,8 @@
 "use client"
 
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
 import { BarChart3, GraduationCap, Users } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback } from "react"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -13,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { ExamClassroomWithMemberships } from "@/electron-src/lib/prisma/examClassroom"
+import { queryKeys } from "@/lib/queryKeys"
 
 interface StatisticsClassroomSelectorProps {
   examId: string
@@ -29,27 +31,19 @@ interface StatisticsClassroomSelectorProps {
 export function StatisticsClassroomSelector({
   examId,
 }: StatisticsClassroomSelectorProps) {
-  const [classrooms, setClassrooms] = useState<ExamClassroomWithMemberships[]>(
-    []
+  const queryClient = useQueryClient()
+  const queryKey = queryKeys.exam.classrooms(examId)
+  const { data: classrooms = [], isPending: loading } = useQuery({
+    queryKey,
+    queryFn: examId
+      ? () => window.electronAPI.examClassroom.getAll(examId)
+      : skipToken,
+  })
+
+  const fetchClassrooms = useCallback(
+    () => queryClient.invalidateQueries({ queryKey }),
+    [queryClient, queryKey]
   )
-  const [loading, setLoading] = useState(true)
-
-  const fetchClassrooms = useCallback(async () => {
-    if (!examId) return
-    setLoading(true)
-    try {
-      const result = await window.electronAPI.examClassroom.getAll(examId)
-      setClassrooms(result ?? [])
-    } catch (err) {
-      console.error("Failed to load exam classrooms:", err)
-    } finally {
-      setLoading(false)
-    }
-  }, [examId])
-
-  useEffect(() => {
-    fetchClassrooms()
-  }, [fetchClassrooms])
 
   const updateFlag = useCallback(
     async (
@@ -57,12 +51,14 @@ export function StatisticsClassroomSelector({
       patch: { teacherStatistics?: boolean; studentReport?: boolean }
     ) => {
       // 楽観的更新
-      setClassrooms((prev) =>
-        prev.map((examClassroom) =>
-          examClassroom.id === examClassroomId
-            ? { ...examClassroom, ...patch }
-            : examClassroom
-        )
+      queryClient.setQueryData<ExamClassroomWithMemberships[]>(
+        queryKey,
+        (prev) =>
+          (prev ?? []).map((examClassroom) =>
+            examClassroom.id === examClassroomId
+              ? { ...examClassroom, ...patch }
+              : examClassroom
+          )
       )
       try {
         await window.electronAPI.examClassroom.update({
@@ -75,7 +71,7 @@ export function StatisticsClassroomSelector({
         fetchClassrooms()
       }
     },
-    [fetchClassrooms]
+    [fetchClassrooms, queryClient, queryKey]
   )
 
   if (loading) {

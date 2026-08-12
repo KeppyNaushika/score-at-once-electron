@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   BarChart3,
   ChevronRight,
@@ -15,7 +16,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
 import { EditGradeWindow } from "@/components/grades/EditGradeWindow"
@@ -31,7 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Progress } from "@/components/ui/progress"
 import { getGradeCompletion, type GradeStepCompletion } from "@/lib/gradeStatus"
-import type { GradeWithRelations } from "@/types/grade.types"
+import { queryKeys } from "@/lib/queryKeys"
 
 interface WorkflowStep {
   id: string
@@ -195,26 +196,23 @@ export default function GradeDetailPage() {
   const searchParams = useSearchParams()
   const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
 
-  const [exam, setExam] = useState<GradeWithRelations | null>(null)
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const { data: exam = null, isPending: loading } = useQuery({
+    queryKey: queryKeys.grade.detail(gradeId),
+    queryFn: () => window.electronAPI.grade.getById(gradeId),
+  })
   // 新規作成直後（?setup=1）は基準日などの基本設定を促すため編集モーダルを開く
   const [showEditModal, setShowEditModal] = useState(
     () => searchParams.get("setup") === "1"
   )
 
-  const loadExam = useCallback(async () => {
-    try {
-      setExam(await window.electronAPI.grade.getById(gradeId))
-    } catch (error) {
-      console.error("Error loading grade exam:", error)
-    } finally {
-      setLoading(false)
-    }
-  }, [gradeId])
-
-  useEffect(() => {
-    loadExam()
-  }, [loadExam])
+  const loadExam = useCallback(
+    () =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.grade.detail(gradeId),
+      }),
+    [queryClient, gradeId]
+  )
 
   const handleDelete = async () => {
     try {

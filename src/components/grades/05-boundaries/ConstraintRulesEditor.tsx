@@ -1,7 +1,8 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { Trash2 } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -20,8 +21,8 @@ import {
   evaluateConstraints,
   validateConstraintExpression,
 } from "@/lib/gradeConstraints"
+import { queryKeys } from "@/lib/queryKeys"
 import type {
-  GradeCalculationResult,
   GradeConstraintData,
   GradeConstraintInput,
   GradeConstraintKind,
@@ -80,24 +81,13 @@ export function ConstraintRulesEditor({
   const { constraints, createConstraint, updateConstraint, deleteConstraint } =
     useGradeConstraints(gradeId)
 
-  const [calcResult, setCalcResult] = useState<GradeCalculationResult | null>(
-    null
-  )
+  // プレビュー用の成績算出結果（06 結果画面と同じキャッシュを共有する）
+  const { data: calcResult = null } = useQuery({
+    queryKey: queryKeys.grade.results(gradeId),
+    queryFn: () => window.electronAPI.grade.calculateGrades(gradeId),
+  })
 
   const labels = useMemo(() => collectLabels(gradeItems), [gradeItems])
-
-  // プレビュー用に成績算出結果を取得
-  const loadCalc = useCallback(async () => {
-    try {
-      setCalcResult(await window.electronAPI.grade.calculateGrades(gradeId))
-    } catch (error) {
-      console.error("Error calculating grades for preview:", error)
-    }
-  }, [gradeId])
-
-  useEffect(() => {
-    loadCalc()
-  }, [loadCalc])
 
   const evaluation = useMemo(() => {
     if (!calcResult) return null
