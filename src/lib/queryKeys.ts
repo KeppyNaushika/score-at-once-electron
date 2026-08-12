@@ -54,6 +54,12 @@ export const queryKeys = {
       ["exam", examId, "questionGroupPage"] as const,
     /** 結果出力ページ(08)が1回で取る形（試験＋受験者） */
     exportPage: (examId: string) => ["exam", examId, "exportPage"] as const,
+    /** 出力設定（重ね描き＋個人成績表。小計グループ選択は関連フラグから解決済み） */
+    exportSettings: (examId: string) =>
+      ["exam", examId, "exportSettings"] as const,
+    /** 模範解答1ページ目の縦横比から決まる用紙の向き */
+    masterImageOrientation: (examId: string) =>
+      ["exam", examId, "masterImageOrientation"] as const,
     classrooms: (examId: string) => ["exam", examId, "classrooms"] as const,
     masterAnswers: (examId: string) =>
       ["exam", examId, "masterAnswers"] as const,

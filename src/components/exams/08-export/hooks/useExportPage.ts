@@ -45,9 +45,6 @@ const EMPTY_STUDENTS: Student[] = []
 export function useExportPage() {
   const params = useParams()
   const examId = params.examId as string
-  const initializedRef = useRef(false)
-
-  // 基本状態
 
   // フィルタ・検索状態
   const [searchTerm, setSearchTerm] = useState("")
@@ -84,45 +81,47 @@ export function useExportPage() {
   const [individualReportOptions, setIndividualReportOptionsState] =
     useState<IndividualReportOptions>(DEFAULT_INDIVIDUAL_REPORT_OPTIONS)
 
-  // 試験設定の読み込み
-  useEffect(() => {
-    if (initializedRef.current) return
-    initializedRef.current = true
-
-    const loadExamSettings = async () => {
-      if (examId && window.electronAPI?.settings) {
-        try {
-          const settings =
-            await window.electronAPI.settings.getExamExportSettings(examId)
-          setAnswerOverlaySettingsState(settings.answerOverlay)
-
-          // 小計グループ選択は source of truth である
-          // ExamSubtotalGroup フラグから hydrate する（P5: 亡霊ID排除）
-          let baseOptions = settings.individualReport
-          const selection =
-            await window.electronAPI.getSubtotalGroupSelection(examId)
-          {
-            baseOptions = {
-              ...baseOptions,
+  // 保存済みの出力設定。小計グループ選択は SSOT である ExamSubtotalGroup の
+  // フラグから解決する（設定JSONに残った亡霊IDを使わない）
+  const { data: savedSettings } = useQuery({
+    queryKey: queryKeys.exam.exportSettings(examId),
+    queryFn: examId
+      ? async () => {
+          const [settings, selection] = await Promise.all([
+            window.electronAPI.settings.getExamExportSettings(examId),
+            window.electronAPI.getSubtotalGroupSelection(examId),
+          ])
+          return {
+            answerOverlay: settings.answerOverlay,
+            individualReport: {
+              ...settings.individualReport,
               tableSubtotalGroupSelection: {
-                ...baseOptions.tableSubtotalGroupSelection,
+                ...settings.individualReport.tableSubtotalGroupSelection,
                 selectedGroupIds: selection.tableGroupIds,
               },
               boxPlotSubtotalGroupSelection: {
-                ...baseOptions.boxPlotSubtotalGroupSelection,
+                ...settings.individualReport.boxPlotSubtotalGroupSelection,
                 selectedGroupIds: selection.boxPlotGroupIds,
               },
-            }
+            },
           }
-          setIndividualReportOptionsState(baseOptions)
-        } catch (error) {
-          console.error("試験設定の読み込みに失敗しました:", error)
         }
-      }
-    }
+      : skipToken,
+  })
 
-    loadExamSettings()
-  }, [examId])
+  /**
+   * 取得した設定を編集状態の種にする。
+   * 試験を切り替えたら蒔き直す（以前は ref で1回に固定していたため、
+   * 別の試験を開いても前の試験の設定が残ったまま保存されていた）。
+   */
+  const [settingsSeededExamId, setSettingsSeededExamId] = useState<
+    string | null
+  >(null)
+  if (savedSettings && settingsSeededExamId !== examId) {
+    setSettingsSeededExamId(examId)
+    setAnswerOverlaySettingsState(savedSettings.answerOverlay)
+    setIndividualReportOptionsState(savedSettings.individualReport)
+  }
 
   /**
    * 出力設定の保存。
@@ -222,42 +221,43 @@ export function useExportPage() {
     ]
   )
 
-  // マスター画像の縦横比からPDF用紙の向きを自動設定
-  const orientationInitializedRef = useRef(false)
-  useEffect(() => {
-    if (orientationInitializedRef.current || !examId) return
+  // マスター画像の縦横比からPDF用紙の向きを決める
+  const { data: detectedOrientation } = useQuery({
+    queryKey: queryKeys.exam.masterImageOrientation(examId),
+    queryFn: examId
+      ? async () => {
+          const masterImages =
+            await window.electronAPI.getMasterImagesByExamId(examId)
+          const firstImage = masterImages[0]
+          if (!firstImage?.imagePath) return null
 
-    const detectOrientation = async () => {
-      try {
-        const masterImages =
-          await window.electronAPI.getMasterImagesByExamId(examId)
-        if (!masterImages || masterImages.length === 0) return
-
-        const firstImage = masterImages[0]
-        if (!firstImage.imagePath) return
-
-        const imageUrl = await window.electronAPI.resolveFileProtocolPath(
-          firstImage.imagePath
-        )
-
-        const img = new Image()
-        img.src = imageUrl
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve()
-          img.onerror = () => reject(new Error("画像の読み込みに失敗"))
-        })
-
-        orientationInitializedRef.current = true
-        if (img.naturalWidth > img.naturalHeight) {
-          setExportOptions((prev) => ({ ...prev, pdfOrientation: "landscape" }))
+          const imageUrl = await window.electronAPI.resolveFileProtocolPath(
+            firstImage.imagePath
+          )
+          const image = new Image()
+          image.src = imageUrl
+          await new Promise<void>((resolve, reject) => {
+            image.onload = () => resolve()
+            image.onerror = () => reject(new Error("画像の読み込みに失敗"))
+          })
+          return image.naturalWidth > image.naturalHeight
+            ? ("landscape" as const)
+            : ("portrait" as const)
         }
-      } catch (error) {
-        console.error("用紙方向の自動検出に失敗しました:", error)
-      }
-    }
+      : skipToken,
+  })
 
-    detectOrientation()
-  }, [examId])
+  // 検出した向きを既定値として1度だけ入れる（利用者が変えた後は上書きしない）
+  const [orientationSeededExamId, setOrientationSeededExamId] = useState<
+    string | null
+  >(null)
+  if (detectedOrientation && orientationSeededExamId !== examId) {
+    setOrientationSeededExamId(examId)
+    setExportOptions((previous) => ({
+      ...previous,
+      pdfOrientation: detectedOrientation,
+    }))
+  }
 
   // プログレス状態
   const [showProgressModal, setShowProgressModal] = useState(false)

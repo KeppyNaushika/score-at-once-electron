@@ -5,7 +5,6 @@
  */
 
 import type {
-  AbsentMethod,
   EstimationDetail,
   EstimationTargetDistribution,
   GradeCalculationResult,
@@ -13,7 +12,11 @@ import type {
   SourceScoreResult,
   StudentGradeResult,
 } from "../../../../src/types/grade.types"
-import { toGradeDataSourceType } from "../../../../src/types/grade.types"
+import {
+  toAbsentMethod,
+  toEstimationMode,
+  toGradeDataSourceType,
+} from "../../../../src/types/grade.types"
 import prisma from "../../prisma/client"
 import { subtotalWithQuestionAssignmentsInclude } from "../../prisma/cropSubtotal"
 import {
@@ -196,10 +199,10 @@ async function buildGradeCalcContext(gradeId: string) {
       id: dataSource.id,
       name: dataSource.name,
       maxScore: liveMaxScoreMap.get(dataSource.id) ?? 0,
-      absentMethod: (dataSource.absentMethod ?? "null") as AbsentMethod,
+      absentMethod: toAbsentMethod(dataSource.absentMethod),
       absentRatio: Number(dataSource.absentRatio ?? 1),
       absentOffset: Number(dataSource.absentOffset ?? 0),
-      estimationMode: dataSource.estimationMode ?? "all",
+      estimationMode: toEstimationMode(dataSource.estimationMode),
       estimationSourceIds: sourceIds,
     }
   })
@@ -424,7 +427,7 @@ export async function calculateGrades(
         // 満点は元データからライブ算出した値を使う（maxScore列は使わない）
         const maxScore = liveMaxScoreMap.get(dataSource.id) ?? 0
         const weight = Number(dataSource.weight)
-        const absentMethod = (dataSource.absentMethod ?? "null") as AbsentMethod
+        const absentMethod = toAbsentMethod(dataSource.absentMethod)
         const absentRatio = Number(dataSource.absentRatio ?? 1)
         const absentOffset = Number(dataSource.absentOffset ?? 0)
 
