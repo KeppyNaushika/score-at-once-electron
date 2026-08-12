@@ -1,8 +1,9 @@
 "use client"
 
 import type { Subtotal } from "@prisma/client"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Calculator, RotateCcw } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -30,12 +31,23 @@ interface SubtotalAssignmentMatrixWithFillHandleProps {
   ) => Promise<boolean>
 }
 
-interface SubtotalAssignmentState {
-  [subtotalRegionId: string]: Set<string> // subtotalCropRegionId -> Set of subtotalIds
-}
+/** 小計欄（CropRegion.id）→ 割り当てた小計id の集合 */
+type SubtotalAssignmentState = Record<string, Set<string>>
 
-interface OriginalSubtotalAssignmentState {
-  [subtotalRegionId: string]: string[] // subtotalCropRegionId -> Array of subtotalIds
+/** 未取得のときに毎回新しい値を作らないための空値 */
+const EMPTY_ASSIGNMENTS: SubtotalAssignmentState = {}
+
+/** 1マス分の割り当てを足し引きした新しい集合を返す（元は書き換えない） */
+function toggleAssignment(
+  assignments: SubtotalAssignmentState,
+  regionId: string,
+  subtotalId: string,
+  checked: boolean
+): SubtotalAssignmentState {
+  const next = new Set(assignments[regionId] ?? [])
+  if (checked) next.add(subtotalId)
+  else next.delete(subtotalId)
+  return { ...assignments, [regionId]: next }
 }
 
 export function SubtotalAssignmentMatrixWithFillHandle({
@@ -43,10 +55,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
   subtotalRegions,
   onUpdateSubtotalAssignments,
 }: SubtotalAssignmentMatrixWithFillHandleProps) {
-  const [assignments, setAssignments] = useState<SubtotalAssignmentState>({})
-  const [originalAssignments, setOriginalAssignments] =
-    useState<OriginalSubtotalAssignmentState>({})
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [saving, setSaving] = useState(false)
 
   // 選択されたセルの状態（rowId-colId形式）
@@ -55,47 +64,56 @@ export function SubtotalAssignmentMatrixWithFillHandle({
   // 全ての小計項目をフラットな配列に変換（列データ）
   const allSubtotals = subtotalGroups.flatMap((group) => group.subtotals)
 
-  // 既存の関連付けを読み込み
-  const loadAssignments = useCallback(async () => {
-    setLoading(true)
-    const newAssignments: SubtotalAssignmentState = {}
-
-    for (const region of subtotalRegions) {
-      try {
-        const result = await window.electronAPI.getCropSubtotalsByCropRegionId(
-          region.id
+  // 保存済みの割り当てが唯一の出所。編集は楽観更新でキャッシュを差し替え、
+  // 失敗したら元へ戻す（「変更をリセット」は取り直すだけで済む）
+  const subtotalRegionIds = useMemo(
+    () => subtotalRegions.map((cropRegion) => cropRegion.id),
+    [subtotalRegions]
+  )
+  const queryKey = useMemo(
+    () => ["subtotalAssignments", subtotalRegionIds],
+    [subtotalRegionIds]
+  )
+  const { data: assignments = EMPTY_ASSIGNMENTS, isPending: loading } =
+    useQuery({
+      queryKey,
+      queryFn: async () => {
+        const perRegion = await Promise.all(
+          subtotalRegionIds.map(async (cropRegionId) => {
+            const cropSubtotals =
+              await window.electronAPI.getCropSubtotalsByCropRegionId(
+                cropRegionId
+              )
+            return [
+              cropRegionId,
+              new Set(
+                cropSubtotals.map(
+                  (cropSubtotal: CropSubtotalWithSubtotalGroup) =>
+                    cropSubtotal.subtotalId
+                )
+              ),
+            ] as const
+          })
         )
+        return Object.fromEntries(perRegion) as SubtotalAssignmentState
+      },
+    })
 
-        if (result && Array.isArray(result)) {
-          newAssignments[region.id] = new Set(
-            result.map(
-              (definition: CropSubtotalWithSubtotalGroup) =>
-                definition.subtotalId
-            )
-          )
-        } else {
-          newAssignments[region.id] = new Set()
-        }
-      } catch (error) {
-        console.error(
-          `Error loading subtotal assignments for region ${region.id}:`,
-          error
-        )
-        newAssignments[region.id] = new Set()
-      }
-    }
-
-    setAssignments(newAssignments)
-    setOriginalAssignments(
-      Object.fromEntries(
-        Object.entries(newAssignments).map(([key, value]) => [
-          key,
-          Array.from(value),
-        ])
+  const setAssignments = useCallback(
+    (
+      update: (previous: SubtotalAssignmentState) => SubtotalAssignmentState
+    ) => {
+      queryClient.setQueryData<SubtotalAssignmentState>(queryKey, (previous) =>
+        update(previous ?? EMPTY_ASSIGNMENTS)
       )
-    )
-    setLoading(false)
-  }, [subtotalRegions])
+    },
+    [queryClient, queryKey]
+  )
+
+  const loadAssignments = useCallback(
+    () => queryClient.invalidateQueries({ queryKey }),
+    [queryClient, queryKey]
+  )
 
   // フィルハンドルのドラッグ管理
   const {
@@ -145,13 +163,6 @@ export function SubtotalAssignmentMatrixWithFillHandle({
             subtotalRegionId,
             Array.from(updatedAssignments)
           )
-
-          // 成功時にoriginalAssignmentsも更新
-          setOriginalAssignments((prev) => {
-            const updated = { ...prev }
-            updated[subtotalRegionId] = Array.from(updatedAssignments)
-            return updated
-          })
         }
 
         console.log(`✅ フィルハンドルで${updates.length}セルを更新しました`)
@@ -165,14 +176,6 @@ export function SubtotalAssignmentMatrixWithFillHandle({
     },
   })
 
-  useEffect(() => {
-    if (subtotalRegions.length > 0) {
-      loadAssignments()
-    } else {
-      setLoading(false)
-    }
-  }, [subtotalRegions, loadAssignments])
-
   // チェックボックスの状態を変更（逐次保存）
   const handleAssignmentChange = async (
     subtotalRegionId: string,
@@ -180,20 +183,9 @@ export function SubtotalAssignmentMatrixWithFillHandle({
     checked: boolean
   ) => {
     // UI状態を即座に更新
-    setAssignments((prev) => {
-      const newAssignments = { ...prev }
-      if (!newAssignments[subtotalRegionId]) {
-        newAssignments[subtotalRegionId] = new Set()
-      }
-
-      if (checked) {
-        newAssignments[subtotalRegionId].add(itemId)
-      } else {
-        newAssignments[subtotalRegionId].delete(itemId)
-      }
-
-      return newAssignments
-    })
+    setAssignments((prev) =>
+      toggleAssignment(prev, subtotalRegionId, itemId, checked)
+    )
 
     // 逐次保存処理
     try {
@@ -214,49 +206,21 @@ export function SubtotalAssignmentMatrixWithFillHandle({
         subtotalRegionId,
         Array.from(updatedAssignments)
       )
-
-      // 成功時にoriginalAssignmentsも更新
-      setOriginalAssignments((prev) => {
-        const updated = { ...prev }
-        updated[subtotalRegionId] = Array.from(updatedAssignments)
-        return updated
-      })
-
-      console.log(
-        `✅ 小計点関連付け保存成功: 小計点${subtotalRegionId}, 項目${itemId}, チェック:${checked}`
-      )
     } catch (error) {
       console.error("❌ 小計点関連付け保存エラー:", error)
 
       // エラー時はUIを元に戻す
-      setAssignments((prev) => {
-        const revertedAssignments = { ...prev }
-        if (!revertedAssignments[subtotalRegionId]) {
-          revertedAssignments[subtotalRegionId] = new Set()
-        }
-
-        if (checked) {
-          revertedAssignments[subtotalRegionId].delete(itemId)
-        } else {
-          revertedAssignments[subtotalRegionId].add(itemId)
-        }
-
-        return revertedAssignments
-      })
+      setAssignments((prev) =>
+        toggleAssignment(prev, subtotalRegionId, itemId, !checked)
+      )
     } finally {
       setSaving(false)
     }
   }
 
-  // 変更をリセット
+  /** 変更をリセット＝保存済みの状態を取り直す */
   const handleReset = () => {
-    const resetAssignments: SubtotalAssignmentState = {}
-    for (const [regionId, itemIds] of Object.entries(originalAssignments)) {
-      resetAssignments[regionId] = new Set(
-        Array.isArray(itemIds) ? itemIds : []
-      )
-    }
-    setAssignments(resetAssignments)
+    void loadAssignments()
   }
 
   // セル選択

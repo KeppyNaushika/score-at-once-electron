@@ -1,8 +1,9 @@
 "use client"
 
 import type { Subtotal } from "@prisma/client"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Grid3X3, RotateCcw } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -30,12 +31,23 @@ interface QuestionAssignmentMatrixWithFillHandleProps {
   ) => Promise<boolean>
 }
 
-interface AssignmentState {
-  [questionId: string]: Set<string> // questionCropRegionId -> Set of subtotalIds
-}
+/** 設問（CropRegion.id）→ 割り当てた小計id の集合 */
+type AssignmentState = Record<string, Set<string>>
 
-interface OriginalAssignmentState {
-  [questionId: string]: string[] // questionCropRegionId -> Array of subtotalIds
+/** 未取得のときに毎回新しい値を作らないための空値 */
+const EMPTY_ASSIGNMENTS: AssignmentState = {}
+
+/** 1マス分の割り当てを足し引きした新しい集合を返す（元は書き換えない） */
+function toggleAssignment(
+  assignments: AssignmentState,
+  questionId: string,
+  subtotalId: string,
+  checked: boolean
+): AssignmentState {
+  const next = new Set(assignments[questionId] ?? [])
+  if (checked) next.add(subtotalId)
+  else next.delete(subtotalId)
+  return { ...assignments, [questionId]: next }
 }
 
 export function QuestionAssignmentMatrixWithFillHandle({
@@ -43,10 +55,7 @@ export function QuestionAssignmentMatrixWithFillHandle({
   cropRegions,
   onUpdateAssignments,
 }: QuestionAssignmentMatrixWithFillHandleProps) {
-  const [assignments, setAssignments] = useState<AssignmentState>({})
-  const [originalAssignments, setOriginalAssignments] =
-    useState<OriginalAssignmentState>({})
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
   const [saving, setSaving] = useState(false)
 
   // 選択されたセルの状態（rowId-colId形式）
@@ -55,42 +64,54 @@ export function QuestionAssignmentMatrixWithFillHandle({
   // 全ての小計項目をフラットな配列に変換（列データ）
   const allSubtotals = subtotalGroups.flatMap((group) => group.subtotals)
 
-  // 既存の関連付けを読み込み
-  const loadAssignments = useCallback(async () => {
-    setLoading(true)
-    const newAssignments: AssignmentState = {}
-
-    for (const region of cropRegions) {
-      try {
-        const result = await window.electronAPI.getCropSubtotalsByCropRegionId(
-          region.id
+  // 保存済みの割り当てが唯一の出所。編集は楽観更新でキャッシュを差し替え、
+  // 失敗したら元へ戻す（「変更をリセット」は取り直すだけで済む）
+  const cropRegionIds = useMemo(
+    () => cropRegions.map((cropRegion) => cropRegion.id),
+    [cropRegions]
+  )
+  const queryKey = useMemo(
+    () => ["questionAssignments", cropRegionIds],
+    [cropRegionIds]
+  )
+  const { data: assignments = EMPTY_ASSIGNMENTS, isPending: loading } =
+    useQuery({
+      queryKey,
+      queryFn: async () => {
+        const perRegion = await Promise.all(
+          cropRegionIds.map(async (cropRegionId) => {
+            const cropSubtotals =
+              await window.electronAPI.getCropSubtotalsByCropRegionId(
+                cropRegionId
+              )
+            return [
+              cropRegionId,
+              new Set(
+                cropSubtotals.map(
+                  (cropSubtotal: CropSubtotalWithSubtotalGroup) =>
+                    cropSubtotal.subtotalId
+                )
+              ),
+            ] as const
+          })
         )
-        if (result && Array.isArray(result)) {
-          newAssignments[region.id] = new Set(
-            result.map(
-              (cropSubtotal: CropSubtotalWithSubtotalGroup) =>
-                cropSubtotal.subtotalId
-            )
-          )
-        } else {
-          newAssignments[region.id] = new Set()
-        }
-      } catch {
-        newAssignments[region.id] = new Set()
-      }
-    }
+        return Object.fromEntries(perRegion) as AssignmentState
+      },
+    })
 
-    setAssignments(newAssignments)
-    setOriginalAssignments(
-      Object.fromEntries(
-        Object.entries(newAssignments).map(([key, value]) => [
-          key,
-          Array.from(value),
-        ])
+  const setAssignments = useCallback(
+    (update: (previous: AssignmentState) => AssignmentState) => {
+      queryClient.setQueryData<AssignmentState>(queryKey, (previous) =>
+        update(previous ?? EMPTY_ASSIGNMENTS)
       )
-    )
-    setLoading(false)
-  }, [cropRegions])
+    },
+    [queryClient, queryKey]
+  )
+
+  const loadAssignments = useCallback(
+    () => queryClient.invalidateQueries({ queryKey }),
+    [queryClient, queryKey]
+  )
 
   // フィルハンドルのドラッグ管理
   const {
@@ -111,39 +132,17 @@ export function QuestionAssignmentMatrixWithFillHandle({
           const newValue = update.value
 
           // UI状態を即座に更新
-          setAssignments((prev) => {
-            const newAssignments = { ...prev }
-            if (!newAssignments[questionId]) {
-              newAssignments[questionId] = new Set()
-            }
+          setAssignments((prev) =>
+            toggleAssignment(prev, questionId, subtotalId, newValue)
+          )
 
-            if (newValue) {
-              newAssignments[questionId].add(subtotalId)
-            } else {
-              newAssignments[questionId].delete(subtotalId)
-            }
-
-            return newAssignments
-          })
-
-          // データベースに保存
-          const currentAssignments = assignments[questionId] || new Set()
-          const updatedAssignments = new Set(currentAssignments)
-
-          if (newValue) {
-            updatedAssignments.add(subtotalId)
-          } else {
-            updatedAssignments.delete(subtotalId)
-          }
+          const updatedAssignments = new Set(
+            assignments[questionId] ?? new Set<string>()
+          )
+          if (newValue) updatedAssignments.add(subtotalId)
+          else updatedAssignments.delete(subtotalId)
 
           await onUpdateAssignments(questionId, Array.from(updatedAssignments))
-
-          // 成功時にoriginalAssignmentsも更新
-          setOriginalAssignments((prev) => {
-            const updated = { ...prev }
-            updated[questionId] = Array.from(updatedAssignments)
-            return updated
-          })
         }
 
         console.log(`✅ フィルハンドルで${updates.length}セルを更新しました`)
@@ -157,14 +156,6 @@ export function QuestionAssignmentMatrixWithFillHandle({
     },
   })
 
-  useEffect(() => {
-    if (cropRegions.length > 0) {
-      loadAssignments()
-    } else {
-      setLoading(false)
-    }
-  }, [cropRegions, loadAssignments])
-
   // チェックボックスの状態を変更（逐次保存）
   const handleAssignmentChange = async (
     questionId: string,
@@ -172,80 +163,37 @@ export function QuestionAssignmentMatrixWithFillHandle({
     checked: boolean
   ) => {
     // UI状態を即座に更新
-    setAssignments((prev) => {
-      const newAssignments = { ...prev }
-      if (!newAssignments[questionId]) {
-        newAssignments[questionId] = new Set()
-      }
-
-      if (checked) {
-        newAssignments[questionId].add(itemId)
-      } else {
-        newAssignments[questionId].delete(itemId)
-      }
-
-      return newAssignments
-    })
+    setAssignments((prev) =>
+      toggleAssignment(prev, questionId, itemId, checked)
+    )
 
     // 逐次保存処理
     try {
       setSaving(true)
 
-      // 現在の関連付け状態を取得
-      const currentAssignments = assignments[questionId] || new Set()
-      const updatedAssignments = new Set(currentAssignments)
-
-      if (checked) {
-        updatedAssignments.add(itemId)
-      } else {
-        updatedAssignments.delete(itemId)
-      }
+      const updatedAssignments = new Set(
+        assignments[questionId] ?? new Set<string>()
+      )
+      if (checked) updatedAssignments.add(itemId)
+      else updatedAssignments.delete(itemId)
 
       // データベースに即座に保存
       await onUpdateAssignments(questionId, Array.from(updatedAssignments))
-
-      // 成功時にoriginalAssignmentsも更新
-      setOriginalAssignments((prev) => {
-        const updated = { ...prev }
-        updated[questionId] = Array.from(updatedAssignments)
-        return updated
-      })
-
-      console.log(
-        `✅ 関連付け保存成功: 設問${questionId}, 項目${itemId}, チェック:${checked}`
-      )
     } catch (error) {
       console.error("❌ 関連付け保存エラー:", error)
 
       // エラー時はUIを元に戻す
-      setAssignments((prev) => {
-        const revertedAssignments = { ...prev }
-        if (!revertedAssignments[questionId]) {
-          revertedAssignments[questionId] = new Set()
-        }
-
-        if (checked) {
-          revertedAssignments[questionId].delete(itemId)
-        } else {
-          revertedAssignments[questionId].add(itemId)
-        }
-
-        return revertedAssignments
-      })
+      setAssignments((prev) =>
+        toggleAssignment(prev, questionId, itemId, !checked)
+      )
     } finally {
       setSaving(false)
     }
   }
 
-  // 変更をリセット
+  /** 変更をリセット＝保存済みの状態を取り直す */
   const handleReset = () => {
-    const resetAssignments: AssignmentState = {}
-    for (const [questionId, itemIds] of Object.entries(originalAssignments)) {
-      resetAssignments[questionId] = new Set(
-        Array.isArray(itemIds) ? itemIds : []
-      )
-    }
-    setAssignments(resetAssignments)
+    void loadAssignments()
   }
 
   // セル選択
