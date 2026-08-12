@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useEffect, useRef } from "react"
 
+import { queryKeys } from "@/lib/queryKeys"
 import type {
   CourseworkItemWithLetterScales,
   CourseworkScoreWithCourseworkStudent,
@@ -71,10 +73,13 @@ function findScoreOf(
  *
  * @param courseworkId - 対象の資料ID
  */
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_ITEMS: CourseworkItemWithLetterScales[] = []
+const EMPTY_ROWS: CourseworkStudentRow[] = []
+
 export function useCourseworkScores(courseworkId: string) {
-  const [items, setItems] = useState<CourseworkItemWithLetterScales[]>([])
-  const [studentRows, setStudentRows] = useState<CourseworkStudentRow[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const queryKey = queryKeys.coursework.scores(courseworkId)
   const pendingChanges = useRef<
     Map<
       string,
@@ -86,8 +91,10 @@ export function useCourseworkScores(courseworkId: string) {
   >(new Map())
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const loadData = useCallback(async () => {
-    try {
+  /** 評価項目と生徒×項目のマス目を1つの取得で組み立てる（表示は必ず対で使う） */
+  const { data, isPending: loading } = useQuery({
+    queryKey,
+    queryFn: async () => {
       const [coursework, courseworkStudents, courseworkClassrooms] =
         await Promise.all([
           window.electronAPI.coursework.getById(courseworkId),
@@ -98,7 +105,6 @@ export function useCourseworkScores(courseworkId: string) {
       const sortedItems = coursework.items
         .slice()
         .sort((itemA, itemB) => itemA.order - itemB.order)
-      setItems(sortedItems)
 
       const registeredClassroomIds = new Set(
         courseworkClassrooms.map(
@@ -149,17 +155,26 @@ export function useCourseworkScores(courseworkId: string) {
         }
       )
 
-      setStudentRows(rows)
-    } catch (error) {
-      console.error("Error loading coursework scores:", error)
-    } finally {
-      setLoading(false)
-    }
-  }, [courseworkId])
+      return { items: sortedItems, studentRows: rows }
+    },
+  })
+  const items = data?.items ?? EMPTY_ITEMS
+  const studentRows = data?.studentRows ?? EMPTY_ROWS
 
-  useEffect(() => {
-    loadData()
-  }, [loadData])
+  /** 編集結果でマス目を差し替える（保存の往復を待たせない） */
+  const patchRows = useCallback(
+    (update: (rows: CourseworkStudentRow[]) => CourseworkStudentRow[]) => {
+      queryClient.setQueryData<{
+        items: CourseworkItemWithLetterScales[]
+        studentRows: CourseworkStudentRow[]
+      }>(queryKey, (previous) =>
+        previous
+          ? { ...previous, studentRows: update(previous.studentRows) }
+          : previous
+      )
+    },
+    [queryClient, queryKey]
+  )
 
   // 未保存の変更を即座にDBへ反映する（デバウンス完了時・アンマウント時に使用）
   const flushPending = useCallback(async () => {
@@ -185,7 +200,7 @@ export function useCourseworkScores(courseworkId: string) {
       if (changes.length === 0) return
 
       // ローカル状態を一括更新
-      setStudentRows((prev) => {
+      patchRows((prev) => {
         const changeMap = new Map<string, Map<string, CourseworkCellPatch>>()
         for (const change of changes) {
           if (!changeMap.has(change.courseworkStudentId))
@@ -229,7 +244,7 @@ export function useCourseworkScores(courseworkId: string) {
         void flushPending()
       }, 500)
     },
-    [flushPending]
+    [flushPending, patchRows]
   )
 
   // アンマウント時、未保存の変更が残っていれば即座にフラッシュする

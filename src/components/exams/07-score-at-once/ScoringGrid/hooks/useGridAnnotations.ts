@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEffect, useMemo } from "react"
 
 import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 
@@ -14,6 +15,9 @@ interface UseGridAnnotationsReturn {
   annotationsByExamStudent: Map<string, AnnotationWithContext[]>
 }
 
+/** 未取得のときに毎回新しい Map を作らないための空値 */
+const EMPTY_ANNOTATIONS = new Map<string, AnnotationWithContext[]>()
+
 /**
  * Grid表示用アノテーション取得フック。
  * 指定 cropRegion の全受験者の注釈を一括取得し、examStudentId でグループ化する。
@@ -24,55 +28,41 @@ export function useGridAnnotations({
   currentUserId,
   refreshKey,
 }: UseGridAnnotationsProps): UseGridAnnotationsReturn {
-  const [annotationsByExamStudent, setAnnotationsByExamStudent] = useState<
-    Map<string, AnnotationWithContext[]>
-  >(new Map())
-  const lastFetchedRef = useRef<string>("")
+  const queryClient = useQueryClient()
+  // 同じ設問を続けて開いても取り直さない（重複取得の抑止はキャッシュが担う）
+  const queryKey = useMemo(
+    () => ["gridAnnotations", cropRegionId ?? null, currentUserId ?? null],
+    [cropRegionId, currentUserId]
+  )
 
-  const fetchAnnotations = useCallback(async () => {
-    if (!cropRegionId) {
-      setAnnotationsByExamStudent(new Map())
-      return
-    }
-
-    // 同一cropRegionIdの重複取得を防止
-    const fetchKey = `${cropRegionId}:${currentUserId ?? ""}`
-    if (lastFetchedRef.current === fetchKey) return
-
-    try {
-      const annotations = await window.electronAPI.drawing.getByCropRegion(
-        cropRegionId,
-        currentUserId
-      )
-
-      if (annotations) {
-        // フェッチ成功後にキーを設定（失敗時のリトライを阻害しない）
-        lastFetchedRef.current = fetchKey
-        const grouped = new Map<string, AnnotationWithContext[]>()
-        for (const annotation of annotations) {
-          // グリッドの行は受験者なので questionScore.examStudentId でまとめる
-          const examStudentId = annotation.questionScore?.examStudentId
-          if (!examStudentId) continue
-
-          const existing = grouped.get(examStudentId) || []
-          existing.push(annotation)
-          grouped.set(examStudentId, existing)
+  const { data: annotationsByExamStudent = EMPTY_ANNOTATIONS } = useQuery({
+    queryKey,
+    queryFn: cropRegionId
+      ? async () => {
+          const annotations = await window.electronAPI.drawing.getByCropRegion(
+            cropRegionId,
+            currentUserId
+          )
+          const grouped = new Map<string, AnnotationWithContext[]>()
+          for (const annotation of annotations) {
+            // グリッドの行は受験者なので questionScore.examStudentId でまとめる
+            const examStudentId = annotation.questionScore?.examStudentId
+            if (!examStudentId) continue
+            grouped.set(examStudentId, [
+              ...(grouped.get(examStudentId) ?? []),
+              annotation,
+            ])
+          }
+          return grouped
         }
-        setAnnotationsByExamStudent(grouped)
-      } else {
-        setAnnotationsByExamStudent(new Map())
-      }
-    } catch (error) {
-      console.error("Grid用アノテーション取得エラー:", error)
-      setAnnotationsByExamStudent(new Map())
-    }
-  }, [cropRegionId, currentUserId])
+      : skipToken,
+  })
 
-  // cropRegionId変更時 または refreshKey変更時に自動再取得
+  // 注釈が書き換わったことの合図。取り直しの指示なので setState はしない
   useEffect(() => {
-    lastFetchedRef.current = "" // リセットして再取得を許可
-    fetchAnnotations()
-  }, [fetchAnnotations, refreshKey])
+    if (refreshKey === undefined) return
+    void queryClient.invalidateQueries({ queryKey })
+  }, [refreshKey, queryKey, queryClient])
 
   return { annotationsByExamStudent }
 }

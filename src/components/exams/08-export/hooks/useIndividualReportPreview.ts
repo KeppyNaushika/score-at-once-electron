@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { skipToken, useQuery } from "@tanstack/react-query"
+import { useEffect, useRef } from "react"
 
 import { loadStudentExportPlacements } from "@/components/exams/08-export/utils/loadStudentExportPlacements"
 import type {
@@ -41,57 +42,49 @@ export function useIndividualReportPreview({
   options,
   enabled = true,
 }: UseIndividualReportPreviewOptions): UseIndividualReportPreviewResult {
-  const [previewReport, setPreviewReport] = useState<PreviewReport | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  // optionsの最新値を保持（データ取得時に使用）
+  /**
+   * 表示オプションは取得の引数だが、**変わっても取り直さない**
+   * （小計点グループの選択などは renderer 側でフィルタするため）。
+   * 取得時に最新を読むだけなので ref で持つ（クエリキーには入れない）。
+   */
   const optionsRef = useRef(options)
   useEffect(() => {
     optionsRef.current = options
   })
 
-  const fetchPreviewData = useCallback(async () => {
-    if (!enabled || !examId || !previewStudentId) {
-      setPreviewReport(null)
-      return
-    }
+  const {
+    data: previewReport = null,
+    isPending,
+    error,
+  } = useQuery({
+    // 取り直すのは対象生徒が変わったときだけ
+    queryKey: ["individualReportPreview", examId, previewStudentId],
+    queryFn:
+      enabled && examId && previewStudentId
+        ? async (): Promise<PreviewReport> => {
+            const studentPlacements = await loadStudentExportPlacements(examId)
+            const result =
+              await window.electronAPI.export.getIndividualReportData({
+                examId,
+                selectedExamStudentIds: [previewStudentId],
+                options: optionsRef.current,
+                studentPlacements,
+              })
+            if (result.reports.length === 0) {
+              throw new Error("プレビュー対象の生徒が見つかりませんでした")
+            }
+            return {
+              report: result.reports[0],
+              population: result.population,
+            }
+          }
+        : skipToken,
+  })
 
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const studentPlacements = await loadStudentExportPlacements(examId)
-      const result = await window.electronAPI.export.getIndividualReportData({
-        examId,
-        selectedExamStudentIds: [previewStudentId],
-        options: optionsRef.current,
-        studentPlacements,
-      })
-
-      if (result.reports.length > 0) {
-        setPreviewReport({
-          report: result.reports[0],
-          population: result.population,
-        })
-      } else {
-        setError("プレビュー対象の生徒が見つかりませんでした")
-        setPreviewReport(null)
-      }
-    } catch (err) {
-      console.error("Preview fetch error:", err)
-      setError(err instanceof Error ? err.message : "不明なエラー")
-      setPreviewReport(null)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [examId, previewStudentId, enabled])
-
-  // previewStudentIdが変わったらデータを再取得
-  // 注意: subtotalGroupSelectionの変更では再取得しない（レンダラー側でフィルタリング）
-  useEffect(() => {
-    fetchPreviewData()
-  }, [fetchPreviewData])
-
-  return { previewReport, isLoading, error }
+  return {
+    previewReport,
+    // 対象生徒が無いときは待たせない
+    isLoading: Boolean(enabled && previewStudentId) && isPending,
+    error: error?.message ?? null,
+  }
 }

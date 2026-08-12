@@ -22,6 +22,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useGridAnnotations } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridAnnotations"
 
+import { createQueryWrapper } from "../../../helpers/queryWrapper"
 import {
   cleanupMockDrawingAPI,
   createMockAnnotation,
@@ -71,11 +72,13 @@ describe("useGridAnnotations", () => {
       ]
       mockAPI.getByCropRegion.mockResolvedValue(annotations)
 
-      const { result } = renderHook(() =>
-        useGridAnnotations({
-          cropRegionId: "cr-1",
-          currentUserId: "user-1",
-        })
+      const { result } = renderHook(
+        () =>
+          useGridAnnotations({
+            cropRegionId: "cr-1",
+            currentUserId: "user-1",
+          }),
+        { wrapper: createQueryWrapper() }
       )
 
       await waitFor(() => {
@@ -101,7 +104,10 @@ describe("useGridAnnotations", () => {
       const { result, rerender } = renderHook(
         ({ cropRegionId }) =>
           useGridAnnotations({ cropRegionId, currentUserId: "user-1" }),
-        { initialProps: { cropRegionId: "cr-1" as string | undefined } }
+        {
+          initialProps: { cropRegionId: "cr-1" as string | undefined },
+          wrapper: createQueryWrapper(),
+        }
       )
 
       await waitFor(() => {
@@ -140,11 +146,13 @@ describe("useGridAnnotations", () => {
 
   describe("cropRegionId未指定", () => {
     it("空のMapを返しAPIを呼ばない", async () => {
-      const { result } = renderHook(() =>
-        useGridAnnotations({
-          cropRegionId: undefined,
-          currentUserId: "user-1",
-        })
+      const { result } = renderHook(
+        () =>
+          useGridAnnotations({
+            cropRegionId: undefined,
+            currentUserId: "user-1",
+          }),
+        { wrapper: createQueryWrapper() }
       )
 
       expect(result.current.annotationsByExamStudent.size).toBe(0)
@@ -172,7 +180,10 @@ describe("useGridAnnotations", () => {
             currentUserId: "user-1",
             refreshKey,
           }),
-        { initialProps: { refreshKey: 0 } }
+        {
+          initialProps: { refreshKey: 0 },
+          wrapper: createQueryWrapper(),
+        }
       )
 
       await waitFor(() => {
@@ -212,11 +223,13 @@ describe("useGridAnnotations", () => {
     it("失敗時に空のMapを返す", async () => {
       mockAPI.getByCropRegion.mockRejectedValue(new Error("取得エラー"))
 
-      const { result } = renderHook(() =>
-        useGridAnnotations({
-          cropRegionId: "cr-1",
-          currentUserId: "user-1",
-        })
+      const { result } = renderHook(
+        () =>
+          useGridAnnotations({
+            cropRegionId: "cr-1",
+            currentUserId: "user-1",
+          }),
+        { wrapper: createQueryWrapper() }
       )
 
       await waitFor(() => {
