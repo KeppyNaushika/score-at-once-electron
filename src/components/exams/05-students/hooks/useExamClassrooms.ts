@@ -1,11 +1,13 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback } from "react"
 
 import type {
   ExamClassroomWithClassroomAndExam,
   ExamClassroomWithMemberships,
 } from "@/electron-src/lib/prisma/examClassroom"
+import { queryKeys } from "@/lib/queryKeys"
 
 interface UseExamClassroomsOptions {
   examId: string
@@ -37,31 +39,19 @@ interface UseExamClassroomsReturn {
 export function useExamClassrooms({
   examId,
 }: UseExamClassroomsOptions): UseExamClassroomsReturn {
-  const [examClassrooms, setExamClassrooms] = useState<
-    ExamClassroomWithMemberships[]
-  >([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const queryKey = queryKeys.exam.classrooms(examId)
+  const { data: examClassrooms = [], isPending: loading } = useQuery({
+    queryKey,
+    queryFn: examId
+      ? () => window.electronAPI.examClassroom.getAll(examId)
+      : skipToken,
+  })
 
-  // データ取得
-  const fetchExamClassrooms = useCallback(async () => {
-    if (!examId) return
-
-    setLoading(true)
-
-    try {
-      const data = await window.electronAPI.examClassroom.getAll(examId)
-      setExamClassrooms(data)
-    } catch (err) {
-      console.error("Failed to fetch exam classrooms:", err)
-    } finally {
-      setLoading(false)
-    }
-  }, [examId])
-
-  // 初回読み込み
-  useEffect(() => {
-    fetchExamClassrooms()
-  }, [fetchExamClassrooms])
+  const fetchExamClassrooms = useCallback(
+    () => queryClient.invalidateQueries({ queryKey }),
+    [queryClient, queryKey]
+  )
 
   // クラスを削除
   const removeClassroom = useCallback(

@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -11,6 +12,8 @@ import { SubtotalGroupModal } from "@/components/subtotal-groups/components/Subt
 import { Button } from "@/components/ui/button"
 import type { SubtotalGroupWithSubtotalsExamsAndTags } from "@/electron-src/lib/prisma/subtotalGroup"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
+import { useTags } from "@/hooks/useTags"
+import { queryKeys } from "@/lib/queryKeys"
 
 /** 小計点グループ一覧のフィルタ対象（グループ名・小計項目名・タグ名で検索、タグで絞り込み） */
 const SUBTOTAL_GROUP_FILTER_ACCESSORS: ListFilterAccessors<SubtotalGroupWithSubtotalsExamsAndTags> =
@@ -29,57 +32,29 @@ const SUBTOTAL_GROUP_FILTER_ACCESSORS: ListFilterAccessors<SubtotalGroupWithSubt
   }
 
 export function SubtotalGroupsPageContainer() {
-  const [subtotalGroups, setSubtotalGroups] = useState<
-    SubtotalGroupWithSubtotalsExamsAndTags[]
-  >([])
-  const [loading, setLoading] = useState(true)
-  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
   const [showModal, setShowModal] = useState(false)
   const [editingGroup, setEditingGroup] =
     useState<SubtotalGroupWithSubtotalsExamsAndTags | null>(null)
-  const [ipcError, setIpcError] = useState<string | null>(null)
 
-  // データの取得
-  const fetchSubtotalGroups = useCallback(async () => {
-    setLoading(true)
-    try {
-      // IPCハンドラーが利用可能かチェック
-      if (typeof window.electronAPI?.getSubtotalGroups !== "function") {
-        setIpcError(
-          "IPCハンドラーが利用できません。Electronアプリを再起動してください。"
-        )
-        setSubtotalGroups([])
-        return
-      }
+  const queryClient = useQueryClient()
+  const {
+    data: subtotalGroups = [],
+    isPending: loading,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.subtotalGroup.all,
+    queryFn: () => window.electronAPI.getSubtotalGroups(),
+  })
+  const ipcError = error?.message ?? null
 
-      setIpcError(null)
+  const fetchSubtotalGroups = useCallback(
+    () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.subtotalGroup.all }),
+    [queryClient]
+  )
 
-      setSubtotalGroups(await window.electronAPI.getSubtotalGroups())
-    } catch (error) {
-      console.error("Error fetching subtotal groups:", error)
-      setSubtotalGroups([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchSubtotalGroups()
-  }, [fetchSubtotalGroups])
-
-  // 既存タグ一覧を取得（タグフィルタの選択肢）
-  const fetchTags = useCallback(async () => {
-    try {
-      const tags = await window.electronAPI.tagGetAll()
-      setAllTags(tags)
-    } catch (error) {
-      console.error("Error fetching tags:", error)
-    }
-  }, [])
-
-  useEffect(() => {
-    void fetchTags()
-  }, [fetchTags])
+  // 既存タグ一覧（タグフィルタの選択肢）
+  const { tags: allTags, refresh: fetchTags } = useTags()
 
   const {
     filteredItems: filteredGroups,

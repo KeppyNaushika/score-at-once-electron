@@ -1,34 +1,49 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback } from "react"
 
+import { queryKeys } from "@/lib/queryKeys"
 import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
+
+/** 未取得のときに毎回新しい Map を作らないための空値 */
+const EMPTY_CONFIGS: ReadonlyMap<string, CropRegionOmrConfigWithOptions> =
+  new Map()
 
 /**
  * 試験に紐づくOMR設定をCRUD管理するフック
  */
 export function useOmrConfig(examId: string) {
-  const [omrConfigs, setOmrConfigs] = useState<
-    Map<string, CropRegionOmrConfigWithOptions>
-  >(new Map())
-  /** OMR設定をDBから読み込み */
-  const loadOmrConfigs = useCallback(async () => {
-    if (!examId) return
-    try {
-      const configs = await window.electronAPI.omrConfig.getByExam(examId)
-      const map = new Map<string, CropRegionOmrConfigWithOptions>()
-      for (const config of configs) {
-        map.set(config.cropRegionId, config)
-      }
-      setOmrConfigs(map)
-    } catch (error) {
-      console.error("Failed to load OMR configs:", error)
-    }
-  }, [examId])
+  const queryClient = useQueryClient()
+  const queryKey = queryKeys.exam.omrConfigs(examId)
+  // 設定は採点領域idで引くので、取得直後にマップへ畳んでおく
+  const { data: omrConfigs = EMPTY_CONFIGS } = useQuery({
+    queryKey,
+    queryFn: examId
+      ? async () =>
+          new Map(
+            (await window.electronAPI.omrConfig.getByExam(examId)).map(
+              (config) => [config.cropRegionId, config]
+            )
+          )
+      : skipToken,
+  })
 
-  useEffect(() => {
-    loadOmrConfigs()
-  }, [loadOmrConfigs])
+  /** 1件分の設定をキャッシュへ差し込む（保存の往復を待たせない） */
+  const patchCache = useCallback(
+    (cropRegionId: string, config: CropRegionOmrConfigWithOptions | null) => {
+      queryClient.setQueryData<Map<string, CropRegionOmrConfigWithOptions>>(
+        queryKey,
+        (previous) => {
+          const next = new Map(previous ?? [])
+          if (config) next.set(cropRegionId, config)
+          else next.delete(cropRegionId)
+          return next
+        }
+      )
+    },
+    [queryClient, queryKey]
+  )
 
   /** OMR設定をupsert */
   const upsertOmrConfig = useCallback(
@@ -44,36 +59,33 @@ export function useOmrConfig(examId: string) {
       }>
     }) => {
       try {
-        const config = await window.electronAPI.omrConfig.upsert(data)
-        setOmrConfigs((prev) => {
-          const next = new Map(prev)
-          next.set(data.cropRegionId, config)
-          return next
-        })
+        patchCache(
+          data.cropRegionId,
+          await window.electronAPI.omrConfig.upsert(data)
+        )
         return true
       } catch (error) {
         console.error("Failed to upsert OMR config:", error)
         return false
       }
     },
-    []
+    [patchCache]
   )
 
   /** OMR設定を削除 */
-  const deleteOmrConfig = useCallback(async (cropRegionId: string) => {
-    try {
-      await window.electronAPI.omrConfig.delete(cropRegionId)
-      setOmrConfigs((prev) => {
-        const next = new Map(prev)
-        next.delete(cropRegionId)
-        return next
-      })
-      return true
-    } catch (error) {
-      console.error("Failed to delete OMR config:", error)
-      return false
-    }
-  }, [])
+  const deleteOmrConfig = useCallback(
+    async (cropRegionId: string) => {
+      try {
+        await window.electronAPI.omrConfig.delete(cropRegionId)
+        patchCache(cropRegionId, null)
+        return true
+      } catch (error) {
+        console.error("Failed to delete OMR config:", error)
+        return false
+      }
+    },
+    [patchCache]
+  )
 
   /** CropRegionIDでOMR設定を取得 */
   const getOmrConfig = useCallback(

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react"
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback } from "react"
 
-import type { ExamDecisionSummary } from "@/types/scoreDecision.types"
+import { queryKeys } from "@/lib/queryKeys"
 
 /**
  * 試験の裁定サマリ（競合・確定後の新提案）を取得する。
@@ -18,30 +19,30 @@ export function useExamDecisionSummary(
    */
   enabled: boolean
 ) {
-  const [summary, setSummary] = useState<ExamDecisionSummary | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const queryKey = queryKeys.exam.decisionSummary(examId, userId)
+  const {
+    data: summary = null,
+    isPending,
+    error,
+  } = useQuery({
+    queryKey,
+    queryFn:
+      examId && userId && enabled
+        ? () => window.electronAPI.getExamDecisionSummary(examId, userId)
+        : skipToken,
+  })
 
-  const refresh = useCallback(async () => {
-    if (!examId || !userId || !enabled) {
-      setLoading(false)
-      return
-    }
-    try {
-      setError(null)
-      setSummary(
-        await window.electronAPI.getExamDecisionSummary(examId, userId)
-      )
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "裁定状況を取得できません")
-    } finally {
-      setLoading(false)
-    }
-  }, [examId, userId, enabled])
+  const refresh = useCallback(
+    () => queryClient.invalidateQueries({ queryKey }),
+    [queryClient, queryKey]
+  )
 
-  useEffect(() => {
-    refresh()
-  }, [refresh])
-
-  return { summary, loading, error, refresh }
+  return {
+    summary,
+    // 走らせない条件（単独利用）のときは待たせない
+    loading: enabled && isPending,
+    error: error ? (error.message ?? "裁定状況を取得できません") : null,
+    refresh,
+  }
 }

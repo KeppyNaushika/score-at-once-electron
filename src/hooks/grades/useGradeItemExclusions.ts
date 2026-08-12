@@ -1,7 +1,9 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback } from "react"
 
+import { queryKeys } from "@/lib/queryKeys"
 import type { GradeCellTarget } from "@/types/grade.types"
 
 /**
@@ -12,27 +14,36 @@ import type { GradeCellTarget } from "@/types/grade.types"
 const buildKey = (target: GradeCellTarget) =>
   `${target.gradeStudentId}:${target.gradeItemId}`
 
+/** 未取得のときに毎回新しい Set を作らないための空値 */
+const EMPTY_EXCLUSIONS: ReadonlySet<string> = new Set()
+
 /** 対象者ごとの成績評定項目除外設定の取得・トグル操作を管理するフック */
 export function useGradeItemExclusions(gradeId: string) {
-  const [exclusionSet, setExclusionSet] = useState<Set<string>>(new Set())
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const queryKey = queryKeys.grade.exclusions(gradeId)
+  const { data: exclusionSet = EMPTY_EXCLUSIONS, isPending: loading } =
+    useQuery({
+      queryKey,
+      queryFn: async () =>
+        new Set(
+          (await window.electronAPI.grade.getGradeItemExclusions(gradeId)).map(
+            buildKey
+          )
+        ),
+    })
 
-  const loadExclusions = useCallback(async () => {
-    setLoading(true)
-    try {
-      const exclusions =
-        await window.electronAPI.grade.getGradeItemExclusions(gradeId)
-      setExclusionSet(new Set(exclusions.map(buildKey)))
-    } catch (error) {
-      console.error("Failed to load grade item exclusions:", error)
-    } finally {
-      setLoading(false)
-    }
-  }, [gradeId])
-
-  useEffect(() => {
-    loadExclusions()
-  }, [loadExclusions])
+  /** 楽観更新でキャッシュを直に差し替える（サーバーへの往復を待たせない） */
+  const patchCache = useCallback(
+    (key: string, excluded: boolean) => {
+      queryClient.setQueryData<Set<string>>(queryKey, (previous) => {
+        const next = new Set(previous ?? [])
+        if (excluded) next.add(key)
+        else next.delete(key)
+        return next
+      })
+    },
+    [queryClient, queryKey]
+  )
 
   const isExcluded = useCallback(
     (target: GradeCellTarget) => exclusionSet.has(buildKey(target)),
@@ -45,28 +56,7 @@ export function useGradeItemExclusions(gradeId: string) {
       const currentlyExcluded = exclusionSet.has(key)
       const newExcluded = !currentlyExcluded
 
-      // 楽観的更新
-      setExclusionSet((prev) => {
-        const next = new Set(prev)
-        if (newExcluded) {
-          next.add(key)
-        } else {
-          next.delete(key)
-        }
-        return next
-      })
-
-      const rollback = () => {
-        setExclusionSet((prev) => {
-          const next = new Set(prev)
-          if (currentlyExcluded) {
-            next.add(key)
-          } else {
-            next.delete(key)
-          }
-          return next
-        })
-      }
+      patchCache(key, newExcluded)
 
       try {
         await window.electronAPI.grade.setGradeItemExclusion({
@@ -74,10 +64,10 @@ export function useGradeItemExclusions(gradeId: string) {
           excluded: newExcluded,
         })
       } catch {
-        rollback()
+        patchCache(key, currentlyExcluded)
       }
     },
-    [exclusionSet]
+    [exclusionSet, patchCache]
   )
 
   return {

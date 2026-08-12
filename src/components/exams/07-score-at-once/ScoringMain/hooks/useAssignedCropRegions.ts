@@ -1,7 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useMemo } from "react"
 
 import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
+import { queryKeys } from "@/lib/queryKeys"
 import type { CropRegionAssignmentSummary } from "@/types/scoreDecision.types"
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_ASSIGNMENTS: CropRegionAssignmentSummary[] = []
 
 interface UseAssignedCropRegionsParams {
   examId: string
@@ -23,30 +28,23 @@ export function useAssignedCropRegions({
   userId,
   cropRegions,
 }: UseAssignedCropRegionsParams) {
-  const [assignments, setAssignments] = useState<CropRegionAssignmentSummary[]>(
-    []
+  const queryClient = useQueryClient()
+  const queryKey = queryKeys.exam.cropRegionAssignments(examId, userId)
+  const { data } = useQuery({
+    queryKey,
+    queryFn:
+      examId && userId
+        ? () => window.electronAPI.getCropRegionAssignments(examId, userId)
+        : skipToken,
+  })
+  const assignments = data?.assignments ?? EMPTY_ASSIGNMENTS
+  const canManage = data?.canManage ?? false
+  const memberCount = data?.memberCount ?? 0
+
+  const refresh = useCallback(
+    () => queryClient.invalidateQueries({ queryKey }),
+    [queryClient, queryKey]
   )
-  const [canManage, setCanManage] = useState(false)
-  const [memberCount, setMemberCount] = useState(0)
-
-  const refresh = useCallback(async () => {
-    if (!examId || !userId) return
-    try {
-      const result = await window.electronAPI.getCropRegionAssignments(
-        examId,
-        userId
-      )
-      setAssignments(result.assignments)
-      setCanManage(result.canManage)
-      setMemberCount(result.memberCount)
-    } catch (error) {
-      console.error("Failed to fetch crop region assignments:", error)
-    }
-  }, [examId, userId])
-
-  useEffect(() => {
-    refresh()
-  }, [refresh])
 
   const selectableCropRegions = useMemo(() => {
     if (assignments.length === 0 || canManage || !userId) return cropRegions

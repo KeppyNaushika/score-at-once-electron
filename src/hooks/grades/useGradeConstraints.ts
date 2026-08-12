@@ -1,27 +1,24 @@
-import { useCallback, useEffect, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback } from "react"
 
-import type {
-  GradeConstraintData,
-  GradeConstraintInput,
-} from "@/types/grade.types"
+import { queryKeys } from "@/lib/queryKeys"
+import type { GradeConstraintInput } from "@/types/grade.types"
 
 /** 観点間の制約ルールの取得・作成・更新・削除・並べ替えを管理するフック */
 export function useGradeConstraints(gradeId: string) {
-  const [constraints, setConstraints] = useState<GradeConstraintData[]>([])
+  const queryClient = useQueryClient()
+  const { data: constraints = [] } = useQuery({
+    queryKey: queryKeys.grade.constraints(gradeId),
+    queryFn: () => window.electronAPI.grade.getGradeConstraints(gradeId),
+  })
 
-  const loadData = useCallback(async () => {
-    try {
-      setConstraints(
-        await window.electronAPI.grade.getGradeConstraints(gradeId)
-      )
-    } catch (error) {
-      console.error("Error loading grade constraints:", error)
-    }
-  }, [gradeId])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
+  const loadData = useCallback(
+    () =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.grade.constraints(gradeId),
+      }),
+    [queryClient, gradeId]
+  )
 
   const createConstraint = useCallback(
     async (constraint: GradeConstraintInput) => {
