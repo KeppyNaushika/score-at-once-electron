@@ -26,6 +26,9 @@ export function useDataSources(gradeId: string) {
   // R の算出は buildGradeCalcContext（全試験のスコア取得＋解決）を伴い重い。
   // 本体とは別のクエリにして後追いで反映し、「Rに影響する変更」のときだけ
   // 無効化する（名前・換算満点・並べ替え・評価項目リネームでは再算出しない）。
+  //
+  // この分離が効くのは detail が兄弟キーだからで、`["grade", gradeId]` のような
+  // 親キーに置くと前方一致でこちらまで巻き込み、打鍵のたびに再算出が走る。
   const sourceFitsKey = queryKeys.grade.sourceFits(gradeId)
   const { data: sourceFits = EMPTY_SOURCE_FITS } = useQuery({
     queryKey: sourceFitsKey,

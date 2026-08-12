@@ -304,7 +304,7 @@ export function TagsPageContainer() {
   >(null)
 
   const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
+    async (event: DragEndEvent) => {
       const { active, over } = event
       if (!over || active.id === over.id) return
 
@@ -315,7 +315,14 @@ export function TagsPageContainer() {
       // 並べ替えは掴んだ手に追従させる（保存の往復を待たせない）
       const reordered = arrayMove(tags, oldIndex, newIndex)
       queryClient.setQueryData(queryKeys.tags.all, reordered)
-      void window.electronAPI.tagReorder(reordered.map((tag) => tag.id))
+      try {
+        await window.electronAPI.tagReorder(reordered.map((tag) => tag.id))
+      } catch (error) {
+        queryClient.setQueryData(queryKeys.tags.all, tags)
+        toast.error("タグの並べ替えに失敗しました", {
+          description: error instanceof Error ? error.message : undefined,
+        })
+      }
     },
     [tags, queryClient]
   )

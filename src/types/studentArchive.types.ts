@@ -64,16 +64,6 @@ export interface ExportStudentsArchiveOptions {
   classroomIds?: string[]
 }
 
-/**
- * エクスポート結果
- */
-export interface ExportStudentsArchiveResult {
-  success: boolean
-  outputPath?: string
-  manifest?: StudentArchiveManifest
-  error?: string
-}
-
 // =============================================================================
 // Import - File Overview
 // =============================================================================

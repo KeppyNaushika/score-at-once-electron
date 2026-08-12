@@ -45,11 +45,8 @@ describe("manifestValidator", () => {
     const manifest = createValidManifest()
     const result = validateManifest(manifest)
 
-    expect(result.success).toBe(true)
     expect(result.manifest).toBeDefined()
-    expect(result.compatibility).toBeDefined()
-    expect(result.compatibility!.isCompatible).toBe(true)
-    expect(result.error).toBeUndefined()
+    expect(result.compatibility.isCompatible).toBe(true)
   })
 
   // MV-2: 必須フィールド欠落で失敗
@@ -97,21 +94,17 @@ describe("manifestValidator", () => {
   // MV-4: 未来バージョンは非互換
   test("MV-4: 未来バージョンは非互換として拒否される", () => {
     const manifest = createValidManifest({ version: "99.0.0" })
-    const result = validateManifest(manifest)
 
-    expect(result.success).toBe(false)
-    expect(result.error).toContain("99.0.0")
-    expect(result.error).toContain("更新")
+    expect(() => validateManifest(manifest)).toThrow(/99\.0\.0/)
+    expect(() => validateManifest(manifest)).toThrow(/更新/)
   })
 
   // MV-5: MIN_SUPPORTED_VERSION未満で失敗
   test("MV-5: 最小サポートバージョン未満で失敗する", () => {
     const manifest = createValidManifest({ version: "0.9.0" })
-    const result = validateManifest(manifest)
 
-    expect(result.success).toBe(false)
-    expect(result.error).toContain("0.9.0")
-    expect(result.error).toContain(MIN_SUPPORTED_VERSION)
+    expect(() => validateManifest(manifest)).toThrow(/0\.9\.0/)
+    expect(() => validateManifest(manifest)).toThrow(MIN_SUPPORTED_VERSION)
   })
 
   // MV-6: 古い互換バージョンはrequiresUpgrade=true

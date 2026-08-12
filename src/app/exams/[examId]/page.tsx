@@ -91,17 +91,12 @@ export default function ExamDetailPage() {
         exportMode,
       })
 
-      if (result.success) {
+      // 保存先を選ばずに閉じたのは失敗ではないので、何も言わない
+      if (!result.canceled) {
         setShowExportModal(false)
         toast.success("エクスポート完了", {
           description: `${result.outputPath} に保存しました。`,
         })
-      } else {
-        if (result.error !== "キャンセルされました") {
-          toast.error("エクスポート失敗", {
-            description: result.error || "エクスポートに失敗しました。",
-          })
-        }
       }
     } catch (error) {
       toast.error("エクスポート失敗", {

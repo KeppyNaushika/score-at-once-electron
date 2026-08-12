@@ -66,7 +66,11 @@ export const queryKeys = {
   },
   grade: {
     list: () => ["grade", "list"] as const,
-    detail: (gradeId: string) => ["grade", gradeId] as const,
+    /**
+     * 成績本体（評価項目・データソース・境界を子として同梱）。
+     * 3画面が同一の queryFn（`grade.getById`）で共有する。
+     */
+    detail: (gradeId: string) => ["grade", gradeId, "detail"] as const,
     classrooms: (gradeId: string) => ["grade", gradeId, "classrooms"] as const,
     constraints: (gradeId: string) =>
       ["grade", gradeId, "constraints"] as const,
@@ -76,7 +80,12 @@ export const queryKeys = {
   },
   coursework: {
     list: () => ["coursework", "list"] as const,
-    detail: (courseworkId: string) => ["coursework", courseworkId] as const,
+    /**
+     * 資料本体（評価項目・学級・タグを子として同梱）。
+     * 概要(01)と評価項目(03)が同一の queryFn（`coursework.getById`）で共有する。
+     */
+    detail: (courseworkId: string) =>
+      ["coursework", courseworkId, "detail"] as const,
     classrooms: (courseworkId: string) =>
       ["coursework", courseworkId, "classrooms"] as const,
     scores: (courseworkItemId: string) =>

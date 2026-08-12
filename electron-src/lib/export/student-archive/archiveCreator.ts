@@ -39,18 +39,13 @@ function createManifest(
 }
 
 /**
- * ZIPアーカイブを作成
+ * ZIPアーカイブを作成する。作成できなければ例外。
  */
 export async function createStudentArchive(
   collectedData: CollectedStudentArchiveData,
   outputPath: string
-): Promise<{
-  success: boolean
-  outputPath?: string
-  manifest?: StudentArchiveManifest
-  error?: string
-}> {
-  return new Promise((resolve) => {
+): Promise<{ outputPath: string }> {
+  return new Promise((resolve, reject) => {
     try {
       const outputDir = path.dirname(outputPath)
       if (!fs.existsSync(outputDir)) {
@@ -65,19 +60,12 @@ export async function createStudentArchive(
       const manifest = createManifest(collectedData.counts)
 
       output.on("close", () => {
-        resolve({
-          success: true,
-          outputPath,
-          manifest,
-        })
+        resolve({ outputPath })
       })
 
       archive.on("error", (err) => {
         console.error("Student archive error:", err)
-        resolve({
-          success: false,
-          error: `アーカイブ作成エラー: ${err.message}`,
-        })
+        reject(new Error(`アーカイブ作成エラー: ${err.message}`))
       })
 
       archive.pipe(output)
@@ -100,13 +88,11 @@ export async function createStudentArchive(
       archive.finalize()
     } catch (error) {
       console.error("Error creating student archive:", error)
-      resolve({
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "アーカイブ作成に失敗しました",
-      })
+      reject(
+        error instanceof Error
+          ? error
+          : new Error("アーカイブ作成に失敗しました")
+      )
     }
   })
 }

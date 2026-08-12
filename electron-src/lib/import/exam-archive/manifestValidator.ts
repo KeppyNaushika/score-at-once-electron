@@ -135,37 +135,26 @@ export function validateManifestFields(manifest: unknown): string | null {
 }
 
 /**
- * マニフェストを検証
+ * マニフェストを検証する。不正・非互換なら例外。
  *
  * @param manifest - 検証するマニフェスト
- * @returns 検証結果
+ * @returns 検証済みマニフェストと互換性情報
  */
 export function validateManifest(manifest: unknown): {
-  success: boolean
-  manifest?: ArchiveManifest
-  compatibility?: CompatibilityInfo
-  error?: string
+  manifest: ArchiveManifest
+  compatibility: CompatibilityInfo
 } {
-  // フィールド検証
   const fieldError = validateManifestFields(manifest)
   if (fieldError) {
-    return { success: false, error: fieldError }
+    throw new Error(fieldError)
   }
 
   const validManifest = manifest as ArchiveManifest
 
-  // 互換性検証
   const compatibility = validateCompatibility(validManifest)
   if (!compatibility.isCompatible) {
-    return {
-      success: false,
-      error: compatibility.warnings.join(" "),
-    }
+    throw new Error(compatibility.warnings.join(" "))
   }
 
-  return {
-    success: true,
-    manifest: validManifest,
-    compatibility,
-  }
+  return { manifest: validManifest, compatibility }
 }

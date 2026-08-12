@@ -204,10 +204,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-17: analyzeArchive失敗時にerrorが設定される", async () => {
-      mockArchive.analyzeArchive.mockResolvedValue({
-        success: false,
-        error: "不正なアーカイブです",
-      })
+      mockArchive.analyzeArchive.mockRejectedValue(
+        new Error("不正なアーカイブです")
+      )
 
       const { result } = renderHook(() => useImportWizard())
 

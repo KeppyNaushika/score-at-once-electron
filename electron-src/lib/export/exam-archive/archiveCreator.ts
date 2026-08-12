@@ -106,16 +106,15 @@ function getDataDir(): string {
 }
 
 /**
- * ZIPアーカイブを作成
+ * ZIPアーカイブを作成する。作成できなければ例外。
  *
  * @param options - アーカイブ作成オプション
- * @returns 作成されたアーカイブのパス
+ * @returns 作成されたアーカイブのパスと、同梱できなかったファイルの一覧
  */
 export async function createArchive(options: CreateArchiveOptions): Promise<{
-  success: boolean
-  outputPath?: string
-  error?: string
-  warnings?: string[]
+  outputPath: string
+  /** 見つからず同梱できなかった画像 */
+  missingFiles: string[]
 }> {
   const {
     collectedData,
@@ -126,7 +125,7 @@ export async function createArchive(options: CreateArchiveOptions): Promise<{
     exportMode,
   } = options
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     try {
       // 出力ディレクトリを確認
       const outputDir = path.dirname(outputPath)
@@ -143,19 +142,12 @@ export async function createArchive(options: CreateArchiveOptions): Promise<{
       const missingFiles: string[] = []
 
       output.on("close", () => {
-        resolve({
-          success: true,
-          outputPath,
-          ...(missingFiles.length > 0 ? { warnings: missingFiles } : {}),
-        })
+        resolve({ outputPath, missingFiles })
       })
 
       archive.on("error", (err) => {
         console.error("Archive error:", err)
-        resolve({
-          success: false,
-          error: `アーカイブ作成エラー: ${err.message}`,
-        })
+        reject(new Error(`アーカイブ作成エラー: ${err.message}`))
       })
 
       archive.on("warning", (err) => {
@@ -235,13 +227,11 @@ export async function createArchive(options: CreateArchiveOptions): Promise<{
       archive.finalize()
     } catch (error) {
       console.error("Error creating archive:", error)
-      resolve({
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "アーカイブ作成に失敗しました",
-      })
+      reject(
+        error instanceof Error
+          ? error
+          : new Error("アーカイブ作成に失敗しました")
+      )
     }
   })
 }

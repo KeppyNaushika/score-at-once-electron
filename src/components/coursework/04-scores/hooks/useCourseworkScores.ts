@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef } from "react"
+import { toast } from "sonner"
 
 import { queryKeys } from "@/lib/queryKeys"
 import type {
@@ -176,16 +177,34 @@ export function useCourseworkScores(courseworkId: string) {
     [queryClient, queryKey]
   )
 
-  // 未保存の変更を即座にDBへ反映する（デバウンス完了時・アンマウント時に使用）
+  /**
+   * 未保存の変更を即座にDBへ反映する（デバウンス完了時・アンマウント時に使用）。
+   *
+   * 失敗したら書き残しへ戻す。戻さないと、キャッシュは入力値を表示したまま
+   * DB には何も無い状態になり、次に開いたときに消えている。
+   * 戻す間に入った新しい編集は上書きしない（そちらの方が新しい）。
+   */
   const flushPending = useCallback(async () => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
       saveTimeoutRef.current = null
     }
     const pending = Array.from(pendingChanges.current.values())
+    if (pending.length === 0) return
     pendingChanges.current.clear()
-    if (pending.length > 0) {
+
+    try {
       await window.electronAPI.coursework.batchUpsertScores(pending)
+    } catch (error) {
+      for (const change of pending) {
+        const key = `${change.courseworkItemId}:${change.courseworkStudentId}`
+        if (!pendingChanges.current.has(key)) {
+          pendingChanges.current.set(key, change)
+        }
+      }
+      toast.error("点数の保存に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
   }, [])
 

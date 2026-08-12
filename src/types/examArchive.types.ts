@@ -457,19 +457,8 @@ export interface ExportExamOptions {
   examId: string
   /** ログインユーザーID（このユーザーのデータのみエクスポート） */
   userId: string
-  outputPath?: string
   /** エクスポートモード（デフォルト: full） */
   exportMode?: ArchiveExportMode
-}
-
-/**
- * エクスポート結果
- */
-export interface ExportExamResult {
-  success: boolean
-  outputPath?: string
-  manifest?: ArchiveManifest
-  error?: string
 }
 
 /**
@@ -480,18 +469,16 @@ export interface AnalyzeArchiveOptions {
 }
 
 /**
- * アーカイブ解析結果
+ * アーカイブ解析結果。読めなければ throw するので、成否の旗は持たない。
  */
 export interface AnalyzeArchiveResult {
-  success: boolean
-  manifest?: ArchiveManifest
+  manifest: ArchiveManifest
   /** バージョン互換性情報 */
-  compatibility?: {
+  compatibility: {
     isCompatible: boolean
     requiresUpgrade: boolean
     warnings: string[]
   }
-  error?: string
 }
 
 // =============================================================================

@@ -40,15 +40,6 @@ export function useImportWizard() {
         archivePath,
       })
 
-      if (!analyzeResult.success) {
-        setState((prev) => ({
-          ...prev,
-          isProcessing: false,
-          error: analyzeResult.error || "アーカイブの解析に失敗しました",
-        }))
-        return false
-      }
-
       // 事前照合を実行
       const fileOverviewData: FileOverviewData =
         await window.electronAPI.archive.preMatch({ archivePath })
@@ -56,7 +47,7 @@ export function useImportWizard() {
       setState((prev) => ({
         ...prev,
         archivePath,
-        manifest: analyzeResult.manifest!,
+        manifest: analyzeResult.manifest,
         fileOverviewData,
         isProcessing: false,
         currentStep: "file_overview",

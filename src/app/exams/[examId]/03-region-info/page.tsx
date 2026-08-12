@@ -57,7 +57,11 @@ export default function RegionInfoPage() {
     () => queryKeys.exam.regionInfoPage(examId ?? ""),
     [examId]
   )
-  const { data, isPending: isLoading } = useQuery<RegionInfoData>({
+  const {
+    data,
+    isPending: isLoading,
+    error,
+  } = useQuery<RegionInfoData>({
     queryKey,
     queryFn: examId
       ? async () => {
@@ -198,6 +202,31 @@ export default function RegionInfoPage() {
     return (
       <div className="flex h-full items-center justify-center">
         <p>試験情報がありません。</p>
+      </div>
+    )
+  }
+  // 取得に失敗したまま編集画面を出すと、保存が黙って何もしない（操作者が居ない）
+  if (error) {
+    return (
+      <div className="flex h-full flex-col">
+        <PageHeader title="採点領域の詳細情報設定" helpButton={helpButton} />
+        <div className="flex flex-1 items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-lg font-semibold text-red-600">
+              エラーが発生しました
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {error.message}
+            </p>
+            <Button
+              onClick={() => queryClient.invalidateQueries({ queryKey })}
+              className="mt-4"
+              variant="outline"
+            >
+              再読み込み
+            </Button>
+          </div>
+        </div>
       </div>
     )
   }

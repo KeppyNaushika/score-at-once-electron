@@ -33,8 +33,12 @@ export function createMockElectronAPI() {
       sourceFormat: "score",
     }),
     analyzeArchive: vi.fn().mockResolvedValue({
-      success: true,
       manifest: createMockManifest(),
+      compatibility: {
+        isCompatible: true,
+        requiresUpgrade: false,
+        warnings: [],
+      },
     }),
     preMatch: vi.fn().mockResolvedValue(createMockFileOverviewData()),
     detectScoringConflicts: vi
@@ -46,7 +50,7 @@ export function createMockElectronAPI() {
       warnings: [],
     }),
     exportExam: vi.fn().mockResolvedValue({
-      success: true,
+      canceled: false,
       outputPath: "/path/to/export.score",
     }),
   }

@@ -15,40 +15,23 @@ import { validateManifest } from "./manifestValidator"
 /**
  * アーカイブを解析（プレビュー用）
  *
- * ZIPを完全に展開せずにマニフェストのみを読み込む
+ * ZIPを完全に展開せずにマニフェストのみを読み込む。読めなければ例外。
  *
  * @param options - 解析オプション
- * @returns 解析結果
+ * @returns マニフェストと互換性情報
  */
 export async function analyzeArchive(
   options: AnalyzeArchiveOptions
 ): Promise<AnalyzeArchiveResult> {
-  try {
-    // マニフェストのみを読み込む
-    const readResult = await readManifestOnly(options.archivePath)
-    if (!readResult.success || !readResult.manifest) {
-      return { success: false, error: readResult.error }
-    }
+  const readResult = await readManifestOnly(options.archivePath)
+  if (!readResult.success || !readResult.manifest) {
+    throw new Error(readResult.error ?? "アーカイブの解析に失敗しました")
+  }
 
-    // マニフェストを検証
-    const validationResult = validateManifest(readResult.manifest)
-    if (!validationResult.success) {
-      return { success: false, error: validationResult.error }
-    }
+  const validationResult = validateManifest(readResult.manifest)
 
-    return {
-      success: true,
-      manifest: validationResult.manifest,
-      compatibility: validationResult.compatibility,
-    }
-  } catch (error) {
-    console.error("Error analyzing archive:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "アーカイブの解析に失敗しました",
-    }
+  return {
+    manifest: validationResult.manifest,
+    compatibility: validationResult.compatibility,
   }
 }

@@ -15,7 +15,7 @@ import type {
   ScoringConflictConfig,
   UpdateDecisions,
 } from "../../src/types/examArchive.types"
-import { exportExam } from "../lib/export/exam-archive"
+import { exportExam, exportExamTo } from "../lib/export/exam-archive"
 import { generateExportFileName } from "../lib/export/exam-archive/archiveCreator"
 import { analyzeArchive } from "../lib/import/exam-archive"
 import {
@@ -60,7 +60,7 @@ export async function executeBulkExport(
       const fileName = generateExportFileName(exam.examName, exportMode)
       const outputPath = path.join(outputDirectory, fileName)
 
-      const exportResult = await exportExam({
+      const exportResult = await exportExamTo({
         examId,
         userId,
         outputPath,
@@ -70,9 +70,8 @@ export async function executeBulkExport(
       results.push({
         examId,
         examName: exam.examName,
-        success: exportResult.success,
+        success: true,
         outputPath: exportResult.outputPath,
-        error: exportResult.error,
       })
     } catch (error) {
       results.push({
@@ -96,7 +95,6 @@ export const archiveHandlers = {
   "archive:exportExam": async (options: {
     examId: string
     userId: string
-    outputPath?: string
     exportMode?: ArchiveExportMode
   }) => {
     return await exportExam(options)

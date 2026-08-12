@@ -16,10 +16,16 @@ export function useBoundaries(gradeId: string) {
     queryFn: () => window.electronAPI.grade.getById(gradeId),
   })
 
-  const loadData = useCallback(
-    () => queryClient.invalidateQueries({ queryKey }),
-    [queryClient, queryKey]
-  )
+  /**
+   * 境界を変えたら評定も変わる。同じ画面（05）が整合ルールのプレビューで
+   * 算出結果を出しているので、本体と一緒に取り直す。
+   */
+  const loadData = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey })
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.grade.results(gradeId),
+    })
+  }, [queryClient, queryKey, gradeId])
 
   const saveBoundaries = useCallback(
     async (data: {

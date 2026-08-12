@@ -119,13 +119,12 @@ export function StudentArchiveExportDialog({
             : Array.from(selectedClassroomIds),
       })
 
-      if (result.success) {
+      // 保存先を選ばずに閉じたのは失敗ではないので、何も言わない
+      if (!result.canceled) {
         toast.success(
           `${selectedStudentIds.size}名の生徒データをエクスポートしました`
         )
         onClose()
-      } else if (result.error !== "キャンセルされました") {
-        toast.error(`エクスポートに失敗しました: ${result.error}`)
       }
     } catch (error) {
       console.error("Failed to export:", error)
