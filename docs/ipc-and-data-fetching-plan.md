@@ -439,13 +439,21 @@ _格納する形_ ごとに分ける。同じキーに違う形を書くと、`i
 | 1   | `CourseworkItemsContainer.tsx:191` が `queryKeys.coursework.detail` に**項目の配列**を書く                                | `CourseworkDetail.tsx:55` が同じキーに**資料オブジェクト**を書く                                       | 詳細→評価項目で `items.map is not a function`、逆順で `coursework.classrooms.map` が undefined。どちらも画面ごと落ちる |
 | 6   | `04-question-group/page.tsx:38` が `queryKeys.exam.cropRegions` に `{activeSubtotalGroups, cropRegions, subtotalRegions}` | `03-region-info/page.tsx:59` が同じキーに `{currentUser, examPages, backgroundImageUrls, cropRegions}` | 04→03 で 0ページ・背景なしの領域エディタが出る。しかも `currentUser` が null なので `autoSaveRegions` が `if (!examId  |     | !currentUser) return` で黙って何もせず**編集が失われる**。03→04 では type で絞られていない cropRegions が設問割当マトリクスの行に並び、小計欄に対して QUESTION_ASSIGNMENT を書き込む |
 
-**直し方**: 画面固有の複合ペイロードには画面固有のキーを与える
-（`queryKeys.coursework.items(id)` / `queryKeys.exam.regionInfo(id)` /
-`queryKeys.exam.questionGroup(id)` のように）。`queryKeys.*.detail` は
-「その実体そのもの」を1つの queryFn で取る用途にだけ残す。
+**直した形**: 画面固有の複合ペイロードには画面固有のキーを与えた
+（`exam.regionInfoPage` / `exam.questionGroupPage` / `exam.exportPage` /
+`exam.detailPage`）。`*.detail` は「その実体そのもの」を1つの queryFn で取る用途に
+だけ残す。
 
 > `grade.detail` は3つの消費者（`page.tsx` / `useBoundaries` / `useDataSources`）が
 > **同一の queryFn** を持つので衝突しない。共有してよいのはこの形だけ。
+
+評価項目（#1）は複合ではなく資料の子なので、別キーへ複製せず
+`coursework.detail` に `select` を足して取り出す形にした。**同じ実体が2つの形で
+キャッシュに載らない**のが要点で、キーを増やすことではない。
+
+`grade.detail` / `coursework.detail` は `["grade", gradeId]` のように**他のキーの
+前方**でもあった。実体を入れたまま無効化すると `sourceFits` や `results` まで
+前方一致で巻き込む（#7 はその帰結）。どちらも末端の葉へ移した。
 
 #### B. 「破壊的更新をやめた」ことが依存を壊した（3件）
 
