@@ -388,10 +388,18 @@ DB 上 String の union 列（`inputMode` / `kind` / `aggregate` / `absentMethod
 `estimationMode` / `status`）は、契約で union を名乗るだけで変換していなかった。
 境界（lib の返り値）で `defineStringUnion` の `to*` を通す形へ揃えた。
 
-### 段階6 — lint の締め（完了）
+### 段階6 — lint の締め（ルールは締めたが、移行は途中）
 
-fetch-effect 39件を全て `useQuery` / `useMemo` へ移し、
-`react-hooks/set-state-in-effect` を `error` へ上げた。`--max-warnings` は 0。
+`react-hooks/set-state-in-effect` の違反39件を全て `useQuery` / `useMemo` へ移し、
+ルールを `error` へ上げた。`--max-warnings` は 0。
+
+> **「39件」は lint 由来の数で、fetch-effect の総数ではない。** このルールが見るのは
+> **effect の外で定義した関数**だけで、effect の中へ直接書いた取得は数えない
+> （`eslint.config.mjs` に書いた注意書きのとおり）。実測では **effect の本体に
+> `window.electronAPI` が現れるものが 47箇所**残っている。押し出し・購読の effect も
+> 混ざっているので全部が移行対象ではないが、**棚卸しは済んでいない**。
+> 少なくとも `useExportPage.ts:90` は永続 `initializedRef` で守られた取得で、
+> 試験を切り替えても前の試験の出力設定が残る（段階7 #11）。
 
 移し方は3通りだった。
 
@@ -477,11 +485,86 @@ IPC が throw する形になったのに `void` で投げているため、失�
 | 7   | `useDataSources.ts:36`                                       | `loadData` が `["grade", gradeId]` を無効化するので、前方一致で `["grade", gradeId, "sourceFits"]` まで巻き込む。「名前・並べ替えでは R を再算出しない」というコード内の明言が実際には守られておらず、入力のたびに `buildGradeCalcContext`（全試験のスコア取得）が走る。キーを兄弟（`["gradeDetail", gradeId]` と `["gradeSourceFits", gradeId]`）に分けるか、`invalidateQueries({ queryKey, exact: true })` にする |
 | 10  | `archiveHandlers.ts:95` ほか、`studentArchiveHandlers.ts:28` | `archive:exportExam` / `archive:analyzeArchive` / `studentArchive:*` が旧 `{success, error}` エンベロープのまま。キャンセルを `result.error === "キャンセルされました"`（`src/app/exams/[examId]/page.tsx:100`・`StudentArchiveExportDialog.tsx:127`）という**文言比較**で判定している。他ドメインと同じく payload/throw ＋ `{canceled}` の判別可能 union へ移す                                                    |
 
+#### E. レビューが取りこぼしたもの（追加調査分）
+
+レビューの棄却8件は**理由が記録されていない**ため手で確認した。うち4件は再検討が要る。
+
+| #   | 場所                          | 内容                                                                                                                                                                                                                                    |
+| --- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 11  | `useExportPage.ts:90`         | 出力設定の取得が永続 `initializedRef` で1回だけに固定されている。試験を切り替えても前の試験の設定が残る。lint が数えない「effect の中に書いた取得」の実例                                                                               |
+| 12  | `gradeCalculator.ts:199`      | `absentMethod: (…) as AbsentMethod`。この移行で `toAbsentMethod` を用意したのに、この経路だけ型アサーションの素通しのまま                                                                                                               |
+| 13  | `useExportPage.ts:274`        | `queryKeys.exam.students(examId)` に `{exam, students}` という複合を入れている。消費者が1つなので今は衝突していないだけで、**系統Aと同じ形**                                                                                            |
+| 14  | `useClickScoringConfig.ts:53` | `{...DEFAULT, ...parsed}` で保存済み JSON をそのまま広げており、壊れた値が union を名乗ったまま通る。`CLICK_SCORING_ACTIONS` が同じファイルにあるのに使っていない（この移行より前からの穴だが、境界で倒す方針を入れた以上ここも揃える） |
+
+<details>
+<summary>棚卸しが要る47箇所（effect の本体に <code>window.electronAPI</code> があるもの）</summary>
+
+押し出し・購読の effect も混ざっている。「取得して setState している」ものだけが移行対象。
+
+- `src/app/answer-sheet-builder/[definitionId]/layout.tsx:39`
+- `src/app/classrooms/[classroomId]/hooks/useClassroomExamResults.ts:11`
+- `src/app/coursework/[courseworkId]/layout.tsx:35`
+- `src/app/exams/[examId]/layout.tsx:50`
+- `src/app/grades/[gradeId]/layout.tsx:40`
+- `src/app/settings/components/AuditLogsTab.tsx:196`
+- `src/app/settings/components/ScreenControlTab.tsx:34`
+- `src/app/settings/hooks/useKeyboardSettings.ts:19`
+- `src/app/settings/hooks/useSyncSettings.ts:25`
+- `src/app/students/[studentId]/hooks/useStudentDetail.ts:17`
+- `src/app/students/[studentId]/hooks/useStudentExamResults.ts:9`
+- `src/components/answer-sheet-builder/AnswerSheetBuilderMainView.tsx:78`
+- `src/components/answer-sheet-builder/AnswerSheetBuilderMainView.tsx:97`
+- `src/components/answer-sheet-builder/AnswerSheetDefinitionDetail.tsx:43`
+- `src/components/answer-sheet-builder/AnswerSheetDefinitionList.tsx:116`
+- `src/components/answer-sheet-builder/AnswerSheetExportView.tsx:34`
+- `src/components/classroom/ClassroomManagementTable.tsx:51`
+- `src/components/common/ScreenBlackout.tsx:46`
+- `src/components/coursework/EditCourseworkWindow.tsx:54`
+- `src/components/exams/04-question-group/components/SubtotalGroupSelector.tsx:42`
+- `src/components/exams/06-student-answers/student-answer-management/hooks/useStudentAnswerUpload.ts:138`
+- `src/components/exams/06-student-answers/student-answer-management/hooks/useStudentAnswerUpload.ts:170`
+- `src/components/exams/06-student-answers/student-answer-table/components/DeleteConfirmationModal.tsx:65`
+- `src/components/exams/06-student-answers/student-answer-table/hooks/useMarkerCorrection.ts:133`
+- `src/components/exams/07-score-at-once/OMRRecognition/hooks/useOmrAutoScoring.ts:103`
+- `src/components/exams/07-score-at-once/ScoringIndividual/AnswerIndividualView.tsx:75`
+- `src/components/exams/07-score-at-once/ScoringIndividual/hooks/core/useImageLoader.ts:36`
+- `src/components/exams/07-score-at-once/ScoringIndividual/hooks/view/useAllStudentAnnotations.ts:49`
+- `src/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider.tsx:230`
+- `src/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerWhiteness.ts:80`
+- `src/components/exams/07-score-at-once/ScoringMain/hooks/useScoringDataLoader.ts:29`
+- `src/components/exams/08-export/hooks/useExcelPreview.ts:88`
+- `src/components/exams/08-export/hooks/useExportPage.ts:229`
+- `src/components/exams/08-export/hooks/useExportPage.ts:90`
+- `src/components/exams/08-export/hooks/useScoredAnswerPdfExport.ts:331`
+- `src/components/exams/08-export/hooks/useScoredAnswerPreview.ts:118`
+- `src/components/exams/forms/CreateExamWindow.tsx:44`
+- `src/components/exams/forms/EditExamWindow.tsx:48`
+- `src/components/exams/list/ExamList.tsx:80`
+- `src/components/grades/03-data-sources/AddDataSourceInline.tsx:76`
+- `src/components/grades/03-data-sources/AddDataSourceInline.tsx:85`
+- `src/components/grades/03-data-sources/AddDataSourceInline.tsx:95`
+- `src/components/grades/04-manual-scores/ManualScoresContainer.tsx:31`
+- `src/components/grades/07-export/ExportContainer.tsx:64`
+- `src/components/student/StudentArchiveExportDialog.tsx:43`
+- `src/components/student/StudentTable.tsx:85`
+- `src/components/subtotal-groups/components/SubtotalGroupModal.tsx:151`
+
+</details>
+
+**棄却1は確定した #6 と同一の問題だった。** 同じキー衝突を、片方の検証が棄却し
+もう片方が確定させている。**検証の一貫性は保証されていない**ので、棄却＝安全とは読まない。
+
 #### 検証
 
 - `npm run check-all`（0 errors / 0 warnings）と `npx vitest run`（1,346件）
-- キー衝突（#1・#6）は**型で止まらない**ので、画面遷移を手で踏むか、
-  「同じ queryKey に異なる queryFn が無いこと」を確かめるテストを足す
+
+**ただしこの2つでは足りない。** この移行で見つけた実バグは全て「型」が教えたもので、
+**アプリを一度も起動していない**（`npm run dev` も e2e も走らせていない）。
+
+- キー衝突（#1・#6）は tsc もテストも捕まえない。画面遷移を踏むか、
+  「同じ queryKey に異なる queryFn が無いこと」を確かめるテストが要る
+- `useScoringFilter` にはテストが1件も無い。その中核の派生ロジックを書き換えた
+- 389ファイル・±3万行に対して finder 4本・候補39件。**網羅の主張はできない**
 
 ---
 
