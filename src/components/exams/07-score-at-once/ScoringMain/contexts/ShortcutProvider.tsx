@@ -302,7 +302,6 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
   const updateKeyBinding = useCallback(
     async (commandId: string, key: string) => {
       if (!userId) return
-      const previous = storedKeyBindings
       const newBindings = { ...keyBindings, [commandId]: key }
       queryClient.setQueryData(keyBindingsKey, newBindings)
       try {
@@ -311,11 +310,13 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
           newBindings
         )
       } catch (error) {
-        queryClient.setQueryData(keyBindingsKey, previous)
+        // 未取得なら previous は undefined で、setQueryData は書き込みを
+        // 中止してしまう（＝巻き戻らない）。戻す先は DB
+        await queryClient.invalidateQueries({ queryKey: keyBindingsKey })
         console.error("キーバインディングの保存に失敗しました:", error)
       }
     },
-    [keyBindings, storedKeyBindings, keyBindingsKey, queryClient, userId]
+    [keyBindings, keyBindingsKey, queryClient, userId]
   )
 
   const resetKeyBindings = useCallback(async () => {

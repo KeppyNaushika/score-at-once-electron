@@ -1,9 +1,10 @@
 "use client"
 
 import type { Exam } from "@prisma/client"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { TagIcon, XIcon } from "lucide-react"
 import React, { useCallback, useState } from "react"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -32,7 +33,8 @@ const EditExamWindow = ({
   setIsShowEditExamWindow,
   onSave,
 }: EditExamWindowProps) => {
-  const { tags: allTags } = useTags()
+  const { tags: allTags, refresh: refreshTags } = useTags()
+  const queryClient = useQueryClient()
   const [examName, setExamName] = useState(examToEdit.examName)
   const [examDate, setExamDate] = useState<Date | undefined>(() => {
     if (!examToEdit.examDate) return undefined
@@ -74,8 +76,17 @@ const EditExamWindow = ({
         tagIds.push(tag.id)
       }
       await window.electronAPI.examTagSetExamTags(examToEdit.id, tagIds)
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.exam.tags(examToEdit.id),
+        }),
+        refreshTags(),
+      ])
     } catch (error) {
       console.error("Failed to save tags:", error)
+      toast.error("タグの保存に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
 
     const updatedExamPayload: Exam = {

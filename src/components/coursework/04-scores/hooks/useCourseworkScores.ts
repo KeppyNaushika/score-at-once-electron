@@ -180,8 +180,8 @@ export function useCourseworkScores(courseworkId: string) {
   /**
    * 未保存の変更を即座にDBへ反映する（デバウンス完了時・アンマウント時に使用）。
    *
-   * 失敗したら書き残しへ戻す。戻さないと、キャッシュは入力値を表示したまま
-   * DB には何も無い状態になり、次に開いたときに消えている。
+   * 失敗したら書き残しへ戻し、キャッシュは DB へ揃える。戻さないと再試行が
+   * できず、揃えないと「保存できなかった値」を保存済みとして表示し続ける。
    * 戻す間に入った新しい編集は上書きしない（そちらの方が新しい）。
    */
   const flushPending = useCallback(async () => {
@@ -202,11 +202,14 @@ export function useCourseworkScores(courseworkId: string) {
           pendingChanges.current.set(key, change)
         }
       }
+      // 画面が消えた後は再試行の機会が無い。保存できなかった値を表示し続けると
+      // 「入っている」と誤解するので、キャッシュは DB に揃えておく
+      await queryClient.invalidateQueries({ queryKey })
       toast.error("点数の保存に失敗しました", {
         description: error instanceof Error ? error.message : undefined,
       })
     }
-  }, [])
+  }, [queryClient, queryKey])
 
   const bulkUpdateCells = useCallback(
     (

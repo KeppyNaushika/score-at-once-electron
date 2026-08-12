@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Monitor, PanelLeftClose } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -20,16 +20,12 @@ const BLACKOUT_SETTINGS_KEY = "screenBlackoutSettings"
 export function ScreenControlTab() {
   // プロジェクターモード
   // 現在のプロジェクターモード（main が持つ状態。localStorage 側とは出所が違う）
+  const queryClient = useQueryClient()
   const { data: savedProjectorMode } = useQuery({
     queryKey: queryKeys.settings.projectorMode,
     queryFn: () => window.electronAPI.settings.getProjectorMode(),
   })
-  const [projectorMode, setProjectorMode] = useState(false)
-  const [projectorModeSeeded, setProjectorModeSeeded] = useState(false)
-  if (savedProjectorMode !== undefined && !projectorModeSeeded) {
-    setProjectorModeSeeded(true)
-    setProjectorMode(savedProjectorMode)
-  }
+  const projectorMode = savedProjectorMode ?? false
 
   // 画面消灯
   const [blackoutEnabled, setBlackoutEnabled] = useState(false)
@@ -83,12 +79,13 @@ export function ScreenControlTab() {
   }, [])
 
   // プロジェクターモードの切り替え
-  const handleProjectorModeToggle = useCallback(async (enabled: boolean) => {
-    setProjectorMode(enabled)
-    if (window.electronAPI?.settings?.setProjectorMode) {
+  const handleProjectorModeToggle = useCallback(
+    async (enabled: boolean) => {
+      queryClient.setQueryData(queryKeys.settings.projectorMode, enabled)
       try {
         // 切り替え後の実際の状態を返すので、要求値ではなくそちらを採る
-        setProjectorMode(
+        queryClient.setQueryData(
+          queryKeys.settings.projectorMode,
           await window.electronAPI.settings.setProjectorMode(enabled)
         )
         toast.success(
@@ -97,13 +94,16 @@ export function ScreenControlTab() {
             : "プロジェクターモードを無効にしました"
         )
       } catch (error) {
-        setProjectorMode(!enabled)
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.settings.projectorMode,
+        })
         toast.error("プロジェクターモードの切り替えに失敗しました", {
           description: error instanceof Error ? error.message : undefined,
         })
       }
-    }
-  }, [])
+    },
+    [queryClient]
+  )
 
   // 画面消灯設定の保存
   const saveBlackoutSettings = useCallback(

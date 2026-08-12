@@ -318,7 +318,7 @@ export function TagsPageContainer() {
       try {
         await window.electronAPI.tagReorder(reordered.map((tag) => tag.id))
       } catch (error) {
-        queryClient.setQueryData(queryKeys.tags.all, tags)
+        await queryClient.invalidateQueries({ queryKey: queryKeys.tags.all })
         toast.error("タグの並べ替えに失敗しました", {
           description: error instanceof Error ? error.message : undefined,
         })

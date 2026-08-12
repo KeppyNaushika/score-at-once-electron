@@ -50,11 +50,6 @@ export function useExamDetail(examId: string) {
   const studentCount = data?.studentCount ?? 0
   const questionRegionCount = data?.questionRegionCount ?? 0
 
-  const loadExam = useCallback(
-    () => queryClient.invalidateQueries({ queryKey }),
-    [queryClient, queryKey]
-  )
-
   const updateExam = useCallback(
     async (
       examData: Partial<Pick<Exam, "examName" | "description" | "examDate">>
@@ -69,7 +64,10 @@ export function useExamDetail(examId: string) {
         })
         // 更新IPCはスカラーだけを返す。詳細画面はページ・答案・採点領域まで要るので
         // 取り直す（返り値をそのまま state へ入れると同梱の関係が消える）。
-        await loadExam()
+        // 試験名はパンくずなど他のキーも読むので、試験に紐づくものをまとめて。
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.exam.scope(exam.id),
+        })
         toast.success("試験を更新しました")
         return true
       } catch (error) {
@@ -78,7 +76,7 @@ export function useExamDetail(examId: string) {
         return false
       }
     },
-    [exam, loadExam]
+    [exam, queryClient]
   )
 
   const modelAnswerCount =

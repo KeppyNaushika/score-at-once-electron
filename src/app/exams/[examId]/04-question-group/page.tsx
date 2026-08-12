@@ -128,7 +128,7 @@ export default function SubtotalGroupPage() {
 
   /**
    * 1領域分の割り当てを丸ごと差し替える。
-   * 先にキャッシュを差し替え、失敗したら元へ戻して呼び出し元へ投げ返す。
+   * 先にキャッシュを差し替え、失敗したら DB を読み直して呼び出し元へ投げ返す。
    */
   const updateAssignments = useCallback(
     async (
@@ -136,7 +136,6 @@ export default function SubtotalGroupPage() {
       subtotalIds: string[],
       assignmentType: CropSubtotalAssignmentType
     ) => {
-      const previous = queryClient.getQueryData<QuestionGroupPageData>(queryKey)
       queryClient.setQueryData<QuestionGroupPageData>(queryKey, (cached) =>
         cached
           ? withReplacedAssignments(
@@ -160,7 +159,9 @@ export default function SubtotalGroupPage() {
           )
         }
       } catch (err) {
-        if (previous) queryClient.setQueryData(queryKey, previous)
+        // 保存は全消し→作り直しなので、消す方だけ通っていることがある。
+        // 編集前の断面へ戻すと DB に無い割り当てを表示し続ける
+        await queryClient.invalidateQueries({ queryKey })
         toast.error("関連付けの保存に失敗しました", {
           description: err instanceof Error ? err.message : undefined,
         })

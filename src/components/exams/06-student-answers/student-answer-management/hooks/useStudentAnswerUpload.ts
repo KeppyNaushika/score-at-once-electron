@@ -158,9 +158,9 @@ export function useStudentAnswerUpload(
         console.error("Failed to persist markerCorrectionEnabled:", error)
         toast.error("マーカー補正の設定を保存できませんでした")
       }
-      // 試験のキャッシュは他の画面も見ているので取り直す
+      // 試験のキャッシュは他の画面も見ているので、紐づくものごと取り直す
       await queryClient.invalidateQueries({
-        queryKey: queryKeys.exam.detail(examId),
+        queryKey: queryKeys.exam.scope(examId),
       })
     },
     [examId, queryClient]

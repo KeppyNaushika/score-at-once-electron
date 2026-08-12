@@ -140,7 +140,9 @@ export function useExcelPreview({
 
   return {
     previewData: active ? previewData : null,
-    isLoading: active && (isFetching || previewData === null),
+    // 失敗しても isFetching は false になる。previewData の有無で見ると
+    // 永久に読み込み中のままになり、失敗の理由が画面へ出ない
+    isLoading: active && isFetching,
     error: active && error ? error.message : null,
   }
 }

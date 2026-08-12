@@ -4,6 +4,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback } from "react"
 
 import { queryKeys } from "@/lib/queryKeys"
+import type { ClassroomWithMemberships } from "@/types/prismaExtensions"
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_CLASSROOMS: ClassroomWithMemberships[] = []
 
 /**
  * 学級の全件（所属生徒付き）。
@@ -13,7 +17,7 @@ import { queryKeys } from "@/lib/queryKeys"
  */
 export function useClassrooms() {
   const queryClient = useQueryClient()
-  const { data: classrooms = [], isPending } = useQuery({
+  const { data: classrooms = EMPTY_CLASSROOMS, isPending } = useQuery({
     queryKey: queryKeys.classrooms.all,
     queryFn: () => window.electronAPI.fetchClassrooms(),
   })

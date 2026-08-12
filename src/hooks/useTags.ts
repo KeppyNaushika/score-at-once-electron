@@ -3,7 +3,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback } from "react"
 
+import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { queryKeys } from "@/lib/queryKeys"
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_TAGS: TagWithAllRelations[] = []
 
 /**
  * タグ一覧（タグフィルタの選択肢・タグ入力の候補）。
@@ -14,7 +18,7 @@ import { queryKeys } from "@/lib/queryKeys"
  */
 export function useTags() {
   const queryClient = useQueryClient()
-  const { data: tags = [], isPending } = useQuery({
+  const { data: tags = EMPTY_TAGS, isPending } = useQuery({
     queryKey: queryKeys.tags.all,
     queryFn: () => window.electronAPI.tagGetAll(),
   })

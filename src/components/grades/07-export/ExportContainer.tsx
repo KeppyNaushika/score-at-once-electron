@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   CheckSquare,
   Eye,
@@ -12,6 +12,7 @@ import {
   Users,
 } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -61,8 +62,10 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
     DEFAULT_GRADE_REPORT_OPTIONS
   )
   // 保存済みの出力設定。編集はこの後 state が持つので、種として蒔く
+  const queryClient = useQueryClient()
+  const settingsKey = queryKeys.grade.exportSettings(gradeId)
   const { data: savedReportOptions } = useQuery({
-    queryKey: queryKeys.grade.exportSettings(gradeId),
+    queryKey: settingsKey,
     queryFn: async () => {
       const settings = await window.electronAPI.grade.getExportSettings(gradeId)
       const saved = settings?.reportOptions ?? null
@@ -104,25 +107,31 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
         const newOptions =
           typeof options === "function" ? options(prev) : options
 
+        // 編集した値をキャッシュにも載せる。伝えないと、戻ってきたときに
+        // 保存前の設定が種になり、そのまま上書き保存される
+        queryClient.setQueryData(settingsKey, newOptions)
+
         // バックグラウンドで保存（read-modify-write）
-        if (window.electronAPI?.grade) {
-          window.electronAPI.grade
-            .getExportSettings(gradeId)
-            .then((currentSettings) =>
-              window.electronAPI.grade.saveExportSettings(gradeId, {
-                ...currentSettings,
-                reportOptions: newOptions,
-              })
-            )
-            .catch((error: unknown) => {
-              console.error("成績算出エクスポート設定の保存に失敗:", error)
+        void window.electronAPI.grade
+          .getExportSettings(gradeId)
+          .then((currentSettings) =>
+            window.electronAPI.grade.saveExportSettings(gradeId, {
+              ...currentSettings,
+              reportOptions: newOptions,
             })
-        }
+          )
+          .catch(async (error: unknown) => {
+            await queryClient.invalidateQueries({ queryKey: settingsKey })
+            console.error("成績算出エクスポート設定の保存に失敗:", error)
+            toast.error("出力設定の保存に失敗しました", {
+              description: error instanceof Error ? error.message : undefined,
+            })
+          })
 
         return newOptions
       })
     },
-    [gradeId]
+    [gradeId, queryClient, settingsKey]
   )
 
   // 出力タブ

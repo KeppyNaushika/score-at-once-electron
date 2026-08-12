@@ -353,8 +353,6 @@ export function CourseworkItemsContainer({
     const reordered = arrayMove(items, oldIndex, newIndex).map(
       (item, order) => ({ ...item, order })
     )
-    const previousCoursework =
-      queryClient.getQueryData<CourseworkWithRelations>(queryKey)
     queryClient.setQueryData<CourseworkWithRelations>(queryKey, (previous) =>
       previous ? { ...previous, items: reordered } : previous
     )
@@ -363,9 +361,7 @@ export function CourseworkItemsContainer({
         reordered.map((item) => ({ id: item.id, order: item.order }))
       )
     } catch (error) {
-      if (previousCoursework) {
-        queryClient.setQueryData(queryKey, previousCoursework)
-      }
+      await loadItems()
       toast.error("並べ替えに失敗しました", {
         description: error instanceof Error ? error.message : undefined,
       })

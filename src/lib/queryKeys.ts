@@ -98,6 +98,11 @@ export const queryKeys = {
       ["answerSheetDefinition", definitionId, "tags"] as const,
   },
   exam: {
+    /**
+     * 試験1件に紐づくキーの前方一致。**格納しない**（無効化の範囲指定専用）。
+     * 試験の実体そのものが変わったときだけ使う。
+     */
+    scope: (examId: string) => ["exam", examId] as const,
     /** 試験1件そのもの（パンくず・答案アップロードなど、本体だけ要る画面） */
     detail: (examId: string) => ["exam", examId, "detail"] as const,
     /** 試験詳細ページが1回で取る形（試験本体＋進捗の分母になる件数） */

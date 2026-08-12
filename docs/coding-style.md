@@ -797,6 +797,28 @@ useEffect(() => {
   足すとキャッシュが番号ぶん増える。キーは同定のままにして、effect から
   `invalidateQueries` を呼ぶ
 
+**書き込みは楽観更新、失敗したら `invalidateQueries`（厳守）。**
+キャッシュは「取得した時点で DB がこう言った」という写しでしかない。DB へ書いて写しに
+何も言わなければ、次にその写しを読んだ画面は消えたはずの値を出し、そのまま書き戻す。
+
+```typescript
+queryClient.setQueryData(queryKey, next) // 先に画面へ反映する（往復を待たせない）
+try {
+  await window.electronAPI.grade.updateDataSource(id, patch)
+} catch (error) {
+  await queryClient.invalidateQueries({ queryKey }) // 戻す先は DB
+  toast.error("保存に失敗しました", { description: message(error) })
+}
+```
+
+- **巻き戻し先はクライアントの断面ではなく DB。** 書き込みが「全消しして作り直す」形
+  （04 の設問割当）だと、消す方だけ通って作る方が失敗し得る。断面へ戻すと、DB に無い
+  ものを画面が表示し続ける
+- **保存しかしない経路を作らない。** 編集した値を state に持って `save` するだけの画面は、
+  その値の出所であるキーを更新も無効化もしていない。保存の後に必ずどちらかをする
+- 楽観更新を置かず `await save()` → `invalidateQueries` にしてもよい。**やってはいけない
+  のは、どちらもしないこと**
+
 **画面をまたいで同じものを見ているなら、フックを1つ置いて共有する。**
 タグ・生徒・学級のような全体の一覧を画面ごとに引き直すと、片方で足したものが
 もう片方に出ない。`useTags` / `useStudents` / `useClassrooms` のように取得と

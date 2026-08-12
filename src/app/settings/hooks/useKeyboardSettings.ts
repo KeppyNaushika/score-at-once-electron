@@ -97,7 +97,6 @@ export function useKeyboardSettings() {
     }
 
     // 新しいショートカットを保存（楽観的更新）
-    const previous = storedShortcuts
     const newShortcuts = {
       ...shortcuts,
       [editingKey]: pendingKey,
@@ -118,19 +117,12 @@ export function useKeyboardSettings() {
       )
       toast.success("ショートカットキーを更新しました")
     } catch (error) {
-      queryClient.setQueryData(shortcutsKey, previous)
+      // 未取得なら previous は undefined で巻き戻らない。戻す先は DB
+      await queryClient.invalidateQueries({ queryKey: shortcutsKey })
       console.error("キーバインディングの保存に失敗しました:", error)
       toast.error("ショートカットキーの保存に失敗しました")
     }
-  }, [
-    editingKey,
-    pendingKey,
-    shortcuts,
-    storedShortcuts,
-    shortcutsKey,
-    queryClient,
-    userId,
-  ])
+  }, [editingKey, pendingKey, shortcuts, shortcutsKey, queryClient, userId])
 
   const handleKeyCancel = () => {
     setEditingKey(null)

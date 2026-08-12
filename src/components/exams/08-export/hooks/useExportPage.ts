@@ -1,8 +1,9 @@
 "use client"
 
-import { skipToken, useQuery } from "@tanstack/react-query"
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 
 import { useStudentSelection } from "@/components/exams/08-export/hooks/useStudentSelection"
 import type { ExportOptions, Student } from "@/components/exams/08-export/types"
@@ -42,9 +43,16 @@ function withoutSelectedGroupIds(
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_STUDENTS: Student[] = []
 
+/** この画面が保存済み設定として持つ形 */
+interface SavedExportSettings {
+  answerOverlay: AnswerOverlaySettings
+  individualReport: IndividualReportOptions
+}
+
 export function useExportPage() {
   const params = useParams()
   const examId = params.examId as string
+  const queryClient = useQueryClient()
 
   // フィルタ・検索状態
   const [searchTerm, setSearchTerm] = useState("")
@@ -83,8 +91,9 @@ export function useExportPage() {
 
   // 保存済みの出力設定。小計グループ選択は SSOT である ExamSubtotalGroup の
   // フラグから解決する（設定JSONに残った亡霊IDを使わない）
+  const settingsKey = queryKeys.exam.exportSettings(examId)
   const { data: savedSettings } = useQuery({
-    queryKey: queryKeys.exam.exportSettings(examId),
+    queryKey: settingsKey,
     queryFn: examId
       ? async () => {
           const [settings, selection] = await Promise.all([
@@ -136,16 +145,37 @@ export function useExportPage() {
   const flushSettings = useCallback(async () => {
     const pending = pendingSettingsRef.current
     pendingSettingsRef.current = null
-    if (!pending || !examId || !window.electronAPI?.settings) return
+    if (!pending || !examId) return
     try {
       await window.electronAPI.settings.saveExamExportSettings(examId, pending)
     } catch (error) {
+      // 書いた値をキャッシュへ伝えないと、戻ってきたときに保存前の設定が
+      // 種になり、そのまま上書き保存される
+      await queryClient.invalidateQueries({ queryKey: settingsKey })
       console.error("出力設定の保存に失敗しました:", error)
+      toast.error("出力設定の保存に失敗しました", {
+        description: error instanceof Error ? error.message : undefined,
+      })
     }
-  }, [examId])
+  }, [examId, queryClient, settingsKey])
 
   const scheduleSettingsSave = useCallback(
     (settings: ExamExportSettings) => {
+      // 画面で編集した値がそのまま保存対象。キャッシュにも同じものを載せる
+      queryClient.setQueryData<SavedExportSettings>(settingsKey, (cached) =>
+        cached
+          ? {
+              answerOverlay: settings.answerOverlay,
+              individualReport: {
+                ...settings.individualReport,
+                tableSubtotalGroupSelection:
+                  cached.individualReport.tableSubtotalGroupSelection,
+                boxPlotSubtotalGroupSelection:
+                  cached.individualReport.boxPlotSubtotalGroupSelection,
+              },
+            }
+          : cached
+      )
       pendingSettingsRef.current = settings
       if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
       persistTimerRef.current = setTimeout(() => {
@@ -153,7 +183,7 @@ export function useExportPage() {
         void flushSettings()
       }, SETTINGS_SAVE_DEBOUNCE_MS)
     },
-    [flushSettings]
+    [flushSettings, queryClient, settingsKey]
   )
 
   // 画面を離れるときは書き残しを吐き出す
@@ -195,7 +225,7 @@ export function useExportPage() {
           : options
       setIndividualReportOptionsState(newOptions)
 
-      if (examId && window.electronAPI?.settings) {
+      if (examId) {
         try {
           // 小計グループ選択は relational フラグへ書き込み（source of truth）
           await window.electronAPI.setSubtotalGroupSelection(
@@ -203,8 +233,17 @@ export function useExportPage() {
             newOptions.tableSubtotalGroupSelection.selectedGroupIds,
             newOptions.boxPlotSubtotalGroupSelection.selectedGroupIds
           )
+          queryClient.setQueryData<SavedExportSettings>(
+            settingsKey,
+            (cached) =>
+              cached ? { ...cached, individualReport: newOptions } : cached
+          )
         } catch (error) {
+          await queryClient.invalidateQueries({ queryKey: settingsKey })
           console.error("小計グループ選択の保存に失敗しました:", error)
+          toast.error("小計点グループの選択を保存できませんでした", {
+            description: error instanceof Error ? error.message : undefined,
+          })
         }
       }
 
@@ -218,6 +257,8 @@ export function useExportPage() {
       examId,
       individualReportOptions,
       scheduleSettingsSave,
+      queryClient,
+      settingsKey,
     ]
   )
 
