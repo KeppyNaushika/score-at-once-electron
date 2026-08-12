@@ -4,6 +4,7 @@ import { useInfiniteQuery } from "@tanstack/react-query"
 import { type Dispatch, type SetStateAction, useMemo, useState } from "react"
 
 import type { AuditLogFilter } from "@/electron-src/lib/prisma/auditQuery"
+import { queryKeys } from "@/lib/queryKeys"
 import type { AuditLogEntry } from "@/types/auditLog.types"
 
 const PAGE_SIZE = 50
@@ -39,7 +40,7 @@ export function useAuditLogs(): UseAuditLogsResult {
     hasNextPage,
     fetchNextPage,
   } = useInfiniteQuery({
-    queryKey: ["auditLogs", filter],
+    queryKey: queryKeys.auditLog.list(filter),
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       window.electronAPI.audit.getLogs({

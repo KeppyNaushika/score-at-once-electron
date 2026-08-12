@@ -15,6 +15,9 @@ import { describe, expect, it } from "vitest"
 
 const REPO_ROOT = path.resolve(__dirname, "../..")
 
+/** キーを取るフック。増えたらここへ足す（漏れると検査を素通りする） */
+const QUERY_HOOKS = new Set(["useQuery", "useInfiniteQuery"])
+
 interface QueryUsage {
   /** `queryKeys.exam.detail` のようなキーの作り手 */
   keyFactory: string
@@ -80,7 +83,7 @@ function collectQueryUsages(): {
       if (
         ts.isCallExpression(node) &&
         ts.isIdentifier(node.expression) &&
-        node.expression.text === "useQuery" &&
+        QUERY_HOOKS.has(node.expression.text) &&
         node.arguments.length > 0 &&
         ts.isObjectLiteralExpression(node.arguments[0])
       ) {
@@ -136,7 +139,7 @@ function collectQueryUsages(): {
 describe("クエリキーの規約", () => {
   const { usages, literalKeys } = collectQueryUsages()
 
-  it("走査そのものが機能している（useQuery を見つけられている）", () => {
+  it("走査そのものが機能している（クエリを見つけられている）", () => {
     expect(usages.length).toBeGreaterThan(30)
   })
 

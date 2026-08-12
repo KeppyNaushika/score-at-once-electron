@@ -1,3 +1,5 @@
+import type { AuditLogFilter } from "@/electron-src/lib/prisma/auditQuery"
+
 /**
  * TanStack Query のキー。
  *
@@ -41,6 +43,13 @@ export const queryKeys = {
   },
   students: {
     all: ["students"] as const,
+  },
+  auditLog: {
+    /**
+     * 監査ログの一覧（無限スクロール）。
+     * 絞り込み条件は要求そのものなのでキーに入る（同定用の id ではない）。
+     */
+    list: (filter: AuditLogFilter) => ["auditLog", "list", filter] as const,
   },
   classrooms: {
     all: ["classrooms"] as const,
