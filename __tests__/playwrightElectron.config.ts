@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test"
+import * as path from "path"
 
 /**
  * 一括採点Electronアプリケーション専用Playwright設定
@@ -7,9 +8,19 @@ export default defineConfig({
   testDir: "./tests/electron",
   /* 起動前に main/preload ビルドと better-sqlite3 の Electron ABI を用意する */
   globalSetup: "./tests/electron/globalSetup.ts",
-  /* レンダラーが参照する Next.js dev サーバー（既存があれば再利用） */
+  /**
+   * レンダラーが参照する Next.js dev サーバー。
+   *
+   * `cwd` を明示する。既定は設定ファイルのあるディレクトリ（`__tests__/`）なので、
+   * 自前で起動しようとすると `app/` を見つけられずに落ちる。
+   *
+   * **`reuseExistingServer` は 3000 番に居るものをそのまま使う。** 別のセッションが
+   * dev サーバーを立てていると、そちらのコードに対して e2e が走ってしまう。
+   * 走らせる前に 3000 番が自分のものか確かめること。
+   */
   webServer: {
     command: "npx next dev",
+    cwd: path.resolve(__dirname, ".."),
     url: "http://localhost:3000",
     reuseExistingServer: true,
     timeout: 120 * 1000,
