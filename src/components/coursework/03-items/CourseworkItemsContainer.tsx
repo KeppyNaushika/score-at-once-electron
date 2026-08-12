@@ -2,6 +2,7 @@
 
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -28,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { queryKeys } from "@/lib/queryKeys"
 import type {
   CourseworkItemWithLetterScales,
   InputMode,
@@ -179,12 +181,25 @@ function SortableItemRow({
  * 並べ替えはドラッグ&ドロップ。
  * 成績算出から参照中の項目は削除をブロックし、参照元をトーストで通知する。
  */
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_ITEMS: CourseworkItemWithLetterScales[] = []
+
 export function CourseworkItemsContainer({
   courseworkId,
 }: CourseworkItemsContainerProps) {
-  const [items, setItems] = useState<CourseworkItemWithLetterScales[]>([])
+  const queryClient = useQueryClient()
+  const queryKey = queryKeys.coursework.detail(courseworkId)
+  const { data: items = EMPTY_ITEMS, isPending: loading } = useQuery({
+    queryKey,
+    queryFn: async () => {
+      const coursework =
+        await window.electronAPI.coursework.getById(courseworkId)
+      return coursework.items
+        .slice()
+        .sort((itemA, itemB) => itemA.order - itemB.order)
+    },
+  })
   const [drafts, setDrafts] = useState<Record<string, ItemDraft>>({})
-  const [loading, setLoading] = useState(true)
   const [newItemName, setNewItemName] = useState("")
 
   // 自動保存用：最新ドラフトの参照と項目ごとのデバウンスタイマー
@@ -193,32 +208,28 @@ export function CourseworkItemsContainer({
     new Map()
   )
 
-  const setDraftsSynced = useCallback((next: Record<string, ItemDraft>) => {
-    draftsRef.current = next
-    setDrafts(next)
-  }, [])
-
-  const loadItems = useCallback(async () => {
-    try {
-      const coursework =
-        await window.electronAPI.coursework.getById(courseworkId)
-      const sorted = coursework.items
-        .slice()
-        .sort((itemA, itemB) => itemA.order - itemB.order)
-      setItems(sorted)
-      setDraftsSynced(
-        Object.fromEntries(sorted.map((item) => [item.id, toDraft(item)]))
-      )
-    } catch (error) {
-      console.error("Error loading coursework items:", error)
-    } finally {
-      setLoading(false)
-    }
-  }, [courseworkId, setDraftsSynced])
-
+  // デバウンス保存は「今の」ドラフトを読む必要がある。state と別に ref で保つ
   useEffect(() => {
-    loadItems()
-  }, [loadItems])
+    draftsRef.current = drafts
+  })
+
+  const loadItems = useCallback(
+    () => queryClient.invalidateQueries({ queryKey }),
+    [queryClient, queryKey]
+  )
+
+  /**
+   * 取り直した項目でドラフトを作り直す。effect ではなくレンダー中に畳む
+   * （取得直後の1フレームに前の項目のドラフトを出さない）。
+   * 取得結果の同一性で判定するので、同じ内容を取り直しても作り直さない。
+   */
+  const [draftSource, setDraftSource] = useState<typeof items | null>(null)
+  if (items !== draftSource) {
+    setDraftSource(items)
+    setDrafts(
+      Object.fromEntries(items.map((item) => [item.id, toDraft(item)]))
+    )
+  }
 
   /** 指定項目の最新ドラフトをDBへ保存する（無効なドラフトはスキップ） */
   const saveItem = useCallback(async (itemId: string) => {
@@ -266,7 +277,7 @@ export function CourseworkItemsContainer({
     (itemId: string, patch: Partial<ItemDraft>) => {
       const current = draftsRef.current[itemId]
       if (!current) return
-      setDraftsSynced({
+      setDrafts({
         ...draftsRef.current,
         [itemId]: { ...current, ...patch },
       })
@@ -281,7 +292,7 @@ export function CourseworkItemsContainer({
         }, 500)
       )
     },
-    [saveItem, setDraftsSynced]
+    [saveItem]
   )
 
   const handleAddItem = async () => {
@@ -329,7 +340,7 @@ export function CourseworkItemsContainer({
     const newIndex = items.findIndex((item) => item.id === over.id)
     if (oldIndex < 0 || newIndex < 0) return
     const reordered = arrayMove(items, oldIndex, newIndex)
-    setItems(reordered)
+    queryClient.setQueryData(queryKey, reordered)
     try {
       await window.electronAPI.coursework.reorderItems(
         reordered.map((item, order) => ({ id: item.id, order }))

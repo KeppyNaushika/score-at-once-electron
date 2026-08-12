@@ -115,16 +115,13 @@ export default [
       // effect の使いどころは docs/coding-style.md「effect の使いどころ」を参照。
       //
       // このルールが判定しているのは setState を含む関数の定義位置であって、await の
-      // 有無ではない。effect の外で定義した関数を effect から呼ぶと警告になり、同じ
-      // 処理を effect の中に書けば出ない。したがって警告の有無とコードの良し悪しは
-      // 一致しない。effect の中の関数へ包み直して警告だけ消すことは禁止（実行時の
-      // 挙動が変わらないため、痕跡の残らない eslint-disable になる）。
+      // 有無ではない。effect の外で定義した関数を effect から呼ぶと違反になり、同じ
+      // 処理を effect の中に書けば出ない。**effect の中の関数へ包み直して違反だけ
+      // 消すことは禁止**（実行時の挙動が変わらないため、痕跡の残らない
+      // eslint-disable になる）。取得は useQuery へ、派生値は useMemo へ移すこと。
       //
-      // 現在の43件は全て「effect からデータを取っている」もので、useQuery への移行で
-      // 消える。手順は docs/ipc-and-data-fetching-plan.md。移行中の増加を止めるため、
-      // package.json の lint に --max-warnings で件数の上限を置いている。移行完了時に
-      // 上限を外し、このルールを error へ引き上げること。
-      "react-hooks/set-state-in-effect": "warn", // 43件（useQuery 移行で 0 になる）
+      // 違反ゼロにしたので error（再混入を止める）
+      "react-hooks/set-state-in-effect": "error",
       // 違反ゼロにしたので error（再混入を止める）
       "react-hooks/error-boundaries": "error",
       "react-hooks/globals": "error",

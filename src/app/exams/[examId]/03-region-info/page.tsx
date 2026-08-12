@@ -1,10 +1,9 @@
 "use client"
 
-import type { ExamPage, User } from "@prisma/client"
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
-import { toast } from "sonner"
+import { useCallback, useMemo, useState } from "react"
 
 import RegionDetailsTable from "@/components/exams/03-region-info/components/RegionDetailsTable"
 import { useOmrConfig } from "@/components/exams/03-region-info/hooks/useOmrConfig"
@@ -12,6 +11,23 @@ import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
+import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
+import { queryKeys } from "@/lib/queryKeys"
+
+/** 未取得のときに毎回新しい値を作らないための空値 */
+const EMPTY_EXAM_PAGES: ExamPageWithContent[] = []
+const EMPTY_IMAGE_URLS: Record<string, string> = {}
+const EMPTY_CROP_REGIONS: CropRegionWithSubtotals[] = []
+
+/** この画面が1回の取得で揃える形 */
+interface RegionInfoData {
+  currentUser: Awaited<
+    ReturnType<typeof window.electronAPI.getCurrentUser>
+  >
+  examPages: ExamPageWithContent[]
+  backgroundImageUrls: Record<string, string>
+  cropRegions: CropRegionWithSubtotals[]
+}
 
 export default function RegionInfoPage() {
   const params = useParams()
@@ -26,93 +42,77 @@ export default function RegionInfoPage() {
     null
   )
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [cropRegions, setCropRegions] = useState<CropRegionWithSubtotals[]>([])
-
-  const [examPages, setExamPages] = useState<ExamPage[]>([])
-  const [selectedExamPage, setSelectedExamPage] = useState<ExamPage | null>(
+  /** 表示中のページ。未選択なら取得結果の先頭を出す */
+  const [selectedExamPageId, setSelectedExamPageId] = useState<string | null>(
     null
   )
-  const [backgroundImageUrls, setBackgroundImageUrls] = useState<{
-    [key: string]: string
-  }>({})
-
-  const [isLoading, setIsLoading] = useState(true)
+  const queryClient = useQueryClient()
 
   // OMR設定管理
   const { getOmrConfig, upsertOmrConfig, deleteOmrConfig } = useOmrConfig(
     examId ?? ""
   )
 
-  const loadInitialData = useCallback(async () => {
-    if (!examId) {
-      toast.error("試験IDが見つかりません。")
-      setIsLoading(false)
-      return
-    }
-    setIsLoading(true)
-    try {
-      const user = await window.electronAPI.getCurrentUser()
-      setCurrentUser(user)
+  // ページ・背景画像・採点領域・操作者は必ず揃って初めて編集できるので、
+  // 1つの取得にまとめる（片方だけ古い状態で描かない）
+  const queryKey = useMemo(
+    () => queryKeys.exam.cropRegions(examId ?? ""),
+    [examId]
+  )
+  const { data, isPending: isLoading } = useQuery<RegionInfoData>({
+    queryKey,
+    queryFn: examId
+      ? async () => {
+          const [currentUser, exam, cropRegions] = await Promise.all([
+            window.electronAPI.getCurrentUser(),
+            // 試験が存在しなければ null（不存在を検知する）
+            window.electronAPI.getExamWithPages(examId),
+            window.electronAPI.getCropRegionsByExamId(examId),
+          ])
+          if (!exam) throw new Error("試験が見つかりません。")
 
-      // examPages（masterImages 含む）を取得。試験が存在しなければ null（不存在を検知）
-      const exam = await window.electronAPI.getExamWithPages(examId)
-      if (!exam) {
-        toast.error("試験が見つかりません。")
-        setExamPages([])
-        setSelectedExamPage(null)
-        setBackgroundImageUrls({})
-        setCropRegions([])
-        return
-      }
-      const fetchedPages = exam.examPages
-      if (fetchedPages && fetchedPages.length > 0) {
-        const sortedExamPages = [...fetchedPages].sort(
-          (pageA, pageB) => pageA.pageNumber - pageB.pageNumber
-        )
-        setExamPages(sortedExamPages)
-        setSelectedExamPage(sortedExamPages[0])
-
-        // 全ページの画像URLを取得
-        const urls: { [key: string]: string } = {}
-        for (const page of sortedExamPages) {
-          if (page.imagePath) {
-            urls[page.id] = await window.electronAPI.resolveFileProtocolPath(
-              page.imagePath
+          const examPages = [...exam.examPages].sort(
+            (pageA, pageB) => pageA.pageNumber - pageB.pageNumber
+          )
+          const backgroundImageUrls = Object.fromEntries(
+            await Promise.all(
+              examPages
+                .filter((page) => page.imagePath)
+                .map(
+                  async (page) =>
+                    [
+                      page.id,
+                      await window.electronAPI.resolveFileProtocolPath(
+                        page.imagePath!
+                      ),
+                    ] as const
+                )
             )
-          }
+          )
+          return { currentUser, examPages, backgroundImageUrls, cropRegions }
         }
-        setBackgroundImageUrls(urls)
-      } else {
-        setExamPages([])
-        setSelectedExamPage(null)
-        setBackgroundImageUrls({})
-      }
+      : skipToken,
+  })
+  const currentUser = data?.currentUser ?? null
+  const examPages = data?.examPages ?? EMPTY_EXAM_PAGES
+  const backgroundImageUrls = data?.backgroundImageUrls ?? EMPTY_IMAGE_URLS
+  const cropRegions = data?.cropRegions ?? EMPTY_CROP_REGIONS
 
-      // 既存の作物領域を取得
-      try {
-        const existingRegions =
-          await window.electronAPI.getCropRegionsByExamId(examId)
-        if (existingRegions && existingRegions.length > 0) {
-          setCropRegions(existingRegions)
-        } else {
-          setCropRegions([])
-        }
-      } catch (regionError) {
-        console.error("Failed to load crop regions:", regionError)
-        setCropRegions([])
-      }
-    } catch (error) {
-      console.error("Failed to load initial data:", error)
-      toast.error("初期データの読み込みに失敗しました。")
-    } finally {
-      setIsLoading(false)
-    }
-  }, [examId])
+  /** 編集中の採点領域でキャッシュを差し替える（自動保存の往復を待たせない） */
+  const setCropRegions = useCallback(
+    (regions: CropRegionWithSubtotals[]) => {
+      queryClient.setQueryData<RegionInfoData>(queryKey, (previous) =>
+        previous ? { ...previous, cropRegions: regions } : previous
+      )
+    },
+    [queryClient, queryKey]
+  )
 
-  useEffect(() => {
-    loadInitialData()
-  }, [loadInitialData])
+  // 表示中のページ。未選択なら先頭を出す（取得結果から導くので state を持たない）
+  const selectedExamPage =
+    examPages.find((page) => page.id === selectedExamPageId) ??
+    examPages[0] ??
+    null
 
   const autoSaveRegions = useCallback(
     async (regions: CropRegionWithSubtotals[]) => {
@@ -160,7 +160,7 @@ export default function RegionInfoPage() {
         console.error("Auto-save failed:", error)
       }
     },
-    [examId, currentUser]
+    [examId, currentUser, setCropRegions]
   )
 
   const handleRegionsChange = useCallback(
@@ -186,7 +186,7 @@ export default function RegionInfoPage() {
 
       setSaveTimeoutId(timeoutId)
     },
-    [saveTimeoutId, autoSaveRegions, cropRegions]
+    [saveTimeoutId, autoSaveRegions, cropRegions, setCropRegions]
   )
 
   if (isLoading) {
@@ -252,7 +252,7 @@ export default function RegionInfoPage() {
                           height={600}
                           unoptimized
                           onClick={() => {
-                            setSelectedExamPage(page)
+                            setSelectedExamPageId(page.id)
                           }}
                         />
                         {pageRegions.map((area, index) => {

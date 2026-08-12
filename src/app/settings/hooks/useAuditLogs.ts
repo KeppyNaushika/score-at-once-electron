@@ -1,12 +1,7 @@
 "use client"
 
-import {
-  type Dispatch,
-  type SetStateAction,
-  useCallback,
-  useEffect,
-  useState,
-} from "react"
+import { useInfiniteQuery } from "@tanstack/react-query"
+import { type Dispatch, type SetStateAction, useMemo, useState } from "react"
 
 import type { AuditLogFilter } from "@/electron-src/lib/prisma/auditQuery"
 import type { AuditLogEntry } from "@/types/auditLog.types"
@@ -31,78 +26,51 @@ interface UseAuditLogsResult {
  * loadMore でオフセットを進めて追記する。
  */
 export function useAuditLogs(): UseAuditLogsResult {
-  const [entries, setEntries] = useState<AuditLogEntry[]>([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [filter, setFilterState] = useState<AuditLogFilter>({})
 
-  const fetchPage = useCallback(
-    (offset: number, currentFilter: AuditLogFilter) =>
+  // 絞り込みはクエリキーの一部。条件を変えると先頭から取り直しになる。
+  // 追記していくページは useInfiniteQuery が持つので、こちらで連結しない
+  // （遅れて返った古いページが後ろに継ぎ足される取りこぼしが起きない）。
+  const {
+    data,
+    isPending: loading,
+    isFetchingNextPage: loadingMore,
+    error,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["auditLogs", filter],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
       window.electronAPI.audit.getLogs({
-        ...currentFilter,
+        ...filter,
         limit: PAGE_SIZE,
-        offset,
+        offset: pageParam,
       }),
-    []
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce(
+        (count, page) => count + page.entries.length,
+        0
+      )
+      return loaded < lastPage.total ? loaded : undefined
+    },
+  })
+
+  const entries = useMemo<AuditLogEntry[]>(
+    () => (data?.pages ?? []).flatMap((page) => page.entries),
+    [data]
   )
-
-  const reload = useCallback(() => {
-    let cancelled = false
-    setLoading(true)
-    setError(null)
-    void (async () => {
-      try {
-        const page = await fetchPage(0, filter)
-        if (cancelled) return
-        setEntries(page.entries)
-        setTotal(page.total)
-      } catch (e) {
-        if (cancelled) return
-        setError(
-          e instanceof Error ? e.message : "監査ログの取得に失敗しました"
-        )
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [fetchPage, filter])
-
-  useEffect(() => {
-    const cleanup = reload()
-    return cleanup
-  }, [reload])
-
-  const loadMore = useCallback(() => {
-    setLoadingMore(true)
-    void (async () => {
-      try {
-        const page = await fetchPage(entries.length, filter)
-        setEntries((prev) => [...prev, ...page.entries])
-        setTotal(page.total)
-      } catch (e) {
-        setError(
-          e instanceof Error ? e.message : "監査ログの取得に失敗しました"
-        )
-      } finally {
-        setLoadingMore(false)
-      }
-    })()
-  }, [entries.length, fetchPage, filter])
+  const total = data?.pages.at(-1)?.total ?? 0
 
   return {
     entries,
     total,
     loading,
     loadingMore,
-    error,
+    error: error?.message ?? null,
     filter,
     setFilter: setFilterState,
-    hasMore: entries.length < total,
-    loadMore,
+    hasMore: hasNextPage,
+    loadMore: () => void fetchNextPage(),
   }
 }

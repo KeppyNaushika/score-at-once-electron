@@ -21,6 +21,9 @@ import type { ExamWithPages } from "@/types/prismaExtensions"
 import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
+/** 該当なしのときに毎回新しい配列を作らないための空値 */
+const EMPTY_VISIBLE_ANSWERS: string[] = []
+
 const areArraysEqual = (a: string[], b: string[]) => {
   if (a.length !== b.length) {
     return false
@@ -83,7 +86,6 @@ export function useScoringFilter({
     double_mark: false,
   })
 
-  const [visibleAnswers, setVisibleAnswers] = useState<string[]>([])
 
   // 設問ごとに採点履歴を管理（設問IDをキーとするMap）
   // これにより設問変更時に明示的なクリア処理が不要になる
@@ -207,92 +209,90 @@ export function useScoringFilter({
     whitenessByAnswerId,
   ])
 
-  const updateVisibleAnswers = useCallback(
-    (customFilterSettings?: FilterSettings) => {
-      const activeFilterSettings = customFilterSettings || filterSettings
-
-      if (!currentCropRegion) {
-        setVisibleAnswers([])
-        return
+  /**
+   * 表示する答案と、選択の引き継ぎ材料を1つの派生値として組み立てる。
+   *
+   * ここは取得ではなく**絞り込みの結果**なので state に置かない（置くと絞りの
+   * 変更・採点履歴の変更のたびに「更新しに行く」呼び出しを書く必要があり、
+   * 呼び忘れた経路だけ古い一覧が残る）。
+   */
+  const derivedVisible = useMemo(() => {
+    if (!currentCropRegion) {
+      return {
+        visibleAnswers: EMPTY_VISIBLE_ANSWERS,
+        firstStudentAnswerId: null as string | null,
+        filteredSelection: EMPTY_VISIBLE_ANSWERS,
       }
-
-      if (questionChangeVersionRef.current === null) {
-        questionChangeVersionRef.current = questionChangeVersion
-      }
-
-      const nextVisibleAnswers: string[] = []
-      let firstStudentAnswerId: string | null = null
-      const nextFilteredSelection: string[] = []
-
-      const questionVersionChanged =
-        questionChangeVersionRef.current !== null &&
-        questionChangeVersionRef.current !== questionChangeVersion
-
-      const selectedIdsSet = questionVersionChanged
-        ? new Set<string>()
-        : new Set(selectedStudentAnswerImageIds)
-
-      for (const scoringData of allScoringData) {
-        const status = scoringData.status
-        const matchesFilter =
-          activeFilterSettings[status as keyof typeof activeFilterSettings]
-        // 設問ごとに採点履歴が管理されているため、現在の設問の履歴のみが参照される
-        const isRecentlyScored = recentlyScoredAnswers.has(scoringData.id)
-
-        if (matchesFilter || isRecentlyScored) {
-          nextVisibleAnswers.push(scoringData.id)
-
-          if (!scoringData.id.startsWith("master-") && !firstStudentAnswerId) {
-            firstStudentAnswerId = scoringData.id
-          }
-
-          if (selectedIdsSet.has(scoringData.id)) {
-            nextFilteredSelection.push(scoringData.id)
-          }
-        }
-      }
-
-      selectionSnapshotVersionRef.current += 1
-      pendingSelectionSnapshotRef.current = {
-        firstStudentAnswerId,
-        hasVisibleSelection: nextFilteredSelection.length > 0,
-        filteredSelection: nextFilteredSelection,
-        version: selectionSnapshotVersionRef.current,
-      }
-
-      if (questionVersionChanged) {
-        questionChangeVersionRef.current = questionChangeVersion
-      }
-
-      setVisibleAnswers((prev) => {
-        if (areArraysEqual(prev, nextVisibleAnswers)) {
-          return prev
-        }
-        return nextVisibleAnswers
-      })
-    },
-    [
-      filterSettings,
-      currentCropRegion,
-      allScoringData,
-      recentlyScoredAnswers,
-      selectedStudentAnswerImageIds,
-      questionChangeVersion,
-    ]
-  )
-
-  useLayoutEffect(() => {
-    if (studentAnswerImages.length === 0 || cropRegions.length === 0) {
-      return
     }
 
-    updateVisibleAnswers()
+    const visibleAnswers: string[] = []
+    let firstStudentAnswerId: string | null = null
+    const filteredSelection: string[] = []
+
+    for (const scoringData of allScoringData) {
+      const status = scoringData.status
+      const matchesFilter =
+        filterSettings[status as keyof typeof filterSettings]
+      // 設問ごとに採点履歴が管理されているため、現在の設問の履歴のみが参照される
+      const isRecentlyScored = recentlyScoredAnswers.has(scoringData.id)
+
+      if (matchesFilter || isRecentlyScored) {
+        visibleAnswers.push(scoringData.id)
+
+        if (!scoringData.id.startsWith("master-") && !firstStudentAnswerId) {
+          firstStudentAnswerId = scoringData.id
+        }
+
+        if (selectedStudentAnswerImageIds.has(scoringData.id)) {
+          filteredSelection.push(scoringData.id)
+        }
+      }
+    }
+
+    return { visibleAnswers, firstStudentAnswerId, filteredSelection }
   }, [
-    studentAnswerImages.length,
-    cropRegions.length,
-    currentCropRegionId,
-    updateVisibleAnswers,
+    filterSettings,
+    currentCropRegion,
+    allScoringData,
+    recentlyScoredAnswers,
+    selectedStudentAnswerImageIds,
   ])
+
+  // 中身が同じでも配列の同一性は変わり得るが、下流は areArraysEqual で
+  // 中身を比べているので取りこぼさない
+  const visibleAnswers = derivedVisible.visibleAnswers
+
+  /**
+   * 選択の引き継ぎ材料を下流の effect へ渡す。
+   * 設問が変わったフレームでは前の設問の選択を持ち越さない（選択は設問ごとに
+   * 意味が違うので、引き継ぐと別の生徒が選ばれたまま見える）。
+   *
+   * 下流の effect より先に書く必要があるので、この位置の layout effect で行う。
+   */
+  useLayoutEffect(() => {
+    const questionVersionChanged =
+      questionChangeVersionRef.current !== null &&
+      questionChangeVersionRef.current !== questionChangeVersion
+    if (questionChangeVersionRef.current === null) {
+      questionChangeVersionRef.current = questionChangeVersion
+    }
+
+    const filteredSelection = questionVersionChanged
+      ? EMPTY_VISIBLE_ANSWERS
+      : derivedVisible.filteredSelection
+
+    selectionSnapshotVersionRef.current += 1
+    pendingSelectionSnapshotRef.current = {
+      firstStudentAnswerId: derivedVisible.firstStudentAnswerId,
+      hasVisibleSelection: filteredSelection.length > 0,
+      filteredSelection,
+      version: selectionSnapshotVersionRef.current,
+    }
+
+    if (questionVersionChanged) {
+      questionChangeVersionRef.current = questionChangeVersion
+    }
+  }, [derivedVisible, questionChangeVersion])
 
   const prevGradingModeRef = useRef<GradingMode>(gradingMode)
   const prevCropRegionIdRef = useRef<string | null>(currentCropRegionId)
@@ -587,11 +587,10 @@ export function useScoringFilter({
       )
   }, [getAllGridAnswerData, visibleAnswers])
 
+  // 採点履歴を捨てると一覧は自動で組み直る（派生値なので更新の呼び出しは要らない）
   const handleRefreshFilter = useCallback(() => {
     setRecentlyScoredAnswers(new Set())
-
-    updateVisibleAnswers()
-  }, [updateVisibleAnswers, setRecentlyScoredAnswers])
+  }, [setRecentlyScoredAnswers])
 
   const handleToggleFilter = useCallback(
     (key: string) => {
@@ -601,13 +600,10 @@ export function useScoringFilter({
           [key]: !filterSettings[key as keyof typeof filterSettings],
         }
         setFilterSettings(newFilterSettings)
-
-        updateVisibleAnswers(newFilterSettings)
-
         setRecentlyScoredAnswers(new Set())
       }
     },
-    [filterSettings, updateVisibleAnswers, setRecentlyScoredAnswers]
+    [filterSettings, setRecentlyScoredAnswers]
   )
 
   return {

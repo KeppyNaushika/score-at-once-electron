@@ -1,6 +1,6 @@
 "use client"
 
-import type { Exam } from "@prisma/client"
+import { skipToken, useQuery } from "@tanstack/react-query"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 
@@ -11,6 +11,7 @@ import {
   type IndividualReportOptions,
 } from "@/electron-src/lib/export/individual-report/types"
 import type { ExamExportSettings } from "@/electron-src/lib/prisma/examSettings"
+import { queryKeys } from "@/lib/queryKeys"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 
@@ -38,15 +39,17 @@ function withoutSelectedGroupIds(
   }
 }
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_STUDENTS: Student[] = []
+
 export function useExportPage() {
   const params = useParams()
   const examId = params.examId as string
   const initializedRef = useRef(false)
 
   // 基本状態
-  const [exam, setExam] = useState<Exam | null>(null)
-  const [students, setStudents] = useState<Student[]>([])
-  const [loading, setLoading] = useState(true)
+
+
 
   // フィルタ・検索状態
   const [searchTerm, setSearchTerm] = useState("")
@@ -267,48 +270,45 @@ export function useExportPage() {
   const [currentStep, setCurrentStep] = useState("")
   const [isExporting, setIsExporting] = useState(false)
 
-  // データ読み込み
-  const loadStudentData = useCallback(async () => {
-    try {
-      setLoading(true)
-      const [examResponse, studentsResponse] = await Promise.all([
-        window.electronAPI.getExam(examId),
-        window.electronAPI.getStudentsForExam(examId),
-      ])
+  // 試験と受験者は必ず対で使うので1つの取得にまとめる
+  const queryKey = queryKeys.exam.students(examId)
+  const { data, isPending: loading } = useQuery({
+    queryKey,
+    queryFn: examId
+      ? async () => {
+          const [exam, examStudents] = await Promise.all([
+            window.electronAPI.getExam(examId),
+            window.electronAPI.getStudentsForExam(examId),
+          ])
+          // 受験生徒順の SSOT は ExamStudent.customOrder（05 で定義）。08 は下流の
+          // 読み手なので customOrder のみで並べ、出席番号・氏名などの独自フォールバックは
+          // 加えない。getStudentsForExam は customOrder 昇順（同着は studentNumber）で
+          // 返すため、同着・未設定は安定ソートでその順序を保つ。未設定（null）は末尾へ。
+          const students = [...examStudents].sort(
+            (examStudentA, examStudentB) =>
+              (examStudentA.customOrder ?? Number.MAX_SAFE_INTEGER) -
+              (examStudentB.customOrder ?? Number.MAX_SAFE_INTEGER)
+          )
+          return { exam, students }
+        }
+      : skipToken,
+  })
+  const exam = data?.exam ?? null
+  const students = data?.students ?? EMPTY_STUDENTS
 
-      if (examResponse) {
-        setExam(examResponse)
-      }
-
-      if (studentsResponse) {
-        // 受験生徒順の SSOT は ExamStudent.customOrder（05 で定義）。08 は下流の
-        // 読み手なので customOrder のみで並べ、出席番号・氏名などの独自フォールバックは
-        // 加えない。getStudentsForExam は customOrder 昇順（同着は studentNumber）で返すため、
-        // 同着・未設定は安定ソートでその順序を保つ。未設定（null）は末尾へ。
-        const sortedStudents = [...studentsResponse].sort(
-          (examStudentA, examStudentB) =>
-            (examStudentA.customOrder ?? Number.MAX_SAFE_INTEGER) -
-            (examStudentB.customOrder ?? Number.MAX_SAFE_INTEGER)
-        )
-
-        setStudents(sortedStudents)
-        // デフォルトで参加中の受験者を選択（選択集合は ExamStudent.id で持つ）
-        const participatingExamStudentIds = sortedStudents
-          .filter((examStudent) => examStudent.status === "participating")
-          .map((examStudent) => examStudent.id)
-        replaceSelection(participatingExamStudentIds)
-      }
-    } catch (error) {
-      console.error("Failed to load data:", error)
-    } finally {
-      setLoading(false)
-    }
-  }, [examId, replaceSelection])
-
-  // 初期化
-  useEffect(() => {
-    loadStudentData()
-  }, [loadStudentData])
+  /**
+   * 取得できた受験者のうち「参加中」を既定で選ぶ。
+   * 取得のたびに選び直すのではなく、初回だけ（利用者が外した選択を戻さない）。
+   */
+  const [seededExamId, setSeededExamId] = useState<string | null>(null)
+  if (data && seededExamId !== examId) {
+    setSeededExamId(examId)
+    replaceSelection(
+      students
+        .filter((examStudent) => examStudent.status === "participating")
+        .map((examStudent) => examStudent.id)
+    )
+  }
 
   // フィルタリング（既にソート済みの students を使用）
   const filteredStudents = students.filter((examStudent) => {
