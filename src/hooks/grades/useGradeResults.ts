@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useState } from "react"
 
 import { useAuth } from "@/contexts/AuthContext"
+import { queryKeys } from "@/lib/queryKeys"
 import type {
   GradeCalculationResult,
   GradeCellTarget,
@@ -16,37 +18,31 @@ import type {
  */
 export function useGradeResults(gradeId: string) {
   const { user } = useAuth()
-  const [result, setResult] = useState<GradeCalculationResult | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const queryKey = queryKeys.grade.results(gradeId)
+  const {
+    data: result = null,
+    isPending: loading,
+    error: queryError,
+  } = useQuery({
+    queryKey,
+    queryFn: () => window.electronAPI.grade.calculateGrades(gradeId),
+  })
+  /** 書き込み（上書き・確定）の失敗。取得の失敗は useQuery が持つ */
+  const [mutationError, setMutationError] = useState<string | null>(null)
+  const error = mutationError ?? queryError?.message ?? null
 
   /**
-   * @param options.silent ローディング表示を出さずに再取得する。確定・解除の直後の
-   *   再計算で使う（1セルの操作で画面全体が「計算中...」に差し替わるのを避けるため）。
+   * 再計算する。取得中の表示は useQuery が持つので、1セルの操作で画面全体が
+   * 「計算中...」に差し替わることはない（再取得中も前の結果が残る）。
    */
   const calculate = useCallback(
-    async (options?: { silent?: boolean }) => {
-      if (!options?.silent) setLoading(true)
-      setError(null)
-      try {
-        setResult(await window.electronAPI.grade.calculateGrades(gradeId))
-      } catch (err) {
-        console.error("Error calculating grades:", err)
-        setError(err instanceof Error ? err.message : "計算に失敗しました")
-      } finally {
-        if (!options?.silent) setLoading(false)
-      }
-    },
-    [gradeId]
+    () => queryClient.invalidateQueries({ queryKey }),
+    [queryClient, queryKey]
   )
 
-  // 公開する再計算は引数なし。silent は内部の都合なので外へ出さない
-  // （onClick へそのまま渡せる形を保つ＝MouseEvent が options に化けない）。
-  const recalculate = useCallback(() => calculate(), [calculate])
-
-  useEffect(() => {
-    calculate()
-  }, [calculate])
+  // 公開する再計算は引数なし（onClick へそのまま渡せる形を保つ）
+  const recalculate = calculate
 
   const setGradeOverride = useCallback(
     async (params: GradeOverrideInput) => {
@@ -64,7 +60,7 @@ export function useGradeResults(gradeId: string) {
 
       // 楽観的更新（再確定が要る場合は確定後の再計算で反映するので行わない）
       if (!wasFrozen) {
-        setResult((prev) => {
+        queryClient.setQueryData<GradeCalculationResult>(queryKey, (prev) => {
           if (!prev) return prev
           return {
             ...prev,
@@ -117,18 +113,18 @@ export function useGradeResults(gradeId: string) {
             ],
             frozenByUserId: user?.id ?? null,
           })
-          await calculate({ silent: true })
+          await calculate()
         }
       } catch (err) {
         console.error("Error persisting grade override:", err)
-        setError(
+        setMutationError(
           err instanceof Error ? err.message : "評定の保存に失敗しました"
         )
         // エラー時は再計算して整合性を回復
-        await calculate({ silent: true })
+        await calculate()
       }
     },
-    [gradeId, result, calculate, user]
+    [gradeId, result, calculate, user, queryClient, queryKey]
   )
 
   /**
@@ -143,10 +139,10 @@ export function useGradeResults(gradeId: string) {
           targets,
           frozenByUserId: user?.id ?? null,
         })
-        await calculate({ silent: true })
+        await calculate()
       } catch (err) {
         console.error("Error freezing grade scores:", err)
-        setError(
+        setMutationError(
           err instanceof Error ? err.message : "成績値の確定に失敗しました"
         )
       }
@@ -163,10 +159,10 @@ export function useGradeResults(gradeId: string) {
           targets,
           userId: user?.id ?? null,
         })
-        await calculate({ silent: true })
+        await calculate()
       } catch (err) {
         console.error("Error unfreezing grade scores:", err)
-        setError(
+        setMutationError(
           err instanceof Error ? err.message : "確定の解除に失敗しました"
         )
       }

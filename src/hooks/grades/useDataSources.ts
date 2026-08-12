@@ -1,53 +1,46 @@
-import { useCallback, useEffect, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback } from "react"
 
+import { queryKeys } from "@/lib/queryKeys"
 import type {
   AbsentMethod,
   EstimationMode,
   GradeDataSourceInput,
-  GradeWithRelations,
 } from "@/types/grade.types"
 
-/** 各データソースのモデル適合度 R（このソースが他ソースからどれだけ当てられるか） */
-type SourceFitMap = Record<
+/** 未取得のときに毎回新しいオブジェクトを作らないための空値 */
+const EMPTY_SOURCE_FITS: Record<
   string,
   { correlation: number; sampleSize: number } | null
->
+> = {}
 
 /** 成績評定項目とデータソースのCRUD操作を管理するフック */
 export function useDataSources(gradeId: string) {
-  const [exam, setExam] = useState<GradeWithRelations | null>(null)
-  const [loading, setLoading] = useState(true)
-  // モデル適合度Rは重い算出のため本体読込と切り離し、非同期に後追いで反映する
-  const [sourceFits, setSourceFits] = useState<SourceFitMap>({})
+  const queryClient = useQueryClient()
+  const detailKey = queryKeys.grade.detail(gradeId)
+  const { data: exam = null, isPending: loading } = useQuery({
+    queryKey: detailKey,
+    queryFn: () => window.electronAPI.grade.getById(gradeId),
+  })
 
-  const loadSourceFits = useCallback(async () => {
-    try {
-      setSourceFits(await window.electronAPI.grade.computeSourceFits(gradeId))
-    } catch (error) {
-      console.error("Error computing source fits:", error)
-    }
-  }, [gradeId])
+  // R の算出は buildGradeCalcContext（全試験のスコア取得＋解決）を伴い重い。
+  // 本体とは別のクエリにして後追いで反映し、「Rに影響する変更」のときだけ
+  // 無効化する（名前・換算満点・並べ替え・評価項目リネームでは再算出しない）。
+  const sourceFitsKey = queryKeys.grade.sourceFits(gradeId)
+  const { data: sourceFits = EMPTY_SOURCE_FITS } = useQuery({
+    queryKey: sourceFitsKey,
+    queryFn: () => window.electronAPI.grade.computeSourceFits(gradeId),
+  })
 
-  const loadData = useCallback(async () => {
-    try {
-      setExam(await window.electronAPI.grade.getById(gradeId))
-    } catch (error) {
-      console.error("Error loading data sources:", error)
-    } finally {
-      setLoading(false)
-    }
-  }, [gradeId])
+  const loadData = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: detailKey }),
+    [queryClient, detailKey]
+  )
 
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  // R の再算出は buildGradeCalcContext（全試験のスコア取得＋解決）を伴い重いため、
-  // loadData には載せず初回マウントと「Rに影響する変更」のみで走らせる（名前・換算満点・
-  // 並べ替え・評価項目リネームでは再算出しない）。
-  useEffect(() => {
-    void loadSourceFits()
-  }, [loadSourceFits])
+  const loadSourceFits = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: sourceFitsKey }),
+    [queryClient, sourceFitsKey]
+  )
 
   const createGradeItem = useCallback(
     async (name: string) => {

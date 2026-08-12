@@ -1,9 +1,12 @@
 "use client"
 
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import type { ReactNode } from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useCallback, useContext } from "react"
 import { toast } from "sonner"
+
+import { queryKeys } from "@/lib/queryKeys"
 
 interface User {
   id: string
@@ -24,42 +27,37 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 /** 認証状態（ログイン・ログアウト・セッション確認）をアプリ全体に提供するプロバイダー */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+  const queryClient = useQueryClient()
 
-  const checkAuth = async () => {
-    try {
-      // electron-storeから認証トークンを取得
+  /**
+   * 保存されたトークンから今のログイン利用者を解決する。
+   * トークンが指す利用者が消えていたらトークンごと捨てる（次回から未ログイン）。
+   */
+  const { data: user = null, isPending: isLoading } = useQuery({
+    queryKey: queryKeys.currentUser.all,
+    queryFn: async (): Promise<User | null> => {
       const userId = await window.electronAPI.getAuthToken()
+      if (!userId) return null
 
-      if (userId) {
-        // userIdから直接ユーザー情報を取得
-        const users = await window.electronAPI.fetchUsers()
-        const user = users.find((candidate: User) => candidate.id === userId)
-        if (user) {
-          setUser(user)
-        } else {
-          // 無効なトークンの場合は削除
-          await window.electronAPI.clearAuthToken()
-          setUser(null)
-        }
-      } else {
-        // トークンがない場合は明示的にnullに設定
-        setUser(null)
-      }
-    } catch (error) {
-      console.error("Auth check failed:", error)
-      await window.electronAPI.clearAuthToken()
-      setUser(null)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+      const users = await window.electronAPI.fetchUsers()
+      const found = users.find((candidate) => candidate.id === userId) ?? null
+      if (!found) await window.electronAPI.clearAuthToken()
+      return found
+    },
+  })
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
+  const setUser = useCallback(
+    (next: User | null) =>
+      queryClient.setQueryData(queryKeys.currentUser.all, next),
+    [queryClient]
+  )
+
+  const checkAuth = useCallback(
+    () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.currentUser.all }),
+    [queryClient]
+  )
 
   const quickLogin = async (selectedUser: User) => {
     try {

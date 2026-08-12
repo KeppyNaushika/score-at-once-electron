@@ -2,8 +2,9 @@
 
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Calculator, Edit2, PlusCircle, Trash2, XIcon } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
 import { DragHandle } from "@/components/common/sortable-table/DragHandle"
@@ -30,6 +31,7 @@ import {
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import type { TagSubtotalGroupWithSubtotalGroup } from "@/electron-src/lib/prisma/tagSubtotalGroup"
 import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
+import { queryKeys } from "@/lib/queryKeys"
 
 const TAG_COLOR_PRESETS = [
   "#ef4444", // red
@@ -285,29 +287,21 @@ function TagModal({
 // ---------------------------------------------------------------------------
 
 export function TagsPageContainer() {
-  const [tags, setTags] = useState<TagWithAllRelations[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const { data: tags = [], isPending: loading } = useQuery({
+    queryKey: queryKeys.tags.all,
+    queryFn: () => window.electronAPI.tagGetAll(),
+  })
+  const loadTags = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: queryKeys.tags.all }),
+    [queryClient]
+  )
   const [modalTag, setModalTag] = useState<TagWithAllRelations | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [expandedTagId, setExpandedTagId] = useState<string | null>(null)
   const [linkedSubtotalGroups, setLinkedSubtotalGroups] = useState<
     TagSubtotalGroupWithSubtotalGroup[] | null
   >(null)
-
-  const loadTags = useCallback(async () => {
-    try {
-      const data = await window.electronAPI.tagGetAll()
-      setTags(data)
-    } catch {
-      toast.error("タグの取得に失敗しました")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void loadTags()
-  }, [loadTags])
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -318,11 +312,12 @@ export function TagsPageContainer() {
       const newIndex = tags.findIndex((tag) => tag.id === over.id)
       if (oldIndex === -1 || newIndex === -1) return
 
+      // 並べ替えは掴んだ手に追従させる（保存の往復を待たせない）
       const reordered = arrayMove(tags, oldIndex, newIndex)
-      setTags(reordered)
+      queryClient.setQueryData(queryKeys.tags.all, reordered)
       void window.electronAPI.tagReorder(reordered.map((tag) => tag.id))
     },
-    [tags]
+    [tags, queryClient]
   )
 
   // 紐づく小計点グループは開いたタグの分だけ取得する

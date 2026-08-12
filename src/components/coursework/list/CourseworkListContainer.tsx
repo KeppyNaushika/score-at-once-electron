@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ClipboardEdit,
   FolderInput,
@@ -9,7 +10,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { BulkTagAssignButton } from "@/components/common/BulkTagAssignButton"
@@ -33,7 +34,9 @@ import {
 } from "@/components/ui/table"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
+import { useTags } from "@/hooks/useTags"
 import { collectClassroomOptions } from "@/lib/filterOptions"
+import { queryKeys } from "@/lib/queryKeys"
 import type { CourseworkSummary } from "@/types/coursework.types"
 import type {
   CourseworkArchiveImportPreview,
@@ -70,8 +73,11 @@ const COURSEWORK_FILTER_ACCESSORS: ListFilterAccessors<CourseworkSummary> = {
  */
 export function CourseworkListContainer() {
   const router = useRouter()
-  const [courseworks, setCourseworks] = useState<CourseworkSummary[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const { data: courseworks = [], isPending: loading } = useQuery({
+    queryKey: queryKeys.coursework.list(),
+    queryFn: () => window.electronAPI.coursework.getAll(),
+  })
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   // インポート確認ウィザードの状態
   const [importPreview, setImportPreview] =
@@ -80,32 +86,13 @@ export function CourseworkListContainer() {
     null
   )
   const [importing, setImporting] = useState(false)
-  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
+  const { tags: allTags, refresh: refreshTags } = useTags()
 
-  const loadCourseworks = useCallback(async () => {
-    try {
-      setCourseworks(await window.electronAPI.coursework.getAll())
-    } catch (error) {
-      console.error("Error loading courseworks:", error)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    loadCourseworks()
-  }, [loadCourseworks])
-
-  useEffect(() => {
-    const loadTags = async () => {
-      try {
-        setAllTags(await window.electronAPI.tagGetAll())
-      } catch (error) {
-        console.error("Error loading tags:", error)
-      }
-    }
-    void loadTags()
-  }, [])
+  const loadCourseworks = useCallback(
+    () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.coursework.list() }),
+    [queryClient]
+  )
 
   const handleCreated = (id: string) => {
     setShowCreateDialog(false)
@@ -122,10 +109,12 @@ export function CourseworkListContainer() {
         })
         return
       }
-      setCourseworks((prev) =>
-        prev.filter(
-          (existingCoursework) => existingCoursework.id !== coursework.id
-        )
+      queryClient.setQueryData<CourseworkSummary[]>(
+        queryKeys.coursework.list(),
+        (prev) =>
+          (prev ?? []).filter(
+            (existingCoursework) => existingCoursework.id !== coursework.id
+          )
       )
       toast.success("資料を削除しました", { description: coursework.name })
     } catch (error) {
@@ -224,7 +213,7 @@ export function CourseworkListContainer() {
         description: `${targetCourseworks.length}件の資料に「${tagName}」を追加`,
       })
       clearSelection()
-      setAllTags(await window.electronAPI.tagGetAll())
+      await refreshTags()
       await loadCourseworks()
     } catch (error) {
       console.error("Error bulk adding tag:", error)

@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   BarChart3,
   ClipboardEdit,
@@ -15,7 +16,7 @@ import {
   Users,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { ListFilterBar } from "@/components/common/ListFilterBar"
@@ -37,11 +38,10 @@ import {
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { collectClassroomOptions } from "@/lib/filterOptions"
 import { getGradeStatus } from "@/lib/gradeStatus"
+import { queryKeys } from "@/lib/queryKeys"
 import type { CourseworkImportDecision } from "@/types/courseworkArchive.types"
 import type { GradeSummary } from "@/types/grade.types"
-import type {
-  GradeArchiveImportPreview,
-} from "@/types/gradeArchive.types"
+import type { GradeArchiveImportPreview } from "@/types/gradeArchive.types"
 
 import { GradeCreateDialog } from "./GradeCreateDialog"
 import { GradeImportDialog } from "./GradeImportDialog"
@@ -78,8 +78,11 @@ const GRADE_FILTER_ACCESSORS: ListFilterAccessors<GradeSummary> = {
  */
 export function GradeListContainer() {
   const router = useRouter()
-  const [grades, setGrades] = useState<GradeSummary[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const { data: grades = [], isPending: loading } = useQuery({
+    queryKey: queryKeys.grade.list(),
+    queryFn: () => window.electronAPI.grade.getAll(),
+  })
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   // インポート確認ウィザードの状態
   const [importPreview, setImportPreview] =
@@ -95,19 +98,10 @@ export function GradeListContainer() {
   >(null)
   const [importing, setImporting] = useState(false)
 
-  const loadGrades = useCallback(async () => {
-    try {
-      setGrades(await window.electronAPI.grade.getAll())
-    } catch (error) {
-      console.error("Error loading grade exams:", error)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    loadGrades()
-  }, [loadGrades])
+  const loadGrades = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: queryKeys.grade.list() }),
+    [queryClient]
+  )
 
   const handleCreated = (id: string) => {
     setShowCreateDialog(false)
@@ -118,7 +112,9 @@ export function GradeListContainer() {
   const handleDelete = async (id: string) => {
     try {
       await window.electronAPI.grade.delete(id)
-      setGrades((prev) => prev.filter((grade) => grade.id !== id))
+      queryClient.setQueryData<GradeSummary[]>(queryKeys.grade.list(), (prev) =>
+        (prev ?? []).filter((grade) => grade.id !== id)
+      )
     } catch (error) {
       console.error("Error deleting grade exam:", error)
       toast.error("削除に失敗しました", {
