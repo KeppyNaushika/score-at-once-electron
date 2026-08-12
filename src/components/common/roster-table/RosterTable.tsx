@@ -1,7 +1,8 @@
 "use client"
 
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { RotateCcw } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useId, useMemo, useState } from "react"
 
 import { RosterDragOverlay } from "@/components/common/roster-table/RosterDragOverlay"
 import { RosterTableFilters } from "@/components/common/roster-table/RosterTableFilters"
@@ -55,6 +56,10 @@ interface RosterTableProps {
  * 追加列/追加フィルタ/行アクション/削除ガードをスロットで差し込む。
  * 成績・試験外成績資料の素の名簿に使用する。
  */
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_ROWS: RosterRow[] = []
+const EMPTY_CLASSROOMS: RosterClassroomOption[] = []
+
 export function RosterTable({
   adapter,
   slots,
@@ -63,8 +68,10 @@ export function RosterTable({
   registerHandle,
   onRowsChange,
 }: RosterTableProps) {
-  const [rows, setRows] = useState<RosterRow[]>([])
-  const [classrooms, setClassrooms] = useState<RosterClassroomOption[]>([])
+  const queryClient = useQueryClient()
+  /** この表1つ分のクエリキー。同じ画面に2つ並んでも混ざらない */
+  const instanceId = useId()
+  const queryKey = useMemo(() => ["rosterTable", instanceId], [instanceId])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClassroomId, setSelectedClassroomId] = useState("all")
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -86,25 +93,42 @@ export function RosterTable({
     [slots?.additionalFilters]
   )
 
-  const loadData = useCallback(async () => {
-    onLoadingChange?.(true)
-    try {
-      const [fetchedRows, fetchedClassrooms] = await Promise.all([
+  // 行と学級の選択肢は必ず対で使う（学級で絞るので）ので1つの取得にまとめる
+  const { data, isFetching } = useQuery({
+    queryKey,
+    queryFn: async () => {
+      const [rows, classrooms] = await Promise.all([
         adapter.fetchRows(),
         adapter.fetchClassrooms(),
       ])
-      setRows(fetchedRows)
-      setClassrooms(fetchedClassrooms)
-    } catch (error) {
-      console.error("Failed to load roster data:", error)
-    } finally {
-      onLoadingChange?.(false)
-    }
-  }, [adapter, onLoadingChange])
+      return { rows, classrooms }
+    },
+  })
+  const rows = data?.rows ?? EMPTY_ROWS
+  const classrooms = data?.classrooms ?? EMPTY_CLASSROOMS
 
+  const loadData = useCallback(
+    () => queryClient.invalidateQueries({ queryKey }),
+    [queryClient, queryKey]
+  )
+
+  /** 並べ替えの楽観更新。キャッシュを直に差し替える */
+  const patchRows = useCallback(
+    (update: (rows: RosterRow[]) => RosterRow[]) => {
+      queryClient.setQueryData<{
+        rows: RosterRow[]
+        classrooms: RosterClassroomOption[]
+      }>(queryKey, (previous) =>
+        previous ? { ...previous, rows: update(previous.rows) } : previous
+      )
+    },
+    [queryClient, queryKey]
+  )
+
+  // 取得の状態・行の件数・再取得の口は親へ押し出す（外部システムへの同期）
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    onLoadingChange?.(isFetching)
+  }, [isFetching, onLoadingChange])
 
   useEffect(() => {
     registerHandle?.({ refresh: loadData })
@@ -170,7 +194,7 @@ export function RosterTable({
       const orderMap = new Map(
         rowOrders.map((rowOrder) => [rowOrder.studentId, rowOrder.customOrder])
       )
-      setRows((prev) =>
+      patchRows((prev) =>
         prev.map((row) => ({
           ...row,
           customOrder: orderMap.get(row.id) ?? row.customOrder,
@@ -183,7 +207,7 @@ export function RosterTable({
         await loadData()
       }
     },
-    [adapter, loadData]
+    [adapter, loadData, patchRows]
   )
 
   const {

@@ -1,8 +1,9 @@
 "use client"
 
 import type { DragEndEvent } from "@dnd-kit/core"
+import { skipToken, useQuery } from "@tanstack/react-query"
 import { Plus, Trash2 } from "lucide-react"
-import { type ReactNode, useCallback, useEffect, useState } from "react"
+import { type ReactNode, useId, useState } from "react"
 
 import {
   DragHandle,
@@ -133,6 +134,9 @@ function SortableClassroomRow(props: ClassroomRowProps) {
  * 登録一覧の表示・order並び替え（任意）・追加ダイアログ・削除（2段階モーダル内包）を提供する。
  * 試験固有の「再採番」フラグ等は {@link ClassroomRosterFlagColumn} で差し込む。
  */
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_AVAILABLE_CLASSROOMS: AvailableClassroomOption[] = []
+
 export function ClassroomRosterManager({
   entries,
   flagColumns = [],
@@ -156,12 +160,11 @@ export function ClassroomRosterManager({
     source: ClassroomRosterEntry[]
     entries: ClassroomRosterEntry[]
   } | null>(null)
-  const [availableClassrooms, setAvailableClassrooms] = useState<
-    AvailableClassroomOption[]
-  >([])
   const [selectedClassroomIds, setSelectedClassroomIds] = useState<Set<string>>(
     new Set()
   )
+  /** このコンポーネント1つ分のクエリキー。同じ画面に2つ並んでも混ざらない */
+  const instanceId = useId()
   const [adding, setAdding] = useState(false)
   const [removalTarget, setRemovalTarget] =
     useState<ClassroomRosterEntry | null>(null)
@@ -174,21 +177,23 @@ export function ClassroomRosterManager({
   const localEntries =
     reorderedEntries?.source === entries ? reorderedEntries.entries : entries
 
-  const loadAvailableClassrooms = useCallback(async () => {
-    if (!fetchAvailableClassrooms) return
-    try {
-      setAvailableClassrooms(await fetchAvailableClassrooms())
-    } catch (err) {
-      console.error("Failed to fetch available classrooms:", err)
-    }
-  }, [fetchAvailableClassrooms])
+  // 候補は追加ダイアログを開いている間だけ取る（閉じている間は問い合わせない）
+  const { data: availableClassrooms = EMPTY_AVAILABLE_CLASSROOMS } = useQuery({
+    queryKey: ["availableClassrooms", instanceId],
+    queryFn:
+      showAddDialog && fetchAvailableClassrooms
+        ? () => fetchAvailableClassrooms()
+        : skipToken,
+  })
 
-  useEffect(() => {
-    if (showAddDialog) {
-      loadAvailableClassrooms()
-      setSelectedClassroomIds(new Set())
-    }
-  }, [showAddDialog, loadAvailableClassrooms])
+  // ダイアログを開き直したら選択を捨てる。前回の選択が残っていると、
+  // 開いた瞬間に身に覚えのない学級が選ばれて見える。
+  // effect ではなくレンダー中に畳む（開いた直後の1フレームに古い選択を出さない）
+  const [lastShowAddDialog, setLastShowAddDialog] = useState(showAddDialog)
+  if (showAddDialog !== lastShowAddDialog) {
+    setLastShowAddDialog(showAddDialog)
+    if (showAddDialog) setSelectedClassroomIds(new Set())
+  }
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event

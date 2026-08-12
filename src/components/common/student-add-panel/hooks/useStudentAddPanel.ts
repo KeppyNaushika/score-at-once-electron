@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useId, useMemo, useState } from "react"
 
 import type {
   AddPanelClassroomItem,
@@ -95,15 +96,32 @@ async function resolveStudentEmptyReason(
  * 学級複数選択・個別検索選択・在籍スイッチ2系統（学級用/個別用）を持ち、
  * スイッチ切替時に該当の候補だけ再取得する。追加後は両候補を再取得し onAdded を呼ぶ。
  */
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_CLASSROOMS: AddPanelClassroomItem[] = []
+const EMPTY_STUDENTS: AddPanelStudentItem[] = []
+
 export function useStudentAddPanel({
   adapter,
   onAdded,
   classroomActiveOnlyDefault,
   studentActiveOnlyDefault,
 }: UseStudentAddPanelParams) {
+  const queryClient = useQueryClient()
+  /** このパネル1つ分のクエリキー。同じ画面に2つ並んでも混ざらない */
+  const instanceId = useId()
   const [activeTab, setActiveTab] = useState("classrooms")
-  const [classrooms, setClassrooms] = useState<SelectableClassroom[]>([])
-  const [students, setStudents] = useState<SelectableStudent[]>([])
+  /**
+   * 選択は取得結果とは別に持つ（id の集合）。取得結果の配列に isSelected を
+   * 混ぜると、再取得のたびに選択が消えるか、逆に消えた学級の選択が残る。
+   */
+  const [selectedClassroomIds, setSelectedClassroomIds] = useState<Set<string>>(
+    new Set()
+  )
+  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(
+    new Set()
+  )
+  /** 選択した順の学級id。追加順が採番の順序になるので保つ */
+  const [classroomOrder, setClassroomOrder] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filterClassroomId, setFilterClassroomId] = useState("all")
   const [classroomActiveOnly, setClassroomActiveOnly] = useState(
@@ -112,92 +130,108 @@ export function useStudentAddPanel({
   const [studentActiveOnly, setStudentActiveOnly] = useState(
     studentActiveOnlyDefault
   )
-  const [loadingClassrooms, setLoadingClassrooms] = useState(false)
-  const [loadingStudents, setLoadingStudents] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
-  const [classroomEmptyReason, setClassroomEmptyReason] =
-    useState<ClassroomEmptyReason | null>(null)
-  const [studentEmptyReason, setStudentEmptyReason] =
-    useState<StudentEmptyReason | null>(null)
 
-  const loadClassrooms = useCallback(async () => {
-    setLoadingClassrooms(true)
-    try {
-      const result = await adapter.fetchAvailableClassrooms(classroomActiveOnly)
-      setClassrooms(
-        result.map((classroom) => ({ ...classroom, isSelected: false }))
-      )
-      setClassroomEmptyReason(
-        result.length > 0
-          ? null
-          : await resolveClassroomEmptyReason(adapter, classroomActiveOnly)
-      )
-    } catch (error) {
-      console.error("Failed to fetch available classrooms:", error)
-    } finally {
-      setLoadingClassrooms(false)
-    }
-  }, [adapter, classroomActiveOnly])
+  // 候補が空のときの理由（学級が1つも無いのか、全部登録済みなのか）は
+  // 空だったときだけ引く。候補と対で表示するので同じ取得にまとめる
+  const classroomsKey = useMemo(
+    () => ["addPanelClassrooms", instanceId, classroomActiveOnly],
+    [instanceId, classroomActiveOnly]
+  )
+  const { data: classroomData, isFetching: loadingClassrooms } = useQuery({
+    queryKey: classroomsKey,
+    queryFn: async () => {
+      const classrooms =
+        await adapter.fetchAvailableClassrooms(classroomActiveOnly)
+      return {
+        classrooms,
+        emptyReason:
+          classrooms.length > 0
+            ? null
+            : await resolveClassroomEmptyReason(adapter, classroomActiveOnly),
+      }
+    },
+  })
+  const availableClassrooms = classroomData?.classrooms ?? EMPTY_CLASSROOMS
+  const classroomEmptyReason = classroomData?.emptyReason ?? null
 
-  const loadStudents = useCallback(async () => {
-    setLoadingStudents(true)
-    try {
-      const result = await adapter.fetchAvailableStudents(studentActiveOnly)
-      setStudents(result.map((student) => ({ ...student, isSelected: false })))
-      setStudentEmptyReason(
-        result.length > 0
-          ? null
-          : await resolveStudentEmptyReason(studentActiveOnly)
-      )
-    } catch (error) {
-      console.error("Failed to fetch available students:", error)
-    } finally {
-      setLoadingStudents(false)
-    }
-  }, [adapter, studentActiveOnly])
+  const studentsKey = useMemo(
+    () => ["addPanelStudents", instanceId, studentActiveOnly],
+    [instanceId, studentActiveOnly]
+  )
+  const { data: studentData, isFetching: loadingStudents } = useQuery({
+    queryKey: studentsKey,
+    queryFn: async () => {
+      const students = await adapter.fetchAvailableStudents(studentActiveOnly)
+      return {
+        students,
+        emptyReason:
+          students.length > 0
+            ? null
+            : await resolveStudentEmptyReason(studentActiveOnly),
+      }
+    },
+  })
+  const availableStudents = studentData?.students ?? EMPTY_STUDENTS
+  const studentEmptyReason = studentData?.emptyReason ?? null
 
-  useEffect(() => {
-    loadClassrooms()
-  }, [loadClassrooms])
+  const loadClassrooms = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: classroomsKey }),
+    [queryClient, classroomsKey]
+  )
+  const loadStudents = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: studentsKey }),
+    [queryClient, studentsKey]
+  )
 
-  useEffect(() => {
-    loadStudents()
-  }, [loadStudents])
+  // 表示用に「取得結果 × 選択」を組み立てる。選択した順を先頭へ寄せる
+  const classrooms = useMemo<SelectableClassroom[]>(() => {
+    const decorated = availableClassrooms.map((classroom) => ({
+      ...classroom,
+      isSelected: selectedClassroomIds.has(classroom.id),
+    }))
+    const orderIndex = new Map(
+      classroomOrder.map((classroomId, index) => [classroomId, index])
+    )
+    return decorated.sort(
+      (left, right) =>
+        (orderIndex.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
+        (orderIndex.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+    )
+  }, [availableClassrooms, selectedClassroomIds, classroomOrder])
+
+  const students = useMemo<SelectableStudent[]>(
+    () =>
+      availableStudents.map((student) => ({
+        ...student,
+        isSelected: selectedStudentIds.has(student.id),
+      })),
+    [availableStudents, selectedStudentIds]
+  )
 
   const handleClassroomSelection = (
     classroomId: string,
     isSelected: boolean
   ) => {
-    setClassrooms((prev) =>
-      prev.map((classroom) =>
-        classroom.id === classroomId ? { ...classroom, isSelected } : classroom
-      )
-    )
-  }
-
-  const handleClassroomReorder = (orderedIds: string[]) => {
-    setClassrooms((prev) => {
-      const byId = new Map(prev.map((classroom) => [classroom.id, classroom]))
-      const reordered = orderedIds
-        .map((id) => byId.get(id))
-        .filter(
-          (classroom): classroom is SelectableClassroom =>
-            classroom !== undefined
-        )
-      // 並び替え対象（選択済み）以外はそのまま末尾に残す
-      const rest = prev.filter(
-        (classroom) => !orderedIds.includes(classroom.id)
-      )
-      return [...reordered, ...rest]
+    setSelectedClassroomIds((prev) => {
+      const next = new Set(prev)
+      if (isSelected) next.add(classroomId)
+      else next.delete(classroomId)
+      return next
     })
   }
 
+  const handleClassroomReorder = (orderedIds: string[]) => {
+    setClassroomOrder(orderedIds)
+  }
+
   const handleStudentSelection = (studentId: string, isSelected: boolean) => {
-    setStudents((prev) =>
-      prev.map((student) =>
-        student.id === studentId ? { ...student, isSelected } : student
-      )
-    )
+    setSelectedStudentIds((prev) => {
+      const next = new Set(prev)
+      if (isSelected) next.add(studentId)
+      else next.delete(studentId)
+      return next
+    })
   }
 
   const handleAddClassrooms = async () => {
@@ -209,6 +243,8 @@ export function useStudentAddPanel({
         selected.map((classroom) => classroom.id),
         classroomActiveOnly
       )
+      setSelectedClassroomIds(new Set())
+      setClassroomOrder([])
       await Promise.all([loadClassrooms(), loadStudents()])
       onAdded()
     } catch (error) {
@@ -228,6 +264,7 @@ export function useStudentAddPanel({
     setIsAdding(true)
     try {
       await adapter.addStudents(selected.map((student) => student.id))
+      setSelectedStudentIds(new Set())
       await Promise.all([loadClassrooms(), loadStudents()])
       onAdded()
     } catch (error) {
