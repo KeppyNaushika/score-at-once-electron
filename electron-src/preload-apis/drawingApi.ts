@@ -5,7 +5,6 @@ import { bind } from "./invoke"
 /**
  * 描画アノテーションのIPC API（CRUD・一括作成・お気に入り・ブラウズ取得）
  *
- * 引数の型は契約（`src/types/electron/drawingApi.d.ts`）と同一のものを参照する。
  * ここで `Partial<DrawingAnnotation>` のような別型を書くと、同じ通信に2つの型定義が
  * できてしまい（必須のはずの questionScoreId が任意になる等）、どちらが正なのか
  * 決まらなくなる。作成・更新はどちらも行そのものを渡す。

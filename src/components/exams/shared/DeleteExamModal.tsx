@@ -4,7 +4,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import ConfirmationModal from "@/components/common/ConfirmationModal"
-import type { ExamForDetail } from "@/types/prismaExtensions"
+import type { ExamForDetail } from "@/hooks/useExamDetail"
 
 interface DeleteExamModalProps {
   exam: ExamForDetail

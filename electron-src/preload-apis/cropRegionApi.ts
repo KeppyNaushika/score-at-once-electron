@@ -1,4 +1,3 @@
-import type {} from "../../src/types/electron/cropRegionApi"
 import { bind } from "./invoke"
 
 /** 採点領域（CropRegion）のIPC API（CRUD・並び順更新） */

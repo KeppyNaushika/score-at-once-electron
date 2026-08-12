@@ -7,13 +7,26 @@
  * 型はすべて Prisma モデル（`@prisma/client`）から派生する（型規則: Prisma型を最優先）。
  * IPC 境界では electron-src/lib/prisma/coursework.ts の serialize() が
  * Decimal を number へ変換するため、Decimal フィールドのみ number へ上書きする。
- * 実施日（date）は grade.types.ts の referenceDate に揃えて string | null とする。
  */
 
-import type { CourseworkLetterScale, Prisma } from "@prisma/client"
+import type {
+  CourseworkItem,
+  CourseworkLetterScale,
+  Prisma,
+} from "@prisma/client"
 
-/** 評価項目の入力モード（"numeric" | "letter"） */
-export type InputMode = "numeric" | "letter"
+import type { Serialized } from "./prismaExtensions"
+import { defineStringUnion } from "./stringUnion"
+
+/**
+ * 評価項目の入力モード。SQLite に enum が無いので DB 上は String。
+ * 想定外の値は既定の numeric へ倒す（点数入力として扱う方が壊れにくい）。
+ */
+const INPUT_MODES = ["numeric", "letter"] as const
+
+export type InputMode = (typeof INPUT_MODES)[number]
+
+export const { to: toInputMode } = defineStringUnion(INPUT_MODES, "numeric")
 
 /**
  * 文字評価→点数の変換表エントリ（評価項目単位）。
@@ -94,9 +107,8 @@ export type CourseworkWithRelations = Omit<
       students: true
     }
   }>,
-  "date" | "items"
+  "items"
 > & {
-  date: string | null
   items: CourseworkItemWithLetterScales[]
 }
 
@@ -117,9 +129,9 @@ export type CourseworkStudentWithMemberships =
 /**
  * 一覧表示用（フィルタ用に tags/classrooms、件数表示用に items/students を同梱）。
  *
- * `getCourseworks` は serializePrisma を通すので、Decimal は number・Date は文字列で届く。
- * 評価項目は CourseworkWithRelations と同じく置き換える（生の payload を埋めると
- * `maxScore` が Prisma.Decimal を名乗ったまま実体が number になる）。
+ * `getCourseworks` は serializePrisma を通すので Decimal は number で届く（Date は Date のまま）。
+ * 評価項目は一覧の include に合わせて変換表（letterScales）を持たない。持っていると
+ * 名乗るだけでは取得されないので、読んだ側が undefined を掴む。
  */
 export type CourseworkSummary = Omit<
   Prisma.CourseworkGetPayload<{
@@ -130,8 +142,9 @@ export type CourseworkSummary = Omit<
       classrooms: { include: { classroom: true } }
     }
   }>,
-  "date" | "items"
+  "items"
 > & {
-  date: string | null
-  items: CourseworkItemWithLetterScales[]
+  items: (Omit<Serialized<CourseworkItem>, "inputMode"> & {
+    inputMode: InputMode
+  })[]
 }

@@ -131,9 +131,9 @@ async function resolveEntityName(
       const coursework = await window.electronAPI.coursework.getById(id)
       name = coursework.name
     } else if (kind === "asb") {
-      const result =
+      const definition =
         await window.electronAPI.answerSheetBuilder.loadDefinition(id)
-      name = result.data?.name ?? null
+      name = definition.name
     }
     if (name) entityNameCache.set(cacheKey, name)
     return name

@@ -7,11 +7,36 @@
 
 import type { Prisma } from "@prisma/client"
 
-import type { GradeConstraintInput } from "../../../src/types/grade.types"
+import type {
+  ConstraintAggregate,
+  GradeConstraintInput,
+  GradeConstraintKind,
+} from "../../../src/types/grade.types"
+import {
+  toConstraintAggregate,
+  toGradeConstraintKind,
+} from "../../../src/types/grade.types"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScope } from "./auditScope"
 import prisma from "./client"
 import { serializePrisma } from "./serializePrisma"
+
+/**
+ * SQLite に enum が無いので kind / aggregate は DB 上 String。
+ * 境界の1箇所で union へ倒し、renderer は union として扱う。
+ */
+const withConstraintUnions = <
+  Constraint extends { kind: string; aggregate: string },
+>(
+  constraint: Constraint
+): Omit<Constraint, "kind" | "aggregate"> & {
+  kind: GradeConstraintKind
+  aggregate: ConstraintAggregate
+} => ({
+  ...constraint,
+  kind: toGradeConstraintKind(constraint.kind),
+  aggregate: toConstraintAggregate(constraint.aggregate),
+})
 
 /**
  * 制約ルールが持つ設定リレーションの include（単一 SSOT）。
@@ -142,7 +167,7 @@ export async function getGradeConstraints(gradeId: string) {
   })
   // tolerance / labelValues.value は Decimal 列。IPC を跨ぐ前に number へ倒さないと
   // renderer 側の数値比較が黙って壊れる（型は number を主張するので気づけない）。
-  return serializePrisma(constraints)
+  return serializePrisma(constraints).map(withConstraintUnions)
 }
 
 /**
@@ -188,7 +213,7 @@ export async function createGradeConstraint(data: {
     scopeLabel: scope.scopeLabel,
   })
 
-  return serializePrisma(created)
+  return withConstraintUnions(serializePrisma(created))
 }
 
 /**
@@ -232,7 +257,7 @@ export async function updateGradeConstraint(data: {
     scopeLabel: scope.scopeLabel,
   })
 
-  return serializePrisma(updated)
+  return withConstraintUnions(serializePrisma(updated))
 }
 
 /**

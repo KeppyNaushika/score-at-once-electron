@@ -48,25 +48,37 @@ const CROP_REGIONS: CropRegionOption[] = [
   { id: "region-2", label: "問2", points: 20, cropSubtotals: [] },
 ]
 
+/** 行の時刻は判定に使わないので固定値でよい */
+const FIXED_DATE = new Date("2026-01-01T00:00:00.000Z")
+
 const COURSEWORKS: CourseworkOption[] = [
   {
     id: "coursework-1",
     name: "レポート",
+    description: null,
     date: null,
+    createdAt: FIXED_DATE,
+    updatedAt: FIXED_DATE,
     items: [
       {
         id: "item-1",
+        courseworkId: "coursework-1",
         name: "第1回",
         maxScore: 30,
-        inputMode: "score",
+        inputMode: "numeric",
         order: 0,
+        createdAt: FIXED_DATE,
+        updatedAt: FIXED_DATE,
       },
       {
         id: "item-2",
+        courseworkId: "coursework-1",
         name: "第2回",
         maxScore: 40,
-        inputMode: "score",
+        inputMode: "numeric",
         order: 1,
+        createdAt: FIXED_DATE,
+        updatedAt: FIXED_DATE,
       },
     ],
   },

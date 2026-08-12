@@ -128,21 +128,22 @@ export function CourseworkStudentsContainer({
             courseworkId,
             activeOnly
           )
+        // 学級名は所属（memberships）から取る。以前は存在しない `className` 列を
+        // 読んでいて、常に空の所属が渡っていた
         return students.map((student): AddPanelStudentItem => ({
           id: student.id,
           studentNumber: student.studentNumber,
           lastName: student.lastName,
           firstName: student.firstName,
-          lastNameKana: "",
-          firstNameKana: "",
-          memberships: student.className
-            ? [
-                {
-                  attendanceNumber: null,
-                  classroom: { id: student.className, name: student.className },
-                },
-              ]
-            : [],
+          lastNameKana: student.lastNameKana,
+          firstNameKana: student.firstNameKana,
+          memberships: student.memberships.map((membership) => ({
+            attendanceNumber: membership.attendanceNumber,
+            classroom: {
+              id: membership.classroom.id,
+              name: membership.classroom.name,
+            },
+          })),
         }))
       },
       addClassrooms: async (orderedClassroomIds, activeOnly) => {

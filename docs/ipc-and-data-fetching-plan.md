@@ -361,19 +361,37 @@ src/components/grades/03-data-sources/hooks/useDataSourceDefaults.ts
 | 7   | `export` / `archive` / `coursework` / `grade`                    | —          | 大きい                                      |
 | —   | `tag` / `examClassroom` / `userExam` / `navigation` / `auditLog` | —          | 既に目標形。`useQuery` 化のみ               |
 
-### 段階5 — registry 化と契約の削除
+### 段階5 — registry 化と契約の削除（完了）
 
-全ドメインが payload を返すようになってから**一括で**行う。ドメインPRに混ぜると、意味の変更
-（失敗の伝え方）と構造の変更（registry 化）が同じ差分に入って切り分けられなくなる。
+全ドメインが payload を返すようになってから一括で行った。手書き契約 22ファイル・1,957行を削除。
 
-署名（約1,960行）を削除し、**本物の型定義（約483行）は main 側へ移す**。
+**手書き契約は型検査を受けていなかった。** `tsconfig.json` の `skipLibCheck: true` は `.d.ts` の
+中身を検査しないため、契約ファイル内の壊れた import はエラーにならず、その型は暗黙に `any` へ
+落ちる。実際 `answerSheetBuilderApi.d.ts` は存在しない再エクスポートを import しており、
+`loadDefinition` の戻り値が `any` になっていた。おかげで payload へ移行済みのチャンネルに対し
+`result.success && result.data` と書いた3画面が残り続け、**解答用紙ビルダーは定義を読み込めない
+まま**だった（エラートーストだけが出る）。契約を書く場所が検査の外にあったことが、
+「人が一致させている」という前提すら成り立っていなかった理由である。
 
-> `drawingApi.d.ts` には「なぜ採点者引数が無いのか」「なぜ `AnnotationWithContext` か」といった
-> 設計判断のコメントがある。**型と一緒に消さず、ハンドラ側へ移すこと。**
+導出へ切り替えた時点で表に出た食い違い:
+
+| 場所                                      | 契約の主張             | 実体                                 |
+| ----------------------------------------- | ---------------------- | ------------------------------------ |
+| `asb:load-definition`                     | （検査されず `any`）   | 定義そのもの。3画面が壊れていた      |
+| `updateExam`                              | `ExamForDetail`        | スカラーのみ。詳細画面の集計が消える |
+| `coursework:getAvailableStudents`         | `{ className }` を持つ | Student 行。学級名は常に空だった     |
+| `GradeWithRelations.referenceDate`        | `string`               | `Date`（structured clone）           |
+| `CourseworkSummary.items[].letterScales`  | 持つ                   | 一覧の include では引いていない      |
+| `ExamForDetail.gradeDataSources[].weight` | `Decimal`              | 境界で number へ倒れている           |
+
+DB 上 String の union 列（`inputMode` / `kind` / `aggregate` / `absentMethod` /
+`estimationMode` / `status`）は、契約で union を名乗るだけで変換していなかった。
+境界（lib の返り値）で `defineStringUnion` の `to*` を通す形へ揃えた。
 
 ### 段階6 — lint の締め
 
-`react-hooks/set-state-in-effect` を `error` へ。`package.json` の `--max-warnings` を撤去。
+残る fetch-effect を `useQuery` へ移し、`react-hooks/set-state-in-effect` を `error` へ。
+`package.json` の `--max-warnings` を撤去。
 
 > **変更系（mutation）は本計画では扱わない。** `loadX()` の手撃ちを `invalidateQueries` へ
 > 差し替えるところまでで止める。`useMutation` への移行は消費側の契約が全面的に変わるため別立て。

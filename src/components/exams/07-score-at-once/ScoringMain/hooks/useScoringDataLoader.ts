@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
-import type { ExamWithPages } from "@/types/electron/examApi"
+import type { ExamWithPages } from "@/types/prismaExtensions"
 import type { StudentAnswerImageWithExamPageAndStudent } from "@/types/prismaExtensions"
 
 interface ScoringDataLoaderResult {

@@ -3,7 +3,7 @@
  *
  * チャンネル名 → 実装の対応をここ1箇所に集める。preload はこの `Handlers` から
  * 引数と戻り値の型を導くので、**renderer 側で契約を宣言し直す必要がない**
- * （`src/types/electron/*.d.ts` の手書き署名はこの仕組みで不要になった）。
+ * （renderer 側の手書き契約はこの仕組みで不要になり、削除済み）。
  *
  * 前提: main と renderer が同じ TypeScript プログラムに属していること。
  * `electron-src` を別ビルドへ切り出すとこの導出は成立しない。

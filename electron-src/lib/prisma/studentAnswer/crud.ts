@@ -6,6 +6,7 @@ import type { Prisma } from "@prisma/client"
 import * as fsPromises from "fs/promises"
 import * as path from "path"
 
+import { toExamStudentStatus } from "../../../../src/types/examStudentStatus.types"
 import type {
   DetectedCornerMarker,
   MarkerDetectionResult,
@@ -399,7 +400,11 @@ export async function getStudentAnswersDataset(examId: string) {
   })
 
   return {
-    examStudents: exam.examStudents,
+    // 受験状態は SQLite に enum が無いので DB 上 String。境界で union へ倒す
+    examStudents: exam.examStudents.map((examStudent) => ({
+      ...examStudent,
+      status: toExamStudentStatus(examStudent.status),
+    })),
     examPages,
   }
 }

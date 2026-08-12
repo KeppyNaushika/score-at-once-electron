@@ -9,7 +9,7 @@ import {
 } from "react"
 
 import type { AuditLogFilter } from "@/electron-src/lib/prisma/auditQuery"
-import type { AuditLogEntry } from "@/types/electron/auditLogApi"
+import type { AuditLogEntry } from "@/types/auditLog.types"
 
 const PAGE_SIZE = 50
 

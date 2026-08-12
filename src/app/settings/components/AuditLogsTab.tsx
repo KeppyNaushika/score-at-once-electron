@@ -29,7 +29,7 @@ import type {
   AuditCategory,
   AuditVerb,
 } from "@/electron-src/lib/prisma/auditActions"
-import type { AuditLogEntry } from "@/types/electron/auditLogApi"
+import type { AuditLogEntry } from "@/types/auditLog.types"
 
 const CATEGORY_LABELS: Record<AuditCategory, string> = {
   exam: "試験",

@@ -1,5 +1,4 @@
 import type {} from "../../src/types/answerWhiteness.types"
-import type {} from "../../src/types/electron/scoringApi"
 import { bind } from "./invoke"
 
 /** 採点スコアのIPC API（設問スコアCRUD・一括更新・確定・採点担当割当） */

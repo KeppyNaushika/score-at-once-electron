@@ -5,7 +5,6 @@
  * IPC 境界では electron-src/lib/prisma の serializePrisma() が Decimal を number へ変換し、
  * grade lib の hydrate が仮想 maxScore を付与するため、
  * それらのフィールドのみ Prisma モデルから上書きする（coursework.types.ts と同じパターン）。
- * 実施日（referenceDate）は string | null とする。
  * ネストした select は electron-src/lib/prisma/gradeDataSource.ts の gradeDataSourceInclude と対を成す。
  */
 
@@ -36,11 +35,29 @@ import { defineStringUnion } from "./stringUnion"
  * - equipercentile（順位法）: 他ソースでの平均順位を、当ソース実分布の同順位の点へ変換。分布を保存し縮小しない。
  * - zscore（標準偏差法）: 他ソースでの平均標準得点(±SD)を、当ソースの実平均±SDへ載せ替え。縮小を打ち消す。
  */
-export type AbsentMethod =
-  "null" | "zero" | "average" | "regression" | "equipercentile" | "zscore"
+const ABSENT_METHODS = [
+  "null",
+  "zero",
+  "average",
+  "regression",
+  "equipercentile",
+  "zscore",
+] as const
+
+export type AbsentMethod = (typeof ABSENT_METHODS)[number]
+
+/** 想定外の値は「欠測として扱わない」= null（推定しない）へ倒す */
+export const { to: toAbsentMethod } = defineStringUnion(ABSENT_METHODS, "null")
 
 /** 推定ソース選択モード */
-export type EstimationMode = "all" | "selected"
+const ESTIMATION_MODES = ["all", "selected"] as const
+
+export type EstimationMode = (typeof ESTIMATION_MODES)[number]
+
+export const { to: toEstimationMode } = defineStringUnion(
+  ESTIMATION_MODES,
+  "all"
+)
 
 /**
  * データソース種別の唯一の定義源（SSOT）。
@@ -84,8 +101,7 @@ export type GradeSummary = Serialized<
 >
 
 /** 成績算出試験（リレーション付き） */
-export type GradeWithRelations = Omit<Grade, "referenceDate"> & {
-  referenceDate: string | null
+export type GradeWithRelations = Grade & {
   gradeClassrooms: (Pick<GradeClassroom, "id" | "classroomId" | "order"> & {
     classroom: Pick<Classroom, "id" | "name">
   })[]
@@ -121,10 +137,15 @@ export interface GradeDataSourceInput {
   weight: number
 }
 
-/** 取得側の include が返す形そのまま（形の SSOT は `gradeDataSourceInclude`） */
-type EnrichedGradeDataSource = Prisma.GradeDataSourceGetPayload<{
-  include: typeof gradeDataSourceInclude
-}>
+/**
+ * 取得側の include が返す形（形の SSOT は `gradeDataSourceInclude`）。
+ * 境界が `serializePrisma` を通すので Decimal は number になっている。
+ */
+type EnrichedGradeDataSource = Serialized<
+  Prisma.GradeDataSourceGetPayload<{
+    include: typeof gradeDataSourceInclude
+  }>
+>
 
 /**
  * データソース（リレーション付き）。
@@ -133,24 +154,15 @@ type EnrichedGradeDataSource = Prisma.GradeDataSourceGetPayload<{
  * 出力をそのまま持つ。以前は Pick で列を絞っていたが、それは規約の禁じる縮小射影で、
  * 満点の元データを落とすと renderer 側で算出できなくなる。
  *
- * 差分は「境界での型注入」だけ ── DB 上 String の union 列と、IPC で number へ倒れる
- * Decimal 列を、実体に合わせて宣言し直す。
+ * 差分は「境界での型注入」だけ ── DB 上 String の union 列を実体に合わせて宣言し直す。
+ * Decimal → number は `Serialized<>` が担うので、ここで列を数え上げない。
  */
 export type GradeDataSourceWithRelations = Omit<
   EnrichedGradeDataSource,
-  | "type"
-  | "weight"
-  | "absentMethod"
-  | "absentRatio"
-  | "absentOffset"
-  | "estimationMode"
-  | "courseworkItem"
+  "type" | "absentMethod" | "estimationMode" | "courseworkItem"
 > & {
   type: GradeDataSourceType
-  weight: number
   absentMethod: AbsentMethod
-  absentRatio: number
-  absentOffset: number
   estimationMode: EstimationMode
   /** 仮想フィールド。元データ（設問配点/評価項目満点）からライブ算出して付与される。 */
   maxScore: number
@@ -161,9 +173,8 @@ export type GradeDataSourceWithRelations = Omit<
   courseworkItem:
     | (Omit<
         NonNullable<EnrichedGradeDataSource["courseworkItem"]>,
-        "maxScore" | "inputMode" | "letterScales"
+        "inputMode" | "letterScales"
       > & {
-        maxScore: number
         inputMode: InputMode
         letterScales: CourseworkLetterScaleData[]
       })
@@ -426,13 +437,29 @@ export interface GradeCalculationResult {
 // ─────────────────────────────────────────────────────────────
 
 /** 制約ルールの種別 */
-export type GradeConstraintKind =
-  | "consistency" // 観点集計と評定の整合（Excel流: A=5,B=3,C=1の平均など）
-  | "mutual_exclusion" // 特定ラベルの混在禁止（A・C混在など）
-  | "expression" // 上級者向け自由記述式
+const GRADE_CONSTRAINT_KINDS = [
+  "consistency", // 観点集計と評定の整合（Excel流: A=5,B=3,C=1の平均など）
+  "mutual_exclusion", // 特定ラベルの混在禁止（A・C混在など）
+  "expression", // 上級者向け自由記述式
+] as const
+
+export type GradeConstraintKind = (typeof GRADE_CONSTRAINT_KINDS)[number]
+
+/** 想定外の値は最も素直な整合ルールへ倒す */
+export const { to: toGradeConstraintKind } = defineStringUnion(
+  GRADE_CONSTRAINT_KINDS,
+  "consistency"
+)
 
 /** 観点の集計方法 */
-export type ConstraintAggregate = "average" | "sum"
+const CONSTRAINT_AGGREGATES = ["average", "sum"] as const
+
+export type ConstraintAggregate = (typeof CONSTRAINT_AGGREGATES)[number]
+
+export const { to: toConstraintAggregate } = defineStringUnion(
+  CONSTRAINT_AGGREGATES,
+  "average"
+)
 
 /**
  * DBに保存される制約ルール1件（設定リレーション込み）。

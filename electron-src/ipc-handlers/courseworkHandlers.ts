@@ -229,9 +229,9 @@ export const courseworkHandlers = {
       properties: ["openFile"],
     })
     if (result.canceled || result.filePaths.length === 0) {
-      return { canceled: true }
+      return { canceled: true as const }
     }
-    return { canceled: false, filePath: result.filePaths[0] }
+    return { canceled: false as const, filePath: result.filePaths[0] }
   },
 
   // アーカイブ解析（プレビュー）

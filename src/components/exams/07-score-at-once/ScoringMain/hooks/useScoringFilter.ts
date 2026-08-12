@@ -17,7 +17,7 @@ import type {
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
-import type { ExamWithPages } from "@/types/electron/examApi"
+import type { ExamWithPages } from "@/types/prismaExtensions"
 import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 

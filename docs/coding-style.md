@@ -430,6 +430,22 @@ payload の一部として素直に返す（`null` / `{ canceled: true }` 等）
 
 **エンベロープを宣言する場所は1つ、消費する場所は1つ。** 両端の型からは見えない。
 
+### renderer 側で IPC 契約を宣言しない（厳守）
+
+チャンネルの引数と戻り値は **main の登録簿（`electron-src/ipc-handlers/index.ts` の
+`Handlers`）から導く**。renderer 側に手書きの署名を置かない。
+
+- preload の1メソッド = `bind("channel")`。引数を素通しするだけなら型を書かない
+- 引数の並び替え・既定値の補完が要るときだけアロー関数で書く（型は `invoke` から付く）
+- `window.electronAPI` の形（`MyAPI`）は preload の `create*Api()` の返り値から合成する
+
+手書きの契約を `.d.ts` に置くと `skipLibCheck: true` の下では**中身が検査されない**。
+壊れた import が暗黙の `any` になり、その先の食い違いが全部素通しになる（実例は
+[ipc-and-data-fetching-plan.md](./ipc-and-data-fetching-plan.md) 段階5）。
+
+**DB 上 String の union 列は境界で倒す。** 型で union を名乗るだけでは値は絞られない。
+lib の返り値で `defineStringUnion` の `to*` を通し、renderer は union として扱う。
+
 ```typescript
 // ❌ lib が失敗を値で返す（呼び出し側が見落としても型が止めない）
 export async function getGrade(id: string) {

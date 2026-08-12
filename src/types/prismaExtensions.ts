@@ -7,7 +7,9 @@
  * @module types/prisma-extensions
  */
 
-import type { Prisma, QuestionScore } from "@prisma/client"
+import type { Exam, Prisma, QuestionScore } from "@prisma/client"
+
+import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
 
 import type { ExamStudentStatus } from "./examStudentStatus.types"
 import type { ScoringStatus } from "./scoringStatus.types"
@@ -160,64 +162,16 @@ export type SerializedQuestionScore = Omit<
 // Exam関連型
 // =============================================================================
 
-/**
- * IPCハンドラー fetch-exam-by-id が返す Exam 型（詳細ページ専用の広ロード）。
- *
- * getExamById（main SSOT）と同一の include を Prisma から自己完結で導出する
- * （prismaExtensions の他型と同じ GetPayload 様式。renderer は electron-src の
- * ランタイム型を root tsconfig で解決できないため payload 直参照はしない）。
- * IPC 側で付加する平坦化 cropRegions / 抽出 answerImages を graft する。
- */
-export type ExamForDetail = Prisma.ExamGetPayload<{
-  include: {
-    userExams: { include: { user: true } }
-    examPages: {
-      include: {
-        studentAnswerImages: {
-          include: { examStudent: { include: { student: true } } }
-        }
-        cropRegions: {
-          // 進捗計算は questionScores のスカラー（status/examStudentId/partialScore）のみ読むため
-          // examStudent/user は join しない（over-fetch 排除）
-          include: { questionScores: true }
-        }
-      }
-    }
-    examSubtotalGroups: {
-      include: { subtotalGroup: { include: { subtotals: true } } }
-    }
-    examStudents: { include: { student: true } }
-    examTags: { include: { tag: true } }
-    // 参照している成績データソース。件数は renderer が `.length` で取る
-    // （Decimal 列を持つのでハンドラで serializePrisma を通している）
-    gradeDataSources: true
-  }
-}> & {
-  /** IPCハンドラーで平坦化されるcropRegions（進捗計算用・スコアは軽量／partialScore は number にシリアライズ済み） */
-  cropRegions?: (Omit<
-    Prisma.CropRegionGetPayload<{ include: { questionScores: true } }>,
-    "questionScores"
-  > & {
-    questionScores: (Omit<QuestionScore, "partialScore"> & {
-      partialScore: number | null
-    })[]
-  })[]
-  /** IPCハンドラーで抽出されるanswerImages */
-  answerImages?: (Prisma.StudentAnswerImageGetPayload<{
-    include: { examStudent: { include: { student: true } } }
-  }> & {
-    pageNumber: number
-  })[]
+/** 試験スカラー + examPages（masterImages 含む）。採点画面が1クエリで取得する形。 */
+export type ExamWithPages = Exam & { examPages: ExamPageWithContent[] }
+
+/** 試験の作成引数（renderer のフォームが組み立てる形） */
+export interface CreateExamArgs {
+  examName: string
+  description?: string | null
+  examDate?: Date | null
 }
 
-// =============================================================================
-// StudentAnswerImage関連型
-// =============================================================================
-
-/**
- * 詳細情報を含むStudentAnswerImage型
- * 採点機能で使用する際はexamStudentsも含む
- */
 export type StudentAnswerImageWithExamPageAndStudent =
   Prisma.StudentAnswerImageGetPayload<{
     include: {

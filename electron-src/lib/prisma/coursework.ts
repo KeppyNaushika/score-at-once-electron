@@ -9,6 +9,8 @@
 import type { Prisma } from "@prisma/client"
 
 import type { CourseworkScoreUpsertInput } from "../../../src/types/coursework.types"
+import type { InputMode } from "../../../src/types/coursework.types"
+import { toInputMode } from "../../../src/types/coursework.types"
 import { recordAuditLog } from "./auditLog"
 import {
   resolveCourseworkScope,
@@ -28,6 +30,31 @@ import {
   rosterUpdateStudentOrders,
 } from "./rosterManager"
 import { serializePrisma } from "./serializePrisma"
+
+/**
+ * 評価項目の `inputMode` を union へ倒す（SQLite に enum が無いので列は String）。
+ * 境界の1箇所でだけ変換し、renderer は union として扱う。
+ */
+const withInputMode = <Item extends { inputMode: string }>(
+  item: Item
+): Omit<Item, "inputMode"> & { inputMode: InputMode } => ({
+  ...item,
+  inputMode: toInputMode(item.inputMode),
+})
+
+/** 資料の同梱評価項目にも同じ変換を掛ける */
+const withCourseworkItems = <
+  Coursework extends { items: { inputMode: string }[] },
+>(
+  coursework: Coursework
+): Omit<Coursework, "items"> & {
+  items: (Omit<Coursework["items"][number], "inputMode"> & {
+    inputMode: InputMode
+  })[]
+} => ({
+  ...coursework,
+  items: coursework.items.map(withInputMode),
+})
 
 /** Coursework の実施日（在籍判定の基準日）を取得 */
 async function getCourseworkDate(courseworkId: string): Promise<Date | null> {
@@ -76,7 +103,7 @@ export async function getCourseworks() {
     },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
   })
-  return serializePrisma(courseworks)
+  return serializePrisma(courseworks).map(withCourseworkItems)
 }
 
 /** 試験外成績資料を1件取得（詳細） */
@@ -88,7 +115,7 @@ export async function getCourseworkById(id: string) {
   if (!coursework) {
     throw new Error("Coursework not found")
   }
-  return serializePrisma(coursework)
+  return withCourseworkItems(serializePrisma(coursework))
 }
 
 /** 試験外成績資料を作成 */
@@ -115,7 +142,7 @@ export async function createCoursework(data: {
     target: coursework.name,
   })
 
-  return serializePrisma(coursework)
+  return withCourseworkItems(serializePrisma(coursework))
 }
 
 /** 試験外成績資料を更新（基本設定） */
@@ -152,7 +179,7 @@ export async function updateCoursework(
     target: coursework.name,
   })
 
-  return serializePrisma(coursework)
+  return withCourseworkItems(serializePrisma(coursework))
 }
 
 /**
@@ -272,7 +299,7 @@ export async function createCourseworkItem(data: {
     target: data.name,
   })
 
-  return serializePrisma(item)
+  return withInputMode(serializePrisma(item))
 }
 
 /** 評価項目を更新（letterScales は全置換） */
@@ -314,7 +341,7 @@ export async function updateCourseworkItem(
     target: item.name,
   })
 
-  return serializePrisma(item)
+  return withInputMode(serializePrisma(item))
 }
 
 /**
@@ -821,5 +848,5 @@ export async function getCourseworkCandidates() {
     include: { items: { orderBy: { order: "asc" } } },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
   })
-  return serializePrisma(courseworks)
+  return serializePrisma(courseworks).map(withCourseworkItems)
 }

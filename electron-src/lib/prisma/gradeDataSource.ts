@@ -5,7 +5,12 @@
 import type { Prisma } from "@prisma/client"
 import * as crypto from "crypto"
 
-import { toGradeDataSourceType } from "../../../src/types/grade.types"
+import { toInputMode } from "../../../src/types/coursework.types"
+import {
+  toAbsentMethod,
+  toEstimationMode,
+  toGradeDataSourceType,
+} from "../../../src/types/grade.types"
 import type { Serialized } from "../../../src/types/prismaExtensions"
 import { computeMaxScoreFromPayload } from "../shared/calculations/gradeDataSourceMaxScore"
 import { recordAuditLog } from "./auditLog"
@@ -107,7 +112,16 @@ type SerializedGradeDataSource = Serialized<
 function hydrateGradeDataSource(dataSource: SerializedGradeDataSource) {
   return {
     ...dataSource,
+    // SQLite に enum が無い列はここで union へ倒す（境界の1箇所だけで変換する）
     type: toGradeDataSourceType(dataSource.type),
+    absentMethod: toAbsentMethod(dataSource.absentMethod),
+    estimationMode: toEstimationMode(dataSource.estimationMode),
+    courseworkItem: dataSource.courseworkItem
+      ? {
+          ...dataSource.courseworkItem,
+          inputMode: toInputMode(dataSource.courseworkItem.inputMode),
+        }
+      : null,
     maxScore: computeMaxScoreFromPayload(dataSource),
   }
 }
@@ -117,7 +131,9 @@ type GradeItemWithDataSources = { dataSources: SerializedGradeDataSource[] }
 /** GradeItem 1件の dataSources を全てハイドレートする。 */
 export function hydrateGradeItem<GI extends GradeItemWithDataSources>(
   gradeItem: GI
-) {
+): Omit<GI, "dataSources"> & {
+  dataSources: ReturnType<typeof hydrateGradeDataSource>[]
+} {
   return {
     ...gradeItem,
     dataSources: gradeItem.dataSources.map(hydrateGradeDataSource),
@@ -134,7 +150,11 @@ export function hydrateGradeItems<GI extends GradeItemWithDataSources>(
 /** Grade 全体（gradeItems[].dataSources[]）をハイドレートする。 */
 export function hydrateGrade<
   G extends { gradeItems: GradeItemWithDataSources[] },
->(grade: G) {
+>(
+  grade: G
+): Omit<G, "gradeItems"> & {
+  gradeItems: ReturnType<typeof hydrateGradeItems<G["gradeItems"][number]>>
+} {
   return { ...grade, gradeItems: hydrateGradeItems(grade.gradeItems) }
 }
 

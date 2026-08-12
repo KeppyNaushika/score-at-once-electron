@@ -4,7 +4,13 @@ import type { Exam } from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import type { ExamForDetail } from "@/types/prismaExtensions"
+/**
+ * 詳細画面が持つ試験の形。境界（`fetch-exam-by-id`）の戻り値から導く。
+ * 手で書き写すと Decimal → number のような境界の変換に追随できない。
+ */
+export type ExamForDetail = NonNullable<
+  Awaited<ReturnType<typeof window.electronAPI.fetchExamById>>
+>
 
 /** 試験詳細ページ用のデータ取得・更新フック（生徒数・設問領域数・答案数等の集計を含む） */
 export function useExamDetail(examId: string) {
@@ -59,12 +65,14 @@ export function useExamDetail(examId: string) {
       if (!exam) return false
 
       try {
-        const updatedExam = await window.electronAPI.updateExam(exam.id, {
+        await window.electronAPI.updateExam(exam.id, {
           examName: examData.examName,
           description: examData.description,
           examDate: examData.examDate,
         })
-        setExam(updatedExam)
+        // 更新IPCはスカラーだけを返す。詳細画面はページ・答案・採点領域まで要るので
+        // 取り直す（返り値をそのまま state へ入れると同梱の関係が消える）。
+        await loadExam()
         toast.success("試験を更新しました")
         return true
       } catch (error) {
@@ -73,7 +81,7 @@ export function useExamDetail(examId: string) {
         return false
       }
     },
-    [exam]
+    [exam, loadExam]
   )
 
   useEffect(() => {

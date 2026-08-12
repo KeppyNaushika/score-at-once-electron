@@ -40,7 +40,6 @@ import { getGradeStatus } from "@/lib/gradeStatus"
 import type { CourseworkImportDecision } from "@/types/courseworkArchive.types"
 import type { GradeSummary } from "@/types/grade.types"
 import type {
-  GradeArchiveData,
   GradeArchiveImportPreview,
 } from "@/types/gradeArchive.types"
 
@@ -85,8 +84,15 @@ export function GradeListContainer() {
   // インポート確認ウィザードの状態
   const [importPreview, setImportPreview] =
     useState<GradeArchiveImportPreview | null>(null)
-  const [importArchiveData, setImportArchiveData] =
-    useState<GradeArchiveData | null>(null)
+  // 旧バージョンの形もそのまま来る（変換は取り込み実行時に main が行う）ので、
+  // 境界の返り値をそのまま持つ
+  const [importArchiveData, setImportArchiveData] = useState<
+    | Extract<
+        Awaited<ReturnType<typeof window.electronAPI.grade.importArchive>>,
+        { canceled: false }
+      >["archiveData"]
+    | null
+  >(null)
   const [importing, setImporting] = useState(false)
 
   const loadGrades = useCallback(async () => {
