@@ -252,7 +252,7 @@ export function useStudentImportWizard() {
         isProcessing: false,
         error: errorMessage,
       }))
-      return { success: false, error: errorMessage }
+      return null
     } finally {
       setState((prev) => ({ ...prev, isProcessing: false }))
     }

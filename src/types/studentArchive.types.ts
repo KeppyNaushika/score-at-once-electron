@@ -95,18 +95,16 @@ export interface StudentArchiveIdIntegrationConfig {
 // =============================================================================
 
 /**
- * インポート結果
+ * インポート結果。失敗は例外になるので、成否の旗は持たない。
  */
 export interface StudentArchiveImportResult {
-  success: boolean
-  summary?: {
+  summary: {
     created: StudentArchiveDataCounts
     updated: StudentArchiveDataCounts
     skipped: StudentArchiveDataCounts
     unchanged: StudentArchiveDataCounts
   }
-  warnings?: string[]
-  error?: string
+  warnings: string[]
 }
 
 // =============================================================================

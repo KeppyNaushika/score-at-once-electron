@@ -184,18 +184,10 @@ export async function executeStudentImport(
       extra: { counts },
     })
 
-    return {
-      success: true,
-      summary: counts,
-      warnings: warnings.length > 0 ? warnings : undefined,
-    }
+    return { summary: counts, warnings }
   } catch (error) {
     console.error("Error executing student import:", error)
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "インポートに失敗しました",
-    }
+    throw error instanceof Error ? error : new Error("インポートに失敗しました")
   }
 }
 
