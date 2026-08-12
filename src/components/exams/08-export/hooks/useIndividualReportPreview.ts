@@ -9,6 +9,7 @@ import type {
   IndividualReportOptions,
   ReportPopulation,
 } from "@/electron-src/lib/export/individual-report/types"
+import { queryKeys } from "@/lib/queryKeys"
 
 interface UseIndividualReportPreviewOptions {
   examId: string
@@ -58,7 +59,10 @@ export function useIndividualReportPreview({
     error,
   } = useQuery({
     // 取り直すのは対象生徒が変わったときだけ
-    queryKey: ["individualReportPreview", examId, previewStudentId],
+    queryKey: queryKeys.exam.individualReportPreview(
+      examId,
+      previewStudentId ?? ""
+    ),
     queryFn:
       enabled && examId && previewStudentId
         ? async (): Promise<PreviewReport> => {

@@ -82,7 +82,7 @@ export function MemberInviteDialog({
     mutationError ?? (membersError ? "メンバー情報の取得に失敗しました" : null)
 
   const { data: isOwner = false } = useQuery({
-    queryKey: ["examOwner", examId, currentUserId],
+    queryKey: queryKeys.exam.owner(examId, currentUserId),
     queryFn:
       isOpen && examId && currentUserId
         ? () => window.electronAPI.userExam.isOwner(currentUserId, examId)
@@ -93,7 +93,7 @@ export function MemberInviteDialog({
     data: searchResults = EMPTY_SEARCH_RESULTS,
     isFetching: isSearching,
   } = useQuery({
-    queryKey: ["examUserSearch", examId, debouncedQuery],
+    queryKey: queryKeys.exam.userSearch(examId, debouncedQuery),
     queryFn:
       isOpen && examId && debouncedQuery
         ? () => window.electronAPI.userExam.searchUsers(examId, debouncedQuery)

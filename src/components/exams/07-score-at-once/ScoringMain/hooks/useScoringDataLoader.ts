@@ -47,14 +47,6 @@ export function useScoringDataLoader(
       : skipToken,
   })
 
-  // 操作者は AuthContext が持つ。取れないときだけ main へ聞きに行く
-  const { data: fallbackUser } = useQuery({
-    queryKey: queryKeys.currentUser.all,
-    queryFn: !authUserId
-      ? () => window.electronAPI.getCurrentUser()
-      : skipToken,
-  })
-
   // 読み込みの失敗は通知する（取得ではないので effect でよい）
   useEffect(() => {
     if (error) toast.error("データの読み込みに失敗しました")
@@ -65,6 +57,8 @@ export function useScoringDataLoader(
     exam: data?.exam ?? null,
     studentAnswerImages: data?.studentAnswerImages ?? EMPTY_ANSWER_IMAGES,
     cropRegions: data?.cropRegions ?? EMPTY_CROP_REGIONS,
-    currentUserId: authUserId ?? fallbackUser?.id ?? null,
+    // 操作者は AuthContext が唯一の出所。ここで main へ聞き直すと、
+    // 同じ「今のユーザー」が2つの出所・2つの形でキャッシュに載る
+    currentUserId: authUserId,
   }
 }

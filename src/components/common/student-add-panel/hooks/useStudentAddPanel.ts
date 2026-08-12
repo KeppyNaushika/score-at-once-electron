@@ -9,6 +9,7 @@ import type {
   StudentAddPanelAdapter,
 } from "@/components/common/student-add-panel/types"
 import { isCurrentMembership } from "@/lib/membership"
+import { queryKeys } from "@/lib/queryKeys"
 
 interface SelectableClassroom extends AddPanelClassroomItem {
   isSelected: boolean
@@ -135,7 +136,7 @@ export function useStudentAddPanel({
   // 候補が空のときの理由（学級が1つも無いのか、全部登録済みなのか）は
   // 空だったときだけ引く。候補と対で表示するので同じ取得にまとめる
   const classroomsKey = useMemo(
-    () => ["addPanelClassrooms", instanceId, classroomActiveOnly],
+    () => queryKeys.roster.addPanelClassrooms(instanceId, classroomActiveOnly),
     [instanceId, classroomActiveOnly]
   )
   const { data: classroomData, isFetching: loadingClassrooms } = useQuery({
@@ -156,7 +157,7 @@ export function useStudentAddPanel({
   const classroomEmptyReason = classroomData?.emptyReason ?? null
 
   const studentsKey = useMemo(
-    () => ["addPanelStudents", instanceId, studentActiveOnly],
+    () => queryKeys.roster.addPanelStudents(instanceId, studentActiveOnly),
     [instanceId, studentActiveOnly]
   )
   const { data: studentData, isFetching: loadingStudents } = useQuery({

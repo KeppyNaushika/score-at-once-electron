@@ -28,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { queryKeys } from "@/lib/queryKeys"
 
 import { ClassroomRemovalDialog } from "./ClassroomRemovalDialog"
 import type {
@@ -179,7 +180,7 @@ export function ClassroomRosterManager({
 
   // 候補は追加ダイアログを開いている間だけ取る（閉じている間は問い合わせない）
   const { data: availableClassrooms = EMPTY_AVAILABLE_CLASSROOMS } = useQuery({
-    queryKey: ["availableClassrooms", instanceId],
+    queryKey: queryKeys.roster.availableClassrooms(instanceId),
     queryFn:
       showAddDialog && fetchAvailableClassrooms
         ? () => fetchAvailableClassrooms()

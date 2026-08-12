@@ -130,11 +130,35 @@ export const queryKeys = {
     /** Excel出力のプレビュー（選択した受験者ぶん） */
     excelPreview: (examId: string, examStudentIds: readonly string[]) =>
       ["exam", examId, "excelPreview", [...examStudentIds]] as const,
+    /** 個人成績表のプレビュー（受験者1人ぶん） */
+    individualReportPreview: (examId: string, examStudentId: string) =>
+      ["exam", examId, "individualReportPreview", examStudentId] as const,
+    /** その利用者がこの試験のオーナーか */
+    owner: (examId: string, userId: string | undefined) =>
+      ["exam", examId, "owner", userId] as const,
+    /** 招待先の利用者検索（検索語は要求の一部なのでキーに入る） */
+    userSearch: (examId: string, query: string) =>
+      ["exam", examId, "userSearch", query] as const,
     /** 採点済み答案のプレビュー（受験者1人ぶん） */
     scoredAnswerPreview: (examId: string, examStudentId: string) =>
       ["exam", examId, "scoredAnswerPreview", examStudentId] as const,
     /** 採点画面(07)が1回で取る形（試験＋ページ＋答案） */
     scoringPage: (examId: string) => ["exam", examId, "scoringPage"] as const,
+  },
+  /**
+   * 汎用の名簿UI（RosterTable / StudentAddPanel / ClassroomRosterManager）。
+   *
+   * 中身は差し込まれた adapter が決めるので、何の名簿かはキーからは分からない。
+   * 取り違えを避けるため、コンポーネントの実体（`useId`）で必ず区切る。
+   */
+  roster: {
+    table: (instanceId: string) => ["roster", instanceId, "table"] as const,
+    availableClassrooms: (instanceId: string) =>
+      ["roster", instanceId, "availableClassrooms"] as const,
+    addPanelClassrooms: (instanceId: string, activeOnly: boolean) =>
+      ["roster", instanceId, "addPanelClassrooms", activeOnly] as const,
+    addPanelStudents: (instanceId: string, activeOnly: boolean) =>
+      ["roster", instanceId, "addPanelStudents", activeOnly] as const,
   },
   grade: {
     list: () => ["grade", "list"] as const,

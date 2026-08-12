@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody } from "@/components/ui/table"
+import { queryKeys } from "@/lib/queryKeys"
 
 export interface RosterTableHandle {
   /** 外部から名簿を再読み込みする */
@@ -71,7 +72,10 @@ export function RosterTable({
   const queryClient = useQueryClient()
   /** この表1つ分のクエリキー。同じ画面に2つ並んでも混ざらない */
   const instanceId = useId()
-  const queryKey = useMemo(() => ["rosterTable", instanceId], [instanceId])
+  const queryKey = useMemo(
+    () => queryKeys.roster.table(instanceId),
+    [instanceId]
+  )
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClassroomId, setSelectedClassroomId] = useState("all")
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
