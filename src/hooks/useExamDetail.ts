@@ -1,8 +1,11 @@
 "use client"
 
 import type { Exam } from "@prisma/client"
-import { useCallback, useEffect, useState } from "react"
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback } from "react"
 import { toast } from "sonner"
+
+import { queryKeys } from "@/lib/queryKeys"
 
 /**
  * 詳細画面が持つ試験の形。境界（`fetch-exam-by-id`）の戻り値から導く。
@@ -14,49 +17,43 @@ export type ExamForDetail = NonNullable<
 
 /** 試験詳細ページ用のデータ取得・更新フック（生徒数・設問領域数・答案数等の集計を含む） */
 export function useExamDetail(examId: string) {
-  const [exam, setExam] = useState<ExamForDetail | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [studentCount, setStudentCount] = useState(0)
-  const [questionRegionCount, setQuestionRegionCount] = useState(0)
+  const queryClient = useQueryClient()
+  const queryKey = queryKeys.exam.detail(examId)
 
-  const loadExam = useCallback(async () => {
-    if (!examId) return
+  // 詳細画面が読むのは「試験本体」と「進捗の分母になる件数」。3つとも同じ
+  // 表示の一部なので1つの取得にまとめる（片方だけ古い状態にならない）
+  const { data, isPending: isLoading } = useQuery({
+    queryKey,
+    queryFn: examId
+      ? async () => {
+          const exam = await window.electronAPI.fetchExamById(examId)
+          if (!exam) throw new Error("試験が見つかりません")
 
-    try {
-      setIsLoading(true)
-      const result = await window.electronAPI.fetchExamById(examId)
-
-      if (result) {
-        setExam(result)
-
-        // 生徒数を取得
-        const examStudents = await window.electronAPI.getStudentsForExam(examId)
-        setStudentCount(examStudents.length)
-
-        // 設問領域数を取得
-        const regionsResult =
-          await window.electronAPI.getCropRegionsByExamId(examId)
-        if (Array.isArray(regionsResult)) {
-          const questionRegions = regionsResult.filter(
-            (region) =>
-              region.type === "QUESTION_ANSWER" &&
-              (region.orderIndex || region.label)
-          )
-          setQuestionRegionCount(questionRegions.length)
+          const [examStudents, cropRegions] = await Promise.all([
+            window.electronAPI.getStudentsForExam(examId),
+            window.electronAPI.getCropRegionsByExamId(examId),
+          ])
+          return {
+            exam,
+            studentCount: examStudents.length,
+            // 設問領域は「番号かラベルが付いたもの」だけ数える（未設定は進捗に入らない）
+            questionRegionCount: cropRegions.filter(
+              (region) =>
+                region.type === "QUESTION_ANSWER" &&
+                (region.orderIndex || region.label)
+            ).length,
+          }
         }
-      } else {
-        toast.error("試験が見つかりません")
-        return false
-      }
-    } catch (error) {
-      console.error("Error loading exam:", error)
-      toast.error("試験の読み込みに失敗しました")
-      return false
-    } finally {
-      setIsLoading(false)
-    }
-    return true
-  }, [examId])
+      : skipToken,
+  })
+  const exam = data?.exam ?? null
+  const studentCount = data?.studentCount ?? 0
+  const questionRegionCount = data?.questionRegionCount ?? 0
+
+  const loadExam = useCallback(
+    () => queryClient.invalidateQueries({ queryKey }),
+    [queryClient, queryKey]
+  )
 
   const updateExam = useCallback(
     async (
@@ -83,10 +80,6 @@ export function useExamDetail(examId: string) {
     },
     [exam, loadExam]
   )
-
-  useEffect(() => {
-    loadExam()
-  }, [loadExam])
 
   const modelAnswerCount =
     exam?.examPages?.filter((page) => page.imagePath).length || 0

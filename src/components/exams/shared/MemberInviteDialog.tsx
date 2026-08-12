@@ -1,5 +1,6 @@
 "use client"
 
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Crown, Search, Trash2, UserPlus } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
@@ -23,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { UserRole } from "@/electron-src/lib/prisma/userExam"
-import type { UserExamWithUserAndInviter } from "@/types/prismaExtensions"
+import { queryKeys } from "@/lib/queryKeys"
 
 interface MemberInviteDialogProps {
   isOpen: boolean
@@ -45,6 +46,9 @@ interface SearchResult {
  * - ユーザー検索・招待
  * - メンバー削除（GRADERのみ）
  */
+/** 未検索のときに毎回新しい配列を作らないための空値 */
+const EMPTY_SEARCH_RESULTS: SearchResult[] = []
+
 export function MemberInviteDialog({
   isOpen,
   onClose,
@@ -52,92 +56,60 @@ export function MemberInviteDialog({
   currentUserId,
   examName,
 }: MemberInviteDialogProps) {
-  const [members, setMembers] = useState<UserExamWithUserAndInviter[]>([])
+  const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [isOwner, setIsOwner] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  /** 入力の落ち着きを待った検索語。これがクエリキーになる */
+  const [debouncedQuery, setDebouncedQuery] = useState("")
   const [invitingUserId, setInvitingUserId] = useState<string | null>(null)
   const [removingUserId, setRemovingUserId] = useState<string | null>(null)
 
-  // メンバー一覧を取得
-  const fetchMembers = useCallback(async () => {
-    if (!examId) return
+  // ダイアログを閉じている間は取りに行かない（開くたびに取り直す）
+  const membersKey = queryKeys.exam.members(examId)
+  const {
+    data: members = [],
+    isPending: loading,
+    error: membersError,
+  } = useQuery({
+    queryKey: membersKey,
+    queryFn:
+      isOpen && examId
+        ? () => window.electronAPI.userExam.getMembers(examId)
+        : skipToken,
+  })
+  /** 招待・削除の失敗。取得の失敗は useQuery が持つ */
+  const [mutationError, setMutationError] = useState<string | null>(null)
+  const error =
+    mutationError ?? (membersError ? "メンバー情報の取得に失敗しました" : null)
 
-    setLoading(true)
-    setError(null)
-    try {
-      const result = await window.electronAPI.userExam.getMembers(examId)
-      setMembers(result)
-    } catch (err) {
-      console.error("Failed to fetch members:", err)
-      setError("メンバー情報の取得に失敗しました")
-    } finally {
-      setLoading(false)
-    }
-  }, [examId])
+  const { data: isOwner = false } = useQuery({
+    queryKey: ["examOwner", examId, currentUserId],
+    queryFn:
+      isOpen && examId && currentUserId
+        ? () => window.electronAPI.userExam.isOwner(currentUserId, examId)
+        : skipToken,
+  })
 
-  // 現在のユーザーがオーナーかどうか確認
-  const checkIsOwner = useCallback(async () => {
-    if (!examId || !currentUserId) return
+  const {
+    data: searchResults = EMPTY_SEARCH_RESULTS,
+    isFetching: isSearching,
+  } = useQuery({
+    queryKey: ["examUserSearch", examId, debouncedQuery],
+    queryFn:
+      isOpen && examId && debouncedQuery
+        ? () => window.electronAPI.userExam.searchUsers(examId, debouncedQuery)
+        : skipToken,
+  })
 
-    try {
-      const ownerStatus = await window.electronAPI.userExam.isOwner(
-        currentUserId,
-        examId
-      )
-      setIsOwner(ownerStatus)
-    } catch (err) {
-      console.error("Failed to check owner status:", err)
-    }
-  }, [examId, currentUserId])
+  const fetchMembers = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: membersKey }),
+    [queryClient, membersKey]
+  )
 
-  // ユーザー検索
-  const searchUsers = useCallback(async () => {
-    if (!searchQuery.trim() || !examId) {
-      setSearchResults([])
-      return
-    }
-
-    setIsSearching(true)
-    try {
-      const results = await window.electronAPI.userExam.searchUsers(
-        examId,
-        searchQuery.trim()
-      )
-      setSearchResults(results)
-    } catch (err) {
-      console.error("Failed to search users:", err)
-      setSearchResults([])
-    } finally {
-      setIsSearching(false)
-    }
-  }, [searchQuery, examId])
-
-  // 検索の実行（デバウンス）
+  // 入力が落ち着いてから検索する（打鍵ごとに問い合わせない）
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery.trim()) {
-        searchUsers()
-      } else {
-        setSearchResults([])
-      }
-    }, 300)
-
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 300)
     return () => clearTimeout(timer)
-  }, [searchQuery, searchUsers])
-
-  // ダイアログが開かれた時にデータを取得
-  useEffect(() => {
-    if (isOpen) {
-      fetchMembers()
-      checkIsOwner()
-      setSearchQuery("")
-      setSearchResults([])
-    }
-  }, [isOpen, fetchMembers, checkIsOwner])
+  }, [searchQuery])
 
   // メンバーを招待
   const handleInvite = async (userId: string) => {
@@ -151,11 +123,12 @@ export function MemberInviteDialog({
         invitedBy: currentUserId,
       })
       await fetchMembers()
+      // 招待した人は候補から外れるので、検索語ごと畳んで一覧へ戻す
       setSearchQuery("")
-      setSearchResults([])
+      setMutationError(null)
     } catch (err) {
       console.error("Failed to invite user:", err)
-      setError("招待に失敗しました")
+      setMutationError("招待に失敗しました")
     } finally {
       setInvitingUserId(null)
     }
@@ -171,7 +144,7 @@ export function MemberInviteDialog({
       await fetchMembers()
     } catch (err) {
       console.error("Failed to remove member:", err)
-      setError("メンバーの削除に失敗しました")
+      setMutationError("メンバーの削除に失敗しました")
     } finally {
       setRemovingUserId(null)
     }
