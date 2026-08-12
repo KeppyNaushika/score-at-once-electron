@@ -1,7 +1,8 @@
 "use client"
 
+import { skipToken, useQuery } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { queryKeys } from "@/lib/queryKeys"
 import type { GradeDataSourceInput } from "@/types/grade.types"
 
 import { useDataSourceDefaults } from "./hooks/useDataSourceDefaults"
@@ -30,13 +32,8 @@ import {
 /** 試験未選択時に渡す空配列。毎レンダー新しい配列を作ると算出フックが回り続けるため定数にする */
 const EMPTY_SUBTOTAL_GROUPS: SubtotalGroupOption[] = []
 const EMPTY_CROP_REGIONS: CropRegionOption[] = []
-
-/** 試験に紐づく選択肢と、それがどの試験のものかの対応。取り違えを型で防ぐ */
-interface ExamScopedOptions {
-  examId: string
-  subtotalGroups: SubtotalGroupOption[]
-  cropRegions: CropRegionOption[]
-}
+const EMPTY_EXAMS: ExamOption[] = []
+const EMPTY_COURSEWORKS: CourseworkOption[] = []
 
 interface AddDataSourceInlineProps {
   gradeItemId: string
@@ -51,15 +48,11 @@ export function AddDataSourceInline({
 }: AddDataSourceInlineProps) {
   const [open, setOpen] = useState(false)
   const [type, setType] = useState<AddDataSourceType>("exam_total")
-  const [exams, setExams] = useState<ExamOption[]>([])
   const [selectedExamId, setSelectedExamId] = useState("")
-  const [examScopedOptions, setExamScopedOptions] =
-    useState<ExamScopedOptions | null>(null)
   const [selectedSubtotalGroupId, setSelectedSubtotalGroupId] = useState("")
   const [selectedSubtotalId, setSelectedSubtotalId] = useState("")
   const [selectedCropRegionId, setSelectedCropRegionId] = useState("")
   // coursework型: 資料→評価項目の2段選択
-  const [courseworks, setCourseworks] = useState<CourseworkOption[]>([])
   const [selectedCourseworkId, setSelectedCourseworkId] = useState("")
   const [selectedCourseworkItemId, setSelectedCourseworkItemId] = useState("")
   // 名前と換算満点は選択内容から導く。ユーザーが手入力したときだけ下書きが優先される。
@@ -72,55 +65,38 @@ export function AddDataSourceInline({
   } | null>(null)
   const [adding, setAdding] = useState(false)
 
-  // 全試験候補をロード
-  useEffect(() => {
-    if (!open) return
-    const load = async () => {
-      setExams(await window.electronAPI.grade.getExamCandidates())
-    }
-    load()
-  }, [open])
+  // 候補は開いたときだけ取る
+  const { data: exams = EMPTY_EXAMS } = useQuery({
+    queryKey: queryKeys.grade.examCandidates(),
+    queryFn: open
+      ? () => window.electronAPI.grade.getExamCandidates()
+      : skipToken,
+  })
+  const { data: courseworks = EMPTY_COURSEWORKS } = useQuery({
+    queryKey: queryKeys.coursework.candidates(),
+    queryFn: open
+      ? () => window.electronAPI.coursework.getCandidates()
+      : skipToken,
+  })
 
-  // 試験外成績資料の候補をロード
-  useEffect(() => {
-    if (!open) return
-    const load = async () => {
-      setCourseworks(await window.electronAPI.coursework.getCandidates())
-    }
-    load()
-  }, [open])
+  // 試験に紐づく選択肢。どの試験の結果かはキーが持つので、
+  // 切り替え直後に前の試験の選択肢が残ることはない
+  const { data: examScopedOptions } = useQuery({
+    queryKey: queryKeys.grade.examOptions(selectedExamId),
+    queryFn: selectedExamId
+      ? async () => {
+          const [subtotalGroups, cropRegions] = await Promise.all([
+            window.electronAPI.grade.getExamSubtotalGroups(selectedExamId),
+            window.electronAPI.grade.getExamCropRegions(selectedExamId),
+          ])
+          return { subtotalGroups, cropRegions }
+        }
+      : skipToken,
+  })
 
-  // 試験選択時にSubtotalGroups/CropRegionsをロード。
-  // どの試験の結果かを一緒に保持することで、切り替え直後に前の試験の選択肢が残らない
-  useEffect(() => {
-    if (!selectedExamId) return
-    let cancelled = false
-    const load = async () => {
-      const [subtotalGroups, cropRegions] = await Promise.all([
-        window.electronAPI.grade.getExamSubtotalGroups(selectedExamId),
-        window.electronAPI.grade.getExamCropRegions(selectedExamId),
-      ])
-      if (cancelled) return
-      setExamScopedOptions({
-        examId: selectedExamId,
-        subtotalGroups,
-        cropRegions,
-      })
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [selectedExamId])
-
-  // 選択中の試験のものだけを採用する（読み込み中・切り替え直後は空）
-  const isCurrentExamLoaded = examScopedOptions?.examId === selectedExamId
-  const subtotalGroups = isCurrentExamLoaded
-    ? examScopedOptions.subtotalGroups
-    : EMPTY_SUBTOTAL_GROUPS
-  const cropRegions = isCurrentExamLoaded
-    ? examScopedOptions.cropRegions
-    : EMPTY_CROP_REGIONS
+  const subtotalGroups =
+    examScopedOptions?.subtotalGroups ?? EMPTY_SUBTOTAL_GROUPS
+  const cropRegions = examScopedOptions?.cropRegions ?? EMPTY_CROP_REGIONS
 
   const selection = useMemo(
     () => ({

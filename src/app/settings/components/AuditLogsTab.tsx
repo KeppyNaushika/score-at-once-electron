@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import {
   ChevronDown,
   ChevronRight,
@@ -29,6 +30,7 @@ import type {
   AuditCategory,
   AuditVerb,
 } from "@/electron-src/lib/prisma/auditActions"
+import { queryKeys } from "@/lib/queryKeys"
 import type { AuditLogEntry } from "@/types/auditLog.types"
 
 const CATEGORY_LABELS: Record<AuditCategory, string> = {
@@ -56,6 +58,12 @@ interface SimpleUser {
   id: string
   name: string
 }
+
+/** フィルタが読むのは id と名前だけ（select の同一性を保つため外に置く） */
+const EMPTY_USERS: SimpleUser[] = []
+const selectSimpleUsers = (
+  users: { id: string; name: string }[]
+): SimpleUser[] => users.map((user) => ({ id: user.id, name: user.name }))
 
 const initials = (name: string | null): string => {
   if (!name) return "?"
@@ -190,19 +198,14 @@ export function AuditLogsTab() {
     hasMore,
     loadMore,
   } = useAuditLogs()
-  const [users, setUsers] = useState<SimpleUser[]>([])
   const [searchText, setSearchText] = useState("")
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const data = await window.electronAPI.fetchUsers()
-        setUsers(data.map((user) => ({ id: user.id, name: user.name })))
-      } catch (e) {
-        console.error("Failed to load users for audit filter:", e)
-      }
-    })()
-  }, [])
+  // 操作者フィルタの選択肢（ログイン画面と同じ利用者一覧のキャッシュを共有する）
+  const { data: users = EMPTY_USERS } = useQuery({
+    queryKey: queryKeys.users.all,
+    queryFn: () => window.electronAPI.fetchUsers(),
+    select: selectSimpleUsers,
+  })
 
   // 検索テキストはデバウンスしてフィルタへ反映。
   // 更新関数形にすることで、待機中に他のフィルタが変わっても上書きしない

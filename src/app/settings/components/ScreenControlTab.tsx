@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { Monitor, PanelLeftClose } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -12,12 +13,23 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { queryKeys } from "@/lib/queryKeys"
 
 const BLACKOUT_SETTINGS_KEY = "screenBlackoutSettings"
 
 export function ScreenControlTab() {
   // プロジェクターモード
+  // 現在のプロジェクターモード（main が持つ状態。localStorage 側とは出所が違う）
+  const { data: savedProjectorMode } = useQuery({
+    queryKey: queryKeys.settings.projectorMode,
+    queryFn: () => window.electronAPI.settings.getProjectorMode(),
+  })
   const [projectorMode, setProjectorMode] = useState(false)
+  const [projectorModeSeeded, setProjectorModeSeeded] = useState(false)
+  if (savedProjectorMode !== undefined && !projectorModeSeeded) {
+    setProjectorModeSeeded(true)
+    setProjectorMode(savedProjectorMode)
+  }
 
   // 画面消灯
   const [blackoutEnabled, setBlackoutEnabled] = useState(false)
@@ -32,12 +44,7 @@ export function ScreenControlTab() {
   )
 
   useEffect(() => {
-    const loadSettings = async () => {
-      // プロジェクターモードの現在状態を取得
-      if (window.electronAPI?.settings?.getProjectorMode) {
-        setProjectorMode(await window.electronAPI.settings.getProjectorMode())
-      }
-
+    const loadSettings = () => {
       // 画面消灯の設定を読み込み
       try {
         const stored = localStorage.getItem(BLACKOUT_SETTINGS_KEY)

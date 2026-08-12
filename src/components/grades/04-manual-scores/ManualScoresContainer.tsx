@@ -1,11 +1,12 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { ExternalLink } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { queryKeys } from "@/lib/queryKeys"
 import type { GradeDataSourceWithRelations } from "@/types/grade.types"
 
 interface ManualScoresContainerProps {
@@ -19,72 +20,69 @@ interface ManualScoresContainerProps {
  * このステップでは成績算出が参照している coursework 型データソースの一覧と
  * 入力状況を表示し、各資料ページへのリンクを提供する。
  */
+/** 未取得のときに毎回新しい値を作らないための空値 */
+const EMPTY_SOURCES: GradeDataSourceWithRelations[] = []
+const EMPTY_COUNTS: Record<string, number> = {}
+
 export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
-  const [courseworkSources, setCourseworkSources] = useState<
-    GradeDataSourceWithRelations[]
-  >([])
-  // dataSourceId → この成績の対象生徒のうち実際に入力済み（非null）の人数
-  const [enteredCounts, setEnteredCounts] = useState<Record<string, number>>({})
-  const [studentCount, setStudentCount] = useState(0)
-  const [loading, setLoading] = useState(true)
+  // 資料ソース・対象者数・入力済み数は必ず対で表示するので1つの取得にまとめる
+  const { data, isPending: loading } = useQuery({
+    queryKey: queryKeys.grade.manualScoresPage(gradeId),
+    queryFn: async () => {
+      const [grade, gradeStudents] = await Promise.all([
+        window.electronAPI.grade.getById(gradeId),
+        window.electronAPI.grade.getStudents(gradeId),
+      ])
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [grade, gradeStudents] = await Promise.all([
-          window.electronAPI.grade.getById(gradeId),
-          window.electronAPI.grade.getStudents(gradeId),
-        ])
+      const courseworkSources = grade.gradeItems
+        .flatMap((gradeItem) => gradeItem.dataSources)
+        .filter((dataSource) => dataSource.type === "coursework")
 
-        const sources = grade.gradeItems
-          .flatMap((gradeItem) => gradeItem.dataSources)
-          .filter((dataSource) => dataSource.type === "coursework")
-        setCourseworkSources(sources)
+      // この成績の対象生徒ID（資料の名簿ではなく成績側の名簿で数える）
+      const gradeStudentIds = new Set(
+        gradeStudents.map((gradeStudent) => gradeStudent.student.id)
+      )
 
-        // この成績の対象生徒ID（資料の名簿ではなく成績側の名簿で数える）
-        const gradeStudentIds = new Set(
-          gradeStudents.map((gradeStudent) => gradeStudent.student.id)
-        )
-        setStudentCount(gradeStudentIds.size)
-
-        // 評価項目は重複し得る（複数データソースが同一項目を参照）ので、
-        // 項目IDごとに1回だけ点数を取得し、対象生徒の入力済み（非null）数を集計する
-        const distinctItemIds = [
-          ...new Set(
-            sources
-              .map((dataSource) => dataSource.courseworkItem?.id)
-              .filter((id): id is string => !!id)
-          ),
-        ]
-        const enteredByItem: Record<string, number> = {}
-        await Promise.all(
-          distinctItemIds.map(async (itemId) => {
-            const scores = await window.electronAPI.coursework.getScores(itemId)
-            enteredByItem[itemId] = scores.filter(
-              // 成績の対象生徒は人（Student）で数えるので、対象者から生徒へ1段辿る
-              (courseworkScore) =>
-                gradeStudentIds.has(
-                  courseworkScore.courseworkStudent.studentId
-                ) &&
-                (courseworkScore.score !== null ||
-                  courseworkScore.letterValue !== null)
-            ).length
-          })
-        )
-        const counts: Record<string, number> = {}
-        for (const dataSource of sources) {
-          const itemId = dataSource.courseworkItem?.id
-          counts[dataSource.id] = itemId ? (enteredByItem[itemId] ?? 0) : 0
-        }
-        setEnteredCounts(counts)
-      } catch (error) {
-        console.error("Error loading coursework data sources:", error)
-      } finally {
-        setLoading(false)
+      // 評価項目は重複し得る（複数データソースが同一項目を参照）ので、
+      // 項目IDごとに1回だけ点数を取得し、対象生徒の入力済み（非null）数を集計する
+      const distinctItemIds = [
+        ...new Set(
+          courseworkSources
+            .map((dataSource) => dataSource.courseworkItem?.id)
+            .filter((id): id is string => !!id)
+        ),
+      ]
+      const enteredByItem: Record<string, number> = {}
+      await Promise.all(
+        distinctItemIds.map(async (itemId) => {
+          const scores = await window.electronAPI.coursework.getScores(itemId)
+          enteredByItem[itemId] = scores.filter(
+            // 成績の対象生徒は人（Student）で数えるので、対象者から生徒へ1段辿る
+            (courseworkScore) =>
+              gradeStudentIds.has(
+                courseworkScore.courseworkStudent.studentId
+              ) &&
+              (courseworkScore.score !== null ||
+                courseworkScore.letterValue !== null)
+          ).length
+        })
+      )
+      const enteredCounts: Record<string, number> = {}
+      for (const dataSource of courseworkSources) {
+        const itemId = dataSource.courseworkItem?.id
+        enteredCounts[dataSource.id] = itemId ? (enteredByItem[itemId] ?? 0) : 0
       }
-    }
-    load()
-  }, [gradeId])
+
+      return {
+        courseworkSources,
+        studentCount: gradeStudentIds.size,
+        enteredCounts,
+      }
+    },
+  })
+  const courseworkSources = data?.courseworkSources ?? EMPTY_SOURCES
+  const studentCount = data?.studentCount ?? 0
+  const enteredCounts = data?.enteredCounts ?? EMPTY_COUNTS
 
   if (loading) {
     return (

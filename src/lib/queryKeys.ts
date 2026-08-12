@@ -27,6 +27,15 @@ export const queryKeys = {
   users: {
     all: ["users"] as const,
   },
+  settings: {
+    /** main が持つプロジェクターモードの現在状態 */
+    projectorMode: ["settings", "projectorMode"] as const,
+    /** 同期設定（設定＋保存先＋現在の状態） */
+    sync: ["settings", "sync"] as const,
+    /** 利用者ごとのキーバインディング */
+    keyboardShortcuts: (userId: string | undefined) =>
+      ["settings", "keyboardShortcuts", userId] as const,
+  },
   tags: {
     all: ["tags"] as const,
   },
@@ -95,6 +104,10 @@ export const queryKeys = {
   },
   grade: {
     list: () => ["grade", "list"] as const,
+    /** データソースに指定できる試験の候補 */
+    examCandidates: () => ["grade", "examCandidates"] as const,
+    /** ある試験の中で指定できる小計点・設問領域の候補 */
+    examOptions: (examId: string) => ["grade", "examOptions", examId] as const,
     /**
      * 成績本体（評価項目・データソース・境界を子として同梱）。
      * 3画面が同一の queryFn（`grade.getById`）で共有する。
@@ -106,9 +119,17 @@ export const queryKeys = {
     exclusions: (gradeId: string) => ["grade", gradeId, "exclusions"] as const,
     results: (gradeId: string) => ["grade", gradeId, "results"] as const,
     sourceFits: (gradeId: string) => ["grade", gradeId, "sourceFits"] as const,
+    /** 外部成績ページ(04)が1回で取る形（資料ソース＋対象者数＋入力済み数） */
+    manualScoresPage: (gradeId: string) =>
+      ["grade", gradeId, "manualScoresPage"] as const,
+    /** 出力設定（個人成績通知書のオプション） */
+    exportSettings: (gradeId: string) =>
+      ["grade", gradeId, "exportSettings"] as const,
   },
   coursework: {
     list: () => ["coursework", "list"] as const,
+    /** データソースに指定できる資料の候補 */
+    candidates: () => ["coursework", "candidates"] as const,
     /**
      * 資料本体（評価項目・学級・タグを子として同梱）。
      * 概要(01)と評価項目(03)が同一の queryFn（`coursework.getById`）で共有する。

@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import {
   CheckSquare,
   Eye,
@@ -10,7 +11,7 @@ import {
   Square,
   Users,
 } from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useGradeResults } from "@/hooks/grades/useGradeResults"
+import { queryKeys } from "@/lib/queryKeys"
 
 import { ExcelExportTab } from "./ExcelExportTab"
 import { generateGradeReportBatchHtml } from "./generateGradeReportHtml"
@@ -58,44 +60,39 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
   const [reportOptions, setReportOptionsState] = useState<GradeReportOptions>(
     DEFAULT_GRADE_REPORT_OPTIONS
   )
-  const settingsInitializedRef = useRef(false)
-
-  // マウント時にDB設定をロード
-  useEffect(() => {
-    if (settingsInitializedRef.current) return
-    settingsInitializedRef.current = true
-
-    const loadSettings = async () => {
-      if (!window.electronAPI?.grade) return
-      try {
-        const settings =
-          await window.electronAPI.grade.getExportSettings(gradeId)
-        if (settings?.reportOptions) {
-          const saved = settings.reportOptions as Partial<GradeReportOptions>
-          // ネストした列選択は新フィールド欠落を防ぐためデフォルトと深くマージ
-          setReportOptionsState({
-            ...DEFAULT_GRADE_REPORT_OPTIONS,
-            ...saved,
-            itemGradeColumns: {
-              ...DEFAULT_GRADE_REPORT_OPTIONS.itemGradeColumns,
-              ...saved.itemGradeColumns,
-            },
-            sourceBreakdownColumns: {
-              ...DEFAULT_GRADE_REPORT_OPTIONS.sourceBreakdownColumns,
-              ...saved.sourceBreakdownColumns,
-            },
-            footer: {
-              ...DEFAULT_GRADE_REPORT_OPTIONS.footer,
-              ...saved.footer,
-            },
-          })
-        }
-      } catch (error) {
-        console.error("成績算出エクスポート設定の読み込みに失敗:", error)
+  // 保存済みの出力設定。編集はこの後 state が持つので、種として蒔く
+  const { data: savedReportOptions } = useQuery({
+    queryKey: queryKeys.grade.exportSettings(gradeId),
+    queryFn: async () => {
+      const settings = await window.electronAPI.grade.getExportSettings(gradeId)
+      const saved = settings?.reportOptions ?? null
+      if (!saved) return DEFAULT_GRADE_REPORT_OPTIONS
+      // ネストした列選択は新フィールド欠落を防ぐためデフォルトと深くマージ
+      return {
+        ...DEFAULT_GRADE_REPORT_OPTIONS,
+        ...saved,
+        itemGradeColumns: {
+          ...DEFAULT_GRADE_REPORT_OPTIONS.itemGradeColumns,
+          ...saved.itemGradeColumns,
+        },
+        sourceBreakdownColumns: {
+          ...DEFAULT_GRADE_REPORT_OPTIONS.sourceBreakdownColumns,
+          ...saved.sourceBreakdownColumns,
+        },
+        footer: {
+          ...DEFAULT_GRADE_REPORT_OPTIONS.footer,
+          ...saved.footer,
+        },
       }
-    }
-    loadSettings()
-  }, [gradeId])
+    },
+  })
+
+  // 成績を切り替えたら蒔き直す（ref で1回に固定すると前の成績の設定が残る）
+  const [seededGradeId, setSeededGradeId] = useState<string | null>(null)
+  if (savedReportOptions && seededGradeId !== gradeId) {
+    setSeededGradeId(gradeId)
+    setReportOptionsState(savedReportOptions)
+  }
 
   // 変更時にDBへ保存するラッパー
   const setReportOptions = useCallback(
