@@ -15,7 +15,7 @@ import {
   Users,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { BulkTagAssignButton } from "@/components/common/BulkTagAssignButton"
@@ -41,6 +41,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
 import { useTableSort } from "@/hooks/useTableSort"
+import { useTags } from "@/hooks/useTags"
 import {
   type ExamSummary,
   getExamProgress,
@@ -68,27 +69,15 @@ const EXAM_FILTER_ACCESSORS: ListFilterAccessors<ExamSummary> = {
 const File = () => {
   const { exams, loadExams } = useExams()
   const { user } = useAuth()
+  const { tags: allTags, refresh: refreshTags } = useTags()
   const [showImportModal, setShowImportModal] = useState(false)
   const [isBulkExporting, setIsBulkExporting] = useState(false)
   const [showBulkExportModal, setShowBulkExportModal] = useState(false)
-  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
 
   const { createExamModal } = useFileActions()
   const router = useRouter()
 
   // 既存タグ一覧を取得
-  useEffect(() => {
-    const loadTags = async () => {
-      try {
-        const tags = await window.electronAPI.tagGetAll()
-        setAllTags(tags)
-      } catch {
-        // ignore
-      }
-    }
-    void loadTags()
-  }, [])
-
   const {
     filteredItems: filteredExams,
     searchTerm,
@@ -154,16 +143,14 @@ const File = () => {
           description: `${selectedIds.size}件の試験に「${tagName.trim()}」を追加`,
         })
         clearSelection()
-        // タグ一覧を再取得
-        const tags = await window.electronAPI.tagGetAll()
-        setAllTags(tags)
+        await refreshTags()
         loadExams()
       } catch (error) {
         toast.error("タグの追加に失敗しました")
         console.error(error)
       }
     },
-    [selectedIds, clearSelection, loadExams]
+    [selectedIds, clearSelection, loadExams, refreshTags]
   )
 
   const handleBulkExport = useCallback(

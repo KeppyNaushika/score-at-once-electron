@@ -2,7 +2,7 @@
 
 import { Download, Edit, PlusCircle, Search, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import ClassroomModal from "@/components/classroom/ClassroomModal"
@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useClassrooms } from "@/hooks/useClassrooms"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
 import type { ClassroomWithMemberships } from "@/types/prismaExtensions"
@@ -35,7 +36,8 @@ interface ClassroomSortable {
 
 export default function ClassroomManagementTable() {
   const router = useRouter()
-  const [classrooms, setClassrooms] = useState<ClassroomWithMemberships[]>([])
+  // 学級は全画面で共有するキャッシュから引く（この画面だけ取り直さない）
+  const { classrooms, refresh: refreshClassrooms } = useClassrooms()
   const [searchTerm, setSearchTerm] = useState("")
   const [isClassroomModalOpen, setIsClassroomModalOpen] = useState(false)
   const [classroomToEdit, setClassroomToEdit] =
@@ -46,19 +48,6 @@ export default function ClassroomManagementTable() {
     new Set()
   )
   const [isExporting, setIsExporting] = useState(false)
-
-  // Data fetching
-  useEffect(() => {
-    const fetchClassrooms = async () => {
-      try {
-        const fetchedClassrooms = await window.electronAPI.fetchClassrooms()
-        setClassrooms(fetchedClassrooms || [])
-      } catch (error) {
-        console.error("Failed to fetch classrooms:", error)
-      }
-    }
-    fetchClassrooms()
-  }, [])
 
   // Filter classrooms
   const filteredClassrooms = useMemo(() => {
@@ -138,9 +127,7 @@ export default function ClassroomManagementTable() {
     if (window.confirm("本当にこの学級を削除しますか？")) {
       try {
         await window.electronAPI.deleteClassroom(classroomId)
-        setClassrooms(
-          classrooms.filter((classroom) => classroom.id !== classroomId)
-        )
+        await refreshClassrooms()
         setSelectedClassroomIds((prev) => {
           const newSet = new Set(prev)
           newSet.delete(classroomId)
@@ -162,20 +149,14 @@ export default function ClassroomManagementTable() {
   }) => {
     try {
       if (classroomToEdit) {
-        const updatedClassroom = await window.electronAPI.updateClassroom({
+        await window.electronAPI.updateClassroom({
           id: classroomToEdit.id,
           ...classroomData,
         })
-        setClassrooms(
-          classrooms.map((classroom) =>
-            classroom.id === updatedClassroom.id ? updatedClassroom : classroom
-          )
-        )
       } else {
-        const newClassroom =
-          await window.electronAPI.createClassroom(classroomData)
-        setClassrooms([...classrooms, newClassroom])
+        await window.electronAPI.createClassroom(classroomData)
       }
+      await refreshClassrooms()
       setIsClassroomModalOpen(false)
     } catch (error) {
       console.error("Failed to save class:", error)

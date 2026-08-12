@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { ArrowLeft, Redo2, Undo2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
@@ -12,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/AuthContext"
+import { queryKeys } from "@/lib/queryKeys"
 import type { RenderMode } from "@/types/answerSheetDefinition.types"
 
 import { countAsbQuestions } from "./answerSheetStats"
@@ -71,27 +73,27 @@ export function AnswerSheetBuilderMainView({
     redo,
   } = useAnswerSheetDefinition()
 
-  const [isLoaded, setIsLoaded] = useState(false)
   const { saveStatus, showSaving, showSaved } = useSaveStatus()
 
-  // DBから定義をロード
+  // 保存済みの定義。編集はこの後 setDefinition が持つので、種として1度だけ入れる
+  const { data: savedDefinition, error: loadError } = useQuery({
+    queryKey: queryKeys.answerSheetDefinition.detail(definitionId),
+    queryFn: () =>
+      window.electronAPI.answerSheetBuilder.loadDefinition(definitionId),
+  })
+  // 読み込みの失敗は通知する（取得ではないので effect でよい）
   useEffect(() => {
-    const load = async () => {
-      const api = window.electronAPI?.answerSheetBuilder
-      if (!api) return
-      try {
-        setDefinition(await api.loadDefinition(definitionId))
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "定義の読み込みに失敗しました"
-        )
-      }
-      setIsLoaded(true)
-    }
-    load()
-  }, [definitionId, setDefinition])
+    if (loadError) toast.error(loadError.message)
+  }, [loadError])
+
+  const [seededDefinitionId, setSeededDefinitionId] = useState<string | null>(
+    null
+  )
+  const isLoaded = seededDefinitionId === definitionId
+  if (savedDefinition && !isLoaded) {
+    setSeededDefinitionId(definitionId)
+    setDefinition(savedDefinition)
+  }
 
   // 即時自動保存
   useEffect(() => {

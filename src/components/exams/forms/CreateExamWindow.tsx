@@ -1,7 +1,7 @@
 "use client"
 
 import { TagIcon, XIcon } from "lucide-react"
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useState } from "react"
 
 import { useExams } from "@/components/hooks/useExams"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
+import { useTags } from "@/hooks/useTags"
 
 interface CreateExamWindowProps {
   onClose: () => void
@@ -28,12 +29,12 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
   onClose,
   onExamCreated,
 }) => {
+  const { tags: allTags } = useTags()
   const [examName, setExamName] = useState("")
   const [examDate, setExamDate] = useState<Date | null>(null)
   const [description, setDescription] = useState("")
   const [tagTexts, setTagTexts] = useState<string[]>([])
   const [currentTagInput, setCurrentTagInput] = useState("")
-  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   // このコンポーネントは親が条件付きでマウントする＝常に開いた状態
   const { inputRef: examNameInputRef, onOpenAutoFocus } =
@@ -41,18 +42,6 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
   const { createExam } = useExams()
 
   // 既存タグを取得
-  useEffect(() => {
-    const loadTags = async () => {
-      try {
-        const tags = await window.electronAPI.tagGetAll()
-        setAllTags(tags)
-      } catch {
-        // ignore
-      }
-    }
-    void loadTags()
-  }, [])
-
   const handleSubmit = async () => {
     if (!examName.trim()) {
       alert("試験名は必須です。")

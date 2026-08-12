@@ -1,27 +1,15 @@
-import { useEffect, useState } from "react"
+"use client"
 
-import type { ClassroomStudentExamResult } from "@/electron-src/lib/prisma/student"
+import { useQuery } from "@tanstack/react-query"
 
+import { queryKeys } from "@/lib/queryKeys"
+
+/** 学級の生徒ごとの試験結果一覧 */
 export function useClassroomExamResults(classroomId: string) {
-  const [studentResults, setStudentResults] = useState<
-    ClassroomStudentExamResult[]
-  >([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        const data =
-          await window.electronAPI.getClassroomExamResults(classroomId)
-        setStudentResults(data)
-      } catch (error) {
-        console.error("Failed to fetch class exam results:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetch()
-  }, [classroomId])
+  const { data: studentResults = [], isPending: loading } = useQuery({
+    queryKey: queryKeys.classroomExamResults.detail(classroomId),
+    queryFn: () => window.electronAPI.getClassroomExamResults(classroomId),
+  })
 
   return { studentResults, loading }
 }

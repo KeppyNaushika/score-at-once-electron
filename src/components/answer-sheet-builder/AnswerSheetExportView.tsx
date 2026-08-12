@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { FileImage, FileText, Printer } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -7,7 +8,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
+import { queryKeys } from "@/lib/queryKeys"
 
 import { ExamIntegrationCard } from "./components/export/ExamIntegrationCard"
 import { useAnswerSheetExport } from "./hooks/useAnswerSheetExport"
@@ -26,30 +27,22 @@ export function AnswerSheetExportView({
   const { exportPdf, exportPng, printSheet, isExporting } =
     useAnswerSheetExport()
   const [dpi, setDpi] = useState(300)
-  const [definition, setDefinition] = useState<AnswerSheetDefinition | null>(
-    null
-  )
-  const [isLoaded, setIsLoaded] = useState(false)
+  const {
+    data: definition = null,
+    isPending,
+    error: loadError,
+  } = useQuery({
+    queryKey: queryKeys.answerSheetDefinition.detail(definitionId),
+    queryFn: () =>
+      window.electronAPI.answerSheetBuilder.loadDefinition(definitionId),
+  })
 
+  // 読み込みの失敗は通知する（取得ではないので effect でよい）
   useEffect(() => {
-    const load = async () => {
-      const api = window.electronAPI?.answerSheetBuilder
-      if (!api) return
-      try {
-        setDefinition(await api.loadDefinition(definitionId))
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "定義の読み込みに失敗しました"
-        )
-      }
-      setIsLoaded(true)
-    }
-    void load()
-  }, [definitionId])
+    if (loadError) toast.error(loadError.message)
+  }, [loadError])
 
-  if (!isLoaded) {
+  if (isPending) {
     return (
       <div className="flex h-full items-center justify-center">
         <p className="text-sm text-muted-foreground">読み込み中...</p>

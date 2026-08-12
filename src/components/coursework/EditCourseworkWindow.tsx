@@ -1,8 +1,7 @@
 "use client"
 
-import type { Tag } from "@prisma/client"
 import { Save } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
@@ -17,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { useTags } from "@/hooks/useTags"
 
 interface EditCourseworkWindowProps {
   courseworkId: string
@@ -42,26 +42,14 @@ export function EditCourseworkWindow({
   onClose,
   onSaved,
 }: EditCourseworkWindowProps) {
+  const { tags: allTags } = useTags()
   const [name, setName] = useState(initialName)
   const [description, setDescription] = useState(initialDescription)
   const [date, setDate] = useState(initialDate)
-  const [allTags, setAllTags] = useState<Tag[]>([])
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(
     new Set(initialTagIds)
   )
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    const loadTags = async () => {
-      try {
-        const tags = await window.electronAPI.tagGetAll()
-        setAllTags(tags)
-      } catch (error) {
-        console.error("Failed to load tags:", error)
-      }
-    }
-    void loadTags()
-  }, [])
 
   const toggleTag = (tagId: string) => {
     setSelectedTagIds((prev) => {

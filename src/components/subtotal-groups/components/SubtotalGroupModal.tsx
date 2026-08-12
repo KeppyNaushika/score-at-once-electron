@@ -18,7 +18,7 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, Plus, TagIcon, Trash2, XIcon } from "lucide-react"
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -32,6 +32,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { SubtotalGroupWithSubtotalsExamsAndTags } from "@/electron-src/lib/prisma/subtotalGroup"
+import { useTags } from "@/hooks/useTags"
 
 interface SubtotalGroupModalProps {
   isOpen: boolean
@@ -120,6 +121,7 @@ export function SubtotalGroupModal({
 }: SubtotalGroupModalProps) {
   // 呼び出し側（SubtotalGroupsPageContainer）は閉じている間このコンポーネントを
   // マウントしないため、開くたびに editingGroup の内容からフォームが始まる。
+  const { tags: allTags } = useTags()
   const [name, setName] = useState(editingGroup?.name ?? "")
   const [tagNames, setTagNames] = useState<string[]>(() =>
     (editingGroup?.tagSubtotalGroups ?? []).map(
@@ -127,7 +129,6 @@ export function SubtotalGroupModal({
     )
   )
   const [currentTagInput, setCurrentTagInput] = useState("")
-  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [subtotals, setSubtotals] = useState<SubtotalFormData[]>(() =>
     [...(editingGroup?.subtotals ?? [])]
@@ -148,18 +149,6 @@ export function SubtotalGroupModal({
   )
 
   // 既存タグ一覧を取得（サジェスト用）
-  useEffect(() => {
-    const loadTags = async () => {
-      try {
-        const tags = await window.electronAPI.tagGetAll()
-        setAllTags(tags)
-      } catch (error) {
-        console.error("Failed to load tags:", error)
-      }
-    }
-    void loadTags()
-  }, [])
-
   const handleAddTag = useCallback(
     (tagName?: string) => {
       const nameToAdd = (tagName ?? currentTagInput).trim()

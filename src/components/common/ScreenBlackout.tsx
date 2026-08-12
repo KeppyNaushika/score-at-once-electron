@@ -1,9 +1,11 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { Lock } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useAuth } from "@/contexts/AuthContext"
+import { queryKeys } from "@/lib/queryKeys"
 
 const BLACKOUT_SETTINGS_KEY = "screenBlackoutSettings"
 const FADE_TIMEOUT_MS = 3000
@@ -34,7 +36,6 @@ export function ScreenBlackout() {
     autoFullScreen: false,
   })
   const [passcode, setPasscode] = useState("")
-  const [passcodeType, setPasscodeType] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [uiVisible, setUiVisible] = useState(true)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -42,22 +43,15 @@ export function ScreenBlackout() {
   const wasFullScreenBeforeRef = useRef(false)
   const passcodeRef = useRef("")
 
-  // ユーザーのパスコードタイプを取得
-  useEffect(() => {
-    if (!user?.id) return
-    const loadPasscodeType = async () => {
-      try {
-        const users = await window.electronAPI.fetchUsers()
-        const currentUser = users.find(
-          (candidateUser: { id: string }) => candidateUser.id === user.id
-        )
-        setPasscodeType(currentUser?.passcodeType ?? "none")
-      } catch {
-        setPasscodeType("none")
-      }
-    }
-    loadPasscodeType()
-  }, [user?.id])
+  // 操作者のパスコード種別（ログイン画面と同じ利用者一覧のキャッシュを共有する）
+  const { data: users } = useQuery({
+    queryKey: queryKeys.users.all,
+    queryFn: () => window.electronAPI.fetchUsers(),
+  })
+  const passcodeType = user?.id
+    ? (users?.find((candidate) => candidate.id === user.id)?.passcodeType ??
+      "none")
+    : null
 
   // ロック対象は数字パスコード（4桁/6桁）のみ
   // 英数字パスコードはkeydownベースのIMEバイパスと相性が悪く、ロック解除不能になるリスクがある

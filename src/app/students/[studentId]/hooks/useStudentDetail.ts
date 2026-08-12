@@ -1,49 +1,22 @@
 import type { Student, StudentClassroomMembership } from "@prisma/client"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
 
-import type {
-  ClassroomWithMemberships,
-  StudentClassroomMembershipWithStudentAndClassroom,
-  StudentWithMemberships,
-} from "@/types/prismaExtensions"
+import { useClassrooms } from "@/hooks/useClassrooms"
+import { useStudents } from "@/hooks/useStudents"
+import type { StudentClassroomMembershipWithStudentAndClassroom } from "@/types/prismaExtensions"
 
 export function useStudentDetail(studentId: string) {
   const router = useRouter()
-  const [student, setStudent] = useState<StudentWithMemberships | null>(null)
-  const [classrooms, setClassrooms] = useState<ClassroomWithMemberships[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        const students = await window.electronAPI.fetchStudents()
-        const targetStudent = students.find(
-          (student) => student.id === studentId
-        )
-        if (targetStudent) {
-          setStudent(targetStudent)
-        }
-
-        const fetchedClassrooms = await window.electronAPI.fetchClassrooms()
-        setClassrooms(fetchedClassrooms || [])
-      } catch (error) {
-        console.error("Failed to fetch data:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
-  }, [studentId])
+  // 生徒・学級は全画面で共有するキャッシュから引く（この画面だけ取り直さない）
+  const { students, isPending: studentsPending, refresh } = useStudents()
+  const { classrooms, isPending: classroomsPending } = useClassrooms()
+  const student = students.find((student) => student.id === studentId) ?? null
+  const loading = studentsPending || classroomsPending
 
   const handleEditStudent = async (studentData: Partial<Student>) => {
     try {
-      const updatedStudent = await window.electronAPI.updateStudent(
-        studentId,
-        studentData
-      )
-      setStudent(updatedStudent)
+      await window.electronAPI.updateStudent(studentId, studentData)
+      await refresh()
       return true
     } catch (error) {
       console.error("Failed to update student:", error)
@@ -100,14 +73,7 @@ export function useStudentDetail(studentId: string) {
         }
       }
 
-      // Refresh student data
-      const students = await window.electronAPI.fetchStudents()
-      const updatedStudent = students.find(
-        (student) => student.id === studentId
-      )
-      if (updatedStudent) {
-        setStudent(updatedStudent)
-      }
+      await refresh()
       return true
     } catch (error) {
       console.error("Failed to save membership:", error)
@@ -120,15 +86,7 @@ export function useStudentDetail(studentId: string) {
     if (window.confirm("この所属関係を終了しますか？")) {
       try {
         await window.electronAPI.endStudentMembership(membershipId)
-
-        // Refresh student data
-        const students = await window.electronAPI.fetchStudents()
-        const updatedStudent = students.find(
-          (student) => student.id === studentId
-        )
-        if (updatedStudent) {
-          setStudent(updatedStudent)
-        }
+        await refresh()
         return true
       } catch (error) {
         console.error("Failed to end membership:", error)

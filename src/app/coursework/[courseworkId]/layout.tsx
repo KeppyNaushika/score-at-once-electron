@@ -1,8 +1,9 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { useParams, usePathname } from "next/navigation"
-import React, { useEffect, useState } from "react"
+import React from "react"
 
 import {
   Breadcrumb,
@@ -13,6 +14,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
+import { queryKeys } from "@/lib/queryKeys"
 
 const workflowSteps = [
   { id: "02-students", label: "1. 生徒管理", path: "02-students" },
@@ -20,6 +22,9 @@ const workflowSteps = [
   { id: "04-scores", label: "3. 点数入力", path: "04-scores" },
   { id: "05-results", label: "4. 結果", path: "05-results" },
 ]
+
+/** パンくずに出すのは名前だけ（select の同一性を保つため外に置く） */
+const selectCourseworkName = (coursework: { name: string }) => coursework.name
 
 export default function CourseworkWorkflowLayout({
   children,
@@ -30,20 +35,12 @@ export default function CourseworkWorkflowLayout({
   const pathname = usePathname()
   const courseworkId =
     typeof params.courseworkId === "string" ? params.courseworkId : ""
-  const [courseworkName, setCourseworkName] = useState<string>("")
-
-  useEffect(() => {
-    const loadCoursework = async () => {
-      try {
-        const coursework =
-          await window.electronAPI.coursework.getById(courseworkId)
-        setCourseworkName(coursework.name)
-      } catch (error) {
-        console.error("Error loading coursework:", error)
-      }
-    }
-    loadCoursework()
-  }, [courseworkId])
+  // パンくずが要るのは名前だけ。資料そのもののキャッシュを概要画面と共有する
+  const { data: courseworkName = "" } = useQuery({
+    queryKey: queryKeys.coursework.detail(courseworkId),
+    queryFn: () => window.electronAPI.coursework.getById(courseworkId),
+    select: selectCourseworkName,
+  })
 
   return (
     <div className="flex h-full flex-col">

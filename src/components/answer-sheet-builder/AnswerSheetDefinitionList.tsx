@@ -10,7 +10,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
 import { BulkTagAssignButton } from "@/components/common/BulkTagAssignButton"
@@ -46,6 +46,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
+import { useTags } from "@/hooks/useTags"
 import type { ASBDefinitionListItem } from "@/types/answerSheetBuilder.types"
 
 import { useAnswerSheetDefinitions } from "./hooks/useAnswerSheetDefinitions"
@@ -105,24 +106,13 @@ export function AnswerSheetDefinitionList() {
     duplicateDefinition,
   } = useAnswerSheetDefinitions(user?.id)
 
+  const { tags: allTags, refresh: refreshTags } = useTags()
   const [sortKey, setSortKey] = useState<SortKey>("updatedAt")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
-  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string
     name: string
   } | null>(null)
-
-  useEffect(() => {
-    const loadTags = async () => {
-      try {
-        setAllTags(await window.electronAPI.tagGetAll())
-      } catch (error) {
-        console.error("Error loading tags:", error)
-      }
-    }
-    void loadTags()
-  }, [])
 
   const {
     filteredItems: filteredDefinitions,
@@ -201,7 +191,7 @@ export function AnswerSheetDefinitionList() {
         description: `${selectedIds.size}件の解答用紙に「${tagName}」を追加`,
       })
       clearSelection()
-      setAllTags(await window.electronAPI.tagGetAll())
+      await refreshTags()
       await loadDefinitions()
     } catch (error) {
       console.error("Error bulk adding tag:", error)

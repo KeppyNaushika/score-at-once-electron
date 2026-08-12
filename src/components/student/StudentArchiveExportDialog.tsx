@@ -1,7 +1,7 @@
 "use client"
 
 import { FolderOutput, Loader2 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useStudents } from "@/hooks/useStudents"
 
 interface ClassroomInfo {
   id: string
@@ -30,61 +31,38 @@ export function StudentArchiveExportDialog({
   onClose,
   selectedStudentIds,
 }: StudentArchiveExportDialogProps) {
-  const [relatedClassrooms, setRelatedClassrooms] = useState<ClassroomInfo[]>(
-    []
-  )
   const [selectedClassroomIds, setSelectedClassroomIds] = useState<Set<string>>(
     new Set()
   )
-  const [isLoading, setIsLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
 
-  // 選択生徒に紐づく学級を取得
-  useEffect(() => {
-    if (!isOpen || selectedStudentIds.size === 0) return
-
-    const fetchClassrooms = async () => {
-      setIsLoading(true)
-      try {
-        const allStudents = await window.electronAPI.fetchStudents()
-        const selectedStudents = allStudents.filter((student: { id: string }) =>
-          selectedStudentIds.has(student.id)
-        )
-
-        // 紐づく学級を収集
-        const classroomMap = new Map<string, string>()
-        for (const student of selectedStudents) {
-          for (const membership of student.memberships || []) {
-            if (
-              membership.classroom &&
-              !classroomMap.has(membership.classroom.id)
-            ) {
-              classroomMap.set(
-                membership.classroom.id,
-                membership.classroom.name
-              )
-            }
-          }
+  // 生徒は共有キャッシュから引き、選択生徒に紐づく学級はそこから導く
+  const { students, isPending: isLoading } = useStudents()
+  const relatedClassrooms: ClassroomInfo[] = useMemo(() => {
+    const classroomById = new Map<string, string>()
+    for (const student of students) {
+      if (!selectedStudentIds.has(student.id)) continue
+      for (const membership of student.memberships) {
+        if (!classroomById.has(membership.classroom.id)) {
+          classroomById.set(membership.classroom.id, membership.classroom.name)
         }
-
-        const classrooms = Array.from(classroomMap.entries())
-          .map(([id, name]) => ({ id, name }))
-          .sort((entryA, entryB) => entryA.name.localeCompare(entryB.name))
-
-        setRelatedClassrooms(classrooms)
-        // デフォルト: 全学級を選択
-        setSelectedClassroomIds(
-          new Set(classrooms.map((classroom) => classroom.id))
-        )
-      } catch (error) {
-        console.error("Failed to fetch classrooms:", error)
-      } finally {
-        setIsLoading(false)
       }
     }
+    return Array.from(classroomById.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((classroomA, classroomB) =>
+        classroomA.name.localeCompare(classroomB.name)
+      )
+  }, [students, selectedStudentIds])
 
-    fetchClassrooms()
-  }, [isOpen, selectedStudentIds])
+  // 既定は全学級。開き直すたび・対象が変わるたびに選び直す
+  const [seededClassrooms, setSeededClassrooms] = useState<ClassroomInfo[]>([])
+  if (isOpen && seededClassrooms !== relatedClassrooms) {
+    setSeededClassrooms(relatedClassrooms)
+    setSelectedClassroomIds(
+      new Set(relatedClassrooms.map((classroom) => classroom.id))
+    )
+  }
 
   const toggleClassroom = (classroomId: string) => {
     setSelectedClassroomIds((prev) => {

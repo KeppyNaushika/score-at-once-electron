@@ -1,9 +1,10 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { Users } from "lucide-react"
 import Head from "next/head"
 import { useParams, usePathname } from "next/navigation"
-import React, { useEffect, useState } from "react"
+import React, { useState } from "react"
 
 import { GuardedLink } from "@/components/common/GuardedLink"
 import { MemberInviteDialog } from "@/components/exams/shared/MemberInviteDialog"
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/AuthContext"
+import { queryKeys } from "@/lib/queryKeys"
 
 // ワークフローステップの定義
 const workflowSteps = [
@@ -34,6 +36,10 @@ const workflowSteps = [
   { id: "08-export", label: "8. 結果", path: "08-export" },
 ]
 
+/** パンくずに出すのは試験名だけ（select の同一性を保つため外に置く） */
+const selectExamName = (exam: { examName: string } | null) =>
+  exam?.examName ?? ""
+
 export default function ExamWorkflowLayout({
   children,
 }: {
@@ -43,23 +49,14 @@ export default function ExamWorkflowLayout({
   const pathname = usePathname()
   const { user } = useAuth()
   const examId = typeof params.examId === "string" ? params.examId : ""
-  const [examName, setExamName] = useState<string>("")
   const [showMemberDialog, setShowMemberDialog] = useState(false)
 
-  // 試験情報を取得
-  useEffect(() => {
-    const loadExam = async () => {
-      try {
-        const exam = await window.electronAPI.getExam(examId)
-        if (exam) {
-          setExamName(exam.examName)
-        }
-      } catch (error) {
-        console.error("Error loading exam:", error)
-      }
-    }
-    loadExam()
-  }, [examId])
+  // パンくずが要るのは試験名だけ
+  const { data: examName = "" } = useQuery({
+    queryKey: queryKeys.exam.detail(examId),
+    queryFn: () => window.electronAPI.getExam(examId),
+    select: selectExamName,
+  })
 
   return (
     <>

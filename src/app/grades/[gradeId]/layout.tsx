@@ -1,8 +1,9 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { useParams, usePathname } from "next/navigation"
-import React, { useEffect, useState } from "react"
+import React from "react"
 
 import {
   Breadcrumb,
@@ -13,6 +14,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
+import { queryKeys } from "@/lib/queryKeys"
 
 const workflowSteps = [
   { id: "02-students", label: "1. 生徒管理", path: "02-students" },
@@ -27,6 +29,9 @@ const workflowSteps = [
   { id: "07-export", label: "6. 出力", path: "07-export" },
 ]
 
+/** パンくずに出すのは名前だけ（select の同一性を保つため外に置く） */
+const selectGradeName = (grade: { name: string }) => grade.name
+
 export default function GradeWorkflowLayout({
   children,
 }: {
@@ -35,19 +40,12 @@ export default function GradeWorkflowLayout({
   const params = useParams()
   const pathname = usePathname()
   const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
-  const [examName, setExamName] = useState<string>("")
-
-  useEffect(() => {
-    const loadExam = async () => {
-      try {
-        const grade = await window.electronAPI.grade.getById(gradeId)
-        setExamName(grade.name)
-      } catch (error) {
-        console.error("Error loading grade exam:", error)
-      }
-    }
-    loadExam()
-  }, [gradeId])
+  // パンくずが要るのは名前だけ。成績本体のキャッシュを各段階と共有する
+  const { data: examName = "" } = useQuery({
+    queryKey: queryKeys.grade.detail(gradeId),
+    queryFn: () => window.electronAPI.grade.getById(gradeId),
+    select: selectGradeName,
+  })
 
   return (
     <div className="flex h-full flex-col">

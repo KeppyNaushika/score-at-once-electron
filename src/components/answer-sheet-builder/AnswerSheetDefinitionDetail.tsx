@@ -1,6 +1,6 @@
 "use client"
 
-import type { Tag } from "@prisma/client"
+import { useQuery } from "@tanstack/react-query"
 import { ArrowRight, Download, Pencil, TagIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import React, { useCallback, useEffect, useState } from "react"
@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
+import { useTags } from "@/hooks/useTags"
+import { queryKeys } from "@/lib/queryKeys"
 
 import { countAsbQuestions } from "./answerSheetStats"
 
@@ -31,44 +32,39 @@ export function AnswerSheetDefinitionDetail({
   definitionId,
 }: AnswerSheetDefinitionDetailProps) {
   const router = useRouter()
-  const [definition, setDefinition] = useState<AnswerSheetDefinition | null>(
-    null
-  )
-  const [isLoaded, setIsLoaded] = useState(false)
   const [tagNames, setTagNames] = useState<string[]>([])
   const [currentTagInput, setCurrentTagInput] = useState("")
-  const [allTags, setAllTags] = useState<Tag[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const { tags: allTags, refresh: refreshTags } = useTags()
 
+  const {
+    data: definition = null,
+    isPending,
+    error: loadError,
+  } = useQuery({
+    queryKey: queryKeys.answerSheetDefinition.detail(definitionId),
+    queryFn: () =>
+      window.electronAPI.answerSheetBuilder.loadDefinition(definitionId),
+  })
+  const { data: definitionTags } = useQuery({
+    queryKey: queryKeys.answerSheetDefinition.tags(definitionId),
+    queryFn: () =>
+      window.electronAPI.asbDefinitionTagGetByDefinitionId(definitionId),
+  })
+
+  // 読み込みの失敗は通知する（取得ではないので effect でよい）
   useEffect(() => {
-    const load = async () => {
-      const api = window.electronAPI?.answerSheetBuilder
-      if (!api) return
-      try {
-        setDefinition(await api.loadDefinition(definitionId))
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "定義の読み込みに失敗しました"
-        )
-      }
-      try {
-        const [definitionTags, tags] = await Promise.all([
-          window.electronAPI.asbDefinitionTagGetByDefinitionId(definitionId),
-          window.electronAPI.tagGetAll(),
-        ])
-        setTagNames(
-          definitionTags.map((definitionTag) => definitionTag.tag.name)
-        )
-        setAllTags(tags)
-      } catch (error) {
-        console.error("Failed to load tags:", error)
-      }
-      setIsLoaded(true)
-    }
-    void load()
-  }, [definitionId])
+    if (loadError) toast.error(loadError.message)
+  }, [loadError])
+
+  // 取得したタグ名を編集状態の種にする（以後は利用者の編集が正）
+  const [seededDefinitionId, setSeededDefinitionId] = useState<string | null>(
+    null
+  )
+  if (definitionTags && seededDefinitionId !== definitionId) {
+    setSeededDefinitionId(definitionId)
+    setTagNames(definitionTags.map((definitionTag) => definitionTag.tag.name))
+  }
 
   // タグ変更を即時保存する
   const persistTags = useCallback(
@@ -83,14 +79,13 @@ export function AnswerSheetDefinitionDetail({
           definitionId,
           tagIds
         )
-        const tags = await window.electronAPI.tagGetAll()
-        setAllTags(tags)
+        await refreshTags()
       } catch (error) {
         console.error("Failed to save tags:", error)
         toast.error("タグの保存に失敗しました")
       }
     },
-    [definitionId]
+    [definitionId, refreshTags]
   )
 
   const handleAddTag = useCallback(
@@ -126,7 +121,7 @@ export function AnswerSheetDefinitionDetail({
         tag.name.toLowerCase().includes(currentTagInput.trim().toLowerCase()))
   )
 
-  if (!isLoaded) {
+  if (isPending) {
     return (
       <div className="flex h-full items-center justify-center">
         <p className="text-sm text-muted-foreground">読み込み中...</p>

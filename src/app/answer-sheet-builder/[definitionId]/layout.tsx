@@ -1,8 +1,9 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { ArrowLeft } from "lucide-react"
 import { useParams, usePathname } from "next/navigation"
-import React, { useEffect, useState } from "react"
+import React from "react"
 
 import { GuardedLink } from "@/components/common/GuardedLink"
 import {
@@ -14,6 +15,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
+import { queryKeys } from "@/lib/queryKeys"
 import { cn } from "@/lib/utils"
 
 const workflowSteps = [
@@ -26,6 +28,9 @@ const workflowSteps = [
  * 解答用紙作成の個別定義レイアウト。
  * 概要 / 1. 作成 / 2. 書き出し の3ページをパンくずタブで束ねる。
  */
+/** パンくずに出すのは定義名だけ（select の同一性を保つため外に置く） */
+const selectDefinitionName = (definition: { name: string }) => definition.name
+
 export default function AnswerSheetBuilderDefinitionLayout({
   children,
 }: {
@@ -34,21 +39,13 @@ export default function AnswerSheetBuilderDefinitionLayout({
   const params = useParams<{ definitionId: string }>()
   const definitionId = params.definitionId
   const pathname = usePathname()
-  const [definitionName, setDefinitionName] = useState("")
-
-  useEffect(() => {
-    const load = async () => {
-      const api = window.electronAPI?.answerSheetBuilder
-      if (!api) return
-      try {
-        const definition = await api.loadDefinition(definitionId)
-        setDefinitionName(definition.name)
-      } catch (error) {
-        console.error("解答用紙定義の読み込みに失敗しました:", error)
-      }
-    }
-    void load()
-  }, [definitionId])
+  // パンくずが要るのは定義名だけ。定義そのもののキャッシュを各ページと共有する
+  const { data: definitionName = "" } = useQuery({
+    queryKey: queryKeys.answerSheetDefinition.detail(definitionId),
+    queryFn: () =>
+      window.electronAPI.answerSheetBuilder.loadDefinition(definitionId),
+    select: selectDefinitionName,
+  })
 
   const base = `/answer-sheet-builder/${definitionId}`
 

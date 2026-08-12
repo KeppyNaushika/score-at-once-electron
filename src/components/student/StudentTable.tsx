@@ -12,7 +12,7 @@ import {
   Upload,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
@@ -39,12 +39,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useClassrooms } from "@/hooks/useClassrooms"
+import { useStudents } from "@/hooks/useStudents"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
-import type {
-  ClassroomWithMemberships,
-  StudentWithMemberships,
-} from "@/types/prismaExtensions"
+import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
 // ソート用の型
 interface StudentSortable {
@@ -57,8 +56,9 @@ interface StudentSortable {
 
 export default function StudentTable() {
   const router = useRouter()
-  const [students, setStudents] = useState<StudentWithMemberships[]>([])
-  const [classrooms, setClassrooms] = useState<ClassroomWithMemberships[]>([])
+  // 生徒・学級は全画面で共有するキャッシュから引く（この画面だけ取り直さない）
+  const { students, refresh: refreshStudents } = useStudents()
+  const { classrooms, refresh: refreshClassrooms } = useClassrooms()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterMembershipStatus, setFilterMembershipStatus] =
     useState<string>("current_unassigned")
@@ -82,20 +82,6 @@ export default function StudentTable() {
   const [isExporting, setIsExporting] = useState(false)
 
   // Data fetching
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const fetchedStudents = await window.electronAPI.fetchStudents()
-        const fetchedClassrooms = await window.electronAPI.fetchClassrooms()
-        setStudents(fetchedStudents || [])
-        setClassrooms(fetchedClassrooms || [])
-      } catch (error) {
-        console.error("Failed to fetch data:", error)
-      }
-    }
-    fetchData()
-  }, [])
-
   // Filter students
   const filteredStudents = useMemo(() => {
     return students.filter((student) => {
@@ -213,7 +199,7 @@ export default function StudentTable() {
     if (window.confirm("本当にこの生徒を削除しますか？")) {
       try {
         await window.electronAPI.deleteStudent(studentId)
-        setStudents(students.filter((student) => student.id !== studentId))
+        await refreshStudents()
         setSelectedStudentIds((prev) => {
           const newSet = new Set(prev)
           newSet.delete(studentId)
@@ -230,8 +216,8 @@ export default function StudentTable() {
     studentData: Prisma.StudentCreateInput
   ) => {
     try {
-      const newStudent = await window.electronAPI.createStudent(studentData)
-      setStudents([...students, newStudent])
+      await window.electronAPI.createStudent(studentData)
+      await refreshStudents()
       setIsStudentModalOpen(false)
     } catch (error) {
       console.error("Failed to create student:", error)
@@ -244,15 +230,8 @@ export default function StudentTable() {
     studentData: Prisma.StudentUpdateInput
   ) => {
     try {
-      const updatedStudent = await window.electronAPI.updateStudent(
-        id,
-        studentData
-      )
-      setStudents(
-        students.map((student) =>
-          student.id === updatedStudent.id ? updatedStudent : student
-        )
-      )
+      await window.electronAPI.updateStudent(id, studentData)
+      await refreshStudents()
       setIsStudentModalOpen(false)
     } catch (error) {
       console.error("Failed to update student:", error)
@@ -282,26 +261,12 @@ export default function StudentTable() {
   }
 
   const refreshData = async () => {
-    try {
-      const fetchedStudents = await window.electronAPI.fetchStudents()
-      const fetchedClassrooms = await window.electronAPI.fetchClassrooms()
-      setStudents(fetchedStudents || [])
-      setClassrooms(fetchedClassrooms || [])
-    } catch (error) {
-      console.error("Failed to refresh data:", error)
-    }
+    await Promise.all([refreshStudents(), refreshClassrooms()])
   }
 
-  const onStudentsImported = (importedStudents: StudentWithMemberships[]) => {
-    setStudents((prevStudents) => {
-      const existingStudentIds = new Set(
-        prevStudents.map((student) => student.id)
-      )
-      const newStudents = importedStudents.filter(
-        (student) => !existingStudentIds.has(student.id)
-      )
-      return [...prevStudents, ...newStudents]
-    })
+  // 取り込んだ分は取り直して反映する（画面側で足し込むと重複の判定を二重に持つ）
+  const onStudentsImported = () => {
+    void refreshStudents()
   }
 
   // Get current classrooms for display

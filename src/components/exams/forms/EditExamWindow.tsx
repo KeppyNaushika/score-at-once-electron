@@ -1,8 +1,9 @@
 "use client"
 
 import type { Exam } from "@prisma/client"
+import { useQuery } from "@tanstack/react-query"
 import { TagIcon, XIcon } from "lucide-react"
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -17,6 +18,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { useTags } from "@/hooks/useTags"
+import { queryKeys } from "@/lib/queryKeys"
 
 interface EditExamWindowProps {
   examToEdit: Exam
@@ -29,6 +32,7 @@ const EditExamWindow = ({
   setIsShowEditExamWindow,
   onSave,
 }: EditExamWindowProps) => {
+  const { tags: allTags } = useTags()
   const [examName, setExamName] = useState(examToEdit.examName)
   const [examDate, setExamDate] = useState<Date | undefined>(() => {
     if (!examToEdit.examDate) return undefined
@@ -41,25 +45,20 @@ const EditExamWindow = ({
   )
   const [tagNames, setTagNames] = useState<string[]>([])
   const [currentTagInput, setCurrentTagInput] = useState("")
-  const [allTags, setAllTags] = useState<{ id: string; name: string }[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
 
   // 既存タグと全タグ一覧を取得
-  useEffect(() => {
-    const loadTags = async () => {
-      try {
-        const [examTags, tags] = await Promise.all([
-          window.electronAPI.examTagGetByExamId(examToEdit.id),
-          window.electronAPI.tagGetAll(),
-        ])
-        setTagNames(examTags.map((examTag) => examTag.tag.name))
-        setAllTags(tags)
-      } catch {
-        // ignore
-      }
-    }
-    void loadTags()
-  }, [examToEdit.id])
+  const { data: examTags } = useQuery({
+    queryKey: queryKeys.exam.tags(examToEdit.id),
+    queryFn: () => window.electronAPI.examTagGetByExamId(examToEdit.id),
+  })
+
+  // 取得したタグ名を編集状態の種にする（以後は利用者の編集が正）
+  const [seededExamId, setSeededExamId] = useState<string | null>(null)
+  if (examTags && seededExamId !== examToEdit.id) {
+    setSeededExamId(examToEdit.id)
+    setTagNames(examTags.map((examTag) => examTag.tag.name))
+  }
 
   const handleSave = async () => {
     if (!examName.trim()) {

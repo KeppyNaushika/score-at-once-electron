@@ -30,6 +30,19 @@ export const queryKeys = {
   tags: {
     all: ["tags"] as const,
   },
+  students: {
+    all: ["students"] as const,
+  },
+  classrooms: {
+    all: ["classrooms"] as const,
+  },
+  studentExamResults: {
+    detail: (studentId: string) => ["studentExamResults", studentId] as const,
+  },
+  classroomExamResults: {
+    detail: (classroomId: string) =>
+      ["classroomExamResults", classroomId] as const,
+  },
   returnDiff: {
     detail: (examId: string) => ["returnDiff", examId] as const,
   },
@@ -42,8 +55,16 @@ export const queryKeys = {
   answerSheetDefinition: {
     list: (userId: string | undefined) =>
       ["answerSheetDefinition", userId] as const,
+    /** 解答用紙定義そのもの（編集・書き出し・パンくずが共有する） */
+    detail: (definitionId: string) =>
+      ["answerSheetDefinition", definitionId, "detail"] as const,
+    /** その定義に紐づくタグ */
+    tags: (definitionId: string) =>
+      ["answerSheetDefinition", definitionId, "tags"] as const,
   },
   exam: {
+    /** 試験1件そのもの（パンくず・答案アップロードなど、本体だけ要る画面） */
+    detail: (examId: string) => ["exam", examId, "detail"] as const,
     /** 試験詳細ページが1回で取る形（試験本体＋進捗の分母になる件数） */
     detailPage: (examId: string) => ["exam", examId, "detailPage"] as const,
     /** 領域情報ページ(03)が1回で取る形（操作者＋ページ＋背景画像＋採点領域） */
@@ -61,6 +82,8 @@ export const queryKeys = {
     masterImageOrientation: (examId: string) =>
       ["exam", examId, "masterImageOrientation"] as const,
     classrooms: (examId: string) => ["exam", examId, "classrooms"] as const,
+    /** この試験に紐づくタグ（タグ一覧そのものは queryKeys.tags.all） */
+    tags: (examId: string) => ["exam", examId, "tags"] as const,
     masterAnswers: (examId: string) =>
       ["exam", examId, "masterAnswers"] as const,
     omrConfigs: (examId: string) => ["exam", examId, "omrConfigs"] as const,
