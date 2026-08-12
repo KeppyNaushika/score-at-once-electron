@@ -423,16 +423,6 @@ export type ArchiveExportMode = "full" | "template" | "template_with_subtotals"
 // =============================================================================
 
 /**
- * 一括エクスポートオプション
- */
-export interface BulkExportExamsOptions {
-  examIds: string[]
-  userId: string
-  /** エクスポートモード（デフォルト: full） */
-  exportMode?: ArchiveExportMode
-}
-
-/**
  * 一括エクスポートの個別試験結果
  */
 export interface BulkExportExamResult {
@@ -1096,7 +1086,7 @@ export type UpdateStrategy = "keep_existing" | "use_import" | "use_newer"
  * フィールド単位の更新決定
  * key: フィールド名, value: 更新戦略
  */
-export type FieldUpdateDecision = Record<string, UpdateStrategy>
+type FieldUpdateDecision = Record<string, UpdateStrategy>
 
 /**
  * 全アイテムの更新決定

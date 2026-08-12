@@ -17,7 +17,7 @@ import { defineStringUnion } from "./stringUnion"
  * 描画種別。SQLite に enum が無いため DB 上は String 列で、境界で `toDrawingType`
  * を通して literal union へ絞り込む（Decimal→number / ScoringStatus と同じ型注入）。
  */
-export const DRAWING_TYPES = ["text", "line", "rectangle", "ellipse"] as const
+const DRAWING_TYPES = ["text", "line", "rectangle", "ellipse"] as const
 export type DrawingType = (typeof DRAWING_TYPES)[number]
 
 /**
@@ -25,7 +25,7 @@ export type DrawingType = (typeof DRAWING_TYPES)[number]
  * （endX/endY は既定の 0.0）が原点への線として描かれてしまうため、読み取りの境界では
  * 倒す前に未知の行を落とす（`narrowDrawableAnnotations`）。
  */
-export const { is: isDrawingType, to: toDrawingType } = defineStringUnion(
+const { is: isDrawingType, to: toDrawingType } = defineStringUnion(
   DRAWING_TYPES,
   "line"
 )
@@ -46,7 +46,7 @@ type AnnotationHorizontalAlign = (typeof ANNOTATION_HORIZONTAL_ALIGNS)[number]
 const ANNOTATION_VERTICAL_ALIGNS = ["top", "center", "bottom"] as const
 type AnnotationVerticalAlign = (typeof ANNOTATION_VERTICAL_ALIGNS)[number]
 
-export const ANCHOR_DIRECTIONS = [
+const ANCHOR_DIRECTIONS = [
   "top-left",
   "top",
   "top-right",
@@ -63,16 +63,16 @@ export type AnchorDirection = (typeof ANCHOR_DIRECTIONS)[number]
  * 型ガードと境界コンバータ。想定外値は既定へ倒す（DB 直書き・旧データへの耐性）。
  * scoringStatus.types.ts / cropRegionAreaType.types.ts と同じ factory から生成する。
  */
-export const { to: toLineStyle } = defineStringUnion(LINE_STYLES, "solid")
-export const { to: toAnnotationHorizontalAlign } = defineStringUnion(
+const { to: toLineStyle } = defineStringUnion(LINE_STYLES, "solid")
+const { to: toAnnotationHorizontalAlign } = defineStringUnion(
   ANNOTATION_HORIZONTAL_ALIGNS,
   "left"
 )
-export const { to: toAnnotationVerticalAlign } = defineStringUnion(
+const { to: toAnnotationVerticalAlign } = defineStringUnion(
   ANNOTATION_VERTICAL_ALIGNS,
   "top"
 )
-export const { to: toAnchorDirection } = defineStringUnion(
+const { to: toAnchorDirection } = defineStringUnion(
   ANCHOR_DIRECTIONS,
   "top-left"
 )

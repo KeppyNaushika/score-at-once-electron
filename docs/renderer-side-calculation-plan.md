@@ -306,9 +306,9 @@ src/hooks/grades/
 
 **Step 6 — IPC の付け替え**（中）
 
-- **6a（先に計測）**: 一時的に `grade:getCalcInput` を生やし、実データで `JSON.stringify(input).length` と renderer 実行時間を測る。A/B の判断はここ
+- **6a（先に計測）**: 一時的に `grade:getCalcInput` を生やし、データで `JSON.stringify(input).length` と renderer 実行時間を測る。A/B の判断はここ
 - 6b: `useGradeCalculation.ts` を追加し、renderer 消費者 3 箇所を移行
-- 6c: `gradeHandlers.ts:425-431` / `gradeApi.ts:181-184` / `gradeApi.d.ts:297-307` を削除。`npx knip` で残骸確認
+- 6c: `gradeHandlers.ts` / preload の `gradeApi.ts` から該当チャンネルを削除。`npx knip` で残骸確認
 
 ### 3.11 リスク
 
@@ -371,7 +371,7 @@ preload に受信側だけがある（`electron-src/preload-apis/exportApi.ts:13
 ### 4.2 対応
 
 - `exportApi.ts:131-143` の `onExportProgress` / 対応する removeListener を削除
-- `src/types/electron/` の型宣言を削除
+- （`src/types/electron/` の手書き契約は廃止済み。preload から署名が導出されるので、削除は登録簿と preload の2箇所で完結する）
 - `useExportPage.ts:318-321` のリスナー登録を削除
 - `npx knip` で残骸確認
 

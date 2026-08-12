@@ -35,7 +35,7 @@ interface AuditActionDef {
  * 全アクションの定義表。網羅的に対応できるよう主要ドメインを定義する。
  * 新しい操作を計装する際はここにキーを追加する（これが記録の契約）。
  */
-export const AUDIT_ACTIONS = {
+const AUDIT_ACTIONS = {
   // ── 試験（exam） ─────────────────────────────────────────────
   "exam.create": {
     category: "exam",

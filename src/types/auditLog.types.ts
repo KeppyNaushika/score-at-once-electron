@@ -12,7 +12,7 @@ import type {
 } from "@/electron-src/lib/prisma/auditQuery"
 
 /** metadata のパース済み構造 */
-export interface AuditMetadata {
+interface AuditMetadata {
   changes?: AuditChange[]
   target?: { type: string; label: string }
   occurrences?: number
@@ -26,6 +26,6 @@ export interface AuditLogEntry extends Omit<BaseAuditLogEntry, "metadata"> {
 }
 
 /** 監査ログの1ページ */
-export interface AuditLogPage extends Omit<BaseAuditLogPage, "entries"> {
+interface AuditLogPage extends Omit<BaseAuditLogPage, "entries"> {
   entries: AuditLogEntry[]
 }

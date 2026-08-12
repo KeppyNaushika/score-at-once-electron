@@ -77,7 +77,7 @@ export interface ReturnScoreCellState {
   value: number | null
 }
 
-export interface ReturnScoreChange {
+interface ReturnScoreChange {
   cropRegionId: string
   label: string | null
   before: ReturnScoreCellState | null
@@ -102,13 +102,13 @@ export interface ReturnStudentDiff {
   snapshotTotal: number | null
 }
 
-export interface ReturnDiffResult {
+interface ReturnDiffResult {
   /** 1件でも返却版スナップショットが存在するか */
   hasAnySnapshot: boolean
   diffs: ReturnStudentDiff[]
 }
 
-export interface CaptureReturnSnapshotResult {
+interface CaptureReturnSnapshotResult {
   /** 記録した生徒数 */
   capturedCount: number
 }

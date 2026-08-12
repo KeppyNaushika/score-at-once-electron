@@ -18,7 +18,7 @@ export const subtotalWithQuestionAssignmentsInclude = {
   },
 } satisfies Prisma.SubtotalInclude
 
-export const cropSubtotalWithSubtotalGroupInclude = {
+const cropSubtotalWithSubtotalGroupInclude = {
   subtotal: { include: { subtotalGroup: true } },
 } satisfies Prisma.CropSubtotalInclude
 

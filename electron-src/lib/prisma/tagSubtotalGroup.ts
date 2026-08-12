@@ -22,11 +22,6 @@ export const tagSubtotalGroupWithTagInclude = {
   tag: true,
 } satisfies Prisma.TagSubtotalGroupInclude
 
-/** タグ同梱の TagSubtotalGroup（`setSubtotalGroupTags` の返り値） */
-export type TagSubtotalGroupWithTag = Prisma.TagSubtotalGroupGetPayload<{
-  include: typeof tagSubtotalGroupWithTagInclude
-}>
-
 /**
  * タグに紐づく小計点グループを取得
  */

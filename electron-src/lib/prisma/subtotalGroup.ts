@@ -11,13 +11,13 @@ import { tagSubtotalGroupWithTagInclude } from "./tagSubtotalGroup"
  * getSubtotalGroups は examSubtotalGroups.exam（id・examName の部分 select）と
  * tagSubtotalGroups.tag も取る。
  */
-export const subtotalGroupWithSubtotalsInclude = {
+const subtotalGroupWithSubtotalsInclude = {
   subtotals: {
     orderBy: { order: "asc" },
   },
 } satisfies Prisma.SubtotalGroupInclude
 
-export const subtotalGroupWithSubtotalsExamsAndTagsInclude = {
+const subtotalGroupWithSubtotalsExamsAndTagsInclude = {
   subtotals: {
     orderBy: { order: "asc" },
   },
@@ -32,7 +32,7 @@ export const subtotalGroupWithSubtotalsExamsAndTagsInclude = {
  * 小計点の算出に使う SubtotalGroup の include。
  * 各小計は自分の設問割り当てを持つので、小計点も満点も追加クエリ無しで算出できる。
  */
-export const subtotalGroupForScoringInclude = {
+const subtotalGroupForScoringInclude = {
   subtotals: {
     include: subtotalWithQuestionAssignmentsInclude,
     orderBy: { order: "asc" },

@@ -8,7 +8,7 @@ import { useCallback } from "react"
 import { useUserPreference } from "@/hooks/useUserPreference"
 
 /** クリック採点で選択可能なアクション */
-export const CLICK_SCORING_ACTIONS = [
+const CLICK_SCORING_ACTIONS = [
   "none",
   "correct",
   "incorrect",

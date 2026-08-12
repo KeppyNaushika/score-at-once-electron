@@ -176,7 +176,7 @@ export const replaceMasterAnswerImage = async (
   return updatedPage
 }
 
-export interface DeleteMasterAnswerResult {
+interface DeleteMasterAnswerResult {
   deletedPage: ExamPage | null
 }
 

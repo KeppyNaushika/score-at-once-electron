@@ -31,7 +31,7 @@ const isOneOf = <TValue extends string>(
 ): value is TValue => candidates.some((candidate) => candidate === value)
 
 /** 設定キーごとのスキーマ定義 */
-export const USER_PREFERENCE_SCHEMA = {
+const USER_PREFERENCE_SCHEMA = {
   showStudentNames: { type: "boolean" as const, default: true },
   autoScroll: { type: "boolean" as const, default: true },
   itemsPerLine: { type: "number" as const, default: 5 },

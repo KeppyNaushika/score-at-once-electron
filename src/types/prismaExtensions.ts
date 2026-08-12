@@ -95,7 +95,7 @@ export type StudentWithMemberships = Prisma.StudentGetPayload<{
 
 /**
  * 受験生徒（ExamStudent）の詳細型。
- * `getStudentsForExam`（examApi.d.ts）の戻り値要素と同一の SSOT。
+ * `getStudentsForExam` の戻り値要素と同一の SSOT。
  *
  * 実体は Exam×Student×Classroom の結合を生徒1人へ畳んだもので、基底は Student ではなく
  * **ExamStudent**。受験状態（status）・並び順（customOrder）は ExamStudent の実列、
@@ -223,16 +223,6 @@ export type StudentAnswerDatasetExamStudent = Omit<
   "status"
 > & { status: ExamStudentStatus }
 
-/**
- * 06 生徒答案ページ専用の複合データセット（Exam 根の 1 include）。
- * 行＝examStudents（実体）／列＝examPages（実体）。
- * IPC 返り値の SSOT。status は ExamStudentWithMemberships と同様に narrowing する。
- */
-export interface StudentAnswersDataset {
-  examStudents: StudentAnswerDatasetExamStudent[]
-  examPages: StudentAnswerDatasetExamPage[]
-}
-
 // =============================================================================
 // UserExam/ExamSubtotalGroup関連型
 // =============================================================================
@@ -240,19 +230,10 @@ export interface StudentAnswersDataset {
 /**
  * ユーザーと招待者を含むUserExam型。
  * メンバー一覧・オーナー取得（userExam.getMembers/getOwner）が返す実形状の SSOT。
- * main（`lib/prisma/userExam.ts`）と renderer 契約（`userExamApi.d.ts`）の双方が参照する。
  */
 export type UserExamWithUserAndInviter = Prisma.UserExamGetPayload<{
   include: { user: true; inviter: true }
 }>
-
-/**
- * SubtotalGroupを含むExamSubtotalGroup型
- */
-export type ExamSubtotalGroupWithSubtotalGroup =
-  Prisma.ExamSubtotalGroupGetPayload<{
-    include: { subtotalGroup: { include: { subtotals: true } } }
-  }>
 
 /**
  * 試験の出力設定一式（重ね描きのスタイル・可視性・個人成績表の設定/節/グラフ）。

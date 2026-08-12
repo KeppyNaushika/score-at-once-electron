@@ -1,6 +1,6 @@
 import prisma from "./client"
 
-export interface GradingDataInfo {
+interface GradingDataInfo {
   hasData: boolean
   answerSheetCount: number
   questionScoreCount: number

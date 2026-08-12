@@ -466,9 +466,6 @@ export async function getGrade(id: string): Promise<GradeWithRelations> {
 でも renderer でも、見落としが型で止まらない。例外は握り潰すほうに明示的な記述（`try`）が要るので、
 既定が安全側に倒れる。
 
-> **移行中**: 契約 `src/types/electron/*.d.ts` に `success` が残っているドメインは未移行。
-> `tag` / `examClassroom` / `userExam` / `navigation` / `auditLog` は既に移行後の形。
-
 ### IPC通信における型の一貫性（厳守）
 
 Main process（electron-src）と Renderer process（components, hooks）間のIPC通信では、**同一の型定義を参照すること**。
@@ -499,21 +496,22 @@ interface ExamData { ... }  // Renderer独自（微妙に違う可能性）
 
 **理由**: IPC通信のデータは Structured Clone で受け渡されるため、型定義が一致していないと実行時エラーや型の不整合が発生する。
 
-**契約はエンベロープを宣言しない。** `src/types/electron/*.d.ts` が宣言するのは payload の型だけで、
-`success` / `error` と、それに伴う payload の `?` は書かない。失敗は preload が例外へ戻すため、
-renderer の型には現れない（「[IPC の失敗の伝え方](#ipc-の失敗の伝え方厳守)」）。
+**ハンドラの戻り値にエンベロープを書かない。** renderer が見る型はハンドラの戻り値から
+導かれるので、`success` / `error` と、それに伴う payload の `?` を書くと呼び出し側全部に
+握りが伝播する。失敗は preload が例外へ戻すため、renderer の型には現れない
+（「[IPC の失敗の伝え方](#ipc-の失敗の伝え方厳守)」）。
 
 ```typescript
-// ❌ エンベロープを契約に書く（payload が optional になり、全呼び出し側が握りを書く）
-getById: (id: string) =>
-  Promise<{
-    success: boolean
-    grade?: GradeWithRelations
-    error?: string
-  }>
+// ❌ エンベロープを返す（payload が optional になり、全呼び出し側が握りを書く）
+"grade:getById": async (id: string) => {
+  const grade = await getGrade(id)
+  return grade
+    ? { success: true, grade }
+    : { success: false, error: "成績が見つかりません" }
+}
 
-// ✅ payload だけを宣言する
-getById: (id: string) => Promise<GradeWithRelations>
+// ✅ payload を返す（失敗は throw）
+"grade:getById": async (id: string) => getGrade(id)
 ```
 
 ### 型定義の配置ルール

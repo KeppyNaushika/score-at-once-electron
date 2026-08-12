@@ -11,7 +11,7 @@ import prisma from "./client"
  * 領域メタデータの作成/更新（create/update）は採点結果を必要としないため questionScores を
  * 引かない軽い形状。get 系のみ採点画面向けに questionScores も引く。
  */
-export const cropRegionWithSubtotalsInclude = {
+const cropRegionWithSubtotalsInclude = {
   examPage: true,
   cropSubtotals: {
     include: {
@@ -20,7 +20,7 @@ export const cropRegionWithSubtotalsInclude = {
   },
 } satisfies Prisma.CropRegionInclude
 
-export const cropRegionWithSubtotalsAndScoresInclude = {
+const cropRegionWithSubtotalsAndScoresInclude = {
   examPage: true,
   cropSubtotals: {
     include: {
@@ -33,11 +33,6 @@ export const cropRegionWithSubtotalsAndScoresInclude = {
 /** examPage・cropSubtotals.subtotal を含む CropRegion（create/update の返り値） */
 export type CropRegionWithSubtotals = Prisma.CropRegionGetPayload<{
   include: typeof cropRegionWithSubtotalsInclude
-}>
-
-/** examPage・cropSubtotals.subtotal・questionScores を含む CropRegion（get 系の返り値） */
-export type CropRegionWithSubtotalsAndScores = Prisma.CropRegionGetPayload<{
-  include: typeof cropRegionWithSubtotalsAndScoresInclude
 }>
 
 /** 設問領域を作成する（orderIndex未指定時は自動採番、examPage・cropSubtotals リレーション含む） */

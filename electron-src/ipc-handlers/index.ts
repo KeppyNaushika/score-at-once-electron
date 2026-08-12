@@ -64,12 +64,13 @@ const handlerGroups = [
 ]
 
 /**
- * 全チャンネルの実装。preload はこの型から署名を導く。
+ * 全チャンネルの実装。preload は `Handlers` 型を通してこの署名を引く
+ * （値としては外へ出さない — renderer 側から main を実行させない）。
  *
  * スプレッドで畳むので、同じチャンネル名が2つあると後勝ちで**黙って消える**。
  * 登録時に件数を突き合わせて気付けるようにしてある（`setupAllIPCHandlers`）。
  */
-export const handlers = {
+const handlers = {
   ...answerSheetBuilderHandlers,
   ...archiveHandlers,
   ...auditLogHandlers,

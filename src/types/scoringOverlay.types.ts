@@ -35,7 +35,7 @@ export const OVERLAY_ANCHORS = [
 export type OverlayAnchor = (typeof OVERLAY_ANCHORS)[number]
 
 /** 想定外値は中央へ落とす */
-export const { to: toOverlayAnchor } = defineStringUnion(
+const { to: toOverlayAnchor } = defineStringUnion(
   OVERLAY_ANCHORS,
   "middle-center"
 )
@@ -46,7 +46,7 @@ export const OVERLAY_KINDS = ["mark", "partial", "subtotal", "total"] as const
 export type OverlayKind = (typeof OVERLAY_KINDS)[number]
 
 /** 想定外値は採点マークへ落とす */
-export const { to: toOverlayKind } = defineStringUnion(OVERLAY_KINDS, "mark")
+const { to: toOverlayKind } = defineStringUnion(OVERLAY_KINDS, "mark")
 
 /** 基準点の日本語ラベル（設定UIの選択肢） */
 export const OVERLAY_ANCHOR_LABELS: Record<OverlayAnchor, string> = {

@@ -13,7 +13,7 @@ import { serializePrisma } from "../lib/prisma/serializePrisma"
 import { toIpcErrorMessage } from "./ipcEnvelope"
 
 /** `withEvent` で包んだことの目印。登録側が `event` を渡すかの判断に使う */
-export const EVENT_HANDLER = Symbol("ipcEventHandler")
+const EVENT_HANDLER = Symbol("ipcEventHandler")
 
 /**
  * `event` を必要とするハンドラーに印を付ける。

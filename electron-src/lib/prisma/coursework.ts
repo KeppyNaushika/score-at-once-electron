@@ -186,7 +186,7 @@ export async function updateCoursework(
  * 参照されていて消せなかったことは失敗ではなく結果なので、値で返す。
  * 呼び出し側は参照元の成績名を並べて知らせる。
  */
-export type CourseworkDeleteResult =
+type CourseworkDeleteResult =
   { deleted: true } | { deleted: false; usedBy: string[] }
 
 /**

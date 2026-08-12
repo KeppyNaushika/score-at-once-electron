@@ -718,7 +718,7 @@ OMR 設定フォーム / `SubQuestionForm.tsx` / `BranchQuestionForm.tsx` / acti
 ### 7.4 段階4 — IPC の分割
 
 **変更**: `answerSheetBuilderHandlers.ts` / `answerSheetBuilderApi.ts` /
-`src/types/electron/answerSheetBuilderApi.d.ts` / `useAnswerSheetDefinition.ts` /
+`useAnswerSheetDefinition.ts` /
 `usePreviewDragInteraction.ts` / `AnswerSheetPreview.tsx`
 
 **手順**
@@ -883,7 +883,6 @@ delete → recreate で、id も uuid 再生成。#1126 の tombstone の罠に�
 | ファイル                                                                          | 段階 | 変更                                      |
 | --------------------------------------------------------------------------------- | ---- | ----------------------------------------- |
 | `src/types/answerSheetDefinition.types.ts`                                        | 2,3  | `*Attributes` 分解・action 書換           |
-| `src/types/electron/answerSheetBuilderApi.d.ts`                                   | 4,5  | API 型                                    |
 | `src/lib/assertNever.ts`                                                          | 4    | 新規（既存が無ければ）                    |
 | `src/components/answer-sheet-builder/constants.ts`                                | 2    | `generateId` の uuid 化・`createDefault*` |
 | `src/components/answer-sheet-builder/hooks/useAnswerSheetDefinition.ts`           | 2,4  | reducer の id 化・関所                    |
