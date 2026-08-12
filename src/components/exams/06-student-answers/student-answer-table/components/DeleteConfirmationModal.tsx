@@ -1,7 +1,7 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { AlertTriangle, Loader2 } from "lucide-react"
-import { useEffect, useState } from "react"
 
 import {
   AlertDialog,
@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import type { StudentAnswerScoreSummary } from "@/electron-src/lib/prisma/studentAnswer/crud"
+import { queryKeys } from "@/lib/queryKeys"
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean
@@ -57,38 +58,15 @@ function DeleteConfirmationBody({
   studentName,
   pageNumber,
 }: Omit<DeleteConfirmationModalProps, "isOpen">) {
-  const [summary, setSummary] = useState<StudentAnswerScoreSummary | null>(null)
-  const [isLoadingSummary, setIsLoadingSummary] = useState(true)
-  const [summaryError, setSummaryError] = useState<string | null>(null)
-
-  // async 関数内で完結させ、preload が古い等で同期例外が飛んでも loading を必ず解除する。
-  useEffect(() => {
-    let isCurrent = true
-
-    const loadSummary = async () => {
-      try {
-        const summary =
-          await window.electronAPI.getStudentAnswerScoreSummary(fileId)
-        if (!isCurrent) return
-        setSummary(summary)
-      } catch (error) {
-        if (!isCurrent) return
-        setSummaryError(
-          error instanceof Error
-            ? error.message
-            : "採点データの確認に失敗しました"
-        )
-      } finally {
-        if (isCurrent) setIsLoadingSummary(false)
-      }
-    }
-
-    void loadSummary()
-
-    return () => {
-      isCurrent = false
-    }
-  }, [fileId])
+  const {
+    data: summary = null,
+    isPending: isLoadingSummary,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.studentAnswerImage.scoreSummary(fileId),
+    queryFn: () => window.electronAPI.getStudentAnswerScoreSummary(fileId),
+  })
+  const summaryError = error ? error.message : null
 
   const handleConfirm = () => {
     onConfirm()

@@ -1,12 +1,13 @@
 "use client"
 
+import { skipToken, useQuery } from "@tanstack/react-query"
 import Image from "next/image"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { getScoringStatusFromArray } from "@/components/exams/07-score-at-once/types"
+import { queryKeys } from "@/lib/queryKeys"
 import type { LineStyle } from "@/types/drawingAnnotation.types"
-import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 
 import { DrawingToolPalette } from "./DrawingToolPalette"
@@ -69,17 +70,17 @@ export default function AnswerIndividualView({
   // 印字設定（採点マーク・点数表示のプレビュー用）をDBからロード
   const params = useParams()
   const examId = params?.examId as string | undefined
-  const [scoringMarkConfig, setAnswerOverlaySettings] =
-    useState<AnswerOverlaySettings>(DEFAULT_ANSWER_OVERLAY_SETTINGS)
-
-  useEffect(() => {
-    if (!examId || !window.electronAPI?.settings) return
-    ;(async () => {
-      const settings =
-        await window.electronAPI.settings.getExamExportSettings(examId)
-      setAnswerOverlaySettings(settings.answerOverlay)
-    })()
-  }, [examId])
+  const { data: answerOverlay } = useQuery({
+    queryKey: queryKeys.exam.answerOverlaySettings(examId ?? ""),
+    queryFn: examId
+      ? async () => {
+          const settings =
+            await window.electronAPI.settings.getExamExportSettings(examId)
+          return settings.answerOverlay
+        }
+      : skipToken,
+  })
+  const scoringMarkConfig = answerOverlay ?? DEFAULT_ANSWER_OVERLAY_SETTINGS
 
   // 現在表示中の採点データを取得
   const currentScoringData =

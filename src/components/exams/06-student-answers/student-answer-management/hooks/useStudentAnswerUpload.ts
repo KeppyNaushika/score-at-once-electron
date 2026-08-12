@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import type {
@@ -7,6 +8,7 @@ import type {
   UploadData,
 } from "@/components/exams/06-student-answers/types"
 import { usePdfPasswordConversion } from "@/hooks/usePdfPasswordConversion"
+import { queryKeys } from "@/lib/queryKeys"
 
 /** 答案ファイルのドロップ・変換・アップロード処理を統合するフック */
 export function useStudentAnswerUpload(
@@ -17,6 +19,8 @@ export function useStudentAnswerUpload(
   ) => void,
   mode: "upload" | "view" = "upload"
 ) {
+  const queryClient = useQueryClient()
+
   // State管理
   const [isUploading, setIsUploading] = useState(false)
   const [isConverting, setIsConverting] = useState(false)
@@ -27,13 +31,6 @@ export function useStudentAnswerUpload(
   // マーカー補正
   const [markerCorrectionEnabled, setMarkerCorrectionEnabledState] =
     useState(false)
-  const [markerCorrectionAvailable, setMarkerCorrectionAvailable] =
-    useState(false)
-  const [markerDiagnostics, setMarkerDiagnostics] = useState("")
-  // マスターマーカーを検出できた ExamPage の id 集合（序数 pageNumber ではキーしない）
-  const [markerAvailableExamPageIds, setMarkerAvailableExamPageIds] = useState<
-    Set<string>
-  >(new Set())
   const filesRef = useRef<UnsavedAnswerImage[]>([])
   const prevFilesRef = useRef<UnsavedAnswerImage[]>([])
 
@@ -134,97 +131,78 @@ export function useStudentAnswerUpload(
     [convertPdfWithRetry]
   )
 
-  // 試験のmarkerCorrectionEnabled設定をトグルの初期値として読み込む
-  useEffect(() => {
-    if (mode !== "upload" || !examId) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const exam = await window.electronAPI.getExam(examId)
-        if (cancelled || !exam) return
-        setMarkerCorrectionEnabledState(exam.markerCorrectionEnabled)
-      } catch {
-        // 取得失敗時は既定のfalseを維持
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [examId, mode])
+  // 試験の markerCorrectionEnabled をトグルの初期値にする
+  const { data: exam } = useQuery({
+    queryKey: queryKeys.exam.detail(examId ?? ""),
+    queryFn:
+      mode === "upload" && examId
+        ? () => window.electronAPI.getExam(examId)
+        : skipToken,
+  })
+  const [seededExamId, setSeededExamId] = useState<string | null>(null)
+  if (exam && seededExamId !== exam.id) {
+    setSeededExamId(exam.id)
+    setMarkerCorrectionEnabledState(exam.markerCorrectionEnabled)
+  }
 
   // トグル変更時はDBにも反映（次回アップロード時の初期値となる）
   const setMarkerCorrectionEnabled = useCallback(
-    (enabled: boolean) => {
+    async (enabled: boolean) => {
       setMarkerCorrectionEnabledState(enabled)
       if (!examId) return
-      window.electronAPI
-        .updateExam(examId, { markerCorrectionEnabled: enabled })
-        .catch((error) => {
-          console.error("Failed to persist markerCorrectionEnabled:", error)
+      try {
+        await window.electronAPI.updateExam(examId, {
+          markerCorrectionEnabled: enabled,
         })
+      } catch (error) {
+        console.error("Failed to persist markerCorrectionEnabled:", error)
+        toast.error("マーカー補正の設定を保存できませんでした")
+      }
+      // 試験のキャッシュは他の画面も見ているので取り直す
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.exam.detail(examId),
+      })
     },
-    [examId]
+    [examId, queryClient]
   )
 
   // マスターマーカー検出（補正可否判定のみ。トグル状態は試験設定に従う）
-  useEffect(() => {
-    if (mode !== "upload" || !examId) return
+  const { data: masterMarkers } = useQuery({
+    queryKey: queryKeys.exam.masterMarkers(examId ?? ""),
+    queryFn:
+      mode === "upload" && examId
+        ? () => window.electronAPI.omr.detectMasterMarkers(examId)
+        : skipToken,
+  })
 
-    let cancelled = false
-    ;(async () => {
-      try {
-        const result = await window.electronAPI.omr.detectMasterMarkers(examId)
-        if (cancelled) return
-        // マスターマーカーを検出できたページを記録（同定は ExamPage.id）
-        const availableExamPageIds = new Set<string>()
-        if (result.pages) {
-          for (const page of result.pages) {
-            if (page.result.success) {
-              availableExamPageIds.add(page.examPageId)
-            }
-          }
-        }
-        // 内容が同じなら既存参照を維持（effect誤発火防止）
-        setMarkerAvailableExamPageIds((prev) => {
-          if (
-            prev.size === availableExamPageIds.size &&
-            [...prev].every((examPageId) =>
-              availableExamPageIds.has(examPageId)
-            )
-          ) {
-            return prev
-          }
-          return availableExamPageIds
-        })
-        setMarkerCorrectionAvailable(availableExamPageIds.size > 0)
-        // 全ページで4マーカー検出できたかは pages から導く
-        if (result.pages.some((page) => !page.result.success)) {
-          const lines: string[] = []
-          for (const page of result.pages) {
-            if (!page.result.success && page.result.diagnostics) {
-              lines.push(`ページ${page.pageNumber}:`)
-              for (const diagnostic of page.result.diagnostics) {
-                if (!diagnostic.detected) {
-                  lines.push(
-                    `  ${diagnostic.corner}: ${diagnostic.failReason ?? "不明"} (黒px: ${diagnostic.darkPixels}/${diagnostic.totalPixels})`
-                  )
-                }
-              }
-            }
-          }
-          setMarkerDiagnostics(lines.join("\n"))
-        }
-      } catch {
-        if (!cancelled) {
-          setMarkerCorrectionAvailable(false)
+  // マーカーを検出できたページ（同定は ExamPage.id）
+  const markerAvailableExamPageIds = useMemo(
+    () =>
+      new Set(
+        (masterMarkers?.pages ?? [])
+          .filter((page) => page.result.success)
+          .map((page) => page.examPageId)
+      ),
+    [masterMarkers]
+  )
+  const markerCorrectionAvailable = markerAvailableExamPageIds.size > 0
+
+  // 検出できなかったページの内訳（表示用）
+  const markerDiagnostics = useMemo(() => {
+    const lines: string[] = []
+    for (const page of masterMarkers?.pages ?? []) {
+      if (page.result.success || !page.result.diagnostics) continue
+      lines.push(`ページ${page.pageNumber}:`)
+      for (const diagnostic of page.result.diagnostics) {
+        if (!diagnostic.detected) {
+          lines.push(
+            `  ${diagnostic.corner}: ${diagnostic.failReason ?? "不明"} (黒px: ${diagnostic.darkPixels}/${diagnostic.totalPixels})`
+          )
         }
       }
-    })()
-
-    return () => {
-      cancelled = true
     }
-  }, [examId, mode])
+    return lines.join("\n")
+  }, [masterMarkers])
 
   // ファイルドロップ処理
   const handleDrop = useCallback(

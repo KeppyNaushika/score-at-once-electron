@@ -1,6 +1,7 @@
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo } from "react"
 
+import { queryKeys } from "@/lib/queryKeys"
 import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 
 interface UseGridAnnotationsProps {
@@ -31,7 +32,7 @@ export function useGridAnnotations({
   const queryClient = useQueryClient()
   // 同じ設問を続けて開いても取り直さない（重複取得の抑止はキャッシュが担う）
   const queryKey = useMemo(
-    () => ["gridAnnotations", cropRegionId ?? null, currentUserId ?? null],
+    () => queryKeys.annotation.byCropRegion(cropRegionId, currentUserId),
     [cropRegionId, currentUserId]
   )
 

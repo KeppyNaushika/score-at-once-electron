@@ -45,6 +45,23 @@ export const queryKeys = {
   classrooms: {
     all: ["classrooms"] as const,
   },
+  annotation: {
+    /** 設問1つ分の手書き（グリッド表示が全受験者ぶん一括で取る） */
+    byCropRegion: (
+      cropRegionId: string | undefined,
+      userId: string | undefined
+    ) => ["annotation", "byCropRegion", cropRegionId, userId] as const,
+    /** 受験者1人分の全設問の手書き（個別表示の透明度制御が読む） */
+    byExamStudent: (
+      examStudentId: string | undefined,
+      userId: string | undefined
+    ) => ["annotation", "byExamStudent", examStudentId, userId] as const,
+  },
+  studentAnswerImage: {
+    /** 答案1枚に載っている採点結果の要約（削除確認で読む） */
+    scoreSummary: (studentAnswerImageId: string) =>
+      ["studentAnswerImage", studentAnswerImageId, "scoreSummary"] as const,
+  },
   studentExamResults: {
     detail: (studentId: string) => ["studentExamResults", studentId] as const,
   },
@@ -101,6 +118,23 @@ export const queryKeys = {
     cropRegionAssignments: (examId: string, userId: string | undefined) =>
       ["exam", examId, "cropRegionAssignments", userId] as const,
     members: (examId: string) => ["exam", examId, "members"] as const,
+    /** この試験にまだ追加していない小計点グループ */
+    availableSubtotalGroups: (examId: string) =>
+      ["exam", examId, "availableSubtotalGroups"] as const,
+    /** 採点マーク・点数の重ね描き設定（07 の個別表示が読む） */
+    answerOverlaySettings: (examId: string) =>
+      ["exam", examId, "answerOverlaySettings"] as const,
+    /** 模範解答のマスターマーカー検出結果（補正の可否判定） */
+    masterMarkers: (examId: string) =>
+      ["exam", examId, "masterMarkers"] as const,
+    /** Excel出力のプレビュー（選択した受験者ぶん） */
+    excelPreview: (examId: string, examStudentIds: readonly string[]) =>
+      ["exam", examId, "excelPreview", [...examStudentIds]] as const,
+    /** 採点済み答案のプレビュー（受験者1人ぶん） */
+    scoredAnswerPreview: (examId: string, examStudentId: string) =>
+      ["exam", examId, "scoredAnswerPreview", examStudentId] as const,
+    /** 採点画面(07)が1回で取る形（試験＋ページ＋答案） */
+    scoringPage: (examId: string) => ["exam", examId, "scoringPage"] as const,
   },
   grade: {
     list: () => ["grade", "list"] as const,

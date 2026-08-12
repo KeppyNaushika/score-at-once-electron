@@ -1,7 +1,11 @@
-import { useEffect, useState } from "react"
+"use client"
+
+import { skipToken, useQuery } from "@tanstack/react-query"
+import { useEffect } from "react"
 import { toast } from "sonner"
 
 import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
+import { queryKeys } from "@/lib/queryKeys"
 import type { ExamWithPages } from "@/types/prismaExtensions"
 import type { StudentAnswerImageWithExamPageAndStudent } from "@/types/prismaExtensions"
 
@@ -13,77 +17,54 @@ interface ScoringDataLoaderResult {
   currentUserId: string | null
 }
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_ANSWER_IMAGES: StudentAnswerImageWithExamPageAndStudent[] = []
+const EMPTY_CROP_REGIONS: CropRegionWithExamPage[] = []
+
 /** 試験・答案・設問領域・ユーザー情報を一括ロードして採点画面の初期データを準備するフック */
 export function useScoringDataLoader(
   examId: string,
   authUserId: string | null
 ): ScoringDataLoaderResult {
-  const [loading, setLoading] = useState(true)
-  const [exam, setExam] = useState<ExamWithPages | null>(null)
-  const [studentAnswerImages, setStudentAnswerImages] = useState<
-    StudentAnswerImageWithExamPageAndStudent[]
-  >([])
-  const [cropRegions, setCropRegions] = useState<CropRegionWithExamPage[]>([])
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  // 試験・答案・設問領域は揃って初めて採点できるので1つの取得にまとめる
+  const {
+    data,
+    isPending: loading,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.exam.scoringPage(examId),
+    queryFn: examId
+      ? async () => {
+          // 試験はスカラー + examPages の1クエリ（重データは別クエリ）
+          const [exam, studentAnswerImages, cropRegions] = await Promise.all([
+            window.electronAPI.getExamWithPages(examId),
+            window.electronAPI.getStudentAnswersByExamId(examId),
+            window.electronAPI.getQuestionAnswerRegionsByExamId(examId),
+          ])
+          if (!exam) throw new Error("試験が見つかりません")
+          return { exam, studentAnswerImages, cropRegions }
+        }
+      : skipToken,
+  })
 
+  // 操作者は AuthContext が持つ。取れないときだけ main へ聞きに行く
+  const { data: fallbackUser } = useQuery({
+    queryKey: queryKeys.currentUser.all,
+    queryFn: !authUserId
+      ? () => window.electronAPI.getCurrentUser()
+      : skipToken,
+  })
+
+  // 読み込みの失敗は通知する（取得ではないので effect でよい）
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true)
-
-        // 試験データの読み込み（スカラー + examPages を1クエリ。重データは別クエリ）
-        const examData = await window.electronAPI.getExamWithPages(examId)
-        if (!examData) {
-          throw new Error("試験が見つかりません")
-        }
-        setExam(examData)
-
-        // 答案データの読み込み
-        setStudentAnswerImages(
-          await window.electronAPI.getStudentAnswersByExamId(examId)
-        )
-
-        // 設問領域データの読み込み
-        const regionsResult =
-          await window.electronAPI.getQuestionAnswerRegionsByExamId(examId)
-        if (!regionsResult || !Array.isArray(regionsResult)) {
-          throw new Error("設問領域データの読み込みに失敗しました")
-        }
-
-        // DBレベルでフィルタリング済みなので、順序を保持したまま設定
-        setCropRegions(regionsResult as CropRegionWithExamPage[])
-
-        // ユーザーIDの設定（AuthContextから渡されたIDを優先）
-        if (authUserId) {
-          setCurrentUserId(authUserId)
-        } else {
-          // フォールバック: electronAPI経由で取得
-          const userData = await window.electronAPI.getCurrentUser()
-          if (userData && userData.id) {
-            setCurrentUserId(userData.id)
-          } else {
-            console.warn("ユーザーIDが取得できませんでした")
-            setCurrentUserId("default-user")
-          }
-        }
-      } catch (error) {
-        console.error("データの読み込みに失敗しました:", error)
-        toast.error("データの読み込みに失敗しました")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (examId) {
-      loadData()
-    }
-  }, [examId, authUserId])
+    if (error) toast.error("データの読み込みに失敗しました")
+  }, [error])
 
   return {
     loading,
-    exam,
-    studentAnswerImages,
-    cropRegions,
-    currentUserId,
+    exam: data?.exam ?? null,
+    studentAnswerImages: data?.studentAnswerImages ?? EMPTY_ANSWER_IMAGES,
+    cropRegions: data?.cropRegions ?? EMPTY_CROP_REGIONS,
+    currentUserId: authUserId ?? fallbackUser?.id ?? null,
   }
 }

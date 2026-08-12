@@ -1,7 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEffect, useMemo, useRef, useState } from "react"
 
+import { queryKeys } from "@/lib/queryKeys"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 
 import type { ScoredAnswerPreviewPage } from "../types"
@@ -58,15 +60,8 @@ export function useScoredAnswerPreview({
   enabled,
   reloadKey,
 }: UseScoredAnswerPreviewProps) {
-  // 取得結果・描画結果は、どの入力に対するものかを一緒に持つ。入力が変われば
-  // 一致しなくなるので、読み込み中フラグや消去の effect が要らない
-  const [fetched, setFetched] = useState<{
-    examId: string
-    previewStudentId: string
-    reloadKey: number
-    pages: LoadedPage[] | null
-    error: string | null
-  } | null>(null)
+  // 描画結果は、どの入力に対するものかを一緒に持つ。入力が変われば
+  // 一致しなくなるので、消去の effect が要らない
   const [rendered, setRendered] = useState<{
     pages: LoadedPage[]
     renderConfig: AnswerOverlaySettings
@@ -84,13 +79,52 @@ export function useScoredAnswerPreview({
   )
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
+  const queryClient = useQueryClient()
   const active = enabled && !!examId && !!previewStudentId
-  const isFetchCurrent =
-    fetched?.examId === examId &&
-    fetched.previewStudentId === previewStudentId &&
-    fetched.reloadKey === reloadKey
-  const loadedPages = active && isFetchCurrent ? fetched.pages : null
-  const isLoading = active && !isFetchCurrent
+  const queryKey = useMemo(
+    () => queryKeys.exam.scoredAnswerPreview(examId, previewStudentId ?? ""),
+    [examId, previewStudentId]
+  )
+
+  // 答案データの取得と画像のデコードは対で1つの結果（片方だけでは描けない）
+  const {
+    data: fetchedPages,
+    isFetching,
+    error: fetchError,
+  } = useQuery({
+    queryKey,
+    queryFn:
+      active && previewStudentId
+        ? async (): Promise<LoadedPage[]> => {
+            const dataResult = await window.electronAPI.export.getPdfExportData(
+              {
+                examId,
+                selectedExamStudentIds: [previewStudentId],
+              }
+            )
+
+            const loaded: LoadedPage[] = []
+            for (const page of dataResult.pages) {
+              const img = new Image()
+              img.crossOrigin = "anonymous"
+              img.src = page.imageUrl
+              await new Promise<void>((resolve, reject) => {
+                img.onload = () => resolve()
+                img.onerror = () => reject(new Error("画像の読み込みに失敗"))
+              })
+              loaded.push({ page, img })
+            }
+            return loaded
+          }
+        : skipToken,
+  })
+  const loadedPages = active ? (fetchedPages ?? null) : null
+  const isLoading = active && isFetching
+
+  // タブへ戻ったら読み直す（出力はデータを読むので据え置くと食い違う）
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey })
+  }, [reloadKey, queryKey, queryClient])
 
   // 描画中は前回の画像を出したままにする（生徒を替えるたびに白くしない）。
   // 出力対象が無いとき（未選択・答案なし・無効）だけ空にする
@@ -103,7 +137,11 @@ export function useScoredAnswerPreview({
   const renderError =
     rendered !== null && rendered.pages === loadedPages ? rendered.error : null
   const error = enabled
-    ? ((active && isFetchCurrent ? fetched.error : null) ?? renderError)
+    ? ((fetchError
+        ? fetchError.message
+        : loadedPages?.length === 0
+          ? "この生徒の答案データがありません"
+          : null) ?? renderError)
     : null
 
   // 設定変更をデバウンスして renderConfig に反映
@@ -113,81 +151,6 @@ export function useScoredAnswerPreview({
     }, RENDER_DEBOUNCE_MS)
     return () => clearTimeout(timer)
   }, [answerOverlaySettings])
-
-  // 答案データ取得＋画像デコード（生徒切替時のみ）
-  useEffect(() => {
-    if (!active || isFetchCurrent || !previewStudentId) return
-
-    let cancelled = false
-
-    const load = async () => {
-      try {
-        const dataResult = await window.electronAPI.export.getPdfExportData({
-          examId,
-          selectedExamStudentIds: [previewStudentId],
-        })
-
-        if (cancelled) return
-
-        if (dataResult.pages.length === 0) {
-          setFetched({
-            examId,
-            previewStudentId,
-            reloadKey,
-            pages: [],
-            error: "この生徒の答案データがありません",
-          })
-          return
-        }
-
-        // 各ページの画像をデコード
-        const loaded: LoadedPage[] = []
-        for (const page of dataResult.pages) {
-          const img = new Image()
-          img.crossOrigin = "anonymous"
-          img.src = page.imageUrl
-
-          await new Promise<void>((resolve, reject) => {
-            img.onload = () => resolve()
-            img.onerror = () => reject(new Error("画像の読み込みに失敗"))
-          })
-
-          if (cancelled) return
-          loaded.push({ page, img })
-        }
-
-        if (!cancelled) {
-          setFetched({
-            examId,
-            previewStudentId,
-            reloadKey,
-            pages: loaded,
-            error: null,
-          })
-        }
-      } catch (err) {
-        if (!cancelled) {
-          console.error("Scored answer preview data load error:", err)
-          setFetched({
-            examId,
-            previewStudentId,
-            reloadKey,
-            pages: null,
-            error:
-              err instanceof Error
-                ? err.message
-                : "プレビューの生成に失敗しました",
-          })
-        }
-      }
-    }
-
-    load()
-
-    return () => {
-      cancelled = true
-    }
-  }, [active, isFetchCurrent, examId, previewStudentId, reloadKey])
 
   // Canvas描画（取得済みデータ or 設定変更時）
   useEffect(() => {

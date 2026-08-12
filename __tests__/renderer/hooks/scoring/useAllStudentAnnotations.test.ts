@@ -24,6 +24,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useAllStudentAnnotations } from "@/components/exams/07-score-at-once/ScoringIndividual/hooks/view/useAllStudentAnnotations"
 import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
 
+import { createQueryWrapper } from "../../../helpers/queryWrapper"
 import {
   cleanupMockDrawingAPI,
   createMockAnnotation,
@@ -64,12 +65,14 @@ describe("useAllStudentAnnotations", () => {
       ]
       mockAPI.getByExamStudent.mockResolvedValue(annotations)
 
-      const { result } = renderHook(() =>
-        useAllStudentAnnotations({
-          currentExamStudentId: "student-1",
-          currentCropRegion: makeCropRegion(),
-          currentUserId: "user-1",
-        })
+      const { result } = renderHook(
+        () =>
+          useAllStudentAnnotations({
+            currentExamStudentId: "student-1",
+            currentCropRegion: makeCropRegion(),
+            currentUserId: "user-1",
+          }),
+        { wrapper: createQueryWrapper() }
       )
 
       await waitFor(() => {
@@ -95,7 +98,10 @@ describe("useAllStudentAnnotations", () => {
             currentCropRegion: makeCropRegion(),
             currentUserId: "user-1",
           }),
-        { initialProps: { examStudentId: "student-1" } }
+        {
+          initialProps: { examStudentId: "student-1" },
+          wrapper: createQueryWrapper(),
+        }
       )
 
       await waitFor(() => {
@@ -117,7 +123,10 @@ describe("useAllStudentAnnotations", () => {
   })
 
   describe("currentCropRegion変更（設問切り替え）", () => {
-    it("cropRegion.idが変わると再取得される", async () => {
+    // 取得は受験者と操作者だけで決まる（要求に設問領域は入らない）。
+    // 設問を切り替えただけで取り直しても同じ答えが返るので、取り直さない。
+    // 描いた内容が変わったことは refreshKey が知らせる。
+    it("設問を切り替えても取り直さない", async () => {
       mockAPI.getByExamStudent.mockResolvedValue([
         createMockAnnotation({ id: "a1" }),
       ])
@@ -129,52 +138,23 @@ describe("useAllStudentAnnotations", () => {
             currentCropRegion: cropRegion,
             currentUserId: "user-1",
           }),
-        { initialProps: { cropRegion: makeCropRegion({ id: "cr-1" }) } }
+        {
+          initialProps: { cropRegion: makeCropRegion({ id: "cr-1" }) },
+          wrapper: createQueryWrapper(),
+        }
       )
 
       await waitFor(() => {
         expect(mockAPI.getByExamStudent).toHaveBeenCalled()
       })
-
       const callCount = mockAPI.getByExamStudent.mock.calls.length
 
       rerender({ cropRegion: makeCropRegion({ id: "cr-2", examId: "exam-1" }) })
 
-      await waitFor(() => {
-        expect(mockAPI.getByExamStudent.mock.calls.length).toBeGreaterThan(
-          callCount
-        )
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10))
       })
-    })
-
-    it("examIdが変わると再取得される", async () => {
-      mockAPI.getByExamStudent.mockResolvedValue([
-        createMockAnnotation({ id: "a1" }),
-      ])
-
-      const { rerender } = renderHook(
-        ({ cropRegion }) =>
-          useAllStudentAnnotations({
-            currentExamStudentId: "student-1",
-            currentCropRegion: cropRegion,
-            currentUserId: "user-1",
-          }),
-        { initialProps: { cropRegion: makeCropRegion({ examId: "exam-1" }) } }
-      )
-
-      await waitFor(() => {
-        expect(mockAPI.getByExamStudent).toHaveBeenCalled()
-      })
-
-      const callCount = mockAPI.getByExamStudent.mock.calls.length
-
-      rerender({ cropRegion: makeCropRegion({ examId: "exam-2" }) })
-
-      await waitFor(() => {
-        expect(mockAPI.getByExamStudent.mock.calls.length).toBeGreaterThan(
-          callCount
-        )
-      })
+      expect(mockAPI.getByExamStudent.mock.calls.length).toBe(callCount)
     })
   })
 
@@ -192,7 +172,7 @@ describe("useAllStudentAnnotations", () => {
             currentUserId: "user-1",
             refreshKey,
           }),
-        { initialProps: { refreshKey: 0 } }
+        { initialProps: { refreshKey: 0 }, wrapper: createQueryWrapper() }
       )
 
       await waitFor(() => {
@@ -214,12 +194,14 @@ describe("useAllStudentAnnotations", () => {
 
   describe("パラメータ未設定", () => {
     it("examStudentId未設定で空配列を返す", async () => {
-      const { result } = renderHook(() =>
-        useAllStudentAnnotations({
-          currentExamStudentId: undefined,
-          currentCropRegion: makeCropRegion(),
-          currentUserId: "user-1",
-        })
+      const { result } = renderHook(
+        () =>
+          useAllStudentAnnotations({
+            currentExamStudentId: undefined,
+            currentCropRegion: makeCropRegion(),
+            currentUserId: "user-1",
+          }),
+        { wrapper: createQueryWrapper() }
       )
 
       await act(async () => {
@@ -231,12 +213,14 @@ describe("useAllStudentAnnotations", () => {
     })
 
     it("cropRegion未設定で空配列を返す", async () => {
-      const { result } = renderHook(() =>
-        useAllStudentAnnotations({
-          currentExamStudentId: "student-1",
-          currentCropRegion: null,
-          currentUserId: "user-1",
-        })
+      const { result } = renderHook(
+        () =>
+          useAllStudentAnnotations({
+            currentExamStudentId: "student-1",
+            currentCropRegion: null,
+            currentUserId: "user-1",
+          }),
+        { wrapper: createQueryWrapper() }
       )
 
       await act(async () => {
@@ -252,12 +236,14 @@ describe("useAllStudentAnnotations", () => {
     it("失敗時に空配列を返す", async () => {
       mockAPI.getByExamStudent.mockRejectedValue(new Error("取得エラー"))
 
-      const { result } = renderHook(() =>
-        useAllStudentAnnotations({
-          currentExamStudentId: "student-1",
-          currentCropRegion: makeCropRegion(),
-          currentUserId: "user-1",
-        })
+      const { result } = renderHook(
+        () =>
+          useAllStudentAnnotations({
+            currentExamStudentId: "student-1",
+            currentCropRegion: makeCropRegion(),
+            currentUserId: "user-1",
+          }),
+        { wrapper: createQueryWrapper() }
       )
 
       await waitFor(() => {

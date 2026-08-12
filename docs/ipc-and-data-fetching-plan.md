@@ -388,18 +388,16 @@ DB 上 String の union 列（`inputMode` / `kind` / `aggregate` / `absentMethod
 `estimationMode` / `status`）は、契約で union を名乗るだけで変換していなかった。
 境界（lib の返り値）で `defineStringUnion` の `to*` を通す形へ揃えた。
 
-### 段階6 — lint の締め（ルールは締めたが、移行は途中）
+### 段階6 — lint の締め（完了）
 
 `react-hooks/set-state-in-effect` の違反39件を全て `useQuery` / `useMemo` へ移し、
 ルールを `error` へ上げた。`--max-warnings` は 0。
 
-> **「39件」は lint 由来の数で、fetch-effect の総数ではない。** このルールが見るのは
+> **「39件」は lint 由来の数で、fetch-effect の総数ではなかった。** このルールが見るのは
 > **effect の外で定義した関数**だけで、effect の中へ直接書いた取得は数えない
 > （`eslint.config.mjs` に書いた注意書きのとおり）。実測では **effect の本体に
-> `window.electronAPI` が現れるものが 47箇所**残っている。押し出し・購読の effect も
-> 混ざっているので全部が移行対象ではないが、**棚卸しは済んでいない**。
-> 少なくとも `useExportPage.ts:90` は永続 `initializedRef` で守られた取得で、
-> 試験を切り替えても前の試験の出力設定が残る（段階7 #11）。
+> `window.electronAPI` が現れるものが 47箇所**残っていた。この棚卸しは段階7で
+> 済ませ、**7箇所**（取得ではない effect のみ）まで減らした。
 
 移し方は3通りだった。
 
@@ -421,13 +419,14 @@ DB 上 String の union 列（`inputMode` / `kind` / `aggregate` / `absentMethod
 `assignments` と `originalAssignments`）が見つかった。保存のたびに両方を更新して
 いたので常に同じ値で、「変更をリセット」は何もしていなかった。
 
-### 段階7 — レビューで出た回帰の修正（未着手）
+### 段階7 — レビューで出た回帰の修正（完了）
 
 段階4〜6のマージ前レビュー（finder 4本 → 候補39件 → 検証で8件棄却）で、**この移行が
-入れた回帰が10件**確定した。全て直してからマージする。
+入れた回帰が10件**確定した。追加調査で4件（E）、47箇所の棚卸しでさらに3件を足し、
+**全て直した**。
 
-原因は3系統に分かれる。どれも「移行の型」そのものの誤りなので、同じ形が他にも無いかを
-直すついでに確かめること。
+原因は3系統に分かれる。どれも「移行の型」そのものの誤りだったので、同じ形が他にも
+無いかを確かめながら直した（E と棚卸しの節がその結果）。
 
 #### A. キャッシュキーの衝突（2組）
 
@@ -496,67 +495,56 @@ IPC が throw する形になったのに `void` で投げているため、失�
 | 13  | `useExportPage.ts:274`        | `queryKeys.exam.students(examId)` に `{exam, students}` という複合を入れている。消費者が1つなので今は衝突していないだけで、**系統Aと同じ形**                                                                                            |
 | 14  | `useClickScoringConfig.ts:53` | `{...DEFAULT, ...parsed}` で保存済み JSON をそのまま広げており、壊れた値が union を名乗ったまま通る。`CLICK_SCORING_ACTIONS` が同じファイルにあるのに使っていない（この移行より前からの穴だが、境界で倒す方針を入れた以上ここも揃える） |
 
-<details>
-<summary>棚卸しが要る47箇所（effect の本体に <code>window.electronAPI</code> があるもの）</summary>
+#### 棚卸しの結果（47箇所 → 7箇所）
 
-押し出し・購読の effect も混ざっている。「取得して setState している」ものだけが移行対象。
+lint が数えない「effect の本体に書いた取得」を全て見た。**40箇所を `useQuery` へ移し、
+7箇所を effect のまま残した。** 実測は TypeScript コンパイラ API による AST 走査
+（`useEffect` の本体に `window.electronAPI` が現れるもの）。
 
-- `src/app/answer-sheet-builder/[definitionId]/layout.tsx:39`
-- `src/app/classrooms/[classroomId]/hooks/useClassroomExamResults.ts:11`
-- `src/app/coursework/[courseworkId]/layout.tsx:35`
-- `src/app/exams/[examId]/layout.tsx:50`
-- `src/app/grades/[gradeId]/layout.tsx:40`
-- `src/app/settings/components/AuditLogsTab.tsx:196`
-- `src/app/settings/components/ScreenControlTab.tsx:34`
-- `src/app/settings/hooks/useKeyboardSettings.ts:19`
-- `src/app/settings/hooks/useSyncSettings.ts:25`
-- `src/app/students/[studentId]/hooks/useStudentDetail.ts:17`
-- `src/app/students/[studentId]/hooks/useStudentExamResults.ts:9`
-- `src/components/answer-sheet-builder/AnswerSheetBuilderMainView.tsx:78`
-- `src/components/answer-sheet-builder/AnswerSheetBuilderMainView.tsx:97`
-- `src/components/answer-sheet-builder/AnswerSheetDefinitionDetail.tsx:43`
-- `src/components/answer-sheet-builder/AnswerSheetDefinitionList.tsx:116`
-- `src/components/answer-sheet-builder/AnswerSheetExportView.tsx:34`
-- `src/components/classroom/ClassroomManagementTable.tsx:51`
-- `src/components/common/ScreenBlackout.tsx:46`
-- `src/components/coursework/EditCourseworkWindow.tsx:54`
-- `src/components/exams/04-question-group/components/SubtotalGroupSelector.tsx:42`
-- `src/components/exams/06-student-answers/student-answer-management/hooks/useStudentAnswerUpload.ts:138`
-- `src/components/exams/06-student-answers/student-answer-management/hooks/useStudentAnswerUpload.ts:170`
-- `src/components/exams/06-student-answers/student-answer-table/components/DeleteConfirmationModal.tsx:65`
-- `src/components/exams/06-student-answers/student-answer-table/hooks/useMarkerCorrection.ts:133`
-- `src/components/exams/07-score-at-once/OMRRecognition/hooks/useOmrAutoScoring.ts:103`
-- `src/components/exams/07-score-at-once/ScoringIndividual/AnswerIndividualView.tsx:75`
-- `src/components/exams/07-score-at-once/ScoringIndividual/hooks/core/useImageLoader.ts:36`
-- `src/components/exams/07-score-at-once/ScoringIndividual/hooks/view/useAllStudentAnnotations.ts:49`
-- `src/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider.tsx:230`
-- `src/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerWhiteness.ts:80`
-- `src/components/exams/07-score-at-once/ScoringMain/hooks/useScoringDataLoader.ts:29`
-- `src/components/exams/08-export/hooks/useExcelPreview.ts:88`
-- `src/components/exams/08-export/hooks/useExportPage.ts:229`
-- `src/components/exams/08-export/hooks/useExportPage.ts:90`
-- `src/components/exams/08-export/hooks/useScoredAnswerPdfExport.ts:331`
-- `src/components/exams/08-export/hooks/useScoredAnswerPreview.ts:118`
-- `src/components/exams/forms/CreateExamWindow.tsx:44`
-- `src/components/exams/forms/EditExamWindow.tsx:48`
-- `src/components/exams/list/ExamList.tsx:80`
-- `src/components/grades/03-data-sources/AddDataSourceInline.tsx:76`
-- `src/components/grades/03-data-sources/AddDataSourceInline.tsx:85`
-- `src/components/grades/03-data-sources/AddDataSourceInline.tsx:95`
-- `src/components/grades/04-manual-scores/ManualScoresContainer.tsx:31`
-- `src/components/grades/07-export/ExportContainer.tsx:64`
-- `src/components/student/StudentArchiveExportDialog.tsx:43`
-- `src/components/student/StudentTable.tsx:85`
-- `src/components/subtotal-groups/components/SubtotalGroupModal.tsx:151`
+移すときに分かったのは、**同じものを画面ごとに引き直していた**ことである。
 
-</details>
+| 引いていたもの    | 引いていた画面数 | 移した先                                 |
+| ----------------- | ---------------- | ---------------------------------------- |
+| `tagGetAll`       | 6                | `useTags`（既存）                        |
+| `fetchStudents`   | 4                | `useStudents`（新設）                    |
+| `fetchClassrooms` | 4                | `useClassrooms`（新設）                  |
+| `fetchUsers`      | 3                | `queryKeys.users.all`                    |
+| `loadDefinition`  | 4                | `queryKeys.answerSheetDefinition.detail` |
+
+パンくずが名前だけのために別途引いていた4つの layout は、実体そのもののキャッシュを
+`select` で共有する（`grade.detail` と同じく、**同一の queryFn を持つ消費者だけが
+キーを共有してよい**）。
+
+effect のまま残した7箇所は、いずれも取得ではない。
+
+| 場所                                | 何をしているか                                   |
+| ----------------------------------- | ------------------------------------------------ |
+| `useSyncSettings.ts:43`             | main からの押し出しを購読                        |
+| `useOmrAutoScoring.ts:103`          | 認識の進捗を購読                                 |
+| `AnswerSheetBuilderMainView.tsx:99` | 編集内容の自動保存（書き込み）                   |
+| `useScoredAnswerPdfExport.ts:331`   | ストリーミング出力の確定（書き込み）             |
+| `useMarkerCorrection.ts:133`        | 画像の補正・復元（DOM のパイプライン）           |
+| `useAnswerWhiteness.ts:80`          | 白紙判定の測定（同上）                           |
+| `useImageLoader.ts:36`              | 答案画像のデコードと `imageRef` への反映（同上） |
+
+`useImageLoader` だけは IPC（`checkFileExists`）を含むが、結果は `HTMLImageElement`
+であってキャッシュに載せるものではない。
+
+**この過程で、レビューが挙げていない同型の穴も直した。**
+
+- `useKeyboardSettings` と `ShortcutProvider` がキーバインディングを別々に持っていた。
+  設定画面で変えても、開いている採点画面には届かなかった
+- `ExportContainer`（成績の出力設定）も `useExportPage` と同じ永続 ref で1回に固定して
+  いた。成績を切り替えても前の成績の設定が残る（#11 と同型）
+- `useScoringDataLoader` は操作者が取れないとき `"default-user"` という**存在しない id**
+  へ倒していた。返り値の型は元から `string | null` なので、null を返す形に直した
 
 **棄却1は確定した #6 と同一の問題だった。** 同じキー衝突を、片方の検証が棄却し
 もう片方が確定させている。**検証の一貫性は保証されていない**ので、棄却＝安全とは読まない。
 
 #### 検証
 
-- `npm run check-all`（0 errors / 0 warnings）と `npx vitest run`（1,346件）
+- `npm run check-all`（0 errors / 0 warnings）と `npx vitest run`（1,345件）
 
 **ただしこの2つでは足りない。** この移行で見つけた実バグは全て「型」が教えたもので、
 **アプリを一度も起動していない**（`npm run dev` も e2e も走らせていない）。
@@ -566,19 +554,25 @@ IPC が throw する形になったのに `void` で投げているため、失�
 - `useScoringFilter` にはテストが1件も無い。その中核の派生ロジックを書き換えた
 - 389ファイル・±3万行に対して finder 4本・候補39件。**網羅の主張はできない**
 
+**テストを1件、新しい挙動に合わせて書き換えた。**
+`useAllStudentAnnotations` は「設問を切り替えると取り直す」ことを検証していたが、
+要求（`drawing.getByExamStudent`）に設問領域は入らないので、取り直しても同じ答えしか
+返らない。取り直さないことを検証する形へ変えた。**通らなくなったテストを消したのでは
+なく、何を保証すべきかが変わったという判断**なので、根拠をここに残す。
+
 ---
 
 ## 7. 検証
 
 型検査だけでは塞がらない部分をスクリプトで担保する。いずれも現時点で 0 件なのでグリーンのまま導入できる。
 
-| 検査                 | 内容                                         | 現在値              |
-| -------------------- | -------------------------------------------- | ------------------- |
-| チャンネル突き合わせ | 登録と `invoke` の差分                       | 0 / 0               |
-| Decimal 走査         | 推論戻り値型に `Decimal` が残るチャンネル    | 4（§7.1）           |
-| 値 import 走査       | `src/` から `electron-src/` への値 import    | 7（すべて許可済み） |
-| エンベロープ残存     | 契約 `.d.ts` の `success` 出現               | 移行の進捗そのもの  |
-| effect からの取得    | `useEffect` から `window.electronAPI` へ到達 | 112 → 0             |
+| 検査                 | 内容                                      | 現在値              |
+| -------------------- | ----------------------------------------- | ------------------- |
+| チャンネル突き合わせ | 登録と `invoke` の差分                    | 0 / 0               |
+| Decimal 走査         | 推論戻り値型に `Decimal` が残るチャンネル | 4（§7.1）           |
+| 値 import 走査       | `src/` から `electron-src/` への値 import | 7（すべて許可済み） |
+| エンベロープ残存     | 契約 `.d.ts` の `success` 出現            | 移行の進捗そのもの  |
+| effect からの取得    | `useEffect` の本体に `window.electronAPI` | 112 → 7（§段階7）   |
 
 いずれも TypeScript コンパイラ API による AST 走査で書ける。grep では `import * as path` や
 複数行 import を誤判定するため不可。

@@ -1,8 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEffect, useMemo } from "react"
 
 import { loadStudentExportPlacements } from "@/components/exams/08-export/utils/loadStudentExportPlacements"
+import { useDebouncedValue } from "@/hooks/useDebouncedValue"
+import { queryKeys } from "@/lib/queryKeys"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -46,6 +49,9 @@ export interface ExcelPreviewData {
   rows: ExcelPreviewRow[]
 }
 
+/** 打鍵ごとに重い集計を走らせないための待ち時間（ms） */
+const PREVIEW_DEBOUNCE_MS = 300
+
 interface UseExcelPreviewProps {
   examId: string
   /** 呼び出し側で安定した参照を渡すこと（毎レンダー新しい配列だと再取得が止まらない） */
@@ -65,92 +71,76 @@ export function useExcelPreview({
   enabled,
   reloadKey,
 }: UseExcelPreviewProps) {
-  // 取得結果は「どの試験・どの生徒選択に対するものか」を一緒に持つ。入力が
-  // 変われば一致しなくなるので、読み込み中フラグや消去の effect が要らない
-  const [fetched, setFetched] = useState<{
-    examId: string
-    selectedExamStudentIds: string[]
-    reloadKey: number
-    previewData: ExcelPreviewData | null
-    error: string | null
-  } | null>(null)
+  const queryClient = useQueryClient()
 
-  const active = enabled && !!examId && selectedExamStudentIds.length > 0
-  const isCurrent =
-    fetched?.examId === examId &&
-    fetched.selectedExamStudentIds === selectedExamStudentIds &&
-    fetched.reloadKey === reloadKey
+  // 生徒選択は連続して変わるので、落ち着いてから取りに行く
+  const debouncedExamStudentIds = useDebouncedValue(
+    selectedExamStudentIds,
+    PREVIEW_DEBOUNCE_MS
+  )
 
-  const previewData = active && isCurrent ? fetched.previewData : null
-  const error = active && isCurrent ? fetched.error : null
-  const isLoading = active && !isCurrent
+  const active = enabled && !!examId && debouncedExamStudentIds.length > 0
+  const queryKey = useMemo(
+    () => queryKeys.exam.excelPreview(examId, debouncedExamStudentIds),
+    [examId, debouncedExamStudentIds]
+  )
 
-  useEffect(() => {
-    if (!active || isCurrent) return
+  const {
+    data: previewData = null,
+    isFetching,
+    error,
+  } = useQuery({
+    queryKey,
+    queryFn: active
+      ? async (): Promise<ExcelPreviewData> => {
+          const studentPlacements = await loadStudentExportPlacements(examId)
+          const result = await window.electronAPI.export.getExcelPreviewData({
+            examId,
+            selectedExamStudentIds: debouncedExamStudentIds,
+            studentPlacements,
+          })
 
-    // デバウンス: 生徒選択変更時に300ms待機
-    const timer = setTimeout(async () => {
-      try {
-        const studentPlacements = await loadStudentExportPlacements(examId)
-        const result = await window.electronAPI.export.getExcelPreviewData({
-          examId,
-          selectedExamStudentIds,
-          studentPlacements,
-        })
-
-        const headers: ExcelPreviewHeader = {
-          questionLabels:
-            result.questionRegions.map(
+          const headers: ExcelPreviewHeader = {
+            questionLabels: result.questionRegions.map(
               (questionRegion) =>
                 questionRegion.label ||
                 `問${(questionRegion.orderIndex ?? 0) + 1}`
-            ) || [],
-          questionMaxScores:
-            result.questionRegions.map(
+            ),
+            questionMaxScores: result.questionRegions.map(
               (questionRegion) => questionRegion.points ?? 0
-            ) || [],
-          subtotalLabels:
-            result.subtotalColumns.map(
+            ),
+            subtotalLabels: result.subtotalColumns.map(
               (subtotalColumn) => subtotalColumn.label
-            ) || [],
+            ),
+          }
+
+          const rows: ExcelPreviewRow[] = result.scoringData.map((data) => ({
+            examStudentId: data.examStudentId,
+            studentName: data.studentName,
+            studentNumber: data.studentNumber,
+            grade: data.grade,
+            className: data.className,
+            attendanceNumber: data.attendanceNumber,
+            status: data.status,
+            scores: data.scores,
+            totalScore: data.totalScore,
+            totalMaxScore: data.totalMaxScore,
+            subtotalScores: data.subtotalScores,
+          }))
+
+          return { headers, rows }
         }
+      : skipToken,
+  })
 
-        const rows: ExcelPreviewRow[] = result.scoringData.map((data) => ({
-          examStudentId: data.examStudentId,
-          studentName: data.studentName,
-          studentNumber: data.studentNumber,
-          grade: data.grade,
-          className: data.className,
-          attendanceNumber: data.attendanceNumber,
-          status: data.status,
-          scores: data.scores,
-          totalScore: data.totalScore,
-          totalMaxScore: data.totalMaxScore,
-          subtotalScores: data.subtotalScores,
-        }))
+  // タブへ戻ったら読み直す。出力はデータを読むので、据え置くと表示と食い違う
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey })
+  }, [reloadKey, queryKey, queryClient])
 
-        setFetched({
-          examId,
-          selectedExamStudentIds,
-          reloadKey,
-          previewData: { headers, rows },
-          error: null,
-        })
-      } catch (err) {
-        console.error("Excel preview data fetch error:", err)
-        setFetched({
-          examId,
-          selectedExamStudentIds,
-          reloadKey,
-          previewData: null,
-          error:
-            err instanceof Error ? err.message : "データの取得に失敗しました",
-        })
-      }
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [active, isCurrent, examId, selectedExamStudentIds, reloadKey])
-
-  return { previewData, isLoading, error }
+  return {
+    previewData: active ? previewData : null,
+    isLoading: active && (isFetching || previewData === null),
+    error: active && error ? error.message : null,
+  }
 }

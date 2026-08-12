@@ -1,8 +1,9 @@
 "use client"
 
+import { skipToken, useQuery } from "@tanstack/react-query"
 import { Calculator, Plus, Search, Trash2 } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
+import { queryKeys } from "@/lib/queryKeys"
 
 interface SubtotalGroupSelectorProps {
   examId: string
@@ -25,37 +27,26 @@ interface SubtotalGroupSelectorProps {
   onRefresh: () => void
 }
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_GROUPS: SubtotalGroupWithSubtotals[] = []
+
 export function SubtotalGroupSelector({
   examId,
   activeSubtotalGroups,
   onRefresh,
 }: SubtotalGroupSelectorProps) {
-  const [availableGroups, setAvailableGroups] = useState<
-    SubtotalGroupWithSubtotals[]
-  >([])
-  const [loading, setLoading] = useState(false)
   const [showSelector, setShowSelector] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
 
-  // 利用可能な小計点グループを取得
-
-  useEffect(() => {
-    if (showSelector) {
-      const fetchAvailableGroups = async () => {
-        setLoading(true)
-        try {
-          setAvailableGroups(
-            await window.electronAPI.getAvailableSubtotalGroupsForExam(examId)
-          )
-        } catch (error) {
-          console.error("Error fetching available subtotal groups:", error)
-        } finally {
-          setLoading(false)
-        }
-      }
-      fetchAvailableGroups()
+  // 追加できる小計点グループは、選択を開いたときだけ取る
+  const { data: availableGroups = EMPTY_GROUPS, isPending: loading } = useQuery(
+    {
+      queryKey: queryKeys.exam.availableSubtotalGroups(examId),
+      queryFn: showSelector
+        ? () => window.electronAPI.getAvailableSubtotalGroupsForExam(examId)
+        : skipToken,
     }
-  }, [showSelector, examId, setAvailableGroups])
+  )
 
   // 小計点グループを試験に追加
   const handleAddGroup = async (groupId: string) => {

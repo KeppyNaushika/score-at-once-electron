@@ -2,9 +2,11 @@
  * @fileoverview 全設問アノテーション読み込みフック
  * 透明度制御用に現在の学生と試験の全アノテーションを読み込む
  */
-import { useEffect, useState } from "react"
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEffect, useMemo } from "react"
 
 import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
+import { queryKeys } from "@/lib/queryKeys"
 import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 
 /** 全設問アノテーション読み込みフックのパラメータ */
@@ -36,62 +38,41 @@ interface UseAllStudentAnnotationsReturn {
  * @param params - フックパラメータ
  * @returns 全設問のアノテーション
  */
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_ANNOTATIONS: AnnotationWithContext[] = []
+
 export function useAllStudentAnnotations({
   currentExamStudentId,
   currentCropRegion,
   currentUserId,
   refreshKey,
 }: UseAllStudentAnnotationsParams): UseAllStudentAnnotationsReturn {
-  const [allStudentAnnotations, setAllStudentAnnotations] = useState<
-    AnnotationWithContext[]
-  >([])
+  const queryClient = useQueryClient()
+  const queryKey = useMemo(
+    () =>
+      queryKeys.annotation.byExamStudent(currentExamStudentId, currentUserId),
+    [currentExamStudentId, currentUserId]
+  )
 
+  // ログインユーザーの手書きだけを取る（透明度制御は自分の描画にしか効かない）
+  const { data: allStudentAnnotations = EMPTY_ANNOTATIONS } = useQuery({
+    queryKey,
+    queryFn:
+      currentExamStudentId && currentCropRegion?.examPage?.examId
+        ? () =>
+            window.electronAPI.drawing.getByExamStudent(
+              currentExamStudentId,
+              undefined, // type
+              currentUserId
+            )
+        : skipToken,
+  })
+
+  // 注釈が書き換わったことの合図。取り直しの指示なので setState はしない
   useEffect(() => {
-    const loadAllAnnotations = async () => {
-      if (!currentExamStudentId || !currentCropRegion?.examPage?.examId) {
-        setAllStudentAnnotations([])
-        return
-      }
-
-      try {
-        console.log("🎨 透明度制御: 全設問アノテーション読み込み開始", {
-          studentId: currentExamStudentId,
-          examId: currentCropRegion.examPage.examId,
-          userId: currentUserId,
-        })
-
-        // ElectronAPIを直接呼び出してフック依存関係を回避
-        // currentUserIdを渡してログインユーザーのアノテーションのみ取得
-        const annotations = await window.electronAPI.drawing.getByExamStudent(
-          currentExamStudentId,
-          undefined, // type
-          currentUserId
-        )
-
-        if (annotations) {
-          console.log("🎨 透明度制御: 読み込み完了", {
-            annotationCount: annotations.length,
-            currentCropRegionId: currentCropRegion?.id,
-          })
-          setAllStudentAnnotations(annotations)
-        } else {
-          console.error("全設問アノテーション読み込みエラー:", null)
-          setAllStudentAnnotations([])
-        }
-      } catch (error) {
-        console.error("全設問アノテーション読み込みエラー:", error)
-        setAllStudentAnnotations([])
-      }
-    }
-
-    loadAllAnnotations()
-  }, [
-    currentExamStudentId,
-    currentCropRegion?.examPage?.examId,
-    currentCropRegion?.id,
-    currentUserId,
-    refreshKey,
-  ])
+    if (refreshKey === undefined) return
+    void queryClient.invalidateQueries({ queryKey })
+  }, [refreshKey, queryKey, queryClient])
 
   return { allStudentAnnotations }
 }
