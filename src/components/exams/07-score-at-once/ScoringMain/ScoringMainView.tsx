@@ -222,7 +222,6 @@ function ScoringMainViewContent() {
     calculateQuestionProgress,
   } = useScoringData({
     currentUserId,
-    setCurrentUserId: () => {},
     currentCropRegionId,
     studentAnswerImages,
     cropRegions,

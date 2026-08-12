@@ -558,30 +558,57 @@ type TxClient = Omit<
 >
 
 /** トランザクション内でOMRConfig + ChoiceOptionsを作成する */
-export async function createOmrConfig(
+export async function upsertOmrConfig(
   tx: TxClient,
   parentFK: { subQuestionId?: string; branchQuestionId?: string },
   config: OMRCellConfig
 ): Promise<void> {
-  const omrConfigId = crypto.randomUUID()
+  // 設定は小問／枝問と1対1。既にあれば同じ行を使い続ける
+  // （毎回作り直すと、保存のたびに別 id の行が同期へ流れる）
+  const existing = await tx.asbOmrConfig.findFirst({
+    where: parentFK,
+    include: { choiceOptions: { orderBy: { choiceIndex: "asc" } } },
+  })
+  const omrConfigId = existing?.id ?? crypto.randomUUID()
 
-  await tx.asbOmrConfig.create({
-    data: {
+  await tx.asbOmrConfig.upsert({
+    where: { id: omrConfigId },
+    create: {
       id: omrConfigId,
       ...parentFK,
       type: "choice",
       numChoices: config.numChoices,
       choiceLayout: config.layout,
     },
+    update: {
+      type: "choice",
+      numChoices: config.numChoices,
+      choiceLayout: config.layout,
+    },
   })
+
+  // 選択肢は id を持たないので、並び順の位置で既存行を使い回す。
+  // 増えた分だけ作り、減った分だけ消す
+  const existingOptions = existing?.choiceOptions ?? []
   for (let ci = 0; ci < config.labels.length; ci++) {
-    await tx.asbOmrChoiceOption.create({
-      data: {
-        omrConfigId,
-        choiceIndex: ci,
-        label: config.labels[ci],
-        isCorrect: config.correctAnswers.includes(ci),
-      },
+    const label = config.labels[ci]
+    const isCorrect = config.correctAnswers.includes(ci)
+    const reused = existingOptions[ci]
+    if (reused) {
+      await tx.asbOmrChoiceOption.update({
+        where: { id: reused.id },
+        data: { choiceIndex: ci, label, isCorrect },
+      })
+    } else {
+      await tx.asbOmrChoiceOption.create({
+        data: { omrConfigId, choiceIndex: ci, label, isCorrect },
+      })
+    }
+  }
+  const removed = existingOptions.slice(config.labels.length)
+  if (removed.length > 0) {
+    await tx.asbOmrChoiceOption.deleteMany({
+      where: { id: { in: removed.map((option) => option.id) } },
     })
   }
 }

@@ -14,7 +14,10 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/AuthContext"
 import { queryKeys } from "@/lib/queryKeys"
-import type { RenderMode } from "@/types/answerSheetDefinition.types"
+import type {
+  AnswerSheetDefinition,
+  RenderMode,
+} from "@/types/answerSheetDefinition.types"
 
 import { countAsbQuestions } from "./answerSheetStats"
 import { GlobalSettingsForm } from "./components/form/GlobalSettingsForm"
@@ -29,6 +32,7 @@ import {
   useAnswerSheetLayout,
   useMultiPageLayout,
 } from "./hooks/useAnswerSheetLayout"
+import { useAsbOwner } from "./hooks/useAsbOwner"
 import { useUndoRedoShortcuts } from "./hooks/useUndoRedoShortcuts"
 
 interface AnswerSheetBuilderMainViewProps {
@@ -74,18 +78,31 @@ export function AnswerSheetBuilderMainView({
   } = useAnswerSheetDefinition()
 
   const { saveStatus, showSaving, showSaved } = useSaveStatus()
+  const {
+    isOwner,
+    ownerName,
+    isPending: isOwnerPending,
+  } = useAsbOwner(definitionId)
 
-  // 保存済みの定義。編集はこの後 setDefinition が持つので、種として1度だけ入れる
-  const { data: savedDefinition, error: loadError } = useQuery({
+  // 保存済みの内容。編集はこの後 setDefinition が持つので、読み込んだ形を1度だけ渡す
+  const {
+    data: savedDefinition,
+    isPending: isLoadPending,
+    error: loadError,
+  } = useQuery({
     queryKey: queryKeys.answerSheetDefinition.detail(definitionId),
     queryFn: () =>
       window.electronAPI.answerSheetBuilder.loadDefinition(definitionId),
   })
-  // 読み込みの失敗は通知する（取得ではないので effect でよい）
-  useEffect(() => {
-    if (loadError) toast.error(loadError.message)
-  }, [loadError])
 
+  /**
+   * 直近で DB に入っていると分かっている内容。
+   *
+   * これと同じものを保存しに行かないための目印。読み込んだ直後に自動保存が
+   * 発火すると、開いただけで書き込みが走る。取得が古ければ、それを書き戻して
+   * 編集を巻き戻すことにもなる。
+   */
+  const [persisted, setPersisted] = useState<AnswerSheetDefinition | null>(null)
   const [seededDefinitionId, setSeededDefinitionId] = useState<string | null>(
     null
   )
@@ -93,32 +110,43 @@ export function AnswerSheetBuilderMainView({
   if (savedDefinition && !isLoaded) {
     setSeededDefinitionId(definitionId)
     setDefinition(savedDefinition)
+    setPersisted(savedDefinition)
   }
 
-  // 即時自動保存
+  // 即時自動保存（担当者だけ。読み込んだ内容そのものは書き戻さない）
   useEffect(() => {
-    if (!isLoaded) return
-
-    const api = window.electronAPI?.answerSheetBuilder
-    if (!api || !user?.id) return
+    if (!isLoaded || !isOwner || !user?.id) return
+    if (definition === persisted) return
 
     showSaving()
-    api
-      .saveDefinition(definition, user.id)
-      .then(showSaved)
+    const saving = definition
+    window.electronAPI.answerSheetBuilder
+      .saveDefinition(saving, user.id)
+      .then(() => {
+        setPersisted(saving)
+        showSaved()
+      })
       .catch((error: unknown) => {
         toast.error("解答用紙を保存できませんでした", {
           description: error instanceof Error ? error.message : undefined,
         })
       })
-  }, [definition, isLoaded, user?.id, showSaving, showSaved])
+  }, [
+    definition,
+    persisted,
+    isLoaded,
+    isOwner,
+    user?.id,
+    showSaving,
+    showSaved,
+  ])
 
   const layout = useAnswerSheetLayout(definition)
   const multiPageLayout = useMultiPageLayout(definition)
 
   useUndoRedoShortcuts({ undo, redo, canUndo, canRedo })
 
-  // 問題統計（設問数はレイアウトの解答セル数、合計配点は定義から集計）
+  // 問題統計（設問数はレイアウトの解答セル数、合計配点は解答用紙から集計）
   const allCells = multiPageLayout.pages.flatMap((page) => page.cells)
   const totalQuestions = allCells.filter(
     (cell) => cell.cellType === "answer"
@@ -133,6 +161,47 @@ export function AnswerSheetBuilderMainView({
   )
 
   if (!isLoaded) {
+    // 読み込みに失敗したまま編集画面を出すと、書いた内容の行き先が無い
+    if (loadError) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center gap-3">
+          <p className="text-sm font-medium text-red-600">
+            解答用紙を読み込めませんでした
+          </p>
+          <p className="text-sm text-muted-foreground">{loadError.message}</p>
+          <Button variant="outline" onClick={() => router.back()}>
+            戻る
+          </Button>
+        </div>
+      )
+    }
+
+    if (isLoadPending || isOwnerPending) {
+      return (
+        <div className="flex h-full items-center justify-center">
+          <p className="text-sm text-muted-foreground">読み込み中...</p>
+        </div>
+      )
+    }
+
+    // 編集できるのは担当者だけ。他の人は概要と書き出しから見る
+    if (!isOwner) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center gap-3">
+          <p className="text-sm font-medium">
+            この解答用紙の担当ではありません
+          </p>
+          <p className="text-sm text-muted-foreground">
+            編集できるのは担当の{ownerName ?? "利用者"}さんだけです。
+            直したいときは担当を渡してもらってください。
+          </p>
+          <Button variant="outline" onClick={() => router.back()}>
+            戻る
+          </Button>
+        </div>
+      )
+    }
+
     return (
       <div className="flex h-screen items-center justify-center">
         <p className="text-sm text-muted-foreground">読み込み中...</p>

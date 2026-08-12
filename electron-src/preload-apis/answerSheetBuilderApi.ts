@@ -9,6 +9,8 @@ export function createAnswerSheetBuilderApi() {
       loadDefinition: bind("asb:load-definition"),
       saveDefinition: bind("asb:save-definition"),
       deleteDefinition: bind("asb:delete-definition"),
+      getOwner: bind("asb:get-owner"),
+      transferOwner: bind("asb:transfer-owner"),
       exportPng: bind("asb:export-png"),
       selectSavePath: bind("asb:select-save-path"),
       convertToExam: bind("asb:convert-to-exam"),

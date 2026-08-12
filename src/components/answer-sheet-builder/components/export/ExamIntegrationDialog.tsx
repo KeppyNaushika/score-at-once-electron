@@ -38,7 +38,7 @@ export function ExamIntegrationDialog({
         <DialogHeader>
           <DialogTitle>採点試験に変換</DialogTitle>
           <DialogDescription>
-            この解答用紙定義から採点試験を作成します。
+            この解答用紙から採点試験を作成します。
           </DialogDescription>
         </DialogHeader>
 

@@ -1,7 +1,7 @@
 import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 
 /**
- * 解答用紙定義から設問数と合計配点を集計する。
+ * 解答用紙から設問数と合計配点を集計する。
  *
  * 枝問の扱い:
  * - 枝問なし: 小問を1問として数え、小問の配点を加算

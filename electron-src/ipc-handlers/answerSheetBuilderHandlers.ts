@@ -25,24 +25,39 @@ import { htmlToPngBuffer } from "../lib/printUtils"
 import {
   deleteAsbDefinition,
   getAsbDefinition,
+  getAsbDefinitionOwner,
   listAsbDefinitions,
   saveAsbDefinition,
+  transferAsbDefinitionOwner,
 } from "../lib/prisma/asbDefinition"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
 /** 解答用紙作成機能のIPCチャンネル（定義CRUD・画像管理・PNG出力・インポート/エクスポート）を登録する */
 export const answerSheetBuilderHandlers = {
-  // 定義一覧取得
-  "asb:list-definitions": async (userId: string) => {
-    const data = await listAsbDefinitions(userId)
-    return data
+  // 担当者（編集できる唯一の利用者）
+  "asb:get-owner": async (id: string) => {
+    return await getAsbDefinitionOwner(id)
+  },
+
+  // 担当の受け渡し（渡せるのは今の担当者だけ）
+  "asb:transfer-owner": async (
+    id: string,
+    currentUserId: string,
+    nextUserId: string
+  ) => {
+    return await transferAsbDefinitionOwner(id, currentUserId, nextUserId)
+  },
+
+  // 一覧取得（閲覧は全員。編集できるのは担当者だけ）
+  "asb:list-definitions": async () => {
+    return await listAsbDefinitions()
   },
 
   // 定義読込
   "asb:load-definition": async (id: string) => {
     const definition = await getAsbDefinition(id)
     if (!definition) {
-      throw new Error("定義が見つかりません")
+      throw new Error("解答用紙が見つかりません")
     }
     return definition
   },
@@ -56,8 +71,8 @@ export const answerSheetBuilderHandlers = {
   },
 
   // 定義削除（画像ディレクトリも削除）
-  "asb:delete-definition": async (id: string) => {
-    const deleted = await deleteAsbDefinition(id)
+  "asb:delete-definition": async (id: string, userId: string) => {
+    const deleted = await deleteAsbDefinition(id, userId)
     if (deleted) {
       // 画像ディレクトリの削除
       const imagesDir = getAsbImagesDirectory(id)
@@ -75,7 +90,7 @@ export const answerSheetBuilderHandlers = {
       }
     }
     if (!deleted) {
-      throw new Error("定義が見つかりません")
+      throw new Error("解答用紙が見つかりません")
     }
   },
 
@@ -177,8 +192,8 @@ export const answerSheetBuilderHandlers = {
   // 定義のインポートファイル選択
   "asb:select-import-file": async () => {
     const result = await dialog.showOpenDialog({
-      title: "解答用紙定義を読み込み",
-      filters: [{ name: "解答用紙定義", extensions: ["asb"] }],
+      title: "解答用紙を読み込み",
+      filters: [{ name: "解答用紙", extensions: ["asb"] }],
       properties: ["openFile"],
     })
 
@@ -203,7 +218,7 @@ export const answerSheetBuilderHandlers = {
   "asb:duplicate-definition": async (id: string, userId: string) => {
     const definition = await getAsbDefinition(id)
     if (!definition) {
-      throw new Error("定義が見つかりません")
+      throw new Error("解答用紙が見つかりません")
     }
 
     const newId = crypto.randomUUID()
@@ -267,7 +282,7 @@ export const answerSheetBuilderHandlers = {
     )
 
     // 既存の名前と重複しないようサフィックス付与
-    const existing = await listAsbDefinitions(userId)
+    const existing = await listAsbDefinitions()
     const existingNames = new Set(
       existing.map((existingDefinition) => existingDefinition.name)
     )

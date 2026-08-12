@@ -39,6 +39,9 @@ export interface ASBDeleteImageArgs {
 export interface ASBDefinitionListItem {
   id: string
   name: string
+  /** 担当者（この解答用紙を編集できる唯一の利用者） */
+  ownerId: string
+  ownerName: string
   paperSize?: string
   orientation?: string
   questionCount?: number

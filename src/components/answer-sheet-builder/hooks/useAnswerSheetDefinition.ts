@@ -1,5 +1,5 @@
 /**
- * 解答用紙定義のuseReducer状態管理
+ * 解答用紙のuseReducer状態管理
  */
 
 import { useCallback } from "react"
@@ -348,7 +348,7 @@ function reducer(
   }
 }
 
-/** 解答用紙定義のCRUD操作とUndo/Redo対応の状態管理を提供するフック */
+/** 解答用紙のCRUD操作とUndo/Redo対応の状態管理を提供するフック */
 export function useAnswerSheetDefinition(initial?: AnswerSheetDefinition) {
   const {
     state: definition,

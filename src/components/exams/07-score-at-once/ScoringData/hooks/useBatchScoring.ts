@@ -15,7 +15,6 @@ interface UseBatchScoringProps {
   cropRegions: CropRegionWithExamPage[]
   currentCropRegionId: string | null
   currentUserId: string | null
-  setCurrentUserId: (userId: string) => void
   questionScores: SerializedQuestionScore[]
   setQuestionScores: React.Dispatch<
     React.SetStateAction<SerializedQuestionScore[]>
@@ -28,7 +27,6 @@ export function useBatchScoring({
   cropRegions,
   currentCropRegionId,
   currentUserId,
-  setCurrentUserId,
   questionScores,
   setQuestionScores,
 }: UseBatchScoringProps) {
@@ -136,15 +134,15 @@ export function useBatchScoring({
             : null
       }
 
-      let effectiveUserId: string
+      // 採点は利用者ごとに別々に保存する。操作者が分からないまま書くと、
+      // 存在しない利用者の採点として残り、本人の画面には戻ってこない
       if (!currentUserId) {
-        console.warn("No current user ID available, using default")
-        const defaultUserId = "default-user-id"
-        setCurrentUserId(defaultUserId)
-        effectiveUserId = defaultUserId
-      } else {
-        effectiveUserId = currentUserId
+        toast.error("採点できません", {
+          description: "ログインしている利用者が確認できませんでした。",
+        })
+        return
       }
+      const effectiveUserId = currentUserId
 
       const ids = Array.isArray(answerIds) ? answerIds : [answerIds]
       const currentCropRegion = cropRegions.find(
@@ -313,7 +311,6 @@ export function useBatchScoring({
     [
       currentUserId,
       cropRegions,
-      setCurrentUserId,
       currentCropRegionId,
       studentAnswerImages,
       setQuestionScores,

@@ -54,7 +54,7 @@ export function AnswerSheetExportView({
     return (
       <div className="flex h-full items-center justify-center">
         <p className="text-sm text-muted-foreground">
-          定義が見つかりませんでした
+          解答用紙が見つかりませんでした
         </p>
       </div>
     )

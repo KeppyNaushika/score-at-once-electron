@@ -14,6 +14,7 @@ import { useTags } from "@/hooks/useTags"
 import { queryKeys } from "@/lib/queryKeys"
 
 import { countAsbQuestions } from "./answerSheetStats"
+import { useAsbOwner } from "./hooks/useAsbOwner"
 
 interface AnswerSheetDefinitionDetailProps {
   definitionId: string
@@ -25,7 +26,7 @@ const ORIENTATION_LABELS: Record<string, string> = {
 }
 
 /**
- * 解答用紙定義の概要ページ。
+ * 解答用紙の概要ページ。
  * メタ情報の表示・個別タグ設定・作成/書き出しへの導線を提供する。
  */
 export function AnswerSheetDefinitionDetail({
@@ -51,6 +52,8 @@ export function AnswerSheetDefinitionDetail({
     queryFn: () =>
       window.electronAPI.asbDefinitionTagGetByDefinitionId(definitionId),
   })
+
+  const { isOwner, ownerName } = useAsbOwner(definitionId)
 
   // 読み込みの失敗は通知する（取得ではないので effect でよい）
   useEffect(() => {
@@ -133,7 +136,7 @@ export function AnswerSheetDefinitionDetail({
     return (
       <div className="flex h-full items-center justify-center">
         <p className="text-sm text-muted-foreground">
-          定義が見つかりませんでした
+          解答用紙が見つかりませんでした
         </p>
       </div>
     )
@@ -152,10 +155,12 @@ export function AnswerSheetDefinitionDetail({
           <p className="text-sm text-muted-foreground">解答用紙の概要</p>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => router.push(`${base}/01-edit`)}>
-            <Pencil className="mr-1 h-4 w-4" />
-            作成
-          </Button>
+          {isOwner && (
+            <Button size="sm" onClick={() => router.push(`${base}/01-edit`)}>
+              <Pencil className="mr-1 h-4 w-4" />
+              作成
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -200,11 +205,22 @@ export function AnswerSheetDefinitionDetail({
             </dd>
           </div>
         )}
+        <div>
+          <dt className="text-muted-foreground">担当</dt>
+          <dd className="font-medium">
+            {isOwner ? "自分" : (ownerName ?? "-")}
+          </dd>
+        </div>
       </dl>
 
-      {/* タグ設定 */}
+      {/* タグ設定（担当者だけが変えられる） */}
       <div className="space-y-2 rounded-lg border p-4">
         <Label className="text-sm font-medium">タグ</Label>
+        {!isOwner && (
+          <p className="text-xs text-muted-foreground">
+            編集できるのは担当の{ownerName ?? "利用者"}さんだけです。
+          </p>
+        )}
         <div className="relative">
           <div className="flex gap-2">
             <Input
@@ -217,6 +233,7 @@ export function AnswerSheetDefinitionDetail({
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               onKeyDown={handleTagInputKeyDown}
               placeholder="タグを追加..."
+              disabled={!isOwner}
               className="text-sm"
             />
             <Button
@@ -255,14 +272,16 @@ export function AnswerSheetDefinitionDetail({
           {tagNames.map((name) => (
             <Badge key={name} variant="secondary">
               {name}
-              <button
-                type="button"
-                onClick={() => handleRemoveTag(name)}
-                className="ml-1.5 cursor-pointer"
-                aria-label={`${name} を削除`}
-              >
-                <XIcon size={14} />
-              </button>
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTag(name)}
+                  className="ml-1.5 cursor-pointer"
+                  aria-label={`${name} を削除`}
+                >
+                  <XIcon size={14} />
+                </button>
+              )}
             </Badge>
           ))}
         </div>

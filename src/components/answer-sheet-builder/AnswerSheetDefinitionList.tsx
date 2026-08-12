@@ -8,9 +8,10 @@ import {
   Pencil,
   Plus,
   Trash2,
+  UserRoundCog,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { BulkTagAssignButton } from "@/components/common/BulkTagAssignButton"
@@ -28,6 +29,13 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +55,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
 import { useTags } from "@/hooks/useTags"
+import { useUsers } from "@/hooks/useUsers"
 import type { ASBDefinitionListItem } from "@/types/answerSheetBuilder.types"
 
 import { useAnswerSheetDefinitions } from "./hooks/useAnswerSheetDefinitions"
@@ -93,8 +102,69 @@ function requireBuilderContext(userId: string | undefined) {
 }
 
 /**
- * 解答用紙定義の一覧表示・作成・複製・削除を行うコンポーネント。
+ * 解答用紙の一覧表示・作成・複製・削除を行うコンポーネント。
  */
+/**
+ * 担当を別の利用者へ渡すダイアログ。
+ *
+ * 編集できるのは担当者ひとりだけなので、他の人が直したいときはここで渡す。
+ * 渡せるのは今の担当者だけ（横から取り上げられない）。
+ */
+function TransferOwnerDialog({
+  definition,
+  currentUserId,
+  onClose,
+  onTransfer,
+}: {
+  definition: ASBDefinitionListItem | null
+  currentUserId: string | undefined
+  onClose: () => void
+  onTransfer: (id: string, nextUserId: string) => Promise<void>
+}) {
+  const { users } = useUsers()
+  const candidates = users.filter((candidate) => candidate.id !== currentUserId)
+
+  return (
+    <Dialog
+      open={definition !== null}
+      onOpenChange={(open) => !open && onClose()}
+    >
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>担当を渡す</DialogTitle>
+          <DialogDescription>
+            「{definition?.name}
+            」を編集できる人を切り替えます。渡した後は自分では
+            編集できなくなります（閲覧と書き出しはできます）。
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-72 overflow-y-auto rounded-lg border border-border/50">
+          {candidates.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground">
+              他に利用者がいません。
+            </p>
+          ) : (
+            candidates.map((candidate) => (
+              <button
+                key={candidate.id}
+                type="button"
+                className="flex w-full items-center px-4 py-2.5 text-left text-sm hover:bg-muted/50"
+                onClick={async () => {
+                  if (!definition) return
+                  await onTransfer(definition.id, candidate.id)
+                  onClose()
+                }}
+              >
+                {candidate.name}
+              </button>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export function AnswerSheetDefinitionList() {
   const { user } = useAuth()
   const router = useRouter()
@@ -104,6 +174,7 @@ export function AnswerSheetDefinitionList() {
     loadDefinitions,
     deleteDefinition,
     duplicateDefinition,
+    transferOwner,
   } = useAnswerSheetDefinitions(user?.id)
 
   const { tags: allTags, refresh: refreshTags } = useTags()
@@ -113,6 +184,18 @@ export function AnswerSheetDefinitionList() {
     id: string
     name: string
   } | null>(null)
+  const [transferTarget, setTransferTarget] =
+    useState<ASBDefinitionListItem | null>(null)
+  /** 一覧には全員の解答用紙が載る。既定は自分が担当のものだけを出す */
+  const [showAllOwners, setShowAllOwners] = useState(false)
+
+  const visibleDefinitions = useMemo(
+    () =>
+      showAllOwners
+        ? definitions
+        : definitions.filter((definition) => definition.ownerId === user?.id),
+    [definitions, showAllOwners, user?.id]
+  )
 
   const {
     filteredItems: filteredDefinitions,
@@ -125,7 +208,7 @@ export function AnswerSheetDefinitionList() {
     setDateFrom,
     dateTo,
     setDateTo,
-  } = useListFilter(definitions, ASB_FILTER_ACCESSORS)
+  } = useListFilter(visibleDefinitions, ASB_FILTER_ACCESSORS)
 
   const toggleSort = useCallback(
     (key: SortKey) => {
@@ -252,10 +335,10 @@ export function AnswerSheetDefinitionList() {
     try {
       const result = await api.exportDefinition(definitionId)
       if (!result.canceled) {
-        toast.success("定義を書き出しました")
+        toast.success("解答用紙を書き出しました")
       }
     } catch (error) {
-      toast.error("定義を書き出せませんでした", {
+      toast.error("解答用紙を書き出せませんでした", {
         description: error instanceof Error ? error.message : undefined,
       })
     }
@@ -276,13 +359,13 @@ export function AnswerSheetDefinitionList() {
         fileResult.filePath,
         userId
       )
-      toast.success("定義を読み込みました")
+      toast.success("解答用紙を読み込みました")
       for (const warning of warnings) {
         toast.warning(warning)
       }
       await loadDefinitions()
     } catch (error) {
-      toast.error("定義を読み込めませんでした", {
+      toast.error("解答用紙を読み込めませんでした", {
         description: error instanceof Error ? error.message : undefined,
       })
     }
@@ -333,6 +416,13 @@ export function AnswerSheetDefinitionList() {
             <FolderInput className="mr-2 h-4 w-4" />
             .asb 読み込み
           </Button>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={showAllOwners}
+              onCheckedChange={(checked) => setShowAllOwners(checked === true)}
+            />
+            全員の解答用紙を表示
+          </label>
           {selectedIds.size > 0 && (
             <>
               <span className="text-sm text-muted-foreground">
@@ -346,12 +436,12 @@ export function AnswerSheetDefinitionList() {
             </>
           )}
         </div>
-        {definitions.length > 0 && (
+        {visibleDefinitions.length > 0 && (
           <ListFilterBar
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
             searchPlaceholder="名前・タグで検索"
-            totalCount={definitions.length}
+            totalCount={visibleDefinitions.length}
             filteredCount={filteredDefinitions.length}
             tagFilter={{
               options: allTags,
@@ -371,14 +461,16 @@ export function AnswerSheetDefinitionList() {
       </div>
 
       <div className="min-h-0 flex-1 p-4">
-        {definitions.length === 0 ? (
+        {visibleDefinitions.length === 0 ? (
           <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
             <p className="mb-2 text-muted-foreground">
-              解答用紙定義がありません
+              {showAllOwners
+                ? "解答用紙がありません"
+                : "担当している解答用紙がありません"}
             </p>
             <Button variant="outline" onClick={handleCreate}>
               <Plus className="mr-2 h-4 w-4" />
-              最初の定義を作成
+              最初の解答用紙を作成
             </Button>
           </div>
         ) : (
@@ -414,6 +506,7 @@ export function AnswerSheetDefinitionList() {
                   >
                     合計配点{sortIndicator("totalPoints")}
                   </TableHead>
+                  <TableHead className="w-28">担当</TableHead>
                   <TableHead
                     className="w-40 cursor-pointer select-none"
                     onClick={() => toggleSort("updatedAt")}
@@ -427,7 +520,7 @@ export function AnswerSheetDefinitionList() {
                 {sorted.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={8}
                       className="py-8 text-center text-muted-foreground"
                     >
                       条件に一致する解答用紙がありません
@@ -478,6 +571,11 @@ export function AnswerSheetDefinitionList() {
                         : "-"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
+                      {definition.ownerId === user?.id
+                        ? "自分"
+                        : definition.ownerName}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
                       {formatDate(definition.updatedAt)}
                     </TableCell>
                     <TableCell>
@@ -496,12 +594,14 @@ export function AnswerSheetDefinitionList() {
                           align="end"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <DropdownMenuItem
-                            onClick={() => handleOpenEditor(definition.id)}
-                          >
-                            <Pencil className="mr-2 h-4 w-4" />
-                            編集
-                          </DropdownMenuItem>
+                          {definition.ownerId === user?.id && (
+                            <DropdownMenuItem
+                              onClick={() => handleOpenEditor(definition.id)}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              編集
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             onClick={() => duplicateDefinition(definition.id)}
                           >
@@ -514,19 +614,29 @@ export function AnswerSheetDefinitionList() {
                             <FolderOutput className="mr-2 h-4 w-4" />
                             .asb 書き出し
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() =>
-                              setDeleteTarget({
-                                id: definition.id,
-                                name: definition.name,
-                              })
-                            }
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            削除
-                          </DropdownMenuItem>
+                          {definition.ownerId === user?.id && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => setTransferTarget(definition)}
+                              >
+                                <UserRoundCog className="mr-2 h-4 w-4" />
+                                担当を渡す
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() =>
+                                  setDeleteTarget({
+                                    id: definition.id,
+                                    name: definition.name,
+                                  })
+                                }
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                削除
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -537,6 +647,13 @@ export function AnswerSheetDefinitionList() {
           </div>
         )}
       </div>
+
+      <TransferOwnerDialog
+        definition={transferTarget}
+        currentUserId={user?.id}
+        onClose={() => setTransferTarget(null)}
+        onTransfer={transferOwner}
+      />
 
       <AlertDialog
         open={deleteTarget !== null}

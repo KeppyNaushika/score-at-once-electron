@@ -88,12 +88,15 @@ export const queryKeys = {
     detail: (examId: string) => ["subtotalGroupsForReport", examId] as const,
   },
   answerSheetDefinition: {
-    list: (userId: string | undefined) =>
-      ["answerSheetDefinition", userId] as const,
+    /** 一覧（誰の解答用紙も出る。自分の分だけを見る絞り込みは表示側） */
+    list: () => ["answerSheetDefinition", "list"] as const,
     /** 解答用紙定義そのもの（編集・書き出し・パンくずが共有する） */
     detail: (definitionId: string) =>
       ["answerSheetDefinition", definitionId, "detail"] as const,
-    /** その定義に紐づくタグ */
+    /** その解答用紙の担当者（編集できる唯一の利用者） */
+    owner: (definitionId: string) =>
+      ["answerSheetDefinition", definitionId, "owner"] as const,
+    /** その解答用紙に紐づくタグ */
     tags: (definitionId: string) =>
       ["answerSheetDefinition", definitionId, "tags"] as const,
   },

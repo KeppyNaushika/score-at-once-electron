@@ -11,7 +11,6 @@ import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 
 interface UseScoringDataProps {
   currentUserId: string | null
-  setCurrentUserId: (userId: string) => void
   currentCropRegionId: string | null
   studentAnswerImages: StudentAnswerImageWithExamStudents[]
   cropRegions: CropRegionWithExamPage[]
@@ -20,7 +19,6 @@ interface UseScoringDataProps {
 /** 採点データの取得・一括採点・進捗計算を統合的に管理するフック */
 export function useScoringData({
   currentUserId,
-  setCurrentUserId,
   currentCropRegionId,
   studentAnswerImages,
   cropRegions,
@@ -35,7 +33,6 @@ export function useScoringData({
     cropRegions,
     currentCropRegionId,
     currentUserId,
-    setCurrentUserId,
     questionScores,
     setQuestionScores,
   })

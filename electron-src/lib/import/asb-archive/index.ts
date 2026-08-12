@@ -56,7 +56,7 @@ export async function importAsbDefinition(
     const remapped = remapDefinitionIds(transformedDefinition, mappings)
 
     // 5. 名前重複チェック
-    remapped.name = await resolveNameConflict(remapped.name, userId)
+    remapped.name = await resolveNameConflict(remapped.name)
 
     // 6. 画像コピー + パス更新
     copyImagesAndUpdatePaths(remapped, imagePaths)

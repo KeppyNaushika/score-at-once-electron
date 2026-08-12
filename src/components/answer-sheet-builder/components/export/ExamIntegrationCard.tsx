@@ -15,7 +15,7 @@ interface ExamIntegrationCardProps {
 }
 
 /**
- * 解答用紙定義から採点試験を作成する導線。
+ * 解答用紙から採点試験を作成する導線。
  * 書き出しページの出力ボタン群と同じ体裁で変換ダイアログを開く。
  */
 export function ExamIntegrationCard({ definition }: ExamIntegrationCardProps) {

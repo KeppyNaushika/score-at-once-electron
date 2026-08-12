@@ -1,24 +1,29 @@
 "use client"
 
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { toast } from "sonner"
 
 import { queryKeys } from "@/lib/queryKeys"
+import type { ASBDefinitionListItem } from "@/types/answerSheetBuilder.types"
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_DEFINITIONS: ASBDefinitionListItem[] = []
 
 /**
- * 解答用紙定義一覧のCRUDフック。
- * IPC経由でメインプロセスの定義リストを取得・操作する。
+ * 解答用紙一覧のCRUDフック。
+ *
+ * 一覧には誰の解答用紙も出る。編集・削除ができるのは担当者だけで、
+ * それ以外の利用者は閲覧と書き出しだけができる。
  */
 export function useAnswerSheetDefinitions(userId: string | undefined) {
   const queryClient = useQueryClient()
-  const queryKey = queryKeys.answerSheetDefinition.list(userId)
-  const { data: definitions = [], isPending: isLoading } = useQuery({
-    queryKey,
-    queryFn: userId
-      ? () => window.electronAPI.answerSheetBuilder.listDefinitions(userId)
-      : skipToken,
-  })
+  const queryKey = queryKeys.answerSheetDefinition.list()
+  const { data: definitions = EMPTY_DEFINITIONS, isPending: isLoading } =
+    useQuery({
+      queryKey,
+      queryFn: () => window.electronAPI.answerSheetBuilder.listDefinitions(),
+    })
 
   const loadDefinitions = useCallback(
     () => queryClient.invalidateQueries({ queryKey }),
@@ -27,34 +32,53 @@ export function useAnswerSheetDefinitions(userId: string | undefined) {
 
   const deleteDefinition = useCallback(
     async (id: string) => {
-      const api = window.electronAPI?.answerSheetBuilder
-      if (!api) return
-
+      if (!userId) return
       try {
-        await api.deleteDefinition(id)
+        await window.electronAPI.answerSheetBuilder.deleteDefinition(id, userId)
         await loadDefinitions()
-        toast.success("定義を削除しました")
+        toast.success("解答用紙を削除しました")
       } catch (error) {
-        toast.error("定義を削除できませんでした", {
+        toast.error("解答用紙を削除できませんでした", {
           description: error instanceof Error ? error.message : undefined,
         })
       }
     },
-    [loadDefinitions]
+    [userId, loadDefinitions]
   )
 
   const duplicateDefinition = useCallback(
     async (id: string) => {
       if (!userId) return
-      const api = window.electronAPI?.answerSheetBuilder
-      if (!api) return
-
       try {
-        await api.duplicateDefinition(id, userId)
-        toast.success("定義を複製しました")
+        await window.electronAPI.answerSheetBuilder.duplicateDefinition(
+          id,
+          userId
+        )
+        toast.success("解答用紙を複製しました")
         await loadDefinitions()
       } catch (error) {
-        toast.error("定義を複製できませんでした", {
+        toast.error("解答用紙を複製できませんでした", {
+          description: error instanceof Error ? error.message : undefined,
+        })
+      }
+    },
+    [userId, loadDefinitions]
+  )
+
+  /** 担当を別の利用者へ渡す（渡せるのは今の担当者だけ） */
+  const transferOwner = useCallback(
+    async (id: string, nextUserId: string) => {
+      if (!userId) return
+      try {
+        await window.electronAPI.answerSheetBuilder.transferOwner(
+          id,
+          userId,
+          nextUserId
+        )
+        await loadDefinitions()
+        toast.success("担当を渡しました")
+      } catch (error) {
+        toast.error("担当を渡せませんでした", {
           description: error instanceof Error ? error.message : undefined,
         })
       }
@@ -68,5 +92,6 @@ export function useAnswerSheetDefinitions(userId: string | undefined) {
     loadDefinitions,
     deleteDefinition,
     duplicateDefinition,
+    transferOwner,
   }
 }

@@ -107,7 +107,7 @@ export const DEFAULT_SETTINGS: GlobalSettings = {
 // =====================
 
 /**
- * 解答用紙定義の要素id。
+ * 解答用紙の要素id。
  *
  * この値は `asbDefinitionConverters` がそのままDBの主キーへ書く。ASBは同期対象なので、
  * 端末をまたいで衝突しない uuidv4 でなければならない（旧実装の `asb_${Date.now()}_${連番}`

@@ -25,11 +25,8 @@ import prisma from "../../prisma/client"
 /**
  * 名前の重複を解決するサフィックスを付与
  */
-export async function resolveNameConflict(
-  name: string,
-  userId: string
-): Promise<string> {
-  const existing = await listAsbDefinitions(userId)
+export async function resolveNameConflict(name: string): Promise<string> {
+  const existing = await listAsbDefinitions()
   const existingNames = new Set(existing.map((definition) => definition.name))
 
   if (!existingNames.has(name)) return name
