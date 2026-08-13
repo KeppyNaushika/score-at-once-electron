@@ -11,6 +11,7 @@
  */
 
 import { execSync } from "child_process"
+import * as fs from "fs"
 import * as path from "path"
 import ts from "typescript"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -172,6 +173,62 @@ function collectUnstableCallbacks(source: ts.SourceFile): Set<string> {
   return unstable
 }
 
+/**
+ * `src/queries/**` に置いた取得の定義を読む。
+ *
+ * 新しい形は `useQuery(gradeItemExclusionsQuery(gradeId))` のように、キーも `queryFn` も
+ * 定義側にある。呼び出し側だけを見ると**何も見つからない**ので、先に定義を読んで
+ * 関数名から引けるようにしておく（見落とすと、移行が進むほど検査が空洞化する）。
+ */
+function collectQueryDefinitions(): Map<
+  string,
+  { key: string; ipcCalls: string[] }
+> {
+  const definitions = new Map<string, { key: string; ipcCalls: string[] }>()
+  const files = execSync(
+    "git ls-files --cached --others --exclude-standard src/queries/",
+    {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    }
+  )
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+
+  for (const relativePath of files) {
+    const fullPath = path.join(REPO_ROOT, relativePath)
+    if (!fs.existsSync(fullPath)) continue
+    const source = ts.createSourceFile(
+      fullPath,
+      fs.readFileSync(fullPath, "utf8"),
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TS
+    )
+    const visit = (node: ts.Node) => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.initializer
+      ) {
+        const text = node.initializer.getText()
+        const isQuery = /\bqueryOptions\(/.test(text)
+        if (isQuery) {
+          const key = /queryKey:\s*([^\n]+)/.exec(text)?.[1]?.trim() ?? ""
+          definitions.set(node.name.text, {
+            key,
+            ipcCalls: findIpcCalls(text),
+          })
+        }
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(source)
+  }
+  return definitions
+}
+
 function scan(): Scan {
   const configPath = path.join(REPO_ROOT, "tsconfig.json")
   const config = ts.readConfigFile(configPath, ts.sys.readFile)
@@ -182,10 +239,13 @@ function scan(): Scan {
   })
   const checker = program.getTypeChecker()
 
-  const files = execSync("git ls-files 'src/**/*.ts' 'src/**/*.tsx'", {
-    cwd: REPO_ROOT,
-    encoding: "utf8",
-  })
+  const files = execSync(
+    "git ls-files --cached --others --exclude-standard 'src/**/*.ts' 'src/**/*.tsx'",
+    {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    }
+  )
     .trim()
     .split("\n")
 
@@ -193,6 +253,7 @@ function scan(): Scan {
   const writers: Writer[] = []
   const literalKeys: string[] = []
   const unstableEffects: string[] = []
+  const queryDefinitions = collectQueryDefinitions()
 
   for (const relativePath of files) {
     const source = program.getSourceFile(path.join(REPO_ROOT, relativePath))
@@ -249,6 +310,28 @@ function scan(): Scan {
               dataType: declared
                 ? checker.getTypeFromTypeNode(declared)
                 : typeOfWrittenValue(checker, node.arguments[1]),
+              location,
+            })
+          } else {
+            literalKeys.push(location)
+          }
+        }
+
+        // 新しい形: useQuery(xxxQuery(id)) — キーと queryFn は定義側にある
+        if (
+          ts.isIdentifier(node.expression) &&
+          QUERY_HOOKS.has(node.expression.text) &&
+          node.arguments.length > 0 &&
+          ts.isCallExpression(node.arguments[0]) &&
+          ts.isIdentifier(node.arguments[0].expression)
+        ) {
+          const definitionName = node.arguments[0].expression.text
+          const definition = queryDefinitions.get(definitionName)
+          if (definition) {
+            readers.push({
+              keyFactory: definitionName,
+              dataType: checker.getTypeAtLocation(node.arguments[0]),
+              ipcCalls: definition.ipcCalls,
               location,
             })
           } else {

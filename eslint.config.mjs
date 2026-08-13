@@ -224,6 +224,19 @@ export default [
           message:
             '同期版の `fs` と区別がつかないため、`import * as fsPromises from "fs/promises"` としてください。',
         },
+        {
+          // 書き込みは必ず `defineMutation` を通す。あちらが `meta`（何を取り直すか・
+          // 失敗したら何と言うか）を必須にしているので、直書きを許すと meta の無い
+          // 書き込みが作れてしまう。無効化とトーストは QueryProvider の
+          // MutationCache が meta を見て行うため、無い書き込みは黙って取り直さない。
+          //
+          // TanStack の `meta` は optional 宣言なので、型注入では必須にできない
+          // （実測で確認）。入口を1つに絞ることでしか塞げない。
+          selector:
+            'CallExpression[callee.name="useMutation"] > ObjectExpression',
+          message:
+            "useMutation にオブジェクトを直接渡さないでください。src/queries の defineMutation を通してください（meta の書き忘れを型で止めるため）。",
+        },
       ],
     },
   },

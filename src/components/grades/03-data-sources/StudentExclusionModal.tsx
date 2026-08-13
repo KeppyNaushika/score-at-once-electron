@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { Users } from "lucide-react"
 import { useMemo } from "react"
 
@@ -20,8 +21,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useGradeItemExclusions } from "@/hooks/grades/useGradeItemExclusions"
+import {
+  buildGradeExclusionKey,
+  gradeItemExclusionsQuery,
+  setGradeItemExclusionMutation,
+} from "@/queries/grade"
 import type { GradeItemWithDataSources } from "@/types/grade.types"
+
+/** 未取得のときに毎回新しい Set を作らないための空値 */
+const EMPTY_EXCLUSIONS: ReadonlySet<string> = new Set()
 
 /** 成績の名簿1行。除外の書き込み先は人ではなく対象者（id）なので実体で受け取る */
 interface ExclusionStudent {
@@ -59,8 +67,9 @@ export function StudentExclusionModal({
   students,
   classroomIds,
 }: StudentExclusionModalProps) {
-  const { exclusionSet, loading, isExcluded, toggleExclusion } =
-    useGradeItemExclusions(gradeId)
+  const { data: exclusionSet = EMPTY_EXCLUSIONS, isPending: loading } =
+    useQuery(gradeItemExclusionsQuery(gradeId))
+  const setExclusion = useMutation(setGradeItemExclusionMutation(gradeId))
 
   const classroomIdSet = useMemo(() => new Set(classroomIds), [classroomIds])
 
@@ -128,18 +137,21 @@ export function StudentExclusionModal({
                         </div>
                       </TableCell>
                       {gradeItems.map((gradeItem) => {
-                        const excluded = isExcluded({
+                        const target = {
                           gradeStudentId: gradeStudent.id,
                           gradeItemId: gradeItem.id,
-                        })
+                        }
+                        const excluded = exclusionSet.has(
+                          buildGradeExclusionKey(target)
+                        )
                         return (
                           <TableCell key={gradeItem.id} className="text-center">
                             <Checkbox
                               checked={!excluded}
                               onCheckedChange={() =>
-                                toggleExclusion({
-                                  gradeStudentId: gradeStudent.id,
-                                  gradeItemId: gradeItem.id,
+                                setExclusion.mutate({
+                                  target,
+                                  excluded: !excluded,
                                 })
                               }
                             />

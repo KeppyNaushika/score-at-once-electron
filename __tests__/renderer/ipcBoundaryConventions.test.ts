@@ -64,10 +64,13 @@ const ALLOWED_VALUE_IMPORTS: Record<string, string[]> = {
  * 「読み込めない」で落ちる）。
  */
 function listFiles(pattern: string): string[] {
-  return execSync(`git ls-files ${pattern}`, {
-    cwd: REPO_ROOT,
-    encoding: "utf8",
-  })
+  return execSync(
+    `git ls-files --cached --others --exclude-standard ${pattern}`,
+    {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    }
+  )
     .trim()
     .split("\n")
     .filter(Boolean)
@@ -190,6 +193,156 @@ function collectValueImports(): string[] {
   return found
 }
 
+/**
+ * まだ `src/queries/` へ移していないファイル。**増やさないこと。**
+ *
+ * DB へのアクセスは `src/queries/` の `queryOptions` / `defineMutation` に集める。
+ * キーと呼び出しが1箇所で結びつくので、同じデータが別のキーで2度キャッシュされる
+ * 事故（段階7・段階9 で実際に起きた）が構造的に起きなくなる。
+ *
+ * ここは移行の残量そのもので、**減る一方**になる。新しいファイルが載ることは無い。
+ */
+const NOT_YET_MIGRATED = [
+  "src/app/(app)/answer-sheet-builder/[definitionId]/layout.tsx",
+  "src/app/(app)/classrooms/[classroomId]/hooks/useClassroomExamResults.ts",
+  "src/app/(app)/coursework/[courseworkId]/layout.tsx",
+  "src/app/(app)/exams/[examId]/01-upload/page.tsx",
+  "src/app/(app)/exams/[examId]/03-region-info/page.tsx",
+  "src/app/(app)/exams/[examId]/04-question-group/page.tsx",
+  "src/app/(app)/exams/[examId]/06-student-answers/hooks/index.tsx",
+  "src/app/(app)/exams/[examId]/layout.tsx",
+  "src/app/(app)/exams/[examId]/page.tsx",
+  "src/app/(app)/grades/[gradeId]/layout.tsx",
+  "src/app/(app)/grades/[gradeId]/page.tsx",
+  "src/app/(app)/settings/components/AuditLogsTab.tsx",
+  "src/app/(app)/settings/components/ScreenControlTab.tsx",
+  "src/app/(app)/settings/hooks/useAuditLogs.ts",
+  "src/app/(app)/settings/hooks/useKeyboardSettings.ts",
+  "src/app/(app)/settings/hooks/useSyncSettings.ts",
+  "src/app/(app)/settings/page.tsx",
+  "src/app/(app)/students/[studentId]/hooks/useStudentDetail.ts",
+  "src/app/(app)/students/[studentId]/hooks/useStudentExamResults.ts",
+  "src/app/login/PasscodeModal.tsx",
+  "src/app/login/UserCreateModal.tsx",
+  "src/app/login/page.tsx",
+  "src/components/answer-sheet-builder/AnswerSheetBuilderMainView.tsx",
+  "src/components/answer-sheet-builder/AnswerSheetDefinitionDetail.tsx",
+  "src/components/answer-sheet-builder/AnswerSheetDefinitionList.tsx",
+  "src/components/answer-sheet-builder/AnswerSheetExportView.tsx",
+  "src/components/answer-sheet-builder/components/form/ImageElementEditor.tsx",
+  "src/components/answer-sheet-builder/hooks/useAnswerSheetDefinitions.ts",
+  "src/components/answer-sheet-builder/hooks/useAnswerSheetExport.ts",
+  "src/components/answer-sheet-builder/hooks/useAsbOwner.ts",
+  "src/components/answer-sheet-builder/hooks/useExamIntegration.ts",
+  "src/components/answer-sheet-builder/utils/renderSvgStrings.ts",
+  "src/components/auth/PasscodeEditModal.tsx",
+  "src/components/auth/UserEditModal.tsx",
+  "src/components/classroom/ClassroomManagementTable.tsx",
+  "src/components/classroom/ClassroomStudentImportModal.tsx",
+  "src/components/common/ScreenBlackout.tsx",
+  "src/components/common/student-add-panel/hooks/useStudentAddPanel.ts",
+  "src/components/coursework/02-students/CourseworkStudentsContainer.tsx",
+  "src/components/coursework/03-items/CourseworkItemsContainer.tsx",
+  "src/components/coursework/04-scores/hooks/useCourseworkScores.ts",
+  "src/components/coursework/CourseworkDetail.tsx",
+  "src/components/coursework/EditCourseworkWindow.tsx",
+  "src/components/coursework/list/CourseworkCreateDialog.tsx",
+  "src/components/coursework/list/CourseworkListContainer.tsx",
+  "src/components/exams/01-upload/hooks/useMasterAnswers.ts",
+  "src/components/exams/01-upload/utils/imageUtils.ts",
+  "src/components/exams/02-template/components/CropRegionEditor.tsx",
+  "src/components/exams/02-template/hooks/useCropRegionSave.ts",
+  "src/components/exams/02-template/hooks/useTemplateData.ts",
+  "src/components/exams/03-region-info/components/RegionDetailsTable.tsx",
+  "src/components/exams/03-region-info/hooks/useDragAndDrop.ts",
+  "src/components/exams/03-region-info/hooks/useOmrConfig.ts",
+  "src/components/exams/04-question-group/components/SubtotalGroupSelector.tsx",
+  "src/components/exams/05-students/components/ClassroomExamManager.tsx",
+  "src/components/exams/05-students/components/exam-student-add-modal/components/ExamStudentAddModalContainer.tsx",
+  "src/components/exams/05-students/components/exam-students-page/hooks/useExamStudentsData.ts",
+  "src/components/exams/05-students/hooks/useExamClassrooms.ts",
+  "src/components/exams/06-student-answers/student-answer-management/hooks/useStudentAnswerUpload.ts",
+  "src/components/exams/06-student-answers/student-answer-table/components/DeleteConfirmationModal.tsx",
+  "src/components/exams/06-student-answers/student-answer-table/hooks/useAnswerTableCore.ts",
+  "src/components/exams/06-student-answers/student-answer-table/hooks/useMarkerCorrection.ts",
+  "src/components/exams/06-student-answers/student-answer-table/hooks/useNameRegion.ts",
+  "src/components/exams/06-student-answers/student-answer-table/utils/studentAnswerImageCache.ts",
+  "src/components/exams/07-score-at-once/OMRRecognition/hooks/useOmrAutoScoring.ts",
+  "src/components/exams/07-score-at-once/ScoringData/hooks/useBatchScoring.ts",
+  "src/components/exams/07-score-at-once/ScoringData/utils/dataLoader.ts",
+  "src/components/exams/07-score-at-once/ScoringGrid/hooks/useGridAnnotations.ts",
+  "src/components/exams/07-score-at-once/ScoringIndividual/AnswerIndividualView.tsx",
+  "src/components/exams/07-score-at-once/ScoringIndividual/hooks/core/useDrawingAnnotations.ts",
+  "src/components/exams/07-score-at-once/ScoringIndividual/hooks/core/useImageLoader.ts",
+  "src/components/exams/07-score-at-once/ScoringIndividual/hooks/view/useAllStudentAnnotations.ts",
+  "src/components/exams/07-score-at-once/ScoringIndividual/hooks/view/useAutoCreateQuestionScore.ts",
+  "src/components/exams/07-score-at-once/ScoringMain/ScoreDecisionPanel/QuestionAssignmentRow.tsx",
+  "src/components/exams/07-score-at-once/ScoringMain/ScoreDecisionPanel/ScoreDecisionForm.tsx",
+  "src/components/exams/07-score-at-once/ScoringMain/ScoreDecisionPanel/hooks/useExamDecisionSummary.ts",
+  "src/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider.tsx",
+  "src/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerWhiteness.ts",
+  "src/components/exams/07-score-at-once/ScoringMain/hooks/useAssignedCropRegions.ts",
+  "src/components/exams/07-score-at-once/ScoringMain/hooks/useScoringDataLoader.ts",
+  "src/components/exams/07-score-at-once/ScoringSidePanel/AnnotationBrowserPanel.tsx",
+  "src/components/exams/07-score-at-once/ScoringSidePanel/hooks/useAnnotationBrowser.ts",
+  "src/components/exams/08-export/ExportMainView.tsx",
+  "src/components/exams/08-export/components/StatisticsClassroomSelector.tsx",
+  "src/components/exams/08-export/components/individual-report/SubtotalGroupSelector.tsx",
+  "src/components/exams/08-export/hooks/useDataFileExports.ts",
+  "src/components/exams/08-export/hooks/useExcelPreview.ts",
+  "src/components/exams/08-export/hooks/useExportPage.ts",
+  "src/components/exams/08-export/hooks/useIndividualReportPreview.ts",
+  "src/components/exams/08-export/hooks/useReturnDiff.ts",
+  "src/components/exams/08-export/hooks/useScoredAnswerPdfExport.ts",
+  "src/components/exams/08-export/hooks/useScoredAnswerPreview.ts",
+  "src/components/exams/08-export/utils/loadStudentExportPlacements.ts",
+  "src/components/exams/08-export/utils/pdfCanvasRenderer/annotationRenderer.ts",
+  "src/components/exams/forms/CreateExamWindow.tsx",
+  "src/components/exams/forms/EditExamWindow.tsx",
+  "src/components/exams/list/ExamList.tsx",
+  "src/components/exams/shared/DeleteExamModal.tsx",
+  "src/components/exams/shared/MemberInviteDialog.tsx",
+  "src/components/grades/02-students/StudentsContainer.tsx",
+  "src/components/grades/03-data-sources/AddDataSourceInline.tsx",
+  "src/components/grades/03-data-sources/DataSourcesContainer.tsx",
+  "src/components/grades/03-data-sources/types.ts",
+  "src/components/grades/04-manual-scores/ManualScoresContainer.tsx",
+  "src/components/grades/05-boundaries/ConstraintRulesEditor.tsx",
+  "src/components/grades/07-export/ExcelExportTab.tsx",
+  "src/components/grades/07-export/ExportContainer.tsx",
+  "src/components/grades/07-export/IndividualReportTab.tsx",
+  "src/components/grades/EditGradeWindow.tsx",
+  "src/components/grades/list/GradeCreateDialog.tsx",
+  "src/components/grades/list/GradeListContainer.tsx",
+  "src/components/hooks/useExams.ts",
+  "src/components/pdf-tools/export-panel/ExportActions.tsx",
+  "src/components/pdf-tools/import-panel/FileDropzone.tsx",
+  "src/components/pdf-tools/import-panel/hooks/useImportedFiles.ts",
+  "src/components/student/StudentArchiveExportDialog.tsx",
+  "src/components/student/StudentTable.tsx",
+  "src/components/subtotal-groups/SubtotalGroupsPageContainer.tsx",
+  "src/components/subtotal-groups/components/SubtotalGroupModal.tsx",
+  "src/components/tag/TagsPageContainer.tsx",
+  "src/contexts/AuthContext.tsx",
+  "src/hooks/grades/useBoundaries.ts",
+  "src/hooks/grades/useDataSources.ts",
+  "src/hooks/grades/useGradeConstraints.ts",
+  "src/hooks/grades/useGradeResults.ts",
+  "src/hooks/import/useImportWizard.ts",
+  "src/hooks/student-import/useStudentImportWizard.ts",
+  "src/hooks/useClassroomManagement.ts",
+  "src/hooks/useClassrooms.ts",
+  "src/hooks/useExamDetail.ts",
+  "src/hooks/useNavigationHistory.ts",
+  "src/hooks/useStudentImport.ts",
+  "src/hooks/useStudents.ts",
+  "src/hooks/useTags.ts",
+  "src/hooks/useUserPreference.ts",
+  "src/hooks/useUsers.ts",
+  "src/lib/scoringStatusColors.ts",
+  "src/types/electron.d.ts",
+]
+
 describe("IPC 境界の規約", () => {
   const registered = collectRegisteredChannels()
   const invoked = collectInvokedChannels()
@@ -215,5 +368,21 @@ describe("IPC 境界の規約", () => {
 
   it("src から electron-src を値で引くのは名指しの一覧だけ", () => {
     expect(collectValueImports()).toEqual([])
+  })
+
+  it("DB へのアクセスは src/queries/ に集める（残りは名指しの一覧）", () => {
+    const touching = listFiles("src/")
+      .filter((relativePath) => /\.tsx?$/.test(relativePath))
+      .filter((relativePath) => !relativePath.startsWith("src/queries/"))
+      .filter((relativePath) =>
+        fs
+          .readFileSync(path.join(REPO_ROOT, relativePath), "utf8")
+          .includes("window.electronAPI")
+      )
+
+    const added = touching.filter(
+      (relativePath) => !NOT_YET_MIGRATED.includes(relativePath)
+    )
+    expect(added).toEqual([])
   })
 })
