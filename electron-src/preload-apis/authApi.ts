@@ -5,7 +5,6 @@ export function createAuthApi() {
   return {
     // User related
     fetchUsers: bind("fetch-users"),
-    getCurrentUser: bind("get-current-user"),
 
     // User management
     createUser: bind("create-user"),

@@ -18,7 +18,6 @@ import { toCropRegionAreaType } from "@/types/cropRegionAreaType.types"
 export function useTemplateData(examId: string | undefined) {
   // 初期データの状態管理
   const [initialData, setInitialData] = useState<InitialDataState>({
-    currentUser: null,
     masterImages: [],
     selectedMasterImage: null,
     backgroundImageUrl: null,
@@ -56,7 +55,7 @@ export function useTemplateData(examId: string | undefined) {
 
   /**
    * 初期データの読み込み処理
-   * 試験情報、ユーザー情報、マスター画像、既存の領域データを取得する
+   * 試験情報、マスター画像、既存の領域データを取得する
    */
   const loadInitialData = useCallback(async () => {
     if (!examId) {
@@ -67,15 +66,11 @@ export function useTemplateData(examId: string | undefined) {
 
     setIsLoading(true)
     try {
-      // ユーザー情報を取得
-      const user = await window.electronAPI.getCurrentUser()
-
       // examPages（masterImages 含む）を取得。試験が存在しなければ null（不存在を検知）
       const exam = await window.electronAPI.getExamWithPages(examId)
       if (!exam) {
         toast.error("試験が見つかりません。")
         setInitialData({
-          currentUser: user,
           masterImages: [],
           selectedMasterImage: null,
           backgroundImageUrl: null,
@@ -152,7 +147,6 @@ export function useTemplateData(examId: string | undefined) {
 
       // 状態を更新（exam 本体は 02 では未使用のため null）
       setInitialData({
-        currentUser: user,
         masterImages: processedMasterImages,
         selectedMasterImage: selectedImage,
         backgroundImageUrl: backgroundUrl,

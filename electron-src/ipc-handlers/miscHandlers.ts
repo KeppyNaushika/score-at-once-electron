@@ -31,7 +31,6 @@ import {
 import {
   createUser,
   fetchUsers,
-  getCurrentUser,
   updateUser,
   updateUserPasscode,
   verifyPasscode,
@@ -43,10 +42,6 @@ export const miscHandlers = {
   // User handlers
   "fetch-users": async () => {
     return await fetchUsers()
-  },
-
-  "get-current-user": async () => {
-    return await getCurrentUser()
   },
 
   // User creation handler

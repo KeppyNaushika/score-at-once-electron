@@ -2,7 +2,6 @@
  * 02-template (採点領域作成) 関連の型定義統合ファイル
  */
 
-import type { User } from "@prisma/client"
 import { type CropRegion, type ExamPage } from "@prisma/client"
 
 import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
@@ -95,8 +94,6 @@ export type DatabaseOperation = "create" | "update"
  * 初期データ読み込みの状態
  */
 export interface InitialDataState {
-  /** 現在のユーザー */
-  currentUser: User | null
   /** マスター画像一覧 */
   masterImages: ExamPage[]
   /** 選択中のマスター画像 */

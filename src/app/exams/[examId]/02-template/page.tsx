@@ -40,10 +40,8 @@ export default function TemplateStepPage() {
     updateLayoutId,
   } = useTemplateData(examId)
 
-  const { autoSaveRegions, createRegion, updateRegion } = useCropRegionSave(
-    examId,
-    initialData.currentUser
-  )
+  const { autoSaveRegions, createRegion, updateRegion } =
+    useCropRegionSave(examId)
 
   // 初期データの読み込み初期化
   useEffect(() => {

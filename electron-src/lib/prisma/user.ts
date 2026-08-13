@@ -13,17 +13,6 @@ export const fetchUsers = async (): Promise<User[]> => {
   }
 }
 
-export const getCurrentUser = async (): Promise<User | null> => {
-  // TODO: Implement actual current user retrieval logic
-  try {
-    // Placeholder: returns the first user found. Replace with actual auth logic.
-    return await prisma.user.findFirst()
-  } catch (error) {
-    console.error("Failed to get current user:", error)
-    throw error
-  }
-}
-
 export const createUser = async (userData: {
   username: string
   name: string

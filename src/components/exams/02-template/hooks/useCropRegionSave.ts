@@ -1,4 +1,3 @@
-import type { User } from "@prisma/client"
 import { useCallback, useRef } from "react"
 import { toast } from "sonner"
 
@@ -8,20 +7,21 @@ import type {
   RegionCoordinates,
 } from "@/components/exams/02-template/types"
 import type { CropRegionArea } from "@/components/exams/02-template/types"
+import { useAuth } from "@/contexts/AuthContext"
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 
 /**
  * 領域保存処理を担当するカスタムフック
  * 個別保存とバッチ保存の両方をサポート
  *
+ * ログインしていなければ保存しない。誰がログインしているかは AuthContext だけが
+ * 知っている（DBの先頭利用者を返す暫定実装は門番として機能していなかった）。
+ *
  * @param examId - 試験ID
- * @param currentUser - 現在のユーザー
  * @returns 領域保存に関する関数群
  */
-export function useCropRegionSave(
-  examId: string | undefined,
-  currentUser: User | null
-) {
+export function useCropRegionSave(examId: string | undefined) {
+  const { user } = useAuth()
   const isSavingRef = useRef(false)
 
   /**
@@ -37,8 +37,8 @@ export function useCropRegionSave(
       region: CropRegionArea,
       operation: DatabaseOperation
     ): Promise<CropRegionWithSubtotals | null> => {
-      if (!examId || !currentUser) {
-        console.warn("Missing examId or currentUser for saveRegion")
+      if (!examId || !user) {
+        console.warn("Missing examId or user for saveRegion")
         return null
       }
 
@@ -84,7 +84,7 @@ export function useCropRegionSave(
         throw error
       }
     },
-    [examId, currentUser]
+    [examId, user]
   )
 
   /**
@@ -96,7 +96,7 @@ export function useCropRegionSave(
    */
   const autoSaveRegions = useCallback(
     async (regions: CropRegionArea[]): Promise<void> => {
-      if (!examId || !currentUser || isSavingRef.current) return
+      if (!examId || !user || isSavingRef.current) return
 
       isSavingRef.current = true
       try {
@@ -156,7 +156,7 @@ export function useCropRegionSave(
         isSavingRef.current = false
       }
     },
-    [examId, currentUser]
+    [examId, user]
   )
 
   /**

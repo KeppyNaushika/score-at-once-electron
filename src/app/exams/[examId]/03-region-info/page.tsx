@@ -10,6 +10,7 @@ import { useOmrConfig } from "@/components/exams/03-region-info/hooks/useOmrConf
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/contexts/AuthContext"
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
 import { queryKeys } from "@/lib/queryKeys"
@@ -21,7 +22,6 @@ const EMPTY_CROP_REGIONS: CropRegionWithSubtotals[] = []
 
 /** この画面が1回の取得で揃える形 */
 interface RegionInfoData {
-  currentUser: Awaited<ReturnType<typeof window.electronAPI.getCurrentUser>>
   examPages: ExamPageWithContent[]
   backgroundImageUrls: Record<string, string>
   cropRegions: CropRegionWithSubtotals[]
@@ -31,6 +31,8 @@ export default function RegionInfoPage() {
   const params = useParams()
   const router = useRouter()
   const { helpButton } = usePageHelp()
+  // 自動保存はログイン中のときだけ動かす
+  const { user } = useAuth()
 
   const paramsExamId = params.examId
   const examId =
@@ -51,7 +53,7 @@ export default function RegionInfoPage() {
     examId ?? ""
   )
 
-  // ページ・背景画像・採点領域・操作者は必ず揃って初めて編集できるので、
+  // ページ・背景画像・採点領域は必ず揃って初めて編集できるので、
   // 1つの取得にまとめる（片方だけ古い状態で描かない）
   const queryKey = useMemo(
     () => queryKeys.exam.regionInfoPage(examId ?? ""),
@@ -65,8 +67,7 @@ export default function RegionInfoPage() {
     queryKey,
     queryFn: examId
       ? async () => {
-          const [currentUser, exam, cropRegions] = await Promise.all([
-            window.electronAPI.getCurrentUser(),
+          const [exam, cropRegions] = await Promise.all([
             // 試験が存在しなければ null（不存在を検知する）
             window.electronAPI.getExamWithPages(examId),
             window.electronAPI.getCropRegionsByExamId(examId),
@@ -91,11 +92,10 @@ export default function RegionInfoPage() {
                 )
             )
           )
-          return { currentUser, examPages, backgroundImageUrls, cropRegions }
+          return { examPages, backgroundImageUrls, cropRegions }
         }
       : skipToken,
   })
-  const currentUser = data?.currentUser ?? null
   const examPages = data?.examPages ?? EMPTY_EXAM_PAGES
   const backgroundImageUrls = data?.backgroundImageUrls ?? EMPTY_IMAGE_URLS
   const cropRegions = data?.cropRegions ?? EMPTY_CROP_REGIONS
@@ -118,7 +118,7 @@ export default function RegionInfoPage() {
 
   const autoSaveRegions = useCallback(
     async (regions: CropRegionWithSubtotals[]) => {
-      if (!examId || !currentUser) return
+      if (!examId || !user) return
 
       try {
         const savePromises = regions.map(async (area) => {
@@ -162,7 +162,7 @@ export default function RegionInfoPage() {
         console.error("Auto-save failed:", error)
       }
     },
-    [examId, currentUser, setCropRegions]
+    [examId, user, setCropRegions]
   )
 
   const handleRegionsChange = useCallback(
