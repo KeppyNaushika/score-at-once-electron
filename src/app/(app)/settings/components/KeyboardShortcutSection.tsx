@@ -1,6 +1,9 @@
 "use client"
 
-import { SHORTCUT_CATEGORIES, SHORTCUT_LABELS } from "@/app/settings/constants"
+import {
+  SHORTCUT_CATEGORIES,
+  SHORTCUT_LABELS,
+} from "@/app/(app)/settings/constants"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

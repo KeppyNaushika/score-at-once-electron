@@ -3,7 +3,6 @@ import "./globals.css"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 
-import AuthGate from "@/components/auth/AuthGate"
 import AppShell from "@/components/layout/AppShell"
 import { AuthProvider } from "@/contexts/AuthContext"
 import { NavigationGuardProvider } from "@/contexts/NavigationGuardContext"
@@ -81,9 +80,7 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <NavigationGuardProvider>
-              <AppShell>
-                <AuthGate>{children}</AuthGate>
-              </AppShell>
+              <AppShell>{children}</AppShell>
             </NavigationGuardProvider>
           </AuthProvider>
         </QueryProvider>

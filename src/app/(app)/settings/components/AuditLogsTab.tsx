@@ -13,7 +13,7 @@ import {
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
-import { useAuditLogs } from "@/app/settings/hooks/useAuditLogs"
+import { useAuditLogs } from "@/app/(app)/settings/hooks/useAuditLogs"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"

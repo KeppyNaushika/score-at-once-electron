@@ -220,3 +220,33 @@ test("資料の概要と評価項目を往復しても、どちらの画面も�
   // 戻っても資料本体が出る（項目の配列で上書きされていない）
   await openDetail()
 })
+
+test("関門は画面遷移のたびに効き直す（レイアウトに置いても固まらない）", async () => {
+  // 関門はレイアウトに1つだけ置いてある。Next.js の「レイアウトはナビゲーションで
+  // 再実行されない」はサーバー側の話で、この関門は usePathname と認証コンテキストを
+  // 購読するクライアントコンポーネントなので、画面を移るたびに評価し直される。
+  // 固まっていれば、ここで中身が出ずに「読み込み中...」のままになる
+  launched = await launchApp()
+  const { page } = launched
+  await loginAsAdmin(page)
+
+  await page.goto(`${E2E_BASE_URL}/exams`, { waitUntil: "domcontentloaded" })
+  await expect(page.getByRole("heading", { name: "試験一覧" })).toBeVisible({
+    timeout: 30_000,
+  })
+
+  // サイドバーから画面内遷移する（ページ全体の読み込みではない）
+  await page.getByRole("link", { name: "解答用紙作成" }).click()
+  await expect(page).toHaveURL(`${E2E_BASE_URL}/answer-sheet-builder`, {
+    timeout: 15_000,
+  })
+  await expect(page.getByRole("button", { name: "新規作成" })).toBeVisible({
+    timeout: 15_000,
+  })
+
+  await page.getByRole("link", { name: "試験一覧" }).click()
+  await expect(page).toHaveURL(`${E2E_BASE_URL}/exams`, { timeout: 15_000 })
+  await expect(page.getByRole("heading", { name: "試験一覧" })).toBeVisible({
+    timeout: 15_000,
+  })
+})

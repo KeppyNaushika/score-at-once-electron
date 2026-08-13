@@ -3,7 +3,7 @@
 import { AlertCircle, CheckCircle2, Loader2, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 
-import { useSyncSettings } from "@/app/settings/hooks/useSyncSettings"
+import { useSyncSettings } from "@/app/(app)/settings/hooks/useSyncSettings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
