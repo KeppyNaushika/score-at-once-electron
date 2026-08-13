@@ -15,7 +15,6 @@ import { ClassroomScoreTrendChart } from "@/app/classrooms/[classroomId]/compone
 import { ClassroomSummaryCards } from "@/app/classrooms/[classroomId]/components/ClassroomSummaryCards"
 import { StudentInsightsCard } from "@/app/classrooms/[classroomId]/components/StudentInsightsCard"
 import { useClassroomExamResults } from "@/app/classrooms/[classroomId]/hooks/useClassroomExamResults"
-import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import ClassroomModal from "@/components/classroom/ClassroomModal"
 import ClassroomStudentImportModal from "@/components/classroom/ClassroomStudentImportModal"
 import MembershipTable from "@/components/classroom/MembershipTable"
@@ -111,151 +110,149 @@ export default function ClassroomDetailPage() {
   }
 
   return (
-    <ProtectedRoute>
-      <div className="flex h-full flex-col">
-        <PageHeader
-          title={classroomData.name}
-          subtitle={
-            <>
-              {classroomData.classroomCode && (
-                <Badge
-                  variant="outline"
-                  className="rounded-full px-2 py-0.5 text-xs font-normal"
-                >
-                  {classroomData.classroomCode}
-                </Badge>
-              )}
-              {classroomData.grade && (
-                <span className="rounded bg-muted/50 px-2 py-0.5 text-xs">
-                  {classroomData.grade}年
-                </span>
-              )}
-              {classroomData.description && (
-                <span>{classroomData.description}</span>
-              )}
-            </>
-          }
+    <div className="flex h-full flex-col">
+      <PageHeader
+        title={classroomData.name}
+        subtitle={
+          <>
+            {classroomData.classroomCode && (
+              <Badge
+                variant="outline"
+                className="rounded-full px-2 py-0.5 text-xs font-normal"
+              >
+                {classroomData.classroomCode}
+              </Badge>
+            )}
+            {classroomData.grade && (
+              <span className="rounded bg-muted/50 px-2 py-0.5 text-xs">
+                {classroomData.grade}年
+              </span>
+            )}
+            {classroomData.description && (
+              <span>{classroomData.description}</span>
+            )}
+          </>
+        }
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          className="rounded-lg"
+          onClick={() => router.push("/classrooms")}
         >
-          <Button
-            variant="ghost"
-            size="sm"
-            className="rounded-lg"
-            onClick={() => router.push("/classrooms")}
-          >
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            一覧に戻る
-          </Button>
-          <Button
-            variant="outline"
-            className="rounded-lg"
-            onClick={handleAddMembership}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            生徒を追加
-          </Button>
-          <Button
-            variant="outline"
-            className="rounded-lg"
-            onClick={() => setIsStudentImportModalOpen(true)}
-          >
-            <Upload className="mr-2 h-4 w-4" />
-            Excel 貼付一括追加
-          </Button>
-          <Button
-            variant="outline"
-            className="rounded-lg"
-            onClick={() => setIsClassroomModalOpen(true)}
-          >
-            <Edit className="mr-2 h-4 w-4" />
-            編集
-          </Button>
-          <Button
-            variant="ghost"
-            className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-            onClick={handleDeleteWithNavigation}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            削除
-          </Button>
-        </PageHeader>
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          一覧に戻る
+        </Button>
+        <Button
+          variant="outline"
+          className="rounded-lg"
+          onClick={handleAddMembership}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          生徒を追加
+        </Button>
+        <Button
+          variant="outline"
+          className="rounded-lg"
+          onClick={() => setIsStudentImportModalOpen(true)}
+        >
+          <Upload className="mr-2 h-4 w-4" />
+          Excel 貼付一括追加
+        </Button>
+        <Button
+          variant="outline"
+          className="rounded-lg"
+          onClick={() => setIsClassroomModalOpen(true)}
+        >
+          <Edit className="mr-2 h-4 w-4" />
+          編集
+        </Button>
+        <Button
+          variant="ghost"
+          className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          onClick={handleDeleteWithNavigation}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          削除
+        </Button>
+      </PageHeader>
 
-        <div className="min-h-0 flex-1 overflow-auto">
-          <div className="container mx-auto max-w-6xl px-6 py-6">
-            <Tabs defaultValue="analytics">
-              <TabsList className="mb-6 w-full">
-                <TabsTrigger value="analytics" className="flex-1">
-                  <BarChart3 className="mr-1.5 h-4 w-4" />
-                  成績分析
-                </TabsTrigger>
-                <TabsTrigger value="membership" className="flex-1">
-                  <Users className="mr-1.5 h-4 w-4" />
-                  所属管理
-                </TabsTrigger>
-              </TabsList>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="container mx-auto max-w-6xl px-6 py-6">
+          <Tabs defaultValue="analytics">
+            <TabsList className="mb-6 w-full">
+              <TabsTrigger value="analytics" className="flex-1">
+                <BarChart3 className="mr-1.5 h-4 w-4" />
+                成績分析
+              </TabsTrigger>
+              <TabsTrigger value="membership" className="flex-1">
+                <Users className="mr-1.5 h-4 w-4" />
+                所属管理
+              </TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="analytics">
-                {analyticsLoading ? (
-                  <div className="flex items-center justify-center py-16">
-                    <LoadingSpinner />
-                  </div>
-                ) : studentResults.length > 0 ? (
-                  <>
-                    <ClassroomSummaryCards studentResults={studentResults} />
-                    <ClassroomScoreTrendChart studentResults={studentResults} />
-                    <StudentInsightsCard studentResults={studentResults} />
-                  </>
-                ) : (
-                  <div className="py-16 text-center text-sm text-muted-foreground">
-                    所属生徒がいないか、採点済みの試験がありません
-                  </div>
-                )}
-              </TabsContent>
+            <TabsContent value="analytics">
+              {analyticsLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <LoadingSpinner />
+                </div>
+              ) : studentResults.length > 0 ? (
+                <>
+                  <ClassroomSummaryCards studentResults={studentResults} />
+                  <ClassroomScoreTrendChart studentResults={studentResults} />
+                  <StudentInsightsCard studentResults={studentResults} />
+                </>
+              ) : (
+                <div className="py-16 text-center text-sm text-muted-foreground">
+                  所属生徒がいないか、採点済みの試験がありません
+                </div>
+              )}
+            </TabsContent>
 
-              <TabsContent value="membership">
-                <MembershipTable
-                  memberships={classroomData.memberships}
-                  onEdit={handleEditMembership}
-                  onViewStudent={handleViewStudent}
-                  onDelete={handleDeleteMembership}
-                  onBulkDelete={handleBulkDeleteMemberships}
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
+            <TabsContent value="membership">
+              <MembershipTable
+                memberships={classroomData.memberships}
+                onEdit={handleEditMembership}
+                onViewStudent={handleViewStudent}
+                onDelete={handleDeleteMembership}
+                onBulkDelete={handleBulkDeleteMemberships}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
-
-        {/* モーダル（閉じている間はマウントしない。開くたびにフォームを作り直す） */}
-        {isClassroomModalOpen && (
-          <ClassroomModal
-            isOpen={isClassroomModalOpen}
-            onClose={() => setIsClassroomModalOpen(false)}
-            onSave={handleSaveClassroom}
-            classroomToEdit={classroomData}
-          />
-        )}
-
-        {/* 入力途中の表を開き直しても保つため、閉じてもマウントしたままにする */}
-        <ClassroomStudentImportModal
-          isOpen={isStudentImportModalOpen}
-          onClose={() => setIsStudentImportModalOpen(false)}
-          onImportSuccess={handleStudentImportSuccess}
-          classroomId={classroomId}
-          className={classroomData?.name || ""}
-        />
-
-        {isMembershipModalOpen && (
-          <StudentClassroomMembershipModal
-            isOpen={isMembershipModalOpen}
-            onClose={() => setIsMembershipModalOpen(false)}
-            onSave={handleSaveMembership}
-            studentId={membershipToEdit?.studentId}
-            classroomId={classroomId}
-            availableStudents={students}
-            availableClassrooms={[]}
-            membershipToEdit={membershipToEdit}
-          />
-        )}
       </div>
-    </ProtectedRoute>
+
+      {/* モーダル（閉じている間はマウントしない。開くたびにフォームを作り直す） */}
+      {isClassroomModalOpen && (
+        <ClassroomModal
+          isOpen={isClassroomModalOpen}
+          onClose={() => setIsClassroomModalOpen(false)}
+          onSave={handleSaveClassroom}
+          classroomToEdit={classroomData}
+        />
+      )}
+
+      {/* 入力途中の表を開き直しても保つため、閉じてもマウントしたままにする */}
+      <ClassroomStudentImportModal
+        isOpen={isStudentImportModalOpen}
+        onClose={() => setIsStudentImportModalOpen(false)}
+        onImportSuccess={handleStudentImportSuccess}
+        classroomId={classroomId}
+        className={classroomData?.name || ""}
+      />
+
+      {isMembershipModalOpen && (
+        <StudentClassroomMembershipModal
+          isOpen={isMembershipModalOpen}
+          onClose={() => setIsMembershipModalOpen(false)}
+          onSave={handleSaveMembership}
+          studentId={membershipToEdit?.studentId}
+          classroomId={classroomId}
+          availableStudents={students}
+          availableClassrooms={[]}
+          membershipToEdit={membershipToEdit}
+        />
+      )}
+    </div>
   )
 }

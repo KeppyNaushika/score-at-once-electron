@@ -56,6 +56,13 @@ const ALLOWED_VALUE_IMPORTS: Record<string, string[]> = {
   ],
 }
 
+/**
+ * 追跡されているファイルを列挙する。
+ *
+ * `git ls-files` は**消したがまだ index に残っているファイルも返す**ので、
+ * 実在するものだけに絞る（絞らないと、ファイルを消した瞬間にこの検査が
+ * 「読み込めない」で落ちる）。
+ */
 function listFiles(pattern: string): string[] {
   return execSync(`git ls-files ${pattern}`, {
     cwd: REPO_ROOT,
@@ -64,6 +71,7 @@ function listFiles(pattern: string): string[] {
     .trim()
     .split("\n")
     .filter(Boolean)
+    .filter((relativePath) => fs.existsSync(path.join(REPO_ROOT, relativePath)))
 }
 
 function parseFile(relativePath: string, kind: ts.ScriptKind): ts.SourceFile {

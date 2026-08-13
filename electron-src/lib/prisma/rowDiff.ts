@@ -29,19 +29,22 @@ export function isUnchanged(
  *
  * `create` / `update` を関数で受け取るのは、Prisma のモデルごとの型を呼び出し側に
  * 残すため（1つのヘルパーで全モデルを受けようとすると `any` になる）。
+ *
+ * @returns 実際に書いたら `true`、何もしなければ `false`
  */
 export async function writeRow(
   existing: Record<string, unknown> | undefined,
   data: Record<string, unknown>,
   create: () => Promise<unknown>,
   update: () => Promise<unknown>
-): Promise<void> {
+): Promise<boolean> {
   if (!existing) {
     await create()
-    return
+    return true
   }
-  if (isUnchanged(existing, data)) return
+  if (isUnchanged(existing, data)) return false
   await update()
+  return true
 }
 
 /** id で引けるようにする */

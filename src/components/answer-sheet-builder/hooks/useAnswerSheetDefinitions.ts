@@ -30,6 +30,21 @@ export function useAnswerSheetDefinitions(userId: string | undefined) {
     [queryClient, queryKey]
   )
 
+  /**
+   * その解答用紙に紐づくものを全部取り直す。
+   *
+   * 担当が変わると一覧だけでなく `owner`（誰が担当か）と `detail`（編集画面が
+   * 読む本体）も古くなる。一覧しか無効化しないと、譲った直後に開き直した画面が
+   * 自分を担当だと信じたまま編集を受け付け、保存で弾かれて編集が消える。
+   */
+  const reloadDefinition = useCallback(
+    (id: string) =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.answerSheetDefinition.scope(id),
+      }),
+    [queryClient]
+  )
+
   const deleteDefinition = useCallback(
     async (id: string) => {
       if (!userId) return
@@ -75,7 +90,7 @@ export function useAnswerSheetDefinitions(userId: string | undefined) {
           userId,
           nextUserId
         )
-        await loadDefinitions()
+        await Promise.all([loadDefinitions(), reloadDefinition(id)])
         toast.success("担当を渡しました")
       } catch (error) {
         toast.error("担当を渡せませんでした", {
@@ -83,7 +98,7 @@ export function useAnswerSheetDefinitions(userId: string | undefined) {
         })
       }
     },
-    [userId, loadDefinitions]
+    [userId, loadDefinitions, reloadDefinition]
   )
 
   return {

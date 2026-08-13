@@ -16,7 +16,6 @@ import { ScoreTrendChart } from "@/app/students/[studentId]/components/ScoreTren
 import { TagAnalyticsCard } from "@/app/students/[studentId]/components/TagAnalyticsCard"
 import { useStudentDetail } from "@/app/students/[studentId]/hooks/useStudentDetail"
 import { useStudentExamResults } from "@/app/students/[studentId]/hooks/useStudentExamResults"
-import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import PageHeader from "@/components/layout/PageHeader"
 import StudentClassroomMembershipModal from "@/components/student/StudentClassroomMembershipModal"
@@ -96,127 +95,125 @@ export default function StudentDetailPage() {
   const studentName = `${student.lastName} ${student.firstName}`
 
   return (
-    <ProtectedRoute>
-      <div className="flex h-full flex-col">
-        <PageHeader
-          title={studentName}
-          subtitle={
-            <>
-              <span className="text-muted-foreground">
-                {student.lastNameKana} {student.firstNameKana}
+    <div className="flex h-full flex-col">
+      <PageHeader
+        title={studentName}
+        subtitle={
+          <>
+            <span className="text-muted-foreground">
+              {student.lastNameKana} {student.firstNameKana}
+            </span>
+            <span className="rounded bg-muted/50 px-2 py-0.5 font-mono text-xs">
+              {student.studentNumber}
+            </span>
+            {student.enrollmentYear && (
+              <span className="rounded bg-muted/50 px-2 py-0.5 text-xs tabular-nums">
+                {student.enrollmentYear}年入学
               </span>
-              <span className="rounded bg-muted/50 px-2 py-0.5 font-mono text-xs">
-                {student.studentNumber}
-              </span>
-              {student.enrollmentYear && (
-                <span className="rounded bg-muted/50 px-2 py-0.5 text-xs tabular-nums">
-                  {student.enrollmentYear}年入学
-                </span>
-              )}
-            </>
-          }
+            )}
+          </>
+        }
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          className="rounded-lg"
+          onClick={() => router.push("/students")}
         >
-          <Button
-            variant="ghost"
-            size="sm"
-            className="rounded-lg"
-            onClick={() => router.push("/students")}
-          >
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            一覧に戻る
-          </Button>
-          <Button
-            onClick={handleEditStudentClick}
-            variant="outline"
-            className="rounded-lg"
-          >
-            <Edit className="mr-2 h-4 w-4" />
-            編集
-          </Button>
-          <Button
-            onClick={handleDeleteStudent}
-            variant="ghost"
-            className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            削除
-          </Button>
-        </PageHeader>
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          一覧に戻る
+        </Button>
+        <Button
+          onClick={handleEditStudentClick}
+          variant="outline"
+          className="rounded-lg"
+        >
+          <Edit className="mr-2 h-4 w-4" />
+          編集
+        </Button>
+        <Button
+          onClick={handleDeleteStudent}
+          variant="ghost"
+          className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          削除
+        </Button>
+      </PageHeader>
 
-        <div className="min-h-0 flex-1 overflow-auto">
-          <div className="container mx-auto max-w-6xl px-6 py-6">
-            <Tabs defaultValue="analytics">
-              <TabsList className="mb-6 w-full">
-                <TabsTrigger value="analytics" className="flex-1">
-                  <BarChart3 className="mr-1.5 h-4 w-4" />
-                  成績分析
-                </TabsTrigger>
-                <TabsTrigger value="membership" className="flex-1">
-                  <Users className="mr-1.5 h-4 w-4" />
-                  学級所属
-                </TabsTrigger>
-              </TabsList>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="container mx-auto max-w-6xl px-6 py-6">
+          <Tabs defaultValue="analytics">
+            <TabsList className="mb-6 w-full">
+              <TabsTrigger value="analytics" className="flex-1">
+                <BarChart3 className="mr-1.5 h-4 w-4" />
+                成績分析
+              </TabsTrigger>
+              <TabsTrigger value="membership" className="flex-1">
+                <Users className="mr-1.5 h-4 w-4" />
+                学級所属
+              </TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="analytics">
-                {examResultsLoading ? (
-                  <div className="flex items-center justify-center py-16">
-                    <LoadingSpinner />
-                  </div>
-                ) : (
-                  <>
-                    <ExamSummaryCards results={examResults} />
-                    <ScoreTrendChart results={examResults} />
-                    <TagAnalyticsCard results={examResults} />
-                    <ExamResultsCard results={examResults} />
-                  </>
-                )}
-              </TabsContent>
+            <TabsContent value="analytics">
+              {examResultsLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <LoadingSpinner />
+                </div>
+              ) : (
+                <>
+                  <ExamSummaryCards results={examResults} />
+                  <ScoreTrendChart results={examResults} />
+                  <TagAnalyticsCard results={examResults} />
+                  <ExamResultsCard results={examResults} />
+                </>
+              )}
+            </TabsContent>
 
-              <TabsContent value="membership">
-                <MembershipsCard
-                  student={student}
-                  onAddMembership={handleAddMembership}
-                  onEditMembership={handleEditMembership}
-                  onEndMembership={handleEndMembership}
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
+            <TabsContent value="membership">
+              <MembershipsCard
+                student={student}
+                onAddMembership={handleAddMembership}
+                onEditMembership={handleEditMembership}
+                onEndMembership={handleEndMembership}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
-
-        {/* Modals */}
-        {isStudentModalOpen && (
-          <StudentModal
-            isOpen={isStudentModalOpen}
-            onClose={() => setIsStudentModalOpen(false)}
-            onSave={() => {}} // Not used for editing
-            onUpdate={handleSaveStudentData}
-            studentToEdit={student}
-          />
-        )}
-
-        {isMembershipModalOpen && (
-          <StudentClassroomMembershipModal
-            isOpen={isMembershipModalOpen}
-            onClose={() => setIsMembershipModalOpen(false)}
-            onSave={handleSaveMembershipData}
-            studentId={student.id}
-            classroomId={undefined}
-            availableStudents={[
-              {
-                id: student.id,
-                studentNumber: student.studentNumber,
-                lastName: student.lastName,
-                firstName: student.firstName,
-                lastNameKana: student.lastNameKana,
-                firstNameKana: student.firstNameKana,
-              },
-            ]}
-            availableClassrooms={classrooms}
-            membershipToEdit={membershipToEdit}
-          />
-        )}
       </div>
-    </ProtectedRoute>
+
+      {/* Modals */}
+      {isStudentModalOpen && (
+        <StudentModal
+          isOpen={isStudentModalOpen}
+          onClose={() => setIsStudentModalOpen(false)}
+          onSave={() => {}} // Not used for editing
+          onUpdate={handleSaveStudentData}
+          studentToEdit={student}
+        />
+      )}
+
+      {isMembershipModalOpen && (
+        <StudentClassroomMembershipModal
+          isOpen={isMembershipModalOpen}
+          onClose={() => setIsMembershipModalOpen(false)}
+          onSave={handleSaveMembershipData}
+          studentId={student.id}
+          classroomId={undefined}
+          availableStudents={[
+            {
+              id: student.id,
+              studentNumber: student.studentNumber,
+              lastName: student.lastName,
+              firstName: student.firstName,
+              lastNameKana: student.lastNameKana,
+              firstNameKana: student.firstNameKana,
+            },
+          ]}
+          availableClassrooms={classrooms}
+          membershipToEdit={membershipToEdit}
+        />
+      )}
+    </div>
   )
 }

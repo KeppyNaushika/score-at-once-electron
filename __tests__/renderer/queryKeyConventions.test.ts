@@ -43,6 +43,8 @@ interface Scan {
   writers: Writer[]
   /** `queryKeys` を経由せずリテラルのキーを書いている場所 */
   literalKeys: string[]
+  /** 不安定なコールバックを effect の依存へ入れている場所 */
+  unstableEffects: string[]
   checker: ts.TypeChecker
 }
 
@@ -103,6 +105,73 @@ function fitsInto(
     .every((branch) => checker.isTypeAssignableTo(branch, read))
 }
 
+/**
+ * キー配列に依存して不安定になったコールバックの名前を集める。
+ *
+ * `queryKeys.exam.x(id)` は毎レンダー新しい配列を返す。それを `useCallback` の依存へ
+ * 入れるとコールバックが毎レンダー別物になり、そのコールバックに依存する effect の
+ * 後始末が**毎レンダー走る**。「アンマウント時だけ」のつもりの処理が壊れる。
+ */
+function collectUnstableCallbacks(source: ts.SourceFile): Set<string> {
+  const keyNames = new Set<string>()
+  const unstable = new Set<string>()
+
+  const collectKeys = (node: ts.Node) => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer
+    ) {
+      const text = node.initializer.getText()
+      // useMemo で包んであれば同一性は保たれる
+      if (
+        /\bqueryKeys(\.[A-Za-z0-9_]+)+/.test(text) &&
+        !text.startsWith("useMemo")
+      ) {
+        keyNames.add(node.name.text)
+      }
+    }
+    ts.forEachChild(node, collectKeys)
+  }
+  collectKeys(source)
+
+  // 不安定なものに依存するものも不安定。伝播が止まるまで回す
+  let grew = true
+  while (grew) {
+    grew = false
+    const visit = (node: ts.Node) => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.initializer &&
+        ts.isCallExpression(node.initializer) &&
+        ts.isIdentifier(node.initializer.expression) &&
+        ["useCallback", "useMemo"].includes(node.initializer.expression.text) &&
+        node.initializer.arguments.length >= 2 &&
+        ts.isArrayLiteralExpression(node.initializer.arguments[1])
+      ) {
+        const dependsOnUnstable = node.initializer.arguments[1].elements.some(
+          (dep) => {
+            const name = dep.getText()
+            return (
+              keyNames.has(name) ||
+              unstable.has(name) ||
+              /^queryKeys(\.[A-Za-z0-9_]+)+\(/.test(name)
+            )
+          }
+        )
+        if (dependsOnUnstable && !unstable.has(node.name.text)) {
+          unstable.add(node.name.text)
+          grew = true
+        }
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(source)
+  }
+  return unstable
+}
+
 function scan(): Scan {
   const configPath = path.join(REPO_ROOT, "tsconfig.json")
   const config = ts.readConfigFile(configPath, ts.sys.readFile)
@@ -123,6 +192,7 @@ function scan(): Scan {
   const readers: Reader[] = []
   const writers: Writer[] = []
   const literalKeys: string[] = []
+  const unstableEffects: string[] = []
 
   for (const relativePath of files) {
     const source = program.getSourceFile(path.join(REPO_ROOT, relativePath))
@@ -142,6 +212,8 @@ function scan(): Scan {
     }
     collectBindings(source)
 
+    const unstableCallbacks = collectUnstableCallbacks(source)
+
     /** 識別子で渡していたら宣言まで1段辿る（`const queryKey = queryKeys...`） */
     const resolveKeyFactory = (text: string): string | null =>
       findKeyFactory(
@@ -155,6 +227,18 @@ function scan(): Scan {
         const { line } = source.getLineAndCharacterOfPosition(node.getStart())
         const location = `${relativePath}:${line + 1}`
         const callee = node.expression.getText()
+
+        if (
+          (callee === "useEffect" || callee === "useLayoutEffect") &&
+          node.arguments.length >= 2 &&
+          ts.isArrayLiteralExpression(node.arguments[1])
+        ) {
+          for (const dep of node.arguments[1].elements) {
+            if (unstableCallbacks.has(dep.getText())) {
+              unstableEffects.push(`${location}: ${dep.getText()}`)
+            }
+          }
+        }
 
         if (callee.endsWith("setQueryData") && node.arguments.length >= 2) {
           const keyFactory = resolveKeyFactory(node.arguments[0].getText())
@@ -225,8 +309,19 @@ function scan(): Scan {
     visit(source)
   }
 
-  return { readers, writers, literalKeys, checker }
+  return { readers, writers, literalKeys, unstableEffects, checker }
 }
+
+/**
+ * 既知の未修正。**増やさないこと。**
+ *
+ * 08-export の出力設定は、設定を意図へ割ってデバウンスごと撤去する予定なので、
+ * 依存配列だけを直す暫定対応を入れていない。詳細は
+ * docs/ipc-and-data-fetching-plan.md 段階9。
+ */
+const KNOWN_UNSTABLE_EFFECTS = [
+  "src/components/exams/08-export/hooks/useExportPage.ts:190: flushSettings",
+]
 
 describe("クエリキーの規約", () => {
   let scanned: Scan
@@ -293,6 +388,14 @@ describe("クエリキーの規約", () => {
     )
 
     expect(mismatches).toEqual([])
+  })
+
+  it("キー配列に依存するコールバックを effect の依存へ入れない", () => {
+    const unexpected = scanned.unstableEffects.filter(
+      (location) => !KNOWN_UNSTABLE_EFFECTS.includes(location)
+    )
+
+    expect(unexpected).toEqual([])
   })
 
   it("誰も読まないキーへは書かない", () => {

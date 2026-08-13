@@ -88,6 +88,12 @@ export const queryKeys = {
     detail: (examId: string) => ["subtotalGroupsForReport", examId] as const,
   },
   answerSheetDefinition: {
+    /**
+     * 解答用紙1件に紐づくキーの前方一致。**格納しない**（無効化の範囲指定専用）。
+     * 担当が変わると owner も detail も古くなるので、まとめて取り直す。
+     */
+    scope: (definitionId: string) =>
+      ["answerSheetDefinition", definitionId] as const,
     /** 一覧（誰の解答用紙も出る。自分の分だけを見る絞り込みは表示側） */
     list: () => ["answerSheetDefinition", "list"] as const,
     /** 解答用紙定義そのもの（編集・書き出し・パンくずが共有する） */

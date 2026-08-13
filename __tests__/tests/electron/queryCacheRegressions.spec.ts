@@ -29,7 +29,7 @@ test.afterEach(async () => {
   if (launched) await launched.close()
 })
 
-test("未ログインで採点画面を開くとログインへ戻る", async () => {
+test("未ログインで採点画面を開くとログイン画面へ送られる", async () => {
   // 採点は利用者ごとに結果を分けて保存する。誰が採点しているか分からないまま
   // 書かせない（以前は "default-user-id" という存在しない利用者で書いていた）
   launched = await launchApp()
@@ -39,7 +39,20 @@ test("未ログインで採点画面を開くとログインへ戻る", async ()
     waitUntil: "domcontentloaded",
   })
 
-  await expect(page).toHaveURL(`${E2E_BASE_URL}/`, { timeout: 15_000 })
+  await expect(page).toHaveURL(`${E2E_BASE_URL}/login`, { timeout: 15_000 })
+})
+
+test("未ログインなら、関門の無かった画面もログイン画面へ送られる", async () => {
+  // 関門はページごとに置いていたので 40ページ中16ページにしか付いておらず、
+  // 試験のワークフローでは 06・07 と試験詳細だけが守られていた
+  launched = await launchApp()
+  const { page } = launched
+
+  await page.goto(`${E2E_BASE_URL}/exams/does-not-exist/02-template`, {
+    waitUntil: "domcontentloaded",
+  })
+
+  await expect(page).toHaveURL(`${E2E_BASE_URL}/login`, { timeout: 15_000 })
 })
 
 test("解答用紙を編集して概要へ移り、作成へ戻っても編集が残る", async () => {

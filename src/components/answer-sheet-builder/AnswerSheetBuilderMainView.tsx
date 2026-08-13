@@ -160,51 +160,45 @@ export function AnswerSheetBuilderMainView({
     [dispatch]
   )
 
-  if (!isLoaded) {
-    // 読み込みに失敗したまま編集画面を出すと、書いた内容の行き先が無い
-    if (loadError) {
-      return (
-        <div className="flex h-full flex-col items-center justify-center gap-3">
-          <p className="text-sm font-medium text-red-600">
-            解答用紙を読み込めませんでした
-          </p>
-          <p className="text-sm text-muted-foreground">{loadError.message}</p>
-          <Button variant="outline" onClick={() => router.back()}>
-            戻る
-          </Button>
-        </div>
-      )
-    }
-
-    if (isLoadPending || isOwnerPending) {
-      return (
-        <div className="flex h-full items-center justify-center">
-          <p className="text-sm text-muted-foreground">読み込み中...</p>
-        </div>
-      )
-    }
-
-    // 編集できるのは担当者だけ。他の人は概要と書き出しから見る
-    if (!isOwner) {
-      return (
-        <div className="flex h-full flex-col items-center justify-center gap-3">
-          <p className="text-sm font-medium">
-            この解答用紙の担当ではありません
-          </p>
-          <p className="text-sm text-muted-foreground">
-            編集できるのは担当の{ownerName ?? "利用者"}さんだけです。
-            直したいときは担当を渡してもらってください。
-          </p>
-          <Button variant="outline" onClick={() => router.back()}>
-            戻る
-          </Button>
-        </div>
-      )
-    }
-
+  // 以下の関門はそれぞれ独立に見る。入れ子にすると、外側が先に外れた時点で
+  // 内側へ到達しなくなる（担当の判定を `!isLoaded` の中に置いていて、担当で
+  // ない利用者にも編集画面が出ていた）。
+  //
+  // 読み込みに失敗したまま編集画面を出すと、書いた内容の行き先が無い
+  if (loadError) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        <p className="text-sm font-medium text-red-600">
+          解答用紙を読み込めませんでした
+        </p>
+        <p className="text-sm text-muted-foreground">{loadError.message}</p>
+        <Button variant="outline" onClick={() => router.back()}>
+          戻る
+        </Button>
+      </div>
+    )
+  }
+
+  if (isLoadPending || isOwnerPending || !isLoaded) {
+    return (
+      <div className="flex h-full items-center justify-center">
         <p className="text-sm text-muted-foreground">読み込み中...</p>
+      </div>
+    )
+  }
+
+  // 編集できるのは担当者だけ。他の人は概要と書き出しから見る
+  if (!isOwner) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        <p className="text-sm font-medium">この解答用紙の担当ではありません</p>
+        <p className="text-sm text-muted-foreground">
+          編集できるのは担当の{ownerName ?? "利用者"}さんだけです。
+          直したいときは担当を渡してもらってください。
+        </p>
+        <Button variant="outline" onClick={() => router.back()}>
+          戻る
+        </Button>
       </div>
     )
   }

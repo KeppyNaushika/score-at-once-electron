@@ -242,52 +242,88 @@ export async function saveAsbDefinition(
   const inSubQuestions = { subQuestion: inDefinition }
 
   await prisma.$transaction(async (tx) => {
+    /**
+     * この保存で DB を触ったか。
+     *
+     * 触っていない行を書かなくした結果、子だけが変わったときに解答用紙そのものの
+     * `updatedAt` が動かなくなった。一覧の更新日時・並べ替え・期間フィルタが古い値を
+     * 出すので、何か書いたら最後に親の時刻だけを進める。
+     */
+    let changed = false
+    const write = async (
+      existing: Record<string, unknown> | undefined,
+      data: Record<string, unknown>,
+      create: () => Promise<unknown>,
+      update: () => Promise<unknown>
+    ) => {
+      if (await writeRow(existing, data, create, update)) changed = true
+    }
+    const removeMany = async (deleted: Promise<{ count: number }>) => {
+      if ((await deleted).count > 0) changed = true
+    }
+
     // 1. 無くなったものだけ消す（親が消えれば子は Cascade で消える）
-    await tx.asbHeaderField.deleteMany({
-      where: {
-        definitionId: definition.id,
-        id: { notIn: surviving.headerFields },
-      },
-    })
-    await tx.asbMajorQuestion.deleteMany({
-      where: {
-        definitionId: definition.id,
-        id: { notIn: surviving.majorQuestions },
-      },
-    })
-    await tx.asbSubQuestion.deleteMany({
-      where: { ...inDefinition, id: { notIn: surviving.subQuestions } },
-    })
-    await tx.asbBranchQuestion.deleteMany({
-      where: { ...inSubQuestions, id: { notIn: surviving.branchQuestions } },
-    })
-    await tx.asbCharGuide.deleteMany({
-      where: { ...inSubQuestions, id: { notIn: surviving.charGuides } },
-    })
+    await removeMany(
+      tx.asbHeaderField.deleteMany({
+        where: {
+          definitionId: definition.id,
+          id: { notIn: surviving.headerFields },
+        },
+      })
+    )
+    await removeMany(
+      tx.asbMajorQuestion.deleteMany({
+        where: {
+          definitionId: definition.id,
+          id: { notIn: surviving.majorQuestions },
+        },
+      })
+    )
+    await removeMany(
+      tx.asbSubQuestion.deleteMany({
+        where: { ...inDefinition, id: { notIn: surviving.subQuestions } },
+      })
+    )
+    await removeMany(
+      tx.asbBranchQuestion.deleteMany({
+        where: { ...inSubQuestions, id: { notIn: surviving.branchQuestions } },
+      })
+    )
+    await removeMany(
+      tx.asbCharGuide.deleteMany({
+        where: { ...inSubQuestions, id: { notIn: surviving.charGuides } },
+      })
+    )
     const inQuestions = [
       { subQuestion: inDefinition },
       { branchQuestion: inSubQuestions },
     ]
-    await tx.asbTextElement.deleteMany({
-      where: { OR: inQuestions, id: { notIn: surviving.textElements } },
-    })
-    await tx.asbImageElement.deleteMany({
-      where: { OR: inQuestions, id: { notIn: surviving.imageElements } },
-    })
-    await tx.asbOmrConfig.deleteMany({
-      where: {
-        OR: [
-          {
-            subQuestion: inDefinition,
-            subQuestionId: { notIn: surviving.omrSubQuestions },
-          },
-          {
-            branchQuestion: inSubQuestions,
-            branchQuestionId: { notIn: surviving.omrBranchQuestions },
-          },
-        ],
-      },
-    })
+    await removeMany(
+      tx.asbTextElement.deleteMany({
+        where: { OR: inQuestions, id: { notIn: surviving.textElements } },
+      })
+    )
+    await removeMany(
+      tx.asbImageElement.deleteMany({
+        where: { OR: inQuestions, id: { notIn: surviving.imageElements } },
+      })
+    )
+    await removeMany(
+      tx.asbOmrConfig.deleteMany({
+        where: {
+          OR: [
+            {
+              subQuestion: inDefinition,
+              subQuestionId: { notIn: surviving.omrSubQuestions },
+            },
+            {
+              branchQuestion: inSubQuestions,
+              branchQuestionId: { notIn: surviving.omrBranchQuestions },
+            },
+          ],
+        },
+      })
+    )
 
     // 2. いま DB にある行を引く（変わっていない行を書かないための突き合わせ先）
     const currentHeaderFields = byId(
@@ -326,7 +362,7 @@ export async function saveAsbDefinition(
       labelPresetBranch: definition.labelPresets?.branch ?? null,
       ...flat,
     }
-    await writeRow(
+    await write(
       existingDefinition ?? undefined,
       definitionData,
       () =>
@@ -356,7 +392,7 @@ export async function saveAsbDefinition(
         fontSize: headerField.fontSize ?? null,
         linkedRegionType: headerField.linkedRegionType ?? null,
       }
-      await writeRow(
+      await write(
         currentHeaderFields.get(headerField.id),
         headerFieldData,
         () =>
@@ -379,7 +415,7 @@ export async function saveAsbDefinition(
         label: majorQuestion.label,
         order: mi,
       }
-      await writeRow(
+      await write(
         currentMajorQuestions.get(majorQuestion.id),
         majorQuestionData,
         () =>
@@ -420,7 +456,7 @@ export async function saveAsbDefinition(
           borderStyleLeft: subQuestion.borderStyles?.left ?? null,
           borderStyleRight: subQuestion.borderStyles?.right ?? null,
         }
-        await writeRow(
+        await write(
           currentSubQuestions.get(subQuestion.id),
           subQuestionData,
           () =>
@@ -448,7 +484,7 @@ export async function saveAsbDefinition(
             boundaryDashRatio: charGuide.boundaryDashRatio ?? null,
             boundaryGapRatio: charGuide.boundaryGapRatio ?? null,
           }
-          await writeRow(
+          await write(
             currentCharGuides.get(charGuide.id),
             charGuideData,
             () =>
@@ -474,7 +510,7 @@ export async function saveAsbDefinition(
             verticalAlign: textElement.verticalAlign,
             order: ti,
           }
-          await writeRow(
+          await write(
             currentTextElements.get(textElement.id),
             textElementData,
             () =>
@@ -504,7 +540,7 @@ export async function saveAsbDefinition(
               visibility: imageElement.visibility ?? "both",
               order: ii,
             }
-            await writeRow(
+            await write(
               currentImageElements.get(imageElement.id),
               imageElementData,
               () =>
@@ -522,11 +558,15 @@ export async function saveAsbDefinition(
 
         // OMR設定（小問）
         if (subQuestion.omrConfig) {
-          await upsertOmrConfig(
-            tx,
-            { subQuestionId: subQuestion.id },
-            subQuestion.omrConfig
-          )
+          if (
+            await upsertOmrConfig(
+              tx,
+              { subQuestionId: subQuestion.id },
+              subQuestion.omrConfig
+            )
+          ) {
+            changed = true
+          }
         }
 
         // 枝問
@@ -546,7 +586,7 @@ export async function saveAsbDefinition(
             borderStyleLeft: branchQuestion.borderStyles?.left ?? null,
             borderStyleRight: branchQuestion.borderStyles?.right ?? null,
           }
-          await writeRow(
+          await write(
             currentBranchQuestions.get(branchQuestion.id),
             branchQuestionData,
             () =>
@@ -571,7 +611,7 @@ export async function saveAsbDefinition(
               verticalAlign: textElement.verticalAlign,
               order: ti,
             }
-            await writeRow(
+            await write(
               currentTextElements.get(textElement.id),
               textElementData,
               () =>
@@ -601,7 +641,7 @@ export async function saveAsbDefinition(
                 visibility: imageElement.visibility ?? "both",
                 order: ii,
               }
-              await writeRow(
+              await write(
                 currentImageElements.get(imageElement.id),
                 imageElementData,
                 () =>
@@ -619,14 +659,27 @@ export async function saveAsbDefinition(
 
           // OMR設定（枝問）
           if (branchQuestion.omrConfig) {
-            await upsertOmrConfig(
-              tx,
-              { branchQuestionId: branchQuestion.id },
-              branchQuestion.omrConfig
-            )
+            if (
+              await upsertOmrConfig(
+                tx,
+                { branchQuestionId: branchQuestion.id },
+                branchQuestion.omrConfig
+              )
+            ) {
+              changed = true
+            }
           }
         }
       }
+    }
+
+    // 子だけが変わったときも「解答用紙が更新された」ことは一覧へ出す。
+    // 空の data では `@updatedAt` は動かないので（実測）、時刻を明示的に渡す
+    if (changed) {
+      await tx.asbDefinition.update({
+        where: { id: definition.id },
+        data: { updatedAt: new Date() },
+      })
     }
   })
 
@@ -646,20 +699,26 @@ export async function saveAsbDefinition(
 // 削除
 // =============================================================================
 
-/** 解答用紙を削除する。削除できるのは担当者だけ */
+/**
+ * 解答用紙を削除する。削除できるのは担当者だけ。
+ *
+ * 担当でないことは `false`（＝見つからない）ではなく**例外で伝える**。`false` にすると
+ * 呼び出し側が「解答用紙が見つかりません」と言うことになり、消えたように読める。
+ */
 export async function deleteAsbDefinition(
   id: string,
   userId: string
 ): Promise<boolean> {
+  const before = await prisma.asbDefinition.findUnique({
+    where: { id },
+  })
+  if (before && before.userId !== userId) {
+    throw new Error(
+      "この解答用紙の担当ではないため削除できません。担当を譲ってもらってください。"
+    )
+  }
+
   try {
-    const before = await prisma.asbDefinition.findUnique({
-      where: { id },
-    })
-    if (before && before.userId !== userId) {
-      throw new Error(
-        "この解答用紙の担当ではないため削除できません。担当を譲ってもらってください。"
-      )
-    }
     await prisma.asbDefinition.delete({ where: { id } })
 
     await recordAuditLog({

@@ -6,7 +6,6 @@ import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
 
-import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import ExamHeader from "@/components/exams/detail/ExamHeader"
 import ExportModeModal from "@/components/exams/detail/ExportModeModal"
 import { useWorkflowData } from "@/components/exams/detail/hooks/useWorkflowData"
@@ -110,37 +109,33 @@ export default function ExamDetailPage() {
 
   if (isLoading) {
     return (
-      <ProtectedRoute>
-        <div className="flex h-64 items-center justify-center">
-          <div className="text-center">
-            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
-            <p className="mt-4 text-muted-foreground">読み込み中...</p>
-          </div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
+          <p className="mt-4 text-muted-foreground">読み込み中...</p>
         </div>
-      </ProtectedRoute>
+      </div>
     )
   }
 
   if (!exam) {
     return (
-      <ProtectedRoute>
-        <div className="container mx-auto p-6">
-          <div className="text-center">
-            <h1 className="mb-4 text-2xl font-bold">試験が見つかりません</h1>
-            <button
-              onClick={() => router.push("/")}
-              className="rounded bg-blue-500 px-4 py-2 text-white"
-            >
-              試験一覧に戻る
-            </button>
-          </div>
+      <div className="container mx-auto p-6">
+        <div className="text-center">
+          <h1 className="mb-4 text-2xl font-bold">試験が見つかりません</h1>
+          <button
+            onClick={() => router.push("/")}
+            className="rounded bg-blue-500 px-4 py-2 text-white"
+          >
+            試験一覧に戻る
+          </button>
         </div>
-      </ProtectedRoute>
+      </div>
     )
   }
 
   return (
-    <ProtectedRoute>
+    <>
       <Head>
         <title>{exam?.examName || "試験"} - 一括採点</title>
       </Head>
@@ -203,6 +198,6 @@ export default function ExamDetailPage() {
           )}
         </div>
       </div>
-    </ProtectedRoute>
+    </>
   )
 }

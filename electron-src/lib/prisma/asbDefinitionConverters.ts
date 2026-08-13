@@ -563,7 +563,7 @@ export async function upsertOmrConfig(
   tx: TxClient,
   parentFK: { subQuestionId?: string; branchQuestionId?: string },
   config: OMRCellConfig
-): Promise<void> {
+): Promise<boolean> {
   // 設定は小問／枝問と1対1。既にあれば同じ行を使い続ける
   // （毎回作り直すと、保存のたびに別 id の行が同期へ流れる）
   const existing = await tx.asbOmrConfig.findFirst({
@@ -577,7 +577,7 @@ export async function upsertOmrConfig(
     numChoices: config.numChoices,
     choiceLayout: config.layout,
   }
-  await writeRow(
+  let changed = await writeRow(
     existing ?? undefined,
     omrConfigData,
     () =>
@@ -603,11 +603,13 @@ export async function upsertOmrConfig(
       await tx.asbOmrChoiceOption.create({
         data: { omrConfigId, ...choiceOptionData },
       })
+      changed = true
     } else if (!isUnchanged(reused, choiceOptionData)) {
       await tx.asbOmrChoiceOption.update({
         where: { id: reused.id },
         data: choiceOptionData,
       })
+      changed = true
     }
   }
   const removed = existingOptions.slice(config.labels.length)
@@ -615,5 +617,8 @@ export async function upsertOmrConfig(
     await tx.asbOmrChoiceOption.deleteMany({
       where: { id: { in: removed.map((option) => option.id) } },
     })
+    changed = true
   }
+
+  return changed
 }

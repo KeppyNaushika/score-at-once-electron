@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback } from "react"
 import { toast } from "sonner"
 
 import { queryKeys } from "@/lib/queryKeys"
@@ -81,17 +81,6 @@ const EMPTY_ROWS: CourseworkStudentRow[] = []
 export function useCourseworkScores(courseworkId: string) {
   const queryClient = useQueryClient()
   const queryKey = queryKeys.coursework.scores(courseworkId)
-  const pendingChanges = useRef<
-    Map<
-      string,
-      {
-        courseworkItemId: string
-        courseworkStudentId: string
-      } & CourseworkCellPatch
-    >
-  >(new Map())
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
   /** 評価項目と生徒×項目のマス目を1つの取得で組み立てる（表示は必ず対で使う） */
   const { data, isPending: loading } = useQuery({
     queryKey,
@@ -178,38 +167,40 @@ export function useCourseworkScores(courseworkId: string) {
   )
 
   /**
-   * 未保存の変更を即座にDBへ反映する（デバウンス完了時・アンマウント時に使用）。
+   * 変更をそのまま DB へ書く。
    *
-   * 失敗したら書き残しへ戻し、キャッシュは DB へ揃える。戻さないと再試行が
-   * できず、揃えないと「保存できなかった値」を保存済みとして表示し続ける。
-   * 戻す間に入った新しい編集は上書きしない（そちらの方が新しい）。
+   * **デバウンスしない。** 表のセルは `EditableTable` が blur で確定するので、
+   * 1セルにつき1回しか飛ばない。待たせる理由が無いうえ、待っている間に強制終了や
+   * リロードが来れば入力が消える。
+   *
+   * 失敗したらキャッシュを DB へ揃える。揃えないと「保存できなかった値」を
+   * 保存済みとして表示し続ける。
    */
-  const flushPending = useCallback(async () => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current)
-      saveTimeoutRef.current = null
-    }
-    const pending = Array.from(pendingChanges.current.values())
-    if (pending.length === 0) return
-    pendingChanges.current.clear()
-
-    try {
-      await window.electronAPI.coursework.batchUpsertScores(pending)
-    } catch (error) {
-      for (const change of pending) {
-        const key = `${change.courseworkItemId}:${change.courseworkStudentId}`
-        if (!pendingChanges.current.has(key)) {
-          pendingChanges.current.set(key, change)
-        }
+  const writeCells = useCallback(
+    async (
+      changes: {
+        courseworkItemId: string
+        courseworkStudentId: string
+        patch: CourseworkCellPatch
+      }[]
+    ) => {
+      try {
+        await window.electronAPI.coursework.batchUpsertScores(
+          changes.map((change) => ({
+            courseworkItemId: change.courseworkItemId,
+            courseworkStudentId: change.courseworkStudentId,
+            ...change.patch,
+          }))
+        )
+      } catch (error) {
+        await queryClient.invalidateQueries({ queryKey })
+        toast.error("点数の保存に失敗しました", {
+          description: error instanceof Error ? error.message : undefined,
+        })
       }
-      // 画面が消えた後は再試行の機会が無い。保存できなかった値を表示し続けると
-      // 「入っている」と誤解するので、キャッシュは DB に揃えておく
-      await queryClient.invalidateQueries({ queryKey })
-      toast.error("点数の保存に失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
-  }, [queryClient, queryKey])
+    },
+    [queryClient, queryKey]
+  )
 
   const bulkUpdateCells = useCallback(
     (
@@ -247,34 +238,10 @@ export function useCourseworkScores(courseworkId: string) {
         })
       })
 
-      // pendingChangesにマージ
-      for (const change of changes) {
-        const key = `${change.courseworkItemId}:${change.courseworkStudentId}`
-        pendingChanges.current.set(key, {
-          ...pendingChanges.current.get(key),
-          courseworkItemId: change.courseworkItemId,
-          courseworkStudentId: change.courseworkStudentId,
-          ...change.patch,
-        })
-      }
-
-      // デバウンスして保存
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
-      }
-      saveTimeoutRef.current = setTimeout(() => {
-        void flushPending()
-      }, 500)
+      void writeCells(changes)
     },
-    [flushPending, patchRows]
+    [writeCells, patchRows]
   )
-
-  // アンマウント時、未保存の変更が残っていれば即座にフラッシュする
-  useEffect(() => {
-    return () => {
-      void flushPending()
-    }
-  }, [flushPending])
 
   return {
     items,

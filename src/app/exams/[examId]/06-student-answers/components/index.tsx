@@ -4,7 +4,6 @@
 
 import { Eye, Grid3X3 } from "lucide-react"
 
-import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { StudentAnswerUpload } from "@/components/exams/06-student-answers/student-answer-management/components/StudentAnswerUpload"
 import { ConfirmChangesModal } from "@/components/exams/06-student-answers/student-answer-table/components/ConfirmChangesModal"
 import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types"
@@ -22,14 +21,12 @@ export type StudentAnswerTab = "new-grid" | "current"
 // Components
 export function LoadingSpinner() {
   return (
-    <ProtectedRoute>
-      <div className="flex h-64 items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
-          <p className="mt-4 text-muted-foreground">読み込み中...</p>
-        </div>
+    <div className="flex h-64 items-center justify-center">
+      <div className="text-center">
+        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
+        <p className="mt-4 text-muted-foreground">読み込み中...</p>
       </div>
-    </ProtectedRoute>
+    </div>
   )
 }
 
