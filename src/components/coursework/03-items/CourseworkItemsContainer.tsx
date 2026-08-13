@@ -2,18 +2,12 @@
 
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
-import {
-  createDefaultLetterScales,
-  draftsToLetterScales,
-  type LetterScaleDraft,
-  LetterScaleEditor,
-} from "@/components/common/letter-scale-editor/LetterScaleEditor"
 import {
   DragHandle,
   SortableTableProvider,
@@ -29,169 +23,51 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { queryKeys } from "@/lib/queryKeys"
+import { cn } from "@/lib/utils"
+import {
+  courseworkDetailQuery,
+  createCourseworkItemMutation,
+  deleteCourseworkItemMutation,
+  reorderCourseworkItemsMutation,
+  updateCourseworkItemMutation,
+} from "@/queries/coursework"
 import type {
   CourseworkItemWithLetterScales,
   CourseworkWithRelations,
   InputMode,
 } from "@/types/coursework.types"
 
+import { LetterScaleEditor } from "./LetterScaleEditor"
+
 interface CourseworkItemsContainerProps {
   courseworkId: string
 }
 
-interface ItemDraft {
-  name: string
-  maxScore: string
-  inputMode: InputMode
-  letterScales: LetterScaleDraft[]
-}
+/** 入力中の文字を引くための鍵（DB の鍵ではなく、この画面だけの覚え） */
+const editingKey = (courseworkItemId: string, field: "name" | "maxScore") =>
+  `${courseworkItemId}:${field}`
 
-function toDraft(item: CourseworkItemWithLetterScales): ItemDraft {
-  return {
-    name: item.name,
-    maxScore: String(item.maxScore),
-    inputMode: item.inputMode,
-    letterScales:
-      item.letterScales.length > 0
-        ? item.letterScales
-            .slice()
-            .sort(
-              (letterScaleA, letterScaleB) =>
-                letterScaleA.order - letterScaleB.order
-            )
-            .map((letterScale) => ({
-              // 既存行は DB の安定 id をそのまま UI の key に使う
-              id: letterScale.id,
-              label: letterScale.label,
-              score: String(letterScale.score),
-            }))
-        : createDefaultLetterScales(),
-  }
-}
-
-/** ドラフトが保存可能（=有効）かを判定する */
-function isDraftValid(draft: ItemDraft): boolean {
-  if (!draft.name.trim()) return false
-  const maxScore = Number(draft.maxScore)
-  if (isNaN(maxScore) || maxScore <= 0) return false
-  if (
-    draft.inputMode === "letter" &&
-    draftsToLetterScales(draft.letterScales).length === 0
-  ) {
-    return false
-  }
-  return true
-}
-
-interface SortableItemRowProps {
-  item: CourseworkItemWithLetterScales
-  draft: ItemDraft
-  onUpdate: (itemId: string, patch: Partial<ItemDraft>) => void
-  onDelete: (item: CourseworkItemWithLetterScales) => void
-}
-
-/** ドラッグ&ドロップで並べ替え可能な、常時インライン編集の評価項目1行 */
-function SortableItemRow({
-  item,
-  draft,
-  onUpdate,
-  onDelete,
-}: SortableItemRowProps) {
-  const { setNodeRef, style, dragHandleProps } = useSortableRow(item.id)
-  const maxScoreNum = Number(draft.maxScore)
-  const maxScoreInvalid =
-    draft.maxScore.trim() === "" || isNaN(maxScoreNum) || maxScoreNum <= 0
-
-  return (
-    <div ref={setNodeRef} style={style} className="rounded-lg border p-4">
-      <div className="flex items-start gap-3">
-        <DragHandle dragHandleProps={dragHandleProps} className="mt-5" />
-
-        <div className="flex-1 space-y-3">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">項目名</Label>
-              <Input
-                value={draft.name}
-                onChange={(e) => onUpdate(item.id, { name: e.target.value })}
-                className="h-8 w-48"
-                placeholder="項目名"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">満点</Label>
-              <Input
-                value={draft.maxScore}
-                onChange={(e) =>
-                  onUpdate(item.id, { maxScore: e.target.value })
-                }
-                type="number"
-                step="any"
-                className={`h-8 w-24 ${
-                  maxScoreInvalid ? "border-red-400 bg-red-50 text-red-700" : ""
-                }`}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">入力方式</Label>
-              <Select
-                value={draft.inputMode}
-                onValueChange={(value) =>
-                  onUpdate(item.id, { inputMode: value as InputMode })
-                }
-              >
-                <SelectTrigger className="h-8 w-28 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="numeric">数値</SelectItem>
-                  <SelectItem value="letter">文字評価</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {draft.inputMode === "letter" && (
-            <LetterScaleEditor
-              scales={draft.letterScales}
-              onChange={(scales) => onUpdate(item.id, { letterScales: scales })}
-            />
-          )}
-        </div>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="mt-5 h-7 w-7 text-destructive"
-          onClick={() => onDelete(item)}
-          title="削除"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  )
-}
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_ITEMS: CourseworkItemWithLetterScales[] = []
 
 /**
  * 試験外成績資料の評価項目管理コンテナ
  *
  * 評価項目の追加・編集（満点・数値/文字モード・文字評価変換表）・並べ替え・削除を行う。
- * 各項目は常時インライン編集で、変更はデバウンスで自動保存される。
- * 並べ替えはドラッグ&ドロップ。
- * 成績算出から参照中の項目は削除をブロックし、参照元をトーストで通知する。
+ * 各項目は常時インライン編集で、**変更は1打鍵ごとに即座に保存する**。
+ *
+ * 以前は項目ごとに 500ms のデバウンスを持ち、期限が来るとドラフト全体（名前・満点・
+ * 入力方式・刻みの配列）を1本の IPC で送っていた。そのため項目名を1文字直すだけで
+ * 文字評価の刻みが全行 delete → create され、id が振り直されていた。
+ *
+ * 並べ替えはドラッグ&ドロップ。成績算出から参照中の項目は削除をブロックし、
+ * 参照元をトーストで通知する。
  */
-/** 未取得のときに毎回新しい配列を作らないための空値 */
-const EMPTY_ITEMS: CourseworkItemWithLetterScales[] = []
-
 export function CourseworkItemsContainer({
   courseworkId,
 }: CourseworkItemsContainerProps) {
-  const queryClient = useQueryClient()
   // 評価項目は資料の子なので、資料そのもののキャッシュから取り出す。
   // 別キーに項目だけを複製すると、同じ資料が2つの形でキャッシュに載る
-  const queryKey = queryKeys.coursework.detail(courseworkId)
   const selectItems = useCallback(
     (coursework: CourseworkWithRelations) =>
       coursework.items
@@ -200,172 +76,102 @@ export function CourseworkItemsContainer({
     []
   )
   const { data: items = EMPTY_ITEMS, isPending: loading } = useQuery({
-    queryKey,
-    queryFn: () => window.electronAPI.coursework.getById(courseworkId),
+    ...courseworkDetailQuery(courseworkId),
     select: selectItems,
   })
-  const [drafts, setDrafts] = useState<Record<string, ItemDraft>>({})
-  const [newItemName, setNewItemName] = useState("")
 
-  // 自動保存用：最新ドラフトの参照と項目ごとのデバウンスタイマー
-  const draftsRef = useRef<Record<string, ItemDraft>>({})
-  const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+  const createItem = useMutation(createCourseworkItemMutation(courseworkId))
+  const updateItem = useMutation(updateCourseworkItemMutation(courseworkId))
+  const deleteItem = useMutation(deleteCourseworkItemMutation(courseworkId))
+  const reorderItems = useMutation(reorderCourseworkItemsMutation(courseworkId))
+
+  const [newItemName, setNewItemName] = useState("")
+  const [editingText, setEditingText] = useState<ReadonlyMap<string, string>>(
     new Map()
   )
 
-  // デバウンス保存は「今の」ドラフトを読む必要がある。state と別に ref で保つ
-  useEffect(() => {
-    draftsRef.current = drafts
-  })
+  const textOf = (
+    item: CourseworkItemWithLetterScales,
+    field: "name" | "maxScore"
+  ) => editingText.get(editingKey(item.id, field)) ?? String(item[field])
 
-  const loadItems = useCallback(
-    () => queryClient.invalidateQueries({ queryKey }),
-    [queryClient, queryKey]
-  )
-
-  /**
-   * 取得結果に合わせてドラフトを揃える。effect ではなくレンダー中に畳む
-   * （取得直後の1フレームに前の項目のドラフトを出さない）。
-   *
-   * **既にドラフトがある項目は作り直さない。** 入力はデバウンスで保存するので、
-   * 保存が終わるまでキャッシュの行は古い名前を持つ。並べ替えのような
-   * 「項目の中身と無関係な更新」で作り直すと、入力中の名前が古い名前へ戻り、
-   * そのままデバウンスに拾われて DB へ書き戻される。
-   */
-  const [draftSource, setDraftSource] = useState<typeof items | null>(null)
-  if (items !== draftSource) {
-    setDraftSource(items)
-    setDrafts((previous) =>
-      Object.fromEntries(
-        items.map((item) => [item.id, previous[item.id] ?? toDraft(item)])
-      )
+  const rememberText = (
+    item: CourseworkItemWithLetterScales,
+    field: "name" | "maxScore",
+    text: string
+  ) => {
+    setEditingText((previous) =>
+      new Map(previous).set(editingKey(item.id, field), text)
     )
   }
 
-  /** 指定項目の最新ドラフトをDBへ保存する（無効なドラフトはスキップ） */
-  const saveItem = useCallback(async (itemId: string) => {
-    const draft = draftsRef.current[itemId]
-    if (!draft || !isDraftValid(draft)) return
-    try {
-      await window.electronAPI.coursework.updateItem(itemId, {
-        name: draft.name.trim(),
-        maxScore: Number(draft.maxScore),
-        inputMode: draft.inputMode,
-        letterScales: draftsToLetterScales(draft.letterScales),
-      })
-    } catch (error) {
-      toast.error("保存に失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
-  }, [])
+  const forgetText = (item: CourseworkItemWithLetterScales) => {
+    setEditingText((previous) => {
+      const next = new Map(previous)
+      next.delete(editingKey(item.id, "name"))
+      next.delete(editingKey(item.id, "maxScore"))
+      return next
+    })
+  }
 
-  /** 保留中の全保存を即座に実行する（並べ替え/追加/削除/離脱前のフラッシュ） */
-  const flushAll = useCallback(async () => {
-    const ids = Array.from(saveTimers.current.keys())
-    for (const id of ids) {
-      const timer = saveTimers.current.get(id)
-      if (timer) clearTimeout(timer)
-      saveTimers.current.delete(id)
-      await saveItem(id)
-    }
-  }, [saveItem])
+  const changeName = (item: CourseworkItemWithLetterScales, text: string) => {
+    rememberText(item, "name", text)
+    // 名前の無い項目は作れない。入力途中の空は書かず、次の打鍵で確定する
+    if (text.trim() === "") return
+    updateItem.mutate({ id: item.id, name: text.trim() })
+  }
 
-  // アンマウント時に未保存分をフラッシュ
-  useEffect(() => {
-    const timers = saveTimers.current
-    return () => {
-      for (const [id, timer] of timers) {
-        clearTimeout(timer)
-        void saveItem(id)
-      }
-      timers.clear()
-    }
-  }, [saveItem])
+  const changeMaxScore = (
+    item: CourseworkItemWithLetterScales,
+    text: string
+  ) => {
+    rememberText(item, "maxScore", text)
+    const maxScore = Number(text)
+    if (text.trim() === "" || Number.isNaN(maxScore) || maxScore <= 0) return
+    updateItem.mutate({ id: item.id, maxScore })
+  }
 
-  /** ドラフトを部分更新し、その項目の保存をデバウンス予約する */
-  const updateDraft = useCallback(
-    (itemId: string, patch: Partial<ItemDraft>) => {
-      setDrafts((previous) => {
-        const current = previous[itemId]
-        if (!current) return previous
-        return { ...previous, [itemId]: { ...current, ...patch } }
-      })
-
-      const existing = saveTimers.current.get(itemId)
-      if (existing) clearTimeout(existing)
-      saveTimers.current.set(
-        itemId,
-        setTimeout(() => {
-          saveTimers.current.delete(itemId)
-          void saveItem(itemId)
-        }, 500)
-      )
-    },
-    [saveItem]
-  )
+  const changeInputMode = (
+    item: CourseworkItemWithLetterScales,
+    inputMode: InputMode
+  ) => {
+    updateItem.mutate({ id: item.id, inputMode })
+  }
 
   const handleAddItem = async () => {
     if (!newItemName.trim()) return
-    await flushAll()
-    try {
-      await window.electronAPI.coursework.createItem({
-        courseworkId,
-        name: newItemName.trim(),
-        maxScore: 100,
-        inputMode: "numeric",
-      })
-      setNewItemName("")
-      await loadItems()
-    } catch (error) {
-      toast.error("評価項目の追加に失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
+    await createItem.mutateAsync({
+      name: newItemName.trim(),
+      maxScore: 100,
+      inputMode: "numeric",
+    })
+    setNewItemName("")
   }
 
   const handleDelete = async (item: CourseworkItemWithLetterScales) => {
-    await flushAll()
-    try {
-      const result = await window.electronAPI.coursework.deleteItem(item.id)
-      if (!result.deleted) {
-        toast.error("削除できません", {
-          description: `次の成績算出で参照されています: ${result.usedBy.join("、")}`,
-        })
-        return
-      }
-      await loadItems()
-      toast.success("評価項目を削除しました", { description: item.name })
-    } catch (error) {
-      toast.error("削除に失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
+    const result = await deleteItem.mutateAsync(item.id)
+    if (!result.deleted) {
+      toast.error("削除できません", {
+        description: `次の成績算出で参照されています: ${result.usedBy.join("、")}`,
       })
+      return
     }
+    forgetText(item)
+    toast.success("評価項目を削除しました", { description: item.name })
   }
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
     const oldIndex = items.findIndex((item) => item.id === active.id)
     const newIndex = items.findIndex((item) => item.id === over.id)
     if (oldIndex < 0 || newIndex < 0) return
-    // 並び順の SSOT は行の order。配列の並びだけを変えると select の並べ替えで元へ戻る
-    const reordered = arrayMove(items, oldIndex, newIndex).map(
-      (item, order) => ({ ...item, order })
+    reorderItems.mutate(
+      arrayMove(items, oldIndex, newIndex).map((item, order) => ({
+        id: item.id,
+        order,
+      }))
     )
-    queryClient.setQueryData<CourseworkWithRelations>(queryKey, (previous) =>
-      previous ? { ...previous, items: reordered } : previous
-    )
-    try {
-      await window.electronAPI.coursework.reorderItems(
-        reordered.map((item) => ({ id: item.id, order: item.order }))
-      )
-    } catch (error) {
-      await loadItems()
-      toast.error("並べ替えに失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
   }
 
   if (loading) {
@@ -417,19 +223,20 @@ export function CourseworkItemsContainer({
             items={items.map((item) => item.id)}
             onDragEnd={handleDragEnd}
           >
-            {items.map((item) => {
-              const draft = drafts[item.id]
-              if (!draft) return null
-              return (
-                <SortableItemRow
-                  key={item.id}
-                  item={item}
-                  draft={draft}
-                  onUpdate={updateDraft}
-                  onDelete={handleDelete}
-                />
-              )
-            })}
+            {items.map((item) => (
+              <SortableItemRow
+                key={item.id}
+                courseworkId={courseworkId}
+                item={item}
+                name={textOf(item, "name")}
+                maxScore={textOf(item, "maxScore")}
+                onChangeName={changeName}
+                onChangeMaxScore={changeMaxScore}
+                onChangeInputMode={changeInputMode}
+                onBlur={forgetText}
+                onDelete={handleDelete}
+              />
+            ))}
           </SortableTableProvider>
         </div>
       )}
@@ -439,6 +246,107 @@ export function CourseworkItemsContainer({
           <Link href={`/coursework/${courseworkId}/04-scores`}>
             次へ: 点数入力
           </Link>
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+interface SortableItemRowProps {
+  courseworkId: string
+  item: CourseworkItemWithLetterScales
+  name: string
+  maxScore: string
+  onChangeName: (item: CourseworkItemWithLetterScales, text: string) => void
+  onChangeMaxScore: (item: CourseworkItemWithLetterScales, text: string) => void
+  onChangeInputMode: (
+    item: CourseworkItemWithLetterScales,
+    inputMode: InputMode
+  ) => void
+  onBlur: (item: CourseworkItemWithLetterScales) => void
+  onDelete: (item: CourseworkItemWithLetterScales) => void
+}
+
+/** ドラッグ&ドロップで並べ替え可能な、常時インライン編集の評価項目1行 */
+function SortableItemRow({
+  courseworkId,
+  item,
+  name,
+  maxScore,
+  onChangeName,
+  onChangeMaxScore,
+  onChangeInputMode,
+  onBlur,
+  onDelete,
+}: SortableItemRowProps) {
+  const { setNodeRef, style, dragHandleProps } = useSortableRow(item.id)
+  const maxScoreNumber = Number(maxScore)
+  const maxScoreInvalid =
+    maxScore.trim() === "" || isNaN(maxScoreNumber) || maxScoreNumber <= 0
+
+  return (
+    <div ref={setNodeRef} style={style} className="rounded-lg border p-4">
+      <div className="flex items-start gap-3">
+        <DragHandle dragHandleProps={dragHandleProps} className="mt-5" />
+
+        <div className="flex-1 space-y-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">項目名</Label>
+              <Input
+                value={name}
+                onChange={(e) => onChangeName(item, e.target.value)}
+                onBlur={() => onBlur(item)}
+                className="h-8 w-48"
+                placeholder="項目名"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">満点</Label>
+              <Input
+                value={maxScore}
+                onChange={(e) => onChangeMaxScore(item, e.target.value)}
+                onBlur={() => onBlur(item)}
+                type="number"
+                step="any"
+                className={cn(
+                  "h-8 w-24",
+                  maxScoreInvalid && "border-red-400 bg-red-50 text-red-700"
+                )}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">入力方式</Label>
+              <Select
+                value={item.inputMode}
+                onValueChange={(value) =>
+                  onChangeInputMode(item, value as InputMode)
+                }
+              >
+                <SelectTrigger className="h-8 w-28 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="numeric">数値</SelectItem>
+                  <SelectItem value="letter">文字評価</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {item.inputMode === "letter" && (
+            <LetterScaleEditor courseworkId={courseworkId} item={item} />
+          )}
+        </div>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="mt-5 h-7 w-7 text-destructive"
+          onClick={() => void onDelete(item)}
+          title="削除"
+        >
+          <Trash2 className="h-4 w-4" />
         </Button>
       </div>
     </div>

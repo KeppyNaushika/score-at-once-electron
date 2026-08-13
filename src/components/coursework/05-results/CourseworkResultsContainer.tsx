@@ -1,5 +1,6 @@
 "use client"
 
+import { useQueries, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 
 import {
@@ -10,9 +11,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { CourseworkItemWithLetterScales } from "@/types/coursework.types"
+import {
+  type CourseworkClassroomRow,
+  courseworkClassroomsQuery,
+  courseworkDetailQuery,
+  courseworkScoresQuery,
+  courseworkStudentsQuery,
+} from "@/queries/coursework"
+import type {
+  CourseworkItemWithLetterScales,
+  CourseworkStudentWithMemberships,
+} from "@/types/coursework.types"
 
-import { useCourseworkScores } from "../04-scores/hooks/useCourseworkScores"
+import {
+  buildCourseworkStudentRows,
+  sortCourseworkItems,
+} from "../04-scores/courseworkScoreMatrix"
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_STUDENTS: CourseworkStudentWithMemberships[] = []
+const EMPTY_CLASSROOMS: CourseworkClassroomRow[] = []
 
 interface CourseworkResultsContainerProps {
   courseworkId: string
@@ -39,7 +57,40 @@ function letterToScore(
 export function CourseworkResultsContainer({
   courseworkId,
 }: CourseworkResultsContainerProps) {
-  const { items, studentRows, loading } = useCourseworkScores(courseworkId)
+  const { data: coursework, isPending: loading } = useQuery(
+    courseworkDetailQuery(courseworkId)
+  )
+  const { data: courseworkStudents = EMPTY_STUDENTS } = useQuery(
+    courseworkStudentsQuery(courseworkId)
+  )
+  const { data: courseworkClassrooms = EMPTY_CLASSROOMS } = useQuery(
+    courseworkClassroomsQuery(courseworkId)
+  )
+
+  const items = useMemo(
+    () => sortCourseworkItems(coursework?.items ?? []),
+    [coursework]
+  )
+  // 点数入力ページと同じキーなので取得は共有される
+  const scoreQueries = useQueries({
+    queries: items.map((item) => courseworkScoresQuery(item.id)),
+  })
+  const studentRows = useMemo(() => {
+    const scoresByItem = new Map(
+      items.map((item, index) => [item.id, scoreQueries[index]?.data ?? []])
+    )
+    const registeredClassroomIds = new Set(
+      courseworkClassrooms.map(
+        (courseworkClassroom) => courseworkClassroom.classroomId
+      )
+    )
+    return buildCourseworkStudentRows(
+      items,
+      courseworkStudents,
+      registeredClassroomIds,
+      scoresByItem
+    )
+  }, [items, scoreQueries, courseworkStudents, courseworkClassrooms])
 
   const hasComments = useMemo(
     () =>

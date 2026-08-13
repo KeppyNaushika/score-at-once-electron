@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation, useQueries, useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { useCallback, useMemo } from "react"
 
@@ -8,12 +9,28 @@ import {
   EditableTable,
 } from "@/components/common/EditableTable"
 import { Button } from "@/components/ui/button"
-import type { CourseworkItemWithLetterScales } from "@/types/coursework.types"
+import {
+  type CourseworkClassroomRow,
+  courseworkClassroomsQuery,
+  courseworkDetailQuery,
+  courseworkScoresQuery,
+  courseworkStudentsQuery,
+  upsertCourseworkScoresMutation,
+} from "@/queries/coursework"
+import type {
+  CourseworkItemWithLetterScales,
+  CourseworkStudentWithMemberships,
+} from "@/types/coursework.types"
 
 import {
+  buildCourseworkStudentRows,
   type CourseworkCellPatch,
-  useCourseworkScores,
-} from "./hooks/useCourseworkScores"
+  sortCourseworkItems,
+} from "./courseworkScoreMatrix"
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_STUDENTS: CourseworkStudentWithMemberships[] = []
+const EMPTY_CLASSROOMS: CourseworkClassroomRow[] = []
 
 interface CourseworkScoresContainerProps {
   courseworkId: string
@@ -61,8 +78,61 @@ const commentColId = (itemId: string) => `${itemId}::comment`
 export function CourseworkScoresContainer({
   courseworkId,
 }: CourseworkScoresContainerProps) {
-  const { items, studentRows, loading, bulkUpdateCells } =
-    useCourseworkScores(courseworkId)
+  const { data: coursework, isPending: loading } = useQuery(
+    courseworkDetailQuery(courseworkId)
+  )
+  const { data: courseworkStudents = EMPTY_STUDENTS } = useQuery(
+    courseworkStudentsQuery(courseworkId)
+  )
+  const { data: courseworkClassrooms = EMPTY_CLASSROOMS } = useQuery(
+    courseworkClassroomsQuery(courseworkId)
+  )
+  const upsertScores = useMutation(upsertCourseworkScoresMutation())
+
+  const items = useMemo(
+    () => sortCourseworkItems(coursework?.items ?? []),
+    [coursework]
+  )
+  // 評価項目ごとの点数。資料ページと同じキーなので取得は共有される
+  const scoreQueries = useQueries({
+    queries: items.map((item) => courseworkScoresQuery(item.id)),
+  })
+  const studentRows = useMemo(() => {
+    const scoresByItem = new Map(
+      items.map((item, index) => [item.id, scoreQueries[index]?.data ?? []])
+    )
+    const registeredClassroomIds = new Set(
+      courseworkClassrooms.map(
+        (courseworkClassroom) => courseworkClassroom.classroomId
+      )
+    )
+    return buildCourseworkStudentRows(
+      items,
+      courseworkStudents,
+      registeredClassroomIds,
+      scoresByItem
+    )
+  }, [items, scoreQueries, courseworkStudents, courseworkClassrooms])
+
+  const bulkUpdateCells = useCallback(
+    (
+      changes: {
+        courseworkItemId: string
+        courseworkStudentId: string
+        patch: CourseworkCellPatch
+      }[]
+    ) => {
+      if (changes.length === 0) return
+      upsertScores.mutate(
+        changes.map((change) => ({
+          courseworkItemId: change.courseworkItemId,
+          courseworkStudentId: change.courseworkStudentId,
+          ...change.patch,
+        }))
+      )
+    },
+    [upsertScores]
+  )
 
   const tableData = useMemo(() => {
     const data = studentRows.map((row): ScoreRow => {

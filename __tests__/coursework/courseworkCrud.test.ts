@@ -38,6 +38,10 @@ import {
   updateCourseworkItem,
   updateCourseworkStudentOrders,
 } from "@/electron-src/lib/prisma/coursework"
+import {
+  deleteCourseworkLetterScale,
+  updateCourseworkLetterScale,
+} from "@/electron-src/lib/prisma/courseworkLetterScale"
 import { createDataSource } from "@/electron-src/lib/prisma/gradeDataSource"
 import { createGradeItem } from "@/electron-src/lib/prisma/gradeItem"
 
@@ -157,11 +161,30 @@ describe("Coursework CRUD", () => {
     })
     expect(itemRes.letterScales).toHaveLength(2)
 
-    const updated = await updateCourseworkItem(itemRes.id, {
-      letterScales: [{ label: "○", score: 100, order: 0 }],
+    // 刻みは1行ずつ書く。項目そのものの更新では触らない（触れば全行の id が
+    // 振り直され、同期とアーカイブの id 照合が壊れる）
+    const [scaleA, scaleB] = itemRes.letterScales
+    const renamed = await updateCourseworkLetterScale(scaleA.id, {
+      label: "○",
     })
-    expect(updated.letterScales).toHaveLength(1)
-    expect(updated.letterScales[0].label).toBe("○")
+    expect(renamed.label).toBe("○")
+
+    await updateCourseworkItem(itemRes.id, { name: "知識・技能" })
+    const afterItemUpdate = await getCourseworkById(courseworkResult.id)
+    const itemAfter = afterItemUpdate.items.find(
+      (item) => item.id === itemRes.id
+    )!
+    expect(itemAfter.name).toBe("知識・技能")
+    // 項目名を変えても刻みの id は変わらない
+    expect(itemAfter.letterScales.map((letterScale) => letterScale.id)).toEqual(
+      [scaleA.id, scaleB.id]
+    )
+
+    await deleteCourseworkLetterScale(scaleB.id)
+    const afterDelete = await getCourseworkById(courseworkResult.id)
+    expect(
+      afterDelete.items.find((item) => item.id === itemRes.id)!.letterScales
+    ).toHaveLength(1)
 
     await deleteCourseworkItem(itemRes.id)
   })

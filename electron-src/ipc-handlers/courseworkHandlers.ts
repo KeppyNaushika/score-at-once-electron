@@ -43,6 +43,12 @@ import {
   updateCourseworkItem,
   updateCourseworkStudentOrders,
 } from "../lib/prisma/coursework"
+import {
+  createCourseworkLetterScale,
+  deleteCourseworkLetterScale,
+  reorderCourseworkLetterScales,
+  updateCourseworkLetterScale,
+} from "../lib/prisma/courseworkLetterScale"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
 /** 試験外成績資料の CRUD・評価項目・点数・名簿・タグ用 IPC チャンネルを登録する */
@@ -96,10 +102,38 @@ export const courseworkHandlers = {
       name?: string
       maxScore?: number
       inputMode?: string
-      letterScales?: { label: string; score: number; order: number }[]
     }
   ) => {
     return updateCourseworkItem(id, data)
+  },
+
+  // CourseworkLetterScale（文字評価の刻み）。1行ずつ書く
+  "coursework:createLetterScale": async (data: {
+    courseworkItemId: string
+    label: string
+    score: number
+    order: number
+  }) => {
+    return createCourseworkLetterScale(data)
+  },
+
+  "coursework:updateLetterScale": async (data: {
+    id: string
+    label?: string
+    score?: number
+  }) => {
+    const { id, ...rest } = data
+    return updateCourseworkLetterScale(id, rest)
+  },
+
+  "coursework:deleteLetterScale": async (id: string) => {
+    return deleteCourseworkLetterScale(id)
+  },
+
+  "coursework:reorderLetterScales": async (
+    items: { id: string; order: number }[]
+  ) => {
+    return reorderCourseworkLetterScales(items)
   },
 
   "coursework:deleteItem": async (id: string) => {

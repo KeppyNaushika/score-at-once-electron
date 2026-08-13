@@ -238,8 +238,6 @@ const NOT_YET_MIGRATED = [
   "src/components/classroom/ClassroomStudentImportModal.tsx",
   "src/components/common/ScreenBlackout.tsx",
   "src/components/common/student-add-panel/hooks/useStudentAddPanel.ts",
-  "src/components/coursework/03-items/CourseworkItemsContainer.tsx",
-  "src/components/coursework/04-scores/hooks/useCourseworkScores.ts",
   "src/components/exams/01-upload/hooks/useMasterAnswers.ts",
   "src/components/exams/01-upload/utils/imageUtils.ts",
   "src/components/exams/02-template/components/CropRegionEditor.tsx",

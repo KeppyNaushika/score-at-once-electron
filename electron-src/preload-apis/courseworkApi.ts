@@ -19,6 +19,12 @@ export function createCourseworkApi() {
       deleteItem: bind("coursework:deleteItem"),
       reorderItems: bind("coursework:reorderItems"),
 
+      // 文字評価の刻み（CourseworkLetterScale）。1行ずつ書く
+      createLetterScale: bind("coursework:createLetterScale"),
+      updateLetterScale: bind("coursework:updateLetterScale"),
+      deleteLetterScale: bind("coursework:deleteLetterScale"),
+      reorderLetterScales: bind("coursework:reorderLetterScales"),
+
       // 点数
       getScores: bind("coursework:getScores"),
       batchUpsertScores: bind("coursework:batchUpsertScores"),

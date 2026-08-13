@@ -172,7 +172,6 @@ export const updateCourseworkItemMutation = (courseworkId: string) =>
       name?: string
       maxScore?: number
       inputMode?: string
-      letterScales?: { label: string; score: number; order: number }[]
     }) => {
       const { id, ...data } = input
       return window.electronAPI.coursework.updateItem(id, data)
@@ -204,21 +203,75 @@ export const reorderCourseworkItemsMutation = (courseworkId: string) =>
     },
   })
 
+// --- 文字評価の刻み ---
+//
+// 「A=100, B=80, C=60」の1行ずつ。ラベルは項目内で一意（DB の
+// `@@unique([courseworkItemId, label])`）なので、重複した状態では書かない。
+
+export const createCourseworkLetterScaleMutation = (courseworkId: string) =>
+  defineMutation({
+    mutationFn: (input: {
+      courseworkItemId: string
+      label: string
+      score: number
+      order: number
+    }) => window.electronAPI.coursework.createLetterScale(input),
+    scope: { id: `coursework:${courseworkId}:letterScales` },
+    meta: {
+      invalidates: [courseworkScope(courseworkId)],
+      errorMessage: "評価の刻みを追加できませんでした",
+    },
+  })
+
+export const updateCourseworkLetterScaleMutation = (courseworkId: string) =>
+  defineMutation({
+    mutationFn: (input: { id: string; label?: string; score?: number }) =>
+      window.electronAPI.coursework.updateLetterScale(input),
+    scope: { id: `coursework:${courseworkId}:letterScales` },
+    meta: {
+      invalidates: [courseworkScope(courseworkId)],
+      errorMessage: "評価の刻みを保存できませんでした",
+    },
+  })
+
+export const deleteCourseworkLetterScaleMutation = (courseworkId: string) =>
+  defineMutation({
+    mutationFn: (letterScaleId: string) =>
+      window.electronAPI.coursework.deleteLetterScale(letterScaleId),
+    scope: { id: `coursework:${courseworkId}:letterScales` },
+    meta: {
+      invalidates: [courseworkScope(courseworkId)],
+      errorMessage: "評価の刻みを削除できませんでした",
+    },
+  })
+
+export const reorderCourseworkLetterScalesMutation = (courseworkId: string) =>
+  defineMutation({
+    mutationFn: (orders: { id: string; order: number }[]) =>
+      window.electronAPI.coursework.reorderLetterScales(orders),
+    scope: { id: `coursework:${courseworkId}:letterScales` },
+    meta: {
+      invalidates: [courseworkScope(courseworkId)],
+      errorMessage: "評価の刻みの並び順を保存できませんでした",
+    },
+  })
+
 // --- 点数 ---
 
 /**
  * 入力した点数を書く。
  *
  * 1マスにつき1レコードなので、まとめて送るのは「同じ操作を対象分繰り返す」
- * だけの意味。`courseworkItemId` ごとに `scope` を切って直列化する。
+ * だけの意味。貼り付けは複数の評価項目にまたがるので、取り直す先は評価項目
+ * ごとのキーの**前方一致**にする（開いていない資料の点数は取り直されない）。
  */
-export const upsertCourseworkScoresMutation = (courseworkItemId: string) =>
+export const upsertCourseworkScoresMutation = () =>
   defineMutation({
     mutationFn: (scores: CourseworkScoreUpsertInput[]) =>
       window.electronAPI.coursework.batchUpsertScores(scores),
-    scope: { id: `courseworkScores:${courseworkItemId}` },
+    scope: { id: "courseworkScores" },
     meta: {
-      invalidates: [courseworkScoresQuery(courseworkItemId).queryKey],
+      invalidates: [["courseworkScores"]],
       errorMessage: "点数を保存できませんでした",
     },
   })

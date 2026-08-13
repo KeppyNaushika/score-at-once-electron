@@ -303,31 +303,24 @@ export async function createCourseworkItem(data: {
 }
 
 /** 評価項目を更新（letterScales は全置換） */
+/**
+ * 評価項目そのものを更新する。
+ *
+ * **文字評価の刻みはここで書かない。** 刻みは `courseworkLetterScale.ts` の
+ * 1行ずつの経路が持つ。かつてここが刻みの配列を受け取り `deleteMany` →
+ * `create` していたため、項目名を1文字直すだけで全行の id が振り直されていた。
+ */
 export async function updateCourseworkItem(
   id: string,
   data: {
     name?: string
     maxScore?: number
     inputMode?: string
-    letterScales?: { label: string; score: number; order: number }[]
   }
 ) {
-  const { letterScales, ...rest } = data
-  const updateData: Record<string, unknown> = { ...rest }
-  if (letterScales !== undefined) {
-    updateData.letterScales = {
-      deleteMany: {},
-      create: letterScales.map((letterScale) => ({
-        label: letterScale.label,
-        score: letterScale.score,
-        order: letterScale.order,
-      })),
-    }
-  }
-
   const item = await prisma.courseworkItem.update({
     where: { id },
-    data: updateData,
+    data,
     include: { letterScales: { orderBy: { order: "asc" } } },
   })
 
