@@ -16,6 +16,7 @@ import {
 } from "./asbDefinitionConverters"
 import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
+import { byId, writeRow } from "./rowDiff"
 
 // =============================================================================
 // DB型定義（fullInclude用）
@@ -216,10 +217,10 @@ function collectSurvivingIds(definition: AnswerSheetDefinition): SurvivingIds {
 /**
  * 解答用紙を保存する。
  *
- * **消えたものだけを消し、残るものは id ごと残す。** 以前は全消しして作り直して
- * いたため、保存のたびに全行の削除と挿入が同期の変更履歴へ流れていた。削除と挿入は
- * 同一トランザクション＝同一秒に起きるので、受け取る側で「同時刻なら削除が勝つ」
- * 判定に当たり、相手の端末から解答用紙が消えたまま復活しない経路があった。
+ * **変わった行だけを書き、消えた行だけを消す。** 以前は全消しして作り直していたため、
+ * 保存のたびに作成日時が「今」へ戻り、全行の削除と挿入が同期の変更履歴へ流れていた。
+ * 全消しをやめた後も全行を上書きしていたため、触っていない行まで `updatedAt` が
+ * 動いていた（同時編集で相手の木を丸ごと倒す。{@link isUnchanged} を参照）。
  *
  * 保存できるのは担当者（`userId`）だけ。担当は保存では変わらない。
  */
@@ -227,16 +228,15 @@ export async function saveAsbDefinition(
   definition: AnswerSheetDefinition,
   userId: string
 ): Promise<void> {
-  const existing = await prisma.asbDefinition.findUnique({
+  const existingDefinition = await prisma.asbDefinition.findUnique({
     where: { id: definition.id },
-    select: { userId: true },
   })
-  if (existing && existing.userId !== userId) {
+  if (existingDefinition && existingDefinition.userId !== userId) {
     throw new Error(
       "この解答用紙の担当ではないため保存できません。担当を譲ってもらってください。"
     )
   }
-  const existed = existing !== null
+  const existed = existingDefinition !== null
   const surviving = collectSurvivingIds(definition)
   const inDefinition = { majorQuestion: { definitionId: definition.id } }
   const inSubQuestions = { subQuestion: inDefinition }
@@ -289,7 +289,34 @@ export async function saveAsbDefinition(
       },
     })
 
-    // 2. 解答用紙そのもの。担当と作成日時は保存では動かさない
+    // 2. いま DB にある行を引く（変わっていない行を書かないための突き合わせ先）
+    const currentHeaderFields = byId(
+      await tx.asbHeaderField.findMany({
+        where: { definitionId: definition.id },
+      })
+    )
+    const currentMajorQuestions = byId(
+      await tx.asbMajorQuestion.findMany({
+        where: { definitionId: definition.id },
+      })
+    )
+    const currentSubQuestions = byId(
+      await tx.asbSubQuestion.findMany({ where: inDefinition })
+    )
+    const currentBranchQuestions = byId(
+      await tx.asbBranchQuestion.findMany({ where: inSubQuestions })
+    )
+    const currentCharGuides = byId(
+      await tx.asbCharGuide.findMany({ where: inSubQuestions })
+    )
+    const currentTextElements = byId(
+      await tx.asbTextElement.findMany({ where: { OR: inQuestions } })
+    )
+    const currentImageElements = byId(
+      await tx.asbImageElement.findMany({ where: { OR: inQuestions } })
+    )
+
+    // 3. 解答用紙そのもの。担当と作成日時は保存では動かさない
     const flat = flattenGlobalSettings(definition.settings)
     const definitionData = {
       name: definition.name,
@@ -299,207 +326,197 @@ export async function saveAsbDefinition(
       labelPresetBranch: definition.labelPresets?.branch ?? null,
       ...flat,
     }
-    await tx.asbDefinition.upsert({
-      where: { id: definition.id },
-      create: { id: definition.id, userId, ...definitionData },
-      update: definitionData,
-    })
+    await writeRow(
+      existingDefinition ?? undefined,
+      definitionData,
+      () =>
+        tx.asbDefinition.create({
+          data: { id: definition.id, userId, ...definitionData },
+        }),
+      () =>
+        tx.asbDefinition.update({
+          where: { id: definition.id },
+          data: definitionData,
+        })
+    )
 
-    // ヘッダーフィールドを作成
+    // ヘッダーフィールド
     for (let hi = 0; hi < definition.settings.headerFields.length; hi++) {
       const headerField = definition.settings.headerFields[hi]
-      await tx.asbHeaderField.upsert({
-        where: { id: headerField.id },
-        create: {
-          id: headerField.id,
-          definitionId: definition.id,
-          type: headerField.type ?? "field",
-          label: headerField.label,
-          widthMm: headerField.widthMm,
-          heightMm: headerField.heightMm,
-          gridCount: headerField.gridCount,
-          lineStyle: headerField.lineStyle,
-          lineWidth: headerField.lineWidth,
-          order: hi,
-          fontSize: headerField.fontSize ?? null,
-          linkedRegionType: headerField.linkedRegionType ?? null,
-        },
-        update: {
-          definitionId: definition.id,
-          type: headerField.type ?? "field",
-          label: headerField.label,
-          widthMm: headerField.widthMm,
-          heightMm: headerField.heightMm,
-          gridCount: headerField.gridCount,
-          lineStyle: headerField.lineStyle,
-          lineWidth: headerField.lineWidth,
-          order: hi,
-          fontSize: headerField.fontSize ?? null,
-          linkedRegionType: headerField.linkedRegionType ?? null,
-        },
-      })
+      const headerFieldData = {
+        definitionId: definition.id,
+        type: headerField.type ?? "field",
+        label: headerField.label,
+        widthMm: headerField.widthMm,
+        heightMm: headerField.heightMm,
+        gridCount: headerField.gridCount,
+        lineStyle: headerField.lineStyle,
+        lineWidth: headerField.lineWidth,
+        order: hi,
+        fontSize: headerField.fontSize ?? null,
+        linkedRegionType: headerField.linkedRegionType ?? null,
+      }
+      await writeRow(
+        currentHeaderFields.get(headerField.id),
+        headerFieldData,
+        () =>
+          tx.asbHeaderField.create({
+            data: { id: headerField.id, ...headerFieldData },
+          }),
+        () =>
+          tx.asbHeaderField.update({
+            where: { id: headerField.id },
+            data: headerFieldData,
+          })
+      )
     }
 
-    // 大問 → 小問 → 枝問 を再帰的に作成
+    // 大問 → 小問 → 枝問 を辿る
     for (let mi = 0; mi < definition.majorQuestions.length; mi++) {
       const majorQuestion = definition.majorQuestions[mi]
-      await tx.asbMajorQuestion.upsert({
-        where: { id: majorQuestion.id },
-        create: {
-          id: majorQuestion.id,
-          definitionId: definition.id,
-          label: majorQuestion.label,
-          order: mi,
-        },
-        update: {
-          definitionId: definition.id,
-          label: majorQuestion.label,
-          order: mi,
-        },
-      })
+      const majorQuestionData = {
+        definitionId: definition.id,
+        label: majorQuestion.label,
+        order: mi,
+      }
+      await writeRow(
+        currentMajorQuestions.get(majorQuestion.id),
+        majorQuestionData,
+        () =>
+          tx.asbMajorQuestion.create({
+            data: { id: majorQuestion.id, ...majorQuestionData },
+          }),
+        () =>
+          tx.asbMajorQuestion.update({
+            where: { id: majorQuestion.id },
+            data: majorQuestionData,
+          })
+      )
 
       for (let si = 0; si < majorQuestion.subQuestions.length; si++) {
         const subQuestion = majorQuestion.subQuestions[si]
-        await tx.asbSubQuestion.upsert({
-          where: { id: subQuestion.id },
-          create: {
-            id: subQuestion.id,
-            majorQuestionId: majorQuestion.id,
-            label: subQuestion.label,
-            order: si,
-            heightMultiplier: subQuestion.heightMultiplier,
-            points: subQuestion.points,
-            usesBranchPoints: subQuestion.usesBranchPoints ?? null,
-            layoutWidth: subQuestion.layoutWidth ?? null,
-            nextPlacement: subQuestion.nextPlacement ?? null,
-            goUp: subQuestion.goUp ?? null,
-            manuscriptEnabled: subQuestion.manuscriptPaper?.enabled ?? false,
-            manuscriptColumns: subQuestion.manuscriptPaper?.columns ?? 20,
-            manuscriptRows: subQuestion.manuscriptPaper?.rows ?? 10,
-            manuscriptCellSizeMm: 0, // 廃止: cellHeight / rows から逆算
-            manuscriptGuideFontSize:
-              subQuestion.manuscriptPaper?.guideFontSize ?? null,
-            manuscriptGuidePosition:
-              subQuestion.manuscriptPaper?.guidePosition ?? null,
-            manuscriptGuidePadding:
-              subQuestion.manuscriptPaper?.guidePadding ?? null,
-            borderStyleTop: subQuestion.borderStyles?.top ?? null,
-            borderStyleBottom: subQuestion.borderStyles?.bottom ?? null,
-            borderStyleLeft: subQuestion.borderStyles?.left ?? null,
-            borderStyleRight: subQuestion.borderStyles?.right ?? null,
-          },
-          update: {
-            majorQuestionId: majorQuestion.id,
-            label: subQuestion.label,
-            order: si,
-            heightMultiplier: subQuestion.heightMultiplier,
-            points: subQuestion.points,
-            usesBranchPoints: subQuestion.usesBranchPoints ?? null,
-            layoutWidth: subQuestion.layoutWidth ?? null,
-            nextPlacement: subQuestion.nextPlacement ?? null,
-            goUp: subQuestion.goUp ?? null,
-            manuscriptEnabled: subQuestion.manuscriptPaper?.enabled ?? false,
-            manuscriptColumns: subQuestion.manuscriptPaper?.columns ?? 20,
-            manuscriptRows: subQuestion.manuscriptPaper?.rows ?? 10,
-            manuscriptCellSizeMm: 0, // 廃止: cellHeight / rows から逆算
-            manuscriptGuideFontSize:
-              subQuestion.manuscriptPaper?.guideFontSize ?? null,
-            manuscriptGuidePosition:
-              subQuestion.manuscriptPaper?.guidePosition ?? null,
-            manuscriptGuidePadding:
-              subQuestion.manuscriptPaper?.guidePadding ?? null,
-            borderStyleTop: subQuestion.borderStyles?.top ?? null,
-            borderStyleBottom: subQuestion.borderStyles?.bottom ?? null,
-            borderStyleLeft: subQuestion.borderStyles?.left ?? null,
-            borderStyleRight: subQuestion.borderStyles?.right ?? null,
-          },
-        })
+        const subQuestionData = {
+          majorQuestionId: majorQuestion.id,
+          label: subQuestion.label,
+          order: si,
+          heightMultiplier: subQuestion.heightMultiplier,
+          points: subQuestion.points,
+          usesBranchPoints: subQuestion.usesBranchPoints ?? null,
+          layoutWidth: subQuestion.layoutWidth ?? null,
+          nextPlacement: subQuestion.nextPlacement ?? null,
+          goUp: subQuestion.goUp ?? null,
+          manuscriptEnabled: subQuestion.manuscriptPaper?.enabled ?? false,
+          manuscriptColumns: subQuestion.manuscriptPaper?.columns ?? 20,
+          manuscriptRows: subQuestion.manuscriptPaper?.rows ?? 10,
+          manuscriptCellSizeMm: 0, // 廃止: cellHeight / rows から逆算
+          manuscriptGuideFontSize:
+            subQuestion.manuscriptPaper?.guideFontSize ?? null,
+          manuscriptGuidePosition:
+            subQuestion.manuscriptPaper?.guidePosition ?? null,
+          manuscriptGuidePadding:
+            subQuestion.manuscriptPaper?.guidePadding ?? null,
+          borderStyleTop: subQuestion.borderStyles?.top ?? null,
+          borderStyleBottom: subQuestion.borderStyles?.bottom ?? null,
+          borderStyleLeft: subQuestion.borderStyles?.left ?? null,
+          borderStyleRight: subQuestion.borderStyles?.right ?? null,
+        }
+        await writeRow(
+          currentSubQuestions.get(subQuestion.id),
+          subQuestionData,
+          () =>
+            tx.asbSubQuestion.create({
+              data: { id: subQuestion.id, ...subQuestionData },
+            }),
+          () =>
+            tx.asbSubQuestion.update({
+              where: { id: subQuestion.id },
+              data: subQuestionData,
+            })
+        )
 
         // 文字位置マーカー（数字ガイド＋区切り罫線）
         const charGuides = subQuestion.manuscriptPaper?.charGuides ?? []
         for (let gi = 0; gi < charGuides.length; gi++) {
           const charGuide = charGuides[gi]
-          await tx.asbCharGuide.upsert({
-            where: { id: charGuide.id },
-            create: {
-              id: charGuide.id,
-              subQuestionId: subQuestion.id,
-              order: gi,
-              atChar: charGuide.atChar,
-              label: charGuide.label,
-              boundary: charGuide.boundary ?? null,
-              boundaryWidth: charGuide.boundaryWidth ?? null,
-              boundaryDashRatio: charGuide.boundaryDashRatio ?? null,
-              boundaryGapRatio: charGuide.boundaryGapRatio ?? null,
-            },
-            update: {
-              subQuestionId: subQuestion.id,
-              order: gi,
-              atChar: charGuide.atChar,
-              label: charGuide.label,
-              boundary: charGuide.boundary ?? null,
-              boundaryWidth: charGuide.boundaryWidth ?? null,
-              boundaryDashRatio: charGuide.boundaryDashRatio ?? null,
-              boundaryGapRatio: charGuide.boundaryGapRatio ?? null,
-            },
-          })
+          const charGuideData = {
+            subQuestionId: subQuestion.id,
+            order: gi,
+            atChar: charGuide.atChar,
+            label: charGuide.label,
+            boundary: charGuide.boundary ?? null,
+            boundaryWidth: charGuide.boundaryWidth ?? null,
+            boundaryDashRatio: charGuide.boundaryDashRatio ?? null,
+            boundaryGapRatio: charGuide.boundaryGapRatio ?? null,
+          }
+          await writeRow(
+            currentCharGuides.get(charGuide.id),
+            charGuideData,
+            () =>
+              tx.asbCharGuide.create({
+                data: { id: charGuide.id, ...charGuideData },
+              }),
+            () =>
+              tx.asbCharGuide.update({
+                where: { id: charGuide.id },
+                data: charGuideData,
+              })
+          )
         }
 
         // テキスト要素（小問）
         for (let ti = 0; ti < subQuestion.textElements.length; ti++) {
           const textElement = subQuestion.textElements[ti]
-          await tx.asbTextElement.upsert({
-            where: { id: textElement.id },
-            create: {
-              id: textElement.id,
-              subQuestionId: subQuestion.id,
-              text: textElement.text,
-              fontSize: textElement.fontSize,
-              horizontalAlign: textElement.horizontalAlign,
-              verticalAlign: textElement.verticalAlign,
-              order: ti,
-            },
-            update: {
-              subQuestionId: subQuestion.id,
-              text: textElement.text,
-              fontSize: textElement.fontSize,
-              horizontalAlign: textElement.horizontalAlign,
-              verticalAlign: textElement.verticalAlign,
-              order: ti,
-            },
-          })
+          const textElementData = {
+            subQuestionId: subQuestion.id,
+            text: textElement.text,
+            fontSize: textElement.fontSize,
+            horizontalAlign: textElement.horizontalAlign,
+            verticalAlign: textElement.verticalAlign,
+            order: ti,
+          }
+          await writeRow(
+            currentTextElements.get(textElement.id),
+            textElementData,
+            () =>
+              tx.asbTextElement.create({
+                data: { id: textElement.id, ...textElementData },
+              }),
+            () =>
+              tx.asbTextElement.update({
+                where: { id: textElement.id },
+                data: textElementData,
+              })
+          )
         }
 
         // 画像要素（小問）
         if (subQuestion.imageElements) {
           for (let ii = 0; ii < subQuestion.imageElements.length; ii++) {
             const imageElement = subQuestion.imageElements[ii]
-            await tx.asbImageElement.upsert({
-              where: { id: imageElement.id },
-              create: {
-                id: imageElement.id,
-                subQuestionId: subQuestion.id,
-                imagePath: imageElement.imagePath,
-                originalName: imageElement.originalName,
-                objectFit: imageElement.objectFit,
-                horizontalAlign: imageElement.horizontalAlign,
-                verticalAlign: imageElement.verticalAlign,
-                opacity: imageElement.opacity,
-                visibility: imageElement.visibility ?? "both",
-                order: ii,
-              },
-              update: {
-                subQuestionId: subQuestion.id,
-                imagePath: imageElement.imagePath,
-                originalName: imageElement.originalName,
-                objectFit: imageElement.objectFit,
-                horizontalAlign: imageElement.horizontalAlign,
-                verticalAlign: imageElement.verticalAlign,
-                opacity: imageElement.opacity,
-                visibility: imageElement.visibility ?? "both",
-                order: ii,
-              },
-            })
+            const imageElementData = {
+              subQuestionId: subQuestion.id,
+              imagePath: imageElement.imagePath,
+              originalName: imageElement.originalName,
+              objectFit: imageElement.objectFit,
+              horizontalAlign: imageElement.horizontalAlign,
+              verticalAlign: imageElement.verticalAlign,
+              opacity: imageElement.opacity,
+              visibility: imageElement.visibility ?? "both",
+              order: ii,
+            }
+            await writeRow(
+              currentImageElements.get(imageElement.id),
+              imageElementData,
+              () =>
+                tx.asbImageElement.create({
+                  data: { id: imageElement.id, ...imageElementData },
+                }),
+              () =>
+                tx.asbImageElement.update({
+                  where: { id: imageElement.id },
+                  data: imageElementData,
+                })
+            )
           }
         }
 
@@ -515,94 +532,88 @@ export async function saveAsbDefinition(
         // 枝問
         for (let bi = 0; bi < subQuestion.branchQuestions.length; bi++) {
           const branchQuestion = subQuestion.branchQuestions[bi]
-          await tx.asbBranchQuestion.upsert({
-            where: { id: branchQuestion.id },
-            create: {
-              id: branchQuestion.id,
-              subQuestionId: subQuestion.id,
-              label: branchQuestion.label,
-              order: bi,
-              heightMultiplier: branchQuestion.heightMultiplier,
-              points: branchQuestion.points,
-              layoutWidth: branchQuestion.layoutWidth ?? null,
-              nextPlacement: branchQuestion.nextPlacement ?? null,
-              goUp: branchQuestion.goUp ?? null,
-              borderStyleTop: branchQuestion.borderStyles?.top ?? null,
-              borderStyleBottom: branchQuestion.borderStyles?.bottom ?? null,
-              borderStyleLeft: branchQuestion.borderStyles?.left ?? null,
-              borderStyleRight: branchQuestion.borderStyles?.right ?? null,
-            },
-            update: {
-              subQuestionId: subQuestion.id,
-              label: branchQuestion.label,
-              order: bi,
-              heightMultiplier: branchQuestion.heightMultiplier,
-              points: branchQuestion.points,
-              layoutWidth: branchQuestion.layoutWidth ?? null,
-              nextPlacement: branchQuestion.nextPlacement ?? null,
-              goUp: branchQuestion.goUp ?? null,
-              borderStyleTop: branchQuestion.borderStyles?.top ?? null,
-              borderStyleBottom: branchQuestion.borderStyles?.bottom ?? null,
-              borderStyleLeft: branchQuestion.borderStyles?.left ?? null,
-              borderStyleRight: branchQuestion.borderStyles?.right ?? null,
-            },
-          })
+          const branchQuestionData = {
+            subQuestionId: subQuestion.id,
+            label: branchQuestion.label,
+            order: bi,
+            heightMultiplier: branchQuestion.heightMultiplier,
+            points: branchQuestion.points,
+            layoutWidth: branchQuestion.layoutWidth ?? null,
+            nextPlacement: branchQuestion.nextPlacement ?? null,
+            goUp: branchQuestion.goUp ?? null,
+            borderStyleTop: branchQuestion.borderStyles?.top ?? null,
+            borderStyleBottom: branchQuestion.borderStyles?.bottom ?? null,
+            borderStyleLeft: branchQuestion.borderStyles?.left ?? null,
+            borderStyleRight: branchQuestion.borderStyles?.right ?? null,
+          }
+          await writeRow(
+            currentBranchQuestions.get(branchQuestion.id),
+            branchQuestionData,
+            () =>
+              tx.asbBranchQuestion.create({
+                data: { id: branchQuestion.id, ...branchQuestionData },
+              }),
+            () =>
+              tx.asbBranchQuestion.update({
+                where: { id: branchQuestion.id },
+                data: branchQuestionData,
+              })
+          )
 
           // テキスト要素（枝問）
           for (let ti = 0; ti < branchQuestion.textElements.length; ti++) {
             const textElement = branchQuestion.textElements[ti]
-            await tx.asbTextElement.upsert({
-              where: { id: textElement.id },
-              create: {
-                id: textElement.id,
-                branchQuestionId: branchQuestion.id,
-                text: textElement.text,
-                fontSize: textElement.fontSize,
-                horizontalAlign: textElement.horizontalAlign,
-                verticalAlign: textElement.verticalAlign,
-                order: ti,
-              },
-              update: {
-                branchQuestionId: branchQuestion.id,
-                text: textElement.text,
-                fontSize: textElement.fontSize,
-                horizontalAlign: textElement.horizontalAlign,
-                verticalAlign: textElement.verticalAlign,
-                order: ti,
-              },
-            })
+            const textElementData = {
+              branchQuestionId: branchQuestion.id,
+              text: textElement.text,
+              fontSize: textElement.fontSize,
+              horizontalAlign: textElement.horizontalAlign,
+              verticalAlign: textElement.verticalAlign,
+              order: ti,
+            }
+            await writeRow(
+              currentTextElements.get(textElement.id),
+              textElementData,
+              () =>
+                tx.asbTextElement.create({
+                  data: { id: textElement.id, ...textElementData },
+                }),
+              () =>
+                tx.asbTextElement.update({
+                  where: { id: textElement.id },
+                  data: textElementData,
+                })
+            )
           }
 
           // 画像要素（枝問）
           if (branchQuestion.imageElements) {
             for (let ii = 0; ii < branchQuestion.imageElements.length; ii++) {
               const imageElement = branchQuestion.imageElements[ii]
-              await tx.asbImageElement.upsert({
-                where: { id: imageElement.id },
-                create: {
-                  id: imageElement.id,
-                  branchQuestionId: branchQuestion.id,
-                  imagePath: imageElement.imagePath,
-                  originalName: imageElement.originalName,
-                  objectFit: imageElement.objectFit,
-                  horizontalAlign: imageElement.horizontalAlign,
-                  verticalAlign: imageElement.verticalAlign,
-                  opacity: imageElement.opacity,
-                  visibility: imageElement.visibility ?? "both",
-                  order: ii,
-                },
-                update: {
-                  branchQuestionId: branchQuestion.id,
-                  imagePath: imageElement.imagePath,
-                  originalName: imageElement.originalName,
-                  objectFit: imageElement.objectFit,
-                  horizontalAlign: imageElement.horizontalAlign,
-                  verticalAlign: imageElement.verticalAlign,
-                  opacity: imageElement.opacity,
-                  visibility: imageElement.visibility ?? "both",
-                  order: ii,
-                },
-              })
+              const imageElementData = {
+                branchQuestionId: branchQuestion.id,
+                imagePath: imageElement.imagePath,
+                originalName: imageElement.originalName,
+                objectFit: imageElement.objectFit,
+                horizontalAlign: imageElement.horizontalAlign,
+                verticalAlign: imageElement.verticalAlign,
+                opacity: imageElement.opacity,
+                visibility: imageElement.visibility ?? "both",
+                order: ii,
+              }
+              await writeRow(
+                currentImageElements.get(imageElement.id),
+                imageElementData,
+                () =>
+                  tx.asbImageElement.create({
+                    data: { id: imageElement.id, ...imageElementData },
+                  }),
+                () =>
+                  tx.asbImageElement.update({
+                    where: { id: imageElement.id },
+                    data: imageElementData,
+                  })
+              )
             }
           }
 

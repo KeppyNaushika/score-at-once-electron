@@ -35,6 +35,7 @@ import type {
   OMRChoiceConfig,
 } from "../../../src/types/omr.types"
 import type { DbDefinitionFull } from "./asbDefinition"
+import { isUnchanged, writeRow } from "./rowDiff"
 
 // =============================================================================
 // GlobalSettings ↔ DBフラットカラム
@@ -571,21 +572,24 @@ export async function upsertOmrConfig(
   })
   const omrConfigId = existing?.id ?? crypto.randomUUID()
 
-  await tx.asbOmrConfig.upsert({
-    where: { id: omrConfigId },
-    create: {
-      id: omrConfigId,
-      ...parentFK,
-      type: "choice",
-      numChoices: config.numChoices,
-      choiceLayout: config.layout,
-    },
-    update: {
-      type: "choice",
-      numChoices: config.numChoices,
-      choiceLayout: config.layout,
-    },
-  })
+  const omrConfigData = {
+    type: "choice",
+    numChoices: config.numChoices,
+    choiceLayout: config.layout,
+  }
+  await writeRow(
+    existing ?? undefined,
+    omrConfigData,
+    () =>
+      tx.asbOmrConfig.create({
+        data: { id: omrConfigId, ...parentFK, ...omrConfigData },
+      }),
+    () =>
+      tx.asbOmrConfig.update({
+        where: { id: omrConfigId },
+        data: omrConfigData,
+      })
+  )
 
   // 選択肢は id を持たないので、並び順の位置で既存行を使い回す。
   // 増えた分だけ作り、減った分だけ消す
@@ -594,14 +598,15 @@ export async function upsertOmrConfig(
     const label = config.labels[ci]
     const isCorrect = config.correctAnswers.includes(ci)
     const reused = existingOptions[ci]
-    if (reused) {
+    const choiceOptionData = { choiceIndex: ci, label, isCorrect }
+    if (!reused) {
+      await tx.asbOmrChoiceOption.create({
+        data: { omrConfigId, ...choiceOptionData },
+      })
+    } else if (!isUnchanged(reused, choiceOptionData)) {
       await tx.asbOmrChoiceOption.update({
         where: { id: reused.id },
-        data: { choiceIndex: ci, label, isCorrect },
-      })
-    } else {
-      await tx.asbOmrChoiceOption.create({
-        data: { omrConfigId, choiceIndex: ci, label, isCorrect },
+        data: choiceOptionData,
       })
     }
   }

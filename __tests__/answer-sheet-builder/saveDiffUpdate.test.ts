@@ -42,6 +42,7 @@ import {
   saveAsbDefinition,
   transferAsbDefinitionOwner,
 } from "../../electron-src/lib/prisma/asbDefinition"
+import { setAsbDefinitionTags } from "../../electron-src/lib/prisma/asbDefinitionTag"
 import { createDefaultDefinition } from "../../src/components/answer-sheet-builder/constants"
 import {
   cleanupTestDatabase,
@@ -135,6 +136,104 @@ describe("解答用紙の保存", () => {
     expect(after[0].createdAt.toISOString()).toBe(
       keptBefore.createdAt.toISOString()
     )
+  })
+
+  it("触っていない大問は書き換えない（更新日時が動かない）", async () => {
+    // 全行を書き直すと、触っていない行まで updatedAt が「今」になる。同期は行ごとの
+    // LWW なので、2端末が別々の大問を編集しただけで後から保存した側の木が丸ごと勝つ
+    const definition = createDefaultDefinition()
+    const firstMajorQuestion = definition.majorQuestions[0]
+    const secondMajorQuestion = {
+      ...firstMajorQuestion,
+      id: crypto.randomUUID(),
+      label: "第2問",
+      subQuestions: firstMajorQuestion.subQuestions.map((subQuestion) => ({
+        ...subQuestion,
+        id: crypto.randomUUID(),
+        textElements: [],
+        imageElements: [],
+        branchQuestions: [],
+      })),
+    }
+    const twoMajorQuestions = {
+      ...definition,
+      majorQuestions: [firstMajorQuestion, secondMajorQuestion],
+    }
+    await saveAsbDefinition(twoMajorQuestions, ownerId)
+
+    const before = await prisma.asbMajorQuestion.findMany({
+      where: { definitionId: definition.id },
+    })
+    const untouchedBefore = before.find(
+      (row) => row.id === secondMajorQuestion.id
+    )!
+
+    // 第1問のラベルだけを変えて保存し直す
+    await saveAsbDefinition(
+      {
+        ...twoMajorQuestions,
+        majorQuestions: [
+          { ...firstMajorQuestion, label: "書き換えた第1問" },
+          secondMajorQuestion,
+        ],
+      },
+      ownerId
+    )
+
+    const after = await prisma.asbMajorQuestion.findMany({
+      where: { definitionId: definition.id },
+    })
+    const touchedAfter = after.find((row) => row.id === firstMajorQuestion.id)!
+    const untouchedAfter = after.find(
+      (row) => row.id === secondMajorQuestion.id
+    )!
+
+    expect(touchedAfter.label).toBe("書き換えた第1問")
+    // 触っていない大問は書き込みが起きていない
+    expect(untouchedAfter.updatedAt.toISOString()).toBe(
+      untouchedBefore.updatedAt.toISOString()
+    )
+  })
+
+  it("何も変えずに保存し直しても、解答用紙の更新日時が動かない", async () => {
+    const definition = createDefaultDefinition()
+    await saveAsbDefinition(definition, ownerId)
+    const first = await prisma.asbDefinition.findUniqueOrThrow({
+      where: { id: definition.id },
+    })
+
+    await saveAsbDefinition(definition, ownerId)
+    const second = await prisma.asbDefinition.findUniqueOrThrow({
+      where: { id: definition.id },
+    })
+
+    expect(second.updatedAt.toISOString()).toBe(first.updatedAt.toISOString())
+  })
+
+  it("タグの設定は、外れたものだけ消して付いたものだけ作る", async () => {
+    const definition = createDefaultDefinition()
+    await saveAsbDefinition(definition, ownerId)
+    const keptTag = await prisma.tag.create({
+      data: { name: `残る ${Date.now()}` },
+    })
+    const removedTag = await prisma.tag.create({
+      data: { name: `外す ${Date.now()}` },
+    })
+
+    await setAsbDefinitionTags(definition.id, [keptTag.id, removedTag.id])
+    const before = await prisma.asbDefinitionTag.findMany({
+      where: { asbDefinitionId: definition.id },
+    })
+    const keptBefore = before.find((link) => link.tagId === keptTag.id)!
+
+    await setAsbDefinitionTags(definition.id, [keptTag.id])
+
+    const after = await prisma.asbDefinitionTag.findMany({
+      where: { asbDefinitionId: definition.id },
+    })
+    expect(after.map((link) => link.tagId)).toEqual([keptTag.id])
+    // 残ったタグの紐付けは作り直されていない
+    expect(after[0].id).toBe(keptBefore.id)
   })
 
   it("担当者でなければ保存できない", async () => {

@@ -29,18 +29,36 @@ export async function createAsbDefinitionTag(data: {
 }
 
 /**
- * 解答用紙定義のタグを一括設定（既存を全削除して再作成）
+ * 解答用紙のタグを設定する。
+ *
+ * **外れたものだけ消し、付いたものだけ作る。** 全削除して作り直すと、変えていない
+ * タグの紐付けまで別の行として作り直されるので、同期先では「全部消して全部足した」
+ * ことになる。2端末が別々のタグを付けただけで後から保存した側が丸ごと勝つ。
  */
 export async function setAsbDefinitionTags(
   asbDefinitionId: string,
   tagIds: string[]
 ) {
   return prisma.$transaction(async (tx) => {
-    await tx.asbDefinitionTag.deleteMany({ where: { asbDefinitionId } })
-    if (tagIds.length === 0) return []
-    await tx.asbDefinitionTag.createMany({
-      data: tagIds.map((tagId) => ({ asbDefinitionId, tagId })),
+    const current = await tx.asbDefinitionTag.findMany({
+      where: { asbDefinitionId },
     })
+    const currentTagIds = new Set(current.map((link) => link.tagId))
+    const nextTagIds = new Set(tagIds)
+
+    const removed = current.filter((link) => !nextTagIds.has(link.tagId))
+    if (removed.length > 0) {
+      await tx.asbDefinitionTag.deleteMany({
+        where: { id: { in: removed.map((link) => link.id) } },
+      })
+    }
+    const added = tagIds.filter((tagId) => !currentTagIds.has(tagId))
+    if (added.length > 0) {
+      await tx.asbDefinitionTag.createMany({
+        data: added.map((tagId) => ({ asbDefinitionId, tagId })),
+      })
+    }
+
     return tx.asbDefinitionTag.findMany({
       where: { asbDefinitionId },
       include: { tag: true },
