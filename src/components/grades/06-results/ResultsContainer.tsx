@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   ArrowRight,
   Lock,
@@ -21,27 +22,94 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { useGradeConstraints } from "@/hooks/grades/useGradeConstraints"
-import { useGradeResults } from "@/hooks/grades/useGradeResults"
+import { useAuth } from "@/contexts/AuthContext"
+import {
+  deleteGradeOverrideMutation,
+  freezeGradeScoresMutation,
+  gradeConstraintsQuery,
+  gradeResultsQuery,
+  unfreezeGradeScoresMutation,
+  upsertGradeOverrideMutation,
+} from "@/queries/grade"
+import type {
+  GradeCellTarget,
+  GradeConstraintData,
+  GradeOverrideInput,
+} from "@/types/grade.types"
 
 import { GradeDistributionChart } from "./GradeDistributionChart"
 import { ResultsTable } from "./ResultsTable"
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_CONSTRAINTS: GradeConstraintData[] = []
 
 interface ResultsContainerProps {
   gradeId: string
 }
 
 export function ResultsContainer({ gradeId }: ResultsContainerProps) {
+  const { user } = useAuth()
   const {
-    result,
-    loading,
-    error,
-    recalculate,
-    setGradeOverride,
-    freezeScores,
-    unfreezeScores,
-  } = useGradeResults(gradeId)
-  const { constraints } = useGradeConstraints(gradeId)
+    data: result = null,
+    isPending: loading,
+    error: queryError,
+    refetch,
+  } = useQuery(gradeResultsQuery(gradeId))
+  const { data: constraints = EMPTY_CONSTRAINTS } = useQuery(
+    gradeConstraintsQuery(gradeId)
+  )
+  const upsertOverride = useMutation(upsertGradeOverrideMutation(gradeId))
+  const deleteOverride = useMutation(deleteGradeOverrideMutation(gradeId))
+  const freezeScores = useMutation(freezeGradeScoresMutation(gradeId))
+  const unfreezeScores = useMutation(unfreezeGradeScoresMutation(gradeId))
+
+  const recalculate = () => {
+    void refetch()
+  }
+
+  /**
+   * 評定の上書きを変える。
+   *
+   * 確定済みのセルは確定値が最優先なので、上書きを保存しただけでは表示が動かない。
+   * 調整の結果をその場で取り込み直す（＝そのセルだけ再確定する）必要がある。
+   * 2つの実体（上書き・確定値）への2つの操作であり、片方だけ済んでも意味は通る。
+   */
+  const setGradeOverride = async (params: GradeOverrideInput) => {
+    const wasFrozen = Boolean(
+      result?.students
+        .find((student) => student.gradeStudentId === params.gradeStudentId)
+        ?.gradeItemResults.find(
+          (gradeItemResult) =>
+            gradeItemResult.gradeItemId === params.gradeItemId
+        )?.frozen
+    )
+
+    if (params.overrideLabel) {
+      await upsertOverride.mutateAsync({
+        ...params,
+        overrideLabel: params.overrideLabel,
+      })
+    } else {
+      await deleteOverride.mutateAsync({
+        gradeStudentId: params.gradeStudentId,
+        gradeItemId: params.gradeItemId,
+      })
+    }
+
+    if (wasFrozen) {
+      await freezeScores.mutateAsync({
+        targets: [
+          {
+            gradeStudentId: params.gradeStudentId,
+            gradeItemId: params.gradeItemId,
+          },
+        ],
+        frozenByUserId: user?.id ?? null,
+      })
+    }
+  }
+
+  const error = queryError?.message ?? null
   // 一括操作の確認。どちらも確定済みの値を捨てるので、確定値がある間は必ず挟む。
   const [pendingBulkAction, setPendingBulkAction] = useState<
     "refreeze" | "unfreeze" | null
@@ -109,7 +177,7 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
             variant="outline"
             onClick={() =>
               frozenSummary.frozen === 0
-                ? freezeScores()
+                ? freezeScores.mutate({ frozenByUserId: user?.id ?? null })
                 : setPendingBulkAction("refreeze")
             }
           >
@@ -157,8 +225,15 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
         result={result}
         constraints={constraints}
         onGradeOverride={setGradeOverride}
-        onRefreezeCell={(target) => freezeScores([target])}
-        onUnfreezeCell={(target) => unfreezeScores([target])}
+        onRefreezeCell={(target: GradeCellTarget) =>
+          freezeScores.mutate({
+            targets: [target],
+            frozenByUserId: user?.id ?? null,
+          })
+        }
+        onUnfreezeCell={(target: GradeCellTarget) =>
+          unfreezeScores.mutate({ targets: [target], userId: user?.id ?? null })
+        }
       />
 
       <AlertDialog
@@ -186,8 +261,10 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
               onClick={() => {
                 const action = pendingBulkAction
                 setPendingBulkAction(null)
-                if (action === "refreeze") freezeScores()
-                else if (action === "unfreeze") unfreezeScores()
+                if (action === "refreeze")
+                  freezeScores.mutate({ frozenByUserId: user?.id ?? null })
+                else if (action === "unfreeze")
+                  unfreezeScores.mutate({ userId: user?.id ?? null })
               }}
             >
               {pendingBulkAction === "refreeze" ? "すべて再確定" : "すべて解除"}

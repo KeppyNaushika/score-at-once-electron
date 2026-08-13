@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { createGradeMutation } from "@/queries/grade"
 
 interface GradeCreateDialogProps {
   open: boolean
@@ -25,23 +27,13 @@ export function GradeCreateDialog({
   onCreated,
 }: GradeCreateDialogProps) {
   const [name, setName] = useState("")
-  const [creating, setCreating] = useState(false)
+  const createGrade = useMutation(createGradeMutation())
 
   const handleCreate = async () => {
     if (!name.trim()) return
-
-    setCreating(true)
-    try {
-      const grade = await window.electronAPI.grade.create({
-        name: name.trim(),
-      })
-      setName("")
-      onCreated(grade.id)
-    } catch (error) {
-      console.error("Error creating grade exam:", error)
-    } finally {
-      setCreating(false)
-    }
+    const grade = await createGrade.mutateAsync({ name: name.trim() })
+    setName("")
+    onCreated(grade.id)
   }
 
   return (
@@ -68,8 +60,11 @@ export function GradeCreateDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             キャンセル
           </Button>
-          <Button onClick={handleCreate} disabled={!name.trim() || creating}>
-            {creating ? "作成中..." : "作成"}
+          <Button
+            onClick={handleCreate}
+            disabled={!name.trim() || createGrade.isPending}
+          >
+            {createGrade.isPending ? "作成中..." : "作成"}
           </Button>
         </DialogFooter>
       </DialogContent>

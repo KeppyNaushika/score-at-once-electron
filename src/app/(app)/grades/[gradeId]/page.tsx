@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   BarChart3,
   ChevronRight,
@@ -17,7 +17,6 @@ import {
 import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useState } from "react"
-import { toast } from "sonner"
 
 import { EditGradeWindow } from "@/components/grades/EditGradeWindow"
 import { Badge } from "@/components/ui/badge"
@@ -32,7 +31,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Progress } from "@/components/ui/progress"
 import { getGradeCompletion, type GradeStepCompletion } from "@/lib/gradeStatus"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  deleteGradeMutation,
+  exportGradeArchiveMutation,
+  gradeDetailQuery,
+} from "@/queries/grade"
 
 interface WorkflowStep {
   id: string
@@ -197,10 +200,11 @@ export default function GradeDetailPage() {
   const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
 
   const queryClient = useQueryClient()
-  const { data: exam = null, isPending: loading } = useQuery({
-    queryKey: queryKeys.grade.detail(gradeId),
-    queryFn: () => window.electronAPI.grade.getById(gradeId),
-  })
+  const { data: exam = null, isPending: loading } = useQuery(
+    gradeDetailQuery(gradeId)
+  )
+  const deleteGrade = useMutation(deleteGradeMutation())
+  const exportArchive = useMutation(exportGradeArchiveMutation())
   // 新規作成直後（?setup=1）は基準日などの基本設定を促すため編集モーダルを開く
   const [showEditModal, setShowEditModal] = useState(
     () => searchParams.get("setup") === "1"
@@ -209,20 +213,14 @@ export default function GradeDetailPage() {
   const loadExam = useCallback(
     () =>
       queryClient.invalidateQueries({
-        queryKey: queryKeys.grade.detail(gradeId),
+        queryKey: gradeDetailQuery(gradeId).queryKey,
       }),
     [queryClient, gradeId]
   )
 
   const handleDelete = async () => {
-    try {
-      await window.electronAPI.grade.delete(gradeId)
-      router.push("/grades")
-    } catch (error) {
-      toast.error("削除に失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
+    await deleteGrade.mutateAsync(gradeId)
+    router.push("/grades")
   }
 
   if (loading) {
@@ -301,16 +299,14 @@ export default function GradeDetailPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={() =>
-                      window.electronAPI.grade.exportArchive(gradeId)
-                    }
+                    onClick={() => exportArchive.mutate(gradeId)}
                   >
                     <FolderOutput className="mr-2 h-4 w-4" />
                     .grade 書き出し
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={handleDelete}
+                    onClick={() => void handleDelete()}
                     className="text-red-600 focus:text-red-600"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />

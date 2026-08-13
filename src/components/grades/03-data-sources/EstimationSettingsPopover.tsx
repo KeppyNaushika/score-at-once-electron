@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { updateDataSourceEstimationMutation } from "@/queries/grade"
 import type {
   AbsentMethod,
   EstimationMode,
@@ -45,30 +47,23 @@ function methodUsesPredictors(method: AbsentMethod): boolean {
 }
 
 interface EstimationSettingsPopoverProps {
+  gradeId: string
   dataSource: GradeDataSourceWithRelations
   /** 同じGrade内の全DataSource（自ソース含む、チェックリスト用） */
   allDataSources: GradeDataSourceWithRelations[]
   /** このソースのモデル適合度 R（他ソースからの予測しやすさ） */
   sourceFit?: { correlation: number; sampleSize: number } | null
-  onUpdate: (
-    id: string,
-    data: {
-      absentMethod?: string
-      absentRatio?: number
-      absentOffset?: number
-      treatExpectedAsMissing?: boolean
-      estimationMode?: string
-      estimationSourceIds?: string[]
-    }
-  ) => Promise<unknown>
 }
 
 export function EstimationSettingsPopover({
+  gradeId,
   dataSource,
   allDataSources,
   sourceFit,
-  onUpdate,
 }: EstimationSettingsPopoverProps) {
+  const updateEstimation = useMutation(
+    updateDataSourceEstimationMutation(gradeId)
+  )
   const [open, setOpen] = useState(false)
   const [method, setMethod] = useState<AbsentMethod>(dataSource.absentMethod)
   const [ratio, setRatio] = useState(String(dataSource.absentRatio))
@@ -91,7 +86,8 @@ export function EstimationSettingsPopover({
     dataSource.type === "crop_region"
 
   const handleSave = async () => {
-    await onUpdate(dataSource.id, {
+    await updateEstimation.mutateAsync({
+      id: dataSource.id,
       absentMethod: method,
       absentRatio: Number(ratio) || 1,
       absentOffset: Number(offset) || 0,

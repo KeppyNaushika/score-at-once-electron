@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { Save } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -15,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { updateGradeMutation } from "@/queries/grade"
 
 interface EditGradeWindowProps {
   gradeId: string
@@ -42,12 +44,13 @@ export function EditGradeWindow({
   const [description, setDescription] = useState(initialDescription)
   const [referenceDate, setReferenceDate] = useState(initialReferenceDate)
   const [saving, setSaving] = useState(false)
+  const updateGrade = useMutation(updateGradeMutation(gradeId))
 
   const handleSave = async () => {
     if (!name.trim()) return
     setSaving(true)
     try {
-      await window.electronAPI.grade.update(gradeId, {
+      await updateGrade.mutateAsync({
         name: name.trim(),
         description: description.trim() || null,
         referenceDate: referenceDate || null,

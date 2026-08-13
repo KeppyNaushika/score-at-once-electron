@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { Check, Pencil, Trash2, X } from "lucide-react"
 import { useState } from "react"
 
@@ -8,6 +9,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import {
+  deleteDataSourceMutation,
+  renameDataSourceMutation,
+} from "@/queries/grade"
 import type { GradeDataSourceWithRelations } from "@/types/grade.types"
 
 import { EstimationSettingsPopover } from "./EstimationSettingsPopover"
@@ -21,6 +26,7 @@ const TYPE_LABELS: Record<string, string> = {
 }
 
 interface DataSourceRowProps {
+  gradeId: string
   dataSource: GradeDataSourceWithRelations
   /** 同じGrade内の全DataSource（推定ソース選択用） */
   allDataSources: GradeDataSourceWithRelations[]
@@ -32,32 +38,19 @@ interface DataSourceRowProps {
   selected: boolean
   /** チェックボックスの選択トグル */
   onToggleSelect: (id: string) => void
-  onUpdate: (
-    id: string,
-    data: {
-      name?: string
-      weight?: number
-      absentMethod?: string
-      absentRatio?: number
-      absentOffset?: number
-      treatExpectedAsMissing?: boolean
-      estimationMode?: string
-      estimationSourceIds?: string[]
-    }
-  ) => Promise<unknown>
-  onDelete: (id: string) => Promise<void>
 }
 
 export function DataSourceRow({
+  gradeId,
   dataSource,
   allDataSources,
   sourceFit,
   batchMode,
   selected,
   onToggleSelect,
-  onUpdate,
-  onDelete,
 }: DataSourceRowProps) {
+  const renameDataSource = useMutation(renameDataSourceMutation(gradeId))
+  const deleteDataSource = useMutation(deleteDataSourceMutation(gradeId))
   const { setNodeRef, style, dragHandleProps } = useSortableRow(dataSource.id)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(dataSource.name)
@@ -70,7 +63,8 @@ export function DataSourceRow({
   const displayMaxScore = dataSource.maxScore
 
   const handleSave = async () => {
-    await onUpdate(dataSource.id, {
+    await renameDataSource.mutateAsync({
+      id: dataSource.id,
       name,
       weight: Number(weight),
     })
@@ -178,10 +172,10 @@ export function DataSourceRow({
           </Badge>
         )}
         <EstimationSettingsPopover
+          gradeId={gradeId}
           dataSource={dataSource}
           allDataSources={allDataSources}
           sourceFit={sourceFit}
-          onUpdate={onUpdate}
         />
       </div>
       <div className="flex items-center gap-3">
@@ -200,7 +194,7 @@ export function DataSourceRow({
           variant="ghost"
           size="icon"
           className="h-7 w-7 text-destructive"
-          onClick={() => onDelete(dataSource.id)}
+          onClick={() => deleteDataSource.mutate(dataSource.id)}
         >
           <Trash2 className="h-3 w-3" />
         </Button>

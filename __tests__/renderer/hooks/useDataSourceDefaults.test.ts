@@ -17,11 +17,11 @@ import { useDataSourceDefaults } from "@/components/grades/03-data-sources/hooks
 import {
   type AddDataSourceSelection,
   COURSEWORK_WHOLE,
-  type CourseworkOption,
   type CropRegionOption,
   type ExamOption,
   type SubtotalGroupOption,
 } from "@/components/grades/03-data-sources/types"
+import type { CourseworkCandidate } from "@/queries/coursework"
 
 const EXAM: ExamOption = {
   id: "exam-1",
@@ -51,7 +51,7 @@ const CROP_REGIONS: CropRegionOption[] = [
 /** 行の時刻は判定に使わないので固定値でよい */
 const FIXED_DATE = new Date("2026-01-01T00:00:00.000Z")
 
-const COURSEWORKS: CourseworkOption[] = [
+const COURSEWORKS: CourseworkCandidate[] = [
   {
     id: "coursework-1",
     name: "レポート",

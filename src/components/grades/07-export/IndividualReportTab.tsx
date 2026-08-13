@@ -1,13 +1,14 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { Printer } from "lucide-react"
-import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { openPrintDialogMutation } from "@/queries/export"
 import type { GradeCalculationResult } from "@/types/grade.types"
 
 import { generateGradeReportBatchHtml } from "./generateGradeReportHtml"
@@ -26,7 +27,7 @@ export function IndividualReportTab({
   options,
   onOptionsChange,
 }: IndividualReportTabProps) {
-  const [printing, setPrinting] = useState(false)
+  const openPrintDialog = useMutation(openPrintDialogMutation())
 
   const updateOption = <K extends keyof GradeReportOptions>(
     key: K,
@@ -35,24 +36,12 @@ export function IndividualReportTab({
     onOptionsChange({ ...options, [key]: value })
   }
 
-  const handlePrint = async () => {
+  const handlePrint = () => {
     if (selectedStudentIds.length === 0) return
-    setPrinting(true)
-    try {
-      const html = generateGradeReportBatchHtml(
-        result,
-        selectedStudentIds,
-        options
-      )
-      await window.electronAPI.export.openPrintDialog({
-        html,
-        title: options.title,
-      })
-    } catch (err) {
-      console.error("Print error:", err)
-    } finally {
-      setPrinting(false)
-    }
+    openPrintDialog.mutate({
+      html: generateGradeReportBatchHtml(result, selectedStudentIds, options),
+      title: options.title,
+    })
   }
 
   const sourceLabel = options.dataSourceLabel || "成績資料"
@@ -321,12 +310,16 @@ export function IndividualReportTab({
       <div className="space-y-2 border-t pt-4">
         <Button
           onClick={handlePrint}
-          disabled={printing || selectedStudentIds.length === 0}
+          disabled={
+            openPrintDialog.isPending || selectedStudentIds.length === 0
+          }
           className="w-full"
           size="sm"
         >
           <Printer className="mr-2 h-4 w-4" />
-          {printing ? "準備中..." : `印刷 (${selectedStudentIds.length}名)`}
+          {openPrintDialog.isPending
+            ? "準備中..."
+            : `印刷 (${selectedStudentIds.length}名)`}
         </Button>
         <p className="text-center text-[10px] text-muted-foreground">
           選択した生徒の通知書を印刷ダイアログで出力

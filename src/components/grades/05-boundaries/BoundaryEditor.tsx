@@ -2,8 +2,9 @@
 
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
+import { useMutation } from "@tanstack/react-query"
 import { Plus, Trash2 } from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useState } from "react"
 
 import {
   DragHandle,
@@ -13,154 +14,156 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import {
+  createGradeItemBoundaryMutation,
+  deleteGradeItemBoundaryMutation,
+  reorderGradeItemBoundariesMutation,
+  updateGradeItemBoundaryMutation,
+} from "@/queries/grade"
 import type { GradeItemWithDataSources } from "@/types/grade.types"
 
 interface BoundaryEditorProps {
+  gradeId: string
   /** 対象の評価項目。境界が引かれていなければ boundaries は空配列 */
   gradeItem: GradeItemWithDataSources
-  onSave: (
-    boundaries: { label: string; minPercentage: number; order: number }[]
-  ) => Promise<void>
 }
 
-interface EditableBoundary {
-  id: string
-  label: string
-  minPercentage: string
-}
+/** 境界の行 */
+type Boundary = GradeItemWithDataSources["boundaries"][number]
 
-/** 未保存の追加行に振る一時id（DB の境界 id と混ざらないよう接頭辞で分ける） */
-let nextAddedRowId = 1
+/** 入力中の文字を引くための鍵（DB の鍵ではなく、この画面だけの覚え） */
+const editingKey = (boundaryId: string, field: "label" | "minPercentage") =>
+  `${boundaryId}:${field}`
 
 /**
  * 成績境界の編集コンポーネント
  *
- * ラベルと最低パーセンテージの組み合わせを編集し、変更を500msデバウンスで自動保存する。
- * DnDで行を並び替え可能。minPercentageが降順でない場合は赤い枠線で警告する。
+ * ラベルと最低パーセンテージを編集し、**1打鍵ごとに即座に保存する**。DnDで行を
+ * 並び替え可能。minPercentage が降順でない場合は赤い枠線で警告する。
+ *
+ * デバウンスは持たない。以前は500msまとめて全行を置き換えていたが、
+ * 「画面には85と出ているが DB は80」という窓を作るうえ、離脱時に保存を捨てて
+ * 最後の打鍵が消えていた。行ごとに書けば1回1レコードなので、まとめる理由が無い。
+ *
+ * 入力中の文字だけは手元に持つ。`""` や `"8."` は数値にできず、打鍵と取り直しの
+ * 間に入力欄が元の値へ戻ってしまうため。
  */
-export function BoundaryEditor({ gradeItem, onSave }: BoundaryEditorProps) {
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+export function BoundaryEditor({ gradeId, gradeItem }: BoundaryEditorProps) {
+  const createBoundary = useMutation(createGradeItemBoundaryMutation(gradeId))
+  const updateBoundary = useMutation(updateGradeItemBoundaryMutation(gradeId))
+  const deleteBoundary = useMutation(deleteGradeItemBoundaryMutation(gradeId))
+  const reorderBoundaries = useMutation(
+    reorderGradeItemBoundariesMutation(gradeId)
+  )
 
-  // サーバから読み直した境界。行の同定は DB の id で行う（並べ替えるので添字は使えない）
-  const savedItems = useMemo(
+  const [editingText, setEditingText] = useState<ReadonlyMap<string, string>>(
+    new Map()
+  )
+
+  // 表示順は order。以前は最低%の降順で並べていたため、DnD で並べ替えても
+  // 見た目が戻り、並べ替えが効いていなかった。
+  const boundaries = useMemo(
     () =>
-      [...gradeItem.boundaries]
-        .sort(
-          (firstBoundary, secondBoundary) =>
-            secondBoundary.minPercentage - firstBoundary.minPercentage
-        )
-        .map((boundary) => ({
-          id: boundary.id,
-          label: boundary.label,
-          minPercentage: String(boundary.minPercentage),
-        })),
+      [...gradeItem.boundaries].sort(
+        (first, second) => first.order - second.order
+      ),
     [gradeItem.boundaries]
   )
 
-  // 編集中の行は「どの読み込み結果から始めたか」を一緒に持つ。サーバから読み直せば
-  // 一致しなくなって最新に従う（再取得は保存が済んだ後にしか起きないので、入力中の
-  // 行がレンダリングのたびに消えることはない）
-  const [draft, setDraft] = useState<{
-    savedItems: EditableBoundary[]
-    items: EditableBoundary[]
-  } | null>(null)
+  /** 表示する文字。入力中ならその文字、そうでなければ DB の値 */
+  const textOf = (boundary: Boundary, field: "label" | "minPercentage") =>
+    editingText.get(editingKey(boundary.id, field)) ?? String(boundary[field])
 
-  const items = draft?.savedItems === savedItems ? draft.items : savedItems
-  const setItems = useCallback(
-    (newItems: EditableBoundary[]) => setDraft({ savedItems, items: newItems }),
-    [savedItems]
-  )
+  const rememberText = (
+    boundary: Boundary,
+    field: "label" | "minPercentage",
+    text: string
+  ) => {
+    setEditingText((previous) =>
+      new Map(previous).set(editingKey(boundary.id, field), text)
+    )
+  }
 
-  const debouncedSave = useCallback(
-    (updatedItems: EditableBoundary[]) => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
+  const forgetText = (boundary: Boundary) => {
+    setEditingText((previous) => {
+      const next = new Map(previous)
+      next.delete(editingKey(boundary.id, "label"))
+      next.delete(editingKey(boundary.id, "minPercentage"))
+      return next
+    })
+  }
+
+  const changeLabel = (boundary: Boundary, text: string) => {
+    rememberText(boundary, "label", text)
+    updateBoundary.mutate({ id: boundary.id, label: text })
+  }
+
+  const changeMinPercentage = (boundary: Boundary, text: string) => {
+    rememberText(boundary, "minPercentage", text)
+    const parsed = Number(text)
+    // 入力途中（空・`8.` など）は保存しない。次の打鍵で確定する
+    if (text.trim() === "" || Number.isNaN(parsed)) return
+    updateBoundary.mutate({ id: boundary.id, minPercentage: parsed })
+  }
+
+  // 隣り合う行で最低%が降順になっていないものに印を付ける。表示順（order）で
+  // 見るので、並べ替えた結果が矛盾していればその場で分かる。
+  const invalidBoundaryIds = useMemo(() => {
+    const invalid = new Set<string>()
+    boundaries.forEach((boundary, index) => {
+      const next = boundaries[index + 1]
+      if (!next) return
+      if (Number(boundary.minPercentage) <= Number(next.minPercentage)) {
+        invalid.add(boundary.id)
+        invalid.add(next.id)
       }
-      saveTimeoutRef.current = setTimeout(async () => {
-        const validItems = updatedItems
-          .filter((item) => item.label.trim())
-          .map((item, index) => ({
-            label: item.label.trim(),
-            minPercentage: Number(item.minPercentage) || 0,
-            order: index,
-          }))
-        await onSave(validItems)
-      }, 500)
-    },
-    [onSave]
-  )
-
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  const invalidRows = useMemo(() => {
-    const invalid = new Set<number>()
-    for (let i = 0; i < items.length - 1; i++) {
-      const current = Number(items[i].minPercentage) || 0
-      const next = Number(items[i + 1].minPercentage) || 0
-      if (current <= next) {
-        invalid.add(i)
-        invalid.add(i + 1)
-      }
-    }
+    })
     return invalid
-  }, [items])
+  }, [boundaries])
 
   const addRow = () => {
-    const newItems = [
-      ...items,
-      { id: `added-${nextAddedRowId++}`, label: "", minPercentage: "0" },
-    ]
-    setItems(newItems)
+    createBoundary.mutate({
+      gradeItemId: gradeItem.id,
+      label: "",
+      minPercentage: 0,
+      order: boundaries.length,
+    })
   }
 
-  const removeRow = (index: number) => {
-    const newItems = items.filter((_, i) => i !== index)
-    setItems(newItems)
-    debouncedSave(newItems)
+  const removeRow = (boundary: Boundary) => {
+    forgetText(boundary)
+    deleteBoundary.mutate(boundary.id)
   }
 
-  const updateRow = (
-    index: number,
-    field: "label" | "minPercentage",
-    value: string
-  ) => {
-    const newItems = items.map((item, i) =>
-      i === index ? { ...item, [field]: value } : item
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = boundaries.findIndex(
+      (boundary) => boundary.id === active.id
     )
-    setItems(newItems)
-    debouncedSave(newItems)
+    const newIndex = boundaries.findIndex((boundary) => boundary.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    reorderBoundaries.mutate(
+      arrayMove(boundaries, oldIndex, newIndex).map((boundary, index) => ({
+        id: boundary.id,
+        order: index,
+      }))
+    )
   }
 
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event
-      if (!over || active.id === over.id) return
-      const oldIndex = items.findIndex((item) => item.id === active.id)
-      const newIndex = items.findIndex((item) => item.id === over.id)
-      if (oldIndex === -1 || newIndex === -1) return
-      const newItems = arrayMove(items, oldIndex, newIndex)
-      setItems(newItems)
-      debouncedSave(newItems)
-    },
-    [items, debouncedSave, setItems]
+  const boundaryIds = useMemo(
+    () => boundaries.map((boundary) => boundary.id),
+    [boundaries]
   )
-
-  const itemIds = useMemo(() => items.map((item) => item.id), [items])
 
   return (
     <div className="space-y-3">
-      {items.length === 0 ? (
+      {boundaries.length === 0 ? (
         <p className="py-4 text-center text-sm text-muted-foreground">
           境界が設定されていません。プリセットを選択するか手動で追加してください。
         </p>
       ) : (
-        <SortableTableProvider items={itemIds} onDragEnd={handleDragEnd}>
+        <SortableTableProvider items={boundaryIds} onDragEnd={handleDragEnd}>
           <div className="space-y-2">
             <div className="grid grid-cols-[28px_1fr_120px_40px] gap-2 text-xs font-medium">
               <span />
@@ -168,13 +171,16 @@ export function BoundaryEditor({ gradeItem, onSave }: BoundaryEditorProps) {
               <span>最低 %</span>
               <span />
             </div>
-            {items.map((item, index) => (
+            {boundaries.map((boundary) => (
               <BoundaryRow
-                key={item.id}
-                item={item}
-                index={index}
-                isInvalid={invalidRows.has(index)}
-                onUpdate={updateRow}
+                key={boundary.id}
+                boundary={boundary}
+                label={textOf(boundary, "label")}
+                minPercentage={textOf(boundary, "minPercentage")}
+                isInvalid={invalidBoundaryIds.has(boundary.id)}
+                onChangeLabel={changeLabel}
+                onChangeMinPercentage={changeMinPercentage}
+                onBlur={forgetText}
                 onRemove={removeRow}
               />
             ))}
@@ -200,25 +206,27 @@ export function BoundaryEditor({ gradeItem, onSave }: BoundaryEditorProps) {
 // ---------------------------------------------------------------------------
 
 interface BoundaryRowProps {
-  item: EditableBoundary
-  index: number
+  boundary: Boundary
+  label: string
+  minPercentage: string
   isInvalid: boolean
-  onUpdate: (
-    index: number,
-    field: "label" | "minPercentage",
-    value: string
-  ) => void
-  onRemove: (index: number) => void
+  onChangeLabel: (boundary: Boundary, text: string) => void
+  onChangeMinPercentage: (boundary: Boundary, text: string) => void
+  onBlur: (boundary: Boundary) => void
+  onRemove: (boundary: Boundary) => void
 }
 
 function BoundaryRow({
-  item,
-  index,
+  boundary,
+  label,
+  minPercentage,
   isInvalid,
-  onUpdate,
+  onChangeLabel,
+  onChangeMinPercentage,
+  onBlur,
   onRemove,
 }: BoundaryRowProps) {
-  const { setNodeRef, style, dragHandleProps } = useSortableRow(item.id)
+  const { setNodeRef, style, dragHandleProps } = useSortableRow(boundary.id)
 
   return (
     <div
@@ -228,15 +236,17 @@ function BoundaryRow({
     >
       <DragHandle dragHandleProps={dragHandleProps} />
       <Input
-        value={item.label}
-        onChange={(e) => onUpdate(index, "label", e.target.value)}
+        value={label}
+        onChange={(e) => onChangeLabel(boundary, e.target.value)}
+        onBlur={() => onBlur(boundary)}
         placeholder="例: A"
         className="h-8"
       />
       <Input
         type="number"
-        value={item.minPercentage}
-        onChange={(e) => onUpdate(index, "minPercentage", e.target.value)}
+        value={minPercentage}
+        onChange={(e) => onChangeMinPercentage(boundary, e.target.value)}
+        onBlur={() => onBlur(boundary)}
         min={0}
         max={100}
         className={cn(
@@ -248,7 +258,7 @@ function BoundaryRow({
         variant="ghost"
         size="icon"
         className="h-8 w-8 text-destructive"
-        onClick={() => onRemove(index)}
+        onClick={() => onRemove(boundary)}
       >
         <Trash2 className="h-3 w-3" />
       </Button>

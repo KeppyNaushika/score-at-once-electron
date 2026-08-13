@@ -25,8 +25,8 @@ import {
 } from "@/electron-src/lib/prisma/gradeDataSource"
 import { createGradeItem } from "@/electron-src/lib/prisma/gradeItem"
 import {
+  createGradeItemBoundary,
   deleteGradeItemBoundaries,
-  replaceGradeItemBoundaries,
 } from "@/electron-src/lib/prisma/gradeItemBoundary"
 
 import {
@@ -58,12 +58,17 @@ describe("GradeBoundary 追加テスト", () => {
         name: "知識・技能",
       })
 
-      await replaceGradeItemBoundaries({
+      await createGradeItemBoundary({
         gradeItemId: gradeItemResult.id,
-        boundaries: [
-          { label: "A", minPercentage: 80, order: 0 },
-          { label: "B", minPercentage: 60, order: 1 },
-        ],
+        label: "A",
+        minPercentage: 80,
+        order: 0,
+      })
+      await createGradeItemBoundary({
+        gradeItemId: gradeItemResult.id,
+        label: "B",
+        minPercentage: 60,
+        order: 1,
       })
 
       await deleteGradeItemBoundaries(gradeItemResult.id)
@@ -83,12 +88,17 @@ describe("GradeBoundary 追加テスト", () => {
         name: "知識・技能",
       })
 
-      await replaceGradeItemBoundaries({
+      await createGradeItemBoundary({
         gradeItemId: gradeItemResult.id,
-        boundaries: [
-          { label: "A", minPercentage: 80, order: 0 },
-          { label: "B", minPercentage: 60, order: 1 },
-        ],
+        label: "A",
+        minPercentage: 80,
+        order: 0,
+      })
+      await createGradeItemBoundary({
+        gradeItemId: gradeItemResult.id,
+        label: "B",
+        minPercentage: 60,
+        order: 1,
       })
 
       await testPrisma.gradeItem.delete({

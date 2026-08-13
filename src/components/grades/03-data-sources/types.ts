@@ -45,11 +45,6 @@ export interface CropRegionOption {
   cropSubtotals: { subtotalId: string }[]
 }
 
-/** 資料の選択肢。形は境界（`coursework:getCandidates`）の返り値から導く */
-export type CourseworkOption = Awaited<
-  ReturnType<typeof window.electronAPI.coursework.getCandidates>
->[number]
-
 /** データソース追加フォームの選択状態。名前と換算満点の既定値を導く入力になる。 */
 export interface AddDataSourceSelection {
   type: AddDataSourceType

@@ -32,7 +32,11 @@ import {
   reorderGradeItems,
   updateGradeItem,
 } from "@/electron-src/lib/prisma/gradeItem"
-import { replaceGradeItemBoundaries } from "@/electron-src/lib/prisma/gradeItemBoundary"
+import {
+  createGradeItemBoundary,
+  deleteGradeItemBoundary,
+  updateGradeItemBoundary,
+} from "@/electron-src/lib/prisma/gradeItemBoundary"
 
 import {
   cleanupTestDatabase,
@@ -312,59 +316,80 @@ describe("GradeItemBoundary CRUD", () => {
       name: "知識・技能",
     })
 
-    await replaceGradeItemBoundaries({
+    await createGradeItemBoundary({
       gradeItemId: gradeItemResult.id,
-      boundaries: [
-        { label: "A", minPercentage: 90, order: 0 },
-        { label: "B", minPercentage: 70, order: 1 },
-      ],
+      label: "A",
+      minPercentage: 90,
+      order: 0,
+    })
+    await createGradeItemBoundary({
+      gradeItemId: gradeItemResult.id,
+      label: "B",
+      minPercentage: 70,
+      order: 1,
     })
     expect(await readBoundaryLabels(gradeItemResult.id)).toEqual(["A", "B"])
   })
 
-  it("同じ評価項目へ再度書くと境界が置換される", async () => {
+  // 差分更新の要点は「触っていない行に手を触れないこと」。全消し→作り直しでは
+  // 行の id が毎回変わり、他端末の編集や作成日時を巻き添えにする。
+  it("1本だけ更新しても、他の行の id は変わらない", async () => {
     const grade = await createTestGrade()
     const gradeItemResult = await createGradeItem({
       gradeId: grade.id,
       name: "知識・技能",
     })
 
-    await replaceGradeItemBoundaries({
+    const boundaryA = await createGradeItemBoundary({
       gradeItemId: gradeItemResult.id,
-      boundaries: [{ label: "A", minPercentage: 80, order: 0 }],
+      label: "A",
+      minPercentage: 80,
+      order: 0,
+    })
+    const boundaryB = await createGradeItemBoundary({
+      gradeItemId: gradeItemResult.id,
+      label: "B",
+      minPercentage: 60,
+      order: 1,
     })
 
-    await replaceGradeItemBoundaries({
-      gradeItemId: gradeItemResult.id,
-      boundaries: [
-        { label: "S", minPercentage: 95, order: 0 },
-        { label: "A", minPercentage: 80, order: 1 },
-        { label: "B", minPercentage: 60, order: 2 },
-      ],
+    await updateGradeItemBoundary(boundaryA.id, { minPercentage: 85 })
+
+    const boundaries = await testPrisma.gradeItemBoundary.findMany({
+      where: { gradeItemId: gradeItemResult.id },
+      orderBy: { order: "asc" },
     })
-    expect(await readBoundaryLabels(gradeItemResult.id)).toEqual([
-      "S",
-      "A",
-      "B",
+    expect(boundaries.map((boundary) => boundary.id)).toEqual([
+      boundaryA.id,
+      boundaryB.id,
     ])
+    expect(Number(boundaries[0].minPercentage)).toBe(85)
+    expect(Number(boundaries[1].minPercentage)).toBe(60)
   })
 
-  it("空配列で置換すると境界が1本も残らない", async () => {
+  it("1本消しても残りは消えない", async () => {
     const grade = await createTestGrade()
     const gradeItemResult = await createGradeItem({
       gradeId: grade.id,
       name: "知識・技能",
     })
 
-    await replaceGradeItemBoundaries({
+    const boundaryA = await createGradeItemBoundary({
       gradeItemId: gradeItemResult.id,
-      boundaries: [{ label: "A", minPercentage: 80, order: 0 }],
+      label: "A",
+      minPercentage: 80,
+      order: 0,
     })
-    await replaceGradeItemBoundaries({
+    await createGradeItemBoundary({
       gradeItemId: gradeItemResult.id,
-      boundaries: [],
+      label: "B",
+      minPercentage: 60,
+      order: 1,
     })
-    expect(await readBoundaryLabels(gradeItemResult.id)).toEqual([])
+
+    await deleteGradeItemBoundary(boundaryA.id)
+
+    expect(await readBoundaryLabels(gradeItemResult.id)).toEqual(["B"])
   })
 
   // 境界は専用APIでなく評価項目の子として降ってくる。境界0本の項目も
@@ -381,13 +406,17 @@ describe("GradeItemBoundary CRUD", () => {
     })
     await createGradeItem({ gradeId: grade.id, name: "項目3" })
 
-    await replaceGradeItemBoundaries({
+    await createGradeItemBoundary({
       gradeItemId: firstItem.id,
-      boundaries: [{ label: "A", minPercentage: 80, order: 0 }],
+      label: "A",
+      minPercentage: 80,
+      order: 0,
     })
-    await replaceGradeItemBoundaries({
+    await createGradeItemBoundary({
       gradeItemId: secondItem.id,
-      boundaries: [{ label: "B", minPercentage: 70, order: 0 }],
+      label: "B",
+      minPercentage: 70,
+      order: 0,
     })
 
     const result = await getGradeItemsByExamId(grade.id)

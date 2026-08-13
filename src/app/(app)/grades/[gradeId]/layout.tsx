@@ -14,7 +14,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
-import { queryKeys } from "@/lib/queryKeys"
+import { gradeDetailQuery } from "@/queries/grade"
 
 const workflowSteps = [
   { id: "02-students", label: "1. 生徒管理", path: "02-students" },
@@ -42,8 +42,7 @@ export default function GradeWorkflowLayout({
   const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
   // パンくずが要るのは名前だけ。成績本体のキャッシュを各段階と共有する
   const { data: examName = "" } = useQuery({
-    queryKey: queryKeys.grade.detail(gradeId),
-    queryFn: () => window.electronAPI.grade.getById(gradeId),
+    ...gradeDetailQuery(gradeId),
     select: selectGradeName,
   })
 

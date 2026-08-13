@@ -1,17 +1,22 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
+import { toast } from "sonner"
 
 import { DragHandle, useSortableRow } from "@/components/common/sortable-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  deleteGradeItemMutation,
+  renameGradeItemMutation,
+} from "@/queries/grade"
 import type { GradeItemWithDataSources } from "@/types/grade.types"
 
 interface GradeItemSectionProps {
+  gradeId: string
   gradeItem: GradeItemWithDataSources
-  onRename: (gradeItemId: string, name: string) => Promise<void>
-  onDelete: (gradeItemId: string) => Promise<void>
   /** 配下のデータソース一覧と追加フォーム */
   children: React.ReactNode
 }
@@ -23,11 +28,12 @@ interface GradeItemSectionProps {
  * この枠の内側で別の DndContext として完結する（掴む要素が重ならないので競合しない）。
  */
 export function GradeItemSection({
+  gradeId,
   gradeItem,
-  onRename,
-  onDelete,
   children,
 }: GradeItemSectionProps) {
+  const renameGradeItem = useMutation(renameGradeItemMutation(gradeId))
+  const deleteGradeItem = useMutation(deleteGradeItemMutation(gradeId))
   const { setNodeRef, style, dragHandleProps } = useSortableRow(gradeItem.id)
   // null は非編集中。編集中の名前そのものを状態に持ち、フラグを別に持たない
   const [editingName, setEditingName] = useState<string | null>(null)
@@ -35,8 +41,22 @@ export function GradeItemSection({
   const handleSaveName = async () => {
     const trimmedName = editingName?.trim()
     if (!trimmedName) return
-    await onRename(gradeItem.id, trimmedName)
+    await renameGradeItem.mutateAsync({
+      id: gradeItem.id,
+      name: trimmedName,
+    })
     setEditingName(null)
+  }
+
+  const handleDelete = async () => {
+    const result = await deleteGradeItem.mutateAsync(gradeItem.id)
+    // 制約ルールの集計対象が変わると判定の意味が変わるため無効化される。
+    // 黙って着色が消えるのを避け、その場で知らせる。
+    if (result.disabledConstraintNames.length > 0) {
+      toast.warning(
+        `制約ルール「${result.disabledConstraintNames.join("」「")}」を無効化しました（集計対象が変わったため再設定してください）`
+      )
+    }
   }
 
   return (
@@ -91,7 +111,7 @@ export function GradeItemSection({
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-destructive"
-            onClick={() => onDelete(gradeItem.id)}
+            onClick={() => void handleDelete()}
           >
             <Trash2 className="h-4 w-4" />
           </Button>

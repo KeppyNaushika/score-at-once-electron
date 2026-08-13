@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
 
@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { useGradeConstraints } from "@/hooks/grades/useGradeConstraints"
 import {
   DEFAULT_CONSTRAINT_AGGREGATE,
   DEFAULT_CONSTRAINT_COLOR,
@@ -21,7 +20,13 @@ import {
   evaluateConstraints,
   validateConstraintExpression,
 } from "@/lib/gradeConstraints"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  createGradeConstraintMutation,
+  deleteGradeConstraintMutation,
+  gradeConstraintsQuery,
+  gradeResultsQuery,
+  updateGradeConstraintMutation,
+} from "@/queries/grade"
 import type {
   GradeConstraintData,
   GradeConstraintInput,
@@ -74,18 +79,22 @@ function guessTargetGradeItem(
   return byName ?? gradeItems[gradeItems.length - 1] ?? null
 }
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_CONSTRAINTS: GradeConstraintData[] = []
+
 export function ConstraintRulesEditor({
   gradeId,
   gradeItems,
 }: ConstraintRulesEditorProps) {
-  const { constraints, createConstraint, updateConstraint, deleteConstraint } =
-    useGradeConstraints(gradeId)
+  const { data: constraints = EMPTY_CONSTRAINTS } = useQuery(
+    gradeConstraintsQuery(gradeId)
+  )
+  const createConstraint = useMutation(createGradeConstraintMutation(gradeId))
+  const updateConstraint = useMutation(updateGradeConstraintMutation(gradeId))
+  const deleteConstraint = useMutation(deleteGradeConstraintMutation(gradeId))
 
   // プレビュー用の成績算出結果（06 結果画面と同じキャッシュを共有する）
-  const { data: calcResult = null } = useQuery({
-    queryKey: queryKeys.grade.results(gradeId),
-    queryFn: () => window.electronAPI.grade.calculateGrades(gradeId),
-  })
+  const { data: calcResult = null } = useQuery(gradeResultsQuery(gradeId))
 
   const labels = useMemo(() => collectLabels(gradeItems), [gradeItems])
 
@@ -124,7 +133,7 @@ export function ConstraintRulesEditor({
       enabled: true,
       order: constraints.length,
     }
-    await createConstraint(input)
+    createConstraint.mutate(input)
   }
 
   return (
@@ -178,8 +187,10 @@ export function ConstraintRulesEditor({
             gradeItems={gradeItems}
             hitCount={evaluation?.counts.get(constraint.id) ?? 0}
             errorMessage={evaluation?.errors.get(constraint.id) ?? null}
-            onUpdate={(patch) => updateConstraint(constraint.id, patch)}
-            onDelete={() => deleteConstraint(constraint.id)}
+            onUpdate={(patch) =>
+              updateConstraint.mutate({ id: constraint.id, constraint: patch })
+            }
+            onDelete={() => deleteConstraint.mutate(constraint.id)}
           />
         ))}
       </div>

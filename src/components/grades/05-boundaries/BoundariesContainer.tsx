@@ -1,9 +1,9 @@
 "use client"
 
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
-import { toast } from "sonner"
 
 import {
   AlertDialog,
@@ -18,7 +18,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { useBoundaries } from "@/hooks/grades/useBoundaries"
+import {
+  applyGradeBoundaryPresetMutation,
+  deleteAllGradeItemBoundariesMutation,
+  gradeDetailQuery,
+} from "@/queries/grade"
 import type { GradeItemWithDataSources } from "@/types/grade.types"
 
 import { BoundaryEditor } from "./BoundaryEditor"
@@ -30,8 +34,13 @@ interface BoundariesContainerProps {
 }
 
 export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
-  const { grade, loading, saveBoundaries, deleteBoundaries } =
-    useBoundaries(gradeId)
+  const { data: grade, isPending: loading } = useQuery(
+    gradeDetailQuery(gradeId)
+  )
+  const applyPreset = useMutation(applyGradeBoundaryPresetMutation(gradeId))
+  const deleteAllBoundaries = useMutation(
+    deleteAllGradeItemBoundariesMutation(gradeId)
+  )
 
   const [deletionTargetGradeItem, setDeletionTargetGradeItem] =
     useState<GradeItemWithDataSources | null>(null)
@@ -45,24 +54,6 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
   }
 
   const gradeItems = grade.gradeItems
-
-  const handleSave = async (
-    gradeItemId: string,
-    boundaries: { label: string; minPercentage: number; order: number }[]
-  ) => {
-    await saveBoundaries({ gradeItemId, boundaries })
-  }
-
-  const handleDelete = async (targetGradeItem: GradeItemWithDataSources) => {
-    try {
-      await deleteBoundaries(targetGradeItem.id)
-    } catch (error) {
-      toast.error("成績境界を削除できませんでした", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
-    setDeletionTargetGradeItem(null)
-  }
 
   return (
     <div className="p-6">
@@ -89,12 +80,11 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
               )}
             </div>
             <BoundaryPresetSelector
-              onSelect={(boundaries) => handleSave(gradeItem.id, boundaries)}
+              onSelect={(boundaries) =>
+                applyPreset.mutate({ gradeItemId: gradeItem.id, boundaries })
+              }
             />
-            <BoundaryEditor
-              gradeItem={gradeItem}
-              onSave={(boundaries) => handleSave(gradeItem.id, boundaries)}
-            />
+            <BoundaryEditor gradeId={gradeId} gradeItem={gradeItem} />
           </Card>
         ))}
       </div>
@@ -130,7 +120,8 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
             <AlertDialogAction
               onClick={() => {
                 if (deletionTargetGradeItem) {
-                  void handleDelete(deletionTargetGradeItem)
+                  deleteAllBoundaries.mutate(deletionTargetGradeItem.id)
+                  setDeletionTargetGradeItem(null)
                 }
               }}
             >

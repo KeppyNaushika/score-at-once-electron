@@ -2,10 +2,10 @@
 
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { Plus, Settings, Users } from "lucide-react"
 import Link from "next/link"
-import { useCallback, useState } from "react"
-import { toast } from "sonner"
+import { useCallback, useMemo, useState } from "react"
 
 import { SortableTableProvider } from "@/components/common/sortable-table"
 import { Badge } from "@/components/ui/badge"
@@ -21,7 +21,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useDataSources } from "@/hooks/grades/useDataSources"
+import {
+  batchUpdateDataSourceEstimationMutation,
+  createGradeItemMutation,
+  type GradeClassroomRow,
+  gradeClassroomsQuery,
+  gradeDetailQuery,
+  gradeSourceFitsQuery,
+  gradeStudentsQuery,
+  reorderDataSourcesMutation,
+  reorderGradeItemsMutation,
+} from "@/queries/grade"
 import type {
   AbsentMethod,
   EstimationMode,
@@ -34,50 +44,47 @@ import { DataSourceRow } from "./DataSourceRow"
 import { GradeItemSection } from "./GradeItemSection"
 import { StudentExclusionModal } from "./StudentExclusionModal"
 
+/** 未取得のときに毎回新しい値を作らないための空値 */
+const EMPTY_SOURCE_FITS: Record<
+  string,
+  { correlation: number; sampleSize: number } | null
+> = {}
+const EMPTY_CLASSROOMS: GradeClassroomRow[] = []
+
 interface DataSourcesContainerProps {
   gradeId: string
 }
 
 export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
-  const {
-    exam,
-    loading,
-    sourceFits,
-    createGradeItem,
-    updateGradeItem,
-    deleteGradeItem,
-    reorderGradeItems,
-    createDataSource,
-    updateDataSource,
-    batchUpdateDataSources,
-    deleteDataSource,
-    reorderDataSources,
-    reload,
-  } = useDataSources(gradeId)
+  const { data: exam = null, isPending: loading } = useQuery(
+    gradeDetailQuery(gradeId)
+  )
+  const { data: sourceFits = EMPTY_SOURCE_FITS } = useQuery(
+    gradeSourceFitsQuery(gradeId)
+  )
+  const createGradeItem = useMutation(createGradeItemMutation(gradeId))
+  const reorderGradeItems = useMutation(reorderGradeItemsMutation(gradeId))
+  const reorderDataSources = useMutation(reorderDataSourcesMutation(gradeId))
+  const batchUpdateEstimation = useMutation(
+    batchUpdateDataSourceEstimationMutation(gradeId)
+  )
 
   const [newItemName, setNewItemName] = useState("")
 
-  // 対象生徒モーダル
+  // 対象生徒モーダル。開いたときだけ取る
   const [exclusionModalOpen, setExclusionModalOpen] = useState(false)
-  const [students, setStudents] =
-    useState<Awaited<ReturnType<typeof window.electronAPI.grade.getStudents>>>()
-  const [classroomIds, setClassroomIds] = useState<string[]>([])
-
-  const loadStudentsAndClassrooms = useCallback(async () => {
-    const [gradeStudents, gradeClassrooms] = await Promise.all([
-      window.electronAPI.grade.getStudents(gradeId),
-      window.electronAPI.grade.getClassrooms(gradeId),
-    ])
-    setStudents(gradeStudents)
-    setClassroomIds(
-      gradeClassrooms.map((gradeClassroom) => gradeClassroom.classroomId)
-    )
-  }, [gradeId])
-
-  const handleOpenExclusionModal = useCallback(async () => {
-    await loadStudentsAndClassrooms()
-    setExclusionModalOpen(true)
-  }, [loadStudentsAndClassrooms])
+  const { data: students } = useQuery({
+    ...gradeStudentsQuery(gradeId),
+    enabled: exclusionModalOpen,
+  })
+  const { data: gradeClassrooms = EMPTY_CLASSROOMS } = useQuery({
+    ...gradeClassroomsQuery(gradeId),
+    enabled: exclusionModalOpen,
+  })
+  const classroomIds = useMemo(
+    () => gradeClassrooms.map((gradeClassroom) => gradeClassroom.classroomId),
+    [gradeClassrooms]
+  )
 
   const handleDataSourceDragEnd = useCallback(
     (dataSources: GradeDataSourceWithRelations[]) => (event: DragEndEvent) => {
@@ -91,7 +98,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
       )
       if (oldIndex === -1 || newIndex === -1) return
       const reordered = arrayMove(dataSources, oldIndex, newIndex)
-      void reorderDataSources(
+      reorderDataSources.mutate(
         reordered.map((dataSource, index) => ({
           id: dataSource.id,
           order: index,
@@ -113,7 +120,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
       )
       if (oldIndex === -1 || newIndex === -1) return
       const reordered = arrayMove(gradeItems, oldIndex, newIndex)
-      void reorderGradeItems(
+      reorderGradeItems.mutate(
         reordered.map((gradeItem, index) => ({
           id: gradeItem.id,
           order: index,
@@ -121,27 +128,6 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
       )
     },
     [reorderGradeItems]
-  )
-
-  const handleRenameGradeItem = useCallback(
-    async (gradeItemId: string, name: string) => {
-      await updateGradeItem(gradeItemId, name)
-    },
-    [updateGradeItem]
-  )
-
-  const handleDeleteGradeItem = useCallback(
-    async (gradeItemId: string) => {
-      const result = await deleteGradeItem(gradeItemId)
-      // 制約ルールの集計対象が変わると判定の意味が変わるため無効化される。
-      // 黙って着色が消えるのを避け、その場で知らせる。
-      if (result.disabledConstraintNames.length > 0) {
-        toast.warning(
-          `制約ルール「${result.disabledConstraintNames.join("」「")}」を無効化しました（集計対象が変わったため再設定してください）`
-        )
-      }
-    },
-    [deleteGradeItem]
   )
 
   // 一括欠測設定
@@ -168,7 +154,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
 
   const handleAddItem = async () => {
     if (!newItemName.trim()) return
-    await createGradeItem(newItemName.trim())
+    await createGradeItem.mutateAsync(newItemName.trim())
     setNewItemName("")
   }
 
@@ -215,12 +201,11 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
         }),
       },
     }))
-    const { failedCount } = await batchUpdateDataSources(updates)
-    if (failedCount > 0) {
-      // 一部だけ適用済みの可能性がある。パネルと選択は保持し再適用できるようにする。
-      toast.error(
-        `${failedCount}件のデータソースに一括設定を適用できませんでした`
-      )
+    try {
+      await batchUpdateEstimation.mutateAsync(updates)
+    } catch {
+      // 一部だけ適用済みの可能性がある。失敗の知らせは中央のトーストが出すので、
+      // ここではパネルと選択を保持して再適用できるようにするだけ。
       return
     }
     setBatchMode(false)
@@ -264,7 +249,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleOpenExclusionModal}
+              onClick={() => setExclusionModalOpen(true)}
             >
               <Users className="mr-1 h-3.5 w-3.5" />
               対象生徒
@@ -405,9 +390,8 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
         {exam.gradeItems.map((gradeItem) => (
           <GradeItemSection
             key={gradeItem.id}
+            gradeId={gradeId}
             gradeItem={gradeItem}
-            onRename={handleRenameGradeItem}
-            onDelete={handleDeleteGradeItem}
           >
             {/* DataSource リスト */}
             {gradeItem.dataSources.length > 0 && (
@@ -419,14 +403,13 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
                   {gradeItem.dataSources.map((dataSource) => (
                     <DataSourceRow
                       key={dataSource.id}
+                      gradeId={gradeId}
                       dataSource={dataSource}
                       allDataSources={allDataSources}
                       sourceFit={sourceFits[dataSource.id]}
                       batchMode={batchMode}
                       selected={selectedDataSourceIds.has(dataSource.id)}
                       onToggleSelect={toggleDsSelection}
-                      onUpdate={updateDataSource}
-                      onDelete={deleteDataSource}
                     />
                   ))}
                 </div>
@@ -434,11 +417,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
             )}
 
             {/* インラインデータソース追加 */}
-            <AddDataSourceInline
-              gradeItemId={gradeItem.id}
-              onCreate={createDataSource}
-              onCreated={reload}
-            />
+            <AddDataSourceInline gradeId={gradeId} gradeItemId={gradeItem.id} />
           </GradeItemSection>
         ))}
       </SortableTableProvider>

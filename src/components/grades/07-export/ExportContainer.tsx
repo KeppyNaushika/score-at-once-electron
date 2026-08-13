@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   CheckSquare,
   Eye,
@@ -12,7 +12,6 @@ import {
   Users,
 } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
-import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -26,8 +25,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useGradeResults } from "@/hooks/grades/useGradeResults"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  gradeExportSettingsQuery,
+  gradeResultsQuery,
+  saveGradeExportSettingsMutation,
+} from "@/queries/grade"
 
 import { ExcelExportTab } from "./ExcelExportTab"
 import { generateGradeReportBatchHtml } from "./generateGradeReportHtml"
@@ -40,12 +42,52 @@ import {
   type GradeReportOptions,
 } from "./types"
 
+/**
+ * 保存済みの通知書オプションを既定値と深くマージする。
+ * 新しい列が増えたときに、古い保存内容へ欠落が残らないようにする。
+ */
+function mergeReportOptions(
+  saved: Partial<GradeReportOptions> | null | undefined
+): GradeReportOptions {
+  if (!saved) return DEFAULT_GRADE_REPORT_OPTIONS
+  return {
+    ...DEFAULT_GRADE_REPORT_OPTIONS,
+    ...saved,
+    itemGradeColumns: {
+      ...DEFAULT_GRADE_REPORT_OPTIONS.itemGradeColumns,
+      ...saved.itemGradeColumns,
+    },
+    sourceBreakdownColumns: {
+      ...DEFAULT_GRADE_REPORT_OPTIONS.sourceBreakdownColumns,
+      ...saved.sourceBreakdownColumns,
+    },
+    footer: {
+      ...DEFAULT_GRADE_REPORT_OPTIONS.footer,
+      ...saved.footer,
+    },
+  }
+}
+
 interface ExportContainerProps {
   gradeId: string
 }
 
 export function ExportContainer({ gradeId }: ExportContainerProps) {
-  const { result, loading, error, recalculate } = useGradeResults(gradeId)
+  const {
+    data: result = null,
+    isPending: loading,
+    error: queryError,
+    refetch,
+  } = useQuery(gradeResultsQuery(gradeId))
+  const { data: exportSettings } = useQuery(gradeExportSettingsQuery(gradeId))
+  const saveExportSettings = useMutation(
+    saveGradeExportSettingsMutation(gradeId)
+  )
+
+  const error = queryError?.message ?? null
+  const recalculate = () => {
+    void refetch()
+  }
 
   // 生徒選択（共有ステート）。null は「まだ触っていない」= 全員選択の意味
   const [selectedStudentsState, setSelectedStudentsState] =
@@ -57,81 +99,26 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
   )
   const [previewStudentIdState, setPreviewStudentId] = useState("")
 
-  // 個人成績通知書オプション
-  const [reportOptions, setReportOptionsState] = useState<GradeReportOptions>(
-    DEFAULT_GRADE_REPORT_OPTIONS
+  // 個人成績通知書のオプションは DB の設定そのもの。手元の state へ写さず、
+  // 変えたらその場で書く（写すと「画面には出ているが DB は古い」窓ができる）。
+  const reportOptions = useMemo(
+    () => mergeReportOptions(exportSettings?.reportOptions),
+    [exportSettings]
   )
-  // 保存済みの出力設定。編集はこの後 state が持つので、種として蒔く
-  const queryClient = useQueryClient()
-  const settingsKey = queryKeys.grade.exportSettings(gradeId)
-  const { data: savedReportOptions } = useQuery({
-    queryKey: settingsKey,
-    queryFn: async () => {
-      const settings = await window.electronAPI.grade.getExportSettings(gradeId)
-      const saved = settings?.reportOptions ?? null
-      if (!saved) return DEFAULT_GRADE_REPORT_OPTIONS
-      // ネストした列選択は新フィールド欠落を防ぐためデフォルトと深くマージ
-      return {
-        ...DEFAULT_GRADE_REPORT_OPTIONS,
-        ...saved,
-        itemGradeColumns: {
-          ...DEFAULT_GRADE_REPORT_OPTIONS.itemGradeColumns,
-          ...saved.itemGradeColumns,
-        },
-        sourceBreakdownColumns: {
-          ...DEFAULT_GRADE_REPORT_OPTIONS.sourceBreakdownColumns,
-          ...saved.sourceBreakdownColumns,
-        },
-        footer: {
-          ...DEFAULT_GRADE_REPORT_OPTIONS.footer,
-          ...saved.footer,
-        },
-      }
-    },
-  })
 
-  // 成績を切り替えたら蒔き直す（ref で1回に固定すると前の成績の設定が残る）
-  const [seededGradeId, setSeededGradeId] = useState<string | null>(null)
-  if (savedReportOptions && seededGradeId !== gradeId) {
-    setSeededGradeId(gradeId)
-    setReportOptionsState(savedReportOptions)
-  }
-
-  // 変更時にDBへ保存するラッパー
   const setReportOptions = useCallback(
     (
       options:
         GradeReportOptions | ((prev: GradeReportOptions) => GradeReportOptions)
     ) => {
-      setReportOptionsState((prev) => {
-        const newOptions =
-          typeof options === "function" ? options(prev) : options
-
-        // 編集した値をキャッシュにも載せる。伝えないと、戻ってきたときに
-        // 保存前の設定が種になり、そのまま上書き保存される
-        queryClient.setQueryData(settingsKey, newOptions)
-
-        // バックグラウンドで保存（read-modify-write）
-        void window.electronAPI.grade
-          .getExportSettings(gradeId)
-          .then((currentSettings) =>
-            window.electronAPI.grade.saveExportSettings(gradeId, {
-              ...currentSettings,
-              reportOptions: newOptions,
-            })
-          )
-          .catch(async (error: unknown) => {
-            await queryClient.invalidateQueries({ queryKey: settingsKey })
-            console.error("成績算出エクスポート設定の保存に失敗:", error)
-            toast.error("出力設定の保存に失敗しました", {
-              description: error instanceof Error ? error.message : undefined,
-            })
-          })
-
-        return newOptions
+      const nextOptions =
+        typeof options === "function" ? options(reportOptions) : options
+      saveExportSettings.mutate({
+        ...exportSettings,
+        reportOptions: nextOptions,
       })
     },
-    [gradeId, queryClient, settingsKey]
+    [exportSettings, reportOptions, saveExportSettings]
   )
 
   // 出力タブ

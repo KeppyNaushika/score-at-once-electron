@@ -1,6 +1,6 @@
 "use client"
 
-import { skipToken, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useMemo, useState } from "react"
 
@@ -13,7 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  type CourseworkCandidate,
+  courseworkCandidatesQuery,
+} from "@/queries/coursework"
+import {
+  createDataSourceMutation,
+  gradeExamCandidatesQuery,
+  gradeExamOptionsQuery,
+} from "@/queries/grade"
 import type { GradeDataSourceInput } from "@/types/grade.types"
 
 import { useDataSourceDefaults } from "./hooks/useDataSourceDefaults"
@@ -21,7 +29,6 @@ import {
   type AddDataSourceSelection,
   type AddDataSourceType,
   COURSEWORK_WHOLE,
-  type CourseworkOption,
   type CropRegionOption,
   type ExamOption,
   isSameSelection,
@@ -33,18 +40,16 @@ import {
 const EMPTY_SUBTOTAL_GROUPS: SubtotalGroupOption[] = []
 const EMPTY_CROP_REGIONS: CropRegionOption[] = []
 const EMPTY_EXAMS: ExamOption[] = []
-const EMPTY_COURSEWORKS: CourseworkOption[] = []
+const EMPTY_COURSEWORKS: CourseworkCandidate[] = []
 
 interface AddDataSourceInlineProps {
+  gradeId: string
   gradeItemId: string
-  onCreate: (dataSourceInput: GradeDataSourceInput) => Promise<unknown>
-  onCreated: () => void
 }
 
 export function AddDataSourceInline({
+  gradeId,
   gradeItemId,
-  onCreate,
-  onCreated,
 }: AddDataSourceInlineProps) {
   const [open, setOpen] = useState(false)
   const [type, setType] = useState<AddDataSourceType>("exam_total")
@@ -63,35 +68,23 @@ export function AddDataSourceInline({
     name: string
     weight: string
   } | null>(null)
-  const [adding, setAdding] = useState(false)
+  const createDataSource = useMutation(createDataSourceMutation(gradeId))
 
   // 候補は開いたときだけ取る
   const { data: exams = EMPTY_EXAMS } = useQuery({
-    queryKey: queryKeys.grade.examCandidates(),
-    queryFn: open
-      ? () => window.electronAPI.grade.getExamCandidates()
-      : skipToken,
+    ...gradeExamCandidatesQuery(),
+    enabled: open,
   })
   const { data: courseworks = EMPTY_COURSEWORKS } = useQuery({
-    queryKey: queryKeys.coursework.candidates(),
-    queryFn: open
-      ? () => window.electronAPI.coursework.getCandidates()
-      : skipToken,
+    ...courseworkCandidatesQuery(),
+    enabled: open,
   })
 
   // 試験に紐づく選択肢。どの試験の結果かはキーが持つので、
   // 切り替え直後に前の試験の選択肢が残ることはない
   const { data: examScopedOptions } = useQuery({
-    queryKey: queryKeys.grade.examOptions(selectedExamId),
-    queryFn: selectedExamId
-      ? async () => {
-          const [subtotalGroups, cropRegions] = await Promise.all([
-            window.electronAPI.grade.getExamSubtotalGroups(selectedExamId),
-            window.electronAPI.grade.getExamCropRegions(selectedExamId),
-          ])
-          return { subtotalGroups, cropRegions }
-        }
-      : skipToken,
+    ...gradeExamOptionsQuery(selectedExamId),
+    enabled: Boolean(selectedExamId),
   })
 
   const subtotalGroups =
@@ -144,40 +137,33 @@ export function AddDataSourceInline({
 
   const handleAdd = async () => {
     if (!name.trim() || !weight) return
-    setAdding(true)
-    try {
-      // 資料全体が選ばれた場合は coursework_total 型（資料IDを参照）へ切り替える
-      const isWhole =
-        type === "coursework" && selectedCourseworkItemId === COURSEWORK_WHOLE
-      const dataSourceInput: GradeDataSourceInput = {
-        gradeItemId,
-        type: isWhole ? "coursework_total" : type,
-        name: name.trim(),
-        weight: Number(weight),
-      }
-      if (type !== "coursework") {
-        dataSourceInput.examId = selectedExamId || undefined
-      }
-      if (type === "subtotal") {
-        dataSourceInput.subtotalId = selectedSubtotalId || undefined
-      }
-      if (type === "crop_region") {
-        dataSourceInput.cropRegionId = selectedCropRegionId || undefined
-      }
-      if (type === "coursework") {
-        if (isWhole) {
-          dataSourceInput.courseworkId = selectedCourseworkId || undefined
-        } else {
-          dataSourceInput.courseworkItemId =
-            selectedCourseworkItemId || undefined
-        }
-      }
-      await onCreate(dataSourceInput)
-      resetForm()
-      onCreated()
-    } finally {
-      setAdding(false)
+    // 資料全体が選ばれた場合は coursework_total 型（資料IDを参照）へ切り替える
+    const isWhole =
+      type === "coursework" && selectedCourseworkItemId === COURSEWORK_WHOLE
+    const dataSourceInput: GradeDataSourceInput = {
+      gradeItemId,
+      type: isWhole ? "coursework_total" : type,
+      name: name.trim(),
+      weight: Number(weight),
     }
+    if (type !== "coursework") {
+      dataSourceInput.examId = selectedExamId || undefined
+    }
+    if (type === "subtotal") {
+      dataSourceInput.subtotalId = selectedSubtotalId || undefined
+    }
+    if (type === "crop_region") {
+      dataSourceInput.cropRegionId = selectedCropRegionId || undefined
+    }
+    if (type === "coursework") {
+      if (isWhole) {
+        dataSourceInput.courseworkId = selectedCourseworkId || undefined
+      } else {
+        dataSourceInput.courseworkItemId = selectedCourseworkItemId || undefined
+      }
+    }
+    await createDataSource.mutateAsync(dataSourceInput)
+    resetForm()
   }
 
   const resetForm = () => {
@@ -388,7 +374,7 @@ export function AddDataSourceInline({
           disabled={
             !name.trim() ||
             !weight ||
-            adding ||
+            createDataSource.isPending ||
             (isCoursework && !selectedCourseworkItemId)
           }
         >

@@ -33,7 +33,13 @@ export function createGradeApi() {
       updateDataSource: bind("grade:updateDataSource"),
       deleteDataSource: bind("grade:deleteDataSource"),
       reorderDataSources: bind("grade:reorderDataSources"),
+      // 境界（評定の刻み）。日常の編集は1本ずつ、並べ替えは専用、
+      // 「全部消す」と「プリセット適用」だけが集合の操作として残る
       replaceGradeItemBoundaries: bind("grade:replaceGradeItemBoundaries"),
+      createGradeItemBoundary: bind("grade:createGradeItemBoundary"),
+      updateGradeItemBoundary: bind("grade:updateGradeItemBoundary"),
+      deleteGradeItemBoundary: bind("grade:deleteGradeItemBoundary"),
+      reorderGradeItemBoundaries: bind("grade:reorderGradeItemBoundaries"),
       deleteGradeItemBoundaries: bind("grade:deleteGradeItemBoundaries"),
       upsertGradeOverride: bind("grade:upsertGradeOverride"),
       deleteGradeOverride: bind("grade:deleteGradeOverride"),

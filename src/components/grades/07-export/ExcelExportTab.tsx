@@ -1,10 +1,11 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { Download } from "lucide-react"
-import { useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { exportGradeExcelMutation } from "@/queries/grade"
 
 interface ExcelExportTabProps {
   gradeId: string
@@ -15,25 +16,20 @@ export function ExcelExportTab({
   gradeId,
   selectedStudentIds,
 }: ExcelExportTabProps) {
-  const [exporting, setExporting] = useState(false)
+  const exportExcel = useMutation(exportGradeExcelMutation(gradeId))
 
-  const handleExportExcel = async () => {
-    setExporting(true)
-    try {
-      const result = await window.electronAPI.grade.exportExcel(gradeId, {
-        studentIds: selectedStudentIds,
-      })
-      if (!result.canceled) {
-        toast.success(`Excelを出力しました: ${result.outputPath}`)
+  const handleExportExcel = () => {
+    // 失敗の知らせは中央のトーストが出す。ここは成功のときだけ言う
+    exportExcel.mutate(
+      { studentIds: selectedStudentIds },
+      {
+        onSuccess: (result) => {
+          if (!result.canceled) {
+            toast.success(`Excelを出力しました: ${result.outputPath}`)
+          }
+        },
       }
-    } catch (error) {
-      console.error("Export error:", error)
-      toast.error(
-        `Excel出力に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}`
-      )
-    } finally {
-      setExporting(false)
-    }
+    )
   }
 
   return (
@@ -46,11 +42,13 @@ export function ExcelExportTab({
       </div>
       <Button
         onClick={handleExportExcel}
-        disabled={exporting || selectedStudentIds.length === 0}
+        disabled={exportExcel.isPending || selectedStudentIds.length === 0}
         size="sm"
       >
         <Download className="mr-2 h-4 w-4" />
-        {exporting ? "出力中..." : `Excel出力 (${selectedStudentIds.length}名)`}
+        {exportExcel.isPending
+          ? "出力中..."
+          : `Excel出力 (${selectedStudentIds.length}名)`}
       </Button>
     </div>
   )

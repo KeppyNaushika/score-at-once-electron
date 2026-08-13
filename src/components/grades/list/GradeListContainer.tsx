@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   BarChart3,
   ClipboardEdit,
@@ -16,7 +16,7 @@ import {
   Users,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { ListFilterBar } from "@/components/common/ListFilterBar"
@@ -38,7 +38,15 @@ import {
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { collectClassroomOptions } from "@/lib/filterOptions"
 import { getGradeStatus } from "@/lib/gradeStatus"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  analyzeGradeArchiveMutation,
+  deleteGradeMutation,
+  duplicateGradeMutation,
+  executeGradeImportMutation,
+  exportGradeArchiveMutation,
+  type GradeArchivePayload,
+  gradeListQuery,
+} from "@/queries/grade"
 import type { CourseworkImportDecision } from "@/types/courseworkArchive.types"
 import type { GradeSummary } from "@/types/grade.types"
 import type { GradeArchiveImportPreview } from "@/types/gradeArchive.types"
@@ -76,32 +84,26 @@ const GRADE_FILTER_ACCESSORS: ListFilterAccessors<GradeSummary> = {
  *
  * テーブル形式で試験一覧を表示し、次のステップへのナビゲーションを提供する。
  */
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_GRADES: GradeSummary[] = []
+
 export function GradeListContainer() {
   const router = useRouter()
-  const queryClient = useQueryClient()
-  const { data: grades = [], isPending: loading } = useQuery({
-    queryKey: queryKeys.grade.list(),
-    queryFn: () => window.electronAPI.grade.getAll(),
-  })
+  const { data: grades = EMPTY_GRADES, isPending: loading } =
+    useQuery(gradeListQuery())
+  const deleteGrade = useMutation(deleteGradeMutation())
+  const duplicateGrade = useMutation(duplicateGradeMutation())
+  const exportArchive = useMutation(exportGradeArchiveMutation())
+  const analyzeArchive = useMutation(analyzeGradeArchiveMutation())
+  const executeImport = useMutation(executeGradeImportMutation())
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   // インポート確認ウィザードの状態
   const [importPreview, setImportPreview] =
     useState<GradeArchiveImportPreview | null>(null)
   // 旧バージョンの形もそのまま来る（変換は取り込み実行時に main が行う）ので、
   // 境界の返り値をそのまま持つ
-  const [importArchiveData, setImportArchiveData] = useState<
-    | Extract<
-        Awaited<ReturnType<typeof window.electronAPI.grade.importArchive>>,
-        { canceled: false }
-      >["archiveData"]
-    | null
-  >(null)
-  const [importing, setImporting] = useState(false)
-
-  const loadGrades = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: queryKeys.grade.list() }),
-    [queryClient]
-  )
+  const [importArchiveData, setImportArchiveData] =
+    useState<GradeArchivePayload | null>(null)
 
   const handleCreated = (id: string) => {
     setShowCreateDialog(false)
@@ -109,52 +111,27 @@ export function GradeListContainer() {
     router.push(`/grades/${id}?setup=1`)
   }
 
-  const handleDelete = async (id: string) => {
-    try {
-      await window.electronAPI.grade.delete(id)
-      queryClient.setQueryData<GradeSummary[]>(queryKeys.grade.list(), (prev) =>
-        (prev ?? []).filter((grade) => grade.id !== id)
-      )
-    } catch (error) {
-      console.error("Error deleting grade exam:", error)
-      toast.error("削除に失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
+  const handleDelete = (id: string) => {
+    deleteGrade.mutate(id)
   }
 
   const handleDuplicate = async (id: string) => {
-    try {
-      const duplicated = await window.electronAPI.grade.duplicate(id)
-      await loadGrades()
-      toast.success(`「${duplicated.name}」を複製しました`)
-    } catch (error) {
-      console.error("Error duplicating grade exam:", error)
-      toast.error("複製に失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
+    const duplicated = await duplicateGrade.mutateAsync(id)
+    toast.success(`「${duplicated.name}」を複製しました`)
   }
 
   const handleImport = async () => {
-    try {
-      const result = await window.electronAPI.grade.importArchive()
-      if (result.canceled) return
-      // ファイル選択後はウィザードを開き、照合方法をユーザーに判断させる
-      setImportArchiveData(result.archiveData)
-      setImportPreview(result.preview)
-    } catch (error) {
-      toast.error("アーカイブを読み込めませんでした", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
+    const result = await analyzeArchive.mutateAsync()
+    if (result.canceled) return
+    // ファイル選択後はウィザードを開き、照合方法をユーザーに判断させる
+    setImportArchiveData(result.archiveData)
+    setImportPreview(result.preview)
   }
 
   const handleImportConfirm = async (
     decisions: Record<string, CourseworkImportDecision>
   ) => {
     if (!importArchiveData || !importPreview) return
-    setImporting(true)
     try {
       // 試験参照のマッピング（examName → 既存examId）を照合結果から構築
       const examMapping: Record<string, string> = {}
@@ -162,10 +139,10 @@ export function GradeListContainer() {
         if (examMatch.found && examMatch.examId)
           examMapping[examMatch.examName] = examMatch.examId
       }
-      const importResult = await window.electronAPI.grade.executeImport(
-        importArchiveData,
-        { examMapping, courseworkDecisions: decisions }
-      )
+      const importResult = await executeImport.mutateAsync({
+        archiveData: importArchiveData,
+        options: { examMapping, courseworkDecisions: decisions },
+      })
       // 取り込み警告（点数スキップ・参照先未検出など）があれば通知する。
       // 自動で消えると見落とすため手動で閉じるまで表示し、全件を本文に載せる。
       if (importResult.warnings.length > 0) {
@@ -179,12 +156,7 @@ export function GradeListContainer() {
         )
       }
       router.push(`/grades/${importResult.gradeId}`)
-    } catch (error) {
-      toast.error("インポートに失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
     } finally {
-      setImporting(false)
       setImportPreview(null)
       setImportArchiveData(null)
     }
@@ -371,9 +343,7 @@ export function GradeListContainer() {
                               複製
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() =>
-                                window.electronAPI.grade.exportArchive(grade.id)
-                              }
+                              onClick={() => exportArchive.mutate(grade.id)}
                             >
                               <FolderOutput className="mr-2 h-4 w-4" />
                               .grade 書き出し
@@ -406,7 +376,7 @@ export function GradeListContainer() {
       <GradeImportDialog
         open={importPreview !== null}
         preview={importPreview}
-        importing={importing}
+        importing={executeImport.isPending}
         onCancel={handleImportCancel}
         onConfirm={handleImportConfirm}
       />

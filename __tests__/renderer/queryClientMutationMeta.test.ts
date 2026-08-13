@@ -32,7 +32,7 @@ async function runMutation(
     defineMutation({
       mutationFn,
       meta: {
-        invalidates: QUERY_KEY,
+        invalidates: [QUERY_KEY],
         errorMessage: "対象生徒の設定を保存できませんでした",
       },
     })
@@ -41,6 +41,63 @@ async function runMutation(
     // 失敗経路も検証したいので、ここでは投げ直さない
   })
 }
+
+describe("meta の型（コンパイル時に強制されること）", () => {
+  // 以下は実行時ではなく **型** の検証である。`@ts-expect-error` が付いた行が
+  // 通るようになったら（＝型が緩んだら）`npm run typecheck` が落ちる。
+  it("DB を書くなら invalidates を省略できない", () => {
+    defineMutation({
+      mutationFn: async () => "ok",
+      // @ts-expect-error invalidates も writesDatabase も名乗っていない
+      meta: { errorMessage: "保存できませんでした" },
+    })
+  })
+
+  it("行き先が空では書けない", () => {
+    defineMutation({
+      mutationFn: async () => "ok",
+      // @ts-expect-error 行き先が1つも無いなら、それは DB を書いていない
+      meta: { invalidates: [], errorMessage: "保存できませんでした" },
+    })
+  })
+
+  it("空のキーは書けない（前方一致で全クエリに当たるため）", () => {
+    defineMutation({
+      mutationFn: async () => "ok",
+      // @ts-expect-error 空配列のキーは NonEmptyQueryKey を満たさない
+      meta: { invalidates: [[]], errorMessage: "保存できませんでした" },
+    })
+  })
+
+  it("行き先は複数書ける", () => {
+    defineMutation({
+      mutationFn: async () => "ok",
+      meta: {
+        invalidates: [QUERY_KEY, ["gradeSourceFits", "g1"] as const],
+        errorMessage: "保存できませんでした",
+      },
+    })
+  })
+
+  it("DB を書かないと名乗りながら取り直す先は持てない", () => {
+    defineMutation({
+      mutationFn: async () => "ok",
+      meta: {
+        writesDatabase: false,
+        // @ts-expect-error 書かないと名乗る以上、取り直す先は存在しない
+        invalidates: [QUERY_KEY],
+        errorMessage: "書き出せませんでした",
+      },
+    })
+  })
+
+  it("DB を書かない経路は writesDatabase: false だけで足りる", () => {
+    defineMutation({
+      mutationFn: async () => "ok",
+      meta: { writesDatabase: false, errorMessage: "書き出せませんでした" },
+    })
+  })
+})
 
 describe("書き込みの後始末", () => {
   it("連打しても取り直しは1回にまとまる", async () => {
@@ -62,7 +119,7 @@ describe("書き込みの後始末", () => {
           await new Promise((resolve) => setTimeout(resolve, 1))
         },
         scope: { id: "grade:g1" },
-        meta: { invalidates: QUERY_KEY, errorMessage: "失敗" },
+        meta: { invalidates: [QUERY_KEY], errorMessage: "失敗" },
       })
     )
     // 10マスを続けて切り替える

@@ -52,8 +52,12 @@ import {
   updateGradeItem,
 } from "../lib/prisma/gradeItem"
 import {
+  createGradeItemBoundary,
   deleteGradeItemBoundaries,
+  deleteGradeItemBoundary,
+  reorderGradeItemBoundaries,
   replaceGradeItemBoundaries,
+  updateGradeItemBoundary,
 } from "../lib/prisma/gradeItemBoundary"
 import {
   getGradeItemExclusions,
@@ -290,11 +294,40 @@ export const gradeHandlers = {
   // GradeItemBoundary
   // =====================================================================
 
+  // 一括経路。プリセットの適用だけが使う（日常の編集は1本ずつの経路へ）
   "grade:replaceGradeItemBoundaries": async (data: {
     gradeItemId: string
     boundaries: { label: string; minPercentage: number; order: number }[]
   }) => {
     return replaceGradeItemBoundaries(data)
+  },
+
+  "grade:createGradeItemBoundary": async (data: {
+    gradeItemId: string
+    label: string
+    minPercentage: number
+    order: number
+  }) => {
+    return createGradeItemBoundary(data)
+  },
+
+  "grade:updateGradeItemBoundary": async (data: {
+    id: string
+    label?: string
+    minPercentage?: number
+  }) => {
+    const { id, ...rest } = data
+    return updateGradeItemBoundary(id, rest)
+  },
+
+  "grade:deleteGradeItemBoundary": async (id: string) => {
+    return deleteGradeItemBoundary(id)
+  },
+
+  "grade:reorderGradeItemBoundaries": async (
+    items: { id: string; order: number }[]
+  ) => {
+    return reorderGradeItemBoundaries(items)
   },
 
   "grade:deleteGradeItemBoundaries": async (gradeItemId: string) => {

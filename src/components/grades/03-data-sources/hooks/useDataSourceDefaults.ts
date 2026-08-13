@@ -6,11 +6,11 @@ import {
   computeMaxScoreFromPayload,
   type MaxScorePayloadSource,
 } from "@/electron-src/lib/shared/calculations/gradeDataSourceMaxScore"
+import type { CourseworkCandidate } from "@/queries/coursework"
 
 import {
   type AddDataSourceSelection,
   COURSEWORK_WHOLE,
-  type CourseworkOption,
   type CropRegionOption,
   type ExamOption,
   type SubtotalGroupOption,
@@ -21,13 +21,13 @@ interface UseDataSourceDefaultsOptions {
   exams: ExamOption[]
   subtotalGroups: SubtotalGroupOption[]
   cropRegions: CropRegionOption[]
-  courseworks: CourseworkOption[]
+  courseworks: CourseworkCandidate[]
 }
 
 /** 選択中の資料と、その中で選ばれている評価項目（「資料全体」のときは undefined）。 */
 function findCourseworkSelection(
   selection: AddDataSourceSelection,
-  courseworks: CourseworkOption[]
+  courseworks: CourseworkCandidate[]
 ) {
   const coursework = courseworks.find(
     (courseworkOption) => courseworkOption.id === selection.courseworkId
@@ -63,7 +63,7 @@ function findSubtotal(
 function buildMaxScorePayload(
   selection: AddDataSourceSelection,
   cropRegions: CropRegionOption[],
-  courseworks: CourseworkOption[]
+  courseworks: CourseworkCandidate[]
 ): MaxScorePayloadSource | null {
   switch (selection.type) {
     case "exam_total":
@@ -123,7 +123,7 @@ function buildDefaultName(
   exams: ExamOption[],
   subtotalGroups: SubtotalGroupOption[],
   cropRegions: CropRegionOption[],
-  courseworks: CourseworkOption[]
+  courseworks: CourseworkCandidate[]
 ): string {
   if (selection.type === "coursework") {
     const courseworkSelection = findCourseworkSelection(selection, courseworks)

@@ -30,7 +30,10 @@ export function createAppQueryClient(): QueryClient {
       // meta は `defineMutation` が必須にしているのでここへ来る書き込みは必ず持つが、
       // 型の上では optional なので、素の `useMutation` を書かれても落ちないようにする
       onSettled: (_data, _error, _variables, _context, mutation) => {
-        if (!mutation.meta) return
+        // `invalidates` の省略は「取り直す先が無い」という申告（Excel 出力・
+        // PDF 印刷・ファイル選択など）。何もしないのが正しい。
+        const invalidates = mutation.meta?.invalidates
+        if (!invalidates) return
         // 連打をまとめる。同じ行き先へ書いているものが他にも走っている間は
         // 取り直さず、最後の1つだけが取り直す。これが無いと、10マス切り替えれば
         // 取り直しも10回走る（実測）。
@@ -41,7 +44,9 @@ export function createAppQueryClient(): QueryClient {
           mutationKey: mutation.options.mutationKey,
         })
         if (stillWriting > 1) return
-        void client.invalidateQueries({ queryKey: mutation.meta.invalidates })
+        for (const queryKey of invalidates) {
+          void client.invalidateQueries({ queryKey })
+        }
       },
       onError: (error, _variables, _context, mutation) => {
         toast.error(mutation.meta?.errorMessage ?? "保存できませんでした", {
