@@ -10,14 +10,19 @@
 4. [不要なコードの削除](#不要なコードの削除)
 5. [ディレクトリ構造方針](#ディレクトリ構造方針)
 6. [型管理の方針](#型管理の方針)
-7. [ファイル分割基準](#ファイル分割基準)
-8. [コンポーネント設計原則](#コンポーネント設計原則)
-9. [import文の書き方](#import文の書き方)
-10. [コメント規約](#コメント規約)
+7. **[データの読み書き](#データの読み書き)**
+8. [IPC の作法](#ipc-の作法)
+9. [ログインの関門](#ログインの関門はルートグループで表す厳守)
+10. [ファイル分割基準](#ファイル分割基準)
+11. [コンポーネント設計原則](#コンポーネント設計原則)
+12. [import文の書き方](#import文の書き方)
+13. [コメント規約](#コメント規約)
 
-> コンポーネント設計原則の中に「[effect の使いどころ](#effect-の使いどころ厳守)」と
-> 「[データ取得は `useQuery`](#データ取得は-usequery厳守)」がある。effect を書く前と、
-> `react-hooks/set-state-in-effect` の警告を直す前に読むこと。
+> **DB に触るコードを書く前に「[データの読み書き](#データの読み書き)」を読むこと。**
+> 1つの事実（書き込みの単位は1テーブル）から、DB・IPC・renderer の作法が全部導かれる。
+>
+> effect を書く前と `react-hooks/set-state-in-effect` の警告を直す前は
+> 「[effect の使いどころ](#effect-の使いどころ厳守)」を読むこと。
 
 ---
 
@@ -379,236 +384,6 @@ Prisma 型のうち renderer で扱いにくい一部（Decimal、SQLite に enu
 - **`as` の乱用**: 型ガードで解決できる場合は型ガードを使う
 - **Prisma型の不要な再定義**: `Student` 型があるのに同等の `StudentData` を作らない
 
-### IPC の粒度（厳守）
-
-**IPC は意図を運ぶ。状態を運ばない。**
-
-- **意図** — 「この小問の配点を3にした」。書き込み先はその1行に限定される
-- **状態** — 「これが今の全体像です、合わせてください」。**利用者が触っていない行まで含めて全体の権威を主張する**
-
-DB は NAS 共有され複数端末が同時に書く。状態を運ぶ IPC は、他端末が直した行まで自分の手元の
-（古いかもしれない）値で上書きするため、**LWW の下で他人の編集を黙って巻き戻す**。
-
-したがって編集内容を書き換える IPC は、**実体ごと・操作ごとに割る**。既存の粒度:
-
-| 機能                    | ハンドラ                | チャンネル数 |
-| ----------------------- | ----------------------- | ------------ |
-| 成績算出                | `gradeHandlers.ts`      | 49           |
-| 試験外成績資料          | `courseworkHandlers.ts` | 27           |
-| 採点領域（02-template） | `cropRegionHandlers.ts` | 22           |
-
-**例外（状態を運んでよい経路）**: undo / redo・複製・アーカイブ取り込み。これらは本当に
-「この姿にしろ」という一括操作なので、文書丸ごとを運ぶのが正しい。名前で一括操作と分かるようにし
-（`replace-*`）、日常の編集がそこへ流れ込まないようにする。
-
-**アンチパターン**: 解答用紙作成（`asb:save-definition`）が定義ツリー全体を1本で受け取り、
-delete → recreate していた。編集画面を開くだけで保存が走るためタグ紐付けが消え、`createdAt` が
-毎回リセットされ、同期先の定義が復活しない経路があった。分割の計画は
-[docs/asb-ipc-split-plan.md](./asb-ipc-split-plan.md)。
-
-**割るときの注意**: action と書き込みを二重に持つことになるので、書き込み側の switch を網羅にして
-`default` で `assertNever(action)` を置く。片方に足して片方に足し忘れると**その操作だけ黙って
-保存されない**。「一覧に書き足す運用」に依存する設計は、この試験では既に破れている実績がある
-（同期除外リストで2回）。
-
-### IPC の失敗の伝え方（厳守）
-
-**失敗は例外で伝える。予期される結果は値で返す。**
-
-キャンセル・未検出・空は失敗ではない。保存ダイアログを閉じたことを例外にしない。これらは
-payload の一部として素直に返す（`null` / `{ canceled: true }` 等）。
-
-`{ success, error }` のエンベロープは、**IPC の境界と preload の間だけで使う搬送形式**である。
-プロセスをまたぐと例外がそのままでは渡らないため、境界で値へ詰め替え、preload で例外へ戻す。
-
-| 層                           | 扱うもの                                                     |
-| ---------------------------- | ------------------------------------------------------------ |
-| main の `lib/`               | payload を返す。失敗は `throw`                               |
-| 境界（ハンドラ登録ラッパー） | 例外を捕まえてエンベロープへ詰める。`serializePrisma` もここ |
-| preload の `invoke`          | エンベロープをほどく。失敗は `throw`                         |
-| renderer                     | payload を受け取る。失敗は reject                            |
-
-**エンベロープを宣言する場所は1つ、消費する場所は1つ。** 両端の型からは見えない。
-
-### renderer 側で IPC 契約を宣言しない（厳守）
-
-チャンネルの引数と戻り値は **main の登録簿（`electron-src/ipc-handlers/index.ts` の
-`Handlers`）から導く**。renderer 側に手書きの署名を置かない。
-
-- preload の1メソッド = `bind("channel")`。引数を素通しするだけなら型を書かない
-- 引数の並び替え・既定値の補完が要るときだけアロー関数で書く（型は `invoke` から付く）
-- `window.electronAPI` の形（`MyAPI`）は preload の `create*Api()` の返り値から合成する
-
-手書きの契約を `.d.ts` に置くと `skipLibCheck: true` の下では**中身が検査されない**。
-壊れた import が暗黙の `any` になり、その先の食い違いが全部素通しになる（実例は
-[ipc-and-data-fetching-plan.md](./ipc-and-data-fetching-plan.md) 段階5）。
-
-**DB 上 String の union 列は境界で倒す。** 型で union を名乗るだけでは値は絞られない。
-lib の返り値で `defineStringUnion` の `to*` を通し、renderer は union として扱う。
-
-```typescript
-// ❌ lib が失敗を値で返す（呼び出し側が見落としても型が止めない）
-export async function getGrade(id: string) {
-  const grade = await prisma.grade.findUnique({ where: { id } })
-  if (!grade) return { success: false, error: "成績が見つかりません" }
-  return { success: true, grade }
-}
-
-// ✅ payload を返し、失敗は投げる
-export async function getGrade(id: string): Promise<GradeWithRelations> {
-  const grade = await prisma.grade.findUnique({ where: { id }, include: … })
-  if (!grade) throw new Error("成績が見つかりません")
-  return grade
-}
-```
-
-**理由**: 値で返す失敗は、呼び出し側が `success` を見なくてもコンパイルが通る。main の内部呼び出し
-でも renderer でも、見落としが型で止まらない。例外は握り潰すほうに明示的な記述（`try`）が要るので、
-既定が安全側に倒れる。
-
-### `src/` から `electron-src/` は型だけ引く（厳守）
-
-renderer から main のモジュールを**値**で import すると、renderer のバンドルへ main の
-依存グラフ（`@prisma/client`・ネイティブモジュール）が入り込む。`import type` を付ける。
-
-例外は**名指しの一覧**で管理する。実体は
-`__tests__/renderer/ipcBoundaryConventions.test.ts` の `ALLOWED_VALUE_IMPORTS`
-にあり、増やすには OWNER の判断が要る。「純粋計算なら良い」といった判断基準は
-書かない（必ず当てはめに使われて広がる）。
-
-同じテストが「登録したまま誰も呼ばないチャンネル」も見る。呼ぶ側（`bind("…")`）の
-綴り違いは `invoke<Channel extends keyof Handlers>` がコンパイルエラーにするが、
-**逆向きは型では止まらない**。
-
-### ログインの関門はルートグループで表す（厳守）
-
-**守られる範囲はファイルの置き場所が決める。** ページは `src/app/(app)/` の下に置く。
-関門（`AuthGate`）は `src/app/(app)/layout.tsx` の1箇所だけにあり、公開するのは
-`src/app/login/` だけ。
-
-```
-src/app/
-├── layout.tsx        Provider と外枠だけ
-├── login/            公開（ここだけ）
-└── (app)/
-    ├── layout.tsx    ← 関門
-    └── exams/ grades/ students/ …
-```
-
-`(app)` は URL に現れないので**パスは変わらない**。
-
-**やってはいけない2つ**:
-
-- **ページごとに関門を置く。** 付け忘れても誰も気づけない。実際 40ページ中16ページに
-  しか付いておらず、守られていないページでは保存の門番が「利用者が居ない」と判断して
-  黙って書き込みを捨てていた
-- **公開パスの一覧を文字列で持つ。** 実体（ファイルの場所）と一覧が二重になり、ページを
-  足した人が更新し忘れる。この試験では「一覧に書き足す運用」が既に2度破れている
-
-関門は `usePathname` も認証コンテキストも購読するクライアントコンポーネントなので、
-画面を移るたびに評価し直される。「レイアウトはナビゲーションで再実行されない」という
-Next.js の注意はサーバーコンポーネントの話で、ここには当たらない（e2e で確認済み）。
-
-**これは秘匿の境界ではない。** DB ファイルは全員の手元にあり、アプリを経由せず読める。
-書き込みを止めるのは main 側の担当者ガードで、関門は導線を整える役だけを負う。
-
-### IPC通信における型の一貫性（厳守）
-
-Main process（electron-src）と Renderer process（components, hooks）間のIPC通信では、**同一の型定義を参照すること**。
-
-| 型の種類       | 参照元                                                               |
-| -------------- | -------------------------------------------------------------------- |
-| Prisma基本型   | `@prisma/client` から直接 import                                     |
-| Prisma拡張型   | `/types/prismaExtensions.ts` から import                             |
-| 共通ドメイン型 | `/types/scoringStatus.types.ts` 等の `/types/*.types.ts` から import |
-
-```typescript
-// ✅ OK: Main/Renderer両方で同じ型を参照
-// electron-src/ipc-handlers/exam-handlers.ts
-import type { ScoringStatus } from "../../src/types/scoringStatus.types"
-import type { StudentWithMemberships } from "../../src/types/prismaExtensions"
-
-// components/exams/ExamList.tsx
-import type { ScoringStatus } from "@/types/scoringStatus.types"
-import type { StudentWithMemberships } from "@/types/prismaExtensions"
-
-// ❌ NG: Main側とRenderer側で別々に型を定義
-// electron-src/types/exam.ts
-interface ExamData { ... }  // Main独自
-
-// components/types/exam.ts
-interface ExamData { ... }  // Renderer独自（微妙に違う可能性）
-```
-
-**理由**: IPC通信のデータは Structured Clone で受け渡されるため、型定義が一致していないと実行時エラーや型の不整合が発生する。
-
-**ハンドラの戻り値にエンベロープを書かない。** renderer が見る型はハンドラの戻り値から
-導かれるので、`success` / `error` と、それに伴う payload の `?` を書くと呼び出し側全部に
-握りが伝播する。失敗は preload が例外へ戻すため、renderer の型には現れない
-（「[IPC の失敗の伝え方](#ipc-の失敗の伝え方厳守)」）。
-
-```typescript
-// ❌ エンベロープを返す（payload が optional になり、全呼び出し側が握りを書く）
-"grade:getById": async (id: string) => {
-  const grade = await getGrade(id)
-  return grade
-    ? { success: true, grade }
-    : { success: false, error: "成績が見つかりません" }
-}
-
-// ✅ payload を返す（失敗は throw）
-"grade:getById": async (id: string) => getGrade(id)
-```
-
-### 書き込みの単位は「1テーブルの1レコード」（厳守）
-
-**SQL に、複数のテーブルを同時に更新する手段は無い。** SQLite で確かめた事実:
-
-- `UPDATE a, b SET …` は構文エラー
-- `UPDATE … FROM` は値を引くための JOIN で、**更新されるのは1テーブルだけ**
-- 複数テーブルに届くのは **FK cascade とトリガーだけ**
-
-Prisma の入れ子書き込みも、**複数の文をトランザクションで包んで順に発行しているだけ**で
-1文にはならない。つまり木をまるごと保存する経路は「1つの操作」ではなく、**最初から N 個の
-操作**である。
-
-N であることは避けられない。決めるべきは**その N を誰が決めるか**である。
-
-|          | 何を知っているか                                      |
-| -------- | ----------------------------------------------------- |
-| renderer | 利用者が**何をしたか**（「この小問の配点を3にした」） |
-| main     | DB の**現在の姿**。何をしたかは知らない               |
-
-だから編集の書き込みは **renderer が意図を出し、main は言われた1レコードを書く**。main が
-受け取った全体像と DB を突き合わせて「たぶんこれが変わった」と**推測してはいけない**。推測は
-外れる — 同期で DB が先に進んでいると、**相手が変えたレコードを自分が変えたと誤認して
-巻き戻す**。触っていないレコードの値がそもそも IPC に載らなければ、巻き戻しようがない。
-
-読みは逆で、**木のまま取る**（`include` / JOIN）。SQL が JOIN で複数テーブルをまたげるから
-であり、コンポーネント階層とデータ階層が対応するからでもある。
-
-> **読みは木、書きはレコード。** これは好みではなく、SQL にできることの写しである。
-
-### バルク経路だけは必要最小限の更新にする
-
-「この姿にしろ」を運ぶ経路（undo / redo・複製・アーカイブ取り込み）は、N レコードを書く
-以外に表しようがない。**この経路に限り** main が現在の行と突き合わせて、
-
-- 無いレコードは作る
-- **変わったレコードだけ** update する
-- 同じレコードは何もしない
-- 消えたレコードだけ消す
-
-判定は `electron-src/lib/prisma/rowDiff.ts` の `writeRow` / `isUnchanged` を使う。
-
-**理由は同期。** DB は NAS 越しに複数端末で共有され、収束はレコードごとの LWW
-（`updatedAt` が新しい方が勝つ）で決まる。全レコードを書き直すと触っていないレコードまで
-`updatedAt` が「今」になるので、**2端末が別々の大問を編集しただけで、後から保存した側の木が
-丸ごと勝ち、相手の編集が消える**。
-
-ただし**これは被害の緩和であって、競合の解決ではない**。古い全体像を送れば、その差分は
-巻き戻しそのものである。日常の編集をここへ流さないこと。
-
 ### 型定義の配置ルール
 
 | スコープ         | 配置場所                                                                                                    | 例                                                        |
@@ -679,6 +454,378 @@ DBに保存しないデータ or どうしても必要？ → Yes → 独自定�
     ↓ No
 設計を見直す
 ```
+
+---
+
+---
+
+## データの読み書き
+
+この章は**1つの事実から全部が導かれる**。層ごとに別の規則があるのではなく、同じ規則を
+DB・IPC・renderer の3つの側から見ている。
+
+### 中心にある事実（厳守）
+
+> **書き込みの単位は「1テーブル」である。**
+
+SQLite で実測した事実:
+
+- `UPDATE a, b SET …` は**構文エラー**。複数テーブルを同時に更新する SQL は存在しない
+- `UPDATE … FROM` は値を引くための JOIN で、更新されるのは1テーブルだけ
+- 複数テーブルに届くのは **FK cascade とトリガーだけ**
+
+Prisma の入れ子書き込みも、複数の文をトランザクションで包んで順に発行しているだけで
+1文にはならない。したがって「木をまるごと保存する」経路は**1つの操作ではなく、最初から
+N 個の操作**である。
+
+N であることは避けられない。決まるのは **N を誰が決めるか**だけで、答えは
+「利用者の操作」である。
+
+|          | 何を知っているか                                      |
+| -------- | ----------------------------------------------------- |
+| renderer | 利用者が**何をしたか**（「この小問の配点を3にした」） |
+| main     | DB の**現在の姿**。何をしたかは知らない               |
+
+**main が受け取った全体像と DB を突き合わせて「たぶんこれが変わった」と推測してはいけない。**
+推測は同期で DB が先に進んだときに外れ、相手の編集を巻き戻す。触っていないレコードの値が
+そもそも IPC に載らなければ、巻き戻しようがない。
+
+読みは逆で、**木のまま取る**（`include` / JOIN）。SQL が JOIN で複数テーブルをまたげるから
+であり、コンポーネント階層とデータ階層が対応するからでもある。
+
+> **読みは木、書きはレコード。** これは好みではなく、SQL にできることの写しである。
+
+### DB — Prisma の API だけを使う（厳守）
+
+業務データの読み書きは Prisma の API だけで行う。生 SQL（`$queryRaw` / `$executeRaw`）を
+使ってよいのは **PRAGMA・スキーマ検出・マイグレーション**に限る。
+
+**Prisma で素直に書けないことは、書き方を工夫するのではなく、やめる。** ORM を使うのは
+性能や移植性のためではなく、**書き方を1つに絞るため**である。
+
+- 並べ替えのように行ごとに違う値を入れるものは、N 回 `update` してよい
+- 同じ値を複数行へ入れるなら `updateMany` 1文でよい
+- 分数順序や `CASE` 式で行数を減らす工夫はしない
+
+### DB — 日常の書き込みに `$transaction` を使わない（厳守）
+
+Prisma の1文はそれ自体が原子的である。1テーブルへの1操作なら包む必要がない。
+
+`$transaction` を使ってよいのは次の2つだけ。
+
+| 使ってよい                     | 例                                    |
+| ------------------------------ | ------------------------------------- |
+| 並べ替え（N 行が全部か無しか） | `reorderTags`                         |
+| バルク経路                     | undo / redo・複製・アーカイブ取り込み |
+
+**それ以外で `$transaction` が必要になったら、1つの意図が複数テーブルにまたがっている
+合図であり、割り方が間違っている。**
+
+### IPC — 意図を運ぶ。状態を運ばない（厳守）
+
+- **意図** — 「この小問の配点を3にした」。書き込み先はその1行に限定される
+- **状態** — 「これが今の全体像です、合わせてください」。**利用者が触っていない行まで
+  含めて全体の権威を主張する**
+
+DB は NAS 越しに共有され、収束はレコードごとの LWW（`updatedAt` が新しい方が勝つ）で
+決まる。状態を運ぶ IPC は、他端末が直した行まで自分の（古いかもしれない）値で上書きする。
+
+したがって編集内容を書き換える IPC は、**実体ごと・操作ごとに割る**。
+
+| 機能                    | ハンドラ                | チャンネル数 |
+| ----------------------- | ----------------------- | ------------ |
+| 成績算出                | `gradeHandlers.ts`      | 49           |
+| 試験外成績資料          | `courseworkHandlers.ts` | 27           |
+| 採点領域（02-template） | `cropRegionHandlers.ts` | 22           |
+
+**例外（状態を運んでよい経路）**: undo / redo・複製・アーカイブ取り込み。これらは本当に
+「この姿にしろ」という一括操作なので、文書丸ごとを運ぶのが正しい。名前で一括操作と分かる
+ようにし（`replace-*`）、日常の編集がそこへ流れ込まないようにする。
+
+**この経路に限り** main が現在の行と突き合わせてよい（`electron-src/lib/prisma/rowDiff.ts`
+の `writeRow` / `isUnchanged`）。無いレコードは作り、変わったレコードだけ update し、同じ
+レコードは何もしない。ただし**これは被害の緩和であって競合の解決ではない**。古い全体像を
+送れば、その差分は巻き戻しそのものである。
+
+**アンチパターン**: 解答用紙作成（`asb:save-definition`）が定義ツリー全体を1本で受け取る。
+分割の計画は [asb-ipc-split-plan.md](./asb-ipc-split-plan.md)。
+
+**割るときの注意**: action と書き込みを二重に持つことになるので、書き込み側の switch を
+網羅にして `default` で `assertNever(action)` を置く。片方に足して片方に足し忘れると
+**その操作だけ黙って保存されない**。
+
+### renderer — 読み書きは `src/queries/` に集める（厳守）
+
+**`window.electronAPI` を書いてよいのは `src/queries/**` だけ。** コンポーネントにも
+フックにも書かない。
+
+```
+src/queries/
+├─ keys.ts          前方一致の「まとまり」だけ（個々のキーは置かない）
+├─ defineMutation.ts
+├─ queryClient.ts   書き込みの後始末（無効化・失敗トースト）を1箇所に
+├─ grade.ts         ← preload-apis/gradeApi.ts と1対1
+├─ cropRegion.ts    ← preload-apis/cropRegionApi.ts と1対1
+└─ …
+```
+
+**preload と1対1にする。** 機能（画面）ごとに置くと、同じチャンネルが複数箇所で包まれて
+キーが割れ、同じデータが2つのキャッシュに入る。大きくなったらその中でテーブルごとに割る。
+
+取得は `queryOptions`、書き込みは `defineMutation` を返す**純粋な関数**として書く。
+フックにしない（`useQuery` / `useMutation` は呼び出し側が呼ぶ）。
+
+```typescript
+// src/queries/grade.ts
+export const gradeItemExclusionsQuery = (gradeId: string) =>
+  queryOptions({
+    queryKey: [...scopeKeys.grade(gradeId), "exclusions"] as const,
+    queryFn: async () => new Set(...),
+  })
+
+export const setGradeItemExclusionMutation = (gradeId: string) =>
+  defineMutation({
+    mutationFn: (input) => window.electronAPI.grade.setGradeItemExclusion(...),
+    scope: { id: `grade:${gradeId}:exclusions` },
+    meta: {
+      invalidates: gradeItemExclusionsQuery(gradeId).queryKey,
+      errorMessage: "対象生徒の設定を保存できませんでした",
+    },
+  })
+```
+
+**キーは `queryOptions` が持つ。** キーの一覧を別に持つと二重管理になり、同じデータが別の
+キーで2度キャッシュされる（実際に起きた）。`src/queries/keys.ts` に置くのは「この試験に
+紐づくもの全部」のような**前方一致のまとまり**だけ。
+
+### renderer — 書き込みは `defineMutation` を通す（厳守）
+
+**`useMutation` にオブジェクトを直接渡さない**（ESLint で禁止）。`defineMutation` が
+`meta` を必須にしており、そこを迂回すると `meta` の無い書き込みが作れてしまう。
+
+`meta` が持つのは2つ。
+
+|                | 何のため                                       |
+| -------------- | ---------------------------------------------- |
+| `invalidates`  | 成功でも失敗でも、この行き先を DB から取り直す |
+| `errorMessage` | 失敗トーストの見出し。出す処理は1箇所にある    |
+
+実装は `src/queries/queryClient.ts` の `MutationCache` に1つだけある。各書き込みは
+**宣言を持ち、実装を持たない**。
+
+- **失敗してもスナップショットへ戻さない。** 巻き戻し先は DB。公式の例は `onMutate` で
+  撮った断面へ戻すが、同期で他端末の変更が入っている以上それは間違い
+- **`scope` は `invalidates` と同じ単位で取る。** レコード単位にすると、格子のマスごとに
+  `useMutation` を呼ぶ必要が出る（フックはループの中で呼べない）
+- **連打はまとめる。** 同じ行き先へ書いているものが他にも走っている間は取り直さない。
+  無いと10マス切り替えれば取り直しも10回走る（実測）
+- **楽観更新は既定で書かない。** DB はローカルにあり、端末ごとに別ファイルなので書き込みが
+  他の教員を待つことはない。楽観更新は「遅延を隠す仕組み」で、隠すべき遅延がない。
+  今回のレビューで出た不具合はほとんどが楽観更新まわりだった
+- **`isPending` は `disabled` に使う。ラベルに繋がない**（数ミリ秒で戻るのでちらつく）
+
+### renderer — フックはデータを受け取る。取らない・書かない（厳守）
+
+`useQuery` / `useMutation` を呼んでよいのは**コンポーネント**（`.tsx`）だけ。フックは
+引数でデータを受け取る。
+
+```typescript
+// ❌ 名前は UI の機構なのに DB を書いている（実在した）
+export function useDragAndDrop(...) {
+  await window.electronAPI.updateCropRegionOrders(updates)
+}
+
+// ✅ 機構は「並び替わった」ことだけ伝える。保存の意味はコンポーネントが決める
+export function useDragAndDrop({ items, onReorder }) { … }
+```
+
+こうすると**書き込みが隠れる場所が無くなる**。`import` を見れば、そのファイルが何を
+読み書きするか分かる。
+
+**計算は純粋関数に置く。** キーもチャンネルも持たないので、React に依存する理由がない。
+`useMemo` で包むのは「重い」「参照の同一性が要る」という React 側の都合があるときだけ。
+
+### renderer — 1つのコンポーネントは1つのテーブルだけ書く（推奨）
+
+目的は**コンポーネントの分割と IPC の単純化**であって、規則を満たすこと自体ではない。
+
+- **書きの定義は、書くコンポーネントが自分で `import` する。** `mutate` を props で
+  配ると、子から見て「これは DB を書く」ことが分からなくなる
+- **回避のための空コンポーネント・空フックを作らない**
+- **違反したいときは、変なことをして回避せず相談する。** 例外は名指しの一覧で管理する
+  （`__tests__/renderer/ipcBoundaryConventions.test.ts`）
+
+新規作成のフォームのように「作ってから紐付ける」順序が本質的なものは、この規則に収まらない。
+名指しで例外に入れる。
+
+### 検査
+
+| 何を守るか                           | 手段                              |
+| ------------------------------------ | --------------------------------- |
+| `useMutation` への直書き禁止         | ESLint（`no-restricted-syntax`）  |
+| `window.electronAPI` の置き場所      | `ipcBoundaryConventions.test.ts`  |
+| 登録したまま呼ばれないチャンネル     | 同上                              |
+| `src/` → `electron-src/` の値 import | 同上（`ALLOWED_VALUE_IMPORTS`）   |
+| 同じキーに違う形／違う IPC を載せる  | `queryKeyConventions.test.ts`     |
+| 書き込みの後始末が効いているか       | `queryClientMutationMeta.test.ts` |
+
+**走査は `git ls-files --cached --others --exclude-standard` を使う。** 追跡済みだけを
+見ると、**新しく作ったファイルが丸ごと検査を素通りする**（実際に起きた）。
+
+---
+
+## IPC の作法
+
+### IPC の失敗の伝え方（厳守）
+
+**失敗は例外で伝える。予期される結果は値で返す。**
+
+キャンセル・未検出・空は失敗ではない。保存ダイアログを閉じたことを例外にしない。これらは
+payload の一部として素直に返す（`null` / `{ canceled: true }` 等）。
+
+`{ success, error }` のエンベロープは、**IPC の境界と preload の間だけで使う搬送形式**である。
+プロセスをまたぐと例外がそのままでは渡らないため、境界で値へ詰め替え、preload で例外へ戻す。
+
+| 層                           | 扱うもの                                                     |
+| ---------------------------- | ------------------------------------------------------------ |
+| main の `lib/`               | payload を返す。失敗は `throw`                               |
+| 境界（ハンドラ登録ラッパー） | 例外を捕まえてエンベロープへ詰める。`serializePrisma` もここ |
+| preload の `invoke`          | エンベロープをほどく。失敗は `throw`                         |
+| renderer                     | payload を受け取る。失敗は reject                            |
+
+**エンベロープを宣言する場所は1つ、消費する場所は1つ。** 両端の型からは見えない。
+
+### renderer 側で IPC 契約を宣言しない（厳守）
+
+チャンネルの引数と戻り値は **main の登録簿（`electron-src/ipc-handlers/index.ts` の
+`Handlers`）から導く**。renderer 側に手書きの署名を置かない。
+
+- preload の1メソッド = `bind("channel")`。引数を素通しするだけなら型を書かない
+- 引数の並び替え・既定値の補完が要るときだけアロー関数で書く（型は `invoke` から付く）
+- `window.electronAPI` の形（`MyAPI`）は preload の `create*Api()` の返り値から合成する
+
+手書きの契約を `.d.ts` に置くと `skipLibCheck: true` の下では**中身が検査されない**。
+壊れた import が暗黙の `any` になり、その先の食い違いが全部素通しになる（実例は
+[ipc-and-data-fetching-plan.md](./ipc-and-data-fetching-plan.md) 段階5）。
+
+**DB 上 String の union 列は境界で倒す。** 型で union を名乗るだけでは値は絞られない。
+lib の返り値で `defineStringUnion` の `to*` を通し、renderer は union として扱う。
+
+```typescript
+// ❌ lib が失敗を値で返す（呼び出し側が見落としても型が止めない）
+export async function getGrade(id: string) {
+  const grade = await prisma.grade.findUnique({ where: { id } })
+  if (!grade) return { success: false, error: "成績が見つかりません" }
+  return { success: true, grade }
+}
+
+// ✅ payload を返し、失敗は投げる
+export async function getGrade(id: string): Promise<GradeWithRelations> {
+  const grade = await prisma.grade.findUnique({ where: { id }, include: … })
+  if (!grade) throw new Error("成績が見つかりません")
+  return grade
+}
+```
+
+**理由**: 値で返す失敗は、呼び出し側が `success` を見なくてもコンパイルが通る。main の内部呼び出し
+でも renderer でも、見落としが型で止まらない。例外は握り潰すほうに明示的な記述（`try`）が要るので、
+既定が安全側に倒れる。
+
+### `src/` から `electron-src/` は型だけ引く（厳守）
+
+renderer から main のモジュールを**値**で import すると、renderer のバンドルへ main の
+依存グラフ（`@prisma/client`・ネイティブモジュール）が入り込む。`import type` を付ける。
+
+例外は**名指しの一覧**で管理する。実体は
+`__tests__/renderer/ipcBoundaryConventions.test.ts` の `ALLOWED_VALUE_IMPORTS`
+にあり、増やすには OWNER の判断が要る。「純粋計算なら良い」といった判断基準は
+書かない（必ず当てはめに使われて広がる）。
+
+同じテストが「登録したまま誰も呼ばないチャンネル」も見る。呼ぶ側（`bind("…")`）の
+綴り違いは `invoke<Channel extends keyof Handlers>` がコンパイルエラーにするが、
+**逆向きは型では止まらない**。
+
+### IPC通信における型の一貫性（厳守）
+
+Main process（electron-src）と Renderer process（components, hooks）間のIPC通信では、**同一の型定義を参照すること**。
+
+| 型の種類       | 参照元                                                               |
+| -------------- | -------------------------------------------------------------------- |
+| Prisma基本型   | `@prisma/client` から直接 import                                     |
+| Prisma拡張型   | `/types/prismaExtensions.ts` から import                             |
+| 共通ドメイン型 | `/types/scoringStatus.types.ts` 等の `/types/*.types.ts` から import |
+
+```typescript
+// ✅ OK: Main/Renderer両方で同じ型を参照
+// electron-src/ipc-handlers/exam-handlers.ts
+import type { ScoringStatus } from "../../src/types/scoringStatus.types"
+import type { StudentWithMemberships } from "../../src/types/prismaExtensions"
+
+// components/exams/ExamList.tsx
+import type { ScoringStatus } from "@/types/scoringStatus.types"
+import type { StudentWithMemberships } from "@/types/prismaExtensions"
+
+// ❌ NG: Main側とRenderer側で別々に型を定義
+// electron-src/types/exam.ts
+interface ExamData { ... }  // Main独自
+
+// components/types/exam.ts
+interface ExamData { ... }  // Renderer独自（微妙に違う可能性）
+```
+
+**理由**: IPC通信のデータは Structured Clone で受け渡されるため、型定義が一致していないと実行時エラーや型の不整合が発生する。
+
+**ハンドラの戻り値にエンベロープを書かない。** renderer が見る型はハンドラの戻り値から
+導かれるので、`success` / `error` と、それに伴う payload の `?` を書くと呼び出し側全部に
+握りが伝播する。失敗は preload が例外へ戻すため、renderer の型には現れない
+（「[IPC の失敗の伝え方](#ipc-の失敗の伝え方厳守)」）。
+
+```typescript
+// ❌ エンベロープを返す（payload が optional になり、全呼び出し側が握りを書く）
+"grade:getById": async (id: string) => {
+  const grade = await getGrade(id)
+  return grade
+    ? { success: true, grade }
+    : { success: false, error: "成績が見つかりません" }
+}
+
+// ✅ payload を返す（失敗は throw）
+"grade:getById": async (id: string) => getGrade(id)
+```
+
+---
+
+## ログインの関門はルートグループで表す（厳守）
+
+**守られる範囲はファイルの置き場所が決める。** ページは `src/app/(app)/` の下に置く。
+関門（`AuthGate`）は `src/app/(app)/layout.tsx` の1箇所だけにあり、公開するのは
+`src/app/login/` だけ。
+
+```
+src/app/
+├── layout.tsx        Provider と外枠だけ
+├── login/            公開（ここだけ）
+└── (app)/
+    ├── layout.tsx    ← 関門
+    └── exams/ grades/ students/ …
+```
+
+`(app)` は URL に現れないので**パスは変わらない**。
+
+**やってはいけない2つ**:
+
+- **ページごとに関門を置く。** 付け忘れても誰も気づけない。実際 40ページ中16ページに
+  しか付いておらず、守られていないページでは保存の門番が「利用者が居ない」と判断して
+  黙って書き込みを捨てていた
+- **公開パスの一覧を文字列で持つ。** 実体（ファイルの場所）と一覧が二重になり、ページを
+  足した人が更新し忘れる。この試験では「一覧に書き足す運用」が既に2度破れている
+
+関門は `usePathname` も認証コンテキストも購読するクライアントコンポーネントなので、
+画面を移るたびに評価し直される。「レイアウトはナビゲーションで再実行されない」という
+Next.js の注意はサーバーコンポーネントの話で、ここには当たらない（e2e で確認済み）。
+
+**これは秘匿の境界ではない。** DB ファイルは全員の手元にあり、アプリを経由せず読める。
+書き込みを止めるのは main 側の担当者ガードで、関門は導線を整える役だけを負う。
 
 ---
 
@@ -875,89 +1022,34 @@ useEffect(() => {
 
 ### データ取得は `useQuery`（厳守）
 
-**クエリキーは「格納する形」ごとに分ける。** 同じキーに違う形を書くと、後から
-マウントした画面が `isPending: false` のまま相手のデータで描画される
-（キャッシュは同期的に返るので、取得し直す前に1度描いてしまう）。型では止まらない。
+> **本体は「[データの読み書き](#データの読み書き)」にある。** ここは effect との
+> 関係だけを書く。
 
-- 1つの実体をそのまま取るクエリは、消費者が何人いてもキーを共有してよい
-  （`grade.detail` は3画面が同一の `queryFn` を持つ）。**共有してよいのは queryFn が
-  同一のときだけ**で、一部だけ要る画面は同じ queryFn に `select` を足して取り出す
-- 画面が「まとめて1回で取る」複合ペイロードは、**その画面のキー**を持つ
-  （`queryKeys.exam.regionInfoPage(examId)` のように `*Page` で名前を分ける）。
-  `detail` に相乗りさせない（厳守）
-- **格納するキーを他のキーの前方に置かない。** `["grade", gradeId]` に実体を入れると、
-  それを無効化したときに `["grade", gradeId, "results"]` まで巻き込む。前方一致で
-  まとめて消したいなら、格納しない中間だけを共通の前置きにする
-- **取り直しの合図をキーに混ぜない。** 「変わったから読み直せ」という番号は、キーに
-  足すとキャッシュが番号ぶん増える。キーは同定のままにして、effect から
-  `invalidateQueries` を呼ぶ
-
-**書き込みは楽観更新、失敗したら `invalidateQueries`（厳守）。**
-キャッシュは「取得した時点で DB がこう言った」という写しでしかない。DB へ書いて写しに
-何も言わなければ、次にその写しを読んだ画面は消えたはずの値を出し、そのまま書き戻す。
+**effect でデータを取らない。** 取得は TanStack Query に載せ、定義は `src/queries/` に置く。
 
 ```typescript
-queryClient.setQueryData(queryKey, next) // 先に画面へ反映する（往復を待たせない）
-try {
-  await window.electronAPI.grade.updateDataSource(id, patch)
-} catch (error) {
-  await queryClient.invalidateQueries({ queryKey }) // 戻す先は DB
-  toast.error("保存に失敗しました", { description: message(error) })
-}
+const { data, isPending } = useQuery(gradeItemExclusionsQuery(gradeId))
 ```
-
-- **巻き戻し先はクライアントの断面ではなく DB。** 書き込みが「全消しして作り直す」形
-  （04 の設問割当）だと、消す方だけ通って作る方が失敗し得る。断面へ戻すと、DB に無い
-  ものを画面が表示し続ける
-- **保存しかしない経路を作らない。** 編集した値を state に持って `save` するだけの画面は、
-  その値の出所であるキーを更新も無効化もしていない。保存の後に必ずどちらかをする
-- 楽観更新を置かず `await save()` → `invalidateQueries` にしてもよい。**やってはいけない
-  のは、どちらもしないこと**
-
-**取得結果を編集用 state へ写すときは、書き込みと繋げる。** 編集する値は
-`useQuery` の返り値のままでは持てないので、最初の1レンダーで state へ写すことになる
-（`seeded*Id !== id` で1回きりにする）。**このとき保存側が同じキーを更新しないと、
-写す元が古いまま残る。** `staleTime` が 0 でも `useQuery` はキャッシュを同期的に返す
-ので、取り直しの結果が届く前に古い値が写る。写すのは1回きりなので、あとから正しい値が
-来ても入らない。時間の条件ではなく、**キャッシュに古い値が残っているかどうか**で決まる。
-
-**画面をまたいで同じものを見ているなら、フックを1つ置いて共有する。**
-タグ・生徒・学級のような全体の一覧を画面ごとに引き直すと、片方で足したものが
-もう片方に出ない。`useTags` / `useStudents` / `useClassrooms` のように取得と
-`refresh` を1箇所に置き、更新した画面が `refresh` を呼ぶ。
-
-**effect でデータを取らない。** 取得は TanStack Query に載せる。
-
-```typescript
-const {
-  data: grade,
-  isLoading,
-  error,
-} = useQuery({
-  queryKey: queryKeys.grade.detail(gradeId),
-  queryFn: () => window.electronAPI.grade.getById(gradeId),
-})
-```
-
-- **`queryKey` は `src/lib/queryKeys.ts` を経由する。** 文字列リテラルを画面側に書かない。同定は
-  **id** で行い、順序・表示名・添字を混ぜない。キーは配列の前方一致で無効化されるので、キーの構造が
-  そのまま無効化の粒度になる
-- **変更後の再取得は `invalidateQueries`。** `loadData()` の手撃ちは禁止。手撃ちは自分の画面しか
-  更新せず、同じデータを見ている別の画面が古いまま残る
-- **フックが返す名前は `isLoading` / `error`。** ライブラリの名前をそのまま通し、翻訳層を作らない
-- **失敗を `console.error` で握り潰さない。** `error` に載せて画面が判断する
-- 既定は `refetchOnWindowFocus: false` / `retry: false`（`src/contexts/QueryProvider.tsx`）。IPC は
-  ネットワークを跨がないので再試行しても結果は変わらない。窓の復帰で他端末の変更を拾いたい画面だけ、
-  その `useQuery` で有効にする
 
 **競合の始末はライブラリが持つ。** 入力が変わって再取得が走ったとき、古い応答が新しい結果を
-上書きしない。自前の effect で取ると、この取り消しを1件ずつ手で書くことになり、実際には
-ほとんど書かれていなかった。
+上書きしない。自前の effect で取ると、この取り消しを1件ずつ手で書くことになる。移行前は
+**112箇所のうち11箇所しか書かれていなかった**。
 
-> **移行中**: `useEffect` から `window.electronAPI` を呼んでいる箇所は未移行。手順は
-> [docs/ipc-and-data-fetching-plan.md](./ipc-and-data-fetching-plan.md)。
+**取得結果を編集用 state へ写さない。** 写すと、
 
----
+|                | 結果                                 |
+| -------------- | ------------------------------------ |
+| 1回だけ写す    | 古いまま（キャッシュは同期的に返る） |
+| 変わるたび写す | 編集中の入力を潰す                   |
+
+のどちらかになり、両立しない。表示は `useQuery` の返り値をそのまま使い、変更は意図として
+書く。**入力欄1つ分の下書き**だけは手元に持ってよい（「どの確定値に対する下書きか」を
+同梱して、確定値が変われば外れる形にする。`EditableTable` / `BoundaryEditor` がその形）。
+
+**失敗を `console.error` で握り潰さない。** 取得の失敗は `error` に載せて画面が判断する。
+書き込みの失敗は `MutationCache` が拾って知らせる。
+
+**フックが返す名前はライブラリのまま**（`isPending` / `error`）。翻訳層を作らない。
 
 ## import文の書き方
 
@@ -1158,19 +1250,21 @@ export async function exportToExcel(
 
 ## 更新履歴
 
-| 日付       | 内容                                                             |
-| ---------- | ---------------------------------------------------------------- |
-| 2025-01-12 | 初版作成                                                         |
-| 2025-01-12 | 型管理方針を改訂（優先順位の明確化、後方互換性の方針追加）       |
-| 2025-01-12 | IPC通信における型の一貫性ルールを追加                            |
-| 2025-01-12 | フォーマッター・リンターセクションを追加                         |
-| 2025-01-12 | eslint-plugin-simple-import-sort を導入                          |
-| 2025-01-12 | 命名規則・不要コード削除のセクションを追加                       |
-| 2025-01-12 | ESLint設定との整合性確認・修正、Tailwind CSSマイグレーション追加 |
-| 2026-07-04 | 命名規則に「実体名の原則・高階関数優先・慣例例外 A/B」を追加     |
-| 2026-07-05 | 命名規則に「id ではなく実体を持つ原則（`xxxIds` の扱い）」を追加 |
-| 2026-08-02 | 「IPC の粒度（意図を運ぶ／状態を運ばない）」を追加               |
-| 2026-08-09 | 「effect の中で setState しない」（A/B/C群の分類）を追加         |
-| 2026-08-11 | 「IPC の失敗の伝え方」を追加。契約はエンベロープを宣言しない     |
-| 2026-08-11 | effect の節を「使いどころ」へ改訂（A/B/C群を廃止・判定の訂正）   |
-| 2026-08-11 | 「データ取得は `useQuery`」を追加                                |
+| 日付       | 内容                                                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2025-01-12 | 初版作成                                                                                                                                                      |
+| 2025-01-12 | 型管理方針を改訂（優先順位の明確化、後方互換性の方針追加）                                                                                                    |
+| 2025-01-12 | IPC通信における型の一貫性ルールを追加                                                                                                                         |
+| 2025-01-12 | フォーマッター・リンターセクションを追加                                                                                                                      |
+| 2025-01-12 | eslint-plugin-simple-import-sort を導入                                                                                                                       |
+| 2025-01-12 | 命名規則・不要コード削除のセクションを追加                                                                                                                    |
+| 2025-01-12 | ESLint設定との整合性確認・修正、Tailwind CSSマイグレーション追加                                                                                              |
+| 2026-07-04 | 命名規則に「実体名の原則・高階関数優先・慣例例外 A/B」を追加                                                                                                  |
+| 2026-07-05 | 命名規則に「id ではなく実体を持つ原則（`xxxIds` の扱い）」を追加                                                                                              |
+| 2026-08-02 | 「IPC の粒度（意図を運ぶ／状態を運ばない）」を追加                                                                                                            |
+| 2026-08-09 | 「effect の中で setState しない」（A/B/C群の分類）を追加                                                                                                      |
+| 2026-08-11 | 「IPC の失敗の伝え方」を追加。契約はエンベロープを宣言しない                                                                                                  |
+| 2026-08-11 | effect の節を「使いどころ」へ改訂（A/B/C群を廃止・判定の訂正）                                                                                                |
+| 2026-08-11 | 「データ取得は `useQuery`」を追加                                                                                                                             |
+| 2026-08-13 | 認証の関門をルートグループへ。ページごとの関門を廃止                                                                                                          |
+| 2026-08-14 | **「データの読み書き」章を新設。** 型・IPC・認証と混ざっていた記述を、SQL の事実（書き込みの単位は1テーブル）を中心に再構成。読み書きは `src/queries/` へ集約 |

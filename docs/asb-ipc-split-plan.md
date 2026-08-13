@@ -220,6 +220,18 @@ Prisma の入れ子書き込みも複数文をトランザクションで包む�
 | **監査ログの粒度**               | レコードごとに残す／解答用紙単位でまとめる／作成・削除・譲渡だけ残す        |
 | **OMR 選択肢に id を持たせるか** | 持たせれば他と揃う。renderer 側の型（`labels: string[]`）を変えることになる |
 
+### 4.0.1 renderer 側の受け皿は決まった（2026-08-14）
+
+分割した31本を renderer がどう呼ぶかは、[ipc-and-data-fetching-plan.md](./ipc-and-data-fetching-plan.md)
+段階10 で形が決まっている。**`src/queries/answerSheetDefinition.ts` に
+`queryOptions` / `defineMutation` を置き、コンポーネントが `useQuery` / `useMutation` で
+呼ぶ。** フックは作らない。
+
+これにより、本書が段階4で予定していた「関所（包んだ dispatch ＋ 網羅 switch ＋
+`assertNever`）」は**要らなくなる可能性が高い**。action を経由せず、コンポーネントが
+書きたいレコードの `xxxMutation` を直接呼ぶためである。段階2〜3（型の分解と action の
+id 化）を進める前に、どちらの形にするかを決めること。
+
 ### 4.1 チャンネル一覧
 
 実体 × 操作で31本。命名は既存の ASB に合わせて `asb:` 接頭辞・ケバブケース。すべて

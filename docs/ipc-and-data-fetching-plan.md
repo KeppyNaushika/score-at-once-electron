@@ -855,6 +855,107 @@ useEffect(() => () => void flush(), [flush]) // 「アンマウント時だけ�
 | `ALLOWED_VALUE_IMPORTS` と `eslint.config.mjs` の例外一覧    | 二重管理。粒度が違う（テストはモジュール＋シンボル、eslint はファイル）ので機能は重複しないが、増やすとき2箇所を触る |
 | #1126 への追記                                               | §1 の前提が実測で否定され、§4 の「実害が小さい」の根拠も §2 修正で消えた。issue 編集は指示待ち                       |
 
+### 段階10 — 読み書きを `src/queries/` へ集める（進行中）
+
+**規約の本文は [coding-style.md](./coding-style.md) の「データの読み書き」章にある。**
+ここは**手順と残量**を持つ。この節だけを読めば作業を続けられるように書く。
+
+#### なぜこの形にしたか（結論だけ）
+
+SQLite に複数テーブルを同時更新する SQL は無い（実測）。だから「木をまるごと保存」は
+最初から N 個の操作で、**N を決めるのは利用者の操作**。main が推測してはいけない。
+そこから、読みは木・書きはレコード → IPC は実体ごと → renderer はキーとチャンネルを
+隠す、が導かれる。
+
+#### 目標形
+
+```
+コンポーネント（.tsx）           ← useQuery / useMutation を呼ぶ唯一の場所
+  ↑ import
+src/queries/<domain>.ts          ← window.electronAPI と キー はここだけ
+  ├ xxxQuery(id)      = queryOptions（キー ＋ 呼び出し）
+  └ xxxMutation(id)   = defineMutation（呼び出し ＋ meta ＋ scope）
+src/queries/queryClient.ts       ← 無効化と失敗トーストの実装（1箇所）
+src/queries/keys.ts              ← 前方一致の「まとまり」だけ
+```
+
+- フックは**データを引数で受け取る**。取らない・書かない
+- 計算は**純粋関数**。`useMemo` は React 側の都合があるときだけ
+- `src/queries/` は **`electron-src/preload-apis/` と1対1**（23ファイル）
+
+#### 試作で確かめたこと（2026-08-14・`e3f12a91` / `8e2c7b0e`）
+
+対象は成績の除外切り替え（`useGradeItemExclusions` → `src/queries/grade.ts`）。
+**-98行 / +59行**、フック1つが消えた。
+
+| 確かめたこと                       | 結果                                                                                                             |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `meta` を型で必須にできるか        | **できない。** ライブラリが `meta?:` と optional 宣言。`defineMutation` を唯一の入口にして塞ぐ                   |
+| 画面ごとの文言でトーストを出せるか | できる（`meta.errorMessage` → `MutationCache.onError`）                                                          |
+| 連打したときの取り直し回数         | **10回書けば10回**。`isMutating({ mutationKey })` でまとめて **1回**へ                                           |
+| `scope` をレコード単位にできるか   | **できない。** 格子のマスごとに `useMutation` が要り、フックはループ内で呼べない。`invalidates` と同じ単位で取る |
+
+#### 罠（同じところで詰まらないために）
+
+- **`git ls-files` は追跡済みしか返さない。** 新規ファイルが検査を丸ごと素通りする。
+  走査は `--cached --others --exclude-standard` を使う。かつ **`--others` は `**` を
+  含む pathspec と噛み合わない**（`src/queries/` のようにディレクトリで指定する）
+- **`useQuery(xxxQuery(id))` は、オブジェクトリテラルを探す走査に映らない。**
+  移行するほど既存の検査が空洞化する。`queryKeyConventions.test.ts` は
+  `src/queries/` の定義を先に読んで結びつけている
+- **`queryOptions` の `DataTag`** により `setQueryData(query.queryKey, v)` は型検査される。
+  移行が済んだ範囲では、走査より型のほうが強い
+
+#### 手順（1ドメインずつ）
+
+1. `src/queries/<domain>.ts` を作る（対応する `preload-apis/<domain>Api.ts` を見る）
+2. 取得を `queryOptions` へ。キーは `scopeKeys` から組み立てる
+3. 書き込みを `defineMutation` へ。`meta.invalidates` と `meta.errorMessage` を書く
+4. 呼び出し側（コンポーネント）を `useQuery(...)` / `useMutation(...)` に直す
+5. **フックが空になったら消す。** 残るなら、データを引数で受け取る形にする
+6. `ipcBoundaryConventions.test.ts` の `NOT_YET_MIGRATED` から**その分を削る**
+7. `npm run check-all` → `npx vitest run` → 必要なら `npm run test:e2e`
+
+**完了条件**: `NOT_YET_MIGRATED` が空になり、`window.electronAPI` が `src/queries/`
+にしか無い状態。
+
+#### 残量（2026-08-14 時点で138ファイル）
+
+一覧の実体は `__tests__/renderer/ipcBoundaryConventions.test.ts` の `NOT_YET_MIGRATED`。
+**これが減っていくのが進捗**である。
+
+| 場所                                  | 数  |
+| ------------------------------------- | --- |
+| `src/components/exams`                | 54  |
+| `src/app/(app)`                       | 19  |
+| `src/components/grades`               | 12  |
+| `src/components/answer-sheet-builder` | 10  |
+| `src/hooks`（+ `hooks/grades` 4）     | 13  |
+| `src/components/coursework`           | 7   |
+| その他                                | 23  |
+
+**勧める順**: `grade`（`src/queries/grade.ts` が既にある）→ `coursework` → `student` /
+`classroom` / `tag`（横断で使われるもの）→ `exam` 系（いちばん大きい）→
+`answer-sheet-builder`（IPC 分割と一緒にやる）。
+
+#### この移行で一緒に片付くもの
+
+| 課題                               | どう片付くか                                       |
+| ---------------------------------- | -------------------------------------------------- |
+| 段階9 #3（08-export のデバウンス） | 設定を意図へ割ると、デバウンスごと不要になる       |
+| 段階9 #5（タグの担当者ガード漏れ） | 書き込みが `src/queries/` に集まるとガードも1箇所  |
+| `.tsx` からの直接 IPC 呼び出し 197 | 定義上ゼロになる                                   |
+| 業務データの `$transaction` 39     | 意図へ割ると要らなくなる（並べ替えとバルクを除く） |
+| 複数 IPC を束ねた読み 12           | main に「画面の木を返す1本」を足して吸収する       |
+
+#### まだ決めていないこと
+
+- **独自宣言の DB 行らしい型 61件**（`User` の5重宣言を含む）の扱い。新規流入を止める
+  検査を入れるか、既存を直すか
+- **添字で対象を指している箇所 106件**のうち、レコードの指定に使っているもの
+  （`majorIndex` / `subIndex` / `branchIndex` など）
+- **id を受け取って自分で取得している16件**のうち、親が既に持っているもの
+
 ---
 
 ## 7. 検証
