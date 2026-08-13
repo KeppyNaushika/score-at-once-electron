@@ -948,13 +948,87 @@ src/queries/keys.ts              ← 前方一致の「まとまり」だけ
 | 業務データの `$transaction` 39     | 意図へ割ると要らなくなる（並べ替えとバルクを除く） |
 | 複数 IPC を束ねた読み 12           | main に「画面の木を返す1本」を足して吸収する       |
 
-#### まだ決めていないこと
+#### 決めたこと（2026-08-14）
 
-- **独自宣言の DB 行らしい型 61件**（`User` の5重宣言を含む）の扱い。新規流入を止める
-  検査を入れるか、既存を直すか
-- **添字で対象を指している箇所 106件**のうち、レコードの指定に使っているもの
-  （`majorIndex` / `subIndex` / `branchIndex` など）
-- **id を受け取って自分で取得している16件**のうち、親が既に持っているもの
+未決3件を実測して決めた。**3件のうち独立した問題は1件だけだった。**
+
+##### 1. 独自宣言の DB 行らしい型 — 直す（対象は19件）
+
+`id: string` を持つローカル宣言を全走査すると **105件**ある。「DB 行らしいか」を
+人力で判定すると必ず揉めるので、**プロパティ名の集合が1つの Prisma モデルの列の
+部分集合になっているか**という機械判定を当てた。
+
+| 群                                                      | 数  | 判断                                                         |
+| ------------------------------------------------------- | --- | ------------------------------------------------------------ |
+| アーカイブの版ごとの形（`src/types/*Archive.types.ts`） | 28  | **正しい。** ファイルの wire format で、版ごとに違う形を持つ |
+| ASB 定義ツリー（`answerSheetDefinition.types.ts`）      | 5   | JSON 埋め込みの影。RDB 化で Prisma 型に変わる                |
+| **DB 行の手写し**                                       | 19  | 直す                                                         |
+
+UI の器（`WorkflowStep` / `TextBox` / `SeriesConfig` / `ImportedFile` / `DetectedRect` /
+`*Sortable` / `RosterRow`）は1つも引っかからない。
+
+**判定は完全ではない。** `LetterScaleDraft` は `{id, label, score}` が
+`CourseworkLetterScale` と一致するだけで、`id` は DB に存在しない UI 専用の uuid
+だった（保存時に落ちる）。**プロパティ名しか見ないので `id` の意味の違いは分からない。**
+名指しの例外に入れる。
+
+- 規約: DB 由来のデータの型は Prisma 型から導出する。手で書き写さない。`Pick` で
+  絞るのも射影なので不可
+- 例外は名指し: アーカイブ型 / ASB 定義型（RDB 化で消える）/ `LetterScaleDraft`
+- 検査: `__tests__/renderer/rowTypeConventions.test.ts`（19件を直しきってから導入）
+
+**手写しが隠していたもの**: `fetchUsers` は `prisma.user.findMany()` をそのまま返して
+おり、**パスコードの bcrypt ハッシュが renderer へ渡っていた**。6箇所の手書き
+`interface User` がそれを隠していた。renderer は `user.passcode` を読んでいないので
+`omit: { passcode: true }` を足せば直る。
+
+##### 2. 添字106件 — ASB 計画へ畳む
+
+`majorIndex` / `subIndex` / `branchIndex` の全179箇所を数えたところ、**1件残らず
+解答用紙作成だった**（13ファイル）。`asb-ipc-split-plan.md` の §6.1・段階2 が
+「action ユニオンを id ベースにする」と既に書いている。段階10 に独立の規約は置かない。
+
+##### 3. id を受け取って自分で取得16件 — 問題の名前が違った
+
+props に `xxxId: string` を持ち自分で取得するコンポーネントは **27件**。中身は
+page 直下の `*Container`（＝目標形そのもの）と、親が持っていない集合を取る
+selector で、抜き取りで調べた範囲に**実際の重複は無かった**。
+
+害があるのは「子が取ること」ではなく**同じ行に2つの鍵があること**。子が同じ
+`queryOptions` を呼ぶ限りキャッシュは共有され、往復は増えない。したがって規則は
+props ではなくキーに置く: **親が持つ木の一部を、別のチャンネルで取り直さない。**
+`src/queries/` が preload と1対1で1チャンネル1 `queryOptions` である限り、移行時に
+キーが2本生えるかどうかで露見する。
+
+##### 4. 値 import の二重管理 — 例外ゼロにする
+
+`eslint.config.mjs`（読む側7ファイル）と `ALLOWED_VALUE_IMPORTS`（モジュール＋名前6件）
+が別の単位で同じことを許可している。**6モジュールを `src/lib/shared/` へ移す。**
+main は既に `src/types/` から型を引いているので前例があり、移せば
+「src → electron-src は型のみ、例外なし」になり両方の一覧が消える。
+
+#### 進捗（2026-08-14 時点）
+
+| ドメイン                         | 状態                                        |
+| -------------------------------- | ------------------------------------------- |
+| `grade`                          | **完了**（フック4つを削除・境界を行ごとに） |
+| `coursework`                     | 一覧・概要・基本設定・生徒管理が完了        |
+| `tag` / `export`                 | `src/queries/` を用意（消費側は移行中）     |
+| `student` / `classroom` / `user` | 未着手                                      |
+| `exam` 系                        | 未着手（いちばん大きい）                    |
+| `answer-sheet-builder`           | 未着手（IPC 分割と一緒に）                  |
+
+**残量 114ファイル**（`NOT_YET_MIGRATED`）。内訳は `components` 81 / `app` 19 /
+`hooks` 11 / その他3。
+
+未着手のうち先に手を付けるべきもの:
+
+- `src/components/coursework/03-items/CourseworkItemsContainer.tsx` — 項目ごとの
+  500ms デバウンス＋ドラフト。**文字評価の刻み（`CourseworkLetterScale`）が
+  `updateItem` の引数として全置換される**ので、行ごとに割るには main 側の
+  チャンネル追加が要る
+- `src/components/coursework/04-scores/hooks/useCourseworkScores.ts` — 点数の
+  デバウンスと失敗の握り潰し（段階9 #4）
 
 ---
 
