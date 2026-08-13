@@ -12,6 +12,7 @@ export default [
       "**/dist/**",
       "**/main/**",
       "**/.next/**",
+      "**/.next-e2e/**",
       "**/out/**",
       "**/public/**",
       "**/scripts/**",

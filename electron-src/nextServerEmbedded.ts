@@ -5,6 +5,8 @@ import type * as NodeModule from "module"
 import type { NextServer } from "next/dist/server/next"
 import * as path from "path"
 
+import { rendererPort } from "./rendererPort"
+
 // Electron公式推奨の環境判定方法
 const isDev = !app.isPackaged
 
@@ -48,7 +50,7 @@ const ensurePackagedNodePath = (basePath: string) => {
   }
 }
 
-/** パッケージ化環境でNext.jsサーバーをlocalhost:3000で起動する（開発時はスキップ） */
+/** パッケージ化環境でNext.jsサーバーを起動する（開発時はスキップ） */
 export async function startEmbeddedNextServer(): Promise<void> {
   if (isDev) return // 開発時は外部サーバーを使用
 
@@ -56,7 +58,7 @@ export async function startEmbeddedNextServer(): Promise<void> {
     const { createServer } = require("http")
 
     const hostname = "localhost"
-    const port = 3000
+    const port = rendererPort
 
     // Next.jsアプリの初期化
     let appDir

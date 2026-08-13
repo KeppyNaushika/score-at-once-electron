@@ -466,6 +466,20 @@ export async function getGrade(id: string): Promise<GradeWithRelations> {
 でも renderer でも、見落としが型で止まらない。例外は握り潰すほうに明示的な記述（`try`）が要るので、
 既定が安全側に倒れる。
 
+### `src/` から `electron-src/` は型だけ引く（厳守）
+
+renderer から main のモジュールを**値**で import すると、renderer のバンドルへ main の
+依存グラフ（`@prisma/client`・ネイティブモジュール）が入り込む。`import type` を付ける。
+
+例外は**名指しの一覧**で管理する。実体は
+`__tests__/renderer/ipcBoundaryConventions.test.ts` の `ALLOWED_VALUE_IMPORTS`
+にあり、増やすには OWNER の判断が要る。「純粋計算なら良い」といった判断基準は
+書かない（必ず当てはめに使われて広がる）。
+
+同じテストが「登録したまま誰も呼ばないチャンネル」も見る。呼ぶ側（`bind("…")`）の
+綴り違いは `invoke<Channel extends keyof Handlers>` がコンパイルエラーにするが、
+**逆向きは型では止まらない**。
+
 ### IPC通信における型の一貫性（厳守）
 
 Main process（electron-src）と Renderer process（components, hooks）間のIPC通信では、**同一の型定義を参照すること**。

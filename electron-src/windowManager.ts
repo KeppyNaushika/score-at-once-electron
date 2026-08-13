@@ -3,6 +3,7 @@ import { app, BrowserWindow, Menu } from "electron"
 import * as path from "path"
 
 import menu from "./menu"
+import { rendererOrigin } from "./rendererPort"
 
 // Electron公式推奨の環境判定方法
 const isDev = !app.isPackaged
@@ -40,7 +41,7 @@ export function createMainWindow(): BrowserWindow {
     },
   })
 
-  const url = "http://localhost:3000"
+  const url = rendererOrigin
 
   Menu.setApplicationMenu(menu(app, mainWindow, "home"))
 

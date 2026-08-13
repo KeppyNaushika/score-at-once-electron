@@ -1,6 +1,11 @@
 import { defineConfig, devices } from "@playwright/test"
 import * as path from "path"
 
+import {
+  E2E_BASE_URL,
+  E2E_RENDERER_PORT,
+} from "./tests/electron/helpers/rendererPort"
+
 /**
  * 一括採点Electronアプリケーション専用Playwright設定
  */
@@ -14,16 +19,21 @@ export default defineConfig({
    * `cwd` を明示する。既定は設定ファイルのあるディレクトリ（`__tests__/`）なので、
    * 自前で起動しようとすると `app/` を見つけられずに落ちる。
    *
-   * **`reuseExistingServer` は 3000 番に居るものをそのまま使う。** 別のセッションが
-   * dev サーバーを立てていると、そちらのコードに対して e2e が走ってしまう。
-   * 走らせる前に 3000 番が自分のものか確かめること。
+   * ポートは 3000 ではない（`helpers/rendererPort.ts`）。開発用サーバーが同じ
+   * 作業ツリーで動いていることがあり、3000 番を再利用すると**そちらのコードに
+   * 対して** e2e が走ってしまう。`reuseExistingServer` は false にして、この
+   * ポートのサーバーが自分のものであることを保証する。
+   *
+   * ビルド成果物の置き場（`NEXT_DIST_DIR`）も分ける。`.next` を共有すると、
+   * 隣で動いている開発用サーバーのビルドと互いに壊し合う。
    */
   webServer: {
-    command: "npx next dev",
+    command: `npx next dev -p ${E2E_RENDERER_PORT}`,
     cwd: path.resolve(__dirname, ".."),
-    url: "http://localhost:3000",
-    reuseExistingServer: true,
-    timeout: 120 * 1000,
+    url: E2E_BASE_URL,
+    reuseExistingServer: false,
+    timeout: 180 * 1000,
+    env: { NEXT_DIST_DIR: ".next-e2e" },
   },
   /* 並列実行を制限（Electronアプリの同時起動を避ける） */
   fullyParallel: false,

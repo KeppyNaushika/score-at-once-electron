@@ -12,6 +12,7 @@ import { expect, test } from "@playwright/test"
 import * as fs from "fs"
 
 import { launchApp, type LaunchedApp, loginAsAdmin } from "./helpers/launchApp"
+import { E2E_BASE_URL } from "./helpers/rendererPort"
 
 let launched: LaunchedApp
 
@@ -30,7 +31,7 @@ test("新規インストールで解答用紙の新規作成がエディタへ�
 
   await loginAsAdmin(page)
 
-  await page.goto("http://localhost:3000/answer-sheet-builder", {
+  await page.goto(`${E2E_BASE_URL}/answer-sheet-builder`, {
     waitUntil: "domcontentloaded",
   })
 
