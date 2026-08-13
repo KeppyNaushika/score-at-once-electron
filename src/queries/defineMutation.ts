@@ -18,10 +18,16 @@ export function defineMutation<
 >(
   options: Omit<
     MutationOptions<TData, TError, TVariables, TContext>,
-    "meta"
+    "meta" | "mutationKey"
   > & { meta: MutationMeta }
 ): MutationOptions<TData, TError, TVariables, TContext> & {
   meta: MutationMeta
 } {
-  return options
+  return {
+    // 取り直す行き先を `mutationKey` にも置く。連打をまとめるとき、
+    // 「同じ行き先へ書いているものが他に走っているか」を `isMutating` の
+    // 標準の絞り込みで判定できる（キーの比較はライブラリの hashKey が行う）。
+    mutationKey: options.meta.invalidates,
+    ...options,
+  }
 }

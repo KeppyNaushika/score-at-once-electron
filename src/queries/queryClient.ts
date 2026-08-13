@@ -31,16 +31,16 @@ export function createAppQueryClient(): QueryClient {
       // 型の上では optional なので、素の `useMutation` を書かれても落ちないようにする
       onSettled: (_data, _error, _variables, _context, mutation) => {
         if (!mutation.meta) return
-        // 連打をまとめる。同じ行き先へ書いているものが自分以外にも走っている間は
-        // 取り直さず、最後の1つだけが取り直す（`isMutating` は自分を含めて数える）。
-        // これが無いと、10マス切り替えれば取り直しも10回走る（実測）
+        // 連打をまとめる。同じ行き先へ書いているものが他にも走っている間は
+        // 取り直さず、最後の1つだけが取り直す。これが無いと、10マス切り替えれば
+        // 取り直しも10回走る（実測）。
+        //
+        // `mutationKey` は `defineMutation` が `meta.invalidates` から付ける。
+        // `isMutating` は自分を含めて数えるので、1 なら自分だけ
         const stillWriting = client.isMutating({
-          predicate: (other) =>
-            other !== mutation &&
-            JSON.stringify(other.meta?.invalidates) ===
-              JSON.stringify(mutation.meta?.invalidates),
+          mutationKey: mutation.options.mutationKey,
         })
-        if (stillWriting > 0) return
+        if (stillWriting > 1) return
         void client.invalidateQueries({ queryKey: mutation.meta.invalidates })
       },
       onError: (error, _variables, _context, mutation) => {
