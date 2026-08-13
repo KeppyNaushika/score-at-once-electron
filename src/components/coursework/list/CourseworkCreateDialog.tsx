@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { createCourseworkMutation } from "@/queries/coursework"
 
 interface CourseworkCreateDialogProps {
   open: boolean
@@ -26,13 +28,14 @@ export function CourseworkCreateDialog({
 }: CourseworkCreateDialogProps) {
   const [name, setName] = useState("")
   const [creating, setCreating] = useState(false)
+  const createCoursework = useMutation(createCourseworkMutation())
 
   const handleCreate = async () => {
     if (!name.trim()) return
 
     setCreating(true)
     try {
-      const coursework = await window.electronAPI.coursework.create({
+      const coursework = await createCoursework.mutateAsync({
         name: name.trim(),
       })
       setName("")

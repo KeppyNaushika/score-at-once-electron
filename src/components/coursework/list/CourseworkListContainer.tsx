@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ClipboardEdit,
   FolderInput,
@@ -36,7 +36,16 @@ import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
 import { useTags } from "@/hooks/useTags"
 import { collectClassroomOptions } from "@/lib/filterOptions"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  addTagToCourseworksMutation,
+  analyzeCourseworkArchiveMutation,
+  courseworkListQuery,
+  deleteCourseworkMutation,
+  exportCourseworkArchiveMutation,
+  importCourseworkArchiveMutation,
+  selectCourseworkImportFileMutation,
+} from "@/queries/coursework"
+import { findOrCreateTagMutation } from "@/queries/tag"
 import type { CourseworkSummary } from "@/types/coursework.types"
 import type {
   CourseworkArchiveImportPreview,
@@ -74,9 +83,15 @@ const COURSEWORK_FILTER_ACCESSORS: ListFilterAccessors<CourseworkSummary> = {
 export function CourseworkListContainer() {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const deleteCoursework = useMutation(deleteCourseworkMutation())
+  const exportArchive = useMutation(exportCourseworkArchiveMutation())
+  const selectImportFile = useMutation(selectCourseworkImportFileMutation())
+  const analyzeArchive = useMutation(analyzeCourseworkArchiveMutation())
+  const importArchive = useMutation(importCourseworkArchiveMutation())
+  const findOrCreateTag = useMutation(findOrCreateTagMutation())
+  const addTagToCourseworks = useMutation(addTagToCourseworksMutation())
   const { data: courseworks = [], isPending: loading } = useQuery({
-    queryKey: queryKeys.coursework.list(),
-    queryFn: () => window.electronAPI.coursework.getAll(),
+    ...courseworkListQuery(),
   })
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   // インポート確認ウィザードの状態
@@ -90,7 +105,9 @@ export function CourseworkListContainer() {
 
   const loadCourseworks = useCallback(
     () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.coursework.list() }),
+      queryClient.invalidateQueries({
+        queryKey: courseworkListQuery().queryKey,
+      }),
     [queryClient]
   )
 
@@ -101,62 +118,36 @@ export function CourseworkListContainer() {
   }
 
   const handleDelete = async (coursework: CourseworkSummary) => {
-    try {
-      const result = await window.electronAPI.coursework.delete(coursework.id)
-      if (!result.deleted) {
-        toast.error("削除できません", {
-          description: `次の成績算出で参照されています: ${result.usedBy.join("、")}`,
-        })
-        return
-      }
-      queryClient.setQueryData<CourseworkSummary[]>(
-        queryKeys.coursework.list(),
-        (prev) =>
-          (prev ?? []).filter(
-            (existingCoursework) => existingCoursework.id !== coursework.id
-          )
-      )
-      toast.success("資料を削除しました", { description: coursework.name })
-    } catch (error) {
-      console.error("Error deleting coursework:", error)
-      toast.error("削除に失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
+    const result = await deleteCoursework.mutateAsync(coursework.id)
+    if (!result.deleted) {
+      toast.error("削除できません", {
+        description: `次の成績算出で参照されています: ${result.usedBy.join("、")}`,
       })
+      return
     }
+    toast.success("資料を削除しました", { description: coursework.name })
   }
 
-  const handleExport = async (coursework: CourseworkSummary) => {
-    try {
-      const result = await window.electronAPI.coursework.exportArchive(
-        coursework.id
-      )
-      if (!result.canceled) {
-        toast.success("資料をエクスポートしました", {
-          description: coursework.name,
-        })
-      }
-    } catch (error) {
-      console.error("Error exporting coursework:", error)
-      toast.error("エクスポートに失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
+  const handleExport = (coursework: CourseworkSummary) => {
+    exportArchive.mutate(coursework.id, {
+      onSuccess: (result) => {
+        if (!result.canceled) {
+          toast.success("資料をエクスポートしました", {
+            description: coursework.name,
+          })
+        }
+      },
+    })
   }
 
   const handleImport = async () => {
-    const selected = await window.electronAPI.coursework.selectImportFile()
+    const selected = await selectImportFile.mutateAsync()
     if (selected.canceled) return
-    try {
-      const preview = await window.electronAPI.coursework.analyzeArchive({
-        archivePath: selected.filePath,
-      })
-      setImportArchivePath(selected.filePath)
-      setImportPreview(preview)
-    } catch (error) {
-      toast.error("アーカイブの解析に失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
+    const preview = await analyzeArchive.mutateAsync({
+      archivePath: selected.filePath,
+    })
+    setImportArchivePath(selected.filePath)
+    setImportPreview(preview)
   }
 
   const handleImportConfirm = async (
@@ -165,7 +156,7 @@ export function CourseworkListContainer() {
     if (!importArchivePath) return
     setImporting(true)
     try {
-      const result = await window.electronAPI.coursework.importArchive({
+      const result = await importArchive.mutateAsync({
         archivePath: importArchivePath,
         courseworkDecisions: decisions,
       })
@@ -201,14 +192,15 @@ export function CourseworkListContainer() {
   // 選択中の各資料へ、既存タグを保持したままタグを追加する
   const handleBulkAddTag = async (tagName: string) => {
     try {
-      const tag = await window.electronAPI.tagFindOrCreate(tagName)
+      const tag = await findOrCreateTag.mutateAsync(tagName)
       const targetCourseworks = courseworks.filter((coursework) =>
         selectedIds.has(coursework.id)
       )
-      for (const coursework of targetCourseworks) {
-        // 既存タグを保持したまま1件追加（全置換 setTags による stale 消失を回避）
-        await window.electronAPI.coursework.addTag(coursework.id, tag.id)
-      }
+      // 既存タグを保持したまま1件ずつ追加（全置換 setTags による stale 消失を回避）
+      await addTagToCourseworks.mutateAsync({
+        courseworkIds: targetCourseworks.map((coursework) => coursework.id),
+        tagId: tag.id,
+      })
       toast.success("タグを追加しました", {
         description: `${targetCourseworks.length}件の資料に「${tagName}」を追加`,
       })

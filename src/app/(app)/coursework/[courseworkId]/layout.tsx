@@ -14,7 +14,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
-import { queryKeys } from "@/lib/queryKeys"
+import { courseworkDetailQuery } from "@/queries/coursework"
 
 const workflowSteps = [
   { id: "02-students", label: "1. 生徒管理", path: "02-students" },
@@ -37,8 +37,7 @@ export default function CourseworkWorkflowLayout({
     typeof params.courseworkId === "string" ? params.courseworkId : ""
   // パンくずが要るのは名前だけ。資料そのもののキャッシュを概要画面と共有する
   const { data: courseworkName = "" } = useQuery({
-    queryKey: queryKeys.coursework.detail(courseworkId),
-    queryFn: () => window.electronAPI.coursework.getById(courseworkId),
+    ...courseworkDetailQuery(courseworkId),
     select: selectCourseworkName,
   })
 

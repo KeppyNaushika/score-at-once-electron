@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   BarChart3,
   ChevronRight,
@@ -27,7 +27,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  courseworkDetailQuery,
+  deleteCourseworkMutation,
+  exportCourseworkArchiveMutation,
+} from "@/queries/coursework"
 
 import { EditCourseworkWindow } from "./EditCourseworkWindow"
 
@@ -51,44 +55,35 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const queryClient = useQueryClient()
-  const { data: coursework, isPending: loading } = useQuery({
-    queryKey: queryKeys.coursework.detail(courseworkId),
-    queryFn: () => window.electronAPI.coursework.getById(courseworkId),
-  })
+  const { data: coursework, isPending: loading } = useQuery(
+    courseworkDetailQuery(courseworkId)
+  )
+  const deleteCoursework = useMutation(deleteCourseworkMutation())
+  const exportArchive = useMutation(exportCourseworkArchiveMutation())
   // 新規作成直後（?setup=1）は基本設定を促すため編集モーダルを開く
   const [showEditModal, setShowEditModal] = useState(
     () => searchParams.get("setup") === "1"
   )
 
   const handleDelete = async () => {
-    try {
-      const result = await window.electronAPI.coursework.delete(courseworkId)
-      if (result.deleted) {
-        router.push("/coursework")
-        return
-      }
-      toast.error("削除できません", {
-        description: `成績算出から参照されています: ${result.usedBy.join("、")}`,
-      })
-    } catch (error) {
-      toast.error("削除に失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
+    const result = await deleteCoursework.mutateAsync(courseworkId)
+    if (result.deleted) {
+      router.push("/coursework")
+      return
     }
+    toast.error("削除できません", {
+      description: `成績算出から参照されています: ${result.usedBy.join("、")}`,
+    })
   }
 
-  const handleExportArchive = async () => {
-    try {
-      const result =
-        await window.electronAPI.coursework.exportArchive(courseworkId)
-      if (!result.canceled) {
-        toast.success(`書き出しました: ${result.outputPath}`)
-      }
-    } catch (error) {
-      toast.error("書き出しに失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
+  const handleExportArchive = () => {
+    exportArchive.mutate(courseworkId, {
+      onSuccess: (result) => {
+        if (!result.canceled) {
+          toast.success(`書き出しました: ${result.outputPath}`)
+        }
+      },
+    })
   }
 
   if (loading) {
@@ -257,7 +252,7 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
           onClose={() => setShowEditModal(false)}
           onSaved={() =>
             queryClient.invalidateQueries({
-              queryKey: queryKeys.coursework.detail(courseworkId),
+              queryKey: courseworkDetailQuery(courseworkId).queryKey,
             })
           }
         />

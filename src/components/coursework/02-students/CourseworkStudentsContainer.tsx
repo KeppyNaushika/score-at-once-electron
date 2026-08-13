@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo, useState } from "react"
 
 import {
@@ -20,7 +20,20 @@ import type {
   AddPanelStudentItem,
   StudentAddPanelAdapter,
 } from "@/components/common/student-add-panel/types"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  addCourseworkStudentsFromClassroomMutation,
+  addCourseworkStudentsMutation,
+  courseworkAvailableClassroomsQuery,
+  courseworkAvailableStudentsQuery,
+  type CourseworkClassroomRow,
+  courseworkClassroomsQuery,
+  courseworkStudentsQuery,
+  previewCourseworkClassroomRemovalMutation,
+  removeCourseworkClassroomMutation,
+  removeCourseworkStudentsMutation,
+  setCourseworkClassroomOrdersMutation,
+  updateCourseworkStudentOrdersMutation,
+} from "@/queries/coursework"
 
 interface CourseworkStudentsContainerProps {
   courseworkId: string
@@ -31,14 +44,36 @@ interface CourseworkStudentsContainerProps {
  *
  * 学級の追加/削除と、共通 roster-table による対象生徒一覧の並び替え・削除を提供する。
  */
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_CLASSROOMS: CourseworkClassroomRow[] = []
+
 export function CourseworkStudentsContainer({
   courseworkId,
 }: CourseworkStudentsContainerProps) {
   const queryClient = useQueryClient()
-  const { data: classrooms = [] } = useQuery({
-    queryKey: queryKeys.coursework.classrooms(courseworkId),
-    queryFn: () => window.electronAPI.coursework.getClassrooms(courseworkId),
-  })
+  const { data: classrooms = EMPTY_CLASSROOMS } = useQuery(
+    courseworkClassroomsQuery(courseworkId)
+  )
+  // 名簿の一般UI は「何の名簿か」を知らない。書き込みの定義はこのコンテナが持つ
+  const updateStudentOrders = useMutation(
+    updateCourseworkStudentOrdersMutation(courseworkId)
+  )
+  const removeStudents = useMutation(
+    removeCourseworkStudentsMutation(courseworkId)
+  )
+  const addStudentsFromClassroom = useMutation(
+    addCourseworkStudentsFromClassroomMutation(courseworkId)
+  )
+  const addStudents = useMutation(addCourseworkStudentsMutation(courseworkId))
+  const setClassroomOrders = useMutation(
+    setCourseworkClassroomOrdersMutation(courseworkId)
+  )
+  const removeClassroom = useMutation(
+    removeCourseworkClassroomMutation(courseworkId)
+  )
+  const previewRemoval = useMutation(
+    previewCourseworkClassroomRemovalMutation(courseworkId)
+  )
   const [studentCount, setStudentCount] = useState(0)
   const [rosterHandle, setRosterHandle] = useState<RosterTableHandle | null>(
     null
@@ -49,8 +84,8 @@ export function CourseworkStudentsContainer({
     () => ({
       fetchRows: async () => {
         const [courseworkClassrooms, courseworkStudents] = await Promise.all([
-          window.electronAPI.coursework.getClassrooms(courseworkId),
-          window.electronAPI.coursework.getStudents(courseworkId),
+          queryClient.fetchQuery(courseworkClassroomsQuery(courseworkId)),
+          queryClient.fetchQuery(courseworkStudentsQuery(courseworkId)),
         ])
         const classroomOrderMap = new Map(
           courseworkClassrooms.map((courseworkClassroom) => [
@@ -81,8 +116,9 @@ export function CourseworkStudentsContainer({
         })
       },
       fetchClassrooms: async () => {
-        const courseworkClassrooms =
-          await window.electronAPI.coursework.getClassrooms(courseworkId)
+        const courseworkClassrooms = await queryClient.fetchQuery(
+          courseworkClassroomsQuery(courseworkId)
+        )
         return courseworkClassrooms.map(
           (courseworkClassroom): RosterClassroomOption => ({
             id: courseworkClassroom.classroomId,
@@ -91,30 +127,22 @@ export function CourseworkStudentsContainer({
         )
       },
       updateRowOrder: async (rowOrders) => {
-        await window.electronAPI.coursework.updateStudentOrders(
-          courseworkId,
-          rowOrders
-        )
+        await updateStudentOrders.mutateAsync(rowOrders)
       },
       removeRows: async (studentIds) => {
-        await window.electronAPI.coursework.removeStudents(
-          courseworkId,
-          studentIds
-        )
+        await removeStudents.mutateAsync(studentIds)
       },
     }),
-    [courseworkId]
+    [courseworkId, queryClient, updateStudentOrders, removeStudents]
   )
 
   // 生徒追加パネルのアダプター（資料）
   const addPanelAdapter = useMemo<StudentAddPanelAdapter>(
     () => ({
       fetchAvailableClassrooms: async (activeOnly) => {
-        const classrooms =
-          await window.electronAPI.coursework.getAvailableClassrooms(
-            courseworkId,
-            activeOnly
-          )
+        const classrooms = await queryClient.fetchQuery(
+          courseworkAvailableClassroomsQuery(courseworkId, activeOnly)
+        )
         return classrooms.map((classroom): AddPanelClassroomItem => ({
           id: classroom.id,
           name: classroom.name,
@@ -123,11 +151,9 @@ export function CourseworkStudentsContainer({
         }))
       },
       fetchAvailableStudents: async (activeOnly) => {
-        const students =
-          await window.electronAPI.coursework.getAvailableStudents(
-            courseworkId,
-            activeOnly
-          )
+        const students = await queryClient.fetchQuery(
+          courseworkAvailableStudentsQuery(courseworkId, activeOnly)
+        )
         // 学級名は所属（memberships）から取る。以前は存在しない `className` 列を
         // 読んでいて、常に空の所属が渡っていた
         return students.map((student): AddPanelStudentItem => ({
@@ -148,26 +174,22 @@ export function CourseworkStudentsContainer({
       },
       addClassrooms: async (orderedClassroomIds, activeOnly) => {
         for (const classroomId of orderedClassroomIds) {
-          await window.electronAPI.coursework.addStudentsFromClassroom(
-            courseworkId,
+          await addStudentsFromClassroom.mutateAsync({
             classroomId,
-            activeOnly
-          )
+            activeOnly,
+          })
         }
       },
       addStudents: async (studentIds) => {
-        await window.electronAPI.coursework.addStudents(
-          courseworkId,
-          studentIds
-        )
+        await addStudents.mutateAsync(studentIds)
       },
     }),
-    [courseworkId]
+    [courseworkId, queryClient, addStudents, addStudentsFromClassroom]
   )
 
   const reloadAll = useCallback(async () => {
     await queryClient.invalidateQueries({
-      queryKey: queryKeys.coursework.classrooms(courseworkId),
+      queryKey: courseworkClassroomsQuery(courseworkId).queryKey,
     })
     await rosterHandle?.refresh()
   }, [queryClient, courseworkId, rosterHandle])
@@ -212,26 +234,18 @@ export function CourseworkStudentsContainer({
             ]}
             // 失敗は例外で伝わり、ClassroomRosterManager の楽観更新がロールバックする
             onReorder={async (orderedClassroomIds) => {
-              await window.electronAPI.coursework.setClassroomOrders(
-                courseworkId,
-                orderedClassroomIds
-              )
+              await setClassroomOrders.mutateAsync(orderedClassroomIds)
             }}
             fetchRemovalPreview={async (entry) => {
-              const result =
-                await window.electronAPI.coursework.classroomRemovalPreview(
-                  courseworkId,
-                  entry.classroomId
-                )
+              const result = await previewRemoval.mutateAsync(entry.classroomId)
               return { exclusiveCount: result.exclusiveCount }
             }}
             // 失敗は例外で伝わり、ダイアログが成功扱いで閉じない
             onRemove={async (entry, deleteStudents) => {
-              await window.electronAPI.coursework.removeClassroom(
-                courseworkId,
-                entry.classroomId,
-                deleteStudents
-              )
+              await removeClassroom.mutateAsync({
+                classroomId: entry.classroomId,
+                deleteStudents,
+              })
             }}
             onChanged={reloadAll}
           />

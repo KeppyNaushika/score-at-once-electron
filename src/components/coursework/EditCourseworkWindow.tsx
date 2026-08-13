@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { Save } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -17,6 +18,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useTags } from "@/hooks/useTags"
+import {
+  setCourseworkTagsMutation,
+  updateCourseworkMutation,
+} from "@/queries/coursework"
 
 interface EditCourseworkWindowProps {
   courseworkId: string
@@ -50,6 +55,8 @@ export function EditCourseworkWindow({
     new Set(initialTagIds)
   )
   const [saving, setSaving] = useState(false)
+  const updateCoursework = useMutation(updateCourseworkMutation(courseworkId))
+  const setTags = useMutation(setCourseworkTagsMutation(courseworkId))
 
   const toggleTag = (tagId: string) => {
     setSelectedTagIds((prev) => {
@@ -64,14 +71,12 @@ export function EditCourseworkWindow({
     if (!name.trim()) return
     setSaving(true)
     try {
-      await window.electronAPI.coursework.update(courseworkId, {
+      await updateCoursework.mutateAsync({
         name: name.trim(),
         description: description.trim() || null,
         date: date || null,
       })
-      await window.electronAPI.coursework.setTags(courseworkId, [
-        ...selectedTagIds,
-      ])
+      await setTags.mutateAsync([...selectedTagIds])
       onSaved()
       onClose()
     } catch (error) {

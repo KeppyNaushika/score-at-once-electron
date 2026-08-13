@@ -1,0 +1,163 @@
+import { queryOptions } from "@tanstack/react-query"
+
+import { defineMutation } from "./defineMutation"
+import { scopeKeys } from "./keys"
+
+/**
+ * タグ（Tag）とその紐付けの読み書き。
+ *
+ * タグ本体は横断で共有される1つの集合。紐付け（試験・資料・解答用紙・小計点
+ * グループ）は相手側の実体に属するので、無効化の行き先も相手側のスコープになる。
+ *
+ * 対応する preload は `electron-src/preload-apis/tagApi.ts`。
+ */
+
+// =====================================================================
+// 取得
+// =====================================================================
+
+export const tagListQuery = () =>
+  queryOptions({
+    queryKey: ["tags"] as const,
+    queryFn: () => window.electronAPI.tagGetAll(),
+  })
+
+/** その試験に付いているタグ */
+export const examTagsQuery = (examId: string) =>
+  queryOptions({
+    queryKey: [...scopeKeys.exam(examId), "tags"] as const,
+    queryFn: () => window.electronAPI.examTagGetByExamId(examId),
+  })
+
+/** その解答用紙に付いているタグ */
+export const answerSheetDefinitionTagsQuery = (definitionId: string) =>
+  queryOptions({
+    queryKey: [
+      ...scopeKeys.answerSheetDefinition(definitionId),
+      "tags",
+    ] as const,
+    queryFn: () =>
+      window.electronAPI.asbDefinitionTagGetByDefinitionId(definitionId),
+  })
+
+// =====================================================================
+// 書き込み
+// =====================================================================
+
+export const createTagMutation = () =>
+  defineMutation({
+    mutationFn: (input: { name: string; color?: string }) =>
+      window.electronAPI.tagCreate(input),
+    meta: {
+      invalidates: [tagListQuery().queryKey],
+      errorMessage: "タグを作成できませんでした",
+    },
+  })
+
+export const updateTagMutation = () =>
+  defineMutation({
+    mutationFn: (input: {
+      id: string
+      data: Parameters<typeof window.electronAPI.tagUpdate>[1]
+    }) => window.electronAPI.tagUpdate(input.id, input.data),
+    meta: {
+      invalidates: [tagListQuery().queryKey],
+      errorMessage: "タグを保存できませんでした",
+    },
+  })
+
+export const deleteTagMutation = () =>
+  defineMutation({
+    mutationFn: (tagId: string) => window.electronAPI.tagDelete(tagId),
+    meta: {
+      invalidates: [tagListQuery().queryKey],
+      errorMessage: "タグを削除できませんでした",
+    },
+  })
+
+export const reorderTagsMutation = () =>
+  defineMutation({
+    mutationFn: (tagIds: string[]) => window.electronAPI.tagReorder(tagIds),
+    meta: {
+      invalidates: [tagListQuery().queryKey],
+      errorMessage: "タグの並び順を保存できませんでした",
+    },
+  })
+
+/**
+ * 名前でタグを引き、無ければ作る。
+ *
+ * 一括タグ付けの前段で使う。作られる可能性があるのでタグ一覧を取り直す。
+ */
+export const findOrCreateTagMutation = () =>
+  defineMutation({
+    mutationFn: (name: string) => window.electronAPI.tagFindOrCreate(name),
+    meta: {
+      invalidates: [tagListQuery().queryKey],
+      errorMessage: "タグを用意できませんでした",
+    },
+  })
+
+/** 試験に付けるタグを置き換える */
+export const setExamTagsMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (tagIds: string[]) =>
+      window.electronAPI.examTagSetExamTags(examId, tagIds),
+    meta: {
+      invalidates: [examTagsQuery(examId).queryKey],
+      errorMessage: "タグを保存できませんでした",
+    },
+  })
+
+/** 試験にタグを1つ足す（既存を保ったまま） */
+export const addExamTagMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (tagId: string) =>
+      window.electronAPI.examTagCreate({ examId, tagId }),
+    meta: {
+      invalidates: [examTagsQuery(examId).queryKey],
+      errorMessage: "タグを追加できませんでした",
+    },
+  })
+
+/** 解答用紙に付けるタグを置き換える */
+export const setAnswerSheetDefinitionTagsMutation = (definitionId: string) =>
+  defineMutation({
+    mutationFn: (tagIds: string[]) =>
+      window.electronAPI.asbDefinitionTagSetDefinitionTags(
+        definitionId,
+        tagIds
+      ),
+    meta: {
+      invalidates: [answerSheetDefinitionTagsQuery(definitionId).queryKey],
+      errorMessage: "タグを保存できませんでした",
+    },
+  })
+
+/** 解答用紙にタグを1つ足す（既存を保ったまま） */
+export const addAnswerSheetDefinitionTagMutation = (definitionId: string) =>
+  defineMutation({
+    mutationFn: (tagId: string) =>
+      window.electronAPI.asbDefinitionTagCreate({
+        asbDefinitionId: definitionId,
+        tagId,
+      }),
+    meta: {
+      invalidates: [answerSheetDefinitionTagsQuery(definitionId).queryKey],
+      errorMessage: "タグを追加できませんでした",
+    },
+  })
+
+/** 小計点グループに付けるタグを置き換える */
+export const setSubtotalGroupTagsMutation = () =>
+  defineMutation({
+    mutationFn: (input: { subtotalGroupId: string; tagIds: string[] }) =>
+      window.electronAPI.tagSubtotalGroupSetTags(
+        input.subtotalGroupId,
+        input.tagIds
+      ),
+    meta: {
+      invalidates: [["subtotalGroup"]],
+      errorMessage: "タグを保存できませんでした",
+    },
+  })

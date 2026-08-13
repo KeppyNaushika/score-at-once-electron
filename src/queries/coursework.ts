@@ -46,6 +46,11 @@ export const courseworkStudentsQuery = (courseworkId: string) =>
     queryFn: () => window.electronAPI.coursework.getStudents(courseworkId),
   })
 
+/** 資料に紐づく学級1件 */
+export type CourseworkClassroomRow = Awaited<
+  ReturnType<typeof window.electronAPI.coursework.getClassrooms>
+>[number]
+
 export const courseworkClassroomsQuery = (courseworkId: string) =>
   queryOptions({
     queryKey: [...scopeKeys.coursework(courseworkId), "classrooms"] as const,
@@ -314,6 +319,25 @@ export const addCourseworkTagMutation = (courseworkId: string) =>
       window.electronAPI.coursework.addTag(courseworkId, tagId),
     meta: {
       invalidates: [courseworkScope(courseworkId)],
+      errorMessage: "タグを追加できませんでした",
+    },
+  })
+
+/**
+ * 選んだ資料へ同じタグをまとめて足す。
+ *
+ * 既存のタグを保ったまま1件ずつ足す（全置換すると、他端末が付けたタグを
+ * 巻き添えにする）。知らせを1回にするため1つの書き込みにまとめている。
+ */
+export const addTagToCourseworksMutation = () =>
+  defineMutation({
+    mutationFn: async (input: { courseworkIds: string[]; tagId: string }) => {
+      for (const courseworkId of input.courseworkIds) {
+        await window.electronAPI.coursework.addTag(courseworkId, input.tagId)
+      }
+    },
+    meta: {
+      invalidates: [courseworkListQuery().queryKey],
       errorMessage: "タグを追加できませんでした",
     },
   })
