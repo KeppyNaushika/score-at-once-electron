@@ -1009,26 +1009,52 @@ main は既に `src/types/` から型を引いているので前例があり、�
 
 #### 進捗（2026-08-14 時点）
 
-| ドメイン                         | 状態                                        |
-| -------------------------------- | ------------------------------------------- |
-| `grade`                          | **完了**（フック4つを削除・境界を行ごとに） |
-| `coursework`                     | 一覧・概要・基本設定・生徒管理が完了        |
-| `tag` / `export`                 | `src/queries/` を用意（消費側は移行中）     |
-| `student` / `classroom` / `user` | 未着手                                      |
-| `exam` 系                        | 未着手（いちばん大きい）                    |
-| `answer-sheet-builder`           | 未着手（IPC 分割と一緒に）                  |
+| ドメイン                                 | 状態                                                              |
+| ---------------------------------------- | ----------------------------------------------------------------- |
+| `grade`                                  | **完了**（フック4つを削除・境界を行ごとに・デバウンス撤去）       |
+| `coursework`                             | **完了**（刻みを行ごとに・点数の束ね取りを解体・フック1つを削除） |
+| `student` / `classroom` / `tag` / `user` | **完了**（薄いフック4つと `useClassroomManagement` を削除）       |
+| `export` / `settings`                    | `src/queries/` を用意（消費側は移行中）                           |
+| `exam` 系                                | 未着手（いちばん大きい）                                          |
+| `answer-sheet-builder`                   | 未着手（[IPC 分割](./asb-ipc-split-plan.md)と一緒に）             |
 
-**残量 114ファイル**（`NOT_YET_MIGRATED`）。内訳は `components` 81 / `app` 19 /
-`hooks` 11 / その他3。
+**残量 107ファイル**（`NOT_YET_MIGRATED`）。
 
-未着手のうち先に手を付けるべきもの:
+| 場所                              | 数  |
+| --------------------------------- | --- |
+| `components/exams`                | 54  |
+| `app`                             | 19  |
+| `components/answer-sheet-builder` | 10  |
+| `hooks`                           | 6   |
+| その他                            | 18  |
 
-- `src/components/coursework/03-items/CourseworkItemsContainer.tsx` — 項目ごとの
-  500ms デバウンス＋ドラフト。**文字評価の刻み（`CourseworkLetterScale`）が
-  `updateItem` の引数として全置換される**ので、行ごとに割るには main 側の
-  チャンネル追加が要る
-- `src/components/coursework/04-scores/hooks/useCourseworkScores.ts` — 点数の
-  デバウンスと失敗の握り潰し（段階9 #4）
+#### この間に決まったこと（実装済み）
+
+- **`meta` は DB を書くかどうかで形が違う**（判別ユニオン）。書くなら `invalidates`
+  必須、書かないなら `writesDatabase: false`。行き先は1つ以上のリスト。型テスト6件で固定
+- **取得は境界の返り値をそのまま返す。** 束ねた入れ物・`Set`・並べ替えた配列を返さない。
+  検査は `queryKeyConventions.test.ts`。既存の型規約をキャッシュの入口で見ているだけ
+- **`passcode` の流出を止めた。** `fetchUsers` が bcrypt ハッシュごと返しており、6箇所の
+  手書き `interface User` がそれを隠していた
+
+#### 次に手を付けるもの
+
+1. **`useUserPreference` と設定フック10本**（`useShowStudentNames` など）。ほとんどが
+   `ScoringMain/hooks/useScoringSettings.ts` に集まっているので、そこを画面側へ出せば
+   まとめて解ける
+2. **`exam` 系 54ファイル**。`src/queries/exam.ts` / `cropRegion.ts` / `scoring.ts` /
+   `drawing.ts` / `examClassroom.ts` / `subtotal.ts` / `userExam.ts` へ割る。
+   段階9 #3（08-export のデバウンス）と #5（タグの担当者ガード漏れ）はこの中で片付く
+3. **`answer-sheet-builder` 10ファイル**。[asb-ipc-split-plan.md](./asb-ipc-split-plan.md)
+   の段階1〜5と同時に行う。ここだけは main 側の分割が前提なので、単独では終わらない
+
+#### まだ数え直していないもの
+
+**独自宣言の行型の一覧（19件）は下限である。** 判定が `id: string` を持つものしか見て
+いないため、**平坦化して名前を変えた射影**（`CourseworkStudentRow` の
+`courseworkStudentId` のような形）を1件も拾えていない。射影は普通その形を取るので、
+実数はもっと多い。数え直しは「取得は境界の返り値をそのまま返す」の検査が効くように
+なった後で行う（そちらが根を止めるので、残るのは props で運ばれる射影だけになる）。
 
 ---
 
