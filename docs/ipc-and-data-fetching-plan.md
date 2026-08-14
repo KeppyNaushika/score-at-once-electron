@@ -1018,7 +1018,7 @@ main は既に `src/types/` から型を引いているので前例があり、�
 | `exam` 系                                | 未着手（いちばん大きい）                                          |
 | `answer-sheet-builder`                   | 未着手（[IPC 分割](./asb-ipc-split-plan.md)と一緒に）             |
 
-**残量 107ファイル**（`NOT_YET_MIGRATED`）。
+**残量 100ファイル**（`NOT_YET_MIGRATED`）。
 
 | 場所                              | 数  |
 | --------------------------------- | --- |
@@ -1039,12 +1039,10 @@ main は既に `src/types/` から型を引いているので前例があり、�
 
 #### 次に手を付けるもの
 
-1. **`useUserPreference` と設定フック10本**（`useShowStudentNames` など）。ほとんどが
-   `ScoringMain/hooks/useScoringSettings.ts` に集まっているので、そこを画面側へ出せば
-   まとめて解ける
-2. **`exam` 系 54ファイル**。`src/queries/exam.ts` / `cropRegion.ts` / `scoring.ts` /
+1. **`exam` 系の各段（01〜08）**。`src/queries/exam.ts` / `cropRegion.ts` / `scoring.ts` /
    `drawing.ts` / `examClassroom.ts` / `subtotal.ts` / `userExam.ts` へ割る。
    段階9 #3（08-export のデバウンス）と #5（タグの担当者ガード漏れ）はこの中で片付く
+2. **`app` 配下 19ファイル**（各段のページ）
 3. **`answer-sheet-builder` 10ファイル**。[asb-ipc-split-plan.md](./asb-ipc-split-plan.md)
    の段階1〜5と同時に行う。ここだけは main 側の分割が前提なので、単独では終わらない
 
