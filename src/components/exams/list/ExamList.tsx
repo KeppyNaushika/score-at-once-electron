@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Calculator,
   Download,
@@ -47,8 +47,13 @@ import {
   getExamProgress,
   getExamWorkflowStatus,
 } from "@/lib/examStatus"
+import { bulkExportExamsMutation } from "@/queries/archive"
 import { examListQuery } from "@/queries/exam"
-import { tagListQuery } from "@/queries/tag"
+import {
+  addTagToExamsMutation,
+  findOrCreateTagMutation,
+  tagListQuery,
+} from "@/queries/tag"
 import type { ArchiveExportMode } from "@/types/examArchive.types"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
@@ -84,10 +89,9 @@ const File = () => {
     [queryClient, user?.id]
   )
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
-  const refreshTags = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
-    [queryClient]
-  )
+  const findOrCreateTag = useMutation(findOrCreateTagMutation())
+  const addTagToExams = useMutation(addTagToExamsMutation())
+  const bulkExportExams = useMutation(bulkExportExamsMutation())
   const [showImportModal, setShowImportModal] = useState(false)
   const [isBulkExporting, setIsBulkExporting] = useState(false)
   const [showBulkExportModal, setShowBulkExportModal] = useState(false)
@@ -145,30 +149,17 @@ const File = () => {
   const handleBulkAddTag = useCallback(
     async (tagName: string) => {
       if (!tagName.trim() || selectedIds.size === 0) return
-      try {
-        const tag = await window.electronAPI.tagFindOrCreate(tagName.trim())
-        for (const examId of selectedIds) {
-          try {
-            await window.electronAPI.examTagCreate({
-              examId,
-              tagId: tag.id,
-            })
-          } catch {
-            // 既に紐づいている場合はunique制約で失敗するが無視
-          }
-        }
-        toast.success("タグを追加しました", {
-          description: `${selectedIds.size}件の試験に「${tagName.trim()}」を追加`,
-        })
-        clearSelection()
-        await refreshTags()
-        loadExams()
-      } catch (error) {
-        toast.error("タグの追加に失敗しました")
-        console.error(error)
-      }
+      const tag = await findOrCreateTag.mutateAsync(tagName.trim())
+      await addTagToExams.mutateAsync({
+        examIds: [...selectedIds],
+        tagId: tag.id,
+      })
+      toast.success("タグを追加しました", {
+        description: `${selectedIds.size}件の試験に「${tagName.trim()}」を追加`,
+      })
+      clearSelection()
     },
-    [selectedIds, clearSelection, loadExams, refreshTags]
+    [selectedIds, clearSelection, findOrCreateTag, addTagToExams]
   )
 
   const handleBulkExport = useCallback(
@@ -181,7 +172,7 @@ const File = () => {
       })
 
       try {
-        const result = await window.electronAPI.archive.bulkExportExams({
+        const result = await bulkExportExams.mutateAsync({
           examIds: Array.from(selectedIds),
           userId: user.id,
           exportMode,
@@ -222,7 +213,7 @@ const File = () => {
         setIsBulkExporting(false)
       }
     },
-    [user, selectedIds, clearSelection]
+    [user, selectedIds, clearSelection, bulkExportExams]
   )
 
   return (

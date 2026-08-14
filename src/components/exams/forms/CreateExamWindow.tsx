@@ -21,7 +21,11 @@ import { useAuth } from "@/contexts/AuthContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
 import { createExamMutation } from "@/queries/exam"
-import { tagListQuery } from "@/queries/tag"
+import {
+  findOrCreateTagMutation,
+  setExamTagsForNewExamMutation,
+  tagListQuery,
+} from "@/queries/tag"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_TAGS: TagWithAllRelations[] = []
@@ -47,6 +51,8 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
     useDialogAutoFocus(true)
   const { user } = useAuth()
   const createExam = useMutation(createExamMutation(user?.id))
+  const findOrCreateTag = useMutation(findOrCreateTagMutation())
+  const setExamTags = useMutation(setExamTagsForNewExamMutation())
 
   // 既存タグを取得
   const handleSubmit = async () => {
@@ -65,10 +71,13 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
       if (tagTexts.length > 0 && createdExam?.id) {
         const tagIds: string[] = []
         for (const tagName of tagTexts) {
-          const tag = await window.electronAPI.tagFindOrCreate(tagName)
+          const tag = await findOrCreateTag.mutateAsync(tagName)
           tagIds.push(tag.id)
         }
-        await window.electronAPI.examTagSetExamTags(createdExam.id, tagIds)
+        await setExamTags.mutateAsync({
+          examId: createdExam.id,
+          tagIds,
+        })
       }
 
       onExamCreated?.()

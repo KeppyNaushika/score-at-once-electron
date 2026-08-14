@@ -109,6 +109,22 @@ export const setExamTagsMutation = (examId: string) =>
     },
   })
 
+/**
+ * 作ったばかりの試験へタグを付ける。
+ *
+ * 作成のあとに続く操作なので、試験 id は呼び出し時にしか分からない。
+ * 取り直す先も同じ理由で「試験に紐づくもの全部」の前方一致になる。
+ */
+export const setExamTagsForNewExamMutation = () =>
+  defineMutation({
+    mutationFn: (input: { examId: string; tagIds: string[] }) =>
+      window.electronAPI.examTagSetExamTags(input.examId, input.tagIds),
+    meta: {
+      invalidates: [["exam"]],
+      errorMessage: "タグを保存できませんでした",
+    },
+  })
+
 /** 試験にタグを1つ足す（既存を保ったまま） */
 export const addExamTagMutation = (examId: string) =>
   defineMutation({
@@ -116,6 +132,33 @@ export const addExamTagMutation = (examId: string) =>
       window.electronAPI.examTagCreate({ examId, tagId }),
     meta: {
       invalidates: [examTagsQuery(examId).queryKey],
+      errorMessage: "タグを追加できませんでした",
+    },
+  })
+
+/**
+ * 選んだ試験へ同じタグをまとめて足す。
+ *
+ * 既存のタグを保ったまま1件ずつ足す（全置換は他端末が付けたタグを巻き添えに
+ * する）。既に紐づいている試験は unique 制約で失敗するので、そこは飛ばす。
+ * 知らせを1回にするため1つの書き込みにまとめている。
+ */
+export const addTagToExamsMutation = () =>
+  defineMutation({
+    mutationFn: async (input: { examIds: string[]; tagId: string }) => {
+      for (const examId of input.examIds) {
+        try {
+          await window.electronAPI.examTagCreate({
+            examId,
+            tagId: input.tagId,
+          })
+        } catch {
+          // 既に紐づいている場合は unique 制約で失敗するが、結果は同じなので飛ばす
+        }
+      }
+    },
+    meta: {
+      invalidates: [["exam"]],
       errorMessage: "タグを追加できませんでした",
     },
   })

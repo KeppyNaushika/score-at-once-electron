@@ -1,8 +1,8 @@
 "use client"
 
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { Crown, Search, Trash2, UserPlus } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -24,7 +24,14 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { UserRole } from "@/electron-src/lib/prisma/userExam"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  type ExamMemberRow,
+  examMembersQuery,
+  examOwnerQuery,
+  examUserSearchQuery,
+  inviteExamMemberMutation,
+  removeExamMemberMutation,
+} from "@/queries/userExam"
 
 interface MemberInviteDialogProps {
   isOpen: boolean
@@ -47,6 +54,7 @@ interface SearchResult {
  * - メンバー削除（GRADERのみ）
  */
 /** 未検索のときに毎回新しい配列を作らないための空値 */
+const EMPTY_MEMBERS: ExamMemberRow[] = []
 const EMPTY_SEARCH_RESULTS: SearchResult[] = []
 
 export function MemberInviteDialog({
@@ -56,25 +64,24 @@ export function MemberInviteDialog({
   currentUserId,
   examName,
 }: MemberInviteDialogProps) {
-  const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState("")
   /** 入力の落ち着きを待った検索語。これがクエリキーになる */
   const [debouncedQuery, setDebouncedQuery] = useState("")
+  const inviteMember = useMutation(inviteExamMemberMutation(examId))
+  const removeMember = useMutation(
+    removeExamMemberMutation(examId, currentUserId)
+  )
   const [invitingUserId, setInvitingUserId] = useState<string | null>(null)
   const [removingUserId, setRemovingUserId] = useState<string | null>(null)
 
   // ダイアログを閉じている間は取りに行かない（開くたびに取り直す）
-  const membersKey = queryKeys.exam.members(examId)
   const {
-    data: members = [],
+    data: members = EMPTY_MEMBERS,
     isPending: loading,
     error: membersError,
   } = useQuery({
-    queryKey: membersKey,
-    queryFn:
-      isOpen && examId
-        ? () => window.electronAPI.userExam.getMembers(examId)
-        : skipToken,
+    ...examMembersQuery(examId),
+    enabled: isOpen && Boolean(examId),
   })
   /** 招待・削除の失敗。取得の失敗は useQuery が持つ */
   const [mutationError, setMutationError] = useState<string | null>(null)
@@ -82,28 +89,17 @@ export function MemberInviteDialog({
     mutationError ?? (membersError ? "メンバー情報の取得に失敗しました" : null)
 
   const { data: isOwner = false } = useQuery({
-    queryKey: queryKeys.exam.owner(examId, currentUserId),
-    queryFn:
-      isOpen && examId && currentUserId
-        ? () => window.electronAPI.userExam.isOwner(currentUserId, examId)
-        : skipToken,
+    ...examOwnerQuery(examId, currentUserId),
+    enabled: isOpen && Boolean(examId) && Boolean(currentUserId),
   })
 
   const {
     data: searchResults = EMPTY_SEARCH_RESULTS,
     isFetching: isSearching,
   } = useQuery({
-    queryKey: queryKeys.exam.userSearch(examId, debouncedQuery),
-    queryFn:
-      isOpen && examId && debouncedQuery
-        ? () => window.electronAPI.userExam.searchUsers(examId, debouncedQuery)
-        : skipToken,
+    ...examUserSearchQuery(examId, debouncedQuery),
+    enabled: isOpen && Boolean(examId) && Boolean(debouncedQuery),
   })
-
-  const fetchMembers = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: membersKey }),
-    [queryClient, membersKey]
-  )
 
   // 入力が落ち着いてから検索する（打鍵ごとに問い合わせない）
   useEffect(() => {
@@ -117,17 +113,15 @@ export function MemberInviteDialog({
 
     setInvitingUserId(userId)
     try {
-      await window.electronAPI.userExam.invite({
+      await inviteMember.mutateAsync({
         examId,
         userId,
         invitedBy: currentUserId,
       })
-      await fetchMembers()
       // 招待した人は候補から外れるので、検索語ごと畳んで一覧へ戻す
       setSearchQuery("")
       setMutationError(null)
-    } catch (err) {
-      console.error("Failed to invite user:", err)
+    } catch {
       setMutationError("招待に失敗しました")
     } finally {
       setInvitingUserId(null)
@@ -140,10 +134,8 @@ export function MemberInviteDialog({
 
     setRemovingUserId(userId)
     try {
-      await window.electronAPI.userExam.remove(examId, userId, currentUserId)
-      await fetchMembers()
-    } catch (err) {
-      console.error("Failed to remove member:", err)
+      await removeMember.mutateAsync(userId)
+    } catch {
       setMutationError("メンバーの削除に失敗しました")
     } finally {
       setRemovingUserId(null)
