@@ -1,10 +1,9 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { TagIcon, XIcon } from "lucide-react"
 import React, { useCallback, useState } from "react"
 
-import { useExams } from "@/components/hooks/useExams"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,8 +17,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/contexts/AuthContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
+import { createExamMutation } from "@/queries/exam"
 import { tagListQuery } from "@/queries/tag"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
@@ -44,7 +45,8 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
   // このコンポーネントは親が条件付きでマウントする＝常に開いた状態
   const { inputRef: examNameInputRef, onOpenAutoFocus } =
     useDialogAutoFocus(true)
-  const { createExam } = useExams()
+  const { user } = useAuth()
+  const createExam = useMutation(createExamMutation(user?.id))
 
   // 既存タグを取得
   const handleSubmit = async () => {
@@ -53,7 +55,7 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
       return
     }
     try {
-      const createdExam = await createExam({
+      const createdExam = await createExam.mutateAsync({
         examName: examName.trim(),
         examDate: examDate,
         description: description.trim() || undefined,

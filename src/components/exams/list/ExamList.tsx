@@ -23,7 +23,6 @@ import { BulkTagAssignButton } from "@/components/common/BulkTagAssignButton"
 import { ListFilterBar } from "@/components/common/ListFilterBar"
 import ExportModeModal from "@/components/exams/detail/ExportModeModal"
 import CreateExamWindow from "@/components/exams/forms/CreateExamWindow"
-import { useExams } from "@/components/hooks/useExams"
 import { useFileActions } from "@/components/hooks/useFileActions"
 import { ImportWizardModal } from "@/components/import/ImportWizardModal"
 import { Badge } from "@/components/ui/badge"
@@ -48,11 +47,13 @@ import {
   getExamProgress,
   getExamWorkflowStatus,
 } from "@/lib/examStatus"
+import { examListQuery } from "@/queries/exam"
 import { tagListQuery } from "@/queries/tag"
 import type { ArchiveExportMode } from "@/types/examArchive.types"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_TAGS: TagWithAllRelations[] = []
+const EMPTY_EXAMS: ExamSummary[] = []
 
 interface ExamSortable {
   id: string
@@ -72,10 +73,17 @@ const EXAM_FILTER_ACCESSORS: ListFilterAccessors<ExamSummary> = {
 }
 
 const File = () => {
-  const { exams, loadExams } = useExams()
   const { user } = useAuth()
-  const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const queryClient = useQueryClient()
+  const { data: exams = EMPTY_EXAMS } = useQuery(examListQuery(user?.id))
+  const loadExams = useCallback(
+    () =>
+      queryClient.invalidateQueries({
+        queryKey: examListQuery(user?.id).queryKey,
+      }),
+    [queryClient, user?.id]
+  )
+  const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const refreshTags = useCallback(
     () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
     [queryClient]

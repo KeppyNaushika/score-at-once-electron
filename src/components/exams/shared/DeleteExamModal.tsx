@@ -1,10 +1,13 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 import { toast } from "sonner"
 
 import ConfirmationModal from "@/components/common/ConfirmationModal"
+import { useAuth } from "@/contexts/AuthContext"
 import type { ExamForDetail } from "@/hooks/useExamDetail"
+import { deleteExamMutation } from "@/queries/exam"
 
 interface DeleteExamModalProps {
   exam: ExamForDetail
@@ -31,6 +34,8 @@ export default function DeleteExamModal({
   onOpenChange,
   onExamDeleted,
 }: DeleteExamModalProps) {
+  const { user } = useAuth()
+  const deleteExam = useMutation(deleteExamMutation(user?.id))
   const [isLoading, setIsLoading] = useState(false)
 
   const handleDelete = async () => {
@@ -38,7 +43,7 @@ export default function DeleteExamModal({
 
     try {
       setIsLoading(true)
-      await window.electronAPI.deleteExam(exam.id)
+      await deleteExam.mutateAsync(exam.id)
       toast.success("試験を削除しました")
       onExamDeleted()
       onOpenChange(false)

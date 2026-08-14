@@ -1,7 +1,7 @@
 "use client"
 
 import type { Exam } from "@prisma/client"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { TagIcon, XIcon } from "lucide-react"
 import React, { useCallback, useState } from "react"
 import { toast } from "sonner"
@@ -20,8 +20,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
-import { queryKeys } from "@/lib/queryKeys"
-import { tagListQuery } from "@/queries/tag"
+import {
+  examTagsQuery,
+  findOrCreateTagMutation,
+  setExamTagsMutation,
+  tagListQuery,
+} from "@/queries/tag"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_TAGS: TagWithAllRelations[] = []
@@ -38,11 +42,8 @@ const EditExamWindow = ({
   onSave,
 }: EditExamWindowProps) => {
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
-  const queryClient = useQueryClient()
-  const refreshTags = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
-    [queryClient]
-  )
+  const findOrCreateTag = useMutation(findOrCreateTagMutation())
+  const setExamTags = useMutation(setExamTagsMutation(examToEdit.id))
   const [examName, setExamName] = useState(examToEdit.examName)
   const [examDate, setExamDate] = useState<Date | undefined>(() => {
     if (!examToEdit.examDate) return undefined
@@ -58,10 +59,7 @@ const EditExamWindow = ({
   const [showSuggestions, setShowSuggestions] = useState(false)
 
   // 既存タグと全タグ一覧を取得
-  const { data: examTags } = useQuery({
-    queryKey: queryKeys.exam.tags(examToEdit.id),
-    queryFn: () => window.electronAPI.examTagGetByExamId(examToEdit.id),
-  })
+  const { data: examTags } = useQuery(examTagsQuery(examToEdit.id))
 
   // 取得したタグ名を編集状態の種にする（以後は利用者の編集が正）
   const [seededExamId, setSeededExamId] = useState<string | null>(null)
@@ -80,16 +78,10 @@ const EditExamWindow = ({
     try {
       const tagIds: string[] = []
       for (const name of tagNames) {
-        const tag = await window.electronAPI.tagFindOrCreate(name)
+        const tag = await findOrCreateTag.mutateAsync(name)
         tagIds.push(tag.id)
       }
-      await window.electronAPI.examTagSetExamTags(examToEdit.id, tagIds)
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.exam.tags(examToEdit.id),
-        }),
-        refreshTags(),
-      ])
+      await setExamTags.mutateAsync(tagIds)
     } catch (error) {
       console.error("Failed to save tags:", error)
       toast.error("タグの保存に失敗しました", {
