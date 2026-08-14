@@ -2,7 +2,7 @@
  * 02-template (採点領域作成) 関連の型定義統合ファイル
  */
 
-import { type CropRegion, type ExamPage } from "@prisma/client"
+import { type CropRegion } from "@prisma/client"
 
 import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
@@ -37,27 +37,6 @@ export type CropRegionArea = Omit<
 // ============================================================================
 
 /**
- * 採点領域のタイプ定義
- * - QUESTION_ANSWER: 解答欄
- * - STUDENT_NAME: 氏名欄
- * - STUDENT_ID: 生徒番号欄
- * - TOTAL_SCORE: 合計点欄
- * - SUBTOTAL_SCORE: 小計欄
- * - MARK: マーク欄
- * - COMMENT: コメント欄
- * - OTHER: その他
- */
-export type AreaType =
-  | "QUESTION_ANSWER"
-  | "STUDENT_NAME"
-  | "STUDENT_ID"
-  | "TOTAL_SCORE"
-  | "SUBTOTAL_SCORE"
-  | "MARK"
-  | "COMMENT"
-  | "OTHER"
-
-/**
  * 座標情報のみを表す型
  */
 export interface RegionCoordinates {
@@ -79,33 +58,6 @@ export interface ImageDimensions {
   width: number
   /** 画像の高さ（ピクセル） */
   height: number
-}
-
-/**
- * データベース操作のタイプ
- */
-export type DatabaseOperation = "create" | "update"
-
-// ============================================================================
-// State Management Types
-// ============================================================================
-
-/**
- * 初期データ読み込みの状態
- */
-export interface InitialDataState {
-  /** マスター画像一覧 */
-  masterImages: ExamPage[]
-  /** 選択中のマスター画像 */
-  selectedMasterImage: ExamPage | null
-  /** 背景画像のURL */
-  backgroundImageUrl: string | null
-  /** 画像の寸法 */
-  imageDimensions: ImageDimensions | null
-  /** 採点領域一覧 */
-  cropRegions: CropRegionArea[]
-  /** レイアウトID */
-  layoutId: string | undefined
 }
 
 // ============================================================================

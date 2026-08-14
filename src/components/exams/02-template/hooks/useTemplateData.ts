@@ -1,257 +1,120 @@
-import type { ExamPage } from "@prisma/client"
-import { useCallback, useState } from "react"
-import { toast } from "sonner"
+import { useQuery } from "@tanstack/react-query"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import type {
   CropRegionArea,
   ImageDimensions,
-  InitialDataState,
 } from "@/components/exams/02-template/types"
+import { cropRegionsQuery } from "@/queries/cropRegion"
+import { examPagesQuery } from "@/queries/exam"
+import { fileProtocolPathQuery } from "@/queries/misc"
 import { toCropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_AREAS: CropRegionArea[] = []
+
 /**
- * テンプレートページの初期データ読み込みと状態管理を担当するカスタムフック
- *
- * @param examId - 試験ID
- * @returns 初期データ読み込み関連の状態と関数
+ * 画像の寸法は、その URL を実際に読み込むまで分からない。
+ * DOM の Image に読ませるので取得（`useQuery`）ではなく effect で扱う。
  */
-export function useTemplateData(examId: string | undefined) {
-  // 初期データの状態管理
-  const [initialData, setInitialData] = useState<InitialDataState>({
-    masterImages: [],
-    selectedMasterImage: null,
-    backgroundImageUrl: null,
-    imageDimensions: null,
-    cropRegions: [],
-    layoutId: undefined,
+function useImageDimensions(imageUrl: string | null) {
+  // どの URL を測った結果かを一緒に持つ。読み込みが終わるまでの間、前の画像の
+  // 寸法を返さないようにするため（state を effect の中で同期に消さずに済む）
+  const [measured, setMeasured] = useState<{
+    imageUrl: string
+    dimensions: ImageDimensions
+  } | null>(null)
+
+  useEffect(() => {
+    if (!imageUrl) return
+    let alive = true
+    const image = new Image()
+    image.onload = () => {
+      if (!alive) return
+      setMeasured({
+        imageUrl,
+        dimensions: { width: image.naturalWidth, height: image.naturalHeight },
+      })
+    }
+    image.src = imageUrl
+    return () => {
+      alive = false
+    }
+  }, [imageUrl])
+
+  return measured?.imageUrl === imageUrl ? measured.dimensions : null
+}
+
+/**
+ * 採点領域エディタが読むデータ。
+ *
+ * 模範解答ページ・採点領域はどちらも DB のもので、写しは持たない。選んでいる
+ * ページ（`selectedExamPageId`）だけが画面の状態である。
+ */
+export function useTemplateData(examId: string) {
+  const [selectedExamPageId, setSelectedExamPageId] = useState<string | null>(
+    null
+  )
+
+  const { data: examPages, isPending: examPagesPending } = useQuery(
+    examPagesQuery(examId)
+  )
+  const { data: cropRegions, isPending: cropRegionsPending } = useQuery(
+    cropRegionsQuery(examId)
+  )
+
+  // 模範解答画像を持つページだけを対象にする（画像の無いページには領域を引けない）
+  const masterImages = useMemo(
+    () =>
+      (examPages ?? [])
+        .filter((examPage) => examPage.imagePath)
+        .sort((pageA, pageB) => pageA.pageNumber - pageB.pageNumber),
+    [examPages]
+  )
+
+  // 全ページが模範解答なし（旧バージョンで消されたまま移行した試験）なら選べる
+  // 背景が無い。[0] を素通しすると undefined 参照で画面ごと落ちる
+  const selectedMasterImage =
+    masterImages.find((examPage) => examPage.id === selectedExamPageId) ??
+    masterImages[0] ??
+    null
+
+  const { data: backgroundImageUrl = null } = useQuery({
+    ...fileProtocolPathQuery(selectedMasterImage?.imagePath ?? ""),
+    enabled: Boolean(selectedMasterImage?.imagePath),
   })
+  const imageDimensions = useImageDimensions(backgroundImageUrl)
 
-  const [isLoading, setIsLoading] = useState(true)
+  // 選んでいるページの領域だけをエディタへ渡す
+  const areas = useMemo(() => {
+    if (!selectedMasterImage) return EMPTY_AREAS
+    return (cropRegions ?? [])
+      .filter((cropRegion) => cropRegion.examPageId === selectedMasterImage.id)
+      .map((cropRegion) => ({
+        id: cropRegion.id,
+        type: toCropRegionAreaType(cropRegion.type),
+        x: cropRegion.x,
+        y: cropRegion.y,
+        width: cropRegion.width,
+        height: cropRegion.height,
+        label: cropRegion.label || "",
+        points: cropRegion.points,
+        orderIndex: cropRegion.orderIndex,
+        examPageId: cropRegion.examPageId,
+      }))
+  }, [cropRegions, selectedMasterImage])
 
-  /**
-   * 画像の寸法を取得する補助関数
-   *
-   * @param imageUrl - 画像のURL
-   * @returns Promise<ImageDimensions | null> 画像の寸法情報
-   */
-  const loadImageDimensions = useCallback(
-    (imageUrl: string): Promise<ImageDimensions | null> => {
-      return new Promise((resolve) => {
-        const img = new Image()
-        img.onload = () => {
-          resolve({
-            width: img.naturalWidth,
-            height: img.naturalHeight,
-          })
-        }
-        img.onerror = () => {
-          resolve(null)
-        }
-        img.src = imageUrl
-      })
-    },
-    []
-  )
-
-  /**
-   * 初期データの読み込み処理
-   * 試験情報、マスター画像、既存の領域データを取得する
-   */
-  const loadInitialData = useCallback(async () => {
-    if (!examId) {
-      toast.error("試験IDが見つかりません。")
-      setIsLoading(false)
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      // examPages（masterImages 含む）を取得。試験が存在しなければ null（不存在を検知）
-      const exam = await window.electronAPI.getExamWithPages(examId)
-      if (!exam) {
-        toast.error("試験が見つかりません。")
-        setInitialData({
-          masterImages: [],
-          selectedMasterImage: null,
-          backgroundImageUrl: null,
-          imageDimensions: null,
-          cropRegions: [],
-          layoutId: undefined,
-        })
-        return
-      }
-      const examPages = exam.examPages
-
-      // マスター画像の処理
-      let processedMasterImages: ExamPage[] = []
-      let selectedImage: ExamPage | null = null
-      let backgroundUrl: string | null = null
-      let dimensions: ImageDimensions | null = null
-
-      if (examPages && examPages.length > 0) {
-        // 模範解答画像を持つページだけを対象にする（画像の無いページには領域を引けない）
-        processedMasterImages = examPages
-          .filter((page) => page.imagePath)
-          .sort((pageA, pageB) => pageA.pageNumber - pageB.pageNumber)
-
-        // 全ページが模範解答なし（旧バージョンで消されたまま移行した試験）なら
-        // 選べる背景が無い。ここで [0] を素通しすると undefined 参照で画面ごと落ち、
-        // どのページが欠けているのかを確かめることすらできなくなる
-        selectedImage = processedMasterImages[0] ?? null
-
-        if (selectedImage?.imagePath) {
-          // 最初の画像のURLと寸法を取得
-          backgroundUrl = await window.electronAPI.resolveFileProtocolPath(
-            selectedImage.imagePath
-          )
-          dimensions = await loadImageDimensions(backgroundUrl)
-        }
-      }
-
-      // 既存のレイアウト領域を取得
-      let regions: CropRegionArea[] = []
-      let layoutIdValue: string | undefined
-
-      try {
-        const existingRegions =
-          await window.electronAPI.getCropRegionsByExamId(examId)
-
-        if (existingRegions && existingRegions.length > 0) {
-          layoutIdValue = "existing"
-
-          // 最初のマスター画像に対応する領域のみをフィルター
-          const firstMasterImageId = selectedImage?.id
-          const currentImageRegions = firstMasterImageId
-            ? existingRegions.filter(
-                (region) => region.examPage?.id === firstMasterImageId
-              )
-            : []
-
-          regions = currentImageRegions.map((region) => ({
-            id: region.id,
-            type: toCropRegionAreaType(region.type),
-            x: region.x,
-            y: region.y,
-            width: region.width,
-            height: region.height,
-            label: region.label || "",
-            points: region.points ? String(region.points) : null,
-            examPageId: region.examPage?.id || "",
-          }))
-        }
-      } catch (regionError) {
-        console.error("Failed to load crop regions:", regionError)
-        layoutIdValue = undefined
-        regions = []
-      }
-
-      // 状態を更新（exam 本体は 02 では未使用のため null）
-      setInitialData({
-        masterImages: processedMasterImages,
-        selectedMasterImage: selectedImage,
-        backgroundImageUrl: backgroundUrl,
-        imageDimensions: dimensions,
-        cropRegions: regions,
-        layoutId: layoutIdValue,
-      })
-    } catch (error) {
-      console.error("Failed to load initial data:", error)
-      toast.error("初期データの読み込みに失敗しました。")
-    } finally {
-      setIsLoading(false)
-    }
-  }, [examId, loadImageDimensions])
-
-  /**
-   * マスター画像の変更処理
-   * 選択された画像に対応する領域データを読み込む
-   *
-   * @param imageId - 選択する画像のID
-   */
-  const handleMasterImageChange = useCallback(
-    async (imageId: string) => {
-      const image = initialData.masterImages.find(
-        (masterImage) => masterImage.id === imageId
-      )
-      if (!image || !examId) return
-
-      if (!image.imagePath) return
-
-      try {
-        // 新しい画像のURLと寸法を取得
-        const url = await window.electronAPI.resolveFileProtocolPath(
-          image.imagePath
-        )
-        const dimensions = await loadImageDimensions(url)
-
-        // 新しいページの領域を読み込む
-        const allRegions =
-          await window.electronAPI.getCropRegionsByExamId(examId)
-        const currentImageRegions = allRegions.filter(
-          (region) => region.examPage?.id === image.id
-        )
-
-        const mappedRegions: CropRegionArea[] =
-          currentImageRegions.length > 0
-            ? currentImageRegions.map((region) => ({
-                id: region.id,
-                type: toCropRegionAreaType(region.type),
-                x: region.x,
-                y: region.y,
-                width: region.width,
-                height: region.height,
-                label: region.label || "",
-                points: region.points ? String(region.points) : null,
-                examPageId: region.examPage?.id || "",
-              }))
-            : []
-
-        // 状態を更新
-        setInitialData((prev) => ({
-          ...prev,
-          selectedMasterImage: image,
-          backgroundImageUrl: url,
-          imageDimensions: dimensions,
-          cropRegions: mappedRegions,
-        }))
-      } catch (error) {
-        toast.error("背景画像の読み込みに失敗しました。")
-        console.error("Failed to change master image:", error)
-      }
-    },
-    [initialData.masterImages, examId, loadImageDimensions]
-  )
-
-  /**
-   * レイアウト領域の状態を更新する
-   *
-   * @param regions - 新しい領域データ
-   */
-  const updateCropRegions = useCallback((regions: CropRegionArea[]) => {
-    setInitialData((prev) => ({
-      ...prev,
-      cropRegions: regions,
-    }))
-  }, [])
-
-  /**
-   * レイアウトIDの状態を更新する
-   *
-   * @param layoutId - 新しいレイアウトID
-   */
-  const updateLayoutId = useCallback((layoutId: string | undefined) => {
-    setInitialData((prev) => ({
-      ...prev,
-      layoutId,
-    }))
+  const selectMasterImage = useCallback((examPageId: string) => {
+    setSelectedExamPageId(examPageId)
   }, [])
 
   return {
-    initialData,
-    isLoading,
-    loadInitialData,
-    handleMasterImageChange,
-    updateCropRegions,
-    updateLayoutId,
+    isLoading: examPagesPending || cropRegionsPending,
+    masterImages,
+    selectedMasterImage,
+    backgroundImageUrl,
+    imageDimensions,
+    areas,
+    selectMasterImage,
   }
 }

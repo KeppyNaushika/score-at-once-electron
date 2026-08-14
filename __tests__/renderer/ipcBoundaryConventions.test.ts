@@ -234,8 +234,6 @@ const NOT_YET_MIGRATED = [
   "src/components/classroom/ClassroomStudentImportModal.tsx",
   "src/components/common/ScreenBlackout.tsx",
   "src/components/common/student-add-panel/hooks/useStudentAddPanel.ts",
-  "src/components/exams/02-template/hooks/useCropRegionSave.ts",
-  "src/components/exams/02-template/hooks/useTemplateData.ts",
   "src/components/exams/03-region-info/components/RegionDetailsTable.tsx",
   "src/components/exams/03-region-info/hooks/useDragAndDrop.ts",
   "src/components/exams/03-region-info/hooks/useOmrConfig.ts",

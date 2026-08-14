@@ -18,12 +18,11 @@ import ImageCanvas from "./ImageCanvas"
 type CropRegionEditorProps = {
   examId: string
   areas: CropRegionArea[]
-  setAreas: React.Dispatch<React.SetStateAction<CropRegionArea[]>>
-  onCreateRegion?: (
+  onCreateRegion: (
     type: CropRegionAreaType,
     coords: { x: number; y: number; width: number; height: number }
   ) => Promise<void>
-  onUpdateRegion?: (
+  onUpdateRegion: (
     index: number,
     coords: { x: number; y: number; width: number; height: number }
   ) => Promise<void>
@@ -38,7 +37,6 @@ type CropRegionEditorProps = {
 const CropRegionEditor = ({
   examId,
   areas,
-  setAreas,
   onCreateRegion,
   onUpdateRegion,
   disabled,
@@ -86,50 +84,26 @@ const CropRegionEditor = ({
       if (!examPageId) return
 
       // クリックした検出枠を採点領域として作成
-      if (onCreateRegion) {
-        await onCreateRegion("QUESTION_ANSWER", {
-          x: rect.x,
-          y: rect.y,
-          width: rect.width,
-          height: rect.height,
-        })
-      }
+      await onCreateRegion("QUESTION_ANSWER", {
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+      })
     },
     [examPageId, onCreateRegion]
   )
 
-  const handleUpdateArea = async (
-    index: number,
-    coords: { x: number; y: number; width: number; height: number }
-  ) => {
-    if (onUpdateRegion) {
-      // Use efficient individual update
-      await onUpdateRegion(index, coords)
-    } else {
-      // Fall back to bulk update
-      const newAreas = [...areas]
-      newAreas[index] = { ...newAreas[index], ...coords }
-      setAreas(newAreas)
-    }
-  }
-
   const handleDeleteArea = async (index: number) => {
     const areaToDelete = areas[index]
+    if (!areaToDelete.id) return
 
-    // DBから削除（IDがある場合のみ）
-    if (areaToDelete.id) {
-      try {
-        await deleteCropRegion.mutateAsync(areaToDelete.id)
-      } catch {
-        // 失敗の知らせは中央のトーストが出す。ここでは削除を中断するだけ
-        return
-      }
+    try {
+      await deleteCropRegion.mutateAsync(areaToDelete.id)
+      setSelectedAreaIndex(null)
+    } catch {
+      // 失敗の知らせは中央のトーストが出す。ここでは選択を保つだけ
     }
-
-    // ローカルステートから削除
-    const newAreas = areas.filter((_, i) => i !== index)
-    setAreas(newAreas)
-    setSelectedAreaIndex(null)
   }
 
   const addArea = async (
@@ -141,73 +115,13 @@ const CropRegionEditor = ({
       return
     }
 
-    const coords = {
+    await onCreateRegion(type, {
       x: customCoords?.x ?? 0.05,
       y: customCoords?.y ?? 0.05,
       width: customCoords?.width ?? 0.1,
       height: customCoords?.height ?? 0.05,
-    }
-
-    if (onCreateRegion) {
-      // Use efficient individual creation
-      await onCreateRegion(type, coords)
-      setSelectedAreaIndex(areas.length) // Select the newly added area
-    } else {
-      // Fall back to bulk update
-      const newAreaBase = {
-        ...coords,
-        points: null,
-        label: "",
-        examPageId: examPageId,
-      }
-
-      // switch に default があるため初期値は不要（必ずどこかで代入される）
-      let newAreaSpecifics: Pick<CropRegionArea, "label" | "type" | "points">
-      switch (type) {
-        case "STUDENT_NAME":
-          newAreaSpecifics = {
-            label: "氏名",
-            type: "STUDENT_NAME",
-          }
-          break
-        case "STUDENT_ID":
-          newAreaSpecifics = {
-            label: "生徒番号",
-            type: "STUDENT_ID",
-          }
-          break
-        case "QUESTION_ANSWER":
-          newAreaSpecifics = {
-            label: `設問 ${
-              areas.filter((area) => area.type === "QUESTION_ANSWER").length + 1
-            }`,
-            type: "QUESTION_ANSWER",
-            points: defaultPoints,
-          }
-          break
-        case "TOTAL_SCORE":
-          newAreaSpecifics = {
-            label: "合計点",
-            type: "TOTAL_SCORE",
-          }
-          break
-        case "SUBTOTAL_SCORE":
-          newAreaSpecifics = {
-            label: "小計",
-            type: "SUBTOTAL_SCORE",
-          }
-          break
-        default:
-          newAreaSpecifics = { label: "新規エリア", type: "OTHER" }
-      }
-
-      const newArea = { ...newAreaBase, ...newAreaSpecifics } as CropRegionArea
-
-      const newAreasArray = [...areas, newArea]
-
-      setAreas(newAreasArray)
-      setSelectedAreaIndex(areas.length) // 新しく追加されたエリアを選択
-    }
+    })
+    setSelectedAreaIndex(areas.length) // 新しく追加されたエリアを選択
   }
 
   return (
@@ -221,7 +135,7 @@ const CropRegionEditor = ({
           selectedAreaIndex={selectedAreaIndex}
           onSelectArea={setSelectedAreaIndex}
           onAddAreaByDrag={addArea}
-          onUpdateArea={handleUpdateArea}
+          onUpdateArea={onUpdateRegion}
           onDeleteArea={handleDeleteArea}
           disabled={disabled}
           examPageId={examPageId}
