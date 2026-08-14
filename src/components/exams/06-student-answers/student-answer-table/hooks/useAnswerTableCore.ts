@@ -1,3 +1,4 @@
+import { useMutation } from "@tanstack/react-query"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
@@ -12,6 +13,7 @@ import type {
   ExamPageColumn,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
+import { deleteStudentAnswerMutation } from "@/queries/answerSheet"
 import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 
 /**
@@ -53,7 +55,6 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
   const {
     nameRegionExamPageIds,
     canvasRef,
-    checkNameRegionAvailability,
     drawNameRegionCanvas,
   } = useNameRegion(examId)
 
@@ -108,36 +109,27 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
     })
 
   const [previewMode, setPreviewMode] = useState<PreviewMode>("full")
+  const deleteStudentAnswer = useMutation(deleteStudentAnswerMutation(examId))
 
   // 答案削除処理（view の右クリックメニューから使用。upload では削除UIは出さない）
   const handleDeleteAnswerSheet = useCallback(
     async (fileId: string) => {
       try {
         const { deletedSummary } =
-          await window.electronAPI.deleteStudentAnswer(fileId)
+          await deleteStudentAnswer.mutateAsync(fileId)
 
-        if (onReloadData) {
-          await onReloadData()
-        }
         // 件数は出さない（未採点の初期化行を含む行数とモーダルの表示件数がずれるため）
         toast.success(
           deletedSummary.hasScoreData
             ? "答案画像と採点データを削除しました"
             : "答案画像を削除しました"
         )
-      } catch (error) {
-        toast.error("答案を削除できませんでした", {
-          description: error instanceof Error ? error.message : undefined,
-        })
+      } catch {
+        // 失敗の知らせは中央のトーストが出す
       }
     },
-    [onReloadData]
+    [deleteStudentAnswer]
   )
-
-  // 氏名領域の可用性チェック
-  useEffect(() => {
-    checkNameRegionAvailability()
-  }, [checkNameRegionAvailability])
 
   // 答案がない生徒の自動無効化（DBベース）
   useEffect(() => {

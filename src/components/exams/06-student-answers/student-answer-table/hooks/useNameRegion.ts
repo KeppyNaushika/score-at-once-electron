@@ -1,31 +1,24 @@
-import { useCallback, useRef, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useCallback, useMemo, useRef } from "react"
+
+import { cropRegionsQuery } from "@/queries/cropRegion"
 
 /** 答案画像から氏名欄領域をクリッピングして表示するためのフック */
 export function useNameRegion(examId: string) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const { data: cropRegions } = useQuery(cropRegionsQuery(examId))
+
   // 氏名欄（STUDENT_NAME の CropRegion）を持つ ExamPage の id 集合。
   // 序数 pageNumber ではなく id でキーする（ページ挿入・並べ替えでずれないため）。
-  const [nameRegionExamPageIds, setNameRegionExamPageIds] = useState<
-    Set<string>
-  >(new Set())
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  // 氏名欄領域の存在確認
-  const checkNameRegionAvailability = useCallback(async () => {
-    try {
-      const cropRegions =
-        await window.electronAPI.getCropRegionsByExamId(examId)
-
-      setNameRegionExamPageIds(
-        new Set(
-          cropRegions
-            .filter((region) => region.type === "STUDENT_NAME")
-            .map((region) => region.examPageId)
-        )
-      )
-    } catch (error) {
-      console.error("氏名欄領域確認エラー:", error)
-    }
-  }, [examId])
+  const nameRegionExamPageIds = useMemo(
+    () =>
+      new Set(
+        (cropRegions ?? [])
+          .filter((cropRegion) => cropRegion.type === "STUDENT_NAME")
+          .map((cropRegion) => cropRegion.examPageId)
+      ),
+    [cropRegions]
+  )
 
   // 氏名欄クリッピング用のcanvas描画。表示ソース（データURL）と対象ページの id を受け取る
   // （答案の同定・実体には依存しない＝表示専用の純関数）。列に対応する ExamPage が無い
@@ -39,10 +32,7 @@ export function useNameRegion(examId: string) {
 
       try {
         // CropRegionからSTUDENT_NAME領域を取得
-        const cropRegions =
-          await window.electronAPI.getCropRegionsByExamId(examId)
-
-        const nameRegion = cropRegions.find(
+        const nameRegion = (cropRegions ?? []).find(
           (region) =>
             region.type === "STUDENT_NAME" && region.examPageId === examPageId
         )
@@ -97,13 +87,12 @@ export function useNameRegion(examId: string) {
         return null
       }
     },
-    [examId]
+    [cropRegions]
   )
 
   return {
     nameRegionExamPageIds,
     canvasRef,
-    checkNameRegionAvailability,
     drawNameRegionCanvas,
   }
 }

@@ -1,3 +1,4 @@
+import { useMutation } from "@tanstack/react-query"
 import { useEffect, useMemo, useRef } from "react"
 
 import type { AnswerTableRow } from "@/components/exams/06-student-answers/student-answer-table/types"
@@ -5,6 +6,7 @@ import type {
   ExamPageColumn,
   UnsavedAnswerImage,
 } from "@/components/exams/06-student-answers/types"
+import { correctImageMutation } from "@/queries/omr"
 
 interface UseMarkerCorrectionArgs {
   files: UnsavedAnswerImage[]
@@ -91,6 +93,7 @@ export function useMarkerCorrection({
   markerAvailableExamPageIds,
   onFilesChange,
 }: UseMarkerCorrectionArgs): UseMarkerCorrectionResult {
+  const correctImage = useMutation(correctImageMutation())
   const originalBuffersRef = useRef<Map<string, ArrayBuffer>>(new Map())
   const runIdRef = useRef(0)
   const filesRef = useRef(files)
@@ -153,10 +156,10 @@ export function useMarkerCorrection({
           try {
             const sendBuffer = new Uint8Array(origBuffer.byteLength)
             sendBuffer.set(new Uint8Array(origBuffer))
-            const result = await window.electronAPI.omr.correctImage(
-              target.id,
-              sendBuffer
-            )
+            const result = await correctImage.mutateAsync({
+              examPageId: target.id,
+              buffer: sendBuffer,
+            })
             if (result.status === "corrected") {
               const correctedAB = result.correctedBuffer.buffer.slice(
                 result.correctedBuffer.byteOffset,
@@ -217,7 +220,7 @@ export function useMarkerCorrection({
     }
 
     processTasks()
-  }, [tasks, onFilesChange])
+  }, [tasks, onFilesChange, correctImage])
 
   return { correctingFileIds }
 }

@@ -1,4 +1,4 @@
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
@@ -8,7 +8,9 @@ import type {
   UploadData,
 } from "@/components/exams/06-student-answers/types"
 import { usePdfPasswordConversion } from "@/hooks/usePdfPasswordConversion"
-import { queryKeys } from "@/lib/queryKeys"
+import { uploadStudentAnswersMutation } from "@/queries/answerSheet"
+import { examDetailQuery, updateExamMutation } from "@/queries/exam"
+import { masterMarkersQuery } from "@/queries/omr"
 
 /** 答案ファイルのドロップ・変換・アップロード処理を統合するフック */
 export function useStudentAnswerUpload(
@@ -19,7 +21,10 @@ export function useStudentAnswerUpload(
   ) => void,
   mode: "upload" | "view" = "upload"
 ) {
-  const queryClient = useQueryClient()
+  const updateExam = useMutation(updateExamMutation(examId ?? "", undefined))
+  const uploadStudentAnswers = useMutation(
+    uploadStudentAnswersMutation(examId ?? "")
+  )
 
   // State管理
   const [isUploading, setIsUploading] = useState(false)
@@ -133,11 +138,8 @@ export function useStudentAnswerUpload(
 
   // 試験の markerCorrectionEnabled をトグルの初期値にする
   const { data: exam } = useQuery({
-    queryKey: queryKeys.exam.detail(examId ?? ""),
-    queryFn:
-      mode === "upload" && examId
-        ? () => window.electronAPI.getExam(examId)
-        : skipToken,
+    ...examDetailQuery(examId ?? ""),
+    enabled: mode === "upload" && Boolean(examId),
   })
   const [seededExamId, setSeededExamId] = useState<string | null>(null)
   if (exam && seededExamId !== exam.id) {
@@ -147,32 +149,19 @@ export function useStudentAnswerUpload(
 
   // トグル変更時はDBにも反映（次回アップロード時の初期値となる）
   const setMarkerCorrectionEnabled = useCallback(
-    async (enabled: boolean) => {
+    (enabled: boolean) => {
       setMarkerCorrectionEnabledState(enabled)
       if (!examId) return
-      try {
-        await window.electronAPI.updateExam(examId, {
-          markerCorrectionEnabled: enabled,
-        })
-      } catch (error) {
-        console.error("Failed to persist markerCorrectionEnabled:", error)
-        toast.error("マーカー補正の設定を保存できませんでした")
-      }
-      // 試験のキャッシュは他の画面も見ているので、紐づくものごと取り直す
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.exam.scope(examId),
-      })
+      // 試験のキャッシュは他の画面も見ているので、紐づくものごと取り直す（meta）
+      updateExam.mutate({ markerCorrectionEnabled: enabled })
     },
-    [examId, queryClient]
+    [examId, updateExam]
   )
 
   // マスターマーカー検出（補正可否判定のみ。トグル状態は試験設定に従う）
   const { data: masterMarkers } = useQuery({
-    queryKey: queryKeys.exam.masterMarkers(examId ?? ""),
-    queryFn:
-      mode === "upload" && examId
-        ? () => window.electronAPI.omr.detectMasterMarkers(examId)
-        : skipToken,
+    ...masterMarkersQuery(examId ?? ""),
+    enabled: mode === "upload" && Boolean(examId),
   })
 
   // マーカーを検出できたページ（同定は ExamPage.id）
@@ -257,10 +246,7 @@ export function useStudentAnswerUpload(
           }
         }
 
-        const uploaded = await window.electronAPI.uploadStudentAnswers(
-          examId,
-          uploadData
-        )
+        const uploaded = await uploadStudentAnswers.mutateAsync(uploadData)
 
         toast.success(`${uploaded.length}件の答案をアップロードしました`)
         setFiles([])
@@ -268,15 +254,13 @@ export function useStudentAnswerUpload(
           onCorrectionStatusUpdate?.(correctionMap)
         }
         onUploadComplete?.()
-      } catch (error) {
-        toast.error("答案をアップロードできませんでした", {
-          description: error instanceof Error ? error.message : undefined,
-        })
+      } catch {
+        // 失敗の知らせは中央のトーストが出す
       } finally {
         setIsUploading(false)
       }
     },
-    [onUploadComplete, onCorrectionStatusUpdate, examId]
+    [onUploadComplete, onCorrectionStatusUpdate, uploadStudentAnswers]
   )
 
   return {

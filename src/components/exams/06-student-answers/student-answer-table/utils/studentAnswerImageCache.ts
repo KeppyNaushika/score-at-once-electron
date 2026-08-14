@@ -2,6 +2,8 @@
 // グリッドのセルで一度読み込んだ画像を、ドラッグ中の DragOverlay プレビュー（別インスタンスの
 // FilePreviewCell）が即座に再利用できるようにする（再取得による灰色アイコン→画像のポップインを防ぐ）。
 // 同一画像の重複 IPC 取得の削減にもなる。
+import { readImageData } from "@/queries/misc"
+
 const imageDataUrlCache = new Map<string, string>()
 
 /** 既に読み込み済みなら同期でデータURLを返す（未読込は undefined） */
@@ -35,7 +37,7 @@ export async function loadStudentAnswerImageSource(
   }
 
   try {
-    const dataUrl = await window.electronAPI.getImageData(imagePath)
+    const dataUrl = await readImageData(imagePath)
     imageDataUrlCache.set(imagePath, dataUrl)
     return dataUrl
   } catch (error) {

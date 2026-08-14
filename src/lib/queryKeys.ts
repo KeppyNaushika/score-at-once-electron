@@ -39,11 +39,6 @@ export const queryKeys = {
       userId: string | undefined
     ) => ["annotation", "byExamStudent", examStudentId, userId] as const,
   },
-  studentAnswerImage: {
-    /** 答案1枚に載っている採点結果の要約（削除確認で読む） */
-    scoreSummary: (studentAnswerImageId: string) =>
-      ["studentAnswerImage", studentAnswerImageId, "scoreSummary"] as const,
-  },
   studentExamResults: {
     detail: (studentId: string) => ["studentExamResults", studentId] as const,
   },
@@ -100,9 +95,6 @@ export const queryKeys = {
     /** 採点マーク・点数の重ね描き設定（07 の個別表示が読む） */
     answerOverlaySettings: (examId: string) =>
       ["exam", examId, "answerOverlaySettings"] as const,
-    /** 模範解答のマスターマーカー検出結果（補正の可否判定） */
-    masterMarkers: (examId: string) =>
-      ["exam", examId, "masterMarkers"] as const,
     /** Excel出力のプレビュー（選択した受験者ぶん） */
     excelPreview: (examId: string, examStudentIds: readonly string[]) =>
       ["exam", examId, "excelPreview", [...examStudentIds]] as const,

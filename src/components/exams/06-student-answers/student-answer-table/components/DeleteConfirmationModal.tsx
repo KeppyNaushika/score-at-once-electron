@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import type { StudentAnswerScoreSummary } from "@/electron-src/lib/prisma/studentAnswer/crud"
-import { queryKeys } from "@/lib/queryKeys"
+import { studentAnswerScoreSummaryQuery } from "@/queries/answerSheet"
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean
@@ -62,10 +62,7 @@ function DeleteConfirmationBody({
     data: summary = null,
     isPending: isLoadingSummary,
     error,
-  } = useQuery({
-    queryKey: queryKeys.studentAnswerImage.scoreSummary(fileId),
-    queryFn: () => window.electronAPI.getStudentAnswerScoreSummary(fileId),
-  })
+  } = useQuery(studentAnswerScoreSummaryQuery(fileId))
   const summaryError = error ? error.message : null
 
   const handleConfirm = () => {

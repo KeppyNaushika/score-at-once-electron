@@ -8,7 +8,9 @@
  * 同じ pageNumber のページが互いを上書きして片方の設定が消えたりする。
  */
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { renderHook, waitFor } from "@testing-library/react"
+import React from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { useNameRegion } from "@/components/exams/06-student-answers/student-answer-table/hooks/useNameRegion"
@@ -37,6 +39,17 @@ function installElectronAPI(cropRegions: MockCropRegion[]) {
   return { getCropRegionsByExamId, getExamPagesByExamId }
 }
 
+/** 取得は TanStack Query が持つので、フックの検証にも provider が要る */
+function renderUseNameRegion() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return renderHook(() => useNameRegion(EXAM_ID), {
+    wrapper: ({ children }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children),
+  })
+}
+
 afterEach(() => {
   Object.defineProperty(window, "electronAPI", {
     value: undefined,
@@ -52,8 +65,7 @@ describe("useNameRegion", () => {
       { id: "region-b", examPageId: PAGE_B, type: "ANSWER" },
     ])
 
-    const { result } = renderHook(() => useNameRegion(EXAM_ID))
-    await result.current.checkNameRegionAvailability()
+    const { result } = renderUseNameRegion()
 
     await waitFor(() => {
       expect(result.current.nameRegionExamPageIds.has(PAGE_A)).toBe(true)
@@ -69,8 +81,7 @@ describe("useNameRegion", () => {
       { id: "region-b", examPageId: PAGE_B, type: "STUDENT_NAME" },
     ])
 
-    const { result } = renderHook(() => useNameRegion(EXAM_ID))
-    await result.current.checkNameRegionAvailability()
+    const { result } = renderUseNameRegion()
 
     await waitFor(() => {
       expect(result.current.nameRegionExamPageIds.size).toBe(2)
@@ -84,8 +95,7 @@ describe("useNameRegion", () => {
       [{ id: "region-a", examPageId: PAGE_A, type: "STUDENT_NAME" }]
     )
 
-    const { result } = renderHook(() => useNameRegion(EXAM_ID))
-    await result.current.checkNameRegionAvailability()
+    const { result } = renderUseNameRegion()
 
     // 実 canvas を与えないと描画前に打ち切られ、以降の解決経路を検証できない
     result.current.canvasRef.current = document.createElement("canvas")
@@ -99,19 +109,20 @@ describe("useNameRegion", () => {
   })
 
   it("列に対応する ExamPage が無い孤立答案（examPageId が null）はクリップしない", async () => {
-    const { getCropRegionsByExamId } = installElectronAPI([
+    installElectronAPI([
       { id: "region-a", examPageId: PAGE_A, type: "STUDENT_NAME" },
     ])
 
-    const { result } = renderHook(() => useNameRegion(EXAM_ID))
+    const { result } = renderUseNameRegion()
     result.current.canvasRef.current = document.createElement("canvas")
 
+    // 採点領域はフックのマウント時に引くので、ここで「引いていないこと」は見ない
+    // （見るべきは、対象ページが無いときにクリップ結果を返さないこと）
     const canvas = await result.current.drawNameRegionCanvas(
       "data:image/png;base64,",
       null
     )
 
     expect(canvas).toBeNull()
-    expect(getCropRegionsByExamId).not.toHaveBeenCalled()
   })
 })

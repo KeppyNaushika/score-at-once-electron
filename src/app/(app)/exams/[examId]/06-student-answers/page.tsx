@@ -55,7 +55,7 @@ export default function StudentAnswersPage() {
     handleResetChanges,
     openConfirmModal,
     closeConfirmModal,
-  } = usePendingChanges(loadData, students, examPages)
+  } = usePendingChanges(examId, loadData, students, examPages)
 
   // Navigation guard
   const isDirty = uploadFileCount > 0 || pendingChanges.length > 0

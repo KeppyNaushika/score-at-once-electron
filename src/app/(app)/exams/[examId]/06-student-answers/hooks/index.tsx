@@ -2,63 +2,60 @@
  * Hooks for 06-student-answers page - quick inline version
  */
 
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { PendingChange } from "@/components/exams/06-student-answers/types"
 import type { PlacementScorePolicy } from "@/electron-src/lib/prisma/studentAnswer/placementApply"
+import {
+  applyStudentAnswerPlacementsMutation,
+  studentAnswersDatasetQuery,
+} from "@/queries/answerSheet"
 import type {
   StudentAnswerDatasetExamPage,
   StudentAnswerDatasetExamStudent,
 } from "@/types/prismaExtensions"
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_EXAM_STUDENTS: StudentAnswerDatasetExamStudent[] = []
+const EMPTY_EXAM_PAGES: StudentAnswerDatasetExamPage[] = []
+
 export function useStudentAnswersData(examId: string) {
-  const [students, setStudents] = useState<StudentAnswerDatasetExamStudent[]>(
-    []
+  const queryClient = useQueryClient()
+  // 受験生徒と模範解答ページ（配置済み答案を子に持つ）を Prisma include のまま保持する。
+  // 初回だけ全画面スピナー、削除・反映後の取り直しは背後で差し替わる（isPending は
+  // キャッシュがある間 false のまま）
+  const { data: dataset, isPending: isLoading } = useQuery(
+    studentAnswersDatasetQuery(examId)
   )
-  // 列＝ExamPage 実体（配置済み答案を子に持つ）を Prisma include のまま保持する。
-  const [examPages, setExamPages] = useState<StudentAnswerDatasetExamPage[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  // 初回ロードのみ全画面スピナーを表示する。削除・反映後の再取得は
-  // バックグラウンドで差し替え、画面のチラつきを防ぐ。
-  const hasLoadedRef = useRef(false)
 
-  const loadData = useCallback(async () => {
-    if (!examId) return
-
-    try {
-      if (!hasLoadedRef.current) {
-        setIsLoading(true)
-      }
-
-      // Exam 根の複合 1 クエリ（examStudents + examPages(+answers)）をそのまま保持する。
-      const dataset = await window.electronAPI.getStudentAnswersDataset(examId)
-      setStudents(dataset.examStudents)
-      setExamPages(dataset.examPages)
-    } catch (error) {
-      toast.error("データを読み込めませんでした", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    } finally {
-      hasLoadedRef.current = true
-      setIsLoading(false)
-    }
-  }, [examId])
+  const loadData = useCallback(
+    () =>
+      queryClient.invalidateQueries({
+        queryKey: studentAnswersDatasetQuery(examId).queryKey,
+      }),
+    [examId, queryClient]
+  )
 
   return {
-    students,
-    examPages,
+    students: dataset?.examStudents ?? EMPTY_EXAM_STUDENTS,
+    examPages: dataset?.examPages ?? EMPTY_EXAM_PAGES,
     isLoading,
     loadData,
   }
 }
 
 export function usePendingChanges(
+  examId: string,
   onDataReload: () => Promise<void>,
   students?: StudentAnswerDatasetExamStudent[],
   examPages?: StudentAnswerDatasetExamPage[]
 ) {
+  const applyStudentAnswerPlacements = useMutation(
+    applyStudentAnswerPlacementsMutation(examId)
+  )
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
   const [affectedCells, setAffectedCells] = useState<Set<string>>(new Set())
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
@@ -142,49 +139,40 @@ export function usePendingChanges(
 
   const handleApplyChanges = useCallback(
     async (policies: Record<string, PlacementScorePolicy>) => {
-      try {
-        // 各変更を最終位置（examPageId 直指定）＋採点方針(carry/discard)付きの move へ。
-        // ページ変化の move は carry を受け付けない（バックエンドでもガード）。
-        const moves = pendingChanges.map((change) => {
-          const pageChanged =
-            change.fromPosition.examPageId !== change.toPosition.examPageId
-          const requested = policies[change.id] ?? "carry"
-          const scorePolicy: PlacementScorePolicy = pageChanged
-            ? "discard"
-            : requested
-          return {
-            fileId: change.movedFileId,
-            finalExamStudentId: change.toPosition.examStudentId,
-            finalExamPageId: change.toPosition.examPageId,
-            scorePolicy,
-          }
-        })
+      // 各変更を最終位置（examPageId 直指定）＋採点方針(carry/discard)付きの move へ。
+      // ページ変化の move は carry を受け付けない（バックエンドでもガード）。
+      const moves = pendingChanges.map((change) => {
+        const pageChanged =
+          change.fromPosition.examPageId !== change.toPosition.examPageId
+        const requested = policies[change.id] ?? "carry"
+        const scorePolicy: PlacementScorePolicy = pageChanged
+          ? "discard"
+          : requested
+        return {
+          fileId: change.movedFileId,
+          finalExamStudentId: change.toPosition.examStudentId,
+          finalExamPageId: change.toPosition.examPageId,
+          scorePolicy,
+        }
+      })
 
-        await window.electronAPI.applyStudentAnswerPlacements(moves)
+      // 失敗はそのまま投げ返す（呼び出し側がモーダルを閉じない）。知らせと
+      // DB からの取り直しは中央が行う
+      await applyStudentAnswerPlacements.mutateAsync(moves)
 
-        setPendingChanges([])
-        setAffectedCells(new Set())
-        await onDataReload()
+      setPendingChanges([])
+      setAffectedCells(new Set())
 
-        const discardCount = moves.filter(
-          (move) => move.scorePolicy === "discard"
-        ).length
-        toast.success(
-          discardCount > 0
-            ? `${moves.length}件を反映しました（採点破棄 ${discardCount}件）`
-            : `${moves.length}件を反映しました`
-        )
-      } catch (error) {
-        console.error("変更の適用に失敗しました:", error)
-
-        // エラー時も結局DB再読み込みで解決（resetFn不要）
-        await onDataReload()
-
-        toast.error("変更の適用に失敗しました。元の状態に戻しました。")
-        throw error
-      }
+      const discardCount = moves.filter(
+        (move) => move.scorePolicy === "discard"
+      ).length
+      toast.success(
+        discardCount > 0
+          ? `${moves.length}件を反映しました（採点破棄 ${discardCount}件）`
+          : `${moves.length}件を反映しました`
+      )
     },
-    [pendingChanges, onDataReload]
+    [pendingChanges, applyStudentAnswerPlacements]
   )
 
   const handleResetChanges = useCallback(async () => {

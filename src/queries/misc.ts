@@ -17,3 +17,11 @@ export const fileProtocolPathQuery = (relativePath: string) =>
     queryKey: ["fileProtocolPath", relativePath] as const,
     queryFn: () => window.electronAPI.resolveFileProtocolPath(relativePath),
   })
+
+/**
+ * 画像を Base64 のデータURLで読む。
+ *
+ * 呼び出し元（答案グリッドのセル）はフックの外なので、そのまま関数として出す。
+ */
+export const readImageData = (imagePath: string) =>
+  window.electronAPI.getImageData(imagePath)
