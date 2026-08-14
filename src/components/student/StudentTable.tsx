@@ -1,7 +1,7 @@
 "use client"
 
 import type { Prisma } from "@prisma/client"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Download,
   Edit,
@@ -42,7 +42,14 @@ import {
 } from "@/components/ui/table"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
-import { classroomListQuery, studentListQuery } from "@/queries/student"
+import {
+  classroomListQuery,
+  createStudentMutation,
+  deleteStudentMutation,
+  exportStudentsExcelMutation,
+  studentListQuery,
+  updateStudentMutation,
+} from "@/queries/student"
 import type { ClassroomWithMemberships } from "@/types/prismaExtensions"
 import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
@@ -99,7 +106,6 @@ export default function StudentTable() {
     useState(false)
   const [isArchiveImportModalOpen, setIsArchiveImportModalOpen] =
     useState(false)
-  const [isExporting, setIsExporting] = useState(false)
 
   // Data fetching
   // Filter students
@@ -215,70 +221,50 @@ export default function StudentTable() {
     setIsStudentModalOpen(true)
   }
 
-  const handleDeleteStudent = async (studentId: string) => {
-    if (window.confirm("本当にこの生徒を削除しますか？")) {
-      try {
-        await window.electronAPI.deleteStudent(studentId)
-        await refreshStudents()
+  const handleDeleteStudent = (studentId: string) => {
+    if (!window.confirm("本当にこの生徒を削除しますか？")) return
+    deleteStudent.mutate(studentId, {
+      onSuccess: () =>
         setSelectedStudentIds((prev) => {
-          const newSet = new Set(prev)
-          newSet.delete(studentId)
-          return newSet
-        })
-      } catch (error) {
-        console.error("Failed to delete student:", error)
-        alert("生徒の削除に失敗しました。")
-      }
-    }
+          const remaining = new Set(prev)
+          remaining.delete(studentId)
+          return remaining
+        }),
+    })
   }
 
-  const handleCreateStudent = async (
-    studentData: Prisma.StudentCreateInput
-  ) => {
-    try {
-      await window.electronAPI.createStudent(studentData)
-      await refreshStudents()
-      setIsStudentModalOpen(false)
-    } catch (error) {
-      console.error("Failed to create student:", error)
-      alert("生徒の作成に失敗しました。")
-    }
+  const handleCreateStudent = (studentData: Prisma.StudentCreateInput) => {
+    createStudent.mutate(studentData, {
+      onSuccess: () => setIsStudentModalOpen(false),
+    })
   }
 
-  const handleUpdateStudent = async (
+  const handleUpdateStudent = (
     id: string,
     studentData: Prisma.StudentUpdateInput
   ) => {
-    try {
-      await window.electronAPI.updateStudent(id, studentData)
-      await refreshStudents()
-      setIsStudentModalOpen(false)
-    } catch (error) {
-      console.error("Failed to update student:", error)
-      alert("生徒の更新に失敗しました。")
-    }
+    updateStudent.mutate(
+      { id, student: studentData },
+      { onSuccess: () => setIsStudentModalOpen(false) }
+    )
   }
 
-  const handleExportExcel = async () => {
+  const handleExportExcel = () => {
     if (selectedStudentIds.size === 0) return
-    setIsExporting(true)
-    try {
-      const result = await window.electronAPI.exportStudentsExcel(
-        Array.from(selectedStudentIds)
-      )
-      if (!result.canceled) {
+    exportStudentsExcel.mutate(Array.from(selectedStudentIds), {
+      onSuccess: (result) => {
+        if (result.canceled) return
         toast.success(
           `${selectedStudentIds.size}名の生徒データをExcelに出力しました`
         )
-      }
-    } catch (error) {
-      toast.error("エクスポートに失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    } finally {
-      setIsExporting(false)
-    }
+      },
+    })
   }
+
+  const createStudent = useMutation(createStudentMutation())
+  const updateStudent = useMutation(updateStudentMutation())
+  const deleteStudent = useMutation(deleteStudentMutation())
+  const exportStudentsExcel = useMutation(exportStudentsExcelMutation())
 
   const refreshData = async () => {
     await Promise.all([refreshStudents(), refreshClassrooms()])
@@ -336,10 +322,10 @@ export default function StudentTable() {
                 onClick={handleExportExcel}
                 variant="outline"
                 className="rounded-lg"
-                disabled={isExporting}
+                disabled={exportStudentsExcel.isPending}
               >
                 <Download className="mr-2 h-4 w-4" />
-                {isExporting ? "出力中..." : "Excel出力"}
+                {exportStudentsExcel.isPending ? "出力中..." : "Excel出力"}
               </Button>
               <Button
                 onClick={() => setIsArchiveExportDialogOpen(true)}

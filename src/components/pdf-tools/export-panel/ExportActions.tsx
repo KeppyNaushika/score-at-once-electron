@@ -1,11 +1,18 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { FileImage, Files, FileText, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { computeNUpLayout } from "@/lib/pdf-tools/nUpLayout"
+import {
+  exportPdfAsPngMutation,
+  mergePdfsMutation,
+  selectPdfSavePathMutation,
+  splitPdfMutation,
+} from "@/queries/pdfTools"
 import type {
   ImportedFile,
   NUpLayout,
@@ -47,6 +54,11 @@ export default function ExportActions({
       }
     })
 
+  const selectSavePath = useMutation(selectPdfSavePathMutation())
+  const mergePdfs = useMutation(mergePdfsMutation())
+  const splitPdf = useMutation(splitPdfMutation())
+  const exportAsPng = useMutation(exportPdfAsPngMutation())
+
   const handleExportMergedPdf = async () => {
     if (outputPages.length === 0) {
       toast.error("出力するページがありません")
@@ -54,7 +66,7 @@ export default function ExportActions({
     }
 
     // 保存先を選択
-    const pathResult = await window.electronAPI.pdfTools.selectSavePath({
+    const pathResult = await selectSavePath.mutateAsync({
       type: "pdf",
       defaultName: "output.pdf",
     })
@@ -65,7 +77,7 @@ export default function ExportActions({
     onProcessingChange(true)
 
     try {
-      const outputPath = await window.electronAPI.pdfTools.mergePdfs({
+      const outputPath = await mergePdfs.mutateAsync({
         pages: buildPageInputs(),
         outputPath: pathResult.path,
       })
@@ -87,7 +99,7 @@ export default function ExportActions({
     }
 
     // 保存先フォルダを選択
-    const pathResult = await window.electronAPI.pdfTools.selectSavePath({
+    const pathResult = await selectSavePath.mutateAsync({
       type: "directory",
     })
 
@@ -97,7 +109,7 @@ export default function ExportActions({
     onProcessingChange(true)
 
     try {
-      const outputPaths = await window.electronAPI.pdfTools.splitPdf({
+      const outputPaths = await splitPdf.mutateAsync({
         pages: buildPageInputs(),
         outputDir: pathResult.path,
       })
@@ -121,7 +133,7 @@ export default function ExportActions({
     }
 
     // 保存先フォルダを選択
-    const pathResult = await window.electronAPI.pdfTools.selectSavePath({
+    const pathResult = await selectSavePath.mutateAsync({
       type: "directory",
     })
 
@@ -172,7 +184,7 @@ export default function ExportActions({
         })
       )
 
-      const outputPaths = await window.electronAPI.pdfTools.exportAsPng({
+      const outputPaths = await exportAsPng.mutateAsync({
         imageBuffers,
         outputDir: pathResult.path,
       })

@@ -1,11 +1,13 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { FileUp, Loader2 } from "lucide-react"
 import { type DragEvent, useCallback, useState } from "react"
 import { toast } from "sonner"
 
 import { PasswordDialog } from "@/components/ui/password-dialog"
 import { cn } from "@/lib/utils"
+import { selectPdfFilesMutation } from "@/queries/pdfTools"
 import type { ImportedFile } from "@/types/pdfTools.types"
 
 import { useImportedFiles } from "./hooks/useImportedFiles"
@@ -28,13 +30,14 @@ export default function FileDropzone({
     handlePasswordSubmit,
     handlePasswordCancel,
   } = useImportedFiles()
+  const selectPdfFiles = useMutation(selectPdfFilesMutation())
 
   // Electronダイアログでファイル選択
   const handleClick = useCallback(async () => {
     if (isProcessing || isLoading) return
 
     try {
-      const result = await window.electronAPI.pdfTools.selectFiles()
+      const result = await selectPdfFiles.mutateAsync()
       if (result.canceled || result.filePaths.length === 0) return
 
       setIsLoading(true)
@@ -50,7 +53,13 @@ export default function FileDropzone({
     } finally {
       setIsLoading(false)
     }
-  }, [isProcessing, isLoading, onFilesImported, processFilePaths])
+  }, [
+    isProcessing,
+    isLoading,
+    onFilesImported,
+    processFilePaths,
+    selectPdfFiles,
+  ])
 
   // ドラッグ&ドロップでファイル追加
   const handleDrop = useCallback(

@@ -3,6 +3,11 @@ import { toast } from "sonner"
 
 import { usePdfPasswordConversion } from "@/hooks/usePdfPasswordConversion"
 import { type ConvertedImage, PDF_RENDER_SCALE } from "@/lib/pdfConverter"
+import {
+  createDecryptedPdfCopy,
+  pathForFile,
+  readPdfInfo,
+} from "@/queries/pdfTools"
 import type { ImportedFile, SourcePdfMetadata } from "@/types/pdfTools.types"
 
 /** PDFファイルの読み込み・ページ情報取得・サムネイル生成を行うフック */
@@ -103,7 +108,7 @@ export function useImportedFiles() {
       for (const file of files) {
         try {
           // webUtils.getPathForFile でファイルパスを取得
-          const filePath = window.electronAPI.pdfTools.getPathForFile(file)
+          const filePath = pathForFile(file)
 
           const importedFile = await importFile(file, filePath)
           if (importedFile) {
@@ -160,7 +165,7 @@ async function readSourcePdfMetadata(
   filePath: string
 ): Promise<SourcePdfMetadata | null> {
   try {
-    const pdfInfo = await window.electronAPI.pdfTools.getPdfInfo(filePath)
+    const pdfInfo = await readPdfInfo(filePath)
     return {
       pageCount: pdfInfo.pageCount,
       pageWidth: pdfInfo.pageWidth,
@@ -175,7 +180,7 @@ async function readSourcePdfMetadata(
 
 /** 復号済みページ画像から一時PDF（復号済み複製）を作成し、そのパスを返す */
 async function createDecryptedCopy(images: ConvertedImage[]): Promise<string> {
-  return window.electronAPI.pdfTools.createDecryptedCopy({
+  return createDecryptedPdfCopy({
     pageImages: images.map((image) => new Uint8Array(image.buffer)),
     pixelsPerPoint: PDF_RENDER_SCALE,
   })

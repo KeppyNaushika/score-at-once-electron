@@ -29,3 +29,16 @@ export const bulkExportExamsMutation = () =>
       errorMessage: "試験を書き出せませんでした",
     },
   })
+
+export const exportStudentArchiveMutation = () =>
+  defineMutation({
+    mutationFn: (
+      input: Parameters<
+        typeof window.electronAPI.studentArchive.exportStudents
+      >[0]
+    ) => window.electronAPI.studentArchive.exportStudents(input),
+    meta: {
+      writesDatabase: false,
+      errorMessage: "生徒を書き出せませんでした",
+    },
+  })

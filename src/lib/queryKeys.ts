@@ -21,9 +21,6 @@ export const queryKeys = {
     detail: (userId: string | undefined, key: string) =>
       ["userPreference", userId, key] as const,
   },
-  tags: {
-    all: ["tags"] as const,
-  },
   students: {
     all: ["students"] as const,
   },

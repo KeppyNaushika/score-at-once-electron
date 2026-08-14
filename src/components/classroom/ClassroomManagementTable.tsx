@@ -1,9 +1,9 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { Download, Edit, PlusCircle, Search, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import ClassroomModal from "@/components/classroom/ClassroomModal"
@@ -22,7 +22,13 @@ import {
 } from "@/components/ui/table"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
-import { classroomListQuery } from "@/queries/student"
+import {
+  classroomListQuery,
+  createClassroomMutation,
+  deleteClassroomMutation,
+  exportClassroomsExcelMutation,
+  updateClassroomMutation,
+} from "@/queries/student"
 import type { ClassroomWithMemberships } from "@/types/prismaExtensions"
 
 // ソート用の型
@@ -39,17 +45,9 @@ interface ClassroomSortable {
 const EMPTY_CLASSROOMS: ClassroomWithMemberships[] = []
 
 export default function ClassroomManagementTable() {
-  const queryClient = useQueryClient()
   const router = useRouter()
   // 学級は全画面で共有するキャッシュから引く（この画面だけ取り直さない）
   const { data: classrooms = EMPTY_CLASSROOMS } = useQuery(classroomListQuery())
-  const refreshClassrooms = useCallback(
-    () =>
-      queryClient.invalidateQueries({
-        queryKey: classroomListQuery().queryKey,
-      }),
-    [queryClient]
-  )
   const [searchTerm, setSearchTerm] = useState("")
   const [isClassroomModalOpen, setIsClassroomModalOpen] = useState(false)
   const [classroomToEdit, setClassroomToEdit] =
@@ -59,7 +57,6 @@ export default function ClassroomManagementTable() {
   const [selectedClassroomIds, setSelectedClassroomIds] = useState<Set<string>>(
     new Set()
   )
-  const [isExporting, setIsExporting] = useState(false)
 
   // Filter classrooms
   const filteredClassrooms = useMemo(() => {
@@ -124,6 +121,11 @@ export default function ClassroomManagementTable() {
     setSelectedClassroomIds(newSet)
   }
 
+  const createClassroom = useMutation(createClassroomMutation())
+  const updateClassroom = useMutation(updateClassroomMutation())
+  const deleteClassroom = useMutation(deleteClassroomMutation())
+  const exportClassroomsExcel = useMutation(exportClassroomsExcelMutation())
+
   // Event handlers
   const handleAddNewClassroom = () => {
     setClassroomToEdit(null)
@@ -135,66 +137,46 @@ export default function ClassroomManagementTable() {
     setIsClassroomModalOpen(true)
   }
 
-  const handleDeleteClassroom = async (classroomId: string) => {
-    if (window.confirm("本当にこの学級を削除しますか？")) {
-      try {
-        await window.electronAPI.deleteClassroom(classroomId)
-        await refreshClassrooms()
+  const handleDeleteClassroom = (classroomId: string) => {
+    if (!window.confirm("本当にこの学級を削除しますか？")) return
+    deleteClassroom.mutate(classroomId, {
+      onSuccess: () =>
         setSelectedClassroomIds((prev) => {
-          const newSet = new Set(prev)
-          newSet.delete(classroomId)
-          return newSet
-        })
-      } catch (error) {
-        console.error("Failed to delete class:", error)
-        alert("学級の削除に失敗しました。")
-      }
-    }
+          const remaining = new Set(prev)
+          remaining.delete(classroomId)
+          return remaining
+        }),
+    })
   }
 
-  const handleSaveClassroom = async (classroomData: {
+  const handleSaveClassroom = (classroomData: {
     name: string
     classroomCode?: string
     grade?: number
     description?: string
     isVisible?: boolean
   }) => {
-    try {
-      if (classroomToEdit) {
-        await window.electronAPI.updateClassroom({
-          id: classroomToEdit.id,
-          ...classroomData,
-        })
-      } else {
-        await window.electronAPI.createClassroom(classroomData)
-      }
-      await refreshClassrooms()
-      setIsClassroomModalOpen(false)
-    } catch (error) {
-      console.error("Failed to save class:", error)
-      alert("学級の保存に失敗しました。")
+    const closeModal = { onSuccess: () => setIsClassroomModalOpen(false) }
+    if (classroomToEdit) {
+      updateClassroom.mutate(
+        { id: classroomToEdit.id, ...classroomData },
+        closeModal
+      )
+      return
     }
+    createClassroom.mutate(classroomData, closeModal)
   }
 
-  const handleExportExcel = async () => {
+  const handleExportExcel = () => {
     if (selectedClassroomIds.size === 0) return
-    setIsExporting(true)
-    try {
-      const result = await window.electronAPI.exportClassroomsExcel(
-        Array.from(selectedClassroomIds)
-      )
-      if (!result.canceled) {
+    exportClassroomsExcel.mutate(Array.from(selectedClassroomIds), {
+      onSuccess: (result) => {
+        if (result.canceled) return
         toast.success(
           `${selectedClassroomIds.size}学級のデータをExcelに出力しました`
         )
-      }
-    } catch (error) {
-      toast.error("エクスポートに失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    } finally {
-      setIsExporting(false)
-    }
+      },
+    })
   }
 
   return (
@@ -219,10 +201,10 @@ export default function ClassroomManagementTable() {
                 onClick={handleExportExcel}
                 variant="outline"
                 className="rounded-lg"
-                disabled={isExporting}
+                disabled={exportClassroomsExcel.isPending}
               >
                 <Download className="mr-2 h-4 w-4" />
-                {isExporting ? "出力中..." : "Excel出力"}
+                {exportClassroomsExcel.isPending ? "出力中..." : "Excel出力"}
               </Button>
             </>
           )}

@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { AlertCircle, Upload } from "lucide-react"
 import { useState } from "react"
 
@@ -13,6 +14,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  addStudentToClassroomMutation,
+  endStudentMembershipMutation,
+  studentListQuery,
+} from "@/queries/student"
 
 interface ClassroomStudentImportModalProps {
   isOpen: boolean
@@ -92,6 +98,9 @@ export default function ClassroomStudentImportModal({
     { studentId: "", attendanceNumber: "", startDate: "", endDate: "" },
   ])
   const [isProcessing, setIsProcessing] = useState(false)
+  const queryClient = useQueryClient()
+  const addStudentToClassroom = useMutation(addStudentToClassroomMutation())
+  const endStudentMembership = useMutation(endStudentMembershipMutation())
   const [validation, setValidation] = useState<{
     valid: number
     errors: string[]
@@ -184,7 +193,7 @@ export default function ClassroomStudentImportModal({
       const validRows = studentData.filter((row) => row.studentId.trim() !== "")
 
       // 生徒一覧を一度だけ取得（N+1問題の修正）
-      const students = await window.electronAPI.fetchStudents()
+      const students = await queryClient.fetchQuery(studentListQuery())
       const studentByNumber = new Map(
         students.map((student) => [student.studentNumber, student])
       )
@@ -209,19 +218,21 @@ export default function ClassroomStudentImportModal({
           const endDateStr = row.endDate.trim()
 
           // バックエンド側で重複チェック・既存所属終了を処理
-          const membership = await window.electronAPI.addStudentToClassroom(
-            student.id,
+          const membership = await addStudentToClassroom.mutateAsync({
+            studentId: student.id,
             classroomId,
             startDate,
-            attendanceNumber ? parseInt(attendanceNumber) : undefined
-          )
+            attendanceNumber: attendanceNumber
+              ? parseInt(attendanceNumber)
+              : undefined,
+          })
 
           // 終了日が指定されている場合は所属を終了
           if (endDateStr) {
-            await window.electronAPI.endStudentMembership(
-              membership.id,
-              new Date(endDateStr.replace(/\//g, "-"))
-            )
+            await endStudentMembership.mutateAsync({
+              membershipId: membership.id,
+              endDate: new Date(endDateStr.replace(/\//g, "-")),
+            })
           }
 
           successCount++

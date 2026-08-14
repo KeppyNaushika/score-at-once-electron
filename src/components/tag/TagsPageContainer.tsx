@@ -2,7 +2,7 @@
 
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Calculator, Edit2, PlusCircle, Trash2, XIcon } from "lucide-react"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
@@ -31,7 +31,14 @@ import {
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import type { TagSubtotalGroupWithSubtotalGroup } from "@/electron-src/lib/prisma/tagSubtotalGroup"
 import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  createTagMutation,
+  deleteTagMutation,
+  reorderTagsMutation,
+  tagListQuery,
+  tagSubtotalGroupsQuery,
+  updateTagMutation,
+} from "@/queries/tag"
 
 const TAG_COLOR_PRESETS = [
   "#ef4444", // red
@@ -286,22 +293,27 @@ function TagModal({
 // Main Container
 // ---------------------------------------------------------------------------
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_TAGS: TagWithAllRelations[] = []
+
 export function TagsPageContainer() {
   const queryClient = useQueryClient()
-  const { data: tags = [], isPending: loading } = useQuery({
-    queryKey: queryKeys.tags.all,
-    queryFn: () => window.electronAPI.tagGetAll(),
-  })
-  const loadTags = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: queryKeys.tags.all }),
-    [queryClient]
+  const { data: tags = EMPTY_TAGS, isPending: loading } = useQuery(
+    tagListQuery()
   )
+  const createTag = useMutation(createTagMutation())
+  const updateTag = useMutation(updateTagMutation())
+  const deleteTag = useMutation(deleteTagMutation())
+  const reorderTags = useMutation(reorderTagsMutation())
   const [modalTag, setModalTag] = useState<TagWithAllRelations | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [expandedTagId, setExpandedTagId] = useState<string | null>(null)
-  const [linkedSubtotalGroups, setLinkedSubtotalGroups] = useState<
-    TagSubtotalGroupWithSubtotalGroup[] | null
-  >(null)
+
+  // 紐づく小計点グループは開いたタグの分だけ引く
+  const { data: linkedSubtotalGroups = null } = useQuery({
+    ...tagSubtotalGroupsQuery(expandedTagId ?? ""),
+    enabled: expandedTagId !== null,
+  })
 
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
@@ -314,17 +326,10 @@ export function TagsPageContainer() {
 
       // 並べ替えは掴んだ手に追従させる（保存の往復を待たせない）
       const reordered = arrayMove(tags, oldIndex, newIndex)
-      queryClient.setQueryData(queryKeys.tags.all, reordered)
-      try {
-        await window.electronAPI.tagReorder(reordered.map((tag) => tag.id))
-      } catch (error) {
-        await queryClient.invalidateQueries({ queryKey: queryKeys.tags.all })
-        toast.error("タグの並べ替えに失敗しました", {
-          description: error instanceof Error ? error.message : undefined,
-        })
-      }
+      queryClient.setQueryData(tagListQuery().queryKey, reordered)
+      reorderTags.mutate(reordered.map((tag) => tag.id))
     },
-    [tags, queryClient]
+    [tags, queryClient, reorderTags]
   )
 
   // 紐づく小計点グループは開いたタグの分だけ取得する
@@ -335,15 +340,6 @@ export function TagsPageContainer() {
         return
       }
       setExpandedTagId(tag.id)
-      setLinkedSubtotalGroups(null)
-      try {
-        const tagSubtotalGroups =
-          await window.electronAPI.tagSubtotalGroupGetByTagId(tag.id)
-        setLinkedSubtotalGroups(tagSubtotalGroups)
-      } catch {
-        toast.error("小計点グループの取得に失敗しました")
-        setLinkedSubtotalGroups([])
-      }
     },
     [expandedTagId]
   )
@@ -366,32 +362,27 @@ export function TagsPageContainer() {
     )
       return
 
-    try {
-      await window.electronAPI.tagDelete(tag.id)
-      toast.success(`タグ「${tag.name}」を削除しました`)
-      await loadTags()
-    } catch {
-      toast.error("タグの削除に失敗しました")
-    }
+    deleteTag.mutate(tag.id, {
+      onSuccess: () => toast.success(`タグ「${tag.name}」を削除しました`),
+    })
   }
 
   const handleSave = async (name: string, color: string | null) => {
+    // 失敗はそのまま投げ返す（モーダルを閉じないため）。
+    // 同じ名前は unique 制約で弾かれるので、そこだけ言い方を変える
     try {
       if (modalTag) {
-        await window.electronAPI.tagUpdate(modalTag.id, { name, color })
+        await updateTag.mutateAsync({ id: modalTag.id, data: { name, color } })
         toast.success(`タグ「${name}」を更新しました`)
-      } else {
-        await window.electronAPI.tagCreate({ name, color: color ?? undefined })
-        toast.success(`タグ「${name}」を作成しました`)
+        return
       }
-      await loadTags()
+      await createTag.mutateAsync({ name, color: color ?? undefined })
+      toast.success(`タグ「${name}」を作成しました`)
     } catch (error) {
-      const message =
-        error instanceof Error && error.message.includes("Unique")
-          ? "同じ名前のタグが既に存在します"
-          : "タグの保存に失敗しました"
-      toast.error(message)
-      throw error // モーダルを閉じない
+      if (error instanceof Error && error.message.includes("Unique")) {
+        toast.error("同じ名前のタグが既に存在します")
+      }
+      throw error
     }
   }
 

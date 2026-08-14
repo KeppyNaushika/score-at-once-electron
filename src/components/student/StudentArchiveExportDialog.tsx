@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { FolderOutput, Loader2 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { exportStudentArchiveMutation } from "@/queries/archive"
 import { studentListQuery } from "@/queries/student"
 import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
@@ -40,6 +41,7 @@ export function StudentArchiveExportDialog({
     new Set()
   )
   const [isExporting, setIsExporting] = useState(false)
+  const exportStudentArchive = useMutation(exportStudentArchiveMutation())
 
   // 生徒は共有キャッシュから引き、選択生徒に紐づく学級はそこから導く
   const { data: students = EMPTY_STUDENTS, isPending: isLoading } =
@@ -95,7 +97,7 @@ export function StudentArchiveExportDialog({
   const handleExport = async () => {
     setIsExporting(true)
     try {
-      const result = await window.electronAPI.studentArchive.exportStudents({
+      const result = await exportStudentArchive.mutateAsync({
         studentIds: Array.from(selectedStudentIds),
         classroomIds:
           selectedClassroomIds.size === relatedClassrooms.length

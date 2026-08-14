@@ -29,6 +29,13 @@ export const examTagsQuery = (examId: string) =>
     queryFn: () => window.electronAPI.examTagGetByExamId(examId),
   })
 
+/** そのタグが付いている小計点グループ（一覧で開いたときだけ引く） */
+export const tagSubtotalGroupsQuery = (tagId: string) =>
+  queryOptions({
+    queryKey: ["tags", tagId, "subtotalGroups"] as const,
+    queryFn: () => window.electronAPI.tagSubtotalGroupGetByTagId(tagId),
+  })
+
 /** その解答用紙に付いているタグ */
 export const answerSheetDefinitionTagsQuery = (definitionId: string) =>
   queryOptions({
