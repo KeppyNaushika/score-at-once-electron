@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQueries } from "@tanstack/react-query"
+import { useQueries } from "@tanstack/react-query"
 import Head from "next/head"
 import { useParams, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -46,10 +46,8 @@ import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { useAuth } from "@/contexts/AuthContext"
 import { resolveExamPaperSize } from "@/electron-src/lib/shared/utilities/examPaperSize"
-import {
-  setUserPreferenceMutation,
-  userPreferenceQuery,
-} from "@/queries/settings"
+import { useWritePreference } from "@/hooks/useWritePreference"
+import { userPreferenceQuery } from "@/queries/settings"
 
 /** 内部コンポーネント（ShortcutProvider内で使用） */
 function ScoringMainViewContent() {
@@ -93,10 +91,10 @@ function ScoringMainViewContent() {
       userPreferenceQuery(authUser?.id, key)
     ),
   })
-  const setPreference = useMutation(setUserPreferenceMutation(authUser?.id))
+  const writePreference = useWritePreference(authUser?.id)
   const scoringSettings = buildScoringSettings(
     preferenceQueries.map((preferenceQuery) => preferenceQuery.data ?? null),
-    setPreference.mutate
+    writePreference
   )
   const {
     itemsPerLine,

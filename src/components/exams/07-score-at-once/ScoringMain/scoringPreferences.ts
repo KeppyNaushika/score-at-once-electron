@@ -6,7 +6,7 @@
  */
 
 import type { PreferenceKey, PreferenceValueType } from "@/lib/userPreferences"
-import { parsePreference, serializePreference } from "@/lib/userPreferences"
+import { parsePreference } from "@/lib/userPreferences"
 import { defineStringUnion } from "@/types/stringUnion"
 
 /** クリック採点で選択可能なアクション */
@@ -91,8 +91,14 @@ export const SCORING_PREFERENCE_KEYS = [
   "masterAnswerKeyBehavior",
 ] as const satisfies readonly PreferenceKey[]
 
-/** 保存文字列を書き込む口。呼び出し側の `useMutation` を渡す */
-type WritePreference = (input: { key: PreferenceKey; value: string }) => void
+/**
+ * 設定を書く口。**値は型のまま渡す**（保存文字列への変換は書く側が持つ）。
+ * 呼び出し側は `useWritePreference` の戻り値を渡す。
+ */
+type WritePreference = <TKey extends PreferenceKey>(
+  key: TKey,
+  value: PreferenceValueType[TKey]
+) => void
 
 /**
  * 採点画面の設定と、その書き換え口を組み立てる。
@@ -104,17 +110,23 @@ export function buildScoringSettings(
   stored: readonly (string | null)[],
   write: WritePreference
 ) {
-  const storedOf = (key: (typeof SCORING_PREFERENCE_KEYS)[number]) =>
+  const rawOf = (key: (typeof SCORING_PREFERENCE_KEYS)[number]) =>
     stored[SCORING_PREFERENCE_KEYS.indexOf(key)] ?? null
 
+  /**
+   * 保存文字列は必ず `parsePreference` を通す。
+   *
+   * `serializePreference` が `"string?"` を JSON で1枚くるむので、生のまま読むと
+   * 段数が食い違い、保存済みの値が丸ごと既定値へ落ちる（R1 #2 で実際に起きた）。
+   */
   const valueOf = <TKey extends (typeof SCORING_PREFERENCE_KEYS)[number]>(
     key: TKey
-  ) => parsePreference(key, storedOf(key))
+  ) => parsePreference(key, rawOf(key))
 
   const setter =
     <TKey extends (typeof SCORING_PREFERENCE_KEYS)[number]>(key: TKey) =>
     (value: PreferenceValueType[TKey]) =>
-      write({ key, value: serializePreference(key, value) })
+      write(key, value)
 
   const setClickScoringConfig = setter("clickScoringConfig")
 
@@ -126,7 +138,7 @@ export function buildScoringSettings(
     layoutDirection: valueOf("layoutDirection"),
     answerSortOrder: valueOf("answerSortOrder"),
     expandMargin: valueOf("expandMargin"),
-    clickScoringConfig: toClickScoringConfig(storedOf("clickScoringConfig")),
+    clickScoringConfig: toClickScoringConfig(valueOf("clickScoringConfig")),
     clickScoringDebounceMs: valueOf("clickScoringDebounceMs"),
     masterAnswerDisplayMode: valueOf("masterAnswerDisplayMode"),
     masterAnswerOpacity: valueOf("masterAnswerOpacity"),
@@ -141,7 +153,7 @@ export function buildScoringSettings(
     setExpandMargin: setter("expandMargin"),
     setClickAction: (clickCount: 2 | 3 | 4, action: ClickScoringAction) => {
       const next = {
-        ...toClickScoringConfig(storedOf("clickScoringConfig")),
+        ...toClickScoringConfig(valueOf("clickScoringConfig")),
         [clickCount]: action,
       }
       setClickScoringConfig(JSON.stringify(next))
