@@ -1,10 +1,9 @@
 "use client"
 
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Calculator } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback } from "react"
-import { toast } from "sonner"
+import { useCallback, useMemo } from "react"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { QuestionAssignmentMatrixWithFillHandle } from "@/components/exams/04-question-group/components/QuestionAssignmentMatrixWithFillHandle"
@@ -13,42 +12,38 @@ import { SubtotalGroupSelector } from "@/components/exams/04-question-group/comp
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
-import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 import type { CropSubtotalAssignmentType } from "@/electron-src/lib/prisma/cropSubtotal"
-import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
-import { queryKeys } from "@/lib/queryKeys"
+import { type CropRegionRow, cropRegionsQuery } from "@/queries/cropRegion"
+import {
+  activeSubtotalGroupsQuery,
+  type ExamSubtotalGroupRow,
+  replaceCropSubtotalsMutation,
+} from "@/queries/subtotal"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
-const EMPTY_GROUPS: SubtotalGroupWithSubtotals[] = []
-const EMPTY_REGIONS: CropRegionWithSubtotals[] = []
-
-/** この画面が1回の取得で揃える形 */
-interface QuestionGroupPageData {
-  activeSubtotalGroups: SubtotalGroupWithSubtotals[]
-  /** 設問領域（QUESTION_ANSWER）。設問割当マトリクスの行 */
-  questionRegions: CropRegionWithSubtotals[]
-  /** 小計欄領域（SUBTOTAL_SCORE）。小計点割当マトリクスの行 */
-  subtotalRegions: CropRegionWithSubtotals[]
-}
+const EMPTY_REGIONS: CropRegionRow[] = []
+const EMPTY_EXAM_SUBTOTAL_GROUPS: ExamSubtotalGroupRow[] = []
 
 /**
- * 1領域分の割り当てを差し替えたキャッシュを返す。
+ * 1領域分の割り当てを差し替えた採点領域の一覧を返す。
  *
  * 保存は「その領域の紐付けを全消しして作り直す」ので、キャッシュも同じ形に倒す。
  * ここで作る CropSubtotal の id は、取り直すまでの置き場所でしかない
  * （DB へは書かれない。表示は subtotalId しか読まない）。
+ *
+ * 先にキャッシュを差し替えないと、同じ行の2マス目のクリックが1マス目より前の
+ * 集合から組み立てられて上書きしてしまう。
  */
 function withReplacedAssignments(
-  previous: QuestionGroupPageData,
+  cropRegions: CropRegionRow[],
   cropRegionId: string,
   subtotalIds: string[],
-  assignmentType: CropSubtotalAssignmentType
-): QuestionGroupPageData {
-  const subtotalById = new Map(
-    previous.activeSubtotalGroups
-      .flatMap((subtotalGroup) => subtotalGroup.subtotals)
-      .map((subtotal) => [subtotal.id, subtotal])
-  )
+  assignmentType: CropSubtotalAssignmentType,
+  subtotalById: ReadonlyMap<
+    string,
+    CropRegionRow["cropSubtotals"][number]["subtotal"]
+  >
+): CropRegionRow[] {
   const now = new Date()
   const cropSubtotals = subtotalIds.flatMap((subtotalId) => {
     const subtotal = subtotalById.get(subtotalId)
@@ -66,18 +61,11 @@ function withReplacedAssignments(
     ]
   })
 
-  const replaceInRows = (cropRegions: CropRegionWithSubtotals[]) =>
-    cropRegions.map((cropRegion) =>
-      cropRegion.id === cropRegionId
-        ? { ...cropRegion, cropSubtotals }
-        : cropRegion
-    )
-
-  return {
-    ...previous,
-    questionRegions: replaceInRows(previous.questionRegions),
-    subtotalRegions: replaceInRows(previous.subtotalRegions),
-  }
+  return cropRegions.map((cropRegion) =>
+    cropRegion.id === cropRegionId
+      ? { ...cropRegion, cropSubtotals }
+      : cropRegion
+  )
 }
 
 export default function SubtotalGroupPage() {
@@ -87,48 +75,54 @@ export default function SubtotalGroupPage() {
   const examId = typeof params.examId === "string" ? params.examId : ""
 
   const queryClient = useQueryClient()
-  const queryKey = queryKeys.exam.questionGroupPage(examId)
 
-  // 設問・小計欄・小計点グループはマトリクスの行と列なので1つの取得にまとめる
   const {
-    data,
-    isPending: loading,
-    error: queryError,
-  } = useQuery<QuestionGroupPageData>({
-    queryKey,
-    queryFn: examId
-      ? async () => {
-          const [cropRegions, examSubtotalGroups] = await Promise.all([
-            window.electronAPI.getCropRegionsByExamId(examId),
-            window.electronAPI.getActiveSubtotalGroupsForExam(examId),
-          ])
-          return {
-            activeSubtotalGroups: examSubtotalGroups.map(
-              (examSubtotalGroup) => examSubtotalGroup.subtotalGroup
-            ),
-            questionRegions: cropRegions.filter(
-              (cropRegion) => cropRegion.type === "QUESTION_ANSWER"
-            ),
-            subtotalRegions: cropRegions.filter(
-              (cropRegion) => cropRegion.type === "SUBTOTAL_SCORE"
-            ),
-          }
-        }
-      : skipToken,
-  })
-  const activeSubtotalGroups = data?.activeSubtotalGroups ?? EMPTY_GROUPS
-  const questionRegions = data?.questionRegions ?? EMPTY_REGIONS
-  const subtotalRegions = data?.subtotalRegions ?? EMPTY_REGIONS
-  const error = queryError?.message ?? null
+    data: cropRegions = EMPTY_REGIONS,
+    isPending: cropRegionsPending,
+    error: cropRegionsError,
+  } = useQuery(cropRegionsQuery(examId))
+  const {
+    data: examSubtotalGroups = EMPTY_EXAM_SUBTOTAL_GROUPS,
+    isPending: subtotalGroupsPending,
+    error: subtotalGroupsError,
+  } = useQuery(activeSubtotalGroupsQuery(examId))
+  const replaceCropSubtotals = useMutation(replaceCropSubtotalsMutation(examId))
 
-  const loadData = useCallback(
-    () => queryClient.invalidateQueries({ queryKey }),
-    [queryClient, queryKey]
+  const loading = cropRegionsPending || subtotalGroupsPending
+  const error = (cropRegionsError ?? subtotalGroupsError)?.message ?? null
+
+  // マトリクスの列は小計点グループ、行は採点領域。どちらも表示のたびに絞り込む
+  const activeSubtotalGroups = useMemo(
+    () =>
+      examSubtotalGroups.map(
+        (examSubtotalGroup) => examSubtotalGroup.subtotalGroup
+      ),
+    [examSubtotalGroups]
+  )
+  /** 設問領域（QUESTION_ANSWER）。設問割当マトリクスの行 */
+  const questionRegions = useMemo(
+    () =>
+      cropRegions.filter((cropRegion) => cropRegion.type === "QUESTION_ANSWER"),
+    [cropRegions]
+  )
+  /** 小計欄領域（SUBTOTAL_SCORE）。小計点割当マトリクスの行 */
+  const subtotalRegions = useMemo(
+    () =>
+      cropRegions.filter((cropRegion) => cropRegion.type === "SUBTOTAL_SCORE"),
+    [cropRegions]
+  )
+
+  const reload = useCallback(
+    () =>
+      queryClient.invalidateQueries({
+        queryKey: cropRegionsQuery(examId).queryKey,
+      }),
+    [queryClient, examId]
   )
 
   /**
    * 1領域分の割り当てを丸ごと差し替える。
-   * 先にキャッシュを差し替え、失敗したら DB を読み直して呼び出し元へ投げ返す。
+   * 先にキャッシュを差し替え、書き込みの後始末（取り直しと通知）は meta に任せる。
    */
   const updateAssignments = useCallback(
     async (
@@ -136,39 +130,30 @@ export default function SubtotalGroupPage() {
       subtotalIds: string[],
       assignmentType: CropSubtotalAssignmentType
     ) => {
-      queryClient.setQueryData<QuestionGroupPageData>(queryKey, (cached) =>
+      const subtotalById = new Map(
+        activeSubtotalGroups
+          .flatMap((subtotalGroup) => subtotalGroup.subtotals)
+          .map((subtotal) => [subtotal.id, subtotal])
+      )
+      queryClient.setQueryData(cropRegionsQuery(examId).queryKey, (cached) =>
         cached
           ? withReplacedAssignments(
               cached,
               cropRegionId,
               subtotalIds,
-              assignmentType
+              assignmentType,
+              subtotalById
             )
           : cached
       )
 
-      try {
-        await window.electronAPI.deleteCropSubtotalsByCropRegionId(cropRegionId)
-        if (subtotalIds.length > 0) {
-          await window.electronAPI.createManyCropSubtotals(
-            subtotalIds.map((subtotalId) => ({
-              cropRegionId,
-              subtotalId,
-              assignmentType,
-            }))
-          )
-        }
-      } catch (err) {
-        // 保存は全消し→作り直しなので、消す方だけ通っていることがある。
-        // 編集前の断面へ戻すと DB に無い割り当てを表示し続ける
-        await queryClient.invalidateQueries({ queryKey })
-        toast.error("関連付けの保存に失敗しました", {
-          description: err instanceof Error ? err.message : undefined,
-        })
-        throw err
-      }
+      await replaceCropSubtotals.mutateAsync({
+        cropRegionId,
+        subtotalIds,
+        assignmentType,
+      })
     },
-    [queryClient, queryKey]
+    [activeSubtotalGroups, examId, queryClient, replaceCropSubtotals]
   )
 
   if (loading) {
@@ -189,7 +174,7 @@ export default function SubtotalGroupPage() {
               エラーが発生しました
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">{error}</p>
-            <Button onClick={loadData} className="mt-4" variant="outline">
+            <Button onClick={reload} className="mt-4" variant="outline">
               再読み込み
             </Button>
           </div>
@@ -212,7 +197,6 @@ export default function SubtotalGroupPage() {
           <SubtotalGroupSelector
             examId={examId}
             activeSubtotalGroups={activeSubtotalGroups}
-            onRefresh={loadData}
           />
 
           {/* 設問と小計項目の関連付け */}
@@ -228,7 +212,7 @@ export default function SubtotalGroupPage() {
                 subtotalGroups={activeSubtotalGroups}
                 cropRegions={questionRegions}
                 onUpdateAssignments={updateAssignments}
-                onReload={loadData}
+                onReload={reload}
               />
             </div>
           )}
@@ -246,7 +230,7 @@ export default function SubtotalGroupPage() {
                 subtotalGroups={activeSubtotalGroups}
                 subtotalRegions={subtotalRegions}
                 onUpdateAssignments={updateAssignments}
-                onReload={loadData}
+                onReload={reload}
               />
             </div>
           )}

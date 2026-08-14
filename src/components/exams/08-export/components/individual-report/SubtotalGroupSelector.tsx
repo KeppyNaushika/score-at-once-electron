@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import type { SubtotalGroupSelection } from "@/electron-src/lib/export/individual-report/types"
-import { queryKeys } from "@/lib/queryKeys"
+import { subtotalGroupsForReportQuery } from "@/queries/export"
 
 interface SubtotalGroupSelectorProps {
   examId: string
@@ -20,10 +20,9 @@ export function SubtotalGroupSelector({
   selection,
   onChange,
 }: SubtotalGroupSelectorProps) {
-  const { data: groups, isPending } = useQuery({
-    queryKey: queryKeys.subtotalGroupsForReport.detail(examId),
-    queryFn: () => window.electronAPI.export.getSubtotalGroupsForReport(examId),
-  })
+  const { data: groups, isPending } = useQuery(
+    subtotalGroupsForReportQuery(examId)
+  )
 
   // 保存済みの選択を、実在するグループだけに整える。取得直後に一度だけ走る初期化であり、
   // 以後の選択変更で再実行してはならない（全解除を打ち消してしまう）ため Effect Event にする

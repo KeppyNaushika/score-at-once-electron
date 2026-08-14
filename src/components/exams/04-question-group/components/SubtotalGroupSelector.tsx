@@ -1,10 +1,9 @@
 "use client"
 
-import { skipToken, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { Calculator, Plus, Search, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
-import { toast } from "sonner"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { Badge } from "@/components/ui/badge"
@@ -19,12 +18,15 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  addSubtotalGroupToExamMutation,
+  availableSubtotalGroupsQuery,
+  removeSubtotalGroupFromExamMutation,
+} from "@/queries/subtotal"
 
 interface SubtotalGroupSelectorProps {
   examId: string
   activeSubtotalGroups: SubtotalGroupWithSubtotals[]
-  onRefresh: () => void
 }
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
@@ -33,7 +35,6 @@ const EMPTY_GROUPS: SubtotalGroupWithSubtotals[] = []
 export function SubtotalGroupSelector({
   examId,
   activeSubtotalGroups,
-  onRefresh,
 }: SubtotalGroupSelectorProps) {
   const [showSelector, setShowSelector] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -41,28 +42,24 @@ export function SubtotalGroupSelector({
   // 追加できる小計点グループは、選択を開いたときだけ取る
   const { data: availableGroups = EMPTY_GROUPS, isPending: loading } = useQuery(
     {
-      queryKey: queryKeys.exam.availableSubtotalGroups(examId),
-      queryFn: showSelector
-        ? () => window.electronAPI.getAvailableSubtotalGroupsForExam(examId)
-        : skipToken,
+      ...availableSubtotalGroupsQuery(examId),
+      enabled: showSelector,
     }
+  )
+  const addSubtotalGroup = useMutation(addSubtotalGroupToExamMutation(examId))
+  const removeSubtotalGroup = useMutation(
+    removeSubtotalGroupFromExamMutation(examId)
   )
 
   // 小計点グループを試験に追加
-  const handleAddGroup = async (groupId: string) => {
-    try {
-      await window.electronAPI.addSubtotalGroupToExam(examId, groupId)
-      setShowSelector(false)
-      onRefresh()
-    } catch (error) {
-      toast.error("小計点グループを追加できませんでした", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
+  const handleAddGroup = (groupId: string) => {
+    addSubtotalGroup.mutate(groupId, {
+      onSuccess: () => setShowSelector(false),
+    })
   }
 
   // 小計点グループを試験から削除
-  const handleRemoveGroup = async (groupId: string) => {
+  const handleRemoveGroup = (groupId: string) => {
     if (
       !confirm(
         "この小計点グループを試験から削除しますか？\\n\\n注意：関連する採点データにも影響する可能性があります。"
@@ -71,14 +68,7 @@ export function SubtotalGroupSelector({
       return
     }
 
-    try {
-      await window.electronAPI.removeSubtotalGroupFromExam(examId, groupId)
-      onRefresh()
-    } catch (error) {
-      toast.error("小計点グループを削除できませんでした", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
+    removeSubtotalGroup.mutate(groupId)
   }
 
   // 検索フィルタリング

@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -10,59 +10,59 @@ import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { SubtotalGroupCard } from "@/components/subtotal-groups/components/SubtotalGroupCard"
 import { SubtotalGroupModal } from "@/components/subtotal-groups/components/SubtotalGroupModal"
 import { Button } from "@/components/ui/button"
-import type { SubtotalGroupWithSubtotalsExamsAndTags } from "@/electron-src/lib/prisma/subtotalGroup"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  deleteSubtotalGroupMutation,
+  subtotalGroupListQuery,
+  type SubtotalGroupRow,
+} from "@/queries/subtotal"
 import { tagListQuery } from "@/queries/tag"
 
 /** 小計点グループ一覧のフィルタ対象（グループ名・小計項目名・タグ名で検索、タグで絞り込み） */
-const SUBTOTAL_GROUP_FILTER_ACCESSORS: ListFilterAccessors<SubtotalGroupWithSubtotalsExamsAndTags> =
-  {
-    searchTexts: (subtotalGroup) => [
-      subtotalGroup.name,
-      ...subtotalGroup.subtotals.map((subtotal) => subtotal.name),
-      ...subtotalGroup.tagSubtotalGroups.map(
-        (tagSubtotalGroup) => tagSubtotalGroup.tag.name
-      ),
-    ],
-    tagIds: (subtotalGroup) =>
-      subtotalGroup.tagSubtotalGroups.map(
-        (tagSubtotalGroup) => tagSubtotalGroup.tag.id
-      ),
-  }
+const SUBTOTAL_GROUP_FILTER_ACCESSORS: ListFilterAccessors<SubtotalGroupRow> = {
+  searchTexts: (subtotalGroup) => [
+    subtotalGroup.name,
+    ...subtotalGroup.subtotals.map((subtotal) => subtotal.name),
+    ...subtotalGroup.tagSubtotalGroups.map(
+      (tagSubtotalGroup) => tagSubtotalGroup.tag.name
+    ),
+  ],
+  tagIds: (subtotalGroup) =>
+    subtotalGroup.tagSubtotalGroups.map(
+      (tagSubtotalGroup) => tagSubtotalGroup.tag.id
+    ),
+}
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_TAGS: TagWithAllRelations[] = []
+const EMPTY_SUBTOTAL_GROUPS: SubtotalGroupRow[] = []
 
 export function SubtotalGroupsPageContainer() {
   const [showModal, setShowModal] = useState(false)
-  const [editingGroup, setEditingGroup] =
-    useState<SubtotalGroupWithSubtotalsExamsAndTags | null>(null)
+  const [editingGroup, setEditingGroup] = useState<SubtotalGroupRow | null>(
+    null
+  )
 
   const queryClient = useQueryClient()
   const {
-    data: subtotalGroups = [],
+    data: subtotalGroups = EMPTY_SUBTOTAL_GROUPS,
     isPending: loading,
     error,
-  } = useQuery({
-    queryKey: queryKeys.subtotalGroup.all,
-    queryFn: () => window.electronAPI.getSubtotalGroups(),
-  })
+  } = useQuery(subtotalGroupListQuery())
   const ipcError = error?.message ?? null
+  const deleteSubtotalGroup = useMutation(deleteSubtotalGroupMutation())
 
   const fetchSubtotalGroups = useCallback(
     () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.subtotalGroup.all }),
+      queryClient.invalidateQueries({
+        queryKey: subtotalGroupListQuery().queryKey,
+      }),
     [queryClient]
   )
 
   // 既存タグ一覧（タグフィルタの選択肢）
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
-  const fetchTags = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
-    [queryClient]
-  )
 
   const {
     filteredItems: filteredGroups,
@@ -101,13 +101,13 @@ export function SubtotalGroupsPageContainer() {
   }, [fetchSubtotalGroups, handleCreate, showModal])
 
   // 編集
-  const handleEdit = (group: SubtotalGroupWithSubtotalsExamsAndTags) => {
+  const handleEdit = (group: SubtotalGroupRow) => {
     setEditingGroup(group)
     setShowModal(true)
   }
 
-  // 削除
-  const handleDelete = async (groupId: string) => {
+  // 削除。使用中で削除できない場合、どの設問で使われているかが例外の文言に載っている
+  const handleDelete = (groupId: string) => {
     const group = subtotalGroups.find(
       (subtotalGroup) => subtotalGroup.id === groupId
     )
@@ -120,23 +120,10 @@ export function SubtotalGroupsPageContainer() {
     )
       return
 
-    try {
-      await window.electronAPI.deleteSubtotalGroup(groupId)
-      await fetchSubtotalGroups() // リストを再読み込み
-      toast.success(`小計点グループ「${groupName}」を削除しました`)
-    } catch (error) {
-      // 使用中で削除できない場合、どの設問で使われているかが文言に載っている
-      toast.error("小計点グループを削除できませんでした", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
-  }
-
-  // モーダルの保存処理
-  const handleSave = async () => {
-    // タグは新規作成され得るのでフィルタの選択肢も取り直す
-    await Promise.all([fetchSubtotalGroups(), fetchTags()])
-    setShowModal(false)
+    deleteSubtotalGroup.mutate(groupId, {
+      onSuccess: () =>
+        toast.success(`小計点グループ「${groupName}」を削除しました`),
+    })
   }
 
   if (loading) {
@@ -227,7 +214,6 @@ export function SubtotalGroupsPageContainer() {
         <SubtotalGroupModal
           isOpen={showModal}
           onClose={() => setShowModal(false)}
-          onSave={handleSave}
           editingGroup={editingGroup}
         />
       )}

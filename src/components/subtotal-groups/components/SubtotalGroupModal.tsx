@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { GripVertical, Plus, TagIcon, Trash2, XIcon } from "lucide-react"
 import React, { useCallback, useState } from "react"
 
@@ -32,15 +32,22 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { SubtotalGroupWithSubtotalsExamsAndTags } from "@/electron-src/lib/prisma/subtotalGroup"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
-import { tagListQuery } from "@/queries/tag"
+import {
+  createSubtotalGroupMutation,
+  type SubtotalGroupRow,
+  updateSubtotalGroupMutation,
+} from "@/queries/subtotal"
+import {
+  findOrCreateTagMutation,
+  setSubtotalGroupTagsMutation,
+  tagListQuery,
+} from "@/queries/tag"
 
 interface SubtotalGroupModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: () => void
-  editingGroup: SubtotalGroupWithSubtotalsExamsAndTags | null
+  editingGroup: SubtotalGroupRow | null
 }
 
 interface SubtotalFormData {
@@ -121,12 +128,15 @@ const EMPTY_TAGS: TagWithAllRelations[] = []
 export function SubtotalGroupModal({
   isOpen,
   onClose,
-  onSave,
   editingGroup,
 }: SubtotalGroupModalProps) {
   // 呼び出し側（SubtotalGroupsPageContainer）は閉じている間このコンポーネントを
   // マウントしないため、開くたびに editingGroup の内容からフォームが始まる。
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
+  const createSubtotalGroup = useMutation(createSubtotalGroupMutation())
+  const updateSubtotalGroup = useMutation(updateSubtotalGroupMutation())
+  const findOrCreateTag = useMutation(findOrCreateTagMutation())
+  const setSubtotalGroupTags = useMutation(setSubtotalGroupTagsMutation())
   const [name, setName] = useState(editingGroup?.name ?? "")
   const [tagNames, setTagNames] = useState<string[]>(() =>
     (editingGroup?.tagSubtotalGroups ?? []).map(
@@ -247,39 +257,35 @@ export function SubtotalGroupModal({
 
     setSaving(true)
     try {
-      const subtotalData = subtotals.map((subtotal, index) => ({
-        name: subtotal.name.trim(),
-        order: index,
-      }))
-
       const groupData = {
         name: name.trim(),
-        subtotals: subtotalData,
+        subtotals: subtotals.map((subtotal, index) => ({
+          name: subtotal.name.trim(),
+          order: index,
+        })),
       }
 
-      let result
-      if (editingGroup) {
-        result = await window.electronAPI.updateSubtotalGroup(
-          editingGroup.id,
-          groupData
-        )
-      } else {
-        result = await window.electronAPI.createSubtotalGroup(groupData)
-      }
+      const savedGroup = editingGroup
+        ? await updateSubtotalGroup.mutateAsync({
+            subtotalGroupId: editingGroup.id,
+            data: groupData,
+          })
+        : await createSubtotalGroup.mutateAsync(groupData)
 
       // タグは他の紐付けと同じく、タグ名から findOrCreate して置換方式で保存する
       const tagIds: string[] = []
       for (const tagName of tagNames) {
-        const tag = await window.electronAPI.tagFindOrCreate(tagName)
+        const tag = await findOrCreateTag.mutateAsync(tagName)
         tagIds.push(tag.id)
       }
-      await window.electronAPI.tagSubtotalGroupSetTags(result.id, tagIds)
+      await setSubtotalGroupTags.mutateAsync({
+        subtotalGroupId: savedGroup.id,
+        tagIds,
+      })
 
-      onSave()
       onClose()
-    } catch (error) {
-      console.error("Error saving subtotal group:", error)
-      alert("保存中にエラーが発生しました。")
+    } catch {
+      // 失敗の知らせは中央のトーストが出す。ここでは閉じずに入力を残す
     } finally {
       setSaving(false)
     }

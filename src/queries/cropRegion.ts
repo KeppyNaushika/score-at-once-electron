@@ -14,6 +14,11 @@ import { scopeKeys } from "./keys"
 // 取得
 // =====================================================================
 
+/** 採点領域1件（小計点の割り当てと採点結果を子として持つ） */
+export type CropRegionRow = Awaited<
+  ReturnType<typeof window.electronAPI.getCropRegionsByExamId>
+>[number]
+
 /** その試験の採点領域（小計欄も含む全部） */
 export const cropRegionsQuery = (examId: string) =>
   queryOptions({

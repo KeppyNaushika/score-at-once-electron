@@ -81,12 +81,6 @@ export const queryKeys = {
   returnDiff: {
     detail: (examId: string) => ["returnDiff", examId] as const,
   },
-  subtotalGroup: {
-    all: ["subtotalGroup"] as const,
-  },
-  subtotalGroupsForReport: {
-    detail: (examId: string) => ["subtotalGroupsForReport", examId] as const,
-  },
   answerSheetDefinition: {
     /**
      * 解答用紙1件に紐づくキーの前方一致。**格納しない**（無効化の範囲指定専用）。
@@ -119,9 +113,6 @@ export const queryKeys = {
     /** 領域情報ページ(03)が1回で取る形（操作者＋ページ＋背景画像＋採点領域） */
     regionInfoPage: (examId: string) =>
       ["exam", examId, "regionInfoPage"] as const,
-    /** 小計点設定ページ(04)が1回で取る形（小計点グループ＋設問領域＋小計欄領域） */
-    questionGroupPage: (examId: string) =>
-      ["exam", examId, "questionGroupPage"] as const,
     /** 結果出力ページ(08)が1回で取る形（試験＋受験者） */
     exportPage: (examId: string) => ["exam", examId, "exportPage"] as const,
     /** 出力設定（重ね描き＋個人成績表。小計グループ選択は関連フラグから解決済み） */
@@ -141,9 +132,6 @@ export const queryKeys = {
     cropRegionAssignments: (examId: string, userId: string | undefined) =>
       ["exam", examId, "cropRegionAssignments", userId] as const,
     members: (examId: string) => ["exam", examId, "members"] as const,
-    /** この試験にまだ追加していない小計点グループ */
-    availableSubtotalGroups: (examId: string) =>
-      ["exam", examId, "availableSubtotalGroups"] as const,
     /** 採点マーク・点数の重ね描き設定（07 の個別表示が読む） */
     answerOverlaySettings: (examId: string) =>
       ["exam", examId, "answerOverlaySettings"] as const,

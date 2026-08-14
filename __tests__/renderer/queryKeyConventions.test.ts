@@ -49,9 +49,19 @@ interface Scan {
   checker: ts.TypeChecker
 }
 
-/** `queryKeys.a.b` の形をテキストから拾う */
+/**
+ * キーの出どころをテキストから拾う。
+ *
+ * 移行前の `queryKeys.a.b` と、移行後の `xxxQuery(...).queryKey`（`src/queries/`
+ * の `queryOptions` が持つキー）の両方を認める。どちらでもないものは、画面側で
+ * 組み立てたリテラルのキーとして弾く。
+ */
 function findKeyFactory(text: string): string | null {
-  return /queryKeys(?:\.[A-Za-z0-9_]+)+/.exec(text)?.[0] ?? null
+  return (
+    /queryKeys(?:\.[A-Za-z0-9_]+)+/.exec(text)?.[0] ??
+    /([A-Za-z0-9_$]+Query)\s*\([^()]*\)\s*\.queryKey/.exec(text)?.[1] ??
+    null
+  )
 }
 
 /** `window.electronAPI.a.b(` の形をテキストから全て拾う */
@@ -80,6 +90,28 @@ function typeOfQueryResult(
   queryFn: ts.Expression
 ): ts.Type | null {
   const type = checker.getTypeAtLocation(queryFn)
+  for (const constituent of type.isUnion() ? type.types : [type]) {
+    const signatures = constituent.getCallSignatures()
+    if (signatures.length === 0) continue
+    const returned = signatures[0].getReturnType()
+    return checker.getAwaitedType(returned) ?? returned
+  }
+  return null
+}
+
+/**
+ * `xxxQuery(id)` が返す options から、そのキーに入る形を取り出す。
+ *
+ * `queryOptions` の戻り値は options そのものなので、そのままでは「キーに入る形」に
+ * ならない。`queryFn` の戻り値まで降りて初めて、`setQueryData` が書く形と比べられる。
+ */
+function typeOfQueryOptions(
+  checker: ts.TypeChecker,
+  optionsType: ts.Type
+): ts.Type | null {
+  const queryFn = optionsType.getProperty("queryFn")
+  if (!queryFn) return null
+  const type = checker.getTypeOfSymbol(queryFn)
   for (const constituent of type.isUnion() ? type.types : [type]) {
     const signatures = constituent.getCallSignatures()
     if (signatures.length === 0) continue
@@ -414,9 +446,10 @@ function scan(): Scan {
           const definitionName = node.arguments[0].expression.text
           const definition = queryDefinitions.get(definitionName)
           if (definition) {
+            const optionsType = checker.getTypeAtLocation(node.arguments[0])
             readers.push({
               keyFactory: definitionName,
-              dataType: checker.getTypeAtLocation(node.arguments[0]),
+              dataType: typeOfQueryOptions(checker, optionsType) ?? optionsType,
               ipcCalls: definition.ipcCalls,
               location,
             })

@@ -5,10 +5,10 @@ import { Calculator, Edit, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { SubtotalGroupWithSubtotalsExamsAndTags } from "@/electron-src/lib/prisma/subtotalGroup"
+import type { SubtotalGroupRow } from "@/queries/subtotal"
 
 interface SubtotalGroupCardProps {
-  group: SubtotalGroupWithSubtotalsExamsAndTags
+  group: SubtotalGroupRow
   onEdit: () => void
   onDelete: () => void
 }
