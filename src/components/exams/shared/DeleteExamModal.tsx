@@ -6,7 +6,7 @@ import { toast } from "sonner"
 
 import ConfirmationModal from "@/components/common/ConfirmationModal"
 import { useAuth } from "@/contexts/AuthContext"
-import type { ExamForDetail } from "@/hooks/useExamDetail"
+import type { ExamForDetail } from "@/queries/exam"
 import { deleteExamMutation } from "@/queries/exam"
 
 interface DeleteExamModalProps {

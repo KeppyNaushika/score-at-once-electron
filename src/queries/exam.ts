@@ -32,6 +32,28 @@ export const examDetailQuery = (examId: string) =>
     queryFn: () => window.electronAPI.getExam(examId),
   })
 
+/**
+ * 詳細画面が読む試験1件。
+ *
+ * 境界（`fetch-exam-by-id`）の戻り値から導く。手で書き写すと Decimal → number の
+ * ような境界の変換に追随できない。
+ */
+export type ExamForDetail = NonNullable<
+  Awaited<ReturnType<typeof window.electronAPI.fetchExamById>>
+>
+
+/**
+ * 試験1件＋進捗の判定に使う関係（模範解答ページ・採点領域・答案画像）。
+ *
+ * 一覧（`fetch-exams-summary`）と同じ形を境界が返すので、進捗の計算は renderer の
+ * `getExamProgress` 1本で足りる。
+ */
+export const examForDetailQuery = (examId: string) =>
+  queryOptions({
+    queryKey: [...scopeKeys.exam(examId), "forDetail"] as const,
+    queryFn: () => window.electronAPI.fetchExamById(examId),
+  })
+
 /** 試験＋模範解答ページ（採点画面が1回で取る形） */
 export const examWithPagesQuery = (examId: string) =>
   queryOptions({

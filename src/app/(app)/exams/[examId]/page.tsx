@@ -1,6 +1,7 @@
 "use client"
 
 import type { Exam } from "@prisma/client"
+import { useMutation } from "@tanstack/react-query"
 import Head from "next/head"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
@@ -16,6 +17,7 @@ import EditExamWindow from "@/components/exams/forms/EditExamWindow"
 import DeleteExamModal from "@/components/exams/shared/DeleteExamModal"
 import { useAuth } from "@/contexts/AuthContext"
 import { useExamDetail } from "@/hooks/useExamDetail"
+import { exportExamArchiveMutation } from "@/queries/archive"
 import type { ArchiveExportMode } from "@/types/examArchive.types"
 
 export default function ExamDetailPage() {
@@ -27,7 +29,7 @@ export default function ExamDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
+  const exportExamArchive = useMutation(exportExamArchiveMutation())
 
   const {
     exam,
@@ -68,8 +70,8 @@ export default function ExamDetailPage() {
     router.push("/exams")
   }
 
-  const handleExport = async (exportMode: ArchiveExportMode) => {
-    if (isExporting) return
+  const handleExport = (exportMode: ArchiveExportMode) => {
+    if (exportExamArchive.isPending) return
 
     if (!user?.id) {
       toast.error("エクスポート失敗", {
@@ -78,33 +80,23 @@ export default function ExamDetailPage() {
       return
     }
 
-    setIsExporting(true)
     toast("エクスポート中...", {
       description: "試験をエクスポートしています。",
     })
 
-    try {
-      const result = await window.electronAPI.archive.exportExam({
-        examId,
-        userId: user.id,
-        exportMode,
-      })
-
-      // 保存先を選ばずに閉じたのは失敗ではないので、何も言わない
-      if (!result.canceled) {
-        setShowExportModal(false)
-        toast.success("エクスポート完了", {
-          description: `${result.outputPath} に保存しました。`,
-        })
+    exportExamArchive.mutate(
+      { examId, userId: user.id, exportMode },
+      {
+        onSuccess: (result) => {
+          // 保存先を選ばずに閉じたのは失敗ではないので、何も言わない
+          if (result.canceled) return
+          setShowExportModal(false)
+          toast.success("エクスポート完了", {
+            description: `${result.outputPath} に保存しました。`,
+          })
+        },
       }
-    } catch (error) {
-      toast.error("エクスポート失敗", {
-        description:
-          error instanceof Error ? error.message : "エラーが発生しました。",
-      })
-    } finally {
-      setIsExporting(false)
-    }
+    )
   }
 
   if (isLoading) {
@@ -175,7 +167,7 @@ export default function ExamDetailPage() {
             open={showExportModal}
             onOpenChange={setShowExportModal}
             onExport={handleExport}
-            isExporting={isExporting}
+            isExporting={exportExamArchive.isPending}
           />
           {exam && showEditModal && (
             <EditExamWindow

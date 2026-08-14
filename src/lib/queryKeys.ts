@@ -108,8 +108,6 @@ export const queryKeys = {
     scope: (examId: string) => ["exam", examId] as const,
     /** 試験1件そのもの（パンくず・答案アップロードなど、本体だけ要る画面） */
     detail: (examId: string) => ["exam", examId, "detail"] as const,
-    /** 試験詳細ページが1回で取る形（試験本体＋進捗の分母になる件数） */
-    detailPage: (examId: string) => ["exam", examId, "detailPage"] as const,
     /** 領域情報ページ(03)が1回で取る形（操作者＋ページ＋背景画像＋採点領域） */
     regionInfoPage: (examId: string) =>
       ["exam", examId, "regionInfoPage"] as const,

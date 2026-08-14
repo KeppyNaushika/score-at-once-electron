@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/AuthContext"
-import { queryKeys } from "@/lib/queryKeys"
+import { examDetailQuery } from "@/queries/exam"
 
 // ワークフローステップの定義
 const workflowSteps = [
@@ -53,8 +53,7 @@ export default function ExamWorkflowLayout({
 
   // パンくずが要るのは試験名だけ
   const { data: examName = "" } = useQuery({
-    queryKey: queryKeys.exam.detail(examId),
-    queryFn: () => window.electronAPI.getExam(examId),
+    ...examDetailQuery(examId),
     select: selectExamName,
   })
 
