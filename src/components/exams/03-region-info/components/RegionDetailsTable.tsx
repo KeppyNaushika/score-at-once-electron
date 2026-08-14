@@ -1,18 +1,25 @@
 "use client"
 
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Palette } from "lucide-react"
-import { useState } from "react"
+import { useCallback, useState } from "react"
 
 import { DeleteConfirmModal } from "@/components/exams/03-region-info/components/DeleteConfirmModal"
 import { RegionTableRow } from "@/components/exams/03-region-info/components/RegionTableRow"
 import { useDragAndDrop } from "@/components/exams/03-region-info/hooks/useDragAndDrop"
 import { useKeyboardNavigation } from "@/components/exams/03-region-info/hooks/useKeyboardNavigation"
-import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
+import type { CropRegionRow } from "@/queries/cropRegion"
+import {
+  cropRegionsQuery,
+  deleteCropRegionMutation,
+  updateCropRegionMutation,
+  updateCropRegionOrdersMutation,
+} from "@/queries/cropRegion"
 import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
 
 type RegionDetailsTableProps = {
-  regions: CropRegionWithSubtotals[]
-  setRegions: React.Dispatch<React.SetStateAction<CropRegionWithSubtotals[]>>
+  examId: string
+  regions: CropRegionRow[]
   disabled?: boolean
   selectedRowIndex: number | null
   setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>
@@ -33,8 +40,8 @@ type RegionDetailsTableProps = {
 }
 
 const RegionDetailsTable = ({
+  examId,
   regions,
-  setRegions,
   disabled = false,
   selectedRowIndex,
   setSelectedRowIndex,
@@ -45,6 +52,39 @@ const RegionDetailsTable = ({
 }: RegionDetailsTableProps) => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [regionToDelete, setRegionToDelete] = useState<number | null>(null)
+
+  const queryClient = useQueryClient()
+  const updateCropRegion = useMutation(updateCropRegionMutation(examId))
+  const deleteCropRegion = useMutation(deleteCropRegionMutation(examId))
+  const updateCropRegionOrders = useMutation(
+    updateCropRegionOrdersMutation(examId)
+  )
+
+  /**
+   * 編集した結果を先にキャッシュへ置く。
+   *
+   * 打鍵のたびに書くので、取り直しを待つと入力欄が1文字ぶん戻って見える。
+   */
+  const patchCachedRegions = useCallback(
+    (patched: CropRegionRow[]) => {
+      queryClient.setQueryData(cropRegionsQuery(examId).queryKey, patched)
+    },
+    [examId, queryClient]
+  )
+
+  /** 並べ替え。順番は行の並びそのものなので、全行の orderIndex を振り直す */
+  const handleReorder = useCallback(
+    (reordered: CropRegionRow[]) => {
+      patchCachedRegions(reordered)
+      updateCropRegionOrders.mutate(
+        reordered.map((region, index) => ({
+          id: region.id,
+          orderIndex: index,
+        }))
+      )
+    },
+    [patchCachedRegions, updateCropRegionOrders]
+  )
 
   // 全ページの領域を表示（統一順序）
   const filteredRegions = regions
@@ -61,7 +101,7 @@ const RegionDetailsTable = ({
     handleDragEnd,
   } = useDragAndDrop({
     regions,
-    setRegions,
+    onReorder: handleReorder,
     selectedRowIndex,
     setSelectedRowIndex,
   })
@@ -71,18 +111,23 @@ const RegionDetailsTable = ({
     field: string,
     value: string | number | null
   ) => {
-    const newRegions = [...regions]
-    if (field === "points" && value !== "" && value !== null) {
-      newRegions[globalIndex] = {
-        ...newRegions[globalIndex],
-        [field]: parseFloat(String(value)),
-      }
-    } else if (field === "points" && (value === "" || value === null)) {
-      newRegions[globalIndex] = { ...newRegions[globalIndex], [field]: null }
-    } else {
-      newRegions[globalIndex] = { ...newRegions[globalIndex], [field]: value }
-    }
-    setRegions(newRegions)
+    const region = regions[globalIndex]
+    if (!region) return
+
+    // 配点だけ数値。空欄は「未設定」なので null へ倒す
+    const nextValue =
+      field === "points"
+        ? value === "" || value === null
+          ? null
+          : parseFloat(String(value))
+        : value
+
+    patchCachedRegions(
+      regions.map((current) =>
+        current.id === region.id ? { ...current, [field]: nextValue } : current
+      )
+    )
+    updateCropRegion.mutate({ id: region.id, data: { [field]: nextValue } })
   }
 
   const handleDeleteRegion = (index: number) => {
@@ -95,43 +140,14 @@ const RegionDetailsTable = ({
       const regionToDeleteData = regions[regionToDelete]
 
       try {
-        // データベースから削除（IDがある場合のみ）
-        if (regionToDeleteData?.id) {
-          await window.electronAPI.deleteCropRegion(regionToDeleteData.id)
-        }
+        await deleteCropRegion.mutateAsync(regionToDeleteData.id)
 
-        // UI状態を更新
-        const newRegions = regions.filter((_, i) => i !== regionToDelete)
+        // 消した分だけ後ろが繰り上がるので、残りの並び順を振り直す
+        const remaining = regions.filter(
+          (region) => region.id !== regionToDeleteData.id
+        )
+        if (remaining.length > 0) handleReorder(remaining)
 
-        // orderIndexを再計算してデータベースに反映
-        const updatedRegions = newRegions.map((region, index) => ({
-          ...region,
-          orderIndex: index,
-        }))
-
-        // データベースのorderIndexを更新
-        try {
-          const updates = updatedRegions
-            .map((region, index) => ({
-              id: region.id,
-              orderIndex: index,
-            }))
-            .filter((update) => update.id) // IDがあるもののみ
-
-          if (
-            window.electronAPI?.updateCropRegionOrders &&
-            updates.length > 0
-          ) {
-            await window.electronAPI.updateCropRegionOrders(updates)
-          }
-        } catch (orderError) {
-          console.error(
-            "Error updating region order after deletion:",
-            orderError
-          )
-        }
-
-        setRegions(updatedRegions)
         setDeleteModalOpen(false)
         setRegionToDelete(null)
 

@@ -215,7 +215,6 @@ const NOT_A_CALL_SITE = [
 const NOT_YET_MIGRATED = [
   "src/app/(app)/answer-sheet-builder/[definitionId]/layout.tsx",
   "src/app/(app)/classrooms/[classroomId]/hooks/useClassroomExamResults.ts",
-  "src/app/(app)/exams/[examId]/03-region-info/page.tsx",
   "src/app/(app)/exams/[examId]/06-student-answers/hooks/index.tsx",
   "src/app/(app)/students/[studentId]/hooks/useStudentDetail.ts",
   "src/app/(app)/students/[studentId]/hooks/useStudentExamResults.ts",
@@ -230,9 +229,6 @@ const NOT_YET_MIGRATED = [
   "src/components/answer-sheet-builder/hooks/useExamIntegration.ts",
   "src/components/answer-sheet-builder/utils/renderSvgStrings.ts",
   "src/components/common/student-add-panel/hooks/useStudentAddPanel.ts",
-  "src/components/exams/03-region-info/components/RegionDetailsTable.tsx",
-  "src/components/exams/03-region-info/hooks/useDragAndDrop.ts",
-  "src/components/exams/03-region-info/hooks/useOmrConfig.ts",
   "src/components/exams/05-students/components/ClassroomExamManager.tsx",
   "src/components/exams/05-students/components/exam-student-add-modal/components/ExamStudentAddModalContainer.tsx",
   "src/components/exams/05-students/components/exam-students-page/hooks/useExamStudentsData.ts",

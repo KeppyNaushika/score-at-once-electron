@@ -81,9 +81,6 @@ export const queryKeys = {
     scope: (examId: string) => ["exam", examId] as const,
     /** 試験1件そのもの（パンくず・答案アップロードなど、本体だけ要る画面） */
     detail: (examId: string) => ["exam", examId, "detail"] as const,
-    /** 領域情報ページ(03)が1回で取る形（操作者＋ページ＋背景画像＋採点領域） */
-    regionInfoPage: (examId: string) =>
-      ["exam", examId, "regionInfoPage"] as const,
     /** 結果出力ページ(08)が1回で取る形（試験＋受験者） */
     exportPage: (examId: string) => ["exam", examId, "exportPage"] as const,
     /** 出力設定（重ね描き＋個人成績表。小計グループ選択は関連フラグから解決済み） */
@@ -95,7 +92,6 @@ export const queryKeys = {
     classrooms: (examId: string) => ["exam", examId, "classrooms"] as const,
     /** この試験に紐づくタグ（タグ一覧そのものは queryKeys.tags.all） */
     tags: (examId: string) => ["exam", examId, "tags"] as const,
-    omrConfigs: (examId: string) => ["exam", examId, "omrConfigs"] as const,
     decisionSummary: (examId: string, userId: string | undefined) =>
       ["exam", examId, "decisionSummary", userId] as const,
     cropRegionAssignments: (examId: string, userId: string | undefined) =>

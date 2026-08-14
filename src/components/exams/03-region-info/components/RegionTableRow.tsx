@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
+import type { CropRegionRow } from "@/queries/cropRegion"
 import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 import { CROP_REGION_AREA_TYPES } from "@/types/cropRegionAreaType.types"
 import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
@@ -59,7 +59,7 @@ const typeIcons: Record<CropRegionAreaType, IconType> = {
 }
 
 type RegionTableRowProps = {
-  region: CropRegionWithSubtotals
+  region: CropRegionRow
   globalIndex: number
   isSelected: boolean
   isDragged: boolean

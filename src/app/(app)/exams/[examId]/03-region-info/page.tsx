@@ -1,46 +1,30 @@
 "use client"
 
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 
 import RegionDetailsTable from "@/components/exams/03-region-info/components/RegionDetailsTable"
 import { useOmrConfig } from "@/components/exams/03-region-info/hooks/useOmrConfig"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/contexts/AuthContext"
-import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
-import { queryKeys } from "@/lib/queryKeys"
+import { type CropRegionRow, cropRegionsQuery } from "@/queries/cropRegion"
+import { examPagesQuery } from "@/queries/exam"
+import { fileProtocolPathQuery } from "@/queries/misc"
 
 /** 未取得のときに毎回新しい値を作らないための空値 */
 const EMPTY_EXAM_PAGES: ExamPageWithContent[] = []
-const EMPTY_IMAGE_URLS: Record<string, string> = {}
-const EMPTY_CROP_REGIONS: CropRegionWithSubtotals[] = []
-
-/** この画面が1回の取得で揃える形 */
-interface RegionInfoData {
-  examPages: ExamPageWithContent[]
-  backgroundImageUrls: Record<string, string>
-  cropRegions: CropRegionWithSubtotals[]
-}
+const EMPTY_CROP_REGIONS: CropRegionRow[] = []
 
 export default function RegionInfoPage() {
   const params = useParams()
   const router = useRouter()
   const { helpButton } = usePageHelp()
-  // 自動保存はログイン中のときだけ動かす
-  const { user } = useAuth()
+  const examId = typeof params.examId === "string" ? params.examId : ""
 
-  const paramsExamId = params.examId
-  const examId =
-    typeof paramsExamId === "string" ? paramsExamId : paramsExamId?.[0]
-
-  const [saveTimeoutId, setSaveTimeoutId] = useState<NodeJS.Timeout | null>(
-    null
-  )
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
   /** 表示中のページ。未選択なら取得結果の先頭を出す */
   const [selectedExamPageId, setSelectedExamPageId] = useState<string | null>(
@@ -49,159 +33,57 @@ export default function RegionInfoPage() {
   const queryClient = useQueryClient()
 
   // OMR設定管理
-  const { getOmrConfig, upsertOmrConfig, deleteOmrConfig } = useOmrConfig(
-    examId ?? ""
-  )
+  const { getOmrConfig, upsertOmrConfig, deleteOmrConfig } =
+    useOmrConfig(examId)
 
-  // ページ・背景画像・採点領域は必ず揃って初めて編集できるので、
-  // 1つの取得にまとめる（片方だけ古い状態で描かない）
-  const queryKey = useMemo(
-    () => queryKeys.exam.regionInfoPage(examId ?? ""),
-    [examId]
-  )
   const {
-    data,
-    isPending: isLoading,
-    error,
-  } = useQuery<RegionInfoData>({
-    queryKey,
-    queryFn: examId
-      ? async () => {
-          const [exam, cropRegions] = await Promise.all([
-            // 試験が存在しなければ null（不存在を検知する）
-            window.electronAPI.getExamWithPages(examId),
-            window.electronAPI.getCropRegionsByExamId(examId),
-          ])
-          if (!exam) throw new Error("試験が見つかりません。")
+    data: fetchedExamPages = EMPTY_EXAM_PAGES,
+    isPending: examPagesPending,
+    error: examPagesError,
+  } = useQuery(examPagesQuery(examId))
+  const {
+    data: cropRegions = EMPTY_CROP_REGIONS,
+    isPending: cropRegionsPending,
+    error: cropRegionsError,
+  } = useQuery(cropRegionsQuery(examId))
 
-          const examPages = [...exam.examPages].sort(
-            (pageA, pageB) => pageA.pageNumber - pageB.pageNumber
-          )
-          const backgroundImageUrls = Object.fromEntries(
-            await Promise.all(
-              examPages
-                .filter((page) => page.imagePath)
-                .map(
-                  async (page) =>
-                    [
-                      page.id,
-                      await window.electronAPI.resolveFileProtocolPath(
-                        page.imagePath!
-                      ),
-                    ] as const
-                )
-            )
-          )
-          return { examPages, backgroundImageUrls, cropRegions }
-        }
-      : skipToken,
-  })
-  const examPages = data?.examPages ?? EMPTY_EXAM_PAGES
-  const backgroundImageUrls = data?.backgroundImageUrls ?? EMPTY_IMAGE_URLS
-  const cropRegions = data?.cropRegions ?? EMPTY_CROP_REGIONS
+  const isLoading = examPagesPending || cropRegionsPending
+  const error = examPagesError ?? cropRegionsError
 
-  /** 編集中の採点領域でキャッシュを差し替える（自動保存の往復を待たせない） */
-  const setCropRegions = useCallback(
-    (regions: CropRegionWithSubtotals[]) => {
-      queryClient.setQueryData<RegionInfoData>(queryKey, (previous) =>
-        previous ? { ...previous, cropRegions: regions } : previous
-      )
-    },
-    [queryClient, queryKey]
+  // 一覧はページ番号順に出す（並べ替えは表示のたびに行う）
+  const examPages = useMemo(
+    () =>
+      [...fetchedExamPages].sort(
+        (pageA, pageB) => pageA.pageNumber - pageB.pageNumber
+      ),
+    [fetchedExamPages]
   )
+
+  // 背景画像はページごとに引く。画像を持たないページは引かない
+  const backgroundImageUrls = useQueries({
+    queries: examPages.map((examPage) => ({
+      ...fileProtocolPathQuery(examPage.imagePath ?? ""),
+      enabled: Boolean(examPage.imagePath),
+    })),
+    combine: (results: { data?: string }[]) =>
+      Object.fromEntries(
+        examPages.map((examPage, index) => [
+          examPage.id,
+          examPage.imagePath ? (results[index]?.data ?? "") : "",
+        ])
+      ),
+  })
 
   // 表示中のページ。未選択なら先頭を出す（取得結果から導くので state を持たない）
   const selectedExamPage =
-    examPages.find((page) => page.id === selectedExamPageId) ??
+    examPages.find((examPage) => examPage.id === selectedExamPageId) ??
     examPages[0] ??
     null
-
-  const autoSaveRegions = useCallback(
-    async (regions: CropRegionWithSubtotals[]) => {
-      if (!examId || !user) return
-
-      try {
-        const savePromises = regions.map(async (area) => {
-          if (!area.examPage?.id) return null
-
-          const regionData = {
-            examPageId: area.examPage.id,
-            type: area.type,
-            x: area.x,
-            y: area.y,
-            width: area.width,
-            height: area.height,
-            label: area.label,
-            points: area.points,
-            orderIndex: area.orderIndex,
-          }
-
-          if (area.id) {
-            return await window.electronAPI.updateCropRegion(
-              area.id,
-              regionData
-            )
-          } else {
-            const { orderIndex: _ignoredOrderIndex, ...createData } = regionData
-            return await window.electronAPI.createCropRegion(createData)
-          }
-        })
-
-        const savedRegions = await Promise.all(savePromises.filter(Boolean))
-
-        if (savedRegions.length > 0) {
-          setCropRegions(
-            savedRegions.filter(
-              (
-                region: CropRegionWithSubtotals | null
-              ): region is CropRegionWithSubtotals => region !== null
-            )
-          )
-        }
-      } catch (error) {
-        console.error("Auto-save failed:", error)
-      }
-    },
-    [examId, user, setCropRegions]
-  )
-
-  const handleRegionsChange = useCallback(
-    (
-      newRegions:
-        | CropRegionWithSubtotals[]
-        | ((prev: CropRegionWithSubtotals[]) => CropRegionWithSubtotals[])
-    ) => {
-      const updatedRegions =
-        typeof newRegions === "function" ? newRegions(cropRegions) : newRegions
-
-      setCropRegions(updatedRegions)
-
-      // Clear existing timeout
-      if (saveTimeoutId) {
-        clearTimeout(saveTimeoutId)
-      }
-
-      // Set new timeout for auto-save
-      const timeoutId = setTimeout(() => {
-        autoSaveRegions(updatedRegions)
-      }, 1000) // Auto-save after 1 second of inactivity
-
-      setSaveTimeoutId(timeoutId)
-    },
-    [saveTimeoutId, autoSaveRegions, cropRegions, setCropRegions]
-  )
 
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
         <p>領域情報を読み込み中...</p>
-      </div>
-    )
-  }
-  if (!examId) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p>試験情報がありません。</p>
       </div>
     )
   }
@@ -219,7 +101,11 @@ export default function RegionInfoPage() {
               {error.message}
             </p>
             <Button
-              onClick={() => queryClient.invalidateQueries({ queryKey })}
+              onClick={() =>
+                queryClient.invalidateQueries({
+                  queryKey: cropRegionsQuery(examId).queryKey,
+                })
+              }
               className="mt-4"
               variant="outline"
             >
@@ -361,8 +247,8 @@ export default function RegionInfoPage() {
           </div>
           <div className="min-h-0 flex-1 overflow-hidden">
             <RegionDetailsTable
+              examId={examId}
               regions={cropRegions}
-              setRegions={handleRegionsChange}
               selectedRowIndex={selectedRowIndex}
               setSelectedRowIndex={setSelectedRowIndex}
               selectedMasterImageId={selectedExamPage?.id}

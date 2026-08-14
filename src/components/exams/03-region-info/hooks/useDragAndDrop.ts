@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
+import type { CropRegionRow } from "@/queries/cropRegion"
 
 type DragState = {
   draggedIndex: number | null
@@ -8,8 +8,9 @@ type DragState = {
 }
 
 type UseDragAndDropProps = {
-  regions: CropRegionWithSubtotals[]
-  setRegions: React.Dispatch<React.SetStateAction<CropRegionWithSubtotals[]>>
+  regions: CropRegionRow[]
+  /** 並べ替えた結果をそのまま渡す（書き込みは呼び出し側が持つ） */
+  onReorder: (reordered: CropRegionRow[]) => void
   selectedRowIndex: number | null
   setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>
 }
@@ -17,7 +18,7 @@ type UseDragAndDropProps = {
 /** 領域情報テーブルの行ドラッグ&ドロップによる並び替えを管理するフック */
 export const useDragAndDrop = ({
   regions,
-  setRegions,
+  onReorder,
   selectedRowIndex,
   setSelectedRowIndex,
 }: UseDragAndDropProps) => {
@@ -41,7 +42,7 @@ export const useDragAndDrop = ({
     setDragState((prev) => ({ ...prev, dragOverIndex: null }))
   }
 
-  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault()
     const { draggedIndex } = dragState
 
@@ -52,28 +53,9 @@ export const useDragAndDrop = ({
       reordered.splice(draggedIndex, 1)
       reordered.splice(dropIndex, 0, draggedItem)
 
-      const reorderedWithOrder = reordered.map((region, index) => ({
-        ...region,
-        orderIndex: index,
-      }))
-
-      setRegions(reorderedWithOrder)
-
-      // orderIndexを更新（データベースに反映）
-      try {
-        const updates = reorderedWithOrder
-          .map((region) => ({
-            id: region.id,
-            orderIndex: region.orderIndex ?? 0,
-          }))
-          .filter((update) => update.id)
-
-        if (window.electronAPI?.updateCropRegionOrders) {
-          await window.electronAPI.updateCropRegionOrders(updates)
-        }
-      } catch (error) {
-        console.error("Failed to update region order:", error)
-      }
+      onReorder(
+        reordered.map((region, index) => ({ ...region, orderIndex: index }))
+      )
 
       if (selectedRowIndex === draggedIndex) {
         setSelectedRowIndex(dropIndex)
