@@ -8,6 +8,7 @@ import { DeleteConfirmModal } from "@/components/exams/03-region-info/components
 import { RegionTableRow } from "@/components/exams/03-region-info/components/RegionTableRow"
 import { useDragAndDrop } from "@/components/exams/03-region-info/hooks/useDragAndDrop"
 import { useKeyboardNavigation } from "@/components/exams/03-region-info/hooks/useKeyboardNavigation"
+import { useEditingText } from "@/hooks/useEditingText"
 import type { CropRegionRow } from "@/queries/cropRegion"
 import {
   cropRegionsQuery,
@@ -54,6 +55,8 @@ const RegionDetailsTable = ({
   const [regionToDelete, setRegionToDelete] = useState<number | null>(null)
 
   const queryClient = useQueryClient()
+  // 1打鍵ごとに書くので、打鍵と取り直しが競り合う。入力中の文字は手元に持つ
+  const { textOf, remember, forget } = useEditingText()
   const updateCropRegion = useMutation(updateCropRegionMutation(examId))
   const deleteCropRegion = useMutation(deleteCropRegionMutation(examId))
   const updateCropRegionOrders = useMutation(
@@ -115,12 +118,17 @@ const RegionDetailsTable = ({
     if (!region) return
 
     // 配点だけ数値。空欄は「未設定」なので null へ倒す
+    remember(region.id, field, value === null ? "" : String(value))
+
     const nextValue =
       field === "points"
         ? value === "" || value === null
           ? null
           : parseFloat(String(value))
         : value
+    // 数にできない途中（空・`8.`）は書かない。次の打鍵で確定する
+    if (field === "points" && nextValue !== null && Number.isNaN(nextValue))
+      return
 
     patchCachedRegions(
       regions.map((current) =>
@@ -140,6 +148,7 @@ const RegionDetailsTable = ({
       const regionToDeleteData = regions[regionToDelete]
 
       try {
+        forget(regionToDeleteData.id)
         await deleteCropRegion.mutateAsync(regionToDeleteData.id)
 
         // 消した分だけ後ろが繰り上がるので、残りの並び順を振り直す
@@ -234,6 +243,7 @@ const RegionDetailsTable = ({
                 omrConfig={getOmrConfig(region.id)}
                 onOmrSave={onOmrSave}
                 onOmrDelete={onOmrDelete}
+                textOf={textOf}
                 onRegionChange={handleRegionChange}
                 onKeyDown={handleKeyDown}
                 onCompositionStart={handleCompositionStart}

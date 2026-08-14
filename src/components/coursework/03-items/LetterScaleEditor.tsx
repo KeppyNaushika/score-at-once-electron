@@ -4,7 +4,6 @@ import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useMutation } from "@tanstack/react-query"
 import { Plus, X } from "lucide-react"
-import { useState } from "react"
 
 import {
   DragHandle,
@@ -13,6 +12,7 @@ import {
 } from "@/components/common/sortable-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useEditingText } from "@/hooks/useEditingText"
 import { cn } from "@/lib/utils"
 import {
   createCourseworkLetterScaleMutation,
@@ -27,10 +27,6 @@ type LetterScale = CourseworkItemWithLetterScales["letterScales"][number]
 
 /** 新しい行に付ける既定のラベル（項目内で未使用のもの） */
 const DEFAULT_LABELS = ["A", "B", "C", "D", "E", "F"]
-
-/** 入力中の文字を引くための鍵（DB の鍵ではなく、この画面だけの覚え） */
-const editingKey = (letterScaleId: string, field: "label" | "score") =>
-  `${letterScaleId}:${field}`
 
 interface LetterScaleEditorProps {
   courseworkId: string
@@ -65,36 +61,14 @@ export function LetterScaleEditor({
     reorderCourseworkLetterScalesMutation(courseworkId)
   )
 
-  const [editingText, setEditingText] = useState<ReadonlyMap<string, string>>(
-    new Map()
-  )
+  const { textOf: editingTextOf, remember, forget } = useEditingText()
 
   const letterScales = [...item.letterScales].sort(
     (first, second) => first.order - second.order
   )
 
   const textOf = (letterScale: LetterScale, field: "label" | "score") =>
-    editingText.get(editingKey(letterScale.id, field)) ??
-    String(letterScale[field])
-
-  const rememberText = (
-    letterScale: LetterScale,
-    field: "label" | "score",
-    text: string
-  ) => {
-    setEditingText((previous) =>
-      new Map(previous).set(editingKey(letterScale.id, field), text)
-    )
-  }
-
-  const forgetText = (letterScale: LetterScale) => {
-    setEditingText((previous) => {
-      const next = new Map(previous)
-      next.delete(editingKey(letterScale.id, "label"))
-      next.delete(editingKey(letterScale.id, "score"))
-      return next
-    })
-  }
+    editingTextOf(letterScale.id, field, String(letterScale[field]))
 
   /** 他の行が既に使っているラベルか（一意制約に触れる状態か） */
   const isDuplicateLabel = (letterScale: LetterScale, label: string) =>
@@ -103,7 +77,7 @@ export function LetterScaleEditor({
     )
 
   const changeLabel = (letterScale: LetterScale, text: string) => {
-    rememberText(letterScale, "label", text)
+    remember(letterScale.id, "label", text)
     const label = text.trim()
     // 空・重複のままでは書かない（DB の一意制約に触れる）。次の打鍵で確定する
     if (label === "" || isDuplicateLabel(letterScale, label)) return
@@ -111,7 +85,7 @@ export function LetterScaleEditor({
   }
 
   const changeScore = (letterScale: LetterScale, text: string) => {
-    rememberText(letterScale, "score", text)
+    remember(letterScale.id, "score", text)
     const score = Number(text)
     if (text.trim() === "" || Number.isNaN(score)) return
     updateLetterScale.mutate({ id: letterScale.id, score })
@@ -133,7 +107,7 @@ export function LetterScaleEditor({
   }
 
   const removeRow = (letterScale: LetterScale) => {
-    forgetText(letterScale)
+    forget(letterScale.id)
     deleteLetterScale.mutate(letterScale.id)
   }
 
@@ -178,7 +152,7 @@ export function LetterScaleEditor({
                 }
                 onChangeLabel={changeLabel}
                 onChangeScore={changeScore}
-                onBlur={forgetText}
+                onBlur={(letterScale) => forget(letterScale.id)}
                 onRemove={removeRow}
               />
             )

@@ -4,7 +4,7 @@ import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useMutation } from "@tanstack/react-query"
 import { Plus, Trash2 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 
 import {
   DragHandle,
@@ -13,6 +13,7 @@ import {
 } from "@/components/common/sortable-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useEditingText } from "@/hooks/useEditingText"
 import { cn } from "@/lib/utils"
 import {
   createGradeItemBoundaryMutation,
@@ -30,10 +31,6 @@ interface BoundaryEditorProps {
 
 /** 境界の行 */
 type Boundary = GradeItemWithDataSources["boundaries"][number]
-
-/** 入力中の文字を引くための鍵（DB の鍵ではなく、この画面だけの覚え） */
-const editingKey = (boundaryId: string, field: "label" | "minPercentage") =>
-  `${boundaryId}:${field}`
 
 /**
  * 成績境界の編集コンポーネント
@@ -56,9 +53,7 @@ export function BoundaryEditor({ gradeId, gradeItem }: BoundaryEditorProps) {
     reorderGradeItemBoundariesMutation(gradeId)
   )
 
-  const [editingText, setEditingText] = useState<ReadonlyMap<string, string>>(
-    new Map()
-  )
+  const { textOf: editingTextOf, remember, forget } = useEditingText()
 
   // 表示順は order。以前は最低%の降順で並べていたため、DnD で並べ替えても
   // 見た目が戻り、並べ替えが効いていなかった。
@@ -72,34 +67,17 @@ export function BoundaryEditor({ gradeId, gradeItem }: BoundaryEditorProps) {
 
   /** 表示する文字。入力中ならその文字、そうでなければ DB の値 */
   const textOf = (boundary: Boundary, field: "label" | "minPercentage") =>
-    editingText.get(editingKey(boundary.id, field)) ?? String(boundary[field])
-
-  const rememberText = (
-    boundary: Boundary,
-    field: "label" | "minPercentage",
-    text: string
-  ) => {
-    setEditingText((previous) =>
-      new Map(previous).set(editingKey(boundary.id, field), text)
-    )
-  }
-
-  const forgetText = (boundary: Boundary) => {
-    setEditingText((previous) => {
-      const next = new Map(previous)
-      next.delete(editingKey(boundary.id, "label"))
-      next.delete(editingKey(boundary.id, "minPercentage"))
-      return next
-    })
-  }
+    editingTextOf(boundary.id, field, String(boundary[field]))
 
   const changeLabel = (boundary: Boundary, text: string) => {
-    rememberText(boundary, "label", text)
+    remember(boundary.id, "label", text)
+    // 空ラベルは書かない。最下位の境界として全生徒に空の評価が付いてしまう
+    if (text.trim() === "") return
     updateBoundary.mutate({ id: boundary.id, label: text })
   }
 
   const changeMinPercentage = (boundary: Boundary, text: string) => {
-    rememberText(boundary, "minPercentage", text)
+    remember(boundary.id, "minPercentage", text)
     const parsed = Number(text)
     // 入力途中（空・`8.` など）は保存しない。次の打鍵で確定する
     if (text.trim() === "" || Number.isNaN(parsed)) return
@@ -131,7 +109,7 @@ export function BoundaryEditor({ gradeId, gradeItem }: BoundaryEditorProps) {
   }
 
   const removeRow = (boundary: Boundary) => {
-    forgetText(boundary)
+    forget(boundary.id)
     deleteBoundary.mutate(boundary.id)
   }
 
@@ -180,7 +158,7 @@ export function BoundaryEditor({ gradeId, gradeItem }: BoundaryEditorProps) {
                 isInvalid={invalidBoundaryIds.has(boundary.id)}
                 onChangeLabel={changeLabel}
                 onChangeMinPercentage={changeMinPercentage}
-                onBlur={forgetText}
+                onBlur={(boundary) => forget(boundary.id)}
                 onRemove={removeRow}
               />
             ))}

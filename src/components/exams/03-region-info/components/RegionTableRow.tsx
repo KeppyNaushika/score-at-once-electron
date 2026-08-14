@@ -78,6 +78,8 @@ type RegionTableRowProps = {
     }>
   }) => Promise<boolean>
   onOmrDelete: (cropRegionId: string) => Promise<boolean>
+  /** 入力中の文字を優先して出す（打鍵と取り直しが競り合うため） */
+  textOf: (rowId: string, field: string, stored: string) => string
   onRegionChange: (
     globalIndex: number,
     field: string,
@@ -109,6 +111,7 @@ export const RegionTableRow = ({
   omrConfig,
   onOmrSave,
   onOmrDelete,
+  textOf,
   onRegionChange,
   onKeyDown,
   onCompositionStart,
@@ -200,7 +203,7 @@ export const RegionTableRow = ({
           <Input
             data-row={globalIndex}
             data-field="label"
-            value={region.label || ""}
+            value={textOf(region.id, "label", region.label || "")}
             onChange={(e) =>
               onRegionChange(globalIndex, "label", e.target.value)
             }
@@ -219,7 +222,11 @@ export const RegionTableRow = ({
               data-row={globalIndex}
               data-field="points"
               type="number"
-              value={region.points ?? ""}
+              value={textOf(
+                region.id,
+                "points",
+                region.points === null ? "" : String(region.points)
+              )}
               onChange={(e) =>
                 onRegionChange(globalIndex, "points", e.target.value)
               }
