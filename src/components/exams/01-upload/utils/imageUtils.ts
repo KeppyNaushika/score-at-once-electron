@@ -13,35 +13,6 @@ export const sortImagesByPageNumber = (
 }
 
 /**
- * 画像URLマップを生成する（キーは ExamPage.id）
- */
-export const generateImageUrls = async (
-  answers: ExamPageWithContent[]
-): Promise<Record<string, string>> => {
-  const urls: Record<string, string> = {}
-
-  for (const answer of answers) {
-    if (!answer.imagePath) {
-      urls[answer.id] = ""
-      continue
-    }
-    try {
-      urls[answer.id] = await window.electronAPI.resolveFileProtocolPath(
-        answer.imagePath
-      )
-    } catch (error) {
-      console.error(
-        `Failed to resolve path for answer ${answer.id} (${answer.imagePath}):`,
-        error
-      )
-      urls[answer.id] = ""
-    }
-  }
-
-  return urls
-}
-
-/**
  * ファイルタイプに基づいてアップロード用データを作成する
  * @param {File} file - アップロード対象のファイル
  * @param {ConvertedImage[]} convertedImages - PDF変換済み画像データ（PDFの場合）

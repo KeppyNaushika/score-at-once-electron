@@ -10,20 +10,17 @@ import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
 /**
  * マスター解答管理コンポーネントのProps
  * @property {string} examId - 試験ID
- * @property {ExamPageWithContent[]} initialMasterAnswers - 初期マスター解答リスト
- * @property {function} onMasterAnswersChange - マスター解答変更時のコールバック関数
  */
 export interface MasterAnswerManagerProps {
   examId: string
-  initialMasterAnswers: ExamPageWithContent[]
-  onMasterAnswersChange: (answers: ExamPageWithContent[]) => void
 }
 
 /**
  * マスター解答ギャラリーのProps
  * @property {ExamPageWithContent[]} answers - 表示する解答リスト
  * @property {Record<string, string>} imageUrls - ページIDとURLのマッピング
- * @property {Record<string, boolean>} isDeleting - 削除中のページIDマップ
+ * @property {string | null} deletingAnswerId - 削除中のページ（無ければ null）
+ * @property {string | null} replacingAnswerId - 差し替え中のページ（無ければ null）
  * @property {boolean} isMoving - 移動処理中かどうか
  * @property {function} onDeleteAnswer - 解答削除ハンドラー
  * @property {function} onReplaceAnswer - 模範解答画像の差し替えハンドラー
@@ -32,8 +29,8 @@ export interface MasterAnswerManagerProps {
 export interface MasterAnswerGalleryProps {
   answers: ExamPageWithContent[]
   imageUrls: Record<string, string>
-  isDeleting: Record<string, boolean>
-  isReplacing: Record<string, boolean>
+  deletingAnswerId: string | null
+  replacingAnswerId: string | null
   isMoving: boolean
   onDeleteAnswer: (examPageId: string) => void
   onReplaceAnswer: (examPageId: string, file: File) => void
@@ -68,18 +65,6 @@ export interface MasterAnswerCardProps {
   onMoveLeft: () => void
   onMoveRight: () => void
   onPageSizeChange: (pageSize: string) => void
-}
-
-/**
- * マスター解答管理の状態
- */
-export interface MasterAnswersState {
-  imageUrls: Record<string, string>
-  isUploading: boolean
-  uploadProgress: number
-  isDeleting: Record<string, boolean>
-  isReplacing: Record<string, boolean>
-  isMoving: boolean
 }
 
 /**

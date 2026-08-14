@@ -122,8 +122,6 @@ export const queryKeys = {
     classrooms: (examId: string) => ["exam", examId, "classrooms"] as const,
     /** この試験に紐づくタグ（タグ一覧そのものは queryKeys.tags.all） */
     tags: (examId: string) => ["exam", examId, "tags"] as const,
-    masterAnswers: (examId: string) =>
-      ["exam", examId, "masterAnswers"] as const,
     omrConfigs: (examId: string) => ["exam", examId, "omrConfigs"] as const,
     decisionSummary: (examId: string, userId: string | undefined) =>
       ["exam", examId, "decisionSummary", userId] as const,

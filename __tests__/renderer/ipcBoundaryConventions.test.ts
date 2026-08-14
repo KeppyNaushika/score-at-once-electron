@@ -205,7 +205,6 @@ function collectValueImports(): string[] {
 const NOT_YET_MIGRATED = [
   "src/app/(app)/answer-sheet-builder/[definitionId]/layout.tsx",
   "src/app/(app)/classrooms/[classroomId]/hooks/useClassroomExamResults.ts",
-  "src/app/(app)/exams/[examId]/01-upload/page.tsx",
   "src/app/(app)/exams/[examId]/03-region-info/page.tsx",
   "src/app/(app)/exams/[examId]/06-student-answers/hooks/index.tsx",
   "src/app/(app)/settings/components/AuditLogsTab.tsx",
@@ -235,8 +234,6 @@ const NOT_YET_MIGRATED = [
   "src/components/classroom/ClassroomStudentImportModal.tsx",
   "src/components/common/ScreenBlackout.tsx",
   "src/components/common/student-add-panel/hooks/useStudentAddPanel.ts",
-  "src/components/exams/01-upload/hooks/useMasterAnswers.ts",
-  "src/components/exams/01-upload/utils/imageUtils.ts",
   "src/components/exams/02-template/hooks/useCropRegionSave.ts",
   "src/components/exams/02-template/hooks/useTemplateData.ts",
   "src/components/exams/03-region-info/components/RegionDetailsTable.tsx",

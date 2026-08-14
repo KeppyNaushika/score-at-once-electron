@@ -19,22 +19,15 @@ import { MasterAnswerGallery } from "./MasterAnswerGallery"
  * - 画像URL管理
  *
  * @param examId - 試験ID
- * @param initialMasterAnswers - 初期画像データ
- * @param onMasterAnswersChange - 画像データ変更時のコールバック関数
  * @returns 模範解答画像管理コンポーネント
  */
-export function MasterAnswerManager({
-  examId,
-  initialMasterAnswers,
-  onMasterAnswersChange,
-}: MasterAnswerManagerProps) {
+export function MasterAnswerManager({ examId }: MasterAnswerManagerProps) {
   const {
     answers,
     imageUrls,
     isUploading,
-    uploadProgress,
-    isDeleting,
-    isReplacing,
+    deletingAnswerId,
+    replacingAnswerId,
     isMoving,
     passwordDialog,
     uploadAnswers,
@@ -44,7 +37,7 @@ export function MasterAnswerManager({
     updatePageSize,
     handlePasswordSubmit,
     handlePasswordCancel,
-  } = useMasterAnswers(examId, initialMasterAnswers, onMasterAnswersChange)
+  } = useMasterAnswers(examId)
 
   return (
     <div className="space-y-6">
@@ -52,7 +45,6 @@ export function MasterAnswerManager({
       <FileUploadDropzone
         onFilesSelected={uploadAnswers}
         isUploading={isUploading}
-        uploadProgress={uploadProgress}
         accept=".pdf,.png,.jpg,.jpeg"
         maxFileSize={50 * 1024 * 1024} // 50MB
       />
@@ -61,8 +53,8 @@ export function MasterAnswerManager({
       <MasterAnswerGallery
         answers={answers}
         imageUrls={imageUrls}
-        isDeleting={isDeleting}
-        isReplacing={isReplacing}
+        deletingAnswerId={deletingAnswerId}
+        replacingAnswerId={replacingAnswerId}
         isMoving={isMoving}
         onDeleteAnswer={deleteAnswer}
         onReplaceAnswer={replaceAnswerImage}

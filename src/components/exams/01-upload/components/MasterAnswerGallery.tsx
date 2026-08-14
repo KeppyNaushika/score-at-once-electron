@@ -16,8 +16,8 @@ import { MasterAnswerCard } from "./MasterAnswerCard"
 export function MasterAnswerGallery({
   answers,
   imageUrls,
-  isDeleting,
-  isReplacing,
+  deletingAnswerId,
+  replacingAnswerId,
   isMoving,
   onDeleteAnswer,
   onReplaceAnswer,
@@ -45,8 +45,8 @@ export function MasterAnswerGallery({
                 imageUrl={imageUrls[answer.id] ?? ""}
                 index={index}
                 totalAnswers={answers.length}
-                isDeleting={isDeleting[answer.id]}
-                isReplacing={isReplacing[answer.id]}
+                isDeleting={answer.id === deletingAnswerId}
+                isReplacing={answer.id === replacingAnswerId}
                 isMoving={isMoving}
                 onDelete={() => onDeleteAnswer(answer.id)}
                 onReplace={(file) => onReplaceAnswer(answer.id, file)}
