@@ -1014,19 +1014,20 @@ main は既に `src/types/` から型を引いているので前例があり、�
 | `grade`                                  | **完了**（フック4つを削除・境界を行ごとに・デバウンス撤去）       |
 | `coursework`                             | **完了**（刻みを行ごとに・点数の束ね取りを解体・フック1つを削除） |
 | `student` / `classroom` / `tag` / `user` | **完了**（薄いフック4つと `useClassroomManagement` を削除）       |
+| `subtotal`                               | **完了**（04 の束ね取得を解体・割り当ての書き込みを1本に）        |
 | `export` / `settings`                    | `src/queries/` を用意（消費側は移行中）                           |
-| `exam` 系                                | 未着手（いちばん大きい）                                          |
+| `exam` 系                                | 01・02・04・05 と詳細・パンくずが完了。03・06・07・08 が残り      |
 | `answer-sheet-builder`                   | 未着手（[IPC 分割](./asb-ipc-split-plan.md)と一緒に）             |
 
-**残量 100ファイル**（`NOT_YET_MIGRATED`）。
+**残量 85ファイル**（`NOT_YET_MIGRATED`）。
 
 | 場所                              | 数  |
 | --------------------------------- | --- |
-| `components/exams`                | 54  |
-| `app`                             | 19  |
+| `components/exams`                | 41  |
+| `app`                             | 15  |
 | `components/answer-sheet-builder` | 10  |
-| `hooks`                           | 6   |
-| その他                            | 18  |
+| `hooks`                           | 4   |
+| その他                            | 15  |
 
 #### この間に決まったこと（実装済み）
 
