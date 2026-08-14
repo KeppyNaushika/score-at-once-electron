@@ -229,6 +229,92 @@ function collectQueryDefinitions(): Map<
   return definitions
 }
 
+/**
+ * 取得は境界の返り値をそのまま返す。
+ *
+ * `src/queries/**` の `queryOptions` が、`window.electronAPI.*` の呼び出し1本を
+ * そのまま返しているかを見る。組み立てた値（複数の呼び出しを束ねたオブジェクト・
+ * Set・並べ替えた配列）を返していたら、それは**取得ではなく計算**で、キャッシュに
+ * 載るのは DB の行ではなくなる。
+ *
+ * 派生物をキャッシュに置くと、1レコードの書き込みに対して取り直す先が「派生物」に
+ * なり、束ごと作り直すか手で書き換えるか（＝楽観更新）の二択になる。実際に
+ * `useCourseworkScores` がその形をしていた。
+ *
+ * @returns 違反の場所（`ファイル:定義名`）
+ */
+function findAssembledQueryFns(): string[] {
+  const violations: string[] = []
+  const files = execSync(
+    "git ls-files --cached --others --exclude-standard src/queries/",
+    { cwd: REPO_ROOT, encoding: "utf8" }
+  )
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+
+  /** `window.electronAPI.…(…)` の呼び出しか */
+  const isBoundaryCall = (node: ts.Node): boolean =>
+    ts.isCallExpression(node) &&
+    node.expression.getText().startsWith("window.electronAPI.")
+
+  for (const relativePath of files) {
+    const fullPath = path.join(REPO_ROOT, relativePath)
+    if (!fs.existsSync(fullPath)) continue
+    const source = ts.createSourceFile(
+      fullPath,
+      fs.readFileSync(fullPath, "utf8"),
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TS
+    )
+
+    const visit = (node: ts.Node) => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.initializer &&
+        /\bqueryOptions\(/.test(node.initializer.getText())
+      ) {
+        const definitionName = node.name.text
+        const findQueryFn = (inner: ts.Node): ts.Node | undefined => {
+          if (
+            ts.isPropertyAssignment(inner) &&
+            inner.name.getText() === "queryFn"
+          ) {
+            return inner.initializer
+          }
+          return ts.forEachChild(inner, findQueryFn)
+        }
+        const queryFn = findQueryFn(node.initializer)
+        if (queryFn && ts.isArrowFunction(queryFn)) {
+          // `() => 呼び出し` か `() => { return 呼び出し }` のどちらも許す
+          let returned: ts.Node = queryFn.body
+          if (ts.isBlock(returned)) {
+            const statements = returned.statements
+            const onlyReturn =
+              statements.length === 1 && ts.isReturnStatement(statements[0])
+                ? statements[0].expression
+                : undefined
+            if (!onlyReturn) {
+              violations.push(`${relativePath}: ${definitionName}`)
+              return
+            }
+            returned = onlyReturn
+          }
+          if (ts.isAwaitExpression(returned)) returned = returned.expression
+          if (!isBoundaryCall(returned)) {
+            violations.push(`${relativePath}: ${definitionName}`)
+          }
+        }
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(source)
+  }
+  return violations
+}
+
 function scan(): Scan {
   const configPath = path.join(REPO_ROOT, "tsconfig.json")
   const config = ts.readConfigFile(configPath, ts.sys.readFile)
@@ -479,6 +565,10 @@ describe("クエリキーの規約", () => {
     )
 
     expect(unexpected).toEqual([])
+  })
+
+  it("取得は境界の返り値をそのまま返す（組み立てた値を載せない）", () => {
+    expect(findAssembledQueryFns()).toEqual([])
   })
 
   it("誰も読まないキーへは書かない", () => {

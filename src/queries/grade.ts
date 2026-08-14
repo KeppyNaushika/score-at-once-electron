@@ -137,17 +137,18 @@ export const gradeExamCandidatesQuery = () =>
     queryFn: () => window.electronAPI.grade.getExamCandidates(),
   })
 
-/** ある試験の中で指定できる小計点・設問領域の候補 */
-export const gradeExamOptionsQuery = (examId: string) =>
+/** ある試験の中で指定できる小計点の候補 */
+export const gradeExamSubtotalGroupsQuery = (examId: string) =>
   queryOptions({
-    queryKey: ["grade", "examOptions", examId] as const,
-    queryFn: async () => {
-      const [subtotalGroups, cropRegions] = await Promise.all([
-        window.electronAPI.grade.getExamSubtotalGroups(examId),
-        window.electronAPI.grade.getExamCropRegions(examId),
-      ])
-      return { subtotalGroups, cropRegions }
-    },
+    queryKey: ["grade", "examSubtotalGroups", examId] as const,
+    queryFn: () => window.electronAPI.grade.getExamSubtotalGroups(examId),
+  })
+
+/** ある試験の中で指定できる設問領域の候補 */
+export const gradeExamCropRegionsQuery = (examId: string) =>
+  queryOptions({
+    queryKey: ["grade", "examCropRegions", examId] as const,
+    queryFn: () => window.electronAPI.grade.getExamCropRegions(examId),
   })
 
 /**
@@ -158,16 +159,16 @@ export const gradeExamOptionsQuery = (examId: string) =>
 export const buildGradeExclusionKey = (target: GradeCellTarget) =>
   `${target.gradeStudentId}:${target.gradeItemId}`
 
-/** 対象者ごとの評価項目の除外設定 */
+/** 除外設定1行 */
+export type GradeItemExclusionRow = Awaited<
+  ReturnType<typeof window.electronAPI.grade.getGradeItemExclusions>
+>[number]
+
+/** 対象者ごとの評価項目の除外設定（行のまま） */
 export const gradeItemExclusionsQuery = (gradeId: string) =>
   queryOptions({
     queryKey: [...scopeKeys.grade(gradeId), "exclusions"] as const,
-    queryFn: async (): Promise<ReadonlySet<string>> =>
-      new Set(
-        (await window.electronAPI.grade.getGradeItemExclusions(gradeId)).map(
-          buildGradeExclusionKey
-        )
-      ),
+    queryFn: () => window.electronAPI.grade.getGradeItemExclusions(gradeId),
   })
 
 // =====================================================================

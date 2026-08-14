@@ -19,8 +19,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useTags } from "@/hooks/useTags"
+import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { queryKeys } from "@/lib/queryKeys"
+import { tagListQuery } from "@/queries/tag"
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_TAGS: TagWithAllRelations[] = []
 
 interface EditExamWindowProps {
   examToEdit: Exam
@@ -33,8 +37,12 @@ const EditExamWindow = ({
   setIsShowEditExamWindow,
   onSave,
 }: EditExamWindowProps) => {
-  const { tags: allTags, refresh: refreshTags } = useTags()
+  const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const queryClient = useQueryClient()
+  const refreshTags = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
+    [queryClient]
+  )
   const [examName, setExamName] = useState(examToEdit.examName)
   const [examDate, setExamDate] = useState<Date | undefined>(() => {
     if (!examToEdit.examDate) return undefined

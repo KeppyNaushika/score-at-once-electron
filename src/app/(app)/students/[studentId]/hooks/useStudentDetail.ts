@@ -1,15 +1,32 @@
 import type { Student, StudentClassroomMembership } from "@prisma/client"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
+import { useCallback } from "react"
 
-import { useClassrooms } from "@/hooks/useClassrooms"
-import { useStudents } from "@/hooks/useStudents"
+import { classroomListQuery, studentListQuery } from "@/queries/student"
+import type { ClassroomWithMemberships } from "@/types/prismaExtensions"
+import type { StudentWithMemberships } from "@/types/prismaExtensions"
 import type { StudentClassroomMembershipWithStudentAndClassroom } from "@/types/prismaExtensions"
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_STUDENTS: StudentWithMemberships[] = []
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_CLASSROOMS: ClassroomWithMemberships[] = []
+
 export function useStudentDetail(studentId: string) {
+  const queryClient = useQueryClient()
   const router = useRouter()
   // 生徒・学級は全画面で共有するキャッシュから引く（この画面だけ取り直さない）
-  const { students, isPending: studentsPending, refresh } = useStudents()
-  const { classrooms, isPending: classroomsPending } = useClassrooms()
+  const { data: students = EMPTY_STUDENTS, isPending: studentsPending } =
+    useQuery(studentListQuery())
+  const refresh = useCallback(
+    () =>
+      queryClient.invalidateQueries({ queryKey: studentListQuery().queryKey }),
+    [queryClient]
+  )
+  const { data: classrooms = EMPTY_CLASSROOMS, isPending: classroomsPending } =
+    useQuery(classroomListQuery())
   const student = students.find((student) => student.id === studentId) ?? null
   const loading = studentsPending || classroomsPending
 

@@ -32,20 +32,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-
-interface User {
-  id: string
-  username: string
-  name: string
-  role: string
-  passcodeType?: string | null
-}
+import type { PublicUser } from "@/queries/user"
 
 interface PasscodeEditModalProps {
   isOpen: boolean
   onClose: () => void
   onPasscodeUpdated: () => void
-  user: User | null
+  user: PublicUser | null
 }
 
 type PasscodeType = "none" | "4digit" | "6digit" | "alphanumeric"

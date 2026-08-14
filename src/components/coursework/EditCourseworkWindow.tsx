@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { Save } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -17,11 +17,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useTags } from "@/hooks/useTags"
+import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import {
   setCourseworkTagsMutation,
   updateCourseworkMutation,
 } from "@/queries/coursework"
+import { tagListQuery } from "@/queries/tag"
 
 interface EditCourseworkWindowProps {
   courseworkId: string
@@ -38,6 +39,9 @@ interface EditCourseworkWindowProps {
  * 試験外成績資料の基本設定を編集するモーダル（試験の EditExamWindow 流儀）。
  * 名前・説明・実施日・タグを更新する。
  */
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_TAGS: TagWithAllRelations[] = []
+
 export function EditCourseworkWindow({
   courseworkId,
   initialName,
@@ -47,7 +51,7 @@ export function EditCourseworkWindow({
   onClose,
   onSaved,
 }: EditCourseworkWindowProps) {
-  const { tags: allTags } = useTags()
+  const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const [name, setName] = useState(initialName)
   const [description, setDescription] = useState(initialDescription)
   const [date, setDate] = useState(initialDate)

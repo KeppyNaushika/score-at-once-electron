@@ -13,20 +13,13 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-
-interface User {
-  id: string
-  username: string
-  name: string
-  role: string
-  passcodeType?: string | null
-}
+import type { PublicUser } from "@/queries/user"
 
 interface UserEditModalProps {
   isOpen: boolean
   onClose: () => void
   onUserUpdated: () => void
-  user: User | null
+  user: PublicUser | null
 }
 
 export function UserEditModal({

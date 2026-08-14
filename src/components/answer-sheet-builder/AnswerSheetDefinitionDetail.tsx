@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { ArrowRight, Download, Pencil, TagIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import React, { useCallback, useEffect, useState } from "react"
@@ -10,8 +10,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useTags } from "@/hooks/useTags"
+import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { queryKeys } from "@/lib/queryKeys"
+import { tagListQuery } from "@/queries/tag"
 
 import { countAsbQuestions } from "./answerSheetStats"
 import { useAsbOwner } from "./hooks/useAsbOwner"
@@ -29,14 +30,22 @@ const ORIENTATION_LABELS: Record<string, string> = {
  * 解答用紙の概要ページ。
  * メタ情報の表示・個別タグ設定・作成/書き出しへの導線を提供する。
  */
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_TAGS: TagWithAllRelations[] = []
+
 export function AnswerSheetDefinitionDetail({
   definitionId,
 }: AnswerSheetDefinitionDetailProps) {
+  const queryClient = useQueryClient()
   const router = useRouter()
   const [tagNames, setTagNames] = useState<string[]>([])
   const [currentTagInput, setCurrentTagInput] = useState("")
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const { tags: allTags, refresh: refreshTags } = useTags()
+  const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
+  const refreshTags = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
+    [queryClient]
+  )
 
   const {
     data: definition = null,

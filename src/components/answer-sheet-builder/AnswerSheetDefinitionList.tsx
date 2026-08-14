@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Copy,
   FolderInput,
@@ -52,10 +53,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
+import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
-import { useTags } from "@/hooks/useTags"
-import { useUsers } from "@/hooks/useUsers"
+import { tagListQuery } from "@/queries/tag"
+import type { PublicUser } from "@/queries/user"
+import { userListQuery } from "@/queries/user"
 import type { ASBDefinitionListItem } from "@/types/answerSheetBuilder.types"
 
 import { useAnswerSheetDefinitions } from "./hooks/useAnswerSheetDefinitions"
@@ -121,7 +124,7 @@ function TransferOwnerDialog({
   onClose: () => void
   onTransfer: (id: string, nextUserId: string) => Promise<void>
 }) {
-  const { users } = useUsers()
+  const { data: users = EMPTY_USERS } = useQuery(userListQuery())
   const candidates = users.filter((candidate) => candidate.id !== currentUserId)
 
   return (
@@ -165,7 +168,14 @@ function TransferOwnerDialog({
   )
 }
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_TAGS: TagWithAllRelations[] = []
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_USERS: PublicUser[] = []
+
 export function AnswerSheetDefinitionList() {
+  const queryClient = useQueryClient()
   const { user } = useAuth()
   const router = useRouter()
   const {
@@ -177,7 +187,11 @@ export function AnswerSheetDefinitionList() {
     transferOwner,
   } = useAnswerSheetDefinitions(user?.id)
 
-  const { tags: allTags, refresh: refreshTags } = useTags()
+  const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
+  const refreshTags = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
+    [queryClient]
+  )
   const [sortKey, setSortKey] = useState<SortKey>("updatedAt")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [deleteTarget, setDeleteTarget] = useState<{

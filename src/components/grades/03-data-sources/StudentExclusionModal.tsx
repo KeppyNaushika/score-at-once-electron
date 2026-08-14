@@ -23,13 +23,14 @@ import {
 } from "@/components/ui/table"
 import {
   buildGradeExclusionKey,
+  type GradeItemExclusionRow,
   gradeItemExclusionsQuery,
   setGradeItemExclusionMutation,
 } from "@/queries/grade"
 import type { GradeItemWithDataSources } from "@/types/grade.types"
 
-/** 未取得のときに毎回新しい Set を作らないための空値 */
-const EMPTY_EXCLUSIONS: ReadonlySet<string> = new Set()
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_EXCLUSIONS: GradeItemExclusionRow[] = []
 
 /** 成績の名簿1行。除外の書き込み先は人ではなく対象者（id）なので実体で受け取る */
 interface ExclusionStudent {
@@ -67,8 +68,14 @@ export function StudentExclusionModal({
   students,
   classroomIds,
 }: StudentExclusionModalProps) {
-  const { data: exclusionSet = EMPTY_EXCLUSIONS, isPending: loading } =
-    useQuery(gradeItemExclusionsQuery(gradeId))
+  const { data: exclusions = EMPTY_EXCLUSIONS, isPending: loading } = useQuery(
+    gradeItemExclusionsQuery(gradeId)
+  )
+  // 引きやすい形へ畳むのは表示側の計算。取得は行のまま持つ
+  const exclusionSet = useMemo(
+    () => new Set(exclusions.map(buildGradeExclusionKey)),
+    [exclusions]
+  )
   const setExclusion = useMutation(setGradeItemExclusionMutation(gradeId))
 
   const classroomIdSet = useMemo(() => new Set(classroomIds), [classroomIds])

@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Calculator,
   Download,
@@ -38,16 +39,20 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
+import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
 import { useTableSort } from "@/hooks/useTableSort"
-import { useTags } from "@/hooks/useTags"
 import {
   type ExamSummary,
   getExamProgress,
   getExamWorkflowStatus,
 } from "@/lib/examStatus"
+import { tagListQuery } from "@/queries/tag"
 import type { ArchiveExportMode } from "@/types/examArchive.types"
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_TAGS: TagWithAllRelations[] = []
 
 interface ExamSortable {
   id: string
@@ -69,7 +74,12 @@ const EXAM_FILTER_ACCESSORS: ListFilterAccessors<ExamSummary> = {
 const File = () => {
   const { exams, loadExams } = useExams()
   const { user } = useAuth()
-  const { tags: allTags, refresh: refreshTags } = useTags()
+  const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
+  const queryClient = useQueryClient()
+  const refreshTags = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
+    [queryClient]
+  )
   const [showImportModal, setShowImportModal] = useState(false)
   const [isBulkExporting, setIsBulkExporting] = useState(false)
   const [showBulkExportModal, setShowBulkExportModal] = useState(false)

@@ -1,8 +1,9 @@
 "use client"
 
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Download, Edit, PlusCircle, Search, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import ClassroomModal from "@/components/classroom/ClassroomModal"
@@ -19,9 +20,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useClassrooms } from "@/hooks/useClassrooms"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
+import { classroomListQuery } from "@/queries/student"
 import type { ClassroomWithMemberships } from "@/types/prismaExtensions"
 
 // ソート用の型
@@ -34,10 +35,21 @@ interface ClassroomSortable {
   original: ClassroomWithMemberships
 }
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_CLASSROOMS: ClassroomWithMemberships[] = []
+
 export default function ClassroomManagementTable() {
+  const queryClient = useQueryClient()
   const router = useRouter()
   // 学級は全画面で共有するキャッシュから引く（この画面だけ取り直さない）
-  const { classrooms, refresh: refreshClassrooms } = useClassrooms()
+  const { data: classrooms = EMPTY_CLASSROOMS } = useQuery(classroomListQuery())
+  const refreshClassrooms = useCallback(
+    () =>
+      queryClient.invalidateQueries({
+        queryKey: classroomListQuery().queryKey,
+      }),
+    [queryClient]
+  )
   const [searchTerm, setSearchTerm] = useState("")
   const [isClassroomModalOpen, setIsClassroomModalOpen] = useState(false)
   const [classroomToEdit, setClassroomToEdit] =

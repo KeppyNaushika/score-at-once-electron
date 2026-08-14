@@ -21,14 +21,7 @@ import { useKeyboardSettings } from "@/app/(app)/settings/hooks/useKeyboardSetti
 import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
 import { UserEditModal } from "@/components/auth/UserEditModal"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-interface User {
-  id: string
-  username: string
-  name: string
-  role: string
-  passcodeType?: string | null
-}
+import type { PublicUser } from "@/queries/user"
 
 export default function SettingsPage() {
   const {
@@ -43,10 +36,10 @@ export default function SettingsPage() {
     getKeyDisplayName,
   } = useKeyboardSettings()
 
-  const [users, setUsers] = useState<User[]>([])
+  const [users, setUsers] = useState<PublicUser[]>([])
   const [isPasscodeEditOpen, setIsPasscodeEditOpen] = useState(false)
   const [isUserEditOpen, setIsUserEditOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [selectedUser, setSelectedUser] = useState<PublicUser | null>(null)
 
   const loadUsers = useCallback(async () => {
     try {
@@ -65,12 +58,12 @@ export default function SettingsPage() {
     return () => cancelAnimationFrame(frame)
   }, [loadUsers])
 
-  const handleEditUser = (user: User) => {
+  const handleEditUser = (user: PublicUser) => {
     setSelectedUser(user)
     setIsUserEditOpen(true)
   }
 
-  const handleEditPasscode = (user: User) => {
+  const handleEditPasscode = (user: PublicUser) => {
     setSelectedUser(user)
     setIsPasscodeEditOpen(true)
   }

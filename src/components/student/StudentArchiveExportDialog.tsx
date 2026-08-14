@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { FolderOutput, Loader2 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -13,7 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useStudents } from "@/hooks/useStudents"
+import { studentListQuery } from "@/queries/student"
+import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
 interface ClassroomInfo {
   id: string
@@ -26,6 +28,9 @@ interface StudentArchiveExportDialogProps {
   selectedStudentIds: Set<string>
 }
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_STUDENTS: StudentWithMemberships[] = []
+
 export function StudentArchiveExportDialog({
   isOpen,
   onClose,
@@ -37,7 +42,8 @@ export function StudentArchiveExportDialog({
   const [isExporting, setIsExporting] = useState(false)
 
   // 生徒は共有キャッシュから引き、選択生徒に紐づく学級はそこから導く
-  const { students, isPending: isLoading } = useStudents()
+  const { data: students = EMPTY_STUDENTS, isPending: isLoading } =
+    useQuery(studentListQuery())
   const relatedClassrooms: ClassroomInfo[] = useMemo(() => {
     const classroomById = new Map<string, string>()
     for (const student of students) {

@@ -9,22 +9,15 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useAuth } from "@/contexts/AuthContext"
 import { queryKeys } from "@/lib/queryKeys"
+import type { PublicUser } from "@/queries/user"
 
 import { PasscodeModal } from "./PasscodeModal"
 import { UserCreateModal } from "./UserCreateModal"
 
-interface User {
-  id: string
-  username: string
-  name: string
-  role: string
-  passcodeType?: string | null
-}
-
 export default function UserSelection() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showPasscodeModal, setShowPasscodeModal] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [selectedUser, setSelectedUser] = useState<PublicUser | null>(null)
   const { quickLogin } = useAuth()
 
   const queryClient = useQueryClient()
@@ -38,7 +31,7 @@ export default function UserSelection() {
     [queryClient]
   )
 
-  const handleUserSelect = async (user: User) => {
+  const handleUserSelect = async (user: PublicUser) => {
     if (user.passcodeType && user.passcodeType !== "none") {
       setSelectedUser(user)
       setShowPasscodeModal(true)

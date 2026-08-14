@@ -32,9 +32,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
-import { useTags } from "@/hooks/useTags"
 import { collectClassroomOptions } from "@/lib/filterOptions"
 import {
   addTagToCourseworksMutation,
@@ -45,7 +45,7 @@ import {
   importCourseworkArchiveMutation,
   selectCourseworkImportFileMutation,
 } from "@/queries/coursework"
-import { findOrCreateTagMutation } from "@/queries/tag"
+import { findOrCreateTagMutation, tagListQuery } from "@/queries/tag"
 import type { CourseworkSummary } from "@/types/coursework.types"
 import type {
   CourseworkArchiveImportPreview,
@@ -80,6 +80,9 @@ const COURSEWORK_FILTER_ACCESSORS: ListFilterAccessors<CourseworkSummary> = {
  * テーブル形式で資料一覧を表示し、各資料への遷移・新規作成・削除を提供する。
  * 成績算出から参照中の資料は削除をブロックし、参照元をトーストで通知する。
  */
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_TAGS: TagWithAllRelations[] = []
+
 export function CourseworkListContainer() {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -101,7 +104,11 @@ export function CourseworkListContainer() {
     null
   )
   const [importing, setImporting] = useState(false)
-  const { tags: allTags, refresh: refreshTags } = useTags()
+  const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
+  const refreshTags = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
+    [queryClient]
+  )
 
   const loadCourseworks = useCallback(
     () =>

@@ -11,9 +11,10 @@ import { SubtotalGroupCard } from "@/components/subtotal-groups/components/Subto
 import { SubtotalGroupModal } from "@/components/subtotal-groups/components/SubtotalGroupModal"
 import { Button } from "@/components/ui/button"
 import type { SubtotalGroupWithSubtotalsExamsAndTags } from "@/electron-src/lib/prisma/subtotalGroup"
+import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
-import { useTags } from "@/hooks/useTags"
 import { queryKeys } from "@/lib/queryKeys"
+import { tagListQuery } from "@/queries/tag"
 
 /** 小計点グループ一覧のフィルタ対象（グループ名・小計項目名・タグ名で検索、タグで絞り込み） */
 const SUBTOTAL_GROUP_FILTER_ACCESSORS: ListFilterAccessors<SubtotalGroupWithSubtotalsExamsAndTags> =
@@ -30,6 +31,9 @@ const SUBTOTAL_GROUP_FILTER_ACCESSORS: ListFilterAccessors<SubtotalGroupWithSubt
         (tagSubtotalGroup) => tagSubtotalGroup.tag.id
       ),
   }
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_TAGS: TagWithAllRelations[] = []
 
 export function SubtotalGroupsPageContainer() {
   const [showModal, setShowModal] = useState(false)
@@ -54,7 +58,11 @@ export function SubtotalGroupsPageContainer() {
   )
 
   // 既存タグ一覧（タグフィルタの選択肢）
-  const { tags: allTags, refresh: fetchTags } = useTags()
+  const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
+  const fetchTags = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
+    [queryClient]
+  )
 
   const {
     filteredItems: filteredGroups,

@@ -580,7 +580,7 @@ src/queries/
 export const gradeItemExclusionsQuery = (gradeId: string) =>
   queryOptions({
     queryKey: [...scopeKeys.grade(gradeId), "exclusions"] as const,
-    queryFn: async () => new Set(...),
+    queryFn: () => window.electronAPI.grade.getGradeItemExclusions(gradeId),
   })
 
 export const setGradeItemExclusionMutation = (gradeId: string) =>
@@ -593,6 +593,18 @@ export const setGradeItemExclusionMutation = (gradeId: string) =>
     },
   })
 ```
+
+**取得は境界の返り値をそのまま返す。** 複数の呼び出しを束ねた入れ物・`Set`・並べ替えた
+配列を返さない。それは取得ではなく**計算**であり、キャッシュに載るのが DB の行でなく
+なる。
+
+これは「[型管理の方針](#型管理の方針)」の「Prisma の出力を射影せずそのまま持つ」を、
+キャッシュの入口で見ているだけである。派生物を載せると、**1レコードの書き込みに対して
+取り直す先が派生物になる** — 束ごと作り直すか、手で書き換えるか（＝楽観更新）の二択に
+追い込まれる。実際に資料の点数入力がその形をしており、楽観更新はそこから生まれていた。
+
+畳んだ形が欲しいときは、`useQuery` の `select`（キャッシュには載らない）か、
+呼び出し側の純粋関数で作る。検査は `queryKeyConventions.test.ts`。
 
 **キーは `queryOptions` が持つ。** キーの一覧を別に持つと二重管理になり、同じデータが別の
 キーで2度キャッシュされる（実際に起きた）。`src/queries/keys.ts` に置くのは「この試験に

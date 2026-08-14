@@ -17,6 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { useQuery } from "@tanstack/react-query"
 import { GripVertical, Plus, TagIcon, Trash2, XIcon } from "lucide-react"
 import React, { useCallback, useState } from "react"
 
@@ -32,7 +33,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { SubtotalGroupWithSubtotalsExamsAndTags } from "@/electron-src/lib/prisma/subtotalGroup"
-import { useTags } from "@/hooks/useTags"
+import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
+import { tagListQuery } from "@/queries/tag"
 
 interface SubtotalGroupModalProps {
   isOpen: boolean
@@ -113,6 +115,9 @@ function SortableSubtotalItem({
   )
 }
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_TAGS: TagWithAllRelations[] = []
+
 export function SubtotalGroupModal({
   isOpen,
   onClose,
@@ -121,7 +126,7 @@ export function SubtotalGroupModal({
 }: SubtotalGroupModalProps) {
   // 呼び出し側（SubtotalGroupsPageContainer）は閉じている間このコンポーネントを
   // マウントしないため、開くたびに editingGroup の内容からフォームが始まる。
-  const { tags: allTags } = useTags()
+  const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const [name, setName] = useState(editingGroup?.name ?? "")
   const [tagNames, setTagNames] = useState<string[]>(() =>
     (editingGroup?.tagSubtotalGroups ?? []).map(

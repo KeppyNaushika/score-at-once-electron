@@ -7,18 +7,12 @@ import { createContext, useCallback, useContext } from "react"
 import { toast } from "sonner"
 
 import { queryKeys } from "@/lib/queryKeys"
-
-interface User {
-  id: string
-  username: string
-  name: string
-  role: string
-}
+import type { PublicUser } from "@/queries/user"
 
 interface AuthContextType {
-  user: User | null
+  user: PublicUser | null
   isLoading: boolean
-  quickLogin: (user: User) => Promise<void>
+  quickLogin: (user: PublicUser) => Promise<void>
   logout: () => void
   checkAuth: () => Promise<void>
 }
@@ -36,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const { data: user = null, isPending: isLoading } = useQuery({
     queryKey: queryKeys.currentUser.all,
-    queryFn: async (): Promise<User | null> => {
+    queryFn: async (): Promise<PublicUser | null> => {
       const userId = await window.electronAPI.getAuthToken()
       if (!userId) return null
 
@@ -48,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   })
 
   const setUser = useCallback(
-    (next: User | null) =>
+    (next: PublicUser | null) =>
       queryClient.setQueryData(queryKeys.currentUser.all, next),
     [queryClient]
   )
@@ -59,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [queryClient]
   )
 
-  const quickLogin = async (selectedUser: User) => {
+  const quickLogin = async (selectedUser: PublicUser) => {
     try {
       // パスワード不要のクイックログイン
       setUser(selectedUser)

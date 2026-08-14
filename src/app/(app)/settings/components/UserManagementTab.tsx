@@ -3,19 +3,12 @@
 import { Edit3, UserPen } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-
-interface User {
-  id: string
-  username: string
-  name: string
-  role: string
-  passcodeType?: string | null
-}
+import type { PublicUser } from "@/queries/user"
 
 interface UserManagementTabProps {
-  users: User[]
-  onEditUser: (user: User) => void
-  onEditPasscode: (user: User) => void
+  users: PublicUser[]
+  onEditUser: (user: PublicUser) => void
+  onEditPasscode: (user: PublicUser) => void
 }
 
 export function UserManagementTab({

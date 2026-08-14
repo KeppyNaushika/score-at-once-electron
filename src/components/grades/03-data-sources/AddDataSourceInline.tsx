@@ -20,7 +20,8 @@ import {
 import {
   createDataSourceMutation,
   gradeExamCandidatesQuery,
-  gradeExamOptionsQuery,
+  gradeExamCropRegionsQuery,
+  gradeExamSubtotalGroupsQuery,
 } from "@/queries/grade"
 import type { GradeDataSourceInput } from "@/types/grade.types"
 
@@ -82,14 +83,14 @@ export function AddDataSourceInline({
 
   // 試験に紐づく選択肢。どの試験の結果かはキーが持つので、
   // 切り替え直後に前の試験の選択肢が残ることはない
-  const { data: examScopedOptions } = useQuery({
-    ...gradeExamOptionsQuery(selectedExamId),
+  const { data: subtotalGroups = EMPTY_SUBTOTAL_GROUPS } = useQuery({
+    ...gradeExamSubtotalGroupsQuery(selectedExamId),
     enabled: Boolean(selectedExamId),
   })
-
-  const subtotalGroups =
-    examScopedOptions?.subtotalGroups ?? EMPTY_SUBTOTAL_GROUPS
-  const cropRegions = examScopedOptions?.cropRegions ?? EMPTY_CROP_REGIONS
+  const { data: cropRegions = EMPTY_CROP_REGIONS } = useQuery({
+    ...gradeExamCropRegionsQuery(selectedExamId),
+    enabled: Boolean(selectedExamId),
+  })
 
   const selection = useMemo(
     () => ({

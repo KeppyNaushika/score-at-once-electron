@@ -4,9 +4,21 @@ import bcrypt from "bcrypt"
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 
-export const fetchUsers = async (): Promise<User[]> => {
+/**
+ * renderer へ渡してよいユーザーの形。
+ *
+ * **`passcode` を落とす。** 中身は bcrypt ハッシュで、画面が使う場面は無い
+ * （照合は `verify-passcode` が main 側で行う）。かつては行をそのまま返しており、
+ * 画面側の手書き `interface User` が6箇所でその事実を隠していた。
+ */
+const PUBLIC_USER_OMIT = { passcode: true } as const
+
+/** 秘密を含まないユーザー1件 */
+export type PublicUser = Omit<User, "passcode">
+
+export const fetchUsers = async (): Promise<PublicUser[]> => {
   try {
-    return await prisma.user.findMany()
+    return await prisma.user.findMany({ omit: PUBLIC_USER_OMIT })
   } catch (error) {
     console.error("Failed to fetch users:", error)
     throw error
@@ -18,7 +30,7 @@ export const createUser = async (userData: {
   name: string
   passcode?: string
   passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
-}): Promise<User> => {
+}): Promise<PublicUser> => {
   try {
     const hashedPasscode =
       userData.passcode && userData.passcodeType !== "none"
@@ -26,6 +38,7 @@ export const createUser = async (userData: {
         : null
 
     const user = await prisma.user.create({
+      omit: PUBLIC_USER_OMIT,
       data: {
         username: userData.username,
         name: userData.name,
@@ -74,13 +87,14 @@ export const updateUser = async (
     username?: string
     name?: string
   }
-): Promise<User> => {
+): Promise<PublicUser> => {
   try {
     const before = await prisma.user.findUnique({
       where: { id: userId },
     })
 
     const user = await prisma.user.update({
+      omit: PUBLIC_USER_OMIT,
       where: { id: userId },
       data: {
         ...(userData.username && { username: userData.username }),
@@ -110,7 +124,7 @@ export const updateUserPasscode = async (
   userId: string,
   passcode?: string,
   passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
-): Promise<User> => {
+): Promise<PublicUser> => {
   try {
     const hashedPasscode =
       passcode && passcodeType !== "none"
@@ -118,6 +132,7 @@ export const updateUserPasscode = async (
         : null
 
     const user = await prisma.user.update({
+      omit: PUBLIC_USER_OMIT,
       where: { id: userId },
       data: {
         passcode: hashedPasscode,

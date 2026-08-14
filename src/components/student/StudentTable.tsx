@@ -1,6 +1,7 @@
 "use client"
 
 import type { Prisma } from "@prisma/client"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Download,
   Edit,
@@ -12,7 +13,7 @@ import {
   Upload,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
@@ -39,10 +40,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useClassrooms } from "@/hooks/useClassrooms"
-import { useStudents } from "@/hooks/useStudents"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
+import { classroomListQuery, studentListQuery } from "@/queries/student"
+import type { ClassroomWithMemberships } from "@/types/prismaExtensions"
 import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
 // ソート用の型
@@ -54,11 +55,30 @@ interface StudentSortable {
   original: StudentWithMemberships
 }
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_STUDENTS: StudentWithMemberships[] = []
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_CLASSROOMS: ClassroomWithMemberships[] = []
+
 export default function StudentTable() {
+  const queryClient = useQueryClient()
   const router = useRouter()
   // 生徒・学級は全画面で共有するキャッシュから引く（この画面だけ取り直さない）
-  const { students, refresh: refreshStudents } = useStudents()
-  const { classrooms, refresh: refreshClassrooms } = useClassrooms()
+  const { data: students = EMPTY_STUDENTS } = useQuery(studentListQuery())
+  const refreshStudents = useCallback(
+    () =>
+      queryClient.invalidateQueries({ queryKey: studentListQuery().queryKey }),
+    [queryClient]
+  )
+  const { data: classrooms = EMPTY_CLASSROOMS } = useQuery(classroomListQuery())
+  const refreshClassrooms = useCallback(
+    () =>
+      queryClient.invalidateQueries({
+        queryKey: classroomListQuery().queryKey,
+      }),
+    [queryClient]
+  )
   const [searchTerm, setSearchTerm] = useState("")
   const [filterMembershipStatus, setFilterMembershipStatus] =
     useState<string>("current_unassigned")

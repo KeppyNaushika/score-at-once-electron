@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { TagIcon, XIcon } from "lucide-react"
 import React, { useCallback, useState } from "react"
 
@@ -17,8 +18,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
-import { useTags } from "@/hooks/useTags"
+import { tagListQuery } from "@/queries/tag"
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_TAGS: TagWithAllRelations[] = []
 
 interface CreateExamWindowProps {
   onClose: () => void
@@ -29,7 +34,7 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
   onClose,
   onExamCreated,
 }) => {
-  const { tags: allTags } = useTags()
+  const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const [examName, setExamName] = useState("")
   const [examDate, setExamDate] = useState<Date | null>(null)
   const [description, setDescription] = useState("")
