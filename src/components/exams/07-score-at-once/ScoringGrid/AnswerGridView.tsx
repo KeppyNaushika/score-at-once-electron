@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { DragSelectionOverlay } from "@/components/exams/07-score-at-once/ScoringGrid/DragSelectionOverlay"
@@ -10,7 +11,6 @@ import { useGridDragSelection } from "@/components/exams/07-score-at-once/Scorin
 import { useGridLayout } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridLayout"
 import { useGridNavigation } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridNavigation"
 import { useGridSelection } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridSelection"
-import { useSelectionBorder } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useSelectionBorder"
 import type {
   CropRegionWithExamPage,
   LayoutDirection,
@@ -19,7 +19,10 @@ import type {
   ScoringData,
   ScoringOperationMode,
 } from "@/components/exams/07-score-at-once/types"
+import { useAuth } from "@/contexts/AuthContext"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
+import { parsePreference } from "@/lib/userPreferences"
+import { userPreferenceQuery } from "@/queries/settings"
 
 interface AnswerGridViewProps {
   /** 統一されたデータ引数 */
@@ -144,7 +147,15 @@ export default function AnswerGridView({
   const { dragStart, isDragging, dragCurrent, startDrag, updateDrag, endDrag } =
     useGridSelection()
 
-  const selectionBorderColor = useSelectionBorder()
+  const { user: preferenceUser } = useAuth()
+  const { data: storedSelectionBorderColor } = useQuery(
+    userPreferenceQuery(preferenceUser?.id, "selectionBorderColor")
+  )
+  const selectionBorderColor =
+    parsePreference(
+      "selectionBorderColor",
+      storedSelectionBorderColor ?? null
+    ) ?? "#F97316"
   const scoringColors = useScoringStatusColors()
 
   /** アノテーション取得（設問ごとに全学生分を一括取得） */

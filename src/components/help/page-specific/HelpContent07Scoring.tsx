@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { ArrowRight, Eye, RotateCcw } from "lucide-react"
 import {
   createContext,
@@ -13,7 +14,6 @@ import {
 } from "react"
 
 import { getDynamicScoreStatusConfig } from "@/components/exams/07-score-at-once/ScoringGrid/constants/scoreStatusConfig"
-import { useSelectionBorder } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useSelectionBorder"
 import { useShortcutContext } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import PartialScoreModal from "@/components/exams/07-score-at-once/ScoringMain/PartialScoreModal"
 import { Callout, HelpHero, Kbd } from "@/components/help/common/DocComponents"
@@ -25,9 +25,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useAuth } from "@/contexts/AuthContext"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
 import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
+import { parsePreference } from "@/lib/userPreferences"
+import { userPreferenceQuery } from "@/queries/settings"
 
 /** キー文字列を表示用に整形（"e"→"E", "Shift+d"→"Shift+D"） */
 function formatKey(key?: string): string {
@@ -212,7 +215,15 @@ const HELP07_KEYFRAMES = `
 /** 一覧表示の説明アニメ：答案が並び、順に印がついていく */
 function GridStyleAnimation() {
   const colors = useScoringStatusColors()
-  const selectionBorder = useSelectionBorder()
+  const { user: preferenceUser } = useAuth()
+  const { data: storedSelectionBorderColor } = useQuery(
+    userPreferenceQuery(preferenceUser?.id, "selectionBorderColor")
+  )
+  const selectionBorder =
+    parsePreference(
+      "selectionBorderColor",
+      storedSelectionBorderColor ?? null
+    ) ?? "#F97316"
   const marks = [true, false, true, true, false, true]
   return (
     <div
@@ -550,7 +561,13 @@ function ScoringGridDemo({
   onAllScored?: () => void
 }) {
   const colors = useScoringStatusColors()
-  const selectionColor = useSelectionBorder()
+  const { user: selectionPreferenceUser } = useAuth()
+  const { data: storedSelectionColor } = useQuery(
+    userPreferenceQuery(selectionPreferenceUser?.id, "selectionBorderColor")
+  )
+  const selectionColor =
+    parsePreference("selectionBorderColor", storedSelectionColor ?? null) ??
+    "#F97316"
   const statusConfigMap = getDynamicScoreStatusConfig(colors)
   const firstUnscored = Math.max(
     0,

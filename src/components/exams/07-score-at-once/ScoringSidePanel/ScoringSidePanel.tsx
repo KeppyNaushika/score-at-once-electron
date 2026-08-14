@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   AlertTriangle,
   BarChart3,
@@ -21,7 +22,7 @@ import { IndividualModePanel } from "@/components/exams/07-score-at-once/Scoring
 import type {
   ClickScoringAction,
   ClickScoringConfig,
-} from "@/components/exams/07-score-at-once/ScoringMain/hooks/useClickScoringConfig"
+} from "@/components/exams/07-score-at-once/ScoringMain/scoringPreferences"
 import ExamProgressCard from "@/components/exams/07-score-at-once/ScoringSidePanel/ExamProgressCard"
 import { MasterAnswerControls } from "@/components/exams/07-score-at-once/ScoringSidePanel/MasterAnswerControls"
 import NavigationControls from "@/components/exams/07-score-at-once/ScoringSidePanel/NavigationControls"
@@ -45,8 +46,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useAuth } from "@/contexts/AuthContext"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
+import {
+  setUserPreferenceMutation,
+  userPreferenceQuery,
+} from "@/queries/settings"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
+
+import { toCollapsedSections } from "./sidePanelSections"
 
 const STATUS_MAP: Record<string, ScoringStatus> = {
   unscored: "unscored",
@@ -76,7 +84,6 @@ const GRID_4_3_STYLE = {
 
 import { AnnotationBrowserPanel } from "./AnnotationBrowserPanel"
 import { useAnnotationBrowser } from "./hooks/useAnnotationBrowser"
-import { useSidePanelCollapse } from "./hooks/useSidePanelCollapse"
 import { SidePanelSection } from "./SidePanelSection"
 
 interface ScoringSidePanelProps {
@@ -258,7 +265,25 @@ export function ScoringSidePanel({
   const annotationBrowser = useAnnotationBrowser()
   const { keyBindings } = useKeyBindings()
   const scoringColors = useScoringStatusColors()
-  const { isSectionOpen, toggleSection } = useSidePanelCollapse()
+  // 閉じているセクションIDを設定へ残す（既定は全展開）
+  const { user: preferenceUser } = useAuth()
+  const { data: storedCollapsedSections } = useQuery(
+    userPreferenceQuery(preferenceUser?.id, "sidePanelCollapsedSections")
+  )
+  const setPreference = useMutation(
+    setUserPreferenceMutation(preferenceUser?.id)
+  )
+  const collapsedSections = toCollapsedSections(storedCollapsedSections ?? null)
+  const isSectionOpen = (sectionId: string) => !collapsedSections.has(sectionId)
+  const toggleSection = (sectionId: string) => {
+    const next = new Set(collapsedSections)
+    if (next.has(sectionId)) next.delete(sectionId)
+    else next.add(sectionId)
+    setPreference.mutate({
+      key: "sidePanelCollapsedSections",
+      value: JSON.stringify([...next]),
+    })
+  }
   const { loadAnnotations: reloadBrowserAnnotations } = annotationBrowser
 
   // キャンバスでアノテーション変更時にブラウザ一覧をリロード

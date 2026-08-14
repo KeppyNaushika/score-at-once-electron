@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation, useQueries } from "@tanstack/react-query"
 import Head from "next/head"
 import { useParams, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -23,7 +24,6 @@ import { useScoringFilter } from "@/components/exams/07-score-at-once/ScoringMai
 import { useScoringMainState } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringMainState"
 import { useScoringMode } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringMode"
 import { useScoringNavigation } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringNavigation"
-import { useScoringSettings } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringSettings"
 import { useScoringShortcuts } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringShortcuts"
 import { useStudentAnswerManagement } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useStudentAnswerManagement"
 import { useExamDecisionSummary } from "@/components/exams/07-score-at-once/ScoringMain/ScoreDecisionPanel/hooks/useExamDecisionSummary"
@@ -32,6 +32,10 @@ import { ScoringContentArea } from "@/components/exams/07-score-at-once/ScoringM
 import { ScoringHeaderControls } from "@/components/exams/07-score-at-once/ScoringMain/ScoringHeaderControls"
 import { ScoringModals } from "@/components/exams/07-score-at-once/ScoringMain/ScoringModals"
 import { ScoringModeModal } from "@/components/exams/07-score-at-once/ScoringMain/ScoringModeModal"
+import {
+  buildScoringSettings,
+  SCORING_PREFERENCE_KEYS,
+} from "@/components/exams/07-score-at-once/ScoringMain/scoringPreferences"
 import {
   ScoringErrorState,
   ScoringLoadingState,
@@ -42,6 +46,10 @@ import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { useAuth } from "@/contexts/AuthContext"
 import { resolveExamPaperSize } from "@/electron-src/lib/shared/utilities/examPaperSize"
+import {
+  setUserPreferenceMutation,
+  userPreferenceQuery,
+} from "@/queries/settings"
 
 /** 内部コンポーネント（ShortcutProvider内で使用） */
 function ScoringMainViewContent() {
@@ -79,6 +87,17 @@ function ScoringMainViewContent() {
     useScoringDataLoader(examId, authUser?.id ?? null)
 
   /** 設定管理フック */
+  // 採点画面の設定。保存文字列を並べて取り、値の組み立ては純粋関数が行う
+  const preferenceQueries = useQueries({
+    queries: SCORING_PREFERENCE_KEYS.map((key) =>
+      userPreferenceQuery(authUser?.id, key)
+    ),
+  })
+  const setPreference = useMutation(setUserPreferenceMutation(authUser?.id))
+  const scoringSettings = buildScoringSettings(
+    preferenceQueries.map((preferenceQuery) => preferenceQuery.data ?? null),
+    setPreference.mutate
+  )
   const {
     itemsPerLine,
     autoScroll,
@@ -102,7 +121,7 @@ function ScoringMainViewContent() {
     setMasterAnswerDisplayMode,
     setMasterAnswerOpacity,
     setMasterAnswerKeyBehavior,
-  } = useScoringSettings()
+  } = scoringSettings
 
   /** 模範解答表示状態（toggle/hold-to-show制御） */
   const [masterAnswerVisible, setMasterAnswerVisible] = useState(false)

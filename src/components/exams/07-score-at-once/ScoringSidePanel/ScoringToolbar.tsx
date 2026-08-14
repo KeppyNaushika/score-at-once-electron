@@ -24,7 +24,7 @@ import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKey
 import type {
   ClickScoringAction,
   ClickScoringConfig,
-} from "@/components/exams/07-score-at-once/ScoringMain/hooks/useClickScoringConfig"
+} from "@/components/exams/07-score-at-once/ScoringMain/scoringPreferences"
 import type {
   MouseBrushAction,
   ScoringOperationMode,

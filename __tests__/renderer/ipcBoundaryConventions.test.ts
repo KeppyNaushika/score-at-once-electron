@@ -307,7 +307,6 @@ const NOT_YET_MIGRATED = [
   "src/hooks/useExamDetail.ts",
   "src/hooks/useNavigationHistory.ts",
   "src/hooks/useStudentImport.ts",
-  "src/hooks/useUserPreference.ts",
   "src/lib/scoringStatusColors.ts",
   "src/types/electron.d.ts",
 ]
