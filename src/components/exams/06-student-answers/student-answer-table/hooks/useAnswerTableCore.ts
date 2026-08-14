@@ -52,11 +52,8 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
   onUpdatePendingChanges,
   existingAnswers = [],
 }: UseAnswerTableCoreParams<TItem>) {
-  const {
-    nameRegionExamPageIds,
-    canvasRef,
-    drawNameRegionCanvas,
-  } = useNameRegion(examId)
+  const { nameRegionExamPageIds, canvasRef, drawNameRegionCanvas } =
+    useNameRegion(examId)
 
   const {
     disabledState,
@@ -115,8 +112,7 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
   const handleDeleteAnswerSheet = useCallback(
     async (fileId: string) => {
       try {
-        const { deletedSummary } =
-          await deleteStudentAnswer.mutateAsync(fileId)
+        const { deletedSummary } = await deleteStudentAnswer.mutateAsync(fileId)
 
         // 件数は出さない（未採点の初期化行を含む行数とモーダルの表示件数がずれるため）
         toast.success(

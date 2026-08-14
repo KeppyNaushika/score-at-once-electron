@@ -855,7 +855,7 @@ useEffect(() => () => void flush(), [flush]) // 「アンマウント時だけ�
 | `ALLOWED_VALUE_IMPORTS` と `eslint.config.mjs` の例外一覧    | 二重管理。粒度が違う（テストはモジュール＋シンボル、eslint はファイル）ので機能は重複しないが、増やすとき2箇所を触る |
 | #1126 への追記                                               | §1 の前提が実測で否定され、§4 の「実害が小さい」の根拠も §2 修正で消えた。issue 編集は指示待ち                       |
 
-### 段階10 — 読み書きを `src/queries/` へ集める（進行中）
+### 段階10 — 読み書きを `src/queries/` へ集める形を確立する（完了）
 
 **規約の本文は [coding-style.md](./coding-style.md) の「データの読み書き」章にある。**
 ここは**手順と残量**を持つ。この節だけを読めば作業を続けられるように書く。
@@ -916,8 +916,15 @@ src/queries/keys.ts              ← 前方一致の「まとまり」だけ
 6. `ipcBoundaryConventions.test.ts` の `NOT_YET_MIGRATED` から**その分を削る**
 7. `npm run check-all` → `npx vitest run` → 必要なら `npm run test:e2e`
 
-**完了条件**: `NOT_YET_MIGRATED` が空になり、`window.electronAPI` が `src/queries/`
-にしか無い状態。
+**この手順は段階11以降でもそのまま使う。**
+
+**段階10 の完了条件**（達成済み）: 移行の形（`queryOptions` / `defineMutation` / `meta` の
+判別ユニオン / 3つの規約テスト）が固まり、`grade` `coursework` `student` `classroom` `tag`
+`user` `subtotal` `auth` `settings` `sync` `auditLog` `misc` `pdfTools` `archive` と
+**試験の 01〜06** が移り終わっていること。
+
+残り（07・08・ASB・端数）は**段階11以降**へ送る。`NOT_YET_MIGRATED` を空にするのは段階12。
+理由は「同じ形を28回繰り返す作業なので、**大量複製の前に一度レビューを通す**」ため。
 
 #### 残量（2026-08-14 時点で138ファイル）
 
@@ -1009,34 +1016,28 @@ main は既に `src/types/` から型を引いているので前例があり、�
 
 #### 進捗（2026-08-14 時点）
 
-| ドメイン                                           | 状態                                                              |
-| -------------------------------------------------- | ----------------------------------------------------------------- |
-| `grade`                                            | **完了**（フック4つを削除・境界を行ごとに・デバウンス撤去）       |
-| `coursework`                                       | **完了**（刻みを行ごとに・点数の束ね取りを解体・フック1つを削除） |
-| `student` / `classroom` / `tag` / `user`           | **完了**（薄いフック5つと表・モーダルの直接呼び出しを解消）       |
-| `subtotal`                                         | **完了**（04 の束ね取得を解体・割り当ての書き込みを1本に）        |
-| `auth` / `settings` / `sync` / `auditLog` / `misc` | **完了**（トークンと利用者一覧の束ねを解体）                      |
-| `pdfTools` / `archive`                             | **完了**                                                          |
-| `exam` 系                                          | **01〜06 と詳細・パンくずが完了。07・08 が残り**                  |
-| `answer-sheet-builder`                             | 未着手（[IPC 分割](./asb-ipc-split-plan.md)は**前提ではない**）   |
+| ドメイン                                           | 状態                                                               |
+| -------------------------------------------------- | ------------------------------------------------------------------ |
+| `grade`                                            | **完了**（フック4つを削除・境界を行ごとに・デバウンス撤去）        |
+| `coursework`                                       | **完了**（刻みを行ごとに・点数の束ね取りを解体・フック1つを削除）  |
+| `student` / `classroom` / `tag` / `user`           | **完了**（薄いフック5つと表・モーダルの直接呼び出しを解消）        |
+| `subtotal`                                         | **完了**（04 の束ね取得を解体・割り当ての書き込みを1本に）         |
+| `auth` / `settings` / `sync` / `auditLog` / `misc` | **完了**（トークンと利用者一覧の束ねを解体）                       |
+| `pdfTools` / `archive`                             | **完了**                                                           |
+| `exam` 系                                          | **01〜06 と詳細・パンくずが完了。07・08 が残り**                   |
+| `answer-sheet-builder`                             | **段階12** へ（[IPC 分割](./asb-ipc-split-plan.md)は前提ではない） |
 
-**残量 49ファイル**（`NOT_YET_MIGRATED`）。
+**段階11以降へ送った残り 49ファイル**（`NOT_YET_MIGRATED`）。
 
-| 場所                              | 数  |
-| --------------------------------- | --- |
-| `components/exams`（07 と 08）    | 29  |
-| `components/answer-sheet-builder` | 10  |
-| `app`                             | 4   |
-| その他                            | 6   |
+| 場所                              | 数  | 送り先 |
+| --------------------------------- | --- | ------ |
+| `components/exams`（07 と 08）    | 29  | 段階11 |
+| `components/answer-sheet-builder` | 10  | 段階12 |
+| `app`                             | 4   | 段階12 |
+| その他                            | 6   | 段階12 |
 
 `src/types/electron.d.ts` は `window.electronAPI` の**宣言そのもの**なので、残量では
 なく `NOT_A_CALL_SITE`（名指しの例外）へ移した。
-
-**ASB は IPC 分割を待たない。** 分割計画（`asb-ipc-split-plan.md` §7）が作り替えるのは
-main のチャンネル構成と renderer の dispatch であって、段階10 が要求する「呼び出しを
-`src/queries/` に集めること」とは層が違う。ASB が触っている API は14本しかなく、
-大半が読み出しである。分割後に `src/queries/answerSheetBuilder.ts` を書き直すことに
-なるが、薄い層なので手戻りは小さい。
 
 #### この間に決まったこと（実装済み）
 
@@ -1047,14 +1048,20 @@ main のチャンネル構成と renderer の dispatch であって、段階10 �
 - **`passcode` の流出を止めた。** `fetchUsers` が bcrypt ハッシュごと返しており、6箇所の
   手書き `interface User` がそれを隠していた
 
-#### 次に手を付けるもの
+#### 段階10 で下した判断（レビューで見てほしい点）
 
-1. **`exam` 系の各段（01〜08）**。`src/queries/exam.ts` / `cropRegion.ts` / `scoring.ts` /
-   `drawing.ts` / `examClassroom.ts` / `subtotal.ts` / `userExam.ts` へ割る。
-   段階9 #3（08-export のデバウンス）と #5（タグの担当者ガード漏れ）はこの中で片付く
-2. **`app` 配下 19ファイル**（各段のページ）
-3. **`answer-sheet-builder` 10ファイル**。[asb-ipc-split-plan.md](./asb-ipc-split-plan.md)
-   の段階1〜5と同時に行う。ここだけは main 側の分割が前提なので、単独では終わらない
+移行は反復作業なので、**ここで下した判断はそのまま段階11以降へ複製される**。
+以下は独断で決めたもので、誤っていれば同じ形で増える。
+
+| 判断                                                                                                                | 誤っていたときに起きること                                   |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| 楽観的 `setQueryData` → `mutate` で**巻き戻しを書かず**、`MutationCache.onSettled` の取り直しに任せた               | 失敗時に古い値が残る経路があれば、6箇所すべてで同じ穴        |
+| 03 のラベル欄を1打鍵ごとに書く際、BoundaryEditor の `editingText`（入力中の文字の保持）を**複製しなかった**         | 取り直しが打鍵の合間に着地すると入力が戻る。**未検証の判断** |
+| `invalidates` に試験スコープ全体を置いた箇所と、狭いキーを置いた箇所が混在                                          | 取り直しすぎ／足りなさすぎ                                   |
+| `scope` を付けた書き込みと付けない書き込みの選び分け                                                                | 同じ行への同時書き込みが入れ違う                             |
+| 各所の `catch` を中央のトーストへ寄せた                                                                             | 旧コードがトースト以外にやっていた後始末の取りこぼし         |
+| プロップ契約の変更（`setRegions` 撤去 / `onOrderUpdate` の `void` 許容 / 真偽値マップ → id）                        | 既存動作の変質                                               |
+| **規約テストを3箇所いじった**（`setQueryData` のキー認識・options から `queryFn` への降下・`infiniteQueryOptions`） | 安全網そのものが緩む                                         |
 
 #### まだ数え直していないもの
 
@@ -1063,6 +1070,113 @@ main のチャンネル構成と renderer の dispatch であって、段階10 �
 `courseworkStudentId` のような形）を1件も拾えていない。射影は普通その形を取るので、
 実数はもっと多い。数え直しは「取得は境界の返り値をそのまま返す」の検査が効くように
 なった後で行う（そちらが根を止めるので、残るのは props で運ばれる射影だけになる）。
+
+---
+
+### レビュー境界（この計画の残りをどう区切るか）
+
+移行は反復作業で、**判断の誤りは次の段階でそのまま複製される**。だから区切りは
+「作業量」ではなく「**誤りが増える前に止められる位置**」で置く。
+
+| レビュー | どこで                  | そこで見るもの                                                      |
+| -------- | ----------------------- | ------------------------------------------------------------------- |
+| **R1**   | 段階10 の直後（＝いま） | 移行の型そのもの。上の「段階10 で下した判断」7項目                  |
+| **R2**   | 段階11 の直後           | 採点・出力という最も込み入った画面での挙動保存                      |
+| **R3**   | 段階13 の直後（12＋13） | `window.electronAPI` の封じ込め完了と、ASB の DB 書き込みの作り替え |
+| **R4**   | 段階15 の直後（14＋15） | ASB の書き込み経路の全面差し替え（関所・31チャンネル）              |
+
+R1 の依頼文（`/code-review ultra` に添える）:
+
+> `e3f12a91^..HEAD` の差分のみを最終ファイル状態でレビューする。内容は段階10（IPC の
+> 読み書きを `src/queries/` へ集める移行）。特に見てほしい点: (1) 楽観的 setQueryData 後に
+> 巻き戻しを書かず MutationCache の取り直しに任せた6箇所の妥当性、(2) 03-region-info の
+> ラベル欄を1打鍵ごとに書く際、入力中の文字を保持するガードを置かなかったことによる
+> 取りこぼし、(3) `meta.invalidates` の粒度（試験スコープ全体と狭いキーの混在）と `scope` の
+> 付け外しの一貫性、(4) 各所の catch を中央トーストへ寄せた際に落ちた後始末、(5) プロップ
+> 契約の変更が既存動作を変えていないか、(6) 規約テスト（`ipcBoundaryConventions` /
+> `queryKeyConventions`）への変更が安全網を緩めていないか。
+
+---
+
+### 段階11 — 採点(07)と出力(08)を移す
+
+**対象 29ファイル**（`NOT_YET_MIGRATED` の `components/exams/07-score-at-once` 18 と
+`08-export` 11）。段階10 の「手順（1ドメインずつ）」をそのまま使う。
+
+**ここに残っている最後の束ね取得**は `useScoringDataLoader`（07）と `useExportPage`（08）。
+02-template・03-region-info・06 でやったのと同じ形で解体する。
+
+- 07 は `src/queries/scoring.ts` / `drawing.ts` が要る（未作成）
+- 08 は `export.ts` が既にある。`getSubtotalGroupSelection` / `setSubtotalGroupSelection` を
+  `subtotal.ts` へ足す（**使う場所ができてから足す**の原則どおり、ここで初めて足す）
+- **段階9 #3（08-export のデバウンス）はここで消える。** 設定を意図へ割ると要らなくなる
+
+**完了条件**: `NOT_YET_MIGRATED` から `components/exams` が消える。
+
+→ **R2**
+
+### 段階12 — `window.electronAPI` を `src/queries/` だけにする
+
+**対象 19ファイル**＋境界の後始末。
+
+1. **ASB 11ファイル**（`answer-sheet-builder` 10 ＋ `app/(app)/answer-sheet-builder/
+[definitionId]/layout.tsx`）。`src/queries/answerSheetBuilder.ts` を作る。
+   触っている API は14本で、大半が読み出し
+2. **端数8ファイル** — `useClassroomExamResults` / `useStudentDetail` /
+   `useStudentExamResults` / `useStudentAddPanel` / `useImportWizard` /
+   `useStudentImportWizard` / `useNavigationHistory` / `useStudentImport` /
+   `scoringStatusColors`
+3. **共有計算6モジュールを `src/lib/shared/` へ移す**（段階10「決めたこと §4」）。
+   `ALLOWED_VALUE_IMPORTS` と `eslint.config.mjs` の例外一覧が**両方とも消える**
+
+**ASB は IPC 分割を待たない。** 分割計画（`asb-ipc-split-plan.md` §12）が触る renderer
+ファイルと、ここで移す11ファイルの**重なりは2つだけ**
+（`AnswerSheetBuilderMainView.tsx` / `ImageElementEditor.tsx`）。逆に分割計画が大きく
+書き換える `useAnswerSheetDefinition.ts` は、いま `window.electronAPI` を呼んでいないので
+この段階の対象ではない。
+
+**完了条件**: `NOT_YET_MIGRATED` が空。`window.electronAPI` は `src/queries/` と
+`src/types/electron.d.ts`（宣言そのもの）にしか無い。**IPC 移行の完了。**
+
+### 段階13 — ASB: main を実体ごとに分解し、バルクを差分適用にする
+
+[asb-ipc-split-plan.md](./asb-ipc-split-plan.md) の **段階1**。
+
+`saveAsbDefinition` の delete → recreate をやめ、実体ごとの upsert へ分解する。
+ここで直るのは**いま起きているデータ消失**である（同書 §3.1 の実測: タグを付けた定義を
+編集画面で開くと `AsbDefinitionTag` が 0 件になる。`AsbDefinition` 12件は `createdAt` が
+既に全て失われており復元できない）。あわせて「開くだけで保存が走る」を止める（同 §6.8）。
+
+**IPC はまだ1本のまま。** 利用者から見える挙動の修正だけが入る。
+
+→ **R3**（段階12 と合わせて）
+
+### 段階14 — ASB: 型と action を id 基準にする
+
+分割計画の **段階2〜3**。`*Attributes` の分解、action ユニオンの id 化、
+`generateId()` の uuid 化（`asb_${Date.now()}_${n}` は2端末で衝突しうる）、
+子要素エディタの props 分解。
+
+**完了条件**: `UPDATE_SUB_QUESTION` の payload に子コレクションが現れない。
+
+### 段階15 — ASB: IPC を割り、書き込みの関所を置く
+
+分割計画の **段階4〜5**。31本のチャンネル登録、包んだ dispatch ＋ 網羅 switch、
+自動保存 effect の撤去、バルクの `asb:replace-definition` への改名と3経路への限定。
+
+ここで `src/queries/answerSheetBuilder.ts` は段階12 に書いた薄い版から31本へ**書き直す**。
+これは手戻りではなく、その31本の置き場所がそこだから。
+
+→ **R4**（段階14 と合わせて）
+
+### 段階16 — DB 行の手写し型を是正し、検査を入れる
+
+段階10「決めたこと §1」の宿題。**ASB 定義ツリーの5件は RDB 化で消える**ので、
+分割（段階13〜15）の後にやると対象が確定する。
+
+- 対象 19件（下限）。名指しの例外はアーカイブ型と `LetterScaleDraft`
+- 検査 `__tests__/renderer/rowTypeConventions.test.ts` を、直しきってから導入
+- **数え直しが要る**（次節「まだ数え直していないもの」）
 
 ---
 

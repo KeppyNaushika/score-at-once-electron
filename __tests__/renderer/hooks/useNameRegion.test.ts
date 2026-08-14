@@ -46,7 +46,11 @@ function renderUseNameRegion() {
   })
   return renderHook(() => useNameRegion(EXAM_ID), {
     wrapper: ({ children }) =>
-      React.createElement(QueryClientProvider, { client: queryClient }, children),
+      React.createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        children
+      ),
   })
 }
 
