@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { UserPlus } from "lucide-react"
 import { useMemo } from "react"
 
@@ -10,6 +11,11 @@ import {
   ClassroomRosterManager,
 } from "@/components/common/classroom-roster"
 import type { ExamClassroomWithMemberships } from "@/electron-src/lib/prisma/examClassroom"
+import {
+  addExamClassroomMutation,
+  availableExamClassroomsQuery,
+  reorderExamClassroomsMutation,
+} from "@/queries/examClassroom"
 
 interface ClassroomExamManagerProps {
   examId: string
@@ -40,6 +46,12 @@ export function ClassroomExamManager({
   showAddDialog,
   onShowAddDialogChange,
 }: ClassroomExamManagerProps) {
+  const queryClient = useQueryClient()
+  const addExamClassroom = useMutation(addExamClassroomMutation(examId))
+  const reorderExamClassrooms = useMutation(
+    reorderExamClassroomsMutation(examId)
+  )
+
   const entries = useMemo<ClassroomRosterEntry[]>(
     () =>
       examClassrooms.map((examClassroom) => ({
@@ -102,8 +114,9 @@ export function ClassroomExamManager({
       }
       emptyHint="「学級を追加」ボタンから学級を追加してください"
       fetchAvailableClassrooms={async () => {
-        const classrooms =
-          await window.electronAPI.examClassroom.getAvailable(examId)
+        const classrooms = await queryClient.fetchQuery(
+          availableExamClassroomsQuery(examId)
+        )
         return classrooms.map((classroom): AvailableClassroomOption => ({
           id: classroom.id,
           name: classroom.name,
@@ -116,7 +129,7 @@ export function ClassroomExamManager({
         for (const classroomId of classroomIds) {
           // administered の学級は既定で教員集計・生徒表示の対象（移行の
           // studentReport=administered と整合）。出力スコープは後から08で調整可能。
-          await window.electronAPI.examClassroom.add({
+          await addExamClassroom.mutateAsync({
             examId,
             classroomId,
             administered: true,
@@ -126,7 +139,7 @@ export function ClassroomExamManager({
         }
       }}
       onReorder={async (orderedIds) => {
-        await window.electronAPI.examClassroom.reorder({ examId, orderedIds })
+        await reorderExamClassrooms.mutateAsync({ examId, orderedIds })
       }}
       onRemove={async (entry) => {
         await onRemoveClassroom(entry.id)

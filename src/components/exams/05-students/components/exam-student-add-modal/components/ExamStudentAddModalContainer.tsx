@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 
 import { StudentAddPanel } from "@/components/common/student-add-panel/components/StudentAddPanel"
@@ -18,6 +19,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  addStudentsToExamMutation,
+  classroomsNotInExamQuery,
+  examStudentsQuery,
+  studentsNotInExamQuery,
+  updateExamStudentOrdersMutation,
+} from "@/queries/exam"
+import { addStudentsFromClassroomToExamMutation } from "@/queries/examClassroom"
 
 /**
  * 試験への生徒追加モーダル
@@ -31,12 +40,20 @@ export function ExamStudentAddModalContainer({
   examId,
   onStudentsAdded,
 }: ExamStudentAddModalProps) {
+  const queryClient = useQueryClient()
+  const addStudentsFromClassroom = useMutation(
+    addStudentsFromClassroomToExamMutation(examId)
+  )
+  const addStudentsToExam = useMutation(addStudentsToExamMutation(examId))
+  const updateExamStudentOrders = useMutation(
+    updateExamStudentOrdersMutation(examId)
+  )
+
   const adapter = useMemo<StudentAddPanelAdapter>(
     () => ({
       fetchAvailableClassrooms: async (activeOnly) => {
-        const classrooms = await window.electronAPI.getClassroomsNotInExam(
-          examId,
-          activeOnly
+        const classrooms = await queryClient.fetchQuery(
+          classroomsNotInExamQuery(examId, activeOnly)
         )
         return classrooms.map((classroom): AddPanelClassroomItem => ({
           id: classroom.id,
@@ -46,9 +63,8 @@ export function ExamStudentAddModalContainer({
         }))
       },
       fetchAvailableStudents: async (activeOnly) => {
-        const students = await window.electronAPI.getStudentsNotInExam(
-          examId,
-          activeOnly
+        const students = await queryClient.fetchQuery(
+          studentsNotInExamQuery(examId, activeOnly)
         )
         return students.map((student): AddPanelStudentItem => ({
           id: student.id,
@@ -69,22 +85,17 @@ export function ExamStudentAddModalContainer({
       addClassrooms: async (orderedClassroomIds, activeOnly) => {
         // 選択順に逐次追加（サーバが customOrder を末尾連番で付与）
         for (const classroomId of orderedClassroomIds) {
-          const result =
-            await window.electronAPI.examClassroom.addStudentsFromClassroom(
-              examId,
-              classroomId,
-              activeOnly
-            )
-          if (!result) {
-            throw new Error(`学級 ${classroomId} の追加に失敗しました`)
-          }
+          await addStudentsFromClassroom.mutateAsync({
+            classroomId,
+            activeOnly,
+          })
         }
       },
       addStudents: async (studentIds) => {
-        await window.electronAPI.addStudentsToExam(examId, studentIds)
+        await addStudentsToExam.mutateAsync(studentIds)
 
         // 既存生徒の末尾に customOrder を付与
-        const existing = await window.electronAPI.getStudentsForExam(examId)
+        const existing = await queryClient.fetchQuery(examStudentsQuery(examId))
         const others = existing.filter(
           (examStudent) => !studentIds.includes(examStudent.studentId)
         )
@@ -100,10 +111,16 @@ export function ExamStudentAddModalContainer({
           studentId,
           customOrder: startOrder + index,
         }))
-        await window.electronAPI.updateStudentOrders(examId, studentOrders)
+        await updateExamStudentOrders.mutateAsync(studentOrders)
       },
     }),
-    [examId]
+    [
+      examId,
+      queryClient,
+      addStudentsFromClassroom,
+      addStudentsToExam,
+      updateExamStudentOrders,
+    ]
   )
 
   return (

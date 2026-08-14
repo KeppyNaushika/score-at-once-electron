@@ -50,10 +50,10 @@ interface UseRosterTableParams {
   onSelectionChange: (studentId: string, isSelected: boolean) => void
   /** 全選択トグル（制御） */
   onSelectAll: (isSelected: boolean) => void
-  /** 並び順更新の永続化 */
+  /** 並び順更新の永続化（待ちたい呼び出し元のために Promise も許す） */
   onOrderUpdate: (
     rowOrders: { studentId: string; customOrder: number }[]
-  ) => Promise<void>
+  ) => void | Promise<void>
 }
 
 /**

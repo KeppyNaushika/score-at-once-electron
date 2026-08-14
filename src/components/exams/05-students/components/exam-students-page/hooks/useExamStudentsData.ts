@@ -1,14 +1,26 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useMemo, useState } from "react"
 
 import type { RosterClassroomOption } from "@/components/common/roster-table"
 import {
   type ExamClassroomPlacement,
   resolveExamClassroomPlacement,
 } from "@/lib/examClassroomPlacement"
+import {
+  checkGradingDataForStudentsMutation,
+  examStudentsQuery,
+  removeStudentsFromExamMutation,
+  updateExamStudentOrdersMutation,
+  updateStudentExamStatusMutation,
+} from "@/queries/exam"
+import { administeredExamClassroomsQuery } from "@/queries/examClassroom"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_EXAM_STUDENTS: ExamStudentWithMemberships[] = []
 
 interface UseExamStudentsDataProps {
   examId: string
@@ -71,17 +83,7 @@ function compareExamStudents(
 
 /** 試験の受験生徒一覧の取得・フィルタ・ステータス更新・並び替え・削除を管理するフック */
 export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
-  // 読み込みが済んだ試験。表示中の examId と食い違っている間が読み込み中
-  const [loadedExamId, setLoadedExamId] = useState<string | null>(null)
-  const [examStudents, setExamStudents] = useState<
-    ExamStudentWithMemberships[]
-  >([]) // 順序付き受験生徒リスト
-  // ExamClassroom(administered=true) 由来の表示学級情報。ExamStudentWithMemberships にマージせず
-  // studentId をキーに別持ちする side data（getStudentsForExam の戻り値には含まれない）。
-  const [placementByStudent, setPlacementByStudent] = useState<
-    Record<string, ExamClassroomPlacement>
-  >({})
-  const [classrooms, setClassrooms] = useState<RosterClassroomOption[]>([]) // フィルタ用学級情報
+  const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<ExamStudentStatus | "all">(
     "all"
@@ -95,103 +97,99 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   >(new Set())
   const [gradingItemCount, setGradingItemCount] = useState(0)
 
-  const loading = loadedExamId !== examId
+  const {
+    data: examStudentRows = EMPTY_EXAM_STUDENTS,
+    isPending: examStudentsPending,
+  } = useQuery(examStudentsQuery(examId))
+  const {
+    data: administeredClassrooms,
+    isPending: administeredClassroomsPending,
+  } = useQuery(administeredExamClassroomsQuery(examId))
 
-  // データの再読み込み
-  const refreshStudentData = useCallback(async () => {
-    try {
-      const [examStudentRows, administeredClassrooms] = await Promise.all([
-        window.electronAPI.getStudentsForExam(examId),
-        window.electronAPI.examClassroom.getAdministered(examId),
-      ])
+  const updateStudentExamStatus = useMutation(
+    updateStudentExamStatusMutation(examId)
+  )
+  const updateExamStudentOrders = useMutation(
+    updateExamStudentOrdersMutation(examId)
+  )
+  const removeStudentsFromExam = useMutation(
+    removeStudentsFromExamMutation(examId)
+  )
+  const checkGradingDataForStudents = useMutation(
+    checkGradingDataForStudentsMutation(examId)
+  )
 
-      // 採番学級は administered 学級（DB 構造）から renderer 側で解決する
-      const placement = resolveExamClassroomPlacement(administeredClassrooms)
+  const loading = examStudentsPending || administeredClassroomsPending
 
-      // 受験生徒を customOrder 順で並び替え（ExamStudent テーブルの順序が基準）
-      const sortedExamStudents = [...examStudentRows].sort(
-        compareExamStudents(placement)
-      )
+  // 採番学級は administered 学級（DB 構造）から renderer 側で解決する。
+  // ExamStudentWithMemberships にはマージせず studentId をキーに別持ちする side data
+  const placementByStudent = useMemo(
+    () => resolveExamClassroomPlacement(administeredClassrooms ?? []),
+    [administeredClassrooms]
+  )
 
-      setExamStudents(sortedExamStudents)
-      setPlacementByStudent(placement)
+  // 受験生徒を customOrder 順で並び替え（ExamStudent テーブルの順序が基準）
+  const examStudents = useMemo(
+    () => [...examStudentRows].sort(compareExamStudents(placementByStudent)),
+    [examStudentRows, placementByStudent]
+  )
 
-      // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（id/name のみ）
-      const uniqueClasses = new Map<string, RosterClassroomOption>()
-      sortedExamStudents.forEach((examStudent) => {
-        // 各生徒の全所属履歴を確認
-        examStudent.student.memberships?.forEach((membership) => {
-          if (!uniqueClasses.has(membership.classroom.id)) {
-            uniqueClasses.set(membership.classroom.id, {
-              id: membership.classroom.id,
-              name: membership.classroom.name,
-            })
-          }
+  // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（id/name のみ）
+  const classrooms = useMemo<RosterClassroomOption[]>(() => {
+    const uniqueClasses = new Map<string, RosterClassroomOption>()
+    for (const examStudent of examStudents) {
+      for (const membership of examStudent.student.memberships ?? []) {
+        if (uniqueClasses.has(membership.classroom.id)) continue
+        uniqueClasses.set(membership.classroom.id, {
+          id: membership.classroom.id,
+          name: membership.classroom.name,
         })
-      })
-      setClassrooms(Array.from(uniqueClasses.values()))
-    } finally {
-      setLoadedExamId(examId)
+      }
     }
-  }, [examId])
+    return Array.from(uniqueClasses.values())
+  }, [examStudents])
 
-  // データの取得（実際のAPIから）
-  useEffect(() => {
-    refreshStudentData()
-  }, [refreshStudentData])
+  const refreshStudentData = useCallback(
+    () =>
+      queryClient.invalidateQueries({
+        queryKey: examStudentsQuery(examId).queryKey,
+      }),
+    [examId, queryClient]
+  )
 
   // 生徒の状態を更新
-  const updateStudentStatus = async (
+  const updateStudentStatus = (
     studentId: string,
     newStatus: ExamStudentStatus
   ) => {
-    try {
-      await window.electronAPI.updateStudentExamStatus(
-        examId,
-        studentId,
-        newStatus
-      )
-
-      // 受験生徒リストのステータスを更新
-      setExamStudents((prevExamStudents) =>
-        prevExamStudents.map((examStudent) =>
-          examStudent.studentId === studentId
-            ? { ...examStudent, status: newStatus }
-            : examStudent
-        )
-      )
-    } catch (error) {
-      console.error("Failed to update student status:", error)
-    }
+    updateStudentExamStatus.mutate({ studentId, status: newStatus })
   }
 
-  // 生徒の並び順を更新
-  const updateStudentOrders = async (
-    examId: string,
+  /**
+   * 生徒の並び順を更新する。
+   *
+   * 掴んだ手に追従させるため、先にキャッシュへ置いてから書く（取り直しを待つと
+   * 行が元の位置へ戻って見える）。
+   */
+  const updateStudentOrders = (
+    _examId: string,
     studentOrders: { studentId: string; customOrder: number }[]
   ) => {
-    try {
-      await window.electronAPI.updateStudentOrders(examId, studentOrders)
-
-      // 成功した場合、受験生徒リストの customOrder を更新し、再ソート
-      const orderMap = new Map(
-        studentOrders.map((studentOrder) => [
-          studentOrder.studentId,
-          studentOrder.customOrder,
-        ])
-      )
-
-      setExamStudents((prevExamStudents) => {
-        const updatedExamStudents = prevExamStudents.map((examStudent) => ({
-          ...examStudent,
-          customOrder:
-            orderMap.get(examStudent.studentId) ?? examStudent.customOrder,
-        }))
-        return updatedExamStudents.sort(compareExamStudents(placementByStudent))
-      })
-    } catch (error) {
-      console.error("Failed to update student orders:", error)
-    }
+    const orderByStudentId = new Map(
+      studentOrders.map((studentOrder) => [
+        studentOrder.studentId,
+        studentOrder.customOrder,
+      ])
+    )
+    queryClient.setQueryData(examStudentsQuery(examId).queryKey, (cached) =>
+      cached?.map((examStudent) => ({
+        ...examStudent,
+        customOrder:
+          orderByStudentId.get(examStudent.studentId) ??
+          examStudent.customOrder,
+      }))
+    )
+    updateExamStudentOrders.mutate(studentOrders)
   }
 
   // 生徒選択の変更（SortableStudentTable用）
@@ -255,15 +253,12 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
     const studentIds = Array.from(selectedStudentsForRemoval)
     setStudentsToRemove(studentIds)
 
-    // 採点データの存在を確認
+    // 採点データの存在を確認。読めなくても削除の確認自体は出す
     try {
-      const gradingData = await window.electronAPI.checkGradingDataForStudents(
-        examId,
-        studentIds
-      )
+      const gradingData =
+        await checkGradingDataForStudents.mutateAsync(studentIds)
       setGradingItemCount(gradingData.totalGradingItems)
-    } catch (error) {
-      console.error("Failed to check grading data:", error)
+    } catch {
       setGradingItemCount(0)
     }
 
@@ -271,20 +266,14 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   }
 
   // 生徒削除の確定実行
-  const confirmStudentRemoval = async () => {
-    try {
-      await window.electronAPI.removeStudentsFromExam(examId, studentsToRemove)
-
-      // データを再読み込み（新しいアーキテクチャに対応）
-      await refreshStudentData()
-
-      // 状態をリセット
-      setSelectedStudentsForRemoval(new Set())
-      setStudentsToRemove([])
-      setShowRemovalConfirm(false)
-    } catch (error) {
-      console.error("Failed to remove students:", error)
-    }
+  const confirmStudentRemoval = () => {
+    removeStudentsFromExam.mutate(studentsToRemove, {
+      onSuccess: () => {
+        setSelectedStudentsForRemoval(new Set())
+        setStudentsToRemove([])
+        setShowRemovalConfirm(false)
+      },
+    })
   }
 
   // フィルタリングされた受験生徒リスト（順序を維持したまま表示用フィルタを適用）

@@ -5,14 +5,11 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 export interface SortableStudentTableProps {
   classrooms: RosterClassroomOption[]
-  onStudentStatusUpdate: (
-    studentId: string,
-    status: ExamStudentStatus
-  ) => Promise<void>
+  onStudentStatusUpdate: (studentId: string, status: ExamStudentStatus) => void
   onStudentOrderUpdate: (
     examId: string,
     studentOrders: { studentId: string; customOrder: number }[]
-  ) => Promise<void>
+  ) => void
   selectedStudents: Set<string>
   onStudentSelectionChange: (studentId: string, isSelected: boolean) => void
   onSelectAll: (isSelected: boolean) => void
