@@ -186,6 +186,7 @@ export default function TemplateStepPage() {
         {/* レイアウトエディター */}
         <div className="min-h-0 flex-1">
           <CropRegionEditor
+            examId={examId}
             areas={initialData.cropRegions}
             setAreas={handleRegionsChange}
             onCreateRegion={handleCreateRegion}

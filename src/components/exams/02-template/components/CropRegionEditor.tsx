@@ -1,9 +1,11 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import type { CropRegionArea } from "@/components/exams/02-template/types"
+import { deleteCropRegionMutation } from "@/queries/cropRegion"
 import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
 import { useFrameDetection } from "../hooks/useFrameDetection"
@@ -14,6 +16,7 @@ import { DetectionSettingsPanel } from "./DetectionSettingsPanel"
 import ImageCanvas from "./ImageCanvas"
 
 type CropRegionEditorProps = {
+  examId: string
   areas: CropRegionArea[]
   setAreas: React.Dispatch<React.SetStateAction<CropRegionArea[]>>
   onCreateRegion?: (
@@ -33,6 +36,7 @@ type CropRegionEditorProps = {
 }
 
 const CropRegionEditor = ({
+  examId,
   areas,
   setAreas,
   onCreateRegion,
@@ -44,6 +48,7 @@ const CropRegionEditor = ({
   defaultPoints,
   onDefaultPointsChange,
 }: CropRegionEditorProps) => {
+  const deleteCropRegion = useMutation(deleteCropRegionMutation(examId))
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | null>(
     null
   )
@@ -114,11 +119,10 @@ const CropRegionEditor = ({
     // DBから削除（IDがある場合のみ）
     if (areaToDelete.id) {
       try {
-        await window.electronAPI.deleteCropRegion(areaToDelete.id)
-      } catch (error) {
-        console.error("Failed to delete area from database:", error)
-        toast.error("採点領域の削除に失敗しました")
-        return // エラーの場合は削除を中断
+        await deleteCropRegion.mutateAsync(areaToDelete.id)
+      } catch {
+        // 失敗の知らせは中央のトーストが出す。ここでは削除を中断するだけ
+        return
       }
     }
 
