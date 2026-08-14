@@ -304,7 +304,6 @@ const NOT_YET_MIGRATED = [
   "src/contexts/AuthContext.tsx",
   "src/hooks/import/useImportWizard.ts",
   "src/hooks/student-import/useStudentImportWizard.ts",
-  "src/hooks/useClassroomManagement.ts",
   "src/hooks/useExamDetail.ts",
   "src/hooks/useNavigationHistory.ts",
   "src/hooks/useStudentImport.ts",

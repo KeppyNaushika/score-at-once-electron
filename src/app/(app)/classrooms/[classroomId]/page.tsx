@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   ArrowLeft,
   BarChart3,
@@ -10,6 +11,7 @@ import {
   Users,
 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
+import { useState } from "react"
 
 import { ClassroomScoreTrendChart } from "@/app/(app)/classrooms/[classroomId]/components/ClassroomScoreTrendChart"
 import { ClassroomSummaryCards } from "@/app/(app)/classrooms/[classroomId]/components/ClassroomSummaryCards"
@@ -25,9 +27,24 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  type Membership,
-  useClassroomManagement,
-} from "@/hooks/useClassroomManagement"
+  addStudentToClassroomMutation,
+  classroomListQuery,
+  deleteClassroomMutation,
+  deleteStudentMembershipMutation,
+  endStudentMembershipMutation,
+  studentListQuery,
+  updateClassroomMutation,
+  updateStudentMembershipMutation,
+} from "@/queries/student"
+import type {
+  ClassroomMembership,
+  ClassroomWithMemberships,
+  StudentWithMemberships,
+} from "@/types/prismaExtensions"
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_CLASSROOMS: ClassroomWithMemberships[] = []
+const EMPTY_STUDENTS: StudentWithMemberships[] = []
 
 export default function ClassroomDetailPage() {
   const params = useParams()
@@ -35,35 +52,103 @@ export default function ClassroomDetailPage() {
   const classroomId =
     typeof params.classroomId === "string" ? params.classroomId : ""
 
-  const {
-    loading,
-    classroomData,
-    students,
-    isClassroomModalOpen,
-    setIsClassroomModalOpen,
-    isStudentImportModalOpen,
-    setIsStudentImportModalOpen,
-    isMembershipModalOpen,
-    setIsMembershipModalOpen,
-    membershipToEdit,
-    setMembershipToEdit,
-    handleSaveClassroom,
-    handleStudentImportSuccess,
-    handleSaveMembership,
-    handleDeleteMembership,
-    handleBulkDeleteMemberships,
-    handleDeleteClassroom,
-  } = useClassroomManagement(classroomId)
+  const { data: classrooms = EMPTY_CLASSROOMS, isPending: loading } =
+    useQuery(classroomListQuery())
+  const { data: students = EMPTY_STUDENTS } = useQuery(studentListQuery())
+  const classroomData =
+    classrooms.find((classroom) => classroom.id === classroomId) ?? null
+
+  const updateClassroom = useMutation(updateClassroomMutation())
+  const deleteClassroom = useMutation(deleteClassroomMutation())
+  const addStudentToClassroom = useMutation(addStudentToClassroomMutation())
+  const updateMembership = useMutation(updateStudentMembershipMutation())
+  const deleteMembership = useMutation(deleteStudentMembershipMutation())
+  const endMembership = useMutation(endStudentMembershipMutation())
+
+  const [isClassroomModalOpen, setIsClassroomModalOpen] = useState(false)
+  const [isStudentImportModalOpen, setIsStudentImportModalOpen] =
+    useState(false)
+  const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false)
+  const [membershipToEdit, setMembershipToEdit] =
+    useState<ClassroomMembership | null>(null)
+
+  const handleSaveClassroom = async (
+    classroomInfo: Partial<ClassroomWithMemberships>
+  ) => {
+    await updateClassroom.mutateAsync({
+      id: classroomId,
+      name: classroomInfo.name,
+      classroomCode: classroomInfo.classroomCode,
+      grade: classroomInfo.grade,
+      description: classroomInfo.description,
+      isVisible: classroomInfo.isVisible,
+    })
+    setIsClassroomModalOpen(false)
+  }
+
+  const handleStudentImportSuccess = () => {
+    setIsStudentImportModalOpen(false)
+  }
+
+  const handleSaveMembership = async (
+    membershipData: Partial<ClassroomMembership> & { studentId?: string }
+  ) => {
+    if (membershipToEdit) {
+      // 空欄は null で明示的にクリアする（undefined はPrismaでは「変更しない」）。
+      // startDate は必須項目のため、未指定時は既存値を維持する（undefined のまま）。
+      await updateMembership.mutateAsync({
+        id: membershipToEdit.id,
+        membership: {
+          attendanceNumber: membershipData.attendanceNumber ?? null,
+          notes: membershipData.notes ?? null,
+          startDate: membershipData.startDate,
+          endDate: membershipData.endDate ?? null,
+        },
+      })
+    } else if (membershipData.studentId) {
+      const membership = await addStudentToClassroom.mutateAsync({
+        studentId: membershipData.studentId,
+        classroomId,
+        startDate: membershipData.startDate ?? undefined,
+        attendanceNumber: membershipData.attendanceNumber ?? undefined,
+        notes: membershipData.notes ?? undefined,
+      })
+      // 終了日が指定されている場合は所属を終了
+      if (membershipData.endDate) {
+        await endMembership.mutateAsync({
+          membershipId: membership.id,
+          endDate: new Date(membershipData.endDate),
+        })
+      }
+    }
+    setIsMembershipModalOpen(false)
+  }
+
+  const handleDeleteMembership = (membershipId: string) => {
+    if (!window.confirm("この所属関係を削除しますか？")) return
+    deleteMembership.mutate(membershipId)
+  }
+
+  const handleBulkDeleteMemberships = async (membershipIds: string[]) => {
+    for (const membershipId of membershipIds) {
+      await deleteMembership.mutateAsync(membershipId)
+    }
+  }
+
+  const handleDeleteClassroom = () => {
+    if (!window.confirm("この学級を削除しますか？")) return
+    deleteClassroom.mutate(classroomId)
+  }
 
   const { studentResults, loading: analyticsLoading } =
     useClassroomExamResults(classroomId)
 
-  const handleEditMembership = (membership: Membership) => {
+  const handleEditMembership = (membership: ClassroomMembership) => {
     setMembershipToEdit(membership)
     setIsMembershipModalOpen(true)
   }
 
-  const handleViewStudent = (membership: Membership) => {
+  const handleViewStudent = (membership: ClassroomMembership) => {
     router.push(`/students/${membership.student.id}`)
   }
 

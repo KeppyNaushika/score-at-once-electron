@@ -57,6 +57,10 @@ export type ClassroomWithMemberships = Prisma.ClassroomGetPayload<{
   }
 }>
 
+/** 学級に属する在籍1件（生徒を同梱）。学級の子として降ってくる形そのもの */
+export type ClassroomMembership =
+  ClassroomWithMemberships["memberships"][number]
+
 /**
  * 受験日所属生徒（studentId のみ）を含む ExamClassroom 型。
  *

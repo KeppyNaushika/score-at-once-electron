@@ -23,21 +23,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { Membership } from "@/hooks/useClassroomManagement"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
 import { cn } from "@/lib/utils"
+import type { ClassroomMembership } from "@/types/prismaExtensions"
 
-interface MembershipTableProps {
-  memberships: Membership[]
-  onEdit: (membership: Membership) => void
-  onViewStudent: (membership: Membership) => void
+interface ClassroomMembershipTableProps {
+  memberships: ClassroomMembership[]
+  onEdit: (membership: ClassroomMembership) => void
+  onViewStudent: (membership: ClassroomMembership) => void
   onDelete: (membershipId: string) => void
   onBulkDelete?: (membershipIds: string[]) => void
 }
 
 // ソート用の型
-interface MembershipSortable {
+interface ClassroomMembershipSortable {
   id: string
   studentId: string
   attendanceNumber: number | null
@@ -45,23 +45,23 @@ interface MembershipSortable {
   startDate: string
   endDate: string | null
   isCurrent: boolean
-  original: Membership
+  original: ClassroomMembership
 }
 
-export default function MembershipTable({
+export default function ClassroomMembershipTable({
   memberships,
   onEdit,
   onViewStudent,
   onDelete,
   onBulkDelete,
-}: MembershipTableProps) {
+}: ClassroomMembershipTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [statusFilter, setStatusFilter] = useState<"current" | "ended" | "all">(
     "current"
   )
 
   // ソート用のデータ変換
-  const sortableData = useMemo<MembershipSortable[]>(() => {
+  const sortableData = useMemo<ClassroomMembershipSortable[]>(() => {
     return memberships.map((membership) => ({
       id: membership.id,
       studentId: membership.student.studentNumber,
