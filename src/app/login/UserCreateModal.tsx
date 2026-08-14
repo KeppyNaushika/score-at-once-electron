@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -32,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { createUserMutation } from "@/queries/user"
 
 interface UserCreateModalProps {
   isOpen: boolean
@@ -52,56 +54,50 @@ export function UserCreateModal({
   })
   const [passcodeType, setPasscodeType] = useState<PasscodeType>("none")
   const [passcode, setPasscode] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const createUser = useMutation(createUserMutation())
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    setIsLoading(true)
 
-    try {
-      if (passcodeType !== "none" && !passcode) {
-        setError("パスコードを入力してください")
-        return
-      }
+    if (passcodeType !== "none" && !passcode) {
+      setError("パスコードを入力してください")
+      return
+    }
 
-      if (passcodeType === "4digit" && passcode.length !== 4) {
-        setError("4桁のパスコードを入力してください")
-        return
-      }
+    if (passcodeType === "4digit" && passcode.length !== 4) {
+      setError("4桁のパスコードを入力してください")
+      return
+    }
 
-      if (passcodeType === "6digit" && passcode.length !== 6) {
-        setError("6桁のパスコードを入力してください")
-        return
-      }
+    if (passcodeType === "6digit" && passcode.length !== 6) {
+      setError("6桁のパスコードを入力してください")
+      return
+    }
 
-      if (passcodeType === "alphanumeric" && passcode.length < 4) {
-        setError("英数字のパスコードは4文字以上で入力してください")
-        return
-      }
+    if (passcodeType === "alphanumeric" && passcode.length < 4) {
+      setError("英数字のパスコードは4文字以上で入力してください")
+      return
+    }
 
-      await window.electronAPI.createUser({
+    createUser.mutate(
+      {
         username: formData.username,
         name: formData.name,
         passcode: passcodeType === "none" ? undefined : passcode,
         passcodeType,
-      })
-
-      // Reset form
-      setFormData({ username: "", name: "" })
-      setPasscodeType("none")
-      setPasscode("")
-
-      onUserCreated()
-      onClose()
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "ユーザーの作成に失敗しました"
-      )
-    } finally {
-      setIsLoading(false)
-    }
+      },
+      {
+        onSuccess: () => {
+          setFormData({ username: "", name: "" })
+          setPasscodeType("none")
+          setPasscode("")
+          onUserCreated()
+          onClose()
+        },
+      }
+    )
   }
 
   const renderPasscodeInput = () => {
@@ -246,8 +242,8 @@ export function UserCreateModal({
             <Button type="button" variant="outline" onClick={onClose}>
               キャンセル
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "作成中..." : "作成"}
+            <Button type="submit" disabled={createUser.isPending}>
+              {createUser.isPending ? "作成中..." : "作成"}
             </Button>
           </DialogFooter>
         </form>

@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/input-otp"
 import { Label } from "@/components/ui/label"
 import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
+import { verifyPasscodeMutation } from "@/queries/user"
 
 interface PasscodeModalProps {
   isOpen: boolean
@@ -38,34 +40,32 @@ export function PasscodeModal({
   onPasscodeVerified,
 }: PasscodeModalProps) {
   const [passcode, setPasscode] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const verifyPasscode = useMutation(verifyPasscodeMutation())
   const { inputRef: passcodeInputRef, onOpenAutoFocus } =
     useDialogAutoFocus(isOpen)
 
   // 呼び出し側（login/page.tsx）は閉じている間このコンポーネントを
   // マウントしないため、開くたびに入力とエラーは初期値から始まる。
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    setIsLoading(true)
 
-    try {
-      const isValid = await window.electronAPI.verifyPasscode(user.id, passcode)
-
-      if (isValid) {
-        setPasscode("")
-        onPasscodeVerified()
-        onClose()
-      } else {
-        setError("パスコードが正しくありません")
+    verifyPasscode.mutate(
+      { userId: user.id, passcode },
+      {
+        onSuccess: (isValid) => {
+          if (!isValid) {
+            setError("パスコードが正しくありません")
+            return
+          }
+          setPasscode("")
+          onPasscodeVerified()
+          onClose()
+        },
       }
-    } catch {
-      setError("パスコードの確認に失敗しました")
-    } finally {
-      setIsLoading(false)
-    }
+    )
   }
 
   const renderPasscodeInput = () => {
@@ -162,8 +162,8 @@ export function PasscodeModal({
             <Button type="button" variant="outline" onClick={onClose}>
               キャンセル
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "確認中..." : "ログイン"}
+            <Button type="submit" disabled={verifyPasscode.isPending}>
+              {verifyPasscode.isPending ? "確認中..." : "ログイン"}
             </Button>
           </DialogFooter>
         </form>

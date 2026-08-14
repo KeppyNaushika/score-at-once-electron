@@ -1,13 +1,19 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useEffect, useState } from "react"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { useEffect, useState } from "react"
 
 import type {
   SyncAppConfig,
   SyncAppStatus,
 } from "@/electron-src/lib/sync/types"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  setSyncConfigMutation,
+  subscribeSyncStatus,
+  syncConfigQuery,
+  syncStatusQuery,
+  triggerSyncMutation,
+} from "@/queries/sync"
 
 const DEFAULT_STATUS: SyncAppStatus = {
   state: "disabled",
@@ -18,52 +24,32 @@ const DEFAULT_STATUS: SyncAppStatus = {
 }
 
 export function useSyncSettings() {
-  const queryClient = useQueryClient()
-  const queryKey = queryKeys.settings.sync
-
-  // 設定・保存先・状態は必ず対で表示するので1つの取得にまとめる
-  const { data, isPending: isLoading } = useQuery({
-    queryKey,
-    queryFn: async () => {
-      const [{ config, syncPath }, status] = await Promise.all([
-        window.electronAPI.sync.getConfig(),
-        window.electronAPI.sync.getStatus(),
-      ])
-      return { config, syncPath, status }
-    },
-  })
-  const config = data?.config ?? null
-  const syncPath = data?.syncPath ?? ""
+  // 設定と保存先、そして今の状態。どちらも同期の1つの姿として並べて出す
+  const { data: syncConfig, isPending: configPending } =
+    useQuery(syncConfigQuery())
+  const { data: fetchedStatus, isPending: statusPending } =
+    useQuery(syncStatusQuery())
+  const setSyncConfig = useMutation(setSyncConfigMutation())
+  const triggerSync = useMutation(triggerSyncMutation())
 
   /**
    * 状態は main から押し出されてくる（同期の進行はこちらから聞きに行くものではない）。
-   * 購読で受けた分はキャッシュへ差し込む。
+   * 購読で受けた分は、取得した分より新しい。
    */
   const [pushedStatus, setPushedStatus] = useState<SyncAppStatus | null>(null)
-  useEffect(() => {
-    return window.electronAPI.sync.onStatusChanged(setPushedStatus)
-  }, [])
-  const status = pushedStatus ?? data?.status ?? DEFAULT_STATUS
+  useEffect(() => subscribeSyncStatus(setPushedStatus), [])
 
-  const updateConfig = useCallback(
-    async (partial: Partial<SyncAppConfig>) => {
-      await window.electronAPI.sync.setConfig(partial)
-      setPushedStatus(null)
-      await queryClient.invalidateQueries({ queryKey })
-    },
-    [queryClient, queryKey]
-  )
-
-  const triggerSync = useCallback(async () => {
-    return window.electronAPI.sync.triggerNow()
-  }, [])
+  const updateConfig = (partial: Partial<SyncAppConfig>) => {
+    // 設定を変えると状態も取り直すので、押し出された分は捨てる
+    setSyncConfig.mutate(partial, { onSuccess: () => setPushedStatus(null) })
+  }
 
   return {
-    config,
-    syncPath,
-    status,
-    isLoading,
+    config: syncConfig?.config ?? null,
+    syncPath: syncConfig?.syncPath ?? "",
+    status: pushedStatus ?? fetchedStatus ?? DEFAULT_STATUS,
+    isLoading: configPending || statusPending,
     updateConfig,
-    triggerSync,
+    triggerSync: () => triggerSync.mutateAsync(),
   }
 }

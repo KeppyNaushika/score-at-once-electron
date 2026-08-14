@@ -1,11 +1,12 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Lock } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useAuth } from "@/contexts/AuthContext"
-import { queryKeys } from "@/lib/queryKeys"
+import { fullScreenQuery, setFullScreenMutation } from "@/queries/settings"
+import { userListQuery, verifyPasscodeMutation } from "@/queries/user"
 
 const BLACKOUT_SETTINGS_KEY = "screenBlackoutSettings"
 const FADE_TIMEOUT_MS = 3000
@@ -44,10 +45,10 @@ export function ScreenBlackout() {
   const passcodeRef = useRef("")
 
   // 操作者のパスコード種別（ログイン画面と同じ利用者一覧のキャッシュを共有する）
-  const { data: users } = useQuery({
-    queryKey: queryKeys.users.all,
-    queryFn: () => window.electronAPI.fetchUsers(),
-  })
+  const { data: users } = useQuery(userListQuery())
+  const queryClient = useQueryClient()
+  const setFullScreen = useMutation(setFullScreenMutation())
+  const verifyPasscodeMutate = useMutation(verifyPasscodeMutation())
   const passcodeType = user?.id
     ? (users?.find((candidate) => candidate.id === user.id)?.passcodeType ??
       "none")
@@ -80,24 +81,18 @@ export function ScreenBlackout() {
   }, [startFadeTimer])
 
   const enterFullScreenIfNeeded = useCallback(async () => {
-    const current = getBlackoutSettings()
-    if (current.autoFullScreen && window.electronAPI?.settings?.setFullScreen) {
-      wasFullScreenBeforeRef.current =
-        await window.electronAPI.settings.getFullScreen()
-      window.electronAPI.settings.setFullScreen(true)
-    }
-  }, [])
+    if (!getBlackoutSettings().autoFullScreen) return
+    // 暗転を解いたときに元へ戻せるよう、今が全画面かをその場で確かめる
+    wasFullScreenBeforeRef.current =
+      await queryClient.fetchQuery(fullScreenQuery())
+    setFullScreen.mutate(true)
+  }, [queryClient, setFullScreen])
 
   const restoreFullScreenIfNeeded = useCallback(() => {
-    const current = getBlackoutSettings()
-    if (
-      current.autoFullScreen &&
-      !wasFullScreenBeforeRef.current &&
-      window.electronAPI?.settings?.setFullScreen
-    ) {
-      window.electronAPI.settings.setFullScreen(false)
-    }
-  }, [])
+    if (!getBlackoutSettings().autoFullScreen) return
+    if (wasFullScreenBeforeRef.current) return
+    setFullScreen.mutate(false)
+  }, [setFullScreen])
 
   const startTimer = useCallback(
     (minutes: number) => {
@@ -248,23 +243,28 @@ export function ScreenBlackout() {
 
   // パスコード検証
   const verifyPasscode = useCallback(
-    async (code: string) => {
+    (code: string) => {
       if (!user?.id || !code) return
       setError("")
-      try {
-        const isValid = await window.electronAPI.verifyPasscode(user.id, code)
-        if (isValid) {
-          unlock()
-        } else {
-          setError("パスコードが正しくありません")
-          resetPasscodeInput()
+      verifyPasscodeMutate.mutate(
+        { userId: user.id, passcode: code },
+        {
+          onSuccess: (isValid) => {
+            if (isValid) {
+              unlock()
+              return
+            }
+            setError("パスコードが正しくありません")
+            resetPasscodeInput()
+          },
+          onError: () => {
+            setError("検証に失敗しました")
+            resetPasscodeInput()
+          },
         }
-      } catch {
-        setError("検証に失敗しました")
-        resetPasscodeInput()
-      }
+      )
     },
-    [user?.id, unlock, resetPasscodeInput]
+    [user?.id, unlock, resetPasscodeInput, verifyPasscodeMutate]
   )
 
   // keydownで直接数字パスコードを構築（IMEをバイパス）

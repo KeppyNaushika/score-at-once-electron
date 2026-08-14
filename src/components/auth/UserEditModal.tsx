@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -13,7 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { PublicUser } from "@/queries/user"
+import { type PublicUser, updateUserMutation } from "@/queries/user"
 
 interface UserEditModalProps {
   isOpen: boolean
@@ -32,38 +33,30 @@ export function UserEditModal({
     username: user?.username || "",
     name: user?.name || "",
   })
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const updateUser = useMutation(updateUserMutation())
 
   // 呼び出し側（settings/page.tsx）は閉じている間このコンポーネントを
   // マウントしないため、開くたびに対象ユーザーの値から始まる。
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    setIsLoading(true)
 
     if (!user) {
       setError("ユーザー情報が見つかりません")
-      setIsLoading(false)
       return
     }
 
-    try {
-      await window.electronAPI.updateUser(user.id, {
-        username: formData.username,
-        name: formData.name,
-      })
-
-      onUserUpdated()
-      onClose()
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "ユーザーの更新に失敗しました"
-      )
-    } finally {
-      setIsLoading(false)
-    }
+    updateUser.mutate(
+      { id: user.id, username: formData.username, name: formData.name },
+      {
+        onSuccess: () => {
+          onUserUpdated()
+          onClose()
+        },
+      }
+    )
   }
 
   const handleClose = () => {
@@ -115,8 +108,8 @@ export function UserEditModal({
             <Button type="button" variant="outline" onClick={handleClose}>
               キャンセル
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "更新中..." : "更新"}
+            <Button type="submit" disabled={updateUser.isPending}>
+              {updateUser.isPending ? "更新中..." : "更新"}
             </Button>
           </DialogFooter>
         </form>

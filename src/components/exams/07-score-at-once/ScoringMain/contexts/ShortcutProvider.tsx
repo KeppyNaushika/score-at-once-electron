@@ -12,7 +12,7 @@
  * - macOSデッドキー対応
  */
 
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   createContext,
   type ReactNode,
@@ -24,7 +24,11 @@ import {
 } from "react"
 
 import { useAuth } from "@/contexts/AuthContext"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  keyboardShortcutsQuery,
+  resetKeyboardShortcutsMutation,
+  saveKeyboardShortcutsMutation,
+} from "@/queries/settings"
 
 import { DEFAULT_KEYBINDINGS } from "../../constants/scoringKeybindings"
 import type {
@@ -226,13 +230,14 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
 
   // キーバインディングは設定画面と同じキャッシュを共有する
   // （設定画面で変えたら、開いている採点画面もそのまま追随する）
-  const keyBindingsKey = queryKeys.settings.keyboardShortcuts(userId)
-  const { data: storedKeyBindings } = useQuery({
-    queryKey: keyBindingsKey,
-    queryFn: userId
-      ? () => window.electronAPI.settings.getUserKeyboardShortcuts(userId)
-      : skipToken,
-  })
+  const keyBindingsKey = keyboardShortcutsQuery(userId).queryKey
+  const { data: storedKeyBindings } = useQuery(keyboardShortcutsQuery(userId))
+  const saveKeyboardShortcuts = useMutation(
+    saveKeyboardShortcutsMutation(userId)
+  )
+  const resetKeyboardShortcuts = useMutation(
+    resetKeyboardShortcutsMutation(userId)
+  )
   const keyBindings: KeyBinding = useMemo(
     () => ({ ...DEFAULT_KEYBINDINGS, ...storedKeyBindings }),
     [storedKeyBindings]
@@ -300,34 +305,22 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
   // ============================================
 
   const updateKeyBinding = useCallback(
-    async (commandId: string, key: string) => {
+    (commandId: string, key: string) => {
       if (!userId) return
-      const newBindings = { ...keyBindings, [commandId]: key }
-      queryClient.setQueryData(keyBindingsKey, newBindings)
-      try {
-        await window.electronAPI.settings.saveUserKeyboardShortcuts(
-          userId,
-          newBindings
-        )
-      } catch (error) {
-        // 未取得なら previous は undefined で、setQueryData は書き込みを
-        // 中止してしまう（＝巻き戻らない）。戻す先は DB
-        await queryClient.invalidateQueries({ queryKey: keyBindingsKey })
-        console.error("キーバインディングの保存に失敗しました:", error)
-      }
+      // 押した手応えを待たせない。書けなかったときは DB の姿へ戻す（meta が取り直す）
+      queryClient.setQueryData(keyBindingsKey, {
+        ...keyBindings,
+        [commandId]: key,
+      })
+      saveKeyboardShortcuts.mutate({ ...keyBindings, [commandId]: key })
     },
-    [keyBindings, keyBindingsKey, queryClient, userId]
+    [keyBindings, keyBindingsKey, queryClient, saveKeyboardShortcuts, userId]
   )
 
-  const resetKeyBindings = useCallback(async () => {
+  const resetKeyBindings = useCallback(() => {
     if (!userId) return
-    try {
-      await window.electronAPI.settings.resetUserKeyboardShortcuts(userId)
-    } catch (error) {
-      console.error("キーバインディングのリセットに失敗しました:", error)
-    }
-    await queryClient.invalidateQueries({ queryKey: keyBindingsKey })
-  }, [keyBindingsKey, queryClient, userId])
+    resetKeyboardShortcuts.mutate()
+  }, [resetKeyboardShortcuts, userId])
 
   // ============================================
   // 全コマンド取得

@@ -1,5 +1,3 @@
-import type { AuditLogFilter } from "@/electron-src/lib/prisma/auditQuery"
-
 /**
  * TanStack Query のキー。
  *
@@ -23,33 +21,11 @@ export const queryKeys = {
     detail: (userId: string | undefined, key: string) =>
       ["userPreference", userId, key] as const,
   },
-  currentUser: {
-    all: ["currentUser"] as const,
-  },
-  users: {
-    all: ["users"] as const,
-  },
-  settings: {
-    /** main が持つプロジェクターモードの現在状態 */
-    projectorMode: ["settings", "projectorMode"] as const,
-    /** 同期設定（設定＋保存先＋現在の状態） */
-    sync: ["settings", "sync"] as const,
-    /** 利用者ごとのキーバインディング */
-    keyboardShortcuts: (userId: string | undefined) =>
-      ["settings", "keyboardShortcuts", userId] as const,
-  },
   tags: {
     all: ["tags"] as const,
   },
   students: {
     all: ["students"] as const,
-  },
-  auditLog: {
-    /**
-     * 監査ログの一覧（無限スクロール）。
-     * 絞り込み条件は要求そのものなのでキーに入る（同定用の id ではない）。
-     */
-    list: (filter: AuditLogFilter) => ["auditLog", "list", filter] as const,
   },
   classrooms: {
     all: ["classrooms"] as const,

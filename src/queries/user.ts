@@ -22,7 +22,20 @@ export const userListQuery = () =>
     queryFn: () => window.electronAPI.fetchUsers(),
   })
 
+/**
+ * 今ログインしている利用者の id。
+ *
+ * DB ではなく electron-store が持つ。誰なのかは利用者一覧と突き合わせて決める
+ * ので、ここが返すのは id だけである。
+ */
+export const authTokenQuery = () =>
+  queryOptions({
+    queryKey: ["authToken"] as const,
+    queryFn: () => window.electronAPI.getAuthToken(),
+  })
+
 const usersKey = userListQuery().queryKey
+const authTokenKey = authTokenQuery().queryKey
 
 export const createUserMutation = () =>
   defineMutation({
@@ -76,5 +89,25 @@ export const verifyPasscodeMutation = () =>
     meta: {
       writesDatabase: false,
       errorMessage: "パスコードを確認できませんでした",
+    },
+  })
+
+/** ログインした利用者を憶える（DB ではなく electron-store へ書く） */
+export const saveAuthTokenMutation = () =>
+  defineMutation({
+    mutationFn: (userId: string) => window.electronAPI.saveAuthToken(userId),
+    meta: {
+      invalidates: [authTokenKey],
+      errorMessage: "ログイン状態を保存できませんでした",
+    },
+  })
+
+/** 憶えているログインを忘れる */
+export const clearAuthTokenMutation = () =>
+  defineMutation({
+    mutationFn: () => window.electronAPI.clearAuthToken(),
+    meta: {
+      invalidates: [authTokenKey],
+      errorMessage: "ログアウトできませんでした",
     },
   })

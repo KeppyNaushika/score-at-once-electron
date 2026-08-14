@@ -245,7 +245,9 @@ function collectQueryDefinitions(): Map<
         node.initializer
       ) {
         const text = node.initializer.getText()
-        const isQuery = /\bqueryOptions\(/.test(text)
+        // 無限スクロールも取得の定義（`infiniteQueryOptions`）。取りこぼすと
+        // 呼び出し側が「リテラルのキー」に見えて誤検知になる
+        const isQuery = /\b(?:queryOptions|infiniteQueryOptions)\(/.test(text)
         if (isQuery) {
           const key = /queryKey:\s*([^\n]+)/.exec(text)?.[1]?.trim() ?? ""
           definitions.set(node.name.text, {

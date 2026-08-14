@@ -1,4 +1,4 @@
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   useCallback,
   useEffect,
@@ -11,7 +11,11 @@ import { toast } from "sonner"
 import { DEFAULT_KEYBINDINGS } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
 import { useAuth } from "@/contexts/AuthContext"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  keyboardShortcutsQuery,
+  resetKeyboardShortcutsMutation,
+  saveKeyboardShortcutsMutation,
+} from "@/queries/settings"
 
 /** プラットフォームは変わらないので購読するものが無い */
 const subscribeToNothing = () => () => {}
@@ -34,13 +38,14 @@ export function useKeyboardSettings() {
   )
 
   // 採点画面（ShortcutProvider）と同じキャッシュを共有する
-  const shortcutsKey = queryKeys.settings.keyboardShortcuts(userId)
-  const { data: storedShortcuts } = useQuery({
-    queryKey: shortcutsKey,
-    queryFn: userId
-      ? () => window.electronAPI.settings.getUserKeyboardShortcuts(userId)
-      : skipToken,
-  })
+  const shortcutsKey = keyboardShortcutsQuery(userId).queryKey
+  const { data: storedShortcuts } = useQuery(keyboardShortcutsQuery(userId))
+  const saveKeyboardShortcuts = useMutation(
+    saveKeyboardShortcutsMutation(userId)
+  )
+  const resetKeyboardShortcuts = useMutation(
+    resetKeyboardShortcutsMutation(userId)
+  )
   const shortcuts = useMemo(
     () => ({ ...DEFAULT_KEYBINDINGS, ...storedShortcuts }),
     [storedShortcuts]
@@ -110,26 +115,25 @@ export function useKeyboardSettings() {
       toast.success("ショートカットキーを更新しました")
       return
     }
-    try {
-      await window.electronAPI.settings.saveUserKeyboardShortcuts(
-        userId,
-        newShortcuts
-      )
-      toast.success("ショートカットキーを更新しました")
-    } catch (error) {
-      // 未取得なら previous は undefined で巻き戻らない。戻す先は DB
-      await queryClient.invalidateQueries({ queryKey: shortcutsKey })
-      console.error("キーバインディングの保存に失敗しました:", error)
-      toast.error("ショートカットキーの保存に失敗しました")
-    }
-  }, [editingKey, pendingKey, shortcuts, shortcutsKey, queryClient, userId])
+    saveKeyboardShortcuts.mutate(newShortcuts, {
+      onSuccess: () => toast.success("ショートカットキーを更新しました"),
+    })
+  }, [
+    editingKey,
+    pendingKey,
+    shortcuts,
+    shortcutsKey,
+    queryClient,
+    userId,
+    saveKeyboardShortcuts,
+  ])
 
   const handleKeyCancel = () => {
     setEditingKey(null)
     setPendingKey("")
   }
 
-  const handleReset = useCallback(async () => {
+  const handleReset = useCallback(() => {
     if (!confirm("すべてのショートカットキーをデフォルトに戻しますか？")) {
       return
     }
@@ -138,15 +142,11 @@ export function useKeyboardSettings() {
       toast.success("ショートカットキーをデフォルトに戻しました")
       return
     }
-    try {
-      await window.electronAPI.settings.resetUserKeyboardShortcuts(userId)
-      toast.success("ショートカットキーをデフォルトに戻しました")
-    } catch (error) {
-      console.error("キーバインディングのリセットに失敗しました:", error)
-      toast.error("ショートカットキーのリセットに失敗しました")
-    }
-    await queryClient.invalidateQueries({ queryKey: shortcutsKey })
-  }, [shortcutsKey, queryClient, userId])
+    resetKeyboardShortcuts.mutate(undefined, {
+      onSuccess: () =>
+        toast.success("ショートカットキーをデフォルトに戻しました"),
+    })
+  }, [shortcutsKey, queryClient, userId, resetKeyboardShortcuts])
 
   const getKeyDisplayName = (key: string) => {
     const KEY_DISPLAY_NAMES: { [key: string]: string } = {

@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import {
   FolderSync,
   History,
@@ -8,7 +9,7 @@ import {
   Palette,
   Users,
 } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { AuditLogsTab } from "@/app/(app)/settings/components/AuditLogsTab"
@@ -21,7 +22,10 @@ import { useKeyboardSettings } from "@/app/(app)/settings/hooks/useKeyboardSetti
 import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
 import { UserEditModal } from "@/components/auth/UserEditModal"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { PublicUser } from "@/queries/user"
+import { type PublicUser, userListQuery } from "@/queries/user"
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_USERS: PublicUser[] = []
 
 export default function SettingsPage() {
   const {
@@ -36,27 +40,10 @@ export default function SettingsPage() {
     getKeyDisplayName,
   } = useKeyboardSettings()
 
-  const [users, setUsers] = useState<PublicUser[]>([])
+  const { data: users = EMPTY_USERS } = useQuery(userListQuery())
   const [isPasscodeEditOpen, setIsPasscodeEditOpen] = useState(false)
   const [isUserEditOpen, setIsUserEditOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<PublicUser | null>(null)
-
-  const loadUsers = useCallback(async () => {
-    try {
-      const usersData = await window.electronAPI.fetchUsers()
-      setUsers(usersData)
-    } catch (error) {
-      console.error("Failed to load users:", error)
-    }
-  }, [])
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      void loadUsers()
-    })
-
-    return () => cancelAnimationFrame(frame)
-  }, [loadUsers])
 
   const handleEditUser = (user: PublicUser) => {
     setSelectedUser(user)
@@ -68,13 +55,9 @@ export default function SettingsPage() {
     setIsPasscodeEditOpen(true)
   }
 
+  // 一覧の取り直しは書き込みの meta が行う
   const handleUserUpdated = () => {
-    void loadUsers()
     toast.success("ユーザー情報が更新されました")
-  }
-
-  const handlePasscodeUpdated = () => {
-    void loadUsers()
   }
 
   return (
@@ -173,7 +156,7 @@ export default function SettingsPage() {
             setIsPasscodeEditOpen(false)
             setSelectedUser(null)
           }}
-          onPasscodeUpdated={handlePasscodeUpdated}
+          onPasscodeUpdated={() => toast.success("パスコードを更新しました")}
           user={selectedUser}
         />
       )}

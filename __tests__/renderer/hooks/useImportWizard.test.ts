@@ -32,10 +32,8 @@ vi.mock("@/contexts/AuthContext", () => ({
       role: "admin",
     },
     isLoading: false,
-    login: vi.fn().mockResolvedValue(true),
     quickLogin: vi.fn(),
     logout: vi.fn(),
-    checkAuth: vi.fn(),
   })),
 }))
 
@@ -62,7 +60,6 @@ describe("useImportWizard", () => {
       isLoading: false,
       quickLogin: vi.fn(),
       logout: vi.fn(),
-      checkAuth: vi.fn(),
     })
   })
 
@@ -770,7 +767,6 @@ describe("useImportWizard", () => {
         isLoading: false,
         quickLogin: vi.fn(),
         logout: vi.fn(),
-        checkAuth: vi.fn(),
       })
 
       const { result } = renderHook(() => useImportWizard())

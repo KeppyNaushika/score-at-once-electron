@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -32,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { PublicUser } from "@/queries/user"
+import { type PublicUser, updateUserPasscodeMutation } from "@/queries/user"
 
 interface PasscodeEditModalProps {
   isOpen: boolean
@@ -62,55 +63,49 @@ export function PasscodeEditModal({
     toPasscodeType(user?.passcodeType)
   )
   const [passcode, setPasscode] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const updateUserPasscode = useMutation(updateUserPasscodeMutation())
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
 
     setError("")
-    setIsLoading(true)
 
-    try {
-      if (passcodeType !== "none" && !passcode) {
-        setError("パスコードを入力してください")
-        return
-      }
-
-      if (passcodeType === "4digit" && passcode.length !== 4) {
-        setError("4桁のパスコードを入力してください")
-        return
-      }
-
-      if (passcodeType === "6digit" && passcode.length !== 6) {
-        setError("6桁のパスコードを入力してください")
-        return
-      }
-
-      if (passcodeType === "alphanumeric" && passcode.length < 4) {
-        setError("英数字のパスコードは4文字以上で入力してください")
-        return
-      }
-
-      await window.electronAPI.updateUserPasscode(
-        user.id,
-        passcodeType === "none" ? undefined : passcode,
-        passcodeType
-      )
-
-      // Reset form
-      setPasscode("")
-
-      onPasscodeUpdated()
-      onClose()
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "パスコードの更新に失敗しました"
-      )
-    } finally {
-      setIsLoading(false)
+    if (passcodeType !== "none" && !passcode) {
+      setError("パスコードを入力してください")
+      return
     }
+
+    if (passcodeType === "4digit" && passcode.length !== 4) {
+      setError("4桁のパスコードを入力してください")
+      return
+    }
+
+    if (passcodeType === "6digit" && passcode.length !== 6) {
+      setError("6桁のパスコードを入力してください")
+      return
+    }
+
+    if (passcodeType === "alphanumeric" && passcode.length < 4) {
+      setError("英数字のパスコードは4文字以上で入力してください")
+      return
+    }
+
+    updateUserPasscode.mutate(
+      {
+        userId: user.id,
+        passcode: passcodeType === "none" ? undefined : passcode,
+        passcodeType,
+      },
+      {
+        onSuccess: () => {
+          setPasscode("")
+          onPasscodeUpdated()
+          onClose()
+        },
+      }
+    )
   }
 
   const renderPasscodeInput = () => {
@@ -245,8 +240,8 @@ export function PasscodeEditModal({
             <Button type="button" variant="outline" onClick={onClose}>
               キャンセル
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "更新中..." : "更新"}
+            <Button type="submit" disabled={updateUserPasscode.isPending}>
+              {updateUserPasscode.isPending ? "更新中..." : "更新"}
             </Button>
           </DialogFooter>
         </form>

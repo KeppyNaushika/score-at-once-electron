@@ -194,6 +194,16 @@ function collectValueImports(): string[] {
 }
 
 /**
+ * `window.electronAPI` に触れてよい、移行対象でないファイル。
+ *
+ * 判断基準ではなく**名指しの一覧**である。増やすときは OWNER の判断を通す。
+ */
+const NOT_A_CALL_SITE = [
+  // `window.electronAPI` そのものの宣言。呼び出しではない
+  "src/types/electron.d.ts",
+]
+
+/**
  * まだ `src/queries/` へ移していないファイル。**増やさないこと。**
  *
  * DB へのアクセスは `src/queries/` の `queryOptions` / `defineMutation` に集める。
@@ -207,17 +217,8 @@ const NOT_YET_MIGRATED = [
   "src/app/(app)/classrooms/[classroomId]/hooks/useClassroomExamResults.ts",
   "src/app/(app)/exams/[examId]/03-region-info/page.tsx",
   "src/app/(app)/exams/[examId]/06-student-answers/hooks/index.tsx",
-  "src/app/(app)/settings/components/AuditLogsTab.tsx",
-  "src/app/(app)/settings/components/ScreenControlTab.tsx",
-  "src/app/(app)/settings/hooks/useAuditLogs.ts",
-  "src/app/(app)/settings/hooks/useKeyboardSettings.ts",
-  "src/app/(app)/settings/hooks/useSyncSettings.ts",
-  "src/app/(app)/settings/page.tsx",
   "src/app/(app)/students/[studentId]/hooks/useStudentDetail.ts",
   "src/app/(app)/students/[studentId]/hooks/useStudentExamResults.ts",
-  "src/app/login/PasscodeModal.tsx",
-  "src/app/login/UserCreateModal.tsx",
-  "src/app/login/page.tsx",
   "src/components/answer-sheet-builder/AnswerSheetBuilderMainView.tsx",
   "src/components/answer-sheet-builder/AnswerSheetDefinitionDetail.tsx",
   "src/components/answer-sheet-builder/AnswerSheetDefinitionList.tsx",
@@ -228,11 +229,8 @@ const NOT_YET_MIGRATED = [
   "src/components/answer-sheet-builder/hooks/useAsbOwner.ts",
   "src/components/answer-sheet-builder/hooks/useExamIntegration.ts",
   "src/components/answer-sheet-builder/utils/renderSvgStrings.ts",
-  "src/components/auth/PasscodeEditModal.tsx",
-  "src/components/auth/UserEditModal.tsx",
   "src/components/classroom/ClassroomManagementTable.tsx",
   "src/components/classroom/ClassroomStudentImportModal.tsx",
-  "src/components/common/ScreenBlackout.tsx",
   "src/components/common/student-add-panel/hooks/useStudentAddPanel.ts",
   "src/components/exams/03-region-info/components/RegionDetailsTable.tsx",
   "src/components/exams/03-region-info/hooks/useDragAndDrop.ts",
@@ -281,13 +279,11 @@ const NOT_YET_MIGRATED = [
   "src/components/student/StudentArchiveExportDialog.tsx",
   "src/components/student/StudentTable.tsx",
   "src/components/tag/TagsPageContainer.tsx",
-  "src/contexts/AuthContext.tsx",
   "src/hooks/import/useImportWizard.ts",
   "src/hooks/student-import/useStudentImportWizard.ts",
   "src/hooks/useNavigationHistory.ts",
   "src/hooks/useStudentImport.ts",
   "src/lib/scoringStatusColors.ts",
-  "src/types/electron.d.ts",
 ]
 
 describe("IPC 境界の規約", () => {
@@ -328,7 +324,9 @@ describe("IPC 境界の規約", () => {
       )
 
     const added = touching.filter(
-      (relativePath) => !NOT_YET_MIGRATED.includes(relativePath)
+      (relativePath) =>
+        !NOT_YET_MIGRATED.includes(relativePath) &&
+        !NOT_A_CALL_SITE.includes(relativePath)
     )
     expect(added).toEqual([])
   })

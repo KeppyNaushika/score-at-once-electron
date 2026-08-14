@@ -1,15 +1,14 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { Plus, Settings, UserIcon } from "lucide-react"
-import { useCallback, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useAuth } from "@/contexts/AuthContext"
-import { queryKeys } from "@/lib/queryKeys"
-import type { PublicUser } from "@/queries/user"
+import { type PublicUser, userListQuery } from "@/queries/user"
 
 import { PasscodeModal } from "./PasscodeModal"
 import { UserCreateModal } from "./UserCreateModal"
@@ -20,29 +19,20 @@ export default function UserSelection() {
   const [selectedUser, setSelectedUser] = useState<PublicUser | null>(null)
   const { quickLogin } = useAuth()
 
-  const queryClient = useQueryClient()
-  const { data: users = [], isPending: isLoading } = useQuery({
-    queryKey: queryKeys.users.all,
-    queryFn: () => window.electronAPI.fetchUsers(),
-  })
+  const { data: users = [], isPending: isLoading } = useQuery(userListQuery())
 
-  const loadUsers = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: queryKeys.users.all }),
-    [queryClient]
-  )
-
-  const handleUserSelect = async (user: PublicUser) => {
+  const handleUserSelect = (user: PublicUser) => {
     if (user.passcodeType && user.passcodeType !== "none") {
       setSelectedUser(user)
       setShowPasscodeModal(true)
     } else {
-      await quickLogin(user)
+      quickLogin(user)
     }
   }
 
-  const handlePasscodeVerified = async () => {
+  const handlePasscodeVerified = () => {
     if (selectedUser) {
-      await quickLogin(selectedUser)
+      quickLogin(selectedUser)
     }
   }
 
@@ -50,8 +40,8 @@ export default function UserSelection() {
     setShowCreateModal(true)
   }
 
+  // 一覧の取り直しは書き込みの meta が行う
   const handleUserCreated = () => {
-    loadUsers()
     toast.success("新しいユーザーが作成されました")
   }
 

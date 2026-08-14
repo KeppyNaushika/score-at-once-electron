@@ -123,6 +123,20 @@ export const saveExamExportSettingsMutation = (examId: string) =>
 // DB を書かない操作
 // =====================================================================
 
+/**
+ * 今この窓が全画面かどうか。
+ *
+ * main のウィンドウ状態なので、キャッシュに置いても他所から動かされる。読むときに
+ * その場で引く（`queryClient.fetchQuery`）用途で、購読はしない。
+ */
+export const fullScreenQuery = () =>
+  queryOptions({
+    queryKey: ["settings", "fullScreen"] as const,
+    queryFn: () => window.electronAPI.settings.getFullScreen(),
+    staleTime: 0,
+    gcTime: 0,
+  })
+
 /** プロジェクターモードは main のウィンドウ状態。DB には残らない */
 export const setProjectorModeMutation = () =>
   defineMutation({

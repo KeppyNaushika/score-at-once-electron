@@ -30,7 +30,7 @@ import type {
   AuditCategory,
   AuditVerb,
 } from "@/electron-src/lib/prisma/auditActions"
-import { queryKeys } from "@/lib/queryKeys"
+import { userListQuery } from "@/queries/user"
 import type { AuditLogEntry } from "@/types/auditLog.types"
 
 const CATEGORY_LABELS: Record<AuditCategory, string> = {
@@ -202,8 +202,7 @@ export function AuditLogsTab() {
 
   // 操作者フィルタの選択肢（ログイン画面と同じ利用者一覧のキャッシュを共有する）
   const { data: users = EMPTY_USERS } = useQuery({
-    queryKey: queryKeys.users.all,
-    queryFn: () => window.electronAPI.fetchUsers(),
+    ...userListQuery(),
     select: selectSimpleUsers,
   })
 

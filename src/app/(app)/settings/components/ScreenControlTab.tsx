@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Monitor, PanelLeftClose } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -13,7 +13,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  projectorModeQuery,
+  setProjectorModeMutation,
+} from "@/queries/settings"
 
 const BLACKOUT_SETTINGS_KEY = "screenBlackoutSettings"
 
@@ -21,10 +24,9 @@ export function ScreenControlTab() {
   // プロジェクターモード
   // 現在のプロジェクターモード（main が持つ状態。localStorage 側とは出所が違う）
   const queryClient = useQueryClient()
-  const { data: savedProjectorMode } = useQuery({
-    queryKey: queryKeys.settings.projectorMode,
-    queryFn: () => window.electronAPI.settings.getProjectorMode(),
-  })
+  const projectorModeKey = projectorModeQuery().queryKey
+  const { data: savedProjectorMode } = useQuery(projectorModeQuery())
+  const setProjectorMode = useMutation(setProjectorModeMutation())
   const projectorMode = savedProjectorMode ?? false
 
   // 画面消灯
@@ -80,29 +82,23 @@ export function ScreenControlTab() {
 
   // プロジェクターモードの切り替え
   const handleProjectorModeToggle = useCallback(
-    async (enabled: boolean) => {
-      queryClient.setQueryData(queryKeys.settings.projectorMode, enabled)
-      try {
+    (enabled: boolean) => {
+      queryClient.setQueryData(projectorModeKey, enabled)
+      setProjectorMode.mutate(enabled, {
         // 切り替え後の実際の状態を返すので、要求値ではなくそちらを採る
-        queryClient.setQueryData(
-          queryKeys.settings.projectorMode,
-          await window.electronAPI.settings.setProjectorMode(enabled)
-        )
-        toast.success(
-          enabled
-            ? "プロジェクターモードを有効にしました"
-            : "プロジェクターモードを無効にしました"
-        )
-      } catch (error) {
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.settings.projectorMode,
-        })
-        toast.error("プロジェクターモードの切り替えに失敗しました", {
-          description: error instanceof Error ? error.message : undefined,
-        })
-      }
+        onSuccess: (applied) => {
+          queryClient.setQueryData(projectorModeKey, applied)
+          toast.success(
+            enabled
+              ? "プロジェクターモードを有効にしました"
+              : "プロジェクターモードを無効にしました"
+          )
+        },
+        onError: () =>
+          void queryClient.invalidateQueries({ queryKey: projectorModeKey }),
+      })
     },
-    [queryClient]
+    [projectorModeKey, queryClient, setProjectorMode]
   )
 
   // 画面消灯設定の保存
