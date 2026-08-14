@@ -1,8 +1,9 @@
 "use client"
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus, Users } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
-import { useState } from "react"
+import { useCallback, useState } from "react"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { ClassroomExamManager } from "@/components/exams/05-students/components/ClassroomExamManager"
@@ -12,13 +13,22 @@ import { useExamStudentsData } from "@/components/exams/05-students/components/e
 import ExamStudentAddModal from "@/components/exams/05-students/components/ExamStudentAddModal"
 import SortableStudentTable from "@/components/exams/05-students/components/SortableStudentTable"
 import StudentRemovalConfirmModal from "@/components/exams/05-students/components/StudentRemovalConfirmModal"
-import { useExamClassrooms } from "@/components/exams/05-students/hooks/useExamClassrooms"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  type ExamClassroomRow,
+  examClassroomsQuery,
+  removeExamClassroomMutation,
+  updateExamClassroomMutation,
+} from "@/queries/examClassroom"
+
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_EXAM_CLASSROOMS: ExamClassroomRow[] = []
 
 export default function StudentsPage() {
+  const queryClient = useQueryClient()
   const params = useParams()
   const router = useRouter()
   const { helpButton } = usePageHelp()
@@ -57,12 +67,49 @@ export default function StudentsPage() {
   } = useExamStudentsData({ examId })
 
   const {
-    examClassrooms,
-    loading: classroomsLoading,
-    refresh: refreshExamClassrooms,
-    removeClassroom,
-    updateClassroom,
-  } = useExamClassrooms({ examId })
+    data: examClassrooms = EMPTY_EXAM_CLASSROOMS,
+    isPending: classroomsLoading,
+  } = useQuery(examClassroomsQuery(examId))
+  const removeExamClassroom = useMutation(removeExamClassroomMutation(examId))
+  const updateExamClassroom = useMutation(updateExamClassroomMutation(examId))
+  const refreshExamClassrooms = useCallback(
+    () =>
+      queryClient.invalidateQueries({
+        queryKey: examClassroomsQuery(examId).queryKey,
+      }),
+    [queryClient, examId]
+  )
+  const removeClassroom = useCallback(
+    async (examClassroomId: string) => {
+      try {
+        await removeExamClassroom.mutateAsync(examClassroomId)
+        return true
+      } catch {
+        return false
+      }
+    },
+    [removeExamClassroom]
+  )
+  const updateClassroom = useCallback(
+    async (
+      examClassroomId: string,
+      options: {
+        administered?: boolean
+        teacherStatistics?: boolean
+        studentReport?: boolean
+      }
+    ) => {
+      try {
+        return await updateExamClassroom.mutateAsync({
+          id: examClassroomId,
+          ...options,
+        })
+      } catch {
+        return null
+      }
+    },
+    [updateExamClassroom]
+  )
 
   if (loading || classroomsLoading) {
     return (
