@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils"
 import {
   courseworkDetailQuery,
   createCourseworkItemMutation,
+  createCourseworkLetterScaleMutation,
   deleteCourseworkItemMutation,
   reorderCourseworkItemsMutation,
   updateCourseworkItemMutation,
@@ -38,6 +39,13 @@ import type {
 } from "@/types/coursework.types"
 
 import { LetterScaleEditor } from "./LetterScaleEditor"
+
+/** 文字評価へ切り替えたときに作る既定の変換表 */
+const DEFAULT_LETTER_SCALES = [
+  { label: "A", score: 100 },
+  { label: "B", score: 80 },
+  { label: "C", score: 60 },
+]
 
 interface CourseworkItemsContainerProps {
   courseworkId: string
@@ -84,6 +92,9 @@ export function CourseworkItemsContainer({
   const updateItem = useMutation(updateCourseworkItemMutation(courseworkId))
   const deleteItem = useMutation(deleteCourseworkItemMutation(courseworkId))
   const reorderItems = useMutation(reorderCourseworkItemsMutation(courseworkId))
+  const createLetterScale = useMutation(
+    createCourseworkLetterScaleMutation(courseworkId)
+  )
 
   const [newItemName, setNewItemName] = useState("")
   const [editingText, setEditingText] = useState<ReadonlyMap<string, string>>(
@@ -131,11 +142,27 @@ export function CourseworkItemsContainer({
     updateItem.mutate({ id: item.id, maxScore })
   }
 
-  const changeInputMode = (
+  /**
+   * 入力方式を切り替える。
+   *
+   * 文字評価は変換表が無いと点数入力(04)で1件も受け付けないので、刻みを持って
+   * いない項目にはその場で既定の刻みを作る。以前は下書きの既定値がこれを担って
+   * いて、行ごとの保存へ割ったときに落ちていた（R1 #4）。
+   */
+  const changeInputMode = async (
     item: CourseworkItemWithLetterScales,
     inputMode: InputMode
   ) => {
-    updateItem.mutate({ id: item.id, inputMode })
+    await updateItem.mutateAsync({ id: item.id, inputMode })
+    if (inputMode !== "letter" || item.letterScales.length > 0) return
+    for (const [order, letterScale] of DEFAULT_LETTER_SCALES.entries()) {
+      await createLetterScale.mutateAsync({
+        courseworkItemId: item.id,
+        label: letterScale.label,
+        score: letterScale.score,
+        order,
+      })
+    }
   }
 
   const handleAddItem = async () => {
@@ -262,7 +289,7 @@ interface SortableItemRowProps {
   onChangeInputMode: (
     item: CourseworkItemWithLetterScales,
     inputMode: InputMode
-  ) => void
+  ) => void | Promise<void>
   onBlur: (item: CourseworkItemWithLetterScales) => void
   onDelete: (item: CourseworkItemWithLetterScales) => void
 }

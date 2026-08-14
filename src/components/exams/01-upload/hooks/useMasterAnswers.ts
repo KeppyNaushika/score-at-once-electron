@@ -6,7 +6,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
@@ -42,6 +42,8 @@ const EMPTY_PAGES: ExamPageWithContent[] = []
  */
 export function useMasterAnswers(examId: string) {
   const queryClient = useQueryClient()
+  // PDF→PNG の変換は数秒かかる。ここを覆わないと無反応に見えて二重に投げ込める
+  const [isConverting, setIsConverting] = useState(false)
 
   // パスワード保護PDFの変換は共通フックに委譲
   const {
@@ -102,11 +104,16 @@ export function useMasterAnswers(examId: string) {
     async (files: File[]) => {
       const allFilesData: ConvertedImage[] = []
 
-      for (const file of files) {
-        const fileData = await toUploadData(file)
-        // ユーザーがパスワード入力をキャンセルした場合はアップロードを中断
-        if (fileData === null) return
-        allFilesData.push(...fileData)
+      setIsConverting(true)
+      try {
+        for (const file of files) {
+          const fileData = await toUploadData(file)
+          // ユーザーがパスワード入力をキャンセルした場合はアップロードを中断
+          if (fileData === null) return
+          allFilesData.push(...fileData)
+        }
+      } finally {
+        setIsConverting(false)
       }
 
       const pdfCount = files.filter(
@@ -198,7 +205,7 @@ export function useMasterAnswers(examId: string) {
   return {
     answers,
     imageUrls,
-    isUploading: uploadMasterAnswers.isPending,
+    isUploading: isConverting || uploadMasterAnswers.isPending,
     deletingAnswerId: deleteMasterAnswer.isPending
       ? (deleteMasterAnswer.variables ?? null)
       : null,

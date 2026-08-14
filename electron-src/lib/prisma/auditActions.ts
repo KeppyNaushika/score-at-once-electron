@@ -340,10 +340,25 @@ const AUDIT_ACTIONS = {
     verb: "update",
     label: "手動スコアを更新しました",
   },
+  "grade.boundary.create": {
+    category: "grade",
+    verb: "create",
+    label: "評価の境界を追加しました",
+  },
   "grade.boundary.update": {
     category: "grade",
     verb: "update",
     label: "境界設定を更新しました",
+  },
+  "grade.boundary.replace": {
+    category: "grade",
+    verb: "update",
+    label: "評価の境界をまとめて置き換えました",
+  },
+  "grade.boundary.deleteAll": {
+    category: "grade",
+    verb: "delete",
+    label: "評価の境界をすべて削除しました",
   },
   "grade.boundary.delete": {
     category: "grade",
@@ -451,6 +466,21 @@ const AUDIT_ACTIONS = {
     category: "grade",
     verb: "update",
     label: "評価項目「{target}」を編集しました",
+  },
+  "coursework.letterScale.create": {
+    category: "grade",
+    verb: "create",
+    label: "文字評価の刻み「{target}」を追加しました",
+  },
+  "coursework.letterScale.update": {
+    category: "grade",
+    verb: "update",
+    label: "文字評価の刻み「{target}」を編集しました",
+  },
+  "coursework.letterScale.delete": {
+    category: "grade",
+    verb: "delete",
+    label: "文字評価の刻み「{target}」を削除しました",
   },
   "coursework.item.delete": {
     category: "grade",

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import type { ReactNode } from "react"
 import { createContext, useContext, useEffect, useEffectEvent } from "react"
@@ -26,6 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 /** 認証状態（ログイン・ログアウト・セッション確認）をアプリ全体に提供するプロバイダー */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   // 憶えているのは id だけ。誰なのかは利用者一覧と突き合わせて決める
   const { data: authUserId = null, isPending: authTokenPending } =
@@ -48,7 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [authUserId, users])
 
   const quickLogin = (selectedUser: PublicUser) => {
-    // パスワード不要のクイックログイン。簡易トークンとして user.id を保存する
+    // パスワード不要のクイックログイン。簡易トークンとして user.id を保存する。
+    //
+    // **先にキャッシュへ置く。** 遷移先は関門の内側で、`user` が null なら
+    // ログイン画面へ弾き返される。取り直しの往復を待つと、その窓に入って
+    // 一度目のログインが必ず跳ね返る（R1 #9）
+    queryClient.setQueryData(authTokenQuery().queryKey, selectedUser.id)
     saveAuthToken.mutate(selectedUser.id, {
       onSuccess: () => {
         toast.success(`${selectedUser.name}さん、おかえりなさい！`)
