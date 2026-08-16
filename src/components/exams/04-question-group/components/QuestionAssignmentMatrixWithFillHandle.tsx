@@ -42,10 +42,9 @@ export function QuestionAssignmentMatrixWithFillHandle({
   // 全ての小計項目をフラットな配列に変換（列データ）
   const allSubtotals = subtotalGroups.flatMap((group) => group.subtotals)
 
-  const { assignments, saving, setCellAssignment, fillCells } =
+  const { isAssigned, saving, setCellAssignment, fillCells } =
     useCropSubtotalAssignments({
       examId,
-      cropRegions,
       assignmentType: "QUESTION_ASSIGNMENT",
     })
 
@@ -216,31 +215,24 @@ export function QuestionAssignmentMatrixWithFillHandle({
                             className="p-0 text-center"
                             onPointerEnter={() =>
                               handleCellPointerEnter({
-                                rowId: region.id,
-                                colId: subtotal.id,
+                                row: region,
+                                col: subtotal,
                                 rowIndex,
                                 colIndex: currentColIndex,
                               })
                             }
                           >
                             <CheckboxCellWithFillHandle
-                              checked={
-                                assignments[region.id]?.has(subtotal.id) ||
-                                false
-                              }
+                              checked={isAssigned(region, subtotal)}
                               onChange={(checked) =>
-                                setCellAssignment(
-                                  region.id,
-                                  subtotal.id,
-                                  checked
-                                )
+                                setCellAssignment(region, subtotal, checked)
                               }
                               onFillHandleDragStart={(e, initialValue) => {
                                 e.preventDefault()
                                 handleFillHandlePointerDown(
                                   {
-                                    rowId: region.id,
-                                    colId: subtotal.id,
+                                    row: region,
+                                    col: subtotal,
                                     rowIndex,
                                     colIndex: currentColIndex,
                                   },
@@ -255,10 +247,7 @@ export function QuestionAssignmentMatrixWithFillHandle({
                                 subtotal.id
                               )}
                               disabled={saving}
-                              isInFillRange={isInFillRange(
-                                region.id,
-                                subtotal.id
-                              )}
+                              isInFillRange={isInFillRange(region, subtotal)}
                               disableFillHandle={false}
                             />
                           </TableCell>

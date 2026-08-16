@@ -30,7 +30,22 @@ export function useEditingText() {
     setTexts((previous) => new Map(previous).set(keyOf(rowId, field), text))
   }, [])
 
-  /** その行の覚えを全て捨てる（行を消したとき） */
+  /** その欄の覚えを捨てる（入力を離れたとき） */
+  const forgetField = useCallback((rowId: string, field: string) => {
+    setTexts((previous) => {
+      const next = new Map(previous)
+      next.delete(keyOf(rowId, field))
+      return next
+    })
+  }, [])
+
+  /**
+   * その行の覚えを全て捨てる（行を消したとき）。
+   *
+   * 入力を離れただけのときにこれを使わないこと。同じ行の別の欄がまだ入力中で、
+   * 書き込みも飛んでいる最中なので、その文字まで消すと隣の欄が一瞬だけ古い値へ
+   * 戻って見える（`useEditingText` が防いでいるはずのちらつきそのもの）。
+   */
   const forget = useCallback((rowId: string) => {
     setTexts((previous) => {
       const next = new Map(previous)
@@ -41,5 +56,5 @@ export function useEditingText() {
     })
   }, [])
 
-  return { textOf, remember, forget }
+  return { textOf, remember, forgetField, forget }
 }

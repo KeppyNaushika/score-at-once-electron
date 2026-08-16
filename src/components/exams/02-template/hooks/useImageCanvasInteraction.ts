@@ -64,13 +64,15 @@ export function useImageCanvasInteraction({
   /** 掴んでいる間の領域の姿。まだ書いていない */
   const [adjustingArea, setAdjustingArea] = useState<AdjustingArea | null>(null)
 
-  // 書いた姿が返ってきた。手元の覚えは役目を終える。指を離した時点で捨てると、
-  // 取り直しが着地するまでの一瞬だけ元の位置へ戻って見える
-  const storedArea = adjustingArea ? areas[adjustingArea.areaIndex] : undefined
+  // 手元の覚えが役目を終えるのは2つ。書いた姿が返ってきたときと、その領域が
+  // もう無いとき（他の教員が消した・別のページへ切り替えた）。指を離した時点で
+  // 捨てると、取り直しが着地するまでの一瞬だけ元の位置へ戻って見える
+  const storedArea = adjustingArea
+    ? areas.find((area) => area.id === adjustingArea.cropRegionId)
+    : undefined
   if (
     adjustingArea &&
-    storedArea &&
-    isSameCoords(storedArea, adjustingArea.coords)
+    (!storedArea || isSameCoords(storedArea, adjustingArea.coords))
   ) {
     setAdjustingArea(null)
   }
@@ -91,7 +93,6 @@ export function useImageCanvasInteraction({
     backgroundImageUrl,
     imageDimensions,
     examPageId,
-    areas,
     onAddAreaByDrag,
     onUpdateArea,
     getRelativeCoords,

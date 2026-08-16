@@ -9,14 +9,15 @@ interface AreaRendererProps {
   areas: CropRegionArea[]
   selectedAreaIndex: number | null
   onSelectArea: (index: number) => void
+  /** 掴んだ領域そのものを渡す。書き込み先は添字でなく id で決まる */
   onResizePointerDown: (
     event: ReactPointerEvent<HTMLDivElement>,
-    areaIndex: number,
+    area: CropRegionArea,
     handle: "nw" | "ne" | "sw" | "se"
   ) => void
   onMovePointerDown: (
     event: ReactPointerEvent<HTMLDivElement>,
-    areaIndex: number
+    area: CropRegionArea
   ) => void
   imageDimensions: { width: number; height: number } | null
   containerRef: RefObject<HTMLDivElement | null>
@@ -151,7 +152,7 @@ export function AreaRenderer({
             }}
             onPointerDown={(e) => {
               e.stopPropagation()
-              onMovePointerDown(e, index)
+              onMovePointerDown(e, area)
             }}
           >
             {/* ラベル */}
@@ -165,22 +166,22 @@ export function AreaRenderer({
                 {/* 左上 */}
                 <div
                   className="absolute -top-1 -left-1 h-3 w-3 cursor-nw-resize border border-white bg-blue-500"
-                  onPointerDown={(e) => onResizePointerDown(e, index, "nw")}
+                  onPointerDown={(e) => onResizePointerDown(e, area, "nw")}
                 />
                 {/* 右上 */}
                 <div
                   className="absolute -top-1 -right-1 h-3 w-3 cursor-ne-resize border border-white bg-blue-500"
-                  onPointerDown={(e) => onResizePointerDown(e, index, "ne")}
+                  onPointerDown={(e) => onResizePointerDown(e, area, "ne")}
                 />
                 {/* 左下 */}
                 <div
                   className="absolute -bottom-1 -left-1 h-3 w-3 cursor-sw-resize border border-white bg-blue-500"
-                  onPointerDown={(e) => onResizePointerDown(e, index, "sw")}
+                  onPointerDown={(e) => onResizePointerDown(e, area, "sw")}
                 />
                 {/* 右下 */}
                 <div
                   className="absolute -right-1 -bottom-1 h-3 w-3 cursor-se-resize border border-white bg-blue-500"
-                  onPointerDown={(e) => onResizePointerDown(e, index, "se")}
+                  onPointerDown={(e) => onResizePointerDown(e, area, "se")}
                 />
               </>
             )}

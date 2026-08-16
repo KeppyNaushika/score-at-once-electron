@@ -61,7 +61,12 @@ export function LetterScaleEditor({
     reorderCourseworkLetterScalesMutation(courseworkId)
   )
 
-  const { textOf: editingTextOf, remember, forget } = useEditingText()
+  const {
+    textOf: editingTextOf,
+    remember,
+    forgetField,
+    forget,
+  } = useEditingText()
 
   const letterScales = [...item.letterScales].sort(
     (first, second) => first.order - second.order
@@ -152,7 +157,7 @@ export function LetterScaleEditor({
                 }
                 onChangeLabel={changeLabel}
                 onChangeScore={changeScore}
-                onBlur={(letterScale) => forget(letterScale.id)}
+                onBlur={forgetField}
                 onRemove={removeRow}
               />
             )
@@ -179,7 +184,8 @@ interface ScaleRowProps {
   isLabelInvalid: boolean
   onChangeLabel: (letterScale: LetterScale, text: string) => void
   onChangeScore: (letterScale: LetterScale, text: string) => void
-  onBlur: (letterScale: LetterScale) => void
+  /** 入力を離れた欄の覚えだけ捨てる（隣の欄はまだ入力中でありうる） */
+  onBlur: (letterScaleId: string, field: "label" | "score") => void
   onRemove: (letterScale: LetterScale) => void
 }
 
@@ -202,7 +208,7 @@ function ScaleRow({
       <Input
         value={label}
         onChange={(e) => onChangeLabel(letterScale, e.target.value)}
-        onBlur={() => onBlur(letterScale)}
+        onBlur={() => onBlur(letterScale.id, "label")}
         className={cn(
           "h-7 w-20 text-xs",
           isLabelInvalid && "border-red-500 focus-visible:ring-red-500"
@@ -214,7 +220,7 @@ function ScaleRow({
       <Input
         value={score}
         onChange={(e) => onChangeScore(letterScale, e.target.value)}
-        onBlur={() => onBlur(letterScale)}
+        onBlur={() => onBlur(letterScale.id, "score")}
         className="h-7 w-24 text-xs"
         type="number"
         step="any"

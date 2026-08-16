@@ -175,10 +175,11 @@ interface ScoringSidePanelProps {
   onAnnotationAddedFromBrowser?: () => void
   // 模範解答表示設定
   masterAnswerDisplayMode?: MasterAnswerDisplayMode
-  masterAnswerOpacity?: number
+  masterAnswerOpacity: number
   masterAnswerKeyBehavior?: MasterAnswerKeyBehavior
   onMasterAnswerDisplayModeChange?: (mode: MasterAnswerDisplayMode) => void
-  onMasterAnswerOpacityChange?: (opacity: number) => void
+  /** 必須。既定値で握り潰すと、動かしても何も書かないつまみになる */
+  onMasterAnswerOpacityChange: (opacity: number) => void
   onMasterAnswerKeyBehaviorChange?: (behavior: MasterAnswerKeyBehavior) => void
   masterAnswerVisible?: boolean
   onToggleMasterAnswer?: () => void
@@ -541,11 +542,11 @@ export function ScoringSidePanel({
               >
                 <MasterAnswerControls
                   displayMode={masterAnswerDisplayMode}
-                  opacity={masterAnswerOpacity ?? 50}
+                  opacity={masterAnswerOpacity}
                   keyBehavior={masterAnswerKeyBehavior ?? "toggle"}
                   masterAnswerVisible={masterAnswerVisible ?? false}
                   onDisplayModeChange={onMasterAnswerDisplayModeChange}
-                  onOpacityChange={onMasterAnswerOpacityChange ?? (() => {})}
+                  onOpacityChange={onMasterAnswerOpacityChange}
                   onKeyBehaviorChange={
                     onMasterAnswerKeyBehaviorChange ?? (() => {})
                   }

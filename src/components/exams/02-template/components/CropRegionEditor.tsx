@@ -23,7 +23,7 @@ type CropRegionEditorProps = {
     coords: { x: number; y: number; width: number; height: number }
   ) => Promise<void>
   onUpdateRegion: (
-    index: number,
+    cropRegionId: string,
     coords: { x: number; y: number; width: number; height: number }
   ) => Promise<void>
   disabled: boolean

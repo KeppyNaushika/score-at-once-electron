@@ -76,19 +76,19 @@ export interface DragState {
  * State for tracking resize operations
  */
 export interface ResizeState {
-  areaIndex: number
+  cropRegionId: string
   handle: "nw" | "ne" | "sw" | "se"
   startCoords: { x: number; y: number }
-  originalArea: { x: number; y: number; width: number; height: number }
+  originalArea: RegionCoordinates
 }
 
 /**
  * State for tracking move operations
  */
 export interface MoveState {
-  areaIndex: number
+  cropRegionId: string
   startCoords: { x: number; y: number }
-  originalArea: { x: number; y: number; width: number; height: number }
+  originalArea: RegionCoordinates
 }
 
 /**
@@ -96,9 +96,12 @@ export interface MoveState {
  *
  * リサイズ・移動の途中はここに置くだけで DB へは書かない。指を離したときに
  * 1回だけ書く（`usePointerHandlers`）。
+ *
+ * **指すのは添字ではなく id。** `areas` は取得したものなので、他の教員が領域を
+ * 消せば並びが変わる。添字で持つと、掴んだのとは別の領域を書き換える。
  */
 export interface AdjustingArea {
-  areaIndex: number
+  cropRegionId: string
   coords: RegionCoordinates
 }
 
@@ -116,9 +119,9 @@ export interface UseImageCanvasInteractionProps {
     coords: { x: number; y: number; width: number; height: number }
   ) => void
   onUpdateArea: (
-    index: number,
-    coords: { x: number; y: number; width: number; height: number }
-  ) => void
+    cropRegionId: string,
+    coords: RegionCoordinates
+  ) => Promise<void>
   zoom: number
   // 検出関連のプロパティ（オプション）
   detectionMode?: DetectionMode

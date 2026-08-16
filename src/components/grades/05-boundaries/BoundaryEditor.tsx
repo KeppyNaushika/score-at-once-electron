@@ -53,7 +53,12 @@ export function BoundaryEditor({ gradeId, gradeItem }: BoundaryEditorProps) {
     reorderGradeItemBoundariesMutation(gradeId)
   )
 
-  const { textOf: editingTextOf, remember, forget } = useEditingText()
+  const {
+    textOf: editingTextOf,
+    remember,
+    forgetField,
+    forget,
+  } = useEditingText()
 
   // 表示順は order。以前は最低%の降順で並べていたため、DnD で並べ替えても
   // 見た目が戻り、並べ替えが効いていなかった。
@@ -164,7 +169,7 @@ export function BoundaryEditor({ gradeId, gradeItem }: BoundaryEditorProps) {
                 isInvalid={invalidBoundaryIds.has(boundary.id)}
                 onChangeLabel={changeLabel}
                 onChangeMinPercentage={changeMinPercentage}
-                onBlur={(boundary) => forget(boundary.id)}
+                onBlur={forgetField}
                 onRemove={removeRow}
               />
             ))}
@@ -198,7 +203,8 @@ interface BoundaryRowProps {
   isInvalid: boolean
   onChangeLabel: (boundary: Boundary, text: string) => void
   onChangeMinPercentage: (boundary: Boundary, text: string) => void
-  onBlur: (boundary: Boundary) => void
+  /** 入力を離れた欄の覚えだけ捨てる（隣の欄はまだ入力中でありうる） */
+  onBlur: (boundaryId: string, field: "label" | "minPercentage") => void
   onRemove: (boundary: Boundary) => void
 }
 
@@ -225,7 +231,7 @@ function BoundaryRow({
       <Input
         value={label}
         onChange={(e) => onChangeLabel(boundary, e.target.value)}
-        onBlur={() => onBlur(boundary)}
+        onBlur={() => onBlur(boundary.id, "label")}
         placeholder="例: A"
         title={isLabelMissing ? "ラベルが空だと評価が付きません" : undefined}
         className={cn(
@@ -237,7 +243,7 @@ function BoundaryRow({
         type="number"
         value={minPercentage}
         onChange={(e) => onChangeMinPercentage(boundary, e.target.value)}
-        onBlur={() => onBlur(boundary)}
+        onBlur={() => onBlur(boundary.id, "minPercentage")}
         min={0}
         max={100}
         className={cn(

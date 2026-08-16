@@ -247,8 +247,17 @@ export const deleteMasterAnswer = async (
  *
  * **運ぶのは「どのページをどちらへ」という意図だけ。** かつては renderer が
  * 並べ直した一覧から全ページの絶対 `pageNumber` を送っていたため、他の教員が
- * 先に別のページを動かしていると、その結果ごと踏み潰していた。入れ替えなら
- * 手元が古くても、動かしたページとその隣にしか触らない。
+ * 先に別のページを動かしていると、その結果ごと踏み潰していた。並びを作るのが
+ * main（書く直前に DB から読む）なら、相手の移動を読み込んだ上で1つ動かせる。
+ *
+ * **隣は番号の大小では決まらない。** `pageNumber` は表示上の序数であって一意では
+ * なく（2台が同時にページを足すと同じ番号の行が別 id で並ぶ。詳細は
+ * studentAnswer/crud.ts の getStudentAnswersDataset のコメント）、並びは
+ * `pageNumber` → `id` の組で決まる。この試験の他の経路もすべてこの並びで読む。
+ *
+ * 番号は入れ替えた後の並びから 1..N へ振り直す。**動いていない行は書かない**ので、
+ * 番号が正常なら書き換わるのは2行だけで、同値や飛びがあるときだけそこが直る
+ * （削除時の採番と同じ扱い）。
  *
  * 端のページは動かす先が無いので `moved: false` を返す（失敗ではない）。
  */
@@ -261,29 +270,28 @@ export const moveExamPage = async (
     throw new Error(`模範解答ページが見つかりません: ${examPageId}`)
   }
 
-  // 隣は「番号が1つ違う」ページではなく「番号がいちばん近い」ページ。削除で
-  // 番号が飛んでいても、見えている並びのとおりに動く
-  const neighbor = await prisma.examPage.findFirst({
-    where: {
-      examId: page.examId,
-      pageNumber:
-        direction === "left"
-          ? { lt: page.pageNumber }
-          : { gt: page.pageNumber },
-    },
-    orderBy: { pageNumber: direction === "left" ? "desc" : "asc" },
+  const pages = await prisma.examPage.findMany({
+    where: { examId: page.examId },
+    orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
   })
-  if (!neighbor) return { moved: false }
+
+  const position = pages.findIndex((candidate) => candidate.id === page.id)
+  const nextPosition = direction === "left" ? position - 1 : position + 1
+  if (nextPosition < 0 || nextPosition >= pages.length) return { moved: false }
+
+  // 行はそのまま。動かすのは配列の位置だけ
+  const reordered = [...pages]
+  const [movedPage] = reordered.splice(position, 1)
+  reordered.splice(nextPosition, 0, movedPage)
 
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    await tx.examPage.update({
-      where: { id: page.id },
-      data: { pageNumber: neighbor.pageNumber },
-    })
-    await tx.examPage.update({
-      where: { id: neighbor.id },
-      data: { pageNumber: page.pageNumber },
-    })
+    for (const [index, target] of reordered.entries()) {
+      if (target.pageNumber === index + 1) continue
+      await tx.examPage.update({
+        where: { id: target.id },
+        data: { pageNumber: index + 1 },
+      })
+    }
   })
 
   const scope = await resolveExamScope(page.examId)

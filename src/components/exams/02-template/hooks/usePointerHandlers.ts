@@ -15,6 +15,7 @@ import { useCallback, useRef } from "react"
 
 import type {
   AdjustingArea,
+  CropRegionArea,
   DetectionMode,
   DragSelectionResult,
   DragState,
@@ -29,7 +30,6 @@ export function usePointerHandlers({
   backgroundImageUrl,
   imageDimensions,
   examPageId,
-  areas,
   onAddAreaByDrag,
   onUpdateArea,
   getRelativeCoords,
@@ -53,15 +53,11 @@ export function usePointerHandlers({
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
   examPageId: string | null
-  areas: {
-    x: number
-    y: number
-    width: number
-    height: number
-    label?: string
-  }[]
   onAddAreaByDrag: (type: CropRegionAreaType, coords: RegionCoordinates) => void
-  onUpdateArea: (index: number, coords: RegionCoordinates) => void
+  onUpdateArea: (
+    cropRegionId: string,
+    coords: RegionCoordinates
+  ) => Promise<void>
   getRelativeCoords: (
     clientX: number,
     clientY: number,
@@ -110,23 +106,21 @@ export function usePointerHandlers({
   /** 四隅のつまみを掴んだ = リサイズの始まり */
   const handleResizePointerDown = (
     event: ReactPointerEvent<HTMLDivElement>,
-    areaIndex: number,
+    area: CropRegionArea,
     handle: "nw" | "ne" | "sw" | "se"
   ) => {
     event.stopPropagation()
-    if (!imageContainerRef.current) return
-
-    const coords = getRelativeCoords(
-      event.clientX,
-      event.clientY,
-      imageContainerRef
-    )
-    const area = areas[areaIndex]
+    // 保存前の領域は書き込み先が無いので掴ませない
+    if (!imageContainerRef.current || !area.id) return
 
     setResizing({
-      areaIndex,
+      cropRegionId: area.id,
       handle,
-      startCoords: coords,
+      startCoords: getRelativeCoords(
+        event.clientX,
+        event.clientY,
+        imageContainerRef
+      ),
       originalArea: {
         x: area.x,
         y: area.y,
@@ -139,21 +133,18 @@ export function usePointerHandlers({
   /** 領域の中を掴んだ = 移動の始まり */
   const handleMovePointerDown = (
     event: ReactPointerEvent<HTMLDivElement>,
-    areaIndex: number
+    area: CropRegionArea
   ) => {
     event.stopPropagation()
-    if (!imageContainerRef.current) return
-
-    const coords = getRelativeCoords(
-      event.clientX,
-      event.clientY,
-      imageContainerRef
-    )
-    const area = areas[areaIndex]
+    if (!imageContainerRef.current || !area.id) return
 
     setMoving({
-      areaIndex,
-      startCoords: coords,
+      cropRegionId: area.id,
+      startCoords: getRelativeCoords(
+        event.clientX,
+        event.clientY,
+        imageContainerRef
+      ),
       originalArea: {
         x: area.x,
         y: area.y,
@@ -177,7 +168,7 @@ export function usePointerHandlers({
       if (dragging && dragStartCoords) {
         setDragCurrentCoords(coords)
       } else if (resizing) {
-        const { areaIndex, handle, startCoords, originalArea } = resizing
+        const { cropRegionId, handle, startCoords, originalArea } = resizing
         const deltaX = coords.x - startCoords.x
         const deltaY = coords.y - startCoords.y
 
@@ -212,14 +203,14 @@ export function usePointerHandlers({
         newArea.x = Math.max(0, Math.min(1 - newArea.width, newArea.x))
         newArea.y = Math.max(0, Math.min(1 - newArea.height, newArea.y))
 
-        setAdjustingArea({ areaIndex, coords: newArea })
+        setAdjustingArea({ cropRegionId, coords: newArea })
       } else if (moving) {
-        const { areaIndex, startCoords, originalArea } = moving
+        const { cropRegionId, startCoords, originalArea } = moving
         const deltaX = coords.x - startCoords.x
         const deltaY = coords.y - startCoords.y
 
         setAdjustingArea({
-          areaIndex,
+          cropRegionId,
           coords: {
             ...originalArea,
             x: Math.max(
@@ -297,10 +288,14 @@ export function usePointerHandlers({
       setDragCurrentCoords(null)
     }
 
-    // 動かした結果をここで1回だけ書く。掴んだだけで動かさなかったときは
-    // adjustingArea が無いので、書き込みも起きない
-    if (adjustingArea) {
-      onUpdateArea(adjustingArea.areaIndex, adjustingArea.coords)
+    // 動かした結果をここで1回だけ書く。**いま終わったジェスチャが掴んでいた**
+    // ものだけを書くので、前の操作の残りが別の場面で書かれることはない
+    if ((resizing || moving) && adjustingArea) {
+      // 書けなかったら手元の姿は嘘になるので捨て、DB の姿へ戻す。書けたときは
+      // 取り直しが同じ姿を持ってくるまで見せ続ける（先に捨てると一瞬だけ戻る）
+      onUpdateArea(adjustingArea.cropRegionId, adjustingArea.coords).catch(() =>
+        setAdjustingArea(null)
+      )
     }
 
     setResizing(null)
@@ -309,6 +304,8 @@ export function usePointerHandlers({
     dragging,
     dragStartCoords,
     dragCurrentCoords,
+    resizing,
+    moving,
     adjustingArea,
     onAddAreaByDrag,
     onUpdateArea,
@@ -317,6 +314,7 @@ export function usePointerHandlers({
     setDragging,
     setMoving,
     setResizing,
+    setAdjustingArea,
     detectionMode,
     onSnapToDetectedRects,
   ])

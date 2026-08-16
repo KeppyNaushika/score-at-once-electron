@@ -59,14 +59,12 @@ export default function TemplateStepPage() {
     [areas, createCropRegion, defaultPoints, selectedMasterImage]
   )
 
-  /** 掴んでいる間ずっと呼ばれる。1回1レコードなので即時に書く */
+  /** 掴み終えたときに1回だけ呼ばれる（途中の姿はキャンバスが持つ） */
   const handleUpdateRegion = useCallback(
-    async (index: number, coords: RegionCoordinates) => {
-      const area = areas[index]
-      if (!area?.id) return
-      await updateCropRegion.mutateAsync({ id: area.id, data: coords })
+    async (cropRegionId: string, coords: RegionCoordinates) => {
+      await updateCropRegion.mutateAsync({ id: cropRegionId, data: coords })
     },
-    [areas, updateCropRegion]
+    [updateCropRegion]
   )
 
   const goToNextStep = useCallback(() => {

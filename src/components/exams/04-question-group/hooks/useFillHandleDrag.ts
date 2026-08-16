@@ -3,11 +3,15 @@ import { useCallback, useState } from "react"
 import { smartFillCheckbox } from "../utils/smartFill"
 
 /**
- * セル位置を表す型
+ * マス1つの位置。
+ *
+ * **行と列は実体をそのまま持つ。** id へ潰すと、塗り終えたあとに呼び出し側が
+ * `.find` で引き直すことになる（既に手元にある実体の作り直し）。添字は範囲の
+ * 計算にだけ使う。
  */
-interface CellPosition {
-  rowId: string
-  colId: string
+interface CellPosition<TRow, TCol> {
+  row: TRow
+  col: TCol
   rowIndex: number
   colIndex: number
 }
@@ -15,25 +19,25 @@ interface CellPosition {
 /**
  * フィルハンドルのドラッグ状態
  */
-interface FillHandleState {
+interface FillHandleState<TRow, TCol> {
   isDragging: boolean
-  startCell: CellPosition | null
-  currentCell: CellPosition | null
-  selectedRange: CellPosition[]
+  startCell: CellPosition<TRow, TCol> | null
+  currentCell: CellPosition<TRow, TCol> | null
+  selectedRange: CellPosition<TRow, TCol>[]
   initialValues: boolean[]
 }
 
 /**
  * フィル完了時の更新データ
  */
-export interface FillUpdate {
-  rowId: string
-  colId: string
+export interface FillUpdate<TRow, TCol> {
+  row: TRow
+  col: TCol
   value: boolean
 }
 
 /** 掴んでいないときの姿 */
-const IDLE_FILL_HANDLE_STATE: FillHandleState = {
+const IDLE_FILL_HANDLE_STATE = {
   isDragging: false,
   startCell: null,
   currentCell: null,
@@ -44,20 +48,16 @@ const IDLE_FILL_HANDLE_STATE: FillHandleState = {
 /**
  * useFillHandleDrag のパラメータ
  */
-interface UseFillHandleDragParams {
+interface UseFillHandleDragParams<TRow, TCol> {
   /**
    * フィル完了時のコールバック
    * 範囲内の全セルの更新データを受け取る
    */
-  onFillComplete: (updates: FillUpdate[]) => Promise<void>
-  /**
-   * 行データの配列（rowIndexから実際のrowIdを取得するため）
-   */
-  rows?: Array<{ id: string }>
-  /**
-   * 列データの配列（colIndexから実際のcolIdを取得するため）
-   */
-  cols?: Array<{ id: string }>
+  onFillComplete: (updates: FillUpdate<TRow, TCol>[]) => Promise<void>
+  /** 行データの配列（範囲計算で添字から行を引くため） */
+  rows: TRow[]
+  /** 列データの配列（範囲計算で添字から列を引くため） */
+  cols: TCol[]
 }
 
 /**
@@ -65,36 +65,20 @@ interface UseFillHandleDragParams {
  *
  * @param params - フック設定パラメータ
  * @returns フィルハンドルの状態とイベントハンドラー
- *
- * @example
- * ```tsx
- * const {
- *   fillHandleState,
- *   handleFillHandlePointerDown,
- *   handleCellPointerEnter,
- *   handlePointerUp,
- *   isInFillRange,
- * } = useFillHandleDrag({
- *   onFillComplete: async (updates) => {
- *     for (const update of updates) {
- *       await saveCell(update.rowId, update.colId, update.value)
- *     }
- *   },
- * })
- * ```
  */
-export function useFillHandleDrag({
-  onFillComplete,
-  rows = [],
-  cols = [],
-}: UseFillHandleDragParams) {
-  const [state, setState] = useState<FillHandleState>(IDLE_FILL_HANDLE_STATE)
+export function useFillHandleDrag<
+  TRow extends { id: string },
+  TCol extends { id: string },
+>({ onFillComplete, rows, cols }: UseFillHandleDragParams<TRow, TCol>) {
+  const [state, setState] = useState<FillHandleState<TRow, TCol>>(
+    IDLE_FILL_HANDLE_STATE
+  )
 
   /**
    * フィルハンドルを掴んだ（ドラッグ開始）
    */
   const handleFillHandlePointerDown = useCallback(
-    (cell: CellPosition, initialValue: boolean) => {
+    (cell: CellPosition<TRow, TCol>, initialValue: boolean) => {
       setState({
         isDragging: true,
         startCell: cell,
@@ -110,7 +94,7 @@ export function useFillHandleDrag({
    * セルへのポインタ進入（ドラッグ中の範囲選択）
    */
   const handleCellPointerEnter = useCallback(
-    (cell: CellPosition) => {
+    (cell: CellPosition<TRow, TCol>) => {
       setState((prev) => {
         if (!prev.isDragging || !prev.startCell) return prev
 
@@ -146,11 +130,13 @@ export function useFillHandleDrag({
       state.selectedRange.length
     )
 
-    const updates: FillUpdate[] = state.selectedRange.map((cell, index) => ({
-      rowId: cell.rowId,
-      colId: cell.colId,
-      value: filledValues[index],
-    }))
+    const updates: FillUpdate<TRow, TCol>[] = state.selectedRange.map(
+      (cell, index) => ({
+        row: cell.row,
+        col: cell.col,
+        value: filledValues[index],
+      })
+    )
 
     setState(IDLE_FILL_HANDLE_STATE)
     onFillComplete(updates).catch((error) => {
@@ -162,23 +148,15 @@ export function useFillHandleDrag({
    * 指定されたセルが選択範囲に含まれるかを判定
    */
   const isInFillRange = useCallback(
-    (rowId: string, colId: string): boolean => {
+    (row: TRow, col: TCol): boolean => {
       if (!state.isDragging) return false
 
       return state.selectedRange.some(
-        (cell) => cell.rowId === rowId && cell.colId === colId
+        (cell) => cell.row.id === row.id && cell.col.id === col.id
       )
     },
     [state.isDragging, state.selectedRange]
   )
-
-  // デバッグ用：ドラッグ状態をログ出力
-  // useEffect(() => {
-  //   if (state.isDragging) {
-  //     console.log("🔵 isDragging:", state.isDragging)
-  //     console.log("🔵 selectedRange:", state.selectedRange)
-  //   }
-  // }, [state.isDragging, state.selectedRange])
 
   return {
     handleFillHandlePointerDown,
@@ -191,32 +169,27 @@ export function useFillHandleDrag({
 /**
  * セル範囲を計算（縦・横・長方形すべて対応）
  */
-function calculateRange(
-  start: CellPosition,
-  end: CellPosition,
-  rows: Array<{ id: string }>,
-  cols: Array<{ id: string }>
-): CellPosition[] {
+function calculateRange<TRow, TCol>(
+  start: CellPosition<TRow, TCol>,
+  end: CellPosition<TRow, TCol>,
+  rows: TRow[],
+  cols: TCol[]
+): CellPosition<TRow, TCol>[] {
   const minRowIndex = Math.min(start.rowIndex, end.rowIndex)
   const maxRowIndex = Math.max(start.rowIndex, end.rowIndex)
   const minColIndex = Math.min(start.colIndex, end.colIndex)
   const maxColIndex = Math.max(start.colIndex, end.colIndex)
 
-  const range: CellPosition[] = []
+  const range: CellPosition<TRow, TCol>[] = []
 
   // 長方形範囲内の全セルを生成
   for (let rowIdx = minRowIndex; rowIdx <= maxRowIndex; rowIdx++) {
     for (let colIdx = minColIndex; colIdx <= maxColIndex; colIdx++) {
-      const rowId = rows[rowIdx]?.id
-      const colId = cols[colIdx]?.id
+      const row = rows[rowIdx]
+      const col = cols[colIdx]
 
-      if (rowId && colId) {
-        range.push({
-          rowId,
-          colId,
-          rowIndex: rowIdx,
-          colIndex: colIdx,
-        })
+      if (row && col) {
+        range.push({ row, col, rowIndex: rowIdx, colIndex: colIdx })
       }
     }
   }

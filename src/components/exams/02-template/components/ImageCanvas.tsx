@@ -39,9 +39,9 @@ type ImageCanvasProps = {
     coords: { x: number; y: number; width: number; height: number }
   ) => void
   onUpdateArea: (
-    index: number,
+    cropRegionId: string,
     coords: { x: number; y: number; width: number; height: number }
-  ) => void
+  ) => Promise<void>
   onDeleteArea: (index: number) => void
   disabled: boolean
   examPageId: string | null
@@ -107,8 +107,8 @@ const ImageCanvas = ({
     () =>
       adjustingArea === null
         ? areas
-        : areas.map((area, index) =>
-            index === adjustingArea.areaIndex
+        : areas.map((area) =>
+            area.id === adjustingArea.cropRegionId
               ? { ...area, ...adjustingArea.coords }
               : area
           ),

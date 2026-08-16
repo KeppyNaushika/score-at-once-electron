@@ -96,9 +96,15 @@ export const createCropSubtotal = async (
   return prisma.cropSubtotal.create({ data })
 }
 
-/** 設問-小計の紐付けを1件消す */
+/**
+ * 設問-小計の紐付けを1件消す。
+ *
+ * `delete` ではなく `deleteMany` を使うのは、**既に消えていても失敗にしない**
+ * ため。他の教員が先に外していたとき、望んだ状態（割り当てが無い）は既に
+ * 成立しているので、そこで「解除できませんでした」と言うのは誤りである。
+ */
 export const deleteCropSubtotal = async (cropSubtotalId: string) => {
-  return prisma.cropSubtotal.delete({
+  return prisma.cropSubtotal.deleteMany({
     where: { id: cropSubtotalId },
   })
 }

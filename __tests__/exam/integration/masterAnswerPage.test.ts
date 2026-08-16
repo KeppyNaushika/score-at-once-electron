@@ -262,14 +262,15 @@ describe("deleteMasterAnswer", () => {
 })
 
 describe("moveExamPage", () => {
-  /** ページ番号順に並べた id */
-  const pageIdsInOrder = async (examId: string) => {
-    const pages = await prisma.examPage.findMany({
+  /** 画面に見えている並び。pageNumber は一意でないので id をタイブレークに入れる */
+  const pagesInOrder = async (examId: string) =>
+    prisma.examPage.findMany({
       where: { examId },
-      orderBy: { pageNumber: "asc" },
+      orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
     })
-    return pages.map((page) => page.id)
-  }
+
+  const pageIdsInOrder = async (examId: string) =>
+    (await pagesInOrder(examId)).map((page) => page.id)
 
   it("隣のページと入れ替わる", async () => {
     const { exam, pages } = await seedExamWithScoredFirstPage()
@@ -289,20 +290,81 @@ describe("moveExamPage", () => {
     expect(await pageIdsInOrder(exam.id)).toEqual([pages[0].id, pages[1].id])
   })
 
-  it("削除で番号が飛んでいても、見えている並びの隣と入れ替わる", async () => {
+  it("同じ番号のページがあっても、隣と1つだけ入れ替わる", async () => {
+    // 2台が同時にページを足すと、同じ番号の行が別 id で並ぶ（sync のマージ）。
+    // 番号の大小だけで隣を探すと同値を飛び越して2つ先と入れ替わっていた
+    const exam = await prisma.exam.create({ data: { examName: "番号の同値" } })
+    const pages = await uploadMasterAnswers(exam.id, [
+      fileData("page1.png", "master-1"),
+      fileData("page2.png", "master-2"),
+      fileData("page3.png", "master-3"),
+      fileData("page4.png", "master-4"),
+    ])
+    await prisma.examPage.update({
+      where: { id: pages[2].id },
+      data: { pageNumber: 2 },
+    })
+
+    // id のタイブレークで決まる実際の並びを見てから、2枚目を右へ動かす
+    const before = await pageIdsInOrder(exam.id)
+    const result = await moveExamPage(before[1], "right")
+
+    expect(result.moved).toBe(true)
+    expect(await pageIdsInOrder(exam.id)).toEqual([
+      before[0],
+      before[2],
+      before[1],
+      before[3],
+    ])
+  })
+
+  it("番号が飛んでいても隣と入れ替わり、番号は 1..N へ直る", async () => {
+    // 同期で片方の端末だけページが消えると、番号に穴が残ることがある
     const exam = await prisma.exam.create({ data: { examName: "番号飛び" } })
     const pages = await uploadMasterAnswers(exam.id, [
       fileData("page1.png", "master-1"),
       fileData("page2.png", "master-2"),
       fileData("page3.png", "master-3"),
     ])
-    // 真ん中を消すと 1 と 3 が残る（詰め直しはしない）
-    await deleteMasterAnswer(pages[1].id)
+    await prisma.examPage.update({
+      where: { id: pages[1].id },
+      data: { pageNumber: 5 },
+    })
+    await prisma.examPage.update({
+      where: { id: pages[2].id },
+      data: { pageNumber: 9 },
+    })
 
     const result = await moveExamPage(pages[0].id, "right")
 
     expect(result.moved).toBe(true)
-    expect(await pageIdsInOrder(exam.id)).toEqual([pages[2].id, pages[0].id])
+    const after = await pagesInOrder(exam.id)
+    expect(after.map((page) => page.id)).toEqual([
+      pages[1].id,
+      pages[0].id,
+      pages[2].id,
+    ])
+    expect(after.map((page) => page.pageNumber)).toEqual([1, 2, 3])
+  })
+
+  it("動いていないページの番号は書き換えない", async () => {
+    const exam = await prisma.exam.create({
+      data: { examName: "差分だけ書く" },
+    })
+    const pages = await uploadMasterAnswers(exam.id, [
+      fileData("page1.png", "master-1"),
+      fileData("page2.png", "master-2"),
+      fileData("page3.png", "master-3"),
+    ])
+    const before = await pagesInOrder(exam.id)
+
+    // 前2枚を入れ替える。3枚目は位置が変わらないので触られない
+    await moveExamPage(pages[0].id, "right")
+
+    const after = await pagesInOrder(exam.id)
+    const untouched = after.find((page) => page.id === pages[2].id)!
+    const original = before.find((page) => page.id === pages[2].id)!
+    expect(untouched.updatedAt).toEqual(original.updatedAt)
   })
 
   it("他の教員が別のページを動かしていても、その結果を踏み潰さない", async () => {

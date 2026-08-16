@@ -85,8 +85,8 @@ type RegionTableRowProps = {
     field: string,
     value: string | number | null
   ) => void
-  /** 入力を離れたら手元の文字を捨て、保存されている値へ戻す */
-  onRegionBlur: (regionId: string) => void
+  /** 入力を離れたら、**その欄の**手元の文字を捨てる（隣の欄はまだ入力中でありうる） */
+  onRegionBlur: (regionId: string, field: string) => void
   onKeyDown: (
     e: React.KeyboardEvent,
     rowIndex: number,
@@ -214,7 +214,7 @@ export const RegionTableRow = ({
             onCompositionStart={onCompositionStart}
             onCompositionEnd={onCompositionEnd}
             onFocus={ensureSelected}
-            onBlur={() => onRegionBlur(region.id)}
+            onBlur={() => onRegionBlur(region.id, "label")}
             disabled={disabled}
             placeholder="領域名を入力"
             className="h-8 w-full min-w-20"
@@ -238,7 +238,7 @@ export const RegionTableRow = ({
               onCompositionStart={onCompositionStart}
               onCompositionEnd={onCompositionEnd}
               onFocus={ensureSelected}
-              onBlur={() => onRegionBlur(region.id)}
+              onBlur={() => onRegionBlur(region.id, "points")}
               disabled={disabled}
               placeholder="10"
               className="h-8 w-full min-w-20"

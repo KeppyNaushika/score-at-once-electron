@@ -54,7 +54,7 @@ const RegionDetailsTable = ({
   const [regionToDelete, setRegionToDelete] = useState<number | null>(null)
 
   // 1打鍵ごとに書くので、打鍵と取り直しが競り合う。入力中の文字は手元に持つ
-  const { textOf, remember, forget } = useEditingText()
+  const { textOf, remember, forgetField, forget } = useEditingText()
   const updateCropRegion = useMutation(updateCropRegionMutation(examId))
   const deleteCropRegion = useMutation(deleteCropRegionMutation(examId))
   const updateCropRegionOrders = useMutation(
@@ -225,7 +225,7 @@ const RegionDetailsTable = ({
                 onOmrDelete={onOmrDelete}
                 textOf={textOf}
                 onRegionChange={handleRegionChange}
-                onRegionBlur={forget}
+                onRegionBlur={forgetField}
                 onKeyDown={handleKeyDown}
                 onCompositionStart={handleCompositionStart}
                 onCompositionEnd={handleCompositionEnd}

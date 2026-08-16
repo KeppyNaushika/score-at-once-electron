@@ -37,8 +37,14 @@ export function GestureColorInput({
   /** 選んでいる間の色。まだ書いていない */
   const [picking, setPicking] = useState<string | null>(null)
 
-  // 書いた色が返ってきた。手元の覚えは役目を終える
-  if (picking === value) setPicking(null)
+  // 書いた色が返ってきた。手元の覚えは役目を終える。
+  //
+  // 大文字小文字は無視する。`<input type="color">` が返すのは小文字（`#fecaca`）
+  // だが、保存値は経路によって大文字のこともある。字面で比べると永久に一致せず、
+  // 保存されていない色を出したまま `value` に追従しなくなる。
+  if (picking !== null && picking.toLowerCase() === value.toLowerCase()) {
+    setPicking(null)
+  }
 
   // 最新の `onCommit` を読むが、購読はやり直さない
   const commit = useEffectEvent((color: string) => onCommit(color))
@@ -56,7 +62,7 @@ export function GestureColorInput({
       ref={colorInputRef}
       type="color"
       value={picking ?? value}
-      onChange={(e) => setPicking(e.target.value.toUpperCase())}
+      onChange={(e) => setPicking(e.target.value)}
       disabled={disabled}
       className={className}
       aria-label={label}
