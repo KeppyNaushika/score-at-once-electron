@@ -1,26 +1,30 @@
 /**
- * Mouse event handlers for canvas interactions
+ * キャンバス上のポインタ操作（新規作成のドラッグ・リサイズ・移動）の受け口。
+ *
+ * **掴んでいる間は書かない。** リサイズと移動は動かしている途中の姿を
+ * `adjustingArea` に持ち、指を離した（`pointerup`）ときに1回だけ `onUpdateArea`
+ * を呼ぶ。かつては `pointermove` のたびに書いていたため、領域を1つ動かすだけで
+ * 数十回 DB を叩き、取り直しと競り合って枠が跳ねていた。
+ *
+ * `pointercancel`（別のジェスチャに奪われた・端末が中断した）では書かない。
+ * 途中で消えた操作は「そこで確定した」わけではないため。
  */
 
-import type { MouseEvent as ReactMouseEvent } from "react"
+import type { PointerEvent as ReactPointerEvent } from "react"
 import { useCallback, useRef } from "react"
 
 import type {
+  AdjustingArea,
   DetectionMode,
   DragSelectionResult,
   DragState,
   MoveState,
+  RegionCoordinates,
   ResizeState,
 } from "@/components/exams/02-template/types"
 import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
-/**
- * Custom hook for handling mouse events on the canvas
- *
- * @param params - Configuration parameters for mouse handling
- * @returns Object containing mouse event handlers
- */
-export function useMouseHandlers({
+export function usePointerHandlers({
   disabled,
   backgroundImageUrl,
   imageDimensions,
@@ -35,11 +39,13 @@ export function useMouseHandlers({
   dragCurrentCoords,
   resizing,
   moving,
+  adjustingArea,
   setDragging,
   setDragStartCoords,
   setDragCurrentCoords,
   setResizing,
   setMoving,
+  setAdjustingArea,
   detectionMode = "manual",
   onSnapToDetectedRects,
 }: {
@@ -54,14 +60,8 @@ export function useMouseHandlers({
     height: number
     label?: string
   }[]
-  onAddAreaByDrag: (
-    type: CropRegionAreaType,
-    coords: { x: number; y: number; width: number; height: number }
-  ) => void
-  onUpdateArea: (
-    index: number,
-    coords: { x: number; y: number; width: number; height: number }
-  ) => void
+  onAddAreaByDrag: (type: CropRegionAreaType, coords: RegionCoordinates) => void
+  onUpdateArea: (index: number, coords: RegionCoordinates) => void
   getRelativeCoords: (
     clientX: number,
     clientY: number,
@@ -73,29 +73,20 @@ export function useMouseHandlers({
   dragCurrentCoords: DragState | null
   resizing: ResizeState | null
   moving: MoveState | null
+  adjustingArea: AdjustingArea | null
   setDragging: (value: boolean) => void
   setDragStartCoords: (value: DragState | null) => void
   setDragCurrentCoords: (value: DragState | null) => void
   setResizing: (value: ResizeState | null) => void
   setMoving: (value: MoveState | null) => void
+  setAdjustingArea: (value: AdjustingArea | null) => void
   detectionMode?: DetectionMode
-  onSnapToDetectedRects?: (dragRect: {
-    x: number
-    y: number
-    width: number
-    height: number
-  }) => DragSelectionResult
+  onSnapToDetectedRects?: (dragRect: RegionCoordinates) => DragSelectionResult
 }) {
   const isCreatingRef = useRef(false) // 重複作成防止
 
-  /**
-   * Handle mouse down events for starting drag operations
-   *
-   * @param event - React mouse event
-   */
-  const handleMouseDown = (
-    event: ReactMouseEvent<HTMLDivElement, MouseEvent>
-  ) => {
+  /** 何もない場所を掴んだ = 新しい領域を作るドラッグの始まり */
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (
       disabled ||
       !backgroundImageUrl ||
@@ -116,15 +107,9 @@ export function useMouseHandlers({
     setDragging(true)
   }
 
-  /**
-   * Handle mouse down events for starting resize operations
-   *
-   * @param event - React mouse event
-   * @param areaIndex - Index of the area being resized
-   * @param handle - Which resize handle was clicked
-   */
-  const handleResizeMouseDown = (
-    event: ReactMouseEvent<HTMLDivElement, MouseEvent>,
+  /** 四隅のつまみを掴んだ = リサイズの始まり */
+  const handleResizePointerDown = (
+    event: ReactPointerEvent<HTMLDivElement>,
     areaIndex: number,
     handle: "nw" | "ne" | "sw" | "se"
   ) => {
@@ -151,14 +136,9 @@ export function useMouseHandlers({
     })
   }
 
-  /**
-   * Handle mouse down events for starting move operations
-   *
-   * @param event - React mouse event
-   * @param areaIndex - Index of the area being moved
-   */
-  const handleMoveMouseDown = (
-    event: ReactMouseEvent<HTMLDivElement, MouseEvent>,
+  /** 領域の中を掴んだ = 移動の始まり */
+  const handleMovePointerDown = (
+    event: ReactPointerEvent<HTMLDivElement>,
     areaIndex: number
   ) => {
     event.stopPropagation()
@@ -183,13 +163,9 @@ export function useMouseHandlers({
     })
   }
 
-  /**
-   * Handle mouse move events for drag, resize, and move operations
-   *
-   * @param event - Mouse event
-   */
-  const handleMouseMove = useCallback(
-    (event: MouseEvent) => {
+  /** 動かしている間。途中の姿は手元に置くだけで、DB へは書かない */
+  const handlePointerMove = useCallback(
+    (event: PointerEvent) => {
       if (!imageContainerRef.current) return
 
       const coords = getRelativeCoords(
@@ -205,7 +181,7 @@ export function useMouseHandlers({
         const deltaX = coords.x - startCoords.x
         const deltaY = coords.y - startCoords.y
 
-        let newArea = { ...originalArea }
+        const newArea = { ...originalArea }
 
         switch (handle) {
           case "nw":
@@ -236,25 +212,26 @@ export function useMouseHandlers({
         newArea.x = Math.max(0, Math.min(1 - newArea.width, newArea.x))
         newArea.y = Math.max(0, Math.min(1 - newArea.height, newArea.y))
 
-        onUpdateArea(areaIndex, newArea)
+        setAdjustingArea({ areaIndex, coords: newArea })
       } else if (moving) {
         const { areaIndex, startCoords, originalArea } = moving
         const deltaX = coords.x - startCoords.x
         const deltaY = coords.y - startCoords.y
 
-        const newArea = {
-          ...originalArea,
-          x: Math.max(
-            0,
-            Math.min(1 - originalArea.width, originalArea.x + deltaX)
-          ),
-          y: Math.max(
-            0,
-            Math.min(1 - originalArea.height, originalArea.y + deltaY)
-          ),
-        }
-
-        onUpdateArea(areaIndex, newArea)
+        setAdjustingArea({
+          areaIndex,
+          coords: {
+            ...originalArea,
+            x: Math.max(
+              0,
+              Math.min(1 - originalArea.width, originalArea.x + deltaX)
+            ),
+            y: Math.max(
+              0,
+              Math.min(1 - originalArea.height, originalArea.y + deltaY)
+            ),
+          },
+        })
       }
     },
     [
@@ -263,16 +240,14 @@ export function useMouseHandlers({
       resizing,
       moving,
       getRelativeCoords,
-      onUpdateArea,
       imageContainerRef,
       setDragCurrentCoords,
+      setAdjustingArea,
     ]
   )
 
-  /**
-   * Handle mouse up events to complete drag, resize, and move operations
-   */
-  const handleMouseUp = useCallback(() => {
+  /** 指を離した = ここが操作の終わり。作成も更新もこの1回で書く */
+  const handlePointerUp = useCallback(() => {
     // 即座な重複防止チェック（デバウンシング機構）
     if (isCreatingRef.current) {
       return
@@ -322,13 +297,21 @@ export function useMouseHandlers({
       setDragCurrentCoords(null)
     }
 
+    // 動かした結果をここで1回だけ書く。掴んだだけで動かさなかったときは
+    // adjustingArea が無いので、書き込みも起きない
+    if (adjustingArea) {
+      onUpdateArea(adjustingArea.areaIndex, adjustingArea.coords)
+    }
+
     setResizing(null)
     setMoving(null)
   }, [
     dragging,
     dragStartCoords,
     dragCurrentCoords,
+    adjustingArea,
     onAddAreaByDrag,
+    onUpdateArea,
     setDragCurrentCoords,
     setDragStartCoords,
     setDragging,
@@ -338,11 +321,29 @@ export function useMouseHandlers({
     onSnapToDetectedRects,
   ])
 
+  /** 操作が中断された。確定していないので書かず、途中の姿も捨てる */
+  const handlePointerCancel = useCallback(() => {
+    setDragging(false)
+    setDragStartCoords(null)
+    setDragCurrentCoords(null)
+    setResizing(null)
+    setMoving(null)
+    setAdjustingArea(null)
+  }, [
+    setDragging,
+    setDragStartCoords,
+    setDragCurrentCoords,
+    setResizing,
+    setMoving,
+    setAdjustingArea,
+  ])
+
   return {
-    handleMouseDown,
-    handleResizeMouseDown,
-    handleMoveMouseDown,
-    handleMouseMove,
-    handleMouseUp,
+    handlePointerDown,
+    handleResizePointerDown,
+    handleMovePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handlePointerCancel,
   }
 }

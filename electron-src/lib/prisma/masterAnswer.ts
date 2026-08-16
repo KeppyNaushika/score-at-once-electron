@@ -242,59 +242,60 @@ export const deleteMasterAnswer = async (
   return { deletedPage: targetPage }
 }
 
-/** 模範解答ページの順序を一括更新する（一時番号経由でユニーク制約を回避） */
-export const updateMasterAnswersOrder = async (
-  pageOrders: { id: string; pageNumber: number }[]
-): Promise<Prisma.BatchPayload> => {
-  if (pageOrders.length === 0) {
-    return { count: 0 }
+/**
+ * 模範解答ページを1つ隣へ動かす。
+ *
+ * **運ぶのは「どのページをどちらへ」という意図だけ。** かつては renderer が
+ * 並べ直した一覧から全ページの絶対 `pageNumber` を送っていたため、他の教員が
+ * 先に別のページを動かしていると、その結果ごと踏み潰していた。入れ替えなら
+ * 手元が古くても、動かしたページとその隣にしか触らない。
+ *
+ * 端のページは動かす先が無いので `moved: false` を返す（失敗ではない）。
+ */
+export const moveExamPage = async (
+  examPageId: string,
+  direction: "left" | "right"
+): Promise<{ moved: boolean }> => {
+  const page = await prisma.examPage.findUnique({ where: { id: examPageId } })
+  if (!page) {
+    throw new Error(`模範解答ページが見つかりません: ${examPageId}`)
   }
 
-  const pages = await prisma.examPage.findMany({
-    where: { id: { in: pageOrders.map((pageOrder) => pageOrder.id) } },
+  // 隣は「番号が1つ違う」ページではなく「番号がいちばん近い」ページ。削除で
+  // 番号が飛んでいても、見えている並びのとおりに動く
+  const neighbor = await prisma.examPage.findFirst({
+    where: {
+      examId: page.examId,
+      pageNumber:
+        direction === "left"
+          ? { lt: page.pageNumber }
+          : { gt: page.pageNumber },
+    },
+    orderBy: { pageNumber: direction === "left" ? "desc" : "asc" },
   })
-  if (pages.length === 0) {
-    throw new Error("No exam pages found for reordering")
-  }
-
-  const { examId } = pages[0]
-  const highestPageNumber = Math.max(...pages.map((page) => page.pageNumber))
-  const offset = highestPageNumber + pageOrders.length + 100
-
-  // 実在するページだけを並べ替える。協調採点では他の教員が先にページを消していることが
-  // あり、消えた1件で update が P2025 を投げるとトランザクションごと巻き戻って
-  // 「1ページも並び替わらない」になる。残ったページは並べ替えて構わない
-  const existingPageIds = new Set(pages.map((page) => page.id))
-  const applicableOrders = pageOrders.filter((pageOrder) =>
-    existingPageIds.has(pageOrder.id)
-  )
+  if (!neighbor) return { moved: false }
 
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    // 一度すべてを衝突しない番号へ逃がしてから確定させる
-    for (const [index, pageOrder] of applicableOrders.entries()) {
-      await tx.examPage.update({
-        where: { id: pageOrder.id },
-        data: { pageNumber: offset + index },
-      })
-    }
-    for (const pageOrder of applicableOrders) {
-      await tx.examPage.update({
-        where: { id: pageOrder.id },
-        data: { pageNumber: pageOrder.pageNumber },
-      })
-    }
+    await tx.examPage.update({
+      where: { id: page.id },
+      data: { pageNumber: neighbor.pageNumber },
+    })
+    await tx.examPage.update({
+      where: { id: neighbor.id },
+      data: { pageNumber: page.pageNumber },
+    })
   })
 
-  const scope = await resolveExamScope(examId)
+  const scope = await resolveExamScope(page.examId)
   await recordAuditLog({
     action: "exam.page.reorder",
     entityType: "ExamPage",
-    entityId: examId,
+    entityId: page.id,
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
   })
 
-  return { count: applicableOrders.length }
+  return { moved: true }
 }
 
 /**

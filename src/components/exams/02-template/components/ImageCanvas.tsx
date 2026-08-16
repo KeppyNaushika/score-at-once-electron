@@ -81,9 +81,10 @@ const ImageCanvas = ({
     dragging,
     dragStartCoords,
     dragCurrentCoords,
-    handleMouseDown,
-    handleResizeMouseDown,
-    handleMoveMouseDown,
+    adjustingArea,
+    handlePointerDown,
+    handleResizePointerDown,
+    handleMovePointerDown,
   } = useImageCanvasInteraction({
     disabled,
     backgroundImageUrl,
@@ -99,6 +100,20 @@ const ImageCanvas = ({
   })
 
   useKeyboardShortcuts(selectedAreaIndex, onDeleteArea)
+
+  // 掴んでいる間は、その領域だけ手元の姿に差し替えて描く。DB にはまだ書いて
+  // いないので、`areas` は掴む前の姿のままである
+  const shownAreas = useMemo(
+    () =>
+      adjustingArea === null
+        ? areas
+        : areas.map((area, index) =>
+            index === adjustingArea.areaIndex
+              ? { ...area, ...adjustingArea.coords }
+              : area
+          ),
+    [areas, adjustingArea]
+  )
 
   // Calculate image dimensions based on zoom
   const imageDimensionsWithZoom = useMemo(
@@ -137,7 +152,7 @@ const ImageCanvas = ({
             minWidth: "400px",
             minHeight: "300px",
           }}
-          onMouseDown={handleMouseDown}
+          onPointerDown={handlePointerDown}
         >
           {/* 検出枠オーバーレイ（確定済み領域より下に表示） */}
           <DetectedRectOverlay
@@ -149,11 +164,11 @@ const ImageCanvas = ({
           />
 
           <AreaRenderer
-            areas={areas}
+            areas={shownAreas}
             selectedAreaIndex={selectedAreaIndex}
             onSelectArea={onSelectArea}
-            onResizeMouseDown={handleResizeMouseDown}
-            onMoveMouseDown={handleMoveMouseDown}
+            onResizePointerDown={handleResizePointerDown}
+            onMovePointerDown={handleMovePointerDown}
             imageDimensions={imageDimensions}
             containerRef={imageContainerRef}
             zoom={zoom}

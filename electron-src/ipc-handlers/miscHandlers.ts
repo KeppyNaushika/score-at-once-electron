@@ -12,9 +12,9 @@ import {
   deleteMasterAnswer,
   getMasterAnswersByExamId,
   type MasterAnswerFileData,
+  moveExamPage,
   replaceMasterAnswerImage,
   updateExamPagePageSize,
-  updateMasterAnswersOrder,
   uploadMasterAnswers,
 } from "../lib/prisma/masterAnswer"
 import {
@@ -157,10 +157,8 @@ export const miscHandlers = {
     return await deleteMasterAnswer(examPageId)
   },
 
-  "update-master-answers-order": async (
-    pageOrders: { id: string; pageNumber: number }[]
-  ) => {
-    return await updateMasterAnswersOrder(pageOrders)
+  "move-exam-page": async (examPageId: string, direction: "left" | "right") => {
+    return await moveExamPage(examPageId, direction)
   },
 
   "update-exam-page-page-size": async (

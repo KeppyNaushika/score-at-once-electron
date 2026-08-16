@@ -103,6 +103,26 @@ export type PreferenceValueType = {
 }
 
 /**
+ * 保存文字列から中身の文字列を取り出す。
+ *
+ * 現行は `serializePreference` が JSON で1枚くるむ。**古い保存値はくるまれて
+ * いない**ので、JSON として読めなければ生のまま返す（`#FF0000` など）。
+ *
+ * 落とし穴は「古い生の値が、たまたま JSON として読めてしまう」場合である。
+ * `clickScoringConfig` や `scoringStatusColors` は中身自体が JSON 文字列なので、
+ * 素朴に `JSON.parse` するとオブジェクトが返り、文字列を名乗ったまま呼び出し側へ
+ * 渡って設定が丸ごと既定値へ落ちていた。**文字列になったときだけ剥がす。**
+ */
+function unwrapStoredString(raw: string): string {
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    return typeof parsed === "string" ? parsed : raw
+  } catch {
+    return raw
+  }
+}
+
+/**
  * DB文字列値をパースして適切な型に変換
  */
 export function parsePreference<K extends PreferenceKey>(
@@ -126,14 +146,8 @@ export function parsePreference<K extends PreferenceKey>(
         ) as PreferenceValueType[K]
       }
       case "string": {
-        // JSON文字列 → パースしてバリデーション
-        let parsed: string
-        try {
-          parsed = JSON.parse(raw)
-        } catch {
-          parsed = raw
-        }
-        const validate = (schema as { validate?: (v: string) => boolean })
+        const parsed = unwrapStoredString(raw)
+        const validate = (schema as { validate?: (value: string) => boolean })
           .validate
         if (validate && !validate(parsed)) {
           return schema.default as PreferenceValueType[K]
@@ -142,11 +156,7 @@ export function parsePreference<K extends PreferenceKey>(
       }
       case "string?": {
         if (raw === "null") return null as PreferenceValueType[K]
-        try {
-          return JSON.parse(raw) as PreferenceValueType[K]
-        } catch {
-          return raw as PreferenceValueType[K]
-        }
+        return unwrapStoredString(raw) as PreferenceValueType[K]
       }
     }
   } catch {

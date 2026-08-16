@@ -20,9 +20,7 @@ export function createSubtotalApi() {
     setSubtotalGroupSelection: bind("set-subtotal-group-selection"),
 
     // CropSubtotal related (unified from QuestionSubtotalAssignment + SubtotalDefinition)
-    createManyCropSubtotals: bind("create-many-crop-subtotals"),
-    deleteCropSubtotalsByCropRegionId: bind(
-      "delete-crop-subtotals-by-crop-region-id"
-    ),
+    createCropSubtotal: bind("create-crop-subtotal"),
+    deleteCropSubtotal: bind("delete-crop-subtotal"),
   }
 }

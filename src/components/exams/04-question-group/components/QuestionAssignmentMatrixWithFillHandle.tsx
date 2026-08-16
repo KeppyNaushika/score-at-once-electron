@@ -15,7 +15,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
-import type { CropSubtotalAssignmentType } from "@/electron-src/lib/prisma/cropSubtotal"
 import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
 
 import { useCropSubtotalAssignments } from "../hooks/useCropSubtotalAssignments"
@@ -23,22 +22,18 @@ import { useFillHandleDrag } from "../hooks/useFillHandleDrag"
 import { CheckboxCellWithFillHandle } from "./CheckboxCellWithFillHandle"
 
 interface QuestionAssignmentMatrixWithFillHandleProps {
+  examId: string
   subtotalGroups: SubtotalGroupWithSubtotals[]
   /** 設問領域（QUESTION_ANSWER）。割り当ての出所でもある */
   cropRegions: CropRegionWithSubtotals[]
-  onUpdateAssignments: (
-    cropRegionId: string,
-    subtotalIds: string[],
-    assignmentType: CropSubtotalAssignmentType
-  ) => Promise<void>
   /** 保存済みの割り当てを取り直す */
   onReload: () => void
 }
 
 export function QuestionAssignmentMatrixWithFillHandle({
+  examId,
   subtotalGroups,
   cropRegions,
-  onUpdateAssignments,
   onReload,
 }: QuestionAssignmentMatrixWithFillHandleProps) {
   // 選択されたセルの状態（rowId-colId形式）
@@ -49,16 +44,16 @@ export function QuestionAssignmentMatrixWithFillHandle({
 
   const { assignments, saving, setCellAssignment, fillCells } =
     useCropSubtotalAssignments({
+      examId,
       cropRegions,
       assignmentType: "QUESTION_ASSIGNMENT",
-      onUpdateAssignments,
     })
 
   // フィルハンドルのドラッグ管理
   const {
-    handleFillHandleMouseDown,
-    handleCellMouseEnter,
-    handleMouseUp,
+    handleFillHandlePointerDown,
+    handleCellPointerEnter,
+    handlePointerUp,
     isInFillRange,
   } = useFillHandleDrag({
     rows: cropRegions,
@@ -137,8 +132,8 @@ export function QuestionAssignmentMatrixWithFillHandle({
             scrollbarWidth: "thin",
             scrollbarColor: "rgba(0, 0, 0, 0.2) transparent",
           }}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
         >
           <Table className="w-auto" style={{ width: "fit-content" }}>
             <TableHeader>
@@ -219,8 +214,8 @@ export function QuestionAssignmentMatrixWithFillHandle({
                           <TableCell
                             key={subtotal.id}
                             className="p-0 text-center"
-                            onMouseEnter={() =>
-                              handleCellMouseEnter({
+                            onPointerEnter={() =>
+                              handleCellPointerEnter({
                                 rowId: region.id,
                                 colId: subtotal.id,
                                 rowIndex,
@@ -242,7 +237,7 @@ export function QuestionAssignmentMatrixWithFillHandle({
                               }
                               onFillHandleDragStart={(e, initialValue) => {
                                 e.preventDefault()
-                                handleFillHandleMouseDown(
+                                handleFillHandlePointerDown(
                                   {
                                     rowId: region.id,
                                     colId: subtotal.id,

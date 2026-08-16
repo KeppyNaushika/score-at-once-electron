@@ -124,34 +124,36 @@ export const removeSubtotalGroupFromExamMutation = (examId: string) =>
 // =====================================================================
 
 /**
- * 採点領域1つ分の割り当てを丸ごと差し替える。
+ * マス1つ分の割り当てを付ける。
  *
- * 部分更新という経路が無い（全消し→作り直し）ので、書き込みも1領域単位で1つに
- * まとめる。同じ領域へ2つが同時に走ると、消す方と作る方が入れ違って割り当てが
- * 消えるため `scope` で直列にする。
+ * マトリクスのマスは「この設問領域をこの小計へ足し込む」という1レコードなので、
+ * 書き込みもその1レコードだけを作る。以前は領域の割り当てを全消ししてから
+ * 作り直していたため、1マス触るだけで残り全部が一度 DB から消えていた。
+ *
+ * 同じ試験の割り当てを同時に書くと取り直しが入れ違うので `scope` で直列にする。
  */
-export const replaceCropSubtotalsMutation = (examId: string) =>
+export const createCropSubtotalMutation = (examId: string) =>
   defineMutation({
-    mutationFn: async (input: {
+    mutationFn: (input: {
       cropRegionId: string
-      subtotalIds: string[]
+      subtotalId: string
       assignmentType: CropSubtotalAssignmentType
-    }) => {
-      await window.electronAPI.deleteCropSubtotalsByCropRegionId(
-        input.cropRegionId
-      )
-      if (input.subtotalIds.length === 0) return
-      await window.electronAPI.createManyCropSubtotals(
-        input.subtotalIds.map((subtotalId) => ({
-          cropRegionId: input.cropRegionId,
-          subtotalId,
-          assignmentType: input.assignmentType,
-        }))
-      )
-    },
+    }) => window.electronAPI.createCropSubtotal(input),
     scope: { id: `exam:${examId}:cropSubtotals` },
     meta: {
       invalidates: [cropRegionsQuery(examId).queryKey],
       errorMessage: "関連付けを保存できませんでした",
+    },
+  })
+
+/** マス1つ分の割り当てを外す。消す先は割り当ての行そのもの（id） */
+export const deleteCropSubtotalMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (cropSubtotalId: string) =>
+      window.electronAPI.deleteCropSubtotal(cropSubtotalId),
+    scope: { id: `exam:${examId}:cropSubtotals` },
+    meta: {
+      invalidates: [cropRegionsQuery(examId).queryKey],
+      errorMessage: "関連付けを解除できませんでした",
     },
   })

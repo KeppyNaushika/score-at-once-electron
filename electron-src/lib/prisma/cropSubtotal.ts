@@ -45,64 +45,61 @@ const cropSubtotalForScoringInclude = {
   },
 } satisfies Prisma.CropSubtotalInclude
 
-/** 複数の設問-小計紐付けを一括作成する（各項目のデータ整合性を検証） */
-export const createManyCropSubtotals = async (
-  data: Prisma.CropSubtotalUncheckedCreateInput[]
+/**
+ * 設問-小計の紐付けを1件作る（データ整合性を検証する）。
+ *
+ * かつては「その領域の紐付けを全消し → 作り直し」の2本で1マスの変更を表して
+ * いた。マス1つを消しただけで全ての紐付けが一度 DB から消えるので、途中で
+ * 落ちれば全滅し、同時に触れば互いの結果を消し合っていた。
+ */
+export const createCropSubtotal = async (
+  data: Prisma.CropSubtotalUncheckedCreateInput
 ) => {
-  // 各CropSubtotalについてデータ整合性をチェック
-  for (const item of data) {
-    const cropRegion = await prisma.cropRegion.findUnique({
-      where: { id: item.cropRegionId },
-      include: { examPage: true },
-    })
+  const cropRegion = await prisma.cropRegion.findUnique({
+    where: { id: data.cropRegionId },
+    include: { examPage: true },
+  })
 
-    if (!cropRegion) {
-      throw new Error(
-        `指定された設問領域が見つかりません: ${item.cropRegionId}`
-      )
-    }
+  if (!cropRegion) {
+    throw new Error(`指定された設問領域が見つかりません: ${data.cropRegionId}`)
+  }
 
-    const subtotal = await prisma.subtotal.findUnique({
-      where: { id: item.subtotalId },
-      include: {
-        subtotalGroup: {
-          include: {
-            examSubtotalGroups: {
-              where: {
-                examId: cropRegion.examPage.examId,
-              },
+  const subtotal = await prisma.subtotal.findUnique({
+    where: { id: data.subtotalId },
+    include: {
+      subtotalGroup: {
+        include: {
+          examSubtotalGroups: {
+            where: {
+              examId: cropRegion.examPage.examId,
             },
           },
         },
       },
-    })
+    },
+  })
 
-    if (!subtotal) {
-      throw new Error(`指定された小計項目が見つかりません: ${item.subtotalId}`)
-    }
-
-    // 小計項目が試験で有効化されているかチェック
-    const isSubtotalActiveInExam =
-      subtotal.subtotalGroup.examSubtotalGroups.length > 0
-
-    if (!isSubtotalActiveInExam) {
-      throw new Error(
-        `小計項目「${subtotal.name}」（グループ：${subtotal.subtotalGroup.name}）は、この試験で有効化されていません。先に04-question-groupページで小計点グループを追加してください。`
-      )
-    }
+  if (!subtotal) {
+    throw new Error(`指定された小計項目が見つかりません: ${data.subtotalId}`)
   }
 
-  return prisma.cropSubtotal.createMany({
-    data,
-  })
+  // 小計項目が試験で有効化されているかチェック
+  const isSubtotalActiveInExam =
+    subtotal.subtotalGroup.examSubtotalGroups.length > 0
+
+  if (!isSubtotalActiveInExam) {
+    throw new Error(
+      `小計項目「${subtotal.name}」（グループ：${subtotal.subtotalGroup.name}）は、この試験で有効化されていません。先に04-question-groupページで小計点グループを追加してください。`
+    )
+  }
+
+  return prisma.cropSubtotal.create({ data })
 }
 
-/** 指定した設問領域に紐づく全ての設問-小計紐付けを削除する */
-export const deleteCropSubtotalsByCropRegionId = async (
-  cropRegionId: string
-) => {
-  return prisma.cropSubtotal.deleteMany({
-    where: { cropRegionId },
+/** 設問-小計の紐付けを1件消す */
+export const deleteCropSubtotal = async (cropSubtotalId: string) => {
+  return prisma.cropSubtotal.delete({
+    where: { id: cropSubtotalId },
   })
 }
 

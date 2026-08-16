@@ -225,6 +225,7 @@ const RegionDetailsTable = ({
                 onOmrDelete={onOmrDelete}
                 textOf={textOf}
                 onRegionChange={handleRegionChange}
+                onRegionBlur={forget}
                 onKeyDown={handleKeyDown}
                 onCompositionStart={handleCompositionStart}
                 onCompositionEnd={handleCompositionEnd}

@@ -32,6 +32,15 @@ export interface FillUpdate {
   value: boolean
 }
 
+/** 掴んでいないときの姿 */
+const IDLE_FILL_HANDLE_STATE: FillHandleState = {
+  isDragging: false,
+  startCell: null,
+  currentCell: null,
+  selectedRange: [],
+  initialValues: [],
+}
+
 /**
  * useFillHandleDrag のパラメータ
  */
@@ -61,9 +70,9 @@ interface UseFillHandleDragParams {
  * ```tsx
  * const {
  *   fillHandleState,
- *   handleFillHandleMouseDown,
- *   handleCellMouseEnter,
- *   handleMouseUp,
+ *   handleFillHandlePointerDown,
+ *   handleCellPointerEnter,
+ *   handlePointerUp,
  *   isInFillRange,
  * } = useFillHandleDrag({
  *   onFillComplete: async (updates) => {
@@ -79,18 +88,12 @@ export function useFillHandleDrag({
   rows = [],
   cols = [],
 }: UseFillHandleDragParams) {
-  const [state, setState] = useState<FillHandleState>({
-    isDragging: false,
-    startCell: null,
-    currentCell: null,
-    selectedRange: [],
-    initialValues: [],
-  })
+  const [state, setState] = useState<FillHandleState>(IDLE_FILL_HANDLE_STATE)
 
   /**
-   * フィルハンドルのマウスダウン（ドラッグ開始）
+   * フィルハンドルを掴んだ（ドラッグ開始）
    */
-  const handleFillHandleMouseDown = useCallback(
+  const handleFillHandlePointerDown = useCallback(
     (cell: CellPosition, initialValue: boolean) => {
       setState({
         isDragging: true,
@@ -104,9 +107,9 @@ export function useFillHandleDrag({
   )
 
   /**
-   * セルへのマウス進入（ドラッグ中の範囲選択）
+   * セルへのポインタ進入（ドラッグ中の範囲選択）
    */
-  const handleCellMouseEnter = useCallback(
+  const handleCellPointerEnter = useCallback(
     (cell: CellPosition) => {
       setState((prev) => {
         if (!prev.isDragging || !prev.startCell) return prev
@@ -125,49 +128,35 @@ export function useFillHandleDrag({
   )
 
   /**
-   * マウスアップ（ドラッグ完了 + スマートフィル適用）
+   * 指を離した（ドラッグ完了 + スマートフィル適用）。**ここが操作の終わり**。
+   *
+   * 保存は `setState` の更新関数の外で呼ぶ。更新関数は React が2度走らせること
+   * があり、中で書くと同じマスを2回作りに行く（1マス＝1レコードになったので、
+   * かつてのような「全消し→作り直し」の冪等性はもう無い）。
    */
-  const handleMouseUp = useCallback(async () => {
-    setState((prev) => {
-      if (!prev.isDragging || prev.selectedRange.length === 0) {
-        // リセットして終了
-        return {
-          isDragging: false,
-          startCell: null,
-          currentCell: null,
-          selectedRange: [],
-          initialValues: [],
-        }
-      }
+  const handlePointerUp = useCallback(() => {
+    if (!state.isDragging || state.selectedRange.length === 0) {
+      setState(IDLE_FILL_HANDLE_STATE)
+      return
+    }
 
-      // スマートフィル適用
-      const filledValues = smartFillCheckbox(
-        prev.initialValues,
-        prev.selectedRange.length
-      )
+    // スマートフィル適用
+    const filledValues = smartFillCheckbox(
+      state.initialValues,
+      state.selectedRange.length
+    )
 
-      // 更新データ作成
-      const updates: FillUpdate[] = prev.selectedRange.map((cell, index) => ({
-        rowId: cell.rowId,
-        colId: cell.colId,
-        value: filledValues[index],
-      }))
+    const updates: FillUpdate[] = state.selectedRange.map((cell, index) => ({
+      rowId: cell.rowId,
+      colId: cell.colId,
+      value: filledValues[index],
+    }))
 
-      // コールバック実行（非同期）
-      onFillComplete(updates).catch((error) => {
-        console.error("フィル完了コールバックエラー:", error)
-      })
-
-      // リセット
-      return {
-        isDragging: false,
-        startCell: null,
-        currentCell: null,
-        selectedRange: [],
-        initialValues: [],
-      }
+    setState(IDLE_FILL_HANDLE_STATE)
+    onFillComplete(updates).catch((error) => {
+      console.error("フィル完了コールバックエラー:", error)
     })
-  }, [onFillComplete])
+  }, [state, onFillComplete])
 
   /**
    * 指定されたセルが選択範囲に含まれるかを判定
@@ -192,9 +181,9 @@ export function useFillHandleDrag({
   // }, [state.isDragging, state.selectedRange])
 
   return {
-    handleFillHandleMouseDown,
-    handleCellMouseEnter,
-    handleMouseUp,
+    handleFillHandlePointerDown,
+    handleCellPointerEnter,
+    handlePointerUp,
     isInFillRange,
   }
 }

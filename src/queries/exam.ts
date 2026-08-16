@@ -187,11 +187,17 @@ export const deleteMasterAnswerMutation = (examId: string) =>
     },
   })
 
-export const updateMasterAnswersOrderMutation = (examId: string) =>
+/**
+ * 模範解答ページを1つ隣へ動かす。
+ *
+ * 運ぶのは「どのページをどちらへ」だけ。全ページの絶対 `pageNumber` を送ると、
+ * 他の教員が先に動かした結果まで踏み潰す。
+ */
+export const moveExamPageMutation = (examId: string) =>
   defineMutation({
-    mutationFn: (
-      orders: Parameters<typeof window.electronAPI.updateMasterAnswersOrder>[0]
-    ) => window.electronAPI.updateMasterAnswersOrder(orders),
+    mutationFn: (input: { examPageId: string; direction: "left" | "right" }) =>
+      window.electronAPI.moveExamPage(input.examPageId, input.direction),
+    scope: { id: `exam:${examId}:examPageOrder` },
     meta: {
       invalidates: [examScope(examId)],
       errorMessage: "模範解答の並び順を保存できませんでした",

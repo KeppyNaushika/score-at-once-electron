@@ -25,6 +25,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useSlidingValue } from "@/hooks/useSlidingValue"
 
 import { SidePanelSection } from "./SidePanelSection"
 
@@ -65,6 +66,9 @@ export function MasterAnswerControls({
 }: MasterAnswerControlsProps) {
   const { keyBindings } = useKeyBindings()
   const toggleKey = keyBindings["view.toggleMasterAnswer"]?.toUpperCase() || "X"
+
+  // つまみを動かしている間は書かず、離したときに1回だけ書く
+  const opacitySlider = useSlidingValue(opacity, onOpacityChange)
 
   // hold-to-show: mousedown で表示、mouseup/mouseleave で非表示
   const handlePointerDown = useCallback(() => {
@@ -149,10 +153,11 @@ export function MasterAnswerControls({
           {/* 不透明度スライダー（overlay時のみ） */}
           {displayMode === "overlay" && (
             <div className="space-y-1">
-              <Label className="text-xs">不透明度: {opacity}%</Label>
+              <Label className="text-xs">
+                不透明度: {opacitySlider.shown}%
+              </Label>
               <Slider
-                value={[opacity]}
-                onValueChange={([v]) => onOpacityChange(v)}
+                {...opacitySlider.sliderProps}
                 min={5}
                 max={100}
                 step={5}

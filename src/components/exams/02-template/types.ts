@@ -92,6 +92,17 @@ export interface MoveState {
 }
 
 /**
+ * 掴んでいる間の領域の姿。
+ *
+ * リサイズ・移動の途中はここに置くだけで DB へは書かない。指を離したときに
+ * 1回だけ書く（`usePointerHandlers`）。
+ */
+export interface AdjustingArea {
+  areaIndex: number
+  coords: RegionCoordinates
+}
+
+/**
  * Props for the image canvas interaction hook
  */
 export interface UseImageCanvasInteractionProps {

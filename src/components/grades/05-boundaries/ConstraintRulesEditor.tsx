@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
 
+import { GestureColorInput } from "@/components/common/GestureColorInput"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -250,12 +251,11 @@ function ConstraintCard({
         <Badge variant="secondary" className="shrink-0">
           {KIND_LABELS[constraint.kind]}
         </Badge>
-        <input
-          type="color"
+        <GestureColorInput
           value={constraint.color}
-          onChange={(e) => onUpdate({ color: e.target.value })}
+          onCommit={(color) => onUpdate({ color })}
+          label="着色色"
           className="h-8 w-8 cursor-pointer rounded border"
-          aria-label="着色色"
         />
         <Switch
           checked={constraint.enabled}

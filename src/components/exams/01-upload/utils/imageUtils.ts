@@ -59,37 +59,3 @@ export const generateUploadSuccessMessage = (
 
   return message
 }
-
-/**
- * 解答の移動操作を実行する
- * @returns 移動後のリスト（移動不可の場合はnull）
- */
-export const moveImageInList = (
-  answers: ExamPageWithContent[],
-  fromIndex: number,
-  direction: "left" | "right"
-): ExamPageWithContent[] | null => {
-  const toIndex = direction === "left" ? fromIndex - 1 : fromIndex + 1
-
-  if (toIndex < 0 || toIndex >= answers.length) {
-    return null
-  }
-
-  const newAnswers = [...answers]
-  const [movedAnswer] = newAnswers.splice(fromIndex, 1)
-  newAnswers.splice(toIndex, 0, movedAnswer)
-
-  return newAnswers
-}
-
-/**
- * 解答移動用のページ番号更新リクエストを生成する（id は ExamPage.id）
- */
-export const generatePageNumberUpdateRequests = (
-  answers: ExamPageWithContent[]
-): Array<{ id: string; pageNumber: number }> => {
-  return answers.map((answer, index) => ({
-    id: answer.id,
-    pageNumber: index + 1,
-  }))
-}

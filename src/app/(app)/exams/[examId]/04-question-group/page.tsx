@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Calculator } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useMemo } from "react"
@@ -12,12 +12,10 @@ import { SubtotalGroupSelector } from "@/components/exams/04-question-group/comp
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
-import type { CropSubtotalAssignmentType } from "@/electron-src/lib/prisma/cropSubtotal"
 import { type CropRegionRow, cropRegionsQuery } from "@/queries/cropRegion"
 import {
   activeSubtotalGroupsQuery,
   type ExamSubtotalGroupRow,
-  replaceCropSubtotalsMutation,
 } from "@/queries/subtotal"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
@@ -42,7 +40,6 @@ export default function SubtotalGroupPage() {
     isPending: subtotalGroupsPending,
     error: subtotalGroupsError,
   } = useQuery(activeSubtotalGroupsQuery(examId))
-  const replaceCropSubtotals = useMutation(replaceCropSubtotalsMutation(examId))
 
   const loading = cropRegionsPending || subtotalGroupsPending
   const error = (cropRegionsError ?? subtotalGroupsError)?.message ?? null
@@ -74,22 +71,6 @@ export default function SubtotalGroupPage() {
         queryKey: cropRegionsQuery(examId).queryKey,
       }),
     [queryClient, examId]
-  )
-
-  /** 1領域分の割り当てを丸ごと差し替える（部分更新という経路が無いため） */
-  const updateAssignments = useCallback(
-    async (
-      cropRegionId: string,
-      subtotalIds: string[],
-      assignmentType: CropSubtotalAssignmentType
-    ) => {
-      await replaceCropSubtotals.mutateAsync({
-        cropRegionId,
-        subtotalIds,
-        assignmentType,
-      })
-    },
-    [replaceCropSubtotals]
   )
 
   if (loading) {
@@ -145,9 +126,9 @@ export default function SubtotalGroupPage() {
                 </h2>
               </div>
               <QuestionAssignmentMatrixWithFillHandle
+                examId={examId}
                 subtotalGroups={activeSubtotalGroups}
                 cropRegions={questionRegions}
-                onUpdateAssignments={updateAssignments}
                 onReload={reload}
               />
             </div>
@@ -163,9 +144,9 @@ export default function SubtotalGroupPage() {
                 </h2>
               </div>
               <SubtotalAssignmentMatrixWithFillHandle
+                examId={examId}
                 subtotalGroups={activeSubtotalGroups}
                 subtotalRegions={subtotalRegions}
-                onUpdateAssignments={updateAssignments}
                 onReload={reload}
               />
             </div>

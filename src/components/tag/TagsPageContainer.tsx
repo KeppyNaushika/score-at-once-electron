@@ -2,7 +2,7 @@
 
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { Calculator, Edit2, PlusCircle, Trash2, XIcon } from "lucide-react"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
@@ -297,7 +297,6 @@ function TagModal({
 const EMPTY_TAGS: TagWithAllRelations[] = []
 
 export function TagsPageContainer() {
-  const queryClient = useQueryClient()
   const { data: tags = EMPTY_TAGS, isPending: loading } =
     useQuery(tagListQuery())
   const createTag = useMutation(createTagMutation())
@@ -314,8 +313,9 @@ export function TagsPageContainer() {
     enabled: expandedTagId !== null,
   })
 
+  /** 並べ替え。掴んでいる間はライブラリが持ち、離したときに1回書く */
   const handleDragEnd = useCallback(
-    async (event: DragEndEvent) => {
+    (event: DragEndEvent) => {
       const { active, over } = event
       if (!over || active.id === over.id) return
 
@@ -323,12 +323,11 @@ export function TagsPageContainer() {
       const newIndex = tags.findIndex((tag) => tag.id === over.id)
       if (oldIndex === -1 || newIndex === -1) return
 
-      // 並べ替えは掴んだ手に追従させる（保存の往復を待たせない）
-      const reordered = arrayMove(tags, oldIndex, newIndex)
-      queryClient.setQueryData(tagListQuery().queryKey, reordered)
-      reorderTags.mutate(reordered.map((tag) => tag.id))
+      reorderTags.mutate(
+        arrayMove(tags, oldIndex, newIndex).map((tag) => tag.id)
+      )
     },
-    [tags, queryClient, reorderTags]
+    [tags, reorderTags]
   )
 
   // 紐づく小計点グループは開いたタグの分だけ取得する

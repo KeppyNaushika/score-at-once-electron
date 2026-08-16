@@ -22,7 +22,7 @@ export function createExamApi() {
     uploadMasterAnswers: bind("upload-master-answers"),
     replaceMasterAnswerImage: bind("replace-master-answer-image"),
     deleteMasterAnswer: bind("delete-master-answer"),
-    updateMasterAnswersOrder: bind("update-master-answers-order"),
+    moveExamPage: bind("move-exam-page"),
     updateExamPagePageSize: bind("update-exam-page-page-size"),
     getMasterImagesByExamId: bind("get-master-images-by-exam-id"),
     getExamPagesByExamId: bind("get-exam-pages-by-exam-id"),

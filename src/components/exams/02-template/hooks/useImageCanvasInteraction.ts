@@ -16,16 +16,28 @@
 import { useEffect, useState } from "react"
 
 import type {
+  AdjustingArea,
   DragState,
   MoveState,
+  RegionCoordinates,
   ResizeState,
   UseImageCanvasInteractionProps,
 } from "@/components/exams/02-template/types"
 
 import { useCanvasCoordinates } from "./useCanvasCoordinates"
-import { useMouseHandlers } from "./useMouseHandlers"
+import { usePointerHandlers } from "./usePointerHandlers"
 
-/** 採点領域の作成・リサイズ・移動などキャンバス上のマウス操作を管理するフック */
+/** 掴んでいる間の姿と、保存されている姿が同じか */
+const isSameCoords = (
+  first: RegionCoordinates,
+  second: RegionCoordinates
+): boolean =>
+  first.x === second.x &&
+  first.y === second.y &&
+  first.width === second.width &&
+  first.height === second.height
+
+/** 採点領域の作成・リサイズ・移動などキャンバス上のポインタ操作を管理するフック */
 export function useImageCanvasInteraction({
   disabled,
   backgroundImageUrl,
@@ -49,18 +61,32 @@ export function useImageCanvasInteraction({
   )
   const [resizing, setResizing] = useState<ResizeState | null>(null)
   const [moving, setMoving] = useState<MoveState | null>(null)
+  /** 掴んでいる間の領域の姿。まだ書いていない */
+  const [adjustingArea, setAdjustingArea] = useState<AdjustingArea | null>(null)
+
+  // 書いた姿が返ってきた。手元の覚えは役目を終える。指を離した時点で捨てると、
+  // 取り直しが着地するまでの一瞬だけ元の位置へ戻って見える
+  const storedArea = adjustingArea ? areas[adjustingArea.areaIndex] : undefined
+  if (
+    adjustingArea &&
+    storedArea &&
+    isSameCoords(storedArea, adjustingArea.coords)
+  ) {
+    setAdjustingArea(null)
+  }
 
   // Coordinate calculations
   const { getRelativeCoords } = useCanvasCoordinates(imageDimensions, zoom)
 
-  // Mouse event handlers
+  // Pointer event handlers
   const {
-    handleMouseDown,
-    handleResizeMouseDown,
-    handleMoveMouseDown,
-    handleMouseMove,
-    handleMouseUp,
-  } = useMouseHandlers({
+    handlePointerDown,
+    handleResizePointerDown,
+    handleMovePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handlePointerCancel,
+  } = usePointerHandlers({
     disabled,
     backgroundImageUrl,
     imageDimensions,
@@ -75,11 +101,13 @@ export function useImageCanvasInteraction({
     dragCurrentCoords,
     resizing,
     moving,
+    adjustingArea,
     setDragging,
     setDragStartCoords,
     setDragCurrentCoords,
     setResizing,
     setMoving,
+    setAdjustingArea,
     detectionMode,
     onSnapToDetectedRects,
   })
@@ -87,22 +115,32 @@ export function useImageCanvasInteraction({
   // Event listeners setup
   useEffect(() => {
     if (dragging || resizing || moving) {
-      document.addEventListener("mousemove", handleMouseMove)
-      document.addEventListener("mouseup", handleMouseUp)
+      document.addEventListener("pointermove", handlePointerMove)
+      document.addEventListener("pointerup", handlePointerUp)
+      document.addEventListener("pointercancel", handlePointerCancel)
 
       return () => {
-        document.removeEventListener("mousemove", handleMouseMove)
-        document.removeEventListener("mouseup", handleMouseUp)
+        document.removeEventListener("pointermove", handlePointerMove)
+        document.removeEventListener("pointerup", handlePointerUp)
+        document.removeEventListener("pointercancel", handlePointerCancel)
       }
     }
-  }, [dragging, resizing, moving, handleMouseMove, handleMouseUp])
+  }, [
+    dragging,
+    resizing,
+    moving,
+    handlePointerMove,
+    handlePointerUp,
+    handlePointerCancel,
+  ])
 
   return {
     dragging,
     dragStartCoords,
     dragCurrentCoords,
-    handleMouseDown,
-    handleResizeMouseDown,
-    handleMoveMouseDown,
+    adjustingArea,
+    handlePointerDown,
+    handleResizePointerDown,
+    handleMovePointerDown,
   }
 }

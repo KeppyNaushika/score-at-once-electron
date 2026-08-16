@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
+import { useSlidingValue } from "@/hooks/useSlidingValue"
 
 interface NavigationControlsProps {
   layoutDirection: LayoutDirection
@@ -55,6 +56,14 @@ export default function NavigationControls({
   const isColumnLayout =
     layoutDirection === "down-right" || layoutDirection === "down-left"
 
+  // つまみを動かしている間は書かず、離したときに1回だけ書く
+  const itemsPerRowSlider = useSlidingValue(itemsPerRow?.[0] ?? 1, (value) =>
+    onItemsPerRowChange?.([value])
+  )
+  const expandMarginSlider = useSlidingValue(expandMargin ?? 0, (value) =>
+    onExpandMarginChange?.(value)
+  )
+
   if (gradingMode === "individual") return null
 
   return (
@@ -73,15 +82,14 @@ export default function NavigationControls({
           </div>
           <div className="mt-1 flex items-center gap-2">
             <Slider
-              value={itemsPerRow}
-              onValueChange={onItemsPerRowChange}
+              {...itemsPerRowSlider.sliderProps}
               max={10}
               min={1}
               step={1}
               className="flex-1"
             />
             <span className="w-8 shrink-0 text-right text-xs text-muted-foreground">
-              {itemsPerRow[0]}件
+              {itemsPerRowSlider.shown}件
             </span>
           </div>
         </div>
@@ -93,15 +101,14 @@ export default function NavigationControls({
           <span className="text-xs text-gray-500">表示領域の拡張</span>
           <div className="mt-1 flex items-center gap-2">
             <Slider
-              value={[expandMargin]}
-              onValueChange={(value) => onExpandMarginChange(value[0])}
+              {...expandMarginSlider.sliderProps}
               max={50}
               min={0}
               step={5}
               className="flex-1"
             />
             <span className="w-8 shrink-0 text-right text-xs text-muted-foreground">
-              {expandMargin}%
+              {expandMarginSlider.shown}%
             </span>
           </div>
         </div>

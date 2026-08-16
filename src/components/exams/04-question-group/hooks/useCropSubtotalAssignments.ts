@@ -1,26 +1,32 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useMutation } from "@tanstack/react-query"
+import { useCallback, useMemo } from "react"
 
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 import type { CropSubtotalAssignmentType } from "@/electron-src/lib/prisma/cropSubtotal"
+import {
+  createCropSubtotalMutation,
+  deleteCropSubtotalMutation,
+} from "@/queries/subtotal"
 
 import type { FillUpdate } from "./useFillHandleDrag"
 
-/** 採点領域（CropRegion.id）→ 割り当てた小計id の集合 */
-export type CropSubtotalAssignmentState = Record<string, ReadonlySet<string>>
+/** 割り当ての行そのもの。採点領域に子として同梱されてくる */
+type CropSubtotalRow = CropRegionWithSubtotals["cropSubtotals"][number]
+
+/** 採点領域（CropRegion.id）→ 小計id → 割り当ての行 */
+export type CropSubtotalAssignmentState = Record<
+  string,
+  ReadonlyMap<string, CropSubtotalRow>
+>
 
 interface UseCropSubtotalAssignmentsParams {
+  examId: string
   /** マトリクスの行になる採点領域。割り当ての出所でもある */
   cropRegions: CropRegionWithSubtotals[]
-  /** この行が書き込む紐付けの種類 */
+  /** この表が書き込む紐付けの種類 */
   assignmentType: CropSubtotalAssignmentType
-  /** 1領域分の割り当てを丸ごと差し替える。失敗は throw する */
-  onUpdateAssignments: (
-    cropRegionId: string,
-    subtotalIds: string[],
-    assignmentType: CropSubtotalAssignmentType
-  ) => Promise<void>
 }
 
 /**
@@ -29,101 +35,82 @@ interface UseCropSubtotalAssignmentsParams {
  * **割り当ては採点領域の子（`cropRegion.cropSubtotals`）なので、別に取得しない。**
  * 以前はマス目ごとに `getCropSubtotalsByCropRegionId` を引いて別のキャッシュに
  * 持っていたため、(1) 1領域の取得失敗で全マスが「未チェック」に見え、そこでの
- * クリックが delete-all→recreate で既存の割り当てを消す、(2) 楽観更新した集合が
- * レンダー時の値から作り直されて累積しない、という2つの壊れ方をしていた。
+ * クリックが既存の割り当てを消す、(2) 楽観更新した集合がレンダー時の値から
+ * 作り直されて累積しない、という2つの壊れ方をしていた。
  *
- * 書き込みは常に「その領域の割り当て集合を丸ごと差し替える」形にする（保存が
- * delete-all→recreate なので、部分更新という概念が無い）。フィルハンドルは
- * 1行分のマスを全て畳んでから1回だけ書く。
+ * **マス1つは1レコード。** チェックを入れれば1件作り、外せば1件消す。以前は
+ * 「その領域の割り当てを全消し→作り直し」で表していたが、それは意図（このマス
+ * を切り替えた）ではなく状態（結果の集合）を送る形で、1マス触るだけで残りが
+ * 一度 DB から消えていた。消す先を id で指せるのは、行そのものを持っているため。
  */
 export function useCropSubtotalAssignments({
+  examId,
   cropRegions,
   assignmentType,
-  onUpdateAssignments,
 }: UseCropSubtotalAssignmentsParams) {
-  const [saving, setSaving] = useState(false)
+  const createCropSubtotal = useMutation(createCropSubtotalMutation(examId))
+  const deleteCropSubtotal = useMutation(deleteCropSubtotalMutation(examId))
+  // 依存へ入れるのは `mutateAsync`。`useMutation` の戻り値は毎レンダー新しい
+  // オブジェクトなので、まるごと入れるとコールバックが毎レンダー別物になる
+  const { mutateAsync: createAssignment } = createCropSubtotal
+  const { mutateAsync: deleteAssignment } = deleteCropSubtotal
 
   const assignments: CropSubtotalAssignmentState = useMemo(
     () =>
       Object.fromEntries(
         cropRegions.map((cropRegion) => [
           cropRegion.id,
-          new Set(
+          new Map(
             cropRegion.cropSubtotals
               .filter(
                 (cropSubtotal) => cropSubtotal.assignmentType === assignmentType
               )
-              .map((cropSubtotal) => cropSubtotal.subtotalId)
+              .map((cropSubtotal) => [cropSubtotal.subtotalId, cropSubtotal])
           ),
         ])
       ),
     [cropRegions, assignmentType]
   )
 
-  /** 1領域分の集合に足し引きした結果を配列で返す */
-  const nextSubtotalIds = useCallback(
-    (cropRegionId: string, changes: ReadonlyMap<string, boolean>) => {
-      const next = new Set(assignments[cropRegionId] ?? [])
-      for (const [subtotalId, checked] of changes) {
-        if (checked) next.add(subtotalId)
-        else next.delete(subtotalId)
-      }
-      return Array.from(next)
-    },
-    [assignments]
-  )
-
-  /** マス1つのチェックを切り替える */
+  /** マス1つの割り当てを付け外しする。既にその姿なら何も書かない */
   const setCellAssignment = useCallback(
     async (cropRegionId: string, subtotalId: string, checked: boolean) => {
-      setSaving(true)
+      const assigned = assignments[cropRegionId]?.get(subtotalId)
       try {
-        await onUpdateAssignments(
-          cropRegionId,
-          nextSubtotalIds(cropRegionId, new Map([[subtotalId, checked]])),
-          assignmentType
-        )
+        if (checked) {
+          if (assigned) return
+          await createAssignment({ cropRegionId, subtotalId, assignmentType })
+        } else {
+          if (!assigned) return
+          await deleteAssignment(assigned.id)
+        }
       } catch {
-        // 巻き戻しと通知は onUpdateAssignments が行う
-      } finally {
-        setSaving(false)
+        // 失敗の通知は MutationCache が出す。ここで受けるのは、投げっぱなしの
+        // 拒否を作らないため
       }
     },
-    [assignmentType, nextSubtotalIds, onUpdateAssignments]
+    [assignments, assignmentType, createAssignment, deleteAssignment]
   )
 
   /**
    * フィルハンドルで塗った範囲を保存する。
    *
-   * マスごとに書くと、同じ行の2マス目が1マス目より前の集合を元に組み立てられて
-   * 上書きしてしまう。行ごとに畳んでから1回だけ書く。
+   * マスごとに1レコードなので、塗った分だけ順に書く。範囲の中に既にその姿の
+   * マスがあれば `setCellAssignment` が黙って飛ばす。
    */
   const fillCells = useCallback(
     async (updates: FillUpdate[]) => {
-      const changesByRegion = new Map<string, Map<string, boolean>>()
       for (const update of updates) {
-        const changes = changesByRegion.get(update.rowId) ?? new Map()
-        changes.set(update.colId, update.value)
-        changesByRegion.set(update.rowId, changes)
-      }
-
-      setSaving(true)
-      try {
-        for (const [cropRegionId, changes] of changesByRegion) {
-          await onUpdateAssignments(
-            cropRegionId,
-            nextSubtotalIds(cropRegionId, changes),
-            assignmentType
-          )
-        }
-      } catch {
-        // 1行目で失敗したら残りは書かない（巻き戻しと通知は呼び出し先）
-      } finally {
-        setSaving(false)
+        await setCellAssignment(update.rowId, update.colId, update.value)
       }
     },
-    [assignmentType, nextSubtotalIds, onUpdateAssignments]
+    [setCellAssignment]
   )
 
-  return { assignments, saving, setCellAssignment, fillCells }
+  return {
+    assignments,
+    saving: createCropSubtotal.isPending || deleteCropSubtotal.isPending,
+    setCellAssignment,
+    fillCells,
+  }
 }

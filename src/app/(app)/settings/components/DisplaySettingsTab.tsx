@@ -15,6 +15,7 @@ import { ColorPicker } from "@/components/ui/color-picker"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { useAuth } from "@/contexts/AuthContext"
+import { useSlidingValue } from "@/hooks/useSlidingValue"
 import {
   applyScoringColorPreset,
   getCurrentPresetId,
@@ -87,6 +88,12 @@ export function DisplaySettingsTab() {
   const setClickScoringDebounceMs = (value: number) =>
     setPreference.mutate({ key: "clickScoringDebounceMs", value })
 
+  // つまみを動かしている間は書かず、離したときに1回だけ書く
+  const debounceMsSlider = useSlidingValue(
+    clickScoringDebounceMs,
+    setClickScoringDebounceMs
+  )
+
   // 採点状態色の状態
   const [scoringColors, setScoringColors] = useState<ScoringStatusColors>(
     getScoringStatusColors
@@ -111,7 +118,7 @@ export function DisplaySettingsTab() {
     loadSettings()
   }, [userId])
 
-  // 選択枠色の変更（KV方式・楽観的更新）
+  // 選択枠色の変更。途中の色を持つのは ColorPicker の側で、ここへは確定した色だけ来る
   const handleSelectionBorderColorChange = useCallback(
     (color: string) => {
       setPreference.mutate({
@@ -125,8 +132,6 @@ export function DisplaySettingsTab() {
 
   // クリック採点アクション変更
   const handleClickActionChange = setClickAction
-
-  const handleDebounceMsChange = setClickScoringDebounceMs
 
   // プリセット選択
   const handlePresetSelect = useCallback(
@@ -234,18 +239,17 @@ export function DisplaySettingsTab() {
                 🐇
               </span>
               <Slider
+                {...debounceMsSlider.sliderProps}
                 className="flex-1"
-                value={[clickScoringDebounceMs]}
                 min={100}
                 max={800}
                 step={50}
-                onValueChange={([v]) => handleDebounceMsChange(v)}
               />
               <span className="shrink-0 text-lg" title="遅い">
                 🐢
               </span>
               <span className="w-14 shrink-0 text-right text-sm text-muted-foreground">
-                {clickScoringDebounceMs}ms
+                {debounceMsSlider.shown}ms
               </span>
             </div>
           </div>

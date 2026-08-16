@@ -10,18 +10,16 @@ import type { ConvertedImage } from "@/lib/pdfConverter"
 import {
   deleteMasterAnswerMutation,
   examPagesQuery,
+  moveExamPageMutation,
   replaceMasterAnswerImageMutation,
   updateExamPagePageSizeMutation,
-  updateMasterAnswersOrderMutation,
   uploadMasterAnswersMutation,
 } from "@/queries/exam"
 import { fileProtocolPathQuery } from "@/queries/misc"
 
 import {
   createUploadData,
-  generatePageNumberUpdateRequests,
   generateUploadSuccessMessage,
-  moveImageInList,
   sortImagesByPageNumber,
 } from "../utils/imageUtils"
 
@@ -56,9 +54,7 @@ export function useMasterAnswers(examId: string) {
     replaceMasterAnswerImageMutation(examId)
   )
   const deleteMasterAnswer = useMutation(deleteMasterAnswerMutation(examId))
-  const updateMasterAnswersOrder = useMutation(
-    updateMasterAnswersOrderMutation(examId)
-  )
+  const moveExamPage = useMutation(moveExamPageMutation(examId))
   const updateExamPagePageSize = useMutation(
     updateExamPagePageSizeMutation(examId)
   )
@@ -166,16 +162,14 @@ export function useMasterAnswers(examId: string) {
     [deleteMasterAnswer]
   )
 
+  /** 1枚を1つ隣へ動かす。並べ直した一覧ではなく、動かす意図だけを送る */
   const moveAnswer = useCallback(
     (fromIndex: number, direction: "left" | "right") => {
-      const movedAnswers = moveImageInList(answers, fromIndex, direction)
-      if (!movedAnswers) return
-
-      updateMasterAnswersOrder.mutate(
-        generatePageNumberUpdateRequests(movedAnswers)
-      )
+      const answer = answers[fromIndex]
+      if (!answer) return
+      moveExamPage.mutate({ examPageId: answer.id, direction })
     },
-    [answers, updateMasterAnswersOrder]
+    [answers, moveExamPage]
   )
 
   const updatePageSize = useCallback(
@@ -198,7 +192,7 @@ export function useMasterAnswers(examId: string) {
     replacingAnswerId: replaceMasterAnswerImage.isPending
       ? (replaceMasterAnswerImage.variables?.examPageId ?? null)
       : null,
-    isMoving: updateMasterAnswersOrder.isPending,
+    isMoving: moveExamPage.isPending,
     passwordDialog,
     uploadAnswers,
     replaceAnswerImage,

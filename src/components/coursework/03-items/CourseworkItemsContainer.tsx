@@ -2,7 +2,7 @@
 
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useCallback, useState } from "react"
@@ -37,6 +37,7 @@ import type {
   CourseworkWithRelations,
   InputMode,
 } from "@/types/coursework.types"
+import { toInputMode } from "@/types/coursework.types"
 
 import { LetterScaleEditor } from "./LetterScaleEditor"
 
@@ -74,6 +75,8 @@ const EMPTY_ITEMS: CourseworkItemWithLetterScales[] = []
 export function CourseworkItemsContainer({
   courseworkId,
 }: CourseworkItemsContainerProps) {
+  const queryClient = useQueryClient()
+
   // 評価項目は資料の子なので、資料そのもののキャッシュから取り出す。
   // 別キーに項目だけを複製すると、同じ資料が2つの形でキャッシュに載る
   const selectItems = useCallback(
@@ -148,13 +151,26 @@ export function CourseworkItemsContainer({
    * 文字評価は変換表が無いと点数入力(04)で1件も受け付けないので、刻みを持って
    * いない項目にはその場で既定の刻みを作る。以前は下書きの既定値がこれを担って
    * いて、行ごとの保存へ割ったときに落ちていた（R1 #4）。
+   *
+   * **既にあるかどうかは取り直してから見る。** 手元の `item` は切り替える前の姿
+   * なので、続けて2回切り替えると同じラベルを2度作りに行き、一意制約
+   * （`@@unique([courseworkItemId, label])`）で落ちる。
    */
   const changeInputMode = async (
     item: CourseworkItemWithLetterScales,
     inputMode: InputMode
   ) => {
     await updateItem.mutateAsync({ id: item.id, inputMode })
-    if (inputMode !== "letter" || item.letterScales.length > 0) return
+    if (inputMode !== "letter") return
+
+    const coursework = await queryClient.fetchQuery(
+      courseworkDetailQuery(courseworkId)
+    )
+    const stored = coursework.items.find(
+      (candidate) => candidate.id === item.id
+    )
+    if (!stored || stored.letterScales.length > 0) return
+
     for (const [order, letterScale] of DEFAULT_LETTER_SCALES.entries()) {
       await createLetterScale.mutateAsync({
         courseworkItemId: item.id,
@@ -163,6 +179,19 @@ export function CourseworkItemsContainer({
         order,
       })
     }
+  }
+
+  /**
+   * `Select` は待てないので、切り替えの後始末をここで受け切る。
+   *
+   * 失敗の通知は `MutationCache` が出す。受けずに投げっぱなしにすると、
+   * 未処理の拒否になって握り潰される。
+   */
+  const handleInputModeChange = (
+    item: CourseworkItemWithLetterScales,
+    inputMode: InputMode
+  ) => {
+    changeInputMode(item, inputMode).catch(() => undefined)
   }
 
   const handleAddItem = async () => {
@@ -259,7 +288,7 @@ export function CourseworkItemsContainer({
                 maxScore={textOf(item, "maxScore")}
                 onChangeName={changeName}
                 onChangeMaxScore={changeMaxScore}
-                onChangeInputMode={changeInputMode}
+                onChangeInputMode={handleInputModeChange}
                 onBlur={forgetText}
                 onDelete={handleDelete}
               />
@@ -289,7 +318,7 @@ interface SortableItemRowProps {
   onChangeInputMode: (
     item: CourseworkItemWithLetterScales,
     inputMode: InputMode
-  ) => void | Promise<void>
+  ) => void
   onBlur: (item: CourseworkItemWithLetterScales) => void
   onDelete: (item: CourseworkItemWithLetterScales) => void
 }
@@ -347,7 +376,7 @@ function SortableItemRow({
               <Select
                 value={item.inputMode}
                 onValueChange={(value) =>
-                  onChangeInputMode(item, value as InputMode)
+                  onChangeInputMode(item, toInputMode(value))
                 }
               >
                 <SelectTrigger className="h-8 w-28 text-xs">

@@ -69,10 +69,15 @@ export function BoundaryEditor({ gradeId, gradeItem }: BoundaryEditorProps) {
   const textOf = (boundary: Boundary, field: "label" | "minPercentage") =>
     editingTextOf(boundary.id, field, String(boundary[field]))
 
+  /**
+   * ラベルは空も書く。
+   *
+   * かつては空を弾いていたが、行の追加は空ラベルで始まるので「一度入れたラベルを
+   * 消せない」だけの制限になっていた（消したつもりが古い値のまま残る）。空のまま
+   * では評価が付かないので、書いたうえで赤枠で知らせる。
+   */
   const changeLabel = (boundary: Boundary, text: string) => {
     remember(boundary.id, "label", text)
-    // 空ラベルは書かない。最下位の境界として全生徒に空の評価が付いてしまう
-    if (text.trim() === "") return
     updateBoundary.mutate({ id: boundary.id, label: text })
   }
 
@@ -155,6 +160,7 @@ export function BoundaryEditor({ gradeId, gradeItem }: BoundaryEditorProps) {
                 boundary={boundary}
                 label={textOf(boundary, "label")}
                 minPercentage={textOf(boundary, "minPercentage")}
+                isLabelMissing={textOf(boundary, "label").trim() === ""}
                 isInvalid={invalidBoundaryIds.has(boundary.id)}
                 onChangeLabel={changeLabel}
                 onChangeMinPercentage={changeMinPercentage}
@@ -187,6 +193,8 @@ interface BoundaryRowProps {
   boundary: Boundary
   label: string
   minPercentage: string
+  /** ラベルが空。この境界に落ちた生徒へ評価が付かない */
+  isLabelMissing: boolean
   isInvalid: boolean
   onChangeLabel: (boundary: Boundary, text: string) => void
   onChangeMinPercentage: (boundary: Boundary, text: string) => void
@@ -198,6 +206,7 @@ function BoundaryRow({
   boundary,
   label,
   minPercentage,
+  isLabelMissing,
   isInvalid,
   onChangeLabel,
   onChangeMinPercentage,
@@ -218,7 +227,11 @@ function BoundaryRow({
         onChange={(e) => onChangeLabel(boundary, e.target.value)}
         onBlur={() => onBlur(boundary)}
         placeholder="例: A"
-        className="h-8"
+        title={isLabelMissing ? "ラベルが空だと評価が付きません" : undefined}
+        className={cn(
+          "h-8",
+          isLabelMissing && "border-red-500 focus-visible:ring-red-500"
+        )}
       />
       <Input
         type="number"

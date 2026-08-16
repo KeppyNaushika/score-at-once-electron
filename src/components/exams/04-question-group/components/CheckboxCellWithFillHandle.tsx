@@ -14,7 +14,7 @@ interface CheckboxCellWithFillHandleProps {
   /** チェック状態変更時のコールバック */
   onChange: (checked: boolean) => void
   /** フィルハンドルドラッグ開始時のコールバック */
-  onFillHandleDragStart: (e: React.MouseEvent, initialValue: boolean) => void
+  onFillHandleDragStart: (e: React.PointerEvent, initialValue: boolean) => void
   /** セルクリック時のコールバック（セル選択用） */
   onCellClick?: () => void
   /** このセルが選択されているか */
@@ -90,7 +90,7 @@ export function CheckboxCellWithFillHandle({
             // フィルハンドル自体のホバー時は拡大
             "hover:-right-1 hover:-bottom-1 hover:h-2 hover:w-2"
           )}
-          onMouseDown={(e) => {
+          onPointerDown={(e) => {
             e.preventDefault()
             e.stopPropagation()
             onFillHandleDragStart(e, checked)

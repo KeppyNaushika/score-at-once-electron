@@ -31,8 +31,8 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 import { getAbsolutePathFromData } from "@/electron-src/lib/dataManager"
 import {
   deleteMasterAnswer,
+  moveExamPage,
   replaceMasterAnswerImage,
-  updateMasterAnswersOrder,
   uploadMasterAnswers,
 } from "@/electron-src/lib/prisma/masterAnswer"
 
@@ -261,23 +261,70 @@ describe("deleteMasterAnswer", () => {
   })
 })
 
-describe("updateMasterAnswersOrder", () => {
-  it("消えたページのidが混ざっても残りを並び替える", async () => {
-    // 協調採点では、一覧が古いまま並び替えることがある。1件の stale な id で
-    // トランザクションごと巻き戻ると、1ページも並び替わらない
-    const { exam, pages } = await seedExamWithScoredFirstPage()
-
-    const result = await updateMasterAnswersOrder([
-      { id: pages[1].id, pageNumber: 1 },
-      { id: pages[0].id, pageNumber: 2 },
-      { id: "deleted-by-another-teacher", pageNumber: 3 },
-    ])
-
-    expect(result.count).toBe(2)
-    const reordered = await prisma.examPage.findMany({
-      where: { examId: exam.id },
+describe("moveExamPage", () => {
+  /** ページ番号順に並べた id */
+  const pageIdsInOrder = async (examId: string) => {
+    const pages = await prisma.examPage.findMany({
+      where: { examId },
       orderBy: { pageNumber: "asc" },
     })
-    expect(reordered.map((page) => page.id)).toEqual([pages[1].id, pages[0].id])
+    return pages.map((page) => page.id)
+  }
+
+  it("隣のページと入れ替わる", async () => {
+    const { exam, pages } = await seedExamWithScoredFirstPage()
+
+    const result = await moveExamPage(pages[0].id, "right")
+
+    expect(result.moved).toBe(true)
+    expect(await pageIdsInOrder(exam.id)).toEqual([pages[1].id, pages[0].id])
+  })
+
+  it("端のページは動かない", async () => {
+    const { exam, pages } = await seedExamWithScoredFirstPage()
+
+    const result = await moveExamPage(pages[0].id, "left")
+
+    expect(result.moved).toBe(false)
+    expect(await pageIdsInOrder(exam.id)).toEqual([pages[0].id, pages[1].id])
+  })
+
+  it("削除で番号が飛んでいても、見えている並びの隣と入れ替わる", async () => {
+    const exam = await prisma.exam.create({ data: { examName: "番号飛び" } })
+    const pages = await uploadMasterAnswers(exam.id, [
+      fileData("page1.png", "master-1"),
+      fileData("page2.png", "master-2"),
+      fileData("page3.png", "master-3"),
+    ])
+    // 真ん中を消すと 1 と 3 が残る（詰め直しはしない）
+    await deleteMasterAnswer(pages[1].id)
+
+    const result = await moveExamPage(pages[0].id, "right")
+
+    expect(result.moved).toBe(true)
+    expect(await pageIdsInOrder(exam.id)).toEqual([pages[2].id, pages[0].id])
+  })
+
+  it("他の教員が別のページを動かしていても、その結果を踏み潰さない", async () => {
+    // 一覧を丸ごと送っていた頃は、手元が古いまま並び替えると相手の移動ごと
+    // 上書きしていた。入れ替えは動かす2枚にしか触らない
+    const exam = await prisma.exam.create({ data: { examName: "同時移動" } })
+    const pages = await uploadMasterAnswers(exam.id, [
+      fileData("page1.png", "master-1"),
+      fileData("page2.png", "master-2"),
+      fileData("page3.png", "master-3"),
+      fileData("page4.png", "master-4"),
+    ])
+
+    // 別の教員が後ろ2枚を入れ替えた後で、こちらが前2枚を入れ替える
+    await moveExamPage(pages[2].id, "right")
+    await moveExamPage(pages[0].id, "right")
+
+    expect(await pageIdsInOrder(exam.id)).toEqual([
+      pages[1].id,
+      pages[0].id,
+      pages[3].id,
+      pages[2].id,
+    ])
   })
 })

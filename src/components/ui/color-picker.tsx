@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import { GestureColorInput } from "@/components/common/GestureColorInput"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -65,11 +66,10 @@ export function ColorPicker({
     }
   }
 
-  // ネイティブカラーピッカーからの変更
-  const handleNativeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newColor = e.target.value.toUpperCase()
+  // ネイティブカラーピッカーで選び終えたとき（途中は GestureColorInput が持つ）
+  const handleNativeCommit = (color: string) => {
     setDraftValue(null)
-    onChange(newColor)
+    onChange(color)
   }
 
   // プリセット選択
@@ -99,12 +99,11 @@ export function ColorPicker({
           {/* カラーピッカーとHEX入力 */}
           <div className="flex items-center gap-2">
             <div className="relative">
-              <input
-                type="color"
+              <GestureColorInput
                 value={value}
-                onChange={handleNativeChange}
+                onCommit={handleNativeCommit}
+                label="色を選択"
                 className="h-9 w-9 cursor-pointer rounded border-0 p-0"
-                style={{ backgroundColor: value }}
               />
             </div>
             <Input

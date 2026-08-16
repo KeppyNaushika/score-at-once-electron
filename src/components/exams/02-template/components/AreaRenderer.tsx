@@ -1,6 +1,6 @@
 "use client"
 
-import type { MouseEvent as ReactMouseEvent, RefObject } from "react"
+import type { PointerEvent as ReactPointerEvent, RefObject } from "react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import type { CropRegionArea } from "@/components/exams/02-template/types"
@@ -9,13 +9,13 @@ interface AreaRendererProps {
   areas: CropRegionArea[]
   selectedAreaIndex: number | null
   onSelectArea: (index: number) => void
-  onResizeMouseDown: (
-    event: ReactMouseEvent<HTMLDivElement, MouseEvent>,
+  onResizePointerDown: (
+    event: ReactPointerEvent<HTMLDivElement>,
     areaIndex: number,
     handle: "nw" | "ne" | "sw" | "se"
   ) => void
-  onMoveMouseDown: (
-    event: ReactMouseEvent<HTMLDivElement, MouseEvent>,
+  onMovePointerDown: (
+    event: ReactPointerEvent<HTMLDivElement>,
     areaIndex: number
   ) => void
   imageDimensions: { width: number; height: number } | null
@@ -27,8 +27,8 @@ export function AreaRenderer({
   areas,
   selectedAreaIndex,
   onSelectArea,
-  onResizeMouseDown,
-  onMoveMouseDown,
+  onResizePointerDown,
+  onMovePointerDown,
   imageDimensions,
   containerRef,
   zoom,
@@ -149,9 +149,9 @@ export function AreaRenderer({
               e.stopPropagation()
               onSelectArea(index)
             }}
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
               e.stopPropagation()
-              onMoveMouseDown(e, index)
+              onMovePointerDown(e, index)
             }}
           >
             {/* ラベル */}
@@ -165,22 +165,22 @@ export function AreaRenderer({
                 {/* 左上 */}
                 <div
                   className="absolute -top-1 -left-1 h-3 w-3 cursor-nw-resize border border-white bg-blue-500"
-                  onMouseDown={(e) => onResizeMouseDown(e, index, "nw")}
+                  onPointerDown={(e) => onResizePointerDown(e, index, "nw")}
                 />
                 {/* 右上 */}
                 <div
                   className="absolute -top-1 -right-1 h-3 w-3 cursor-ne-resize border border-white bg-blue-500"
-                  onMouseDown={(e) => onResizeMouseDown(e, index, "ne")}
+                  onPointerDown={(e) => onResizePointerDown(e, index, "ne")}
                 />
                 {/* 左下 */}
                 <div
                   className="absolute -bottom-1 -left-1 h-3 w-3 cursor-sw-resize border border-white bg-blue-500"
-                  onMouseDown={(e) => onResizeMouseDown(e, index, "sw")}
+                  onPointerDown={(e) => onResizePointerDown(e, index, "sw")}
                 />
                 {/* 右下 */}
                 <div
                   className="absolute -right-1 -bottom-1 h-3 w-3 cursor-se-resize border border-white bg-blue-500"
-                  onMouseDown={(e) => onResizeMouseDown(e, index, "se")}
+                  onPointerDown={(e) => onResizePointerDown(e, index, "se")}
                 />
               </>
             )}
