@@ -24,9 +24,14 @@ main の失敗の伝え方、renderer の IPC 契約、renderer のデータ取�
 
 ---
 
-## 2. 現状
+## 2. 着手前の状態（2026-08-11 時点・履歴）
 
-### 2.1 エンベロープはドメインごとにばらついている
+**この節の数値は着手前の記録である。現在値ではない。** 契約 `.d.ts` は段階5 で全廃し、
+エンベロープは撤去済み、effect からの取得も残り3件まで減っている。ここを更新すると
+「何がどれだけ変わったか」が読めなくなるので、**あえて凍結する**。現在値が要るときは
+検査（§7）を走らせる。
+
+### 2.1 エンベロープはドメインごとにばらついていた
 
 契約 `src/types/electron/*.d.ts` の `success` 出現数 / チャンネル数:
 
@@ -148,7 +153,7 @@ preload に残るのは「メソッド名 ↔ チャンネル名」の対応だ�
 `Serialized<T>`（`src/types/prismaExtensions.ts:26`）と `serializePrisma`
 （`electron-src/lib/prisma/serializePrisma.ts`）は既にある。新規作成は不要。
 
-`Serialized<T>` は **Decimal 以外では恒等関数**である。277チャンネル中273本で何も変わらない。
+`Serialized<T>` は **Decimal 以外では恒等関数**である。ほぼ全てのチャンネルで何も変わらない。
 「例外が多い」のではなく「名前の付いた例外が1つある」状態。
 
 適用位置は境界に置き、ハンドラの裁量にしない。引数側（renderer → main）は、**ハンドラの引数に
@@ -216,7 +221,7 @@ renderer にだけ注入するブリッジ経由なので、サーバー側に�
 | `electron-typed-bridge`       | —     | 2023-09 アーカイブ | —      | 停止         |
 
 - 手書きの表方式は**目的が違う**。宣言 2 回 → 1 回であって 0 回ではない
-- 推論方式は `electron-trpc` のみだが、tRPC 一式（router / procedure）の導入となり、277チャンネルの
+- 推論方式は `electron-trpc` のみだが、tRPC 一式（router / procedure）の導入となり、全チャンネルの
   書き換え量が本計画より大きい。`serializePrisma` の事情も乗らない
 - 自前で書く量は `invoke` ラッパー10行弱。依存を増やす釣り合いが取れない
 - 通信の中核であり、壊れたときに自分で直せる状態を保つ
@@ -281,7 +286,7 @@ if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) return value
 
 各段階は単独でマージでき、後戻りできる。
 
-### 段階0 — 前提の固定
+### 段階0 — 前提の固定（完了）
 
 renderer から main へ型を通す設計は、**値も通せてしまう**。`tsc` に区別する機能は無いので ESLint で塞ぐ。
 
@@ -322,21 +327,21 @@ src/components/grades/03-data-sources/hooks/useDataSourceDefaults.ts
 > **注意**: `electron-src/lib/shared/` は安全ではない。`lib/shared/calculations/gradeCalculator.ts:17`
 > が `prisma`（DB 接続の実体）を import している。ディレクトリ名では守れないため**ファイル名で列挙する**。
 
-### 段階1 — `Serialized` / `convert` にバイナリ素通しを追加
+### 段階1 — `Serialized` / `convert` にバイナリ素通しを追加（完了）
 
 §5.2。単独で無害。段階2の前提。
 
-### 段階2 — 境界の統合
+### 段階2 — 境界の統合（完了）
 
 `registerHandler` と `registerSafeHandler` を1つにし、エンベロープ詰めと `serializePrisma` を
 そこへ置く。**この時点では lib も renderer も変えない**ので、エンベロープを二重に包まないよう、
 既に `{ success }` を返している lib の戻り値はそのまま payload として扱う。
 
-### 段階3 — preload の `invoke`
+### 段階3 — preload の `invoke`（完了）
 
 失敗エンベロープをほどいて投げ直す。型はまだ契約 `.d.ts` が持つ。
 
-### 段階4 — ドメイン単位の移行（本体）
+### 段階4 — ドメイン単位の移行（本体・完了）
 
 **1ドメイン = 1PR。** ドメインごとに次を一度に済ませる。
 
@@ -766,7 +771,7 @@ effect のまま残した7箇所は、いずれも取得ではない。
 
 ---
 
-### 段階9 — 3回目のレビューと、そこで変わった前提
+### 段階9 — 3回目のレビューと、そこで変わった前提（完了・保留は段階11以降へ）
 
 `51f6afd0..HEAD`（7コミット・71ファイル）を対象にレビューを回し、10件が確認された。
 **大半は段階7〜8 で入れた回帰**である。
@@ -935,37 +940,32 @@ src/queries/keys.ts              ← 前方一致の「まとまり」だけ
 `user` `subtotal` `auth` `settings` `sync` `auditLog` `misc` `pdfTools` `archive` と
 **試験の 01〜06** が移り終わっていること。
 
-残り（07・08・ASB・端数）は**段階11以降**へ送る。`NOT_YET_MIGRATED` を空にするのは段階12。
+残り（07・08・ASB・端数）は**段階11以降**へ送る。`NOT_YET_MIGRATED` を空にするのは段階13。
 理由は「同じ形を28回繰り返す作業なので、**大量複製の前に一度レビューを通す**」ため。
 
-#### 残量（2026-08-14 時点で138ファイル）
+#### 残量
 
 一覧の実体は `__tests__/renderer/ipcBoundaryConventions.test.ts` の `NOT_YET_MIGRATED`。
-**これが減っていくのが進捗**である。
-
-| 場所                                  | 数  |
-| ------------------------------------- | --- |
-| `src/components/exams`                | 54  |
-| `src/app/(app)`                       | 19  |
-| `src/components/grades`               | 12  |
-| `src/components/answer-sheet-builder` | 10  |
-| `src/hooks`（+ `hooks/grades` 4）     | 13  |
-| `src/components/coursework`           | 7   |
-| その他                                | 23  |
-
-**勧める順**: `grade`（`src/queries/grade.ts` が既にある）→ `coursework` → `student` /
-`classroom` / `tag`（横断で使われるもの）→ `exam` 系（いちばん大きい）→
-`answer-sheet-builder`（IPC 分割と一緒にやる）。
+**これが減っていくのが進捗**である（数値は下の「進捗」節に置く）。
 
 #### この移行で一緒に片付くもの
 
-| 課題                               | どう片付くか                                       |
-| ---------------------------------- | -------------------------------------------------- |
-| 段階9 #3（08-export のデバウンス） | 設定を意図へ割ると、デバウンスごと不要になる       |
-| 段階9 #5（タグの担当者ガード漏れ） | 書き込みが `src/queries/` に集まるとガードも1箇所  |
-| `.tsx` からの直接 IPC 呼び出し 197 | 定義上ゼロになる                                   |
-| 業務データの `$transaction` 39     | 意図へ割ると要らなくなる（並べ替えとバルクを除く） |
-| 複数 IPC を束ねた読み 12           | main に「画面の木を返す1本」を足して吸収する       |
+| 課題                               | どう片付くか                                            |
+| ---------------------------------- | ------------------------------------------------------- |
+| 段階9 #3（08-export のデバウンス） | 設定を意図へ割ると、デバウンスごと不要になる（段階12）  |
+| 段階9 #5（タグの担当者ガード漏れ） | 書き込みが `src/queries/` に集まるとガードも1箇所       |
+| `.tsx` からの直接 IPC 呼び出し     | 定義上ゼロになる                                        |
+| 業務データの `$transaction`        | 意図へ割ると要らなくなる（並べ替えとバルクを除く）      |
+| **複数 IPC を束ねた読み**          | **解体する。** main に束ねる1本を足すのではない（下記） |
+
+**束ねた読みは解体する。** 当初は「main に画面の木を返す1本を足して吸収する」と書いて
+いたが、実際にやったのは逆で、`queryFn` は境界の返り値をそのまま返す形へ割った
+（03・04・05・試験詳細・認証）。束ねた入れ物をキャッシュへ載せると、1レコードの
+書き込みに対して取り直す先が派生物になり、楽観更新へ追い込まれるからである。
+
+**例外は 06 の `getStudentAnswersDataset` だけ。** これは main 側の1チャンネルが
+受験生徒＋模範解答ページ＋配置済み答案を返すもので、renderer が複数の呼び出しを
+束ねているわけではない（`queryFn` は1本を素通ししている）。
 
 #### 決めたこと（2026-08-14）
 
@@ -1037,16 +1037,16 @@ main は既に `src/types/` から型を引いているので前例があり、�
 | `auth` / `settings` / `sync` / `auditLog` / `misc` | **完了**（トークンと利用者一覧の束ねを解体）                       |
 | `pdfTools` / `archive`                             | **完了**                                                           |
 | `exam` 系                                          | **01〜06 と詳細・パンくずが完了。07・08 が残り**                   |
-| `answer-sheet-builder`                             | **段階12** へ（[IPC 分割](./asb-ipc-split-plan.md)は前提ではない） |
+| `answer-sheet-builder`                             | **段階13** へ（[IPC 分割](./asb-ipc-split-plan.md)は前提ではない） |
 
-**段階11以降へ送った残り 49ファイル**（`NOT_YET_MIGRATED`）。
+**段階12以降へ送った残り 49ファイル**（`NOT_YET_MIGRATED`）。
 
 | 場所                              | 数  | 送り先 |
 | --------------------------------- | --- | ------ |
-| `components/exams`（07 と 08）    | 29  | 段階11 |
-| `components/answer-sheet-builder` | 10  | 段階12 |
-| `app`                             | 4   | 段階12 |
-| その他                            | 6   | 段階12 |
+| `components/exams`（07 と 08）    | 29  | 段階12 |
+| `components/answer-sheet-builder` | 10  | 段階13 |
+| `app`                             | 4   | 段階13 |
+| その他                            | 6   | 段階13 |
 
 `src/types/electron.d.ts` は `window.electronAPI` の**宣言そのもの**なので、残量では
 なく `NOT_A_CALL_SITE`（名指しの例外）へ移した。
@@ -1253,16 +1253,18 @@ effect の撤去、バルクの `asb:replace-definition` への改名と3経路�
 
 ## 7. 検証
 
-型検査だけでは塞がらない部分をスクリプトで担保する。いずれも現時点で 0 件なのでグリーンのまま導入できる。
+型検査だけでは塞がらない部分をスクリプトで担保する。
 
-| 検査                 | 内容                                      | 現在値              | 置き場所                           |
-| -------------------- | ----------------------------------------- | ------------------- | ---------------------------------- |
-| チャンネル突き合わせ | 登録と `invoke` の差分                    | 277 / 277・死 0     | `ipcBoundaryConventions.test.ts`   |
-| 値 import 走査       | `src/` から `electron-src/` への値 import | 7（すべて許可済み） | 同上（`ALLOWED_VALUE_IMPORTS`）    |
-| キーの形             | `setQueryData` が読む側と同じ形を書くか   | 違反 0              | `queryKeyConventions.test.ts`      |
-| Decimal 走査         | 推論戻り値型に `Decimal` が残るチャンネル | 0（§7.1）           | **置かない**（作れない状態のため） |
-| エンベロープ残存     | 契約 `.d.ts` の `success` 出現            | 契約ごと廃止        | —                                  |
-| effect からの取得    | `useEffect` の本体に `window.electronAPI` | 112 → 7（§段階7）   | —                                  |
+**数値はここに書かない。** 検査が現在値を持つ。文書に固定すると必ず腐るうえ、腐って
+いるかを確かめるのに毎回測り直しが要り、その測り方を間違える（実際に2度間違えた）。
+
+| 検査                 | 内容                                          | 置き場所                           |
+| -------------------- | --------------------------------------------- | ---------------------------------- |
+| チャンネル突き合わせ | 登録と `invoke` の差分。死んだ登録も検出      | `ipcBoundaryConventions.test.ts`   |
+| 読み書きの置き場所   | `window.electronAPI` が `src/queries/` だけか | 同上（`NOT_YET_MIGRATED`）         |
+| 値 import 走査       | `src/` から `electron-src/` への値 import     | 同上（`ALLOWED_VALUE_IMPORTS`）    |
+| キーの形             | `setQueryData` が読む側と同じ形を書くか       | `queryKeyConventions.test.ts`      |
+| Decimal 走査         | 推論戻り値型に `Decimal` が残るチャンネル     | **置かない**（§7.1。作れない状態） |
 
 いずれも TypeScript コンパイラ API による AST 走査で書ける。grep では `import * as path` や
 複数行 import を誤判定するため不可。
