@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useState } from "react"
 
@@ -15,7 +15,6 @@ import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
 import {
   createCropRegionMutation,
-  cropRegionsQuery,
   updateCropRegionMutation,
 } from "@/queries/cropRegion"
 import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
@@ -28,7 +27,6 @@ export default function TemplateStepPage() {
 
   const [defaultPoints, setDefaultPoints] = useState(10)
 
-  const queryClient = useQueryClient()
   const {
     isLoading,
     masterImages,
@@ -61,28 +59,14 @@ export default function TemplateStepPage() {
     [areas, createCropRegion, defaultPoints, selectedMasterImage]
   )
 
-  /**
-   * ドラッグ中の座標を書き込む。
-   *
-   * 先にキャッシュを差し替えないと、取り直しが終わるまで枠が元の位置へ戻る。
-   * 掴んでいる間ずっと呼ばれるので、取り直しは `scope` でまとめられる。
-   */
+  /** 掴んでいる間ずっと呼ばれる。1回1レコードなので即時に書く */
   const handleUpdateRegion = useCallback(
     async (index: number, coords: RegionCoordinates) => {
       const area = areas[index]
       if (!area?.id) return
-      const cropRegionId = area.id
-
-      queryClient.setQueryData(cropRegionsQuery(examId).queryKey, (cached) =>
-        cached?.map((cropRegion) =>
-          cropRegion.id === cropRegionId
-            ? { ...cropRegion, ...coords }
-            : cropRegion
-        )
-      )
-      await updateCropRegion.mutateAsync({ id: cropRegionId, data: coords })
+      await updateCropRegion.mutateAsync({ id: area.id, data: coords })
     },
-    [areas, examId, queryClient, updateCropRegion]
+    [areas, updateCropRegion]
   )
 
   const goToNextStep = useCallback(() => {

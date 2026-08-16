@@ -298,9 +298,8 @@ const EMPTY_TAGS: TagWithAllRelations[] = []
 
 export function TagsPageContainer() {
   const queryClient = useQueryClient()
-  const { data: tags = EMPTY_TAGS, isPending: loading } = useQuery(
-    tagListQuery()
-  )
+  const { data: tags = EMPTY_TAGS, isPending: loading } =
+    useQuery(tagListQuery())
   const createTag = useMutation(createTagMutation())
   const updateTag = useMutation(updateTagMutation())
   const deleteTag = useMutation(deleteTagMutation())

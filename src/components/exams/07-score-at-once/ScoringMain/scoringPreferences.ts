@@ -92,12 +92,13 @@ export const SCORING_PREFERENCE_KEYS = [
 ] as const satisfies readonly PreferenceKey[]
 
 /**
- * 設定を書く口。**値は型のまま渡す**（保存文字列への変換は書く側が持つ）。
- * 呼び出し側は `useWritePreference` の戻り値を渡す。
+ * 設定を書く口。**値は型のまま渡す**（保存文字列への変換は
+ * `setUserPreferenceMutation` が持つ）。呼び出し側は `mutate` をそのまま渡す。
  */
-type WritePreference = <TKey extends PreferenceKey>(
-  key: TKey,
-  value: PreferenceValueType[TKey]
+type WritePreference = (
+  input: {
+    [TKey in PreferenceKey]: { key: TKey; value: PreferenceValueType[TKey] }
+  }[PreferenceKey]
 ) => void
 
 /**
@@ -123,13 +124,6 @@ export function buildScoringSettings(
     key: TKey
   ) => parsePreference(key, rawOf(key))
 
-  const setter =
-    <TKey extends (typeof SCORING_PREFERENCE_KEYS)[number]>(key: TKey) =>
-    (value: PreferenceValueType[TKey]) =>
-      write(key, value)
-
-  const setClickScoringConfig = setter("clickScoringConfig")
-
   return {
     // 1行あたりの件数は配列で出し入れする（shadcn/Radix の Slider が配列を扱う）
     itemsPerLine: [valueOf("itemsPerLine")],
@@ -144,23 +138,38 @@ export function buildScoringSettings(
     masterAnswerOpacity: valueOf("masterAnswerOpacity"),
     masterAnswerKeyBehavior: valueOf("masterAnswerKeyBehavior"),
 
+    // キーごとに書く。まとめる関数を挟むと、キーと値の対応が総称の中へ隠れて
+    // 型が確かめられなくなる（union のどの枝かが決まらない）
     setItemsPerLine: (sliderValue: number[]) =>
-      setter("itemsPerLine")(sliderValue[0]),
-    setAutoScroll: setter("autoScroll"),
-    setShowStudentNames: setter("showStudentNames"),
-    setLayoutDirection: setter("layoutDirection"),
-    setAnswerSortOrder: setter("answerSortOrder"),
-    setExpandMargin: setter("expandMargin"),
+      write({ key: "itemsPerLine", value: sliderValue[0] }),
+    setAutoScroll: (value: PreferenceValueType["autoScroll"]) =>
+      write({ key: "autoScroll", value }),
+    setShowStudentNames: (value: PreferenceValueType["showStudentNames"]) =>
+      write({ key: "showStudentNames", value }),
+    setLayoutDirection: (value: PreferenceValueType["layoutDirection"]) =>
+      write({ key: "layoutDirection", value }),
+    setAnswerSortOrder: (value: PreferenceValueType["answerSortOrder"]) =>
+      write({ key: "answerSortOrder", value }),
+    setExpandMargin: (value: PreferenceValueType["expandMargin"]) =>
+      write({ key: "expandMargin", value }),
     setClickAction: (clickCount: 2 | 3 | 4, action: ClickScoringAction) => {
       const next = {
         ...toClickScoringConfig(valueOf("clickScoringConfig")),
         [clickCount]: action,
       }
-      setClickScoringConfig(JSON.stringify(next))
+      write({ key: "clickScoringConfig", value: JSON.stringify(next) })
     },
-    setClickScoringDebounceMs: setter("clickScoringDebounceMs"),
-    setMasterAnswerDisplayMode: setter("masterAnswerDisplayMode"),
-    setMasterAnswerOpacity: setter("masterAnswerOpacity"),
-    setMasterAnswerKeyBehavior: setter("masterAnswerKeyBehavior"),
+    setClickScoringDebounceMs: (
+      value: PreferenceValueType["clickScoringDebounceMs"]
+    ) => write({ key: "clickScoringDebounceMs", value }),
+    setMasterAnswerDisplayMode: (
+      value: PreferenceValueType["masterAnswerDisplayMode"]
+    ) => write({ key: "masterAnswerDisplayMode", value }),
+    setMasterAnswerOpacity: (
+      value: PreferenceValueType["masterAnswerOpacity"]
+    ) => write({ key: "masterAnswerOpacity", value }),
+    setMasterAnswerKeyBehavior: (
+      value: PreferenceValueType["masterAnswerKeyBehavior"]
+    ) => write({ key: "masterAnswerKeyBehavior", value }),
   }
 }

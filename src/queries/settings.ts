@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query"
 
-import type { PreferenceKey } from "@/lib/userPreferences"
+import type { PreferenceKey, PreferenceValueType } from "@/lib/userPreferences"
+import { serializePreference } from "@/lib/userPreferences"
 
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
@@ -60,16 +61,21 @@ export const examExportSettingsQuery = (examId: string) =>
 /**
  * ユーザー設定を1キー分書く。
  *
- * 値は呼び出し側で `serializePreference` してから渡す（型ごとの変換は
- * `lib/userPreferences` が持つ純粋関数）。
+ * **値は型のまま渡す。** 保存文字列への変換をここが持つので、読む側の
+ * `parsePreference` と段数が食い違わない。呼び出し側が個別に `JSON.stringify`
+ * していた頃は、同じキーへ2つの符号化が書かれて保存済みの値が読めなくなった。
  */
+type SetUserPreferenceInput = {
+  [TKey in PreferenceKey]: { key: TKey; value: PreferenceValueType[TKey] }
+}[PreferenceKey]
+
 export const setUserPreferenceMutation = (userId: string | undefined) =>
   defineMutation({
-    mutationFn: (input: { key: PreferenceKey; value: string }) =>
+    mutationFn: (input: SetUserPreferenceInput) =>
       window.electronAPI.settings.setUserPreference(
         userId ?? "",
         input.key,
-        input.value
+        serializePreference(input.key, input.value)
       ),
     scope: { id: `userPreference:${userId}` },
     meta: {

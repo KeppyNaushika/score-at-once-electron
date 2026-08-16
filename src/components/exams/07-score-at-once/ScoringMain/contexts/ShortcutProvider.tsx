@@ -12,7 +12,7 @@
  * - macOSデッドキー対応
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   createContext,
   type ReactNode,
@@ -204,7 +204,6 @@ interface ShortcutProviderProps {
 export function ShortcutProvider({ children }: ShortcutProviderProps) {
   const { user } = useAuth()
   const userId = user?.id
-  const queryClient = useQueryClient()
 
   // ============================================
   // 状態管理
@@ -230,7 +229,6 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
 
   // キーバインディングは設定画面と同じキャッシュを共有する
   // （設定画面で変えたら、開いている採点画面もそのまま追随する）
-  const keyBindingsKey = keyboardShortcutsQuery(userId).queryKey
   const { data: storedKeyBindings } = useQuery(keyboardShortcutsQuery(userId))
   const saveKeyboardShortcuts = useMutation(
     saveKeyboardShortcutsMutation(userId)
@@ -307,14 +305,9 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
   const updateKeyBinding = useCallback(
     (commandId: string, key: string) => {
       if (!userId) return
-      // 押した手応えを待たせない。書けなかったときは DB の姿へ戻す（meta が取り直す）
-      queryClient.setQueryData(keyBindingsKey, {
-        ...keyBindings,
-        [commandId]: key,
-      })
       saveKeyboardShortcuts.mutate({ ...keyBindings, [commandId]: key })
     },
-    [keyBindings, keyBindingsKey, queryClient, saveKeyboardShortcuts, userId]
+    [keyBindings, saveKeyboardShortcuts, userId]
   )
 
   const resetKeyBindings = useCallback(() => {

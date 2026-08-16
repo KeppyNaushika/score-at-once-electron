@@ -24,50 +24,6 @@ import {
 const EMPTY_REGIONS: CropRegionRow[] = []
 const EMPTY_EXAM_SUBTOTAL_GROUPS: ExamSubtotalGroupRow[] = []
 
-/**
- * 1領域分の割り当てを差し替えた採点領域の一覧を返す。
- *
- * 保存は「その領域の紐付けを全消しして作り直す」ので、キャッシュも同じ形に倒す。
- * ここで作る CropSubtotal の id は、取り直すまでの置き場所でしかない
- * （DB へは書かれない。表示は subtotalId しか読まない）。
- *
- * 先にキャッシュを差し替えないと、同じ行の2マス目のクリックが1マス目より前の
- * 集合から組み立てられて上書きしてしまう。
- */
-function withReplacedAssignments(
-  cropRegions: CropRegionRow[],
-  cropRegionId: string,
-  subtotalIds: string[],
-  assignmentType: CropSubtotalAssignmentType,
-  subtotalById: ReadonlyMap<
-    string,
-    CropRegionRow["cropSubtotals"][number]["subtotal"]
-  >
-): CropRegionRow[] {
-  const now = new Date()
-  const cropSubtotals = subtotalIds.flatMap((subtotalId) => {
-    const subtotal = subtotalById.get(subtotalId)
-    if (!subtotal) return []
-    return [
-      {
-        id: crypto.randomUUID(),
-        cropRegionId,
-        subtotalId,
-        assignmentType,
-        createdAt: now,
-        updatedAt: now,
-        subtotal,
-      },
-    ]
-  })
-
-  return cropRegions.map((cropRegion) =>
-    cropRegion.id === cropRegionId
-      ? { ...cropRegion, cropSubtotals }
-      : cropRegion
-  )
-}
-
 export default function SubtotalGroupPage() {
   const params = useParams()
   const router = useRouter()
@@ -120,40 +76,20 @@ export default function SubtotalGroupPage() {
     [queryClient, examId]
   )
 
-  /**
-   * 1領域分の割り当てを丸ごと差し替える。
-   * 先にキャッシュを差し替え、書き込みの後始末（取り直しと通知）は meta に任せる。
-   */
+  /** 1領域分の割り当てを丸ごと差し替える（部分更新という経路が無いため） */
   const updateAssignments = useCallback(
     async (
       cropRegionId: string,
       subtotalIds: string[],
       assignmentType: CropSubtotalAssignmentType
     ) => {
-      const subtotalById = new Map(
-        activeSubtotalGroups
-          .flatMap((subtotalGroup) => subtotalGroup.subtotals)
-          .map((subtotal) => [subtotal.id, subtotal])
-      )
-      queryClient.setQueryData(cropRegionsQuery(examId).queryKey, (cached) =>
-        cached
-          ? withReplacedAssignments(
-              cached,
-              cropRegionId,
-              subtotalIds,
-              assignmentType,
-              subtotalById
-            )
-          : cached
-      )
-
       await replaceCropSubtotals.mutateAsync({
         cropRegionId,
         subtotalIds,
         assignmentType,
       })
     },
-    [activeSubtotalGroups, examId, queryClient, replaceCropSubtotals]
+    [replaceCropSubtotals]
   )
 
   if (loading) {

@@ -165,30 +165,10 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
     updateStudentExamStatus.mutate({ studentId, status: newStatus })
   }
 
-  /**
-   * 生徒の並び順を更新する。
-   *
-   * 掴んだ手に追従させるため、先にキャッシュへ置いてから書く（取り直しを待つと
-   * 行が元の位置へ戻って見える）。
-   */
   const updateStudentOrders = (
     _examId: string,
     studentOrders: { studentId: string; customOrder: number }[]
   ) => {
-    const orderByStudentId = new Map(
-      studentOrders.map((studentOrder) => [
-        studentOrder.studentId,
-        studentOrder.customOrder,
-      ])
-    )
-    queryClient.setQueryData(examStudentsQuery(examId).queryKey, (cached) =>
-      cached?.map((examStudent) => ({
-        ...examStudent,
-        customOrder:
-          orderByStudentId.get(examStudent.studentId) ??
-          examStudent.customOrder,
-      }))
-    )
     updateExamStudentOrders.mutate(studentOrders)
   }
 

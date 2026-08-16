@@ -1,11 +1,6 @@
 "use client"
 
-import {
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query"
+import { useMutation, useQueries, useQuery } from "@tanstack/react-query"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
@@ -41,7 +36,6 @@ const EMPTY_PAGES: ExamPageWithContent[] = []
  * @param examId - 試験ID
  */
 export function useMasterAnswers(examId: string) {
-  const queryClient = useQueryClient()
   // PDF→PNG の変換は数秒かかる。ここを覆わないと無反応に見えて二重に投げ込める
   const [isConverting, setIsConverting] = useState(false)
 
@@ -177,19 +171,11 @@ export function useMasterAnswers(examId: string) {
       const movedAnswers = moveImageInList(answers, fromIndex, direction)
       if (!movedAnswers) return
 
-      // 一覧は pageNumber で並べ直すので、手元の pageNumber も先に振り直す。
-      // 番号を DB へ書くだけだと、取り直すまで表示が元の順序へ戻ってしまう
-      const renumbered = movedAnswers.map((answer, index) => ({
-        ...answer,
-        pageNumber: index + 1,
-      }))
-      queryClient.setQueryData(examPagesQuery(examId).queryKey, renumbered)
-
       updateMasterAnswersOrder.mutate(
         generatePageNumberUpdateRequests(movedAnswers)
       )
     },
-    [answers, examId, queryClient, updateMasterAnswersOrder]
+    [answers, updateMasterAnswersOrder]
   )
 
   const updatePageSize = useCallback(

@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query"
-import { useEffect, useEffectEvent, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef } from "react"
 
 import type { AnswerTableRow } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type {
@@ -93,19 +93,9 @@ export function useMarkerCorrection({
   markerAvailableExamPageIds,
   onFilesChange,
 }: UseMarkerCorrectionArgs): UseMarkerCorrectionResult {
-  const correctImage = useMutation(correctImageMutation())
-  /**
-   * 補正の呼び出し。
-   *
-   * `useMutation` の戻り値は**毎レンダー新しいオブジェクト**なので、依存配列へ
-   * 入れると effect が毎レンダー走る。しかも `mutateAsync` は自分で再レンダーを
-   * 起こすので、入れた瞬間に自走するループになる（実測）。effect から最新を
-   * 読むが再実行はしない、という形は Effect Event で書く。
-   */
-  const requestCorrection = useEffectEvent(
-    (examPageId: string, buffer: Uint8Array) =>
-      correctImage.mutateAsync({ examPageId, buffer })
-  )
+  // 依存へ入れるのは `mutateAsync`。`useMutation` の戻り値は毎レンダー新しい
+  // オブジェクトなので、まるごと入れると effect が自走する
+  const { mutateAsync: requestCorrection } = useMutation(correctImageMutation())
   const originalBuffersRef = useRef<Map<string, ArrayBuffer>>(new Map())
   const runIdRef = useRef(0)
   const filesRef = useRef(files)
@@ -168,7 +158,10 @@ export function useMarkerCorrection({
           try {
             const sendBuffer = new Uint8Array(origBuffer.byteLength)
             sendBuffer.set(new Uint8Array(origBuffer))
-            const result = await requestCorrection(target.id, sendBuffer)
+            const result = await requestCorrection({
+              examPageId: target.id,
+              buffer: sendBuffer,
+            })
             if (result.status === "corrected") {
               const correctedAB = result.correctedBuffer.buffer.slice(
                 result.correctedBuffer.byteOffset,
@@ -229,7 +222,7 @@ export function useMarkerCorrection({
     }
 
     processTasks()
-  }, [tasks, onFilesChange])
+  }, [tasks, onFilesChange, requestCorrection])
 
   return { correctingFileIds }
 }

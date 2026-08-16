@@ -17,7 +17,7 @@ import {
 interface AuthContextType {
   user: PublicUser | null
   isLoading: boolean
-  quickLogin: (user: PublicUser) => void
+  quickLogin: (user: PublicUser) => Promise<void>
   logout: () => void
 }
 
@@ -48,19 +48,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     dropStaleToken()
   }, [authUserId, users])
 
-  const quickLogin = (selectedUser: PublicUser) => {
+  const quickLogin = async (selectedUser: PublicUser) => {
     // パスワード不要のクイックログイン。簡易トークンとして user.id を保存する。
     //
-    // **先にキャッシュへ置く。** 遷移先は関門の内側で、`user` が null なら
-    // ログイン画面へ弾き返される。取り直しの往復を待つと、その窓に入って
-    // 一度目のログインが必ず跳ね返る（R1 #9）
-    queryClient.setQueryData(authTokenQuery().queryKey, selectedUser.id)
-    saveAuthToken.mutate(selectedUser.id, {
-      onSuccess: () => {
-        toast.success(`${selectedUser.name}さん、おかえりなさい！`)
-        router.push("/exams")
-      },
-    })
+    // 遷移先は関門の内側なので、**読み直しが終わってから移る**。書いた直後に
+    // 移ると、まだ取り直していないキャッシュを関門が見てログイン画面へ弾き返す
+    try {
+      await saveAuthToken.mutateAsync(selectedUser.id)
+      await queryClient.invalidateQueries({
+        queryKey: authTokenQuery().queryKey,
+      })
+    } catch {
+      // 失敗の知らせは中央のトーストが出す
+      return
+    }
+    toast.success(`${selectedUser.name}さん、おかえりなさい！`)
+    router.push("/exams")
   }
 
   const logout = () => {

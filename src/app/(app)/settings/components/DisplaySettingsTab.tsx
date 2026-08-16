@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { RotateCcw } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -15,7 +15,6 @@ import { ColorPicker } from "@/components/ui/color-picker"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { useAuth } from "@/contexts/AuthContext"
-import { useWritePreference } from "@/hooks/useWritePreference"
 import {
   applyScoringColorPreset,
   getCurrentPresetId,
@@ -29,7 +28,10 @@ import {
 } from "@/lib/scoringStatusColors"
 import { parsePreference } from "@/lib/userPreferences"
 import { cn } from "@/lib/utils"
-import { userPreferenceQuery } from "@/queries/settings"
+import {
+  setUserPreferenceMutation,
+  userPreferenceQuery,
+} from "@/queries/settings"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 const DEFAULT_SELECTION_BORDER_COLOR = "#F97316"
@@ -58,7 +60,7 @@ export function DisplaySettingsTab() {
   const { data: storedClickScoringDebounceMs } = useQuery(
     userPreferenceQuery(userId, "clickScoringDebounceMs")
   )
-  const writePreference = useWritePreference(userId)
+  const setPreference = useMutation(setUserPreferenceMutation(userId))
 
   const selectionBorderColor =
     parsePreference(
@@ -77,13 +79,13 @@ export function DisplaySettingsTab() {
     clickCount: 2 | 3 | 4,
     action: ClickScoringAction
   ) => {
-    writePreference(
-      "clickScoringConfig",
-      JSON.stringify({ ...clickScoringConfig, [clickCount]: action })
-    )
+    setPreference.mutate({
+      key: "clickScoringConfig",
+      value: JSON.stringify({ ...clickScoringConfig, [clickCount]: action }),
+    })
   }
   const setClickScoringDebounceMs = (value: number) =>
-    writePreference("clickScoringDebounceMs", value)
+    setPreference.mutate({ key: "clickScoringDebounceMs", value })
 
   // 採点状態色の状態
   const [scoringColors, setScoringColors] = useState<ScoringStatusColors>(
@@ -112,10 +114,13 @@ export function DisplaySettingsTab() {
   // 選択枠色の変更（KV方式・楽観的更新）
   const handleSelectionBorderColorChange = useCallback(
     (color: string) => {
-      writePreference("selectionBorderColor", color.toUpperCase())
+      setPreference.mutate({
+        key: "selectionBorderColor",
+        value: color.toUpperCase(),
+      })
       toast.success("選択枠色が変更されました")
     },
-    [writePreference]
+    [setPreference]
   )
 
   // クリック採点アクション変更

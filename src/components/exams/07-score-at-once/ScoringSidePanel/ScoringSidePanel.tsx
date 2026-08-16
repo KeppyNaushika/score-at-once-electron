@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   AlertTriangle,
   BarChart3,
@@ -48,9 +48,11 @@ import {
 } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/AuthContext"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
-import { useWritePreference } from "@/hooks/useWritePreference"
 import { parsePreference } from "@/lib/userPreferences"
-import { userPreferenceQuery } from "@/queries/settings"
+import {
+  setUserPreferenceMutation,
+  userPreferenceQuery,
+} from "@/queries/settings"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { toCollapsedSections } from "./sidePanelSections"
@@ -269,7 +271,9 @@ export function ScoringSidePanel({
   const { data: storedCollapsedSections } = useQuery(
     userPreferenceQuery(preferenceUser?.id, "sidePanelCollapsedSections")
   )
-  const writePreference = useWritePreference(preferenceUser?.id)
+  const setPreference = useMutation(
+    setUserPreferenceMutation(preferenceUser?.id)
+  )
   const collapsedSections = toCollapsedSections(
     parsePreference(
       "sidePanelCollapsedSections",
@@ -281,7 +285,10 @@ export function ScoringSidePanel({
     const next = new Set(collapsedSections)
     if (next.has(sectionId)) next.delete(sectionId)
     else next.add(sectionId)
-    writePreference("sidePanelCollapsedSections", JSON.stringify([...next]))
+    setPreference.mutate({
+      key: "sidePanelCollapsedSections",
+      value: JSON.stringify([...next]),
+    })
   }
   const { loadAnnotations: reloadBrowserAnnotations } = annotationBrowser
 

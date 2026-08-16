@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { Palette } from "lucide-react"
 import { useCallback, useState } from "react"
 
@@ -11,7 +11,6 @@ import { useKeyboardNavigation } from "@/components/exams/03-region-info/hooks/u
 import { useEditingText } from "@/hooks/useEditingText"
 import type { CropRegionRow } from "@/queries/cropRegion"
 import {
-  cropRegionsQuery,
   deleteCropRegionMutation,
   updateCropRegionMutation,
   updateCropRegionOrdersMutation,
@@ -54,7 +53,6 @@ const RegionDetailsTable = ({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [regionToDelete, setRegionToDelete] = useState<number | null>(null)
 
-  const queryClient = useQueryClient()
   // 1打鍵ごとに書くので、打鍵と取り直しが競り合う。入力中の文字は手元に持つ
   const { textOf, remember, forget } = useEditingText()
   const updateCropRegion = useMutation(updateCropRegionMutation(examId))
@@ -63,22 +61,9 @@ const RegionDetailsTable = ({
     updateCropRegionOrdersMutation(examId)
   )
 
-  /**
-   * 編集した結果を先にキャッシュへ置く。
-   *
-   * 打鍵のたびに書くので、取り直しを待つと入力欄が1文字ぶん戻って見える。
-   */
-  const patchCachedRegions = useCallback(
-    (patched: CropRegionRow[]) => {
-      queryClient.setQueryData(cropRegionsQuery(examId).queryKey, patched)
-    },
-    [examId, queryClient]
-  )
-
   /** 並べ替え。順番は行の並びそのものなので、全行の orderIndex を振り直す */
   const handleReorder = useCallback(
     (reordered: CropRegionRow[]) => {
-      patchCachedRegions(reordered)
       updateCropRegionOrders.mutate(
         reordered.map((region, index) => ({
           id: region.id,
@@ -86,7 +71,7 @@ const RegionDetailsTable = ({
         }))
       )
     },
-    [patchCachedRegions, updateCropRegionOrders]
+    [updateCropRegionOrders]
   )
 
   // 全ページの領域を表示（統一順序）
@@ -130,11 +115,6 @@ const RegionDetailsTable = ({
     if (field === "points" && nextValue !== null && Number.isNaN(nextValue))
       return
 
-    patchCachedRegions(
-      regions.map((current) =>
-        current.id === region.id ? { ...current, [field]: nextValue } : current
-      )
-    )
     updateCropRegion.mutate({ id: region.id, data: { [field]: nextValue } })
   }
 

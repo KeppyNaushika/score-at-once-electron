@@ -534,10 +534,13 @@ describe("クエリキーの規約", () => {
     scanned = scan()
   })
 
-  it("走査そのものが機能している（読み書きを見つけられている）", () => {
+  it("走査そのものが機能している（読みを見つけられている）", () => {
     expect(scanned.readers.length).toBeGreaterThan(30)
-    expect(scanned.writers.length).toBeGreaterThan(10)
   })
+
+  // 書く側（`setQueryData`）の件数は下限を置かない。**楽観更新は既定で書かない**
+  // 規約（coding-style.md）に従って減っていく一方で、いずれ 0 になるため。
+  // 走査が機能しているかは読み側の下限で見る
 
   it("キーは queryKeys を経由して作る", () => {
     expect(scanned.literalKeys).toEqual([])
