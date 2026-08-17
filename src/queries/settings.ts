@@ -1,7 +1,16 @@
 import { queryOptions } from "@tanstack/react-query"
 
+import type { IndividualReportOptions } from "@/electron-src/lib/export/individual-report/types"
+import type {
+  ExamReportGraphSettingsValues,
+  ExamReportTableSectionValues,
+} from "@/electron-src/lib/prisma/examSettings"
 import type { PreferenceKey, PreferenceValueType } from "@/lib/userPreferences"
 import { serializePreference } from "@/lib/userPreferences"
+import type {
+  AnswerOverlayStyle,
+  AnswerOverlayVisibility,
+} from "@/types/scoringOverlay.types"
 
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
@@ -111,18 +120,94 @@ export const resetKeyboardShortcutsMutation = (userId: string | undefined) =>
     },
   })
 
-export const saveExamExportSettingsMutation = (examId: string) =>
-  defineMutation({
-    mutationFn: (
-      settings: Parameters<
-        typeof window.electronAPI.settings.saveExamExportSettings
-      >[1]
-    ) => window.electronAPI.settings.saveExamExportSettings(examId, settings),
+/**
+ * 出力設定の書き込みは**1つにつき1レコード**。
+ *
+ * 6つのテーブルに分かれているので、口も6つに分かれる。どれも同じ `scope` を
+ * 名乗るので実行は直列になり、取り直しは最後の1件だけが走る。
+ */
+const exportSettingsWrite = (examId: string) =>
+  ({
     scope: { id: `exam:${examId}:exportSettings` },
     meta: {
       invalidates: [examExportSettingsQuery(examId).queryKey],
       errorMessage: "出力設定を保存できませんでした",
     },
+  }) as const
+
+/** 重ね描きのスタイルを1種別ぶん */
+export const setExamAnswerOverlayStyleMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (style: AnswerOverlayStyle) =>
+      window.electronAPI.settings.setExamAnswerOverlayStyle(examId, style),
+    ...exportSettingsWrite(examId),
+  })
+
+/** 採点状態1つぶんの可視性 */
+export const setExamAnswerOverlayVisibilityMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (visibility: AnswerOverlayVisibility) =>
+      window.electronAPI.settings.setExamAnswerOverlayVisibility(
+        examId,
+        visibility
+      ),
+    ...exportSettingsWrite(examId),
+  })
+
+/** 統計の可視性を、種別×母集団の1マスぶん */
+export const setExamReportStatisticVisibilityMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (input: {
+      statisticKind: string
+      scope: string
+      shown: boolean
+    }) =>
+      window.electronAPI.settings.setExamReportStatisticVisibility(
+        examId,
+        input.statisticKind,
+        input.scope,
+        input.shown
+      ),
+    ...exportSettingsWrite(examId),
+  })
+
+/**
+ * 個人成績表の設定本体（1試験に1行）。
+ *
+ * この行だけは十数個のオプションから組む射影が要る。読み出しと対なので main が
+ * 持ち、ここはオプションをそのまま渡す。
+ */
+export const setExamReportSettingsMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (individualReport: IndividualReportOptions) =>
+      window.electronAPI.settings.setExamReportSettings(
+        examId,
+        individualReport
+      ),
+    ...exportSettingsWrite(examId),
+  })
+
+/** 個人成績表の表の節（小計・設問）を1つぶん */
+export const setExamReportTableSectionMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (input: {
+      tableKind: string
+      values: ExamReportTableSectionValues
+    }) =>
+      window.electronAPI.settings.setExamReportTableSection(
+        examId,
+        input.tableKind,
+        input.values
+      ),
+    ...exportSettingsWrite(examId),
+  })
+
+/** 個人成績表のグラフ設定（1試験に1行） */
+export const setExamReportGraphSettingsMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (values: ExamReportGraphSettingsValues) =>
+      window.electronAPI.settings.setExamReportGraphSettings(examId, values),
+    ...exportSettingsWrite(examId),
   })
 
 // =====================================================================

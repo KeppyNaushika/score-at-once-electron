@@ -4,10 +4,23 @@
 
 import { BrowserWindow, powerSaveBlocker } from "electron"
 
-import type { ExamExportSettings } from "../lib/prisma/examSettings"
+import type {
+  AnswerOverlayStyle,
+  AnswerOverlayVisibility,
+} from "../../src/types/scoringOverlay.types"
+import type { IndividualReportOptions } from "../lib/export/individual-report/types"
+import type {
+  ExamReportGraphSettingsValues,
+  ExamReportTableSectionValues,
+} from "../lib/prisma/examSettings"
 import {
   getExamExportSettings,
-  upsertExamExportSettings,
+  setExamAnswerOverlayStyle,
+  setExamAnswerOverlayVisibility,
+  setExamReportGraphSettings,
+  setExamReportSettings,
+  setExamReportStatisticVisibility,
+  setExamReportTableSection,
 } from "../lib/prisma/examSettings"
 import {
   bulkUpsertUserKeyboardShortcuts,
@@ -100,8 +113,37 @@ export const settingsHandlers = {
   "settings:getExamExportSettings": (examId: string) =>
     getExamExportSettings(examId),
 
-  "settings:saveExamExportSettings": (
+  // 出力設定の書き込みは1つにつき1レコード。何を変えたかは操作が知っている
+  "settings:setExamAnswerOverlayStyle": (
     examId: string,
-    settings: ExamExportSettings
-  ) => upsertExamExportSettings(examId, settings),
+    style: AnswerOverlayStyle
+  ) => setExamAnswerOverlayStyle(examId, style),
+
+  "settings:setExamAnswerOverlayVisibility": (
+    examId: string,
+    visibility: AnswerOverlayVisibility
+  ) => setExamAnswerOverlayVisibility(examId, visibility),
+
+  "settings:setExamReportStatisticVisibility": (
+    examId: string,
+    statisticKind: string,
+    scope: string,
+    shown: boolean
+  ) => setExamReportStatisticVisibility(examId, statisticKind, scope, shown),
+
+  "settings:setExamReportSettings": (
+    examId: string,
+    individualReport: IndividualReportOptions
+  ) => setExamReportSettings(examId, individualReport),
+
+  "settings:setExamReportTableSection": (
+    examId: string,
+    tableKind: string,
+    values: ExamReportTableSectionValues
+  ) => setExamReportTableSection(examId, tableKind, values),
+
+  "settings:setExamReportGraphSettings": (
+    examId: string,
+    values: ExamReportGraphSettingsValues
+  ) => setExamReportGraphSettings(examId, values),
 } satisfies HandlerMap

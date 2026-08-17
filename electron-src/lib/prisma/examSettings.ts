@@ -6,14 +6,21 @@
  * 引きたいので、境界であるここが行 ⇄ 束ねた形の変換を担う。
  */
 
+import type {
+  ExamIndividualReportGraphSettings,
+  ExamIndividualReportTableSection,
+} from "@prisma/client"
+
 import { examWithExportSettingsInclude } from "../../../src/types/prismaExtensions"
-import type { AnswerOverlaySettings } from "../../../src/types/scoringOverlay.types"
+import type {
+  AnswerOverlaySettings,
+  AnswerOverlayStyle,
+  AnswerOverlayVisibility,
+} from "../../../src/types/scoringOverlay.types"
 import {
   DEFAULT_ANSWER_OVERLAY_SETTINGS,
-  OVERLAY_KINDS,
   toAnswerOverlaySettings,
 } from "../../../src/types/scoringOverlay.types"
-import { SCORING_STATUSES } from "../../../src/types/scoringStatus.types"
 import type { IndividualReportOptions } from "../export/individual-report/types"
 import type {
   StatisticKind,
@@ -23,7 +30,6 @@ import type {
 import {
   DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
   STATISTIC_KINDS,
-  STATISTIC_SCOPES,
   toReportDisplayMode,
   toReportPageLayout,
   toReportPageOrientation,
@@ -144,147 +150,38 @@ export async function getExamExportSettings(
   }
 }
 
-/** 試験の出力設定を作成または更新する */
-export async function upsertExamExportSettings(
-  examId: string,
-  settings: ExamExportSettings
-): Promise<void> {
-  const { answerOverlay, individualReport } = settings
+/**
+ * 出力設定の書き込みは**1つにつき1レコード**。
+ *
+ * 以前は設定一式を受け取り、6テーブル 20行以上を1つの `$transaction` で
+ * upsert していた。打鍵1回でその全部が走るので、共有フォルダ上の SQLite では
+ * 書き込みが重くなり、renderer 側はそれを隠すためのデバウンスを抱えていた。
+ * 何を変えたかは利用者の操作が知っているので、その1行だけを書く。
+ */
 
-  await prisma.$transaction(async (tx) => {
-    for (const overlayKind of OVERLAY_KINDS) {
-      const style = answerOverlay.styles[overlayKind]
-      const values = {
-        position: style.position,
-        anchor: style.anchor,
-        offsetX: style.offsetX,
-        offsetY: style.offsetY,
-        size: style.size,
-        color: style.color,
-        opacity: style.opacity,
-      }
-      await tx.examAnswerOverlayStyle.upsert({
-        where: { examId_overlayKind: { examId, overlayKind } },
-        update: values,
-        create: {
-          examId,
-          overlayKind,
-          ...values,
-        },
-      })
-    }
+/** 行の識別と履歴を除いた、書き込む値だけ */
+type RowValues<TRow, TIdentity extends keyof TRow = never> = Omit<
+  TRow,
+  "id" | "examId" | "createdAt" | "updatedAt" | TIdentity
+>
 
-    for (const status of SCORING_STATUSES) {
-      const visibility = answerOverlay.visibility[status]
-      const values = {
-        showMark: visibility.showMark,
-        showScore: visibility.showScore,
-      }
-      await tx.examAnswerOverlayVisibility.upsert({
-        where: { examId_status: { examId, status } },
-        update: values,
-        create: {
-          examId,
-          status,
-          ...values,
-        },
-      })
-    }
+/** 個人成績表の表の節（小計・設問）1行分の値 */
+export type ExamReportTableSectionValues = RowValues<
+  ExamIndividualReportTableSection,
+  "tableKind"
+>
 
-    for (const statisticKind of STATISTIC_KINDS) {
-      for (const scope of STATISTIC_SCOPES) {
-        const shown = individualReport.statistics[statisticKind][scope]
-        await tx.examIndividualReportStatisticVisibility.upsert({
-          where: {
-            examId_statisticKind_scope: { examId, statisticKind, scope },
-          },
-          update: { shown },
-          create: {
-            examId,
-            statisticKind,
-            scope,
-            shown,
-          },
-        })
-      }
-    }
+/** 個人成績表のグラフ設定1行分の値 */
+export type ExamReportGraphSettingsValues =
+  RowValues<ExamIndividualReportGraphSettings>
 
-    const reportValues = {
-      displayMode: individualReport.displayMode,
-      showScore: individualReport.showScore,
-      showMarks: individualReport.showMarks,
-      hideUnassignedSubtotals: individualReport.hideUnassignedSubtotals,
-      showGroupSubtotals: individualReport.showGroupSubtotals,
-      showCorrectRate: individualReport.showCorrectRate,
-      showScoreRate: individualReport.showScoreRate,
-      showLearningAdvice: individualReport.showLearningAdvice,
-      adviceReviewRateMin: individualReport.adviceOptions.reviewRateMin,
-      adviceReviewRateMax: individualReport.adviceOptions.reviewRateMax,
-      adviceReviewQuestionCount:
-        individualReport.adviceOptions.reviewQuestionCount,
-      showComment: individualReport.showComment,
-      showSignature: individualReport.showSignature,
-      pageLayout: individualReport.pageLayout,
-      pageOrientation: individualReport.pageOrientation,
-      tableGroupSelectionEnabled:
-        individualReport.tableSubtotalGroupSelection.enabled,
-      statisticsIncludesParticipating:
-        individualReport.boxPlotIncludeStatuses.participating,
-      statisticsIncludesExpected:
-        individualReport.boxPlotIncludeStatuses.expected,
-      statisticsIncludesAbsent: individualReport.boxPlotIncludeStatuses.absent,
-    }
-    await tx.examIndividualReportSettings.upsert({
-      where: { examId },
-      update: reportValues,
-      create: { examId, ...reportValues },
-    })
-
-    const sections = [
-      {
-        tableKind: "subtotal",
-        enabled: individualReport.showSubtotalTable,
-        columns: individualReport.subtotalTableColumns,
-        fontSize: individualReport.subtotalTableFontSize,
-      },
-      {
-        tableKind: "question",
-        enabled: individualReport.showQuestionTable,
-        columns: individualReport.questionTableColumns,
-        fontSize: individualReport.questionTableFontSize,
-      },
-    ]
-    for (const section of sections) {
-      const values = {
-        enabled: section.enabled,
-        columns: section.columns,
-        fontSize: section.fontSize,
-      }
-      await tx.examIndividualReportTableSection.upsert({
-        where: {
-          examId_tableKind: { examId, tableKind: section.tableKind },
-        },
-        update: values,
-        create: {
-          examId,
-          tableKind: section.tableKind,
-          ...values,
-        },
-      })
-    }
-
-    const graphValues = {
-      ...individualReport.graphOptions,
-      boxPlotGroupSelectionEnabled:
-        individualReport.boxPlotSubtotalGroupSelection.enabled,
-    }
-    await tx.examIndividualReportGraphSettings.upsert({
-      where: { examId },
-      update: graphValues,
-      create: { examId, ...graphValues },
-    })
-  })
-
+/**
+ * 出力設定を触ったことを監査ログへ残す。
+ *
+ * 行ごとに書くようになったので1操作が複数行になることもあるが、利用者から見れば
+ * 「出力設定を変えた」の1件。`coalesceKey` で1つにまとめる。
+ */
+async function recordExportSettingsAudit(examId: string): Promise<void> {
   const scope = await resolveExamScope(examId)
   await recordAuditLog({
     action: "exam.export_settings.update",
@@ -294,6 +191,151 @@ export async function upsertExamExportSettings(
     scopeLabel: scope.scopeLabel,
     coalesceKey: `export_settings:${examId}`,
   })
+}
+
+/**
+ * 重ね描きのスタイルを1種別ぶん書く。
+ *
+ * 値の列は**引き算で決める**（識別と履歴を落とした残り）。列を並べて書き写すと、
+ * 列を足したときに永続化から漏れる。
+ */
+export async function setExamAnswerOverlayStyle(
+  examId: string,
+  style: AnswerOverlayStyle
+): Promise<void> {
+  const {
+    id: _id,
+    examId: _examId,
+    overlayKind,
+    createdAt: _createdAt,
+    updatedAt: _updatedAt,
+    ...values
+  } = style
+
+  await prisma.examAnswerOverlayStyle.upsert({
+    where: { examId_overlayKind: { examId, overlayKind } },
+    update: values,
+    create: { examId, overlayKind, ...values },
+  })
+  await recordExportSettingsAudit(examId)
+}
+
+/** 採点状態1つぶんの可視性を書く */
+export async function setExamAnswerOverlayVisibility(
+  examId: string,
+  visibility: AnswerOverlayVisibility
+): Promise<void> {
+  const {
+    id: _id,
+    examId: _examId,
+    status,
+    createdAt: _createdAt,
+    updatedAt: _updatedAt,
+    ...values
+  } = visibility
+
+  await prisma.examAnswerOverlayVisibility.upsert({
+    where: { examId_status: { examId, status } },
+    update: values,
+    create: { examId, status, ...values },
+  })
+  await recordExportSettingsAudit(examId)
+}
+
+/**
+ * 統計（平均・偏差値・順位・箱ひげ図）の可視性を、種別×母集団の1マスぶん書く。
+ *
+ * 綴りは読み出しと同じ正規化を通す。renderer は種別の一覧（`STATISTIC_KINDS`）を
+ * 値として引けない（`src` から `electron-src` は型のみ）ので文字列で渡ってくる。
+ * 想定外の綴りをそのまま行にしない。
+ */
+export async function setExamReportStatisticVisibility(
+  examId: string,
+  rawStatisticKind: string,
+  rawScope: string,
+  shown: boolean
+): Promise<void> {
+  const statisticKind: StatisticKind = toStatisticKind(rawStatisticKind)
+  const scope: StatisticScope = toStatisticScope(rawScope)
+
+  await prisma.examIndividualReportStatisticVisibility.upsert({
+    where: { examId_statisticKind_scope: { examId, statisticKind, scope } },
+    update: { shown },
+    create: { examId, statisticKind, scope, shown },
+  })
+  await recordExportSettingsAudit(examId)
+}
+
+/**
+ * 個人成績表の設定本体（1試験に1行）を書く。
+ *
+ * この行だけは `IndividualReportOptions` の十数個のフィールドから組む。読み出し
+ * （`getExamExportSettings`）と対になる射影なので、**両方をこのファイルに置く**。
+ * 片方を renderer へ移すとプロセスを跨いで食い違う。
+ */
+export async function setExamReportSettings(
+  examId: string,
+  individualReport: IndividualReportOptions
+): Promise<void> {
+  const values = {
+    displayMode: individualReport.displayMode,
+    showScore: individualReport.showScore,
+    showMarks: individualReport.showMarks,
+    hideUnassignedSubtotals: individualReport.hideUnassignedSubtotals,
+    showGroupSubtotals: individualReport.showGroupSubtotals,
+    showCorrectRate: individualReport.showCorrectRate,
+    showScoreRate: individualReport.showScoreRate,
+    showLearningAdvice: individualReport.showLearningAdvice,
+    adviceReviewRateMin: individualReport.adviceOptions.reviewRateMin,
+    adviceReviewRateMax: individualReport.adviceOptions.reviewRateMax,
+    adviceReviewQuestionCount:
+      individualReport.adviceOptions.reviewQuestionCount,
+    showComment: individualReport.showComment,
+    showSignature: individualReport.showSignature,
+    pageLayout: individualReport.pageLayout,
+    pageOrientation: individualReport.pageOrientation,
+    tableGroupSelectionEnabled:
+      individualReport.tableSubtotalGroupSelection.enabled,
+    statisticsIncludesParticipating:
+      individualReport.boxPlotIncludeStatuses.participating,
+    statisticsIncludesExpected:
+      individualReport.boxPlotIncludeStatuses.expected,
+    statisticsIncludesAbsent: individualReport.boxPlotIncludeStatuses.absent,
+  }
+
+  await prisma.examIndividualReportSettings.upsert({
+    where: { examId },
+    update: values,
+    create: { examId, ...values },
+  })
+  await recordExportSettingsAudit(examId)
+}
+
+/** 個人成績表の表の節（小計・設問）を1つぶん書く */
+export async function setExamReportTableSection(
+  examId: string,
+  tableKind: string,
+  values: ExamReportTableSectionValues
+): Promise<void> {
+  await prisma.examIndividualReportTableSection.upsert({
+    where: { examId_tableKind: { examId, tableKind } },
+    update: values,
+    create: { examId, tableKind, ...values },
+  })
+  await recordExportSettingsAudit(examId)
+}
+
+/** 個人成績表のグラフ設定（1試験に1行）を書く */
+export async function setExamReportGraphSettings(
+  examId: string,
+  values: ExamReportGraphSettingsValues
+): Promise<void> {
+  await prisma.examIndividualReportGraphSettings.upsert({
+    where: { examId },
+    update: values,
+    create: { examId, ...values },
+  })
+  await recordExportSettingsAudit(examId)
 }
 
 /** 統計の可視性の行を、種別×母集団の表へ組む。欠けは既定値で補う */

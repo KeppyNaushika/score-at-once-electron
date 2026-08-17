@@ -6,6 +6,11 @@ import { useCallback, useMemo, useState } from "react"
 
 import { useStudentSelection } from "@/components/exams/08-export/hooks/useStudentSelection"
 import type { ExportOptions, Student } from "@/components/exams/08-export/types"
+import type { ExportSettingChange } from "@/components/exams/08-export/utils/exportSettingChanges"
+import {
+  answerOverlayChanges,
+  individualReportChanges,
+} from "@/components/exams/08-export/utils/exportSettingChanges"
 import {
   DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
   type IndividualReportOptions,
@@ -13,7 +18,12 @@ import {
 import { examDetailQuery, examStudentsQuery } from "@/queries/exam"
 import {
   examExportSettingsQuery,
-  saveExamExportSettingsMutation,
+  setExamAnswerOverlayStyleMutation,
+  setExamAnswerOverlayVisibilityMutation,
+  setExamReportGraphSettingsMutation,
+  setExamReportSettingsMutation,
+  setExamReportStatisticVisibilityMutation,
+  setExamReportTableSectionMutation,
 } from "@/queries/settings"
 import {
   setSubtotalGroupSelectionMutation,
@@ -23,26 +33,6 @@ import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 
 import { useMasterImageOrientation } from "./useMasterImageOrientation"
-
-/**
- * 選択されたグループID（エンティティ参照）は設定側に持たない。
- * enabled などの非参照設定のみ保持し、IDは ExamSubtotalGroup のフラグから hydrate する。
- */
-function withoutSelectedGroupIds(
-  options: IndividualReportOptions
-): IndividualReportOptions {
-  return {
-    ...options,
-    tableSubtotalGroupSelection: {
-      ...options.tableSubtotalGroupSelection,
-      selectedGroupIds: [],
-    },
-    boxPlotSubtotalGroupSelection: {
-      ...options.boxPlotSubtotalGroupSelection,
-      selectedGroupIds: [],
-    },
-  }
-}
 
 /** 選ばれている小計点グループが変わったか。並びも選択の一部なのでそのまま比べる */
 function hasDifferentGroupSelection(
@@ -108,19 +98,41 @@ export function useExportPage() {
   // フラグなので、設定JSONに残った亡霊IDは使わない
   const { data: savedSettings } = useQuery(examExportSettingsQuery(examId))
   const { data: savedSelection } = useQuery(subtotalGroupSelectionQuery(examId))
-  const saveExportSettings = useMutation(saveExamExportSettingsMutation(examId))
   const setSubtotalGroupSelection = useMutation(
     setSubtotalGroupSelectionMutation(examId)
+  )
+
+  // 出力設定は6テーブルに分かれている。変わった行だけを、その行の口から書く
+  const setOverlayStyle = useMutation(setExamAnswerOverlayStyleMutation(examId))
+  const setOverlayVisibility = useMutation(
+    setExamAnswerOverlayVisibilityMutation(examId)
+  )
+  const setStatisticVisibility = useMutation(
+    setExamReportStatisticVisibilityMutation(examId)
+  )
+  const setReportSettings = useMutation(setExamReportSettingsMutation(examId))
+  const setReportTableSection = useMutation(
+    setExamReportTableSectionMutation(examId)
+  )
+  const setReportGraphSettings = useMutation(
+    setExamReportGraphSettingsMutation(examId)
   )
 
   /**
    * 取得した設定を編集状態の種にする。
    * 試験を切り替えたら蒔き直す（以前は ref で1回に固定していたため、
    * 別の試験を開いても前の試験の設定が残ったまま保存されていた）。
+   *
+   * 書き込みに失敗したときも蒔き直す。変わった行だけを書くようになったので、
+   * 落ちた1行は次の操作では拾われない。手元の姿を捨てて DB の姿へ戻す。
    */
   const [settingsSeededExamId, setSettingsSeededExamId] = useState<
     string | null
   >(null)
+  const forgetSeededSettings = useCallback(
+    () => setSettingsSeededExamId(null),
+    []
+  )
   if (savedSettings && savedSelection && settingsSeededExamId !== examId) {
     setSettingsSeededExamId(examId)
     setAnswerOverlaySettingsState(savedSettings.answerOverlay)
@@ -137,6 +149,56 @@ export function useExportPage() {
     })
   }
 
+  /** 変わった行を、その行の口から1件ずつ書く */
+  const writeChanges = useCallback(
+    (changes: ExportSettingChange[]) => {
+      // 失敗したら手元の種を捨てる。書けなかった行は次の操作では拾われない
+      const onError = { onError: forgetSeededSettings }
+
+      for (const change of changes) {
+        switch (change.kind) {
+          case "overlayStyle":
+            setOverlayStyle.mutate(change.style, onError)
+            break
+          case "overlayVisibility":
+            setOverlayVisibility.mutate(change.visibility, onError)
+            break
+          case "statisticVisibility":
+            setStatisticVisibility.mutate(
+              {
+                statisticKind: change.statisticKind,
+                scope: change.scope,
+                shown: change.shown,
+              },
+              onError
+            )
+            break
+          case "reportSettings":
+            setReportSettings.mutate(change.individualReport, onError)
+            break
+          case "reportTableSection":
+            setReportTableSection.mutate(
+              { tableKind: change.tableKind, values: change.values },
+              onError
+            )
+            break
+          case "reportGraphSettings":
+            setReportGraphSettings.mutate(change.values, onError)
+            break
+        }
+      }
+    },
+    [
+      forgetSeededSettings,
+      setOverlayStyle,
+      setOverlayVisibility,
+      setReportGraphSettings,
+      setReportSettings,
+      setReportTableSection,
+      setStatisticVisibility,
+    ]
+  )
+
   // 採点マーク設定の保存。1回の操作で確定するので即時に書く
   const setAnswerOverlaySettings = useCallback(
     (
@@ -149,15 +211,12 @@ export function useExportPage() {
       const next =
         typeof config === "function" ? config(answerOverlaySettings) : config
       setAnswerOverlaySettingsState(next)
-      saveExportSettings.mutate({
-        answerOverlay: next,
-        individualReport: withoutSelectedGroupIds(individualReportOptions),
-      })
+      writeChanges(answerOverlayChanges(answerOverlaySettings, next))
     },
-    [answerOverlaySettings, individualReportOptions, saveExportSettings]
+    [answerOverlaySettings, writeChanges]
   )
 
-  // 個人成績表オプションの保存。小計グループの選択だけは別のレコードなので別に書く
+  // 個人成績表オプションの保存。小計グループの選択だけは別のテーブル
   const setIndividualReportOptions = useCallback(
     (
       options:
@@ -170,7 +229,7 @@ export function useExportPage() {
           : options
       setIndividualReportOptionsState(next)
 
-      // 小計グループの選択は別のテーブル（ExamSubtotalGroup のフラグ）。変わって
+      // 選ばれたグループの id は ExamSubtotalGroup のフラグが正本。変わって
       // いないのに書くと、フォントサイズを1文字打つたびに関係ない行まで触る
       if (
         hasDifferentGroupSelection(
@@ -182,22 +241,23 @@ export function useExportPage() {
           individualReportOptions.boxPlotSubtotalGroupSelection.selectedGroupIds
         )
       ) {
-        setSubtotalGroupSelection.mutate({
-          tableGroupIds: next.tableSubtotalGroupSelection.selectedGroupIds,
-          boxPlotGroupIds: next.boxPlotSubtotalGroupSelection.selectedGroupIds,
-        })
+        setSubtotalGroupSelection.mutate(
+          {
+            tableGroupIds: next.tableSubtotalGroupSelection.selectedGroupIds,
+            boxPlotGroupIds:
+              next.boxPlotSubtotalGroupSelection.selectedGroupIds,
+          },
+          { onError: forgetSeededSettings }
+        )
       }
 
-      saveExportSettings.mutate({
-        answerOverlay: answerOverlaySettings,
-        individualReport: withoutSelectedGroupIds(next),
-      })
+      writeChanges(individualReportChanges(individualReportOptions, next))
     },
     [
-      answerOverlaySettings,
+      forgetSeededSettings,
       individualReportOptions,
-      saveExportSettings,
       setSubtotalGroupSelection,
+      writeChanges,
     ]
   )
 

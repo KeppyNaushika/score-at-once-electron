@@ -22,7 +22,17 @@ export function createSettingsApi() {
 
       // ExamExportSettings
       getExamExportSettings: bind("settings:getExamExportSettings"),
-      saveExamExportSettings: bind("settings:saveExamExportSettings"),
+      // 書き込みは1レコードずつ。何を変えたかは操作が知っている
+      setExamAnswerOverlayStyle: bind("settings:setExamAnswerOverlayStyle"),
+      setExamAnswerOverlayVisibility: bind(
+        "settings:setExamAnswerOverlayVisibility"
+      ),
+      setExamReportStatisticVisibility: bind(
+        "settings:setExamReportStatisticVisibility"
+      ),
+      setExamReportSettings: bind("settings:setExamReportSettings"),
+      setExamReportTableSection: bind("settings:setExamReportTableSection"),
+      setExamReportGraphSettings: bind("settings:setExamReportGraphSettings"),
     },
   }
 }
