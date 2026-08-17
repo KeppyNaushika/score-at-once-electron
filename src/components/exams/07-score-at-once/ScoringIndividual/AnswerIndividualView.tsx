@@ -1,12 +1,13 @@
 "use client"
 
-import { skipToken, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import Image from "next/image"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { getScoringStatusFromArray } from "@/components/exams/07-score-at-once/types"
-import { queryKeys } from "@/lib/queryKeys"
+import { toggleAnnotationFavoriteMutation } from "@/queries/drawing"
+import { examExportSettingsQuery } from "@/queries/settings"
 import type { LineStyle } from "@/types/drawingAnnotation.types"
 import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 
@@ -70,17 +71,15 @@ export default function AnswerIndividualView({
   // 印字設定（採点マーク・点数表示のプレビュー用）をDBからロード
   const params = useParams()
   const examId = params?.examId as string | undefined
-  const { data: answerOverlay } = useQuery({
-    queryKey: queryKeys.exam.answerOverlaySettings(examId ?? ""),
-    queryFn: examId
-      ? async () => {
-          const settings =
-            await window.electronAPI.settings.getExamExportSettings(examId)
-          return settings.answerOverlay
-        }
-      : skipToken,
+  const { data: exportSettings } = useQuery({
+    ...examExportSettingsQuery(examId ?? ""),
+    enabled: Boolean(examId),
   })
-  const scoringMarkConfig = answerOverlay ?? DEFAULT_ANSWER_OVERLAY_SETTINGS
+  const scoringMarkConfig =
+    exportSettings?.answerOverlay ?? DEFAULT_ANSWER_OVERLAY_SETTINGS
+  const { mutateAsync: toggleFavorite } = useMutation(
+    toggleAnnotationFavoriteMutation()
+  )
 
   // 現在表示中の採点データを取得
   const currentScoringData =
@@ -127,6 +126,7 @@ export default function AnswerIndividualView({
 
   // QuestionScore自動作成フック（設問表示時にQuestionScoreが存在しない場合は自動作成）
   const { currentQuestionScoreId } = useAutoCreateQuestionScore({
+    examId: examId ?? "",
     currentExamStudentId,
     currentCropRegionId: currentCropRegion?.id,
     currentUserId,
@@ -368,27 +368,25 @@ export default function AnswerIndividualView({
       for (const elementId of elementIds) {
         const isFavorite = favoriteElementIds.has(elementId)
         try {
-          const annotations = await window.electronAPI.drawing.toggleFavorite(
-            elementId,
-            !isFavorite
+          await toggleFavorite({
+            annotationId: elementId,
+            isFavorite: !isFavorite,
+          })
+          // 手元の描画要素は state が持つ（キャンバスの描き直しはここを見る）
+          drawingState.setDrawingElements(
+            (prev: typeof drawingState.drawingElements) =>
+              prev.map((element: (typeof prev)[number]) =>
+                element.id === elementId
+                  ? { ...element, isFavorite: !isFavorite }
+                  : element
+              )
           )
-          if (annotations) {
-            // ローカル状態を更新
-            drawingState.setDrawingElements(
-              (prev: typeof drawingState.drawingElements) =>
-                prev.map((element: (typeof prev)[number]) =>
-                  element.id === elementId
-                    ? { ...element, isFavorite: !isFavorite }
-                    : element
-                )
-            )
-          }
-        } catch (error) {
-          console.error("お気に入り切替エラー:", error)
+        } catch {
+          // 失敗の通知は MutationCache の後始末が出す
         }
       }
     },
-    [favoriteElementIds, drawingState]
+    [favoriteElementIds, drawingState, toggleFavorite]
   )
 
   // 模範解答オーバーレイ用の画像読み込み（全ページ）。

@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useRef, useState } from "react"
 
@@ -19,9 +20,15 @@ import { useIndividualReportPreview } from "@/components/exams/08-export/hooks/u
 import { useReturnDiff } from "@/components/exams/08-export/hooks/useReturnDiff"
 import { useScoredAnswerPdfExport } from "@/components/exams/08-export/hooks/useScoredAnswerPdfExport"
 import { useScoredAnswerPreview } from "@/components/exams/08-export/hooks/useScoredAnswerPreview"
+import { toStudentExportPlacements } from "@/components/exams/08-export/utils/studentExportPlacements"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { useAuth } from "@/contexts/AuthContext"
+import { administeredExamClassroomsQuery } from "@/queries/examClassroom"
+import {
+  recordUnresolvedConflictsMutation,
+  validateScoringDataMutation,
+} from "@/queries/export"
 import type {
   ConflictWarning,
   ScoringValidationWarnings,
@@ -88,6 +95,31 @@ export default function ExportMainView() {
     [selectedStudents]
   )
 
+  /**
+   * 出力に載せる学級情報（学年・学級名・出席番号）。
+   *
+   * 採番学級の解決は renderer が単一ソースで担う。取得はここが1回だけ行い、
+   * プレビューと書き出しの両方へ同じ値を渡す（下流それぞれが取りに行くと、
+   * 同じ学級を何度も引くうえ、経路ごとに解決結果がずれる）。
+   */
+  const { data: administeredClassrooms } = useQuery({
+    ...administeredExamClassroomsQuery(exam?.id ?? ""),
+    enabled: Boolean(exam?.id),
+  })
+  const studentPlacements = useMemo(
+    () => toStudentExportPlacements(administeredClassrooms ?? []),
+    [administeredClassrooms]
+  )
+
+  // `mutateAsync` だけを取り出す。`useMutation` の戻り値は毎レンダー別物なので、
+  // それを依存に入れると下流の effect が毎レンダー走る（R1 #1 と同じ形）
+  const { mutateAsync: validateScoringData } = useMutation(
+    validateScoringDataMutation()
+  )
+  const { mutateAsync: recordUnresolvedConflicts } = useMutation(
+    recordUnresolvedConflictsMutation()
+  )
+
   // 答案返却・差分（左カードのパネルと右カードの記録ボタンで状態を共有）
   const {
     diffByExamStudent,
@@ -128,9 +160,9 @@ export default function ExportMainView() {
     error: previewError,
   } = useIndividualReportPreview({
     examId: exam?.id || "",
-    selectedExamStudentIds,
     previewStudentId,
     options: individualReportOptions,
+    studentPlacements,
     enabled: !!exam?.id && selectedStudents.size > 0,
   })
 
@@ -142,6 +174,7 @@ export default function ExportMainView() {
   } = useExcelPreview({
     examId: exam?.id || "",
     selectedExamStudentIds,
+    studentPlacements,
     enabled:
       !!exam?.id && selectedStudents.size > 0 && exportTab === "grading-data",
     reloadKey: previewReloadKey,
@@ -186,7 +219,7 @@ export default function ExportMainView() {
       const acknowledged = acknowledgedConflictsRef.current
       if (!exam || !user || !acknowledged) return
       acknowledgedConflictsRef.current = null
-      await window.electronAPI.export.recordUnresolvedConflicts({
+      await recordUnresolvedConflicts({
         examId: exam.id,
         userId: user.id,
         exportType,
@@ -197,7 +230,7 @@ export default function ExportMainView() {
         scoreImpact: acknowledged.scoreImpact,
       })
     },
-    [exam, user]
+    [exam, recordUnresolvedConflicts, user]
   )
 
   // 採点済み答案の Canvas 描画ベース PDF 出力（ストリーミング処理）
@@ -234,6 +267,7 @@ export default function ExportMainView() {
     exam,
     selectedStudents,
     individualReportOptions,
+    studentPlacements,
     setIsExporting,
   })
 
@@ -251,10 +285,9 @@ export default function ExportMainView() {
         "ログイン情報を取得できませんでした。再ログインしてから出力してください"
       )
     }
-    const selectedExamStudentIds = Array.from(selectedStudents)
-    const result = await window.electronAPI.export.validateScoringData({
+    const result = await validateScoringData({
       examId: exam.id,
-      selectedExamStudentIds,
+      selectedExamStudentIds: Array.from(selectedStudents),
       userId: user.id,
     })
 

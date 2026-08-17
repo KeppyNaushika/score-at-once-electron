@@ -17,6 +17,7 @@ import { QuestionAssignmentRow } from "./QuestionAssignmentRow"
 import { ScoreDecisionForm } from "./ScoreDecisionForm"
 
 interface ScoreDecisionPanelProps {
+  examId: string
   isOpen: boolean
   onClose: () => void
   summary: ExamDecisionSummary | null
@@ -41,6 +42,7 @@ interface SelectedCell {
  * 作らず、誰に割り当てるか／どこまで進んだか／何を裁定するかを1枚で完結させる。
  */
 export function ScoreDecisionPanel({
+  examId,
   isOpen,
   onClose,
   summary,
@@ -114,6 +116,7 @@ export function ScoreDecisionPanel({
             {(summary?.questions ?? []).map((question) => (
               <QuestionAssignmentRow
                 key={question.cropRegionId}
+                examId={examId}
                 question={question}
                 members={summary?.members ?? []}
                 canManage={summary?.canDecide ?? false}
@@ -134,6 +137,7 @@ export function ScoreDecisionPanel({
             {selectedEntry ? (
               <ScoreDecisionForm
                 key={`${selectedEntry.cell.cropRegionId}:${selectedEntry.cell.examStudentId}`}
+                examId={examId}
                 cell={selectedEntry.cell}
                 questionLabel={selectedEntry.question.questionLabel}
                 maxScore={selectedEntry.question.maxScore}

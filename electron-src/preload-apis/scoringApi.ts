@@ -5,7 +5,6 @@ import { bind } from "./invoke"
 export function createScoringApi() {
   return {
     // QuestionScore related functions
-    getQuestionScore: bind("get-question-score"),
     getQuestionScoresForExam: bind("get-question-scores-for-exam"),
     createQuestionScore: bind("create-question-score"),
     updateQuestionScore: bind("update-question-score"),

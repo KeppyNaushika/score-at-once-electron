@@ -1,17 +1,26 @@
 "use client"
 
 import type { Exam } from "@prisma/client"
+import { useMutation } from "@tanstack/react-query"
 import type { Dispatch, SetStateAction } from "react"
 import { toast } from "sonner"
 
 import { generatePrintHtml } from "@/components/exams/08-export/components/individual-report/generatePrintHtml"
-import { loadStudentExportPlacements } from "@/components/exams/08-export/utils/loadStudentExportPlacements"
 import type { IndividualReportOptions } from "@/electron-src/lib/export/individual-report/types"
+import type { StudentExportPlacement } from "@/electron-src/lib/shared/types"
+import {
+  exportGradingDataExcelMutation,
+  exportRDataMutation,
+  fetchIndividualReportData,
+  openPrintDialogMutation,
+} from "@/queries/export"
 
 interface UseDataFileExportsParams {
   exam: Exam | null
   selectedStudents: Set<string>
   individualReportOptions: IndividualReportOptions
+  /** 採番学級から解いた出力用の学級情報。取得は呼び出し側が持つ */
+  studentPlacements: Record<string, StudentExportPlacement>
   setIsExporting: Dispatch<SetStateAction<boolean>>
 }
 
@@ -25,31 +34,32 @@ export function useDataFileExports({
   exam,
   selectedStudents,
   individualReportOptions,
+  studentPlacements,
   setIsExporting,
 }: UseDataFileExportsParams) {
+  const exportGradingDataExcel = useMutation(exportGradingDataExcelMutation())
+  const exportRData = useMutation(exportRDataMutation())
+  const openPrintDialog = useMutation(openPrintDialogMutation())
+
   /** @returns 出力が実際に完了したか（監査ログの記録可否の判断に使う） */
   const executeExportGradingData = async (): Promise<boolean> => {
     if (!exam) return false
     setIsExporting(true)
 
     try {
-      const selectedExamStudentIds = Array.from(selectedStudents)
-      const studentPlacements = await loadStudentExportPlacements(exam.id)
-
-      const result = await window.electronAPI.exportGradingDataExcel({
+      const result = await exportGradingDataExcel.mutateAsync({
         examId: exam.id,
-        selectedExamStudentIds,
+        selectedExamStudentIds: Array.from(selectedStudents),
         studentPlacements,
       })
 
       if (result.canceled) return false
-      alert(
-        `採点データExcelの出力が完了しました。\n保存先: ${result.outputPath}`
-      )
+      toast.success("採点データExcelを出力しました", {
+        description: result.outputPath,
+      })
       return true
-    } catch (error) {
-      console.error("Export error:", error)
-      alert("出力中にエラーが発生しました")
+    } catch {
+      // 失敗の通知は MutationCache の後始末が出す
       return false
     } finally {
       setIsExporting(false)
@@ -60,18 +70,16 @@ export function useDataFileExports({
     if (!exam) return
     setIsExporting(true)
     try {
-      const selectedExamStudentIds = Array.from(selectedStudents)
-      const result = await window.electronAPI.exportRData({
+      const result = await exportRData.mutateAsync({
         examId: exam.id,
-        selectedExamStudentIds,
+        selectedExamStudentIds: Array.from(selectedStudents),
         format,
       })
       if (!result.canceled) {
         toast.success(`分析用データを出力しました: ${result.outputPath}`)
       }
-    } catch (error) {
-      console.error("R data export error:", error)
-      toast.error("出力中にエラーが発生しました")
+    } catch {
+      // 失敗の通知は MutationCache の後始末が出す
     } finally {
       setIsExporting(false)
     }
@@ -83,17 +91,22 @@ export function useDataFileExports({
     setIsExporting(true)
 
     try {
-      const selectedExamStudentIds = Array.from(selectedStudents)
-      const studentPlacements = await loadStudentExportPlacements(exam.id)
-
-      // 1. データ取得（統計・アドバイス含む）
-      const reportData =
-        await window.electronAPI.export.getIndividualReportData({
+      // 1. データ取得（統計・アドバイス含む）。読み出しは書き込みではないので
+      //    共通の失敗トーストが付かない。ここで自分で知らせる
+      let reportData
+      try {
+        reportData = await fetchIndividualReportData({
           examId: exam.id,
-          selectedExamStudentIds,
+          selectedExamStudentIds: Array.from(selectedStudents),
           options: individualReportOptions,
           studentPlacements,
         })
+      } catch (error) {
+        toast.error("個人成績表のデータを取得できませんでした", {
+          description: error instanceof Error ? error.message : undefined,
+        })
+        return false
+      }
 
       // 2. HTMLを生成（プレビューと同じ構造）
       const html = generatePrintHtml(
@@ -102,18 +115,16 @@ export function useDataFileExports({
         individualReportOptions
       )
 
-      // 3. 印刷ダイアログを開く
-      await window.electronAPI.export.openPrintDialog({
-        html,
-        title: `個人成績表 - ${exam?.examName || ""}`,
-      })
+      // 3. 印刷ダイアログを開く（失敗の通知は MutationCache の後始末が出す）
+      try {
+        await openPrintDialog.mutateAsync({
+          html,
+          title: `個人成績表 - ${exam.examName}`,
+        })
+      } catch {
+        return false
+      }
       return true
-    } catch (error) {
-      console.error("Individual report export error:", error)
-      alert(
-        `エラー: ${error instanceof Error ? error.message : "不明なエラー"}`
-      )
-      return false
     } finally {
       setIsExporting(false)
     }

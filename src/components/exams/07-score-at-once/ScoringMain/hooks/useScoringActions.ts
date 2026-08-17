@@ -7,24 +7,12 @@
  * - 初期化処理
  */
 
-import { useCallback, useEffect } from "react"
-
-import type { SerializedQuestionScore } from "@/types/prismaExtensions"
+import { useCallback } from "react"
 
 /**
  * useScoringActionsの入力パラメータ
  */
 interface UseScoringActionsParams {
-  /** 試験ID */
-  examId: string
-  /** ローディング状態 */
-  loading: boolean
-  /** 試験情報（存在確認用） */
-  exam: unknown | null
-  /** 採点スコア読み込み関数 */
-  loadQuestionScores: (examId: string) => Promise<SerializedQuestionScore[]>
-  /** 採点スコア設定関数 */
-  setQuestionScores: (scores: SerializedQuestionScore[]) => void
   /** 表示設定: 生徒名表示状態 */
   showStudentNames: boolean
   /** 表示設定: 生徒名表示設定関数 */
@@ -57,34 +45,11 @@ export function useScoringActions(
   params: UseScoringActionsParams
 ): UseScoringActionsReturn {
   const {
-    examId,
-    loading,
-    exam,
-    loadQuestionScores,
-    setQuestionScores,
     showStudentNames,
     setShowStudentNames,
     setItemsPerLine,
     setAutoScroll,
   } = params
-
-  /**
-   * 採点データの初期化
-   */
-  useEffect(() => {
-    const initializeGradingData = async () => {
-      if (!loading && exam) {
-        try {
-          const existingScores = await loadQuestionScores(examId)
-          setQuestionScores(existingScores)
-        } catch (error) {
-          console.error("Failed to initialize grading data:", error)
-        }
-      }
-    }
-
-    initializeGradingData()
-  }, [examId, loading, exam, loadQuestionScores, setQuestionScores])
 
   /**
    * 生徒名表示切り替えハンドラー

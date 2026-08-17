@@ -98,9 +98,6 @@ export const miscHandlers = {
     return await uploadStudentAnswers(examId, filesData)
   },
 
-  "get-answer-sheets-by-exam-id": (examId: string) =>
-    getStudentAnswersByExamId(examId),
-
   // 06 生徒答案ページ専用の複合データセット（Exam 根の 1 include）
   "get-student-answers-dataset": (examId: string) =>
     getStudentAnswersDataset(examId),

@@ -1,7 +1,14 @@
 "use client"
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo, useState } from "react"
 
+import {
+  annotationsForBrowseQuery,
+  batchCreateAnnotationsMutation,
+  createAnnotationMutation,
+  toggleAnnotationFavoriteMutation,
+} from "@/queries/drawing"
 import type {
   AnnotationWithContext,
   DrawingAnnotation,
@@ -129,17 +136,25 @@ interface UseAnnotationBrowserReturn {
   isLoading: boolean
   filters: AnnotationFilters
   setFilters: (partial: Partial<AnnotationFilters>) => void
-  loadAnnotations: (examId: string) => Promise<void>
+  reload: () => Promise<void>
   toggleFavorite: (id: string, currentFavorite: boolean) => Promise<void>
   addToTargets: (params: AddToTargetsParams) => Promise<AddToTargetsResult>
 }
 
-/** アノテーション一覧の取得・フィルタリング・重複省略・お気に入り・一括追加を管理するフック */
-export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
-  const [allAnnotations, setAllAnnotations] = useState<AnnotationWithContext[]>(
-    []
-  )
-  const [isLoading, setIsLoading] = useState(false)
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_ANNOTATIONS: AnnotationWithContext[] = []
+
+/**
+ * アノテーション一覧の取得・フィルタリング・重複省略・お気に入り・一括追加を
+ * 管理するフック。
+ *
+ * 一覧はキャッシュが持つ。書き込みは注釈のまとまりを取り直すので、追加や
+ * お気に入りの切り替えのあとに手元の配列をつつく必要はない。
+ */
+export function useAnnotationBrowser(
+  examId: string
+): UseAnnotationBrowserReturn {
+  const queryClient = useQueryClient()
   const [filters, setFiltersState] = useState<AnnotationFilters>({
     cropRegionId: null,
     examStudentId: null,
@@ -151,19 +166,29 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
     setFiltersState((prev) => ({ ...prev, ...partial }))
   }, [])
 
-  const loadAnnotations = useCallback(async (examId: string) => {
-    setIsLoading(true)
-    try {
-      const annotations = await window.electronAPI.drawing.getForBrowse(examId)
-      if (annotations) {
-        setAllAnnotations(annotations)
-      }
-    } catch (error) {
-      console.error("アノテーション読み込みエラー:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+  const { data: allAnnotations = EMPTY_ANNOTATIONS, isPending: isLoading } =
+    useQuery({
+      ...annotationsForBrowseQuery(examId),
+      enabled: Boolean(examId),
+    })
+
+  const queryKey = useMemo(
+    () => annotationsForBrowseQuery(examId).queryKey,
+    [examId]
+  )
+  const reload = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey })
+  }, [queryClient, queryKey])
+
+  const { mutateAsync: toggleAnnotationFavorite } = useMutation(
+    toggleAnnotationFavoriteMutation()
+  )
+  const { mutateAsync: createAnnotation } = useMutation(
+    createAnnotationMutation()
+  )
+  const { mutateAsync: batchCreateAnnotations } = useMutation(
+    batchCreateAnnotationsMutation()
+  )
 
   // フィルタ + 重複省略後の表示リスト
   const displayItems = useMemo(() => {
@@ -234,25 +259,15 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
   const toggleFavorite = useCallback(
     async (id: string, currentFavorite: boolean) => {
       try {
-        const annotations = await window.electronAPI.drawing.toggleFavorite(
-          id,
-          !currentFavorite
-        )
-        if (annotations) {
-          // ローカル状態を即時更新
-          setAllAnnotations((prev) =>
-            prev.map((annotation) =>
-              annotation.id === id
-                ? { ...annotation, isFavorite: !currentFavorite }
-                : annotation
-            )
-          )
-        }
-      } catch (error) {
-        console.error("お気に入り切替エラー:", error)
+        await toggleAnnotationFavorite({
+          annotationId: id,
+          isFavorite: !currentFavorite,
+        })
+      } catch {
+        // 失敗の通知と取り直しは MutationCache の後始末が担う
       }
     },
-    []
+    [toggleAnnotationFavorite]
   )
 
   const addToTargets = useCallback(
@@ -321,22 +336,17 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
 
       try {
         if (newAnnotations.length === 1) {
-          const created = await window.electronAPI.drawing.create(
-            newAnnotations[0]
-          )
-          setAllAnnotations((prev) => [created, ...prev])
-        } else if (newAnnotations.length > 1) {
-          const created =
-            await window.electronAPI.drawing.batchCreate(newAnnotations)
-          setAllAnnotations((prev) => [...created, ...prev])
+          await createAnnotation(newAnnotations[0])
+        } else {
+          await batchCreateAnnotations(newAnnotations)
         }
         return { created: newAnnotations.length, skipped }
-      } catch (error) {
-        console.error("アノテーション追加エラー:", error)
+      } catch {
+        // 失敗の通知と取り直しは MutationCache の後始末が担う
         return { created: 0, skipped }
       }
     },
-    [allAnnotations]
+    [allAnnotations, batchCreateAnnotations, createAnnotation]
   )
 
   return {
@@ -345,7 +355,7 @@ export function useAnnotationBrowser(): UseAnnotationBrowserReturn {
     isLoading,
     filters,
     setFilters,
-    loadAnnotations,
+    reload,
     toggleFavorite,
     addToTargets,
   }

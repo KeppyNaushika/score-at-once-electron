@@ -5,7 +5,7 @@
  * ブラウザパネルでのアノテーション再レンダリングパターンを検証：
  *
  * [初回読み込み / 試験切り替え]
- *   - loadAnnotations(examId) → getForBrowseで試験全体のアノテーション取得
+ *   - examId → getForBrowseで試験全体のアノテーション取得
  *
  * [フィルタ変更]
  *   - cropRegionId / examStudentId / type / favoritesOnlyフィルタ → displayItemsの再計算
@@ -14,17 +14,14 @@
  *   - 同一プロパティのアノテーションをグループ化して表示（count + representative）
  *
  * [お気に入り切り替え]
- *   - toggleFavorite → ローカル状態更新 + ソート順変更
+ *   - toggleFavorite → 書き込み後に一覧を取り直す（手元の配列はつつかない）
  *
  * [アノテーション追加]
- *   - addToTargets → create/batchCreate + ローカル状態に追加
+ *   - addToTargets → create/batchCreate
  *   - 同一設問 → 元の位置、異設問 → 中央配置
- *
- * [重複アノテーション追加]
- *   - 同一questionScoreIdに同一プロパティで追加 → displayItems上はcount増加
  */
 
-import { act, renderHook } from "@testing-library/react"
+import { act, renderHook, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -33,6 +30,7 @@ import {
 } from "@/components/exams/07-score-at-once/ScoringSidePanel/hooks/useAnnotationBrowser"
 import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 
+import { createQueryWrapper } from "../../../helpers/queryWrapper"
 import {
   cleanupMockDrawingAPI,
   createMockAnnotation,
@@ -64,6 +62,13 @@ function createMockAnnotationWithContext(
   } as AnnotationWithContext
 }
 
+/** 一覧が取れるまで待ってからフックを返す */
+function renderBrowser(examId = "exam-1") {
+  return renderHook(() => useAnnotationBrowser(examId), {
+    wrapper: createQueryWrapper(),
+  })
+}
+
 describe("useAnnotationBrowser", () => {
   let mockAPI: MockDrawingAPI
 
@@ -77,45 +82,44 @@ describe("useAnnotationBrowser", () => {
   })
 
   // =========================================================================
-  // loadAnnotations — 試験全体の読み込み
+  // 一覧の取得
   // =========================================================================
-  describe("loadAnnotations（試験全体の読み込み）", () => {
+  describe("一覧の取得", () => {
     it("examIdで試験全体のアノテーションを取得する", async () => {
-      const annotations = [
+      mockAPI.getForBrowse.mockResolvedValue([
         createMockAnnotationWithContext({ id: "a1" }),
         createMockAnnotationWithContext({ id: "a2" }),
-      ]
-      mockAPI.getForBrowse.mockResolvedValue(annotations)
+      ])
 
-      const { result } = renderHook(() => useAnnotationBrowser())
+      const { result } = renderBrowser()
 
-      await act(async () => {
-        await result.current.loadAnnotations("exam-1")
+      await waitFor(() => {
+        expect(result.current.allAnnotations).toHaveLength(2)
       })
-
       expect(mockAPI.getForBrowse).toHaveBeenCalledWith("exam-1")
-      expect(result.current.allAnnotations).toHaveLength(2)
     })
 
-    it("再読み込みでallAnnotationsが完全に置換される", async () => {
-      const { result } = renderHook(() => useAnnotationBrowser())
-
+    it("reload で取り直すと一覧が置き換わる", async () => {
       mockAPI.getForBrowse.mockResolvedValue([
         createMockAnnotationWithContext({ id: "a1" }),
       ])
-      await act(async () => {
-        await result.current.loadAnnotations("exam-1")
+
+      const { result } = renderBrowser()
+      await waitFor(() => {
+        expect(result.current.allAnnotations).toHaveLength(1)
       })
-      expect(result.current.allAnnotations).toHaveLength(1)
 
       mockAPI.getForBrowse.mockResolvedValue([
         createMockAnnotationWithContext({ id: "b1" }),
         createMockAnnotationWithContext({ id: "b2" }),
       ])
       await act(async () => {
-        await result.current.loadAnnotations("exam-1")
+        await result.current.reload()
       })
-      expect(result.current.allAnnotations).toHaveLength(2)
+
+      await waitFor(() => {
+        expect(result.current.allAnnotations).toHaveLength(2)
+      })
     })
   })
 
@@ -145,12 +149,10 @@ describe("useAnnotationBrowser", () => {
         } as Partial<AnnotationWithContext>),
       ])
 
-      const { result } = renderHook(() => useAnnotationBrowser())
-      await act(async () => {
-        await result.current.loadAnnotations("exam-1")
+      const { result } = renderBrowser()
+      await waitFor(() => {
+        expect(result.current.allAnnotations).toHaveLength(2)
       })
-
-      // フィルタなし
       expect(result.current.displayItems).toHaveLength(2)
 
       // cr-1のみ
@@ -172,9 +174,9 @@ describe("useAnnotationBrowser", () => {
         createMockAnnotationWithContext({ id: "l1", type: "line" }),
       ])
 
-      const { result } = renderHook(() => useAnnotationBrowser())
-      await act(async () => {
-        await result.current.loadAnnotations("exam-1")
+      const { result } = renderBrowser()
+      await waitFor(() => {
+        expect(result.current.allAnnotations).toHaveLength(2)
       })
 
       act(() => {
@@ -190,9 +192,9 @@ describe("useAnnotationBrowser", () => {
         createMockAnnotationWithContext({ id: "a2", isFavorite: false }),
       ])
 
-      const { result } = renderHook(() => useAnnotationBrowser())
-      await act(async () => {
-        await result.current.loadAnnotations("exam-1")
+      const { result } = renderBrowser()
+      await waitFor(() => {
+        expect(result.current.allAnnotations).toHaveLength(2)
       })
 
       act(() => {
@@ -209,36 +211,35 @@ describe("useAnnotationBrowser", () => {
   // 重複グルーピング
   // =========================================================================
   describe("重複グルーピング", () => {
-    it("同一プロパティのアノテーションがグループ化される", async () => {
-      // x, y, type, text, color, strokeWidth, fontSize, lineStyle, width, height, endX, endY, cropRegionIdが同一
-      const baseProps = {
-        type: "text" as const,
-        text: "テスト",
-        color: "#ef4444",
-        strokeWidth: 3,
-        fontSize: 16,
-        lineStyle: "solid" as const,
-        x: 0.1,
-        y: 0.2,
-        width: 0,
-        height: 0,
-        endX: 0,
-        endY: 0,
-      }
+    // x, y, type, text, color, strokeWidth, fontSize, lineStyle, width, height, endX, endY, cropRegionIdが同一
+    const baseProps = {
+      type: "text" as const,
+      text: "テスト",
+      color: "#ef4444",
+      strokeWidth: 3,
+      fontSize: 16,
+      lineStyle: "solid" as const,
+      x: 0.1,
+      y: 0.2,
+      width: 0,
+      height: 0,
+      endX: 0,
+      endY: 0,
+    }
 
+    it("同一プロパティのアノテーションがグループ化される", async () => {
       mockAPI.getForBrowse.mockResolvedValue([
         createMockAnnotationWithContext({ id: "a1", ...baseProps }),
         createMockAnnotationWithContext({ id: "a2", ...baseProps }),
         createMockAnnotationWithContext({ id: "a3", ...baseProps }),
       ])
 
-      const { result } = renderHook(() => useAnnotationBrowser())
-      await act(async () => {
-        await result.current.loadAnnotations("exam-1")
-      })
+      const { result } = renderBrowser()
 
       // 3件が1グループにまとまる
-      expect(result.current.displayItems).toHaveLength(1)
+      await waitFor(() => {
+        expect(result.current.displayItems).toHaveLength(1)
+      })
       expect(result.current.displayItems[0].count).toBe(3)
       expect(result.current.displayItems[0].allIds).toHaveLength(3)
     })
@@ -257,32 +258,16 @@ describe("useAnnotationBrowser", () => {
         }),
       ])
 
-      const { result } = renderHook(() => useAnnotationBrowser())
-      await act(async () => {
-        await result.current.loadAnnotations("exam-1")
-      })
+      const { result } = renderBrowser()
 
-      expect(result.current.displayItems).toHaveLength(2)
+      await waitFor(() => {
+        expect(result.current.displayItems).toHaveLength(2)
+      })
       expect(result.current.displayItems[0].count).toBe(1)
       expect(result.current.displayItems[1].count).toBe(1)
     })
 
     it("グループ内にお気に入りが1件でもあればisFavorite=true", async () => {
-      const baseProps = {
-        type: "text" as const,
-        text: "テスト",
-        color: "#ef4444",
-        strokeWidth: 3,
-        fontSize: 16,
-        lineStyle: "solid" as const,
-        x: 0.1,
-        y: 0.2,
-        width: 0,
-        height: 0,
-        endX: 0,
-        endY: 0,
-      }
-
       mockAPI.getForBrowse.mockResolvedValue([
         createMockAnnotationWithContext({
           id: "a1",
@@ -296,11 +281,11 @@ describe("useAnnotationBrowser", () => {
         }),
       ])
 
-      const { result } = renderHook(() => useAnnotationBrowser())
-      await act(async () => {
-        await result.current.loadAnnotations("exam-1")
-      })
+      const { result } = renderBrowser()
 
+      await waitFor(() => {
+        expect(result.current.displayItems).toHaveLength(1)
+      })
       expect(result.current.displayItems[0].isFavorite).toBe(true)
     })
   })
@@ -309,24 +294,30 @@ describe("useAnnotationBrowser", () => {
   // toggleFavorite
   // =========================================================================
   describe("toggleFavorite（お気に入り切り替え）", () => {
-    it("ローカル状態が即時更新される", async () => {
+    it("書き込んだあと一覧を取り直す（手元の配列はつつかない）", async () => {
       mockAPI.getForBrowse.mockResolvedValue([
         createMockAnnotationWithContext({ id: "a1", isFavorite: false }),
       ])
 
-      const { result } = renderHook(() => useAnnotationBrowser())
-      await act(async () => {
-        await result.current.loadAnnotations("exam-1")
+      const { result } = renderBrowser()
+      await waitFor(() => {
+        expect(result.current.allAnnotations).toHaveLength(1)
       })
-
       expect(result.current.allAnnotations[0].isFavorite).toBe(false)
+
+      // DB が変わったことにする。取り直しでこれが載る
+      mockAPI.getForBrowse.mockResolvedValue([
+        createMockAnnotationWithContext({ id: "a1", isFavorite: true }),
+      ])
 
       await act(async () => {
         await result.current.toggleFavorite("a1", false)
       })
 
-      expect(result.current.allAnnotations[0].isFavorite).toBe(true)
       expect(mockAPI.toggleFavorite).toHaveBeenCalledWith("a1", true)
+      await waitFor(() => {
+        expect(result.current.allAnnotations[0].isFavorite).toBe(true)
+      })
     })
   })
 
@@ -335,7 +326,10 @@ describe("useAnnotationBrowser", () => {
   // =========================================================================
   describe("addToTargets（アノテーション追加）", () => {
     it("単一ターゲットにcreateで追加される", async () => {
-      const { result } = renderHook(() => useAnnotationBrowser())
+      const { result } = renderBrowser()
+      await waitFor(() => {
+        expect(mockAPI.getForBrowse).toHaveBeenCalled()
+      })
 
       const source = createMockAnnotationWithContext({
         id: "source-1",
@@ -358,17 +352,16 @@ describe("useAnnotationBrowser", () => {
       // 同一設問なので元の位置を保持
       expect(mockAPI.create.mock.calls[0][0].x).toBe(0.3)
       expect(mockAPI.create.mock.calls[0][0].y).toBe(0.4)
-
-      // ローカル状態に追加
-      expect(result.current.allAnnotations).toHaveLength(1)
     })
 
     it("複数ターゲットにbatchCreateで追加される", async () => {
-      const { result } = renderHook(() => useAnnotationBrowser())
+      const { result } = renderBrowser()
+      await waitFor(() => {
+        expect(mockAPI.getForBrowse).toHaveBeenCalled()
+      })
 
-      const source = createMockAnnotationWithContext({ id: "source-1" })
       const params: AddToTargetsParams = {
-        sourceAnnotation: source,
+        sourceAnnotation: createMockAnnotationWithContext({ id: "source-1" }),
         targetQuestionScoreIds: ["qs-1", "qs-2", "qs-3"],
         targetCropRegionId: "cr-1",
         sourceCropRegionId: "cr-1",
@@ -380,11 +373,13 @@ describe("useAnnotationBrowser", () => {
 
       expect(mockAPI.batchCreate).toHaveBeenCalledTimes(1)
       expect(mockAPI.batchCreate.mock.calls[0][0]).toHaveLength(3)
-      expect(result.current.allAnnotations).toHaveLength(3)
     })
 
     it("異設問への追加時に中央配置される（line型）", async () => {
-      const { result } = renderHook(() => useAnnotationBrowser())
+      const { result } = renderBrowser()
+      await waitFor(() => {
+        expect(mockAPI.getForBrowse).toHaveBeenCalled()
+      })
 
       const source = createMockAnnotationWithContext({
         id: "source-1",
@@ -413,7 +408,10 @@ describe("useAnnotationBrowser", () => {
     })
 
     it("異設問への追加時に中央配置される（rect型）", async () => {
-      const { result } = renderHook(() => useAnnotationBrowser())
+      const { result } = renderBrowser()
+      await waitFor(() => {
+        expect(mockAPI.getForBrowse).toHaveBeenCalled()
+      })
 
       const source = createMockAnnotationWithContext({
         id: "source-1",
@@ -442,7 +440,10 @@ describe("useAnnotationBrowser", () => {
     })
 
     it("ターゲットが空配列の場合は何も行わない", async () => {
-      const { result } = renderHook(() => useAnnotationBrowser())
+      const { result } = renderBrowser()
+      await waitFor(() => {
+        expect(mockAPI.getForBrowse).toHaveBeenCalled()
+      })
 
       const params: AddToTargetsParams = {
         sourceAnnotation: createMockAnnotationWithContext(),
@@ -480,12 +481,12 @@ describe("useAnnotationBrowser", () => {
         }),
       ])
 
-      const { result } = renderHook(() => useAnnotationBrowser())
-      await act(async () => {
-        await result.current.loadAnnotations("exam-1")
-      })
+      const { result } = renderBrowser()
 
       // お気に入りが先
+      await waitFor(() => {
+        expect(result.current.displayItems).toHaveLength(2)
+      })
       expect(result.current.displayItems[0].representative.text).toBe(
         "お気に入り"
       )

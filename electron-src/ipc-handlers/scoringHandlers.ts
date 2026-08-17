@@ -22,7 +22,6 @@ import {
   type BatchScoreEntry,
   batchUpdateQuestionScores,
   createQuestionScore,
-  getQuestionScoreById,
   getQuestionScoresForExam,
   SCORE_TARGET_DELETED,
   updateQuestionScore,
@@ -64,11 +63,6 @@ export const scoringHandlers = {
   "get-question-scores-for-exam": async (examId: string, userId?: string) => {
     const scores = await getQuestionScoresForExam(examId, userId)
     return scores.map(serializeScore)
-  },
-
-  "get-question-score": async (id: string) => {
-    const score = await getQuestionScoreById(id)
-    return score ? serializeScore(score) : null
   },
 
   "create-question-score": async (data: CreateQuestionScoreData) =>

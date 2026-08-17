@@ -1,22 +1,22 @@
 "use client"
 
-import { skipToken, useQuery } from "@tanstack/react-query"
-import { useEffect, useRef } from "react"
+import { useQuery } from "@tanstack/react-query"
 
-import { loadStudentExportPlacements } from "@/components/exams/08-export/utils/loadStudentExportPlacements"
 import type {
   IndividualReportData,
   IndividualReportOptions,
   ReportPopulation,
 } from "@/electron-src/lib/export/individual-report/types"
-import { queryKeys } from "@/lib/queryKeys"
+import type { StudentExportPlacement } from "@/electron-src/lib/shared/types"
+import { individualReportPreviewQuery } from "@/queries/export"
 
 interface UseIndividualReportPreviewOptions {
   examId: string
-  selectedExamStudentIds: string[]
   /** プレビュー対象の生徒。個人成績表と採点済み答案で共通なので呼び出し側が持つ */
   previewStudentId: string | null
   options: IndividualReportOptions
+  /** 採番学級から解いた出力用の学級情報。取得は呼び出し側が持つ */
+  studentPlacements: Record<string, StudentExportPlacement>
   enabled?: boolean
 }
 
@@ -33,62 +33,47 @@ interface UseIndividualReportPreviewResult {
 }
 
 /**
- * 個人成績表プレビュー用のフック
- * 選択された生徒の中から1人分のプレビューデータを取得
- * 表示オプションの変更では再取得せず、リアルタイムでプレビューに反映
+ * 個人成績表プレビュー用のフック。
+ *
+ * 表示オプションは取得の引数だが**変わっても取り直さない**（小計点グループの
+ * 選択などは renderer 側で絞り込むため）。キーに入れていないので、次に取りに
+ * 行くときだけ最新が使われる。
  */
 export function useIndividualReportPreview({
   examId,
   previewStudentId,
   options,
+  studentPlacements,
   enabled = true,
 }: UseIndividualReportPreviewOptions): UseIndividualReportPreviewResult {
-  /**
-   * 表示オプションは取得の引数だが、**変わっても取り直さない**
-   * （小計点グループの選択などは renderer 側でフィルタするため）。
-   * 取得時に最新を読むだけなので ref で持つ（クエリキーには入れない）。
-   */
-  const optionsRef = useRef(options)
-  useEffect(() => {
-    optionsRef.current = options
-  })
-
   const {
-    data: previewReport = null,
+    data: reportData,
     isPending,
     error,
   } = useQuery({
-    // 取り直すのは対象生徒が変わったときだけ
-    queryKey: queryKeys.exam.individualReportPreview(
+    ...individualReportPreviewQuery(
       examId,
-      previewStudentId ?? ""
+      previewStudentId ?? "",
+      options,
+      studentPlacements
     ),
-    queryFn:
-      enabled && examId && previewStudentId
-        ? async (): Promise<PreviewReport> => {
-            const studentPlacements = await loadStudentExportPlacements(examId)
-            const result =
-              await window.electronAPI.export.getIndividualReportData({
-                examId,
-                selectedExamStudentIds: [previewStudentId],
-                options: optionsRef.current,
-                studentPlacements,
-              })
-            if (result.reports.length === 0) {
-              throw new Error("プレビュー対象の生徒が見つかりませんでした")
-            }
-            return {
-              report: result.reports[0],
-              population: result.population,
-            }
-          }
-        : skipToken,
+    enabled: enabled && Boolean(examId) && Boolean(previewStudentId),
   })
 
+  // 1人ぶんだけ頼んでいるので、返ってくるのも1件。畳むのは取得ではなく計算
+  const firstReport = reportData?.reports[0]
+
   return {
-    previewReport,
+    previewReport:
+      reportData && firstReport
+        ? { report: firstReport, population: reportData.population }
+        : null,
     // 対象生徒が無いときは待たせない
     isLoading: Boolean(enabled && previewStudentId) && isPending,
-    error: error?.message ?? null,
+    error:
+      error?.message ??
+      (reportData && !firstReport
+        ? "プレビュー対象の生徒が見つかりませんでした"
+        : null),
   }
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQueries } from "@tanstack/react-query"
+import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query"
 import Head from "next/head"
 import { useParams, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -46,6 +46,7 @@ import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { useAuth } from "@/contexts/AuthContext"
 import { resolveExamPaperSize } from "@/electron-src/lib/shared/utilities/examPaperSize"
+import { questionScoresForExamQuery } from "@/queries/scoring"
 import {
   setUserPreferenceMutation,
   userPreferenceQuery,
@@ -59,6 +60,7 @@ function ScoringMainViewContent() {
   const { user: authUser } = useAuth()
   const { helpButton } = usePageHelp()
   const { keyBindings } = useShortcutContext()
+  const queryClient = useQueryClient()
 
   /** 操作モード管理 */
   const {
@@ -233,24 +235,29 @@ function ScoringMainViewContent() {
   })
 
   /** 採点データ管理hook */
-  const {
-    questionScores,
-    setQuestionScores,
-    loadQuestionScores,
-    handleBatchScore,
-    calculateQuestionProgress,
-  } = useScoringData({
-    currentUserId,
-    currentCropRegionId,
-    studentAnswerImages,
-    cropRegions,
-  })
+  const { questionScores, handleBatchScore, calculateQuestionProgress } =
+    useScoringData({
+      examId,
+      currentUserId,
+      currentCropRegionId,
+      studentAnswerImages,
+      cropRegions,
+    })
 
-  /** QuestionScore作成後のリロードコールバック */
+  /**
+   * 採点行を取り直す。
+   *
+   * 採点の書き込みは自分で取り直すので、これが要るのは**手で頼まれたとき**
+   * （裁定パネルの再読み込みボタン・OMR の取り込み後）だけである。
+   */
+  const questionScoresKey = useMemo(
+    () =>
+      questionScoresForExamQuery(examId, currentUserId ?? undefined).queryKey,
+    [examId, currentUserId]
+  )
   const handleQuestionScoreCreated = useCallback(async () => {
-    const scores = await loadQuestionScores(examId)
-    setQuestionScores(scores)
-  }, [loadQuestionScores, examId, setQuestionScores])
+    await queryClient.invalidateQueries({ queryKey: questionScoresKey })
+  }, [queryClient, questionScoresKey])
 
   /** 裁定状況（採点者間の食い違い・確定後の新提案） */
   const {
@@ -432,11 +439,6 @@ function ScoringMainViewContent() {
     handleItemsPerLineChange,
     handleAutoScrollChange,
   } = useScoringActions({
-    examId,
-    loading,
-    exam,
-    loadQuestionScores,
-    setQuestionScores,
     showStudentNames,
     setShowStudentNames,
     setItemsPerLine,
@@ -889,6 +891,7 @@ function ScoringMainViewContent() {
 
       {/* 採点結果の確定（裁定）パネル */}
       <ScoreDecisionPanel
+        examId={examId}
         isOpen={showScoreDecisionPanel}
         onClose={() => setShowScoreDecisionPanel(false)}
         summary={decisionSummary}

@@ -10,6 +10,7 @@ import type {
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
+import { checkFileExists } from "@/queries/misc"
 
 import type { ImageLoaderReturn } from "./types"
 
@@ -84,8 +85,7 @@ export function useImageLoader({
           }
 
           // ファイル存在確認して読み込み（appimg:///プロトコル使用）
-          window.electronAPI
-            .checkFileExists(imageInfo.path)
+          checkFileExists(imageInfo.path)
             .then((result) => {
               if (result.exists) {
                 // 相対パスを使用（appimg:// プロトコルハンドラー内で絶対パスに変換される）

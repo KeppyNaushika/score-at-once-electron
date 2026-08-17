@@ -7,6 +7,7 @@
 import { mmToPixels } from "@/lib/paperSize"
 import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
 import { convertTextToSvg } from "@/lib/textbox-canvas/textConversionUtils"
+import { convertSvgToPng } from "@/queries/export"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 /**
@@ -93,9 +94,7 @@ export async function drawElement(
             }
 
             // SVG→PNG変換（Canvas taint問題を回避するためmainプロセスで実行）
-            const result = await window.electronAPI.export.convertSvgToPng({
-              svgString: svgData,
-            })
+            const result = await convertSvgToPng({ svgString: svgData })
 
             const img = new Image()
             await new Promise<void>((resolve, reject) => {

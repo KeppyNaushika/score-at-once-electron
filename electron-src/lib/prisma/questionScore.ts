@@ -148,30 +148,6 @@ export const getQuestionScoresForExam = async (
 }
 
 /**
- * 単一の採点データをIDで取得
- * @param id QuestionScoreのID
- */
-export const getQuestionScoreById = async (id: string) => {
-  try {
-    const score = await prisma.questionScore.findUnique({
-      where: { id },
-      include: {
-        examStudent: { include: { student: true } },
-        cropRegion: true,
-        user: true,
-      },
-    })
-
-    // 見つからないのは失敗ではない。協調採点では他教員が答案ごと削除した後に
-    // 引かれることがあり、呼び出し側はそれを「消えた」と読む
-    return score
-  } catch (error) {
-    console.error("Failed to get question score by id:", error)
-    throw error
-  }
-}
-
-/**
  * 採点データを作成
  */
 export const createQuestionScore = async (data: CreateQuestionScoreData) => {

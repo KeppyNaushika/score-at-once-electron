@@ -519,13 +519,9 @@ function scan(): Scan {
 /**
  * 既知の未修正。**増やさないこと。**
  *
- * 08-export の出力設定は、設定を意図へ割ってデバウンスごと撤去する予定なので、
- * 依存配列だけを直す暫定対応を入れていない。詳細は
- * docs/ipc-and-data-fetching-plan.md 段階9。
+ * 段階12 で 08-export のデバウンスごと消えたので、今は空。
  */
-const KNOWN_UNSTABLE_EFFECTS = [
-  "src/components/exams/08-export/hooks/useExportPage.ts:190: flushSettings",
-]
+const KNOWN_UNSTABLE_EFFECTS: string[] = []
 
 describe("クエリキーの規約", () => {
   let scanned: Scan

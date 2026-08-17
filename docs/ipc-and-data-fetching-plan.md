@@ -950,13 +950,13 @@ src/queries/keys.ts              ← 前方一致の「まとまり」だけ
 
 #### この移行で一緒に片付くもの
 
-| 課題                               | どう片付くか                                            |
-| ---------------------------------- | ------------------------------------------------------- |
-| 段階9 #3（08-export のデバウンス） | 設定を意図へ割ると、デバウンスごと不要になる（段階12）  |
-| 段階9 #5（タグの担当者ガード漏れ） | 書き込みが `src/queries/` に集まるとガードも1箇所       |
-| `.tsx` からの直接 IPC 呼び出し     | 定義上ゼロになる                                        |
-| 業務データの `$transaction`        | 意図へ割ると要らなくなる（並べ替えとバルクを除く）      |
-| **複数 IPC を束ねた読み**          | **解体する。** main に束ねる1本を足すのではない（下記） |
+| 課題                               | どう片付くか                                               |
+| ---------------------------------- | ---------------------------------------------------------- |
+| 段階9 #3（08-export のデバウンス） | 撤去済み（段階12。理由は当初の見立てと違った・同節を参照） |
+| 段階9 #5（タグの担当者ガード漏れ） | 書き込みが `src/queries/` に集まるとガードも1箇所          |
+| `.tsx` からの直接 IPC 呼び出し     | 定義上ゼロになる                                           |
+| 業務データの `$transaction`        | 意図へ割ると要らなくなる（並べ替えとバルクを除く）         |
+| **複数 IPC を束ねた読み**          | **解体する。** main に束ねる1本を足すのではない（下記）    |
 
 **束ねた読みは解体する。** 当初は「main に画面の木を返す1本を足して吸収する」と書いて
 いたが、実際にやったのは逆で、`queryFn` は境界の返り値をそのまま返す形へ割った
@@ -1036,14 +1036,14 @@ main は既に `src/types/` から型を引いているので前例があり、�
 | `subtotal`                                         | **完了**（04 の束ね取得を解体・割り当ての書き込みを1本に）         |
 | `auth` / `settings` / `sync` / `auditLog` / `misc` | **完了**（トークンと利用者一覧の束ねを解体）                       |
 | `pdfTools` / `archive`                             | **完了**                                                           |
-| `exam` 系                                          | **01〜06 と詳細・パンくずが完了。07・08 が残り**                   |
+| `exam` 系                                          | **完了**（07・08 は段階12 で移った）                               |
+| `scoring` / `drawing`                              | **完了**（段階12 で新設）                                          |
 | `answer-sheet-builder`                             | **段階13** へ（[IPC 分割](./asb-ipc-split-plan.md)は前提ではない） |
 
-**段階12以降へ送った残り 49ファイル**（`NOT_YET_MIGRATED`）。
+**残り 20ファイル**（`NOT_YET_MIGRATED`。段階12 で 29 減った）。
 
 | 場所                              | 数  | 送り先 |
 | --------------------------------- | --- | ------ |
-| `components/exams`（07 と 08）    | 29  | 段階12 |
 | `components/answer-sheet-builder` | 10  | 段階13 |
 | `app`                             | 4   | 段階13 |
 | その他                            | 6   | 段階13 |
@@ -1259,18 +1259,84 @@ unique は張れず（id 以外の unique は同期違反）、同期のマー�
 「何もしない関数」を渡していた `ScoringSidePanel`）、`forget` が行の全欄を捨てて
 いた1件、事実と逆のコメント1件、番号飛びを作れていないテスト1件。
 
-### 段階12 — 採点(07)と出力(08)を移す
+### 段階12 — 採点(07)と出力(08)を移す（完了）
 
 **対象 29ファイル**（`NOT_YET_MIGRATED` の `07-score-at-once` 18 と `08-export` 11）。
-段階10 の「手順（1ドメインずつ）」をそのまま使う。
+段階10 の「手順（1ドメインずつ）」をそのまま使った。
 
-- 最後の束ね取得は `useScoringDataLoader`（07）と `useExportPage`（08）
-- 07 は `src/queries/scoring.ts` / `drawing.ts` が要る（未作成）
-- 08 は `export.ts` がある。`get/setSubtotalGroupSelection` を `subtotal.ts` へ足す
-- **この2画面のジェスチャ**（描画のストローク・出力設定のスライダー）にも段階11 の規約を当てる
-- 段階9 #3（08-export のデバウンス）はここで消える
+**完了条件**（達成済み）: `NOT_YET_MIGRATED` から `components/exams` が消える。
+`grep -rn "window.electronAPI" src/components/exams/` は 0件。残りは 20ファイル。
 
-**完了条件**: `NOT_YET_MIGRATED` から `components/exams` が消える。
+#### 新しく置いた境界
+
+| ファイル                 | 中身                                                              |
+| ------------------------ | ----------------------------------------------------------------- |
+| `src/queries/scoring.ts` | 採点行・裁定サマリ・採点担当・答案の白さ                          |
+| `src/queries/drawing.ts` | 手書き注釈（4通りの取り出し方と CRUD）                            |
+| `export.ts` へ追記       | プレビュー3種・書き出し・ストリーミング PDF の各段                |
+| `subtotal.ts` へ追記     | `get/setSubtotalGroupSelection`                                   |
+| `omr.ts` へ追記          | マーカー検出・一括認識・進捗の購読（フックの外から呼ぶ3つ）       |
+| `misc.ts` へ追記         | `checkFileExists`（`<img>` の読み込みの中から呼ぶので関数のまま） |
+
+`scopeKeys` に `annotation()` を足した。注釈は取り出し方が4通りあり、削除は id しか
+受け取らないので、**書き込み側から「どの取り出し方が当たるか」を絞れない**。まとめて取り直す。
+
+#### 解体した束ね取得と、消えた楽観更新
+
+| 何                            | どうしたか                                                                 |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| `useScoringDataLoader`（07）  | 試験＋答案＋設問領域の1キーを3つのクエリへ割った                           |
+| `useExportPage`（08）         | 設定＋小計選択、試験＋受験者、をそれぞれ別のクエリへ                       |
+| 07 の `questionScores`        | `useState` ＋ 楽観更新をやめ、`questionScoresForExamQuery` へ              |
+| 08 の出力設定                 | デバウンス＋`setQueryData` をやめ、1操作＝1回の書き込みへ                  |
+| `StatisticsClassroomSelector` | チェックの楽観更新を撤去（`updateExamClassroomMutation` へ）               |
+| `useAnnotationBrowser`        | 一覧の `useState` を撤去。お気に入りと追加のあと手元の配列をつつくのもやめ |
+| `useScoredAnswerPreview`      | 取得と画像デコードを分けた（キャッシュに載るのは main の行だけ）           |
+| `useAnswerWhiteness`          | 「測ったページ」を覚える ref と state をやめ、キャッシュのキーへ           |
+
+**07 の採点で楽観更新をやめられる根拠**（実測ではなく構造）:
+
+- `create-question-score` は main が「生徒×設問×採点者」で引き当ててから作る（＝冪等）
+- 書き込みは `scope: exam:<id>:questionScores` で直列。取り直しが届く前にもう一度
+  打っても、2件目は1件目の行を見つけて更新する
+- 連打の取り直しは `isMutating` が畳む（段階11 で確かめた）
+
+#### 段階9 #3（デバウンス）の決着
+
+**撤去した。** ただし**設定を行ごとの意図へ割ってはいない**（`saveExamExportSettings`
+は今も設定一式を渡し、main が5テーブルへ upsert する）。デバウンスが要らなくなったのは
+別の理由で、`defineMutation` の `scope` が書き込みを直列にし、`MutationCache` が
+取り直しを畳むようになったためである。デバウンスが肩代わりしていたのはその2つだった。
+
+> **残した宿題**: 出力設定を行ごとの意図（`set-answer-overlay-style` など6本）へ割る
+> のは別の作業。`IndividualReportSettings.tsx`（649行）の prop の形が変わるうえ、
+> 段階12 の対象ファイルに含まれない。打鍵ごとに20行の upsert が走る点は残っている。
+
+#### ジェスチャ（段階11 からの持ち越し）
+
+| 対象                         | 結果                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------ |
+| 07 の描画ストローク          | 既にストロークの終端で1回書いていた（`useDrawingState` が途中を持つ）    |
+| `ExportOptionsCard` の並列数 | **書き込みが無かった。** 画面内の `exportOptions` だけを動かすつまみで、 |
+|                              | DB へは行かない。割る途中も終端も無いので、直すものが無い                |
+| 採点マーク設定の色           | `InlineColorPicker` が段階11 の `GestureColorInput` を通っている         |
+
+#### ついでに落とした死んだチャンネル
+
+`get-question-score`（07 の楽観更新の巻き戻しだけが使っていた）と
+`get-answer-sheets-by-exam-id`（`get-student-answer-images-by-exam-id` と**同じ関数**を
+呼ぶ二重登録）を preload・ハンドラごと削除した。
+
+`src/lib/queryKeys.ts` は `exam` / `grade` / `coursework` / `annotation` / `userPreference` /
+`students` / `classrooms` / `returnDiff` が全て空き家になったので消した。残るのは段階13 の
+4群（`answerSheetDefinition` / `roster` / `studentExamResults` / `classroomExamResults`）。
+
+#### 検査の穴を1つ塞いだ
+
+`__tests__/helpers/queryWrapper.tsx` が**素の `QueryClient`** を作っていたので、
+テストでは `meta.invalidates` が一度も走っていなかった（`MutationCache` はアプリ側の
+`createAppQueryClient` にしか無い）。「書いたのに取り直さない」状態で通っていたことになる。
+アプリと同じクライアントを使うように直した。
 
 → **R4**
 

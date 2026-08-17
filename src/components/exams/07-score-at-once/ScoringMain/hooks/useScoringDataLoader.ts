@@ -1,11 +1,12 @@
 "use client"
 
-import { skipToken, useQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { toast } from "sonner"
 
 import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
-import { queryKeys } from "@/lib/queryKeys"
+import { questionAnswerRegionsQuery } from "@/queries/cropRegion"
+import { examWithPagesQuery, studentAnswerImagesQuery } from "@/queries/exam"
 import type { ExamWithPages } from "@/types/prismaExtensions"
 import type { StudentAnswerImageWithExamPageAndStudent } from "@/types/prismaExtensions"
 
@@ -21,42 +22,43 @@ interface ScoringDataLoaderResult {
 const EMPTY_ANSWER_IMAGES: StudentAnswerImageWithExamPageAndStudent[] = []
 const EMPTY_CROP_REGIONS: CropRegionWithExamPage[] = []
 
-/** 試験・答案・設問領域・ユーザー情報を一括ロードして採点画面の初期データを準備するフック */
+/**
+ * 採点画面の初期データ（試験・答案・設問領域）を用意する。
+ *
+ * 3つは別々のキャッシュに載せる。まとめて1つのキーへ入れていた頃は、答案を1枚
+ * 消しただけで試験も設問領域も取り直していた。揃うまで待つ必要はあるが、それは
+ * 待ち方（`loading`）の話であって、格納の仕方の話ではない。
+ */
 export function useScoringDataLoader(
   examId: string,
   authUserId: string | null
 ): ScoringDataLoaderResult {
-  // 試験・答案・設問領域は揃って初めて採点できるので1つの取得にまとめる
-  const {
-    data,
-    isPending: loading,
-    error,
-  } = useQuery({
-    queryKey: queryKeys.exam.scoringPage(examId),
-    queryFn: examId
-      ? async () => {
-          // 試験はスカラー + examPages の1クエリ（重データは別クエリ）
-          const [exam, studentAnswerImages, cropRegions] = await Promise.all([
-            window.electronAPI.getExamWithPages(examId),
-            window.electronAPI.getStudentAnswersByExamId(examId),
-            window.electronAPI.getQuestionAnswerRegionsByExamId(examId),
-          ])
-          if (!exam) throw new Error("試験が見つかりません")
-          return { exam, studentAnswerImages, cropRegions }
-        }
-      : skipToken,
+  const exam = useQuery({
+    ...examWithPagesQuery(examId),
+    enabled: Boolean(examId),
+  })
+  const studentAnswerImages = useQuery({
+    ...studentAnswerImagesQuery(examId),
+    enabled: Boolean(examId),
+  })
+  const cropRegions = useQuery({
+    ...questionAnswerRegionsQuery(examId),
+    enabled: Boolean(examId),
   })
 
   // 読み込みの失敗は通知する（取得ではないので effect でよい）
+  const error = exam.error ?? studentAnswerImages.error ?? cropRegions.error
   useEffect(() => {
     if (error) toast.error("データの読み込みに失敗しました")
   }, [error])
 
   return {
-    loading,
-    exam: data?.exam ?? null,
-    studentAnswerImages: data?.studentAnswerImages ?? EMPTY_ANSWER_IMAGES,
-    cropRegions: data?.cropRegions ?? EMPTY_CROP_REGIONS,
+    // 3つが揃って初めて採点できる。1つでも来ていなければ待たせる
+    loading:
+      exam.isPending || studentAnswerImages.isPending || cropRegions.isPending,
+    exam: exam.data ?? null,
+    studentAnswerImages: studentAnswerImages.data ?? EMPTY_ANSWER_IMAGES,
+    cropRegions: cropRegions.data ?? EMPTY_CROP_REGIONS,
     // 操作者は AuthContext が唯一の出所。ここで main へ聞き直すと、
     // 同じ「今のユーザー」が2つの出所・2つの形でキャッシュに載る
     currentUserId: authUserId,

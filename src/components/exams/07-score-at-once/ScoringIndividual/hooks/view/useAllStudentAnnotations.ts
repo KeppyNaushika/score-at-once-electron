@@ -2,11 +2,11 @@
  * @fileoverview 全設問アノテーション読み込みフック
  * 透明度制御用に現在の学生と試験の全アノテーションを読み込む
  */
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo } from "react"
 
 import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
-import { queryKeys } from "@/lib/queryKeys"
+import { annotationsByExamStudentQuery } from "@/queries/drawing"
 import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 
 /** 全設問アノテーション読み込みフックのパラメータ */
@@ -50,22 +50,17 @@ export function useAllStudentAnnotations({
   const queryClient = useQueryClient()
   const queryKey = useMemo(
     () =>
-      queryKeys.annotation.byExamStudent(currentExamStudentId, currentUserId),
+      annotationsByExamStudentQuery(currentExamStudentId ?? "", currentUserId)
+        .queryKey,
     [currentExamStudentId, currentUserId]
   )
 
   // ログインユーザーの手書きだけを取る（透明度制御は自分の描画にしか効かない）
   const { data: allStudentAnnotations = EMPTY_ANNOTATIONS } = useQuery({
-    queryKey,
-    queryFn:
+    ...annotationsByExamStudentQuery(currentExamStudentId ?? "", currentUserId),
+    enabled: Boolean(
       currentExamStudentId && currentCropRegion?.examPage?.examId
-        ? () =>
-            window.electronAPI.drawing.getByExamStudent(
-              currentExamStudentId,
-              undefined, // type
-              currentUserId
-            )
-        : skipToken,
+    ),
   })
 
   // 注釈が書き換わったことの合図。取り直しの指示なので setState はしない

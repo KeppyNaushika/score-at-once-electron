@@ -1,5 +1,5 @@
-// import { checkForAutoFinalization } from "@/components/exams/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
-import { useCallback, useEffect, useRef } from "react"
+import { useMutation } from "@tanstack/react-query"
+import { useCallback } from "react"
 import { toast } from "sonner"
 
 import type {
@@ -7,92 +7,52 @@ import type {
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
+import {
+  createQuestionScoreMutation,
+  updateQuestionScoreMutation,
+} from "@/queries/scoring"
 import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
+/** 採点状態の綴り。旧い呼び出し形式（第1引数が状態）かどうかの判定に使う */
+const SCORING_STATUSES: readonly string[] = [
+  "unscored",
+  "correct",
+  "incorrect",
+  "partial",
+  "pending",
+  "no_answer",
+]
+
 interface UseBatchScoringProps {
+  examId: string
   studentAnswerImages: StudentAnswerImageWithExamStudents[]
   cropRegions: CropRegionWithExamPage[]
   currentCropRegionId: string | null
   currentUserId: string | null
   questionScores: SerializedQuestionScore[]
-  setQuestionScores: React.Dispatch<
-    React.SetStateAction<SerializedQuestionScore[]>
-  >
 }
 
-/** 選択された答案に対する一括採点（楽観的UI更新+DB保存）を実行するフック */
+/**
+ * 選択された答案をまとめて採点する。
+ *
+ * 楽観更新は持たない。書き込みは `scope` で直列になっていて、`create` は
+ * main 側が「生徒×設問×採点者」で引き当ててから作る（＝冪等）ので、
+ * 取り直しが届く前に同じマスをもう一度打っても行は増えない。
+ */
 export function useBatchScoring({
+  examId,
   studentAnswerImages,
   cropRegions,
   currentCropRegionId,
   currentUserId,
   questionScores,
-  setQuestionScores,
 }: UseBatchScoringProps) {
-  // questionScoresの最新値をrefで保持（useCallbackの依存配列から除去するため）
-  const questionScoresRef = useRef(questionScores)
-  useEffect(() => {
-    questionScoresRef.current = questionScores
-  })
-
-  /** 採点行を画面状態から取り除く（ref も同期してループ中の次反復に反映させる） */
-  const removeScoreFromState = useCallback(
-    (scoreId: string) => {
-      setQuestionScores((prev) =>
-        prev.filter((questionScore) => questionScore.id !== scoreId)
-      )
-      questionScoresRef.current = questionScoresRef.current.filter(
-        (questionScore) => questionScore.id !== scoreId
-      )
-    },
-    [setQuestionScores]
+  const { mutateAsync: createQuestionScore } = useMutation(
+    createQuestionScoreMutation(examId)
   )
-
-  /** 楽観更新を DB の実値へ戻す。行ごと消えていた場合は画面からも取り除く。 */
-  const rollbackUpdate = useCallback(
-    async (scoreId: string) => {
-      try {
-        const dbScore = await window.electronAPI.getQuestionScore(scoreId)
-        if (dbScore) {
-          setQuestionScores((prev) =>
-            prev.map((questionScore) =>
-              questionScore.id === scoreId
-                ? {
-                    ...questionScore,
-                    partialScore: dbScore.partialScore,
-                    status: dbScore.status,
-                    updatedAt: dbScore.updatedAt,
-                  }
-                : questionScore
-            )
-          )
-          toast.error("採点の保存に失敗しました")
-          return
-        }
-
-        // DB に無い＝他の教員が答案ごと削除した。楽観更新を残すと「保存済み」に
-        // 見えてしまうので画面からも消し、原因が分かる文言を出す。
-        removeScoreFromState(scoreId)
-        toast.error(
-          "この答案は削除されたため採点を保存できません（Shift+R で再読み込みしてください）"
-        )
-      } catch {
-        // ロールバック自体が失敗 → Shift+Rでの再読み込みに委ねる
-        toast.error("採点の保存に失敗しました")
-      }
-    },
-    [removeScoreFromState, setQuestionScores]
-  )
-
-  const rollbackCreate = useCallback(
-    (tempId: string) => {
-      setQuestionScores((prev) =>
-        prev.filter((questionScore) => questionScore.id !== tempId)
-      )
-      toast.error("採点の保存に失敗しました")
-    },
-    [setQuestionScores]
+  const { mutateAsync: updateQuestionScore } = useMutation(
+    updateQuestionScoreMutation(examId)
   )
 
   const handleBatchScore = useCallback(
@@ -109,15 +69,7 @@ export function useBatchScoring({
 
       if (
         typeof statusOrAnswerIds === "string" &&
-        !Array.isArray(statusOrAnswerIds) &&
-        [
-          "unscored",
-          "correct",
-          "incorrect",
-          "partial",
-          "pending",
-          "no_answer",
-        ].includes(statusOrAnswerIds)
+        SCORING_STATUSES.includes(statusOrAnswerIds)
       ) {
         // 新形式: handleBatchScore(status, partialScore?)
         status = statusOrAnswerIds as ScoringStatus
@@ -128,10 +80,7 @@ export function useBatchScoring({
         // 旧形式: handleBatchScore(answerIds, status)
         answerIds = statusOrAnswerIds as string | string[]
         status = statusOrPartialScore as ScoringStatus
-        inputPartialScore =
-          partialScore !== undefined && partialScore !== null
-            ? partialScore
-            : null
+        inputPartialScore = partialScore ?? null
       }
 
       // 採点は利用者ごとに別々に保存する。操作者が分からないまま書くと、
@@ -142,185 +91,75 @@ export function useBatchScoring({
         })
         return
       }
-      const effectiveUserId = currentUserId
 
       const ids = Array.isArray(answerIds) ? answerIds : [answerIds]
       const currentCropRegion = cropRegions.find(
         (cropRegion) => cropRegion.id === currentCropRegionId
       )
-
       if (!currentCropRegion) return
 
       for (const answerId of ids) {
         const studentAnswerImage = studentAnswerImages.find(
           (image) => image.id === answerId
         )
-        if (!studentAnswerImage) continue
+        if (!studentAnswerImage?.examStudentId) continue
 
-        if (!studentAnswerImage.examStudentId) continue
-
-        // refから最新のquestionScoresを取得
         const currentScore = findQuestionScore(
-          questionScoresRef.current,
+          questionScores,
           studentAnswerImage.examStudentId,
           currentCropRegion.id
         )
 
-        let newScore: number | null = 0
-        let scoringStatus: ScoringStatus = status
-
-        switch (status) {
-          case "unscored":
-            newScore = null
-            scoringStatus = "unscored"
-            break
-          case "correct":
-            newScore = null
-            break
-          case "incorrect":
-          case "no_answer":
-            newScore = null
-            break
-          case "partial":
-            if (inputPartialScore !== null && inputPartialScore !== undefined) {
-              newScore = inputPartialScore
-            } else {
-              newScore = currentScore?.partialScore ?? null
-            }
-            break
-          case "pending":
-            if (inputPartialScore !== null && inputPartialScore !== undefined) {
-              newScore = inputPartialScore
-            } else {
-              newScore = currentScore?.partialScore ?? null
-            }
-            break
-        }
+        // 部分点は入力があればそれ、無ければ今の値を引き継ぐ。それ以外の
+        // 状態（正解・不正解・無解答・未採点）は部分点を持たない
+        const nextPartialScore =
+          status === "partial" || status === "pending"
+            ? (inputPartialScore ?? currentScore?.partialScore ?? null)
+            : null
 
         if (currentScore?.id) {
-          // Update: 楽観的にUI更新
-          const scoreId = currentScore.id
-          const optimisticPartialScore = newScore
-          setQuestionScores((prev) =>
-            prev.map((questionScore) =>
-              questionScore.id === scoreId
-                ? {
-                    ...questionScore,
-                    partialScore: optimisticPartialScore,
-                    status: scoringStatus,
-                  }
-                : questionScore
-            )
-          )
-          // refも同期してループ内の次の反復で最新値が見えるようにする
-          questionScoresRef.current = questionScoresRef.current.map(
-            (questionScore) =>
-              questionScore.id === scoreId
-                ? {
-                    ...questionScore,
-                    partialScore: optimisticPartialScore,
-                    status: scoringStatus,
-                  }
-                : questionScore
-          )
-
-          // DB保存をfire-and-forget
-          const updateData = {
-            partialScore: newScore !== null ? newScore : undefined,
-            status: scoringStatus,
-          }
-          window.electronAPI
-            .updateQuestionScore(scoreId, updateData)
+          updateQuestionScore({
+            questionScoreId: currentScore.id,
+            data: {
+              partialScore: nextPartialScore ?? undefined,
+              status,
+            },
+          })
             .then((result) => {
               if (result.status === "target-deleted") {
-                // 他の教員が答案ごと削除した。再照会しても無いので即座に取り除く。
-                removeScoreFromState(scoreId)
+                // 他の教員が答案ごと削除した。失敗ではないので共通の
+                // 失敗トーストは出ない。ここで理由を伝える
                 toast.error(
                   "この答案は削除されたため採点を保存できません（Shift+R で再読み込みしてください）"
                 )
-                return
               }
-
-              // 成功時: updatedAtを反映
-              const updatedScore = result.score
-              setQuestionScores((prev) =>
-                prev.map((questionScore) =>
-                  questionScore.id === scoreId
-                    ? { ...questionScore, updatedAt: updatedScore.updatedAt }
-                    : questionScore
-                )
-              )
             })
             .catch(() => {
-              rollbackUpdate(scoreId)
+              // 失敗の通知と取り直しは MutationCache の後始末が担う
             })
         } else {
-          // Create: 仮IDで楽観的にUI追加
-          const tempId = crypto.randomUUID()
-          const now = new Date()
-          const optimisticScore: SerializedQuestionScore = {
-            id: tempId,
-            cropRegionId: currentCropRegion.id,
-            examStudentId: studentAnswerImage.examStudentId,
-            partialScore: newScore,
-            status: scoringStatus,
-            userId: effectiveUserId,
-            createdAt: now,
-            updatedAt: now,
-          }
-          setQuestionScores((prev) => [...prev, optimisticScore])
-          // refも同期してループ内の次の反復で最新値が見えるようにする
-          questionScoresRef.current = [
-            ...questionScoresRef.current,
-            optimisticScore,
-          ]
-
-          // DB保存をfire-and-forget
-          const scoreData = {
+          createQuestionScore({
             examStudentId: studentAnswerImage.examStudentId,
             cropRegionId: currentCropRegion.id,
-            partialScore: newScore !== null ? newScore : undefined,
-            status: scoringStatus,
-            userId: effectiveUserId,
-          }
-          window.electronAPI
-            .createQuestionScore(scoreData)
-            .then((createdScore) => {
-              {
-                // 成功時: 仮IDを本物のIDに差し替え
-                setQuestionScores((prev) =>
-                  prev.map((questionScore) =>
-                    questionScore.id === tempId
-                      ? {
-                          ...questionScore,
-                          id: createdScore.id,
-                          createdAt: createdScore.createdAt,
-                          updatedAt: createdScore.updatedAt,
-                        }
-                      : questionScore
-                  )
-                )
-              }
-            })
-            .catch(() => {
-              rollbackCreate(tempId)
-            })
+            partialScore: nextPartialScore ?? undefined,
+            status,
+            userId: currentUserId,
+          }).catch(() => {
+            // 同上
+          })
         }
       }
     },
     [
-      currentUserId,
+      createQuestionScore,
       cropRegions,
       currentCropRegionId,
+      currentUserId,
+      questionScores,
       studentAnswerImages,
-      setQuestionScores,
-      removeScoreFromState,
-      rollbackUpdate,
-      rollbackCreate,
+      updateQuestionScore,
     ]
   )
 
-  return {
-    handleBatchScore,
-  }
+  return { handleBatchScore }
 }

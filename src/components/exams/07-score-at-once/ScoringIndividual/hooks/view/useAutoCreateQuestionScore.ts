@@ -3,9 +3,14 @@
  * @description 設問を表示した際にQuestionScoreが存在しない場合、unscoredステータスで自動作成
  */
 
+import { useMutation } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef } from "react"
 
+import { createQuestionScoreMutation } from "@/queries/scoring"
+
 interface UseAutoCreateQuestionScoreParams {
+  /** 試験ID（書き込みの行き先を決める） */
+  examId: string
   /** 現在の生徒ID */
   currentExamStudentId?: string
   /** 現在の設問領域ID */
@@ -31,12 +36,17 @@ interface UseAutoCreateQuestionScoreReturn {
  * 設問表示時にQuestionScoreを自動作成するフック
  */
 export function useAutoCreateQuestionScore({
+  examId,
   currentExamStudentId,
   currentCropRegionId,
   currentUserId,
   questionScores,
   onQuestionScoreCreated,
 }: UseAutoCreateQuestionScoreParams): UseAutoCreateQuestionScoreReturn {
+  const { mutateAsync: createScore } = useMutation(
+    createQuestionScoreMutation(examId)
+  )
+
   // 作成中のリクエストを追跡（重複作成防止）
   const creatingRef = useRef<string | null>(null)
 
@@ -64,7 +74,7 @@ export function useAutoCreateQuestionScore({
     creatingRef.current = key
 
     try {
-      await window.electronAPI.createQuestionScore({
+      await createScore({
         examStudentId: currentExamStudentId,
         cropRegionId: currentCropRegionId,
         userId: currentUserId,
@@ -74,8 +84,8 @@ export function useAutoCreateQuestionScore({
 
       // 作成成功 - 親コンポーネントに通知してリストを更新
       onQuestionScoreCreated?.()
-    } catch (error) {
-      console.error("QuestionScore作成エラー:", error)
+    } catch {
+      // 失敗の通知は MutationCache の後始末が出す
     } finally {
       // 作成完了後にリセット（別の設問に移動可能にする）
       if (creatingRef.current === key) {
@@ -83,6 +93,7 @@ export function useAutoCreateQuestionScore({
       }
     }
   }, [
+    createScore,
     currentExamStudentId,
     currentCropRegionId,
     currentUserId,

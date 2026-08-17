@@ -1,8 +1,18 @@
 "use client"
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useState } from "react"
 
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
+import { cropRegionsQuery } from "@/queries/cropRegion"
+import { studentAnswerImagesQuery } from "@/queries/exam"
+import {
+  batchRecognizeOmr,
+  detectMasterMarkers,
+  omrConfigsQuery,
+  subscribeOmrBatchProgress,
+} from "@/queries/omr"
+import { batchUpdateQuestionScoresMutation } from "@/queries/scoring"
 import type { ComputedCell } from "@/types/answerSheetLayout.types"
 import type {
   ComputedOMRBubble,
@@ -21,6 +31,9 @@ import {
   type ScoringResultSummary,
 } from "../utils/reevaluateResults"
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_OMR_CONFIGS: CropRegionOmrConfigWithOptions[] = []
+
 /** 分布から算出できなかったときに使う塗りつぶし判定閾値 */
 const DEFAULT_AREA_THRESHOLD = 0.4
 
@@ -28,8 +41,6 @@ const DEFAULT_AREA_THRESHOLD = 0.4
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.7
 
 interface OmrAutoScoringState {
-  /** OMR設定リスト */
-  omrConfigs: CropRegionOmrConfigWithOptions[]
   /** 認識処理中か */
   isRecognizing: boolean
   /** 採点反映中か */
@@ -62,8 +73,17 @@ interface OmrAutoScoringState {
  * OMR自動採点のパイプラインを管理するフック
  */
 export function useOmrAutoScoring(examId: string) {
+  const queryClient = useQueryClient()
+  const { mutateAsync: batchUpdateQuestionScores } = useMutation(
+    batchUpdateQuestionScoresMutation(examId)
+  )
+
+  // OMR設定はキャッシュが持つ。認識の途中でも同じキーから引く
+  const { data: omrConfigs = EMPTY_OMR_CONFIGS } = useQuery(
+    omrConfigsQuery(examId)
+  )
+
   const [state, setState] = useState<OmrAutoScoringState>({
-    omrConfigs: [],
     isRecognizing: false,
     isApplying: false,
     progress: null,
@@ -79,29 +99,9 @@ export function useOmrAutoScoring(examId: string) {
     minInkDarkness: null,
   })
 
-  /** OMR設定をDBから読み込み */
-  const loadOmrConfigs = useCallback(async () => {
-    try {
-      const configs = await window.electronAPI.omrConfig.getByExam(examId)
-      setState((prev) => ({ ...prev, omrConfigs: configs, error: null }))
-      return configs
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        error: error instanceof Error ? error.message : "OMR設定の取得に失敗",
-      }))
-      return []
-    }
-  }, [examId])
-
-  /** マウント時にOMR設定を読み込み */
-  useEffect(() => {
-    loadOmrConfigs()
-  }, [loadOmrConfigs])
-
   /** バッチ進捗リスナー */
   useEffect(() => {
-    const unsubscribe = window.electronAPI.omr.onBatchProgress((progress) => {
+    const unsubscribe = subscribeOmrBatchProgress((progress) => {
       setState((prev) => ({ ...prev, progress }))
     })
     return unsubscribe
@@ -123,8 +123,8 @@ export function useOmrAutoScoring(examId: string) {
     }))
 
     try {
-      // 1. OMR設定を取得
-      const configs = await loadOmrConfigs()
+      // 1. OMR設定を取得（キャッシュ経由。表示と同じ行を使う）
+      const configs = await queryClient.fetchQuery(omrConfigsQuery(examId))
       if (configs.length === 0) {
         setState((prev) => ({
           ...prev,
@@ -135,8 +135,7 @@ export function useOmrAutoScoring(examId: string) {
       }
 
       // 2. マスターマーカー検出
-      const markerResult =
-        await window.electronAPI.omr.detectMasterMarkers(examId)
+      const markerResult = await detectMasterMarkers(examId)
       // 4マーカー揃ったページが1枚も無ければ認識できない
       if (markerResult.pages.every((page) => !page.result.success)) {
         setState((prev) => ({
@@ -210,8 +209,7 @@ export function useOmrAutoScoring(examId: string) {
       ]
 
       // 5. 答案画像パスを収集
-      const cropRegions =
-        await window.electronAPI.getCropRegionsByExamId(examId)
+      const cropRegions = await queryClient.fetchQuery(cropRegionsQuery(examId))
       const page1Regions = cropRegions.filter(
         (cropRegion) => cropRegion.examPage?.pageNumber === 1
       )
@@ -225,8 +223,9 @@ export function useOmrAutoScoring(examId: string) {
       }
 
       // 答案画像パス取得（全生徒、ページ1のみフィルタ）
-      const allAnswerImages =
-        await window.electronAPI.getStudentAnswerImagesByExamId(examId)
+      const allAnswerImages = await queryClient.fetchQuery(
+        studentAnswerImagesQuery(examId)
+      )
 
       const page1ExamPageId = page1Regions[0]?.examPage?.id
       const answerImages = allAnswerImages.filter(
@@ -253,7 +252,7 @@ export function useOmrAutoScoring(examId: string) {
       // CropRegion座標 + OMR設定からComputedCellを構築
       const cells = buildCellsFromRegions(page1Regions, configs, cellConfigs)
 
-      const results = await window.electronAPI.omr.batchRecognize({
+      const results = await batchRecognizeOmr({
         imagePaths,
         cells,
         cellConfigs,
@@ -335,7 +334,7 @@ export function useOmrAutoScoring(examId: string) {
         error: error instanceof Error ? error.message : "OMR認識に失敗しました",
       }))
     }
-  }, [examId, loadOmrConfigs])
+  }, [examId, queryClient])
 
   /**
    * 採点結果をQuestionScoreに反映
@@ -373,7 +372,7 @@ export function useOmrAutoScoring(examId: string) {
           return false
         }
 
-        await window.electronAPI.batchUpdateQuestionScores(entries)
+        await batchUpdateQuestionScores(entries)
         setState((prev) => ({ ...prev, isApplying: false }))
         return true
       } catch (error) {
@@ -386,7 +385,7 @@ export function useOmrAutoScoring(examId: string) {
         return false
       }
     },
-    [state.scoreEntries]
+    [batchUpdateQuestionScores, state.scoreEntries]
   )
 
   /** areaThresholdを変更し、キャッシュ済みfillRatiosから即座に再判定 */
@@ -401,7 +400,7 @@ export function useOmrAutoScoring(examId: string) {
       const { updatedSheetResults, scoreEntries, summary } =
         reevaluateWithThreshold({
           sheetResults: state.originalSheetResults,
-          omrConfigs: state.omrConfigs,
+          omrConfigs,
           pointsMap: state.pointsMap,
           areaThreshold: newThreshold,
           confidenceThreshold: state.confidenceThreshold,
@@ -417,8 +416,8 @@ export function useOmrAutoScoring(examId: string) {
       }))
     },
     [
+      omrConfigs,
       state.originalSheetResults,
-      state.omrConfigs,
       state.pointsMap,
       state.confidenceThreshold,
     ]
@@ -431,7 +430,7 @@ export function useOmrAutoScoring(examId: string) {
       const { updatedSheetResults, scoreEntries, summary } =
         reevaluateWithThreshold({
           sheetResults: state.originalSheetResults,
-          omrConfigs: state.omrConfigs,
+          omrConfigs,
           pointsMap: state.pointsMap,
           areaThreshold: state.areaThreshold,
           confidenceThreshold: newThreshold,
@@ -446,8 +445,8 @@ export function useOmrAutoScoring(examId: string) {
       }))
     },
     [
+      omrConfigs,
       state.originalSheetResults,
-      state.omrConfigs,
       state.pointsMap,
       state.areaThreshold,
       state.minInkDarkness,
@@ -463,7 +462,8 @@ export function useOmrAutoScoring(examId: string) {
 
   return {
     ...state,
-    hasOmrConfigs: state.omrConfigs.length > 0,
+    omrConfigs,
+    hasOmrConfigs: omrConfigs.length > 0,
     runRecognition,
     applyScores,
     updateAreaThreshold,

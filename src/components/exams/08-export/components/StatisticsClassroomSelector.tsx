@@ -1,8 +1,7 @@
 "use client"
 
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { BarChart3, GraduationCap, Users } from "lucide-react"
-import { useCallback } from "react"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -13,8 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { ExamClassroomWithMemberships } from "@/electron-src/lib/prisma/examClassroom"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  examClassroomsQuery,
+  updateExamClassroomMutation,
+} from "@/queries/examClassroom"
 
 interface StatisticsClassroomSelectorProps {
   examId: string
@@ -31,48 +32,16 @@ interface StatisticsClassroomSelectorProps {
 export function StatisticsClassroomSelector({
   examId,
 }: StatisticsClassroomSelectorProps) {
-  const queryClient = useQueryClient()
-  const queryKey = queryKeys.exam.classrooms(examId)
-  const { data: classrooms = [], isPending: loading } = useQuery({
-    queryKey,
-    queryFn: examId
-      ? () => window.electronAPI.examClassroom.getAll(examId)
-      : skipToken,
-  })
-
-  const fetchClassrooms = useCallback(
-    () => queryClient.invalidateQueries({ queryKey }),
-    [queryClient, queryKey]
+  const { data: classrooms = [], isPending: loading } = useQuery(
+    examClassroomsQuery(examId)
   )
+  const updateExamClassroom = useMutation(updateExamClassroomMutation(examId))
 
-  const updateFlag = useCallback(
-    async (
-      examClassroomId: string,
-      patch: { teacherStatistics?: boolean; studentReport?: boolean }
-    ) => {
-      // 楽観的更新
-      queryClient.setQueryData<ExamClassroomWithMemberships[]>(
-        queryKey,
-        (prev) =>
-          (prev ?? []).map((examClassroom) =>
-            examClassroom.id === examClassroomId
-              ? { ...examClassroom, ...patch }
-              : examClassroom
-          )
-      )
-      try {
-        await window.electronAPI.examClassroom.update({
-          id: examClassroomId,
-          ...patch,
-        })
-      } catch (err) {
-        console.error("Failed to update exam class flags:", err)
-        // 失敗時は再取得して整合
-        fetchClassrooms()
-      }
-    },
-    [fetchClassrooms, queryClient, queryKey]
-  )
+  /** チェックは1回で確定するので即時に書く。失敗の通知と取り直しは共通の後始末が担う */
+  const setFlag = (
+    examClassroomId: string,
+    patch: { teacherStatistics?: boolean; studentReport?: boolean }
+  ) => updateExamClassroom.mutate({ id: examClassroomId, ...patch })
 
   if (loading) {
     return (
@@ -141,7 +110,7 @@ export function StatisticsClassroomSelector({
                   <Checkbox
                     checked={examClassroom.teacherStatistics}
                     onCheckedChange={(checked) =>
-                      updateFlag(examClassroom.id, {
+                      setFlag(examClassroom.id, {
                         teacherStatistics: checked === true,
                       })
                     }
@@ -151,7 +120,7 @@ export function StatisticsClassroomSelector({
                   <Checkbox
                     checked={examClassroom.studentReport}
                     onCheckedChange={(checked) =>
-                      updateFlag(examClassroom.id, {
+                      setFlag(examClassroom.id, {
                         studentReport: checked === true,
                       })
                     }

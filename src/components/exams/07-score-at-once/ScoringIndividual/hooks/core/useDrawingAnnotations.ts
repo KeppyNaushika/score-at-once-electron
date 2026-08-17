@@ -3,8 +3,17 @@
  * @description 既存描画システムにデータベース永続化を統合
  */
 
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef, useState } from "react"
 
+import {
+  annotationsByQuestionScoreQuery,
+  batchCreateAnnotationsMutation,
+  createAnnotationMutation,
+  deleteAnnotationMutation,
+  deleteAnnotationsByQuestionScoreMutation,
+  updateAnnotationMutation,
+} from "@/queries/drawing"
 import type {
   DrawingAnnotation,
   DrawingType,
@@ -52,13 +61,28 @@ interface UseDrawingAnnotationsReturn {
 
 /**
  * 統合描画アノテーション管理フック（ScoringIndividual専用）
+ *
+ * 描いている最中の要素はキャンバス側の state が持つ（`useDrawingState`）。
+ * ここは**ストロークが終わった時点の1回**を DB へ渡すだけを担う。
  */
 export function useDrawingAnnotations(
   callbacks?: DrawingPersistenceCallbacks
 ): UseDrawingAnnotationsReturn {
-  // 状態管理
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const createAnnotation = useMutation(createAnnotationMutation())
+  const updateAnnotation = useMutation(updateAnnotationMutation())
+  const deleteAnnotation = useMutation(deleteAnnotationMutation())
+  const batchCreateAnnotations = useMutation(batchCreateAnnotationsMutation())
+  const deleteByQuestionScore = useMutation(
+    deleteAnnotationsByQuestionScoreMutation()
+  )
+
+  const { mutateAsync: createOne } = createAnnotation
+  const { mutateAsync: updateOne } = updateAnnotation
+  const { mutateAsync: deleteOne } = deleteAnnotation
+  const { mutateAsync: createMany } = batchCreateAnnotations
+  const { mutateAsync: deleteAllOfQuestionScore } = deleteByQuestionScore
+
   // 参照
   const callbacksRef = useRef<DrawingPersistenceCallbacks>(callbacks || {})
 
@@ -68,19 +92,30 @@ export function useDrawingAnnotations(
   }, [callbacks])
 
   /**
-   * エラーハンドリング
+   * 読み込みの進行と失敗。
+   *
+   * 読み込みは命令的（`fetchQuery`）なので、`useQuery` の結果として出てこない。
+   * `isLoading` / `error` が読み込みも覆っていたのは元の形が持っていた性質なので、
+   * ここで持ち直す（呼び出し側はこの2つで待ちと失敗表示を出している）。
    */
-  const handleError = useCallback(
-    (message: string, originalError?: unknown) => {
-      console.error("描画アノテーションエラー:", message, originalError)
-      setError(message)
-      callbacksRef.current.onError?.(message)
-    },
-    []
-  )
+  const [reading, setReading] = useState(false)
+  const [readError, setReadError] = useState<string | null>(null)
+
+  const isLoading =
+    reading ||
+    createAnnotation.isPending ||
+    updateAnnotation.isPending ||
+    deleteAnnotation.isPending ||
+    batchCreateAnnotations.isPending ||
+    deleteByQuestionScore.isPending
 
   /**
    * アノテーション読み込み
+   *
+   * 呼び出し側（`useDrawingState`）が設問の切り替えに合わせて命令的に読むので、
+   * キャッシュ経由でその場で取る（`fetchQuery`）。取れた行はキャッシュにも載るので、
+   * 同じ設問を続けて開いても往復は増えない。
+   *
    * @returns 読み込んだアノテーション配列（失敗時は空配列）
    */
   const loadAnnotations = useCallback(
@@ -88,25 +123,25 @@ export function useDrawingAnnotations(
       questionScoreId: string,
       type?: DrawingType
     ): Promise<DrawingAnnotation[]> => {
-      setIsLoading(true)
-      setError(null)
-
+      setReading(true)
+      setReadError(null)
       try {
         // 採点者で絞る余地は無い。QuestionScore は「生徒×設問×採点者」で1行なので、
         // この questionScoreId の注釈は全部同じ採点者のものである
-        const annotations = await window.electronAPI.drawing.getByQuestionScore(
-          questionScoreId,
-          type
+        return await queryClient.fetchQuery(
+          annotationsByQuestionScoreQuery(questionScoreId, type)
         )
-        return annotations
       } catch (error) {
-        handleError("アノテーション読み込み中にエラーが発生しました", error)
+        console.error("アノテーション読み込みエラー:", error)
+        const message = "アノテーション読み込み中にエラーが発生しました"
+        setReadError(message)
+        callbacksRef.current.onError?.(message)
         return []
       } finally {
-        setIsLoading(false)
+        setReading(false)
       }
     },
-    [handleError]
+    [queryClient]
   )
 
   /**
@@ -115,23 +150,17 @@ export function useDrawingAnnotations(
    */
   const saveElement = useCallback(
     async (element: DrawingAnnotation): Promise<DrawingAnnotation | null> => {
-      setIsLoading(true)
-      setError(null)
-
       try {
         // 採点者は渡さない。注釈の持ち主は親 QuestionScore から決まる
-        const annotations = await window.electronAPI.drawing.create(element)
-
-        callbacksRef.current.onAnnotationCreated?.(annotations)
-        return annotations
-      } catch (error) {
-        handleError("描画要素保存中にエラーが発生しました", error)
+        const created = await createOne(element)
+        callbacksRef.current.onAnnotationCreated?.(created)
+        return created
+      } catch {
+        // 失敗の通知は MutationCache の後始末が出す
         return null
-      } finally {
-        setIsLoading(false)
       }
     },
-    [handleError]
+    [createOne]
   )
 
   /**
@@ -139,23 +168,16 @@ export function useDrawingAnnotations(
    */
   const updateElement = useCallback(
     async (element: DrawingAnnotation): Promise<DrawingAnnotation | null> => {
-      setIsLoading(true)
-      setError(null)
-
       try {
         // 行をそのまま送り返す。列を選んで詰め替えないので、列を足しても永続化から漏れない
-        const annotations = await window.electronAPI.drawing.update(element)
-
-        callbacksRef.current.onAnnotationUpdated?.(annotations)
-        return annotations
-      } catch (error) {
-        handleError("描画要素更新中にエラーが発生しました", error)
+        const updated = await updateOne(element)
+        callbacksRef.current.onAnnotationUpdated?.(updated)
+        return updated
+      } catch {
         return null
-      } finally {
-        setIsLoading(false)
       }
     },
-    [handleError]
+    [updateOne]
   )
 
   /**
@@ -163,84 +185,53 @@ export function useDrawingAnnotations(
    */
   const deleteElement = useCallback(
     async (elementId: string): Promise<boolean> => {
-      setIsLoading(true)
-      setError(null)
-
       try {
-        await window.electronAPI.drawing.delete(elementId)
-
+        await deleteOne(elementId)
         callbacksRef.current.onAnnotationDeleted?.(elementId)
         return true
-      } catch (error) {
-        handleError("描画要素削除中にエラーが発生しました", error)
+      } catch {
         return false
-      } finally {
-        setIsLoading(false)
       }
     },
-    [handleError]
-  )
-
-  /**
-   * タイプ別削除
-   */
-  const deleteByType = useCallback(
-    async (questionScoreId: string, type?: DrawingType): Promise<boolean> => {
-      setIsLoading(true)
-      setError(null)
-
-      try {
-        await window.electronAPI.drawing.deleteByQuestionScore(
-          questionScoreId,
-          type
-        )
-
-        return true
-      } catch (error) {
-        handleError("タイプ別削除中にエラーが発生しました", error)
-        return false
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [handleError]
+    [deleteOne]
   )
 
   /**
    * 描画要素の同期（既存システムからデータベースへ）
-   * questionScoreIdは必須（事前にQuestionScoreが作成されている必要がある）
+   *
+   * 「今キャンバスに載っている要素をこの設問の注釈にする」という1つの意図なので、
+   * 消してから作る。questionScoreId は必須（事前に QuestionScore が要る）。
    */
   const syncElements = useCallback(
     async (
       elements: DrawingAnnotation[],
       questionScoreId: string
     ): Promise<DrawingAnnotation[]> => {
-      setIsLoading(true)
-      setError(null)
-
       try {
-        // 既存のアノテーションをクリア
-        await deleteByType(questionScoreId)
+        // 既存の注釈を消してから入れ直す。消える範囲は親の id で言い切れる
+        await deleteAllOfQuestionScore({ questionScoreId })
 
+        if (elements.length === 0) return []
         // 新しい要素を一括作成（採点者は親 QuestionScore から決まる）
-        const annotations =
-          await window.electronAPI.drawing.batchCreate(elements)
-
-        return annotations
-      } catch (error) {
-        handleError("描画要素同期中にエラーが発生しました", error)
+        return await createMany(elements)
+      } catch {
         return []
-      } finally {
-        setIsLoading(false)
       }
     },
-    [handleError, deleteByType]
+    [createMany, deleteAllOfQuestionScore]
   )
 
   return {
     // 状態
     isLoading,
-    error,
+    error:
+      readError ??
+      createAnnotation.error?.message ??
+      updateAnnotation.error?.message ??
+      deleteAnnotation.error?.message ??
+      batchCreateAnnotations.error?.message ??
+      deleteByQuestionScore.error?.message ??
+      null,
 
     // CRUD操作
     loadAnnotations,

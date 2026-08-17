@@ -1,7 +1,7 @@
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo } from "react"
 
-import { queryKeys } from "@/lib/queryKeys"
+import { annotationsByCropRegionQuery } from "@/queries/drawing"
 import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 
 interface UseGridAnnotationsProps {
@@ -32,31 +32,14 @@ export function useGridAnnotations({
   const queryClient = useQueryClient()
   // 同じ設問を続けて開いても取り直さない（重複取得の抑止はキャッシュが担う）
   const queryKey = useMemo(
-    () => queryKeys.annotation.byCropRegion(cropRegionId, currentUserId),
+    () =>
+      annotationsByCropRegionQuery(cropRegionId ?? "", currentUserId).queryKey,
     [cropRegionId, currentUserId]
   )
 
-  const { data: annotationsByExamStudent = EMPTY_ANNOTATIONS } = useQuery({
-    queryKey,
-    queryFn: cropRegionId
-      ? async () => {
-          const annotations = await window.electronAPI.drawing.getByCropRegion(
-            cropRegionId,
-            currentUserId
-          )
-          const grouped = new Map<string, AnnotationWithContext[]>()
-          for (const annotation of annotations) {
-            // グリッドの行は受験者なので questionScore.examStudentId でまとめる
-            const examStudentId = annotation.questionScore?.examStudentId
-            if (!examStudentId) continue
-            grouped.set(examStudentId, [
-              ...(grouped.get(examStudentId) ?? []),
-              annotation,
-            ])
-          }
-          return grouped
-        }
-      : skipToken,
+  const { data: annotations } = useQuery({
+    ...annotationsByCropRegionQuery(cropRegionId ?? "", currentUserId),
+    enabled: Boolean(cropRegionId),
   })
 
   // 注釈が書き換わったことの合図。取り直しの指示なので setState はしない
@@ -64,6 +47,22 @@ export function useGridAnnotations({
     if (refreshKey === undefined) return
     void queryClient.invalidateQueries({ queryKey })
   }, [refreshKey, queryKey, queryClient])
+
+  // 行ごとに束ねるのは計算。キャッシュには main が返した行がそのまま載っている
+  const annotationsByExamStudent = useMemo(() => {
+    if (!annotations) return EMPTY_ANNOTATIONS
+    const grouped = new Map<string, AnnotationWithContext[]>()
+    for (const annotation of annotations) {
+      // グリッドの行は受験者なので questionScore.examStudentId でまとめる
+      const examStudentId = annotation.questionScore?.examStudentId
+      if (!examStudentId) continue
+      grouped.set(examStudentId, [
+        ...(grouped.get(examStudentId) ?? []),
+        annotation,
+      ])
+    }
+    return grouped
+  }, [annotations])
 
   return { annotationsByExamStudent }
 }

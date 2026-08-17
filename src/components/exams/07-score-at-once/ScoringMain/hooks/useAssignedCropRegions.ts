@@ -1,8 +1,8 @@
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
 
 import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
-import { queryKeys } from "@/lib/queryKeys"
+import { cropRegionAssignmentsQuery } from "@/queries/scoring"
 import type { CropRegionAssignmentSummary } from "@/types/scoreDecision.types"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
@@ -29,13 +29,13 @@ export function useAssignedCropRegions({
   cropRegions,
 }: UseAssignedCropRegionsParams) {
   const queryClient = useQueryClient()
-  const queryKey = queryKeys.exam.cropRegionAssignments(examId, userId)
+  const queryKey = useMemo(
+    () => cropRegionAssignmentsQuery(examId, userId ?? "").queryKey,
+    [examId, userId]
+  )
   const { data } = useQuery({
-    queryKey,
-    queryFn:
-      examId && userId
-        ? () => window.electronAPI.getCropRegionAssignments(examId, userId)
-        : skipToken,
+    ...cropRegionAssignmentsQuery(examId, userId ?? ""),
+    enabled: Boolean(examId && userId),
   })
   const assignments = data?.assignments ?? EMPTY_ASSIGNMENTS
   const canManage = data?.canManage ?? false

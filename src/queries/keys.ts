@@ -21,4 +21,12 @@ export const scopeKeys = {
   /** 解答用紙1件に紐づくもの全部 */
   answerSheetDefinition: (definitionId: string) =>
     ["answerSheetDefinition", definitionId] as const,
+  /**
+   * 手書き注釈の全部。
+   *
+   * 注釈は取り出し方が4通りある（設問スコア別・受験者別・設問別・試験の一覧）。
+   * 1件書けばそのどれもが古くなるうえ、削除は id しか受け取らないので
+   * 「どの取り出し方が当たるか」を書き込み側から絞れない。まとめて取り直す。
+   */
+  annotation: () => ["annotation"] as const,
 } as const

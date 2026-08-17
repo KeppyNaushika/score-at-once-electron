@@ -3,12 +3,14 @@
  * @description 一覧表示を開いた時点で、そのページの全答案×全採点領域の白さを先読みする。
  */
 
-import { useEffect, useRef, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 
 import type {
   CropRegionWithExamPage,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
+import { answerWhitenessQuery } from "@/queries/scoring"
 import type {
   RegionWhiteness,
   WhitenessTargetRegion,
@@ -26,6 +28,9 @@ interface UseAnswerWhitenessProps {
   enabled: boolean
 }
 
+/** 未取得のときに毎回新しい Map を作らないための空値 */
+const EMPTY_WHITENESS: WhitenessByAnswerId = new Map()
+
 /** 算出済みか判定するための、対象ページの答案画像の顔ぶれ */
 function buildMeasurementSignature(
   answerImages: StudentAnswerImageWithExamStudents[]
@@ -42,6 +47,10 @@ function buildMeasurementSignature(
  * 算出はページ単位で1回だけ行い、そのページの全採点領域分をまとめて得る。設問を
  * 切り替えても再算出は発生しない（画像1枚のデコードコストに対し、領域を増やす
  * コストは無視できるため。詳細は electron-src/lib/scoring/regionWhiteness.ts）。
+ *
+ * 算出済みかどうかはキャッシュが覚える。以前は「測ったページ」と「測った顔ぶれ」を
+ * 自前の ref と state で持っていたが、ページを行き来するたびに測り直すか、逆に
+ * 答案が増えても測り直さないかのどちらかになりやすかった。
  */
 export function useAnswerWhiteness({
   studentAnswerImages,
@@ -49,101 +58,63 @@ export function useAnswerWhiteness({
   currentExamPageId,
   enabled,
 }: UseAnswerWhitenessProps) {
-  const [whitenessByAnswerId, setWhitenessByAnswerId] =
-    useState<WhitenessByAnswerId>(new Map())
-  const [measuredExamPageIds, setMeasuredExamPageIds] = useState<Set<string>>(
-    new Set()
+  const pageAnswerImages = useMemo(
+    () =>
+      currentExamPageId
+        ? studentAnswerImages.filter(
+            (answerImage) =>
+              answerImage.examPageId === currentExamPageId &&
+              answerImage.imagePath
+          )
+        : [],
+    [currentExamPageId, studentAnswerImages]
   )
 
-  /** ページごとの算出済みシグネチャ（答案が増減したら再算出する） */
-  const measuredSignatureRef = useRef<Map<string, string>>(new Map())
-  /** 算出中にページが切り替わった場合に古い結果を捨てるためのトークン */
-  const measurementTokenRef = useRef(0)
+  const pageRegions: WhitenessTargetRegion[] = useMemo(
+    () =>
+      cropRegions
+        .filter((cropRegion) => cropRegion.examPageId === currentExamPageId)
+        .map((cropRegion) => ({
+          cropRegionId: cropRegion.id,
+          x: cropRegion.x,
+          y: cropRegion.y,
+          width: cropRegion.width,
+          height: cropRegion.height,
+        })),
+    [cropRegions, currentExamPageId]
+  )
 
-  const pageAnswerImages = currentExamPageId
-    ? studentAnswerImages.filter(
-        (answerImage) =>
-          answerImage.examPageId === currentExamPageId && answerImage.imagePath
-      )
-    : []
   const signature = buildMeasurementSignature(pageAnswerImages)
 
-  // 毎レンダーで新しい配列になるため、effectの依存には入れずrefで最新値を渡す。
-  // 再算出の要否はsignature（答案の顔ぶれ）で判定する。
-  const pageAnswerImagesRef = useRef(pageAnswerImages)
-  const cropRegionsRef = useRef(cropRegions)
-  useEffect(() => {
-    pageAnswerImagesRef.current = pageAnswerImages
-    cropRegionsRef.current = cropRegions
+  const { data: measurement } = useQuery({
+    ...answerWhitenessQuery(currentExamPageId ?? "", signature, {
+      answerImages: pageAnswerImages.map((answerImage) => ({
+        studentAnswerImageId: answerImage.id,
+        imagePath: answerImage.imagePath ?? "",
+      })),
+      regions: pageRegions,
+    }),
+    enabled:
+      enabled &&
+      Boolean(currentExamPageId) &&
+      pageAnswerImages.length > 0 &&
+      pageRegions.length > 0,
   })
 
-  useEffect(() => {
-    if (!enabled) return
-    if (!currentExamPageId) return
-
-    const pageAnswerImages = pageAnswerImagesRef.current
-    if (pageAnswerImages.length === 0) return
-    if (measuredSignatureRef.current.get(currentExamPageId) === signature)
-      return
-
-    const pageRegions: WhitenessTargetRegion[] = cropRegionsRef.current
-      .filter((cropRegion) => cropRegion.examPageId === currentExamPageId)
-      .map((cropRegion) => ({
-        cropRegionId: cropRegion.id,
-        x: cropRegion.x,
-        y: cropRegion.y,
-        width: cropRegion.width,
-        height: cropRegion.height,
-      }))
-
-    if (pageRegions.length === 0) return
-
-    const examPageId = currentExamPageId
-    measuredSignatureRef.current.set(examPageId, signature)
-    measurementTokenRef.current += 1
-    const token = measurementTokenRef.current
-
-    const measure = async () => {
-      try {
-        const result = await window.electronAPI.measureAnswerWhiteness({
-          answerImages: pageAnswerImages.map((answerImage) => ({
-            studentAnswerImageId: answerImage.id,
-            imagePath: answerImage.imagePath ?? "",
-          })),
-          regions: pageRegions,
-        })
-
-        // 算出中に別ページへ移った場合は破棄する
-        if (token !== measurementTokenRef.current) return
-
-        const answers = result.answers
-        setWhitenessByAnswerId((prev) => {
-          const next = new Map(prev)
-          for (const answer of answers) {
-            next.set(
-              answer.studentAnswerImageId,
-              new Map(
-                answer.regions.map((region) => [region.cropRegionId, region])
-              )
-            )
-          }
-          return next
-        })
-        setMeasuredExamPageIds((prev) => new Set(prev).add(examPageId))
-      } catch (error) {
-        measuredSignatureRef.current.delete(examPageId)
-        console.error("答案の白さ算出に失敗しました:", error)
-      }
-    }
-
-    measure()
-  }, [enabled, currentExamPageId, signature])
+  // 答案 → 領域 → 白さ へ畳むのは計算。キャッシュには main が返した形が載っている
+  const whitenessByAnswerId = useMemo(() => {
+    if (!measurement) return EMPTY_WHITENESS
+    return new Map(
+      measurement.answers.map((answer) => [
+        answer.studentAnswerImageId,
+        new Map(answer.regions.map((region) => [region.cropRegionId, region])),
+      ])
+    )
+  }, [measurement])
 
   return {
     whitenessByAnswerId,
     /** 表示中のページの白さが揃っているか（並び順の選択可否に使う） */
-    isWhitenessReady: currentExamPageId
-      ? measuredExamPageIds.has(currentExamPageId)
-      : false,
+    isWhitenessReady: Boolean(measurement),
   }
 }

@@ -51,6 +51,18 @@ export const availableSubtotalGroupsQuery = (examId: string) =>
     queryFn: () => window.electronAPI.getAvailableSubtotalGroupsForExam(examId),
   })
 
+/**
+ * 個人成績表に出す小計点グループの選択。
+ *
+ * 出力設定の JSON ではなく `ExamSubtotalGroup` のフラグが正本である。設定側に
+ * id を持たせると、グループを消した後も亡霊の id が残る。
+ */
+export const subtotalGroupSelectionQuery = (examId: string) =>
+  queryOptions({
+    queryKey: [...scopeKeys.exam(examId), "subtotalGroupSelection"] as const,
+    queryFn: () => window.electronAPI.getSubtotalGroupSelection(examId),
+  })
+
 // =====================================================================
 // 書き込み（小計点グループ本体）
 // =====================================================================
@@ -116,6 +128,25 @@ export const removeSubtotalGroupFromExamMutation = (examId: string) =>
     meta: {
       invalidates: [scopeKeys.exam(examId)],
       errorMessage: "小計点グループを削除できませんでした",
+    },
+  })
+
+/** 個人成績表に出す小計点グループを選び直す */
+export const setSubtotalGroupSelectionMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (input: {
+      tableGroupIds: string[]
+      boxPlotGroupIds: string[]
+    }) =>
+      window.electronAPI.setSubtotalGroupSelection(
+        examId,
+        input.tableGroupIds,
+        input.boxPlotGroupIds
+      ),
+    scope: { id: `exam:${examId}:subtotalGroupSelection` },
+    meta: {
+      invalidates: [subtotalGroupSelectionQuery(examId).queryKey],
+      errorMessage: "小計点グループの選択を保存できませんでした",
     },
   })
 

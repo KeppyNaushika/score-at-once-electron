@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { CheckCircle, Clock, Info } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/contexts/AuthContext"
 import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
+import { finalizeQuestionScoreMutation } from "@/queries/scoring"
 import type { ScoreDecisionCell } from "@/types/scoreDecision.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -31,6 +33,7 @@ const formatDateTime = (isoString: string): string =>
   new Date(isoString).toLocaleString("ja-JP")
 
 interface ScoreDecisionFormProps {
+  examId: string
   cell: ScoreDecisionCell
   questionLabel: string
   maxScore: number
@@ -68,6 +71,7 @@ function toInitialFormValues(cell: ScoreDecisionFormProps["cell"]) {
  * 表示に必要な提案・既存確定はサマリに同梱されているため、ここでは再取得しない。
  */
 export function ScoreDecisionForm({
+  examId,
   cell,
   questionLabel,
   maxScore,
@@ -75,6 +79,9 @@ export function ScoreDecisionForm({
   onDecided,
 }: ScoreDecisionFormProps) {
   const { user } = useAuth()
+  const finalizeQuestionScore = useMutation(
+    finalizeQuestionScoreMutation(examId)
+  )
 
   // 呼び出し側（ScoreDecisionPanel）がセルごとの key でこのフォームを作り直すため、
   // 既存の確定（あれば）を初期値としてそのまま state に置ける。
@@ -85,7 +92,7 @@ export function ScoreDecisionForm({
   const [sourceQuestionScoreId, setSourceQuestionScoreId] = useState<
     string | null
   >(initial.sourceQuestionScoreId)
-  const [deciding, setDeciding] = useState(false)
+  const deciding = finalizeQuestionScore.isPending
 
   const needsScore = NEEDS_SCORE.includes(verdict)
   const parsedScore = score === "" ? null : Number(score)
@@ -98,27 +105,22 @@ export function ScoreDecisionForm({
 
   const handleDecide = async () => {
     if (!user) return
-    setDeciding(true)
     try {
-      await window.electronAPI.finalizeQuestionScore(
-        cell.examStudentId,
-        cell.cropRegionId,
-        user.id,
-        {
+      await finalizeQuestionScore.mutateAsync({
+        examStudentId: cell.examStudentId,
+        cropRegionId: cell.cropRegionId,
+        userId: user.id,
+        scoreData: {
           status: verdict,
           partialScore: needsScore ? (parsedScore ?? 0) : undefined,
           comment: comment || undefined,
           sourceQuestionScoreId: sourceQuestionScoreId ?? undefined,
-        }
-      )
+        },
+      })
       toast.success("採点結果を確定しました")
       onDecided()
-    } catch (error) {
-      toast.error("採点結果を確定できませんでした", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    } finally {
-      setDeciding(false)
+    } catch {
+      // 失敗の通知は MutationCache の後始末が出す
     }
   }
 

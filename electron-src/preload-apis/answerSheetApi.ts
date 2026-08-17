@@ -5,7 +5,6 @@ export function createAnswerSheetApi() {
   return {
     // Student answer related
     uploadStudentAnswers: bind("upload-answer-sheets"),
-    getStudentAnswersByExamId: bind("get-answer-sheets-by-exam-id"),
     getStudentAnswersDataset: bind("get-student-answers-dataset"),
     getStudentAnswerScoreSummary: bind("get-answer-sheet-score-summary"),
     deleteStudentAnswer: bind("delete-answer-sheet"),

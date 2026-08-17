@@ -1,10 +1,13 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useMemo, useState } from "react"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { useCallback, useMemo } from "react"
 import { toast } from "sonner"
 
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  captureReturnSnapshotMutation,
+  returnDiffQuery,
+} from "@/queries/export"
 
 /**
  * 答案返却スナップショットの記録と差分検出を管理するフック。
@@ -14,13 +17,12 @@ import { queryKeys } from "@/lib/queryKeys"
  * - changedExamStudentIds: 返却版から変更があった生徒IDの集合
  */
 export function useReturnDiff(examId: string) {
-  const queryClient = useQueryClient()
-  const [capturing, setCapturing] = useState(false)
-
   const { data: returnDiff } = useQuery({
-    queryKey: queryKeys.returnDiff.detail(examId),
-    queryFn: () => window.electronAPI.export.getReturnDiff(examId),
+    ...returnDiffQuery(examId),
+    enabled: Boolean(examId),
   })
+  const captureSnapshot = useMutation(captureReturnSnapshotMutation(examId))
+  const { mutateAsync: captureSnapshotAsync } = captureSnapshot
 
   const diffByExamStudent = useMemo(
     () =>
@@ -34,27 +36,19 @@ export function useReturnDiff(examId: string) {
   const capture = useCallback(
     async (examStudentIds: string[]): Promise<boolean> => {
       if (!examId || examStudentIds.length === 0) return false
-      setCapturing(true)
       try {
-        const { capturedCount } =
-          await window.electronAPI.export.captureReturnSnapshot({
-            examId,
-            examStudentIds,
-          })
-        toast.success(`${capturedCount}名を返却版として記録しました`)
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.returnDiff.detail(examId),
+        const { capturedCount } = await captureSnapshotAsync({
+          examId,
+          examStudentIds,
         })
+        toast.success(`${capturedCount}名を返却版として記録しました`)
         return true
-      } catch (error) {
-        console.error("返却版の記録に失敗しました:", error)
-        toast.error("返却版の記録に失敗しました")
+      } catch {
+        // 失敗の通知と取り直しは MutationCache の後始末が担う
         return false
-      } finally {
-        setCapturing(false)
       }
     },
-    [examId, queryClient]
+    [captureSnapshotAsync, examId]
   )
 
   const changedExamStudentIds = useMemo(() => {
@@ -69,7 +63,7 @@ export function useReturnDiff(examId: string) {
     diffByExamStudent,
     changedExamStudentIds,
     hasAnySnapshot: returnDiff?.hasAnySnapshot ?? false,
-    capturing,
+    capturing: captureSnapshot.isPending,
     capture,
   }
 }

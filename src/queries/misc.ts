@@ -25,3 +25,12 @@ export const fileProtocolPathQuery = (relativePath: string) =>
  */
 export const readImageData = (imagePath: string) =>
   window.electronAPI.getImageData(imagePath)
+
+/**
+ * そのパスにファイルがあるか。
+ *
+ * 呼び出し元は `<img>` の読み込み（Promise の中）なので、フックにできない。
+ * DB を触らないぶん取り直す先も無いので、そのまま関数として出す。
+ */
+export const checkFileExists = (relativePath: string) =>
+  window.electronAPI.checkFileExists(relativePath)

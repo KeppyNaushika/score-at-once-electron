@@ -1,7 +1,7 @@
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useMemo } from "react"
 
-import { queryKeys } from "@/lib/queryKeys"
+import { examDecisionSummaryQuery } from "@/queries/scoring"
 
 /**
  * 試験の裁定サマリ（競合・確定後の新提案）を取得する。
@@ -20,17 +20,17 @@ export function useExamDecisionSummary(
   enabled: boolean
 ) {
   const queryClient = useQueryClient()
-  const queryKey = queryKeys.exam.decisionSummary(examId, userId)
+  const queryKey = useMemo(
+    () => examDecisionSummaryQuery(examId, userId ?? "").queryKey,
+    [examId, userId]
+  )
   const {
     data: summary = null,
     isPending,
     error,
   } = useQuery({
-    queryKey,
-    queryFn:
-      examId && userId && enabled
-        ? () => window.electronAPI.getExamDecisionSummary(examId, userId)
-        : skipToken,
+    ...examDecisionSummaryQuery(examId, userId ?? ""),
+    enabled: enabled && Boolean(examId) && Boolean(userId),
   })
 
   const refresh = useCallback(

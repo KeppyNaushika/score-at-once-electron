@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import {
   Circle,
   Eye,
@@ -27,15 +28,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { createQuestionScoreMutation } from "@/queries/scoring"
 import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 
 import type { CropRegionWithExamPage } from "../types"
 import type {
-  AddToTargetsParams,
   AddToTargetsResult,
   AnnotationDisplayItem,
-  AnnotationFilters,
 } from "./hooks/useAnnotationBrowser"
+import { useAnnotationBrowser } from "./hooks/useAnnotationBrowser"
 
 interface AnnotationBrowserPanelProps {
   examId: string
@@ -44,14 +45,8 @@ interface AnnotationBrowserPanelProps {
   currentExamStudentId?: string
   cropRegions: CropRegionWithExamPage[]
   gradingMode: "grid" | "individual"
-  // ブラウザーhookから
-  displayItems: AnnotationDisplayItem[]
-  filters: AnnotationFilters
-  isLoading: boolean
-  onFiltersChange: (partial: Partial<AnnotationFilters>) => void
-  onLoadAnnotations: (examId: string) => Promise<void>
-  onToggleFavorite: (id: string, currentFavorite: boolean) => Promise<void>
-  onAddToTargets: (params: AddToTargetsParams) => Promise<AddToTargetsResult>
+  /** キャンバス側で手書きが変わったことの合図（増えたら取り直す） */
+  annotationRefreshKey?: number
   // QuestionScore確保用
   questionScores: Array<{
     id: string
@@ -65,8 +60,6 @@ interface AnnotationBrowserPanelProps {
   onAnnotationAddedFromBrowser?: () => void
   /** アノテーションの生徒・設問に移動 */
   onNavigateTo?: (examStudentId: string, cropRegionId: string) => void
-  /** グループ内全アノテーション参照用 */
-  allAnnotations?: AnnotationWithContext[]
 }
 
 // アノテーションタイプのアイコン
@@ -119,25 +112,40 @@ export function AnnotationBrowserPanel({
   currentExamStudentId,
   cropRegions,
   gradingMode,
-  displayItems,
-  filters,
-  isLoading,
-  onFiltersChange,
-  onLoadAnnotations,
-  onToggleFavorite,
-  onAddToTargets,
+  annotationRefreshKey,
   questionScores,
   selectedScoringDataIds,
   allScoringData,
   onQuestionScoreCreated,
   onAnnotationAddedFromBrowser,
   onNavigateTo,
-  allAnnotations = [],
 }: AnnotationBrowserPanelProps) {
-  // 初回ロード
+  const {
+    allAnnotations,
+    displayItems,
+    isLoading,
+    filters,
+    setFilters: onFiltersChange,
+    reload,
+    toggleFavorite: onToggleFavorite,
+    addToTargets: onAddToTargets,
+  } = useAnnotationBrowser(examId)
+  const { mutateAsync: createQuestionScore } = useMutation(
+    createQuestionScoreMutation(examId)
+  )
+
+  // キャンバスで手書きが変わったら取り直す。合図が来たときだけ
+  const prevRefreshKeyRef = useRef(annotationRefreshKey)
   useEffect(() => {
-    onLoadAnnotations(examId)
-  }, [examId, onLoadAnnotations])
+    if (
+      annotationRefreshKey !== undefined &&
+      prevRefreshKeyRef.current !== undefined &&
+      annotationRefreshKey !== prevRefreshKeyRef.current
+    ) {
+      void reload()
+    }
+    prevRefreshKeyRef.current = annotationRefreshKey
+  }, [annotationRefreshKey, reload])
 
   // 絞り込み候補の受験者一覧。フィルタは questionScore.examStudentId と突き合わせるので、
   // 実体（examStudent）をそのまま持ち、氏名は表示時に student から導出する
@@ -182,7 +190,7 @@ export function AnnotationBrowserPanel({
       // なければ作成
       if (!currentUserId) return null
       try {
-        const created = await window.electronAPI.createQuestionScore({
+        const created = await createQuestionScore({
           cropRegionId,
           examStudentId,
           userId: currentUserId,
@@ -190,12 +198,12 @@ export function AnnotationBrowserPanel({
         })
         onQuestionScoreCreated?.()
         return created.id
-      } catch (error) {
-        console.error("QuestionScore作成エラー:", error)
+      } catch {
+        // 失敗の通知は MutationCache の後始末が出す
       }
       return null
     },
-    [questionScores, currentUserId, onQuestionScoreCreated]
+    [questionScores, currentUserId, createQuestionScore, onQuestionScoreCreated]
   )
 
   // 連打防止用フラグ
@@ -270,9 +278,7 @@ export function AnnotationBrowserPanel({
           return
         }
 
-        // 追加後にアノテーション一覧を再ロード
-        await onLoadAnnotations(examId)
-        // キャンバスプレビューにも即時反映
+        // 一覧の取り直しは書き込み側が済ませている。キャンバスへは合図だけ送る
         onAnnotationAddedFromBrowser?.()
       } finally {
         isAddingRef.current = false
@@ -287,8 +293,6 @@ export function AnnotationBrowserPanel({
       allScoringData,
       ensureQuestionScore,
       onAddToTargets,
-      onLoadAnnotations,
-      examId,
       onAnnotationAddedFromBrowser,
     ]
   )

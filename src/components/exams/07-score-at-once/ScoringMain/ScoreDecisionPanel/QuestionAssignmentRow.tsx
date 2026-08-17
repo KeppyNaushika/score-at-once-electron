@@ -1,8 +1,8 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { ChevronDown, ChevronRight, Plus, X } from "lucide-react"
 import { useState } from "react"
-import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/contexts/AuthContext"
+import {
+  assignCropRegionMutation,
+  unassignCropRegionMutation,
+} from "@/queries/scoring"
 import type {
   ExamMemberSummary,
   ScoreDecisionCell,
@@ -20,6 +24,7 @@ import type {
 } from "@/types/scoreDecision.types"
 
 interface QuestionAssignmentRowProps {
+  examId: string
   question: ScoreDecisionQuestion
   members: ExamMemberSummary[]
   canManage: boolean
@@ -36,6 +41,7 @@ interface QuestionAssignmentRowProps {
  * (cropRegionId, userId) のペアで行う — 行や列の添字から引かない。
  */
 export function QuestionAssignmentRow({
+  examId,
   question,
   members,
   canManage,
@@ -45,7 +51,9 @@ export function QuestionAssignmentRow({
 }: QuestionAssignmentRowProps) {
   const { user } = useAuth()
   const [isExpanded, setIsExpanded] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
+  const assignCropRegion = useMutation(assignCropRegionMutation(examId))
+  const unassignCropRegion = useMutation(unassignCropRegionMutation(examId))
+  const isSaving = assignCropRegion.isPending || unassignCropRegion.isPending
 
   const assignedUserIds = new Set(
     question.assignees.map((assignee) => assignee.userId)
@@ -54,41 +62,33 @@ export function QuestionAssignmentRow({
     (member) => !assignedUserIds.has(member.userId)
   )
 
+  // 失敗の通知と担当一覧の取り直しは MutationCache の後始末が担う。
+  // `onAssignmentChanged` は裁定サマリなど別の行き先を取り直すためのもの
   const handleAssign = async (member: ExamMemberSummary) => {
     if (!user) return
-    setIsSaving(true)
     try {
-      await window.electronAPI.assignCropRegion(
-        question.cropRegionId,
-        member.userId,
-        user.id
-      )
-      onAssignmentChanged()
-    } catch (error) {
-      toast.error("採点担当を割り当てられませんでした", {
-        description: error instanceof Error ? error.message : undefined,
+      await assignCropRegion.mutateAsync({
+        cropRegionId: question.cropRegionId,
+        userId: member.userId,
+        assignedByUserId: user.id,
       })
-    } finally {
-      setIsSaving(false)
+      onAssignmentChanged()
+    } catch {
+      // 通知済み
     }
   }
 
   const handleUnassign = async (userId: string) => {
     if (!user) return
-    setIsSaving(true)
     try {
-      await window.electronAPI.unassignCropRegion(
-        question.cropRegionId,
+      await unassignCropRegion.mutateAsync({
+        cropRegionId: question.cropRegionId,
         userId,
-        user.id
-      )
-      onAssignmentChanged()
-    } catch (error) {
-      toast.error("採点担当を解除できませんでした", {
-        description: error instanceof Error ? error.message : undefined,
+        requestedByUserId: user.id,
       })
-    } finally {
-      setIsSaving(false)
+      onAssignmentChanged()
+    } catch {
+      // 通知済み
     }
   }
 

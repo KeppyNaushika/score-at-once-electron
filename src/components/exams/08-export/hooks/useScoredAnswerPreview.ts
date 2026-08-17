@@ -1,9 +1,10 @@
 "use client"
 
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo, useRef, useState } from "react"
 
-import { queryKeys } from "@/lib/queryKeys"
+import type { PdfExportPageRow } from "@/queries/export"
+import { pdfExportDataQuery } from "@/queries/export"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 
 import type { ScoredAnswerPreviewPage } from "../types"
@@ -27,31 +28,37 @@ interface UseScoredAnswerPreviewProps {
   reloadKey: number
 }
 
-/** getPdfExportData が返す1ページ分のデータ型 */
-type PreviewPage = NonNullable<
-  Awaited<
-    ReturnType<typeof window.electronAPI.export.getPdfExportData>
-  >["pages"]
->[number]
-
-/** 画像デコード済みのページ（IPC再取得せずに再描画するためのキャッシュ） */
-interface LoadedPage {
-  page: PreviewPage
-  img: HTMLImageElement
-}
-
 /** 設定変更をプレビューへ反映する際のデバウンス時間（ms） */
 const RENDER_DEBOUNCE_MS = 150
 
 /** 出力対象が無いときの空配列（毎レンダー作り直すと下流の再描画を誘発する） */
 const NO_PREVIEW_PAGES: ScoredAnswerPreviewPage[] = []
 
+/** 画像を1枚デコードする。同じ URL は使い回す（設定を変えても読み直さない） */
+async function decodeImage(
+  cache: Map<string, HTMLImageElement>,
+  imageUrl: string
+): Promise<HTMLImageElement> {
+  const cached = cache.get(imageUrl)
+  if (cached) return cached
+
+  const image = new Image()
+  image.crossOrigin = "anonymous"
+  image.src = imageUrl
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve()
+    image.onerror = () => reject(new Error("画像の読み込みに失敗"))
+  })
+  cache.set(imageUrl, image)
+  return image
+}
+
 /**
  * 採点済み答案のCanvas描画プレビューを生成するフック
  *
- * - 答案データ取得と画像デコードは生徒切替時のみ実行（重い処理）
- * - 採点マーク設定（色・不透明度・位置・サイズ等）の変更は、
- *   キャッシュ済み画像を使ったCanvas再描画のみで反映する（デバウンス付き）
+ * - 答案データの取得はキャッシュが持つ（生徒を切り替えたときだけ取りに行く）
+ * - 画像のデコードは URL ごとに1回だけ。採点マーク設定（色・不透明度・位置・
+ *   サイズ等）を変えたときは、デコード済みの画像で描き直すだけで済む
  */
 export function useScoredAnswerPreview({
   examId,
@@ -63,7 +70,7 @@ export function useScoredAnswerPreview({
   // 描画結果は、どの入力に対するものかを一緒に持つ。入力が変われば
   // 一致しなくなるので、消去の effect が要らない
   const [rendered, setRendered] = useState<{
-    pages: LoadedPage[]
+    pages: PdfExportPageRow[]
     renderConfig: AnswerOverlaySettings
     previewPages: ScoredAnswerPreviewPage[]
     error: string | null
@@ -77,48 +84,25 @@ export function useScoredAnswerPreview({
   const scoringMarkImagesRef = useRef<Map<string, HTMLImageElement> | null>(
     null
   )
+  const decodedImagesRef = useRef<Map<string, HTMLImageElement>>(new Map())
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   const queryClient = useQueryClient()
   const active = enabled && !!examId && !!previewStudentId
   const queryKey = useMemo(
-    () => queryKeys.exam.scoredAnswerPreview(examId, previewStudentId ?? ""),
+    () => pdfExportDataQuery(examId, previewStudentId ?? "").queryKey,
     [examId, previewStudentId]
   )
 
-  // 答案データの取得と画像のデコードは対で1つの結果（片方だけでは描けない）
   const {
-    data: fetchedPages,
+    data: exportData,
     isFetching,
     error: fetchError,
   } = useQuery({
-    queryKey,
-    queryFn:
-      active && previewStudentId
-        ? async (): Promise<LoadedPage[]> => {
-            const dataResult = await window.electronAPI.export.getPdfExportData(
-              {
-                examId,
-                selectedExamStudentIds: [previewStudentId],
-              }
-            )
-
-            const loaded: LoadedPage[] = []
-            for (const page of dataResult.pages) {
-              const img = new Image()
-              img.crossOrigin = "anonymous"
-              img.src = page.imageUrl
-              await new Promise<void>((resolve, reject) => {
-                img.onload = () => resolve()
-                img.onerror = () => reject(new Error("画像の読み込みに失敗"))
-              })
-              loaded.push({ page, img })
-            }
-            return loaded
-          }
-        : skipToken,
+    ...pdfExportDataQuery(examId, previewStudentId ?? ""),
+    enabled: active,
   })
-  const loadedPages = active ? (fetchedPages ?? null) : null
+  const pages = active ? (exportData?.pages ?? null) : null
   const isLoading = active && isFetching
 
   // タブへ戻ったら読み直す（出力はデータを読むので据え置くと食い違う）
@@ -129,17 +113,17 @@ export function useScoredAnswerPreview({
   // 描画中は前回の画像を出したままにする（生徒を替えるたびに白くしない）。
   // 出力対象が無いとき（未選択・答案なし・無効）だけ空にする
   const previewPages =
-    !enabled || !previewStudentId || loadedPages?.length === 0
+    !enabled || !previewStudentId || pages?.length === 0
       ? NO_PREVIEW_PAGES
       : (rendered?.previewPages ?? NO_PREVIEW_PAGES)
   // 描画時のエラーは、その描画対象がまだ現役のときだけ出す（生徒を替えた後に
   // 前の生徒の失敗が残らないようにする）
   const renderError =
-    rendered !== null && rendered.pages === loadedPages ? rendered.error : null
+    rendered !== null && rendered.pages === pages ? rendered.error : null
   const error = enabled
     ? ((fetchError
         ? fetchError.message
-        : loadedPages?.length === 0
+        : pages?.length === 0
           ? "この生徒の答案データがありません"
           : null) ?? renderError)
     : null
@@ -154,11 +138,8 @@ export function useScoredAnswerPreview({
 
   // Canvas描画（取得済みデータ or 設定変更時）
   useEffect(() => {
-    if (!enabled || !loadedPages || loadedPages.length === 0) return
-    if (
-      rendered?.pages === loadedPages &&
-      rendered.renderConfig === renderConfig
-    )
+    if (!enabled || !pages || pages.length === 0) return
+    if (rendered?.pages === pages && rendered.renderConfig === renderConfig)
       return
 
     let cancelled = false
@@ -178,7 +159,13 @@ export function useScoredAnswerPreview({
         const canvas = canvasRef.current
 
         const previewPages: ScoredAnswerPreviewPage[] = []
-        for (const { page, img } of loadedPages) {
+        for (const page of pages) {
+          const image = await decodeImage(
+            decodedImagesRef.current,
+            page.imageUrl
+          )
+          if (cancelled) return
+
           // main が組み立てた形をそのまま描画エンジンへ渡す（PdfCanvasRenderer と同じ経路）
           const scoringDataForPdf = page.scoringData
 
@@ -207,7 +194,7 @@ export function useScoredAnswerPreview({
 
           await renderAnswerSheetToCanvas(
             canvas,
-            img,
+            image,
             scoringDataForPdf,
             annotations,
             renderConfig,
@@ -228,18 +215,13 @@ export function useScoredAnswerPreview({
         }
 
         if (!cancelled) {
-          setRendered({
-            pages: loadedPages,
-            renderConfig,
-            previewPages,
-            error: null,
-          })
+          setRendered({ pages, renderConfig, previewPages, error: null })
         }
       } catch (err) {
         if (!cancelled) {
           console.error("Scored answer preview render error:", err)
           setRendered({
-            pages: loadedPages,
+            pages,
             renderConfig,
             previewPages: [],
             error:
@@ -256,7 +238,7 @@ export function useScoredAnswerPreview({
     return () => {
       cancelled = true
     }
-  }, [loadedPages, renderConfig, enabled, rendered])
+  }, [pages, renderConfig, enabled, rendered])
 
   return { previewPages, isLoading, error }
 }

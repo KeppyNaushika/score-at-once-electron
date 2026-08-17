@@ -15,6 +15,7 @@ import {
 } from "@/components/exams/07-score-at-once/ScoringIndividual/hooks/core/useDrawingAnnotations"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
+import { createQueryWrapper } from "../../../helpers/queryWrapper"
 import {
   cleanupMockDrawingAPI,
   createMockAnnotation,
@@ -63,7 +64,9 @@ describe("useDrawingAnnotations", () => {
       ]
       mockAPI.getByQuestionScore.mockResolvedValue(annotations)
 
-      const { result } = renderHook(() => useDrawingAnnotations())
+      const { result } = renderHook(() => useDrawingAnnotations(), {
+        wrapper: createQueryWrapper(),
+      })
 
       let loaded: DrawingAnnotation[] = []
       await act(async () => {
@@ -80,7 +83,9 @@ describe("useDrawingAnnotations", () => {
         createMockAnnotation({ type: "line" }),
       ])
 
-      const { result } = renderHook(() => useDrawingAnnotations())
+      const { result } = renderHook(() => useDrawingAnnotations(), {
+        wrapper: createQueryWrapper(),
+      })
 
       let loaded: DrawingAnnotation[] = []
       await act(async () => {
@@ -94,7 +99,9 @@ describe("useDrawingAnnotations", () => {
     it("読み込み失敗時にerror状態が設定される", async () => {
       mockAPI.getByQuestionScore.mockRejectedValue(new Error("読み込みエラー"))
 
-      const { result } = renderHook(() => useDrawingAnnotations())
+      const { result } = renderHook(() => useDrawingAnnotations(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         const data = await result.current.loadAnnotations("qs-1")
@@ -110,7 +117,9 @@ describe("useDrawingAnnotations", () => {
   // =========================================================================
   describe("saveElement（新規アノテーション作成）", () => {
     it("新規要素を保存すると作成されたアノテーションを返す", async () => {
-      const { result } = renderHook(() => useDrawingAnnotations())
+      const { result } = renderHook(() => useDrawingAnnotations(), {
+        wrapper: createQueryWrapper(),
+      })
 
       const element = makeElement({ id: "new-1", text: "新規テキスト" })
       await act(async () => {
@@ -127,7 +136,9 @@ describe("useDrawingAnnotations", () => {
         onAnnotationCreated: onCreated,
       }
 
-      const { result } = renderHook(() => useDrawingAnnotations(callbacks))
+      const { result } = renderHook(() => useDrawingAnnotations(callbacks), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         await result.current.saveElement(makeElement())
@@ -137,7 +148,9 @@ describe("useDrawingAnnotations", () => {
     })
 
     it("作成データに採点者を載せない（持ち主は親の採点データが決める）", async () => {
-      const { result } = renderHook(() => useDrawingAnnotations())
+      const { result } = renderHook(() => useDrawingAnnotations(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         await result.current.saveElement(makeElement())
@@ -151,7 +164,9 @@ describe("useDrawingAnnotations", () => {
     it("API失敗時にnullを返す", async () => {
       mockAPI.create.mockRejectedValue(new Error("作成失敗"))
 
-      const { result } = renderHook(() => useDrawingAnnotations())
+      const { result } = renderHook(() => useDrawingAnnotations(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         const saved = await result.current.saveElement(makeElement())
@@ -170,7 +185,9 @@ describe("useDrawingAnnotations", () => {
       const updated = createMockAnnotation({ id: "a1", x: 0.9 })
       mockAPI.update.mockResolvedValue(updated)
 
-      const { result } = renderHook(() => useDrawingAnnotations())
+      const { result } = renderHook(() => useDrawingAnnotations(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         const returned = await result.current.updateElement(
@@ -189,8 +206,9 @@ describe("useDrawingAnnotations", () => {
       ])
       mockAPI.update.mockResolvedValue(createMockAnnotation({ id: "a1" }))
 
-      const { result } = renderHook(() =>
-        useDrawingAnnotations({ onAnnotationUpdated: onUpdated })
+      const { result } = renderHook(
+        () => useDrawingAnnotations({ onAnnotationUpdated: onUpdated }),
+        { wrapper: createQueryWrapper() }
       )
       await act(async () => {
         await result.current.loadAnnotations("qs-1")
@@ -208,7 +226,9 @@ describe("useDrawingAnnotations", () => {
   // =========================================================================
   describe("deleteElement（アノテーション削除）", () => {
     it("削除に成功するとtrueを返し対象IDでAPIを呼ぶ", async () => {
-      const { result } = renderHook(() => useDrawingAnnotations())
+      const { result } = renderHook(() => useDrawingAnnotations(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         const deleted = await result.current.deleteElement("a1")
@@ -224,8 +244,9 @@ describe("useDrawingAnnotations", () => {
         createMockAnnotation({ id: "a1" }),
       ])
 
-      const { result } = renderHook(() =>
-        useDrawingAnnotations({ onAnnotationDeleted: onDeleted })
+      const { result } = renderHook(
+        () => useDrawingAnnotations({ onAnnotationDeleted: onDeleted }),
+        { wrapper: createQueryWrapper() }
       )
       await act(async () => {
         await result.current.loadAnnotations("qs-1")
@@ -248,7 +269,9 @@ describe("useDrawingAnnotations", () => {
       ])
       mockAPI.batchCreate.mockResolvedValue([])
 
-      const { result } = renderHook(() => useDrawingAnnotations())
+      const { result } = renderHook(() => useDrawingAnnotations(), {
+        wrapper: createQueryWrapper(),
+      })
       await act(async () => {
         await result.current.loadAnnotations("qs-1")
       })
@@ -266,7 +289,9 @@ describe("useDrawingAnnotations", () => {
       ]
       mockAPI.batchCreate.mockResolvedValue(newAnnotations)
 
-      const { result } = renderHook(() => useDrawingAnnotations())
+      const { result } = renderHook(() => useDrawingAnnotations(), {
+        wrapper: createQueryWrapper(),
+      })
       await act(async () => {
         const synced = await result.current.syncElements(
           [makeElement({ id: "new-1" }), makeElement({ id: "new-2" })],
@@ -289,7 +314,9 @@ describe("useDrawingAnnotations", () => {
         })
       )
 
-      const { result } = renderHook(() => useDrawingAnnotations())
+      const { result } = renderHook(() => useDrawingAnnotations(), {
+        wrapper: createQueryWrapper(),
+      })
 
       // 読み込み開始
       let loadPromise: Promise<DrawingAnnotation[]>

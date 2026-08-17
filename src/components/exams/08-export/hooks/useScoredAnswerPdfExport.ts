@@ -16,6 +16,14 @@ import type {
   RenderProgress,
 } from "@/components/exams/08-export/types"
 import type { PdfExportPageData } from "@/electron-src/lib/prisma/pdfExport"
+import {
+  addPageToStreamingSession,
+  cancelStreamingSession,
+  createPdfStreamingSession,
+  fetchPdfExportData,
+  finalizeStreamingSession,
+  selectPdfSavePath,
+} from "@/queries/export"
 
 interface UseScoredAnswerPdfExportParams {
   exam: Exam | null
@@ -58,7 +66,7 @@ export function useScoredAnswerPdfExport({
   // 保存先選択のPromiseを保持（並行処理用）。
   // 形は境界の宣言から導く（手で書き写すとチャンネルの変更に追随できない）
   const savePathPromiseRef = useRef<ReturnType<
-    typeof window.electronAPI.export.selectPdfSavePath
+    typeof selectPdfSavePath
   > | null>(null)
 
   // ストリーミングセッション用の状態
@@ -87,7 +95,7 @@ export function useScoredAnswerPdfExport({
       const selectedExamStudentIds = Array.from(selectedStudents)
 
       // 1. データ取得
-      const pdfExportData = await window.electronAPI.export.getPdfExportData({
+      const pdfExportData = await fetchPdfExportData({
         examId: exam.id,
         selectedExamStudentIds,
       })
@@ -101,15 +109,14 @@ export function useScoredAnswerPdfExport({
 
       // 2. ストリーミングセッション作成（空ページを事前に作成）
       setCurrentStep("PDFセッションを作成中...")
-      streamingSessionIdRef.current =
-        await window.electronAPI.export.createPdfStreamingSession({
-          totalPages: pdfExportData.pages.length,
-          pdfOrientation: exportOptions.pdfOrientation,
-        })
+      streamingSessionIdRef.current = await createPdfStreamingSession({
+        totalPages: pdfExportData.pages.length,
+        pdfOrientation: exportOptions.pdfOrientation,
+      })
 
       // 3. 保存先選択を並行で開始
       setCurrentStep("保存先を選択してください...")
-      const savePathPromise = window.electronAPI.export.selectPdfSavePath({
+      const savePathPromise = selectPdfSavePath({
         examName: exam?.examName,
       })
       savePathPromiseRef.current = savePathPromise
@@ -131,9 +138,7 @@ export function useScoredAnswerPdfExport({
           savePathResultRef.current = null
           // セッションのクリーンアップ
           if (streamingSessionIdRef.current) {
-            window.electronAPI.export.cancelStreamingSession(
-              streamingSessionIdRef.current
-            )
+            cancelStreamingSession(streamingSessionIdRef.current)
             streamingSessionIdRef.current = null
           }
         }
@@ -160,9 +165,7 @@ export function useScoredAnswerPdfExport({
       savePathResultRef.current = null
       // セッションのクリーンアップ
       if (streamingSessionIdRef.current) {
-        window.electronAPI.export.cancelStreamingSession(
-          streamingSessionIdRef.current
-        )
+        cancelStreamingSession(streamingSessionIdRef.current)
         streamingSessionIdRef.current = null
       }
     }
@@ -217,7 +220,7 @@ export function useScoredAnswerPdfExport({
     }
 
     try {
-      await window.electronAPI.export.addPageToStreamingSession({
+      await addPageToStreamingSession({
         sessionId: streamingSessionIdRef.current,
         pageIndex: pageData.pageIndex,
         imageData: pageData.imageData,
@@ -263,9 +266,7 @@ export function useScoredAnswerPdfExport({
         setCurrentStep("保存先選択が開始されていません")
         setIsExporting(false)
         // セッションのクリーンアップ
-        window.electronAPI.export.cancelStreamingSession(
-          streamingSessionIdRef.current
-        )
+        cancelStreamingSession(streamingSessionIdRef.current)
         streamingSessionIdRef.current = null
         return
       }
@@ -283,9 +284,7 @@ export function useScoredAnswerPdfExport({
         setCanvasRenderingComplete(false)
         savePathResultRef.current = null
         // セッションのクリーンアップ
-        window.electronAPI.export.cancelStreamingSession(
-          streamingSessionIdRef.current
-        )
+        cancelStreamingSession(streamingSessionIdRef.current)
         streamingSessionIdRef.current = null
         return
       }
@@ -316,9 +315,7 @@ export function useScoredAnswerPdfExport({
       savePathResultRef.current = null
       // セッションのクリーンアップ
       if (streamingSessionIdRef.current) {
-        window.electronAPI.export.cancelStreamingSession(
-          streamingSessionIdRef.current
-        )
+        cancelStreamingSession(streamingSessionIdRef.current)
         streamingSessionIdRef.current = null
       }
     },
@@ -339,7 +336,7 @@ export function useScoredAnswerPdfExport({
         setExportProgress(95)
         setCurrentStep("PDFを保存中...")
 
-        await window.electronAPI.export.finalizeStreamingSession({
+        await finalizeStreamingSession({
           sessionId: streamingSessionIdRef.current,
           outputPath: savePathResultRef.current.filePath,
         })
@@ -357,9 +354,7 @@ export function useScoredAnswerPdfExport({
         setExportStatus("error")
         setCurrentStep("PDF保存中にエラーが発生しました")
         if (streamingSessionIdRef.current) {
-          window.electronAPI.export.cancelStreamingSession(
-            streamingSessionIdRef.current
-          )
+          cancelStreamingSession(streamingSessionIdRef.current)
           streamingSessionIdRef.current = null
         }
       } finally {

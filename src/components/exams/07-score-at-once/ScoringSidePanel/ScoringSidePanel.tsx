@@ -14,7 +14,7 @@ import {
   User,
   X,
 } from "lucide-react"
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback } from "react"
 
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import type { QuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/types"
@@ -84,7 +84,6 @@ const GRID_4_3_STYLE = {
 } as const
 
 import { AnnotationBrowserPanel } from "./AnnotationBrowserPanel"
-import { useAnnotationBrowser } from "./hooks/useAnnotationBrowser"
 import { SidePanelSection } from "./SidePanelSection"
 
 interface ScoringSidePanelProps {
@@ -264,7 +263,6 @@ export function ScoringSidePanel({
   hiddenUnscoredCount,
   onBatchScoreVisibleUnscored,
 }: ScoringSidePanelProps) {
-  const annotationBrowser = useAnnotationBrowser()
   const { keyBindings } = useKeyBindings()
   const scoringColors = useScoringStatusColors()
   // 閉じているセクションIDを設定へ残す（既定は全展開）
@@ -291,21 +289,6 @@ export function ScoringSidePanel({
       value: JSON.stringify([...next]),
     })
   }
-  const { loadAnnotations: reloadBrowserAnnotations } = annotationBrowser
-
-  // キャンバスでアノテーション変更時にブラウザ一覧をリロード
-  const prevRefreshKeyRef = useRef(annotationRefreshKey)
-  useEffect(() => {
-    if (
-      annotationRefreshKey !== undefined &&
-      prevRefreshKeyRef.current !== undefined &&
-      annotationRefreshKey !== prevRefreshKeyRef.current
-    ) {
-      reloadBrowserAnnotations(examId)
-    }
-    prevRefreshKeyRef.current = annotationRefreshKey
-  }, [annotationRefreshKey, reloadBrowserAnnotations, examId])
-
   // アノテーションの生徒・設問に移動
   const handleNavigateTo = useCallback(
     (examStudentId: string, cropRegionId: string) => {
@@ -566,20 +549,13 @@ export function ScoringSidePanel({
             currentExamStudentId={currentExamStudentId}
             cropRegions={cropRegions}
             gradingMode={gradingMode}
-            displayItems={annotationBrowser.displayItems}
-            filters={annotationBrowser.filters}
-            isLoading={annotationBrowser.isLoading}
-            onFiltersChange={annotationBrowser.setFilters}
-            onLoadAnnotations={annotationBrowser.loadAnnotations}
-            onToggleFavorite={annotationBrowser.toggleFavorite}
-            onAddToTargets={annotationBrowser.addToTargets}
+            annotationRefreshKey={annotationRefreshKey}
             questionScores={questionScores ?? []}
             selectedScoringDataIds={selectedScoringDataIds ?? []}
             allScoringData={allScoringData ?? []}
             onQuestionScoreCreated={onQuestionScoreCreated}
             onAnnotationAddedFromBrowser={onAnnotationAddedFromBrowser}
             onNavigateTo={handleNavigateTo}
-            allAnnotations={annotationBrowser.allAnnotations}
           />
         </TabsContent>
       </Tabs>

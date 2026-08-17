@@ -1,9 +1,8 @@
 "use client"
 
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { useParams } from "next/navigation"
-import { useCallback, useEffect, useRef, useState } from "react"
-import { toast } from "sonner"
+import { useCallback, useMemo, useState } from "react"
 
 import { useStudentSelection } from "@/components/exams/08-export/hooks/useStudentSelection"
 import type { ExportOptions, Student } from "@/components/exams/08-export/types"
@@ -11,14 +10,19 @@ import {
   DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
   type IndividualReportOptions,
 } from "@/electron-src/lib/export/individual-report/types"
-import type { ExamExportSettings } from "@/electron-src/lib/prisma/examSettings"
-import { queryKeys } from "@/lib/queryKeys"
+import { examDetailQuery, examStudentsQuery } from "@/queries/exam"
+import {
+  examExportSettingsQuery,
+  saveExamExportSettingsMutation,
+} from "@/queries/settings"
+import {
+  setSubtotalGroupSelectionMutation,
+  subtotalGroupSelectionQuery,
+} from "@/queries/subtotal"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 
-/** 結果出力ページの状態（生徒選択・出力設定・採点マーク設定・プログレス）を統合管理するフック */
-/** 打鍵ごとに共有DBへ書きに行かないための待ち時間（ms） */
-const SETTINGS_SAVE_DEBOUNCE_MS = 400
+import { useMasterImageOrientation } from "./useMasterImageOrientation"
 
 /**
  * 選択されたグループID（エンティティ参照）は設定側に持たない。
@@ -40,19 +44,30 @@ function withoutSelectedGroupIds(
   }
 }
 
+/** 選ばれている小計点グループが変わったか。並びも選択の一部なのでそのまま比べる */
+function hasDifferentGroupSelection(
+  next: readonly string[],
+  previous: readonly string[]
+): boolean {
+  return (
+    next.length !== previous.length ||
+    next.some((groupId, index) => groupId !== previous[index])
+  )
+}
+
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_STUDENTS: Student[] = []
 
-/** この画面が保存済み設定として持つ形 */
-interface SavedExportSettings {
-  answerOverlay: AnswerOverlaySettings
-  individualReport: IndividualReportOptions
-}
-
+/**
+ * 結果出力ページの状態（生徒選択・出力設定・採点マーク設定・プログレス）を統合管理するフック。
+ *
+ * 設定の保存にデバウンスは置かない。以前は 400ms まとめてから書いていたが、
+ * 「画面には出ているが DB には無い」窓を作るうえ、そのあいだキャッシュへ書いた
+ * 値（＝楽観更新）が取り直しと競り合っていた。1つの操作で1レコード書く。
+ */
 export function useExportPage() {
   const params = useParams()
   const examId = params.examId as string
-  const queryClient = useQueryClient()
 
   // フィルタ・検索状態
   const [searchTerm, setSearchTerm] = useState("")
@@ -70,7 +85,7 @@ export function useExportPage() {
     removeStudents,
   } = useStudentSelection()
 
-  // 出力設定
+  // 出力設定（この画面の中だけで使う。DB には書かない）
   const [exportOptions, setExportOptions] = useState<ExportOptions>({
     includeScoredAnswers: true,
     includeIndividualReports: false,
@@ -89,34 +104,14 @@ export function useExportPage() {
   const [individualReportOptions, setIndividualReportOptionsState] =
     useState<IndividualReportOptions>(DEFAULT_INDIVIDUAL_REPORT_OPTIONS)
 
-  // 保存済みの出力設定。小計グループ選択は SSOT である ExamSubtotalGroup の
-  // フラグから解決する（設定JSONに残った亡霊IDを使わない）
-  const settingsKey = queryKeys.exam.exportSettings(examId)
-  const { data: savedSettings } = useQuery({
-    queryKey: settingsKey,
-    queryFn: examId
-      ? async () => {
-          const [settings, selection] = await Promise.all([
-            window.electronAPI.settings.getExamExportSettings(examId),
-            window.electronAPI.getSubtotalGroupSelection(examId),
-          ])
-          return {
-            answerOverlay: settings.answerOverlay,
-            individualReport: {
-              ...settings.individualReport,
-              tableSubtotalGroupSelection: {
-                ...settings.individualReport.tableSubtotalGroupSelection,
-                selectedGroupIds: selection.tableGroupIds,
-              },
-              boxPlotSubtotalGroupSelection: {
-                ...settings.individualReport.boxPlotSubtotalGroupSelection,
-                selectedGroupIds: selection.boxPlotGroupIds,
-              },
-            },
-          }
-        }
-      : skipToken,
-  })
+  // 保存済みの出力設定と、小計グループの選択。選択の正本は ExamSubtotalGroup の
+  // フラグなので、設定JSONに残った亡霊IDは使わない
+  const { data: savedSettings } = useQuery(examExportSettingsQuery(examId))
+  const { data: savedSelection } = useQuery(subtotalGroupSelectionQuery(examId))
+  const saveExportSettings = useMutation(saveExamExportSettingsMutation(examId))
+  const setSubtotalGroupSelection = useMutation(
+    setSubtotalGroupSelectionMutation(examId)
+  )
 
   /**
    * 取得した設定を編集状態の種にする。
@@ -126,167 +121,88 @@ export function useExportPage() {
   const [settingsSeededExamId, setSettingsSeededExamId] = useState<
     string | null
   >(null)
-  if (savedSettings && settingsSeededExamId !== examId) {
+  if (savedSettings && savedSelection && settingsSeededExamId !== examId) {
     setSettingsSeededExamId(examId)
     setAnswerOverlaySettingsState(savedSettings.answerOverlay)
-    setIndividualReportOptionsState(savedSettings.individualReport)
+    setIndividualReportOptionsState({
+      ...savedSettings.individualReport,
+      tableSubtotalGroupSelection: {
+        ...savedSettings.individualReport.tableSubtotalGroupSelection,
+        selectedGroupIds: savedSelection.tableGroupIds,
+      },
+      boxPlotSubtotalGroupSelection: {
+        ...savedSettings.individualReport.boxPlotSubtotalGroupSelection,
+        selectedGroupIds: savedSelection.boxPlotGroupIds,
+      },
+    })
   }
 
-  /**
-   * 出力設定の保存。
-   *
-   * 数値入力は打鍵ごとに呼ばれるうえ、保存は 20 行以上の upsert を1トランザクションで
-   * 走らせる。共有フォルダ上の SQLite ではロックを取り合うので、書き込みだけ遅らせる。
-   * 画面の状態は即時に更新するので体感は変わらない。
-   */
-  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingSettingsRef = useRef<ExamExportSettings | null>(null)
-
-  const flushSettings = useCallback(async () => {
-    const pending = pendingSettingsRef.current
-    pendingSettingsRef.current = null
-    if (!pending || !examId) return
-    try {
-      await window.electronAPI.settings.saveExamExportSettings(examId, pending)
-    } catch (error) {
-      // 書いた値をキャッシュへ伝えないと、戻ってきたときに保存前の設定が
-      // 種になり、そのまま上書き保存される
-      await queryClient.invalidateQueries({ queryKey: settingsKey })
-      console.error("出力設定の保存に失敗しました:", error)
-      toast.error("出力設定の保存に失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
-  }, [examId, queryClient, settingsKey])
-
-  const scheduleSettingsSave = useCallback(
-    (settings: ExamExportSettings) => {
-      // 画面で編集した値がそのまま保存対象。キャッシュにも同じものを載せる
-      queryClient.setQueryData<SavedExportSettings>(settingsKey, (cached) =>
-        cached
-          ? {
-              answerOverlay: settings.answerOverlay,
-              individualReport: {
-                ...settings.individualReport,
-                tableSubtotalGroupSelection:
-                  cached.individualReport.tableSubtotalGroupSelection,
-                boxPlotSubtotalGroupSelection:
-                  cached.individualReport.boxPlotSubtotalGroupSelection,
-              },
-            }
-          : cached
-      )
-      pendingSettingsRef.current = settings
-      if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
-      persistTimerRef.current = setTimeout(() => {
-        persistTimerRef.current = null
-        void flushSettings()
-      }, SETTINGS_SAVE_DEBOUNCE_MS)
-    },
-    [flushSettings, queryClient, settingsKey]
-  )
-
-  // 画面を離れるときは書き残しを吐き出す
-  useEffect(() => {
-    return () => {
-      if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
-      void flushSettings()
-    }
-  }, [flushSettings])
-
-  // 採点マーク設定の保存
+  // 採点マーク設定の保存。1回の操作で確定するので即時に書く
   const setAnswerOverlaySettings = useCallback(
     (
       config:
         | AnswerOverlaySettings
         | ((prev: AnswerOverlaySettings) => AnswerOverlaySettings)
     ) => {
-      const newConfig =
+      // 更新関数の中から書かない。React が更新関数を2度走らせることがあるので、
+      // 1つの操作が2件の書き込みになる（段階11 で同じ形の不具合を踏んでいる）
+      const next =
         typeof config === "function" ? config(answerOverlaySettings) : config
-      setAnswerOverlaySettingsState(newConfig)
-      scheduleSettingsSave({
-        answerOverlay: newConfig,
+      setAnswerOverlaySettingsState(next)
+      saveExportSettings.mutate({
+        answerOverlay: next,
         individualReport: withoutSelectedGroupIds(individualReportOptions),
       })
     },
-    [answerOverlaySettings, individualReportOptions, scheduleSettingsSave]
+    [answerOverlaySettings, individualReportOptions, saveExportSettings]
   )
 
-  // 個人成績表オプションの保存
+  // 個人成績表オプションの保存。小計グループの選択だけは別のレコードなので別に書く
   const setIndividualReportOptions = useCallback(
-    async (
+    (
       options:
         | IndividualReportOptions
         | ((prev: IndividualReportOptions) => IndividualReportOptions)
     ) => {
-      const newOptions =
+      const next =
         typeof options === "function"
           ? options(individualReportOptions)
           : options
-      setIndividualReportOptionsState(newOptions)
+      setIndividualReportOptionsState(next)
 
-      if (examId) {
-        try {
-          // 小計グループ選択は relational フラグへ書き込み（source of truth）
-          await window.electronAPI.setSubtotalGroupSelection(
-            examId,
-            newOptions.tableSubtotalGroupSelection.selectedGroupIds,
-            newOptions.boxPlotSubtotalGroupSelection.selectedGroupIds
-          )
-          queryClient.setQueryData<SavedExportSettings>(
-            settingsKey,
-            (cached) =>
-              cached ? { ...cached, individualReport: newOptions } : cached
-          )
-        } catch (error) {
-          await queryClient.invalidateQueries({ queryKey: settingsKey })
-          console.error("小計グループ選択の保存に失敗しました:", error)
-          toast.error("小計点グループの選択を保存できませんでした", {
-            description: error instanceof Error ? error.message : undefined,
-          })
-        }
+      // 小計グループの選択は別のテーブル（ExamSubtotalGroup のフラグ）。変わって
+      // いないのに書くと、フォントサイズを1文字打つたびに関係ない行まで触る
+      if (
+        hasDifferentGroupSelection(
+          next.tableSubtotalGroupSelection.selectedGroupIds,
+          individualReportOptions.tableSubtotalGroupSelection.selectedGroupIds
+        ) ||
+        hasDifferentGroupSelection(
+          next.boxPlotSubtotalGroupSelection.selectedGroupIds,
+          individualReportOptions.boxPlotSubtotalGroupSelection.selectedGroupIds
+        )
+      ) {
+        setSubtotalGroupSelection.mutate({
+          tableGroupIds: next.tableSubtotalGroupSelection.selectedGroupIds,
+          boxPlotGroupIds: next.boxPlotSubtotalGroupSelection.selectedGroupIds,
+        })
       }
 
-      scheduleSettingsSave({
+      saveExportSettings.mutate({
         answerOverlay: answerOverlaySettings,
-        individualReport: withoutSelectedGroupIds(newOptions),
+        individualReport: withoutSelectedGroupIds(next),
       })
     },
     [
       answerOverlaySettings,
-      examId,
       individualReportOptions,
-      scheduleSettingsSave,
-      queryClient,
-      settingsKey,
+      saveExportSettings,
+      setSubtotalGroupSelection,
     ]
   )
 
   // マスター画像の縦横比からPDF用紙の向きを決める
-  const { data: detectedOrientation } = useQuery({
-    queryKey: queryKeys.exam.masterImageOrientation(examId),
-    queryFn: examId
-      ? async () => {
-          const masterImages =
-            await window.electronAPI.getMasterImagesByExamId(examId)
-          const firstImage = masterImages[0]
-          if (!firstImage?.imagePath) return null
-
-          const imageUrl = await window.electronAPI.resolveFileProtocolPath(
-            firstImage.imagePath
-          )
-          const image = new Image()
-          image.src = imageUrl
-          await new Promise<void>((resolve, reject) => {
-            image.onload = () => resolve()
-            image.onerror = () => reject(new Error("画像の読み込みに失敗"))
-          })
-          return image.naturalWidth > image.naturalHeight
-            ? ("landscape" as const)
-            : ("portrait" as const)
-        }
-      : skipToken,
-  })
+  const detectedOrientation = useMasterImageOrientation(examId)
 
   // 検出した向きを既定値として1度だけ入れる（利用者が変えた後は上書きしない）
   const [orientationSeededExamId, setOrientationSeededExamId] = useState<
@@ -309,38 +225,37 @@ export function useExportPage() {
   const [currentStep, setCurrentStep] = useState("")
   const [isExporting, setIsExporting] = useState(false)
 
-  // 試験と受験者は必ず対で使うので1つの取得にまとめる
-  const queryKey = queryKeys.exam.exportPage(examId)
-  const { data, isPending: loading } = useQuery({
-    queryKey,
-    queryFn: examId
-      ? async () => {
-          const [exam, examStudents] = await Promise.all([
-            window.electronAPI.getExam(examId),
-            window.electronAPI.getStudentsForExam(examId),
-          ])
-          // 受験生徒順の SSOT は ExamStudent.customOrder（05 で定義）。08 は下流の
-          // 読み手なので customOrder のみで並べ、出席番号・氏名などの独自フォールバックは
-          // 加えない。getStudentsForExam は customOrder 昇順（同着は studentNumber）で
-          // 返すため、同着・未設定は安定ソートでその順序を保つ。未設定（null）は末尾へ。
-          const students = [...examStudents].sort(
+  const { data: exam = null, isPending: examPending } = useQuery(
+    examDetailQuery(examId)
+  )
+  const { data: examStudents, isPending: studentsPending } = useQuery(
+    examStudentsQuery(examId)
+  )
+
+  /**
+   * 受験生徒順の SSOT は ExamStudent.customOrder（05 で定義）。08 は下流の読み手なので
+   * customOrder のみで並べ、出席番号・氏名などの独自フォールバックは加えない。
+   * `getStudentsForExam` は customOrder 昇順（同着は studentNumber）で返すため、
+   * 同着・未設定は安定ソートでその順序を保つ。未設定（null）は末尾へ。
+   */
+  const students = useMemo(
+    () =>
+      examStudents
+        ? [...examStudents].sort(
             (examStudentA, examStudentB) =>
               (examStudentA.customOrder ?? Number.MAX_SAFE_INTEGER) -
               (examStudentB.customOrder ?? Number.MAX_SAFE_INTEGER)
           )
-          return { exam, students }
-        }
-      : skipToken,
-  })
-  const exam = data?.exam ?? null
-  const students = data?.students ?? EMPTY_STUDENTS
+        : EMPTY_STUDENTS,
+    [examStudents]
+  )
 
   /**
    * 取得できた受験者のうち「参加中」を既定で選ぶ。
    * 取得のたびに選び直すのではなく、初回だけ（利用者が外した選択を戻さない）。
    */
   const [seededExamId, setSeededExamId] = useState<string | null>(null)
-  if (data && seededExamId !== examId) {
+  if (examStudents && seededExamId !== examId) {
     setSeededExamId(examId)
     replaceSelection(
       students
@@ -391,7 +306,7 @@ export function useExportPage() {
     // 表示フィルタ前の全生徒（返却差分の件数・詳細を表示フィルタと独立させるため）
     allStudents: students,
     availableClassrooms,
-    loading,
+    loading: examPending || studentsPending,
 
     // フィルタ・検索
     searchTerm,
