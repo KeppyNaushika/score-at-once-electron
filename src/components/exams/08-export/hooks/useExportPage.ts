@@ -98,23 +98,29 @@ export function useExportPage() {
   // フラグなので、設定JSONに残った亡霊IDは使わない
   const { data: savedSettings } = useQuery(examExportSettingsQuery(examId))
   const { data: savedSelection } = useQuery(subtotalGroupSelectionQuery(examId))
-  const setSubtotalGroupSelection = useMutation(
+  const { mutate: setSubtotalGroupSelection } = useMutation(
     setSubtotalGroupSelectionMutation(examId)
   )
 
-  // 出力設定は6テーブルに分かれている。変わった行だけを、その行の口から書く
-  const setOverlayStyle = useMutation(setExamAnswerOverlayStyleMutation(examId))
-  const setOverlayVisibility = useMutation(
+  // 出力設定は6テーブルに分かれている。変わった行だけを、その行の口から書く。
+  // `mutate` だけを取り出すのは、`useMutation` の戻り値が毎レンダー別物になり、
+  // それを依存に入れると下流の props が毎レンダー作り直されるため
+  const { mutate: setOverlayStyle } = useMutation(
+    setExamAnswerOverlayStyleMutation(examId)
+  )
+  const { mutate: setOverlayVisibility } = useMutation(
     setExamAnswerOverlayVisibilityMutation(examId)
   )
-  const setStatisticVisibility = useMutation(
+  const { mutate: setStatisticVisibility } = useMutation(
     setExamReportStatisticVisibilityMutation(examId)
   )
-  const setReportSettings = useMutation(setExamReportSettingsMutation(examId))
-  const setReportTableSection = useMutation(
+  const { mutate: setReportSettings } = useMutation(
+    setExamReportSettingsMutation(examId)
+  )
+  const { mutate: setReportTableSection } = useMutation(
     setExamReportTableSectionMutation(examId)
   )
-  const setReportGraphSettings = useMutation(
+  const { mutate: setReportGraphSettings } = useMutation(
     setExamReportGraphSettingsMutation(examId)
   )
 
@@ -158,13 +164,13 @@ export function useExportPage() {
       for (const change of changes) {
         switch (change.kind) {
           case "overlayStyle":
-            setOverlayStyle.mutate(change.style, onError)
+            setOverlayStyle(change.style, onError)
             break
           case "overlayVisibility":
-            setOverlayVisibility.mutate(change.visibility, onError)
+            setOverlayVisibility(change.visibility, onError)
             break
           case "statisticVisibility":
-            setStatisticVisibility.mutate(
+            setStatisticVisibility(
               {
                 statisticKind: change.statisticKind,
                 scope: change.scope,
@@ -174,16 +180,16 @@ export function useExportPage() {
             )
             break
           case "reportSettings":
-            setReportSettings.mutate(change.individualReport, onError)
+            setReportSettings(change.individualReport, onError)
             break
           case "reportTableSection":
-            setReportTableSection.mutate(
+            setReportTableSection(
               { tableKind: change.tableKind, values: change.values },
               onError
             )
             break
           case "reportGraphSettings":
-            setReportGraphSettings.mutate(change.values, onError)
+            setReportGraphSettings(change.values, onError)
             break
         }
       }
@@ -241,7 +247,7 @@ export function useExportPage() {
           individualReportOptions.boxPlotSubtotalGroupSelection.selectedGroupIds
         )
       ) {
-        setSubtotalGroupSelection.mutate(
+        setSubtotalGroupSelection(
           {
             tableGroupIds: next.tableSubtotalGroupSelection.selectedGroupIds,
             boxPlotGroupIds:

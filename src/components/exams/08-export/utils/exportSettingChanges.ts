@@ -1,4 +1,7 @@
-import type { IndividualReportOptions } from "@/electron-src/lib/export/individual-report/types"
+import type {
+  GraphOptions,
+  IndividualReportOptions,
+} from "@/electron-src/lib/export/individual-report/types"
 import type {
   ExamReportGraphSettingsValues,
   ExamReportTableSectionValues,
@@ -143,12 +146,27 @@ function tableSectionValues(
       }
 }
 
+/**
+ * 列でない項目を持っていたら `never` になる型。
+ *
+ * 下でグラフのオプションをそのまま行の値として渡すため、**列に無い項目が増えたら
+ * 型で落とす**。展開（spread）は余分なプロパティの検査を素通りするので、実行時に
+ * Prisma が「そんな列は無い」と言うまで気づけない。
+ */
+type OnlyColumnsOf<TValue, TRow> =
+  Exclude<keyof TValue, keyof TRow> extends never ? TValue : never
+
 /** グラフ設定1行分の値を取り出す */
 function graphSettingsValues(
   options: IndividualReportOptions
 ): ExamReportGraphSettingsValues {
+  const graphOptions: OnlyColumnsOf<
+    GraphOptions,
+    ExamReportGraphSettingsValues
+  > = options.graphOptions
+
   return {
-    ...options.graphOptions,
+    ...graphOptions,
     boxPlotGroupSelectionEnabled: options.boxPlotSubtotalGroupSelection.enabled,
   }
 }
