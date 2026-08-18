@@ -1437,10 +1437,46 @@ main が `memberships[0]` へフォールバックして**別の学級・別の�
 3. **共有計算6モジュールを `src/lib/shared/` へ移す**（段階10「決めたこと §4」）。
    `ALLOWED_VALUE_IMPORTS` と `eslint.config.mjs` の例外一覧が**両方とも消える**
 
+4. **画面の目隠し（`ScreenBlackout`）の設定を `localStorage` 直読みから移す。**
+   下記「段階12 で見つけた宿題」を参照
+
 **ASB は IPC 分割を待たない。** 分割計画（`asb-ipc-split-plan.md` §12）が触る renderer
 ファイルとの重なりは2つだけ（`AnswerSheetBuilderMainView.tsx` / `ImageElementEditor.tsx`）。
 
 **完了条件**: `NOT_YET_MIGRATED` が空。**IPC 移行の完了。**
+
+#### 段階12 で見つけた宿題（`ScreenBlackout`）
+
+段階12 の検証で e2e を回したところ **9件中9件が落ちていた**。原因は採点でも出力でもなく、
+離席時の目隠し（簡易スクリーンセイバー）が**無限レンダーでアプリごと固まっていた**こと
+だった。`b6d9386b`（段階10 の設定移行）由来で、**このブランチでは数段階にわたり e2e が
+赤のまま誰も回していなかった**。
+
+連鎖はこう:
+
+```
+setFullScreen（useMutation の戻り値・毎レンダー別物）
+  → enterFullScreenIfNeeded → startTimer → 設定監視 effect（毎レンダー走る）
+    → setSettings(新しい入れ物) → 再レンダー → 振り出しへ
+```
+
+**直したこと（段階12 で対応済み）**: 暗転の本体を `useEffectEvent` へ切り出し、
+無操作タイマーを effect が持つ形にして `startTimer` を無くした。あわせて
+`mutate` の取り出しと、設定が同じなら書かない（＝再レンダーの燃料を断つ）を入れた。
+
+**残した宿題は2つ**:
+
+1. **この画面には自動テストが1件も無い。** e2e は暗転まで踏まず、unit も無い。
+   偽タイマーで「N分でロックする／操作で延びる／パスコードが無ければ暗転だけ」を
+   固定する。jsdom ＋ Query のラッパー ＋ 利用者一覧のモックが要る（100行前後）
+2. **設定が `localStorage` 直読みで、`src/queries/` の外にいる。** 変更の伝達も独自の
+   `window` イベント。「取得を state へ蒔き直す」構図そのものがここから来ている。
+   `ScreenControlTab` 側も動くので、端数の移行と一緒に扱う
+
+> **検査の穴**: `useMutation` の戻り値を依存配列へ入れる誤りを、この移行で**3回**
+> 踏んでいる（R1 #1・R4・本件）。`react-hooks/exhaustive-deps` は依存が列挙されて
+> いれば通るので止まらない。**列挙された依存が毎レンダー別物**であることを見る検査を
+> 置くのが本筋（`useMutation(...)` の戻り値そのものを依存に入れるのを禁じる）。
 
 ### 段階14 — ASB: main を実体ごとに分解し、バルクを差分適用にする
 

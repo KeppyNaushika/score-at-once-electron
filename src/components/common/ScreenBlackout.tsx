@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Lock } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react"
 
 import { useAuth } from "@/contexts/AuthContext"
 import { fullScreenQuery, setFullScreenMutation } from "@/queries/settings"
@@ -10,6 +10,8 @@ import { userListQuery, verifyPasscodeMutation } from "@/queries/user"
 
 const BLACKOUT_SETTINGS_KEY = "screenBlackoutSettings"
 const FADE_TIMEOUT_MS = 3000
+/** 操作のたびに見張りを張り直さないための間隔（ms） */
+const ACTIVITY_THROTTLE_MS = 1000
 
 interface BlackoutSettings {
   enabled: boolean
@@ -39,16 +41,23 @@ export function ScreenBlackout() {
   const [passcode, setPasscode] = useState("")
   const [error, setError] = useState("")
   const [uiVisible, setUiVisible] = useState(true)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** 最後に操作した時刻。無操作の見張りはこれが動いたら張り直す */
+  const [lastActivityAt, setLastActivityAt] = useState(0)
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wasFullScreenBeforeRef = useRef(false)
   const passcodeRef = useRef("")
+  /** 直近で「触った」と控えた時刻（間引き用） */
+  const lastBumpRef = useRef(0)
 
   // 操作者のパスコード種別（ログイン画面と同じ利用者一覧のキャッシュを共有する）
   const { data: users } = useQuery(userListQuery())
   const queryClient = useQueryClient()
-  const setFullScreen = useMutation(setFullScreenMutation())
-  const verifyPasscodeMutate = useMutation(verifyPasscodeMutation())
+  // `mutate` だけを取り出す。`useMutation` の戻り値は毎レンダー別物なので、
+  // 依存に入れると下の useCallback が毎レンダー作り直され、それを依存に持つ
+  // effect が毎レンダー走る。この画面ではその effect が `setSettings` を
+  // 呼ぶため、レンダーが止まらなくなる（実測: Maximum update depth exceeded）
+  const { mutate: setFullScreen } = useMutation(setFullScreenMutation())
+  const { mutate: verifyPasscodeMutate } = useMutation(verifyPasscodeMutation())
   const passcodeType = user?.id
     ? (users?.find((candidate) => candidate.id === user.id)?.passcodeType ??
       "none")
@@ -59,13 +68,6 @@ export function ScreenBlackout() {
   const hasDigitPasscode =
     passcodeType === "4digit" || passcodeType === "6digit"
   const maxLength = passcodeType === "4digit" ? 4 : 6
-
-  const clearTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current)
-      timerRef.current = null
-    }
-  }, [])
 
   // フェードUI制御
   const startFadeTimer = useCallback(() => {
@@ -85,33 +87,59 @@ export function ScreenBlackout() {
     // 暗転を解いたときに元へ戻せるよう、今が全画面かをその場で確かめる
     wasFullScreenBeforeRef.current =
       await queryClient.fetchQuery(fullScreenQuery())
-    setFullScreen.mutate(true)
+    setFullScreen(true)
   }, [queryClient, setFullScreen])
 
   const restoreFullScreenIfNeeded = useCallback(() => {
     if (!getBlackoutSettings().autoFullScreen) return
     if (wasFullScreenBeforeRef.current) return
-    setFullScreen.mutate(false)
+    setFullScreen(false)
   }, [setFullScreen])
 
-  const startTimer = useCallback(
-    (minutes: number) => {
-      clearTimer()
-      timerRef.current = setTimeout(
-        async () => {
-          await enterFullScreenIfNeeded()
-          setIsBlackout(true)
-          if (hasDigitPasscode) {
-            setIsLocked(true)
-            setUiVisible(true)
-            startFadeTimer()
-          }
-        },
-        minutes * 60 * 1000
-      )
-    },
-    [clearTimer, hasDigitPasscode, enterFullScreenIfNeeded, startFadeTimer]
-  )
+  /**
+   * 画面を暗転させる。無操作タイマーの発火と手動ロック（Ctrl/Cmd+L）で同じもの。
+   *
+   * **発火した時点の値を読む**（`useEffectEvent`）。閉じ込めると、タイマーを
+   * 張ったときの `hasDigitPasscode` が固定され、利用者一覧が後から届く場合に
+   * 「ロックなしで暗転する」ことになる。閉じ込めないために依存へ足すと、今度は
+   * この関数を依存に持つ effect が毎レンダー走り、その中の `setSettings` が
+   * 次のレンダーを呼んで止まらなくなる（実測: Maximum update depth exceeded）。
+   */
+  const blackoutNow = useEffectEvent(async () => {
+    await enterFullScreenIfNeeded()
+    setIsBlackout(true)
+    if (hasDigitPasscode) {
+      setIsLocked(true)
+      setUiVisible(true)
+      startFadeTimer()
+    }
+  })
+
+  /**
+   * 無操作の見張り。
+   *
+   * **タイマーは effect が持つ**（張る関数を外へ出さない）。以前は
+   * `startTimer` を各所から呼んでいたが、そうすると「暗転の中身」を掴んだ
+   * 関数が依存の連鎖に乗り、書き込みハンドルの同一性まで引きずっていた。
+   * 見張り直しは「最後に触った時刻」が動いたことで表す。
+   */
+  useEffect(() => {
+    if (!settings.enabled || isLocked || isBlackout) return
+
+    const timer = setTimeout(
+      () => {
+        void blackoutNow()
+      },
+      settings.timeoutMinutes * 60 * 1000
+    )
+    return () => clearTimeout(timer)
+  }, [
+    settings.enabled,
+    settings.timeoutMinutes,
+    isLocked,
+    isBlackout,
+    lastActivityAt,
+  ])
 
   const unlock = useCallback(() => {
     restoreFullScreenIfNeeded()
@@ -122,40 +150,36 @@ export function ScreenBlackout() {
     setPasscode("")
     setError("")
     if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
-    const current = getBlackoutSettings()
-    if (current.enabled) {
-      startTimer(current.timeoutMinutes)
-    }
-  }, [startTimer, restoreFullScreenIfNeeded])
+    // 見張りは `isBlackout` / `isLocked` が戻ったことで自動的に張り直る
+  }, [restoreFullScreenIfNeeded])
 
-  // 手動ロック（Ctrl/Cmd + L）
+  // 手動ロック（Ctrl/Cmd + L）。暗転の中身はタイマーと同じものを呼ぶ
   useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "l") {
         e.preventDefault()
-        await enterFullScreenIfNeeded()
-        setIsBlackout(true)
-        clearTimer()
-        if (hasDigitPasscode) {
-          setIsLocked(true)
-          setUiVisible(true)
-          startFadeTimer()
-        }
+        void blackoutNow()
       }
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [hasDigitPasscode, clearTimer, enterFullScreenIfNeeded, startFadeTimer])
+  }, [])
 
   // 設定変更を監視
   useEffect(() => {
     const handleSettingsChange = () => {
-      const newSettings = getBlackoutSettings()
-      setSettings(newSettings)
-      clearTimer()
-      if (newSettings.enabled && !isLocked) {
-        startTimer(newSettings.timeoutMinutes)
-      }
+      const stored = getBlackoutSettings()
+      // 中身が同じなら書かない。`getBlackoutSettings` は毎回新しい入れ物を
+      // 返すので、そのまま渡すと**値が変わっていなくても**再レンダーになる。
+      // この effect が何かの拍子に走り直すようになった日に、それが止まらない
+      // 連鎖の燃料になる
+      setSettings((previous) =>
+        previous.enabled === stored.enabled &&
+        previous.timeoutMinutes === stored.timeoutMinutes &&
+        previous.autoFullScreen === stored.autoFullScreen
+          ? previous
+          : stored
+      )
       if (!isLocked) {
         setIsBlackout(false)
       }
@@ -172,9 +196,8 @@ export function ScreenBlackout() {
         "screenBlackoutSettingsChanged",
         handleSettingsChange
       )
-      clearTimer()
     }
-  }, [clearTimer, startTimer, isLocked])
+  }, [isLocked])
 
   // ユーザー操作でタイマーリセット（ロック中は無視）
   useEffect(() => {
@@ -190,10 +213,12 @@ export function ScreenBlackout() {
         }
         return
       }
-      clearTimer()
-      if (settings.enabled) {
-        startTimer(settings.timeoutMinutes)
-      }
+      // 見張りの張り直しは「触った」という事実だけで表す。連打で state が
+      // 暴れないよう、間隔を空けて控える
+      const now = Date.now()
+      if (now - lastBumpRef.current < ACTIVITY_THROTTLE_MS) return
+      lastBumpRef.current = now
+      setLastActivityAt(now)
     }
 
     events.forEach((event) => {
@@ -212,8 +237,6 @@ export function ScreenBlackout() {
     isLocked,
     hasDigitPasscode,
     unlock,
-    clearTimer,
-    startTimer,
   ])
 
   // ロック画面でのユーザー操作→フェード復帰
@@ -246,7 +269,7 @@ export function ScreenBlackout() {
     (code: string) => {
       if (!user?.id || !code) return
       setError("")
-      verifyPasscodeMutate.mutate(
+      verifyPasscodeMutate(
         { userId: user.id, passcode: code },
         {
           onSuccess: (isValid) => {
