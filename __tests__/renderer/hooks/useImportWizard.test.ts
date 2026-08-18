@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { initialState } from "@/hooks/import/constants"
 import { useImportWizard } from "@/hooks/import/useImportWizard"
 
+import { createQueryWrapper } from "../../helpers/queryWrapper"
 import {
   createMockFileOverviewData,
   createMockScoringConflictData,
@@ -74,22 +75,30 @@ describe("useImportWizard", () => {
 
   describe("初期状態", () => {
     it("IW-1: 初期状態が正しく設定される", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
       expect(result.current.state).toEqual(initialState)
     })
 
     it("IW-2: currentStepがfile_selectで初期化される", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
       expect(result.current.state.currentStep).toBe("file_select")
     })
 
     it("IW-3: isProcessingがfalseで初期化される", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
       expect(result.current.state.isProcessing).toBe(false)
     })
 
     it("IW-4: idIntegrationConfigがデフォルト値で初期化される", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
       const config = result.current.state.idIntegrationConfig
       expect(config.student.strategy).toBe("by_student_number")
       expect(config.classroom.strategy).toBe("by_name")
@@ -104,7 +113,9 @@ describe("useImportWizard", () => {
 
   describe("selectFile - ファイル選択", () => {
     it("IW-10: ファイル選択成功時にcurrentStepがfile_overviewに遷移する", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         await result.current.selectFile()
@@ -114,7 +125,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-11: ファイル選択成功時にarchivePathが設定される", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         await result.current.selectFile()
@@ -124,7 +137,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-12: ファイル選択成功時にmanifestが設定される", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         await result.current.selectFile()
@@ -135,7 +150,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-13: ファイル選択成功時にfileOverviewDataが設定される", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         await result.current.selectFile()
@@ -154,7 +171,9 @@ describe("useImportWizard", () => {
         })
       )
 
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.selectFile()
@@ -178,7 +197,9 @@ describe("useImportWizard", () => {
         new Error("ファイルが見つかりません")
       )
 
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         const success = await result.current.selectFile()
@@ -192,7 +213,9 @@ describe("useImportWizard", () => {
     it("IW-16: ファイル選択キャンセル時にステップが変わらない", async () => {
       mockArchive.selectImportFile.mockResolvedValue({ canceled: true })
 
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         const success = await result.current.selectFile()
@@ -208,7 +231,9 @@ describe("useImportWizard", () => {
         new Error("不正なアーカイブです")
       )
 
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         const success = await result.current.selectFile()
@@ -221,7 +246,9 @@ describe("useImportWizard", () => {
     it("IW-18: preMatch が失敗したらエラーになり、遷移しない", async () => {
       mockArchive.preMatch.mockRejectedValue(new Error("照合エラー"))
 
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         const success = await result.current.selectFile()
@@ -238,7 +265,9 @@ describe("useImportWizard", () => {
         new Error("ネットワークエラー")
       )
 
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         const success = await result.current.selectFile()
@@ -249,7 +278,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-20: selectFile完了後にisProcessingがfalseに戻る", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         await result.current.selectFile()
@@ -265,7 +296,9 @@ describe("useImportWizard", () => {
 
   describe("performPreMatching - 事前照合", () => {
     it("IW-25: archivePathが未設定の場合にfalseを返す", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       let success: boolean
       await act(async () => {
@@ -285,7 +318,9 @@ describe("useImportWizard", () => {
       })
       mockArchive.preMatch.mockResolvedValue(newData)
 
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       // まずselectFileでarchivePathを設定
       await act(async () => {
@@ -306,7 +341,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-27: 事前照合失敗時にerrorが設定される", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       // archivePathを設定
       await act(async () => {
@@ -332,7 +369,9 @@ describe("useImportWizard", () => {
           })
       )
 
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       // archivePathを先に設定（別のpreMatch応答で）
       mockArchive.preMatch.mockResolvedValueOnce({
@@ -374,7 +413,9 @@ describe("useImportWizard", () => {
 
   describe("updateIdIntegrationConfig - ID統合設定更新", () => {
     it("IW-30: student設定のstrategyを更新できる", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.updateIdIntegrationConfig("student", {
@@ -389,7 +430,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-31: class設定のstrategyを更新できる", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.updateIdIntegrationConfig("classroom", {
@@ -404,7 +447,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-32: subtotalGroup設定のstrategyを更新できる", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.updateIdIntegrationConfig("subtotalGroup", {
@@ -419,7 +464,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-33: 他のカテゴリの設定が保持される", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.updateIdIntegrationConfig("student", {
@@ -439,7 +486,9 @@ describe("useImportWizard", () => {
 
   describe("updateIdIntegrationDecision - 個別決定更新", () => {
     it("IW-35: 新しい個別決定を追加できる", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.updateIdIntegrationDecision("student", "import-1", {
@@ -455,7 +504,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-36: 既存の個別決定を上書きできる", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.updateIdIntegrationDecision("student", "import-1", {
@@ -483,7 +534,9 @@ describe("useImportWizard", () => {
 
   describe("batchUpdateIdIntegrationDecisions - 一括決定更新", () => {
     it("IW-40: 複数アイテムの決定を一括設定できる", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.batchUpdateIdIntegrationDecisions(
@@ -511,7 +564,9 @@ describe("useImportWizard", () => {
 
   describe("goToNextStep / goBack - ステップ遷移", () => {
     it("IW-45: file_overviewからid_integrationに遷移する", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       // file_overviewに移動
       await act(async () => {
@@ -533,7 +588,9 @@ describe("useImportWizard", () => {
         data: conflictData,
       })
 
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       // id_integrationまで進める
       await act(async () => {
@@ -554,7 +611,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-47: update_confirmからfinal_confirmに遷移する", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       // update_confirmまで進める
       await act(async () => {
@@ -576,7 +635,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-48: final_confirmからexecuteに遷移する", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       // final_confirmまで進める
       await act(async () => {
@@ -601,7 +662,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-50: goBackでid_integrationからfile_overviewに戻る", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         await result.current.selectFile()
@@ -619,7 +682,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-51: goBackでfile_selectからは戻れない", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.goBack()
@@ -635,7 +700,9 @@ describe("useImportWizard", () => {
 
   describe("setScoringConflictStrategy - 採点競合方針設定", () => {
     it("IW-60: 採点競合方針をnewer_winsに設定できる", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.setScoringConflictStrategy("newer_wins")
@@ -647,7 +714,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-61: 採点競合方針をimport_winsに設定できる", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.setScoringConflictStrategy("import_wins")
@@ -661,7 +730,9 @@ describe("useImportWizard", () => {
 
   describe("setScoringConflictResolution - 個別解決", () => {
     it("IW-65: 個別の採点競合解決を設定できる", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.setScoringConflictResolution("conflict-1", "import")
@@ -675,7 +746,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-66: 複数の採点競合解決を一括設定できる", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.setAllScoringConflictResolutions(
@@ -697,7 +770,9 @@ describe("useImportWizard", () => {
 
   describe("setFieldUpdateDecision / setBulkUpdateStrategy", () => {
     it("IW-70: フィールド単位の更新決定を設定できる", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.setFieldUpdateDecision(
@@ -713,7 +788,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-71: 一括更新戦略を設定できる", () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       act(() => {
         result.current.setBulkUpdateStrategy(
@@ -747,7 +824,9 @@ describe("useImportWizard", () => {
     }
 
     it("IW-75: 正常実行時にresultを返す", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
       await setupForExecute({ result })
 
       let importResult: unknown
@@ -769,7 +848,9 @@ describe("useImportWizard", () => {
         logout: vi.fn(),
       })
 
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       // archivePathを設定
       await act(async () => {
@@ -786,7 +867,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-77: archivePath未設定時にnullが返る", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       let importResult: unknown
       await act(async () => {
@@ -802,7 +885,9 @@ describe("useImportWizard", () => {
         new Error("事前照合に失敗しました")
       )
 
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         await result.current.selectFile()
@@ -827,7 +912,9 @@ describe("useImportWizard", () => {
         })
       )
 
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         await result.current.selectFile()
@@ -855,7 +942,9 @@ describe("useImportWizard", () => {
         new Error("インポート処理に失敗しました")
       )
 
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         await result.current.selectFile()
@@ -871,7 +960,9 @@ describe("useImportWizard", () => {
     })
 
     it("IW-82: idIntegrationImportに全設定が正しく渡される", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         await result.current.selectFile()
@@ -912,7 +1003,9 @@ describe("useImportWizard", () => {
 
   describe("reset / clearError", () => {
     it("IW-85: resetで初期状態に戻る", async () => {
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       // 状態を変更
       await act(async () => {
@@ -930,7 +1023,9 @@ describe("useImportWizard", () => {
     it("IW-86: clearErrorでerrorのみnullになる", async () => {
       mockArchive.selectImportFile.mockRejectedValue(new Error("テストエラー"))
 
-      const { result } = renderHook(() => useImportWizard())
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
 
       await act(async () => {
         await result.current.selectFile()

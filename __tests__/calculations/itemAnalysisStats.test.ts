@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest"
 import {
   computeItemAnalysis,
   type ItemAnalysisInputStudent,
-} from "@/electron-src/lib/shared/calculations/itemAnalysis"
+} from "@/lib/shared/itemAnalysis"
 
 // ================== ヘルパー ==================
 

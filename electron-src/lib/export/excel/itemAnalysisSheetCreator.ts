@@ -4,7 +4,8 @@ import type * as ExcelJS from "exceljs"
 import {
   computeItemAnalysis,
   type ItemAnalysisInputStudent,
-} from "../../shared/calculations/itemAnalysis"
+} from "@/lib/shared/itemAnalysis"
+
 import type { DiscriminationLevel, ScoringData } from "../../shared/types"
 import {
   applyCellStyle,

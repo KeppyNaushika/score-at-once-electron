@@ -7,7 +7,7 @@ import {
   computeFrequencyDistribution,
   computeSpTable,
   type SpInputStudent,
-} from "@/electron-src/lib/shared/calculations/spAnalysis"
+} from "@/lib/shared/spAnalysis"
 
 // ================== ヘルパー ==================
 

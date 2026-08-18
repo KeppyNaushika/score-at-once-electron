@@ -1,50 +1,25 @@
-import { useEffect, useRef, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 
 import { useAuth } from "@/contexts/AuthContext"
 import {
-  getScoringStatusColors,
-  loadScoringStatusColors,
+  DEFAULT_SCORING_STATUS_COLORS,
+  parseScoringStatusColors,
   type ScoringStatusColors,
 } from "@/lib/scoringStatusColors"
+import { userPreferenceQuery } from "@/queries/settings"
 
 /**
- * 採点状態色を取得・監視するフック
+ * 採点状態色。
  *
- * 設定画面で色が変更された際にリアルタイムで反映される
+ * 設定画面と同じキャッシュを読むので、あちらで色を変えれば採点画面もその場で
+ * 変わる（変更を伝える自作イベントは要らない）。
  */
 export function useScoringStatusColors(): ScoringStatusColors {
   const { user } = useAuth()
-  const userId = user?.id
-  const initializedRef = useRef(false)
+  const { data: stored } = useQuery({
+    ...userPreferenceQuery(user?.id, "scoringStatusColors"),
+    select: parseScoringStatusColors,
+  })
 
-  const [colors, setColors] = useState<ScoringStatusColors>(
-    getScoringStatusColors
-  )
-
-  // 初期化時にDBから読み込み
-  useEffect(() => {
-    if (initializedRef.current || !userId) return
-    initializedRef.current = true
-
-    const init = async () => {
-      await loadScoringStatusColors(userId)
-      setColors(getScoringStatusColors())
-    }
-    init()
-  }, [userId])
-
-  useEffect(() => {
-    const handleChange = () => {
-      setColors(getScoringStatusColors())
-    }
-
-    // 設定画面からの変更イベントを監視
-    window.addEventListener("scoringStatusColorsChanged", handleChange)
-
-    return () => {
-      window.removeEventListener("scoringStatusColorsChanged", handleChange)
-    }
-  }, [])
-
-  return colors
+  return stored ?? DEFAULT_SCORING_STATUS_COLORS
 }

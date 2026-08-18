@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { ImagePlus, Trash2 } from "lucide-react"
 import Image from "next/image"
 import { useCallback } from "react"
@@ -13,6 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
+import {
+  deleteAnswerSheetImageMutation,
+  uploadAnswerSheetImageMutation,
+} from "@/queries/answerSheetBuilder"
+import { pathForFile } from "@/queries/pdfTools"
 import type {
   CellImageElement,
   ImageObjectFit,
@@ -48,10 +54,14 @@ export function ImageElementEditor({
   onUpdate,
   definitionId,
 }: ImageElementEditorProps) {
-  const handleAdd = useCallback(async () => {
-    const api = window.electronAPI
-    if (!api?.answerSheetBuilder) return
+  const { mutateAsync: uploadImage } = useMutation(
+    uploadAnswerSheetImageMutation()
+  )
+  const { mutateAsync: deleteImage } = useMutation(
+    deleteAnswerSheetImageMutation()
+  )
 
+  const handleAdd = useCallback(async () => {
     // ファイル選択ダイアログ
     const input = document.createElement("input")
     input.type = "file"
@@ -62,9 +72,9 @@ export function ImageElementEditor({
       if (!file) return
 
       // Electron の webUtils.getPathForFile でローカルパスを取得
-      const filePath = window.electronAPI?.pdfTools?.getPathForFile(file)
+      const filePath = pathForFile(file)
       if (!filePath) return
-      const uploadedPath = await api.answerSheetBuilder.uploadImage({
+      const uploadedPath = await uploadImage({
         definitionId,
         filePath,
         originalName: file.name,
@@ -84,20 +94,15 @@ export function ImageElementEditor({
       }
     }
     input.click()
-  }, [definitionId, imageElements, onUpdate])
+  }, [definitionId, imageElements, onUpdate, uploadImage])
 
   const handleRemove = useCallback(
     async (index: number) => {
       const element = imageElements[index]
-      const api = window.electronAPI
-      if (api?.answerSheetBuilder) {
-        await api.answerSheetBuilder.deleteImage({
-          imagePath: element.imagePath,
-        })
-      }
+      await deleteImage({ imagePath: element.imagePath })
       onUpdate(imageElements.filter((_, i) => i !== index))
     },
-    [imageElements, onUpdate]
+    [imageElements, onUpdate, deleteImage]
   )
 
   const handleChange = useCallback(

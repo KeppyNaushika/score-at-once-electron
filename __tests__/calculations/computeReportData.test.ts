@@ -14,13 +14,13 @@ import {
   groupSubtotalData,
 } from "@/components/exams/08-export/components/individual-report/computeReportData"
 import type {
-  RawTotalScoreEntry,
-  ReportPopulation,
-} from "@/electron-src/lib/export/individual-report/types"
-import type {
   ScoringData,
   SubtotalScore,
 } from "@/electron-src/lib/shared/types"
+import type {
+  RawTotalScoreEntry,
+  ReportPopulation,
+} from "@/types/individualReport.types"
 
 // ================== ヘルパー ==================
 

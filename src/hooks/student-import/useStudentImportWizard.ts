@@ -1,7 +1,14 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { useCallback, useState } from "react"
 
+import {
+  analyzeStudentArchive,
+  importStudentArchiveMutation,
+  preMatchStudentArchive,
+  selectStudentArchiveFile,
+} from "@/queries/archive"
 import type {
   CategoryIdIntegrationConfig,
   IdChoice,
@@ -27,6 +34,7 @@ export const STUDENT_IMPORT_STEP_ORDER = [
  * 生徒インポートウィザードの状態管理フック
  */
 export function useStudentImportWizard() {
+  const { mutateAsync: runImport } = useMutation(importStudentArchiveMutation())
   const [state, setState] = useState<StudentImportWizardState>(
     INITIAL_STUDENT_IMPORT_WIZARD_STATE
   )
@@ -36,7 +44,7 @@ export function useStudentImportWizard() {
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
     try {
-      const result = await window.electronAPI.studentArchive.selectImportFile()
+      const result = await selectStudentArchiveFile()
 
       if (result.canceled) {
         setState((prev) => ({ ...prev, isProcessing: false }))
@@ -46,13 +54,11 @@ export function useStudentImportWizard() {
       const archivePath = result.filePath
 
       // アーカイブ解析
-      const manifest = await window.electronAPI.studentArchive.analyzeArchive({
-        archivePath,
-      })
+      const manifest = await analyzeStudentArchive(archivePath)
 
       // 事前照合
       const fileOverviewData: StudentArchiveFileOverviewData =
-        await window.electronAPI.studentArchive.preMatch({ archivePath })
+        await preMatchStudentArchive(archivePath)
 
       setState((prev) => ({
         ...prev,
@@ -233,7 +239,7 @@ export function useStudentImportWizard() {
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
     try {
-      const result = await window.electronAPI.studentArchive.import({
+      const result = await runImport({
         archivePath: state.archivePath,
         preMatchResult: state.fileOverviewData,
         integrationConfig: state.idIntegrationConfig,
@@ -261,6 +267,7 @@ export function useStudentImportWizard() {
     state.fileOverviewData,
     state.idIntegrationConfig,
     state.updateDecisions,
+    runImport,
   ])
 
   // リセット

@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query"
 
 import { useAuth } from "@/contexts/AuthContext"
-import { queryKeys } from "@/lib/queryKeys"
+import { answerSheetDefinitionOwnerQuery } from "@/queries/answerSheetBuilder"
 
 /**
  * 解答用紙の担当者。
@@ -13,10 +13,9 @@ import { queryKeys } from "@/lib/queryKeys"
  */
 export function useAsbOwner(definitionId: string) {
   const { user } = useAuth()
-  const { data: owner = null, isPending } = useQuery({
-    queryKey: queryKeys.answerSheetDefinition.owner(definitionId),
-    queryFn: () => window.electronAPI.answerSheetBuilder.getOwner(definitionId),
-  })
+  const { data: owner = null, isPending } = useQuery(
+    answerSheetDefinitionOwnerQuery(definitionId)
+  )
 
   return {
     ownerId: owner?.ownerId ?? null,

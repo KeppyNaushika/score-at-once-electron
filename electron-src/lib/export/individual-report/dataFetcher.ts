@@ -2,6 +2,17 @@
  * 個人成績表用データ取得・統合ロジック
  */
 
+import type {
+  ExamInfoForReport,
+  GetIndividualReportDataOptions,
+  GetIndividualReportDataResult,
+  IndividualReportData,
+  ReportClassroom,
+  ReportPopulation,
+  StudentInfoForReport,
+  SubtotalGroupInfo,
+} from "@/types/individualReport.types"
+
 import prisma from "../../prisma/client"
 import { getClassroomMembersForExam } from "../../prisma/examClassroom"
 import { getQuestionScoresForExam } from "../../prisma/questionScore"
@@ -26,16 +37,6 @@ import {
   collectReportSubtotals,
   collectSubtotalRawScores,
 } from "./statisticsCalculator"
-import type {
-  ExamInfoForReport,
-  GetIndividualReportDataOptions,
-  GetIndividualReportDataResult,
-  IndividualReportData,
-  ReportClassroom,
-  ReportPopulation,
-  StudentInfoForReport,
-  SubtotalGroupInfo,
-} from "./types"
 
 /**
  * 個人成績表用データを取得

@@ -1,6 +1,6 @@
 "use client"
 
-import type { FrequencyDistributionResult } from "@/electron-src/lib/shared/calculations/spAnalysis"
+import type { FrequencyDistributionResult } from "@/lib/shared/spAnalysis"
 
 interface FrequencyDistributionChartProps {
   data: FrequencyDistributionResult

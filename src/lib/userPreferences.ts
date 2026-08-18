@@ -78,6 +78,14 @@ const USER_PREFERENCE_SCHEMA = {
     type: "string?" as const,
     default: null as string | null,
   },
+  /**
+   * 離席時の目隠し（簡易スクリーンセイバー）。
+   *
+   * 端末ではなく利用者に付く設定なので、他の端末で入り直しても同じように働く。
+   */
+  screenBlackoutEnabled: { type: "boolean" as const, default: false },
+  screenBlackoutTimeoutMinutes: { type: "number" as const, default: 5 },
+  screenBlackoutAutoFullScreen: { type: "boolean" as const, default: false },
 } as const
 
 /** 設定キーの型 */
@@ -100,6 +108,9 @@ export type PreferenceValueType = {
   clickScoringConfig: string | null
   clickScoringDebounceMs: number
   sidePanelCollapsedSections: string | null
+  screenBlackoutEnabled: boolean
+  screenBlackoutTimeoutMinutes: number
+  screenBlackoutAutoFullScreen: boolean
 }
 
 /**

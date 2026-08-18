@@ -9,11 +9,11 @@ import type {
   StatisticKind,
   StatisticScope,
   SubtotalTableColumns,
-} from "@/electron-src/lib/export/individual-report/types"
+} from "@/types/individualReport.types"
 import {
   STATISTIC_KINDS,
   STATISTIC_SCOPES,
-} from "@/electron-src/lib/export/individual-report/types"
+} from "@/types/individualReport.types"
 
 import { SubtotalGroupSelector } from "./individual-report/SubtotalGroupSelector"
 

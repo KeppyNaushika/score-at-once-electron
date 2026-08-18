@@ -2,7 +2,7 @@
  * 個人成績表の小さなセクション用純粋ビューコンポーネント
  * hooks不使用 - プレビューとPDF出力（renderToStaticMarkup）の両方で使用可能
  */
-import type { IndividualReportData } from "@/electron-src/lib/export/individual-report/types"
+import type { IndividualReportData } from "@/types/individualReport.types"
 
 import { formatDate } from "./computeReportData"
 

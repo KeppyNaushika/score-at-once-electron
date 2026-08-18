@@ -4,11 +4,12 @@
 
 import { BrowserWindow, powerSaveBlocker } from "electron"
 
+import type { IndividualReportOptions } from "@/types/individualReport.types"
+
 import type {
   AnswerOverlayStyle,
   AnswerOverlayVisibility,
 } from "../../src/types/scoringOverlay.types"
-import type { IndividualReportOptions } from "../lib/export/individual-report/types"
 import type {
   ExamReportGraphSettingsValues,
   ExamReportTableSectionValues,

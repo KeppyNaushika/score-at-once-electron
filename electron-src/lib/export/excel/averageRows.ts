@@ -1,9 +1,9 @@
 import type { CropRegion } from "@prisma/client"
 import type * as ExcelJS from "exceljs"
 
+import { calculateAverage } from "@/lib/shared/numericStats"
 import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
 
-import { calculateAverage } from "../../shared/calculations/numericStats"
 import type { ScoringData } from "../../shared/types"
 import { applyCellStyle } from "../../shared/utilities/excelUtilities"
 import type { SubtotalColumn } from "./dataFetcher"

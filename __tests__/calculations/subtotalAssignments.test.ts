@@ -11,9 +11,9 @@
  */
 import { describe, expect, it } from "vitest"
 
-import { computeMaxScoreFromPayload } from "@/electron-src/lib/shared/calculations/gradeDataSourceMaxScore"
-import { selectExamCropRegions } from "@/electron-src/lib/shared/calculations/subtotalAssignments"
 import { computeSubtotalScore } from "@/electron-src/lib/shared/calculations/subtotalCalculator"
+import { computeMaxScoreFromPayload } from "@/lib/shared/gradeDataSourceMaxScore"
+import { selectExamCropRegions } from "@/lib/shared/subtotalAssignments"
 
 const EXAM_ID = "exam-a"
 

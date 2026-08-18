@@ -32,12 +32,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { ReturnStudentDiff } from "@/electron-src/lib/prisma/returnSnapshot"
 import type {
   IndividualReportData,
   IndividualReportOptions,
   ReportPopulation,
-} from "@/electron-src/lib/export/individual-report/types"
-import type { ReturnStudentDiff } from "@/electron-src/lib/prisma/returnSnapshot"
+} from "@/types/individualReport.types"
 
 import type { ExcelPreviewData } from "../hooks/useExcelPreview"
 import { ExcelPreview } from "./ExcelPreview"

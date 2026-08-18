@@ -7,9 +7,10 @@
 
 import type { QuestionScore } from "@prisma/client"
 
+import { selectExamCropRegions } from "@/lib/shared/subtotalAssignments"
+
 import { getCropSubtotalsForScoring } from "../../prisma/cropSubtotal"
 import { calculateActualScore } from "./actualScore"
-import { selectExamCropRegions } from "./subtotalAssignments"
 
 /**
  * 小計計算の入力となる、解決済み設問スコアの最小射影（生徒×設問の得点1件）。

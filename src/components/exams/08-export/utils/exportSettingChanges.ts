@@ -1,11 +1,11 @@
 import type {
-  GraphOptions,
-  IndividualReportOptions,
-} from "@/electron-src/lib/export/individual-report/types"
-import type {
   ExamReportGraphSettingsValues,
   ExamReportTableSectionValues,
 } from "@/electron-src/lib/prisma/examSettings"
+import type {
+  GraphOptions,
+  IndividualReportOptions,
+} from "@/types/individualReport.types"
 import type {
   AnswerOverlaySettings,
   AnswerOverlayStyle,

@@ -5,6 +5,7 @@
  * main側に渡してsharpでPNG化、またはprintToPDFでPDF化する。
  */
 
+import { readImageData } from "@/queries/misc"
 import type { ComputedCell } from "@/types/answerSheetLayout.types"
 
 /** セル内の画像パスをbase64 data URIに一括変換する（エクスポート時に使用） */
@@ -23,13 +24,10 @@ export async function resolveImageDataUris(
 
   if (paths.size === 0) return map
 
-  const api = window.electronAPI
-  if (!api?.getImageData) return map
-
   await Promise.all(
     [...paths].map(async (imagePath) => {
       try {
-        map.set(imagePath, await api.getImageData(imagePath))
+        map.set(imagePath, await readImageData(imagePath))
       } catch {
         console.warn("Failed to resolve image data URI:", imagePath)
       }

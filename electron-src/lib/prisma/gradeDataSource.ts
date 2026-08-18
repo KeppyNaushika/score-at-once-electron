@@ -5,6 +5,8 @@
 import type { Prisma } from "@prisma/client"
 import * as crypto from "crypto"
 
+import { computeMaxScoreFromPayload } from "@/lib/shared/gradeDataSourceMaxScore"
+
 import { toInputMode } from "../../../src/types/coursework.types"
 import {
   toAbsentMethod,
@@ -12,7 +14,6 @@ import {
   toGradeDataSourceType,
 } from "../../../src/types/grade.types"
 import type { Serialized } from "../../../src/types/prismaExtensions"
-import { computeMaxScoreFromPayload } from "../shared/calculations/gradeDataSourceMaxScore"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScopeByItem } from "./auditScope"
 import prisma from "./client"

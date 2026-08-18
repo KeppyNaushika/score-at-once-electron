@@ -1,10 +1,9 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { ArrowLeft, Redo2, Undo2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
-import { toast } from "sonner"
 
 import { useSaveStatus } from "@/components/hooks/useSaveStatus"
 import { Button } from "@/components/ui/button"
@@ -13,7 +12,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/AuthContext"
-import { queryKeys } from "@/lib/queryKeys"
+import {
+  answerSheetDefinitionQuery,
+  saveAnswerSheetDefinitionMutation,
+} from "@/queries/answerSheetBuilder"
 import type {
   AnswerSheetDefinition,
   RenderMode,
@@ -89,11 +91,10 @@ export function AnswerSheetBuilderMainView({
     data: savedDefinition,
     isPending: isLoadPending,
     error: loadError,
-  } = useQuery({
-    queryKey: queryKeys.answerSheetDefinition.detail(definitionId),
-    queryFn: () =>
-      window.electronAPI.answerSheetBuilder.loadDefinition(definitionId),
-  })
+  } = useQuery(answerSheetDefinitionQuery(definitionId))
+  const { mutateAsync: saveDefinition } = useMutation(
+    saveAnswerSheetDefinitionMutation(definitionId)
+  )
 
   /**
    * 直近で DB に入っていると分かっている内容。
@@ -120,16 +121,13 @@ export function AnswerSheetBuilderMainView({
 
     showSaving()
     const saving = definition
-    window.electronAPI.answerSheetBuilder
-      .saveDefinition(saving, user.id)
+    saveDefinition({ definition: saving, userId: user.id })
       .then(() => {
         setPersisted(saving)
         showSaved()
       })
-      .catch((error: unknown) => {
-        toast.error("解答用紙を保存できませんでした", {
-          description: error instanceof Error ? error.message : undefined,
-        })
+      .catch(() => {
+        // 失敗の通知は MutationCache が出す。ここは「保存済み」の目印を進めない
       })
   }, [
     definition,
@@ -139,6 +137,7 @@ export function AnswerSheetBuilderMainView({
     user?.id,
     showSaving,
     showSaved,
+    saveDefinition,
   ])
 
   const layout = useAnswerSheetLayout(definition)

@@ -323,6 +323,11 @@ src/components/grades/03-data-sources/hooks/useDataSourceDefaults.ts
 > main から167箇所参照されており、renderer が値として要るのは `STATISTIC_KINDS` /
 > `STATISTIC_SCOPES` / `DEFAULT_INDIVIDUAL_REPORT_OPTIONS` の3つだけ。定数の切り出しが要る。
 > 本計画の対象外とし、別途扱う。
+>
+> **→ 段階14 で消えた。** 定数の切り出しは要らなかった。`individual-report/types.ts` を
+> 丸ごと `src/types/individualReport.types.ts` へ移すと、main 側の167箇所は**型**の参照
+> なので向きが変わっても規約に触れない（`src/` → `electron-src/` の型 import は許される）。
+> 残り5つは `src/lib/shared/` へ（値で引く `subtotalAssignments` も連れて6つ）。
 
 > **注意**: `electron-src/lib/shared/` は安全ではない。`lib/shared/calculations/gradeCalculator.ts:17`
 > が `prisma`（DB 接続の実体）を import している。ディレクトリ名では守れないため**ファイル名で列挙する**。
@@ -728,8 +733,9 @@ effect のまま残した7箇所は、いずれも取得ではない。
 ハンドラ側に選択肢が無いので「掛け忘れたハンドラ」が存在できない。§7 が数えていた4件は
 `success` の union が絞れないことによる見かけの残存で、エンベロープを畳んだ時点で消えた。
 
-**値 import の許可一覧はテストの中にある**（`ALLOWED_VALUE_IMPORTS`）。「純粋計算なら
-良い」という判断基準は書かない。増やすには OWNER の判断が要る。
+**値 import の許可一覧はテストの中にあった**（`ALLOWED_VALUE_IMPORTS`）。「純粋計算なら
+良い」という判断基準は書かない、という扱いだったが、段階14 で6モジュールを
+`src/lib/shared/` へ出して**一覧ごと消えた**（例外なし）。
 
 **4. 動作確認を e2e として足した**
 
@@ -1019,34 +1025,34 @@ props ではなくキーに置く: **親が持つ木の一部を、別のチャ�
 `src/queries/` が preload と1対1で1チャンネル1 `queryOptions` である限り、移行時に
 キーが2本生えるかどうかで露見する。
 
-##### 4. 値 import の二重管理 — 例外ゼロにする
+##### 4. 値 import の二重管理 — 例外ゼロにする（段階14 で完了）
 
 `eslint.config.mjs`（読む側7ファイル）と `ALLOWED_VALUE_IMPORTS`（モジュール＋名前6件）
-が別の単位で同じことを許可している。**6モジュールを `src/lib/shared/` へ移す。**
-main は既に `src/types/` から型を引いているので前例があり、移せば
-「src → electron-src は型のみ、例外なし」になり両方の一覧が消える。
+が別の単位で同じことを許可していた。**6モジュールを `src/lib/shared/` へ移した。**
+main は既に `src/types/` から型を引いているので前例があり、移した結果
+「src → electron-src は型のみ、例外なし」になって両方の一覧が消えた。
 
 #### 進捗（2026-08-14 時点）
 
-| ドメイン                                           | 状態                                                               |
-| -------------------------------------------------- | ------------------------------------------------------------------ |
-| `grade`                                            | **完了**（フック4つを削除・境界を行ごとに・デバウンス撤去）        |
-| `coursework`                                       | **完了**（刻みを行ごとに・点数の束ね取りを解体・フック1つを削除）  |
-| `student` / `classroom` / `tag` / `user`           | **完了**（薄いフック5つと表・モーダルの直接呼び出しを解消）        |
-| `subtotal`                                         | **完了**（04 の束ね取得を解体・割り当ての書き込みを1本に）         |
-| `auth` / `settings` / `sync` / `auditLog` / `misc` | **完了**（トークンと利用者一覧の束ねを解体）                       |
-| `pdfTools` / `archive`                             | **完了**                                                           |
-| `exam` 系                                          | **完了**（07・08 は段階12 で移った）                               |
-| `scoring` / `drawing`                              | **完了**（段階12 で新設）                                          |
-| `answer-sheet-builder`                             | **段階14** へ（[IPC 分割](./asb-ipc-split-plan.md)は前提ではない） |
+| ドメイン                                           | 状態                                                                      |
+| -------------------------------------------------- | ------------------------------------------------------------------------- |
+| `grade`                                            | **完了**（フック4つを削除・境界を行ごとに・デバウンス撤去）               |
+| `coursework`                                       | **完了**（刻みを行ごとに・点数の束ね取りを解体・フック1つを削除）         |
+| `student` / `classroom` / `tag` / `user`           | **完了**（薄いフック5つと表・モーダルの直接呼び出しを解消）               |
+| `subtotal`                                         | **完了**（04 の束ね取得を解体・割り当ての書き込みを1本に）                |
+| `auth` / `settings` / `sync` / `auditLog` / `misc` | **完了**（トークンと利用者一覧の束ねを解体）                              |
+| `pdfTools` / `archive`                             | **完了**                                                                  |
+| `exam` 系                                          | **完了**（07・08 は段階12 で移った）                                      |
+| `scoring` / `drawing`                              | **完了**（段階12 で新設）                                                 |
+| `answer-sheet-builder`                             | **完了**（段階14。[IPC 分割](./asb-ipc-split-plan.md)は前提ではなかった） |
 
-**残り 20ファイル**（`NOT_YET_MIGRATED`。段階12 で 29 減った）。
+**残り 0ファイル**（`NOT_YET_MIGRATED`。段階12 で 29 減り、段階14 で残り20 が消えた）。
 
-| 場所                              | 数  | 送り先 |
-| --------------------------------- | --- | ------ |
-| `components/answer-sheet-builder` | 10  | 段階14 |
-| `app`                             | 4   | 段階14 |
-| その他                            | 6   | 段階14 |
+| 場所                              | 数  | 送り先         |
+| --------------------------------- | --- | -------------- |
+| `components/answer-sheet-builder` | 10  | 段階14（完了） |
+| `app`                             | 4   | 段階14（完了） |
+| その他                            | 6   | 段階14（完了） |
 
 `src/types/electron.d.ts` は `window.electronAPI` の**宣言そのもの**なので、残量では
 なく `NOT_A_CALL_SITE`（名指しの例外）へ移した。
@@ -1590,6 +1596,63 @@ IPC を渡る」としたが、**これは誤り**で、境界がスカラーへ
 
 **完了条件**: `NOT_YET_MIGRATED` が空。**IPC 移行の完了。**
 
+#### やったこと（完了・2026-08-18）
+
+**`NOT_YET_MIGRATED` は空になった。`ALLOWED_VALUE_IMPORTS` と `eslint.config.mjs` の
+例外一覧も消えた。** 移行の対象は20ファイル（見積りは19）で、内訳は ASB 11 ＋ 端数9。
+
+新しく置いた口は2つ:
+
+- `src/queries/answerSheetBuilder.ts` — 15チャンネル。DB を書く8つ（作成・保存・削除・
+  複製・担当の受け渡し・取り込み・試験への変換）と、書かない7つ（ダイアログ・PNG／
+  定義の書き出し・画像の出し入れ）を分けた
+- `src/queries/navigation.ts` — 窓のセッション履歴（戻る/進む）
+
+`archive.ts` には**取り込みの実行**を書き込みとして足し、下見（解析・事前照合・変換・
+競合検出）は関数のまま出した。ウィザードは段ごとに失敗をモーダルの中に出すので、
+`meta` を与えると同じ失敗が二重に知らされる。
+
+#### 直したもの（表示の変更ではない）
+
+| 何                       | 直る前                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------- |
+| 履歴メニューの固有名     | このファイルが持つ `Map` に溜めっぱなしで、**試験の名前を変えても古い名前が残り続けていた** |
+| 採点状態色               | モジュール変数 ＋ `window` イベントで配っていた。設定画面と採点画面が別々の写しを持っていた |
+| 画面の目隠しの設定       | `localStorage` 直読み ＋ 自作イベント。**端末に付いていて、利用者に付いていなかった**       |
+| 一覧のタグ               | 資料の概要でタグを変えても、一覧の行のタグは古いままだった（一覧が取り直されない）          |
+| 試験アーカイブの取り込み | 取り込み後に取り直す先の宣言が無かった（一覧の更新は呼び出し側の後始末に頼っていた）        |
+
+採点状態色と目隠しの設定は、どちらも `UserPreference`（KV）へ移した。設定画面と本体が
+同じキャッシュを読むので、**変更を伝える自作イベントが要らなくなった**（`screenBlackout`
+の3キーは新設。`scoringStatusColors` は元からあるキーで、読み方だけを直した）。
+
+#### 決めたこと（食い違ったので書いておく）
+
+- **共有計算の置き場所は `src/lib/shared/`。** 移したのは6モジュール（`examPaperSize` /
+  `numericStats` / `itemAnalysis` / `spAnalysis` / `gradeDataSourceMaxScore` ＋
+  それが値で引く `subtotalAssignments`）
+- **`individual-report/types.ts` だけは `src/types/individualReport.types.ts` へ。**
+  373行のうち定数は3つで、残りは両側が使う型。型は `src/types/` という規約が先にあり、
+  `src/types/scoringStatus.types.ts`（main が `toScoringStatus` を値で引いている）と
+  同じ形になる
+- **書き込みの取り直し先は宣言のときに決まる。** 対象の id が実行時にしか分からない
+  ものは、(a) その id を state で持つ画面が `xxxMutation(id)` を組む（担当の受け渡し）か、
+  (b) まとまり全体を指す（複数件へのタグ付け。`addTagToExamsMutation` と同じ形）
+
+#### 検査
+
+`npm run check-all` 通過。`npx vitest run` 146ファイル / 1401件すべて通過。
+`npm run test:e2e` 9件すべて通過（解答用紙の新規作成・編集の往復・担当の切り替えは
+この e2e が踏んでいる）。
+
+`useImportWizard.test.ts` の 47件は Provider が要るようになったので、`renderHook` に
+`createQueryWrapper()` を被せた（テストの中身は変えていない）。
+
+**測っていないもの**: 解答用紙の自動保存が1打鍵ごとに定義を取り直す費用。書き込みが
+`detail` を無効化するので、保存のたびに読み直しが1往復増える。編集中の内容は画面が
+自分の状態として持っている（種を蒔くのは1度だけ）ので表示は揺れないが、**回数は増えた**。
+定義を実体ごとに割る段階15〜17 で自然に消える見込み。
+
 #### 段階12 で見つけた宿題（`ScreenBlackout`）
 
 段階12 の検証で e2e を回したところ **9件中9件が落ちていた**。原因は採点でも出力でもなく、
@@ -1614,9 +1677,9 @@ setFullScreen（useMutation の戻り値・毎レンダー別物）
 1. **この画面には自動テストが1件も無い。** e2e は暗転まで踏まず、unit も無い。
    偽タイマーで「N分でロックする／操作で延びる／パスコードが無ければ暗転だけ」を
    固定する。jsdom ＋ Query のラッパー ＋ 利用者一覧のモックが要る（100行前後）
-2. **設定が `localStorage` 直読みで、`src/queries/` の外にいる。** 変更の伝達も独自の
-   `window` イベント。「取得を state へ蒔き直す」構図そのものがここから来ている。
-   `ScreenControlTab` 側も動くので、端数の移行と一緒に扱う
+2. ~~**設定が `localStorage` 直読みで、`src/queries/` の外にいる。**~~ **済**（段階14）。
+   3キー（`screenBlackoutEnabled` / `screenBlackoutTimeoutMinutes` /
+   `screenBlackoutAutoFullScreen`）を `UserPreference` へ移し、自作イベントを外した
 
 > **検査の穴**: `useMutation` の戻り値を依存配列へ入れる誤りを、この移行で**3回**
 > 踏んでいる（R1 #1・R4・本件）。`react-hooks/exhaustive-deps` は依存が列挙されて

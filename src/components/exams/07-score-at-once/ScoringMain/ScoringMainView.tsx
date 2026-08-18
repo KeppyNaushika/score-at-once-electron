@@ -45,7 +45,7 @@ import type { MouseBrushAction } from "@/components/exams/07-score-at-once/types
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { useAuth } from "@/contexts/AuthContext"
-import { resolveExamPaperSize } from "@/electron-src/lib/shared/utilities/examPaperSize"
+import { resolveExamPaperSize } from "@/lib/shared/examPaperSize"
 import { cropRegionScopes } from "@/queries/cropRegion"
 import {
   setUserPreferenceMutation,

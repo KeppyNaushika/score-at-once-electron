@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   Copy,
   FolderInput,
@@ -56,7 +56,18 @@ import { useAuth } from "@/contexts/AuthContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
-import { tagListQuery } from "@/queries/tag"
+import {
+  createAnswerSheetDefinitionMutation,
+  exportAnswerSheetDefinitionMutation,
+  importAnswerSheetDefinitionMutation,
+  selectAnswerSheetImportFileMutation,
+  transferAnswerSheetDefinitionOwnerMutation,
+} from "@/queries/answerSheetBuilder"
+import {
+  addTagToAnswerSheetDefinitionsMutation,
+  findOrCreateTagMutation,
+  tagListQuery,
+} from "@/queries/tag"
 import type { PublicUser } from "@/queries/user"
 import { userListQuery } from "@/queries/user"
 import type { ASBDefinitionListItem } from "@/types/answerSheetBuilder.types"
@@ -76,32 +87,15 @@ const ASB_FILTER_ACCESSORS: ListFilterAccessors<ASBDefinitionListItem> = {
   date: (definition) => definition.updatedAt ?? null,
 }
 
-/** preload API を取得する。未初期化ならトーストで通知して null を返す */
-function requireBuilderApi() {
-  const api = window.electronAPI?.answerSheetBuilder
-  if (!api) {
-    toast.error("アプリの初期化が完了していません", {
-      description: "アプリを再起動してください",
-    })
-    return null
-  }
-  return api
-}
-
-/**
- * ユーザーIDと preload API をまとめて取得する。
- * どちらかが欠けていればトーストで通知して null を返す。
- */
-function requireBuilderContext(userId: string | undefined) {
+/** ログイン中の利用者を取得する。欠けていればトーストで通知して null を返す */
+function requireUserId(userId: string | undefined) {
   if (!userId) {
     toast.error("ログイン情報を取得できませんでした", {
       description: "一度ログアウトして再ログインしてください",
     })
     return null
   }
-  const api = requireBuilderApi()
-  if (!api) return null
-  return { userId, api }
+  return userId
 }
 
 /**
@@ -122,7 +116,7 @@ function TransferOwnerDialog({
   definition: ASBDefinitionListItem | null
   currentUserId: string | undefined
   onClose: () => void
-  onTransfer: (id: string, nextUserId: string) => Promise<void>
+  onTransfer: (nextUserId: string) => Promise<void>
 }) {
   const { data: users = EMPTY_USERS } = useQuery(userListQuery())
   const candidates = users.filter((candidate) => candidate.id !== currentUserId)
@@ -154,7 +148,7 @@ function TransferOwnerDialog({
                 className="flex w-full items-center px-4 py-2.5 text-left text-sm hover:bg-muted/50"
                 onClick={async () => {
                   if (!definition) return
-                  await onTransfer(definition.id, candidate.id)
+                  await onTransfer(candidate.id)
                   onClose()
                 }}
               >
@@ -175,23 +169,12 @@ const EMPTY_TAGS: TagWithAllRelations[] = []
 const EMPTY_USERS: PublicUser[] = []
 
 export function AnswerSheetDefinitionList() {
-  const queryClient = useQueryClient()
   const { user } = useAuth()
   const router = useRouter()
-  const {
-    definitions,
-    isLoading,
-    loadDefinitions,
-    deleteDefinition,
-    duplicateDefinition,
-    transferOwner,
-  } = useAnswerSheetDefinitions(user?.id)
+  const { definitions, isLoading, deleteDefinition, duplicateDefinition } =
+    useAnswerSheetDefinitions(user?.id)
 
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
-  const refreshTags = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
-    [queryClient]
-  )
   const [sortKey, setSortKey] = useState<SortKey>("updatedAt")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -200,6 +183,29 @@ export function AnswerSheetDefinitionList() {
   } | null>(null)
   const [transferTarget, setTransferTarget] =
     useState<ASBDefinitionListItem | null>(null)
+  // 担当を渡す相手は選んだ1件ぶん。取り直す先もその1件のまとまりになるので、
+  // 書き込みの宣言は「今どれを選んでいるか」から組む
+  const { mutateAsync: transferOwnerOf } = useMutation(
+    transferAnswerSheetDefinitionOwnerMutation(transferTarget?.id ?? "")
+  )
+  const { mutateAsync: createDefinition } = useMutation(
+    createAnswerSheetDefinitionMutation()
+  )
+  const { mutateAsync: exportDefinition } = useMutation(
+    exportAnswerSheetDefinitionMutation()
+  )
+  const { mutateAsync: selectImportFile } = useMutation(
+    selectAnswerSheetImportFileMutation()
+  )
+  const { mutateAsync: importDefinition } = useMutation(
+    importAnswerSheetDefinitionMutation()
+  )
+  const { mutateAsync: findOrCreateTag } = useMutation(
+    findOrCreateTagMutation()
+  )
+  const { mutateAsync: addTagToDefinitions } = useMutation(
+    addTagToAnswerSheetDefinitionsMutation()
+  )
   /** 一覧には全員の解答用紙が載る。既定は自分が担当のものだけを出す */
   const [showAllOwners, setShowAllOwners] = useState(false)
 
@@ -273,33 +279,23 @@ export function AnswerSheetDefinitionList() {
 
   const handleBulkAddTag = async (tagName: string) => {
     try {
-      const tag = await window.electronAPI.tagFindOrCreate(tagName)
-      for (const definitionId of selectedIds) {
-        try {
-          await window.electronAPI.asbDefinitionTagCreate({
-            asbDefinitionId: definitionId,
-            tagId: tag.id,
-          })
-        } catch {
-          // 既に紐づいている場合は unique 制約で失敗するが無視
-        }
-      }
+      const tag = await findOrCreateTag(tagName)
+      await addTagToDefinitions({
+        definitionIds: [...selectedIds],
+        tagId: tag.id,
+      })
       toast.success("タグを追加しました", {
         description: `${selectedIds.size}件の解答用紙に「${tagName}」を追加`,
       })
       clearSelection()
-      await refreshTags()
-      await loadDefinitions()
-    } catch (error) {
-      console.error("Error bulk adding tag:", error)
-      toast.error("タグの追加に失敗しました")
+    } catch {
+      // 失敗の通知は MutationCache が出す
     }
   }
 
   const handleCreate = useCallback(async () => {
-    const context = requireBuilderContext(user?.id)
-    if (!context) return
-    const { api, userId } = context
+    const userId = requireUserId(user?.id)
+    if (!userId) return
 
     try {
       const newId = crypto.randomUUID()
@@ -307,16 +303,13 @@ export function AnswerSheetDefinitionList() {
       const definition = createDefaultDefinition()
       definition.id = newId
 
-      await api.saveDefinition(definition, userId)
+      await createDefinition({ definition, userId })
       // 作成直後は編集したいので作成ページへ直行
       router.push(`/answer-sheet-builder/${newId}/01-edit`)
-    } catch (error) {
-      console.error("Error creating definition:", error)
-      toast.error("解答用紙の作成に失敗しました", {
-        description: error instanceof Error ? error.message : String(error),
-      })
+    } catch {
+      // 失敗の通知は MutationCache が出す
     }
-  }, [user?.id, router])
+  }, [user?.id, router, createDefinition])
 
   // 行クリック: 概要（detail）へ
   const handleEdit = useCallback(
@@ -334,6 +327,20 @@ export function AnswerSheetDefinitionList() {
     [router]
   )
 
+  const handleTransferOwner = useCallback(
+    async (nextUserId: string) => {
+      const userId = requireUserId(user?.id)
+      if (!userId) return
+      try {
+        await transferOwnerOf({ currentUserId: userId, nextUserId })
+        toast.success("担当を渡しました")
+      } catch {
+        // 失敗の通知は MutationCache が出す
+      }
+    },
+    [user?.id, transferOwnerOf]
+  )
+
   const confirmDelete = async () => {
     if (!deleteTarget) return
     await deleteDefinition(deleteTarget.id)
@@ -342,48 +349,42 @@ export function AnswerSheetDefinitionList() {
     setDeleteTarget(null)
   }
 
-  const handleExport = useCallback(async (definitionId: string) => {
-    const api = requireBuilderApi()
-    if (!api) return
-
-    try {
-      const result = await api.exportDefinition(definitionId)
-      if (!result.canceled) {
-        toast.success("解答用紙を書き出しました")
+  const handleExport = useCallback(
+    async (definitionId: string) => {
+      try {
+        const result = await exportDefinition(definitionId)
+        if (!result.canceled) {
+          toast.success("解答用紙を書き出しました")
+        }
+      } catch {
+        // 失敗の通知は MutationCache が出す
       }
-    } catch (error) {
-      toast.error("解答用紙を書き出せませんでした", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
-  }, [])
+    },
+    [exportDefinition]
+  )
 
   const handleImport = useCallback(async () => {
-    const context = requireBuilderContext(user?.id)
-    if (!context) return
-    const { api, userId } = context
+    const userId = requireUserId(user?.id)
+    if (!userId) return
 
-    // 1. ファイル選択
-    const fileResult = await api.selectImportFile()
-    if (fileResult.canceled) return
-
-    // 2. インポート実行
     try {
-      const { warnings } = await api.importDefinition(
-        fileResult.filePath,
-        userId
-      )
+      // 1. ファイル選択
+      const fileResult = await selectImportFile()
+      if (fileResult.canceled) return
+
+      // 2. インポート実行
+      const { warnings } = await importDefinition({
+        filePath: fileResult.filePath,
+        userId,
+      })
       toast.success("解答用紙を読み込みました")
       for (const warning of warnings) {
         toast.warning(warning)
       }
-      await loadDefinitions()
-    } catch (error) {
-      toast.error("解答用紙を読み込めませんでした", {
-        description: error instanceof Error ? error.message : undefined,
-      })
+    } catch {
+      // 失敗の通知は MutationCache が出す
     }
-  }, [user?.id, loadDefinitions])
+  }, [user?.id, selectImportFile, importDefinition])
 
   const sortIndicator = (key: SortKey) => {
     if (sortKey !== key) return ""
@@ -666,7 +667,7 @@ export function AnswerSheetDefinitionList() {
         definition={transferTarget}
         currentUserId={user?.id}
         onClose={() => setTransferTarget(null)}
-        onTransfer={transferOwner}
+        onTransfer={handleTransferOwner}
       />
 
       <AlertDialog

@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { IndividualReportOptions } from "@/electron-src/lib/export/individual-report/types"
+import type { IndividualReportOptions } from "@/types/individualReport.types"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 
 export type ExportTabType =

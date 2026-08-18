@@ -4,6 +4,8 @@
  * 欠測時の代替スコア推定（average / regression / zero）に対応
  */
 
+import { computeMaxScoreFromPayload } from "@/lib/shared/gradeDataSourceMaxScore"
+
 import type {
   EstimationDetail,
   EstimationTargetDistribution,
@@ -28,7 +30,6 @@ import {
 import { findExamStudentScores } from "./examScoreCalculator"
 import type { DataSourceInfo, ExamDataCache } from "./gradeCalculatorTypes"
 import { gradeStudentForCalcInclude } from "./gradeCalculatorTypes"
-import { computeMaxScoreFromPayload } from "./gradeDataSourceMaxScore"
 import { determineGradeLabel } from "./gradeLabel"
 import { findCourseworkStudentScore, getRawScore } from "./rawScoreCalculator"
 import type { RawScoreCell, RawScoreRow } from "./rawScoreMatrix"

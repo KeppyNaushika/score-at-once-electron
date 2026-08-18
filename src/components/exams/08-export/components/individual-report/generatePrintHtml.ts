@@ -9,7 +9,7 @@ import type {
   IndividualReportData,
   IndividualReportOptions,
   ReportPopulation,
-} from "@/electron-src/lib/export/individual-report/types"
+} from "@/types/individualReport.types"
 
 import { calculateLearningAdvice } from "../../utils/learningAdviceCalculator"
 import { BoxPlotChartView } from "./BoxPlotChart"

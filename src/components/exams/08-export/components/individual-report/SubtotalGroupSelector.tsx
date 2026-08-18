@@ -6,8 +6,8 @@ import { useEffect, useEffectEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import type { SubtotalGroupSelection } from "@/electron-src/lib/export/individual-report/types"
 import { subtotalGroupsForReportQuery } from "@/queries/export"
+import type { SubtotalGroupSelection } from "@/types/individualReport.types"
 
 interface SubtotalGroupSelectorProps {
   examId: string

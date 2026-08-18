@@ -6,7 +6,6 @@ import type { Dispatch, SetStateAction } from "react"
 import { toast } from "sonner"
 
 import { generatePrintHtml } from "@/components/exams/08-export/components/individual-report/generatePrintHtml"
-import type { IndividualReportOptions } from "@/electron-src/lib/export/individual-report/types"
 import type { StudentExportPlacement } from "@/electron-src/lib/shared/types"
 import {
   exportGradingDataExcelMutation,
@@ -14,6 +13,7 @@ import {
   fetchIndividualReportData,
   openPrintDialogMutation,
 } from "@/queries/export"
+import type { IndividualReportOptions } from "@/types/individualReport.types"
 
 interface UseDataFileExportsParams {
   exam: Exam | null

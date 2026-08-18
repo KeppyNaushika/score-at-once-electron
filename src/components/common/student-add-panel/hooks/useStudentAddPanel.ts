@@ -1,5 +1,6 @@
 "use client"
 
+import type { QueryClient } from "@tanstack/react-query"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useId, useMemo, useState } from "react"
 
@@ -10,6 +11,7 @@ import type {
 } from "@/components/common/student-add-panel/types"
 import { isCurrentMembership } from "@/lib/membership"
 import { queryKeys } from "@/lib/queryKeys"
+import { studentListQuery } from "@/queries/student"
 
 interface SelectableClassroom extends AddPanelClassroomItem {
   isSelected: boolean
@@ -53,10 +55,11 @@ type StudentEmptyReason =
  * 区別できないため、システム全体の生徒（追加済み含む）を見て判定する。
  */
 async function resolveClassroomEmptyReason(
+  queryClient: QueryClient,
   adapter: StudentAddPanelAdapter,
   classroomActiveOnly: boolean
 ): Promise<ClassroomEmptyReason> {
-  const allStudents = await window.electronAPI.fetchStudents()
+  const allStudents = await queryClient.fetchQuery(studentListQuery())
   if (allStudents.length === 0) return "noStudents"
   const anyInClassroom = allStudents.some(
     (student) => student.memberships.length > 0
@@ -76,9 +79,10 @@ async function resolveClassroomEmptyReason(
  * 「未在籍・在籍中が元々0名（過去在籍のみ）」を区別する。
  */
 async function resolveStudentEmptyReason(
+  queryClient: QueryClient,
   studentActiveOnly: boolean
 ): Promise<StudentEmptyReason> {
-  const allStudents = await window.electronAPI.fetchStudents()
+  const allStudents = await queryClient.fetchQuery(studentListQuery())
   if (allStudents.length === 0) return "noStudents"
   if (studentActiveOnly) {
     const hasCurrentOrUnassigned = allStudents.some(
@@ -149,7 +153,11 @@ export function useStudentAddPanel({
         emptyReason:
           classrooms.length > 0
             ? null
-            : await resolveClassroomEmptyReason(adapter, classroomActiveOnly),
+            : await resolveClassroomEmptyReason(
+                queryClient,
+                adapter,
+                classroomActiveOnly
+              ),
       }
     },
   })
@@ -169,7 +177,7 @@ export function useStudentAddPanel({
         emptyReason:
           students.length > 0
             ? null
-            : await resolveStudentEmptyReason(studentActiveOnly),
+            : await resolveStudentEmptyReason(queryClient, studentActiveOnly),
       }
     },
   })

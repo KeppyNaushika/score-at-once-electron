@@ -4,11 +4,13 @@
  * renderer側でlayout計算→HTML生成→main側にデータを渡す。
  */
 
+import { useMutation } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
 import { useAuth } from "@/contexts/AuthContext"
+import { convertAnswerSheetToExamMutation } from "@/queries/answerSheetBuilder"
 import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 
 import { generateAnswerSheetPageHtmls } from "../utils/generatePrintHtml"
@@ -19,15 +21,12 @@ export function useExamIntegration() {
   const [isConverting, setIsConverting] = useState(false)
   const router = useRouter()
   const { user } = useAuth()
+  const { mutateAsync: convertToExamMutate } = useMutation(
+    convertAnswerSheetToExamMutation(user?.id)
+  )
 
   const convertToExam = useCallback(
     async (definition: AnswerSheetDefinition) => {
-      const api = window.electronAPI?.answerSheetBuilder
-      if (!api) {
-        toast.error("Electron APIが利用できません")
-        return
-      }
-
       if (!user?.id) {
         toast.error("ログインが必要です")
         return
@@ -49,7 +48,7 @@ export function useExamIntegration() {
           "model-answer"
         )
 
-        const examId = await api.convertToExam({
+        const examId = await convertToExamMutate({
           definition,
           userId: user.id,
           multiPageLayout,
@@ -59,15 +58,13 @@ export function useExamIntegration() {
 
         toast.success("試験に変換しました")
         router.push(`/exams/${examId}`)
-      } catch (error) {
-        toast.error(
-          `変換エラー: ${error instanceof Error ? error.message : "不明なエラー"}`
-        )
+      } catch {
+        // 失敗の通知は MutationCache が出す
       } finally {
         setIsConverting(false)
       }
     },
-    [user, router]
+    [user, router, convertToExamMutate]
   )
 
   return { convertToExam, isConverting }

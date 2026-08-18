@@ -1,9 +1,7 @@
 import type * as ExcelJS from "exceljs"
 
-import {
-  computeSpTable,
-  type SpInputStudent,
-} from "../../shared/calculations/spAnalysis"
+import { computeSpTable, type SpInputStudent } from "@/lib/shared/spAnalysis"
+
 import type { ScoringData } from "../../shared/types"
 import {
   applyCellStyle,

@@ -6,7 +6,7 @@
 import type {
   AdviceOptions,
   LearningAdviceData,
-} from "@/electron-src/lib/export/individual-report/types"
+} from "@/types/individualReport.types"
 
 interface LearningAdvicePreviewProps {
   advice: LearningAdviceData

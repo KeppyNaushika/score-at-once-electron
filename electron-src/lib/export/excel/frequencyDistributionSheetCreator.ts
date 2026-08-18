@@ -1,6 +1,7 @@
 import type * as ExcelJS from "exceljs"
 
-import { computeFrequencyDistribution } from "../../shared/calculations/spAnalysis"
+import { computeFrequencyDistribution } from "@/lib/shared/spAnalysis"
+
 import type { ScoringData } from "../../shared/types"
 import {
   applyCellStyle,

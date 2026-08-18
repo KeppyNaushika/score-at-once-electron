@@ -9,7 +9,8 @@
  *   到達不能なハンドラが残る（実例は docs/type-assertion-audit.md §13）
  * - `src/` から `electron-src/` への**値** import も型では止まらない。値で引くと
  *   renderer のバンドルへ main の依存グラフ（Prisma・ネイティブモジュール）が
- *   入り込む
+ *   入り込む。**例外は無い**（両側が同じ結果を出す必要のある計算は、段階14 で
+ *   `src/lib/shared/` と `src/types/` へ出した）
  *
  * Decimal の走査は置かない。境界（`registerChannel`）が戻り値へ一律に
  * `serializePrisma` を掛け、preload の `invoke` が型に `Serialized<>` を掛けるので、
@@ -23,38 +24,6 @@ import ts from "typescript"
 import { describe, expect, it } from "vitest"
 
 const REPO_ROOT = path.resolve(__dirname, "../..")
-
-/**
- * `src/` が値として引いてよい main のモジュールと名前。
- *
- * ここは「純粋計算なら良い」といった判断基準ではなく**名指しの一覧**である。
- * 増やすときは OWNER の判断を通す。いずれも DB もファイルも触らない計算で、
- * main と renderer が同じ結果を出す必要があるもの。
- */
-const ALLOWED_VALUE_IMPORTS: Record<string, string[]> = {
-  "@/electron-src/lib/shared/utilities/examPaperSize": ["resolveExamPaperSize"],
-  "@/electron-src/lib/export/individual-report/types": [
-    "STATISTIC_KINDS",
-    "STATISTIC_SCOPES",
-    "DEFAULT_INDIVIDUAL_REPORT_OPTIONS",
-  ],
-  "@/electron-src/lib/shared/calculations/numericStats": [
-    "calculateAverage",
-    "calculateBoxPlot",
-    "calculateRank",
-    "calculateStandardDeviation",
-  ],
-  "@/electron-src/lib/shared/calculations/itemAnalysis": [
-    "computeItemAnalysis",
-  ],
-  "@/electron-src/lib/shared/calculations/spAnalysis": [
-    "computeFrequencyDistribution",
-    "computeSpTable",
-  ],
-  "@/electron-src/lib/shared/calculations/gradeDataSourceMaxScore": [
-    "computeMaxScoreFromPayload",
-  ],
-}
 
 /**
  * 追跡されているファイルを列挙する。
@@ -172,16 +141,13 @@ function collectValueImports(): string[] {
         statement.getStart()
       )
       const location = `${relativePath}:${line + 1}`
-      const allowed = ALLOWED_VALUE_IMPORTS[specifier] ?? []
 
       const bindings = clause.namedBindings
       if (bindings && ts.isNamedImports(bindings)) {
         for (const element of bindings.elements) {
           if (element.isTypeOnly) continue
           const imported = element.propertyName?.text ?? element.name.text
-          if (!allowed.includes(imported)) {
-            found.push(`${location}: ${imported} from ${specifier}`)
-          }
+          found.push(`${location}: ${imported} from ${specifier}`)
         }
       } else {
         // default / namespace import は一覧で表せないので常に違反
@@ -204,36 +170,15 @@ const NOT_A_CALL_SITE = [
 ]
 
 /**
- * まだ `src/queries/` へ移していないファイル。**増やさないこと。**
+ * まだ `src/queries/` へ移していないファイル。**空である。**
  *
  * DB へのアクセスは `src/queries/` の `queryOptions` / `defineMutation` に集める。
  * キーと呼び出しが1箇所で結びつくので、同じデータが別のキーで2度キャッシュされる
  * 事故（段階7・段階9 で実際に起きた）が構造的に起きなくなる。
  *
- * ここは移行の残量そのもので、**減る一方**になる。新しいファイルが載ることは無い。
+ * 段階14 で移行が終わり、この一覧は空になった。**足さないこと。**
  */
-const NOT_YET_MIGRATED = [
-  "src/app/(app)/answer-sheet-builder/[definitionId]/layout.tsx",
-  "src/app/(app)/classrooms/[classroomId]/hooks/useClassroomExamResults.ts",
-  "src/app/(app)/students/[studentId]/hooks/useStudentDetail.ts",
-  "src/app/(app)/students/[studentId]/hooks/useStudentExamResults.ts",
-  "src/components/answer-sheet-builder/AnswerSheetBuilderMainView.tsx",
-  "src/components/answer-sheet-builder/AnswerSheetDefinitionDetail.tsx",
-  "src/components/answer-sheet-builder/AnswerSheetDefinitionList.tsx",
-  "src/components/answer-sheet-builder/AnswerSheetExportView.tsx",
-  "src/components/answer-sheet-builder/components/form/ImageElementEditor.tsx",
-  "src/components/answer-sheet-builder/hooks/useAnswerSheetDefinitions.ts",
-  "src/components/answer-sheet-builder/hooks/useAnswerSheetExport.ts",
-  "src/components/answer-sheet-builder/hooks/useAsbOwner.ts",
-  "src/components/answer-sheet-builder/hooks/useExamIntegration.ts",
-  "src/components/answer-sheet-builder/utils/renderSvgStrings.ts",
-  "src/components/common/student-add-panel/hooks/useStudentAddPanel.ts",
-  "src/hooks/import/useImportWizard.ts",
-  "src/hooks/student-import/useStudentImportWizard.ts",
-  "src/hooks/useNavigationHistory.ts",
-  "src/hooks/useStudentImport.ts",
-  "src/lib/scoringStatusColors.ts",
-]
+const NOT_YET_MIGRATED: string[] = []
 
 describe("IPC 境界の規約", () => {
   const registered = collectRegisteredChannels()
@@ -258,7 +203,7 @@ describe("IPC 境界の規約", () => {
     expect(missing).toEqual([])
   })
 
-  it("src から electron-src を値で引くのは名指しの一覧だけ", () => {
+  it("src から electron-src を値で引かない（例外なし）", () => {
     expect(collectValueImports()).toEqual([])
   })
 

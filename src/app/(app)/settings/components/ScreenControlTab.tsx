@@ -13,12 +13,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { useAuth } from "@/contexts/AuthContext"
+import { parsePreference } from "@/lib/userPreferences"
 import {
   projectorModeQuery,
   setProjectorModeMutation,
+  setUserPreferenceMutation,
+  userPreferenceQuery,
 } from "@/queries/settings"
-
-const BLACKOUT_SETTINGS_KEY = "screenBlackoutSettings"
 
 export function ScreenControlTab() {
   // プロジェクターモード
@@ -29,10 +31,32 @@ export function ScreenControlTab() {
   const setProjectorMode = useMutation(setProjectorModeMutation())
   const projectorMode = savedProjectorMode ?? false
 
-  // 画面消灯
-  const [blackoutEnabled, setBlackoutEnabled] = useState(false)
-  const [blackoutMinutes, setBlackoutMinutes] = useState(5)
-  const [autoFullScreen, setAutoFullScreen] = useState(false)
+  // 画面消灯。目隠しの本体（ScreenBlackout）と同じキャッシュを読み書きするので、
+  // 変更を伝える自作イベントは要らない
+  const { user } = useAuth()
+  const userId = user?.id
+  const setPreference = useMutation(setUserPreferenceMutation(userId))
+  const { data: storedBlackoutEnabled } = useQuery(
+    userPreferenceQuery(userId, "screenBlackoutEnabled")
+  )
+  const { data: storedBlackoutMinutes } = useQuery(
+    userPreferenceQuery(userId, "screenBlackoutTimeoutMinutes")
+  )
+  const { data: storedAutoFullScreen } = useQuery(
+    userPreferenceQuery(userId, "screenBlackoutAutoFullScreen")
+  )
+  const blackoutEnabled = parsePreference(
+    "screenBlackoutEnabled",
+    storedBlackoutEnabled ?? null
+  )
+  const blackoutMinutes = parsePreference(
+    "screenBlackoutTimeoutMinutes",
+    storedBlackoutMinutes ?? null
+  )
+  const autoFullScreen = parsePreference(
+    "screenBlackoutAutoFullScreen",
+    storedAutoFullScreen ?? null
+  )
 
   // サイドバー動作（セクション別）
   const [sidebarBehaviors, setSidebarBehaviors] = useState<
@@ -43,19 +67,6 @@ export function ScreenControlTab() {
 
   useEffect(() => {
     const loadSettings = () => {
-      // 画面消灯の設定を読み込み
-      try {
-        const stored = localStorage.getItem(BLACKOUT_SETTINGS_KEY)
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          setBlackoutEnabled(parsed.enabled ?? false)
-          setBlackoutMinutes(parsed.timeoutMinutes ?? 5)
-          setAutoFullScreen(parsed.autoFullScreen ?? false)
-        }
-      } catch {
-        // ignore
-      }
-
       // サイドバー動作の設定を読み込み（セクション別）
       try {
         const loaded: Record<string, SidebarBehavior> = {}
@@ -101,51 +112,40 @@ export function ScreenControlTab() {
     [projectorModeKey, queryClient, setProjectorMode]
   )
 
-  // 画面消灯設定の保存
-  const saveBlackoutSettings = useCallback(
-    (enabled: boolean, minutes: number, fullScreen: boolean) => {
-      const settings = {
-        enabled,
-        timeoutMinutes: minutes,
-        autoFullScreen: fullScreen,
-      }
-      localStorage.setItem(BLACKOUT_SETTINGS_KEY, JSON.stringify(settings))
-      window.dispatchEvent(new CustomEvent("screenBlackoutSettingsChanged"))
-    },
-    []
-  )
-
   const handleBlackoutToggle = useCallback(
     (enabled: boolean) => {
-      setBlackoutEnabled(enabled)
-      saveBlackoutSettings(enabled, blackoutMinutes, autoFullScreen)
+      setPreference.mutate({ key: "screenBlackoutEnabled", value: enabled })
       toast.success(
         enabled ? "画面消灯を有効にしました" : "画面消灯を無効にしました"
       )
     },
-    [blackoutMinutes, autoFullScreen, saveBlackoutSettings]
+    [setPreference]
   )
 
   const handleBlackoutMinutesChange = useCallback(
     (value: string) => {
       const minutes = Math.max(1, Math.min(60, parseInt(value) || 1))
-      setBlackoutMinutes(minutes)
-      saveBlackoutSettings(blackoutEnabled, minutes, autoFullScreen)
+      setPreference.mutate({
+        key: "screenBlackoutTimeoutMinutes",
+        value: minutes,
+      })
     },
-    [blackoutEnabled, autoFullScreen, saveBlackoutSettings]
+    [setPreference]
   )
 
   const handleAutoFullScreenToggle = useCallback(
     (enabled: boolean) => {
-      setAutoFullScreen(enabled)
-      saveBlackoutSettings(blackoutEnabled, blackoutMinutes, enabled)
+      setPreference.mutate({
+        key: "screenBlackoutAutoFullScreen",
+        value: enabled,
+      })
       toast.success(
         enabled
           ? "消灯時の自動フルスクリーンを有効にしました"
           : "消灯時の自動フルスクリーンを無効にしました"
       )
     },
-    [blackoutEnabled, blackoutMinutes, saveBlackoutSettings]
+    [setPreference]
   )
 
   // サイドバー動作の変更（セクション別）

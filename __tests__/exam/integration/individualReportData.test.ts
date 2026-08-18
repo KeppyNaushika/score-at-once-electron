@@ -23,7 +23,7 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 })
 
 import { fetchIndividualReportData } from "@/electron-src/lib/export/individual-report/dataFetcher"
-import { DEFAULT_INDIVIDUAL_REPORT_OPTIONS } from "@/electron-src/lib/export/individual-report/types"
+import { DEFAULT_INDIVIDUAL_REPORT_OPTIONS } from "@/types/individualReport.types"
 
 import { createFullTestExam } from "../../helpers/testExamBuilder"
 import {

@@ -255,46 +255,11 @@ export default [
               group: ["@/electron-src/**", "**/electron-src/**"],
               allowTypeImports: true,
               message:
-                "src から electron-src へは型のみ import できます（`import type` を使う）。値が必要なら eslint.config.mjs の例外一覧へファイルを名指しで足してください。",
+                "src から electron-src へは型のみ import できます（`import type` を使う）。両側で同じ結果を出す必要のある計算は electron-src の外（`src/lib/shared/`）へ出してください。例外一覧は段階14 で無くなりました。",
             },
           ],
         },
       ],
-    },
-  },
-  {
-    // main の純粋計算を renderer からも値として使うファイル。DB を触らない式を
-    // main と renderer で二重に持たないための例外で、対象は以下の6モジュール。
-    //
-    //   lib/shared/utilities/examPaperSize
-    //   lib/shared/calculations/numericStats
-    //   lib/shared/calculations/itemAnalysis
-    //   lib/shared/calculations/spAnalysis
-    //   lib/shared/calculations/gradeDataSourceMaxScore
-    //   lib/export/individual-report/types（STATISTIC_KINDS 等の定数）
-    //
-    // 例外は判断基準ではなく対象の名指しで管理する。増やすときはこの files に足す。
-    //
-    // 本来は「どのモジュールを許すか」で書きたいが、no-restricted-imports の
-    // group は gitignore 記法で、親ディレクトリを除外した後に `!` で個別に
-    // 再包含できない（`@/electron-src/**` が中間ディレクトリごと除外するため）。
-    // そのため許可の単位が「読む側のファイル」になっている。上記6モジュールを
-    // electron-src の外へ出せば、この一覧ごと不要になる。
-    //
-    // 注意: `lib/shared/` はディレクトリ名では守れない。
-    // `lib/shared/calculations/gradeCalculator.ts` が prisma（DB 接続の実体）を
-    // import している。
-    files: [
-      "src/components/exams/07-score-at-once/ScoringMain/ScoringMainView.tsx",
-      "src/components/exams/08-export/components/IndividualReportSettings.tsx",
-      "src/components/exams/08-export/components/individual-report/computeReportData.ts",
-      "src/components/exams/08-export/hooks/useExportPage.ts",
-      "src/components/exams/08-export/hooks/useItemAnalysis.ts",
-      "src/components/exams/08-export/hooks/useSpAnalysis.ts",
-      "src/components/grades/03-data-sources/hooks/useDataSourceDefaults.ts",
-    ],
-    rules: {
-      "@typescript-eslint/no-restricted-imports": "off",
     },
   },
   {

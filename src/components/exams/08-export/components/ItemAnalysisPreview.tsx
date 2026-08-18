@@ -1,7 +1,7 @@
 "use client"
 
-import type { ItemAnalysisResult } from "@/electron-src/lib/shared/calculations/itemAnalysis"
 import type { DiscriminationLevel } from "@/electron-src/lib/shared/types"
+import type { ItemAnalysisResult } from "@/lib/shared/itemAnalysis"
 
 const LEVEL_CONFIG: Record<
   DiscriminationLevel,

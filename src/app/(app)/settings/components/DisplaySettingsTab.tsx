@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { RotateCcw } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback } from "react"
 import { toast } from "sonner"
 
 import {
@@ -17,11 +17,9 @@ import { Slider } from "@/components/ui/slider"
 import { useAuth } from "@/contexts/AuthContext"
 import { useSlidingValue } from "@/hooks/useSlidingValue"
 import {
-  applyScoringColorPreset,
-  getCurrentPresetId,
-  getScoringStatusColors,
-  loadScoringStatusColors,
-  saveScoringStatusColors,
+  DEFAULT_SCORING_STATUS_COLORS,
+  parseScoringColorPresetId,
+  parseScoringStatusColors,
   SCORING_COLOR_PRESETS,
   SCORING_STATUS_LABELS,
   SCORING_STATUS_ORDER,
@@ -48,7 +46,6 @@ const SELECTION_BORDER_PRESETS = [
 export function DisplaySettingsTab() {
   const { user } = useAuth()
   const userId = user?.id
-  const initializedUserIdRef = useRef<string | undefined>(undefined)
 
   // 選択枠色・クリック採点設定は採点画面と同じフックを使う。ここで読み書きすると
   // 採点画面のキャッシュも同時に更新されるので、変更を伝える自作イベントは要らない
@@ -94,29 +91,15 @@ export function DisplaySettingsTab() {
     setClickScoringDebounceMs
   )
 
-  // 採点状態色の状態
-  const [scoringColors, setScoringColors] = useState<ScoringStatusColors>(
-    getScoringStatusColors
-  )
-  const [currentPresetId, setCurrentPresetId] = useState<string | null>(
-    getCurrentPresetId
-  )
-
-  // 初期値をロード（KV方式）
-  useEffect(() => {
-    if (initializedUserIdRef.current === userId) return
-    if (!userId) return
-
-    initializedUserIdRef.current = userId
-
-    const loadSettings = async () => {
-      await loadScoringStatusColors(userId)
-      setScoringColors(getScoringStatusColors())
-      setCurrentPresetId(getCurrentPresetId())
-    }
-
-    loadSettings()
-  }, [userId])
+  // 採点状態色も採点画面と同じキャッシュから読む
+  const { data: scoringColors = DEFAULT_SCORING_STATUS_COLORS } = useQuery({
+    ...userPreferenceQuery(userId, "scoringStatusColors"),
+    select: parseScoringStatusColors,
+  })
+  const { data: currentPresetId = null } = useQuery({
+    ...userPreferenceQuery(userId, "scoringColorPresetId"),
+    select: parseScoringColorPresetId,
+  })
 
   // 選択枠色の変更。途中の色を持つのは ColorPicker の側で、ここへは確定した色だけ来る
   const handleSelectionBorderColorChange = useCallback(
@@ -133,24 +116,29 @@ export function DisplaySettingsTab() {
   // クリック採点アクション変更
   const handleClickActionChange = setClickAction
 
-  // プリセット選択
+  // プリセット選択。色そのものと「どのプリセットか」は別の行なので、書き込みも2つ
   const handlePresetSelect = useCallback(
-    async (presetId: string) => {
-      await applyScoringColorPreset(presetId, userId || undefined)
-      setScoringColors(getScoringStatusColors())
-      setCurrentPresetId(presetId)
+    (presetId: string) => {
+      const preset = SCORING_COLOR_PRESETS.find(
+        (candidate) => candidate.id === presetId
+      )
+      if (!preset) return
+      setPreference.mutate({
+        key: "scoringStatusColors",
+        value: JSON.stringify(preset.colors),
+      })
+      setPreference.mutate({
+        key: "scoringColorPresetId",
+        value: JSON.stringify(presetId),
+      })
       toast.success("カラープリセットが適用されました")
     },
-    [userId]
+    [setPreference]
   )
 
-  // 個別の色変更
+  // 個別の色変更。1色でも触ればプリセットからは外れる
   const handleStatusColorChange = useCallback(
-    async (
-      status: ScoringStatus,
-      type: "bg" | "text" | "icon",
-      color: string
-    ) => {
+    (status: ScoringStatus, type: "bg" | "text" | "icon", color: string) => {
       const updated: ScoringStatusColors = {
         ...scoringColors,
         [status]: {
@@ -158,16 +146,18 @@ export function DisplaySettingsTab() {
           [type]: color.toUpperCase(),
         },
       }
-      setScoringColors(updated)
-      setCurrentPresetId(null)
-      await saveScoringStatusColors(updated, userId || undefined)
+      setPreference.mutate({
+        key: "scoringStatusColors",
+        value: JSON.stringify(updated),
+      })
+      setPreference.mutate({ key: "scoringColorPresetId", value: null })
     },
-    [scoringColors, userId]
+    [scoringColors, setPreference]
   )
 
   // リセット
-  const handleReset = useCallback(async () => {
-    await handlePresetSelect("default")
+  const handleReset = useCallback(() => {
+    handlePresetSelect("default")
   }, [handlePresetSelect])
 
   const isPresetSelected = (presetId: string) => currentPresetId === presetId

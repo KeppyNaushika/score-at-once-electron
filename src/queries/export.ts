@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query"
 
-import type { IndividualReportOptions } from "@/electron-src/lib/export/individual-report/types"
 import type { StudentExportPlacement } from "@/electron-src/lib/shared/types"
+import type { IndividualReportOptions } from "@/types/individualReport.types"
 
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
@@ -112,11 +112,24 @@ export const pdfExportDataQuery = (examId: string, examStudentId: string) =>
 /** 印刷ダイアログを開く。ブラウザの印刷と同じで、DB は変わらない */
 export const openPrintDialogMutation = () =>
   defineMutation({
-    mutationFn: (input: { html: string; title: string }) =>
-      window.electronAPI.export.openPrintDialog(input),
+    mutationFn: (
+      input: Parameters<typeof window.electronAPI.export.openPrintDialog>[0]
+    ) => window.electronAPI.export.openPrintDialog(input),
     meta: {
       writesDatabase: false,
       errorMessage: "印刷できませんでした",
+    },
+  })
+
+/** HTML を PDF ファイルへ書き出す。出るのはファイルで、DB は変わらない */
+export const printHtmlToPdfMutation = () =>
+  defineMutation({
+    mutationFn: (
+      input: Parameters<typeof window.electronAPI.export.printHtmlToPdf>[0]
+    ) => window.electronAPI.export.printHtmlToPdf(input),
+    meta: {
+      writesDatabase: false,
+      errorMessage: "PDFを出力できませんでした",
     },
   })
 

@@ -5,7 +5,7 @@ import { useMemo } from "react"
 import {
   computeMaxScoreFromPayload,
   type MaxScorePayloadSource,
-} from "@/electron-src/lib/shared/calculations/gradeDataSourceMaxScore"
+} from "@/lib/shared/gradeDataSourceMaxScore"
 import type { CourseworkCandidate } from "@/queries/coursework"
 
 import {

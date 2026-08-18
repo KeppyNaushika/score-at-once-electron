@@ -1,8 +1,18 @@
 "use client"
 
+import { useMutation } from "@tanstack/react-query"
 import { useCallback, useState } from "react"
 
 import { useAuth } from "@/contexts/AuthContext"
+import {
+  analyzeExamArchive,
+  convertDatToScore,
+  convertHszToScore,
+  detectExamScoringConflicts,
+  importExamArchiveMutation,
+  preMatchExamArchive,
+  selectExamArchiveFile,
+} from "@/queries/archive"
 import type {
   CategoryIdIntegrationConfig,
   FileOverviewData,
@@ -28,6 +38,7 @@ import { initialState, STEP_ORDER } from "./constants"
  */
 export function useImportWizard() {
   const { user } = useAuth()
+  const { mutateAsync: runImport } = useMutation(importExamArchiveMutation())
   const [state, setState] = useState<ImportWizardState>(initialState)
 
   // アーカイブ解析 → 事前照合 → file_overview遷移（共通処理）
@@ -36,13 +47,11 @@ export function useImportWizard() {
 
     try {
       // アーカイブを解析
-      const analyzeResult = await window.electronAPI.archive.analyzeArchive({
-        archivePath,
-      })
+      const analyzeResult = await analyzeExamArchive(archivePath)
 
       // 事前照合を実行
       const fileOverviewData: FileOverviewData =
-        await window.electronAPI.archive.preMatch({ archivePath })
+        await preMatchExamArchive(archivePath)
 
       setState((prev) => ({
         ...prev,
@@ -69,7 +78,7 @@ export function useImportWizard() {
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
     try {
-      const result = await window.electronAPI.archive.selectImportFile()
+      const result = await selectExamArchiveFile()
 
       if (result.canceled) {
         setState((prev) => ({ ...prev, isProcessing: false }))
@@ -116,10 +125,8 @@ export function useImportWizard() {
       // 外部フォーマット → .score 変換
       const convertResult =
         state.sourceFormat === "dat"
-          ? await window.electronAPI.archive.convertDatToScore({
-              datPath: hszPath,
-            })
-          : await window.electronAPI.archive.convertHszToScore({ hszPath })
+          ? await convertDatToScore(hszPath)
+          : await convertHszToScore(hszPath)
 
       setState((prev) => ({
         ...prev,
@@ -160,9 +167,7 @@ export function useImportWizard() {
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
     try {
-      const fileOverviewData = await window.electronAPI.archive.preMatch({
-        archivePath: state.archivePath,
-      })
+      const fileOverviewData = await preMatchExamArchive(state.archivePath)
 
       setState((prev) => ({
         ...prev,
@@ -399,12 +404,11 @@ export function useImportWizard() {
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
     try {
-      const scoringConflicts =
-        await window.electronAPI.archive.detectScoringConflicts({
-          archivePath: state.archivePath,
-          preMatchResult: state.fileOverviewData,
-          integrationConfig: state.idIntegrationConfig,
-        })
+      const scoringConflicts = await detectExamScoringConflicts({
+        archivePath: state.archivePath,
+        preMatchResult: state.fileOverviewData,
+        integrationConfig: state.idIntegrationConfig,
+      })
 
       if (scoringConflicts) {
         setState((prev) => ({
@@ -480,7 +484,7 @@ export function useImportWizard() {
 
     try {
       // ID統合インポートを実行
-      const result = await window.electronAPI.archive.idIntegrationImport({
+      const result = await runImport({
         archivePath: state.archivePath,
         preMatchResult: state.fileOverviewData,
         integrationConfig: state.idIntegrationConfig,
@@ -507,6 +511,7 @@ export function useImportWizard() {
     state.scoringConflictConfig,
     state.updateDecisions,
     user?.id,
+    runImport,
   ])
 
   // リセット

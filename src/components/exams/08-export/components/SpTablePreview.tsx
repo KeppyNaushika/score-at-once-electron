@@ -1,6 +1,6 @@
 "use client"
 
-import type { SpTableResult } from "@/electron-src/lib/shared/calculations/spAnalysis"
+import type { SpTableResult } from "@/lib/shared/spAnalysis"
 
 interface SpTablePreviewProps {
   data: SpTableResult

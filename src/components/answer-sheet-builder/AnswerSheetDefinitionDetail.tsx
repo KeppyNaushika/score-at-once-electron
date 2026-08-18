@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { ArrowRight, Download, Pencil, TagIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import React, { useCallback, useEffect, useState } from "react"
@@ -11,8 +11,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
-import { queryKeys } from "@/lib/queryKeys"
-import { tagListQuery } from "@/queries/tag"
+import { answerSheetDefinitionQuery } from "@/queries/answerSheetBuilder"
+import {
+  answerSheetDefinitionTagsQuery,
+  findOrCreateTagMutation,
+  setAnswerSheetDefinitionTagsMutation,
+  tagListQuery,
+} from "@/queries/tag"
 
 import { countAsbQuestions } from "./answerSheetStats"
 import { useAsbOwner } from "./hooks/useAsbOwner"
@@ -36,31 +41,26 @@ const EMPTY_TAGS: TagWithAllRelations[] = []
 export function AnswerSheetDefinitionDetail({
   definitionId,
 }: AnswerSheetDefinitionDetailProps) {
-  const queryClient = useQueryClient()
   const router = useRouter()
   const [tagNames, setTagNames] = useState<string[]>([])
   const [currentTagInput, setCurrentTagInput] = useState("")
   const [showSuggestions, setShowSuggestions] = useState(false)
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
-  const refreshTags = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
-    [queryClient]
+  const { mutateAsync: findOrCreateTag } = useMutation(
+    findOrCreateTagMutation()
+  )
+  const { mutateAsync: setDefinitionTags } = useMutation(
+    setAnswerSheetDefinitionTagsMutation(definitionId)
   )
 
   const {
     data: definition = null,
     isPending,
     error: loadError,
-  } = useQuery({
-    queryKey: queryKeys.answerSheetDefinition.detail(definitionId),
-    queryFn: () =>
-      window.electronAPI.answerSheetBuilder.loadDefinition(definitionId),
-  })
-  const { data: definitionTags } = useQuery({
-    queryKey: queryKeys.answerSheetDefinition.tags(definitionId),
-    queryFn: () =>
-      window.electronAPI.asbDefinitionTagGetByDefinitionId(definitionId),
-  })
+  } = useQuery(answerSheetDefinitionQuery(definitionId))
+  const { data: definitionTags } = useQuery(
+    answerSheetDefinitionTagsQuery(definitionId)
+  )
 
   const { isOwner, ownerName } = useAsbOwner(definitionId)
 
@@ -84,20 +84,15 @@ export function AnswerSheetDefinitionDetail({
       try {
         const tagIds: string[] = []
         for (const name of nextTagNames) {
-          const tag = await window.electronAPI.tagFindOrCreate(name)
+          const tag = await findOrCreateTag(name)
           tagIds.push(tag.id)
         }
-        await window.electronAPI.asbDefinitionTagSetDefinitionTags(
-          definitionId,
-          tagIds
-        )
-        await refreshTags()
-      } catch (error) {
-        console.error("Failed to save tags:", error)
-        toast.error("タグの保存に失敗しました")
+        await setDefinitionTags(tagIds)
+      } catch {
+        // 失敗の通知は MutationCache が出す
       }
     },
-    [definitionId, refreshTags]
+    [findOrCreateTag, setDefinitionTags]
   )
 
   const handleAddTag = useCallback(

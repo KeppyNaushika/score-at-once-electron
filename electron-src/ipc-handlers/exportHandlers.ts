@@ -1,6 +1,7 @@
 import { BrowserWindow, dialog } from "electron"
 
 import type { ConflictWarning } from "@/types/exportValidation.types"
+import type { GetIndividualReportDataOptions } from "@/types/individualReport.types"
 
 import { fetchExportData } from "../lib/export/excel/dataFetcher"
 import { exportGradingDataExcel } from "../lib/export/excel/excelExportMain"
@@ -8,7 +9,6 @@ import {
   fetchIndividualReportData,
   fetchSubtotalGroupsForReport,
 } from "../lib/export/individual-report/dataFetcher"
-import type { GetIndividualReportDataOptions } from "../lib/export/individual-report/types"
 import {
   exportRData,
   type ExportRDataOptions,

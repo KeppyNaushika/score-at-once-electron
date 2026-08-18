@@ -11,10 +11,6 @@ import {
   answerOverlayChanges,
   individualReportChanges,
 } from "@/components/exams/08-export/utils/exportSettingChanges"
-import {
-  DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
-  type IndividualReportOptions,
-} from "@/electron-src/lib/export/individual-report/types"
 import { examDetailQuery, examStudentsQuery } from "@/queries/exam"
 import {
   examExportSettingsQuery,
@@ -29,6 +25,10 @@ import {
   setSubtotalGroupSelectionMutation,
   subtotalGroupSelectionQuery,
 } from "@/queries/subtotal"
+import {
+  DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
+  type IndividualReportOptions,
+} from "@/types/individualReport.types"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 

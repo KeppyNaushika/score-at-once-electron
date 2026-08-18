@@ -6,7 +6,7 @@ import {
   computeItemAnalysis,
   type ItemAnalysisInputStudent,
   type ItemAnalysisResult,
-} from "@/electron-src/lib/shared/calculations/itemAnalysis"
+} from "@/lib/shared/itemAnalysis"
 
 import type { ExcelPreviewData } from "./useExcelPreview"
 

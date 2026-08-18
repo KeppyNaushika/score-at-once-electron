@@ -14,7 +14,7 @@ import {
   answerOverlayChanges,
   individualReportChanges,
 } from "@/components/exams/08-export/utils/exportSettingChanges"
-import { DEFAULT_INDIVIDUAL_REPORT_OPTIONS } from "@/electron-src/lib/export/individual-report/types"
+import { DEFAULT_INDIVIDUAL_REPORT_OPTIONS } from "@/types/individualReport.types"
 import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 
 /** DB から読んだ体の重ね描き設定（既定値と違い、実在する行の id と時刻を持つ） */

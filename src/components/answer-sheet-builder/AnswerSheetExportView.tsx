@@ -8,7 +8,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { queryKeys } from "@/lib/queryKeys"
+import { answerSheetDefinitionQuery } from "@/queries/answerSheetBuilder"
 
 import { ExamIntegrationCard } from "./components/export/ExamIntegrationCard"
 import { useAnswerSheetExport } from "./hooks/useAnswerSheetExport"
@@ -31,11 +31,7 @@ export function AnswerSheetExportView({
     data: definition = null,
     isPending,
     error: loadError,
-  } = useQuery({
-    queryKey: queryKeys.answerSheetDefinition.detail(definitionId),
-    queryFn: () =>
-      window.electronAPI.answerSheetBuilder.loadDefinition(definitionId),
-  })
+  } = useQuery(answerSheetDefinitionQuery(definitionId))
 
   // 読み込みの失敗は通知する（取得ではないので effect でよい）
   useEffect(() => {

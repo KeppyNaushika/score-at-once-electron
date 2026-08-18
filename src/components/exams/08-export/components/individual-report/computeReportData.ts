@@ -3,6 +3,17 @@
  * プレビュー（React）とPDF出力（renderToStaticMarkup）の両方で使用
  */
 import type {
+  ScoringData,
+  SubtotalScore,
+} from "@/electron-src/lib/shared/types"
+import {
+  calculateAverage,
+  calculateBoxPlot,
+  calculateRank,
+  calculateStandardDeviation,
+} from "@/lib/shared/numericStats"
+import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
+import type {
   IndividualReportData,
   IndividualReportOptions,
   RawTotalScoreEntry,
@@ -10,18 +21,7 @@ import type {
   ReportPopulation,
   ReportSubtotal,
   SubtotalRawScores,
-} from "@/electron-src/lib/export/individual-report/types"
-import {
-  calculateAverage,
-  calculateBoxPlot,
-  calculateRank,
-  calculateStandardDeviation,
-} from "@/electron-src/lib/shared/calculations/numericStats"
-import type {
-  ScoringData,
-  SubtotalScore,
-} from "@/electron-src/lib/shared/types"
-import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
+} from "@/types/individualReport.types"
 
 /** 受験状態フィルタ */
 export interface BoxPlotIncludeStatuses {

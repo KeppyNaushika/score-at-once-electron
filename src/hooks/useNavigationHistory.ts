@@ -1,7 +1,18 @@
 "use client"
 
+import type { QueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { usePathname, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
+
+import { answerSheetDefinitionQuery } from "@/queries/answerSheetBuilder"
+import { courseworkDetailQuery } from "@/queries/coursework"
+import { examDetailQuery } from "@/queries/exam"
+import { gradeDetailQuery } from "@/queries/grade"
+import {
+  goToHistoryIndexMutation,
+  navigationStateQuery,
+} from "@/queries/navigation"
 
 /** 履歴メニューに表示する1エントリ（ラベル解決済み） */
 export interface NavigationMenuEntry {
@@ -108,35 +119,37 @@ function routeToLabel(pathname: string): RouteLabel {
   }
 }
 
-// 固有名はセッション中変化が稀なため、モジュールスコープでキャッシュする
-const entityNameCache = new Map<string, string>()
-
+/**
+ * 固有名は各画面が読むものと同じキャッシュから引く。
+ *
+ * `ensureQueryData` は載っていれば往復せず、無ければ1度だけ取る。かつては
+ * このファイルが持つ `Map` に溜めていたが、そちらは**取り直しの手立てが無い**
+ * ので、試験の名前を変えても履歴には古い名前が残り続けていた。
+ */
 async function resolveEntityName(
+  queryClient: QueryClient,
   kind: EntityKind,
   id: string
 ): Promise<string | null> {
-  const cacheKey = `${kind}:${id}`
-  const cached = entityNameCache.get(cacheKey)
-  if (cached !== undefined) return cached
-
   try {
-    let name: string | null = null
     if (kind === "exam") {
-      const exam = await window.electronAPI.getExam(id)
-      name = exam?.examName ?? null
-    } else if (kind === "grade") {
-      const grade = await window.electronAPI.grade.getById(id)
-      name = grade.name
-    } else if (kind === "coursework") {
-      const coursework = await window.electronAPI.coursework.getById(id)
-      name = coursework.name
-    } else if (kind === "asb") {
-      const definition =
-        await window.electronAPI.answerSheetBuilder.loadDefinition(id)
-      name = definition.name
+      const exam = await queryClient.ensureQueryData(examDetailQuery(id))
+      return exam?.examName ?? null
     }
-    if (name) entityNameCache.set(cacheKey, name)
-    return name
+    if (kind === "grade") {
+      const grade = await queryClient.ensureQueryData(gradeDetailQuery(id))
+      return grade.name
+    }
+    if (kind === "coursework") {
+      const coursework = await queryClient.ensureQueryData(
+        courseworkDetailQuery(id)
+      )
+      return coursework.name
+    }
+    const definition = await queryClient.ensureQueryData(
+      answerSheetDefinitionQuery(id)
+    )
+    return definition.name
   } catch {
     return null
   }
@@ -144,6 +157,7 @@ async function resolveEntityName(
 
 /** URLから履歴メニュー用のラベルとセクションを組み立てる（固有名が引ければ「セクション｜固有名」） */
 async function buildEntry(
+  queryClient: QueryClient,
   url: string
 ): Promise<{ label: string; section: string }> {
   let pathname: string
@@ -157,7 +171,7 @@ async function buildEntry(
   const { base, step, entity } = routeToLabel(pathname)
   if (!entity) return { label: base, section }
 
-  const name = await resolveEntityName(entity.kind, entity.id)
+  const name = await resolveEntityName(queryClient, entity.kind, entity.id)
   // 「セクション｜ステップ｜固有名」（ステップ・固有名は解決できたものだけ連結）
   const label = [base, step, name].filter(Boolean).join("｜")
   return { label, section }
@@ -180,6 +194,8 @@ interface UseNavigationHistoryResult {
 export function useNavigationHistory(): UseNavigationHistoryResult {
   const router = useRouter()
   const pathname = usePathname()
+  const queryClient = useQueryClient()
+  const { mutate: goToHistoryIndex } = useMutation(goToHistoryIndexMutation())
   const [canGoBack, setCanGoBack] = useState(false)
   const [canGoForward, setCanGoForward] = useState(false)
   const [entries, setEntries] = useState<NavigationMenuEntry[]>([])
@@ -188,10 +204,7 @@ export function useNavigationHistory(): UseNavigationHistoryResult {
     let cancelled = false
 
     const run = async () => {
-      const api = window.electronAPI?.navigation
-      if (!api) return
-
-      const state = await api.getState()
+      const state = await queryClient.fetchQuery(navigationStateQuery())
       if (cancelled) return
 
       setCanGoBack(state.canGoBack)
@@ -199,7 +212,7 @@ export function useNavigationHistory(): UseNavigationHistoryResult {
 
       const labeled = await Promise.all(
         state.entries.map(async (entry) => {
-          const { label, section } = await buildEntry(entry.url)
+          const { label, section } = await buildEntry(queryClient, entry.url)
           return {
             index: entry.index,
             label,
@@ -214,12 +227,13 @@ export function useNavigationHistory(): UseNavigationHistoryResult {
       setEntries(labeled.reverse())
     }
 
-    void run()
+    // 履歴が引けないとき（起動直後・テスト環境）はメニューを出さないだけ
+    void run().catch(() => undefined)
 
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [queryClient])
 
   // 遷移ごとに履歴状態を再取得する
   useEffect(() => {
@@ -227,9 +241,10 @@ export function useNavigationHistory(): UseNavigationHistoryResult {
     return cleanup
   }, [pathname, refresh])
 
-  const goToIndex = useCallback((index: number) => {
-    void window.electronAPI?.navigation?.goToIndex(index)
-  }, [])
+  const goToIndex = useCallback(
+    (index: number) => goToHistoryIndex(index),
+    [goToHistoryIndex]
+  )
 
   return {
     canGoBack,

@@ -1,12 +1,12 @@
 import { queryOptions } from "@tanstack/react-query"
 
-import type { IndividualReportOptions } from "@/electron-src/lib/export/individual-report/types"
 import type {
   ExamReportGraphSettingsValues,
   ExamReportTableSectionValues,
 } from "@/electron-src/lib/prisma/examSettings"
 import type { PreferenceKey, PreferenceValueType } from "@/lib/userPreferences"
 import { serializePreference } from "@/lib/userPreferences"
+import type { IndividualReportOptions } from "@/types/individualReport.types"
 import type {
   AnswerOverlayStyle,
   AnswerOverlayVisibility,

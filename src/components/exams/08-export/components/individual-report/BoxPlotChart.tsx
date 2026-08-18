@@ -10,11 +10,11 @@
  */
 import { useMemo } from "react"
 
+import type { ScoringData } from "@/electron-src/lib/shared/types"
 import type {
   ReportPopulation,
   SubtotalGroupSelection,
-} from "@/electron-src/lib/export/individual-report/types"
-import type { ScoringData } from "@/electron-src/lib/shared/types"
+} from "@/types/individualReport.types"
 
 import {
   type BoxPlotIncludeStatuses,

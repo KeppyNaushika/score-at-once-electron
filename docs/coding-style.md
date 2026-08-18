@@ -723,7 +723,7 @@ export function useDragAndDrop({ items, onReorder }) { … }
 | `useMutation` への直書き禁止         | ESLint（`no-restricted-syntax`）  |
 | `window.electronAPI` の置き場所      | `ipcBoundaryConventions.test.ts`  |
 | 登録したまま呼ばれないチャンネル     | 同上                              |
-| `src/` → `electron-src/` の値 import | 同上（`ALLOWED_VALUE_IMPORTS`）   |
+| `src/` → `electron-src/` の値 import | 同上（例外なし）                  |
 | 同じキーに違う形／違う IPC を載せる  | `queryKeyConventions.test.ts`     |
 | 書き込みの後始末が効いているか       | `queryClientMutationMeta.test.ts` |
 
@@ -794,10 +794,10 @@ export async function getGrade(id: string): Promise<GradeWithRelations> {
 renderer から main のモジュールを**値**で import すると、renderer のバンドルへ main の
 依存グラフ（`@prisma/client`・ネイティブモジュール）が入り込む。`import type` を付ける。
 
-例外は**名指しの一覧**で管理する。実体は
-`__tests__/renderer/ipcBoundaryConventions.test.ts` の `ALLOWED_VALUE_IMPORTS`
-にあり、増やすには OWNER の判断が要る。「純粋計算なら良い」といった判断基準は
-書かない（必ず当てはめに使われて広がる）。
+**例外は無い。** main と renderer が同じ結果を出す必要のある計算（用紙サイズの解決・
+統計・項目分析など）は、`electron-src/` ではなく `src/lib/shared/` に置く。そこへ置けば
+両側が同じものを値で引ける。かつては読む側のファイルを名指しで許す一覧があったが、
+6モジュールを外へ出して不要になった（段階14）。
 
 同じテストが「登録したまま誰も呼ばないチャンネル」も見る。呼ぶ側（`bind("…")`）の
 綴り違いは `invoke<Channel extends keyof Handlers>` がコンパイルエラーにするが、

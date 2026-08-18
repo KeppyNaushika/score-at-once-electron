@@ -2,13 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query"
 
+import type { StudentExportPlacement } from "@/electron-src/lib/shared/types"
+import { individualReportPreviewQuery } from "@/queries/export"
 import type {
   IndividualReportData,
   IndividualReportOptions,
   ReportPopulation,
-} from "@/electron-src/lib/export/individual-report/types"
-import type { StudentExportPlacement } from "@/electron-src/lib/shared/types"
-import { individualReportPreviewQuery } from "@/queries/export"
+} from "@/types/individualReport.types"
 
 interface UseIndividualReportPreviewOptions {
   examId: string

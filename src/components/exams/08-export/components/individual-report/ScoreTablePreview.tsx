@@ -10,7 +10,7 @@ import type {
   IndividualReportOptions,
   ReportPopulation,
   TableColumns,
-} from "@/electron-src/lib/export/individual-report/types"
+} from "@/types/individualReport.types"
 
 interface ScoreTablePreviewProps {
   report: IndividualReportData

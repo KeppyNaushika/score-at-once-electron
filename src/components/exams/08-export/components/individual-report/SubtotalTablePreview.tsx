@@ -9,12 +9,12 @@
  */
 import { Fragment, useMemo } from "react"
 
+import type { SubtotalScore } from "@/electron-src/lib/shared/types"
 import type {
   IndividualReportData,
   SubtotalGroupSelection,
   SubtotalTableColumns,
-} from "@/electron-src/lib/export/individual-report/types"
-import type { SubtotalScore } from "@/electron-src/lib/shared/types"
+} from "@/types/individualReport.types"
 
 import {
   allocateColumnsDHondt,

@@ -2,14 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query"
 
-import { queryKeys } from "@/lib/queryKeys"
+import { studentExamResultsQuery } from "@/queries/student"
 
 /** 生徒1人の試験結果一覧 */
 export function useStudentExamResults(studentId: string) {
-  const { data: results = [], isPending: loading } = useQuery({
-    queryKey: queryKeys.studentExamResults.detail(studentId),
-    queryFn: () => window.electronAPI.getStudentExamResults(studentId),
-  })
+  const { data: results = [], isPending: loading } = useQuery(
+    studentExamResultsQuery(studentId)
+  )
 
   return { results, loading }
 }

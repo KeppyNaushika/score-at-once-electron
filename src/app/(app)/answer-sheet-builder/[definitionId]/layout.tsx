@@ -15,8 +15,8 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
-import { queryKeys } from "@/lib/queryKeys"
 import { cn } from "@/lib/utils"
+import { answerSheetDefinitionQuery } from "@/queries/answerSheetBuilder"
 
 const workflowSteps = [
   { id: "detail", label: "概要", path: "" },
@@ -41,9 +41,7 @@ export default function AnswerSheetBuilderDefinitionLayout({
   const pathname = usePathname()
   // パンくずが要るのは定義名だけ。定義そのもののキャッシュを各ページと共有する
   const { data: definitionName = "" } = useQuery({
-    queryKey: queryKeys.answerSheetDefinition.detail(definitionId),
-    queryFn: () =>
-      window.electronAPI.answerSheetBuilder.loadDefinition(definitionId),
+    ...answerSheetDefinitionQuery(definitionId),
     select: selectDefinitionName,
   })
 

@@ -3,12 +3,12 @@
  * adviceOptionsの変更をリアルタイムでプレビューに反映
  */
 
+import type { ScoreDetail } from "@/electron-src/lib/shared/types"
 import type {
   AdviceOptions,
   AdviceQuestion,
   LearningAdviceData,
-} from "@/electron-src/lib/export/individual-report/types"
-import type { ScoreDetail } from "@/electron-src/lib/shared/types"
+} from "@/types/individualReport.types"
 
 /**
  * 生徒が間違えた問題かどうかを判定

@@ -6,13 +6,13 @@
  */
 
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
-
-import type { ScoringData } from "../../shared/types"
 import type {
   RawTotalScoreEntry,
   ReportSubtotal,
   SubtotalRawScores,
-} from "./types"
+} from "@/types/individualReport.types"
+
+import type { ScoringData } from "../../shared/types"
 
 /**
  * 設問別正答率を計算

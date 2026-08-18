@@ -8,7 +8,7 @@ import {
   type FrequencyDistributionResult,
   type SpInputStudent,
   type SpTableResult,
-} from "@/electron-src/lib/shared/calculations/spAnalysis"
+} from "@/lib/shared/spAnalysis"
 
 import type { ExcelPreviewData } from "./useExcelPreview"
 

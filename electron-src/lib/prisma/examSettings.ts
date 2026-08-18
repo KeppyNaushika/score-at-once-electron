@@ -11,6 +11,23 @@ import type {
   ExamIndividualReportTableSection,
 } from "@prisma/client"
 
+import type { IndividualReportOptions } from "@/types/individualReport.types"
+import type {
+  StatisticKind,
+  StatisticScope,
+  StatisticVisibility,
+} from "@/types/individualReport.types"
+import {
+  DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
+  STATISTIC_KINDS,
+  toReportDisplayMode,
+  toReportPageLayout,
+  toReportPageOrientation,
+  toStatisticKind,
+  toStatisticScope,
+  toTableColumns,
+} from "@/types/individualReport.types"
+
 import { examWithExportSettingsInclude } from "../../../src/types/prismaExtensions"
 import type {
   AnswerOverlaySettings,
@@ -21,22 +38,6 @@ import {
   DEFAULT_ANSWER_OVERLAY_SETTINGS,
   toAnswerOverlaySettings,
 } from "../../../src/types/scoringOverlay.types"
-import type { IndividualReportOptions } from "../export/individual-report/types"
-import type {
-  StatisticKind,
-  StatisticScope,
-  StatisticVisibility,
-} from "../export/individual-report/types"
-import {
-  DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
-  STATISTIC_KINDS,
-  toReportDisplayMode,
-  toReportPageLayout,
-  toReportPageOrientation,
-  toStatisticKind,
-  toStatisticScope,
-  toTableColumns,
-} from "../export/individual-report/types"
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope } from "./auditScope"
 import prisma from "./client"

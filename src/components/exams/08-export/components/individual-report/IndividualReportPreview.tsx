@@ -7,12 +7,12 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
+import { cn } from "@/lib/utils"
 import type {
   IndividualReportData,
   IndividualReportOptions,
   ReportPopulation,
-} from "@/electron-src/lib/export/individual-report/types"
-import { cn } from "@/lib/utils"
+} from "@/types/individualReport.types"
 
 import { calculateLearningAdvice } from "../../utils/learningAdviceCalculator"
 import { BoxPlotChart } from "./BoxPlotChart"

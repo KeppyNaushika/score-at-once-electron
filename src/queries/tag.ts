@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 
+import { answerSheetDefinitionListQuery } from "./answerSheetBuilder"
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
 
@@ -179,7 +180,11 @@ export const setAnswerSheetDefinitionTagsMutation = (definitionId: string) =>
         tagIds
       ),
     meta: {
-      invalidates: [answerSheetDefinitionTagsQuery(definitionId).queryKey],
+      // 一覧の行にもタグが出る（`listDefinitions` が同梱する）ので一緒に取り直す
+      invalidates: [
+        answerSheetDefinitionTagsQuery(definitionId).queryKey,
+        answerSheetDefinitionListQuery().queryKey,
+      ],
       errorMessage: "タグを保存できませんでした",
     },
   })
@@ -193,7 +198,38 @@ export const addAnswerSheetDefinitionTagMutation = (definitionId: string) =>
         tagId,
       }),
     meta: {
-      invalidates: [answerSheetDefinitionTagsQuery(definitionId).queryKey],
+      // 一覧の行にもタグが出る（`listDefinitions` が同梱する）ので一緒に取り直す
+      invalidates: [
+        answerSheetDefinitionTagsQuery(definitionId).queryKey,
+        answerSheetDefinitionListQuery().queryKey,
+      ],
+      errorMessage: "タグを追加できませんでした",
+    },
+  })
+
+/**
+ * 選んだ解答用紙へ同じタグをまとめて足す。
+ *
+ * `addTagToExamsMutation` と同じ形。既存のタグを保ったまま1件ずつ足し、既に
+ * 紐づいているものは飛ばす。行き先は解答用紙のまとまり全体（一覧の行にもタグが
+ * 出るうえ、対象は複数件なので絞る意味が無い）。
+ */
+export const addTagToAnswerSheetDefinitionsMutation = () =>
+  defineMutation({
+    mutationFn: async (input: { definitionIds: string[]; tagId: string }) => {
+      for (const definitionId of input.definitionIds) {
+        try {
+          await window.electronAPI.asbDefinitionTagCreate({
+            asbDefinitionId: definitionId,
+            tagId: input.tagId,
+          })
+        } catch {
+          // 既に紐づいている場合は unique 制約で失敗するが、結果は同じなので飛ばす
+        }
+      }
+    },
+    meta: {
+      invalidates: [["answerSheetDefinition"]],
       errorMessage: "タグを追加できませんでした",
     },
   })

@@ -4,10 +4,13 @@
 
 import type { SubtotalGroup } from "@prisma/client"
 
+import type {
+  ScoringData,
+  StudentExportPlacement,
+} from "@/electron-src/lib/shared/types"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
-import { defineStringUnion } from "../../../../src/types/stringUnion"
-import type { ScoringData, StudentExportPlacement } from "../../shared/types"
+import { defineStringUnion } from "./stringUnion"
 
 // ================== 表示モード関連 ==================
 

@@ -1,5 +1,11 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 
+import {
+  createStudentMutation,
+  studentListQuery,
+  updateStudentMutation,
+} from "@/queries/student"
 import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
 interface StudentImportRow {
@@ -25,6 +31,9 @@ interface ValidationResult {
  *   画面が読み込み済みのものをそのまま渡す（セルを離れるたびに全件を取り直さない）
  */
 export function useStudentImport(existingStudents: StudentWithMemberships[]) {
+  const queryClient = useQueryClient()
+  const createStudent = useMutation(createStudentMutation())
+  const updateStudent = useMutation(updateStudentMutation())
   const [studentData, setStudentData] = useState<StudentImportRow[]>([
     {
       studentNumber: "",
@@ -124,7 +133,7 @@ export function useStudentImport(existingStudents: StudentWithMemberships[]) {
       const imported: StudentWithMemberships[] = []
 
       // 既存の生徒データを取得
-      const existingStudents = await window.electronAPI.fetchStudents()
+      const existingStudents = await queryClient.fetchQuery(studentListQuery())
       const existingStudentNumbers = new Set(
         existingStudents.map((student) => student.studentNumber)
       )
@@ -153,19 +162,19 @@ export function useStudentImport(existingStudents: StudentWithMemberships[]) {
         // 既存チェック - 上書きまたは新規作成
         if (existingStudentNumbers.has(studentNumber)) {
           const existingStudent = existingStudents.find(
-            (s) => s.studentNumber === studentNumber
+            (student) => student.studentNumber === studentNumber
           )
           if (existingStudent) {
             // 既存生徒を更新
-            const updatedStudent = await window.electronAPI.updateStudent(
-              existingStudent.id,
-              studentData
-            )
+            const updatedStudent = await updateStudent.mutateAsync({
+              id: existingStudent.id,
+              student: studentData,
+            })
             imported.push(updatedStudent)
           }
         } else {
           // 新規生徒を作成
-          const newStudent = await window.electronAPI.createStudent(studentData)
+          const newStudent = await createStudent.mutateAsync(studentData)
           imported.push(newStudent)
         }
       }

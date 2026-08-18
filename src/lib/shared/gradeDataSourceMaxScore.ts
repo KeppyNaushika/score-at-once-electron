@@ -9,7 +9,7 @@
  * 分岐ロジックはここが単一のソースになる。
  */
 
-import { selectExamCropRegions } from "./subtotalAssignments"
+import { selectExamCropRegions } from "@/lib/shared/subtotalAssignments"
 
 /**
  * 満点算出に必要な元データ。

@@ -4,7 +4,12 @@
  *
  * - 4つのプリセットパターン（標準、ビビッド、ソフト、色覚多様性対応）
  * - 各状態の個別カスタマイズ
- * - DBに保存（UserPreference KV方式）
+ *
+ * **ここにあるのは値と、保存文字列を読む計算だけ。** 読み書きは
+ * `src/queries/settings.ts` の `userPreferenceQuery` / `setUserPreferenceMutation`
+ * を通す（キー `scoringStatusColors` / `scoringColorPresetId`）。かつてはこの
+ * ファイルが自前のキャッシュと `window` イベントで変更を配っていたが、設定画面と
+ * 採点画面が同じキャッシュを見る形にすれば、その仕掛けは要らない。
  */
 
 import type { ScoringStatus } from "@/types/scoringStatus.types"
@@ -114,165 +119,52 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
   },
 ]
 
-/** メモリキャッシュ（同期的なアクセス用） */
-let cachedColors: ScoringStatusColors = SCORING_COLOR_PRESETS[0].colors
-/** 現在選択中のプリセットID */
-let cachedPresetId: string | null = "default"
-/** 現在のユーザーID（保存時に使用） */
-let currentUserId: string | null = null
+/** 既定の配色（プリセットの先頭） */
+export const DEFAULT_SCORING_STATUS_COLORS: ScoringStatusColors =
+  SCORING_COLOR_PRESETS[0].colors
 
 /**
- * DBのJSON内の旧キー"ungraded"を"unscored"にマイグレーション
+ * 保存されている色設定を読める形に直す。
+ *
+ * 旧いキー `"ungraded"` は `"unscored"` として読む（保存し直しはしない。
+ * 次に色を変えたときに現行のキーで書き直る）。
  */
-function migrateUngradedKey(
-  colors: Record<string, StatusColorConfig>
+export function parseScoringStatusColors(
+  stored: string | null
 ): ScoringStatusColors {
-  const result = { ...colors } as Record<string, StatusColorConfig>
-  if ("ungraded" in result && !("unscored" in result)) {
-    result.unscored = result.ungraded
-    delete result.ungraded
-  }
-  return result as ScoringStatusColors
-}
+  if (!stored || stored === "null") return DEFAULT_SCORING_STATUS_COLORS
 
-/**
- * DBから採点状態色を読み込み（初期化用・KV方式）
- */
-export async function loadScoringStatusColors(userId: string): Promise<void> {
-  if (typeof window === "undefined" || !window.electronAPI?.settings) return
-
+  let parsed: unknown
   try {
-    currentUserId = userId
-    const [storedColors, storedPresetId] = await Promise.all([
-      window.electronAPI.settings.getUserPreference(
-        userId,
-        "scoringStatusColors"
-      ),
-      window.electronAPI.settings.getUserPreference(
-        userId,
-        "scoringColorPresetId"
-      ),
-    ])
-
-    if (storedColors && storedColors !== "null") {
-      try {
-        const parsed: unknown = JSON.parse(storedColors)
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          cachedColors = migrateUngradedKey(
-            parsed as Record<string, StatusColorConfig>
-          )
-        }
-      } catch {
-        // keep default
-      }
-    }
-
-    if (storedPresetId && storedPresetId !== "null") {
-      let parsed = storedPresetId
-      try {
-        parsed = JSON.parse(storedPresetId)
-      } catch {
-        // keep raw value
-      }
-      cachedPresetId = parsed
-    } else {
-      cachedPresetId = null
-    }
-  } catch (error) {
-    console.error("Failed to load scoring status colors:", error)
+    parsed = JSON.parse(stored)
+  } catch {
+    return DEFAULT_SCORING_STATUS_COLORS
   }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return DEFAULT_SCORING_STATUS_COLORS
+  }
+
+  const colors = { ...parsed } as Record<string, StatusColorConfig>
+  if ("ungraded" in colors && !("unscored" in colors)) {
+    colors.unscored = colors.ungraded
+    delete colors.ungraded
+  }
+  return colors as ScoringStatusColors
 }
 
 /**
- * 保存されている採点状態色を取得（同期的）
+ * 保存されているプリセットidを読む。
+ *
+ * 個別に色を変えるとプリセットからは外れるので、そのときは `null` が入っている。
  */
-export function getScoringStatusColors(): ScoringStatusColors {
-  return cachedColors
-}
-
-/**
- * 採点状態色を保存（KV方式・楽観的更新）
- */
-export async function saveScoringStatusColors(
-  colors: ScoringStatusColors,
-  userId?: string
-): Promise<void> {
-  const targetUserId = userId || currentUserId
-  cachedColors = colors
-  cachedPresetId = null
-
-  if (typeof window === "undefined") return
-
-  // 変更を通知
-  window.dispatchEvent(new CustomEvent("scoringStatusColorsChanged"))
-
-  if (!targetUserId || !window.electronAPI?.settings) return
-
+export function parseScoringColorPresetId(
+  stored: string | null
+): string | null {
+  if (!stored || stored === "null") return null
   try {
-    await Promise.all([
-      window.electronAPI.settings.setUserPreference(
-        targetUserId,
-        "scoringStatusColors",
-        JSON.stringify(colors)
-      ),
-      window.electronAPI.settings.setUserPreference(
-        targetUserId,
-        "scoringColorPresetId",
-        "null"
-      ),
-    ])
-  } catch (error) {
-    console.error("Failed to save scoring status colors:", error)
-  }
-}
-
-/**
- * 現在選択されているプリセットIDを取得
- */
-export function getCurrentPresetId(): string | null {
-  return cachedPresetId
-}
-
-/**
- * プリセットを適用（KV方式・楽観的更新）
- */
-export async function applyScoringColorPreset(
-  presetId: string,
-  userId?: string
-): Promise<void> {
-  const preset = SCORING_COLOR_PRESETS.find(
-    (candidate) => candidate.id === presetId
-  )
-  if (!preset) {
-    console.error(`Preset not found: ${presetId}`)
-    return
-  }
-
-  const targetUserId = userId || currentUserId
-  cachedColors = preset.colors
-  cachedPresetId = presetId
-
-  if (typeof window === "undefined") return
-
-  // 変更を通知
-  window.dispatchEvent(new CustomEvent("scoringStatusColorsChanged"))
-
-  if (!targetUserId || !window.electronAPI?.settings) return
-
-  try {
-    await Promise.all([
-      window.electronAPI.settings.setUserPreference(
-        targetUserId,
-        "scoringStatusColors",
-        JSON.stringify(preset.colors)
-      ),
-      window.electronAPI.settings.setUserPreference(
-        targetUserId,
-        "scoringColorPresetId",
-        JSON.stringify(presetId)
-      ),
-    ])
-  } catch (error) {
-    console.error("Failed to apply scoring color preset:", error)
+    const parsed: unknown = JSON.parse(stored)
+    return typeof parsed === "string" ? parsed : stored
+  } catch {
+    return stored
   }
 }
