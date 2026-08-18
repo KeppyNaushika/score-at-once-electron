@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useParams } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 
@@ -94,6 +94,8 @@ export function useExportPage() {
   const [individualReportOptions, setIndividualReportOptionsState] =
     useState<IndividualReportOptions>(DEFAULT_INDIVIDUAL_REPORT_OPTIONS)
 
+  const queryClient = useQueryClient()
+
   // 保存済みの出力設定と、小計グループの選択。選択の正本は ExamSubtotalGroup の
   // フラグなので、設定JSONに残った亡霊IDは使わない
   const { data: savedSettings } = useQuery({
@@ -137,9 +139,11 @@ export function useExportPage() {
    * 直す（以前は ref で1回に固定していたため、別の試験を開いても前の試験の設定が
    * 残ったまま保存されていた）。
    *
-   * 書き込みに失敗したときも蒔き直すが、**新しいデータが届いてから**にする。
-   * 失敗の合図だけで蒔き直すと、取り直しがまだ走っている最中の（＝古い）
-   * キャッシュから戻してしまい、以後 DB と食い違ったままになる。
+   * 書き込みに失敗したときも蒔き直すが、**取り直しが終わってから**にする。
+   * 合図だけで蒔き直すと、取り直しがまだ走っている最中の（＝古い）キャッシュから
+   * 戻してしまい、以後 DB と食い違ったままになる。待つのは
+   * `invalidateQueries` の解決で、「データが変わったか」では見ない
+   * （失敗したときは DB が変わらないので、変化を待つと**一度も蒔き直せない**）。
    */
   const [seeded, setSeeded] = useState<{
     examId: string
@@ -147,15 +151,22 @@ export function useExportPage() {
     selection: typeof savedSelection
   } | null>(null)
   const [reseedRequested, setReseedRequested] = useState(false)
-  const requestReseed = useCallback(() => setReseedRequested(true), [])
+  const requestReseed = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: examExportSettingsQuery(examId).queryKey,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: subtotalGroupSelectionQuery(examId).queryKey,
+      }),
+    ])
+    setReseedRequested(true)
+  }, [queryClient, examId])
 
   const needsSeed =
     savedSettings !== undefined &&
     savedSelection !== undefined &&
-    (seeded?.examId !== examId ||
-      (reseedRequested &&
-        (seeded.settings !== savedSettings ||
-          seeded.selection !== savedSelection)))
+    (seeded?.examId !== examId || reseedRequested)
 
   if (needsSeed && savedSettings && savedSelection) {
     setSeeded({ examId, settings: savedSettings, selection: savedSelection })

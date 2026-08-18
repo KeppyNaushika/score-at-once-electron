@@ -18,7 +18,6 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useSlidingValue } from "@/hooks/useSlidingValue"
 import {
   DEFAULT_SCORING_STATUS_COLORS,
-  parseScoringColorPresetId,
   parseScoringStatusColors,
   SCORING_COLOR_PRESETS,
   SCORING_STATUS_LABELS,
@@ -96,10 +95,13 @@ export function DisplaySettingsTab() {
     ...userPreferenceQuery(userId, "scoringStatusColors"),
     select: parseScoringStatusColors,
   })
-  const { data: currentPresetId = null } = useQuery({
-    ...userPreferenceQuery(userId, "scoringColorPresetId"),
-    select: parseScoringColorPresetId,
-  })
+  const { data: storedPresetId } = useQuery(
+    userPreferenceQuery(userId, "scoringColorPresetId")
+  )
+  const currentPresetId = parsePreference(
+    "scoringColorPresetId",
+    storedPresetId ?? null
+  )
 
   // 選択枠色の変更。途中の色を持つのは ColorPicker の側で、ここへは確定した色だけ来る
   const handleSelectionBorderColorChange = useCallback(
@@ -127,10 +129,8 @@ export function DisplaySettingsTab() {
         key: "scoringStatusColors",
         value: JSON.stringify(preset.colors),
       })
-      setPreference.mutate({
-        key: "scoringColorPresetId",
-        value: JSON.stringify(presetId),
-      })
+      // id そのものを渡す。保存文字列への変換は書き込み側が持つ
+      setPreference.mutate({ key: "scoringColorPresetId", value: presetId })
       toast.success("カラープリセットが適用されました")
     },
     [setPreference]

@@ -10,6 +10,10 @@ import { scopeKeys } from "./keys"
  * タグ本体は横断で共有される1つの集合。紐付け（試験・資料・解答用紙・小計点
  * グループ）は相手側の実体に属するので、無効化の行き先も相手側のスコープになる。
  *
+ * **紐付けを変えたらタグ一覧も取り直す。** 一覧（`tagGetAll`）は紐付けを同梱して
+ * いて、タグ管理画面がそれを「利用先」として出す。相手側だけ取り直すと、そちらの
+ * 表示は直るのにタグ管理画面の数字が古いまま残る。
+ *
  * 対応する preload は `electron-src/preload-apis/tagApi.ts`。
  */
 
@@ -112,7 +116,7 @@ export const setExamTagsMutation = (examId: string) =>
     mutationFn: (tagIds: string[]) =>
       window.electronAPI.examTagSetExamTags(examId, tagIds),
     meta: {
-      invalidates: [examTagsQuery(examId).queryKey],
+      invalidates: [examTagsQuery(examId).queryKey, tagListQuery().queryKey],
       errorMessage: "タグを保存できませんでした",
     },
   })
@@ -128,7 +132,7 @@ export const setExamTagsForNewExamMutation = () =>
     mutationFn: (input: { examId: string; tagIds: string[] }) =>
       window.electronAPI.examTagSetExamTags(input.examId, input.tagIds),
     meta: {
-      invalidates: [["exam"]],
+      invalidates: [["exam"], tagListQuery().queryKey],
       errorMessage: "タグを保存できませんでした",
     },
   })
@@ -139,7 +143,7 @@ export const addExamTagMutation = (examId: string) =>
     mutationFn: (tagId: string) =>
       window.electronAPI.examTagCreate({ examId, tagId }),
     meta: {
-      invalidates: [examTagsQuery(examId).queryKey],
+      invalidates: [examTagsQuery(examId).queryKey, tagListQuery().queryKey],
       errorMessage: "タグを追加できませんでした",
     },
   })
@@ -166,7 +170,7 @@ export const addTagToExamsMutation = () =>
       }
     },
     meta: {
-      invalidates: [["exam"]],
+      invalidates: [["exam"], tagListQuery().queryKey],
       errorMessage: "タグを追加できませんでした",
     },
   })
@@ -180,10 +184,12 @@ export const setAnswerSheetDefinitionTagsMutation = (definitionId: string) =>
         tagIds
       ),
     meta: {
-      // 一覧の行にもタグが出る（`listDefinitions` が同梱する）ので一緒に取り直す
+      // 一覧の行にもタグが出る（`listDefinitions` が同梱する）ので一緒に取り直す。
+      // タグ一覧は紐付けを利用先として同梱するので、そちらも古くなる
       invalidates: [
         answerSheetDefinitionTagsQuery(definitionId).queryKey,
         answerSheetDefinitionListQuery().queryKey,
+        tagListQuery().queryKey,
       ],
       errorMessage: "タグを保存できませんでした",
     },
@@ -198,10 +204,12 @@ export const addAnswerSheetDefinitionTagMutation = (definitionId: string) =>
         tagId,
       }),
     meta: {
-      // 一覧の行にもタグが出る（`listDefinitions` が同梱する）ので一緒に取り直す
+      // 一覧の行にもタグが出る（`listDefinitions` が同梱する）ので一緒に取り直す。
+      // タグ一覧は紐付けを利用先として同梱するので、そちらも古くなる
       invalidates: [
         answerSheetDefinitionTagsQuery(definitionId).queryKey,
         answerSheetDefinitionListQuery().queryKey,
+        tagListQuery().queryKey,
       ],
       errorMessage: "タグを追加できませんでした",
     },
@@ -229,7 +237,7 @@ export const addTagToAnswerSheetDefinitionsMutation = () =>
       }
     },
     meta: {
-      invalidates: [["answerSheetDefinition"]],
+      invalidates: [["answerSheetDefinition"], tagListQuery().queryKey],
       errorMessage: "タグを追加できませんでした",
     },
   })
@@ -243,7 +251,7 @@ export const setSubtotalGroupTagsMutation = () =>
         input.tagIds
       ),
     meta: {
-      invalidates: [["subtotalGroup"]],
+      invalidates: [["subtotalGroup"], tagListQuery().queryKey],
       errorMessage: "タグを保存できませんでした",
     },
   })

@@ -37,7 +37,9 @@ export function StatisticsClassroomSelector({
     ...examClassroomsQuery(examId),
     enabled: Boolean(examId),
   })
-  const updateExamClassroom = useMutation(updateExamClassroomMutation(examId))
+  const { mutateAsync: updateExamClassroom } = useMutation(
+    updateExamClassroomMutation(examId)
+  )
 
   /**
    * 押した直後の値を手元に持つ。
@@ -75,7 +77,7 @@ export function StatisticsClassroomSelector({
   }
 
   /** チェックは1回で確定するので即時に書く。失敗の通知と取り直しは共通の後始末が担う */
-  const setFlag = (
+  const setFlag = async (
     examClassroomId: string,
     patch: { teacherStatistics?: boolean; studentReport?: boolean }
   ) => {
@@ -83,7 +85,18 @@ export function StatisticsClassroomSelector({
       ...previous,
       [examClassroomId]: { ...previous[examClassroomId], ...patch },
     }))
-    updateExamClassroom.mutate({ id: examClassroomId, ...patch })
+    try {
+      await updateExamClassroom({ id: examClassroomId, ...patch })
+    } catch {
+      // 書けなかったときは DB の値が変わらないので、上の「一致したら捨てる」では
+      // 手元の覚えが永久に残る。チェックが入ったまま「保存済み」に見えるので、
+      // ここで捨てて DB の値へ戻す（失敗の通知は共通の後始末が出す）
+      setPressed((previous) => {
+        const next = { ...previous }
+        delete next[examClassroomId]
+        return next
+      })
+    }
   }
 
   if (loading) {
@@ -161,21 +174,21 @@ export function StatisticsClassroomSelector({
                   <TableCell className="text-center">
                     <Checkbox
                       checked={teacherStatistics}
-                      onCheckedChange={(checked) =>
-                        setFlag(examClassroom.id, {
+                      onCheckedChange={(checked) => {
+                        void setFlag(examClassroom.id, {
                           teacherStatistics: checked === true,
                         })
-                      }
+                      }}
                     />
                   </TableCell>
                   <TableCell className="text-center">
                     <Checkbox
                       checked={studentReport}
-                      onCheckedChange={(checked) =>
-                        setFlag(examClassroom.id, {
+                      onCheckedChange={(checked) => {
+                        void setFlag(examClassroom.id, {
                           studentReport: checked === true,
                         })
-                      }
+                      }}
                     />
                   </TableCell>
                 </TableRow>

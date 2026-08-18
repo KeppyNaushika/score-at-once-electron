@@ -166,12 +166,14 @@ export function useAnnotationBrowser(
     setFiltersState((prev) => ({ ...prev, ...partial }))
   }, [])
 
-  // 走らせない条件のときは待たせない（`isPending` は無効なクエリでは永久に true）
-  const { data: allAnnotations = EMPTY_ANNOTATIONS, isFetching } = useQuery({
+  // 走らせない条件のときは待たせない（`isPending` は無効なクエリでは永久に true）。
+  // 待つのは**最初の1回だけ**。書き込みのたびに走る取り直しまで「読み込み中」に
+  // すると、1ストロークごとに一覧が消えてスクロール位置が飛ぶ
+  const { data: allAnnotations = EMPTY_ANNOTATIONS, isPending } = useQuery({
     ...annotationsForBrowseQuery(examId),
     enabled: Boolean(examId),
   })
-  const isLoading = Boolean(examId) && isFetching
+  const isLoading = Boolean(examId) && isPending
 
   const queryKey = useMemo(
     () => annotationsForBrowseQuery(examId).queryKey,

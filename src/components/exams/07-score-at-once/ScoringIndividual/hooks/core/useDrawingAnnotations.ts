@@ -8,10 +8,9 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
   annotationsByQuestionScoreQuery,
-  batchCreateAnnotationsMutation,
   createAnnotationMutation,
   deleteAnnotationMutation,
-  deleteAnnotationsByQuestionScoreMutation,
+  replaceQuestionScoreAnnotationsMutation,
   updateAnnotationMutation,
 } from "@/queries/drawing"
 import type {
@@ -72,16 +71,14 @@ export function useDrawingAnnotations(
   const createAnnotation = useMutation(createAnnotationMutation())
   const updateAnnotation = useMutation(updateAnnotationMutation())
   const deleteAnnotation = useMutation(deleteAnnotationMutation())
-  const batchCreateAnnotations = useMutation(batchCreateAnnotationsMutation())
-  const deleteByQuestionScore = useMutation(
-    deleteAnnotationsByQuestionScoreMutation()
+  const replaceOfQuestionScore = useMutation(
+    replaceQuestionScoreAnnotationsMutation()
   )
 
   const { mutateAsync: createOne } = createAnnotation
   const { mutateAsync: updateOne } = updateAnnotation
   const { mutateAsync: deleteOne } = deleteAnnotation
-  const { mutateAsync: createMany } = batchCreateAnnotations
-  const { mutateAsync: deleteAllOfQuestionScore } = deleteByQuestionScore
+  const { mutateAsync: replaceAnnotations } = replaceOfQuestionScore
 
   // 参照
   const callbacksRef = useRef<DrawingPersistenceCallbacks>(callbacks || {})
@@ -106,8 +103,7 @@ export function useDrawingAnnotations(
     createAnnotation.isPending ||
     updateAnnotation.isPending ||
     deleteAnnotation.isPending ||
-    batchCreateAnnotations.isPending ||
-    deleteByQuestionScore.isPending
+    replaceOfQuestionScore.isPending
 
   /**
    * アノテーション読み込み
@@ -208,23 +204,17 @@ export function useDrawingAnnotations(
       questionScoreId: string
     ): Promise<DrawingAnnotation[]> => {
       try {
-        // 削除と作成を**続けて積む**（間で待たない）。`scope` が実行の順序を
-        // 保つので消してから作る順は変わらず、両方が pending のあいだは
-        // 取り直しが畳まれる。待ってから作ると、削除の直後に「空になった DB」を
-        // 読みに行く取り直しが走り、注釈が一瞬消えて戻るのが見える
-        const deletion = deleteAllOfQuestionScore({ questionScoreId })
-        const creation =
-          elements.length > 0
-            ? createMany(elements)
-            : Promise.resolve<DrawingAnnotation[]>([])
-
-        await deletion
-        return await creation
+        // 消すのと作るのは**1つの書き込み**（`replace…`）。別々に積むと、
+        // 消す方が失敗しても作る方が走って注釈が二重に載る
+        return await replaceAnnotations({
+          questionScoreId,
+          annotations: elements,
+        })
       } catch {
         return []
       }
     },
-    [createMany, deleteAllOfQuestionScore]
+    [replaceAnnotations]
   )
 
   return {
@@ -235,8 +225,7 @@ export function useDrawingAnnotations(
       createAnnotation.error?.message ??
       updateAnnotation.error?.message ??
       deleteAnnotation.error?.message ??
-      batchCreateAnnotations.error?.message ??
-      deleteByQuestionScore.error?.message ??
+      replaceOfQuestionScore.error?.message ??
       null,
 
     // CRUD操作

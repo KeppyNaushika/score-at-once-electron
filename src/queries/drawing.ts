@@ -129,31 +129,39 @@ export const deleteAnnotationMutation = () =>
     },
   })
 
-/**
- * その設問スコアに紐づく注釈を全部消す。
- *
- * 「この設問の手書きを消す」は1つの意図で、消える範囲は親の id で言い切れる。
- * 1件ずつ消す形に割ると、途中で失敗したときに半分だけ消えた状態が残る。
- */
-export const deleteAnnotationsByQuestionScoreMutation = () =>
-  defineMutation({
-    mutationFn: (input: { questionScoreId: string; type?: DrawingType }) =>
-      window.electronAPI.drawing.deleteByQuestionScore(
-        input.questionScoreId,
-        input.type
-      ),
-    scope: { id: "annotation" },
-    meta: {
-      invalidates: [scopeKeys.annotation()],
-      errorMessage: "手書きを削除できませんでした",
-    },
-  })
-
 /** 1ストロークが複数の要素になることがあるので、まとめて作る口を持つ */
 export const batchCreateAnnotationsMutation = () =>
   defineMutation({
     mutationFn: (annotations: DrawingAnnotation[]) =>
       window.electronAPI.drawing.batchCreate(annotations),
+    scope: { id: "annotation" },
+    meta: {
+      invalidates: [scopeKeys.annotation()],
+      errorMessage: "手書きを保存できませんでした",
+    },
+  })
+
+/**
+ * その設問の注釈を、渡した内容へ置き換える（消してから作る）。
+ *
+ * **消すのと作るのを別々の書き込みにしない。** 別々にすると、消す方が失敗しても
+ * 作る方は積まれたまま実行され、古い注釈の上に新しい注釈が重なる。かといって
+ * 消し終わるのを待ってから作ると、その間に取り直しが走って**注釈が一瞬消えて
+ * 戻る**のが見える（間に他の書き込みが挟まらないので `MutationCache` の
+ * まとめが効かない）。1つの書き込みにすれば、順序も後始末も1回で済む。
+ */
+export const replaceQuestionScoreAnnotationsMutation = () =>
+  defineMutation({
+    mutationFn: async (input: {
+      questionScoreId: string
+      annotations: DrawingAnnotation[]
+    }) => {
+      await window.electronAPI.drawing.deleteByQuestionScore(
+        input.questionScoreId
+      )
+      if (input.annotations.length === 0) return []
+      return window.electronAPI.drawing.batchCreate(input.annotations)
+    },
     scope: { id: "annotation" },
     meta: {
       invalidates: [scopeKeys.annotation()],

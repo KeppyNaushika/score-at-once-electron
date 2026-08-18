@@ -10,9 +10,14 @@
  * を通す（キー `scoringStatusColors` / `scoringColorPresetId`）。かつてはこの
  * ファイルが自前のキャッシュと `window` イベントで変更を配っていたが、設定画面と
  * 採点画面が同じキャッシュを見る形にすれば、その仕掛けは要らない。
+ *
+ * プリセットidは中身が id そのものなので、専用の読み手は持たない
+ * （`parsePreference("scoringColorPresetId", …)` で足りる）。
  */
 
 import type { ScoringStatus } from "@/types/scoringStatus.types"
+
+import { parsePreference } from "./userPreferences"
 
 /** 各状態の色設定 */
 export interface StatusColorConfig {
@@ -126,17 +131,23 @@ export const DEFAULT_SCORING_STATUS_COLORS: ScoringStatusColors =
 /**
  * 保存されている色設定を読める形に直す。
  *
+ * 受け取るのは `UserPreference` の**生の保存文字列**で、剥がす段は2つある。
+ * 1つ目は保存の符号化（`serializePreference` が文字列を JSON でくるむ）、
+ * 2つ目が中身の JSON。ここが両方を持つことで、呼び出し側が段を数え違えない
+ * （実際に片方を飛ばして、色が常に既定へ落ちていた）。
+ *
  * 旧いキー `"ungraded"` は `"unscored"` として読む（保存し直しはしない。
  * 次に色を変えたときに現行のキーで書き直る）。
  */
 export function parseScoringStatusColors(
   stored: string | null
 ): ScoringStatusColors {
-  if (!stored || stored === "null") return DEFAULT_SCORING_STATUS_COLORS
+  const json = parsePreference("scoringStatusColors", stored)
+  if (!json) return DEFAULT_SCORING_STATUS_COLORS
 
   let parsed: unknown
   try {
-    parsed = JSON.parse(stored)
+    parsed = JSON.parse(json)
   } catch {
     return DEFAULT_SCORING_STATUS_COLORS
   }
@@ -150,21 +161,4 @@ export function parseScoringStatusColors(
     delete colors.ungraded
   }
   return colors as ScoringStatusColors
-}
-
-/**
- * 保存されているプリセットidを読む。
- *
- * 個別に色を変えるとプリセットからは外れるので、そのときは `null` が入っている。
- */
-export function parseScoringColorPresetId(
-  stored: string | null
-): string | null {
-  if (!stored || stored === "null") return null
-  try {
-    const parsed: unknown = JSON.parse(stored)
-    return typeof parsed === "string" ? parsed : stored
-  } catch {
-    return stored
-  }
 }

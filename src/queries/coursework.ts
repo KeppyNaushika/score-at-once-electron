@@ -4,6 +4,7 @@ import type { CourseworkScoreUpsertInput } from "@/types/coursework.types"
 
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
+import { tagListQuery } from "./tag"
 
 /**
  * 試験外成績資料（Coursework）の読み書き。
@@ -361,7 +362,8 @@ export const setCourseworkTagsMutation = (courseworkId: string) =>
     mutationFn: (tagIds: string[]) =>
       window.electronAPI.coursework.setTags(courseworkId, tagIds),
     meta: {
-      invalidates: [courseworkScope(courseworkId)],
+      // タグ一覧は紐付けを利用先として同梱するので、そちらも古くなる
+      invalidates: [courseworkScope(courseworkId), tagListQuery().queryKey],
       errorMessage: "タグを保存できませんでした",
     },
   })
@@ -371,7 +373,8 @@ export const addCourseworkTagMutation = (courseworkId: string) =>
     mutationFn: (tagId: string) =>
       window.electronAPI.coursework.addTag(courseworkId, tagId),
     meta: {
-      invalidates: [courseworkScope(courseworkId)],
+      // タグ一覧は紐付けを利用先として同梱するので、そちらも古くなる
+      invalidates: [courseworkScope(courseworkId), tagListQuery().queryKey],
       errorMessage: "タグを追加できませんでした",
     },
   })
