@@ -1,13 +1,12 @@
 import type {
-  CropRegionWithExamPage,
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type {
   DrawingAnnotation,
   LineStyle,
 } from "@/types/drawingAnnotation.types"
-import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 
 // Canvas が持つのは DrawingAnnotation の行そのもの（DB に保存されている形）。
 // 座標 x/y と width/height/endX/endY は 0.0-1.0 の割合、strokeWidth/fontSize は mm。
@@ -29,15 +28,12 @@ export interface AnswerIndividualViewProps {
   currentScoringDataId: string | null // 現在表示中のデータID（selectedの最初の要素）
 
   // 設問情報（派生済みオブジェクト）
-  currentCropRegion?: CropRegionWithExamPage | null // 現在の設問領域
-  cropRegions?: CropRegionWithExamPage[] // 全採点領域（全設問マーク描画用）
+  currentCropRegion?: QuestionAnswerRegionRow | null // 現在の設問領域
+  cropRegions?: QuestionAnswerRegionRow[] // 全採点領域（全設問マーク描画用）
 
   // QuestionScore自動作成用のコンテキスト情報
   currentExamStudentId?: string
   currentUserId?: string
-
-  // アノテーション用: QuestionScore配列（正しいquestionScoreIdを取得するため）
-  questionScores?: SerializedQuestionScore[]
 
   // QuestionScore自動作成後のコールバック（リストの更新用）
   onQuestionScoreCreated?: () => void

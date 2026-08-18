@@ -3,20 +3,15 @@
  * 複数の機能で使用される型をここに統一
  */
 
-/** Prismaから基本型とPayload型をインポート */
-import type { Prisma } from "@prisma/client"
-
 import type {
   ANSWER_SORT_ORDERS,
   LAYOUT_DIRECTIONS,
   MASTER_ANSWER_DISPLAY_MODES,
   MASTER_ANSWER_KEY_BEHAVIORS,
 } from "@/lib/userPreferences"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 /** Prisma拡張型をprismaExtensions.tsからインポート */
-import type {
-  SerializedQuestionScore,
-  StudentAnswerImageWithExamPageAndStudent,
-} from "@/types/prismaExtensions"
+import type { StudentAnswerImageWithExamPageAndStudent } from "@/types/prismaExtensions"
 import {
   type ScoringStatus,
   toScoringStatus,
@@ -31,14 +26,12 @@ export type StudentAnswerImageWithExamStudents =
   StudentAnswerImageWithExamPageAndStudent
 
 /**
- * CropRegionをExamPage情報で拡張したPrisma生成型
- * 変数名: cropRegion, cropRegions
+ * 採点行1件。**採点領域の子として届く形をそのまま名づける。**
+ *
+ * 手で宣言し直すと境界の実物とずれる（`status` の綴りの広さが実際に食い違って
+ * いた）。所在は「その採点領域の中」なので、型の出どころも採点領域にする。
  */
-export type CropRegionWithExamPage = Prisma.CropRegionGetPayload<{
-  include: {
-    examPage: true
-  }
-}>
+export type QuestionScoreRow = QuestionAnswerRegionRow["questionScores"][number]
 
 /**
  * 採点モード
@@ -81,7 +74,7 @@ export interface ScoringData {
   /** QuestionScore.status */
   status: ScoringStatus
   /** 採点領域情報 */
-  questionRegion: CropRegionWithExamPage
+  questionRegion: QuestionAnswerRegionRow
   /** ExamStudent.customOrder (必須・ソート用) */
   customOrder: number
 }
@@ -123,39 +116,63 @@ export interface MasterGridItem {
   imageUrl: string
   maxScore: number
   status: MasterStatus
-  questionRegion: CropRegionWithExamPage
+  questionRegion: QuestionAnswerRegionRow
   customOrder: number
   isMaster: true
 }
 
 /**
- * QuestionScore配列からの検索ユーティリティ関数
- * シンプルな線形検索でscoringDataオブジェクトを置き換え
+ * その採点領域における、指定した利用者の採点行を1件取る。
+ *
+ * **採点領域の木のまま受け取る。** 平らな配列へ潰すと
+ * `(examStudentId, cropRegionId)` の2つで探し直すことになり、採点行が採点領域の
+ * 子であるという事実が消える。木のままなら「その設問の中を見る」ので、照合は
+ * `examStudentId` と `userId` だけで済む。
+ *
+ * 07 が出すのは**自分の採点だけ**。他の教員の採点も木には届いているが、ここで
+ * 落とす。食い違いを裁くのは採点する場ではない（将来の 07-2-finalize）。
  */
 export function findQuestionScore(
-  questionScores: SerializedQuestionScore[],
+  cropRegion: QuestionAnswerRegionRow,
   examStudentId: string,
-  cropRegionId: string
-): SerializedQuestionScore | undefined {
-  return questionScores.find(
-    (score) =>
-      score.examStudentId === examStudentId &&
-      score.cropRegionId === cropRegionId
+  userId: string | null
+): QuestionScoreRow | undefined {
+  if (!userId) return undefined
+
+  const scores = cropRegion.questionScores.filter(
+    (questionScore) =>
+      questionScore.examStudentId === examStudentId &&
+      questionScore.userId === userId
+  )
+
+  // 同期のマージで、同じ利用者の同じマスに2行残ることがある。`QuestionScore` は
+  // id 以外の unique を張れない（sqlite-nas-sync の制約）ので防げない。
+  // `find` で先頭を取ると2行目を黙って握り潰すため、最後に書かれた行を採る
+  // （更新時刻 → id の順。集計側 scoreResolution.ts の pickLatest と同じ規則）。
+  return scores.reduce<QuestionScoreRow | undefined>(
+    (latest, questionScore) => {
+      if (!latest) return questionScore
+      const latestUpdatedAt = new Date(latest.updatedAt).getTime()
+      const currentUpdatedAt = new Date(questionScore.updatedAt).getTime()
+      if (currentUpdatedAt !== latestUpdatedAt) {
+        return currentUpdatedAt > latestUpdatedAt ? questionScore : latest
+      }
+      return questionScore.id > latest.id ? questionScore : latest
+    },
+    undefined
   )
 }
 
-/**
- * QuestionScore配列から採点状況を取得
- */
-export function getScoringStatusFromArray(
-  questionScores: SerializedQuestionScore[],
+/** その採点領域における、指定した利用者の採点状況 */
+export function getScoringStatus(
+  cropRegion: QuestionAnswerRegionRow | null | undefined,
   examStudentId: string,
-  cropRegionId?: string
+  userId: string | null
 ): ScoringStatus {
-  if (!cropRegionId) return "unscored"
+  if (!cropRegion) return "unscored"
 
-  const score = findQuestionScore(questionScores, examStudentId, cropRegionId)
-  return toScoringStatus(score?.status)
+  const questionScore = findQuestionScore(cropRegion, examStudentId, userId)
+  return toScoringStatus(questionScore?.status)
 }
 
 /**

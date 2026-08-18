@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { useShortcutContext } from "../contexts/ShortcutProvider"
 
 interface UsePartialScoreProps {
   selectedAnswers: Set<string>
-  currentCropRegion: CropRegionWithExamPage | undefined | null
+  currentCropRegion: QuestionAnswerRegionRow | undefined | null
   onBatchScore: (
     status: ScoringStatus,
     score?: number | null,

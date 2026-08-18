@@ -1,7 +1,7 @@
 "use client"
 
 import PartialScoreModal from "@/components/exams/07-score-at-once/ScoringMain/PartialScoreModal"
-import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 /** キーバインディングの型 */
 interface ModalKeyBindings {
@@ -14,7 +14,7 @@ interface ScoringModalsProps {
   // Partial Score Modal props
   showPartialScoreModal: boolean
   partialScoreInput: string
-  currentCropRegion?: CropRegionWithExamPage
+  currentCropRegion?: QuestionAnswerRegionRow
   onPartialScoreClose: () => void
   onPartialScoreChange: (value: string) => void
   onPartialScoreConfirmPartial?: () => void

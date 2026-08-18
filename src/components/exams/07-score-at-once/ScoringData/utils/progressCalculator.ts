@@ -1,16 +1,17 @@
-import type {
-  CropRegionWithExamPage,
-  QuestionProgress,
-  StudentAnswerImageWithExamStudents,
-} from "@/components/exams/07-score-at-once/ScoringData/types"
+import type { QuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/types"
+import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-score-at-once/types"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
-import type { SerializedQuestionScore } from "@/types/prismaExtensions"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
-/** 各設問の採点進捗（採点済み件数・割合）を計算する */
+/**
+ * 各設問の採点進捗（採点済み件数・割合）を計算する。
+ *
+ * 進捗は**自分の採点**の進み具合を出す（07 が出すのは自分の採点だけ）。
+ */
 export function calculateQuestionProgress(
-  cropRegions: CropRegionWithExamPage[],
+  cropRegions: QuestionAnswerRegionRow[],
   pageImages: StudentAnswerImageWithExamStudents[],
-  questionScores: SerializedQuestionScore[]
+  currentUserId: string | null
 ): QuestionProgress {
   const progress: QuestionProgress = {}
 
@@ -40,9 +41,9 @@ export function calculateQuestionProgress(
 
     relevantPageImages.forEach((pageImage) => {
       const score = findQuestionScore(
-        questionScores,
+        cropRegion,
         pageImage.examStudentId,
-        cropRegion.id
+        currentUserId
       )
       const isGraded =
         score &&

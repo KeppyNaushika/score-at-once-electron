@@ -30,7 +30,6 @@ import QuestionNavigator from "@/components/exams/07-score-at-once/ScoringSidePa
 import ScoringToolbar from "@/components/exams/07-score-at-once/ScoringSidePanel/ScoringToolbar"
 import type {
   AnswerSortOrder,
-  CropRegionWithExamPage,
   LayoutDirection,
   MasterAnswerDisplayMode,
   MasterAnswerKeyBehavior,
@@ -49,6 +48,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { parsePreference } from "@/lib/userPreferences"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import {
   setUserPreferenceMutation,
   userPreferenceQuery,
@@ -89,9 +89,9 @@ import { SidePanelSection } from "./SidePanelSection"
 interface ScoringSidePanelProps {
   examId: string
   // Question Navigator props
-  cropRegions: CropRegionWithExamPage[]
-  currentCropRegion?: CropRegionWithExamPage | null
-  onCropRegionChange: (cropRegion: CropRegionWithExamPage | null) => void
+  cropRegions: QuestionAnswerRegionRow[]
+  currentCropRegion?: QuestionAnswerRegionRow | null
+  onCropRegionChange: (cropRegion: QuestionAnswerRegionRow | null) => void
   onPrevQuestion: () => void
   onNextQuestion: () => void
   questionProgress: QuestionProgress
@@ -161,11 +161,6 @@ interface ScoringSidePanelProps {
   // アノテーションブラウザー用追加props
   currentUserId?: string
   selectedScoringDataIds?: string[]
-  questionScores?: Array<{
-    id: string
-    examStudentId: string
-    cropRegionId: string
-  }>
   allScoringData?: Array<{ id: string; examStudentId: string }>
   onQuestionScoreCreated?: () => void
   /** キャンバスでアノテーション変更時にブラウザ一覧をリロードするキー */
@@ -240,7 +235,6 @@ export function ScoringSidePanel({
   // アノテーションブラウザー用
   currentUserId,
   selectedScoringDataIds,
-  questionScores,
   allScoringData,
   onQuestionScoreCreated,
   annotationRefreshKey,
@@ -550,7 +544,6 @@ export function ScoringSidePanel({
             cropRegions={cropRegions}
             gradingMode={gradingMode}
             annotationRefreshKey={annotationRefreshKey}
-            questionScores={questionScores ?? []}
             selectedScoringDataIds={selectedScoringDataIds ?? []}
             allScoringData={allScoringData ?? []}
             onQuestionScoreCreated={onQuestionScoreCreated}

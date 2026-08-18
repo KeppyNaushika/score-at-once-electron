@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react"
 
-import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
 import { PAPER_DIMENSIONS } from "@/lib/paperSize"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 import { renderTextElement } from "../ScoringIndividual/utils/canvasTextRenderer"
@@ -31,7 +31,7 @@ import { renderTextElement } from "../ScoringIndividual/utils/canvasTextRenderer
 
 interface CroppedAnswerImageProps {
   imageUrl: string
-  cropRegion: CropRegionWithExamPage // not null（呼び出し元で保証）
+  cropRegion: QuestionAnswerRegionRow // not null（呼び出し元で保証）
   alt: string
   className?: string
   isColumnLayout?: boolean

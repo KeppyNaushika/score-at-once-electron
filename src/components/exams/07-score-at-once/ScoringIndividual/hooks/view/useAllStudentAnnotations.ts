@@ -5,7 +5,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo } from "react"
 
-import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { annotationsByExamStudentQuery } from "@/queries/drawing"
 import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 
@@ -14,7 +14,7 @@ interface UseAllStudentAnnotationsParams {
   /** 現在の学生ID */
   currentExamStudentId?: string
   /** 現在の設問領域（試験ID取得用） */
-  currentCropRegion?: CropRegionWithExamPage | null
+  currentCropRegion?: QuestionAnswerRegionRow | null
   /** 現在のユーザーID（アノテーション取得のフィルタリング用） */
   currentUserId?: string
   /** 外部からのアノテーション変更通知キー（変更時にリロード） */

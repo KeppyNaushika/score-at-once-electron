@@ -6,7 +6,6 @@ import AnswerGridView from "@/components/exams/07-score-at-once/ScoringGrid/Answ
 import AnswerIndividualView from "@/components/exams/07-score-at-once/ScoringIndividual/AnswerIndividualView"
 import { MasterAnswerView } from "@/components/exams/07-score-at-once/ScoringIndividual/MasterAnswerView"
 import type {
-  CropRegionWithExamPage,
   GradingMode,
   LayoutDirection,
   MasterAnswerDisplayMode,
@@ -16,7 +15,7 @@ import type {
   ScoringOperationMode,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
-import type { SerializedQuestionScore } from "@/types/prismaExtensions"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 interface ScoringContentAreaProps {
   gradingMode: GradingMode
@@ -24,8 +23,8 @@ interface ScoringContentAreaProps {
   masterAnswerData: MasterGridItem | null
   filteredScoringDataIds: string[]
   selectedScoringDataIds: Set<string>
-  currentCropRegion?: CropRegionWithExamPage
-  cropRegions?: CropRegionWithExamPage[]
+  currentCropRegion?: QuestionAnswerRegionRow
+  cropRegions?: QuestionAnswerRegionRow[]
   onScoringDataSelect: (dataId: string, isSelected: boolean) => void
   onScoringDataReplace?: (ids: string[]) => void
   layoutDirection: LayoutDirection
@@ -36,7 +35,6 @@ interface ScoringContentAreaProps {
   studentAnswerImages?: StudentAnswerImageWithExamStudents[]
   currentExamStudentId?: string
   currentUserId?: string
-  questionScores?: SerializedQuestionScore[]
   onQuestionScoreCreated?: () => void
   onAnnotationChanged?: () => void
   annotationRefreshKey?: number
@@ -75,7 +73,6 @@ export function ScoringContentArea({
   studentAnswerImages,
   currentExamStudentId,
   currentUserId,
-  questionScores,
   onQuestionScoreCreated,
   onAnnotationChanged,
   annotationRefreshKey,
@@ -246,7 +243,6 @@ export function ScoringContentArea({
       studentAnswerImages={studentAnswerImages}
       currentExamStudentId={currentExamStudentId}
       currentUserId={currentUserId}
-      questionScores={questionScores}
       onQuestionScoreCreated={onQuestionScoreCreated}
       onAnnotationChanged={onAnnotationChanged}
       annotationRefreshKey={annotationRefreshKey}

@@ -8,10 +8,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react"
 
 import type { SelectionRectangle } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
-import type {
-  CropRegionWithExamPage,
-  ScoringData,
-} from "@/components/exams/07-score-at-once/types"
+import type { ScoringData } from "@/components/exams/07-score-at-once/types"
 import {
   resolveAnchorPoint,
   resolveImageOrigin,
@@ -19,6 +16,7 @@ import {
 } from "@/lib/answerOverlayPlacement"
 import { mmToPixels } from "@/lib/paperSize"
 import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type {
   AnnotationWithContext,
   DrawingAnnotation,
@@ -47,7 +45,7 @@ interface UseCanvasDrawingProps {
   imageLoaded: boolean
   loadedImages: HTMLImageElement[]
   currentScoringData: ScoringData | null
-  currentCropRegion?: CropRegionWithExamPage | null
+  currentCropRegion?: QuestionAnswerRegionRow | null
   zoom: number
   drawingElements: DrawingAnnotation[]
   selectedElementIds: string[]
@@ -173,7 +171,7 @@ export function useCanvasDrawing({
 
       // 採点領域の描画ヘルパー関数
       const drawCropRegionMark = (
-        region: CropRegionWithExamPage,
+        region: QuestionAnswerRegionRow,
         status: ScoringStatus,
         isCurrent: boolean,
         actualScore: number | null

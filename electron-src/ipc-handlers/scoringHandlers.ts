@@ -22,7 +22,6 @@ import {
   type BatchScoreEntry,
   batchUpdateQuestionScores,
   createQuestionScore,
-  getQuestionScoresForExam,
   SCORE_TARGET_DELETED,
   updateQuestionScore,
 } from "../lib/prisma/questionScore"
@@ -60,11 +59,6 @@ function serializeScore(score: {
 /** 採点（QuestionScore）のCRUD・進捗取得・一括更新・採点レコード初期化に関するIPCチャンネルを登録する */
 export const scoringHandlers = {
   // QuestionScore 関連のハンドラー
-  "get-question-scores-for-exam": async (examId: string, userId?: string) => {
-    const scores = await getQuestionScoresForExam(examId, userId)
-    return scores.map(serializeScore)
-  },
-
   "create-question-score": async (data: CreateQuestionScoreData) =>
     serializeScore(await createQuestionScore(data)),
 

@@ -10,10 +10,10 @@
 import { useEffect, useLayoutEffect, useRef } from "react"
 
 import type {
-  CropRegionWithExamPage,
   GradingMode,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 /**
  * useScoringEffectsの入力パラメータ
@@ -26,7 +26,7 @@ interface UseScoringEffectsParams {
   /** ページ画像一覧 */
   studentAnswerImages: StudentAnswerImageWithExamStudents[]
   /** 採点領域一覧 */
-  cropRegions: CropRegionWithExamPage[]
+  cropRegions: QuestionAnswerRegionRow[]
   /** 現在選択中の採点領域ID */
   currentCropRegionId: string | null
   /** 選択ページ画像IDを設定する関数 */

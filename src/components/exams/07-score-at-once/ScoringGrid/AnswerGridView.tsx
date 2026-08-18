@@ -12,7 +12,6 @@ import { useGridLayout } from "@/components/exams/07-score-at-once/ScoringGrid/h
 import { useGridNavigation } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridNavigation"
 import { useGridSelection } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridSelection"
 import type {
-  CropRegionWithExamPage,
   LayoutDirection,
   MasterGridItem,
   MouseBrushAction,
@@ -22,6 +21,7 @@ import type {
 import { useAuth } from "@/contexts/AuthContext"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { parsePreference } from "@/lib/userPreferences"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { userPreferenceQuery } from "@/queries/settings"
 
 interface AnswerGridViewProps {
@@ -47,7 +47,7 @@ interface AnswerGridViewProps {
   /** 表示領域拡張率 (0-50%) */
   expandMargin?: number
   /** アノテーション描画用: 現在の設問 */
-  currentCropRegion?: CropRegionWithExamPage
+  currentCropRegion?: QuestionAnswerRegionRow
   /** アノテーション描画用: 現在のユーザーID */
   currentUserId?: string
   /** アノテーションリフレッシュキー（変更検知用） */

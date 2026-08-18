@@ -4,7 +4,7 @@
  */
 import { useCallback } from "react"
 
-import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 import { ZOOM_SETTINGS } from "../../constants/drawingConstants"
 
@@ -23,7 +23,7 @@ interface UseZoomAndScrollParams {
   /** ページ間隔 */
   pageSpacing?: number
   /** 現在の設問領域 */
-  currentCropRegion?: CropRegionWithExamPage | null
+  currentCropRegion?: QuestionAnswerRegionRow | null
   /** split表示モード（利用可能幅/高さの補正用） */
   splitMode?: "horizontal" | "vertical" | null
 }

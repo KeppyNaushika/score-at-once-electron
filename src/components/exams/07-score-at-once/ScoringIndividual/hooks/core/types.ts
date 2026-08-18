@@ -3,10 +3,10 @@
  */
 import type { SelectionRectangle } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type {
-  CropRegionWithExamPage,
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type {
   AnnotationWithContext,
   DrawingAnnotation,
@@ -18,7 +18,7 @@ import type { ScoringStatus } from "@/types/scoringStatus.types"
  * 採点領域と採点ステータスのペア（全設問マーク描画用）
  */
 export interface CropRegionWithStatus {
-  cropRegion: CropRegionWithExamPage
+  cropRegion: QuestionAnswerRegionRow
   status: ScoringStatus
   actualScore: number | null
 }
@@ -28,7 +28,7 @@ export interface CropRegionWithStatus {
  */
 export interface UseImageCanvasProps {
   currentScoringData: ScoringData | null
-  currentCropRegion?: CropRegionWithExamPage | null
+  currentCropRegion?: QuestionAnswerRegionRow | null
   studentAnswerImages?: StudentAnswerImageWithExamStudents[]
   zoom: number
   position: { x: number; y: number }

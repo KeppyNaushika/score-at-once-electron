@@ -10,15 +10,14 @@ import {
 import type { WhitenessByAnswerId } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerWhiteness"
 import type {
   AnswerSortOrder,
-  CropRegionWithExamPage,
   GradingMode,
   MasterGridItem,
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { ExamWithPages } from "@/types/prismaExtensions"
-import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
 /** 該当なしのときに毎回新しい配列を作らないための空値 */
@@ -48,9 +47,9 @@ interface FilterSettings {
 
 interface UseScoringFilterProps {
   studentAnswerImages: StudentAnswerImageWithExamStudents[]
-  cropRegions: CropRegionWithExamPage[]
+  cropRegions: QuestionAnswerRegionRow[]
   currentCropRegionId: string | null
-  questionScores: SerializedQuestionScore[]
+  currentUserId: string | null
   selectedStudentAnswerImageIds: Set<string>
   setSelectedPageImageIds: (answers: Set<string>) => void
   exam: ExamWithPages | null
@@ -66,7 +65,7 @@ export function useScoringFilter({
   studentAnswerImages,
   cropRegions,
   currentCropRegionId,
-  questionScores,
+  currentUserId,
   selectedStudentAnswerImageIds,
   setSelectedPageImageIds,
   exam,
@@ -144,9 +143,9 @@ export function useScoringFilter({
     const studentScoringData: ScoringData[] = sortedAnswerSheets.map(
       (pageImage) => {
         const score = findQuestionScore(
-          questionScores,
+          currentCropRegion,
           pageImage.examStudentId,
-          currentCropRegion.id
+          currentUserId
         )
         const { student } = pageImage.examStudent
 
@@ -202,7 +201,7 @@ export function useScoringFilter({
   }, [
     currentCropRegion,
     studentAnswerImages,
-    questionScores,
+    currentUserId,
     gradingMode,
     answerSortOrder,
     whitenessByAnswerId,

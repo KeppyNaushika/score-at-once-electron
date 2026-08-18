@@ -1519,6 +1519,56 @@ IPC を渡る」としたが、**これは誤り**で、境界がスカラーへ
 この計画（IPC とデータ取得の移行）の範囲ではないので、着手はしない。**07 が自分の
 採点しか出さない理由**をここに残しておく。
 
+#### やったこと（完了・2026-08-18）
+
+`questionScoresForExamQuery` を消し、IPC チャンネル `get-question-scores-for-exam`
+と preload の束縛も落とした（読む側がいなくなった。main 側の
+`getQuestionScoresForExam` は出力・返却差分が今も使うので残る）。
+
+採点行は `cropRegion.questionScores` から読む。`findQuestionScore` は**採点領域を
+そのまま受け取り**、`examStudentId` と `userId` で絞る。`cropRegionId` の照合は
+消えた（その領域の中しか見ないので、照合する相手が無い）。`flatMap` も `Map` も
+置いていない。
+
+**取り直し先を採点領域へ向けた。** 採点の書き込み4本（作成・更新・確定・OMR 一括）の
+`invalidates` は `cropRegionScopes(examId)`（`cropRegions` と `questionAnswerRegions`
+の2本）になった。手動の取り直し（裁定パネル・OMR 取り込み後）も同じ行き先。
+
+**型を境界から導いた。** `CropRegionWithExamPage`（`Prisma.CropRegionGetPayload` の
+手写し）は、`examPage` しか宣言していないのに実体には `cropSubtotals` と
+`questionScores` が載っていた。境界の返り値から導く `QuestionAnswerRegionRow` へ
+置き換え（26ファイル）、採点行1件も `QuestionScoreRow` として同じ木から導いた。
+
+> 手写しは**綴りの広さでも**ずれていた。`SerializedQuestionScore.status` は絞った
+> ユニオン、境界の実物は `string`。取り直したことで初めてコンパイルエラーとして
+> 出てきた。段階18 で潰す型の、これは1件目である。
+
+`ScoringData/types.ts` の再輸出（`export type { ... }`）も落とした。規約どおり
+各ファイルが本来の所在から取る。
+
+#### 直したもの（表示の変更ではない）
+
+**同じマスに同じ利用者の行が2つある場合**、`find` は先頭を取っていた。DB の返す
+順に依存し、どちらが出るか決まらない。最後に書かれた行（更新時刻 → id）を採る
+形へ変えた。集計側 `scoreResolution.ts` の `pickLatest` と同じ規則である。
+行が1つの通常の場合は今までと同じ結果になる。
+
+#### 検査
+
+`__tests__/renderer/utils/questionProgress.test.ts` を木の形へ移し、
+`__tests__/renderer/hooks/scoring/useScoringData.test.tsx` を新設した（フックの
+**出力**を固定するので、内部が変わっても生き残る）。置いた性質は3つ:
+
+- 採点領域に届いている行だけで数える（採点行を別に取りに行かない）
+- 他の教員の採点は混ざらない／操作者が分からなければ誰の採点も数えない
+- 同じマスに2行あっても取りこぼさない（並び順を入れ替えても同じ結果）
+
+**わざと壊して効くことを確かめた。** 利用者の絞りを外すと2件、最新の選び方を
+`scores[0]` に戻すと3件が落ちる。
+
+採点経路の e2e は張っていない（fixture が3つ要る。この変更本体より大きい）。
+1マス採点するたびに木を取り直す費用も**まだ測っていない**。
+
 ### 段階14 — `window.electronAPI` を `src/queries/` だけにする
 
 **対象 19ファイル**＋境界の後始末。

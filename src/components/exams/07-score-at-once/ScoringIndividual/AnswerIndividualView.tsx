@@ -5,7 +5,10 @@ import Image from "next/image"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import { getScoringStatusFromArray } from "@/components/exams/07-score-at-once/types"
+import {
+  findQuestionScore,
+  getScoringStatus,
+} from "@/components/exams/07-score-at-once/types"
 import { toggleAnnotationFavoriteMutation } from "@/queries/drawing"
 import { examExportSettingsQuery } from "@/queries/settings"
 import type { LineStyle } from "@/types/drawingAnnotation.types"
@@ -38,7 +41,6 @@ export default function AnswerIndividualView({
   pageSpacing = 20,
   currentExamStudentId,
   currentUserId,
-  questionScores,
   onQuestionScoreCreated,
   onAnnotationChanged,
   annotationRefreshKey,
@@ -89,18 +91,19 @@ export default function AnswerIndividualView({
 
   // 全設問の採点ステータスと点数を計算（全設問マーク・点数描画用）
   const allCropRegionsWithStatus = useMemo(() => {
-    if (!cropRegions || !questionScores || !currentScoringData) return []
+    if (!cropRegions || !currentScoringData) return []
     const examStudentId = currentScoringData.examStudentId
     return cropRegions.map((cropRegion) => {
-      const status = getScoringStatusFromArray(
-        questionScores,
+      // 採点行はその設問の子。設問を跨いで探し直す必要は無い
+      const questionScore = findQuestionScore(
+        cropRegion,
         examStudentId,
-        cropRegion.id
+        currentUserId ?? null
       )
-      const questionScore = questionScores.find(
-        (candidateQuestionScore) =>
-          candidateQuestionScore.examStudentId === examStudentId &&
-          candidateQuestionScore.cropRegionId === cropRegion.id
+      const status = getScoringStatus(
+        cropRegion,
+        examStudentId,
+        currentUserId ?? null
       )
       const maxScore = cropRegion.points ?? 0
       let actualScore: number | null = null
@@ -122,15 +125,14 @@ export default function AnswerIndividualView({
       }
       return { cropRegion, status, actualScore }
     })
-  }, [cropRegions, questionScores, currentScoringData])
+  }, [cropRegions, currentUserId, currentScoringData])
 
   // QuestionScore自動作成フック（設問表示時にQuestionScoreが存在しない場合は自動作成）
   const { currentQuestionScoreId } = useAutoCreateQuestionScore({
     examId: examId ?? "",
     currentExamStudentId,
-    currentCropRegionId: currentCropRegion?.id,
+    currentCropRegion,
     currentUserId,
-    questionScores,
     onQuestionScoreCreated,
   })
 

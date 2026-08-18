@@ -4,7 +4,7 @@
  */
 import { useEffect } from "react"
 
-import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 /** 設問変更時自動スクロールフックのパラメータ */
 interface UseQuestionAutoScrollParams {
@@ -19,7 +19,7 @@ interface UseQuestionAutoScrollParams {
   /** ページ間隔 */
   pageSpacing?: number
   /** 現在の設問領域 */
-  currentCropRegion?: CropRegionWithExamPage | null
+  currentCropRegion?: QuestionAnswerRegionRow | null
   /** split表示モード（スクロール中心の補正用） */
   splitMode?: "horizontal" | "vertical" | null
 }

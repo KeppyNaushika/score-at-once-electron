@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
 
-import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { cropRegionAssignmentsQuery } from "@/queries/scoring"
 import type { CropRegionAssignmentSummary } from "@/types/scoreDecision.types"
 
@@ -11,7 +11,7 @@ const EMPTY_ASSIGNMENTS: CropRegionAssignmentSummary[] = []
 interface UseAssignedCropRegionsParams {
   examId: string
   userId: string | undefined
-  cropRegions: CropRegionWithExamPage[]
+  cropRegions: QuestionAnswerRegionRow[]
 }
 
 /**

@@ -6,6 +6,8 @@
 import { useMutation } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef } from "react"
 
+import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { createQuestionScoreMutation } from "@/queries/scoring"
 
 interface UseAutoCreateQuestionScoreParams {
@@ -13,16 +15,10 @@ interface UseAutoCreateQuestionScoreParams {
   examId: string
   /** 現在の生徒ID */
   currentExamStudentId?: string
-  /** 現在の設問領域ID */
-  currentCropRegionId?: string
+  /** 現在の設問領域（採点行を子として持つ） */
+  currentCropRegion?: QuestionAnswerRegionRow | null
   /** 現在のユーザーID */
   currentUserId?: string
-  /** QuestionScore配列（既存のスコアを検索用） */
-  questionScores?: Array<{
-    id: string
-    examStudentId: string
-    cropRegionId: string
-  }>
   /** QuestionScore作成後のコールバック（リストの更新用） */
   onQuestionScoreCreated?: () => void
 }
@@ -38,9 +34,8 @@ interface UseAutoCreateQuestionScoreReturn {
 export function useAutoCreateQuestionScore({
   examId,
   currentExamStudentId,
-  currentCropRegionId,
+  currentCropRegion,
   currentUserId,
-  questionScores,
   onQuestionScoreCreated,
 }: UseAutoCreateQuestionScoreParams): UseAutoCreateQuestionScoreReturn {
   const { mutateAsync: createScore } = useMutation(
@@ -50,13 +45,16 @@ export function useAutoCreateQuestionScore({
   // 作成中のリクエストを追跡（重複作成防止）
   const creatingRef = useRef<string | null>(null)
 
-  // 現在のQuestionScoreを検索
+  // 現在の採点行は、この設問（採点領域）の子として手元にある
+  const currentCropRegionId = currentCropRegion?.id
   const currentQuestionScoreId =
-    questionScores?.find(
-      (questionScore) =>
-        questionScore.examStudentId === currentExamStudentId &&
-        questionScore.cropRegionId === currentCropRegionId
-    )?.id ?? null
+    currentCropRegion && currentExamStudentId
+      ? (findQuestionScore(
+          currentCropRegion,
+          currentExamStudentId,
+          currentUserId ?? null
+        )?.id ?? null)
+      : null
 
   // QuestionScore作成関数
   const createQuestionScore = useCallback(async () => {

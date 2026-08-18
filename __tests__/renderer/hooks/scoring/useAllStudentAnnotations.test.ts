@@ -22,7 +22,7 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useAllStudentAnnotations } from "@/components/exams/07-score-at-once/ScoringIndividual/hooks/view/useAllStudentAnnotations"
-import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 import { createQueryWrapper } from "../../../helpers/queryWrapper"
 import {
@@ -34,14 +34,14 @@ import {
 
 function makeCropRegion(
   overrides: Partial<{ id: string; examId: string; label: string }> = {}
-): CropRegionWithExamPage {
+): QuestionAnswerRegionRow {
   return {
     id: overrides.id || "cr-1",
     label: overrides.label || "問1",
     examPage: {
       examId: overrides.examId || "exam-1",
     },
-  } as CropRegionWithExamPage
+  } as QuestionAnswerRegionRow
 }
 
 describe("useAllStudentAnnotations", () => {

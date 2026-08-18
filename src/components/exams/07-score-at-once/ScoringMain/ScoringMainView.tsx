@@ -46,7 +46,7 @@ import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { useAuth } from "@/contexts/AuthContext"
 import { resolveExamPaperSize } from "@/electron-src/lib/shared/utilities/examPaperSize"
-import { questionScoresForExamQuery } from "@/queries/scoring"
+import { cropRegionScopes } from "@/queries/cropRegion"
 import {
   setUserPreferenceMutation,
   userPreferenceQuery,
@@ -235,29 +235,28 @@ function ScoringMainViewContent() {
   })
 
   /** 採点データ管理hook */
-  const { questionScores, handleBatchScore, calculateQuestionProgress } =
-    useScoringData({
-      examId,
-      currentUserId,
-      currentCropRegionId,
-      studentAnswerImages,
-      cropRegions,
-    })
+  const { handleBatchScore, calculateQuestionProgress } = useScoringData({
+    examId,
+    currentUserId,
+    currentCropRegionId,
+    studentAnswerImages,
+    cropRegions,
+  })
 
   /**
    * 採点行を取り直す。
    *
+   * 採点行は採点領域の子として載っているので、取り直す先は採点領域のまとまり。
    * 採点の書き込みは自分で取り直すので、これが要るのは**手で頼まれたとき**
    * （裁定パネルの再読み込みボタン・OMR の取り込み後）だけである。
    */
-  const questionScoresKey = useMemo(
-    () =>
-      questionScoresForExamQuery(examId, currentUserId ?? undefined).queryKey,
-    [examId, currentUserId]
-  )
   const handleQuestionScoreCreated = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: questionScoresKey })
-  }, [queryClient, questionScoresKey])
+    await Promise.all(
+      cropRegionScopes(examId).map((queryKey) =>
+        queryClient.invalidateQueries({ queryKey })
+      )
+    )
+  }, [queryClient, examId])
 
   /** 裁定状況（採点者間の食い違い・確定後の新提案） */
   const {
@@ -313,7 +312,7 @@ function ScoringMainViewContent() {
     studentAnswerImages,
     cropRegions,
     currentCropRegionId: currentCropRegionId,
-    questionScores,
+    currentUserId,
     selectedStudentAnswerImageIds: selectedStudentAnswerImageIds,
     setSelectedPageImageIds: setSelectedPageImageIds,
     exam,
@@ -779,7 +778,6 @@ function ScoringMainViewContent() {
             showStudentNames={showStudentNames}
             currentExamStudentId={currentExamStudentId || undefined}
             currentUserId={currentUserId || undefined}
-            questionScores={questionScores}
             onQuestionScoreCreated={handleQuestionScoreCreated}
             expandMargin={expandMargin}
             onAnnotationChanged={handleCanvasAnnotationChanged}
@@ -853,7 +851,6 @@ function ScoringMainViewContent() {
               }
               currentUserId={currentUserId ?? undefined}
               selectedScoringDataIds={Array.from(selectedStudentAnswerImageIds)}
-              questionScores={questionScores}
               allScoringData={allScoringData}
               onQuestionScoreCreated={handleQuestionScoreCreated}
               annotationRefreshKey={annotationVersionForBrowser}

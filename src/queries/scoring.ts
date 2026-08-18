@@ -1,10 +1,15 @@
 import { queryOptions } from "@tanstack/react-query"
 
+import { cropRegionScopes } from "./cropRegion"
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
 
 /**
  * 採点（QuestionScore）と、設問ごとの採点担当（CropRegionAssignment）の読み書き。
+ *
+ * **採点行そのものを取るクエリはここに無い。** 採点行は採点領域（`CropRegion`）の
+ * 子として `src/queries/cropRegion.ts` のクエリに載っている。`QuestionScore` を根に
+ * 取り直すと、同じ行が別のキーで2度キャッシュされる。
  *
  * 対応する preload は `electron-src/preload-apis/scoringApi.ts`。
  */
@@ -12,29 +17,6 @@ import { scopeKeys } from "./keys"
 // =====================================================================
 // 取得
 // =====================================================================
-
-/**
- * その試験の採点行。
- *
- * 採点は利用者ごとに別の行なので、誰の採点を見ているかがキーの一部になる。
- * 取り直しの行き先は `questionScoresScope`（利用者を問わない前方一致）。
- */
-export const questionScoresForExamQuery = (
-  examId: string,
-  userId: string | undefined
-) =>
-  queryOptions({
-    queryKey: [
-      ...scopeKeys.exam(examId),
-      "questionScores",
-      userId ?? null,
-    ] as const,
-    queryFn: () => window.electronAPI.getQuestionScoresForExam(examId, userId),
-  })
-
-/** 誰の採点かを問わず、その試験の採点行をまとめて指す前方一致 */
-const questionScoresScope = (examId: string) =>
-  [...scopeKeys.exam(examId), "questionScores"] as const
 
 /**
  * 裁定サマリ（競合・確定後の新提案）。
@@ -95,7 +77,7 @@ export const createQuestionScoreMutation = (examId: string) =>
     ) => window.electronAPI.createQuestionScore(data),
     scope: { id: `exam:${examId}:questionScores` },
     meta: {
-      invalidates: [questionScoresScope(examId)],
+      invalidates: cropRegionScopes(examId),
       errorMessage: "採点を保存できませんでした",
     },
   })
@@ -115,7 +97,7 @@ export const updateQuestionScoreMutation = (examId: string) =>
       window.electronAPI.updateQuestionScore(input.questionScoreId, input.data),
     scope: { id: `exam:${examId}:questionScores` },
     meta: {
-      invalidates: [questionScoresScope(examId)],
+      invalidates: cropRegionScopes(examId),
       errorMessage: "採点を保存できませんでした",
     },
   })
@@ -142,7 +124,7 @@ export const finalizeQuestionScoreMutation = (examId: string) =>
     scope: { id: `exam:${examId}:questionScores` },
     meta: {
       invalidates: [
-        questionScoresScope(examId),
+        ...cropRegionScopes(examId),
         [...scopeKeys.exam(examId), "decisionSummary"],
       ],
       errorMessage: "採点を確定できませんでした",
@@ -159,7 +141,7 @@ export const batchUpdateQuestionScoresMutation = (examId: string) =>
     ) => window.electronAPI.batchUpdateQuestionScores(entries),
     scope: { id: `exam:${examId}:questionScores` },
     meta: {
-      invalidates: [questionScoresScope(examId)],
+      invalidates: cropRegionScopes(examId),
       errorMessage: "自動採点の結果を保存できませんでした",
     },
   })

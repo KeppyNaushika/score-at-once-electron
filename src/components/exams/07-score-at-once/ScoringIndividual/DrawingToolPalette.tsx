@@ -13,11 +13,11 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
-import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type {
   DrawingAnnotation,
   LineStyle,
@@ -40,7 +40,7 @@ interface DrawingToolPaletteProps {
   onZoomOut: () => void
   onMaximizeView: () => void
   onCropView: () => void
-  currentCropRegion?: CropRegionWithExamPage
+  currentCropRegion?: QuestionAnswerRegionRow
 
   // Tool selection
   currentTool: CanvasTool

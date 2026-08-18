@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { toast } from "sonner"
 
-import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { questionAnswerRegionsQuery } from "@/queries/cropRegion"
 import { examWithPagesQuery, studentAnswerImagesQuery } from "@/queries/exam"
 import type { ExamWithPages } from "@/types/prismaExtensions"
@@ -14,13 +14,13 @@ interface ScoringDataLoaderResult {
   loading: boolean
   exam: ExamWithPages | null
   studentAnswerImages: StudentAnswerImageWithExamPageAndStudent[]
-  cropRegions: CropRegionWithExamPage[]
+  cropRegions: QuestionAnswerRegionRow[]
   currentUserId: string | null
 }
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_ANSWER_IMAGES: StudentAnswerImageWithExamPageAndStudent[] = []
-const EMPTY_CROP_REGIONS: CropRegionWithExamPage[] = []
+const EMPTY_CROP_REGIONS: QuestionAnswerRegionRow[] = []
 
 /**
  * 採点画面の初期データ（試験・答案・設問領域）を用意する。

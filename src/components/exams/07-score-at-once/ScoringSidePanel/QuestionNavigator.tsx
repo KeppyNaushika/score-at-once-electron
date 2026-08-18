@@ -8,7 +8,6 @@ import {
   FileText,
 } from "lucide-react"
 
-import type { CropRegionWithExamPage } from "@/components/exams/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,13 +23,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 import { SidePanelSection } from "./SidePanelSection"
 
 interface QuestionNavigatorProps {
-  questionRegions: CropRegionWithExamPage[]
-  currentCropRegion?: CropRegionWithExamPage | null
-  onCropRegionChange: (cropRegion: CropRegionWithExamPage | null) => void
+  questionRegions: QuestionAnswerRegionRow[]
+  currentCropRegion?: QuestionAnswerRegionRow | null
+  onCropRegionChange: (cropRegion: QuestionAnswerRegionRow | null) => void
   onPrevQuestion: () => void
   onNextQuestion: () => void
   questionProgress?: {

@@ -13,6 +13,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import { toast } from "sonner"
 
+import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
 import {
   ContextMenu,
@@ -28,10 +29,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { createQuestionScoreMutation } from "@/queries/scoring"
 import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 
-import type { CropRegionWithExamPage } from "../types"
 import type {
   AddToTargetsResult,
   AnnotationDisplayItem,
@@ -43,16 +44,10 @@ interface AnnotationBrowserPanelProps {
   currentUserId?: string
   currentCropRegionId?: string
   currentExamStudentId?: string
-  cropRegions: CropRegionWithExamPage[]
+  cropRegions: QuestionAnswerRegionRow[]
   gradingMode: "grid" | "individual"
   /** キャンバス側で手書きが変わったことの合図（増えたら取り直す） */
   annotationRefreshKey?: number
-  // QuestionScore確保用
-  questionScores: Array<{
-    id: string
-    examStudentId: string
-    cropRegionId: string
-  }>
   selectedScoringDataIds: string[]
   allScoringData: Array<{ id: string; examStudentId: string }>
   onQuestionScoreCreated?: () => void
@@ -113,7 +108,6 @@ export function AnnotationBrowserPanel({
   cropRegions,
   gradingMode,
   annotationRefreshKey,
-  questionScores,
   selectedScoringDataIds,
   allScoringData,
   onQuestionScoreCreated,
@@ -179,12 +173,13 @@ export function AnnotationBrowserPanel({
       examStudentId: string,
       cropRegionId: string
     ): Promise<string | null> => {
-      // 既存のQuestionScoreを探す
-      const existing = questionScores.find(
-        (questionScore) =>
-          questionScore.examStudentId === examStudentId &&
-          questionScore.cropRegionId === cropRegionId
+      // 既存の採点行は、その設問（採点領域）の子として手元にある
+      const cropRegion = cropRegions.find(
+        (candidateCropRegion) => candidateCropRegion.id === cropRegionId
       )
+      const existing = cropRegion
+        ? findQuestionScore(cropRegion, examStudentId, currentUserId ?? null)
+        : undefined
       if (existing) return existing.id
 
       // なければ作成
@@ -203,7 +198,7 @@ export function AnnotationBrowserPanel({
       }
       return null
     },
-    [questionScores, currentUserId, createQuestionScore, onQuestionScoreCreated]
+    [cropRegions, currentUserId, createQuestionScore, onQuestionScoreCreated]
   )
 
   // 連打防止用フラグ

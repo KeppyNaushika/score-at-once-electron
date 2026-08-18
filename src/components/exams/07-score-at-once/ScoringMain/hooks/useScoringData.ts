@@ -1,32 +1,24 @@
-import { useQuery } from "@tanstack/react-query"
 import { useCallback } from "react"
 
 import { useBatchScoring } from "@/components/exams/07-score-at-once/ScoringData/hooks/useBatchScoring"
-import type {
-  CropRegionWithExamPage,
-  StudentAnswerImageWithExamStudents,
-} from "@/components/exams/07-score-at-once/ScoringData/types"
 import { calculateQuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/utils/progressCalculator"
-import { questionScoresForExamQuery } from "@/queries/scoring"
-import type { SerializedQuestionScore } from "@/types/prismaExtensions"
+import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 interface UseScoringDataProps {
   examId: string
   currentUserId: string | null
   currentCropRegionId: string | null
   studentAnswerImages: StudentAnswerImageWithExamStudents[]
-  cropRegions: CropRegionWithExamPage[]
+  cropRegions: QuestionAnswerRegionRow[]
 }
 
-/** 未取得のときに毎回新しい配列を作らないための空値 */
-const EMPTY_QUESTION_SCORES: SerializedQuestionScore[] = []
-
 /**
- * 採点データの取得・一括採点・進捗計算を統合的に管理するフック。
+ * 一括採点と進捗計算をまとめるフック。
  *
- * 採点行はキャッシュが持つ。以前は取得した配列を state へ写して楽観更新して
- * いたが、DB の姿と手元の姿が2つある状態になり、他の教員の書き込みや失敗した
- * 書き込みのたびにどちらが正かが分からなくなっていた。
+ * **採点行はここで取らない。** 採点行は採点領域（`cropRegions`）の子として
+ * 既に届いている。`QuestionScore` を根にもう一度取ると、同じ行が別のキーで
+ * 2度キャッシュされ、`(examStudentId, cropRegionId)` で探し直すことになる。
  */
 export function useScoringData({
   examId,
@@ -35,19 +27,12 @@ export function useScoringData({
   studentAnswerImages,
   cropRegions,
 }: UseScoringDataProps) {
-  // ログインしている利用者の採点だけを取る（採点は利用者ごとに別の行）
-  const { data: questionScores = EMPTY_QUESTION_SCORES } = useQuery({
-    ...questionScoresForExamQuery(examId, currentUserId ?? undefined),
-    enabled: Boolean(examId),
-  })
-
   const { handleBatchScore } = useBatchScoring({
     examId,
     studentAnswerImages,
     cropRegions,
     currentCropRegionId,
     currentUserId,
-    questionScores,
   })
 
   const calculateQuestionProgressCallback = useCallback(
@@ -55,13 +40,12 @@ export function useScoringData({
       calculateQuestionProgress(
         cropRegions,
         studentAnswerImages,
-        questionScores
+        currentUserId
       ),
-    [studentAnswerImages, cropRegions, questionScores]
+    [studentAnswerImages, cropRegions, currentUserId]
   )
 
   return {
-    questionScores,
     handleBatchScore,
     calculateQuestionProgress: calculateQuestionProgressCallback,
   }

@@ -2,16 +2,13 @@ import { useMutation } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { toast } from "sonner"
 
-import type {
-  CropRegionWithExamPage,
-  StudentAnswerImageWithExamStudents,
-} from "@/components/exams/07-score-at-once/types"
+import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-score-at-once/types"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import {
   createQuestionScoreMutation,
   updateQuestionScoreMutation,
 } from "@/queries/scoring"
-import type { SerializedQuestionScore } from "@/types/prismaExtensions"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /** 採点状態の綴り。旧い呼び出し形式（第1引数が状態）かどうかの判定に使う */
@@ -27,10 +24,9 @@ const SCORING_STATUSES: readonly string[] = [
 interface UseBatchScoringProps {
   examId: string
   studentAnswerImages: StudentAnswerImageWithExamStudents[]
-  cropRegions: CropRegionWithExamPage[]
+  cropRegions: QuestionAnswerRegionRow[]
   currentCropRegionId: string | null
   currentUserId: string | null
-  questionScores: SerializedQuestionScore[]
 }
 
 /**
@@ -46,7 +42,6 @@ export function useBatchScoring({
   cropRegions,
   currentCropRegionId,
   currentUserId,
-  questionScores,
 }: UseBatchScoringProps) {
   const { mutateAsync: createQuestionScore } = useMutation(
     createQuestionScoreMutation(examId)
@@ -104,10 +99,11 @@ export function useBatchScoring({
         )
         if (!studentAnswerImage?.examStudentId) continue
 
+        // 採点行はこの設問（採点領域）の子として手元にある
         const currentScore = findQuestionScore(
-          questionScores,
+          currentCropRegion,
           studentAnswerImage.examStudentId,
-          currentCropRegion.id
+          currentUserId
         )
 
         // 部分点は入力があればそれ、無ければ今の値を引き継ぐ。それ以外の
@@ -155,7 +151,6 @@ export function useBatchScoring({
       cropRegions,
       currentCropRegionId,
       currentUserId,
-      questionScores,
       studentAnswerImages,
       updateQuestionScore,
     ]

@@ -1,10 +1,10 @@
 import { useCallback } from "react"
 
 import type {
-  CropRegionWithExamPage,
   LayoutDirection,
   ScoringData,
 } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 /** ScoringDataに選択状態を追加した型 */
 type ScoringDataWithSelection = ScoringData & { isSelected: boolean }
@@ -18,7 +18,7 @@ interface UseScoringNavigationProps {
   layoutDirection: LayoutDirection
   getGridAnswerData: () => ScoringDataWithSelection[]
   effectiveColumns?: number
-  cropRegions?: CropRegionWithExamPage[]
+  cropRegions?: QuestionAnswerRegionRow[]
 }
 
 /** 設問間の前後移動とWASDキーによるグリッド内ナビゲーションを提供するフック */

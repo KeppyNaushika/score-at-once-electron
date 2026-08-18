@@ -8,10 +8,10 @@
 import { useCallback, useEffect, useMemo } from "react"
 
 import type {
-  CropRegionWithExamPage,
   GradingMode,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 /**
  * 生徒データの型定義（UIコンポーネント用）
@@ -40,7 +40,7 @@ interface UseStudentAnswerManagementParams {
   /** 現在の採点モード */
   gradingMode: GradingMode
   /** 現在の採点領域（ナビゲーション用） */
-  currentCropRegion: CropRegionWithExamPage | undefined
+  currentCropRegion: QuestionAnswerRegionRow | undefined
   /** 選択ページ画像IDを設定する関数 */
   setSelectedPageImageIds: (ids: Set<string>) => void
   /** 現在の生徒インデックスを設定する関数 */

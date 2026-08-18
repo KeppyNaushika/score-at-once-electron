@@ -6,10 +6,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 
-import type {
-  CropRegionWithExamPage,
-  StudentAnswerImageWithExamStudents,
-} from "@/components/exams/07-score-at-once/types"
+import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-score-at-once/types"
+import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { answerWhitenessQuery } from "@/queries/scoring"
 import type {
   RegionWhiteness,
@@ -21,7 +19,7 @@ export type WhitenessByAnswerId = Map<string, Map<string, RegionWhiteness>>
 
 interface UseAnswerWhitenessProps {
   studentAnswerImages: StudentAnswerImageWithExamStudents[]
-  cropRegions: CropRegionWithExamPage[]
+  cropRegions: QuestionAnswerRegionRow[]
   /** 一覧に表示しているページ */
   currentExamPageId: string | null
   /** 一覧表示中のみ算出する */
