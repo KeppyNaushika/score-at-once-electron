@@ -940,7 +940,7 @@ src/queries/keys.ts              ← 前方一致の「まとまり」だけ
 `user` `subtotal` `auth` `settings` `sync` `auditLog` `misc` `pdfTools` `archive` と
 **試験の 01〜06** が移り終わっていること。
 
-残り（07・08・ASB・端数）は**段階11以降**へ送る。`NOT_YET_MIGRATED` を空にするのは段階13。
+残り（07・08・ASB・端数）は**段階11以降**へ送る。`NOT_YET_MIGRATED` を空にするのは段階14。
 理由は「同じ形を28回繰り返す作業なので、**大量複製の前に一度レビューを通す**」ため。
 
 #### 残量
@@ -1038,15 +1038,15 @@ main は既に `src/types/` から型を引いているので前例があり、�
 | `pdfTools` / `archive`                             | **完了**                                                           |
 | `exam` 系                                          | **完了**（07・08 は段階12 で移った）                               |
 | `scoring` / `drawing`                              | **完了**（段階12 で新設）                                          |
-| `answer-sheet-builder`                             | **段階13** へ（[IPC 分割](./asb-ipc-split-plan.md)は前提ではない） |
+| `answer-sheet-builder`                             | **段階14** へ（[IPC 分割](./asb-ipc-split-plan.md)は前提ではない） |
 
 **残り 20ファイル**（`NOT_YET_MIGRATED`。段階12 で 29 減った）。
 
 | 場所                              | 数  | 送り先 |
 | --------------------------------- | --- | ------ |
-| `components/answer-sheet-builder` | 10  | 段階13 |
-| `app`                             | 4   | 段階13 |
-| その他                            | 6   | 段階13 |
+| `components/answer-sheet-builder` | 10  | 段階14 |
+| `app`                             | 4   | 段階14 |
+| その他                            | 6   | 段階14 |
 
 `src/types/electron.d.ts` は `window.electronAPI` の**宣言そのもの**なので、残量では
 なく `NOT_A_CALL_SITE`（名指しの例外）へ移した。
@@ -1118,10 +1118,11 @@ main は既に `src/types/` から型を引いているので前例があり、�
 | -------- | ----------------------- | -------------------- | ---------------- |
 | **R1**   | 段階10 の直後           | `0e68a2f4..9c0b94d4` | 10件。修正済み   |
 | **R2**   | R1 の修正の直後         | `9c0b94d4..ecc776b0` | 10件。**段階11** |
-| **R3**   | 段階11 の直後           | —                    | —                |
-| **R4**   | 段階12 の直後           | —                    | —                |
+| **R3**   | 段階11 の直後           | `2c42200f..59ef93fa` | 11件。修正済み   |
+| **R4**   | 段階12 の直後           | `59ef93fa..f2010e08` | 12件。10件修正   |
 | **R5**   | 段階14 の直後（13＋14） | —                    | —                |
 | **R6**   | 段階16 の直後（15＋16） | —                    | —                |
+| **R7**   | 段階18 の直後（17＋18） | —                    | —                |
 
 ---
 
@@ -1355,7 +1356,7 @@ unique は張れず（id 以外の unique は同期違反）、同期のマー�
 呼ぶ二重登録）を preload・ハンドラごと削除した。
 
 `src/lib/queryKeys.ts` は `exam` / `grade` / `coursework` / `annotation` / `userPreference` /
-`students` / `classrooms` / `returnDiff` が全て空き家になったので消した。残るのは段階13 の
+`students` / `classrooms` / `returnDiff` が全て空き家になったので消した。残るのは段階14 の
 4群（`answerSheetDefinition` / `roster` / `studentExamResults` / `classroomExamResults`）。
 
 #### 検査の穴を1つ塞いだ
@@ -1413,18 +1414,112 @@ main が `memberships[0]` へフォールバックして**別の学級・別の�
   `ScoringErrorState` が今も「• 試験情報が見つかりません」と理由を出している
 - **採点1マスごとの取り直しの重さ（判断待ち）** — 下記
 
-##### 積み残し: 採点の取り直しが重い
+##### 積み残し → 段階13 で分かった、もっと手前の誤り
 
-楽観更新を外した結果、1マス採点するたびに `getQuestionScoresForExam` が
-`examStudent{student}` / `cropRegion{examPage}` / `user` を include した**試験の全行**を
-返す。300人×30問なら約9000行が毎回 IPC を渡る。連打の畳み込みは burst の間しか
-効かないので、毎秒1〜2マスの通常の打鍵では毎回払う。
+R4 は「1マス採点するたびに include 付きの9000行が IPC を渡る」を指摘した。**この
+見立ては誤りだった。** 境界の `serializeScore` はスカラー8列しか返さないので、
+include した木は IPC を渡っていない（main で組み立てて捨てている）。
 
-**include を削れば済むが、`include` の増減は OWNER の判断**なので触っていない。
-選択肢は (a) この取得だけ採点行のスカラーに絞る、(b) 採点画面用に軽い取得を足す、
-(c) このまま。
+さらに掘ると、**そもそも `QuestionScore` を根にした取得が要らなかった**。採点行は
+07 が既に呼んでいる採点領域の取得に、子として含まれている。詳細は段階13。
 
-### 段階13 — `window.electronAPI` を `src/queries/` だけにする
+取り直しの費用そのものは**まだ測っていない**。
+
+### 段階13 — 07 の採点行を、採点領域の木から取る
+
+**R4 の後に OWNER の指摘で分かった、段階12 の設計上の誤り。**
+
+#### 何を間違えたか
+
+段階12 で `questionScoresForExamQuery`（`QuestionScore` を根にした取得）を新設した。
+しかし 07 が既に呼んでいる `getQuestionAnswerRegionsByExamId` の include が
+
+```ts
+const cropRegionWithSubtotalsAndScoresInclude = {
+  examPage: true,
+  cropSubtotals: { include: { subtotal: true } },
+  questionScores: true, // ← 採点行は既に子として届いている
+}
+```
+
+となっており、**同じ行が既にキャッシュへ載っていた**。境界（`serializeCropRegion` ＋
+`ipcHandlerUtils` の `serializePrisma`）で Decimal も number へ直っている。
+
+つまり `queryKeyConventions` が名指しで警戒している「**同じデータが別のキーで2度
+キャッシュされる**」を、自分で作っていた。
+
+**根の取り方も逆だった。** `QuestionScore` に `examId` は無いので、`QuestionScore` を
+根にすると `cropRegion → examPage → examId` と**2つ上へ登る** `where` が要る。
+`CropRegion` を根にすれば `examPage.examId` を1つ見るだけで、採点行は**下に**
+ぶら下がる。これが「読みは木」の形である。
+
+#### やること
+
+- `questionScoresForExamQuery` を消す
+- 採点行は `questionAnswerRegionsQuery` の木から読む。**平らにしない**
+  （`flatMap` で潰すと、`(examStudentId, cropRegionId)` の2つで探し直すことになる。
+  木のままなら「その設問の中を見る」ので照合は `examStudentId` だけで済む）
+- `findQuestionScore` / `getScoringStatusFromArray` から `cropRegionId` の引数が消える
+- 07 の `CropRegionWithExamPage`（`examPage` だけの手書き宣言）を境界の返り値から
+  導く形へ直す。段階18 と同じ性質の是正
+
+> **`Map` や `flatMap` で索引を作らない。** 段階11 の 04 で同じ間違いをして、
+> 「索引そのものが要らなかった」と結論している。行は実体で手元にある。
+
+#### 表示は変えない（OWNER 決定・2026-08-18）
+
+**07 が出すのは「自分の採点」だけ。** include で他の教員の採点も手元には届くが、
+画面には出さない。確定（裁定）は**将来の `07-2-finalize`** として別に立てる。
+採点する場と、食い違いを裁く場を混ぜない。
+
+したがって **`scoreResolution.ts` のリゾルバを 07 へ通さない。** あれは集計・出力系
+（Excel・個人成績表・PDF・小計・成績連携）が使うもので、08 は既に全教員ぶんを1つに
+畳んでいる。**07 だけが「自分のぶん」を見るのは設計であって漏れではない。**
+
+#### 同じマスに2行あることがある
+
+`QuestionScore` に `(cropRegionId, examStudentId, userId)` の unique は張れない
+（sqlite-nas-sync の制約で id 以外の unique は同期違反。実際 `@@index([examStudentId])`
+しか無い）。同期のマージで2行残りうるので、`find` で最初の1件を取ると2行目を黙って
+握り潰す。段階11 の `CropSubtotal` で実際に踏んだ形。木のまま見れば、そのマスに
+何行あるかがその場で分かる。
+
+#### 検査
+
+**採点経路を守る網が1本も無い。** e2e 9件はどれも採点しない。
+
+e2e で採点まで到達させるには fixture が3つ要る（採点領域＝02 のドラッグ・受験生徒＝05・
+答案画像＝06 のファイル名推測）。**今回の変更本体より大きい**ので、ここでは張らない。
+
+代わりに**フック単位**で置く。危険は renderer 側の導出に集中しているため、そちらのほうが
+安く狙いも正確である。
+
+- `useScoringData` の**出力**（採点行と進捗）を固定する。内部が平らな配列から木へ
+  変わっても出力は変わらないので、改修をまたいで生き残る
+- 「他の教員の採点が混ざらない」「同じマスに2行あっても取りこぼさない」を明示的に置く
+
+採点経路の e2e は、fixture を揃えるときに別途。
+
+#### 測っていないこと
+
+1マス採点するたびに木を取り直す費用は**実測していない**。R4 は「include 付きの9000行が
+IPC を渡る」としたが、**これは誤り**で、境界がスカラーへ直すので渡るのはスカラーである
+（`serializeCropRegion`）。残るのは main の join と行数で、体感に出るかは未確認。
+**測ってから決める。**
+
+**完了条件**: `questionScoresForExamQuery` が無くなり、07 が採点行を木から読むこと。
+表示は1ピクセルも変えないこと。
+
+#### この先に見えているもの（この計画の外）
+
+**`07-2-finalize`**（仮）。採点する場（07）と、食い違いを裁く場を分ける。いまの
+`ScoreDecisionPanel` はモーダルとして 07 に同居しているが、その前身と見るのが自然。
+リゾルバ（`scoreResolution.ts`）が居場所を得るのはそこで、07 ではない。
+
+この計画（IPC とデータ取得の移行）の範囲ではないので、着手はしない。**07 が自分の
+採点しか出さない理由**をここに残しておく。
+
+### 段階14 — `window.electronAPI` を `src/queries/` だけにする
 
 **対象 19ファイル**＋境界の後始末。
 
@@ -1478,7 +1573,7 @@ setFullScreen（useMutation の戻り値・毎レンダー別物）
 > いれば通るので止まらない。**列挙された依存が毎レンダー別物**であることを見る検査を
 > 置くのが本筋（`useMutation(...)` の戻り値そのものを依存に入れるのを禁じる）。
 
-### 段階14 — ASB: main を実体ごとに分解し、バルクを差分適用にする
+### 段階15 — ASB: main を実体ごとに分解し、バルクを差分適用にする
 
 [asb-ipc-split-plan.md](./asb-ipc-split-plan.md) の **段階1**。`saveAsbDefinition` の
 delete → recreate をやめ、実体ごとの upsert へ分解する。ここで直るのは**いま起きている
@@ -1488,9 +1583,9 @@ delete → recreate をやめ、実体ごとの upsert へ分解する。ここ�
 
 **IPC はまだ1本のまま。** 利用者から見える挙動の修正だけが入る。
 
-→ **R5**（段階13 と合わせて）
+→ **R5**（段階14 と合わせて）
 
-### 段階15 — ASB: 型と action を id 基準にする
+### 段階16 — ASB: 型と action を id 基準にする
 
 分割計画の **段階2〜3**。`*Attributes` の分解、action ユニオンの id 化、`generateId()` の
 uuid 化（`asb_${Date.now()}_${n}` は2端末で衝突しうる）、子要素エディタの props 分解。
@@ -1498,20 +1593,20 @@ uuid 化（`asb_${Date.now()}_${n}` は2端末で衝突しうる）、子要素�
 
 **完了条件**: `UPDATE_SUB_QUESTION` の payload に子コレクションが現れない。
 
-### 段階16 — ASB: IPC を割り、書き込みの関所を置く
+### 段階17 — ASB: IPC を割り、書き込みの関所を置く
 
 分割計画の **段階4〜5**。31本のチャンネル登録、包んだ dispatch ＋ 網羅 switch、自動保存
 effect の撤去、バルクの `asb:replace-definition` への改名と3経路への限定。
 
-ここで `src/queries/answerSheetBuilder.ts` は段階13 に書いた薄い版から31本へ**書き直す**。
+ここで `src/queries/answerSheetBuilder.ts` は段階14 に書いた薄い版から31本へ**書き直す**。
 これは手戻りではなく、その31本の置き場所がそこだから。
 
-→ **R6**（段階15 と合わせて）
+→ **R6**（段階16 と合わせて）
 
-### 段階17 — DB 行の手写し型を是正し、検査を入れる
+### 段階18 — DB 行の手写し型を是正し、検査を入れる
 
 段階10「決めたこと §1」の宿題。**ASB 定義ツリーの5件は RDB 化で消える**ので、分割
-（段階14〜16）の後にやると対象が確定する。
+（段階15〜17）の後にやると対象が確定する。
 
 - 対象 19件（下限）。名指しの例外はアーカイブ型と `LetterScaleDraft`
 - 検査 `__tests__/renderer/rowTypeConventions.test.ts` を、直しきってから導入
