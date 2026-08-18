@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useRef, useState } from "react"
 
@@ -102,14 +102,31 @@ export default function ExportMainView() {
    * プレビューと書き出しの両方へ同じ値を渡す（下流それぞれが取りに行くと、
    * 同じ学級を何度も引くうえ、経路ごとに解決結果がずれる）。
    */
-  const { data: administeredClassrooms } = useQuery({
-    ...administeredExamClassroomsQuery(exam?.id ?? ""),
-    enabled: Boolean(exam?.id),
-  })
+  const { data: administeredClassrooms, isSuccess: placementsReady } = useQuery(
+    {
+      ...administeredExamClassroomsQuery(exam?.id ?? ""),
+      enabled: Boolean(exam?.id),
+    }
+  )
   const studentPlacements = useMemo(
     () => toStudentExportPlacements(administeredClassrooms ?? []),
     [administeredClassrooms]
   )
+
+  /**
+   * 書き出しの瞬間の採番学級を取り直す。
+   *
+   * プレビューは「揃うまで走らせない」で足りるが、書き出しは押された瞬間に
+   * 正しい値が要る。まだ届いていない状態で押されると、学年・学級名・出席番号が
+   * 既定の所属（memberships[0]）で書かれたファイルが、警告も出さずに出来上がる。
+   */
+  const queryClient = useQueryClient()
+  const resolveStudentPlacements = useCallback(async () => {
+    if (!exam?.id) return {}
+    return toStudentExportPlacements(
+      await queryClient.fetchQuery(administeredExamClassroomsQuery(exam.id))
+    )
+  }, [exam?.id, queryClient])
 
   // `mutateAsync` だけを取り出す。`useMutation` の戻り値は毎レンダー別物なので、
   // それを依存に入れると下流の effect が毎レンダー走る（R1 #1 と同じ形）
@@ -163,7 +180,9 @@ export default function ExportMainView() {
     previewStudentId,
     options: individualReportOptions,
     studentPlacements,
-    enabled: !!exam?.id && selectedStudents.size > 0,
+    // 採番学級が揃うまで走らせない。空のまま引くと、学級名も出席番号も
+    // 既定の所属のものが焼き付き、キーが同じなので取り直されない
+    enabled: !!exam?.id && selectedStudents.size > 0 && placementsReady,
   })
 
   // Excelプレビュー
@@ -176,7 +195,10 @@ export default function ExportMainView() {
     selectedExamStudentIds,
     studentPlacements,
     enabled:
-      !!exam?.id && selectedStudents.size > 0 && exportTab === "grading-data",
+      !!exam?.id &&
+      selectedStudents.size > 0 &&
+      exportTab === "grading-data" &&
+      placementsReady,
     reloadKey: previewReloadKey,
   })
 
@@ -267,7 +289,7 @@ export default function ExportMainView() {
     exam,
     selectedStudents,
     individualReportOptions,
-    studentPlacements,
+    resolveStudentPlacements,
     setIsExporting,
   })
 

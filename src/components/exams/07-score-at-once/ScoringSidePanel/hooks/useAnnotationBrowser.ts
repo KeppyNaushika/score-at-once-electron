@@ -166,11 +166,12 @@ export function useAnnotationBrowser(
     setFiltersState((prev) => ({ ...prev, ...partial }))
   }, [])
 
-  const { data: allAnnotations = EMPTY_ANNOTATIONS, isPending: isLoading } =
-    useQuery({
-      ...annotationsForBrowseQuery(examId),
-      enabled: Boolean(examId),
-    })
+  // 走らせない条件のときは待たせない（`isPending` は無効なクエリでは永久に true）
+  const { data: allAnnotations = EMPTY_ANNOTATIONS, isFetching } = useQuery({
+    ...annotationsForBrowseQuery(examId),
+    enabled: Boolean(examId),
+  })
+  const isLoading = Boolean(examId) && isFetching
 
   const queryKey = useMemo(
     () => annotationsForBrowseQuery(examId).queryKey,

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { BarChart3, GraduationCap, Users } from "lucide-react"
+import { useState } from "react"
 
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -32,16 +33,58 @@ interface StatisticsClassroomSelectorProps {
 export function StatisticsClassroomSelector({
   examId,
 }: StatisticsClassroomSelectorProps) {
-  const { data: classrooms = [], isPending: loading } = useQuery(
-    examClassroomsQuery(examId)
-  )
+  const { data: classrooms = [], isPending: loading } = useQuery({
+    ...examClassroomsQuery(examId),
+    enabled: Boolean(examId),
+  })
   const updateExamClassroom = useMutation(updateExamClassroomMutation(examId))
+
+  /**
+   * 押した直後の値を手元に持つ。
+   *
+   * キャッシュには書かない（＝楽観更新ではない）。DB の値が返ってくるまで
+   * チェックが動かないと、取り消そうとした2度目のクリックが1度目と同じ値を
+   * 送ってしまい、黙って失われる。持つのはこのコンポーネントだけ。
+   */
+  const [pressed, setPressed] = useState<
+    Record<string, { teacherStatistics?: boolean; studentReport?: boolean }>
+  >({})
+
+  /**
+   * 書いた値が返ってきたら手元の覚えを捨てる。
+   *
+   * 捨てないと、他の教員が同じ学級の設定を変えても手元の値が勝ち続ける。
+   * レンダー中の setState は同じコンポーネント宛てなので自分で止まる。
+   */
+  const settled = classrooms.filter((examClassroom) => {
+    const pressedFlags = pressed[examClassroom.id]
+    if (!pressedFlags) return false
+    return (
+      (pressedFlags.teacherStatistics === undefined ||
+        pressedFlags.teacherStatistics === examClassroom.teacherStatistics) &&
+      (pressedFlags.studentReport === undefined ||
+        pressedFlags.studentReport === examClassroom.studentReport)
+    )
+  })
+  if (settled.length > 0) {
+    setPressed((previous) => {
+      const next = { ...previous }
+      for (const examClassroom of settled) delete next[examClassroom.id]
+      return next
+    })
+  }
 
   /** チェックは1回で確定するので即時に書く。失敗の通知と取り直しは共通の後始末が担う */
   const setFlag = (
     examClassroomId: string,
     patch: { teacherStatistics?: boolean; studentReport?: boolean }
-  ) => updateExamClassroom.mutate({ id: examClassroomId, ...patch })
+  ) => {
+    setPressed((previous) => ({
+      ...previous,
+      [examClassroomId]: { ...previous[examClassroomId], ...patch },
+    }))
+    updateExamClassroom.mutate({ id: examClassroomId, ...patch })
+  }
 
   if (loading) {
     return (
@@ -90,44 +133,54 @@ export function StatisticsClassroomSelector({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {classrooms.map((examClassroom) => (
-              <TableRow key={examClassroom.id}>
-                <TableCell className="font-medium">
-                  {examClassroom.classroom.name}
-                  {examClassroom.classroom.grade != null && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {examClassroom.classroom.grade}年
+            {classrooms.map((examClassroom) => {
+              // 書いた値が返ってきたら手元の覚えは役目を終える
+              const pressedFlags = pressed[examClassroom.id]
+              const teacherStatistics =
+                pressedFlags?.teacherStatistics ??
+                examClassroom.teacherStatistics
+              const studentReport =
+                pressedFlags?.studentReport ?? examClassroom.studentReport
+
+              return (
+                <TableRow key={examClassroom.id}>
+                  <TableCell className="font-medium">
+                    {examClassroom.classroom.name}
+                    {examClassroom.classroom.grade != null && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {examClassroom.classroom.grade}年
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      {examClassroom.classroom.memberships.length}
                     </span>
-                  )}
-                </TableCell>
-                <TableCell className="text-center text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    {examClassroom.classroom.memberships.length}
-                  </span>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Checkbox
-                    checked={examClassroom.teacherStatistics}
-                    onCheckedChange={(checked) =>
-                      setFlag(examClassroom.id, {
-                        teacherStatistics: checked === true,
-                      })
-                    }
-                  />
-                </TableCell>
-                <TableCell className="text-center">
-                  <Checkbox
-                    checked={examClassroom.studentReport}
-                    onCheckedChange={(checked) =>
-                      setFlag(examClassroom.id, {
-                        studentReport: checked === true,
-                      })
-                    }
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox
+                      checked={teacherStatistics}
+                      onCheckedChange={(checked) =>
+                        setFlag(examClassroom.id, {
+                          teacherStatistics: checked === true,
+                        })
+                      }
+                    />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox
+                      checked={studentReport}
+                      onCheckedChange={(checked) =>
+                        setFlag(examClassroom.id, {
+                          studentReport: checked === true,
+                        })
+                      }
+                    />
+                  </TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </div>

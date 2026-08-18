@@ -208,12 +208,18 @@ export function useDrawingAnnotations(
       questionScoreId: string
     ): Promise<DrawingAnnotation[]> => {
       try {
-        // 既存の注釈を消してから入れ直す。消える範囲は親の id で言い切れる
-        await deleteAllOfQuestionScore({ questionScoreId })
+        // 削除と作成を**続けて積む**（間で待たない）。`scope` が実行の順序を
+        // 保つので消してから作る順は変わらず、両方が pending のあいだは
+        // 取り直しが畳まれる。待ってから作ると、削除の直後に「空になった DB」を
+        // 読みに行く取り直しが走り、注釈が一瞬消えて戻るのが見える
+        const deletion = deleteAllOfQuestionScore({ questionScoreId })
+        const creation =
+          elements.length > 0
+            ? createMany(elements)
+            : Promise.resolve<DrawingAnnotation[]>([])
 
-        if (elements.length === 0) return []
-        // 新しい要素を一括作成（採点者は親 QuestionScore から決まる）
-        return await createMany(elements)
+        await deletion
+        return await creation
       } catch {
         return []
       }

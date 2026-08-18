@@ -84,7 +84,16 @@ export function useScoredAnswerPreview({
   const scoringMarkImagesRef = useRef<Map<string, HTMLImageElement> | null>(
     null
   )
-  const decodedImagesRef = useRef<Map<string, HTMLImageElement>>(new Map())
+  /**
+   * デコード済みの画像。**いま出しているページの分だけ**持つ。
+   *
+   * 設定を変えたときに読み直さないためのもので、生徒を切り替えたら用が無い。
+   * 溜め続けると、原寸の答案画像がページを開いている間ずっと積み上がる。
+   */
+  const decodedImagesRef = useRef<{
+    pages: PdfExportPageRow[] | null
+    images: Map<string, HTMLImageElement>
+  }>({ pages: null, images: new Map() })
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   const queryClient = useQueryClient()
@@ -144,6 +153,11 @@ export function useScoredAnswerPreview({
 
     let cancelled = false
 
+    // 出す対象が変わったら、前のページのデコード結果は用済み
+    if (decodedImagesRef.current.pages !== pages) {
+      decodedImagesRef.current = { pages, images: new Map() }
+    }
+
     const render = async () => {
       try {
         // 採点マーク画像のプリロード
@@ -161,7 +175,7 @@ export function useScoredAnswerPreview({
         const previewPages: ScoredAnswerPreviewPage[] = []
         for (const page of pages) {
           const image = await decodeImage(
-            decodedImagesRef.current,
+            decodedImagesRef.current.images,
             page.imageUrl
           )
           if (cancelled) return

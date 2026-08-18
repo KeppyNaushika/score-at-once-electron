@@ -96,51 +96,70 @@ export function useExportPage() {
 
   // 保存済みの出力設定と、小計グループの選択。選択の正本は ExamSubtotalGroup の
   // フラグなので、設定JSONに残った亡霊IDは使わない
-  const { data: savedSettings } = useQuery(examExportSettingsQuery(examId))
-  const { data: savedSelection } = useQuery(subtotalGroupSelectionQuery(examId))
-  const { mutate: setSubtotalGroupSelection } = useMutation(
+  const { data: savedSettings } = useQuery({
+    ...examExportSettingsQuery(examId),
+    enabled: Boolean(examId),
+  })
+  const { data: savedSelection } = useQuery({
+    ...subtotalGroupSelectionQuery(examId),
+    enabled: Boolean(examId),
+  })
+  const { mutateAsync: setSubtotalGroupSelection } = useMutation(
     setSubtotalGroupSelectionMutation(examId)
   )
 
   // 出力設定は6テーブルに分かれている。変わった行だけを、その行の口から書く。
   // `mutate` だけを取り出すのは、`useMutation` の戻り値が毎レンダー別物になり、
   // それを依存に入れると下流の props が毎レンダー作り直されるため
-  const { mutate: setOverlayStyle } = useMutation(
+  const { mutateAsync: setOverlayStyle } = useMutation(
     setExamAnswerOverlayStyleMutation(examId)
   )
-  const { mutate: setOverlayVisibility } = useMutation(
+  const { mutateAsync: setOverlayVisibility } = useMutation(
     setExamAnswerOverlayVisibilityMutation(examId)
   )
-  const { mutate: setStatisticVisibility } = useMutation(
+  const { mutateAsync: setStatisticVisibility } = useMutation(
     setExamReportStatisticVisibilityMutation(examId)
   )
-  const { mutate: setReportSettings } = useMutation(
+  const { mutateAsync: setReportSettings } = useMutation(
     setExamReportSettingsMutation(examId)
   )
-  const { mutate: setReportTableSection } = useMutation(
+  const { mutateAsync: setReportTableSection } = useMutation(
     setExamReportTableSectionMutation(examId)
   )
-  const { mutate: setReportGraphSettings } = useMutation(
+  const { mutateAsync: setReportGraphSettings } = useMutation(
     setExamReportGraphSettingsMutation(examId)
   )
 
   /**
    * 取得した設定を編集状態の種にする。
-   * 試験を切り替えたら蒔き直す（以前は ref で1回に固定していたため、
-   * 別の試験を開いても前の試験の設定が残ったまま保存されていた）。
    *
-   * 書き込みに失敗したときも蒔き直す。変わった行だけを書くようになったので、
-   * 落ちた1行は次の操作では拾われない。手元の姿を捨てて DB の姿へ戻す。
+   * 種は「どの試験の、どのデータから蒔いたか」で覚える。試験を切り替えたら蒔き
+   * 直す（以前は ref で1回に固定していたため、別の試験を開いても前の試験の設定が
+   * 残ったまま保存されていた）。
+   *
+   * 書き込みに失敗したときも蒔き直すが、**新しいデータが届いてから**にする。
+   * 失敗の合図だけで蒔き直すと、取り直しがまだ走っている最中の（＝古い）
+   * キャッシュから戻してしまい、以後 DB と食い違ったままになる。
    */
-  const [settingsSeededExamId, setSettingsSeededExamId] = useState<
-    string | null
-  >(null)
-  const forgetSeededSettings = useCallback(
-    () => setSettingsSeededExamId(null),
-    []
-  )
-  if (savedSettings && savedSelection && settingsSeededExamId !== examId) {
-    setSettingsSeededExamId(examId)
+  const [seeded, setSeeded] = useState<{
+    examId: string
+    settings: typeof savedSettings
+    selection: typeof savedSelection
+  } | null>(null)
+  const [reseedRequested, setReseedRequested] = useState(false)
+  const requestReseed = useCallback(() => setReseedRequested(true), [])
+
+  const needsSeed =
+    savedSettings !== undefined &&
+    savedSelection !== undefined &&
+    (seeded?.examId !== examId ||
+      (reseedRequested &&
+        (seeded.settings !== savedSettings ||
+          seeded.selection !== savedSelection)))
+
+  if (needsSeed && savedSettings && savedSelection) {
+    setSeeded({ examId, settings: savedSettings, selection: savedSelection })
+    setReseedRequested(false)
     setAnswerOverlaySettingsState(savedSettings.answerOverlay)
     setIndividualReportOptionsState({
       ...savedSettings.individualReport,
@@ -155,47 +174,57 @@ export function useExportPage() {
     })
   }
 
-  /** 変わった行を、その行の口から1件ずつ書く */
+  /**
+   * 変わった行を、その行の口から1件ずつ書く。
+   *
+   * 失敗は `mutate` の第2引数ではなく **`mutateAsync` の拒否で受ける**。1回の操作が
+   * 同じ口を複数回叩くことがあり（「デフォルトに戻す」は最大10行）、`mutate` の
+   * コールバックは同じ観測子を使い回すぶん**最後の1件しか届かない**
+   * （query-core の `MutationObserver.mutate` が前回の観測を外す）。
+   */
   const writeChanges = useCallback(
     (changes: ExportSettingChange[]) => {
-      // 失敗したら手元の種を捨てる。書けなかった行は次の操作では拾われない
-      const onError = { onError: forgetSeededSettings }
+      const write = (writing: Promise<unknown>) => {
+        // 書けなかった行は次の操作では拾われない。DB から蒔き直させる
+        void writing.catch(requestReseed)
+      }
 
       for (const change of changes) {
         switch (change.kind) {
           case "overlayStyle":
-            setOverlayStyle(change.style, onError)
+            write(setOverlayStyle(change.style))
             break
           case "overlayVisibility":
-            setOverlayVisibility(change.visibility, onError)
+            write(setOverlayVisibility(change.visibility))
             break
           case "statisticVisibility":
-            setStatisticVisibility(
-              {
+            write(
+              setStatisticVisibility({
                 statisticKind: change.statisticKind,
                 scope: change.scope,
                 shown: change.shown,
-              },
-              onError
+              })
             )
             break
           case "reportSettings":
-            setReportSettings(change.individualReport, onError)
+            write(setReportSettings(change.individualReport))
             break
           case "reportTableSection":
-            setReportTableSection(
-              { tableKind: change.tableKind, values: change.values },
-              onError
+            write(
+              setReportTableSection({
+                tableKind: change.tableKind,
+                values: change.values,
+              })
             )
             break
           case "reportGraphSettings":
-            setReportGraphSettings(change.values, onError)
+            write(setReportGraphSettings(change.values))
             break
         }
       }
     },
     [
-      forgetSeededSettings,
+      requestReseed,
       setOverlayStyle,
       setOverlayVisibility,
       setReportGraphSettings,
@@ -247,21 +276,17 @@ export function useExportPage() {
           individualReportOptions.boxPlotSubtotalGroupSelection.selectedGroupIds
         )
       ) {
-        setSubtotalGroupSelection(
-          {
-            tableGroupIds: next.tableSubtotalGroupSelection.selectedGroupIds,
-            boxPlotGroupIds:
-              next.boxPlotSubtotalGroupSelection.selectedGroupIds,
-          },
-          { onError: forgetSeededSettings }
-        )
+        void setSubtotalGroupSelection({
+          tableGroupIds: next.tableSubtotalGroupSelection.selectedGroupIds,
+          boxPlotGroupIds: next.boxPlotSubtotalGroupSelection.selectedGroupIds,
+        }).catch(requestReseed)
       }
 
       writeChanges(individualReportChanges(individualReportOptions, next))
     },
     [
-      forgetSeededSettings,
       individualReportOptions,
+      requestReseed,
       setSubtotalGroupSelection,
       writeChanges,
     ]
@@ -291,12 +316,14 @@ export function useExportPage() {
   const [currentStep, setCurrentStep] = useState("")
   const [isExporting, setIsExporting] = useState(false)
 
-  const { data: exam = null, isPending: examPending } = useQuery(
-    examDetailQuery(examId)
-  )
-  const { data: examStudents, isPending: studentsPending } = useQuery(
-    examStudentsQuery(examId)
-  )
+  const { data: exam = null, isPending: examPending } = useQuery({
+    ...examDetailQuery(examId),
+    enabled: Boolean(examId),
+  })
+  const { data: examStudents, isPending: studentsPending } = useQuery({
+    ...examStudentsQuery(examId),
+    enabled: Boolean(examId),
+  })
 
   /**
    * 受験生徒順の SSOT は ExamStudent.customOrder（05 で定義）。08 は下流の読み手なので

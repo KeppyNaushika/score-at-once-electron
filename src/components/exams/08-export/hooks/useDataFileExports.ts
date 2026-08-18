@@ -19,8 +19,15 @@ interface UseDataFileExportsParams {
   exam: Exam | null
   selectedStudents: Set<string>
   individualReportOptions: IndividualReportOptions
-  /** 採番学級から解いた出力用の学級情報。取得は呼び出し側が持つ */
-  studentPlacements: Record<string, StudentExportPlacement>
+  /**
+   * 押された瞬間の採番学級を解く。
+   *
+   * 値ではなく関数で受け取る。取得が済む前に押されると、学年・学級名・出席番号が
+   * 既定の所属のもので書かれたファイルが黙って出来上がる。
+   */
+  resolveStudentPlacements: () => Promise<
+    Record<string, StudentExportPlacement>
+  >
   setIsExporting: Dispatch<SetStateAction<boolean>>
 }
 
@@ -34,7 +41,7 @@ export function useDataFileExports({
   exam,
   selectedStudents,
   individualReportOptions,
-  studentPlacements,
+  resolveStudentPlacements,
   setIsExporting,
 }: UseDataFileExportsParams) {
   const exportGradingDataExcel = useMutation(exportGradingDataExcelMutation())
@@ -50,7 +57,7 @@ export function useDataFileExports({
       const result = await exportGradingDataExcel.mutateAsync({
         examId: exam.id,
         selectedExamStudentIds: Array.from(selectedStudents),
-        studentPlacements,
+        studentPlacements: await resolveStudentPlacements(),
       })
 
       if (result.canceled) return false
@@ -99,7 +106,7 @@ export function useDataFileExports({
           examId: exam.id,
           selectedExamStudentIds: Array.from(selectedStudents),
           options: individualReportOptions,
-          studentPlacements,
+          studentPlacements: await resolveStudentPlacements(),
         })
       } catch (error) {
         toast.error("個人成績表のデータを取得できませんでした", {
