@@ -267,7 +267,8 @@ describe("calculateEffectiveScoreValue", () => {
   })
 
   it("incorrect/no_answer/double_markは0を返す", () => {
-    for (const status of ["incorrect", "no_answer", "double_mark"]) {
+    const zeroStatuses = ["incorrect", "no_answer", "double_mark"] as const
+    for (const status of zeroStatuses) {
       expect(
         calculateEffectiveScoreValue({ status, partialScore: null }, 10)
       ).toBe(0)
@@ -306,5 +307,29 @@ describe("calculateActualScore - 旧status耐性", () => {
     expect(
       calculateActualScore({ status: "final", partialScore: null }, 10)
     ).toBe(10)
+  })
+})
+
+describe("判定の集合を型で守る", () => {
+  // `status: string` で受けていた頃は、得点化の switch が `default: return 0` で
+  // 黙って通り、**未知の判定が「未採点（欠測）」ではなく0点として成績に算入されて
+  // いた**。いまは網羅していない値がコンパイルエラーになる
+  // （docs/branch-review-findings.md #16）。
+  it("旧データの final / proposed は、いまも部分点として読める", () => {
+    expect(
+      calculateEffectiveScoreValue({ status: "final", partialScore: 7 }, 10)
+    ).toBe(7)
+    expect(
+      calculateEffectiveScoreValue({ status: "proposed", partialScore: 4 }, 10)
+    ).toBe(4)
+  })
+
+  it("未採点は0ではなく欠測（null）", () => {
+    expect(
+      calculateEffectiveScoreValue(
+        { status: "unscored", partialScore: null },
+        10
+      )
+    ).toBeNull()
   })
 })

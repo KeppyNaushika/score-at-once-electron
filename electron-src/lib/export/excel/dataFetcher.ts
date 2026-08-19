@@ -1,7 +1,7 @@
 import type { CropRegion, Exam } from "@prisma/client"
 
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
-import type { ScoringStatus } from "@/types/scoringStatus.types"
+import { toScoringStatus } from "@/types/scoringStatus.types"
 
 import { getCropRegionsByExamId } from "../../prisma/cropRegion"
 import { getExamById } from "../../prisma/exam"
@@ -274,7 +274,9 @@ function buildScoreDetails(
       questionLabel: region.label || `問${(region.orderIndex ?? 0) + 1}`,
       score: actualScore,
       maxScore: region.points || 0,
-      status: (scoreRecord?.status as ScoringStatus) || "unscored",
+      // 上流が判定を絞って返すので `as` は要らない（旧データの final / proposed は
+      // 表示上は未採点へ寄せる）
+      status: toScoringStatus(scoreRecord?.status),
     }
   })
 }

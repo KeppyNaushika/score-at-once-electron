@@ -20,19 +20,50 @@
  * status="final" は廃止済みだが、未変換の旧データへの耐性として提案より優先する。
  */
 
+import {
+  type StoredScoringStatus,
+  toStoredScoringStatus,
+} from "@/types/scoringStatus.types"
+
+import { calculateActualScore } from "./actualScore"
+
 export interface ResolvableScore {
   examStudentId: string
   cropRegionId: string
-  status: string
+  /** 現行の7値＋未変換の旧データ。`string` にすると得点化の網羅が効かなくなる */
+  status: StoredScoringStatus
   partialScore: number | string | { toString(): string } | null
   id?: string
   updatedAt?: Date | string
 }
 
+/** 呼ぶ側が渡す形。Prisma の行そのまま（判定はまだ `string`） */
+export type ResolvableScoreInput = Omit<ResolvableScore, "status"> & {
+  status: string
+}
+
+/** 同上（確定の側） */
+export type ResolvableDecisionInput = Omit<ResolvableDecision, "verdict"> & {
+  verdict: string
+}
+
+/**
+ * Prisma の行（`status` は `String` 列）を、判定を絞った形にする。**境界はここ1つ。**
+ *
+ * SQLite は enum を持てないので DB から出た時点では `string`。各所で `as` を書くと
+ * 綴りの誤りも旧値の見落としも検査に掛からないので、変換を名前のある関数に集める。
+ */
+export const toResolvableScore = <T extends { status: string }>(
+  row: T
+): T & { status: StoredScoringStatus } => ({
+  ...row,
+  status: toStoredScoringStatus(row.status),
+})
+
 export interface ResolvableDecision {
   examStudentId: string
   cropRegionId: string
-  verdict: string
+  verdict: StoredScoringStatus
   score: number | string | { toString(): string } | null
   decidedAt?: Date | string
   sourceQuestionScoreId?: string | null
@@ -42,8 +73,8 @@ export interface ResolvableDecision {
 export interface EffectiveScore {
   examStudentId: string
   cropRegionId: string
-  /** 採点判定（correct | incorrect | partial | pending | no_answer | double_mark | unscored） */
-  status: string
+  /** 採点判定。旧データ由来の `final` / `proposed` もそのまま出る */
+  status: StoredScoringStatus
   partialScore: number | null
   /**
    * 採点マーク・描画注釈の参照に使う QuestionScore 行の id。
@@ -107,9 +138,18 @@ const proposalToEffective = (
 })
 
 export function resolveEffectiveScores(
-  scores: ResolvableScore[],
-  decisions: ResolvableDecision[] = []
+  rawScores: ResolvableScoreInput[],
+  rawDecisions: ResolvableDecisionInput[] = []
 ): ResolveResult {
+  // **判定を絞るのはここ1回。** 呼ぶ側は Prisma の行（`status` は String 列）を
+  // そのまま渡してよい。各所で `as` を書くと、綴りの誤りも旧値の見落としも検査に
+  // 掛からない（docs/branch-review-findings.md #16）
+  const scores = rawScores.map(toResolvableScore)
+  const decisions = rawDecisions.map((decision) => ({
+    ...decision,
+    verdict: toStoredScoringStatus(decision.verdict),
+  }))
+
   const groups = new Map<string, ResolvableScore[]>()
   for (const score of scores) {
     const key = cellKey(score.examStudentId, score.cropRegionId)
@@ -190,25 +230,13 @@ export function resolveEffectiveScores(
 
 /**
  * 有効スコアの実際の得点を計算する。
- * （prisma/questionScore.ts の calculateActualScore と同等のルール）
+ *
+ * **`calculateActualScore` に委ねる。** かつては同じ規則を2箇所で書いており、
+ * 旧データの `final` / `proposed` の扱いだけが食い違っていた（あちらは部分点として
+ * 読み、こちらは `default: return 0` で0点にしていた）。判定を union で受けるように
+ * したときに、その食い違いが表に出た（docs/branch-review-findings.md #16）。
  */
 export const calculateEffectiveScoreValue = (
   effective: Pick<EffectiveScore, "status" | "partialScore">,
   maxScore: number
-): number | null => {
-  switch (effective.status) {
-    case "correct":
-      return maxScore
-    case "incorrect":
-    case "no_answer":
-    case "double_mark":
-      return 0
-    case "unscored":
-      return null
-    case "partial":
-    case "pending":
-      return effective.partialScore
-    default:
-      return 0
-  }
-}
+): number | null => calculateActualScore(effective, maxScore)

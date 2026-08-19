@@ -1,3 +1,6 @@
+import { assertNever } from "@/lib/assertNever"
+import type { StoredScoringStatus } from "@/types/scoringStatus.types"
+
 /**
  * 採点ステータスから実際の得点を求める純粋関数。
  *
@@ -13,7 +16,10 @@
  * @returns 得点。未採点・部分点未入力は null
  */
 export const calculateActualScore = (
-  questionScore: { status: string; partialScore?: number | null },
+  questionScore: {
+    status: StoredScoringStatus
+    partialScore?: number | null
+  },
   maxScore: number
 ): number | null => {
   switch (questionScore.status) {
@@ -39,7 +45,9 @@ export const calculateActualScore = (
         questionScore.partialScore !== undefined
         ? Number(questionScore.partialScore)
         : null
-    default:
-      return 0
   }
+  // **網羅していない値はここでコンパイルエラーになる。** `string` で受けていた頃は
+  // `default: return 0` で黙って通り、未知の判定が「未採点（欠測）」ではなく
+  // **0点として成績に算入されていた**（docs/branch-review-findings.md #16）。
+  return assertNever(questionScore.status)
 }

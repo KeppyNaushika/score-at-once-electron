@@ -12,6 +12,8 @@
 
 import { Decimal } from "@prisma/client/runtime/client"
 
+import { toStoredScoringStatus } from "@/types/scoringStatus.types"
+
 import {
   calculateEffectiveScoreValue,
   type EffectiveScore,
@@ -326,11 +328,13 @@ const toCellState = (
   maxScore: number | null
 ): ReturnScoreCellState | null => {
   if (!cell) return null
+  // 返却版の JSON から読み出した値。書いた時点の判定がそのまま入っている
+  const status = toStoredScoringStatus(cell.s)
   return {
-    status: cell.s,
+    status,
     partialScore: cell.p,
     value: calculateEffectiveScoreValue(
-      { status: cell.s, partialScore: cell.p },
+      { status, partialScore: cell.p },
       maxScore ?? 0
     ),
   }
