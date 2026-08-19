@@ -9,6 +9,7 @@
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScopeByCropRegion, resolveUserLabel } from "./auditScope"
 import prisma from "./client"
+import { isRecordNotFoundError } from "./prismaErrors"
 import { canDecideExamScores } from "./scoreDecision"
 
 /**
@@ -113,10 +114,20 @@ export const unassignCropRegion = async (
 
   // 鍵は `@@unique`（idは uuidv4 で計算できない）。delete の戻り値から
   // 監査ログ用のidを取る。事前に findUnique で引くと2文に割れ、その隙間で
-  // 同期が相手の DELETE を適用したときに P2025 で失敗扱いになる
-  const deleted = await prisma.cropRegionAssignment.delete({
-    where: { cropRegionId_userId: { cropRegionId, userId } },
-  })
+  // 同期が相手の DELETE を適用したときに P2025 で失敗扱いになる。
+  //
+  // **既に外れているなら、それは成功。** 担当を外す操作の結果は「担当でない」で、
+  // 2人が同時に外しても・二度押ししても望んだ状態にはなっている。行が無いことを
+  // 失敗として伝えると、直しようのないエラーだけが出る
+  const deleted = await prisma.cropRegionAssignment
+    .delete({
+      where: { cropRegionId_userId: { cropRegionId, userId } },
+    })
+    .catch((error: unknown) => {
+      if (isRecordNotFoundError(error)) return null
+      throw error
+    })
+  if (!deleted) return
 
   const userLabel = await resolveUserLabel(userId)
   await recordAuditLog({

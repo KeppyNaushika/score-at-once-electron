@@ -102,6 +102,14 @@ export function useMasterAnswers(examId: string) {
           if (fileData === null) return
           allFilesData.push(...fileData)
         }
+      } catch (error) {
+        // 変換は書き込みではないので MutationCache は通らない。ここで知らせないと、
+        // 読めないPDFを渡したときスピナーが消えるだけで何も起きない
+        console.error("模範解答の変換に失敗しました:", error)
+        toast.error("ファイルの変換に失敗しました", {
+          description: error instanceof Error ? error.message : undefined,
+        })
+        return
       } finally {
         setIsConverting(false)
       }
@@ -129,7 +137,16 @@ export function useMasterAnswers(examId: string) {
    */
   const replaceAnswerImage = useCallback(
     async (examPageId: string, file: File) => {
-      const fileData = await toUploadData(file)
+      let fileData: ConvertedImage[] | null
+      try {
+        fileData = await toUploadData(file)
+      } catch (error) {
+        console.error("模範解答の変換に失敗しました:", error)
+        toast.error("ファイルの変換に失敗しました", {
+          description: error instanceof Error ? error.message : undefined,
+        })
+        return
+      }
       if (fileData === null) return
       if (fileData.length === 0) {
         toast.error("画像を読み取れませんでした。")

@@ -106,7 +106,7 @@ describe("applyStudentAnswerPlacements", () => {
       },
     })
 
-    const result = await applyStudentAnswerPlacements([
+    await applyStudentAnswerPlacements([
       {
         fileId: image(page1.id, examStudentA.id).id,
         finalExamStudentId: examStudentB.id,
@@ -120,7 +120,6 @@ describe("applyStudentAnswerPlacements", () => {
         scorePolicy: "carry",
       },
     ])
-    expect(result.success).toBe(true)
 
     // 画像の examStudentId が入れ替わり、ページは p1 のまま
     const imgAfterA = await testPrisma.studentAnswerImage.findUniqueOrThrow({
@@ -162,7 +161,7 @@ describe("applyStudentAnswerPlacements", () => {
       },
     })
 
-    const result = await applyStudentAnswerPlacements([
+    await applyStudentAnswerPlacements([
       {
         fileId: image(page1.id, examStudentA.id).id,
         finalExamStudentId: examStudentB.id,
@@ -176,7 +175,6 @@ describe("applyStudentAnswerPlacements", () => {
         scorePolicy: "discard",
       },
     ])
-    expect(result.success).toBe(true)
 
     // r1 の採点（A・B とも）は削除
     const remaining = await testPrisma.questionScore.findMany({
@@ -218,7 +216,7 @@ describe("applyStudentAnswerPlacements", () => {
     })
 
     // 同一ページで A → B へ carry（B 側に複合採点は無いので単独移動）
-    const carried = await applyStudentAnswerPlacements([
+    await applyStudentAnswerPlacements([
       {
         fileId: image(page1.id, examStudentA.id).id,
         finalExamStudentId: examStudentB.id,
@@ -232,7 +230,6 @@ describe("applyStudentAnswerPlacements", () => {
         scorePolicy: "carry",
       },
     ])
-    expect(carried.success).toBe(true)
 
     // 複合採点が B へ追従（unique 違反を起こさず1件のまま）
     const afterCarry = await testPrisma.compoundAnswerScore.findMany({
@@ -245,7 +242,7 @@ describe("applyStudentAnswerPlacements", () => {
 
     // ページ跨ぎ（discard）で複合採点は破棄される。
     // carry 後この画像は B のもの。p2×B と入れ替える形で p1→p2 へ動かす。
-    const discarded = await applyStudentAnswerPlacements([
+    await applyStudentAnswerPlacements([
       {
         fileId: image(page1.id, examStudentA.id).id,
         finalExamStudentId: examStudentB.id,
@@ -259,7 +256,6 @@ describe("applyStudentAnswerPlacements", () => {
         scorePolicy: "discard",
       },
     ])
-    expect(discarded.success).toBe(true)
     expect(
       await testPrisma.compoundAnswerScore.count({
         where: { compoundAnswerId: compoundAnswer.id },
@@ -275,7 +271,7 @@ describe("applyStudentAnswerPlacements", () => {
     const imgP2A = image(page2.id, examStudentA.id)
 
     // A の p1画像 と p2画像 を入れ替え（両方ページが変わる→discard）
-    const result = await applyStudentAnswerPlacements([
+    await applyStudentAnswerPlacements([
       {
         fileId: imgP1A.id,
         finalExamStudentId: examStudentA.id,
@@ -289,7 +285,6 @@ describe("applyStudentAnswerPlacements", () => {
         scorePolicy: "discard",
       },
     ])
-    expect(result.success).toBe(true)
 
     // examPageId が実際に更新される（旧 batchUpdate は無視していた核心バグの修正）
     const imgP1AAfter = await testPrisma.studentAnswerImage.findUniqueOrThrow({
@@ -318,15 +313,17 @@ describe("applyStudentAnswerPlacements", () => {
     const { examStudentA, page1, page2, image } = await buildSimpleExam()
     const imgP1A = image(page1.id, examStudentA.id)
 
-    const result = await applyStudentAnswerPlacements([
-      {
-        fileId: imgP1A.id,
-        finalExamStudentId: examStudentA.id,
-        finalExamPageId: page2.id, // ページ変化
-        scorePolicy: "carry", // 追従は不可
-      },
-    ])
-    expect(result.success).toBe(false)
+    // 失敗は例外で伝わる（値で返すと、呼び出し側が成功として通してしまう）
+    await expect(
+      applyStudentAnswerPlacements([
+        {
+          fileId: imgP1A.id,
+          finalExamStudentId: examStudentA.id,
+          finalExamPageId: page2.id, // ページ変化
+          scorePolicy: "carry", // 追従は不可
+        },
+      ])
+    ).rejects.toThrow()
 
     // ロールバックで examPageId は元のまま
     const imgAfter = await testPrisma.studentAnswerImage.findUniqueOrThrow({
@@ -346,7 +343,7 @@ describe("applyStudentAnswerPlacements", () => {
       where: { id: image(page1.id, examStudentB.id).id },
     })
 
-    const result = await applyStudentAnswerPlacements([
+    await applyStudentAnswerPlacements([
       {
         fileId: image(page1.id, examStudentA.id).id,
         finalExamStudentId: examStudentB.id,
@@ -354,7 +351,6 @@ describe("applyStudentAnswerPlacements", () => {
         scorePolicy: "carry",
       },
     ])
-    expect(result.success).toBe(true)
 
     // r1 の採点は1件のみ（B の孤立採点は掃除、A の採点が B へ追従）
     const r1Scores = await testPrisma.questionScore.findMany({
@@ -368,15 +364,16 @@ describe("applyStudentAnswerPlacements", () => {
     const { examStudentA, page1, image } = await buildSimpleExam()
     const imgP1A = image(page1.id, examStudentA.id)
 
-    const result = await applyStudentAnswerPlacements([
-      {
-        fileId: imgP1A.id,
-        finalExamStudentId: null,
-        finalExamPageId: page1.id,
-        scorePolicy: "discard",
-      },
-    ])
-    expect(result.success).toBe(false)
+    await expect(
+      applyStudentAnswerPlacements([
+        {
+          fileId: imgP1A.id,
+          finalExamStudentId: null,
+          finalExamPageId: page1.id,
+          scorePolicy: "discard",
+        },
+      ])
+    ).rejects.toThrow()
     expect(
       await testPrisma.studentAnswerImage.findUnique({
         where: { id: imgP1A.id },
@@ -389,15 +386,16 @@ describe("applyStudentAnswerPlacements", () => {
     const imgP1A = image(page1.id, examStudentA.id)
 
     // A の p1 を、占有済みの (p1,B) へ単独移動（入れ替えでない）→ 拒否
-    const result = await applyStudentAnswerPlacements([
-      {
-        fileId: imgP1A.id,
-        finalExamStudentId: examStudentB.id,
-        finalExamPageId: page1.id,
-        scorePolicy: "discard",
-      },
-    ])
-    expect(result.success).toBe(false)
+    await expect(
+      applyStudentAnswerPlacements([
+        {
+          fileId: imgP1A.id,
+          finalExamStudentId: examStudentB.id,
+          finalExamPageId: page1.id,
+          scorePolicy: "discard",
+        },
+      ])
+    ).rejects.toThrow()
 
     // A は動いていない
     const imgAfter = await testPrisma.studentAnswerImage.findUniqueOrThrow({

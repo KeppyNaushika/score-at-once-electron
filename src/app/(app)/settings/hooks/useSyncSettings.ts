@@ -39,10 +39,16 @@ export function useSyncSettings() {
   const [pushedStatus, setPushedStatus] = useState<SyncAppStatus | null>(null)
   useEffect(() => subscribeSyncStatus(setPushedStatus), [])
 
-  const updateConfig = (partial: Partial<SyncAppConfig>) => {
-    // 設定を変えると状態も取り直すので、押し出された分は捨てる
-    setSyncConfig.mutate(partial, { onSuccess: () => setPushedStatus(null) })
-  }
+  /**
+   * 設定を書く。**失敗を呼び出し側へ渡すため `mutateAsync` を返す。**
+   * `mutate` だと `undefined` を返すので、`await` しても失敗を受け取れず、
+   * 書けなかった設定を「変えました」と知らせることになる。
+   */
+  const updateConfig = (partial: Partial<SyncAppConfig>) =>
+    setSyncConfig.mutateAsync(partial, {
+      // 設定を変えると状態も取り直すので、押し出された分は捨てる
+      onSuccess: () => setPushedStatus(null),
+    })
 
   return {
     config: syncConfig?.config ?? null,
