@@ -113,10 +113,10 @@ export function OMRMarkerSettings({
               min={1.5}
               max={15}
               step={0.5}
-              onValueChange={([slidingValue]) => {
-                gesture.begin()
+              onPointerDown={gesture.begin}
+              onValueChange={([slidingValue]) =>
                 onUpdate({ sizeMm: slidingValue })
-              }}
+              }
               onValueCommit={gesture.end}
             />
             <EditableValue
@@ -137,10 +137,10 @@ export function OMRMarkerSettings({
               min={5}
               max={20}
               step={0.5}
-              onValueChange={([slidingValue]) => {
-                gesture.begin()
+              onPointerDown={gesture.begin}
+              onValueChange={([slidingValue]) =>
                 onUpdate({ offsetMm: slidingValue })
-              }}
+              }
               onValueCommit={gesture.end}
             />
             <EditableValue

@@ -75,11 +75,10 @@ export function SliderWithInput({
         min={min}
         max={max}
         step={step}
-        onValueChange={([slidingValue]) => {
-          // つまみを動かしている間もプレビューへ映す。保存だけを離すまで待たせる
-          gesture.begin()
-          onChange(slidingValue)
-        }}
+        // ジェスチャは**指で動かしている間**のこと。打鍵（矢印キー）は1回で値が
+        // 確定する入力なので、始まりを知らせない＝その場で保存される
+        onPointerDown={gesture.begin}
+        onValueChange={([slidingValue]) => onChange(slidingValue)}
         onValueCommit={gesture.end}
       />
       {editing ? (

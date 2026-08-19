@@ -205,10 +205,10 @@ export function ImageElementEditor({
               max={100}
               step={5}
               value={[Math.round(imageElement.opacity * 100)]}
-              onValueChange={([percent]) => {
-                gesture.begin()
+              onPointerDown={gesture.begin}
+              onValueChange={([percent]) =>
                 onUpdate(imageElement.id, { opacity: percent / 100 })
-              }}
+              }
               onValueCommit={gesture.end}
               className="flex-1"
             />

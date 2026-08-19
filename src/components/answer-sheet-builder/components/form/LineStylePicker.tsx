@@ -282,10 +282,10 @@ function BorderFieldRow({
           min={0.1}
           max={1.5}
           step={0.1}
-          onValueChange={([slidingValue]) => {
-            gesture.begin()
+          onPointerDown={gesture.begin}
+          onValueChange={([slidingValue]) =>
             onUpdate({ [field.widthKey]: slidingValue })
-          }}
+          }
           onValueCommit={gesture.end}
         />
         <EditableValue
@@ -312,10 +312,10 @@ function BorderFieldRow({
                 min={0.5}
                 max={10}
                 step={0.5}
-                onValueChange={([slidingValue]) => {
-                  gesture.begin()
+                onPointerDown={gesture.begin}
+                onValueChange={([slidingValue]) =>
                   onUpdate({ [field.dashRatioKey]: slidingValue })
-                }}
+                }
                 onValueCommit={gesture.end}
               />
               <EditableValue
@@ -340,10 +340,10 @@ function BorderFieldRow({
               min={0.5}
               max={10}
               step={0.5}
-              onValueChange={([slidingValue]) => {
-                gesture.begin()
+              onPointerDown={gesture.begin}
+              onValueChange={([slidingValue]) =>
                 onUpdate({ [field.gapRatioKey]: slidingValue })
-              }}
+              }
               onValueCommit={gesture.end}
             />
             <EditableValue
