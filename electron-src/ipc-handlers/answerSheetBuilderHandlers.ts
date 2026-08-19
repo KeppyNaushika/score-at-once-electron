@@ -556,6 +556,18 @@ export const answerSheetBuilderHandlers = {
         subQuestions: majorQuestion.subQuestions.map((subQuestion) => ({
           ...subQuestion,
           id: crypto.randomUUID(),
+          // 文字位置マーカーは別テーブルの行なので、ここで id を振り直さないと
+          // 元の AsbCharGuide.id を引き継いだまま作成しようとして主キーが衝突する。
+          // 画像ディレクトリの作成とコピーは先に走るため、トランザクションが
+          // 巻き戻っても孤児のファイルが残る（docs/branch-review-findings.md #8）
+          manuscriptPaper: subQuestion.manuscriptPaper
+            ? {
+                ...subQuestion.manuscriptPaper,
+                charGuides: subQuestion.manuscriptPaper.charGuides?.map(
+                  (charGuide) => ({ ...charGuide, id: crypto.randomUUID() })
+                ),
+              }
+            : subQuestion.manuscriptPaper,
           textElements: subQuestion.textElements.map((textElement) => ({
             ...textElement,
             id: crypto.randomUUID(),

@@ -9,6 +9,9 @@
  * archiveRoundTrip と同様に client をテスト用クライアントへモックする。
  */
 
+import * as fs from "fs"
+import * as os from "os"
+import * as path from "path"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 vi.mock("electron", () => ({
@@ -26,8 +29,18 @@ vi.mock("../../electron-src/lib/prisma/client", async () => {
   }
 })
 
+/**
+ * 画像の置き場所。複製は実ファイルをコピーするので、使い捨ての場所を1つ用意して
+ * そこへ寄せる（並行して走る他の検査と踏み合わないよう、テストごとに固有の名前）。
+ */
+const testDataDir = path.join(
+  os.tmpdir(),
+  `asb-charguide-${process.pid}-${Date.now()}`
+)
 vi.mock("../../electron-src/lib/dataManager", () => ({
-  getDataDirectory: () => "/tmp/test-data",
+  getDataDirectory: () => testDataDir,
+  getAsbImagesDirectory: (definitionId: string) =>
+    path.join(testDataDir, "asb-images", definitionId),
 }))
 
 /** ログインしている利用者（担当かどうかの判定は main がこれで行う） */
@@ -36,6 +49,7 @@ vi.mock("../../electron-src/lib/prisma/auditActor", () => ({
   getCurrentActorUserId: () => actor.userId,
 }))
 
+import { answerSheetBuilderHandlers } from "../../electron-src/ipc-handlers/answerSheetBuilderHandlers"
 import { getAsbDefinition } from "../../electron-src/lib/prisma/asbDefinition"
 import { replaceAsbDefinition } from "../../electron-src/lib/prisma/asbDefinitionReplace"
 import { createDefaultDefinition } from "../../src/components/answer-sheet-builder/constants"
@@ -57,6 +71,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await disconnectTestPrisma()
+  fs.rmSync(testDataDir, { recursive: true, force: true })
 })
 
 describe("AsbCharGuide 変換往復", () => {
@@ -110,5 +125,54 @@ describe("AsbCharGuide 変換往復", () => {
       loaded?.majorQuestions[0].subQuestions[0].manuscriptPaper
     expect(manuscriptPaper?.enabled).toBe(true)
     expect(manuscriptPaper?.charGuides).toBeUndefined()
+  })
+})
+
+describe("解答用紙の複製", () => {
+  it("文字位置マーカーの id を振り直す（元の id を引き継がない）", async () => {
+    // 振り直さないと、元の AsbCharGuide.id のまま作成しようとして主キーが衝突し、
+    // **マーカーを置いた解答用紙が一切複製できない**。しかも画像ディレクトリの
+    // 作成とコピーはトランザクションの前に走るので、巻き戻っても孤児が残る
+    // （docs/branch-review-findings.md #8）。OMR は同じ問題を既に直してある。
+    const definition = createDefaultDefinition()
+    const subQuestion = definition.majorQuestions[0].subQuestions[0]
+    const charGuides: ManuscriptCharGuide[] = [
+      { id: "dup-cg-a", atChar: 10, label: "10" },
+      { id: "dup-cg-b", atChar: 20, label: "20", boundary: "dashed" },
+    ]
+    subQuestion.manuscriptPaper = {
+      enabled: true,
+      columns: 25,
+      rows: 15,
+      charGuides,
+    }
+    await replaceAsbDefinition(definition, userId)
+
+    const duplicatedId = await answerSheetBuilderHandlers[
+      "asb:duplicate-definition"
+    ](definition.id, userId)
+
+    const loaded = await getAsbDefinition(duplicatedId)
+    const copiedGuides =
+      loaded?.majorQuestions[0].subQuestions[0].manuscriptPaper?.charGuides
+    expect(copiedGuides).toHaveLength(2)
+
+    // 中身は同じで、id だけが別
+    expect(copiedGuides?.map((charGuide) => charGuide.atChar)).toEqual([10, 20])
+    expect(copiedGuides?.map((charGuide) => charGuide.label)).toEqual([
+      "10",
+      "20",
+    ])
+    const copiedIds = copiedGuides?.map((charGuide) => charGuide.id) ?? []
+    expect(copiedIds).not.toContain("dup-cg-a")
+    expect(copiedIds).not.toContain("dup-cg-b")
+
+    // 元の解答用紙のマーカーは無傷
+    const original = await getAsbDefinition(definition.id)
+    expect(
+      original?.majorQuestions[0].subQuestions[0].manuscriptPaper?.charGuides?.map(
+        (charGuide) => charGuide.id
+      )
+    ).toEqual(["dup-cg-a", "dup-cg-b"])
   })
 })
