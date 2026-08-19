@@ -839,9 +839,11 @@ export function useAnswerSheetDefinition({
    */
   const definitionRef = useRef(definition)
   const onEditRef = useRef(onEdit)
+  const onRestoreRef = useRef(onRestore)
   useEffect(() => {
     definitionRef.current = definition
     onEditRef.current = onEdit
+    onRestoreRef.current = onRestore
   })
 
   /** 編集を状態へ当て、同じ意図を書き込みへ渡す（**書き込みの関所**） */
@@ -862,14 +864,14 @@ export function useAnswerSheetDefinition({
   const undo = useCallback(() => {
     if (!previousState) return
     undoState()
-    onRestore(previousState)
-  }, [previousState, undoState, onRestore])
+    onRestoreRef.current(previousState)
+  }, [previousState, undoState])
 
   const redo = useCallback(() => {
     if (!nextState) return
     redoState()
-    onRestore(nextState)
-  }, [nextState, redoState, onRestore])
+    onRestoreRef.current(nextState)
+  }, [nextState, redoState])
 
   const updateDefinition = useCallback(
     (data: AsbDefinitionUpdate) => {

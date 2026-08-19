@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { ArrowLeft, Redo2, Undo2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useState } from "react"
 
 import { useSaveStatus } from "@/components/hooks/useSaveStatus"
 import { Button } from "@/components/ui/button"
@@ -85,45 +85,22 @@ export function AnswerSheetBuilderMainView({
   } = useQuery(answerSheetDefinitionQuery(definitionId))
 
   // 編集1つ＝1レコードの書き込み1本。木をまるごと置き換えるのは undo / redo だけ
-  const { mutate: applyEdit } = useMutation(
+  //
+  // **`mutateAsync` で待つ。** 呼び出しごとのコールバック（`mutate(action, {onError})`）は
+  // 使えない — 観測子が1つなので `MutationObserver.mutate` が前の分を切り離し、**解決前に
+  // 次が来ると先の onError / onSuccess が発火しない**。`updateSubQuestion` は隣を降ろす分と
+  // 本体の分を同じ tick で2本出し、関所は溜めた分をまとめて出すので、重なるのが普通
+  // （docs/branch-review-findings.md #9）。
+  const { mutateAsync: applyEdit } = useMutation(
     applyAnswerSheetEditMutation(definitionId)
   )
-  const { mutate: replaceDefinition } = useMutation(
+  const { mutateAsync: replaceDefinition } = useMutation(
     replaceAnswerSheetDefinitionMutation(definitionId)
   )
 
-  /**
-   * 書き込みに失敗したときの立て直し。
-   *
-   * 中身を書けるのは編集状態を持つフックより後（DB から読み直して画面へ入れ直すため）
-   * なので、関所へは「そのとき入っているもの」を呼ぶ形で渡す。
-   */
-  const handleWriteFailure = useRef<() => void>(() => {})
-
-  const write = useCallback(
-    (action: AnswerSheetEditAction) => {
-      showSaving()
-      applyEdit(action, {
-        onSuccess: showSaved,
-        onError: () => handleWriteFailure.current(),
-      })
-    },
-    [applyEdit, showSaving, showSaved]
-  )
-  // つまみやドラッグの最中は待たせ、離したときに1回だけ書く
+  // つまみやドラッグの最中は待たせ、離したときに1回だけ書く。
+  // 関所は渡した関数を ref で持ち直すので、`write` の同一性は問わない
   const { onEdit, gestureHandlers } = useAsbWriteGate(write)
-
-  const restore = useCallback(
-    (restored: AnswerSheetDefinition) => {
-      if (!user?.id) return
-      showSaving()
-      replaceDefinition(
-        { definition: restored, userId: user.id },
-        { onSuccess: showSaved, onError: () => handleWriteFailure.current() }
-      )
-    },
-    [replaceDefinition, showSaving, showSaved, user?.id]
-  )
 
   const { definition, actions, setDefinition, canUndo, canRedo, undo, redo } =
     useAnswerSheetDefinition({ onEdit, onRestore: restore })
@@ -133,14 +110,45 @@ export function AnswerSheetBuilderMainView({
    *
    * 書けなかった値を「保存済み」として見せ続けない。巻き戻し先は手元の断面ではなく DB
    * である（同期で他の教員の変更が入っている可能性がある）。
+   *
+   * **この画面だけが立て直しを要る。** 他の画面はクエリキャッシュがそのまま状態なので、
+   * `MutationCache` が失敗時にも取り直せば表示が揃う。ここは undo / redo のために編集中の
+   * 木を reducer に複製として持っているので、取り直したあと入れ直す一手が要る。
    */
-  useEffect(() => {
-    handleWriteFailure.current = () => {
-      void refetchDefinition().then((refetched) => {
-        if (refetched.data) setDefinition(refetched.data)
-      })
+  async function recoverFromWriteFailure() {
+    const refetched = await refetchDefinition()
+    if (refetched.data) setDefinition(refetched.data)
+  }
+
+  /**
+   * 編集1つを書く。
+   *
+   * **宣言を巻き上げて、状態を持つフックより前で参照できるようにしている。** 立て直しは
+   * `setDefinition` を要るので、フックより後でしか中身を書けない。関所も編集フックも
+   * 渡された関数を ref で読み直すので、毎レンダー作り直しても取りこぼさない。
+   */
+  async function write(action: AnswerSheetEditAction) {
+    showSaving()
+    try {
+      await applyEdit(action)
+      showSaved()
+    } catch {
+      // 知らせは MutationCache が出す。ここでは表示を DB へ揃えるだけ
+      await recoverFromWriteFailure()
     }
-  })
+  }
+
+  /** undo / redo は木をまるごと置き換える（1つの意図に対応しないので別経路） */
+  async function restore(restored: AnswerSheetDefinition) {
+    if (!user?.id) return
+    showSaving()
+    try {
+      await replaceDefinition({ definition: restored, userId: user.id })
+      showSaved()
+    } catch {
+      await recoverFromWriteFailure()
+    }
+  }
 
   const [seededDefinitionId, setSeededDefinitionId] = useState<string | null>(
     null
