@@ -58,9 +58,11 @@ function DeleteConfirmationBody({
   studentName,
   pageNumber,
 }: Omit<DeleteConfirmationModalProps, "isOpen">) {
+  // **`isFetching` で止める。** `isPending` は初回だけなので、キャッシュに残って
+  // いれば古い答えのまま確定できてしまう（開くたびの取り直しが着地する前に押せる）
   const {
     data: summary = null,
-    isPending: isLoadingSummary,
+    isFetching: isLoadingSummary,
     error,
   } = useQuery(studentAnswerScoreSummaryQuery(fileId))
   const summaryError = error ? error.message : null

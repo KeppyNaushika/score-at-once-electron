@@ -30,6 +30,14 @@ export const studentAnswerScoreSummaryQuery = (studentAnswerImageId: string) =>
     ] as const,
     queryFn: () =>
       window.electronAPI.getStudentAnswerScoreSummary(studentAnswerImageId),
+    // **開くたびに必ず数え直す。** これは「消す前に何を消すのか数える」ための取得で、
+    // 古い答えを見せると採点済みの答案を「採点データなし」と告げて消せてしまう。
+    // 鍵は試験のまとまりの外にあるので採点の書き込みで古くならず、本体は開いている
+    // 間しか mount されないので gcTime 内に開き直すとキャッシュがそのまま出る。
+    // 無効化に頼っても他の教員が採点した分は届かない（同期はキャッシュを触らない）
+    // ので、開いたら必ず取り直す（docs/branch-review-findings.md #13）。
+    staleTime: 0,
+    refetchOnMount: "always",
   })
 
 // =====================================================================
