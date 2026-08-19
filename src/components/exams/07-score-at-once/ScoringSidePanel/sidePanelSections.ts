@@ -1,18 +1,17 @@
 /**
  * サイドパネルの折りたたみ状態。
  *
- * 保存文字列を閉じているセクションIDの集合へ倒す純粋関数。壊れていれば全展開に戻す。
+ * 節ごとに1行（`UserSidePanelSection`）で持つ。**行が無い節は開いている**ので、
+ * 畳んでいる節の集合へ倒す。1キーの JSON に配列で持っていた頃は、続けて2つ畳むと
+ * 先の1つが開いたままになった（塊で読み書きするため）。
  */
-export function toCollapsedSections(
-  stored: string | null
-): ReadonlySet<string> {
-  if (!stored) return new Set()
 
-  try {
-    const parsed: unknown = JSON.parse(stored)
-    if (!Array.isArray(parsed)) return new Set()
-    return new Set(parsed.filter((item) => typeof item === "string"))
-  } catch {
-    return new Set()
-  }
+import type { UserSidePanelSection } from "@prisma/client"
+
+export function toCollapsedSections(
+  rows: UserSidePanelSection[]
+): ReadonlySet<string> {
+  return new Set(
+    rows.filter((row) => row.collapsed).map((row) => row.sectionId)
+  )
 }

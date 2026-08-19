@@ -1,6 +1,11 @@
 "use client"
 
-import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query"
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import Head from "next/head"
 import { useParams, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -48,9 +53,15 @@ import { useAuth } from "@/contexts/AuthContext"
 import { resolveExamPaperSize } from "@/lib/shared/examPaperSize"
 import { cropRegionScopes } from "@/queries/cropRegion"
 import {
+  setUserClickScoringActionMutation,
   setUserPreferenceMutation,
+  userClickScoringActionsQuery,
   userPreferenceQuery,
 } from "@/queries/settings"
+import {
+  DEFAULT_CLICK_SCORING_CONFIG,
+  toClickScoringConfig,
+} from "@/types/clickScoring.types"
 
 /** 内部コンポーネント（ShortcutProvider内で使用） */
 function ScoringMainViewContent() {
@@ -96,6 +107,15 @@ function ScoringMainViewContent() {
     ),
   })
   const setPreference = useMutation(setUserPreferenceMutation(authUser?.id))
+  // クリック回数ごとの動作は回数ごとに1行。**塊で書かない**（続けて2つ変えると
+  // 先の1つが消える）
+  const { data: clickScoringConfig = DEFAULT_CLICK_SCORING_CONFIG } = useQuery({
+    ...userClickScoringActionsQuery(authUser?.id),
+    select: toClickScoringConfig,
+  })
+  const { mutate: setClickAction } = useMutation(
+    setUserClickScoringActionMutation(authUser?.id)
+  )
   const scoringSettings = buildScoringSettings(
     preferenceQueries.map((preferenceQuery) => preferenceQuery.data ?? null),
     setPreference.mutate
@@ -107,7 +127,6 @@ function ScoringMainViewContent() {
     layoutDirection,
     answerSortOrder,
     expandMargin,
-    clickScoringConfig,
     clickScoringDebounceMs,
     masterAnswerDisplayMode,
     masterAnswerOpacity,
@@ -118,7 +137,6 @@ function ScoringMainViewContent() {
     setLayoutDirection,
     setAnswerSortOrder,
     setExpandMargin,
-    setClickAction,
     setClickScoringDebounceMs,
     setMasterAnswerDisplayMode,
     setMasterAnswerOpacity,
@@ -830,7 +848,9 @@ function ScoringMainViewContent() {
               partialScoreInput={partialScoreInput}
               clickScoringConfig={clickScoringConfig}
               clickScoringDebounceMs={clickScoringDebounceMs}
-              onClickActionChange={setClickAction}
+              onClickActionChange={(clickCount, action) =>
+                setClickAction({ clickCount, action })
+              }
               onClickScoringDebounceMsChange={setClickScoringDebounceMs}
               layoutDirection={layoutDirection}
               visibleAnswersCount={visibleAnswers.length}

@@ -4,13 +4,19 @@ import type {
   ExamReportGraphSettingsValues,
   ExamReportTableSectionValues,
 } from "@/electron-src/lib/prisma/examSettings"
+import type {
+  UserScoringStatusColorEntry,
+  UserScoringStatusColorValues,
+} from "@/electron-src/lib/prisma/userScoringStatusColor"
 import type { PreferenceKey, PreferenceValueType } from "@/lib/userPreferences"
 import { serializePreference } from "@/lib/userPreferences"
+import type { ClickScoringAction } from "@/types/clickScoring.types"
 import type { IndividualReportOptions } from "@/types/individualReport.types"
 import type {
   AnswerOverlayStyle,
   AnswerOverlayVisibility,
 } from "@/types/scoringOverlay.types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
@@ -39,6 +45,35 @@ export const userPreferenceQuery = (
     queryKey: ["userPreference", userId, key] as const,
     queryFn: () =>
       window.electronAPI.settings.getUserPreference(userId ?? "", key),
+  })
+
+/**
+ * 採点状態ごとの表示色（利用者ごと・状態ごとに1行）。
+ *
+ * **行をそのまま載せる。** 状態で引ける形へ畳むのは表示側の計算で、`select` が行う
+ * （キャッシュには載らない）。行が無い状態は既定の配色で描く。
+ */
+export const userScoringStatusColorsQuery = (userId: string | undefined) =>
+  queryOptions({
+    queryKey: ["userScoringStatusColor", userId] as const,
+    queryFn: () =>
+      window.electronAPI.settings.listUserScoringStatusColors(userId ?? ""),
+  })
+
+/** 連続クリックでの採点に割り当てた動作（利用者ごと・回数ごとに1行） */
+export const userClickScoringActionsQuery = (userId: string | undefined) =>
+  queryOptions({
+    queryKey: ["userClickScoringAction", userId] as const,
+    queryFn: () =>
+      window.electronAPI.settings.listUserClickScoringActions(userId ?? ""),
+  })
+
+/** 側面パネルで畳んでいる節（利用者ごと・節ごとに1行） */
+export const userSidePanelSectionsQuery = (userId: string | undefined) =>
+  queryOptions({
+    queryKey: ["userSidePanelSection", userId] as const,
+    queryFn: () =>
+      window.electronAPI.settings.listUserSidePanelSections(userId ?? ""),
   })
 
 /** 利用者ごとのキーバインディング */
@@ -90,6 +125,89 @@ export const setUserPreferenceMutation = (userId: string | undefined) =>
     meta: {
       invalidates: [["userPreference", userId]],
       errorMessage: "設定を保存できませんでした",
+    },
+  })
+
+/**
+ * 採点状態1つぶんの色を書く。
+ *
+ * **プリセットの記憶も外れる**（色を1つでも触ればプリセットからは外れるので、DB では
+ * 同じトランザクションで消している）。取り直す先が2つあるのはそのため。
+ */
+export const setUserScoringStatusColorMutation = (userId: string | undefined) =>
+  defineMutation({
+    mutationFn: (input: {
+      status: ScoringStatus
+      colors: UserScoringStatusColorValues
+    }) =>
+      window.electronAPI.settings.setUserScoringStatusColor(
+        userId ?? "",
+        input.status,
+        input.colors
+      ),
+    scope: { id: `userScoringStatusColor:${userId}` },
+    meta: {
+      invalidates: [
+        userScoringStatusColorsQuery(userId).queryKey,
+        ["userPreference", userId],
+      ],
+      errorMessage: "色を保存できませんでした",
+    },
+  })
+
+/** 配色プリセットを当てる（状態ぶんの色と、選んだプリセットは同時に決まる） */
+export const applyUserScoringColorPresetMutation = (
+  userId: string | undefined
+) =>
+  defineMutation({
+    mutationFn: (input: {
+      presetId: string
+      colors: UserScoringStatusColorEntry[]
+    }) =>
+      window.electronAPI.settings.applyUserScoringColorPreset(
+        userId ?? "",
+        input.presetId,
+        input.colors
+      ),
+    scope: { id: `userScoringStatusColor:${userId}` },
+    meta: {
+      invalidates: [
+        userScoringStatusColorsQuery(userId).queryKey,
+        ["userPreference", userId],
+      ],
+      errorMessage: "配色を保存できませんでした",
+    },
+  })
+
+/** クリック回数1つぶんの動作を書く */
+export const setUserClickScoringActionMutation = (userId: string | undefined) =>
+  defineMutation({
+    mutationFn: (input: { clickCount: number; action: ClickScoringAction }) =>
+      window.electronAPI.settings.setUserClickScoringAction(
+        userId ?? "",
+        input.clickCount,
+        input.action
+      ),
+    scope: { id: `userClickScoringAction:${userId}` },
+    meta: {
+      invalidates: [userClickScoringActionsQuery(userId).queryKey],
+      errorMessage: "クリック採点の設定を保存できませんでした",
+    },
+  })
+
+/** 側面パネルの節1つぶんの開閉を書く */
+export const setUserSidePanelSectionMutation = (userId: string | undefined) =>
+  defineMutation({
+    mutationFn: (input: { sectionId: string; collapsed: boolean }) =>
+      window.electronAPI.settings.setUserSidePanelSection(
+        userId ?? "",
+        input.sectionId,
+        input.collapsed
+      ),
+    scope: { id: `userSidePanelSection:${userId}` },
+    meta: {
+      invalidates: [userSidePanelSectionsQuery(userId).queryKey],
+      errorMessage: "パネルの開閉を保存できませんでした",
     },
   })
 

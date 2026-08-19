@@ -20,6 +20,15 @@ export function createSettingsApi() {
       getUserPreference: bind("settings:getUserPreference"),
       setUserPreference: bind("settings:setUserPreference"),
 
+      // 組が繰り返す設定（採点状態の色・クリック回数の動作・側面パネルの節）は行で持つ
+      listUserScoringStatusColors: bind("settings:listUserScoringStatusColors"),
+      setUserScoringStatusColor: bind("settings:setUserScoringStatusColor"),
+      applyUserScoringColorPreset: bind("settings:applyUserScoringColorPreset"),
+      listUserClickScoringActions: bind("settings:listUserClickScoringActions"),
+      setUserClickScoringAction: bind("settings:setUserClickScoringAction"),
+      listUserSidePanelSections: bind("settings:listUserSidePanelSections"),
+      setUserSidePanelSection: bind("settings:setUserSidePanelSection"),
+
       // ExamExportSettings
       getExamExportSettings: bind("settings:getExamExportSettings"),
       // 書き込みは1レコードずつ。何を変えたかは操作が知っている

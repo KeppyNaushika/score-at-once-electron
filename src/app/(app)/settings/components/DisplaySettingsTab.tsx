@@ -5,11 +5,6 @@ import { RotateCcw } from "lucide-react"
 import { useCallback } from "react"
 import { toast } from "sonner"
 
-import {
-  type ClickScoringAction,
-  toClickScoringAction,
-  toClickScoringConfig,
-} from "@/components/exams/07-score-at-once/ScoringMain/scoringPreferences"
 import { Button } from "@/components/ui/button"
 import { ColorPicker } from "@/components/ui/color-picker"
 import { Label } from "@/components/ui/label"
@@ -18,18 +13,29 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useSlidingValue } from "@/hooks/useSlidingValue"
 import {
   DEFAULT_SCORING_STATUS_COLORS,
-  parseScoringStatusColors,
   SCORING_COLOR_PRESETS,
   SCORING_STATUS_LABELS,
   SCORING_STATUS_ORDER,
-  type ScoringStatusColors,
+  toScoringStatusColors,
+  toStatusColorValues,
 } from "@/lib/scoringStatusColors"
 import { parsePreference } from "@/lib/userPreferences"
 import { cn } from "@/lib/utils"
 import {
+  applyUserScoringColorPresetMutation,
+  setUserClickScoringActionMutation,
   setUserPreferenceMutation,
+  setUserScoringStatusColorMutation,
+  userClickScoringActionsQuery,
   userPreferenceQuery,
+  userScoringStatusColorsQuery,
 } from "@/queries/settings"
+import {
+  type ClickScoringAction,
+  DEFAULT_CLICK_SCORING_CONFIG,
+  toClickScoringAction,
+  toClickScoringConfig,
+} from "@/types/clickScoring.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 const DEFAULT_SELECTION_BORDER_COLOR = "#F97316"
@@ -51,36 +57,31 @@ export function DisplaySettingsTab() {
   const { data: storedSelectionBorderColor } = useQuery(
     userPreferenceQuery(userId, "selectionBorderColor")
   )
-  const { data: storedClickScoringConfig } = useQuery(
-    userPreferenceQuery(userId, "clickScoringConfig")
-  )
   const { data: storedClickScoringDebounceMs } = useQuery(
     userPreferenceQuery(userId, "clickScoringDebounceMs")
   )
   const setPreference = useMutation(setUserPreferenceMutation(userId))
+
+  // クリック回数ごとの動作は回数ごとに1行。**塊で書かない**（続けて2つ変えると
+  // 先の1つが消える）
+  const { data: clickScoringConfig = DEFAULT_CLICK_SCORING_CONFIG } = useQuery({
+    ...userClickScoringActionsQuery(userId),
+    select: toClickScoringConfig,
+  })
+  const { mutate: setClickAction } = useMutation(
+    setUserClickScoringActionMutation(userId)
+  )
 
   const selectionBorderColor =
     parsePreference(
       "selectionBorderColor",
       storedSelectionBorderColor ?? null
     ) ?? DEFAULT_SELECTION_BORDER_COLOR
-  const clickScoringConfig = toClickScoringConfig(
-    parsePreference("clickScoringConfig", storedClickScoringConfig ?? null)
-  )
   const clickScoringDebounceMs = parsePreference(
     "clickScoringDebounceMs",
     storedClickScoringDebounceMs ?? null
   )
 
-  const setClickAction = (
-    clickCount: 2 | 3 | 4,
-    action: ClickScoringAction
-  ) => {
-    setPreference.mutate({
-      key: "clickScoringConfig",
-      value: JSON.stringify({ ...clickScoringConfig, [clickCount]: action }),
-    })
-  }
   const setClickScoringDebounceMs = (value: number) =>
     setPreference.mutate({ key: "clickScoringDebounceMs", value })
 
@@ -90,11 +91,18 @@ export function DisplaySettingsTab() {
     setClickScoringDebounceMs
   )
 
-  // 採点状態色も採点画面と同じキャッシュから読む
+  // 採点状態色も採点画面と同じキャッシュから読む。**状態ごとに1行**なので、
+  // 1色変えても他の色を書き戻さない
   const { data: scoringColors = DEFAULT_SCORING_STATUS_COLORS } = useQuery({
-    ...userPreferenceQuery(userId, "scoringStatusColors"),
-    select: parseScoringStatusColors,
+    ...userScoringStatusColorsQuery(userId),
+    select: toScoringStatusColors,
   })
+  const { mutate: setStatusColor } = useMutation(
+    setUserScoringStatusColorMutation(userId)
+  )
+  const { mutate: applyColorPreset } = useMutation(
+    applyUserScoringColorPresetMutation(userId)
+  )
   const { data: storedPresetId } = useQuery(
     userPreferenceQuery(userId, "scoringColorPresetId")
   )
@@ -116,43 +124,48 @@ export function DisplaySettingsTab() {
   )
 
   // クリック採点アクション変更
-  const handleClickActionChange = setClickAction
+  const handleClickActionChange = useCallback(
+    (clickCount: 2 | 3 | 4, action: ClickScoringAction) =>
+      setClickAction({ clickCount, action }),
+    [setClickAction]
+  )
 
-  // プリセット選択。色そのものと「どのプリセットか」は別の行なので、書き込みも2つ
+  /**
+   * プリセット選択。
+   *
+   * どの色になるかを決めるのは画面（プリセットの定義はここにある）で、DB へ渡すのは
+   * その結果。**プリセットidと色は同時に決まる**ので、書き込みは1つにまとめてある。
+   */
   const handlePresetSelect = useCallback(
     (presetId: string) => {
       const preset = SCORING_COLOR_PRESETS.find(
         (candidate) => candidate.id === presetId
       )
       if (!preset) return
-      setPreference.mutate({
-        key: "scoringStatusColors",
-        value: JSON.stringify(preset.colors),
+      applyColorPreset({
+        presetId,
+        colors: SCORING_STATUS_ORDER.map((status) => ({
+          status,
+          ...toStatusColorValues(preset.colors[status]),
+        })),
       })
-      // id そのものを渡す。保存文字列への変換は書き込み側が持つ
-      setPreference.mutate({ key: "scoringColorPresetId", value: presetId })
       toast.success("カラープリセットが適用されました")
     },
-    [setPreference]
+    [applyColorPreset]
   )
 
-  // 個別の色変更。1色でも触ればプリセットからは外れる
+  // 個別の色変更。触るのはその状態の行1つだけ（1色でも触ればプリセットからは外れる）
   const handleStatusColorChange = useCallback(
     (status: ScoringStatus, type: "bg" | "text" | "icon", color: string) => {
-      const updated: ScoringStatusColors = {
-        ...scoringColors,
-        [status]: {
+      setStatusColor({
+        status,
+        colors: toStatusColorValues({
           ...scoringColors[status],
           [type]: color.toUpperCase(),
-        },
-      }
-      setPreference.mutate({
-        key: "scoringStatusColors",
-        value: JSON.stringify(updated),
+        }),
       })
-      setPreference.mutate({ key: "scoringColorPresetId", value: null })
     },
-    [scoringColors, setPreference]
+    [scoringColors, setStatusColor]
   )
 
   // リセット

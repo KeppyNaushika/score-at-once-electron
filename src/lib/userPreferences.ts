@@ -1,6 +1,12 @@
 /**
  * @fileoverview ユーザー設定のKVスキーマ定義と型安全アクセス
  * @description UserPreference KVテーブルの設定キー・デフォルト値・型パースを一元管理
+ *
+ * **ここに置くのは、1つの値で足りる設定だけ。** 組が繰り返すもの（採点状態ごとの色・
+ * クリック回数ごとの動作・側面パネルの節ごとの開閉）は行で持つ
+ * （`UserScoringStatusColor` / `UserClickScoringAction` / `UserSidePanelSection`）。
+ * 塊で読み書きすると、**続けて2つ変えたときに先の1つが消える** — 取り直しが着地する
+ * 前に、古い写しへ2度目を重ねて書くため。
  */
 
 import type { RenderMode } from "@/types/answerSheetDefinition.types"
@@ -53,10 +59,6 @@ const USER_PREFERENCE_SCHEMA = {
     type: "string?" as const,
     default: null as string | null,
   },
-  scoringStatusColors: {
-    type: "string?" as const,
-    default: null as string | null,
-  },
   scoringColorPresetId: {
     type: "string?" as const,
     default: null as string | null,
@@ -72,15 +74,7 @@ const USER_PREFERENCE_SCHEMA = {
     default: "toggle",
     validate: (value: string) => isOneOf(MASTER_ANSWER_KEY_BEHAVIORS, value),
   },
-  clickScoringConfig: {
-    type: "string?" as const,
-    default: null as string | null,
-  },
   clickScoringDebounceMs: { type: "number" as const, default: 300 },
-  sidePanelCollapsedSections: {
-    type: "string?" as const,
-    default: null as string | null,
-  },
   /**
    * 離席時の目隠し（簡易スクリーンセイバー）。
    *
@@ -116,14 +110,11 @@ export type PreferenceValueType = {
   answerSortOrder: (typeof ANSWER_SORT_ORDERS)[number]
   expandMargin: number
   selectionBorderColor: string | null
-  scoringStatusColors: string | null
   scoringColorPresetId: string | null
   masterAnswerDisplayMode: (typeof MASTER_ANSWER_DISPLAY_MODES)[number]
   masterAnswerOpacity: number
   masterAnswerKeyBehavior: (typeof MASTER_ANSWER_KEY_BEHAVIORS)[number]
-  clickScoringConfig: string | null
   clickScoringDebounceMs: number
-  sidePanelCollapsedSections: string | null
   screenBlackoutEnabled: boolean
   screenBlackoutTimeoutMinutes: number
   screenBlackoutAutoFullScreen: boolean
@@ -137,10 +128,10 @@ export type PreferenceValueType = {
  * 現行は `serializePreference` が JSON で1枚くるむ。**古い保存値はくるまれて
  * いない**ので、JSON として読めなければ生のまま返す（`#FF0000` など）。
  *
- * 落とし穴は「古い生の値が、たまたま JSON として読めてしまう」場合である。
- * `clickScoringConfig` や `scoringStatusColors` は中身自体が JSON 文字列なので、
- * 素朴に `JSON.parse` するとオブジェクトが返り、文字列を名乗ったまま呼び出し側へ
- * 渡って設定が丸ごと既定値へ落ちていた。**文字列になったときだけ剥がす。**
+ * 落とし穴は「古い生の値が、たまたま JSON として読めてしまう」場合である。中身自体が
+ * JSON だった設定（採点状態の色・クリック採点。いずれも行へ割った）では、素朴に
+ * `JSON.parse` するとオブジェクトが返り、文字列を名乗ったまま呼び出し側へ渡って設定が
+ * 丸ごと既定値へ落ちていた。**文字列になったときだけ剥がす。**
  */
 function unwrapStoredString(raw: string): string {
   try {

@@ -22,10 +22,6 @@ import { useState } from "react"
 
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import type {
-  ClickScoringAction,
-  ClickScoringConfig,
-} from "@/components/exams/07-score-at-once/ScoringMain/scoringPreferences"
-import type {
   MouseBrushAction,
   ScoringOperationMode,
 } from "@/components/exams/07-score-at-once/types"
@@ -48,6 +44,10 @@ import {
 } from "@/components/ui/tooltip"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
+import type {
+  ClickScoringAction,
+  ClickScoringConfig,
+} from "@/types/clickScoring.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { SidePanelSection } from "./SidePanelSection"

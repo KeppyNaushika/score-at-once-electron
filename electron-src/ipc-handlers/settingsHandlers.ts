@@ -24,12 +24,29 @@ import {
   setExamReportTableSection,
 } from "../lib/prisma/examSettings"
 import {
+  listUserClickScoringActions,
+  setUserClickScoringAction,
+} from "../lib/prisma/userClickScoringAction"
+import type {
+  UserScoringStatusColorEntry,
+  UserScoringStatusColorValues,
+} from "../lib/prisma/userScoringStatusColor"
+import {
+  applyUserScoringColorPreset,
+  listUserScoringStatusColors,
+  setUserScoringStatusColor,
+} from "../lib/prisma/userScoringStatusColor"
+import {
   bulkUpsertUserKeyboardShortcuts,
   getUserKeyboardShortcuts,
   getUserPreference,
   resetUserKeyboardShortcuts,
   setUserPreference,
 } from "../lib/prisma/userSettings"
+import {
+  listUserSidePanelSections,
+  setUserSidePanelSection,
+} from "../lib/prisma/userSidePanelSection"
 import { type HandlerMap, withEvent } from "./ipcHandlerUtils"
 
 // プロジェクターモード用のpowerSaveBlocker ID
@@ -106,6 +123,45 @@ export const settingsHandlers = {
 
   "settings:setUserPreference": (userId: string, key: string, value: string) =>
     setUserPreference(userId, key, value),
+
+  // =========================================================================
+  // 利用者ごとの設定のうち、**組が繰り返すもの**は行で持つ。
+  // 1キーの JSON に畳んでいた頃は、続けて2つ変えると先の1つが消えていた
+  // （塊で読み書きするので、取り直しの前に古い写しを重ねて書く）
+  // =========================================================================
+
+  "settings:listUserScoringStatusColors": (userId: string) =>
+    listUserScoringStatusColors(userId),
+
+  "settings:setUserScoringStatusColor": (
+    userId: string,
+    status: string,
+    colors: UserScoringStatusColorValues
+  ) => setUserScoringStatusColor(userId, status, colors),
+
+  "settings:applyUserScoringColorPreset": (
+    userId: string,
+    presetId: string,
+    colors: UserScoringStatusColorEntry[]
+  ) => applyUserScoringColorPreset(userId, presetId, colors),
+
+  "settings:listUserClickScoringActions": (userId: string) =>
+    listUserClickScoringActions(userId),
+
+  "settings:setUserClickScoringAction": (
+    userId: string,
+    clickCount: number,
+    action: string
+  ) => setUserClickScoringAction(userId, clickCount, action),
+
+  "settings:listUserSidePanelSections": (userId: string) =>
+    listUserSidePanelSections(userId),
+
+  "settings:setUserSidePanelSection": (
+    userId: string,
+    sectionId: string,
+    collapsed: boolean
+  ) => setUserSidePanelSection(userId, sectionId, collapsed),
 
   // =========================================================================
   // ExamExportSettings

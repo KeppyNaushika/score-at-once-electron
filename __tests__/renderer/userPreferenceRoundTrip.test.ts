@@ -6,15 +6,18 @@
  * 読めない**という形で静かに壊れる（実際に採点状態色が常に既定へ落ちていた）。
  * 型では止まらない（どちらの段でも型は `string`）。
  *
- * 中身が JSON の設定（色・クリック採点）は剥がす段が2つある。ここでは
- * 「書いたものが読める」だけを見る。
+ * 組が繰り返す設定（採点状態の色・クリック回数の動作・側面パネルの節）は
+ * **1キーの JSON ではなく行**で持つ。行から画面の形へ畳むところも、ここで見る。
  */
+import type { UserScoringStatusColor } from "@prisma/client"
 import { describe, expect, it } from "vitest"
 
 import {
   DEFAULT_SCORING_STATUS_COLORS,
-  parseScoringStatusColors,
   SCORING_COLOR_PRESETS,
+  SCORING_STATUS_ORDER,
+  toScoringStatusColors,
+  toStatusColorValues,
 } from "@/lib/scoringStatusColors"
 import { parsePreference, serializePreference } from "@/lib/userPreferences"
 
@@ -24,55 +27,45 @@ const roundTrip = <TKey extends Parameters<typeof serializePreference>[0]>(
   value: Parameters<typeof serializePreference<TKey>>[1]
 ) => serializePreference(key, value)
 
-describe("採点状態色の往復", () => {
-  it("プリセットを保存すると、その配色が読める", () => {
+/** 保存された色の行を組む（id と日時は読む側が見ない） */
+function colorRow(
+  status: string,
+  colors: { bg: string; text: string; icon: string }
+): UserScoringStatusColor {
+  return {
+    id: `row-${status}`,
+    userId: "user-1",
+    status,
+    backgroundColor: colors.bg,
+    textColor: colors.text,
+    iconColor: colors.icon,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+  }
+}
+
+describe("採点状態色（状態ごとに1行）", () => {
+  it("保存された行の色で読める", () => {
     const vivid = SCORING_COLOR_PRESETS.find((preset) => preset.id === "vivid")
     if (!vivid) throw new Error("プリセット vivid が無い")
 
-    const stored = roundTrip(
-      "scoringStatusColors",
-      JSON.stringify(vivid.colors)
+    const rows = SCORING_STATUS_ORDER.map((status) =>
+      colorRow(status, vivid.colors[status])
     )
 
-    expect(parseScoringStatusColors(stored)).toEqual(vivid.colors)
+    expect(toScoringStatusColors(rows)).toEqual(vivid.colors)
   })
 
-  it("1色だけ変えた配色も、そのまま読める", () => {
-    const edited = {
-      ...DEFAULT_SCORING_STATUS_COLORS,
-      correct: { bg: "#000000", text: "#FFFFFF", icon: "#FF0000" },
-    }
-
-    const stored = roundTrip("scoringStatusColors", JSON.stringify(edited))
-
-    expect(parseScoringStatusColors(stored).correct.bg).toBe("#000000")
+  it("行が1つも無ければ既定の配色になる", () => {
+    expect(toScoringStatusColors([])).toEqual(DEFAULT_SCORING_STATUS_COLORS)
   })
 
-  it("未保存なら既定の配色になる", () => {
-    expect(parseScoringStatusColors(null)).toEqual(
-      DEFAULT_SCORING_STATUS_COLORS
-    )
-    expect(parseScoringStatusColors("null")).toEqual(
-      DEFAULT_SCORING_STATUS_COLORS
-    )
-  })
+  it("行の無い状態は既定のまま残す（後から状態が増えても落ちない）", () => {
+    const rows = [
+      colorRow("unscored", { bg: "#111111", text: "#222222", icon: "#333333" }),
+    ]
 
-  it("移行前に保存された値（くるまれていない）も読める", () => {
-    const legacy = JSON.stringify(DEFAULT_SCORING_STATUS_COLORS)
-
-    expect(parseScoringStatusColors(legacy)).toEqual(
-      DEFAULT_SCORING_STATUS_COLORS
-    )
-  })
-
-  it("保存に無い状態は既定のまま残す（後から増えた状態でも落ちない）", () => {
-    // `no_answer` / `double_mark` が増える前に保存された配色を開く
-    const olderShape = JSON.stringify({
-      unscored: { bg: "#111111", text: "#222222", icon: "#333333" },
-      correct: DEFAULT_SCORING_STATUS_COLORS.correct,
-    })
-
-    const colors = parseScoringStatusColors(olderShape)
+    const colors = toScoringStatusColors(rows)
 
     expect(colors.unscored.bg).toBe("#111111")
     expect(colors.double_mark).toEqual(
@@ -81,21 +74,22 @@ describe("採点状態色の往復", () => {
     expect(colors.no_answer).toEqual(DEFAULT_SCORING_STATUS_COLORS.no_answer)
   })
 
-  it("色として読めない値は既定のまま残す", () => {
-    const broken = JSON.stringify({ correct: "赤", partial: { bg: 1 } })
+  it("知らない状態の行は読み飛ばす（他の色を塗り替えない）", () => {
+    const rows = [
+      colorRow("ungraded", { bg: "#111111", text: "#222222", icon: "#333333" }),
+    ]
 
-    const colors = parseScoringStatusColors(broken)
-
-    expect(colors.correct).toEqual(DEFAULT_SCORING_STATUS_COLORS.correct)
-    expect(colors.partial).toEqual(DEFAULT_SCORING_STATUS_COLORS.partial)
+    expect(toScoringStatusColors(rows)).toEqual(DEFAULT_SCORING_STATUS_COLORS)
   })
 
-  it("旧いキー ungraded は unscored として読む", () => {
-    const legacy = JSON.stringify({
-      ungraded: { bg: "#111111", text: "#222222", icon: "#333333" },
+  it("画面の色は、そのまま列の形へ写る", () => {
+    expect(
+      toStatusColorValues({ bg: "#000000", text: "#FFFFFF", icon: "#FF0000" })
+    ).toEqual({
+      backgroundColor: "#000000",
+      textColor: "#FFFFFF",
+      iconColor: "#FF0000",
     })
-
-    expect(parseScoringStatusColors(legacy).unscored.bg).toBe("#111111")
   })
 })
 

@@ -3,78 +3,14 @@
  *
  * 取得と書き込みは呼び出し側（`ScoringMainView`）が行う。ここはキーもチャンネルも
  * 持たないので、React にも DB にも依存しない。
+ *
+ * **1つの値で足りる設定だけがここにある。** 組が繰り返す設定（クリック回数ごとの動作・
+ * 採点状態ごとの色・側面パネルの節）は行で持つので、`src/queries/settings.ts` の
+ * それぞれの口から読む。
  */
 
 import type { PreferenceKey, PreferenceValueType } from "@/lib/userPreferences"
 import { parsePreference } from "@/lib/userPreferences"
-import { defineStringUnion } from "@/types/stringUnion"
-
-/** クリック採点で選択可能なアクション */
-const CLICK_SCORING_ACTIONS = [
-  "none",
-  "correct",
-  "incorrect",
-  "partial",
-  "partial_modal",
-  "pending",
-  "unscored",
-  "no_answer",
-  "double_mark",
-  "individual",
-] as const
-
-export type ClickScoringAction = (typeof CLICK_SCORING_ACTIONS)[number]
-
-/** 保存値・入力値をアクションへ倒す。知らない値は「なし」に落とす */
-export const { to: toClickScoringAction } = defineStringUnion(
-  CLICK_SCORING_ACTIONS,
-  "none"
-)
-
-/** クリック回数ごとのアクション設定 */
-export interface ClickScoringConfig {
-  2: ClickScoringAction
-  3: ClickScoringAction
-  4: ClickScoringAction
-}
-
-const DEFAULT_CLICK_SCORING_CONFIG: ClickScoringConfig = {
-  2: "incorrect",
-  3: "partial_modal",
-  4: "individual",
-}
-
-/**
- * 保存文字列をアクション設定へ倒す。
- *
- * 保存済み JSON をそのまま広げると、壊れた値が ClickScoringAction を名乗ったまま
- * 通る（型は保存値の中身を知らない）。クリック回数ごとに1つずつ union へ倒す。
- */
-export function toClickScoringConfig(
-  stored: string | null
-): ClickScoringConfig {
-  if (!stored) return DEFAULT_CLICK_SCORING_CONFIG
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(stored)
-  } catch {
-    return DEFAULT_CLICK_SCORING_CONFIG
-  }
-  if (typeof parsed !== "object" || parsed === null) {
-    return DEFAULT_CLICK_SCORING_CONFIG
-  }
-
-  const storedActions: Record<string, unknown> = { ...parsed }
-  const actionOf = (clickCount: 2 | 3 | 4): ClickScoringAction => {
-    const value = storedActions[String(clickCount)]
-    if (typeof value !== "string")
-      return DEFAULT_CLICK_SCORING_CONFIG[clickCount]
-    return toClickScoringAction(value)
-  }
-
-  return { 2: actionOf(2), 3: actionOf(3), 4: actionOf(4) }
-}
 
 /** 採点画面が読む設定キー。並び順が `useQueries` の並びになる */
 export const SCORING_PREFERENCE_KEYS = [
@@ -84,7 +20,6 @@ export const SCORING_PREFERENCE_KEYS = [
   "layoutDirection",
   "answerSortOrder",
   "expandMargin",
-  "clickScoringConfig",
   "clickScoringDebounceMs",
   "masterAnswerDisplayMode",
   "masterAnswerOpacity",
@@ -132,7 +67,6 @@ export function buildScoringSettings(
     layoutDirection: valueOf("layoutDirection"),
     answerSortOrder: valueOf("answerSortOrder"),
     expandMargin: valueOf("expandMargin"),
-    clickScoringConfig: toClickScoringConfig(valueOf("clickScoringConfig")),
     clickScoringDebounceMs: valueOf("clickScoringDebounceMs"),
     masterAnswerDisplayMode: valueOf("masterAnswerDisplayMode"),
     masterAnswerOpacity: valueOf("masterAnswerOpacity"),
@@ -152,13 +86,6 @@ export function buildScoringSettings(
       write({ key: "answerSortOrder", value }),
     setExpandMargin: (value: PreferenceValueType["expandMargin"]) =>
       write({ key: "expandMargin", value }),
-    setClickAction: (clickCount: 2 | 3 | 4, action: ClickScoringAction) => {
-      const next = {
-        ...toClickScoringConfig(valueOf("clickScoringConfig")),
-        [clickCount]: action,
-      }
-      write({ key: "clickScoringConfig", value: JSON.stringify(next) })
-    },
     setClickScoringDebounceMs: (
       value: PreferenceValueType["clickScoringDebounceMs"]
     ) => write({ key: "clickScoringDebounceMs", value }),

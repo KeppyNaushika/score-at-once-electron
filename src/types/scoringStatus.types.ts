@@ -26,7 +26,7 @@ export type ScoringStatus = (typeof SCORING_STATUSES)[number]
  * 型ガード `isScoringStatus` と境界コンバータ `toScoringStatus`（想定外値は未採点 unscored）。
  * QuestionScore.status は常に7値のいずれか（保留=pending）。
  */
-export const { to: toScoringStatus } = defineStringUnion(
+export const { is: isScoringStatus, to: toScoringStatus } = defineStringUnion(
   SCORING_STATUSES,
   "unscored"
 )

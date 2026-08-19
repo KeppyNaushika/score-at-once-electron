@@ -5,19 +5,23 @@
  * - 4つのプリセットパターン（標準、ビビッド、ソフト、色覚多様性対応）
  * - 各状態の個別カスタマイズ
  *
- * **ここにあるのは値と、保存文字列を読む計算だけ。** 読み書きは
- * `src/queries/settings.ts` の `userPreferenceQuery` / `setUserPreferenceMutation`
- * を通す（キー `scoringStatusColors` / `scoringColorPresetId`）。かつてはこの
- * ファイルが自前のキャッシュと `window` イベントで変更を配っていたが、設定画面と
- * 採点画面が同じキャッシュを見る形にすれば、その仕掛けは要らない。
+ * **ここにあるのは値と、行を読む計算だけ。** 読み書きは `src/queries/settings.ts` の
+ * `userScoringStatusColorsQuery` / `setUserScoringStatusColorMutation` を通す。
+ * かつてはこのファイルが自前のキャッシュと `window` イベントで変更を配っていたが、
+ * 設定画面と採点画面が同じキャッシュを見る形にすれば、その仕掛けは要らない。
  *
- * プリセットidは中身が id そのものなので、専用の読み手は持たない
+ * **色は状態ごとに1行**（`UserScoringStatusColor`）。1キーの JSON に7状態を畳んで
+ * いた頃は、続けて2色変えると先の1色が消えていた。
+ *
+ * プリセットidは中身が id そのものなので `UserPreference` のまま
  * （`parsePreference("scoringColorPresetId", …)` で足りる）。
  */
 
-import type { ScoringStatus } from "@/types/scoringStatus.types"
+import type { UserScoringStatusColor } from "@prisma/client"
 
-import { parsePreference } from "./userPreferences"
+import type { UserScoringStatusColorValues } from "@/electron-src/lib/prisma/userScoringStatusColor"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
+import { isScoringStatus } from "@/types/scoringStatus.types"
 
 /** 各状態の色設定 */
 export interface StatusColorConfig {
@@ -128,55 +132,40 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
 export const DEFAULT_SCORING_STATUS_COLORS: ScoringStatusColors =
   SCORING_COLOR_PRESETS[0].colors
 
-/** JSON から読めたものが、名前で引ける入れ物か */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
-
-/** 保存されている1状態ぶんの色として読めるか */
-function isStatusColorConfig(value: unknown): value is StatusColorConfig {
-  if (!isRecord(value)) return false
-  return (
-    typeof value.bg === "string" &&
-    typeof value.text === "string" &&
-    typeof value.icon === "string"
-  )
-}
-
 /**
- * 保存されている色設定を読める形に直す。
+ * 行（DB の列）から、状態で引ける形へ畳む。
  *
- * 受け取るのは `UserPreference` の**生の保存文字列**で、剥がす段は2つある。
- * 1つ目は保存の符号化（`serializePreference` が文字列を JSON でくるむ）、
- * 2つ目が中身の JSON。ここが両方を持つことで、呼び出し側が段を数え違えない
- * （実際に片方を飛ばして、色が常に既定へ落ちていた）。
+ * **行が無い状態は既定のまま。** 状態は後から増えているので、「全部入っている」と
+ * 名乗って組むと、古い保存内容では `colors.double_mark.bg` が undefined になり、
+ * 採点画面の描画で落ちる。
  *
- * **読めた状態だけを差し替える。** 保存された時点に無かった状態は既定のまま残す
- * （状態は後から増えている）。「全部入っている」と名乗って組むと、古い保存値を
- * 開いたときに `colors.double_mark.bg` が undefined になり、採点画面の描画で落ちる。
- *
- * 旧いキー `"ungraded"` は `"unscored"` として読む（保存し直しはしない。
- * 次に色を変えたときに現行のキーで書き直る）。
+ * 畳んだ形はキャッシュに載せない（`useQuery` の `select` で作る）。載せると、色を
+ * 1つ書いたときの取り直し先が畳んだ形になり、束ごと作り直すことになる。
  */
-export function parseScoringStatusColors(
-  stored: string | null
+export function toScoringStatusColors(
+  rows: UserScoringStatusColor[]
 ): ScoringStatusColors {
-  const json = parsePreference("scoringStatusColors", stored)
-  if (!json) return DEFAULT_SCORING_STATUS_COLORS
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(json)
-  } catch {
-    return DEFAULT_SCORING_STATUS_COLORS
-  }
-  if (!isRecord(parsed)) return DEFAULT_SCORING_STATUS_COLORS
-
   const colors = { ...DEFAULT_SCORING_STATUS_COLORS }
-  for (const status of SCORING_STATUS_ORDER) {
-    const value =
-      parsed[status] ?? (status === "unscored" ? parsed.ungraded : undefined)
-    if (isStatusColorConfig(value)) colors[status] = value
+  for (const row of rows) {
+    // 知らない状態の行は**読み飛ばす**。未採点へ倒すと、無関係な行が未採点の色を
+    // 塗り替えてしまう（状態が増減した後の DB で起こりうる）
+    if (!isScoringStatus(row.status)) continue
+    colors[row.status] = {
+      bg: row.backgroundColor,
+      text: row.textColor,
+      icon: row.iconColor,
+    }
   }
   return colors
+}
+
+/** 状態1つぶんの色を、DB の列の形へ */
+export function toStatusColorValues(
+  config: StatusColorConfig
+): UserScoringStatusColorValues {
+  return {
+    backgroundColor: config.bg,
+    textColor: config.text,
+    iconColor: config.icon,
+  }
 }

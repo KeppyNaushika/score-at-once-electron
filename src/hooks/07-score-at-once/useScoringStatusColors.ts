@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query"
 import { useAuth } from "@/contexts/AuthContext"
 import {
   DEFAULT_SCORING_STATUS_COLORS,
-  parseScoringStatusColors,
   type ScoringStatusColors,
+  toScoringStatusColors,
 } from "@/lib/scoringStatusColors"
-import { userPreferenceQuery } from "@/queries/settings"
+import { userScoringStatusColorsQuery } from "@/queries/settings"
 
 /**
  * 採点状態色。
@@ -16,10 +16,10 @@ import { userPreferenceQuery } from "@/queries/settings"
  */
 export function useScoringStatusColors(): ScoringStatusColors {
   const { user } = useAuth()
-  const { data: stored } = useQuery({
-    ...userPreferenceQuery(user?.id, "scoringStatusColors"),
-    select: parseScoringStatusColors,
+  const { data: colors } = useQuery({
+    ...userScoringStatusColorsQuery(user?.id),
+    select: toScoringStatusColors,
   })
 
-  return stored ?? DEFAULT_SCORING_STATUS_COLORS
+  return colors ?? DEFAULT_SCORING_STATUS_COLORS
 }

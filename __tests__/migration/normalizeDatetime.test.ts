@@ -230,6 +230,11 @@ describe("DateTime正規化マイグレーション", () => {
     // GradeBoundary から INSERT SELECT で移しており、以後は ISO text 生成
     "GradeItemBoundary",
     "ReturnSnapshot",
+    // 20260819140000 で追加（利用者の設定JSONを行へ割る）。
+    // normalize migration より後で ISO text 生成
+    "UserClickScoringAction",
+    "UserScoringStatusColor",
+    "UserSidePanelSection",
   ])
 
   // 20260704010000_rename_class_tables_to_classroom で物理名をリネームしたテーブル。

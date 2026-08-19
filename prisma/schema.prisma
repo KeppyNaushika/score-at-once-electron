@@ -8,17 +8,17 @@ datasource db {
 }
 
 model User {
-  id                     String                 @id @default(uuid())
-  username               String                 @unique
+  id                     String                   @id @default(uuid())
+  username               String                   @unique
   passcode               String?
   name                   String
-  role                   String                 @default("teacher")
-  createdAt              DateTime               @default(now())
-  updatedAt              DateTime               @updatedAt
-  passcodeType           String?                @default("none")
+  role                   String                   @default("teacher")
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  passcodeType           String?                  @default("none")
   questionScores         QuestionScore[]
   userExams              UserExam[]
-  invitedUserExams       UserExam[]             @relation("InvitedByUser")
+  invitedUserExams       UserExam[]               @relation("InvitedByUser")
   keyboardShortcuts      UserKeyboardShortcut[]
   preferences            UserPreference[]
   answerSheetDefinitions AsbDefinition[]
@@ -26,7 +26,10 @@ model User {
   scoreDecisions         ScoreDecision[]
   gradeFrozenScores      GradeFrozenScore[]
   cropRegionAssignments  CropRegionAssignment[]
-  assignedCropRegions    CropRegionAssignment[] @relation("AssignedByUser")
+  assignedCropRegions    CropRegionAssignment[]   @relation("AssignedByUser")
+  scoringStatusColors    UserScoringStatusColor[]
+  clickScoringActions    UserClickScoringAction[]
+  sidePanelSections      UserSidePanelSection[]
 }
 
 model Classroom {
@@ -528,6 +531,60 @@ model UserPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, key])
+  @@index([userId])
+}
+
+/// 採点状態ごとの表示色（利用者ごと）。一括採点画面のパネルと一覧の背景・文字・記号に使う。
+/// 状態は7つで、行が無い状態は既定の配色で描く（プリセットを当てても行は状態ごとに書く）。
+model UserScoringStatusColor {
+  id     String @id @default(uuid())
+  userId String
+  status String // ScoringStatus（src/types/scoringStatus.types.ts）
+
+  backgroundColor String
+  textColor       String
+  iconColor       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, status])
+  @@index([userId])
+}
+
+/// 連続クリックでの採点（2〜4回）に割り当てた動作（利用者ごと）
+model UserClickScoringAction {
+  id         String @id @default(uuid())
+  userId     String
+  /// 連続クリックの回数（2〜4）
+  clickCount Int
+  /// ClickScoringAction（src/components/exams/07-score-at-once/ScoringMain/scoringPreferences.ts）
+  action     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clickCount])
+  @@index([userId])
+}
+
+/// 採点画面の側面パネルで、節を畳んでいるか（利用者ごと）。行が無い節は開いている
+model UserSidePanelSection {
+  id        String  @id @default(uuid())
+  userId    String
+  sectionId String
+  collapsed Boolean
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sectionId])
   @@index([userId])
 }
 

@@ -19,10 +19,6 @@ import { useCallback } from "react"
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import type { QuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/types"
 import { IndividualModePanel } from "@/components/exams/07-score-at-once/ScoringIndividual/IndividualModePanel"
-import type {
-  ClickScoringAction,
-  ClickScoringConfig,
-} from "@/components/exams/07-score-at-once/ScoringMain/scoringPreferences"
 import ExamProgressCard from "@/components/exams/07-score-at-once/ScoringSidePanel/ExamProgressCard"
 import { MasterAnswerControls } from "@/components/exams/07-score-at-once/ScoringSidePanel/MasterAnswerControls"
 import NavigationControls from "@/components/exams/07-score-at-once/ScoringSidePanel/NavigationControls"
@@ -47,15 +43,21 @@ import {
 } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/AuthContext"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
-import { parsePreference } from "@/lib/userPreferences"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import {
-  setUserPreferenceMutation,
-  userPreferenceQuery,
+  setUserSidePanelSectionMutation,
+  userSidePanelSectionsQuery,
 } from "@/queries/settings"
+import type {
+  ClickScoringAction,
+  ClickScoringConfig,
+} from "@/types/clickScoring.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { toCollapsedSections } from "./sidePanelSections"
+
+/** 取得が終わるまでは全展開（畳んでいる節が無い） */
+const EMPTY_COLLAPSED_SECTIONS: ReadonlySet<string> = new Set()
 
 const STATUS_MAP: Record<string, ScoringStatus> = {
   unscored: "unscored",
@@ -261,28 +263,20 @@ export function ScoringSidePanel({
   const scoringColors = useScoringStatusColors()
   // 閉じているセクションIDを設定へ残す（既定は全展開）
   const { user: preferenceUser } = useAuth()
-  const { data: storedCollapsedSections } = useQuery(
-    userPreferenceQuery(preferenceUser?.id, "sidePanelCollapsedSections")
-  )
-  const setPreference = useMutation(
-    setUserPreferenceMutation(preferenceUser?.id)
-  )
-  const collapsedSections = toCollapsedSections(
-    parsePreference(
-      "sidePanelCollapsedSections",
-      storedCollapsedSections ?? null
-    )
+  const { data: collapsedSections = EMPTY_COLLAPSED_SECTIONS } = useQuery({
+    ...userSidePanelSectionsQuery(preferenceUser?.id),
+    select: toCollapsedSections,
+  })
+  const { mutate: setSectionCollapsed } = useMutation(
+    setUserSidePanelSectionMutation(preferenceUser?.id)
   )
   const isSectionOpen = (sectionId: string) => !collapsedSections.has(sectionId)
-  const toggleSection = (sectionId: string) => {
-    const next = new Set(collapsedSections)
-    if (next.has(sectionId)) next.delete(sectionId)
-    else next.add(sectionId)
-    setPreference.mutate({
-      key: "sidePanelCollapsedSections",
-      value: JSON.stringify([...next]),
+  // 触るのはその節の行1つだけ。**他の節の開閉を書き戻さない**
+  const toggleSection = (sectionId: string) =>
+    setSectionCollapsed({
+      sectionId,
+      collapsed: !collapsedSections.has(sectionId),
     })
-  }
   // アノテーションの生徒・設問に移動
   const handleNavigateTo = useCallback(
     (examStudentId: string, cropRegionId: string) => {
