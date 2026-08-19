@@ -1035,19 +1035,23 @@ export function useAnswerSheetDefinition({
         })
       }
       const current = subQuestionAttributes(found.question)
+      // 原稿用紙だけが入れ子なので1段深く重ね直す。**この更新が原稿用紙の話で
+      // ないときは、いまの姿をそのまま残す。** `&&` で書くと式全体が undefined に
+      // なり、直前の `...current` で入れた設定を上書きして消す（原稿用紙を止めるのは
+      // `enabled: false` であって、キーごと落とす経路は画面に無い）。
+      // 段階6 で原稿用紙をテーブルへ出せば、この重ね直し自体が要らなくなる。
+      const manuscriptPaper = data.manuscriptPaper
+        ? {
+            ...DEFAULT_MANUSCRIPT_PAPER,
+            ...current.manuscriptPaper,
+            ...data.manuscriptPaper,
+          }
+        : current.manuscriptPaper
       edit({
         type: "UPDATE_SUB_QUESTION",
         payload: {
           subQuestionId,
-          attributes: {
-            ...current,
-            ...data,
-            manuscriptPaper: data.manuscriptPaper && {
-              ...DEFAULT_MANUSCRIPT_PAPER,
-              ...current.manuscriptPaper,
-              ...data.manuscriptPaper,
-            },
-          },
+          attributes: { ...current, ...data, manuscriptPaper },
         },
       })
     },

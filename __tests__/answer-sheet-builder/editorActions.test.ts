@@ -171,6 +171,50 @@ describe("更新に子のまとまりが紛れ込まない", () => {
     ).toEqual(["guide-1"])
   })
 
+  it("ラベルだけを変えても、原稿用紙は残る", () => {
+    // 原稿用紙は属性の中で唯一の入れ子で、更新のたびに手で1段深く重ね直している。
+    // その重ね直しを `&&` で書くと、**原稿用紙と無関係な更新**のときに undefined に
+    // なり、設定ごと消える。画面から消えるだけでなく、書き込みへ渡る意図にも
+    // 載らなくなるので DB の列が既定へ戻る。
+    const { result, edits } = renderEditor(twoMajorsWithTwoSubs())
+
+    act(() => {
+      result.current.actions.updateSubQuestion("sub-1a", {
+        manuscriptPaper: { enabled: true, columns: 25, rows: 15 },
+      })
+    })
+    act(() => {
+      result.current.actions.addCharGuide("sub-1a", {
+        id: "guide-1",
+        atChar: 80,
+        label: "80",
+      })
+    })
+
+    // 原稿用紙に触らない更新（ラベルを1文字打つ）
+    act(() => {
+      result.current.actions.updateSubQuestion("sub-1a", { label: "(1)改" })
+    })
+
+    const subQuestion = findSubQuestion(result.current.definition, "sub-1a")
+    expect(subQuestion.label).toBe("(1)改")
+    expect(subQuestion.manuscriptPaper?.enabled).toBe(true)
+    expect(subQuestion.manuscriptPaper?.columns).toBe(25)
+    expect(subQuestion.manuscriptPaper?.rows).toBe(15)
+    expect(
+      subQuestion.manuscriptPaper?.charGuides?.map((charGuide) => charGuide.id)
+    ).toEqual(["guide-1"])
+
+    // DB へ行くのは意図のほう。ここに載っていなければ列が既定へ戻る
+    const lastEdit = edits[edits.length - 1]
+    if (lastEdit.type !== "UPDATE_SUB_QUESTION") throw new Error("種類が違う")
+    expect(lastEdit.payload.attributes.manuscriptPaper).toMatchObject({
+      enabled: true,
+      columns: 25,
+      rows: 15,
+    })
+  })
+
   it("セルにテキスト要素を足しても、別のセルの中身は変わらない", () => {
     const { result } = renderEditor(twoMajorsWithTwoSubs())
 
