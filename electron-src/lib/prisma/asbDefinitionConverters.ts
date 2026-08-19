@@ -27,6 +27,7 @@ import type {
   MajorQuestion,
   ManuscriptCharGuide,
   ManuscriptGuidePosition,
+  PaperSettings,
   SubQuestion,
 } from "../../../src/types/answerSheetDefinition.types"
 import type {
@@ -105,9 +106,14 @@ type FlatGlobalSettings = {
   multiColumnDividerLineWidth: number
 }
 
-/** GlobalSettings をDBフラットカラム形式に変換する */
+/**
+ * 用紙設定をDBフラットカラム形式に変換する。
+ *
+ * ヘッダー項目は別テーブルなので受け取らない（`PaperSettings`）。`GlobalSettings` を
+ * 渡してもよい（余分な `headerFields` は使われない）。
+ */
 export function flattenGlobalSettings(
-  settings: GlobalSettings
+  settings: PaperSettings
 ): FlatGlobalSettings {
   return {
     paperSize: settings.paperSize,

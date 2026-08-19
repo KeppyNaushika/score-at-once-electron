@@ -37,6 +37,16 @@ vi.mock("../../electron-src/lib/dataManager", () => ({
   getDataDirectory: () => "/tmp/test-data",
 }))
 
+/**
+ * ログインしている利用者。**担当かどうかを判定するのは main** で、判定の出所は
+ * renderer が渡す id ではなく認証ストア（`getCurrentActorUserId`）。テストでは
+ * 「いま誰がアプリを触っているか」をここで決める。
+ */
+const actor = vi.hoisted(() => ({ userId: null as string | null }))
+vi.mock("../../electron-src/lib/prisma/auditActor", () => ({
+  getCurrentActorUserId: () => actor.userId,
+}))
+
 import {
   getAsbDefinition,
   transferAsbDefinitionOwner,
@@ -60,6 +70,7 @@ beforeAll(async () => {
   await cleanupTestDatabase()
   ownerId = (await createTestUser()).id
   otherUserId = (await createTestUser({ username: "other" })).id
+  actor.userId = ownerId
 })
 
 afterAll(async () => {
@@ -282,9 +293,11 @@ describe("解答用紙の保存", () => {
     const definition = createDefaultDefinition()
     await replaceAsbDefinition(definition, ownerId)
 
+    actor.userId = otherUserId
     await expect(
       replaceAsbDefinition({ ...definition, name: "横取り" }, otherUserId)
     ).rejects.toThrow(/担当ではない/)
+    actor.userId = ownerId
 
     const row = await prisma.asbDefinition.findUniqueOrThrow({
       where: { id: definition.id },
@@ -301,6 +314,7 @@ describe("解答用紙の保存", () => {
     ).rejects.toThrow(/今の担当者だけ/)
 
     await transferAsbDefinitionOwner(definition.id, ownerId, otherUserId)
+    actor.userId = otherUserId
     await replaceAsbDefinition(
       { ...definition, name: "受け取った" },
       otherUserId
@@ -308,6 +322,8 @@ describe("解答用紙の保存", () => {
 
     const loaded = await getAsbDefinition(definition.id)
     expect(loaded?.name).toBe("受け取った")
+    // 渡した側はもう書けない
+    actor.userId = ownerId
     await expect(
       replaceAsbDefinition({ ...definition, name: "戻す" }, ownerId)
     ).rejects.toThrow(/担当ではない/)

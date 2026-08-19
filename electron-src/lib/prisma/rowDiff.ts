@@ -42,6 +42,23 @@ export async function writeRow(
     await create()
     return true
   }
+  return updateRowIfChanged(existing, data, update)
+}
+
+/**
+ * 変わっていれば更新する。**行が既に在ると分かっているとき**に使う。
+ *
+ * 1件ずつの更新（IPC から来るもの）は、先に行を引いて存在を確かめている。そこで
+ * `writeRow` を使うと「無ければ作る」枝が呼び出し側に残り、そこへ到達しないことを
+ * 書いて説明する羽目になる。
+ *
+ * @returns 実際に書いたら `true`
+ */
+export async function updateRowIfChanged(
+  existing: Record<string, unknown>,
+  data: Record<string, unknown>,
+  update: () => Promise<unknown>
+): Promise<boolean> {
   if (isUnchanged(existing, data)) return false
   await update()
   return true

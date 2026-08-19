@@ -30,6 +30,12 @@ vi.mock("../../electron-src/lib/dataManager", () => ({
   getDataDirectory: () => "/tmp/test-data",
 }))
 
+/** ログインしている利用者（担当かどうかの判定は main がこれで行う） */
+const actor = vi.hoisted(() => ({ userId: null as string | null }))
+vi.mock("../../electron-src/lib/prisma/auditActor", () => ({
+  getCurrentActorUserId: () => actor.userId,
+}))
+
 import { getAsbDefinition } from "../../electron-src/lib/prisma/asbDefinition"
 import { replaceAsbDefinition } from "../../electron-src/lib/prisma/asbDefinitionReplace"
 import { createDefaultDefinition } from "../../src/components/answer-sheet-builder/constants"
@@ -46,6 +52,7 @@ beforeAll(async () => {
   await cleanupTestDatabase()
   const user = await createTestUser()
   userId = user.id
+  actor.userId = userId
 })
 
 afterAll(async () => {

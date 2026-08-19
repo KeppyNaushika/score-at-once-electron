@@ -24,8 +24,16 @@ const SKIP_HISTORY_ACTIONS = new Set(["SET_DEFINITION", "UNDO", "REDO"])
 interface UndoableResult<S, A> {
   state: S
   dispatch: (action: A) => void
-  canUndo: boolean
-  canRedo: boolean
+  /**
+   * 元に戻したときに現れる状態（履歴が無ければ `undefined`）。
+   *
+   * 戻せるかどうかだけでなく**戻した先の姿**を外へ出すのは、呼び出し側がそれを
+   * 保存しに行くため。undo は「過去の姿へ置き換える」操作で、対応する1つの意図が
+   * 無い（docs/asb-ipc-split-plan.md §6.6）。
+   */
+  previousState: S | undefined
+  /** やり直したときに現れる状態（先の履歴が無ければ `undefined`） */
+  nextState: S | undefined
   undo: () => void
   redo: () => void
 }
@@ -121,8 +129,8 @@ export function useUndoableReducer<S, A extends { type: string }>(
   return {
     state: undoState.present,
     dispatch: rawDispatch,
-    canUndo: undoState.past.length > 0,
-    canRedo: undoState.future.length > 0,
+    previousState: undoState.past.at(-1),
+    nextState: undoState.future.at(0),
     undo,
     redo,
   }

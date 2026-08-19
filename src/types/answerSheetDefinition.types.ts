@@ -425,6 +425,12 @@ export interface AnswerSheetDefinition extends AsbDefinitionAttributes {
 /** 番号の既定を当てる対象 */
 export type LabelCategory = "major" | "sub" | "branch"
 
+/** 番号の既定を当てた結果。どの実体がどのラベルになるかは画面が決める */
+export interface LabelAssignment {
+  id: string
+  label: string
+}
+
 /**
  * 編集の意図。
  *
@@ -435,17 +441,30 @@ export type LabelCategory = "major" | "sub" | "branch"
  * **新しい実体は呼び出し側が作って載せる。** reducer の中で作ると、その id を
  * 呼び出し側が知れず、対応する書き込みを組み立てられない。
  *
- * 更新の指示（`data`）が `*Attributes` なのは、**子のまとまりを更新に紛れ込ませない**
- * ため。子は子の action で足し引きする。
+ * **更新は「その実体が今こうなる」という属性ひとそろい（`*Attributes`）を運ぶ。**
+ * 書き込みの単位は1テーブルの1レコードで、UPDATE 文が書くのはその行の列である。
+ * 一部の列だけを運ぶ形（`Partial`）にすると、「載っていない」と「空にする」を
+ * 区別する規約が別に要る（`undefined` はプロセス境界を越えると両方に見える）。
+ * **子のまとまりは属性に含まれない**ので、更新に子が紛れ込むことはない。
+ *
+ * 画面が触るのは属性の一部（配点だけ・余白だけ）なので、足りない分を今の状態から
+ * 埋めるのは編集フック（`useAnswerSheetDefinition`）が受け持つ。
  */
 export type AnswerSheetAction =
   | { type: "UNDO" }
   | { type: "REDO" }
   | { type: "SET_DEFINITION"; payload: AnswerSheetDefinition }
-  | { type: "UPDATE_DEFINITION"; payload: AsbDefinitionUpdate }
+  | {
+      type: "UPDATE_DEFINITION"
+      payload: { attributes: AsbDefinitionAttributes }
+    }
   | {
       type: "APPLY_LABEL_PRESET"
-      payload: { category: LabelCategory; preset: string }
+      payload: {
+        category: LabelCategory
+        preset: string
+        relabeled: LabelAssignment[]
+      }
     }
   | {
       type: "ADD_HEADER_FIELD"
@@ -453,10 +472,7 @@ export type AnswerSheetAction =
     }
   | {
       type: "UPDATE_HEADER_FIELD"
-      payload: {
-        headerFieldId: string
-        data: Partial<AsbHeaderFieldAttributes>
-      }
+      payload: { headerFieldId: string; attributes: AsbHeaderFieldAttributes }
     }
   | { type: "DELETE_HEADER_FIELD"; payload: { headerFieldId: string } }
   | { type: "REORDER_HEADER_FIELDS"; payload: { orderedIds: string[] } }
@@ -465,7 +481,7 @@ export type AnswerSheetAction =
       type: "UPDATE_MAJOR_QUESTION"
       payload: {
         majorQuestionId: string
-        data: Partial<AsbMajorQuestionAttributes>
+        attributes: AsbMajorQuestionAttributes
       }
     }
   | { type: "DELETE_MAJOR_QUESTION"; payload: { majorQuestionId: string } }
@@ -476,7 +492,7 @@ export type AnswerSheetAction =
     }
   | {
       type: "UPDATE_SUB_QUESTION"
-      payload: { subQuestionId: string; data: AsbSubQuestionUpdate }
+      payload: { subQuestionId: string; attributes: AsbSubQuestionAttributes }
     }
   | { type: "DELETE_SUB_QUESTION"; payload: { subQuestionId: string } }
   | {
@@ -491,7 +507,7 @@ export type AnswerSheetAction =
       type: "UPDATE_BRANCH_QUESTION"
       payload: {
         branchQuestionId: string
-        data: Partial<AsbBranchQuestionAttributes>
+        attributes: AsbBranchQuestionAttributes
       }
     }
   | { type: "DELETE_BRANCH_QUESTION"; payload: { branchQuestionId: string } }
@@ -505,10 +521,7 @@ export type AnswerSheetAction =
     }
   | {
       type: "UPDATE_TEXT_ELEMENT"
-      payload: {
-        textElementId: string
-        data: Partial<AsbTextElementAttributes>
-      }
+      payload: { textElementId: string; attributes: AsbTextElementAttributes }
     }
   | { type: "DELETE_TEXT_ELEMENT"; payload: { textElementId: string } }
   | {
@@ -517,10 +530,7 @@ export type AnswerSheetAction =
     }
   | {
       type: "UPDATE_IMAGE_ELEMENT"
-      payload: {
-        imageElementId: string
-        data: Partial<AsbImageElementAttributes>
-      }
+      payload: { imageElementId: string; attributes: AsbImageElementAttributes }
     }
   | { type: "DELETE_IMAGE_ELEMENT"; payload: { imageElementId: string } }
   | {
@@ -529,7 +539,7 @@ export type AnswerSheetAction =
     }
   | {
       type: "UPDATE_CHAR_GUIDE"
-      payload: { charGuideId: string; data: Partial<AsbCharGuideAttributes> }
+      payload: { charGuideId: string; attributes: AsbCharGuideAttributes }
     }
   | { type: "DELETE_CHAR_GUIDE"; payload: { charGuideId: string } }
   | {
@@ -537,3 +547,15 @@ export type AnswerSheetAction =
       payload: { parent: AsbCellParent; config: OMRCellConfig }
     }
   | { type: "DELETE_OMR_CONFIG"; payload: { parent: AsbCellParent } }
+
+/**
+ * 書き込みに写る編集の意図。
+ *
+ * `SET_DEFINITION`（読み込んだ内容を置く）と undo / redo（過去の姿へ戻す）は、対応する
+ * 1レコードの書き込みが無いので外れる。**この型を網羅する `switch` が書き込みの関所**で、
+ * action を足して書き込みを書かなければ型検査が落ちる（`src/queries/answerSheetBuilder.ts`）。
+ */
+export type AnswerSheetEditAction = Exclude<
+  AnswerSheetAction,
+  { type: "UNDO" } | { type: "REDO" } | { type: "SET_DEFINITION" }
+>

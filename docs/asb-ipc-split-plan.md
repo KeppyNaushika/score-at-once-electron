@@ -809,37 +809,77 @@ toast だけで UI が DB より先へ進んだままになるが、書き込み
 
 **検査**: `__tests__/answer-sheet-builder/editorActions.test.ts`（8件）。
 
-### 7.4 段階4 — IPC の分割
+### 7.4 段階4 — IPC の分割（済 2026-08-19）
 
 **変更**: `answerSheetBuilderHandlers.ts` / `answerSheetBuilderApi.ts` /
-`useAnswerSheetDefinition.ts` /
-`usePreviewDragInteraction.ts` / `AnswerSheetPreview.tsx`
+`src/queries/answerSheetBuilder.ts` / `useAnswerSheetDefinition.ts` /
+`AnswerSheetBuilderMainView.tsx` / main の実体ごとのモジュール
 
-**手順**
+**完了条件は満たした**: 自動保存 effect は無い・`AnswerSheetPreview` は `dispatch` を
+受け取らない（段階3で解消済み）・action を1つ足すと書き込みを書くまでビルドが落ちる
+（実際に落ちることを確認した）。
 
-1. §4.1 の31本を登録する。ハンドラは §5.2 の関数を呼ぶだけ
-2. preload と型定義を揃える
-3. §6.5 の関所（包んだ dispatch + 網羅 switch + `assertNever`）を書く
-4. §6.3 のとおり生 `dispatch` を外へ出すのをやめる
-5. `AnswerSheetBuilderMainView.tsx` の自動保存 effect を撤去する（書き込みは関所が行う）
-6. §6.7 のデバウンス・失敗時処理・保存状態表示を入れる
+**決めたこと（計画からの差）**:
 
-**完了条件**
+| 何                          | どうしたか                                                                                                                                   |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 更新が運ぶもの              | `Partial<*Attributes>` ではなく **`*Attributes` ひとそろい**。下記「一部の列だけを運ばない理由」                                             |
+| チャンネル数                | 30本（31本から**セルの中身の `reorder` 2本を落とした**）。並べ替える導線が画面に無い。作るときに action と一緒に足す                         |
+| 全チャンネルの第1引数       | **`definitionId`**。担当の判定に要り、子だけが変わったときに解答用紙の更新日時を進める相手を名指しするのにも要る                             |
+| 担当者ガード                | `getCurrentActorUserId()`（認証ストア）で判定し、**引数の `userId` は落とした**。バルクの `ownerUserId` は作成時に担当を書く値としてだけ残る |
+| 監査ログの粒度（§4.0 未決） | **1件ずつの編集は残さない。** 作成・削除・譲渡・取り込み・書き出しだけを残す。打鍵ごとに1行増えると、監査ログが編集で埋まって他が読めない    |
+| デバウンス（§6.7）          | **置かない。** 規約「1回の入力で値が確定するなら即時に書く」に従う。待たせるのはジェスチャの間だけ                                           |
+| 関所の置き場所（§4.0.1）    | **要った。** 画面は `actions` を通して編集するので、action → 書き込みの写しが1箇所要る。写す先は `src/queries/answerSheetBuilder.ts`         |
 
-- 自動保存 effect が無い
-- `AnswerSheetPreview` が `dispatch` を受け取らない
-- action を1つ足すと、書き込みを書くまでビルドが落ちる
+#### 一部の列だけを運ばない理由
 
-### 7.5 段階5 — バルクの限定と改名
+更新の payload を `Partial<*Attributes>` にすると、「載せていない」と「空にする」を
+区別する規約が別に要る。`undefined` はプロセス境界を越えると両方に見えるので、`null` を
+「空にする」と決め直すか、キーが在ることを頼りにするしかない。**どちらも型では表せない。**
 
-**変更**: `answerSheetBuilderHandlers.ts` / `answerSheetBuilderApi.ts` / 型定義 /
-`dataCreator.ts` / `useAnswerSheetDefinition.ts`（undo / redo）
+一方、列単位に絞る利得は無い。sqlite-nas-sync の解決は**行ごとの LWW** なので、1列だけ
+書いても行まるごと書いても、同時編集の結末は変わらない。**巻き戻しを防ぐ単位はレコード**
+であって列ではない（§4.0）。したがって「その行が今こうなる」を運ぶ。
 
-**手順**
+画面が触るのは属性の一部（配点だけ・余白だけ）のままで、足りない分を今の状態から埋めるのは
+編集フック（`useAnswerSheetDefinition`）が受け持つ。
 
-1. `asb:save-definition` を `asb:replace-definition` へ改名する
-2. 呼び出し元を undo / redo・複製・アーカイブ取り込みの3つに限定する
-3. ハンドラのコメントに「日常の編集をここへ流さない」理由を残す
+#### 隣とぶつかる配置は、2つの意図になる
+
+「N行上に戻す」と「この後で改行」は隣り合う要素と両立しない。以前は reducer が**隣の
+レコードも一緒に書き換えて**いたが、それでは隣を DB へ書く経路が無い。ぶつかる相手の
+更新を**別の action として先に出す**形へ変えた（`conflictingNeighbour`）。
+
+#### main のファイル分割（1テーブル1ファイル）
+
+`asbQuestion.ts`（3テーブル）と `asbCellElement.ts`（2テーブル）を実体ごとに割った。
+`electron-src/lib/prisma/` の他のモジュールに揃えた形。
+
+| ファイル                | 担当                                                         |
+| ----------------------- | ------------------------------------------------------------ |
+| `asbMajorQuestion.ts`   | 大問。木の書き込みの入口（`writeAsbMajorQuestionTree`）      |
+| `asbSubQuestion.ts`     | 小問                                                         |
+| `asbBranchQuestion.ts`  | 枝問                                                         |
+| `asbTextElement.ts`     | テキスト要素                                                 |
+| `asbImageElement.ts`    | 画像要素                                                     |
+| `asbCellContents.ts`    | セルの中身をまとめて書く（親の指し方・木の walk）            |
+| `asbDefinitionWrite.ts` | 担当の確認と、解答用紙の更新日時（**全ての書き込みが通る**） |
+| `rowOrder.ts`           | 並びの位置を振る（削除で詰める・並べ替えで振り直す）         |
+
+**関数の形は2種類**という規則を置いた。`tx` を先に取るものは木を書く側（バルクと、新しい
+枝をまとめて入れるところ）、`definitionId` を先に取るものが IPC の口。
+
+**検査**: `__tests__/answer-sheet-builder/recordWrites.test.ts`（9件。並びが詰まること・
+触っていない行を書かないこと・子を書くと解答用紙の更新日時が進むこと・担当でなければ
+書けないこと）と `sliderGesture.test.tsx`（6件。ジェスチャの間は溜め、離したときに同じ
+対象の最後の1つだけを書く）。前2つはガードを外すと実際に落ちることを確認済み。
+
+### 7.5 段階5 — バルクの限定と改名（済 2026-08-19）
+
+1. `asb:save-definition` → `asb:replace-definition` へ改名した
+2. 通る経路は**新規作成・undo / redo・複製・アーカイブ取り込みの4つ**。計画は3つと
+   書いていたが、新規作成（既定の姿を丸ごと置く）も「全体を指定する」経路である
+3. ハンドラと `replaceAsbDefinition` のコメントに、日常の編集を流さない理由を残した
 
 ---
 
@@ -1017,3 +1057,4 @@ delete → recreate で、id も uuid 再生成。#1126 の tombstone の罠に�
 | 2026-08-13 | §4.0 を追加。SQL の実測から原則を確定し、担当者ガードの置き場所を決定。未決2点を明示                       |
 | 2026-08-19 | 段階1〜3 を実施。§7.1〜7.3 に結果と計画からの差（関数群の書き分け・`SET_RENDER_MODE`・子の reorder）を記録 |
 | 2026-08-19 | `renderMode` を解答用紙の列から利用者の設定へ移し、書き出しを常に両方（解答用紙・模範解答）にした          |
+| 2026-08-19 | 段階4〜5 を実施。§7.4〜7.5 に結果と計画からの差（属性ひとそろい・ガードの出所・監査ログの粒度）を記録      |

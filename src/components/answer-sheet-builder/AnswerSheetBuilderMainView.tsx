@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { ArrowLeft, Redo2, Undo2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useSaveStatus } from "@/components/hooks/useSaveStatus"
 import { Button } from "@/components/ui/button"
@@ -15,7 +15,8 @@ import { useAuth } from "@/contexts/AuthContext"
 import { parsePreference } from "@/lib/userPreferences"
 import {
   answerSheetDefinitionQuery,
-  saveAnswerSheetDefinitionMutation,
+  applyAnswerSheetEditMutation,
+  replaceAnswerSheetDefinitionMutation,
 } from "@/queries/answerSheetBuilder"
 import {
   setUserPreferenceMutation,
@@ -23,11 +24,12 @@ import {
 } from "@/queries/settings"
 import type {
   AnswerSheetDefinition,
+  AnswerSheetEditAction,
   PaperSettings,
 } from "@/types/answerSheetDefinition.types"
 
 import { countAsbQuestions } from "./answerSheetStats"
-import { AsbGestureProvider, useAsbGestureOwner } from "./AsbGestureContext"
+import { AsbGestureProvider } from "./AsbGestureContext"
 import { GlobalSettingsForm } from "./components/form/GlobalSettingsForm"
 import { HeaderFieldEditor } from "./components/form/HeaderFieldEditor"
 import { LineStylePicker } from "./components/form/LineStylePicker"
@@ -41,6 +43,7 @@ import {
   useMultiPageLayout,
 } from "./hooks/useAnswerSheetLayout"
 import { useAsbOwner } from "./hooks/useAsbOwner"
+import { useAsbWriteGate } from "./hooks/useAsbWriteGate"
 import { useUndoRedoShortcuts } from "./hooks/useUndoRedoShortcuts"
 
 interface AnswerSheetBuilderMainViewProps {
@@ -56,8 +59,6 @@ export function AnswerSheetBuilderMainView({
 }: AnswerSheetBuilderMainViewProps) {
   const { user } = useAuth()
   const router = useRouter()
-  const { definition, actions, setDefinition, canUndo, canRedo, undo, redo } =
-    useAnswerSheetDefinition()
 
   // どちらの姿で見るかは、解答用紙ではなく使う人に付く（他の解答用紙を開いても同じ）
   const { data: storedRenderMode } = useQuery(
@@ -67,8 +68,6 @@ export function AnswerSheetBuilderMainView({
   const { mutate: setPreference } = useMutation(
     setUserPreferenceMutation(user?.id)
   )
-  // つまみやドラッグの最中は保存しない（離したときに1回だけ書く）
-  const { isGesturing, handlers: gestureHandlers } = useAsbGestureOwner()
 
   const { saveStatus, showSaving, showSaved } = useSaveStatus()
   const {
@@ -82,19 +81,67 @@ export function AnswerSheetBuilderMainView({
     data: savedDefinition,
     isPending: isLoadPending,
     error: loadError,
+    refetch: refetchDefinition,
   } = useQuery(answerSheetDefinitionQuery(definitionId))
-  const { mutateAsync: saveDefinition } = useMutation(
-    saveAnswerSheetDefinitionMutation(definitionId)
+
+  // 編集1つ＝1レコードの書き込み1本。木をまるごと置き換えるのは undo / redo だけ
+  const { mutate: applyEdit } = useMutation(
+    applyAnswerSheetEditMutation(definitionId)
+  )
+  const { mutate: replaceDefinition } = useMutation(
+    replaceAnswerSheetDefinitionMutation(definitionId)
   )
 
   /**
-   * 直近で DB に入っていると分かっている内容。
+   * 書き込みに失敗したときの立て直し。
    *
-   * これと同じものを保存しに行かないための目印。読み込んだ直後に自動保存が
-   * 発火すると、開いただけで書き込みが走る。取得が古ければ、それを書き戻して
-   * 編集を巻き戻すことにもなる。
+   * 中身を書けるのは編集状態を持つフックより後（DB から読み直して画面へ入れ直すため）
+   * なので、関所へは「そのとき入っているもの」を呼ぶ形で渡す。
    */
-  const [persisted, setPersisted] = useState<AnswerSheetDefinition | null>(null)
+  const handleWriteFailure = useRef<() => void>(() => {})
+
+  const write = useCallback(
+    (action: AnswerSheetEditAction) => {
+      showSaving()
+      applyEdit(action, {
+        onSuccess: showSaved,
+        onError: () => handleWriteFailure.current(),
+      })
+    },
+    [applyEdit, showSaving, showSaved]
+  )
+  // つまみやドラッグの最中は待たせ、離したときに1回だけ書く
+  const { onEdit, gestureHandlers } = useAsbWriteGate(write)
+
+  const restore = useCallback(
+    (restored: AnswerSheetDefinition) => {
+      if (!user?.id) return
+      showSaving()
+      replaceDefinition(
+        { definition: restored, userId: user.id },
+        { onSuccess: showSaved, onError: () => handleWriteFailure.current() }
+      )
+    },
+    [replaceDefinition, showSaving, showSaved, user?.id]
+  )
+
+  const { definition, actions, setDefinition, canUndo, canRedo, undo, redo } =
+    useAnswerSheetDefinition({ onEdit, onRestore: restore })
+
+  /**
+   * 失敗したら DB を正として画面を合わせる。
+   *
+   * 書けなかった値を「保存済み」として見せ続けない。巻き戻し先は手元の断面ではなく DB
+   * である（同期で他の教員の変更が入っている可能性がある）。
+   */
+  useEffect(() => {
+    handleWriteFailure.current = () => {
+      void refetchDefinition().then((refetched) => {
+        if (refetched.data) setDefinition(refetched.data)
+      })
+    }
+  })
+
   const [seededDefinitionId, setSeededDefinitionId] = useState<string | null>(
     null
   )
@@ -102,36 +149,7 @@ export function AnswerSheetBuilderMainView({
   if (savedDefinition && !isLoaded) {
     setSeededDefinitionId(definitionId)
     setDefinition(savedDefinition)
-    setPersisted(savedDefinition)
   }
-
-  // 即時自動保存（担当者だけ。読み込んだ内容そのものは書き戻さない）
-  useEffect(() => {
-    if (!isLoaded || !isOwner || !user?.id) return
-    if (definition === persisted) return
-    if (isGesturing) return
-
-    showSaving()
-    const saving = definition
-    saveDefinition({ definition: saving, userId: user.id })
-      .then(() => {
-        setPersisted(saving)
-        showSaved()
-      })
-      .catch(() => {
-        // 失敗の通知は MutationCache が出す。ここは「保存済み」の目印を進めない
-      })
-  }, [
-    definition,
-    persisted,
-    isLoaded,
-    isOwner,
-    isGesturing,
-    user?.id,
-    showSaving,
-    showSaved,
-    saveDefinition,
-  ])
 
   /** 用紙設定の一部だけを差し替える（解答用紙1件の列を書く、と同じこと） */
   const updatePaperSettings = useCallback(

@@ -11,10 +11,11 @@ import type { Prisma } from "@prisma/client"
 
 import type { AsbCellParent } from "../../../src/types/answerSheetDefinition.types"
 import type { OMRCellConfig } from "../../../src/types/omr.types"
+import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
 import { isUnchanged, writeRow } from "./rowDiff"
 
 /** 設定と選択肢をまとめて書く。書いたら `true` */
-export async function upsertAsbOmrConfig(
+export async function writeAsbOmrConfig(
   tx: Prisma.TransactionClient,
   parent: AsbCellParent,
   config: OMRCellConfig
@@ -103,4 +104,36 @@ export async function deleteRemovedAsbOmrConfigs(
     },
   })
   return count > 0
+}
+
+// =============================================================================
+// 1件ずつの書き込み（IPC から）
+// =============================================================================
+
+/**
+ * セルの OMR 設定を書く（無ければ作る）。
+ *
+ * 選択肢は設定に完全従属し、個々の選択肢に id が無い。**id の無いレコードは
+ * プリミティブで指せない**ので、設定単位の upsert が意図の最小単位になる
+ * （docs/asb-ipc-split-plan.md §4.4）。
+ */
+export async function upsertAsbOmrConfig(
+  definitionId: string,
+  parent: AsbCellParent,
+  config: OMRCellConfig
+): Promise<void> {
+  await writeAsbDefinitionContent(definitionId, (tx) =>
+    writeAsbOmrConfig(tx, parent, config)
+  )
+}
+
+/** セルの OMR 設定を外す。選択肢は Cascade で消える */
+export async function deleteAsbOmrConfig(
+  definitionId: string,
+  parent: AsbCellParent
+): Promise<void> {
+  await writeAsbDefinitionContent(definitionId, async (tx) => {
+    const { count } = await tx.asbOmrConfig.deleteMany({ where: parent })
+    return count > 0
+  })
 }

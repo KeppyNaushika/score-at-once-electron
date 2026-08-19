@@ -12,7 +12,28 @@ import type {
   ASBExportPngArgs,
   ASBUploadImageArgs,
 } from "../../src/types/answerSheetBuilder.types"
-import type { AnswerSheetDefinition } from "../../src/types/answerSheetDefinition.types"
+import type {
+  AnswerSheetDefinition,
+  AsbBranchQuestionAttributes,
+  AsbCellParent,
+  AsbCharGuideAttributes,
+  AsbDefinitionAttributes,
+  AsbHeaderFieldAttributes,
+  AsbImageElementAttributes,
+  AsbMajorQuestionAttributes,
+  AsbSubQuestionAttributes,
+  AsbTextElementAttributes,
+  BranchQuestion,
+  CellImageElement,
+  CellTextElement,
+  HeaderFieldDefinition,
+  LabelAssignment,
+  LabelCategory,
+  MajorQuestion,
+  ManuscriptCharGuide,
+  SubQuestion,
+} from "../../src/types/answerSheetDefinition.types"
+import type { OMRCellConfig } from "../../src/types/omr.types"
 import { convertToExam } from "../lib/answer-sheet-builder/examConverter"
 import {
   getAbsolutePathFromData,
@@ -23,13 +44,58 @@ import { exportAsbDefinition } from "../lib/export/asb-archive"
 import { importAsbDefinition } from "../lib/import/asb-archive"
 import { htmlToPngBuffer } from "../lib/printUtils"
 import {
+  createAsbBranchQuestion,
+  deleteAsbBranchQuestion,
+  reorderAsbBranchQuestions,
+  updateAsbBranchQuestion,
+} from "../lib/prisma/asbBranchQuestion"
+import {
+  createAsbCharGuide,
+  deleteAsbCharGuide,
+  updateAsbCharGuide,
+} from "../lib/prisma/asbCharGuide"
+import {
+  applyAsbLabelPreset,
   deleteAsbDefinition,
   getAsbDefinition,
   getAsbDefinitionOwner,
   listAsbDefinitions,
   transferAsbDefinitionOwner,
+  updateAsbDefinition,
 } from "../lib/prisma/asbDefinition"
 import { replaceAsbDefinition } from "../lib/prisma/asbDefinitionReplace"
+import {
+  createAsbHeaderField,
+  deleteAsbHeaderField,
+  reorderAsbHeaderFields,
+  updateAsbHeaderField,
+} from "../lib/prisma/asbHeaderField"
+import {
+  createAsbImageElement,
+  deleteAsbImageElement,
+  updateAsbImageElement,
+} from "../lib/prisma/asbImageElement"
+import {
+  createAsbMajorQuestion,
+  deleteAsbMajorQuestion,
+  reorderAsbMajorQuestions,
+  updateAsbMajorQuestion,
+} from "../lib/prisma/asbMajorQuestion"
+import {
+  deleteAsbOmrConfig,
+  upsertAsbOmrConfig,
+} from "../lib/prisma/asbOmrConfig"
+import {
+  createAsbSubQuestion,
+  deleteAsbSubQuestion,
+  reorderAsbSubQuestions,
+  updateAsbSubQuestion,
+} from "../lib/prisma/asbSubQuestion"
+import {
+  createAsbTextElement,
+  deleteAsbTextElement,
+  updateAsbTextElement,
+} from "../lib/prisma/asbTextElement"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
 /** 解答用紙作成機能のIPCチャンネル（定義CRUD・画像管理・PNG出力・インポート/エクスポート）を登録する */
@@ -62,12 +128,242 @@ export const answerSheetBuilderHandlers = {
     return definition
   },
 
-  // 定義保存
-  "asb:save-definition": async (
+  // 定義まるごとの置き換え。**日常の編集をここへ流さない**（下の1件ずつの書き込みへ）。
+  // 通すのは新規作成・undo/redo・複製・アーカイブ取り込みの4経路だけで、どれも
+  // 「全体を指定する」ことに意味がある（docs/asb-ipc-split-plan.md §4.5）
+  "asb:replace-definition": async (
     definition: AnswerSheetDefinition,
-    userId: string
+    ownerUserId: string
   ) => {
-    await replaceAsbDefinition(definition, userId)
+    await replaceAsbDefinition(definition, ownerUserId)
+  },
+
+  // ---------------------------------------------------------------------------
+  // 1件ずつの書き込み（実体 × 操作）
+  //
+  // どれも `definitionId` を先に取る。**担当かどうかの判定に要る**（判定は現在の DB を
+  // 見て main が行う。renderer が渡す利用者 id は信じない）。また、子だけが変わった
+  // ときも解答用紙の更新日時を進める必要があり、その相手を名指しするのにも要る。
+  // ---------------------------------------------------------------------------
+
+  "asb:update-definition": async (
+    definitionId: string,
+    attributes: AsbDefinitionAttributes
+  ) => {
+    await updateAsbDefinition(definitionId, attributes)
+  },
+
+  "asb:apply-label-preset": async (
+    definitionId: string,
+    category: LabelCategory,
+    preset: string,
+    relabeled: LabelAssignment[]
+  ) => {
+    await applyAsbLabelPreset(definitionId, category, preset, relabeled)
+  },
+
+  "asb:create-header-field": async (
+    definitionId: string,
+    headerField: HeaderFieldDefinition
+  ) => {
+    await createAsbHeaderField(definitionId, headerField)
+  },
+
+  "asb:update-header-field": async (
+    definitionId: string,
+    headerFieldId: string,
+    attributes: AsbHeaderFieldAttributes
+  ) => {
+    await updateAsbHeaderField(definitionId, headerFieldId, attributes)
+  },
+
+  "asb:delete-header-field": async (
+    definitionId: string,
+    headerFieldId: string
+  ) => {
+    await deleteAsbHeaderField(definitionId, headerFieldId)
+  },
+
+  "asb:reorder-header-fields": async (
+    definitionId: string,
+    orderedIds: string[]
+  ) => {
+    await reorderAsbHeaderFields(definitionId, orderedIds)
+  },
+
+  "asb:create-major-question": async (
+    definitionId: string,
+    majorQuestion: MajorQuestion
+  ) => {
+    await createAsbMajorQuestion(definitionId, majorQuestion)
+  },
+
+  "asb:update-major-question": async (
+    definitionId: string,
+    majorQuestionId: string,
+    attributes: AsbMajorQuestionAttributes
+  ) => {
+    await updateAsbMajorQuestion(definitionId, majorQuestionId, attributes)
+  },
+
+  "asb:delete-major-question": async (
+    definitionId: string,
+    majorQuestionId: string
+  ) => {
+    await deleteAsbMajorQuestion(definitionId, majorQuestionId)
+  },
+
+  "asb:reorder-major-questions": async (
+    definitionId: string,
+    orderedIds: string[]
+  ) => {
+    await reorderAsbMajorQuestions(definitionId, orderedIds)
+  },
+
+  "asb:create-sub-question": async (
+    definitionId: string,
+    majorQuestionId: string,
+    subQuestion: SubQuestion
+  ) => {
+    await createAsbSubQuestion(definitionId, majorQuestionId, subQuestion)
+  },
+
+  "asb:update-sub-question": async (
+    definitionId: string,
+    subQuestionId: string,
+    attributes: AsbSubQuestionAttributes
+  ) => {
+    await updateAsbSubQuestion(definitionId, subQuestionId, attributes)
+  },
+
+  "asb:delete-sub-question": async (
+    definitionId: string,
+    subQuestionId: string
+  ) => {
+    await deleteAsbSubQuestion(definitionId, subQuestionId)
+  },
+
+  "asb:reorder-sub-questions": async (
+    definitionId: string,
+    majorQuestionId: string,
+    orderedIds: string[]
+  ) => {
+    await reorderAsbSubQuestions(definitionId, majorQuestionId, orderedIds)
+  },
+
+  "asb:create-branch-question": async (
+    definitionId: string,
+    subQuestionId: string,
+    branchQuestion: BranchQuestion
+  ) => {
+    await createAsbBranchQuestion(definitionId, subQuestionId, branchQuestion)
+  },
+
+  "asb:update-branch-question": async (
+    definitionId: string,
+    branchQuestionId: string,
+    attributes: AsbBranchQuestionAttributes
+  ) => {
+    await updateAsbBranchQuestion(definitionId, branchQuestionId, attributes)
+  },
+
+  "asb:delete-branch-question": async (
+    definitionId: string,
+    branchQuestionId: string
+  ) => {
+    await deleteAsbBranchQuestion(definitionId, branchQuestionId)
+  },
+
+  "asb:reorder-branch-questions": async (
+    definitionId: string,
+    subQuestionId: string,
+    orderedIds: string[]
+  ) => {
+    await reorderAsbBranchQuestions(definitionId, subQuestionId, orderedIds)
+  },
+
+  "asb:create-text-element": async (
+    definitionId: string,
+    parent: AsbCellParent,
+    textElement: CellTextElement
+  ) => {
+    await createAsbTextElement(definitionId, parent, textElement)
+  },
+
+  "asb:update-text-element": async (
+    definitionId: string,
+    textElementId: string,
+    attributes: AsbTextElementAttributes
+  ) => {
+    await updateAsbTextElement(definitionId, textElementId, attributes)
+  },
+
+  "asb:delete-text-element": async (
+    definitionId: string,
+    textElementId: string
+  ) => {
+    await deleteAsbTextElement(definitionId, textElementId)
+  },
+
+  "asb:create-image-element": async (
+    definitionId: string,
+    parent: AsbCellParent,
+    imageElement: CellImageElement
+  ) => {
+    await createAsbImageElement(definitionId, parent, imageElement)
+  },
+
+  "asb:update-image-element": async (
+    definitionId: string,
+    imageElementId: string,
+    attributes: AsbImageElementAttributes
+  ) => {
+    await updateAsbImageElement(definitionId, imageElementId, attributes)
+  },
+
+  "asb:delete-image-element": async (
+    definitionId: string,
+    imageElementId: string
+  ) => {
+    await deleteAsbImageElement(definitionId, imageElementId)
+  },
+
+  "asb:create-char-guide": async (
+    definitionId: string,
+    subQuestionId: string,
+    charGuide: ManuscriptCharGuide
+  ) => {
+    await createAsbCharGuide(definitionId, subQuestionId, charGuide)
+  },
+
+  "asb:update-char-guide": async (
+    definitionId: string,
+    charGuideId: string,
+    attributes: AsbCharGuideAttributes
+  ) => {
+    await updateAsbCharGuide(definitionId, charGuideId, attributes)
+  },
+
+  "asb:delete-char-guide": async (
+    definitionId: string,
+    charGuideId: string
+  ) => {
+    await deleteAsbCharGuide(definitionId, charGuideId)
+  },
+
+  "asb:upsert-omr-config": async (
+    definitionId: string,
+    parent: AsbCellParent,
+    config: OMRCellConfig
+  ) => {
+    await upsertAsbOmrConfig(definitionId, parent, config)
+  },
+
+  "asb:delete-omr-config": async (
+    definitionId: string,
+    parent: AsbCellParent
+  ) => {
+    await deleteAsbOmrConfig(definitionId, parent)
   },
 
   // 定義削除（画像ディレクトリも削除）

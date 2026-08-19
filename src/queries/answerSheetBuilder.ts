@@ -1,5 +1,11 @@
 import { queryOptions } from "@tanstack/react-query"
 
+import { assertNever } from "@/lib/assertNever"
+import type {
+  AnswerSheetDefinition,
+  AnswerSheetEditAction,
+} from "@/types/answerSheetDefinition.types"
+
 import { auditLogListKey } from "./auditLog"
 import { defineMutation } from "./defineMutation"
 import { examListQuery } from "./exam"
@@ -11,8 +17,9 @@ import { scopeKeys } from "./keys"
  * 対応する preload は `electron-src/preload-apis/answerSheetBuilderApi.ts`。
  * 解答用紙に付けるタグは `tag.ts` が持つ（タグ側の一覧も古くなるため）。
  *
- * **定義1件は今も1本の大きな塊として往復する。** 実体ごとに割るのは段階15〜17。
- * ここはその前段として、往復の口を1箇所に集めるところまでを持つ。
+ * **書き込みは実体ごとに割ってある。** 画面の編集1つが1レコードの書き込み1本になり、
+ * 触っていないレコードの値は IPC に載らない。木をまるごと運ぶ `replace` は、全体を
+ * 指定することに意味がある4経路（新規作成・undo/redo・複製・取り込み）だけが使う。
  */
 
 // =====================================================================
@@ -58,45 +65,196 @@ export const answerSheetDefinitionOwnerQuery = (definitionId: string) =>
 const listKey = answerSheetDefinitionListQuery().queryKey
 
 /**
- * 新しい定義を1件作る。
+ * 編集の意図を、対応する1レコードの書き込みへ写す。**書き込みの関所**。
  *
- * 保存と同じ口（`saveDefinition`）だが、取り直す先は一覧だけ。作ったばかりの
- * 解答用紙にはまだ何もキャッシュが無いので、そのまとまりを指す意味が無い。
+ * `switch` は `AnswerSheetEditAction` を網羅する。action を1つ足して書き込みを書かなければ
+ * `assertNever` が型検査で落ちるので、**片方だけ足した状態を作れない**（action と書き込みを
+ * 二重に持つ設計の唯一の危険がこれで、同期の除外一覧では実際に2度破れている）。
  */
-export const createAnswerSheetDefinitionMutation = () =>
+function writeAnswerSheetEdit(
+  definitionId: string,
+  action: AnswerSheetEditAction
+): Promise<void> {
+  const asb = window.electronAPI.answerSheetBuilder
+  switch (action.type) {
+    case "UPDATE_DEFINITION":
+      return asb.updateDefinition(definitionId, action.payload.attributes)
+    case "APPLY_LABEL_PRESET":
+      return asb.applyLabelPreset(
+        definitionId,
+        action.payload.category,
+        action.payload.preset,
+        action.payload.relabeled
+      )
+
+    case "ADD_HEADER_FIELD":
+      return asb.createHeaderField(definitionId, action.payload.headerField)
+    case "UPDATE_HEADER_FIELD":
+      return asb.updateHeaderField(
+        definitionId,
+        action.payload.headerFieldId,
+        action.payload.attributes
+      )
+    case "DELETE_HEADER_FIELD":
+      return asb.deleteHeaderField(definitionId, action.payload.headerFieldId)
+    case "REORDER_HEADER_FIELDS":
+      return asb.reorderHeaderFields(definitionId, action.payload.orderedIds)
+
+    case "ADD_MAJOR_QUESTION":
+      return asb.createMajorQuestion(definitionId, action.payload.majorQuestion)
+    case "UPDATE_MAJOR_QUESTION":
+      return asb.updateMajorQuestion(
+        definitionId,
+        action.payload.majorQuestionId,
+        action.payload.attributes
+      )
+    case "DELETE_MAJOR_QUESTION":
+      return asb.deleteMajorQuestion(
+        definitionId,
+        action.payload.majorQuestionId
+      )
+    case "REORDER_MAJOR_QUESTIONS":
+      return asb.reorderMajorQuestions(definitionId, action.payload.orderedIds)
+
+    case "ADD_SUB_QUESTION":
+      return asb.createSubQuestion(
+        definitionId,
+        action.payload.majorQuestionId,
+        action.payload.subQuestion
+      )
+    case "UPDATE_SUB_QUESTION":
+      return asb.updateSubQuestion(
+        definitionId,
+        action.payload.subQuestionId,
+        action.payload.attributes
+      )
+    case "DELETE_SUB_QUESTION":
+      return asb.deleteSubQuestion(definitionId, action.payload.subQuestionId)
+    case "REORDER_SUB_QUESTIONS":
+      return asb.reorderSubQuestions(
+        definitionId,
+        action.payload.majorQuestionId,
+        action.payload.orderedIds
+      )
+
+    case "ADD_BRANCH_QUESTION":
+      return asb.createBranchQuestion(
+        definitionId,
+        action.payload.subQuestionId,
+        action.payload.branchQuestion
+      )
+    case "UPDATE_BRANCH_QUESTION":
+      return asb.updateBranchQuestion(
+        definitionId,
+        action.payload.branchQuestionId,
+        action.payload.attributes
+      )
+    case "DELETE_BRANCH_QUESTION":
+      return asb.deleteBranchQuestion(
+        definitionId,
+        action.payload.branchQuestionId
+      )
+    case "REORDER_BRANCH_QUESTIONS":
+      return asb.reorderBranchQuestions(
+        definitionId,
+        action.payload.subQuestionId,
+        action.payload.orderedIds
+      )
+
+    case "ADD_TEXT_ELEMENT":
+      return asb.createTextElement(
+        definitionId,
+        action.payload.parent,
+        action.payload.textElement
+      )
+    case "UPDATE_TEXT_ELEMENT":
+      return asb.updateTextElement(
+        definitionId,
+        action.payload.textElementId,
+        action.payload.attributes
+      )
+    case "DELETE_TEXT_ELEMENT":
+      return asb.deleteTextElement(definitionId, action.payload.textElementId)
+
+    case "ADD_IMAGE_ELEMENT":
+      return asb.createImageElement(
+        definitionId,
+        action.payload.parent,
+        action.payload.imageElement
+      )
+    case "UPDATE_IMAGE_ELEMENT":
+      return asb.updateImageElement(
+        definitionId,
+        action.payload.imageElementId,
+        action.payload.attributes
+      )
+    case "DELETE_IMAGE_ELEMENT":
+      return asb.deleteImageElement(definitionId, action.payload.imageElementId)
+
+    case "ADD_CHAR_GUIDE":
+      return asb.createCharGuide(
+        definitionId,
+        action.payload.subQuestionId,
+        action.payload.charGuide
+      )
+    case "UPDATE_CHAR_GUIDE":
+      return asb.updateCharGuide(
+        definitionId,
+        action.payload.charGuideId,
+        action.payload.attributes
+      )
+    case "DELETE_CHAR_GUIDE":
+      return asb.deleteCharGuide(definitionId, action.payload.charGuideId)
+
+    case "UPSERT_OMR_CONFIG":
+      return asb.upsertOmrConfig(
+        definitionId,
+        action.payload.parent,
+        action.payload.config
+      )
+    case "DELETE_OMR_CONFIG":
+      return asb.deleteOmrConfig(definitionId, action.payload.parent)
+
+    default:
+      return assertNever(action)
+  }
+}
+
+/**
+ * 編集を1つ書く。
+ *
+ * 書く先のテーブルは action ごとに違うが、**取り直す先は同じ**（その解答用紙のまとまりと
+ * 一覧の要約）なので、宣言は1つで足りる。行き先が同じ＝`mutationKey` も同じなので、
+ * 連続した編集の取り直しは最後の1つにまとまる。
+ *
+ * `scope` を付けてあるのは順番のため。TanStack は同じ `scope` の書き込みを直列に実行する
+ * ので、「足す → その属性を書く」が入れ替わらない。
+ */
+export const applyAnswerSheetEditMutation = (definitionId: string) =>
   defineMutation({
-    mutationFn: (input: {
-      definition: Parameters<
-        typeof window.electronAPI.answerSheetBuilder.saveDefinition
-      >[0]
-      userId: string
-    }) =>
-      window.electronAPI.answerSheetBuilder.saveDefinition(
-        input.definition,
-        input.userId
-      ),
+    mutationFn: (action: AnswerSheetEditAction) =>
+      writeAnswerSheetEdit(definitionId, action),
+    scope: { id: `answerSheetDefinition:${definitionId}` },
     meta: {
-      invalidates: [listKey],
-      errorMessage: "解答用紙を作成できませんでした",
+      invalidates: [scopeKeys.answerSheetDefinition(definitionId), listKey],
+      errorMessage: "解答用紙を保存できませんでした",
     },
   })
 
 /**
- * 定義1件を丸ごと保存する。
+ * 解答用紙を丸ごと置き換える。
  *
- * 保存すると、その解答用紙に紐づくもの（本体・担当）も一覧の要約（名前・設問数・
- * 更新日時）も古くなるので、どちらも取り直す。編集画面は読み込んだ内容を自分の
- * 状態として持っている（種を蒔くのは1度だけ）ので、取り直しで編集は巻き戻らない。
+ * 使ってよいのは**全体を指定することに意味がある**経路だけ — undo / redo（過去の姿）と、
+ * 新規作成・複製・取り込み（まだ無いものを丸ごと置く）。日常の編集をここへ流すと、触って
+ * いないレコードの値まで載り、同期で先へ進んだ相手の編集を巻き戻す。
  */
-export const saveAnswerSheetDefinitionMutation = (definitionId: string) =>
+export const replaceAnswerSheetDefinitionMutation = (definitionId: string) =>
   defineMutation({
     mutationFn: (input: {
-      definition: Parameters<
-        typeof window.electronAPI.answerSheetBuilder.saveDefinition
-      >[0]
+      definition: AnswerSheetDefinition
       userId: string
     }) =>
-      window.electronAPI.answerSheetBuilder.saveDefinition(
+      window.electronAPI.answerSheetBuilder.replaceDefinition(
         input.definition,
         input.userId
       ),
@@ -104,6 +262,28 @@ export const saveAnswerSheetDefinitionMutation = (definitionId: string) =>
     meta: {
       invalidates: [scopeKeys.answerSheetDefinition(definitionId), listKey],
       errorMessage: "解答用紙を保存できませんでした",
+    },
+  })
+
+/**
+ * 新しい定義を1件作る。
+ *
+ * 木をまるごと置く経路（`replace`）だが、取り直す先は一覧だけ。作ったばかりの
+ * 解答用紙にはまだ何もキャッシュが無いので、そのまとまりを指す意味が無い。
+ */
+export const createAnswerSheetDefinitionMutation = () =>
+  defineMutation({
+    mutationFn: (input: {
+      definition: AnswerSheetDefinition
+      userId: string
+    }) =>
+      window.electronAPI.answerSheetBuilder.replaceDefinition(
+        input.definition,
+        input.userId
+      ),
+    meta: {
+      invalidates: [listKey],
+      errorMessage: "解答用紙を作成できませんでした",
     },
   })
 

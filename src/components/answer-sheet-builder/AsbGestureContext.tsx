@@ -1,14 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
+import { createContext, useContext } from "react"
 
 /**
  * 解答用紙の編集で「いまジェスチャの最中か」を伝える。
@@ -20,6 +13,8 @@ import {
  *
  * つまみは画面の深いところ（用紙設定・罫線・ヘッダー項目…）に散らばっていて、どれも
  * 同じ1つの「保存を待たせる」に繋がるので、props で配らずに context で渡す。
+ *
+ * 受け取って実際に待たせるのは書き込みの関所（`hooks/useAsbWriteGate.ts`）。
  */
 
 interface AsbGestureHandlers {
@@ -37,31 +32,6 @@ const AsbGestureContext = createContext<AsbGestureHandlers>(NO_GESTURE)
 /** つまみ・ドラッグ側が使う。始まりと終わりを伝えるだけ */
 export function useAsbGesture(): AsbGestureHandlers {
   return useContext(AsbGestureContext)
-}
-
-/**
- * 保存する側（編集画面）が使う。
- *
- * `isGesturing` の間は保存しない。離した時点で `false` に戻り、そのとき1回だけ保存が走る。
- * ページの外で指を離したときに `true` のまま残らないよう、`pointerup` を最後の砦にする
- * （残ると以後の編集が保存されなくなる）。
- */
-export function useAsbGestureOwner() {
-  const [isGesturing, setIsGesturing] = useState(false)
-  const begin = useCallback(() => setIsGesturing(true), [])
-  const end = useCallback(() => setIsGesturing(false), [])
-  const handlers = useMemo(() => ({ begin, end }), [begin, end])
-
-  useEffect(() => {
-    window.addEventListener("pointerup", end)
-    window.addEventListener("pointercancel", end)
-    return () => {
-      window.removeEventListener("pointerup", end)
-      window.removeEventListener("pointercancel", end)
-    }
-  }, [end])
-
-  return { isGesturing, handlers }
 }
 
 export function AsbGestureProvider({

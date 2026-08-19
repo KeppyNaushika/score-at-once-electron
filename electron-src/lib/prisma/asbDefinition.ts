@@ -10,13 +10,19 @@
 import type { Prisma } from "@prisma/client"
 
 import type { ASBDefinitionListItem } from "../../../src/types/answerSheetBuilder.types"
-import type { AnswerSheetDefinition } from "../../../src/types/answerSheetDefinition.types"
+import type {
+  AnswerSheetDefinition,
+  AsbDefinitionAttributes,
+  LabelCategory,
+} from "../../../src/types/answerSheetDefinition.types"
 import {
   dbToDefinition,
   flattenGlobalSettings,
 } from "./asbDefinitionConverters"
+import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
 import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
+import { updateRowIfChanged } from "./rowDiff"
 
 // =============================================================================
 // DB型定義（fullInclude用）
@@ -161,7 +167,7 @@ export async function getAsbDefinition(
  * そのまま載せる。**担当（`userId`）と作成日時はここに含めない** — どちらも
  * 保存で動くものではない（作成時と担当の受け渡しでだけ決まる）。
  */
-export function asbDefinitionRow(definition: AnswerSheetDefinition) {
+export function asbDefinitionRow(definition: AsbDefinitionAttributes) {
   return {
     name: definition.name,
     labelPresetMajor: definition.labelPresets?.major ?? null,
@@ -169,6 +175,93 @@ export function asbDefinitionRow(definition: AnswerSheetDefinition) {
     labelPresetBranch: definition.labelPresets?.branch ?? null,
     ...flattenGlobalSettings(definition.settings),
   }
+}
+
+// =============================================================================
+// 1件ずつの書き込み（IPC から）
+// =============================================================================
+
+/**
+ * 解答用紙そのものの属性（名前・番号の既定・用紙設定）を書き換える。
+ *
+ * ヘッダー項目は別テーブルなので、ここでは動かない。
+ */
+export async function updateAsbDefinition(
+  definitionId: string,
+  attributes: AsbDefinitionAttributes
+): Promise<void> {
+  await writeAsbDefinitionContent(definitionId, async (tx) => {
+    const existing = await tx.asbDefinition.findUnique({
+      where: { id: definitionId },
+    })
+    if (!existing) throw new Error("解答用紙が見つかりません")
+    const data = asbDefinitionRow(attributes)
+    return updateRowIfChanged(existing, data, () =>
+      tx.asbDefinition.update({ where: { id: definitionId }, data })
+    )
+  })
+}
+
+/**
+ * 番号の既定を当て、配下のラベルを振り直す。
+ *
+ * **どのラベルになるかを決めるのは renderer。** 既定の書式を読んで番号を割り当てる
+ * 計算（`parsePresetLabels` と並びの対応）は画面が持ち、IPC が運ぶのはその結果だけ
+ * （docs/coding-style.md「main 側で特殊な計算をして専用 IPC を生やさない」）。
+ *
+ * 既定の列と振り直しを1つの書き込みにしてあるのは、片方だけが入ると画面と DB で
+ * 「何番の既定か」と「実際のラベル」が食い違うため。
+ */
+export async function applyAsbLabelPreset(
+  definitionId: string,
+  category: LabelCategory,
+  preset: string,
+  relabeled: { id: string; label: string }[]
+): Promise<void> {
+  await writeAsbDefinitionContent(definitionId, async (tx) => {
+    const existing = await tx.asbDefinition.findUnique({
+      where: { id: definitionId },
+    })
+    if (!existing) throw new Error("解答用紙が見つかりません")
+
+    const presetColumn = {
+      major: { labelPresetMajor: preset },
+      sub: { labelPresetSub: preset },
+      branch: { labelPresetBranch: preset },
+    }[category]
+    let changed = await updateRowIfChanged(existing, presetColumn, () =>
+      tx.asbDefinition.update({
+        where: { id: definitionId },
+        data: presetColumn,
+      })
+    )
+
+    // 振り直すのは実際に変わるものだけ（`label: { not: label }`）。同じ値で書くと
+    // 触っていない行まで `updatedAt` が動き、同期で相手の編集をその行ごと倒す
+    const relabel = {
+      major: (id: string, label: string) =>
+        tx.asbMajorQuestion.updateMany({
+          where: { id, label: { not: label } },
+          data: { label },
+        }),
+      sub: (id: string, label: string) =>
+        tx.asbSubQuestion.updateMany({
+          where: { id, label: { not: label } },
+          data: { label },
+        }),
+      branch: (id: string, label: string) =>
+        tx.asbBranchQuestion.updateMany({
+          where: { id, label: { not: label } },
+          data: { label },
+        }),
+    }[category]
+
+    for (const { id, label } of relabeled) {
+      const { count } = await relabel(id, label)
+      if (count > 0) changed = true
+    }
+    return changed
+  })
 }
 
 // =============================================================================

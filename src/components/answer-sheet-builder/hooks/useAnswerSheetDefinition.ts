@@ -1,34 +1,48 @@
 /**
- * 解答用紙の編集状態（useReducer + undo/redo）。
+ * 解答用紙の編集状態（useReducer + undo/redo）と、編集の意図の組み立て。
  *
  * **対象は id で指す。** 添字で指すと、その添字が「どの行を書くか」の決定に使われる。
  * 新しい実体はここ（呼び出し側）で作って action に載せる。reducer の中で作ると、
  * 作った id を呼び出し側が知れず、対応する書き込みを組み立てられない。
  *
- * 書き込み（DB への保存）はここではしない。編集画面が持つ。
+ * **画面は属性の一部を触り、action は属性ひとそろいを運ぶ。** 「配点だけ」「余白だけ」と
+ * いう触り方と、「その行の列を書く」という書き込みの単位は別のものなので、足りない分を
+ * 今の状態から埋めるのはここが受け持つ。
+ *
+ * **書き込み（DB への保存）はここではしない。** 編集が起きたことを `onEdit` で伝え、
+ * 実際に書くのは編集画面（`AnswerSheetBuilderMainView`）。フックは DB を触らない
+ * （docs/coding-style.md「フックはデータを受け取る。取らない・書かない」）。
  */
 
-import { useCallback, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 
 import type {
   AnswerSheetAction,
   AnswerSheetDefinition,
+  AnswerSheetEditAction,
   AsbBranchQuestionAttributes,
   AsbCellParent,
   AsbCharGuideAttributes,
+  AsbDefinitionAttributes,
   AsbDefinitionUpdate,
   AsbHeaderFieldAttributes,
   AsbImageElementAttributes,
   AsbMajorQuestionAttributes,
+  AsbSubQuestionAttributes,
   AsbSubQuestionUpdate,
   AsbTextElementAttributes,
   BranchQuestion,
   CellImageElement,
+  CellTextElement,
   HeaderFieldDefinition,
+  LabelAssignment,
   LabelCategory,
   LabelPresets,
   MajorQuestion,
   ManuscriptCharGuide,
+  ManuscriptPaperAttributes,
+  ManuscriptPaperConfig,
+  NextPlacement,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
 import type { OMRCellConfig } from "@/types/omr.types"
@@ -201,58 +215,42 @@ function reducer(
       return action.payload
 
     case "UPDATE_DEFINITION": {
-      const { settings, ...attributes } = action.payload
+      const { attributes } = action.payload
+      // ヘッダー項目は用紙設定の中に居るが別テーブルの実体なので、属性には含まれない
       return {
         ...state,
         ...attributes,
-        settings: settings
-          ? { ...state.settings, ...settings }
-          : state.settings,
+        settings: {
+          ...attributes.settings,
+          headerFields: state.settings.headerFields,
+        },
       }
     }
 
     case "APPLY_LABEL_PRESET": {
-      const { category, preset } = action.payload
+      const { category, preset, relabeled } = action.payload
       const labelPresets: LabelPresets = {
         ...state.labelPresets,
         [category]: preset,
       }
-      const labels = parsePresetLabels(preset)
-      const majorQuestions = state.majorQuestions.map(
-        (majorQuestion, majorIndex) => {
-          if (category === "major") {
-            return {
-              ...majorQuestion,
-              label: labels[majorIndex] ?? majorQuestion.label,
-            }
-          }
-          if (category === "sub") {
-            return {
-              ...majorQuestion,
-              subQuestions: majorQuestion.subQuestions.map(
-                (subQuestion, subIndex) => ({
-                  ...subQuestion,
-                  label: labels[subIndex] ?? subQuestion.label,
-                })
-              ),
-            }
-          }
-          // branch: 小問ごとに0からリスタート
-          return {
-            ...majorQuestion,
-            subQuestions: majorQuestion.subQuestions.map((subQuestion) => ({
-              ...subQuestion,
-              branchQuestions: subQuestion.branchQuestions.map(
-                (branchQuestion, branchIndex) => ({
-                  ...branchQuestion,
-                  label: labels[branchIndex] ?? branchQuestion.label,
-                })
-              ),
-            })),
-          }
-        }
+      const labels = new Map(
+        relabeled.map((assignment) => [assignment.id, assignment.label])
       )
-      return { ...state, labelPresets, majorQuestions }
+      const relabel = <TQuestion extends { id: string; label: string }>(
+        question: TQuestion
+      ): TQuestion => {
+        const label = labels.get(question.id)
+        return label === undefined || label === question.label
+          ? question
+          : { ...question, label }
+      }
+      const relabeledState =
+        category === "major"
+          ? mapMajorQuestions(state, relabel)
+          : category === "sub"
+            ? mapSubQuestions(state, relabel)
+            : mapBranchQuestions(state, relabel)
+      return { ...relabeledState, labelPresets }
     }
 
     // ---------- ヘッダー項目 ----------
@@ -264,12 +262,12 @@ function reducer(
       ])
 
     case "UPDATE_HEADER_FIELD": {
-      const { headerFieldId, data } = action.payload
+      const { headerFieldId, attributes } = action.payload
       return withHeaderFields(
         state,
         mapKeepingIdentity(state.settings.headerFields, (headerField) =>
           headerField.id === headerFieldId
-            ? { ...headerField, ...data }
+            ? { ...headerField, ...attributes }
             : headerField
         )
       )
@@ -298,10 +296,10 @@ function reducer(
       }
 
     case "UPDATE_MAJOR_QUESTION": {
-      const { majorQuestionId, data } = action.payload
+      const { majorQuestionId, attributes } = action.payload
       return mapMajorQuestions(state, (majorQuestion) =>
         majorQuestion.id === majorQuestionId
-          ? { ...majorQuestion, ...data }
+          ? { ...majorQuestion, ...attributes }
           : majorQuestion
       )
     }
@@ -338,22 +336,12 @@ function reducer(
     }
 
     case "UPDATE_SUB_QUESTION": {
-      const { subQuestionId, data } = action.payload
-      return mapMajorQuestions(state, (majorQuestion) => {
-        const subIndex = majorQuestion.subQuestions.findIndex(
-          (subQuestion) => subQuestion.id === subQuestionId
-        )
-        if (subIndex === -1) return majorQuestion
-        const subQuestions = [...majorQuestion.subQuestions]
-        subQuestions[subIndex] = updatedSubQuestion(
-          subQuestions[subIndex],
-          data
-        )
-        return {
-          ...majorQuestion,
-          subQuestions: withExclusivePlacement(subQuestions, subIndex, data),
-        }
-      })
+      const { subQuestionId, attributes } = action.payload
+      return mapSubQuestions(state, (subQuestion) =>
+        subQuestion.id === subQuestionId
+          ? withSubQuestionAttributes(subQuestion, attributes)
+          : subQuestion
+      )
     }
 
     case "DELETE_SUB_QUESTION":
@@ -393,26 +381,12 @@ function reducer(
     }
 
     case "UPDATE_BRANCH_QUESTION": {
-      const { branchQuestionId, data } = action.payload
-      return mapSubQuestions(state, (subQuestion) => {
-        const branchIndex = subQuestion.branchQuestions.findIndex(
-          (branchQuestion) => branchQuestion.id === branchQuestionId
-        )
-        if (branchIndex === -1) return subQuestion
-        const branchQuestions = [...subQuestion.branchQuestions]
-        branchQuestions[branchIndex] = {
-          ...branchQuestions[branchIndex],
-          ...data,
-        }
-        return {
-          ...subQuestion,
-          branchQuestions: withExclusivePlacement(
-            branchQuestions,
-            branchIndex,
-            data
-          ),
-        }
-      })
+      const { branchQuestionId, attributes } = action.payload
+      return mapBranchQuestions(state, (branchQuestion) =>
+        branchQuestion.id === branchQuestionId
+          ? { ...branchQuestion, ...attributes }
+          : branchQuestion
+      )
     }
 
     case "DELETE_BRANCH_QUESTION":
@@ -452,12 +426,12 @@ function reducer(
     }
 
     case "UPDATE_TEXT_ELEMENT": {
-      const { textElementId, data } = action.payload
+      const { textElementId, attributes } = action.payload
       return mapAllCellChildren(state, (cell) => ({
         ...cell,
         textElements: mapKeepingIdentity(cell.textElements, (textElement) =>
           textElement.id === textElementId
-            ? { ...textElement, ...data }
+            ? { ...textElement, ...attributes }
             : textElement
         ),
       }))
@@ -481,14 +455,14 @@ function reducer(
     }
 
     case "UPDATE_IMAGE_ELEMENT": {
-      const { imageElementId, data } = action.payload
+      const { imageElementId, attributes } = action.payload
       return mapAllCellChildren(state, (cell) => ({
         ...cell,
         imageElements:
           cell.imageElements &&
           mapKeepingIdentity(cell.imageElements, (imageElement) =>
             imageElement.id === imageElementId
-              ? { ...imageElement, ...data }
+              ? { ...imageElement, ...attributes }
               : imageElement
           ),
       }))
@@ -531,12 +505,14 @@ function reducer(
     }
 
     case "UPDATE_CHAR_GUIDE": {
-      const { charGuideId, data } = action.payload
+      const { charGuideId, attributes } = action.payload
       return mapCharGuides(state, (subQuestion) => {
         const charGuides = subQuestion.manuscriptPaper?.charGuides
         if (!charGuides) return null
         const mapped = mapKeepingIdentity(charGuides, (charGuide) =>
-          charGuide.id === charGuideId ? { ...charGuide, ...data } : charGuide
+          charGuide.id === charGuideId
+            ? { ...charGuide, ...attributes }
+            : charGuide
         )
         return mapped === charGuides ? null : mapped
       })
@@ -573,54 +549,19 @@ function withHeaderFields(
   }
 }
 
-/** 小問の更新。原稿用紙は一部指定なので、文字位置マーカーを残したまま重ねる */
-function updatedSubQuestion(
+/** 小問へ属性を当てる。文字位置マーカーは属性に含まれない（別テーブル）ので残す */
+function withSubQuestionAttributes(
   subQuestion: SubQuestion,
-  data: AsbSubQuestionUpdate
+  attributes: AsbSubQuestionAttributes
 ): SubQuestion {
-  const { manuscriptPaper, ...attributes } = data
-  if (!manuscriptPaper) return { ...subQuestion, ...attributes }
   return {
     ...subQuestion,
     ...attributes,
-    manuscriptPaper: {
-      ...DEFAULT_MANUSCRIPT_PAPER,
-      ...subQuestion.manuscriptPaper,
-      ...manuscriptPaper,
+    manuscriptPaper: attributes.manuscriptPaper && {
+      ...attributes.manuscriptPaper,
+      charGuides: subQuestion.manuscriptPaper?.charGuides,
     },
   }
-}
-
-/**
- * 「N行上に戻す」と「この後で改行」は隣り合う要素と両立しない。
- *
- * 片方を立てたら、ぶつかる相手の設定を降ろす。並びの中の隣を見るので、ここだけは
- * 位置で辿る（id では「隣」を言えない）。
- */
-function withExclusivePlacement<
-  TQuestion extends {
-    nextPlacement?: "inline" | "break"
-    goUp?: number
-  },
->(
-  questions: TQuestion[],
-  index: number,
-  data: { goUp?: number; nextPlacement?: "inline" | "break" }
-): TQuestion[] {
-  const updated = [...questions]
-  if (data.goUp != null && index > 0) {
-    const previous = updated[index - 1]
-    if (previous.nextPlacement === "break") {
-      updated[index - 1] = { ...previous, nextPlacement: undefined }
-    }
-  }
-  if (data.nextPlacement === "break" && index < updated.length - 1) {
-    const next = updated[index + 1]
-    if (next.goUp != null) {
-      updated[index + 1] = { ...next, goUp: undefined }
-    }
-  }
-  return updated
 }
 
 /**
@@ -644,6 +585,188 @@ function mapCharGuides(
       },
     }
   })
+}
+
+// =====================================================================
+// 実体から「自身の属性」を取り出す
+// =====================================================================
+
+function definitionAttributes(
+  definition: AnswerSheetDefinition
+): AsbDefinitionAttributes {
+  const { headerFields, ...settings } = definition.settings
+  return {
+    name: definition.name,
+    labelPresets: definition.labelPresets,
+    settings,
+  }
+}
+
+function headerFieldAttributes(
+  headerField: HeaderFieldDefinition
+): AsbHeaderFieldAttributes {
+  const { id, order, ...attributes } = headerField
+  return attributes
+}
+
+function majorQuestionAttributes(
+  majorQuestion: MajorQuestion
+): AsbMajorQuestionAttributes {
+  return { label: majorQuestion.label }
+}
+
+function subQuestionAttributes(
+  subQuestion: SubQuestion
+): AsbSubQuestionAttributes {
+  const {
+    id,
+    branchQuestions,
+    textElements,
+    imageElements,
+    omrConfig,
+    manuscriptPaper,
+    ...attributes
+  } = subQuestion
+  return manuscriptPaper
+    ? {
+        ...attributes,
+        manuscriptPaper: manuscriptPaperAttributes(manuscriptPaper),
+      }
+    : attributes
+}
+
+function manuscriptPaperAttributes(
+  manuscriptPaper: ManuscriptPaperConfig
+): ManuscriptPaperAttributes {
+  const { charGuides, ...attributes } = manuscriptPaper
+  return attributes
+}
+
+function branchQuestionAttributes(
+  branchQuestion: BranchQuestion
+): AsbBranchQuestionAttributes {
+  const { id, textElements, imageElements, omrConfig, ...attributes } =
+    branchQuestion
+  return attributes
+}
+
+function textElementAttributes(
+  textElement: CellTextElement
+): AsbTextElementAttributes {
+  const { id, ...attributes } = textElement
+  return attributes
+}
+
+function imageElementAttributes(
+  imageElement: CellImageElement
+): AsbImageElementAttributes {
+  const { id, ...attributes } = imageElement
+  return attributes
+}
+
+function charGuideAttributes(
+  charGuide: ManuscriptCharGuide
+): AsbCharGuideAttributes {
+  const { id, ...attributes } = charGuide
+  return attributes
+}
+
+// =====================================================================
+// 木から実体を引く
+// =====================================================================
+
+/** 並びの中での位置つきで引いた実体（隣を見る操作に要る） */
+interface QuestionPosition<TQuestion> {
+  question: TQuestion
+  siblings: TQuestion[]
+  index: number
+}
+
+function findSubQuestion(
+  definition: AnswerSheetDefinition,
+  subQuestionId: string
+): QuestionPosition<SubQuestion> | null {
+  for (const majorQuestion of definition.majorQuestions) {
+    const index = majorQuestion.subQuestions.findIndex(
+      (subQuestion) => subQuestion.id === subQuestionId
+    )
+    if (index === -1) continue
+    return {
+      question: majorQuestion.subQuestions[index],
+      siblings: majorQuestion.subQuestions,
+      index,
+    }
+  }
+  return null
+}
+
+function findBranchQuestion(
+  definition: AnswerSheetDefinition,
+  branchQuestionId: string
+): QuestionPosition<BranchQuestion> | null {
+  for (const subQuestion of allSubQuestions(definition)) {
+    const index = subQuestion.branchQuestions.findIndex(
+      (branchQuestion) => branchQuestion.id === branchQuestionId
+    )
+    if (index === -1) continue
+    return {
+      question: subQuestion.branchQuestions[index],
+      siblings: subQuestion.branchQuestions,
+      index,
+    }
+  }
+  return null
+}
+
+function allSubQuestions(definition: AnswerSheetDefinition): SubQuestion[] {
+  return definition.majorQuestions.flatMap(
+    (majorQuestion) => majorQuestion.subQuestions
+  )
+}
+
+/** 解答を書くセル（小問と枝問）を並べる。中身はどちらも同じ形で持つ */
+function allCells(
+  definition: AnswerSheetDefinition
+): (SubQuestion | BranchQuestion)[] {
+  return allSubQuestions(definition).flatMap((subQuestion) => [
+    subQuestion,
+    ...subQuestion.branchQuestions,
+  ])
+}
+
+/** ぶつかった相手から降ろす設定（立てた側と逆の一方だけが入る） */
+interface ClearedPlacement {
+  nextPlacement?: undefined
+  goUp?: undefined
+}
+
+/**
+ * 「N行上に戻す」と「この後で改行」は隣り合う要素と両立しない。
+ *
+ * 片方を立てたら、ぶつかる相手の設定を降ろす。**降ろす先は別のレコードなので、別の
+ * 意図として送る** — 1つの更新に隣の値を混ぜると、その隣を DB へ書く経路が無くなる。
+ * 隣を見るのでここだけは並びの位置で辿る（id では「隣」を言えない）。
+ */
+function conflictingNeighbour<
+  TQuestion extends { nextPlacement?: NextPlacement; goUp?: number },
+>(
+  siblings: TQuestion[],
+  index: number,
+  data: { goUp?: number; nextPlacement?: NextPlacement }
+): { question: TQuestion; cleared: ClearedPlacement } | null {
+  if (data.goUp != null && index > 0) {
+    const previous = siblings[index - 1]
+    if (previous.nextPlacement === "break") {
+      return { question: previous, cleared: { nextPlacement: undefined } }
+    }
+  }
+  if (data.nextPlacement === "break" && index < siblings.length - 1) {
+    const next = siblings[index + 1]
+    if (next.goUp != null) {
+      return { question: next, cleared: { goUp: undefined } }
+    }
+  }
+  return null
 }
 
 // =====================================================================
@@ -674,16 +797,61 @@ const DEFAULT_BRANCH_LABELS = [
   "(コ)",
 ]
 
+interface UseAnswerSheetDefinitionOptions {
+  /** 最初に置く内容（読み込み前は既定の解答用紙） */
+  initial?: AnswerSheetDefinition
+  /**
+   * 編集が1つ起きた。**ここで DB へ書く。**
+   *
+   * 呼ばれるのは実際に意図のある編集だけで、読み込み（`setDefinition`）では呼ばない。
+   */
+  onEdit: (action: AnswerSheetEditAction) => void
+  /**
+   * 過去（または先）の姿へ戻した。
+   *
+   * undo / redo は「文書全体の過去の姿」を復元する操作で、対応する1つの意図が無い。
+   * 丸ごと置き換える経路へ流す（docs/asb-ipc-split-plan.md §6.6）。
+   */
+  onRestore: (definition: AnswerSheetDefinition) => void
+}
+
 /** 解答用紙の編集操作と Undo/Redo を提供するフック */
-export function useAnswerSheetDefinition(initial?: AnswerSheetDefinition) {
+export function useAnswerSheetDefinition({
+  initial,
+  onEdit,
+  onRestore,
+}: UseAnswerSheetDefinitionOptions) {
   const {
     state: definition,
     dispatch,
-    canUndo,
-    canRedo,
-    undo,
-    redo,
+    previousState,
+    nextState,
+    undo: undoState,
+    redo: redoState,
   } = useUndoableReducer(reducer, initial ?? createDefaultDefinition())
+
+  /**
+   * いまの編集内容と、書き込み先。
+   *
+   * 編集の操作（`actions`）は「配点だけ」といった一部の指定を受け取り、足りない属性を
+   * 今の内容から埋める。それを引数や依存に置くと**編集のたびに全部の操作が別物になり**、
+   * フォームが丸ごと描き直される。最新の値は ref から読み、操作そのものは固定する。
+   */
+  const definitionRef = useRef(definition)
+  const onEditRef = useRef(onEdit)
+  useEffect(() => {
+    definitionRef.current = definition
+    onEditRef.current = onEdit
+  })
+
+  /** 編集を状態へ当て、同じ意図を書き込みへ渡す（**書き込みの関所**） */
+  const edit = useCallback(
+    (action: AnswerSheetEditAction) => {
+      dispatch(action)
+      onEditRef.current(action)
+    },
+    [dispatch]
+  )
 
   const setDefinition = useCallback(
     (next: AnswerSheetDefinition) =>
@@ -691,157 +859,230 @@ export function useAnswerSheetDefinition(initial?: AnswerSheetDefinition) {
     [dispatch]
   )
 
+  const undo = useCallback(() => {
+    if (!previousState) return
+    undoState()
+    onRestore(previousState)
+  }, [previousState, undoState, onRestore])
+
+  const redo = useCallback(() => {
+    if (!nextState) return
+    redoState()
+    onRestore(nextState)
+  }, [nextState, redoState, onRestore])
+
   const updateDefinition = useCallback(
-    (data: AsbDefinitionUpdate) =>
-      dispatch({ type: "UPDATE_DEFINITION", payload: data }),
-    [dispatch]
+    (data: AsbDefinitionUpdate) => {
+      const current = definitionAttributes(definitionRef.current)
+      edit({
+        type: "UPDATE_DEFINITION",
+        payload: {
+          attributes: {
+            ...current,
+            ...data,
+            settings: { ...current.settings, ...data.settings },
+          },
+        },
+      })
+    },
+    [edit]
   )
 
   const applyLabelPreset = useCallback(
-    (category: LabelCategory, preset: string) =>
-      dispatch({ type: "APPLY_LABEL_PRESET", payload: { category, preset } }),
-    [dispatch]
+    (category: LabelCategory, preset: string) => {
+      const labels = parsePresetLabels(preset)
+      const relabeled = labelAssignments(
+        definitionRef.current,
+        category,
+        labels
+      )
+      edit({
+        type: "APPLY_LABEL_PRESET",
+        payload: { category, preset, relabeled },
+      })
+    },
+    [edit]
   )
 
   // ---------- ヘッダー項目 ----------
 
   const addHeaderField = useCallback(
     (defaults?: Partial<HeaderFieldDefinition>) =>
-      dispatch({
+      edit({
         type: "ADD_HEADER_FIELD",
         payload: {
           headerField: createDefaultHeaderField({
             ...defaults,
-            order: definition.settings.headerFields.length,
+            order: definitionRef.current.settings.headerFields.length,
           }),
         },
       }),
-    [dispatch, definition.settings.headerFields.length]
+    [edit]
   )
 
   const updateHeaderField = useCallback(
-    (headerFieldId: string, data: Partial<AsbHeaderFieldAttributes>) =>
-      dispatch({
+    (headerFieldId: string, data: Partial<AsbHeaderFieldAttributes>) => {
+      const headerField = definitionRef.current.settings.headerFields.find(
+        (candidate) => candidate.id === headerFieldId
+      )
+      if (!headerField) return
+      edit({
         type: "UPDATE_HEADER_FIELD",
-        payload: { headerFieldId, data },
-      }),
-    [dispatch]
+        payload: {
+          headerFieldId,
+          attributes: { ...headerFieldAttributes(headerField), ...data },
+        },
+      })
+    },
+    [edit]
   )
 
   const deleteHeaderField = useCallback(
     (headerFieldId: string) =>
-      dispatch({ type: "DELETE_HEADER_FIELD", payload: { headerFieldId } }),
-    [dispatch]
+      edit({ type: "DELETE_HEADER_FIELD", payload: { headerFieldId } }),
+    [edit]
   )
 
   const reorderHeaderFields = useCallback(
     (orderedIds: string[]) =>
-      dispatch({ type: "REORDER_HEADER_FIELDS", payload: { orderedIds } }),
-    [dispatch]
+      edit({ type: "REORDER_HEADER_FIELDS", payload: { orderedIds } }),
+    [edit]
   )
 
   // ---------- 大問 ----------
 
   const addMajorQuestion = useCallback(() => {
-    const index = definition.majorQuestions.length
-    dispatch({
+    const { majorQuestions, labelPresets } = definitionRef.current
+    const index = majorQuestions.length
+    edit({
       type: "ADD_MAJOR_QUESTION",
       payload: {
         majorQuestion: createDefaultMajorQuestion(
-          presetLabel(definition.labelPresets?.major, index, String(index + 1)),
-          presetLabel(definition.labelPresets?.sub, 0, getCircledNumber(1))
+          presetLabel(labelPresets?.major, index, String(index + 1)),
+          presetLabel(labelPresets?.sub, 0, getCircledNumber(1))
         ),
       },
     })
-  }, [dispatch, definition.majorQuestions.length, definition.labelPresets])
+  }, [edit])
 
   const updateMajorQuestion = useCallback(
-    (majorQuestionId: string, data: Partial<AsbMajorQuestionAttributes>) =>
-      dispatch({
+    (majorQuestionId: string, data: Partial<AsbMajorQuestionAttributes>) => {
+      const majorQuestion = definitionRef.current.majorQuestions.find(
+        (candidate) => candidate.id === majorQuestionId
+      )
+      if (!majorQuestion) return
+      edit({
         type: "UPDATE_MAJOR_QUESTION",
-        payload: { majorQuestionId, data },
-      }),
-    [dispatch]
+        payload: {
+          majorQuestionId,
+          attributes: { ...majorQuestionAttributes(majorQuestion), ...data },
+        },
+      })
+    },
+    [edit]
   )
 
   const deleteMajorQuestion = useCallback(
     (majorQuestionId: string) =>
-      dispatch({ type: "DELETE_MAJOR_QUESTION", payload: { majorQuestionId } }),
-    [dispatch]
+      edit({ type: "DELETE_MAJOR_QUESTION", payload: { majorQuestionId } }),
+    [edit]
   )
 
   const reorderMajorQuestions = useCallback(
     (orderedIds: string[]) =>
-      dispatch({ type: "REORDER_MAJOR_QUESTIONS", payload: { orderedIds } }),
-    [dispatch]
+      edit({ type: "REORDER_MAJOR_QUESTIONS", payload: { orderedIds } }),
+    [edit]
   )
 
   // ---------- 小問 ----------
 
   const addSubQuestion = useCallback(
     (majorQuestionId: string) => {
-      const majorQuestion = definition.majorQuestions.find(
+      const { majorQuestions, labelPresets } = definitionRef.current
+      const majorQuestion = majorQuestions.find(
         (candidate) => candidate.id === majorQuestionId
       )
       if (!majorQuestion) return
       const index = majorQuestion.subQuestions.length
-      dispatch({
+      edit({
         type: "ADD_SUB_QUESTION",
         payload: {
           majorQuestionId,
           subQuestion: createDefaultSubQuestion(
-            presetLabel(
-              definition.labelPresets?.sub,
-              index,
-              getCircledNumber(index + 1)
-            )
+            presetLabel(labelPresets?.sub, index, getCircledNumber(index + 1))
           ),
         },
       })
     },
-    [dispatch, definition.majorQuestions, definition.labelPresets]
+    [edit]
   )
 
   const updateSubQuestion = useCallback(
-    (subQuestionId: string, data: AsbSubQuestionUpdate) =>
-      dispatch({
+    (subQuestionId: string, data: AsbSubQuestionUpdate) => {
+      const found = findSubQuestion(definitionRef.current, subQuestionId)
+      if (!found) return
+      const neighbour = conflictingNeighbour(found.siblings, found.index, data)
+      if (neighbour) {
+        edit({
+          type: "UPDATE_SUB_QUESTION",
+          payload: {
+            subQuestionId: neighbour.question.id,
+            attributes: {
+              ...subQuestionAttributes(neighbour.question),
+              ...neighbour.cleared,
+            },
+          },
+        })
+      }
+      const current = subQuestionAttributes(found.question)
+      edit({
         type: "UPDATE_SUB_QUESTION",
-        payload: { subQuestionId, data },
-      }),
-    [dispatch]
+        payload: {
+          subQuestionId,
+          attributes: {
+            ...current,
+            ...data,
+            manuscriptPaper: data.manuscriptPaper && {
+              ...DEFAULT_MANUSCRIPT_PAPER,
+              ...current.manuscriptPaper,
+              ...data.manuscriptPaper,
+            },
+          },
+        },
+      })
+    },
+    [edit]
   )
 
   const deleteSubQuestion = useCallback(
     (subQuestionId: string) =>
-      dispatch({ type: "DELETE_SUB_QUESTION", payload: { subQuestionId } }),
-    [dispatch]
+      edit({ type: "DELETE_SUB_QUESTION", payload: { subQuestionId } }),
+    [edit]
   )
 
   const reorderSubQuestions = useCallback(
     (majorQuestionId: string, orderedIds: string[]) =>
-      dispatch({
+      edit({
         type: "REORDER_SUB_QUESTIONS",
         payload: { majorQuestionId, orderedIds },
       }),
-    [dispatch]
+    [edit]
   )
 
   // ---------- 枝問 ----------
 
   const addBranchQuestion = useCallback(
     (subQuestionId: string) => {
-      const subQuestion = definition.majorQuestions
-        .flatMap((majorQuestion) => majorQuestion.subQuestions)
-        .find((candidate) => candidate.id === subQuestionId)
-      if (!subQuestion) return
-      const index = subQuestion.branchQuestions.length
-      dispatch({
+      const found = findSubQuestion(definitionRef.current, subQuestionId)
+      if (!found) return
+      const index = found.question.branchQuestions.length
+      edit({
         type: "ADD_BRANCH_QUESTION",
         payload: {
           subQuestionId,
           branchQuestion: createDefaultBranchQuestion(
             presetLabel(
-              definition.labelPresets?.branch,
+              definitionRef.current.labelPresets?.branch,
               index,
               DEFAULT_BRANCH_LABELS[index] ?? `(${index + 1})`
             )
@@ -849,119 +1090,165 @@ export function useAnswerSheetDefinition(initial?: AnswerSheetDefinition) {
         },
       })
     },
-    [dispatch, definition.majorQuestions, definition.labelPresets]
+    [edit]
   )
 
   const updateBranchQuestion = useCallback(
-    (branchQuestionId: string, data: Partial<AsbBranchQuestionAttributes>) =>
-      dispatch({
+    (branchQuestionId: string, data: Partial<AsbBranchQuestionAttributes>) => {
+      const found = findBranchQuestion(definitionRef.current, branchQuestionId)
+      if (!found) return
+      const neighbour = conflictingNeighbour(found.siblings, found.index, data)
+      if (neighbour) {
+        edit({
+          type: "UPDATE_BRANCH_QUESTION",
+          payload: {
+            branchQuestionId: neighbour.question.id,
+            attributes: {
+              ...branchQuestionAttributes(neighbour.question),
+              ...neighbour.cleared,
+            },
+          },
+        })
+      }
+      edit({
         type: "UPDATE_BRANCH_QUESTION",
-        payload: { branchQuestionId, data },
-      }),
-    [dispatch]
+        payload: {
+          branchQuestionId,
+          attributes: {
+            ...branchQuestionAttributes(found.question),
+            ...data,
+          },
+        },
+      })
+    },
+    [edit]
   )
 
   const deleteBranchQuestion = useCallback(
     (branchQuestionId: string) =>
-      dispatch({
-        type: "DELETE_BRANCH_QUESTION",
-        payload: { branchQuestionId },
-      }),
-    [dispatch]
+      edit({ type: "DELETE_BRANCH_QUESTION", payload: { branchQuestionId } }),
+    [edit]
   )
 
   const reorderBranchQuestions = useCallback(
     (subQuestionId: string, orderedIds: string[]) =>
-      dispatch({
+      edit({
         type: "REORDER_BRANCH_QUESTIONS",
         payload: { subQuestionId, orderedIds },
       }),
-    [dispatch]
+    [edit]
   )
 
   // ---------- セルの中身 ----------
 
   const addTextElement = useCallback(
     (parent: AsbCellParent) =>
-      dispatch({
+      edit({
         type: "ADD_TEXT_ELEMENT",
         payload: { parent, textElement: createDefaultTextElement() },
       }),
-    [dispatch]
+    [edit]
   )
 
   const updateTextElement = useCallback(
-    (textElementId: string, data: Partial<AsbTextElementAttributes>) =>
-      dispatch({
+    (textElementId: string, data: Partial<AsbTextElementAttributes>) => {
+      const textElement = allCells(definitionRef.current)
+        .flatMap((cell) => cell.textElements)
+        .find((candidate) => candidate.id === textElementId)
+      if (!textElement) return
+      edit({
         type: "UPDATE_TEXT_ELEMENT",
-        payload: { textElementId, data },
-      }),
-    [dispatch]
+        payload: {
+          textElementId,
+          attributes: { ...textElementAttributes(textElement), ...data },
+        },
+      })
+    },
+    [edit]
   )
 
   const deleteTextElement = useCallback(
     (textElementId: string) =>
-      dispatch({ type: "DELETE_TEXT_ELEMENT", payload: { textElementId } }),
-    [dispatch]
+      edit({ type: "DELETE_TEXT_ELEMENT", payload: { textElementId } }),
+    [edit]
   )
 
   const addImageElement = useCallback(
     (parent: AsbCellParent, imageElement: CellImageElement) =>
-      dispatch({
+      edit({
         type: "ADD_IMAGE_ELEMENT",
         payload: { parent, imageElement },
       }),
-    [dispatch]
+    [edit]
   )
 
   const updateImageElement = useCallback(
-    (imageElementId: string, data: Partial<AsbImageElementAttributes>) =>
-      dispatch({
+    (imageElementId: string, data: Partial<AsbImageElementAttributes>) => {
+      const imageElement = allCells(definitionRef.current)
+        .flatMap((cell) => cell.imageElements ?? [])
+        .find((candidate) => candidate.id === imageElementId)
+      if (!imageElement) return
+      edit({
         type: "UPDATE_IMAGE_ELEMENT",
-        payload: { imageElementId, data },
-      }),
-    [dispatch]
+        payload: {
+          imageElementId,
+          attributes: { ...imageElementAttributes(imageElement), ...data },
+        },
+      })
+    },
+    [edit]
   )
 
   const deleteImageElement = useCallback(
     (imageElementId: string) =>
-      dispatch({ type: "DELETE_IMAGE_ELEMENT", payload: { imageElementId } }),
-    [dispatch]
+      edit({ type: "DELETE_IMAGE_ELEMENT", payload: { imageElementId } }),
+    [edit]
   )
 
   const upsertOmrConfig = useCallback(
     (parent: AsbCellParent, config: OMRCellConfig) =>
-      dispatch({ type: "UPSERT_OMR_CONFIG", payload: { parent, config } }),
-    [dispatch]
+      edit({ type: "UPSERT_OMR_CONFIG", payload: { parent, config } }),
+    [edit]
   )
 
   const deleteOmrConfig = useCallback(
     (parent: AsbCellParent) =>
-      dispatch({ type: "DELETE_OMR_CONFIG", payload: { parent } }),
-    [dispatch]
+      edit({ type: "DELETE_OMR_CONFIG", payload: { parent } }),
+    [edit]
   )
 
   // ---------- 文字位置マーカー ----------
 
   const addCharGuide = useCallback(
     (subQuestionId: string, charGuide: ManuscriptCharGuide) =>
-      dispatch({
+      edit({
         type: "ADD_CHAR_GUIDE",
         payload: { subQuestionId, charGuide },
       }),
-    [dispatch]
+    [edit]
   )
 
   const updateCharGuide = useCallback(
-    (charGuideId: string, data: Partial<AsbCharGuideAttributes>) =>
-      dispatch({ type: "UPDATE_CHAR_GUIDE", payload: { charGuideId, data } }),
-    [dispatch]
+    (charGuideId: string, data: Partial<AsbCharGuideAttributes>) => {
+      const charGuide = allSubQuestions(definitionRef.current)
+        .flatMap((subQuestion) => subQuestion.manuscriptPaper?.charGuides ?? [])
+        .find((candidate) => candidate.id === charGuideId)
+      if (!charGuide) return
+      edit({
+        type: "UPDATE_CHAR_GUIDE",
+        payload: {
+          charGuideId,
+          attributes: { ...charGuideAttributes(charGuide), ...data },
+        },
+      })
+    },
+    [edit]
   )
 
   const deleteCharGuide = useCallback(
     (charGuideId: string) =>
-      dispatch({ type: "DELETE_CHAR_GUIDE", payload: { charGuideId } }),
-    [dispatch]
+      edit({ type: "DELETE_CHAR_GUIDE", payload: { charGuideId } }),
+    [edit]
   )
 
   const actions = useMemo<AsbEditorActions>(
@@ -1034,9 +1321,42 @@ export function useAnswerSheetDefinition(initial?: AnswerSheetDefinition) {
     /** 編集の操作ひとそろい（フォームへまとめて配る） */
     actions,
     setDefinition,
-    canUndo,
-    canRedo,
+    canUndo: previousState !== undefined,
+    canRedo: nextState !== undefined,
     undo,
     redo,
   }
+}
+
+/**
+ * 番号の既定を、いまの木のどの実体へ当てるかを決める。
+ *
+ * 大問と小問は通し、枝問は小問ごとに1から振り直す（従来の見え方をそのまま保つ）。
+ * **計算は renderer に置く**（docs/asb-ipc-split-plan.md §4.3）。IPC が運ぶのは結果だけ。
+ */
+function labelAssignments(
+  definition: AnswerSheetDefinition,
+  category: LabelCategory,
+  labels: string[]
+): LabelAssignment[] {
+  if (category === "major") {
+    return definition.majorQuestions.map((majorQuestion, index) => ({
+      id: majorQuestion.id,
+      label: labels[index] ?? majorQuestion.label,
+    }))
+  }
+  if (category === "sub") {
+    return definition.majorQuestions.flatMap((majorQuestion) =>
+      majorQuestion.subQuestions.map((subQuestion, index) => ({
+        id: subQuestion.id,
+        label: labels[index] ?? subQuestion.label,
+      }))
+    )
+  }
+  return allSubQuestions(definition).flatMap((subQuestion) =>
+    subQuestion.branchQuestions.map((branchQuestion, index) => ({
+      id: branchQuestion.id,
+      label: labels[index] ?? branchQuestion.label,
+    }))
+  )
 }

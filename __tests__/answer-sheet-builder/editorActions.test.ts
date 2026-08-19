@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest"
 import { useAnswerSheetDefinition } from "@/components/answer-sheet-builder/hooks/useAnswerSheetDefinition"
 import type {
   AnswerSheetDefinition,
+  AnswerSheetEditAction,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
 
@@ -48,6 +49,25 @@ function twoMajorsWithTwoSubs(): AnswerSheetDefinition {
   }
 }
 
+/**
+ * 編集フックを、**書き込みへ渡った意図を控えながら**動かす。
+ *
+ * フック自身は DB を触らない。編集1つにつき `onEdit` が1回呼ばれ、それがそのまま
+ * 1レコードの書き込みになる。
+ */
+function renderEditor(initial: AnswerSheetDefinition) {
+  const edits: AnswerSheetEditAction[] = []
+  const restored: AnswerSheetDefinition[] = []
+  const rendered = renderHook(() =>
+    useAnswerSheetDefinition({
+      initial,
+      onEdit: (action) => edits.push(action),
+      onRestore: (definition) => restored.push(definition),
+    })
+  )
+  return { ...rendered, edits, restored }
+}
+
 function findSubQuestion(
   definition: AnswerSheetDefinition,
   subQuestionId: string
@@ -61,9 +81,7 @@ function findSubQuestion(
 
 describe("編集操作は id で指した実体だけを変える", () => {
   it("同じ位置にいる別の大問の小問は巻き添えにしない", () => {
-    const { result } = renderHook(() =>
-      useAnswerSheetDefinition(twoMajorsWithTwoSubs())
-    )
+    const { result } = renderEditor(twoMajorsWithTwoSubs())
 
     act(() => {
       result.current.actions.updateSubQuestion("sub-2a", { points: 7 })
@@ -74,9 +92,7 @@ describe("編集操作は id で指した実体だけを変える", () => {
   })
 
   it("触っていない大問は、参照ごと残る（作り直さない）", () => {
-    const { result } = renderHook(() =>
-      useAnswerSheetDefinition(twoMajorsWithTwoSubs())
-    )
+    const { result } = renderEditor(twoMajorsWithTwoSubs())
     const untouched = result.current.definition.majorQuestions[1]
 
     act(() => {
@@ -87,9 +103,7 @@ describe("編集操作は id で指した実体だけを変える", () => {
   })
 
   it("小問を消しても、別の大問の同じ位置の小問は残る", () => {
-    const { result } = renderHook(() =>
-      useAnswerSheetDefinition(twoMajorsWithTwoSubs())
-    )
+    const { result } = renderEditor(twoMajorsWithTwoSubs())
 
     act(() => {
       result.current.actions.deleteSubQuestion("sub-1a")
@@ -103,9 +117,7 @@ describe("編集操作は id で指した実体だけを変える", () => {
   })
 
   it("並べ替えは id の並びで指す", () => {
-    const { result } = renderHook(() =>
-      useAnswerSheetDefinition(twoMajorsWithTwoSubs())
-    )
+    const { result } = renderEditor(twoMajorsWithTwoSubs())
 
     act(() => {
       result.current.actions.reorderSubQuestions("major-1", [
@@ -131,7 +143,7 @@ describe("編集操作は id で指した実体だけを変える", () => {
 describe("更新に子のまとまりが紛れ込まない", () => {
   it("原稿用紙の列数を変えても、文字位置マーカーは残る", () => {
     const definition = twoMajorsWithTwoSubs()
-    const { result } = renderHook(() => useAnswerSheetDefinition(definition))
+    const { result } = renderEditor(definition)
 
     act(() => {
       result.current.actions.updateSubQuestion("sub-1a", {
@@ -160,9 +172,7 @@ describe("更新に子のまとまりが紛れ込まない", () => {
   })
 
   it("セルにテキスト要素を足しても、別のセルの中身は変わらない", () => {
-    const { result } = renderHook(() =>
-      useAnswerSheetDefinition(twoMajorsWithTwoSubs())
-    )
+    const { result } = renderEditor(twoMajorsWithTwoSubs())
 
     act(() => {
       result.current.actions.addTextElement({ subQuestionId: "sub-1a" })
@@ -177,9 +187,7 @@ describe("更新に子のまとまりが紛れ込まない", () => {
   })
 
   it("テキスト要素は、どのセルにあっても id で引いて消せる", () => {
-    const { result } = renderHook(() =>
-      useAnswerSheetDefinition(twoMajorsWithTwoSubs())
-    )
+    const { result } = renderEditor(twoMajorsWithTwoSubs())
 
     act(() => {
       result.current.actions.addTextElement({ subQuestionId: "sub-2b" })
@@ -199,9 +207,7 @@ describe("更新に子のまとまりが紛れ込まない", () => {
 
 describe("ヘッダー項目", () => {
   it("並べ替えると、並びの位置が order へ写る", () => {
-    const { result } = renderHook(() =>
-      useAnswerSheetDefinition(createDefaultDefinition())
-    )
+    const { result } = renderEditor(createDefaultDefinition())
 
     act(() => {
       result.current.actions.addHeaderField({ label: "受験番号" })
@@ -224,5 +230,85 @@ describe("ヘッダー項目", () => {
       ["氏名", 0],
       ["受験番号", 1],
     ])
+  })
+})
+
+describe("編集は書き込みの意図として渡る", () => {
+  it("小問の一部を触っても、渡るのは属性ひとそろい（子は載らない）", () => {
+    const { result, edits } = renderEditor(twoMajorsWithTwoSubs())
+
+    act(() => {
+      result.current.actions.updateSubQuestion("sub-1a", { points: 7 })
+    })
+
+    expect(edits).toHaveLength(1)
+    const [edit] = edits
+    if (edit.type !== "UPDATE_SUB_QUESTION") throw new Error("種類が違う")
+    expect(edit.payload.subQuestionId).toBe("sub-1a")
+    // 触っていない属性も載る（1レコードの列を書くのが書き込みの単位）
+    expect(edit.payload.attributes.points).toBe(7)
+    expect(edit.payload.attributes.label).toBe("(1)")
+    // 子のまとまりは載らない
+    expect(edit.payload.attributes).not.toHaveProperty("branchQuestions")
+    expect(edit.payload.attributes).not.toHaveProperty("textElements")
+    expect(edit.payload.attributes).not.toHaveProperty("id")
+  })
+
+  it("隣とぶつかる配置は、隣の分も別の意図として渡る", () => {
+    // 「この後で改行」と「N行上に戻す」は両立しない。降ろす先は別のレコードなので、
+    // 1つの更新に混ぜると、その隣を DB へ書く経路が無くなる
+    const definition = twoMajorsWithTwoSubs()
+    definition.majorQuestions[0].subQuestions[1].goUp = 1
+    const { result, edits } = renderEditor(definition)
+
+    act(() => {
+      result.current.actions.updateSubQuestion("sub-1a", {
+        nextPlacement: "break",
+      })
+    })
+
+    expect(
+      edits.map((edit) =>
+        edit.type === "UPDATE_SUB_QUESTION" ? edit.payload.subQuestionId : null
+      )
+    ).toEqual(["sub-1b", "sub-1a"])
+    expect(
+      findSubQuestion(result.current.definition, "sub-1b").goUp
+    ).toBeUndefined()
+    expect(
+      findSubQuestion(result.current.definition, "sub-1a").nextPlacement
+    ).toBe("break")
+  })
+
+  it("番号の既定は、どの実体がどのラベルになるかまで決めて渡る", () => {
+    const { result, edits } = renderEditor(twoMajorsWithTwoSubs())
+
+    act(() => {
+      result.current.actions.applyLabelPreset("major", "1,2,3,4")
+    })
+
+    const [edit] = edits
+    if (edit.type !== "APPLY_LABEL_PRESET") throw new Error("種類が違う")
+    expect(edit.payload.relabeled).toEqual([
+      { id: "major-1", label: "1" },
+      { id: "major-2", label: "2" },
+    ])
+  })
+
+  it("元に戻すのは意図ではなく、戻した先の姿がそのまま渡る", () => {
+    const { result, edits, restored } = renderEditor(twoMajorsWithTwoSubs())
+
+    act(() => {
+      result.current.actions.updateSubQuestion("sub-1a", { points: 7 })
+    })
+    act(() => {
+      result.current.undo()
+    })
+
+    // undo そのものは編集の意図として渡らない（対応する1レコードの書き込みが無い）
+    expect(edits).toHaveLength(1)
+    expect(restored).toHaveLength(1)
+    expect(findSubQuestion(restored[0], "sub-1a").points).toBe(1)
+    expect(findSubQuestion(result.current.definition, "sub-1a").points).toBe(1)
   })
 })
