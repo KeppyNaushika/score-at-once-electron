@@ -744,57 +744,70 @@ toast だけで UI が DB より先へ進んだままになるが、書き込み
 | 4    | IPC を31本へ割り、包んだ dispatch から呼ぶ。網羅 switch       | 他端末の編集の巻き戻し                                  |
 | 5    | バルクを `asb:replace-definition` へ改名し3経路に限定         | 通常編集がバルクへ流れ込む再発                          |
 
-### 7.1 段階1 — main の分解とバルクの差分適用
+### 7.1 段階1 — main の分解とバルクの差分適用（済 2026-08-19）
 
-**変更**: `asbDefinition.ts` / 新規5ファイル / `asbDefinitionReplace.ts` /
-`asbDefinitionTag.ts`（§8.2）/ `AnswerSheetBuilderMainView.tsx`（§6.8 の ref のみ）
+**着手時点で、利用者から見える不具合は既に直っていた。** §3.1 のデータ消失は
+`40e1241f` / `0e68a2f4` で差分適用へ、§6.8 の「開くだけで保存」は編集画面の `persisted`
+で、§8.2 のタグの delete → recreate は `setAsbDefinitionTags` の差分化で片付いている。
 
-**手順**
+**この段階で入れたのは分解だけ。**
 
-1. §5.2 の関数群を新規ファイルへ書く。中身は現行 `saveAsbDefinition` の各ブロックを、
-   `create` から `upsert` へ変えて移す
-2. `replaceAsbDefinition` を §5.4 の形で書き、`saveAsbDefinition` を置き換える
-   （チャンネル名はまだ `asb:save-definition` のまま）
-3. `AnswerSheetBuilderMainView.tsx` に §6.8 の ref を入れ、開くだけの保存を止める
-4. `setAsbDefinitionTags` を upsert 差分へ（§8.2）
+| ファイル                  | 中身                                                           |
+| ------------------------- | -------------------------------------------------------------- |
+| `asbHeaderField.ts`       | ヘッダー項目                                                   |
+| `asbQuestion.ts`          | 大問・小問・枝問                                               |
+| `asbCellElement.ts`       | テキスト要素・画像要素（親は `AsbCellParent`）                 |
+| `asbCharGuide.ts`         | 文字位置マーカー                                               |
+| `asbOmrConfig.ts`         | OMR設定・選択肢（`upsertOmrConfig` を変換の側から移した）      |
+| `asbDefinitionReplace.ts` | `replaceAsbDefinition`（旧 `saveAsbDefinition`）               |
+| `asbDefinition.ts`        | 解答用紙そのもの（一覧・取得・削除・担当・`asbDefinitionRow`） |
 
-**完了条件**
+> **§5.2 の関数群は全部は書いていない。** 各モジュールが持つのは「行の組み立て」
+> 「upsert」「残す id 以外を消す」の3つで、これは `replaceAsbDefinition` が実際に使うもの。
+> IPC が呼ぶ `create` / `update` / `delete` / `reorder` は**同じ行の組み立てを使って段階4 で
+> 足す**。呼ばれない関数を先に20本置くと、検査も通らないまま残る。
 
-- タグを付けた定義を編集画面で開いて閉じても、タグが残る
-- `createdAt` が保存で変わらない
-- 変更のない行の `updatedAt` が動かない
+**改名の理由**: `save` は日常の保存に見え、通常編集が再びここへ流れ込む。`replace` は
+「この姿にしろ」と運ぶ経路であることを名前で言う（§4.5）。
 
-**IPC はまだ1本のまま。** この段階では利用者から見える挙動の修正だけが入る。
+**検査**: 「先頭を消すと、残った小問の並び順が詰まる」を `saveDiffUpdate.test.ts` へ追加
+（`order` をずらすと落ちることを確認済み）。
 
-### 7.2 段階2 — 型の分解と action の id 化
+### 7.2 段階2 — 型の分解と action の id 化（済 2026-08-19）
 
-**変更**: `src/types/answerSheetDefinition.types.ts` / `constants.ts` /
-`useAnswerSheetDefinition.ts` / 各フォーム（コールバックの引数が添字から id になる）
+§5.3 の `*Attributes` 分解、§6.1 の action、`createDefault*` の呼び出し側への移動を入れた。
+`generateId()` の uuid 化は 2026-08-03 に済んでいる（§6.2）。
 
-**手順**
+**計画からの差**:
 
-1. §5.3 の `*Attributes` 分解を型に施す。既存の `SubQuestion` 等は `extends` で組み直すので、
-   利用側の型エラーは出ない
-2. §6.1 の action ユニオンへ書き換え、reducer を id 検索ベースにする
-3. `createDefault*` の呼び出しを reducer から**呼び出し側（フック）へ移す**。フックが実体を作り、
-   action に載せる
-4. `generateId()` を `crypto.randomUUID()` へ
-5. フックのコールバック引数を添字から id へ変え、各フォームの呼び出しを直す
+| 何                                              | どうしたか                                                                                  |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `SET_RENDER_MODE` を `UPDATE_DEFINITION` へ統合 | **統合しない。** 表示の切り替えであって編集ではなく、undo 履歴に積まない扱いを保つ          |
+| `AsbCellParent` の置き場所                      | `src/types/answerSheetDefinition.types.ts`。main も renderer も同じ言葉で親を指す           |
+| 小問の更新                                      | `AsbSubQuestionUpdate`。原稿用紙は「列数だけ」を触るので一部指定を許し、マーカーは別 action |
+| フォームへの配り方                              | `AsbEditorActions` 1つ。4層（大問→小問→枝問→セル）を素通りする props を無くす               |
+| プレビューのドラッグ（§6.3）                    | ここで解消。フックは `dispatch` を返さず、ドラッグは意図（id と値）だけを受け取る           |
 
-**完了条件**: 型検査が通り、既存の編集操作が従来どおり動く（保存経路はまだ1本）
+`DragInfo.target` も添字から `AsbCellParent` へ変えた。**レイアウト計算の出力に添字が
+残っていると、そこから書き込み先が決まる。**
 
-### 7.3 段階3 — 子要素の action 化
+### 7.3 段階3 — 子要素の action 化（済 2026-08-19）
 
-**変更**: `TextElementEditor.tsx` / `ImageElementEditor.tsx` / `ManuscriptPaperSettings.tsx` /
-OMR 設定フォーム / `SubQuestionForm.tsx` / `BranchQuestionForm.tsx` / action ユニオン / reducer
+§6.4 のとおりエディタの props を分解し、`SubQuestionForm` / `BranchQuestionForm` から
+親の `onUpdate` 経由をやめた。
 
-**手順**
+**子の `reorder` は足していない。** セルの中身を並べ替える導線が画面に無いため
+（action だけ先に置くと、対応する書き込みが無いまま残る）。作るときに action と IPC を
+一緒に足す。
 
-1. §6.4 のとおりエディタの props を分解する
-2. `SubQuestionForm` / `BranchQuestionForm` から、親の `onUpdate` 経由をやめて子の action を直接呼ぶ
-3. reducer に子の action を実装する
+**完了条件**: `UPDATE_SUB_QUESTION` の payload に子コレクションが現れない → 満たした。
 
-**完了条件**: `UPDATE_SUB_QUESTION` の payload に子コレクションが一切現れない
+**ジェスチャ**（[coding-style.md](./coding-style.md)「ジェスチャは終わったときに1回書く」）:
+つまみとプレビューのドラッグは離したときに1つの意図になる。ただし**この画面は途中の値も
+プレビューへ映す**ので、動かすのは編集状態・待たせるのは保存、と切り分けた
+（`AsbGestureContext`。つまみは画面の深いところに散らばり、行き先はどれも同じ1つ）。
+
+**検査**: `__tests__/answer-sheet-builder/editorActions.test.ts`（8件）。
 
 ### 7.4 段階4 — IPC の分割
 
@@ -996,9 +1009,10 @@ delete → recreate で、id も uuid 再生成。#1126 の tombstone の罠に�
 
 ## 更新履歴
 
-| 日付       | 内容                                                                                           |
-| ---------- | ---------------------------------------------------------------------------------------------- |
-| 2026-08-02 | 初版。#1126 の調査から IPC 分割の計画として起こす                                              |
-| 2026-08-02 | 実装計画として完成。所有者未整備による優先度の見直し・型分解・関数シグネチャ・段階別手順を追加 |
-| 2026-08-03 | §3.4 の「main はログイン中のユーザーを知らない」を訂正。所有と共有の設計文書へリンク           |
-| 2026-08-13 | §4.0 を追加。SQL の実測から原則を確定し、担当者ガードの置き場所を決定。未決2点を明示           |
+| 日付       | 内容                                                                                                       |
+| ---------- | ---------------------------------------------------------------------------------------------------------- |
+| 2026-08-02 | 初版。#1126 の調査から IPC 分割の計画として起こす                                                          |
+| 2026-08-02 | 実装計画として完成。所有者未整備による優先度の見直し・型分解・関数シグネチャ・段階別手順を追加             |
+| 2026-08-03 | §3.4 の「main はログイン中のユーザーを知らない」を訂正。所有と共有の設計文書へリンク                       |
+| 2026-08-13 | §4.0 を追加。SQL の実測から原則を確定し、担当者ガードの置き場所を決定。未決2点を明示                       |
+| 2026-08-19 | 段階1〜3 を実施。§7.1〜7.3 に結果と計画からの差（関数群の書き分け・`SET_RENDER_MODE`・子の reorder）を記録 |
