@@ -269,23 +269,54 @@ export function AnswerSheetDefinitionList() {
     }
   })
 
+  /**
+   * 一括操作の対象にできる行＝**自分が担当のものだけ**。
+   *
+   * タグ付けは他の編集と同じく担当の確認を通るので、他人の解答用紙を選んでも main が
+   * 弾く。しかも一括の書き込みは「既に付いている」を飛ばすために失敗を握り潰すので、
+   * **弾かれたことが利用者に伝わらない**（docs/branch-review-findings.md #10 の余波）。
+   * 押す前に選べなくしておくのが本筋で、それでもすり抜けた分は下で数えて伝える。
+   */
+  const taggableDefinitions = useMemo(
+    () => sorted.filter((definition) => definition.ownerId === user?.id),
+    [sorted, user?.id]
+  )
+  const isTaggable = useCallback(
+    (definition: ASBDefinitionListItem) => definition.ownerId === user?.id,
+    [user?.id]
+  )
+
   const {
     selectedIds,
     toggleSelect,
     toggleSelectAll,
     allSelected,
     clearSelection,
-  } = useRowSelection(sorted)
+  } = useRowSelection(taggableDefinitions)
 
   const handleBulkAddTag = async (tagName: string) => {
+    // 選んだ後に担当が変わることもある（同期で他の端末から届く）ので、実行時にも見る
+    const targets = sorted.filter(
+      (definition) => selectedIds.has(definition.id) && isTaggable(definition)
+    )
+    const skipped = selectedIds.size - targets.length
+    if (targets.length === 0) {
+      toast.error("タグを追加できませんでした", {
+        description: "選んだ解答用紙はどれも担当ではありません。",
+      })
+      return
+    }
     try {
       const tag = await findOrCreateTag(tagName)
       await addTagToDefinitions({
-        definitionIds: [...selectedIds],
+        definitionIds: targets.map((definition) => definition.id),
         tagId: tag.id,
       })
       toast.success("タグを追加しました", {
-        description: `${selectedIds.size}件の解答用紙に「${tagName}」を追加`,
+        description:
+          skipped > 0
+            ? `${targets.length}件の解答用紙に「${tagName}」を追加（${skipped}件は担当ではないため対象外）`
+            : `${targets.length}件の解答用紙に「${tagName}」を追加`,
       })
       clearSelection()
     } catch {
@@ -553,6 +584,12 @@ export function AnswerSheetDefinitionList() {
                         checked={selectedIds.has(definition.id)}
                         onCheckedChange={(checked) =>
                           toggleSelect(definition.id, checked === true)
+                        }
+                        disabled={!isTaggable(definition)}
+                        title={
+                          isTaggable(definition)
+                            ? undefined
+                            : `担当は ${definition.ownerName} さんです`
                         }
                         aria-label={`${definition.name} を選択`}
                       />

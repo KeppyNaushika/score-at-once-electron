@@ -154,7 +154,12 @@ export const addTagToExamsMutation = () =>
             tagId: input.tagId,
           })
         } catch {
-          // 既に紐づいている場合は unique 制約で失敗するが、結果は同じなので飛ばす
+          // 既に紐づいている場合は unique 制約で失敗するが、結果は同じなので飛ばす。
+          //
+          // **担当でないものをここへ渡さないこと。** タグ付けも担当の確認を通るように
+          // なった（docs/branch-review-findings.md #10）ので、渡すとこの catch が
+          // 「弾かれた」も一緒に握り潰し、利用者に伝わらないまま一部だけ付く。
+          // 呼ぶ側（AnswerSheetDefinitionList）が担当分に絞り、外した件数を伝える。
         }
       }
     },
