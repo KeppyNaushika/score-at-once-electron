@@ -130,14 +130,32 @@ export default function ClassroomDetailPage() {
   }
 
   const handleBulkDeleteMemberships = async (membershipIds: string[]) => {
-    for (const membershipId of membershipIds) {
-      await deleteMembership.mutateAsync(membershipId)
+    try {
+      for (const membershipId of membershipIds) {
+        await deleteMembership.mutateAsync(membershipId)
+      }
+    } catch {
+      // 1件でも失敗したらそこで止める。知らせは中央のトーストが出す。
+      // 受け止めないと未処理の rejection になり、**残りの id が黙って飛ばされる**
     }
   }
 
-  const handleDeleteClassroom = () => {
-    if (!window.confirm("この学級を削除しますか？")) return
-    deleteClassroom.mutate(classroomId)
+  /**
+   * 学級を消す。**消せたかどうかを返す。**
+   *
+   * 投げっぱなしにすると、呼ぶ側が `await` しても待ったことにならず、外部キーや
+   * 権限で失敗しても一覧へ遷移して「消えていない学級」が並ぶ
+   * （docs/branch-review-findings.md #15）。
+   */
+  const handleDeleteClassroom = async (): Promise<boolean> => {
+    if (!window.confirm("この学級を削除しますか？")) return false
+    try {
+      await deleteClassroom.mutateAsync(classroomId)
+      return true
+    } catch {
+      // 知らせは中央のトーストが出す。ここでは遷移させないことだけを伝える
+      return false
+    }
   }
 
   const { studentResults, loading: analyticsLoading } =
@@ -158,7 +176,7 @@ export default function ClassroomDetailPage() {
   }
 
   const handleDeleteWithNavigation = async () => {
-    await handleDeleteClassroom()
+    if (!(await handleDeleteClassroom())) return
     router.push("/classrooms")
   }
 
