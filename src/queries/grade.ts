@@ -1,8 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 
 import type {
-  AbsentMethod,
-  EstimationMode,
   GradeCellTarget,
   GradeConstraintInput,
   GradeDataSourceInput,
@@ -371,21 +369,23 @@ export const renameDataSourceMutation = (gradeId: string) =>
     },
   })
 
-/** 欠測推定の設定を変える。予測の前提が変わるので相関も取り直す */
+/**
+ * 欠測推定の設定を変える。予測の前提が変わるので相関も取り直す。
+ *
+ * **列の顔ぶれは IPC の引数から導く。** ここで手書きすると、書き写しが1つずれても
+ * 型検査に掛からない（対象が全て optional なので「必須の欠落」にならず、変数で渡す
+ * 限り余剰プロパティ検査も働かない）。実際それで、一括設定が常に失敗していたのに
+ * `tsc` が黙っていた（docs/branch-review-findings.md #3）。
+ */
 export const updateDataSourceEstimationMutation = (gradeId: string) =>
   defineMutation({
-    mutationFn: (input: {
+    mutationFn: ({
+      id,
+      ...data
+    }: {
       id: string
-      absentMethod?: AbsentMethod
-      absentRatio?: number
-      absentOffset?: number
-      treatExpectedAsMissing?: boolean
-      estimationMode?: EstimationMode
-      estimationSourceIds?: string[]
-    }) => {
-      const { id, ...data } = input
-      return window.electronAPI.grade.updateDataSource(id, data)
-    },
+    } & Parameters<typeof window.electronAPI.grade.updateDataSource>[1]) =>
+      window.electronAPI.grade.updateDataSource(id, data),
     scope: { id: `grade:${gradeId}:dataSources` },
     meta: {
       invalidates: [
@@ -393,50 +393,6 @@ export const updateDataSourceEstimationMutation = (gradeId: string) =>
         gradeSourceFitsQuery(gradeId).queryKey,
       ],
       errorMessage: "欠測時の設定を保存できませんでした",
-    },
-  })
-
-/**
- * 選んだデータソースへ同じ欠測設定をまとめて当てる。
- *
- * 一括専用の IPC は持たない。**同じ操作を対象分だけ繰り返す**だけなので、
- * 個別更新をターゲット数だけ回す。原子性も意図的に持たない — 部分適用が残っても
- * 意味が通り、もう一度「適用」を押せば回復できる。
- *
- * ここで1つの書き込みにまとめるのは、失敗の知らせを1回にするため。対象ごとに
- * `useMutation` を分けると、20件失敗したときトーストが20枚出る。
- */
-export const batchUpdateDataSourceEstimationMutation = (gradeId: string) =>
-  defineMutation({
-    mutationFn: async (
-      updates: {
-        id: string
-        absentMethod?: AbsentMethod
-        absentRatio?: number
-        absentOffset?: number
-        treatExpectedAsMissing?: boolean
-        estimationMode?: EstimationMode
-        estimationSourceIds?: string[]
-      }[]
-    ) => {
-      const results = await Promise.allSettled(
-        updates.map(({ id, ...data }) =>
-          window.electronAPI.grade.updateDataSource(id, data)
-        )
-      )
-      const failedCount = results.filter(
-        (settled) => settled.status === "rejected"
-      ).length
-      if (failedCount > 0) {
-        throw new Error(`${failedCount}件に適用できませんでした`)
-      }
-    },
-    meta: {
-      invalidates: [
-        gradeScope(gradeId),
-        gradeSourceFitsQuery(gradeId).queryKey,
-      ],
-      errorMessage: "欠測時の一括設定を適用できませんでした",
     },
   })
 

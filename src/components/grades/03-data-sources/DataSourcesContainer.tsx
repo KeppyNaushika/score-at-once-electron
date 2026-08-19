@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  batchUpdateDataSourceEstimationMutation,
   createGradeItemMutation,
   type GradeClassroomRow,
   gradeClassroomsQuery,
@@ -31,6 +30,7 @@ import {
   gradeStudentsQuery,
   reorderDataSourcesMutation,
   reorderGradeItemsMutation,
+  updateDataSourceEstimationMutation,
 } from "@/queries/grade"
 import type {
   AbsentMethod,
@@ -65,8 +65,8 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
   const createGradeItem = useMutation(createGradeItemMutation(gradeId))
   const reorderGradeItems = useMutation(reorderGradeItemsMutation(gradeId))
   const reorderDataSources = useMutation(reorderDataSourcesMutation(gradeId))
-  const batchUpdateEstimation = useMutation(
-    batchUpdateDataSourceEstimationMutation(gradeId)
+  const updateEstimation = useMutation(
+    updateDataSourceEstimationMutation(gradeId)
   )
 
   const [newItemName, setNewItemName] = useState("")
@@ -187,22 +187,27 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
     // 選べるが、各ターゲットは自分自身を推定ソースにできない（個別行popoverの
     // 自ソース除外と同じ規則）。そこでターゲットごとに自idだけを除いた列を
     // 組み立て、普遍的な個別更新をターゲット分だけ回す。
-    const updates = [...selectedDataSourceIds].map((targetId) => ({
-      id: targetId,
-      data: {
-        absentMethod: batchMethod,
-        absentRatio: Number(batchRatio),
-        absentOffset: Number(batchOffset),
-        ...(usesEstimationSources && {
-          estimationMode: batchEstimationMode,
-          estimationSourceIds: batchEstimationSourceIds.filter(
-            (sourceId) => sourceId !== targetId
-          ),
-        }),
-      },
-    }))
     try {
-      await batchUpdateEstimation.mutateAsync(updates)
+      // 一括専用の口は持たない。**同じ操作をターゲット分だけ繰り返す**だけなので、
+      // 個別更新をそのまま回す。知らせが N 枚出ることは無い — MutationCache が
+      // 「同じ行き先へ書いているものが他に走っている間は後始末を出さない」ので、
+      // 最後の1つだけが取り直しと通知を出す。
+      await Promise.all(
+        [...selectedDataSourceIds].map((targetId) =>
+          updateEstimation.mutateAsync({
+            id: targetId,
+            absentMethod: batchMethod,
+            absentRatio: Number(batchRatio),
+            absentOffset: Number(batchOffset),
+            ...(usesEstimationSources && {
+              estimationMode: batchEstimationMode,
+              estimationSourceIds: batchEstimationSourceIds.filter(
+                (sourceId) => sourceId !== targetId
+              ),
+            }),
+          })
+        )
+      )
     } catch {
       // 一部だけ適用済みの可能性がある。失敗の知らせは中央のトーストが出すので、
       // ここではパネルと選択を保持して再適用できるようにするだけ。
