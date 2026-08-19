@@ -6,7 +6,7 @@ import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-s
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import {
-  createQuestionScoreMutation,
+  setQuestionScoreMutation,
   updateQuestionScoreMutation,
 } from "@/queries/scoring"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
@@ -43,8 +43,8 @@ export function useBatchScoring({
   currentCropRegionId,
   currentUserId,
 }: UseBatchScoringProps) {
-  const { mutateAsync: createQuestionScore } = useMutation(
-    createQuestionScoreMutation(examId)
+  const { mutateAsync: setScore } = useMutation(
+    setQuestionScoreMutation(examId)
   )
   const { mutateAsync: updateQuestionScore } = useMutation(
     updateQuestionScoreMutation(examId)
@@ -134,7 +134,7 @@ export function useBatchScoring({
               // 失敗の通知と取り直しは MutationCache の後始末が担う
             })
         } else {
-          createQuestionScore({
+          setScore({
             examStudentId: studentAnswerImage.examStudentId,
             cropRegionId: currentCropRegion.id,
             partialScore: nextPartialScore ?? undefined,
@@ -147,7 +147,7 @@ export function useBatchScoring({
       }
     },
     [
-      createQuestionScore,
+      setScore,
       cropRegions,
       currentCropRegionId,
       currentUserId,

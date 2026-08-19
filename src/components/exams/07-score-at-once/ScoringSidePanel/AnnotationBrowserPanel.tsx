@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
-import { createQuestionScoreMutation } from "@/queries/scoring"
+import { ensureQuestionScoreMutation } from "@/queries/scoring"
 import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 
 import type {
@@ -124,8 +124,8 @@ export function AnnotationBrowserPanel({
     toggleFavorite: onToggleFavorite,
     addToTargets: onAddToTargets,
   } = useAnnotationBrowser(examId)
-  const { mutateAsync: createQuestionScore } = useMutation(
-    createQuestionScoreMutation(examId)
+  const { mutateAsync: ensureQuestionScoreRow } = useMutation(
+    ensureQuestionScoreMutation(examId)
   )
 
   // キャンバスで手書きが変わったら取り直す。合図が来たときだけ
@@ -185,11 +185,10 @@ export function AnnotationBrowserPanel({
       // なければ作成
       if (!currentUserId) return null
       try {
-        const created = await createQuestionScore({
+        const created = await ensureQuestionScoreRow({
           cropRegionId,
           examStudentId,
           userId: currentUserId,
-          status: "unscored",
         })
         onQuestionScoreCreated?.()
         return created.id
@@ -198,7 +197,7 @@ export function AnnotationBrowserPanel({
       }
       return null
     },
-    [cropRegions, currentUserId, createQuestionScore, onQuestionScoreCreated]
+    [cropRegions, currentUserId, ensureQuestionScoreRow, onQuestionScoreCreated]
   )
 
   // 連打防止用フラグ

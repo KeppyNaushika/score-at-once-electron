@@ -16,13 +16,15 @@ import {
 } from "../lib/prisma/cropRegionAssignment"
 import type {
   CreateQuestionScoreData,
+  EnsureQuestionScoreData,
   UpdateQuestionScoreData,
 } from "../lib/prisma/questionScore"
 import {
   type BatchScoreEntry,
   batchUpdateQuestionScores,
-  createQuestionScore,
+  ensureQuestionScore,
   SCORE_TARGET_DELETED,
+  setQuestionScore,
   updateQuestionScore,
 } from "../lib/prisma/questionScore"
 import { upsertScoreDecision } from "../lib/prisma/scoreDecision"
@@ -59,8 +61,13 @@ function serializeScore(score: {
 /** 採点（QuestionScore）のCRUD・進捗取得・一括更新・採点レコード初期化に関するIPCチャンネルを登録する */
 export const scoringHandlers = {
   // QuestionScore 関連のハンドラー
-  "create-question-score": async (data: CreateQuestionScoreData) =>
-    serializeScore(await createQuestionScore(data)),
+  // 採点する（無ければ作り、有れば上書きする）
+  "set-question-score": async (data: CreateQuestionScoreData) =>
+    serializeScore(await setQuestionScore(data)),
+
+  // 注釈の置き場所として採点行を用意する（有れば何も書かずに返す）
+  "ensure-question-score": async (data: EnsureQuestionScoreData) =>
+    serializeScore(await ensureQuestionScore(data)),
 
   "update-question-score": async (
     id: string,

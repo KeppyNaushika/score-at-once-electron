@@ -23,7 +23,7 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 import { upsertCompoundAnswerScore } from "@/electron-src/lib/prisma/compoundAnswer"
 import {
   batchUpdateQuestionScores,
-  createQuestionScore,
+  setQuestionScore,
 } from "@/electron-src/lib/prisma/questionScore"
 import { upsertScoreDecision } from "@/electron-src/lib/prisma/scoreDecision"
 
@@ -82,7 +82,7 @@ describe("採点対象と受験者の試験スコープ", () => {
   it("同じ試験の採点領域と受験者なら採点できる", async () => {
     const { examA, cropRegionA, examStudentA } = await buildTwoExams()
 
-    const result = await createQuestionScore({
+    const result = await setQuestionScore({
       cropRegionId: cropRegionA.id,
       examStudentId: examStudentA.id,
       status: "correct",
@@ -97,7 +97,7 @@ describe("採点対象と受験者の試験スコープ", () => {
     const { examA, cropRegionA, examStudentB } = await buildTwoExams()
 
     await expect(
-      createQuestionScore({
+      setQuestionScore({
         cropRegionId: cropRegionA.id,
         examStudentId: examStudentB.id,
         status: "correct",

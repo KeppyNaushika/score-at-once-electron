@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef } from "react"
 
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
-import { createQuestionScoreMutation } from "@/queries/scoring"
+import { ensureQuestionScoreMutation } from "@/queries/scoring"
 
 interface UseAutoCreateQuestionScoreParams {
   /** 試験ID（書き込みの行き先を決める） */
@@ -38,8 +38,8 @@ export function useAutoCreateQuestionScore({
   currentUserId,
   onQuestionScoreCreated,
 }: UseAutoCreateQuestionScoreParams): UseAutoCreateQuestionScoreReturn {
-  const { mutateAsync: createScore } = useMutation(
-    createQuestionScoreMutation(examId)
+  const { mutateAsync: ensureScore } = useMutation(
+    ensureQuestionScoreMutation(examId)
   )
 
   // 作成中のリクエストを追跡（重複作成防止）
@@ -57,7 +57,7 @@ export function useAutoCreateQuestionScore({
       : null
 
   // QuestionScore作成関数
-  const createQuestionScore = useCallback(async () => {
+  const ensureQuestionScoreRow = useCallback(async () => {
     if (!currentExamStudentId || !currentCropRegionId || !currentUserId) {
       return
     }
@@ -72,12 +72,10 @@ export function useAutoCreateQuestionScore({
     creatingRef.current = key
 
     try {
-      await createScore({
+      await ensureScore({
         examStudentId: currentExamStudentId,
         cropRegionId: currentCropRegionId,
         userId: currentUserId,
-        status: "unscored",
-        partialScore: undefined,
       })
 
       // 作成成功 - 親コンポーネントに通知してリストを更新
@@ -91,7 +89,7 @@ export function useAutoCreateQuestionScore({
       }
     }
   }, [
-    createScore,
+    ensureScore,
     currentExamStudentId,
     currentCropRegionId,
     currentUserId,
@@ -106,14 +104,14 @@ export function useAutoCreateQuestionScore({
       currentUserId &&
       currentQuestionScoreId === null
     ) {
-      createQuestionScore()
+      ensureQuestionScoreRow()
     }
   }, [
     currentExamStudentId,
     currentCropRegionId,
     currentUserId,
     currentQuestionScoreId,
-    createQuestionScore,
+    ensureQuestionScoreRow,
   ])
 
   return {

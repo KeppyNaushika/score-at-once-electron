@@ -147,10 +147,85 @@ export const getQuestionScoresForExam = async (
   }
 }
 
+/** `ensureQuestionScore` の引数。判定を持たない（採点する関数ではないので） */
+export interface EnsureQuestionScoreData {
+  examStudentId: string
+  cropRegionId: string
+  userId: string
+}
+
 /**
- * 採点データを作成
+ * この組み合わせの採点行を用意する。**有れば何も書かずに、その行を返す。**
+ *
+ * 手書き注釈は `DrawingAnnotation.questionScoreId` を必須で持つので、注釈を
+ * ぶら下げる先として行の実体が要る。**それがこの関数の唯一の存在理由**で、
+ * 「未採点である」ことを記録するためではない — 行の不在は既にアプリ全体で
+ * 未採点として読まれている（採点画面・確定リゾルバ・成績算出・出力の全経路。
+ * docs/branch-review-findings.md #2）。
+ *
+ * **作るときも監査ログを残さない。** 利用者が行った操作ではなく、`unscored` は
+ * 確定リゾルバが「採点の意思表示ではない」として読み飛ばすものなので、
+ * 「採点を提案した」と記録すると監査ログが嘘をつく。
+ *
+ * この作成そのものを無くすのが段階21（注釈を書くときに main が用意する）。
  */
-export const createQuestionScore = async (data: CreateQuestionScoreData) => {
+export const ensureQuestionScore = async (data: EnsureQuestionScoreData) => {
+  try {
+    await assertCropRegionsInSameExam([
+      {
+        cropRegionId: data.cropRegionId,
+        examStudentId: data.examStudentId,
+      },
+    ])
+
+    const include = {
+      examStudent: { include: { student: true } },
+      cropRegion: true,
+      user: true,
+    }
+
+    const existing = await prisma.questionScore.findFirst({
+      where: {
+        examStudentId: data.examStudentId,
+        cropRegionId: data.cropRegionId,
+        userId: data.userId,
+      },
+      include,
+    })
+    // 有ったら触らない。ここで status を書くと、入れたばかりの採点が消える
+    if (existing) return existing
+
+    return await prisma.questionScore.create({
+      data: {
+        examStudentId: data.examStudentId,
+        cropRegionId: data.cropRegionId,
+        partialScore: null,
+        status: "unscored",
+        userId: data.userId,
+      },
+      include,
+    })
+  } catch (error) {
+    console.error("Failed to ensure question score:", error)
+    throw error
+  }
+}
+
+/**
+ * 採点する。**この組み合わせに行が無ければ作り、有れば上書きする。**
+ *
+ * `QuestionScore` には (examStudentId, cropRegionId, userId) の unique が無い
+ * （sqlite-nas-sync の制約で id 以外の unique を張らない方針）ので `upsert()` が
+ * 使えず、`findFirst` ＋ 分岐を手書きしている。**「1採点者・1セル・1行」を守って
+ * いるのはこの関数だけ。**
+ *
+ * **「行が無いなら用意したい」だけのときは呼ばないこと。** 上書きが正しいのは
+ * 利用者が採点したときだけで、置き場所が欲しいだけなら `ensureQuestionScore` を
+ * 使う。かつてこの関数が `createQuestionScore` という名前で両方を兼ねており、
+ * 設問を表示しただけで出る自動作成が、入れたばかりの採点を unscored で
+ * 上書きしていた（docs/branch-review-findings.md #2）。
+ */
+export const setQuestionScore = async (data: CreateQuestionScoreData) => {
   try {
     // 採点領域と受験者が同じ試験のものであること（FK は片方ずつしか見ない）
     await assertCropRegionsInSameExam([
@@ -255,7 +330,7 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
       return created
     }
   } catch (error) {
-    console.error("Failed to create question score:", error)
+    console.error("Failed to set question score:", error)
     throw error
   }
 }
