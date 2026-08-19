@@ -131,6 +131,51 @@ describe("書き込みの後始末", () => {
     unsubscribe()
   })
 
+  it("行き先の広い書き込みは、狭い書き込みを見て黙らない", async () => {
+    // 照合が前方一致だと、[["exam","E1"]] は [["exam","E1","cropRegions"]] に
+    // 一致してしまう。狭い方は自分のキーしか取り直さないので、広い方が黙ると
+    // 試験まるごとの取り直しが誰にも行われない
+    const client = createAppQueryClient()
+    const broadKey = ["exam", "E1"] as const
+    const narrowKey = ["exam", "E1", "cropRegions"] as const
+    const queryFn = vi.fn(async () => "data")
+    const queryObserver = new QueryObserver(client, {
+      queryKey: broadKey,
+      queryFn,
+    })
+    const unsubscribe = queryObserver.subscribe(() => {})
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    const afterInitial = queryFn.mock.calls.length
+
+    const narrow = new MutationObserver(
+      client,
+      defineMutation({
+        mutationFn: async () => {
+          await new Promise((resolve) => setTimeout(resolve, 30))
+        },
+        meta: { invalidates: [narrowKey], errorMessage: "失敗" },
+      })
+    )
+    const broad = new MutationObserver(
+      client,
+      defineMutation({
+        mutationFn: async () => {
+          await new Promise((resolve) => setTimeout(resolve, 1))
+        },
+        meta: { invalidates: [broadKey], errorMessage: "失敗" },
+      })
+    )
+
+    // 狭い方が走っている最中に、広い方が終わる
+    const narrowDone = narrow.mutate()
+    await broad.mutate()
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    expect(queryFn.mock.calls.length - afterInitial).toBe(1)
+    await narrowDone
+    unsubscribe()
+  })
+
   it("成功したら meta.invalidates を取り直す", async () => {
     const client = createAppQueryClient()
     const invalidate = vi.spyOn(client, "invalidateQueries")

@@ -34,14 +34,21 @@ export function createAppQueryClient(): QueryClient {
         // PDF 印刷・ファイル選択など）。何もしないのが正しい。
         const invalidates = mutation.meta?.invalidates
         if (!invalidates) return
-        // 連打をまとめる。同じ行き先へ書いているものが他にも走っている間は
+        // 連打をまとめる。**同じ行き先へ書いているもの**が他にも走っている間は
         // 取り直さず、最後の1つだけが取り直す。これが無いと、10マス切り替えれば
         // 取り直しも10回走る（実測）。
         //
         // `mutationKey` は `defineMutation` が `meta.invalidates` から付ける。
-        // `isMutating` は自分を含めて数えるので、1 なら自分だけ
+        // `isMutating` は自分を含めて数えるので、1 なら自分だけ。
+        //
+        // **`exact` を外してはいけない。** 既定の照合は前方一致なので、広いキーの
+        // 書き込みが「狭いキーの書き込みが代わりに取り直してくれる」と誤解する。
+        // 狭い方は自分のキーしか取り直さないので、広い方の行き先が取り残される
+        // （試験まるごとを取り直すはずの書き込みが、採点領域だけの書き込みを
+        // 見て黙る、など）。
         const stillWriting = client.isMutating({
           mutationKey: mutation.options.mutationKey,
+          exact: true,
         })
         if (stillWriting > 1) return
         for (const queryKey of invalidates) {
