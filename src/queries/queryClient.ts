@@ -12,6 +12,12 @@ import { toast } from "sonner"
  *
  * 取得の既定:
  * - 再試行しない。IPC はネットワークを跨がないので、繰り返しても結果は変わらない
+ * - **オンライン判定に従わない**（`networkMode: "always"`）。同じ理由で、取得も
+ *   書き込みもネットワークを跨がない。アプリが読み書きするのは常にローカルの複製で、
+ *   NAS の共有ファイルに触れるのは `sqlite-nas-sync` が行レベルのマージを回すときだけ
+ *   （しかもその失敗は React Query を通らない）。既定の `"online"` のままだと、
+ *   Wi-Fi を切った端末で `navigator.onLine` が false になり、**全クエリが
+ *   `fetchStatus:"paused"` のまま「読み込み中」で固まり、採点も保存されない**
  * - 窓に戻るたびの再取得を止める。NAS同期で他の教員の変更は入るが、採点中に
  *   手元の表示が動くほうが害が大きい。拾いたい画面はその `useQuery` で有効にする
  */
@@ -21,6 +27,10 @@ export function createAppQueryClient(): QueryClient {
       queries: {
         refetchOnWindowFocus: false,
         retry: false,
+        networkMode: "always",
+      },
+      mutations: {
+        networkMode: "always",
       },
     },
     mutationCache: new MutationCache({

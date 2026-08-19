@@ -7,8 +7,12 @@
  * 表示し続ける）ので、中央処理だけを直接確かめる。
  */
 
-import { MutationObserver, QueryObserver } from "@tanstack/react-query"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  MutationObserver,
+  onlineManager,
+  QueryObserver,
+} from "@tanstack/react-query"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { defineMutation } from "../../src/queries/defineMutation"
 import { createAppQueryClient } from "../../src/queries/queryClient"
@@ -207,5 +211,42 @@ describe("書き込みの後始末", () => {
       "対象生徒の設定を保存できませんでした",
       { description: "DB is locked" }
     )
+  })
+})
+
+describe("オフラインでも止まらない", () => {
+  // データはローカルの SQLite で、IPC はネットワークを跨がない。既定の
+  // networkMode:"online" のままだと、Wi-Fi を切った端末で navigator.onLine が
+  // false になり、**全クエリが paused のまま固まって採点も保存されない**。
+  // NAS の共有ファイルに触れるのは sqlite-nas-sync だけで、その経路は
+  // React Query を通らない（docs/branch-review-findings.md #5）。
+  afterEach(() => {
+    onlineManager.setOnline(true)
+  })
+
+  it("オンライン判定が false でも取得が走る", async () => {
+    onlineManager.setOnline(false)
+    const client = createAppQueryClient()
+    const fetchData = vi.fn(async () => "取れた")
+
+    const observer = new QueryObserver(client, {
+      queryKey: ["offline-probe"],
+      queryFn: fetchData,
+    })
+    const unsubscribe = observer.subscribe(() => {})
+    await vi.waitFor(() => expect(fetchData).toHaveBeenCalled())
+    unsubscribe()
+
+    expect(observer.getCurrentResult().fetchStatus).not.toBe("paused")
+  })
+
+  it("オンライン判定が false でも書き込みが走る", async () => {
+    onlineManager.setOnline(false)
+    const client = createAppQueryClient()
+    const write = vi.fn(async () => "書けた")
+
+    await runMutation(client, write)
+
+    expect(write).toHaveBeenCalled()
   })
 })
