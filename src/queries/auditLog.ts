@@ -11,6 +11,14 @@ import type { AuditLogFilter } from "@/electron-src/lib/prisma/auditQuery"
 const PAGE_SIZE = 50
 
 /**
+ * 監査ログ全体の行き先。
+ *
+ * 絞り込みごとにキーが分かれるので、**取り直しは前方一致で全部**を指す。監査ログを
+ * 1行足す書き込み（書き出し・取り込みなど）はここを指す。
+ */
+export const auditLogListKey = ["auditLog", "list"] as const
+
+/**
  * 監査ログの一覧（無限スクロール）。
  *
  * 絞り込み条件は要求そのものなのでキーに入る（同定用の id ではない）。条件を

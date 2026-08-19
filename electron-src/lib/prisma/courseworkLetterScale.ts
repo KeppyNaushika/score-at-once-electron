@@ -21,6 +21,7 @@ import type { Prisma } from "@prisma/client"
 import { recordAuditLog } from "./auditLog"
 import { resolveCourseworkScopeByItem } from "./auditScope"
 import prisma from "./client"
+import { isRecordNotFoundError } from "./prismaErrors"
 import { serializePrisma } from "./serializePrisma"
 
 /** 刻みを1行足す */
@@ -68,11 +69,20 @@ export async function updateCourseworkLetterScale(
   return serializePrisma(letterScale)
 }
 
-/** 刻みを1行消す */
+/**
+ * 刻みを1行消す。
+ *
+ * **既に消えていれば何もしない。** 消す操作の結果は「無い」ことで、他の端末が先に
+ * 消していても・二度押しでも、望んだ状態にはなっている。
+ */
 export async function deleteCourseworkLetterScale(id: string) {
-  const letterScale = await prisma.courseworkLetterScale.delete({
-    where: { id },
-  })
+  const letterScale = await prisma.courseworkLetterScale
+    .delete({ where: { id } })
+    .catch((error: unknown) => {
+      if (isRecordNotFoundError(error)) return null
+      throw error
+    })
+  if (!letterScale) return
 
   const scope = await resolveCourseworkScopeByItem(letterScale.courseworkItemId)
   await recordAuditLog({

@@ -78,7 +78,6 @@ export function useExcelPreview({
   enabled,
   reloadKey,
 }: UseExcelPreviewProps) {
-
   // 生徒選択は連続して変わるので、落ち着いてから取りに行く
   const debouncedExamStudentIds = useDebouncedValue(
     selectedExamStudentIds,

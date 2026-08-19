@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query"
 
 import type { CourseworkScoreUpsertInput } from "@/types/coursework.types"
 
+import { auditLogListKey } from "./auditLog"
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
 import { tagListQuery } from "./tag"
@@ -407,7 +408,8 @@ export const exportCourseworkArchiveMutation = () =>
     mutationFn: (courseworkId: string) =>
       window.electronAPI.coursework.exportArchive(courseworkId),
     meta: {
-      writesDatabase: false,
+      // 書き出したことは監査ログに残る＝DB を1行書く
+      invalidates: [auditLogListKey],
       errorMessage: "試験外成績資料を書き出せませんでした",
     },
   })

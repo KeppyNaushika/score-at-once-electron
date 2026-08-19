@@ -18,6 +18,7 @@ import type { Prisma } from "@prisma/client"
 import { recordAuditLog } from "./auditLog"
 import { resolveGradeScopeByItem } from "./auditScope"
 import prisma from "./client"
+import { isRecordNotFoundError } from "./prismaErrors"
 
 /**
  * 評価項目の境界を丸ごと置き換える。**一括経路**（`docs/coding-style.md` の
@@ -101,9 +102,20 @@ export async function updateGradeItemBoundary(
   return boundary
 }
 
-/** 境界を1本消す */
+/**
+ * 境界を1本消す。
+ *
+ * **既に消えていれば何もしない。** 消す操作の結果は「無い」ことで、他の端末が先に
+ * 消していても・二度押しでも、望んだ状態にはなっている。
+ */
 export async function deleteGradeItemBoundary(id: string) {
-  const boundary = await prisma.gradeItemBoundary.delete({ where: { id } })
+  const boundary = await prisma.gradeItemBoundary
+    .delete({ where: { id } })
+    .catch((error: unknown) => {
+      if (isRecordNotFoundError(error)) return null
+      throw error
+    })
+  if (!boundary) return
 
   const scope = await resolveGradeScopeByItem(boundary.gradeItemId)
   await recordAuditLog({

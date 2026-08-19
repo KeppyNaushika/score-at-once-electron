@@ -9,6 +9,7 @@ import type {
   GradeOverrideInput,
 } from "@/types/grade.types"
 
+import { auditLogListKey } from "./auditLog"
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
 
@@ -696,7 +697,8 @@ export const exportGradeArchiveMutation = () =>
     mutationFn: (gradeId: string) =>
       window.electronAPI.grade.exportArchive(gradeId),
     meta: {
-      writesDatabase: false,
+      // 書き出したことは監査ログに残る＝DB を1行書く
+      invalidates: [auditLogListKey],
       errorMessage: "成績アーカイブを書き出せませんでした",
     },
   })

@@ -1,3 +1,4 @@
+import { auditLogListKey } from "./auditLog"
 import { defineMutation } from "./defineMutation"
 import { classroomListQuery, studentListQuery } from "./student"
 import { tagListQuery } from "./tag"
@@ -21,7 +22,8 @@ export const exportExamArchiveMutation = () =>
       input: Parameters<typeof window.electronAPI.archive.exportExam>[0]
     ) => window.electronAPI.archive.exportExam(input),
     meta: {
-      writesDatabase: false,
+      // 書き出したことは監査ログに残る＝DB を1行書く
+      invalidates: [auditLogListKey],
       errorMessage: "試験を書き出せませんでした",
     },
   })
@@ -32,7 +34,8 @@ export const bulkExportExamsMutation = () =>
       input: Parameters<typeof window.electronAPI.archive.bulkExportExams>[0]
     ) => window.electronAPI.archive.bulkExportExams(input),
     meta: {
-      writesDatabase: false,
+      // 書き出したことは監査ログに残る＝DB を1行書く
+      invalidates: [auditLogListKey],
       errorMessage: "試験を書き出せませんでした",
     },
   })
@@ -45,7 +48,8 @@ export const exportStudentArchiveMutation = () =>
       >[0]
     ) => window.electronAPI.studentArchive.exportStudents(input),
     meta: {
-      writesDatabase: false,
+      // 書き出したことは監査ログに残る＝DB を1行書く
+      invalidates: [auditLogListKey],
       errorMessage: "生徒を書き出せませんでした",
     },
   })

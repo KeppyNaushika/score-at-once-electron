@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 
+import { auditLogListKey } from "./auditLog"
 import { defineMutation } from "./defineMutation"
 import { examListQuery } from "./exam"
 import { scopeKeys } from "./keys"
@@ -231,7 +232,8 @@ export const exportAnswerSheetDefinitionMutation = () =>
     mutationFn: (definitionId: string) =>
       window.electronAPI.answerSheetBuilder.exportDefinition(definitionId),
     meta: {
-      writesDatabase: false,
+      // 書き出したことは監査ログに残る＝DB を1行書く
+      invalidates: [auditLogListKey],
       errorMessage: "解答用紙を書き出せませんでした",
     },
   })
