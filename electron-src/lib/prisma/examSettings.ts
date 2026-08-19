@@ -43,7 +43,7 @@ import { resolveExamScope } from "./auditScope"
 import prisma from "./client"
 
 /** 試験の出力設定一式（IPC で renderer へ渡す形） */
-export interface ExamExportSettings {
+interface ExamExportSettings {
   answerOverlay: AnswerOverlaySettings
   individualReport: IndividualReportOptions
 }

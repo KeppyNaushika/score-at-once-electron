@@ -137,17 +137,6 @@ export const setExamTagsForNewExamMutation = () =>
     },
   })
 
-/** 試験にタグを1つ足す（既存を保ったまま） */
-export const addExamTagMutation = (examId: string) =>
-  defineMutation({
-    mutationFn: (tagId: string) =>
-      window.electronAPI.examTagCreate({ examId, tagId }),
-    meta: {
-      invalidates: [examTagsQuery(examId).queryKey, tagListQuery().queryKey],
-      errorMessage: "タグを追加できませんでした",
-    },
-  })
-
 /**
  * 選んだ試験へ同じタグをまとめて足す。
  *
@@ -192,26 +181,6 @@ export const setAnswerSheetDefinitionTagsMutation = (definitionId: string) =>
         tagListQuery().queryKey,
       ],
       errorMessage: "タグを保存できませんでした",
-    },
-  })
-
-/** 解答用紙にタグを1つ足す（既存を保ったまま） */
-export const addAnswerSheetDefinitionTagMutation = (definitionId: string) =>
-  defineMutation({
-    mutationFn: (tagId: string) =>
-      window.electronAPI.asbDefinitionTagCreate({
-        asbDefinitionId: definitionId,
-        tagId,
-      }),
-    meta: {
-      // 一覧の行にもタグが出る（`listDefinitions` が同梱する）ので一緒に取り直す。
-      // タグ一覧は紐付けを利用先として同梱するので、そちらも古くなる
-      invalidates: [
-        answerSheetDefinitionTagsQuery(definitionId).queryKey,
-        answerSheetDefinitionListQuery().queryKey,
-        tagListQuery().queryKey,
-      ],
-      errorMessage: "タグを追加できませんでした",
     },
   })
 

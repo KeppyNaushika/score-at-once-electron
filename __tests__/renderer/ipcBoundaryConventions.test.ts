@@ -122,6 +122,65 @@ function collectInvokedChannels(): Set<string> {
   return invoked
 }
 
+/**
+ * preload が renderer へ差し出しているメソッド名 → 定義しているファイル。
+ *
+ * 葉（`bind("…")` や関数）だけを数える。入れ子の名前空間（`audit: { … }`）は
+ * それ自体では呼べないので数えない。
+ */
+function collectPreloadMethods(): Map<string, string> {
+  const methods = new Map<string, string>()
+
+  for (const relativePath of listFiles("'electron-src/preload-apis/*.ts'")) {
+    if (relativePath.endsWith("invoke.ts")) continue
+    const source = parseFile(relativePath, ts.ScriptKind.TS)
+    const visit = (node: ts.Node) => {
+      if (
+        ts.isPropertyAssignment(node) &&
+        ts.isIdentifier(node.name) &&
+        !ts.isObjectLiteralExpression(node.initializer)
+      ) {
+        methods.set(node.name.text, relativePath)
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(source)
+  }
+
+  return methods
+}
+
+/** `src/` の中で `.なにか` として触れられている名前 */
+function collectPropertyAccesses(): Set<string> {
+  const accessed = new Set<string>()
+
+  for (const relativePath of listFiles("'src/**/*.ts' 'src/**/*.tsx'")) {
+    // 型宣言は「宣言しているだけ」で呼び出しではない。数えると全部生きて見える
+    if (relativePath.endsWith(".d.ts")) continue
+    const source = parseFile(relativePath, ts.ScriptKind.TSX)
+    const visit = (node: ts.Node) => {
+      if (ts.isPropertyAccessExpression(node)) {
+        accessed.add(node.name.text)
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(source)
+  }
+
+  return accessed
+}
+
+/**
+ * 呼ばれていないが残しておく preload メソッド（名指し）。
+ *
+ * 「使う予定がある」で残すのはここに書いたものだけ。判断基準は書かない。
+ */
+const UNCALLED_PRELOAD_METHODS = new Set([
+  // 監査ログのスコープ絞り込み（#1102）。UI がまだ無い。
+  // docs/audit-log-redesign.md「フィルタ次元」の対象（scopeId）で使う
+  "getScopes",
+])
+
 /** `src/` から `electron-src/` を値として引いている箇所 */
 function collectValueImports(): string[] {
   const found: string[] = []
@@ -201,6 +260,22 @@ describe("IPC 境界の規約", () => {
     const missing = [...invoked].filter((channel) => !registered.has(channel))
 
     expect(missing).toEqual([])
+  })
+
+  it("preload のメソッドは renderer から呼ばれている（残りは名指しの一覧）", () => {
+    // チャンネルが preload から呼ばれていても、その preload メソッドを誰も
+    // 呼んでいなければ、ハンドラごと死んでいる。**型では捕まらない**
+    // （`src/types/electron/*.d.ts` は宣言しているだけで呼び出しではない）
+    const methods = collectPreloadMethods()
+    const accessed = collectPropertyAccesses()
+    expect(methods.size).toBeGreaterThan(200)
+
+    const uncalled = [...methods.entries()]
+      .filter(([name]) => !accessed.has(name))
+      .filter(([name]) => !UNCALLED_PRELOAD_METHODS.has(name))
+      .map(([name, file]) => `${name} (${file})`)
+
+    expect(uncalled).toEqual([])
   })
 
   it("src から electron-src を値で引かない（例外なし）", () => {

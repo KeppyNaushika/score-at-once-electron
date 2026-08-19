@@ -9,7 +9,7 @@ import type { AsbCharGuide, Prisma } from "@prisma/client"
 import type { ManuscriptCharGuide } from "../../../src/types/answerSheetDefinition.types"
 import { writeRow } from "./rowDiff"
 
-export function asbCharGuideRow(
+function asbCharGuideRow(
   subQuestionId: string,
   charGuide: ManuscriptCharGuide,
   order: number

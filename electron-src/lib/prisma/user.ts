@@ -14,7 +14,7 @@ import prisma from "./client"
 const PUBLIC_USER_OMIT = { passcode: true } as const
 
 /** 秘密を含まないユーザー1件 */
-export type PublicUser = Omit<User, "passcode">
+type PublicUser = Omit<User, "passcode">
 
 export const fetchUsers = async (): Promise<PublicUser[]> => {
   try {

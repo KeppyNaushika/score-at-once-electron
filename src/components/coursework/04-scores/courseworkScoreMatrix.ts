@@ -34,7 +34,7 @@ export type CourseworkCellPatch = Partial<CourseworkCell>
  * 行の同定は資料の対象者（CourseworkStudent）の id で行う。点数の書き込み先が
  * 対象者だからで、人（Student）の id では名簿に載っていない生徒にも書けてしまう。
  */
-export interface CourseworkStudentRow {
+interface CourseworkStudentRow {
   courseworkStudentId: string
   studentNumber: string
   lastName: string

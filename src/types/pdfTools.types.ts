@@ -92,11 +92,3 @@ export interface FileTransform {
 export interface InterleaveConfig {
   transforms: FileTransform[]
 }
-
-/** IPC: 汎用レスポンス */
-export interface PdfToolsResult {
-  success: boolean
-  outputPath?: string
-  outputPaths?: string[]
-  error?: string
-}

@@ -8,7 +8,7 @@ import prisma from "./client"
 import { getExamReferenceDate } from "./examStudent"
 import { membershipFilterAt } from "./membershipFilter"
 
-export type ExamClassroomWithClassroomAndExam = Prisma.ExamClassroomGetPayload<{
+type ExamClassroomWithClassroomAndExam = Prisma.ExamClassroomGetPayload<{
   include: {
     classroom: true
     exam: true

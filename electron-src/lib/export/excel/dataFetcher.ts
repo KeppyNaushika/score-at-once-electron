@@ -52,7 +52,7 @@ export interface SubtotalColumn {
 /**
  * 出力用データ
  */
-export interface ExportData {
+interface ExportData {
   exam: Exam
   selectedExamStudents: ExportExamStudent[]
   questionRegions: CropRegion[]

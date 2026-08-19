@@ -11,7 +11,7 @@
  * 詳細は docs/ipc-and-data-fetching-plan.md。
  */
 
-export type IpcEnvelope<TValue> =
+type IpcEnvelope<TValue> =
   { __ipc: "ok"; value: TValue } | { __ipc: "failed"; error: string }
 
 /**

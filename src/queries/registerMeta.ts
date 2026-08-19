@@ -5,7 +5,7 @@
  * 渡した配列の要素数だけ回る）、`[]` は**すべてのクエリに当たる**。書き出しボタン
  * 1つでキャッシュ全体が無効化される、という形で静かに壊れるので、型で塞ぐ。
  */
-export type NonEmptyQueryKey = readonly [unknown, ...unknown[]]
+type NonEmptyQueryKey = readonly [unknown, ...unknown[]]
 
 /**
  * 取り直す行き先。**1つ以上**。

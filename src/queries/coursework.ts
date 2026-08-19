@@ -369,17 +369,6 @@ export const setCourseworkTagsMutation = (courseworkId: string) =>
     },
   })
 
-export const addCourseworkTagMutation = (courseworkId: string) =>
-  defineMutation({
-    mutationFn: (tagId: string) =>
-      window.electronAPI.coursework.addTag(courseworkId, tagId),
-    meta: {
-      // タグ一覧は紐付けを利用先として同梱するので、そちらも古くなる
-      invalidates: [courseworkScope(courseworkId), tagListQuery().queryKey],
-      errorMessage: "タグを追加できませんでした",
-    },
-  })
-
 /**
  * 選んだ資料へ同じタグをまとめて足す。
  *

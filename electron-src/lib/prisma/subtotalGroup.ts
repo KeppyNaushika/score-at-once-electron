@@ -50,15 +50,6 @@ export type SubtotalGroupWithSubtotals = Prisma.SubtotalGroupGetPayload<{
 }>
 
 /**
- * subtotals・examSubtotalGroups.exam（部分 select）・tagSubtotalGroups.tag を含む
- * SubtotalGroup（getSubtotalGroups の返り値）
- */
-export type SubtotalGroupWithSubtotalsExamsAndTags =
-  Prisma.SubtotalGroupGetPayload<{
-    include: typeof subtotalGroupWithSubtotalsExamsAndTagsInclude
-  }>
-
-/**
  * 小計点グループを全て取得
  */
 export async function getSubtotalGroups() {

@@ -27,7 +27,7 @@ import { writeRow } from "./rowDiff"
 // 大問
 // =============================================================================
 
-export function asbMajorQuestionRow(
+function asbMajorQuestionRow(
   definitionId: string,
   majorQuestion: MajorQuestion,
   order: number
@@ -71,7 +71,7 @@ export async function deleteRemovedAsbMajorQuestions(
 // 小問
 // =============================================================================
 
-export function asbSubQuestionRow(
+function asbSubQuestionRow(
   majorQuestionId: string,
   subQuestion: SubQuestion,
   order: number
@@ -134,7 +134,7 @@ export async function deleteRemovedAsbSubQuestions(
 // 枝問
 // =============================================================================
 
-export function asbBranchQuestionRow(
+function asbBranchQuestionRow(
   subQuestionId: string,
   branchQuestion: BranchQuestion,
   order: number

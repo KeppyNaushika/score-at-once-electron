@@ -9,16 +9,12 @@
  */
 
 import type {
-  Classroom,
-  Grade,
-  GradeClassroom,
   GradeConstraint,
   GradeConstraintExclusionLabel,
   GradeConstraintLabelValue,
   GradeConstraintViewpoint,
   GradeItem,
   GradeItemBoundary,
-  GradeStudent,
   Prisma,
 } from "@prisma/client"
 
@@ -99,16 +95,6 @@ export const { to: toGradeDataSourceType } = defineStringUnion(
 export type GradeSummary = Serialized<
   Prisma.GradeGetPayload<{ include: typeof gradeSummaryInclude }>
 >
-
-/** 成績算出試験（リレーション付き） */
-export type GradeWithRelations = Grade & {
-  gradeClassrooms: (Pick<GradeClassroom, "id" | "classroomId" | "order"> & {
-    classroom: Pick<Classroom, "id" | "name">
-  })[]
-  gradeItems: GradeItemWithDataSources[]
-  /** 対象者は行のまま同梱される。件数は `.length` で取る */
-  gradeStudents: GradeStudent[]
-}
 
 /** 評価項目（リレーション付き）。成績境界は行のまま同梱される */
 export type GradeItemWithDataSources = Pick<

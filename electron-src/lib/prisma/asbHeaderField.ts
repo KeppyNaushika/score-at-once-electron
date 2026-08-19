@@ -17,7 +17,7 @@ import { writeRow } from "./rowDiff"
  * `order` は並びの位置で、呼び出し側が決める（{@link ../../../docs/asb-ipc-split-plan}
  * §4.2 — 作成と削除は main、並べ替えは renderer）。
  */
-export function asbHeaderFieldRow(
+function asbHeaderFieldRow(
   definitionId: string,
   headerField: HeaderFieldDefinition,
   order: number

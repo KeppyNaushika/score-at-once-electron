@@ -18,7 +18,6 @@ export function useAsbOwner(definitionId: string) {
   )
 
   return {
-    ownerId: owner?.ownerId ?? null,
     ownerName: owner?.ownerName ?? null,
     /** 判定できるまでは false（読み込み中に編集させない） */
     isOwner: owner !== null && owner.ownerId === user?.id,

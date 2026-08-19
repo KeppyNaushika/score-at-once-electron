@@ -31,7 +31,7 @@ export type StudentAnswerImageWithExamStudents =
  * 手で宣言し直すと境界の実物とずれる（`status` の綴りの広さが実際に食い違って
  * いた）。所在は「その採点領域の中」なので、型の出どころも採点領域にする。
  */
-export type QuestionScoreRow = QuestionAnswerRegionRow["questionScores"][number]
+type QuestionScoreRow = QuestionAnswerRegionRow["questionScores"][number]
 
 /**
  * 採点モード

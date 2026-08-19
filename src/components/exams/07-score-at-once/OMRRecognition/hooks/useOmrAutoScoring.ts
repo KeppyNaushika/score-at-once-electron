@@ -462,7 +462,6 @@ export function useOmrAutoScoring(examId: string) {
 
   return {
     ...state,
-    omrConfigs,
     hasOmrConfigs: omrConfigs.length > 0,
     runRecognition,
     applyScores,

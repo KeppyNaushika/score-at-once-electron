@@ -56,7 +56,7 @@ export interface AuditLogEntry {
   metadata: Record<string, unknown> | null
 }
 
-export interface AuditLogPage {
+interface AuditLogPage {
   entries: AuditLogEntry[]
   total: number
   limit: number

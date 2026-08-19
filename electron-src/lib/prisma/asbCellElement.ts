@@ -18,7 +18,7 @@ import { writeRow } from "./rowDiff"
 // テキスト要素
 // =============================================================================
 
-export function asbTextElementRow(
+function asbTextElementRow(
   parent: AsbCellParent,
   textElement: CellTextElement,
   order: number
@@ -67,7 +67,7 @@ export async function deleteRemovedAsbTextElements(
 // 画像要素
 // =============================================================================
 
-export function asbImageElementRow(
+function asbImageElementRow(
   parent: AsbCellParent,
   imageElement: CellImageElement,
   order: number
@@ -116,7 +116,7 @@ export async function deleteRemovedAsbImageElements(
 }
 
 /** 「この解答用紙のどれかのセルに属する」— 小問の子か、枝問の子か */
-export function inDefinitionCells(definitionId: string) {
+function inDefinitionCells(definitionId: string) {
   return [
     { subQuestion: { majorQuestion: { definitionId } } },
     { branchQuestion: { subQuestion: { majorQuestion: { definitionId } } } },
