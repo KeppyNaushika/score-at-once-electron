@@ -111,6 +111,11 @@ export function ScreenBlackout() {
    * 「ロックなしで暗転する」ことになる。閉じ込めないために依存へ足すと、今度は
    * この関数を依存に持つ effect が毎レンダー走り、そこから設定の蒔き直しが
    * 起きて止まらなくなる（実測: Maximum update depth exceeded）。
+   *
+   * **施錠したかどうかを覚えるのは `isLocked` で、ここが唯一の決め手。** 解除側で
+   * `hasDigitPasscode` を読み直してはいけない。この部品は `AuthGate` の外にあり、
+   * 利用者一覧が届く前は false なので、起動直後に暗転すると開始時と解除時で
+   * 判断が食い違い、**再読み込み以外に出口が無くなる**（指摘 #6）。
    */
   const blackoutNow = useEffectEvent(async () => {
     await enterFullScreenIfNeeded()
@@ -173,11 +178,15 @@ export function ScreenBlackout() {
     const events = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"]
 
     const handleActivity = () => {
-      if (isBlackout && !isLocked) {
-        if (!hasDigitPasscode) {
-          unlock()
-          return
-        }
+      // **施錠したかどうかは `isLocked` だけで決める。** 目隠しを始めた瞬間の
+      // `hasDigitPasscode` で施錠を決めたのに、解除側で読み直すと食い違う。
+      // `ScreenBlackout` は `AuthGate` の外にあり、利用者一覧が届く前は
+      // `hasDigitPasscode` が false なので、起動直後に Cmd+L を押すと
+      // 「施錠されていないのに解除できない」状態になっていた
+      // （docs/branch-review-findings.md #6）。
+      if (isBlackout) {
+        // ここへ来るのは施錠していないときだけ（施錠中はこの effect を張らない）
+        unlock()
         return
       }
       // 見張りの張り直しは「触った」という事実だけで表す。連打で state が
@@ -197,7 +206,7 @@ export function ScreenBlackout() {
         window.removeEventListener(event, handleActivity)
       })
     }
-  }, [blackoutEnabled, isBlackout, isLocked, hasDigitPasscode, unlock])
+  }, [blackoutEnabled, isBlackout, isLocked, unlock])
 
   // ロック画面でのユーザー操作→フェード復帰
   useEffect(() => {
@@ -295,10 +304,11 @@ export function ScreenBlackout() {
     <div
       className="fixed inset-0 z-9999 flex items-center justify-center bg-black"
       onClick={() => {
-        if (!isLocked && !hasDigitPasscode) {
-          unlock()
-        } else if (isLocked) {
+        // 施錠の有無は `isLocked` だけで決める（handleActivity と同じ理由）
+        if (isLocked) {
           showUi()
+        } else {
+          unlock()
         }
       }}
       role="presentation"
