@@ -192,7 +192,6 @@ function templateToDefinition(
       headerFields,
     },
     majorQuestions,
-    renderMode: (templateRecord.renderMode as "model-answer") ?? "model-answer",
     labelPresets: {
       major: (templateRecord.labelPresetMajor as string) ?? undefined,
       sub: (templateRecord.labelPresetSub as string) ?? undefined,

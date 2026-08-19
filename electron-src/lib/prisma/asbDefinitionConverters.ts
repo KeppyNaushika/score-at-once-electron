@@ -536,7 +536,6 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
     name: row.name,
     settings,
     majorQuestions,
-    renderMode: row.renderMode as AnswerSheetDefinition["renderMode"],
     labelPresets: {
       major: row.labelPresetMajor ?? undefined,
       sub: row.labelPresetSub ?? undefined,

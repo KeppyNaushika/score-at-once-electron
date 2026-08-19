@@ -3,6 +3,9 @@
  * @description UserPreference KVテーブルの設定キー・デフォルト値・型パースを一元管理
  */
 
+import type { RenderMode } from "@/types/answerSheetDefinition.types"
+import { RENDER_MODES } from "@/types/answerSheetDefinition.types"
+
 /**
  * union を持つ設定の取りうる値。
  *
@@ -86,6 +89,19 @@ const USER_PREFERENCE_SCHEMA = {
   screenBlackoutEnabled: { type: "boolean" as const, default: false },
   screenBlackoutTimeoutMinutes: { type: "number" as const, default: 5 },
   screenBlackoutAutoFullScreen: { type: "boolean" as const, default: false },
+  /**
+   * 解答用紙をどちらの姿で見るか（解答用紙／模範解答）。
+   *
+   * **解答用紙1枚ごとの設定ではない。** 「模範解答を見ながら作る」は作っている人の
+   * 都合で、解答用紙が持つ性質ではないので、利用者に付ける。
+   */
+  asbRenderMode: {
+    type: "string" as const,
+    default: "answer-sheet",
+    validate: (value: string) => isOneOf(RENDER_MODES, value),
+  },
+  /** 解答用紙の書き出しで、解答用紙と模範解答を別のファイルにするか */
+  asbExportSeparateFiles: { type: "boolean" as const, default: true },
 } as const
 
 /** 設定キーの型 */
@@ -111,6 +127,8 @@ export type PreferenceValueType = {
   screenBlackoutEnabled: boolean
   screenBlackoutTimeoutMinutes: number
   screenBlackoutAutoFullScreen: boolean
+  asbRenderMode: RenderMode
+  asbExportSeparateFiles: boolean
 }
 
 /**

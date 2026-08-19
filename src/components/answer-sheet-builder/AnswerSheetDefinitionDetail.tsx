@@ -197,10 +197,6 @@ export function AnswerSheetDefinitionDetail({
           <dt className="text-muted-foreground">合計配点</dt>
           <dd className="font-medium">{totalPoints}点</dd>
         </div>
-        <div>
-          <dt className="text-muted-foreground">レンダーモード</dt>
-          <dd className="font-medium">{definition.renderMode}</dd>
-        </div>
         {definition.updatedAt && (
           <div>
             <dt className="text-muted-foreground">更新日時</dt>

@@ -263,7 +263,6 @@ export function createDefaultDefinition(): AnswerSheetDefinition {
     name: "新しい解答用紙",
     settings: { ...DEFAULT_SETTINGS },
     majorQuestions: [createDefaultMajorQuestion()],
-    renderMode: "answer-sheet",
   }
 }
 

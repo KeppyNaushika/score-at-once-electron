@@ -24,10 +24,9 @@ import { resolveImageDataUris } from "./renderSvgStrings"
 async function renderPageSvgHtmls(
   definition: AnswerSheetDefinition,
   multiLayout: ComputedMultiPageLayout,
-  renderMode?: RenderMode
+  renderMode: RenderMode
 ): Promise<{ pageSvgHtmls: string[]; mathJaxDefs: string }> {
   const { pageWidthMm, pageHeightMm } = multiLayout
-  const effectiveRenderMode = renderMode ?? definition.renderMode
 
   // 画像の data URI を事前解決
   const allCells = multiLayout.pages.flatMap((page) => page.cells)
@@ -60,7 +59,7 @@ async function renderPageSvgHtmls(
             contentHeightMm: pageHeightMm,
           },
           pageLayout: page,
-          renderMode: effectiveRenderMode,
+          renderMode,
           forPrint: true,
           imageDataUris,
           borderConfig: definition.settings.borderConfig,
@@ -118,16 +117,31 @@ function generatePageCss(pageWidthMm: number, pageHeightMm: number): string {
   foreignObject svg[role="img"] { overflow: visible !important; display: inline !important; }`
 }
 
-/** 解答用紙の全ページを含む印刷用HTML文書を生成する */
+/**
+ * 解答用紙の全ページを含む印刷用HTML文書を生成する。
+ *
+ * `renderModes` を2つ渡すと、1つの文書に続けて綴じる（解答用紙の全ページ →
+ * 模範解答の全ページ）。**どちらの姿で出すかは書き出しの指定で、解答用紙が持つ
+ * 性質ではない**ので、既定は置かず必ず受け取る。
+ */
 export async function generateAnswerSheetPrintHtml(
   definition: AnswerSheetDefinition,
-  multiLayout: ComputedMultiPageLayout
+  multiLayout: ComputedMultiPageLayout,
+  renderModes: readonly RenderMode[]
 ): Promise<string> {
   const { pageWidthMm, pageHeightMm } = multiLayout
-  const { pageSvgHtmls, mathJaxDefs } = await renderPageSvgHtmls(
-    definition,
-    multiLayout
-  )
+  const pageSvgHtmls: string[] = []
+  // MathJax のグリフ定義はグローバルに溜まるので、最後に取れたものが全部を含む
+  let mathJaxDefs = ""
+  for (const renderMode of renderModes) {
+    const rendered = await renderPageSvgHtmls(
+      definition,
+      multiLayout,
+      renderMode
+    )
+    pageSvgHtmls.push(...rendered.pageSvgHtmls)
+    mathJaxDefs = rendered.mathJaxDefs
+  }
 
   const pagesHtml = pageSvgHtmls
     .map((svgHtml, i) => {
@@ -157,7 +171,7 @@ ${pagesHtml}
 export async function generateAnswerSheetPageHtmls(
   definition: AnswerSheetDefinition,
   multiLayout: ComputedMultiPageLayout,
-  renderMode?: RenderMode
+  renderMode: RenderMode
 ): Promise<string[]> {
   const { pageWidthMm, pageHeightMm } = multiLayout
   const { pageSvgHtmls, mathJaxDefs } = await renderPageSvgHtmls(

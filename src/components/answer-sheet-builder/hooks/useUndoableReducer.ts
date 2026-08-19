@@ -19,12 +19,7 @@ const MAX_HISTORY = 50
 const BATCH_TIME_MS = 300
 
 /** 履歴スキップ対象アクション */
-const SKIP_HISTORY_ACTIONS = new Set([
-  "SET_DEFINITION",
-  "SET_RENDER_MODE",
-  "UNDO",
-  "REDO",
-])
+const SKIP_HISTORY_ACTIONS = new Set(["SET_DEFINITION", "UNDO", "REDO"])
 
 interface UndoableResult<S, A> {
   state: S

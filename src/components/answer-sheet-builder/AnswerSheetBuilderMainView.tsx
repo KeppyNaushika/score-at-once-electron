@@ -12,10 +12,15 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/AuthContext"
+import { parsePreference } from "@/lib/userPreferences"
 import {
   answerSheetDefinitionQuery,
   saveAnswerSheetDefinitionMutation,
 } from "@/queries/answerSheetBuilder"
+import {
+  setUserPreferenceMutation,
+  userPreferenceQuery,
+} from "@/queries/settings"
 import type {
   AnswerSheetDefinition,
   PaperSettings,
@@ -51,16 +56,17 @@ export function AnswerSheetBuilderMainView({
 }: AnswerSheetBuilderMainViewProps) {
   const { user } = useAuth()
   const router = useRouter()
-  const {
-    definition,
-    actions,
-    setDefinition,
-    setRenderMode,
-    canUndo,
-    canRedo,
-    undo,
-    redo,
-  } = useAnswerSheetDefinition()
+  const { definition, actions, setDefinition, canUndo, canRedo, undo, redo } =
+    useAnswerSheetDefinition()
+
+  // どちらの姿で見るかは、解答用紙ではなく使う人に付く（他の解答用紙を開いても同じ）
+  const { data: storedRenderMode } = useQuery(
+    userPreferenceQuery(user?.id, "asbRenderMode")
+  )
+  const renderMode = parsePreference("asbRenderMode", storedRenderMode ?? null)
+  const { mutate: setPreference } = useMutation(
+    setUserPreferenceMutation(user?.id)
+  )
   // つまみやドラッグの最中は保存しない（離したときに1回だけ書く）
   const { isGesturing, handlers: gestureHandlers } = useAsbGestureOwner()
 
@@ -362,8 +368,10 @@ export function AnswerSheetBuilderMainView({
           <AnswerSheetPreview
             layout={layout}
             multiPageLayout={multiPageLayout}
-            renderMode={definition.renderMode}
-            onRenderModeChange={setRenderMode}
+            renderMode={renderMode}
+            onRenderModeChange={(mode) =>
+              setPreference({ key: "asbRenderMode", value: mode })
+            }
             onResizeSubQuestion={(subQuestionId, heightMultiplier) =>
               actions.updateSubQuestion(subQuestionId, { heightMultiplier })
             }

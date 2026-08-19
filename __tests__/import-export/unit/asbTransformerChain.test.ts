@@ -1,8 +1,7 @@
 /**
  * ASB（解答用紙定義）アーカイブ バージョン変換チェーンのユニットテスト
  *
- * 旧バージョン形状をチェーンに通し、最新形式（タグ同梱の 1.2.0）へ
- * 正しく変換されることを検証する。
+ * 旧バージョン形状をチェーンに通し、最新形式へ正しく変換されることを検証する。
  */
 
 import { describe, expect, test } from "vitest"
@@ -109,17 +108,27 @@ describe("ASB transformer chain", () => {
   test("v1.1.0 → 最新: タグ情報が空配列で補完される（no-op）", () => {
     const result = transformAsbToLatest(createV1_1_0_ArchiveData())
 
-    expect(result.finalVersion).toBe("1.2.0")
-    expect(result.data.manifest.version).toBe("1.2.0")
+    expect(result.finalVersion).toBe("1.3.0")
+    expect(result.data.manifest.version).toBe("1.3.0")
     expect(result.data.manifest.counts.tags).toBe(0)
     expect(result.data.tagsData).toEqual([])
     expect(result.data.asbDefinitionTags).toEqual([])
   })
 
+  test("v1.2.0 → 最新: 解答用紙が持っていた描き分けは落ちる", () => {
+    const result = transformAsbToLatest(createV1_2_0_ArchiveData())
+
+    // renderMode は利用者の設定（asbRenderMode）へ移した。書き込み先の列がもう無い
+    expect(result.data.definition).not.toHaveProperty("renderMode")
+    // 落とすのはその1つだけで、他はそのまま残る
+    expect(result.data.definition.name).toBe("テスト解答用紙")
+    expect(result.data.definition.majorQuestions).toEqual([])
+  })
+
   test("v1.2.0: タグ情報がそのまま保持される（往復）", () => {
     const result = transformAsbToLatest(createV1_2_0_ArchiveData())
 
-    expect(result.finalVersion).toBe("1.2.0")
+    expect(result.finalVersion).toBe("1.3.0")
     expect(result.data.tagsData).toEqual([
       { id: "tag-1", name: "数学", order: 0, color: "#ff0000" },
       { id: "tag-2", name: "中間試験", order: 1, color: null },

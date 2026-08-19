@@ -84,12 +84,13 @@ export interface AsbChainTransformResult {
 // バージョン
 // =============================================================================
 
-export type AsbArchiveVersion = "1.0.0" | "1.1.0" | "1.2.0"
-export const ASB_CURRENT_VERSION: AsbArchiveVersion = "1.2.0"
+export type AsbArchiveVersion = "1.0.0" | "1.1.0" | "1.2.0" | "1.3.0"
+export const ASB_CURRENT_VERSION: AsbArchiveVersion = "1.3.0"
 export const ASB_SUPPORTED_VERSIONS: readonly AsbArchiveVersion[] = [
   "1.0.0",
   "1.1.0",
   "1.2.0",
+  "1.3.0",
 ] as const
 
 // =============================================================================

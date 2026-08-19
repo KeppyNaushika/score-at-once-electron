@@ -164,7 +164,6 @@ export async function getAsbDefinition(
 export function asbDefinitionRow(definition: AnswerSheetDefinition) {
   return {
     name: definition.name,
-    renderMode: definition.renderMode,
     labelPresetMajor: definition.labelPresets?.major ?? null,
     labelPresetSub: definition.labelPresets?.sub ?? null,
     labelPresetBranch: definition.labelPresets?.branch ?? null,

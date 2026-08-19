@@ -29,7 +29,6 @@ import type {
   LabelPresets,
   MajorQuestion,
   ManuscriptCharGuide,
-  RenderMode,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
 import type { OMRCellConfig } from "@/types/omr.types"
@@ -211,9 +210,6 @@ function reducer(
           : state.settings,
       }
     }
-
-    case "SET_RENDER_MODE":
-      return { ...state, renderMode: action.payload }
 
     case "APPLY_LABEL_PRESET": {
       const { category, preset } = action.payload
@@ -701,12 +697,6 @@ export function useAnswerSheetDefinition(initial?: AnswerSheetDefinition) {
     [dispatch]
   )
 
-  const setRenderMode = useCallback(
-    (renderMode: RenderMode) =>
-      dispatch({ type: "SET_RENDER_MODE", payload: renderMode }),
-    [dispatch]
-  )
-
   const applyLabelPreset = useCallback(
     (category: LabelCategory, preset: string) =>
       dispatch({ type: "APPLY_LABEL_PRESET", payload: { category, preset } }),
@@ -1044,7 +1034,6 @@ export function useAnswerSheetDefinition(initial?: AnswerSheetDefinition) {
     /** 編集の操作ひとそろい（フォームへまとめて配る） */
     actions,
     setDefinition,
-    setRenderMode,
     canUndo,
     canRedo,
     undo,

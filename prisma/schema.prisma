@@ -1276,9 +1276,8 @@ model CourseworkLetterScale {
 
 /// 解答用紙定義（トップレベル + GlobalSettings インライン）
 model AsbDefinition {
-  id         String @id @default(uuid())
-  name       String @default("新しい解答用紙")
-  renderMode String @default("answer-sheet")
+  id   String @id @default(uuid())
+  name String @default("新しい解答用紙")
 
   // LabelPresets
   labelPresetMajor  String?

@@ -1,8 +1,11 @@
 /**
- * PDF/PNG出力・印刷hook
+ * 解答用紙の書き出し（PDF・PNG）。
  *
- * PDF/印刷/PNG: renderToStaticMarkup でプレビューと同じReactコンポーネントをHTML化
- *              → BrowserWindow + printToPDF / capturePage で出力
+ * renderToStaticMarkup でプレビューと同じ React コンポーネントを HTML にし、
+ * BrowserWindow + printToPDF / capturePage で出す。
+ *
+ * **解答用紙と模範解答は必ず両方出す。** 片方だけ出す設定は無い（採点には模範解答が、
+ * 配布には解答用紙が要る）。1つのファイルに続けて綴じるか、2つに分けるかだけを選ぶ。
  */
 
 import { useMutation } from "@tanstack/react-query"
@@ -13,19 +16,22 @@ import {
   exportAnswerSheetPngMutation,
   selectAnswerSheetSavePathMutation,
 } from "@/queries/answerSheetBuilder"
-import {
-  openPrintDialogMutation,
-  printHtmlToPdfMutation,
-} from "@/queries/export"
+import { printHtmlToPdfMutation } from "@/queries/export"
 import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 
+import { MODEL_ANSWER_SUFFIX, withFileNameSuffix } from "../exportFileNames"
 import {
   generateAnswerSheetPageHtmls,
   generateAnswerSheetPrintHtml,
 } from "../utils/generatePrintHtml"
 import { computeMultiPageLayoutFromDefinition } from "./layout/computeMultiPageLayout"
 
-/** 解答用紙のPDF/PNG出力・印刷機能を提供するフック */
+interface ExportOptions {
+  /** 解答用紙と模範解答を別のファイルにするか（false なら1つに続けて綴じる） */
+  separateFiles: boolean
+}
+
+/** 解答用紙のPDF/PNG出力を提供するフック */
 export function useAnswerSheetExport() {
   const [isExporting, setIsExporting] = useState(false)
   const { mutateAsync: selectSavePath } = useMutation(
@@ -35,12 +41,12 @@ export function useAnswerSheetExport() {
   const { mutateAsync: exportPngFile } = useMutation(
     exportAnswerSheetPngMutation()
   )
-  const { mutateAsync: openPrintDialog } = useMutation(
-    openPrintDialogMutation()
-  )
 
   const exportPdf = useCallback(
-    async (definition: AnswerSheetDefinition) => {
+    async (
+      definition: AnswerSheetDefinition,
+      { separateFiles }: ExportOptions
+    ) => {
       try {
         setIsExporting(true)
 
@@ -51,19 +57,46 @@ export function useAnswerSheetExport() {
         if (pathResult.canceled) return
 
         const multiLayout = computeMultiPageLayoutFromDefinition(definition)
-        const html = await generateAnswerSheetPrintHtml(definition, multiLayout)
+        const pageSize = {
+          width: multiLayout.pageWidthMm,
+          height: multiLayout.pageHeightMm,
+        }
+        const margins = { top: 0, bottom: 0, left: 0, right: 0 }
+
+        if (separateFiles) {
+          await printHtmlToPdf({
+            html: await generateAnswerSheetPrintHtml(definition, multiLayout, [
+              "answer-sheet",
+            ]),
+            filePath: pathResult.filePath,
+            pageSize,
+            margins,
+          })
+          await printHtmlToPdf({
+            html: await generateAnswerSheetPrintHtml(definition, multiLayout, [
+              "model-answer",
+            ]),
+            filePath: withFileNameSuffix(
+              pathResult.filePath,
+              MODEL_ANSWER_SUFFIX
+            ),
+            pageSize,
+            margins,
+          })
+          toast.success("PDFを2つ出力しました（解答用紙・模範解答）")
+          return
+        }
 
         await printHtmlToPdf({
-          html,
+          html: await generateAnswerSheetPrintHtml(definition, multiLayout, [
+            "answer-sheet",
+            "model-answer",
+          ]),
           filePath: pathResult.filePath,
-          pageSize: {
-            width: multiLayout.pageWidthMm,
-            height: multiLayout.pageHeightMm,
-          },
-          margins: { top: 0, bottom: 0, left: 0, right: 0 },
+          pageSize,
+          margins,
         })
-
-        toast.success("PDFを出力しました")
+        toast.success("PDFを出力しました（解答用紙のあとに模範解答）")
       } catch {
         // 失敗の通知は MutationCache が出す
       } finally {
@@ -74,7 +107,11 @@ export function useAnswerSheetExport() {
   )
 
   const exportPng = useCallback(
-    async (definition: AnswerSheetDefinition, dpi: number = 300) => {
+    async (
+      definition: AnswerSheetDefinition,
+      dpi: number,
+      { separateFiles }: ExportOptions
+    ) => {
       try {
         setIsExporting(true)
 
@@ -85,19 +122,46 @@ export function useAnswerSheetExport() {
         if (pathResult.canceled) return
 
         const multiLayout = computeMultiPageLayoutFromDefinition(definition)
-        const htmlPages = await generateAnswerSheetPageHtmls(
+        const answerSheetPages = await generateAnswerSheetPageHtmls(
           definition,
-          multiLayout
+          multiLayout,
+          "answer-sheet"
         )
-
-        await exportPngFile({
-          htmlPages,
-          outputPath: pathResult.filePath,
+        const modelAnswerPages = await generateAnswerSheetPageHtmls(
+          definition,
+          multiLayout,
+          "model-answer"
+        )
+        const size = {
           dpi,
           pageWidthMm: multiLayout.pageWidthMm,
           pageHeightMm: multiLayout.pageHeightMm,
+        }
+
+        if (separateFiles) {
+          await exportPngFile({
+            htmlPages: answerSheetPages,
+            outputPath: pathResult.filePath,
+            ...size,
+          })
+          await exportPngFile({
+            htmlPages: modelAnswerPages,
+            outputPath: withFileNameSuffix(
+              pathResult.filePath,
+              MODEL_ANSWER_SUFFIX
+            ),
+            ...size,
+          })
+          toast.success("PNGを出力しました（解答用紙・模範解答）")
+          return
+        }
+
+        await exportPngFile({
+          htmlPages: [...answerSheetPages, ...modelAnswerPages],
+          outputPath: pathResult.filePath,
+          ...size,
         })
-        toast.success("PNGを出力しました")
+        toast.success("PNGを出力しました（解答用紙のあとに模範解答）")
       } catch {
         // 失敗の通知は MutationCache が出す
       } finally {
@@ -107,32 +171,5 @@ export function useAnswerSheetExport() {
     [selectSavePath, exportPngFile]
   )
 
-  const printSheet = useCallback(
-    async (definition: AnswerSheetDefinition) => {
-      try {
-        setIsExporting(true)
-
-        const multiLayout = computeMultiPageLayoutFromDefinition(definition)
-        const html = await generateAnswerSheetPrintHtml(definition, multiLayout)
-
-        await openPrintDialog({
-          html,
-          title: definition.name,
-          pageSize: {
-            width: multiLayout.pageWidthMm,
-            height: multiLayout.pageHeightMm,
-          },
-        })
-
-        toast.success("印刷プレビューを開きました")
-      } catch {
-        // 失敗の通知は MutationCache が出す
-      } finally {
-        setIsExporting(false)
-      }
-    },
-    [openPrintDialog]
-  )
-
-  return { exportPdf, exportPng, printSheet, isExporting }
+  return { exportPdf, exportPng, isExporting }
 }

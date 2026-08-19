@@ -15,7 +15,14 @@ export type PaperSize = "A4" | "B4" | "A3" | "B5"
 export type Orientation = "portrait" | "landscape"
 export type BorderLineStyle = "solid" | "dashed" | "dotted"
 export type MajorNumberDisplayMode = "multirow" | "boxed-top"
-export type RenderMode = "answer-sheet" | "model-answer"
+/**
+ * 描き分け。**解答用紙1枚ごとの設定ではなく、見る人の作業の状態**。
+ *
+ * 「模範解答を見ながら作る」は作っている人の都合で、解答用紙が持つ性質ではない。
+ * 保存先は `UserPreference` の `asbRenderMode`（アプリ全体・利用者ごと）。
+ */
+export const RENDER_MODES = ["answer-sheet", "model-answer"] as const
+export type RenderMode = (typeof RENDER_MODES)[number]
 export type HorizontalAlign = "left" | "center" | "right"
 export type VerticalAlign = "top" | "middle" | "bottom"
 
@@ -387,7 +394,6 @@ export type PaperSettings = Omit<GlobalSettings, "headerFields">
 /** 解答用紙1件の属性（子は持たない）。用紙設定は DB では列として平らに並ぶ */
 export interface AsbDefinitionAttributes {
   name: string
-  renderMode: RenderMode
   labelPresets?: LabelPresets
   settings: PaperSettings
 }
@@ -437,8 +443,6 @@ export type AnswerSheetAction =
   | { type: "REDO" }
   | { type: "SET_DEFINITION"; payload: AnswerSheetDefinition }
   | { type: "UPDATE_DEFINITION"; payload: AsbDefinitionUpdate }
-  // 表示の切り替えで、編集ではない（履歴に積まない）ので UPDATE_DEFINITION と分ける
-  | { type: "SET_RENDER_MODE"; payload: RenderMode }
   | {
       type: "APPLY_LABEL_PRESET"
       payload: { category: LabelCategory; preset: string }
