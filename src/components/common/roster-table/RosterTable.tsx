@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { RotateCcw } from "lucide-react"
-import { useCallback, useEffect, useId, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { RosterDragOverlay } from "@/components/common/roster-table/RosterDragOverlay"
 import { RosterTableFilters } from "@/components/common/roster-table/RosterTableFilters"
@@ -70,11 +70,10 @@ export function RosterTable({
   onRowsChange,
 }: RosterTableProps) {
   const queryClient = useQueryClient()
-  /** この表1つ分のクエリキー。同じ画面に2つ並んでも混ざらない */
-  const instanceId = useId()
+  /** この名簿のクエリキー。中身を決めるのはアダプタなので、その持ち主で区切る */
   const queryKey = useMemo(
-    () => queryKeys.roster.table(instanceId),
-    [instanceId]
+    () => queryKeys.roster.table(adapter.scopeId),
+    [adapter.scopeId]
   )
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClassroomId, setSelectedClassroomId] = useState("all")

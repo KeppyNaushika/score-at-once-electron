@@ -1,6 +1,7 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 
+import { useInvalidateOnSignal } from "@/hooks/useInvalidateOnSignal"
 import { annotationsByCropRegionQuery } from "@/queries/drawing"
 import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 
@@ -29,7 +30,6 @@ export function useGridAnnotations({
   currentUserId,
   refreshKey,
 }: UseGridAnnotationsProps): UseGridAnnotationsReturn {
-  const queryClient = useQueryClient()
   // 同じ設問を続けて開いても取り直さない（重複取得の抑止はキャッシュが担う）
   const queryKey = useMemo(
     () =>
@@ -43,10 +43,7 @@ export function useGridAnnotations({
   })
 
   // 注釈が書き換わったことの合図。取り直しの指示なので setState はしない
-  useEffect(() => {
-    if (refreshKey === undefined) return
-    void queryClient.invalidateQueries({ queryKey })
-  }, [refreshKey, queryKey, queryClient])
+  useInvalidateOnSignal(queryKey, refreshKey)
 
   // 行ごとに束ねるのは計算。キャッシュには main が返した行がそのまま載っている
   const annotationsByExamStudent = useMemo(() => {

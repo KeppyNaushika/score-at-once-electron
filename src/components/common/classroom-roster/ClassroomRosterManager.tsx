@@ -3,7 +3,7 @@
 import type { DragEndEvent } from "@dnd-kit/core"
 import { skipToken, useQuery } from "@tanstack/react-query"
 import { Plus, Trash2 } from "lucide-react"
-import { type ReactNode, useId, useState } from "react"
+import { type ReactNode, useState } from "react"
 
 import {
   DragHandle,
@@ -40,6 +40,13 @@ import type {
 } from "./types"
 
 interface ClassroomRosterManagerProps {
+  /**
+   * この学級一覧が誰のものか（試験id・成績id・資料id）。
+   *
+   * **候補のキャッシュはこれで区切る。** 木の中の位置（`useId`）で区切ると、別の
+   * 試験の同じ画面へ移ったときに同じキーになり、前の候補が出る。
+   */
+  scopeId: string
   entries: ClassroomRosterEntry[]
   /** エンティティ固有のフラグ列（試験=再採番1列、成績/資料=なし） */
   flagColumns?: ClassroomRosterFlagColumn[]
@@ -139,6 +146,7 @@ function SortableClassroomRow(props: ClassroomRowProps) {
 const EMPTY_AVAILABLE_CLASSROOMS: AvailableClassroomOption[] = []
 
 export function ClassroomRosterManager({
+  scopeId,
   entries,
   flagColumns = [],
   removalMode,
@@ -164,8 +172,6 @@ export function ClassroomRosterManager({
   const [selectedClassroomIds, setSelectedClassroomIds] = useState<Set<string>>(
     new Set()
   )
-  /** このコンポーネント1つ分のクエリキー。同じ画面に2つ並んでも混ざらない */
-  const instanceId = useId()
   const [adding, setAdding] = useState(false)
   const [removalTarget, setRemovalTarget] =
     useState<ClassroomRosterEntry | null>(null)
@@ -180,7 +186,7 @@ export function ClassroomRosterManager({
 
   // 候補は追加ダイアログを開いている間だけ取る（閉じている間は問い合わせない）
   const { data: availableClassrooms = EMPTY_AVAILABLE_CLASSROOMS } = useQuery({
-    queryKey: queryKeys.roster.availableClassrooms(instanceId),
+    queryKey: queryKeys.roster.availableClassrooms(scopeId),
     queryFn:
       showAddDialog && fetchAvailableClassrooms
         ? () => fetchAvailableClassrooms()

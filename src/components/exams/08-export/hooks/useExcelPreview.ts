@@ -1,10 +1,11 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 
 import type { StudentExportPlacement } from "@/electron-src/lib/shared/types"
 import { useDebouncedValue } from "@/hooks/useDebouncedValue"
+import { useInvalidateOnSignal } from "@/hooks/useInvalidateOnSignal"
 import { excelPreviewDataQuery } from "@/queries/export"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
@@ -77,7 +78,6 @@ export function useExcelPreview({
   enabled,
   reloadKey,
 }: UseExcelPreviewProps) {
-  const queryClient = useQueryClient()
 
   // 生徒選択は連続して変わるので、落ち着いてから取りに行く
   const debouncedExamStudentIds = useDebouncedValue(
@@ -108,9 +108,7 @@ export function useExcelPreview({
   )
 
   // タブへ戻ったら読み直す。出力はデータを読むので、据え置くと表示と食い違う
-  useEffect(() => {
-    void queryClient.invalidateQueries({ queryKey })
-  }, [reloadKey, queryKey, queryClient])
+  useInvalidateOnSignal(queryKey, reloadKey)
 
   // 表に出す形へ畳むのは計算。キャッシュには main が返した行がそのまま載っている
   const previewData: ExcelPreviewData | null = useMemo(() => {

@@ -51,6 +51,7 @@ export function ExamStudentAddModalContainer({
 
   const adapter = useMemo<StudentAddPanelAdapter>(
     () => ({
+      scopeId: examId,
       fetchAvailableClassrooms: async (activeOnly) => {
         const classrooms = await queryClient.fetchQuery(
           classroomsNotInExamQuery(examId, activeOnly)

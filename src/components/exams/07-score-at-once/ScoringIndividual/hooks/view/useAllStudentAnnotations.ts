@@ -2,9 +2,10 @@
  * @fileoverview 全設問アノテーション読み込みフック
  * 透明度制御用に現在の学生と試験の全アノテーションを読み込む
  */
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 
+import { useInvalidateOnSignal } from "@/hooks/useInvalidateOnSignal"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { annotationsByExamStudentQuery } from "@/queries/drawing"
 import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
@@ -47,7 +48,6 @@ export function useAllStudentAnnotations({
   currentUserId,
   refreshKey,
 }: UseAllStudentAnnotationsParams): UseAllStudentAnnotationsReturn {
-  const queryClient = useQueryClient()
   const queryKey = useMemo(
     () =>
       annotationsByExamStudentQuery(currentExamStudentId ?? "", currentUserId)
@@ -64,10 +64,7 @@ export function useAllStudentAnnotations({
   })
 
   // 注釈が書き換わったことの合図。取り直しの指示なので setState はしない
-  useEffect(() => {
-    if (refreshKey === undefined) return
-    void queryClient.invalidateQueries({ queryKey })
-  }, [refreshKey, queryKey, queryClient])
+  useInvalidateOnSignal(queryKey, refreshKey)
 
   return { allStudentAnnotations }
 }

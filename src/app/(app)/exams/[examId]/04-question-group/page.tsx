@@ -13,6 +13,7 @@ import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
 import { type CropRegionRow, cropRegionsQuery } from "@/queries/cropRegion"
+import { scopeKeys } from "@/queries/keys"
 import {
   activeSubtotalGroupsQuery,
   type ExamSubtotalGroupRow,
@@ -67,9 +68,10 @@ export default function SubtotalGroupPage() {
 
   const reload = useCallback(
     () =>
-      queryClient.invalidateQueries({
-        queryKey: cropRegionsQuery(examId).queryKey,
-      }),
+      // 失敗しうるのは採点領域だけではない。エラー画面はページの取得の失敗でも
+      // 出るので、再読み込みは**その画面が読んでいるもの全部**を取り直す
+      // （retry: false なので、取り直さない方が残ると二度と戻れない）
+      queryClient.invalidateQueries({ queryKey: scopeKeys.exam(examId) }),
     [queryClient, examId]
   )
 

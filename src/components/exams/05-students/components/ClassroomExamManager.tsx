@@ -103,6 +103,7 @@ export function ClassroomExamManager({
 
   return (
     <ClassroomRosterManager
+      scopeId={examId}
       entries={entries}
       flagColumns={flagColumns}
       removalMode="unlink-only"

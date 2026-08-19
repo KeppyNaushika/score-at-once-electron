@@ -1,8 +1,9 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useRef, useState } from "react"
 
+import { useInvalidateOnSignal } from "@/hooks/useInvalidateOnSignal"
 import type { PdfExportPageRow } from "@/queries/export"
 import { pdfExportDataQuery } from "@/queries/export"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
@@ -95,8 +96,6 @@ export function useScoredAnswerPreview({
     images: Map<string, HTMLImageElement>
   }>({ pages: null, images: new Map() })
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-
-  const queryClient = useQueryClient()
   const active = enabled && !!examId && !!previewStudentId
   const queryKey = useMemo(
     () => pdfExportDataQuery(examId, previewStudentId ?? "").queryKey,
@@ -115,9 +114,7 @@ export function useScoredAnswerPreview({
   const isLoading = active && isFetching
 
   // タブへ戻ったら読み直す（出力はデータを読むので据え置くと食い違う）
-  useEffect(() => {
-    void queryClient.invalidateQueries({ queryKey })
-  }, [reloadKey, queryKey, queryClient])
+  useInvalidateOnSignal(queryKey, reloadKey)
 
   // 描画中は前回の画像を出したままにする（生徒を替えるたびに白くしない）。
   // 出力対象が無いとき（未選択・答案なし・無効）だけ空にする

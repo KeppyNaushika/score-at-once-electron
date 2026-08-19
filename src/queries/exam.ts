@@ -6,6 +6,7 @@ import type { CreateExamArgs } from "@/types/prismaExtensions"
 
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
+import { masterMarkersQuery } from "./omr"
 
 /**
  * 試験（Exam）本体・模範解答ページ・受験生徒の読み書き。
@@ -154,7 +155,9 @@ export const uploadMasterAnswersMutation = (examId: string) =>
       files: Parameters<typeof window.electronAPI.uploadMasterAnswers>[1]
     ) => window.electronAPI.uploadMasterAnswers(examId, files),
     meta: {
-      invalidates: [examScope(examId)],
+      // マーカー検出は試験のまとまりの外に置いてある（重いので、模範解答の画像が
+      // 変わったときだけ解き直す）。名指しで取り直す
+      invalidates: [examScope(examId), masterMarkersQuery(examId).queryKey],
       errorMessage: "模範解答を取り込めませんでした",
     },
   })
@@ -172,7 +175,9 @@ export const replaceMasterAnswerImageMutation = (examId: string) =>
         input.fileData
       ),
     meta: {
-      invalidates: [examScope(examId)],
+      // マーカー検出は試験のまとまりの外に置いてある（重いので、模範解答の画像が
+      // 変わったときだけ解き直す）。名指しで取り直す
+      invalidates: [examScope(examId), masterMarkersQuery(examId).queryKey],
       errorMessage: "模範解答を差し替えられませんでした",
     },
   })
@@ -182,7 +187,9 @@ export const deleteMasterAnswerMutation = (examId: string) =>
     mutationFn: (examPageId: string) =>
       window.electronAPI.deleteMasterAnswer(examPageId),
     meta: {
-      invalidates: [examScope(examId)],
+      // マーカー検出は試験のまとまりの外に置いてある（重いので、模範解答の画像が
+      // 変わったときだけ解き直す）。名指しで取り直す
+      invalidates: [examScope(examId), masterMarkersQuery(examId).queryKey],
       errorMessage: "模範解答を削除できませんでした",
     },
   })

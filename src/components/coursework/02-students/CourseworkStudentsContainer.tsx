@@ -82,6 +82,7 @@ export function CourseworkStudentsContainer({
   // 名簿テーブルのアダプター（資料）
   const rosterAdapter = useMemo<RosterTableAdapter>(
     () => ({
+      scopeId: courseworkId,
       fetchRows: async () => {
         const [courseworkClassrooms, courseworkStudents] = await Promise.all([
           queryClient.fetchQuery(courseworkClassroomsQuery(courseworkId)),
@@ -139,6 +140,7 @@ export function CourseworkStudentsContainer({
   // 生徒追加パネルのアダプター（資料）
   const addPanelAdapter = useMemo<StudentAddPanelAdapter>(
     () => ({
+      scopeId: courseworkId,
       fetchAvailableClassrooms: async (activeOnly) => {
         const classrooms = await queryClient.fetchQuery(
           courseworkAvailableClassroomsQuery(courseworkId, activeOnly)
@@ -224,6 +226,7 @@ export function CourseworkStudentsContainer({
         <div className="mb-6">
           <h3 className="mb-3 text-sm font-medium">登録済み学級</h3>
           <ClassroomRosterManager
+            scopeId={courseworkId}
             entries={classroomEntries}
             removalMode="can-delete-students"
             description="ドラッグで並び替えできます。学級を外すときは、専属生徒を残すか削除するか選べます。"

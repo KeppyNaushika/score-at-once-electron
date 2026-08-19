@@ -2,7 +2,7 @@
 
 import type { QueryClient } from "@tanstack/react-query"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useId, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import type {
   AddPanelClassroomItem,
@@ -113,7 +113,7 @@ export function useStudentAddPanel({
 }: UseStudentAddPanelParams) {
   const queryClient = useQueryClient()
   /** このパネル1つ分のクエリキー。同じ画面に2つ並んでも混ざらない */
-  const instanceId = useId()
+  const scopeId = adapter.scopeId
   const [activeTab, setActiveTab] = useState("classrooms")
   /**
    * 選択は取得結果とは別に持つ（id の集合）。取得結果の配列に isSelected を
@@ -140,8 +140,8 @@ export function useStudentAddPanel({
   // 候補が空のときの理由（学級が1つも無いのか、全部登録済みなのか）は
   // 空だったときだけ引く。候補と対で表示するので同じ取得にまとめる
   const classroomsKey = useMemo(
-    () => queryKeys.roster.addPanelClassrooms(instanceId, classroomActiveOnly),
-    [instanceId, classroomActiveOnly]
+    () => queryKeys.roster.addPanelClassrooms(scopeId, classroomActiveOnly),
+    [scopeId, classroomActiveOnly]
   )
   const { data: classroomData, isFetching: loadingClassrooms } = useQuery({
     queryKey: classroomsKey,
@@ -165,8 +165,8 @@ export function useStudentAddPanel({
   const classroomEmptyReason = classroomData?.emptyReason ?? null
 
   const studentsKey = useMemo(
-    () => queryKeys.roster.addPanelStudents(instanceId, studentActiveOnly),
-    [instanceId, studentActiveOnly]
+    () => queryKeys.roster.addPanelStudents(scopeId, studentActiveOnly),
+    [scopeId, studentActiveOnly]
   )
   const { data: studentData, isFetching: loadingStudents } = useQuery({
     queryKey: studentsKey,

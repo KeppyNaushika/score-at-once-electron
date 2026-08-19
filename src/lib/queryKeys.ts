@@ -14,15 +14,18 @@ export const queryKeys = {
    * 汎用の名簿UI（RosterTable / StudentAddPanel / ClassroomRosterManager）。
    *
    * 中身は差し込まれた adapter が決めるので、何の名簿かはキーからは分からない。
-   * 取り違えを避けるため、コンポーネントの実体（`useId`）で必ず区切る。
+   * **持ち主の id（成績id・試験id・資料id）で区切る。** 以前はコンポーネントの実体
+   * （`useId`）で区切っていたが、それは木の中の位置でしかなく、別の成績の同じ画面へ
+   * 移ると同じキーになって前の名簿の行が出た（並べ替えると、その行の id が新しい方の
+   * 書き込みへ渡る）。
    */
   roster: {
-    table: (instanceId: string) => ["roster", instanceId, "table"] as const,
-    availableClassrooms: (instanceId: string) =>
-      ["roster", instanceId, "availableClassrooms"] as const,
-    addPanelClassrooms: (instanceId: string, activeOnly: boolean) =>
-      ["roster", instanceId, "addPanelClassrooms", activeOnly] as const,
-    addPanelStudents: (instanceId: string, activeOnly: boolean) =>
-      ["roster", instanceId, "addPanelStudents", activeOnly] as const,
+    table: (scopeId: string) => ["roster", scopeId, "table"] as const,
+    availableClassrooms: (scopeId: string) =>
+      ["roster", scopeId, "availableClassrooms"] as const,
+    addPanelClassrooms: (scopeId: string, activeOnly: boolean) =>
+      ["roster", scopeId, "addPanelClassrooms", activeOnly] as const,
+    addPanelStudents: (scopeId: string, activeOnly: boolean) =>
+      ["roster", scopeId, "addPanelStudents", activeOnly] as const,
   },
 } as const

@@ -17,10 +17,15 @@ import { scopeKeys } from "./keys"
  * 模範解答のマスターマーカー検出結果。
  *
  * 補正できるページかどうかの判定に使う。読むだけで DB は変わらない。
+ *
+ * **キーを試験のまとまりの下に置かない。** これは全ページの画像を読んで解く重い
+ * 計算で、答えが変わるのは模範解答の画像が変わったときだけ。試験のまとまりに置くと、
+ * 答案を1枚取り込むたび・設定を1つ変えるたびに解き直しになる。行き先は模範解答を
+ * 書き換える3つの書き込み（取り込み・差し替え・削除）が名指しで指す。
  */
 export const masterMarkersQuery = (examId: string) =>
   queryOptions({
-    queryKey: [...scopeKeys.exam(examId), "masterMarkers"] as const,
+    queryKey: ["masterMarkers", examId] as const,
     queryFn: () => window.electronAPI.omr.detectMasterMarkers(examId),
   })
 

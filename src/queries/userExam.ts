@@ -49,7 +49,12 @@ export const inviteExamMemberMutation = (examId: string) =>
       input: Parameters<typeof window.electronAPI.userExam.invite>[0]
     ) => window.electronAPI.userExam.invite(input),
     meta: {
-      invalidates: [examMembersQuery(examId).queryKey],
+      // 採点割当も「何人いるか」「割り当てを触れるか」を運んでいる。参加者だけ
+      // 取り直すと、招待した直後に割当・確定の入口が出ないまま残る
+      invalidates: [
+        examMembersQuery(examId).queryKey,
+        [...scopeKeys.exam(examId), "cropRegionAssignments"],
+      ],
       errorMessage: "参加者を招待できませんでした",
     },
   })
@@ -62,7 +67,10 @@ export const removeExamMemberMutation = (
     mutationFn: (userId: string) =>
       window.electronAPI.userExam.remove(examId, userId, currentUserId ?? ""),
     meta: {
-      invalidates: [examMembersQuery(examId).queryKey],
+      invalidates: [
+        examMembersQuery(examId).queryKey,
+        [...scopeKeys.exam(examId), "cropRegionAssignments"],
+      ],
       errorMessage: "参加者を外せませんでした",
     },
   })

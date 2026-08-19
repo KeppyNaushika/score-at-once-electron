@@ -32,6 +32,8 @@ export interface AddPanelStudentItem {
 
 /** host が差し込むデータ取得・追加処理 */
 export interface StudentAddPanelAdapter {
+  /** この追加パネルが誰のものか（キャッシュのキーはこれで区切る） */
+  scopeId: string
   /** 追加可能な学級候補を取得（activeOnly=在籍中のみ） */
   fetchAvailableClassrooms: (
     activeOnly: boolean

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
 import { type CropRegionRow, cropRegionsQuery } from "@/queries/cropRegion"
 import { examPagesQuery } from "@/queries/exam"
+import { scopeKeys } from "@/queries/keys"
 import { fileProtocolPathQuery } from "@/queries/misc"
 
 /** 未取得のときに毎回新しい値を作らないための空値 */
@@ -102,8 +103,11 @@ export default function RegionInfoPage() {
             </p>
             <Button
               onClick={() =>
+                // 失敗しうるのは採点領域だけではない。エラー画面はページの取得の
+                // 失敗でも出るので、この画面が読んでいるもの全部を取り直す
+                // （retry: false なので、取り直さない方が残ると二度と戻れない）
                 queryClient.invalidateQueries({
-                  queryKey: cropRegionsQuery(examId).queryKey,
+                  queryKey: scopeKeys.exam(examId),
                 })
               }
               className="mt-4"
