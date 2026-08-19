@@ -39,9 +39,9 @@ vi.mock("../../electron-src/lib/dataManager", () => ({
 
 import {
   getAsbDefinition,
-  saveAsbDefinition,
   transferAsbDefinitionOwner,
 } from "../../electron-src/lib/prisma/asbDefinition"
+import { replaceAsbDefinition } from "../../electron-src/lib/prisma/asbDefinitionReplace"
 import { setAsbDefinitionTags } from "../../electron-src/lib/prisma/asbDefinitionTag"
 import { createDefaultDefinition } from "../../src/components/answer-sheet-builder/constants"
 import {
@@ -69,12 +69,12 @@ afterAll(async () => {
 describe("解答用紙の保存", () => {
   it("2回目の保存で作成日時と担当が変わらない", async () => {
     const definition = createDefaultDefinition()
-    await saveAsbDefinition(definition, ownerId)
+    await replaceAsbDefinition(definition, ownerId)
     const first = await prisma.asbDefinition.findUniqueOrThrow({
       where: { id: definition.id },
     })
 
-    await saveAsbDefinition({ ...definition, name: "名前を変えた" }, ownerId)
+    await replaceAsbDefinition({ ...definition, name: "名前を変えた" }, ownerId)
     const second = await prisma.asbDefinition.findUniqueOrThrow({
       where: { id: definition.id },
     })
@@ -96,7 +96,7 @@ describe("解答用紙の保存", () => {
       imageElements: [],
       branchQuestions: [],
     }
-    await saveAsbDefinition(
+    await replaceAsbDefinition(
       {
         ...definition,
         majorQuestions: [
@@ -119,7 +119,7 @@ describe("解答用紙の保存", () => {
     ])
 
     // 2つ目を消して保存し直す
-    await saveAsbDefinition(
+    await replaceAsbDefinition(
       {
         ...definition,
         majorQuestions: [{ ...majorQuestion, subQuestions: [keptSubQuestion] }],
@@ -159,7 +159,7 @@ describe("解答用紙の保存", () => {
       ...definition,
       majorQuestions: [firstMajorQuestion, secondMajorQuestion],
     }
-    await saveAsbDefinition(twoMajorQuestions, ownerId)
+    await replaceAsbDefinition(twoMajorQuestions, ownerId)
 
     const before = await prisma.asbMajorQuestion.findMany({
       where: { definitionId: definition.id },
@@ -169,7 +169,7 @@ describe("解答用紙の保存", () => {
     )!
 
     // 第1問のラベルだけを変えて保存し直す
-    await saveAsbDefinition(
+    await replaceAsbDefinition(
       {
         ...twoMajorQuestions,
         majorQuestions: [
@@ -195,14 +195,56 @@ describe("解答用紙の保存", () => {
     )
   })
 
+  it("先頭を消すと、残った小問の並び順が詰まる（穴が空かない）", async () => {
+    const definition = createDefaultDefinition()
+    const majorQuestion = definition.majorQuestions[0]
+    const firstSubQuestion = majorQuestion.subQuestions[0]
+    const secondSubQuestion = {
+      ...firstSubQuestion,
+      id: crypto.randomUUID(),
+      label: "2つ目",
+      textElements: [],
+      imageElements: [],
+      branchQuestions: [],
+    }
+    await replaceAsbDefinition(
+      {
+        ...definition,
+        majorQuestions: [
+          {
+            ...majorQuestion,
+            subQuestions: [firstSubQuestion, secondSubQuestion],
+          },
+        ],
+      },
+      ownerId
+    )
+
+    // 先頭を消す。残るのは元 order=1 の行
+    await replaceAsbDefinition(
+      {
+        ...definition,
+        majorQuestions: [
+          { ...majorQuestion, subQuestions: [secondSubQuestion] },
+        ],
+      },
+      ownerId
+    )
+
+    const remaining = await prisma.asbSubQuestion.findMany({
+      where: { majorQuestion: { definitionId: definition.id } },
+    })
+    expect(remaining.map((row) => row.order)).toEqual([0])
+  })
+
   it("何も変えずに保存し直しても、解答用紙の更新日時が動かない", async () => {
     const definition = createDefaultDefinition()
-    await saveAsbDefinition(definition, ownerId)
+    await replaceAsbDefinition(definition, ownerId)
     const first = await prisma.asbDefinition.findUniqueOrThrow({
       where: { id: definition.id },
     })
 
-    await saveAsbDefinition(definition, ownerId)
+    await replaceAsbDefinition(definition, ownerId)
     const second = await prisma.asbDefinition.findUniqueOrThrow({
       where: { id: definition.id },
     })
@@ -212,7 +254,7 @@ describe("解答用紙の保存", () => {
 
   it("タグの設定は、外れたものだけ消して付いたものだけ作る", async () => {
     const definition = createDefaultDefinition()
-    await saveAsbDefinition(definition, ownerId)
+    await replaceAsbDefinition(definition, ownerId)
     const keptTag = await prisma.tag.create({
       data: { name: `残る ${Date.now()}` },
     })
@@ -238,10 +280,10 @@ describe("解答用紙の保存", () => {
 
   it("担当者でなければ保存できない", async () => {
     const definition = createDefaultDefinition()
-    await saveAsbDefinition(definition, ownerId)
+    await replaceAsbDefinition(definition, ownerId)
 
     await expect(
-      saveAsbDefinition({ ...definition, name: "横取り" }, otherUserId)
+      replaceAsbDefinition({ ...definition, name: "横取り" }, otherUserId)
     ).rejects.toThrow(/担当ではない/)
 
     const row = await prisma.asbDefinition.findUniqueOrThrow({
@@ -252,19 +294,22 @@ describe("解答用紙の保存", () => {
 
   it("担当を渡せるのは今の担当者だけで、渡した後は相手が保存できる", async () => {
     const definition = createDefaultDefinition()
-    await saveAsbDefinition(definition, ownerId)
+    await replaceAsbDefinition(definition, ownerId)
 
     await expect(
       transferAsbDefinitionOwner(definition.id, otherUserId, otherUserId)
     ).rejects.toThrow(/今の担当者だけ/)
 
     await transferAsbDefinitionOwner(definition.id, ownerId, otherUserId)
-    await saveAsbDefinition({ ...definition, name: "受け取った" }, otherUserId)
+    await replaceAsbDefinition(
+      { ...definition, name: "受け取った" },
+      otherUserId
+    )
 
     const loaded = await getAsbDefinition(definition.id)
     expect(loaded?.name).toBe("受け取った")
     await expect(
-      saveAsbDefinition({ ...definition, name: "戻す" }, ownerId)
+      replaceAsbDefinition({ ...definition, name: "戻す" }, ownerId)
     ).rejects.toThrow(/担当ではない/)
   })
 })

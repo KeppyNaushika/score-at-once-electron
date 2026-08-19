@@ -158,6 +158,15 @@ export interface MajorQuestion {
   subQuestions: SubQuestion[]
 }
 
+/**
+ * セルの中身（テキスト・画像・OMR設定）が、どちらのセルに属するか。
+ *
+ * 小問と枝問はどちらも「解答を書くセル」として同じ子を持つが、DB では別の外部キーに
+ * なる。親の指し方をこの1つの形にまとめて、子の書き込みが親の種類を意識せずに済むようにする。
+ */
+export type AsbCellParent =
+  { subQuestionId: string } | { branchQuestionId: string }
+
 // =====================
 // マージン設定
 // =====================

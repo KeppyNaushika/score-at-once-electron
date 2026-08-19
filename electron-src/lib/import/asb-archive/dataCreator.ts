@@ -16,10 +16,8 @@ import {
   getAsbImagesDirectory,
   getRelativePathFromData,
 } from "../../dataManager"
-import {
-  listAsbDefinitions,
-  saveAsbDefinition,
-} from "../../prisma/asbDefinition"
+import { listAsbDefinitions } from "../../prisma/asbDefinition"
+import { replaceAsbDefinition } from "../../prisma/asbDefinitionReplace"
 import prisma from "../../prisma/client"
 
 /**
@@ -88,7 +86,7 @@ export function copyImagesAndUpdatePaths(
  * インポートした定義をDBに保存し、タグを復元して紐付ける。
  *
  * タグは UUID一次照合 → タグ名で upsert（name は unique）で解決する。
- * saveAsbDefinition が独自トランザクションを持つためタグ紐付けは別トランザクションになり、
+ * replaceAsbDefinition が独自トランザクションを持つためタグ紐付けは別トランザクションになり、
  * 定義本体はこの時点で既にコミット済み。したがってタグ紐付けの失敗は「取り込み失敗」に
  * せず（=握りつぶさず警告として返し）、再インポートで重複定義が生じるのを防ぐ。
  * タグは概要ページのタグ設定UIから後から復旧できる。
@@ -101,7 +99,7 @@ export async function createImportedAsbDefinition(
   tagsData: ArchiveAsbTag[],
   asbDefinitionTags: AsbDefinitionTagRef[]
 ): Promise<string[]> {
-  await saveAsbDefinition(definition, userId)
+  await replaceAsbDefinition(definition, userId)
 
   if (tagsData.length === 0 || asbDefinitionTags.length === 0) return []
 

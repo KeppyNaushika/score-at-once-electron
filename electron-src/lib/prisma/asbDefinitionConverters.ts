@@ -11,7 +11,6 @@ import type {
   AsbImageElement,
   AsbOmrConfig,
   AsbTextElement,
-  PrismaClient,
 } from "@prisma/client"
 
 import type {
@@ -35,7 +34,6 @@ import type {
   OMRChoiceConfig,
 } from "../../../src/types/omr.types"
 import type { DbDefinitionFull } from "./asbDefinition"
-import { isUnchanged, writeRow } from "./rowDiff"
 
 // =============================================================================
 // GlobalSettings ↔ DBフラットカラム
@@ -547,78 +545,4 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }
-}
-
-// =============================================================================
-// OMRConfig作成
-// =============================================================================
-
-type TxClient = Omit<
-  PrismaClient,
-  "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
->
-
-/** トランザクション内でOMRConfig + ChoiceOptionsを作成する */
-export async function upsertOmrConfig(
-  tx: TxClient,
-  parentFK: { subQuestionId?: string; branchQuestionId?: string },
-  config: OMRCellConfig
-): Promise<boolean> {
-  // 設定は小問／枝問と1対1。既にあれば同じ行を使い続ける
-  // （毎回作り直すと、保存のたびに別 id の行が同期へ流れる）
-  const existing = await tx.asbOmrConfig.findFirst({
-    where: parentFK,
-    include: { choiceOptions: { orderBy: { choiceIndex: "asc" } } },
-  })
-  const omrConfigId = existing?.id ?? crypto.randomUUID()
-
-  const omrConfigData = {
-    type: "choice",
-    numChoices: config.numChoices,
-    choiceLayout: config.layout,
-  }
-  let changed = await writeRow(
-    existing ?? undefined,
-    omrConfigData,
-    () =>
-      tx.asbOmrConfig.create({
-        data: { id: omrConfigId, ...parentFK, ...omrConfigData },
-      }),
-    () =>
-      tx.asbOmrConfig.update({
-        where: { id: omrConfigId },
-        data: omrConfigData,
-      })
-  )
-
-  // 選択肢は id を持たないので、並び順の位置で既存行を使い回す。
-  // 増えた分だけ作り、減った分だけ消す
-  const existingOptions = existing?.choiceOptions ?? []
-  for (let ci = 0; ci < config.labels.length; ci++) {
-    const label = config.labels[ci]
-    const isCorrect = config.correctAnswers.includes(ci)
-    const reused = existingOptions[ci]
-    const choiceOptionData = { choiceIndex: ci, label, isCorrect }
-    if (!reused) {
-      await tx.asbOmrChoiceOption.create({
-        data: { omrConfigId, ...choiceOptionData },
-      })
-      changed = true
-    } else if (!isUnchanged(reused, choiceOptionData)) {
-      await tx.asbOmrChoiceOption.update({
-        where: { id: reused.id },
-        data: choiceOptionData,
-      })
-      changed = true
-    }
-  }
-  const removed = existingOptions.slice(config.labels.length)
-  if (removed.length > 0) {
-    await tx.asbOmrChoiceOption.deleteMany({
-      where: { id: { in: removed.map((option) => option.id) } },
-    })
-    changed = true
-  }
-
-  return changed
 }

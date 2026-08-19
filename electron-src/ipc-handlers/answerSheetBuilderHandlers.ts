@@ -27,9 +27,9 @@ import {
   getAsbDefinition,
   getAsbDefinitionOwner,
   listAsbDefinitions,
-  saveAsbDefinition,
   transferAsbDefinitionOwner,
 } from "../lib/prisma/asbDefinition"
+import { replaceAsbDefinition } from "../lib/prisma/asbDefinitionReplace"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
 /** 解答用紙作成機能のIPCチャンネル（定義CRUD・画像管理・PNG出力・インポート/エクスポート）を登録する */
@@ -67,7 +67,7 @@ export const answerSheetBuilderHandlers = {
     definition: AnswerSheetDefinition,
     userId: string
   ) => {
-    await saveAsbDefinition(definition, userId)
+    await replaceAsbDefinition(definition, userId)
   },
 
   // 定義削除（画像ディレクトリも削除）
@@ -310,7 +310,7 @@ export const answerSheetBuilderHandlers = {
       updatedAt: undefined,
     }
 
-    await saveAsbDefinition(duplicated, userId)
+    await replaceAsbDefinition(duplicated, userId)
     return newId
   },
 } satisfies HandlerMap

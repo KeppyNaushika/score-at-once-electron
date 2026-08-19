@@ -5,7 +5,7 @@
  * definitionToDb（保存）→ dbToDefinition（読込）で文字位置マーカーが
  * id・順序・boundary・比率つきで正しく往復することを検証する。
  *
- * saveAsbDefinition / getAsbDefinition は ./client シングルトン（本番DB）を使うため、
+ * replaceAsbDefinition / getAsbDefinition は ./client シングルトン（DB）を使うため、
  * archiveRoundTrip と同様に client をテスト用クライアントへモックする。
  */
 
@@ -30,10 +30,8 @@ vi.mock("../../electron-src/lib/dataManager", () => ({
   getDataDirectory: () => "/tmp/test-data",
 }))
 
-import {
-  getAsbDefinition,
-  saveAsbDefinition,
-} from "../../electron-src/lib/prisma/asbDefinition"
+import { getAsbDefinition } from "../../electron-src/lib/prisma/asbDefinition"
+import { replaceAsbDefinition } from "../../electron-src/lib/prisma/asbDefinitionReplace"
 import { createDefaultDefinition } from "../../src/components/answer-sheet-builder/constants"
 import type { ManuscriptCharGuide } from "../../src/types/answerSheetDefinition.types"
 import {
@@ -84,7 +82,7 @@ describe("AsbCharGuide 変換往復", () => {
       charGuides,
     }
 
-    await saveAsbDefinition(definition, userId)
+    await replaceAsbDefinition(definition, userId)
     const loaded = await getAsbDefinition(definition.id)
 
     expect(loaded).not.toBeNull()
@@ -98,7 +96,7 @@ describe("AsbCharGuide 変換往復", () => {
     const subQuestion = definition.majorQuestions[0].subQuestions[0]
     subQuestion.manuscriptPaper = { enabled: true, columns: 20, rows: 10 }
 
-    await saveAsbDefinition(definition, userId)
+    await replaceAsbDefinition(definition, userId)
     const loaded = await getAsbDefinition(definition.id)
 
     const manuscriptPaper =
