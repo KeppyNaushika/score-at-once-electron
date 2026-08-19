@@ -91,6 +91,16 @@ export default function ExamDetailPage() {
           // 保存先を選ばずに閉じたのは失敗ではないので、何も言わない
           if (result.canceled) return
           setShowExportModal(false)
+          const missingFiles = result.missingFiles ?? []
+          if (missingFiles.length > 0) {
+            // **欠けたまま作られている。** 成功としてだけ伝えると、受け取った同僚が
+            // 答案画像の無い試験を警告なしで取り込む（指摘 #12）
+            toast.warning("画像が欠けたまま書き出しました", {
+              description: `${missingFiles.length}件のファイルが見つかりませんでした。受け取った側では、その画像が表示されません。${result.outputPath} に保存しています。`,
+              duration: 12000,
+            })
+            return
+          }
           toast.success("エクスポート完了", {
             description: `${result.outputPath} に保存しました。`,
           })

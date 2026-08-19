@@ -80,7 +80,20 @@ export interface ScoreDetail {
  * 失敗したときは例外になる（`canceled: false` は必ず保存済みを意味する）。
  */
 export type FileExportResult =
-  { canceled: true } | { canceled: false; outputPath: string }
+  | { canceled: true }
+  | {
+      canceled: false
+      outputPath: string
+      /**
+       * 書き出せなかったファイルの説明。**空でなければ、中身が欠けたまま作られている。**
+       *
+       * 画像の実体は同期されずローカルに残るので、共有フォルダの `data/` が一部
+       * 見えていない端末で書き出すと欠ける。捨てると「伝えずに成功と言う」ことに
+       * なり、受け取った同僚が答案画像の無い試験を警告なしで取り込む
+       * （docs/branch-review-findings.md #12）。
+       */
+      missingFiles?: string[]
+    }
 
 // 問題分析関連の型定義
 export type DiscriminationLevel =

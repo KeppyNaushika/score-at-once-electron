@@ -21,7 +21,7 @@ import { collectExamData } from "./dataCollector"
  */
 export async function exportExamTo(
   options: ExportExamOptions & { outputPath: string }
-): Promise<{ outputPath: string }> {
+): Promise<{ outputPath: string; missingFiles: string[] }> {
   const { examId, userId, outputPath, exportMode = "full" } = options
 
   const exam = await getExamById(examId)
@@ -51,10 +51,20 @@ export async function exportExamTo(
     scopeId: examId,
     scopeLabel: exam.examName,
     target: exam.examName,
-    extra: { exportMode, outputPath: archiveResult.outputPath },
+    extra: {
+      exportMode,
+      outputPath: archiveResult.outputPath,
+      // 欠けたまま書き出したなら、記録にも残す（成功としてだけ残さない）
+      ...(archiveResult.missingFiles.length > 0 && {
+        missingFiles: archiveResult.missingFiles,
+      }),
+    },
   })
 
-  return { outputPath: archiveResult.outputPath }
+  return {
+    outputPath: archiveResult.outputPath,
+    missingFiles: archiveResult.missingFiles,
+  }
 }
 
 /**
@@ -81,9 +91,9 @@ export async function exportExam(
     return { canceled: true }
   }
 
-  const { outputPath } = await exportExamTo({
+  const { outputPath, missingFiles } = await exportExamTo({
     ...options,
     outputPath: result.filePath,
   })
-  return { canceled: false, outputPath }
+  return { canceled: false, outputPath, missingFiles }
 }
