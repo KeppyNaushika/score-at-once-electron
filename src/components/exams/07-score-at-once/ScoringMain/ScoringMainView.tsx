@@ -510,7 +510,12 @@ function ScoringMainViewContent() {
         return
       }
 
-      // トグル: 同じステータスなら未採点に戻す
+      // トグル: 同じステータスなら未採点に戻す。
+      //
+      // 判断の元にするのはキャッシュだが、**画面の色も同じキャッシュから出ている**。
+      // 利用者は色が変わったのを見てから押すので、両者が食い違うのは取り直しが
+      // 着地する前の一瞬だけ。そこで押したなら、見えている姿（未採点）に対する
+      // 「塗る」であって、意図とはずれない（R6 で検討して据え置き）
       if (isToggle) {
         const currentData = allScoringData.find(
           (scoringData) => scoringData.id === answerId

@@ -257,6 +257,12 @@ target    (108,000 + 7,200) × 2 + 約10,000 = 約240,000行/年
    `exam.subtotal_assignment.update` / `grade.manual_score.update` / `user.delete` /
    `system.migration.cleanup_orphaned_scores`（最後はmigration SQL用で未使用が正常）
 7. **student/classroom 系が `scopeId` を記録していない** → スコープ絞り込みから漏れる
+8. **1打鍵＝1行になっている経路がある**（R6 で見つけた） → 03-region-info の領域情報は
+   打鍵ごとに `updateCropRegion` を呼び、`updateCropRegion` は必ず監査行を残す。IME で
+   1語を確定すると `exam.region.update` が10行以上並ぶ。**書き込みを遅らせるのは
+   [規約](./coding-style.md)に反する**（1回の入力で値が確定するなら即時に書く）ので、
+   まとめるならこちら側——同じ実体の同じ列への連続した更新を1行に畳む——になる。
+   OWNER 判断: 2026-08-19 に「このまま」（規約を曲げない。監査ログ側の枠で扱う）
 
 ## 同期（sqlite-nas-sync）の確認結果
 
@@ -282,7 +288,7 @@ target    (108,000 + 7,200) × 2 + 約10,000 = 約240,000行/年
 | 5   | 未計装9件 ＋ student/classroom の `scopeId` 記録                                                                                                                      |
 
 PR-2 を PR-3 より前に置くのは、**対象ラベルがないとフィルタを作っても
-「読んでも意味が取れない行」に着地する**ため。実データで `{target}` を持たないアクションが
+「読んでも意味が取れない行」に着地する**ため。データで `{target}` を持たないアクションが
 110中52あり、しかも件数が多い日常操作（採点・答案・領域）がそこに集中している。
 上位3アクション（`exam.score.propose` / `exam.region.update` / `answer_sheet.update`）で
 全体の79%を占めるので、労力の大半は最初の数個で回収できる。
