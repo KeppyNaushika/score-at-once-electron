@@ -2,6 +2,7 @@
  * AsbDefinitionTag（解答用紙定義-タグ関連）のPrisma操作関数
  */
 
+import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
 import prisma from "./client"
 
 /**
@@ -17,14 +18,21 @@ export async function getAsbDefinitionTags(asbDefinitionId: string) {
 }
 
 /**
- * 解答用紙定義-タグ関連を作成
+ * 解答用紙定義-タグ関連を作成する。
+ *
+ * **関所を通す。** タグは利用者ごとの分類ではなく解答用紙そのものの属性
+ * （`AsbDefinitionTag` は `userId` を持たない）なので、他の編集と扱いを分ける理由が
+ * 無い。通さないと、担当でない教員が一覧から他人の解答用紙へタグを付けられるうえ、
+ * 親の更新日時が繰り上がらず一覧の並べ替えや期間の絞り込みが古いまま残る
+ * （docs/branch-review-findings.md #10）。
  */
 export async function createAsbDefinitionTag(data: {
   asbDefinitionId: string
   tagId: string
-}) {
-  return prisma.asbDefinitionTag.create({
-    data,
+}): Promise<void> {
+  await writeAsbDefinitionContent(data.asbDefinitionId, async (tx) => {
+    await tx.asbDefinitionTag.create({ data })
+    return true
   })
 }
 
@@ -38,8 +46,8 @@ export async function createAsbDefinitionTag(data: {
 export async function setAsbDefinitionTags(
   asbDefinitionId: string,
   tagIds: string[]
-) {
-  return prisma.$transaction(async (tx) => {
+): Promise<void> {
+  await writeAsbDefinitionContent(asbDefinitionId, async (tx) => {
     const current = await tx.asbDefinitionTag.findMany({
       where: { asbDefinitionId },
     })
@@ -59,9 +67,7 @@ export async function setAsbDefinitionTags(
       })
     }
 
-    return tx.asbDefinitionTag.findMany({
-      where: { asbDefinitionId },
-      include: { tag: true },
-    })
+    // 触った行があるときだけ、親の更新日時を繰り上げる
+    return removed.length > 0 || added.length > 0
   })
 }

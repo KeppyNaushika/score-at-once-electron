@@ -52,7 +52,10 @@ import {
   transferAsbDefinitionOwner,
 } from "../../electron-src/lib/prisma/asbDefinition"
 import { replaceAsbDefinition } from "../../electron-src/lib/prisma/asbDefinitionReplace"
-import { setAsbDefinitionTags } from "../../electron-src/lib/prisma/asbDefinitionTag"
+import {
+  createAsbDefinitionTag,
+  setAsbDefinitionTags,
+} from "../../electron-src/lib/prisma/asbDefinitionTag"
 import { createDefaultDefinition } from "../../src/components/answer-sheet-builder/constants"
 import {
   cleanupTestDatabase,
@@ -303,6 +306,55 @@ describe("解答用紙の保存", () => {
       where: { id: definition.id },
     })
     expect(row.name).toBe(definition.name)
+  })
+
+  it("担当者でなければタグも付け替えられない", async () => {
+    // タグ付けだけが関所を通っていなかった。一覧が全員の解答用紙を出すように
+    // なったので、他の編集は全部弾かれるのにタグ付けだけ通る状態だった
+    // （docs/branch-review-findings.md #10）
+    const definition = createDefaultDefinition()
+    await replaceAsbDefinition(definition, ownerId)
+    const tag = await prisma.tag.create({
+      data: { name: `よそのタグ_${crypto.randomUUID()}` },
+    })
+
+    actor.userId = otherUserId
+    await expect(setAsbDefinitionTags(definition.id, [tag.id])).rejects.toThrow(
+      /担当ではない/
+    )
+    await expect(
+      createAsbDefinitionTag({
+        asbDefinitionId: definition.id,
+        tagId: tag.id,
+      })
+    ).rejects.toThrow(/担当ではない/)
+    actor.userId = ownerId
+
+    const links = await prisma.asbDefinitionTag.findMany({
+      where: { asbDefinitionId: definition.id },
+    })
+    expect(links).toHaveLength(0)
+  })
+
+  it("タグを付け替えると、解答用紙の更新日時が繰り上がる", async () => {
+    const definition = createDefaultDefinition()
+    await replaceAsbDefinition(definition, ownerId)
+    const before = await prisma.asbDefinition.findUniqueOrThrow({
+      where: { id: definition.id },
+    })
+    const tag = await prisma.tag.create({
+      data: { name: `並べ替え確認_${crypto.randomUUID()}` },
+    })
+
+    await setAsbDefinitionTags(definition.id, [tag.id])
+
+    const after = await prisma.asbDefinition.findUniqueOrThrow({
+      where: { id: definition.id },
+    })
+    expect(after.updatedAt.getTime()).toBeGreaterThanOrEqual(
+      before.updatedAt.getTime()
+    )
+    expect(after.updatedAt.getTime()).not.toBe(0)
   })
 
   it("担当を渡せるのは今の担当者だけで、渡した後は相手が保存できる", async () => {
