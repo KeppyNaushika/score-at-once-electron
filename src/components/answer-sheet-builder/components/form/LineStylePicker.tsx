@@ -9,6 +9,7 @@ import type {
   BorderLineStyle,
 } from "@/types/answerSheetDefinition.types"
 
+import { useAsbGesture } from "../../AsbGestureContext"
 import { DEFAULT_DASH_RATIO, DEFAULT_GAP_RATIO } from "../../constants"
 
 interface LineStylePickerProps {
@@ -233,6 +234,7 @@ function BorderFieldRow({
   borderConfig: BorderConfig
   onUpdate: (config: Partial<BorderConfig>) => void
 }) {
+  const gesture = useAsbGesture()
   const width =
     (borderConfig[field.widthKey] as number | undefined) ?? field.defaultWidth
   const activeStyle =
@@ -280,7 +282,11 @@ function BorderFieldRow({
           min={0.1}
           max={1.5}
           step={0.1}
-          onValueChange={([v]) => onUpdate({ [field.widthKey]: v })}
+          onValueChange={([slidingValue]) => {
+            gesture.begin()
+            onUpdate({ [field.widthKey]: slidingValue })
+          }}
+          onValueCommit={gesture.end}
         />
         <EditableValue
           value={width}
@@ -306,7 +312,11 @@ function BorderFieldRow({
                 min={0.5}
                 max={10}
                 step={0.5}
-                onValueChange={([v]) => onUpdate({ [field.dashRatioKey]: v })}
+                onValueChange={([slidingValue]) => {
+                  gesture.begin()
+                  onUpdate({ [field.dashRatioKey]: slidingValue })
+                }}
+                onValueCommit={gesture.end}
               />
               <EditableValue
                 value={dashRatio}
@@ -330,7 +340,11 @@ function BorderFieldRow({
               min={0.5}
               max={10}
               step={0.5}
-              onValueChange={([v]) => onUpdate({ [field.gapRatioKey]: v })}
+              onValueChange={([slidingValue]) => {
+                gesture.begin()
+                onUpdate({ [field.gapRatioKey]: slidingValue })
+              }}
+              onValueCommit={gesture.end}
             />
             <EditableValue
               value={gapRatio}

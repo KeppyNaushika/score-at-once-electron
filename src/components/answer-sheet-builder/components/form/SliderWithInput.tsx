@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import { Slider } from "@/components/ui/slider"
 
+import { useAsbGesture } from "../../AsbGestureContext"
+
 interface SliderWithInputProps {
   label: string
   value: number
@@ -34,6 +36,7 @@ export function SliderWithInput({
   const lo = inputMin ?? min
   const hi = inputMax ?? max
   const displayDecimals = decimals ?? (step < 1 ? 1 : 0)
+  const gesture = useAsbGesture()
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
@@ -72,7 +75,12 @@ export function SliderWithInput({
         min={min}
         max={max}
         step={step}
-        onValueChange={([v]) => onChange(v)}
+        onValueChange={([slidingValue]) => {
+          // つまみを動かしている間もプレビューへ映す。保存だけを離すまで待たせる
+          gesture.begin()
+          onChange(slidingValue)
+        }}
+        onValueCommit={gesture.end}
       />
       {editing ? (
         <input

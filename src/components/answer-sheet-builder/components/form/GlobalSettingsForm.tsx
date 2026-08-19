@@ -12,6 +12,7 @@ import type {
   GlobalSettings,
   MajorNumberDisplayMode,
   Orientation,
+  PaperSettings,
   PaperSize,
 } from "@/types/answerSheetDefinition.types"
 
@@ -20,7 +21,8 @@ import { SliderWithInput } from "./SliderWithInput"
 
 interface GlobalSettingsFormProps {
   settings: GlobalSettings
-  onUpdate: (settings: Partial<GlobalSettings>) => void
+  /** ヘッダー項目は別の実体なので、ここからは触れない */
+  onUpdate: (settings: Partial<PaperSettings>) => void
 }
 
 /**

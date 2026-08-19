@@ -3,8 +3,8 @@
 import { useRef, useState } from "react"
 
 import type {
-  AnswerSheetAction,
   BorderConfig,
+  ColumnWidths,
   RenderMode,
 } from "@/types/answerSheetDefinition.types"
 import type {
@@ -21,7 +21,13 @@ interface AnswerSheetPreviewProps {
   multiPageLayout: ComputedMultiPageLayout
   renderMode: RenderMode
   onRenderModeChange: (mode: RenderMode) => void
-  dispatch: (action: AnswerSheetAction) => void
+  /** 罫線をドラッグして動かせるもの。プレビューは行き先を知らず、意図だけを伝える */
+  onResizeSubQuestion: (subQuestionId: string, heightMultiplier: number) => void
+  onResizeBranchQuestion: (
+    branchQuestionId: string,
+    heightMultiplier: number
+  ) => void
+  onResizeColumn: (column: keyof ColumnWidths, widthMm: number) => void
   baseRowHeight: number
   /** 罫線種別ごとの破線ダッシュ長/間隔の解決に使う */
   borderConfig: BorderConfig
@@ -36,7 +42,9 @@ export function AnswerSheetPreview({
   multiPageLayout,
   renderMode,
   onRenderModeChange,
-  dispatch,
+  onResizeSubQuestion,
+  onResizeBranchQuestion,
+  onResizeColumn,
   baseRowHeight,
   borderConfig,
 }: AnswerSheetPreviewProps) {
@@ -52,7 +60,12 @@ export function AnswerSheetPreview({
     onMouseUp,
     onMouseLeave,
     cursor,
-  } = usePreviewDragInteraction(layout, interactive, dispatch, baseRowHeight)
+  } = usePreviewDragInteraction(
+    layout,
+    interactive,
+    { onResizeSubQuestion, onResizeBranchQuestion, onResizeColumn },
+    baseRowHeight
+  )
 
   const { totalPages } = multiPageLayout
   const currentPageLayout =

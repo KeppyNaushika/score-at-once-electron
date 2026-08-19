@@ -6,6 +6,8 @@ import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import type { OMRMarkerConfig } from "@/types/answerSheetDefinition.types"
 
+import { useAsbGesture } from "../../AsbGestureContext"
+
 interface OMRMarkerSettingsProps {
   config: OMRMarkerConfig
   onUpdate: (config: Partial<OMRMarkerConfig>) => void
@@ -86,6 +88,7 @@ export function OMRMarkerSettings({
   config,
   onUpdate,
 }: OMRMarkerSettingsProps) {
+  const gesture = useAsbGesture()
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -110,7 +113,11 @@ export function OMRMarkerSettings({
               min={1.5}
               max={15}
               step={0.5}
-              onValueChange={([v]) => onUpdate({ sizeMm: v })}
+              onValueChange={([slidingValue]) => {
+                gesture.begin()
+                onUpdate({ sizeMm: slidingValue })
+              }}
+              onValueCommit={gesture.end}
             />
             <EditableValue
               value={config.sizeMm}
@@ -130,7 +137,11 @@ export function OMRMarkerSettings({
               min={5}
               max={20}
               step={0.5}
-              onValueChange={([v]) => onUpdate({ offsetMm: v })}
+              onValueChange={([slidingValue]) => {
+                gesture.begin()
+                onUpdate({ offsetMm: slidingValue })
+              }}
+              onValueCommit={gesture.end}
             />
             <EditableValue
               value={config.offsetMm}

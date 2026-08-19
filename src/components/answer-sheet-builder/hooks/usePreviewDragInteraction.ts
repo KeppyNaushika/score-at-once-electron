@@ -3,12 +3,17 @@
  *
  * SVGプレビューの罫線をドラッグして行高さ・列幅を直接調整する。
  * ドラッグ情報はComputedLine.dragInfoから取得。
+ *
+ * **ドラッグはジェスチャなので、保存は指を離したとき1回**（`useAsbGesture`）。
+ * 動かしている間の値はプレビューへ映すために編集状態へ入れるが、保存は待たせる。
  */
 
 import { useCallback, useRef, useState } from "react"
 
-import type { AnswerSheetAction } from "@/types/answerSheetDefinition.types"
+import type { ColumnWidths } from "@/types/answerSheetDefinition.types"
 import type { ComputedLayout, DragInfo } from "@/types/answerSheetLayout.types"
+
+import { useAsbGesture } from "../AsbGestureContext"
 
 const HIT_DISTANCE_PX = 6
 
@@ -17,6 +22,19 @@ interface DragState {
   startClientX: number
   startClientY: number
   startValueMm: number
+}
+
+/** ドラッグで動かせるもの。どれも「1つの実体の1つの値」を書き換える */
+interface PreviewDragHandlers {
+  /** 小問の行の高さ（倍率） */
+  onResizeSubQuestion: (subQuestionId: string, heightMultiplier: number) => void
+  /** 枝問の行の高さ（倍率） */
+  onResizeBranchQuestion: (
+    branchQuestionId: string,
+    heightMultiplier: number
+  ) => void
+  /** 番号列の幅（mm） */
+  onResizeColumn: (column: keyof ColumnWidths, widthMm: number) => void
 }
 
 interface PreviewDragResult {
@@ -35,9 +53,10 @@ interface PreviewDragResult {
 export function usePreviewDragInteraction(
   layout: ComputedLayout,
   interactive: boolean,
-  dispatch: (action: AnswerSheetAction) => void,
+  handlers: PreviewDragHandlers,
   baseRowHeight: number
 ): PreviewDragResult {
+  const gesture = useAsbGesture()
   const [hoveredDragInfo, setHoveredDragInfo] = useState<DragInfo | null>(null)
   const dragStateRef = useRef<DragState | null>(null)
   const svgRectRef = useRef<DOMRect | null>(null)
@@ -104,6 +123,7 @@ export function usePreviewDragInteraction(
       if (!interactive || !hoveredDragInfo) return
 
       e.preventDefault()
+      gesture.begin()
       dragStateRef.current = {
         dragInfo: hoveredDragInfo,
         startClientX: e.clientX,
@@ -111,7 +131,7 @@ export function usePreviewDragInteraction(
         startValueMm: hoveredDragInfo.currentValueMm,
       }
     },
-    [interactive, hoveredDragInfo]
+    [interactive, hoveredDragInfo, gesture]
   )
 
   const onMouseMove = useCallback(
@@ -140,39 +160,16 @@ export function usePreviewDragInteraction(
         if (dragInfo.target.type === "heightMultiplier") {
           const newMultiplier = Math.max(0.5, newValueMm / baseRowHeight)
           const rounded = Math.round(newMultiplier * 4) / 4 // 0.25刻み
-          const { majorIndex, subIndex, branchIndex } = dragInfo.target
+          const { cell } = dragInfo.target
 
-          if (branchIndex !== undefined) {
-            dispatch({
-              type: "UPDATE_BRANCH_QUESTION",
-              payload: {
-                majorIndex,
-                subIndex,
-                branchIndex,
-                data: { heightMultiplier: rounded },
-              },
-            })
+          if ("subQuestionId" in cell) {
+            handlers.onResizeSubQuestion(cell.subQuestionId, rounded)
           } else {
-            dispatch({
-              type: "UPDATE_SUB_QUESTION",
-              payload: {
-                majorIndex,
-                subIndex,
-                data: { heightMultiplier: rounded },
-              },
-            })
+            handlers.onResizeBranchQuestion(cell.branchQuestionId, rounded)
           }
         } else if (dragInfo.target.type === "columnWidth") {
           const rounded = Math.max(5, Math.round(newValueMm * 2) / 2) // 0.5mm刻み, 最小5mm
-          dispatch({
-            type: "UPDATE_SETTINGS",
-            payload: {
-              columnWidths: { [dragInfo.target.column]: rounded } as Record<
-                string,
-                number
-              >,
-            } as never,
-          })
+          handlers.onResizeColumn(dragInfo.target.column, rounded)
         }
       } else {
         // ホバー判定
@@ -185,19 +182,21 @@ export function usePreviewDragInteraction(
       layout.pageWidthMm,
       layout.pageHeightMm,
       baseRowHeight,
-      dispatch,
+      handlers,
       findNearestDraggableLine,
     ]
   )
 
   const onMouseUp = useCallback(() => {
     dragStateRef.current = null
-  }, [])
+    gesture.end()
+  }, [gesture])
 
   const onMouseLeave = useCallback(() => {
     dragStateRef.current = null
     setHoveredDragInfo(null)
-  }, [])
+    gesture.end()
+  }, [gesture])
 
   let cursor = "default"
   if (interactive && hoveredDragInfo) {

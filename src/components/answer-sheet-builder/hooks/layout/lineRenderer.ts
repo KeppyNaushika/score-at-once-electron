@@ -421,9 +421,7 @@ export function renderBranchQuestions(
             axis: "horizontal",
             target: {
               type: "heightMultiplier",
-              majorIndex: majorIndex,
-              subIndex: subIndex,
-              branchIndex: branchIndex,
+              cell: { branchQuestionId: branch.id },
             },
             currentValueMm: branchHeight,
             minMm: baseRowHeight * 0.5,

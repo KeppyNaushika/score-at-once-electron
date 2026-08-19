@@ -14,9 +14,11 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import type {
+  AsbCharGuideAttributes,
   BorderLineStyle,
   ManuscriptCharGuide,
   ManuscriptGuidePosition,
+  ManuscriptPaperAttributes,
   ManuscriptPaperConfig,
 } from "@/types/answerSheetDefinition.types"
 
@@ -27,19 +29,21 @@ import {
   DEFAULT_MANUSCRIPT_GUIDE_FONT_RATIO,
   DEFAULT_MANUSCRIPT_GUIDE_PADDING_RATIO,
   DEFAULT_MANUSCRIPT_GUIDE_POSITION,
+  DEFAULT_MANUSCRIPT_PAPER,
   generateId,
 } from "../../constants"
 import { SliderWithInput } from "./SliderWithInput"
 
 interface ManuscriptPaperSettingsProps {
   config: ManuscriptPaperConfig | undefined
-  onUpdate: (config: ManuscriptPaperConfig) => void
-}
-
-const DEFAULT_CONFIG: ManuscriptPaperConfig = {
-  enabled: false,
-  columns: 20,
-  rows: 10,
+  /** 原稿用紙そのものの設定（文字位置マーカーは別の実体なので含めない） */
+  onUpdate: (data: Partial<ManuscriptPaperAttributes>) => void
+  onAddCharGuide: (charGuide: ManuscriptCharGuide) => void
+  onUpdateCharGuide: (
+    charGuideId: string,
+    data: Partial<AsbCharGuideAttributes>
+  ) => void
+  onDeleteCharGuide: (charGuideId: string) => void
 }
 
 const GUIDE_POSITION_LABELS: Record<ManuscriptGuidePosition, string> = {
@@ -61,16 +65,11 @@ const BOUNDARY_OPTIONS: { value: string; label: string }[] = [
 export function ManuscriptPaperSettings({
   config,
   onUpdate,
+  onAddCharGuide,
+  onUpdateCharGuide,
+  onDeleteCharGuide,
 }: ManuscriptPaperSettingsProps) {
-  const current = config ?? DEFAULT_CONFIG
-
-  const handleToggle = (enabled: boolean) => {
-    onUpdate({ ...current, enabled })
-  }
-
-  const handleChange = (data: Partial<ManuscriptPaperConfig>) => {
-    onUpdate({ ...current, ...data })
-  }
+  const current = config ?? DEFAULT_MANUSCRIPT_PAPER
 
   /** 入力値を [min, max] の整数に丸める。空欄・非数値は fallback（0設定によるエラーを防ぐ） */
   const clampInt = (
@@ -85,29 +84,12 @@ export function ManuscriptPaperSettings({
   }
 
   const capacity = current.columns * current.rows
-  const guides = current.charGuides ?? []
-
-  const updateGuide = (id: string, data: Partial<ManuscriptCharGuide>) => {
-    handleChange({
-      charGuides: guides.map((guide) =>
-        guide.id === id ? { ...guide, ...data } : guide
-      ),
-    })
-  }
+  const guides = config?.charGuides ?? []
 
   const addGuide = () => {
     // 既定は用紙容量（末尾マス）を指す。ラベルは数値を初期表示。
     const atChar = Math.min(capacity, 100)
-    handleChange({
-      charGuides: [
-        ...guides,
-        { id: generateId(), atChar, label: String(atChar) },
-      ],
-    })
-  }
-
-  const removeGuide = (id: string) => {
-    handleChange({ charGuides: guides.filter((guide) => guide.id !== id) })
+    onAddCharGuide({ id: generateId(), atChar, label: String(atChar) })
   }
 
   return (
@@ -117,7 +99,7 @@ export function ManuscriptPaperSettings({
         <Switch
           className="scale-75"
           checked={current.enabled}
-          onCheckedChange={handleToggle}
+          onCheckedChange={(enabled) => onUpdate({ enabled })}
         />
       </div>
 
@@ -132,7 +114,7 @@ export function ManuscriptPaperSettings({
               min={1}
               max={40}
               onChange={(e) =>
-                handleChange({
+                onUpdate({
                   columns: clampInt(e.target.value, 1, 40, current.columns),
                 })
               }
@@ -147,7 +129,7 @@ export function ManuscriptPaperSettings({
               min={1}
               max={20}
               onChange={(e) =>
-                handleChange({
+                onUpdate({
                   rows: clampInt(e.target.value, 1, 20, current.rows),
                 })
               }
@@ -184,7 +166,7 @@ export function ManuscriptPaperSettings({
                     current.guidePosition ?? DEFAULT_MANUSCRIPT_GUIDE_POSITION
                   }
                   onValueChange={(v) =>
-                    handleChange({
+                    onUpdate({
                       guidePosition: v as ManuscriptGuidePosition,
                     })
                   }
@@ -212,7 +194,7 @@ export function ManuscriptPaperSettings({
                   min={0.05}
                   max={1}
                   step={0.05}
-                  onChange={(v) => handleChange({ guideFontSize: v })}
+                  onChange={(guideFontSize) => onUpdate({ guideFontSize })}
                 />
               </div>
               <div className="col-span-2">
@@ -225,7 +207,7 @@ export function ManuscriptPaperSettings({
                   min={0}
                   max={1}
                   step={0.05}
-                  onChange={(v) => handleChange({ guidePadding: v })}
+                  onChange={(guidePadding) => onUpdate({ guidePadding })}
                 />
               </div>
             </div>
@@ -242,7 +224,7 @@ export function ManuscriptPaperSettings({
                   max={capacity}
                   title="先頭からの文字数"
                   onChange={(e) =>
-                    updateGuide(guide.id, {
+                    onUpdateCharGuide(guide.id, {
                       atChar: clampInt(
                         e.target.value,
                         1,
@@ -258,14 +240,14 @@ export function ManuscriptPaperSettings({
                   value={guide.label}
                   placeholder="数字(空欄=罫線のみ)"
                   onChange={(e) =>
-                    updateGuide(guide.id, { label: e.target.value })
+                    onUpdateCharGuide(guide.id, { label: e.target.value })
                   }
                 />
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 text-destructive"
-                  onClick={() => removeGuide(guide.id)}
+                  onClick={() => onDeleteCharGuide(guide.id)}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
@@ -277,7 +259,7 @@ export function ManuscriptPaperSettings({
                 <Select
                   value={guide.boundary ?? BOUNDARY_NONE}
                   onValueChange={(v) =>
-                    updateGuide(
+                    onUpdateCharGuide(
                       guide.id,
                       v === BOUNDARY_NONE
                         ? { boundary: undefined }
@@ -307,7 +289,7 @@ export function ManuscriptPaperSettings({
                       max={1.5}
                       step={0.1}
                       onChange={(v) =>
-                        updateGuide(guide.id, { boundaryWidth: v })
+                        onUpdateCharGuide(guide.id, { boundaryWidth: v })
                       }
                     />
                   </div>
@@ -324,7 +306,7 @@ export function ManuscriptPaperSettings({
                         max={10}
                         step={0.5}
                         onChange={(v) =>
-                          updateGuide(guide.id, { boundaryDashRatio: v })
+                          onUpdateCharGuide(guide.id, { boundaryDashRatio: v })
                         }
                       />
                     </div>
@@ -337,7 +319,7 @@ export function ManuscriptPaperSettings({
                       max={10}
                       step={0.5}
                       onChange={(v) =>
-                        updateGuide(guide.id, { boundaryGapRatio: v })
+                        onUpdateCharGuide(guide.id, { boundaryGapRatio: v })
                       }
                     />
                   </div>

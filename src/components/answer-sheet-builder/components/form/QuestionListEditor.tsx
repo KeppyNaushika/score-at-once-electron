@@ -11,10 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type {
-  BranchQuestion,
   LabelPresets,
   MajorQuestion,
-  SubQuestion,
 } from "@/types/answerSheetDefinition.types"
 
 import {
@@ -23,6 +21,8 @@ import {
   parsePresetLabels,
   SUB_QUESTION_LABEL_PRESETS,
 } from "../../constants"
+import { movedIds } from "../../reorderIds"
+import type { AsbEditorActions } from "../../types"
 import { MajorQuestionForm } from "./MajorQuestionForm"
 
 /** プリセット文字列の短縮表示ラベルを生成 */
@@ -36,40 +36,7 @@ interface QuestionListEditorProps {
   majorQuestions: MajorQuestion[]
   labelPresets?: LabelPresets
   definitionId: string
-  onSetLabelPreset: (
-    category: "major" | "sub" | "branch",
-    preset: string
-  ) => void
-  onAddMajor: () => void
-  onUpdateMajor: (index: number, data: Partial<MajorQuestion>) => void
-  onDeleteMajor: (index: number) => void
-  onReorderMajor: (fromIndex: number, toIndex: number) => void
-  onAddSub: (majorIndex: number) => void
-  onUpdateSub: (
-    majorIndex: number,
-    subIndex: number,
-    data: Partial<SubQuestion>
-  ) => void
-  onDeleteSub: (majorIndex: number, subIndex: number) => void
-  onReorderSub: (majorIndex: number, fromIndex: number, toIndex: number) => void
-  onAddBranch: (majorIndex: number, subIndex: number) => void
-  onUpdateBranch: (
-    majorIndex: number,
-    subIndex: number,
-    branchIndex: number,
-    data: Partial<BranchQuestion>
-  ) => void
-  onDeleteBranch: (
-    majorIndex: number,
-    subIndex: number,
-    branchIndex: number
-  ) => void
-  onReorderBranch: (
-    majorIndex: number,
-    subIndex: number,
-    fromIndex: number,
-    toIndex: number
-  ) => void
+  actions: AsbEditorActions
   /** 縦書きレイアウトか（高さ/幅ラベルの表示を入れ替える） */
   vertical?: boolean
 }
@@ -78,20 +45,8 @@ export function QuestionListEditor({
   majorQuestions,
   labelPresets,
   definitionId,
+  actions,
   vertical = false,
-  onSetLabelPreset,
-  onAddMajor,
-  onUpdateMajor,
-  onDeleteMajor,
-  onReorderMajor,
-  onAddSub,
-  onUpdateSub,
-  onDeleteSub,
-  onReorderSub,
-  onAddBranch,
-  onUpdateBranch,
-  onDeleteBranch,
-  onReorderBranch,
 }: QuestionListEditorProps) {
   return (
     <div className="space-y-3">
@@ -105,7 +60,9 @@ export function QuestionListEditor({
             <span className="text-xs whitespace-nowrap">大問</span>
             <Select
               value={labelPresets?.major ?? ""}
-              onValueChange={(v) => onSetLabelPreset("major", v)}
+              onValueChange={(preset) =>
+                actions.applyLabelPreset("major", preset)
+              }
             >
               <SelectTrigger className="h-7 w-28 text-xs">
                 <SelectValue placeholder="選択..." />
@@ -123,7 +80,9 @@ export function QuestionListEditor({
             <span className="text-xs whitespace-nowrap">小問</span>
             <Select
               value={labelPresets?.sub ?? ""}
-              onValueChange={(v) => onSetLabelPreset("sub", v)}
+              onValueChange={(preset) =>
+                actions.applyLabelPreset("sub", preset)
+              }
             >
               <SelectTrigger className="h-7 w-32 text-xs">
                 <SelectValue placeholder="選択..." />
@@ -141,7 +100,9 @@ export function QuestionListEditor({
             <span className="text-xs whitespace-nowrap">枝問</span>
             <Select
               value={labelPresets?.branch ?? ""}
-              onValueChange={(v) => onSetLabelPreset("branch", v)}
+              onValueChange={(preset) =>
+                actions.applyLabelPreset("branch", preset)
+              }
             >
               <SelectTrigger className="h-7 w-32 text-xs">
                 <SelectValue placeholder="選択..." />
@@ -166,7 +127,7 @@ export function QuestionListEditor({
           variant="outline"
           size="sm"
           className="h-7 text-xs"
-          onClick={onAddMajor}
+          onClick={actions.addMajorQuestion}
         >
           <Plus className="mr-1 h-3 w-3" />
           大問追加
@@ -174,31 +135,29 @@ export function QuestionListEditor({
       </div>
 
       <div className="space-y-2">
-        {majorQuestions.map((major, mi) => (
+        {majorQuestions.map((majorQuestion, majorIndex) => (
           <MajorQuestionForm
-            key={major.id}
-            major={major}
-            majorIndex={mi}
-            totalMajorCount={majorQuestions.length}
+            key={majorQuestion.id}
+            majorQuestion={majorQuestion}
+            majorIndex={majorIndex}
             definitionId={definitionId}
+            actions={actions}
             vertical={vertical}
-            onUpdate={(data) => onUpdateMajor(mi, data)}
-            onDelete={() => onDeleteMajor(mi)}
-            onMoveUp={mi > 0 ? () => onReorderMajor(mi, mi - 1) : undefined}
-            onMoveDown={
-              mi < majorQuestions.length - 1
-                ? () => onReorderMajor(mi, mi + 1)
+            onMoveUp={
+              majorIndex > 0
+                ? () =>
+                    actions.reorderMajorQuestions(
+                      movedIds(majorQuestions, majorIndex, majorIndex - 1)
+                    )
                 : undefined
             }
-            onAddSub={() => onAddSub(mi)}
-            onUpdateSub={(si, data) => onUpdateSub(mi, si, data)}
-            onDeleteSub={(si) => onDeleteSub(mi, si)}
-            onReorderSub={(from, to) => onReorderSub(mi, from, to)}
-            onAddBranch={(si) => onAddBranch(mi, si)}
-            onUpdateBranch={(si, bi, data) => onUpdateBranch(mi, si, bi, data)}
-            onDeleteBranch={(si, bi) => onDeleteBranch(mi, si, bi)}
-            onReorderBranch={(si, from, to) =>
-              onReorderBranch(mi, si, from, to)
+            onMoveDown={
+              majorIndex < majorQuestions.length - 1
+                ? () =>
+                    actions.reorderMajorQuestions(
+                      movedIds(majorQuestions, majorIndex, majorIndex + 1)
+                    )
+                : undefined
             }
           />
         ))}

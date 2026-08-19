@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type {
+  AsbHeaderFieldAttributes,
   BorderLineStyle,
   HeaderFieldDefinition,
   HeaderFieldType,
@@ -26,14 +27,18 @@ import type {
 } from "@/types/answerSheetDefinition.types"
 
 import { HEADER_FIELD_PRESETS } from "../../constants"
+import { movedIds } from "../../reorderIds"
 import { SliderWithInput } from "./SliderWithInput"
 
 interface HeaderFieldEditorProps {
   fields: HeaderFieldDefinition[]
   onAdd: (defaults?: Partial<HeaderFieldDefinition>) => void
-  onUpdate: (fieldId: string, data: Partial<HeaderFieldDefinition>) => void
-  onDelete: (fieldId: string) => void
-  onReorder: (fromIndex: number, toIndex: number) => void
+  onUpdate: (
+    headerFieldId: string,
+    data: Partial<AsbHeaderFieldAttributes>
+  ) => void
+  onDelete: (headerFieldId: string) => void
+  onReorder: (orderedIds: string[]) => void
   /** 縦書きレイアウトか（幅/高さラベルの表示を入れ替える） */
   vertical?: boolean
 }
@@ -120,7 +125,7 @@ export function HeaderFieldEditor({
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={() => onReorder(index, index - 1)}
+                onClick={() => onReorder(movedIds(fields, index, index - 1))}
                 disabled={index === 0}
               >
                 <ArrowUp className="h-3 w-3" />
@@ -129,7 +134,7 @@ export function HeaderFieldEditor({
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={() => onReorder(index, index + 1)}
+                onClick={() => onReorder(movedIds(fields, index, index + 1))}
                 disabled={index === fields.length - 1}
               >
                 <ArrowDown className="h-3 w-3" />

@@ -4,21 +4,22 @@ import { ChevronDown, ChevronUp, Settings2, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import type { BranchQuestion } from "@/types/answerSheetDefinition.types"
+import type {
+  AsbBranchQuestionAttributes,
+  BranchQuestion,
+} from "@/types/answerSheetDefinition.types"
 
+import type { AsbEditorActions } from "../../types"
 import { ImageElementEditor } from "./ImageElementEditor"
 import { OMRCellConfigForm } from "./OMRCellConfigForm"
 import { TextElementEditor } from "./TextElementEditor"
 
 interface BranchQuestionFormProps {
-  branch: BranchQuestion
-  branchIndex: number
-  totalBranchCount: number
+  branchQuestion: BranchQuestion
   showPoints?: boolean
   maxGoUp: number
   definitionId: string
-  onUpdate: (data: Partial<BranchQuestion>) => void
-  onDelete: () => void
+  actions: AsbEditorActions
   onMoveUp?: () => void
   onMoveDown?: () => void
   /** 縦書きレイアウトか（高さ/幅ラベルの表示を入れ替える） */
@@ -26,35 +27,38 @@ interface BranchQuestionFormProps {
 }
 
 export function BranchQuestionForm({
-  branch,
+  branchQuestion,
   showPoints = true,
   maxGoUp,
   definitionId,
-  onUpdate,
-  onDelete,
+  actions,
   onMoveUp,
   onMoveDown,
   vertical = false,
 }: BranchQuestionFormProps) {
+  const cell = { branchQuestionId: branchQuestion.id }
+  const onUpdate = (data: Partial<AsbBranchQuestionAttributes>) =>
+    actions.updateBranchQuestion(branchQuestion.id, data)
   // 縦書きでは見た目の高さ/幅が入れ替わるためラベルだけ入れ替える（内部値は不変）
   const heightLabel = vertical ? "幅" : "高さ"
   const widthLabel = vertical ? "高さ" : "幅"
   const [detailOpen, setDetailOpen] = useState(false)
 
   const hasDetailContent =
-    branch.textElements.length > 0 || (branch.imageElements?.length ?? 0) > 0
+    branchQuestion.textElements.length > 0 ||
+    (branchQuestion.imageElements?.length ?? 0) > 0
 
-  const hasVisibilityRestricted = branch.imageElements?.some(
+  const hasVisibilityRestricted = branchQuestion.imageElements?.some(
     (imageElement) =>
       imageElement.visibility && imageElement.visibility !== "both"
   )
 
-  const goUpActive = branch.goUp != null
+  const goUpActive = branchQuestion.goUp != null
   const isGoUpInvalid =
     goUpActive &&
-    (!Number.isInteger(branch.goUp) ||
-      branch.goUp! < 1 ||
-      branch.goUp! > maxGoUp)
+    (!Number.isInteger(branchQuestion.goUp) ||
+      branchQuestion.goUp! < 1 ||
+      branchQuestion.goUp! > maxGoUp)
 
   return (
     <div className="ml-4 space-y-1 border-l-2 border-muted-foreground/20 py-1 pl-4">
@@ -65,7 +69,7 @@ export function BranchQuestionForm({
             <span className="text-muted-foreground">番号</span>
             <input
               className="w-10 bg-transparent px-0.5 text-center outline-none focus:bg-accent/50"
-              value={branch.label}
+              value={branchQuestion.label}
               onChange={(e) => onUpdate({ label: e.target.value })}
               placeholder=""
             />
@@ -76,7 +80,7 @@ export function BranchQuestionForm({
               <input
                 type="number"
                 className="w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none focus:bg-accent/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                value={branch.points}
+                value={branchQuestion.points}
                 min={0}
                 max={100}
                 onChange={(e) => onUpdate({ points: Number(e.target.value) })}
@@ -92,7 +96,7 @@ export function BranchQuestionForm({
               type="number"
               aria-label={heightLabel}
               className="w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none focus:bg-accent/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-              value={branch.heightMultiplier}
+              value={branchQuestion.heightMultiplier}
               min={1}
               max={30}
               step={0.5}
@@ -110,7 +114,7 @@ export function BranchQuestionForm({
             <input
               aria-label={widthLabel}
               className="w-10 bg-transparent px-0.5 text-center outline-none focus:bg-accent/50"
-              value={branch.layoutWidth ?? ""}
+              value={branchQuestion.layoutWidth ?? ""}
               onChange={(e) => {
                 const value = e.target.value.trim()
                 if (value === "") {
@@ -128,13 +132,13 @@ export function BranchQuestionForm({
           </div>
         </div>
         {/* 改行ボタン */}
-        {branch.layoutWidth && (
+        {branchQuestion.layoutWidth && (
           <Button
             variant="outline"
             size="icon"
-            className={`h-7 w-7 text-xs ${branch.nextPlacement === "break" ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
+            className={`h-7 w-7 text-xs ${branchQuestion.nextPlacement === "break" ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
             onClick={() => {
-              if (branch.nextPlacement === "break") {
+              if (branchQuestion.nextPlacement === "break") {
                 onUpdate({ nextPlacement: undefined })
               } else {
                 onUpdate({ nextPlacement: "break" })
@@ -146,12 +150,12 @@ export function BranchQuestionForm({
           </Button>
         )}
         {/* 戻るボタン（自分自身をN行上に配置） */}
-        {branch.layoutWidth && (
+        {branchQuestion.layoutWidth && (
           <div className="inline-flex items-center gap-0">
             <Button
               variant="outline"
               size="icon"
-              className={`h-7 w-7 text-xs ${goUpActive && branch.goUp! > 0 ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"} ${goUpActive ? "rounded-r-none" : ""}`}
+              className={`h-7 w-7 text-xs ${goUpActive && branchQuestion.goUp! > 0 ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"} ${goUpActive ? "rounded-r-none" : ""}`}
               onClick={() => {
                 if (goUpActive) {
                   onUpdate({ goUp: undefined })
@@ -173,7 +177,7 @@ export function BranchQuestionForm({
                 type="number"
                 aria-label="戻り行数"
                 className={`h-7 w-8 [appearance:textfield] rounded-r-md border border-l-0 border-primary/50 px-0.5 text-center text-xs outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${isGoUpInvalid ? "bg-red-100 dark:bg-red-900/30" : "bg-transparent"}`}
-                value={branch.goUp || ""}
+                value={branchQuestion.goUp || ""}
                 min={1}
                 max={maxGoUp}
                 onChange={(e) => {
@@ -186,10 +190,10 @@ export function BranchQuestionForm({
                 }}
                 onBlur={() => {
                   if (
-                    branch.goUp == null ||
-                    !Number.isInteger(branch.goUp) ||
-                    branch.goUp < 1 ||
-                    branch.goUp > maxGoUp
+                    branchQuestion.goUp == null ||
+                    !Number.isInteger(branchQuestion.goUp) ||
+                    branchQuestion.goUp < 1 ||
+                    branchQuestion.goUp > maxGoUp
                   ) {
                     onUpdate({ goUp: undefined })
                   }
@@ -197,7 +201,7 @@ export function BranchQuestionForm({
                 onKeyDown={(e) => {
                   if (e.key === "ArrowUp" || e.key === "ArrowDown") {
                     e.preventDefault()
-                    const cur = branch.goUp ?? 0
+                    const cur = branchQuestion.goUp ?? 0
                     const next = e.key === "ArrowUp" ? cur + 1 : cur - 1
                     if (next >= 1 && next <= maxGoUp) {
                       onUpdate({ goUp: next })
@@ -249,7 +253,7 @@ export function BranchQuestionForm({
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={onDelete}
+            onClick={() => actions.deleteBranchQuestion(branchQuestion.id)}
             title="枝問を削除"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -261,18 +265,28 @@ export function BranchQuestionForm({
       {detailOpen && (
         <div className="space-y-2 pt-1">
           <TextElementEditor
-            textElements={branch.textElements}
-            onUpdate={(elements) => onUpdate({ textElements: elements })}
+            textElements={branchQuestion.textElements}
+            onAdd={() => actions.addTextElement(cell)}
+            onUpdate={actions.updateTextElement}
+            onDelete={actions.deleteTextElement}
             vertical={vertical}
           />
           <ImageElementEditor
-            imageElements={branch.imageElements ?? []}
-            onUpdate={(elements) => onUpdate({ imageElements: elements })}
+            imageElements={branchQuestion.imageElements ?? []}
+            onAdd={(imageElement) =>
+              actions.addImageElement(cell, imageElement)
+            }
+            onUpdate={actions.updateImageElement}
+            onDelete={actions.deleteImageElement}
             definitionId={definitionId}
           />
           <OMRCellConfigForm
-            config={branch.omrConfig}
-            onChange={(config) => onUpdate({ omrConfig: config })}
+            config={branchQuestion.omrConfig}
+            onChange={(config) =>
+              config
+                ? actions.upsertOmrConfig(cell, config)
+                : actions.deleteOmrConfig(cell)
+            }
           />
         </div>
       )}

@@ -9,6 +9,7 @@ import { useEffect, useRef } from "react"
 
 import type { InlineSegment } from "@/lib/answer-sheet-builder/inlineMarkupParser"
 import type {
+  AsbCellParent,
   BorderLineStyle,
   RenderMode,
 } from "@/types/answerSheetDefinition.types"
@@ -56,6 +57,19 @@ export function getDashProps(
   }
 }
 
+/** 同じセル（小問か枝問）を指しているか */
+function isSameCell(cellA: AsbCellParent, cellB: AsbCellParent): boolean {
+  if ("subQuestionId" in cellA) {
+    return (
+      "subQuestionId" in cellB && cellA.subQuestionId === cellB.subQuestionId
+    )
+  }
+  return (
+    "branchQuestionId" in cellB &&
+    cellA.branchQuestionId === cellB.branchQuestionId
+  )
+}
+
 /** 2つの DragInfo が同一の対象を指しているか比較する */
 export function isDragInfoEqual(
   a: DragInfo | undefined,
@@ -68,11 +82,7 @@ export function isDragInfoEqual(
     a.target.type === "heightMultiplier" &&
     b.target.type === "heightMultiplier"
   ) {
-    return (
-      a.target.majorIndex === b.target.majorIndex &&
-      a.target.subIndex === b.target.subIndex &&
-      a.target.branchIndex === b.target.branchIndex
-    )
+    return isSameCell(a.target.cell, b.target.cell)
   }
   if (a.target.type === "columnWidth" && b.target.type === "columnWidth") {
     return a.target.column === b.target.column

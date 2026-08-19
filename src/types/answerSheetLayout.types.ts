@@ -6,6 +6,7 @@
  */
 
 import type {
+  AsbCellParent,
   BorderLineStyle,
   BranchQuestion,
   CellImageElement,
@@ -106,12 +107,11 @@ export interface ComputedCell {
 
 export interface DragInfo {
   axis: "horizontal" | "vertical"
+  /** 動かす先。行の高さは**どのセルか**を id で指す（添字で指すと書き込み先が添字で決まる） */
   target:
     | {
         type: "heightMultiplier"
-        majorIndex: number
-        subIndex: number
-        branchIndex?: number
+        cell: AsbCellParent
       }
     | {
         type: "columnWidth"

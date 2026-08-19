@@ -12,11 +12,12 @@ import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type {
-  BranchQuestion,
   MajorQuestion,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
 
+import { movedIds } from "../../reorderIds"
+import type { AsbEditorActions } from "../../types"
 import { SubQuestionForm } from "./SubQuestionForm"
 
 /** 簡易分数パース (例: "1/3" → 0.333) */
@@ -62,57 +63,30 @@ function calcSubMaxGoUps(subs: SubQuestion[]): number[] {
 }
 
 interface MajorQuestionFormProps {
-  major: MajorQuestion
+  majorQuestion: MajorQuestion
   majorIndex: number
-  totalMajorCount: number
   definitionId: string
-  onUpdate: (data: Partial<MajorQuestion>) => void
-  onDelete: () => void
+  actions: AsbEditorActions
   onMoveUp?: () => void
   onMoveDown?: () => void
-  onAddSub: () => void
-  onUpdateSub: (subIndex: number, data: Partial<SubQuestion>) => void
-  onDeleteSub: (subIndex: number) => void
-  onReorderSub: (fromIndex: number, toIndex: number) => void
-  onAddBranch: (subIndex: number) => void
-  onUpdateBranch: (
-    subIndex: number,
-    branchIndex: number,
-    data: Partial<BranchQuestion>
-  ) => void
-  onDeleteBranch: (subIndex: number, branchIndex: number) => void
-  onReorderBranch: (
-    subIndex: number,
-    fromIndex: number,
-    toIndex: number
-  ) => void
   /** 縦書きレイアウトか（高さ/幅ラベルの表示を入れ替える） */
   vertical?: boolean
 }
 
 export function MajorQuestionForm({
-  major,
+  majorQuestion,
   majorIndex,
   definitionId,
-  onUpdate,
-  onDelete,
+  actions,
   onMoveUp,
   onMoveDown,
-  onAddSub,
-  onUpdateSub,
-  onDeleteSub,
-  onReorderSub,
-  onAddBranch,
-  onUpdateBranch,
-  onDeleteBranch,
-  onReorderBranch,
   vertical = false,
 }: MajorQuestionFormProps) {
   const [isOpen, setIsOpen] = useState(true)
 
   const subMaxGoUps = useMemo(
-    () => calcSubMaxGoUps(major.subQuestions),
-    [major.subQuestions]
+    () => calcSubMaxGoUps(majorQuestion.subQuestions),
+    [majorQuestion.subQuestions]
   )
 
   return (
@@ -136,8 +110,12 @@ export function MajorQuestionForm({
         </span>
         <Input
           className="h-7 w-20 text-xs"
-          value={major.label}
-          onChange={(e) => onUpdate({ label: e.target.value })}
+          value={majorQuestion.label}
+          onChange={(e) =>
+            actions.updateMajorQuestion(majorQuestion.id, {
+              label: e.target.value,
+            })
+          }
           placeholder=""
         />
         <div className="ml-auto flex items-center gap-1.5">
@@ -145,7 +123,7 @@ export function MajorQuestionForm({
             variant="outline"
             size="sm"
             className="h-7 text-xs"
-            onClick={onAddSub}
+            onClick={() => actions.addSubQuestion(majorQuestion.id)}
             title="小問を追加"
           >
             <Plus className="mr-1 h-3 w-3" />
@@ -177,7 +155,7 @@ export function MajorQuestionForm({
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={onDelete}
+            onClick={() => actions.deleteMajorQuestion(majorQuestion.id)}
             title="大問を削除"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -189,30 +167,42 @@ export function MajorQuestionForm({
       {isOpen && (
         <div className="space-y-3 border-t px-3 pt-2 pb-3">
           {/* 小問リスト */}
-          {major.subQuestions.length > 0 && (
+          {majorQuestion.subQuestions.length > 0 && (
             <div className="space-y-2 pl-2">
-              {major.subQuestions.map((subQuestion, si) => (
+              {majorQuestion.subQuestions.map((subQuestion, subIndex) => (
                 <SubQuestionForm
                   key={subQuestion.id}
-                  sub={subQuestion}
-                  majorIndex={majorIndex}
-                  subIndex={si}
-                  totalSubCount={major.subQuestions.length}
-                  maxGoUp={subMaxGoUps[si]}
+                  subQuestion={subQuestion}
+                  maxGoUp={subMaxGoUps[subIndex]}
                   definitionId={definitionId}
-                  onUpdate={(data) => onUpdateSub(si, data)}
-                  onDelete={() => onDeleteSub(si)}
-                  onMoveUp={si > 0 ? () => onReorderSub(si, si - 1) : undefined}
-                  onMoveDown={
-                    si < major.subQuestions.length - 1
-                      ? () => onReorderSub(si, si + 1)
+                  actions={actions}
+                  vertical={vertical}
+                  onMoveUp={
+                    subIndex > 0
+                      ? () =>
+                          actions.reorderSubQuestions(
+                            majorQuestion.id,
+                            movedIds(
+                              majorQuestion.subQuestions,
+                              subIndex,
+                              subIndex - 1
+                            )
+                          )
                       : undefined
                   }
-                  onAddBranch={() => onAddBranch(si)}
-                  onUpdateBranch={(bi, data) => onUpdateBranch(si, bi, data)}
-                  onDeleteBranch={(bi) => onDeleteBranch(si, bi)}
-                  onReorderBranch={(from, to) => onReorderBranch(si, from, to)}
-                  vertical={vertical}
+                  onMoveDown={
+                    subIndex < majorQuestion.subQuestions.length - 1
+                      ? () =>
+                          actions.reorderSubQuestions(
+                            majorQuestion.id,
+                            movedIds(
+                              majorQuestion.subQuestions,
+                              subIndex,
+                              subIndex + 1
+                            )
+                          )
+                      : undefined
+                  }
                 />
               ))}
             </div>

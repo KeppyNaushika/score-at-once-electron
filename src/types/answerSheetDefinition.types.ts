@@ -23,12 +23,21 @@ export type VerticalAlign = "top" | "middle" | "bottom"
 // セル内テキスト要素
 // =====================
 
-export interface CellTextElement {
-  id: string
+/**
+ * テキスト要素の属性（自身の列だけ。子は持たない）。
+ *
+ * 実体の型を「自身の属性」と「子」に割ってあるのは、**更新の指示に子が紛れ込まないため**。
+ * `Partial<CellTextElement>` だと id まで書き換えられてしまう。
+ */
+export interface AsbTextElementAttributes {
   text: string
   fontSize: number
   horizontalAlign: HorizontalAlign
   verticalAlign: VerticalAlign
+}
+
+export interface CellTextElement extends AsbTextElementAttributes {
+  id: string
 }
 
 // =====================
@@ -38,8 +47,7 @@ export interface CellTextElement {
 export type ImageObjectFit = "contain" | "cover" | "fill"
 export type ImageVisibility = "both" | "answer-sheet-only" | "model-answer-only"
 
-export interface CellImageElement {
-  id: string
+export interface AsbImageElementAttributes {
   imagePath: string // data/ からの相対パス
   originalName: string // 表示用ファイル名
   objectFit: ImageObjectFit
@@ -48,6 +56,10 @@ export interface CellImageElement {
   opacity: number // 0-1
   /** 表示モード制限。未指定 = "both"（常に表示） */
   visibility?: ImageVisibility
+}
+
+export interface CellImageElement extends AsbImageElementAttributes {
+  id: string
 }
 
 // =====================
@@ -75,9 +87,7 @@ export type ManuscriptGuidePosition =
  * - label が空文字列なら数字は表示しない（区切り罫線のみ使う場合）。
  * - boundary が未指定なら区切り罫線は引かない（数字ガイドのみ使う場合）。
  */
-export interface ManuscriptCharGuide {
-  /** 安定ID（React key・DB AsbCharGuide.id・アーカイブID再マッピングに使用） */
-  id: string
+export interface AsbCharGuideAttributes {
   /** 先頭からの文字数（1始まり） */
   atChar: number
   /** 表示テキスト（空文字列 = 数字非表示） */
@@ -92,12 +102,16 @@ export interface ManuscriptCharGuide {
   boundaryGapRatio?: number
 }
 
-export interface ManuscriptPaperConfig {
+export interface ManuscriptCharGuide extends AsbCharGuideAttributes {
+  /** 安定ID（React key・DB AsbCharGuide.id・アーカイブID再マッピングに使用） */
+  id: string
+}
+
+/** 原稿用紙の設定（文字位置マーカーは別テーブルなので含めない） */
+export interface ManuscriptPaperAttributes {
   enabled: boolean
   columns: number
   rows: number
-  /** 文字位置マーカー（数字ガイド＋区切り罫線の統合リスト） */
-  charGuides?: ManuscriptCharGuide[]
   /** ガイド文字サイズ（1マス＝1とした相対値。マス比）。未指定 = 既定 */
   guideFontSize?: number
   /** ガイド表示位置（マスの隅）。未指定 = "bottom-left" */
@@ -106,19 +120,21 @@ export interface ManuscriptPaperConfig {
   guidePadding?: number
 }
 
+export interface ManuscriptPaperConfig extends ManuscriptPaperAttributes {
+  /** 文字位置マーカー（数字ガイド＋区切り罫線の統合リスト） */
+  charGuides?: ManuscriptCharGuide[]
+}
+
 // =====================
 // 3階層問題構造
 // =====================
 
 export type NextPlacement = "inline" | "break"
 
-export interface BranchQuestion {
-  id: string
+export interface AsbBranchQuestionAttributes {
   label: string
   heightMultiplier: number
   points: number
-  textElements: CellTextElement[]
-  imageElements?: CellImageElement[]
   borderStyles?: BorderStyles
   /** 幅の分数表記 (例: "1/4", "1/3", "1/2")。未指定 = 全幅（縦配置） */
   layoutWidth?: string
@@ -126,19 +142,20 @@ export interface BranchQuestion {
   nextPlacement?: NextPlacement
   /** この要素自身をN行上に戻して配置する。未指定 = 戻らない */
   goUp?: number
+}
+
+export interface BranchQuestion extends AsbBranchQuestionAttributes {
+  id: string
+  textElements: CellTextElement[]
+  imageElements?: CellImageElement[]
   /** OMR自動認識設定 */
   omrConfig?: OMRCellConfig
 }
 
-export interface SubQuestion {
-  id: string
+export interface AsbSubQuestionAttributes {
   label: string
-  branchQuestions: BranchQuestion[]
   heightMultiplier: number
   points: number
-  textElements: CellTextElement[]
-  imageElements?: CellImageElement[]
-  manuscriptPaper?: ManuscriptPaperConfig
   borderStyles?: BorderStyles
   /** 幅の分数表記 (例: "1/4", "1/3", "1/2")。未指定 = 全幅（縦配置） */
   layoutWidth?: string
@@ -148,13 +165,39 @@ export interface SubQuestion {
   goUp?: number
   /** 枝問ごとに配点するか（undefined/true=枝問配点、false=完答） */
   usesBranchPoints?: boolean
+  /** 原稿用紙。文字位置マーカーは別テーブル・別 action なので含めない */
+  manuscriptPaper?: ManuscriptPaperAttributes
+}
+
+export interface SubQuestion extends AsbSubQuestionAttributes {
+  id: string
+  branchQuestions: BranchQuestion[]
+  textElements: CellTextElement[]
+  imageElements?: CellImageElement[]
+  /** 木の中では文字位置マーカーまで持つ（属性だけの版を子ごと狭める） */
+  manuscriptPaper?: ManuscriptPaperConfig
   /** OMR自動認識設定 */
   omrConfig?: OMRCellConfig
 }
 
-export interface MajorQuestion {
-  id: string
+/**
+ * 小問の更新の指示。
+ *
+ * 原稿用紙は「列数だけ」「ガイドの位置だけ」と一部を触るので、ここだけ入れ子の一部指定を
+ * 許す。文字位置マーカーは別テーブル・別 action なので入ってこない。
+ */
+export type AsbSubQuestionUpdate = Partial<
+  Omit<AsbSubQuestionAttributes, "manuscriptPaper">
+> & {
+  manuscriptPaper?: Partial<ManuscriptPaperAttributes>
+}
+
+export interface AsbMajorQuestionAttributes {
   label: string
+}
+
+export interface MajorQuestion extends AsbMajorQuestionAttributes {
+  id: string
   subQuestions: SubQuestion[]
 }
 
@@ -287,8 +330,7 @@ export type HeaderFieldType = "field" | "hfill" | "label"
 export type LinkedRegionType =
   "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "STUDENT_NAME" | "STUDENT_ID"
 
-export interface HeaderFieldDefinition {
-  id: string
+export interface AsbHeaderFieldAttributes {
   type: HeaderFieldType
   label: string
   widthMm: number
@@ -296,11 +338,16 @@ export interface HeaderFieldDefinition {
   gridCount: number
   lineStyle: BorderLineStyle
   lineWidth: number
-  order: number
   /** label タイプのフォントサイズ (mm) */
   fontSize?: number
   /** 試験変換時に対応するCropRegionを自動生成する */
   linkedRegionType?: LinkedRegionType
+}
+
+export interface HeaderFieldDefinition extends AsbHeaderFieldAttributes {
+  id: string
+  /** 並びの位置。決めるのは並べ替えの操作で、属性ではない */
+  order: number
 }
 
 // =====================
@@ -334,13 +381,33 @@ export interface LabelPresets {
   branch?: string
 }
 
-export interface AnswerSheetDefinition {
-  id: string
+/** ヘッダー項目（別テーブル）を除いた用紙設定 */
+export type PaperSettings = Omit<GlobalSettings, "headerFields">
+
+/** 解答用紙1件の属性（子は持たない）。用紙設定は DB では列として平らに並ぶ */
+export interface AsbDefinitionAttributes {
   name: string
-  settings: GlobalSettings
-  majorQuestions: MajorQuestion[]
   renderMode: RenderMode
   labelPresets?: LabelPresets
+  settings: PaperSettings
+}
+
+/**
+ * 解答用紙1件の更新の指示。
+ *
+ * 用紙設定は項目数が多く、画面はいつも一部だけを触る（余白だけ・段組みだけ）ので、
+ * ここだけ入れ子の一部指定を許す。ヘッダー項目は別テーブルなので入ってこない。
+ */
+export type AsbDefinitionUpdate = Partial<
+  Omit<AsbDefinitionAttributes, "settings">
+> & {
+  settings?: Partial<PaperSettings>
+}
+
+export interface AnswerSheetDefinition extends AsbDefinitionAttributes {
+  id: string
+  settings: GlobalSettings
+  majorQuestions: MajorQuestion[]
   createdAt?: string
   updatedAt?: string
 }
@@ -349,77 +416,120 @@ export interface AnswerSheetDefinition {
 // useReducer アクション型
 // =====================
 
+/** 番号の既定を当てる対象 */
+export type LabelCategory = "major" | "sub" | "branch"
+
+/**
+ * 編集の意図。
+ *
+ * **対象は id で指す。** 添字で指すと、その添字がプロセス境界を越えて「どの行を書くか」
+ * の決定に使われる（過去に是正した密行列UIと同じ形）。並べ替えだけは新しい並びが
+ * renderer にしか無いので、id の並び（`orderedIds`）を運ぶ。
+ *
+ * **新しい実体は呼び出し側が作って載せる。** reducer の中で作ると、その id を
+ * 呼び出し側が知れず、対応する書き込みを組み立てられない。
+ *
+ * 更新の指示（`data`）が `*Attributes` なのは、**子のまとまりを更新に紛れ込ませない**
+ * ため。子は子の action で足し引きする。
+ */
 export type AnswerSheetAction =
   | { type: "UNDO" }
   | { type: "REDO" }
   | { type: "SET_DEFINITION"; payload: AnswerSheetDefinition }
-  | { type: "UPDATE_SETTINGS"; payload: Partial<GlobalSettings> }
-  | { type: "SET_NAME"; payload: string }
+  | { type: "UPDATE_DEFINITION"; payload: AsbDefinitionUpdate }
+  // 表示の切り替えで、編集ではない（履歴に積まない）ので UPDATE_DEFINITION と分ける
   | { type: "SET_RENDER_MODE"; payload: RenderMode }
-  | { type: "ADD_MAJOR_QUESTION" }
   | {
-      type: "UPDATE_MAJOR_QUESTION"
-      payload: { index: number; data: Partial<MajorQuestion> }
+      type: "APPLY_LABEL_PRESET"
+      payload: { category: LabelCategory; preset: string }
     }
-  | { type: "DELETE_MAJOR_QUESTION"; payload: { index: number } }
   | {
-      type: "REORDER_MAJOR_QUESTIONS"
-      payload: { fromIndex: number; toIndex: number }
+      type: "ADD_HEADER_FIELD"
+      payload: { headerField: HeaderFieldDefinition }
     }
-  | { type: "ADD_SUB_QUESTION"; payload: { majorIndex: number } }
   | {
-      type: "UPDATE_SUB_QUESTION"
+      type: "UPDATE_HEADER_FIELD"
       payload: {
-        majorIndex: number
-        subIndex: number
-        data: Partial<SubQuestion>
+        headerFieldId: string
+        data: Partial<AsbHeaderFieldAttributes>
       }
     }
+  | { type: "DELETE_HEADER_FIELD"; payload: { headerFieldId: string } }
+  | { type: "REORDER_HEADER_FIELDS"; payload: { orderedIds: string[] } }
+  | { type: "ADD_MAJOR_QUESTION"; payload: { majorQuestion: MajorQuestion } }
   | {
-      type: "DELETE_SUB_QUESTION"
-      payload: { majorIndex: number; subIndex: number }
+      type: "UPDATE_MAJOR_QUESTION"
+      payload: {
+        majorQuestionId: string
+        data: Partial<AsbMajorQuestionAttributes>
+      }
+    }
+  | { type: "DELETE_MAJOR_QUESTION"; payload: { majorQuestionId: string } }
+  | { type: "REORDER_MAJOR_QUESTIONS"; payload: { orderedIds: string[] } }
+  | {
+      type: "ADD_SUB_QUESTION"
+      payload: { majorQuestionId: string; subQuestion: SubQuestion }
+    }
+  | {
+      type: "UPDATE_SUB_QUESTION"
+      payload: { subQuestionId: string; data: AsbSubQuestionUpdate }
+    }
+  | { type: "DELETE_SUB_QUESTION"; payload: { subQuestionId: string } }
+  | {
+      type: "REORDER_SUB_QUESTIONS"
+      payload: { majorQuestionId: string; orderedIds: string[] }
     }
   | {
       type: "ADD_BRANCH_QUESTION"
-      payload: { majorIndex: number; subIndex: number }
+      payload: { subQuestionId: string; branchQuestion: BranchQuestion }
     }
   | {
       type: "UPDATE_BRANCH_QUESTION"
       payload: {
-        majorIndex: number
-        subIndex: number
-        branchIndex: number
-        data: Partial<BranchQuestion>
+        branchQuestionId: string
+        data: Partial<AsbBranchQuestionAttributes>
       }
     }
-  | {
-      type: "REORDER_SUB_QUESTIONS"
-      payload: { majorIndex: number; fromIndex: number; toIndex: number }
-    }
+  | { type: "DELETE_BRANCH_QUESTION"; payload: { branchQuestionId: string } }
   | {
       type: "REORDER_BRANCH_QUESTIONS"
+      payload: { subQuestionId: string; orderedIds: string[] }
+    }
+  | {
+      type: "ADD_TEXT_ELEMENT"
+      payload: { parent: AsbCellParent; textElement: CellTextElement }
+    }
+  | {
+      type: "UPDATE_TEXT_ELEMENT"
       payload: {
-        majorIndex: number
-        subIndex: number
-        fromIndex: number
-        toIndex: number
+        textElementId: string
+        data: Partial<AsbTextElementAttributes>
       }
     }
+  | { type: "DELETE_TEXT_ELEMENT"; payload: { textElementId: string } }
   | {
-      type: "DELETE_BRANCH_QUESTION"
-      payload: { majorIndex: number; subIndex: number; branchIndex: number }
+      type: "ADD_IMAGE_ELEMENT"
+      payload: { parent: AsbCellParent; imageElement: CellImageElement }
     }
   | {
-      type: "SET_LABEL_PRESET"
-      payload: { category: "major" | "sub" | "branch"; preset: string }
+      type: "UPDATE_IMAGE_ELEMENT"
+      payload: {
+        imageElementId: string
+        data: Partial<AsbImageElementAttributes>
+      }
     }
-  | { type: "ADD_HEADER_FIELD"; payload?: Partial<HeaderFieldDefinition> }
+  | { type: "DELETE_IMAGE_ELEMENT"; payload: { imageElementId: string } }
   | {
-      type: "UPDATE_HEADER_FIELD"
-      payload: { fieldId: string; data: Partial<HeaderFieldDefinition> }
+      type: "ADD_CHAR_GUIDE"
+      payload: { subQuestionId: string; charGuide: ManuscriptCharGuide }
     }
-  | { type: "DELETE_HEADER_FIELD"; payload: { fieldId: string } }
   | {
-      type: "REORDER_HEADER_FIELDS"
-      payload: { fromIndex: number; toIndex: number }
+      type: "UPDATE_CHAR_GUIDE"
+      payload: { charGuideId: string; data: Partial<AsbCharGuideAttributes> }
     }
+  | { type: "DELETE_CHAR_GUIDE"; payload: { charGuideId: string } }
+  | {
+      type: "UPSERT_OMR_CONFIG"
+      payload: { parent: AsbCellParent; config: OMRCellConfig }
+    }
+  | { type: "DELETE_OMR_CONFIG"; payload: { parent: AsbCellParent } }

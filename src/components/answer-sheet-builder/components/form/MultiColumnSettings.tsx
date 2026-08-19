@@ -13,13 +13,15 @@ import type {
   BorderLineStyle,
   GlobalSettings,
   MultiColumnConfig,
+  PaperSettings,
 } from "@/types/answerSheetDefinition.types"
 
 import { SliderWithInput } from "./SliderWithInput"
 
 interface MultiColumnSettingsProps {
   settings: GlobalSettings
-  onUpdate: (settings: Partial<GlobalSettings>) => void
+  /** ヘッダー項目は別の実体なので、ここからは触れない */
+  onUpdate: (settings: Partial<PaperSettings>) => void
   /** 縦組みレイアウトか（段が上下方向に分割される旨を案内する） */
   vertical?: boolean
 }

@@ -20,11 +20,13 @@ import {
 } from "@/queries/answerSheetBuilder"
 import { pathForFile } from "@/queries/pdfTools"
 import type {
+  AsbImageElementAttributes,
   CellImageElement,
   ImageObjectFit,
   ImageVisibility,
 } from "@/types/answerSheetDefinition.types"
 
+import { useAsbGesture } from "../../AsbGestureContext"
 import { generateId } from "../../constants"
 
 const OBJECT_FIT_OPTIONS: { value: ImageObjectFit; label: string }[] = [
@@ -41,7 +43,13 @@ const VISIBILITY_OPTIONS: { value: ImageVisibility; label: string }[] = [
 
 interface ImageElementEditorProps {
   imageElements: CellImageElement[]
-  onUpdate: (elements: CellImageElement[]) => void
+  /** 取り込んだ画像を1件足す（実体はここで作る。取り込み先の相対パスが要るため） */
+  onAdd: (imageElement: CellImageElement) => void
+  onUpdate: (
+    imageElementId: string,
+    data: Partial<AsbImageElementAttributes>
+  ) => void
+  onDelete: (imageElementId: string) => void
   definitionId: string
 }
 
@@ -51,9 +59,12 @@ interface ImageElementEditorProps {
  */
 export function ImageElementEditor({
   imageElements,
+  onAdd,
   onUpdate,
+  onDelete,
   definitionId,
 }: ImageElementEditorProps) {
+  const gesture = useAsbGesture()
   const { mutateAsync: uploadImage } = useMutation(
     uploadAnswerSheetImageMutation()
   )
@@ -80,39 +91,25 @@ export function ImageElementEditor({
         originalName: file.name,
       })
 
-      {
-        const newElement: CellImageElement = {
-          id: generateId(),
-          imagePath: uploadedPath,
-          originalName: file.name,
-          objectFit: "contain",
-          horizontalAlign: "center",
-          verticalAlign: "middle",
-          opacity: 1,
-        }
-        onUpdate([...imageElements, newElement])
-      }
+      onAdd({
+        id: generateId(),
+        imagePath: uploadedPath,
+        originalName: file.name,
+        objectFit: "contain",
+        horizontalAlign: "center",
+        verticalAlign: "middle",
+        opacity: 1,
+      })
     }
     input.click()
-  }, [definitionId, imageElements, onUpdate, uploadImage])
+  }, [definitionId, onAdd, uploadImage])
 
   const handleRemove = useCallback(
-    async (index: number) => {
-      const element = imageElements[index]
-      await deleteImage({ imagePath: element.imagePath })
-      onUpdate(imageElements.filter((_, i) => i !== index))
+    async (imageElement: CellImageElement) => {
+      await deleteImage({ imagePath: imageElement.imagePath })
+      onDelete(imageElement.id)
     },
-    [imageElements, onUpdate, deleteImage]
-  )
-
-  const handleChange = useCallback(
-    (index: number, data: Partial<CellImageElement>) => {
-      const updated = imageElements.map((element, i) =>
-        i === index ? { ...element, ...data } : element
-      )
-      onUpdate(updated)
-    },
-    [imageElements, onUpdate]
+    [onDelete, deleteImage]
   )
 
   return (
@@ -130,26 +127,26 @@ export function ImageElementEditor({
         </Button>
       </div>
 
-      {imageElements.map((element, i) => (
-        <div key={element.id} className="space-y-1.5 rounded border p-1.5">
+      {imageElements.map((imageElement) => (
+        <div key={imageElement.id} className="space-y-1.5 rounded border p-1.5">
           {/* Row 1: サムネイル + ファイル名 + 削除 */}
           <div className="flex items-center gap-1.5">
             <Image
-              src={`appimg:///${element.imagePath}`}
-              alt={element.originalName}
+              src={`appimg:///${imageElement.imagePath}`}
+              alt={imageElement.originalName}
               width={32}
               height={32}
               unoptimized
               className="h-8 w-8 shrink-0 rounded border object-contain"
             />
             <span className="min-w-0 flex-1 truncate text-xs">
-              {element.originalName}
+              {imageElement.originalName}
             </span>
             <Button
               variant="ghost"
               size="icon"
               className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-              onClick={() => handleRemove(i)}
+              onClick={() => handleRemove(imageElement)}
             >
               <Trash2 className="h-3 w-3" />
             </Button>
@@ -158,9 +155,11 @@ export function ImageElementEditor({
           {/* Row 2: objectFit + 表示モード */}
           <div className="flex items-center gap-2">
             <Select
-              value={element.objectFit}
-              onValueChange={(v) =>
-                handleChange(i, { objectFit: v as ImageObjectFit })
+              value={imageElement.objectFit}
+              onValueChange={(value) =>
+                onUpdate(imageElement.id, {
+                  objectFit: value as ImageObjectFit,
+                })
               }
             >
               <SelectTrigger className="h-7 w-24 text-xs">
@@ -176,9 +175,11 @@ export function ImageElementEditor({
             </Select>
 
             <Select
-              value={element.visibility ?? "both"}
-              onValueChange={(v) =>
-                handleChange(i, { visibility: v as ImageVisibility })
+              value={imageElement.visibility ?? "both"}
+              onValueChange={(value) =>
+                onUpdate(imageElement.id, {
+                  visibility: value as ImageVisibility,
+                })
               }
             >
               <SelectTrigger className="h-7 w-28 text-xs">
@@ -203,12 +204,16 @@ export function ImageElementEditor({
               min={0}
               max={100}
               step={5}
-              value={[Math.round(element.opacity * 100)]}
-              onValueChange={([v]) => handleChange(i, { opacity: v / 100 })}
+              value={[Math.round(imageElement.opacity * 100)]}
+              onValueChange={([percent]) => {
+                gesture.begin()
+                onUpdate(imageElement.id, { opacity: percent / 100 })
+              }}
+              onValueCommit={gesture.end}
               className="flex-1"
             />
             <span className="w-8 shrink-0 text-right text-[10px]">
-              {Math.round(element.opacity * 100)}%
+              {Math.round(imageElement.opacity * 100)}%
             </span>
           </div>
         </div>

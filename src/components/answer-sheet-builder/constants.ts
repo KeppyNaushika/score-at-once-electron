@@ -2,10 +2,12 @@ import type {
   AnswerSheetDefinition,
   BorderLineStyle,
   BranchQuestion,
+  CellTextElement,
   GlobalSettings,
   HeaderFieldDefinition,
   MajorQuestion,
   ManuscriptGuidePosition,
+  ManuscriptPaperAttributes,
   PaperSize,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
@@ -116,6 +118,23 @@ export const DEFAULT_SETTINGS: GlobalSettings = {
  */
 export function generateId(): string {
   return crypto.randomUUID()
+}
+
+/** 原稿用紙の既定（設定を持たない小問に原稿用紙を足すときの土台） */
+export const DEFAULT_MANUSCRIPT_PAPER: ManuscriptPaperAttributes = {
+  enabled: false,
+  columns: 20,
+  rows: 10,
+}
+
+export function createDefaultTextElement(): CellTextElement {
+  return {
+    id: generateId(),
+    text: "",
+    fontSize: 10,
+    horizontalAlign: "center",
+    verticalAlign: "middle",
+  }
 }
 
 export function createDefaultBranchQuestion(label?: string): BranchQuestion {

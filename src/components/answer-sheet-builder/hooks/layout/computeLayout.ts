@@ -559,8 +559,7 @@ export function computeLayoutFromDefinition(
               axis: "horizontal",
               target: {
                 type: "heightMultiplier",
-                majorIndex: majorIndex,
-                subIndex: subIndex,
+                cell: { subQuestionId: sub.id },
               },
               currentValueMm: hasBranches
                 ? sub.branchQuestions.reduce(

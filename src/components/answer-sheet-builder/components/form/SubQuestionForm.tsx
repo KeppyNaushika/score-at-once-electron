@@ -12,10 +12,13 @@ import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import type {
+  AsbSubQuestionUpdate,
   BranchQuestion,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
 
+import { movedIds } from "../../reorderIds"
+import type { AsbEditorActions } from "../../types"
 import { BranchQuestionForm } from "./BranchQuestionForm"
 import { ImageElementEditor } from "./ImageElementEditor"
 import { ManuscriptPaperSettings } from "./ManuscriptPaperSettings"
@@ -65,66 +68,60 @@ function calcBranchMaxGoUps(branches: BranchQuestion[]): number[] {
 }
 
 interface SubQuestionFormProps {
-  sub: SubQuestion
-  majorIndex: number
-  subIndex: number
-  totalSubCount: number
+  subQuestion: SubQuestion
   maxGoUp: number
   definitionId: string
-  onUpdate: (data: Partial<SubQuestion>) => void
-  onDelete: () => void
+  actions: AsbEditorActions
   onMoveUp?: () => void
   onMoveDown?: () => void
-  onAddBranch: () => void
-  onUpdateBranch: (branchIndex: number, data: Partial<BranchQuestion>) => void
-  onDeleteBranch: (branchIndex: number) => void
-  onReorderBranch: (fromIndex: number, toIndex: number) => void
   /** 縦書きレイアウトか（高さ/幅ラベルの表示を入れ替える） */
   vertical?: boolean
 }
 
 export function SubQuestionForm({
-  sub,
+  subQuestion,
   maxGoUp,
   definitionId,
-  onUpdate,
-  onDelete,
+  actions,
   onMoveUp,
   onMoveDown,
-  onAddBranch,
-  onUpdateBranch,
-  onDeleteBranch,
-  onReorderBranch,
   vertical = false,
 }: SubQuestionFormProps) {
-  const hasBranches = sub.branchQuestions.length > 0
+  const cell = { subQuestionId: subQuestion.id }
+  const onUpdate = (data: AsbSubQuestionUpdate) =>
+    actions.updateSubQuestion(subQuestion.id, data)
+  const hasBranches = subQuestion.branchQuestions.length > 0
   const [detailOpen, setDetailOpen] = useState(false)
   // 縦書きでは見た目の高さ/幅が入れ替わるためラベルだけ入れ替える（内部値は不変）
   const heightLabel = vertical ? "幅" : "高さ"
   const widthLabel = vertical ? "高さ" : "幅"
 
   const hasDetailContent =
-    sub.textElements.length > 0 ||
-    (sub.imageElements?.length ?? 0) > 0 ||
-    !!sub.manuscriptPaper?.enabled
+    subQuestion.textElements.length > 0 ||
+    (subQuestion.imageElements?.length ?? 0) > 0 ||
+    !!subQuestion.manuscriptPaper?.enabled
 
-  const hasVisibilityRestricted = sub.imageElements?.some(
+  const hasVisibilityRestricted = subQuestion.imageElements?.some(
     (imageElement) =>
       imageElement.visibility && imageElement.visibility !== "both"
   )
 
   const branchMaxGoUps = useMemo(
-    () => calcBranchMaxGoUps(sub.branchQuestions),
-    [sub.branchQuestions]
+    () => calcBranchMaxGoUps(subQuestion.branchQuestions),
+    [subQuestion.branchQuestions]
   )
 
-  const isManuscriptPaper = !!sub.manuscriptPaper?.enabled && !hasBranches
-  const participatesInHorizontal = !!sub.layoutWidth || isManuscriptPaper
+  const isManuscriptPaper =
+    !!subQuestion.manuscriptPaper?.enabled && !hasBranches
+  const participatesInHorizontal =
+    !!subQuestion.layoutWidth || isManuscriptPaper
 
-  const goUpActive = sub.goUp != null
+  const goUpActive = subQuestion.goUp != null
   const isGoUpInvalid =
     goUpActive &&
-    (!Number.isInteger(sub.goUp) || sub.goUp! < 1 || sub.goUp! > maxGoUp)
+    (!Number.isInteger(subQuestion.goUp) ||
+      subQuestion.goUp! < 1 ||
+      subQuestion.goUp! > maxGoUp)
 
   return (
     <div className="space-y-1 border-l-2 border-primary/30 pl-4">
@@ -135,20 +132,20 @@ export function SubQuestionForm({
             <span className="text-muted-foreground">番号</span>
             <input
               className="w-10 bg-transparent px-0.5 text-center outline-none focus:bg-accent/50"
-              value={sub.label}
+              value={subQuestion.label}
               onChange={(e) => onUpdate({ label: e.target.value })}
               aria-label="小問番号"
             />
           </div>
           {/* 配点: 枝問なし or 完答モード(usesBranchPoints=false)の時に表示 */}
-          {(!hasBranches || sub.usesBranchPoints === false) && (
+          {(!hasBranches || subQuestion.usesBranchPoints === false) && (
             <div className="flex items-center gap-0.5 px-1.5">
               <span className="text-muted-foreground">配点</span>
               <input
                 type="number"
                 aria-label="配点"
                 className="w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none focus:bg-accent/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                value={sub.points}
+                value={subQuestion.points}
                 min={0}
                 max={100}
                 onChange={(e) => onUpdate({ points: Number(e.target.value) })}
@@ -166,7 +163,7 @@ export function SubQuestionForm({
                 type="number"
                 aria-label={heightLabel}
                 className="w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none focus:bg-accent/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                value={sub.heightMultiplier}
+                value={subQuestion.heightMultiplier}
                 min={1}
                 max={30}
                 step={0.5}
@@ -186,7 +183,7 @@ export function SubQuestionForm({
               <input
                 aria-label={widthLabel}
                 className="w-10 bg-transparent px-0.5 text-center outline-none focus:bg-accent/50"
-                value={sub.layoutWidth ?? ""}
+                value={subQuestion.layoutWidth ?? ""}
                 onChange={(e) => {
                   const value = e.target.value.trim()
                   if (value === "") {
@@ -209,9 +206,9 @@ export function SubQuestionForm({
           <Button
             variant="outline"
             size="icon"
-            className={`h-7 w-7 text-xs ${sub.nextPlacement === "break" ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
+            className={`h-7 w-7 text-xs ${subQuestion.nextPlacement === "break" ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
             onClick={() => {
-              if (sub.nextPlacement === "break") {
+              if (subQuestion.nextPlacement === "break") {
                 onUpdate({ nextPlacement: undefined })
               } else {
                 onUpdate({ nextPlacement: "break" })
@@ -228,7 +225,7 @@ export function SubQuestionForm({
             <Button
               variant="outline"
               size="icon"
-              className={`h-7 w-7 text-xs ${goUpActive && sub.goUp! > 0 ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"} ${goUpActive ? "rounded-r-none" : ""}`}
+              className={`h-7 w-7 text-xs ${goUpActive && subQuestion.goUp! > 0 ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"} ${goUpActive ? "rounded-r-none" : ""}`}
               onClick={() => {
                 if (goUpActive) {
                   onUpdate({ goUp: undefined })
@@ -250,7 +247,7 @@ export function SubQuestionForm({
                 type="number"
                 aria-label="戻り行数"
                 className={`h-7 w-8 [appearance:textfield] rounded-r-md border border-l-0 border-primary/50 px-0.5 text-center text-xs outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${isGoUpInvalid ? "bg-red-100 dark:bg-red-900/30" : "bg-transparent"}`}
-                value={sub.goUp || ""}
+                value={subQuestion.goUp || ""}
                 min={1}
                 max={maxGoUp}
                 onChange={(e) => {
@@ -263,10 +260,10 @@ export function SubQuestionForm({
                 }}
                 onBlur={() => {
                   if (
-                    sub.goUp == null ||
-                    !Number.isInteger(sub.goUp) ||
-                    sub.goUp < 1 ||
-                    sub.goUp > maxGoUp
+                    subQuestion.goUp == null ||
+                    !Number.isInteger(subQuestion.goUp) ||
+                    subQuestion.goUp < 1 ||
+                    subQuestion.goUp > maxGoUp
                   ) {
                     onUpdate({ goUp: undefined })
                   }
@@ -274,7 +271,7 @@ export function SubQuestionForm({
                 onKeyDown={(e) => {
                   if (e.key === "ArrowUp" || e.key === "ArrowDown") {
                     e.preventDefault()
-                    const cur = sub.goUp ?? 0
+                    const cur = subQuestion.goUp ?? 0
                     const next = e.key === "ArrowUp" ? cur + 1 : cur - 1
                     if (next >= 1 && next <= maxGoUp) {
                       onUpdate({ goUp: next })
@@ -294,7 +291,7 @@ export function SubQuestionForm({
             </span>
             <Switch
               className="scale-75"
-              checked={sub.usesBranchPoints !== false}
+              checked={subQuestion.usesBranchPoints !== false}
               onCheckedChange={(value) => onUpdate({ usesBranchPoints: value })}
             />
           </div>
@@ -344,7 +341,7 @@ export function SubQuestionForm({
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-primary"
-            onClick={onAddBranch}
+            onClick={() => actions.addBranchQuestion(subQuestion.id)}
             title="枝問を追加"
           >
             <GitBranch className="h-3.5 w-3.5" />
@@ -353,7 +350,7 @@ export function SubQuestionForm({
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={onDelete}
+            onClick={() => actions.deleteSubQuestion(subQuestion.id)}
             title="小問を削除"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -365,29 +362,44 @@ export function SubQuestionForm({
       {!hasBranches && detailOpen && (
         <div className="space-y-2 pt-1">
           <TextElementEditor
-            textElements={sub.textElements}
-            onUpdate={(elements) => onUpdate({ textElements: elements })}
+            textElements={subQuestion.textElements}
+            onAdd={() => actions.addTextElement(cell)}
+            onUpdate={actions.updateTextElement}
+            onDelete={actions.deleteTextElement}
             vertical={vertical}
           />
           <ImageElementEditor
-            imageElements={sub.imageElements ?? []}
-            onUpdate={(elements) => onUpdate({ imageElements: elements })}
+            imageElements={subQuestion.imageElements ?? []}
+            onAdd={(imageElement) =>
+              actions.addImageElement(cell, imageElement)
+            }
+            onUpdate={actions.updateImageElement}
+            onDelete={actions.deleteImageElement}
             definitionId={definitionId}
           />
           <ManuscriptPaperSettings
-            config={sub.manuscriptPaper}
-            onUpdate={(config) => {
-              const updates: Partial<SubQuestion> = { manuscriptPaper: config }
-              // 原稿用紙有効化時にlayoutWidthが未設定なら自動設定（横配置参加のため）
-              if (config.enabled && !sub.layoutWidth) {
-                updates.layoutWidth = "1"
-              }
-              onUpdate(updates)
+            config={subQuestion.manuscriptPaper}
+            onUpdate={(data) => {
+              // 原稿用紙を使い始めたら、横に並ぶよう幅を埋めておく
+              const startsUsing =
+                data.enabled && !subQuestion.layoutWidth
+                  ? { layoutWidth: "1" }
+                  : {}
+              onUpdate({ manuscriptPaper: data, ...startsUsing })
             }}
+            onAddCharGuide={(charGuide) =>
+              actions.addCharGuide(subQuestion.id, charGuide)
+            }
+            onUpdateCharGuide={actions.updateCharGuide}
+            onDeleteCharGuide={actions.deleteCharGuide}
           />
           <OMRCellConfigForm
-            config={sub.omrConfig}
-            onChange={(config) => onUpdate({ omrConfig: config })}
+            config={subQuestion.omrConfig}
+            onChange={(config) =>
+              config
+                ? actions.upsertOmrConfig(cell, config)
+                : actions.deleteOmrConfig(cell)
+            }
           />
         </div>
       )}
@@ -395,24 +407,41 @@ export function SubQuestionForm({
       {/* 枝問リスト */}
       {hasBranches && (
         <div className="space-y-0.5">
-          {sub.branchQuestions.map((branch, bi) => (
+          {subQuestion.branchQuestions.map((branchQuestion, branchIndex) => (
             <BranchQuestionForm
-              key={branch.id}
-              branch={branch}
-              branchIndex={bi}
-              totalBranchCount={sub.branchQuestions.length}
-              showPoints={sub.usesBranchPoints !== false}
-              maxGoUp={branchMaxGoUps[bi]}
+              key={branchQuestion.id}
+              branchQuestion={branchQuestion}
+              showPoints={subQuestion.usesBranchPoints !== false}
+              maxGoUp={branchMaxGoUps[branchIndex]}
               definitionId={definitionId}
-              onUpdate={(data) => onUpdateBranch(bi, data)}
-              onDelete={() => onDeleteBranch(bi)}
-              onMoveUp={bi > 0 ? () => onReorderBranch(bi, bi - 1) : undefined}
-              onMoveDown={
-                bi < sub.branchQuestions.length - 1
-                  ? () => onReorderBranch(bi, bi + 1)
+              actions={actions}
+              vertical={vertical}
+              onMoveUp={
+                branchIndex > 0
+                  ? () =>
+                      actions.reorderBranchQuestions(
+                        subQuestion.id,
+                        movedIds(
+                          subQuestion.branchQuestions,
+                          branchIndex,
+                          branchIndex - 1
+                        )
+                      )
                   : undefined
               }
-              vertical={vertical}
+              onMoveDown={
+                branchIndex < subQuestion.branchQuestions.length - 1
+                  ? () =>
+                      actions.reorderBranchQuestions(
+                        subQuestion.id,
+                        movedIds(
+                          subQuestion.branchQuestions,
+                          branchIndex,
+                          branchIndex + 1
+                        )
+                      )
+                  : undefined
+              }
             />
           ))}
         </div>
