@@ -30,7 +30,6 @@ import type {
   ArchiveGradeDataSourceEstimationSourceRow,
   ArchiveGradeDataSourceRow,
   ArchiveGradeExamRef,
-  ArchiveGradeExportSettingsRow,
   ArchiveGradeFrozenScoreRow,
   ArchiveGradeItemExclusionRow,
   ArchiveGradeItemRow,
@@ -42,6 +41,31 @@ import type {
   GradeSections,
 } from "../../../../src/types/gradeArchive.types"
 import type { LegacyCollectedCourseworkData } from "../coursework-transformers/legacyShape"
+
+// =============================================================================
+// v1.14.0 の形状定義（出力設定を列へ割る前。1.15.0 との差分だけを宣言する）
+// =============================================================================
+
+/**
+ * v1.14.0 の GradeExportSettings（出力設定）の行。
+ *
+ * 設定をまるごと JSON 文字列で持っていた。1.15.0 で列へ割った。
+ */
+export interface ArchiveGradeExportSettingsRowV1_14_0 {
+  id: string
+  gradeId: string
+  settingsJson: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** v1.14.0 の成績本体セクション群 */
+export type GradeSectionsV1_14_0 = Omit<
+  GradeSections,
+  "gradeIndividualReportSettings"
+> & {
+  gradeExportSettings: ArchiveGradeExportSettingsRowV1_14_0[]
+}
 
 // =============================================================================
 // v1.13.0 の形状定義（境界セットを畳む前。1.14.0 との差分だけを宣言する）
@@ -72,7 +96,10 @@ export interface ArchiveGradeBoundaryRowV1_13_0 {
 }
 
 /** v1.13.0 の成績本体セクション群 */
-type GradeSectionsV1_13_0 = Omit<GradeSections, "gradeItemBoundaries"> & {
+type GradeSectionsV1_13_0 = Omit<
+  GradeSectionsV1_14_0,
+  "gradeItemBoundaries"
+> & {
   gradeBoundarySets: ArchiveGradeBoundarySetRowV1_13_0[]
   gradeBoundaries: ArchiveGradeBoundaryRowV1_13_0[]
 }
@@ -816,7 +843,7 @@ export function flattenLegacyGrade(
   }
 
   // ── 出力設定 ─────────────────────────────────────────────
-  const gradeExportSettings: ArchiveGradeExportSettingsRow[] =
+  const gradeExportSettings: ArchiveGradeExportSettingsRowV1_14_0[] =
     gradeData.exportSettings
       ? [
           {

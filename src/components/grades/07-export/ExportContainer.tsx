@@ -26,47 +26,19 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  gradeExportSettingsQuery,
+  gradeReportSettingsQuery,
   gradeResultsQuery,
-  saveGradeExportSettingsMutation,
+  updateGradeReportSettingsMutation,
 } from "@/queries/grade"
+import type { GradeReportSettings } from "@/types/gradeReport.types"
+import { DEFAULT_GRADE_REPORT_SETTINGS } from "@/types/gradeReport.types"
 
 import { ExcelExportTab } from "./ExcelExportTab"
 import { generateGradeReportBatchHtml } from "./generateGradeReportHtml"
 import { GradeExcelPreview } from "./GradeExcelPreview"
 import { IndividualReportTab } from "./IndividualReportTab"
 import { PreviewPane } from "./PreviewPane"
-import {
-  DEFAULT_GRADE_REPORT_OPTIONS,
-  type GradeExportTabType,
-  type GradeReportOptions,
-} from "./types"
-
-/**
- * 保存済みの通知書オプションを既定値と深くマージする。
- * 新しい列が増えたときに、古い保存内容へ欠落が残らないようにする。
- */
-function mergeReportOptions(
-  saved: Partial<GradeReportOptions> | null | undefined
-): GradeReportOptions {
-  if (!saved) return DEFAULT_GRADE_REPORT_OPTIONS
-  return {
-    ...DEFAULT_GRADE_REPORT_OPTIONS,
-    ...saved,
-    itemGradeColumns: {
-      ...DEFAULT_GRADE_REPORT_OPTIONS.itemGradeColumns,
-      ...saved.itemGradeColumns,
-    },
-    sourceBreakdownColumns: {
-      ...DEFAULT_GRADE_REPORT_OPTIONS.sourceBreakdownColumns,
-      ...saved.sourceBreakdownColumns,
-    },
-    footer: {
-      ...DEFAULT_GRADE_REPORT_OPTIONS.footer,
-      ...saved.footer,
-    },
-  }
-}
+import type { GradeExportTabType } from "./types"
 
 interface ExportContainerProps {
   gradeId: string
@@ -79,9 +51,11 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
     error: queryError,
     refetch,
   } = useQuery(gradeResultsQuery(gradeId))
-  const { data: exportSettings } = useQuery(gradeExportSettingsQuery(gradeId))
-  const saveExportSettings = useMutation(
-    saveGradeExportSettingsMutation(gradeId)
+  const { data: reportSettingsRow } = useQuery(
+    gradeReportSettingsQuery(gradeId)
+  )
+  const { mutate: updateReportSettings } = useMutation(
+    updateGradeReportSettingsMutation(gradeId)
   )
 
   const error = queryError?.message ?? null
@@ -99,26 +73,17 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
   )
   const [previewStudentIdState, setPreviewStudentId] = useState("")
 
-  // 個人成績通知書のオプションは DB の設定そのもの。手元の state へ写さず、
-  // 変えたらその場で書く（写すと「画面には出ているが DB は古い」窓ができる）。
-  const reportOptions = useMemo(
-    () => mergeReportOptions(exportSettings?.reportOptions),
-    [exportSettings]
-  )
+  /**
+   * 個人成績通知書の設定は DB の行そのもの。手元の state へ写さず、変えたらその場で
+   * 書く（写すと「画面には出ているが DB は古い」窓ができる）。行がまだ無ければ既定。
+   */
+  const reportSettings: GradeReportSettings =
+    reportSettingsRow ?? DEFAULT_GRADE_REPORT_SETTINGS
 
-  const setReportOptions = useCallback(
-    (
-      options:
-        GradeReportOptions | ((prev: GradeReportOptions) => GradeReportOptions)
-    ) => {
-      const nextOptions =
-        typeof options === "function" ? options(reportOptions) : options
-      saveExportSettings.mutate({
-        ...exportSettings,
-        reportOptions: nextOptions,
-      })
-    },
-    [exportSettings, reportOptions, saveExportSettings]
+  // 書くのは**変えた列だけ**。まるごと送ると、続けて2つ変えたときに先の1つが消える
+  const changeReportSettings = useCallback(
+    (values: Partial<GradeReportSettings>) => updateReportSettings(values),
+    [updateReportSettings]
   )
 
   // 出力タブ
@@ -195,9 +160,9 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
     return generateGradeReportBatchHtml(
       result,
       [previewStudentId],
-      reportOptions
+      reportSettings
     )
-  }, [result, previewStudentId, reportOptions, exportTab])
+  }, [result, previewStudentId, reportSettings, exportTab])
 
   // ─── ローディング / エラー ───────────────────────────────────────
   if (loading) {
@@ -484,8 +449,8 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
                   <IndividualReportTab
                     result={result}
                     selectedStudentIds={selectedStudentIds}
-                    options={reportOptions}
-                    onOptionsChange={setReportOptions}
+                    options={reportSettings}
+                    onOptionsChange={changeReportSettings}
                   />
                 </TabsContent>
               </Tabs>

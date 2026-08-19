@@ -225,11 +225,29 @@ export interface ArchiveGradeConstraintExclusionLabelRow {
   updatedAt: string
 }
 
-/** GradeExportSettings（出力設定）の行 */
-export interface ArchiveGradeExportSettingsRow {
+/** GradeIndividualReportSettings（個人成績通知書の設定）の行 */
+export interface ArchiveGradeIndividualReportSettingsRow {
   id: string
   gradeId: string
-  settingsJson: string
+  title: string
+  showItemGrades: boolean
+  itemGradeColumnScore: boolean
+  itemGradeColumnPercentage: boolean
+  itemGradeColumnGradeLabel: boolean
+  itemGradeFontSize: number
+  itemGradeTableColumns: number
+  showSourceBreakdown: boolean
+  sourceBreakdownColumnScore: boolean
+  sourceBreakdownColumnWeight: boolean
+  sourceBreakdownColumnComment: boolean
+  sourceBreakdownFontSize: number
+  sourceBreakdownTableColumns: number
+  dataSourceLabel: string
+  showCommentSection: boolean
+  showSignatureSection: boolean
+  footerLeft: string
+  footerCenter: string
+  footerRight: string
   createdAt: string
   updatedAt: string
 }
@@ -250,7 +268,7 @@ export interface GradeSections {
   gradeConstraintViewpoints: ArchiveGradeConstraintViewpointRow[]
   gradeConstraintLabelValues: ArchiveGradeConstraintLabelValueRow[]
   gradeConstraintExclusionLabels: ArchiveGradeConstraintExclusionLabelRow[]
-  gradeExportSettings: ArchiveGradeExportSettingsRow[]
+  gradeIndividualReportSettings: ArchiveGradeIndividualReportSettingsRow[]
 }
 
 // =============================================================================
@@ -397,6 +415,8 @@ export interface GradeArchiveImportPreview {
  *   上書き・確定値・除外設定の参照が studentNumber → gradeStudentId（#962 Phase C）
  * - 1.14.0: 境界セット（GradeBoundarySet）を畳み、境界を評価項目へ直付け。
  *   gradeBoundarySets / gradeBoundaries → gradeItemBoundaries（参照が gradeItemId へ）
+ * - 1.15.0: 出力設定の JSON（GradeExportSettings.settingsJson）を列へ割る。
+ *   gradeExportSettings → gradeIndividualReportSettings（個人成績通知書の設定が列に並ぶ）
  *
  * 検出は manifest.version 文字列ではなくデータ形状で行う（旧アーカイブのバージョン
  * 表記が不正確でも確実に正規化するため。詳細は grade-transformers/index.ts）。
@@ -414,7 +434,8 @@ export type GradeArchiveVersion =
   | "1.12.0"
   | "1.13.0"
   | "1.14.0"
-export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.14.0"
+  | "1.15.0"
+export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.15.0"
 
 // バージョン変換の型（版ごとのアーカイブ全体の型・変換器・チェーン）は
 // electron-src/lib/import/grade-transformers/types.ts が持つ。

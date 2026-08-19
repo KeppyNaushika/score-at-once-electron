@@ -17,9 +17,13 @@ import {
 } from "../../../electron-src/lib/import/coursework-transformers/legacyShape"
 import { transformGradeToLatest } from "../../../electron-src/lib/import/grade-transformers"
 import type { LegacyGradeArchiveData } from "../../../electron-src/lib/import/grade-transformers/legacyShape"
-import type { GradeArchiveDataV1_13_0 } from "../../../electron-src/lib/import/grade-transformers/types"
+import type {
+  GradeArchiveDataV1_13_0,
+  GradeArchiveDataV1_14_0,
+} from "../../../electron-src/lib/import/grade-transformers/types"
 import type { GradeArchiveManifest } from "../../../src/types/gradeArchive.types"
 import { GRADE_CURRENT_VERSION } from "../../../src/types/gradeArchive.types"
+import { DEFAULT_GRADE_REPORT_SETTINGS } from "../../../src/types/gradeReport.types"
 
 const manifest: GradeArchiveManifest = {
   version: "1.9.0",
@@ -184,12 +188,13 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
     const { warnings, appliedTransformations, originalVersion } =
       transformGradeToLatest(archive)
 
-    // 総合の名残が無いので 1.9.0→1.10.0 は当たらない。射影形式である以上
-    // 1.12.0→1.13.0 の平坦化と 1.13.0→1.14.0 の境界セット畳みは必ず通る
+    // 総合の名残が無いので 1.9.0→1.10.0 は当たらない。射影形式である以上、平坦化から
+    // 現行までの3段（平坦化・境界セット畳み・出力設定の列化）は必ず通る
     expect(warnings.some((warning) => warning.includes("1.9.0"))).toBe(false)
     expect(appliedTransformations).toEqual([
       { from: "1.12.0", to: "1.13.0" },
       { from: "1.13.0", to: "1.14.0" },
+      { from: "1.14.0", to: "1.15.0" },
     ])
     expect(originalVersion).toBe("1.12.0")
   })
@@ -796,14 +801,19 @@ describe("transformGradeToLatest: 1.12.0 → 1.13.0（成績本体の平坦化�
  * GradeBoundarySet を挟み、gradeBoundarySetId でセット越しに評価項目を指していた。
  */
 function buildV1_13_0Archive(): GradeArchiveDataV1_13_0 {
-  // 現行形式を作ってから境界のセクションを 1.13.0 の形へ差し替える。
-  // 境界以外の形は 1.13.0 と 1.14.0 で同じなので、そのまま流用できる
+  // 現行形式を作ってから、境界と出力設定のセクションを 1.13.0 の形へ差し替える。
+  // それ以外の形は 1.13.0 から変わっていないので、そのまま流用できる
   const { data } = transformGradeToLatest(buildV1_9_0Archive())
   const gradeItemId = data.gradeItems[0].id
-  const { gradeItemBoundaries: _currentBoundaries, ...withoutBoundaries } = data
+  const {
+    gradeItemBoundaries: _currentBoundaries,
+    gradeIndividualReportSettings: _currentReportSettings,
+    ...withoutBoundaries
+  } = data
   return {
     ...withoutBoundaries,
     manifest: { ...data.manifest, version: "1.13.0" },
+    gradeExportSettings: [],
     gradeBoundarySets: [
       {
         id: "set-1",
@@ -843,7 +853,10 @@ describe("transformGradeToLatest: 1.13.0 → 1.14.0（境界セットを畳む�
       transformGradeToLatest(archive)
 
     expect(originalVersion).toBe("1.13.0")
-    expect(appliedTransformations).toEqual([{ from: "1.13.0", to: "1.14.0" }])
+    expect(appliedTransformations).toEqual([
+      { from: "1.13.0", to: "1.14.0" },
+      { from: "1.14.0", to: "1.15.0" },
+    ])
     // 容器のセクションは残らない
     expect(data).not.toHaveProperty("gradeBoundarySets")
     expect(data).not.toHaveProperty("gradeBoundaries")
@@ -889,6 +902,110 @@ describe("transformGradeToLatest: 1.13.0 → 1.14.0（境界セットを畳む�
 
   it("現行形式のアーカイブには当たらない（二重適用しない）", () => {
     const current = transformGradeToLatest(buildV1_13_0Archive()).data
+
+    const { appliedTransformations, originalVersion } =
+      transformGradeToLatest(current)
+
+    expect(appliedTransformations).toEqual([])
+    expect(originalVersion).toBe(GRADE_CURRENT_VERSION)
+  })
+})
+
+/**
+ * v1.14.0 が実際に書き出していた形。出力設定は列ではなく、通知書の設定をまるごと
+ * 抱えた JSON 1本だった。
+ */
+function buildV1_14_0Archive(settingsJson: string): GradeArchiveDataV1_14_0 {
+  const { data } = transformGradeToLatest(buildV1_9_0Archive())
+  const { gradeIndividualReportSettings: _current, ...withoutReportSettings } =
+    data
+  return {
+    ...withoutReportSettings,
+    manifest: { ...data.manifest, version: "1.14.0" },
+    gradeExportSettings: [
+      {
+        id: "export-settings-1",
+        gradeId: data.grades[0].id,
+        settingsJson,
+        createdAt: "1970-01-01T00:00:00.000Z",
+        updatedAt: "1970-01-01T00:00:00.000Z",
+      },
+    ],
+  }
+}
+
+describe("transformGradeToLatest: 1.14.0 → 1.15.0（出力設定を列へ割る）", () => {
+  it("通知書の設定が JSON から列へ移る", () => {
+    const archive = buildV1_14_0Archive(
+      JSON.stringify({
+        reportOptions: {
+          title: "通知票",
+          showItemGrades: false,
+          itemGradeColumns: {
+            score: false,
+            percentage: true,
+            gradeLabel: false,
+          },
+          itemGradeFontSize: 14,
+          showSourceBreakdown: true,
+          sourceBreakdownColumns: { score: true, weight: false, comment: true },
+          dataSourceLabel: "資料",
+          showSignatureSection: true,
+          footer: { left: "左", center: "中", right: "右" },
+        },
+      })
+    )
+
+    const { data, appliedTransformations, originalVersion } =
+      transformGradeToLatest(archive)
+
+    expect(originalVersion).toBe("1.14.0")
+    expect(appliedTransformations).toEqual([{ from: "1.14.0", to: "1.15.0" }])
+    expect(data).not.toHaveProperty("gradeExportSettings")
+    const [reportSettings] = data.gradeIndividualReportSettings
+    expect(reportSettings.title).toBe("通知票")
+    expect(reportSettings.showItemGrades).toBe(false)
+    expect(reportSettings.itemGradeColumnScore).toBe(false)
+    expect(reportSettings.itemGradeColumnPercentage).toBe(true)
+    expect(reportSettings.itemGradeFontSize).toBe(14)
+    expect(reportSettings.sourceBreakdownColumnWeight).toBe(false)
+    expect(reportSettings.sourceBreakdownColumnComment).toBe(true)
+    expect(reportSettings.dataSourceLabel).toBe("資料")
+    expect(reportSettings.showSignatureSection).toBe(true)
+    expect(reportSettings.footerLeft).toBe("左")
+    expect(reportSettings.footerRight).toBe("右")
+    // id と日時は引き継ぐ（設定をいつ決めたかは移行で変わらない）
+    expect(reportSettings.id).toBe("export-settings-1")
+    expect(reportSettings.createdAt).toBe("1970-01-01T00:00:00.000Z")
+  })
+
+  it("保存に無い項目は既定で埋める（後から増えた項目でも落ちない）", () => {
+    const archive = buildV1_14_0Archive(
+      JSON.stringify({ reportOptions: { title: "古い設定" } })
+    )
+
+    const { data } = transformGradeToLatest(archive)
+
+    const [reportSettings] = data.gradeIndividualReportSettings
+    expect(reportSettings.title).toBe("古い設定")
+    const { title: _title, ...defaultsWithoutTitle } =
+      DEFAULT_GRADE_REPORT_SETTINGS
+    expect(reportSettings).toMatchObject(defaultsWithoutTitle)
+  })
+
+  it("読めない JSON でも既定の設定になる（取り込みを止めない）", () => {
+    const archive = buildV1_14_0Archive("これはJSONではない")
+
+    const { data } = transformGradeToLatest(archive)
+
+    const [reportSettings] = data.gradeIndividualReportSettings
+    expect(reportSettings).toMatchObject(DEFAULT_GRADE_REPORT_SETTINGS)
+  })
+
+  it("現行形式のアーカイブには当たらない（二重適用しない）", () => {
+    const current = transformGradeToLatest(
+      buildV1_14_0Archive(JSON.stringify({ reportOptions: {} }))
+    ).data
 
     const { appliedTransformations, originalVersion } =
       transformGradeToLatest(current)

@@ -15,6 +15,7 @@
  *   - 内包資料が入れ子形式             → 1.11.0 → 1.12.0（平坦なセクションへ）
  *   - gradeData を持つ（射影形式）      → 1.12.0 → 1.13.0（成績本体も平坦なセクションへ）
  *   - 境界セットのセクションあり        → 1.13.0 → 1.14.0（境界を評価項目へ直付け）
+ *   - 出力設定が JSON 1本のセクション   → 1.14.0 → 1.15.0（出力設定を列へ割る）
  * 1.6.0〜1.9.0 は加算的な変更のみで、専用の transformer は持たない。
  */
 
@@ -23,7 +24,11 @@ import { GRADE_CURRENT_VERSION } from "../../../../src/types/gradeArchive.types"
 import { isLegacyCollectedCourseworkData } from "../coursework-transformers/legacyShape"
 import type { LegacyGradeArchiveData } from "./legacyShape"
 import type { AnyGradeArchiveData, GradeChainTransformResult } from "./types"
-import { isGradeArchiveUpTo1_12_0, isGradeArchiveV1_13_0 } from "./types"
+import {
+  isGradeArchiveUpTo1_12_0,
+  isGradeArchiveV1_13_0,
+  isGradeArchiveV1_14_0,
+} from "./types"
 import { V1_3_0_to_V1_4_0_Transformer } from "./V1_3_0_to_V1_4_0"
 import { V1_4_0_to_V1_5_0_Transformer } from "./V1_4_0_to_V1_5_0"
 import { V1_9_0_to_V1_10_0_Transformer } from "./V1_9_0_to_V1_10_0"
@@ -31,6 +36,7 @@ import { V1_10_0_to_V1_11_0_Transformer } from "./V1_10_0_to_V1_11_0"
 import { V1_11_0_to_V1_12_0_Transformer } from "./V1_11_0_to_V1_12_0"
 import { V1_12_0_to_V1_13_0_Transformer } from "./V1_12_0_to_V1_13_0"
 import { V1_13_0_to_V1_14_0_Transformer } from "./V1_13_0_to_V1_14_0"
+import { V1_14_0_to_V1_15_0_Transformer } from "./V1_14_0_to_V1_15_0"
 
 const v1_3_0 = new V1_3_0_to_V1_4_0_Transformer()
 const v1_4_0 = new V1_4_0_to_V1_5_0_Transformer()
@@ -39,6 +45,7 @@ const v1_10_0 = new V1_10_0_to_V1_11_0_Transformer()
 const v1_11_0 = new V1_11_0_to_V1_12_0_Transformer()
 const v1_12_0 = new V1_12_0_to_V1_13_0_Transformer()
 const v1_13_0 = new V1_13_0_to_V1_14_0_Transformer()
+const v1_14_0 = new V1_14_0_to_V1_15_0_Transformer()
 
 /**
  * 総合（overall）の名残を持つか。境界セット・手動上書きのどちらかに targetType があるか、
@@ -91,9 +98,11 @@ function detectOriginalVersion(data: AnyGradeArchiveData): GradeArchiveVersion {
   return "1.12.0"
 }
 
-/** 平坦なセクションのうち、境界セットを持つ形かどうかで 1.13.0 と現行を分ける */
+/** 平坦なセクションのうち、どの形かは残っている旧セクションで見分ける */
 function detectFlatVersion(data: AnyGradeArchiveData): GradeArchiveVersion {
-  return isGradeArchiveV1_13_0(data) ? "1.13.0" : GRADE_CURRENT_VERSION
+  if (isGradeArchiveV1_13_0(data)) return "1.13.0"
+  if (isGradeArchiveV1_14_0(data)) return "1.14.0"
+  return GRADE_CURRENT_VERSION
 }
 
 /**
@@ -179,6 +188,14 @@ export function transformGradeToLatest(
     appliedTransformations.push({ from: "1.13.0", to: "1.14.0" })
   }
 
+  // 1.14.0 → 1.15.0: 出力設定の JSON を列へ割る
+  if (isGradeArchiveV1_14_0(current)) {
+    const result = v1_14_0.transform(current)
+    current = result.data
+    warnings.push(...result.warnings)
+    appliedTransformations.push({ from: "1.14.0", to: "1.15.0" })
+  }
+
   // ここまでで必ず現行の形になっている。なっていなければ変換の取りこぼしなので
   // 黙って先へ流さず落とす（旧い形のまま importer へ渡すと実行時に崩れる）
   const normalized: AnyGradeArchiveData = current
@@ -190,6 +207,11 @@ export function transformGradeToLatest(
   if (isGradeArchiveV1_13_0(normalized)) {
     throw new Error(
       "grade アーカイブを現行バージョンへ変換できませんでした（境界セットが残っています）"
+    )
+  }
+  if (isGradeArchiveV1_14_0(normalized)) {
+    throw new Error(
+      "grade アーカイブを現行バージョンへ変換できませんでした（出力設定の JSON が残っています）"
     )
   }
 

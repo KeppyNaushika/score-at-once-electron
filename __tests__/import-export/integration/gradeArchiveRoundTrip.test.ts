@@ -98,8 +98,14 @@ function toLegacyArchive(
         description: collected.grades[0].description,
         referenceDate: collected.grades[0].referenceDate,
       },
-      exportSettings: collected.gradeExportSettings[0]
-        ? { settingsJson: collected.gradeExportSettings[0].settingsJson }
+      // 旧形式は設定をまるごと JSON で持っていた。変換器（1.14.0→1.15.0）が列へ
+      // 割り直すところまでを、この往復で通す
+      exportSettings: collected.gradeIndividualReportSettings[0]
+        ? {
+            settingsJson: toLegacySettingsJson(
+              collected.gradeIndividualReportSettings[0]
+            ),
+          }
         : null,
       gradeItems: collected.gradeItems.map((gradeItem) => ({
         id: gradeItem.id,
@@ -235,6 +241,43 @@ function toLegacyArchive(
   }
 }
 
+/** 現行の設定の行を、旧形式（1.14.0 以前）の JSON へ畳み直す */
+function toLegacySettingsJson(
+  reportSettings: Awaited<
+    ReturnType<typeof collectGradeArchiveData>
+  >["gradeIndividualReportSettings"][number]
+): string {
+  return JSON.stringify({
+    reportOptions: {
+      title: reportSettings.title,
+      showItemGrades: reportSettings.showItemGrades,
+      itemGradeColumns: {
+        score: reportSettings.itemGradeColumnScore,
+        percentage: reportSettings.itemGradeColumnPercentage,
+        gradeLabel: reportSettings.itemGradeColumnGradeLabel,
+      },
+      itemGradeFontSize: reportSettings.itemGradeFontSize,
+      itemGradeTableColumns: reportSettings.itemGradeTableColumns,
+      showSourceBreakdown: reportSettings.showSourceBreakdown,
+      sourceBreakdownColumns: {
+        score: reportSettings.sourceBreakdownColumnScore,
+        weight: reportSettings.sourceBreakdownColumnWeight,
+        comment: reportSettings.sourceBreakdownColumnComment,
+      },
+      sourceBreakdownFontSize: reportSettings.sourceBreakdownFontSize,
+      sourceBreakdownTableColumns: reportSettings.sourceBreakdownTableColumns,
+      dataSourceLabel: reportSettings.dataSourceLabel,
+      showCommentSection: reportSettings.showCommentSection,
+      showSignatureSection: reportSettings.showSignatureSection,
+      footer: {
+        left: reportSettings.footerLeft,
+        center: reportSettings.footerCenter,
+        right: reportSettings.footerRight,
+      },
+    },
+  })
+}
+
 describe("grade-archive ラウンドトリップ", () => {
   beforeEach(async () => {
     await cleanupTestDatabase()
@@ -244,9 +287,8 @@ describe("grade-archive ラウンドトリップ", () => {
     await disconnectTestPrisma()
   })
 
-  it("Grade.referenceDate と GradeExportSettings が往復で保持される (v1.2.0)", async () => {
+  it("Grade.referenceDate と個人成績通知書の設定が往復で保持される", async () => {
     const referenceDate = new Date("2026-04-01T00:00:00.000Z")
-    const settingsJson = JSON.stringify({ includeKana: true, format: "pdf" })
 
     const grade = await prisma.grade.create({
       data: {
@@ -255,8 +297,16 @@ describe("grade-archive ラウンドトリップ", () => {
         referenceDate,
       },
     })
-    await prisma.gradeExportSettings.create({
-      data: { gradeId: grade.id, settingsJson },
+    await prisma.gradeIndividualReportSettings.create({
+      data: {
+        gradeId: grade.id,
+        title: "通知票",
+        showItemGrades: false,
+        itemGradeColumnPercentage: false,
+        itemGradeFontSize: 14,
+        dataSourceLabel: "資料",
+        footerLeft: "左",
+      },
     })
     // 最低限の中身も持たせる（空でないことの確認）
     await prisma.gradeItem.create({
@@ -266,7 +316,7 @@ describe("grade-archive ラウンドトリップ", () => {
     // 収集（export）
     const collected = await collectGradeArchiveData(grade.id)
     expect(collected.grades[0].referenceDate).toBe(referenceDate.toISOString())
-    expect(collected.gradeExportSettings[0].settingsJson).toBe(settingsJson)
+    expect(collected.gradeIndividualReportSettings[0].title).toBe("通知票")
 
     // インポート（新規Gradeとして作成される）
     const result = await importGradeArchive(toArchive(grade.id, collected))
@@ -280,11 +330,19 @@ describe("grade-archive ラウンドトリップ", () => {
       referenceDate.toISOString()
     )
 
-    const importedSettings = await prisma.gradeExportSettings.findUnique({
-      where: { gradeId: result.gradeId! },
-    })
+    const importedSettings =
+      await prisma.gradeIndividualReportSettings.findUnique({
+        where: { gradeId: result.gradeId! },
+      })
     expect(importedSettings).not.toBeNull()
-    expect(importedSettings!.settingsJson).toBe(settingsJson)
+    expect(importedSettings!.title).toBe("通知票")
+    expect(importedSettings!.showItemGrades).toBe(false)
+    expect(importedSettings!.itemGradeColumnPercentage).toBe(false)
+    expect(importedSettings!.itemGradeFontSize).toBe(14)
+    expect(importedSettings!.dataSourceLabel).toBe("資料")
+    expect(importedSettings!.footerLeft).toBe("左")
+    // 触っていない項目は既定のまま（旧アーカイブに無くても落ちない）
+    expect(importedSettings!.itemGradeColumnScore).toBe(true)
   })
 
   it("試験外成績資料(Coursework)の項目・点数・コメント・名簿・タグが往復で保持される (v1.4.0)", async () => {
@@ -849,14 +907,14 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(dataSource!.courseworkItemId).not.toBeNull()
   })
 
-  it("referenceDate/exportSettings が無いGradeも問題なく往復する（後方互換）", async () => {
+  it("referenceDate/通知書の設定が無いGradeも問題なく往復する（後方互換）", async () => {
     const grade = await prisma.grade.create({
       data: { name: `成績_min_${Date.now()}` },
     })
 
     const collected = await collectGradeArchiveData(grade.id)
     expect(collected.grades[0].referenceDate).toBeNull()
-    expect(collected.gradeExportSettings).toHaveLength(0)
+    expect(collected.gradeIndividualReportSettings).toHaveLength(0)
     expect(collected.courseworkArchive.courseworks).toHaveLength(0)
 
     const result = await importGradeArchive(toArchive(grade.id, collected))
@@ -866,9 +924,10 @@ describe("grade-archive ラウンドトリップ", () => {
     })
     expect(imported!.referenceDate).toBeNull()
 
-    const importedSettings = await prisma.gradeExportSettings.findUnique({
-      where: { gradeId: result.gradeId! },
-    })
+    const importedSettings =
+      await prisma.gradeIndividualReportSettings.findUnique({
+        where: { gradeId: result.gradeId! },
+      })
     expect(importedSettings).toBeNull()
   })
 

@@ -11,15 +11,16 @@ import { Textarea } from "@/components/ui/textarea"
 import { useEditingText } from "@/hooks/useEditingText"
 import { openPrintDialogMutation } from "@/queries/export"
 import type { GradeCalculationResult } from "@/types/grade.types"
+import type { GradeReportSettings } from "@/types/gradeReport.types"
 
 import { generateGradeReportBatchHtml } from "./generateGradeReportHtml"
-import type { GradeReportOptions } from "./types"
 
 interface IndividualReportTabProps {
   result: GradeCalculationResult
   selectedStudentIds: string[]
-  options: GradeReportOptions
-  onOptionsChange: (options: GradeReportOptions) => void
+  options: GradeReportSettings
+  /** 変えた列だけを渡す（まるごと渡すと、続けて2つ変えたときに先の1つが消える） */
+  onOptionsChange: (values: Partial<GradeReportSettings>) => void
 }
 
 /** 入力中の文字を覚えるときの行。この画面には設定が1組しか無い */
@@ -41,11 +42,11 @@ export function IndividualReportTab({
    */
   const { textOf, remember, forgetField } = useEditingText()
 
-  const updateOption = <K extends keyof GradeReportOptions>(
+  const updateOption = <K extends keyof GradeReportSettings>(
     key: K,
-    value: GradeReportOptions[K]
+    value: GradeReportSettings[K]
   ) => {
-    onOptionsChange({ ...options, [key]: value })
+    onOptionsChange({ [key]: value })
   }
 
   /** 文字を打つ欄に広げる。`field` は覚えるときの鍵で、DB の鍵ではない */
@@ -103,34 +104,25 @@ export function IndividualReportTab({
                 <div className="flex flex-wrap gap-2">
                   <OptionCard
                     label="得点"
-                    checked={options.itemGradeColumns.score}
+                    checked={options.itemGradeColumnScore}
                     onChange={(checked) =>
-                      updateOption("itemGradeColumns", {
-                        ...options.itemGradeColumns,
-                        score: checked,
-                      })
+                      updateOption("itemGradeColumnScore", checked)
                     }
                     variant="sub"
                   />
                   <OptionCard
                     label="得点率"
-                    checked={options.itemGradeColumns.percentage}
+                    checked={options.itemGradeColumnPercentage}
                     onChange={(checked) =>
-                      updateOption("itemGradeColumns", {
-                        ...options.itemGradeColumns,
-                        percentage: checked,
-                      })
+                      updateOption("itemGradeColumnPercentage", checked)
                     }
                     variant="sub"
                   />
                   <OptionCard
                     label="評価"
-                    checked={options.itemGradeColumns.gradeLabel}
+                    checked={options.itemGradeColumnGradeLabel}
                     onChange={(checked) =>
-                      updateOption("itemGradeColumns", {
-                        ...options.itemGradeColumns,
-                        gradeLabel: checked,
-                      })
+                      updateOption("itemGradeColumnGradeLabel", checked)
                     }
                     variant="sub"
                   />
@@ -202,34 +194,25 @@ export function IndividualReportTab({
                 <div className="flex flex-wrap gap-2">
                   <OptionCard
                     label="得点"
-                    checked={options.sourceBreakdownColumns.score}
+                    checked={options.sourceBreakdownColumnScore}
                     onChange={(checked) =>
-                      updateOption("sourceBreakdownColumns", {
-                        ...options.sourceBreakdownColumns,
-                        score: checked,
-                      })
+                      updateOption("sourceBreakdownColumnScore", checked)
                     }
                     variant="sub"
                   />
                   <OptionCard
                     label="換算得点"
-                    checked={options.sourceBreakdownColumns.weight}
+                    checked={options.sourceBreakdownColumnWeight}
                     onChange={(checked) =>
-                      updateOption("sourceBreakdownColumns", {
-                        ...options.sourceBreakdownColumns,
-                        weight: checked,
-                      })
+                      updateOption("sourceBreakdownColumnWeight", checked)
                     }
                     variant="sub"
                   />
                   <OptionCard
                     label="コメント"
-                    checked={options.sourceBreakdownColumns.comment}
+                    checked={options.sourceBreakdownColumnComment}
                     onChange={(checked) =>
-                      updateOption("sourceBreakdownColumns", {
-                        ...options.sourceBreakdownColumns,
-                        comment: checked,
-                      })
+                      updateOption("sourceBreakdownColumnComment", checked)
                     }
                     variant="sub"
                   />
@@ -303,8 +286,8 @@ export function IndividualReportTab({
           <div className="flex items-start gap-2 rounded-lg border bg-muted/50 p-2">
             <Label className="w-6 shrink-0 pt-1 text-xs">左</Label>
             <Textarea
-              {...editing("footer.left", options.footer.left, (text) =>
-                updateOption("footer", { ...options.footer, left: text })
+              {...editing("footer.left", options.footerLeft, (text) =>
+                updateOption("footerLeft", text)
               )}
               rows={2}
               className="min-h-0 flex-1 resize-y text-xs"
@@ -313,8 +296,8 @@ export function IndividualReportTab({
           <div className="flex items-start gap-2 rounded-lg border bg-muted/50 p-2">
             <Label className="w-6 shrink-0 pt-1 text-xs">中</Label>
             <Textarea
-              {...editing("footer.center", options.footer.center, (text) =>
-                updateOption("footer", { ...options.footer, center: text })
+              {...editing("footer.center", options.footerCenter, (text) =>
+                updateOption("footerCenter", text)
               )}
               rows={2}
               className="min-h-0 flex-1 resize-y text-xs"
@@ -323,8 +306,8 @@ export function IndividualReportTab({
           <div className="flex items-start gap-2 rounded-lg border bg-muted/50 p-2">
             <Label className="w-6 shrink-0 pt-1 text-xs">右</Label>
             <Textarea
-              {...editing("footer.right", options.footer.right, (text) =>
-                updateOption("footer", { ...options.footer, right: text })
+              {...editing("footer.right", options.footerRight, (text) =>
+                updateOption("footerRight", text)
               )}
               rows={2}
               className="min-h-0 flex-1 resize-y text-xs"

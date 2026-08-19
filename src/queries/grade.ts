@@ -8,6 +8,7 @@ import type {
   GradeDataSourceInput,
   GradeOverrideInput,
 } from "@/types/grade.types"
+import type { GradeReportSettings } from "@/types/gradeReport.types"
 
 import { auditLogListKey } from "./auditLog"
 import { defineMutation } from "./defineMutation"
@@ -111,11 +112,15 @@ export const gradeResultsQuery = (gradeId: string) =>
     queryFn: () => window.electronAPI.grade.calculateGrades(gradeId),
   })
 
-/** 個人成績通知書の出力設定 */
-export const gradeExportSettingsQuery = (gradeId: string) =>
+/**
+ * 個人成績通知書の設定（成績算出ごとに1行）。
+ *
+ * **行をそのまま載せる。** まだ無ければ `null` で、既定で描くのは表示側。
+ */
+export const gradeReportSettingsQuery = (gradeId: string) =>
   queryOptions({
-    queryKey: [...scopeKeys.grade(gradeId), "exportSettings"] as const,
-    queryFn: () => window.electronAPI.grade.getExportSettings(gradeId),
+    queryKey: [...scopeKeys.grade(gradeId), "reportSettings"] as const,
+    queryFn: () => window.electronAPI.grade.getReportSettings(gradeId),
   })
 
 /**
@@ -663,16 +668,20 @@ export const setGradeItemExclusionMutation = (gradeId: string) =>
 
 // --- 出力設定 ---
 
-export const saveGradeExportSettingsMutation = (gradeId: string) =>
+/**
+ * 通知書の設定を書く。**触った列だけ**を渡す。
+ *
+ * まるごと渡すと、続けて2つチェックを入れたときに先の1つが消える（取り直しが着地する
+ * 前に、古い写しへ2度目を重ねて書くため）。この行にはヌル許容の列が無いので、
+ * 載せない＝触らない、で曖昧さが無い。
+ */
+export const updateGradeReportSettingsMutation = (gradeId: string) =>
   defineMutation({
-    mutationFn: (
-      settings: Parameters<
-        typeof window.electronAPI.grade.saveExportSettings
-      >[1]
-    ) => window.electronAPI.grade.saveExportSettings(gradeId, settings),
-    scope: { id: `grade:${gradeId}:exportSettings` },
+    mutationFn: (values: Partial<GradeReportSettings>) =>
+      window.electronAPI.grade.updateReportSettings(gradeId, values),
+    scope: { id: `grade:${gradeId}:reportSettings` },
     meta: {
-      invalidates: [gradeExportSettingsQuery(gradeId).queryKey],
+      invalidates: [gradeReportSettingsQuery(gradeId).queryKey],
       errorMessage: "出力設定を保存できませんでした",
     },
   })

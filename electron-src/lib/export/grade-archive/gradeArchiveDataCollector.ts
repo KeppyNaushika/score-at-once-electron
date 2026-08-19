@@ -28,8 +28,8 @@ import type {
   ArchiveGradeDataSourceEstimationSourceRow,
   ArchiveGradeDataSourceRow,
   ArchiveGradeExamRef,
-  ArchiveGradeExportSettingsRow,
   ArchiveGradeFrozenScoreRow,
+  ArchiveGradeIndividualReportSettingsRow,
   ArchiveGradeItemBoundaryRow,
   ArchiveGradeItemExclusionRow,
   ArchiveGradeItemRow,
@@ -68,7 +68,7 @@ export async function collectGradeArchiveData(
     studentJoinRows,
     itemRows,
     constraintRows,
-    exportSettingsRow,
+    reportSettingsRow,
   ] = await Promise.all([
     prisma.gradeClassroom.findMany({
       where: { gradeId },
@@ -86,7 +86,7 @@ export async function collectGradeArchiveData(
       where: { gradeId },
       orderBy: { order: "asc" },
     }),
-    prisma.gradeExportSettings.findUnique({ where: { gradeId } }),
+    prisma.gradeIndividualReportSettings.findUnique({ where: { gradeId } }),
   ])
 
   const gradeItemIds = itemRows.map((gradeItem) => gradeItem.id)
@@ -316,17 +316,16 @@ export async function collectGradeArchiveData(
       updatedAt: dateToJson(exclusionLabel.updatedAt),
     }))
 
-  const gradeExportSettings: ArchiveGradeExportSettingsRow[] = exportSettingsRow
-    ? [
-        {
-          id: exportSettingsRow.id,
-          gradeId: exportSettingsRow.gradeId,
-          settingsJson: exportSettingsRow.settingsJson,
-          createdAt: dateToJson(exportSettingsRow.createdAt),
-          updatedAt: dateToJson(exportSettingsRow.updatedAt),
-        },
-      ]
-    : []
+  const gradeIndividualReportSettings: ArchiveGradeIndividualReportSettingsRow[] =
+    reportSettingsRow
+      ? [
+          {
+            ...reportSettingsRow,
+            createdAt: dateToJson(reportSettingsRow.createdAt),
+            updatedAt: dateToJson(reportSettingsRow.updatedAt),
+          },
+        ]
+      : []
 
   // ── 外部参照 ─────────────────────────────────────────────
   const [studentRows, classroomRows] = await Promise.all([
@@ -508,7 +507,7 @@ export async function collectGradeArchiveData(
     gradeConstraintViewpoints,
     gradeConstraintLabelValues,
     gradeConstraintExclusionLabels,
-    gradeExportSettings,
+    gradeIndividualReportSettings,
     studentsData,
     classesData,
     membershipsData,

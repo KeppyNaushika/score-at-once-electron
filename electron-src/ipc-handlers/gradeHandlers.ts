@@ -9,6 +9,7 @@ import type {
   GradeConstraintInput,
   GradeItemExclusionInput,
 } from "../../src/types/grade.types"
+import type { GradeReportSettings } from "../../src/types/gradeReport.types"
 import { createGradeArchive } from "../lib/export/grade-archive/gradeArchiveCreator"
 import { exportGradeExcel } from "../lib/export/gradeExcel/gradeExcelExportMain"
 import { extractGradeArchive } from "../lib/import/grade-archive/gradeArchiveExtractor"
@@ -22,9 +23,7 @@ import {
   duplicateGrade,
   getAllGrades,
   getGradeById,
-  getGradeExportSettings,
   updateGrade,
-  upsertGradeExportSettings,
 } from "../lib/prisma/grade"
 import {
   createGradeConstraint,
@@ -45,6 +44,10 @@ import {
   freezeGradeScores,
   unfreezeGradeScores,
 } from "../lib/prisma/gradeFrozenScore"
+import {
+  getGradeIndividualReportSettings,
+  updateGradeIndividualReportSettings,
+} from "../lib/prisma/gradeIndividualReportSettings"
 import {
   createGradeItem,
   deleteGradeItem,
@@ -126,15 +129,16 @@ export const gradeHandlers = {
     return duplicateGrade(id)
   },
 
-  "grade:getExportSettings": async (gradeId: string) => {
-    return getGradeExportSettings(gradeId)
+  "grade:getReportSettings": async (gradeId: string) => {
+    return getGradeIndividualReportSettings(gradeId)
   },
 
-  "grade:saveExportSettings": async (
+  // 触った列だけを載せる。まるごと送ると、続けて2つ変えたときに先の1つが消える
+  "grade:updateReportSettings": async (
     gradeId: string,
-    settings: Record<string, unknown>
+    values: Partial<GradeReportSettings>
   ) => {
-    await upsertGradeExportSettings(gradeId, settings)
+    await updateGradeIndividualReportSettings(gradeId, values)
   },
 
   // =====================================================================

@@ -6,8 +6,7 @@ import type {
   GradeItemResult,
   StudentGradeResult,
 } from "@/types/grade.types"
-
-import type { GradeReportOptions } from "./types"
+import type { GradeReportSettings } from "@/types/gradeReport.types"
 
 /**
  * 複数生徒分の個人成績通知書HTMLをページ区切りで結合
@@ -15,7 +14,7 @@ import type { GradeReportOptions } from "./types"
 export function generateGradeReportBatchHtml(
   result: GradeCalculationResult,
   studentIds: string[],
-  options: GradeReportOptions
+  options: GradeReportSettings
 ): string {
   const reportsHtml = studentIds
     .map((studentId, index) => {
@@ -157,7 +156,7 @@ export function generateGradeReportBatchHtml(
 function renderStudentReport(
   _result: GradeCalculationResult,
   student: StudentGradeResult,
-  options: GradeReportOptions
+  options: GradeReportSettings
 ): string {
   const sections: string[] = []
 
@@ -199,7 +198,12 @@ function renderStudentReport(
   }
 
   // フッター
-  const footer = options.footer
+  // 設定は DB の列そのものなので、この関数の中だけで組にして読む
+  const footer = {
+    left: options.footerLeft,
+    center: options.footerCenter,
+    right: options.footerRight,
+  }
   const hasFooter = footer.left || footer.center || footer.right
   const footerHtml = hasFooter
     ? `<div class="report-footer">
@@ -217,9 +221,13 @@ function renderStudentReport(
  */
 function renderItemGradesSection(
   student: StudentGradeResult,
-  options: GradeReportOptions
+  options: GradeReportSettings
 ): string {
-  const cols = options.itemGradeColumns
+  const cols = {
+    score: options.itemGradeColumnScore,
+    percentage: options.itemGradeColumnPercentage,
+    gradeLabel: options.itemGradeColumnGradeLabel,
+  }
   const fontSize = options.itemGradeFontSize
   const columns = Math.max(1, Math.min(5, options.itemGradeTableColumns))
 
@@ -279,9 +287,13 @@ function renderItemGradesSection(
  */
 function renderSourceBreakdownSection(
   student: StudentGradeResult,
-  options: GradeReportOptions
+  options: GradeReportSettings
 ): string | null {
-  const srcCols = options.sourceBreakdownColumns
+  const srcCols = {
+    score: options.sourceBreakdownColumnScore,
+    weight: options.sourceBreakdownColumnWeight,
+    comment: options.sourceBreakdownColumnComment,
+  }
   const label = options.dataSourceLabel || "成績資料"
   const fontSize = options.sourceBreakdownFontSize
   const columns = Math.max(1, Math.min(5, options.sourceBreakdownTableColumns))

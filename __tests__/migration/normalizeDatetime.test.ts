@@ -229,6 +229,9 @@ describe("DateTime正規化マイグレーション", () => {
     // 20260801000000 で GradeBoundary を畳んで作られたテーブル。行は正規化済みの
     // GradeBoundary から INSERT SELECT で移しており、以後は ISO text 生成
     "GradeItemBoundary",
+    // 20260819160000 で追加（成績の出力設定JSONを列へ割る）。
+    // normalize migration より後で ISO text 生成
+    "GradeIndividualReportSettings",
     "ReturnSnapshot",
     // 20260819140000 で追加（利用者の設定JSONを行へ割る）。
     // normalize migration より後で ISO text 生成

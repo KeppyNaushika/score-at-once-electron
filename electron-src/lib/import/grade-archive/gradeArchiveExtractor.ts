@@ -153,7 +153,16 @@ export async function extractGradeArchive(
         sections,
         "gradeConstraintExclusionLabels"
       ),
-      gradeExportSettings: readArray(sections, "gradeExportSettings"),
+      // 出力設定も版でセクション名が違う（1.15.0 で列へ割った）。境界と同じ理由で
+      // 読めた方だけを載せる
+      ...(Array.isArray(sections.gradeExportSettings)
+        ? { gradeExportSettings: readArray(sections, "gradeExportSettings") }
+        : {
+            gradeIndividualReportSettings: readArray(
+              sections,
+              "gradeIndividualReportSettings"
+            ),
+          }),
       studentsData: readArray(sections, "studentsData"),
       classesData: readArray(sections, "classesData"),
       membershipsData: readArray(sections, "membershipsData"),

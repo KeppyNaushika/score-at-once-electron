@@ -244,7 +244,7 @@ export async function duplicateGrade(id: string) {
             include: gradeConstraintInclude,
             orderBy: { order: "asc" },
           },
-          exportSettings: true,
+          reportSettings: true,
         },
       })
       if (!source) return null
@@ -276,13 +276,17 @@ export async function duplicateGrade(id: string) {
         },
       })
 
-      // 2. エクスポート設定（1:1）
-      if (source.exportSettings) {
-        await tx.gradeExportSettings.create({
-          data: {
-            gradeId: grade.id,
-            settingsJson: source.exportSettings.settingsJson,
-          },
+      // 2. 個人成績通知書の設定（1:1）。id と日時は新しい行のもの
+      if (source.reportSettings) {
+        const {
+          id: _id,
+          gradeId: _gradeId,
+          createdAt: _createdAt,
+          updatedAt: _updatedAt,
+          ...reportSettings
+        } = source.reportSettings
+        await tx.gradeIndividualReportSettings.create({
+          data: { gradeId: grade.id, ...reportSettings },
         })
       }
 
@@ -484,34 +488,4 @@ export async function duplicateGrade(id: string) {
   })
 
   return getGradeById(result.gradeId)
-}
-
-// =============================================================================
-// GradeExportSettings（エクスポート設定）
-// =============================================================================
-
-/** 成績算出試験のエクスポート設定をJSON形式で取得する */
-export async function getGradeExportSettings(gradeId: string) {
-  const settings = await prisma.gradeExportSettings.findUnique({
-    where: { gradeId },
-  })
-  if (!settings) return null
-  try {
-    return JSON.parse(settings.settingsJson)
-  } catch {
-    return null
-  }
-}
-
-/** 成績算出試験のエクスポート設定を作成または更新する（JSON文字列として保存） */
-export async function upsertGradeExportSettings(
-  gradeId: string,
-  settings: Record<string, unknown>
-) {
-  const settingsJson = JSON.stringify(settings)
-  return prisma.gradeExportSettings.upsert({
-    where: { gradeId },
-    update: { settingsJson },
-    create: { gradeId, settingsJson },
-  })
 }

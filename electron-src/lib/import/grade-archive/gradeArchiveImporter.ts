@@ -370,12 +370,16 @@ export async function importGradeArchive(
         },
       })
 
-      for (const exportSettings of data.gradeExportSettings) {
-        await tx.gradeExportSettings.create({
-          data: {
-            gradeId: grade.id,
-            settingsJson: exportSettings.settingsJson,
-          },
+      for (const reportSettings of data.gradeIndividualReportSettings) {
+        const {
+          id: _id,
+          gradeId: _gradeId,
+          createdAt: _createdAt,
+          updatedAt: _updatedAt,
+          ...values
+        } = reportSettings
+        await tx.gradeIndividualReportSettings.create({
+          data: { gradeId: grade.id, ...values },
         })
       }
 

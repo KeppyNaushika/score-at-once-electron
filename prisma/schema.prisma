@@ -846,7 +846,7 @@ model Grade {
   gradeClassrooms  GradeClassroom[]
   gradeStudents    GradeStudent[]
   gradeConstraints GradeConstraint[]
-  exportSettings   GradeExportSettings?
+  reportSettings   GradeIndividualReportSettings?
 }
 
 /// 観点間の制約ルール（不適切な観点/評定の組合せを検知して着色）
@@ -1188,12 +1188,41 @@ model GradeItemBoundary {
 }
 
 /// 成績算出プロジェクトのエクスポート設定
-model GradeExportSettings {
-  id           String   @id @default(uuid())
-  gradeId      String   @unique
-  settingsJson String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+/// 個人成績通知書に何を載せ、どう組むか（成績算出ごとに1行）。
+/// 既定値はここが唯一の置き場で、画面の既定（DEFAULT_GRADE_REPORT_OPTIONS）と一致させる
+/// （__tests__/grade/gradeReportSettings.test.ts が突き合わせる）。
+model GradeIndividualReportSettings {
+  id      String @id @default(uuid())
+  gradeId String @unique
+
+  title String @default("個人成績通知書")
+
+  showItemGrades            Boolean @default(true)
+  itemGradeColumnScore      Boolean @default(true)
+  itemGradeColumnPercentage Boolean @default(true)
+  itemGradeColumnGradeLabel Boolean @default(true)
+  itemGradeFontSize         Int     @default(11)
+  itemGradeTableColumns     Int     @default(1)
+
+  showSourceBreakdown          Boolean @default(false)
+  sourceBreakdownColumnScore   Boolean @default(true)
+  sourceBreakdownColumnWeight  Boolean @default(true)
+  sourceBreakdownColumnComment Boolean @default(false)
+  sourceBreakdownFontSize      Int     @default(11)
+  sourceBreakdownTableColumns  Int     @default(1)
+
+  /// 「データソース」の表示ラベル（空なら画面の既定語を使う）
+  dataSourceLabel String @default("")
+
+  showCommentSection   Boolean @default(false)
+  showSignatureSection Boolean @default(false)
+
+  footerLeft   String @default("")
+  footerCenter String @default("")
+  footerRight  String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   grade Grade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
 }
