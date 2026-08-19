@@ -881,6 +881,18 @@ toast だけで UI が DB より先へ進んだままになるが、書き込み
    書いていたが、新規作成（既定の姿を丸ごと置く）も「全体を指定する」経路である
 3. ハンドラと `replaceAsbDefinition` のコメントに、日常の編集を流さない理由を残した
 
+### 7.6 段階6 — 原稿用紙をテーブルへ出し、枝問へも生やす（未着手）
+
+§8.5。**段階1〜5 が「書き込みを実体ごとに割る」だったのに対し、これは「実体そのものを
+正す」**もので、段階10 が ASB 定義型を手写し型の是正対象から外した根拠（RDB 化で消える）を
+実際に果たす作業でもある。
+
+**着手の前に、指摘 #1 の網（ラベルだけ変えても原稿用紙が残る）を入れる。** 参照60箇所を
+機械的に触るので、途中で原稿用紙が落ちても気づけない。振る舞いの検査なので、作り替えた
+後もそのまま生き残る。
+
+段階19（`ipc-and-data-fetching-plan.md`）の ASB 部分を前倒しで済ませることになる。
+
 ---
 
 ## 8. 付随して直すもの
@@ -941,6 +953,172 @@ delete → recreate で、id も uuid 再生成。#1126 の tombstone の罠に�
 **`userId` は列名も `onDelete: Cascade` も変えず、作成者の記録として残す。** ロール判定は
 メンバー表（`AsbDefinitionMember`）が持つ。したがって**保存時の書き換えはメンバー表が入った時点で
 やめる**（作成者は作成時に決まり、以後変わらない）。
+
+### 8.5 原稿用紙が小問の列に埋まっている（型規約違反）
+
+**発端**は R7/R8 の指摘 #1（小問のラベルを1文字打つと原稿用紙の設定が消える）だが、
+**原因は合流の書き方ではなく、画面と DB でデータ構造が違うこと**である
+（OWNER 指摘・2026-08-19）。
+
+#### 何が違うのか
+
+原稿用紙の設定6項目は **DB では小問の列**として平らに並び、**画面では
+`manuscriptPaper` という入れ子**に束ね直されている。束ね直しのために
+`asbDefinitionConverters.ts`（553行）が行と入れ子を毎回組み替えている。
+
+段差があると2つのことが起きる。
+
+1. **合流の規則が2種類になる。** 平らな項目は `{...current, ...data}` の1回で正しく
+   混ざるが、入れ子だけは手で1段深く混ぜ直す必要がある。その手作業が指摘 #1
+2. **DB に無い状態が表現できてしまう。** `manuscriptEnabled` は列として必ず値を持つが、
+   画面の型では `manuscriptPaper` ごと `undefined` になれる。#1 はその存在しないはずの
+   状態へ落ちる事故だった
+
+段階10「決めたこと §1」は ASB 定義ツリーの5件を「**RDB 化で Prisma 型に変わる**」として
+手写し型の是正対象から外していた。段階1〜5 で書き込みは実体ごとに割ったが、**画面側の型は
+手写しのまま残した**ので、例外の根拠が失効している。
+
+#### 枝問にも原稿用紙が要る
+
+いま枝問には原稿用紙が無い。それどころか `ManuscriptPaperSettings` は
+`SubQuestionForm.tsx:379` で `{!hasBranches && …}` に囲まれているので、**枝問を持つ小問も
+原稿用紙を使えない**。「(1) 記号で答えよ ／ (2) 100字で説明せよ」が作れない。
+
+**OMR は同じ性質のものを既に正しく作ってある。** 省略可能な 1:1 の設定＋子の配列という
+形はまったく同じなのに、原稿用紙だけが小問の列へ埋め込まれている。
+
+|          | 置き場所                   | 子の配列                   | 枝問に付くか |
+| -------- | -------------------------- | -------------------------- | ------------ |
+| OMR      | `AsbOmrConfig`（テーブル） | `AsbOmrChoiceOption`       | **付く**     |
+| 原稿用紙 | AsbSubQuestion の6列       | `AsbCharGuide`（親は小問） | **付かない** |
+
+**枝問の件が、直し方を決める。** 列のまま平らにすると、枝問へ生やすときに同じ6列を
+`AsbBranchQuestion` へ複製することになり、描画側の分岐も二重になる。テーブルへ出せば
+nullable FK を足すだけで済む。
+
+#### 決めた形
+
+```prisma
+/// 原稿用紙。小問または枝問に 1:1 で付く（AsbOmrConfig と同じ形）。
+model AsbManuscriptPaper {
+  id               String  @id @default(uuid())
+  subQuestionId    String? @unique
+  branchQuestionId String? @unique
+  enabled          Boolean @default(true)
+  columns          Int     @default(20)
+  rows             Int     @default(10)
+  guideFontSize    Float?
+  guidePosition    String?
+  guidePadding     Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subQuestion    AsbSubQuestion?    @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
+  branchQuestion AsbBranchQuestion? @relation(fields: [branchQuestionId], references: [id], onDelete: Cascade)
+  charGuides     AsbCharGuide[]
+
+  @@index([subQuestionId])
+  @@index([branchQuestionId])
+}
+```
+
+- **`AsbCharGuide.subQuestionId` → `manuscriptPaperId`。** 文字位置マーカーは原稿用紙の
+  持ち物であって小問の持ち物ではない（`AsbOmrChoiceOption → omrConfigId` と同じ）
+- **`AsbSubQuestion` から7列を落とす**（`manuscriptEnabled` / `Columns` / `Rows` /
+  `GuideFontSize` / `GuidePosition` / `GuidePadding` と、廃止済みの `manuscriptCellSizeMm`）
+- **`enabled` 列は残す**（OWNER 決定・2026-08-19）。OMR は行の有無で表すが、原稿用紙は
+  設計中にオン・オフを往復するのが自然な操作で、そのたびに 25×15 と文字位置マーカーが
+  消えるのは損失が大きい。「行なし＝一度も使っていない」「`enabled=false`＝いまはオフ、
+  設定は保管」と読む
+- **`id` は不透明な uuidv4 のまま**。書き込みは `@unique`（＝親のid）を鍵に upsert する。
+  一度は「両端末が同じ id を作れば同期の衝突が起きない」として親の id を借りる案を採ろうと
+  したが、**借用 id は 2026-08-03 の PR #1150 で全廃され、`uuidIdCoverage.test.ts` が
+  禁じている**（OWNER 指摘・2026-08-19）。この形が抱える同期の詰まりは実在するが、
+  **アプリの id 方針を曲げて避けるものではなくライブラリ側で直す**
+  （[sync-secondary-unique-hazard.md](./sync-secondary-unique-hazard.md) §6）
+
+#### 画面側の型
+
+入れ子は残るが、**それは include の木そのもの**になるので手写しではなくなる。
+
+```ts
+export type AsbManuscriptPaperAttributes = Omit<
+  AsbManuscriptPaper,
+  | "id"
+  | "subQuestionId"
+  | "branchQuestionId"
+  | "createdAt"
+  | "updatedAt"
+  | "guidePosition"
+> & { guidePosition: ManuscriptGuidePosition | null }
+```
+
+`guidePosition` だけ union を注入する（`String?` のままでは絞れない）。これは
+`ScoringStatus` と同じ既存の型注入の形で、規約の範囲内。
+
+**`AsbSubQuestionUpdate` の入れ子の例外が消える。**
+
+```ts
+// いま（原稿用紙だけ入れ子の一部指定を許している。#1 の温床）
+export type AsbSubQuestionUpdate = Partial<
+  Omit<AsbSubQuestionAttributes, "manuscriptPaper">
+> & {
+  manuscriptPaper?: Partial<ManuscriptPaperAttributes>
+}
+
+// これから
+export type AsbSubQuestionUpdate = Partial<AsbSubQuestionAttributes>
+```
+
+原稿用紙は自分の action（`UPSERT_MANUSCRIPT_PAPER` / `DELETE_MANUSCRIPT_PAPER`。OMR と
+同じくセルを指す）で書くので、小問の更新に混ざらない。**#1 の手作業が構造ごと消える。**
+
+#### 移行（migration）
+
+1. `AsbManuscriptPaper` を作る
+2. **行を作る条件**は「`manuscriptEnabled=1`」「文字位置マーカーを持つ」「設定が既定と
+   違う」のいずれか。既定のまま一度も使っていない小問に空の行を作らない
+3. `id` には **`subQuestionId` をそのまま入れる**（§決めた形）
+4. `AsbCharGuide` を作り直し、`subQuestionId` を `manuscriptPaperId` として写す。
+   id = 親の id なので値の付け替えは不要
+5. `AsbSubQuestion` を作り直して7列を落とす
+
+**罠が2つある。**
+
+- **`AsbSubQuestion` の作り直しは子を持つ**（`AsbBranchQuestion` / `AsbTextElement` /
+  `AsbImageElement` / `AsbOmrConfig`）。`PRAGMA foreign_keys` を意識せずに `RENAME TO` を
+  使うと、子の FK 参照が旧名を指したまま残る。既知の罠（`project_migration_rename_fk_gotcha`）
+- **`migrationDeployer` は FK 既定 OFF・非トランザクション。** 検証は空DB への
+  `foreign_key_check` では足りず、`sqlite_master` の定義文を目視する
+
+検証は「空DBへ全 migration を昇順適用」と「旧データを入れたDBへ適用」の両方を行う。
+新しい migration を `MIGRATION_CHECKSUMS` に足さない（足すと replay されない）。
+
+#### 作業の並び
+
+| #   | 対象        | 中身                                                                                                                                                                          |
+| --- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | migration   | 上記。旧データの移送まで                                                                                                                                                      |
+| 2   | main        | `asbManuscriptPaper.ts` 新設（`asbOmrConfig.ts` に倣う）。`asbSubQuestion` / `asbBranchQuestion` / `asbCharGuide` / `asbDefinitionConverters` / `asbDefinitionReplace` を追随 |
+| 3   | main        | 複製ハンドラ（`answerSheetBuilderHandlers.ts:556`）で原稿用紙と文字位置マーカーの id を振り直す。**指摘 #8 はここ**                                                           |
+| 4   | renderer 型 | Prisma 由来へ。`AsbSubQuestionUpdate` の入れ子の例外を落とす。action を2本足す                                                                                                |
+| 5   | renderer    | 参照60箇所（7ファイル）を include の木へ。うち4つはレイアウト計算                                                                                                             |
+| 6   | 枝問        | `BranchQuestionForm` に設定を置き、`cellBuilder` ほかを枝問セルへ通す                                                                                                         |
+| 7   | アーカイブ  | ASB アーカイブの版上げ＋変換器                                                                                                                                                |
+
+#### 検査
+
+| 対象    | 見るもの                                                                     |
+| ------- | ---------------------------------------------------------------------------- |
+| reducer | **ラベルだけを変えても原稿用紙が残る**（指摘 #1 の網。作り替えの前に入れる） |
+| 往復    | 枝問に付けた原稿用紙と文字位置マーカーが保存・復元される                     |
+| 複製    | 原稿用紙と文字位置マーカーの id が振り直される（指摘 #8）                    |
+| 移行    | 旧データ（`manuscriptEnabled=1` ＋ マーカー付き）が値を保って移る            |
+| 移行    | 既定のまま使っていない小問に行が作られない                                   |
+| id      | 原稿用紙の id が親の id と一致する（同期の前提。外すと §同期の罠 へ戻る）    |
+
+**ガードは外すと実際に落ちることを確認してから採用する。**
 
 ---
 
