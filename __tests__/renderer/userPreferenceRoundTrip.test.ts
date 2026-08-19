@@ -65,6 +65,31 @@ describe("採点状態色の往復", () => {
     )
   })
 
+  it("保存に無い状態は既定のまま残す（後から増えた状態でも落ちない）", () => {
+    // `no_answer` / `double_mark` が増える前に保存された配色を開く
+    const olderShape = JSON.stringify({
+      unscored: { bg: "#111111", text: "#222222", icon: "#333333" },
+      correct: DEFAULT_SCORING_STATUS_COLORS.correct,
+    })
+
+    const colors = parseScoringStatusColors(olderShape)
+
+    expect(colors.unscored.bg).toBe("#111111")
+    expect(colors.double_mark).toEqual(
+      DEFAULT_SCORING_STATUS_COLORS.double_mark
+    )
+    expect(colors.no_answer).toEqual(DEFAULT_SCORING_STATUS_COLORS.no_answer)
+  })
+
+  it("色として読めない値は既定のまま残す", () => {
+    const broken = JSON.stringify({ correct: "赤", partial: { bg: 1 } })
+
+    const colors = parseScoringStatusColors(broken)
+
+    expect(colors.correct).toEqual(DEFAULT_SCORING_STATUS_COLORS.correct)
+    expect(colors.partial).toEqual(DEFAULT_SCORING_STATUS_COLORS.partial)
+  })
+
   it("旧いキー ungraded は unscored として読む", () => {
     const legacy = JSON.stringify({
       ungraded: { bg: "#111111", text: "#222222", icon: "#333333" },
