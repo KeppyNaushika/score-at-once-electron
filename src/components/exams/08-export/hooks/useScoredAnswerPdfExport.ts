@@ -61,6 +61,9 @@ export function useScoredAnswerPdfExport({
 }: UseScoredAnswerPdfExportParams) {
   // Canvas描画用の状態
   const [pdfExportPages, setPdfExportPages] = useState<PdfExportPageData[]>([])
+  // 失敗したページを名前で知らせるための控え。`handlePageComplete` は描画中に
+  // 何度も呼ばれるので状態を閉じ込めず、ref で引く
+  const pdfExportPagesRef = useRef<PdfExportPageData[]>([])
   const [startCanvasRendering, setStartCanvasRendering] = useState(false)
 
   // 保存先選択のPromiseを保持（並行処理用）。
@@ -146,6 +149,7 @@ export function useScoredAnswerPdfExport({
 
       // 4. Canvas描画を開始（onPageCompleteでPDFに逐次埋め込み）
       setPdfExportPages(pdfExportData.pages)
+      pdfExportPagesRef.current = pdfExportData.pages
       setStartCanvasRendering(true)
 
       // handlePageComplete と handleCanvasComplete がストリーミング処理を実行
@@ -208,28 +212,79 @@ export function useScoredAnswerPdfExport({
   /**
    * 1ページ完了時のコールバック（ストリーミング埋め込み）
    */
-  const handlePageComplete = useCallback(async (pageData: RenderedPageData) => {
-    // キャンセル済みなら何もしない
-    if (isExportCancelledRef.current) {
-      return
-    }
+  /**
+   * 書き出しを中止して、後始末を全部やる。
+   *
+   * **`setIsExporting(false)` を必ず通す。** これを戻し損ねると、以後どの書き出しも
+   * `runValidatedExport` が黙って return する（アプリを再起動するまで PDF を出せない）。
+   * main 側の pdf-lib セッションも解放する — 放っておくとページのバッファが残り続ける。
+   */
+  const abortExport = useCallback(
+    (reason: string) => {
+      isExportCancelledRef.current = true
+      setStartCanvasRendering(false)
+      setPdfExportPages([])
+      setExportStatus("error")
+      setCurrentStep(reason)
+      setEmbeddedPagesCount(0)
+      setTotalPagesCount(0)
+      setCanvasRenderingComplete(false)
+      savePathPromiseRef.current = null
+      savePathResultRef.current = null
+      if (streamingSessionIdRef.current) {
+        cancelStreamingSession(streamingSessionIdRef.current)
+        streamingSessionIdRef.current = null
+      }
+      setIsExporting(false)
+    },
+    [setExportStatus, setCurrentStep, setIsExporting]
+  )
 
-    if (!streamingSessionIdRef.current) {
-      console.error("Streaming session not found")
-      return
-    }
+  const handlePageComplete = useCallback(
+    async (pageData: RenderedPageData) => {
+      // キャンセル済みなら何もしない
+      if (isExportCancelledRef.current) {
+        return
+      }
 
-    try {
-      await addPageToStreamingSession({
-        sessionId: streamingSessionIdRef.current,
-        pageIndex: pageData.pageIndex,
-        imageData: pageData.imageData,
-      })
-      setEmbeddedPagesCount((prev) => prev + 1)
-    } catch (error) {
-      console.error(`Error embedding page ${pageData.pageIndex}:`, error)
-    }
-  }, [])
+      if (!streamingSessionIdRef.current) {
+        // 素通りするとカウンタが進まず、完了を待つ関門が開かない
+        abortExport(
+          "PDF セッションが失われました。ファイルは作成していません。もう一度お試しください。"
+        )
+        return
+      }
+
+      try {
+        await addPageToStreamingSession({
+          sessionId: streamingSessionIdRef.current,
+          pageIndex: pageData.pageIndex,
+          imageData: pageData.imageData,
+        })
+        setEmbeddedPagesCount((prev) => prev + 1)
+      } catch (error) {
+        // **1ページでも入らなければ中止する。** 握り潰すとカウンタが進まず、完了を
+        // 待つ関門が永久に開かない（進捗が「41/42」で固まり、isExporting も戻らない
+        // ので以後どの書き出しも黙って何もしなくなる）。答案の PDF は印刷して生徒へ
+        // 返すものなので、ページが欠けたまま成功と見えるほうが害が大きい。
+        const detail = error instanceof Error ? error.message : String(error)
+        // 利用者が答案を特定できる言い方にする（ページ番号だけでは探せない）
+        const page = pdfExportPagesRef.current.find(
+          (candidate) =>
+            candidate.examStudentId === pageData.examStudentId &&
+            candidate.pageNumber === pageData.pageNumber
+        )
+        const where = page
+          ? `${page.studentName} さんの ${page.pageNumber} ページ目`
+          : `${pageData.pageIndex + 1} ページ目`
+        abortExport(
+          `${where}を PDF へ入れられませんでした（${detail}）。` +
+            `ファイルは作成していません。`
+        )
+      }
+    },
+    [abortExport]
+  )
 
   /**
    * Canvas描画完了コールバック
@@ -302,24 +357,11 @@ export function useScoredAnswerPdfExport({
    */
   const handleCanvasError = useCallback(
     (error: Error) => {
-      console.error("Canvas rendering error:", error)
-      setStartCanvasRendering(false)
-      setPdfExportPages([])
-      setExportStatus("error")
-      setCurrentStep(`Canvas描画エラー: ${error.message}`)
-      setIsExporting(false)
-      setEmbeddedPagesCount(0)
-      setTotalPagesCount(0)
-      setCanvasRenderingComplete(false)
-      savePathPromiseRef.current = null
-      savePathResultRef.current = null
-      // セッションのクリーンアップ
-      if (streamingSessionIdRef.current) {
-        cancelStreamingSession(streamingSessionIdRef.current)
-        streamingSessionIdRef.current = null
-      }
+      abortExport(
+        `答案の描画に失敗しました（${error.message}）。ファイルは作成していません。`
+      )
     },
-    [setExportStatus, setCurrentStep, setIsExporting]
+    [abortExport]
   )
 
   /**
