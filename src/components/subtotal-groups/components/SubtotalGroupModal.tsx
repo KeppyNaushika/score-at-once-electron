@@ -155,6 +155,13 @@ export function SubtotalGroupModal({
       }))
   )
   const [saving, setSaving] = useState(false)
+  /**
+   * この開いている間に作ったグループの id。
+   *
+   * 作成のあとタグ側で失敗しても、次の「保存」で作り直さないために覚える。
+   * `editingGroup` は props なので、作成直後は null のままである。
+   */
+  const [createdGroupId, setCreatedGroupId] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -265,12 +272,18 @@ export function SubtotalGroupModal({
         })),
       }
 
-      const savedGroup = editingGroup
+      // **作った相手を覚える。** 作成のあとタグ側で失敗すると、モーダルは開いたまま
+      // 入力を残すので利用者はもう一度「保存」を押す。覚えていないと作成の枝を
+      // もう一度通り、**同名のグループがもう1つできて最初の1つはタグの付かないまま
+      // 残る**（docs/branch-review-findings.md #14）。
+      const existingGroupId = editingGroup?.id ?? createdGroupId
+      const savedGroup = existingGroupId
         ? await updateSubtotalGroup.mutateAsync({
-            subtotalGroupId: editingGroup.id,
+            subtotalGroupId: existingGroupId,
             data: groupData,
           })
         : await createSubtotalGroup.mutateAsync(groupData)
+      setCreatedGroupId(savedGroup.id)
 
       // タグは他の紐付けと同じく、タグ名から findOrCreate して置換方式で保存する
       const tagIds: string[] = []

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { TagIcon, XIcon } from "lucide-react"
-import React, { useCallback, useState } from "react"
+import React, { useCallback, useRef, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -44,6 +44,13 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
   const [examDate, setExamDate] = useState<Date | null>(null)
   const [description, setDescription] = useState("")
   const [tagTexts, setTagTexts] = useState<string[]>([])
+  /**
+   * この窓で作った試験。タグ側で失敗したあとの再試行で、作り直さないために覚える。
+   * 描画に使わないので ref（state にすると保存のたびに描き直される）。
+   */
+  const createdExamRef = useRef<Awaited<
+    ReturnType<typeof createExam.mutateAsync>
+  > | null>(null)
   const [currentTagInput, setCurrentTagInput] = useState("")
   const [showSuggestions, setShowSuggestions] = useState(false)
   // このコンポーネントは親が条件付きでマウントする＝常に開いた状態
@@ -61,11 +68,17 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
       return
     }
     try {
-      const createdExam = await createExam.mutateAsync({
-        examName: examName.trim(),
-        examDate: examDate,
-        description: description.trim() || undefined,
-      })
+      // **作った試験を覚える。** タグ側で失敗しても閉じずに入力を残すので、
+      // 覚えていないと次の「保存」で**同じ試験がもう1つできる**
+      // （docs/branch-review-findings.md #14 と同じ形）
+      const createdExam =
+        createdExamRef.current ??
+        (await createExam.mutateAsync({
+          examName: examName.trim(),
+          examDate: examDate,
+          description: description.trim() || undefined,
+        }))
+      createdExamRef.current = createdExam
 
       // タグを保存
       if (tagTexts.length > 0 && createdExam?.id) {
