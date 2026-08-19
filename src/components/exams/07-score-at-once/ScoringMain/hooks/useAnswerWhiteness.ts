@@ -31,12 +31,26 @@ const EMPTY_WHITENESS: WhitenessByAnswerId = new Map()
 
 /** 算出済みか判定するための、対象ページの答案画像の顔ぶれ */
 function buildMeasurementSignature(
-  answerImages: StudentAnswerImageWithExamStudents[]
+  answerImages: StudentAnswerImageWithExamStudents[],
+  regions: WhitenessTargetRegion[]
 ): string {
-  return answerImages
+  const images = answerImages
     .map((answerImage) => `${answerImage.id}:${answerImage.imagePath ?? ""}`)
     .sort()
     .join("|")
+  // **矩形も鍵に入れる。** 白さは「どの画像を、どの枠で測ったか」で決まる。答案の
+  // 顔ぶれだけを見ていると、02 で解答欄を動かしたあと 07 へ戻っても測り直さず、
+  // **古い矩形で測った値が使われ続ける**（足した領域は結果の map に無いので黙って
+  // 落ちる）。この鍵は試験のまとまりの外にあり、どの書き込みでも無効化されない
+  // ので、入力を鍵で表しきる以外に手が無い（docs/branch-review-findings.md #11）。
+  const rects = regions
+    .map(
+      (region) =>
+        `${region.cropRegionId}:${region.x},${region.y},${region.width},${region.height}`
+    )
+    .sort()
+    .join("|")
+  return `${images}#${rects}`
 }
 
 /**
@@ -82,7 +96,7 @@ export function useAnswerWhiteness({
     [cropRegions, currentExamPageId]
   )
 
-  const signature = buildMeasurementSignature(pageAnswerImages)
+  const signature = buildMeasurementSignature(pageAnswerImages, pageRegions)
 
   const { data: measurement } = useQuery({
     ...answerWhitenessQuery(currentExamPageId ?? "", signature, {

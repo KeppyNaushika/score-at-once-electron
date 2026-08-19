@@ -47,16 +47,21 @@ export const cropRegionAssignmentsQuery = (examId: string, userId: string) =>
  * 並び順を白さ順にするために、そのページの全答案 × 全採点領域をまとめて測る。
  * 画像1枚のデコードが支配的なので、領域を増やす費用はほぼ無い。
  *
- * キーの `answerImagesSignature` は答案の顔ぶれ（id と画像パス）。答案が増減
- * すれば測り直し、設問を切り替えただけなら測り直さない。
+ * キーの `measurementSignature` は**測るもの全部**（答案の id と画像パス、採点領域の
+ * id と矩形）。答案が増減しても、02 で解答欄を動かしても測り直す。設問を切り替えた
+ * だけなら測り直さない。
+ *
+ * **この鍵は `scopeKeys.exam` の外にある。** 白さは画像と矩形だけで決まり採点結果に
+ * 依存しないので、試験への書き込みで測り直す必要が無い（画像を読み直すので重い）。
+ * そのぶん**入力を鍵で表しきる**責任がこちらにある。
  */
 export const answerWhitenessQuery = (
   examPageId: string,
-  answerImagesSignature: string,
+  measurementSignature: string,
   input: Parameters<typeof window.electronAPI.measureAnswerWhiteness>[0]
 ) =>
   queryOptions({
-    queryKey: ["answerWhiteness", examPageId, answerImagesSignature] as const,
+    queryKey: ["answerWhiteness", examPageId, measurementSignature] as const,
     queryFn: () => window.electronAPI.measureAnswerWhiteness(input),
   })
 
