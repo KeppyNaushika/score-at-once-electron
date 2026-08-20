@@ -31,12 +31,9 @@ export interface AnswerIndividualViewProps {
   currentCropRegion?: QuestionAnswerRegionRow | null // 現在の設問領域
   cropRegions?: QuestionAnswerRegionRow[] // 全採点領域（全設問マーク描画用）
 
-  // QuestionScore自動作成用のコンテキスト情報
+  // 手書き注釈の行き先（答案＋設問＋採点者）を組み立てるための文脈
   currentExamStudentId?: string
   currentUserId?: string
-
-  // QuestionScore自動作成後のコールバック（リストの更新用）
-  onQuestionScoreCreated?: () => void
 
   // Individual表示固有設定
   studentAnswerImages?: StudentAnswerImageWithExamStudents[] // 全答案データ

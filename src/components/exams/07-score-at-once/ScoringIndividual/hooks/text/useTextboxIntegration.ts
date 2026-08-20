@@ -7,6 +7,7 @@ import { useCallback, useState } from "react"
 
 import type {
   AnchorDirection,
+  AnnotationTarget,
   DrawingAnnotation,
 } from "@/types/drawingAnnotation.types"
 import { newDrawingAnnotation } from "@/types/drawingAnnotation.types"
@@ -14,8 +15,8 @@ import { newDrawingAnnotation } from "@/types/drawingAnnotation.types"
 import { DEFAULT_DRAWING_SETTINGS } from "../../constants/drawingConstants"
 
 interface UseTextboxIntegrationProps {
-  /** 作成先の採点データ。無ければ行を作れないのでテキストを確定できない */
-  questionScoreId: string | null
+  /** 注釈の行き先。決まっていなければ保存先が無いのでテキストを確定できない */
+  annotationTarget: AnnotationTarget | null
   /** 現在の描画要素配列 */
   drawingElements: DrawingAnnotation[]
   /** 描画要素更新関数（直接state更新用、非推奨） */
@@ -66,7 +67,7 @@ interface UseTextboxIntegrationReturn {
 
 /** 個別採点画面でテキストボックスの追加・編集・座標変換を統合するフック */
 export function useTextboxIntegration({
-  questionScoreId,
+  annotationTarget,
   drawingElements,
   updateDrawingElements,
   addDrawingElement,
@@ -162,10 +163,9 @@ export function useTextboxIntegration({
         })
         updateDrawingElements(updatedElements)
       }
-    } else if (questionScoreId) {
+    } else if (annotationTarget) {
       // 新規要素の追加
       const newElement = newDrawingAnnotation({
-        questionScoreId,
         type: "text",
         x: currentPosition.x,
         y: currentPosition.y,
@@ -193,7 +193,7 @@ export function useTextboxIntegration({
     currentFontSize,
     currentAnchorDirection,
     editingElementId,
-    questionScoreId,
+    annotationTarget,
     drawingElements,
     updateDrawingElements,
     addDrawingElement,

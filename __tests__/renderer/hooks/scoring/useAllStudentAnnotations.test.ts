@@ -60,8 +60,8 @@ describe("useAllStudentAnnotations", () => {
   describe("currentExamStudentId変更（生徒切り替え）", () => {
     it("生徒変更で全設問のアノテーションを再取得する", async () => {
       const annotations = [
-        createMockAnnotation({ id: "a1", questionScoreId: "qs-1" }),
-        createMockAnnotation({ id: "a2", questionScoreId: "qs-2" }),
+        createMockAnnotation({ id: "a1" }),
+        createMockAnnotation({ id: "a2" }),
       ]
       mockAPI.getByExamStudent.mockResolvedValue(annotations)
 

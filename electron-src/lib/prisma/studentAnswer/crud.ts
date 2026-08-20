@@ -363,7 +363,9 @@ export async function getStudentAnswersDataset(examId: string) {
         // 自分のローカル DB へ書き、NAS への反映は行レベルマージ（LWW）なので、
         // 2台が同時にページを追加すると同じ番号の行が別 id で並ぶ。これは
         // `@@unique([examId, pageNumber])` では防げない（各端末では制約が満たされ、
-        // 衝突はマージ時に現れる。id 以外の unique は同期違反）。
+        // 衝突はマージ時に現れる）。そもそも序数は端末をまたいで独立に同じ値が
+        // 振られるので unique にできない — 値が一致することが「同じもの」を意味せず、
+        // 畳むと別物が1つに潰れる。規約が「uuid 以外を unique にしない」なのはこのため。
         //
         // 同定は全経路で id なので重複自体は害にならないが、06 の自動配置だけは
         // この配列の**順序**でファイルを割り当てる（useTableDataGeneration.ts）。
@@ -419,9 +421,10 @@ export async function getStudentAnswersDataset(examId: string) {
 /**
  * 「実際に採点された」QuestionScore の条件。
  *
- * `scoringInitializer` が全マスに status="unscored" の行を先行作成するため、行の有無を
- * そのまま「採点済み」と扱うと常に true になる。判定と削除で定義がずれないよう定数にする
- * （削除側は unscored の初期化行も含めて全て消す＝この条件は使わない）。
+ * `status="unscored"` の行は採点の意思表示ではない（注釈をぶら下げるために用意される
+ * ことがあるほか、旧版が表示のたびに量産した空行も残っている）。行の有無をそのまま
+ * 「採点済み」と扱うと常に true になるので、判定と削除で定義がずれないよう定数にする
+ * （削除側は unscored の行も含めて全て消す＝この条件は使わない）。
  */
 const SCORED_QUESTION_SCORE_FILTER = {
   OR: [{ status: { not: "unscored" } }, { partialScore: { not: null } }],

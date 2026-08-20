@@ -81,7 +81,7 @@ describe("resolveEffectiveScores - 提案のみ", () => {
   })
 
   it("unscored行は採点済み行があれば無視される", () => {
-    // scoringInitializer がデフォルトユーザー名義で量産する初期行を想定
+    // 注釈をぶら下げるために用意された行（採点の意思表示ではない）を想定
     const initRow = score({ status: "unscored" })
     const scored = score({ status: "correct" })
     const { resolved, conflicts } = resolveEffectiveScores([initRow, scored])

@@ -7,6 +7,7 @@ import { useCallback, useState } from "react"
 import { useCursor } from "@/components/exams/07-score-at-once/ScoringIndividual/hooks/utils/useCursor"
 import type { SelectionRectangle } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type {
+  AnnotationTarget,
   DrawingAnnotation,
   LineStyle,
 } from "@/types/drawingAnnotation.types"
@@ -23,8 +24,8 @@ interface UseCanvasInteractionProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>
   /** 現在のツール */
   currentTool: string
-  /** 作成先の採点データ（新規アノテーションの行に載せる） */
-  questionScoreId: string | null
+  /** 注釈の行き先（答案＋設問＋採点者）。決まっていなければ新規描画を始めない */
+  annotationTarget: AnnotationTarget | null
   /** 描画要素配列 */
   drawingElements: DrawingAnnotation[]
   /** 選択中の要素ID配列 */
@@ -146,7 +147,7 @@ interface UseCanvasInteractionReturn {
 export function useCanvasInteraction({
   canvasRef,
   currentTool,
-  questionScoreId,
+  annotationTarget,
   drawingElements,
   selectedElementIds,
   isDraggingElement,
@@ -205,7 +206,7 @@ export function useCanvasInteraction({
     handleNewDrawingMouseUp,
   } = useDrawingCreation({
     currentTool,
-    questionScoreId,
+    annotationTarget,
     isDrawing,
     drawingElements,
     isShiftPressed,

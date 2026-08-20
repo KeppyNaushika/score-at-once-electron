@@ -5,7 +5,10 @@
 import { useCallback, useMemo } from "react"
 
 import type { ScoringData } from "@/components/exams/07-score-at-once/types"
-import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
+import type {
+  AnnotationTarget,
+  DrawingAnnotation,
+} from "@/types/drawingAnnotation.types"
 
 import { useTextboxIntegration } from "../text/useTextboxIntegration"
 
@@ -13,8 +16,8 @@ import { useTextboxIntegration } from "../text/useTextboxIntegration"
 interface UseCanvasIntegrationParams {
   /** 読み込み済み画像配列 */
   loadedImages: HTMLImageElement[]
-  /** 作成先の採点データ（新規アノテーションの行に載せる） */
-  questionScoreId: string | null
+  /** 注釈の行き先（答案＋設問＋採点者）。置き場所の採点行は保存時に main が用意する */
+  annotationTarget: AnnotationTarget | null
   /** 描画要素配列 */
   drawingElements: DrawingAnnotation[]
   /** 描画要素設定関数 */
@@ -63,7 +66,7 @@ interface UseCanvasIntegrationReturn {
  */
 export function useCanvasIntegration({
   loadedImages,
-  questionScoreId,
+  annotationTarget,
   drawingElements,
   setDrawingElements,
   addDrawingElement,
@@ -88,7 +91,7 @@ export function useCanvasIntegration({
 
   // テキストボックス統合フック
   const textboxIntegration = useTextboxIntegration({
-    questionScoreId,
+    annotationTarget,
     drawingElements,
     updateDrawingElements: setDrawingElements,
     addDrawingElement,

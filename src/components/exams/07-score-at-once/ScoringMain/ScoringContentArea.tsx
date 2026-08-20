@@ -35,7 +35,6 @@ interface ScoringContentAreaProps {
   studentAnswerImages?: StudentAnswerImageWithExamStudents[]
   currentExamStudentId?: string
   currentUserId?: string
-  onQuestionScoreCreated?: () => void
   onAnnotationChanged?: () => void
   annotationRefreshKey?: number
   gridAnnotationRefreshKey?: number
@@ -73,7 +72,6 @@ export function ScoringContentArea({
   studentAnswerImages,
   currentExamStudentId,
   currentUserId,
-  onQuestionScoreCreated,
   onAnnotationChanged,
   annotationRefreshKey,
   gridAnnotationRefreshKey,
@@ -243,7 +241,6 @@ export function ScoringContentArea({
       studentAnswerImages={studentAnswerImages}
       currentExamStudentId={currentExamStudentId}
       currentUserId={currentUserId}
-      onQuestionScoreCreated={onQuestionScoreCreated}
       onAnnotationChanged={onAnnotationChanged}
       annotationRefreshKey={annotationRefreshKey}
       // overlay

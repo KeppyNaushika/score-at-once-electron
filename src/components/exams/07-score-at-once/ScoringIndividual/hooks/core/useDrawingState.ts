@@ -16,6 +16,7 @@ import type {
   SelectionRectangle,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type {
+  AnnotationTarget,
   DrawingAnnotation,
   LineStyle,
 } from "@/types/drawingAnnotation.types"
@@ -28,9 +29,12 @@ import {
 
 /**
  * 拡張された描画状態フック（データベース統合対応）
+ *
+ * `annotationTarget` は注釈の行き先（答案＋設問＋採点者）。**置き場所の採点行は
+ * 持たない。** 保存のときに main が用意するので、キャンバスは描くことだけを担う。
  */
 export function useDrawingState(
-  questionScoreId?: string | null,
+  annotationTarget?: AnnotationTarget | null,
   enablePersistence: boolean = true,
   onAnnotationChanged?: () => void
 ): DrawingState &
@@ -128,8 +132,8 @@ export function useDrawingState(
     enablePersistence ? persistenceCallbacks : undefined
   )
 
-  // questionScoreIdが変更された時にDBから自動読み込み
-  const prevQuestionScoreIdRef = useRef<string | null | undefined>(undefined)
+  // 行き先が変わった時にDBから自動読み込み
+  const prevTargetRef = useRef<AnnotationTarget | null | undefined>(undefined)
 
   // ロードバージョンカウンター：非同期ロードの競合を防止
   // 各ロード開始時にインクリメントし、完了時にバージョンが最新かチェック
@@ -138,9 +142,18 @@ export function useDrawingState(
 
   // 設問変更時の同期的クリア（useLayoutEffectで描画前に確実にクリア）
   // useLayoutEffectは描画effectの前に実行されるため、古いデータで描画されることを防ぐ
+  //
+  // 行き先は3つのidの組なので、**中身で比べる**。入れ物の同一性で比べると、取り直しの
+  // たびに新しい入れ物が来て（＝中身は同じでも）読み込みが走り、描いたばかりの注釈が
+  // 一瞬消える
   useLayoutEffect(() => {
-    if (prevQuestionScoreIdRef.current !== questionScoreId) {
-      prevQuestionScoreIdRef.current = questionScoreId
+    const previousTarget = prevTargetRef.current
+    const isSameTarget =
+      previousTarget?.examStudentId === annotationTarget?.examStudentId &&
+      previousTarget?.cropRegionId === annotationTarget?.cropRegionId &&
+      previousTarget?.userId === annotationTarget?.userId
+    if (previousTarget === undefined || !isSameTarget) {
+      prevTargetRef.current = annotationTarget ?? null
 
       // 設問変更時は即座にdrawingElementsと選択をクリア
       // useLayoutEffectにより、描画effectが実行される前にクリアが完了する
@@ -148,25 +161,24 @@ export function useDrawingState(
       setSelectedElementIds([])
 
       // DB読み込みは非同期 → ロード完了時にバージョンチェックで最新のみ適用
-      if (enablePersistence && questionScoreId) {
+      if (enablePersistence && annotationTarget) {
         const thisVersion = ++loadVersionRef.current
-        loadAnnotations(questionScoreId).then((annotations) => {
+        loadAnnotations(annotationTarget).then((annotations) => {
           // stale loadを破棄：より新しいロードが開始されていたら無視
           if (thisVersion !== loadVersionRef.current) return
           setDrawingElements(annotations)
         })
       }
     }
-  }, [enablePersistence, questionScoreId, loadAnnotations])
+  }, [enablePersistence, annotationTarget, loadAnnotations])
 
   // 描画要素操作（データベース統合対応）
   const addDrawingElement = useCallback(
     async (element: DrawingAnnotation) => {
-      // questionScoreIdがない場合は追加できない
-      // （QuestionScoreは設問表示時に自動作成されるはず）
-      if (enablePersistence && !questionScoreId) {
+      // 行き先が決まっていなければ保存先が無い（答案・設問・採点者のどれかが未確定）
+      if (enablePersistence && !annotationTarget) {
         console.error(
-          "描画要素の追加には QuestionScore が必要です。設問表示時に自動作成されるまでお待ちください。"
+          "描画要素の追加には行き先（答案・設問・採点者）が必要です。"
         )
         return
       }
@@ -174,10 +186,10 @@ export function useDrawingState(
       // ローカル状態を即座に更新
       setDrawingElements((prev) => [...prev, element])
 
-      // データベースへの保存（バックグラウンド）
-      if (enablePersistence && questionScoreId) {
+      // データベースへの保存（バックグラウンド）。置き場所の採点行はここで初めて要る
+      if (enablePersistence && annotationTarget) {
         try {
-          await saveElement(element)
+          await saveElement(annotationTarget, element)
         } catch (error) {
           console.error("描画要素保存エラー:", error)
           // 保存に失敗した場合、ローカル状態をロールバック
@@ -189,7 +201,7 @@ export function useDrawingState(
         }
       }
     },
-    [enablePersistence, questionScoreId, saveElement]
+    [enablePersistence, annotationTarget, saveElement]
   )
 
   const updateDrawingElement = useCallback(
@@ -209,7 +221,7 @@ export function useDrawingState(
       })
 
       // データベース更新（バックグラウンド）
-      // 既存アノテーションの更新はアノテーションIDで行うためquestionScoreIdは不要
+      // 既存アノテーションの更新はアノテーションIDで行うため行き先は不要
       if (enablePersistence && previousElement !== null) {
         const elementToUpdate: DrawingAnnotation = previousElement
         try {
@@ -255,7 +267,7 @@ export function useDrawingState(
       })
 
       // データベース更新（バックグラウンド、各要素を個別に更新）
-      // 既存アノテーションの更新はアノテーションIDで行うためquestionScoreIdは不要
+      // 既存アノテーションの更新はアノテーションIDで行うため行き先は不要
       if (enablePersistence) {
         for (const { id, updates: elementUpdates } of updates) {
           const previousElement = previousElements.get(id)
@@ -289,7 +301,7 @@ export function useDrawingState(
       )
 
       // データベースから削除（バックグラウンド）
-      // 既存アノテーションの削除はアノテーションIDで行うためquestionScoreIdは不要
+      // 既存アノテーションの削除はアノテーションIDで行うため行き先は不要
       if (enablePersistence) {
         try {
           await deleteElement(id)
@@ -403,41 +415,41 @@ export function useDrawingState(
     setSelectionRectangle(null)
 
     // データベースからも全削除（バックグラウンド）
-    if (enablePersistence && questionScoreId) {
+    if (enablePersistence && annotationTarget) {
       try {
         // データベースをクリアする代わりに同期して空配列を送信
-        await syncElements([], questionScoreId)
+        await syncElements([], annotationTarget)
       } catch (error) {
         console.error("全描画クリアエラー:", error)
       }
     }
-  }, [enablePersistence, questionScoreId, syncElements])
+  }, [enablePersistence, annotationTarget, syncElements])
 
   // データベース同期関数
   const syncWithDatabase = useCallback(async () => {
-    if (!enablePersistence || !questionScoreId) return
+    if (!enablePersistence || !annotationTarget) return
 
     try {
-      await syncElements(drawingElements, questionScoreId)
+      await syncElements(drawingElements, annotationTarget)
     } catch (error) {
       console.error("データベース同期エラー:", error)
     }
-  }, [enablePersistence, questionScoreId, drawingElements, syncElements])
+  }, [enablePersistence, annotationTarget, drawingElements, syncElements])
 
   // データベースから読み込み
   const loadFromDatabase = useCallback(async () => {
-    if (!enablePersistence || !questionScoreId) return
+    if (!enablePersistence || !annotationTarget) return
 
     try {
       const thisVersion = ++loadVersionRef.current
-      const annotations = await loadAnnotations(questionScoreId)
+      const annotations = await loadAnnotations(annotationTarget)
       // stale loadを破棄
       if (thisVersion !== loadVersionRef.current) return
       setDrawingElements(annotations)
     } catch (error) {
       console.error("データベース読み込みエラー:", error)
     }
-  }, [enablePersistence, questionScoreId, loadAnnotations])
+  }, [enablePersistence, annotationTarget, loadAnnotations])
 
   return {
     // State

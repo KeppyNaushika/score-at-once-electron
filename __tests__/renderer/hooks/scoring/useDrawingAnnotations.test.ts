@@ -20,6 +20,7 @@ import {
   cleanupMockDrawingAPI,
   createMockAnnotation,
   createMockDrawingAPI,
+  MOCK_ANNOTATION_TARGET,
   type MockDrawingAPI,
 } from "./helpers/mockDrawingAPI"
 
@@ -36,7 +37,6 @@ function makeElement(
 ): DrawingAnnotation {
   return createMockAnnotation({
     id: `el-${crypto.randomUUID().slice(0, 8)}`,
-    questionScoreId: "qs-1",
     ...overrides,
   })
 }
@@ -57,12 +57,12 @@ describe("useDrawingAnnotations", () => {
   // 1. loadAnnotations — 設問変更時のDB読み込み
   // =========================================================================
   describe("loadAnnotations（設問変更時のDB読み込み）", () => {
-    it("questionScoreIdを指定してアノテーションを読み込む", async () => {
+    it("行き先を指定してアノテーションを読み込む", async () => {
       const annotations = [
         createMockAnnotation({ id: "a1" }),
         createMockAnnotation({ id: "a2" }),
       ]
-      mockAPI.getByQuestionScore.mockResolvedValue(annotations)
+      mockAPI.getByTarget.mockResolvedValue(annotations)
 
       const { result } = renderHook(() => useDrawingAnnotations(), {
         wrapper: createQueryWrapper(),
@@ -70,16 +70,19 @@ describe("useDrawingAnnotations", () => {
 
       let loaded: DrawingAnnotation[] = []
       await act(async () => {
-        loaded = await result.current.loadAnnotations("qs-1")
+        loaded = await result.current.loadAnnotations(MOCK_ANNOTATION_TARGET)
       })
 
-      expect(mockAPI.getByQuestionScore).toHaveBeenCalledWith("qs-1", undefined)
+      expect(mockAPI.getByTarget).toHaveBeenCalledWith(
+        MOCK_ANNOTATION_TARGET,
+        undefined
+      )
       expect(loaded).toHaveLength(2)
       expect(loaded[0].id).toBe("a1")
     })
 
     it("typeフィルタ付きで読み込む", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue([
+      mockAPI.getByTarget.mockResolvedValue([
         createMockAnnotation({ type: "line" }),
       ])
 
@@ -89,22 +92,30 @@ describe("useDrawingAnnotations", () => {
 
       let loaded: DrawingAnnotation[] = []
       await act(async () => {
-        loaded = await result.current.loadAnnotations("qs-1", "line")
+        loaded = await result.current.loadAnnotations(
+          MOCK_ANNOTATION_TARGET,
+          "line"
+        )
       })
 
-      expect(mockAPI.getByQuestionScore).toHaveBeenCalledWith("qs-1", "line")
+      expect(mockAPI.getByTarget).toHaveBeenCalledWith(
+        MOCK_ANNOTATION_TARGET,
+        "line"
+      )
       expect(loaded[0].type).toBe("line")
     })
 
     it("読み込み失敗時にerror状態が設定される", async () => {
-      mockAPI.getByQuestionScore.mockRejectedValue(new Error("読み込みエラー"))
+      mockAPI.getByTarget.mockRejectedValue(new Error("読み込みエラー"))
 
       const { result } = renderHook(() => useDrawingAnnotations(), {
         wrapper: createQueryWrapper(),
       })
 
       await act(async () => {
-        const data = await result.current.loadAnnotations("qs-1")
+        const data = await result.current.loadAnnotations(
+          MOCK_ANNOTATION_TARGET
+        )
         expect(data).toEqual([])
       })
 
@@ -123,7 +134,10 @@ describe("useDrawingAnnotations", () => {
 
       const element = makeElement({ id: "new-1", text: "新規テキスト" })
       await act(async () => {
-        const saved = await result.current.saveElement(element)
+        const saved = await result.current.saveElement(
+          MOCK_ANNOTATION_TARGET,
+          element
+        )
         expect(saved).not.toBeNull()
       })
 
@@ -141,24 +155,26 @@ describe("useDrawingAnnotations", () => {
       })
 
       await act(async () => {
-        await result.current.saveElement(makeElement())
+        await result.current.saveElement(MOCK_ANNOTATION_TARGET, makeElement())
       })
 
       expect(onCreated).toHaveBeenCalledTimes(1)
     })
 
-    it("作成データに採点者を載せない（持ち主は親の採点データが決める）", async () => {
+    it("作成は行き先と行を分けて渡す（採点者は行き先が持つ）", async () => {
       const { result } = renderHook(() => useDrawingAnnotations(), {
         wrapper: createQueryWrapper(),
       })
 
       await act(async () => {
-        await result.current.saveElement(makeElement())
+        await result.current.saveElement(MOCK_ANNOTATION_TARGET, makeElement())
       })
 
-      const [createData] = mockAPI.create.mock.calls[0]
-      expect(createData.questionScoreId).toBe("qs-1")
-      expect("userId" in createData).toBe(false)
+      const [target, annotation] = mockAPI.create.mock.calls[0]
+      expect(target).toEqual(MOCK_ANNOTATION_TARGET)
+      // 注釈は置き場所も採点者も持たない
+      expect("questionScoreId" in annotation).toBe(false)
+      expect("userId" in annotation).toBe(false)
     })
 
     it("API失敗時にnullを返す", async () => {
@@ -169,7 +185,10 @@ describe("useDrawingAnnotations", () => {
       })
 
       await act(async () => {
-        const saved = await result.current.saveElement(makeElement())
+        const saved = await result.current.saveElement(
+          MOCK_ANNOTATION_TARGET,
+          makeElement()
+        )
         expect(saved).toBeNull()
       })
 
@@ -201,7 +220,7 @@ describe("useDrawingAnnotations", () => {
 
     it("コールバックonAnnotationUpdatedが呼ばれる", async () => {
       const onUpdated = vi.fn()
-      mockAPI.getByQuestionScore.mockResolvedValue([
+      mockAPI.getByTarget.mockResolvedValue([
         createMockAnnotation({ id: "a1" }),
       ])
       mockAPI.update.mockResolvedValue(createMockAnnotation({ id: "a1" }))
@@ -211,7 +230,7 @@ describe("useDrawingAnnotations", () => {
         { wrapper: createQueryWrapper() }
       )
       await act(async () => {
-        await result.current.loadAnnotations("qs-1")
+        await result.current.loadAnnotations(MOCK_ANNOTATION_TARGET)
       })
       await act(async () => {
         await result.current.updateElement(makeElement({ id: "a1" }))
@@ -240,7 +259,7 @@ describe("useDrawingAnnotations", () => {
 
     it("コールバックonAnnotationDeletedが呼ばれる", async () => {
       const onDeleted = vi.fn()
-      mockAPI.getByQuestionScore.mockResolvedValue([
+      mockAPI.getByTarget.mockResolvedValue([
         createMockAnnotation({ id: "a1" }),
       ])
 
@@ -249,7 +268,7 @@ describe("useDrawingAnnotations", () => {
         { wrapper: createQueryWrapper() }
       )
       await act(async () => {
-        await result.current.loadAnnotations("qs-1")
+        await result.current.loadAnnotations(MOCK_ANNOTATION_TARGET)
       })
       await act(async () => {
         await result.current.deleteElement("a1")
@@ -264,7 +283,7 @@ describe("useDrawingAnnotations", () => {
   // =========================================================================
   describe("syncElements（全要素同期）", () => {
     it("空配列で同期するとannotationsがクリアされる", async () => {
-      mockAPI.getByQuestionScore.mockResolvedValue([
+      mockAPI.getByTarget.mockResolvedValue([
         createMockAnnotation({ id: "a1" }),
       ])
       mockAPI.batchCreate.mockResolvedValue([])
@@ -273,13 +292,13 @@ describe("useDrawingAnnotations", () => {
         wrapper: createQueryWrapper(),
       })
       await act(async () => {
-        await result.current.loadAnnotations("qs-1")
+        await result.current.loadAnnotations(MOCK_ANNOTATION_TARGET)
       })
       await act(async () => {
-        await result.current.syncElements([], "qs-1")
+        await result.current.syncElements([], MOCK_ANNOTATION_TARGET)
       })
 
-      expect(mockAPI.deleteByQuestionScore).toHaveBeenCalled()
+      expect(mockAPI.deleteByTarget).toHaveBeenCalled()
     })
 
     it("新しい要素で同期すると作成されたアノテーション配列を返す", async () => {
@@ -295,7 +314,7 @@ describe("useDrawingAnnotations", () => {
       await act(async () => {
         const synced = await result.current.syncElements(
           [makeElement({ id: "new-1" }), makeElement({ id: "new-2" })],
-          "qs-1"
+          MOCK_ANNOTATION_TARGET
         )
         expect(synced).toHaveLength(2)
       })
@@ -308,7 +327,7 @@ describe("useDrawingAnnotations", () => {
   describe("isLoading状態", () => {
     it("読み込み中にisLoadingがtrueになる", async () => {
       let resolvePromise: (value: unknown) => void
-      mockAPI.getByQuestionScore.mockReturnValue(
+      mockAPI.getByTarget.mockReturnValue(
         new Promise((resolve) => {
           resolvePromise = resolve
         })
@@ -321,7 +340,7 @@ describe("useDrawingAnnotations", () => {
       // 読み込み開始
       let loadPromise: Promise<DrawingAnnotation[]>
       act(() => {
-        loadPromise = result.current.loadAnnotations("qs-1")
+        loadPromise = result.current.loadAnnotations(MOCK_ANNOTATION_TARGET)
       })
 
       expect(result.current.isLoading).toBe(true)

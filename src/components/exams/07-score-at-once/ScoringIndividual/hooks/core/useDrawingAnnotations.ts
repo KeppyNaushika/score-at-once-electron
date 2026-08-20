@@ -7,13 +7,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
-  annotationsByQuestionScoreQuery,
+  annotationsByTargetQuery,
   createAnnotationMutation,
   deleteAnnotationMutation,
-  replaceQuestionScoreAnnotationsMutation,
+  replaceTargetAnnotationsMutation,
   updateAnnotationMutation,
 } from "@/queries/drawing"
 import type {
+  AnnotationTarget,
   DrawingAnnotation,
   DrawingType,
 } from "@/types/drawingAnnotation.types"
@@ -42,10 +43,13 @@ interface UseDrawingAnnotationsReturn {
 
   // CRUD操作
   loadAnnotations: (
-    questionScoreId: string,
+    target: AnnotationTarget,
     type?: DrawingType
   ) => Promise<DrawingAnnotation[]>
-  saveElement: (element: DrawingAnnotation) => Promise<DrawingAnnotation | null>
+  saveElement: (
+    target: AnnotationTarget,
+    element: DrawingAnnotation
+  ) => Promise<DrawingAnnotation | null>
   updateElement: (
     element: DrawingAnnotation
   ) => Promise<DrawingAnnotation | null>
@@ -54,7 +58,7 @@ interface UseDrawingAnnotationsReturn {
   // バッチ操作
   syncElements: (
     elements: DrawingAnnotation[],
-    questionScoreId: string
+    target: AnnotationTarget
   ) => Promise<DrawingAnnotation[]>
 }
 
@@ -71,14 +75,12 @@ export function useDrawingAnnotations(
   const createAnnotation = useMutation(createAnnotationMutation())
   const updateAnnotation = useMutation(updateAnnotationMutation())
   const deleteAnnotation = useMutation(deleteAnnotationMutation())
-  const replaceOfQuestionScore = useMutation(
-    replaceQuestionScoreAnnotationsMutation()
-  )
+  const replaceOfTarget = useMutation(replaceTargetAnnotationsMutation())
 
   const { mutateAsync: createOne } = createAnnotation
   const { mutateAsync: updateOne } = updateAnnotation
   const { mutateAsync: deleteOne } = deleteAnnotation
-  const { mutateAsync: replaceAnnotations } = replaceOfQuestionScore
+  const { mutateAsync: replaceAnnotations } = replaceOfTarget
 
   // 参照
   const callbacksRef = useRef<DrawingPersistenceCallbacks>(callbacks || {})
@@ -103,7 +105,7 @@ export function useDrawingAnnotations(
     createAnnotation.isPending ||
     updateAnnotation.isPending ||
     deleteAnnotation.isPending ||
-    replaceOfQuestionScore.isPending
+    replaceOfTarget.isPending
 
   /**
    * アノテーション読み込み
@@ -116,16 +118,16 @@ export function useDrawingAnnotations(
    */
   const loadAnnotations = useCallback(
     async (
-      questionScoreId: string,
+      target: AnnotationTarget,
       type?: DrawingType
     ): Promise<DrawingAnnotation[]> => {
       setReading(true)
       setReadError(null)
       try {
-        // 採点者で絞る余地は無い。QuestionScore は「生徒×設問×採点者」で1行なので、
-        // この questionScoreId の注釈は全部同じ採点者のものである
+        // 採点者で絞る余地は無い。行き先に採点者が入っており、そこにぶら下がる注釈は
+        // 全部その採点者のものである。**行がまだ無ければ空で返る（作らない）**
         return await queryClient.fetchQuery(
-          annotationsByQuestionScoreQuery(questionScoreId, type)
+          annotationsByTargetQuery(target, type)
         )
       } catch (error) {
         console.error("アノテーション読み込みエラー:", error)
@@ -142,13 +144,18 @@ export function useDrawingAnnotations(
 
   /**
    * 描画要素保存（新規作成）
-   * 行をそのまま渡す。questionScoreId は行に載っている
+   *
+   * 行をそのまま渡し、置き場所は行き先（`target`）で伝える。採点行が要るかどうかは
+   * main が決める（描いただけの時点では行を作らない）。
    */
   const saveElement = useCallback(
-    async (element: DrawingAnnotation): Promise<DrawingAnnotation | null> => {
+    async (
+      target: AnnotationTarget,
+      element: DrawingAnnotation
+    ): Promise<DrawingAnnotation | null> => {
       try {
-        // 採点者は渡さない。注釈の持ち主は親 QuestionScore から決まる
-        const created = await createOne(element)
+        // 採点者は行き先が持つ。注釈の持ち主は親 QuestionScore から決まる
+        const created = await createOne({ target, annotation: element })
         callbacksRef.current.onAnnotationCreated?.(created)
         return created
       } catch {
@@ -195,19 +202,19 @@ export function useDrawingAnnotations(
   /**
    * 描画要素の同期（既存システムからデータベースへ）
    *
-   * 「今キャンバスに載っている要素をこの設問の注釈にする」という1つの意図なので、
-   * 消してから作る。questionScoreId は必須（事前に QuestionScore が要る）。
+   * 「今キャンバスに載っている要素をこの行き先の注釈にする」という1つの意図なので、
+   * 消してから作る。空で呼べば消すだけで終わる。
    */
   const syncElements = useCallback(
     async (
       elements: DrawingAnnotation[],
-      questionScoreId: string
+      target: AnnotationTarget
     ): Promise<DrawingAnnotation[]> => {
       try {
         // 消すのと作るのは**1つの書き込み**（`replace…`）。別々に積むと、
         // 消す方が失敗しても作る方が走って注釈が二重に載る
         return await replaceAnnotations({
-          questionScoreId,
+          target,
           annotations: elements,
         })
       } catch {
@@ -225,7 +232,7 @@ export function useDrawingAnnotations(
       createAnnotation.error?.message ??
       updateAnnotation.error?.message ??
       deleteAnnotation.error?.message ??
-      replaceOfQuestionScore.error?.message ??
+      replaceOfTarget.error?.message ??
       null,
 
     // CRUD操作

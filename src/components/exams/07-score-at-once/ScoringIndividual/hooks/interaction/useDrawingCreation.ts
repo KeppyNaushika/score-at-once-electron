@@ -6,6 +6,7 @@ import { useCallback, useRef } from "react"
 import { toast } from "sonner"
 
 import type {
+  AnnotationTarget,
   DrawingAnnotation,
   LineStyle,
 } from "@/types/drawingAnnotation.types"
@@ -15,8 +16,8 @@ import { newDrawingAnnotation } from "@/types/drawingAnnotation.types"
 interface UseDrawingCreationProps {
   /** 現在のツール */
   currentTool: string
-  /** 作成先の採点データ。無ければ行を作れないので新規描画を始めない */
-  questionScoreId: string | null
+  /** 注釈の行き先。決まっていなければ保存先が無いので新規描画を始めない */
+  annotationTarget: AnnotationTarget | null
   /** 描画中フラグ */
   isDrawing: boolean
   /** 描画要素配列 */
@@ -67,7 +68,7 @@ interface UseDrawingCreationReturn {
  */
 export function useDrawingCreation({
   currentTool,
-  questionScoreId,
+  annotationTarget,
   isDrawing,
   drawingElements,
   isShiftPressed,
@@ -166,18 +167,16 @@ export function useDrawingCreation({
    */
   const handleNewDrawingMouseDown = useCallback(
     (imageCoords: { x: number; y: number }): boolean => {
-      // 採点データが未作成のうちは行を作れない（設問表示時に自動作成される）。
+      // 答案・設問・採点者のどれかが決まっていないと、描いたものの行き先が無い。
       //
-      // 黙って弾かない。自動作成が失敗するとこの設問では以後ずっとどのツールも
-      // 反応しなくなり（描いても何も起きない）、画面からは「アプリが壊れた」としか
-      // 見えない。自動作成は設問を選び直したときに再試行されるので、待てば直るのでは
-      // なく何をすれば直るのかを言う。id を固定して、描くたびにトーストが積み上がる
-      // のは防ぐ。
-      if (!questionScoreId) {
-        toast.error(
-          "採点データを準備できていません。設問を選び直してください",
-          { id: "drawing-question-score-missing" }
-        )
+      // 黙って弾かない。どのツールも反応しなくなる（描いても何も起きない）状態は、
+      // 画面からは「アプリが壊れた」としか見えない。設問を選び直せば行き先は決まるので、
+      // 待てば直るのではなく何をすれば直るのかを言う。id を固定して、描くたびに
+      // トーストが積み上がるのは防ぐ。
+      if (!annotationTarget) {
+        toast.error("答案と設問が選ばれていません。設問を選び直してください", {
+          id: "drawing-target-missing",
+        })
         return false
       }
 
@@ -192,7 +191,6 @@ export function useDrawingCreation({
       // 線の新規作成
       if (currentTool === "line") {
         const newElement = newDrawingAnnotation({
-          questionScoreId,
           type: "line",
           x: imageCoords.x,
           y: imageCoords.y,
@@ -211,7 +209,6 @@ export function useDrawingCreation({
       // 矩形の新規作成
       if (currentTool === "rectangle") {
         const newElement = newDrawingAnnotation({
-          questionScoreId,
           type: "rectangle",
           x: imageCoords.x,
           y: imageCoords.y,
@@ -227,7 +224,6 @@ export function useDrawingCreation({
       // 楕円の新規作成
       if (currentTool === "ellipse") {
         const newElement = newDrawingAnnotation({
-          questionScoreId,
           type: "ellipse",
           x: imageCoords.x,
           y: imageCoords.y,
@@ -244,7 +240,7 @@ export function useDrawingCreation({
     },
     [
       currentTool,
-      questionScoreId,
+      annotationTarget,
       strokeColor,
       strokeWidth,
       lineStyle,

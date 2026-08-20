@@ -1,6 +1,5 @@
 "use client"
 
-import { useMutation } from "@tanstack/react-query"
 import {
   Circle,
   Eye,
@@ -13,7 +12,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import { toast } from "sonner"
 
-import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
 import {
   ContextMenu,
@@ -30,8 +28,10 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
-import { ensureQuestionScoreMutation } from "@/queries/scoring"
-import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
+import type {
+  AnnotationTarget,
+  AnnotationWithContext,
+} from "@/types/drawingAnnotation.types"
 
 import type {
   AddToTargetsResult,
@@ -50,7 +50,6 @@ interface AnnotationBrowserPanelProps {
   annotationRefreshKey?: number
   selectedScoringDataIds: string[]
   allScoringData: Array<{ id: string; examStudentId: string }>
-  onQuestionScoreCreated?: () => void
   /** ブラウザの+ボタンでアノテーション追加後のコールバック（キャンバスリロード用） */
   onAnnotationAddedFromBrowser?: () => void
   /** アノテーションの生徒・設問に移動 */
@@ -110,7 +109,6 @@ export function AnnotationBrowserPanel({
   annotationRefreshKey,
   selectedScoringDataIds,
   allScoringData,
-  onQuestionScoreCreated,
   onAnnotationAddedFromBrowser,
   onNavigateTo,
 }: AnnotationBrowserPanelProps) {
@@ -124,9 +122,6 @@ export function AnnotationBrowserPanel({
     toggleFavorite: onToggleFavorite,
     addToTargets: onAddToTargets,
   } = useAnnotationBrowser(examId)
-  const { mutateAsync: ensureQuestionScoreRow } = useMutation(
-    ensureQuestionScoreMutation(examId)
-  )
 
   // キャンバスで手書きが変わったら取り直す。合図が来たときだけ
   const prevRefreshKeyRef = useRef(annotationRefreshKey)
@@ -167,39 +162,6 @@ export function AnnotationBrowserPanel({
     )
   }, [displayItems])
 
-  // QuestionScoreを確保または取得する
-  const ensureQuestionScore = useCallback(
-    async (
-      examStudentId: string,
-      cropRegionId: string
-    ): Promise<string | null> => {
-      // 既存の採点行は、その設問（採点領域）の子として手元にある
-      const cropRegion = cropRegions.find(
-        (candidateCropRegion) => candidateCropRegion.id === cropRegionId
-      )
-      const existing = cropRegion
-        ? findQuestionScore(cropRegion, examStudentId, currentUserId ?? null)
-        : undefined
-      if (existing) return existing.id
-
-      // なければ作成
-      if (!currentUserId) return null
-      try {
-        const created = await ensureQuestionScoreRow({
-          cropRegionId,
-          examStudentId,
-          userId: currentUserId,
-        })
-        onQuestionScoreCreated?.()
-        return created.id
-      } catch {
-        // 失敗の通知は MutationCache の後始末が出す
-      }
-      return null
-    },
-    [cropRegions, currentUserId, ensureQuestionScoreRow, onQuestionScoreCreated]
-  )
-
   // 連打防止用フラグ
   const isAddingRef = useRef(false)
 
@@ -219,15 +181,16 @@ export function AnnotationBrowserPanel({
         if (gradingMode === "individual") {
           // 個別モード: 現在の生徒+設問に追加
           if (!currentExamStudentId || !currentCropRegionId) return
-          const qsId = await ensureQuestionScore(
-            currentExamStudentId,
-            currentCropRegionId
-          )
-          if (!qsId) return
 
           result = await onAddToTargets({
             sourceAnnotation: source,
-            targetQuestionScoreIds: [qsId],
+            targets: [
+              {
+                examStudentId: currentExamStudentId,
+                cropRegionId: currentCropRegionId,
+                userId: currentUserId,
+              },
+            ],
             targetCropRegionId: currentCropRegionId,
             sourceCropRegionId,
           })
@@ -236,31 +199,26 @@ export function AnnotationBrowserPanel({
           if (selectedScoringDataIds.length === 0 || !currentCropRegionId)
             return
 
-          // selectedScoringDataIdsからexamStudentIdをマッピング
-          const targetStudentIds = selectedScoringDataIds
+          // 行き先は「答案＋設問＋採点者」。採点行は無ければ保存のときに main が用意する
+          const targets: AnnotationTarget[] = selectedScoringDataIds
             .map((scoringDataId) => {
               const scoringData = allScoringData.find(
                 (candidate) => candidate.id === scoringDataId
               )
               return scoringData?.examStudentId
             })
-            .filter((id): id is string => !!id)
-
-          // 各生徒のQuestionScoreを確保
-          const targetQsIds: string[] = []
-          for (const examStudentId of targetStudentIds) {
-            const qsId = await ensureQuestionScore(
+            .filter((examStudentId) => examStudentId !== undefined)
+            .map((examStudentId) => ({
               examStudentId,
-              currentCropRegionId
-            )
-            if (qsId) targetQsIds.push(qsId)
-          }
+              cropRegionId: currentCropRegionId,
+              userId: currentUserId,
+            }))
 
-          if (targetQsIds.length === 0) return
+          if (targets.length === 0) return
 
           result = await onAddToTargets({
             sourceAnnotation: source,
-            targetQuestionScoreIds: targetQsIds,
+            targets,
             targetCropRegionId: currentCropRegionId,
             sourceCropRegionId,
           })
@@ -285,7 +243,6 @@ export function AnnotationBrowserPanel({
       gradingMode,
       selectedScoringDataIds,
       allScoringData,
-      ensureQuestionScore,
       onAddToTargets,
       onAnnotationAddedFromBrowser,
     ]

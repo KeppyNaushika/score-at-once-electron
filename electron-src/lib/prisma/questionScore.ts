@@ -163,11 +163,13 @@ export interface EnsureQuestionScoreData {
  * 未採点として読まれている（採点画面・確定リゾルバ・成績算出・出力の全経路。
  * docs/branch-review-findings.md #2）。
  *
+ * **呼ぶのは注釈の保存だけ**（`createDrawingAnnotation`）。IPC の口は持たない。
+ * renderer から呼べるようにすると「表示したら書き込む」に戻り、設問をめくるだけで
+ * 空行が量産される（段階21 でその経路を畳んだ）。
+ *
  * **作るときも監査ログを残さない。** 利用者が行った操作ではなく、`unscored` は
  * 確定リゾルバが「採点の意思表示ではない」として読み飛ばすものなので、
  * 「採点を提案した」と記録すると監査ログが嘘をつく。
- *
- * この作成そのものを無くすのが段階21（注釈を書くときに main が用意する）。
  */
 export const ensureQuestionScore = async (data: EnsureQuestionScoreData) => {
   try {

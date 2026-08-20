@@ -11,7 +11,10 @@ import {
 } from "@/components/exams/07-score-at-once/types"
 import { toggleAnnotationFavoriteMutation } from "@/queries/drawing"
 import { examExportSettingsQuery } from "@/queries/settings"
-import type { LineStyle } from "@/types/drawingAnnotation.types"
+import type {
+  AnnotationTarget,
+  LineStyle,
+} from "@/types/drawingAnnotation.types"
 import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 
 import { DrawingToolPalette } from "./DrawingToolPalette"
@@ -20,7 +23,6 @@ import { useImageCanvas } from "./hooks/core/useImageCanvas"
 import { useImageNavigation } from "./hooks/navigation/useImageNavigation"
 import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
 import { useAllStudentAnnotations } from "./hooks/view/useAllStudentAnnotations"
-import { useAutoCreateQuestionScore } from "./hooks/view/useAutoCreateQuestionScore"
 import { useCanvasIntegration } from "./hooks/view/useCanvasIntegration"
 import { useDrawingToolShortcuts } from "./hooks/view/useDrawingToolShortcuts"
 import { useQuestionAutoScroll } from "./hooks/view/useQuestionAutoScroll"
@@ -41,7 +43,6 @@ export default function AnswerIndividualView({
   pageSpacing = 20,
   currentExamStudentId,
   currentUserId,
-  onQuestionScoreCreated,
   onAnnotationChanged,
   annotationRefreshKey,
   masterOverlayImageUrls,
@@ -127,18 +128,31 @@ export default function AnswerIndividualView({
     })
   }, [cropRegions, currentUserId, currentScoringData])
 
-  // QuestionScore自動作成フック（設問表示時にQuestionScoreが存在しない場合は自動作成）
-  const { currentQuestionScoreId } = useAutoCreateQuestionScore({
-    examId: examId ?? "",
-    currentExamStudentId,
-    currentCropRegion,
-    currentUserId,
-    onQuestionScoreCreated,
-  })
+  /**
+   * 手書き注釈の行き先（答案＋設問＋採点者）。
+   *
+   * **採点行は持たない。** 行が要るのは注釈を保存するときだけで、用意するのは main。
+   * 設問をめくっただけでは何も書き込まれない（docs/branch-review-findings.md #2）。
+   *
+   * 3つの id だけで組み立てる。取り直しのたびに入れ替わる採点領域の実体を持つと、
+   * 中身が同じでも別物として扱われて注釈の読み込みが走ってしまう。
+   */
+  const currentCropRegionId = currentCropRegion?.id
+  const annotationTarget = useMemo<AnnotationTarget | null>(
+    () =>
+      currentExamStudentId && currentCropRegionId && currentUserId
+        ? {
+            examStudentId: currentExamStudentId,
+            cropRegionId: currentCropRegionId,
+            userId: currentUserId,
+          }
+        : null,
+    [currentExamStudentId, currentCropRegionId, currentUserId]
+  )
 
   // 描画状態管理（データベース統合対応）
   const drawingState = useDrawingState(
-    currentQuestionScoreId,
+    annotationTarget,
     true, // データベース永続化を有効化
     onAnnotationChanged
   )
@@ -240,7 +254,7 @@ export default function AnswerIndividualView({
     handleTextElementReClick,
   } = useCanvasIntegration({
     loadedImages,
-    questionScoreId: currentQuestionScoreId,
+    annotationTarget,
     drawingElements: drawingState.drawingElements,
     setDrawingElements: drawingState.setDrawingElements,
     addDrawingElement: drawingState.addDrawingElement,
@@ -294,7 +308,7 @@ export default function AnswerIndividualView({
       loadedImages,
       pageSpacing,
       currentTool: drawingState.currentTool,
-      questionScoreId: currentQuestionScoreId,
+      annotationTarget,
       drawingElements: drawingState.drawingElements,
       // 複数選択システム
       selectedElementIds: drawingState.selectedElementIds,

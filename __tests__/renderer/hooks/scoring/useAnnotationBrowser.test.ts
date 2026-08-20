@@ -339,7 +339,13 @@ describe("useAnnotationBrowser", () => {
 
       const params: AddToTargetsParams = {
         sourceAnnotation: source,
-        targetQuestionScoreIds: ["qs-target-1"],
+        targets: [
+          {
+            examStudentId: "student-2",
+            cropRegionId: "cr-1",
+            userId: "user-1",
+          },
+        ],
         targetCropRegionId: "cr-1",
         sourceCropRegionId: "cr-1", // 同一設問
       }
@@ -349,9 +355,17 @@ describe("useAnnotationBrowser", () => {
       })
 
       expect(mockAPI.create).toHaveBeenCalledTimes(1)
+      // 行き先は答案＋設問＋採点者。置き場所の採点行は渡さない
+      const [target, annotation] = mockAPI.create.mock.calls[0]
+      expect(target).toEqual({
+        examStudentId: "student-2",
+        cropRegionId: "cr-1",
+        userId: "user-1",
+      })
+      expect("questionScoreId" in annotation).toBe(false)
       // 同一設問なので元の位置を保持
-      expect(mockAPI.create.mock.calls[0][0].x).toBe(0.3)
-      expect(mockAPI.create.mock.calls[0][0].y).toBe(0.4)
+      expect(annotation.x).toBe(0.3)
+      expect(annotation.y).toBe(0.4)
     })
 
     it("複数ターゲットにbatchCreateで追加される", async () => {
@@ -362,7 +376,13 @@ describe("useAnnotationBrowser", () => {
 
       const params: AddToTargetsParams = {
         sourceAnnotation: createMockAnnotationWithContext({ id: "source-1" }),
-        targetQuestionScoreIds: ["qs-1", "qs-2", "qs-3"],
+        targets: ["student-2", "student-3", "student-4"].map(
+          (examStudentId) => ({
+            examStudentId,
+            cropRegionId: "cr-1",
+            userId: "user-1",
+          })
+        ),
         targetCropRegionId: "cr-1",
         sourceCropRegionId: "cr-1",
       }
@@ -392,7 +412,13 @@ describe("useAnnotationBrowser", () => {
 
       const params: AddToTargetsParams = {
         sourceAnnotation: source,
-        targetQuestionScoreIds: ["qs-target-1"],
+        targets: [
+          {
+            examStudentId: "student-2",
+            cropRegionId: "cr-2",
+            userId: "user-1",
+          },
+        ],
         targetCropRegionId: "cr-2", // 異なる設問
         sourceCropRegionId: "cr-1",
       }
@@ -401,7 +427,7 @@ describe("useAnnotationBrowser", () => {
         await result.current.addToTargets(params)
       })
 
-      const createData = mockAPI.create.mock.calls[0][0]
+      const createData = mockAPI.create.mock.calls[0][1]
       // 中央配置: midX=(0.1+0.3)/2=0.2, offset=0.5-0.2=0.3
       expect(createData.x).toBeCloseTo(0.4) // 0.1 + 0.3
       expect(createData.endX).toBeCloseTo(0.6) // 0.3 + 0.3
@@ -424,7 +450,13 @@ describe("useAnnotationBrowser", () => {
 
       const params: AddToTargetsParams = {
         sourceAnnotation: source,
-        targetQuestionScoreIds: ["qs-target-1"],
+        targets: [
+          {
+            examStudentId: "student-2",
+            cropRegionId: "cr-2",
+            userId: "user-1",
+          },
+        ],
         targetCropRegionId: "cr-2",
         sourceCropRegionId: "cr-1",
       }
@@ -433,7 +465,7 @@ describe("useAnnotationBrowser", () => {
         await result.current.addToTargets(params)
       })
 
-      const createData = mockAPI.create.mock.calls[0][0]
+      const createData = mockAPI.create.mock.calls[0][1]
       // 中央配置: 0.5 - 0.2/2 = 0.4
       expect(createData.x).toBeCloseTo(0.4)
       expect(createData.y).toBeCloseTo(0.4)
@@ -447,7 +479,7 @@ describe("useAnnotationBrowser", () => {
 
       const params: AddToTargetsParams = {
         sourceAnnotation: createMockAnnotationWithContext(),
-        targetQuestionScoreIds: [],
+        targets: [],
         targetCropRegionId: "cr-1",
         sourceCropRegionId: "cr-1",
       }

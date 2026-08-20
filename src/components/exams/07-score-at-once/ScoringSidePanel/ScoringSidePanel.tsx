@@ -164,7 +164,6 @@ interface ScoringSidePanelProps {
   currentUserId?: string
   selectedScoringDataIds?: string[]
   allScoringData?: Array<{ id: string; examStudentId: string }>
-  onQuestionScoreCreated?: () => void
   /** キャンバスでアノテーション変更時にブラウザ一覧をリロードするキー */
   annotationRefreshKey?: number
   /** ブラウザの+ボタンでアノテーション追加後のコールバック（キャンバスリロード用） */
@@ -238,7 +237,6 @@ export function ScoringSidePanel({
   currentUserId,
   selectedScoringDataIds,
   allScoringData,
-  onQuestionScoreCreated,
   annotationRefreshKey,
   onAnnotationAddedFromBrowser,
   masterAnswerDisplayMode,
@@ -540,7 +538,6 @@ export function ScoringSidePanel({
             annotationRefreshKey={annotationRefreshKey}
             selectedScoringDataIds={selectedScoringDataIds ?? []}
             allScoringData={allScoringData ?? []}
-            onQuestionScoreCreated={onQuestionScoreCreated}
             onAnnotationAddedFromBrowser={onAnnotationAddedFromBrowser}
             onNavigateTo={handleNavigateTo}
           />

@@ -4,6 +4,7 @@
  */
 
 import type {
+  AnnotationTarget,
   DrawingAnnotation,
   DrawingType,
 } from "../../src/types/drawingAnnotation.types"
@@ -13,23 +14,32 @@ import { type HandlerMap } from "./ipcHandlerUtils"
 /**
  * 描画アノテーション関連のIPCハンドラーを設定する
  * 全ての描画ツール（テキスト・直線・長方形・楕円）に対応
+ *
+ * 口が運ぶのは意図（「この答案のこの設問に、この採点者が描いた」）で、置き場所の
+ * 採点行は main が用意する。renderer は `questionScoreId` を知らないし、要らない。
  */
 export const drawingHandlers = {
   // 基本CRUD操作
 
-  /** 描画アノテーション作成 */
-  "drawing:create": async (annotation: DrawingAnnotation) => {
-    const result = await drawingService.createDrawingAnnotation(annotation)
+  /** 描画アノテーション作成（置き場所が無ければ main が用意する） */
+  "drawing:create": async (
+    target: AnnotationTarget,
+    annotation: DrawingAnnotation
+  ) => {
+    const result = await drawingService.createDrawingAnnotation(
+      target,
+      annotation
+    )
     return result
   },
 
-  /** QuestionScoreに紐づく描画アノテーション取得 */
-  "drawing:getByQuestionScore": async (
-    questionScoreId: string,
+  /** 行き先（答案＋設問＋採点者）に紐づく描画アノテーション取得 */
+  "drawing:getByTarget": async (
+    target: AnnotationTarget,
     type?: DrawingType
   ) => {
-    const result = await drawingService.getDrawingAnnotationsByQuestionScore(
-      questionScoreId,
+    const result = await drawingService.getDrawingAnnotationsByTarget(
+      target,
       type
     )
     return result
@@ -69,23 +79,21 @@ export const drawingHandlers = {
     await drawingService.deleteDrawingAnnotation(id)
   },
 
-  /** QuestionScoreに紐づく描画アノテーション一括削除 */
-  "drawing:deleteByQuestionScore": async (
-    questionScoreId: string,
+  /** 行き先（答案＋設問＋採点者）に紐づく描画アノテーション一括削除 */
+  "drawing:deleteByTarget": async (
+    target: AnnotationTarget,
     type?: DrawingType
   ) => {
-    await drawingService.deleteDrawingAnnotationsByQuestionScore(
-      questionScoreId,
-      type
-    )
+    await drawingService.deleteDrawingAnnotationsByTarget(target, type)
   },
 
   // バッチ操作
 
-  /** 描画アノテーション一括作成 */
-  "drawing:batchCreate": async (annotations: DrawingAnnotation[]) => {
-    const result =
-      await drawingService.batchCreateDrawingAnnotations(annotations)
+  /** 描画アノテーション一括作成（行き先ごとに置き場所を用意する） */
+  "drawing:batchCreate": async (
+    writes: Array<{ target: AnnotationTarget; annotation: DrawingAnnotation }>
+  ) => {
+    const result = await drawingService.batchCreateDrawingAnnotations(writes)
     return result
   },
 

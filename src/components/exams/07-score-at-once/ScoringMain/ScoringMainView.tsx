@@ -267,8 +267,11 @@ function ScoringMainViewContent() {
    * 採点行は採点領域の子として載っているので、取り直す先は採点領域のまとまり。
    * 採点の書き込みは自分で取り直すので、これが要るのは**手で頼まれたとき**
    * （裁定パネルの再読み込みボタン・OMR の取り込み後）だけである。
+   *
+   * 手書き注釈の保存も採点行を増やしうるが、増えるのは `status:"unscored"` の行だけで
+   * 画面の表示は行の有無で変わらない（行が無いのと未採点は同じに読まれる）。
    */
-  const handleQuestionScoreCreated = useCallback(async () => {
+  const refetchQuestionScores = useCallback(async () => {
     await Promise.all(
       cropRegionScopes(examId).map((queryKey) =>
         queryClient.invalidateQueries({ queryKey })
@@ -303,8 +306,8 @@ function ScoringMainViewContent() {
 
   /** 確定後は裁定状況と採点データの両方を取り直す */
   const handleScoreDecided = useCallback(async () => {
-    await Promise.all([refreshDecisionSummary(), handleQuestionScoreCreated()])
-  }, [refreshDecisionSummary, handleQuestionScoreCreated])
+    await Promise.all([refreshDecisionSummary(), refetchQuestionScores()])
+  }, [refreshDecisionSummary, refetchQuestionScores])
 
   /** 担当割当の変更は、裁定サマリと採点画面の選択可能設問の両方に効く */
   const handleAssignmentChanged = useCallback(async () => {
@@ -801,7 +804,6 @@ function ScoringMainViewContent() {
             showStudentNames={showStudentNames}
             currentExamStudentId={currentExamStudentId || undefined}
             currentUserId={currentUserId || undefined}
-            onQuestionScoreCreated={handleQuestionScoreCreated}
             expandMargin={expandMargin}
             onAnnotationChanged={handleCanvasAnnotationChanged}
             annotationRefreshKey={annotationVersionForCanvas}
@@ -877,7 +879,6 @@ function ScoringMainViewContent() {
               currentUserId={currentUserId ?? undefined}
               selectedScoringDataIds={Array.from(selectedStudentAnswerImageIds)}
               allScoringData={allScoringData}
-              onQuestionScoreCreated={handleQuestionScoreCreated}
               annotationRefreshKey={annotationVersionForBrowser}
               onAnnotationAddedFromBrowser={handleBrowserAnnotationAdded}
               masterAnswerDisplayMode={masterAnswerDisplayMode}
@@ -908,7 +909,7 @@ function ScoringMainViewContent() {
         userId={currentUserId ?? ""}
         open={showOmrModal}
         onOpenChange={setShowOmrModal}
-        onScoresApplied={handleQuestionScoreCreated}
+        onScoresApplied={refetchQuestionScores}
       />
 
       {/* 採点結果の確定（裁定）パネル */}

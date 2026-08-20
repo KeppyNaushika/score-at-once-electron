@@ -7,6 +7,7 @@ import type {
   SelectionRectangle,
 } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type {
+  AnnotationTarget,
   DrawingAnnotation,
   LineStyle,
 } from "@/types/drawingAnnotation.types"
@@ -37,8 +38,8 @@ interface UseAnswerDisplayEventsProps {
 
   // Drawing state
   currentTool: CanvasTool
-  /** 作成先の採点データ（新規アノテーションの行に載せる） */
-  questionScoreId: string | null
+  /** 注釈の行き先（答案＋設問＋採点者）。決まっていなければ新規描画を始めない */
+  annotationTarget: AnnotationTarget | null
   drawingElements: DrawingAnnotation[]
   selectedElementIds: string[]
   isDraggingElement: boolean
@@ -183,7 +184,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
   } = useCanvasInteraction({
     canvasRef,
     currentTool: props.currentTool,
-    questionScoreId: props.questionScoreId,
+    annotationTarget: props.annotationTarget,
     drawingElements: props.drawingElements,
     selectedElementIds: props.selectedElementIds,
     isDraggingElement: props.isDraggingElement,

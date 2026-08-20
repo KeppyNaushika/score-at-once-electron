@@ -73,8 +73,8 @@ export const answerWhitenessQuery = (
  * 採点する。**行が無ければ作り、有れば上書きする。**
  *
  * `QuestionScore` は「受験者×設問×採点者」で1行。上書きが正しいのは**利用者が
- * 採点したとき**だけなので、「行が無いなら用意したい」だけのときは
- * `ensureQuestionScoreMutation` を使う。
+ * 採点したとき**だけなので、renderer から採点行を用意する口は持たない。手書き注釈の
+ * 置き場所は、注釈を保存するときに main が用意する（`queries/drawing.ts`）。
  */
 export const setQuestionScoreMutation = (examId: string) =>
   defineMutation({
@@ -85,29 +85,6 @@ export const setQuestionScoreMutation = (examId: string) =>
     meta: {
       invalidates: cropRegionScopes(examId),
       errorMessage: "採点を保存できませんでした",
-    },
-  })
-
-/**
- * 手書き注釈の置き場所として、採点行を用意する。**有れば何も書かずに返す。**
- *
- * 注釈は `questionScoreId` を必須で持つので、描く前に行の実体が要る。それが
- * この口の唯一の存在理由で、「未採点である」ことを記録するためではない
- * （行の不在は既に全経路で未採点として読まれている）。
- *
- * **`setQuestionScoreMutation` で代用しないこと。** 関門はキャッシュを見ている
- * ので、採点の直後は「行が無い」と見える。上書きする口を通すと、入れたばかりの
- * 採点が unscored で消える（docs/branch-review-findings.md #2・#4）。
- */
-export const ensureQuestionScoreMutation = (examId: string) =>
-  defineMutation({
-    mutationFn: (
-      data: Parameters<typeof window.electronAPI.ensureQuestionScore>[0]
-    ) => window.electronAPI.ensureQuestionScore(data),
-    scope: { id: `exam:${examId}:questionScores` },
-    meta: {
-      invalidates: cropRegionScopes(examId),
-      errorMessage: "採点欄を用意できませんでした",
     },
   })
 

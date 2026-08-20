@@ -10,6 +10,7 @@ import {
   toggleAnnotationFavoriteMutation,
 } from "@/queries/drawing"
 import type {
+  AnnotationTarget,
   AnnotationWithContext,
   DrawingAnnotation,
   DrawingType,
@@ -39,27 +40,41 @@ interface AnnotationFilters {
 // addToTargets用パラメータ
 export interface AddToTargetsParams {
   sourceAnnotation: AnnotationWithContext
-  /** 追加先。採点者は行き先の QuestionScore が決めるので、別途受け取らない */
-  targetQuestionScoreIds: string[]
+  /**
+   * 追加先（答案＋設問＋採点者）。置き場所の採点行は持たない — 無ければ
+   * 保存のときに main が用意する。
+   */
+  targets: AnnotationTarget[]
   targetCropRegionId: string
   sourceCropRegionId: string
 }
 
 /**
+ * 一覧に載る行。
+ *
+ * 型の上では置き場所（`questionScoreId`）を名乗らないが、DB の行には載っている。
+ * 見た目を写す側が落とし忘れないよう、受け口で明示する。
+ */
+type BrowsedAnnotation = AnnotationWithContext & { questionScoreId?: string }
+
+/**
  * 行から「見た目を決める列」だけを取り出す。
  *
- * 外すのは同定用の id、履歴（時刻）、独立した書き込み経路を持つお気に入り、そして
- * 同梱した関係。main 側の `toAppearance`（drawingAnnotation.ts）と同じ切り方で、
- * 列を足すと自動的に対象へ入る。
+ * 外すのは同定用の id、履歴（時刻）、独立した書き込み経路を持つお気に入り、同梱した
+ * 関係、そして置き場所（`questionScoreId`）。main 側の `toAppearance`
+ * （drawingAnnotation.ts）と同じ切り方で、列を足すと自動的に対象へ入る。
+ *
+ * 置き場所は型の上では持たないが、DB の行には載っている。見た目の比較へ混ぜると
+ * 「どの採点行にぶら下がっているか」まで一致を求めることになり、コピー先の重複判定が
+ * 永久に一致しなくなる。
  *
  * 返りを `Record` にするのは、比較する側が列名を知らずに回すため（列名を並べた
  * 時点で足し忘れが起きる）。
  */
-function toAppearance(
-  annotation: AnnotationWithContext
-): Record<string, unknown> {
+function toAppearance(annotation: BrowsedAnnotation): Record<string, unknown> {
   const {
     questionScore: _questionScore,
+    questionScoreId: _questionScoreId,
     id: _id,
     createdAt: _createdAt,
     updatedAt: _updatedAt,
@@ -277,7 +292,7 @@ export function useAnnotationBrowser(
     async (params: AddToTargetsParams): Promise<AddToTargetsResult> => {
       const {
         sourceAnnotation,
-        targetQuestionScoreIds,
+        targets,
         targetCropRegionId,
         sourceCropRegionId,
       } = params
@@ -290,60 +305,66 @@ export function useAnnotationBrowser(
 
       // コピー元から見た目の列だけを引き継ぐ。列を選んで詰め替えないので、
       // 列が増えてもコピー先へ運ばれる。
-      // 同定と履歴（id・時刻）とお気に入りは引き継がず、新しい行として作る
+      // 同定と履歴（id・時刻）とお気に入り、そしてコピー元の置き場所は引き継がず、
+      // 新しい行として作る（`toAppearance` と同じ切り方）
+      const sourceRow: BrowsedAnnotation = sourceAnnotation
       const {
         questionScore: _questionScore,
+        questionScoreId: _questionScoreId,
         id: _id,
         createdAt: _createdAt,
         updatedAt: _updatedAt,
         isFavorite: _isFavorite,
         ...sourceAppearance
-      } = sourceAnnotation
+      } = sourceRow
 
       // コピー後の見た目。重複判定も作成もこの1つから導く
       const targetAppearance = { ...sourceAppearance, ...positionOverride }
 
       // フロントエンド側重複チェック: allAnnotationsを使ってローカルで判定。
-      // 既に同じ見た目のアノテーションを持つ questionScoreId を除外する。
+      // 既に同じ見た目のアノテーションを持つ行き先を除外する。突き合わせは親の実体
+      // （questionScore）が持つ答案・設問・採点者で行う。
       //
       // 列を並べて突き合わせない。列を足したときに判定へ入れ忘れると、見た目の違う
       // マークを重複と見なしてコピーが黙って落ちる（main 側の重複判定も同じ理由で
       // 構造的に持っている）。
-      //
-      // questionScoreId だけは比べない。コピー元のものが載っているうえ、行き先は
-      // 直前の絞り込みで既に一致させてある。
-      const newQuestionScoreIds = targetQuestionScoreIds.filter(
-        (questionScoreId) =>
+      const newTargets = targets.filter(
+        (target) =>
           !allAnnotations.some((existing) => {
-            if (existing.questionScore?.id !== questionScoreId) return false
+            const parentQuestionScore = existing.questionScore
+            if (
+              parentQuestionScore.examStudentId !== target.examStudentId ||
+              parentQuestionScore.cropRegionId !== target.cropRegionId ||
+              parentQuestionScore.userId !== target.userId
+            ) {
+              return false
+            }
             const existingAppearance = toAppearance(existing)
             return Object.entries(targetAppearance).every(
-              ([column, value]) =>
-                column === "questionScoreId" ||
-                existingAppearance[column] === value
+              ([column, value]) => existingAppearance[column] === value
             )
           })
       )
 
-      const skipped = targetQuestionScoreIds.length - newQuestionScoreIds.length
+      const skipped = targets.length - newTargets.length
 
       // 全て重複の場合はIPCリクエストを送らない
-      if (newQuestionScoreIds.length === 0) {
+      if (newTargets.length === 0) {
         return { created: 0, skipped }
       }
 
-      const newAnnotations: DrawingAnnotation[] = newQuestionScoreIds.map(
-        (questionScoreId) =>
-          newDrawingAnnotation({ ...targetAppearance, questionScoreId })
-      )
+      const writes = newTargets.map((target) => ({
+        target,
+        annotation: newDrawingAnnotation(targetAppearance),
+      }))
 
       try {
-        if (newAnnotations.length === 1) {
-          await createAnnotation(newAnnotations[0])
+        if (writes.length === 1) {
+          await createAnnotation(writes[0])
         } else {
-          await batchCreateAnnotations(newAnnotations)
+          await batchCreateAnnotations(writes)
         }
-        return { created: newAnnotations.length, skipped }
+        return { created: writes.length, skipped }
       } catch {
         // 失敗の通知と取り直しは MutationCache の後始末が担う
         return { created: 0, skipped }

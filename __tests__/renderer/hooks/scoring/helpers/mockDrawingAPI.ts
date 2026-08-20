@@ -6,7 +6,22 @@
 
 import { vi } from "vitest"
 
-import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
+import type {
+  AnnotationTarget,
+  DrawingAnnotation,
+} from "@/types/drawingAnnotation.types"
+
+/**
+ * テストで使う注釈の行き先（答案＋設問＋採点者）。
+ *
+ * 注釈は置き場所（採点行）を持たない。保存の口はこの3つを受け取り、行が要るかは
+ * main が決める。
+ */
+export const MOCK_ANNOTATION_TARGET: AnnotationTarget = {
+  examStudentId: "es-1",
+  cropRegionId: "cr-1",
+  userId: "user-1",
+}
 
 /** テスト用アノテーションデータを作成 */
 export function createMockAnnotation(
@@ -14,7 +29,6 @@ export function createMockAnnotation(
 ): DrawingAnnotation {
   return {
     id: `annotation-${crypto.randomUUID().slice(0, 8)}`,
-    questionScoreId: "qs-1",
     type: "text",
     x: 0.1,
     y: 0.2,
@@ -45,11 +59,11 @@ export interface MockDrawingAPI {
   create: ReturnType<typeof vi.fn>
   update: ReturnType<typeof vi.fn>
   delete: ReturnType<typeof vi.fn>
-  getByQuestionScore: ReturnType<typeof vi.fn>
+  getByTarget: ReturnType<typeof vi.fn>
   getByExamStudent: ReturnType<typeof vi.fn>
   getByCropRegion: ReturnType<typeof vi.fn>
   batchCreate: ReturnType<typeof vi.fn>
-  deleteByQuestionScore: ReturnType<typeof vi.fn>
+  deleteByTarget: ReturnType<typeof vi.fn>
   toggleFavorite: ReturnType<typeof vi.fn>
   getForBrowse: ReturnType<typeof vi.fn>
 }
@@ -59,23 +73,29 @@ export interface MockDrawingAPI {
  */
 export function createMockDrawingAPI(): MockDrawingAPI {
   const mockDrawing: MockDrawingAPI = {
-    // 作成も更新も行そのものを受け取り、そのまま返す
+    // 作成は行き先と行を受け取り、行をそのまま返す。更新は行だけ
     create: vi
       .fn()
-      .mockImplementation(async (annotation: DrawingAnnotation) => annotation),
+      .mockImplementation(
+        async (_target: AnnotationTarget, annotation: DrawingAnnotation) =>
+          annotation
+      ),
     update: vi
       .fn()
       .mockImplementation(async (annotation: DrawingAnnotation) => annotation),
     delete: vi.fn().mockResolvedValue(undefined),
-    getByQuestionScore: vi.fn().mockResolvedValue([]),
+    getByTarget: vi.fn().mockResolvedValue([]),
     getByExamStudent: vi.fn().mockResolvedValue([]),
     getByCropRegion: vi.fn().mockResolvedValue([]),
-    batchCreate: vi
-      .fn()
-      .mockImplementation(
-        async (annotations: DrawingAnnotation[]) => annotations
-      ),
-    deleteByQuestionScore: vi.fn().mockResolvedValue(undefined),
+    batchCreate: vi.fn().mockImplementation(
+      async (
+        writes: Array<{
+          target: AnnotationTarget
+          annotation: DrawingAnnotation
+        }>
+      ) => writes.map((write) => write.annotation)
+    ),
+    deleteByTarget: vi.fn().mockResolvedValue(undefined),
     toggleFavorite: vi
       .fn()
       .mockImplementation(async (id: string, isFavorite: boolean) =>

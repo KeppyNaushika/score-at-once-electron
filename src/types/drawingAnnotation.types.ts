@@ -141,8 +141,33 @@ type NarrowAnnotationUnions<T> = Omit<T, AnnotationUnionColumn> & {
   anchorDirection: AnchorDirection
 }
 
-/** 描画アノテーション1行（Prisma のモデルに union 型注入だけを施したもの） */
-export type DrawingAnnotation = NarrowAnnotationUnions<PrismaDrawingAnnotation>
+/**
+ * 描画アノテーション1行（Prisma のモデルに union 型注入だけを施したもの）。
+ *
+ * **置き場所（`questionScoreId`）は持たない。** 注釈がどの採点行にぶら下がるかは
+ * 保存の都合であって、描く側が決めることではない。保存の口は「答案＋設問＋採点者」
+ * （`AnnotationTarget`）を受け取り、main が必要なら採点行を用意してからぶら下げる。
+ *
+ * かつては renderer が描く前に採点行を作らせており（そのための `questionScoreId`）、
+ * 設問を表示しただけで `status:"unscored"` の空行が量産されていた
+ * （docs/branch-review-findings.md #2）。
+ */
+export type DrawingAnnotation = NarrowAnnotationUnions<
+  Omit<PrismaDrawingAnnotation, "questionScoreId">
+>
+
+/**
+ * 注釈の行き先。「この答案のこの設問に、この採点者が描いた」を表す。
+ *
+ * 採点行（`QuestionScore`）は「受験者×設問×採点者」で1行なので、この3つで
+ * ぶら下げ先が一意に決まる。行そのものが在るかどうかは main の内側の話で、
+ * 無ければ保存のときに用意される。
+ */
+export interface AnnotationTarget {
+  examStudentId: string
+  cropRegionId: string
+  userId: string
+}
 
 /**
  * 未保存の1行を作る。
@@ -156,8 +181,7 @@ export type DrawingAnnotation = NarrowAnnotationUnions<PrismaDrawingAnnotation>
  * まで型が通らない。手書きの入力型のように値が黙って落ちることが無い。
  */
 export function newDrawingAnnotation(
-  seed: Partial<DrawingAnnotation> &
-    Pick<DrawingAnnotation, "questionScoreId" | "type" | "x" | "y">
+  seed: Partial<DrawingAnnotation> & Pick<DrawingAnnotation, "type" | "x" | "y">
 ): DrawingAnnotation {
   const now = new Date()
   return {
@@ -192,11 +216,18 @@ export function newDrawingAnnotation(
  * 形の SSOT は取得側の include（`annotationWithContextInclude`）で、ここでは導出だけを行う。
  * 取得経路は `serializePrisma` を通して IPC へ返すので、同梱した QuestionScore の
  * `partialScore` は Decimal ではなく number。`Serialized<>` を被せて実体と型を揃える。
+ *
+ * `DrawingAnnotation` と同じく置き場所の列（`questionScoreId`）は名乗らない。
+ * 親を見たい側には実体（`questionScore`）が同梱されているので、id だけを別に
+ * 持つ意味が無い。
  */
 export type AnnotationWithContext = NarrowAnnotationUnions<
-  Serialized<
-    Prisma.DrawingAnnotationGetPayload<{
-      include: typeof annotationWithContextInclude
-    }>
+  Omit<
+    Serialized<
+      Prisma.DrawingAnnotationGetPayload<{
+        include: typeof annotationWithContextInclude
+      }>
+    >,
+    "questionScoreId"
   >
 >

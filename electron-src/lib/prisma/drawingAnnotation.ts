@@ -6,6 +6,7 @@
 import type { Prisma } from "@prisma/client"
 
 import type {
+  AnnotationTarget,
   AnnotationWithContext,
   DrawingAnnotation,
   DrawingType,
@@ -17,6 +18,7 @@ import {
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope, resolveExamScopeByQuestionScore } from "./auditScope"
 import prisma from "./client"
+import { ensureQuestionScore } from "./questionScore"
 import { serializePrisma } from "./serializePrisma"
 
 /**
@@ -55,8 +57,14 @@ function toDrawableAnnotations<
 /**
  * 行から「見た目を決める列」だけを取り出す。
  *
- * 外すのは3種類だけ。同定用の `id`、DB が管理する時刻、そして独立した書き込み経路を
- * 持つ `isFavorite`（`toggleDrawingAnnotationFavorite`）。
+ * 外すのは4種類だけ。同定用の `id`、DB が管理する時刻、独立した書き込み経路を
+ * 持つ `isFavorite`（`toggleDrawingAnnotationFavorite`）、そして置き場所の
+ * `questionScoreId`。
+ *
+ * 置き場所は型の上では `DrawingAnnotation` に無いが、DB から読んだ行が renderer を
+ * 一周して戻ってくるので実体には載っている。既存の注釈の親は動かない（更新も削除も
+ * 注釈の id で行う）ので、書き戻さずここで落とす。作成のときだけ、用意した採点行の
+ * id を呼び出し側が明示的に足す。
  *
  * Canvas が抱えている行は設問を開いた時点のコピーなので、更新でまるごと書き戻すと
  * その間に別経路が立てたお気に入りを巻き戻してしまう（サイドパネルで星を付けた直後に
@@ -66,9 +74,12 @@ function toDrawableAnnotations<
  * 列を足すと自動的に appearance へ入る（＝重複判定にも更新にも載る）。独自の書き込み
  * 経路を持つ列を足すときだけ、ここへ除外を足す。
  */
-function toAppearance(annotation: DrawingAnnotation) {
+function toAppearance(
+  annotation: DrawingAnnotation & { questionScoreId?: string }
+) {
   const {
     id: _id,
+    questionScoreId: _questionScoreId,
     createdAt: _createdAt,
     updatedAt: _updatedAt,
     isFavorite: _isFavorite,
@@ -94,31 +105,38 @@ export const annotationWithContextInclude = {
 } satisfies Prisma.DrawingAnnotationInclude
 
 /**
- * 描画アノテーションを作成する
+ * 描画アノテーションを作成する。
+ *
+ * **置き場所はここで用意する。** 受け取るのは「答案＋設問＋採点者」という意図で、
+ * その組み合わせの採点行が無ければ `ensureQuestionScore` が用意し、注釈をその子として
+ * ぶら下げる。既に採点済みの行が在れば触らない（判定も部分点もそのまま）。
+ *
+ * renderer に先に採点行を作らせない。かつてはそうしており、設問を表示しただけで
+ * `status:"unscored"` の空行が量産されていた（docs/branch-review-findings.md #2）。
+ *
+ * @param target 注釈の行き先（答案＋設問＋採点者）
  * @param annotation 作成する行（既定値は送り元が `newDrawingAnnotation` で埋める）
  * @returns Promise<AnnotationWithContext> 作成された描画アノテーション（設問の文脈付き）
  */
 export async function createDrawingAnnotation(
+  target: AnnotationTarget,
   annotation: DrawingAnnotation
 ): Promise<AnnotationWithContext> {
   try {
-    // 外部キー制約の事前検証。
-    // 併せて注釈の持ち主（＝親の採点者）をここで確定させる。注釈は自前の userId を
-    // 持たないので、採点者を引数で受け取る余地そのものが無い。
-    const parentQuestionScore = await prisma.questionScore.findUnique({
-      where: { id: annotation.questionScoreId },
-    })
+    // 置き場所を用意する。併せて注釈の持ち主（＝親の採点者）もここで確定する。
+    // 注釈は自前の userId を持たないので、採点者を注釈側で受け取る余地そのものが無い
+    const parentQuestionScore = await ensureQuestionScore(target)
 
-    if (!parentQuestionScore) {
-      throw new Error(`QuestionScore not found: ${annotation.questionScoreId}`)
-    }
-
-    // 重複チェック: 見た目を決める列が完全一致する行が既にあればそれを返す。
+    // 重複チェック: 同じ採点行の下で見た目を決める列が完全一致する行が既にあれば
+    // それを返す。
     //
     // アノテーションのコピー時は値を直接コピーするため、浮動小数点の丸め誤差は発生しない。
     // SQLite (IEEE 754 double) と JavaScript (IEEE 754 double) 間で値は保持される。
     const duplicate = await prisma.drawingAnnotation.findFirst({
-      where: toAppearance(annotation),
+      where: {
+        ...toAppearance(annotation),
+        questionScoreId: parentQuestionScore.id,
+      },
       include: annotationWithContextInclude,
     })
 
@@ -127,15 +145,13 @@ export async function createDrawingAnnotation(
     }
 
     const result = await prisma.drawingAnnotation.create({
-      data: annotation,
+      data: { ...annotation, questionScoreId: parentQuestionScore.id },
       // 透明度制御に必要なquestionScore情報を含める
       include: annotationWithContextInclude,
     })
 
     // 監査ログ: 採点マーク追加（マークごとに個別記録。集約は同一idの連続操作のみ）
-    const scope = await resolveExamScopeByQuestionScore(
-      annotation.questionScoreId
-    )
+    const scope = await resolveExamScopeByQuestionScore(parentQuestionScore.id)
     await recordAuditLog({
       action: "exam.annotation.create",
       userId: parentQuestionScore.userId,
@@ -153,10 +169,50 @@ export async function createDrawingAnnotation(
 }
 
 /**
- * QuestionScoreに紐づく描画アノテーションを取得する
+ * 行き先（答案＋設問＋採点者）に紐づく描画アノテーションを取得する。
+ *
+ * **採点行が無ければ空配列を返す。用意はしない。** 読むだけで行が増えるのは
+ * 段階21 でやめた振る舞いそのものである（docs/branch-review-findings.md #2）。
+ *
+ * @param target 注釈の行き先（答案＋設問＋採点者）
+ * @param type フィルタする描画タイプ（オプション）
+ * @returns Promise<DrawingAnnotation[]> 描画アノテーション配列
+ */
+export async function getDrawingAnnotationsByTarget(
+  target: AnnotationTarget,
+  type?: DrawingType
+): Promise<DrawingAnnotation[]> {
+  try {
+    const result = await prisma.drawingAnnotation.findMany({
+      where: {
+        questionScore: {
+          examStudentId: target.examStudentId,
+          cropRegionId: target.cropRegionId,
+          userId: target.userId,
+        },
+        ...(type && { type }),
+      },
+      orderBy: { createdAt: "asc" },
+    })
+
+    return toDrawableAnnotations(
+      serializePrisma(result),
+      "getDrawingAnnotationsByTarget"
+    )
+  } catch (error) {
+    console.error("描画アノテーション取得エラー:", error)
+    throw error
+  }
+}
+
+/**
+ * QuestionScoreに紐づく描画アノテーションを取得する（main の内側専用）。
  *
  * 採点者による絞り込みは受け付けない。QuestionScore は「生徒×設問×採点者」で1行なので、
  * 同じ questionScoreId の注釈は全部同じ採点者のものであり、絞る余地が無い。
+ *
+ * IPC はこちらを通さない。renderer は行き先（`AnnotationTarget`）で呼ぶ。ここを使うのは
+ * 既にリゾルバが採点行を決めている PDF 出力だけである。
  *
  * 関係は同梱しない。呼び出し側（Canvas・PDF 出力）は行を編集して書き戻すので、
  * 同梱した関係が付いてくると書き戻しの経路に載ってしまう。作成者が要るなら
@@ -368,22 +424,29 @@ export async function deleteDrawingAnnotation(id: string): Promise<void> {
 }
 
 /**
- * QuestionScoreに紐づく描画アノテーションを一括削除する
- * @param questionScoreId QuestionScoreのID
+ * 行き先（答案＋設問＋採点者）に紐づく描画アノテーションを一括削除する。
+ *
+ * **採点行が無ければ何も消さない。用意もしない。**
+ *
+ * @param target 注釈の行き先（答案＋設問＋採点者）
  * @param type 削除する描画タイプ（オプション）
  * @returns Promise<void>
  */
-export async function deleteDrawingAnnotationsByQuestionScore(
-  questionScoreId: string,
+export async function deleteDrawingAnnotationsByTarget(
+  target: AnnotationTarget,
   type?: DrawingType
 ): Promise<void> {
   try {
-    const where = {
-      questionScoreId,
-      ...(type && { type }),
-    }
-
-    await prisma.drawingAnnotation.deleteMany({ where })
+    await prisma.drawingAnnotation.deleteMany({
+      where: {
+        questionScore: {
+          examStudentId: target.examStudentId,
+          cropRegionId: target.cropRegionId,
+          userId: target.userId,
+        },
+        ...(type && { type }),
+      },
+    })
   } catch (error) {
     console.error("描画アノテーション一括削除エラー:", error)
     throw error
@@ -391,21 +454,27 @@ export async function deleteDrawingAnnotationsByQuestionScore(
 }
 
 /**
- * 描画アノテーションを一括作成する
- * @param annotations 作成する描画アノテーション配列
+ * 描画アノテーションを一括作成する。
+ *
+ * **1件ずつ順番に作る。** 置き場所の用意（`ensureQuestionScore`）は「探して、無ければ
+ * 作る」なので、同じ行き先のものを並行に走らせると探した時点ではどちらも見つからず、
+ * 採点行が二重にできる（`QuestionScore` に (examStudentId, cropRegionId, userId) の
+ * unique は無く、DB は止めてくれない）。1ストロークぶんや選択した生徒ぶんの件数なので、
+ * 直列でも待ちにはならない。
+ *
+ * @param writes 「この行き先へ、この注釈を描いた」の並び
  * @returns Promise<AnnotationWithContext[]> 作成された描画アノテーション配列（設問の文脈付き）
  */
 export async function batchCreateDrawingAnnotations(
-  annotations: DrawingAnnotation[]
+  writes: Array<{ target: AnnotationTarget; annotation: DrawingAnnotation }>
 ): Promise<AnnotationWithContext[]> {
   try {
-    // 各アノテーションに対してcreateDrawingAnnotation関数を使用（QuestionScore自動作成機能を含む）
-    const results = await Promise.all(
-      annotations.map(async (annotation) => {
-        return await createDrawingAnnotation(annotation)
-      })
-    )
-
+    const results: AnnotationWithContext[] = []
+    for (const write of writes) {
+      results.push(
+        await createDrawingAnnotation(write.target, write.annotation)
+      )
+    }
     return results
   } catch (error) {
     console.error("描画アノテーション一括作成エラー:", error)

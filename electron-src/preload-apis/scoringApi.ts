@@ -6,7 +6,6 @@ export function createScoringApi() {
   return {
     // QuestionScore related functions
     setQuestionScore: bind("set-question-score"),
-    ensureQuestionScore: bind("ensure-question-score"),
     updateQuestionScore: bind("update-question-score"),
     finalizeQuestionScore: bind("finalize-question-score"),
     getExamDecisionSummary: bind("get-exam-decision-summary"),
