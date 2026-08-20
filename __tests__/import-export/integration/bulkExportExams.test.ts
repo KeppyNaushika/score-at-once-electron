@@ -231,6 +231,67 @@ describe("executeBulkExport", () => {
     )
   })
 
+  // BE-8: 画像の実体が無いまま書き出したことが試験ごとに結果へ載る
+  it("BE-8: 実体の無い画像は missingFiles に試験ごとに載る", async () => {
+    // 画像のレコードだけがあり、実体は tmpDir に無い（＝欠けたまま書き出される）
+    const withImages = await createFullTestExam(prisma, {
+      examName: "画像あり",
+      pageCount: 1,
+      cropRegionsPerPage: 1,
+      studentCount: 2,
+      includeMasterImages: true,
+      includeStudentAnswerImages: true,
+    })
+    const withoutImages = await createFullTestExam(prisma, {
+      examName: "画像なし",
+      pageCount: 1,
+      cropRegionsPerPage: 1,
+      studentCount: 1,
+    })
+
+    const outputDir = path.join(tmpDir, "output")
+    fs.mkdirSync(outputDir, { recursive: true })
+
+    const bulkResult = await executeBulkExport(
+      [withImages.exam.id, withoutImages.exam.id],
+      withImages.user.id,
+      outputDir
+    )
+
+    // 欠けていても ZIP は作られる（壊れてはいない）。だからこそ結果で伝える必要がある
+    expect(bulkResult.results[0].success).toBe(true)
+    // 模範解答1枚 + 生徒2人分の答案1ページ = 3件
+    expect(bulkResult.results[0].missingFiles).toHaveLength(3)
+    expect(
+      bulkResult.results[0].missingFiles.filter((missingFile) =>
+        missingFile.startsWith("模範解答画像: ")
+      )
+    ).toHaveLength(1)
+    expect(
+      bulkResult.results[0].missingFiles.filter((missingFile) =>
+        missingFile.startsWith("答案画像: ")
+      )
+    ).toHaveLength(2)
+
+    // 画像を持たない試験は欠けようがない
+    expect(bulkResult.results[1].missingFiles).toEqual([])
+  })
+
+  // BE-9: 失敗した試験にも missingFiles の器がある（画面が分岐せずに読める）
+  it("BE-9: 失敗した試験の missingFiles は空配列になる", async () => {
+    const outputDir = path.join(tmpDir, "output")
+    fs.mkdirSync(outputDir, { recursive: true })
+
+    const bulkResult = await executeBulkExport(
+      ["non-existent-id"],
+      "dummy-user-id",
+      outputDir
+    )
+
+    expect(bulkResult.results[0].success).toBe(false)
+    expect(bulkResult.results[0].missingFiles).toEqual([])
+  })
+
   // BE-7: エクスポートされた.scoreファイルが有効なアーカイブである
   it("BE-7: 生成された.scoreファイルが有効なZIPアーカイブである", async () => {
     const exam = await createFullTestExam(prisma, {

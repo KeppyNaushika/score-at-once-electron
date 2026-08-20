@@ -53,6 +53,7 @@ export async function executeBulkExport(
           examName: examId,
           success: false,
           error: "試験が見つかりません",
+          missingFiles: [],
         })
         continue
       }
@@ -72,6 +73,8 @@ export async function executeBulkExport(
         examName: exam.examName,
         success: true,
         outputPath: exportResult.outputPath,
+        // 欠けたまま作られていることは、試験ごとに画面まで届ける
+        missingFiles: exportResult.missingFiles,
       })
     } catch (error) {
       results.push({
@@ -80,6 +83,7 @@ export async function executeBulkExport(
         success: false,
         error:
           error instanceof Error ? error.message : "エクスポートに失敗しました",
+        missingFiles: [],
       })
     }
   }

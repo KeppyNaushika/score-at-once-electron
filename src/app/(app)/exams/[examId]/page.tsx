@@ -7,8 +7,9 @@ import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
 
+import type { ExportOutcome } from "@/components/common/ExportResultSummary"
+import ExamArchiveExportModal from "@/components/exams/detail/ExamArchiveExportModal"
 import ExamHeader from "@/components/exams/detail/ExamHeader"
-import ExportModeModal from "@/components/exams/detail/ExportModeModal"
 import { useWorkflowData } from "@/components/exams/detail/hooks/useWorkflowData"
 import OverallProgress from "@/components/exams/detail/OverallProgress"
 import PhaseCard from "@/components/exams/detail/PhaseCard"
@@ -29,6 +30,8 @@ export default function ExamDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
+  /** 書き出しの結果。渡している間はモーダルが結果の段を見せる */
+  const [exportOutcome, setExportOutcome] = useState<ExportOutcome | null>(null)
   const exportExamArchive = useMutation(exportExamArchiveMutation())
 
   const {
@@ -87,26 +90,34 @@ export default function ExamDetailPage() {
     exportExamArchive.mutate(
       { examId, userId: user.id, exportMode },
       {
-        onSuccess: (result) => {
+        onSuccess: (exportResult) => {
           // 保存先を選ばずに閉じたのは失敗ではないので、何も言わない
-          if (result.canceled) return
-          setShowExportModal(false)
-          const missingFiles = result.missingFiles ?? []
-          if (missingFiles.length > 0) {
-            // **欠けたまま作られている。** 成功としてだけ伝えると、受け取った同僚が
-            // 答案画像の無い試験を警告なしで取り込む（指摘 #12）
-            toast.warning("画像が欠けたまま書き出しました", {
-              description: `${missingFiles.length}件のファイルが見つかりませんでした。受け取った側では、その画像が表示されません。${result.outputPath} に保存しています。`,
-              duration: 12000,
-            })
-            return
-          }
-          toast.success("エクスポート完了", {
-            description: `${result.outputPath} に保存しました。`,
+          if (exportResult.canceled) return
+          // 結果はモーダルの中で見せる（欠けたファイル名まで出す）。
+          // 書き出し中に閉じられていても、結果は見せる
+          setShowExportModal(true)
+          setExportOutcome({
+            archives: [
+              {
+                sourceId: examId,
+                sourceName: exam?.examName ?? "",
+                outputPath: exportResult.outputPath,
+                missingFiles: exportResult.missingFiles ?? [],
+              },
+            ],
+            failures: [],
           })
         },
       }
     )
+  }
+
+  /** 閉じたら結果を捨てる（次に開いたときは選択の段から始まる） */
+  const handleExportModalOpenChange = (open: boolean) => {
+    setShowExportModal(open)
+    if (!open) {
+      setExportOutcome(null)
+    }
   }
 
   if (isLoading) {
@@ -173,11 +184,12 @@ export default function ExamDetailPage() {
           </div>
 
           {/* Modals */}
-          <ExportModeModal
+          <ExamArchiveExportModal
             open={showExportModal}
-            onOpenChange={setShowExportModal}
+            onOpenChange={handleExportModalOpenChange}
             onExport={handleExport}
             isExporting={exportExamArchive.isPending}
+            exportOutcome={exportOutcome}
           />
           {exam && showEditModal && (
             <EditExamWindow

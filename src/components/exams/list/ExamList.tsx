@@ -20,8 +20,9 @@ import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { BulkTagAssignButton } from "@/components/common/BulkTagAssignButton"
+import type { ExportOutcome } from "@/components/common/ExportResultSummary"
 import { ListFilterBar } from "@/components/common/ListFilterBar"
-import ExportModeModal from "@/components/exams/detail/ExportModeModal"
+import ExamArchiveExportModal from "@/components/exams/detail/ExamArchiveExportModal"
 import CreateExamWindow from "@/components/exams/forms/CreateExamWindow"
 import { useFileActions } from "@/components/hooks/useFileActions"
 import { ImportWizardModal } from "@/components/import/ImportWizardModal"
@@ -95,6 +96,9 @@ const File = () => {
   const [showImportModal, setShowImportModal] = useState(false)
   const [isBulkExporting, setIsBulkExporting] = useState(false)
   const [showBulkExportModal, setShowBulkExportModal] = useState(false)
+  /** 一括書き出しの結果。渡している間はモーダルが結果の段を見せる */
+  const [bulkExportOutcome, setBulkExportOutcome] =
+    useState<ExportOutcome | null>(null)
 
   const { createExamModal } = useFileActions()
   const router = useRouter()
@@ -172,36 +176,47 @@ const File = () => {
       })
 
       try {
-        const result = await bulkExportExams.mutateAsync({
+        const bulkResult = await bulkExportExams.mutateAsync({
           examIds: Array.from(selectedIds),
           userId: user.id,
           exportMode,
         })
 
-        if (result.canceled) {
-          // フォルダ選択キャンセル時はtoast表示なし
+        if (bulkResult.canceled) {
+          // 出力先を選ばずに閉じたのは失敗ではないので、何も言わない
           return
         }
 
-        const successCount = result.results.filter(
-          (exportResult) => exportResult.success
-        ).length
-        const failCount = result.results.filter(
-          (exportResult) => !exportResult.success
-        ).length
-
-        if (failCount === 0) {
-          toast.success("書き出し完了", {
-            description: `${successCount}件の試験を書き出しました。`,
-          })
-        } else {
-          toast.warning("一部書き出しに失敗", {
-            description: `${successCount}件成功、${failCount}件失敗`,
-          })
-        }
+        // 結果はモーダルの中で見せる。**欠けたファイルも試験ごとの失敗も落とさない**。
+        // 書き出し中に閉じられていても、結果は見せる
+        setShowBulkExportModal(true)
+        setBulkExportOutcome({
+          archives: bulkResult.results.flatMap((exportResult) =>
+            exportResult.success && exportResult.outputPath
+              ? [
+                  {
+                    sourceId: exportResult.examId,
+                    sourceName: exportResult.examName,
+                    outputPath: exportResult.outputPath,
+                    missingFiles: exportResult.missingFiles,
+                  },
+                ]
+              : []
+          ),
+          failures: bulkResult.results.flatMap((exportResult) =>
+            exportResult.success
+              ? []
+              : [
+                  {
+                    sourceId: exportResult.examId,
+                    sourceName: exportResult.examName,
+                    error: exportResult.error ?? "書き出しに失敗しました",
+                  },
+                ]
+          ),
+        })
 
         clearSelection()
-        setShowBulkExportModal(false)
       } catch (error) {
         toast.error("書き出しに失敗しました", {
           description:
@@ -216,6 +231,14 @@ const File = () => {
     [user, selectedIds, clearSelection, bulkExportExams]
   )
 
+  /** 閉じたら結果を捨てる（次に開いたときは選択の段から始まる） */
+  const handleBulkExportModalOpenChange = useCallback((open: boolean) => {
+    setShowBulkExportModal(open)
+    if (!open) {
+      setBulkExportOutcome(null)
+    }
+  }, [])
+
   return (
     <>
       {createExamModal.isOpen && (
@@ -229,11 +252,12 @@ const File = () => {
         onClose={() => setShowImportModal(false)}
         onComplete={handleImportComplete}
       />
-      <ExportModeModal
+      <ExamArchiveExportModal
         open={showBulkExportModal}
-        onOpenChange={setShowBulkExportModal}
+        onOpenChange={handleBulkExportModalOpenChange}
         onExport={handleBulkExport}
         isExporting={isBulkExporting}
+        exportOutcome={bulkExportOutcome}
       />
       <div className="flex h-full min-w-full flex-col">
         <div className="border-b px-4 py-3">

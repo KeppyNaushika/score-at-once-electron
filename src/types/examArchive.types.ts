@@ -431,6 +431,12 @@ export interface BulkExportExamResult {
   success: boolean
   outputPath?: string
   error?: string
+  /**
+   * 同梱できなかったファイルの説明。**空でなければ、中身が欠けたまま作られている。**
+   *
+   * 捨てると「画像が1枚も入っていないのに5件書き出しました」と言うことになる。
+   */
+  missingFiles: string[]
 }
 
 /**

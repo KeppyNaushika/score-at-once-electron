@@ -38,7 +38,16 @@ function createManifest(collected: CollectedAsbData): AsbArchiveManifest {
 export async function createAsbArchive(
   collected: CollectedAsbData,
   outputPath: string
-): Promise<{ success: boolean; outputPath?: string; error?: string }> {
+): Promise<{
+  success: boolean
+  outputPath?: string
+  error?: string
+  /** 見つからず同梱できなかった画像。**空でなければ欠けたまま作られている** */
+  missingFiles: string[]
+}> {
+  // 欠けたファイルはどの経路で終わっても返す（集めたまま捨てない）
+  const missingFiles: string[] = []
+
   return new Promise((resolve) => {
     try {
       const outputDir = path.dirname(outputPath)
@@ -48,10 +57,9 @@ export async function createAsbArchive(
 
       const output = fs.createWriteStream(outputPath)
       const archive = new ZipArchive({ zlib: { level: 9 } })
-      const missingFiles: string[] = []
 
       output.on("close", () => {
-        resolve({ success: true, outputPath })
+        resolve({ success: true, outputPath, missingFiles })
       })
 
       archive.on("error", (err) => {
@@ -59,6 +67,7 @@ export async function createAsbArchive(
         resolve({
           success: false,
           error: `アーカイブ作成エラー: ${err.message}`,
+          missingFiles,
         })
       })
 
@@ -106,7 +115,8 @@ export async function createAsbArchive(
           })
         } else {
           console.warn(`ASB image not found: ${absolutePath}`)
-          missingFiles.push(path.basename(relativePath))
+          // 種別を付けて並べる（試験アーカイブの `答案画像: …` と同じ読み方にする）
+          missingFiles.push(`解答用紙の画像: ${path.basename(relativePath)}`)
         }
       }
 
@@ -119,6 +129,7 @@ export async function createAsbArchive(
           error instanceof Error
             ? error.message
             : "アーカイブ作成に失敗しました",
+        missingFiles,
       })
     }
   })

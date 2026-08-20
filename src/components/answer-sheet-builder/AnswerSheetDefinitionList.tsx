@@ -15,7 +15,12 @@ import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import BaseModal from "@/components/common/BaseModal"
 import { BulkTagAssignButton } from "@/components/common/BulkTagAssignButton"
+import {
+  type ExportOutcome,
+  ExportResultSummary,
+} from "@/components/common/ExportResultSummary"
 import { ListFilterBar } from "@/components/common/ListFilterBar"
 import {
   AlertDialog,
@@ -183,6 +188,8 @@ export function AnswerSheetDefinitionList() {
   } | null>(null)
   const [transferTarget, setTransferTarget] =
     useState<ASBDefinitionListItem | null>(null)
+  /** 書き出しの結果。渡している間は結果モーダルを見せる */
+  const [exportOutcome, setExportOutcome] = useState<ExportOutcome | null>(null)
   // 担当を渡す相手は選んだ1件ぶん。取り直す先もその1件のまとまりになるので、
   // 書き込みの宣言は「今どれを選んでいるか」から組む
   const { mutateAsync: transferOwnerOf } = useMutation(
@@ -381,12 +388,23 @@ export function AnswerSheetDefinitionList() {
   }
 
   const handleExport = useCallback(
-    async (definitionId: string) => {
+    async (definition: ASBDefinitionListItem) => {
       try {
-        const result = await exportDefinition(definitionId)
-        if (!result.canceled) {
-          toast.success("解答用紙を書き出しました")
-        }
+        const exportResult = await exportDefinition(definition.id)
+        // 保存先を選ばずに閉じたのは失敗ではないので、何も言わない
+        if (exportResult.canceled) return
+        // 結果はモーダルの中で見せる（欠けた画像はファイル名まで出す）
+        setExportOutcome({
+          archives: [
+            {
+              sourceId: definition.id,
+              sourceName: definition.name,
+              outputPath: exportResult.outputPath,
+              missingFiles: exportResult.missingFiles ?? [],
+            },
+          ],
+          failures: [],
+        })
       } catch {
         // 失敗の通知は MutationCache が出す
       }
@@ -661,7 +679,7 @@ export function AnswerSheetDefinitionList() {
                             複製
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleExport(definition.id)}
+                            onClick={() => handleExport(definition)}
                           >
                             <FolderOutput className="mr-2 h-4 w-4" />
                             .asb 書き出し
@@ -699,6 +717,25 @@ export function AnswerSheetDefinitionList() {
           </div>
         )}
       </div>
+
+      {exportOutcome && (
+        <BaseModal
+          open
+          onOpenChange={(open) => !open && setExportOutcome(null)}
+          title=".asb 書き出し"
+          variant={
+            exportOutcome.archives.some(
+              (archive) => archive.missingFiles.length > 0
+            )
+              ? "warning"
+              : "success"
+          }
+          size="lg"
+          actions={{ cancel: { label: "閉じる" } }}
+        >
+          <ExportResultSummary outcome={exportOutcome} />
+        </BaseModal>
+      )}
 
       <TransferOwnerDialog
         definition={transferTarget}

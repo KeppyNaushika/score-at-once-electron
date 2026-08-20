@@ -8,15 +8,19 @@ import type { ArchiveAsbTag } from "../../../../src/types/asbArchive.types"
 import { getAsbDefinition } from "../../prisma/asbDefinition"
 import { getAsbDefinitionTags } from "../../prisma/asbDefinitionTag"
 import { recordAuditLog } from "../../prisma/auditLog"
+import type { FileExportResult } from "../../shared/types"
 import { createAsbArchive, generateAsbExportFileName } from "./archiveCreator"
 import { collectAsbData } from "./dataCollector"
 
 /**
  * 解答用紙定義をエクスポート
+ *
+ * 画像の実体が見つからなくてもアーカイブは作られる（壊れてはいない）。欠けたものは
+ * `missingFiles` で返し、監査ログにも残す。
  */
 export async function exportAsbDefinition(
   definitionId: string
-): Promise<{ canceled: true } | { canceled: false; outputPath: string }> {
+): Promise<FileExportResult> {
   try {
     // 1. 定義を取得
     const definition = await getAsbDefinition(definitionId)
@@ -56,19 +60,27 @@ export async function exportAsbDefinition(
       throw new Error(archiveResult.error ?? "書き出しに失敗しました")
     }
 
-    {
-      await recordAuditLog({
-        action: "answer_sheet.export",
-        entityType: "AsbDefinition",
-        entityId: definitionId,
-        scopeId: definitionId,
-        scopeLabel: definition.name,
-        target: definition.name,
-        extra: { outputPath: archiveResult.outputPath },
-      })
-    }
+    await recordAuditLog({
+      action: "answer_sheet.export",
+      entityType: "AsbDefinition",
+      entityId: definitionId,
+      scopeId: definitionId,
+      scopeLabel: definition.name,
+      target: definition.name,
+      extra: {
+        outputPath: archiveResult.outputPath,
+        // 欠けたまま書き出したなら、記録にも残す（成功としてだけ残さない）
+        ...(archiveResult.missingFiles.length > 0 && {
+          missingFiles: archiveResult.missingFiles,
+        }),
+      },
+    })
 
-    return { canceled: false, outputPath: archiveResult.outputPath }
+    return {
+      canceled: false,
+      outputPath: archiveResult.outputPath,
+      missingFiles: archiveResult.missingFiles,
+    }
   } catch (error) {
     console.error("Error exporting ASB definition:", error)
     throw error
