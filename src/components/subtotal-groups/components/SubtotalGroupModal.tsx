@@ -51,7 +51,15 @@ interface SubtotalGroupModalProps {
 }
 
 interface SubtotalFormData {
-  id: string
+  /**
+   * 並べ替えと React の key に使う、この画面の中だけの値。
+   *
+   * **DB の行を指す id ではない。** まだ作られていない項目にも要るので、
+   * 既にある項目では `subtotalId` と同じ値を、新しい項目では uuid を入れる。
+   */
+  key: string
+  /** DB にある行の id。まだ作られていない項目は null */
+  subtotalId: string | null
   name: string
   order: number
 }
@@ -60,16 +68,12 @@ interface SubtotalFormData {
 function SortableSubtotalItem({
   subtotal,
   index,
-  onUpdate,
+  onRename,
   onDelete,
 }: {
   subtotal: SubtotalFormData
   index: number
-  onUpdate: (
-    index: number,
-    field: keyof SubtotalFormData,
-    value: string | number
-  ) => void
+  onRename: (index: number, name: string) => void
   onDelete: (index: number) => void
 }) {
   const {
@@ -79,7 +83,7 @@ function SortableSubtotalItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: subtotal.id })
+  } = useSortable({ id: subtotal.key })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -107,7 +111,7 @@ function SortableSubtotalItem({
         <Input
           placeholder="小計項目名"
           value={subtotal.name}
-          onChange={(e) => onUpdate(index, "name", e.target.value)}
+          onChange={(e) => onRename(index, e.target.value)}
         />
       </div>
       <Button
@@ -149,7 +153,8 @@ export function SubtotalGroupModal({
     [...(editingGroup?.subtotals ?? [])]
       .sort((subtotalA, subtotalB) => subtotalA.order - subtotalB.order)
       .map((subtotal, index) => ({
-        id: subtotal.id,
+        key: subtotal.id,
+        subtotalId: subtotal.id,
         name: subtotal.name,
         order: index,
       }))
@@ -202,24 +207,21 @@ export function SubtotalGroupModal({
         tag.name.toLowerCase().includes(currentTagInput.trim().toLowerCase()))
   )
 
-  // 小計項目を追加
+  // 小計項目を追加。DB にはまだ無いので subtotalId は null
   const addSubtotal = () => {
     const newSubtotal: SubtotalFormData = {
-      id: `temp-${Date.now()}`,
+      key: crypto.randomUUID(),
+      subtotalId: null,
       name: "",
       order: subtotals.length,
     }
     setSubtotals([...subtotals, newSubtotal])
   }
 
-  // 小計項目を更新
-  const updateSubtotal = (
-    index: number,
-    field: keyof SubtotalFormData,
-    value: string | number
-  ) => {
+  // 小計項目の名前を変える
+  const renameSubtotal = (index: number, name: string) => {
     const updated = [...subtotals]
-    updated[index] = { ...updated[index], [field]: value }
+    updated[index] = { ...updated[index], name }
     setSubtotals(updated)
   }
 
@@ -232,14 +234,21 @@ export function SubtotalGroupModal({
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over) return
 
-    const activeIndex = subtotals.findIndex((item) => item.id === active.id)
-    const overIndex = subtotals.findIndex((item) => item.id === over.id)
+    const activeIndex = subtotals.findIndex(
+      (subtotal) => subtotal.key === active.id
+    )
+    const overIndex = subtotals.findIndex(
+      (subtotal) => subtotal.key === over.id
+    )
 
     if (activeIndex !== overIndex) {
-      setSubtotals((items) => {
-        const newItems = arrayMove(items, activeIndex, overIndex)
+      setSubtotals((prev) => {
+        const reordered = arrayMove(prev, activeIndex, overIndex)
         // orderを更新
-        return newItems.map((item, index) => ({ ...item, order: index }))
+        return reordered.map((subtotal, index) => ({
+          ...subtotal,
+          order: index,
+        }))
       })
     }
   }
@@ -264,13 +273,14 @@ export function SubtotalGroupModal({
 
     setSaving(true)
     try {
-      const groupData = {
-        name: name.trim(),
-        subtotals: subtotals.map((subtotal, index) => ({
-          name: subtotal.name.trim(),
-          order: index,
-        })),
-      }
+      // 画面の並びをそのまま order にする。更新では**どの行を指しているか**を
+      // id で伝える（伝えないと、名前を1文字直しただけの保存でも main には
+      // 「全部消えて全部増えた」に見え、設問の割り当てが道連れになる）
+      const editedSubtotals = subtotals.map((subtotal, index) => ({
+        id: subtotal.subtotalId,
+        name: subtotal.name.trim(),
+        order: index,
+      }))
 
       // **作った相手を覚える。** 作成のあとタグ側で失敗すると、モーダルは開いたまま
       // 入力を残すので利用者はもう一度「保存」を押す。覚えていないと作成の枝を
@@ -280,10 +290,28 @@ export function SubtotalGroupModal({
       const savedGroup = existingGroupId
         ? await updateSubtotalGroup.mutateAsync({
             subtotalGroupId: existingGroupId,
-            data: groupData,
+            data: { name: name.trim(), subtotals: editedSubtotals },
           })
-        : await createSubtotalGroup.mutateAsync(groupData)
+        : await createSubtotalGroup.mutateAsync({
+            name: name.trim(),
+            subtotals: editedSubtotals.map((subtotal) => ({
+              name: subtotal.name,
+              order: subtotal.order,
+            })),
+          })
       setCreatedGroupId(savedGroup.id)
+
+      // **保存できた行の id を手元へ取り込む。** 取り込まないと、続くタグ側で失敗して
+      // もう一度「保存」を押したとき、作ったばかりの項目が main には「まだ無いもの」に
+      // 見えて作り直される
+      setSubtotals(
+        savedGroup.subtotals.map((subtotal) => ({
+          key: subtotal.id,
+          subtotalId: subtotal.id,
+          name: subtotal.name,
+          order: subtotal.order,
+        }))
+      )
 
       // タグは他の紐付けと同じく、タグ名から findOrCreate して置換方式で保存する
       const tagIds: string[] = []
@@ -415,16 +443,16 @@ export function SubtotalGroupModal({
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={subtotals.map((subtotal) => subtotal.id)}
+                  items={subtotals.map((subtotal) => subtotal.key)}
                   strategy={verticalListSortingStrategy}
                 >
                   <div className="space-y-3">
                     {subtotals.map((subtotal, index) => (
                       <SortableSubtotalItem
-                        key={subtotal.id}
+                        key={subtotal.key}
                         subtotal={subtotal}
                         index={index}
-                        onUpdate={updateSubtotal}
+                        onRename={renameSubtotal}
                         onDelete={deleteSubtotal}
                       />
                     ))}

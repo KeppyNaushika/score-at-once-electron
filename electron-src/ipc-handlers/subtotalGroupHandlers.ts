@@ -30,12 +30,14 @@ export const subtotalGroupHandlers = {
     return await createSubtotalGroup(data)
   },
 
-  // 小計点グループ更新
+  // 小計点グループ更新（小計項目は id で突き合わせて差分だけを書く。id が null の
+  // 項目は新しく作るもので、その id は DB が振る）
   "update-subtotal-group": async (
     id: string,
     data: {
       name: string
       subtotals: {
+        id: string | null
         name: string
         order: number
       }[]

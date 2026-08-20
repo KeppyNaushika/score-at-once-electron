@@ -92,46 +92,138 @@ export async function createSubtotalGroup(data: {
 }
 
 /**
- * 小計点グループを更新
+ * 小計点グループを更新する。
+ *
+ * **外れたものだけ消し、変わったものだけ更新し、増えたものだけ作る。**
+ * かつてはここが小計項目を `deleteMany` してから配列ごと作り直していたため、
+ * グループ名を1文字直して保存するだけで全ての `Subtotal` の id が振り直され、
+ * カスケードでその子が消えていた —— 04 で設定した設問の割り当て（`CropSubtotal`）と、
+ * その小計を参照する成績のデータソース（`GradeDataSource`）である。割り当て直しても
+ * id が変わっているので元には戻らない。同期にも毎回 tombstone と新しい id が流れていた。
+ *
+ * **突き合わせは id で行う。** `Subtotal` は `@@unique([subtotalGroupId, name])` を
+ * 持つが、名前で突き合わせると「並べ替えと改名が同時に来たとき」に別物として扱って
+ * しまう。**新しい項目の id は受け取らない**（画面側が新しい行に持たせているのは
+ * 並べ替えと React の key に使う値で、DB の行を指す id ではない）。作る行の id は
+ * schema の `@default(uuid())` が振る。
+ *
+ * **触った行が1つも無ければ何も書かない。** 書けば同期には「その行が変わった」として
+ * 流れ、相手の端末の編集を巻き添えにする。
  */
 export async function updateSubtotalGroup(
   id: string,
   data: {
     name: string
+    /** id は既にある行を指す。新しい項目は null（id は DB が振る） */
     subtotals: {
+      id: string | null
       name: string
       order: number
     }[]
   }
 ) {
-  // トランザクション内で更新
-  const subtotalGroup = await prisma.$transaction(
+  const { subtotalGroup, hasWritten } = await prisma.$transaction(
     async (tx: Prisma.TransactionClient) => {
-      // 既存の小計項目を削除
-      await tx.subtotal.deleteMany({
+      const currentGroup = await tx.subtotalGroup.findUniqueOrThrow({
+        where: { id },
+      })
+      const currentSubtotals = await tx.subtotal.findMany({
         where: { subtotalGroupId: id },
       })
+      const currentSubtotalById = new Map(
+        currentSubtotals.map((subtotal) => [subtotal.id, subtotal])
+      )
 
-      // 小計点グループを更新
-      return await tx.subtotalGroup.update({
-        where: { id },
-        data: {
-          name: data.name,
-          subtotals: {
-            create: data.subtotals,
+      // 受け取った並びを「そのまま残るもの・変わったもの・増えたもの」へ振り分ける。
+      // 既にある行を指していない id（画面側の並べ替え用の値や、他の端末が既に
+      // 消した行の id）は、増えたものとして扱う
+      const keptSubtotalIds = new Set<string>()
+      const changedSubtotals: { id: string; name: string; order: number }[] = []
+      const addedSubtotals: { name: string; order: number }[] = []
+      for (const subtotal of data.subtotals) {
+        const currentSubtotal =
+          subtotal.id === null
+            ? undefined
+            : currentSubtotalById.get(subtotal.id)
+        if (currentSubtotal === undefined) {
+          addedSubtotals.push({ name: subtotal.name, order: subtotal.order })
+          continue
+        }
+        keptSubtotalIds.add(currentSubtotal.id)
+        if (
+          currentSubtotal.name !== subtotal.name ||
+          currentSubtotal.order !== subtotal.order
+        ) {
+          changedSubtotals.push({
+            id: currentSubtotal.id,
+            name: subtotal.name,
+            order: subtotal.order,
+          })
+        }
+      }
+      const removedSubtotals = currentSubtotals.filter(
+        (subtotal) => !keptSubtotalIds.has(subtotal.id)
+      )
+
+      // 消す・変える・作るの順で書く。名前は `@@unique` なので、消した項目が
+      // 名乗っていた名前を同じ保存の中で別の項目が名乗れるようにこの順にする
+      // （2つの項目が名前を入れ替えるときだけは中間で重複するため保存が通らない。
+      // その場合は1つずつ保存し直してもらう）
+      if (removedSubtotals.length > 0) {
+        await tx.subtotal.deleteMany({
+          where: {
+            id: { in: removedSubtotals.map((subtotal) => subtotal.id) },
           },
-        },
-        include: subtotalGroupWithSubtotalsInclude,
-      })
+        })
+      }
+      for (const subtotal of changedSubtotals) {
+        await tx.subtotal.update({
+          where: { id: subtotal.id },
+          data: { name: subtotal.name, order: subtotal.order },
+        })
+      }
+      if (addedSubtotals.length > 0) {
+        await tx.subtotal.createMany({
+          data: addedSubtotals.map((subtotal) => ({
+            subtotalGroupId: id,
+            name: subtotal.name,
+            order: subtotal.order,
+          })),
+        })
+      }
+
+      const isGroupNameChanged = currentGroup.name !== data.name
+      if (isGroupNameChanged) {
+        await tx.subtotalGroup.update({
+          where: { id },
+          data: { name: data.name },
+        })
+      }
+
+      // 書いた結果を読み直して返す
+      return {
+        subtotalGroup: await tx.subtotalGroup.findUniqueOrThrow({
+          where: { id },
+          include: subtotalGroupWithSubtotalsInclude,
+        }),
+        hasWritten:
+          isGroupNameChanged ||
+          removedSubtotals.length > 0 ||
+          changedSubtotals.length > 0 ||
+          addedSubtotals.length > 0,
+      }
     }
   )
 
-  await recordAuditLog({
-    action: "subtotal_group.update",
-    entityType: "SubtotalGroup",
-    entityId: subtotalGroup.id,
-    target: subtotalGroup.name,
-  })
+  // 何も書いていない保存は記録しない（監査ログは書き込みの記録である）
+  if (hasWritten) {
+    await recordAuditLog({
+      action: "subtotal_group.update",
+      entityType: "SubtotalGroup",
+      entityId: subtotalGroup.id,
+      target: subtotalGroup.name,
+    })
+  }
 
   return subtotalGroup
 }
