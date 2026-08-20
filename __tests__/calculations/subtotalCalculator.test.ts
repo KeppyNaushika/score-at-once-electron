@@ -11,7 +11,7 @@
 import type { CropRegion } from "@prisma/client"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import type { StoredScoringStatus } from "@/types/scoringStatus.types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 // モック設定（import前に定義）
 const mockGetCropSubtotalsForScoring = vi.fn()
@@ -77,7 +77,7 @@ function createQuestionAssignment(
 function createQuestionScore(
   examStudentId: string,
   cropRegionId: string,
-  status: StoredScoringStatus,
+  status: ScoringStatus,
   partialScore: number | null = null
 ): QuestionScoreForSubtotal {
   return { examStudentId, cropRegionId, status, partialScore }

@@ -30,26 +30,3 @@ export const { is: isScoringStatus, to: toScoringStatus } = defineStringUnion(
   SCORING_STATUSES,
   "unscored"
 )
-
-/**
- * DB に入りうる採点判定。**現行の7値に、未変換の旧データの値を足したもの。**
- *
- * `QuestionScore.status` は `String` 列なので、旧バージョンが書いた `"final"` /
- * `"proposed"` がそのまま残っている DB がありうる。得点化と確定リゾルバはこれらを
- * 現に扱っている（`final` は提案より優先し、`proposed` は部分点として読む）ので、
- * `ScoringStatus` へ絞ると**旧データの扱いが黙って消える**。
- *
- * **書く側は使わない。** 新しく書いてよいのは `ScoringStatus` の7値だけで、これは
- * 「読むときに出会いうる値」を表す型である。
- */
-export const LEGACY_SCORING_STATUSES = ["final", "proposed"] as const
-
-export type StoredScoringStatus =
-  ScoringStatus | (typeof LEGACY_SCORING_STATUSES)[number]
-
-/** DB/JSON 由来の文字列を `StoredScoringStatus` へ絞る（想定外値は未採点） */
-export const { is: isStoredScoringStatus, to: toStoredScoringStatus } =
-  defineStringUnion<StoredScoringStatus>(
-    [...SCORING_STATUSES, ...LEGACY_SCORING_STATUSES],
-    "unscored"
-  )

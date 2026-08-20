@@ -1,5 +1,5 @@
 import { assertNever } from "@/lib/assertNever"
-import type { StoredScoringStatus } from "@/types/scoringStatus.types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /**
  * 採点ステータスから実際の得点を求める純粋関数。
@@ -17,7 +17,7 @@ import type { StoredScoringStatus } from "@/types/scoringStatus.types"
  */
 export const calculateActualScore = (
   questionScore: {
-    status: StoredScoringStatus
+    status: ScoringStatus
     partialScore?: number | null
   },
   maxScore: number
@@ -25,13 +25,6 @@ export const calculateActualScore = (
   switch (questionScore.status) {
     case "correct":
       return maxScore
-    case "final":
-      // 廃止済みstatus。未変換の旧データへの耐性として残す
-      // （確定値は partialScore、満点確定時は null のことがある）
-      return questionScore.partialScore !== null &&
-        questionScore.partialScore !== undefined
-        ? Number(questionScore.partialScore)
-        : maxScore
     case "incorrect":
     case "no_answer":
     case "double_mark":
@@ -40,7 +33,6 @@ export const calculateActualScore = (
       return null // 未採点は null を返して -/配点 と表示
     case "partial":
     case "pending":
-    case "proposed": // 廃止済みstatus（旧データ耐性）
       return questionScore.partialScore !== null &&
         questionScore.partialScore !== undefined
         ? Number(questionScore.partialScore)

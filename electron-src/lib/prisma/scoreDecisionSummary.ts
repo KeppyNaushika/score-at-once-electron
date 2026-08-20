@@ -12,10 +12,7 @@ import type {
   ScoreDecisionQuestion,
   ScoreProposal,
 } from "@/types/scoreDecision.types"
-import {
-  toScoringStatus,
-  toStoredScoringStatus,
-} from "@/types/scoringStatus.types"
+import { toScoringStatus } from "@/types/scoringStatus.types"
 
 import { calculateActualScore } from "../shared/calculations/actualScore"
 import { resolveEffectiveScores } from "../shared/calculations/scoreResolution"
@@ -203,7 +200,7 @@ export const getExamDecisionSummary = async (
       status: toScoringStatus(score.status),
       partialScore,
       scoreValue: calculateActualScore(
-        { status: toStoredScoringStatus(score.status), partialScore },
+        { status: toScoringStatus(score.status), partialScore },
         maxScore
       ),
       updatedAt: score.updatedAt.toISOString(),

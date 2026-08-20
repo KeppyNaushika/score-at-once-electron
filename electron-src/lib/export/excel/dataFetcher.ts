@@ -274,8 +274,8 @@ function buildScoreDetails(
       questionLabel: region.label || `問${(region.orderIndex ?? 0) + 1}`,
       score: actualScore,
       maxScore: region.points || 0,
-      // 上流が判定を絞って返すので `as` は要らない（旧データの final / proposed は
-      // 表示上は未採点へ寄せる）
+      // 行が無ければ未採点。`toScoringStatus` が undefined も想定外値も
+      // `unscored` へ倒すので、ここで既定値を書き足さない
       status: toScoringStatus(scoreRecord?.status),
     }
   })

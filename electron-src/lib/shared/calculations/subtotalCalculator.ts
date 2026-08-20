@@ -8,16 +8,16 @@
 import type { QuestionScore } from "@prisma/client"
 
 import { selectExamCropRegions } from "@/lib/shared/subtotalAssignments"
-import type { StoredScoringStatus } from "@/types/scoringStatus.types"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { getCropSubtotalsForScoring } from "../../prisma/cropSubtotal"
 import { calculateActualScore } from "./actualScore"
 
 /**
  * 小計計算の入力となる、解決済み設問スコアの最小射影（生徒×設問の得点1件）。
- * identity フィールドは QuestionScore に追随。status は `StoredScoringStatus`
- * （現行の7値＋未変換の旧データ）へ絞る — `string` のままだと得点化の switch が
- * 網羅されず、未知の判定が黙って 0点として算入される。
+ * identity フィールドは QuestionScore に追随。status は `ScoringStatus`（7値）へ
+ * 絞る — `string` のままだと得点化の switch が網羅されず、未知の判定が黙って
+ * 0点として算入される。
  */
 export type QuestionScoreForSubtotal = Omit<
   QuestionScore,
@@ -25,8 +25,8 @@ export type QuestionScoreForSubtotal = Omit<
 > & {
   partialScore?: number | null
   // SQLite は enum を持てないので Prisma の型は `string`。判定の集合はここで注入する
-  // （境界で `toStoredScoringStatus` を1回通す）
-  status: StoredScoringStatus
+  // （境界で `toScoringStatus` を1回通す）
+  status: ScoringStatus
 }
 
 /**

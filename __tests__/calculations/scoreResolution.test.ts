@@ -4,14 +4,13 @@
  * テスト対象:
  * - resolveEffectiveScores: 確定（ScoreDecision）> 提案合意 > 競合 の決定的解決
  * - calculateEffectiveScoreValue: 有効スコアの得点計算
- * - calculateActualScore: 旧status（final）耐性
  */
 import { describe, expect, it } from "vitest"
 
-import { calculateActualScore } from "@/electron-src/lib/shared/calculations/actualScore"
 import type {
   ResolvableDecision,
   ResolvableScore,
+  ResolvableScoreInput,
 } from "@/electron-src/lib/shared/calculations/scoreResolution"
 import {
   calculateEffectiveScoreValue,
@@ -163,14 +162,22 @@ describe("resolveEffectiveScores - 提案のみ", () => {
     expect(result2.resolved[0].questionScoreId).toBe("id-zzz")
   })
 
-  it("旧データのfinal行は提案より優先される（耐性）", () => {
-    const proposal = score({ status: "correct" })
-    const final = score({ status: "final", partialScore: 5 })
-    const { resolved, conflicts } = resolveEffectiveScores([proposal, final])
+  // 旧値 final / proposed の流入口は無い（DB は起動時 migration が、アーカイブは
+  // トランスフォーマーが掃海し、同期は schemaVersion 不一致のリモートを丸ごと
+  // 捨てる）。それでも境界で倒れないことだけは固定しておく — `toScoringStatus`
+  // が未採点へ倒すので、例外にはならず欠測として扱われる。
+  it("旧データの final 行が来ても落ちず、未採点として扱われる", () => {
+    const legacyRow: ResolvableScoreInput = {
+      ...score(),
+      status: "final",
+      partialScore: 5,
+    }
+    const { resolved, conflicts } = resolveEffectiveScores([legacyRow])
     expect(resolved).toHaveLength(1)
-    expect(resolved[0].status).toBe("final")
-    expect(resolved[0].partialScore).toBe(5)
+    expect(resolved[0].status).toBe("unscored")
     expect(conflicts).toEqual([])
+    // 未採点なので0点ではなく欠測（null）として算入される
+    expect(calculateEffectiveScoreValue(resolved[0], 10)).toBeNull()
   })
 })
 
@@ -294,36 +301,11 @@ describe("calculateEffectiveScoreValue", () => {
   })
 })
 
-// ================== calculateActualScore (旧データ耐性) ==================
-
-describe("calculateActualScore - 旧status耐性", () => {
-  it("finalはpartialScoreの確定値を返す（満点固定にしない）", () => {
-    expect(calculateActualScore({ status: "final", partialScore: 3 }, 10)).toBe(
-      3
-    )
-  })
-
-  it("finalでpartialScoreがnullなら満点を返す（旧データ互換）", () => {
-    expect(
-      calculateActualScore({ status: "final", partialScore: null }, 10)
-    ).toBe(10)
-  })
-})
-
 describe("判定の集合を型で守る", () => {
   // `status: string` で受けていた頃は、得点化の switch が `default: return 0` で
   // 黙って通り、**未知の判定が「未採点（欠測）」ではなく0点として成績に算入されて
   // いた**。いまは網羅していない値がコンパイルエラーになる
   // （docs/branch-review-findings.md #16）。
-  it("旧データの final / proposed は、いまも部分点として読める", () => {
-    expect(
-      calculateEffectiveScoreValue({ status: "final", partialScore: 7 }, 10)
-    ).toBe(7)
-    expect(
-      calculateEffectiveScoreValue({ status: "proposed", partialScore: 4 }, 10)
-    ).toBe(4)
-  })
-
   it("未採点は0ではなく欠測（null）", () => {
     expect(
       calculateEffectiveScoreValue(

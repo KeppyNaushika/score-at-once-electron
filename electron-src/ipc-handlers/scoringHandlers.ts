@@ -95,19 +95,10 @@ export const scoringHandlers = {
       sourceQuestionScoreId?: string
     }
   ) => {
-    // 旧API互換: status="final" は点数有無からverdictを導出する
-    const verdict =
-      scoreData.status === "final"
-        ? scoreData.partialScore === null ||
-          scoreData.partialScore === undefined
-          ? "correct"
-          : "partial"
-        : scoreData.status
-
     const decision = await upsertScoreDecision({
       cropRegionId,
       examStudentId,
-      verdict,
+      verdict: scoreData.status,
       score: scoreData.partialScore ?? null,
       comment: scoreData.comment ?? null,
       decidedByUserId: userId,

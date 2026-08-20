@@ -17,12 +17,11 @@
  *
  * unscored 行は他の行が存在する場合は無視する（scoringInitializer が
  * デフォルトユーザー名義で初期行を量産するため、採点の提案としては扱わない）。
- * status="final" は廃止済みだが、未変換の旧データへの耐性として提案より優先する。
  */
 
 import {
-  type StoredScoringStatus,
-  toStoredScoringStatus,
+  type ScoringStatus,
+  toScoringStatus,
 } from "@/types/scoringStatus.types"
 
 import { calculateActualScore } from "./actualScore"
@@ -30,8 +29,8 @@ import { calculateActualScore } from "./actualScore"
 export interface ResolvableScore {
   examStudentId: string
   cropRegionId: string
-  /** 現行の7値＋未変換の旧データ。`string` にすると得点化の網羅が効かなくなる */
-  status: StoredScoringStatus
+  /** 採点判定の7値。`string` にすると得点化の網羅が効かなくなる */
+  status: ScoringStatus
   partialScore: number | string | { toString(): string } | null
   id?: string
   updatedAt?: Date | string
@@ -51,19 +50,19 @@ export type ResolvableDecisionInput = Omit<ResolvableDecision, "verdict"> & {
  * Prisma の行（`status` は `String` 列）を、判定を絞った形にする。**境界はここ1つ。**
  *
  * SQLite は enum を持てないので DB から出た時点では `string`。各所で `as` を書くと
- * 綴りの誤りも旧値の見落としも検査に掛からないので、変換を名前のある関数に集める。
+ * 綴りの誤りも検査に掛からないので、変換を名前のある関数に集める。
  */
 export const toResolvableScore = <T extends { status: string }>(
   row: T
-): T & { status: StoredScoringStatus } => ({
+): T & { status: ScoringStatus } => ({
   ...row,
-  status: toStoredScoringStatus(row.status),
+  status: toScoringStatus(row.status),
 })
 
 export interface ResolvableDecision {
   examStudentId: string
   cropRegionId: string
-  verdict: StoredScoringStatus
+  verdict: ScoringStatus
   score: number | string | { toString(): string } | null
   decidedAt?: Date | string
   sourceQuestionScoreId?: string | null
@@ -73,8 +72,8 @@ export interface ResolvableDecision {
 export interface EffectiveScore {
   examStudentId: string
   cropRegionId: string
-  /** 採点判定。旧データ由来の `final` / `proposed` もそのまま出る */
-  status: StoredScoringStatus
+  /** 採点判定 */
+  status: ScoringStatus
   partialScore: number | null
   /**
    * 採点マーク・描画注釈の参照に使う QuestionScore 行の id。
@@ -147,7 +146,7 @@ export function resolveEffectiveScores(
   const scores = rawScores.map(toResolvableScore)
   const decisions = rawDecisions.map((decision) => ({
     ...decision,
-    verdict: toStoredScoringStatus(decision.verdict),
+    verdict: toScoringStatus(decision.verdict),
   }))
 
   const groups = new Map<string, ResolvableScore[]>()
@@ -193,12 +192,9 @@ export function resolveEffectiveScores(
   for (const [key, group] of groups) {
     if (decidedCells.has(key)) continue
 
-    // 旧データ耐性: 未変換の final 行があれば提案より優先する
-    const finals = group.filter((proposal) => proposal.status === "final")
-    const candidates =
-      finals.length > 0
-        ? finals
-        : group.filter((proposal) => proposal.status !== "unscored")
+    const candidates = group.filter(
+      (proposal) => proposal.status !== "unscored"
+    )
 
     if (candidates.length === 0) {
       // 全行 unscored — 表示用に1件残す
@@ -232,9 +228,9 @@ export function resolveEffectiveScores(
  * 有効スコアの実際の得点を計算する。
  *
  * **`calculateActualScore` に委ねる。** かつては同じ規則を2箇所で書いており、
- * 旧データの `final` / `proposed` の扱いだけが食い違っていた（あちらは部分点として
- * 読み、こちらは `default: return 0` で0点にしていた）。判定を union で受けるように
- * したときに、その食い違いが表に出た（docs/branch-review-findings.md #16）。
+ * 一方は部分点として読む判定を、他方は `default: return 0` で0点にしていた。
+ * 判定を union で受けるようにしたときに、その食い違いが表に出た
+ * （docs/branch-review-findings.md #16）。
  */
 export const calculateEffectiveScoreValue = (
   effective: Pick<EffectiveScore, "status" | "partialScore">,
