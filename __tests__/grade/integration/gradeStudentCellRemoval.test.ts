@@ -25,6 +25,7 @@ import {
   removeClassroomFromGrade,
 } from "@/electron-src/lib/prisma/gradeStudent"
 
+import { SAW_ALL_DELETION_COUNTS } from "../../helpers/deletionCounts"
 import {
   cleanupTestDatabase,
   createPrismaClientForPath,
@@ -153,7 +154,12 @@ describe("成績から生徒を外したときのセルの削除", () => {
   it("学級ごと外すと、その生徒の上書き・確定値・除外設定が全て消える", async () => {
     const fixture = await buildFixture()
 
-    await removeClassroomFromGrade(fixture.gradeId, fixture.classroomId, true)
+    await removeClassroomFromGrade(
+      fixture.gradeId,
+      fixture.classroomId,
+      true,
+      SAW_ALL_DELETION_COUNTS
+    )
 
     expect(await countCells(fixture.removedGradeStudentId)).toEqual({
       overrides: 0,
@@ -165,7 +171,12 @@ describe("成績から生徒を外したときのセルの削除", () => {
   it("他の生徒のセルは巻き添えにならない", async () => {
     const fixture = await buildFixture()
 
-    await removeClassroomFromGrade(fixture.gradeId, fixture.classroomId, true)
+    await removeClassroomFromGrade(
+      fixture.gradeId,
+      fixture.classroomId,
+      true,
+      SAW_ALL_DELETION_COUNTS
+    )
 
     // kept は別学級にも所属するため専属ではなく、対象者として残る
     expect(await countCells(fixture.keptGradeStudentId)).toEqual({
@@ -178,7 +189,12 @@ describe("成績から生徒を外したときのセルの削除", () => {
   it("外した生徒を再び追加しても、以前の確定値・上書き・除外は復元されない", async () => {
     const fixture = await buildFixture()
 
-    await removeClassroomFromGrade(fixture.gradeId, fixture.classroomId, true)
+    await removeClassroomFromGrade(
+      fixture.gradeId,
+      fixture.classroomId,
+      true,
+      SAW_ALL_DELETION_COUNTS
+    )
     await addStudentsFromClassroomToGrade(fixture.gradeId, fixture.classroomId)
 
     const readded = await testPrisma.gradeStudent.findFirstOrThrow({

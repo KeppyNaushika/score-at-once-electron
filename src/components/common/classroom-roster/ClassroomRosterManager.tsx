@@ -29,12 +29,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { queryKeys } from "@/lib/queryKeys"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
 import { ClassroomRemovalDialog } from "./ClassroomRemovalDialog"
 import type {
   AvailableClassroomOption,
   ClassroomRemovalMode,
-  ClassroomRemovalPreview,
   ClassroomRosterEntry,
   ClassroomRosterFlagColumn,
 } from "./types"
@@ -62,15 +62,19 @@ interface ClassroomRosterManagerProps {
   onAddClassrooms?: (classroomIds: string[]) => Promise<void>
   /** order並び替え（D&D）。失敗時は throw すると楽観更新がロールバックされる */
   onReorder: (orderedIds: string[]) => Promise<void>
-  /** 削除実行（deleteStudents=trueで専属生徒も削除） */
+  /**
+   * 削除実行（deleteStudents=trueで専属生徒も削除）。
+   * 利用者に見せた件数を添えて渡す（消す直前に main が数え直す。段階26）
+   */
   onRemove: (
     entry: ClassroomRosterEntry,
-    deleteStudents: boolean
+    deleteStudents: boolean,
+    confirmedCounts: ConfirmedDeletionCount[]
   ) => Promise<void>
-  /** can-delete-students モードの削除プレビュー */
+  /** can-delete-students モードで、巻き添えになるものを数える */
   fetchRemovalPreview?: (
     entry: ClassroomRosterEntry
-  ) => Promise<ClassroomRemovalPreview>
+  ) => Promise<ConfirmedDeletionCount[]>
   /** 専属生徒を削除したときに連動して消えるもの（最終確認に列挙する） */
   deletionLosses?: string[]
   /** 変更後に親へ再読込を通知 */
@@ -304,8 +308,8 @@ export function ClassroomRosterManager({
         mode={removalMode}
         fetchRemovalPreview={fetchRemovalPreview}
         deletionLosses={deletionLosses}
-        onConfirm={async (entry, deleteStudents) => {
-          await onRemove(entry, deleteStudents)
+        onConfirm={async (entry, deleteStudents, confirmedCounts) => {
+          await onRemove(entry, deleteStudents, confirmedCounts)
           onChanged?.()
         }}
         onClose={() => setRemovalTarget(null)}

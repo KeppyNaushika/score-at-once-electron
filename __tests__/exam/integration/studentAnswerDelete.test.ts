@@ -30,7 +30,7 @@ import {
 } from "@/electron-src/lib/prisma/questionScore"
 import {
   deleteStudentAnswer,
-  getStudentAnswerScoreSummary,
+  getStudentAnswerDeletionCounts,
 } from "@/electron-src/lib/prisma/studentAnswer/crud"
 
 import { createFullTestExam } from "../../helpers/testExamBuilder"
@@ -41,6 +41,20 @@ import {
 } from "../../helpers/testPrismaClient"
 
 const testPrisma = createPrismaClientForPath(TEST_DB_PATH)
+
+/**
+ * 「いま画面に出ている件数を見て押した」削除。
+ *
+ * 段階26 で削除は「見せた件数」を要求するようになった。ここでは直前に数えた
+ * 件数をそのまま添えるので、数え直しは必ず一致する（＝中止されない）。
+ * 「見せた後に増える」側の検証は deleteAfterRecount.test.ts にある。
+ */
+async function deleteAnswerAsSeen(answerSheetId: string) {
+  return await deleteStudentAnswer(
+    answerSheetId,
+    await getStudentAnswerDeletionCounts(answerSheetId)
+  )
+}
 
 /** 2生徒 × 2ページ × 1設問/ページ、全マス答案あり・全マス採点済み */
 async function buildSimpleExam() {
@@ -155,7 +169,7 @@ describe("deleteStudentAnswer", () => {
       },
     })
 
-    await deleteStudentAnswer(image(page1.id, examStudentA.id).id)
+    await deleteAnswerAsSeen(image(page1.id, examStudentA.id).id)
 
     // 画像本体
     expect(
@@ -222,7 +236,7 @@ describe("deleteStudentAnswer", () => {
       },
     })
 
-    await deleteStudentAnswer(image(page1.id, examStudentA.id).id)
+    await deleteAnswerAsSeen(image(page1.id, examStudentA.id).id)
 
     // 削除の伝搬は sqlite-nas-sync の `_tombstone` が担うため、
     // アプリ側で削除記録を持つ必要はない（issue #918）
@@ -236,11 +250,13 @@ describe("deleteStudentAnswer", () => {
   it("削除直前の採点実績を返す（モーダルと同じ定義）", async () => {
     const { examStudentA, page1, image } = await buildSimpleExam()
 
-    const { deletedSummary } = await deleteStudentAnswer(
+    const { deletedCounts } = await deleteAnswerAsSeen(
       image(page1.id, examStudentA.id).id
     )
-    expect(deletedSummary.hasScoreData).toBe(true)
-    expect(deletedSummary.scoredQuestionCount).toBe(1)
+    expect(deletedCounts).toContainEqual({
+      countedName: "採点済みの設問",
+      shownCount: 1,
+    })
   })
 
   it("未採点の答案では採点実績なしを返す（トーストの文言が変わる）", async () => {
@@ -251,10 +267,10 @@ describe("deleteStudentAnswer", () => {
       data: { status: "unscored", partialScore: null },
     })
 
-    const { deletedSummary } = await deleteStudentAnswer(
+    const { deletedCounts } = await deleteAnswerAsSeen(
       image(page1.id, examStudentA.id).id
     )
-    expect(deletedSummary.hasScoreData).toBe(false)
+    expect(deletedCounts).toEqual([])
   })
 
   it("協調採点では全教員分の採点行が消える（自分の行だけ残さない）", async () => {
@@ -291,7 +307,7 @@ describe("deleteStudentAnswer", () => {
       })
     ).toBe(3)
 
-    await deleteStudentAnswer(image(page1.id, examStudentA.id).id)
+    await deleteAnswerAsSeen(image(page1.id, examStudentA.id).id)
 
     // 教員を問わず全滅している（userId で絞っていないことの保証）
     expect(
@@ -318,7 +334,7 @@ describe("deleteStudentAnswer", () => {
     const scoreId = score(region1.id, examStudentA.id).id
 
     // 教員Aが答案を削除 → 教員Bが開いたままの採点を保存しようとする
-    await deleteStudentAnswer(image(page1.id, examStudentA.id).id)
+    await deleteAnswerAsSeen(image(page1.id, examStudentA.id).id)
 
     const result = await updateQuestionScore(scoreId, { status: "correct" })
     // 例外ではなく「対象が消えている」という結果が値で返る（協調採点で他教員が
@@ -329,7 +345,7 @@ describe("deleteStudentAnswer", () => {
   it("存在しない答案は例外を投げ、DB は変化しない", async () => {
     const { region1, examStudentA } = await buildSimpleExam()
 
-    await expect(deleteStudentAnswer(crypto.randomUUID())).rejects.toThrow()
+    await expect(deleteStudentAnswer(crypto.randomUUID(), [])).rejects.toThrow()
     expect(
       await testPrisma.questionScore.count({
         where: { cropRegionId: region1.id, examStudentId: examStudentA.id },
@@ -338,7 +354,7 @@ describe("deleteStudentAnswer", () => {
   })
 })
 
-describe("getStudentAnswerScoreSummary", () => {
+describe("getStudentAnswerDeletionCounts", () => {
   beforeEach(async () => {
     await cleanupTestDatabase()
   })
@@ -349,7 +365,16 @@ describe("getStudentAnswerScoreSummary", () => {
     await disconnectTestPrisma()
   })
 
-  it("採点済みなら hasScoreData=true と内訳を返す", async () => {
+  /** 数えた結果から1項目ぶんの件数を取り出す（無ければ0件） */
+  const countOf = (
+    deletionCounts: { countedName: string; shownCount: number }[],
+    countedName: string
+  ) =>
+    deletionCounts.find(
+      (deletionCount) => deletionCount.countedName === countedName
+    )?.shownCount ?? 0
+
+  it("採点済みなら内訳を件数で返す", async () => {
     const { examStudentA, page1, region1, image, score } =
       await buildSimpleExam()
 
@@ -363,13 +388,14 @@ describe("getStudentAnswerScoreSummary", () => {
       },
     })
 
-    const result = await getStudentAnswerScoreSummary(
+    const result = await getStudentAnswerDeletionCounts(
       image(page1.id, examStudentA.id).id
     )
-    expect(result.hasScoreData).toBe(true)
-    expect(result.scoredQuestionCount).toBe(1)
-    expect(result.drawingAnnotationCount).toBe(1)
-    expect(result.scoreDecisionCount).toBe(0)
+    expect(result.length).toBeGreaterThan(0)
+    expect(countOf(result, "採点済みの設問")).toBe(1)
+    expect(countOf(result, "答案への書き込み")).toBe(1)
+    // 0件の項目は出さない（見せていない＝0件と見せた扱い）
+    expect(countOf(result, "確定した点数")).toBe(0)
   })
 
   it("協調採点で1設問に複数教員の行があっても設問数で数える", async () => {
@@ -393,11 +419,11 @@ describe("getStudentAnswerScoreSummary", () => {
       },
     })
 
-    const result = await getStudentAnswerScoreSummary(
+    const result = await getStudentAnswerDeletionCounts(
       image(page1.id, examStudentA.id).id
     )
     // 行数は2だが設問は1問
-    expect(result.scoredQuestionCount).toBe(1)
+    expect(countOf(result, "採点済みの設問")).toBe(1)
   })
 
   it("部分点のみ入力された複合回答も採点済みとして数える", async () => {
@@ -431,14 +457,14 @@ describe("getStudentAnswerScoreSummary", () => {
       },
     })
 
-    const result = await getStudentAnswerScoreSummary(
+    const result = await getStudentAnswerDeletionCounts(
       image(page1.id, examStudentA.id).id
     )
-    expect(result.scoredCompoundAnswerCount).toBe(1)
-    expect(result.hasScoreData).toBe(true)
+    expect(countOf(result, "採点済みの複合回答")).toBe(1)
+    expect(result.length).toBeGreaterThan(0)
   })
 
-  it("unscored の初期化行だけなら hasScoreData=false", async () => {
+  it("unscored の初期化行だけなら何も数えない", async () => {
     const { examStudentA, page1, region1, image } = await buildSimpleExam()
 
     // 初期化直後の状態（status=unscored・部分点なし）に戻す
@@ -447,11 +473,10 @@ describe("getStudentAnswerScoreSummary", () => {
       data: { status: "unscored", partialScore: null },
     })
 
-    const result = await getStudentAnswerScoreSummary(
+    const result = await getStudentAnswerDeletionCounts(
       image(page1.id, examStudentA.id).id
     )
-    expect(result.hasScoreData).toBe(false)
-    expect(result.scoredQuestionCount).toBe(0)
+    expect(result).toEqual([])
   })
 
   it("未採点でも削除時は初期化行ごと消える", async () => {
@@ -462,7 +487,7 @@ describe("getStudentAnswerScoreSummary", () => {
       data: { status: "unscored", partialScore: null },
     })
 
-    await deleteStudentAnswer(image(page1.id, examStudentA.id).id)
+    await deleteAnswerAsSeen(image(page1.id, examStudentA.id).id)
     expect(
       await testPrisma.questionScore.count({
         where: { cropRegionId: region1.id, examStudentId: examStudentA.id },

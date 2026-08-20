@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
   AlertDialog,
@@ -23,25 +23,27 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
-import type {
-  ClassroomRemovalMode,
-  ClassroomRemovalPreview,
-  ClassroomRosterEntry,
-} from "./types"
+import type { ClassroomRemovalMode, ClassroomRosterEntry } from "./types"
 
 interface ClassroomRemovalDialogProps {
   /** 削除対象（null のとき閉じている） */
   entry: ClassroomRosterEntry | null
   mode: ClassroomRemovalMode
-  /** can-delete-students モードで削除対象になる生徒数を取得 */
+  /** can-delete-students モードで、巻き添えになるものを数える */
   fetchRemovalPreview?: (
     entry: ClassroomRosterEntry
-  ) => Promise<ClassroomRemovalPreview>
-  /** 実行。deleteStudents=true で専属生徒も削除 */
+  ) => Promise<ConfirmedDeletionCount[]>
+  /**
+   * 実行。deleteStudents=true で専属生徒も削除。
+   * 利用者に見せた件数を添えて渡す（消す直前に main が数え直す。段階26）
+   */
   onConfirm: (
     entry: ClassroomRosterEntry,
-    deleteStudents: boolean
+    deleteStudents: boolean,
+    confirmedCounts: ConfirmedDeletionCount[]
   ) => Promise<void>
   /**
    * 専属生徒を削除したときに連動して消えるものの列挙。
@@ -53,11 +55,34 @@ interface ClassroomRemovalDialogProps {
 
 type RemovalChoice = "unlink" | "delete-students"
 
+/** 巻き添えになる人数の合計（この画面が数えるのは生徒だけ） */
+function sumDeletionCounts(
+  deletionCounts: ConfirmedDeletionCount[] | null
+): number {
+  return (deletionCounts ?? []).reduce(
+    (total, deletionCount) => total + deletionCount.shownCount,
+    0
+  )
+}
+
+/** 「◯◯ 3名 が削除されます」の文言を、数えたものの名前から組み立てる */
+function describeDeletionCounts(
+  deletionCounts: ConfirmedDeletionCount[]
+): string {
+  const details = deletionCounts
+    .map(
+      (deletionCount) =>
+        `${deletionCount.countedName} ${deletionCount.shownCount}名`
+    )
+    .join("、")
+  return `${details} が削除されます`
+}
+
 interface RemovalChoiceFormProps {
   entry: ClassroomRosterEntry
   confirming: boolean
-  /** 専属生徒の数。取得前は null（件数不明のまま破壊的削除させない） */
-  exclusiveCount: number | null
+  /** 巻き添えになるものの件数。取得前は null（件数不明のまま破壊的削除させない） */
+  deletionCounts: ConfirmedDeletionCount[] | null
   /** 外し方の選択。2段階目から戻ったときに選び直させないよう外側で持つ */
   choice: RemovalChoice
   onChoiceChange: (choice: RemovalChoice) => void
@@ -65,24 +90,27 @@ interface RemovalChoiceFormProps {
   /** 専属生徒を削除する選択かつ対象1名以上のとき、2段階目へ渡す */
   onProceedToFinalConfirm: (
     entry: ClassroomRosterEntry,
-    deleteCount: number
+    deletionCounts: ConfirmedDeletionCount[]
   ) => void
-  onConfirm: (entry: ClassroomRosterEntry, deleteStudents: boolean) => void
+  onConfirm: () => void
+  /** 数え直しで増えていて中止されたときの文言 */
+  refusalMessage: string | null
 }
 
 /** 1段階目の本体（外し方の選択）。件数の取得は外側が持つ */
 function RemovalChoiceForm({
   entry,
   confirming,
-  exclusiveCount,
+  deletionCounts,
   choice,
   onChoiceChange,
   onCancel,
   onProceedToFinalConfirm,
   onConfirm,
+  refusalMessage,
 }: RemovalChoiceFormProps) {
   const willDeleteStudents = choice === "delete-students"
-  const deleteCount = exclusiveCount ?? 0
+  const deleteCount = sumDeletionCounts(deletionCounts)
 
   return (
     <>
@@ -114,15 +142,23 @@ function RemovalChoiceForm({
           <Label htmlFor="removal-delete" className="font-normal">
             登録を解除し、専属の生徒も削除
             <span className="ml-1 block text-xs text-muted-foreground">
-              {exclusiveCount === null
+              {deletionCounts === null
                 ? "対象生徒数を確認中…"
                 : deleteCount === 0
                   ? "この学級にのみ所属する生徒はいません"
-                  : `この学級にのみ所属する ${deleteCount}名 が削除されます`}
+                  : describeDeletionCounts(deletionCounts)}
             </span>
           </Label>
         </div>
       </RadioGroup>
+
+      {/* 数えた後に他の教員が加えていれば main が中止する。閉じずに数え直した
+          結果を見せ、利用者にもう一度決めてもらう */}
+      {refusalMessage && (
+        <p className="rounded bg-amber-50 p-3 text-sm font-medium text-amber-900">
+          {refusalMessage}
+        </p>
+      )}
 
       <DialogFooter>
         <Button variant="outline" onClick={onCancel} disabled={confirming}>
@@ -133,15 +169,15 @@ function RemovalChoiceForm({
           // 登録解除のみ（unlink）は常に実行可。専属生徒削除を選んだ場合のみ
           // 対象数の確定を待つ（プレビュー失敗時は catch で 0 が入り詰まらない）。
           disabled={
-            confirming || (willDeleteStudents && exclusiveCount === null)
+            confirming || (willDeleteStudents && deletionCounts === null)
           }
           onClick={() => {
             // 専属生徒を削除する選択かつ対象1名以上 → 2段階目へ
-            if (willDeleteStudents && deleteCount > 0) {
-              onProceedToFinalConfirm(entry, deleteCount)
+            if (willDeleteStudents && deletionCounts && deleteCount > 0) {
+              onProceedToFinalConfirm(entry, deletionCounts)
             } else {
               // 登録解除のみ、または削除対象0名はここで実行
-              onConfirm(entry, willDeleteStudents)
+              onConfirm()
             }
           }}
         >
@@ -168,16 +204,15 @@ export function ClassroomRemovalDialog({
   deletionLosses,
   onClose,
 }: ClassroomRemovalDialogProps) {
-  const [confirming, setConfirming] = useState(false)
   const [choice, setChoice] = useState<RemovalChoice>("unlink")
-  // 専属生徒数は「どの学級に対する件数か」を対で持つ。対象が変われば一致しなく
+  // 巻き添えの件数は「どの学級に対する件数か」を対で持つ。対象が変われば一致しなく
   // なるので前の学級の件数が残らず、2段階目を往復しても取り直さずに済む
   const [preview, setPreview] = useState<{
     entry: ClassroomRosterEntry
-    exclusiveCount: number
+    deletionCounts: ConfirmedDeletionCount[]
   } | null>(null)
-  const exclusiveCount =
-    preview !== null && preview.entry === entry ? preview.exclusiveCount : null
+  const deletionCounts =
+    preview !== null && preview.entry === entry ? preview.deletionCounts : null
 
   // プレビュー取得関数は毎レンダー identity が変わりうるので ref で持ち、
   // useEffect の再発火を「対象(entry)が変わったとき」だけに限定する。
@@ -186,33 +221,38 @@ export function ClassroomRemovalDialog({
     fetchRemovalPreviewRef.current = fetchRemovalPreview
   })
 
+  /**
+   * 巻き添えになるものを数える。取得失敗時は件数不明のまま据え置く。これにより
+   * 「専属生徒も削除」は確定ボタンが無効化され（件数不明のまま破壊的削除させない）、
+   * 安全な「登録解除のみ」だけは実行できる。0 を入れると2段階目の最終確認を
+   * 飛ばして専属生徒を確認なしに削除してしまうため避ける。
+   */
+  const countRemovalImpact = useCallback(
+    async (target: ClassroomRosterEntry) => {
+      const fetchPreview = fetchRemovalPreviewRef.current
+      if (!fetchPreview) return
+      try {
+        setPreview({
+          entry: target,
+          deletionCounts: await fetchPreview(target),
+        })
+      } catch (err) {
+        console.error("Failed to fetch class removal preview:", err)
+      }
+    },
+    []
+  )
+
   useEffect(() => {
     if (!entry || mode !== "can-delete-students") return
-    const fetchPreview = fetchRemovalPreviewRef.current
-    if (!fetchPreview) return
-    let cancelled = false
-    fetchPreview(entry)
-      .then((removalPreview) => {
-        if (!cancelled) {
-          setPreview({ entry, exclusiveCount: removalPreview.exclusiveCount })
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to fetch class removal preview:", err)
-        // 取得失敗時は件数不明のまま据え置く。これにより「専属生徒も削除」は
-        // 確定ボタンが無効化され（件数不明のまま破壊的削除させない）、安全な
-        // 「登録解除のみ」だけは実行できる。0 を入れると2段階目の最終確認を
-        // 飛ばして専属生徒を確認なしに削除してしまうため避ける。
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [entry, mode])
-  // 2段階目（取り消し不可の最終確認）の対象と削除件数。1段階目を閉じると
-  // 件数を持っていた本体が外れるので、進むときに一緒に受け取っておく
+    void countRemovalImpact(entry)
+  }, [countRemovalImpact, entry, mode])
+
+  // 2段階目（取り消し不可の最終確認）の対象と件数。1段階目を閉じると件数を
+  // 持っていた本体が外れるので、進むときに一緒に受け取っておく
   const [finalConfirm, setFinalConfirm] = useState<{
     entry: ClassroomRosterEntry
-    deleteCount: number
+    deletionCounts: ConfirmedDeletionCount[]
   } | null>(null)
 
   // 閉じたら選択を初期値へ戻す（次に開いたときに前回の選択を引きずらない）
@@ -221,20 +261,32 @@ export function ClassroomRemovalDialog({
     onClose()
   }
 
-  const runConfirm = async (
-    target: ClassroomRosterEntry,
-    deleteStudents: boolean
-  ) => {
-    setConfirming(true)
-    try {
-      await onConfirm(target, deleteStudents)
-      setFinalConfirm(null)
-      handleClose()
-    } catch (err) {
-      console.error("Failed to remove class:", err)
-    } finally {
-      setConfirming(false)
-    }
+  // 登録解除だけなら巻き添えは無い（数え直す対象も無いので空配列を添える）
+  const willDeleteStudents =
+    mode === "can-delete-students" && choice === "delete-students"
+  const confirmedCounts = willDeleteStudents ? deletionCounts : []
+
+  const { canConfirm, isDeleting, refusalMessage, confirmDeletion } =
+    useConfirmedDeletion({
+      confirmedCounts,
+      deleteWithConfirmedCounts: useCallback(
+        async (counts: ConfirmedDeletionCount[]) => {
+          if (!entry) return
+          await onConfirm(entry, willDeleteStudents, counts)
+        },
+        [entry, onConfirm, willDeleteStudents]
+      ),
+      recount: useCallback(
+        async () => (entry ? await countRemovalImpact(entry) : undefined),
+        [countRemovalImpact, entry]
+      ),
+    })
+  const confirming = isDeleting
+
+  const runConfirm = async () => {
+    if (!(await confirmDeletion())) return
+    setFinalConfirm(null)
+    handleClose()
   }
 
   // unlink-only（試験）: 単純な確認1段階
@@ -260,7 +312,7 @@ export function ClassroomRemovalDialog({
               disabled={confirming}
               onClick={(e) => {
                 e.preventDefault()
-                if (entry) runConfirm(entry, false)
+                void runConfirm()
               }}
             >
               登録を解除
@@ -284,14 +336,15 @@ export function ClassroomRemovalDialog({
             <RemovalChoiceForm
               entry={entry}
               confirming={confirming}
-              exclusiveCount={exclusiveCount}
+              deletionCounts={deletionCounts}
               choice={choice}
               onChoiceChange={setChoice}
               onCancel={handleClose}
-              onProceedToFinalConfirm={(target, deleteCount) =>
-                setFinalConfirm({ entry: target, deleteCount })
+              onProceedToFinalConfirm={(target, counts) =>
+                setFinalConfirm({ entry: target, deletionCounts: counts })
               }
-              onConfirm={runConfirm}
+              onConfirm={() => void runConfirm()}
+              refusalMessage={refusalMessage}
             />
           )}
         </DialogContent>
@@ -308,7 +361,7 @@ export function ClassroomRemovalDialog({
             <AlertDialogDescription className="space-y-2">
               <span className="block">
                 「{finalConfirm?.entry.name}」にのみ所属する{" "}
-                {finalConfirm?.deleteCount}名 を
+                {sumDeletionCounts(finalConfirm?.deletionCounts ?? null)}名 を
                 対象から外します。連動して以下も削除されます：
               </span>
               <span className="block pl-4 text-muted-foreground">
@@ -323,6 +376,13 @@ export function ClassroomRemovalDialog({
               <span className="block font-medium">
                 この操作は取り消せません。本当に削除しますか？
               </span>
+              {/* 数えた後に他の教員が加えていれば main が中止する。閉じずに
+                  数え直した結果を見せ、利用者にもう一度決めてもらう */}
+              {refusalMessage && (
+                <span className="block rounded bg-amber-50 p-3 font-medium text-amber-900">
+                  {refusalMessage}
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -330,11 +390,11 @@ export function ClassroomRemovalDialog({
               キャンセル
             </AlertDialogCancel>
             <AlertDialogAction
-              disabled={confirming}
+              disabled={!canConfirm}
               className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
               onClick={(e) => {
                 e.preventDefault()
-                if (finalConfirm) runConfirm(finalConfirm.entry, true)
+                void runConfirm()
               }}
             >
               削除する

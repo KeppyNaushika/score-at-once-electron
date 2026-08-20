@@ -1,5 +1,7 @@
 import { queryOptions } from "@tanstack/react-query"
 
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
+
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
 
@@ -20,16 +22,18 @@ export const studentAnswersDatasetQuery = (examId: string) =>
     queryFn: () => window.electronAPI.getStudentAnswersDataset(examId),
   })
 
-/** 答案1枚に載っている採点結果の要約（削除確認で読む） */
-export const studentAnswerScoreSummaryQuery = (studentAnswerImageId: string) =>
+/** 答案1枚を消すと巻き添えになる採点実績の件数（削除確認で読む） */
+export const studentAnswerDeletionCountsQuery = (
+  studentAnswerImageId: string
+) =>
   queryOptions({
     queryKey: [
       "studentAnswerImage",
       studentAnswerImageId,
-      "scoreSummary",
+      "deletionCounts",
     ] as const,
     queryFn: () =>
-      window.electronAPI.getStudentAnswerScoreSummary(studentAnswerImageId),
+      window.electronAPI.getStudentAnswerDeletionCounts(studentAnswerImageId),
     // **開くたびに必ず数え直す。** これは「消す前に何を消すのか数える」ための取得で、
     // 古い答えを見せると採点済みの答案を「採点データなし」と告げて消せてしまう。
     // 鍵は試験のまとまりの外にあるので採点の書き込みで古くならず、本体は開いている
@@ -55,10 +59,23 @@ export const uploadStudentAnswersMutation = (examId: string) =>
     },
   })
 
+/**
+ * 答案を削除する。**利用者が見た件数を添える** — main は消す直前に数え直し、
+ * 増えていれば中止する（docs/remaining-work.md 段階26）。
+ */
 export const deleteStudentAnswerMutation = (examId: string) =>
   defineMutation({
-    mutationFn: (studentAnswerImageId: string) =>
-      window.electronAPI.deleteStudentAnswer(studentAnswerImageId),
+    mutationFn: ({
+      studentAnswerImageId,
+      confirmedCounts,
+    }: {
+      studentAnswerImageId: string
+      confirmedCounts: ConfirmedDeletionCount[]
+    }) =>
+      window.electronAPI.deleteStudentAnswer(
+        studentAnswerImageId,
+        confirmedCounts
+      ),
     meta: {
       invalidates: [scopeKeys.exam(examId)],
       errorMessage: "答案を削除できませんでした",

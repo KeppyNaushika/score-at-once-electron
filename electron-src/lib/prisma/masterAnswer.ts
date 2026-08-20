@@ -11,6 +11,9 @@ import type { ExamPage, Prisma } from "@prisma/client"
 import * as fsPromises from "fs/promises"
 import * as path from "path"
 
+import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
+
 import {
   getAbsolutePathFromData,
   getMasterAnswersDirectory,
@@ -19,6 +22,7 @@ import {
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope } from "./auditScope"
 import prisma from "./client"
+import { deleteAfterRecount } from "./deleteAfterRecount"
 
 /**
  * アップロード1件分のファイル。PDF は renderer 側で画像へ変換されてから渡ってくるので、
@@ -181,6 +185,28 @@ interface DeleteMasterAnswerResult {
 }
 
 /**
+ * 模範解答ページを消すと巻き添えになる答案を、削除の確認で見せる形で数える。
+ *
+ * **画面と同じ定義で数えること。** 画面（`MasterAnswerCard`）はページに載っている
+ * `studentAnswerImages` の件数を出している（段階26）。
+ */
+const countMasterAnswerDeletionCounts = async (
+  client: Prisma.TransactionClient,
+  examPageId: string
+): Promise<ConfirmedDeletionCount[]> => {
+  const answerSheetCount = await client.studentAnswerImage.count({
+    where: { examPageId },
+  })
+  if (answerSheetCount === 0) return []
+  return [
+    {
+      countedName: DELETION_COUNT_NAME.pageAnswerSheet,
+      shownCount: answerSheetCount,
+    },
+  ]
+}
+
+/**
  * 模範解答ページを削除する。ページ番号は1から振り直す。
  *
  * ページに紐づく答案画像・採点領域・採点結果もカスケード削除される。画像を取り替えたい
@@ -188,7 +214,8 @@ interface DeleteMasterAnswerResult {
  * 何件消えるかを示して確認を取ること。
  */
 export const deleteMasterAnswer = async (
-  examPageId: string
+  examPageId: string,
+  confirmedCounts: ConfirmedDeletionCount[]
 ): Promise<DeleteMasterAnswerResult> => {
   const targetPage = await prisma.examPage.findUnique({
     where: { id: examPageId },
@@ -202,25 +229,29 @@ export const deleteMasterAnswer = async (
 
   const { examId } = targetPage
 
-  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    await tx.examPage.delete({ where: { id: examPageId } })
+  await deleteAfterRecount({
+    confirmedCounts,
+    recount: (tx) => countMasterAnswerDeletionCounts(tx, examPageId),
+    remove: async (tx) => {
+      await tx.examPage.delete({ where: { id: examPageId } })
 
-    // 並びが採番結果を決めるので、id をタイブレークに入れて決定的にする
-    // （pageNumber は一意ではない。詳細は studentAnswer/crud.ts の
-    //  getStudentAnswersDataset のコメント）
-    const pages = await tx.examPage.findMany({
-      where: { examId },
-      orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
-    })
+      // 並びが採番結果を決めるので、id をタイブレークに入れて決定的にする
+      // （pageNumber は一意ではない。詳細は studentAnswer/crud.ts の
+      //  getStudentAnswersDataset のコメント）
+      const pages = await tx.examPage.findMany({
+        where: { examId },
+        orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
+      })
 
-    for (const [index, page] of pages.entries()) {
-      if (page.pageNumber !== index + 1) {
-        await tx.examPage.update({
-          where: { id: page.id },
-          data: { pageNumber: index + 1 },
-        })
+      for (const [index, page] of pages.entries()) {
+        if (page.pageNumber !== index + 1) {
+          await tx.examPage.update({
+            where: { id: page.id },
+            data: { pageNumber: index + 1 },
+          })
+        }
       }
-    }
+    },
   })
 
   // DB から消えた後に画像を消す。答案画像はページと一緒にカスケード削除されるため、

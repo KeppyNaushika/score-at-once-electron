@@ -6,6 +6,8 @@ import type { Prisma } from "@prisma/client"
 import * as fsPromises from "fs/promises"
 import * as path from "path"
 
+import { DELETION_COUNT_NAME } from "../../../../src/lib/shared/deletionCountNames"
+import type { ConfirmedDeletionCount } from "../../../../src/types/deletionConfirmation.types"
 import { toExamStudentStatus } from "../../../../src/types/examStudentStatus.types"
 import type {
   DetectedCornerMarker,
@@ -22,6 +24,7 @@ import { correctImage } from "../../omr/imageCorrector"
 import { recordAuditLog } from "../auditLog"
 import { resolveExamScope, resolveExamScopeByPage } from "../auditScope"
 import prisma from "../client"
+import { deleteAfterRecount } from "../deleteAfterRecount"
 import type { Tx } from "../transactionClient"
 import { getPageScoreScope, type PageScoreScope } from "./pageScope"
 
@@ -412,22 +415,6 @@ export async function getStudentAnswersDataset(examId: string) {
 /**
  * 答案の削除
  */
-/** 答案1枚に紐づく「実際に採点された」データの件数（削除確認モーダルの表示用） */
-export interface StudentAnswerScoreSummary {
-  /**
-   * 採点済みの設問数。協調採点では1設問に教員ごとの QuestionScore 行が並ぶため、
-   * 行数ではなく CropRegion 数で数える（行数だと教員数だけ水増しされる）。
-   */
-  scoredQuestionCount: number
-  /** 確定済みスコア（ScoreDecision）の件数 */
-  scoreDecisionCount: number
-  /** 答案上の書き込み（DrawingAnnotation）の件数 */
-  drawingAnnotationCount: number
-  /** 採点済みの複合回答数 */
-  scoredCompoundAnswerCount: number
-  /** 上記のいずれかが1件以上あるか */
-  hasScoreData: boolean
-}
 
 /**
  * 「実際に採点された」QuestionScore の条件。
@@ -449,12 +436,17 @@ const SCORED_COMPOUND_ANSWER_SCORE_FILTER = {
   ],
 } satisfies Prisma.CompoundAnswerScoreWhereInput
 
-/** 答案1枚（ページ scope × 生徒）の採点実績を数える */
+/**
+ * 答案1枚（ページ scope × 生徒）の採点実績を、削除の確認で見せる形で数える。
+ *
+ * 0件の項目は返さない。見せていない項目は「0件と見せた」ものとして扱われるので、
+ * 後から増えれば数え直しが拾う（`deleteAfterRecount`）。
+ */
 async function countStudentAnswerScoreData(
   client: typeof prisma | Tx,
   scope: PageScoreScope,
   examStudentId: string
-): Promise<StudentAnswerScoreSummary> {
+): Promise<ConfirmedDeletionCount[]> {
   const { cropRegionIds, compoundAnswerIds } = scope
 
   const [
@@ -499,25 +491,33 @@ async function countStudentAnswerScoreData(
         }),
   ])
 
-  const scoredQuestionCount = scoredQuestionRegions.length
-
-  return {
-    scoredQuestionCount,
-    scoreDecisionCount,
-    drawingAnnotationCount,
-    scoredCompoundAnswerCount,
-    hasScoreData:
-      scoredQuestionCount > 0 ||
-      scoreDecisionCount > 0 ||
-      drawingAnnotationCount > 0 ||
-      scoredCompoundAnswerCount > 0,
-  }
+  return [
+    {
+      countedName: DELETION_COUNT_NAME.scoredQuestion,
+      shownCount: scoredQuestionRegions.length,
+    },
+    {
+      countedName: DELETION_COUNT_NAME.scoreDecision,
+      shownCount: scoreDecisionCount,
+    },
+    {
+      countedName: DELETION_COUNT_NAME.drawingAnnotation,
+      shownCount: drawingAnnotationCount,
+    },
+    {
+      countedName: DELETION_COUNT_NAME.scoredCompoundAnswer,
+      shownCount: scoredCompoundAnswerCount,
+    },
+  ].filter((deletionCount) => deletionCount.shownCount > 0)
 }
 
 /**
- * 答案1枚に紐づく採点データの件数を取得する（削除確認モーダルの事前照会）。
+ * 答案1枚を消すと巻き添えになる採点実績を数える（削除確認モーダルの事前照会）。
+ *
+ * ここで返した件数を、利用者はそのまま画面で見る。画面はこの配列を表示にも
+ * 「削除の要求に添える件数」にも使うので、**見せたものと送るものが必ず一致する**。
  */
-export async function getStudentAnswerScoreSummary(answerSheetId: string) {
+export async function getStudentAnswerDeletionCounts(answerSheetId: string) {
   const answerSheet = await prisma.studentAnswerImage.findUnique({
     where: { id: answerSheetId },
   })
@@ -527,13 +527,11 @@ export async function getStudentAnswerScoreSummary(answerSheetId: string) {
   }
 
   const scope = await getPageScoreScope(prisma, answerSheet.examPageId)
-  const summary = await countStudentAnswerScoreData(
+  return await countStudentAnswerScoreData(
     prisma,
     scope,
     answerSheet.examStudentId
   )
-
-  return summary
 }
 
 /**
@@ -546,8 +544,14 @@ export async function getStudentAnswerScoreSummary(answerSheetId: string) {
  *
  * DB をトランザクションで確定させてからファイルを消す。逆順だと DB 失敗時に画像だけが
  * 失われて復旧できない（孤立ファイルが残る方が害が小さい）。
+ *
+ * @param confirmedCounts 利用者が確認ダイアログで見た採点実績の件数。消す直前に
+ *   数え直し、増えていれば削除を中止する（`deleteAfterRecount`）。
  */
-export async function deleteStudentAnswer(answerSheetId: string) {
+export async function deleteStudentAnswer(
+  answerSheetId: string,
+  confirmedCounts: ConfirmedDeletionCount[]
+) {
   const answerSheet = await prisma.studentAnswerImage.findUnique({
     where: { id: answerSheetId },
   })
@@ -556,15 +560,22 @@ export async function deleteStudentAnswer(answerSheetId: string) {
     throw new Error("答案が見つかりません")
   }
 
-  const { summary, removedRows } = await prisma.$transaction(
-    async (tx) => {
+  const { deletedCounts, removedRows } = await deleteAfterRecount({
+    confirmedCounts,
+    // 数え直しは「利用者から見た採点実績」の定義で行う（モーダルの表示と同じ）。
+    // 削除自体は unscored の初期化行も含めて全て消すので、行数とは一致しない。
+    recount: async (tx) =>
+      await countStudentAnswerScoreData(
+        tx,
+        await getPageScoreScope(tx, answerSheet.examPageId),
+        answerSheet.examStudentId
+      ),
+    remove: async (tx) => {
       const scope = await getPageScoreScope(tx, answerSheet.examPageId)
       const { examStudentId } = answerSheet
       const { cropRegionIds, compoundAnswerIds } = scope
 
-      // 削除前に「利用者から見た採点実績」を数えておく（モーダルの表示と同じ定義）。
-      // 削除自体は unscored の初期化行も含めて全て消すので、行数とは一致しない。
-      const scoreSummary = await countStudentAnswerScoreData(
+      const scoreCounts = await countStudentAnswerScoreData(
         tx,
         scope,
         examStudentId
@@ -613,7 +624,7 @@ export async function deleteStudentAnswer(answerSheetId: string) {
       await tx.studentAnswerImage.delete({ where: { id: answerSheetId } })
 
       return {
-        summary: scoreSummary,
+        deletedCounts: scoreCounts,
         removedRows: {
           questionScoreRows,
           scoreDecisionRows,
@@ -624,8 +635,8 @@ export async function deleteStudentAnswer(answerSheetId: string) {
     },
     // 採点済み答案では削除対象の行数が多く、既定の 5s を超えうる
     // （超えると P2028 で削除ごとロールバックする）。
-    { timeout: 30000 }
-  )
+    timeoutMs: 30000,
+  })
 
   // ファイル削除は DB コミット後。失敗しても孤立ファイルが残るだけなので警告に留める
   // （パス解決の失敗も含めて握る。ここで例外を投げると削除済みの DB と矛盾する）。
@@ -646,5 +657,5 @@ export async function deleteStudentAnswer(answerSheetId: string) {
     summary: `答案画像を削除（QuestionScore ${removedRows.questionScoreRows} 行 / ScoreDecision ${removedRows.scoreDecisionRows} 行 / DrawingAnnotation ${removedRows.drawingAnnotationRows} 行 / CompoundAnswerScore ${removedRows.compoundAnswerScoreRows} 行を同時削除）`,
   })
 
-  return { deletedSummary: summary }
+  return { deletedCounts }
 }

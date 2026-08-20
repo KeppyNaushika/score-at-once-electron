@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import type { ExamClassroomPlacement } from "@/lib/examClassroomPlacement"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 interface StudentRemovalConfirmModalProps {
@@ -22,8 +23,15 @@ interface StudentRemovalConfirmModalProps {
   studentsToRemove: ExamStudentWithMemberships[]
   /** ExamClassroom 由来の表示学級情報（studentId キーの side data） */
   placementByStudent: Record<string, ExamClassroomPlacement>
-  hasGradingData: boolean
-  gradingDataCount?: number
+  /**
+   * 巻き添えになるものの件数。数え終わるまでと、数えられなかったときは null。
+   * この配列がそのまま削除の要求へ添えられる（見せたものと送るものが同じ）
+   */
+  deletionCounts: ConfirmedDeletionCount[] | null
+  /** 押せるか（数え終わっていて削除中でない） */
+  canConfirm: boolean
+  /** 数え直しで増えていて中止されたときの文言 */
+  refusalMessage: string | null
 }
 
 export default function StudentRemovalConfirmModal({
@@ -32,8 +40,9 @@ export default function StudentRemovalConfirmModal({
   onConfirm,
   studentsToRemove,
   placementByStudent,
-  hasGradingData,
-  gradingDataCount = 0,
+  deletionCounts,
+  canConfirm,
+  refusalMessage,
 }: StudentRemovalConfirmModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -73,7 +82,7 @@ export default function StudentRemovalConfirmModal({
           </div>
 
           {/* 採点データの警告 */}
-          {hasGradingData && (
+          {deletionCounts !== null && deletionCounts.length > 0 && (
             <div className="rounded-md border border-destructive/20 bg-destructive/10 p-4">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
@@ -84,7 +93,12 @@ export default function StudentRemovalConfirmModal({
                   <p className="text-sm text-muted-foreground">
                     削除する生徒には
                     <strong className="text-destructive">
-                      {gradingDataCount}件の採点データ
+                      {deletionCounts
+                        .map(
+                          (deletionCount) =>
+                            `${deletionCount.countedName}${deletionCount.shownCount}件`
+                        )
+                        .join("、")}
                     </strong>
                     が関連付けられています。
                     生徒を削除すると、以下のデータも連動して削除されます：
@@ -104,7 +118,7 @@ export default function StudentRemovalConfirmModal({
           )}
 
           {/* 採点データがない場合の確認 */}
-          {!hasGradingData && (
+          {deletionCounts !== null && deletionCounts.length === 0 && (
             <div className="rounded-md border bg-muted/50 p-4">
               <div className="flex items-start gap-3">
                 <Trash2 className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
@@ -120,11 +134,31 @@ export default function StudentRemovalConfirmModal({
           )}
         </div>
 
+        {/* 数えている途中・数えられなかったとき。件数不明のまま押させない */}
+        {deletionCounts === null && (
+          <p className="text-sm text-muted-foreground">
+            消えるものを数えています…（数え終わるまで削除できません）
+          </p>
+        )}
+
+        {/* 数えた後に他の教員が書き足していれば main が中止する。閉じずに
+            数え直した結果を見せ、利用者にもう一度決めてもらう */}
+        {refusalMessage && (
+          <p className="rounded bg-amber-50 p-3 text-sm font-medium text-amber-900">
+            {refusalMessage}
+          </p>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             キャンセル
           </Button>
-          <Button variant="destructive" onClick={onConfirm} className="gap-2">
+          <Button
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={!canConfirm}
+            className="gap-2"
+          >
             <Trash2 className="h-4 w-4" />
             削除する
           </Button>

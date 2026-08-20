@@ -65,7 +65,6 @@ export function useExamDetail(examId: string) {
       (count, page) => count + (page.cropRegions?.length || 0),
       0
     ) || 0
-  const gradeDataSourceCount = exam?.gradeDataSources?.length || 0
 
   return {
     exam,
@@ -75,7 +74,6 @@ export function useExamDetail(examId: string) {
     modelAnswerCount,
     answerSheetCount,
     cropRegionCount,
-    gradeDataSourceCount,
     updateExam,
   }
 }

@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client"
 import { dialog } from "electron"
 import * as ExcelJS from "exceljs"
 
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 
 import { fetchClassrooms } from "../lib/prisma/classroom"
@@ -14,7 +15,7 @@ import {
   updateStudentExamStatus,
   updateStudentOrders,
 } from "../lib/prisma/examStudent"
-import { checkGradingDataForStudents } from "../lib/prisma/gradingData"
+import { getExamStudentDeletionCounts } from "../lib/prisma/gradingData"
 import {
   createStudent,
   deleteStudent,
@@ -100,8 +101,13 @@ export const studentHandlers = {
     return await addStudentsToExam(examId, studentIds)
   },
 
-  "remove-students-from-exam": async (examId: string, studentIds: string[]) => {
-    return await removeStudentsFromExam(examId, studentIds)
+  // 利用者が見た件数を添えて削除する（消す直前に数え直し、増えていれば中止する）
+  "remove-students-from-exam": async (
+    examId: string,
+    studentIds: string[],
+    confirmedCounts: ConfirmedDeletionCount[]
+  ) => {
+    return await removeStudentsFromExam(examId, studentIds, confirmedCounts)
   },
 
   "update-student-exam-status": async (
@@ -126,8 +132,9 @@ export const studentHandlers = {
     return await getStudentsNotInExam(examId, activeOnly)
   },
 
-  "check-grading-data-for-students": (examId: string, studentIds: string[]) =>
-    checkGradingDataForStudents(examId, studentIds),
+  // 削除確認モーダルで「何が消えるか」を提示するための事前照会
+  "count-exam-student-deletion": (examId: string, studentIds: string[]) =>
+    getExamStudentDeletionCounts(examId, studentIds),
 
   "update-student-orders": async (
     examId: string,

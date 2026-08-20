@@ -14,6 +14,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { TableCell } from "@/components/ui/table"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 
 interface DraggableAnswerCellProps {
@@ -21,7 +22,8 @@ interface DraggableAnswerCellProps {
   // 生徒・ページは実体のまま受け取る（座標 droppable の examPageId・削除確認の氏名/ページ表示に使う）
   examStudent: StudentAnswerDatasetExamStudent
   examPage: ExamPageColumn
-  onDelete: () => void
+  /** 削除の実行。利用者に見せた件数を添えて渡す（消す直前に main が数え直す） */
+  onDelete: (confirmedCounts: ConfirmedDeletionCount[]) => Promise<void>
   children: React.ReactNode
 }
 

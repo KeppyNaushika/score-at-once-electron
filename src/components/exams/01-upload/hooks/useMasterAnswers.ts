@@ -16,6 +16,7 @@ import {
   uploadMasterAnswersMutation,
 } from "@/queries/exam"
 import { fileProtocolPathQuery } from "@/queries/misc"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
 import {
   createUploadData,
@@ -168,13 +169,15 @@ export function useMasterAnswers(examId: string) {
 
   /**
    * ページごと削除する。答案画像・採点結果もカスケード削除されるため、
-   * 呼び出し側で確認を取ってから呼ぶこと
+   * 呼び出し側で確認を取ってから呼ぶこと。
+   *
+   * 確認で見せた件数を添えて渡す。数え直しで増えていれば main が中止し、ここは
+   * 投げ返す — 確認ダイアログが受け止めて開いたまま数え直す（段階26）
    */
   const deleteAnswer = useCallback(
-    (examPageId: string) => {
-      deleteMasterAnswer.mutate(examPageId, {
-        onSuccess: () => toast.success("ページを削除しました。"),
-      })
+    async (examPageId: string, confirmedCounts: ConfirmedDeletionCount[]) => {
+      await deleteMasterAnswer.mutateAsync({ examPageId, confirmedCounts })
+      toast.success("ページを削除しました。")
     },
     [deleteMasterAnswer]
   )
@@ -204,7 +207,7 @@ export function useMasterAnswers(examId: string) {
     imageUrls,
     isUploading: isConverting || uploadMasterAnswers.isPending,
     deletingAnswerId: deleteMasterAnswer.isPending
-      ? (deleteMasterAnswer.variables ?? null)
+      ? (deleteMasterAnswer.variables?.examPageId ?? null)
       : null,
     replacingAnswerId: replaceMasterAnswerImage.isPending
       ? (replaceMasterAnswerImage.variables?.examPageId ?? null)

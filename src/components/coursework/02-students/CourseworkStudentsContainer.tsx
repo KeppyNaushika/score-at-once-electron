@@ -239,15 +239,15 @@ export function CourseworkStudentsContainer({
             onReorder={async (orderedClassroomIds) => {
               await setClassroomOrders.mutateAsync(orderedClassroomIds)
             }}
-            fetchRemovalPreview={async (entry) => {
-              const result = await previewRemoval.mutateAsync(entry.classroomId)
-              return { exclusiveCount: result.exclusiveCount }
-            }}
+            fetchRemovalPreview={(entry) =>
+              previewRemoval.mutateAsync(entry.classroomId)
+            }
             // 失敗は例外で伝わり、ダイアログが成功扱いで閉じない
-            onRemove={async (entry, deleteStudents) => {
+            onRemove={async (entry, deleteStudents, confirmedCounts) => {
               await removeClassroom.mutateAsync({
                 classroomId: entry.classroomId,
                 deleteStudents,
+                confirmedCounts,
               })
             }}
             onChanged={reloadAll}

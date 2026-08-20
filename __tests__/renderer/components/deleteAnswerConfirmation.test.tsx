@@ -14,40 +14,33 @@
 
 import { QueryClientProvider } from "@tanstack/react-query"
 import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DeleteConfirmationModal } from "@/components/exams/06-student-answers/student-answer-table/components/DeleteConfirmationModal"
 import { createAppQueryClient } from "@/queries/queryClient"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
-const getSummary = vi.fn()
+const getDeletionCounts = vi.fn()
 
 beforeEach(() => {
-  getSummary.mockReset()
+  getDeletionCounts.mockReset()
   Object.defineProperty(window, "electronAPI", {
-    value: { getStudentAnswerScoreSummary: getSummary },
+    value: { getStudentAnswerDeletionCounts: getDeletionCounts },
     writable: true,
     configurable: true,
   })
 })
 
-/** 採点データがまったく無い答案の要約 */
-const noScores = {
-  scoredQuestionCount: 0,
-  scoreDecisionCount: 0,
-  drawingAnnotationCount: 0,
-  scoredCompoundAnswerCount: 0,
-  hasScoreData: false,
-}
+/** 採点データがまったく無い答案（0件の項目は返さないので空配列） */
+const noScores: ConfirmedDeletionCount[] = []
 
-/** 採点済みの答案の要約 */
-const scored = {
-  scoredQuestionCount: 12,
-  scoreDecisionCount: 0,
-  drawingAnnotationCount: 5,
-  scoredCompoundAnswerCount: 0,
-  hasScoreData: true,
-}
+/** 採点済みの答案 */
+const scored: ConfirmedDeletionCount[] = [
+  { countedName: "採点済みの設問", shownCount: 12 },
+  { countedName: "答案への書き込み", shownCount: 5 },
+]
 
 /**
  * **キャッシュを持ち越す**ラッパー。閉じて開き直しても同じ QueryClient なので、
@@ -63,12 +56,18 @@ function createSharedWrapper() {
   }
 }
 
-function renderModal(wrapper: ReturnType<typeof createSharedWrapper>) {
+function renderModal(
+  wrapper: ReturnType<typeof createSharedWrapper>,
+  handlers: {
+    onClose?: () => void
+    onConfirm?: (confirmedCounts: ConfirmedDeletionCount[]) => Promise<void>
+  } = {}
+) {
   return render(
     <DeleteConfirmationModal
       isOpen
-      onClose={() => {}}
-      onConfirm={() => {}}
+      onClose={handlers.onClose ?? (() => {})}
+      onConfirm={handlers.onConfirm ?? (async () => {})}
       fileId="answer-1"
       studentName="田中太郎"
       pageNumber={1}
@@ -83,7 +82,7 @@ const deleteButton = () =>
 describe("答案の削除確認は、数え終わるまで押させない", () => {
   it("数えている間は押せず、その旨を出す", async () => {
     let land: (value: typeof noScores) => void = () => {}
-    getSummary.mockReturnValue(
+    getDeletionCounts.mockReturnValue(
       new Promise<typeof noScores>((resolve) => {
         land = resolve
       })
@@ -103,7 +102,7 @@ describe("答案の削除確認は、数え終わるまで押させない", () =
 
   it("開き直すと数え直す（前に開いたときの答えを見せたまま押させない）", async () => {
     const wrapper = createSharedWrapper()
-    getSummary.mockResolvedValueOnce(noScores)
+    getDeletionCounts.mockResolvedValueOnce(noScores)
     const first = renderModal(wrapper)
     await waitFor(() =>
       expect(
@@ -115,7 +114,7 @@ describe("答案の削除確認は、数え終わるまで押させない", () =
 
     // この間に 07 で採点された
     let land: (value: typeof scored) => void = () => {}
-    getSummary.mockReturnValue(
+    getDeletionCounts.mockReturnValue(
       new Promise<typeof scored>((resolve) => {
         land = resolve
       })
@@ -132,6 +131,41 @@ describe("答案の削除確認は、数え終わるまで押させない", () =
         screen.getByText("この答案の採点データも全て削除されます")
       ).toBeTruthy()
     )
-    expect(getSummary).toHaveBeenCalledTimes(2)
+    expect(getDeletionCounts).toHaveBeenCalledTimes(2)
+  })
+
+  it("中止されたら閉じずに、文言を出して数え直した件数を見せる", async () => {
+    const user = userEvent.setup()
+    const wrapper = createSharedWrapper()
+    const onClose = vi.fn()
+    // 利用者は「採点データなし」を見た。押した時点で main が数え直して中止する
+    getDeletionCounts.mockResolvedValueOnce(noScores)
+    const refusal =
+      "確認したあとに他の教員が書き足したため、削除を中止しました（採点済みの設問 0件 → 12件）。もう一度確認してください。"
+    const onConfirm = vi.fn().mockRejectedValue(new Error(refusal))
+    // 数え直しでは、増えたぶんが見える
+    getDeletionCounts.mockResolvedValueOnce(scored)
+
+    renderModal(wrapper, { onClose, onConfirm })
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("この答案にはまだ採点データがありません")
+      ).toBeTruthy()
+    )
+    await user.click(deleteButton())
+
+    // 中止の文言が出る
+    expect(await screen.findByText(refusal)).toBeTruthy()
+    // ダイアログは閉じない（閉じると数え直した件数を見せられない）
+    expect(onClose).not.toHaveBeenCalled()
+    // 数え直した結果が出ている
+    await waitFor(() =>
+      expect(
+        screen.getByText("この答案の採点データも全て削除されます")
+      ).toBeTruthy()
+    )
+    expect(screen.getByText("採点済みの設問: 12件")).toBeTruthy()
+    expect(getDeletionCounts).toHaveBeenCalledTimes(2)
   })
 })

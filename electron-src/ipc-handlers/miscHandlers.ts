@@ -1,6 +1,8 @@
 import type { Prisma } from "@prisma/client"
 import * as fsPromises from "fs/promises"
 
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
+
 import { getAbsolutePathFromData } from "../lib/dataManager"
 import {
   createClassroom,
@@ -19,8 +21,8 @@ import {
 } from "../lib/prisma/masterAnswer"
 import {
   deleteStudentAnswer,
+  getStudentAnswerDeletionCounts,
   getStudentAnswersByExamId,
-  getStudentAnswerScoreSummary,
   getStudentAnswersDataset,
   uploadStudentAnswers,
 } from "../lib/prisma/studentAnswer/crud"
@@ -103,11 +105,15 @@ export const miscHandlers = {
     getStudentAnswersDataset(examId),
 
   // 削除確認モーダルで「何が消えるか」を提示するための事前照会
-  "get-answer-sheet-score-summary": (answerSheetId: string) =>
-    getStudentAnswerScoreSummary(answerSheetId),
+  "get-answer-sheet-deletion-counts": (answerSheetId: string) =>
+    getStudentAnswerDeletionCounts(answerSheetId),
 
-  "delete-answer-sheet": async (answerSheetId: string) => {
-    return await deleteStudentAnswer(answerSheetId)
+  // 利用者が見た件数を添えて削除する（消す直前に数え直し、増えていれば中止する）
+  "delete-answer-sheet": async (
+    answerSheetId: string,
+    confirmedCounts: ConfirmedDeletionCount[]
+  ) => {
+    return await deleteStudentAnswer(answerSheetId, confirmedCounts)
   },
 
   "apply-answer-sheet-placements": async (
@@ -150,8 +156,12 @@ export const miscHandlers = {
     return await replaceMasterAnswerImage(examPageId, fileData)
   },
 
-  "delete-master-answer": async (examPageId: string) => {
-    return await deleteMasterAnswer(examPageId)
+  // 利用者が見た件数を添えて削除する（消す直前に数え直し、増えていれば中止する）
+  "delete-master-answer": async (
+    examPageId: string,
+    confirmedCounts: ConfirmedDeletionCount[]
+  ) => {
+    return await deleteMasterAnswer(examPageId, confirmedCounts)
   },
 
   "move-exam-page": async (examPageId: string, direction: "left" | "right") => {

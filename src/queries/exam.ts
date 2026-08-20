@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client"
 import { queryOptions } from "@tanstack/react-query"
 
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { CreateExamArgs } from "@/types/prismaExtensions"
 
@@ -138,9 +139,19 @@ export const updateExamMutation = (
     },
   })
 
+/**
+ * 試験を削除する。**利用者が見た件数を添える** — main は消す直前に数え直し、
+ * 増えていれば中止する（docs/remaining-work.md 段階26）。
+ */
 export const deleteExamMutation = (userId: string | undefined) =>
   defineMutation({
-    mutationFn: (examId: string) => window.electronAPI.deleteExam(examId),
+    mutationFn: ({
+      examId,
+      confirmedCounts,
+    }: {
+      examId: string
+      confirmedCounts: ConfirmedDeletionCount[]
+    }) => window.electronAPI.deleteExam(examId, confirmedCounts),
     meta: {
       invalidates: [examListQuery(userId).queryKey],
       errorMessage: "試験を削除できませんでした",
@@ -184,8 +195,14 @@ export const replaceMasterAnswerImageMutation = (examId: string) =>
 
 export const deleteMasterAnswerMutation = (examId: string) =>
   defineMutation({
-    mutationFn: (examPageId: string) =>
-      window.electronAPI.deleteMasterAnswer(examPageId),
+    mutationFn: ({
+      examPageId,
+      confirmedCounts,
+    }: {
+      examPageId: string
+      /** 利用者が確認ダイアログで見た件数（消す直前に main が数え直す。段階26） */
+      confirmedCounts: ConfirmedDeletionCount[]
+    }) => window.electronAPI.deleteMasterAnswer(examPageId, confirmedCounts),
     meta: {
       // マーカー検出は試験のまとまりの外に置いてある（重いので、模範解答の画像が
       // 変わったときだけ解き直す）。名指しで取り直す
@@ -236,10 +253,24 @@ export const addStudentsToExamMutation = (examId: string) =>
     },
   })
 
+/**
+ * 受験生徒を試験から外す。**利用者が見た件数を添える** — main は消す直前に
+ * 数え直し、増えていれば中止する（docs/remaining-work.md 段階26）。
+ */
 export const removeStudentsFromExamMutation = (examId: string) =>
   defineMutation({
-    mutationFn: (studentIds: string[]) =>
-      window.electronAPI.removeStudentsFromExam(examId, studentIds),
+    mutationFn: ({
+      studentIds,
+      confirmedCounts,
+    }: {
+      studentIds: string[]
+      confirmedCounts: ConfirmedDeletionCount[]
+    }) =>
+      window.electronAPI.removeStudentsFromExam(
+        examId,
+        studentIds,
+        confirmedCounts
+      ),
     meta: {
       invalidates: [examScope(examId)],
       errorMessage: "受験生徒を外せませんでした",
@@ -275,11 +306,11 @@ export const updateExamStudentOrdersMutation = (examId: string) =>
 // DB を書かない操作
 // =====================================================================
 
-/** 外す前に、その生徒の採点データが残るかを見る。DB は変えない */
-export const checkGradingDataForStudentsMutation = (examId: string) =>
+/** 外す前に、巻き添えになる採点データを数える。DB は変えない */
+export const examStudentDeletionCountsMutation = (examId: string) =>
   defineMutation({
     mutationFn: (studentIds: string[]) =>
-      window.electronAPI.checkGradingDataForStudents(examId, studentIds),
+      window.electronAPI.getExamStudentDeletionCounts(examId, studentIds),
     meta: {
       writesDatabase: false,
       errorMessage: "採点データを確認できませんでした",

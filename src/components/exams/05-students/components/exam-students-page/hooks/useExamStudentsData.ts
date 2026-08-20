@@ -4,18 +4,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo, useState } from "react"
 
 import type { RosterClassroomOption } from "@/components/common/roster-table"
+import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
 import {
   type ExamClassroomPlacement,
   resolveExamClassroomPlacement,
 } from "@/lib/examClassroomPlacement"
 import {
-  checkGradingDataForStudentsMutation,
+  examStudentDeletionCountsMutation,
   examStudentsQuery,
   removeStudentsFromExamMutation,
   updateExamStudentOrdersMutation,
   updateStudentExamStatusMutation,
 } from "@/queries/exam"
 import { administeredExamClassroomsQuery } from "@/queries/examClassroom"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
@@ -95,7 +97,11 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   const [selectedStudentsForRemoval, setSelectedStudentsForRemoval] = useState<
     Set<string>
   >(new Set())
-  const [gradingItemCount, setGradingItemCount] = useState(0)
+  // 削除確認で見せている件数。数え終わるまでと、数えられなかったときは null
+  // （見ていない件数は添えようがないので、そのまま押させない）
+  const [removalDeletionCounts, setRemovalDeletionCounts] = useState<
+    ConfirmedDeletionCount[] | null
+  >(null)
 
   const {
     data: examStudentRows = EMPTY_EXAM_STUDENTS,
@@ -115,8 +121,8 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   const removeStudentsFromExam = useMutation(
     removeStudentsFromExamMutation(examId)
   )
-  const checkGradingDataForStudents = useMutation(
-    checkGradingDataForStudentsMutation(examId)
+  const countExamStudentDeletion = useMutation(
+    examStudentDeletionCountsMutation(examId)
   )
 
   const loading = examStudentsPending || administeredClassroomsPending
@@ -226,34 +232,59 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
     }
   }
 
+  // 巻き添えになる採点データを数える。数えられなければ null のまま
+  // （0 を入れると「採点データがないため安全に削除できます」と嘘をつく）
+  const countRemovalImpact = useCallback(
+    async (studentIds: string[]) => {
+      setRemovalDeletionCounts(null)
+      try {
+        setRemovalDeletionCounts(
+          await countExamStudentDeletion.mutateAsync(studentIds)
+        )
+      } catch {
+        // 失敗の知らせは中央のトーストが出す。件数不明のまま押させない
+      }
+    },
+    [countExamStudentDeletion]
+  )
+
   // 選択した生徒の削除開始
   const initiateStudentRemoval = async () => {
     if (selectedStudentsForRemoval.size === 0) return
 
     const studentIds = Array.from(selectedStudentsForRemoval)
     setStudentsToRemove(studentIds)
-
-    // 採点データの存在を確認。読めなくても削除の確認自体は出す
-    try {
-      const gradingData =
-        await checkGradingDataForStudents.mutateAsync(studentIds)
-      setGradingItemCount(gradingData.totalGradingItems)
-    } catch {
-      setGradingItemCount(0)
-    }
-
     setShowRemovalConfirm(true)
+    await countRemovalImpact(studentIds)
   }
 
-  // 生徒削除の確定実行
-  const confirmStudentRemoval = () => {
-    removeStudentsFromExam.mutate(studentsToRemove, {
-      onSuccess: () => {
-        setSelectedStudentsForRemoval(new Set())
-        setStudentsToRemove([])
-        setShowRemovalConfirm(false)
+  // 生徒削除の確定実行。見せた件数を添え、中止されたら開いたまま数え直す（段階26）
+  const {
+    canConfirm: canConfirmStudentRemoval,
+    refusalMessage: studentRemovalRefusalMessage,
+    confirmDeletion,
+  } = useConfirmedDeletion({
+    confirmedCounts: removalDeletionCounts,
+    deleteWithConfirmedCounts: useCallback(
+      async (confirmedCounts: ConfirmedDeletionCount[]) => {
+        await removeStudentsFromExam.mutateAsync({
+          studentIds: studentsToRemove,
+          confirmedCounts,
+        })
       },
-    })
+      [removeStudentsFromExam, studentsToRemove]
+    ),
+    recount: useCallback(
+      () => countRemovalImpact(studentsToRemove),
+      [countRemovalImpact, studentsToRemove]
+    ),
+  })
+
+  const confirmStudentRemoval = async () => {
+    if (!(await confirmDeletion())) return
+    setSelectedStudentsForRemoval(new Set())
+    setStudentsToRemove([])
+    setShowRemovalConfirm(false)
   }
 
   // フィルタリングされた受験生徒リスト（順序を維持したまま表示用フィルタを適用）
@@ -282,7 +313,9 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
     setShowRemovalConfirm,
     setStudentsToRemove,
     selectedStudentsForRemoval,
-    gradingItemCount,
+    removalDeletionCounts,
+    canConfirmStudentRemoval,
+    studentRemovalRefusalMessage,
     refreshStudentData,
     updateStudentStatus,
     updateStudentOrders,

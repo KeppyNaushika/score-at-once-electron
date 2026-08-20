@@ -9,6 +9,7 @@ import type {
   CourseworkImportDecisions,
   CourseworkMatchingMethod,
 } from "../../src/types/courseworkArchive.types"
+import type { ConfirmedDeletionCount } from "../../src/types/deletionConfirmation.types"
 import { exportCoursework } from "../lib/export/coursework-archive"
 import {
   cleanupCourseworkTempDir,
@@ -211,15 +212,18 @@ export const courseworkHandlers = {
     return removeStudentsFromCoursework(courseworkId, studentIds)
   },
 
+  // 利用者が見た件数を添えて削除する（消す直前に数え直し、増えていれば中止する）
   "coursework:removeClassroom": async (
     courseworkId: string,
     classroomId: string,
-    deleteStudents: boolean = true
+    deleteStudents: boolean,
+    confirmedCounts: ConfirmedDeletionCount[]
   ) => {
     return removeClassroomFromCoursework(
       courseworkId,
       classroomId,
-      deleteStudents
+      deleteStudents,
+      confirmedCounts
     )
   },
 

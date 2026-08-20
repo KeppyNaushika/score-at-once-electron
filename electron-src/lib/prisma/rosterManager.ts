@@ -7,9 +7,18 @@
  * テーブル固有の I/O・監査メタデータは {@link RosterAdapter} で各ドメインが型安全に供給する。
  */
 
+import type { Prisma } from "@prisma/client"
+
+import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
+
 import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
+import { deleteAfterRecount } from "./deleteAfterRecount"
 import { membershipFilterAt } from "./membershipFilter"
+
+/** 名簿を読む相手。削除の数え直しではトランザクションの中から読む */
+type RosterClient = typeof prisma | Prisma.TransactionClient
 
 /**
  * ドメイン（成績 / 資料）ごとの名簿 I/O・監査メタデータ。
@@ -45,13 +54,18 @@ export interface RosterAdapter {
     targetId: string,
     orders: { classroomId: string; order: number }[]
   ): Promise<void>
-  /** 指定学級以外の登録学級ID一覧 */
+  /**
+   * 指定学級以外の登録学級ID一覧。
+   * 数え直しは削除と同じトランザクションで行うため client を受け取る
+   */
   listOtherClassroomIds(
+    client: RosterClient,
     targetId: string,
     exceptClassroomId: string
   ): Promise<string[]>
-  /** 学級と、それに伴い外す生徒を単一トランザクションで削除 */
+  /** 学級と、それに伴い外す生徒を削除する（トランザクションは呼び出し側が持つ） */
   removeClassroomAndStudents(
+    tx: Prisma.TransactionClient,
     targetId: string,
     classroomId: string,
     studentIds: string[]
@@ -214,11 +228,12 @@ export async function rosterSetClassroomOrders(
  * 他の登録学級にも在籍する生徒は残るため除外する。
  */
 async function computeExclusiveStudents(
+  client: RosterClient,
   adapter: RosterAdapter,
   targetId: string,
   classroomId: string
 ): Promise<string[]> {
-  const memberships = await prisma.studentClassroomMembership.findMany({
+  const memberships = await client.studentClassroomMembership.findMany({
     where: { classroomId },
   })
   const classroomStudentIds = memberships.map(
@@ -226,10 +241,11 @@ async function computeExclusiveStudents(
   )
 
   const otherClassroomIds = await adapter.listOtherClassroomIds(
+    client,
     targetId,
     classroomId
   )
-  const otherMemberships = await prisma.studentClassroomMembership.findMany({
+  const otherMemberships = await client.studentClassroomMembership.findMany({
     where: { classroomId: { in: otherClassroomIds } },
   })
   const otherStudentIds = new Set(
@@ -240,20 +256,40 @@ async function computeExclusiveStudents(
 }
 
 /**
- * 学級削除のプレビュー。専属生徒を削除する場合に消える生徒数を返す。
- * 確認モーダルで「△名が削除されます」を出すために使う（実削除は行わない）。
+ * 学級を外すと巻き添えになる専属生徒を、削除の確認で見せる形で数える。
+ *
+ * ここで返した件数を利用者はそのまま画面で見て、同じ配列が削除の要求に添えられて
+ * 戻ってくる。main は消す直前に**同じ関数で**数え直して突き合わせる（段階26）。
+ * 0名なら項目を返さない（「この学級にのみ所属する生徒はいません」に対応する）。
  */
-export async function rosterClassroomRemovalPreview(
+async function countExclusiveStudentDeletion(
+  client: RosterClient,
   adapter: RosterAdapter,
   targetId: string,
   classroomId: string
-): Promise<{ exclusiveCount: number }> {
+): Promise<ConfirmedDeletionCount[]> {
   const exclusive = await computeExclusiveStudents(
+    client,
     adapter,
     targetId,
     classroomId
   )
-  return { exclusiveCount: exclusive.length }
+  if (exclusive.length === 0) return []
+  return [
+    {
+      countedName: DELETION_COUNT_NAME.exclusiveStudent,
+      shownCount: exclusive.length,
+    },
+  ]
+}
+
+/** 学級削除のプレビュー（確認モーダルの事前照会。実削除は行わない） */
+export function rosterClassroomRemovalPreview(
+  adapter: RosterAdapter,
+  targetId: string,
+  classroomId: string
+): Promise<ConfirmedDeletionCount[]> {
+  return countExclusiveStudentDeletion(prisma, adapter, targetId, classroomId)
 }
 
 /**
@@ -261,22 +297,36 @@ export async function rosterClassroomRemovalPreview(
  *
  * @param deleteStudents trueなら、その学級にのみ所属する生徒も削除する（他学級にも
  *   在籍する生徒は残す）。falseなら学級登録だけ解除し、生徒は対象に残す。
+ * @param confirmedCounts 利用者が確認ダイアログで見た専属生徒の件数。消す直前に
+ *   数え直し、増えていれば削除を中止する（`deleteAfterRecount`）。
  */
 export async function rosterRemoveClassroom(
   adapter: RosterAdapter,
   targetId: string,
   classroomId: string,
-  deleteStudents = true
+  deleteStudents: boolean,
+  confirmedCounts: ConfirmedDeletionCount[]
 ): Promise<{ removedStudents: number }> {
-  const studentsToRemove = deleteStudents
-    ? await computeExclusiveStudents(adapter, targetId, classroomId)
-    : []
-
-  await adapter.removeClassroomAndStudents(
-    targetId,
-    classroomId,
-    studentsToRemove
-  )
+  const studentsToRemove = await deleteAfterRecount({
+    confirmedCounts,
+    // 登録解除だけなら生徒は残るので、巻き添えは何も無い（数え直す対象も無い）
+    recount: (tx) =>
+      deleteStudents
+        ? countExclusiveStudentDeletion(tx, adapter, targetId, classroomId)
+        : Promise.resolve([]),
+    remove: async (tx) => {
+      const exclusiveStudentIds = deleteStudents
+        ? await computeExclusiveStudents(tx, adapter, targetId, classroomId)
+        : []
+      await adapter.removeClassroomAndStudents(
+        tx,
+        targetId,
+        classroomId,
+        exclusiveStudentIds
+      )
+      return exclusiveStudentIds
+    },
+  })
 
   const scope = await adapter.scope(targetId)
   await recordAuditLog({

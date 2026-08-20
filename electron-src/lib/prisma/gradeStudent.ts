@@ -2,6 +2,8 @@
  * GradeStudent / GradeClassroom のPrisma操作関数
  */
 
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
+
 import { resolveGradeScope } from "./auditScope"
 import { getAvailableClassroomsForTarget } from "./availableClassrooms"
 import { getAvailableStudentsForTarget } from "./availableStudents"
@@ -184,21 +186,19 @@ const gradeRosterAdapter: RosterAdapter = {
       )
     )
   },
-  listOtherClassroomIds: async (targetId, exceptClassroomId) => {
-    const rows = await prisma.gradeClassroom.findMany({
+  listOtherClassroomIds: async (client, targetId, exceptClassroomId) => {
+    const rows = await client.gradeClassroom.findMany({
       where: { gradeId: targetId, classroomId: { not: exceptClassroomId } },
     })
     return rows.map((gradeClassroom) => gradeClassroom.classroomId)
   },
-  removeClassroomAndStudents: async (targetId, classroomId, studentIds) => {
-    await prisma.$transaction([
-      prisma.gradeStudent.deleteMany({
-        where: { gradeId: targetId, studentId: { in: studentIds } },
-      }),
-      prisma.gradeClassroom.delete({
-        where: { gradeId_classroomId: { gradeId: targetId, classroomId } },
-      }),
-    ])
+  removeClassroomAndStudents: async (tx, targetId, classroomId, studentIds) => {
+    await tx.gradeStudent.deleteMany({
+      where: { gradeId: targetId, studentId: { in: studentIds } },
+    })
+    await tx.gradeClassroom.delete({
+      where: { gradeId_classroomId: { gradeId: targetId, classroomId } },
+    })
   },
   scope: (targetId) => resolveGradeScope(targetId),
   audit: {
@@ -271,16 +271,19 @@ export function getGradeClassroomRemovalPreview(
  * 学級を削除する。
  *
  * @param deleteStudents trueなら専属生徒も削除（既定）。falseなら登録解除のみ。
+ * @param confirmedCounts 利用者が確認ダイアログで見た専属生徒の件数（段階26）
  */
 export function removeClassroomFromGrade(
   gradeId: string,
   classroomId: string,
-  deleteStudents = true
+  deleteStudents: boolean,
+  confirmedCounts: ConfirmedDeletionCount[]
 ) {
   return rosterRemoveClassroom(
     gradeRosterAdapter,
     gradeId,
     classroomId,
-    deleteStudents
+    deleteStudents,
+    confirmedCounts
   )
 }

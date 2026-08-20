@@ -27,6 +27,7 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 import { removeStudentsFromExam } from "@/electron-src/lib/prisma/examStudent"
 import { calculateGrades } from "@/electron-src/lib/shared/calculations/gradeCalculator"
 
+import { SAW_ALL_DELETION_COUNTS } from "../../helpers/deletionCounts"
 import {
   cleanupTestDatabase,
   createPrismaClientForPath,
@@ -144,7 +145,11 @@ describe("成績算出の受験者スコープ", () => {
   it("試験から外した生徒の得点は算入されない（#962 の非対称の解消）", async () => {
     const fixture = await buildFixture()
 
-    await removeStudentsFromExam(fixture.examId, [fixture.studentId])
+    await removeStudentsFromExam(
+      fixture.examId,
+      [fixture.studentId],
+      SAW_ALL_DELETION_COUNTS
+    )
 
     const source = await readSourceScore(fixture.gradeId)
     expect(source.rawScore).toBeNull()

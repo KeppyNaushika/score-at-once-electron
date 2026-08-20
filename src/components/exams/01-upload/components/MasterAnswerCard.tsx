@@ -16,6 +16,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
+import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
 
 const PAGE_SIZE_OPTIONS = ["A3", "A4", "A5", "B4", "B5"] as const
 
@@ -48,7 +50,28 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
     const canMoveLeft = index > 0
     const canMoveRight = index < totalAnswers - 1
     const isBusy = isDeleting || isMoving || isReplacing
+
+    // **表示にも送信にも同じ配列を使う**（見せたものと送るものが同じなら食い違わない）。
+    // main は消す直前にこれと同じ定義で数え直し、増えていれば中止する（段階26）
     const answerImageCount = answer.studentAnswerImages.length
+    const deletionCounts =
+      answerImageCount > 0
+        ? [
+            {
+              countedName: DELETION_COUNT_NAME.pageAnswerSheet,
+              shownCount: answerImageCount,
+            },
+          ]
+        : []
+
+    const { canConfirm, refusalMessage, confirmDeletion } =
+      useConfirmedDeletion({
+        confirmedCounts: deletionCounts,
+        deleteWithConfirmedCounts: onDelete,
+        // 件数は試験のまとまりの取得結果から数えているので、削除の失敗で無効化された
+        // 一覧が届けば数え直したことになる（ここで追加の取得はしない）
+        recount: () => Promise.resolve(),
+      })
 
     const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
       e.currentTarget.alt = `画像読込エラー: ${answer.imagePath}`
@@ -181,15 +204,29 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
                 ページ {answer.pageNumber} を削除しますか？
               </AlertDialogTitle>
               <AlertDialogDescription>
-                {answerImageCount > 0
-                  ? `このページに取り込まれている答案 ${answerImageCount} 件と、その採点結果も一緒に削除されます。模範解答の画像を取り替えたいだけなら、削除ではなく差し替えを使ってください。`
+                {deletionCounts.length > 0
+                  ? `このページに取り込まれている${DELETION_COUNT_NAME.pageAnswerSheet} ${answerImageCount} 件と、その採点結果も一緒に削除されます。模範解答の画像を取り替えたいだけなら、削除ではなく差し替えを使ってください。`
                   : "このページと、ページ上の採点領域が削除されます。"}
               </AlertDialogDescription>
+              {/* 数えた後に他の教員が取り込んでいれば main が中止する。閉じずに
+                  文言を出し、利用者にもう一度決めてもらう */}
+              {refusalMessage && (
+                <p className="rounded bg-amber-50 p-3 text-sm font-medium text-amber-900">
+                  {refusalMessage}
+                </p>
+              )}
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>キャンセル</AlertDialogCancel>
               <AlertDialogAction
-                onClick={onDelete}
+                // 既定の「クリックで閉じる」を止める。中止されたときに開いたままにする
+                onClick={(event) => {
+                  event.preventDefault()
+                  void confirmDeletion().then((deleted) => {
+                    if (deleted) setConfirmingDelete(false)
+                  })
+                }}
+                disabled={!canConfirm}
                 className="bg-destructive text-white hover:bg-destructive/90"
               >
                 削除する

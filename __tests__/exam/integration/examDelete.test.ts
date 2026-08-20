@@ -24,6 +24,7 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 import { getExamDirectory } from "@/electron-src/lib/dataManager"
 import { createExam, deleteExam } from "@/electron-src/lib/prisma/exam"
 
+import { SAW_ALL_DELETION_COUNTS } from "../../helpers/deletionCounts"
 import {
   disconnectTestPrisma,
   getTestPrismaClient,
@@ -68,7 +69,7 @@ describe("deleteExam", () => {
       },
     })
 
-    await deleteExam(exam.id)
+    await deleteExam(exam.id, SAW_ALL_DELETION_COUNTS)
 
     expect(await prisma.exam.findUnique({ where: { id: exam.id } })).toBeNull()
     // cascade で子レコードも消えていること
@@ -82,7 +83,9 @@ describe("deleteExam", () => {
   it("試験ディレクトリが存在しない場合も削除に失敗しない", async () => {
     const exam = await createExam({ examName: "ファイル無しの試験" }, userId)
 
-    await expect(deleteExam(exam.id)).resolves.toBeTruthy()
+    await expect(
+      deleteExam(exam.id, SAW_ALL_DELETION_COUNTS)
+    ).resolves.toBeTruthy()
     expect(await prisma.exam.findUnique({ where: { id: exam.id } })).toBeNull()
   })
 })

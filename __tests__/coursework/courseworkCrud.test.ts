@@ -45,6 +45,7 @@ import {
 import { createDataSource } from "@/electron-src/lib/prisma/gradeDataSource"
 import { createGradeItem } from "@/electron-src/lib/prisma/gradeItem"
 
+import { SAW_ALL_DELETION_COUNTS } from "../helpers/deletionCounts"
 import {
   cleanupTestDatabase,
   createPrismaClientForPath,
@@ -474,7 +475,9 @@ describe("Coursework CRUD", () => {
         classroomA.id
       )
       // classroomA の s1,s2 は他学級に属さない → 2名
-      expect(preview.exclusiveCount).toBe(2)
+      expect(preview).toEqual([
+        { countedName: "この学級にのみ所属する生徒", shownCount: 2 },
+      ])
     })
 
     it("deleteStudents=false なら登録解除のみで生徒は残る", async () => {
@@ -483,7 +486,8 @@ describe("Coursework CRUD", () => {
       const result = await removeClassroomFromCoursework(
         courseworkId,
         classroomA.id,
-        false
+        false,
+        SAW_ALL_DELETION_COUNTS
       )
       expect(result.removedStudents).toBe(0)
 
@@ -498,7 +502,9 @@ describe("Coursework CRUD", () => {
 
       const result = await removeClassroomFromCoursework(
         courseworkId,
-        classroomA.id
+        classroomA.id,
+        true,
+        SAW_ALL_DELETION_COUNTS
       )
       expect(result.removedStudents).toBe(2) // s1,s2
 

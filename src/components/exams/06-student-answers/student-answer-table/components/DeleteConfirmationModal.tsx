@@ -13,35 +13,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import type { StudentAnswerScoreSummary } from "@/electron-src/lib/prisma/studentAnswer/crud"
-import { studentAnswerScoreSummaryQuery } from "@/queries/answerSheet"
+import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
+import { studentAnswerDeletionCountsQuery } from "@/queries/answerSheet"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: () => void
+  /**
+   * 削除の実行。**利用者に見せた件数を添えて渡す**ので、main は消す直前に
+   * 数え直せる。中止されたら投げること（このダイアログが受け止めて開いたままにする）
+   */
+  onConfirm: (confirmedCounts: ConfirmedDeletionCount[]) => Promise<void>
   /** 採点データの照会に使う StudentAnswerImage.id */
   fileId: string
   studentName?: string
   pageNumber?: number
-}
-
-/** 採点データの内訳を「◯◯ 3件」形式の行に整形する（0件は出さない） */
-function buildScoreDetails(summary: StudentAnswerScoreSummary): string[] {
-  const details: string[] = []
-  if (summary.scoredQuestionCount > 0) {
-    details.push(`採点済みの設問: ${summary.scoredQuestionCount}問`)
-  }
-  if (summary.scoreDecisionCount > 0) {
-    details.push(`確定した点数: ${summary.scoreDecisionCount}件`)
-  }
-  if (summary.drawingAnnotationCount > 0) {
-    details.push(`答案への書き込み: ${summary.drawingAnnotationCount}件`)
-  }
-  if (summary.scoredCompoundAnswerCount > 0) {
-    details.push(`採点済みの複合回答: ${summary.scoredCompoundAnswerCount}問`)
-  }
-  return details
 }
 
 /**
@@ -61,18 +48,28 @@ function DeleteConfirmationBody({
   // **`isFetching` で止める。** `isPending` は初回だけなので、キャッシュに残って
   // いれば古い答えのまま確定できてしまう（開くたびの取り直しが着地する前に押せる）
   const {
-    data: summary = null,
-    isFetching: isLoadingSummary,
+    data: deletionCounts,
+    isFetching: isLoadingCounts,
     error,
-  } = useQuery(studentAnswerScoreSummaryQuery(fileId))
-  const summaryError = error ? error.message : null
+    refetch,
+  } = useQuery(studentAnswerDeletionCountsQuery(fileId))
+  const countsError = error ? error.message : null
 
-  const handleConfirm = () => {
-    onConfirm()
-    onClose()
+  // **表示にも送信にも同じ配列を使う。** 見せたものと送るものが同じなら食い違わない。
+  // 取り直している間・照会に失敗した間は null（＝押させない）
+  const shownCounts =
+    isLoadingCounts || deletionCounts === undefined ? null : deletionCounts
+
+  const { canConfirm, isDeleting, refusalMessage, confirmDeletion } =
+    useConfirmedDeletion({
+      confirmedCounts: shownCounts,
+      deleteWithConfirmedCounts: onConfirm,
+      recount: refetch,
+    })
+
+  const handleConfirm = async () => {
+    if (await confirmDeletion()) onClose()
   }
-
-  const scoreDetails = summary ? buildScoreDetails(summary) : []
 
   return (
     <>
@@ -99,47 +96,66 @@ function DeleteConfirmationBody({
           <ul className="mt-1 list-inside list-disc space-y-1 text-sm">
             <li>この操作は取り消せません</li>
             <li>答案画像ファイルが完全に削除されます</li>
-            {isLoadingSummary && (
+            {isLoadingCounts && (
               <li className="flex items-center gap-1">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 採点データを確認しています…
               </li>
             )}
-            {/* 照会に失敗したら「採点データは無い」と誤解させないよう、
-                安全側に倒して無条件の警告を出す */}
-            {summaryError && (
+            {/* 照会に失敗したら「採点データは無い」と誤解させないよう、安全側に
+                倒して削除させない。見ていない件数は添えようがない（0件と偽って
+                添えると、実際には在る採点を巻き添えに消すか、必ず中止されるかの
+                どちらかになる） */}
+            {countsError && (
               <>
-                <li>{summaryError}</li>
+                <li>{countsError}</li>
                 <li className="font-medium">
-                  この答案に採点データがあれば全て削除されます
+                  何が消えるか数えられなかったため削除できません。開き直してください
                 </li>
               </>
             )}
-            {summary?.hasScoreData && (
+            {shownCounts && shownCounts.length > 0 && (
               <li className="font-medium">
                 この答案の採点データも全て削除されます
                 <ul className="mt-1 list-inside list-[circle] space-y-0.5 pl-4 font-normal">
-                  {scoreDetails.map((detail) => (
-                    <li key={detail}>{detail}</li>
+                  {shownCounts.map((deletionCount) => (
+                    <li key={deletionCount.countedName}>
+                      {deletionCount.countedName}: {deletionCount.shownCount}件
+                    </li>
                   ))}
                 </ul>
               </li>
             )}
-            {summary && !summary.hasScoreData && (
+            {shownCounts && shownCounts.length === 0 && (
               <li>この答案にはまだ採点データがありません</li>
             )}
           </ul>
         </div>
+
+        {/* 数えた後に他の教員が書き足していれば main が中止する。閉じずに
+            数え直した結果を見せ、利用者にもう一度決めてもらう */}
+        {refusalMessage && (
+          <p className="rounded bg-amber-50 p-3 text-sm font-medium text-amber-900">
+            {refusalMessage}
+          </p>
+        )}
 
         <p className="text-sm text-gray-600">
           本当に削除してもよろしいですか？
         </p>
       </div>
       <AlertDialogFooter>
-        <AlertDialogCancel onClick={onClose}>キャンセル</AlertDialogCancel>
+        <AlertDialogCancel onClick={onClose} disabled={isDeleting}>
+          キャンセル
+        </AlertDialogCancel>
         <AlertDialogAction
-          onClick={handleConfirm}
-          disabled={isLoadingSummary}
+          // 既定の「クリックで閉じる」を止める。中止されたときに開いたままにして
+          // 数え直した件数を見せるため
+          onClick={(event) => {
+            event.preventDefault()
+            void handleConfirm()
+          }}
+          disabled={!canConfirm}
           className="bg-red-600 hover:bg-red-700"
         >
           削除する

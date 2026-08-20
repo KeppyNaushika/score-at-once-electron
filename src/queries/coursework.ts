@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query"
 
 import type { CourseworkScoreUpsertInput } from "@/types/coursework.types"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
 import { auditLogListKey } from "./auditLog"
 import { defineMutation } from "./defineMutation"
@@ -318,11 +319,17 @@ export const removeCourseworkStudentsMutation = (courseworkId: string) =>
 
 export const removeCourseworkClassroomMutation = (courseworkId: string) =>
   defineMutation({
-    mutationFn: (input: { classroomId: string; deleteStudents: boolean }) =>
+    mutationFn: (input: {
+      classroomId: string
+      deleteStudents: boolean
+      /** 利用者が確認ダイアログで見た件数（消す直前に main が数え直す。段階26） */
+      confirmedCounts: ConfirmedDeletionCount[]
+    }) =>
       window.electronAPI.coursework.removeClassroom(
         courseworkId,
         input.classroomId,
-        input.deleteStudents
+        input.deleteStudents,
+        input.confirmedCounts
       ),
     meta: {
       invalidates: [courseworkScope(courseworkId)],

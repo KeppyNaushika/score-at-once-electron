@@ -48,7 +48,9 @@ export function MasterAnswerGallery({
                 isDeleting={answer.id === deletingAnswerId}
                 isReplacing={answer.id === replacingAnswerId}
                 isMoving={isMoving}
-                onDelete={() => onDeleteAnswer(answer.id)}
+                onDelete={(confirmedCounts) =>
+                  onDeleteAnswer(answer.id, confirmedCounts)
+                }
                 onReplace={(file) => onReplaceAnswer(answer.id, file)}
                 onMoveLeft={() => onMoveAnswer(index, "left")}
                 onMoveRight={() => onMoveAnswer(index, "right")}

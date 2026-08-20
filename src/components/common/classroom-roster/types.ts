@@ -59,8 +59,3 @@ export interface ClassroomRosterFlagColumn {
  * - `can-delete-students`: 登録解除に加え、その学級にのみ所属する生徒も削除できる。成績・資料。
  */
 export type ClassroomRemovalMode = "unlink-only" | "can-delete-students"
-
-/** 削除プレビュー（その学級にのみ所属する＝削除対象になる生徒数） */
-export interface ClassroomRemovalPreview {
-  exclusiveCount: number
-}

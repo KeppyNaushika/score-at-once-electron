@@ -24,8 +24,9 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 })
 
 import { removeStudentsFromExam } from "@/electron-src/lib/prisma/examStudent"
-import { checkGradingDataForStudent } from "@/electron-src/lib/prisma/gradingData"
+import { getExamStudentDeletionCounts } from "@/electron-src/lib/prisma/gradingData"
 
+import { SAW_ALL_DELETION_COUNTS } from "../../helpers/deletionCounts"
 import { createFullTestExam } from "../../helpers/testExamBuilder"
 import {
   cleanupTestDatabase,
@@ -150,7 +151,11 @@ describe("removeStudentsFromExam", () => {
     expect(before.compoundAnswerScores).toBeGreaterThan(0)
     expect(before.returnSnapshots).toBeGreaterThan(0)
 
-    await removeStudentsFromExam(exam.exam.id, [examStudentA.studentId])
+    await removeStudentsFromExam(
+      exam.exam.id,
+      [examStudentA.studentId],
+      SAW_ALL_DELETION_COUNTS
+    )
 
     expect(await countScoringRows(examStudentA.id)).toEqual({
       studentAnswerImages: 0,
@@ -179,7 +184,11 @@ describe("removeStudentsFromExam", () => {
   it("生徒（人）そのものは消えない — 消えるのはその試験の受験だけ", async () => {
     const { exam, examStudentA } = await buildExamWithFullScoringLayer()
 
-    await removeStudentsFromExam(exam.exam.id, [examStudentA.studentId])
+    await removeStudentsFromExam(
+      exam.exam.id,
+      [examStudentA.studentId],
+      SAW_ALL_DELETION_COUNTS
+    )
 
     const student = await testPrisma.student.findUnique({
       where: { id: examStudentA.studentId },
@@ -199,25 +208,26 @@ describe("removeStudentsFromExam", () => {
       where: { examStudentId: examStudentA.id },
     })
 
-    const gradingData = await checkGradingDataForStudent(
-      exam.exam.id,
-      examStudentA.studentId
-    )
+    const deletionCounts = await getExamStudentDeletionCounts(exam.exam.id, [
+      examStudentA.studentId,
+    ])
 
-    expect(gradingData.answerSheetCount).toBe(0)
-    expect(gradingData.questionScoreCount).toBe(0)
-    expect(gradingData.scoreDecisionCount).toBe(1)
-    expect(gradingData.compoundAnswerScoreCount).toBe(1)
-    expect(gradingData.returnSnapshotCount).toBe(1)
-    // 「採点データがないため安全に削除できます」を出してはいけない
-    expect(gradingData.hasData).toBe(true)
-    expect(gradingData.totalGradingItems).toBe(3)
+    // 答案と採点行は消したので、残るのは確定・複合回答・返却版の3件。
+    // 数える範囲が削除範囲より狭いとここが3件に届かず、モーダルが
+    // 「採点データがないため安全に削除できます」と誤表示してしまう
+    expect(deletionCounts).toEqual([
+      { countedName: "採点データ", shownCount: 3 },
+    ])
   })
 
   it("外した生徒を再追加しても採点は復元されない（破棄は取り消せない）", async () => {
     const { exam, examStudentA } = await buildExamWithFullScoringLayer()
 
-    await removeStudentsFromExam(exam.exam.id, [examStudentA.studentId])
+    await removeStudentsFromExam(
+      exam.exam.id,
+      [examStudentA.studentId],
+      SAW_ALL_DELETION_COUNTS
+    )
 
     const readded = await testPrisma.examStudent.create({
       data: {

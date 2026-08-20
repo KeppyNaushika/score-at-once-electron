@@ -31,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 
 // ============================================================================
@@ -52,7 +53,8 @@ export interface FileCellSlotProps {
   isFileDisabled: boolean
   onTogglePosition: () => void
   onToggleFileDisabled: () => void
-  onDelete: () => void
+  /** 削除の実行。利用者に見せた件数を添えて渡す */
+  onDelete: (confirmedCounts: ConfirmedDeletionCount[]) => Promise<void>
   children: React.ReactNode
 }
 
@@ -99,7 +101,10 @@ interface TableContentProps {
   bulkDisabling?: BulkDisablingHandlers
   toggleCellDisabled: (examStudent: CellRow, examPage: CellColumn) => void
   toggleFileDisabled: (fileId: string) => void
-  onDeleteAnswerSheet?: (fileId: string) => void
+  onDeleteAnswerSheet?: (
+    fileId: string,
+    confirmedCounts: ConfirmedDeletionCount[]
+  ) => Promise<void>
   // DnD ラッパー（モード別に注入）
   renderFileCell: (props: FileCellSlotProps) => React.ReactNode
   renderEmptyCell: (props: EmptyCellSlotProps) => React.ReactNode
@@ -282,7 +287,8 @@ export function TableContent({
                     onTogglePosition: () =>
                       toggleCellDisabled(examStudent, examPage),
                     onToggleFileDisabled: () => toggleFileDisabled(file.id),
-                    onDelete: () => onDeleteAnswerSheet?.(file.id),
+                    onDelete: async (confirmedCounts) =>
+                      await onDeleteAnswerSheet?.(file.id, confirmedCounts),
                     children: (
                       <FilePreviewCell
                         previewUrl={display?.previewUrl}

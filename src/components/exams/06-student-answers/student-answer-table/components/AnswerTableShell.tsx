@@ -40,6 +40,7 @@ import type {
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
 import { Card, CardContent } from "@/components/ui/card"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
 interface AnswerTableShellProps {
   mode: "upload" | "view"
@@ -90,7 +91,10 @@ interface AnswerTableShellProps {
   bulkDisabling?: BulkDisablingHandlers
   toggleCellDisabled: (examStudent: CellRow, examPage: CellColumn) => void
   toggleFileDisabled: (fileId: string) => void
-  onDeleteAnswerSheet?: (fileId: string) => void
+  onDeleteAnswerSheet?: (
+    fileId: string,
+    confirmedCounts: ConfirmedDeletionCount[]
+  ) => Promise<void>
 
   // 孤立答案（view のみ）
   orphanItems: AnswerImageIdentity[]

@@ -1,5 +1,7 @@
 import type { Prisma } from "@prisma/client"
 
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
+
 import {
   createExam,
   deleteExam,
@@ -136,8 +138,12 @@ export const examHandlers = {
     return exam
   },
 
-  "delete-exam": async (examId: string) => {
-    const exam = await deleteExam(examId)
+  // 利用者が見た件数を添えて削除する（消す直前に数え直し、増えていれば中止する）
+  "delete-exam": async (
+    examId: string,
+    confirmedCounts: ConfirmedDeletionCount[]
+  ) => {
+    const exam = await deleteExam(examId, confirmedCounts)
     // Dateオブジェクトをそのまま返す
     return exam
   },

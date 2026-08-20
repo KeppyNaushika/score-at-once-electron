@@ -16,6 +16,18 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { ClassroomRemovalDialog } from "@/components/common/classroom-roster/ClassroomRemovalDialog"
 import type { ClassroomRosterEntry } from "@/components/common/classroom-roster/types"
+import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
+
+/** 専属生徒 n 名を見せたときの件数（0名なら項目を出さない） */
+const exclusiveStudents = (count: number) =>
+  count === 0
+    ? []
+    : [
+        {
+          countedName: DELETION_COUNT_NAME.exclusiveStudent,
+          shownCount: count,
+        },
+      ]
 
 const entry: ClassroomRosterEntry = {
   id: "c1",
@@ -46,14 +58,14 @@ describe("ClassroomRemovalDialog", () => {
 
     await user.click(screen.getByRole("button", { name: "登録を解除" }))
 
-    expect(onConfirm).toHaveBeenCalledWith(entry, false)
+    expect(onConfirm).toHaveBeenCalledWith(entry, false, [])
   })
 
   it("can-delete-students: 登録解除のみ選択なら deleteStudents=false（2段階目なし）", async () => {
     const user = userEvent.setup()
     const onConfirm = vi.fn().mockResolvedValue(undefined)
     const onClose = vi.fn()
-    const fetchRemovalPreview = vi.fn().mockResolvedValue({ exclusiveCount: 2 })
+    const fetchRemovalPreview = vi.fn().mockResolvedValue(exclusiveStudents(2))
 
     render(
       <ClassroomRemovalDialog
@@ -71,14 +83,14 @@ describe("ClassroomRemovalDialog", () => {
     })
     await user.click(actionButton)
 
-    expect(onConfirm).toHaveBeenCalledWith(entry, false)
+    expect(onConfirm).toHaveBeenCalledWith(entry, false, [])
   })
 
   it("can-delete-students: 専属生徒削除を選ぶと2段階目を経て deleteStudents=true", async () => {
     const user = userEvent.setup()
     const onConfirm = vi.fn().mockResolvedValue(undefined)
     const onClose = vi.fn()
-    const fetchRemovalPreview = vi.fn().mockResolvedValue({ exclusiveCount: 2 })
+    const fetchRemovalPreview = vi.fn().mockResolvedValue(exclusiveStudents(2))
 
     render(
       <ClassroomRemovalDialog
@@ -102,7 +114,7 @@ describe("ClassroomRemovalDialog", () => {
     const deleteButton = await screen.findByRole("button", { name: "削除する" })
     await user.click(deleteButton)
 
-    expect(onConfirm).toHaveBeenCalledWith(entry, true)
+    expect(onConfirm).toHaveBeenCalledWith(entry, true, exclusiveStudents(2))
   })
 
   it("can-delete-students: プレビュー取得失敗時は確認なしで専属削除しない", async () => {
@@ -136,14 +148,14 @@ describe("ClassroomRemovalDialog", () => {
     const unlinkButton = screen.getByRole("button", { name: "登録を解除" })
     expect(unlinkButton).toBeEnabled()
     await user.click(unlinkButton)
-    expect(onConfirm).toHaveBeenCalledWith(entry, false)
+    expect(onConfirm).toHaveBeenCalledWith(entry, false, [])
   })
 
   it("can-delete-students: 専属生徒0名なら2段階目なしで実行", async () => {
     const user = userEvent.setup()
     const onConfirm = vi.fn().mockResolvedValue(undefined)
     const onClose = vi.fn()
-    const fetchRemovalPreview = vi.fn().mockResolvedValue({ exclusiveCount: 0 })
+    const fetchRemovalPreview = vi.fn().mockResolvedValue(exclusiveStudents(0))
 
     render(
       <ClassroomRemovalDialog
@@ -164,7 +176,7 @@ describe("ClassroomRemovalDialog", () => {
     })
     await user.click(actionButton)
 
-    expect(onConfirm).toHaveBeenCalledWith(entry, true)
+    expect(onConfirm).toHaveBeenCalledWith(entry, true, [])
     expect(
       screen.queryByRole("button", { name: "削除する" })
     ).not.toBeInTheDocument()

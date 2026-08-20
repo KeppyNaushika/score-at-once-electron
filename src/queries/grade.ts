@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 import type {
   GradeCellTarget,
   GradeConstraintInput,
@@ -256,11 +257,17 @@ export const addStudentsFromClassroomMutation = (gradeId: string) =>
 
 export const removeGradeClassroomMutation = (gradeId: string) =>
   defineMutation({
-    mutationFn: (input: { classroomId: string; removeStudents: boolean }) =>
+    mutationFn: (input: {
+      classroomId: string
+      removeStudents: boolean
+      /** 利用者が確認ダイアログで見た件数（消す直前に main が数え直す。段階26） */
+      confirmedCounts: ConfirmedDeletionCount[]
+    }) =>
       window.electronAPI.grade.removeClassroom(
         gradeId,
         input.classroomId,
-        input.removeStudents
+        input.removeStudents,
+        input.confirmedCounts
       ),
     meta: {
       invalidates: [gradeScope(gradeId)],

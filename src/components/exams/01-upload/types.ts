@@ -6,6 +6,7 @@
  */
 
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
 /**
  * マスター解答管理コンポーネントのProps
@@ -32,7 +33,11 @@ export interface MasterAnswerGalleryProps {
   deletingAnswerId: string | null
   replacingAnswerId: string | null
   isMoving: boolean
-  onDeleteAnswer: (examPageId: string) => void
+  /** 削除の実行。利用者に見せた件数を添えて渡す（段階26） */
+  onDeleteAnswer: (
+    examPageId: string,
+    confirmedCounts: ConfirmedDeletionCount[]
+  ) => Promise<void>
   onReplaceAnswer: (examPageId: string, file: File) => void
   onMoveAnswer: (fromIndex: number, direction: "left" | "right") => void
   onPageSizeChange: (examPageId: string, pageSize: string) => void
@@ -60,7 +65,7 @@ export interface MasterAnswerCardProps {
   isDeleting: boolean
   isReplacing: boolean
   isMoving: boolean
-  onDelete: () => void
+  onDelete: (confirmedCounts: ConfirmedDeletionCount[]) => Promise<void>
   onReplace: (file: File) => void
   onMoveLeft: () => void
   onMoveRight: () => void

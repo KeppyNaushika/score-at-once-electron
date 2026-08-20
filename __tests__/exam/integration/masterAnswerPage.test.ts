@@ -36,6 +36,7 @@ import {
   uploadMasterAnswers,
 } from "@/electron-src/lib/prisma/masterAnswer"
 
+import { SAW_ALL_DELETION_COUNTS } from "../../helpers/deletionCounts"
 import {
   cleanupTestDatabase,
   disconnectTestPrisma,
@@ -217,7 +218,10 @@ describe("deleteMasterAnswer", () => {
   it("ページごと消し、答案と採点結果もカスケード削除する", async () => {
     const { pages, cropRegion } = await seedExamWithScoredFirstPage()
 
-    const result = await deleteMasterAnswer(pages[0].id)
+    const result = await deleteMasterAnswer(
+      pages[0].id,
+      SAW_ALL_DELETION_COUNTS
+    )
 
     expect(result.deletedPage?.id).toBe(pages[0].id)
     expect(
@@ -233,7 +237,7 @@ describe("deleteMasterAnswer", () => {
   it("残ったページの番号を1から振り直す", async () => {
     const { exam, pages } = await seedExamWithScoredFirstPage()
 
-    await deleteMasterAnswer(pages[0].id)
+    await deleteMasterAnswer(pages[0].id, SAW_ALL_DELETION_COUNTS)
 
     const remaining = await prisma.examPage.findMany({
       where: { examId: exam.id },
@@ -246,7 +250,7 @@ describe("deleteMasterAnswer", () => {
   it("模範解答と答案の画像ファイルを消す", async () => {
     const { pages, answerImagePath } = await seedExamWithScoredFirstPage()
 
-    await deleteMasterAnswer(pages[0].id)
+    await deleteMasterAnswer(pages[0].id, SAW_ALL_DELETION_COUNTS)
 
     expect(await exists(pages[0].imagePath)).toBe(false)
     expect(await exists(answerImagePath)).toBe(false)
@@ -255,7 +259,10 @@ describe("deleteMasterAnswer", () => {
   })
 
   it("存在しないページを指定しても失敗しない", async () => {
-    const result = await deleteMasterAnswer("no-such-page")
+    const result = await deleteMasterAnswer(
+      "no-such-page",
+      SAW_ALL_DELETION_COUNTS
+    )
 
     expect(result.deletedPage).toBeNull()
   })

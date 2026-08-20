@@ -11,6 +11,7 @@ import type { Prisma } from "@prisma/client"
 import type { CourseworkScoreUpsertInput } from "../../../src/types/coursework.types"
 import type { InputMode } from "../../../src/types/coursework.types"
 import { toInputMode } from "../../../src/types/coursework.types"
+import type { ConfirmedDeletionCount } from "../../../src/types/deletionConfirmation.types"
 import { recordAuditLog } from "./auditLog"
 import {
   resolveCourseworkScope,
@@ -661,8 +662,8 @@ const courseworkRosterAdapter: RosterAdapter = {
       )
     )
   },
-  listOtherClassroomIds: async (targetId, exceptClassroomId) => {
-    const rows = await prisma.courseworkClassroom.findMany({
+  listOtherClassroomIds: async (client, targetId, exceptClassroomId) => {
+    const rows = await client.courseworkClassroom.findMany({
       where: {
         courseworkId: targetId,
         classroomId: { not: exceptClassroomId },
@@ -671,17 +672,15 @@ const courseworkRosterAdapter: RosterAdapter = {
     return rows.map((courseworkClassroom) => courseworkClassroom.classroomId)
   },
   // 名簿行を消せば点数は cascade で落ちる（CourseworkScore は CourseworkStudent の子）
-  removeClassroomAndStudents: async (targetId, classroomId, studentIds) => {
-    await prisma.$transaction([
-      prisma.courseworkStudent.deleteMany({
-        where: { courseworkId: targetId, studentId: { in: studentIds } },
-      }),
-      prisma.courseworkClassroom.delete({
-        where: {
-          courseworkId_classroomId: { courseworkId: targetId, classroomId },
-        },
-      }),
-    ])
+  removeClassroomAndStudents: async (tx, targetId, classroomId, studentIds) => {
+    await tx.courseworkStudent.deleteMany({
+      where: { courseworkId: targetId, studentId: { in: studentIds } },
+    })
+    await tx.courseworkClassroom.delete({
+      where: {
+        courseworkId_classroomId: { courseworkId: targetId, classroomId },
+      },
+    })
   },
   scope: (targetId) => resolveCourseworkScope(targetId),
   audit: {
@@ -789,17 +788,20 @@ export function getCourseworkClassroomRemovalPreview(
  * 学級を削除する。
  *
  * @param deleteStudents trueなら専属生徒も削除（既定）。falseなら登録解除のみ。
+ * @param confirmedCounts 利用者が確認ダイアログで見た専属生徒の件数（段階26）
  */
 export function removeClassroomFromCoursework(
   courseworkId: string,
   classroomId: string,
-  deleteStudents = true
+  deleteStudents: boolean,
+  confirmedCounts: ConfirmedDeletionCount[]
 ) {
   return rosterRemoveClassroom(
     courseworkRosterAdapter,
     courseworkId,
     classroomId,
-    deleteStudents
+    deleteStudents,
+    confirmedCounts
   )
 }
 

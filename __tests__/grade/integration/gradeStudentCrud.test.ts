@@ -30,6 +30,7 @@ import {
   updateGradeStudentOrders,
 } from "@/electron-src/lib/prisma/gradeStudent"
 
+import { SAW_ALL_DELETION_COUNTS } from "../../helpers/deletionCounts"
 import {
   cleanupTestDatabase,
   createPrismaClientForPath,
@@ -471,7 +472,12 @@ describe("GradeStudent / GradeClassroom", () => {
       const { grade, classroomA } = await createTestData()
       await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
-      const result = await removeClassroomFromGrade(grade.id, classroomA.id)
+      const result = await removeClassroomFromGrade(
+        grade.id,
+        classroomA.id,
+        true,
+        SAW_ALL_DELETION_COUNTS
+      )
       expect(result.removedStudents).toBe(2)
 
       const students = await getStudentsByGradeId(grade.id)
@@ -494,7 +500,12 @@ describe("GradeStudent / GradeClassroom", () => {
       await addStudentsFromClassroomToGrade(grade.id, classroomB.id)
 
       // classroomAを削除
-      const result = await removeClassroomFromGrade(grade.id, classroomA.id)
+      const result = await removeClassroomFromGrade(
+        grade.id,
+        classroomA.id,
+        true,
+        SAW_ALL_DELETION_COUNTS
+      )
       // student1はclassroomBにも属しているので削除されない、student2のみ削除
       expect(result.removedStudents).toBe(1)
 
@@ -507,7 +518,12 @@ describe("GradeStudent / GradeClassroom", () => {
       const { grade, classroomA } = await createTestData()
       await addStudentsFromClassroomToGrade(grade.id, classroomA.id)
 
-      await removeClassroomFromGrade(grade.id, classroomA.id)
+      await removeClassroomFromGrade(
+        grade.id,
+        classroomA.id,
+        true,
+        SAW_ALL_DELETION_COUNTS
+      )
 
       const classrooms = await getGradeClassrooms(grade.id)
       expect(classrooms).toHaveLength(0)
@@ -520,7 +536,8 @@ describe("GradeStudent / GradeClassroom", () => {
       const result = await removeClassroomFromGrade(
         grade.id,
         classroomA.id,
-        false
+        false,
+        SAW_ALL_DELETION_COUNTS
       )
       expect(result.removedStudents).toBe(0)
 
@@ -542,7 +559,9 @@ describe("GradeStudent / GradeClassroom", () => {
         classroomA.id
       )
       // classroomA の student1,2 は他学級に属さない → 2名が削除対象
-      expect(preview.exclusiveCount).toBe(2)
+      expect(preview).toEqual([
+        { countedName: "この学級にのみ所属する生徒", shownCount: 2 },
+      ])
     })
 
     it("他学級にも所属する生徒は削除対象に数えない", async () => {
@@ -563,7 +582,9 @@ describe("GradeStudent / GradeClassroom", () => {
       )
 
       // student1 は classroomB にも属するため、classroomA 専属は student2 のみ
-      expect(preview.exclusiveCount).toBe(1)
+      expect(preview).toEqual([
+        { countedName: "この学級にのみ所属する生徒", shownCount: 1 },
+      ])
     })
   })
 

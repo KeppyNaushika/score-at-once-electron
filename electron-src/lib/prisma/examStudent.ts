@@ -1,3 +1,4 @@
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 import {
   type ExamStudentStatus,
   toExamStudentStatus,
@@ -9,6 +10,8 @@ import { resolveExamScope, resolveStudentLabel } from "./auditScope"
 import { getAvailableClassroomsForTarget } from "./availableClassrooms"
 import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
+import { deleteAfterRecount } from "./deleteAfterRecount"
+import { countExamStudentDeletionCounts } from "./gradingData"
 
 /** Exam.examDate を在籍判定の基準日として取得（未設定なら null → 現在日時扱い） */
 export async function getExamReferenceDate(
@@ -121,16 +124,25 @@ export async function addStudentsToExam(examId: string, studentIds: string[]) {
  * 答案画像・採点・確定・複合回答・返却スナップショットは ExamStudent の子なので、
  * この 1 回の deleteMany が DB の cascade でまとめて消す
  * （手書きで子テーブルを列挙すると、テーブルが増えたときに必ず取りこぼす）。
+ *
+ * @param confirmedCounts 利用者が確認ダイアログで見た採点データの件数。消す直前に
+ *   数え直し、増えていれば削除を中止する（`deleteAfterRecount`）。
  */
 export async function removeStudentsFromExam(
   examId: string,
-  studentIds: string[]
+  studentIds: string[],
+  confirmedCounts: ConfirmedDeletionCount[]
 ) {
-  await prisma.examStudent.deleteMany({
-    where: {
-      examId,
-      studentId: { in: studentIds },
-    },
+  await deleteAfterRecount({
+    confirmedCounts,
+    recount: (tx) => countExamStudentDeletionCounts(tx, examId, studentIds),
+    remove: (tx) =>
+      tx.examStudent.deleteMany({
+        where: {
+          examId,
+          studentId: { in: studentIds },
+        },
+      }),
   })
 
   // 監査ログ: 受験生徒の削除

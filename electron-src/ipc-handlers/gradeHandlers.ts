@@ -4,6 +4,7 @@
 
 import { dialog } from "electron"
 
+import type { ConfirmedDeletionCount } from "../../src/types/deletionConfirmation.types"
 import type {
   GradeCellTarget,
   GradeConstraintInput,
@@ -179,12 +180,19 @@ export const gradeHandlers = {
     return addStudentsToGrade(gradeId, studentIds)
   },
 
+  // 利用者が見た件数を添えて削除する（消す直前に数え直し、増えていれば中止する）
   "grade:removeClassroom": async (
     gradeId: string,
     classroomId: string,
-    deleteStudents: boolean = true
+    deleteStudents: boolean,
+    confirmedCounts: ConfirmedDeletionCount[]
   ) => {
-    return removeClassroomFromGrade(gradeId, classroomId, deleteStudents)
+    return removeClassroomFromGrade(
+      gradeId,
+      classroomId,
+      deleteStudents,
+      confirmedCounts
+    )
   },
 
   "grade:classroomRemovalPreview": async (

@@ -14,6 +14,7 @@ import type {
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
 import { deleteStudentAnswerMutation } from "@/queries/answerSheet"
+import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 
 /**
@@ -108,21 +109,22 @@ export function useAnswerTableCore<TItem extends AnswerImageIdentity>({
   const [previewMode, setPreviewMode] = useState<PreviewMode>("full")
   const deleteStudentAnswer = useMutation(deleteStudentAnswerMutation(examId))
 
-  // 答案削除処理（view の右クリックメニューから使用。upload では削除UIは出さない）
+  // 答案削除処理（view の右クリックメニューから使用。upload では削除UIは出さない）。
+  // 確認ダイアログで見せた件数を添えて渡す。数え直しで増えていれば main が中止し、
+  // ここは投げ返す — ダイアログが受け止めて開いたまま数え直す（段階26）
   const handleDeleteAnswerSheet = useCallback(
-    async (fileId: string) => {
-      try {
-        const { deletedSummary } = await deleteStudentAnswer.mutateAsync(fileId)
+    async (fileId: string, confirmedCounts: ConfirmedDeletionCount[]) => {
+      const { deletedCounts } = await deleteStudentAnswer.mutateAsync({
+        studentAnswerImageId: fileId,
+        confirmedCounts,
+      })
 
-        // 件数は出さない（未採点の初期化行を含む行数とモーダルの表示件数がずれるため）
-        toast.success(
-          deletedSummary.hasScoreData
-            ? "答案画像と採点データを削除しました"
-            : "答案画像を削除しました"
-        )
-      } catch {
-        // 失敗の知らせは中央のトーストが出す
-      }
+      // 件数は出さない（未採点の初期化行を含む行数とモーダルの表示件数がずれるため）
+      toast.success(
+        deletedCounts.length > 0
+          ? "答案画像と採点データを削除しました"
+          : "答案画像を削除しました"
+      )
     },
     [deleteStudentAnswer]
   )

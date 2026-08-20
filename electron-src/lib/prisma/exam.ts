@@ -2,10 +2,13 @@ import type { Prisma } from "@prisma/client"
 import * as fsPromises from "fs/promises"
 
 import type { ExamProgressSource } from "../../../src/lib/examStatus"
+import { DELETION_COUNT_NAME } from "../../../src/lib/shared/deletionCountNames"
+import type { ConfirmedDeletionCount } from "../../../src/types/deletionConfirmation.types"
 import { toScoringStatus } from "../../../src/types/scoringStatus.types"
 import { getExamDirectory } from "../dataManager"
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
+import { deleteAfterRecount } from "./deleteAfterRecount"
 import { examPageWithContentInclude } from "./examPage"
 
 /**
@@ -248,14 +251,74 @@ export const updateExam = async (id: string, data: Prisma.ExamUpdateInput) => {
   return exam
 }
 
-/** 試験を削除する（DBレコードのcascade削除に加え、画像ファイルのディレクトリも削除する） */
-export const deleteExam = async (id: string) => {
+/**
+ * 試験を消すと巻き添えになるものを、削除の確認で見せる形で数える。
+ *
+ * **画面と同じ定義で数えること。** 画面（`DeleteExamModal`）は `fetch-exam-by-id` の
+ * include の木を renderer で数えている。ここはその木を数え直す SQL 版であり、
+ * 数え方が食い違うと削除が通らなくなる（段階26）。
+ */
+const countExamDeletionCounts = async (
+  client: Prisma.TransactionClient,
+  examId: string
+): Promise<ConfirmedDeletionCount[]> => {
+  const [
+    masterAnswerCount,
+    cropRegionCount,
+    answerSheetCount,
+    gradeDataSourceCount,
+  ] = await Promise.all([
+    // 模範解答は「画像の入ったページ」を数える。画面は
+    // `filter((examPage) => examPage.imagePath)` なので、空文字も画像なしとして
+    // 落とす（旧データには imagePath="" のページがある）
+    client.examPage.count({
+      where: { examId, NOT: [{ imagePath: null }, { imagePath: "" }] },
+    }),
+    client.cropRegion.count({ where: { examPage: { examId } } }),
+    client.studentAnswerImage.count({ where: { examPage: { examId } } }),
+    client.gradeDataSource.count({ where: { examId } }),
+  ])
+
+  return [
+    {
+      countedName: DELETION_COUNT_NAME.masterAnswer,
+      shownCount: masterAnswerCount,
+    },
+    {
+      countedName: DELETION_COUNT_NAME.cropRegion,
+      shownCount: cropRegionCount,
+    },
+    {
+      countedName: DELETION_COUNT_NAME.answerSheet,
+      shownCount: answerSheetCount,
+    },
+    {
+      countedName: DELETION_COUNT_NAME.gradeDataSource,
+      shownCount: gradeDataSourceCount,
+    },
+  ].filter((deletionCount) => deletionCount.shownCount > 0)
+}
+
+/**
+ * 試験を削除する（DBレコードのcascade削除に加え、画像ファイルのディレクトリも削除する）
+ *
+ * @param confirmedCounts 利用者が確認ダイアログで見た件数。消す直前に数え直し、
+ *   増えていれば削除を中止する（`deleteAfterRecount`）。
+ */
+export const deleteExam = async (
+  id: string,
+  confirmedCounts: ConfirmedDeletionCount[]
+) => {
   const before = await prisma.exam.findUnique({
     where: { id },
   })
 
-  const exam = await prisma.exam.delete({
-    where: { id },
+  const exam = await deleteAfterRecount({
+    confirmedCounts,
+    recount: (tx) => countExamDeletionCounts(tx, id),
+    remove: (tx) => tx.exam.delete({ where: { id } }),
+    // 採点済みの試験では cascade で消える行数が多く、既定の 5s を超えうる
+    timeoutMs: 30000,
   })
 
   // 模範解答・答案の画像はDBのcascadeでは消えないため、試験ディレクトリごと削除する。

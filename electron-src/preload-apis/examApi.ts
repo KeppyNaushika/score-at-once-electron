@@ -35,7 +35,7 @@ export function createExamApi() {
     addStudentsToExam: bind("add-students-to-exam"),
     removeStudentsFromExam: bind("remove-students-from-exam"),
     updateStudentExamStatus: bind("update-student-exam-status"),
-    checkGradingDataForStudents: bind("check-grading-data-for-students"),
+    getExamStudentDeletionCounts: bind("count-exam-student-deletion"),
     getClassroomsNotInExam: bind("get-classrooms-not-in-exam"),
     getStudentsNotInExam: bind("get-students-not-in-exam"),
     updateStudentOrders: bind("update-student-orders"),
