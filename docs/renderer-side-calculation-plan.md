@@ -174,7 +174,7 @@ const overrideBoundary = boundaries.find(
 
 規約 §178「id ではなく実体を持つ原則」の適用例でもある（`.map((e) => e.label)` で潰した情報を添字で復元していた）。
 
-**副次的に潜在バグも消えた**: `indexOf` はラベル**文字列**で引いていたため、同一ラベルの境界が 2 つあると常に先頭がヒットして方向判定が狂う。`GradeItemBoundary.label` に unique 制約は無い（id 以外の unique は sqlite-nas-sync の制約で置けない）ので、DB 上は重複しうる。
+**副次的に潜在バグも消えた**: `indexOf` はラベル**文字列**で引いていたため、同一ラベルの境界が 2 つあると常に先頭がヒットして方向判定が狂う。`GradeItemBoundary.label` に unique 制約は無い（`label` は人が付ける名前で、端末をまたいで独立に同じ値が入りうる。unique にすると衝突が「別の境界が同じ鍵になった」を意味し、同期のマージが畳むと別物が 1 つに潰れる — 規約は「uuid 以外を unique にしない」）ので、DB 上は重複しうる。
 
 実施内容:
 

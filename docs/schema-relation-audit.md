@@ -11,7 +11,11 @@
 - 境界を全行消してもセット行が生き残り、「境界は無いのに設定済み」という状態が作れた
 - 進捗判定が `Grade._count.boundarySets` を見ていたため、上記の空セットで嘘をついた
 - 容器を消すためだけの削除 API が必要だった
-- `gradeId` は `gradeItem.gradeId` から辿れる冗長列で、id 以外の unique は sqlite-nas-sync の方針に反した
+- `gradeId` は `gradeItem.gradeId` から辿れる冗長列で、同じ事実を2箇所に持って食い違いうる状態だった
+
+> 当時この項に「id 以外の unique は sqlite-nas-sync の方針に反した」と書いていたが、これは誤りである。
+> 規約は「**uuid 以外を unique にしない**」で、`@@unique([gradeId, gradeItemId])` は2列とも uuid なので
+> 規約には反していなかった。畳んだ理由は上の冗長列と空セットのほうである。
 
 これは `GradeItemBoundary` へ畳んで解消した（#1122）。**本書は「同じことが他にも起きていないか」を
 スキーマ全71モデルに対して調べた記録である。**
@@ -90,8 +94,11 @@
 
 #### 対応（実施済み）
 
-`examPageId @unique` を足すのが最短だが、id 以外の unique は sqlite-nas-sync の方針に反するため、
-`ExamPage` が `imagePath` / `pageSize` を直接持つ形へ畳んだ。
+`examPageId @unique` を足すのが最短で、`ExamPage` が `imagePath` / `pageSize` を直接持つ形へ畳んだ。
+
+> 当時ここに「id 以外の unique は sqlite-nas-sync の方針に反する」と書いていたが、これは誤りである。
+> 規約は「**uuid 以外を unique にしない**」で、`examPageId` は uuid なので規約には反していなかった。
+> 畳む判断は、実体が2行に割れていること（本節冒頭）だけで足りている。
 
 争点は「模範解答の無いページ」を許すかだった。旧実装は模範解答だけを消して答案画像が残るページを
 許していたが、そのページは 01-upload の一覧（模範解答の列挙）に現れないため教員からは見えず、

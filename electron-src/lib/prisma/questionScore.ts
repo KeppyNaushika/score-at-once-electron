@@ -214,10 +214,16 @@ export const ensureQuestionScore = async (data: EnsureQuestionScoreData) => {
 /**
  * 採点する。**この組み合わせに行が無ければ作り、有れば上書きする。**
  *
- * `QuestionScore` には (examStudentId, cropRegionId, userId) の unique が無い
- * （sqlite-nas-sync の制約で id 以外の unique を張らない方針）ので `upsert()` が
- * 使えず、`findFirst` ＋ 分岐を手書きしている。**「1採点者・1セル・1行」を守って
- * いるのはこの関数だけ。**
+ * `QuestionScore` には (examStudentId, cropRegionId, userId) の unique がいま無いので
+ * `upsert()` が使えず、`findFirst` ＋ 分岐を手書きしている。**「1採点者・1セル・1行」を
+ * 守っているのはこの関数だけ。**
+ *
+ * 無いのは規約が禁じているからではない。規約は「uuid 以外を unique にしない」で、
+ * この3列はすべて uuid なので張ること自体は規約に反しない（張れば同期のマージが LWW で
+ * 1行へ畳む）。ただし `QuestionScore` は子（`DrawingAnnotation`）を持つため、いま張ると
+ * 衝突時に勝った端末が外部キー違反で詰まり、その相手からの以後すべての変更が届かなく
+ * なる（docs/sync-secondary-unique-hazard.md §3）。段階20 が入るまでは張れず、実際に
+ * 張るかどうかは段階30 で判断する。
  *
  * **「行が無いなら用意したい」だけのときは呼ばないこと。** 上書きが正しいのは
  * 利用者が採点したときだけで、置き場所が欲しいだけなら `ensureQuestionScore` を

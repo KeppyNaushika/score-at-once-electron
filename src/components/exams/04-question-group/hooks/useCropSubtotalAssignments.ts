@@ -27,9 +27,14 @@ interface UseCropSubtotalAssignmentsParams {
  *
  * かつては小計id をキーにした索引を組んでいたが、それは「1マス＝1行」という
  * 一意性を仮定する形だった。CropSubtotal に `(cropRegionId, subtotalId,
- * assignmentType)` の unique は張れず（sqlite-nas-sync の制約で id 以外の unique を
- * 置けない）、同期のマージで同じ割り当てが2行残りうる。索引は2行目を握り潰すので、
- * チェックを外しても外れないマスができていた。
+ * assignmentType)` の unique がいま無いため、同期のマージで同じ割り当てが2行残りうる。
+ * 索引は2行目を握り潰すので、チェックを外しても外れないマスができていた。
+ *
+ * 無いのは規約が禁じているからではない。規約は「uuid 以外を unique にしない」で、
+ * この3列は uuid 2つと固定値の区分なので張ること自体は規約に反しない（張れば同期の
+ * マージが LWW で1行へ畳む）。CropSubtotal は子を持たないので
+ * docs/sync-secondary-unique-hazard.md §3 の詰まりにも当たらない。実際に張るかどうかは
+ * 段階30 で判断する。
  *
  * **マス1つは1レコード。** チェックを入れれば1件作り、外せばそのマスに当たる行を
  * すべて消す（同じ事実の重複であって、2つの事実ではない）。

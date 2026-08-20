@@ -151,7 +151,8 @@ export async function getPdfExportData(options: {
       if (!imagePath || !fs.existsSync(imagePath)) continue
 
       // このページの採点領域を取得。ページの同定は examPageId で行う
-      // （pageNumber は序数で id 以外の unique を持てないため key にならない）
+      // （pageNumber は序数。端末をまたいで独立に同じ値が振られるので、値が一致しても
+      //  同じページとは限らず、unique にもできない＝ key にならない）
       const pageRegions = cropRegions.filter(
         (cropRegion) => cropRegion.examPageId === studentAnswer.examPageId
       )

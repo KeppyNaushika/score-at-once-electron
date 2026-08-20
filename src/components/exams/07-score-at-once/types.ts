@@ -145,8 +145,15 @@ export function findQuestionScore(
       questionScore.userId === userId
   )
 
-  // 同期のマージで、同じ利用者の同じマスに2行残ることがある。`QuestionScore` は
-  // id 以外の unique を張れない（sqlite-nas-sync の制約）ので防げない。
+  // 同期のマージで、同じ利用者の同じマスに2行残ることがある。`QuestionScore` に
+  // `(examStudentId, cropRegionId, userId)` の unique がまだ無いためで、規約が禁じて
+  // いるからではない（規約は「uuid 以外を unique にしない」で、この3列はすべて uuid
+  // なので張ること自体は規約に反しない。張れば同期のマージが LWW で1行へ畳む）。
+  // ただし `QuestionScore` は子（`DrawingAnnotation`）を持つため、いま張ると衝突時に
+  // 勝った端末が外部キー違反で詰まり、その相手からの以後すべての変更が届かなくなる
+  // （docs/sync-secondary-unique-hazard.md §3）。段階20 が入るまでは張れず、実際に
+  // 張るかどうかは段階30 で判断する。
+  // いま unique が無い以上ここは2行あることを前提に読む必要があり、
   // `find` で先頭を取ると2行目を黙って握り潰すため、最後に書かれた行を採る
   // （更新時刻 → id の順。集計側 scoreResolution.ts の pickLatest と同じ規則）。
   return scores.reduce<QuestionScoreRow | undefined>(

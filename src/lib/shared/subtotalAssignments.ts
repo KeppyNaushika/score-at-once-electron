@@ -23,9 +23,14 @@ interface AssignedCropRegionRef {
 /**
  * 割り当て行から、当該試験の設問領域だけを重複なく取り出す。
  *
- * CropSubtotal には (subtotalId, cropRegionId, assignmentType) の unique が無く
- * （sqlite-nas-sync の制約で id 以外の unique を置けない）、同期のマージで同じ割り当てが
- * 2行残りうる。畳まないと配点が二重に計上される。
+ * CropSubtotal には (subtotalId, cropRegionId, assignmentType) の unique がいま無く、
+ * 同期のマージで同じ割り当てが2行残りうる。畳まないと配点が二重に計上される。
+ *
+ * 無いのは規約が禁じているからではない。規約は「uuid 以外を unique にしない」で、
+ * この3列は uuid 2つと固定値の区分なので張ること自体は規約に反しない（張れば同期の
+ * マージが LWW で1行へ畳む）。CropSubtotal は子を持たないので
+ * docs/sync-secondary-unique-hazard.md §3 の詰まりにも当たらない。実際に張るかどうかは
+ * 段階30 で判断する。
  *
  * 呼び出し側の cropRegion 型をそのまま返す（型引数で受けて返すため、配点や種別を
  * 持つ側は落とさずに受け取れる）。

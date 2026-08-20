@@ -1312,8 +1312,14 @@ Chromium が色パネルの操作中に `change` を何回出すかは実機で�
 
 **一意でない列で索引を張った（1件）** — マスの状態を `小計id → 割り当ての行` の
 `Map` で持った。`CropSubtotal` に `(cropRegionId, subtotalId, assignmentType)` の
-unique は張れず（id 以外の unique は同期違反）、同期のマージで2行残りうる。
-索引が2行目を握り潰すので、チェックを外しても外れないマスができていた。
+unique がいま無いため、同期のマージで2行残りうる。索引が2行目を握り潰すので、
+チェックを外しても外れないマスができていた。
+
+> 無いのは規約が禁じているからではない（規約は「uuid 以外を unique にしない」で、この
+> 3列は uuid 2つと固定値の区分）。張れば同期のマージが LWW で1行へ畳み、`CropSubtotal`
+> は子を持たないので
+> [sync-secondary-unique-hazard.md](./sync-secondary-unique-hazard.md) §3 の詰まりにも
+> 当たらない。実際に張るかどうかは**段階30** で判断する。
 
 **索引そのものが要らなかった。** 行は `cropRegion.cropSubtotals` に実体で来ており、
 マスを描く時点で手元にある。`Map` を捨てて直に読む形にすると、一意性の仮定も
@@ -1563,11 +1569,17 @@ const cropRegionWithSubtotalsAndScoresInclude = {
 
 #### 同じマスに2行あることがある
 
-`QuestionScore` に `(cropRegionId, examStudentId, userId)` の unique は張れない
-（sqlite-nas-sync の制約で id 以外の unique は同期違反。実際 `@@index([examStudentId])`
-しか無い）。同期のマージで2行残りうるので、`find` で最初の1件を取ると2行目を黙って
-握り潰す。段階11 の `CropSubtotal` で実際に踏んだ形。木のまま見れば、そのマスに
-何行あるかがその場で分かる。
+`QuestionScore` に `(cropRegionId, examStudentId, userId)` の unique がいま無い
+（実際 `@@index([examStudentId])` しか無い）。同期のマージで2行残りうるので、`find` で
+最初の1件を取ると2行目を黙って握り潰す。段階11 の `CropSubtotal` で実際に踏んだ形。
+木のまま見れば、そのマスに何行あるかがその場で分かる。
+
+無いのは規約が禁じているからではない。規約は「uuid 以外を unique にしない」で、この3列は
+すべて uuid なので張ること自体は規約に反しない。ただし `QuestionScore` は子
+（`DrawingAnnotation`）を持つため、いま張ると衝突時に勝った端末が外部キー違反で詰まり、
+その相手からの以後すべての変更が届かなくなる
+（[sync-secondary-unique-hazard.md](./sync-secondary-unique-hazard.md) §3）。**段階20** が
+入るまでは張れず、実際に張るかどうかは**段階30** で判断する。
 
 #### 検査
 
