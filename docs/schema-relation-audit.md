@@ -290,6 +290,14 @@ id 違い・unique 同値の行が2つできるが、**これは sqlite-nas-sync
 `applyInsert` がセカンダリUNIQUE違反を検出し、`updatedAt` の LWW で敗者行を削除して1行へ収束させる
 （DELETEトリガーが `_changelog` / `_tombstone` に載るので他クライアントにも伝播する）。
 
+**ただし、この解決は「敗者行に子がいない場合に限る」**（2026-08-19 の実測:
+[sync-secondary-unique-hazard.md](./sync-secondary-unique-hazard.md)）。敗者に子がいると、その子は
+カスケードで消えて世界から失われるうえ、負けた側ではなく**勝った側の端末**が子の INSERT で
+外部キー違反を起こして取り込みが丸ごと巻き戻り、**その相手からの以後すべての変更が永久に
+届かなくなる**。`ExamSubtotalGroup` は子を持たないので該当しない（該当は10モデル、最重は
+`ExamStudent`）。ただし下の「属性の集約」は、まさにこの解決が**属性をマージしない**ことの
+帰結である。
+
 > **旧方針（撤回済み）と、その代わりに受け入れたもの** — 当初は id を親子キーから決定論的に
 > 組み立てる方針を採り、migration `20260802040000_exam_subtotal_group_deterministic_id` で
 > `@default(uuid())` を外した。根拠は「id 違い・unique 同値の行が NAS 同期で衝突する」だったが、

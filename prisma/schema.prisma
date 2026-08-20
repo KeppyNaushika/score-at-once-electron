@@ -210,6 +210,13 @@ model CropRegion {
 /// 2端末が同じ(設問, 担当者)ペアを割り当てるとid違い・`@@unique`同値の行ができるが、
 /// これは sqlite-nas-sync が解決する（`conflict.ts` の applyInsert が敗者行をLWWで
 /// 削除し、DELETEトリガー経由で全クライアントが勝者へ収束する）。idは uuidv4 でよい。
+///
+/// **ただし、この解決は「敗者行に子がいない場合に限る」**（実測:
+/// docs/sync-secondary-unique-hazard.md）。敗者に子がぶら下がっていると、その子はカスケードで
+/// 消えるうえ、負けた側ではなく**勝った側の端末**が子のINSERTで外部キー違反を起こして
+/// 取り込みが丸ごと巻き戻り、**その相手からの以後すべての変更が永久に届かなくなる**
+/// （画面には何も出ない）。該当するのは「セカンダリuniqueを持ち、かつ子を持つ」10モデルで、
+/// 最重は ExamStudent。CropRegionAssignment は子を持たないので該当しない。
 model CropRegionAssignment {
   id           String     @id @default(uuid())
   cropRegionId String
@@ -283,6 +290,15 @@ model UserExam {
 /// 2端末が同じ(試験, 小計点グループ)を追加するとid違い・`@@unique`同値の行ができるが、
 /// これは sqlite-nas-sync が解決する（敗者行をLWWで削除して1行へ収束させる）。
 /// 書き込みは必ず `@@unique` を鍵に upsert すること（idは同定に使わない）。
+///
+/// **ただし、この解決は「敗者行に子がいない場合に限る」**（実測:
+/// docs/sync-secondary-unique-hazard.md）。敗者に子がいると、その子はカスケードで消え、
+/// さらに負けた側ではなく**勝った側の端末**が子のINSERTで外部キー違反を起こして取り込みが
+/// 丸ごと巻き戻り、**その相手からの以後すべての変更が永久に届かなくなる**。該当するのは
+/// 「セカンダリuniqueを持ち、かつ子を持つ」10モデルで、最重は ExamStudent。
+/// ExamSubtotalGroup は子を持たないので該当しないが、**敗者行の属性は失われる**
+/// （selectedForTable / selectedForBoxPlot は「1行でもtrueなら選択」と読まれるのに、
+/// 勝った行が総取りする。同文書 §6.1 が既知の穴として名指ししている）。
 model ExamSubtotalGroup {
   id                 String        @id @default(uuid())
   examId             String
@@ -895,6 +911,14 @@ model GradeConstraint {
 /// 2端末が同じ(ルール, 項目)を追加するとid違い・`@@unique`同値の行ができるが、これは
 /// sqlite-nas-sync が解決する（敗者行をLWWで削除して1行へ収束させる）。
 /// 書き込みは必ず `@@unique` を鍵に upsert すること（idは同定に使わない）。
+///
+/// **ただし、この解決は「敗者行に子がいない場合に限る」**（実測:
+/// docs/sync-secondary-unique-hazard.md）。敗者に子がいると、その子はカスケードで消え、
+/// さらに負けた側ではなく**勝った側の端末**が子のINSERTで外部キー違反を起こして取り込みが
+/// 丸ごと巻き戻り、**その相手からの以後すべての変更が永久に届かなくなる**。該当するのは
+/// 「セカンダリuniqueを持ち、かつ子を持つ」10モデルで、最重は ExamStudent。
+/// GradeConstraintViewpoint は子を持たないので該当しない。**この表に子を足すときは、
+/// 上の条件に入ることを踏まえること。**
 model GradeConstraintViewpoint {
   id           String   @id @default(uuid())
   constraintId String

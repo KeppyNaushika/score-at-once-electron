@@ -254,6 +254,12 @@ export async function getActiveSubtotalGroupsForExam(examId: string) {
  * 行を引くのに使えない。2端末が同時に同じ組み合わせを追加すると id 違いの行が2つできるが、
  * sqlite-nas-sync が LWW で1行へ収束させる
  * （以前は素の create で、重複防止は @@unique も無いまま呼び出し側任せだった）。
+ *
+ * **この収束は「敗者行に子がいない場合に限る」**（実測: docs/sync-secondary-unique-hazard.md）。
+ * `ExamSubtotalGroup` は子を持たないので条件を満たすが、**敗者行の属性は勝った行に取り込まれず
+ * 失われる**（`selectedForTable` / `selectedForBoxPlot`。同文書 §6.1 の既知の穴）。
+ * 子を持つ表で同じことをすると、その子が消えるうえ**勝った側の端末**が外部キー違反で詰まり、
+ * その相手からの以後すべての変更が届かなくなる。この形を他表へ写すときは条件を確かめること。
  */
 export async function addSubtotalGroupToExam(
   examId: string,

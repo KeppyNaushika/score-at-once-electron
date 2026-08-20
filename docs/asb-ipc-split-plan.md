@@ -911,6 +911,16 @@ renderer の `OMRCellConfig` に id が無く、`asbDefinitionConverters.ts:566`
 2端末が同じ小問に OMR を作ると id 違い・unique 同値の行ができるが、これは sqlite-nas-sync が
 LWW で1行へ収束させる（#1128 のコメント参照）。**id を決定論的にする必要はない。**
 
+**ただし、この収束は「敗者行に子がいない場合に限る」**（実測:
+[sync-secondary-unique-hazard.md](./sync-secondary-unique-hazard.md)）。`AsbOmrConfig` は
+`AsbOmrChoiceOption` を子に持つので**該当する側**である。2端末が同じ小問に OMR を作ると、
+敗者側の選択肢はカスケードで消えて世界から失われ、さらに負けた側ではなく**勝った側の端末**が
+選択肢の INSERT で外部キー違反を起こして取り込みが丸ごと巻き戻り、**その相手からの以後
+すべての変更が永久に届かなくなる**（`warnings` に積まれるだけで画面には出ない）。
+`CropRegionOmrConfig` も同じ形。**直すのはライブラリ側**（負けた行の子を勝った行へ付け替える。
+[remaining-work.md](./remaining-work.md) の段階20）で、id を決定論的にする案は採らない
+（同文書 §6.3）。
+
 残る問題は id が往復しないことそのもので、更新が実質「削除＋新規作成」になり毎回 changelog と
 tombstone が動く。ただし `saveAsbDefinition`（`asbDefinition.ts:161`）が保存のたびに定義ごと
 `deleteMany` してから作り直しているため、**churn は OMR に限らず定義全体で起きている**。

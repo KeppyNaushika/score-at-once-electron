@@ -31,7 +31,13 @@
  *   「現存すれば再作成とみなす」ため、削除が同期先で復活を潰さない。**必ず id を保持すること**
  *   （新しい id を振ると別レコードとして増える）。
  * - 二次 `@@unique`（`[cropRegionId, examStudentId]` 等）の衝突は `conflict.ts` ケース2 が
- *   LWW で単一行に収束させる。全表汎用なので個別対応は不要。
+ *   LWW で単一行に収束させる。**ただしこれは「敗者行に子がいない場合に限る」**（実測:
+ *   docs/sync-secondary-unique-hazard.md）。敗者に子がいると、その子はカスケードで消え、
+ *   さらに負けた側ではなく**勝った側の端末**が子の INSERT で外部キー違反を起こして取り込みが
+ *   丸ごと巻き戻り、**その相手からの以後すべての変更が永久に届かなくなる**。ここで扱う
+ *   `ScoreDecision` / `CompoundAnswerScore` / `StudentAnswerImage` はいずれも子を持たないので
+ *   該当しないが、「全表汎用だから個別対応は不要」とは言えない（該当は10モデル、最重は
+ *   `ExamStudent`）。
  */
 import type { Prisma } from "@prisma/client"
 
