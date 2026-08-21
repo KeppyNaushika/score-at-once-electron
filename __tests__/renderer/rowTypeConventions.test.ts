@@ -92,10 +92,18 @@ function prismaModelFields(): Map<string, Set<string>> {
   return models
 }
 
-/** 走査対象のファイル（git が知っているもの。生成物・依存は入らない） */
+/**
+ * 走査対象のファイル（git が知っているもの。生成物・依存は入らない）。
+ *
+ * pathspec の `**` の後ろの `/` は**リテラルの区切りとして少なくとも1階層を要求する**ため、
+ * ディレクトリ直下のファイルが落ちる（`electron-src` 直下の `index.ts` / `preload.ts` など
+ * 7本が、304ファイル中297ファイルしか拾われない形で外れていた）。
+ * 直下ぶんの pathspec を別に並べて拾う（`src` 直下に現状ファイルは無いが、
+ * 増えたときに同じ穴が開かないよう同じ形で並べる）。
+ */
 function sourceFiles(): string[] {
   return execSync(
-    "git ls-files --cached --others --exclude-standard 'src/**/*.ts' 'src/**/*.tsx' 'electron-src/**/*.ts'",
+    "git ls-files --cached --others --exclude-standard 'src/*.ts' 'src/*.tsx' 'src/**/*.ts' 'src/**/*.tsx' 'electron-src/*.ts' 'electron-src/**/*.ts'",
     { cwd: REPO_ROOT, encoding: "utf8" }
   )
     .trim()
