@@ -184,7 +184,7 @@ describe("deployPendingMigrations", () => {
   })
 
   it("失敗したマイグレーションはバックアップから復元され、記録されない", async () => {
-    // 事前に実データを入れておき、復元で戻ることを確認する
+    // 事前にデータを入れておき、復元で戻ることを確認する
     withDatabase((db) => {
       db.exec(`CREATE TABLE "Keep" (id TEXT PRIMARY KEY)`)
       db.prepare(`INSERT INTO "Keep" VALUES ('keep-me')`).run()
@@ -227,6 +227,62 @@ describe("deployPendingMigrations", () => {
     expect(state.hasHalf).toBe(false)
     expect(state.recorded).toBe(0)
     expect(state.keep).toBe("keep-me")
+  })
+
+  it("直前のマイグレーションが残した PRAGMA foreign_keys を引き継がない", async () => {
+    // PRAGMA foreign_keys は接続の状態なので、1本目が最後に置いた ON が
+    // 2本目の初期状態になっていた。deployer が1本ごとに OFF へ戻す。
+    writeMigration(
+      "20260101000000_leaves_fk_on",
+      `CREATE TABLE "Parent" (id TEXT PRIMARY KEY);
+       CREATE TABLE "Child" (id TEXT PRIMARY KEY, parentId TEXT NOT NULL REFERENCES "Parent"(id));
+       INSERT INTO "Parent" VALUES ('p1');
+       INSERT INTO "Child" VALUES ('c1', 'p1');
+       PRAGMA foreign_keys=ON;`
+    )
+    // FK が有効なままだと、子の行が残っている親の DROP は
+    // FOREIGN KEY constraint failed で落ちる
+    writeMigration("20260101000001_drops_parent", `DROP TABLE "Parent";`)
+    const deploy = await loadDeployer()
+
+    expect(deploy({ migrationsDir: MIGRATIONS_DIR })).toBe(2)
+
+    const parentTables = withDatabase((db) =>
+      db
+        .prepare(
+          `SELECT name FROM sqlite_master WHERE type='table' AND name='Parent'`
+        )
+        .all()
+    )
+    expect(parentTables).toEqual([])
+  })
+
+  it("ON を要求するマイグレーションが自分で ON を敷けば効く", async () => {
+    // ALTER TABLE … RENAME TO が子の外部キー参照を追随させるには FK が有効である必要がある。
+    // deployer が OFF へ戻しても、マイグレーション側の ON が上書きできること。
+    writeMigration(
+      "20260101000000_create",
+      `CREATE TABLE "Parent" (id TEXT PRIMARY KEY);
+       CREATE TABLE "Child" (id TEXT PRIMARY KEY, parentId TEXT NOT NULL REFERENCES "Parent"(id));`
+    )
+    writeMigration(
+      "20260101000001_rename",
+      `PRAGMA foreign_keys=ON;
+       ALTER TABLE "Parent" RENAME TO "Guardian";`
+    )
+    const deploy = await loadDeployer()
+
+    expect(deploy({ migrationsDir: MIGRATIONS_DIR })).toBe(2)
+
+    // 子の定義文の参照先が新しい名前へ書き換わっている（旧名のまま残ると dangling FK）
+    const childReferencingGuardian = withDatabase((db) =>
+      db
+        .prepare(
+          `SELECT name FROM sqlite_master WHERE type='table' AND name='Child' AND sql LIKE '%"Guardian"%'`
+        )
+        .all()
+    )
+    expect(childReferencingGuardian).toHaveLength(1)
   })
 
   it("_prisma_migrations テーブルが無ければ何もしない", async () => {

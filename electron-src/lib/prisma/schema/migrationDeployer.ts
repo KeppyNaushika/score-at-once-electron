@@ -7,6 +7,19 @@ import { getDatabasePath } from "../databaseInitializer"
 import { hasTable, type SqliteDatabase } from "../sqliteSchemaUtils"
 import { createBackup, restoreBackup } from "./bridgeMigrations"
 
+/**
+ * 1本のマイグレーションSQLを、外部キー制約を既知の状態（OFF）へ戻してから流す。
+ *
+ * `PRAGMA foreign_keys` は接続の状態なので、直前に流したファイルが最後に置いた値が
+ * そのまま残る（RedefineTables 系は `OFF→ON`、テーブル改名系は `ON→OFF` で終わる）。
+ * 開始時点を固定しておかないと、後から足したマイグレーションの挙動が
+ * 「その起動で何本前に走ったか」で変わる。
+ */
+const applyMigrationSql = (db: SqliteDatabase, sql: string): void => {
+  db.pragma("foreign_keys = OFF")
+  db.exec(sql)
+}
+
 /** _prisma_migrations から適用済みマイグレーション名の集合を取得する */
 const listAppliedMigrationNames = (db: SqliteDatabase): Set<string> => {
   const rows = db
@@ -26,6 +39,12 @@ const listAppliedMigrationNames = (db: SqliteDatabase): Set<string> => {
  * セミコロンを SQLite 本体に正しく解釈させる（自前の `split(";")` は使わない）。
  * また各文は自動コミットで実行されるため、RENAME 系マイグレーションの
  * `PRAGMA foreign_keys` が意図どおり効く。
+ *
+ * `PRAGMA foreign_keys` は接続に紐づく状態で、1本の接続で全ての未適用ぶんを流す以上、
+ * あるファイルが最後に置いた値が次のファイルの初期状態になる。マイグレーション側は
+ * 自分の開始時点の状態を当てにできないため、**1本ごとに既知の状態（OFF）へ戻してから**
+ * 流す（`applyMigrationSql`）。`ON` を要求するマイグレーション（子の外部キー参照を
+ * 追随させる `ALTER TABLE … RENAME TO` 等）は自分で `ON` を敷くので、これで壊れない。
  */
 export const deployPendingMigrations = (options?: {
   migrationsDir?: string
@@ -79,7 +98,7 @@ export const deployPendingMigrations = (options?: {
       const startedAt = new Date().toISOString()
 
       try {
-        db.exec(sql)
+        applyMigrationSql(db, sql)
         recordApplied.run(
           crypto.randomUUID(),
           checksum,

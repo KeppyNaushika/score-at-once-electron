@@ -49,6 +49,18 @@ const tableNames = (): string[] =>
     ).map((row) => row.name)
   )
 
+/** 空DBに init → ベースライン → 全マイグレーションを通す */
+const buildFreshChain = async (): Promise<void> => {
+  bootstrapSchema(DB_PATH)
+  const prisma = createPrismaClientForPath(DB_PATH)
+  try {
+    await createBaseline(prisma)
+  } finally {
+    await prisma.$disconnect()
+  }
+  deployPendingMigrations({ migrationsDir: REAL_MIGRATIONS })
+}
+
 const localMigrationNames = (): string[] =>
   fs
     .readdirSync(REAL_MIGRATIONS, { withFileTypes: true })
@@ -102,16 +114,20 @@ describe("新規インストールの初期化連鎖", () => {
     expect(deployPendingMigrations({ migrationsDir: REAL_MIGRATIONS })).toBe(0)
   })
 
+  it("全マイグレーション適用後に外部キーの不整合が残らない", async () => {
+    await buildFreshChain()
+
+    // 各マイグレーションは自分の中で foreign_keys を落として作り直すため、
+    // 通しで適用した結果に dangling な参照が残っていないかは別に見る必要がある
+    // （PRAGMA は接続の状態なので、1本の適用が通ることは整合の証明にならない）
+    const violations = withDatabase((db) =>
+      db.prepare(`PRAGMA foreign_key_check`).all()
+    )
+    expect(violations).toEqual([])
+  })
+
   it("適用後のスキーマが db push 基準（schema.prisma）と全テーブルで列一致する", async () => {
-    // fresh chain を構築
-    bootstrapSchema(DB_PATH)
-    const prisma = createPrismaClientForPath(DB_PATH)
-    try {
-      await createBaseline(prisma)
-    } finally {
-      await prisma.$disconnect()
-    }
-    deployPendingMigrations({ migrationsDir: REAL_MIGRATIONS })
+    await buildFreshChain()
 
     // 基準: globalSetup が prisma db push で作る test-database.db（schema.prisma 忠実）
     const groundTruthPath = path.resolve(

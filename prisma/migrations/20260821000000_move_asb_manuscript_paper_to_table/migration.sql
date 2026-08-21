@@ -67,6 +67,10 @@ WHERE sq."manuscriptEnabled" <> 0
 -- RedefineTables: AsbCharGuide の親を小問から原稿用紙へ付け替える。
 -- 列名と外部キーの両方が変わるため ALTER では届かず、作り直しになる。
 -- id は据え置き（行の同一性は変わっていない）。
+--
+-- 作り直しの間、子の外部キー参照を黙らせているのは foreign_keys=OFF の方である。
+-- defer_foreign_keys=ON は Prisma の定型に従って併記しているだけで、各文が自動コミットで
+-- 走る（＝制約検査を遅らせる先のトランザクションが無い）この実行では実質無効。
 PRAGMA defer_foreign_keys=ON;
 PRAGMA foreign_keys=OFF;
 CREATE TABLE "new_AsbCharGuide" (
