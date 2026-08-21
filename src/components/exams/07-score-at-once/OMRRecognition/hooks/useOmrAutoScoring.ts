@@ -21,7 +21,6 @@ import type {
   OMRCellConfig,
   OMRSheetResult,
 } from "@/types/omr.types"
-import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import {
   recommendAreaThreshold,
@@ -343,13 +342,8 @@ export function useOmrAutoScoring(examId: string) {
     async (userId: string) => {
       setState((prev) => ({ ...prev, isApplying: true, error: null }))
       try {
-        const entries: Array<{
-          examStudentId: string
-          cropRegionId: string
-          status: ScoringStatus
-          partialScore: number | null
-          userId: string
-        }> = []
+        // 形は書き込みの口が決める（画面側で payload の型を手写ししない）
+        const entries: Parameters<typeof batchUpdateQuestionScores>[0] = []
 
         for (const [examStudentId, scoreEntries] of state.scoreEntries) {
           for (const entry of scoreEntries) {

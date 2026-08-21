@@ -1,4 +1,4 @@
-import type { ScoreDecision } from "@prisma/client"
+import type { Prisma, ScoreDecision } from "@prisma/client"
 import { Decimal } from "@prisma/client/runtime/client"
 
 import type { Serialized } from "@/types/prismaExtensions"
@@ -52,14 +52,24 @@ const verdictLabel = (verdict: string | null | undefined): string => {
   }
 }
 
-interface UpsertScoreDecisionData {
-  cropRegionId: string
-  examStudentId: string
-  verdict: string
-  score?: number | null
-  comment?: string | null
-  decidedByUserId: string
-  sourceQuestionScoreId?: string | null
+/**
+ * 確定1件の内容。**確定は「このセルの結果はこれだ」を一度に決める1つの操作**なので、
+ * 省略できる項目は無い（`Required`）。コメントを空にする・採用元の紐付けを解くときは
+ * `null` を明示する — 省略が「消す」を意味する形にしない（Prisma の流儀は逆で、
+ * 2人目がそちらの流儀で書くと消えてしまう）。
+ *
+ * 土台は Prisma の入力型で、**DB と書き込みが決める列（id / createdAt / updatedAt /
+ * decidedAt）を外し、Decimal（score）と union（verdict）だけを注入する**。
+ */
+export type UpsertScoreDecisionData = Required<
+  Omit<
+    Prisma.ScoreDecisionUncheckedCreateInput,
+    "id" | "createdAt" | "updatedAt" | "decidedAt" | "verdict" | "score"
+  >
+> & {
+  verdict: ScoringStatus
+  /** 確定点。verdict 自体が点を決める（正解など）ときは null */
+  score: number | null
 }
 
 /**
@@ -112,25 +122,25 @@ const canDecideScore = async (
  * 削除・再作成はしない — LWW同期でセカンダリUNIQUEにより単一行へ収束させるため、
  * 同一セルの確定は常に既存行のin-place更新で表現する。
  */
-export const upsertScoreDecision = async (data: UpsertScoreDecisionData) => {
+export const upsertScoreDecision = async (
+  decisionData: UpsertScoreDecisionData
+) => {
   const permission = await canDecideScore(
-    data.cropRegionId,
-    data.decidedByUserId
+    decisionData.cropRegionId,
+    decisionData.decidedByUserId
   )
   if (!permission.allowed) {
     throw new Error(permission.reason ?? "権限がありません")
   }
 
   const score =
-    data.score !== null && data.score !== undefined
-      ? new Decimal(data.score)
-      : null
+    decisionData.score !== null ? new Decimal(decisionData.score) : null
 
   // 採点領域と受験者が同じ試験のものであること（FK は片方ずつしか見ない）
   await assertCropRegionsInSameExam([
     {
-      cropRegionId: data.cropRegionId,
-      examStudentId: data.examStudentId,
+      cropRegionId: decisionData.cropRegionId,
+      examStudentId: decisionData.examStudentId,
     },
   ])
 
@@ -138,50 +148,49 @@ export const upsertScoreDecision = async (data: UpsertScoreDecisionData) => {
   const previous = await prisma.scoreDecision.findUnique({
     where: {
       cropRegionId_examStudentId: {
-        cropRegionId: data.cropRegionId,
-        examStudentId: data.examStudentId,
+        cropRegionId: decisionData.cropRegionId,
+        examStudentId: decisionData.examStudentId,
       },
     },
   })
 
+  // 作成でも更新でも同じ内容を書く。確定は毎回セルの結果全体を決め直す操作なので、
+  // 「触った列だけ」ではなく受け取った内容がそのまま行になる
+  const decidedColumns = {
+    verdict: decisionData.verdict,
+    score,
+    comment: decisionData.comment,
+    decidedByUserId: decisionData.decidedByUserId,
+    decidedAt: new Date(),
+    sourceQuestionScoreId: decisionData.sourceQuestionScoreId,
+  }
+
   const decision = await prisma.scoreDecision.upsert({
     where: {
       cropRegionId_examStudentId: {
-        cropRegionId: data.cropRegionId,
-        examStudentId: data.examStudentId,
+        cropRegionId: decisionData.cropRegionId,
+        examStudentId: decisionData.examStudentId,
       },
     },
     create: {
-      cropRegionId: data.cropRegionId,
-      examStudentId: data.examStudentId,
-      verdict: data.verdict,
-      score,
-      comment: data.comment ?? null,
-      decidedByUserId: data.decidedByUserId,
-      decidedAt: new Date(),
-      sourceQuestionScoreId: data.sourceQuestionScoreId ?? null,
+      cropRegionId: decisionData.cropRegionId,
+      examStudentId: decisionData.examStudentId,
+      ...decidedColumns,
     },
-    update: {
-      verdict: data.verdict,
-      score,
-      comment: data.comment ?? null,
-      decidedByUserId: data.decidedByUserId,
-      decidedAt: new Date(),
-      sourceQuestionScoreId: data.sourceQuestionScoreId ?? null,
-    },
+    update: decidedColumns,
     include: {
       decidedBy: true,
     },
   })
 
   // 監査ログ: 採点確定（OWNERによる確定。提案連打は記録しない）
-  const scope = await resolveExamScopeByCropRegion(data.cropRegionId)
-  const studentLabel = await resolveExamStudentLabel(data.examStudentId)
+  const scope = await resolveExamScopeByCropRegion(decisionData.cropRegionId)
+  const studentLabel = await resolveExamStudentLabel(decisionData.examStudentId)
   const prevScore = previous?.score != null ? Number(previous.score) : null
   const newScore = score != null ? Number(score) : null
   await recordAuditLog({
     action: "exam.score.decide",
-    userId: data.decidedByUserId,
+    userId: decisionData.decidedByUserId,
     entityType: "ScoreDecision",
     entityId: decision.id,
     scopeId: scope.scopeId,
@@ -194,7 +203,7 @@ export const upsertScoreDecision = async (data: UpsertScoreDecisionData) => {
         field: "verdict",
         label: "判定",
         before: previous ? verdictLabel(previous.verdict) : null,
-        after: verdictLabel(data.verdict),
+        after: verdictLabel(decisionData.verdict),
       },
       { field: "score", label: "得点", before: prevScore, after: newScore },
     ],

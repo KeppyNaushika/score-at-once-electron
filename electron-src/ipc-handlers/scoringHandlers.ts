@@ -14,18 +14,19 @@ import {
   getAssignmentsForExam,
   unassignCropRegion,
 } from "../lib/prisma/cropRegionAssignment"
-import type {
-  CreateQuestionScoreData,
-  UpdateQuestionScoreData,
-} from "../lib/prisma/questionScore"
 import {
-  type BatchScoreEntry,
   batchUpdateQuestionScores,
+  type QuestionScoreResult,
   SCORE_TARGET_DELETED,
   setQuestionScore,
+  type SetQuestionScoreData,
   updateQuestionScore,
 } from "../lib/prisma/questionScore"
-import { upsertScoreDecision } from "../lib/prisma/scoreDecision"
+import {
+  toSerializedScoreDecision,
+  upsertScoreDecision,
+  type UpsertScoreDecisionData,
+} from "../lib/prisma/scoreDecision"
 import { getExamDecisionSummary } from "../lib/prisma/scoreDecisionSummary"
 import { measureAnswerWhiteness } from "../lib/scoring/regionWhiteness"
 import { type HandlerMap } from "./ipcHandlerUtils"
@@ -60,50 +61,24 @@ function serializeScore(score: {
 export const scoringHandlers = {
   // QuestionScore 関連のハンドラー
   // 採点する（無ければ作り、有れば上書きする）
-  "set-question-score": async (data: CreateQuestionScoreData) =>
-    serializeScore(await setQuestionScore(data)),
+  "set-question-score": async (questionScore: SetQuestionScoreData) =>
+    serializeScore(await setQuestionScore(questionScore)),
 
-  "update-question-score": async (
-    id: string,
-    data: UpdateQuestionScoreData,
-    expectedVersion?: number
-  ) => {
-    const result = await updateQuestionScore(id, data, expectedVersion)
+  "update-question-score": async (id: string, result: QuestionScoreResult) => {
+    const updated = await updateQuestionScore(id, result)
 
     // 「他教員が答案ごと削除した」は保存の失敗ではないので値で返す
-    if (result.status === SCORE_TARGET_DELETED) {
+    if (updated.status === SCORE_TARGET_DELETED) {
       return { status: SCORE_TARGET_DELETED } as const
     }
 
-    return { status: "saved" as const, score: serializeScore(result.score) }
+    return { status: "saved" as const, score: serializeScore(updated.score) }
   },
 
-  "finalize-question-score": async (
-    examStudentId: string,
-    cropRegionId: string,
-    userId: string,
-    scoreData: {
-      partialScore?: number
-      status: string
-      comment?: string
-      sourceQuestionScoreId?: string
-    }
-  ) => {
-    const decision = await upsertScoreDecision({
-      cropRegionId,
-      examStudentId,
-      verdict: scoreData.status,
-      score: scoreData.partialScore ?? null,
-      comment: scoreData.comment ?? null,
-      decidedByUserId: userId,
-      sourceQuestionScoreId: scoreData.sourceQuestionScoreId ?? null,
-    })
-
-    return {
-      ...decision,
-      score: decision.score ? Number(decision.score) : null,
-    }
-  },
+  // 採点を確定する（生徒×設問で1行）。確定はセルの結果全体を毎回決め直す操作なので、
+  // 書き込みの口の引数をそのまま受ける（画面側で payload の型を手写ししない）
+  "finalize-question-score": async (decisionData: UpsertScoreDecisionData) =>
+    toSerializedScoreDecision(await upsertScoreDecision(decisionData)),
 
   // 裁定サマリ（競合・確定後の新提案）— 確定パネルと出力前警告が共有する
   "get-exam-decision-summary": (examId: string, userId: string) =>
@@ -140,8 +115,10 @@ export const scoringHandlers = {
   ) => unassignCropRegion(cropRegionId, userId, requestedByUserId),
 
   // QuestionScore 一括更新（OMR自動採点結果反映）
-  "batch-update-question-scores": async (entries: BatchScoreEntry[]) => {
-    return await batchUpdateQuestionScores(entries)
+  "batch-update-question-scores": async (
+    questionScores: SetQuestionScoreData[]
+  ) => {
+    return await batchUpdateQuestionScores(questionScores)
   },
 
   // グリッド採点の白さ順ソート用: 答案画像ごとに全採点領域の白さを算出する

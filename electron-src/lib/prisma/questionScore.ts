@@ -1,4 +1,4 @@
-import type { QuestionScore } from "@prisma/client"
+import type { Prisma, QuestionScore } from "@prisma/client"
 import { Decimal } from "@prisma/client/runtime/client"
 
 import type { Serialized } from "@/types/prismaExtensions"
@@ -96,38 +96,45 @@ async function recordScoreAudit(opts: {
   })
 }
 
-// 採点データの型定義
-// 注: "proposed"/"final" は廃止済み。QuestionScoreは常に採点者ごとの「提案」であり、
-// 確定はScoreDecision（scoreDecision.ts）で表現する。
-export interface CreateQuestionScoreData {
-  examStudentId: string
-  cropRegionId: string
-  partialScore?: number // 部分点・保留時のみ使用
-  status:
-    | "unscored"
-    | "correct"
-    | "incorrect"
-    | "partial"
-    | "pending"
-    | "no_answer"
-    | "double_mark"
-  comment?: string
-  userId: string
+/**
+ * 「このマスの採点結果はこれだ」という**1つの決定**。
+ *
+ * 判定と部分点は利用者の1操作で一緒に決まる（数字キーはバッファに溜まるだけで、
+ * F/J を押した瞬間に判定と点が同時に確定する）ので、割らずに**両方必須**で受ける。
+ * optional にすると「省略＝消す」と「省略＝触らない」が同じ袋に混ざり、列ごとに
+ * 意味が逆になる。正答にするときは `partialScore` に `null` を明示する。
+ *
+ * 注: "proposed"/"final" は廃止済み。QuestionScore は常に採点者ごとの「提案」であり、
+ * 確定は ScoreDecision（scoreDecision.ts）で表現する。
+ */
+export interface QuestionScoreResult {
+  status: ScoringStatus
+  /** 部分点。判定そのものが点を決める（正解・不正解・無答など）ときは null */
+  partialScore: number | null
 }
 
-export interface UpdateQuestionScoreData {
-  partialScore?: number // 部分点・保留時のみ使用
-  status?:
-    | "unscored"
-    | "correct"
-    | "incorrect"
-    | "partial"
-    | "pending"
-    | "no_answer"
-    | "double_mark"
-  comment?: string
-  version?: number
-}
+/**
+ * `setQuestionScore` / `batchUpdateQuestionScores` の引数。
+ * 行の同定（受験者×設問×採点者）＋ 採点結果。
+ *
+ * 土台は Prisma の入力型で、**DB が決める列（id / createdAt / updatedAt）と、
+ * ここでは書かない子（drawingAnnotations）を外し、Decimal と union だけを注入する**。
+ * 列を手写しすると、渡しても何も起きない引数（かつての comment / version）が紛れ込む。
+ */
+export type SetQuestionScoreData = Omit<
+  Prisma.QuestionScoreUncheckedCreateInput,
+  | "id"
+  | "createdAt"
+  | "updatedAt"
+  | "drawingAnnotations"
+  | "status"
+  | "partialScore"
+> &
+  QuestionScoreResult
+
+/** 部分点を Decimal 列の値へ。`null` はそのまま NULL を書く */
+const toPartialScoreColumn = (partialScore: number | null): Decimal | null =>
+  partialScore !== null ? new Decimal(partialScore) : null
 
 /**
  * 試験の採点データを取得
@@ -263,35 +270,32 @@ export const ensureQuestionScore = async (data: EnsureQuestionScoreData) => {
  * 設問を表示しただけで出る自動作成が、入れたばかりの採点を unscored で
  * 上書きしていた（docs/branch-review-findings.md #2）。
  */
-export const setQuestionScore = async (data: CreateQuestionScoreData) => {
+export const setQuestionScore = async (questionScore: SetQuestionScoreData) => {
   try {
     // 採点領域と受験者が同じ試験のものであること（FK は片方ずつしか見ない）
     await assertCropRegionsInSameExam([
       {
-        cropRegionId: data.cropRegionId,
-        examStudentId: data.examStudentId,
+        cropRegionId: questionScore.cropRegionId,
+        examStudentId: questionScore.examStudentId,
       },
     ])
 
     // 同じ生徒・設問・採点者の組み合わせで既存レコードをチェック
     const existing = await prisma.questionScore.findFirst({
       where: {
-        examStudentId: data.examStudentId,
-        cropRegionId: data.cropRegionId,
-        userId: data.userId,
+        examStudentId: questionScore.examStudentId,
+        cropRegionId: questionScore.cropRegionId,
+        userId: questionScore.userId,
       },
     })
 
     if (existing) {
-      // 既存レコードを更新
+      // 既存レコードを更新。決定した2列だけを書く（行の同定に使った列は触らない）
       const updated = await prisma.questionScore.update({
         where: { id: existing.id },
         data: {
-          partialScore:
-            data.partialScore !== null && data.partialScore !== undefined
-              ? new Decimal(data.partialScore)
-              : null,
-          status: data.status,
+          partialScore: toPartialScoreColumn(questionScore.partialScore),
+          status: questionScore.status,
         },
         include: {
           examStudent: { include: { student: true } },
@@ -303,15 +307,15 @@ export const setQuestionScore = async (data: CreateQuestionScoreData) => {
       await recordScoreAudit({
         action: "exam.score.update",
         scoreId: updated.id,
-        cropRegionId: data.cropRegionId,
-        examStudentId: data.examStudentId,
-        userId: data.userId,
+        cropRegionId: questionScore.cropRegionId,
+        examStudentId: questionScore.examStudentId,
+        userId: questionScore.userId,
         changes: [
           {
             field: "status",
             label: "採点",
             before: scoreStatusLabel(existing.status),
-            after: scoreStatusLabel(data.status),
+            after: scoreStatusLabel(questionScore.status),
           },
           {
             field: "partialScore",
@@ -320,27 +324,18 @@ export const setQuestionScore = async (data: CreateQuestionScoreData) => {
               existing.partialScore != null
                 ? Number(existing.partialScore)
                 : null,
-            after:
-              data.partialScore != null && data.partialScore !== undefined
-                ? data.partialScore
-                : null,
+            after: questionScore.partialScore,
           },
         ],
       })
 
       return updated
     } else {
-      // 新規作成
+      // 新規作成。受け取った列はそのまま渡す（黙って落ちる列を作らない）
       const created = await prisma.questionScore.create({
         data: {
-          examStudentId: data.examStudentId,
-          cropRegionId: data.cropRegionId,
-          partialScore:
-            data.partialScore !== null && data.partialScore !== undefined
-              ? new Decimal(data.partialScore)
-              : null,
-          status: data.status,
-          userId: data.userId,
+          ...questionScore,
+          partialScore: toPartialScoreColumn(questionScore.partialScore),
         },
         include: {
           examStudent: { include: { student: true } },
@@ -352,15 +347,15 @@ export const setQuestionScore = async (data: CreateQuestionScoreData) => {
       await recordScoreAudit({
         action: "exam.score.propose",
         scoreId: created.id,
-        cropRegionId: data.cropRegionId,
-        examStudentId: data.examStudentId,
-        userId: data.userId,
+        cropRegionId: questionScore.cropRegionId,
+        examStudentId: questionScore.examStudentId,
+        userId: questionScore.userId,
         changes: [
           {
             field: "status",
             label: "採点",
             before: null,
-            after: scoreStatusLabel(data.status),
+            after: scoreStatusLabel(questionScore.status),
           },
         ],
       })
@@ -374,25 +369,17 @@ export const setQuestionScore = async (data: CreateQuestionScoreData) => {
 }
 
 /**
- * 採点データを更新（楽観的ロック対応）
+ * 既にある採点行を、新しい採点結果で書き換える。
+ *
+ * **楽観的ロックはここには無い**（`version` 列はどのモデルにも無く、比較も一度も
+ * 行われていなかった）。やっているのは「その行がまだ在るか」の確認だけで、それは
+ * 差分記録用に変更前を取る `findUnique` が兼ねている。
  */
 export const updateQuestionScore = async (
   id: string,
-  data: UpdateQuestionScoreData,
-  expectedVersion?: number
+  result: QuestionScoreResult
 ) => {
   try {
-    // 楽観的ロックのチェック
-    if (expectedVersion !== undefined) {
-      const current = await prisma.questionScore.findUnique({
-        where: { id },
-      })
-
-      if (!current) {
-        return { status: SCORE_TARGET_DELETED } as const
-      }
-    }
-
     // 差分記録用に変更前を取得。ここで無ければ答案ごと削除された後なので、
     // 生の Prisma エラーではなく「削除済み」として返す（協調採点で他教員が削除した場合）。
     const before = await prisma.questionScore.findUnique({
@@ -406,11 +393,8 @@ export const updateQuestionScore = async (
     const updated = await prisma.questionScore.update({
       where: { id },
       data: {
-        partialScore:
-          data.partialScore !== null && data.partialScore !== undefined
-            ? new Decimal(data.partialScore)
-            : null,
-        status: data.status,
+        partialScore: toPartialScoreColumn(result.partialScore),
+        status: result.status,
       },
       include: {
         examStudent: { include: { student: true } },
@@ -429,14 +413,14 @@ export const updateQuestionScore = async (
         {
           field: "status",
           label: "採点",
-          before: scoreStatusLabel(before?.status),
+          before: scoreStatusLabel(before.status),
           after: scoreStatusLabel(updated.status),
         },
         {
           field: "partialScore",
           label: "部分点",
           before:
-            before?.partialScore != null ? Number(before.partialScore) : null,
+            before.partialScore != null ? Number(before.partialScore) : null,
           after:
             updated.partialScore != null ? Number(updated.partialScore) : null,
         },
@@ -454,33 +438,30 @@ export const updateQuestionScore = async (
   }
 }
 
-export interface BatchScoreEntry {
-  examStudentId: string
-  cropRegionId: string
-  status: string
-  partialScore: number | null
-  userId: string
-}
-
-/** 採点データをトランザクション内で一括upsertする（OMR自動採点結果の反映用） */
+/**
+ * 採点データをトランザクション内で一括upsertする（OMR自動採点結果の反映用）。
+ *
+ * 1件ずつの意味は `setQuestionScore` と同じ（無ければ作り、有れば上書きする）ので
+ * 引数の形も同じものを使う。
+ */
 export async function batchUpdateQuestionScores(
-  entries: BatchScoreEntry[]
+  questionScores: SetQuestionScoreData[]
 ): Promise<{ updatedCount: number }> {
   try {
     let updatedCount = 0
 
     // 採点領域と受験者が同じ試験のものであること（FK は片方ずつしか見ない）
-    await assertCropRegionsInSameExam(entries)
+    await assertCropRegionsInSameExam(questionScores)
 
     // トランザクション内で一括処理
     await prisma.$transaction(async (tx) => {
-      for (const entry of entries) {
+      for (const questionScore of questionScores) {
         // 既存レコードを検索
         const existing = await tx.questionScore.findFirst({
           where: {
-            examStudentId: entry.examStudentId,
-            cropRegionId: entry.cropRegionId,
-            userId: entry.userId,
+            examStudentId: questionScore.examStudentId,
+            cropRegionId: questionScore.cropRegionId,
+            userId: questionScore.userId,
           },
         })
 
@@ -488,24 +469,15 @@ export async function batchUpdateQuestionScores(
           await tx.questionScore.update({
             where: { id: existing.id },
             data: {
-              status: entry.status,
-              partialScore:
-                entry.partialScore !== null
-                  ? new Decimal(entry.partialScore)
-                  : null,
+              status: questionScore.status,
+              partialScore: toPartialScoreColumn(questionScore.partialScore),
             },
           })
         } else {
           await tx.questionScore.create({
             data: {
-              examStudentId: entry.examStudentId,
-              cropRegionId: entry.cropRegionId,
-              userId: entry.userId,
-              status: entry.status,
-              partialScore:
-                entry.partialScore !== null
-                  ? new Decimal(entry.partialScore)
-                  : null,
+              ...questionScore,
+              partialScore: toPartialScoreColumn(questionScore.partialScore),
             },
           })
         }
@@ -514,13 +486,15 @@ export async function batchUpdateQuestionScores(
     })
 
     // 監査ログ: 一括反映（OMR自動採点等）。1件にまとめて記録する。
-    if (entries.length > 0) {
-      const scope = await resolveExamScopeByCropRegion(entries[0].cropRegionId)
+    if (questionScores.length > 0) {
+      const scope = await resolveExamScopeByCropRegion(
+        questionScores[0].cropRegionId
+      )
       await recordAuditLog({
         action: "exam.score.batch",
-        userId: entries[0].userId,
+        userId: questionScores[0].userId,
         entityType: "QuestionScore",
-        entityId: entries[0].cropRegionId,
+        entityId: questionScores[0].cropRegionId,
         scopeId: scope.scopeId,
         scopeLabel: scope.scopeLabel,
         summary: `採点を一括反映しました（${updatedCount}件）`,

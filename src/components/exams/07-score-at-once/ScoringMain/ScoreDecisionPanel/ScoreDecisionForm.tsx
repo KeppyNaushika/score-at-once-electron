@@ -109,13 +109,13 @@ export function ScoreDecisionForm({
       await finalizeQuestionScore.mutateAsync({
         examStudentId: cell.examStudentId,
         cropRegionId: cell.cropRegionId,
-        userId: user.id,
-        scoreData: {
-          status: verdict,
-          partialScore: needsScore ? (parsedScore ?? 0) : undefined,
-          comment: comment || undefined,
-          sourceQuestionScoreId: sourceQuestionScoreId ?? undefined,
-        },
+        decidedByUserId: user.id,
+        verdict,
+        // 点を持たない判定と、コメント無し・採用元なしは null を明示する
+        // （省略で消える形にしない）
+        score: needsScore ? (parsedScore ?? 0) : null,
+        comment: comment === "" ? null : comment,
+        sourceQuestionScoreId,
       })
       toast.success("採点結果を確定しました")
       onDecided()

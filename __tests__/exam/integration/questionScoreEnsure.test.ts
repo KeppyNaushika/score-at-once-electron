@@ -139,12 +139,14 @@ describe("採点行を用意する口は、採点を上書きしない", () => {
       examStudentId,
       userId,
       status: "correct",
+      partialScore: null,
     })
     await setQuestionScore({
       cropRegionId,
       examStudentId,
       userId,
       status: "incorrect",
+      partialScore: null,
     })
 
     const rows = await rowsFor(cropRegionId, examStudentId)

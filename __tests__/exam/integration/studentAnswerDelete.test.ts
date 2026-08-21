@@ -336,7 +336,10 @@ describe("deleteStudentAnswer", () => {
     // 教員Aが答案を削除 → 教員Bが開いたままの採点を保存しようとする
     await deleteAnswerAsSeen(image(page1.id, examStudentA.id).id)
 
-    const result = await updateQuestionScore(scoreId, { status: "correct" })
+    const result = await updateQuestionScore(scoreId, {
+      status: "correct",
+      partialScore: null,
+    })
     // 例外ではなく「対象が消えている」という結果が値で返る（協調採点で他教員が
     // 答案ごと削除したケース）
     expect(result.status).toBe(SCORE_TARGET_DELETED)

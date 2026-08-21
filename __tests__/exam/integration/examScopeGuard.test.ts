@@ -86,6 +86,7 @@ describe("採点対象と受験者の試験スコープ", () => {
       cropRegionId: cropRegionA.id,
       examStudentId: examStudentA.id,
       status: "correct",
+      partialScore: null,
       userId: examA.user.id,
     })
 
@@ -101,6 +102,7 @@ describe("採点対象と受験者の試験スコープ", () => {
         cropRegionId: cropRegionA.id,
         examStudentId: examStudentB.id,
         status: "correct",
+        partialScore: null,
         userId: examA.user.id,
       })
     ).rejects.toThrow()
@@ -146,6 +148,7 @@ describe("採点対象と受験者の試験スコープ", () => {
         score: null,
         comment: null,
         decidedByUserId: examA.user.id,
+        sourceQuestionScoreId: null,
       })
     ).rejects.toThrow()
 

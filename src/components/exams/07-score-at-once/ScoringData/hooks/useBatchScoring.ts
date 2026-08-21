@@ -117,7 +117,7 @@ export function useBatchScoring({
           updateQuestionScore({
             questionScoreId: currentScore.id,
             data: {
-              partialScore: nextPartialScore ?? undefined,
+              partialScore: nextPartialScore,
               status,
             },
           })
@@ -137,7 +137,7 @@ export function useBatchScoring({
           setScore({
             examStudentId: studentAnswerImage.examStudentId,
             cropRegionId: currentCropRegion.id,
-            partialScore: nextPartialScore ?? undefined,
+            partialScore: nextPartialScore,
             status,
             userId: currentUserId,
           }).catch(() => {

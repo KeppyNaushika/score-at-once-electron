@@ -115,18 +115,11 @@ export const updateQuestionScoreMutation = (examId: string) =>
  */
 export const finalizeQuestionScoreMutation = (examId: string) =>
   defineMutation({
-    mutationFn: (input: {
-      examStudentId: string
-      cropRegionId: string
-      userId: string
-      scoreData: Parameters<typeof window.electronAPI.finalizeQuestionScore>[3]
-    }) =>
-      window.electronAPI.finalizeQuestionScore(
-        input.examStudentId,
-        input.cropRegionId,
-        input.userId,
-        input.scoreData
-      ),
+    mutationFn: (
+      decisionData: Parameters<
+        typeof window.electronAPI.finalizeQuestionScore
+      >[0]
+    ) => window.electronAPI.finalizeQuestionScore(decisionData),
     scope: { id: `exam:${examId}:questionScores` },
     meta: {
       invalidates: [
