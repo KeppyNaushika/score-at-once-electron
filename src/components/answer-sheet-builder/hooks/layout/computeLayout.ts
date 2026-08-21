@@ -44,8 +44,8 @@ import {
   renderGridDividerLines,
 } from "./lineRenderer"
 import {
+  availableBranchAreaWidth,
   requiredBranchAreaWidth,
-  withRequiredSubQuestionWidths,
 } from "./manuscriptWidth"
 import { transformLayoutToVertical } from "./verticalTransform"
 
@@ -181,17 +181,12 @@ export function computeLayoutFromDefinition(
 
     if (subIsHorizontal) {
       // === 横配置（グリッド）モード ===
-      // 原稿用紙セルの layoutWidth を必要幅に合わせる
-      const subsForGrid = withRequiredSubQuestionWidths(
+      // 原稿用紙セルの layoutWidth はグリッドの中で必要幅に合う
+      const gridCells = buildSubGridLayout(
         major.subQuestions,
         baseRowHeight,
         horizontalAreaWidth,
         subNumWidth,
-        branchNumWidth
-      )
-      const gridCells = buildSubGridLayout(
-        subsForGrid,
-        baseRowHeight,
         branchNumWidth
       )
       for (const gridCell of gridCells) {
@@ -236,6 +231,7 @@ export function computeLayoutFromDefinition(
             cellAnswerX,
             cellAnswerWidth,
             cellRight,
+            availableBranchAreaWidth(sub, horizontalAreaWidth, subNumWidth),
             baseRowHeight,
             paper,
             settings,
@@ -314,7 +310,12 @@ export function computeLayoutFromDefinition(
           const branchCells = buildBranchGridLayout(
             subQuestion.branchQuestions,
             baseRowHeight,
-            branchNumWidth
+            branchNumWidth,
+            availableBranchAreaWidth(
+              subQuestion,
+              horizontalAreaWidth,
+              subNumWidth
+            )
           )
           for (const edge of computeGridRowRightEdges(
             branchCells,
@@ -439,13 +440,20 @@ export function computeLayoutFromDefinition(
           const branchAreaWidth = requiredBranchAreaWidth(
             sub.branchQuestions,
             baseRowHeight,
-            branchNumWidth
+            branchNumWidth,
+            availableBranchAreaWidth(sub, horizontalAreaWidth, subNumWidth)
           )
           if (branchAreaWidth == null) return contentRight
           return answerAreaX + branchAreaWidth
         }
         if (!sub.manuscriptPaper?.enabled) return contentRight
-        const subHeight = computeSubHeight(sub, baseRowHeight, branchNumWidth)
+        const subHeight = computeSubHeight(
+          sub,
+          baseRowHeight,
+          horizontalAreaWidth,
+          subNumWidth,
+          branchNumWidth
+        )
         return (
           answerAreaX +
           (subHeight / sub.manuscriptPaper.rows) * sub.manuscriptPaper.columns
@@ -455,7 +463,13 @@ export function computeLayoutFromDefinition(
       major.subQuestions.forEach((sub, subIndex) => {
         const subStartY = currentY
         const hasBranches = sub.branchQuestions.length > 0
-        const subHeight = computeSubHeight(sub, baseRowHeight, branchNumWidth)
+        const subHeight = computeSubHeight(
+          sub,
+          baseRowHeight,
+          horizontalAreaWidth,
+          subNumWidth,
+          branchNumWidth
+        )
         const effSubNumW = sub.label === "" ? 0 : subNumWidth
         const effBranchNumX = subNumX + effSubNumW
         const effBranchNumW = hasBranches ? branchNumWidth : 0
@@ -489,6 +503,7 @@ export function computeLayoutFromDefinition(
             effAnswerX,
             effAnswerWidth,
             subRightEdges[subIndex],
+            availableBranchAreaWidth(sub, horizontalAreaWidth, subNumWidth),
             baseRowHeight,
             paper,
             settings,
@@ -538,7 +553,8 @@ export function computeLayoutFromDefinition(
           const branchCells = buildBranchGridLayout(
             sub.branchQuestions,
             baseRowHeight,
-            branchNumWidth
+            branchNumWidth,
+            availableBranchAreaWidth(sub, horizontalAreaWidth, subNumWidth)
           )
           for (const edge of computeGridRowRightEdges(
             branchCells,
@@ -686,7 +702,13 @@ export function computeLayoutFromDefinition(
       } else {
         let subSegStart: number | null = null
         for (const sub of majorQuestion.subQuestions) {
-          const subH = computeSubHeight(sub, baseRowHeight, branchNumWidth)
+          const subH = computeSubHeight(
+            sub,
+            baseRowHeight,
+            contentRight - (majorNumX + majorNumWidth),
+            subNumWidth,
+            branchNumWidth
+          )
           if (sub.label !== "") {
             if (subSegStart === null) subSegStart = trackY
           } else {

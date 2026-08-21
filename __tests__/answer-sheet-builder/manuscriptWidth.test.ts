@@ -1,3 +1,13 @@
+/**
+ * 原稿用紙の幅の不変条件
+ *
+ * - **常に** マス目は枠に収まる（`マス目の右端 ≤ 枠の右端`）
+ * - **枝問が全員原稿用紙のときだけ** 割り当て幅・描画幅・囲み枠の右端が一致する
+ *
+ * 「一致」を無条件の約束として書くと、混在（原稿用紙あり＋なし）が検査から抜ける。
+ * 混在では枠は普通の枝問に合わせて広くなるので、マス目とは一致しない。
+ */
+
 import { describe, expect, it } from "vitest"
 
 import {
@@ -7,13 +17,13 @@ import {
 import { computeLayoutFromDefinition } from "@/components/answer-sheet-builder/hooks/layout/computeLayout"
 import { buildSubGridLayout } from "@/components/answer-sheet-builder/hooks/layout/gridBuilder"
 import {
+  availableBranchAreaWidth,
   branchManuscriptAreaWidth,
   columnContentWidth,
   manuscriptCellSize,
   maxManuscriptColumns,
   requiredBranchAreaWidth,
   subManuscriptAreaWidth,
-  withRequiredSubQuestionWidths,
 } from "@/components/answer-sheet-builder/hooks/layout/manuscriptWidth"
 import type {
   AnswerSheetDefinition,
@@ -42,6 +52,9 @@ const branchAnswerX = subAnswerX + columnWidths.branchNumber
 /** 小問が並ぶ横配置領域（大問番号欄の右から段の右端まで） */
 const horizontalAreaX = contentLeft + columnWidths.majorNumber
 const horizontalAreaWidth = contentRight - horizontalAreaX
+/** 枝問が並ぶ領域の左端（小問番号欄の右） */
+const branchAreaX =
+  contentLeft + columnWidths.majorNumber + columnWidths.subNumber
 
 function manuscriptPaper(columns: number, rows: number): ManuscriptPaper {
   return {
@@ -58,7 +71,8 @@ function manuscriptPaper(columns: number, rows: number): ManuscriptPaper {
 
 function branchQuestion(
   label: string,
-  paper: ManuscriptPaper | undefined
+  paper: ManuscriptPaper | undefined,
+  layoutWidth?: string
 ): BranchQuestion {
   return {
     id: `branch-${label}`,
@@ -67,13 +81,15 @@ function branchQuestion(
     points: 5,
     textElements: [],
     manuscriptPaper: paper,
+    layoutWidth,
   }
 }
 
 function subQuestion(
   label: string,
   paper: ManuscriptPaper | undefined,
-  branchQuestions: BranchQuestion[] = []
+  branchQuestions: BranchQuestion[] = [],
+  layoutWidth?: string
 ): SubQuestion {
   return {
     id: `sub-${label}`,
@@ -83,6 +99,7 @@ function subQuestion(
     branchQuestions,
     textElements: [],
     manuscriptPaper: paper,
+    layoutWidth,
   }
 }
 
@@ -114,6 +131,13 @@ function cellAt(layout: ComputedLayout, questionPath: number[]): ComputedCell {
   return cell
 }
 
+/** マス目の右端 */
+function manuscriptGridRight(cell: ComputedCell): number {
+  const manuscriptGrid = cell.manuscriptGrid
+  if (!manuscriptGrid) throw new Error("マス目が無い")
+  return manuscriptGrid.gridX + manuscriptGrid.gridWidth
+}
+
 /** 検査する列数。段幅に収まる数と、収まらない数の両方を通す */
 const COLUMN_COUNTS = [3, 8, 14, 20]
 
@@ -129,14 +153,10 @@ describe("小問の原稿用紙：割り当て幅・描画幅・囲み枠の右�
 
     // 割り当て：グリッドが小問に割り当てた幅（番号欄込み）
     const gridCells = buildSubGridLayout(
-      withRequiredSubQuestionWidths(
-        [sub],
-        baseRowHeight,
-        horizontalAreaWidth,
-        columnWidths.subNumber,
-        0
-      ),
+      [sub],
       baseRowHeight,
+      horizontalAreaWidth,
+      columnWidths.subNumber,
       0
     )
     expect(gridCells[0].width * horizontalAreaWidth).toBeCloseTo(
@@ -156,7 +176,7 @@ describe("小問の原稿用紙：割り当て幅・描画幅・囲み枠の右�
 
 // ─── 枝問の原稿用紙 ───
 
-describe("枝問の原稿用紙：割り当て幅・描画幅・囲み枠の右端", () => {
+describe("枝問が全員原稿用紙：割り当て幅・描画幅・囲み枠の右端", () => {
   it.each(COLUMN_COUNTS)("列数 %i で3つが一致する", (columns) => {
     const branch = branchQuestion("ア", manuscriptPaper(columns, 2))
     const sub = subQuestion("(1)", undefined, [branch])
@@ -170,7 +190,12 @@ describe("枝問の原稿用紙：割り当て幅・描画幅・囲み枠の右�
       requiredBranchAreaWidth(
         [branch],
         baseRowHeight,
-        columnWidths.branchNumber
+        columnWidths.branchNumber,
+        availableBranchAreaWidth(
+          sub,
+          horizontalAreaWidth,
+          columnWidths.subNumber
+        )
       )
     ).toBeCloseTo(columnWidths.branchNumber + drawnWidth)
 
@@ -208,6 +233,106 @@ describe("枝問の原稿用紙：割り当て幅・描画幅・囲み枠の右�
       cellAt(layout, [0, 0, 1]).x + cellAt(layout, [0, 0, 1]).width
     ).toBeCloseTo(wideRight)
     expect(outerRightEdge(layout)).toBeCloseTo(wideRight)
+  })
+})
+
+// ─── 原稿用紙あり・なしの混在 ───
+
+describe("混在：原稿用紙を持たない枝問も必要幅を言う", () => {
+  /** 枝問領域が、原稿用紙を見ないときに持てる幅（元の規則で決まる幅） */
+  const availableWidth = horizontalAreaWidth - columnWidths.subNumber
+
+  it("普通の枝問はマス目の幅に押し込まれない（元の規則どおり全幅）", () => {
+    const manuscriptBranch = branchQuestion("ア", manuscriptPaper(4, 2))
+    const plainBranch = branchQuestion("イ", undefined)
+    const sub = subQuestion("(1)", undefined, [manuscriptBranch, plainBranch])
+    const layout = computeLayoutFromDefinition(definitionOf([sub]))
+
+    // 普通の解答欄は段の右端まで届く（マス目の 4 マス幅に縮まない）
+    const plainCell = cellAt(layout, [0, 0, 1])
+    expect(plainCell.x).toBeCloseTo(branchAnswerX)
+    expect(plainCell.x + plainCell.width).toBeCloseTo(contentRight)
+
+    // マス目は自分の必要幅のまま、枠に収まる
+    const manuscriptCell = cellAt(layout, [0, 0, 0])
+    const cellSize = manuscriptCellSize(manuscriptBranch, baseRowHeight)
+    expect(manuscriptCell.manuscriptGrid?.gridWidth).toBeCloseTo(cellSize * 4)
+    expect(manuscriptGridRight(manuscriptCell)).toBeLessThanOrEqual(
+      outerRightEdge(layout) + 1e-9
+    )
+    // 枠は普通の枝問に合わせて立つので、マス目とは一致しない
+    expect(outerRightEdge(layout)).toBeCloseTo(contentRight)
+    expect(outerRightEdge(layout)).toBeGreaterThan(
+      manuscriptGridRight(manuscriptCell)
+    )
+  })
+
+  it("layoutWidth を明示した兄弟は、その分数ぶんの幅を保つ", () => {
+    const manuscriptBranch = branchQuestion("ア", manuscriptPaper(4, 2))
+    const halfBranch = branchQuestion("イ", undefined, "1/2")
+    const sub = subQuestion("(1)", undefined, [manuscriptBranch, halfBranch])
+    const layout = computeLayoutFromDefinition(definitionOf([sub]))
+
+    // 元の規則で決まる幅＝領域の半分。そこから枝問番号欄を引いたものが解答欄
+    const halfCell = cellAt(layout, [0, 0, 1])
+    expect(halfCell.x).toBeCloseTo(branchAnswerX)
+    expect(halfCell.width).toBeCloseTo(
+      availableWidth / 2 - columnWidths.branchNumber
+    )
+
+    // 枠は広い方（半分の枝問）に合わせて立ち、マス目はその中に収まる
+    expect(outerRightEdge(layout)).toBeCloseTo(branchAreaX + availableWidth / 2)
+    expect(manuscriptGridRight(cellAt(layout, [0, 0, 0]))).toBeLessThanOrEqual(
+      outerRightEdge(layout) + 1e-9
+    )
+  })
+
+  it("横配置：親の小問に明示した layoutWidth を上書きしない", () => {
+    const manuscriptBranch = branchQuestion("ア", manuscriptPaper(4, 2))
+    const plainBranch = branchQuestion("イ", undefined)
+    const half = subQuestion(
+      "(1)",
+      undefined,
+      [manuscriptBranch, plainBranch],
+      "1/2"
+    )
+    const neighbor = subQuestion("(2)", undefined, [], "1/2")
+    const layout = computeLayoutFromDefinition(definitionOf([half, neighbor]))
+
+    // 親は横配置領域の半分を保つ（枝問のマス目の幅まで縮まない）
+    const parentRight = horizontalAreaX + horizontalAreaWidth / 2
+    expect(
+      cellAt(layout, [0, 0, 1]).x + cellAt(layout, [0, 0, 1]).width
+    ).toBeCloseTo(parentRight)
+    // 隣の小問は半分の位置から始まり、段の右端まで届く
+    const neighborCell = cellAt(layout, [0, 1])
+    expect(neighborCell.x).toBeCloseTo(parentRight + columnWidths.subNumber)
+    expect(neighborCell.x + neighborCell.width).toBeCloseTo(contentRight)
+    expect(outerRightEdge(layout)).toBeCloseTo(contentRight)
+  })
+
+  it("原稿用紙が1つも無ければ幅を要求しない（元の規則がそのまま残る）", () => {
+    const half = branchQuestion("ア", undefined, "1/2")
+    const plain = branchQuestion("イ", undefined)
+    const sub = subQuestion("(1)", undefined, [half, plain])
+
+    expect(
+      requiredBranchAreaWidth(
+        sub.branchQuestions,
+        baseRowHeight,
+        columnWidths.branchNumber,
+        availableWidth
+      )
+    ).toBeNull()
+
+    const layout = computeLayoutFromDefinition(definitionOf([sub]))
+    expect(cellAt(layout, [0, 0, 0]).width).toBeCloseTo(
+      availableWidth / 2 - columnWidths.branchNumber
+    )
+    expect(
+      cellAt(layout, [0, 0, 1]).x + cellAt(layout, [0, 0, 1]).width
+    ).toBeCloseTo(contentRight)
+    expect(outerRightEdge(layout)).toBeCloseTo(contentRight)
   })
 })
 

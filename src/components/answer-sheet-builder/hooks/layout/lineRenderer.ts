@@ -256,6 +256,11 @@ export function renderBranchQuestions(
   _answerX: number,
   _answerWidth: number,
   contentRight: number,
+  /**
+   * 枝問領域の、幅を書き換える前の幅（mm）。原稿用紙を持たない枝問の実効幅がこれを
+   * 分け合う。`contentRight` は書き換えた**後**の右端なので、そこからは出せない。
+   */
+  availableBranchAreaWidth: number,
   baseRowHeight: number,
   paper: { width: number; height: number },
   settings: GlobalSettings,
@@ -272,7 +277,8 @@ export function renderBranchQuestions(
     const branchCells = buildBranchGridLayout(
       sub.branchQuestions,
       baseRowHeight,
-      branchNumWidth
+      branchNumWidth,
+      availableBranchAreaWidth
     )
 
     for (const gridCell of branchCells) {

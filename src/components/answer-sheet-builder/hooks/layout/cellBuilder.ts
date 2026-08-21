@@ -29,19 +29,27 @@ import {
   gridTotalHeight,
   isGridHorizontal,
 } from "./gridBuilder"
-import { withRequiredSubQuestionWidths } from "./manuscriptWidth"
+import { availableBranchAreaWidth } from "./manuscriptWidth"
 
-/** 小問の高さを計算する（baseRowHeight単位のmm値） */
+/**
+ * 小問の高さを計算する（baseRowHeight単位のmm値）
+ *
+ * 枝問の行の折り返しは幅で決まるので、高さを出すにも枝問領域の幅が要る。
+ * 受け取る小問は**幅を書き換える前**のもの（`buildSubGridLayout` が返す `item` と同じ）。
+ */
 export function computeSubHeight(
   sub: SubQuestion,
   baseRowHeight: number,
+  horizontalAreaWidth: number,
+  subNumberWidth: number,
   branchNumberWidth: number
 ): number {
   if (sub.branchQuestions.length > 0) {
     const branchCells = buildBranchGridLayout(
       sub.branchQuestions,
       baseRowHeight,
-      branchNumberWidth
+      branchNumberWidth,
+      availableBranchAreaWidth(sub, horizontalAreaWidth, subNumberWidth)
     )
     return gridTotalHeight(branchCells) * baseRowHeight
   }
@@ -227,23 +235,26 @@ export function computeMajorHeight(
   branchNumberWidth: number
 ): number {
   if (isGridHorizontal(major.subQuestions)) {
-    // 原稿用紙セルの layoutWidth を必要幅に合わせる（レンダリングと同じ計算を通す）
-    const subQuestions = withRequiredSubQuestionWidths(
+    // 原稿用紙セルの layoutWidth はグリッドの中で必要幅に合う（レンダリングと同じ計算）
+    const gridCells = buildSubGridLayout(
       major.subQuestions,
       baseRowHeight,
       horizontalAreaWidth,
       subNumberWidth,
       branchNumberWidth
     )
-    const gridCells = buildSubGridLayout(
-      subQuestions,
-      baseRowHeight,
-      branchNumberWidth
-    )
     return gridTotalHeight(gridCells) * baseRowHeight
   }
   return major.subQuestions.reduce(
-    (sum, sub) => sum + computeSubHeight(sub, baseRowHeight, branchNumberWidth),
+    (sum, sub) =>
+      sum +
+      computeSubHeight(
+        sub,
+        baseRowHeight,
+        horizontalAreaWidth,
+        subNumberWidth,
+        branchNumberWidth
+      ),
     0
   )
 }

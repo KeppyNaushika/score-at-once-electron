@@ -45,9 +45,9 @@ interface ManuscriptPaperSettingsProps {
    * 段の幅に収まる最大列数。マス目は `基準行高 × 倍率` の正方形なので、
    * 段の幅・番号欄の幅・倍率から決まる。
    *
-   * **入力をここで止めるためのもので、既にこれを超えている定義は切り詰めない。**
-   * 超過はそのまま描き、警告だけを出す（勝手に値を書き換えると「なぜ列数が減ったのか」を
-   * 後から追えなくなる）。
+   * **伝えるためのもので、入力をここで止めない。** はじめて作るときの列数と、超過の警告に
+   * 使う。超過はそのまま描き、警告だけを出す（勝手に値を書き換えると「なぜ列数が減ったのか」
+   * を後から追えなくなる）。用紙を小さくしたあとに値を微調整できなくなるのも同じ理由で避ける。
    */
   maxColumns: number
   /** 縦書きか。**はじめて作るときの行数がこれで決まる**（縦書き＝200字詰） */
@@ -85,6 +85,17 @@ const GUIDE_POSITION_LABELS: Record<ManuscriptGuidePosition, string> = {
   "top-left": "左上",
   "top-right": "右上",
 }
+
+/**
+ * 列数の入力に置く絶対的な上限。
+ *
+ * **段の幅から出る上限（`maxColumns`）で丸めてはいけない。** 丸めると、A3 で 20 列として
+ * 作った用紙を A4 へ切り替えたとき、数値入力の下矢印を1回押しただけでブラウザが先に
+ * `value` を `max` へ寄せ、`onChange` が上限の値で発火して元の 20 が DB から消える。
+ * 上限を超える値を打てるのは意図どおりで、その状態は警告で伝える。
+ * ここで止めるのは桁あふれだけ。
+ */
+const MANUSCRIPT_COLUMNS_HARD_LIMIT = 100
 
 /** 区切り罫線の選択肢（先頭は「なし」＝罫線なし） */
 const BOUNDARY_NONE = "none"
@@ -148,13 +159,12 @@ export function ManuscriptPaperSettings({
                 className="h-7 text-xs"
                 value={manuscriptPaper.columns}
                 min={1}
-                max={maxColumns}
                 onChange={(e) =>
                   onUpdateSettings(manuscriptPaper.id, {
                     columns: clampInt(
                       e.target.value,
                       1,
-                      maxColumns,
+                      MANUSCRIPT_COLUMNS_HARD_LIMIT,
                       manuscriptPaper.columns
                     ),
                   })

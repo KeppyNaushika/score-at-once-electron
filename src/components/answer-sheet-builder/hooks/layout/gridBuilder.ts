@@ -17,7 +17,11 @@ import type {
 } from "@/types/answerSheetLayout.types"
 
 import { parseFraction } from "./layoutUtils"
-import { withRequiredBranchQuestionWidths } from "./manuscriptWidth"
+import {
+  availableBranchAreaWidth,
+  requiredSubQuestionWidth,
+  withRequiredBranchQuestionWidths,
+} from "./manuscriptWidth"
 
 interface RowTrack {
   y: number // この行のY位置（baseRowHeight単位）
@@ -174,56 +178,81 @@ export function buildGridLayout<
 /**
  * SubQuestion 用のグリッドレイアウト。
  *
- * `layoutWidth` は呼び出し側が `withRequiredSubQuestionWidths` で埋めておく
- * （必要幅は段の幅で割った分数になるので、段の幅を知っている側が持つ）。
+ * 幅（`layoutWidth`）と高さ（`heightMultiplier`）の書き換えはここで一緒に行う。
+ * **書き換えを呼び出し側に置くと、書き換え後の `layoutWidth` から枝問の利用可能幅を
+ * 出してしまう**（利用可能幅は書き換える前の値から出す必要がある）ので、生の小問を
+ * 受けてこの中で閉じる。
+ *
+ * 返すセルの `item` は生の小問そのもの。書き換えた写しは幾何（`x`/`width`/`height`）へ
+ * 溶けたので、描く側が書き換え後の `layoutWidth` を見ることはない。
  */
 export function buildSubGridLayout(
   subQuestions: SubQuestion[],
   baseRowHeight: number,
+  horizontalAreaWidth: number,
+  subNumberWidth: number,
   branchNumberWidth: number
 ): SubGridCell[] {
   // 枝問がある小問は、枝問レイアウトの要求高さで heightMultiplier を上書き
   // 原稿用紙有効時は heightMultiplier × rows に拡張
   const adjusted = subQuestions.map((sub) => {
+    const requiredWidth = requiredSubQuestionWidth(
+      sub,
+      baseRowHeight,
+      horizontalAreaWidth,
+      subNumberWidth,
+      branchNumberWidth
+    )
+    const layoutWidth =
+      requiredWidth == null
+        ? sub.layoutWidth
+        : String(requiredWidth / horizontalAreaWidth)
     if (sub.branchQuestions.length > 0) {
       const branchCells = buildBranchGridLayout(
         sub.branchQuestions,
         baseRowHeight,
-        branchNumberWidth
+        branchNumberWidth,
+        availableBranchAreaWidth(sub, horizontalAreaWidth, subNumberWidth)
       )
-      const branchHeight = gridTotalHeight(branchCells)
-      if (branchHeight !== sub.heightMultiplier) {
-        return { ...sub, heightMultiplier: branchHeight }
+      return {
+        ...sub,
+        layoutWidth,
+        heightMultiplier: gridTotalHeight(branchCells),
       }
-      return sub
     }
     if (sub.manuscriptPaper?.enabled) {
       return {
         ...sub,
+        layoutWidth,
         heightMultiplier: sub.heightMultiplier * sub.manuscriptPaper.rows,
       }
     }
-    return sub
+    return { ...sub, layoutWidth }
   })
-  return buildGridLayout(adjusted)
+  return buildGridLayout(adjusted).map((gridCell) => ({
+    ...gridCell,
+    item: subQuestions[gridCell.itemIndex],
+  }))
 }
 
 /**
  * BranchQuestion 用のグリッドレイアウト。
  *
- * 原稿用紙を持つ枝問は `layoutWidth` をここで必要幅に合わせる。領域幅は
- * `requiredBranchAreaWidth` そのもの（＝親の小問へ積み上げた幅）なので、呼び出し側から
- * 渡す必要が無く、割り当てと描画が食い違わない。
+ * 枝問の `layoutWidth` はここで実効幅に合わせる。割り当て後の領域幅
+ * （`requiredBranchAreaWidth`）は実効幅から決まるので、渡すのは**書き換える前**の
+ * 領域幅（`availableBranchAreaWidth`）1つでよい。
  */
 export function buildBranchGridLayout(
   branchQuestions: BranchQuestion[],
   baseRowHeight: number,
-  branchNumberWidth: number
+  branchNumberWidth: number,
+  availableAreaWidth: number
 ): BranchGridCell[] {
   const sized = withRequiredBranchQuestionWidths(
     branchQuestions,
     baseRowHeight,
-    branchNumberWidth
+    branchNumberWidth,
+    availableAreaWidth
   )
   // 原稿用紙有効時は heightMultiplier × rows に拡張（小問と同じ）
   return buildGridLayout(
