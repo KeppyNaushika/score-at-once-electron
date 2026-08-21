@@ -173,52 +173,63 @@ export function StudentAddPanel({
                   {classroomEmptyMessage}
                 </div>
               ) : (
-                classrooms.map((candidate) => (
-                  <Card key={candidate.classroom.id} className="p-3">
-                    <div className="flex items-center space-x-3">
-                      <Checkbox
-                        id={`add-class-${candidate.classroom.id}`}
-                        checked={candidate.isSelected}
-                        onCheckedChange={(checked) =>
-                          handleClassroomSelection(
-                            candidate.classroom.id,
-                            checked === true
-                          )
-                        }
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <label
-                            htmlFor={`add-class-${candidate.classroom.id}`}
-                            className="cursor-pointer font-medium"
-                          >
-                            {candidate.classroom.name}
-                          </label>
-                          <TooltipProvider delayDuration={150}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="outline">
-                                  {candidate.addableStudents.length}名
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="left"
-                                className="max-h-64 max-w-xs overflow-auto whitespace-pre-line"
-                              >
-                                {candidate.addableStudents
-                                  .map(
-                                    (student) =>
-                                      `${student.lastName} ${student.firstName}`
-                                  )
-                                  .join("\n")}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                classrooms.map((candidate) => {
+                  const addableCountBadge = (
+                    <Badge variant="outline">
+                      {candidate.addableStudents.length}名
+                    </Badge>
+                  )
+                  return (
+                    <Card key={candidate.classroom.id} className="p-3">
+                      <div className="flex items-center space-x-3">
+                        <Checkbox
+                          id={`add-class-${candidate.classroom.id}`}
+                          checked={candidate.isSelected}
+                          onCheckedChange={(checked) =>
+                            handleClassroomSelection(
+                              candidate.classroom.id,
+                              checked === true
+                            )
+                          }
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <label
+                              htmlFor={`add-class-${candidate.classroom.id}`}
+                              className="cursor-pointer font-medium"
+                            >
+                              {candidate.classroom.name}
+                            </label>
+                            {/* 0名（在籍スイッチで候補から消えたが選択は残っている学級）は
+                                並べる氏名が無いので、空のツールチップを出さない */}
+                            {candidate.addableStudents.length === 0 ? (
+                              addableCountBadge
+                            ) : (
+                              <TooltipProvider delayDuration={150}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    {addableCountBadge}
+                                  </TooltipTrigger>
+                                  <TooltipContent
+                                    side="left"
+                                    className="max-h-64 max-w-xs overflow-auto whitespace-pre-line"
+                                  >
+                                    {candidate.addableStudents
+                                      .map(
+                                        (student) =>
+                                          `${student.lastName} ${student.firstName}`
+                                      )
+                                      .join("\n")}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Card>
-                ))
+                    </Card>
+                  )
+                })
               )}
             </CardContent>
           </Card>

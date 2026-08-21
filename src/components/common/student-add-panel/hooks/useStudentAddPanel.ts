@@ -133,12 +133,17 @@ export function useStudentAddPanel({
   const scopeId = adapter.scopeId
   const [activeTab, setActiveTab] = useState("classrooms")
   /**
-   * 選択は取得結果とは別に持つ（id の集合）。取得結果の配列に isSelected を
-   * 混ぜると、再取得のたびに選択が消えるか、逆に消えた学級の選択が残る。
+   * 選択は取得結果とは別に持つ。取得結果の配列に isSelected を混ぜると、
+   * 再取得のたびに選択が消えるか、逆に消えた学級の選択が残る。
+   *
+   * id だけでなく**選んだ時点の学級の行**を控える。境界は追加できる生徒が0人の
+   * 学級を候補に返さないので、在籍スイッチを入れると選んだ学級が候補から消える。
+   * 行を持っていれば、消えても表示し続けられる（外せない選択を作らない）。
+   * 選択そのものはこの Map の鍵で表す。
    */
-  const [selectedClassroomIds, setSelectedClassroomIds] = useState<Set<string>>(
-    new Set()
-  )
+  const [selectedClassroomById, setSelectedClassroomById] = useState<
+    Map<string, ClassroomWithMemberships>
+  >(new Map())
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(
     new Set()
   )
@@ -212,11 +217,21 @@ export function useStudentAddPanel({
 
   // 表示用に「取得結果 × 選択」を組み立てる。選択した順を先頭へ寄せる
   const classrooms = useMemo<AddPanelClassroomCandidate[]>(() => {
+    const availableIds = new Set(
+      availableClassrooms.map((classroom) => classroom.id)
+    )
     const candidates = availableClassrooms.map((classroom) => ({
       classroom,
       addableStudents: collectAddableStudents(classroom),
-      isSelected: selectedClassroomIds.has(classroom.id),
+      isSelected: selectedClassroomById.has(classroom.id),
     }))
+    // 候補から消えた選択済みの学級も、チェックが付いている間は出し続ける。
+    // 消えたのは「追加できる生徒が0人」だからなので、人数は選んだ時点の数字では
+    // なく 0名 と出す（38名と出したまま追加すると0人しか入らない）
+    for (const [classroomId, classroom] of selectedClassroomById) {
+      if (availableIds.has(classroomId)) continue
+      candidates.push({ classroom, addableStudents: [], isSelected: true })
+    }
     const orderIndex = new Map(
       classroomOrder.map((classroomId, index) => [classroomId, index])
     )
@@ -225,7 +240,7 @@ export function useStudentAddPanel({
         (orderIndex.get(left.classroom.id) ?? Number.MAX_SAFE_INTEGER) -
         (orderIndex.get(right.classroom.id) ?? Number.MAX_SAFE_INTEGER)
     )
-  }, [availableClassrooms, selectedClassroomIds, classroomOrder])
+  }, [availableClassrooms, selectedClassroomById, classroomOrder])
 
   const students = useMemo<SelectableStudent[]>(
     () =>
@@ -240,10 +255,15 @@ export function useStudentAddPanel({
     classroomId: string,
     isSelected: boolean
   ) => {
-    setSelectedClassroomIds((prev) => {
-      const next = new Set(prev)
-      if (isSelected) next.add(classroomId)
-      else next.delete(classroomId)
+    // チェックを付けた時点の行を控える（候補から消えても表示し続けるため）。
+    // 既に候補から消えている学級を付け直すことはない（外した瞬間に消えるので）
+    const selectedClassroom = availableClassrooms.find(
+      (classroom) => classroom.id === classroomId
+    )
+    setSelectedClassroomById((prev) => {
+      const next = new Map(prev)
+      if (!isSelected) next.delete(classroomId)
+      else if (selectedClassroom) next.set(classroomId, selectedClassroom)
       return next
     })
   }
@@ -270,7 +290,7 @@ export function useStudentAddPanel({
         selected.map((candidate) => candidate.classroom.id),
         classroomActiveOnly
       )
-      setSelectedClassroomIds(new Set())
+      setSelectedClassroomById(new Map())
       setClassroomOrder([])
       await Promise.all([loadClassrooms(), loadStudents()])
       onAdded()

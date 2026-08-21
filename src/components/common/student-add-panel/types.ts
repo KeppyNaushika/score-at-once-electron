@@ -28,7 +28,12 @@ import type {
 export interface AddPanelClassroomCandidate {
   /** 学級の行（在籍と生徒を同梱）。名前は classroom.name */
   classroom: ClassroomWithMemberships
-  /** この学級から追加できる生徒（在籍歴を畳んだもの、出席番号順）。人数は .length */
+  /**
+   * この学級から追加できる生徒（在籍歴を畳んだもの、出席番号順）。人数は .length
+   *
+   * 在籍スイッチで境界の候補から消えた選択済みの学級は空（＝0名）。追加できる生徒が
+   * 0人だから消えたので、選んだ時点の人数は持ち回らない。
+   */
   addableStudents: Student[]
   isSelected: boolean
 }
