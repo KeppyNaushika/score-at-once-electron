@@ -14,9 +14,16 @@ import { Switch } from "@/components/ui/switch"
 import type {
   AsbSubQuestionUpdate,
   BranchQuestion,
+  GlobalSettings,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
 
+import {
+  branchManuscriptAreaWidth,
+  manuscriptCellSize,
+  maxManuscriptColumns,
+  subManuscriptAreaWidth,
+} from "../../hooks/layout/manuscriptWidth"
 import { movedIds } from "../../reorderIds"
 import type { AsbEditorActions } from "../../types"
 import { BranchQuestionForm } from "./BranchQuestionForm"
@@ -74,8 +81,8 @@ interface SubQuestionFormProps {
   actions: AsbEditorActions
   onMoveUp?: () => void
   onMoveDown?: () => void
-  /** 縦書きレイアウトか（高さ/幅ラベルの表示を入れ替える） */
-  vertical?: boolean
+  /** 用紙設定。縦書きの判定と、原稿用紙の列数の上限（段の幅）に要る */
+  settings: GlobalSettings
 }
 
 export function SubQuestionForm({
@@ -85,8 +92,9 @@ export function SubQuestionForm({
   actions,
   onMoveUp,
   onMoveDown,
-  vertical = false,
+  settings,
 }: SubQuestionFormProps) {
+  const vertical = settings.verticalLayout ?? false
   const cell = { subQuestionId: subQuestion.id }
   const onUpdate = (data: AsbSubQuestionUpdate) =>
     actions.updateSubQuestion(subQuestion.id, data)
@@ -104,6 +112,12 @@ export function SubQuestionForm({
   const hasVisibilityRestricted = subQuestion.imageElements?.some(
     (imageElement) =>
       imageElement.visibility && imageElement.visibility !== "both"
+  )
+
+  // 原稿用紙の列数の上限。マス目は正方形なので、段の幅から入る個数がそのまま決まる
+  const manuscriptMaxColumns = maxManuscriptColumns(
+    subManuscriptAreaWidth(settings, subQuestion),
+    manuscriptCellSize(subQuestion, settings.baseRowHeight)
   )
 
   const branchMaxGoUps = useMemo(
@@ -379,6 +393,7 @@ export function SubQuestionForm({
           />
           <ManuscriptPaperSettings
             manuscriptPaper={subQuestion.manuscriptPaper}
+            maxColumns={manuscriptMaxColumns}
             onSetEnabled={(enabled) => {
               actions.setManuscriptPaperEnabled(cell, enabled)
               // 原稿用紙を使い始めたら、横に並ぶよう幅を埋めておく。
@@ -416,6 +431,14 @@ export function SubQuestionForm({
               definitionId={definitionId}
               actions={actions}
               vertical={vertical}
+              manuscriptMaxColumns={maxManuscriptColumns(
+                branchManuscriptAreaWidth(
+                  settings,
+                  subQuestion,
+                  branchQuestion
+                ),
+                manuscriptCellSize(branchQuestion, settings.baseRowHeight)
+              )}
               onMoveUp={
                 branchIndex > 0
                   ? () =>

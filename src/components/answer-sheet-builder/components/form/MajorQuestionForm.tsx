@@ -12,6 +12,7 @@ import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type {
+  GlobalSettings,
   MajorQuestion,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
@@ -69,8 +70,8 @@ interface MajorQuestionFormProps {
   actions: AsbEditorActions
   onMoveUp?: () => void
   onMoveDown?: () => void
-  /** 縦書きレイアウトか（高さ/幅ラベルの表示を入れ替える） */
-  vertical?: boolean
+  /** 用紙設定。縦書きの判定と、原稿用紙の列数の上限（段の幅）に要る */
+  settings: GlobalSettings
 }
 
 export function MajorQuestionForm({
@@ -80,7 +81,7 @@ export function MajorQuestionForm({
   actions,
   onMoveUp,
   onMoveDown,
-  vertical = false,
+  settings,
 }: MajorQuestionFormProps) {
   const [isOpen, setIsOpen] = useState(true)
 
@@ -176,7 +177,7 @@ export function MajorQuestionForm({
                   maxGoUp={subMaxGoUps[subIndex]}
                   definitionId={definitionId}
                   actions={actions}
-                  vertical={vertical}
+                  settings={settings}
                   onMoveUp={
                     subIndex > 0
                       ? () =>

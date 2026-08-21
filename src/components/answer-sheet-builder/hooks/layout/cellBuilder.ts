@@ -29,14 +29,20 @@ import {
   gridTotalHeight,
   isGridHorizontal,
 } from "./gridBuilder"
+import { withRequiredSubQuestionWidths } from "./manuscriptWidth"
 
 /** 小問の高さを計算する（baseRowHeight単位のmm値） */
 export function computeSubHeight(
   sub: SubQuestion,
-  baseRowHeight: number
+  baseRowHeight: number,
+  branchNumberWidth: number
 ): number {
   if (sub.branchQuestions.length > 0) {
-    const branchCells = buildBranchGridLayout(sub.branchQuestions)
+    const branchCells = buildBranchGridLayout(
+      sub.branchQuestions,
+      baseRowHeight,
+      branchNumberWidth
+    )
     return gridTotalHeight(branchCells) * baseRowHeight
   }
   if (sub.manuscriptPaper?.enabled) {
@@ -216,34 +222,28 @@ export function computeManuscriptGrid(
 export function computeMajorHeight(
   major: { subQuestions: SubQuestion[] },
   baseRowHeight: number,
-  horizontalAreaWidth?: number,
-  subNumWidth?: number
+  horizontalAreaWidth: number,
+  subNumberWidth: number,
+  branchNumberWidth: number
 ): number {
   if (isGridHorizontal(major.subQuestions)) {
-    // 原稿用紙セルの layoutWidth を必要幅に合わせる（レンダリングと同じ計算）
-    const subs =
-      horizontalAreaWidth != null && subNumWidth != null
-        ? major.subQuestions.map((sub) => {
-            if (
-              sub.manuscriptPaper?.enabled &&
-              sub.branchQuestions.length === 0
-            ) {
-              const snw = sub.label === "" ? 0 : subNumWidth
-              const reqW =
-                baseRowHeight *
-                  sub.heightMultiplier *
-                  sub.manuscriptPaper.columns +
-                snw
-              return { ...sub, layoutWidth: String(reqW / horizontalAreaWidth) }
-            }
-            return sub
-          })
-        : major.subQuestions
-    const gridCells = buildSubGridLayout(subs)
+    // 原稿用紙セルの layoutWidth を必要幅に合わせる（レンダリングと同じ計算を通す）
+    const subQuestions = withRequiredSubQuestionWidths(
+      major.subQuestions,
+      baseRowHeight,
+      horizontalAreaWidth,
+      subNumberWidth,
+      branchNumberWidth
+    )
+    const gridCells = buildSubGridLayout(
+      subQuestions,
+      baseRowHeight,
+      branchNumberWidth
+    )
     return gridTotalHeight(gridCells) * baseRowHeight
   }
   return major.subQuestions.reduce(
-    (sum, sub) => sum + computeSubHeight(sub, baseRowHeight),
+    (sum, sub) => sum + computeSubHeight(sub, baseRowHeight, branchNumberWidth),
     0
   )
 }

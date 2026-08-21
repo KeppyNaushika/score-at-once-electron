@@ -25,6 +25,8 @@ interface BranchQuestionFormProps {
   onMoveDown?: () => void
   /** 縦書きレイアウトか（高さ/幅ラベルの表示を入れ替える） */
   vertical?: boolean
+  /** この枝問の原稿用紙が段の幅に収められる最大列数 */
+  manuscriptMaxColumns: number
 }
 
 export function BranchQuestionForm({
@@ -36,6 +38,7 @@ export function BranchQuestionForm({
   onMoveUp,
   onMoveDown,
   vertical = false,
+  manuscriptMaxColumns,
 }: BranchQuestionFormProps) {
   const cell = { branchQuestionId: branchQuestion.id }
   const onUpdate = (data: Partial<AsbBranchQuestionAttributes>) =>
@@ -284,6 +287,7 @@ export function BranchQuestionForm({
           />
           <ManuscriptPaperSettings
             manuscriptPaper={branchQuestion.manuscriptPaper}
+            maxColumns={manuscriptMaxColumns}
             onSetEnabled={(enabled) => {
               actions.setManuscriptPaperEnabled(cell, enabled)
               // 原稿用紙を使い始めたら、横に並ぶよう幅を埋めておく

@@ -318,7 +318,7 @@ export function AnswerSheetBuilderMainView({
                     labelPresets={definition.labelPresets}
                     definitionId={definition.id}
                     actions={actions}
-                    vertical={definition.settings.verticalLayout ?? false}
+                    settings={definition.settings}
                   />
                 </div>
               </ScrollArea>

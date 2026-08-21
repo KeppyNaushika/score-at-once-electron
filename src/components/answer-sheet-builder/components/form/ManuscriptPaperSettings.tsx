@@ -41,6 +41,15 @@ import { SliderWithInput } from "./SliderWithInput"
 interface ManuscriptPaperSettingsProps {
   /** セルの原稿用紙。無い＝一度も使っていない */
   manuscriptPaper: ManuscriptPaper | undefined
+  /**
+   * 段の幅に収まる最大列数。マス目は `基準行高 × 倍率` の正方形なので、
+   * 段の幅・番号欄の幅・倍率から決まる。
+   *
+   * **入力をここで止めるためのもので、既にこれを超えている定義は切り詰めない。**
+   * 超過はそのまま描き、警告だけを出す（勝手に値を書き換えると「なぜ列数が減ったのか」を
+   * 後から追えなくなる）。
+   */
+  maxColumns: number
   /** 使うかどうかの切り替え。オンにすると行ができる */
   onSetEnabled: (enabled: boolean) => void
   /** 原稿用紙そのものの設定（オンオフと文字位置マーカーは別の実体・別の意図） */
@@ -78,6 +87,7 @@ const BOUNDARY_OPTIONS: { value: string; label: string }[] = [
 
 export function ManuscriptPaperSettings({
   manuscriptPaper,
+  maxColumns,
   onSetEnabled,
   onUpdateSettings,
   onAddCharGuide,
@@ -100,6 +110,7 @@ export function ManuscriptPaperSettings({
   }
 
   const capacity = current.columns * current.rows
+  const columnsOverflow = current.columns > maxColumns
 
   return (
     <div className="space-y-2">
@@ -113,42 +124,53 @@ export function ManuscriptPaperSettings({
       </div>
 
       {manuscriptPaper?.enabled && (
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label className="text-[10px] text-muted-foreground">列数</Label>
-            <Input
-              type="number"
-              className="h-7 text-xs"
-              value={manuscriptPaper.columns}
-              min={1}
-              max={40}
-              onChange={(e) =>
-                onUpdateSettings(manuscriptPaper.id, {
-                  columns: clampInt(
-                    e.target.value,
-                    1,
-                    40,
-                    manuscriptPaper.columns
-                  ),
-                })
-              }
-            />
+        <div className="space-y-1">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-[10px] text-muted-foreground">列数</Label>
+              <Input
+                type="number"
+                className="h-7 text-xs"
+                value={manuscriptPaper.columns}
+                min={1}
+                max={maxColumns}
+                onChange={(e) =>
+                  onUpdateSettings(manuscriptPaper.id, {
+                    columns: clampInt(
+                      e.target.value,
+                      1,
+                      maxColumns,
+                      manuscriptPaper.columns
+                    ),
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] text-muted-foreground">行数</Label>
+              <Input
+                type="number"
+                className="h-7 text-xs"
+                value={manuscriptPaper.rows}
+                min={1}
+                max={20}
+                onChange={(e) =>
+                  onUpdateSettings(manuscriptPaper.id, {
+                    rows: clampInt(e.target.value, 1, 20, manuscriptPaper.rows),
+                  })
+                }
+              />
+            </div>
           </div>
-          <div>
-            <Label className="text-[10px] text-muted-foreground">行数</Label>
-            <Input
-              type="number"
-              className="h-7 text-xs"
-              value={manuscriptPaper.rows}
-              min={1}
-              max={20}
-              onChange={(e) =>
-                onUpdateSettings(manuscriptPaper.id, {
-                  rows: clampInt(e.target.value, 1, 20, manuscriptPaper.rows),
-                })
-              }
-            />
-          </div>
+          {columnsOverflow ? (
+            <p className="text-[10px] text-destructive">
+              {`この段幅では最大${maxColumns}マスです。いまの${manuscriptPaper.columns}マスは枠と用紙からはみ出して描かれます（値はそのまま残しています）。`}
+            </p>
+          ) : (
+            <p className="text-[10px] text-muted-foreground">
+              {`この段幅では最大${maxColumns}マス`}
+            </p>
+          )}
         </div>
       )}
 

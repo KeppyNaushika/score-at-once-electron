@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type {
+  GlobalSettings,
   LabelPresets,
   MajorQuestion,
 } from "@/types/answerSheetDefinition.types"
@@ -37,8 +38,8 @@ interface QuestionListEditorProps {
   labelPresets?: LabelPresets
   definitionId: string
   actions: AsbEditorActions
-  /** 縦書きレイアウトか（高さ/幅ラベルの表示を入れ替える） */
-  vertical?: boolean
+  /** 用紙設定。縦書きの判定と、原稿用紙の列数の上限（段の幅）に要る */
+  settings: GlobalSettings
 }
 
 export function QuestionListEditor({
@@ -46,7 +47,7 @@ export function QuestionListEditor({
   labelPresets,
   definitionId,
   actions,
-  vertical = false,
+  settings,
 }: QuestionListEditorProps) {
   return (
     <div className="space-y-3">
@@ -142,7 +143,7 @@ export function QuestionListEditor({
             majorIndex={majorIndex}
             definitionId={definitionId}
             actions={actions}
-            vertical={vertical}
+            settings={settings}
             onMoveUp={
               majorIndex > 0
                 ? () =>

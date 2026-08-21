@@ -269,7 +269,11 @@ export function renderBranchQuestions(
   if (branchIsHorizontal) {
     const branchAreaX = subNumX + subNumWidth
     const branchAreaWidth = contentRight - branchAreaX
-    const branchCells = buildBranchGridLayout(sub.branchQuestions)
+    const branchCells = buildBranchGridLayout(
+      sub.branchQuestions,
+      baseRowHeight,
+      branchNumWidth
+    )
 
     for (const gridCell of branchCells) {
       const cellX = branchAreaX + gridCell.x * branchAreaWidth

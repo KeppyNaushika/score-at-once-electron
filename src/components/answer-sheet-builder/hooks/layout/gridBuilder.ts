@@ -17,6 +17,7 @@ import type {
 } from "@/types/answerSheetLayout.types"
 
 import { parseFraction } from "./layoutUtils"
+import { withRequiredBranchQuestionWidths } from "./manuscriptWidth"
 
 interface RowTrack {
   y: number // この行のY位置（baseRowHeight単位）
@@ -170,13 +171,26 @@ export function buildGridLayout<
   return cells
 }
 
-/** SubQuestion 用のグリッドレイアウト */
-export function buildSubGridLayout(subQuestions: SubQuestion[]): SubGridCell[] {
+/**
+ * SubQuestion 用のグリッドレイアウト。
+ *
+ * `layoutWidth` は呼び出し側が `withRequiredSubQuestionWidths` で埋めておく
+ * （必要幅は段の幅で割った分数になるので、段の幅を知っている側が持つ）。
+ */
+export function buildSubGridLayout(
+  subQuestions: SubQuestion[],
+  baseRowHeight: number,
+  branchNumberWidth: number
+): SubGridCell[] {
   // 枝問がある小問は、枝問レイアウトの要求高さで heightMultiplier を上書き
   // 原稿用紙有効時は heightMultiplier × rows に拡張
   const adjusted = subQuestions.map((sub) => {
     if (sub.branchQuestions.length > 0) {
-      const branchCells = buildBranchGridLayout(sub.branchQuestions)
+      const branchCells = buildBranchGridLayout(
+        sub.branchQuestions,
+        baseRowHeight,
+        branchNumberWidth
+      )
       const branchHeight = gridTotalHeight(branchCells)
       if (branchHeight !== sub.heightMultiplier) {
         return { ...sub, heightMultiplier: branchHeight }
@@ -194,13 +208,26 @@ export function buildSubGridLayout(subQuestions: SubQuestion[]): SubGridCell[] {
   return buildGridLayout(adjusted)
 }
 
-/** BranchQuestion 用のグリッドレイアウト */
+/**
+ * BranchQuestion 用のグリッドレイアウト。
+ *
+ * 原稿用紙を持つ枝問は `layoutWidth` をここで必要幅に合わせる。領域幅は
+ * `requiredBranchAreaWidth` そのもの（＝親の小問へ積み上げた幅）なので、呼び出し側から
+ * 渡す必要が無く、割り当てと描画が食い違わない。
+ */
 export function buildBranchGridLayout(
-  branchQuestions: BranchQuestion[]
+  branchQuestions: BranchQuestion[],
+  baseRowHeight: number,
+  branchNumberWidth: number
 ): BranchGridCell[] {
+  const sized = withRequiredBranchQuestionWidths(
+    branchQuestions,
+    baseRowHeight,
+    branchNumberWidth
+  )
   // 原稿用紙有効時は heightMultiplier × rows に拡張（小問と同じ）
   return buildGridLayout(
-    branchQuestions.map((branchQuestion) =>
+    sized.map((branchQuestion) =>
       branchQuestion.manuscriptPaper?.enabled
         ? {
             ...branchQuestion,
