@@ -135,6 +135,11 @@ export const gradeSourceFitsQuery = (gradeId: string) =>
     queryFn: () => window.electronAPI.grade.computeSourceFits(gradeId),
   })
 
+/** データソースに指定できる試験1件 */
+export type GradeExamCandidateRow = Awaited<
+  ReturnType<typeof window.electronAPI.grade.getExamCandidates>
+>[number]
+
 /** データソースに指定できる試験の候補 */
 export const gradeExamCandidatesQuery = () =>
   queryOptions({
@@ -142,12 +147,22 @@ export const gradeExamCandidatesQuery = () =>
     queryFn: () => window.electronAPI.grade.getExamCandidates(),
   })
 
+/** ある試験の中で指定できる小計点グループ1件（小計を同梱） */
+export type GradeExamSubtotalGroupRow = Awaited<
+  ReturnType<typeof window.electronAPI.grade.getExamSubtotalGroups>
+>[number]
+
 /** ある試験の中で指定できる小計点の候補 */
 export const gradeExamSubtotalGroupsQuery = (examId: string) =>
   queryOptions({
     queryKey: ["grade", "examSubtotalGroups", examId] as const,
     queryFn: () => window.electronAPI.grade.getExamSubtotalGroups(examId),
   })
+
+/** ある試験の中で指定できる設問領域1件（小計への割り当てを同梱） */
+export type GradeExamCropRegionRow = Awaited<
+  ReturnType<typeof window.electronAPI.grade.getExamCropRegions>
+>[number]
 
 /** ある試験の中で指定できる設問領域の候補 */
 export const gradeExamCropRegionsQuery = (examId: string) =>

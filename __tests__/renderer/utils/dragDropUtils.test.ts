@@ -6,6 +6,7 @@
  * （dnd-kit の衝突判定・描画）はここでは扱わず、`npm run dev` での手動確認に委ねる。
  */
 
+import type { ExamPage } from "@prisma/client"
 import { describe, expect, it } from "vitest"
 
 import {
@@ -33,13 +34,23 @@ const STUDENT_B = "22222222-2222-4222-8222-222222222222"
 const PAGE_1 = "aaaaaaaa-0001-4001-8001-000000000001"
 const PAGE_2 = "aaaaaaaa-0002-4002-8002-000000000002"
 const PAGE_3 = "aaaaaaaa-0003-4003-8003-000000000003"
+const EXAM_ID = "eeeeeeee-0001-4001-8001-000000000001"
 
 /**
  * セルの行・列は実体で渡す（id を呼び出し側で選ばない＝本番と同じ呼び方）。
  * 行は studentId、列は pageNumber を必須にしてあるので、転置するとコンパイルが通らない。
+ * 列は Prisma の `ExamPage` 行そのものなので、テストでも全列を埋める。
  */
 const row = (id: string) => ({ id, studentId: `student-of-${id}` })
-const column = (id: string, pageNumber = 1) => ({ id, pageNumber })
+const column = (id: string, pageNumber = 1): ExamPage => ({
+  id,
+  examId: EXAM_ID,
+  pageNumber,
+  imagePath: null,
+  pageSize: "A4",
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+})
 
 describe("encodeCellDroppableId / decodeCellDroppableId", () => {
   it("エンコードとデコードが往復で一致する", () => {

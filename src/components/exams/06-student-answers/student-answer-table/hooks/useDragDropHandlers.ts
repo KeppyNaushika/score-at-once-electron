@@ -1,5 +1,6 @@
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
+import type { ExamPage } from "@prisma/client"
 import { useCallback } from "react"
 import { toast } from "sonner"
 
@@ -11,7 +12,6 @@ import {
 } from "@/components/exams/06-student-answers/student-answer-table/utils/dragDropUtils"
 import type {
   AnswerImageIdentity,
-  ExamPageColumn,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
 import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
@@ -22,7 +22,7 @@ interface UseDragDropHandlersParams<TItem extends AnswerImageIdentity> {
   getEnabledFiles: () => TItem[]
   getDisabledFiles: () => TItem[]
   students?: StudentAnswerDatasetExamStudent[]
-  examPages?: ExamPageColumn[]
+  examPages?: ExamPage[]
   mode?: "upload" | "view"
   fileOrder?: PlacementStrategy
   onReloadData?: () => void

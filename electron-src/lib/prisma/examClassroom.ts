@@ -29,21 +29,28 @@ export type ExamClassroomWithMemberships = Prisma.ExamClassroomGetPayload<{
   }
 }>
 
-export interface AddExamClassroomOptions {
-  examId: string
-  classroomId: string
-  administered?: boolean
-  teacherStatistics?: boolean
-  studentReport?: boolean
-}
+/** 「この試験にこの学級を足す」という意図。書き換えうる列は Prisma の行から導く */
+export type AddExamClassroomOptions = Pick<
+  ExamClassroom,
+  "examId" | "classroomId"
+> &
+  Partial<
+    Pick<ExamClassroom, "administered" | "teacherStatistics" | "studentReport">
+  >
 
-export interface UpdateExamClassroomOptions {
-  id: string
-  administered?: boolean
-  teacherStatistics?: boolean
-  studentReport?: boolean
-  order?: number
-}
+/**
+ * 「この ExamClassroom の、指定した列を書き換える」という意図。
+ *
+ * 書き換えうる列は Prisma の行から導く（手で並べると、列が増減しても検査に
+ * 掛からないまま静かにずれる）。`id` は対象の同定で、残りは任意＝渡されたものだけ書く。
+ */
+export type UpdateExamClassroomOptions = Pick<ExamClassroom, "id"> &
+  Partial<
+    Pick<
+      ExamClassroom,
+      "administered" | "teacherStatistics" | "studentReport" | "order"
+    >
+  >
 
 export interface ReorderExamClassroomsOptions {
   examId: string

@@ -1,4 +1,4 @@
-import type { UserExam } from "@prisma/client"
+import type { User, UserExam } from "@prisma/client"
 
 import type { UserExamWithUserAndInviter } from "@/types/prismaExtensions"
 
@@ -190,7 +190,7 @@ export const removeExamMember = async (
 export const searchUsersForInvitation = async (
   examId: string,
   query: string
-): Promise<{ id: string; username: string; name: string }[]> => {
+): Promise<Omit<User, "passcode">[]> => {
   try {
     // Get existing member IDs
     const existingMembers = await prisma.userExam.findMany({

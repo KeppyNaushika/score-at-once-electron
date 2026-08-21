@@ -4,10 +4,10 @@ import type {
   SensorDescriptor,
   SensorOptions,
 } from "@dnd-kit/core"
+import type { ExamPage } from "@prisma/client"
 
 import type {
   AnswerImageIdentity,
-  ExamPageColumn,
   PlacementStrategy,
   UnsavedAnswerImage,
   UploadData,
@@ -43,7 +43,7 @@ export interface ExtendedDisabledState {
 export interface AnswerTableCell<
   TItem extends AnswerImageIdentity = AnswerImageIdentity,
 > {
-  examPage: ExamPageColumn
+  examPage: ExamPage
   type: "file" | "empty" | "disabled"
   file?: TItem
   disabledReason?: DisabledReason
@@ -105,7 +105,7 @@ export interface SortableTableCellProps {
 
 export interface EmptyTableCellProps {
   examStudent: StudentAnswerDatasetExamStudent | null
-  examPage: ExamPageColumn | null // droppable の examPageId・表示 pageNumber
+  examPage: ExamPage | null // droppable の examPageId・表示 pageNumber
   isPositionDisabled: boolean
   isPendingChange?: boolean
   mode?: "upload" | "view"
@@ -166,7 +166,7 @@ export interface UseDragDropParams<
   getEnabledFiles: () => TItem[]
   getDisabledFiles: () => TItem[]
   students?: StudentAnswerDatasetExamStudent[]
-  examPages?: ExamPageColumn[]
+  examPages?: ExamPage[]
   mode?: "upload" | "view"
   fileOrder?: PlacementStrategy
   onReloadData?: () => void
@@ -200,7 +200,7 @@ export interface UseDragDropReturn<
 interface AnswerTableBaseProps {
   examId: string
   students: StudentAnswerDatasetExamStudent[]
-  examPages: ExamPageColumn[]
+  examPages: ExamPage[]
   imageLoadStates?: Record<string, "pending" | "loading" | "loaded" | "error">
   onReloadData?: () => void
   // 既存答案（PlacedAnswerImage 実体をそのまま渡す）。upload では占有信号、view では

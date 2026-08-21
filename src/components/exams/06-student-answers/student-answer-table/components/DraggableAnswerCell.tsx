@@ -1,12 +1,12 @@
 "use client"
 
 import { useDraggable, useDroppable } from "@dnd-kit/core"
+import type { ExamPage } from "@prisma/client"
 import { Trash2 } from "lucide-react"
 import { useState } from "react"
 
 import { DeleteConfirmationModal } from "@/components/exams/06-student-answers/student-answer-table/components/DeleteConfirmationModal"
 import { encodeCellDroppableId } from "@/components/exams/06-student-answers/student-answer-table/utils/dragDropUtils"
-import type { ExamPageColumn } from "@/components/exams/06-student-answers/types"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -21,7 +21,7 @@ interface DraggableAnswerCellProps {
   fileId: string
   // 生徒・ページは実体のまま受け取る（座標 droppable の examPageId・削除確認の氏名/ページ表示に使う）
   examStudent: StudentAnswerDatasetExamStudent
-  examPage: ExamPageColumn
+  examPage: ExamPage
   /** 削除の実行。利用者に見せた件数を添えて渡す（消す直前に main が数え直す） */
   onDelete: (confirmedCounts: ConfirmedDeletionCount[]) => Promise<void>
   children: React.ReactNode

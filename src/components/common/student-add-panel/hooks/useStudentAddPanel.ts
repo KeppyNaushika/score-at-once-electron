@@ -6,18 +6,18 @@ import { useCallback, useMemo, useState } from "react"
 
 import type {
   AddPanelClassroomItem,
-  AddPanelStudentItem,
   StudentAddPanelAdapter,
 } from "@/components/common/student-add-panel/types"
 import { isCurrentMembership } from "@/lib/membership"
 import { queryKeys } from "@/lib/queryKeys"
 import { studentListQuery } from "@/queries/student"
+import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
 interface SelectableClassroom extends AddPanelClassroomItem {
   isSelected: boolean
 }
 
-interface SelectableStudent extends AddPanelStudentItem {
+interface SelectableStudent extends StudentWithMemberships {
   isSelected: boolean
 }
 
@@ -103,7 +103,7 @@ async function resolveStudentEmptyReason(
  */
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_CLASSROOMS: AddPanelClassroomItem[] = []
-const EMPTY_STUDENTS: AddPanelStudentItem[] = []
+const EMPTY_STUDENTS: StudentWithMemberships[] = []
 
 export function useStudentAddPanel({
   adapter,

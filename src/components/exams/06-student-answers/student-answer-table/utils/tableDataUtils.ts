@@ -1,12 +1,11 @@
+import type { ExamPage } from "@prisma/client"
+
 import type {
   DisabledCell,
   ExtendedDisabledState,
 } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { DisabledReason } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type {
-  AnswerImageIdentity,
-  ExamPageColumn,
-} from "@/components/exams/06-student-answers/types"
+import type { AnswerImageIdentity } from "@/components/exams/06-student-answers/types"
 import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 
 /**
@@ -38,7 +37,7 @@ function hasCell(
  * コンパイルが通ってしまう（＝表が全滅するのに気付けない）。
  */
 export type CellRow = Pick<StudentAnswerDatasetExamStudent, "id" | "studentId">
-export type CellColumn = ExamPageColumn
+export type CellColumn = ExamPage
 
 /**
  * (受験者, ページ) → 値 を O(1) で引く入れ子マップ。
@@ -123,7 +122,7 @@ export function sortStudentsByCustomOrder(
 export function calculateDynamicDisabledCells<T extends AnswerImageIdentity>(
   files: T[],
   sortedStudents: StudentAnswerDatasetExamStudent[],
-  examPages: ExamPageColumn[],
+  examPages: ExamPage[],
   disabledState: ExtendedDisabledState,
   mode?: "upload" | "view"
 ): CellLookup {
@@ -164,7 +163,7 @@ export function calculateCellsWithExistingAnswers<
 >(
   files: T[],
   sortedStudents: StudentAnswerDatasetExamStudent[],
-  examPages: ExamPageColumn[],
+  examPages: ExamPage[],
   disabledState: ExtendedDisabledState,
   mode?: "upload" | "view",
   existingAnswers?: AnswerImageIdentity[]
@@ -227,7 +226,7 @@ export function getDisabledFiles<T extends AnswerImageIdentity>(
  * placedByCell は (受験者, ページ) で引く CellValueMap（序数キーは使わない）。
  * 同一セルに複数の配置可能答案が解決された場合は先着のみを配置し、後続は孤立扱いに
  * する（黙って上書きして消さない＝表からも孤立枠からも見えなくなる事故を防ぐ。
- * 実データは @@unique([examPageId, examStudentId]) によりセル衝突は構造的に起きないが、
+ * データは @@unique([examPageId, examStudentId]) によりセル衝突は構造的に起きないが、
  * 「解決不能な画像を黙って落とさない」原則をここで担保する）。
  */
 export function partitionAnswerItemsByPlacement<T extends AnswerImageIdentity>(

@@ -1,3 +1,4 @@
+import type { ExamPage } from "@prisma/client"
 import { useMutation } from "@tanstack/react-query"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -10,7 +11,6 @@ import type { PreviewMode } from "@/components/exams/06-student-answers/student-
 import type { FileState } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type {
   AnswerImageIdentity,
-  ExamPageColumn,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
 import { deleteStudentAnswerMutation } from "@/queries/answerSheet"
@@ -26,7 +26,7 @@ interface UseAnswerTableCoreParams<TItem extends AnswerImageIdentity> {
   examId: string
   students: StudentAnswerDatasetExamStudent[]
   files: TItem[]
-  examPages: ExamPageColumn[]
+  examPages: ExamPage[]
   fileOrder?: PlacementStrategy
   mode?: "upload" | "view"
   onFilesChange: (files: TItem[]) => void

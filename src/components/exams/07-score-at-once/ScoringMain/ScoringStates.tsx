@@ -4,16 +4,12 @@ import { useRouter } from "next/navigation"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { Button } from "@/components/ui/button"
-
-/** 試験情報の最小型（存在チェックのみに使用） */
-interface ExamInfo {
-  id: string
-  examName: string
-}
+import type { ExamWithPages } from "@/types/prismaExtensions"
 
 interface ScoringStatesProps {
   loading: boolean
-  exam?: ExamInfo | null
+  /** 採点画面が取る試験1件（`examWithPagesQuery` の戻り。ここでは有無だけを読む） */
+  exam?: ExamWithPages | null
   answerSheetsLength: number
   cropRegionsLength: number
   examId: string

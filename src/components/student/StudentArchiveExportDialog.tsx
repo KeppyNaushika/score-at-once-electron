@@ -1,5 +1,6 @@
 "use client"
 
+import type { Classroom } from "@prisma/client"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { FolderOutput, Loader2 } from "lucide-react"
 import { useMemo, useState } from "react"
@@ -17,11 +18,6 @@ import {
 import { exportStudentArchiveMutation } from "@/queries/archive"
 import { studentListQuery } from "@/queries/student"
 import type { StudentWithMemberships } from "@/types/prismaExtensions"
-
-interface ClassroomInfo {
-  id: string
-  name: string
-}
 
 interface StudentArchiveExportDialogProps {
   isOpen: boolean
@@ -46,25 +42,24 @@ export function StudentArchiveExportDialog({
   // 生徒は共有キャッシュから引き、選択生徒に紐づく学級はそこから導く
   const { data: students = EMPTY_STUDENTS, isPending: isLoading } =
     useQuery(studentListQuery())
-  const relatedClassrooms: ClassroomInfo[] = useMemo(() => {
-    const classroomById = new Map<string, string>()
+  // 学級は所属（memberships）が同梱している行そのものを持つ（id で重複を畳む）
+  const relatedClassrooms: Classroom[] = useMemo(() => {
+    const classroomById = new Map<string, Classroom>()
     for (const student of students) {
       if (!selectedStudentIds.has(student.id)) continue
       for (const membership of student.memberships) {
         if (!classroomById.has(membership.classroom.id)) {
-          classroomById.set(membership.classroom.id, membership.classroom.name)
+          classroomById.set(membership.classroom.id, membership.classroom)
         }
       }
     }
-    return Array.from(classroomById.entries())
-      .map(([id, name]) => ({ id, name }))
-      .sort((classroomA, classroomB) =>
-        classroomA.name.localeCompare(classroomB.name)
-      )
+    return [...classroomById.values()].sort((classroomA, classroomB) =>
+      classroomA.name.localeCompare(classroomB.name)
+    )
   }, [students, selectedStudentIds])
 
   // 既定は全学級。開き直すたび・対象が変わるたびに選び直す
-  const [seededClassrooms, setSeededClassrooms] = useState<ClassroomInfo[]>([])
+  const [seededClassrooms, setSeededClassrooms] = useState<Classroom[]>([])
   if (isOpen && seededClassrooms !== relatedClassrooms) {
     setSeededClassrooms(relatedClassrooms)
     setSelectedClassroomIds(

@@ -29,6 +29,7 @@ import {
   examMembersQuery,
   examOwnerQuery,
   examUserSearchQuery,
+  type ExamUserSearchRow,
   inviteExamMemberMutation,
   removeExamMemberMutation,
 } from "@/queries/userExam"
@@ -41,12 +42,6 @@ interface MemberInviteDialogProps {
   examName?: string
 }
 
-interface SearchResult {
-  id: string
-  username: string
-  name: string
-}
-
 /**
  * 試験メンバー管理ダイアログ
  * - 現在のメンバー一覧表示
@@ -55,7 +50,7 @@ interface SearchResult {
  */
 /** 未検索のときに毎回新しい配列を作らないための空値 */
 const EMPTY_MEMBERS: ExamMemberRow[] = []
-const EMPTY_SEARCH_RESULTS: SearchResult[] = []
+const EMPTY_SEARCH_RESULTS: ExamUserSearchRow[] = []
 
 export function MemberInviteDialog({
   isOpen,

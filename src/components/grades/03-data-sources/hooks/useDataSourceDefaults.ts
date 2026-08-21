@@ -7,20 +7,19 @@ import {
   type MaxScorePayloadSource,
 } from "@/lib/shared/gradeDataSourceMaxScore"
 import type { CourseworkCandidate } from "@/queries/coursework"
+import type {
+  GradeExamCandidateRow,
+  GradeExamCropRegionRow,
+  GradeExamSubtotalGroupRow,
+} from "@/queries/grade"
 
-import {
-  type AddDataSourceSelection,
-  COURSEWORK_WHOLE,
-  type CropRegionOption,
-  type ExamOption,
-  type SubtotalGroupOption,
-} from "../types"
+import { type AddDataSourceSelection, COURSEWORK_WHOLE } from "../types"
 
 interface UseDataSourceDefaultsOptions {
   selection: AddDataSourceSelection
-  exams: ExamOption[]
-  subtotalGroups: SubtotalGroupOption[]
-  cropRegions: CropRegionOption[]
+  exams: GradeExamCandidateRow[]
+  subtotalGroups: GradeExamSubtotalGroupRow[]
+  cropRegions: GradeExamCropRegionRow[]
   courseworks: CourseworkCandidate[]
 }
 
@@ -46,7 +45,7 @@ function findCourseworkSelection(
 /** 選択中の小計項目（所属グループを問わず id で引く）。 */
 function findSubtotal(
   subtotalId: string,
-  subtotalGroups: SubtotalGroupOption[]
+  subtotalGroups: GradeExamSubtotalGroupRow[]
 ) {
   return (
     subtotalGroups
@@ -62,7 +61,7 @@ function findSubtotal(
  */
 function buildMaxScorePayload(
   selection: AddDataSourceSelection,
-  cropRegions: CropRegionOption[],
+  cropRegions: GradeExamCropRegionRow[],
   courseworks: CourseworkCandidate[]
 ): MaxScorePayloadSource | null {
   switch (selection.type) {
@@ -120,9 +119,9 @@ function buildMaxScorePayload(
 /** 選択内容から既定の名前を組み立てる。選択が未完成なら空文字。 */
 function buildDefaultName(
   selection: AddDataSourceSelection,
-  exams: ExamOption[],
-  subtotalGroups: SubtotalGroupOption[],
-  cropRegions: CropRegionOption[],
+  exams: GradeExamCandidateRow[],
+  subtotalGroups: GradeExamSubtotalGroupRow[],
+  cropRegions: GradeExamCropRegionRow[],
   courseworks: CourseworkCandidate[]
 ): string {
   if (selection.type === "coursework") {

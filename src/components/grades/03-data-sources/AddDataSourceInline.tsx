@@ -19,8 +19,11 @@ import {
 } from "@/queries/coursework"
 import {
   createDataSourceMutation,
+  type GradeExamCandidateRow,
   gradeExamCandidatesQuery,
+  type GradeExamCropRegionRow,
   gradeExamCropRegionsQuery,
+  type GradeExamSubtotalGroupRow,
   gradeExamSubtotalGroupsQuery,
 } from "@/queries/grade"
 import type { GradeDataSourceInput } from "@/types/grade.types"
@@ -30,17 +33,14 @@ import {
   type AddDataSourceSelection,
   type AddDataSourceType,
   COURSEWORK_WHOLE,
-  type CropRegionOption,
-  type ExamOption,
   isSameSelection,
-  type SubtotalGroupOption,
   toAddDataSourceType,
 } from "./types"
 
 /** 試験未選択時に渡す空配列。毎レンダー新しい配列を作ると算出フックが回り続けるため定数にする */
-const EMPTY_SUBTOTAL_GROUPS: SubtotalGroupOption[] = []
-const EMPTY_CROP_REGIONS: CropRegionOption[] = []
-const EMPTY_EXAMS: ExamOption[] = []
+const EMPTY_SUBTOTAL_GROUPS: GradeExamSubtotalGroupRow[] = []
+const EMPTY_CROP_REGIONS: GradeExamCropRegionRow[] = []
+const EMPTY_EXAMS: GradeExamCandidateRow[] = []
 const EMPTY_COURSEWORKS: CourseworkCandidate[] = []
 
 interface AddDataSourceInlineProps {

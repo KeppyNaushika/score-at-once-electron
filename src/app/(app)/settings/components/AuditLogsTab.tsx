@@ -30,7 +30,7 @@ import type {
   AuditCategory,
   AuditVerb,
 } from "@/electron-src/lib/prisma/auditActions"
-import { userListQuery } from "@/queries/user"
+import { type PublicUser, userListQuery } from "@/queries/user"
 import type { AuditLogEntry } from "@/types/auditLog.types"
 
 const CATEGORY_LABELS: Record<AuditCategory, string> = {
@@ -54,16 +54,8 @@ const VERB_META: Record<
   other: { label: "操作", className: "text-muted-foreground", Icon: History },
 }
 
-interface SimpleUser {
-  id: string
-  name: string
-}
-
-/** フィルタが読むのは id と名前だけ（select の同一性を保つため外に置く） */
-const EMPTY_USERS: SimpleUser[] = []
-const selectSimpleUsers = (
-  users: { id: string; name: string }[]
-): SimpleUser[] => users.map((user) => ({ id: user.id, name: user.name }))
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_USERS: PublicUser[] = []
 
 const initials = (name: string | null): string => {
   if (!name) return "?"
@@ -201,10 +193,7 @@ export function AuditLogsTab() {
   const [searchText, setSearchText] = useState("")
 
   // 操作者フィルタの選択肢（ログイン画面と同じ利用者一覧のキャッシュを共有する）
-  const { data: users = EMPTY_USERS } = useQuery({
-    ...userListQuery(),
-    select: selectSimpleUsers,
-  })
+  const { data: users = EMPTY_USERS } = useQuery(userListQuery())
 
   // 検索テキストはデバウンスしてフィルタへ反映。
   // 更新関数形にすることで、待機中に他のフィルタが変わっても上書きしない

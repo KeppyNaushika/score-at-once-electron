@@ -17,39 +17,86 @@ import { useDataSourceDefaults } from "@/components/grades/03-data-sources/hooks
 import {
   type AddDataSourceSelection,
   COURSEWORK_WHOLE,
-  type CropRegionOption,
-  type ExamOption,
-  type SubtotalGroupOption,
 } from "@/components/grades/03-data-sources/types"
 import type { CourseworkCandidate } from "@/queries/coursework"
-
-const EXAM: ExamOption = {
-  id: "exam-1",
-  examName: "中間試験",
-  examDate: null,
-}
-
-const SUBTOTAL_GROUPS: SubtotalGroupOption[] = [
-  {
-    id: "group-1",
-    name: "観点",
-    subtotals: [{ id: "subtotal-1", name: "知識", order: 0 }],
-  },
-]
-
-/** 問1(10点)は小計へ割り当て済み、問2(20点)は未割り当て */
-const CROP_REGIONS: CropRegionOption[] = [
-  {
-    id: "region-1",
-    label: "問1",
-    points: 10,
-    cropSubtotals: [{ subtotalId: "subtotal-1" }],
-  },
-  { id: "region-2", label: "問2", points: 20, cropSubtotals: [] },
-]
+import type {
+  GradeExamCandidateRow,
+  GradeExamCropRegionRow,
+  GradeExamSubtotalGroupRow,
+} from "@/queries/grade"
 
 /** 行の時刻は判定に使わないので固定値でよい */
 const FIXED_DATE = new Date("2026-01-01T00:00:00.000Z")
+
+const EXAM: GradeExamCandidateRow = {
+  id: "exam-1",
+  examName: "中間試験",
+  examDate: null,
+  description: null,
+  markerCorrectionEnabled: false,
+  createdAt: FIXED_DATE,
+  updatedAt: FIXED_DATE,
+}
+
+const SUBTOTAL_GROUPS: GradeExamSubtotalGroupRow[] = [
+  {
+    id: "group-1",
+    name: "観点",
+    createdAt: FIXED_DATE,
+    updatedAt: FIXED_DATE,
+    subtotals: [
+      {
+        id: "subtotal-1",
+        name: "知識",
+        subtotalGroupId: "group-1",
+        order: 0,
+        createdAt: FIXED_DATE,
+        updatedAt: FIXED_DATE,
+      },
+    ],
+  },
+]
+
+/** 設問領域1件。座標は判定に使わないので 0 でよい */
+function cropRegion(
+  overrides: Pick<
+    GradeExamCropRegionRow,
+    "id" | "label" | "points" | "cropSubtotals"
+  >
+): GradeExamCropRegionRow {
+  return {
+    examPageId: "page-1",
+    type: "QUESTION_ANSWER",
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    orderIndex: 0,
+    createdAt: FIXED_DATE,
+    updatedAt: FIXED_DATE,
+    ...overrides,
+  }
+}
+
+/** 問1(10点)は小計へ割り当て済み、問2(20点)は未割り当て */
+const CROP_REGIONS: GradeExamCropRegionRow[] = [
+  cropRegion({
+    id: "region-1",
+    label: "問1",
+    points: 10,
+    cropSubtotals: [
+      {
+        id: "crop-subtotal-1",
+        cropRegionId: "region-1",
+        subtotalId: "subtotal-1",
+        assignmentType: "QUESTION_ASSIGNMENT",
+        createdAt: FIXED_DATE,
+        updatedAt: FIXED_DATE,
+      },
+    ],
+  }),
+  cropRegion({ id: "region-2", label: "問2", points: 20, cropSubtotals: [] }),
+]
 
 const COURSEWORKS: CourseworkCandidate[] = [
   {

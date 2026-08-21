@@ -1,3 +1,4 @@
+import type { ExamPage } from "@prisma/client"
 import { useCallback, useMemo, useRef, useState } from "react"
 
 import type { ExtendedDisabledState } from "@/components/exams/06-student-answers/student-answer-table/types"
@@ -6,7 +7,6 @@ import type {
   CellRow,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import { manualDisabledReason } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
-import type { ExamPageColumn } from "@/components/exams/06-student-answers/types"
 import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 
 /**
@@ -21,7 +21,7 @@ export function useDisabledState({
   examPages,
 }: {
   students: StudentAnswerDatasetExamStudent[]
-  examPages: ExamPageColumn[]
+  examPages: ExamPage[]
 }) {
   const [disabledState, setDisabledState] = useState<ExtendedDisabledState>({
     rows: [],

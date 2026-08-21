@@ -32,6 +32,11 @@ export const examOwnerQuery = (examId: string, userId: string | undefined) =>
     queryFn: () => window.electronAPI.userExam.isOwner(userId ?? "", examId),
   })
 
+/** 招待先の候補1件（秘密を含まない利用者） */
+export type ExamUserSearchRow = Awaited<
+  ReturnType<typeof window.electronAPI.userExam.searchUsers>
+>[number]
+
 /** 招待先の利用者検索（検索語は要求の一部なのでキーに入る） */
 export const examUserSearchQuery = (examId: string, query: string) =>
   queryOptions({

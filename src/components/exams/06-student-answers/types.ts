@@ -32,15 +32,11 @@ export interface AnswerImageIdentity {
 // 保存済み答案の実体は Prisma payload（`PlacedAnswerImage`＝@/types/prismaExtensions）を
 // そのまま使う。所在を隠す再エクスポートは置かず、各消費者が prismaExtensions から直接 import する。
 
-/**
- * 表の列となる ExamPage の最小契約（同定＝id、表示＝pageNumber）。
- * 供給の `StudentAnswerDatasetExamPage`（ExamPage 実体）がこれを満たすため、
- * 呼び出し側は実体をそのまま渡し、表は id/pageNumber だけを読む。
- */
-export interface ExamPageColumn {
-  id: string
-  pageNumber: number
-}
+// 表の列は Prisma の `ExamPage` 実体をそのまま持つ（各消費者が @prisma/client から
+// 直接 import する）。以前はここに id/pageNumber だけの最小契約を手で宣言していたが、
+// 供給側は常に ExamPage 実体（`StudentAnswerDatasetExamPage`）なので、列が増減しても
+// 気付けない手写しでしかなかった。表が読むのは id と pageNumber だけという事実は
+// 契約ではなく読む側のコードが示す。
 
 /**
  * 未保存答案（アップロード源）。ドロップ→変換した画像で、DB にはまだ無い。

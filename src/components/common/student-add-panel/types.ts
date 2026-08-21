@@ -4,7 +4,13 @@
  * 試験(exam)・成績(grade)で共有する。host（モーダル/インライン）は adapter で
  * データ取得・追加処理を差し込み、exam固有の examDate/status/customOrder などは
  * host 側で内部解決する。
+ *
+ * 生徒候補は境界が返す行（`StudentWithMemberships`）をそのまま持つ。以前は
+ * 「パネルが読む列だけ」の手写しを置いて host ごとに詰め替えていたが、供給側は
+ * 3経路とも同じ Prisma payload なので、写し違いに気付けないだけだった。
  */
+
+import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
 /** 学級候補（追加可能な学級） */
 export interface AddPanelClassroomItem {
@@ -14,20 +20,6 @@ export interface AddPanelClassroomItem {
   studentCount: number
   /** 追加対象の生徒名（出席番号順、tooltip表示用） */
   studentNames: string[]
-}
-
-/** 生徒候補（個別追加用） */
-export interface AddPanelStudentItem {
-  id: string
-  studentNumber: string
-  lastName: string
-  firstName: string
-  lastNameKana: string
-  firstNameKana: string
-  memberships: {
-    attendanceNumber?: number | null
-    classroom: { id: string; name: string }
-  }[]
 }
 
 /** host が差し込むデータ取得・追加処理 */
@@ -41,7 +33,7 @@ export interface StudentAddPanelAdapter {
   /** 追加可能な生徒候補を取得（activeOnly=在籍中の所属が1件以上ある生徒のみ） */
   fetchAvailableStudents: (
     activeOnly: boolean
-  ) => Promise<AddPanelStudentItem[]>
+  ) => Promise<StudentWithMemberships[]>
   /** 選択した学級（指定順）を一括追加 */
   addClassrooms: (
     orderedClassroomIds: string[],

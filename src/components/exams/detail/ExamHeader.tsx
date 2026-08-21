@@ -20,18 +20,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
-interface ExamData {
-  id: string
-  examName: string
-  description: string | null
-  examDate: Date | null
-  examTags?: { tag: { id: string; name: string; color: string | null } }[]
-  createdAt: Date
-}
+import type { ExamForDetail } from "@/queries/exam"
 
 interface ExamHeaderProps {
-  exam: ExamData
+  /** 詳細画面が取る試験1件（`examForDetailQuery` の戻り）をそのまま受け取る */
+  exam: ExamForDetail
   onEdit: () => void
   onDelete: () => void
   onExport?: () => void
@@ -52,25 +45,23 @@ export default function ExamHeader({
             <p className="mt-2 text-muted-foreground">{exam.description}</p>
           )}
           <div className="mt-3 flex items-center gap-4">
-            {exam.examTags &&
-              exam.examTags.length > 0 &&
-              exam.examTags.map((examTag) => (
-                <Badge
-                  key={examTag.tag.id}
-                  variant="outline"
-                  style={
-                    examTag.tag.color
-                      ? {
-                          borderColor: examTag.tag.color,
-                          color: examTag.tag.color,
-                        }
-                      : undefined
-                  }
-                >
-                  <Tag className="mr-1 h-3 w-3" />
-                  {examTag.tag.name}
-                </Badge>
-              ))}
+            {exam.examTags.map((examTag) => (
+              <Badge
+                key={examTag.tag.id}
+                variant="outline"
+                style={
+                  examTag.tag.color
+                    ? {
+                        borderColor: examTag.tag.color,
+                        color: examTag.tag.color,
+                      }
+                    : undefined
+                }
+              >
+                <Tag className="mr-1 h-3 w-3" />
+                {examTag.tag.name}
+              </Badge>
+            ))}
             {exam.examDate && (
               <Badge variant="outline">
                 <Calendar className="mr-1 h-3 w-3" />

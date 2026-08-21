@@ -25,6 +25,7 @@ import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
 
+import type { ArchiveExamData } from "../../../../../src/types/examArchive.types"
 import { EXAM_CURRENT_VERSION } from "../../../../../src/types/examArchive.types"
 import type {
   DatAbcData,
@@ -42,21 +43,14 @@ import {
   DAT_SUBJECT_MAP,
 } from "./types"
 
-/** CropRegionデータ */
-interface CropRegionData {
-  id: string
-  examPageId: string
-  label: string
-  type: string
-  x: number
-  y: number
-  width: number
-  height: number
-  points: number | null
-  orderIndex: number | null
-  createdAt: string
-  updatedAt: string
-}
+/**
+ * 書き出す .score の中の CropRegion 1件。
+ *
+ * ここが作るのは DB の行ではなく**アーカイブの中身**なので、Prisma の型ではなく
+ * アーカイブの型（版ごとに凍結された wire format）から導く。手写しにしておくと、
+ * アーカイブ側に列が増えても .dat 変換だけが古い形を書き続ける。
+ */
+type CropRegionData = ArchiveExamData["cropRegions"][number]
 
 /**
  * .datファイルを.score形式に変換

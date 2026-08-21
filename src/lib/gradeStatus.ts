@@ -5,24 +5,34 @@
  * 詳細ページでフェーズカード+進捗を表示するために使用
  */
 
+import type { Prisma } from "@prisma/client"
+
+import type { Serialized } from "@/types/prismaExtensions"
+
 /**
- * 進捗判定が読む最小の形。
+ * 進捗判定が読む成績1件。
  *
- * 一覧（GradeSummary）と詳細（GradeWithRelations）の双方から渡せるよう、DB の行を
- * 名指しせず「この関数が読むフィールド」だけを構造で要求する。読まないものは
- * `unknown[]` にしてあり、件数以外を触れないことが型で分かる。
+ * 一覧（`grade.getAll` の `gradeSummaryInclude`）と詳細（`grade.getById` の
+ * `gradeWithRelationsInclude`）の双方が、この include を含む形で取っている。
+ * 以前はここに「この関数が読むフィールド」だけを手で宣言していたが、列や
+ * リレーションが増減しても検査に掛からないため、Prisma の payload から導く。
+ * 境界を越えた後の行なので `Serialized`（Decimal → number）を被せる。
  */
-interface GradeProgressSource {
-  id: string
-  gradeStudents: unknown[]
-  gradeItems: {
-    boundaries: unknown[]
-    dataSources: {
-      type: string
-      courseworkItem?: { scores: unknown[] } | null
-    }[]
-  }[]
-}
+type GradeProgressSource = Serialized<
+  Prisma.GradeGetPayload<{
+    include: {
+      gradeStudents: true
+      gradeItems: {
+        include: {
+          boundaries: true
+          dataSources: {
+            include: { courseworkItem: { include: { scores: true } } }
+          }
+        }
+      }
+    }
+  }>
+>
 
 interface GradeStatus {
   step: number

@@ -1,3 +1,4 @@
+import type { ExamPage } from "@prisma/client"
 import { useMemo } from "react"
 
 import type {
@@ -19,7 +20,6 @@ import {
 } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
   AnswerImageIdentity,
-  ExamPageColumn,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
 import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
@@ -27,13 +27,13 @@ import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 interface UseTableDataGenerationParams<TItem extends AnswerImageIdentity> {
   files: TItem[]
   sortedStudents: StudentAnswerDatasetExamStudent[]
-  examPages: ExamPageColumn[]
+  examPages: ExamPage[]
   fileOrder: PlacementStrategy
   disabledState: ExtendedDisabledState
   mode?: "upload" | "view"
   enhancedIsCellDisabled: (
     examStudent: StudentAnswerDatasetExamStudent,
-    examPage: ExamPageColumn
+    examPage: ExamPage
   ) => boolean
   allowOverwrite?: boolean
   // 既存答案（DB答案の占有信号）があるマス。呼び出し側が導出済みのものを受け取り、
@@ -104,11 +104,11 @@ export function useTableDataGeneration<TItem extends AnswerImageIdentity>({
       // page-first は列を外側、student-first は行を外側に回す（序数の比較子を持たない）。
       const validPositions: Array<{
         examStudent: StudentAnswerDatasetExamStudent
-        examPage: ExamPageColumn
+        examPage: ExamPage
       }> = []
       const collectPosition = (
         examStudent: StudentAnswerDatasetExamStudent,
-        examPage: ExamPageColumn
+        examPage: ExamPage
       ) => {
         const isManuallyDisabled =
           manualDisabledReason(disabledState, examStudent, examPage) !==

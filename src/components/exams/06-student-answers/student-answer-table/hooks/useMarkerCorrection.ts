@@ -1,11 +1,9 @@
+import type { ExamPage } from "@prisma/client"
 import { useMutation } from "@tanstack/react-query"
 import { useEffect, useMemo, useRef } from "react"
 
 import type { AnswerTableRow } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type {
-  ExamPageColumn,
-  UnsavedAnswerImage,
-} from "@/components/exams/06-student-answers/types"
+import type { UnsavedAnswerImage } from "@/components/exams/06-student-answers/types"
 import { correctImageMutation } from "@/queries/omr"
 
 interface UseMarkerCorrectionArgs {
@@ -24,7 +22,7 @@ interface UseMarkerCorrectionResult {
 interface CorrectionTask {
   file: UnsavedAnswerImage
   buffer: ArrayBuffer
-  target: ExamPageColumn | undefined
+  target: ExamPage | undefined
 }
 
 /**
@@ -41,7 +39,7 @@ function collectCorrectionTasks({
 }: Omit<UseMarkerCorrectionArgs, "onFilesChange">): CorrectionTask[] {
   // ファイルID → 補正対象ページ（マスが持つ列の ExamPage 実体）のマップを構築。
   // 同定は id、ログの「ページN」表示は pageNumber と、実体をそのまま持ち回って使い分ける。
-  const targetMap = new Map<string, ExamPageColumn>()
+  const targetMap = new Map<string, ExamPage>()
   if (markerCorrectionEnabled) {
     for (const row of tableRows) {
       for (const cell of row.cells) {

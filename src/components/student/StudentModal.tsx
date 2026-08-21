@@ -1,6 +1,6 @@
 "use client"
 
-import type { Prisma } from "@prisma/client"
+import type { Prisma, Student } from "@prisma/client"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -16,23 +16,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
 
-// StudentModalに必要な最小限のフィールド（createdAt/updatedAtは不要）
-interface StudentForEdit {
-  id: string
-  studentNumber: string
-  lastName: string
-  firstName: string
-  lastNameKana: string
-  firstNameKana: string
-  enrollmentYear?: number | null
-}
-
 interface StudentModalProps {
   isOpen: boolean
   onClose: () => void
   onSave: (studentData: Prisma.StudentCreateInput) => void
   onUpdate: (id: string, studentData: Prisma.StudentUpdateInput) => void
-  studentToEdit: StudentForEdit | null
+  /** 編集する生徒の行そのもの（新規作成なら null） */
+  studentToEdit: Student | null
 }
 
 export default function StudentModal({

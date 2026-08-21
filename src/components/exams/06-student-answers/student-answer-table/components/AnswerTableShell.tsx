@@ -9,6 +9,7 @@ import {
   type SensorOptions,
 } from "@dnd-kit/core"
 import { rectSortingStrategy, SortableContext } from "@dnd-kit/sortable"
+import type { ExamPage } from "@prisma/client"
 import { FileImage } from "lucide-react"
 
 import { DraggableAnswerCell } from "@/components/exams/06-student-answers/student-answer-table/components/DraggableAnswerCell"
@@ -36,7 +37,6 @@ import type {
 } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
   AnswerImageIdentity,
-  ExamPageColumn,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
 import { Card, CardContent } from "@/components/ui/card"
@@ -47,7 +47,7 @@ interface AnswerTableShellProps {
 
   // ヘッダー
   maxPages: number
-  examPages: ExamPageColumn[]
+  examPages: ExamPage[]
   enabledFilesCount: number
   trashFiles: Array<{ id: string; name: string; size?: number }>
   onFileRestore: (fileId: string) => void

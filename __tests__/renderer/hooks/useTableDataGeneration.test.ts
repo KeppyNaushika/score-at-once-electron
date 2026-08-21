@@ -8,6 +8,7 @@
  * 行は ExamStudent 実体、マスは ExamPage 実体を同梱して返るので、添字の一致に依存しない。
  */
 
+import type { ExamPage } from "@prisma/client"
 import { renderHook } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
@@ -15,10 +16,7 @@ import { useTableDataGeneration } from "@/components/exams/06-student-answers/st
 import type { ExtendedDisabledState } from "@/components/exams/06-student-answers/student-answer-table/types"
 import type { CellLookup } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import { addCellToLookup } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
-import type {
-  ExamPageColumn,
-  UnsavedAnswerImage,
-} from "@/components/exams/06-student-answers/types"
+import type { UnsavedAnswerImage } from "@/components/exams/06-student-answers/types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 const EXAM_ID = "eeeeeeee-0000-4000-8000-000000000000"
@@ -30,6 +28,19 @@ const EXAM_STUDENT_B = "es-b"
 const STUDENT_B = "22222222-2222-4222-8222-222222222222"
 const PAGE_1 = "aaaaaaaa-0001-4001-8001-000000000001"
 const PAGE_2 = "aaaaaaaa-0002-4002-8002-000000000002"
+
+/** 表の列は Prisma の `ExamPage` 行そのもの。テストでも全列を埋める */
+function examPage(id: string, pageNumber: number): ExamPage {
+  return {
+    id,
+    examId: EXAM_ID,
+    pageNumber,
+    imagePath: null,
+    pageSize: "A4",
+    createdAt: EPOCH,
+    updatedAt: EPOCH,
+  }
+}
 
 function makeExamStudent(
   examStudentId: string,
@@ -92,7 +103,7 @@ function existingAnswerAt(
   addCellToLookup(
     lookup,
     { id: examStudentId, studentId: `student-of-${examStudentId}` },
-    { id: examPageId, pageNumber: 1 }
+    examPage(examPageId, 1)
   )
   return lookup
 }
@@ -106,10 +117,7 @@ const EMPTY_DISABLED_STATE: ExtendedDisabledState = {
 
 const NO_EXISTING_ANSWERS: CellLookup = new Map()
 
-const EXAM_PAGES: ExamPageColumn[] = [
-  { id: PAGE_1, pageNumber: 1 },
-  { id: PAGE_2, pageNumber: 2 },
-]
+const EXAM_PAGES: ExamPage[] = [examPage(PAGE_1, 1), examPage(PAGE_2, 2)]
 
 /** 行・マスを「行の生徒番号 / マスのページ番号 → 置かれた答案id」へ畳んだ検査用の表現 */
 function summarize(

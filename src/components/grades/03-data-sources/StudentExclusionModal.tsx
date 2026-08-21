@@ -25,6 +25,7 @@ import {
   buildGradeExclusionKey,
   type GradeItemExclusionRow,
   gradeItemExclusionsQuery,
+  type GradeStudentRow,
   setGradeItemExclusionMutation,
 } from "@/queries/grade"
 import type { GradeItemWithDataSources } from "@/types/grade.types"
@@ -32,31 +33,12 @@ import type { GradeItemWithDataSources } from "@/types/grade.types"
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_EXCLUSIONS: GradeItemExclusionRow[] = []
 
-/** 成績の名簿1行。除外の書き込み先は人ではなく対象者（id）なので実体で受け取る */
-interface ExclusionStudent {
-  id: string
-  gradeId: string
-  studentId: string
-  customOrder: number | null
-  student: {
-    id: string
-    studentNumber: string
-    lastName: string
-    firstName: string
-    memberships: Array<{
-      classroomId: string
-      attendanceNumber: number | null
-      classroom: { id: string; name: string }
-    }>
-  }
-}
-
 interface StudentExclusionModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   gradeId: string
   gradeItems: GradeItemWithDataSources[]
-  students: ExclusionStudent[]
+  students: GradeStudentRow[]
   classroomIds: string[]
 }
 

@@ -1,3 +1,4 @@
+import type { ExamPage } from "@prisma/client"
 import { useCallback, useMemo } from "react"
 
 import { useTableDataGeneration } from "@/components/exams/06-student-answers/student-answer-table/hooks/useTableDataGeneration"
@@ -12,7 +13,6 @@ import {
 } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
   AnswerImageIdentity,
-  ExamPageColumn,
   PlacementStrategy,
 } from "@/components/exams/06-student-answers/types"
 import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
@@ -20,12 +20,12 @@ import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 interface UseTableDataParams<TItem extends AnswerImageIdentity> {
   files: TItem[]
   students: StudentAnswerDatasetExamStudent[]
-  examPages: ExamPageColumn[]
+  examPages: ExamPage[]
   fileOrder: PlacementStrategy
   disabledState: ExtendedDisabledState
   isCellDisabled: (
     examStudent: StudentAnswerDatasetExamStudent,
-    examPage: ExamPageColumn
+    examPage: ExamPage
   ) => boolean
   mode?: "upload" | "view"
   existingAnswers?: AnswerImageIdentity[]
@@ -65,10 +65,7 @@ export function useTableData<TItem extends AnswerImageIdentity>({
 
   // 手動無効化 + 動的無効化を合わせたセル無効判定
   const enhancedIsCellDisabled = useCallback(
-    (
-      examStudent: StudentAnswerDatasetExamStudent,
-      examPage: ExamPageColumn
-    ) => {
+    (examStudent: StudentAnswerDatasetExamStudent, examPage: ExamPage) => {
       // 元の無効化チェック
       if (isCellDisabled(examStudent, examPage)) return true
 

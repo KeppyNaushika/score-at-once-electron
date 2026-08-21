@@ -5,7 +5,7 @@
  * 分かれる。純粋側は prisma に触れないので renderer からも呼べる。
  */
 
-import type { QuestionScore } from "@prisma/client"
+import type { CropRegion, QuestionScore } from "@prisma/client"
 
 import { selectExamCropRegions } from "@/lib/shared/subtotalAssignments"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
@@ -27,18 +27,6 @@ export type QuestionScoreForSubtotal = Omit<
   // SQLite は enum を持てないので Prisma の型は `string`。判定の集合はここで注入する
   // （境界で `toScoringStatus` を1回通す）
   status: ScoringStatus
-}
-
-/**
- * 小計計算が読む設問領域の最小射影。
- *
- * Prisma の `CropRegion` はそのまま渡せる。成績算出は事前取得したキャッシュから
- * この3列だけを持つので、全列を要求すると呼び出し側に `as` を強いることになる。
- */
-interface CropRegionForSubtotal {
-  id: string
-  type: string
-  points: number | null
 }
 
 /**
@@ -127,7 +115,7 @@ export function computeSubtotalScore(
 function computeStudentTotalScore(
   examStudentId: string,
   allQuestionScores: QuestionScoreForSubtotal[],
-  cropRegions: CropRegionForSubtotal[]
+  cropRegions: CropRegion[]
 ): SubtotalScoreResult {
   const examStudentScores = allQuestionScores.filter(
     (questionScore) => questionScore.examStudentId === examStudentId
@@ -181,7 +169,7 @@ function computeSubtotalScoreForCropRegion(
   examStudentId: string,
   examId: string,
   allQuestionScores: QuestionScoreForSubtotal[],
-  cropRegions: CropRegionForSubtotal[],
+  cropRegions: CropRegion[],
   assignedSubtotals: SubtotalForCropRegionScore[]
 ): SubtotalScoreResult {
   if (assignedSubtotals.length === 0) {
@@ -261,7 +249,7 @@ export async function calculateSubtotalScoreForStudent(
   examId: string,
   subtotalRegionId: string,
   allQuestionScores: QuestionScoreForSubtotal[],
-  cropRegions: CropRegionForSubtotal[]
+  cropRegions: CropRegion[]
 ): Promise<SubtotalScoreResult> {
   try {
     const cropSubtotals = await getCropSubtotalsForScoring(subtotalRegionId)

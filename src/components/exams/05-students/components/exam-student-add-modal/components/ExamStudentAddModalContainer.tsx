@@ -6,7 +6,6 @@ import { useMemo } from "react"
 import { StudentAddPanel } from "@/components/common/student-add-panel/components/StudentAddPanel"
 import type {
   AddPanelClassroomItem,
-  AddPanelStudentItem,
   StudentAddPanelAdapter,
 } from "@/components/common/student-add-panel/types"
 import type { ExamStudentAddModalProps } from "@/components/exams/05-students/components/exam-student-add-modal/types"
@@ -63,26 +62,9 @@ export function ExamStudentAddModalContainer({
           studentNames: classroom.studentNames,
         }))
       },
-      fetchAvailableStudents: async (activeOnly) => {
-        const students = await queryClient.fetchQuery(
-          studentsNotInExamQuery(examId, activeOnly)
-        )
-        return students.map((student): AddPanelStudentItem => ({
-          id: student.id,
-          studentNumber: student.studentNumber,
-          lastName: student.lastName,
-          firstName: student.firstName,
-          lastNameKana: student.lastNameKana,
-          firstNameKana: student.firstNameKana,
-          memberships: student.memberships.map((membership) => ({
-            attendanceNumber: membership.attendanceNumber,
-            classroom: {
-              id: membership.classroom.id,
-              name: membership.classroom.name,
-            },
-          })),
-        }))
-      },
+      fetchAvailableStudents: async (activeOnly) =>
+        // 候補は境界が返す行（Student＋所属＋学級）をそのまま渡す
+        queryClient.fetchQuery(studentsNotInExamQuery(examId, activeOnly)),
       addClassrooms: async (orderedClassroomIds, activeOnly) => {
         // 選択順に逐次追加（サーバが customOrder を末尾連番で付与）
         for (const classroomId of orderedClassroomIds) {

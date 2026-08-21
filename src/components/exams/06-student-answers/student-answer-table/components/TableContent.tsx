@@ -1,3 +1,4 @@
+import type { ExamPage } from "@prisma/client"
 import { Ban, X } from "lucide-react"
 
 import { FilePreviewCell } from "@/components/exams/06-student-answers/student-answer-table/components/FilePreviewCell"
@@ -14,10 +15,7 @@ import type {
   CellRow,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
 import { lookupHasCell } from "@/components/exams/06-student-answers/student-answer-table/utils/tableDataUtils"
-import type {
-  AnswerImageIdentity,
-  ExamPageColumn,
-} from "@/components/exams/06-student-answers/types"
+import type { AnswerImageIdentity } from "@/components/exams/06-student-answers/types"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -48,7 +46,7 @@ import type { StudentAnswerDatasetExamStudent } from "@/types/prismaExtensions"
 export interface FileCellSlotProps {
   fileId: string
   examStudent: StudentAnswerDatasetExamStudent
-  examPage: ExamPageColumn
+  examPage: ExamPage
   isDragDisabled: boolean
   isFileDisabled: boolean
   onTogglePosition: () => void
@@ -61,7 +59,7 @@ export interface FileCellSlotProps {
 /** 空セル・無効セルのラッパーへ渡す情報（中身の描画もラッパー側が行う）。 */
 export interface EmptyCellSlotProps {
   examStudent: StudentAnswerDatasetExamStudent
-  examPage: ExamPageColumn
+  examPage: ExamPage
   isPositionDisabled: boolean
   hasExistingAnswer: boolean
   disabledReason?: DisabledReason
@@ -79,7 +77,7 @@ export interface BulkDisablingHandlers {
 interface TableContentProps {
   // 行（ExamStudent 実体）とマス（ExamPage 実体を同梱）。列ヘッダーだけは examPages で描く。
   tableRows: AnswerTableRow<AnswerImageIdentity>[]
-  examPages: ExamPageColumn[]
+  examPages: ExamPage[]
   disabledState: ExtendedDisabledState
   mode: "upload" | "view"
   previewMode: PreviewMode

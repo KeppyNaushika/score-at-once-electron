@@ -25,26 +25,6 @@ export const { to: toAddDataSourceType } = defineStringUnion(
 /** 資料の評価項目セレクトで「資料全体（全項目合計）」を表すセンチネル値 */
 export const COURSEWORK_WHOLE = "__whole__"
 
-export interface ExamOption {
-  id: string
-  examName: string
-  examDate: Date | null
-}
-
-export interface SubtotalGroupOption {
-  id: string
-  name: string
-  subtotals: { id: string; name: string; order: number }[]
-}
-
-export interface CropRegionOption {
-  id: string
-  label: string
-  points: number | null
-  /** 小計への割り当て。満点の算出に使う */
-  cropSubtotals: { subtotalId: string }[]
-}
-
 /** データソース追加フォームの選択状態。名前と換算満点の既定値を導く入力になる。 */
 export interface AddDataSourceSelection {
   type: AddDataSourceType
