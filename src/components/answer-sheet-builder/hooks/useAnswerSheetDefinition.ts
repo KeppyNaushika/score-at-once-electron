@@ -28,6 +28,7 @@ import type {
   AsbHeaderFieldAttributes,
   AsbImageElementAttributes,
   AsbMajorQuestionAttributes,
+  AsbManuscriptPaperAttributes,
   AsbSubQuestionAttributes,
   AsbSubQuestionUpdate,
   AsbTextElementAttributes,
@@ -40,8 +41,7 @@ import type {
   LabelPresets,
   MajorQuestion,
   ManuscriptCharGuide,
-  ManuscriptPaperAttributes,
-  ManuscriptPaperConfig,
+  ManuscriptPaper,
   NextPlacement,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
@@ -55,6 +55,7 @@ import {
   createDefaultSubQuestion,
   createDefaultTextElement,
   DEFAULT_MANUSCRIPT_PAPER,
+  generateId,
   getCircledNumber,
   parsePresetLabels,
 } from "../constants"
@@ -133,7 +134,7 @@ function mapBranchQuestions(
 /** セル（小問・枝問）が持つ子。どちらも同じものを同じ形で持つ */
 type CellChildren = Pick<
   SubQuestion,
-  "textElements" | "imageElements" | "omrConfig"
+  "textElements" | "imageElements" | "omrConfig" | "manuscriptPaper"
 >
 
 /** 親に指されたセル（小問か枝問）の子だけを書き換える */
@@ -164,7 +165,8 @@ function withCellChildren<TCell extends CellChildren>(
   if (
     children.textElements === cell.textElements &&
     children.imageElements === cell.imageElements &&
-    children.omrConfig === cell.omrConfig
+    children.omrConfig === cell.omrConfig &&
+    children.manuscriptPaper === cell.manuscriptPaper
   ) {
     return cell
   }
@@ -339,7 +341,7 @@ function reducer(
       const { subQuestionId, attributes } = action.payload
       return mapSubQuestions(state, (subQuestion) =>
         subQuestion.id === subQuestionId
-          ? withSubQuestionAttributes(subQuestion, attributes)
+          ? { ...subQuestion, ...attributes }
           : subQuestion
       )
     }
@@ -493,40 +495,54 @@ function reducer(
         omrConfig: undefined,
       }))
 
+    // ---------- 原稿用紙 ----------
+
+    case "UPSERT_MANUSCRIPT_PAPER": {
+      const { parent, manuscriptPaperId, attributes } = action.payload
+      return mapCellChildren(state, parent, (cell) => ({
+        ...cell,
+        manuscriptPaper: {
+          ...attributes,
+          id: manuscriptPaperId,
+          charGuides: cell.manuscriptPaper?.charGuides ?? [],
+        },
+      }))
+    }
+
+    case "DELETE_MANUSCRIPT_PAPER":
+      return mapCellChildren(state, action.payload.parent, (cell) => ({
+        ...cell,
+        manuscriptPaper: undefined,
+      }))
+
     // ---------- 文字位置マーカー ----------
 
     case "ADD_CHAR_GUIDE": {
-      const { subQuestionId, charGuide } = action.payload
-      return mapCharGuides(state, (subQuestion) =>
-        subQuestion.id === subQuestionId
-          ? [...(subQuestion.manuscriptPaper?.charGuides ?? []), charGuide]
-          : null
-      )
+      const { manuscriptPaperId, charGuide } = action.payload
+      return mapCharGuides(state, manuscriptPaperId, (charGuides) => [
+        ...charGuides,
+        charGuide,
+      ])
     }
 
     case "UPDATE_CHAR_GUIDE": {
       const { charGuideId, attributes } = action.payload
-      return mapCharGuides(state, (subQuestion) => {
-        const charGuides = subQuestion.manuscriptPaper?.charGuides
-        if (!charGuides) return null
-        const mapped = mapKeepingIdentity(charGuides, (charGuide) =>
+      return mapAllCharGuides(state, (charGuides) =>
+        mapKeepingIdentity(charGuides, (charGuide) =>
           charGuide.id === charGuideId
             ? { ...charGuide, ...attributes }
             : charGuide
         )
-        return mapped === charGuides ? null : mapped
-      })
+      )
     }
 
     case "DELETE_CHAR_GUIDE":
-      return mapCharGuides(state, (subQuestion) => {
-        const charGuides = subQuestion.manuscriptPaper?.charGuides
-        if (!charGuides) return null
-        const kept = charGuides.filter(
+      return mapAllCharGuides(state, (charGuides) =>
+        filterKeepingIdentity(
+          charGuides,
           (charGuide) => charGuide.id !== action.payload.charGuideId
         )
-        return kept.length === charGuides.length ? null : kept
-      })
+      )
 
     default:
       return state
@@ -549,42 +565,44 @@ function withHeaderFields(
   }
 }
 
-/** 小問へ属性を当てる。文字位置マーカーは属性に含まれない（別テーブル）ので残す */
-function withSubQuestionAttributes(
-  subQuestion: SubQuestion,
-  attributes: AsbSubQuestionAttributes
-): SubQuestion {
-  return {
-    ...subQuestion,
-    ...attributes,
-    manuscriptPaper: attributes.manuscriptPaper && {
-      ...attributes.manuscriptPaper,
-      charGuides: subQuestion.manuscriptPaper?.charGuides,
-    },
-  }
+/** id で指した原稿用紙の文字位置マーカーを書き換える */
+function mapCharGuides(
+  state: AnswerSheetDefinition,
+  manuscriptPaperId: string,
+  mapper: (charGuides: ManuscriptCharGuide[]) => ManuscriptCharGuide[]
+): AnswerSheetDefinition {
+  return mapAllCellChildren(state, (cell) =>
+    cell.manuscriptPaper?.id === manuscriptPaperId
+      ? withCharGuides(cell, mapper(cell.manuscriptPaper.charGuides))
+      : cell
+  )
 }
 
 /**
- * 小問の文字位置マーカーを書き換える。
+ * どのセルにあっても、文字位置マーカーを書き換える。
  *
- * `mapper` が `null` を返した小問は触らない（対象ではなかった、という意味）。
+ * マーカーの id は解答用紙の中で一意なので、どの原稿用紙にぶら下がっているかを
+ * 呼び出し側が知らなくてよい（テキスト要素・画像要素と同じ）。
  */
-function mapCharGuides(
+function mapAllCharGuides(
   state: AnswerSheetDefinition,
-  mapper: (subQuestion: SubQuestion) => ManuscriptCharGuide[] | null
+  mapper: (charGuides: ManuscriptCharGuide[]) => ManuscriptCharGuide[]
 ): AnswerSheetDefinition {
-  return mapSubQuestions(state, (subQuestion) => {
-    const charGuides = mapper(subQuestion)
-    if (charGuides === null) return subQuestion
-    return {
-      ...subQuestion,
-      manuscriptPaper: {
-        ...DEFAULT_MANUSCRIPT_PAPER,
-        ...subQuestion.manuscriptPaper,
-        charGuides,
-      },
-    }
-  })
+  return mapAllCellChildren(state, (cell) =>
+    cell.manuscriptPaper
+      ? withCharGuides(cell, mapper(cell.manuscriptPaper.charGuides))
+      : cell
+  )
+}
+
+/** マーカーが全部同じなら、原稿用紙の参照ごと残す */
+function withCharGuides(
+  cell: CellChildren,
+  charGuides: ManuscriptCharGuide[]
+): CellChildren {
+  const manuscriptPaper = cell.manuscriptPaper
+  if (!manuscriptPaper || charGuides === manuscriptPaper.charGuides) return cell
+  return { ...cell, manuscriptPaper: { ...manuscriptPaper, charGuides } }
 }
 
 // =====================================================================
@@ -627,26 +645,27 @@ function subQuestionAttributes(
     manuscriptPaper,
     ...attributes
   } = subQuestion
-  return manuscriptPaper
-    ? {
-        ...attributes,
-        manuscriptPaper: manuscriptPaperAttributes(manuscriptPaper),
-      }
-    : attributes
+  return attributes
 }
 
 function manuscriptPaperAttributes(
-  manuscriptPaper: ManuscriptPaperConfig
-): ManuscriptPaperAttributes {
-  const { charGuides, ...attributes } = manuscriptPaper
+  manuscriptPaper: ManuscriptPaper
+): AsbManuscriptPaperAttributes {
+  const { id, charGuides, ...attributes } = manuscriptPaper
   return attributes
 }
 
 function branchQuestionAttributes(
   branchQuestion: BranchQuestion
 ): AsbBranchQuestionAttributes {
-  const { id, textElements, imageElements, omrConfig, ...attributes } =
-    branchQuestion
+  const {
+    id,
+    textElements,
+    imageElements,
+    omrConfig,
+    manuscriptPaper,
+    ...attributes
+  } = branchQuestion
   return attributes
 }
 
@@ -732,6 +751,19 @@ function allCells(
     subQuestion,
     ...subQuestion.branchQuestions,
   ])
+}
+
+/** 親の指し方（小問か枝問か）からセルを引く */
+function findCell(
+  definition: AnswerSheetDefinition,
+  parent: AsbCellParent
+): SubQuestion | BranchQuestion | undefined {
+  if ("subQuestionId" in parent) {
+    return allSubQuestions(definition).find(
+      (subQuestion) => subQuestion.id === parent.subQuestionId
+    )
+  }
+  return findBranchQuestion(definition, parent.branchQuestionId)?.question
 }
 
 /** ぶつかった相手から降ろす設定（立てた側と逆の一方だけが入る） */
@@ -1036,24 +1068,14 @@ export function useAnswerSheetDefinition({
           },
         })
       }
-      const current = subQuestionAttributes(found.question)
-      // 原稿用紙だけが入れ子なので1段深く重ね直す。**この更新が原稿用紙の話で
-      // ないときは、いまの姿をそのまま残す。** `&&` で書くと式全体が undefined に
-      // なり、直前の `...current` で入れた設定を上書きして消す（原稿用紙を止めるのは
-      // `enabled: false` であって、キーごと落とす経路は画面に無い）。
-      // 段階6 で原稿用紙をテーブルへ出せば、この重ね直し自体が要らなくなる。
-      const manuscriptPaper = data.manuscriptPaper
-        ? {
-            ...DEFAULT_MANUSCRIPT_PAPER,
-            ...current.manuscriptPaper,
-            ...data.manuscriptPaper,
-          }
-        : current.manuscriptPaper
+      // 属性はすべて平ら（入れ子は無い）ので1回の重ね合わせで正しく混ざる。
+      // 原稿用紙が小問の列だった頃はここだけ1段深く混ぜ直しており、それが
+      // 「ラベルを打つと原稿用紙が消える」の正体だった
       edit({
         type: "UPDATE_SUB_QUESTION",
         payload: {
           subQuestionId,
-          attributes: { ...current, ...data, manuscriptPaper },
+          attributes: { ...subQuestionAttributes(found.question), ...data },
         },
       })
     },
@@ -1223,21 +1245,57 @@ export function useAnswerSheetDefinition({
     [edit]
   )
 
+  // ---------- 原稿用紙 ----------
+
+  /**
+   * セルの原稿用紙を書く（無ければ作る）。
+   *
+   * 画面は「列数だけ」「ガイドの位置だけ」を触るので、足りない属性はいまの姿から埋める。
+   * まだ原稿用紙が無いセルでは、**ここで新しい実体を作って id を載せる**（reducer の中で
+   * 作ると、その id を知れず対応する書き込みを組み立てられない）。
+   */
+  const upsertManuscriptPaper = useCallback(
+    (parent: AsbCellParent, data: Partial<AsbManuscriptPaperAttributes>) => {
+      const cell = findCell(definitionRef.current, parent)
+      if (!cell) return
+      const current = cell.manuscriptPaper
+      edit({
+        type: "UPSERT_MANUSCRIPT_PAPER",
+        payload: {
+          parent,
+          manuscriptPaperId: current?.id ?? generateId(),
+          attributes: {
+            ...DEFAULT_MANUSCRIPT_PAPER,
+            ...(current && manuscriptPaperAttributes(current)),
+            ...data,
+          },
+        },
+      })
+    },
+    [edit]
+  )
+
+  const deleteManuscriptPaper = useCallback(
+    (parent: AsbCellParent) =>
+      edit({ type: "DELETE_MANUSCRIPT_PAPER", payload: { parent } }),
+    [edit]
+  )
+
   // ---------- 文字位置マーカー ----------
 
   const addCharGuide = useCallback(
-    (subQuestionId: string, charGuide: ManuscriptCharGuide) =>
+    (manuscriptPaperId: string, charGuide: ManuscriptCharGuide) =>
       edit({
         type: "ADD_CHAR_GUIDE",
-        payload: { subQuestionId, charGuide },
+        payload: { manuscriptPaperId, charGuide },
       }),
     [edit]
   )
 
   const updateCharGuide = useCallback(
     (charGuideId: string, data: Partial<AsbCharGuideAttributes>) => {
-      const charGuide = allSubQuestions(definitionRef.current)
-        .flatMap((subQuestion) => subQuestion.manuscriptPaper?.charGuides ?? [])
+      const charGuide = allCells(definitionRef.current)
+        .flatMap((cell) => cell.manuscriptPaper?.charGuides ?? [])
         .find((candidate) => candidate.id === charGuideId)
       if (!charGuide) return
       edit({
@@ -1285,6 +1343,8 @@ export function useAnswerSheetDefinition({
       deleteImageElement,
       upsertOmrConfig,
       deleteOmrConfig,
+      upsertManuscriptPaper,
+      deleteManuscriptPaper,
       addCharGuide,
       updateCharGuide,
       deleteCharGuide,
@@ -1316,6 +1376,8 @@ export function useAnswerSheetDefinition({
       deleteImageElement,
       upsertOmrConfig,
       deleteOmrConfig,
+      upsertManuscriptPaper,
+      deleteManuscriptPaper,
       addCharGuide,
       updateCharGuide,
       deleteCharGuide,

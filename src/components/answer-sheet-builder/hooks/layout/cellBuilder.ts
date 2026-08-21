@@ -6,6 +6,7 @@
 
 import type {
   BorderConfig,
+  BranchQuestion,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
 import type {
@@ -155,17 +156,22 @@ export function createCell(
   return cell
 }
 
-/** 原稿用紙グリッドの座標を計算する */
+/**
+ * 原稿用紙グリッドの座標を計算する。
+ *
+ * 受けるのは小問でも枝問でもよい（原稿用紙はセルの持ち物で、どちらにも付く）。
+ */
 export function computeManuscriptGrid(
-  sub: SubQuestion,
+  cell: SubQuestion | BranchQuestion,
   cellX: number,
   cellY: number,
   cellWidth: number,
   cellHeight: number,
   borderConfig?: BorderConfig
 ): ManuscriptGrid | undefined {
-  if (!sub.manuscriptPaper?.enabled) return undefined
-  const { columns, rows } = sub.manuscriptPaper
+  const manuscriptPaper = cell.manuscriptPaper
+  if (!manuscriptPaper?.enabled) return undefined
+  const { columns, rows } = manuscriptPaper
   // 0以下はゼロ除算・剰余0でNaNになるため描画しない（防御）
   if (columns < 1 || rows < 1) return undefined
   const cellSizeMm = cellHeight / rows
@@ -192,17 +198,17 @@ export function computeManuscriptGrid(
     lineDividerWidth:
       borderConfig?.manuscriptLineDividerWidth ??
       DEFAULT_MANUSCRIPT_DIVIDER_WIDTH,
-    // 文字数ガイドは小問ごとの設定。
-    charGuides: sub.manuscriptPaper.charGuides ?? [],
+    // 文字位置マーカーは原稿用紙ごとの設定。
+    charGuides: manuscriptPaper.charGuides,
     // guideFontSize/guidePadding はマス比（1マス=1）で保存。cellSizeMm 倍して絶対mmへ。
     guideFontSize:
-      (sub.manuscriptPaper.guideFontSize ??
-        DEFAULT_MANUSCRIPT_GUIDE_FONT_RATIO) * cellSizeMm,
+      (manuscriptPaper.guideFontSize ?? DEFAULT_MANUSCRIPT_GUIDE_FONT_RATIO) *
+      cellSizeMm,
     guidePosition:
-      sub.manuscriptPaper.guidePosition ?? DEFAULT_MANUSCRIPT_GUIDE_POSITION,
+      manuscriptPaper.guidePosition ?? DEFAULT_MANUSCRIPT_GUIDE_POSITION,
     guidePadding:
-      (sub.manuscriptPaper.guidePadding ??
-        DEFAULT_MANUSCRIPT_GUIDE_PADDING_RATIO) * cellSizeMm,
+      (manuscriptPaper.guidePadding ?? DEFAULT_MANUSCRIPT_GUIDE_PADDING_RATIO) *
+      cellSizeMm,
   }
 }
 

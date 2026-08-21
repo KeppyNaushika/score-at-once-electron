@@ -17,6 +17,8 @@ import type {
   BranchQuestion,
   HeaderFieldType,
   LinkedRegionType,
+  ManuscriptGuidePosition,
+  ManuscriptPaper,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
 
@@ -66,11 +68,22 @@ function templateToDefinition(
     subQuestions: (
       majorQuestion.subQuestions as Array<Record<string, unknown>>
     ).map((subQuestion): SubQuestion => {
-      const manuscriptPaper = subQuestion.manuscriptEnabled
+      const manuscriptPaperRecord = subQuestion.manuscriptPaper as
+        Record<string, unknown> | undefined
+      const manuscriptPaper: ManuscriptPaper | undefined = manuscriptPaperRecord
         ? {
-            enabled: true as const,
-            columns: subQuestion.manuscriptColumns as number,
-            rows: subQuestion.manuscriptRows as number,
+            id: manuscriptPaperRecord.id as string,
+            enabled: manuscriptPaperRecord.enabled as boolean,
+            columns: manuscriptPaperRecord.columns as number,
+            rows: manuscriptPaperRecord.rows as number,
+            guideFontSize:
+              (manuscriptPaperRecord.guideFontSize as number | null) ?? null,
+            guidePosition:
+              (manuscriptPaperRecord.guidePosition as ManuscriptGuidePosition | null) ??
+              null,
+            guidePadding:
+              (manuscriptPaperRecord.guidePadding as number | null) ?? null,
+            charGuides: [],
           }
         : undefined
       return {

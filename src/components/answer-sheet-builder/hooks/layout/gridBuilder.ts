@@ -198,7 +198,19 @@ export function buildSubGridLayout(subQuestions: SubQuestion[]): SubGridCell[] {
 export function buildBranchGridLayout(
   branchQuestions: BranchQuestion[]
 ): BranchGridCell[] {
-  return buildGridLayout(branchQuestions)
+  // 原稿用紙有効時は heightMultiplier × rows に拡張（小問と同じ）
+  return buildGridLayout(
+    branchQuestions.map((branchQuestion) =>
+      branchQuestion.manuscriptPaper?.enabled
+        ? {
+            ...branchQuestion,
+            heightMultiplier:
+              branchQuestion.heightMultiplier *
+              branchQuestion.manuscriptPaper.rows,
+          }
+        : branchQuestion
+    )
+  )
 }
 
 /** グリッドレイアウトが横配置モードかどうか */

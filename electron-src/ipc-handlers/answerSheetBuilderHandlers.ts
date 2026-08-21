@@ -21,6 +21,7 @@ import type {
   AsbHeaderFieldAttributes,
   AsbImageElementAttributes,
   AsbMajorQuestionAttributes,
+  AsbManuscriptPaperAttributes,
   AsbSubQuestionAttributes,
   AsbTextElementAttributes,
   BranchQuestion,
@@ -31,6 +32,7 @@ import type {
   LabelCategory,
   MajorQuestion,
   ManuscriptCharGuide,
+  ManuscriptPaper,
   SubQuestion,
 } from "../../src/types/answerSheetDefinition.types"
 import type { OMRCellConfig } from "../../src/types/omr.types"
@@ -81,6 +83,10 @@ import {
   reorderAsbMajorQuestions,
   updateAsbMajorQuestion,
 } from "../lib/prisma/asbMajorQuestion"
+import {
+  deleteAsbManuscriptPaper,
+  upsertAsbManuscriptPaper,
+} from "../lib/prisma/asbManuscriptPaper"
 import {
   deleteAsbOmrConfig,
   upsertAsbOmrConfig,
@@ -328,12 +334,33 @@ export const answerSheetBuilderHandlers = {
     await deleteAsbImageElement(definitionId, imageElementId)
   },
 
+  "asb:upsert-manuscript-paper": async (
+    definitionId: string,
+    parent: AsbCellParent,
+    manuscriptPaperId: string,
+    attributes: AsbManuscriptPaperAttributes
+  ) => {
+    await upsertAsbManuscriptPaper(
+      definitionId,
+      parent,
+      manuscriptPaperId,
+      attributes
+    )
+  },
+
+  "asb:delete-manuscript-paper": async (
+    definitionId: string,
+    parent: AsbCellParent
+  ) => {
+    await deleteAsbManuscriptPaper(definitionId, parent)
+  },
+
   "asb:create-char-guide": async (
     definitionId: string,
-    subQuestionId: string,
+    manuscriptPaperId: string,
     charGuide: ManuscriptCharGuide
   ) => {
-    await createAsbCharGuide(definitionId, subQuestionId, charGuide)
+    await createAsbCharGuide(definitionId, manuscriptPaperId, charGuide)
   },
 
   "asb:update-char-guide": async (
@@ -549,6 +576,21 @@ export const answerSheetBuilderHandlers = {
       }
     }
 
+    // 原稿用紙と文字位置マーカーは別テーブルの行なので、ここで id を振り直さないと
+    // 元の id を引き継いだまま作成しようとして主キーが衝突する。画像ディレクトリの
+    // 作成とコピーは先に走るため、トランザクションが巻き戻っても孤児のファイルが
+    // 残る（docs/branch-review-findings.md #8）
+    const copyManuscriptPaper = (
+      manuscriptPaper: ManuscriptPaper
+    ): ManuscriptPaper => ({
+      ...manuscriptPaper,
+      id: crypto.randomUUID(),
+      charGuides: manuscriptPaper.charGuides.map((charGuide) => ({
+        ...charGuide,
+        id: crypto.randomUUID(),
+      })),
+    })
+
     const regeneratedMajorQuestions = definition.majorQuestions.map(
       (majorQuestion) => ({
         ...majorQuestion,
@@ -556,18 +598,9 @@ export const answerSheetBuilderHandlers = {
         subQuestions: majorQuestion.subQuestions.map((subQuestion) => ({
           ...subQuestion,
           id: crypto.randomUUID(),
-          // 文字位置マーカーは別テーブルの行なので、ここで id を振り直さないと
-          // 元の AsbCharGuide.id を引き継いだまま作成しようとして主キーが衝突する。
-          // 画像ディレクトリの作成とコピーは先に走るため、トランザクションが
-          // 巻き戻っても孤児のファイルが残る（docs/branch-review-findings.md #8）
-          manuscriptPaper: subQuestion.manuscriptPaper
-            ? {
-                ...subQuestion.manuscriptPaper,
-                charGuides: subQuestion.manuscriptPaper.charGuides?.map(
-                  (charGuide) => ({ ...charGuide, id: crypto.randomUUID() })
-                ),
-              }
-            : subQuestion.manuscriptPaper,
+          manuscriptPaper:
+            subQuestion.manuscriptPaper &&
+            copyManuscriptPaper(subQuestion.manuscriptPaper),
           textElements: subQuestion.textElements.map((textElement) => ({
             ...textElement,
             id: crypto.randomUUID(),
@@ -577,6 +610,9 @@ export const answerSheetBuilderHandlers = {
             (branchQuestion) => ({
               ...branchQuestion,
               id: crypto.randomUUID(),
+              manuscriptPaper:
+                branchQuestion.manuscriptPaper &&
+                copyManuscriptPaper(branchQuestion.manuscriptPaper),
               textElements: branchQuestion.textElements.map((textElement) => ({
                 ...textElement,
                 id: crypto.randomUUID(),

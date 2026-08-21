@@ -1,7 +1,9 @@
 /**
  * 文字位置マーカー（AsbCharGuide）の書き込み。
  *
- * 原稿用紙の「N文字目」に紐づく数字ガイドと区切り罫線。小問だけが持つ。
+ * 原稿用紙の「N文字目」に紐づく数字ガイドと区切り罫線。**親は原稿用紙**
+ * （`AsbOmrChoiceOption` → `AsbOmrConfig` と同じ）。小問に直接ぶら下げていた頃は、
+ * 枝問の原稿用紙にマーカーを置く先が無かった。
  */
 
 import type { AsbCharGuide, Prisma } from "@prisma/client"
@@ -13,6 +15,11 @@ import type {
 import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
 import { updateRowIfChanged, writeRow } from "./rowDiff"
 import { writeRowOrders } from "./rowOrder"
+
+/** 文字位置マーカーのうち、既に DB にある行 */
+export interface CurrentAsbCharGuideRows {
+  charGuides: ReadonlyMap<string, AsbCharGuide>
+}
 
 function asbCharGuideColumns(charGuide: AsbCharGuideAttributes) {
   return {
@@ -26,21 +33,21 @@ function asbCharGuideColumns(charGuide: AsbCharGuideAttributes) {
 }
 
 function asbCharGuideRow(
-  subQuestionId: string,
+  manuscriptPaperId: string,
   charGuide: AsbCharGuideAttributes,
   order: number
 ) {
-  return { subQuestionId, order, ...asbCharGuideColumns(charGuide) }
+  return { manuscriptPaperId, order, ...asbCharGuideColumns(charGuide) }
 }
 
 export async function writeAsbCharGuide(
   tx: Prisma.TransactionClient,
-  subQuestionId: string,
+  manuscriptPaperId: string,
   charGuide: ManuscriptCharGuide,
   order: number,
   existing: AsbCharGuide | undefined
 ): Promise<boolean> {
-  const data = asbCharGuideRow(subQuestionId, charGuide, order)
+  const data = asbCharGuideRow(manuscriptPaperId, charGuide, order)
   return writeRow(
     existing,
     data,
@@ -54,19 +61,22 @@ export async function deleteRemovedAsbCharGuides(
   definitionId: string,
   survivingIds: string[]
 ): Promise<boolean> {
+  const inSubQuestions = { subQuestion: { majorQuestion: { definitionId } } }
   const { count } = await tx.asbCharGuide.deleteMany({
     where: {
-      subQuestion: { majorQuestion: { definitionId } },
+      manuscriptPaper: {
+        OR: [inSubQuestions, { branchQuestion: inSubQuestions }],
+      },
       id: { notIn: survivingIds },
     },
   })
   return count > 0
 }
 
-/** 小問が持つ文字位置マーカーを、木の並びのとおりに書く */
+/** 原稿用紙が持つ文字位置マーカーを、木の並びのとおりに書く */
 export async function writeAsbCharGuides(
   tx: Prisma.TransactionClient,
-  subQuestionId: string,
+  manuscriptPaperId: string,
   charGuides: ManuscriptCharGuide[],
   current?: ReadonlyMap<string, AsbCharGuide>
 ): Promise<boolean> {
@@ -74,7 +84,7 @@ export async function writeAsbCharGuides(
   for (const [order, charGuide] of charGuides.entries()) {
     const wrote = await writeAsbCharGuide(
       tx,
-      subQuestionId,
+      manuscriptPaperId,
       charGuide,
       order,
       current?.get(charGuide.id)
@@ -91,12 +101,12 @@ export async function writeAsbCharGuides(
 /** 末尾に1件足す */
 export async function createAsbCharGuide(
   definitionId: string,
-  subQuestionId: string,
+  manuscriptPaperId: string,
   charGuide: ManuscriptCharGuide
 ): Promise<void> {
   await writeAsbDefinitionContent(definitionId, async (tx) => {
-    const order = await tx.asbCharGuide.count({ where: { subQuestionId } })
-    const data = asbCharGuideRow(subQuestionId, charGuide, order)
+    const order = await tx.asbCharGuide.count({ where: { manuscriptPaperId } })
+    const data = asbCharGuideRow(manuscriptPaperId, charGuide, order)
     await tx.asbCharGuide.create({ data: { id: charGuide.id, ...data } })
     return true
   })
@@ -119,7 +129,7 @@ export async function updateAsbCharGuide(
   })
 }
 
-/** 1件消し、同じ小問に残ったマーカーの並びを詰める */
+/** 1件消し、同じ原稿用紙に残ったマーカーの並びを詰める */
 export async function deleteAsbCharGuide(
   definitionId: string,
   charGuideId: string
@@ -127,7 +137,7 @@ export async function deleteAsbCharGuide(
   await writeAsbDefinitionContent(definitionId, async (tx) => {
     const removed = await tx.asbCharGuide.delete({ where: { id: charGuideId } })
     const remaining = await tx.asbCharGuide.findMany({
-      where: { subQuestionId: removed.subQuestionId },
+      where: { manuscriptPaperId: removed.manuscriptPaperId },
       orderBy: { order: "asc" },
     })
     await writeRowOrders(remaining, (id, order) =>

@@ -1,14 +1,14 @@
 /**
  * 小問（AsbSubQuestion）の書き込み。
  *
- * **この実体が持つ列を知っているのはここだけ。** 原稿用紙の設定は小問の列として平らに
- * 並ぶ（文字位置マーカーだけは別テーブル）。
+ * **この実体が持つ列を知っているのはここだけ。** 原稿用紙は別テーブル（`AsbManuscriptPaper`）
+ * になり、セルの中身として枝問と同じ経路を通る。
  *
  * `tx` を先に取るものは木を書く側、`definitionId` を先に取るものが IPC の口
  * （`asbBranchQuestion.ts` と同じ）。
  */
 
-import type { AsbCharGuide, AsbSubQuestion, Prisma } from "@prisma/client"
+import type { AsbSubQuestion, Prisma } from "@prisma/client"
 
 import type {
   AsbSubQuestionAttributes,
@@ -17,7 +17,6 @@ import type {
 import type { CurrentAsbBranchQuestionRows } from "./asbBranchQuestion"
 import { writeAsbBranchQuestionTree } from "./asbBranchQuestion"
 import { writeAsbCellContents } from "./asbCellContents"
-import { writeAsbCharGuides } from "./asbCharGuide"
 import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
 import { updateRowIfChanged, writeRow } from "./rowDiff"
 import { sortRowsByIds, writeRowOrders } from "./rowOrder"
@@ -25,7 +24,6 @@ import { sortRowsByIds, writeRowOrders } from "./rowOrder"
 /** 小問とその子のうち、既に DB にある行 */
 export interface CurrentAsbSubQuestionRows extends CurrentAsbBranchQuestionRows {
   subQuestions: ReadonlyMap<string, AsbSubQuestion>
-  charGuides: ReadonlyMap<string, AsbCharGuide>
 }
 
 function asbSubQuestionColumns(subQuestion: AsbSubQuestionAttributes) {
@@ -37,13 +35,6 @@ function asbSubQuestionColumns(subQuestion: AsbSubQuestionAttributes) {
     layoutWidth: subQuestion.layoutWidth ?? null,
     nextPlacement: subQuestion.nextPlacement ?? null,
     goUp: subQuestion.goUp ?? null,
-    manuscriptEnabled: subQuestion.manuscriptPaper?.enabled ?? false,
-    manuscriptColumns: subQuestion.manuscriptPaper?.columns ?? 20,
-    manuscriptRows: subQuestion.manuscriptPaper?.rows ?? 10,
-    manuscriptCellSizeMm: 0, // 廃止: cellHeight / rows から逆算
-    manuscriptGuideFontSize: subQuestion.manuscriptPaper?.guideFontSize ?? null,
-    manuscriptGuidePosition: subQuestion.manuscriptPaper?.guidePosition ?? null,
-    manuscriptGuidePadding: subQuestion.manuscriptPaper?.guidePadding ?? null,
     borderStyleTop: subQuestion.borderStyles?.top ?? null,
     borderStyleBottom: subQuestion.borderStyles?.bottom ?? null,
     borderStyleLeft: subQuestion.borderStyles?.left ?? null,
@@ -64,7 +55,7 @@ function asbSubQuestionRow(
 }
 
 /**
- * 小問と、その下（文字位置マーカー・セルの中身・枝問）をまとめて書く。
+ * 小問と、その下（セルの中身・枝問）をまとめて書く。
  *
  * @returns 1行でも書いたら `true`
  */
@@ -86,14 +77,6 @@ export async function writeAsbSubQuestionTree(
     if (wrote) changed = true
   }
 
-  mark(
-    await writeAsbCharGuides(
-      tx,
-      subQuestion.id,
-      subQuestion.manuscriptPaper?.charGuides ?? [],
-      current?.charGuides
-    )
-  )
   mark(
     await writeAsbCellContents(
       tx,

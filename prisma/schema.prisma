@@ -1520,32 +1520,21 @@ model AsbMajorQuestion {
 
 /// 小問
 model AsbSubQuestion {
-  id                      String   @id @default(uuid())
-  majorQuestionId         String
-  label                   String
-  order                   Int      @default(0)
-  heightMultiplier        Float    @default(1)
-  points                  Float    @default(1)
-  usesBranchPoints        Boolean?
-  layoutWidth             String?
-  nextPlacement           String?
-  goUp                    Int?
-  // ManuscriptPaper (1:1 inline)
-  manuscriptEnabled       Boolean  @default(false)
-  manuscriptColumns       Int      @default(20)
-  manuscriptRows          Int      @default(10)
-  manuscriptCellSizeMm    Float    @default(8)
-  // 文字位置マーカー（数字ガイド＋区切り罫線の統合）は「id を持つオブジェクトの配列」のため
-  // JSON 直列化をやめ AsbCharGuide テーブルへ分離（issue #913）。
-  // 以下 guide 設定は 1:1 のスカラー値（配列でなく JSON でもない）ためインライン継続。
-  manuscriptGuideFontSize Float?
-  manuscriptGuidePosition String?
-  manuscriptGuidePadding  Float?
+  id                String   @id @default(uuid())
+  majorQuestionId   String
+  label             String
+  order             Int      @default(0)
+  heightMultiplier  Float    @default(1)
+  points            Float    @default(1)
+  usesBranchPoints  Boolean?
+  layoutWidth       String?
+  nextPlacement     String?
+  goUp              Int?
   // BorderStyles (per-side)
-  borderStyleTop          String?
-  borderStyleBottom       String?
-  borderStyleLeft         String?
-  borderStyleRight        String?
+  borderStyleTop    String?
+  borderStyleBottom String?
+  borderStyleLeft   String?
+  borderStyleRight  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1555,7 +1544,7 @@ model AsbSubQuestion {
   textElements    AsbTextElement[]
   imageElements   AsbImageElement[]
   omrConfig       AsbOmrConfig?
-  charGuides      AsbCharGuide[]
+  manuscriptPaper AsbManuscriptPaper?
 
   @@index([majorQuestionId])
 }
@@ -1579,10 +1568,11 @@ model AsbBranchQuestion {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  subQuestion   AsbSubQuestion    @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
-  textElements  AsbTextElement[]
-  imageElements AsbImageElement[]
-  omrConfig     AsbOmrConfig?
+  subQuestion     AsbSubQuestion      @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
+  textElements    AsbTextElement[]
+  imageElements   AsbImageElement[]
+  omrConfig       AsbOmrConfig?
+  manuscriptPaper AsbManuscriptPaper?
 
   @@index([subQuestionId])
 }
@@ -1669,12 +1659,48 @@ model AsbOmrChoiceOption {
   @@index([omrConfigId])
 }
 
+/// 原稿用紙。小問または枝問に 1:1 で付く（AsbOmrConfig と同じ形）。
+///
+/// 設定は元々 AsbSubQuestion の列として平らに並んでいた。画面では `manuscriptPaper` と
+/// いう入れ子に束ね直していたため、合流の規則が平らな列と入れ子とで2種類になり、原稿用紙と
+/// 無関係な更新が設定を消す事故を生んだ（docs/asb-ipc-split-plan.md §8.5）。列のままでは
+/// 枝問へ生やすときに同じ列を複製することになるので、テーブルへ出して nullable FK で受ける。
+///
+/// `enabled` を列として残すのは、設計中にオン・オフを往復するのが自然な操作だから。
+/// 「行なし＝一度も使っていない」「enabled=false＝いまはオフ、設定は保管」と読む。
+model AsbManuscriptPaper {
+  id               String  @id @default(uuid())
+  subQuestionId    String? @unique
+  branchQuestionId String? @unique
+  enabled          Boolean @default(true)
+  columns          Int     @default(20)
+  rows             Int     @default(10)
+  /// ガイド文字サイズ（1マス＝1とした相対値。マス比）
+  guideFontSize    Float?
+  /// ガイド表示位置（マスの隅）
+  guidePosition    String?
+  /// ガイドの隅からの余白（1マス＝1とした相対値。マス比）
+  guidePadding     Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subQuestion    AsbSubQuestion?    @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
+  branchQuestion AsbBranchQuestion? @relation(fields: [branchQuestionId], references: [id], onDelete: Cascade)
+  charGuides     AsbCharGuide[]
+
+  @@index([subQuestionId])
+  @@index([branchQuestionId])
+}
+
 /// 原稿用紙の文字位置マーカー（数字ガイド＋区切り罫線の統合）。
 /// AsbSubQuestion.manuscriptCharGuides の JSON 直列化を廃し独立テーブル化（issue #913）。
+/// 親は原稿用紙（AsbOmrChoiceOption → AsbOmrConfig と同じ）。小問に直接ぶら下げていた
+/// 頃は、枝問の原稿用紙にマーカーを置く先が無かった。
 /// order は表示順。atChar 重複は UI で禁止するが DB 制約は課さない（id で追従）。
 model AsbCharGuide {
   id                String   @id @default(uuid())
-  subQuestionId     String
+  manuscriptPaperId String
   order             Int      @default(0)
   atChar            Int
   label             String
@@ -1685,7 +1711,7 @@ model AsbCharGuide {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  subQuestion AsbSubQuestion @relation(fields: [subQuestionId], references: [id], onDelete: Cascade)
+  manuscriptPaper AsbManuscriptPaper @relation(fields: [manuscriptPaperId], references: [id], onDelete: Cascade)
 
-  @@index([subQuestionId])
+  @@index([manuscriptPaperId])
 }

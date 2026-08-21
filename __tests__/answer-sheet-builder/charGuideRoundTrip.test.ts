@@ -1,9 +1,9 @@
 /**
- * AsbCharGuide 変換レイヤーの往復テスト
+ * 原稿用紙（AsbManuscriptPaper）と文字位置マーカー（AsbCharGuide）の往復テスト
  *
- * manuscriptCharGuides（旧: JSON列）を AsbCharGuide テーブルへ分離した（issue #913）ことに伴い、
- * definitionToDb（保存）→ dbToDefinition（読込）で文字位置マーカーが
- * id・順序・boundary・比率つきで正しく往復することを検証する。
+ * 原稿用紙を小問の列からテーブルへ出し、文字位置マーカーの親を原稿用紙へ付け替えた
+ * （docs/asb-ipc-split-plan.md §8.5）。保存 → 読込で、値・id・順序が保たれること、
+ * **枝問にも原稿用紙が付くこと**、**オフにしても設定とマーカーが消えないこと**を見る。
  *
  * replaceAsbDefinition / getAsbDefinition は ./client シングルトン（DB）を使うため、
  * archiveRoundTrip と同様に client をテスト用クライアントへモックする。
@@ -52,13 +52,34 @@ vi.mock("../../electron-src/lib/prisma/auditActor", () => ({
 import { answerSheetBuilderHandlers } from "../../electron-src/ipc-handlers/answerSheetBuilderHandlers"
 import { getAsbDefinition } from "../../electron-src/lib/prisma/asbDefinition"
 import { replaceAsbDefinition } from "../../electron-src/lib/prisma/asbDefinitionReplace"
+import { upsertAsbManuscriptPaper } from "../../electron-src/lib/prisma/asbManuscriptPaper"
 import { createDefaultDefinition } from "../../src/components/answer-sheet-builder/constants"
-import type { ManuscriptCharGuide } from "../../src/types/answerSheetDefinition.types"
+import type {
+  ManuscriptCharGuide,
+  ManuscriptPaper,
+} from "../../src/types/answerSheetDefinition.types"
 import {
   cleanupTestDatabase,
   createTestUser,
   disconnectTestPrisma,
 } from "../helpers/testPrismaClient"
+
+/** 既定の原稿用紙（属性ひとそろい。テストは変えたい列だけ上書きする） */
+function manuscriptPaper(
+  overrides: Partial<ManuscriptPaper> = {}
+): ManuscriptPaper {
+  return {
+    id: crypto.randomUUID(),
+    enabled: true,
+    columns: 20,
+    rows: 10,
+    guideFontSize: null,
+    guidePosition: null,
+    guidePadding: null,
+    charGuides: [],
+    ...overrides,
+  }
+}
 
 let userId: string
 
@@ -97,12 +118,7 @@ describe("AsbCharGuide 変換往復", () => {
       // boundary 等が未設定の要素（optional は undefined のまま往復する）
       { id: "cg-c", atChar: 30, label: "30" },
     ]
-    subQuestion.manuscriptPaper = {
-      enabled: true,
-      columns: 20,
-      rows: 10,
-      charGuides,
-    }
+    subQuestion.manuscriptPaper = manuscriptPaper({ charGuides })
 
     await replaceAsbDefinition(definition, userId)
     const loaded = await getAsbDefinition(definition.id)
@@ -113,18 +129,99 @@ describe("AsbCharGuide 変換往復", () => {
     expect(loadedGuides).toEqual(charGuides)
   })
 
-  it("charGuides が無い小問は manuscriptPaper.charGuides が undefined になる", async () => {
+  it("charGuides が無い小問は charGuides が空配列になる", async () => {
     const definition = createDefaultDefinition()
     const subQuestion = definition.majorQuestions[0].subQuestions[0]
-    subQuestion.manuscriptPaper = { enabled: true, columns: 20, rows: 10 }
+    subQuestion.manuscriptPaper = manuscriptPaper()
 
     await replaceAsbDefinition(definition, userId)
     const loaded = await getAsbDefinition(definition.id)
 
-    const manuscriptPaper =
+    const loadedPaper =
       loaded?.majorQuestions[0].subQuestions[0].manuscriptPaper
-    expect(manuscriptPaper?.enabled).toBe(true)
-    expect(manuscriptPaper?.charGuides).toBeUndefined()
+    expect(loadedPaper?.enabled).toBe(true)
+    expect(loadedPaper?.charGuides).toEqual([])
+  })
+
+  it("枝問にも原稿用紙と文字位置マーカーが付く", async () => {
+    // 原稿用紙が小問の列だった頃は、枝問に原稿用紙を置く先が無かった。
+    // それどころか原稿用紙の設定欄は「枝問を持たない小問」にしか出ず、
+    // 「(1) 記号で答えよ ／ (2) 100字で説明せよ」が作れなかった
+    const definition = createDefaultDefinition()
+    const subQuestion = definition.majorQuestions[0].subQuestions[0]
+    subQuestion.branchQuestions = [
+      {
+        id: crypto.randomUUID(),
+        label: "(1)",
+        heightMultiplier: 1,
+        points: 2,
+        textElements: [],
+        imageElements: [],
+      },
+      {
+        id: crypto.randomUUID(),
+        label: "(2)",
+        heightMultiplier: 1,
+        points: 8,
+        textElements: [],
+        imageElements: [],
+        manuscriptPaper: manuscriptPaper({
+          columns: 25,
+          rows: 4,
+          guidePosition: "top-right",
+          charGuides: [{ id: crypto.randomUUID(), atChar: 100, label: "100" }],
+        }),
+      },
+    ]
+
+    await replaceAsbDefinition(definition, userId)
+    const loaded = await getAsbDefinition(definition.id)
+
+    const loadedBranches =
+      loaded?.majorQuestions[0].subQuestions[0].branchQuestions ?? []
+    expect(loadedBranches[0].manuscriptPaper).toBeUndefined()
+    expect(loadedBranches[1].manuscriptPaper).toMatchObject({
+      enabled: true,
+      columns: 25,
+      rows: 4,
+      guidePosition: "top-right",
+    })
+    expect(
+      loadedBranches[1].manuscriptPaper?.charGuides.map(
+        (charGuide) => charGuide.atChar
+      )
+    ).toEqual([100])
+  })
+
+  it("enabled を false にしても、設定と文字位置マーカーは消えない", async () => {
+    // 原稿用紙は設計中にオン・オフを往復するのが自然な操作で、そのたびに
+    // 25×15 とマーカーが消えるのは損失が大きい。「行なし＝一度も使っていない」
+    // 「enabled=false＝いまはオフ、設定は保管」と読む
+    const definition = createDefaultDefinition()
+    const subQuestion = definition.majorQuestions[0].subQuestions[0]
+    subQuestion.manuscriptPaper = manuscriptPaper({
+      columns: 25,
+      rows: 15,
+      charGuides: [{ id: crypto.randomUUID(), atChar: 80, label: "80" }],
+    })
+    await replaceAsbDefinition(definition, userId)
+
+    await upsertAsbManuscriptPaper(
+      definition.id,
+      { subQuestionId: subQuestion.id },
+      subQuestion.manuscriptPaper.id,
+      { ...subQuestion.manuscriptPaper, enabled: false }
+    )
+
+    const loaded = await getAsbDefinition(definition.id)
+    const loadedPaper =
+      loaded?.majorQuestions[0].subQuestions[0].manuscriptPaper
+    expect(loadedPaper?.enabled).toBe(false)
+    expect(loadedPaper?.columns).toBe(25)
+    expect(loadedPaper?.rows).toBe(15)
+    expect(
+      loadedPaper?.charGuides.map((charGuide) => charGuide.atChar)
+    ).toEqual([80])
   })
 })
 
@@ -140,12 +237,12 @@ describe("解答用紙の複製", () => {
       { id: "dup-cg-a", atChar: 10, label: "10" },
       { id: "dup-cg-b", atChar: 20, label: "20", boundary: "dashed" },
     ]
-    subQuestion.manuscriptPaper = {
-      enabled: true,
+    subQuestion.manuscriptPaper = manuscriptPaper({
+      id: "dup-mp",
       columns: 25,
       rows: 15,
       charGuides,
-    }
+    })
     await replaceAsbDefinition(definition, userId)
 
     const duplicatedId = await answerSheetBuilderHandlers[
@@ -153,8 +250,11 @@ describe("解答用紙の複製", () => {
     ](definition.id, userId)
 
     const loaded = await getAsbDefinition(duplicatedId)
-    const copiedGuides =
-      loaded?.majorQuestions[0].subQuestions[0].manuscriptPaper?.charGuides
+    const copiedPaper =
+      loaded?.majorQuestions[0].subQuestions[0].manuscriptPaper
+    // 原稿用紙そのものも別テーブルの行なので id を振り直す
+    expect(copiedPaper?.id).not.toBe("dup-mp")
+    const copiedGuides = copiedPaper?.charGuides
     expect(copiedGuides).toHaveLength(2)
 
     // 中身は同じで、id だけが別
@@ -170,7 +270,7 @@ describe("解答用紙の複製", () => {
     // 元の解答用紙のマーカーは無傷
     const original = await getAsbDefinition(definition.id)
     expect(
-      original?.majorQuestions[0].subQuestions[0].manuscriptPaper?.charGuides?.map(
+      original?.majorQuestions[0].subQuestions[0].manuscriptPaper?.charGuides.map(
         (charGuide) => charGuide.id
       )
     ).toEqual(["dup-cg-a", "dup-cg-b"])

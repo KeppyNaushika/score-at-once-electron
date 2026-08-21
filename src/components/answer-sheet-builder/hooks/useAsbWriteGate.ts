@@ -45,6 +45,8 @@ function collapsibleKey(action: AnswerSheetEditAction): string | null {
       return `UPDATE_CHAR_GUIDE:${action.payload.charGuideId}`
     case "UPSERT_OMR_CONFIG":
       return `UPSERT_OMR_CONFIG:${JSON.stringify(action.payload.parent)}`
+    case "UPSERT_MANUSCRIPT_PAPER":
+      return `UPSERT_MANUSCRIPT_PAPER:${action.payload.manuscriptPaperId}`
     default:
       return null
   }

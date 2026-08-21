@@ -12,9 +12,12 @@ import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { useAnswerSheetDefinition } from "@/components/answer-sheet-builder/hooks/useAnswerSheetDefinition"
+import type { AsbEditorActions } from "@/components/answer-sheet-builder/types"
 import type {
   AnswerSheetDefinition,
   AnswerSheetEditAction,
+  AsbCellParent,
+  AsbManuscriptPaperAttributes,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
 
@@ -141,54 +144,62 @@ describe("編集操作は id で指した実体だけを変える", () => {
 })
 
 describe("更新に子のまとまりが紛れ込まない", () => {
-  it("原稿用紙の列数を変えても、文字位置マーカーは残る", () => {
-    const definition = twoMajorsWithTwoSubs()
-    const { result } = renderEditor(definition)
-
+  /** 原稿用紙を有効にして、文字位置マーカーを1つ置く */
+  function givenManuscriptPaper(
+    result: {
+      current: { actions: AsbEditorActions; definition: AnswerSheetDefinition }
+    },
+    parent: AsbCellParent,
+    data: Partial<AsbManuscriptPaperAttributes>
+  ): string {
     act(() => {
-      result.current.actions.updateSubQuestion("sub-1a", {
-        manuscriptPaper: { enabled: true },
+      result.current.actions.upsertManuscriptPaper(parent, {
+        enabled: true,
+        ...data,
       })
     })
+    const cellId =
+      "subQuestionId" in parent ? parent.subQuestionId : parent.branchQuestionId
+    const manuscriptPaperId = findSubQuestion(result.current.definition, cellId)
+      .manuscriptPaper?.id
+    if (!manuscriptPaperId) throw new Error("原稿用紙ができていない")
     act(() => {
-      result.current.actions.addCharGuide("sub-1a", {
+      result.current.actions.addCharGuide(manuscriptPaperId, {
         id: "guide-1",
         atChar: 80,
         label: "80",
       })
     })
+    return manuscriptPaperId
+  }
+
+  it("原稿用紙の列数を変えても、文字位置マーカーは残る", () => {
+    const { result } = renderEditor(twoMajorsWithTwoSubs())
+    const cell = { subQuestionId: "sub-1a" }
+    givenManuscriptPaper(result, cell, {})
+
     act(() => {
-      result.current.actions.updateSubQuestion("sub-1a", {
-        manuscriptPaper: { columns: 25 },
-      })
+      result.current.actions.upsertManuscriptPaper(cell, { columns: 25 })
     })
 
     const subQuestion = findSubQuestion(result.current.definition, "sub-1a")
     expect(subQuestion.manuscriptPaper?.columns).toBe(25)
     expect(subQuestion.manuscriptPaper?.enabled).toBe(true)
     expect(
-      subQuestion.manuscriptPaper?.charGuides?.map((charGuide) => charGuide.id)
+      subQuestion.manuscriptPaper?.charGuides.map((charGuide) => charGuide.id)
     ).toEqual(["guide-1"])
   })
 
   it("ラベルだけを変えても、原稿用紙は残る", () => {
-    // 原稿用紙は属性の中で唯一の入れ子で、更新のたびに手で1段深く重ね直している。
-    // その重ね直しを `&&` で書くと、**原稿用紙と無関係な更新**のときに undefined に
-    // なり、設定ごと消える。画面から消えるだけでなく、書き込みへ渡る意図にも
-    // 載らなくなるので DB の列が既定へ戻る。
+    // 原稿用紙が小問の属性の中の入れ子だった頃は、更新のたびに手で1段深く重ね直して
+    // いた。その重ね直しを `&&` で書くと**原稿用紙と無関係な更新**のときに undefined に
+    // なり、設定ごと消えた（docs/branch-review-findings.md #1）。原稿用紙をテーブルへ
+    // 出したいまは、小問の属性に原稿用紙が入らないので混ざりようがない。
     const { result, edits } = renderEditor(twoMajorsWithTwoSubs())
-
-    act(() => {
-      result.current.actions.updateSubQuestion("sub-1a", {
-        manuscriptPaper: { enabled: true, columns: 25, rows: 15 },
-      })
-    })
-    act(() => {
-      result.current.actions.addCharGuide("sub-1a", {
-        id: "guide-1",
-        atChar: 80,
-        label: "80",
-      })
+    const cell = { subQuestionId: "sub-1a" }
+    const manuscriptPaperId = givenManuscriptPaper(result, cell, {
+      columns: 25,
+      rows: 15,
     })
 
     // 原稿用紙に触らない更新（ラベルを1文字打つ）
@@ -198,21 +209,60 @@ describe("更新に子のまとまりが紛れ込まない", () => {
 
     const subQuestion = findSubQuestion(result.current.definition, "sub-1a")
     expect(subQuestion.label).toBe("(1)改")
+    expect(subQuestion.manuscriptPaper?.id).toBe(manuscriptPaperId)
     expect(subQuestion.manuscriptPaper?.enabled).toBe(true)
     expect(subQuestion.manuscriptPaper?.columns).toBe(25)
     expect(subQuestion.manuscriptPaper?.rows).toBe(15)
     expect(
-      subQuestion.manuscriptPaper?.charGuides?.map((charGuide) => charGuide.id)
+      subQuestion.manuscriptPaper?.charGuides.map((charGuide) => charGuide.id)
     ).toEqual(["guide-1"])
 
-    // DB へ行くのは意図のほう。ここに載っていなければ列が既定へ戻る
+    // DB へ行くのは意図のほう。小問の更新が原稿用紙のテーブルへ届かないこと
     const lastEdit = edits[edits.length - 1]
     if (lastEdit.type !== "UPDATE_SUB_QUESTION") throw new Error("種類が違う")
-    expect(lastEdit.payload.attributes.manuscriptPaper).toMatchObject({
+    expect(Object.keys(lastEdit.payload.attributes)).not.toContain(
+      "manuscriptPaper"
+    )
+  })
+
+  it("枝問にも原稿用紙を付けられ、小問側には作られない", () => {
+    const { result } = renderEditor(twoMajorsWithTwoSubs())
+    act(() => {
+      result.current.actions.addBranchQuestion("sub-1a")
+    })
+    const branchQuestion = findSubQuestion(result.current.definition, "sub-1a")
+      .branchQuestions[0]
+
+    act(() => {
+      result.current.actions.upsertManuscriptPaper(
+        { branchQuestionId: branchQuestion.id },
+        { enabled: true, columns: 25, rows: 4 }
+      )
+    })
+
+    const subQuestion = findSubQuestion(result.current.definition, "sub-1a")
+    expect(subQuestion.manuscriptPaper).toBeUndefined()
+    expect(subQuestion.branchQuestions[0].manuscriptPaper).toMatchObject({
       enabled: true,
       columns: 25,
-      rows: 15,
+      rows: 4,
     })
+  })
+
+  it("原稿用紙をオフにしても、設定と文字位置マーカーは残る", () => {
+    const { result } = renderEditor(twoMajorsWithTwoSubs())
+    const cell = { subQuestionId: "sub-1a" }
+    givenManuscriptPaper(result, cell, { columns: 25, rows: 15 })
+
+    act(() => {
+      result.current.actions.upsertManuscriptPaper(cell, { enabled: false })
+    })
+
+    const subQuestion = findSubQuestion(result.current.definition, "sub-1a")
+    expect(subQuestion.manuscriptPaper?.enabled).toBe(false)
+    expect(subQuestion.manuscriptPaper?.columns).toBe(25)
+    expect(subQuestion.manuscriptPaper?.rows).toBe(15)
+    expect(subQuestion.manuscriptPaper?.charGuides).toHaveLength(1)
   })
 
   it("セルにテキスト要素を足しても、別のセルの中身は変わらない", () => {

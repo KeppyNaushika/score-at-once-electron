@@ -1,10 +1,11 @@
 /**
  * 解答を書くセル（小問・枝問）の中身をまとめて扱う。
  *
- * セルはテキスト要素・画像要素・OMR設定を持ち、**小問と枝問がまったく同じ形で持つ**。
- * DB では親が別の外部キーになるので、親の指し方を1つの形（{@link AsbCellParent}）に
+ * セルはテキスト要素・画像要素・OMR設定・原稿用紙を持ち、**小問と枝問がまったく同じ形で
+ * 持つ**。DB では親が別の外部キーになるので、親の指し方を1つの形（{@link AsbCellParent}）に
  * まとめる。列を知っているのは実体ごとのモジュール（`asbTextElement.ts` /
- * `asbImageElement.ts` / `asbOmrConfig.ts`）で、ここはそれらを順に通すだけ。
+ * `asbImageElement.ts` / `asbOmrConfig.ts` / `asbManuscriptPaper.ts`）で、ここはそれらを
+ * 順に通すだけ。
  */
 
 import type { AsbImageElement, AsbTextElement, Prisma } from "@prisma/client"
@@ -15,11 +16,13 @@ import type {
   SubQuestion,
 } from "../../../src/types/answerSheetDefinition.types"
 import { writeAsbImageElement } from "./asbImageElement"
+import type { CurrentAsbManuscriptPaperRows } from "./asbManuscriptPaper"
+import { writeAsbManuscriptPaperTree } from "./asbManuscriptPaper"
 import { writeAsbOmrConfig } from "./asbOmrConfig"
 import { writeAsbTextElement } from "./asbTextElement"
 
 /** セルの中身のうち、既に DB にある行（変わっていない行を書かないための突き合わせ先） */
-export interface CurrentAsbCellRows {
+export interface CurrentAsbCellRows extends CurrentAsbManuscriptPaperRows {
   textElements: ReadonlyMap<string, AsbTextElement>
   imageElements: ReadonlyMap<string, AsbImageElement>
 }
@@ -91,6 +94,16 @@ export async function writeAsbCellContents(
   }
   if (cell.omrConfig) {
     mark(await writeAsbOmrConfig(tx, parent, cell.omrConfig))
+  }
+  if (cell.manuscriptPaper) {
+    mark(
+      await writeAsbManuscriptPaperTree(
+        tx,
+        parent,
+        cell.manuscriptPaper,
+        current
+      )
+    )
   }
   return changed
 }

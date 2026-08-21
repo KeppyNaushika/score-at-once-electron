@@ -2,7 +2,7 @@
  * スクリーンショット用サンプルデータ生成スクリプト
  *
  * 専用の __tests__/screenshots/data/database.db にまっさらな状態からデータを生成する。
- * 実データ(database.db)には一切触れない。
+ * データ(database.db)には一切触れない。
  *
  * Phase 1（テスト前に実行）:
  *   - ユーザー作成
@@ -124,16 +124,24 @@ async function main() {
             layoutWidth: subQuestion.layoutWidth,
             nextPlacement: subQuestion.nextPlacement,
             goUp: subQuestion.goUp,
-            manuscriptEnabled: subQuestion.manuscriptEnabled,
-            manuscriptColumns: subQuestion.manuscriptColumns,
-            manuscriptRows: subQuestion.manuscriptRows,
-            manuscriptCellSizeMm: subQuestion.manuscriptCellSizeMm,
             borderStyleTop: subQuestion.borderStyleTop,
             borderStyleBottom: subQuestion.borderStyleBottom,
             borderStyleLeft: subQuestion.borderStyleLeft,
             borderStyleRight: subQuestion.borderStyleRight,
           },
         })
+        // 原稿用紙は別テーブル（雛形は旧形式の列名で持っている）
+        if (subQuestion.manuscriptEnabled) {
+          await prisma.asbManuscriptPaper.create({
+            data: {
+              id: crypto.randomUUID(),
+              subQuestionId: newSubQuestionId,
+              enabled: true,
+              columns: subQuestion.manuscriptColumns,
+              rows: subQuestion.manuscriptRows,
+            },
+          })
+        }
         for (const textElement of subQuestion.textElements || []) {
           await prisma.asbTextElement.create({
             data: {

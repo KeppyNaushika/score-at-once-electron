@@ -5,6 +5,8 @@
  * グローバル設定・useReducerアクション型を定義する。
  */
 
+import type { AsbManuscriptPaper } from "@prisma/client"
+
 import type { OMRCellConfig } from "./omr.types"
 
 // =====================
@@ -114,22 +116,30 @@ export interface ManuscriptCharGuide extends AsbCharGuideAttributes {
   id: string
 }
 
-/** 原稿用紙の設定（文字位置マーカーは別テーブルなので含めない） */
-export interface ManuscriptPaperAttributes {
-  enabled: boolean
-  columns: number
-  rows: number
-  /** ガイド文字サイズ（1マス＝1とした相対値。マス比）。未指定 = 既定 */
-  guideFontSize?: number
-  /** ガイド表示位置（マスの隅）。未指定 = "bottom-left" */
-  guidePosition?: ManuscriptGuidePosition
-  /** ガイドの隅からの余白（1マス＝1とした相対値。マス比）。未指定 = 既定 */
-  guidePadding?: number
-}
+/**
+ * 原稿用紙1件の属性（自身の列だけ。文字位置マーカーは別テーブルの子）。
+ *
+ * **DB の行そのもの**を持つ。かつては小問の列を画面側で入れ子に束ね直していたため、
+ * 合流の規則が平らな列と入れ子とで2種類になり、原稿用紙と無関係な更新が設定を消した
+ * （docs/asb-ipc-split-plan.md §8.5）。
+ *
+ * `guidePosition` だけ union を注入する（DB は `String?` で、そのままでは絞れない）。
+ */
+export type AsbManuscriptPaperAttributes = Omit<
+  AsbManuscriptPaper,
+  | "id"
+  | "subQuestionId"
+  | "branchQuestionId"
+  | "createdAt"
+  | "updatedAt"
+  | "guidePosition"
+> & { guidePosition: ManuscriptGuidePosition | null }
 
-export interface ManuscriptPaperConfig extends ManuscriptPaperAttributes {
+/** 木の中の原稿用紙（文字位置マーカーまで持つ） */
+export interface ManuscriptPaper extends AsbManuscriptPaperAttributes {
+  id: string
   /** 文字位置マーカー（数字ガイド＋区切り罫線の統合リスト） */
-  charGuides?: ManuscriptCharGuide[]
+  charGuides: ManuscriptCharGuide[]
 }
 
 // =====================
@@ -157,6 +167,8 @@ export interface BranchQuestion extends AsbBranchQuestionAttributes {
   imageElements?: CellImageElement[]
   /** OMR自動認識設定 */
   omrConfig?: OMRCellConfig
+  /** 原稿用紙。無い＝一度も使っていない（`enabled: false` は「いまはオフ」） */
+  manuscriptPaper?: ManuscriptPaper
 }
 
 export interface AsbSubQuestionAttributes {
@@ -172,8 +184,6 @@ export interface AsbSubQuestionAttributes {
   goUp?: number
   /** 枝問ごとに配点するか（undefined/true=枝問配点、false=完答） */
   usesBranchPoints?: boolean
-  /** 原稿用紙。文字位置マーカーは別テーブル・別 action なので含めない */
-  manuscriptPaper?: ManuscriptPaperAttributes
 }
 
 export interface SubQuestion extends AsbSubQuestionAttributes {
@@ -181,8 +191,8 @@ export interface SubQuestion extends AsbSubQuestionAttributes {
   branchQuestions: BranchQuestion[]
   textElements: CellTextElement[]
   imageElements?: CellImageElement[]
-  /** 木の中では文字位置マーカーまで持つ（属性だけの版を子ごと狭める） */
-  manuscriptPaper?: ManuscriptPaperConfig
+  /** 原稿用紙。無い＝一度も使っていない（`enabled: false` は「いまはオフ」） */
+  manuscriptPaper?: ManuscriptPaper
   /** OMR自動認識設定 */
   omrConfig?: OMRCellConfig
 }
@@ -190,14 +200,11 @@ export interface SubQuestion extends AsbSubQuestionAttributes {
 /**
  * 小問の更新の指示。
  *
- * 原稿用紙は「列数だけ」「ガイドの位置だけ」と一部を触るので、ここだけ入れ子の一部指定を
- * 許す。文字位置マーカーは別テーブル・別 action なので入ってこない。
+ * **入れ子の例外は無い。** 原稿用紙が小問の列だった頃は「列数だけ」を触るために
+ * ここだけ入れ子の一部指定を許していて、それが原稿用紙を消す事故の温床だった。
+ * 原稿用紙は自分の action（`UPSERT_MANUSCRIPT_PAPER`）で書く。
  */
-export type AsbSubQuestionUpdate = Partial<
-  Omit<AsbSubQuestionAttributes, "manuscriptPaper">
-> & {
-  manuscriptPaper?: Partial<ManuscriptPaperAttributes>
-}
+export type AsbSubQuestionUpdate = Partial<AsbSubQuestionAttributes>
 
 export interface AsbMajorQuestionAttributes {
   label: string
@@ -534,8 +541,17 @@ export type AnswerSheetAction =
     }
   | { type: "DELETE_IMAGE_ELEMENT"; payload: { imageElementId: string } }
   | {
+      type: "UPSERT_MANUSCRIPT_PAPER"
+      payload: {
+        parent: AsbCellParent
+        manuscriptPaperId: string
+        attributes: AsbManuscriptPaperAttributes
+      }
+    }
+  | { type: "DELETE_MANUSCRIPT_PAPER"; payload: { parent: AsbCellParent } }
+  | {
       type: "ADD_CHAR_GUIDE"
-      payload: { subQuestionId: string; charGuide: ManuscriptCharGuide }
+      payload: { manuscriptPaperId: string; charGuide: ManuscriptCharGuide }
     }
   | {
       type: "UPDATE_CHAR_GUIDE"

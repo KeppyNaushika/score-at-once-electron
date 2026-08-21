@@ -191,10 +191,20 @@ function writeAnswerSheetEdit(
     case "DELETE_IMAGE_ELEMENT":
       return asb.deleteImageElement(definitionId, action.payload.imageElementId)
 
+    case "UPSERT_MANUSCRIPT_PAPER":
+      return asb.upsertManuscriptPaper(
+        definitionId,
+        action.payload.parent,
+        action.payload.manuscriptPaperId,
+        action.payload.attributes
+      )
+    case "DELETE_MANUSCRIPT_PAPER":
+      return asb.deleteManuscriptPaper(definitionId, action.payload.parent)
+
     case "ADD_CHAR_GUIDE":
       return asb.createCharGuide(
         definitionId,
-        action.payload.subQuestionId,
+        action.payload.manuscriptPaperId,
         action.payload.charGuide
       )
     case "UPDATE_CHAR_GUIDE":

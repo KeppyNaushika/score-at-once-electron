@@ -44,6 +44,7 @@ import {
   reorderAsbMajorQuestions,
   updateAsbMajorQuestion,
 } from "../../electron-src/lib/prisma/asbMajorQuestion"
+import { upsertAsbManuscriptPaper } from "../../electron-src/lib/prisma/asbManuscriptPaper"
 import {
   createAsbSubQuestion,
   updateAsbSubQuestion,
@@ -231,34 +232,115 @@ describe("実体ごとの書き込み", () => {
   })
 
   it("原稿用紙の設定を書いても、文字位置マーカーは消えない", async () => {
-    // 文字位置マーカーは別テーブル・別チャンネル。小問の属性を書く経路がそこへ
-    // 触れると、原稿用紙のマス数を変えるたびに目印が消える
+    // 文字位置マーカーは原稿用紙の子で、別チャンネル。原稿用紙の属性を書く経路が
+    // そこへ触れると、マス数を変えるたびに目印が消える
     const definition = await givenThreeMajorQuestions()
     const subQuestion = definition.majorQuestions[0].subQuestions[0]
+    const manuscriptPaperId = crypto.randomUUID()
+    await prisma.asbManuscriptPaper.create({
+      data: {
+        id: manuscriptPaperId,
+        subQuestionId: subQuestion.id,
+        enabled: true,
+        columns: 20,
+        rows: 10,
+      },
+    })
     await prisma.asbCharGuide.create({
       data: {
         id: "guide-keep",
-        subQuestionId: subQuestion.id,
+        manuscriptPaperId,
         order: 0,
         atChar: 80,
         label: "80",
       },
     })
 
-    await updateAsbSubQuestion(definition.id, subQuestion.id, {
-      label: subQuestion.label,
-      points: subQuestion.points,
-      heightMultiplier: subQuestion.heightMultiplier,
-      manuscriptPaper: { enabled: true, columns: 25, rows: 10 },
+    await upsertAsbManuscriptPaper(
+      definition.id,
+      { subQuestionId: subQuestion.id },
+      manuscriptPaperId,
+      {
+        enabled: true,
+        columns: 25,
+        rows: 10,
+        guideFontSize: null,
+        guidePosition: null,
+        guidePadding: null,
+      }
+    )
+
+    const charGuides = await prisma.asbCharGuide.findMany({
+      where: { manuscriptPaperId },
+    })
+    expect(charGuides.map((charGuide) => charGuide.id)).toEqual(["guide-keep"])
+    const row = await prisma.asbManuscriptPaper.findUniqueOrThrow({
+      where: { id: manuscriptPaperId },
+    })
+    expect(row.columns).toBe(25)
+  })
+
+  it("小問のラベルだけを書いても、原稿用紙の行は動かない", async () => {
+    // #1 の DB 側。小問の属性を書く経路が原稿用紙の列を持っていた頃は、
+    // ラベルを1文字打つだけで 25×15 が 20×10 の既定へ戻った
+    const definition = await givenThreeMajorQuestions()
+    const subQuestion = definition.majorQuestions[0].subQuestions[0]
+    const manuscriptPaperId = crypto.randomUUID()
+    await prisma.asbManuscriptPaper.create({
+      data: {
+        id: manuscriptPaperId,
+        subQuestionId: subQuestion.id,
+        enabled: true,
+        columns: 25,
+        rows: 15,
+      },
     })
 
-    const guides = await prisma.asbCharGuide.findMany({
+    await updateAsbSubQuestion(definition.id, subQuestion.id, {
+      label: "打ち替えた",
+      points: subQuestion.points,
+      heightMultiplier: subQuestion.heightMultiplier,
+    })
+
+    const row = await prisma.asbManuscriptPaper.findUniqueOrThrow({
+      where: { id: manuscriptPaperId },
+    })
+    expect(row.enabled).toBe(true)
+    expect(row.columns).toBe(25)
+    expect(row.rows).toBe(15)
+  })
+
+  it("原稿用紙を書いても、同じセルに2つ目の行を作らない", async () => {
+    // 鍵は `@unique`（＝親の id）。画面が持っている id が古くても、セルに1行という
+    // 不変式は main が守る
+    const definition = await givenThreeMajorQuestions()
+    const subQuestion = definition.majorQuestions[1].subQuestions[0]
+    const attributes = {
+      enabled: true,
+      columns: 20,
+      rows: 10,
+      guideFontSize: null,
+      guidePosition: null,
+      guidePadding: null,
+    }
+    const firstId = crypto.randomUUID()
+    await upsertAsbManuscriptPaper(
+      definition.id,
+      { subQuestionId: subQuestion.id },
+      firstId,
+      attributes
+    )
+    await upsertAsbManuscriptPaper(
+      definition.id,
+      { subQuestionId: subQuestion.id },
+      crypto.randomUUID(),
+      { ...attributes, columns: 30 }
+    )
+
+    const rows = await prisma.asbManuscriptPaper.findMany({
       where: { subQuestionId: subQuestion.id },
     })
-    expect(guides.map((guide) => guide.id)).toEqual(["guide-keep"])
-    const row = await prisma.asbSubQuestion.findUniqueOrThrow({
-      where: { id: subQuestion.id },
-    })
-    expect(row.manuscriptColumns).toBe(25)
+    expect(rows.map((row) => row.id)).toEqual([firstId])
+    expect(rows[0].columns).toBe(30)
   })
 })

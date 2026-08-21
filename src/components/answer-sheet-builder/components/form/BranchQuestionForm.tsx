@@ -11,6 +11,7 @@ import type {
 
 import type { AsbEditorActions } from "../../types"
 import { ImageElementEditor } from "./ImageElementEditor"
+import { ManuscriptPaperSettings } from "./ManuscriptPaperSettings"
 import { OMRCellConfigForm } from "./OMRCellConfigForm"
 import { TextElementEditor } from "./TextElementEditor"
 
@@ -46,7 +47,8 @@ export function BranchQuestionForm({
 
   const hasDetailContent =
     branchQuestion.textElements.length > 0 ||
-    (branchQuestion.imageElements?.length ?? 0) > 0
+    (branchQuestion.imageElements?.length ?? 0) > 0 ||
+    !!branchQuestion.manuscriptPaper?.enabled
 
   const hasVisibilityRestricted = branchQuestion.imageElements?.some(
     (imageElement) =>
@@ -279,6 +281,19 @@ export function BranchQuestionForm({
             onUpdate={actions.updateImageElement}
             onDelete={actions.deleteImageElement}
             definitionId={definitionId}
+          />
+          <ManuscriptPaperSettings
+            manuscriptPaper={branchQuestion.manuscriptPaper}
+            onUpsert={(data) => {
+              actions.upsertManuscriptPaper(cell, data)
+              // 原稿用紙を使い始めたら、横に並ぶよう幅を埋めておく
+              if (data.enabled && !branchQuestion.layoutWidth) {
+                onUpdate({ layoutWidth: "1" })
+              }
+            }}
+            onAddCharGuide={actions.addCharGuide}
+            onUpdateCharGuide={actions.updateCharGuide}
+            onDeleteCharGuide={actions.deleteCharGuide}
           />
           <OMRCellConfigForm
             config={branchQuestion.omrConfig}

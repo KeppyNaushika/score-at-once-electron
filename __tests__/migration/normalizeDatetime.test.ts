@@ -202,6 +202,9 @@ describe("DateTime正規化マイグレーション", () => {
     // createdAt/updatedAt は 20260802030000（同期対象にするための追加）で ISO text として
     // 生まれるため、integer(ms) の混在が起こらない
     "AsbHeaderField",
+    // 20260821000000 で追加（原稿用紙をテーブルへ出す）。
+    // normalize migration より後で ISO text 生成
+    "AsbManuscriptPaper",
     "AuditLog",
     "Coursework",
     "CourseworkClassroom", // 旧 CourseworkClass（20260704010000 でリネーム）

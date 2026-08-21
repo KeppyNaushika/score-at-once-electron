@@ -6,7 +6,10 @@
 
 import * as crypto from "crypto"
 
-import type { AnswerSheetDefinition } from "../../../../src/types/answerSheetDefinition.types"
+import type {
+  AnswerSheetDefinition,
+  ManuscriptPaper,
+} from "../../../../src/types/answerSheetDefinition.types"
 import type { AsbIdMappings } from "../../../../src/types/asbArchive.types"
 
 /**
@@ -25,6 +28,7 @@ export function generateAsbIdMappings(
     imageElement: {},
     charGuide: {},
     omrConfig: {},
+    manuscriptPaper: {},
   }
 
   for (const headerField of definition.settings.headerFields) {
@@ -45,7 +49,9 @@ export function generateAsbIdMappings(
           mappings.imageElement[imageElement.id] = crypto.randomUUID()
         }
       }
-      if (subQuestion.manuscriptPaper?.charGuides) {
+      if (subQuestion.manuscriptPaper) {
+        mappings.manuscriptPaper[subQuestion.manuscriptPaper.id] =
+          crypto.randomUUID()
         for (const charGuide of subQuestion.manuscriptPaper.charGuides) {
           mappings.charGuide[charGuide.id] = crypto.randomUUID()
         }
@@ -65,6 +71,13 @@ export function generateAsbIdMappings(
             mappings.imageElement[imageElement.id] = crypto.randomUUID()
           }
         }
+        if (branchQuestion.manuscriptPaper) {
+          mappings.manuscriptPaper[branchQuestion.manuscriptPaper.id] =
+            crypto.randomUUID()
+          for (const charGuide of branchQuestion.manuscriptPaper.charGuides) {
+            mappings.charGuide[charGuide.id] = crypto.randomUUID()
+          }
+        }
         if (branchQuestion.omrConfig) {
           mappings.omrConfig[branchQuestion.id] = crypto.randomUUID()
         }
@@ -73,6 +86,18 @@ export function generateAsbIdMappings(
   }
 
   return mappings
+}
+
+/** 原稿用紙と、その下の文字位置マーカーの id を差し替える */
+function remapManuscriptPaperIds(
+  manuscriptPaper: ManuscriptPaper,
+  mappings: AsbIdMappings
+): void {
+  manuscriptPaper.id =
+    mappings.manuscriptPaper[manuscriptPaper.id] ?? manuscriptPaper.id
+  for (const charGuide of manuscriptPaper.charGuides) {
+    charGuide.id = mappings.charGuide[charGuide.id] ?? charGuide.id
+  }
 }
 
 /**
@@ -106,10 +131,8 @@ export function remapDefinitionIds(
             mappings.imageElement[imageElement.id] ?? imageElement.id
         }
       }
-      if (subQuestion.manuscriptPaper?.charGuides) {
-        for (const charGuide of subQuestion.manuscriptPaper.charGuides) {
-          charGuide.id = mappings.charGuide[charGuide.id] ?? charGuide.id
-        }
+      if (subQuestion.manuscriptPaper) {
+        remapManuscriptPaperIds(subQuestion.manuscriptPaper, mappings)
       }
 
       for (const branchQuestion of subQuestion.branchQuestions) {
@@ -125,6 +148,9 @@ export function remapDefinitionIds(
             imageElement.id =
               mappings.imageElement[imageElement.id] ?? imageElement.id
           }
+        }
+        if (branchQuestion.manuscriptPaper) {
+          remapManuscriptPaperIds(branchQuestion.manuscriptPaper, mappings)
         }
       }
     }

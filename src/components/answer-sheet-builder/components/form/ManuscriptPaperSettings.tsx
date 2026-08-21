@@ -15,11 +15,11 @@ import {
 import { Switch } from "@/components/ui/switch"
 import type {
   AsbCharGuideAttributes,
+  AsbManuscriptPaperAttributes,
   BorderLineStyle,
   ManuscriptCharGuide,
   ManuscriptGuidePosition,
-  ManuscriptPaperAttributes,
-  ManuscriptPaperConfig,
+  ManuscriptPaper,
 } from "@/types/answerSheetDefinition.types"
 
 import {
@@ -35,10 +35,14 @@ import {
 import { SliderWithInput } from "./SliderWithInput"
 
 interface ManuscriptPaperSettingsProps {
-  config: ManuscriptPaperConfig | undefined
+  /** セルの原稿用紙。無い＝一度も使っていない */
+  manuscriptPaper: ManuscriptPaper | undefined
   /** 原稿用紙そのものの設定（文字位置マーカーは別の実体なので含めない） */
-  onUpdate: (data: Partial<ManuscriptPaperAttributes>) => void
-  onAddCharGuide: (charGuide: ManuscriptCharGuide) => void
+  onUpsert: (data: Partial<AsbManuscriptPaperAttributes>) => void
+  onAddCharGuide: (
+    manuscriptPaperId: string,
+    charGuide: ManuscriptCharGuide
+  ) => void
   onUpdateCharGuide: (
     charGuideId: string,
     data: Partial<AsbCharGuideAttributes>
@@ -63,13 +67,14 @@ const BOUNDARY_OPTIONS: { value: string; label: string }[] = [
 ]
 
 export function ManuscriptPaperSettings({
-  config,
-  onUpdate,
+  manuscriptPaper,
+  onUpsert,
   onAddCharGuide,
   onUpdateCharGuide,
   onDeleteCharGuide,
 }: ManuscriptPaperSettingsProps) {
-  const current = config ?? DEFAULT_MANUSCRIPT_PAPER
+  // 行がまだ無いセルでは既定の姿を見せる。実体を作るのは最初の書き込みのとき
+  const current = manuscriptPaper ?? DEFAULT_MANUSCRIPT_PAPER
 
   /** 入力値を [min, max] の整数に丸める。空欄・非数値は fallback（0設定によるエラーを防ぐ） */
   const clampInt = (
@@ -84,13 +89,6 @@ export function ManuscriptPaperSettings({
   }
 
   const capacity = current.columns * current.rows
-  const guides = config?.charGuides ?? []
-
-  const addGuide = () => {
-    // 既定は用紙容量（末尾マス）を指す。ラベルは数値を初期表示。
-    const atChar = Math.min(capacity, 100)
-    onAddCharGuide({ id: generateId(), atChar, label: String(atChar) })
-  }
 
   return (
     <div className="space-y-2">
@@ -99,7 +97,7 @@ export function ManuscriptPaperSettings({
         <Switch
           className="scale-75"
           checked={current.enabled}
-          onCheckedChange={(enabled) => onUpdate({ enabled })}
+          onCheckedChange={(enabled) => onUpsert({ enabled })}
         />
       </div>
 
@@ -114,7 +112,7 @@ export function ManuscriptPaperSettings({
               min={1}
               max={40}
               onChange={(e) =>
-                onUpdate({
+                onUpsert({
                   columns: clampInt(e.target.value, 1, 40, current.columns),
                 })
               }
@@ -129,7 +127,7 @@ export function ManuscriptPaperSettings({
               min={1}
               max={20}
               onChange={(e) =>
-                onUpdate({
+                onUpsert({
                   rows: clampInt(e.target.value, 1, 20, current.rows),
                 })
               }
@@ -138,7 +136,7 @@ export function ManuscriptPaperSettings({
         </div>
       )}
 
-      {current.enabled && (
+      {manuscriptPaper?.enabled && (
         <div className="space-y-2 rounded border p-2">
           <div className="flex items-center justify-between">
             <Label className="text-[10px] text-muted-foreground">
@@ -148,14 +146,22 @@ export function ManuscriptPaperSettings({
               variant="outline"
               size="sm"
               className="h-6 text-[10px]"
-              onClick={addGuide}
+              onClick={() => {
+                // 既定は用紙容量（末尾マス）を指す。ラベルは数値を初期表示
+                const atChar = Math.min(capacity, 100)
+                onAddCharGuide(manuscriptPaper.id, {
+                  id: generateId(),
+                  atChar,
+                  label: String(atChar),
+                })
+              }}
             >
               <Plus className="mr-1 h-3 w-3" />
               追加
             </Button>
           </div>
 
-          {guides.length > 0 && (
+          {manuscriptPaper.charGuides.length > 0 && (
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-[10px] text-muted-foreground">
@@ -165,9 +171,9 @@ export function ManuscriptPaperSettings({
                   value={
                     current.guidePosition ?? DEFAULT_MANUSCRIPT_GUIDE_POSITION
                   }
-                  onValueChange={(v) =>
-                    onUpdate({
-                      guidePosition: v as ManuscriptGuidePosition,
+                  onValueChange={(value) =>
+                    onUpsert({
+                      guidePosition: value as ManuscriptGuidePosition,
                     })
                   }
                 >
@@ -194,7 +200,7 @@ export function ManuscriptPaperSettings({
                   min={0.05}
                   max={1}
                   step={0.05}
-                  onChange={(guideFontSize) => onUpdate({ guideFontSize })}
+                  onChange={(guideFontSize) => onUpsert({ guideFontSize })}
                 />
               </div>
               <div className="col-span-2">
@@ -207,29 +213,29 @@ export function ManuscriptPaperSettings({
                   min={0}
                   max={1}
                   step={0.05}
-                  onChange={(guidePadding) => onUpdate({ guidePadding })}
+                  onChange={(guidePadding) => onUpsert({ guidePadding })}
                 />
               </div>
             </div>
           )}
 
-          {guides.map((guide) => (
-            <div key={guide.id} className="space-y-1 rounded border p-1.5">
+          {manuscriptPaper.charGuides.map((charGuide) => (
+            <div key={charGuide.id} className="space-y-1 rounded border p-1.5">
               <div className="flex items-center gap-1">
                 <Input
                   type="number"
                   className="h-7 w-16 text-xs"
-                  value={guide.atChar}
+                  value={charGuide.atChar}
                   min={1}
                   max={capacity}
                   title="先頭からの文字数"
                   onChange={(e) =>
-                    onUpdateCharGuide(guide.id, {
+                    onUpdateCharGuide(charGuide.id, {
                       atChar: clampInt(
                         e.target.value,
                         1,
                         capacity,
-                        guide.atChar
+                        charGuide.atChar
                       ),
                     })
                   }
@@ -237,17 +243,17 @@ export function ManuscriptPaperSettings({
                 <span className="text-[10px] text-muted-foreground">字目</span>
                 <Input
                   className="h-7 flex-1 text-xs"
-                  value={guide.label}
+                  value={charGuide.label}
                   placeholder="数字(空欄=罫線のみ)"
                   onChange={(e) =>
-                    onUpdateCharGuide(guide.id, { label: e.target.value })
+                    onUpdateCharGuide(charGuide.id, { label: e.target.value })
                   }
                 />
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 text-destructive"
-                  onClick={() => onDeleteCharGuide(guide.id)}
+                  onClick={() => onDeleteCharGuide(charGuide.id)}
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
@@ -257,10 +263,10 @@ export function ManuscriptPaperSettings({
                   次の罫線
                 </span>
                 <Select
-                  value={guide.boundary ?? BOUNDARY_NONE}
+                  value={charGuide.boundary ?? BOUNDARY_NONE}
                   onValueChange={(v) =>
                     onUpdateCharGuide(
-                      guide.id,
+                      charGuide.id,
                       v === BOUNDARY_NONE
                         ? { boundary: undefined }
                         : { boundary: v as BorderLineStyle }
@@ -278,35 +284,41 @@ export function ManuscriptPaperSettings({
                     ))}
                   </SelectContent>
                 </Select>
-                {guide.boundary && (
+                {charGuide.boundary && (
                   <div className="flex-1">
                     <SliderWithInput
                       label="太さ(mm)"
                       value={
-                        guide.boundaryWidth ?? DEFAULT_MANUSCRIPT_BOUNDARY_WIDTH
+                        charGuide.boundaryWidth ??
+                        DEFAULT_MANUSCRIPT_BOUNDARY_WIDTH
                       }
                       min={0.1}
                       max={1.5}
                       step={0.1}
                       onChange={(v) =>
-                        onUpdateCharGuide(guide.id, { boundaryWidth: v })
+                        onUpdateCharGuide(charGuide.id, { boundaryWidth: v })
                       }
                     />
                   </div>
                 )}
               </div>
-              {(guide.boundary === "dashed" || guide.boundary === "dotted") && (
+              {(charGuide.boundary === "dashed" ||
+                charGuide.boundary === "dotted") && (
                 <div className="flex items-center gap-2 pl-2">
-                  {guide.boundary === "dashed" && (
+                  {charGuide.boundary === "dashed" && (
                     <div className="flex-1">
                       <SliderWithInput
                         label="破線長"
-                        value={guide.boundaryDashRatio ?? DEFAULT_DASH_RATIO}
+                        value={
+                          charGuide.boundaryDashRatio ?? DEFAULT_DASH_RATIO
+                        }
                         min={0.5}
                         max={10}
                         step={0.5}
                         onChange={(v) =>
-                          onUpdateCharGuide(guide.id, { boundaryDashRatio: v })
+                          onUpdateCharGuide(charGuide.id, {
+                            boundaryDashRatio: v,
+                          })
                         }
                       />
                     </div>
@@ -314,12 +326,12 @@ export function ManuscriptPaperSettings({
                   <div className="flex-1">
                     <SliderWithInput
                       label="間隔"
-                      value={guide.boundaryGapRatio ?? DEFAULT_GAP_RATIO}
+                      value={charGuide.boundaryGapRatio ?? DEFAULT_GAP_RATIO}
                       min={0.5}
                       max={10}
                       step={0.5}
                       onChange={(v) =>
-                        onUpdateCharGuide(guide.id, { boundaryGapRatio: v })
+                        onUpdateCharGuide(charGuide.id, { boundaryGapRatio: v })
                       }
                     />
                   </div>
@@ -328,7 +340,7 @@ export function ManuscriptPaperSettings({
             </div>
           ))}
 
-          {guides.length === 0 ? (
+          {manuscriptPaper.charGuides.length === 0 ? (
             <p className="text-[10px] text-muted-foreground">
               「追加」で先頭からの文字数の目印を作成。数字（例:
               80）と区切り罫線（○字以内/以上）を組み合わせられます。罫線のみ使うときは数字を空欄に。

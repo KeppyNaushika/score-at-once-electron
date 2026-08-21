@@ -6,6 +6,7 @@ import type {
   AsbHeaderFieldAttributes,
   AsbImageElementAttributes,
   AsbMajorQuestionAttributes,
+  AsbManuscriptPaperAttributes,
   AsbSubQuestionUpdate,
   AsbTextElementAttributes,
   CellImageElement,
@@ -79,7 +80,16 @@ export interface AsbEditorActions {
   upsertOmrConfig: (parent: AsbCellParent, config: OMRCellConfig) => void
   deleteOmrConfig: (parent: AsbCellParent) => void
 
-  addCharGuide: (subQuestionId: string, charGuide: ManuscriptCharGuide) => void
+  upsertManuscriptPaper: (
+    parent: AsbCellParent,
+    data: Partial<AsbManuscriptPaperAttributes>
+  ) => void
+  deleteManuscriptPaper: (parent: AsbCellParent) => void
+
+  addCharGuide: (
+    manuscriptPaperId: string,
+    charGuide: ManuscriptCharGuide
+  ) => void
   updateCharGuide: (
     charGuideId: string,
     data: Partial<AsbCharGuideAttributes>

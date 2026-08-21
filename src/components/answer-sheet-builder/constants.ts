@@ -1,5 +1,6 @@
 import type {
   AnswerSheetDefinition,
+  AsbManuscriptPaperAttributes,
   BorderLineStyle,
   BranchQuestion,
   CellTextElement,
@@ -7,7 +8,6 @@ import type {
   HeaderFieldDefinition,
   MajorQuestion,
   ManuscriptGuidePosition,
-  ManuscriptPaperAttributes,
   PaperSize,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
@@ -120,11 +120,14 @@ export function generateId(): string {
   return crypto.randomUUID()
 }
 
-/** 原稿用紙の既定（設定を持たない小問に原稿用紙を足すときの土台） */
-export const DEFAULT_MANUSCRIPT_PAPER: ManuscriptPaperAttributes = {
+/** 原稿用紙の既定（原稿用紙をまだ持たないセルに足すときの土台） */
+export const DEFAULT_MANUSCRIPT_PAPER: AsbManuscriptPaperAttributes = {
   enabled: false,
   columns: 20,
   rows: 10,
+  guideFontSize: null,
+  guidePosition: null,
+  guidePadding: null,
 }
 
 export function createDefaultTextElement(): CellTextElement {

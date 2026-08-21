@@ -23,11 +23,13 @@ import {
 import { V1_0_0_to_V1_1_0_Transformer } from "./V1_0_0_to_V1_1_0"
 import { V1_1_0_to_V1_2_0_Transformer } from "./V1_1_0_to_V1_2_0"
 import { V1_2_0_to_V1_3_0_Transformer } from "./V1_2_0_to_V1_3_0"
+import { V1_3_0_to_V1_4_0_Transformer } from "./V1_3_0_to_V1_4_0"
 
 const ASB_TRANSFORMERS: AsbVersionTransformer[] = [
   new V1_0_0_to_V1_1_0_Transformer(),
   new V1_1_0_to_V1_2_0_Transformer(),
   new V1_2_0_to_V1_3_0_Transformer(),
+  new V1_3_0_to_V1_4_0_Transformer(),
 ]
 
 /** マニフェストのバージョン文字列からサポート対象のASBバージョンを判定する */

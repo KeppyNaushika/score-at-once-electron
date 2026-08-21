@@ -20,7 +20,7 @@ import type {
   GridCell,
 } from "@/types/answerSheetLayout.types"
 
-import { createCell } from "./cellBuilder"
+import { computeManuscriptGrid, createCell } from "./cellBuilder"
 import {
   buildBranchGridLayout,
   computeGridRowRightEdges,
@@ -292,12 +292,21 @@ export function renderBranchQuestions(
 
       const branchPoints =
         sub.usesBranchPoints === false ? 0 : gridCell.item.points
+      // 原稿用紙のある枝問は、解答欄そのものをマス目の幅にする（小問と同じ）。
+      // **枝問は必ずこの横配置の枝を通る** — `isGridHorizontal` が原稿用紙を
+      // 横配置の条件に数えているため、縦配置の枝へは落ちてこない
+      const branchAnswerX = cellX + effBranchNumW
+      const branchManuscriptPaper = gridCell.item.manuscriptPaper
+      const branchAnswerWidth = branchManuscriptPaper?.enabled
+        ? (cellHeight / branchManuscriptPaper.rows) *
+          branchManuscriptPaper.columns
+        : cellWidth - effBranchNumW
       cells.push(
         createCell(
           [majorIndex, subIndex, gridCell.itemIndex],
-          cellX + effBranchNumW,
+          branchAnswerX,
           cellY,
-          cellWidth - effBranchNumW,
+          branchAnswerWidth,
           cellHeight,
           paper,
           `${majorLabel}-${sub.label}-${gridCell.item.label}`,
@@ -305,7 +314,14 @@ export function renderBranchQuestions(
           gridCell.item.textElements,
           "answer",
           pageIndex,
-          undefined,
+          computeManuscriptGrid(
+            gridCell.item,
+            branchAnswerX,
+            cellY,
+            branchAnswerWidth,
+            cellHeight,
+            settings.borderConfig
+          ),
           gridCell.item.omrConfig,
           gridCell.item.imageElements
         )

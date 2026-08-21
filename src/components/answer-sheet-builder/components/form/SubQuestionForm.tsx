@@ -378,18 +378,17 @@ export function SubQuestionForm({
             definitionId={definitionId}
           />
           <ManuscriptPaperSettings
-            config={subQuestion.manuscriptPaper}
-            onUpdate={(data) => {
-              // 原稿用紙を使い始めたら、横に並ぶよう幅を埋めておく
-              const startsUsing =
-                data.enabled && !subQuestion.layoutWidth
-                  ? { layoutWidth: "1" }
-                  : {}
-              onUpdate({ manuscriptPaper: data, ...startsUsing })
+            manuscriptPaper={subQuestion.manuscriptPaper}
+            onUpsert={(data) => {
+              actions.upsertManuscriptPaper(cell, data)
+              // 原稿用紙を使い始めたら、横に並ぶよう幅を埋めておく。
+              // **別のレコードなので別の意図として送る**（1つの更新に混ぜると
+              // 書き込みの単位が2テーブルにまたがる）
+              if (data.enabled && !subQuestion.layoutWidth) {
+                onUpdate({ layoutWidth: "1" })
+              }
             }}
-            onAddCharGuide={(charGuide) =>
-              actions.addCharGuide(subQuestion.id, charGuide)
-            }
+            onAddCharGuide={actions.addCharGuide}
             onUpdateCharGuide={actions.updateCharGuide}
             onDeleteCharGuide={actions.deleteCharGuide}
           />

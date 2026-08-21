@@ -76,6 +76,69 @@ function createV1_1_0_ArchiveData(): AsbArchiveData {
   return raw as unknown as AsbArchiveData
 }
 
+/**
+ * v1.3.0 形状: 原稿用紙は小問の入れ子で、id を持たない。
+ *
+ * 「有効なときだけ入れ子が在る」形なので `enabled` すら書かれていないことがあり、
+ * 未指定の項目はキーごと欠けている。枝問には原稿用紙が付かない。
+ */
+function createV1_3_0_ArchiveData(): AsbArchiveData {
+  const raw = {
+    manifest: {
+      version: "1.3.0",
+      appVersion: "test",
+      exportedAt: TIMESTAMP,
+      definitionName: "テスト解答用紙",
+      paperSize: "A4",
+      orientation: "portrait",
+      counts: createCounts({
+        majorQuestions: 1,
+        subQuestions: 2,
+        charGuides: 1,
+      }),
+    },
+    definition: {
+      ...createDefinition(),
+      majorQuestions: [
+        {
+          id: "major-1",
+          label: "1",
+          subQuestions: [
+            {
+              id: "sub-1",
+              label: "(1)",
+              branchQuestions: [],
+              heightMultiplier: 1,
+              points: 10,
+              textElements: [],
+              imageElements: [],
+              manuscriptPaper: {
+                enabled: true,
+                columns: 25,
+                rows: 15,
+                guidePosition: "top-right",
+                charGuides: [{ id: "cg-1", atChar: 80, label: "80" }],
+              },
+            },
+            {
+              id: "sub-2",
+              label: "(2)",
+              branchQuestions: [],
+              heightMultiplier: 1,
+              points: 5,
+              textElements: [],
+              imageElements: [],
+            },
+          ],
+        },
+      ],
+    },
+    tagsData: [],
+    asbDefinitionTags: [],
+  }
+  return raw as unknown as AsbArchiveData
+}
+
 /** v1.2.0（タグ対応）形状: tagsData と asbDefinitionTags を同梱 */
 function createV1_2_0_ArchiveData(): AsbArchiveData {
   const raw = {
@@ -108,8 +171,8 @@ describe("ASB transformer chain", () => {
   test("v1.1.0 → 最新: タグ情報が空配列で補完される（no-op）", () => {
     const result = transformAsbToLatest(createV1_1_0_ArchiveData())
 
-    expect(result.finalVersion).toBe("1.3.0")
-    expect(result.data.manifest.version).toBe("1.3.0")
+    expect(result.finalVersion).toBe("1.4.0")
+    expect(result.data.manifest.version).toBe("1.4.0")
     expect(result.data.manifest.counts.tags).toBe(0)
     expect(result.data.tagsData).toEqual([])
     expect(result.data.asbDefinitionTags).toEqual([])
@@ -125,10 +188,37 @@ describe("ASB transformer chain", () => {
     expect(result.data.definition.majorQuestions).toEqual([])
   })
 
+  test("v1.3.0 → 最新: 原稿用紙が id と null 揃いの行になる", () => {
+    const result = transformAsbToLatest(createV1_3_0_ArchiveData())
+
+    expect(result.finalVersion).toBe("1.4.0")
+    const [withPaper, withoutPaper] =
+      result.data.definition.majorQuestions[0].subQuestions
+    // 旧形式は「有効なときだけ入れ子が在る」形。値はそのまま移り、
+    // 未指定だった項目は null（DB の列が持つ姿）になる
+    expect(withPaper.manuscriptPaper).toMatchObject({
+      enabled: true,
+      columns: 25,
+      rows: 15,
+      guidePosition: "top-right",
+      guideFontSize: null,
+      guidePadding: null,
+    })
+    expect(withPaper.manuscriptPaper?.charGuides).toEqual([
+      { id: "cg-1", atChar: 80, label: "80" },
+    ])
+    // id は行の主キーになるので、無かったものには振る
+    expect(withPaper.manuscriptPaper?.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+    )
+    // 原稿用紙を使っていない小問には行を作らない
+    expect(withoutPaper.manuscriptPaper).toBeUndefined()
+  })
+
   test("v1.2.0: タグ情報がそのまま保持される（往復）", () => {
     const result = transformAsbToLatest(createV1_2_0_ArchiveData())
 
-    expect(result.finalVersion).toBe("1.3.0")
+    expect(result.finalVersion).toBe("1.4.0")
     expect(result.data.tagsData).toEqual([
       { id: "tag-1", name: "数学", order: 0, color: "#ff0000" },
       { id: "tag-2", name: "中間試験", order: 1, color: null },

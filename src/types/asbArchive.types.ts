@@ -84,13 +84,23 @@ export interface AsbChainTransformResult {
 // バージョン
 // =============================================================================
 
-export type AsbArchiveVersion = "1.0.0" | "1.1.0" | "1.2.0" | "1.3.0"
-export const ASB_CURRENT_VERSION: AsbArchiveVersion = "1.3.0"
+/**
+ * | バージョン | 変更内容                                                              |
+ * | ---------- | --------------------------------------------------------------------- |
+ * | 1.0.0      | 初版                                                                  |
+ * | 1.1.0      | 文字位置マーカーを JSON 列から独立テーブルへ                          |
+ * | 1.2.0      | タグ本体と定義へのタグ参照を同梱                                      |
+ * | 1.3.0      | 描き分け（renderMode）を解答用紙の属性から外す                        |
+ * | 1.4.0      | 原稿用紙をテーブルへ（id を持ち、枝問にも付く。マーカーの親も原稿用紙）|
+ */
+export type AsbArchiveVersion = "1.0.0" | "1.1.0" | "1.2.0" | "1.3.0" | "1.4.0"
+export const ASB_CURRENT_VERSION: AsbArchiveVersion = "1.4.0"
 export const ASB_SUPPORTED_VERSIONS: readonly AsbArchiveVersion[] = [
   "1.0.0",
   "1.1.0",
   "1.2.0",
   "1.3.0",
+  "1.4.0",
 ] as const
 
 // =============================================================================
@@ -107,4 +117,5 @@ export interface AsbIdMappings {
   imageElement: Record<string, string>
   charGuide: Record<string, string>
   omrConfig: Record<string, string>
+  manuscriptPaper: Record<string, string>
 }

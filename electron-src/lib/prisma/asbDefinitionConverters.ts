@@ -9,6 +9,7 @@ import type {
   AsbCharGuide,
   AsbDefinition,
   AsbImageElement,
+  AsbManuscriptPaper,
   AsbOmrConfig,
   AsbTextElement,
 } from "@prisma/client"
@@ -27,6 +28,7 @@ import type {
   MajorQuestion,
   ManuscriptCharGuide,
   ManuscriptGuidePosition,
+  ManuscriptPaper,
   PaperSettings,
   SubQuestion,
 } from "../../../src/types/answerSheetDefinition.types"
@@ -210,8 +212,7 @@ export function flattenGlobalSettings(
  * AsbCharGuide テーブル行（order昇順で取得済み）を文字位置マーカー配列へ変換する。
  * boundary は DB移行時に solid/dashed/dotted へ検証済みだが、念のため型を絞る。
  */
-function dbCharGuides(rows: AsbCharGuide[]): ManuscriptCharGuide[] | undefined {
-  if (rows.length === 0) return undefined
+function dbCharGuides(rows: AsbCharGuide[]): ManuscriptCharGuide[] {
   const VALID_STYLES = new Set<BorderLineStyle>(["solid", "dashed", "dotted"])
   return rows.map((row): ManuscriptCharGuide => {
     const boundary =
@@ -228,6 +229,27 @@ function dbCharGuides(rows: AsbCharGuide[]): ManuscriptCharGuide[] | undefined {
       boundaryGapRatio: row.boundaryGapRatio ?? undefined,
     }
   })
+}
+
+/**
+ * AsbManuscriptPaper 行を木の原稿用紙へ変換する。
+ *
+ * 行そのものを持つので、束ね直しは無い。`guidePosition` だけ DB が `String?` なので
+ * union へ絞る（`ScoringStatus` と同じ型注入）。
+ */
+function dbManuscriptPaper(
+  row: AsbManuscriptPaper & { charGuides: AsbCharGuide[] }
+): ManuscriptPaper {
+  return {
+    id: row.id,
+    enabled: row.enabled,
+    columns: row.columns,
+    rows: row.rows,
+    guideFontSize: row.guideFontSize,
+    guidePosition: row.guidePosition as ManuscriptGuidePosition | null,
+    guidePadding: row.guidePadding,
+    charGuides: dbCharGuides(row.charGuides),
+  }
 }
 
 /** DBフラットカラムから GlobalSettings に復元する */
@@ -418,18 +440,8 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
       label: majorQuestion.label,
       subQuestions: majorQuestion.subQuestions.map(
         (subQuestion): SubQuestion => {
-          const manuscriptPaper = subQuestion.manuscriptEnabled
-            ? {
-                enabled: true as const,
-                columns: subQuestion.manuscriptColumns,
-                rows: subQuestion.manuscriptRows,
-                charGuides: dbCharGuides(subQuestion.charGuides),
-                guideFontSize: subQuestion.manuscriptGuideFontSize ?? undefined,
-                guidePosition:
-                  (subQuestion.manuscriptGuidePosition as ManuscriptGuidePosition | null) ??
-                  undefined,
-                guidePadding: subQuestion.manuscriptGuidePadding ?? undefined,
-              }
+          const manuscriptPaper = subQuestion.manuscriptPaper
+            ? dbManuscriptPaper(subQuestion.manuscriptPaper)
             : undefined
           const borderStyles =
             subQuestion.borderStyleTop ||
@@ -513,6 +525,9 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
                   goUp: branchQuestion.goUp ?? undefined,
                   omrConfig: branchQuestion.omrConfig
                     ? dbToOmrConfig(branchQuestion.omrConfig)
+                    : undefined,
+                  manuscriptPaper: branchQuestion.manuscriptPaper
+                    ? dbManuscriptPaper(branchQuestion.manuscriptPaper)
                     : undefined,
                 }
               }

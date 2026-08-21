@@ -36,7 +36,7 @@ export function collectAsbData(
     for (const subQuestion of majorQuestion.subQuestions) {
       subQuestions++
       textElements += subQuestion.textElements.length
-      charGuides += subQuestion.manuscriptPaper?.charGuides?.length ?? 0
+      charGuides += subQuestion.manuscriptPaper?.charGuides.length ?? 0
       if (subQuestion.imageElements) {
         imageElements += subQuestion.imageElements.length
         for (const imageElement of subQuestion.imageElements) {
@@ -48,6 +48,7 @@ export function collectAsbData(
       for (const branchQuestion of subQuestion.branchQuestions) {
         branchQuestions++
         textElements += branchQuestion.textElements.length
+        charGuides += branchQuestion.manuscriptPaper?.charGuides.length ?? 0
         if (branchQuestion.imageElements) {
           imageElements += branchQuestion.imageElements.length
           for (const imageElement of branchQuestion.imageElements) {

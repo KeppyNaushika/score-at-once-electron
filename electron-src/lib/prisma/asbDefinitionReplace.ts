@@ -39,6 +39,7 @@ import {
   deleteRemovedAsbMajorQuestions,
   writeAsbMajorQuestionTree,
 } from "./asbMajorQuestion"
+import { deleteRemovedAsbManuscriptPapers } from "./asbManuscriptPaper"
 import { deleteRemovedAsbOmrConfigs } from "./asbOmrConfig"
 import { deleteRemovedAsbSubQuestions } from "./asbSubQuestion"
 import { deleteRemovedAsbTextElements } from "./asbTextElement"
@@ -58,6 +59,9 @@ interface SurvivingIds {
   /** OMR設定を持つ小問・枝問（設定自体は id を持ち回らないので親で数える） */
   omrSubQuestions: string[]
   omrBranchQuestions: string[]
+  /** 原稿用紙を持つ小問・枝問（残す判定は親で行う。OMR設定と同じ） */
+  manuscriptSubQuestions: string[]
+  manuscriptBranchQuestions: string[]
 }
 
 function collectSurvivingIds(definition: AnswerSheetDefinition): SurvivingIds {
@@ -73,14 +77,19 @@ function collectSurvivingIds(definition: AnswerSheetDefinition): SurvivingIds {
     imageElements: [],
     omrSubQuestions: [],
     omrBranchQuestions: [],
+    manuscriptSubQuestions: [],
+    manuscriptBranchQuestions: [],
   }
 
   for (const majorQuestion of definition.majorQuestions) {
     surviving.majorQuestions.push(majorQuestion.id)
     for (const subQuestion of majorQuestion.subQuestions) {
       surviving.subQuestions.push(subQuestion.id)
-      for (const charGuide of subQuestion.manuscriptPaper?.charGuides ?? []) {
-        surviving.charGuides.push(charGuide.id)
+      if (subQuestion.manuscriptPaper) {
+        surviving.manuscriptSubQuestions.push(subQuestion.id)
+        for (const charGuide of subQuestion.manuscriptPaper.charGuides) {
+          surviving.charGuides.push(charGuide.id)
+        }
       }
       for (const textElement of subQuestion.textElements) {
         surviving.textElements.push(textElement.id)
@@ -93,6 +102,12 @@ function collectSurvivingIds(definition: AnswerSheetDefinition): SurvivingIds {
       }
       for (const branchQuestion of subQuestion.branchQuestions) {
         surviving.branchQuestions.push(branchQuestion.id)
+        if (branchQuestion.manuscriptPaper) {
+          surviving.manuscriptBranchQuestions.push(branchQuestion.id)
+          for (const charGuide of branchQuestion.manuscriptPaper.charGuides) {
+            surviving.charGuides.push(charGuide.id)
+          }
+        }
         for (const textElement of branchQuestion.textElements) {
           surviving.textElements.push(textElement.id)
         }
@@ -174,6 +189,12 @@ export async function replaceAsbDefinition(
       )
     )
     mark(
+      await deleteRemovedAsbManuscriptPapers(tx, definitionId, {
+        subQuestionIds: surviving.manuscriptSubQuestions,
+        branchQuestionIds: surviving.manuscriptBranchQuestions,
+      })
+    )
+    mark(
       await deleteRemovedAsbCharGuides(tx, definitionId, surviving.charGuides)
     )
     mark(
@@ -214,8 +235,13 @@ export async function replaceAsbDefinition(
       branchQuestions: byId(
         await tx.asbBranchQuestion.findMany({ where: inSubQuestions })
       ),
+      manuscriptPapers: byId(
+        await tx.asbManuscriptPaper.findMany({ where: { OR: inCells } })
+      ),
       charGuides: byId(
-        await tx.asbCharGuide.findMany({ where: inSubQuestions })
+        await tx.asbCharGuide.findMany({
+          where: { manuscriptPaper: { OR: inCells } },
+        })
       ),
       textElements: byId(
         await tx.asbTextElement.findMany({ where: { OR: inCells } })

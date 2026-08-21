@@ -48,17 +48,22 @@ const fullInclude = {
                   },
                 },
               },
+              manuscriptPaper: {
+                include: { charGuides: { orderBy: { order: "asc" } } },
+              },
             },
           },
           textElements: { orderBy: { order: "asc" } },
           imageElements: { orderBy: { order: "asc" } },
-          charGuides: { orderBy: { order: "asc" } },
           omrConfig: {
             include: {
               choiceOptions: {
                 orderBy: { choiceIndex: "asc" },
               },
             },
+          },
+          manuscriptPaper: {
+            include: { charGuides: { orderBy: { order: "asc" } } },
           },
         },
       },
