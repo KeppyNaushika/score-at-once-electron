@@ -181,4 +181,69 @@ describe("ClassroomRemovalDialog", () => {
       screen.queryByRole("button", { name: "削除する" })
     ).not.toBeInTheDocument()
   })
+
+  it("can-delete-students: 中止されたら2段階目の本文も数え直した件数へそろう", async () => {
+    const user = userEvent.setup()
+    // 1回目は中止（他の教員が1名足した）、2回目は成功
+    const onConfirm = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new Error(
+          "削除対象が増えています（3件 → 4件）。もう一度確認してください。"
+        )
+      )
+      .mockResolvedValue(undefined)
+    const onClose = vi.fn()
+    // 数え直すと3名 → 4名
+    const fetchRemovalPreview = vi
+      .fn()
+      .mockResolvedValueOnce(exclusiveStudents(3))
+      .mockResolvedValue(exclusiveStudents(4))
+
+    render(
+      <ClassroomRemovalDialog
+        entry={entry}
+        mode="can-delete-students"
+        fetchRemovalPreview={fetchRemovalPreview}
+        onConfirm={onConfirm}
+        onClose={onClose}
+      />
+    )
+
+    await waitFor(() => expect(fetchRemovalPreview).toHaveBeenCalledTimes(1))
+    await user.click(screen.getByRole("radio", { name: /専属の生徒も削除/ }))
+    await user.click(await screen.findByRole("button", { name: "次へ" }))
+
+    // 2段階目は見せた件数（3名）を出す
+    const finalConfirmDialog = await screen.findByRole("alertdialog")
+    expect(finalConfirmDialog.textContent).toContain("3名")
+
+    // 押すと main が中止し、その場で数え直す
+    await user.click(screen.getByRole("button", { name: "削除する" }))
+    await waitFor(() => expect(fetchRemovalPreview).toHaveBeenCalledTimes(2))
+
+    // 中止の文言（何が変わったか）は残しつつ、本文は数え直した4名へそろう
+    await waitFor(() =>
+      expect(screen.getByRole("alertdialog").textContent).toContain("4名")
+    )
+    expect(screen.getByRole("alertdialog").textContent).toContain("3件 → 4件")
+    expect(screen.getByRole("alertdialog").textContent).not.toContain(
+      "所属する 3名"
+    )
+
+    // もう一度押したときに消えるのは、本文が言っている4名
+    await user.click(screen.getByRole("button", { name: "削除する" }))
+    expect(onConfirm).toHaveBeenNthCalledWith(
+      1,
+      entry,
+      true,
+      exclusiveStudents(3)
+    )
+    expect(onConfirm).toHaveBeenNthCalledWith(
+      2,
+      entry,
+      true,
+      exclusiveStudents(4)
+    )
+  })
 })

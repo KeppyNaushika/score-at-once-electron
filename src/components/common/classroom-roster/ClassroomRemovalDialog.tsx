@@ -88,10 +88,7 @@ interface RemovalChoiceFormProps {
   onChoiceChange: (choice: RemovalChoice) => void
   onCancel: () => void
   /** 専属生徒を削除する選択かつ対象1名以上のとき、2段階目へ渡す */
-  onProceedToFinalConfirm: (
-    entry: ClassroomRosterEntry,
-    deletionCounts: ConfirmedDeletionCount[]
-  ) => void
+  onProceedToFinalConfirm: (entry: ClassroomRosterEntry) => void
   onConfirm: () => void
   /** 数え直しで増えていて中止されたときの文言 */
   refusalMessage: string | null
@@ -174,7 +171,7 @@ function RemovalChoiceForm({
           onClick={() => {
             // 専属生徒を削除する選択かつ対象1名以上 → 2段階目へ
             if (willDeleteStudents && deletionCounts && deleteCount > 0) {
-              onProceedToFinalConfirm(entry, deletionCounts)
+              onProceedToFinalConfirm(entry)
             } else {
               // 登録解除のみ、または削除対象0名はここで実行
               onConfirm()
@@ -248,12 +245,11 @@ export function ClassroomRemovalDialog({
     void countRemovalImpact(entry)
   }, [countRemovalImpact, entry, mode])
 
-  // 2段階目（取り消し不可の最終確認）の対象と件数。1段階目を閉じると件数を
-  // 持っていた本体が外れるので、進むときに一緒に受け取っておく
-  const [finalConfirm, setFinalConfirm] = useState<{
-    entry: ClassroomRosterEntry
-    deletionCounts: ConfirmedDeletionCount[]
-  } | null>(null)
+  // 2段階目（取り消し不可の最終確認）に居る学級。**件数は持たない** —
+  // 進むときに固定すると、中止されて数え直したあとも本文が古い件数を出し続け、
+  // 読んだ数と消える数が食い違う（段階40）。件数は常に preview から読む
+  const [finalConfirmEntry, setFinalConfirmEntry] =
+    useState<ClassroomRosterEntry | null>(null)
 
   // 閉じたら選択を初期値へ戻す（次に開いたときに前回の選択を引きずらない）
   const handleClose = () => {
@@ -285,7 +281,7 @@ export function ClassroomRemovalDialog({
 
   const runConfirm = async () => {
     if (!(await confirmDeletion())) return
-    setFinalConfirm(null)
+    setFinalConfirmEntry(null)
     handleClose()
   }
 
@@ -328,7 +324,7 @@ export function ClassroomRemovalDialog({
     <>
       {/* 1段階目: 外し方の選択 */}
       <Dialog
-        open={entry !== null && finalConfirm === null}
+        open={entry !== null && finalConfirmEntry === null}
         onOpenChange={(open) => !open && handleClose()}
       >
         <DialogContent>
@@ -340,9 +336,7 @@ export function ClassroomRemovalDialog({
               choice={choice}
               onChoiceChange={setChoice}
               onCancel={handleClose}
-              onProceedToFinalConfirm={(target, counts) =>
-                setFinalConfirm({ entry: target, deletionCounts: counts })
-              }
+              onProceedToFinalConfirm={setFinalConfirmEntry}
               onConfirm={() => void runConfirm()}
               refusalMessage={refusalMessage}
             />
@@ -352,16 +346,16 @@ export function ClassroomRemovalDialog({
 
       {/* 2段階目: 取り消し不可の最終確認 */}
       <AlertDialog
-        open={finalConfirm !== null}
-        onOpenChange={(open) => !open && setFinalConfirm(null)}
+        open={finalConfirmEntry !== null}
+        onOpenChange={(open) => !open && setFinalConfirmEntry(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>生徒データを削除しますか？</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
-                「{finalConfirm?.entry.name}」にのみ所属する{" "}
-                {sumDeletionCounts(finalConfirm?.deletionCounts ?? null)}名 を
+                「{finalConfirmEntry?.name}」にのみ所属する{" "}
+                {sumDeletionCounts(deletionCounts)}名 を
                 対象から外します。連動して以下も削除されます：
               </span>
               <span className="block pl-4 text-muted-foreground">
