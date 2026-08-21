@@ -173,15 +173,15 @@ export function StudentAddPanel({
                   {classroomEmptyMessage}
                 </div>
               ) : (
-                classrooms.map((classroomItem) => (
-                  <Card key={classroomItem.id} className="p-3">
+                classrooms.map((candidate) => (
+                  <Card key={candidate.classroom.id} className="p-3">
                     <div className="flex items-center space-x-3">
                       <Checkbox
-                        id={`add-class-${classroomItem.id}`}
-                        checked={classroomItem.isSelected}
+                        id={`add-class-${candidate.classroom.id}`}
+                        checked={candidate.isSelected}
                         onCheckedChange={(checked) =>
                           handleClassroomSelection(
-                            classroomItem.id,
+                            candidate.classroom.id,
                             checked === true
                           )
                         }
@@ -189,23 +189,28 @@ export function StudentAddPanel({
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <label
-                            htmlFor={`add-class-${classroomItem.id}`}
+                            htmlFor={`add-class-${candidate.classroom.id}`}
                             className="cursor-pointer font-medium"
                           >
-                            {classroomItem.name}
+                            {candidate.classroom.name}
                           </label>
                           <TooltipProvider delayDuration={150}>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Badge variant="outline">
-                                  {classroomItem.studentCount}名
+                                  {candidate.addableStudents.length}名
                                 </Badge>
                               </TooltipTrigger>
                               <TooltipContent
                                 side="left"
                                 className="max-h-64 max-w-xs overflow-auto whitespace-pre-line"
                               >
-                                {classroomItem.studentNames.join("\n")}
+                                {candidate.addableStudents
+                                  .map(
+                                    (student) =>
+                                      `${student.lastName} ${student.firstName}`
+                                  )
+                                  .join("\n")}
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -290,9 +295,12 @@ export function StudentAddPanel({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">すべての学級</SelectItem>
-                  {classrooms.map((classroom) => (
-                    <SelectItem key={classroom.id} value={classroom.id}>
-                      {classroom.name}
+                  {classrooms.map((candidate) => (
+                    <SelectItem
+                      key={candidate.classroom.id}
+                      value={candidate.classroom.id}
+                    >
+                      {candidate.classroom.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

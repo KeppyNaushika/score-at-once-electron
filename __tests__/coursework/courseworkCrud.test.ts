@@ -461,7 +461,10 @@ describe("Coursework CRUD", () => {
 
       const classrooms = await getCourseworkClassrooms(courseworkId)
       const byName = new Map(
-        classrooms.map((classroom) => [classroom.className, classroom.order])
+        classrooms.map((courseworkClassroom) => [
+          courseworkClassroom.classroom.name,
+          courseworkClassroom.order,
+        ])
       )
       expect(byName.get("1年B組")).toBe(0)
       expect(byName.get("1年A組")).toBe(1)

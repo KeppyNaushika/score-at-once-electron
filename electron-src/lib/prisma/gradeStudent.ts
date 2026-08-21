@@ -49,10 +49,15 @@ export async function getStudentsByGradeId(gradeId: string) {
 
 /**
  * 成績算出試験の登録学級一覧を取得
+ *
+ * GradeClassroom の木（学級と、基準日時点で在籍している所属）をそのまま返す。
+ * 学級名は `gradeClassroom.classroom.name`、生徒数は
+ * `gradeClassroom.classroom.memberships.length` として表示側が読む。
+ * 「基準日で絞る」規則は include の where が1箇所で持ち、main は数えない。
  */
 export async function getGradeClassrooms(gradeId: string) {
   const referenceDate = await getExamReferenceDate(gradeId)
-  const classrooms = await prisma.gradeClassroom.findMany({
+  return prisma.gradeClassroom.findMany({
     where: { gradeId },
     include: {
       classroom: {
@@ -65,20 +70,13 @@ export async function getGradeClassrooms(gradeId: string) {
     },
     orderBy: { order: "asc" },
   })
-  return classrooms.map((gradeClassroom) => ({
-    id: gradeClassroom.id,
-    classroomId: gradeClassroom.classroomId,
-    className: gradeClassroom.classroom.name,
-    order: gradeClassroom.order,
-    studentCount: gradeClassroom.classroom.memberships.length,
-  }))
 }
 
 /**
  * まだ登録されていない学級一覧を取得
  *
- * @param activeOnly trueなら基準日時点で在籍中の生徒のみを数える（既定）。
- *   falseなら在籍期間に関わらず学級に在籍歴のある全生徒を数える。
+ * @param activeOnly trueなら基準日時点で在籍中の生徒のみを候補にする（既定）。
+ *   falseなら在籍期間に関わらず学級に在籍歴のある全生徒を候補にする。
  *   いずれの場合も、対象生徒が0名の学級は候補から除外する。
  */
 export async function getAvailableClassroomsForGrade(

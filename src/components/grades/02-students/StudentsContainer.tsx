@@ -9,17 +9,13 @@ import {
   ClassroomRosterManager,
 } from "@/components/common/classroom-roster"
 import {
-  type RosterClassroomOption,
   type RosterRow,
   RosterTable,
   type RosterTableAdapter,
   type RosterTableHandle,
 } from "@/components/common/roster-table"
 import { StudentAddPanel } from "@/components/common/student-add-panel/components/StudentAddPanel"
-import type {
-  AddPanelClassroomItem,
-  StudentAddPanelAdapter,
-} from "@/components/common/student-add-panel/types"
+import type { StudentAddPanelAdapter } from "@/components/common/student-add-panel/types"
 import { Button } from "@/components/ui/button"
 import {
   addStudentsFromClassroomMutation,
@@ -116,10 +112,8 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
         const gradeClassrooms = await queryClient.fetchQuery(
           gradeClassroomsQuery(gradeId)
         )
-        return gradeClassrooms.map((gradeClassroom): RosterClassroomOption => ({
-          id: gradeClassroom.classroomId,
-          name: gradeClassroom.className,
-        }))
+        // 学級の行そのものを渡す（フィルタは id で照合し、名前は表示時に読む）
+        return gradeClassrooms.map((gradeClassroom) => gradeClassroom.classroom)
       },
       updateRowOrder: async (rowOrders) => {
         await updateStudentOrders.mutateAsync(rowOrders)
@@ -135,17 +129,11 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
   const addPanelAdapter = useMemo<StudentAddPanelAdapter>(
     () => ({
       scopeId: gradeId,
-      fetchAvailableClassrooms: async (activeOnly) => {
-        const classrooms = await queryClient.fetchQuery(
+      fetchAvailableClassrooms: async (activeOnly) =>
+        // 候補は境界が返す学級（在籍＋生徒を同梱）をそのまま渡す
+        queryClient.fetchQuery(
           gradeAvailableClassroomsQuery(gradeId, activeOnly)
-        )
-        return classrooms.map((classroom): AddPanelClassroomItem => ({
-          id: classroom.id,
-          name: classroom.name,
-          studentCount: classroom.studentCount,
-          studentNames: classroom.studentNames,
-        }))
-      },
+        ),
       fetchAvailableStudents: async (activeOnly) =>
         // 候補は境界が返す行（Student＋所属＋学級）をそのまま渡す
         queryClient.fetchQuery(
@@ -178,8 +166,8 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
       classrooms.map((gradeClassroom) => ({
         id: gradeClassroom.classroomId,
         classroomId: gradeClassroom.classroomId,
-        name: gradeClassroom.className,
-        studentCount: gradeClassroom.studentCount,
+        name: gradeClassroom.classroom.name,
+        studentCount: gradeClassroom.classroom.memberships.length,
         order: gradeClassroom.order,
       })),
     [classrooms]

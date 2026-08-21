@@ -1,10 +1,11 @@
-import type { RosterClassroomOption } from "@/components/common/roster-table"
+import type { Classroom } from "@prisma/client"
+
 import type { ExamClassroomPlacement } from "@/lib/examClassroomPlacement"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 export interface SortableStudentTableProps {
-  classrooms: RosterClassroomOption[]
+  classrooms: Classroom[]
   onStudentStatusUpdate: (studentId: string, status: ExamStudentStatus) => void
   onStudentOrderUpdate: (
     examId: string,

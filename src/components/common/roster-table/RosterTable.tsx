@@ -1,5 +1,6 @@
 "use client"
 
+import type { Classroom } from "@prisma/client"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { RotateCcw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -9,7 +10,6 @@ import { RosterTableFilters } from "@/components/common/roster-table/RosterTable
 import { RosterTableHeader } from "@/components/common/roster-table/RosterTableHeader"
 import { RosterTableRow } from "@/components/common/roster-table/RosterTableRow"
 import type {
-  RosterClassroomOption,
   RosterRow,
   RosterTableAdapter,
   RosterTableSlots,
@@ -59,7 +59,7 @@ interface RosterTableProps {
  */
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_ROWS: RosterRow[] = []
-const EMPTY_CLASSROOMS: RosterClassroomOption[] = []
+const EMPTY_CLASSROOMS: Classroom[] = []
 
 export function RosterTable({
   adapter,
@@ -120,7 +120,7 @@ export function RosterTable({
     (update: (rows: RosterRow[]) => RosterRow[]) => {
       queryClient.setQueryData<{
         rows: RosterRow[]
-        classrooms: RosterClassroomOption[]
+        classrooms: Classroom[]
       }>(queryKey, (previous) =>
         previous ? { ...previous, rows: update(previous.rows) } : previous
       )

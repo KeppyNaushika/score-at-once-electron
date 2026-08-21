@@ -1,9 +1,9 @@
 "use client"
 
+import type { Classroom } from "@prisma/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo, useState } from "react"
 
-import type { RosterClassroomOption } from "@/components/common/roster-table"
 import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
 import {
   type ExamClassroomPlacement,
@@ -140,19 +140,16 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
     [examStudentRows, placementByStudent]
   )
 
-  // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（id/name のみ）
-  const classrooms = useMemo<RosterClassroomOption[]>(() => {
-    const uniqueClasses = new Map<string, RosterClassroomOption>()
+  // フィルタ用学級リスト: 受験生徒の所属履歴に現れる Classroom を id で一意化する
+  const classrooms = useMemo<Classroom[]>(() => {
+    const classroomById = new Map<string, Classroom>()
     for (const examStudent of examStudents) {
       for (const membership of examStudent.student.memberships ?? []) {
-        if (uniqueClasses.has(membership.classroom.id)) continue
-        uniqueClasses.set(membership.classroom.id, {
-          id: membership.classroom.id,
-          name: membership.classroom.name,
-        })
+        if (classroomById.has(membership.classroom.id)) continue
+        classroomById.set(membership.classroom.id, membership.classroom)
       }
     }
-    return Array.from(uniqueClasses.values())
+    return Array.from(classroomById.values())
   }, [examStudents])
 
   const refreshStudentData = useCallback(

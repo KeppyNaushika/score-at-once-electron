@@ -1,6 +1,2 @@
 export { ClassroomRosterManager } from "./ClassroomRosterManager"
-export type {
-  AvailableClassroomOption,
-  ClassroomRosterEntry,
-  ClassroomRosterFlagColumn,
-} from "./types"
+export type { ClassroomRosterEntry, ClassroomRosterFlagColumn } from "./types"

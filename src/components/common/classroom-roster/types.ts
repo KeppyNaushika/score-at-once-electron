@@ -26,15 +26,6 @@ export interface ClassroomRosterEntry {
   order: number
 }
 
-/** 追加ダイアログに出す候補学級 */
-export interface AvailableClassroomOption {
-  id: string
-  name: string
-  classroomCode?: string | null
-  grade?: number | null
-  studentCount: number
-}
-
 /**
  * エンティティ固有のフラグ列（試験の「再採番(administered)」など）。
  * 成績・資料はフラグ列を持たない（空配列）。

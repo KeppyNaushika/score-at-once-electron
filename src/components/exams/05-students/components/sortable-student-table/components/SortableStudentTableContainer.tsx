@@ -232,15 +232,6 @@ export function SortableStudentTableContainer(
     [onStudentStatusUpdate, examStudentByStudentId]
   )
 
-  const classroomOptions = useMemo(
-    () =>
-      classrooms.map((classroom) => ({
-        id: classroom.id,
-        name: classroom.name,
-      })),
-    [classrooms]
-  )
-
   const handleConfirmReset = async () => {
     setIsResetting(true)
     try {
@@ -260,7 +251,7 @@ export function SortableStudentTableContainer(
           onSearchChange={onSearchChange}
           selectedClassroomId={selectedClassroomId}
           onClassroomChange={onClassroomChange}
-          classrooms={classroomOptions}
+          classrooms={classrooms}
           additionalFilters={additionalFilters}
         />
         <Button

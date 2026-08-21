@@ -1,6 +1,9 @@
 import type { ExamClassroom, Prisma } from "@prisma/client"
 
-import type { ExamClassroomWithMembers } from "@/types/prismaExtensions"
+import type {
+  ClassroomWithMembershipRows,
+  ExamClassroomWithMembers,
+} from "@/types/prismaExtensions"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope } from "./auditScope"
@@ -271,20 +274,14 @@ export const removeExamClassroom = async (
 }
 
 /**
- * Get all classrooms that are NOT in ExamClassroom for a exam
- * Used by ClassroomExamManager to show available classrooms to add
+ * この試験の ExamClassroom に**まだ入っていない**学級を返す
+ *
+ * ClassroomExamManager の「学級を追加」ダイアログの候補。学級の木を在籍ごと
+ * そのまま返し、生徒数は `classroom.memberships.length` として表示側が数える。
  */
 export const getAvailableClassroomsForExam = async (
   examId: string
-): Promise<
-  {
-    id: string
-    name: string
-    classroomCode: string | null
-    grade: number | null
-    studentCount: number
-  }[]
-> => {
+): Promise<ClassroomWithMembershipRows[]> => {
   try {
     // Get classrooms already associated with this exam
     const existingExamClassrooms = await prisma.examClassroom.findMany({
@@ -295,7 +292,7 @@ export const getAvailableClassroomsForExam = async (
     )
 
     // Get all classrooms not in ExamClassroom
-    const availableClassrooms = await prisma.classroom.findMany({
+    return await prisma.classroom.findMany({
       where: {
         id: {
           notIn:
@@ -307,14 +304,6 @@ export const getAvailableClassroomsForExam = async (
       },
       orderBy: [{ grade: "asc" }, { name: "asc" }],
     })
-
-    return availableClassrooms.map((classroom) => ({
-      id: classroom.id,
-      name: classroom.name,
-      classroomCode: classroom.classroomCode,
-      grade: classroom.grade,
-      studentCount: classroom.memberships.length,
-    }))
   } catch (error) {
     console.error(
       `Failed to get available classrooms for exam ${examId}:`,

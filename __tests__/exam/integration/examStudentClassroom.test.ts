@@ -150,6 +150,36 @@ describe("Exam 在籍フィルタ", () => {
       const allResult = await getClassroomsNotInExam(exam.id, false)
       expect(allResult.map((classroom) => classroom.name)).toContain("3年A組")
     })
+
+    it("既に受験者になっている生徒は候補の在籍に載らない", async () => {
+      const { exam, classroomA, left } = await createTestData()
+
+      // 在籍中の active だけ受験者にする
+      await addStudentsFromClassroom(exam.id, classroomA.id, true)
+
+      // 人数は表示側が memberships を数えるので、候補の木から
+      // 追加済みの生徒が落ちていること自体を確かめる
+      const result = await getClassroomsNotInExam(exam.id, false)
+      const candidate = result.find(
+        (classroom) => classroom.id === classroomA.id
+      )
+      expect(candidate).toBeDefined()
+      expect(
+        candidate?.memberships.map((membership) => membership.studentId)
+      ).toEqual([left.id])
+    })
+
+    it("追加できる生徒が残っていない学級は候補から外れる", async () => {
+      const { exam, classroomA } = await createTestData()
+
+      // 在籍歴のある生徒を全員（転出済みも含めて）受験者にする
+      await addStudentsFromClassroom(exam.id, classroomA.id, false)
+
+      const result = await getClassroomsNotInExam(exam.id, false)
+      expect(result.map((classroom) => classroom.id)).not.toContain(
+        classroomA.id
+      )
+    })
   })
 
   describe("将来始まる所属（基準日より後に入学/転入）", () => {

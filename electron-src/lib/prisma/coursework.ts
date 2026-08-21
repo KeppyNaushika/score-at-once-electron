@@ -530,10 +530,16 @@ export async function getCourseworkStudents(courseworkId: string) {
   return serializePrisma(students)
 }
 
-/** 登録学級一覧を取得 */
+/**
+ * 登録学級一覧を取得
+ *
+ * CourseworkClassroom の木（学級と、基準日時点で在籍している所属）をそのまま返す。
+ * 学級名は `courseworkClassroom.classroom.name`、生徒数は
+ * `courseworkClassroom.classroom.memberships.length` として表示側が読む。
+ */
 export async function getCourseworkClassrooms(courseworkId: string) {
   const referenceDate = await getCourseworkDate(courseworkId)
-  const classrooms = await prisma.courseworkClassroom.findMany({
+  return prisma.courseworkClassroom.findMany({
     where: { courseworkId },
     include: {
       classroom: {
@@ -546,13 +552,6 @@ export async function getCourseworkClassrooms(courseworkId: string) {
     },
     orderBy: { order: "asc" },
   })
-  return classrooms.map((courseworkClassroom) => ({
-    id: courseworkClassroom.id,
-    classroomId: courseworkClassroom.classroomId,
-    className: courseworkClassroom.classroom.name,
-    order: courseworkClassroom.order,
-    studentCount: courseworkClassroom.classroom.memberships.length,
-  }))
 }
 
 /** まだ登録されていない学級一覧を取得 */

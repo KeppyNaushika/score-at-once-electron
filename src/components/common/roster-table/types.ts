@@ -1,3 +1,4 @@
+import type { Classroom } from "@prisma/client"
 import type { ReactNode } from "react"
 
 /**
@@ -28,12 +29,6 @@ export interface RosterRow {
   kana: string
   classroomInfo: RosterClassroomInfo
   customOrder?: number | null
-}
-
-/** フィルタ用の学級候補 */
-export interface RosterClassroomOption {
-  id: string
-  name: string
 }
 
 /** 追加列の定義（ヘッダー＋セル） */
@@ -76,8 +71,8 @@ export interface RosterTableAdapter {
   scopeId: string
   /** 名簿行を取得 */
   fetchRows: () => Promise<RosterRow[]>
-  /** フィルタ用の学級候補を取得 */
-  fetchClassrooms: () => Promise<RosterClassroomOption[]>
+  /** フィルタ用の学級候補を取得（Classroom の行そのもの） */
+  fetchClassrooms: () => Promise<Classroom[]>
   /** 並び順を更新（customOrder の連番を保存） */
   updateRowOrder: (
     rowOrders: { studentId: string; customOrder: number }[]

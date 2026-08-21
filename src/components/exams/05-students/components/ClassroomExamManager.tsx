@@ -5,7 +5,6 @@ import { UserPlus } from "lucide-react"
 import { useMemo } from "react"
 
 import {
-  type AvailableClassroomOption,
   type ClassroomRosterEntry,
   type ClassroomRosterFlagColumn,
   ClassroomRosterManager,
@@ -114,18 +113,10 @@ export function ClassroomExamManager({
         </>
       }
       emptyHint="「学級を追加」ボタンから学級を追加してください"
-      fetchAvailableClassrooms={async () => {
-        const classrooms = await queryClient.fetchQuery(
-          availableExamClassroomsQuery(examId)
-        )
-        return classrooms.map((classroom): AvailableClassroomOption => ({
-          id: classroom.id,
-          name: classroom.name,
-          classroomCode: classroom.classroomCode,
-          grade: classroom.grade,
-          studentCount: classroom.studentCount,
-        }))
-      }}
+      // 候補は境界が返す学級（在籍を同梱）をそのまま渡す。人数は表示側が数える
+      fetchAvailableClassrooms={() =>
+        queryClient.fetchQuery(availableExamClassroomsQuery(examId))
+      }
       onAddClassrooms={async (classroomIds) => {
         for (const classroomId of classroomIds) {
           // administered の学級は既定で教員集計・生徒表示の対象（移行の

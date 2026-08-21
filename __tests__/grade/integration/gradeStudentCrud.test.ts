@@ -153,7 +153,7 @@ describe("GradeStudent / GradeClassroom", () => {
 
       const classrooms = await getGradeClassrooms(grade.id)
       expect(classrooms).toHaveLength(1)
-      expect(classrooms[0].className).toBe("1年A組")
+      expect(classrooms[0].classroom.name).toBe("1年A組")
     })
 
     it("複数学級の追加でorderが正しく設定される", async () => {
@@ -217,8 +217,9 @@ describe("GradeStudent / GradeClassroom", () => {
 
       const result = await getGradeClassrooms(grade.id)
       expect(result).toHaveLength(1)
-      expect(result[0].className).toBe("1年A組")
-      expect(result[0].studentCount).toBe(2)
+      expect(result[0].classroom.name).toBe("1年A組")
+      // 生徒数は main では数えない。基準日で絞った在籍がそのまま載る
+      expect(result[0].classroom.memberships).toHaveLength(2)
     })
   })
 
@@ -599,7 +600,10 @@ describe("GradeStudent / GradeClassroom", () => {
 
       const classrooms = await getGradeClassrooms(grade.id)
       const byName = new Map(
-        classrooms.map((classroom) => [classroom.className, classroom.order])
+        classrooms.map((gradeClassroom) => [
+          gradeClassroom.classroom.name,
+          gradeClassroom.order,
+        ])
       )
       expect(byName.get("1年B組")).toBe(0)
       expect(byName.get("1年A組")).toBe(1)

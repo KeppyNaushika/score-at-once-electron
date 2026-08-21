@@ -1,11 +1,9 @@
 "use client"
 
+import type { Classroom } from "@prisma/client"
 import { Search } from "lucide-react"
 
-import type {
-  RosterClassroomOption,
-  RosterFilter,
-} from "@/components/common/roster-table/types"
+import type { RosterFilter } from "@/components/common/roster-table/types"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -20,7 +18,7 @@ interface RosterTableFiltersProps {
   onSearchChange: (value: string) => void
   selectedClassroomId: string
   onClassroomChange: (value: string) => void
-  classrooms: RosterClassroomOption[]
+  classrooms: Classroom[]
   additionalFilters: RosterFilter[]
 }
 

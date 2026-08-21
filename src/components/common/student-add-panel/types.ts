@@ -5,21 +5,32 @@
  * データ取得・追加処理を差し込み、exam固有の examDate/status/customOrder などは
  * host 側で内部解決する。
  *
- * 生徒候補は境界が返す行（`StudentWithMemberships`）をそのまま持つ。以前は
- * 「パネルが読む列だけ」の手写しを置いて host ごとに詰め替えていたが、供給側は
- * 3経路とも同じ Prisma payload なので、写し違いに気付けないだけだった。
+ * 学級候補・生徒候補はいずれも境界が返す行（`ClassroomWithMemberships` /
+ * `StudentWithMemberships`）をそのまま持つ。以前は「パネルが読む列だけ」の手写しを
+ * 置いて host ごとに詰め替えていたが、供給側は3経路とも同じ Prisma payload なので、
+ * 写し違いに気付けないだけだった（資料の host は生徒名を空配列で潰していた）。
  */
 
-import type { StudentWithMemberships } from "@/types/prismaExtensions"
+import type { Student } from "@prisma/client"
 
-/** 学級候補（追加可能な学級） */
-export interface AddPanelClassroomItem {
-  id: string
-  name: string
-  /** この学級から新たに追加できる在籍生徒数 */
-  studentCount: number
-  /** 追加対象の生徒名（出席番号順、tooltip表示用） */
-  studentNames: string[]
+import type {
+  ClassroomWithMemberships,
+  StudentWithMemberships,
+} from "@/types/prismaExtensions"
+
+/**
+ * 追加候補の学級1件（学級の実体に、パネルが導いた分を隣へ添えたもの）
+ *
+ * 学級には在籍と生徒が同梱されて降ってくるが、同一生徒が複数の在籍歴で現れうるので、
+ * 「この学級から追加できる生徒」は studentId で畳んでから読む。実体（classroom）と
+ * 導出（addableStudents / isSelected）は混ぜずに並べる。
+ */
+export interface AddPanelClassroomCandidate {
+  /** 学級の行（在籍と生徒を同梱）。名前は classroom.name */
+  classroom: ClassroomWithMemberships
+  /** この学級から追加できる生徒（在籍歴を畳んだもの、出席番号順）。人数は .length */
+  addableStudents: Student[]
+  isSelected: boolean
 }
 
 /** host が差し込むデータ取得・追加処理 */
@@ -29,7 +40,7 @@ export interface StudentAddPanelAdapter {
   /** 追加可能な学級候補を取得（activeOnly=在籍中のみ） */
   fetchAvailableClassrooms: (
     activeOnly: boolean
-  ) => Promise<AddPanelClassroomItem[]>
+  ) => Promise<ClassroomWithMemberships[]>
   /** 追加可能な生徒候補を取得（activeOnly=在籍中の所属が1件以上ある生徒のみ） */
   fetchAvailableStudents: (
     activeOnly: boolean

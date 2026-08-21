@@ -5,7 +5,6 @@ export { RosterTableFilters } from "./RosterTableFilters"
 export { RosterTableHeader } from "./RosterTableHeader"
 export { RosterTableRow } from "./RosterTableRow"
 export type {
-  RosterClassroomOption,
   RosterColumn,
   RosterFilter,
   RosterRow,

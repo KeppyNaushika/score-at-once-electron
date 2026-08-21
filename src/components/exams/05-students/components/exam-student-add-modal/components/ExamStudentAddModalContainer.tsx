@@ -4,10 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 
 import { StudentAddPanel } from "@/components/common/student-add-panel/components/StudentAddPanel"
-import type {
-  AddPanelClassroomItem,
-  StudentAddPanelAdapter,
-} from "@/components/common/student-add-panel/types"
+import type { StudentAddPanelAdapter } from "@/components/common/student-add-panel/types"
 import type { ExamStudentAddModalProps } from "@/components/exams/05-students/components/exam-student-add-modal/types"
 import { Button } from "@/components/ui/button"
 import {
@@ -51,17 +48,9 @@ export function ExamStudentAddModalContainer({
   const adapter = useMemo<StudentAddPanelAdapter>(
     () => ({
       scopeId: examId,
-      fetchAvailableClassrooms: async (activeOnly) => {
-        const classrooms = await queryClient.fetchQuery(
-          classroomsNotInExamQuery(examId, activeOnly)
-        )
-        return classrooms.map((classroom): AddPanelClassroomItem => ({
-          id: classroom.id,
-          name: classroom.name,
-          studentCount: classroom.studentCount,
-          studentNames: classroom.studentNames,
-        }))
-      },
+      fetchAvailableClassrooms: async (activeOnly) =>
+        // 候補は境界が返す学級（在籍＋生徒を同梱）をそのまま渡す
+        queryClient.fetchQuery(classroomsNotInExamQuery(examId, activeOnly)),
       fetchAvailableStudents: async (activeOnly) =>
         // 候補は境界が返す行（Student＋所属＋学級）をそのまま渡す
         queryClient.fetchQuery(studentsNotInExamQuery(examId, activeOnly)),

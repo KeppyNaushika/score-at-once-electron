@@ -30,10 +30,10 @@ import {
 } from "@/components/ui/table"
 import { queryKeys } from "@/lib/queryKeys"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
+import type { ClassroomWithMembershipRows } from "@/types/prismaExtensions"
 
 import { ClassroomRemovalDialog } from "./ClassroomRemovalDialog"
 import type {
-  AvailableClassroomOption,
   ClassroomRemovalMode,
   ClassroomRosterEntry,
   ClassroomRosterFlagColumn,
@@ -57,7 +57,7 @@ interface ClassroomRosterManagerProps {
    * 追加候補の学級を取得。省略時は追加ダイアログを出さない
    * （成績/資料は別途 StudentAddPanel が学級追加を担うため省略する）。
    */
-  fetchAvailableClassrooms?: () => Promise<AvailableClassroomOption[]>
+  fetchAvailableClassrooms?: () => Promise<ClassroomWithMembershipRows[]>
   /** 学級を追加。{@link fetchAvailableClassrooms} と対で指定する */
   onAddClassrooms?: (classroomIds: string[]) => Promise<void>
   /** order並び替え（D&D）。失敗時は throw すると楽観更新がロールバックされる */
@@ -147,7 +147,7 @@ function SortableClassroomRow(props: ClassroomRowProps) {
  * 試験固有の「再採番」フラグ等は {@link ClassroomRosterFlagColumn} で差し込む。
  */
 /** 未取得のときに毎回新しい配列を作らないための空値 */
-const EMPTY_AVAILABLE_CLASSROOMS: AvailableClassroomOption[] = []
+const EMPTY_AVAILABLE_CLASSROOMS: ClassroomWithMembershipRows[] = []
 
 export function ClassroomRosterManager({
   scopeId,
@@ -383,7 +383,7 @@ export function ClassroomRosterManager({
                           : "-"}
                       </TableCell>
                       <TableCell className="text-center">
-                        {availableClassroom.studentCount}名
+                        {availableClassroom.memberships.length}名
                       </TableCell>
                     </TableRow>
                   ))}

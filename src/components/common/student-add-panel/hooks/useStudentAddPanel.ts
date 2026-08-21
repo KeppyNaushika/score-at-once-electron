@@ -1,24 +1,41 @@
 "use client"
 
+import type { Student } from "@prisma/client"
 import type { QueryClient } from "@tanstack/react-query"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo, useState } from "react"
 
 import type {
-  AddPanelClassroomItem,
+  AddPanelClassroomCandidate,
   StudentAddPanelAdapter,
 } from "@/components/common/student-add-panel/types"
 import { isCurrentMembership } from "@/lib/membership"
 import { queryKeys } from "@/lib/queryKeys"
 import { studentListQuery } from "@/queries/student"
-import type { StudentWithMemberships } from "@/types/prismaExtensions"
-
-interface SelectableClassroom extends AddPanelClassroomItem {
-  isSelected: boolean
-}
+import type {
+  ClassroomWithMemberships,
+  StudentWithMemberships,
+} from "@/types/prismaExtensions"
 
 interface SelectableStudent extends StudentWithMemberships {
   isSelected: boolean
+}
+
+/**
+ * この学級から追加できる生徒を集める。
+ *
+ * 在籍は学級の子として降ってくるが、同一生徒が複数の在籍歴を持つと同じ生徒が
+ * 二度現れるので、studentId で畳む（既に対象へ追加済みの生徒は境界の where が外している）。
+ */
+function collectAddableStudents(
+  classroom: ClassroomWithMemberships
+): Student[] {
+  const studentById = new Map<string, Student>()
+  for (const membership of classroom.memberships) {
+    if (studentById.has(membership.studentId)) continue
+    studentById.set(membership.studentId, membership.student)
+  }
+  return [...studentById.values()]
 }
 
 interface UseStudentAddPanelParams {
@@ -102,7 +119,7 @@ async function resolveStudentEmptyReason(
  * スイッチ切替時に該当の候補だけ再取得する。追加後は両候補を再取得し onAdded を呼ぶ。
  */
 /** 未取得のときに毎回新しい配列を作らないための空値 */
-const EMPTY_CLASSROOMS: AddPanelClassroomItem[] = []
+const EMPTY_CLASSROOMS: ClassroomWithMemberships[] = []
 const EMPTY_STUDENTS: StudentWithMemberships[] = []
 
 export function useStudentAddPanel({
@@ -194,18 +211,19 @@ export function useStudentAddPanel({
   )
 
   // 表示用に「取得結果 × 選択」を組み立てる。選択した順を先頭へ寄せる
-  const classrooms = useMemo<SelectableClassroom[]>(() => {
-    const decorated = availableClassrooms.map((classroom) => ({
-      ...classroom,
+  const classrooms = useMemo<AddPanelClassroomCandidate[]>(() => {
+    const candidates = availableClassrooms.map((classroom) => ({
+      classroom,
+      addableStudents: collectAddableStudents(classroom),
       isSelected: selectedClassroomIds.has(classroom.id),
     }))
     const orderIndex = new Map(
       classroomOrder.map((classroomId, index) => [classroomId, index])
     )
-    return decorated.sort(
+    return candidates.sort(
       (left, right) =>
-        (orderIndex.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
-        (orderIndex.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+        (orderIndex.get(left.classroom.id) ?? Number.MAX_SAFE_INTEGER) -
+        (orderIndex.get(right.classroom.id) ?? Number.MAX_SAFE_INTEGER)
     )
   }, [availableClassrooms, selectedClassroomIds, classroomOrder])
 
@@ -244,12 +262,12 @@ export function useStudentAddPanel({
   }
 
   const handleAddClassrooms = async () => {
-    const selected = classrooms.filter((classroom) => classroom.isSelected)
+    const selected = classrooms.filter((candidate) => candidate.isSelected)
     if (selected.length === 0) return
     setIsAdding(true)
     try {
       await adapter.addClassrooms(
-        selected.map((classroom) => classroom.id),
+        selected.map((candidate) => candidate.classroom.id),
         classroomActiveOnly
       )
       setSelectedClassroomIds(new Set())
@@ -305,7 +323,7 @@ export function useStudentAddPanel({
   })
 
   const selectedClassrooms = classrooms.filter(
-    (classroom) => classroom.isSelected
+    (candidate) => candidate.isSelected
   )
   const selectedClassroomCount = selectedClassrooms.length
   const selectedStudentCount = students.filter(

@@ -238,9 +238,9 @@ export async function updateStudentOrders(
 /**
  * 試験に追加できる学級候補を取得
  *
- * 既に参加している生徒を除いた在籍生徒数で 0名学級を非表示にする。
- * @param activeOnly true なら基準日(examDate)時点で在籍中の生徒のみ数える（既定）。
- *   false なら過去所属も含めて数える。
+ * 既に参加している生徒を除くと在籍が0名になる学級は候補に出さない。
+ * @param activeOnly true なら基準日(examDate)時点で在籍中の生徒のみ候補にする（既定）。
+ *   false なら過去所属も含めて候補にする。
  */
 export async function getClassroomsNotInExam(
   examId: string,
