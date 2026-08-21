@@ -57,7 +57,10 @@ import {
   createDefaultMajorQuestion,
   createDefaultSubQuestion,
 } from "../../src/components/answer-sheet-builder/constants"
-import type { AnswerSheetDefinition } from "../../src/types/answerSheetDefinition.types"
+import type {
+  AnswerSheetDefinition,
+  AsbManuscriptPaperSettings,
+} from "../../src/types/answerSheetDefinition.types"
 import {
   cleanupTestDatabase,
   createTestUser,
@@ -66,6 +69,20 @@ import {
 } from "../helpers/testPrismaClient"
 
 const prisma = getTestPrismaClient()
+
+/**
+ * 行を作るときに renderer が渡す設定。
+ *
+ * 既定は用紙設定から決まる（横書き・A4縦なら段幅に入る14列×2行）ので、main は持たない。
+ * スキーマの `@default`（20×10）と違う値にして、渡した方が書かれることを見る
+ */
+const initialManuscriptSettings: AsbManuscriptPaperSettings = {
+  columns: 14,
+  rows: 2,
+  guideFontSize: null,
+  guidePosition: null,
+  guidePadding: null,
+}
 
 let ownerId: string
 let otherUserId: string
@@ -314,12 +331,19 @@ describe("実体ごとの書き込み", () => {
     const subQuestion = definition.majorQuestions[1].subQuestions[0]
     const parent = { subQuestionId: subQuestion.id }
     const firstId = crypto.randomUUID()
-    await setAsbManuscriptPaperEnabled(definition.id, parent, firstId, true)
+    await setAsbManuscriptPaperEnabled(
+      definition.id,
+      parent,
+      firstId,
+      true,
+      initialManuscriptSettings
+    )
     const writtenId = await setAsbManuscriptPaperEnabled(
       definition.id,
       parent,
       crypto.randomUUID(),
-      false
+      false,
+      initialManuscriptSettings
     )
 
     const rows = await prisma.asbManuscriptPaper.findMany({
@@ -328,6 +352,10 @@ describe("実体ごとの書き込み", () => {
     expect(rows.map((row) => row.id)).toEqual([firstId])
     expect(writtenId).toBe(firstId)
     expect(rows[0].enabled).toBe(false)
+    // 作った行の列数・行数は**渡された既定**（スキーマの `@default` 20×10 ではない）。
+    // 既定は用紙設定から決まるので、main には決めようがない
+    expect(rows[0].columns).toBe(initialManuscriptSettings.columns)
+    expect(rows[0].rows).toBe(initialManuscriptSettings.rows)
   })
 
   it("設定を書いてもオンオフは動かない", async () => {
@@ -340,7 +368,8 @@ describe("実体ごとの書き込み", () => {
       definition.id,
       parent,
       crypto.randomUUID(),
-      false
+      false,
+      initialManuscriptSettings
     )
 
     await updateAsbManuscriptPaper(definition.id, manuscriptPaperId, {

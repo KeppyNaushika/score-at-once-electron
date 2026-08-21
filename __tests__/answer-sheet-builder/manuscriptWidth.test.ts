@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  DEFAULT_MANUSCRIPT_PAPER,
   DEFAULT_SETTINGS,
+  defaultManuscriptPaperSettings,
 } from "@/components/answer-sheet-builder/constants"
 import { computeLayoutFromDefinition } from "@/components/answer-sheet-builder/hooks/layout/computeLayout"
 import { buildSubGridLayout } from "@/components/answer-sheet-builder/hooks/layout/gridBuilder"
 import {
+  branchManuscriptAreaWidth,
   columnContentWidth,
   manuscriptCellSize,
   maxManuscriptColumns,
@@ -44,11 +45,13 @@ const horizontalAreaWidth = contentRight - horizontalAreaX
 
 function manuscriptPaper(columns: number, rows: number): ManuscriptPaper {
   return {
-    ...DEFAULT_MANUSCRIPT_PAPER,
     id: `manuscript-paper-${columns}x${rows}`,
     enabled: true,
     columns,
     rows,
+    guideFontSize: null,
+    guidePosition: null,
+    guidePadding: null,
     charGuides: [],
   }
 }
@@ -256,6 +259,22 @@ describe("列数の上限は段の幅から出る", () => {
     expect(outerRightEdge(overflowing)).toBeGreaterThan(contentRight)
   })
 
+  it("小問と枝問で上限が違う（枝問は枝番号欄のぶん狭い）", () => {
+    const branch = branchQuestion("ア", undefined)
+    const parent = subQuestion("(1)", undefined, [branch])
+    const subLimit = maxManuscriptColumns(
+      subManuscriptAreaWidth(settings, parent),
+      manuscriptCellSize(parent, baseRowHeight)
+    )
+    const branchLimit = maxManuscriptColumns(
+      branchManuscriptAreaWidth(settings, parent, branch),
+      manuscriptCellSize(branch, baseRowHeight)
+    )
+
+    expect(subLimit).toBe(14)
+    expect(branchLimit).toBeLessThan(subLimit)
+  })
+
   it("超えている列数を切り詰めない（そのまま描く）", () => {
     const columns = 30
     const sub = subQuestion("(1)", manuscriptPaper(columns, 2))
@@ -266,5 +285,85 @@ describe("列数の上限は段の幅から出る", () => {
     expect(cell.manuscriptGrid?.gridWidth).toBeCloseTo(
       manuscriptCellSize(sub, baseRowHeight) * columns
     )
+  })
+})
+
+// ─── 行をはじめて作るときの既定 ───
+
+describe("原稿用紙の既定は用紙設定から決まる", () => {
+  /** その小問の段幅に収まる上限（画面が入力を止めるのに使う数と同じもの） */
+  function subColumnLimit(
+    paperSettings: GlobalSettings,
+    sub: SubQuestion
+  ): number {
+    return maxManuscriptColumns(
+      subManuscriptAreaWidth(paperSettings, sub),
+      manuscriptCellSize(sub, paperSettings.baseRowHeight)
+    )
+  }
+
+  it("縦書き・A3横は 20×10（200字詰）", () => {
+    const verticalA3: GlobalSettings = {
+      ...settings,
+      paperSize: "A3",
+      orientation: "landscape",
+      verticalLayout: true,
+    }
+    const sub = subQuestion("(1)", undefined)
+    // 縦組みは短辺が論理的な幅。297 − 余白20 − 大問番号欄10 − 小問番号欄10 = 257mm
+    const limit = subColumnLimit(verticalA3, sub)
+    expect(limit).toBe(21)
+
+    // 21 マス入るので 200字詰の 20 をそのまま保つ（半端な 21 へ広げない）
+    expect(defaultManuscriptPaperSettings(true, limit)).toMatchObject({
+      columns: 20,
+      rows: 10,
+    })
+  })
+
+  it("横書き・A4縦は 14×2（20マスは段に入らないので詰める）", () => {
+    const sub = subQuestion("(1)", undefined)
+    const limit = subColumnLimit(settings, sub)
+    expect(limit).toBe(14)
+
+    const initial = defaultManuscriptPaperSettings(false, limit)
+    expect(initial).toMatchObject({ columns: 14, rows: 2 })
+
+    // 既定で作った原稿用紙は、作った瞬間にはみ出していない（＝警告が出ない）
+    const layout = computeLayoutFromDefinition(
+      definitionOf([
+        subQuestion("(1)", manuscriptPaper(initial.columns, initial.rows)),
+      ])
+    )
+    expect(outerRightEdge(layout)).toBeLessThanOrEqual(contentRight + 1e-9)
+  })
+
+  it("段組み2段のような狭い設定でも上限に収まる", () => {
+    const twoColumns: GlobalSettings = {
+      ...settings,
+      multiColumn: { ...settings.multiColumn, enabled: true, columnCount: 2 },
+    }
+    const sub = subQuestion("(1)", undefined)
+    const limit = subColumnLimit(twoColumns, sub)
+    expect(limit).toBeLessThan(20)
+
+    const initial = defaultManuscriptPaperSettings(false, limit)
+    expect(initial.columns).toBe(limit)
+    expect(initial.rows).toBe(2)
+  })
+
+  it("枝問はその枝問の上限に従う（小問より狭い）", () => {
+    const branch = branchQuestion("ア", undefined)
+    const parent = subQuestion("(1)", undefined, [branch])
+    const branchLimit = maxManuscriptColumns(
+      branchManuscriptAreaWidth(settings, parent, branch),
+      manuscriptCellSize(branch, baseRowHeight)
+    )
+
+    expect(branchLimit).toBe(13)
+    expect(defaultManuscriptPaperSettings(false, branchLimit)).toMatchObject({
+      columns: 13,
+      rows: 2,
+    })
   })
 })

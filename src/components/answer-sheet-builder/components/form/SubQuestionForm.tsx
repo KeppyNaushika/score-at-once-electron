@@ -394,8 +394,9 @@ export function SubQuestionForm({
           <ManuscriptPaperSettings
             manuscriptPaper={subQuestion.manuscriptPaper}
             maxColumns={manuscriptMaxColumns}
-            onSetEnabled={(enabled) => {
-              actions.setManuscriptPaperEnabled(cell, enabled)
+            verticalLayout={vertical}
+            onSetEnabled={(enabled, initialSettings) => {
+              actions.setManuscriptPaperEnabled(cell, enabled, initialSettings)
               // 原稿用紙を使い始めたら、横に並ぶよう幅を埋めておく。
               // **別のレコードなので別の意図として送る**（1つの更新に混ぜると
               // 書き込みの単位が2テーブルにまたがる）

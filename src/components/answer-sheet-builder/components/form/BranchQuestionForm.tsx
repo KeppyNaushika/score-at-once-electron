@@ -288,8 +288,9 @@ export function BranchQuestionForm({
           <ManuscriptPaperSettings
             manuscriptPaper={branchQuestion.manuscriptPaper}
             maxColumns={manuscriptMaxColumns}
-            onSetEnabled={(enabled) => {
-              actions.setManuscriptPaperEnabled(cell, enabled)
+            verticalLayout={vertical}
+            onSetEnabled={(enabled, initialSettings) => {
+              actions.setManuscriptPaperEnabled(cell, enabled, initialSettings)
               // 原稿用紙を使い始めたら、横に並ぶよう幅を埋めておく
               if (enabled && !branchQuestion.layoutWidth) {
                 onUpdate({ layoutWidth: "1" })

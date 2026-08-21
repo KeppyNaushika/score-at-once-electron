@@ -1,6 +1,6 @@
 import type {
   AnswerSheetDefinition,
-  AsbManuscriptPaperAttributes,
+  AsbManuscriptPaperSettings,
   BorderLineStyle,
   BranchQuestion,
   CellTextElement,
@@ -120,14 +120,42 @@ export function generateId(): string {
   return crypto.randomUUID()
 }
 
-/** 原稿用紙の既定（原稿用紙をまだ持たないセルに足すときの土台） */
-export const DEFAULT_MANUSCRIPT_PAPER: AsbManuscriptPaperAttributes = {
-  enabled: false,
-  columns: 20,
-  rows: 10,
-  guideFontSize: null,
-  guidePosition: null,
-  guidePadding: null,
+/**
+ * 200字詰の列数。**段に収まるかぎりこの数を保つ** — 20 は「200字詰」という意味を
+ * 持つ数で、収まらないからと半端な数へ丸めると、その意味が消える
+ */
+const MANUSCRIPT_PAPER_FULL_COLUMNS = 20
+/** 縦書きの既定の行数（20列×10行＝200字詰） */
+const MANUSCRIPT_PAPER_VERTICAL_ROWS = 10
+/** 横書きの既定の行数（数行の記述欄として使う） */
+const MANUSCRIPT_PAPER_HORIZONTAL_ROWS = 2
+
+/**
+ * 原稿用紙を**はじめて作るとき**の設定。用紙設定から決まる。
+ *
+ * 原稿用紙は本来「縦書き・A3横・200字詰」で使うものなので、縦書きなら 20×10。横書きは
+ * 数行の記述欄として使うので 20×2。列数はどちらも、その段幅に 20 マスが入らなければ
+ * 上限（`maxManuscriptColumns`）まで詰める — 詰めずに 20 のままにすると、アプリの既定
+ * （横書き・A4縦）で原稿用紙をオンにした瞬間に「はみ出している」と警告が出る。
+ *
+ * **既に在る原稿用紙には使わない。** 用紙設定を変えても列数は書き換えない（A3 で作った
+ * 20マスを A4 に変えたら、はみ出したまま描いて警告する）。
+ *
+ * @param maxColumns そのセルの段幅に収まる最大列数（小問と枝問で番号欄のぶん違う）
+ */
+export function defaultManuscriptPaperSettings(
+  verticalLayout: boolean,
+  maxColumns: number
+): AsbManuscriptPaperSettings {
+  return {
+    columns: Math.min(MANUSCRIPT_PAPER_FULL_COLUMNS, maxColumns),
+    rows: verticalLayout
+      ? MANUSCRIPT_PAPER_VERTICAL_ROWS
+      : MANUSCRIPT_PAPER_HORIZONTAL_ROWS,
+    guideFontSize: null,
+    guidePosition: null,
+    guidePadding: null,
+  }
 }
 
 export function createDefaultTextElement(): CellTextElement {

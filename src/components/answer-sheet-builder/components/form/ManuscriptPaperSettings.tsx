@@ -33,7 +33,7 @@ import {
   DEFAULT_MANUSCRIPT_GUIDE_FONT_RATIO,
   DEFAULT_MANUSCRIPT_GUIDE_PADDING_RATIO,
   DEFAULT_MANUSCRIPT_GUIDE_POSITION,
-  DEFAULT_MANUSCRIPT_PAPER,
+  defaultManuscriptPaperSettings,
   generateId,
 } from "../../constants"
 import { SliderWithInput } from "./SliderWithInput"
@@ -50,8 +50,18 @@ interface ManuscriptPaperSettingsProps {
    * 後から追えなくなる）。
    */
   maxColumns: number
-  /** 使うかどうかの切り替え。オンにすると行ができる */
-  onSetEnabled: (enabled: boolean) => void
+  /** 縦書きか。**はじめて作るときの行数がこれで決まる**（縦書き＝200字詰） */
+  verticalLayout: boolean
+  /**
+   * 使うかどうかの切り替え。オンにすると行ができる。
+   *
+   * 行がまだ無いセルはその `initialSettings` で作られる。**ここで見せている既定の姿を
+   * そのまま渡す** — 見せた姿と作られる姿が違うと、オンにした瞬間に列数が変わる。
+   */
+  onSetEnabled: (
+    enabled: boolean,
+    initialSettings: AsbManuscriptPaperSettings
+  ) => void
   /** 原稿用紙そのものの設定（オンオフと文字位置マーカーは別の実体・別の意図） */
   onUpdateSettings: (
     manuscriptPaperId: string,
@@ -88,14 +98,19 @@ const BOUNDARY_OPTIONS: { value: string; label: string }[] = [
 export function ManuscriptPaperSettings({
   manuscriptPaper,
   maxColumns,
+  verticalLayout,
   onSetEnabled,
   onUpdateSettings,
   onAddCharGuide,
   onUpdateCharGuide,
   onDeleteCharGuide,
 }: ManuscriptPaperSettingsProps) {
-  // 行がまだ無いセルでは既定の姿を見せる（スイッチはオフ）。実体を作るのはオンにしたとき
-  const current = manuscriptPaper ?? DEFAULT_MANUSCRIPT_PAPER
+  // 行がまだ無いセルで見せる姿。実体を作るのはオンにしたときで、そのとき渡すのもこれ
+  const initialSettings = defaultManuscriptPaperSettings(
+    verticalLayout,
+    maxColumns
+  )
+  const current = manuscriptPaper ?? { enabled: false, ...initialSettings }
 
   /** 入力値を [min, max] の整数に丸める。空欄・非数値は fallback（0設定によるエラーを防ぐ） */
   const clampInt = (
@@ -119,7 +134,7 @@ export function ManuscriptPaperSettings({
         <Switch
           className="scale-75"
           checked={current.enabled}
-          onCheckedChange={onSetEnabled}
+          onCheckedChange={(enabled) => onSetEnabled(enabled, initialSettings)}
         />
       </div>
 

@@ -212,7 +212,8 @@ async function writeAnswerSheetEdit(
         definitionId,
         action.payload.parent,
         action.payload.manuscriptPaperId,
-        action.payload.enabled
+        action.payload.enabled,
+        action.payload.initialSettings
       )
       return { parent: action.payload.parent, manuscriptPaperId }
     }

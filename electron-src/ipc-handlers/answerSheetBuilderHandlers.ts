@@ -340,13 +340,15 @@ export const answerSheetBuilderHandlers = {
     definitionId: string,
     parent: AsbCellParent,
     manuscriptPaperId: string,
-    enabled: boolean
+    enabled: boolean,
+    initialSettings: AsbManuscriptPaperSettings
   ): Promise<string> =>
     await setAsbManuscriptPaperEnabled(
       definitionId,
       parent,
       manuscriptPaperId,
-      enabled
+      enabled,
+      initialSettings
     ),
 
   "asb:update-manuscript-paper": async (

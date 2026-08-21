@@ -80,8 +80,15 @@ export interface AsbEditorActions {
   upsertOmrConfig: (parent: AsbCellParent, config: OMRCellConfig) => void
   deleteOmrConfig: (parent: AsbCellParent) => void
 
-  /** 原稿用紙を使うかどうか。オンにするとき、行が無ければ作る */
-  setManuscriptPaperEnabled: (parent: AsbCellParent, enabled: boolean) => void
+  /**
+   * 原稿用紙を使うかどうか。オンにするとき、行が無ければ `initialSettings` で作る
+   * （用紙設定から決まる既定。行が既に在れば使わない）
+   */
+  setManuscriptPaperEnabled: (
+    parent: AsbCellParent,
+    enabled: boolean,
+    initialSettings: AsbManuscriptPaperSettings
+  ) => void
   /** 原稿用紙の設定（列数・行数・ガイド）。行が在るときだけ */
   updateManuscriptPaper: (
     manuscriptPaperId: string,

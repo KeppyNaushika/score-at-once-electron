@@ -591,6 +591,12 @@ export type AnswerSheetAction =
         parent: AsbCellParent
         manuscriptPaperId: string
         enabled: boolean
+        /**
+         * 行を作るときの設定。**用紙設定から決まる**（縦書きなら200字詰、横書きなら
+         * 数行の記述欄。どちらも段幅に入らなければ詰める）ので、用紙を知っている画面が
+         * 渡す。行が既に在れば使わない。
+         */
+        initialSettings: AsbManuscriptPaperSettings
       }
     }
   | {

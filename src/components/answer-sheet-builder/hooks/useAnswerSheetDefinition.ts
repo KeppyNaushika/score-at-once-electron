@@ -54,7 +54,6 @@ import {
   createDefaultMajorQuestion,
   createDefaultSubQuestion,
   createDefaultTextElement,
-  DEFAULT_MANUSCRIPT_PAPER,
   generateId,
   getCircledNumber,
   parsePresetLabels,
@@ -498,7 +497,8 @@ function reducer(
     // ---------- 原稿用紙 ----------
 
     case "SET_MANUSCRIPT_PAPER_ENABLED": {
-      const { parent, manuscriptPaperId, enabled } = action.payload
+      const { parent, manuscriptPaperId, enabled, initialSettings } =
+        action.payload
       return mapCellChildren(state, parent, (cell) => ({
         ...cell,
         // 行がまだ無いセルはここで作る。既に在るなら設定も文字位置マーカーも残す
@@ -506,7 +506,7 @@ function reducer(
         manuscriptPaper: cell.manuscriptPaper
           ? { ...cell.manuscriptPaper, enabled }
           : {
-              ...DEFAULT_MANUSCRIPT_PAPER,
+              ...initialSettings,
               enabled,
               id: manuscriptPaperId,
               charGuides: [],
@@ -1274,11 +1274,16 @@ export function useAnswerSheetDefinition({
    * セルが原稿用紙を使うかどうかを切り替える。**行が無ければ作る**。
    *
    * まだ原稿用紙が無いセルでは、**ここで新しい id を振る**（reducer の中で作ると、その
-   * id を知れず対応する書き込みを組み立てられない）。列数などの既定は reducer と main が
-   * それぞれ持つ既定値で埋まる。
+   * id を知れず対応する書き込みを組み立てられない）。列数などの既定は用紙設定から決まる
+   * ので**画面が渡す**（`initialSettings`）。reducer も main もその値で作る — 別々の既定
+   * 値を持つと、画面が見せた姿と DB の行が食い違う。
    */
   const setManuscriptPaperEnabled = useCallback(
-    (parent: AsbCellParent, enabled: boolean) => {
+    (
+      parent: AsbCellParent,
+      enabled: boolean,
+      initialSettings: AsbManuscriptPaperSettings
+    ) => {
       const cell = findCell(definitionRef.current, parent)
       if (!cell) return
       edit({
@@ -1287,6 +1292,7 @@ export function useAnswerSheetDefinition({
           parent,
           manuscriptPaperId: cell.manuscriptPaper?.id ?? generateId(),
           enabled,
+          initialSettings,
         },
       })
     },

@@ -211,7 +211,10 @@ describe("AsbCharGuide 変換往復", () => {
       definition.id,
       { subQuestionId: subQuestion.id },
       subQuestion.manuscriptPaper.id,
-      false
+      false,
+      // 行を作るときの既定。ここでは行が既に在るので使われない
+      // （使われてしまえば 25×15 が既定へ戻り、この検査が落ちる）
+      manuscriptPaper()
     )
 
     const loaded = await getAsbDefinition(definition.id)

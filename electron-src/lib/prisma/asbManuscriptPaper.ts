@@ -123,8 +123,10 @@ export async function deleteRemovedAsbManuscriptPapers(
  * セルが原稿用紙を使うかどうかを切り替える。**行が無ければここで作る**。
  *
  * 原稿用紙の行を作る経路はこれひとつ。設定の書き込み（`updateAsbManuscriptPaper`）は
- * 行が在ることを前提にできる。作るときの列数・行数はスキーマの既定値に任せる
- * （renderer の `DEFAULT_MANUSCRIPT_PAPER` と同じ 20×10）。
+ * 行が在ることを前提にできる。**作るときの列数・行数は renderer が渡す**
+ * （`initialSettings`）— 既定は用紙設定から決まる（縦書きなら 20×10 の200字詰、段幅に
+ * 入らなければ詰める）ので、ここでは決められない。スキーマの `@default` は残っているが、
+ * この経路では必ず値が入るので使われない。既に在る行には触らない（オンオフだけを書く）。
  *
  * 鍵は `@unique`（＝親の id）。**同じセルに2つ目の行を作らない**ためで、id そのものは
  * 不透明な uuidv4 のまま（借用 id は PR #1150 で全廃され、`uuidIdCoverage.test.ts` が
@@ -145,7 +147,8 @@ export async function setAsbManuscriptPaperEnabled(
   definitionId: string,
   parent: AsbCellParent,
   manuscriptPaperId: string,
-  enabled: boolean
+  enabled: boolean,
+  initialSettings: AsbManuscriptPaperSettings
 ): Promise<string> {
   let writtenManuscriptPaperId = manuscriptPaperId
   await writeAsbDefinitionContent(definitionId, async (tx) => {
@@ -156,7 +159,12 @@ export async function setAsbManuscriptPaperEnabled(
       { enabled },
       () =>
         tx.asbManuscriptPaper.create({
-          data: { id: writtenManuscriptPaperId, ...parent, enabled },
+          data: {
+            id: writtenManuscriptPaperId,
+            ...parent,
+            enabled,
+            ...asbManuscriptPaperSettingColumns(initialSettings),
+          },
         }),
       () =>
         tx.asbManuscriptPaper.update({

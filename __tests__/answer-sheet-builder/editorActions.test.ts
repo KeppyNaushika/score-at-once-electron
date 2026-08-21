@@ -21,7 +21,13 @@ import type {
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
 
-import { createDefaultDefinition } from "../../src/components/answer-sheet-builder/constants"
+import {
+  createDefaultDefinition,
+  defaultManuscriptPaperSettings,
+} from "../../src/components/answer-sheet-builder/constants"
+
+/** 行を作るときに画面が渡す既定（用紙設定から決まるので、渡さないと作れない） */
+const initialManuscriptSettings = defaultManuscriptPaperSettings(false, 20)
 
 /** 大問2つ・それぞれに小問2つ、という同じ形を2つ並べた解答用紙 */
 function twoMajorsWithTwoSubs(): AnswerSheetDefinition {
@@ -153,7 +159,11 @@ describe("更新に子のまとまりが紛れ込まない", () => {
     settings: Partial<AsbManuscriptPaperSettings>
   ): string {
     act(() => {
-      result.current.actions.setManuscriptPaperEnabled(parent, true)
+      result.current.actions.setManuscriptPaperEnabled(
+        parent,
+        true,
+        initialManuscriptSettings
+      )
     })
     const cellId =
       "subQuestionId" in parent ? parent.subQuestionId : parent.branchQuestionId
@@ -237,7 +247,11 @@ describe("更新に子のまとまりが紛れ込まない", () => {
 
     const cell = { branchQuestionId: branchQuestion.id }
     act(() => {
-      result.current.actions.setManuscriptPaperEnabled(cell, true)
+      result.current.actions.setManuscriptPaperEnabled(
+        cell,
+        true,
+        initialManuscriptSettings
+      )
     })
     const manuscriptPaperId = findSubQuestion(
       result.current.definition,
@@ -266,7 +280,11 @@ describe("更新に子のまとまりが紛れ込まない", () => {
     givenManuscriptPaper(result, cell, { columns: 25, rows: 15 })
 
     act(() => {
-      result.current.actions.setManuscriptPaperEnabled(cell, false)
+      result.current.actions.setManuscriptPaperEnabled(
+        cell,
+        false,
+        initialManuscriptSettings
+      )
     })
 
     const subQuestion = findSubQuestion(result.current.definition, "sub-1a")
