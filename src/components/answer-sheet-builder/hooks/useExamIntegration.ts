@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { convertAnswerSheetToExamMutation } from "@/queries/answerSheetBuilder"
 import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 
@@ -20,18 +20,13 @@ import { computeMultiPageLayoutFromDefinition } from "./layout/computeMultiPageL
 export function useExamIntegration() {
   const [isConverting, setIsConverting] = useState(false)
   const router = useRouter()
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const { mutateAsync: convertToExamMutate } = useMutation(
-    convertAnswerSheetToExamMutation(user?.id)
+    convertAnswerSheetToExamMutation(currentUser.id)
   )
 
   const convertToExam = useCallback(
     async (definition: AnswerSheetDefinition) => {
-      if (!user?.id) {
-        toast.error("ログインが必要です")
-        return
-      }
-
       try {
         setIsConverting(true)
 
@@ -50,7 +45,7 @@ export function useExamIntegration() {
 
         const examId = await convertToExamMutate({
           definition,
-          userId: user.id,
+          userId: currentUser.id,
           multiPageLayout,
           answerSheetHtmlPages,
           modelAnswerHtmlPages,
@@ -64,7 +59,7 @@ export function useExamIntegration() {
         setIsConverting(false)
       }
     },
-    [user, router, convertToExamMutate]
+    [currentUser.id, router, convertToExamMutate]
   )
 
   return { convertToExam, isConverting }

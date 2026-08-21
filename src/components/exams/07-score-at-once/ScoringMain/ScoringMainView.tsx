@@ -49,7 +49,7 @@ import { ScoringSidePanel } from "@/components/exams/07-score-at-once/ScoringSid
 import type { MouseBrushAction } from "@/components/exams/07-score-at-once/types"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { resolveExamPaperSize } from "@/lib/shared/examPaperSize"
 import { cropRegionScopes } from "@/queries/cropRegion"
 import {
@@ -68,7 +68,7 @@ function ScoringMainViewContent() {
   const params = useParams()
   const searchParams = useSearchParams()
   const examId = params.examId as string
-  const { user: authUser } = useAuth()
+  const currentUser = useCurrentUser()
   const { helpButton } = usePageHelp()
   const { keyBindings } = useShortcutContext()
   const queryClient = useQueryClient()
@@ -96,25 +96,25 @@ function ScoringMainViewContent() {
   )
 
   /** データローダーフック */
-  const { loading, exam, studentAnswerImages, cropRegions, currentUserId } =
-    useScoringDataLoader(examId, authUser?.id ?? null)
+  const { loading, exam, studentAnswerImages, cropRegions } =
+    useScoringDataLoader(examId)
 
   /** 設定管理フック */
   // 採点画面の設定。保存文字列を並べて取り、値の組み立ては純粋関数が行う
   const preferenceQueries = useQueries({
     queries: SCORING_PREFERENCE_KEYS.map((key) =>
-      userPreferenceQuery(authUser?.id, key)
+      userPreferenceQuery(currentUser.id, key)
     ),
   })
-  const setPreference = useMutation(setUserPreferenceMutation(authUser?.id))
+  const setPreference = useMutation(setUserPreferenceMutation(currentUser.id))
   // クリック回数ごとの動作は回数ごとに1行。**塊で書かない**（続けて2つ変えると
   // 先の1つが消える）
   const { data: clickScoringConfig = DEFAULT_CLICK_SCORING_CONFIG } = useQuery({
-    ...userClickScoringActionsQuery(authUser?.id),
+    ...userClickScoringActionsQuery(currentUser.id),
     select: toClickScoringConfig,
   })
   const { mutate: setClickAction } = useMutation(
-    setUserClickScoringActionMutation(authUser?.id)
+    setUserClickScoringActionMutation(currentUser.id)
   )
   const scoringSettings = buildScoringSettings(
     preferenceQueries.map((preferenceQuery) => preferenceQuery.data ?? null),
@@ -214,7 +214,7 @@ function ScoringMainViewContent() {
     isFiltered: isQuestionSetFiltered,
   } = useAssignedCropRegions({
     examId,
-    userId: currentUserId ?? undefined,
+    userId: currentUser.id,
     cropRegions,
   })
 
@@ -255,7 +255,7 @@ function ScoringMainViewContent() {
   /** 採点データ管理hook */
   const { handleBatchScore, calculateQuestionProgress } = useScoringData({
     examId,
-    currentUserId,
+    currentUserId: currentUser.id,
     currentCropRegionId,
     studentAnswerImages,
     cropRegions,
@@ -287,7 +287,7 @@ function ScoringMainViewContent() {
     refresh: refreshDecisionSummary,
   } = useExamDecisionSummary(
     examId,
-    currentUserId ?? undefined,
+    currentUser.id,
     // 単独利用（メンバー1人）では裁定サマリを引かない。全採点行の走査を
     // 画面入場ごとに払わないため（競合は構造的にゼロで結果は常に空）。
     memberCount > 1
@@ -333,7 +333,7 @@ function ScoringMainViewContent() {
     studentAnswerImages,
     cropRegions,
     currentCropRegionId: currentCropRegionId,
-    currentUserId,
+    currentUserId: currentUser.id,
     selectedStudentAnswerImageIds: selectedStudentAnswerImageIds,
     setSelectedPageImageIds: setSelectedPageImageIds,
     exam,
@@ -803,7 +803,7 @@ function ScoringMainViewContent() {
             autoScroll={autoScroll}
             showStudentNames={showStudentNames}
             currentExamStudentId={currentExamStudentId || undefined}
-            currentUserId={currentUserId || undefined}
+            currentUserId={currentUser.id}
             expandMargin={expandMargin}
             onAnnotationChanged={handleCanvasAnnotationChanged}
             annotationRefreshKey={annotationVersionForCanvas}
@@ -876,7 +876,7 @@ function ScoringMainViewContent() {
               onScoringBehaviorChange={(behavior) =>
                 setScoringBehavior(behavior)
               }
-              currentUserId={currentUserId ?? undefined}
+              currentUserId={currentUser.id}
               selectedScoringDataIds={Array.from(selectedStudentAnswerImageIds)}
               allScoringData={allScoringData}
               annotationRefreshKey={annotationVersionForBrowser}
@@ -906,7 +906,7 @@ function ScoringMainViewContent() {
       {/* OMR自動採点モーダル */}
       <OMRAutoScoringModal
         examId={examId}
-        userId={currentUserId ?? ""}
+        userId={currentUser.id}
         open={showOmrModal}
         onOpenChange={setShowOmrModal}
         onScoresApplied={refetchQuestionScores}

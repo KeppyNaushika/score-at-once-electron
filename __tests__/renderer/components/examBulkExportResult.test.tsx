@@ -22,8 +22,9 @@ import ExamList from "@/components/exams/list/ExamList"
 
 import { createQueryWrapper } from "../../helpers/queryWrapper"
 
-vi.mock("@/contexts/AuthContext", () => ({
-  useAuth: () => ({ user: { id: "user-1" } }),
+// 関門（AuthGate）の内側なので、利用者は必ず居る
+vi.mock("@/contexts/CurrentUserContext", () => ({
+  useCurrentUser: () => ({ id: "user-1" }),
 }))
 
 const bulkExportExams = vi.fn()

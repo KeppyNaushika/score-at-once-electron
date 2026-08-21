@@ -22,7 +22,7 @@ const EMPTY_DEFINITIONS: ASBDefinitionListItem[] = []
  *
  * 失敗の通知と一覧の取り直しは書き込みの宣言（`meta`）が持つので、ここには無い。
  */
-export function useAnswerSheetDefinitions(userId: string | undefined) {
+export function useAnswerSheetDefinitions(userId: string) {
   const { data: definitions = EMPTY_DEFINITIONS, isPending: isLoading } =
     useQuery(answerSheetDefinitionListQuery())
 
@@ -35,7 +35,6 @@ export function useAnswerSheetDefinitions(userId: string | undefined) {
 
   const deleteDefinition = useCallback(
     async (definitionId: string) => {
-      if (!userId) return
       try {
         await removeDefinition({ definitionId, userId })
         toast.success("解答用紙を削除しました")
@@ -48,7 +47,6 @@ export function useAnswerSheetDefinitions(userId: string | undefined) {
 
   const duplicateDefinition = useCallback(
     async (definitionId: string) => {
-      if (!userId) return
       try {
         await copyDefinition({ definitionId, userId })
         toast.success("解答用紙を複製しました")

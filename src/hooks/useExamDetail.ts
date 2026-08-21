@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { toast } from "sonner"
 
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { cropRegionsQuery } from "@/queries/cropRegion"
 import {
   examForDetailQuery,
@@ -15,14 +15,16 @@ import {
 
 /** 試験詳細ページ用のデータ取得・更新フック（生徒数・設問領域数・答案数等の集計を含む） */
 export function useExamDetail(examId: string) {
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
 
   const { data: exam = null, isPending: isLoading } = useQuery(
     examForDetailQuery(examId)
   )
   const { data: examStudents } = useQuery(examStudentsQuery(examId))
   const { data: cropRegions } = useQuery(cropRegionsQuery(examId))
-  const updateExamMutate = useMutation(updateExamMutation(examId, user?.id))
+  const updateExamMutate = useMutation(
+    updateExamMutation(examId, currentUser.id)
+  )
 
   const studentCount = examStudents?.length ?? 0
   // 設問領域は「番号かラベルが付いたもの」だけ数える（未設定は進捗に入らない）

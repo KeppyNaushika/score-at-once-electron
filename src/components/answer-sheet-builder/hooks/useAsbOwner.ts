@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { answerSheetDefinitionOwnerQuery } from "@/queries/answerSheetBuilder"
 
 /**
@@ -12,7 +12,7 @@ import { answerSheetDefinitionOwnerQuery } from "@/queries/answerSheetBuilder"
  * 直したい人は担当を渡してもらう（同時に編集できる形にしない）。
  */
 export function useAsbOwner(definitionId: string) {
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const { data: owner = null, isPending } = useQuery(
     answerSheetDefinitionOwnerQuery(definitionId)
   )
@@ -20,7 +20,7 @@ export function useAsbOwner(definitionId: string) {
   return {
     ownerName: owner?.ownerName ?? null,
     /** 判定できるまでは false（読み込み中に編集させない） */
-    isOwner: owner !== null && owner.ownerId === user?.id,
+    isOwner: owner !== null && owner.ownerId === currentUser.id,
     isPending,
   }
 }

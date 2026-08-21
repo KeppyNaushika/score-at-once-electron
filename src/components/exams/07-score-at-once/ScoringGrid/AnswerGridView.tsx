@@ -18,7 +18,7 @@ import type {
   ScoringData,
   ScoringOperationMode,
 } from "@/components/exams/07-score-at-once/types"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { parsePreference } from "@/lib/userPreferences"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
@@ -147,9 +147,9 @@ export default function AnswerGridView({
   const { dragStart, isDragging, dragCurrent, startDrag, updateDrag, endDrag } =
     useGridSelection()
 
-  const { user: preferenceUser } = useAuth()
+  const currentUser = useCurrentUser()
   const { data: storedSelectionBorderColor } = useQuery(
-    userPreferenceQuery(preferenceUser?.id, "selectionBorderColor")
+    userPreferenceQuery(currentUser.id, "selectionBorderColor")
   )
   const selectionBorderColor =
     parsePreference(

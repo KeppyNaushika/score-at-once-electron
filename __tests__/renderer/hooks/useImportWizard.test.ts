@@ -8,7 +8,7 @@
 import { act, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { initialState } from "@/hooks/import/constants"
 import { useImportWizard } from "@/hooks/import/useImportWizard"
 
@@ -23,22 +23,12 @@ import {
   type MockArchive,
 } from "../helpers/mockElectronAPI"
 
-// useAuth モック
-vi.mock("@/contexts/AuthContext", () => ({
-  useAuth: vi.fn(() => ({
-    user: {
-      id: "test-user-id",
-      username: "testuser",
-      name: "テストユーザー",
-      role: "admin",
-    },
-    isLoading: false,
-    quickLogin: vi.fn(),
-    logout: vi.fn(),
-  })),
+// 関門（AuthGate）の内側なので、利用者は必ず居る
+vi.mock("@/contexts/CurrentUserContext", () => ({
+  useCurrentUser: vi.fn(),
 }))
 
-const mockUseAuth = vi.mocked(useAuth)
+const mockUseCurrentUser = vi.mocked(useCurrentUser)
 
 describe("useImportWizard", () => {
   let mockArchive: MockArchive
@@ -47,20 +37,14 @@ describe("useImportWizard", () => {
     const mocks = createMockElectronAPI()
     mockArchive = mocks.mockArchive
 
-    // useAuth モックをデフォルト状態にリセット
-    mockUseAuth.mockReturnValue({
-      user: {
-        id: "test-user-id",
-        username: "testuser",
-        name: "テストユーザー",
-        role: "admin",
-        passcodeType: null,
-        createdAt: new Date("2026-01-01T00:00:00.000Z"),
-        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-      },
-      isLoading: false,
-      quickLogin: vi.fn(),
-      logout: vi.fn(),
+    mockUseCurrentUser.mockReturnValue({
+      id: "test-user-id",
+      username: "testuser",
+      name: "テストユーザー",
+      role: "admin",
+      passcodeType: null,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     })
   })
 
@@ -838,32 +822,6 @@ describe("useImportWizard", () => {
       expect((importResult as { examId: string }).examId).toBe(
         "imported-exam-id"
       )
-    })
-
-    it("IW-76: user未設定時にerrorが設定されnullが返る", async () => {
-      mockUseAuth.mockReturnValue({
-        user: null,
-        isLoading: false,
-        quickLogin: vi.fn(),
-        logout: vi.fn(),
-      })
-
-      const { result } = renderHook(() => useImportWizard(), {
-        wrapper: createQueryWrapper(),
-      })
-
-      // archivePathを設定
-      await act(async () => {
-        await result.current.selectFile()
-      })
-
-      let importResult: unknown
-      await act(async () => {
-        importResult = await result.current.executeImport()
-      })
-
-      expect(importResult).toBeNull()
-      expect(result.current.state.error).toBe("ログインが必要です")
     })
 
     it("IW-77: archivePath未設定時にnullが返る", async () => {

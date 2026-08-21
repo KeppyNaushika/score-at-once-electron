@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Lock } from "lucide-react"
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react"
 
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { parsePreference } from "@/lib/userPreferences"
 import {
   fullScreenQuery,
@@ -18,7 +18,7 @@ const FADE_TIMEOUT_MS = 3000
 const ACTIVITY_THROTTLE_MS = 1000
 
 export function ScreenBlackout() {
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const [isBlackout, setIsBlackout] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const [passcode, setPasscode] = useState("")
@@ -35,13 +35,13 @@ export function ScreenBlackout() {
   // 目隠しの設定は設定画面と同じキャッシュを読む。あちらで変えれば
   // ここも取り直されるので、変更を伝える自作イベントは要らない
   const { data: storedEnabled } = useQuery(
-    userPreferenceQuery(user?.id, "screenBlackoutEnabled")
+    userPreferenceQuery(currentUser.id, "screenBlackoutEnabled")
   )
   const { data: storedTimeoutMinutes } = useQuery(
-    userPreferenceQuery(user?.id, "screenBlackoutTimeoutMinutes")
+    userPreferenceQuery(currentUser.id, "screenBlackoutTimeoutMinutes")
   )
   const { data: storedAutoFullScreen } = useQuery(
-    userPreferenceQuery(user?.id, "screenBlackoutAutoFullScreen")
+    userPreferenceQuery(currentUser.id, "screenBlackoutAutoFullScreen")
   )
   const blackoutEnabled = parsePreference(
     "screenBlackoutEnabled",
@@ -65,9 +65,10 @@ export function ScreenBlackout() {
   // いたため、レンダーが止まらなくなった（実測: Maximum update depth exceeded）
   const { mutate: setFullScreen } = useMutation(setFullScreenMutation())
   const { mutate: verifyPasscodeMutate } = useMutation(verifyPasscodeMutation())
-  const passcodeType = user?.id
-    ? (users?.find((candidate) => candidate.id === user.id)?.passcodeType ??
-      "none")
+  // 利用者一覧が届くまでは判定できない（null）。届いたら種別か "none" になる
+  const passcodeType = users
+    ? (users.find((candidate) => candidate.id === currentUser.id)
+        ?.passcodeType ?? "none")
     : null
 
   // ロック対象は数字パスコード（4桁/6桁）のみ
@@ -113,9 +114,9 @@ export function ScreenBlackout() {
    * 起きて止まらなくなる（実測: Maximum update depth exceeded）。
    *
    * **施錠したかどうかを覚えるのは `isLocked` で、ここが唯一の決め手。** 解除側で
-   * `hasDigitPasscode` を読み直してはいけない。この部品は `AuthGate` の外にあり、
-   * 利用者一覧が届く前は false なので、起動直後に暗転すると開始時と解除時で
-   * 判断が食い違い、**再読み込み以外に出口が無くなる**（指摘 #6）。
+   * `hasDigitPasscode` を読み直してはいけない。利用者一覧が届く前は false なので、
+   * 届く前に暗転すると開始時と解除時で判断が食い違い、**再読み込み以外に出口が
+   * 無くなる**（指摘 #6）。
    */
   const blackoutNow = useEffectEvent(async () => {
     await enterFullScreenIfNeeded()
@@ -180,9 +181,8 @@ export function ScreenBlackout() {
     const handleActivity = () => {
       // **施錠したかどうかは `isLocked` だけで決める。** 目隠しを始めた瞬間の
       // `hasDigitPasscode` で施錠を決めたのに、解除側で読み直すと食い違う。
-      // `ScreenBlackout` は `AuthGate` の外にあり、利用者一覧が届く前は
-      // `hasDigitPasscode` が false なので、起動直後に Cmd+L を押すと
-      // 「施錠されていないのに解除できない」状態になっていた
+      // 利用者一覧が届く前は `hasDigitPasscode` が false なので、届く前に
+      // Cmd+L を押すと「施錠されていないのに解除できない」状態になっていた
       // （docs/branch-review-findings.md #6）。
       if (isBlackout) {
         // ここへ来るのは施錠していないときだけ（施錠中はこの effect を張らない）
@@ -236,10 +236,10 @@ export function ScreenBlackout() {
   // パスコード検証
   const verifyPasscode = useCallback(
     (code: string) => {
-      if (!user?.id || !code) return
+      if (!code) return
       setError("")
       verifyPasscodeMutate(
-        { userId: user.id, passcode: code },
+        { userId: currentUser.id, passcode: code },
         {
           onSuccess: (isValid) => {
             if (isValid) {
@@ -256,7 +256,7 @@ export function ScreenBlackout() {
         }
       )
     },
-    [user?.id, unlock, resetPasscodeInput, verifyPasscodeMutate]
+    [currentUser.id, unlock, resetPasscodeInput, verifyPasscodeMutate]
   )
 
   // keydownで直接数字パスコードを構築（IMEをバイパス）

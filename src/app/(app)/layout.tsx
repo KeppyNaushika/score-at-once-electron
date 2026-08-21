@@ -1,4 +1,5 @@
 import AuthGate from "@/components/auth/AuthGate"
+import { ScreenBlackout } from "@/components/common/ScreenBlackout"
 
 /**
  * ログインしている人だけが入れる範囲。
@@ -9,7 +10,16 @@ import AuthGate from "@/components/auth/AuthGate"
  * ページを足した人が更新し忘れる）。
  *
  * ここに置いていない `login/` だけが公開される。
+ *
+ * 画面の目隠し（`ScreenBlackout`）もここに置く。**目隠しは利用者の設定で決まる**
+ * ので、誰かが決まっていない場所には出しようがない。以前は関門の外（`AppShell`）に
+ * あり、利用者が居ない間は設定が全部既定値に落ちて何もしない部品として回っていた。
  */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return <AuthGate>{children}</AuthGate>
+  return (
+    <AuthGate>
+      {children}
+      <ScreenBlackout />
+    </AuthGate>
+  )
 }

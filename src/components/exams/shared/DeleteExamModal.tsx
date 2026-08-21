@@ -5,7 +5,7 @@ import { useCallback } from "react"
 import { toast } from "sonner"
 
 import ConfirmationModal from "@/components/common/ConfirmationModal"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
 import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
 import type { ExamForDetail } from "@/queries/exam"
@@ -60,9 +60,9 @@ export default function DeleteExamModal({
   onOpenChange,
   onExamDeleted,
 }: DeleteExamModalProps) {
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const queryClient = useQueryClient()
-  const deleteExam = useMutation(deleteExamMutation(user?.id))
+  const deleteExam = useMutation(deleteExamMutation(currentUser.id))
 
   const deletionCounts = countExamDeletion(exam)
 

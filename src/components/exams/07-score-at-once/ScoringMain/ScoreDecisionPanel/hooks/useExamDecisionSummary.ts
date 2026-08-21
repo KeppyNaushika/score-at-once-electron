@@ -11,7 +11,7 @@ import { examDecisionSummaryQuery } from "@/queries/scoring"
  */
 export function useExamDecisionSummary(
   examId: string,
-  userId: string | undefined,
+  userId: string,
   /**
    * 取得するか。試験全体の採点行を走査するので、単独利用（メンバー1人）では
    * 走らせない。競合はメンバーが1人なら構造的にゼロなので結果は常に空になる
@@ -21,7 +21,7 @@ export function useExamDecisionSummary(
 ) {
   const queryClient = useQueryClient()
   const queryKey = useMemo(
-    () => examDecisionSummaryQuery(examId, userId ?? "").queryKey,
+    () => examDecisionSummaryQuery(examId, userId).queryKey,
     [examId, userId]
   )
   const {
@@ -29,8 +29,8 @@ export function useExamDecisionSummary(
     isPending,
     error,
   } = useQuery({
-    ...examDecisionSummaryQuery(examId, userId ?? ""),
-    enabled: enabled && Boolean(examId) && Boolean(userId),
+    ...examDecisionSummaryQuery(examId, userId),
+    enabled: enabled && Boolean(examId),
   })
 
   const refresh = useCallback(

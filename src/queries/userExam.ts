@@ -26,10 +26,10 @@ export const examMembersQuery = (examId: string) =>
   })
 
 /** その利用者がこの試験の担当か */
-export const examOwnerQuery = (examId: string, userId: string | undefined) =>
+export const examOwnerQuery = (examId: string, userId: string) =>
   queryOptions({
     queryKey: [...scopeKeys.exam(examId), "owner", userId] as const,
-    queryFn: () => window.electronAPI.userExam.isOwner(userId ?? "", examId),
+    queryFn: () => window.electronAPI.userExam.isOwner(userId, examId),
   })
 
 /** 招待先の候補1件（秘密を含まない利用者） */
@@ -66,11 +66,11 @@ export const inviteExamMemberMutation = (examId: string) =>
 
 export const removeExamMemberMutation = (
   examId: string,
-  currentUserId: string | undefined
+  currentUserId: string
 ) =>
   defineMutation({
     mutationFn: (userId: string) =>
-      window.electronAPI.userExam.remove(examId, userId, currentUserId ?? ""),
+      window.electronAPI.userExam.remove(examId, userId, currentUserId),
     meta: {
       invalidates: [
         examMembersQuery(examId).queryKey,

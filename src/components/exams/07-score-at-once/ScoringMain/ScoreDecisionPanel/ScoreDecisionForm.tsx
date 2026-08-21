@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
 import { finalizeQuestionScoreMutation } from "@/queries/scoring"
 import type { ScoreDecisionCell } from "@/types/scoreDecision.types"
@@ -78,7 +78,7 @@ export function ScoreDecisionForm({
   canDecide,
   onDecided,
 }: ScoreDecisionFormProps) {
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const finalizeQuestionScore = useMutation(
     finalizeQuestionScoreMutation(examId)
   )
@@ -104,12 +104,11 @@ export function ScoreDecisionForm({
       parsedScore > maxScore)
 
   const handleDecide = async () => {
-    if (!user) return
     try {
       await finalizeQuestionScore.mutateAsync({
         examStudentId: cell.examStudentId,
         cropRegionId: cell.cropRegionId,
-        decidedByUserId: user.id,
+        decidedByUserId: currentUser.id,
         verdict,
         // 点を持たない判定と、コメント無し・採用元なしは null を明示する
         // （省略で消える形にしない）

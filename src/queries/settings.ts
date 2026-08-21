@@ -37,14 +37,10 @@ import { scopeKeys } from "./keys"
  * **保存されている文字列をそのまま返す。** 値の解釈（`parsePreference`）は
  * 表示側の計算なので、キャッシュには載せない。
  */
-export const userPreferenceQuery = (
-  userId: string | undefined,
-  key: PreferenceKey
-) =>
+export const userPreferenceQuery = (userId: string, key: PreferenceKey) =>
   queryOptions({
     queryKey: ["userPreference", userId, key] as const,
-    queryFn: () =>
-      window.electronAPI.settings.getUserPreference(userId ?? "", key),
+    queryFn: () => window.electronAPI.settings.getUserPreference(userId, key),
   })
 
 /**
@@ -53,35 +49,34 @@ export const userPreferenceQuery = (
  * **行をそのまま載せる。** 状態で引ける形へ畳むのは表示側の計算で、`select` が行う
  * （キャッシュには載らない）。行が無い状態は既定の配色で描く。
  */
-export const userScoringStatusColorsQuery = (userId: string | undefined) =>
+export const userScoringStatusColorsQuery = (userId: string) =>
   queryOptions({
     queryKey: ["userScoringStatusColor", userId] as const,
     queryFn: () =>
-      window.electronAPI.settings.listUserScoringStatusColors(userId ?? ""),
+      window.electronAPI.settings.listUserScoringStatusColors(userId),
   })
 
 /** 連続クリックでの採点に割り当てた動作（利用者ごと・回数ごとに1行） */
-export const userClickScoringActionsQuery = (userId: string | undefined) =>
+export const userClickScoringActionsQuery = (userId: string) =>
   queryOptions({
     queryKey: ["userClickScoringAction", userId] as const,
     queryFn: () =>
-      window.electronAPI.settings.listUserClickScoringActions(userId ?? ""),
+      window.electronAPI.settings.listUserClickScoringActions(userId),
   })
 
 /** 側面パネルで畳んでいる節（利用者ごと・節ごとに1行） */
-export const userSidePanelSectionsQuery = (userId: string | undefined) =>
+export const userSidePanelSectionsQuery = (userId: string) =>
   queryOptions({
     queryKey: ["userSidePanelSection", userId] as const,
     queryFn: () =>
-      window.electronAPI.settings.listUserSidePanelSections(userId ?? ""),
+      window.electronAPI.settings.listUserSidePanelSections(userId),
   })
 
 /** 利用者ごとのキーバインディング */
-export const keyboardShortcutsQuery = (userId: string | undefined) =>
+export const keyboardShortcutsQuery = (userId: string) =>
   queryOptions({
     queryKey: ["settings", "keyboardShortcuts", userId] as const,
-    queryFn: () =>
-      window.electronAPI.settings.getUserKeyboardShortcuts(userId ?? ""),
+    queryFn: () => window.electronAPI.settings.getUserKeyboardShortcuts(userId),
   })
 
 /** main が持つプロジェクターモードの現在状態 */
@@ -113,11 +108,11 @@ type SetUserPreferenceInput = {
   [TKey in PreferenceKey]: { key: TKey; value: PreferenceValueType[TKey] }
 }[PreferenceKey]
 
-export const setUserPreferenceMutation = (userId: string | undefined) =>
+export const setUserPreferenceMutation = (userId: string) =>
   defineMutation({
     mutationFn: (input: SetUserPreferenceInput) =>
       window.electronAPI.settings.setUserPreference(
-        userId ?? "",
+        userId,
         input.key,
         serializePreference(input.key, input.value)
       ),
@@ -134,14 +129,14 @@ export const setUserPreferenceMutation = (userId: string | undefined) =>
  * **プリセットの記憶も外れる**（色を1つでも触ればプリセットからは外れるので、DB では
  * 同じトランザクションで消している）。取り直す先が2つあるのはそのため。
  */
-export const setUserScoringStatusColorMutation = (userId: string | undefined) =>
+export const setUserScoringStatusColorMutation = (userId: string) =>
   defineMutation({
     mutationFn: (input: {
       status: ScoringStatus
       colors: UserScoringStatusColorValues
     }) =>
       window.electronAPI.settings.setUserScoringStatusColor(
-        userId ?? "",
+        userId,
         input.status,
         input.colors
       ),
@@ -156,16 +151,14 @@ export const setUserScoringStatusColorMutation = (userId: string | undefined) =>
   })
 
 /** 配色プリセットを当てる（状態ぶんの色と、選んだプリセットは同時に決まる） */
-export const applyUserScoringColorPresetMutation = (
-  userId: string | undefined
-) =>
+export const applyUserScoringColorPresetMutation = (userId: string) =>
   defineMutation({
     mutationFn: (input: {
       presetId: string
       colors: UserScoringStatusColorEntry[]
     }) =>
       window.electronAPI.settings.applyUserScoringColorPreset(
-        userId ?? "",
+        userId,
         input.presetId,
         input.colors
       ),
@@ -180,11 +173,11 @@ export const applyUserScoringColorPresetMutation = (
   })
 
 /** クリック回数1つぶんの動作を書く */
-export const setUserClickScoringActionMutation = (userId: string | undefined) =>
+export const setUserClickScoringActionMutation = (userId: string) =>
   defineMutation({
     mutationFn: (input: { clickCount: number; action: ClickScoringAction }) =>
       window.electronAPI.settings.setUserClickScoringAction(
-        userId ?? "",
+        userId,
         input.clickCount,
         input.action
       ),
@@ -196,11 +189,11 @@ export const setUserClickScoringActionMutation = (userId: string | undefined) =>
   })
 
 /** 側面パネルの節1つぶんの開閉を書く */
-export const setUserSidePanelSectionMutation = (userId: string | undefined) =>
+export const setUserSidePanelSectionMutation = (userId: string) =>
   defineMutation({
     mutationFn: (input: { sectionId: string; collapsed: boolean }) =>
       window.electronAPI.settings.setUserSidePanelSection(
-        userId ?? "",
+        userId,
         input.sectionId,
         input.collapsed
       ),
@@ -211,27 +204,24 @@ export const setUserSidePanelSectionMutation = (userId: string | undefined) =>
     },
   })
 
-export const saveKeyboardShortcutsMutation = (userId: string | undefined) =>
+export const saveKeyboardShortcutsMutation = (userId: string) =>
   defineMutation({
     mutationFn: (
       shortcuts: Parameters<
         typeof window.electronAPI.settings.saveUserKeyboardShortcuts
       >[1]
     ) =>
-      window.electronAPI.settings.saveUserKeyboardShortcuts(
-        userId ?? "",
-        shortcuts
-      ),
+      window.electronAPI.settings.saveUserKeyboardShortcuts(userId, shortcuts),
     meta: {
       invalidates: [keyboardShortcutsQuery(userId).queryKey],
       errorMessage: "キー設定を保存できませんでした",
     },
   })
 
-export const resetKeyboardShortcutsMutation = (userId: string | undefined) =>
+export const resetKeyboardShortcutsMutation = (userId: string) =>
   defineMutation({
     mutationFn: () =>
-      window.electronAPI.settings.resetUserKeyboardShortcuts(userId ?? ""),
+      window.electronAPI.settings.resetUserKeyboardShortcuts(userId),
     meta: {
       invalidates: [keyboardShortcutsQuery(userId).queryKey],
       errorMessage: "キー設定を戻せませんでした",

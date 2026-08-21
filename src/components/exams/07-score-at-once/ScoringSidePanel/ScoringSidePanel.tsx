@@ -41,7 +41,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import {
@@ -260,13 +260,13 @@ export function ScoringSidePanel({
   const { keyBindings } = useKeyBindings()
   const scoringColors = useScoringStatusColors()
   // 閉じているセクションIDを設定へ残す（既定は全展開）
-  const { user: preferenceUser } = useAuth()
+  const currentUser = useCurrentUser()
   const { data: collapsedSections = EMPTY_COLLAPSED_SECTIONS } = useQuery({
-    ...userSidePanelSectionsQuery(preferenceUser?.id),
+    ...userSidePanelSectionsQuery(currentUser.id),
     select: toCollapsedSections,
   })
   const { mutate: setSectionCollapsed } = useMutation(
-    setUserSidePanelSectionMutation(preferenceUser?.id)
+    setUserSidePanelSectionMutation(currentUser.id)
   )
   const isSectionOpen = (sectionId: string) => !collapsedSections.has(sectionId)
   // 触るのはその節の行1つだけ。**他の節の開閉を書き戻さない**

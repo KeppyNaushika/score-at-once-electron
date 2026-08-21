@@ -25,7 +25,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
 import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
@@ -215,9 +215,9 @@ const HELP07_KEYFRAMES = `
 /** 一覧表示の説明アニメ：答案が並び、順に印がついていく */
 function GridStyleAnimation() {
   const colors = useScoringStatusColors()
-  const { user: preferenceUser } = useAuth()
+  const currentUser = useCurrentUser()
   const { data: storedSelectionBorderColor } = useQuery(
-    userPreferenceQuery(preferenceUser?.id, "selectionBorderColor")
+    userPreferenceQuery(currentUser.id, "selectionBorderColor")
   )
   const selectionBorder =
     parsePreference(
@@ -561,9 +561,9 @@ function ScoringGridDemo({
   onAllScored?: () => void
 }) {
   const colors = useScoringStatusColors()
-  const { user: selectionPreferenceUser } = useAuth()
+  const currentUser = useCurrentUser()
   const { data: storedSelectionColor } = useQuery(
-    userPreferenceQuery(selectionPreferenceUser?.id, "selectionBorderColor")
+    userPreferenceQuery(currentUser.id, "selectionBorderColor")
   )
   const selectionColor =
     parsePreference("selectionBorderColor", storedSelectionColor ?? null) ??

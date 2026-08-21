@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import {
   assignCropRegionMutation,
   unassignCropRegionMutation,
@@ -49,7 +49,7 @@ export function QuestionAssignmentRow({
   onSelectCell,
   onAssignmentChanged,
 }: QuestionAssignmentRowProps) {
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const [isExpanded, setIsExpanded] = useState(false)
   const assignCropRegion = useMutation(assignCropRegionMutation(examId))
   const unassignCropRegion = useMutation(unassignCropRegionMutation(examId))
@@ -65,12 +65,11 @@ export function QuestionAssignmentRow({
   // 失敗の通知と担当一覧の取り直しは MutationCache の後始末が担う。
   // `onAssignmentChanged` は裁定サマリなど別の行き先を取り直すためのもの
   const handleAssign = async (member: ExamMemberSummary) => {
-    if (!user) return
     try {
       await assignCropRegion.mutateAsync({
         cropRegionId: question.cropRegionId,
         userId: member.userId,
-        assignedByUserId: user.id,
+        assignedByUserId: currentUser.id,
       })
       onAssignmentChanged()
     } catch {
@@ -79,12 +78,11 @@ export function QuestionAssignmentRow({
   }
 
   const handleUnassign = async (userId: string) => {
-    if (!user) return
     try {
       await unassignCropRegion.mutateAsync({
         cropRegionId: question.cropRegionId,
         userId,
-        requestedByUserId: user.id,
+        requestedByUserId: currentUser.id,
       })
       onAssignmentChanged()
     } catch {

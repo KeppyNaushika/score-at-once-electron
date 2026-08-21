@@ -17,7 +17,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { examDetailQuery } from "@/queries/exam"
 
 // ワークフローステップの定義
@@ -47,7 +47,7 @@ export default function ExamWorkflowLayout({
 }) {
   const params = useParams()
   const pathname = usePathname()
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const examId = typeof params.examId === "string" ? params.examId : ""
   const [showMemberDialog, setShowMemberDialog] = useState(false)
 
@@ -125,15 +125,13 @@ export default function ExamWorkflowLayout({
       </div>
 
       {/* メンバー管理ダイアログ */}
-      {user && (
-        <MemberInviteDialog
-          isOpen={showMemberDialog}
-          onClose={() => setShowMemberDialog(false)}
-          examId={examId}
-          currentUserId={user.id}
-          examName={examName}
-        />
-      )}
+      <MemberInviteDialog
+        isOpen={showMemberDialog}
+        onClose={() => setShowMemberDialog(false)}
+        examId={examId}
+        currentUserId={currentUser.id}
+        examName={examName}
+      />
     </>
   )
 }

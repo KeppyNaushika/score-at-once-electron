@@ -386,7 +386,7 @@ export const importAnswerSheetDefinitionMutation = () =>
   })
 
 /** 解答用紙から試験を作る（模範解答ページまで作られる） */
-export const convertAnswerSheetToExamMutation = (userId: string | undefined) =>
+export const convertAnswerSheetToExamMutation = (userId: string) =>
   defineMutation({
     mutationFn: (
       args: Parameters<

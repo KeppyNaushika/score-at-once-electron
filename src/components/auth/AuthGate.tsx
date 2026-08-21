@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 
 import { useAuth } from "@/contexts/AuthContext"
+import { CurrentUserProvider } from "@/contexts/CurrentUserContext"
 
 /**
  * ログインしていなければ中身を描かない関門。
@@ -20,6 +21,10 @@ import { useAuth } from "@/contexts/AuthContext"
  * これは秘匿の境界ではない。DB ファイルは全員の手元にあり、アプリを経由せず読める
  * （`docs/scoring-scope-and-permissions-design.md`）。書き込みを本当に止めるのは
  * main 側の担当者ガードで、ここは導線を整える役だけを負う。
+ *
+ * 絞り込んだ `user` は `CurrentUserProvider` で子へ配る。**保証を作っている場所が
+ * 保証された型を配る**ので、内側では `useCurrentUser()` が `PublicUser` を返し、
+ * `userId ?? ""` のような型を通すためだけの詰め物が要らない。
  */
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
@@ -43,5 +48,5 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!user) return null
 
-  return <>{children}</>
+  return <CurrentUserProvider user={user}>{children}</CurrentUserProvider>
 }

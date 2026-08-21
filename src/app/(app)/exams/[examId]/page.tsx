@@ -16,7 +16,7 @@ import PhaseCard from "@/components/exams/detail/PhaseCard"
 import QuickStats from "@/components/exams/detail/QuickStats"
 import EditExamWindow from "@/components/exams/forms/EditExamWindow"
 import DeleteExamModal from "@/components/exams/shared/DeleteExamModal"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useExamDetail } from "@/hooks/useExamDetail"
 import { exportExamArchiveMutation } from "@/queries/archive"
 import type { ArchiveExportMode } from "@/types/examArchive.types"
@@ -24,7 +24,7 @@ import type { ArchiveExportMode } from "@/types/examArchive.types"
 export default function ExamDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const examId = typeof params.examId === "string" ? params.examId : ""
 
   const [showEditModal, setShowEditModal] = useState(false)
@@ -75,19 +75,12 @@ export default function ExamDetailPage() {
   const handleExport = (exportMode: ArchiveExportMode) => {
     if (exportExamArchive.isPending) return
 
-    if (!user?.id) {
-      toast.error("エクスポート失敗", {
-        description: "ログインが必要です。",
-      })
-      return
-    }
-
     toast("エクスポート中...", {
       description: "試験をエクスポートしています。",
     })
 
     exportExamArchive.mutate(
-      { examId, userId: user.id, exportMode },
+      { examId, userId: currentUser.id, exportMode },
       {
         onSuccess: (exportResult) => {
           // 保存先を選ばずに閉じたのは失敗ではないので、何も言わない

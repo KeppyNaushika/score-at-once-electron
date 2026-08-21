@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { ColorPicker } from "@/components/ui/color-picker"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useSlidingValue } from "@/hooks/useSlidingValue"
 import {
   DEFAULT_SCORING_STATUS_COLORS,
@@ -49,8 +49,7 @@ const SELECTION_BORDER_PRESETS = [
 ]
 
 export function DisplaySettingsTab() {
-  const { user } = useAuth()
-  const userId = user?.id
+  const userId = useCurrentUser().id
 
   // 選択枠色・クリック採点設定は採点画面と同じフックを使う。ここで読み書きすると
   // 採点画面のキャッシュも同時に更新されるので、変更を伝える自作イベントは要らない

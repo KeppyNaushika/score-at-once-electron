@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import {
   deleteGradeOverrideMutation,
   freezeGradeScoresMutation,
@@ -48,7 +48,7 @@ interface ResultsContainerProps {
 }
 
 export function ResultsContainer({ gradeId }: ResultsContainerProps) {
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const {
     data: result = null,
     isPending: loading,
@@ -104,7 +104,7 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
             gradeItemId: params.gradeItemId,
           },
         ],
-        frozenByUserId: user?.id ?? null,
+        frozenByUserId: currentUser.id,
       })
     }
   }
@@ -177,7 +177,7 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
             variant="outline"
             onClick={() =>
               frozenSummary.frozen === 0
-                ? freezeScores.mutate({ frozenByUserId: user?.id ?? null })
+                ? freezeScores.mutate({ frozenByUserId: currentUser.id })
                 : setPendingBulkAction("refreeze")
             }
           >
@@ -228,11 +228,11 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
         onRefreezeCell={(target: GradeCellTarget) =>
           freezeScores.mutate({
             targets: [target],
-            frozenByUserId: user?.id ?? null,
+            frozenByUserId: currentUser.id,
           })
         }
         onUnfreezeCell={(target: GradeCellTarget) =>
-          unfreezeScores.mutate({ targets: [target], userId: user?.id ?? null })
+          unfreezeScores.mutate({ targets: [target], userId: currentUser.id })
         }
       />
 
@@ -262,9 +262,9 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
                 const action = pendingBulkAction
                 setPendingBulkAction(null)
                 if (action === "refreeze")
-                  freezeScores.mutate({ frozenByUserId: user?.id ?? null })
+                  freezeScores.mutate({ frozenByUserId: currentUser.id })
                 else if (action === "unfreeze")
-                  unfreezeScores.mutate({ userId: user?.id ?? null })
+                  unfreezeScores.mutate({ userId: currentUser.id })
               }}
             >
               {pendingBulkAction === "refreeze" ? "すべて再確定" : "すべて解除"}

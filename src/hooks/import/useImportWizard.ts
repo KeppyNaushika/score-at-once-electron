@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query"
 import { useCallback, useState } from "react"
 
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import {
   analyzeExamArchive,
   convertDatToScore,
@@ -37,7 +37,7 @@ import { initialState, STEP_ORDER } from "./constants"
  * Step 6 (execute): 実行
  */
 export function useImportWizard() {
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const { mutateAsync: runImport } = useMutation(importExamArchiveMutation())
   const [state, setState] = useState<ImportWizardState>(initialState)
 
@@ -465,13 +465,6 @@ export function useImportWizard() {
   // インポート実行
   const executeImport = useCallback(async () => {
     if (!state.archivePath) return null
-    if (!user?.id) {
-      setState((prev) => ({
-        ...prev,
-        error: "ログインが必要です",
-      }))
-      return null
-    }
     if (!state.fileOverviewData) {
       setState((prev) => ({
         ...prev,
@@ -488,7 +481,7 @@ export function useImportWizard() {
         archivePath: state.archivePath,
         preMatchResult: state.fileOverviewData,
         integrationConfig: state.idIntegrationConfig,
-        currentUserId: user.id,
+        currentUserId: currentUser.id,
         scoringConflictConfig: state.scoringConflictConfig,
         updateDecisions: state.updateDecisions,
       })
@@ -510,7 +503,7 @@ export function useImportWizard() {
     state.idIntegrationConfig,
     state.scoringConflictConfig,
     state.updateDecisions,
-    user?.id,
+    currentUser.id,
     runImport,
   ])
 

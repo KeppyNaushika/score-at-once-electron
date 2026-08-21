@@ -9,7 +9,7 @@ import {
 import { toast } from "sonner"
 
 import { DEFAULT_KEYBINDINGS } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
 import {
   keyboardShortcutsQuery,
@@ -22,8 +22,7 @@ const subscribeToNothing = () => () => {}
 const getServerModifierKeyLabel = () => "Alt"
 
 export function useKeyboardSettings() {
-  const { user } = useAuth()
-  const userId = user?.id
+  const userId = useCurrentUser().id
 
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [pendingKey, setPendingKey] = useState<string>("")

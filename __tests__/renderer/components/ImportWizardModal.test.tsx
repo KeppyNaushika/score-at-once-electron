@@ -21,20 +21,13 @@ vi.mock("@/hooks/import/useImportWizard", () => ({
   useImportWizard: vi.fn(),
 }))
 
-// useAuth をモック
-vi.mock("@/contexts/AuthContext", () => ({
-  useAuth: vi.fn(() => ({
-    user: {
-      id: "test-user-id",
-      username: "testuser",
-      name: "テストユーザー",
-      role: "admin",
-    },
-    isLoading: false,
-    login: vi.fn(),
-    quickLogin: vi.fn(),
-    logout: vi.fn(),
-    checkAuth: vi.fn(),
+// 関門（AuthGate）の内側なので、利用者は必ず居る
+vi.mock("@/contexts/CurrentUserContext", () => ({
+  useCurrentUser: vi.fn(() => ({
+    id: "test-user-id",
+    username: "testuser",
+    name: "テストユーザー",
+    role: "admin",
   })),
 }))
 

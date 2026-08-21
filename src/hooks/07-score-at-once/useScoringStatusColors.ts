@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import {
   DEFAULT_SCORING_STATUS_COLORS,
   type ScoringStatusColors,
@@ -15,9 +15,9 @@ import { userScoringStatusColorsQuery } from "@/queries/settings"
  * 変わる（変更を伝える自作イベントは要らない）。
  */
 export function useScoringStatusColors(): ScoringStatusColors {
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const { data: colors } = useQuery({
-    ...userScoringStatusColorsQuery(user?.id),
+    ...userScoringStatusColorsQuery(currentUser.id),
     select: toScoringStatusColors,
   })
 

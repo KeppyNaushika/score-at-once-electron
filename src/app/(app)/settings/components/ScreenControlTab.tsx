@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { parsePreference } from "@/lib/userPreferences"
 import {
   projectorModeQuery,
@@ -33,8 +33,7 @@ export function ScreenControlTab() {
 
   // 画面消灯。目隠しの本体（ScreenBlackout）と同じキャッシュを読み書きするので、
   // 変更を伝える自作イベントは要らない
-  const { user } = useAuth()
-  const userId = user?.id
+  const userId = useCurrentUser().id
   const setPreference = useMutation(setUserPreferenceMutation(userId))
   const { data: storedBlackoutEnabled } = useQuery(
     userPreferenceQuery(userId, "screenBlackoutEnabled")

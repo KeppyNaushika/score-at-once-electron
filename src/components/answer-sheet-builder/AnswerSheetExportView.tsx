@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { parsePreference } from "@/lib/userPreferences"
 import { answerSheetDefinitionQuery } from "@/queries/answerSheetBuilder"
 import {
@@ -31,20 +31,20 @@ interface AnswerSheetExportViewProps {
 export function AnswerSheetExportView({
   definitionId,
 }: AnswerSheetExportViewProps) {
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const { exportPdf, exportPng, isExporting } = useAnswerSheetExport()
   const [dpi, setDpi] = useState(300)
 
   // 前に選んだものに従う（この解答用紙ではなく、使う人に付く設定）
   const { data: storedSeparateFiles } = useQuery(
-    userPreferenceQuery(user?.id, "asbExportSeparateFiles")
+    userPreferenceQuery(currentUser.id, "asbExportSeparateFiles")
   )
   const separateFiles = parsePreference(
     "asbExportSeparateFiles",
     storedSeparateFiles ?? null
   )
   const { mutate: setPreference } = useMutation(
-    setUserPreferenceMutation(user?.id)
+    setUserPreferenceMutation(currentUser.id)
   )
   const {
     data: definition = null,

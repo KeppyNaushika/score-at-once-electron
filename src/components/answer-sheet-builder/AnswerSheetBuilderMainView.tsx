@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { parsePreference } from "@/lib/userPreferences"
 import {
   answerSheetDefinitionQuery,
@@ -57,16 +57,16 @@ interface AnswerSheetBuilderMainViewProps {
 export function AnswerSheetBuilderMainView({
   definitionId,
 }: AnswerSheetBuilderMainViewProps) {
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const router = useRouter()
 
   // どちらの姿で見るかは、解答用紙ではなく使う人に付く（他の解答用紙を開いても同じ）
   const { data: storedRenderMode } = useQuery(
-    userPreferenceQuery(user?.id, "asbRenderMode")
+    userPreferenceQuery(currentUser.id, "asbRenderMode")
   )
   const renderMode = parsePreference("asbRenderMode", storedRenderMode ?? null)
   const { mutate: setPreference } = useMutation(
-    setUserPreferenceMutation(user?.id)
+    setUserPreferenceMutation(currentUser.id)
   )
 
   const { saveStatus, showSaving, showSaved } = useSaveStatus()
@@ -156,10 +156,9 @@ export function AnswerSheetBuilderMainView({
 
   /** undo / redo は木をまるごと置き換える（1つの意図に対応しないので別経路） */
   async function restore(restored: AnswerSheetDefinition) {
-    if (!user?.id) return
     showSaving()
     try {
-      await replaceDefinition({ definition: restored, userId: user.id })
+      await replaceDefinition({ definition: restored, userId: currentUser.id })
       showSaved()
     } catch {
       await recoverFromWriteFailure()

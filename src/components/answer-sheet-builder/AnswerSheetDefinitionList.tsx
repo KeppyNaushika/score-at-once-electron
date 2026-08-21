@@ -57,7 +57,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
@@ -92,17 +92,6 @@ const ASB_FILTER_ACCESSORS: ListFilterAccessors<ASBDefinitionListItem> = {
   date: (definition) => definition.updatedAt ?? null,
 }
 
-/** ログイン中の利用者を取得する。欠けていればトーストで通知して null を返す */
-function requireUserId(userId: string | undefined) {
-  if (!userId) {
-    toast.error("ログイン情報を取得できませんでした", {
-      description: "一度ログアウトして再ログインしてください",
-    })
-    return null
-  }
-  return userId
-}
-
 /**
  * 解答用紙の一覧表示・作成・複製・削除を行うコンポーネント。
  */
@@ -119,7 +108,7 @@ function TransferOwnerDialog({
   onTransfer,
 }: {
   definition: ASBDefinitionListItem | null
-  currentUserId: string | undefined
+  currentUserId: string
   onClose: () => void
   onTransfer: (nextUserId: string) => Promise<void>
 }) {
@@ -174,10 +163,10 @@ const EMPTY_TAGS: TagWithAllRelations[] = []
 const EMPTY_USERS: PublicUser[] = []
 
 export function AnswerSheetDefinitionList() {
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const router = useRouter()
   const { definitions, isLoading, deleteDefinition, duplicateDefinition } =
-    useAnswerSheetDefinitions(user?.id)
+    useAnswerSheetDefinitions(currentUser.id)
 
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const [sortKey, setSortKey] = useState<SortKey>("updatedAt")
@@ -220,8 +209,10 @@ export function AnswerSheetDefinitionList() {
     () =>
       showAllOwners
         ? definitions
-        : definitions.filter((definition) => definition.ownerId === user?.id),
-    [definitions, showAllOwners, user?.id]
+        : definitions.filter(
+            (definition) => definition.ownerId === currentUser.id
+          ),
+    [definitions, showAllOwners, currentUser.id]
   )
 
   const {
@@ -285,12 +276,13 @@ export function AnswerSheetDefinitionList() {
    * 押す前に選べなくしておくのが本筋で、それでもすり抜けた分は下で数えて伝える。
    */
   const taggableDefinitions = useMemo(
-    () => sorted.filter((definition) => definition.ownerId === user?.id),
-    [sorted, user?.id]
+    () => sorted.filter((definition) => definition.ownerId === currentUser.id),
+    [sorted, currentUser.id]
   )
   const isTaggable = useCallback(
-    (definition: ASBDefinitionListItem) => definition.ownerId === user?.id,
-    [user?.id]
+    (definition: ASBDefinitionListItem) =>
+      definition.ownerId === currentUser.id,
+    [currentUser.id]
   )
 
   const {
@@ -332,22 +324,19 @@ export function AnswerSheetDefinitionList() {
   }
 
   const handleCreate = useCallback(async () => {
-    const userId = requireUserId(user?.id)
-    if (!userId) return
-
     try {
       const newId = crypto.randomUUID()
       const { createDefaultDefinition } = await import("./constants")
       const definition = createDefaultDefinition()
       definition.id = newId
 
-      await createDefinition({ definition, userId })
+      await createDefinition({ definition, userId: currentUser.id })
       // 作成直後は編集したいので作成ページへ直行
       router.push(`/answer-sheet-builder/${newId}/01-edit`)
     } catch {
       // 失敗の通知は MutationCache が出す
     }
-  }, [user?.id, router, createDefinition])
+  }, [currentUser.id, router, createDefinition])
 
   // 行クリック: 概要（detail）へ
   const handleEdit = useCallback(
@@ -367,16 +356,14 @@ export function AnswerSheetDefinitionList() {
 
   const handleTransferOwner = useCallback(
     async (nextUserId: string) => {
-      const userId = requireUserId(user?.id)
-      if (!userId) return
       try {
-        await transferOwnerOf({ currentUserId: userId, nextUserId })
+        await transferOwnerOf({ currentUserId: currentUser.id, nextUserId })
         toast.success("担当を渡しました")
       } catch {
         // 失敗の通知は MutationCache が出す
       }
     },
-    [user?.id, transferOwnerOf]
+    [currentUser.id, transferOwnerOf]
   )
 
   const confirmDelete = async () => {
@@ -413,9 +400,6 @@ export function AnswerSheetDefinitionList() {
   )
 
   const handleImport = useCallback(async () => {
-    const userId = requireUserId(user?.id)
-    if (!userId) return
-
     try {
       // 1. ファイル選択
       const fileResult = await selectImportFile()
@@ -424,7 +408,7 @@ export function AnswerSheetDefinitionList() {
       // 2. インポート実行
       const { warnings } = await importDefinition({
         filePath: fileResult.filePath,
-        userId,
+        userId: currentUser.id,
       })
       toast.success("解答用紙を読み込みました")
       for (const warning of warnings) {
@@ -433,7 +417,7 @@ export function AnswerSheetDefinitionList() {
     } catch {
       // 失敗の通知は MutationCache が出す
     }
-  }, [user?.id, selectImportFile, importDefinition])
+  }, [currentUser.id, selectImportFile, importDefinition])
 
   const sortIndicator = (key: SortKey) => {
     if (sortKey !== key) return ""
@@ -641,7 +625,7 @@ export function AnswerSheetDefinitionList() {
                         : "-"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {definition.ownerId === user?.id
+                      {definition.ownerId === currentUser.id
                         ? "自分"
                         : definition.ownerName}
                     </TableCell>
@@ -664,7 +648,7 @@ export function AnswerSheetDefinitionList() {
                           align="end"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {definition.ownerId === user?.id && (
+                          {definition.ownerId === currentUser.id && (
                             <DropdownMenuItem
                               onClick={() => handleOpenEditor(definition.id)}
                             >
@@ -684,7 +668,7 @@ export function AnswerSheetDefinitionList() {
                             <FolderOutput className="mr-2 h-4 w-4" />
                             .asb 書き出し
                           </DropdownMenuItem>
-                          {definition.ownerId === user?.id && (
+                          {definition.ownerId === currentUser.id && (
                             <>
                               <DropdownMenuItem
                                 onClick={() => setTransferTarget(definition)}
@@ -739,7 +723,7 @@ export function AnswerSheetDefinitionList() {
 
       <TransferOwnerDialog
         definition={transferTarget}
-        currentUserId={user?.id}
+        currentUserId={currentUser.id}
         onClose={() => setTransferTarget(null)}
         onTransfer={handleTransferOwner}
       />

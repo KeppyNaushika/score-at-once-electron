@@ -23,7 +23,7 @@ import {
   useState,
 } from "react"
 
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import {
   keyboardShortcutsQuery,
   resetKeyboardShortcutsMutation,
@@ -202,8 +202,7 @@ interface ShortcutProviderProps {
 
 /** 一括採点画面のキーボードショートカット管理（コマンド登録・キーバインド・when句評価）を提供するプロバイダー */
 export function ShortcutProvider({ children }: ShortcutProviderProps) {
-  const { user } = useAuth()
-  const userId = user?.id
+  const userId = useCurrentUser().id
 
   // ============================================
   // 状態管理

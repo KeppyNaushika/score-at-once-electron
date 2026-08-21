@@ -15,7 +15,6 @@ interface ScoringDataLoaderResult {
   exam: ExamWithPages | null
   studentAnswerImages: StudentAnswerImageWithExamPageAndStudent[]
   cropRegions: QuestionAnswerRegionRow[]
-  currentUserId: string | null
 }
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
@@ -29,10 +28,7 @@ const EMPTY_CROP_REGIONS: QuestionAnswerRegionRow[] = []
  * 消しただけで試験も設問領域も取り直していた。揃うまで待つ必要はあるが、それは
  * 待ち方（`loading`）の話であって、格納の仕方の話ではない。
  */
-export function useScoringDataLoader(
-  examId: string,
-  authUserId: string | null
-): ScoringDataLoaderResult {
+export function useScoringDataLoader(examId: string): ScoringDataLoaderResult {
   const exam = useQuery({
     ...examWithPagesQuery(examId),
     enabled: Boolean(examId),
@@ -59,8 +55,5 @@ export function useScoringDataLoader(
     exam: exam.data ?? null,
     studentAnswerImages: studentAnswerImages.data ?? EMPTY_ANSWER_IMAGES,
     cropRegions: cropRegions.data ?? EMPTY_CROP_REGIONS,
-    // 操作者は AuthContext が唯一の出所。ここで main へ聞き直すと、
-    // 同じ「今のユーザー」が2つの出所・2つの形でキャッシュに載る
-    currentUserId: authUserId,
   }
 }

@@ -21,10 +21,10 @@ import { masterMarkersQuery } from "./omr"
 // =====================================================================
 
 /** 一覧に出す試験の要約（利用者ごとに見えるものが違う） */
-export const examListQuery = (userId: string | undefined) =>
+export const examListQuery = (userId: string) =>
   queryOptions({
     queryKey: ["exam", "list", userId] as const,
-    queryFn: () => window.electronAPI.fetchExamsSummary(userId ?? ""),
+    queryFn: () => window.electronAPI.fetchExamsSummary(userId),
   })
 
 /** 試験1件そのもの（パンくず・答案アップロードなど、本体だけ要る画面） */
@@ -116,20 +116,17 @@ export const studentsNotInExamQuery = (examId: string, activeOnly: boolean) =>
 
 const examScope = (examId: string) => scopeKeys.exam(examId)
 
-export const createExamMutation = (userId: string | undefined) =>
+export const createExamMutation = (userId: string) =>
   defineMutation({
     mutationFn: (props: CreateExamArgs) =>
-      window.electronAPI.createExam(props, userId ?? ""),
+      window.electronAPI.createExam(props, userId),
     meta: {
       invalidates: [examListQuery(userId).queryKey],
       errorMessage: "試験を作成できませんでした",
     },
   })
 
-export const updateExamMutation = (
-  examId: string,
-  userId: string | undefined
-) =>
+export const updateExamMutation = (examId: string, userId: string) =>
   defineMutation({
     mutationFn: (data: Prisma.ExamUpdateInput) =>
       window.electronAPI.updateExam(examId, data),
@@ -143,7 +140,7 @@ export const updateExamMutation = (
  * 試験を削除する。**利用者が見た件数を添える** — main は消す直前に数え直し、
  * 増えていれば中止する（docs/remaining-work.md 段階26）。
  */
-export const deleteExamMutation = (userId: string | undefined) =>
+export const deleteExamMutation = (userId: string) =>
   defineMutation({
     mutationFn: ({
       examId,

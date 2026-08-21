@@ -10,7 +10,7 @@ const EMPTY_ASSIGNMENTS: CropRegionAssignmentSummary[] = []
 
 interface UseAssignedCropRegionsParams {
   examId: string
-  userId: string | undefined
+  userId: string
   cropRegions: QuestionAnswerRegionRow[]
 }
 
@@ -30,12 +30,12 @@ export function useAssignedCropRegions({
 }: UseAssignedCropRegionsParams) {
   const queryClient = useQueryClient()
   const queryKey = useMemo(
-    () => cropRegionAssignmentsQuery(examId, userId ?? "").queryKey,
+    () => cropRegionAssignmentsQuery(examId, userId).queryKey,
     [examId, userId]
   )
   const { data } = useQuery({
-    ...cropRegionAssignmentsQuery(examId, userId ?? ""),
-    enabled: Boolean(examId && userId),
+    ...cropRegionAssignmentsQuery(examId, userId),
+    enabled: Boolean(examId),
   })
   const assignments = data?.assignments ?? EMPTY_ASSIGNMENTS
   const canManage = data?.canManage ?? false
@@ -47,7 +47,7 @@ export function useAssignedCropRegions({
   )
 
   const selectableCropRegions = useMemo(() => {
-    if (assignments.length === 0 || canManage || !userId) return cropRegions
+    if (assignments.length === 0 || canManage) return cropRegions
 
     const assigneeIdsByCropRegionId = assignments.reduce((acc, assignment) => {
       const assigneeIds = acc.get(assignment.cropRegionId) ?? new Set<string>()

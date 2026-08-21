@@ -85,7 +85,7 @@ export function MemberInviteDialog({
 
   const { data: isOwner = false } = useQuery({
     ...examOwnerQuery(examId, currentUserId),
-    enabled: isOpen && Boolean(examId) && Boolean(currentUserId),
+    enabled: isOpen && Boolean(examId),
   })
 
   const {

@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
 import { createExamMutation } from "@/queries/exam"
@@ -56,8 +56,8 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
   // このコンポーネントは親が条件付きでマウントする＝常に開いた状態
   const { inputRef: examNameInputRef, onOpenAutoFocus } =
     useDialogAutoFocus(true)
-  const { user } = useAuth()
-  const createExam = useMutation(createExamMutation(user?.id))
+  const currentUser = useCurrentUser()
+  const createExam = useMutation(createExamMutation(currentUser.id))
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
   const setExamTags = useMutation(setExamTagsForNewExamMutation())
 

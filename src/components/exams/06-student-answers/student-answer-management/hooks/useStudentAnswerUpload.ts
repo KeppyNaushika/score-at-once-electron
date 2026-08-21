@@ -7,6 +7,7 @@ import type {
   UnsavedAnswerImage,
   UploadData,
 } from "@/components/exams/06-student-answers/types"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { usePdfPasswordConversion } from "@/hooks/usePdfPasswordConversion"
 import { uploadStudentAnswersMutation } from "@/queries/answerSheet"
 import { examDetailQuery, updateExamMutation } from "@/queries/exam"
@@ -21,7 +22,10 @@ export function useStudentAnswerUpload(
   ) => void,
   mode: "upload" | "view" = "upload"
 ) {
-  const updateExam = useMutation(updateExamMutation(examId ?? "", undefined))
+  // 試験を更新すると一覧の要約も古くなる。取り直す先は利用者ごとなので、
+  // 誰が見ている一覧かを添える
+  const currentUser = useCurrentUser()
+  const updateExam = useMutation(updateExamMutation(examId, currentUser.id))
   const uploadStudentAnswers = useMutation(
     uploadStudentAnswersMutation(examId ?? "")
   )

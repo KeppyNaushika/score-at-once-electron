@@ -38,7 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
@@ -79,15 +79,15 @@ const EXAM_FILTER_ACCESSORS: ListFilterAccessors<ExamSummary> = {
 }
 
 const File = () => {
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const queryClient = useQueryClient()
-  const { data: exams = EMPTY_EXAMS } = useQuery(examListQuery(user?.id))
+  const { data: exams = EMPTY_EXAMS } = useQuery(examListQuery(currentUser.id))
   const loadExams = useCallback(
     () =>
       queryClient.invalidateQueries({
-        queryKey: examListQuery(user?.id).queryKey,
+        queryKey: examListQuery(currentUser.id).queryKey,
       }),
-    [queryClient, user?.id]
+    [queryClient, currentUser.id]
   )
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
@@ -168,7 +168,7 @@ const File = () => {
 
   const handleBulkExport = useCallback(
     async (exportMode: ArchiveExportMode) => {
-      if (!user || selectedIds.size === 0) return
+      if (selectedIds.size === 0) return
 
       setIsBulkExporting(true)
       toast("書き出し中...", {
@@ -178,7 +178,7 @@ const File = () => {
       try {
         const bulkResult = await bulkExportExams.mutateAsync({
           examIds: Array.from(selectedIds),
-          userId: user.id,
+          userId: currentUser.id,
           exportMode,
         })
 
@@ -228,7 +228,7 @@ const File = () => {
         setIsBulkExporting(false)
       }
     },
-    [user, selectedIds, clearSelection, bulkExportExams]
+    [currentUser.id, selectedIds, clearSelection, bulkExportExams]
   )
 
   /** 閉じたら結果を捨てる（次に開いたときは選択の段から始まる） */

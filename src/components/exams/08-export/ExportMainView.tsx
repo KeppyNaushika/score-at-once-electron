@@ -23,7 +23,7 @@ import { useScoredAnswerPreview } from "@/components/exams/08-export/hooks/useSc
 import { toStudentExportPlacements } from "@/components/exams/08-export/utils/studentExportPlacements"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import { useAuth } from "@/contexts/AuthContext"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { administeredExamClassroomsQuery } from "@/queries/examClassroom"
 import {
   recordUnresolvedConflictsMutation,
@@ -36,7 +36,7 @@ import type {
 
 export default function ExportMainView() {
   const { helpButton } = usePageHelp()
-  const { user } = useAuth()
+  const currentUser = useCurrentUser()
   const router = useRouter()
   const [exportTab, setExportTab] = useState<ExportTabType>("scored-answers")
   const [showWarningModal, setShowWarningModal] = useState(false)
@@ -239,11 +239,11 @@ export default function ExportMainView() {
   const recordUnresolvedConflictExport = useCallback(
     async (exportType: string) => {
       const acknowledged = acknowledgedConflictsRef.current
-      if (!exam || !user || !acknowledged) return
+      if (!exam || !acknowledged) return
       acknowledgedConflictsRef.current = null
       await recordUnresolvedConflicts({
         examId: exam.id,
-        userId: user.id,
+        userId: currentUser.id,
         exportType,
         conflicts: acknowledged.conflicts.map((conflict) => ({
           studentName: conflict.studentName,
@@ -252,7 +252,7 @@ export default function ExportMainView() {
         scoreImpact: acknowledged.scoreImpact,
       })
     },
-    [exam, recordUnresolvedConflicts, user]
+    [exam, recordUnresolvedConflicts, currentUser.id]
   )
 
   // 採点済み答案の Canvas 描画ベース PDF 出力（ストリーミング処理）
@@ -301,16 +301,10 @@ export default function ExportMainView() {
     exportType: "scored-answers" | "grading-data" | "individual-reports"
   ): Promise<boolean> => {
     if (!exam) return false
-    // 無言で何も起きない状態を作らない（runValidatedExport の catch が表に出す）
-    if (!user) {
-      throw new Error(
-        "ログイン情報を取得できませんでした。再ログインしてから出力してください"
-      )
-    }
     const result = await validateScoringData({
       examId: exam.id,
       selectedExamStudentIds: Array.from(selectedStudents),
-      userId: user.id,
+      userId: currentUser.id,
     })
 
     if (result.hasWarnings) {
