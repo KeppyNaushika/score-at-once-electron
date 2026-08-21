@@ -7,7 +7,7 @@
  * @module types/prisma-extensions
  */
 
-import type { Exam, Prisma, QuestionScore } from "@prisma/client"
+import type { Exam, Prisma, QuestionScore, ScoreDecision } from "@prisma/client"
 
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
 
@@ -60,6 +60,16 @@ export type ClassroomWithMemberships = Prisma.ClassroomGetPayload<{
 /** 学級に属する在籍1件（生徒を同梱）。学級の子として降ってくる形そのもの */
 export type ClassroomMembership =
   ClassroomWithMemberships["memberships"][number]
+
+/**
+ * 在籍行だけを同梱した学級（生徒は同梱しない）。
+ *
+ * 人数を表示側で数えるために在籍を持つだけの候補一覧の形。氏名まで要るなら
+ * 生徒を同梱する {@link ClassroomWithMemberships} を使う。
+ */
+export type ClassroomWithMembershipRows = Prisma.ClassroomGetPayload<{
+  include: { memberships: true }
+}>
 
 /**
  * 受験日所属生徒（studentId のみ）を含む ExamClassroom 型。
@@ -160,6 +170,22 @@ export type SerializedQuestionScore = Omit<
 > & {
   partialScore: number | null
   status: ScoringStatus
+}
+
+/**
+ * 境界を越えた ScoreDecision の実体型（type injection）。
+ *
+ * {@link SerializedQuestionScore} と同じ2点の補正で、`score`（Decimal）を number へ、
+ * `verdict`（DB 上は String）を SSOT の ScoringStatus literal union へ絞る。
+ * 確定リゾルバ（scoreResolution.ts）の入力型でもある。実行時の相棒は
+ * `serializePrisma` と `toScoringStatus`（`toSerializedScoreDecision`）。
+ */
+export type SerializedScoreDecision = Omit<
+  ScoreDecision,
+  "score" | "verdict"
+> & {
+  score: number | null
+  verdict: ScoringStatus
 }
 
 // =============================================================================

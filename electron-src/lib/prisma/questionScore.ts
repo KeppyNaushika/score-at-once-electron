@@ -1,4 +1,11 @@
+import type { QuestionScore } from "@prisma/client"
 import { Decimal } from "@prisma/client/runtime/client"
+
+import type { Serialized } from "@/types/prismaExtensions"
+import {
+  type ScoringStatus,
+  toScoringStatus,
+} from "@/types/scoringStatus.types"
 
 import { type AuditChange, recordAuditLog } from "./auditLog"
 import {
@@ -8,6 +15,24 @@ import {
 import prisma from "./client"
 import { assertCropRegionsInSameExam } from "./examScopeGuard"
 import { isRecordNotFoundError } from "./prismaErrors"
+import { serializePrisma } from "./serializePrisma"
+
+/**
+ * 採点行を「シリアライズ後の形」へ倒す境界コンバータ。
+ *
+ * `partialScore`（Decimal）を number へ、`status`（DB 上は String 列）を
+ * `ScoringStatus` へ絞る。**この2点の補正を行うのはここ1箇所**で、
+ * 型の側の相棒は `SerializedQuestionScore`（types/prismaExtensions.ts）。
+ * 同梱したリレーションは落とさずそのまま持つ（射影しない）。
+ */
+export const toSerializedQuestionScore = <
+  Row extends Omit<QuestionScore, "status"> & { status: string },
+>(
+  questionScore: Row
+): Serialized<Row> & { status: ScoringStatus } => ({
+  ...serializePrisma(questionScore),
+  status: toScoringStatus(questionScore.status),
+})
 
 /**
  * 採点対象が既に無いことを表す機械可読な理由コード。
@@ -106,6 +131,11 @@ export interface UpdateQuestionScoreData {
 
 /**
  * 試験の採点データを取得
+ *
+ * 行を作るのはこの関数なので、Decimal→number と判定の絞り込みもここで済ませる
+ * （`toSerializedQuestionScore`）。呼ぶ側（出力・PDF・返却差分・確定リゾルバ）は
+ * `SerializedQuestionScore` として受け取れる。
+ *
  * @param examId 試験ID
  * @param userId 採点者のユーザーID（指定時はそのユーザーの採点データのみ取得）
  */
@@ -140,7 +170,7 @@ export const getQuestionScoresForExam = async (
       ],
     })
 
-    return scores
+    return scores.map(toSerializedQuestionScore)
   } catch (error) {
     console.error("Failed to get question scores for exam:", error)
     throw error

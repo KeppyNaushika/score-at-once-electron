@@ -1,4 +1,11 @@
+import type { ScoreDecision } from "@prisma/client"
 import { Decimal } from "@prisma/client/runtime/client"
+
+import type { Serialized } from "@/types/prismaExtensions"
+import {
+  type ScoringStatus,
+  toScoringStatus,
+} from "@/types/scoringStatus.types"
 
 import { recordAuditLog } from "./auditLog"
 import {
@@ -7,6 +14,23 @@ import {
 } from "./auditScope"
 import prisma from "./client"
 import { assertCropRegionsInSameExam } from "./examScopeGuard"
+import { serializePrisma } from "./serializePrisma"
+
+/**
+ * 確定行を「シリアライズ後の形」へ倒す境界コンバータ。
+ *
+ * `score`（Decimal）を number へ、`verdict`（DB 上は String 列）を `ScoringStatus` へ
+ * 絞る。型の側の相棒は `SerializedScoreDecision`（types/prismaExtensions.ts）。
+ * 同梱したリレーションは落とさずそのまま持つ（射影しない）。
+ */
+export const toSerializedScoreDecision = <
+  Row extends Omit<ScoreDecision, "verdict"> & { verdict: string },
+>(
+  scoreDecision: Row
+): Serialized<Row> & { verdict: ScoringStatus } => ({
+  ...serializePrisma(scoreDecision),
+  verdict: toScoringStatus(scoreDecision.verdict),
+})
 
 /** verdict コードを日本語表示に変換（監査ログ差分用） */
 const verdictLabel = (verdict: string | null | undefined): string => {
@@ -179,7 +203,12 @@ export const upsertScoreDecision = async (data: UpsertScoreDecisionData) => {
   return decision
 }
 
-/** 試験の全確定スコアを取得する */
+/**
+ * 試験の全確定スコアを取得する。
+ *
+ * 行を作るのはこの関数なので、Decimal→number と判定の絞り込みもここで済ませる
+ * （`toSerializedScoreDecision`）。
+ */
 export const getScoreDecisionsForExam = async (examId: string) => {
   const decisions = await prisma.scoreDecision.findMany({
     where: {
@@ -191,5 +220,5 @@ export const getScoreDecisionsForExam = async (examId: string) => {
       decidedBy: true,
     },
   })
-  return decisions
+  return decisions.map(toSerializedScoreDecision)
 }

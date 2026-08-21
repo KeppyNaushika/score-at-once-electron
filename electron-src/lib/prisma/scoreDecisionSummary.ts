@@ -12,12 +12,12 @@ import type {
   ScoreDecisionQuestion,
   ScoreProposal,
 } from "@/types/scoreDecision.types"
-import { toScoringStatus } from "@/types/scoringStatus.types"
 
 import { calculateActualScore } from "../shared/calculations/actualScore"
 import { resolveEffectiveScores } from "../shared/calculations/scoreResolution"
 import prisma from "./client"
-import { canDecideExamScores } from "./scoreDecision"
+import { toSerializedQuestionScore } from "./questionScore"
+import { canDecideExamScores, toSerializedScoreDecision } from "./scoreDecision"
 
 const cellKey = (examStudentId: string, cropRegionId: string): string =>
   `${examStudentId} ${cropRegionId}`
@@ -28,8 +28,8 @@ export const getExamDecisionSummary = async (
 ): Promise<ExamDecisionSummary> => {
   const [
     questionRegions,
-    scores,
-    decisions,
+    questionScoreRows,
+    scoreDecisionRows,
     examStudents,
     permission,
     assignments,
@@ -77,6 +77,11 @@ export const getExamDecisionSummary = async (
       distinct: ["examStudentId"],
     }),
   ])
+
+  // 行を作ったのはここなので、Decimal→number と判定の絞り込みもここで1回だけ済ませる。
+  // 以降このファイルに生の Decimal も生 string の判定も現れない。
+  const scores = questionScoreRows.map(toSerializedQuestionScore)
+  const decisions = scoreDecisionRows.map(toSerializedScoreDecision)
 
   const { resolved, conflicts } = resolveEffectiveScores(scores, decisions)
 
@@ -190,22 +195,15 @@ export const getExamDecisionSummary = async (
   const toProposal = (
     score: (typeof scores)[number],
     maxScore: number
-  ): ScoreProposal => {
-    const partialScore =
-      score.partialScore !== null ? Number(score.partialScore) : null
-    return {
-      questionScoreId: score.id,
-      userId: score.userId,
-      userName: userNameById.get(score.userId) ?? score.userId,
-      status: toScoringStatus(score.status),
-      partialScore,
-      scoreValue: calculateActualScore(
-        { status: toScoringStatus(score.status), partialScore },
-        maxScore
-      ),
-      updatedAt: score.updatedAt.toISOString(),
-    }
-  }
+  ): ScoreProposal => ({
+    questionScoreId: score.id,
+    userId: score.userId,
+    userName: userNameById.get(score.userId) ?? score.userId,
+    status: score.status,
+    partialScore: score.partialScore,
+    scoreValue: calculateActualScore(score, maxScore),
+    updatedAt: score.updatedAt.toISOString(),
+  })
 
   const cellsByRegion = new Map<string, ScoreDecisionCell[]>()
   let totalScoreImpact = 0
@@ -245,8 +243,8 @@ export const getExamDecisionSummary = async (
       proposals,
       decision: decision
         ? {
-            verdict: toScoringStatus(decision.verdict),
-            score: decision.score !== null ? Number(decision.score) : null,
+            verdict: decision.verdict,
+            score: decision.score,
             comment: decision.comment,
             decidedByName: decision.decidedBy.name,
             decidedAt: decision.decidedAt.toISOString(),

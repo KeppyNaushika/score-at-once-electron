@@ -21,6 +21,8 @@ import {
 } from "../../../../src/types/grade.types"
 import prisma from "../../prisma/client"
 import { subtotalWithQuestionAssignmentsInclude } from "../../prisma/cropSubtotal"
+import { toSerializedQuestionScore } from "../../prisma/questionScore"
+import { toSerializedScoreDecision } from "../../prisma/scoreDecision"
 import {
   adjustEstimate,
   applyAdjustmentAndClamp,
@@ -158,8 +160,8 @@ async function buildGradeCalcContext(gradeId: string) {
       examStudents: examStudentRows.map((examStudentRow) => {
         // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
         const { resolved: resolvedScores } = resolveEffectiveScores(
-          examStudentRow.questionScores,
-          examStudentRow.scoreDecisions
+          examStudentRow.questionScores.map(toSerializedQuestionScore),
+          examStudentRow.scoreDecisions.map(toSerializedScoreDecision)
         )
         return {
           examStudentId: examStudentRow.id,

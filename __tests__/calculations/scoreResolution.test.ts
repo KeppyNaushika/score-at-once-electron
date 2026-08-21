@@ -7,21 +7,26 @@
  */
 import { describe, expect, it } from "vitest"
 
-import type {
-  ResolvableDecision,
-  ResolvableScore,
-  ResolvableScoreInput,
-} from "@/electron-src/lib/shared/calculations/scoreResolution"
 import {
   calculateEffectiveScoreValue,
   resolveEffectiveScores,
 } from "@/electron-src/lib/shared/calculations/scoreResolution"
+import type {
+  SerializedQuestionScore,
+  SerializedScoreDecision,
+} from "@/types/prismaExtensions"
+import { toScoringStatus } from "@/types/scoringStatus.types"
 
 // ================== ヘルパー ==================
 
+// リゾルバは「シリアライズ後の行」を受ける。行の全列が揃っている前提なので、
+// ヘルパーも Prisma の行と同じ列を全部持つ（欠けた列を作れないようにするため、
+// 部分的な形を作らず SerializedQuestionScore / SerializedScoreDecision で名乗る）。
 let seq = 0
 
-function score(overrides: Partial<ResolvableScore> = {}): ResolvableScore {
+function score(
+  overrides: Partial<SerializedQuestionScore> = {}
+): SerializedQuestionScore {
   seq++
   return {
     id: `id-${String(seq).padStart(4, "0")}`,
@@ -29,21 +34,28 @@ function score(overrides: Partial<ResolvableScore> = {}): ResolvableScore {
     cropRegionId: "region-1",
     status: "correct",
     partialScore: null,
+    userId: "user-1",
+    createdAt: new Date("2026-06-01T10:00:00Z"),
     updatedAt: new Date("2026-06-01T10:00:00Z"),
     ...overrides,
   }
 }
 
 function decision(
-  overrides: Partial<ResolvableDecision> = {}
-): ResolvableDecision {
+  overrides: Partial<SerializedScoreDecision> = {}
+): SerializedScoreDecision {
   return {
+    id: "decision-1",
     examStudentId: "student-1",
     cropRegionId: "region-1",
     verdict: "partial",
     score: 5,
+    comment: null,
+    decidedByUserId: "user-1",
     decidedAt: new Date("2026-06-02T10:00:00Z"),
     sourceQuestionScoreId: null,
+    createdAt: new Date("2026-06-02T10:00:00Z"),
+    updatedAt: new Date("2026-06-02T10:00:00Z"),
     ...overrides,
   }
 }
@@ -130,20 +142,6 @@ describe("resolveEffectiveScores - 提案のみ", () => {
     ])
   })
 
-  it("partialScoreはDecimal風オブジェクトや文字列でも数値比較される", () => {
-    const decimalLike = score({
-      status: "partial",
-      partialScore: { toString: () => "3" },
-    })
-    const numeric = score({ status: "partial", partialScore: 3 })
-    const { resolved, conflicts } = resolveEffectiveScores([
-      decimalLike,
-      numeric,
-    ])
-    expect(resolved).toHaveLength(1)
-    expect(conflicts).toEqual([])
-  })
-
   it("updatedAtが同時刻ならidで決定的に選択される", () => {
     const timestamp = new Date("2026-06-01T10:00:00Z")
     const scoreA = score({
@@ -164,14 +162,14 @@ describe("resolveEffectiveScores - 提案のみ", () => {
 
   // 旧値 final / proposed の流入口は無い（DB は起動時 migration が、アーカイブは
   // トランスフォーマーが掃海し、同期は schemaVersion 不一致のリモートを丸ごと
-  // 捨てる）。それでも境界で倒れないことだけは固定しておく — `toScoringStatus`
-  // が未採点へ倒すので、例外にはならず欠測として扱われる。
+  // 捨てる）。それでも境界で倒れないことだけは固定しておく — 行を作る側の
+  // `toSerializedQuestionScore` が使う `toScoringStatus` が未採点へ倒すので、
+  // 例外にはならず欠測として扱われる。
   it("旧データの final 行が来ても落ちず、未採点として扱われる", () => {
-    const legacyRow: ResolvableScoreInput = {
-      ...score(),
-      status: "final",
+    const legacyRow = score({
+      status: toScoringStatus("final"),
       partialScore: 5,
-    }
+    })
     const { resolved, conflicts } = resolveEffectiveScores([legacyRow])
     expect(resolved).toHaveLength(1)
     expect(resolved[0].status).toBe("unscored")

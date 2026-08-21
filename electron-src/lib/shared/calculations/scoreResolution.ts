@@ -8,6 +8,13 @@
  * 集計・出力系（Excel出力・個人レポート・PDF出力・小計・成績連携）は
  * 必ずこのモジュールで生徒×設問ごとに1つの有効スコアへ解決してから処理する。
  *
+ * **入力は「シリアライズ後の行」で受ける**（`SerializedQuestionScore` /
+ * `SerializedScoreDecision`）。Decimal→number と判定の絞り込みは行を作る側
+ * （`toSerializedQuestionScore` / `toSerializedScoreDecision`）で1回だけ済ませ、
+ * ここでは行の全列が揃っている前提に立つ。かつては `id` と `updatedAt` を省略可能に
+ * していたため、渡し忘れた行が最新判定（`pickLatest`）で常に負け、その採点者の点数が
+ * 黙って採用されないという穴があった。
+ *
  * 解決ルール（決定的）:
  * 1. ScoreDecision があればそれを採用（確定後に新しい提案があれば isStale を立てる）
  * 2. 提案のうち unscored 以外が1つならそれを採用
@@ -21,54 +28,13 @@
  * 提案ではない、という状態はこれからも正しく起こる。
  */
 
-import {
-  type ScoringStatus,
-  toScoringStatus,
-} from "@/types/scoringStatus.types"
+import type {
+  SerializedQuestionScore,
+  SerializedScoreDecision,
+} from "@/types/prismaExtensions"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { calculateActualScore } from "./actualScore"
-
-export interface ResolvableScore {
-  examStudentId: string
-  cropRegionId: string
-  /** 採点判定の7値。`string` にすると得点化の網羅が効かなくなる */
-  status: ScoringStatus
-  partialScore: number | string | { toString(): string } | null
-  id?: string
-  updatedAt?: Date | string
-}
-
-/** 呼ぶ側が渡す形。Prisma の行そのまま（判定はまだ `string`） */
-export type ResolvableScoreInput = Omit<ResolvableScore, "status"> & {
-  status: string
-}
-
-/** 同上（確定の側） */
-export type ResolvableDecisionInput = Omit<ResolvableDecision, "verdict"> & {
-  verdict: string
-}
-
-/**
- * Prisma の行（`status` は `String` 列）を、判定を絞った形にする。**境界はここ1つ。**
- *
- * SQLite は enum を持てないので DB から出た時点では `string`。各所で `as` を書くと
- * 綴りの誤りも検査に掛からないので、変換を名前のある関数に集める。
- */
-export const toResolvableScore = <T extends { status: string }>(
-  row: T
-): T & { status: ScoringStatus } => ({
-  ...row,
-  status: toScoringStatus(row.status),
-})
-
-export interface ResolvableDecision {
-  examStudentId: string
-  cropRegionId: string
-  verdict: ScoringStatus
-  score: number | string | { toString(): string } | null
-  decidedAt?: Date | string
-  sourceQuestionScoreId?: string | null
-}
 
 /** 受験者×設問ごとに解決された有効スコア */
 export interface EffectiveScore {
@@ -102,56 +68,39 @@ interface ResolveResult {
   conflicts: ScoreConflict[]
 }
 
-const normalizeScore = (
-  value: ResolvableScore["partialScore"]
-): number | null => {
-  if (value === null || value === undefined) return null
-  const n = Number(value)
-  return Number.isNaN(n) ? null : n
-}
-
-const toTime = (value: Date | string | undefined): number =>
-  value ? new Date(value).getTime() : 0
-
 /** updatedAt 降順 → id 降順の決定的な「最新」選択 */
-const pickLatest = <T extends ResolvableScore>(group: T[]): T =>
+const pickLatest = (
+  group: SerializedQuestionScore[]
+): SerializedQuestionScore =>
   group.reduce((latest, current) => {
-    const tLatest = toTime(latest.updatedAt)
-    const tCurrent = toTime(current.updatedAt)
-    if (tCurrent !== tLatest) return tCurrent > tLatest ? current : latest
-    return (current.id ?? "") > (latest.id ?? "") ? current : latest
+    const latestTime = latest.updatedAt.getTime()
+    const currentTime = current.updatedAt.getTime()
+    if (currentTime !== latestTime)
+      return currentTime > latestTime ? current : latest
+    return current.id > latest.id ? current : latest
   })
 
 const cellKey = (examStudentId: string, cropRegionId: string): string =>
   `${examStudentId} ${cropRegionId}`
 
 const proposalToEffective = (
-  proposal: ResolvableScore,
+  proposal: SerializedQuestionScore,
   isStale = false
 ): EffectiveScore => ({
   examStudentId: proposal.examStudentId,
   cropRegionId: proposal.cropRegionId,
   status: proposal.status,
-  partialScore: normalizeScore(proposal.partialScore),
-  questionScoreId: proposal.id ?? null,
+  partialScore: proposal.partialScore,
+  questionScoreId: proposal.id,
   source: "proposal",
   isStale,
 })
 
 export function resolveEffectiveScores(
-  rawScores: ResolvableScoreInput[],
-  rawDecisions: ResolvableDecisionInput[] = []
+  scores: SerializedQuestionScore[],
+  decisions: SerializedScoreDecision[] = []
 ): ResolveResult {
-  // **判定を絞るのはここ1回。** 呼ぶ側は Prisma の行（`status` は String 列）を
-  // そのまま渡してよい。各所で `as` を書くと、綴りの誤りも旧値の見落としも検査に
-  // 掛からない（docs/branch-review-findings.md #16）
-  const scores = rawScores.map(toResolvableScore)
-  const decisions = rawDecisions.map((decision) => ({
-    ...decision,
-    verdict: toScoringStatus(decision.verdict),
-  }))
-
-  const groups = new Map<string, ResolvableScore[]>()
+  const groups = new Map<string, SerializedQuestionScore[]>()
   for (const score of scores) {
     const key = cellKey(score.examStudentId, score.cropRegionId)
     const group = groups.get(key)
@@ -173,18 +122,19 @@ export function resolveEffectiveScores(
     decidedCells.add(key)
 
     const proposals = groups.get(key) ?? []
-    const decidedAt = toTime(decision.decidedAt)
+    const decidedAt = decision.decidedAt.getTime()
     const isStale = proposals.some(
       (proposal) =>
-        proposal.status !== "unscored" && toTime(proposal.updatedAt) > decidedAt
+        proposal.status !== "unscored" &&
+        proposal.updatedAt.getTime() > decidedAt
     )
 
     resolved.push({
       examStudentId: decision.examStudentId,
       cropRegionId: decision.cropRegionId,
       status: decision.verdict,
-      partialScore: normalizeScore(decision.score),
-      questionScoreId: decision.sourceQuestionScoreId ?? null,
+      partialScore: decision.score,
+      questionScoreId: decision.sourceQuestionScoreId,
       source: "decision",
       isStale,
     })
@@ -208,8 +158,7 @@ export function resolveEffectiveScores(
     const allAgree = candidates.every(
       (proposal) =>
         proposal.status === first.status &&
-        normalizeScore(proposal.partialScore) ===
-          normalizeScore(first.partialScore)
+        proposal.partialScore === first.partialScore
     )
 
     if (allAgree) {
