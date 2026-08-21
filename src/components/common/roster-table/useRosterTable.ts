@@ -2,7 +2,7 @@
 
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import type { RosterRow } from "@/components/common/roster-table/types"
 
@@ -50,7 +50,17 @@ interface UseRosterTableParams {
   onSelectionChange: (studentId: string, isSelected: boolean) => void
   /** 全選択トグル（制御） */
   onSelectAll: (isSelected: boolean) => void
-  /** 並び順更新の永続化（待ちたい呼び出し元のために Promise も許す） */
+  /**
+   * 並び順を DB へ書き、書いた結果を読み直すところまで。
+   *
+   * **解決するまでが「離した並びを見せていてよい間」。** このフックは楽観更新を
+   * 持たず、解決した時点で手元の並びを捨てて DB の並びへ戻る（書けていれば同じ並びに
+   * なり、書けていなければ DB の並びが出る）。よって**読み直しを待ってから解決する**
+   * こと。書き込みだけを待って解決すると、読み直しが返るまでの間だけ古い並びが出る。
+   *
+   * **失敗しても reject しないこと。** dnd-kit の `onDragEnd` は Promise を受け取らず、
+   * 投げると誰も拾わない。失敗の知らせは中央のトースト（`queries/queryClient.ts`）が出す。
+   */
   onOrderUpdate: (
     rowOrders: { studentId: string; customOrder: number }[]
   ) => void | Promise<void>
@@ -69,20 +79,30 @@ export function useRosterTable({
   onSelectAll,
   onOrderUpdate,
 }: UseRosterTableParams) {
-  const [sortedRows, setSortedRows] = useState<RosterRow[]>([])
+  /**
+   * 離した時点の並び（studentId の列）。書き込みと読み直しが終わるまでの間だけ持つ。
+   *
+   * **楽観更新ではない。** キャッシュには何も書かず、DB を読み直したら捨てる。
+   * これが無いと、指を離してから読み直しが返るまでの数百ミリ秒だけ行が元の位置へ
+   * 戻り、その後もう一度動く（ドラッグ操作の見た目が途切れる）。
+   */
+  const [droppedRowIds, setDroppedRowIds] = useState<string[] | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
     null
   )
 
-  // 並び順を初期化・更新
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      const sorted = filteredRows.slice().sort(compareByCustomOrder)
-      setSortedRows(sorted)
-    })
-    return () => cancelAnimationFrame(frame)
-  }, [filteredRows])
+  const sortedRows = useMemo(() => {
+    const sorted = filteredRows.slice().sort(compareByCustomOrder)
+    if (!droppedRowIds) return sorted
+    // 離した並びを見せる。行が増減していたら（他の教員の変更が入った等）諦めて
+    // DB の並びに従う（欠けた行を落として見せると、無いものを並べたことになる）
+    const rowById = new Map(sorted.map((row) => [row.id, row]))
+    const droppedRows = droppedRowIds.flatMap(
+      (droppedRowId) => rowById.get(droppedRowId) ?? []
+    )
+    return droppedRows.length === sorted.length ? droppedRows : sorted
+  }, [filteredRows, droppedRowIds])
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(event.active.id as string)
@@ -108,41 +128,43 @@ export function useRosterTable({
         selectedIds.has(row.id)
       )
 
-      // ドラッグ対象が選択済みかつ複数選択中なら、選択分をまとめて移動
-      if (selectedIds.has(active.id as string) && selectedRowsList.length > 1) {
-        const newSortedRows = [...sortedRows]
+      const newSortedRows = (() => {
+        // ドラッグ対象が選択済みかつ複数選択中なら、選択分をまとめて移動
+        if (
+          selectedIds.has(active.id as string) &&
+          selectedRowsList.length > 1
+        ) {
+          const movedRows = [...sortedRows]
+          const selectedRowsData = selectedRowsList
+            .map((row) => {
+              const index = movedRows.findIndex(
+                (sortedRow) => sortedRow.id === row.id
+              )
+              return movedRows.splice(index, 1)[0]
+            })
+            .filter(Boolean)
 
-        const selectedRowsData = selectedRowsList
-          .map((row) => {
-            const index = newSortedRows.findIndex(
-              (sortedRow) => sortedRow.id === row.id
-            )
-            return newSortedRows.splice(index, 1)[0]
-          })
-          .filter(Boolean)
+          const targetIndex =
+            newIndex <= oldIndex
+              ? newIndex
+              : newIndex - selectedRowsList.length + 1
+          movedRows.splice(targetIndex, 0, ...selectedRowsData)
+          return movedRows
+        }
+        return arrayMove(sortedRows, oldIndex, newIndex)
+      })()
 
-        const targetIndex =
-          newIndex <= oldIndex
-            ? newIndex
-            : newIndex - selectedRowsList.length + 1
-        newSortedRows.splice(targetIndex, 0, ...selectedRowsData)
-
-        setSortedRows(newSortedRows)
-
-        const rowOrders = newSortedRows.map((row, index) => ({
-          studentId: row.id,
-          customOrder: index,
-        }))
-        await onOrderUpdate(rowOrders)
-      } else {
-        const newSortedRows = arrayMove(sortedRows, oldIndex, newIndex)
-        setSortedRows(newSortedRows)
-
-        const rowOrders = newSortedRows.map((row, index) => ({
-          studentId: row.id,
-          customOrder: index,
-        }))
-        await onOrderUpdate(rowOrders)
+      // 離した並びを見せたまま書きに行き、読み直しが返ったら手元の並びを捨てる
+      setDroppedRowIds(newSortedRows.map((row) => row.id))
+      try {
+        await onOrderUpdate(
+          newSortedRows.map((row, index) => ({
+            studentId: row.id,
+            customOrder: index,
+          }))
+        )
+      } finally {
+        setDroppedRowIds(null)
       }
     },
     [sortedRows, selectedIds, onOrderUpdate]

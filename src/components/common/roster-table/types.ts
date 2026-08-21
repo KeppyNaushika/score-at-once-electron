@@ -73,7 +73,13 @@ export interface RosterTableAdapter {
   fetchRows: () => Promise<RosterRow[]>
   /** フィルタ用の学級候補を取得（Classroom の行そのもの） */
   fetchClassrooms: () => Promise<Classroom[]>
-  /** 並び順を更新（customOrder の連番を保存） */
+  /**
+   * 並び順を更新（customOrder の連番を保存）。
+   *
+   * 失敗は throw で伝える。利用者への知らせは中央のトースト
+   * （`queries/queryClient.ts` の `MutationCache.onError`）が出すので、
+   * ここは書き込みの結果をそのまま投げればよい。
+   */
   updateRowOrder: (
     rowOrders: { studentId: string; customOrder: number }[]
   ) => Promise<void>

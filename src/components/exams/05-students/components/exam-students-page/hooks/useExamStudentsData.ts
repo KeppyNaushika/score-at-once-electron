@@ -168,11 +168,21 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
     updateStudentExamStatus.mutate({ studentId, status: newStatus })
   }
 
-  const updateStudentOrders = (
+  // 離した時点で書き、書けても書けなくても読み直す。表示側（useRosterTable）は
+  // これが解決した時点で手元の並びを捨てるので、**読み直しまで待ってから解決する**。
+  // 失敗の知らせは中央のトースト（queries/queryClient.ts）が出す
+  const updateStudentOrders = async (
     _examId: string,
     studentOrders: { studentId: string; customOrder: number }[]
   ) => {
-    updateExamStudentOrders.mutate(studentOrders)
+    try {
+      await updateExamStudentOrders.mutateAsync(studentOrders)
+    } catch (error) {
+      // ここで握るのは、dnd-kit の onDragEnd が Promise を受け取らないため
+      console.error("Failed to update student orders:", error)
+    } finally {
+      await refreshStudentData()
+    }
   }
 
   // 生徒選択の変更（SortableStudentTable用）

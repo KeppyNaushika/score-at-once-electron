@@ -7,10 +7,11 @@ import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 export interface SortableStudentTableProps {
   classrooms: Classroom[]
   onStudentStatusUpdate: (studentId: string, status: ExamStudentStatus) => void
+  /** 並び順を書き、読み直すところまで（解決した時点で手元の並びを捨てる） */
   onStudentOrderUpdate: (
     examId: string,
     studentOrders: { studentId: string; customOrder: number }[]
-  ) => void
+  ) => void | Promise<void>
   selectedStudents: Set<string>
   onStudentSelectionChange: (studentId: string, isSelected: boolean) => void
   onSelectAll: (isSelected: boolean) => void

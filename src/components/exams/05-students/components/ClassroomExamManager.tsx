@@ -24,7 +24,8 @@ interface ClassroomExamManagerProps {
     examClassroomId: string,
     options: { administered?: boolean }
   ) => Promise<unknown>
-  onClassroomsChanged?: () => void
+  /** 変更後の読み直し。読み直しが終わるまでを解決に含めて返す */
+  onClassroomsChanged?: () => void | Promise<void>
   showAddDialog?: boolean
   onShowAddDialogChange?: (open: boolean) => void
 }

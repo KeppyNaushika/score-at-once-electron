@@ -200,7 +200,7 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
               "手動で上書きした評定",
               "評価項目ごとの除外設定",
             ]}
-            // 失敗は例外で伝わり、ClassroomRosterManager の楽観更新がロールバックする
+            // 失敗は例外で伝わり、中央のトーストが知らせる（表示は読み直しで戻る）
             onReorder={async (orderedClassroomIds) => {
               await setClassroomOrders.mutateAsync(orderedClassroomIds)
             }}

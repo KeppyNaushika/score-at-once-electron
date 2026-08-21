@@ -211,9 +211,8 @@ export default function StudentsPage() {
             examClassrooms={examClassrooms}
             onRemoveClassroom={removeClassroom}
             onUpdateClassroom={updateClassroom}
-            onClassroomsChanged={() => {
-              refreshExamClassrooms()
-              refreshStudentData()
+            onClassroomsChanged={async () => {
+              await Promise.all([refreshExamClassrooms(), refreshStudentData()])
             }}
             showAddDialog={showAddClassroomDialog}
             onShowAddDialogChange={setShowAddClassroomDialog}

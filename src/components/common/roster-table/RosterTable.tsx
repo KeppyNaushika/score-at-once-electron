@@ -115,19 +115,6 @@ export function RosterTable({
     [queryClient, queryKey]
   )
 
-  /** 並べ替えの楽観更新。キャッシュを直に差し替える */
-  const patchRows = useCallback(
-    (update: (rows: RosterRow[]) => RosterRow[]) => {
-      queryClient.setQueryData<{
-        rows: RosterRow[]
-        classrooms: Classroom[]
-      }>(queryKey, (previous) =>
-        previous ? { ...previous, rows: update(previous.rows) } : previous
-      )
-    },
-    [queryClient, queryKey]
-  )
-
   // 取得の状態・行の件数・再取得の口は親へ押し出す（外部システムへの同期）
   useEffect(() => {
     onLoadingChange?.(isFetching)
@@ -191,26 +178,22 @@ export function RosterTable({
     [filteredRows]
   )
 
+  // 離した時点で書き、書けても書けなくても DB を読み直す。キャッシュを先に
+  // 書き換えない（楽観更新はしない）ので、表示は必ず DB から返ってきた並びになる。
+  // 失敗の知らせは中央のトースト（`queries/queryClient.ts`）が出す
   const handleOrderUpdate = useCallback(
     async (rowOrders: { studentId: string; customOrder: number }[]) => {
-      // 楽観的に customOrder を反映
-      const orderMap = new Map(
-        rowOrders.map((rowOrder) => [rowOrder.studentId, rowOrder.customOrder])
-      )
-      patchRows((prev) =>
-        prev.map((row) => ({
-          ...row,
-          customOrder: orderMap.get(row.id) ?? row.customOrder,
-        }))
-      )
       try {
         await adapter.updateRowOrder(rowOrders)
       } catch (error) {
+        // ここで握るのは、dnd-kit の onDragEnd が Promise を受け取らないため。
+        // 利用者への知らせはトーストが出しているので、痕跡だけ残す
         console.error("Failed to update row order:", error)
+      } finally {
         await loadData()
       }
     },
-    [adapter, loadData, patchRows]
+    [adapter, loadData]
   )
 
   const {

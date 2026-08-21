@@ -3,7 +3,7 @@
 import type { DragEndEvent } from "@dnd-kit/core"
 import { skipToken, useQuery } from "@tanstack/react-query"
 import { Plus, Trash2 } from "lucide-react"
-import { type ReactNode, useState } from "react"
+import { type ReactNode, useMemo, useState } from "react"
 
 import {
   DragHandle,
@@ -60,7 +60,12 @@ interface ClassroomRosterManagerProps {
   fetchAvailableClassrooms?: () => Promise<ClassroomWithMembershipRows[]>
   /** 学級を追加。{@link fetchAvailableClassrooms} と対で指定する */
   onAddClassrooms?: (classroomIds: string[]) => Promise<void>
-  /** order並び替え（D&D）。失敗時は throw すると楽観更新がロールバックされる */
+  /**
+   * order並び替え（D&D）。離した時点で1回だけ呼ぶ。
+   *
+   * 失敗は throw で伝える。利用者への知らせは中央のトースト
+   * （`queries/queryClient.ts` の `MutationCache.onError`）が出す。
+   */
   onReorder: (orderedIds: string[]) => Promise<void>
   /**
    * 削除実行（deleteStudents=trueで専属生徒も削除）。
@@ -77,8 +82,14 @@ interface ClassroomRosterManagerProps {
   ) => Promise<ConfirmedDeletionCount[]>
   /** 専属生徒を削除したときに連動して消えるもの（最終確認に列挙する） */
   deletionLosses?: string[]
-  /** 変更後に親へ再読込を通知 */
-  onChanged?: () => void
+  /**
+   * 変更後に親へ再読込を通知。
+   *
+   * **読み直しが終わるまでを解決に含めて返すこと。** 並べ替えは、これが解決した時点で
+   * 手元の並びを捨てて `entries` の並びへ戻る（省略すると読み直す口が無いので、
+   * 離した並びはそのまま `entries` の並びへ戻る）。
+   */
+  onChanged?: () => void | Promise<void>
   /** 追加ダイアログの外部制御（任意） */
   showAddDialog?: boolean
   onShowAddDialogChange?: (open: boolean) => void
@@ -167,12 +178,14 @@ export function ClassroomRosterManager({
   onShowAddDialogChange,
 }: ClassroomRosterManagerProps) {
   const [internalShowAddDialog, setInternalShowAddDialog] = useState(false)
-  // DnD の楽観更新。どの entries に対する並びかを一緒に持ち、
-  // 親がデータを読み直したら（entries が差し替わったら）破棄して最新に従う
-  const [reorderedEntries, setReorderedEntries] = useState<{
-    source: ClassroomRosterEntry[]
-    entries: ClassroomRosterEntry[]
-  } | null>(null)
+  /**
+   * 離した時点の並び（学級 id の列）。書き込みと読み直しが終わるまでの間だけ持つ。
+   *
+   * **楽観更新ではない。** キャッシュにも親の状態にも何も書かず、読み直しが返ったら
+   * 捨てる。これが無いと、指を離してから読み直しが返るまでの間だけ行が元の位置へ
+   * 戻り、その後もう一度動く（ドラッグ操作の見た目が途切れる）。
+   */
+  const [droppedEntryIds, setDroppedEntryIds] = useState<string[] | null>(null)
   const [selectedClassroomIds, setSelectedClassroomIds] = useState<Set<string>>(
     new Set()
   )
@@ -185,8 +198,16 @@ export function ClassroomRosterManager({
   const showAddDialog = externalShowAddDialog ?? internalShowAddDialog
   const setShowAddDialog = onShowAddDialogChange ?? setInternalShowAddDialog
 
-  const localEntries =
-    reorderedEntries?.source === entries ? reorderedEntries.entries : entries
+  const localEntries = useMemo(() => {
+    if (!droppedEntryIds) return entries
+    // 離した並びを見せる。学級が増減していたら（他の教員の変更が入った等）諦めて
+    // 渡された並びに従う（欠けた学級を落として見せると、無いものを並べたことになる）
+    const entryById = new Map(entries.map((entry) => [entry.id, entry]))
+    const droppedEntries = droppedEntryIds.flatMap(
+      (droppedEntryId) => entryById.get(droppedEntryId) ?? []
+    )
+    return droppedEntries.length === entries.length ? droppedEntries : entries
+  }, [entries, droppedEntryIds])
 
   // 候補は追加ダイアログを開いている間だけ取る（閉じている間は問い合わせない）
   const { data: availableClassrooms = EMPTY_AVAILABLE_CLASSROOMS } = useQuery({
@@ -217,14 +238,19 @@ export function ClassroomRosterManager({
     const newOrder = [...localEntries]
     const [removed] = newOrder.splice(oldIndex, 1)
     newOrder.splice(newIndex, 0, removed)
-    setReorderedEntries({ source: entries, entries: newOrder })
 
+    // 離した並びを見せたまま書きに行き、書けても書けなくても読み直してから
+    // 手元の並びを捨てる（表示は必ず DB から返ってきた並びになる）
+    setDroppedEntryIds(newOrder.map((entry) => entry.id))
     try {
       await onReorder(newOrder.map((entry) => entry.id))
-      onChanged?.()
-    } catch (err) {
-      console.error("Failed to reorder classrooms:", err)
-      setReorderedEntries(null)
+    } catch (error) {
+      // ここで握るのは、dnd-kit の onDragEnd が Promise を受け取らないため。
+      // 利用者への知らせはトーストが出しているので、痕跡だけ残す
+      console.error("Failed to reorder classrooms:", error)
+    } finally {
+      await onChanged?.()
+      setDroppedEntryIds(null)
     }
   }
 
