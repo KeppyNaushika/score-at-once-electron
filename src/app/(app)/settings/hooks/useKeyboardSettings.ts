@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   useCallback,
   useEffect,
@@ -24,7 +24,6 @@ const getServerModifierKeyLabel = () => "Alt"
 export function useKeyboardSettings() {
   const { user } = useAuth()
   const userId = user?.id
-  const queryClient = useQueryClient()
 
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [pendingKey, setPendingKey] = useState<string>("")
@@ -38,7 +37,6 @@ export function useKeyboardSettings() {
   )
 
   // 採点画面（ShortcutProvider）と同じキャッシュを共有する
-  const shortcutsKey = keyboardShortcutsQuery(userId).queryKey
   const { data: storedShortcuts } = useQuery(keyboardShortcutsQuery(userId))
   const saveKeyboardShortcuts = useMutation(
     saveKeyboardShortcutsMutation(userId)
@@ -101,32 +99,20 @@ export function useKeyboardSettings() {
       return
     }
 
-    // 新しいショートカットを保存（楽観的更新）
+    // 書いてから読み直す。手元のキャッシュへ先に置くと、保存に失敗したときに
+    // 新しいキーが割り当たったまま残る（戻す道が無い）
     const newShortcuts = {
       ...shortcuts,
       [editingKey]: pendingKey,
     }
 
-    queryClient.setQueryData(shortcutsKey, newShortcuts)
     setEditingKey(null)
     setPendingKey("")
 
-    if (!userId) {
-      toast.success("ショートカットキーを更新しました")
-      return
-    }
     saveKeyboardShortcuts.mutate(newShortcuts, {
       onSuccess: () => toast.success("ショートカットキーを更新しました"),
     })
-  }, [
-    editingKey,
-    pendingKey,
-    shortcuts,
-    shortcutsKey,
-    queryClient,
-    userId,
-    saveKeyboardShortcuts,
-  ])
+  }, [editingKey, pendingKey, shortcuts, saveKeyboardShortcuts])
 
   const handleKeyCancel = () => {
     setEditingKey(null)
@@ -137,16 +123,11 @@ export function useKeyboardSettings() {
     if (!confirm("すべてのショートカットキーをデフォルトに戻しますか？")) {
       return
     }
-    if (!userId) {
-      queryClient.setQueryData(shortcutsKey, DEFAULT_KEYBINDINGS)
-      toast.success("ショートカットキーをデフォルトに戻しました")
-      return
-    }
     resetKeyboardShortcuts.mutate(undefined, {
       onSuccess: () =>
         toast.success("ショートカットキーをデフォルトに戻しました"),
     })
-  }, [shortcutsKey, queryClient, userId, resetKeyboardShortcuts])
+  }, [resetKeyboardShortcuts])
 
   const getKeyDisplayName = (key: string) => {
     const KEY_DISPLAY_NAMES: { [key: string]: string } = {

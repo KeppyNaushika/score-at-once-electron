@@ -94,7 +94,6 @@ export function ScreenControlTab() {
   // プロジェクターモードの切り替え
   const handleProjectorModeToggle = useCallback(
     (enabled: boolean) => {
-      queryClient.setQueryData(projectorModeKey, enabled)
       setProjectorMode.mutate(enabled, {
         // 切り替え後の実際の状態を返すので、要求値ではなくそちらを採る
         onSuccess: (applied) => {
