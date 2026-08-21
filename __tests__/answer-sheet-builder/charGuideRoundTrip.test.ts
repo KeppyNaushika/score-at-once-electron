@@ -62,6 +62,7 @@ import {
   cleanupTestDatabase,
   createTestUser,
   disconnectTestPrisma,
+  getTestPrismaClient,
 } from "../helpers/testPrismaClient"
 
 /** 既定の原稿用紙（属性ひとそろい。テストは変えたい列だけ上書きする） */
@@ -222,6 +223,32 @@ describe("AsbCharGuide 変換往復", () => {
     expect(
       loadedPaper?.charGuides.map((charGuide) => charGuide.atChar)
     ).toEqual([80])
+  })
+
+  it("guidePosition は境界で union へ絞る（null は「未指定」として残す）", async () => {
+    // DB は `String?`。**型が union を名乗る以上、境界で実際に絞る**（素の `as` は
+    // 名乗るだけで何もしない）。`null` は「未指定＝既定に従う」という別の意味なので潰さない
+    const definition = createDefaultDefinition()
+    const subQuestion = definition.majorQuestions[0].subQuestions[0]
+    subQuestion.manuscriptPaper = manuscriptPaper({ guidePosition: null })
+    await replaceAsbDefinition(definition, userId)
+
+    const beforeTampering = await getAsbDefinition(definition.id)
+    expect(
+      beforeTampering?.majorQuestions[0].subQuestions[0].manuscriptPaper
+        ?.guidePosition
+    ).toBeNull()
+
+    // 列の値を直に汚す（union の外の文字列は、本来どの流入口からも入らない）
+    await getTestPrismaClient().asbManuscriptPaper.updateMany({
+      where: { subQuestionId: subQuestion.id },
+      data: { guidePosition: "middle-center" },
+    })
+
+    const loaded = await getAsbDefinition(definition.id)
+    expect(
+      loaded?.majorQuestions[0].subQuestions[0].manuscriptPaper?.guidePosition
+    ).toBe("bottom-left")
   })
 })
 

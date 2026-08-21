@@ -8,6 +8,7 @@
 import type { AsbManuscriptPaper } from "@prisma/client"
 
 import type { OMRCellConfig } from "./omr.types"
+import { defineStringUnion } from "./stringUnion"
 
 // =====================
 // 基本型
@@ -86,9 +87,32 @@ export interface BorderStyles {
 // 原稿用紙設定
 // =====================
 
-/** 文字数ガイドを表示するマスの隅 */
+/**
+ * 文字数ガイドを表示するマスの隅。並びは画面の選択肢の並びでもある。
+ *
+ * DB（`AsbManuscriptPaper.guidePosition`）は `String?` なので、値の集合を保証できるのは
+ * この定義だけ。**各所での union 手書き重複は禁止**（`ScoringStatus` と同じ扱い）。
+ */
+export const MANUSCRIPT_GUIDE_POSITIONS = [
+  "bottom-left",
+  "bottom-right",
+  "top-left",
+  "top-right",
+] as const
+
 export type ManuscriptGuidePosition =
-  "top-left" | "top-right" | "bottom-left" | "bottom-right"
+  (typeof MANUSCRIPT_GUIDE_POSITIONS)[number]
+
+/**
+ * 境界コンバータ。DB/アーカイブ由来の生 String を union へ絞る（想定外値は左下）。
+ *
+ * fallback は `DEFAULT_MANUSCRIPT_GUIDE_POSITION`（`answer-sheet-builder/constants.ts`）と
+ * 同じ値。constants.ts はこのファイルを import しているので、参照すると循環になる。
+ */
+export const { to: toManuscriptGuidePosition } = defineStringUnion(
+  MANUSCRIPT_GUIDE_POSITIONS,
+  "bottom-left"
+)
 
 /**
  * 原稿用紙の文字位置マーカー（先頭からN文字目に紐づく目印）。

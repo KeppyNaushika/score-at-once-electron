@@ -27,11 +27,11 @@ import type {
   LinkedRegionType,
   MajorQuestion,
   ManuscriptCharGuide,
-  ManuscriptGuidePosition,
   ManuscriptPaper,
   PaperSettings,
   SubQuestion,
 } from "../../../src/types/answerSheetDefinition.types"
+import { toManuscriptGuidePosition } from "../../../src/types/answerSheetDefinition.types"
 import type {
   OMRCellConfig,
   OMRChoiceConfig,
@@ -235,7 +235,8 @@ function dbCharGuides(rows: AsbCharGuide[]): ManuscriptCharGuide[] {
  * AsbManuscriptPaper 行を木の原稿用紙へ変換する。
  *
  * 行そのものを持つので、束ね直しは無い。`guidePosition` だけ DB が `String?` なので
- * union へ絞る（`ScoringStatus` と同じ型注入）。
+ * 境界コンバータ `toManuscriptGuidePosition` で union へ絞る（`ScoringStatus` と同じ
+ * 型注入＋実行時の相棒）。`null` は「未指定」という意味を持つので潰さない。
  */
 function dbManuscriptPaper(
   row: AsbManuscriptPaper & { charGuides: AsbCharGuide[] }
@@ -246,7 +247,10 @@ function dbManuscriptPaper(
     columns: row.columns,
     rows: row.rows,
     guideFontSize: row.guideFontSize,
-    guidePosition: row.guidePosition as ManuscriptGuidePosition | null,
+    guidePosition:
+      row.guidePosition === null
+        ? null
+        : toManuscriptGuidePosition(row.guidePosition),
     guidePadding: row.guidePadding,
     charGuides: dbCharGuides(row.charGuides),
   }

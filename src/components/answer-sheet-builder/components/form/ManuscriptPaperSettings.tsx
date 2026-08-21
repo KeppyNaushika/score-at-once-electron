@@ -21,6 +21,10 @@ import type {
   ManuscriptGuidePosition,
   ManuscriptPaper,
 } from "@/types/answerSheetDefinition.types"
+import {
+  MANUSCRIPT_GUIDE_POSITIONS,
+  toManuscriptGuidePosition,
+} from "@/types/answerSheetDefinition.types"
 
 import {
   DEFAULT_DASH_RATIO,
@@ -55,23 +59,12 @@ interface ManuscriptPaperSettingsProps {
   onDeleteCharGuide: (charGuideId: string) => void
 }
 
+/** 表示名だけ。並びと値の集合は `MANUSCRIPT_GUIDE_POSITIONS` が唯一の持ち主 */
 const GUIDE_POSITION_LABELS: Record<ManuscriptGuidePosition, string> = {
   "bottom-left": "左下",
   "bottom-right": "右下",
   "top-left": "左上",
   "top-right": "右上",
-}
-
-/** 選択肢の並び。`Select` が返す文字列をここに突き合わせて union へ戻す */
-const GUIDE_POSITIONS: ManuscriptGuidePosition[] = [
-  "bottom-left",
-  "bottom-right",
-  "top-left",
-  "top-right",
-]
-
-function toGuidePosition(value: string): ManuscriptGuidePosition | null {
-  return GUIDE_POSITIONS.find((position) => position === value) ?? null
 }
 
 /** 区切り罫線の選択肢（先頭は「なし」＝罫線なし） */
@@ -197,7 +190,7 @@ export function ManuscriptPaperSettings({
                   }
                   onValueChange={(value) =>
                     onUpdateSettings(manuscriptPaper.id, {
-                      guidePosition: toGuidePosition(value),
+                      guidePosition: toManuscriptGuidePosition(value),
                     })
                   }
                 >
@@ -205,7 +198,7 @@ export function ManuscriptPaperSettings({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {GUIDE_POSITIONS.map((position) => (
+                    {MANUSCRIPT_GUIDE_POSITIONS.map((position) => (
                       <SelectItem key={position} value={position}>
                         {GUIDE_POSITION_LABELS[position]}
                       </SelectItem>

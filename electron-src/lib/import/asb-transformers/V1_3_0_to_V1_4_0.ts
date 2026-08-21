@@ -18,9 +18,9 @@ import * as crypto from "crypto"
 
 import type {
   ManuscriptCharGuide,
-  ManuscriptGuidePosition,
   ManuscriptPaper,
 } from "../../../../src/types/answerSheetDefinition.types"
+import { toManuscriptGuidePosition } from "../../../../src/types/answerSheetDefinition.types"
 import type {
   AsbArchiveData,
   AsbArchiveVersion,
@@ -39,7 +39,8 @@ interface LegacyManuscriptPaper {
   rows?: number
   charGuides?: ManuscriptCharGuide[]
   guideFontSize?: number
-  guidePosition?: ManuscriptGuidePosition
+  /** 旧アーカイブの JSON は検査を経ていないので生の文字列として読む */
+  guidePosition?: string
   guidePadding?: number
 }
 
@@ -55,7 +56,10 @@ function toManuscriptPaper(legacy: LegacyManuscriptPaper): ManuscriptPaper {
     columns: legacy.columns ?? 20,
     rows: legacy.rows ?? 10,
     guideFontSize: legacy.guideFontSize ?? null,
-    guidePosition: legacy.guidePosition ?? null,
+    guidePosition:
+      legacy.guidePosition === undefined
+        ? null
+        : toManuscriptGuidePosition(legacy.guidePosition),
     guidePadding: legacy.guidePadding ?? null,
     charGuides: legacy.charGuides ?? [],
   }

@@ -17,10 +17,10 @@ import type {
   BranchQuestion,
   HeaderFieldType,
   LinkedRegionType,
-  ManuscriptGuidePosition,
   ManuscriptPaper,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
+import { toManuscriptGuidePosition } from "@/types/answerSheetDefinition.types"
 
 // 解答用紙（B4, 200dpi相当）の画像サイズ
 const SHEET_WIDTH = 2024
@@ -79,8 +79,9 @@ function templateToDefinition(
             guideFontSize:
               (manuscriptPaperRecord.guideFontSize as number | null) ?? null,
             guidePosition:
-              (manuscriptPaperRecord.guidePosition as ManuscriptGuidePosition | null) ??
-              null,
+              typeof manuscriptPaperRecord.guidePosition === "string"
+                ? toManuscriptGuidePosition(manuscriptPaperRecord.guidePosition)
+                : null,
             guidePadding:
               (manuscriptPaperRecord.guidePadding as number | null) ?? null,
             charGuides: [],
