@@ -379,15 +379,16 @@ export function SubQuestionForm({
           />
           <ManuscriptPaperSettings
             manuscriptPaper={subQuestion.manuscriptPaper}
-            onUpsert={(data) => {
-              actions.upsertManuscriptPaper(cell, data)
+            onSetEnabled={(enabled) => {
+              actions.setManuscriptPaperEnabled(cell, enabled)
               // 原稿用紙を使い始めたら、横に並ぶよう幅を埋めておく。
               // **別のレコードなので別の意図として送る**（1つの更新に混ぜると
               // 書き込みの単位が2テーブルにまたがる）
-              if (data.enabled && !subQuestion.layoutWidth) {
+              if (enabled && !subQuestion.layoutWidth) {
                 onUpdate({ layoutWidth: "1" })
               }
             }}
+            onUpdateSettings={actions.updateManuscriptPaper}
             onAddCharGuide={actions.addCharGuide}
             onUpdateCharGuide={actions.updateCharGuide}
             onDeleteCharGuide={actions.deleteCharGuide}

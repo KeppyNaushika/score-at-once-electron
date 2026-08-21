@@ -21,7 +21,7 @@ import type {
   AsbHeaderFieldAttributes,
   AsbImageElementAttributes,
   AsbMajorQuestionAttributes,
-  AsbManuscriptPaperAttributes,
+  AsbManuscriptPaperSettings,
   AsbSubQuestionAttributes,
   AsbTextElementAttributes,
   BranchQuestion,
@@ -84,8 +84,8 @@ import {
   updateAsbMajorQuestion,
 } from "../lib/prisma/asbMajorQuestion"
 import {
-  deleteAsbManuscriptPaper,
-  upsertAsbManuscriptPaper,
+  setAsbManuscriptPaperEnabled,
+  updateAsbManuscriptPaper,
 } from "../lib/prisma/asbManuscriptPaper"
 import {
   deleteAsbOmrConfig,
@@ -334,25 +334,27 @@ export const answerSheetBuilderHandlers = {
     await deleteAsbImageElement(definitionId, imageElementId)
   },
 
-  "asb:upsert-manuscript-paper": async (
+  // 原稿用紙の行を作る経路はここだけ。返すのは**実際に書いた行の id**で、既にそのセルに
+  // 行があれば渡された id は捨てられるので、捨てた結果を renderer が木へ取り込める
+  "asb:set-manuscript-paper-enabled": async (
     definitionId: string,
     parent: AsbCellParent,
     manuscriptPaperId: string,
-    attributes: AsbManuscriptPaperAttributes
-  ) => {
-    await upsertAsbManuscriptPaper(
+    enabled: boolean
+  ): Promise<string> =>
+    await setAsbManuscriptPaperEnabled(
       definitionId,
       parent,
       manuscriptPaperId,
-      attributes
-    )
-  },
+      enabled
+    ),
 
-  "asb:delete-manuscript-paper": async (
+  "asb:update-manuscript-paper": async (
     definitionId: string,
-    parent: AsbCellParent
+    manuscriptPaperId: string,
+    settings: AsbManuscriptPaperSettings
   ) => {
-    await deleteAsbManuscriptPaper(definitionId, parent)
+    await updateAsbManuscriptPaper(definitionId, manuscriptPaperId, settings)
   },
 
   "asb:create-char-guide": async (

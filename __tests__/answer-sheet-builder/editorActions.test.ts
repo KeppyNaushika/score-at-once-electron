@@ -17,7 +17,7 @@ import type {
   AnswerSheetDefinition,
   AnswerSheetEditAction,
   AsbCellParent,
-  AsbManuscriptPaperAttributes,
+  AsbManuscriptPaperSettings,
   SubQuestion,
 } from "@/types/answerSheetDefinition.types"
 
@@ -144,25 +144,25 @@ describe("編集操作は id で指した実体だけを変える", () => {
 })
 
 describe("更新に子のまとまりが紛れ込まない", () => {
-  /** 原稿用紙を有効にして、文字位置マーカーを1つ置く */
+  /** 原稿用紙を有効にして、設定を書き、文字位置マーカーを1つ置く */
   function givenManuscriptPaper(
     result: {
       current: { actions: AsbEditorActions; definition: AnswerSheetDefinition }
     },
     parent: AsbCellParent,
-    data: Partial<AsbManuscriptPaperAttributes>
+    settings: Partial<AsbManuscriptPaperSettings>
   ): string {
     act(() => {
-      result.current.actions.upsertManuscriptPaper(parent, {
-        enabled: true,
-        ...data,
-      })
+      result.current.actions.setManuscriptPaperEnabled(parent, true)
     })
     const cellId =
       "subQuestionId" in parent ? parent.subQuestionId : parent.branchQuestionId
     const manuscriptPaperId = findSubQuestion(result.current.definition, cellId)
       .manuscriptPaper?.id
     if (!manuscriptPaperId) throw new Error("原稿用紙ができていない")
+    act(() => {
+      result.current.actions.updateManuscriptPaper(manuscriptPaperId, settings)
+    })
     act(() => {
       result.current.actions.addCharGuide(manuscriptPaperId, {
         id: "guide-1",
@@ -176,10 +176,12 @@ describe("更新に子のまとまりが紛れ込まない", () => {
   it("原稿用紙の列数を変えても、文字位置マーカーは残る", () => {
     const { result } = renderEditor(twoMajorsWithTwoSubs())
     const cell = { subQuestionId: "sub-1a" }
-    givenManuscriptPaper(result, cell, {})
+    const manuscriptPaperId = givenManuscriptPaper(result, cell, {})
 
     act(() => {
-      result.current.actions.upsertManuscriptPaper(cell, { columns: 25 })
+      result.current.actions.updateManuscriptPaper(manuscriptPaperId, {
+        columns: 25,
+      })
     })
 
     const subQuestion = findSubQuestion(result.current.definition, "sub-1a")
@@ -233,11 +235,20 @@ describe("更新に子のまとまりが紛れ込まない", () => {
     const branchQuestion = findSubQuestion(result.current.definition, "sub-1a")
       .branchQuestions[0]
 
+    const cell = { branchQuestionId: branchQuestion.id }
     act(() => {
-      result.current.actions.upsertManuscriptPaper(
-        { branchQuestionId: branchQuestion.id },
-        { enabled: true, columns: 25, rows: 4 }
-      )
+      result.current.actions.setManuscriptPaperEnabled(cell, true)
+    })
+    const manuscriptPaperId = findSubQuestion(
+      result.current.definition,
+      "sub-1a"
+    ).branchQuestions[0].manuscriptPaper?.id
+    if (!manuscriptPaperId) throw new Error("原稿用紙ができていない")
+    act(() => {
+      result.current.actions.updateManuscriptPaper(manuscriptPaperId, {
+        columns: 25,
+        rows: 4,
+      })
     })
 
     const subQuestion = findSubQuestion(result.current.definition, "sub-1a")
@@ -255,7 +266,7 @@ describe("更新に子のまとまりが紛れ込まない", () => {
     givenManuscriptPaper(result, cell, { columns: 25, rows: 15 })
 
     act(() => {
-      result.current.actions.upsertManuscriptPaper(cell, { enabled: false })
+      result.current.actions.setManuscriptPaperEnabled(cell, false)
     })
 
     const subQuestion = findSubQuestion(result.current.definition, "sub-1a")

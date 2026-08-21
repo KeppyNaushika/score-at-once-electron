@@ -18,8 +18,19 @@ interface UndoableState<S> {
 const MAX_HISTORY = 50
 const BATCH_TIME_MS = 300
 
-/** 履歴スキップ対象アクション */
-const SKIP_HISTORY_ACTIONS = new Set(["SET_DEFINITION", "UNDO", "REDO"])
+/**
+ * 履歴スキップ対象アクション。
+ *
+ * `ADOPT_MANUSCRIPT_PAPER_ID` は「書いた行の id を取り込む」だけで、利用者が戻したい
+ * 編集ではない。履歴へ積むと、元に戻したときに**捨てられた id を持つ木**が復元され、
+ * それが丸ごと保存されて親の `@unique` で落ちる。
+ */
+const SKIP_HISTORY_ACTIONS = new Set([
+  "SET_DEFINITION",
+  "UNDO",
+  "REDO",
+  "ADOPT_MANUSCRIPT_PAPER_ID",
+])
 
 interface UndoableResult<S, A> {
   state: S

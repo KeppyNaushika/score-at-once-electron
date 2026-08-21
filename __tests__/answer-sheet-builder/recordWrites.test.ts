@@ -44,7 +44,10 @@ import {
   reorderAsbMajorQuestions,
   updateAsbMajorQuestion,
 } from "../../electron-src/lib/prisma/asbMajorQuestion"
-import { upsertAsbManuscriptPaper } from "../../electron-src/lib/prisma/asbManuscriptPaper"
+import {
+  setAsbManuscriptPaperEnabled,
+  updateAsbManuscriptPaper,
+} from "../../electron-src/lib/prisma/asbManuscriptPaper"
 import {
   createAsbSubQuestion,
   updateAsbSubQuestion,
@@ -256,19 +259,13 @@ describe("実体ごとの書き込み", () => {
       },
     })
 
-    await upsertAsbManuscriptPaper(
-      definition.id,
-      { subQuestionId: subQuestion.id },
-      manuscriptPaperId,
-      {
-        enabled: true,
-        columns: 25,
-        rows: 10,
-        guideFontSize: null,
-        guidePosition: null,
-        guidePadding: null,
-      }
-    )
+    await updateAsbManuscriptPaper(definition.id, manuscriptPaperId, {
+      columns: 25,
+      rows: 10,
+      guideFontSize: null,
+      guidePosition: null,
+      guidePadding: null,
+    })
 
     const charGuides = await prisma.asbCharGuide.findMany({
       where: { manuscriptPaperId },
@@ -310,37 +307,70 @@ describe("実体ごとの書き込み", () => {
     expect(row.rows).toBe(15)
   })
 
-  it("原稿用紙を書いても、同じセルに2つ目の行を作らない", async () => {
+  it("原稿用紙をオンにしても、同じセルに2つ目の行を作らない", async () => {
     // 鍵は `@unique`（＝親の id）。画面が持っている id が古くても、セルに1行という
-    // 不変式は main が守る
+    // 不変式は main が守り、**使い続けた id を返す**（画面はそれを木へ取り込む）
     const definition = await givenThreeMajorQuestions()
     const subQuestion = definition.majorQuestions[1].subQuestions[0]
-    const attributes = {
-      enabled: true,
-      columns: 20,
-      rows: 10,
-      guideFontSize: null,
-      guidePosition: null,
-      guidePadding: null,
-    }
+    const parent = { subQuestionId: subQuestion.id }
     const firstId = crypto.randomUUID()
-    await upsertAsbManuscriptPaper(
+    await setAsbManuscriptPaperEnabled(definition.id, parent, firstId, true)
+    const writtenId = await setAsbManuscriptPaperEnabled(
       definition.id,
-      { subQuestionId: subQuestion.id },
-      firstId,
-      attributes
-    )
-    await upsertAsbManuscriptPaper(
-      definition.id,
-      { subQuestionId: subQuestion.id },
+      parent,
       crypto.randomUUID(),
-      { ...attributes, columns: 30 }
+      false
     )
 
     const rows = await prisma.asbManuscriptPaper.findMany({
       where: { subQuestionId: subQuestion.id },
     })
     expect(rows.map((row) => row.id)).toEqual([firstId])
-    expect(rows[0].columns).toBe(30)
+    expect(writtenId).toBe(firstId)
+    expect(rows[0].enabled).toBe(false)
+  })
+
+  it("設定を書いてもオンオフは動かない", async () => {
+    // `enabled` は設定の袋に入っていない。入れると、設定を書くたびにオンオフが
+    // 一緒に流れ、省略の意味が列ごとに変わる
+    const definition = await givenThreeMajorQuestions()
+    const subQuestion = definition.majorQuestions[2].subQuestions[0]
+    const parent = { subQuestionId: subQuestion.id }
+    const manuscriptPaperId = await setAsbManuscriptPaperEnabled(
+      definition.id,
+      parent,
+      crypto.randomUUID(),
+      false
+    )
+
+    await updateAsbManuscriptPaper(definition.id, manuscriptPaperId, {
+      columns: 30,
+      rows: 12,
+      guideFontSize: null,
+      guidePosition: null,
+      guidePadding: null,
+    })
+
+    const row = await prisma.asbManuscriptPaper.findUniqueOrThrow({
+      where: { id: manuscriptPaperId },
+    })
+    expect(row.enabled).toBe(false)
+    expect(row.columns).toBe(30)
+    expect(row.rows).toBe(12)
+  })
+
+  it("行の無い原稿用紙の設定は書けない", async () => {
+    // 設定を触る欄はオンのときしか出ないので、行は在るはず。無いときに黙って
+    // 作ると、オンオフを通さずに原稿用紙が生えることになる
+    const definition = await givenThreeMajorQuestions()
+    await expect(
+      updateAsbManuscriptPaper(definition.id, crypto.randomUUID(), {
+        columns: 30,
+        rows: 12,
+        guideFontSize: null,
+        guidePosition: null,
+        guidePadding: null,
+      })
+    ).rejects.toThrow(/原稿用紙が見つかりません/)
   })
 })

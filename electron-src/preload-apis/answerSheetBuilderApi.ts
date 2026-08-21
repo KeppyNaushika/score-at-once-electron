@@ -62,8 +62,8 @@ export function createAnswerSheetBuilderApi() {
       updateImageElement: bind("asb:update-image-element"),
       deleteImageElement: bind("asb:delete-image-element"),
 
-      upsertManuscriptPaper: bind("asb:upsert-manuscript-paper"),
-      deleteManuscriptPaper: bind("asb:delete-manuscript-paper"),
+      setManuscriptPaperEnabled: bind("asb:set-manuscript-paper-enabled"),
+      updateManuscriptPaper: bind("asb:update-manuscript-paper"),
 
       createCharGuide: bind("asb:create-char-guide"),
       updateCharGuide: bind("asb:update-char-guide"),

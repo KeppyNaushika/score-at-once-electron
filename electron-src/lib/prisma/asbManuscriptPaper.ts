@@ -15,16 +15,30 @@ import type { AsbManuscriptPaper, Prisma } from "@prisma/client"
 import type {
   AsbCellParent,
   AsbManuscriptPaperAttributes,
+  AsbManuscriptPaperSettings,
   ManuscriptPaper,
 } from "../../../src/types/answerSheetDefinition.types"
 import type { CurrentAsbCharGuideRows } from "./asbCharGuide"
 import { writeAsbCharGuides } from "./asbCharGuide"
 import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
-import { writeRow } from "./rowDiff"
+import { updateRowIfChanged, writeRow } from "./rowDiff"
 
 /** 原稿用紙とその子のうち、既に DB にある行 */
 export interface CurrentAsbManuscriptPaperRows extends CurrentAsbCharGuideRows {
   manuscriptPapers: ReadonlyMap<string, AsbManuscriptPaper>
+}
+
+/** 見た目の設定の列（オンオフは含めない） */
+function asbManuscriptPaperSettingColumns(
+  settings: AsbManuscriptPaperSettings
+) {
+  return {
+    columns: settings.columns,
+    rows: settings.rows,
+    guideFontSize: settings.guideFontSize,
+    guidePosition: settings.guidePosition,
+    guidePadding: settings.guidePadding,
+  }
 }
 
 function asbManuscriptPaperColumns(
@@ -32,11 +46,7 @@ function asbManuscriptPaperColumns(
 ) {
   return {
     enabled: manuscriptPaper.enabled,
-    columns: manuscriptPaper.columns,
-    rows: manuscriptPaper.rows,
-    guideFontSize: manuscriptPaper.guideFontSize,
-    guidePosition: manuscriptPaper.guidePosition,
-    guidePadding: manuscriptPaper.guidePadding,
+    ...asbManuscriptPaperSettingColumns(manuscriptPaper),
   }
 }
 
@@ -110,43 +120,73 @@ export async function deleteRemovedAsbManuscriptPapers(
 // =============================================================================
 
 /**
- * セルの原稿用紙を書く（無ければ作る）。
+ * セルが原稿用紙を使うかどうかを切り替える。**行が無ければここで作る**。
+ *
+ * 原稿用紙の行を作る経路はこれひとつ。設定の書き込み（`updateAsbManuscriptPaper`）は
+ * 行が在ることを前提にできる。作るときの列数・行数はスキーマの既定値に任せる
+ * （renderer の `DEFAULT_MANUSCRIPT_PAPER` と同じ 20×10）。
  *
  * 鍵は `@unique`（＝親の id）。**同じセルに2つ目の行を作らない**ためで、id そのものは
  * 不透明な uuidv4 のまま（借用 id は PR #1150 で全廃され、`uuidIdCoverage.test.ts` が
  * 禁じている）。既に行があればその id を使い続ける — 毎回作り直すと、保存のたびに
  * 別 id の行が同期へ流れ、文字位置マーカーの行き先も変わってしまう。
  *
+ * **使い続けた id は呼び出し側へ返す。** renderer は自分の木に原稿用紙が無ければ新しい
+ * id を振るので、木に無いのに DB に在るとき（別の端末が先に作ったとき）に、渡された
+ * `manuscriptPaperId` は捨てられる。捨てたことを黙っていると、renderer の木は存在しない
+ * 行を指したままになり、文字位置マーカーの追加が外部キーで落ち、全体保存が親の
+ * `@unique` で落ちる。
+ *
  * 文字位置マーカーはここでは触らない（自分の口を持つ子である）。
+ *
+ * @returns 実際に書いた行の id
  */
-export async function upsertAsbManuscriptPaper(
+export async function setAsbManuscriptPaperEnabled(
   definitionId: string,
   parent: AsbCellParent,
   manuscriptPaperId: string,
-  attributes: AsbManuscriptPaperAttributes
-): Promise<void> {
+  enabled: boolean
+): Promise<string> {
+  let writtenManuscriptPaperId = manuscriptPaperId
   await writeAsbDefinitionContent(definitionId, async (tx) => {
     const existing = await tx.asbManuscriptPaper.findFirst({ where: parent })
-    const data = asbManuscriptPaperColumns(attributes)
+    writtenManuscriptPaperId = existing?.id ?? manuscriptPaperId
     return writeRow(
       existing ?? undefined,
-      data,
+      { enabled },
       () =>
         tx.asbManuscriptPaper.create({
-          data: { id: manuscriptPaperId, ...parent, ...data },
+          data: { id: writtenManuscriptPaperId, ...parent, enabled },
         }),
-      () => tx.asbManuscriptPaper.update({ where: { id: existing?.id }, data })
+      () =>
+        tx.asbManuscriptPaper.update({
+          where: { id: writtenManuscriptPaperId },
+          data: { enabled },
+        })
     )
   })
+  return writtenManuscriptPaperId
 }
 
-/** セルの原稿用紙を外す。文字位置マーカーは Cascade で消える */
-export async function deleteAsbManuscriptPaper(
+/**
+ * 原稿用紙の設定（列数・行数・ガイド）を書く。**オンオフは触らない**。
+ *
+ * 設定を触る欄はオンのときしか出ないので、行は在る。他の1件ずつの書き込みと同じく
+ * id で引き、無ければ例外にする。
+ */
+export async function updateAsbManuscriptPaper(
   definitionId: string,
-  parent: AsbCellParent
+  manuscriptPaperId: string,
+  settings: AsbManuscriptPaperSettings
 ): Promise<void> {
   await writeAsbDefinitionContent(definitionId, async (tx) => {
-    const { count } = await tx.asbManuscriptPaper.deleteMany({ where: parent })
-    return count > 0
+    const existing = await tx.asbManuscriptPaper.findUnique({
+      where: { id: manuscriptPaperId },
+    })
+    if (!existing) throw new Error("原稿用紙が見つかりません")
+    const data = asbManuscriptPaperSettingColumns(settings)
+    return updateRowIfChanged(existing, data, () =>
+      tx.asbManuscriptPaper.update({ where: { id: manuscriptPaperId }, data })
+    )
   })
 }

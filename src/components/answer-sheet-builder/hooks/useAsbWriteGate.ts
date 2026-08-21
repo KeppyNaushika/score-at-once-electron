@@ -45,8 +45,10 @@ function collapsibleKey(action: AnswerSheetEditAction): string | null {
       return `UPDATE_CHAR_GUIDE:${action.payload.charGuideId}`
     case "UPSERT_OMR_CONFIG":
       return `UPSERT_OMR_CONFIG:${JSON.stringify(action.payload.parent)}`
-    case "UPSERT_MANUSCRIPT_PAPER":
-      return `UPSERT_MANUSCRIPT_PAPER:${action.payload.manuscriptPaperId}`
+    // オンオフ（`SET_MANUSCRIPT_PAPER_ENABLED`）は溜めない。スイッチは1回で決まるうえ、
+    // 行を作る唯一の経路なので、後続の設定の書き込みより先に届いている必要がある
+    case "UPDATE_MANUSCRIPT_PAPER":
+      return `UPDATE_MANUSCRIPT_PAPER:${action.payload.manuscriptPaperId}`
     default:
       return null
   }

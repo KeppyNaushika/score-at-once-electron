@@ -102,8 +102,16 @@ export function AnswerSheetBuilderMainView({
   // 関所は渡した関数を ref で持ち直すので、`write` の同一性は問わない
   const { onEdit, gestureHandlers } = useAsbWriteGate(write)
 
-  const { definition, actions, setDefinition, canUndo, canRedo, undo, redo } =
-    useAnswerSheetDefinition({ onEdit, onRestore: restore })
+  const {
+    definition,
+    actions,
+    setDefinition,
+    adoptManuscriptPaperId,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+  } = useAnswerSheetDefinition({ onEdit, onRestore: restore })
 
   /**
    * 失敗したら DB を正として画面を合わせる。
@@ -130,7 +138,15 @@ export function AnswerSheetBuilderMainView({
   async function write(action: AnswerSheetEditAction) {
     showSaving()
     try {
-      await applyEdit(action)
+      // 原稿用紙だけは、main が書いた行の id が画面の指定と違うことがある
+      // （セルと1対1なので、既に在る行があれば main はその id を使い続ける）
+      const writtenManuscriptPaper = await applyEdit(action)
+      if (writtenManuscriptPaper) {
+        adoptManuscriptPaperId(
+          writtenManuscriptPaper.parent,
+          writtenManuscriptPaper.manuscriptPaperId
+        )
+      }
       showSaved()
     } catch {
       // 知らせは MutationCache が出す。ここでは表示を DB へ揃えるだけ

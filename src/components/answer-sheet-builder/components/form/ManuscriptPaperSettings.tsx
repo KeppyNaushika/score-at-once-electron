@@ -15,7 +15,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import type {
   AsbCharGuideAttributes,
-  AsbManuscriptPaperAttributes,
+  AsbManuscriptPaperSettings,
   BorderLineStyle,
   ManuscriptCharGuide,
   ManuscriptGuidePosition,
@@ -37,8 +37,13 @@ import { SliderWithInput } from "./SliderWithInput"
 interface ManuscriptPaperSettingsProps {
   /** セルの原稿用紙。無い＝一度も使っていない */
   manuscriptPaper: ManuscriptPaper | undefined
-  /** 原稿用紙そのものの設定（文字位置マーカーは別の実体なので含めない） */
-  onUpsert: (data: Partial<AsbManuscriptPaperAttributes>) => void
+  /** 使うかどうかの切り替え。オンにすると行ができる */
+  onSetEnabled: (enabled: boolean) => void
+  /** 原稿用紙そのものの設定（オンオフと文字位置マーカーは別の実体・別の意図） */
+  onUpdateSettings: (
+    manuscriptPaperId: string,
+    data: Partial<AsbManuscriptPaperSettings>
+  ) => void
   onAddCharGuide: (
     manuscriptPaperId: string,
     charGuide: ManuscriptCharGuide
@@ -57,6 +62,18 @@ const GUIDE_POSITION_LABELS: Record<ManuscriptGuidePosition, string> = {
   "top-right": "右上",
 }
 
+/** 選択肢の並び。`Select` が返す文字列をここに突き合わせて union へ戻す */
+const GUIDE_POSITIONS: ManuscriptGuidePosition[] = [
+  "bottom-left",
+  "bottom-right",
+  "top-left",
+  "top-right",
+]
+
+function toGuidePosition(value: string): ManuscriptGuidePosition | null {
+  return GUIDE_POSITIONS.find((position) => position === value) ?? null
+}
+
 /** 区切り罫線の選択肢（先頭は「なし」＝罫線なし） */
 const BOUNDARY_NONE = "none"
 const BOUNDARY_OPTIONS: { value: string; label: string }[] = [
@@ -68,12 +85,13 @@ const BOUNDARY_OPTIONS: { value: string; label: string }[] = [
 
 export function ManuscriptPaperSettings({
   manuscriptPaper,
-  onUpsert,
+  onSetEnabled,
+  onUpdateSettings,
   onAddCharGuide,
   onUpdateCharGuide,
   onDeleteCharGuide,
 }: ManuscriptPaperSettingsProps) {
-  // 行がまだ無いセルでは既定の姿を見せる。実体を作るのは最初の書き込みのとき
+  // 行がまだ無いセルでは既定の姿を見せる（スイッチはオフ）。実体を作るのはオンにしたとき
   const current = manuscriptPaper ?? DEFAULT_MANUSCRIPT_PAPER
 
   /** 入力値を [min, max] の整数に丸める。空欄・非数値は fallback（0設定によるエラーを防ぐ） */
@@ -97,23 +115,28 @@ export function ManuscriptPaperSettings({
         <Switch
           className="scale-75"
           checked={current.enabled}
-          onCheckedChange={(enabled) => onUpsert({ enabled })}
+          onCheckedChange={onSetEnabled}
         />
       </div>
 
-      {current.enabled && (
+      {manuscriptPaper?.enabled && (
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label className="text-[10px] text-muted-foreground">列数</Label>
             <Input
               type="number"
               className="h-7 text-xs"
-              value={current.columns}
+              value={manuscriptPaper.columns}
               min={1}
               max={40}
               onChange={(e) =>
-                onUpsert({
-                  columns: clampInt(e.target.value, 1, 40, current.columns),
+                onUpdateSettings(manuscriptPaper.id, {
+                  columns: clampInt(
+                    e.target.value,
+                    1,
+                    40,
+                    manuscriptPaper.columns
+                  ),
                 })
               }
             />
@@ -123,12 +146,12 @@ export function ManuscriptPaperSettings({
             <Input
               type="number"
               className="h-7 text-xs"
-              value={current.rows}
+              value={manuscriptPaper.rows}
               min={1}
               max={20}
               onChange={(e) =>
-                onUpsert({
-                  rows: clampInt(e.target.value, 1, 20, current.rows),
+                onUpdateSettings(manuscriptPaper.id, {
+                  rows: clampInt(e.target.value, 1, 20, manuscriptPaper.rows),
                 })
               }
             />
@@ -169,11 +192,12 @@ export function ManuscriptPaperSettings({
                 </Label>
                 <Select
                   value={
-                    current.guidePosition ?? DEFAULT_MANUSCRIPT_GUIDE_POSITION
+                    manuscriptPaper.guidePosition ??
+                    DEFAULT_MANUSCRIPT_GUIDE_POSITION
                   }
                   onValueChange={(value) =>
-                    onUpsert({
-                      guidePosition: value as ManuscriptGuidePosition,
+                    onUpdateSettings(manuscriptPaper.id, {
+                      guidePosition: toGuidePosition(value),
                     })
                   }
                 >
@@ -181,13 +205,11 @@ export function ManuscriptPaperSettings({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(GUIDE_POSITION_LABELS).map(
-                      ([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      )
-                    )}
+                    {GUIDE_POSITIONS.map((position) => (
+                      <SelectItem key={position} value={position}>
+                        {GUIDE_POSITION_LABELS[position]}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -195,25 +217,30 @@ export function ManuscriptPaperSettings({
                 <SliderWithInput
                   label="文字サイズ(マス比)"
                   value={
-                    current.guideFontSize ?? DEFAULT_MANUSCRIPT_GUIDE_FONT_RATIO
+                    manuscriptPaper.guideFontSize ??
+                    DEFAULT_MANUSCRIPT_GUIDE_FONT_RATIO
                   }
                   min={0.05}
                   max={1}
                   step={0.05}
-                  onChange={(guideFontSize) => onUpsert({ guideFontSize })}
+                  onChange={(guideFontSize) =>
+                    onUpdateSettings(manuscriptPaper.id, { guideFontSize })
+                  }
                 />
               </div>
               <div className="col-span-2">
                 <SliderWithInput
                   label="余白(マス比)"
                   value={
-                    current.guidePadding ??
+                    manuscriptPaper.guidePadding ??
                     DEFAULT_MANUSCRIPT_GUIDE_PADDING_RATIO
                   }
                   min={0}
                   max={1}
                   step={0.05}
-                  onChange={(guidePadding) => onUpsert({ guidePadding })}
+                  onChange={(guidePadding) =>
+                    onUpdateSettings(manuscriptPaper.id, { guidePadding })
+                  }
                 />
               </div>
             </div>

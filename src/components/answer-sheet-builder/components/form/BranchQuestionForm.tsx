@@ -284,13 +284,14 @@ export function BranchQuestionForm({
           />
           <ManuscriptPaperSettings
             manuscriptPaper={branchQuestion.manuscriptPaper}
-            onUpsert={(data) => {
-              actions.upsertManuscriptPaper(cell, data)
+            onSetEnabled={(enabled) => {
+              actions.setManuscriptPaperEnabled(cell, enabled)
               // 原稿用紙を使い始めたら、横に並ぶよう幅を埋めておく
-              if (data.enabled && !branchQuestion.layoutWidth) {
+              if (enabled && !branchQuestion.layoutWidth) {
                 onUpdate({ layoutWidth: "1" })
               }
             }}
+            onUpdateSettings={actions.updateManuscriptPaper}
             onAddCharGuide={actions.addCharGuide}
             onUpdateCharGuide={actions.updateCharGuide}
             onDeleteCharGuide={actions.deleteCharGuide}

@@ -28,7 +28,7 @@ import type {
   AsbHeaderFieldAttributes,
   AsbImageElementAttributes,
   AsbMajorQuestionAttributes,
-  AsbManuscriptPaperAttributes,
+  AsbManuscriptPaperSettings,
   AsbSubQuestionAttributes,
   AsbSubQuestionUpdate,
   AsbTextElementAttributes,
@@ -497,23 +497,45 @@ function reducer(
 
     // ---------- 原稿用紙 ----------
 
-    case "UPSERT_MANUSCRIPT_PAPER": {
-      const { parent, manuscriptPaperId, attributes } = action.payload
+    case "SET_MANUSCRIPT_PAPER_ENABLED": {
+      const { parent, manuscriptPaperId, enabled } = action.payload
       return mapCellChildren(state, parent, (cell) => ({
         ...cell,
-        manuscriptPaper: {
-          ...attributes,
-          id: manuscriptPaperId,
-          charGuides: cell.manuscriptPaper?.charGuides ?? [],
-        },
+        // 行がまだ無いセルはここで作る。既に在るなら設定も文字位置マーカーも残す
+        // （オフは「いまは使わない」であって、捨てることではない）
+        manuscriptPaper: cell.manuscriptPaper
+          ? { ...cell.manuscriptPaper, enabled }
+          : {
+              ...DEFAULT_MANUSCRIPT_PAPER,
+              enabled,
+              id: manuscriptPaperId,
+              charGuides: [],
+            },
       }))
     }
 
-    case "DELETE_MANUSCRIPT_PAPER":
-      return mapCellChildren(state, action.payload.parent, (cell) => ({
+    case "UPDATE_MANUSCRIPT_PAPER": {
+      const { manuscriptPaperId, attributes } = action.payload
+      return mapAllCellChildren(state, (cell) =>
+        cell.manuscriptPaper?.id === manuscriptPaperId
+          ? {
+              ...cell,
+              manuscriptPaper: { ...cell.manuscriptPaper, ...attributes },
+            }
+          : cell
+      )
+    }
+
+    case "ADOPT_MANUSCRIPT_PAPER_ID": {
+      const { parent, manuscriptPaperId } = action.payload
+      return mapCellChildren(state, parent, (cell) => ({
         ...cell,
-        manuscriptPaper: undefined,
+        manuscriptPaper: cell.manuscriptPaper && {
+          ...cell.manuscriptPaper,
+          id: manuscriptPaperId,
+        },
       }))
+    }
 
     // ---------- 文字位置マーカー ----------
 
@@ -648,11 +670,12 @@ function subQuestionAttributes(
   return attributes
 }
 
-function manuscriptPaperAttributes(
+/** 原稿用紙から見た目の設定だけを取り出す（オンオフは別の意図が書く） */
+function manuscriptPaperSettings(
   manuscriptPaper: ManuscriptPaper
-): AsbManuscriptPaperAttributes {
-  const { id, charGuides, ...attributes } = manuscriptPaper
-  return attributes
+): AsbManuscriptPaperSettings {
+  const { id, charGuides, enabled, ...settings } = manuscriptPaper
+  return settings
 }
 
 function branchQuestionAttributes(
@@ -1248,37 +1271,70 @@ export function useAnswerSheetDefinition({
   // ---------- 原稿用紙 ----------
 
   /**
-   * セルの原稿用紙を書く（無ければ作る）。
+   * セルが原稿用紙を使うかどうかを切り替える。**行が無ければ作る**。
    *
-   * 画面は「列数だけ」「ガイドの位置だけ」を触るので、足りない属性はいまの姿から埋める。
-   * まだ原稿用紙が無いセルでは、**ここで新しい実体を作って id を載せる**（reducer の中で
-   * 作ると、その id を知れず対応する書き込みを組み立てられない）。
+   * まだ原稿用紙が無いセルでは、**ここで新しい id を振る**（reducer の中で作ると、その
+   * id を知れず対応する書き込みを組み立てられない）。列数などの既定は reducer と main が
+   * それぞれ持つ既定値で埋まる。
    */
-  const upsertManuscriptPaper = useCallback(
-    (parent: AsbCellParent, data: Partial<AsbManuscriptPaperAttributes>) => {
+  const setManuscriptPaperEnabled = useCallback(
+    (parent: AsbCellParent, enabled: boolean) => {
       const cell = findCell(definitionRef.current, parent)
       if (!cell) return
-      const current = cell.manuscriptPaper
       edit({
-        type: "UPSERT_MANUSCRIPT_PAPER",
+        type: "SET_MANUSCRIPT_PAPER_ENABLED",
         payload: {
           parent,
-          manuscriptPaperId: current?.id ?? generateId(),
-          attributes: {
-            ...DEFAULT_MANUSCRIPT_PAPER,
-            ...(current && manuscriptPaperAttributes(current)),
-            ...data,
-          },
+          manuscriptPaperId: cell.manuscriptPaper?.id ?? generateId(),
+          enabled,
         },
       })
     },
     [edit]
   )
 
-  const deleteManuscriptPaper = useCallback(
-    (parent: AsbCellParent) =>
-      edit({ type: "DELETE_MANUSCRIPT_PAPER", payload: { parent } }),
+  /**
+   * 原稿用紙の設定を書く。**行が在るときだけ**（設定の欄はオンのときしか出ない）。
+   *
+   * 画面は「列数だけ」「ガイドの位置だけ」を触るので、足りない設定はいまの姿から埋める。
+   * `enabled` はここに入らない — 切り替えは別の意図である。
+   */
+  const updateManuscriptPaper = useCallback(
+    (manuscriptPaperId: string, data: Partial<AsbManuscriptPaperSettings>) => {
+      const manuscriptPaper = allCells(definitionRef.current)
+        .map((cell) => cell.manuscriptPaper)
+        .find((candidate) => candidate?.id === manuscriptPaperId)
+      if (!manuscriptPaper) return
+      edit({
+        type: "UPDATE_MANUSCRIPT_PAPER",
+        payload: {
+          manuscriptPaperId,
+          attributes: { ...manuscriptPaperSettings(manuscriptPaper), ...data },
+        },
+      })
+    },
     [edit]
+  )
+
+  /**
+   * main が書いた原稿用紙の行の id を木へ取り込む。**書き込みは起こさない**。
+   *
+   * 原稿用紙が木に無いセルでは新しい id を振って渡すが、DB に行が在れば main は
+   * その行を更新し、渡した id は捨てられる（別の端末が先に作ったとき）。
+   * 取り込まないと、木の原稿用紙は存在しない行を指したままになり、
+   * 文字位置マーカーの追加が外部キーで、全体保存が親の `@unique` で落ちる。
+   */
+  const adoptManuscriptPaperId = useCallback(
+    (parent: AsbCellParent, manuscriptPaperId: string) => {
+      const cell = findCell(definitionRef.current, parent)
+      if (!cell?.manuscriptPaper) return
+      if (cell.manuscriptPaper.id === manuscriptPaperId) return
+      dispatch({
+        type: "ADOPT_MANUSCRIPT_PAPER_ID",
+        payload: { parent, manuscriptPaperId },
+      })
+    },
+    [dispatch]
   )
 
   // ---------- 文字位置マーカー ----------
@@ -1343,8 +1399,8 @@ export function useAnswerSheetDefinition({
       deleteImageElement,
       upsertOmrConfig,
       deleteOmrConfig,
-      upsertManuscriptPaper,
-      deleteManuscriptPaper,
+      setManuscriptPaperEnabled,
+      updateManuscriptPaper,
       addCharGuide,
       updateCharGuide,
       deleteCharGuide,
@@ -1376,8 +1432,8 @@ export function useAnswerSheetDefinition({
       deleteImageElement,
       upsertOmrConfig,
       deleteOmrConfig,
-      upsertManuscriptPaper,
-      deleteManuscriptPaper,
+      setManuscriptPaperEnabled,
+      updateManuscriptPaper,
       addCharGuide,
       updateCharGuide,
       deleteCharGuide,
@@ -1389,6 +1445,11 @@ export function useAnswerSheetDefinition({
     /** 編集の操作ひとそろい（フォームへまとめて配る） */
     actions,
     setDefinition,
+    /**
+     * 書いた結果を木へ取り込む（`actions` には入れない — 編集の意図ではないので、
+     * フォームから呼ぶものではない）。
+     */
+    adoptManuscriptPaperId,
     canUndo: previousState !== undefined,
     canRedo: nextState !== undefined,
     undo,

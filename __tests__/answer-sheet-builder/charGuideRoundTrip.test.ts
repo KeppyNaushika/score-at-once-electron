@@ -52,7 +52,7 @@ vi.mock("../../electron-src/lib/prisma/auditActor", () => ({
 import { answerSheetBuilderHandlers } from "../../electron-src/ipc-handlers/answerSheetBuilderHandlers"
 import { getAsbDefinition } from "../../electron-src/lib/prisma/asbDefinition"
 import { replaceAsbDefinition } from "../../electron-src/lib/prisma/asbDefinitionReplace"
-import { upsertAsbManuscriptPaper } from "../../electron-src/lib/prisma/asbManuscriptPaper"
+import { setAsbManuscriptPaperEnabled } from "../../electron-src/lib/prisma/asbManuscriptPaper"
 import { createDefaultDefinition } from "../../src/components/answer-sheet-builder/constants"
 import type {
   ManuscriptCharGuide,
@@ -206,11 +206,11 @@ describe("AsbCharGuide 変換往復", () => {
     })
     await replaceAsbDefinition(definition, userId)
 
-    await upsertAsbManuscriptPaper(
+    await setAsbManuscriptPaperEnabled(
       definition.id,
       { subQuestionId: subQuestion.id },
       subQuestion.manuscriptPaper.id,
-      { ...subQuestion.manuscriptPaper, enabled: false }
+      false
     )
 
     const loaded = await getAsbDefinition(definition.id)

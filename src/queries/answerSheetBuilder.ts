@@ -4,6 +4,7 @@ import { assertNever } from "@/lib/assertNever"
 import type {
   AnswerSheetDefinition,
   AnswerSheetEditAction,
+  AsbCellParent,
 } from "@/types/answerSheetDefinition.types"
 
 import { auditLogListKey } from "./auditLog"
@@ -65,16 +66,31 @@ export const answerSheetDefinitionOwnerQuery = (definitionId: string) =>
 const listKey = answerSheetDefinitionListQuery().queryKey
 
 /**
+ * main が実際に書いた原稿用紙の行。
+ *
+ * 原稿用紙はセルと1対1なので、main は既にそのセルに行があればその id を使い続ける
+ * （`setAsbManuscriptPaperEnabled`）。画面が振った id と食い違うことがあるので、書いた
+ * 行の id を返して画面が自分の木を直せるようにする。
+ */
+interface WrittenManuscriptPaper {
+  parent: AsbCellParent
+  manuscriptPaperId: string
+}
+
+/**
  * 編集の意図を、対応する1レコードの書き込みへ写す。**書き込みの関所**。
  *
  * `switch` は `AnswerSheetEditAction` を網羅する。action を1つ足して書き込みを書かなければ
  * `assertNever` が型検査で落ちるので、**片方だけ足した状態を作れない**（action と書き込みを
  * 二重に持つ設計の唯一の危険がこれで、同期の除外一覧では実際に2度破れている）。
+ *
+ * **値を返すのは原稿用紙のオンオフだけ**（原稿用紙の行を作るのはこの1経路で、他は書いた
+ * 行の id が画面の指定と必ず一致する）。
  */
-function writeAnswerSheetEdit(
+async function writeAnswerSheetEdit(
   definitionId: string,
   action: AnswerSheetEditAction
-): Promise<void> {
+): Promise<WrittenManuscriptPaper | void> {
   const asb = window.electronAPI.answerSheetBuilder
   switch (action.type) {
     case "UPDATE_DEFINITION":
@@ -191,15 +207,21 @@ function writeAnswerSheetEdit(
     case "DELETE_IMAGE_ELEMENT":
       return asb.deleteImageElement(definitionId, action.payload.imageElementId)
 
-    case "UPSERT_MANUSCRIPT_PAPER":
-      return asb.upsertManuscriptPaper(
+    case "SET_MANUSCRIPT_PAPER_ENABLED": {
+      const manuscriptPaperId = await asb.setManuscriptPaperEnabled(
         definitionId,
         action.payload.parent,
         action.payload.manuscriptPaperId,
+        action.payload.enabled
+      )
+      return { parent: action.payload.parent, manuscriptPaperId }
+    }
+    case "UPDATE_MANUSCRIPT_PAPER":
+      return asb.updateManuscriptPaper(
+        definitionId,
+        action.payload.manuscriptPaperId,
         action.payload.attributes
       )
-    case "DELETE_MANUSCRIPT_PAPER":
-      return asb.deleteManuscriptPaper(definitionId, action.payload.parent)
 
     case "ADD_CHAR_GUIDE":
       return asb.createCharGuide(
@@ -239,6 +261,8 @@ function writeAnswerSheetEdit(
  *
  * `scope` を付けてあるのは順番のため。TanStack は同じ `scope` の書き込みを直列に実行する
  * ので、「足す → その属性を書く」が入れ替わらない。
+ *
+ * 原稿用紙のオンオフだけは**書いた行**を返す。呼び出し側はその id を木へ取り込む。
  */
 export const applyAnswerSheetEditMutation = (definitionId: string) =>
   defineMutation({

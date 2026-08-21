@@ -135,6 +135,19 @@ export type AsbManuscriptPaperAttributes = Omit<
   | "guidePosition"
 > & { guidePosition: ManuscriptGuidePosition | null }
 
+/**
+ * 原稿用紙の見た目の設定（オンオフを除いた列）。
+ *
+ * **`enabled` は入らない。** 原稿用紙を使うかどうかはスイッチが決める別の意図で、
+ * 書き込みも別（`SET_MANUSCRIPT_PAPER_ENABLED`）。同じ列を2つの袋に入れると、省略の
+ * 意味がその列だけ変わる — 設定を書く側から `enabled` を省いたときに「触っていない」と
+ * 読むのか「オフにする」と読むのかが、袋ごとに違ってしまう。
+ */
+export type AsbManuscriptPaperSettings = Omit<
+  AsbManuscriptPaperAttributes,
+  "enabled"
+>
+
 /** 木の中の原稿用紙（文字位置マーカーまで持つ） */
 export interface ManuscriptPaper extends AsbManuscriptPaperAttributes {
   id: string
@@ -202,7 +215,8 @@ export interface SubQuestion extends AsbSubQuestionAttributes {
  *
  * **入れ子の例外は無い。** 原稿用紙が小問の列だった頃は「列数だけ」を触るために
  * ここだけ入れ子の一部指定を許していて、それが原稿用紙を消す事故の温床だった。
- * 原稿用紙は自分の action（`UPSERT_MANUSCRIPT_PAPER`）で書く。
+ * 原稿用紙は自分の action（`SET_MANUSCRIPT_PAPER_ENABLED` / `UPDATE_MANUSCRIPT_PAPER`）
+ * で書く。
  */
 export type AsbSubQuestionUpdate = Partial<AsbSubQuestionAttributes>
 
@@ -541,14 +555,46 @@ export type AnswerSheetAction =
     }
   | { type: "DELETE_IMAGE_ELEMENT"; payload: { imageElementId: string } }
   | {
-      type: "UPSERT_MANUSCRIPT_PAPER"
+      /**
+       * 原稿用紙を使うかどうかを切り替える。**行が無ければここで作る**。
+       *
+       * 「一度も使っていない＝行が無い」「いまはオフ＝`enabled: false`」という区別を
+       * 保つので、オフに倒しても列数や文字位置マーカーは残る。原稿用紙の行を作る経路は
+       * これひとつで、だから**書いた行の id を返すのもこれだけ**。
+       */
+      type: "SET_MANUSCRIPT_PAPER_ENABLED"
       payload: {
         parent: AsbCellParent
         manuscriptPaperId: string
-        attributes: AsbManuscriptPaperAttributes
+        enabled: boolean
       }
     }
-  | { type: "DELETE_MANUSCRIPT_PAPER"; payload: { parent: AsbCellParent } }
+  | {
+      /**
+       * 原稿用紙の設定（列数・行数・ガイド）を書く。**行が在る前提**。
+       *
+       * 設定を触る欄はオンのときしか出ないので、ここへ来る時点で行はできている。
+       */
+      type: "UPDATE_MANUSCRIPT_PAPER"
+      payload: {
+        manuscriptPaperId: string
+        attributes: AsbManuscriptPaperSettings
+      }
+    }
+  | {
+      /**
+       * main が書いた原稿用紙の行の id を木へ取り込む。
+       *
+       * 原稿用紙はセルと1対1で、木に無いのに DB に在ることがある（別の端末が先に
+       * 作ったとき）。そのとき main は既に在る行を更新し、
+       * 画面が振った id は捨てられる。捨てられた id を木が持ち続けると、文字位置
+       * マーカーが存在しない親を指し、全体保存が親の `@unique` で落ちる。
+       *
+       * **書き込みには写らない**（書いた結果を受け取るだけで、新しい意図ではない）。
+       */
+      type: "ADOPT_MANUSCRIPT_PAPER_ID"
+      payload: { parent: AsbCellParent; manuscriptPaperId: string }
+    }
   | {
       type: "ADD_CHAR_GUIDE"
       payload: { manuscriptPaperId: string; charGuide: ManuscriptCharGuide }
@@ -568,10 +614,15 @@ export type AnswerSheetAction =
  * 書き込みに写る編集の意図。
  *
  * `SET_DEFINITION`（読み込んだ内容を置く）と undo / redo（過去の姿へ戻す）は、対応する
- * 1レコードの書き込みが無いので外れる。**この型を網羅する `switch` が書き込みの関所**で、
- * action を足して書き込みを書かなければ型検査が落ちる（`src/queries/answerSheetBuilder.ts`）。
+ * 1レコードの書き込みが無いので外れる。`ADOPT_MANUSCRIPT_PAPER_ID` も外れる — 書いた
+ * 結果を木へ取り込むだけで、書き込みの向きが逆である。**この型を網羅する `switch` が
+ * 書き込みの関所**で、action を足して書き込みを書かなければ型検査が落ちる
+ * （`src/queries/answerSheetBuilder.ts`）。
  */
 export type AnswerSheetEditAction = Exclude<
   AnswerSheetAction,
-  { type: "UNDO" } | { type: "REDO" } | { type: "SET_DEFINITION" }
+  | { type: "UNDO" }
+  | { type: "REDO" }
+  | { type: "SET_DEFINITION" }
+  | { type: "ADOPT_MANUSCRIPT_PAPER_ID" }
 >

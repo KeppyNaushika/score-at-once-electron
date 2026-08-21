@@ -1095,8 +1095,9 @@ export type AsbSubQuestionUpdate = Partial<
 export type AsbSubQuestionUpdate = Partial<AsbSubQuestionAttributes>
 ```
 
-原稿用紙は自分の action（`UPSERT_MANUSCRIPT_PAPER` / `DELETE_MANUSCRIPT_PAPER`。OMR と
-同じくセルを指す）で書くので、小問の更新に混ざらない。**#1 の手作業が構造ごと消える。**
+原稿用紙は自分の action（`SET_MANUSCRIPT_PAPER_ENABLED` / `UPDATE_MANUSCRIPT_PAPER`。
+オンオフはセルを指し、設定は行を指す）で書くので、小問の更新に混ざらない。
+**#1 の手作業が構造ごと消える。**
 
 #### 移行（migration）
 

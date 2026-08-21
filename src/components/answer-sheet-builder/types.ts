@@ -6,7 +6,7 @@ import type {
   AsbHeaderFieldAttributes,
   AsbImageElementAttributes,
   AsbMajorQuestionAttributes,
-  AsbManuscriptPaperAttributes,
+  AsbManuscriptPaperSettings,
   AsbSubQuestionUpdate,
   AsbTextElementAttributes,
   CellImageElement,
@@ -80,11 +80,13 @@ export interface AsbEditorActions {
   upsertOmrConfig: (parent: AsbCellParent, config: OMRCellConfig) => void
   deleteOmrConfig: (parent: AsbCellParent) => void
 
-  upsertManuscriptPaper: (
-    parent: AsbCellParent,
-    data: Partial<AsbManuscriptPaperAttributes>
+  /** 原稿用紙を使うかどうか。オンにするとき、行が無ければ作る */
+  setManuscriptPaperEnabled: (parent: AsbCellParent, enabled: boolean) => void
+  /** 原稿用紙の設定（列数・行数・ガイド）。行が在るときだけ */
+  updateManuscriptPaper: (
+    manuscriptPaperId: string,
+    data: Partial<AsbManuscriptPaperSettings>
   ) => void
-  deleteManuscriptPaper: (parent: AsbCellParent) => void
 
   addCharGuide: (
     manuscriptPaperId: string,
