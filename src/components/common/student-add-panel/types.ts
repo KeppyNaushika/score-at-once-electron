@@ -41,8 +41,9 @@ export interface AddPanelClassroomCandidate {
 /**
  * 追加候補の生徒1件（生徒の行に、選んでいるかどうかを添えたもの）
  *
- * 学級と違い、候補から消えた選択済みの生徒を作り直すことはないので、行をそのまま
- * 広げて `isSelected` を隣に置く。
+ * 在籍スイッチで境界の候補から消えた選択済みの生徒も、選んだ時点の行から同じ形で
+ * 作って下段（「選択中」）に並べる。学級と違って導出（人数）を添えないので、控えた
+ * 行をそのまま広げれば足りる。
  */
 export interface SelectableStudent extends StudentWithMemberships {
   isSelected: boolean

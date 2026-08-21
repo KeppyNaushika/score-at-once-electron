@@ -141,9 +141,16 @@ export function useStudentAddPanel({
   const [selectedClassroomById, setSelectedClassroomById] = useState<
     Map<string, ClassroomWithMemberships>
   >(new Map())
-  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(
-    new Set()
-  )
+  /**
+   * 生徒の選択も学級と同じく「id → 選んだ時点の生徒の行」で持つ。
+   *
+   * 在籍スイッチ（`studentActiveOnly`）は境界が返す候補そのものを変えるので、
+   * オフで選んだ生徒はオンにすると `availableStudents` から落ちる。行を控えて
+   * おけば、候補から消えても下段（「選択中」）に出し続けられる。
+   */
+  const [selectedStudentById, setSelectedStudentById] = useState<
+    Map<string, StudentWithMemberships>
+  >(new Map())
   /** 選択した順の学級id。追加順が採番の順序になるので保つ */
   const [classroomOrder, setClassroomOrder] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -239,14 +246,25 @@ export function useStudentAddPanel({
     )
   }, [availableClassrooms, selectedClassroomById, classroomOrder])
 
-  const students = useMemo<SelectableStudent[]>(
-    () =>
-      availableStudents.map((student) => ({
-        ...student,
-        isSelected: selectedStudentIds.has(student.id),
-      })),
-    [availableStudents, selectedStudentIds]
+  const availableStudentIds = useMemo(
+    () => new Set(availableStudents.map((student) => student.id)),
+    [availableStudents]
   )
+
+  const students = useMemo<SelectableStudent[]>(() => {
+    const candidates = availableStudents.map((student) => ({
+      ...student,
+      isSelected: selectedStudentById.has(student.id),
+    }))
+    // 在籍スイッチで候補から消えた選択済みの生徒も、チェックが付いている間は
+    // 控えた行から出す。ここに載せないと、件数にも追加にも入らないまま
+    // 選択だけが残る（外しようがない選択になる）
+    for (const [studentId, student] of selectedStudentById) {
+      if (availableStudentIds.has(studentId)) continue
+      candidates.push({ ...student, isSelected: true })
+    }
+    return candidates
+  }, [availableStudents, availableStudentIds, selectedStudentById])
 
   const handleClassroomSelection = (
     classroomId: string,
@@ -270,10 +288,15 @@ export function useStudentAddPanel({
   }
 
   const handleStudentSelection = (studentId: string, isSelected: boolean) => {
-    setSelectedStudentIds((prev) => {
-      const next = new Set(prev)
-      if (isSelected) next.add(studentId)
-      else next.delete(studentId)
+    // チェックを付けた時点の行を控える（候補から消えても出し続けるため）。
+    // 既に候補から消えている生徒を付け直すことはない（外した瞬間に消えるので）
+    const selectedStudent = availableStudents.find(
+      (student) => student.id === studentId
+    )
+    setSelectedStudentById((prev) => {
+      const next = new Map(prev)
+      if (!isSelected) next.delete(studentId)
+      else if (selectedStudent) next.set(studentId, selectedStudent)
       return next
     })
   }
@@ -308,7 +331,7 @@ export function useStudentAddPanel({
     setIsAdding(true)
     try {
       await adapter.addStudents(selected.map((student) => student.id))
-      setSelectedStudentIds(new Set())
+      setSelectedStudentById(new Map())
       await Promise.all([loadClassrooms(), loadStudents()])
       onAdded()
     } catch (error) {
@@ -340,19 +363,29 @@ export function useStudentAddPanel({
     return matchesSearch && matchesClassroom
   }
 
-  const filteredStudents = students.filter(matchesStudentFilter)
   /**
-   * 選んだのに絞り込みから外れた生徒。
+   * 上段（候補の一覧）に出るか。
    *
-   * 追加も件数も選択そのもの（`students` のチェック）から作るので、絞り込みで画面から
-   * 消えると「見ていないものが入り、しかも件数には出ている」状態になる。ここへ出して
-   * 見えるようにすることで、追加と件数の実装はそのままで食い違わなくなる。
+   * 絞り込みに一致し、かつ**いまも境界の候補にある**こと。在籍スイッチで候補から
+   * 落ちた生徒は絞り込みに一致していても候補ではないので、上段には出しようがない。
+   */
+  const isListedStudent = (student: SelectableStudent) =>
+    availableStudentIds.has(student.id) && matchesStudentFilter(student)
+
+  const listedStudents = students.filter(isListedStudent)
+  /**
+   * 選んだのに上段から外れた生徒（絞り込みに一致しない／候補から消えた）。
    *
-   * 絞り込みが空（検索語なし・学級が all）のときは全員が一致するので、これは空になり
+   * 追加も件数も選択そのもの（`students` のチェック）から作るので、画面から消えると
+   * 「見ていないものが入り、しかも件数には出ている」状態になる。ここへ出して見える
+   * ようにすることで、追加と件数の実装はそのままで食い違わなくなる。
+   *
+   * 上段と下段は1つの述語の表裏なので、どちらにも出ない生徒は生まれない。絞り込みが
+   * 空（検索語なし・学級が all）で、候補から消えた選択も無ければ、これは空になり
    * 画面は1つの一覧のままになる。
    */
-  const selectedStudentsOutsideFilter = students.filter(
-    (student) => student.isSelected && !matchesStudentFilter(student)
+  const selectedStudentsOutsideList = students.filter(
+    (student) => student.isSelected && !isListedStudent(student)
   )
 
   const selectedClassrooms = classrooms.filter(
@@ -368,8 +401,8 @@ export function useStudentAddPanel({
     setActiveTab,
     classrooms,
     selectedClassrooms,
-    filteredStudents,
-    selectedStudentsOutsideFilter,
+    listedStudents,
+    selectedStudentsOutsideList,
     searchTerm,
     setSearchTerm,
     filterClassroomId,

@@ -51,8 +51,8 @@ export function StudentAddPanel({
     setActiveTab,
     classrooms,
     selectedClassrooms,
-    filteredStudents,
-    selectedStudentsOutsideFilter,
+    listedStudents,
+    selectedStudentsOutsideList,
     searchTerm,
     setSearchTerm,
     filterClassroomId,
@@ -322,7 +322,7 @@ export function StudentAddPanel({
               <div className="py-4 text-center">読み込み中...</div>
             ) : (
               <div className="space-y-4">
-                {filteredStudents.length === 0 ? (
+                {listedStudents.length === 0 ? (
                   <div className="py-4 text-center text-muted-foreground">
                     {studentEmptyMessage}
                   </div>
@@ -331,9 +331,9 @@ export function StudentAddPanel({
                     {/* 絞り込みが入っていないときは段が1つなので「N名」とだけ出す */}
                     <div className="text-sm font-medium text-muted-foreground">
                       {hasStudentFilter ? "該当 " : ""}
-                      {filteredStudents.length}名
+                      {listedStudents.length}名
                     </div>
-                    {filteredStudents.map((student) => (
+                    {listedStudents.map((student) => (
                       <StudentCandidateCard
                         key={student.id}
                         student={student}
@@ -343,15 +343,16 @@ export function StudentAddPanel({
                   </div>
                 )}
 
-                {/* 絞り込みから外れた選択済みの生徒。追加も件数も選択そのものから
-                    作るので、ここに出しておかないと「見ていないものが入る」。
-                    絞り込みが空のときは全員が上段に出るので、この段は現れない */}
-                {selectedStudentsOutsideFilter.length > 0 && (
+                {/* 上段から外れた選択済みの生徒（絞り込みに一致しない・在籍スイッチで
+                    候補から消えた）。追加も件数も選択そのものから作るので、ここに
+                    出しておかないと「見ていないものが入る」「外せない選択が残る」。
+                    上段に全員が出ているときは、この段は現れない */}
+                {selectedStudentsOutsideList.length > 0 && (
                   <div className="space-y-2 border-t pt-4">
                     <div className="text-sm font-medium text-muted-foreground">
-                      選択中 {selectedStudentsOutsideFilter.length}名
+                      選択中 {selectedStudentsOutsideList.length}名
                     </div>
-                    {selectedStudentsOutsideFilter.map((student) => (
+                    {selectedStudentsOutsideList.map((student) => (
                       <StudentCandidateCard
                         key={student.id}
                         student={student}

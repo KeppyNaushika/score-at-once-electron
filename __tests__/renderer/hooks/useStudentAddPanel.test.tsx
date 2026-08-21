@@ -14,6 +14,12 @@
  * 消えるが、**追加と件数は絞り込み前の選択から作られる**ので、見ていない生徒が入り、
  * しかも件数には出ていた。選択したものが全部画面のどこかに出ていること
  * （＝件数と追加の対象が、見えているものと一致すること）を固定する。
+ *
+ * 最後は「個別で追加」タブの在籍スイッチ。こちらは絞り込みと違い、境界
+ * （`getAvailableStudentsForTarget`）が返す候補そのものが変わる（activeOnly は
+ * 「過去在籍のみ」の生徒を返さない）。選んだ生徒が候補から落ちると、以前は画面から
+ * 消えたうえに選択だけが残り、**外せず・件数にも追加にも入らない**状態になっていた。
+ * 学級と同じく選んだ時点の行を控え、下段（「選択中」）へ出すことを固定する。
  */
 
 import type { Classroom, Student } from "@prisma/client"
@@ -305,26 +311,25 @@ function createStudentTabAdapter() {
 }
 
 /**
- * 画面のどこかに出ている生徒（上段＝絞り込みに一致・下段＝絞り込みから外れた選択済み）。
+ * 画面のどこかに出ている生徒（上段＝候補かつ絞り込みに一致・下段＝上段から外れた選択済み）。
  *
- * 選択したものがここに揃っているか、が「見ていないものが入る」を防ぐ条件そのもの。
+ * 選択したものがここに揃っているか、が「見ていないものが入る」「外せない選択が残る」を
+ * 防ぐ条件そのもの。
  */
 function visibleStudentIds(result: PanelResult) {
   return [
-    ...result.current.filteredStudents,
-    ...result.current.selectedStudentsOutsideFilter,
+    ...result.current.listedStudents,
+    ...result.current.selectedStudentsOutsideList,
   ].map((student) => student.id)
 }
 
-function selectedStudentsOutsideFilterIds(result: PanelResult) {
-  return result.current.selectedStudentsOutsideFilter.map(
-    (student) => student.id
-  )
+function selectedStudentsOutsideListIds(result: PanelResult) {
+  return result.current.selectedStudentsOutsideList.map((student) => student.id)
 }
 
 async function renderStudentTab(adapter: StudentAddPanelAdapter) {
   const { result } = renderStudentAddPanel(adapter)
-  await waitFor(() => expect(result.current.filteredStudents).toHaveLength(2))
+  await waitFor(() => expect(result.current.listedStudents).toHaveLength(2))
   return result
 }
 
@@ -341,12 +346,10 @@ describe("useStudentAddPanel の生徒選択と絞り込み", () => {
     })
 
     // 上段は絞り込みに一致した佐藤だけ。田中は下段へ回り、画面から消えない
-    expect(
-      result.current.filteredStudents.map((student) => student.id)
-    ).toEqual([STUDENT_SATO.id])
-    expect(selectedStudentsOutsideFilterIds(result)).toEqual([
-      STUDENT_TANAKA.id,
+    expect(result.current.listedStudents.map((student) => student.id)).toEqual([
+      STUDENT_SATO.id,
     ])
+    expect(selectedStudentsOutsideListIds(result)).toEqual([STUDENT_TANAKA.id])
     expect(result.current.selectedStudentCount).toBe(1)
     expect(visibleStudentIds(result)).toContain(STUDENT_TANAKA.id)
   })
@@ -362,12 +365,10 @@ describe("useStudentAddPanel の生徒選択と絞り込み", () => {
       result.current.setFilterClassroomId(CLASSROOM_B.id)
     })
 
-    expect(
-      result.current.filteredStudents.map((student) => student.id)
-    ).toEqual([STUDENT_SATO.id])
-    expect(selectedStudentsOutsideFilterIds(result)).toEqual([
-      STUDENT_TANAKA.id,
+    expect(result.current.listedStudents.map((student) => student.id)).toEqual([
+      STUDENT_SATO.id,
     ])
+    expect(selectedStudentsOutsideListIds(result)).toEqual([STUDENT_TANAKA.id])
   })
 
   it("絞り込みが空なら下段は空で、一覧は1つのまま", async () => {
@@ -379,8 +380,8 @@ describe("useStudentAddPanel の生徒選択と絞り込み", () => {
       result.current.handleStudentSelection(STUDENT_SATO.id, true)
     })
 
-    expect(result.current.filteredStudents).toHaveLength(2)
-    expect(result.current.selectedStudentsOutsideFilter).toHaveLength(0)
+    expect(result.current.listedStudents).toHaveLength(2)
+    expect(result.current.selectedStudentsOutsideList).toHaveLength(0)
   })
 
   it("下段でチェックを外すと消え、件数も減る", async () => {
@@ -402,7 +403,7 @@ describe("useStudentAddPanel の生徒選択と絞り込み", () => {
       result.current.handleStudentSelection(STUDENT_TANAKA.id, false)
     })
 
-    expect(result.current.selectedStudentsOutsideFilter).toHaveLength(0)
+    expect(result.current.selectedStudentsOutsideList).toHaveLength(0)
     expect(result.current.selectedStudentCount).toBe(1)
     expect(visibleStudentIds(result)).toEqual([STUDENT_SATO.id])
   })
@@ -436,5 +437,129 @@ describe("useStudentAddPanel の生徒選択と絞り込み", () => {
       STUDENT_SATO.id,
     ])
     expect(result.current.selectedStudentCount).toBe(0)
+  })
+})
+
+/**
+ * 在籍スイッチをオンにすると片方の生徒が候補から消えるアダプタ。
+ *
+ * 境界（`getAvailableStudentsForTarget`）は activeOnly のとき「過去在籍のみ」の生徒を
+ * 返さない。`STUDENT_LEFT` がそれに当たる（`STUDENT_TANAKA` は在籍中なので常に返る）。
+ */
+function createStudentActiveOnlyAdapter() {
+  const addStudents = vi
+    .fn<StudentAddPanelAdapter["addStudents"]>()
+    .mockResolvedValue(undefined)
+  const adapter: StudentAddPanelAdapter = {
+    scopeId: "exam-student-active-only",
+    fetchAvailableClassrooms: () =>
+      Promise.resolve([
+        buildClassroom(CLASSROOM_A.id, CLASSROOM_A.name, [STUDENT_TANAKA]),
+        buildClassroom(CLASSROOM_B.id, CLASSROOM_B.name, [STUDENT_LEFT]),
+      ]),
+    fetchAvailableStudents: (activeOnly: boolean) =>
+      Promise.resolve(
+        activeOnly
+          ? [buildStudentInClassroom(STUDENT_TANAKA, CLASSROOM_A)]
+          : [
+              buildStudentInClassroom(STUDENT_TANAKA, CLASSROOM_A),
+              buildStudentInClassroom(STUDENT_LEFT, CLASSROOM_B),
+            ]
+      ),
+    addClassrooms: () => Promise.resolve(),
+    addStudents,
+  }
+  return { adapter, addStudents }
+}
+
+/**
+ * 在籍スイッチの取り直しが着地するまで待つ。
+ *
+ * 「消えた生徒が下段に残っている」だけを待つと早すぎる。切り替えた直後は取り直しが
+ * 走っていて境界の候補が一時的に空になり、**控えた選択だけが見えている**あいだにも
+ * その条件は満たされてしまう。**残る生徒が上段へ戻ったところまで**待つ。
+ */
+async function waitForRefetchedWithoutLeftStudent(result: PanelResult) {
+  await waitFor(() => {
+    expect(result.current.listedStudents.map((student) => student.id)).toEqual([
+      STUDENT_TANAKA.id,
+    ])
+  })
+}
+
+async function selectLeftStudentThenTurnOnActiveOnly(
+  adapter: StudentAddPanelAdapter
+) {
+  const { result } = renderStudentAddPanel(adapter)
+  await waitFor(() => expect(result.current.listedStudents).toHaveLength(2))
+
+  act(() => {
+    result.current.handleStudentSelection(STUDENT_LEFT.id, true)
+  })
+  act(() => {
+    result.current.setStudentActiveOnly(true)
+  })
+  await waitForRefetchedWithoutLeftStudent(result)
+  return result
+}
+
+describe("useStudentAddPanel の生徒選択と在籍スイッチ", () => {
+  it("候補から消えた選択済みの生徒を、下段に出し続ける", async () => {
+    const { adapter } = createStudentActiveOnlyAdapter()
+    const result = await selectLeftStudentThenTurnOnActiveOnly(adapter)
+
+    // 候補ではなくなったので上段には出ない。絞り込みは空だが下段に回る
+    expect(selectedStudentsOutsideListIds(result)).toEqual([STUDENT_LEFT.id])
+    expect(visibleStudentIds(result)).toContain(STUDENT_LEFT.id)
+    // 出しているのは選んだ時点の行そのもの（氏名も学級も控えたものが読める）
+    const [keptStudent] = result.current.selectedStudentsOutsideList
+    expect(keptStudent.lastName).toBe("過年度")
+    expect(keptStudent.memberships[0]?.classroom.name).toBe(CLASSROOM_B.name)
+  })
+
+  it("チェックを外した瞬間に消える", async () => {
+    const { adapter } = createStudentActiveOnlyAdapter()
+    const result = await selectLeftStudentThenTurnOnActiveOnly(adapter)
+
+    act(() => {
+      result.current.handleStudentSelection(STUDENT_LEFT.id, false)
+    })
+
+    expect(result.current.selectedStudentsOutsideList).toHaveLength(0)
+    expect(visibleStudentIds(result)).toEqual([STUDENT_TANAKA.id])
+    expect(result.current.selectedStudentCount).toBe(0)
+  })
+
+  it("件数にも追加の対象にも入る", async () => {
+    const { adapter, addStudents } = createStudentActiveOnlyAdapter()
+    const result = await selectLeftStudentThenTurnOnActiveOnly(adapter)
+
+    expect(result.current.selectedStudentCount).toBe(1)
+
+    await act(async () => {
+      await result.current.handleAddStudents()
+    })
+
+    expect(addStudents).toHaveBeenCalledWith([STUDENT_LEFT.id])
+    // 追加が済んだら控えも落とす
+    expect(result.current.selectedStudentCount).toBe(0)
+    expect(result.current.selectedStudentsOutsideList).toHaveLength(0)
+  })
+
+  it("スイッチを戻したら、上段の候補として出る（下段には二重に出ない）", async () => {
+    const { adapter } = createStudentActiveOnlyAdapter()
+    const result = await selectLeftStudentThenTurnOnActiveOnly(adapter)
+
+    act(() => {
+      result.current.setStudentActiveOnly(false)
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.listedStudents.map((student) => student.id)
+      ).toEqual([STUDENT_TANAKA.id, STUDENT_LEFT.id])
+    })
+    expect(result.current.selectedStudentsOutsideList).toHaveLength(0)
+    expect(result.current.selectedStudentCount).toBe(1)
   })
 })
