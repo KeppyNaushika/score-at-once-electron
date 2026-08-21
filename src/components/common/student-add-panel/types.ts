@@ -73,8 +73,6 @@ export interface StudentAddPanelProps {
   adapter: StudentAddPanelAdapter
   /** 追加完了時に呼ばれる（host 側のロスター再読込などに使う） */
   onAdded: () => void
-  /** 学級の追加順をドラッグで並び替え可能にするか（既定 true） */
-  showClassroomReorder?: boolean
   /** 親の高さいっぱいに広げ、候補リストを内部スクロールにするか（モーダル用、既定 false） */
   fillHeight?: boolean
   /** 学級タブの在籍スイッチ初期値（既定 true） */

@@ -42,7 +42,6 @@ import {
 export function StudentAddPanel({
   adapter,
   onAdded,
-  showClassroomReorder = true,
   classroomActiveOnlyDefault = true,
   studentActiveOnlyDefault = true,
   fillHeight = false,
@@ -158,9 +157,9 @@ export function StudentAddPanel({
         </label>
 
         <div
-          className={`grid grid-cols-1 gap-4 ${
-            showClassroomReorder ? "lg:grid-cols-2" : ""
-          } ${fillHeight ? "min-h-0 flex-1" : ""}`}
+          className={`grid grid-cols-1 gap-4 lg:grid-cols-2 ${
+            fillHeight ? "min-h-0 flex-1" : ""
+          }`}
         >
           {/* 利用可能な学級一覧 */}
           <Card className={listCardClass}>
@@ -240,22 +239,20 @@ export function StudentAddPanel({
           </Card>
 
           {/* 追加順序 */}
-          {showClassroomReorder && (
-            <Card className={listCardClass}>
-              <CardHeader>
-                <CardTitle className="text-lg">追加順序</CardTitle>
-                <CardDescription>
-                  選択した学級の追加順序を設定できます
-                </CardDescription>
-              </CardHeader>
-              <CardContent className={reorderContentClass}>
-                <SortableClassroomList
-                  selectedClassrooms={selectedClassrooms}
-                  onReorder={handleClassroomReorder}
-                />
-              </CardContent>
-            </Card>
-          )}
+          <Card className={listCardClass}>
+            <CardHeader>
+              <CardTitle className="text-lg">追加順序</CardTitle>
+              <CardDescription>
+                選択した学級の追加順序を設定できます
+              </CardDescription>
+            </CardHeader>
+            <CardContent className={reorderContentClass}>
+              <SortableClassroomList
+                selectedClassrooms={selectedClassrooms}
+                onReorder={handleClassroomReorder}
+              />
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex justify-end">
