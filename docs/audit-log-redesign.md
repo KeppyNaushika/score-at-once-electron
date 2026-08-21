@@ -266,16 +266,19 @@ target    (108,000 + 7,200) × 2 + 約10,000 = 約240,000行/年
 
 ## 同期（sqlite-nas-sync）の確認結果
 
-- 書き込みは**すべて `localDb`**。リモートは `readChangelog` / `getRemoteDeletedAt` と読むだけ。
+- 書き込みは**すべて `localDb`**。リモートは `readChangelog` / `getRemoteTombstone` と読むだけ。
   30人が同時採点しても NAS への書き込みロックは発生しない
-- 同期は changelog ベースで、**適用は1トランザクション**（`sync.ts:632`）。
+- 同期は changelog ベースで、**適用は1トランザクション**（`sync.ts:786`）。
   親子が割れることはない。フルマージ時も揃って復活する
-- `deleteProtected` は削除エントリを `continue` でスキップするだけ（`sync.ts:243`）
-- **ライブラリは外部キーを一切考慮していない**（`grep foreign_key` → 0件）。
-  changelog の適用順序が子→親になると FK 違反でトランザクションごとロールバックし同期が失敗する。
-  既存の全 FK が同じリスクを持つ（今まで顕在化していないのは順序が偶然合っているため）
-  → **`sqlite-nas-sync` 側で `PRAGMA defer_foreign_keys=ON` を使うべき。別 issue に切り出す**
-  （手法はこのプロジェクトの `bridgeMigrations.ts:310, 1185` で既に使っている）
+- `deleteProtected` は削除エントリを `continue` でスキップするだけ（`sync.ts:377` / `:543`）。
+  0.16.0 以降は**利用者操作による削除だけ**が対象で、ユニーク制約が強制する「畳み」は
+  素通しになる（`AuditLog` は `id` 以外の unique を持たないので畳まれることはない）
+- ~~**ライブラリは外部キーを一切考慮していない**（`grep foreign_key` → 0件）。
+  changelog の適用順序が子→親になると FK 違反でトランザクションごとロールバックし同期が失敗する~~
+  → **0.16.0 で解決済み**（段階35 で依存を上げた）。`pullNormal` / `pullFullMerge` が
+  取り込みのトランザクションの頭で `PRAGMA defer_foreign_keys = ON` を張り、検査を
+  COMMIT まで遅らせる（`~/dev/sqlite-nas-sync/src/sync.ts:794` / `:882`）。
+  制約を切るのではないので、COMMIT 時に矛盾が残っていれば従来どおり失敗する
 
 ## PR 分割
 

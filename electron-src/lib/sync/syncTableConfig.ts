@@ -27,10 +27,19 @@ export const SYNC_EXCLUDE_TABLES: string[] = [
   "UserPreference",
 ]
 
-/** テーブル別の同期オプション */
+/**
+ * テーブル別の同期オプション
+ *
+ * `deleteProtected` が止めるのは**利用者操作による削除**だけである（v0.16.0 で範囲が
+ * 狭まった）。別id・同一ユニークキーの行を1行へ統合する「畳み」は、ユニーク制約が
+ * 強制するものなので保護されない。ここで指定できる表を足すときは、その表が
+ * `id` 以外の unique を持つか、畳まれる行の外部キーの子かを見ること。
+ */
 export const SYNC_TABLE_OPTIONS: Record<string, TableOptions> = {
   // 監査ログ。連続操作の集約で既存行を上書きするため、LWWは updatedAt で収束させる。
-  // 削除はされない（deleteProtected）。
+  // 削除はされない（deleteProtected）。AuditLog は `id` 以外の unique を持たず、
+  // どのモデルとも外部キーで繋がっていないため畳みの対象にならず、
+  // v0.16.0 での範囲の縮小の影響を受けない。
   AuditLog: {
     timestampColumn: "updatedAt",
     deleteProtected: true,

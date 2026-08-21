@@ -10,6 +10,37 @@
 **この文書の主張はすべて実測に基づく。** 検証は `~/dev/sqlite-nas-sync/__tests__/` に一時
 テストを置いて行い、確認後に削除した（再現手順は §5）。
 
+> **解消済み（2026-08-21・段階35）。** §6 の直しがライブラリの 0.14.0〜0.16.0 に入り、
+> 本リポジトリの依存も `^0.16.0` へ上げた。以下の §3 は **0.13.1 までの姿**である。
+> 同じ手順（Tag `name` の衝突＋カスケードする `ExamTag`）を両版で走らせた実測:
+>
+> | 版         | 収束後の親  | 収束後の子                   |
+> | ---------- | ----------- | ---------------------------- |
+> | **0.13.1** | `tag-b` 1行 | `et-b` のみ（`et-a` 消滅）   |
+> | **0.16.0** | `tag-b` 1行 | `et-a` `et-b` 両方（付替済） |
+>
+> §3.2 の「勝った側が FK 違反で詰まる」も出ない（`foreign_key_check` が空・
+> `pullNormal` / `pullFullMerge` が `PRAGMA defer_foreign_keys = ON` を張る。
+> `~/dev/sqlite-nas-sync/src/sync.ts:794` / `:882`）。
+> §7 の未確認事項のうち、フルマージ経路と複合 `@@unique` は
+> `~/dev/sqlite-nas-sync/__tests__/secondary-unique-fold.test.ts` が押さえた。
+>
+> **ただし §3.2 と同じ形の詰まりが1つ残っている**（ライブラリ側・0.13.1 でも同じなので
+> 上げたことによる後退ではない）。**届いた UPDATE** がローカルの**別の行**のユニークに
+> 当たる場合、`applyUpdate`（`~/dev/sqlite-nas-sync/src/conflict.ts:1329-1341`）は
+> 素の `UPDATE` を投げるだけで `applyInsert` のような畳みを持たない。実測:
+>
+> ```
+> A: Tag(t1,"数学") を "国語" へ改名   B: 独立に Tag(t2,"国語") を作成
+> B 1回目 clientsSynced=0 warnings=["… UNIQUE constraint failed: Tag.name"]
+> B 2回目 clientsSynced=0 warnings=[同じ]   ← 以後ずっと A から何も届かない
+> ```
+>
+> `applyInsert` の畳みへ落ちるのは**ローカルに同じ id の行が無いとき**だけである
+> （同 `:1301-1323`）。**`@unique` を持つ列を利用者が編集できる表**が該当する
+> （`Tag.name` / `Classroom.name` / `Subtotal.name` / `Student.studentNumber` /
+> `User.username`）。段階33・段階30 で unique を触るときに併せて扱う。
+
 ## 1. まず、規約の実際の中身
 
 「id 以外の unique は同期違反」と縮めて覚えていたが、スキーマの註釈が言っているのは

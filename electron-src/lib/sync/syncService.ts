@@ -9,6 +9,10 @@
  *
  * 削除の伝搬はライブラリの `_tombstone`（deletedAt と updatedAt のLWW）に一本化している。
  * 時刻を見ずに id を消し続けるアプリ側の削除記録は持たない（issue #918）。
+ *
+ * 別id・同一ユニークキーの行の「畳み」も、負けた行の子の引き取りも、畳み先の伝播も
+ * ライブラリ側（v0.16.0）が行う。既に `_tombstone` を持つローカルDBには
+ * `setupSync` が `mergedInto` 列を足すので、アプリ側の移行処理は要らない。
  */
 
 import { BrowserWindow } from "electron"
