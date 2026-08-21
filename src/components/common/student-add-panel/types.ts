@@ -38,6 +38,16 @@ export interface AddPanelClassroomCandidate {
   isSelected: boolean
 }
 
+/**
+ * 追加候補の生徒1件（生徒の行に、選んでいるかどうかを添えたもの）
+ *
+ * 学級と違い、候補から消えた選択済みの生徒を作り直すことはないので、行をそのまま
+ * 広げて `isSelected` を隣に置く。
+ */
+export interface SelectableStudent extends StudentWithMemberships {
+  isSelected: boolean
+}
+
 /** host が差し込むデータ取得・追加処理 */
 export interface StudentAddPanelAdapter {
   /** この追加パネルが誰のものか（キャッシュのキーはこれで区切る） */

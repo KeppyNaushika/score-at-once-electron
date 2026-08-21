@@ -9,9 +9,14 @@
  *
  * ここで固定するのは「チェックが付いている学級は候補から消えても出し続ける・
  * 人数は0名・外した瞬間に消える・0名でも追加の対象に入る」の4点。
+ *
+ * 後半は「個別で追加」タブ。こちらは絞り込み（検索語・学級プルダウン）で画面から
+ * 消えるが、**追加と件数は絞り込み前の選択から作られる**ので、見ていない生徒が入り、
+ * しかも件数には出ていた。選択したものが全部画面のどこかに出ていること
+ * （＝件数と追加の対象が、見えているものと一致すること）を固定する。
  */
 
-import type { Student } from "@prisma/client"
+import type { Classroom, Student } from "@prisma/client"
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
@@ -43,12 +48,8 @@ function buildStudent(id: string, lastName: string): Student {
   }
 }
 
-function buildClassroom(
-  id: string,
-  name: string,
-  students: Student[]
-): ClassroomWithMemberships {
-  const classroom = {
+function buildClassroomRow(id: string, name: string): Classroom {
+  return {
     id,
     name,
     classroomCode: null,
@@ -58,8 +59,15 @@ function buildClassroom(
     createdAt: NOW,
     updatedAt: NOW,
   }
+}
+
+function buildClassroom(
+  id: string,
+  name: string,
+  students: Student[]
+): ClassroomWithMemberships {
   return {
-    ...classroom,
+    ...buildClassroomRow(id, name),
     memberships: students.map((student, index) => ({
       id: `membership-${id}-${student.id}`,
       studentId: student.id,
@@ -242,5 +250,191 @@ describe("useStudentAddPanel の学級選択と在籍スイッチ", () => {
     )
     // 追加が済んだら控えも落とす
     expect(result.current.selectedClassrooms).toHaveLength(0)
+  })
+})
+
+const CLASSROOM_A = buildClassroomRow("classroom-a", "1年A組")
+const CLASSROOM_B = buildClassroomRow("classroom-b", "1年B組")
+const STUDENT_TANAKA = buildStudent("student-tanaka", "田中")
+const STUDENT_SATO = buildStudent("student-sato", "佐藤")
+
+function buildStudentInClassroom(
+  student: Student,
+  classroom: Classroom
+): StudentWithMemberships {
+  return {
+    ...student,
+    memberships: [
+      {
+        id: `membership-${classroom.id}-${student.id}`,
+        studentId: student.id,
+        classroomId: classroom.id,
+        startDate: NOW,
+        endDate: null,
+        attendanceNumber: 1,
+        notes: null,
+        createdAt: NOW,
+        updatedAt: NOW,
+        classroom,
+      },
+    ],
+  }
+}
+
+/** 学級違いの生徒2人を返すアダプタ（検索語でも学級でも片方だけに絞れる） */
+function createStudentTabAdapter() {
+  const addStudents = vi
+    .fn<StudentAddPanelAdapter["addStudents"]>()
+    .mockResolvedValue(undefined)
+  const adapter: StudentAddPanelAdapter = {
+    scopeId: "exam-students",
+    fetchAvailableClassrooms: () =>
+      Promise.resolve([
+        buildClassroom(CLASSROOM_A.id, CLASSROOM_A.name, [STUDENT_TANAKA]),
+        buildClassroom(CLASSROOM_B.id, CLASSROOM_B.name, [STUDENT_SATO]),
+      ]),
+    fetchAvailableStudents: () =>
+      Promise.resolve([
+        buildStudentInClassroom(STUDENT_TANAKA, CLASSROOM_A),
+        buildStudentInClassroom(STUDENT_SATO, CLASSROOM_B),
+      ]),
+    addClassrooms: () => Promise.resolve(),
+    addStudents,
+  }
+  return { adapter, addStudents }
+}
+
+/**
+ * 画面のどこかに出ている生徒（上段＝絞り込みに一致・下段＝絞り込みから外れた選択済み）。
+ *
+ * 選択したものがここに揃っているか、が「見ていないものが入る」を防ぐ条件そのもの。
+ */
+function visibleStudentIds(result: PanelResult) {
+  return [
+    ...result.current.filteredStudents,
+    ...result.current.selectedStudentsOutsideFilter,
+  ].map((student) => student.id)
+}
+
+function selectedStudentsOutsideFilterIds(result: PanelResult) {
+  return result.current.selectedStudentsOutsideFilter.map(
+    (student) => student.id
+  )
+}
+
+async function renderStudentTab(adapter: StudentAddPanelAdapter) {
+  const { result } = renderStudentAddPanel(adapter)
+  await waitFor(() => expect(result.current.filteredStudents).toHaveLength(2))
+  return result
+}
+
+describe("useStudentAddPanel の生徒選択と絞り込み", () => {
+  it("検索語から外れた選択済みの生徒を下段に出す", async () => {
+    const { adapter } = createStudentTabAdapter()
+    const result = await renderStudentTab(adapter)
+
+    act(() => {
+      result.current.handleStudentSelection(STUDENT_TANAKA.id, true)
+    })
+    act(() => {
+      result.current.setSearchTerm("佐藤")
+    })
+
+    // 上段は絞り込みに一致した佐藤だけ。田中は下段へ回り、画面から消えない
+    expect(
+      result.current.filteredStudents.map((student) => student.id)
+    ).toEqual([STUDENT_SATO.id])
+    expect(selectedStudentsOutsideFilterIds(result)).toEqual([
+      STUDENT_TANAKA.id,
+    ])
+    expect(result.current.selectedStudentCount).toBe(1)
+    expect(visibleStudentIds(result)).toContain(STUDENT_TANAKA.id)
+  })
+
+  it("学級のプルダウンも検索語と同じに扱う", async () => {
+    const { adapter } = createStudentTabAdapter()
+    const result = await renderStudentTab(adapter)
+
+    act(() => {
+      result.current.handleStudentSelection(STUDENT_TANAKA.id, true)
+    })
+    act(() => {
+      result.current.setFilterClassroomId(CLASSROOM_B.id)
+    })
+
+    expect(
+      result.current.filteredStudents.map((student) => student.id)
+    ).toEqual([STUDENT_SATO.id])
+    expect(selectedStudentsOutsideFilterIds(result)).toEqual([
+      STUDENT_TANAKA.id,
+    ])
+  })
+
+  it("絞り込みが空なら下段は空で、一覧は1つのまま", async () => {
+    const { adapter } = createStudentTabAdapter()
+    const result = await renderStudentTab(adapter)
+
+    act(() => {
+      result.current.handleStudentSelection(STUDENT_TANAKA.id, true)
+      result.current.handleStudentSelection(STUDENT_SATO.id, true)
+    })
+
+    expect(result.current.filteredStudents).toHaveLength(2)
+    expect(result.current.selectedStudentsOutsideFilter).toHaveLength(0)
+  })
+
+  it("下段でチェックを外すと消え、件数も減る", async () => {
+    const { adapter } = createStudentTabAdapter()
+    const result = await renderStudentTab(adapter)
+
+    act(() => {
+      result.current.handleStudentSelection(STUDENT_TANAKA.id, true)
+    })
+    act(() => {
+      result.current.setSearchTerm("佐藤")
+    })
+    act(() => {
+      result.current.handleStudentSelection(STUDENT_SATO.id, true)
+    })
+    expect(result.current.selectedStudentCount).toBe(2)
+
+    act(() => {
+      result.current.handleStudentSelection(STUDENT_TANAKA.id, false)
+    })
+
+    expect(result.current.selectedStudentsOutsideFilter).toHaveLength(0)
+    expect(result.current.selectedStudentCount).toBe(1)
+    expect(visibleStudentIds(result)).toEqual([STUDENT_SATO.id])
+  })
+
+  it("追加するのは、そのとき画面に出ている選択そのもの", async () => {
+    const { adapter, addStudents } = createStudentTabAdapter()
+    const result = await renderStudentTab(adapter)
+
+    act(() => {
+      result.current.handleStudentSelection(STUDENT_TANAKA.id, true)
+    })
+    act(() => {
+      result.current.setSearchTerm("佐藤")
+    })
+    act(() => {
+      result.current.handleStudentSelection(STUDENT_SATO.id, true)
+    })
+
+    // 押す前に、件数に出ている2人が両方とも画面のどこかに出ている
+    expect(result.current.selectedStudentCount).toBe(2)
+    expect(visibleStudentIds(result)).toEqual(
+      expect.arrayContaining([STUDENT_TANAKA.id, STUDENT_SATO.id])
+    )
+
+    await act(async () => {
+      await result.current.handleAddStudents()
+    })
+
+    expect(addStudents).toHaveBeenCalledWith([
+      STUDENT_TANAKA.id,
+      STUDENT_SATO.id,
+    ])
+    expect(result.current.selectedStudentCount).toBe(0)
   })
 })

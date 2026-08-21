@@ -3,6 +3,7 @@
 import { Plus, Search, UserPlus } from "lucide-react"
 
 import { SortableClassroomList } from "@/components/common/student-add-panel/components/SortableClassroomList"
+import { StudentCandidateCard } from "@/components/common/student-add-panel/components/StudentCandidateCard"
 import { useStudentAddPanel } from "@/components/common/student-add-panel/hooks/useStudentAddPanel"
 import type { StudentAddPanelProps } from "@/components/common/student-add-panel/types"
 import { Badge } from "@/components/ui/badge"
@@ -52,6 +53,7 @@ export function StudentAddPanel({
     classrooms,
     selectedClassrooms,
     filteredStudents,
+    selectedStudentsOutsideFilter,
     searchTerm,
     setSearchTerm,
     filterClassroomId,
@@ -97,9 +99,12 @@ export function StudentAddPanel({
     }
   })()
 
+  /** 個別タブの絞り込みが入っているか（検索語・学級プルダウンは同じ扱い） */
+  const hasStudentFilter = searchTerm !== "" || filterClassroomId !== "all"
+
   // 生徒候補が空のときの理由別メッセージ（スイッチ状態で文言を変える）
   const studentEmptyMessage = (() => {
-    if (searchTerm || filterClassroomId !== "all") {
+    if (hasStudentFilter) {
       return "該当する生徒が見つかりません"
     }
     switch (studentEmptyReason) {
@@ -281,12 +286,9 @@ export function StudentAddPanel({
 
         <Card className={fillHeight ? "flex min-h-0 flex-1 flex-col" : ""}>
           <CardHeader>
-            <CardTitle className="text-lg">
-              利用可能な生徒 ({filteredStudents.length}名)
-            </CardTitle>
-            <CardDescription>
-              追加したい生徒を検索・選択してください
-            </CardDescription>
+            {/* 数は見出しに置かない（何を数えた N なのかが曖昧になる）。
+                段ごとの見出しへ「該当 N名」「選択中 N名」として付ける */}
+            <CardTitle className="text-lg">生徒を選ぶ</CardTitle>
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="relative">
                 <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
@@ -321,53 +323,46 @@ export function StudentAddPanel({
           <CardContent className={studentListContentClass}>
             {loadingStudents ? (
               <div className="py-4 text-center">読み込み中...</div>
-            ) : filteredStudents.length === 0 ? (
-              <div className="py-4 text-center text-muted-foreground">
-                {studentEmptyMessage}
-              </div>
             ) : (
-              <div className="space-y-2">
-                {filteredStudents.map((student) => (
-                  <Card key={student.id} className="p-3">
-                    <div className="flex items-center space-x-3">
-                      <Checkbox
-                        id={`add-student-${student.id}`}
-                        checked={student.isSelected}
-                        onCheckedChange={(checked) =>
-                          handleStudentSelection(student.id, checked === true)
-                        }
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <label
-                            htmlFor={`add-student-${student.id}`}
-                            className="cursor-pointer"
-                          >
-                            <div className="font-medium">
-                              {student.lastName} {student.firstName}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {student.studentNumber}
-                            </div>
-                          </label>
-                          <div className="text-right">
-                            <div className="text-sm font-medium">
-                              {student.memberships[0]?.classroom.name ||
-                                "未所属"}
-                            </div>
-                            {student.memberships[0]?.attendanceNumber !=
-                              null && (
-                              <div className="text-xs text-muted-foreground">
-                                出席番号:{" "}
-                                {student.memberships[0].attendanceNumber}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+              <div className="space-y-4">
+                {filteredStudents.length === 0 ? (
+                  <div className="py-4 text-center text-muted-foreground">
+                    {studentEmptyMessage}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {/* 絞り込みが入っていないときは段が1つなので「N名」とだけ出す */}
+                    <div className="text-sm font-medium text-muted-foreground">
+                      {hasStudentFilter ? "該当 " : ""}
+                      {filteredStudents.length}名
                     </div>
-                  </Card>
-                ))}
+                    {filteredStudents.map((student) => (
+                      <StudentCandidateCard
+                        key={student.id}
+                        student={student}
+                        onSelectionChange={handleStudentSelection}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* 絞り込みから外れた選択済みの生徒。追加も件数も選択そのものから
+                    作るので、ここに出しておかないと「見ていないものが入る」。
+                    絞り込みが空のときは全員が上段に出るので、この段は現れない */}
+                {selectedStudentsOutsideFilter.length > 0 && (
+                  <div className="space-y-2 border-t pt-4">
+                    <div className="text-sm font-medium text-muted-foreground">
+                      選択中 {selectedStudentsOutsideFilter.length}名
+                    </div>
+                    {selectedStudentsOutsideFilter.map((student) => (
+                      <StudentCandidateCard
+                        key={student.id}
+                        student={student}
+                        onSelectionChange={handleStudentSelection}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

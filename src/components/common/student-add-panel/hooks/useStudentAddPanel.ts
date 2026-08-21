@@ -7,6 +7,7 @@ import { useCallback, useMemo, useState } from "react"
 
 import type {
   AddPanelClassroomCandidate,
+  SelectableStudent,
   StudentAddPanelAdapter,
 } from "@/components/common/student-add-panel/types"
 import { isCurrentMembership } from "@/lib/membership"
@@ -16,10 +17,6 @@ import type {
   ClassroomWithMemberships,
   StudentWithMemberships,
 } from "@/types/prismaExtensions"
-
-interface SelectableStudent extends StudentWithMemberships {
-  isSelected: boolean
-}
 
 /**
  * この学級から追加できる生徒を集める。
@@ -325,7 +322,8 @@ export function useStudentAddPanel({
     }
   }
 
-  const filteredStudents = students.filter((student) => {
+  /** 検索語（氏名・ふりがな・学籍番号）と学級プルダウンの両方に一致するか */
+  const matchesStudentFilter = (student: SelectableStudent) => {
     const fullName = `${student.lastName} ${student.firstName}`.toLowerCase()
     const fullKana =
       `${student.lastNameKana} ${student.firstNameKana}`.toLowerCase()
@@ -340,7 +338,22 @@ export function useStudentAddPanel({
         (membership) => membership.classroom.id === filterClassroomId
       )
     return matchesSearch && matchesClassroom
-  })
+  }
+
+  const filteredStudents = students.filter(matchesStudentFilter)
+  /**
+   * 選んだのに絞り込みから外れた生徒。
+   *
+   * 追加も件数も選択そのもの（`students` のチェック）から作るので、絞り込みで画面から
+   * 消えると「見ていないものが入り、しかも件数には出ている」状態になる。ここへ出して
+   * 見えるようにすることで、追加と件数の実装はそのままで食い違わなくなる。
+   *
+   * 絞り込みが空（検索語なし・学級が all）のときは全員が一致するので、これは空になり
+   * 画面は1つの一覧のままになる。
+   */
+  const selectedStudentsOutsideFilter = students.filter(
+    (student) => student.isSelected && !matchesStudentFilter(student)
+  )
 
   const selectedClassrooms = classrooms.filter(
     (candidate) => candidate.isSelected
@@ -356,6 +369,7 @@ export function useStudentAddPanel({
     classrooms,
     selectedClassrooms,
     filteredStudents,
+    selectedStudentsOutsideFilter,
     searchTerm,
     setSearchTerm,
     filterClassroomId,
