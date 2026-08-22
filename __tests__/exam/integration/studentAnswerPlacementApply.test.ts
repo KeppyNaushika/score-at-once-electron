@@ -121,12 +121,28 @@ describe("applyStudentAnswerPlacements", () => {
       },
     ])
 
-    // 画像の examStudentId が入れ替わり、ページは p1 のまま
-    const imgAfterA = await testPrisma.studentAnswerImage.findUniqueOrThrow({
-      where: { id: image(page1.id, examStudentA.id).id },
-    })
-    expect(imgAfterA.examStudentId).toBe(examStudentB.id)
-    expect(imgAfterA.examPageId).toBe(page1.id)
+    // 答案画像が入れ替わり、ページは p1 のまま。
+    //
+    // **行はマスに留まり、中身（imagePath）が動く。** `StudentAnswerImage` は
+    // `@@unique([examPageId, examStudentId])` を持つので、入れ替えを「行の unique キーの
+    // 書き換え」で表すと途中で必ず2行が同じマスに乗る。相手の端末は変更を1件ずつ当てるため、
+    // その途中の状態が unique 違反になって取り込みが丸ごと巻き戻り、その相手からの同期が
+    // 永久に止まる（実測: `__tests__/sync/studentAnswerPlacementSync.test.ts`）。
+    // だから見るのは「どのマスにどの画像が入ったか」で、行のidの居場所ではない。
+    const imageAtStudentB =
+      await testPrisma.studentAnswerImage.findFirstOrThrow({
+        where: { examPageId: page1.id, examStudentId: examStudentB.id },
+      })
+    const imageAtStudentA =
+      await testPrisma.studentAnswerImage.findFirstOrThrow({
+        where: { examPageId: page1.id, examStudentId: examStudentA.id },
+      })
+    expect(imageAtStudentB.imagePath).toBe(
+      image(page1.id, examStudentA.id).imagePath
+    )
+    expect(imageAtStudentA.imagePath).toBe(
+      image(page1.id, examStudentB.id).imagePath
+    )
 
     // 採点が examStudentId 付け替えで追従（行=id は保持）
     const scoreAAfter = await testPrisma.questionScore.findUniqueOrThrow({
@@ -241,16 +257,24 @@ describe("applyStudentAnswerPlacements", () => {
     expect(afterCarry[0].id).toBe(compoundScoreA.id)
 
     // ページ跨ぎ（discard）で複合採点は破棄される。
-    // carry 後この画像は B のもの。p2×B と入れ替える形で p1→p2 へ動かす。
+    // carry 後 (p1,B) のマスに A の答案が入っている。そのマスと (p2,B) を入れ替える。
+    // 入れ替えで行はマスに留まるので、動かす対象は fixture のidではなく**今そのマスに
+    // 座っている行**から引く。
+    const imageAtPage1B = await testPrisma.studentAnswerImage.findFirstOrThrow({
+      where: { examPageId: page1.id, examStudentId: examStudentB.id },
+    })
+    const imageAtPage2B = await testPrisma.studentAnswerImage.findFirstOrThrow({
+      where: { examPageId: page2.id, examStudentId: examStudentB.id },
+    })
     await applyStudentAnswerPlacements([
       {
-        fileId: image(page1.id, examStudentA.id).id,
+        fileId: imageAtPage1B.id,
         finalExamStudentId: examStudentB.id,
         finalExamPageId: page2.id,
         scorePolicy: "discard",
       },
       {
-        fileId: image(page2.id, examStudentB.id).id,
+        fileId: imageAtPage2B.id,
         finalExamStudentId: examStudentB.id,
         finalExamPageId: page1.id,
         scorePolicy: "discard",
@@ -286,15 +310,16 @@ describe("applyStudentAnswerPlacements", () => {
       },
     ])
 
-    // examPageId が実際に更新される（旧 batchUpdate は無視していた核心バグの修正）
-    const imgP1AAfter = await testPrisma.studentAnswerImage.findUniqueOrThrow({
-      where: { id: imgP1A.id },
+    // ページを跨いで実際に入れ替わる（旧 batchUpdate は finalPageNumber を無視していた）。
+    // 入れ替えでは行がマスに留まり中身が動くので、見るのは各マスの imagePath。
+    const imageAtPage2 = await testPrisma.studentAnswerImage.findFirstOrThrow({
+      where: { examPageId: page2.id, examStudentId: examStudentA.id },
     })
-    const imgP2AAfter = await testPrisma.studentAnswerImage.findUniqueOrThrow({
-      where: { id: imgP2A.id },
+    const imageAtPage1 = await testPrisma.studentAnswerImage.findFirstOrThrow({
+      where: { examPageId: page1.id, examStudentId: examStudentA.id },
     })
-    expect(imgP1AAfter.examPageId).toBe(page2.id)
-    expect(imgP2AAfter.examPageId).toBe(page1.id)
+    expect(imageAtPage2.imagePath).toBe(imgP1A.imagePath)
+    expect(imageAtPage1.imagePath).toBe(imgP2A.imagePath)
 
     // A の r1・r2 採点は破棄
     expect(

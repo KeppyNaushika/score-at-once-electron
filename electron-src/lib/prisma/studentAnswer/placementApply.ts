@@ -6,43 +6,47 @@
  * - 採点はページ scoped: 移動元ページの CropRegion / CompoundAnswer × 現生徒の
  *   QuestionScore / ScoreDecision / CompoundAnswerScore のみ対象。
  * - carry（追従・同一ページのみ）:
- *   - QuestionScore は unique が無いので **id 指定の updateMany で examStudentId 付け替え**（id 保持 →
- *     子の DrawingAnnotation を温存。swap も id 指定なので途中衝突なし）。
- *   - ScoreDecision は `@@unique([cropRegionId, examStudentId])` があるため **delete → 最終位置へ再作成**。
- *   - CompoundAnswerScore も `@@unique([compoundAnswerId, examStudentId])` があるため同じく再作成方式。
+ *   - QuestionScore は unique が無いので **id 指定の updateMany で examStudentId 付け替え**
+ *     （id 保持 → 子の DrawingAnnotation を温存）。
+ *   - unique を持つ ScoreDecision / CompoundAnswerScore / StudentAnswerImage は
+ *     `slotPermutation.ts` の計画に従う（移動先が空くなら行ごと動かし、空かない輪は
+ *     行をスロットに残して中身だけ回す）。**削除→再作成はしない**。
  * - discard: 各スコア表（QuestionScore / ScoreDecision / CompoundAnswerScore）を削除。
  *   DrawingAnnotation は QuestionScore の cascade で道連れになる。
  * - **移動先セルの残存採点を掃除**: 移動先 (finalExamStudentId, 移動先ページの CropRegion /
  *   CompoundAnswer) に既存の採点があり、それが「移動してくる採点（moving 集合）」でない場合は
  *   stale として削除する（さもないと carry で QuestionScore が二重計上、ScoreDecision と
  *   CompoundAnswerScore は unique 違反になる）。
- * - 画像は `@@unique([examPageId, examStudentId])` の 2-cycle を避けるため **delete → 同一 id で再作成**。
  * - ガード: carry かつページ変化はエラー。finalExamStudentId=null（削除）は不可（削除は別操作）。
  *   移動先が batch 外の答案で占有されている場合もエラー（上書きはしない）。
  *
- * いずれも基本的な Prisma 操作のみ（findMany/updateMany/deleteMany/createMany）。
+ * いずれも基本的な Prisma 操作のみ（findMany/updateMany/deleteMany/update）。
  *
  * ## 前提（実コードで確認済み・崩すと壊れる）
  *
  * - **FK は実行時強制**。衝突回避のために偽IDの一時レコードを挟む方式は FK 違反で壊れる
  *   （旧 `batchUpdateStudentAnswerPlacements`/`swap*` がそれで破綻していた）。
- *   本APIが一時IDを使わず delete → 再作成で表現しているのはこのため。
- * - **delete → 同一 id での再作成は sqlite-nas-sync 上で安全**。`sync.ts` の tombstone-ignore が
- *   「現存すれば再作成とみなす」ため、削除が同期先で復活を潰さない。**必ず id を保持すること**
- *   （新しい id を振ると別レコードとして増える）。
- * - 二次 `@@unique`（`[cropRegionId, examStudentId]` 等）の衝突は `conflict.ts` ケース2 が
- *   LWW で単一行に収束させる。**ただしこれは「敗者行に子がいない場合に限る」**（実測:
- *   docs/sync-secondary-unique-hazard.md）。敗者に子がいると、その子はカスケードで消え、
- *   さらに負けた側ではなく**勝った側の端末**が子の INSERT で外部キー違反を起こして取り込みが
- *   丸ごと巻き戻り、**その相手からの以後すべての変更が永久に届かなくなる**。ここで扱う
- *   `ScoreDecision` / `CompoundAnswerScore` / `StudentAnswerImage` はいずれも子を持たないので
- *   該当しないが、「全表汎用だから個別対応は不要」とは言えない（該当は10モデル、最重は
- *   `ExamStudent`）。
+ * - **delete → 同一 id での再作成は NAS 同期を越えられない**（2026-08 実測。
+ *   `__tests__/sync/studentAnswerPlacementSync.test.ts`）。`sqlite-nas-sync` の
+ *   `deduplicateEntries` が同じ (表, id) のエントリを最後の1件へ畳むため、相手には
+ *   **INSERT 1件**しか届かず、相手はそれを主キー衝突として `applyInsert` のケース1
+ *   （素の UPDATE）で当てる。そこがセカンダリ unique に当たると例外が catch されず、
+ *   取り込みが丸ごと巻き戻り `lastSeenId` も進まない ＝ **その相手からの変更が以後
+ *   永久に届かなくなる**。実測では「生徒swap」と「相手が移動先に自分の行を持っていた」の
+ *   両方で `UNIQUE constraint failed: ScoreDecision.cropRegionId, ScoreDecision.examStudentId`
+ *   が出て同期が止まった。ここに削除→再作成を戻してはいけない。
+ * - 上と同じ理由で、**入れ替え（輪）を unique キーの書き換えで表現することもできない**。
+ *   相手は変更を1件ずつ当てるので、どの順でも途中で2行が同じスロットに乗る。輪だけは
+ *   「行をスロットに残して中身を回す」以外に手が無い（`slotPermutation.ts` 参照）。
+ * - 二次 `@@unique` の衝突そのものは `conflict.ts` の `applyUpdate` が LWW で畳んでくれる。
+ *   **ただしこれは「敗者行に子がいない場合に限る」**（実測: docs/sync-secondary-unique-hazard.md）。
+ *   ここで扱う `ScoreDecision` / `CompoundAnswerScore` / `StudentAnswerImage` はいずれも
+ *   子を持たないので該当しないが、「全表汎用だから個別対応は不要」とは言えない
+ *   （該当は10モデル、最重は `ExamStudent`）。
  */
-import type { Prisma } from "@prisma/client"
-
 import prisma from "../client"
 import { getPageScoreScope, type PageScoreScope } from "./pageScope"
+import { planSlotPermutation, type SlotOccupant } from "./slotPermutation"
 
 /**
  * 移動1件ごとの採点データ処理方針（view 方式B）。
@@ -57,6 +61,10 @@ export interface StudentAnswerPlacementMove {
   finalExamPageId: string
   scorePolicy: PlacementScorePolicy
 }
+
+/** 答案画像のスロット（`@@unique([examPageId, examStudentId])`）を1つの文字列で表す */
+const imageSlot = (examPageId: string, examStudentId: string): string =>
+  `${examPageId}|${examStudentId}`
 
 /**
  * 複数の答案配置を採点安全に一括適用する。
@@ -82,7 +90,7 @@ export async function applyStudentAnswerPlacements(
 
   await prisma.$transaction(
     async (tx) => {
-      // 1. 現在の配置を取得（再作成のため imagePath/createdAt も保持）
+      // 1. 現在の配置を取得
       const currentAnswers = await Promise.all(
         moves.map((move) =>
           tx.studentAnswerImage.findUnique({
@@ -171,19 +179,14 @@ export async function applyStudentAnswerPlacements(
         }
       }
 
-      // 3. 移動する採点（source）の収集。moving 集合も作る（移動先掃除で使う）。
+      // 3. 削除対象の収集。moving 集合も作る（移動先掃除で「動いてくる行」を除くのに使う）。
       const questionScoreIdsToDelete: string[] = [] // discard source + stale destination
-      const scoreDecisionIdsToDelete: string[] = [] // discard/carry source + stale destination
+      const scoreDecisionIdsToDelete: string[] = [] // discard source + stale destination
+      const compoundAnswerScoreIdsToDelete: string[] = []
       const questionScoreCarryUpdates: Array<{
         ids: string[]
         finalExamStudentId: string
       }> = []
-      const scoreDecisionsToRecreate: Prisma.ScoreDecisionCreateManyInput[] = []
-      // 複合回答も CropRegion と同じくページ scoped。`@@unique([compoundAnswerId, examStudentId])`
-      // があるため ScoreDecision と同様 delete → 再作成で付け替える。
-      const compoundAnswerScoreIdsToDelete: string[] = []
-      const compoundAnswerScoresToRecreate: Prisma.CompoundAnswerScoreCreateManyInput[] =
-        []
       const movingQuestionScoreIds = new Set<string>()
       const movingScoreDecisionIds = new Set<string>()
       const movingCompoundAnswerScoreIds = new Set<string>()
@@ -193,6 +196,8 @@ export async function applyStudentAnswerPlacements(
         cropRegionIds: string[]
         compoundAnswerIds: string[]
       }> = []
+      /** carry が表すスロット置換（同一ページ内なので受験者の置換になる） */
+      const carryDestinationsByPage = new Map<string, Map<string, string>>()
 
       // ページ scope は crud.ts の削除と共有（getPageScoreScope）。同じページを何度も
       // 引かないようトランザクション内でキャッシュする。
@@ -216,6 +221,14 @@ export async function applyStudentAnswerPlacements(
           compoundAnswerIds: targetScope.compoundAnswerIds,
         })
 
+        if (plan.move.scorePolicy === "carry") {
+          const destinations =
+            carryDestinationsByPage.get(plan.targetExamPageId) ??
+            new Map<string, string>()
+          destinations.set(plan.current.examStudentId, plan.finalExamStudentId)
+          carryDestinationsByPage.set(plan.targetExamPageId, destinations)
+        }
+
         // 複合回答の採点（carry は同一ページ限定なので compoundAnswerId はそのまま使える）
         if (sourceCompoundAnswerIds.length > 0) {
           const compoundAnswerScores = await tx.compoundAnswerScore.findMany({
@@ -227,23 +240,11 @@ export async function applyStudentAnswerPlacements(
           compoundAnswerScores.forEach((compoundAnswerScore) =>
             movingCompoundAnswerScoreIds.add(compoundAnswerScore.id)
           )
-          compoundAnswerScoreIdsToDelete.push(
-            ...compoundAnswerScores.map(
-              (compoundAnswerScore) => compoundAnswerScore.id
-            )
-          )
-          if (plan.move.scorePolicy === "carry") {
-            compoundAnswerScoresToRecreate.push(
-              ...compoundAnswerScores.map((compoundAnswerScore) => ({
-                id: compoundAnswerScore.id,
-                compoundAnswerId: compoundAnswerScore.compoundAnswerId,
-                examStudentId: plan.finalExamStudentId,
-                userId: compoundAnswerScore.userId,
-                recognizedAnswer: compoundAnswerScore.recognizedAnswer,
-                status: compoundAnswerScore.status,
-                partialScore: compoundAnswerScore.partialScore,
-                createdAt: compoundAnswerScore.createdAt,
-              }))
+          if (plan.move.scorePolicy === "discard") {
+            compoundAnswerScoreIdsToDelete.push(
+              ...compoundAnswerScores.map(
+                (compoundAnswerScore) => compoundAnswerScore.id
+              )
             )
           }
         }
@@ -276,31 +277,13 @@ export async function applyStudentAnswerPlacements(
           scoreDecisionIdsToDelete.push(
             ...scoreDecisions.map((scoreDecision) => scoreDecision.id)
           )
-        } else {
-          // carry: QuestionScore は id 指定で examStudentId 付け替え（注釈を温存）
-          if (questionScores.length > 0) {
-            questionScoreCarryUpdates.push({
-              ids: questionScores.map((questionScore) => questionScore.id),
-              finalExamStudentId: plan.finalExamStudentId,
-            })
-          }
-          // ScoreDecision は unique 回避のため delete → id 保持で最終位置へ再作成
-          scoreDecisionIdsToDelete.push(
-            ...scoreDecisions.map((scoreDecision) => scoreDecision.id)
-          )
-          scoreDecisionsToRecreate.push(
-            ...scoreDecisions.map((scoreDecision) => ({
-              id: scoreDecision.id,
-              cropRegionId: scoreDecision.cropRegionId,
-              examStudentId: plan.finalExamStudentId,
-              verdict: scoreDecision.verdict,
-              score: scoreDecision.score,
-              comment: scoreDecision.comment,
-              decidedByUserId: scoreDecision.decidedByUserId,
-              decidedAt: scoreDecision.decidedAt,
-              createdAt: scoreDecision.createdAt,
-            }))
-          )
+        } else if (questionScores.length > 0) {
+          // carry: QuestionScore は id 指定で examStudentId 付け替え（注釈を温存）。
+          // unique が無いので途中で衝突しない — swap も2連発でよい。
+          questionScoreCarryUpdates.push({
+            ids: questionScores.map((questionScore) => questionScore.id),
+            finalExamStudentId: plan.finalExamStudentId,
+          })
         }
       }
 
@@ -346,10 +329,21 @@ export async function applyStudentAnswerPlacements(
         }
       }
 
-      // 4. QuestionScore を削除（DrawingAnnotation は cascade で道連れ）
+      // 4. 削除（QuestionScore の DrawingAnnotation は cascade で道連れ）。
+      //    carry の置換より先に済ませて、移動先スロットを空けておく。
       if (questionScoreIdsToDelete.length > 0) {
         await tx.questionScore.deleteMany({
           where: { id: { in: questionScoreIdsToDelete } },
+        })
+      }
+      if (scoreDecisionIdsToDelete.length > 0) {
+        await tx.scoreDecision.deleteMany({
+          where: { id: { in: scoreDecisionIdsToDelete } },
+        })
+      }
+      if (compoundAnswerScoreIdsToDelete.length > 0) {
+        await tx.compoundAnswerScore.deleteMany({
+          where: { id: { in: compoundAnswerScoreIdsToDelete } },
         })
       }
 
@@ -361,44 +355,166 @@ export async function applyStudentAnswerPlacements(
         })
       }
 
-      // 6. ScoreDecision: 対象を削除 → carry 分を最終位置へ再作成（unique 回避）
-      if (scoreDecisionIdsToDelete.length > 0) {
-        await tx.scoreDecision.deleteMany({
-          where: { id: { in: scoreDecisionIdsToDelete } },
+      // 6. carry の ScoreDecision / CompoundAnswerScore: unique を壊さない手順で置換する。
+      //    削除は済んでいるので、ここで見える行がそのままスロットの住人になる。
+      for (const [examPageId, destinations] of carryDestinationsByPage) {
+        const scope = await getScope(examPageId)
+        const involvedExamStudentIds = Array.from(
+          new Set([...destinations.keys(), ...destinations.values()])
+        )
+
+        if (scope.cropRegionIds.length > 0) {
+          const scoreDecisions = await tx.scoreDecision.findMany({
+            where: {
+              cropRegionId: { in: scope.cropRegionIds },
+              examStudentId: { in: involvedExamStudentIds },
+            },
+          })
+          const scoreDecisionById = new Map(
+            scoreDecisions.map((scoreDecision) => [
+              scoreDecision.id,
+              scoreDecision,
+            ])
+          )
+          const occupantsByCropRegion = new Map<string, SlotOccupant[]>()
+          for (const scoreDecision of scoreDecisions) {
+            const occupants =
+              occupantsByCropRegion.get(scoreDecision.cropRegionId) ?? []
+            occupants.push({
+              rowId: scoreDecision.id,
+              slot: scoreDecision.examStudentId,
+            })
+            occupantsByCropRegion.set(scoreDecision.cropRegionId, occupants)
+          }
+
+          for (const occupants of occupantsByCropRegion.values()) {
+            const permutation = planSlotPermutation(occupants, destinations)
+            for (const keyMove of permutation.keyMoves) {
+              await tx.scoreDecision.update({
+                where: { id: keyMove.rowId },
+                data: { examStudentId: keyMove.toSlot },
+              })
+            }
+            for (const payloadCopy of permutation.payloadCopies) {
+              const source = scoreDecisionById.get(payloadCopy.fromRowId)!
+              await tx.scoreDecision.update({
+                where: { id: payloadCopy.intoRowId },
+                data: {
+                  verdict: source.verdict,
+                  score: source.score,
+                  comment: source.comment,
+                  decidedByUserId: source.decidedByUserId,
+                  decidedAt: source.decidedAt,
+                  createdAt: source.createdAt,
+                },
+              })
+            }
+          }
+        }
+
+        if (scope.compoundAnswerIds.length === 0) continue
+        const compoundAnswerScores = await tx.compoundAnswerScore.findMany({
+          where: {
+            compoundAnswerId: { in: scope.compoundAnswerIds },
+            examStudentId: { in: involvedExamStudentIds },
+          },
         })
-      }
-      if (scoreDecisionsToRecreate.length > 0) {
-        await tx.scoreDecision.createMany({ data: scoreDecisionsToRecreate })
+        const compoundAnswerScoreById = new Map(
+          compoundAnswerScores.map((compoundAnswerScore) => [
+            compoundAnswerScore.id,
+            compoundAnswerScore,
+          ])
+        )
+        const occupantsByCompoundAnswer = new Map<string, SlotOccupant[]>()
+        for (const compoundAnswerScore of compoundAnswerScores) {
+          const occupants =
+            occupantsByCompoundAnswer.get(
+              compoundAnswerScore.compoundAnswerId
+            ) ?? []
+          occupants.push({
+            rowId: compoundAnswerScore.id,
+            slot: compoundAnswerScore.examStudentId,
+          })
+          occupantsByCompoundAnswer.set(
+            compoundAnswerScore.compoundAnswerId,
+            occupants
+          )
+        }
+
+        for (const occupants of occupantsByCompoundAnswer.values()) {
+          const permutation = planSlotPermutation(occupants, destinations)
+          for (const keyMove of permutation.keyMoves) {
+            await tx.compoundAnswerScore.update({
+              where: { id: keyMove.rowId },
+              data: { examStudentId: keyMove.toSlot },
+            })
+          }
+          for (const payloadCopy of permutation.payloadCopies) {
+            const source = compoundAnswerScoreById.get(payloadCopy.fromRowId)!
+            await tx.compoundAnswerScore.update({
+              where: { id: payloadCopy.intoRowId },
+              data: {
+                userId: source.userId,
+                recognizedAnswer: source.recognizedAnswer,
+                status: source.status,
+                partialScore: source.partialScore,
+                createdAt: source.createdAt,
+              },
+            })
+          }
+        }
       }
 
-      // 6b. CompoundAnswerScore: 同様に削除 → carry 分を最終位置へ再作成
-      if (compoundAnswerScoreIdsToDelete.length > 0) {
-        await tx.compoundAnswerScore.deleteMany({
-          where: { id: { in: compoundAnswerScoreIdsToDelete } },
-        })
-      }
-      if (compoundAnswerScoresToRecreate.length > 0) {
-        await tx.compoundAnswerScore.createMany({
-          data: compoundAnswerScoresToRecreate,
-        })
-      }
-
-      // 7. 画像移動: delete → 同一 id で再作成（2-cycle 回避、id/imagePath/createdAt 保持）
-      await tx.studentAnswerImage.deleteMany({
-        where: { id: { in: batchFileIds } },
-      })
-      await tx.studentAnswerImage.createMany({
-        data: plans.map((plan) => ({
-          id: plan.move.fileId,
+      // 7. 答案画像も同じ手順で置換する（`@@unique([examPageId, examStudentId])`）。
+      //    ページ跨ぎもあるのでスロットは (ページ, 受験者) の組。
+      const imageDestinations = new Map<string, string>()
+      const imageSlotColumns = new Map<
+        string,
+        { examPageId: string; examStudentId: string }
+      >()
+      const imageOccupants: SlotOccupant[] = plans.map((plan) => {
+        const fromSlot = imageSlot(
+          plan.current.examPageId,
+          plan.current.examStudentId
+        )
+        const toSlot = imageSlot(plan.targetExamPageId, plan.finalExamStudentId)
+        imageDestinations.set(fromSlot, toSlot)
+        imageSlotColumns.set(toSlot, {
           examPageId: plan.targetExamPageId,
           examStudentId: plan.finalExamStudentId,
-          imagePath: plan.current.imagePath,
-          createdAt: plan.current.createdAt,
-        })),
+        })
+        return { rowId: plan.move.fileId, slot: fromSlot }
       })
+      const imageById = new Map(
+        plans.map((plan) => [plan.move.fileId, plan.current])
+      )
+      const imagePermutation = planSlotPermutation(
+        imageOccupants,
+        imageDestinations
+      )
+      for (const keyMove of imagePermutation.keyMoves) {
+        const columns = imageSlotColumns.get(keyMove.toSlot)!
+        await tx.studentAnswerImage.update({
+          where: { id: keyMove.rowId },
+          data: {
+            examPageId: columns.examPageId,
+            examStudentId: columns.examStudentId,
+          },
+        })
+      }
+      for (const payloadCopy of imagePermutation.payloadCopies) {
+        const source = imageById.get(payloadCopy.fromRowId)!
+        await tx.studentAnswerImage.update({
+          where: { id: payloadCopy.intoRowId },
+          data: {
+            imagePath: source.imagePath,
+            createdAt: source.createdAt,
+          },
+        })
+      }
     },
-    // 学級分の一括移動では plan ごとの照会と tombstone の逐次 upsert が積み上がり、
-    // 既定の 5s を超えうる（超えると P2028 で全体がロールバックする）。
+    // 学級分の一括移動では plan ごとの照会が積み上がり、既定の 5s を超えうる
+    // （超えると P2028 で全体がロールバックする）。
     { timeout: 30000 }
   )
 }
