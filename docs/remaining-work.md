@@ -1190,27 +1190,55 @@ id と等しい。**畳みとは「敗者 id を消して勝者 id へ吸わせ�
 
 ### 一覧（決め手を1つずつ）
 
-| 群  | 表・列                                                                   | 決め手                                     | 状態           |
-| --- | ------------------------------------------------------------------------ | ------------------------------------------ | -------------- |
-| ①   | `Tag.name`                                                               | 同じ名前のタグは同じタグ                   | **残す**       |
-| ①   | `Subtotal (subtotalGroupId, name)`                                       | 改名でぶつかり、設問の割り当てが勝者へ移る | **外す**       |
-| ①   | `User.username`                                                          | 下記                                       | 未判定         |
-| ①   | `Classroom.name`                                                         | 下記                                       | 未判定         |
-| ①   | `Student.studentNumber`                                                  | 下記                                       | 未判定         |
-| ②a  | `UserKeyboardShortcut (userId, action)`                                  | **同期対象外**。出会わない                 | 対象外         |
-| ②a  | `UserPreference (userId, key)`                                           | **同期対象外**。出会わない                 | 対象外         |
-| ②b  | `UserScoringStatusColor (userId, status)`                                | 閉じた語彙・子なし・改名経路なし           | 下記でまとめて |
-| ②b  | `UserClickScoringAction (userId, clickCount)`                            | 同上（`clickCount` は型で `2\|3\|4`）      | 同上           |
-| ②b  | `ExamAnswerOverlayStyle (examId, overlayKind)`                           | 同上                                       | 同上           |
-| ②b  | `ExamAnswerOverlayVisibility (examId, status)`                           | 同上                                       | 同上           |
-| ②b  | `ExamIndividualReportTableSection (examId, tableKind)`                   | 同上                                       | 同上           |
-| ②b  | `ExamIndividualReportStatisticVisibility (examId, statisticKind, scope)` | 同上                                       | 同上           |
-| ②b  | `UserSidePanelSection (userId, sectionId)`                               | 同上（**当初の一覧に無かった1件**）        | 同上           |
-| ②c  | `CropRegionOmrChoiceOption (omrConfigId, choiceIndex)`                   | 下記                                       | 未判定         |
-| ②c  | `AsbOmrChoiceOption (omrConfigId, choiceIndex)`                          | 下記                                       | 未判定         |
-| ③   | `GradeConstraintLabelValue (constraintId, label)`                        | 下記                                       | 未判定         |
-| ③   | `GradeConstraintExclusionLabel (constraintId, label)`                    | 下記                                       | 未判定         |
-| ③   | `CourseworkLetterScale (courseworkItemId, label)`                        | 下記                                       | 未判定         |
+**OWNER 判断・2026-08-22（10件決着・5件が残り）。** 下の表の「状態」に反映してある。
+
+| 群  | 表・列                                                                   | 決め手                                     | 状態               |
+| --- | ------------------------------------------------------------------------ | ------------------------------------------ | ------------------ |
+| ①   | `Tag.name`                                                               | 同じ名前のタグは同じタグ                   | **残す**           |
+| ①   | `Subtotal (subtotalGroupId, name)`                                       | 改名でぶつかり、設問の割り当てが勝者へ移る | **外す**           |
+| ①   | `User.username`                                                          | 下記                                       | **外す**           |
+| ①   | `Classroom.name`                                                         | 下記                                       | **外す**           |
+| ①   | `Student.studentNumber`                                                  | 下記                                       | **外す**           |
+| ②a  | `UserKeyboardShortcut (userId, action)`                                  | **同期対象外**。出会わない                 | **判断不要・残す** |
+| ②a  | `UserPreference (userId, key)`                                           | **同期対象外**。出会わない                 | **判断不要・残す** |
+| ②b  | `UserScoringStatusColor (userId, status)`                                | 閉じた語彙・子なし・改名経路なし           | **残す**           |
+| ②b  | `UserClickScoringAction (userId, clickCount)`                            | 同上（`clickCount` は型で `2\|3\|4`）      | **残す**           |
+| ②b  | `ExamAnswerOverlayStyle (examId, overlayKind)`                           | 同上                                       | **残す**           |
+| ②b  | `ExamAnswerOverlayVisibility (examId, status)`                           | 同上                                       | **残す**           |
+| ②b  | `ExamIndividualReportTableSection (examId, tableKind)`                   | 同上                                       | **残す**           |
+| ②b  | `ExamIndividualReportStatisticVisibility (examId, statisticKind, scope)` | 同上                                       | **残す**           |
+| ②b  | `UserSidePanelSection (userId, sectionId)`                               | 同上（**当初の一覧に無かった1件**）        | **残す**           |
+| ②c  | `CropRegionOmrChoiceOption (omrConfigId, choiceIndex)`                   | 下記                                       | 未判定             |
+| ②c  | `AsbOmrChoiceOption (omrConfigId, choiceIndex)`                          | 下記                                       | 未判定             |
+| ③   | `GradeConstraintLabelValue (constraintId, label)`                        | 下記                                       | 未判定             |
+| ③   | `GradeConstraintExclusionLabel (constraintId, label)`                    | 下記                                       | 未判定             |
+| ③   | `CourseworkLetterScale (courseworkItemId, label)`                        | 下記                                       | 未判定             |
+
+---
+
+### 判断の記録（2026-08-22）
+
+**①は3件とも外す。** 3件に共通するのは、**アプリの中で解釈が割れている**こと ——
+取り込みは `generateUniqueClassName` / `generateUniqueStudentNumber` で「同名は別物」として
+作るのに、同期だけが畳む。外せばアプリ内で揃う。
+
+**外す3件で、実装時に必ず手当てするもの**:
+
+- `@unique` が索引を兼ねていたので、`@@index` を置くかを列ごとに決める
+- **`AuditLog.userId` は FK が無いので付け替えから漏れる。** 外すかどうかに関わらず残る穴
+  だが、外せば「同名の別人が潰れる」経路そのものが消える
+- **ログインは一覧から選ぶ形で `username` を鍵に引いていない**（`login/page.tsx`）ので、
+  外しても認証は壊れない。同じ名前が2つ並びうることだけが変わる
+- 同じ学級・同じ生徒を2人が作った場合、**重複が残る**。人が外して整理することになる
+
+**②a の2件は判断が要らない。** `SYNC_EXCLUDE_TABLES` にあり他端末の行と出会わないので、
+畳みが起きえない。**残す。**
+
+**②b の7件は残す。** 語彙が有限で人は増やせず、改名の経路も無く、子も無い。同値になったら
+必ず「同じもの」で、**1つのマスの取り合い**である。外すと同じマスの行が2つ並び、どちらを
+読むかが決まらなくなる。
+
+**残り5件** —— ②c の `choiceIndex` 2件と、③の3件。
 
 ---
 
