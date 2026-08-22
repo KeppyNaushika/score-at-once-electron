@@ -6,6 +6,11 @@
  * keydown）も、コマンド表を通らない直の購読（模範解答の keyup）も、**この関数だけで**
  * 突き合わせる。規則が2つに割れると、片方だけ設定変更に追随しない、という壊れ方をする
  * （実際、離す側が `"x"` 直書きで、キーを変えると模範解答が出たままになっていた）。
+ *
+ * **離す側（keyup）だけは修飾キーを外して突き合わせる**ので、そのための
+ * `baseKeyOfEvent` / `baseKeyOfBinding` もここに置く（理由は各関数の説明）。
+ * デッドキーの読み替えも大文字小文字の規則も同じものを通す必要があるため、
+ * 別のファイルへ分けると上で言った「規則が2つに割れる」を自分で作ることになる。
  */
 
 /**
@@ -62,11 +67,14 @@ const SPECIAL_KEYS = new Set([
   "Insert",
 ])
 
+/** 割り当て文字列で、キー本体の前に並ぶ修飾キーの名前（`normalizeKey` が出す綴り） */
+const MODIFIER_NAMES = new Set(["Ctrl", "Alt", "Shift", "Meta"])
+
 /**
- * キー入力を正規化する
- * macOSデッドキー対応と修飾キーの処理を含む
+ * 押されたキーの**本体だけ**を、割り当て文字列と同じ綴りで取り出す。
+ * デッドキーの読み替えと大文字小文字の規則は `normalizeKey` と同じもの。
  */
-export function normalizeKey(event: KeyboardEvent): string {
+export function baseKeyOfEvent(event: KeyboardEvent): string {
   let key = event.key
 
   // macOSデッドキー対応
@@ -85,6 +93,38 @@ export function normalizeKey(event: KeyboardEvent): string {
   if (key === " ") {
     key = "Space"
   }
+
+  return key
+}
+
+/**
+ * 割り当て文字列から**本体のキーだけ**を取り出す（`"Shift+d"` → `"d"`、`"x"` → `"x"`）。
+ *
+ * 先頭から修飾キーの名前が続く間だけを捨てる。残り全部を本体として返すのは、
+ * 本体そのものが `+` である割り当て（`"Shift++"`。US配列で Shift+= を記録すると
+ * こうなる）を、最後の `+` で切って空文字にしないため。
+ */
+export function baseKeyOfBinding(binding: string): string {
+  const segments = binding.split("+")
+  let bodyIndex = 0
+  while (
+    bodyIndex < segments.length - 1 &&
+    MODIFIER_NAMES.has(segments[bodyIndex])
+  ) {
+    bodyIndex++
+  }
+  const body = segments.slice(bodyIndex).join("+")
+  // `"Shift++"` は ["Shift", "", ""] に割れる。join で戻すと `"+"` になるはずだが、
+  // `"Shift+"`（本体なし）のような壊れた割り当ては空文字になるのでそのまま返す
+  return body
+}
+
+/**
+ * キー入力を正規化する
+ * macOSデッドキー対応と修飾キーの処理を含む
+ */
+export function normalizeKey(event: KeyboardEvent): string {
+  const key = baseKeyOfEvent(event)
 
   // 修飾キーを含める（順序: Ctrl, Alt, Shift, Meta）
   const modifiers: string[] = []

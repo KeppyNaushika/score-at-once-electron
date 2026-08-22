@@ -308,6 +308,39 @@ describe("模範解答を離すキーは割当に従う", () => {
     fireEvent.keyUp(document.body, { key: "x" })
     expect(hideMasterAnswer).not.toHaveBeenCalled()
   })
+
+  /**
+   * 修飾キー付きの割当（`Shift+d` は既定にもある形）では、keyup が修飾キーと本体に
+   * 割れて飛ぶ。Shift を先に離せば届くのは `"shift"` と `"d"` だけで、`"Shift+d"` は
+   * 一度も現れない。離す側が修飾キー込みで突き合わせていた頃は、これで模範解答が
+   * 出たまま固まった（押せても離せない）。
+   */
+  describe("修飾キー付きの割当", () => {
+    it("Shift を押したまま本体を離しても離せる", async () => {
+      await renderScoringKeys({ "view.toggleMasterAnswer": "Shift+d" })
+
+      fireEvent.keyUp(document.body, { key: "D", shiftKey: true })
+      expect(hideMasterAnswer).toHaveBeenCalledTimes(1)
+    })
+
+    it("Shift を先に離してから本体を離しても離せる", async () => {
+      await renderScoringKeys({ "view.toggleMasterAnswer": "Shift+d" })
+
+      // 実際の順序。Shift 単独の keyup は本体ではないので何も起きない
+      fireEvent.keyUp(document.body, { key: "Shift" })
+      expect(hideMasterAnswer).not.toHaveBeenCalled()
+
+      fireEvent.keyUp(document.body, { key: "d" })
+      expect(hideMasterAnswer).toHaveBeenCalledTimes(1)
+    })
+
+    it("割当が Shift+d でも、関係ないキーでは離れない", async () => {
+      await renderScoringKeys({ "view.toggleMasterAnswer": "Shift+d" })
+
+      fireEvent.keyUp(document.body, { key: "x" })
+      expect(hideMasterAnswer).not.toHaveBeenCalled()
+    })
+  })
 })
 
 // =====================================================================

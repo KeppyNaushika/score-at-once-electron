@@ -67,6 +67,8 @@ export interface SlotPermutationPlan {
  * @param destinationBySlot 移動元スロット → 移動先スロット。行が無いスロットを
  *   含んでいてよい（無視する）。移動元と移動先が同じ組は何もしない
  * @throws 2つの移動元が同じ移動先を指している場合（1スロット1行を壊す指示）
+ * @throws 同じスロットに2行が座っている場合（unique が既に壊れている）
+ * @throws 移動先を占める行が移動元に含まれない場合（置換ではなく上書きになる）
  */
 export function planSlotPermutation(
   occupants: SlotOccupant[],
@@ -81,14 +83,40 @@ export function planSlotPermutation(
     claimedDestinations.add(toSlot)
   }
 
-  const rowIdBySlot = new Map(
-    occupants.map((occupant) => [occupant.slot, occupant.rowId])
-  )
+  // 「1スロット1行」はこの分解の土台。Map へ素直に畳むと後から来た行が前の行を
+  // 黙って隠し、隠れた行だけが動かないまま残る。壊れた入力はここで止める
+  const rowIdBySlot = new Map<string, string>()
+  for (const occupant of occupants) {
+    if (rowIdBySlot.has(occupant.slot)) {
+      throw new Error(`同じスロットに2行が座っています: ${occupant.slot}`)
+    }
+    rowIdBySlot.set(occupant.slot, occupant.rowId)
+  }
+
   // 行が実在し、かつ実際に動く移動元だけを相手にする
   const pendingSlots = Array.from(destinationBySlot.keys()).filter(
     (fromSlot) =>
       rowIdBySlot.has(fromSlot) && destinationBySlot.get(fromSlot) !== fromSlot
   )
+
+  // 移動先が埋まっているなら、**その占有者も動く側**でなければならない。
+  // 動かない行の上へ載せると、行ごとは動かせず（スロットが空かない）中身のコピーへ
+  // 落ちるので、占有者の中身が黙って上書きされる ——「A→B, B→B」や、B が
+  // `destinationBySlot` に居ない場合がこれ。2つのマスが同じ答案を映し、B の答案は
+  // 孤児になり、例外は出ない。**上書きは置換ではない**ので、指示として拒む。
+  //
+  // ここを通ったあとの形は、移動元集合の上の「出次数1・入次数1以下」の graph に
+  // なる（入次数は上の claimedDestinations が担保する）＝ 鎖と輪の直和。
+  // 鎖は下の while で末尾から解け、残るのは必ず輪だけになる。
+  const movingSlots = new Set(pendingSlots)
+  for (const fromSlot of pendingSlots) {
+    const toSlot = destinationBySlot.get(fromSlot)!
+    if (rowIdBySlot.has(toSlot) && !movingSlots.has(toSlot)) {
+      throw new Error(
+        `移動先に、移動しない行が座っています: ${toSlot}（上書きはしません）`
+      )
+    }
+  }
 
   const keyMoves: SlotKeyMove[] = []
   let movedSomething = true
@@ -107,7 +135,7 @@ export function planSlotPermutation(
     }
   }
 
-  // 残ったのは全スロットが埋まった輪。行は動かさず、中身だけを回す
+  // 残ったのは輪だけ（上の検査で保証済み）。行は動かさず、中身だけを回す
   const payloadCopies: SlotPayloadCopy[] = pendingSlots.map((fromSlot) => ({
     intoRowId: rowIdBySlot.get(destinationBySlot.get(fromSlot)!)!,
     fromRowId: rowIdBySlot.get(fromSlot)!,

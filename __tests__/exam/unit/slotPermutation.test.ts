@@ -169,4 +169,104 @@ describe("planSlotPermutation", () => {
       )
     ).toThrow()
   })
+
+  it("2つの輪が同時にあっても、それぞれの中身だけが回る", () => {
+    // 輪どうしが混ざらないこと。入次数1以下なので輪は必ず互いに素になる
+    const occupants: SlotOccupant[] = [
+      { rowId: "row-x", slot: "x" },
+      { rowId: "row-y", slot: "y" },
+      { rowId: "row-p", slot: "p" },
+      { rowId: "row-q", slot: "q" },
+      { rowId: "row-r", slot: "r" },
+    ]
+    const destinations = new Map([
+      ["x", "y"],
+      ["y", "x"],
+      ["p", "q"],
+      ["q", "r"],
+      ["r", "p"],
+    ])
+    const permutation = planSlotPermutation(occupants, destinations)
+    expect(permutation.keyMoves).toEqual([])
+    expect(applyPlan(occupants, destinations)).toEqual(
+      new Map([
+        ["x", "row-y"],
+        ["y", "row-x"],
+        ["p", "row-r"],
+        ["q", "row-p"],
+        ["r", "row-q"],
+      ])
+    )
+  })
+
+  it("輪と鎖が同時にあっても、鎖だけが行ごと動く", () => {
+    const occupants: SlotOccupant[] = [
+      { rowId: "row-x", slot: "x" },
+      { rowId: "row-y", slot: "y" },
+      { rowId: "row-p", slot: "p" },
+      { rowId: "row-q", slot: "q" },
+    ]
+    const destinations = new Map([
+      ["x", "y"],
+      ["y", "x"],
+      ["p", "q"],
+      ["q", "empty"],
+    ])
+    const permutation = planSlotPermutation(occupants, destinations)
+    expect(permutation.keyMoves).toEqual([
+      { rowId: "row-q", toSlot: "empty" },
+      { rowId: "row-p", toSlot: "q" },
+    ])
+    expect(applyPlan(occupants, destinations)).toEqual(
+      new Map([
+        ["x", "row-y"],
+        ["y", "row-x"],
+        ["q", "row-p"],
+        ["empty", "row-q"],
+      ])
+    )
+  })
+
+  it("自分自身への移動が混ざっていても、その行の中身は奪われない", () => {
+    // 指摘④の再現形。`y→y` は何もしない移動として飛ばされるので y の行は残り、
+    // `x→y` は行ごと動かせず中身のコピーへ落ちて、y の中身を黙って壊していた
+    expect(() =>
+      planSlotPermutation(
+        [
+          { rowId: "row-x", slot: "x" },
+          { rowId: "row-y", slot: "y" },
+        ],
+        new Map([
+          ["x", "y"],
+          ["y", "y"],
+        ])
+      )
+    ).toThrow(/移動しない行/)
+  })
+
+  it("移動先に居座る行が移動元に無ければ拒む", () => {
+    // y はどこへも動かないのに、その上へ x を載せようとしている＝置換ではなく上書き
+    expect(() =>
+      planSlotPermutation(
+        [
+          { rowId: "row-x", slot: "x" },
+          { rowId: "row-y", slot: "y" },
+        ],
+        new Map([["x", "y"]])
+      )
+    ).toThrow(/移動しない行/)
+  })
+
+  it("同じスロットに2行が座っていたら拒む", () => {
+    // unique が既に壊れている形。Map へ畳むと片方が消えて、消えた行だけが動かない
+    expect(() =>
+      planSlotPermutation(
+        [
+          { rowId: "row-x", slot: "x" },
+          { rowId: "row-x-duplicate", slot: "x" },
+        ],
+        new Map([["x", "y"]])
+      )
+    ).toThrow(/同じスロット/)
+  })
 })
