@@ -1106,48 +1106,233 @@ SQLite の `UNIQUE constraint failed: …` という**文面に依存してい�
 | `Subtotal (subtotalGroupId, name)`                         | **外す** | 改名で別の小計どうしがぶつかる。畳むと設問の割り当てが勝者へ移り、**2つの小計が1つに潰れる**。段階23 で「名前の入れ替えが通らない」と出たのもこれ |
 | `(constraintId, label)` / `(courseworkItemId, label)` ほか | 未判定   | 同じ物差しで見る                                                                                                                                  |
 
-### 判断が要る18件（2026-08-22 に全数を数えた）
+### 判断が要る19件（2026-08-22 に材料をそろえた）
 
-スキーマの unique は**全51件**。うち **33件は uuid だけで組まれている**ので、ぶつかるのは
-「同じものを2回作った」ときだけ＝**畳むのが常に正解**。残る **18件**を1つずつ判定する。
+スキーマの unique は**全51件**。うち **32件は uuid だけで組まれている**ので、ぶつかるのは
+「同じものを2回作った」ときだけ＝**畳むのが常に正解**。残る **19件**を1つずつ判定する。
 
-**① 人が付ける名前（5件）— いちばん危ない**
+**当初は18件と数えていた。1件は列名に騙されて uuid の側へ入れていた** ——
+`UserSidePanelSection (userId, sectionId)` の `sectionId` は `"progress"` / `"question"` /
+`"display"` のような UI 側の固定値で、**`*Id` と名乗るのに何も指していない**（スキーマの
+コメント自身がそう書いている）。全 unique の列を `@relation(fields:)` と突き合わせ直したら、
+**嘘をついている `*Id` はこの1件だけ**だった。
 
-| 表・列                             | 判定     |
-| ---------------------------------- | -------- |
-| `Tag.name`                         | **残す** |
-| `Subtotal (subtotalGroupId, name)` | **外す** |
-| `User.username`                    | 未判定   |
-| `Classroom.name`                   | 未判定   |
-| `Student.studentNumber`            | 未判定   |
+### 材料を読む前に（3つの前置き）
 
-**② コードが決めた語彙・序数（10件）— おそらく安全**
+**② のうち2件は、そもそも他端末の行と出会わない。**
+`UserKeyboardShortcut` と `UserPreference` は `SYNC_EXCLUDE_TABLES`
+（`electron-src/lib/sync/syncTableConfig.ts:26-29`）に入っており、アーカイブにも載らない。
+**判定の対象から外してよい。**
 
-`UserKeyboardShortcut (userId, action)` / `UserPreference (userId, key)` /
-`UserScoringStatusColor (userId, status)` / `UserClickScoringAction (userId, clickCount)` /
-`ExamAnswerOverlayStyle (examId, overlayKind)` / `ExamAnswerOverlayVisibility (examId, status)` /
-`ExamIndividualReportTableSection (examId, tableKind)` /
-`ExamIndividualReportStatisticVisibility (examId, statisticKind, scope)` /
-`CropRegionOmrChoiceOption (omrConfigId, choiceIndex)` /
-`AsbOmrChoiceOption (omrConfigId, choiceIndex)`
+**データに重複が無いことは、証拠にならない。** `data/sync-config.json` は
+`"enabled": false` で、この DB は**一度も畳みを経験していない**。「今ぶつかっていない」は
+「ぶつからない」の材料ではない。ただし**値の分布そのものは材料になる**。
 
-**人が自由に付ける値ではない。** 2つの端末が同じ `(userId, "correct")` を作ったら、それは
-同じもの。畳むのが正解。
+**畳みの挙動（一次情報）** —— `~/dev/sqlite-nas-sync/src/conflict.ts` の `repointChildren` →
+`repointChild`。子を勝者へ付け替え、**付け替えた子が自分のユニークにぶつかったらその子も
+畳む（再帰）**。`deleteProtected` は畳みを止めない（`syncTableConfig.ts` のコメントが明記）。
 
-**ただし `choiceIndex` の2件は別の顔をしている。** 選択肢の**並び順**なので、2人が別々に
-選択肢を足すと**同じ番号がぶつかりうる — しかも別の選択肢として**。`Subtotal` と同型かも
-しれない。**この2件は①と同じ丁寧さで見る。**
+### 一覧（決め手を1つずつ）
 
-**③ 人が付けるラベル（3件）— ①と同じ危険**
+| 群  | 表・列                                                                   | 決め手                                     | 状態           |
+| --- | ------------------------------------------------------------------------ | ------------------------------------------ | -------------- |
+| ①   | `Tag.name`                                                               | 同じ名前のタグは同じタグ                   | **残す**       |
+| ①   | `Subtotal (subtotalGroupId, name)`                                       | 改名でぶつかり、設問の割り当てが勝者へ移る | **外す**       |
+| ①   | `User.username`                                                          | 下記                                       | 未判定         |
+| ①   | `Classroom.name`                                                         | 下記                                       | 未判定         |
+| ①   | `Student.studentNumber`                                                  | 下記                                       | 未判定         |
+| ②a  | `UserKeyboardShortcut (userId, action)`                                  | **同期対象外**。出会わない                 | 対象外         |
+| ②a  | `UserPreference (userId, key)`                                           | **同期対象外**。出会わない                 | 対象外         |
+| ②b  | `UserScoringStatusColor (userId, status)`                                | 閉じた語彙・子なし・改名経路なし           | 下記でまとめて |
+| ②b  | `UserClickScoringAction (userId, clickCount)`                            | 同上（`clickCount` は型で `2\|3\|4`）      | 同上           |
+| ②b  | `ExamAnswerOverlayStyle (examId, overlayKind)`                           | 同上                                       | 同上           |
+| ②b  | `ExamAnswerOverlayVisibility (examId, status)`                           | 同上                                       | 同上           |
+| ②b  | `ExamIndividualReportTableSection (examId, tableKind)`                   | 同上                                       | 同上           |
+| ②b  | `ExamIndividualReportStatisticVisibility (examId, statisticKind, scope)` | 同上                                       | 同上           |
+| ②b  | `UserSidePanelSection (userId, sectionId)`                               | 同上（**当初の一覧に無かった1件**）        | 同上           |
+| ②c  | `CropRegionOmrChoiceOption (omrConfigId, choiceIndex)`                   | 下記                                       | 未判定         |
+| ②c  | `AsbOmrChoiceOption (omrConfigId, choiceIndex)`                          | 下記                                       | 未判定         |
+| ③   | `GradeConstraintLabelValue (constraintId, label)`                        | 下記                                       | 未判定         |
+| ③   | `GradeConstraintExclusionLabel (constraintId, label)`                    | 下記                                       | 未判定         |
+| ③   | `CourseworkLetterScale (courseworkItemId, label)`                        | 下記                                       | 未判定         |
 
-`GradeConstraintLabelValue (constraintId, label)` /
-`GradeConstraintExclusionLabel (constraintId, label)` /
-`CourseworkLetterScale (courseworkItemId, label)`
+---
 
-**「A」「B」「C」のような評定のラベル。** 別のものに同じラベルを付けられる。
+#### ① `User.username`
+
+**値**: 人が自由に打つ（`UserCreateModal.tsx:86` / `UserEditModal.tsx:52` →
+`prisma/user.ts:43,100`）。**重複チェックも空文字チェックも無い。**
+
+**2端末で同値・別物になるか**: **なる。** 教員Aが `"suzuki"`（鈴木一郎）を作り、別の校舎の
+教員Bも `"suzuki"`（鈴木花子）を作る。畳むと**負けた鈴木の採点が勝った鈴木の採点になる**。
+利用者はアーカイブを越えない設計なので、id が揃う経路は同期以外に無い。
+
+**改名**: **できる。**
+
+**子**: **15本。** `QuestionScore` **69,453行** / `GradeFrozenScore` 590 / `ReturnSnapshot` 271 /
+`UserExam` 33 / `AsbDefinition` 12 ほか。**`AuditLog.userId` は FK を張っていないので
+付け替えられない** —— 畳むと**監査ログだけが消えた id を指し続ける**。
+
+**`upsert`**: **1箇所**（`databaseSetup.ts:48`、空DBのシードのみ）。外す作業量はほぼゼロ。
+
+**データ**: 2行（`keppy` / `other user`）。
+
+#### ① `Classroom.name`
+
+**値**: 人が自由に打つ（`ClassroomManagementTable.tsx:161,167` /
+`classrooms/[classroomId]/page.tsx:77` → `prisma/classroom.ts:46,86`）。
+
+**2端末で同値・別物になるか**: **なる。**「同じ学級を2人が作った」（＝畳んでよい）と、
+**年度をまたぐ**「2025年度の3年1組」と「2026年度の3年1組」（＝別の学級）の両方がありうる。
+後者を畳むと**2年分の在籍・試験・成績が1つの学級に潰れる**。
+
+**いちばん強い材料**: **取り込み側は「同名＝同一」と決めていない。**
+`classroomProcessor.ts:51` は `generateUniqueClassName` を通し、名前が衝突したら `(2)` を
+足して**別学級として作る**（`uniqueNameGenerators.ts:65-79`）。
+**アプリの中で、同期と取り込みが逆の解釈をしている。**
+
+**改名**: **できる。** 年度更新で「2025年2年1組」→「2026年3年1組」と打ち直す運用なら、
+**改名の瞬間に既存の3年1組とぶつかる**。
+
+**子**: 4本。メンバーシップ **375** / `ExamClassroom` 89 / `GradeClassroom` 11 /
+`CourseworkClassroom` 16。**再帰畳みに注意** —— `ExamClassroom` は
+`@@unique([examId, classroomId])` なので、付け替えた先に同じ試験の行があればその子も畳まれる。
+
+**`upsert`**: 1箇所（シード）＋ `findUnique where {name}` 3箇所。
+
+**データ**: 15行。**名前は全部「年度＋学年＋組」**（`2024年1年1組` … `2026年3年5組`）。
+**この DB は年度を名前に埋めて衝突を避けている —— ただしそれは習慣で、UI もスキーマも
+年度を要求していない。** `grade` 列と `classroomCode`（`2026-301`）が別に在り、名前だけが
+識別子ではない。
+
+#### ① `Student.studentNumber`
+
+**値**: 人が自由に打つ／表に貼り付ける（`StudentModal.tsx:78` /
+`useStudentImport.ts:151` → `prisma/student.ts:52,93`）。
+
+**2端末で同値・別物になるか**: **なる。** 教員Aが新1年生を `20260001`〜 で登録し、教員Bが
+**別の付番規則で**同じ `20260001`（別人）を登録する。畳むと**消えた生徒の答案・点数が
+もう1人の生徒のものになる**。`useStudentImport.ts:56,137` の重複チェックは**自分の端末が
+読み込んでいる一覧に対してだけ**。
+
+**ここでもアプリの解釈が割れている**: 貼り付け取り込みは同じ学籍番号を
+`「既に登録済みです（上書きされます）」` と警告して**既存行を update する**（＝同一人物とみなす）。
+一方**アーカイブ取り込みは `_1` を足して別人として作る**（`uniqueNameGenerators.ts:29-48`）。
+
+**改名**: **できる。** 付番規則を年度途中で変える／転入生に仮番号を振って後で直す。
+
+**子**: 4本。**`ExamStudent` 2,860** / メンバーシップ 375 / `GradeStudent` 299 /
+`CourseworkStudent` 472。**再帰畳みが最も深いのがここ** —— `ExamStudent` は
+`@@unique([examId, studentId])` なので付け替え先に同じ試験の行があれば `ExamStudent` も
+畳まれ、さらにその子（`QuestionScore` **69,453** / `StudentAnswerImage` / `ScoreDecision` /
+`CompoundAnswerScore` / `ReturnSnapshot`）が付け替わる。
+
+**`upsert`**: 1箇所（シード）＋ `findUnique` 2箇所。
+
+**データ**: 135行。8桁125行（`20240001`〜、**入学年度4桁＋連番4桁**）/ 7桁9行 / 4桁1行。
+**入学年度がプレフィクスなので年度をまたいだ衝突は構造的に起きない付番 —— ただし規則を
+強制するコードは無い。**
+
+---
+
+#### ②b（7件）—— 閉じた語彙
+
+**値**: 全部 `as const` 配列から来る（`OVERLAY_KINDS` / `SCORING_STATUSES` /
+`STATISTIC_KINDS` / `CLICK_SCORING_ACTIONS` ほか）。**利用者は語彙を増やせない。**
+
+**2端末で同値・別物になるか**: **同値は作れるが、必ず「同じもの」。** 教員Aが試験Xで
+「正解マークを表示」を切り替え、同時に教員Bが同じ試験Xで「部分点の色」を変えると、両端末が
+`(examId, "mark")` の行を作る。**これは1つのマスの取り合いであって、別のものの衝突ではない。**
+
+**改名**: **経路が無い。** キー列を書き換える UI も IPC も存在しない
+（`examSettings.ts` は キー列を `where` に使い `update` の値から外している）。
+
+**子**: **7件とも子なし（葉）。** 畳んでも付け替わるものが無い。
+
+**データ**: きれいに全数が揃っている —— `ExamAnswerOverlayStyle` 60 = 15試験 × 4種、
+`ExamAnswerOverlayVisibility` 105 = 15 × 7状態、`ExamIndividualReportStatisticVisibility`
+120 = 15 × 4種 × 2母集団（欠けゼロ）。
+
+**外す場合の作業量**: 各1〜2箇所の `upsert`。加えて**取り込み側は `upsert` ではなく
+「compound unique で `findUnique` → 在れば skip」**（`importExamAttachments.ts:29,54,94,117`）
+なので、そこも書き換えになる。**索引は7件とも親列の `@@index` を別に持っている**ので、
+追加は要らない。
+
+#### ②c `choiceIndex` の2件
+
+**`Subtotal` と同型ではない。** 理由は2つ。**(i) 子がいない**ので、畳んでも何かの割り当てが
+勝者へ移ることはない。**(ii) 意味の単位が「選択肢1つ」ではなくリスト全体**で、renderer は
+個々の選択肢に id を持たない（`string[]` で持つ）。**位置がその選択肢の身元である。**
+
+**2端末で同値・別物になるか**: **なる。** 教員Aが4択（ア/イ/ウ/エ）で保存し、教員Bが同じ
+設問を5択（1/2/3/4/5）で保存すると、index ごとに LWW が働いて**2つのリストの混合**になりうる。
+ただしこれは畳みのせいというより、**リストを行に割って個別に LWW していること**のせい。
+
+**`upsert`**: **2件とも0箇所。** compound unique をコードで使っている場所が1つも無い
+（`grep` の結果はすべて DDL）。**外す作業量はゼロ。**
+
+**外すと何が起きるか（ここが判断の核心）**:
+
+- `CropRegionOmrChoiceOption` —— 同じ index の行が並び、読み出しが全行を返すので
+  **4択が8択に見える**
+- `AsbOmrChoiceOption` —— 読み出しが `labels` は**配列の並び順**、`correctAnswers` は
+  **`choiceIndex` の値**という2つの数え方を混ぜている（`asbDefinitionConverters.ts:400-420`）。
+  index が重複すると **正解の指す先がずれる**
+
+**2件の違い**: `CropRegion` 版は保存のたびに `deleteMany` → `createMany` の**総入れ替え**で、
+**全行の id が新しくなる**。`Asb` 版は**位置で既存行を使い回す**設計を意図的に選んでいる
+（doc に「毎回作り直すと、保存のたびに別 id の行が同期へ流れる」と書いてある）。
+
+**データ**: `CropRegion` 250行/65設定（ラベルは `1`〜`4` だけ＝index の1オリジン表記）、
+`Asb` 261行/66設定（1件だけ11個＝`0`〜`9` と `−` の数字記入欄）。
+
+#### ③ `GradeConstraintLabelValue` / `GradeConstraintExclusionLabel`
+
+**この2件は、ここで打つ値ではない。** ラベルは `GradeItemBoundary.label` から集めた集合で、
+UI は**その一覧から選ぶ／各行に数値を入れる**だけ（`ConstraintRulesEditor.tsx:66-70`
+`collectLabels`）。**ラベル文字列を編集する入力欄が無い。**
+
+**2端末で同値・別物になるか**: **「別のものが偶然同じラベルになる」筋書きが作れなかった。**
+ラベル集合は成績内で1つ、`constraintId` でスコープされ、上流の `GradeItemBoundary.label` が
+改名されたら**次の書き込みの `deleteMany notIn` でこの行は消える** —— 旧ラベルの行が別の意味の
+まま残ることがない。
+
+**子**: どちらも葉。**`upsert`** 各1箇所。**索引** 両方 `@@index([constraintId])` あり。
+
+**2件の違い**: `LabelValue` は `value: Decimal` を持つので、畳むと**片方の換算値が消える**
+（結果表の判定が変わる）。`ExclusionLabel` は `order` しか持たないので、失うのは並び順だけ。
+
+**データ**: LabelValue 6行 = 2ルール × {A=5, B=3, C=1}。ExclusionLabel 4行。
+
+#### ③ `CourseworkLetterScale` ——**③のうちこれだけ `Subtotal` と同型**
+
+**値**: 人が1行ずつ自由に打つ（`LetterScaleEditor.tsx:83-89`、**打鍵のたびに DB へ飛ぶ**）。
+
+**2端末で同値・別物になるか**: **なる。しかも UI が積極的にぶつける。**
+`addRow`（`:98-110`）は `DEFAULT_LABELS = ["A","B","C","D","E","F"]` の**未使用の先頭**を選ぶ。
+刻みがまだ無い評価項目で、教員Aと教員Bが同時に「行を追加」を押すと、**2人とも `"A"` を選ぶ**。
+それぞれ別の刻み（A は「A=100」、B は「A=90」のつもり）なのに `(courseworkItemId, "A")` が同値。
+**`Subtotal` より衝突しやすい。** 重複ガード（`isDuplicateLabel`）は**自分の端末の一覧に
+対してだけ**。
+
+**改名**: **できる。**
+
+**子**: 葉。**ただし `CourseworkScore.letterValue` が FK でない素の文字列でこのラベルを
+参照する**（換算は `rawScoreCalculator.ts:159-161` の名前照合）。**畳んで負けた行のラベルが
+消えると、そのラベルを持つ点数は換算先を失って落ちる** —— FK が無いので付け替えも起きない。
+
+**`upsert`**: **0箇所。外す作業量はゼロ。**
+
+**データ**: 40行/8項目。**全項目が同じラベル集合 `S / A / B / C / F`** で、点数だけ項目ごとに
+違う。**ラベルは項目をまたいで完全に使い回されており、識別子として働いているのは
+`courseworkItemId` の側。**
+
+---
 
 外すときは**索引（`@@index`）の手当て**と、**`upsert` を使っている箇所の書き換え**が付いてくる
-（`upsert` は `where` に unique を要求する。全33箇所のうち該当分）。
+（`upsert` は `where` に unique を要求する）。**②b と ②c と ③ は親列の `@@index` を既に
+持っているので追加は要らない。①の3件だけは、その列の索引が `@unique` そのもの**なので、
+`@@index` を置くかどうかの判断が要る（等値検索は取り込み時のループとシードのみ）。
 
 ---
 
