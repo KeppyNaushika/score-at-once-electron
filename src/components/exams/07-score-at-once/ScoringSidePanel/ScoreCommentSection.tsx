@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react"
 
 import { useCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
-import { useShortcutContext } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import { Textarea } from "@/components/ui/textarea"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
@@ -37,11 +36,8 @@ interface ScoreCommentSectionProps {
  * - **出る**: `Escape`（書きかけを捨てて戻る）／`Ctrl`(`⌘`)`+Enter`（残して戻る）／
  *   欄の外を触る（残して戻る）。`Enter` 単体は改行（覚え書きは複数行を書く）
  *
- * 出るときは `inputFocus` を自分で false へ戻す。`ShortcutProvider` は `focusout` を
- * `focusin` と同じ処理に通しており、離れる側の要素を見て `inputFocus` を true のまま
- * 据え置く（次に入力欄でないものが focus を取るまで戻らない）。フォーカスが body へ
- * 抜けると戻る機会が来ないので、採点キーが黙って死ぬ。部分点モーダルも同じ手当てを
- * している（usePartialScore）。
+ * 出たあとに採点キーが戻ることは `ShortcutProvider` の `focusout` が見ている
+ * （欄を離れた時点で `inputFocus` が false へ倒れる）。ここでは面倒を見ない。
  */
 export function ScoreCommentSection({
   examId,
@@ -53,7 +49,6 @@ export function ScoreCommentSection({
   onEnsureOpen,
 }: ScoreCommentSectionProps) {
   const { keyBindings } = useKeyBindings()
-  const { setContextValue } = useShortcutContext()
   // 節を開いた直後に欄へ入るので、DOM が生えたことを描画で知る必要がある
   // （ref オブジェクトでは生えたことに気づけない）
   const [textarea, setTextarea] = useState<HTMLTextAreaElement | null>(null)
@@ -122,7 +117,7 @@ export function ScoreCommentSection({
   // `draft` は捨てたはずの文字列のまま（＝捨てたつもりが保存される）
   const discardOnBlur = useRef(false)
 
-  /** 欄から出る。後始末（`inputFocus` を戻す）は blur ハンドラが行う */
+  /** 欄から出る。書きかけの始末は blur ハンドラが行う */
   const leaveField = () => {
     textarea?.blur()
   }
@@ -155,9 +150,8 @@ export function ScoreCommentSection({
         onChange={(event) => setDraft(event.target.value)}
         onBlur={() => {
           // キーを使わずマウスで欄の外を触った場合もここを通る。
-          // `inputFocus` を戻すのは blur が起きた全経路の共通の後始末なので、
-          // Esc / ⌘+Enter だけでなくここでも行う（戻し忘れると採点キーが死ぬ）
-          setContextValue("inputFocus", false)
+          // `inputFocus` を戻すのは `ShortcutProvider` の `focusout` の仕事で、
+          // ここは書きかけの始末だけを見る
           if (discardOnBlur.current) {
             discardOnBlur.current = false
             return

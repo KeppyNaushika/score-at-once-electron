@@ -327,22 +327,40 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
   // ============================================
 
   useEffect(() => {
-    const handleFocus = (e: FocusEvent) => {
-      const target = e.target
-      const isInput =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        (target instanceof HTMLElement && target.isContentEditable)
+    /** 文字を打ち込める要素か（採点キーを黙らせる対象） */
+    const isTextEntryTarget = (target: EventTarget | null) =>
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      (target instanceof HTMLElement && target.isContentEditable)
 
-      setContextValue("inputFocus", isInput)
+    /** 入った要素が入力欄かどうかで決める */
+    const handleFocusIn = (event: FocusEvent) => {
+      setContextValue("inputFocus", isTextEntryTarget(event.target))
     }
 
-    document.addEventListener("focusin", handleFocus, true)
-    document.addEventListener("focusout", handleFocus, true)
+    /**
+     * 抜けたことは「抜けた」で決める。**離れる側の要素を見てはいけない。**
+     *
+     * `focusin` と同じ処理へ通すと、離れる側（＝入力欄）を見て `inputFocus` を true の
+     * まま据え置く。フォーカスが `body` へ抜けると次の `focusin` が来ないので戻る機会が
+     * 無く、採点キーが黙って死ぬ（入力欄を触ったあと画面の余白をクリックすると踏む）。
+     *
+     * ただし `focusout` は `focusin` より先に発火する。入力欄から別の入力欄へ移る途中で
+     * 一度 false へ倒すと、その隙間に届いたキーが採点として通ってしまう。次にフォーカスを
+     * 取る要素は `relatedTarget` で既に分かっているので、そこも入力欄なら倒さない
+     * （どこも取らない＝ `body` へ抜ける場合の `relatedTarget` は `null` なので倒す側へ落ちる）。
+     */
+    const handleFocusOut = (event: FocusEvent) => {
+      if (isTextEntryTarget(event.relatedTarget)) return
+      setContextValue("inputFocus", false)
+    }
+
+    document.addEventListener("focusin", handleFocusIn, true)
+    document.addEventListener("focusout", handleFocusOut, true)
 
     return () => {
-      document.removeEventListener("focusin", handleFocus, true)
-      document.removeEventListener("focusout", handleFocus, true)
+      document.removeEventListener("focusin", handleFocusIn, true)
+      document.removeEventListener("focusout", handleFocusOut, true)
     }
   }, [setContextValue])
 

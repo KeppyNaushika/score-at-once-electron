@@ -17,6 +17,7 @@ import type {
 } from "@/types/drawingAnnotation.types"
 import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 
+import { useContextValue } from "../hooks/useContextValue"
 import { DrawingToolPalette } from "./DrawingToolPalette"
 import { useDrawingState } from "./hooks/core/useDrawingState"
 import { useImageCanvas } from "./hooks/core/useImageCanvas"
@@ -270,6 +271,13 @@ export default function AnswerIndividualView({
       currentCropRegion,
       splitMode: null,
     })
+
+  // 高品質テキスト編集モーダルが開いていることを、ショートカットの実行条件へ渡す。
+  // 採点キー・描画ツールキーの `when` 句はこの `textEditorActive` を読んでおり、
+  // 書き手が居ないと常に既定値（false）のまま＝条件として効かない。
+  // モーダル内でも書式ボタン等にフォーカスがあれば `inputFocus` は false なので、
+  // 入力欄ガードでは覆えない（このフラグでしか止められない）
+  useContextValue("textEditorActive", textboxIntegration.showTextboxModal)
 
   // 描画ツールキーボードショートカット
   useDrawingToolShortcuts({

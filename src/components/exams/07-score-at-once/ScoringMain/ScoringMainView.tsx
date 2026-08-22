@@ -20,6 +20,7 @@ import {
 import { useAnswerWhiteness } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerWhiteness"
 import { useAssignedCropRegions } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAssignedCropRegions"
 import { useBatchScoringWithProgress } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useBatchScoringWithProgress"
+import { useMasterAnswerHoldRelease } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useMasterAnswerHoldRelease"
 import { usePartialScore } from "@/components/exams/07-score-at-once/ScoringMain/hooks/usePartialScore"
 import { useScoringActions } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringActions"
 import { useScoringData } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringData"
@@ -660,17 +661,12 @@ function ScoringMainViewContent() {
       .filter((url): url is string => url !== null)
   }, [exam])
 
-  /** hold-to-show用: keyupイベントで模範解答を非表示 */
-  useEffect(() => {
-    if (masterAnswerKeyBehavior !== "hold-to-show") return
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "x" || e.key === "X") {
-        setMasterAnswerVisible(false)
-      }
-    }
-    window.addEventListener("keyup", handleKeyUp)
-    return () => window.removeEventListener("keyup", handleKeyUp)
-  }, [masterAnswerKeyBehavior])
+  /** hold-to-show用: キーを離したら模範解答を隠す（押した側と同じ条件で守る） */
+  useMasterAnswerHoldRelease({
+    masterAnswerKeyBehavior,
+    gradingMode,
+    onRelease: handleMasterAnswerHide,
+  })
 
   /** コンテキスト値の設定 */
   useContextValue("gradingMode", gradingMode)

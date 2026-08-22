@@ -2,7 +2,15 @@
  * グリッドナビゲーションフック
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useState,
+} from "react"
+
+import { useShortcutContext } from "../../ScoringMain/contexts/ShortcutProvider"
 
 interface UseGridNavigationProps {
   externalItemsPerRow?: number[]
@@ -39,8 +47,18 @@ export function useGridNavigation({
   }, [handleItemsPerRowChange, itemsPerRow])
 
   // Opt + [-/+] キーボードイベント処理
+  //
+  // このキーは `ShortcutProvider` のコマンド表を通らない直の購読なので、
+  // 他の採点キーが `when` 句で得ている入力欄ガードを自前で持つ。
+  // 持たないと入力欄に文字を打っている最中の Alt+- / Alt+= で表示数が動く。
+  const { context } = useShortcutContext()
+  const canChangeItemsPerRow = useEffectEvent(
+    () => !context.inputFocus && !context.modalOpen
+  )
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (!canChangeItemsPerRow()) return
       if (event.altKey && (event.key === "-" || event.key === "_")) {
         event.preventDefault()
         decrementItemsPerRow()
