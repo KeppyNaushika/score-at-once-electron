@@ -230,6 +230,10 @@ describe("畳みが起きたときアプリが黙らない", () => {
         losingId: "exam-student-a",
         winningId: "exam-student-b",
         removedLocalRow: true,
+        // 消える受験生徒にぶら下がっていた採点行1件が、残る側へ移る
+        movedChildren: 1,
+        // 引き継げず消えた子は無い（参照列を一時的に外せる形なので）
+        lostChildren: 0,
       },
     ]
     expect(foldSyncResult.folds).toEqual(expectedFolds)

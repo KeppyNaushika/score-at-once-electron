@@ -201,6 +201,9 @@ describe("畳み（別 id・同一ユニークキー）", () => {
         losingId: "tag-math",
         winningId: "tag-japanese",
         removedLocalRow: true,
+        // このタグには子が居ないので、付け替えも取りこぼしも起きない
+        movedChildren: 0,
+        lostChildren: 0,
       },
     ])
     // 畳みは行が1つ消える操作なので、消えた数にも出る
@@ -317,6 +320,9 @@ describe("畳まれた行の子（採点データ）", () => {
         losingId: "exam-student-a",
         winningId: "exam-student-b",
         removedLocalRow: false,
+        // 敗者行を持っていない端末には、付け替える子も居ない
+        movedChildren: 0,
+        lostChildren: 0,
       },
     ])
     // 敗者にぶら下がっていた採点は、B のローカルでも勝者へ向け直されて入る
@@ -341,6 +347,9 @@ describe("畳まれた行の子（採点データ）", () => {
         losingId: "exam-student-a",
         winningId: "exam-student-b",
         removedLocalRow: true,
+        // 消える受験生徒にぶら下がっていた採点行1件が、残る側へ移る
+        movedChildren: 1,
+        lostChildren: 0,
       },
     ])
 

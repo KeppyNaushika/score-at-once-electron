@@ -119,6 +119,8 @@ async function recordFoldAuditLogs(folds: SyncRecordFold[]): Promise<void> {
         losingId: fold.losingId,
         winningId: fold.winningId,
         removedLocalRow: fold.removedLocalRow,
+        movedChildren: fold.movedChildren,
+        lostChildren: fold.lostChildren,
       },
       coalesceKey: `sync.merge:${fold.tableName}:${fold.losingId}`,
     })

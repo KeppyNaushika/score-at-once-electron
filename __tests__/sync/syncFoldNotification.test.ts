@@ -143,6 +143,8 @@ describe("同期の畳みを伝える", () => {
         losingId: "losing-1",
         winningId: "winning-1",
         removedLocalRow: true,
+        movedChildren: 0,
+        lostChildren: 0,
       },
     ]
 
@@ -180,6 +182,8 @@ describe("同期の畳みを伝える", () => {
           losingId: "losing-1",
           winningId: "winning-1",
           removedLocalRow: true,
+          movedChildren: 0,
+          lostChildren: 0,
         },
       ])
     )
@@ -196,6 +200,8 @@ describe("同期の畳みを伝える", () => {
         losingId: "losing-1",
         winningId: "winning-1",
         removedLocalRow: true,
+        movedChildren: 0,
+        lostChildren: 0,
       },
       coalesceKey: "sync.merge:ExamStudent:losing-1",
     })
@@ -212,12 +218,16 @@ describe("同期の畳みを伝える", () => {
           losingId: "losing-1",
           winningId: "winning-1",
           removedLocalRow: true,
+          movedChildren: 0,
+          lostChildren: 0,
         },
         {
           tableName: "QuestionScore",
           losingId: "losing-2",
           winningId: "winning-2",
           removedLocalRow: false,
+          movedChildren: 0,
+          lostChildren: 0,
         },
       ])
     )
