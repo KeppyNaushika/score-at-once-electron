@@ -1,9 +1,14 @@
 /**
  * getDatabasePath のsync対応テスト
  *
- * getDatabasePath()は内部でrequire("../sync/syncConfig")を使うため、
- * syncConfig.tsのモジュールが正しく解決される必要がある。
- * ここではsyncConfigの関数を直接テストし、getDatabasePathの動作を検証する。
+ * かつて `getDatabasePath()` は `require("../sync/syncConfig")` で syncConfig を読み、
+ * その失敗ごと try/catch で飲んでいた。vite-node に `require` は無いので、テストからは
+ * 常に `getDataDirectory()/database.db` の枝しか踏めず、
+ * 「sync有効時にローカルDBを返す」分岐は一度も検証されていなかった
+ * （このファイルも、syncConfig の関数を並べて分岐を**真似る**ことしかできていなかった）。
+ *
+ * 静的 import へ寄せた今は本物の `getDatabasePath()` を両方の枝で呼べるので、そうする。
+ * DBは作らない（パス計算のみ）。
  */
 
 import * as fs from "fs"
@@ -26,18 +31,34 @@ vi.mock("../../electron-src/lib/dataManager", () => ({
   getDataDirectory: () => TEST_DATA_DIR,
 }))
 
+import { getDatabasePath } from "../../electron-src/lib/prisma/databaseInitializer"
 import {
   getLocalDbPath,
   getNasDbPath,
-  loadSyncConfig,
   saveSyncConfig,
 } from "../../electron-src/lib/sync/syncConfig"
 import { DEFAULT_SYNC_CONFIG } from "../../electron-src/lib/sync/types"
 
-describe("DBパスのsync対応ロジック", () => {
+/** sync設定ファイル。`syncConfig` が userData 直下に置くのと同じ場所 */
+const CONFIG_PATH = path.join(TEST_LOCAL_DIR, "sync-config.json")
+
+const NAS_DB = path.join(TEST_DATA_DIR, "database.db")
+const LOCAL_DB = path.join(TEST_LOCAL_DIR, "score-at-once", "database.db")
+
+describe("getDatabasePath のsync分岐", () => {
   beforeEach(() => {
+    // このファイルの electron モックが `__tests__/setup.ts` の全体モックを上書きできて
+    // いないと、sync設定の書き込み先がデータのある data/ 配下になる。
+    // `getLocalDbPath()` も `getConfigPath()` も同じ `app.getPath("userData")` を見るので、
+    // 前者が /tmp を指していることを保存前に確かめておく。
+    if (getLocalDbPath() !== LOCAL_DB) {
+      throw new Error(
+        `electronモックが効いていません（書き込み先: ${getLocalDbPath()}）`
+      )
+    }
     fs.mkdirSync(TEST_DATA_DIR, { recursive: true })
     fs.mkdirSync(TEST_LOCAL_DIR, { recursive: true })
+    fs.rmSync(CONFIG_PATH, { force: true })
   })
 
   afterEach(() => {
@@ -48,49 +69,43 @@ describe("DBパスのsync対応ロジック", () => {
     }
   })
 
-  it("sync無効時はNAS DBパスを使うべき", () => {
-    saveSyncConfig({ ...DEFAULT_SYNC_CONFIG, enabled: false })
-    const config = loadSyncConfig()
-    expect(config.enabled).toBe(false)
-
-    // sync無効 → getNasDbPath()が使われる
-    const nasPath = getNasDbPath()
-    expect(nasPath).toBe(path.join(TEST_DATA_DIR, "database.db"))
+  it("2つの枝は別の場所を指す（取り違えても気づけるようにする）", () => {
+    expect(getNasDbPath()).toBe(NAS_DB)
+    expect(getLocalDbPath()).toBe(LOCAL_DB)
+    expect(NAS_DB).not.toBe(LOCAL_DB)
   })
 
-  it("sync有効時はローカルDBパスを使うべき", () => {
+  it("sync有効時はローカルDBパスを返すべき", () => {
     saveSyncConfig({
       ...DEFAULT_SYNC_CONFIG,
       enabled: true,
       clientId: "test",
     })
-    const config = loadSyncConfig()
-    expect(config.enabled).toBe(true)
 
-    // sync有効 → getLocalDbPath()が使われる
-    const localPath = getLocalDbPath()
-    expect(localPath).toBe(
-      path.join(TEST_LOCAL_DIR, "score-at-once", "database.db")
-    )
+    expect(getDatabasePath()).toBe(LOCAL_DB)
   })
 
-  it("getDatabasePathの分岐ロジックが正しい", () => {
-    // sync無効時
+  it("sync無効時はデータディレクトリのDBパスを返すべき", () => {
     saveSyncConfig({ ...DEFAULT_SYNC_CONFIG, enabled: false })
-    let config = loadSyncConfig()
-    const pathWhenDisabled = config.enabled ? getLocalDbPath() : getNasDbPath()
-    expect(pathWhenDisabled).toBe(path.join(TEST_DATA_DIR, "database.db"))
 
-    // sync有効時
+    expect(getDatabasePath()).toBe(NAS_DB)
+  })
+
+  it("設定ファイルが無い初回起動でもデータディレクトリのDBパスを返すべき", () => {
+    expect(fs.existsSync(CONFIG_PATH)).toBe(false)
+
+    expect(getDatabasePath()).toBe(NAS_DB)
+  })
+
+  it("同じ起動中でも設定の切り替えに追随すべき", () => {
     saveSyncConfig({
       ...DEFAULT_SYNC_CONFIG,
       enabled: true,
       clientId: "test",
     })
-    config = loadSyncConfig()
-    const pathWhenEnabled = config.enabled ? getLocalDbPath() : getNasDbPath()
-    expect(pathWhenEnabled).toBe(
-      path.join(TEST_LOCAL_DIR, "score-at-once", "database.db")
-    )
+    expect(getDatabasePath()).toBe(LOCAL_DB)
+
+    saveSyncConfig({ ...DEFAULT_SYNC_CONFIG, enabled: false })
+    expect(getDatabasePath()).toBe(NAS_DB)
   })
 })

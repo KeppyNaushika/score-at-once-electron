@@ -23,6 +23,7 @@ import { syncFoldTableLabel } from "@/lib/shared/syncFoldLabels"
 
 import { getDataDirectory } from "../dataManager"
 import { recordAuditLog } from "../prisma/auditLog"
+import { getSchemaVersion } from "./schemaVersion"
 import {
   ensureClientId,
   ensureSyncDirectory,
@@ -30,7 +31,6 @@ import {
   getLocalDbPath,
   getNasDbPath,
   getNasSyncPath,
-  getSchemaVersion,
   loadSyncConfig,
   saveSyncConfig,
 } from "./syncConfig"

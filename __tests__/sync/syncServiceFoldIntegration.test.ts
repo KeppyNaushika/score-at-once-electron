@@ -15,14 +15,13 @@
  * それぞれの端末で受験生徒として登録し、それぞれ採点した状態。
  * `ExamStudent` は `@@unique([examId, studentId])` なので2行は同居できない。
  *
- * ## パスについて（vitest 固有の事情）
+ * ## パスについて
  *
- * `getDatabasePath()` は sync 有効時にローカルDBを返すが、その分岐は
- * `require("../sync/syncConfig")` で書かれている。Electron（CJS）では動くものの
- * vite-node には `require` が無いので、テストでは常に
- * `getDataDirectory()/database.db` へフォールバックする。
- * Prisma の宛先を **アプリと同じ「同期対象のローカルDB」** に一致させるため、
- * データディレクトリを端末Aのローカル DB があるディレクトリに重ねている。
+ * `getDatabasePath()` は sync 有効時にローカルDB（`getLocalDbPath()`）を、無効時に
+ * `getDataDirectory()/database.db` を返す。ここではどちらの枝を通っても Prisma の宛先が
+ * **アプリと同じ「同期対象のローカルDB」** になるよう、データディレクトリを
+ * 端末Aのローカル DB があるディレクトリに重ねている。
+ * （分岐そのものの検証は `databasePath.test.ts`）
  */
 import * as fs from "fs"
 import * as os from "os"
@@ -141,7 +140,9 @@ beforeAll(async () => {
   createClientDatabase(LOCAL_DB_A)
   createClientDatabase(DB_B)
 
-  const { getNasSyncPath, getSchemaVersion, saveSyncConfig } =
+  const { getSchemaVersion } =
+    await import("../../electron-src/lib/sync/schemaVersion")
+  const { getNasSyncPath, saveSyncConfig } =
     await import("../../electron-src/lib/sync/syncConfig")
   const { startSync, stopSync, triggerSyncNow } =
     await import("../../electron-src/lib/sync/syncService")

@@ -12,25 +12,8 @@ import * as fs from "fs"
 import * as path from "path"
 
 import { getDataDirectory } from "../dataManager"
-import { listLocalMigrationNames } from "../prisma/schema/migrationDeployer"
 import type { SyncAppConfig } from "./types"
 import { DEFAULT_SYNC_CONFIG } from "./types"
-
-/**
- * prisma/migrationsから最新マイグレーション名を取得し、schemaVersionとして返す。
- * マイグレーションガード（migrationGuard）と同じ解決ロジックを使い、
- * 起動時チェックと同期ゲートが必ず同じバージョン文字列を参照するようにする。
- */
-export function getSchemaVersion(): string {
-  try {
-    const entries = listLocalMigrationNames().filter((migrationName) =>
-      /^\d{14}_/.test(migrationName)
-    )
-    return entries.length > 0 ? entries[entries.length - 1] : "unknown"
-  } catch {
-    return "unknown"
-  }
-}
 
 function getConfigPath(): string {
   return path.join(app.getPath("userData"), "sync-config.json")

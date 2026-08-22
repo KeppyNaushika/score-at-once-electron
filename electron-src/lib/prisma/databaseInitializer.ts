@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client"
 import * as path from "path"
 
 import { getDataDirectory } from "../dataManager"
+import { getLocalDbPath, loadSyncConfig } from "../sync/syncConfig"
 import {
   bootstrapSchema,
   type SchemaBootstrapResult,
@@ -11,20 +12,21 @@ import {
 /**
  * データベースファイルの絶対パスを返す
  *
- * sync有効時はローカルDBパス、無効時はデータディレクトリ内のDBパスを返す。
+ * sync有効時はローカルDBパス、無効時はデータディレクトリ内のDBパスを返す
+ * （sync有効時、NAS上のDBは同期先であって接続先ではない）。
+ *
+ * 分岐は sync設定の `enabled` だけで決める。設定ファイルが無い初回起動でも
+ * `loadSyncConfig()` は既定値（`enabled: false`）を返すので、「読み込みに失敗したら
+ * 既定パス」というフォールバックは要らない。かつてここは `require()` の失敗ごと
+ * try/catch で飲んでいたが、それは失敗の理由を区別しないため
+ * 「sync有効なのに従来パスを返す」事故を隠す形になっていた。
+ * なお、ここで例外が出るとしたら Electron の `app` が使えないときだけで、
+ * 逃げ先の `getDataDirectory()` も同じく `app` に依存する以上、隠しても直らない。
  */
-export const getDatabasePath = (): string => {
-  try {
-    const { getLocalDbPath, loadSyncConfig } = require("../sync/syncConfig")
-    const config = loadSyncConfig()
-    if (config?.enabled) {
-      return getLocalDbPath()
-    }
-  } catch {
-    // sync未初期化時（初回起動等）は従来パスにフォールバック
-  }
-  return path.join(getDataDirectory(), "database.db")
-}
+export const getDatabasePath = (): string =>
+  loadSyncConfig().enabled
+    ? getLocalDbPath()
+    : path.join(getDataDirectory(), "database.db")
 
 /** 指定パスのSQLiteファイルに接続するPrismaClientを生成する */
 const createPrismaClientForPath = (dbPath: string): PrismaClient => {
