@@ -19,7 +19,10 @@ import { BrowserWindow } from "electron"
 import * as fs from "fs"
 import type { SyncInstance, SyncResult } from "sqlite-nas-sync"
 
+import { syncFoldTableLabel } from "@/lib/shared/syncFoldLabels"
+
 import { getDataDirectory } from "../dataManager"
+import { recordAuditLog } from "../prisma/auditLog"
 import {
   ensureClientId,
   ensureSyncDirectory,
@@ -35,6 +38,7 @@ import { SYNC_EXCLUDE_TABLES, SYNC_TABLE_OPTIONS } from "./syncTableConfig"
 import type {
   SyncAppConfig,
   SyncAppStatus,
+  SyncRecordFold,
   VersionMismatchRemote,
 } from "./types"
 
@@ -71,6 +75,53 @@ function broadcastSyncStatus(): void {
     } catch {
       // ウィンドウが既に閉じられている場合は無視
     }
+  }
+}
+
+/**
+ * 畳みが起きたことを renderer へ押し出す。
+ *
+ * **既読は持たない。** 同期はアプリが動いている間しか走らないので、畳みの瞬間には
+ * 必ず窓が開いている。読んだかどうかを覚えると、その状態がまた新しい保存先になる。
+ * あとから見返す口は監査ログ（`sync.merge`）1つに寄せる。
+ *
+ * 中身は加工しない（何件が何になったかの数え上げは renderer 側で組み立てる）。
+ */
+function broadcastRecordFolds(folds: SyncRecordFold[]): void {
+  if (folds.length === 0) return
+  for (const win of BrowserWindow.getAllWindows()) {
+    try {
+      win.webContents.send("sync:records-folded", folds)
+    } catch {
+      // ウィンドウが既に閉じられている場合は無視
+    }
+  }
+}
+
+/**
+ * 畳みを監査ログへ残す（あとから見返す口はここ1つ。専用の履歴画面は作らない）。
+ *
+ * `coalesceKey` は**同じ端末が同じ畳みを二度書くのを止めるだけ**で、端末をまたいだ
+ * 重複は畳めない。畳みは各端末でそれぞれ起きるが、相手の記録が届くのは相手が書いた
+ * 次の同期以降で、書く時点のローカルDBにはまだ無い（`recordAuditLog` の突き合わせは
+ * 書く瞬間のローカル行に対してしか働かない）。端末数ぶん行が並ぶのはそのため。
+ */
+async function recordFoldAuditLogs(folds: SyncRecordFold[]): Promise<void> {
+  for (const fold of folds) {
+    await recordAuditLog({
+      action: "sync.merge",
+      // システム操作は null（利用者が起こした操作ではない）
+      userId: null,
+      entityType: fold.tableName,
+      entityId: fold.losingId,
+      target: syncFoldTableLabel(fold.tableName),
+      extra: {
+        losingId: fold.losingId,
+        winningId: fold.winningId,
+        removedLocalRow: fold.removedLocalRow,
+      },
+      coalesceKey: `sync.merge:${fold.tableName}:${fold.losingId}`,
+    })
   }
 }
 
@@ -170,6 +221,12 @@ export async function startSync(config: SyncAppConfig): Promise<void> {
         syncCount: currentStatus.syncCount + 1,
         versionMismatches: extractVersionMismatches(result),
       })
+
+      // 畳みは黙って行を1つにする操作なので、起きた瞬間に伝える。
+      broadcastRecordFolds(result.folds)
+      // 記録はベストエフォート（`recordAuditLog` は失敗を握りつぶす）。同期の
+      // コールバックは同期関数なので、書き込みの完了は待たずに切り離す。
+      void recordFoldAuditLogs(result.folds)
     },
   })
 

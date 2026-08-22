@@ -647,6 +647,16 @@ const AUDIT_ACTIONS = {
     verb: "delete",
     label: "{target}",
   },
+  /**
+   * NAS同期が、別id・同一ユニークキーの行を1つへ「畳んだ」ことの記録。
+   * ユニーク制約が強制する操作なので利用者は止められない。何と何が1つになったかは
+   * metadata の `losingId` / `winningId` に入る（`entityId` は消えた側）。
+   */
+  "sync.merge": {
+    category: "system",
+    verb: "delete",
+    label: "同期で重複していた{target}を1つにまとめました",
+  },
 } as const satisfies Record<string, AuditActionDef>
 
 /** 定義済みアクションキーの型 */

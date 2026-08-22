@@ -60,9 +60,21 @@ vi.mock("sqlite-nas-sync", () => ({
 }))
 
 // databaseInitializerモック
+//
+// 同期は畳みの結果を監査ログへ書くようになったので、syncService から auditLog →
+// prisma/client と芋づるで読み込まれる。client.ts は読み込みの時点で
+// createSharedPrismaClient() を呼ぶため、このモックにも口が要る。
+// ここで見るのはパス解決と設定の読み書きで、監査ログは書かない。
 vi.mock("../../electron-src/lib/prisma/databaseInitializer", () => ({
   getDatabasePath: () =>
     path.join(TEST_LOCAL_DIR, "score-at-once", "database.db"),
+  createSharedPrismaClient: () => ({
+    auditLog: {
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+  }),
 }))
 
 import {

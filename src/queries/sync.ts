@@ -34,6 +34,16 @@ export const subscribeSyncStatus = (
   onChanged: Parameters<typeof window.electronAPI.sync.onStatusChanged>[0]
 ) => window.electronAPI.sync.onStatusChanged(onChanged)
 
+/**
+ * 同期が別id・同一ユニークキーの行を1つへ畳んだら呼ばれる購読を張る。
+ *
+ * 畳みは黙って行が1つ消える操作なので、起きた瞬間に押し出される（既読は持たない）。
+ * 外すのは戻り値を呼ぶ。
+ */
+export const subscribeSyncRecordFolds = (
+  onFolded: Parameters<typeof window.electronAPI.sync.onRecordsFolded>[0]
+) => window.electronAPI.sync.onRecordsFolded(onFolded)
+
 // =====================================================================
 // 書き込み
 // =====================================================================
