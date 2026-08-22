@@ -2,12 +2,22 @@
 
 import { useMutation, useQueries, useQuery } from "@tanstack/react-query"
 import Link from "next/link"
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import {
   type EditableColumnDef,
   EditableTable,
 } from "@/components/common/EditableTable"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import {
   type CourseworkClassroomRow,
@@ -22,6 +32,12 @@ import type {
   CourseworkStudentWithMemberships,
 } from "@/types/coursework.types"
 
+import {
+  containsFullWidth,
+  isUnknownLetterValue,
+  letterValueOf,
+  toHalfWidth,
+} from "../courseworkLetterValues"
 import {
   buildCourseworkStudentRows,
   type CourseworkCellPatch,
@@ -45,23 +61,13 @@ interface ScoreRow {
 }
 
 /**
- * 表記ゆれを吸収する（全角英数・全角記号を半角へ、前後の空白を落とす）。
+ * 数値の表記ゆれを吸収する（全角英数・全角記号を半角へ、前後の空白を落とす）。
  *
- * Excel から貼り付けた `１０` や `ａ` は間違いではなく表記の違いなので、弾かずに
- * 受け入れる。文字評価の照合では変換表のラベル側にも同じ正規化を通すこと
- * （入力側だけ半角化すると、ラベルが全角で登録されている場合に一致しなくなる）。
+ * `１０` は 10 のことであって別の数ではないので、数値として読むために寄せる。
+ * **文字評価には通さない。** 評語は `Ａ` と `A` が別の評語でありうるので、
+ * 表記を寄せるかどうかは貼り付けのときに人へ尋ねる（`transformPastedText`）。
  */
-const normalizeInput = (value: string): string =>
-  value
-    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (fullWidthChar) =>
-      String.fromCharCode(fullWidthChar.charCodeAt(0) - 0xfee0)
-    )
-    .replace(/[－ー−]/g, "-")
-    .replace(/[．]/g, ".")
-    .trim()
-
-/** 文字評価の照合キー（両側に同じ正規化を通し、大小文字は無視する） */
-const letterKey = (value: string): string => normalizeInput(value).toUpperCase()
+const normalizeInput = (value: string): string => toHalfWidth(value).trim()
 
 /** 評価項目ごとの列ID（value列はitem.id、補助列は接尾辞付き） */
 const adjColId = (itemId: string) => `${itemId}::adj`
@@ -72,8 +78,11 @@ const commentColId = (itemId: string) => `${itemId}::comment`
  * 試験外成績資料の点数入力コンテナ
  *
  * EditableTable を用い、行＝名簿生徒・列＝評価項目（value／加減点／理由／コメント）で
- * Excelコピペ対応の一括入力を提供する。文字評価項目は変換表のラベルで検証する。
- * 変更はデバウンスで自動保存される。
+ * Excelコピペ対応の一括入力を提供する。変更は自動保存される。
+ *
+ * **入力は自由。** 文字評価は変換表に無い評語もそのまま保存する（弾くと、教員が
+ * 打った「認定」がどこにも残らず、後から拾えない）。変換表に無いことに気づく口は
+ * 2つだけ持つ: このマスが赤いことと、評価項目（03）での列挙。
  */
 export function CourseworkScoresContainer({
   courseworkId,
@@ -132,6 +141,33 @@ export function CourseworkScoresContainer({
       )
     },
     [upsertScores]
+  )
+
+  /**
+   * 全角の確認を待っている貼り付け。
+   *
+   * `answer` を呼ぶと `transformPastedText` の約束が果たされ、表への配布が進む。
+   * 尋ねるのは貼り付け1回につき1度で、設定としては持たない（効く瞬間にだけ尋ねる）。
+   */
+  const [pendingPaste, setPendingPaste] = useState<{
+    answer: (toHalfWidthChars: boolean) => void
+  } | null>(null)
+
+  const confirmPastedText = useCallback(
+    (pastedText: string) =>
+      new Promise<string>((resolve) => {
+        if (!containsFullWidth(pastedText)) {
+          resolve(pastedText)
+          return
+        }
+        setPendingPaste({
+          answer: (toHalfWidthChars: boolean) => {
+            setPendingPaste(null)
+            resolve(toHalfWidthChars ? toHalfWidth(pastedText) : pastedText)
+          },
+        })
+      }),
+    []
   )
 
   const tableData = useMemo(() => {
@@ -200,13 +236,6 @@ export function CourseworkScoresContainer({
         const validLabels = item.letterScales
           .map((letterScale) => letterScale.label)
           .join("/")
-        // 照合は正規化キーで行い、保存する値は変換表のラベルそのものにする
-        const labelByKey = new Map(
-          item.letterScales.map((letterScale) => [
-            letterKey(letterScale.label),
-            letterScale.label,
-          ])
-        )
         return [
           {
             id: item.id,
@@ -217,12 +246,15 @@ export function CourseworkScoresContainer({
             size: 110,
             meta: {
               placeholder: isLetter ? validLabels || "評価記号" : "数値",
-              // 文字評価は変換表のラベル、数値は有限の数値なら有効。
-              // 満点超過も負数も許容する（配点の枠を超えて成績へ加減できる仕様）。
+              // 文字評価は入力どおり保存する。赤は「変換表に無い」という注意で、
+              // 変換表を1つも作っていない段階では判定しない（全マスが赤くても
+              // 直しようがない）。数値は有限の数値なら有効で、満点超過も負数も
+              // 許容する（配点の枠を超えて成績へ加減できる仕様）。
+              invalidValuePolicy: isLetter ? "keep" : "reject",
               validate: (value: string) => {
+                if (isLetter) return !isUnknownLetterValue(item, value)
                 const normalized = normalizeInput(value)
                 if (normalized === "") return true
-                if (isLetter) return labelByKey.has(letterKey(value))
                 const parsedValue = Number(normalized)
                 return !isNaN(parsedValue) && isFinite(parsedValue)
               },
@@ -294,28 +326,18 @@ export function CourseworkScoresContainer({
 
         const courseworkStudentId = newRow._courseworkStudentId
         for (const item of items) {
-          const labelByKey = new Map(
-            item.letterScales.map((letterScale) => [
-              letterKey(letterScale.label),
-              letterScale.label,
-            ])
-          )
-
           // value列（数値 or 文字評価）
           const valueColumnId = item.id
           if (newRow[valueColumnId] !== oldRow[valueColumnId]) {
-            const trimmed = normalizeInput(newRow[valueColumnId] ?? "")
             if (item.inputMode === "letter") {
-              if (trimmed === "") {
-                pushPatch(item, courseworkStudentId, { letterValue: null })
-              } else {
-                const label = labelByKey.get(letterKey(newRow[valueColumnId]))
-                if (label !== undefined) {
-                  pushPatch(item, courseworkStudentId, { letterValue: label })
-                }
-                // 変換表に無い記号は無視
-              }
+              // 入力された文字をそのまま保存する。変換表に無い評語も保存し、
+              // 気づく口は「マスが赤いこと」と「評価項目の画面での列挙」が持つ
+              const letterValue = letterValueOf(newRow[valueColumnId] ?? "")
+              pushPatch(item, courseworkStudentId, {
+                letterValue: letterValue === "" ? null : letterValue,
+              })
             } else {
+              const trimmed = normalizeInput(newRow[valueColumnId] ?? "")
               if (trimmed === "") {
                 pushPatch(item, courseworkStudentId, { score: null })
               } else {
@@ -416,8 +438,38 @@ export function CourseworkScoresContainer({
           onDataChange={handleDataChange}
           allowInsertRow={false}
           allowDeleteRow={false}
+          transformPastedText={confirmPastedText}
         />
       </div>
+
+      {/*
+        全角を黙って半角へ変えない。`Ａ` と `A` が別の評語でありうるので、
+        寄せてよいかを貼り付けのたびに（1回だけ）尋ねる。閉じただけのときは
+        「そのまま」と同じ扱いにする（黙って変換する方には倒さない）。
+      */}
+      <AlertDialog
+        open={pendingPaste !== null}
+        onOpenChange={(open) => {
+          if (!open) pendingPaste?.answer(false)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>全角文字が検知されました</AlertDialogTitle>
+            <AlertDialogDescription>
+              半角文字でよろしいですか？「そのまま貼り付ける」を選ぶと、貼り付けた文字のまま入力します。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => pendingPaste?.answer(false)}>
+              そのまま貼り付ける
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => pendingPaste?.answer(true)}>
+              半角にする
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="mt-6 flex justify-end">
         <Button asChild>

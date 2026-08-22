@@ -2,10 +2,15 @@
 
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import {
@@ -26,6 +31,7 @@ import {
 import { cn } from "@/lib/utils"
 import {
   courseworkDetailQuery,
+  courseworkScoresQuery,
   createCourseworkItemMutation,
   createCourseworkLetterScaleMutation,
   deleteCourseworkItemMutation,
@@ -39,6 +45,10 @@ import type {
 } from "@/types/coursework.types"
 import { toInputMode } from "@/types/coursework.types"
 
+import {
+  collectUnknownLetterValues,
+  type UnknownLetterValues,
+} from "../courseworkLetterValues"
 import { LetterScaleEditor } from "./LetterScaleEditor"
 
 /** 文字評価へ切り替えたときに作る既定の変換表 */
@@ -90,6 +100,33 @@ export function CourseworkItemsContainer({
     ...courseworkDetailQuery(courseworkId),
     select: selectItems,
   })
+
+  // 文字評価の項目だけ、入力された評語を見に行く（数値の項目には変換表が無い）。
+  // 点数入力ページと同じキーなので取得は共有される
+  const letterItems = useMemo(
+    () => items.filter((item) => item.inputMode === "letter"),
+    [items]
+  )
+  const scoreQueries = useQueries({
+    queries: letterItems.map((item) => courseworkScoresQuery(item.id)),
+  })
+  /**
+   * 評価項目 id → 入力されたが変換表に無い評語。
+   *
+   * **基準を決めるこの画面で気づく。** 点数入力は自由に受け付けるので、変換表に
+   * 無い評語は保存される。それが何であって何人分あるのかを、変換表のすぐ下に出す。
+   * 集計は renderer 側で行う（main は点数の行を返すだけ）。
+   */
+  const unknownLetterValuesByItem = useMemo(
+    () =>
+      new Map(
+        letterItems.map((item, index) => [
+          item.id,
+          collectUnknownLetterValues(item, scoreQueries[index]?.data ?? []),
+        ])
+      ),
+    [letterItems, scoreQueries]
+  )
 
   const createItem = useMutation(createCourseworkItemMutation(courseworkId))
   const updateItem = useMutation(updateCourseworkItemMutation(courseworkId))
@@ -284,6 +321,7 @@ export function CourseworkItemsContainer({
                 key={item.id}
                 courseworkId={courseworkId}
                 item={item}
+                unknownLetterValues={unknownLetterValuesByItem.get(item.id)}
                 name={textOf(item, "name")}
                 maxScore={textOf(item, "maxScore")}
                 onChangeName={changeName}
@@ -311,6 +349,8 @@ export function CourseworkItemsContainer({
 interface SortableItemRowProps {
   courseworkId: string
   item: CourseworkItemWithLetterScales
+  /** 入力されたが変換表に無い評語（文字評価の項目のみ） */
+  unknownLetterValues: UnknownLetterValues | undefined
   name: string
   maxScore: string
   onChangeName: (item: CourseworkItemWithLetterScales, text: string) => void
@@ -327,6 +367,7 @@ interface SortableItemRowProps {
 function SortableItemRow({
   courseworkId,
   item,
+  unknownLetterValues,
   name,
   maxScore,
   onChangeName,
@@ -391,7 +432,17 @@ function SortableItemRow({
           </div>
 
           {item.inputMode === "letter" && (
-            <LetterScaleEditor courseworkId={courseworkId} item={item} />
+            <>
+              <LetterScaleEditor courseworkId={courseworkId} item={item} />
+              {unknownLetterValues !== undefined &&
+                unknownLetterValues.count > 0 && (
+                  <p className="text-xs text-amber-700">
+                    変換表にない評価が入力されています:{" "}
+                    {unknownLetterValues.values.join("、")}（
+                    {unknownLetterValues.count}件）
+                  </p>
+                )}
+            </>
           )}
         </div>
 

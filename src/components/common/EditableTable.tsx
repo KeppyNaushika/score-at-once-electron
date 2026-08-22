@@ -31,8 +31,17 @@ interface EditableColumnMeta {
   readOnly?: boolean
   /** 編集セルの入力欄に出すプレースホルダ */
   placeholder?: string
-  /** 非空の入力の検証。false なら赤背景で「保存されない」ことを示す */
+  /** 非空の入力の検証。false なら赤背景で注意を示す */
   validate?: (value: string) => boolean
+  /**
+   * 検証NGの入力をどう扱う列か。
+   *
+   * - `"reject"`（既定）: 保存されない。赤背景と「保存されません」の通知は破棄の予告。
+   * - `"keep"`: 入力どおり保存する。赤背景は「想定していない値だ」という注意であって
+   *   破棄の予告ではないので、通知も出さず、貼り付けの「保存されませんでした」の
+   *   件数にも数えない（数えると嘘になる）。
+   */
+  invalidValuePolicy?: "reject" | "keep"
 }
 
 /**
@@ -72,6 +81,26 @@ interface EditableTableProps<T extends RowData> {
   allowDeleteRow?: boolean
   className?: string
   getRowProps?: (row: Row<EditableTableFeatures, T>) => { className?: string }
+  /**
+   * 貼り付けられた文字列を、表へ配る前に差し替える口（任意）。
+   *
+   * 渡さなければ従来どおり、貼られた文字列がそのまま配られる。表記を人へ尋ねて
+   * から配りたい表だけがこれを渡す。**貼り付け1回につき1度**しか呼ばれない
+   * （セルごとに尋ねると300人分の貼り付けで300回尋ねることになる）。
+   *
+   * 待っている間にフォーカスは移りうるので、貼り付け先の起点は呼ぶ前に読んである。
+   */
+  transformPastedText?: (pastedText: string) => Promise<string>
+}
+
+/**
+ * 貼り付け先の起点（フォーカスしているセル）。
+ *
+ * 確認ダイアログを開くとフォーカスが移るので、**待つ前に**読んでおく。
+ */
+interface PasteOrigin {
+  rowIndex: number
+  editableColumnIndex: number
 }
 
 type EditableCellProps<T extends RowData> = CellContext<
@@ -100,16 +129,18 @@ function EditableCell<T extends RowData>({
   const inputRef = useRef<HTMLInputElement>(null)
 
   const meta = column.columnDef.meta
+  const keepsInvalidValue = meta?.invalidValuePolicy === "keep"
 
-  // 非空かつ検証NGのセルは赤背景で警告（保存されない入力を可視化）
+  // 非空かつ検証NGのセルは赤背景で警告
   const isInvalid =
     strValue.trim() !== "" && meta?.validate ? !meta.validate(strValue) : false
 
   const onBlur = () => {
     table.options.meta?.updateData(row.index, column.id, strValue)
     // 下書きは残す。親が受け付ければ確定値が変わって外れ、弾かれれば残って赤いまま。
-    // 赤背景だけでは何が悪いか伝わらず、title はホバーしないと出ないので通知する
-    if (isInvalid) {
+    // 赤背景だけでは何が悪いか伝わらず、title はホバーしないと出ないので通知する。
+    // 入力どおり保存する列は失われるものが無いので、通知はしない（赤だけで足りる）
+    if (isInvalid && !keepsInvalidValue) {
       toast.warning(`「${strValue}」は保存されません`, {
         description: meta?.placeholder
           ? `入力できる値: ${meta.placeholder}`
@@ -186,7 +217,11 @@ function EditableCell<T extends RowData>({
       }`}
       placeholder={meta?.placeholder || ""}
       title={
-        isInvalid ? "無効な値です（このままでは保存されません）" : undefined
+        isInvalid
+          ? keepsInvalidValue
+            ? "想定していない値です（入力どおり保存します）"
+            : "無効な値です（このままでは保存されません）"
+          : undefined
       }
     />
   )
@@ -200,6 +235,7 @@ export function EditableTable<T extends RowData>({
   allowDeleteRow = true,
   className = "",
   getRowProps,
+  transformPastedText,
 }: EditableTableProps<T>) {
   const deleteRow = useCallback(
     (rowIndex: number) => {
@@ -334,18 +370,57 @@ export function EditableTable<T extends RowData>({
     })
   }
 
-  /** その列の検証に照らして保存されない値か */
+  /**
+   * その列の検証に照らして保存されない値か。
+   *
+   * 入力どおり保存する列（`invalidValuePolicy: "keep"`）は、検証NGでも失われない
+   * ので数えない。
+   */
   const isRejected = (column: EditableColumnDef<T>, value: string) =>
-    value.trim() !== "" && column.meta?.validate
+    value.trim() !== "" &&
+    column.meta?.validate &&
+    column.meta.invalidValuePolicy !== "keep"
       ? !column.meta.validate(value)
       : false
 
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault()
+  /** 編集できる列だけを、表に並んでいる順で */
+  const editableColumnsForPaste = columns.filter(
+    (column) => !column.meta?.readOnly
+  )
 
-    const paste = e.clipboardData.getData("text")
+  /** フォーカスしているセルから貼り付けの起点を読む（同期。待つ前に呼ぶこと） */
+  const readPasteOrigin = (): PasteOrigin => {
+    const activeElement = document.activeElement
+    const td =
+      activeElement instanceof HTMLElement ? activeElement.closest("td") : null
+    const tr = td?.closest("tr")
+    const tbody = tr?.closest("tbody")
+    if (!td || !tr || !tbody) return { rowIndex: 0, editableColumnIndex: 0 }
+
+    const allRows = Array.from(tbody.querySelectorAll("tr"))
+    const rowIndex = allRows.indexOf(tr)
+
+    // フォーカスセルのカラムIDを特定
+    const allCells = Array.from(tr.querySelectorAll("td"))
+    const cellIndex = allCells.indexOf(td)
+    const visibleColumns = table.getVisibleLeafColumns()
+    if (cellIndex < 0 || cellIndex >= visibleColumns.length) {
+      return { rowIndex: Math.max(rowIndex, 0), editableColumnIndex: 0 }
+    }
+    const focusedColumnId = visibleColumns[cellIndex].id
+    const editableColumnIndex = editableColumnsForPaste.findIndex(
+      (column) => column.id === focusedColumnId
+    )
+    return {
+      rowIndex: Math.max(rowIndex, 0),
+      editableColumnIndex: Math.max(editableColumnIndex, 0),
+    }
+  }
+
+  /** 貼り付けられた文字列を表へ配る */
+  const applyPastedText = (pastedText: string, origin: PasteOrigin) => {
     // CRLF/CR を LF に正規化してから分割（末尾セルに \r が混入するのを防ぐ）
-    const rows = paste.replace(/\r\n?/g, "\n").split("\n")
+    const rows = pastedText.replace(/\r\n?/g, "\n").split("\n")
     // 末尾の終端改行による空行のみ除去。途中の空行は行対応を保つため残す
     // （空行を除去すると空白セルの分だけ以降の行が上に詰まりズレる）
     while (rows.length > 0 && rows[rows.length - 1].trim() === "") rows.pop()
@@ -354,43 +429,17 @@ export function EditableTable<T extends RowData>({
 
     if (hasReadOnlyColumns) {
       // マージ型ペースト: readOnlyカラムをスキップし、editableカラムのみにデータをマッピング
-      const editableCols = columns.filter((column) => !column.meta?.readOnly)
-
-      // フォーカスセルの位置を起点にする
-      const activeElement = document.activeElement as HTMLInputElement | null
-      let startRowIndex = 0
-      let startEditableColIndex = 0
-
-      if (activeElement?.closest("td")) {
-        const td = activeElement.closest("td")!
-        const tr = td.closest("tr")!
-        const tbody = tr.closest("tbody")!
-        const allRows = Array.from(tbody.querySelectorAll("tr"))
-        startRowIndex = allRows.indexOf(tr)
-
-        // フォーカスセルのカラムIDを特定
-        const allTds = Array.from(tr.querySelectorAll("td"))
-        const tdIndex = allTds.indexOf(td)
-        const visibleColumns = table.getVisibleLeafColumns()
-        if (tdIndex >= 0 && tdIndex < visibleColumns.length) {
-          const focusedColId = visibleColumns[tdIndex].id
-          const editableIndex = editableCols.findIndex(
-            (column) => column.id === focusedColId
-          )
-          if (editableIndex >= 0) startEditableColIndex = editableIndex
-        }
-      }
-
+      const editableCols = editableColumnsForPaste
       const newData = [...data]
       let rejectedCount = 0
       for (let ri = 0; ri < rows.length; ri++) {
-        const targetRow = startRowIndex + ri
+        const targetRow = origin.rowIndex + ri
         if (targetRow >= newData.length) break
 
         const cells = rows[ri].split("\t")
         const updatedRow = { ...newData[targetRow] }
         for (let ci = 0; ci < cells.length; ci++) {
-          const targetCol = startEditableColIndex + ci
+          const targetCol = origin.editableColumnIndex + ci
           if (targetCol >= editableCols.length) break
           const targetColumn = editableCols[targetCol]
           const colId = targetColumn.id
@@ -422,6 +471,22 @@ export function EditableTable<T extends RowData>({
       onDataChange(pastedData)
       notifyRejectedPaste(rejectedCount)
     }
+  }
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault()
+
+    const pastedText = e.clipboardData.getData("text")
+    // 起点は今読む。差し替えを待つ間にフォーカスが移りうる
+    const origin = readPasteOrigin()
+
+    if (!transformPastedText) {
+      applyPastedText(pastedText, origin)
+      return
+    }
+    void transformPastedText(pastedText).then((resolvedText) => {
+      applyPastedText(resolvedText, origin)
+    })
   }
 
   return (
