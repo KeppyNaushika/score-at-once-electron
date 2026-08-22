@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { Trash2 } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 import {
   AlertDialog,
@@ -22,9 +22,14 @@ import {
   applyGradeBoundaryPresetMutation,
   deleteAllGradeItemBoundariesMutation,
   gradeDetailQuery,
+  gradeResultsQuery,
 } from "@/queries/grade"
-import type { GradeItemWithDataSources } from "@/types/grade.types"
+import type {
+  GradeItemWithDataSources,
+  StudentGradeResult,
+} from "@/types/grade.types"
 
+import { collectUnknownGradeLabels } from "../gradeLabelValues"
 import { BoundaryEditor } from "./BoundaryEditor"
 import { BoundaryPresetSelector } from "./BoundaryPresetSelector"
 import { ConstraintRulesEditor } from "./ConstraintRulesEditor"
@@ -33,10 +38,22 @@ interface BoundariesContainerProps {
   gradeId: string
 }
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_GRADE_ITEMS: GradeItemWithDataSources[] = []
+const EMPTY_STUDENTS: StudentGradeResult[] = []
+
 export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
   const { data: grade, isPending: loading } = useQuery(
     gradeDetailQuery(gradeId)
   )
+  /**
+   * 上書きされた評定を見るために算出結果を読む。
+   *
+   * 結果（06）および同じ画面の制約ルール編集と同じキーなので、取得は共有される
+   * （この画面はもともとこの結果を読んでいる）。上書きだけを返す口は無いが作る
+   * 必要も無い ── 同じ結果を見ておけば、赤いマスと、ここの列挙が食い違わない。
+   */
+  const { data: result } = useQuery(gradeResultsQuery(gradeId))
   const applyPreset = useMutation(applyGradeBoundaryPresetMutation(gradeId))
   const deleteAllBoundaries = useMutation(
     deleteAllGradeItemBoundariesMutation(gradeId)
@@ -44,6 +61,25 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
 
   const [deletionTargetGradeItem, setDeletionTargetGradeItem] =
     useState<GradeItemWithDataSources | null>(null)
+
+  /**
+   * 評価項目 id → 上書きされたが基準に無い評定。
+   *
+   * **基準を決めるこの画面で気づく。** 上書きは自由に受け付けるので、基準に無い
+   * 評定（校長判断の「／」など）も保存される。それが何であって何人分あるのかを、
+   * 境界の編集欄のすぐ下に出す。基準へ足す導線は置かない（足すかどうかは人が決める）。
+   * 集計は renderer 側で行う（main は算出結果の行を返すだけ）。
+   */
+  const unknownGradeLabelsByGradeItem = useMemo(() => {
+    const gradeItems = grade?.gradeItems ?? EMPTY_GRADE_ITEMS
+    const students = result?.students ?? EMPTY_STUDENTS
+    return new Map(
+      gradeItems.map((gradeItem) => [
+        gradeItem.id,
+        collectUnknownGradeLabels(gradeItem, students),
+      ])
+    )
+  }, [grade?.gradeItems, result?.students])
 
   if (loading || !grade) {
     return (
@@ -63,30 +99,43 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
       </p>
 
       <div className="space-y-4">
-        {gradeItems.map((gradeItem) => (
-          <Card key={gradeItem.id} className="space-y-3 p-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold">{gradeItem.name}</h3>
-              {gradeItem.boundaries.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive"
-                  onClick={() => setDeletionTargetGradeItem(gradeItem)}
-                >
-                  <Trash2 className="mr-1 h-3.5 w-3.5" />
-                  境界設定を削除
-                </Button>
-              )}
-            </div>
-            <BoundaryPresetSelector
-              onSelect={(boundaries) =>
-                applyPreset.mutate({ gradeItemId: gradeItem.id, boundaries })
-              }
-            />
-            <BoundaryEditor gradeId={gradeId} gradeItem={gradeItem} />
-          </Card>
-        ))}
+        {gradeItems.map((gradeItem) => {
+          const unknownGradeLabels = unknownGradeLabelsByGradeItem.get(
+            gradeItem.id
+          )
+          return (
+            <Card key={gradeItem.id} className="space-y-3 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-semibold">{gradeItem.name}</h3>
+                {gradeItem.boundaries.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive"
+                    onClick={() => setDeletionTargetGradeItem(gradeItem)}
+                  >
+                    <Trash2 className="mr-1 h-3.5 w-3.5" />
+                    境界設定を削除
+                  </Button>
+                )}
+              </div>
+              <BoundaryPresetSelector
+                onSelect={(boundaries) =>
+                  applyPreset.mutate({ gradeItemId: gradeItem.id, boundaries })
+                }
+              />
+              <BoundaryEditor gradeId={gradeId} gradeItem={gradeItem} />
+              {unknownGradeLabels !== undefined &&
+                unknownGradeLabels.count > 0 && (
+                  <p className="text-xs text-amber-700">
+                    基準にない評定が入力されています:{" "}
+                    {unknownGradeLabels.values.join("、")}（
+                    {unknownGradeLabels.count}件）
+                  </p>
+                )}
+            </Card>
+          )
+        })}
       </div>
 
       <Separator className="my-8" />

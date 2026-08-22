@@ -5,6 +5,8 @@ import { useCallback, useRef, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 
+import { isUnknownGradeLabel } from "../gradeLabelValues"
+
 /** 上書きが自動算出値に対してどちら向きか */
 type OverrideDirection = "up" | "down" | "fixed" | "custom"
 
@@ -60,6 +62,25 @@ export function resolveOverrideDirection(
 
   // 同じ段階への上書き（固定用途）
   return "fixed"
+}
+
+/**
+ * マスの色。
+ *
+ * 基準に無い評定（赤）を上書き（橙）より前に出す。どちらも手で触った印だが、
+ * 橙は「触った」だけで、赤は「触った先が基準に無い」というより強い知らせ。
+ */
+function badgeColorClassName(
+  isUnknownLabel: boolean,
+  isOverridden: boolean
+): string {
+  if (isUnknownLabel) {
+    return "border-red-400 bg-red-100 text-red-800 hover:bg-red-200 dark:border-red-600 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+  }
+  if (isOverridden) {
+    return "border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200 dark:border-amber-600 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
+  }
+  return "hover:bg-muted"
 }
 
 export function EditableGradeLabel({
@@ -135,9 +156,23 @@ export function EditableGradeLabel({
   }
 
   const isOverridden = overrideLabel !== null
-  const tooltipText = isOverridden
+
+  /**
+   * 基準（成績境界）に無い評定か。
+   *
+   * `*`（custom）とは別のことを言う。`*` は「矢印を出せない」＝上下を比べられない
+   * 印で、境界が0本のときも自動算出値が無いときも点く。こちらは「この評定は基準に
+   * 無い」で、境界が1本以上あるときだけ点く。重なる場面（基準に無い評定への上書き）
+   * では両方が真なので両方出す。
+   */
+  const isUnknownLabel = isUnknownGradeLabel(boundaries, overrideLabel)
+
+  const overrideTooltip = isOverridden
     ? `自動算出: ${originalLabel ?? "-"} → 手動: ${overrideLabel}`
     : undefined
+  const tooltipText = isUnknownLabel
+    ? `${overrideTooltip}\nこの評定は成績境界にありません`
+    : overrideTooltip
 
   // Override方向の判定。上書き値が空文字でも「手で触ったセル」であることは
   // 示す必要があるので custom（*）へ倒す
@@ -152,11 +187,10 @@ export function EditableGradeLabel({
   return (
     <Badge
       variant={isOverridden ? "default" : "outline"}
-      className={`cursor-pointer text-xs ${
+      className={`cursor-pointer text-xs ${badgeColorClassName(
+        isUnknownLabel,
         isOverridden
-          ? "border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200 dark:border-amber-600 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
-          : "hover:bg-muted"
-      }`}
+      )}`}
       title={tooltipText}
       onClick={startEdit}
     >
