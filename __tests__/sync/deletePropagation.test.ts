@@ -7,15 +7,18 @@
  *
  * 検証の主眼は **アプリの時刻形式 × ライブラリの LWW 比較** の組み合わせ:
  * - アプリ（Prisma）が書く `updatedAt` は ISO-T 形式 `2026-07-26T08:00:00.000+00:00`
- * - ライブラリのトリガーが書く `_tombstone.deletedAt` は `datetime('now')` の
- *   スペース形式 `2026-07-26 09:00:00`
+ * - ライブラリのトリガーが書く `_tombstone.deletedAt` は **0.19.0 から同じ ISO-T の
+ *   ミリ秒付き**（`strftime('%Y-%m-%dT%H:%M:%fZ','now')`）
  *
- * この2つを素の文字列で比較すると、同日なら10文字目が `' '(0x20) < 'T'(0x54)` となり
+ * **0.18.0 までは `datetime('now')` の秒精度スペース形式 `2026-07-26 09:00:00` だった。**
+ * 素の文字列で比較すると、同日なら10文字目が `' '(0x20) < 'T'(0x54)` となり
  * 「削除は常に古い」と誤判定され、**削除したレコードがフルマージで復活する**。
- * sqlite-nas-sync 0.13.1 の `isLaterTimestamp`（julianday 正規化）がこれを解消した。
+ * 0.13.1 の `isLaterTimestamp`（julianday 正規化）がこれを解消し、0.19.0 で書式そのものが
+ * 揃った（同じ秒の中で削除が最大999ミリ秒ぶん過去へずれる問題も、これで消えた）。
  *
- * この組み合わせはライブラリ単体のテストでは再現しない（両方の時刻がトリガー由来の
- * スペース形式になるため）。検出できるのはアプリ側のこのテストだけなので、
+ * **既に在るDBには秒精度・スペース形式の tombstone が残る**ので、混在しても前後が正しく
+ * 決まることは引き続き固定する。この組み合わせはライブラリ単体のテストでは再現しない
+ * （両方の時刻がトリガー由来になるため）。検出できるのはアプリ側のこのテストだけなので、
  * ライブラリを更新するたびの回帰ガードとして機能させる（issue #918）。
  */
 import Database from "better-sqlite3"
@@ -137,7 +140,7 @@ afterEach(() => {
 })
 
 describe("削除の同期伝搬", () => {
-  it("前提: アプリの updatedAt(ISO-T) と tombstone の deletedAt(スペース形式) は素の文字列比較では逆転する", () => {
+  it("削除の時刻は、アプリの updatedAt と同じ精度・同じ書式で記録される（0.19.0）", () => {
     const syncA = createSyncInstance(DB_A, "client-a")
     insertTag(DB_A, "tag-1", "数学", recentIsoText(DB_A))
     withDatabase(DB_A, (db) => db.exec(`DELETE FROM "Tag" WHERE id = 'tag-1'`))
@@ -152,19 +155,26 @@ describe("削除の同期伝搬", () => {
       updatedAt: recentIsoText(DB_A),
     }))
 
-    // トリガーは datetime('now') のスペース形式、アプリは ISO-T
-    expect(deletedAt).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
+    // 両方とも ISO-T のミリ秒付き。ミリ秒まで在ることが要点で、秒に切り捨てられていると
+    // 同じ秒の中で起きた削除と更新の前後が失われる（消したはずの行が復活する）
+    expect(deletedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
     expect(updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+  })
 
-    // 素の文字列比較では「あとから起きた削除」が古い扱いになる（0.12.0 の不具合）
-    const sameDayUpdatedAt = `${deletedAt.slice(0, 10)}T00:00:00.000+00:00`
-    expect(deletedAt > sameDayUpdatedAt).toBe(false)
+  it("既に在るDBに残る秒精度・スペース形式の削除とも、前後が正しく決まる", () => {
+    // 0.18.0 までのトリガーが書いた形。書式を揃えても、既存の行は書き換えられない
+    // （切り捨てで失われたミリ秒は復元できない）ので、混在は残り続ける
+    const legacyDeletedAt = "2026-07-26 09:00:00"
+    const sameDayUpdatedAt = "2026-07-26T00:00:00.000+00:00"
 
-    // julianday 正規化なら正しく「削除の方が新しい」と判定される（0.13.1 の修正）
+    // 素の文字列比較では ' '(0x20) < 'T'(0x54) なので「あとから起きた削除」が古く出る
+    expect(legacyDeletedAt > sameDayUpdatedAt).toBe(false)
+
+    // julianday で正規化すれば正しく「削除の方が新しい」と判定される（0.13.1 の修正）
     const normalized = withDatabase(DB_A, (db) =>
       db
         .prepare(`SELECT julianday(?) AS deleted, julianday(?) AS updated`)
-        .get(deletedAt, sameDayUpdatedAt)
+        .get(legacyDeletedAt, sameDayUpdatedAt)
     ) as { deleted: number; updated: number }
     expect(normalized.deleted > normalized.updated).toBe(true)
   })
