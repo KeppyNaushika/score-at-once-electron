@@ -37,6 +37,7 @@ import type {
   ScoringContextState,
   ShortcutContextValue,
 } from "../../types"
+import { normalizeKey } from "../utils/normalizeKey"
 
 // ============================================
 // コンテキスト作成
@@ -59,97 +60,6 @@ export function useShortcutContext() {
 // ============================================
 // ユーティリティ関数
 // ============================================
-
-/**
- * macOSデッドキーのKeyCodeマッピング
- * Option+E などがデッドキーとして検出される問題に対応
- */
-const DEAD_KEY_CODE_MAP: { [code: string]: string } = {
-  KeyQ: "q",
-  KeyE: "e",
-  KeyF: "f",
-  KeyJ: "j",
-  KeyO: "o",
-  KeyP: "p",
-  KeyA: "a",
-  KeyS: "s",
-  KeyD: "d",
-  KeyW: "w",
-  KeyR: "r",
-  KeyT: "t",
-  KeyY: "y",
-  KeyU: "u",
-  KeyI: "i",
-  KeyG: "g",
-  KeyH: "h",
-  KeyK: "k",
-  KeyL: "l",
-  KeyZ: "z",
-  KeyX: "x",
-  KeyC: "c",
-  KeyV: "v",
-  KeyB: "b",
-  KeyN: "n",
-  KeyM: "m",
-}
-
-/**
- * 大文字小文字を保持すべき特殊キー
- * これらのキーはキーバインディング設定と同じ形式で返す
- */
-const SPECIAL_KEYS = new Set([
-  "Escape",
-  "Backspace",
-  "Enter",
-  "Tab",
-  "ArrowLeft",
-  "ArrowRight",
-  "ArrowUp",
-  "ArrowDown",
-  "Delete",
-  "Home",
-  "End",
-  "PageUp",
-  "PageDown",
-  "Insert",
-])
-
-/**
- * キー入力を正規化する
- * macOSデッドキー対応と修飾キーの処理を含む
- */
-function normalizeKey(event: KeyboardEvent): string {
-  let key = event.key
-
-  // macOSデッドキー対応
-  if (key === "Dead" && event.code && DEAD_KEY_CODE_MAP[event.code]) {
-    key = DEAD_KEY_CODE_MAP[event.code]
-  } else if (event.code && DEAD_KEY_CODE_MAP[event.code]) {
-    key = DEAD_KEY_CODE_MAP[event.code]
-  }
-
-  // 特殊キーは大文字小文字を保持、通常キーは小文字に正規化
-  if (!SPECIAL_KEYS.has(key)) {
-    key = key.toLowerCase()
-  }
-
-  // スペースキーの正規化
-  if (key === " ") {
-    key = "Space"
-  }
-
-  // 修飾キーを含める（順序: Ctrl, Alt, Shift, Meta）
-  const modifiers: string[] = []
-  if (event.ctrlKey || event.metaKey) modifiers.push("Ctrl")
-  if (event.altKey) modifiers.push("Alt")
-  if (event.shiftKey) modifiers.push("Shift")
-
-  if (modifiers.length > 0) {
-    return `${modifiers.join("+")}+${key}`
-  }
-
-  return key
-}
 
 /**
  * when句を評価する

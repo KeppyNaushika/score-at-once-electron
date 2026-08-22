@@ -14,6 +14,8 @@
  *    入力欄へ移る途中で一度 false へ倒すと、その隙間に届いたキーが採点として通る。
  * 3. **素通しを作らない。** `ShortcutProvider` のコマンド表を通らない直の購読
  *    （`Alt+-` / `Alt+=` / 模範解答の keyup）も、表と同じ入力欄ガードを持つ。
+ * 4. **割当に従う。** 表を通らない購読も、キーは表と同じ源から引く。模範解答を離す
+ *    キーが直書きだった頃は、割当を変えた利用者が押せても離せなくなった。
  *
  * 加えて、`when` 句が読んでいるコンテキストに**書き手が居ること**を検査する
  * （`textEditorActive` は読み手だけ 21 箇所あって書き手が0だった＝条件として死んでいた）。
@@ -24,13 +26,17 @@ import "./setup"
 import * as fs from "node:fs"
 import * as path from "node:path"
 
-import { act, fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { DEFAULT_KEYBINDINGS } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
 import { useCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
 import { useContextValue } from "@/components/exams/07-score-at-once/hooks/useContextValue"
 import { useGridNavigation } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridNavigation"
-import { ShortcutProvider } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
+import {
+  ShortcutProvider,
+  useShortcutContext,
+} from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import { useMasterAnswerHoldRelease } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useMasterAnswerHoldRelease"
 import { CurrentUserProvider } from "@/contexts/CurrentUserContext"
 import type { PublicUser } from "@/queries/user"
@@ -54,6 +60,8 @@ const INITIAL_ITEMS_PER_ROW = [5]
 const scoreCorrect = vi.fn()
 /** 模範解答を隠す指示が来たことの記録 */
 const hideMasterAnswer = vi.fn()
+/** DB に保存された「利用者が変えた割当」を返す口 */
+const getUserKeyboardShortcuts = vi.fn()
 
 /**
  * 07 の3種類のキー購読を1つに載せた見本。
@@ -64,6 +72,10 @@ const hideMasterAnswer = vi.fn()
  */
 function KeySubscriptions() {
   useContextValue("hasSelectedAnswers", true)
+
+  // 割当は DB から非同期に届く。届く前に打つと既定値を試すだけになるので、
+  // テストから「いま何が割り当たっているか」を見えるようにしておく
+  const { keyBindings } = useShortcutContext()
 
   useCommand("scoring.correct", scoreCorrect, {
     when: "!inputFocus && !modalOpen && hasSelectedAnswers",
@@ -87,11 +99,21 @@ function KeySubscriptions() {
         入力欄ではない何か
       </button>
       <span data-testid="items-per-row">{itemsPerRow[0]}</span>
+      <span data-testid="master-answer-key">
+        {keyBindings["view.toggleMasterAnswer"]}
+      </span>
     </>
   )
 }
 
-async function renderScoringKeys() {
+/**
+ * @param storedKeyBindings 利用者が設定で変えた割当（DB に入っている分）
+ */
+async function renderScoringKeys(
+  storedKeyBindings: Record<string, string> = {}
+) {
+  getUserKeyboardShortcuts.mockResolvedValue(storedKeyBindings)
+
   const QueryWrapper = createQueryWrapper()
   render(
     <QueryWrapper>
@@ -105,6 +127,14 @@ async function renderScoringKeys() {
   // キー割当の取得（非同期）と、コマンド登録・コンテキスト反映の effect を落ち着かせる
   await act(async () => {
     await Promise.resolve()
+  })
+  // 変えた割当が画面へ届くまで待つ。待たずに打つと既定値のままを試してしまい、
+  // 「変えたキーで離せる」検査が検査にならない
+  await waitFor(() => {
+    expect(masterAnswerKeyText()).toBe(
+      storedKeyBindings["view.toggleMasterAnswer"] ??
+        DEFAULT_KEYBINDINGS["view.toggleMasterAnswer"]
+    )
   })
 }
 
@@ -120,13 +150,19 @@ function itemsPerRowText() {
   return screen.getByTestId("items-per-row").textContent
 }
 
+function masterAnswerKeyText() {
+  return screen.getByTestId("master-answer-key").textContent
+}
+
 beforeEach(() => {
   scoreCorrect.mockReset()
   hideMasterAnswer.mockReset()
+  getUserKeyboardShortcuts.mockReset()
+  getUserKeyboardShortcuts.mockResolvedValue({})
   Object.defineProperty(window, "electronAPI", {
     value: {
       settings: {
-        getUserKeyboardShortcuts: vi.fn().mockResolvedValue({}),
+        getUserKeyboardShortcuts,
         saveUserKeyboardShortcuts: vi.fn().mockResolvedValue(undefined),
         resetUserKeyboardShortcuts: vi.fn().mockResolvedValue(undefined),
       },
@@ -241,6 +277,36 @@ describe("コマンド表を通らないキーの入力欄ガード", () => {
 
     fireEvent.keyUp(document.body, { key: "x" })
     expect(hideMasterAnswer).toHaveBeenCalledTimes(1)
+  })
+})
+
+/**
+ * 模範解答の「押している間だけ見せる」は、押す側と離す側で別の購読になっている。
+ * 離す側がキーを直書きしていた頃は、割当を変えた利用者が押せても離せなくなり、
+ * 模範解答が出たまま固まった（「押している間だけ」が「一度押したら消えない」に化ける）。
+ * 押す側と同じ源（`ShortcutProvider` の `keyBindings`）を読んでいることを固定する。
+ */
+describe("模範解答を離すキーは割当に従う", () => {
+  it("割当が既定のままなら x で離せる", async () => {
+    await renderScoringKeys()
+
+    fireEvent.keyUp(document.body, { key: "x" })
+    expect(hideMasterAnswer).toHaveBeenCalledTimes(1)
+  })
+
+  it("割当を m に変えたら m で離せる", async () => {
+    await renderScoringKeys({ "view.toggleMasterAnswer": "m" })
+
+    fireEvent.keyUp(document.body, { key: "m" })
+    expect(hideMasterAnswer).toHaveBeenCalledTimes(1)
+  })
+
+  it("割当を m に変えたら、既定の x では離れない", async () => {
+    // これが無いと「両方受け付ける」実装（既定を残したまま割当も見る）で通ってしまう
+    await renderScoringKeys({ "view.toggleMasterAnswer": "m" })
+
+    fireEvent.keyUp(document.body, { key: "x" })
+    expect(hideMasterAnswer).not.toHaveBeenCalled()
   })
 })
 
