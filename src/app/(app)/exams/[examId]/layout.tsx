@@ -1,16 +1,12 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { Users } from "lucide-react"
 import Head from "next/head"
 import { useParams } from "next/navigation"
-import React, { useState } from "react"
+import React from "react"
 
 import type { WorkflowTab } from "@/components/common/WorkflowTabHeader"
 import { WorkflowTabHeader } from "@/components/common/WorkflowTabHeader"
-import { MemberInviteDialog } from "@/components/exams/shared/MemberInviteDialog"
-import { Button } from "@/components/ui/button"
-import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { examDetailQuery } from "@/queries/exam"
 
 // ワークフローステップの定義
@@ -30,7 +26,7 @@ const workflowTabs: readonly WorkflowTab[] = [
   { id: "08-export", label: "8. 結果", path: "/08-export" },
 ]
 
-/** パンくずに出すのは試験名だけ（select の同一性を保つため外に置く） */
+/** ヘッダーに出すのは試験名だけ（select の同一性を保つため外に置く） */
 const selectExamName = (exam: { examName: string } | null) =>
   exam?.examName ?? ""
 
@@ -40,11 +36,9 @@ export default function ExamWorkflowLayout({
   children: React.ReactNode
 }) {
   const params = useParams()
-  const currentUser = useCurrentUser()
   const examId = typeof params.examId === "string" ? params.examId : ""
-  const [showMemberDialog, setShowMemberDialog] = useState(false)
 
-  // パンくずが要るのは試験名だけ
+  // ヘッダーが要るのは試験名だけ
   const { data: examName = "" } = useQuery({
     ...examDetailQuery(examId),
     select: selectExamName,
@@ -58,34 +52,12 @@ export default function ExamWorkflowLayout({
       <div className="flex h-full flex-col">
         <WorkflowTabHeader
           listHref="/exams"
-          listLabel="試験一覧"
           entityName={examName || "試験"}
           entityHref={`/exams/${examId}`}
           tabs={workflowTabs}
-          actions={
-            // メンバー管理はどの段からも開ける。行き先を持たない操作なので
-            // タブには並べられず、ここに残す
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowMemberDialog(true)}
-            >
-              <Users className="mr-2 h-4 w-4" />
-              メンバー
-            </Button>
-          }
         />
         <main className="min-h-0 flex-1 overflow-auto">{children}</main>
       </div>
-
-      {/* メンバー管理ダイアログ */}
-      <MemberInviteDialog
-        isOpen={showMemberDialog}
-        onClose={() => setShowMemberDialog(false)}
-        examId={examId}
-        currentUserId={currentUser.id}
-        examName={examName}
-      />
     </>
   )
 }

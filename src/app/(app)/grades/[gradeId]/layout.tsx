@@ -22,7 +22,7 @@ const workflowTabs: readonly WorkflowTab[] = [
   { id: "07-export", label: "6. 出力", path: "/07-export" },
 ]
 
-/** パンくずに出すのは名前だけ（select の同一性を保つため外に置く） */
+/** ヘッダーに出すのは名前だけ（select の同一性を保つため外に置く） */
 const selectGradeName = (grade: { name: string }) => grade.name
 
 export default function GradeWorkflowLayout({
@@ -32,7 +32,7 @@ export default function GradeWorkflowLayout({
 }) {
   const params = useParams()
   const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
-  // パンくずが要るのは名前だけ。成績本体のキャッシュを各段階と共有する
+  // ヘッダーが要るのは名前だけ。成績本体のキャッシュを各段階と共有する
   const { data: gradeName = "" } = useQuery({
     ...gradeDetailQuery(gradeId),
     select: selectGradeName,
@@ -42,7 +42,6 @@ export default function GradeWorkflowLayout({
     <div className="flex h-full flex-col">
       <WorkflowTabHeader
         listHref="/grades"
-        listLabel="成績算出"
         entityName={gradeName || "成績"}
         entityHref={`/grades/${gradeId}`}
         tabs={workflowTabs}

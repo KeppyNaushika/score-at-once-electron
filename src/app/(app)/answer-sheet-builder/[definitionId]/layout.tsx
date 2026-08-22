@@ -18,7 +18,7 @@ const workflowTabs: readonly WorkflowTab[] = [
  * 解答用紙作成の個別定義レイアウト。
  * 概要 / 1. 作成 / 2. 書き出し の3ページをタブで束ねる。
  */
-/** パンくずに出すのは定義名だけ（select の同一性を保つため外に置く） */
+/** ヘッダーに出すのは定義名だけ（select の同一性を保つため外に置く） */
 const selectDefinitionName = (definition: { name: string }) => definition.name
 
 export default function AnswerSheetBuilderDefinitionLayout({
@@ -28,7 +28,7 @@ export default function AnswerSheetBuilderDefinitionLayout({
 }) {
   const params = useParams<{ definitionId: string }>()
   const definitionId = params.definitionId
-  // パンくずが要るのは定義名だけ。定義そのもののキャッシュを各ページと共有する
+  // ヘッダーが要るのは定義名だけ。定義そのもののキャッシュを各ページと共有する
   const { data: definitionName = "" } = useQuery({
     ...answerSheetDefinitionQuery(definitionId),
     select: selectDefinitionName,
@@ -38,7 +38,6 @@ export default function AnswerSheetBuilderDefinitionLayout({
     <div className="flex h-screen flex-col">
       <WorkflowTabHeader
         listHref="/answer-sheet-builder"
-        listLabel="解答用紙作成"
         entityName={definitionName || "解答用紙"}
         entityHref={`/answer-sheet-builder/${definitionId}`}
         tabs={workflowTabs}

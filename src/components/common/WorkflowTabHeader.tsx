@@ -2,17 +2,8 @@
 
 import { ArrowLeft } from "lucide-react"
 import { usePathname } from "next/navigation"
-import type { ReactNode } from "react"
 
 import { GuardedLink } from "@/components/common/GuardedLink"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -29,65 +20,44 @@ export interface WorkflowTab {
 }
 
 interface WorkflowTabHeaderProps {
-  /** 一覧のURL。パンくずの1つ目と「一覧へ戻る」の行き先を兼ねる */
+  /** 「一覧へ戻る」の行き先 */
   listHref: string
-  /** 一覧の名前。サイドバーの項目名と揃える */
-  listLabel: string
   /** いま開いている実体の名前 */
   entityName: string
   /** 実体のURL。各タブの行き先はこれに `WorkflowTab.path` を継いで作る */
   entityHref: string
   tabs: readonly WorkflowTab[]
-  /** 「一覧へ戻る」の左に置く、そのワークフロー固有の操作 */
-  actions?: ReactNode
 }
 
 /**
  * 段のあるワークフローの詳細画面が共通で被るヘッダー。
+ * 上段が実体の名前と一覧への戻り、下段が段のタブ。
  *
- * 上段が `一覧の名前 › 実体の名前` のパンくずと操作、下段が段のタブ。
- * 段はパンくず（`›` で連なる道筋）ではなくタブで並べる。段は上流から下流へ
- * 一本道に見えるが、実際はどの段へも行き来できる**兄弟**であって、
- * いま居る段の親ではないため。
+ * **パンくずは置かない。** 段は上流から下流へ一本道に見えるが、実際はどの段へも
+ * 行き来できる**兄弟**であって、いま居る段の親ではない。`›` で連なる道筋は
+ * その関係を偽る。一覧との親子だけは本物だが、それは「一覧へ戻る」1つで足りる。
  *
  * タブは必ず `GuardedLink` を通す。書きかけを抱えた画面から段を移ると
  * 黙って捨てることになるので、離脱の確認を挟む口を1つに保つ。
  */
 export function WorkflowTabHeader({
   listHref,
-  listLabel,
   entityName,
   entityHref,
   tabs,
-  actions,
 }: WorkflowTabHeaderProps) {
   const pathname = usePathname()
 
   return (
     <header className="shrink-0 border-b bg-background">
       <div className="flex items-center justify-between gap-4 px-4 pt-2">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <GuardedLink href={listHref}>{listLabel}</GuardedLink>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{entityName}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-        <div className="flex items-center gap-2">
-          {actions}
-          <Button variant="ghost" size="sm" asChild>
-            <GuardedLink href={listHref}>
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              一覧へ戻る
-            </GuardedLink>
-          </Button>
-        </div>
+        <h1 className="truncate text-sm font-semibold">{entityName}</h1>
+        <Button variant="ghost" size="sm" asChild className="shrink-0">
+          <GuardedLink href={listHref}>
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            一覧へ戻る
+          </GuardedLink>
+        </Button>
       </div>
       {/* 試験は概要込みで9枚並ぶ。窓が狭いときはタブ列だけを横に流す */}
       <nav

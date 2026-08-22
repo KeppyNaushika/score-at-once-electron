@@ -16,7 +16,7 @@ const workflowTabs: readonly WorkflowTab[] = [
   { id: "05-results", label: "4. 結果", path: "/05-results" },
 ]
 
-/** パンくずに出すのは名前だけ（select の同一性を保つため外に置く） */
+/** ヘッダーに出すのは名前だけ（select の同一性を保つため外に置く） */
 const selectCourseworkName = (coursework: { name: string }) => coursework.name
 
 export default function CourseworkWorkflowLayout({
@@ -27,7 +27,7 @@ export default function CourseworkWorkflowLayout({
   const params = useParams()
   const courseworkId =
     typeof params.courseworkId === "string" ? params.courseworkId : ""
-  // パンくずが要るのは名前だけ。資料そのもののキャッシュを概要画面と共有する
+  // ヘッダーが要るのは名前だけ。資料そのもののキャッシュを概要画面と共有する
   const { data: courseworkName = "" } = useQuery({
     ...courseworkDetailQuery(courseworkId),
     select: selectCourseworkName,
@@ -37,7 +37,6 @@ export default function CourseworkWorkflowLayout({
     <div className="flex h-full flex-col">
       <WorkflowTabHeader
         listHref="/coursework"
-        listLabel="試験外成績資料"
         entityName={courseworkName || "試験外成績資料"}
         entityHref={`/coursework/${courseworkId}`}
         tabs={workflowTabs}

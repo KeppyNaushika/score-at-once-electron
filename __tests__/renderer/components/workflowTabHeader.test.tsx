@@ -75,7 +75,6 @@ function renderHeaderAt(
   render(
     <WorkflowTabHeader
       listHref="/exams"
-      listLabel="試験一覧"
       entityName="期末考査"
       entityHref={entityHref}
       tabs={tabs}
@@ -159,14 +158,14 @@ describe("WorkflowTabHeader の行き先", () => {
     })
   })
 
-  it("一覧へ戻ると、パンくずの一覧は同じ行き先を指す", () => {
+  it("一覧への導線は「一覧へ戻る」の1つだけ（パンくずを置かない）", () => {
     renderHeaderAt(examHref)
 
     const listLinks = screen
       .getAllByRole("link")
       .filter((link) => link.getAttribute("href") === "/exams")
-    // パンくずの1つ目と「一覧へ戻る」の2つ
-    expect(listLinks).toHaveLength(2)
-    expect(listLinks.map((link) => link.textContent)).toContain("一覧へ戻る")
+    // 同じ行き先を2か所から出さない。パンくずを戻すとここが2つになる
+    expect(listLinks).toHaveLength(1)
+    expect(listLinks[0].textContent).toContain("一覧へ戻る")
   })
 })
