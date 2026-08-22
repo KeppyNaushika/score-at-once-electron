@@ -1,9 +1,10 @@
 "use client"
 
-import { ArrowLeft } from "lucide-react"
+import { List } from "lucide-react"
 import { usePathname } from "next/navigation"
 
 import { GuardedLink } from "@/components/common/GuardedLink"
+import { HistoryNavButtons } from "@/components/layout/HistoryNavButtons"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -31,14 +32,30 @@ interface WorkflowTabHeaderProps {
 
 /**
  * 段のあるワークフローの詳細画面が共通で被るヘッダー。
- * 上段が実体の名前と一覧への戻り、下段が段のタブ。
+ * 上段が Word のタイトルバー（左にクイックアクセスツールバー・中央に実体の名前）、
+ * 下段が段のタブ。
  *
  * **パンくずは置かない。** 段は上流から下流へ一本道に見えるが、実際はどの段へも
  * 行き来できる**兄弟**であって、いま居る段の親ではない。`›` で連なる道筋は
- * その関係を偽る。一覧との親子だけは本物だが、それは「一覧へ戻る」1つで足りる。
+ * その関係を偽る。一覧との親子だけは本物だが、それはツールバーの一覧1つで足りる。
  *
- * タブは必ず `GuardedLink` を通す。書きかけを抱えた画面から段を移ると
- * 黙って捨てることになるので、離脱の確認を挟む口を1つに保つ。
+ * 遷移は必ずガードを通す。書きかけを抱えた画面から段を移ると黙って捨てることに
+ * なるので、離脱の確認を挟む口を1つに保つ（`GuardedLink` と、履歴の行き来を
+ * `guardedTraverse` で包む `useNavigationHistory`）。
+ *
+ * **「戻る／進む」は閲覧の履歴であって段の前後ではない。** 一覧 → 試験A → 試験B と
+ * 来たら、戻るで試験Aへ帰る。段を1つ戻るのは下段のタブの仕事。
+ *
+ * 押せるかどうかは `HistoryNavButtons` が Electron のセッション履歴に訊いた
+ * `canGoBack` / `canGoForward` に従う（端では押せない）。選ばなかった形:
+ *
+ * - **常に押せるままにする**: 端でも押せて、押しても何も起きない。壊れているのか
+ *   端なのかを利用者が区別できない
+ * - **アプリ側で行き来を数える**: 数えられるのはアプリが起こした遷移だけなので、
+ *   外から履歴を動かされるとずれる（Alt+← / マウスの第4ボタン）。ずれて
+ *   **戻れるのに押せない**方が、押しても何も起きないより悪い（手が無くなる）。
+ *   Electron に訊けばこの二択自体が要らない —— 履歴そのものを見た答えなので、
+ *   誰が動かしてもずれない
  */
 export function WorkflowTabHeader({
   listHref,
@@ -50,14 +67,29 @@ export function WorkflowTabHeader({
 
   return (
     <header className="shrink-0 border-b bg-background">
-      <div className="flex items-center justify-between gap-4 px-4 pt-2">
-        <h1 className="truncate text-sm font-semibold">{entityName}</h1>
-        <Button variant="ghost" size="sm" asChild className="shrink-0">
-          <GuardedLink href={listHref}>
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            一覧へ戻る
-          </GuardedLink>
-        </Button>
+      {/*
+        タイトルは**行の中央**に置く。ツールバーと横並びにすると、アイコンの枚数や
+        名前の長さでタイトルの中心が押されて動く。行に対して絶対配置し、中心を
+        `left-1/2` + `-translate-x-1/2` で取ることで、左に何を足しても中心は動かない。
+        重なりは名前側の幅を切って避け（長い名前は省略記号）、下に居るボタンを
+        塞がないよう当たり判定も外す。
+      */}
+      <div className="relative flex items-center px-2 pt-1">
+        <div className="flex items-center gap-0.5">
+          <HistoryNavButtons />
+          <Button variant="ghost" size="icon" className="size-7" asChild>
+            <GuardedLink
+              href={listHref}
+              aria-label="一覧へ戻る"
+              title="一覧へ戻る"
+            >
+              <List />
+            </GuardedLink>
+          </Button>
+        </div>
+        <h1 className="pointer-events-none absolute left-1/2 max-w-[60%] -translate-x-1/2 truncate text-sm font-semibold">
+          {entityName}
+        </h1>
       </div>
       {/* 試験は概要込みで9枚並ぶ。窓が狭いときはタブ列だけを横に流す */}
       <nav

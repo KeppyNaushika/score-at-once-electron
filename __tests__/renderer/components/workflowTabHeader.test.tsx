@@ -15,23 +15,44 @@
  * （`aria-current="page"` が付く枚数と、どれに付くか）で押さえる。
  */
 
-import { cleanup, render, screen, within } from "@testing-library/react"
-import type { ComponentProps } from "react"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import "@testing-library/jest-dom/vitest"
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import type { ComponentProps, ReactNode } from "react"
+import { useState } from "react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { WorkflowTab } from "@/components/common/WorkflowTabHeader"
 import { WorkflowTabHeader } from "@/components/common/WorkflowTabHeader"
+import { NavigationGuardProvider } from "@/contexts/NavigationGuardContext"
+import { useNavigationGuard } from "@/hooks/useNavigationGuard"
 
 // 共通セットアップ（`__tests__/renderer/setup.ts`）は取り込まない。あちらは
 // usePathname を "/" に固定していて、`vi.mock` は後から読み込まれた方が勝つため、
 // 取り込むと「いまどのページか」を差し替えられなくなる
 const navigation = vi.hoisted(() => ({ pathname: "/" }))
 
+// 呼ばれたかを見たいので、毎回新しい関数を作らず1組を使い回す
+const router = vi.hoisted(() => ({
+  push: vi.fn(),
+  replace: vi.fn(),
+  back: vi.fn(),
+  forward: vi.fn(),
+  refresh: vi.fn(),
+}))
+
 vi.mock("next/navigation", () => ({
   usePathname: () => navigation.pathname,
-  // GuardedLink がぶら下がる NavigationGuardContext が読み込み時に import する。
-  // Provider は描かないので呼ばれないが、束ねる時点で欠けていると落ちる
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+  // GuardedLink がぶら下がる NavigationGuardContext が読み込み時に import する
+  useRouter: () => router,
 }))
 
 // next/link は App Router の文脈（AppRouterContext）を要求する。ここで見たいのは
@@ -42,9 +63,57 @@ vi.mock("next/link", () => ({
   ),
 }))
 
+/**
+ * 戻る／進むが押せるかは Electron のセッション履歴が決める
+ * （`useNavigationHistory` → `navigation:get-state`）。窓の履歴そのものなので、
+ * ここではその返事を差し替えて「履歴の端に居るか」を作る。
+ */
+const getNavigationState = vi.fn()
+
+Object.defineProperty(window, "electronAPI", {
+  value: {
+    navigation: { getState: getNavigationState, goToIndex: vi.fn() },
+  },
+  configurable: true,
+})
+
+/** 履歴の端（開いた直後で、戻り先も進み先も無い） */
+function atHistoryEdge() {
+  getNavigationState.mockResolvedValue({
+    canGoBack: false,
+    canGoForward: false,
+    activeIndex: 0,
+    entries: [],
+  })
+}
+
+beforeEach(() => {
+  atHistoryEdge()
+})
+
 afterEach(() => {
   cleanup()
+  vi.clearAllMocks()
 })
+
+/**
+ * 本物と同じ入れ子で包む。ヘッダーは履歴の状態を IPC で引き（QueryClient）、
+ * 移動を未保存のガードへ通す（NavigationGuardProvider）。
+ */
+function TestProviders({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        // 取れなかったときは黙って諦める（履歴が無い＝端として描く）
+        defaultOptions: { queries: { retry: false } },
+      })
+  )
+  return (
+    <QueryClientProvider client={queryClient}>
+      <NavigationGuardProvider>{children}</NavigationGuardProvider>
+    </QueryClientProvider>
+  )
+}
 
 /** 試験のタブ（概要込みで9枚）。実物と同じ形で、段の枚数の多さもそのまま持つ */
 const examTabs: readonly WorkflowTab[] = [
@@ -78,7 +147,8 @@ function renderHeaderAt(
       entityName="期末考査"
       entityHref={entityHref}
       tabs={tabs}
-    />
+    />,
+    { wrapper: TestProviders }
   )
 }
 
@@ -158,14 +228,155 @@ describe("WorkflowTabHeader の行き先", () => {
     })
   })
 
-  it("一覧への導線は「一覧へ戻る」の1つだけ（パンくずを置かない）", () => {
+  it("一覧への導線はツールバーのアイコン1つだけ（パンくずも右のボタンも置かない）", () => {
     renderHeaderAt(examHref)
 
     const listLinks = screen
       .getAllByRole("link")
       .filter((link) => link.getAttribute("href") === "/exams")
-    // 同じ行き先を2か所から出さない。パンくずを戻すとここが2つになる
+    // 同じ行き先を2か所から出さない。パンくずを戻しても、右端に
+    // 「一覧へ戻る」ボタンを足しても、ここが2つになる
     expect(listLinks).toHaveLength(1)
-    expect(listLinks[0].textContent).toContain("一覧へ戻る")
+    // アイコンのみなので、名前は読み上げ用のものが要る
+    expect(listLinks[0]).toHaveAccessibleName("一覧へ戻る")
+  })
+})
+
+/**
+ * 左のクイックアクセスツールバー。
+ *
+ * 「戻る／進む」は**閲覧の履歴**であって段の前後ではない。一覧 → 試験A → 試験B と
+ * 来たら戻るで試験Aへ帰る、ブラウザと同じ動きを指す。
+ */
+describe("WorkflowTabHeader のツールバー", () => {
+  it("戻る・進む・一覧の3つが、読み上げ用の名前を持って並ぶ", () => {
+    renderHeaderAt(examHref)
+
+    const backButton = screen.getByRole("button", { name: "戻る" })
+    const forwardButton = screen.getByRole("button", { name: "進む" })
+    const listLink = screen.getByRole("link", { name: "一覧へ戻る" })
+
+    // アイコンだけなので、文字は一切出ていない（名前は aria-label が担う）
+    expect(backButton.textContent).toBe("")
+    expect(forwardButton.textContent).toBe("")
+    expect(listLink.textContent).toBe("")
+  })
+})
+
+describe("WorkflowTabHeader の戻る・進むが押せるか", () => {
+  it("履歴の端では押せない（押しても何も起きない死んだボタンを出さない）", async () => {
+    renderHeaderAt(examHref)
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "戻る" })).toBeDisabled()
+    })
+    expect(screen.getByRole("button", { name: "進む" })).toBeDisabled()
+  })
+
+  it("戻り先ができれば押せるようになる", async () => {
+    getNavigationState.mockResolvedValue({
+      canGoBack: true,
+      canGoForward: false,
+      activeIndex: 1,
+      entries: [],
+    })
+
+    renderHeaderAt(examHref)
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "戻る" })).toBeEnabled()
+    })
+    // 戻ったあとでなければ進み先は無い
+    expect(screen.getByRole("button", { name: "進む" })).toBeDisabled()
+  })
+
+  it("アプリを通さず外から履歴を動かされても、押せるかどうかがずれない", async () => {
+    // Alt+← やマウスの第4ボタンはアプリを経由しないので、アプリ側で行き来を
+    // 数えているとずれる。窓のセッション履歴に訊いているのでずれない
+    getNavigationState.mockResolvedValue({
+      canGoBack: false,
+      canGoForward: true,
+      activeIndex: 0,
+      entries: [],
+    })
+
+    renderHeaderAt(examHref)
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "進む" })).toBeEnabled()
+    })
+    expect(screen.getByRole("button", { name: "戻る" })).toBeDisabled()
+  })
+})
+
+/** 書きかけを抱えた画面の代役。ヘッダーと同じ Provider の下に置く */
+const dirtyDetails = [{ label: "未保存の採点", count: 3 }]
+
+function DirtyPage() {
+  useNavigationGuard(true, dirtyDetails)
+  return null
+}
+
+/** 書きかけがある状態で、戻れる位置にヘッダーを描く */
+async function renderDirtyHeader() {
+  getNavigationState.mockResolvedValue({
+    canGoBack: true,
+    canGoForward: false,
+    activeIndex: 1,
+    entries: [],
+  })
+  navigation.pathname = examHref
+  render(
+    <>
+      <DirtyPage />
+      <WorkflowTabHeader
+        listHref="/exams"
+        entityName="期末考査"
+        entityHref={examHref}
+        tabs={examTabs}
+      />
+    </>,
+    { wrapper: TestProviders }
+  )
+  await waitFor(() => {
+    expect(screen.getByRole("button", { name: "戻る" })).toBeEnabled()
+  })
+}
+
+describe("WorkflowTabHeader の戻るが未保存を捨てないこと", () => {
+  it("書きかけがあるとき、戻るは確認を挟んで勝手に遷移しない", async () => {
+    await renderDirtyHeader()
+
+    await userEvent.click(screen.getByRole("button", { name: "戻る" }))
+
+    expect(screen.getByText("未保存のデータがあります")).toBeInTheDocument()
+    // 確認する前に履歴を動かさない。ガードは popstate を見ていないので、
+    // ここで router.back() を直に呼ぶと書きかけを黙って捨てる
+    expect(router.back).not.toHaveBeenCalled()
+  })
+
+  it("確認して離れると、押すのではなく戻る", async () => {
+    await renderDirtyHeader()
+
+    await userEvent.click(screen.getByRole("button", { name: "戻る" }))
+    await userEvent.click(screen.getByRole("button", { name: "離れる" }))
+
+    // 保留していたのは行き先ではなく「戻る」という行為。href に潰すと
+    // ここが push になり、履歴が戻らず1つ増える
+    expect(router.back).toHaveBeenCalledTimes(1)
+    expect(router.push).not.toHaveBeenCalled()
+  })
+
+  it("確認で留まると、履歴は動かない", async () => {
+    await renderDirtyHeader()
+
+    await userEvent.click(screen.getByRole("button", { name: "戻る" }))
+    // ダイアログの「戻る」はツールバーの「戻る」と同名なので、ダイアログの中で探す
+    const confirmDialog = screen.getByRole("alertdialog")
+    await userEvent.click(
+      within(confirmDialog).getByRole("button", { name: "戻る" })
+    )
+
+    expect(router.back).not.toHaveBeenCalled()
   })
 })

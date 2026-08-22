@@ -21,7 +21,6 @@ import { usePathname } from "next/navigation"
 import { Fragment } from "react"
 
 import { GuardedLink } from "@/components/common/GuardedLink"
-import { HistoryNavButtons } from "@/components/layout/HistoryNavButtons"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
@@ -84,15 +83,11 @@ export default function Navigation({
         )}
       >
         {!isSidebarMinimized && (
-          <div className="flex min-w-0 items-center gap-1">
-            <GuardedLink
-              href="/exams"
-              className="truncate text-lg font-semibold"
-            >
-              一括採点
-            </GuardedLink>
-            <HistoryNavButtons />
-          </div>
+          // 戻る/進むはここに置いていたが、詳細画面のヘッダー（WorkflowTabHeader）の
+          // クイックアクセスツールバーへ移した。同じ導線を2か所から出さない
+          <GuardedLink href="/exams" className="truncate text-lg font-semibold">
+            一括採点
+          </GuardedLink>
         )}
         <Button
           variant="ghost"

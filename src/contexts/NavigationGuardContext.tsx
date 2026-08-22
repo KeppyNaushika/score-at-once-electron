@@ -26,12 +26,32 @@ export interface DirtyDetail {
   count: number
 }
 
+/**
+ * 確認ダイアログのあいだ保留しておく「やること」。
+ *
+ * 行き先の href だけを覚えていたときは、確認後に復元できるのが `router.push` に
+ * 限られていた。**履歴の行き来（戻る・進む・履歴の n 番目へ）は行き先を持たない**
+ * ——どこへ着くかを決めるのは履歴であってアプリではない——ので、href では表せない。
+ * 押す・戻る・進むを同じダイアログに載せるために、保留するものを行き先から行為へ
+ * 広げている。
+ *
+ * 行き来の中身をここに書かず関数で受け取るのは、`router.back()` なのか Electron の
+ * セッション履歴への `goToIndex` なのかを、このコンテキストが知らずに済ませるため。
+ */
+type NavigationIntent =
+  { kind: "push"; href: string } | { kind: "traverse"; traverse: () => void }
+
 interface NavigationGuardContextType {
   isDirty: boolean
   setNavigationGuard: (isDirty: boolean, details?: DirtyDetail[]) => void
   clearNavigationGuard: () => void
   guardedNavigate: (href: string) => void
   requestNavigation: (href: string) => boolean
+  /**
+   * 履歴を行き来する操作をガードへ通す（戻る・進む・履歴の n 番目へ）。
+   * 書きかけがあれば確認を挟み、「離れる」を選んだときに `traverse` を実行する。
+   */
+  guardedTraverse: (traverse: () => void) => void
 }
 
 const NavigationGuardContext = createContext<NavigationGuardContextType>({
@@ -40,6 +60,7 @@ const NavigationGuardContext = createContext<NavigationGuardContextType>({
   clearNavigationGuard: () => {},
   guardedNavigate: () => {},
   requestNavigation: () => true,
+  guardedTraverse: (traverse) => traverse(),
 })
 
 /** ナビゲーションガードコンテキストから未保存確認・遷移制御の機能を取得するフック */
@@ -56,7 +77,8 @@ export function NavigationGuardProvider({
   const router = useRouter()
   const [isDirty, setIsDirty] = useState(false)
   const [details, setDetails] = useState<DirtyDetail[]>([])
-  const [pendingHref, setPendingHref] = useState<string | null>(null)
+  const [pendingNavigation, setPendingNavigation] =
+    useState<NavigationIntent | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const isDirtyRef = useRef(false)
 
@@ -77,26 +99,64 @@ export function NavigationGuardProvider({
     setDetails([])
   }, [])
 
-  const guardedNavigate = useCallback(
-    (href: string) => {
-      if (isDirtyRef.current) {
-        setPendingHref(href)
-        setDialogOpen(true)
-      } else {
-        router.push(href)
+  const runNavigation = useCallback(
+    (intent: NavigationIntent) => {
+      switch (intent.kind) {
+        case "push":
+          router.push(intent.href)
+          break
+        case "traverse":
+          intent.traverse()
+          break
       }
     },
     [router]
   )
 
-  const requestNavigation = useCallback((href: string): boolean => {
-    if (isDirtyRef.current) {
-      setPendingHref(href)
-      setDialogOpen(true)
-      return false
-    }
-    return true
-  }, [])
+  /**
+   * 「これをやってよいか」を訊く。よければ true を返すので、
+   * **実行するのは呼び出し側**（リンクの既定動作をそのまま通す `GuardedLink` 用）。
+   */
+  const requestNavigationIntent = useCallback(
+    (intent: NavigationIntent): boolean => {
+      if (isDirtyRef.current) {
+        setPendingNavigation(intent)
+        setDialogOpen(true)
+        return false
+      }
+      return true
+    },
+    []
+  )
+
+  /** 訊いたうえで**こちらが実行する**。行き先へのリンクを持たないボタン用 */
+  const guardedNavigateIntent = useCallback(
+    (intent: NavigationIntent) => {
+      if (requestNavigationIntent(intent)) {
+        runNavigation(intent)
+      }
+    },
+    [requestNavigationIntent, runNavigation]
+  )
+
+  const guardedNavigate = useCallback(
+    (href: string) => {
+      guardedNavigateIntent({ kind: "push", href })
+    },
+    [guardedNavigateIntent]
+  )
+
+  const requestNavigation = useCallback(
+    (href: string): boolean => requestNavigationIntent({ kind: "push", href }),
+    [requestNavigationIntent]
+  )
+
+  const guardedTraverse = useCallback(
+    (traverse: () => void) => {
+      guardedNavigateIntent({ kind: "traverse", traverse })
+    },
+    [guardedNavigateIntent]
+  )
 
   // beforeunload handler
   useEffect(() => {
@@ -111,16 +171,16 @@ export function NavigationGuardProvider({
 
   const handleLeave = useCallback(() => {
     setDialogOpen(false)
-    if (pendingHref) {
+    if (pendingNavigation) {
       clearNavigationGuard()
-      router.push(pendingHref)
-      setPendingHref(null)
+      runNavigation(pendingNavigation)
+      setPendingNavigation(null)
     }
-  }, [pendingHref, clearNavigationGuard, router])
+  }, [pendingNavigation, clearNavigationGuard, runNavigation])
 
   const handleStay = useCallback(() => {
     setDialogOpen(false)
-    setPendingHref(null)
+    setPendingNavigation(null)
   }, [])
 
   return (
@@ -131,6 +191,7 @@ export function NavigationGuardProvider({
         clearNavigationGuard,
         guardedNavigate,
         requestNavigation,
+        guardedTraverse,
       }}
     >
       {children}

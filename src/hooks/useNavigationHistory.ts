@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { usePathname, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 
+import { useNavigationGuardContext } from "@/contexts/NavigationGuardContext"
 import { answerSheetDefinitionQuery } from "@/queries/answerSheetBuilder"
 import { courseworkDetailQuery } from "@/queries/coursework"
 import { examDetailQuery } from "@/queries/exam"
@@ -190,11 +191,17 @@ interface UseNavigationHistoryResult {
 /**
  * Electron のセッション履歴を用いてブラウザ的な戻る/進む・履歴一覧を提供するフック。
  * 履歴状態は遷移（pathname 変化）ごとに再取得し、各エントリのラベルを非同期解決する。
+ *
+ * **移動は必ず未保存のガードを通す。** ガードが見張っているのは `GuardedLink` の
+ * クリックと `beforeunload` だけで `popstate` は監視していないので、ここで
+ * `router.back()` を直に呼ぶと書きかけを黙って捨てる。ここで包んでおけば、この
+ * フックを使う画面はどれも確認を通る。
  */
 export function useNavigationHistory(): UseNavigationHistoryResult {
   const router = useRouter()
   const pathname = usePathname()
   const queryClient = useQueryClient()
+  const { guardedTraverse } = useNavigationGuardContext()
   const { mutate: goToHistoryIndex } = useMutation(goToHistoryIndexMutation())
   const [canGoBack, setCanGoBack] = useState(false)
   const [canGoForward, setCanGoForward] = useState(false)
@@ -242,16 +249,29 @@ export function useNavigationHistory(): UseNavigationHistoryResult {
   }, [pathname, refresh])
 
   const goToIndex = useCallback(
-    (index: number) => goToHistoryIndex(index),
-    [goToHistoryIndex]
+    (index: number) =>
+      guardedTraverse(() => {
+        goToHistoryIndex(index)
+      }),
+    [guardedTraverse, goToHistoryIndex]
+  )
+
+  const goBack = useCallback(
+    () => guardedTraverse(() => router.back()),
+    [guardedTraverse, router]
+  )
+
+  const goForward = useCallback(
+    () => guardedTraverse(() => router.forward()),
+    [guardedTraverse, router]
   )
 
   return {
     canGoBack,
     canGoForward,
     entries,
-    goBack: () => router.back(),
-    goForward: () => router.forward(),
+    goBack,
+    goForward,
     goToIndex,
   }
 }
