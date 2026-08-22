@@ -41,7 +41,12 @@ export async function processQuestionScores(
       const conflict = conflictMap.get(questionScore.id)
 
       if (conflict) {
-        // データが同一なら何もしない
+        // データが同一なら何もしない。
+        //
+        // ここで見るのは採点結果（判定・部分点）だけで、覚え書き（comment）は見ない。
+        // 競合は「どちらの採点結果を採るか」を利用者に問う仕組みで、その一覧に
+        // 覚え書きは載っていない。覚え書きは採った側の結果に付いてくる
+        // （＝取り込み側が勝ったときだけ書き換わる）。
         const isIdentical =
           conflict.importScore.status === conflict.existingScore.status &&
           conflict.importScore.partialScore ===
@@ -71,6 +76,7 @@ export async function processQuestionScores(
               ? parseFloat(questionScore.partialScore)
               : null,
             status: questionScore.status,
+            comment: questionScore.comment,
             userId: currentUserId,
           },
         })
@@ -104,6 +110,7 @@ export async function processQuestionScores(
                   ? parseFloat(questionScore.partialScore)
                   : null,
                 status: questionScore.status,
+                comment: questionScore.comment,
                 userId: currentUserId,
               },
             })

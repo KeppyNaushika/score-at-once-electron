@@ -231,13 +231,20 @@ export function ScoreDecisionForm({
                   この結果にする
                 </Button>
               </div>
-              <ul className="mt-2 space-y-0.5">
+              <ul className="mt-2 space-y-1">
                 {result.proposals.map((proposal) => (
-                  <li
-                    key={proposal.questionScoreId}
-                    className="truncate text-xs text-gray-500"
-                  >
-                    {proposal.userName} ・ {formatDateTime(proposal.updatedAt)}
+                  <li key={proposal.questionScoreId} className="text-xs">
+                    <div className="truncate text-gray-500">
+                      {proposal.userName} ・{" "}
+                      {formatDateTime(proposal.updatedAt)}
+                    </div>
+                    {/* 同じ結果でも、そこに至った理由は人ごとに違う。
+                        束ねた見出しではなく採点者ごとに出す */}
+                    {proposal.comment !== "" && (
+                      <p className="mt-0.5 whitespace-pre-wrap text-gray-700">
+                        {proposal.comment}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>

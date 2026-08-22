@@ -19,6 +19,8 @@ import {
   type QuestionScoreResult,
   SCORE_TARGET_DELETED,
   setQuestionScore,
+  setQuestionScoreComment,
+  type SetQuestionScoreCommentData,
   type SetQuestionScoreData,
   updateQuestionScore,
 } from "../lib/prisma/questionScore"
@@ -41,6 +43,7 @@ function serializeScore(score: {
   examStudentId: string
   partialScore: { toNumber(): number } | null
   status: string
+  comment: string
   userId: string
   createdAt: Date
   updatedAt: Date
@@ -51,6 +54,7 @@ function serializeScore(score: {
     examStudentId: score.examStudentId,
     partialScore: score.partialScore ? score.partialScore.toNumber() : null,
     status: toScoringStatus(score.status),
+    comment: score.comment,
     userId: score.userId,
     createdAt: score.createdAt,
     updatedAt: score.updatedAt,
@@ -73,6 +77,14 @@ export const scoringHandlers = {
     }
 
     return { status: "saved" as const, score: serializeScore(updated.score) }
+  },
+
+  // その採点者が、その点にした理由の覚え書きを書く。採点（判定・部分点）とは別の
+  // 操作なので口も別にする（同じ口にすると、送らなかった側が黙って初期値へ戻る）
+  "set-question-score-comment": async (data: SetQuestionScoreCommentData) => {
+    const written = await setQuestionScoreComment(data)
+    // 書かなかったとき（行が無く、覚え書きも空）は行を作らずに null を返す
+    return written ? serializeScore(written) : null
   },
 
   // 採点を確定する（生徒×設問で1行）。確定はセルの結果全体を毎回決め直す操作なので、

@@ -16,6 +16,14 @@ export interface ScoreProposal {
   partialScore: number | null
   /** status と partialScore から算出した実得点（未採点は null） */
   scoreValue: number | null
+  /**
+   * その採点者がその点にした理由の覚え書き（`QuestionScore.comment`）。
+   *
+   * 07 は自分の採点だけを見せる画面なので、他の教員の覚え書きが出るのはここだけ。
+   * **確定する人が「なぜこの点なのか」を読めないと確定できない**ので、提案の一覧に
+   * 添える。書いていなければ空文字（列は NULL を持たない）。
+   */
+  comment: string
   updatedAt: string
 }
 

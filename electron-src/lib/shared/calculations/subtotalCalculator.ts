@@ -21,7 +21,15 @@ import { calculateActualScore } from "./actualScore"
  */
 export type QuestionScoreForSubtotal = Omit<
   QuestionScore,
-  "id" | "userId" | "createdAt" | "updatedAt" | "partialScore" | "status"
+  | "id"
+  | "userId"
+  | "createdAt"
+  | "updatedAt"
+  | "partialScore"
+  | "status"
+  // 覚え書き（その採点者がその点にした理由）は点にならない。
+  // 小計は誰が何点にしたかだけで決まる
+  | "comment"
 > & {
   partialScore?: number | null
   // SQLite は enum を持てないので Prisma の型は `string`。判定の集合はここで注入する

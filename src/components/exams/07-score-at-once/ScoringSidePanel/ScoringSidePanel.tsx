@@ -86,6 +86,7 @@ const GRID_4_3_STYLE = {
 } as const
 
 import { AnnotationBrowserPanel } from "./AnnotationBrowserPanel"
+import { ScoreCommentSection } from "./ScoreCommentSection"
 import { SidePanelSection } from "./SidePanelSection"
 
 interface ScoringSidePanelProps {
@@ -472,6 +473,19 @@ export function ScoringSidePanel({
             visibleUnscoredCount={visibleUnscoredCount}
             hiddenUnscoredCount={hiddenUnscoredCount}
             onBatchScoreVisibleUnscored={onBatchScoreVisibleUnscored}
+          />
+
+          {/* 覚え書き（いま選んでいるマスに、その点にした理由を書く） */}
+          <ScoreCommentSection
+            examId={examId}
+            currentCropRegion={currentCropRegion}
+            currentExamStudentId={currentExamStudentId}
+            currentUserId={currentUserId}
+            isOpen={isSectionOpen("scoreComment")}
+            onToggle={() => toggleSection("scoreComment")}
+            onEnsureOpen={() => {
+              if (!isSectionOpen("scoreComment")) toggleSection("scoreComment")
+            }}
           />
 
           {/* 個別表示モード時：生徒選択パネル */}

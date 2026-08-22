@@ -284,6 +284,7 @@ describe("edgeCases", () => {
             examStudentId,
             status: "correct",
             partialScore: "10",
+            comment: "",
             userId: currentUser.id,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),

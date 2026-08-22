@@ -316,12 +316,25 @@ model ExamSubtotalGroup {
   @@index([subtotalGroupId])
 }
 
+/// 生徒×設問×採点者ごとの採点（＝提案）。確定は ScoreDecision が持つ。
 model QuestionScore {
   id                 String              @id @default(uuid())
   cropRegionId       String
   examStudentId      String
   partialScore       Decimal?
   status             String              @default("unscored")
+  /// その採点者が、その点にした理由の覚え書き。
+  ///
+  /// **かつて `UpdateQuestionScoreData` に同名の項目があったが、あれは列を持たない
+  /// 死んだ引数で、渡しても何も起きなかった**（段階34 で撤去済み）。こちらは列が実在し、
+  /// 書き込み（setQuestionScoreComment）・IPC・画面まで通っている。
+  ///
+  /// 粒度が (受験者, 設問, 採点者) と一致するのでこの表に置く。1つのマスに複数書きたい
+  /// ときは手書き注釈（DrawingAnnotation）の役目で、そちらは答案上の位置を持つ。
+  ///
+  /// NULL を持たない（DrawingAnnotation.text と同じ形）。「書いていない」と
+  /// 「空で書いた」を区別する必要が無く、区別すると読む側が毎回2通りを相手にする。
+  comment            String              @default("")
   userId             String
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @default(now()) @updatedAt

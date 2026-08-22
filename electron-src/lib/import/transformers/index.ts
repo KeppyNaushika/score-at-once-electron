@@ -62,6 +62,7 @@ import { V1_21_0_to_V1_22_0_Transformer } from "./V1_21_0_to_V1_22_0"
 import { V1_22_0_to_V1_23_0_Transformer } from "./V1_22_0_to_V1_23_0"
 import { V1_23_0_to_V1_24_0_Transformer } from "./V1_23_0_to_V1_24_0"
 import { V1_24_0_to_V1_25_0_Transformer } from "./V1_24_0_to_V1_25_0"
+import { V1_25_0_to_V1_26_0_Transformer } from "./V1_25_0_to_V1_26_0"
 
 const EXAM_TRANSFORMERS: ExamVersionTransformer[] = [
   new V1_0_0_to_V1_1_0_Transformer(),
@@ -89,6 +90,7 @@ const EXAM_TRANSFORMERS: ExamVersionTransformer[] = [
   new V1_22_0_to_V1_23_0_Transformer(),
   new V1_23_0_to_V1_24_0_Transformer(),
   new V1_24_0_to_V1_25_0_Transformer(),
+  new V1_25_0_to_V1_26_0_Transformer(),
 ]
 
 /** マニフェストのバージョン文字列からサポート対象バージョンを判定する */
@@ -270,6 +272,18 @@ const SHAPE_VERSION_FLOORS: {
     applies: (data) =>
       (data.scoresData.scoreDecisions ?? []).some(
         (scoreDecision) => "sourceQuestionScoreId" in scoreDecision
+      ),
+  },
+  {
+    // 採点に覚え書きが無かった頃の行（V1_25_0_to_V1_26_0 が処理）。
+    // 補うだけ・既存値は残すので変換は冪等であり、併存条件は要らない
+    maxVersion: "1.25.0",
+    marker: "QuestionScore.comment 欠落",
+    // 版の判定は既定値を埋める**前**に走る（キーの有無で旧形式を見分けるため）ので、
+    // セクションごと欠けているアーカイブも来る。行が1つも無いなら旧形式の証拠も無い
+    applies: (data) =>
+      (data.scoresData.questionScores ?? []).some(
+        (questionScore) => !("comment" in questionScore)
       ),
   },
 ]

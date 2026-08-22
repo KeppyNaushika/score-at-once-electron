@@ -20,6 +20,9 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   "scoring.incorrect": "o",
   "scoring.noAnswer": "p",
   "scoring.doubleMark": "t",
+  // 覚え書き（サイドパネルの入力欄へ入る）。判定キー f/j の隣で、
+  // 打ち終えたら Esc（捨てる）か ⌘/Ctrl+Enter（残す）で採点へ戻る
+  "scoring.comment": "k",
 
   // ============================================
   // ナビゲーション (Navigation)

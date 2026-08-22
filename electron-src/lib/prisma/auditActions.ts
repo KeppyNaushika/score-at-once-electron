@@ -168,6 +168,11 @@ const AUDIT_ACTIONS = {
     verb: "update",
     label: "採点提案を変更しました",
   },
+  "exam.score.comment": {
+    category: "exam",
+    verb: "update",
+    label: "採点に覚え書きを残しました",
+  },
   "exam.score.decide": {
     category: "exam",
     verb: "update",

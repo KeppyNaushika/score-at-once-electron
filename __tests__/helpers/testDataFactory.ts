@@ -225,6 +225,7 @@ export function createArchiveScoresData(
     examStudentId: string
     status?: string
     partialScore?: string | null
+    comment?: string
     userId?: string
   }> = []
 ): ArchiveScoresData {
@@ -235,6 +236,7 @@ export function createArchiveScoresData(
       examStudentId: score.examStudentId,
       partialScore: score.partialScore ?? null,
       status: score.status ?? "unscored",
+      comment: score.comment ?? "",
       userId: score.userId ?? generateId(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

@@ -267,6 +267,7 @@ export async function collectExamData(
               examStudentId: questionScore.examStudentId,
               partialScore: questionScore.partialScore?.toString() ?? null,
               status: questionScore.status,
+              comment: questionScore.comment,
               userId: questionScore.userId,
               createdAt: questionScore.createdAt.toISOString(),
               updatedAt: questionScore.updatedAt.toISOString(),

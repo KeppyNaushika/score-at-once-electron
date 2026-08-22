@@ -359,6 +359,46 @@ describe("roundTripFieldFidelity", () => {
     expect(await prisma.tag.count()).toBe(1)
   })
 
+  it("採点の覚え書き（QuestionScore.comment）が往復で保たれる", async () => {
+    const testExam = await createFullTestExam(prisma, {
+      pageCount: 1,
+      cropRegionsPerPage: 1,
+      studentCount: 2,
+    })
+
+    // 1件だけ覚え書きを書く。もう1件は空のまま（＝書いていない側も往復で壊れない）
+    const [firstScore, secondScore] = await prisma.questionScore.findMany({
+      orderBy: { id: "asc" },
+    })
+    await prisma.questionScore.update({
+      where: { id: firstScore.id },
+      data: { comment: "誤字は減点しない方針なので3点\n（2行目も保つ）" },
+    })
+
+    const archivePath = await exportToArchive(
+      testExam.exam.id,
+      testExam.user.id,
+      "score-comment.score"
+    )
+
+    await cleanupTestDatabase()
+    const importUser = await createTestUser()
+    await importArchive(archivePath, importUser.id)
+
+    const imported = await prisma.questionScore.findMany({
+      orderBy: { id: "asc" },
+    })
+    expect(imported).toHaveLength(2)
+    expect(
+      imported.find((questionScore) => questionScore.id === firstScore.id)!
+        .comment
+    ).toBe("誤字は減点しない方針なので3点\n（2行目も保つ）")
+    expect(
+      imported.find((questionScore) => questionScore.id === secondScore.id)!
+        .comment
+    ).toBe("")
+  })
+
   it("非表示の学級は往復しても非表示のまま", async () => {
     const testExam = await createFullTestExam(prisma, {
       pageCount: 1,

@@ -87,6 +87,8 @@ export interface ArchiveDataCounts {
  * - 1.21.0: v0.16.x (採点層を ExamStudent 経由へ配線変更 — studentAnswerImages / questionScores / scoreDecisions / compoundAnswerScores / returnSnapshots の studentId を examStudentId へ。ReturnSnapshot.examId は ExamStudent が持つため削除)
  * - 1.25.0: v0.17.x (ScoreDecision.sourceQuestionScoreId 廃止 — 同じ結果を出した採点者が
  *            複数いれば「どの提案を採ったか」は決まらない。保存するのは採点結果であって由来ではない)
+ * - 1.26.0: v0.17.x (QuestionScore.comment 追加 — その採点者がその点にした理由の覚え書き。
+ *            NULL を持たず、旧アーカイブの採点行は空文字で補う)
  */
 export type ExamArchiveVersion =
   | "1.0.0"
@@ -115,9 +117,10 @@ export type ExamArchiveVersion =
   | "1.23.0"
   | "1.24.0"
   | "1.25.0"
+  | "1.26.0"
 
 /** 現在の最新バージョン */
-export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.25.0"
+export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.26.0"
 
 /** サポートされている全バージョン（古い順） */
 export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
@@ -147,6 +150,7 @@ export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
   "1.23.0",
   "1.24.0",
   "1.25.0",
+  "1.26.0",
 ] as const
 
 /**
@@ -874,6 +878,8 @@ export interface ArchiveScoresData {
     examStudentId: string
     partialScore: string | null // Decimal as string
     status: string
+    /** v1.26.0+ その採点者がその点にした理由の覚え書き。NULL は持たない（旧版は空文字で補う） */
+    comment: string
     userId: string
     createdAt: string
     updatedAt: string

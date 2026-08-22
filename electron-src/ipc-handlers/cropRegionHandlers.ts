@@ -11,6 +11,10 @@ import {
 
 /**
  * QuestionScoreをIPC用にシリアライズ（DecimalをnumberにDateはそのまま）
+ *
+ * **列を手写ししているので、`QuestionScore` に列を足したらここにも足すこと。**
+ * 引数の型が受け入れる形は「少なくともこれらを持つ行」なので、足し忘れても
+ * typecheck は通り、その列だけが renderer へ届かない。
  */
 function serializeQuestionScore(score: {
   id: string
@@ -18,6 +22,7 @@ function serializeQuestionScore(score: {
   examStudentId: string
   partialScore: { toNumber(): number } | null
   status: string
+  comment: string
   userId: string
   createdAt: Date
   updatedAt: Date
@@ -28,6 +33,7 @@ function serializeQuestionScore(score: {
     examStudentId: score.examStudentId,
     partialScore: score.partialScore ? score.partialScore.toNumber() : null,
     status: score.status,
+    comment: score.comment,
     userId: score.userId,
     createdAt: score.createdAt,
     updatedAt: score.updatedAt,
@@ -36,19 +42,14 @@ function serializeQuestionScore(score: {
 
 /**
  * CropRegionをIPC用にシリアライズ（questionScoresのDecimalを変換）
+ *
+ * 受け入れる採点行の形は `serializeQuestionScore` の引数そのもの。手写しで
+ * 二重に並べていた頃は、片方にだけ列を足すと引数の型が食い違って落ちた
+ * （列を足す作業の途中で、無関係に見えるここが赤くなる）。
  */
 function serializeCropRegion<
   T extends {
-    questionScores?: Array<{
-      id: string
-      cropRegionId: string
-      examStudentId: string
-      partialScore: { toNumber(): number } | null
-      status: string
-      userId: string
-      createdAt: Date
-      updatedAt: Date
-    }>
+    questionScores?: Parameters<typeof serializeQuestionScore>[0][]
   },
 >(region: T) {
   return {

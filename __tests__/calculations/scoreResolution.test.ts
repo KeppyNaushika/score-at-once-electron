@@ -34,6 +34,7 @@ function score(
     cropRegionId: "region-1",
     status: "correct",
     partialScore: null,
+    comment: "",
     userId: "user-1",
     createdAt: new Date("2026-06-01T10:00:00Z"),
     updatedAt: new Date("2026-06-01T10:00:00Z"),

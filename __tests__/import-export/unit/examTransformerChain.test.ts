@@ -331,10 +331,10 @@ function createV1_15_0_ArchiveData(): ExamArchiveData {
   return raw as unknown as ExamArchiveData
 }
 
-/** 現行 (v1.25.0) 最小形状 */
+/** 現行 (v1.26.0) 最小形状 */
 function createCurrentArchiveData(): ExamArchiveData {
   const raw = {
-    manifest: createManifest("1.25.0"),
+    manifest: createManifest("1.26.0"),
     examData: {
       exam: {
         id: "exam-1",
@@ -373,7 +373,7 @@ function createCurrentArchiveData(): ExamArchiveData {
 }
 
 /**
- * 旧形状（1.25.0 未満）の行を差し込む。`ExamArchiveData` は最新版の形しか表せないため、
+ * 旧形状（1.26.0 未満）の行を差し込む。`ExamArchiveData` は最新版の形しか表せないため、
  * 旧キーの行は型の外から入れる（`Object.assign` で足りるので `as` は使わない）。
  */
 const putLegacyRows = (
@@ -384,13 +384,13 @@ const putLegacyRows = (
 }
 
 describe("transformExamArchiveToLatest", () => {
-  test("v1.0.0 実形状（project系キー）が全25変換を経て最新形式になる", () => {
+  test("v1.0.0 実形状（project系キー）が全26変換を経て最新形式になる", () => {
     const result = transformExamArchiveToLatest(createV1_0_0_ArchiveData())
 
     expect(result.originalVersion).toBe("1.0.0")
-    expect(result.finalVersion).toBe("1.25.0")
-    expect(result.appliedTransformations).toHaveLength(25)
-    expect(result.data.manifest.version).toBe("1.25.0")
+    expect(result.finalVersion).toBe("1.26.0")
+    expect(result.appliedTransformations).toHaveLength(26)
+    expect(result.data.manifest.version).toBe("1.26.0")
 
     const examData = result.data.examData
     const examDataRecord = examData as unknown as Record<string, unknown>
@@ -489,6 +489,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.22.0", to: "1.23.0" },
       { from: "1.23.0", to: "1.24.0" },
       { from: "1.24.0", to: "1.25.0" },
+      { from: "1.25.0", to: "1.26.0" },
     ])
 
     const examData = result.data.examData
@@ -607,7 +608,7 @@ describe("transformExamArchiveToLatest", () => {
     ]
 
     const detection = detectExamArchiveVersion(data)
-    expect(detection.version).toBe("1.25.0")
+    expect(detection.version).toBe("1.26.0")
     expect(detection.corrections).toEqual([])
 
     const result = transformExamArchiveToLatest(data)
@@ -709,6 +710,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.22.0", to: "1.23.0" },
       { from: "1.23.0", to: "1.24.0" },
       { from: "1.24.0", to: "1.25.0" },
+      { from: "1.25.0", to: "1.26.0" },
     ])
     // キーごと落ちる（取り込み先が存在しないため）
     const transformedExamData = result.data.examData as unknown as Record<
@@ -722,13 +724,13 @@ describe("transformExamArchiveToLatest", () => {
     ).toBe(true)
   })
 
-  test("廃止済みキーを持たない v1.17.0 アーカイブは警告なしで 1.25.0 になる", () => {
+  test("廃止済みキーを持たない v1.17.0 アーカイブは警告なしで 1.26.0 になる", () => {
     const data = createCurrentArchiveData()
     data.manifest.version = "1.17.0"
 
     const result = transformExamArchiveToLatest(data)
 
-    expect(result.finalVersion).toBe("1.25.0")
+    expect(result.finalVersion).toBe("1.26.0")
     expect(result.warnings).toEqual([])
   })
 
@@ -760,6 +762,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.22.0", to: "1.23.0" },
       { from: "1.23.0", to: "1.24.0" },
       { from: "1.24.0", to: "1.25.0" },
+      { from: "1.25.0", to: "1.26.0" },
     ])
     // キーごと落ちる（アーカイブは正本であり復活防止をしないため）
     const transformedRecord = result.data as unknown as Record<string, unknown>
@@ -784,6 +787,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.22.0", to: "1.23.0" },
       { from: "1.23.0", to: "1.24.0" },
       { from: "1.24.0", to: "1.25.0" },
+      { from: "1.25.0", to: "1.26.0" },
     ])
     expect(result.data.scoresData.cropRegionAssignments).toEqual([])
   })
@@ -850,6 +854,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.22.0", to: "1.23.0" },
       { from: "1.23.0", to: "1.24.0" },
       { from: "1.24.0", to: "1.25.0" },
+      { from: "1.25.0", to: "1.26.0" },
     ])
     expect(result.data.examData.studentAnswerImages).toEqual([
       expect.objectContaining({
@@ -1315,6 +1320,85 @@ describe("transformExamArchiveToLatest", () => {
     )
   })
 
+  test("1.25.0 → 1.26.0: 覚え書きの無い採点行は空文字で補われる", () => {
+    const data = createCurrentArchiveData()
+    data.manifest.version = "1.25.0"
+    putLegacyRows(data.scoresData, {
+      questionScores: [
+        {
+          id: "qs-1",
+          cropRegionId: "cr-1",
+          examStudentId: "es-1",
+          partialScore: "3",
+          status: "partial",
+          userId: "user-1",
+          createdAt: TIMESTAMP,
+          updatedAt: TIMESTAMP,
+        },
+      ],
+    })
+
+    const result = transformExamArchiveToLatest(data)
+    const [questionScore] = result.data.scoresData.questionScores
+
+    expect(questionScore.comment).toBe("")
+    // 判定・部分点はそのまま
+    expect(questionScore.status).toBe("partial")
+    expect(questionScore.partialScore).toBe("3")
+    // 旧版には覚え書きを書ける画面が無かった＝失われた覚え書きが存在しない
+    expect(result.warnings).toEqual([])
+  })
+
+  test("1.25.0 → 1.26.0: 既に書かれている覚え書きは上書きしない", () => {
+    const data = createCurrentArchiveData()
+    data.manifest.version = "1.25.0"
+    putLegacyRows(data.scoresData, {
+      questionScores: [
+        {
+          id: "qs-1",
+          cropRegionId: "cr-1",
+          examStudentId: "es-1",
+          partialScore: "3",
+          status: "partial",
+          comment: "誤字は減点しない方針で3点",
+          userId: "user-1",
+          createdAt: TIMESTAMP,
+          updatedAt: TIMESTAMP,
+        },
+      ],
+    })
+
+    const result = transformExamArchiveToLatest(data)
+
+    expect(result.data.scoresData.questionScores[0].comment).toBe(
+      "誤字は減点しない方針で3点"
+    )
+  })
+
+  test("形状フロア: 版数が新しくても採点行に覚え書きが無ければ 1.25.0 まで引き下げる", () => {
+    const data = createCurrentArchiveData()
+    putLegacyRows(data.scoresData, {
+      questionScores: [
+        {
+          id: "qs-1",
+          cropRegionId: "cr-1",
+          examStudentId: "es-1",
+          partialScore: null,
+          status: "correct",
+          userId: "user-1",
+          createdAt: TIMESTAMP,
+          updatedAt: TIMESTAMP,
+        },
+      ],
+    })
+
+    const detection = detectExamArchiveVersion(data)
+
+    expect(detection.version).toBe("1.25.0")
+    expect(detection.corrections).toHaveLength(1)
+    expect(detection.corrections[0]).toContain("QuestionScore.comment")
+  })
+
   test("確定セクションが無い旧アーカイブに空配列を足さない", () => {
     const data = createCurrentArchiveData()
     data.manifest.version = "1.24.0"
@@ -1329,7 +1413,7 @@ describe("transformExamArchiveToLatest", () => {
     const data = createCurrentArchiveData()
     const result = transformExamArchiveToLatest(data)
 
-    expect(result.originalVersion).toBe("1.25.0")
+    expect(result.originalVersion).toBe("1.26.0")
     expect(result.appliedTransformations).toEqual([])
     expect(result.warnings).toEqual([])
     expect(result.data).toBe(data)

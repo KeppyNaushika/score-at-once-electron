@@ -202,6 +202,7 @@ export const getExamDecisionSummary = async (
     status: score.status,
     partialScore: score.partialScore,
     scoreValue: calculateActualScore(score, maxScore),
+    comment: score.comment,
     updatedAt: score.updatedAt.toISOString(),
   })
 

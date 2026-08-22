@@ -30,6 +30,7 @@ function makeQuestionScore(
     studentId: "student-1",
     partialScore: null,
     status: "correct",
+    comment: "",
     userId: "user-1",
     createdAt: "2026-06-01T10:00:00Z",
     updatedAt: "2026-06-01T10:00:00Z",

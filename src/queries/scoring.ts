@@ -109,6 +109,25 @@ export const updateQuestionScoreMutation = (examId: string) =>
   })
 
 /**
+ * その採点者が、その点にした理由の覚え書きを書く。
+ *
+ * **採点そのものとは別の口。** 判定・部分点はキー1打で確定する操作、覚え書きは
+ * 文字を打ち終えてから残す操作で、同じ口に混ぜると送らなかった側が黙って
+ * 初期値へ戻る。行が無ければ main が用意する（空の覚え書きでは作らない）。
+ */
+export const setQuestionScoreCommentMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (
+      data: Parameters<typeof window.electronAPI.setQuestionScoreComment>[0]
+    ) => window.electronAPI.setQuestionScoreComment(data),
+    scope: { id: `exam:${examId}:questionScores` },
+    meta: {
+      invalidates: cropRegionScopes(examId),
+      errorMessage: "覚え書きを保存できませんでした",
+    },
+  })
+
+/**
  * 競合した採点に裁定を下す。
  *
  * 確定は採点行そのものを書き換えるので、裁定サマリも古くなる。
