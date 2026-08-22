@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
-  ClipboardEdit,
   FolderInput,
   FolderOutput,
   MoreHorizontal,
@@ -13,28 +12,33 @@ import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import { BulkTagAssignButton } from "@/components/common/BulkTagAssignButton"
-import { ListFilterBar } from "@/components/common/ListFilterBar"
+import {
+  BulkTagAssignButton,
+  BulkTagAssignPanel,
+} from "@/components/common/BulkTagAssignButton"
+import { EntityListPage } from "@/components/common/EntityListPage"
+import {
+  ClassroomFilterButton,
+  DateRangeFilterButton,
+  DateRangeFilterPanel,
+  ListSearchInput,
+  MultiSelectFilterPanel,
+  TagFilterButton,
+} from "@/components/common/ListFilterControls"
+import type { ToolbarAction } from "@/components/common/OverflowToolbar"
+import { usePageHelp } from "@/components/help/usePageHelp"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
+import { getCourseworkStatus } from "@/lib/courseworkStatus"
 import { collectClassroomOptions } from "@/lib/filterOptions"
 import {
   addTagToCourseworksMutation,
@@ -75,18 +79,21 @@ const COURSEWORK_FILTER_ACCESSORS: ListFilterAccessors<CourseworkSummary> = {
   date: (coursework) => coursework.referenceDate,
 }
 
+/** 未取得のときに毎回新しい配列を作らないための空値 */
+const EMPTY_TAGS: TagWithAllRelations[] = []
+const EMPTY_COURSEWORKS: CourseworkSummary[] = []
+
 /**
  * 試験外成績資料（Coursework）の一覧コンテナ
  *
- * テーブル形式で資料一覧を表示し、各資料への遷移・新規作成・削除を提供する。
+ * 列・当たり判定・並べ替え・空の出し分けは `EntityListPage` が1つだけ持つ。
+ * ここが渡すのは「行1件から6つの列をどう作るか」と、ヘッダー右に並べる操作。
  * 成績算出から参照中の資料は削除をブロックし、参照元をトーストで通知する。
  */
-/** 未取得のときに毎回新しい配列を作らないための空値 */
-const EMPTY_TAGS: TagWithAllRelations[] = []
-
 export function CourseworkListContainer() {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const { helpButton } = usePageHelp()
   const deleteCoursework = useMutation(deleteCourseworkMutation())
   const exportArchive = useMutation(exportCourseworkArchiveMutation())
   const selectImportFile = useMutation(selectCourseworkImportFileMutation())
@@ -94,9 +101,8 @@ export function CourseworkListContainer() {
   const importArchive = useMutation(importCourseworkArchiveMutation())
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
   const addTagToCourseworks = useMutation(addTagToCourseworksMutation())
-  const { data: courseworks = [], isPending: loading } = useQuery({
-    ...courseworkListQuery(),
-  })
+  const { data: courseworks = EMPTY_COURSEWORKS, isPending: isLoading } =
+    useQuery(courseworkListQuery())
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   // インポート確認ウィザードの状態
   const [importPreview, setImportPreview] =
@@ -148,7 +154,8 @@ export function CourseworkListContainer() {
     })
   }
 
-  const handleImport = async () => {
+  // ヘッダーの並び（useMemo）から参照するので、参照を安定させる
+  const handleImport = useCallback(async () => {
     const selected = await selectImportFile.mutateAsync()
     if (selected.canceled) return
     const preview = await analyzeArchive.mutateAsync({
@@ -156,7 +163,7 @@ export function CourseworkListContainer() {
     })
     setImportArchivePath(selected.filePath)
     setImportPreview(preview)
-  }
+  }, [analyzeArchive, selectImportFile])
 
   const handleImportConfirm = async (
     decisions: Record<string, CourseworkImportDecision>,
@@ -199,30 +206,6 @@ export function CourseworkListContainer() {
     setImportArchivePath(null)
   }
 
-  // 選択中の各資料へ、既存タグを保持したままタグを追加する
-  const handleBulkAddTag = async (tagName: string) => {
-    try {
-      const tag = await findOrCreateTag.mutateAsync(tagName)
-      const targetCourseworks = courseworks.filter((coursework) =>
-        selectedIds.has(coursework.id)
-      )
-      // 既存タグを保持したまま1件ずつ追加（全置換 setTags による stale 消失を回避）
-      await addTagToCourseworks.mutateAsync({
-        courseworkIds: targetCourseworks.map((coursework) => coursework.id),
-        tagId: tag.id,
-      })
-      toast.success("タグを追加しました", {
-        description: `${targetCourseworks.length}件の資料に「${tagName}」を追加`,
-      })
-      clearSelection()
-      await refreshTags()
-      await loadCourseworks()
-    } catch (error) {
-      console.error("Error bulk adding tag:", error)
-      toast.error("タグの追加に失敗しました")
-    }
-  }
-
   const classroomOptions = useMemo(
     () =>
       collectClassroomOptions(courseworks, (coursework) =>
@@ -257,211 +240,292 @@ export function CourseworkListContainer() {
     clearSelection,
   } = useRowSelection(filteredCourseworks)
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-muted-foreground">読み込み中...</p>
-      </div>
-    )
-  }
+  // 選択中の各資料へ、既存タグを保持したままタグを追加する
+  const handleBulkAddTag = useCallback(
+    async (tagName: string) => {
+      try {
+        const tag = await findOrCreateTag.mutateAsync(tagName)
+        const targetCourseworks = courseworks.filter((coursework) =>
+          selectedIds.has(coursework.id)
+        )
+        // 既存タグを保持したまま1件ずつ追加（全置換 setTags による stale 消失を回避）
+        await addTagToCourseworks.mutateAsync({
+          courseworkIds: targetCourseworks.map((coursework) => coursework.id),
+          tagId: tag.id,
+        })
+        toast.success("タグを追加しました", {
+          description: `${targetCourseworks.length}件の資料に「${tagName}」を追加`,
+        })
+        clearSelection()
+        await refreshTags()
+        await loadCourseworks()
+      } catch (error) {
+        console.error("Error bulk adding tag:", error)
+        toast.error("タグの追加に失敗しました")
+      }
+    },
+    [
+      addTagToCourseworks,
+      clearSelection,
+      courseworks,
+      findOrCreateTag,
+      loadCourseworks,
+      refreshTags,
+      selectedIds,
+    ]
+  )
 
-  return (
-    <div className="flex h-full min-w-full flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <div className="flex items-center space-x-2">
+  const tagFilterConfig = useMemo(
+    () => ({
+      options: allTags,
+      selectedIds: filterTagIds,
+      onToggle: toggleTagId,
+      onClear: clearTagIds,
+    }),
+    [allTags, filterTagIds, toggleTagId, clearTagIds]
+  )
+
+  const classroomFilterConfig = useMemo(
+    () => ({
+      options: classroomOptions,
+      selectedIds: filterClassroomIds,
+      onToggle: toggleClassroomId,
+      onClear: clearClassroomIds,
+    }),
+    [classroomOptions, filterClassroomIds, toggleClassroomId, clearClassroomIds]
+  )
+
+  const dateRangeConfig = useMemo(
+    () => ({
+      label: "実施日",
+      from: dateFrom,
+      to: dateTo,
+      onFromChange: setDateFrom,
+      onToChange: setDateTo,
+    }),
+    [dateFrom, dateTo, setDateFrom, setDateTo]
+  )
+
+  const actions = useMemo<ToolbarAction[]>(() => {
+    const toolbarActions: ToolbarAction[] = [
+      {
+        id: "create",
+        priority: 80,
+        node: (
           <Button
             onClick={() => setShowCreateDialog(true)}
             variant="outline"
+            size="sm"
             className="rounded-lg"
           >
             <Plus className="mr-2 h-4 w-4" />
             新規作成
           </Button>
+        ),
+        collapsedNode: (
+          <Button
+            onClick={() => setShowCreateDialog(true)}
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            新規作成
+          </Button>
+        ),
+      },
+      {
+        id: "import",
+        priority: 70,
+        node: (
           <Button
             onClick={handleImport}
             variant="outline"
+            size="sm"
             className="rounded-lg"
           >
             <FolderInput className="mr-2 h-4 w-4" />
             .coursework 読み込み
           </Button>
-          {selectedIds.size > 0 && (
-            <>
-              <span className="text-sm text-muted-foreground">
-                {selectedIds.size}件選択中
-              </span>
-              <BulkTagAssignButton
-                selectedCount={selectedIds.size}
-                allTags={allTags}
-                onAssign={handleBulkAddTag}
-              />
-            </>
-          )}
-        </div>
-        {courseworks.length > 0 && (
-          <ListFilterBar
+        ),
+        collapsedNode: (
+          <Button
+            onClick={handleImport}
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start"
+          >
+            <FolderInput className="mr-2 h-4 w-4" />
+            .coursework 読み込み
+          </Button>
+        ),
+      },
+    ]
+
+    if (selectedIds.size > 0) {
+      toolbarActions.push({
+        id: "bulk-tag",
+        priority: 60,
+        node: (
+          <BulkTagAssignButton
+            selectedCount={selectedIds.size}
+            allTags={allTags}
+            onAssign={handleBulkAddTag}
+          />
+        ),
+        collapsedNode: (
+          <BulkTagAssignPanel
+            selectedCount={selectedIds.size}
+            allTags={allTags}
+            onAssign={handleBulkAddTag}
+          />
+        ),
+      })
+    }
+
+    toolbarActions.push(
+      {
+        id: "tag-filter",
+        priority: 90,
+        node: <TagFilterButton config={tagFilterConfig} />,
+        collapsedNode: (
+          <div className="space-y-1">
+            <p className="px-2 text-xs text-muted-foreground">タグで絞り込み</p>
+            <MultiSelectFilterPanel config={tagFilterConfig} />
+          </div>
+        ),
+      },
+      {
+        id: "classroom-filter",
+        priority: 85,
+        node: <ClassroomFilterButton config={classroomFilterConfig} />,
+        collapsedNode: (
+          <div className="space-y-1">
+            <p className="px-2 text-xs text-muted-foreground">学級で絞り込み</p>
+            <MultiSelectFilterPanel config={classroomFilterConfig} />
+          </div>
+        ),
+      },
+      {
+        id: "date-filter",
+        priority: 84,
+        node: <DateRangeFilterButton config={dateRangeConfig} />,
+        collapsedNode: <DateRangeFilterPanel config={dateRangeConfig} />,
+      },
+      {
+        // 検索欄は最後まで残す（検索できない一覧にしない）
+        id: "search",
+        priority: 100,
+        node: (
+          <ListSearchInput
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
-            searchPlaceholder="資料名・タグ・学級で検索"
-            totalCount={courseworks.length}
-            filteredCount={filteredCourseworks.length}
-            tagFilter={{
-              options: allTags,
-              selectedIds: filterTagIds,
-              onToggle: toggleTagId,
-              onClear: clearTagIds,
-            }}
-            classroomFilter={{
-              options: classroomOptions,
-              selectedIds: filterClassroomIds,
-              onToggle: toggleClassroomId,
-              onClear: clearClassroomIds,
-            }}
-            dateRangeFilter={{
-              label: "実施日",
-              from: dateFrom,
-              to: dateTo,
-              onFromChange: setDateFrom,
-              onToChange: setDateTo,
-            }}
+            placeholder="資料名・タグ・学級で検索"
           />
-        )}
-      </div>
+        ),
+        collapsedNode: (
+          <ListSearchInput
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            placeholder="資料名・タグ・学級で検索"
+          />
+        ),
+      }
+    )
 
-      <div className="min-h-0 flex-1 p-4">
-        {courseworks.length === 0 ? (
-          <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-            <p className="mb-2 text-muted-foreground">
-              試験外成績資料がありません
-            </p>
+    return toolbarActions
+  }, [
+    allTags,
+    classroomFilterConfig,
+    dateRangeConfig,
+    handleBulkAddTag,
+    handleImport,
+    searchTerm,
+    selectedIds,
+    setSearchTerm,
+    tagFilterConfig,
+  ])
+
+  return (
+    <>
+      <EntityListPage<CourseworkSummary>
+        title="試験外成績資料"
+        helpButton={helpButton}
+        rows={filteredCourseworks}
+        totalCount={courseworks.length}
+        isLoading={isLoading}
+        name={(coursework) => coursework.name}
+        summary={(coursework) => (
+          <span className="flex flex-wrap items-center gap-1">
+            <span>
+              {coursework.description || "説明なし"}
+              {" / 生徒: "}
+              {coursework.students.length}名 / 評価項目:{" "}
+              {coursework.items.length}
+            </span>
+            {coursework.tags.map((courseworkTag) => (
+              <Badge
+                key={courseworkTag.tag.id}
+                variant="secondary"
+                className="text-xs"
+              >
+                {courseworkTag.tag.name}
+              </Badge>
+            ))}
+          </span>
+        )}
+        dateLabel="実施日"
+        referenceDate={(coursework) => coursework.referenceDate}
+        updatedAt={(coursework) => coursework.updatedAt}
+        overviewUrl={(coursework) => `/coursework/${coursework.id}`}
+        nextStep={(coursework) => {
+          const status = getCourseworkStatus(coursework)
+          return { label: status.text, url: status.url }
+        }}
+        rowMenu={(coursework) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label={`${coursework.name}の操作`}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport(coursework)}>
+                <FolderOutput className="mr-2 h-4 w-4" />
+                .coursework 書き出し
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => handleDelete(coursework)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                削除
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        actions={actions}
+        selectedIds={selectedIds}
+        onToggleSelect={toggleSelect}
+        onToggleSelectAll={toggleSelectAll}
+        allSelected={allSelected}
+        empty={{
+          message: "試験外成績資料がありません",
+          action: (
             <Button variant="outline" onClick={() => setShowCreateDialog(true)}>
               <Plus className="mr-2 h-4 w-4" />
               最初の資料を作成
             </Button>
-          </div>
-        ) : (
-          <div className="h-full overflow-hidden rounded-xl border border-border/50 shadow-sm">
-            <Table wrapperClassName="h-full">
-              <TableHeader className="sticky top-0 z-10 bg-card">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={(checked) =>
-                        toggleSelectAll(checked === true)
-                      }
-                      aria-label="全選択"
-                    />
-                  </TableHead>
-                  <TableHead>資料名</TableHead>
-                  <TableHead className="w-40 text-center">実施日</TableHead>
-                  <TableHead className="w-40 text-center">編集</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCourseworks.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={5}
-                      className="py-8 text-center text-muted-foreground"
-                    >
-                      条件に一致する資料がありません
-                    </TableCell>
-                  </TableRow>
-                )}
-                {filteredCourseworks.map((coursework) => (
-                  <TableRow key={coursework.id} className="group">
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.has(coursework.id)}
-                        onCheckedChange={(checked) =>
-                          toggleSelect(coursework.id, checked === true)
-                        }
-                        aria-label={`${coursework.name} を選択`}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{coursework.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {coursework.description || "説明なし"}
-                          {" / "}
-                          生徒: {coursework.students.length}名 / 評価項目:{" "}
-                          {coursework.items.length}
-                        </div>
-                        {coursework.tags.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {coursework.tags.map((courseworkTag) => (
-                              <Badge
-                                key={courseworkTag.tag.id}
-                                variant="secondary"
-                                className="text-xs"
-                              >
-                                {courseworkTag.tag.name}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {coursework.referenceDate
-                        ? new Date(coursework.referenceDate).toLocaleDateString(
-                            "ja-JP"
-                          )
-                        : "-"}
-                    </TableCell>
-
-                    <TableCell className="text-center">
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          router.push(`/coursework/${coursework.id}`)
-                        }
-                        className="rounded-lg"
-                      >
-                        <ClipboardEdit className="mr-1 h-4 w-4" />
-                        詳細
-                      </Button>
-                    </TableCell>
-
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleExport(coursework)}
-                          >
-                            <FolderOutput className="mr-2 h-4 w-4" />
-                            .coursework 書き出し
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => handleDelete(coursework)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            削除
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
+          ),
+        }}
+        noMatchMessage="条件に一致する資料がありません"
+        sortStorageKey="courseworkList-sort"
+      />
 
       <CourseworkCreateDialog
         open={showCreateDialog}
@@ -476,6 +540,6 @@ export function CourseworkListContainer() {
         onCancel={handleImportCancel}
         onConfirm={handleImportConfirm}
       />
-    </div>
+    </>
   )
 }

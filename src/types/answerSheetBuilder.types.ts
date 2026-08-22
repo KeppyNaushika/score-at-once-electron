@@ -39,6 +39,13 @@ export interface ASBDeleteImageArgs {
 export interface ASBDefinitionListItem {
   id: string
   name: string
+  /** 説明（任意）。一覧では名前セルの2行目に出す */
+  description?: string | null
+  /**
+   * この解答用紙がいつのものか（任意）。一覧では「使用日」として出す。
+   * 境界を越えるときに ISO 文字列になる（`listAsbDefinitions`）。
+   */
+  referenceDate?: string | null
   /** 担当者（この解答用紙を編集できる唯一の利用者） */
   ownerId: string
   ownerName: string

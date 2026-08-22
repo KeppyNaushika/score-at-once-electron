@@ -6,6 +6,7 @@ import { useMemo } from "react"
 
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 import { OverflowToolbar } from "@/components/common/OverflowToolbar"
+import { HistoryNavButtons } from "@/components/layout/HistoryNavButtons"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { SortableTableHead } from "@/components/ui/SortableTableHead"
@@ -46,6 +47,10 @@ export interface EntityListEmptyState {
 }
 
 interface EntityListPageProps<TRow extends { id: string }> {
+  /** ヘッダーの中央に出す画面の題（「試験一覧」「解答用紙作成」など） */
+  title: string
+  /** ヘッダー右端の「使い方」。`usePageHelp` が作ったものを呼び手が渡す */
+  helpButton?: ReactNode
   /** 絞り込み済みの行（並べ替えは部品の中でやる） */
   rows: TRow[]
   /**
@@ -84,6 +89,15 @@ interface EntityListPageProps<TRow extends { id: string }> {
    * `useRowSelection` を持てばよい
    */
   selectedIds: Set<string>
+  /**
+   * その行を選べない理由。返したら選択を止め、理由を `title` に出す。
+   *
+   * **選ばせてから弾くのでは伝わらない。** 解答用紙の一括タグ付けは担当でない行を
+   * main が弾くが、一括の書き込みは「既に付いている」を飛ばすために失敗を握り潰すので、
+   * 弾かれたことが利用者へ届かない（docs/branch-review-findings.md #10）。押す前に
+   * 選べなくしておく。他の3画面は行の持ち主で分かれないので渡さない
+   */
+  selectionDisabledReason?: (row: TRow) => string | undefined
   onToggleSelect: (rowId: string, checked: boolean) => void
   onToggleSelectAll: (checked: boolean) => void
   allSelected: boolean
@@ -105,6 +119,15 @@ interface SortableEntityRow<TRow> {
 
 /** 列は6つで固定なので、空・読み込みの行が跨ぐ数もここで決まる */
 const COLUMN_COUNT = 6
+
+/**
+ * 並べ替えに使える列。**保存された並び順の照合にも使う。**
+ *
+ * 一覧は列名を localStorage に持つので、画面を作り直すと古い列名だけが残る
+ * （試験一覧の `examList-sort` には、改名前の `"examDate"` が残っている）。
+ * `useTableSort` はここに無い列名を「保存が無い」とみなして既定へ戻す。
+ */
+const SORTABLE_KEYS = ["name", "referenceDate", "updatedAt"] as const
 
 function formatDay(date: EntityListDate): string {
   if (date === null) return "—"
@@ -144,6 +167,8 @@ function formatDayAndTime(date: EntityListDate): string {
  * - **「…」と「次のステップ」は行クリックを止める**（別の飛び先を持つため）
  */
 export function EntityListPage<TRow extends { id: string }>({
+  title,
+  helpButton,
   rows,
   totalCount,
   isLoading,
@@ -157,6 +182,7 @@ export function EntityListPage<TRow extends { id: string }>({
   rowMenu,
   actions,
   selectedIds,
+  selectionDisabledReason,
   onToggleSelect,
   onToggleSelectAll,
   allSelected,
@@ -183,6 +209,7 @@ export function EntityListPage<TRow extends { id: string }>({
   const { sortedData, sortConfig, requestSort } = useTableSort(sortableRows, {
     defaultSort: { key: "updatedAt", direction: "desc" },
     storageKey: sortStorageKey,
+    sortableKeys: SORTABLE_KEYS,
   })
 
   /** 押されたのが行そのものか、行の中の別の導線かを分ける */
@@ -207,17 +234,38 @@ export function EntityListPage<TRow extends { id: string }>({
 
   return (
     <div className="flex h-full min-w-full flex-col">
-      <div className="border-b px-4 py-3">
-        <div className="flex items-center gap-2">
-          <OverflowToolbar actions={actions} />
-          {/* 件数は畳まない（畳むと「何件あるのか」が見えなくなる） */}
-          <span className="shrink-0 text-xs text-muted-foreground">
+      {/*
+        ヘッダーは**1行**。左にクイックアクセス（戻る／進む）、中央に題、右に操作。
+        詳細画面の `WorkflowTabHeader` の上段と同じ姿で、違うのは「一覧へ戻る」が
+        無いこと（一覧に一覧の親は無い）と、下段のタブが無いことだけ。
+
+        題は**行に対して絶対配置**して中心を取る。flex の spacer や grid で挟むと、
+        左のアイコン数や右のボタン幅が変わるたびに中心が動く（窓が狭いときほど大きく
+        ずれる）。`left-1/2` + `-translate-x-1/2` なら左右に何を足しても中心は動かない。
+        重なりは題の幅を切って避け、下のボタンを塞がないよう当たり判定も外す。
+      */}
+      <header className="relative flex shrink-0 items-center gap-2 border-b bg-background px-3 py-2">
+        <div className="flex shrink-0 items-center gap-2">
+          <HistoryNavButtons />
+          {/*
+            件数は畳まない（畳むと「何件あるのか」が見えなくなる）ので、実測して
+            畳む並びの外＝左のクイックアクセスの隣に置く。絞り込むと分母と分子が出る
+          */}
+          <span className="text-xs whitespace-nowrap text-muted-foreground">
             {rows.length === totalCount
               ? `${totalCount}件`
               : `${rows.length} / ${totalCount}件`}
           </span>
         </div>
-      </div>
+        <h1 className="pointer-events-none absolute left-1/2 max-w-[40%] -translate-x-1/2 truncate text-sm font-semibold">
+          {title}
+        </h1>
+        <OverflowToolbar actions={actions} />
+        {/* 「使い方」は畳まない。読み方が分からないときに真っ先に隠れると詰む */}
+        {helpButton === undefined || helpButton === null ? null : (
+          <div className="shrink-0">{helpButton}</div>
+        )}
+      </header>
 
       <div className="min-h-0 flex-1 p-4">
         {!isLoading && totalCount === 0 ? (
@@ -296,6 +344,7 @@ export function EntityListPage<TRow extends { id: string }>({
                   sortedData.map((sortableRow) => {
                     const row = sortableRow.row
                     const step = nextStep(row)
+                    const disabledReason = selectionDisabledReason?.(row)
                     return (
                       <TableRow
                         key={sortableRow.id}
@@ -315,6 +364,8 @@ export function EntityListPage<TRow extends { id: string }>({
                             onCheckedChange={(checked) =>
                               onToggleSelect(sortableRow.id, checked === true)
                             }
+                            disabled={disabledReason !== undefined}
+                            title={disabledReason}
                             aria-label={`${sortableRow.name}を選択`}
                           />
                         </TableCell>

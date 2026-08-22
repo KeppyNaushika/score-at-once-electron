@@ -1,25 +1,34 @@
 "use client"
 
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
-  BarChart3,
-  ClipboardEdit,
   Copy,
-  Eye,
   FolderInput,
   FolderOutput,
   MoreHorizontal,
   Plus,
-  Settings,
-  Sliders,
   Trash2,
-  Users,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import { ListFilterBar } from "@/components/common/ListFilterBar"
+import {
+  BulkTagAssignButton,
+  BulkTagAssignPanel,
+} from "@/components/common/BulkTagAssignButton"
+import { EntityListPage } from "@/components/common/EntityListPage"
+import {
+  ClassroomFilterButton,
+  DateRangeFilterButton,
+  DateRangeFilterPanel,
+  ListSearchInput,
+  MultiSelectFilterPanel,
+  TagFilterButton,
+} from "@/components/common/ListFilterControls"
+import type { ToolbarAction } from "@/components/common/OverflowToolbar"
+import { usePageHelp } from "@/components/help/usePageHelp"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -27,18 +36,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
+import { useRowSelection } from "@/hooks/useRowSelection"
 import { collectClassroomOptions } from "@/lib/filterOptions"
 import { getGradeStatus } from "@/lib/gradeStatus"
 import {
+  addTagToGradesMutation,
   analyzeGradeArchiveMutation,
   deleteGradeMutation,
   duplicateGradeMutation,
@@ -47,6 +51,7 @@ import {
   type GradeArchivePayload,
   gradeListQuery,
 } from "@/queries/grade"
+import { findOrCreateTagMutation, tagListQuery } from "@/queries/tag"
 import type { CourseworkImportDecision } from "@/types/courseworkArchive.types"
 import type { GradeSummary } from "@/types/grade.types"
 import type { GradeArchiveImportPreview } from "@/types/gradeArchive.types"
@@ -54,18 +59,9 @@ import type { GradeArchiveImportPreview } from "@/types/gradeArchive.types"
 import { GradeCreateDialog } from "./GradeCreateDialog"
 import { GradeImportDialog } from "./GradeImportDialog"
 
-const STEP_ICONS: Record<
-  number,
-  React.ComponentType<{ className?: string }>
-> = {
-  2: Users,
-  3: Settings,
-  4: ClipboardEdit,
-  5: Sliders,
-  6: BarChart3,
-}
-
-/** 成績算出一覧のフィルタ対象値（名前・説明・学級名／学級／基準日） */
+/**
+ * 成績算出一覧のフィルタ対象値（名前・説明・学級名・タグ名／タグ／学級／成績算出日）
+ */
 const GRADE_FILTER_ACCESSORS: ListFilterAccessors<GradeSummary> = {
   searchTexts: (grade) => [
     grade.name,
@@ -73,29 +69,41 @@ const GRADE_FILTER_ACCESSORS: ListFilterAccessors<GradeSummary> = {
     ...grade.gradeClassrooms.map(
       (gradeClassroom) => gradeClassroom.classroom.name
     ),
+    ...grade.gradeTags.map((gradeTag) => gradeTag.tag.name),
   ],
+  tagIds: (grade) => grade.gradeTags.map((gradeTag) => gradeTag.tagId),
   classroomIds: (grade) =>
     grade.gradeClassrooms.map((gradeClassroom) => gradeClassroom.classroomId),
   date: (grade) => grade.referenceDate,
 }
 
-/**
- * 成績算出試験の一覧コンテナ
- *
- * テーブル形式で試験一覧を表示し、次のステップへのナビゲーションを提供する。
- */
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_GRADES: GradeSummary[] = []
+const EMPTY_TAGS: TagWithAllRelations[] = []
 
+/**
+ * 成績算出の一覧コンテナ
+ *
+ * 列・当たり判定・並べ替え・空の出し分けは `EntityListPage` が1つだけ持つ。
+ * ここが渡すのは「行1件から6つの列をどう作るか」と、ヘッダー右に並べる操作。
+ *
+ * **語は「成績算出」で通す。** 中身は成績算出試験だが、試験一覧と同じ「試験」で
+ * 呼ぶと、どちらの一覧を見ているのか見分けが付かない。
+ */
 export function GradeListContainer() {
   const router = useRouter()
-  const { data: grades = EMPTY_GRADES, isPending: loading } =
+  const queryClient = useQueryClient()
+  const { helpButton } = usePageHelp()
+  const { data: grades = EMPTY_GRADES, isPending: isLoading } =
     useQuery(gradeListQuery())
+  const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const deleteGrade = useMutation(deleteGradeMutation())
   const duplicateGrade = useMutation(duplicateGradeMutation())
   const exportArchive = useMutation(exportGradeArchiveMutation())
   const analyzeArchive = useMutation(analyzeGradeArchiveMutation())
   const executeImport = useMutation(executeGradeImportMutation())
+  const findOrCreateTag = useMutation(findOrCreateTagMutation())
+  const addTagToGrades = useMutation(addTagToGradesMutation())
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   // インポート確認ウィザードの状態
   const [importPreview, setImportPreview] =
@@ -107,7 +115,7 @@ export function GradeListContainer() {
 
   const handleCreated = (id: string) => {
     setShowCreateDialog(false)
-    // 作成直後は基本設定（基準日など）を促すため編集モーダルを開いた状態で開く
+    // 作成直後は基本設定（成績算出日など）を促すため編集モーダルを開いた状態で開く
     router.push(`/grades/${id}?setup=1`)
   }
 
@@ -120,13 +128,14 @@ export function GradeListContainer() {
     toast.success(`「${duplicated.name}」を複製しました`)
   }
 
-  const handleImport = async () => {
+  // ヘッダーの並び（useMemo）から参照するので、参照を安定させる
+  const handleImport = useCallback(async () => {
     const result = await analyzeArchive.mutateAsync()
     if (result.canceled) return
     // ファイル選択後はウィザードを開き、照合方法をユーザーに判断させる
     setImportArchiveData(result.archiveData)
     setImportPreview(result.preview)
-  }
+  }, [analyzeArchive])
 
   const handleImportConfirm = async (
     decisions: Record<string, CourseworkImportDecision>
@@ -180,6 +189,9 @@ export function GradeListContainer() {
     filteredItems: filteredGrades,
     searchTerm,
     setSearchTerm,
+    filterTagIds,
+    toggleTagId,
+    clearTagIds,
     filterClassroomIds,
     toggleClassroomId,
     clearClassroomIds,
@@ -189,183 +201,294 @@ export function GradeListContainer() {
     setDateTo,
   } = useListFilter(grades, GRADE_FILTER_ACCESSORS)
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-muted-foreground">読み込み中...</p>
-      </div>
-    )
-  }
+  const {
+    selectedIds,
+    toggleSelect,
+    toggleSelectAll,
+    allSelected,
+    clearSelection,
+  } = useRowSelection(filteredGrades)
 
-  return (
-    <div className="flex h-full min-w-full flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <div className="flex items-center space-x-2">
+  /** 選んだ成績算出へ、既存のタグを保ったまま同じタグを足す */
+  const handleBulkAddTag = useCallback(
+    async (tagName: string) => {
+      if (selectedIds.size === 0) return
+      const tag = await findOrCreateTag.mutateAsync(tagName)
+      await addTagToGrades.mutateAsync({
+        gradeIds: [...selectedIds],
+        tagId: tag.id,
+      })
+      toast.success("タグを追加しました", {
+        description: `${selectedIds.size}件の成績算出に「${tagName}」を追加`,
+      })
+      clearSelection()
+      await queryClient.invalidateQueries({
+        queryKey: tagListQuery().queryKey,
+      })
+    },
+    [addTagToGrades, clearSelection, findOrCreateTag, queryClient, selectedIds]
+  )
+
+  const tagFilterConfig = useMemo(
+    () => ({
+      options: allTags,
+      selectedIds: filterTagIds,
+      onToggle: toggleTagId,
+      onClear: clearTagIds,
+    }),
+    [allTags, filterTagIds, toggleTagId, clearTagIds]
+  )
+
+  const classroomFilterConfig = useMemo(
+    () => ({
+      options: classroomOptions,
+      selectedIds: filterClassroomIds,
+      onToggle: toggleClassroomId,
+      onClear: clearClassroomIds,
+    }),
+    [classroomOptions, filterClassroomIds, toggleClassroomId, clearClassroomIds]
+  )
+
+  const dateRangeConfig = useMemo(
+    () => ({
+      label: "成績算出日",
+      from: dateFrom,
+      to: dateTo,
+      onFromChange: setDateFrom,
+      onToChange: setDateTo,
+    }),
+    [dateFrom, dateTo, setDateFrom, setDateTo]
+  )
+
+  const actions = useMemo<ToolbarAction[]>(() => {
+    const toolbarActions: ToolbarAction[] = [
+      {
+        id: "create",
+        priority: 80,
+        node: (
           <Button
             onClick={() => setShowCreateDialog(true)}
             variant="outline"
+            size="sm"
             className="rounded-lg"
           >
             <Plus className="mr-2 h-4 w-4" />
             新規作成
           </Button>
+        ),
+        collapsedNode: (
+          <Button
+            onClick={() => setShowCreateDialog(true)}
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            新規作成
+          </Button>
+        ),
+      },
+      {
+        id: "import",
+        priority: 70,
+        node: (
           <Button
             onClick={handleImport}
             variant="outline"
+            size="sm"
             className="rounded-lg"
           >
             <FolderInput className="mr-2 h-4 w-4" />
             .grade 読み込み
           </Button>
-        </div>
-        {grades.length > 0 && (
-          <ListFilterBar
+        ),
+        collapsedNode: (
+          <Button
+            onClick={handleImport}
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start"
+          >
+            <FolderInput className="mr-2 h-4 w-4" />
+            .grade 読み込み
+          </Button>
+        ),
+      },
+    ]
+
+    if (selectedIds.size > 0) {
+      toolbarActions.push({
+        id: "bulk-tag",
+        priority: 60,
+        node: (
+          <BulkTagAssignButton
+            selectedCount={selectedIds.size}
+            allTags={allTags}
+            onAssign={handleBulkAddTag}
+          />
+        ),
+        collapsedNode: (
+          <BulkTagAssignPanel
+            selectedCount={selectedIds.size}
+            allTags={allTags}
+            onAssign={handleBulkAddTag}
+          />
+        ),
+      })
+    }
+
+    toolbarActions.push(
+      {
+        id: "tag-filter",
+        priority: 90,
+        node: <TagFilterButton config={tagFilterConfig} />,
+        collapsedNode: (
+          <div className="space-y-1">
+            <p className="px-2 text-xs text-muted-foreground">タグで絞り込み</p>
+            <MultiSelectFilterPanel config={tagFilterConfig} />
+          </div>
+        ),
+      },
+      {
+        id: "classroom-filter",
+        priority: 85,
+        node: <ClassroomFilterButton config={classroomFilterConfig} />,
+        collapsedNode: (
+          <div className="space-y-1">
+            <p className="px-2 text-xs text-muted-foreground">学級で絞り込み</p>
+            <MultiSelectFilterPanel config={classroomFilterConfig} />
+          </div>
+        ),
+      },
+      {
+        id: "date-filter",
+        priority: 84,
+        node: <DateRangeFilterButton config={dateRangeConfig} />,
+        collapsedNode: <DateRangeFilterPanel config={dateRangeConfig} />,
+      },
+      {
+        // 検索欄は最後まで残す（検索できない一覧にしない）
+        id: "search",
+        priority: 100,
+        node: (
+          <ListSearchInput
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
-            searchPlaceholder="試験名・学級で検索"
-            totalCount={grades.length}
-            filteredCount={filteredGrades.length}
-            classroomFilter={{
-              options: classroomOptions,
-              selectedIds: filterClassroomIds,
-              onToggle: toggleClassroomId,
-              onClear: clearClassroomIds,
-            }}
-            dateRangeFilter={{
-              label: "基準日",
-              from: dateFrom,
-              to: dateTo,
-              onFromChange: setDateFrom,
-              onToChange: setDateTo,
-            }}
+            placeholder="成績算出名・タグ・学級で検索"
           />
-        )}
-      </div>
+        ),
+        collapsedNode: (
+          <ListSearchInput
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            placeholder="成績算出名・タグ・学級で検索"
+          />
+        ),
+      }
+    )
 
-      <div className="min-h-0 flex-1 p-4">
-        {grades.length === 0 ? (
-          <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-            <p className="mb-2 text-muted-foreground">
-              成績算出試験がありません
-            </p>
+    return toolbarActions
+  }, [
+    allTags,
+    classroomFilterConfig,
+    dateRangeConfig,
+    handleBulkAddTag,
+    handleImport,
+    searchTerm,
+    selectedIds,
+    setSearchTerm,
+    tagFilterConfig,
+  ])
+
+  return (
+    <>
+      <EntityListPage<GradeSummary>
+        title="成績算出"
+        helpButton={helpButton}
+        rows={filteredGrades}
+        totalCount={grades.length}
+        isLoading={isLoading}
+        name={(grade) => grade.name}
+        summary={(grade) => {
+          const classroomNames = grade.gradeClassrooms
+            .map((gradeClassroom) => gradeClassroom.classroom.name)
+            .join("、")
+          return (
+            <span className="flex flex-wrap items-center gap-1">
+              <span>
+                {classroomNames || "学級未登録"}
+                {" / 生徒: "}
+                {grade.gradeStudents.length}名 / 評価項目:{" "}
+                {grade.gradeItems.length}
+              </span>
+              {grade.gradeTags.map((gradeTag) => (
+                <Badge
+                  key={gradeTag.tag.id}
+                  variant="secondary"
+                  className="text-xs"
+                >
+                  {gradeTag.tag.name}
+                </Badge>
+              ))}
+            </span>
+          )
+        }}
+        dateLabel="成績算出日"
+        referenceDate={(grade) => grade.referenceDate}
+        updatedAt={(grade) => grade.updatedAt}
+        overviewUrl={(grade) => `/grades/${grade.id}`}
+        nextStep={(grade) => {
+          const status = getGradeStatus(grade)
+          return { label: status.text, url: status.url }
+        }}
+        rowMenu={(grade) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label={`${grade.name}の操作`}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleDuplicate(grade.id)}>
+                <Copy className="mr-2 h-4 w-4" />
+                複製
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportArchive.mutate(grade.id)}>
+                <FolderOutput className="mr-2 h-4 w-4" />
+                .grade 書き出し
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => handleDelete(grade.id)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                削除
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        actions={actions}
+        selectedIds={selectedIds}
+        onToggleSelect={toggleSelect}
+        onToggleSelectAll={toggleSelectAll}
+        allSelected={allSelected}
+        empty={{
+          message: "成績算出がありません",
+          action: (
             <Button variant="outline" onClick={() => setShowCreateDialog(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              最初の試験を作成
+              最初の成績算出を作成
             </Button>
-          </div>
-        ) : (
-          <div className="h-full overflow-hidden rounded-xl border border-border/50 shadow-sm">
-            <Table wrapperClassName="h-full">
-              <TableHeader className="sticky top-0 z-10 bg-card">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>試験名</TableHead>
-                  <TableHead className="w-32 text-center">詳細</TableHead>
-                  <TableHead className="w-52 text-center">
-                    次のステップ
-                  </TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredGrades.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="py-8 text-center text-muted-foreground"
-                    >
-                      条件に一致する試験がありません
-                    </TableCell>
-                  </TableRow>
-                )}
-                {filteredGrades.map((grade) => {
-                  const status = getGradeStatus(grade)
-                  const StepIcon = STEP_ICONS[status.step] ?? BarChart3
-
-                  const classNames = grade.gradeClassrooms
-                    .map((gradeClassroom) => gradeClassroom.classroom.name)
-                    .join("、")
-
-                  return (
-                    <TableRow key={grade.id} className="group">
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{grade.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {classNames || "学級未登録"}
-                            {" / "}
-                            生徒: {grade.gradeStudents.length}名 / 評価項目:{" "}
-                            {grade.gradeItems.length}
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="text-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="rounded-lg"
-                          onClick={() => router.push(`/grades/${grade.id}`)}
-                        >
-                          <Eye className="mr-1 h-4 w-4" />
-                          詳細
-                        </Button>
-                      </TableCell>
-
-                      <TableCell className="text-center">
-                        <Button
-                          size="sm"
-                          onClick={() => router.push(status.url)}
-                          className="w-48 justify-start rounded-lg text-left"
-                        >
-                          <StepIcon className="mr-1 h-4 w-4 shrink-0" />
-                          <span className="min-w-0 truncate text-xs">
-                            {status.text}
-                          </span>
-                        </Button>
-                      </TableCell>
-
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => handleDuplicate(grade.id)}
-                            >
-                              <Copy className="mr-2 h-4 w-4" />
-                              複製
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => exportArchive.mutate(grade.id)}
-                            >
-                              <FolderOutput className="mr-2 h-4 w-4" />
-                              .grade 書き出し
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => handleDelete(grade.id)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              削除
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
+          ),
+        }}
+        noMatchMessage="条件に一致する成績算出がありません"
+        sortStorageKey="gradeList-sort"
+      />
 
       <GradeCreateDialog
         open={showCreateDialog}
@@ -380,6 +503,6 @@ export function GradeListContainer() {
         onCancel={handleImportCancel}
         onConfirm={handleImportConfirm}
       />
-    </div>
+    </>
   )
 }

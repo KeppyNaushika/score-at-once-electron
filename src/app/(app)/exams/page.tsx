@@ -1,18 +1,15 @@
 "use client"
 
-import Exams from "@/components/exams/list/ExamList"
-import { usePageHelp } from "@/components/help/usePageHelp"
-import PageHeader from "@/components/layout/PageHeader"
+import ExamList from "@/components/exams/list/ExamList"
 
+/**
+ * ヘッダー（題・戻る／進む・操作）は `EntityListPage` が持つので、ページは
+ * 一覧を全面に置くだけ。4つのトップページで同じ形にしてある。
+ */
 export default function ExamsPage() {
-  const { helpButton } = usePageHelp()
-
   return (
-    <div className="flex h-full flex-col">
-      <PageHeader title="試験一覧" helpButton={helpButton} />
-      <div className="flex-1 overflow-hidden">
-        <Exams />
-      </div>
+    <div className="h-full overflow-hidden">
+      <ExamList />
     </div>
   )
 }

@@ -38,6 +38,18 @@ import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 /** hoist される `vi.mock` の中から参照するので、こちらも hoist して作る */
 const { pushSpy } = vi.hoisted(() => ({ pushSpy: vi.fn() }))
 
+/**
+ * ヘッダー左のクイックアクセス（戻る／進む）は差し替える。
+ *
+ * 中身は Electron のセッション履歴を引く `useNavigationHistory` で、
+ * `QueryClientProvider` と `window.electronAPI` が要る。ここで見たいのは一覧の
+ * 列と当たり判定なので、その2つを持ち込まずに済ませる（履歴の側の検査は
+ * 呼ばれ方ではなく `useNavigationHistory` 自身が持つべきもの）。
+ */
+vi.mock("@/components/layout/HistoryNavButtons", () => ({
+  HistoryNavButtons: () => <div data-testid="history-nav-buttons" />,
+}))
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: pushSpy,
@@ -90,6 +102,7 @@ function renderList(
 ) {
   return render(
     <EntityListPage<TestExamRow>
+      title="試験一覧"
       rows={ROWS}
       totalCount={ROWS.length}
       isLoading={false}
@@ -217,6 +230,43 @@ describe("EntityListPage の出し分け", () => {
     expect(screen.queryByText("まだ試験がありません")).toBeNull()
     // 絞り込んだ結果であることが件数でわかる
     expect(screen.getByText("0 / 2件")).toBeInTheDocument()
+  })
+
+  it("列は6つで、並びまで固定（増えても減っても落ちる）", () => {
+    renderList()
+
+    // 4画面が同じ列を同じ順で持つことの錠。画面固有の列を足す口が無いことは
+    // 型（`EntityListPageProps` に列の定義が無い）が担保し、ここでは並びを固定する
+    const columnHeaders = screen
+      .getAllByRole("columnheader")
+      .map((columnHeader) => columnHeader.textContent?.trim() ?? "")
+    expect(columnHeaders).toEqual([
+      "",
+      "名前",
+      "試験日",
+      "更新日時",
+      "次のステップ",
+      "",
+    ])
+  })
+
+  it("ヘッダーは1行で、題を中央に持つ", () => {
+    renderList()
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "試験一覧" })
+    ).toBeInTheDocument()
+    // 左のクイックアクセス（戻る／進む）も同じ行に居る
+    expect(screen.getByTestId("history-nav-buttons")).toBeInTheDocument()
+  })
+
+  it("1件も無くても操作（検索欄）は消えない", () => {
+    renderList({ rows: [], totalCount: 0 })
+
+    // 幅を測るための控えの並びにも同じ検索欄が居る（`OverflowToolbar`）ので、
+    // 本物の並び＝ツールバーの中から引く
+    const toolbar = screen.getByRole("toolbar", { name: "一覧の操作" })
+    expect(within(toolbar).getByLabelText("検索欄")).toBeInTheDocument()
   })
 
   it("日付列の見出しは画面ごとの語、未設定の日付は空欄にしない", () => {

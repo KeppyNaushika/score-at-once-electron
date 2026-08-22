@@ -16,12 +16,24 @@ import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import BaseModal from "@/components/common/BaseModal"
-import { BulkTagAssignButton } from "@/components/common/BulkTagAssignButton"
+import {
+  BulkTagAssignButton,
+  BulkTagAssignPanel,
+} from "@/components/common/BulkTagAssignButton"
+import { EntityListPage } from "@/components/common/EntityListPage"
 import {
   type ExportOutcome,
   ExportResultSummary,
 } from "@/components/common/ExportResultSummary"
-import { ListFilterBar } from "@/components/common/ListFilterBar"
+import {
+  DateRangeFilterButton,
+  DateRangeFilterPanel,
+  ListSearchInput,
+  MultiSelectFilterPanel,
+  TagFilterButton,
+} from "@/components/common/ListFilterControls"
+import type { ToolbarAction } from "@/components/common/OverflowToolbar"
+import { usePageHelp } from "@/components/help/usePageHelp"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,18 +61,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
+import { getAnswerSheetStatus } from "@/lib/answerSheetStatus"
 import {
   createAnswerSheetDefinitionMutation,
   exportAnswerSheetDefinitionMutation,
@@ -79,22 +84,19 @@ import type { ASBDefinitionListItem } from "@/types/answerSheetBuilder.types"
 
 import { useAnswerSheetDefinitions } from "./hooks/useAnswerSheetDefinitions"
 
-type SortKey = "name" | "updatedAt" | "questionCount" | "totalPoints"
-type SortDir = "asc" | "desc"
-
-/** 解答用紙一覧のフィルタ対象値（名前・タグ名／タグ／更新日） */
+/** 解答用紙一覧のフィルタ対象値（名前・説明・タグ名／タグ／使用日） */
 const ASB_FILTER_ACCESSORS: ListFilterAccessors<ASBDefinitionListItem> = {
   searchTexts: (definition) => [
     definition.name,
+    definition.description,
     ...(definition.tags ?? []).map((tag) => tag.name),
   ],
   tagIds: (definition) => (definition.tags ?? []).map((tag) => tag.id),
-  date: (definition) => definition.updatedAt ?? null,
+  // 日付範囲の絞り込みは列に出している日付＝使用日に合わせる
+  // （以前は更新日時で絞っていて、列の「更新日時」と語だけが揃っていなかった）
+  date: (definition) => definition.referenceDate ?? null,
 }
 
-/**
- * 解答用紙の一覧表示・作成・複製・削除を行うコンポーネント。
- */
 /**
  * 担当を別の利用者へ渡すダイアログ。
  *
@@ -165,12 +167,11 @@ const EMPTY_USERS: PublicUser[] = []
 export function AnswerSheetDefinitionList() {
   const currentUser = useCurrentUser()
   const router = useRouter()
+  const { helpButton } = usePageHelp()
   const { definitions, isLoading, deleteDefinition, duplicateDefinition } =
     useAnswerSheetDefinitions(currentUser.id)
 
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
-  const [sortKey, setSortKey] = useState<SortKey>("updatedAt")
-  const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string
     name: string
@@ -228,45 +229,6 @@ export function AnswerSheetDefinitionList() {
     setDateTo,
   } = useListFilter(visibleDefinitions, ASB_FILTER_ACCESSORS)
 
-  const toggleSort = useCallback(
-    (key: SortKey) => {
-      if (sortKey === key) {
-        setSortDir((prevSortDir) => (prevSortDir === "asc" ? "desc" : "asc"))
-      } else {
-        setSortKey(key)
-        setSortDir(key === "name" ? "asc" : "desc")
-      }
-    },
-    [sortKey]
-  )
-
-  const sorted = [...filteredDefinitions].sort((definitionA, definitionB) => {
-    const direction = sortDir === "asc" ? 1 : -1
-    switch (sortKey) {
-      case "name":
-        return direction * definitionA.name.localeCompare(definitionB.name)
-      case "updatedAt":
-        return (
-          direction *
-          (definitionA.updatedAt ?? "").localeCompare(
-            definitionB.updatedAt ?? ""
-          )
-        )
-      case "questionCount":
-        return (
-          direction *
-          ((definitionA.questionCount ?? 0) - (definitionB.questionCount ?? 0))
-        )
-      case "totalPoints":
-        return (
-          direction *
-          ((definitionA.totalPoints ?? 0) - (definitionB.totalPoints ?? 0))
-        )
-      default:
-        return 0
-    }
-  })
-
   /**
    * 一括操作の対象にできる行＝**自分が担当のものだけ**。
    *
@@ -276,8 +238,11 @@ export function AnswerSheetDefinitionList() {
    * 押す前に選べなくしておくのが本筋で、それでもすり抜けた分は下で数えて伝える。
    */
   const taggableDefinitions = useMemo(
-    () => sorted.filter((definition) => definition.ownerId === currentUser.id),
-    [sorted, currentUser.id]
+    () =>
+      filteredDefinitions.filter(
+        (definition) => definition.ownerId === currentUser.id
+      ),
+    [filteredDefinitions, currentUser.id]
   )
   const isTaggable = useCallback(
     (definition: ASBDefinitionListItem) =>
@@ -293,35 +258,45 @@ export function AnswerSheetDefinitionList() {
     clearSelection,
   } = useRowSelection(taggableDefinitions)
 
-  const handleBulkAddTag = async (tagName: string) => {
-    // 選んだ後に担当が変わることもある（同期で他の端末から届く）ので、実行時にも見る
-    const targets = sorted.filter(
-      (definition) => selectedIds.has(definition.id) && isTaggable(definition)
-    )
-    const skipped = selectedIds.size - targets.length
-    if (targets.length === 0) {
-      toast.error("タグを追加できませんでした", {
-        description: "選んだ解答用紙はどれも担当ではありません。",
-      })
-      return
-    }
-    try {
-      const tag = await findOrCreateTag(tagName)
-      await addTagToDefinitions({
-        definitionIds: targets.map((definition) => definition.id),
-        tagId: tag.id,
-      })
-      toast.success("タグを追加しました", {
-        description:
-          skipped > 0
-            ? `${targets.length}件の解答用紙に「${tagName}」を追加（${skipped}件は担当ではないため対象外）`
-            : `${targets.length}件の解答用紙に「${tagName}」を追加`,
-      })
-      clearSelection()
-    } catch {
-      // 失敗の通知は MutationCache が出す
-    }
-  }
+  const handleBulkAddTag = useCallback(
+    async (tagName: string) => {
+      // 選んだ後に担当が変わることもある（同期で他の端末から届く）ので、実行時にも見る
+      const targets = filteredDefinitions.filter(
+        (definition) => selectedIds.has(definition.id) && isTaggable(definition)
+      )
+      const skipped = selectedIds.size - targets.length
+      if (targets.length === 0) {
+        toast.error("タグを追加できませんでした", {
+          description: "選んだ解答用紙はどれも担当ではありません。",
+        })
+        return
+      }
+      try {
+        const tag = await findOrCreateTag(tagName)
+        await addTagToDefinitions({
+          definitionIds: targets.map((definition) => definition.id),
+          tagId: tag.id,
+        })
+        toast.success("タグを追加しました", {
+          description:
+            skipped > 0
+              ? `${targets.length}件の解答用紙に「${tagName}」を追加（${skipped}件は担当ではないため対象外）`
+              : `${targets.length}件の解答用紙に「${tagName}」を追加`,
+        })
+        clearSelection()
+      } catch {
+        // 失敗の通知は MutationCache が出す
+      }
+    },
+    [
+      addTagToDefinitions,
+      clearSelection,
+      filteredDefinitions,
+      findOrCreateTag,
+      isTaggable,
+      selectedIds,
+    ]
+  )
 
   const handleCreate = useCallback(async () => {
     try {
@@ -337,14 +312,6 @@ export function AnswerSheetDefinitionList() {
       // 失敗の通知は MutationCache が出す
     }
   }, [currentUser.id, router, createDefinition])
-
-  // 行クリック: 概要（detail）へ
-  const handleEdit = useCallback(
-    (id: string) => {
-      router.push(`/answer-sheet-builder/${id}`)
-    },
-    [router]
-  )
 
   // ドロップダウン「編集」: 作成ページ（エディタ）へ直行
   const handleOpenEditor = useCallback(
@@ -419,288 +386,294 @@ export function AnswerSheetDefinitionList() {
     }
   }, [currentUser.id, selectImportFile, importDefinition])
 
-  const sortIndicator = (key: SortKey) => {
-    if (sortKey !== key) return ""
-    return sortDir === "asc" ? " ↑" : " ↓"
-  }
+  const tagFilterConfig = useMemo(
+    () => ({
+      options: allTags,
+      selectedIds: filterTagIds,
+      onToggle: toggleTagId,
+      onClear: clearTagIds,
+    }),
+    [allTags, filterTagIds, toggleTagId, clearTagIds]
+  )
 
-  const formatDate = (iso?: string) => {
-    if (!iso) return "-"
-    const date = new Date(iso)
-    return date.toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
+  const dateRangeConfig = useMemo(
+    () => ({
+      label: "使用日",
+      from: dateFrom,
+      to: dateTo,
+      onFromChange: setDateFrom,
+      onToChange: setDateTo,
+    }),
+    [dateFrom, dateTo, setDateFrom, setDateTo]
+  )
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <p className="text-sm text-muted-foreground">読み込み中...</p>
-      </div>
+  const actions = useMemo<ToolbarAction[]>(() => {
+    // 並びに出す姿と「…」の中の姿が同じもの。作るのは1回にして、幅を測る控えの
+    // 並びと本物で同じ要素が使われるようにする
+    const ownerScopeToggle = (
+      <label className="flex items-center gap-2 text-sm whitespace-nowrap text-muted-foreground">
+        <Checkbox
+          checked={showAllOwners}
+          onCheckedChange={(checked) => setShowAllOwners(checked === true)}
+        />
+        全員の解答用紙を表示
+      </label>
     )
-  }
 
-  return (
-    <div className="flex h-full min-w-full flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <div className="flex items-center space-x-2">
+    const toolbarActions: ToolbarAction[] = [
+      {
+        id: "create",
+        priority: 80,
+        node: (
           <Button
             onClick={handleCreate}
             variant="outline"
+            size="sm"
             className="rounded-lg"
           >
             <Plus className="mr-2 h-4 w-4" />
             新規作成
           </Button>
+        ),
+        collapsedNode: (
+          <Button
+            onClick={handleCreate}
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            新規作成
+          </Button>
+        ),
+      },
+      {
+        id: "import",
+        priority: 70,
+        node: (
           <Button
             onClick={handleImport}
             variant="outline"
+            size="sm"
             className="rounded-lg"
           >
             <FolderInput className="mr-2 h-4 w-4" />
             .asb 読み込み
           </Button>
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Checkbox
-              checked={showAllOwners}
-              onCheckedChange={(checked) => setShowAllOwners(checked === true)}
-            />
-            全員の解答用紙を表示
-          </label>
-          {selectedIds.size > 0 && (
-            <>
-              <span className="text-sm text-muted-foreground">
-                {selectedIds.size}件選択中
-              </span>
-              <BulkTagAssignButton
-                selectedCount={selectedIds.size}
-                allTags={allTags}
-                onAssign={handleBulkAddTag}
-              />
-            </>
-          )}
-        </div>
-        {visibleDefinitions.length > 0 && (
-          <ListFilterBar
+        ),
+        collapsedNode: (
+          <Button
+            onClick={handleImport}
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start"
+          >
+            <FolderInput className="mr-2 h-4 w-4" />
+            .asb 読み込み
+          </Button>
+        ),
+      },
+      {
+        // 「誰の解答用紙を見るか」は絞り込みの一種なので、他の絞り込みと同じ側に置く
+        id: "owner-scope",
+        priority: 65,
+        node: ownerScopeToggle,
+        collapsedNode: ownerScopeToggle,
+      },
+    ]
+
+    if (selectedIds.size > 0) {
+      toolbarActions.push({
+        id: "bulk-tag",
+        priority: 60,
+        node: (
+          <BulkTagAssignButton
+            selectedCount={selectedIds.size}
+            allTags={allTags}
+            onAssign={handleBulkAddTag}
+          />
+        ),
+        collapsedNode: (
+          <BulkTagAssignPanel
+            selectedCount={selectedIds.size}
+            allTags={allTags}
+            onAssign={handleBulkAddTag}
+          />
+        ),
+      })
+    }
+
+    toolbarActions.push(
+      {
+        id: "tag-filter",
+        priority: 90,
+        node: <TagFilterButton config={tagFilterConfig} />,
+        collapsedNode: (
+          <div className="space-y-1">
+            <p className="px-2 text-xs text-muted-foreground">タグで絞り込み</p>
+            <MultiSelectFilterPanel config={tagFilterConfig} />
+          </div>
+        ),
+      },
+      {
+        id: "date-filter",
+        priority: 84,
+        node: <DateRangeFilterButton config={dateRangeConfig} />,
+        collapsedNode: <DateRangeFilterPanel config={dateRangeConfig} />,
+      },
+      {
+        // 検索欄は最後まで残す（検索できない一覧にしない）
+        id: "search",
+        priority: 100,
+        node: (
+          <ListSearchInput
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
-            searchPlaceholder="名前・タグで検索"
-            totalCount={visibleDefinitions.length}
-            filteredCount={filteredDefinitions.length}
-            tagFilter={{
-              options: allTags,
-              selectedIds: filterTagIds,
-              onToggle: toggleTagId,
-              onClear: clearTagIds,
-            }}
-            dateRangeFilter={{
-              label: "更新日",
-              from: dateFrom,
-              to: dateTo,
-              onFromChange: setDateFrom,
-              onToChange: setDateTo,
-            }}
+            placeholder="名前・タグで検索"
           />
-        )}
-      </div>
+        ),
+        collapsedNode: (
+          <ListSearchInput
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            placeholder="名前・タグで検索"
+          />
+        ),
+      }
+    )
 
-      <div className="min-h-0 flex-1 p-4">
-        {visibleDefinitions.length === 0 ? (
-          <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-            <p className="mb-2 text-muted-foreground">
-              {showAllOwners
-                ? "解答用紙がありません"
-                : "担当している解答用紙がありません"}
-            </p>
+    return toolbarActions
+  }, [
+    allTags,
+    dateRangeConfig,
+    handleBulkAddTag,
+    handleCreate,
+    handleImport,
+    searchTerm,
+    showAllOwners,
+    selectedIds,
+    setSearchTerm,
+    tagFilterConfig,
+  ])
+
+  return (
+    <>
+      <EntityListPage<ASBDefinitionListItem>
+        title="解答用紙作成"
+        helpButton={helpButton}
+        rows={filteredDefinitions}
+        totalCount={visibleDefinitions.length}
+        isLoading={isLoading}
+        name={(definition) => definition.name}
+        summary={(definition) => (
+          <span className="flex flex-wrap items-center gap-1">
+            <span>
+              {definition.paperSize ?? "-"}{" "}
+              {definition.orientation === "landscape" ? "横" : "縦"}
+              {" / 設問数: "}
+              {definition.questionCount ?? 0}
+              {" / 合計配点: "}
+              {definition.totalPoints ?? 0}点 / 担当:{" "}
+              {definition.ownerId === currentUser.id
+                ? "自分"
+                : definition.ownerName}
+            </span>
+            {(definition.tags ?? []).map((tag) => (
+              <Badge key={tag.id} variant="secondary" className="text-xs">
+                {tag.name}
+              </Badge>
+            ))}
+          </span>
+        )}
+        dateLabel="使用日"
+        referenceDate={(definition) => definition.referenceDate ?? null}
+        updatedAt={(definition) => definition.updatedAt ?? null}
+        overviewUrl={(definition) => `/answer-sheet-builder/${definition.id}`}
+        nextStep={(definition) => {
+          const status = getAnswerSheetStatus(definition)
+          return { label: status.text, url: status.url }
+        }}
+        rowMenu={(definition) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label={`${definition.name}の操作`}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {definition.ownerId === currentUser.id && (
+                <DropdownMenuItem
+                  onClick={() => handleOpenEditor(definition.id)}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  編集
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                onClick={() => duplicateDefinition(definition.id)}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                複製
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport(definition)}>
+                <FolderOutput className="mr-2 h-4 w-4" />
+                .asb 書き出し
+              </DropdownMenuItem>
+              {definition.ownerId === currentUser.id && (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => setTransferTarget(definition)}
+                  >
+                    <UserRoundCog className="mr-2 h-4 w-4" />
+                    担当を渡す
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() =>
+                      setDeleteTarget({
+                        id: definition.id,
+                        name: definition.name,
+                      })
+                    }
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    削除
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        actions={actions}
+        selectedIds={selectedIds}
+        selectionDisabledReason={(definition) =>
+          isTaggable(definition)
+            ? undefined
+            : `担当は ${definition.ownerName} さんです`
+        }
+        onToggleSelect={toggleSelect}
+        onToggleSelectAll={toggleSelectAll}
+        allSelected={allSelected}
+        empty={{
+          message: showAllOwners
+            ? "解答用紙がありません"
+            : "担当している解答用紙がありません",
+          action: (
             <Button variant="outline" onClick={handleCreate}>
               <Plus className="mr-2 h-4 w-4" />
               最初の解答用紙を作成
             </Button>
-          </div>
-        ) : (
-          <div className="h-full overflow-hidden rounded-xl border border-border/50 shadow-sm">
-            <Table wrapperClassName="h-full">
-              <TableHeader className="sticky top-0 z-10 bg-card">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={(checked) =>
-                        toggleSelectAll(checked === true)
-                      }
-                      aria-label="全選択"
-                    />
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer select-none"
-                    onClick={() => toggleSort("name")}
-                  >
-                    名前{sortIndicator("name")}
-                  </TableHead>
-                  <TableHead className="w-24">用紙</TableHead>
-                  <TableHead
-                    className="w-20 cursor-pointer text-right select-none"
-                    onClick={() => toggleSort("questionCount")}
-                  >
-                    設問数{sortIndicator("questionCount")}
-                  </TableHead>
-                  <TableHead
-                    className="w-24 cursor-pointer text-right select-none"
-                    onClick={() => toggleSort("totalPoints")}
-                  >
-                    合計配点{sortIndicator("totalPoints")}
-                  </TableHead>
-                  <TableHead className="w-28">担当</TableHead>
-                  <TableHead
-                    className="w-40 cursor-pointer select-none"
-                    onClick={() => toggleSort("updatedAt")}
-                  >
-                    更新日時{sortIndicator("updatedAt")}
-                  </TableHead>
-                  <TableHead className="w-12" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sorted.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={8}
-                      className="py-8 text-center text-muted-foreground"
-                    >
-                      条件に一致する解答用紙がありません
-                    </TableCell>
-                  </TableRow>
-                )}
-                {sorted.map((definition) => (
-                  <TableRow
-                    key={definition.id}
-                    className="group cursor-pointer"
-                    onClick={() => handleEdit(definition.id)}
-                  >
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={selectedIds.has(definition.id)}
-                        onCheckedChange={(checked) =>
-                          toggleSelect(definition.id, checked === true)
-                        }
-                        disabled={!isTaggable(definition)}
-                        title={
-                          isTaggable(definition)
-                            ? undefined
-                            : `担当は ${definition.ownerName} さんです`
-                        }
-                        aria-label={`${definition.name} を選択`}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {definition.name}
-                      {definition.tags && definition.tags.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {definition.tags.map((tag) => (
-                            <Badge
-                              key={tag.id}
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              {tag.name}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {definition.paperSize ?? "-"}{" "}
-                      {definition.orientation === "landscape" ? "横" : "縦"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {definition.questionCount ?? "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {definition.totalPoints != null
-                        ? `${definition.totalPoints}点`
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {definition.ownerId === currentUser.id
-                        ? "自分"
-                        : definition.ownerName}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(definition.updatedAt)}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {definition.ownerId === currentUser.id && (
-                            <DropdownMenuItem
-                              onClick={() => handleOpenEditor(definition.id)}
-                            >
-                              <Pencil className="mr-2 h-4 w-4" />
-                              編集
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            onClick={() => duplicateDefinition(definition.id)}
-                          >
-                            <Copy className="mr-2 h-4 w-4" />
-                            複製
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleExport(definition)}
-                          >
-                            <FolderOutput className="mr-2 h-4 w-4" />
-                            .asb 書き出し
-                          </DropdownMenuItem>
-                          {definition.ownerId === currentUser.id && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => setTransferTarget(definition)}
-                              >
-                                <UserRoundCog className="mr-2 h-4 w-4" />
-                                担当を渡す
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() =>
-                                  setDeleteTarget({
-                                    id: definition.id,
-                                    name: definition.name,
-                                  })
-                                }
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                削除
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
+          ),
+        }}
+        noMatchMessage="条件に一致する解答用紙がありません"
+        sortStorageKey="answerSheetList-sort"
+      />
 
       {exportOutcome && (
         <BaseModal
@@ -743,8 +716,8 @@ export function AnswerSheetDefinitionList() {
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction
               className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
-              onClick={(e) => {
-                e.preventDefault()
+              onClick={(event) => {
+                event.preventDefault()
                 void confirmDelete()
               }}
             >
@@ -753,6 +726,6 @@ export function AnswerSheetDefinitionList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   )
 }

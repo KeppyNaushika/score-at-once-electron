@@ -19,6 +19,16 @@ interface UseTableSortOptions<T> {
   defaultSort?: { key: (keyof T & string) | null; direction: SortDirection }
   /** localStorageに保存するキー（指定すると永続化される） */
   storageKey?: string
+  /**
+   * 並べ替えに使える列。渡すと、**これに無い列名で保存された並び順は捨てて既定へ戻る。**
+   *
+   * 保存は列名の文字列なので、列を消したり改名したりすると、既存の利用者の
+   * localStorage にだけ古い名前が残る。`Reflect.get` はそれを `undefined` として
+   * 読むため比較が常に 0 になり、**一度見出しを押すまで並ばない**一覧になる
+   * （実例: 試験一覧の `examList-sort` に残った `"examDate"`。列は `referenceDate` へ
+   * 改名済みだった）。読むときに照合すれば、消えた列名は次に押した時点で上書きされる。
+   */
+  sortableKeys?: readonly (keyof T & string)[]
 }
 
 /**
@@ -76,12 +86,25 @@ export function useTableSort<T extends object>(
   const storageKey = options?.storageKey ?? null
   const defaultSortKey = options?.defaultSort?.key ?? null
   const defaultSortDirection = options?.defaultSort?.direction ?? null
+  const sortableKeys = options?.sortableKeys
 
   const { storedText, setStoredText } = useLocalStorageText(storageKey)
   // 永続化しないときの置き場。永続化するときは触らない（出所を2つにしない）
   const [chosenSort, setChosenSort] = useState<TableSort | null>(null)
 
-  const storedSort = useMemo(() => parseTableSort(storedText), [storedText])
+  const storedSort = useMemo(() => {
+    const parsedSort = parseTableSort(storedText)
+    if (parsedSort === null) return null
+    // 今は無い列名で保存されていたら「保存が無い」とみなす（既定の並びへ戻す）
+    if (
+      sortableKeys !== undefined &&
+      parsedSort.key !== null &&
+      !sortableKeys.some((sortableKey) => sortableKey === parsedSort.key)
+    ) {
+      return null
+    }
+    return parsedSort
+  }, [storedText, sortableKeys])
   const activeSort = storageKey !== null ? storedSort : chosenSort
 
   const sortKey = activeSort ? activeSort.key : defaultSortKey

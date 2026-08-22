@@ -14,12 +14,22 @@ afterEach(() => {
   cleanup()
 })
 
-// Radix UI コンポーネントが必要とするグローバルAPI
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+/**
+ * Radix UI と `OverflowToolbar` が必要とするグローバルAPI（jsdom は持たない）。
+ *
+ * **クラスで置く。** 以前は `vi.fn().mockImplementation(() => ({…}))` だったが、
+ * アロー関数は `new` で呼べないので、`new ResizeObserver(…)` を書く側から見ると
+ * 「コンストラクタではない」と言われて落ちる。Radix は `new` を使わない経路で
+ * 触っていたので、これまで表に出ていなかった。
+ *
+ * 幅の変化は起こさない（何も観測しない）。**幅を伴う検査をしたいテストは、
+ * 自前の差し替えを持つこと**（`overflowToolbar.test.tsx` がそうしている）。
+ */
+global.ResizeObserver = class implements ResizeObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,

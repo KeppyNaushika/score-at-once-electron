@@ -1,15 +1,15 @@
 "use client"
 
 import { GradeListContainer } from "@/components/grades/list/GradeListContainer"
-import PageHeader from "@/components/layout/PageHeader"
 
+/**
+ * ヘッダー（題・戻る／進む・操作）は `EntityListPage` が持つので、ページは
+ * 一覧を全面に置くだけ。4つのトップページで同じ形にしてある。
+ */
 export default function GradesPage() {
   return (
-    <div className="flex h-full flex-col">
-      <PageHeader title="成績算出" />
-      <div className="flex-1 overflow-hidden">
-        <GradeListContainer />
-      </div>
+    <div className="h-full overflow-hidden">
+      <GradeListContainer />
     </div>
   )
 }

@@ -12,7 +12,11 @@ import { HelpContent05Students } from "@/components/help/page-specific/HelpConte
 import { HelpContent06StudentAnswers } from "@/components/help/page-specific/HelpContent06StudentAnswers"
 import { HelpContent07Scoring } from "@/components/help/page-specific/HelpContent07Scoring"
 import { HelpContent08Export } from "@/components/help/page-specific/HelpContent08Export"
+import { HelpContentAnswerSheetList } from "@/components/help/page-specific/HelpContentAnswerSheetList"
 import { HelpContentClassrooms } from "@/components/help/page-specific/HelpContentClassrooms"
+import { HelpContentCourseworkList } from "@/components/help/page-specific/HelpContentCourseworkList"
+import { HelpContentExamList } from "@/components/help/page-specific/HelpContentExamList"
+import { HelpContentGradeList } from "@/components/help/page-specific/HelpContentGradeList"
 import { HelpContentStudents } from "@/components/help/page-specific/HelpContentStudents"
 import { HelpContentSubtotalGroups } from "@/components/help/page-specific/HelpContentSubtotalGroups"
 import { Button } from "@/components/ui/button"
@@ -40,6 +44,12 @@ const pageHelpComponents: {
   "subtotal-groups": HelpContentSubtotalGroups,
   classrooms: HelpContentClassrooms,
   students: HelpContentStudents,
+  // 4つのトップページ（段階64 で一覧の姿を揃えた側）。**4つとも持たせる**
+  // ——「使い方」があったり無かったりすると、無い画面では壊れていると読める
+  exams: HelpContentExamList,
+  "answer-sheet-builder": HelpContentAnswerSheetList,
+  coursework: HelpContentCourseworkList,
+  grades: HelpContentGradeList,
 }
 
 /** 現在のページに対応するヘルプコンテンツを全画面モーダルで表示するフック */
@@ -93,6 +103,10 @@ export function usePageHelp() {
       "subtotal-groups": "小計点グループ管理",
       classrooms: "学級管理",
       students: "生徒管理",
+      exams: "試験一覧",
+      "answer-sheet-builder": "解答用紙作成",
+      coursework: "試験外成績資料",
+      grades: "成績算出",
     }
     return (currentPageId && titles[currentPageId]) || "ヘルプ"
   }
