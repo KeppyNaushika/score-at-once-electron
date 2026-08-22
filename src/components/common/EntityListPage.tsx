@@ -24,7 +24,7 @@ import { useTableSort } from "@/hooks/useTableSort"
  *
  * `Date` と ISO 文字列の両方を受けるのは、**いまの4画面で型が割れているから**。
  * 試験・資料・成績は Prisma の行がそのまま IPC の structured clone を通るので `Date`
- * （`Exam.examDate` / `Coursework.date` / `Grade.referenceDate` と `updatedAt`）だが、
+ * （4実体とも `referenceDate` と `updatedAt`）だが、
  * 解答用紙だけは `listAsbDefinitions`（`electron-src/lib/prisma/asbDefinition.ts`）が
  * `toISOString()` して返すので文字列である（`ASBDefinitionListItem.updatedAt`）。
  * 既存の `useListFilter` の `date` accessor も同じ理由で両方を受けている。
@@ -63,10 +63,10 @@ interface EntityListPageProps<TRow extends { id: string }> {
   /**
    * 日付列の値。
    *
-   * **これは一時的な形。** `Exam.examDate` / `Coursework.date` / `Grade.referenceDate`
-   * を `referenceDate` へ統一する作業が別にあり、それが入ったら型条件
+   * **これは一時的な形。** DB の列名は4実体とも `referenceDate` へ揃ったので、型条件
    * （`TRow extends { referenceDate: EntityListDate; updatedAt: EntityListDate }`）へ
-   * 畳んで、`referenceDate` と `updatedAt` の関数2つを消す。
+   * 畳んで、`referenceDate` と `updatedAt` の関数2つを消せる。
+   * 解答用紙だけは IPC が ISO 文字列で返すため、畳むときも `EntityListDate` は要る。
    */
   referenceDate: (row: TRow) => EntityListDate
   /** 更新日時列の値。上と同じ理由で一時的に関数で受ける */

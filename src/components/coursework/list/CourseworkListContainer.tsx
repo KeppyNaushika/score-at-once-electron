@@ -72,7 +72,7 @@ const COURSEWORK_FILTER_ACCESSORS: ListFilterAccessors<CourseworkSummary> = {
     coursework.classrooms.map(
       (courseworkClassroom) => courseworkClassroom.classroomId
     ),
-  date: (coursework) => coursework.date,
+  date: (coursework) => coursework.referenceDate,
 }
 
 /**
@@ -407,8 +407,10 @@ export function CourseworkListContainer() {
                     </TableCell>
 
                     <TableCell className="text-center text-sm text-muted-foreground">
-                      {coursework.date
-                        ? new Date(coursework.date).toLocaleDateString("ja-JP")
+                      {coursework.referenceDate
+                        ? new Date(coursework.referenceDate).toLocaleDateString(
+                            "ja-JP"
+                          )
                         : "-"}
                     </TableCell>
 

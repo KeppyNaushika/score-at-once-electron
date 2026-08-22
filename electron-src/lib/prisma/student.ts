@@ -163,7 +163,7 @@ export interface StudentSubtotalScore {
 export interface StudentExamResult {
   examId: string
   examName: string
-  examDate: Date | null
+  referenceDate: Date | null
   tags: string[]
   totalScore: number
   maxScore: number
@@ -299,7 +299,7 @@ export const getStudentExamResults = async (
       results.push({
         examId: exam.id,
         examName: exam.examName,
-        examDate: exam.examDate,
+        referenceDate: exam.referenceDate,
         tags: exam.examTags.map((examTag) => examTag.tag.name),
         totalScore,
         maxScore,
@@ -312,12 +312,12 @@ export const getStudentExamResults = async (
 
     // 試験日の降順でソート
     results.sort((firstResult, secondResult) => {
-      if (!firstResult.examDate && !secondResult.examDate) return 0
-      if (!firstResult.examDate) return 1
-      if (!secondResult.examDate) return -1
+      if (!firstResult.referenceDate && !secondResult.referenceDate) return 0
+      if (!firstResult.referenceDate) return 1
+      if (!secondResult.referenceDate) return -1
       return (
-        new Date(secondResult.examDate).getTime() -
-        new Date(firstResult.examDate).getTime()
+        new Date(secondResult.referenceDate).getTime() -
+        new Date(firstResult.referenceDate).getTime()
       )
     })
 

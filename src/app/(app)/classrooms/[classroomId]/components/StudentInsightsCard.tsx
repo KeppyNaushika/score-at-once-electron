@@ -121,7 +121,7 @@ export function StudentInsightsCard({
 
     const filterExams = (exams: StudentExamResult[]) =>
       exams.filter((examResult) => {
-        if (!examResult.examDate || examResult.maxScore === 0) return false
+        if (!examResult.referenceDate || examResult.maxScore === 0) return false
         if (examResult.status !== "complete" && examResult.status !== "partial")
           return false
         if (
@@ -129,7 +129,7 @@ export function StudentInsightsCard({
           !examResult.tags.some((tag) => selectedTags.has(tag))
         )
           return false
-        const time = new Date(examResult.examDate).getTime()
+        const time = new Date(examResult.referenceDate).getTime()
         if (fromTime && time < fromTime) return false
         if (toTime && time > toTime) return false
         return true
@@ -138,8 +138,8 @@ export function StudentInsightsCard({
     return studentResults.map((studentResult) => {
       const filtered = filterExams(studentResult.examResults).sort(
         (examA, examB) =>
-          new Date(examA.examDate!).getTime() -
-          new Date(examB.examDate!).getTime()
+          new Date(examA.referenceDate!).getTime() -
+          new Date(examB.referenceDate!).getTime()
       )
 
       const rates = filtered.map(

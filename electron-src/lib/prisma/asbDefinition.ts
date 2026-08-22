@@ -131,6 +131,8 @@ export async function listAsbDefinitions(): Promise<ASBDefinitionListItem[]> {
     return {
       id: row.id,
       name: row.name,
+      description: row.description,
+      referenceDate: row.referenceDate?.toISOString() ?? null,
       paperSize: row.paperSize,
       orientation: row.orientation,
       questionCount,
@@ -175,6 +177,10 @@ export async function getAsbDefinition(
 export function asbDefinitionRow(definition: AsbDefinitionAttributes) {
   return {
     name: definition.name,
+    description: definition.description,
+    referenceDate: definition.referenceDate
+      ? new Date(definition.referenceDate)
+      : null,
     labelPresetMajor: definition.labelPresets?.major ?? null,
     labelPresetSub: definition.labelPresets?.sub ?? null,
     labelPresetBranch: definition.labelPresets?.branch ?? null,

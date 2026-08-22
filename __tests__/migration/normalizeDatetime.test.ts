@@ -235,6 +235,7 @@ describe("DateTime正規化マイグレーション", () => {
     // 20260819160000 で追加（成績の出力設定JSONを列へ割る）。
     // normalize migration より後で ISO text 生成
     "GradeIndividualReportSettings",
+    "GradeTag", // 20260823000000 で追加。normalize migration より後で ISO text 生成
     "ReturnSnapshot",
     // 20260819140000 で追加（利用者の設定JSONを行へ割る）。
     // normalize migration より後で ISO text 生成
@@ -252,6 +253,20 @@ describe("DateTime正規化マイグレーション", () => {
     "StudentClassroomMembership",
     "ExamClassroom",
     "GradeClassroom",
+  ])
+
+  /**
+   * normalize migration (20260613144726) より後に、列だけがリネーム／追加されたもの。
+   * 表そのものは当時からあるので表単位では除外できない（createdAt/updatedAt は
+   * 旧名のまま正規化済みで、そちらの網羅は保ちたい）。
+   *
+   * - `Exam.referenceDate` は 20260823000000 で `examDate` からリネーム。
+   *   RENAME COLUMN は中身を動かさないので、正規化済みの値がそのまま新しい名前で残る
+   * - `AsbDefinition.referenceDate` は 20260823000000 で新設。以後 ISO text で生まれる
+   */
+  const RENAMED_OR_ADDED_COLUMNS_AFTER_NORMALIZATION = new Set([
+    "Exam.referenceDate",
+    "AsbDefinition.referenceDate",
   ])
 
   it("網羅性: migration.sql が schema.prisma の全 DateTime カラムをカバーする", () => {
@@ -275,6 +290,12 @@ describe("DateTime正規化マイグレーション", () => {
       for (const line of body.split("\n")) {
         const parts = line.trim().split(/\s+/)
         if (parts.length >= 2 && parts[1].startsWith("DateTime")) {
+          if (
+            RENAMED_OR_ADDED_COLUMNS_AFTER_NORMALIZATION.has(
+              `${table}.${parts[0]}`
+            )
+          )
+            continue
           expected.push([table, parts[0]])
         }
       }

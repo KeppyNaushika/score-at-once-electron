@@ -637,6 +637,8 @@ function definitionAttributes(
   const { headerFields, ...settings } = definition.settings
   return {
     name: definition.name,
+    description: definition.description,
+    referenceDate: definition.referenceDate,
     labelPresets: definition.labelPresets,
     settings,
   }

@@ -368,7 +368,7 @@ export async function collectExamData(
       exam: {
         id: exam.id,
         examName: exam.examName,
-        examDate: exam.examDate?.toISOString() ?? null,
+        referenceDate: exam.referenceDate?.toISOString() ?? null,
         description: exam.description,
         markerCorrectionEnabled: exam.markerCorrectionEnabled,
         createdAt: exam.createdAt.toISOString(),

@@ -277,7 +277,9 @@ export async function importCourseworkData(
       data: {
         name: coursework.name,
         description: coursework.description,
-        date: coursework.date ? new Date(coursework.date) : null,
+        referenceDate: coursework.referenceDate
+          ? new Date(coursework.referenceDate)
+          : null,
         updatedAt,
       },
     })
@@ -579,7 +581,9 @@ export async function importCourseworkData(
         id: newCourseworkId,
         name: coursework.name,
         description: coursework.description,
-        date: coursework.date ? new Date(coursework.date) : null,
+        referenceDate: coursework.referenceDate
+          ? new Date(coursework.referenceDate)
+          : null,
         ...policy.createdTimestamps(coursework),
       },
     })

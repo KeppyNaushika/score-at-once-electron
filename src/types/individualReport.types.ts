@@ -183,7 +183,7 @@ export interface StudentInfoForReport {
 /** 試験情報 */
 export interface ExamInfoForReport {
   examName: string
-  examDate: Date | null
+  referenceDate: Date | null
   tags: string[]
 }
 

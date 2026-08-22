@@ -41,7 +41,7 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
 }) => {
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const [examName, setExamName] = useState("")
-  const [examDate, setExamDate] = useState<Date | null>(null)
+  const [referenceDate, setReferenceDate] = useState<Date | null>(null)
   const [description, setDescription] = useState("")
   const [tagTexts, setTagTexts] = useState<string[]>([])
   /**
@@ -75,7 +75,7 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
         createdExamRef.current ??
         (await createExam.mutateAsync({
           examName: examName.trim(),
-          examDate: examDate,
+          referenceDate: referenceDate,
           description: description.trim() || undefined,
         }))
       createdExamRef.current = createdExam
@@ -155,15 +155,19 @@ const CreateExamWindow: React.FC<CreateExamWindowProps> = ({
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="examDate" className="text-right">
+            <Label htmlFor="referenceDate" className="text-right">
               試験日
             </Label>
             <Input
-              id="examDate"
+              id="referenceDate"
               type="date"
-              value={examDate ? examDate.toISOString().split("T")[0] : ""}
+              value={
+                referenceDate ? referenceDate.toISOString().split("T")[0] : ""
+              }
               onChange={(e) =>
-                setExamDate(e.target.value ? new Date(e.target.value) : null)
+                setReferenceDate(
+                  e.target.value ? new Date(e.target.value) : null
+                )
               }
               className="col-span-3"
             />

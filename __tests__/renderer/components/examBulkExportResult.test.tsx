@@ -34,7 +34,7 @@ function createExamSummary(id: string, examName: string) {
   return {
     id,
     examName,
-    examDate: null,
+    referenceDate: null,
     description: null,
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"),

@@ -158,7 +158,7 @@ function toLegacyArchive(
       examRefs: collected.examRefs.map((examRef) => ({
         id: examRef.id,
         examName: examRef.examName,
-        examDate: examRef.examDate,
+        examDate: examRef.referenceDate,
         dataSourceName:
           collected.gradeDataSources.find(
             (dataSource) => dataSource.examId === examRef.id
@@ -343,6 +343,35 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(importedSettings!.footerLeft).toBe("左")
     // 触っていない項目は既定のまま（旧アーカイブに無くても落ちない）
     expect(importedSettings!.itemGradeColumnScore).toBe(true)
+  })
+
+  it("成績のタグ(GradeTag)が往復で保持される (v1.16.0)", async () => {
+    const suffix = Date.now()
+    const tag = await prisma.tag.create({ data: { name: `教科_${suffix}` } })
+    const grade = await prisma.grade.create({
+      data: { name: `タグ付き成績_${suffix}` },
+    })
+    await prisma.gradeTag.create({
+      data: { gradeId: grade.id, tagId: tag.id },
+    })
+
+    const collected = await collectGradeArchiveData(grade.id)
+    // 中間テーブルの行と、タグの実体の両方が載る（実体が無いと名前を復元できない）
+    expect(collected.gradeTags).toHaveLength(1)
+    expect(collected.gradeTags[0].tagId).toBe(tag.id)
+    expect(collected.tagsData).toEqual([
+      { id: tag.id, name: `教科_${suffix}`, order: 0, color: null },
+    ])
+
+    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const importedTags = await prisma.gradeTag.findMany({
+      where: { gradeId: result.gradeId! },
+      include: { tag: true },
+    })
+    // タグは成績の外にある共有物なので、同じ名前の既存タグへ寄る（作り直さない）
+    expect(importedTags).toHaveLength(1)
+    expect(importedTags[0].tagId).toBe(tag.id)
+    expect(importedTags[0].tag.name).toBe(`教科_${suffix}`)
   })
 
   it("試験外成績資料(Coursework)の項目・点数・コメント・名簿・タグが往復で保持される (v1.4.0)", async () => {

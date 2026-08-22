@@ -34,7 +34,7 @@ const testPrisma = createPrismaClientForPath(TEST_DB_PATH)
 /** 試験 + 小計グループ3つ + ExamSubtotalGroup junction を作成 */
 async function createTestData() {
   const exam = await testPrisma.exam.create({
-    data: { examName: "テスト試験", examDate: new Date("2024-04-10") },
+    data: { examName: "テスト試験", referenceDate: new Date("2024-04-10") },
   })
 
   const groupIds: string[] = []

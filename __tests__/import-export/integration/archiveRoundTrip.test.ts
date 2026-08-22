@@ -293,7 +293,7 @@ describe("archiveRoundTrip", () => {
           exam: {
             id: "old-exam",
             examName: "旧",
-            examDate: now,
+            referenceDate: now,
             subject: null,
             description: null,
             createdAt: now,

@@ -408,7 +408,7 @@ export async function seedExamWithScoring(
     data: {
       id: examId,
       examName: "第２回定期テスト 中２数学",
-      examDate: new Date("2025-10-15"),
+      referenceDate: new Date("2025-10-15"),
       description: "一次関数・連立方程式",
     },
   })
@@ -697,7 +697,7 @@ export async function seedSimpleExam(
     data: {
       id: examId,
       examName: "第１回実力テスト 中２英語",
-      examDate: new Date("2025-07-10"),
+      referenceDate: new Date("2025-07-10"),
       description: "Lesson 1-4 まとめ",
     },
   })

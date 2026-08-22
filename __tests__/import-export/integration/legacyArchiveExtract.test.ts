@@ -74,7 +74,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
         exam: {
           id: "exam-1",
           examName: "旧形式試験",
-          examDate: null,
+          referenceDate: null,
           description: null,
           markerCorrectionEnabled: false,
           createdAt: TIMESTAMP,
@@ -166,7 +166,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
         project: {
           id: "exam-1",
           examName: "v0.2試験",
-          examDate: null,
+          referenceDate: null,
           subject: "数学",
           description: null,
           createdAt: TIMESTAMP,
@@ -245,7 +245,7 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
         exam: {
           id: "exam-1",
           examName: "現行試験",
-          examDate: null,
+          referenceDate: null,
           description: null,
           markerCorrectionEnabled: false,
           createdAt: TIMESTAMP,

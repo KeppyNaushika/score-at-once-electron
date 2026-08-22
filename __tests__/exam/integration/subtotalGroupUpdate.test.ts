@@ -54,7 +54,7 @@ async function createTestSubtotalGroup() {
 /** 設問（採点領域）を1つ作り、その小計への割り当てを付ける */
 async function assignCropRegionToSubtotal(subtotalId: string) {
   const exam = await testPrisma.exam.create({
-    data: { examName: "テスト試験", examDate: new Date("2024-04-10") },
+    data: { examName: "テスト試験", referenceDate: new Date("2024-04-10") },
   })
   const examPage = await testPrisma.examPage.create({
     data: { examId: exam.id, pageNumber: 1 },

@@ -45,11 +45,11 @@ const EditExamWindow = ({
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
   const setExamTags = useMutation(setExamTagsMutation(examToEdit.id))
   const [examName, setExamName] = useState(examToEdit.examName)
-  const [examDate, setExamDate] = useState<Date | undefined>(() => {
-    if (!examToEdit.examDate) return undefined
-    return examToEdit.examDate instanceof Date
-      ? examToEdit.examDate
-      : new Date(examToEdit.examDate)
+  const [referenceDate, setReferenceDate] = useState<Date | undefined>(() => {
+    if (!examToEdit.referenceDate) return undefined
+    return examToEdit.referenceDate instanceof Date
+      ? examToEdit.referenceDate
+      : new Date(examToEdit.referenceDate)
   })
   const [description, setDescription] = useState<string | null>(
     examToEdit.description ?? null
@@ -92,7 +92,7 @@ const EditExamWindow = ({
     const updatedExamPayload: Exam = {
       ...examToEdit,
       examName: examName.trim(),
-      examDate: examDate ?? null,
+      referenceDate: referenceDate ?? null,
       description: description ?? null,
       updatedAt: new Date(),
     }
@@ -153,15 +153,17 @@ const EditExamWindow = ({
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="examDate" className="text-right">
+            <Label htmlFor="referenceDate" className="text-right">
               試験日
             </Label>
             <Input
-              id="examDate"
+              id="referenceDate"
               type="date"
-              value={examDate ? examDate.toISOString().split("T")[0] : ""}
+              value={
+                referenceDate ? referenceDate.toISOString().split("T")[0] : ""
+              }
               onChange={(e) =>
-                setExamDate(
+                setReferenceDate(
                   e.target.value ? new Date(e.target.value) : undefined
                 )
               }

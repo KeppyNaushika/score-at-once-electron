@@ -243,7 +243,7 @@ export const updateExam = async (id: string, data: Prisma.ExamUpdateInput) => {
     target: exam.examName,
     changes: diffFields(before ?? undefined, exam, [
       { field: "examName", label: "試験名" },
-      { field: "examDate", label: "試験日" },
+      { field: "referenceDate", label: "試験日" },
       { field: "description", label: "説明" },
     ]),
   })

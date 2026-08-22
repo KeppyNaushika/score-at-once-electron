@@ -118,7 +118,7 @@ export const createCourseworkMutation = () =>
     mutationFn: (input: {
       name: string
       description?: string | null
-      date?: string | null
+      referenceDate?: string | null
     }) => window.electronAPI.coursework.create(input),
     meta: {
       invalidates: [courseworkListQuery().queryKey],
@@ -131,7 +131,7 @@ export const updateCourseworkMutation = (courseworkId: string) =>
     mutationFn: (input: {
       name?: string
       description?: string | null
-      date?: string | null
+      referenceDate?: string | null
     }) => window.electronAPI.coursework.update(courseworkId, input),
     meta: {
       invalidates: [

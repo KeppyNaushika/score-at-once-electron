@@ -107,6 +107,8 @@ function definitionOf(subQuestions: SubQuestion[]): AnswerSheetDefinition {
   return {
     id: "definition-manuscript-width",
     name: "原稿用紙の幅",
+    description: null,
+    referenceDate: null,
     settings,
     majorQuestions: [{ id: "major-1", label: "1", subQuestions }],
   }

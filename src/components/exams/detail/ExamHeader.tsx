@@ -62,10 +62,10 @@ export default function ExamHeader({
                 {examTag.tag.name}
               </Badge>
             ))}
-            {exam.examDate && (
+            {exam.referenceDate && (
               <Badge variant="outline">
                 <Calendar className="mr-1 h-3 w-3" />
-                {exam.examDate.toLocaleDateString()}
+                {exam.referenceDate.toLocaleDateString()}
               </Badge>
             )}
             <Badge variant="secondary">

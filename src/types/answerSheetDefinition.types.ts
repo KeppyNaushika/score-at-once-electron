@@ -439,6 +439,14 @@ export type PaperSettings = Omit<GlobalSettings, "headerFields">
 /** 解答用紙1件の属性（子は持たない）。用紙設定は DB では列として平らに並ぶ */
 export interface AsbDefinitionAttributes {
   name: string
+  /** 説明（未設定は null）。試験・資料・成績と同じく概要ページに出す */
+  description: string | null
+  /**
+   * この解答用紙がいつのものか（ISO 文字列。未設定は null）。一覧では「使用日」と表示する。
+   * 解答用紙は名簿を持たないので在籍判定には使われず、「いつ使う用紙か」を示すだけだが、
+   * DB の名前は試験・資料・成績と同じ referenceDate に揃えてある。
+   */
+  referenceDate: string | null
   labelPresets?: LabelPresets
   settings: PaperSettings
 }

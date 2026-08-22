@@ -31,7 +31,7 @@ const FIXED_DATE = new Date("2026-01-01T00:00:00.000Z")
 const EXAM: GradeExamCandidateRow = {
   id: "exam-1",
   examName: "中間試験",
-  examDate: null,
+  referenceDate: null,
   description: null,
   markerCorrectionEnabled: false,
   createdAt: FIXED_DATE,
@@ -103,7 +103,7 @@ const COURSEWORKS: CourseworkCandidate[] = [
     id: "coursework-1",
     name: "レポート",
     description: null,
-    date: null,
+    referenceDate: null,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
     items: [

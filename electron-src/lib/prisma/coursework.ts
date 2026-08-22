@@ -58,11 +58,13 @@ const withCourseworkItems = <
 })
 
 /** Coursework の実施日（在籍判定の基準日）を取得 */
-async function getCourseworkDate(courseworkId: string): Promise<Date | null> {
-  const cw = await prisma.coursework.findUnique({
+async function getCourseworkReferenceDate(
+  courseworkId: string
+): Promise<Date | null> {
+  const coursework = await prisma.coursework.findUnique({
     where: { id: courseworkId },
   })
-  return cw?.date ?? null
+  return coursework?.referenceDate ?? null
 }
 
 // =============================================================================
@@ -102,7 +104,7 @@ export async function getCourseworks() {
         orderBy: { order: "asc" },
       },
     },
-    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    orderBy: [{ referenceDate: "desc" }, { createdAt: "desc" }],
   })
   return serializePrisma(courseworks).map(withCourseworkItems)
 }
@@ -123,13 +125,13 @@ export async function getCourseworkById(id: string) {
 export async function createCoursework(data: {
   name: string
   description?: string | null
-  date?: string | null
+  referenceDate?: string | null
 }) {
   const coursework = await prisma.coursework.create({
     data: {
       name: data.name,
       description: data.description ?? null,
-      date: data.date ? new Date(data.date) : null,
+      referenceDate: data.referenceDate ? new Date(data.referenceDate) : null,
     },
     include: courseworkWithRelationsInclude,
   })
@@ -152,18 +154,20 @@ export async function updateCoursework(
   data: {
     name?: string
     description?: string | null
-    date?: string | null
+    referenceDate?: string | null
   }
 ) {
   const updateData: {
     name?: string
     description?: string | null
-    date?: Date | null
+    referenceDate?: Date | null
   } = {}
   if (data.name !== undefined) updateData.name = data.name
   if (data.description !== undefined) updateData.description = data.description
-  if (data.date !== undefined)
-    updateData.date = data.date ? new Date(data.date) : null
+  if (data.referenceDate !== undefined)
+    updateData.referenceDate = data.referenceDate
+      ? new Date(data.referenceDate)
+      : null
 
   const coursework = await prisma.coursework.update({
     where: { id },
@@ -538,7 +542,7 @@ export async function getCourseworkStudents(courseworkId: string) {
  * `courseworkClassroom.classroom.memberships.length` として表示側が読む。
  */
 export async function getCourseworkClassrooms(courseworkId: string) {
-  const referenceDate = await getCourseworkDate(courseworkId)
+  const referenceDate = await getCourseworkReferenceDate(courseworkId)
   return prisma.courseworkClassroom.findMany({
     where: { courseworkId },
     include: {
@@ -559,7 +563,7 @@ export async function getAvailableClassroomsForCoursework(
   courseworkId: string,
   activeOnly = true
 ) {
-  const referenceDate = await getCourseworkDate(courseworkId)
+  const referenceDate = await getCourseworkReferenceDate(courseworkId)
   const [existing, courseworkStudents] = await Promise.all([
     prisma.courseworkClassroom.findMany({
       where: { courseworkId },
@@ -588,7 +592,7 @@ export async function getAvailableStudentsForCoursework(
   courseworkId: string,
   activeOnly = true
 ) {
-  const referenceDate = await getCourseworkDate(courseworkId)
+  const referenceDate = await getCourseworkReferenceDate(courseworkId)
   const courseworkStudents = await prisma.courseworkStudent.findMany({
     where: { courseworkId },
   })
@@ -608,7 +612,7 @@ export async function getAvailableStudentsForCoursework(
  * 資料名簿の I/O・監査メタデータ（共通ロジック rosterManager へ供給）
  */
 const courseworkRosterAdapter: RosterAdapter = {
-  getReferenceDate: (targetId) => getCourseworkDate(targetId),
+  getReferenceDate: (targetId) => getCourseworkReferenceDate(targetId),
   listExistingStudents: (targetId) =>
     prisma.courseworkStudent.findMany({
       where: { courseworkId: targetId },
@@ -840,7 +844,7 @@ export async function addCourseworkTag(courseworkId: string, tagId: string) {
 export async function getCourseworkCandidates() {
   const courseworks = await prisma.coursework.findMany({
     include: { items: { orderBy: { order: "asc" } } },
-    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    orderBy: [{ referenceDate: "desc" }, { createdAt: "desc" }],
   })
   return serializePrisma(courseworks).map(withCourseworkItems)
 }

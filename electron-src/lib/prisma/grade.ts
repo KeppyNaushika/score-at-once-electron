@@ -36,6 +36,7 @@ const gradeWithRelationsInclude = {
   // 対象者は行のまま渡し切る。件数は renderer が `.length` で取る
   // （件数も計算値なので main では作らない）
   gradeStudents: true,
+  gradeTags: { include: { tag: true } },
 } satisfies Prisma.GradeInclude
 
 /**
@@ -55,6 +56,8 @@ export const gradeSummaryInclude = {
     orderBy: { order: "asc" },
   },
   gradeStudents: true,
+  // 一覧はタグを表示し、タグでの絞り込みにも使う
+  gradeTags: { include: { tag: true } },
   gradeItems: {
     include: {
       boundaries: { orderBy: { order: "asc" } },
@@ -488,4 +491,33 @@ export async function duplicateGrade(id: string) {
   })
 
   return getGradeById(result.gradeId)
+}
+
+// =============================================================================
+// タグ（GradeTag）
+// =============================================================================
+
+/** 成績算出のタグを一括設定（既存を全削除して再作成） */
+export async function setGradeTags(gradeId: string, tagIds: string[]) {
+  await prisma.$transaction(async (tx) => {
+    await tx.gradeTag.deleteMany({ where: { gradeId } })
+    if (tagIds.length > 0) {
+      await tx.gradeTag.createMany({
+        data: tagIds.map((tagId) => ({ gradeId, tagId })),
+      })
+    }
+  })
+}
+
+/**
+ * 成績算出にタグを1件追加（既存タグは保持・冪等）。
+ *
+ * 一覧の一括タグ付けはこちらを使う。全置換にすると、他端末が付けたタグを巻き添えにする。
+ */
+export async function addGradeTag(gradeId: string, tagId: string) {
+  await prisma.gradeTag.upsert({
+    where: { gradeId_tagId: { gradeId, tagId } },
+    update: {},
+    create: { gradeId, tagId },
+  })
 }

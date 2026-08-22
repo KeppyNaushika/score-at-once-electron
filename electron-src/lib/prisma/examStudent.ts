@@ -13,14 +13,14 @@ import prisma from "./client"
 import { deleteAfterRecount } from "./deleteAfterRecount"
 import { countExamStudentDeletionCounts } from "./gradingData"
 
-/** Exam.examDate を在籍判定の基準日として取得（未設定なら null → 現在日時扱い） */
+/** Exam.referenceDate を在籍判定の基準日として取得（未設定なら null → 現在日時扱い） */
 export async function getExamReferenceDate(
   examId: string
 ): Promise<Date | null> {
   const exam = await prisma.exam.findUnique({
     where: { id: examId },
   })
-  return exam?.examDate ?? null
+  return exam?.referenceDate ?? null
 }
 
 /**
@@ -239,7 +239,7 @@ export async function updateStudentOrders(
  * 試験に追加できる学級候補を取得
  *
  * 既に参加している生徒を除くと在籍が0名になる学級は候補に出さない。
- * @param activeOnly true なら基準日(examDate)時点で在籍中の生徒のみ候補にする（既定）。
+ * @param activeOnly true なら基準日(referenceDate)時点で在籍中の生徒のみ候補にする（既定）。
  *   false なら過去所属も含めて候補にする。
  */
 export async function getClassroomsNotInExam(

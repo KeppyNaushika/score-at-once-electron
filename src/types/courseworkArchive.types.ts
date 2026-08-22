@@ -18,16 +18,18 @@ import type { ImportAction } from "./importAction.types"
  * - 1.0.0: 初版（独立化）。資料1件を入れ子ツリーへ射影して持っていた
  * - 1.1.0: テーブルごとの平坦なセクションへ変更し、各行を Prisma の行のまま持つ。
  *   点数の参照が studentId → courseworkStudentId（#962 Phase B）
+ * - 1.2.0: 資料の実施日のキーが date → referenceDate（DB の列名を試験・資料・成績・
+ *   解答用紙で referenceDate へ揃えた。アーカイブは Prisma の行をそのまま持つので追随する）
  */
-export type CourseworkArchiveVersion = "1.0.0" | "1.1.0"
+export type CourseworkArchiveVersion = "1.0.0" | "1.1.0" | "1.2.0"
 /** 現行アーカイブバージョン */
-export const COURSEWORK_CURRENT_VERSION: CourseworkArchiveVersion = "1.1.0"
+export const COURSEWORK_CURRENT_VERSION: CourseworkArchiveVersion = "1.2.0"
 /** 読込可能な最小バージョン */
 export const COURSEWORK_MIN_SUPPORTED_VERSION: CourseworkArchiveVersion =
   "1.0.0"
 /** サポート対象バージョン（昇順） */
 export const COURSEWORK_SUPPORTED_VERSIONS: readonly CourseworkArchiveVersion[] =
-  ["1.0.0", "1.1.0"] as const
+  ["1.0.0", "1.1.0", "1.2.0"] as const
 
 export interface CourseworkArchiveManifest {
   version: string
@@ -55,7 +57,8 @@ export interface ArchiveCourseworkRow {
   id: string
   name: string
   description: string | null
-  date: string | null
+  /** v1.2.0+ 実施日。それ以前のキー名は date（DB の列名を4実体で referenceDate へ揃えた） */
+  referenceDate: string | null
   createdAt: string
   updatedAt: string
 }

@@ -253,7 +253,7 @@ export async function convertDatToScore(
       exam: {
         id: examId,
         examName: examTitle,
-        examDate: null,
+        referenceDate: null,
         description: `リアテンダントからインポート（${subjectName}）`,
         createdAt: now,
         updatedAt: now,

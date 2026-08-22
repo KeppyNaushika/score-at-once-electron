@@ -223,7 +223,7 @@ describe("examMergeOrSeparate", () => {
       where: { id: testExam.exam.id },
       data: {
         examName: "書き出した側の試験名",
-        examDate: new Date("2026-03-01T00:00:00.000Z"),
+        referenceDate: new Date("2026-03-01T00:00:00.000Z"),
         description: "書き出した側の説明",
         markerCorrectionEnabled: true,
       },
@@ -241,7 +241,7 @@ describe("examMergeOrSeparate", () => {
       where: { id: testExam.exam.id },
       data: {
         examName: "このPCの試験名",
-        examDate: new Date("2020-05-05T00:00:00.000Z"),
+        referenceDate: new Date("2020-05-05T00:00:00.000Z"),
         description: null,
         markerCorrectionEnabled: false,
         updatedAt: new Date("2020-01-01T00:00:00.000Z"),
@@ -256,11 +256,13 @@ describe("examMergeOrSeparate", () => {
     expect(examId).toBe(testExam.exam.id)
 
     const merged = await prisma.exam.findUnique({ where: { id: examId } })
-    // Exam の列は id / examName / examDate / description /
+    // Exam の列は id / examName / referenceDate / description /
     // markerCorrectionEnabled / createdAt / updatedAt で全部。
     // id と createdAt を除く全列がアーカイブ側の値になる
     expect(merged!.examName).toBe("書き出した側の試験名")
-    expect(merged!.examDate!.toISOString()).toBe("2026-03-01T00:00:00.000Z")
+    expect(merged!.referenceDate!.toISOString()).toBe(
+      "2026-03-01T00:00:00.000Z"
+    )
     expect(merged!.description).toBe("書き出した側の説明")
     expect(merged!.markerCorrectionEnabled).toBe(true)
     // 勝ったときの updatedAt はアーカイブ側の値（取り込み時刻ではない）
@@ -299,7 +301,7 @@ describe("examMergeOrSeparate", () => {
       where: { id: testExam.exam.id },
       data: {
         examName: "書き出した側の試験名",
-        examDate: new Date("2026-03-01T00:00:00.000Z"),
+        referenceDate: new Date("2026-03-01T00:00:00.000Z"),
         description: "書き出した側の説明",
         markerCorrectionEnabled: true,
       },
@@ -317,7 +319,7 @@ describe("examMergeOrSeparate", () => {
       where: { id: testExam.exam.id },
       data: {
         examName: "このPCの試験名",
-        examDate: new Date("2020-05-05T00:00:00.000Z"),
+        referenceDate: new Date("2020-05-05T00:00:00.000Z"),
         description: null,
         markerCorrectionEnabled: false,
         updatedAt: localUpdatedAt,
@@ -333,7 +335,9 @@ describe("examMergeOrSeparate", () => {
 
     const merged = await prisma.exam.findUnique({ where: { id: examId } })
     expect(merged!.examName).toBe("このPCの試験名")
-    expect(merged!.examDate!.toISOString()).toBe("2020-05-05T00:00:00.000Z")
+    expect(merged!.referenceDate!.toISOString()).toBe(
+      "2020-05-05T00:00:00.000Z"
+    )
     expect(merged!.description).toBeNull()
     expect(merged!.markerCorrectionEnabled).toBe(false)
     expect(merged!.updatedAt.toISOString()).toBe(localUpdatedAt.toISOString())
@@ -355,7 +359,7 @@ describe("examMergeOrSeparate", () => {
       where: { id: testExam.exam.id },
       data: {
         examName: "書き出した側の試験名",
-        examDate: new Date("2026-03-01T00:00:00.000Z"),
+        referenceDate: new Date("2026-03-01T00:00:00.000Z"),
         description: "書き出した側の説明",
         markerCorrectionEnabled: true,
       },
@@ -374,7 +378,7 @@ describe("examMergeOrSeparate", () => {
       where: { id: testExam.exam.id },
       data: {
         examName: "このPCの試験名",
-        examDate: new Date("2020-05-05T00:00:00.000Z"),
+        referenceDate: new Date("2020-05-05T00:00:00.000Z"),
         description: null,
         markerCorrectionEnabled: false,
         updatedAt: localUpdatedAt,
@@ -392,7 +396,7 @@ describe("examMergeOrSeparate", () => {
     // 「いまこれが正しい」と言い切る操作なので、時刻を見ずに置き換わる
     const overwritten = await prisma.exam.findUnique({ where: { id: examId } })
     expect(overwritten!.examName).toBe("書き出した側の試験名")
-    expect(overwritten!.examDate!.toISOString()).toBe(
+    expect(overwritten!.referenceDate!.toISOString()).toBe(
       "2026-03-01T00:00:00.000Z"
     )
     expect(overwritten!.description).toBe("書き出した側の説明")
@@ -594,7 +598,7 @@ describe("examMergeOrSeparate", () => {
       [
         "createdAt",
         "description",
-        "examDate",
+        "referenceDate",
         "examName",
         "id",
         "markerCorrectionEnabled",

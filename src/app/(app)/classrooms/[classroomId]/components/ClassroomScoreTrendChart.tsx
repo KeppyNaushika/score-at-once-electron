@@ -233,23 +233,23 @@ export function ClassroomScoreTrendChart({
   // チャートデータ生成
   const { mergedData, hasData } = useMemo(() => {
     // 全試験を日付でグループ化
-    const examDateMap = new Map<
+    const datedExamMap = new Map<
       string,
       { examId: string; examName: string; date: Date }
     >()
     studentResults.forEach((studentResult) =>
       studentResult.examResults.forEach((examResult) => {
-        if (examResult.examDate && !examDateMap.has(examResult.examId)) {
-          examDateMap.set(examResult.examId, {
+        if (examResult.referenceDate && !datedExamMap.has(examResult.examId)) {
+          datedExamMap.set(examResult.examId, {
             examId: examResult.examId,
             examName: examResult.examName,
-            date: new Date(examResult.examDate),
+            date: new Date(examResult.referenceDate),
           })
         }
       })
     )
 
-    const exams = Array.from(examDateMap.values()).sort(
+    const exams = Array.from(datedExamMap.values()).sort(
       (examA, examB) => examA.date.getTime() - examB.date.getTime()
     )
 

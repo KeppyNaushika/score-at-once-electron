@@ -169,7 +169,7 @@ export function createArchiveExamData(
     exam: {
       id: examId,
       examName: overrides.examName ?? "テスト試験",
-      examDate: new Date().toISOString(),
+      referenceDate: new Date().toISOString(),
       description: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

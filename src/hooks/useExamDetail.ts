@@ -37,13 +37,15 @@ export function useExamDetail(examId: string) {
 
   const updateExam = useCallback(
     async (
-      examData: Partial<Pick<Exam, "examName" | "description" | "examDate">>
+      examData: Partial<
+        Pick<Exam, "examName" | "description" | "referenceDate">
+      >
     ) => {
       try {
         await updateExamMutate.mutateAsync({
           examName: examData.examName,
           description: examData.description,
-          examDate: examData.examDate,
+          referenceDate: examData.referenceDate,
         })
         toast.success("試験を更新しました")
         return true

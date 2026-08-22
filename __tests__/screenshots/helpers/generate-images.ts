@@ -135,6 +135,8 @@ function templateToDefinition(
   return {
     id: templateRecord.id as string,
     name: templateRecord.name as string,
+    description: null,
+    referenceDate: null,
     settings: {
       paperSize: templateRecord.paperSize as "B4",
       orientation: templateRecord.orientation as "portrait",

@@ -18,6 +18,7 @@ import type {
   ArchiveCwClass,
   ArchiveCwMembership,
   ArchiveCwStudent,
+  ArchiveCwTag,
   CollectedCourseworkData,
   CourseworkImportDecisions,
 } from "./courseworkArchive.types"
@@ -252,6 +253,15 @@ export interface ArchiveGradeIndividualReportSettingsRow {
   updatedAt: string
 }
 
+/** GradeTag（成績×タグ）の行。v1.16.0+ */
+export interface ArchiveGradeTagRow {
+  id: string
+  gradeId: string
+  tagId: string
+  createdAt: string
+  updatedAt: string
+}
+
 /** 成績本体のセクション群（テーブルごとに平坦） */
 export interface GradeSections {
   grades: ArchiveGradeRow[]
@@ -269,6 +279,7 @@ export interface GradeSections {
   gradeConstraintLabelValues: ArchiveGradeConstraintLabelValueRow[]
   gradeConstraintExclusionLabels: ArchiveGradeConstraintExclusionLabelRow[]
   gradeIndividualReportSettings: ArchiveGradeIndividualReportSettingsRow[]
+  gradeTags: ArchiveGradeTagRow[]
 }
 
 // =============================================================================
@@ -284,7 +295,8 @@ export interface GradeSections {
 export interface ArchiveGradeExamRef {
   id: string
   examName: string
-  examDate: string | null
+  /** v1.16.0+ 試験日。それ以前のキー名は examDate（DB の列名を4実体で referenceDate へ揃えた） */
+  referenceDate: string | null
 }
 
 /**
@@ -319,6 +331,12 @@ interface GradeExternalSections {
   studentsData: ArchiveCwStudent[]
   classesData: ArchiveCwClass[]
   membershipsData: ArchiveCwMembership[]
+  /**
+   * 成績に付いているタグの実体。タグは成績の外にある共有物なので、
+   * 中間テーブル（gradeTags）だけでは取り込み先で名前を復元できない
+   * （資料アーカイブが tagsData を同梱しているのと同じ理由）。
+   */
+  tagsData: ArchiveCwTag[]
   examRefs: ArchiveGradeExamRef[]
   subtotalRefs: ArchiveGradeSubtotalRef[]
   cropRegionRefs: ArchiveGradeCropRegionRef[]
@@ -435,7 +453,8 @@ export type GradeArchiveVersion =
   | "1.13.0"
   | "1.14.0"
   | "1.15.0"
-export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.15.0"
+  | "1.16.0"
+export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.16.0"
 
 // バージョン変換の型（版ごとのアーカイブ全体の型・変換器・チェーン）は
 // electron-src/lib/import/grade-transformers/types.ts が持つ。

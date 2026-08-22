@@ -24,17 +24,20 @@ import {
   type CourseworkChainTransformResult,
   type CourseworkVersionTransformer,
   isCourseworkArchiveV1_0_0,
+  isCourseworkArchiveV1_1_0,
 } from "./types"
 import { V1_0_0_to_V1_1_0_Transformer } from "./V1_0_0_to_V1_1_0"
+import { V1_1_0_to_V1_2_0_Transformer } from "./V1_1_0_to_V1_2_0"
 
 const COURSEWORK_TRANSFORMERS: CourseworkVersionTransformer[] = [
   new V1_0_0_to_V1_1_0_Transformer(),
+  new V1_1_0_to_V1_2_0_Transformer(),
 ]
 
 /**
  * マニフェストのバージョン文字列からサポート対象バージョンを判定する。
  *
- * 実データの形が manifest より古ければそちらへ下方補正する（version が実態と
+ * データの形が manifest より古ければそちらへ下方補正する（version が実態と
  * ずれたアーカイブが実在したため。exam の形状ベース検出と同じ理由）。
  */
 function detectCourseworkVersion(
@@ -46,8 +49,9 @@ function detectCourseworkVersion(
     COURSEWORK_SUPPORTED_VERSIONS
   )
   if (declared === "unknown") return declared
-  // 旧版の形なら、名乗りに関わらず 1.0.0 として変換を通す
+  // 旧版の形なら、名乗りに関わらずその版として変換を通す（古い順に見る）
   if (data && isCourseworkArchiveV1_0_0(data)) return "1.0.0"
+  if (data && isCourseworkArchiveV1_1_0(data)) return "1.1.0"
   return declared
 }
 
@@ -74,6 +78,11 @@ export function transformCourseworkToLatest(
     // 変換器の実装バグ（旧版の形のまま抜けてきた）。取り込みへ進めてはいけない
     throw new Error(
       "coursework archive is still in the 1.0.0 shape after transformation"
+    )
+  }
+  if (isCourseworkArchiveV1_1_0(outcome.data)) {
+    throw new Error(
+      "coursework archive is still in the 1.1.0 shape after transformation"
     )
   }
   return { ...outcome, data: outcome.data }

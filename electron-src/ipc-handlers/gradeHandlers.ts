@@ -19,11 +19,13 @@ import {
   previewGradeArchiveImport,
 } from "../lib/import/grade-archive/gradeArchiveImporter"
 import {
+  addGradeTag,
   createGrade,
   deleteGrade,
   duplicateGrade,
   getAllGrades,
   getGradeById,
+  setGradeTags,
   updateGrade,
 } from "../lib/prisma/grade"
 import {
@@ -128,6 +130,15 @@ export const gradeHandlers = {
 
   "grade:duplicate": async (id: string) => {
     return duplicateGrade(id)
+  },
+
+  // タグ（GradeTag）
+  "grade:setTags": async (gradeId: string, tagIds: string[]) => {
+    return setGradeTags(gradeId, tagIds)
+  },
+
+  "grade:addTag": async (gradeId: string, tagId: string) => {
+    return addGradeTag(gradeId, tagId)
   },
 
   "grade:getReportSettings": async (gradeId: string) => {

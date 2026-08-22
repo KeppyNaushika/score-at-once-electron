@@ -50,7 +50,7 @@ export function HeaderView({ report, fontScale }: HeaderViewProps) {
         )}
       </div>
       <div style={{ textAlign: "right" }}>
-        {report.examInfo.examDate && (
+        {report.examInfo.referenceDate && (
           <p
             style={{
               fontSize: `${12 * fontScale}px`,
@@ -58,7 +58,7 @@ export function HeaderView({ report, fontScale }: HeaderViewProps) {
               margin: 0,
             }}
           >
-            {formatDate(report.examInfo.examDate)}
+            {formatDate(report.examInfo.referenceDate)}
           </p>
         )}
         <p

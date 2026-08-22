@@ -59,6 +59,10 @@ export function createGradeApi() {
       getExamSubtotalGroups: bind("grade:getExamSubtotalGroups"),
       getExamCropRegions: bind("grade:getExamCropRegions"),
       exportExcel: bind("grade:exportExcel"),
+      // タグ
+      setTags: bind("grade:setTags"),
+      addTag: bind("grade:addTag"),
+
       getReportSettings: bind("grade:getReportSettings"),
       updateReportSettings: bind("grade:updateReportSettings"),
       exportArchive: bind("grade:exportArchive"),

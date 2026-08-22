@@ -2,7 +2,7 @@
  * 共通「生徒追加パネル」の型
  *
  * 試験(exam)・成績(grade)で共有する。host（モーダル/インライン）は adapter で
- * データ取得・追加処理を差し込み、exam固有の examDate/status/customOrder などは
+ * データ取得・追加処理を差し込み、exam固有の referenceDate/status/customOrder などは
  * host 側で内部解決する。
  *
  * 学級候補・生徒候補はいずれも境界が返す行（`ClassroomWithMemberships` /

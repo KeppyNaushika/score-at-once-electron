@@ -78,7 +78,7 @@ export function EditCourseworkWindow({
       await updateCoursework.mutateAsync({
         name: name.trim(),
         description: description.trim() || null,
-        date: date || null,
+        referenceDate: date || null,
       })
       await setTags.mutateAsync([...selectedTagIds])
       onSaved()

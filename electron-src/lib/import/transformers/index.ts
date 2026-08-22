@@ -63,6 +63,7 @@ import { V1_22_0_to_V1_23_0_Transformer } from "./V1_22_0_to_V1_23_0"
 import { V1_23_0_to_V1_24_0_Transformer } from "./V1_23_0_to_V1_24_0"
 import { V1_24_0_to_V1_25_0_Transformer } from "./V1_24_0_to_V1_25_0"
 import { V1_25_0_to_V1_26_0_Transformer } from "./V1_25_0_to_V1_26_0"
+import { V1_26_0_to_V1_27_0_Transformer } from "./V1_26_0_to_V1_27_0"
 
 const EXAM_TRANSFORMERS: ExamVersionTransformer[] = [
   new V1_0_0_to_V1_1_0_Transformer(),
@@ -91,6 +92,7 @@ const EXAM_TRANSFORMERS: ExamVersionTransformer[] = [
   new V1_23_0_to_V1_24_0_Transformer(),
   new V1_24_0_to_V1_25_0_Transformer(),
   new V1_25_0_to_V1_26_0_Transformer(),
+  new V1_26_0_to_V1_27_0_Transformer(),
 ]
 
 /** マニフェストのバージョン文字列からサポート対象バージョンを判定する */
@@ -285,6 +287,16 @@ const SHAPE_VERSION_FLOORS: {
       (data.scoresData.questionScores ?? []).some(
         (questionScore) => !("comment" in questionScore)
       ),
+  },
+  {
+    // 試験の日付が examDate だった頃（V1_26_0_to_V1_27_0 が処理）。
+    // 現行キー referenceDate が併存する場合は発火しない（併存は手編集の産物で、
+    // どちらが正かをアーカイブから決められないため manifest.version を信じる）
+    maxVersion: "1.26.0",
+    marker: "Exam.examDate キー",
+    applies: (data) =>
+      "examDate" in data.examData.exam &&
+      !("referenceDate" in data.examData.exam),
   },
 ]
 

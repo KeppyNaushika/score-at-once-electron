@@ -17,7 +17,7 @@ import { membershipFilterAt } from "./membershipFilter"
  *
  * @param existingClassroomIds 候補から除外する学級ID（成績の GradeClassroom など、既に紐付け済みの学級）
  * @param excludeStudentIds 候補から除外する生徒ID（既に対象へ追加済みの生徒）
- * @param referenceDate 在籍判定の基準日（exam=examDate / grade=referenceDate、null可）
+ * @param referenceDate 在籍判定の基準日（試験・資料・成績が同名で持つ referenceDate。null可）
  * @param activeOnly true なら基準日時点で在籍中（終了していない所属）の生徒のみ候補にする
  *
  * 学級（Classroom）の木を、追加できる在籍とその生徒を同梱したまま返す。

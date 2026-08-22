@@ -38,7 +38,7 @@ function toImportedMasterImagePath(
 /**
  * 既にある試験の列を、人が選んだ操作に従って書き換える。
  *
- * **Exam の列は id / examName / examDate / description / markerCorrectionEnabled /
+ * **Exam の列は id / examName / referenceDate / description / markerCorrectionEnabled /
  * createdAt / updatedAt で全部**（prisma/schema.prisma）。id は同定そのもの、
  * createdAt は「既にある行」なので動かさない。残り4列がここの対象。
  * 列を足したらここにも足すこと。
@@ -66,7 +66,7 @@ async function applyExamColumns(
     where: { id: existingExamId },
     data: {
       examName: exam.examName,
-      examDate: exam.examDate ? new Date(exam.examDate) : null,
+      referenceDate: exam.referenceDate ? new Date(exam.referenceDate) : null,
       description: exam.description,
       // 旧アーカイブ（〜v1.11.0）はこの列を持たないので既定の false へ倒れる
       markerCorrectionEnabled: exam.markerCorrectionEnabled ?? false,
@@ -182,13 +182,13 @@ export async function processExam(
     ? await generateUniqueExamName(tx, exam.examName)
     : exam.examName
 
-  // Exam の列は id / examName / examDate / description / markerCorrectionEnabled /
+  // Exam の列は id / examName / referenceDate / description / markerCorrectionEnabled /
   // createdAt / updatedAt で全部。列を足したらここも足すこと。
   await tx.exam.create({
     data: {
       id: exam.id,
       examName,
-      examDate: exam.examDate ? new Date(exam.examDate) : null,
+      referenceDate: exam.referenceDate ? new Date(exam.referenceDate) : null,
       description: exam.description,
       // 旧アーカイブ（〜v1.11.0）はこの列を持たないので既定の false へ倒れる
       markerCorrectionEnabled: exam.markerCorrectionEnabled ?? false,

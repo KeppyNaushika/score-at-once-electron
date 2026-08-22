@@ -292,6 +292,8 @@ export function createDefaultDefinition(): AnswerSheetDefinition {
   return {
     id: generateId(),
     name: "新しい解答用紙",
+    description: null,
+    referenceDate: null,
     settings: { ...DEFAULT_SETTINGS },
     majorQuestions: [createDefaultMajorQuestion()],
   }

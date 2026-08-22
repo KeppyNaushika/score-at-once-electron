@@ -15,9 +15,11 @@ import type {
   GradeArchiveData,
   GradeArchiveVersion,
 } from "../../../../src/types/gradeArchive.types"
+import type { AnyCollectedCourseworkData } from "../coursework-transformers/types"
 import type {
   ArchiveGradeBoundaryRowV1_13_0,
   ArchiveGradeBoundarySetRowV1_13_0,
+  ArchiveGradeExamRefV1_15_0,
   ArchiveGradeExportSettingsRowV1_14_0,
 } from "./legacyShape"
 import {
@@ -28,9 +30,21 @@ import {
 /** 1.3.0〜1.12.0 のアーカイブ全体（射影形式） */
 export type GradeArchiveDataUpTo1_12_0 = LegacyGradeArchiveData
 
+/**
+ * 1.15.0 のアーカイブ全体。成績がタグを持たず、試験参照の日付キーが examDate で、
+ * 内包資料が coursework 1.1.0 の形（資料側の版と .grade の版は別物なので名指しておく）。
+ */
+export type GradeArchiveDataV1_15_0 = Omit<
+  GradeArchiveData,
+  "gradeTags" | "tagsData" | "examRefs" | "courseworkArchive"
+> & {
+  examRefs: ArchiveGradeExamRefV1_15_0[]
+  courseworkArchive: AnyCollectedCourseworkData
+}
+
 /** 1.14.0 のアーカイブ全体（出力設定がまだ JSON 1本） */
 export type GradeArchiveDataV1_14_0 = Omit<
-  GradeArchiveData,
+  GradeArchiveDataV1_15_0,
   "gradeIndividualReportSettings"
 > & {
   gradeExportSettings: ArchiveGradeExportSettingsRowV1_14_0[]
@@ -45,8 +59,8 @@ export type GradeArchiveDataV1_13_0 = Omit<
   gradeBoundaries: ArchiveGradeBoundaryRowV1_13_0[]
 }
 
-/** 1.15.0 のアーカイブ全体（現行。出力設定が列へ割れている） */
-export type GradeArchiveDataV1_15_0 = GradeArchiveData
+/** 1.16.0 のアーカイブ全体（現行。成績にタグが付き、日付のキーが referenceDate へ揃った） */
+export type GradeArchiveDataV1_16_0 = GradeArchiveData
 
 /** 読み込み時点では版が確定していないので、扱いうる版の総和で受ける */
 export type AnyGradeArchiveData =
@@ -54,6 +68,7 @@ export type AnyGradeArchiveData =
   | GradeArchiveDataV1_13_0
   | GradeArchiveDataV1_14_0
   | GradeArchiveDataV1_15_0
+  | GradeArchiveDataV1_16_0
 
 /** どの版の形かを判定する（manifest.version ではなくデータの形で決める） */
 export function isGradeArchiveUpTo1_12_0(
@@ -80,6 +95,20 @@ export function isGradeArchiveV1_14_0(
   return Array.isArray(sections.gradeExportSettings)
 }
 
+/**
+ * 成績のタグのセクションが無ければ 1.15.0 の形。
+ *
+ * extractor は「読めたセクションだけを載せる」ので、gradeTags が無いアーカイブは
+ * キーごと欠ける（常に空配列で埋めると 1.15.0 と 1.16.0 が見分けられなくなる）。
+ */
+export function isGradeArchiveV1_15_0(
+  data: AnyGradeArchiveData
+): data is GradeArchiveDataV1_15_0 {
+  if (isLegacyGradeArchiveData(data)) return false
+  if (isGradeArchiveV1_13_0(data) || isGradeArchiveV1_14_0(data)) return false
+  return !("gradeTags" in data && Array.isArray(data.gradeTags))
+}
+
 export interface GradeTransformResult {
   data: AnyGradeArchiveData
   warnings: string[]
@@ -93,7 +122,7 @@ export interface GradeVersionTransformer {
 
 /** チェーン完了後は現行の形であることが保証される */
 export interface GradeChainTransformResult {
-  data: GradeArchiveDataV1_15_0
+  data: GradeArchiveDataV1_16_0
   originalVersion: GradeArchiveVersion
   finalVersion: GradeArchiveVersion
   appliedTransformations: {

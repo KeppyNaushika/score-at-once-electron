@@ -17,6 +17,7 @@ import type {
   ArchiveCwClass,
   ArchiveCwMembership,
   ArchiveCwStudent,
+  ArchiveCwTag,
 } from "../../../../src/types/courseworkArchive.types"
 import type {
   ArchiveGradeClassroomRow,
@@ -37,6 +38,7 @@ import type {
   ArchiveGradeRow,
   ArchiveGradeStudentRow,
   ArchiveGradeSubtotalRef,
+  ArchiveGradeTagRow,
   CollectedGradeData,
 } from "../../../../src/types/gradeArchive.types"
 import prisma from "../../prisma/client"
@@ -69,6 +71,7 @@ export async function collectGradeArchiveData(
     itemRows,
     constraintRows,
     reportSettingsRow,
+    tagJoinRows,
   ] = await Promise.all([
     prisma.gradeClassroom.findMany({
       where: { gradeId },
@@ -87,6 +90,11 @@ export async function collectGradeArchiveData(
       orderBy: { order: "asc" },
     }),
     prisma.gradeIndividualReportSettings.findUnique({ where: { gradeId } }),
+    prisma.gradeTag.findMany({
+      where: { gradeId },
+      include: { tag: true },
+      orderBy: { createdAt: "asc" },
+    }),
   ])
 
   const gradeItemIds = itemRows.map((gradeItem) => gradeItem.id)
@@ -347,6 +355,23 @@ export async function collectGradeArchiveData(
     }),
   ])
 
+  // タグは成績の外にある共有物なので、中間テーブルの行と実体の両方を載せる
+  // （実体が無いと取り込み先で名前を復元できない）
+  const gradeTags: ArchiveGradeTagRow[] = tagJoinRows.map((gradeTag) => ({
+    id: gradeTag.id,
+    gradeId: gradeTag.gradeId,
+    tagId: gradeTag.tagId,
+    createdAt: dateToJson(gradeTag.createdAt),
+    updatedAt: dateToJson(gradeTag.updatedAt),
+  }))
+
+  const tagsData: ArchiveCwTag[] = tagJoinRows.map((gradeTag) => ({
+    id: gradeTag.tag.id,
+    name: gradeTag.tag.name,
+    order: gradeTag.tag.order,
+    color: gradeTag.tag.color,
+  }))
+
   const studentsData: ArchiveCwStudent[] = studentRows.map((student) => ({
     id: student.id,
     studentNumber: student.studentNumber,
@@ -440,7 +465,7 @@ export async function collectGradeArchiveData(
   const examRefs: ArchiveGradeExamRef[] = examRows.map((exam) => ({
     id: exam.id,
     examName: exam.examName,
-    examDate: nullableDateToJson(exam.examDate),
+    referenceDate: nullableDateToJson(exam.referenceDate),
   }))
 
   // 小計名はグループ内でしか一意でないため、名前で当てるときの絞り込みに試験が要る。
@@ -508,9 +533,11 @@ export async function collectGradeArchiveData(
     gradeConstraintLabelValues,
     gradeConstraintExclusionLabels,
     gradeIndividualReportSettings,
+    gradeTags,
     studentsData,
     classesData,
     membershipsData,
+    tagsData,
     examRefs,
     subtotalRefs,
     cropRegionRefs,

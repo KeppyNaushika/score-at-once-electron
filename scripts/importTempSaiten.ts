@@ -323,7 +323,7 @@ async function importExam(
   // 実施日推定（answer_area.jsonの更新日）
   const firstDataDir = pages[0].dataDir
   const aaStat = fs.statSync(path.join(firstDataDir, "answer_area.json"))
-  const examDate = aaStat.mtime
+  const referenceDate = aaStat.mtime
 
   // 画像コピー
   const examDir = path.join(DATA_DIR, "exams", examId)
@@ -372,7 +372,7 @@ async function importExam(
     data: {
       id: examId,
       examName: group.name,
-      examDate,
+      referenceDate,
       createdAt: now,
       updatedAt: now,
     },
@@ -666,7 +666,7 @@ async function importExam(
     0
   )
   console.log(
-    `  ✓ ${group.name}: ${pages.length}ページ, ${totalQ}設問, ${totalScores}スコア, 実施日=${examDate.toISOString().split("T")[0]}`
+    `  ✓ ${group.name}: ${pages.length}ページ, ${totalQ}設問, ${totalScores}スコア, 実施日=${referenceDate.toISOString().split("T")[0]}`
   )
 }
 

@@ -22,7 +22,7 @@ interface ExamResultSortable {
   examId: string
   examName: string
   tags: string[]
-  examDate: string | null
+  referenceDate: string | null
   totalScore: number
   original: StudentExamResult
 }
@@ -39,8 +39,8 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
       examId: result.examId,
       examName: result.examName,
       tags: result.tags,
-      examDate: result.examDate
-        ? new Date(result.examDate).toISOString()
+      referenceDate: result.referenceDate
+        ? new Date(result.referenceDate).toISOString()
         : null,
       totalScore: result.totalScore,
       original: result,
@@ -48,7 +48,7 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
   }, [results])
 
   const { sortedData, sortConfig, requestSort } = useTableSort(sortableData, {
-    defaultSort: { key: "examDate", direction: "desc" },
+    defaultSort: { key: "referenceDate", direction: "desc" },
   })
 
   const formatDate = (date: Date | null) => {
@@ -132,7 +132,7 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
                   </SortableTableHead>
                   <TableHead>タグ</TableHead>
                   <SortableTableHead
-                    sortKey="examDate"
+                    sortKey="referenceDate"
                     currentSortKey={sortConfig.key}
                     currentDirection={sortConfig.direction}
                     onSort={(key) =>
@@ -184,7 +184,7 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
                       )}
                     </TableCell>
                     <TableCell className="tabular-nums">
-                      {formatDate(result.examDate)}
+                      {formatDate(result.referenceDate)}
                     </TableCell>
                     <TableCell>{getScoreDisplay(result)}</TableCell>
                     <TableCell>{getStatusBadge(result)}</TableCell>

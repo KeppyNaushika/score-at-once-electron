@@ -64,7 +64,7 @@ const EMPTY_EXAMS: ExamSummary[] = []
 interface ExamSortable {
   id: string
   examName: string
-  examDate: string | null
+  referenceDate: string | null
   original: ExamSummary
 }
 
@@ -118,14 +118,16 @@ const File = () => {
     return filteredExams.map((exam) => ({
       id: exam.id,
       examName: exam.examName,
-      examDate: exam.examDate ? new Date(exam.examDate).toISOString() : null,
+      referenceDate: exam.referenceDate
+        ? new Date(exam.referenceDate).toISOString()
+        : null,
       original: exam,
     }))
   }, [filteredExams])
 
   // ソート機能（localStorage永続化、既定: 実施日降順）
   const { sortedData, sortConfig, requestSort } = useTableSort(sortableData, {
-    defaultSort: { key: "examDate", direction: "desc" },
+    defaultSort: { key: "referenceDate", direction: "desc" },
     storageKey: "examList-sort",
   })
 
@@ -341,7 +343,7 @@ const File = () => {
                     試験名
                   </SortableTableHead>
                   <SortableTableHead
-                    sortKey="examDate"
+                    sortKey="referenceDate"
                     currentSortKey={sortConfig.key}
                     currentDirection={sortConfig.direction}
                     onSort={requestSort}
@@ -406,8 +408,10 @@ const File = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-center text-sm text-muted-foreground tabular-nums">
-                        {exam.examDate
-                          ? new Date(exam.examDate).toLocaleDateString("ja-JP")
+                        {exam.referenceDate
+                          ? new Date(exam.referenceDate).toLocaleDateString(
+                              "ja-JP"
+                            )
                           : "—"}
                       </TableCell>
 

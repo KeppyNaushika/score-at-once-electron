@@ -218,6 +218,8 @@ describe("computeLayoutFromDefinition の vertical フラグ伝播", () => {
     return {
       id: "d1",
       name: "t",
+      description: null,
+      referenceDate: null,
       settings: {
         ...DEFAULT_SETTINGS,
         verticalLayout: vertical,

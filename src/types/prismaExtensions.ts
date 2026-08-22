@@ -199,7 +199,7 @@ export type ExamWithPages = Exam & { examPages: ExamPageWithContent[] }
 export interface CreateExamArgs {
   examName: string
   description?: string | null
-  examDate?: Date | null
+  referenceDate?: Date | null
 }
 
 export type StudentAnswerImageWithExamPageAndStudent =

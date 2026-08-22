@@ -109,7 +109,10 @@ model StudentClassroomMembership {
 model Exam {
   id                                    String                                    @id @default(uuid())
   examName                              String
-  examDate                              DateTime?
+  /// この試験がいつのものか（任意）。在籍判定の基準日であり、一覧では「試験日」と表示する。
+  /// 試験・資料・成績・解答用紙で役割が同じなので、DB の名前は4つとも referenceDate に揃える
+  /// （表示の語だけ実体ごとに変える）。
+  referenceDate                         DateTime?
   description                           String?
   /// 答案アップロード時にOMRマーカーによる位置補正を既定でONにするか（ASB由来かつomrMarkers有効な試験はtrue）
   markerCorrectionEnabled               Boolean                                   @default(false)
@@ -512,6 +515,7 @@ model Tag {
   tagSubtotalGroups TagSubtotalGroup[]
   examTags          ExamTag[]
   courseworkTags    CourseworkTag[]
+  gradeTags         GradeTag[]
   asbDefinitionTags AsbDefinitionTag[]
 }
 
@@ -896,6 +900,7 @@ model Grade {
   id            String    @id @default(uuid())
   name          String
   description   String?
+  /// この成績算出がいつのものか（任意）。在籍判定の基準日。一覧では「成績算出日」と表示する。
   referenceDate DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -904,7 +909,26 @@ model Grade {
   gradeClassrooms  GradeClassroom[]
   gradeStudents    GradeStudent[]
   gradeConstraints GradeConstraint[]
+  gradeTags        GradeTag[]
   reportSettings   GradeIndividualReportSettings?
+}
+
+/// 成績算出のタグ（既存 Tag と多対多）。試験・資料・解答用紙は既にタグを持っていて、
+/// 成績だけが持っていなかった（一覧の一括タグ付け・タグ絞り込みが成績にだけ無かった）。
+/// 列・カスケード・索引は ExamTag / CourseworkTag / AsbDefinitionTag と同じ形にしてある。
+model GradeTag {
+  id        String   @id @default(uuid())
+  gradeId   String
+  tagId     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  grade Grade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([gradeId, tagId])
+  @@index([gradeId])
+  @@index([tagId])
 }
 
 /// 観点間の制約ルール（不適切な観点/評定の組合せを検知して着色）
@@ -1300,12 +1324,14 @@ model GradeIndividualReportSettings {
 /// 試験外成績資料（例「第2回レポート」）。評価項目を複数持ち、点数を自分で保持する。
 /// 成績算出（Grade）からは CourseworkItem 単位で参照され、点数そのものを共有・再利用する。
 model Coursework {
-  id          String    @id @default(uuid())
-  name        String
-  description String?
-  date        DateTime? // 実施日（任意）: 在籍判定・並びに使用
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String    @id @default(uuid())
+  name          String
+  description   String?
+  /// この資料がいつのものか（任意）: 在籍判定・並びに使用。一覧では「実施日」と表示する。
+  /// 旧名は date だったが、試験・成績・解答用紙と役割が同じ日付なので名前を揃えた。
+  referenceDate DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   classrooms       CourseworkClassroom[]
   students         CourseworkStudent[]
@@ -1430,6 +1456,15 @@ model CourseworkLetterScale {
 model AsbDefinition {
   id   String @id @default(uuid())
   name String @default("新しい解答用紙")
+
+  /// 説明（任意）。Exam / Coursework / Grade と同じ宣言（String?・既定値なし）に揃えてある。
+  /// 4つの概要ページが同じ項目（名前・日付・説明・タグ）を持てるようにするため。
+  description String?
+
+  /// この解答用紙がいつのものか（任意）。一覧では「使用日」と表示する。
+  /// 解答用紙は名簿を持たないので在籍判定には使われず、「いつ使う用紙か」を示すだけ。
+  /// それでも名前を揃えるのは、4画面の一覧が同じ列を同じ意味で持てるようにするため。
+  referenceDate DateTime?
 
   // LabelPresets
   labelPresetMajor  String?

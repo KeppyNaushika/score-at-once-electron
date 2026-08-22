@@ -12,6 +12,7 @@ import type { GradeReportSettings } from "@/types/gradeReport.types"
 import { auditLogListKey } from "./auditLog"
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
+import { tagListQuery } from "./tag"
 
 /**
  * 成績算出（Grade）の読み書き。
@@ -243,6 +244,38 @@ export const duplicateGradeMutation = () =>
     meta: {
       invalidates: [gradeListQuery().queryKey],
       errorMessage: "成績算出を複製できませんでした",
+    },
+  })
+
+// --- タグ ---
+
+export const setGradeTagsMutation = (gradeId: string) =>
+  defineMutation({
+    mutationFn: (tagIds: string[]) =>
+      window.electronAPI.grade.setTags(gradeId, tagIds),
+    meta: {
+      // タグ一覧は紐付けを利用先として同梱するので、そちらも古くなる
+      invalidates: [gradeScope(gradeId), tagListQuery().queryKey],
+      errorMessage: "タグを保存できませんでした",
+    },
+  })
+
+/**
+ * 選んだ成績算出へ同じタグをまとめて足す。
+ *
+ * 既存のタグを保ったまま1件ずつ足す（全置換すると、他端末が付けたタグを
+ * 巻き添えにする）。知らせを1回にするため1つの書き込みにまとめている。
+ */
+export const addTagToGradesMutation = () =>
+  defineMutation({
+    mutationFn: async (input: { gradeIds: string[]; tagId: string }) => {
+      for (const gradeId of input.gradeIds) {
+        await window.electronAPI.grade.addTag(gradeId, input.tagId)
+      }
+    },
+    meta: {
+      invalidates: [gradeListQuery().queryKey],
+      errorMessage: "タグを追加できませんでした",
     },
   })
 

@@ -111,7 +111,7 @@ export async function convertHszToScore(
       exam: {
         id: examId,
         examName: sheets.title_name,
-        examDate: null,
+        referenceDate: null,
         description: `百問繚乱からインポート（${subjectName}・${sheets.course}）`,
         createdAt: now,
         updatedAt: now,

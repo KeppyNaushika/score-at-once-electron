@@ -16,6 +16,7 @@ import prisma from "./client"
 const tagWithAllRelationsInclude = {
   examTags: true,
   courseworkTags: true,
+  gradeTags: true,
   asbDefinitionTags: true,
   tagSubtotalGroups: true,
 } satisfies Prisma.TagInclude

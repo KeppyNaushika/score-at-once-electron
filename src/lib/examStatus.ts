@@ -272,7 +272,12 @@ export function getExamWorkflowStatus(
  */
 export type ExamSummary = Pick<
   Exam,
-  "id" | "examName" | "examDate" | "description" | "createdAt" | "updatedAt"
+  | "id"
+  | "examName"
+  | "referenceDate"
+  | "description"
+  | "createdAt"
+  | "updatedAt"
 > & {
   tags: Pick<Tag, "id" | "name" | "color">[]
 } & ExamProgressSource

@@ -188,7 +188,7 @@ export function createMinimalCollectedData(
       exam: {
         id: examId,
         examName: overrides.examName ?? "テスト試験",
-        examDate: now,
+        referenceDate: now,
         description: null,
         createdAt: now,
         updatedAt: now,

@@ -4,13 +4,17 @@
  * 1.0.0（資料1件の入れ子ツリー）→ 1.1.0（テーブルごとの平坦なセクション）の展開と、
  * 点数の参照が人（Student）から資料の対象者（CourseworkStudent）へ移ること、
  * 名簿に載っていない生徒の点数が破棄されることを固定する（#962 Phase B）。
+ * 併せて 1.1.0 → 1.2.0（実施日のキーが date → referenceDate）も固定する。
  */
 
 import { describe, expect, it } from "vitest"
 
 import { transformCourseworkToLatest } from "../../../electron-src/lib/import/coursework-transformers"
 import type { LegacyArchiveCourseworkRef } from "../../../electron-src/lib/import/coursework-transformers/legacyShape"
-import type { CourseworkArchiveDataV1_0_0 } from "../../../electron-src/lib/import/coursework-transformers/types"
+import type {
+  CourseworkArchiveDataV1_0_0,
+  CourseworkArchiveDataV1_1_0,
+} from "../../../electron-src/lib/import/coursework-transformers/types"
 import {
   COURSEWORK_CURRENT_VERSION,
   type CourseworkArchiveData,
@@ -41,7 +45,7 @@ function buildLegacyArchive(
   }
 }
 
-/** 1.1.0（現行）の空アーカイブ */
+/** 現行（1.2.0）の空アーカイブ */
 function buildCurrentArchive(): CourseworkArchiveData {
   return {
     manifest: {
@@ -210,7 +214,7 @@ describe("coursework-archive 1.0.0 → 1.1.0", () => {
         id: "cw-1",
         name: "第1回レポート",
         description: null,
-        date: null,
+        referenceDate: null,
         createdAt: "2026-06-01T00:00:00.000Z",
         updatedAt: "2026-06-01T00:00:00.000Z",
       },
@@ -220,5 +224,64 @@ describe("coursework-archive 1.0.0 → 1.1.0", () => {
 
     expect(result.appliedTransformations).toEqual([])
     expect(result.data.courseworks).toEqual(flat.courseworks)
+  })
+})
+
+describe("coursework-archive 1.1.0 → 1.2.0", () => {
+  /** 1.1.0 が実際に書き出していた形（平坦だが実施日のキーが date） */
+  function buildV1_1_0Archive(): CourseworkArchiveDataV1_1_0 {
+    const current = buildCurrentArchive()
+    const { courseworks: _currentCourseworks, manifest, ...sections } = current
+    return {
+      ...sections,
+      manifest: { ...manifest, version: "1.1.0" },
+      courseworks: [
+        {
+          id: "cw-1",
+          name: "第1回レポート",
+          description: null,
+          date: "2026-06-01T00:00:00.000Z",
+          createdAt: "2026-06-01T00:00:00.000Z",
+          updatedAt: "2026-06-01T00:00:00.000Z",
+        },
+      ],
+    }
+  }
+
+  it("実施日のキーが date から referenceDate へ移る", () => {
+    const result = transformCourseworkToLatest(buildV1_1_0Archive())
+
+    expect(result.originalVersion).toBe("1.1.0")
+    expect(result.finalVersion).toBe(COURSEWORK_CURRENT_VERSION)
+    expect(result.data.courseworks[0].referenceDate).toBe(
+      "2026-06-01T00:00:00.000Z"
+    )
+    expect(result.data.courseworks[0]).not.toHaveProperty("date")
+    // キーの付け替えだけで値は失われないので警告は出さない
+    expect(result.warnings).toEqual([])
+  })
+
+  it("1.2.0 を名乗っていても中身が旧キーなら 1.1.0 として変換する", () => {
+    const lying = buildV1_1_0Archive()
+    lying.manifest.version = COURSEWORK_CURRENT_VERSION
+
+    const result = transformCourseworkToLatest(lying)
+
+    expect(result.originalVersion).toBe("1.1.0")
+    expect(result.data.courseworks[0].referenceDate).toBe(
+      "2026-06-01T00:00:00.000Z"
+    )
+  })
+
+  it("1.0.0 から通したときも実施日が referenceDate まで届く", () => {
+    const result = transformCourseworkToLatest(
+      buildLegacyArchive([
+        { ...LEGACY_COURSEWORK, date: "2026-06-01T00:00:00.000Z" },
+      ])
+    )
+
+    expect(result.data.courseworks[0].referenceDate).toBe(
+      "2026-06-01T00:00:00.000Z"
+    )
   })
 })

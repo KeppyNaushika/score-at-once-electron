@@ -1,7 +1,7 @@
 /**
  * Exam の生徒・学級 在籍フィルタ統合テスト
  *
- * examDate を基準日とした在籍判定（activeOnly）と、0名学級の非表示を検証する。
+ * referenceDate を基準日とした在籍判定（activeOnly）と、0名学級の非表示を検証する。
  */
 
 import * as path from "path"
@@ -38,11 +38,11 @@ import {
 const testPrisma = createPrismaClientForPath(TEST_DB_PATH)
 
 /**
- * examDate=2024-04-10 の試験と、在籍中/在籍終了の生徒を持つ学級を作成
+ * referenceDate=2024-04-10 の試験と、在籍中/在籍終了の生徒を持つ学級を作成
  */
 async function createTestData() {
   const exam = await testPrisma.exam.create({
-    data: { examName: "テスト試験", examDate: new Date("2024-04-10") },
+    data: { examName: "テスト試験", referenceDate: new Date("2024-04-10") },
   })
 
   const classroomA = await testPrisma.classroom.create({
@@ -59,7 +59,7 @@ async function createTestData() {
       firstNameKana: "タロウ",
     },
   })
-  // examDate より前に在籍終了（転出）
+  // referenceDate より前に在籍終了（転出）
   const left = await testPrisma.student.create({
     data: {
       studentNumber: "E002",
@@ -75,7 +75,7 @@ async function createTestData() {
       studentId: active.id,
       classroomId: classroomA.id,
       attendanceNumber: 1,
-      startDate: new Date("2024-04-01"), // examDate(2024-04-10)より前に開始
+      startDate: new Date("2024-04-01"), // referenceDate(2024-04-10)より前に開始
     },
   })
   await testPrisma.studentClassroomMembership.create({
@@ -84,7 +84,7 @@ async function createTestData() {
       classroomId: classroomA.id,
       attendanceNumber: 2,
       startDate: new Date("2023-04-01"),
-      endDate: new Date("2024-03-31"), // examDate(2024-04-10)より前に終了
+      endDate: new Date("2024-03-31"), // referenceDate(2024-04-10)より前に終了
     },
   })
 
@@ -103,7 +103,7 @@ describe("Exam 在籍フィルタ", () => {
   })
 
   describe("addStudentsFromClassroom", () => {
-    it("activeOnly=true は examDate 時点で在籍中の生徒のみ追加する", async () => {
+    it("activeOnly=true は referenceDate 時点で在籍中の生徒のみ追加する", async () => {
       const { exam, classroomA } = await createTestData()
 
       const result = await addStudentsFromClassroom(
@@ -183,7 +183,7 @@ describe("Exam 在籍フィルタ", () => {
   })
 
   describe("将来始まる所属（基準日より後に入学/転入）", () => {
-    /** examDate(2024-04-10) より後に始まる所属を持つ生徒を classroomA に追加 */
+    /** referenceDate(2024-04-10) より後に始まる所属を持つ生徒を classroomA に追加 */
     async function addFutureStudent(classroomId: string) {
       const future = await testPrisma.student.create({
         data: {
@@ -199,7 +199,7 @@ describe("Exam 在籍フィルタ", () => {
           studentId: future.id,
           classroomId,
           attendanceNumber: 3,
-          startDate: new Date("2024-05-01"), // examDate より後に開始
+          startDate: new Date("2024-05-01"), // referenceDate より後に開始
           endDate: null,
         },
       })

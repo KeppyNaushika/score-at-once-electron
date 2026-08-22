@@ -65,7 +65,7 @@ function createArchiveWithBareSections(outputPath: string): void {
     exam: {
       id: "bare-exam",
       examName: "キーを欠くアーカイブ",
-      examDate: null,
+      referenceDate: null,
       description: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

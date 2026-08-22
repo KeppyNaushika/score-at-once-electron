@@ -117,10 +117,10 @@ export default function DeleteExamModal({
           label: examTag.tag.name,
           variant: "outline" as const,
         })),
-        ...(exam.examDate
+        ...(exam.referenceDate
           ? [
               {
-                label: new Date(exam.examDate).toLocaleDateString(),
+                label: new Date(exam.referenceDate).toLocaleDateString(),
                 variant: "secondary" as const,
               },
             ]

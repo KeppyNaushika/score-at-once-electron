@@ -342,7 +342,7 @@ export async function reorderDataSources(
  */
 export async function getExamCandidates() {
   const exams = await prisma.exam.findMany({
-    orderBy: { examDate: "desc" },
+    orderBy: { referenceDate: "desc" },
   })
   return exams
 }

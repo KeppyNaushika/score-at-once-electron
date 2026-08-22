@@ -154,9 +154,10 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
               生徒: {coursework.students.length}名
             </Badge>
             <Badge variant="outline">評価項目: {coursework.items.length}</Badge>
-            {coursework.date && (
+            {coursework.referenceDate && (
               <Badge variant="secondary">
-                実施日: {new Date(coursework.date).toLocaleDateString("ja-JP")}
+                実施日:{" "}
+                {new Date(coursework.referenceDate).toLocaleDateString("ja-JP")}
               </Badge>
             )}
             {coursework.tags.map((courseworkTag) => (
@@ -242,8 +243,8 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
           initialName={coursework.name}
           initialDescription={coursework.description ?? ""}
           initialDate={
-            coursework.date
-              ? new Date(coursework.date).toISOString().split("T")[0]
+            coursework.referenceDate
+              ? new Date(coursework.referenceDate).toISOString().split("T")[0]
               : ""
           }
           initialTagIds={coursework.tags.map(

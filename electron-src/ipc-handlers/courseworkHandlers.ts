@@ -67,14 +67,18 @@ export const courseworkHandlers = {
   "coursework:create": async (data: {
     name: string
     description?: string | null
-    date?: string | null
+    referenceDate?: string | null
   }) => {
     return createCoursework(data)
   },
 
   "coursework:update": async (
     id: string,
-    data: { name?: string; description?: string | null; date?: string | null }
+    data: {
+      name?: string
+      description?: string | null
+      referenceDate?: string | null
+    }
   ) => {
     return updateCoursework(id, data)
   },

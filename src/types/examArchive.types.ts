@@ -120,9 +120,10 @@ export type ExamArchiveVersion =
   | "1.24.0"
   | "1.25.0"
   | "1.26.0"
+  | "1.27.0"
 
 /** 現在の最新バージョン */
-export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.26.0"
+export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.27.0"
 
 /** サポートされている全バージョン（古い順） */
 export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
@@ -153,6 +154,7 @@ export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
   "1.24.0",
   "1.25.0",
   "1.26.0",
+  "1.27.0",
 ] as const
 
 /**
@@ -513,7 +515,8 @@ export interface ArchiveExamData {
   exam: {
     id: string
     examName: string
-    examDate: string | null
+    /** v1.27.0+ 試験日。それ以前のキー名は examDate（DB の列名を4実体で referenceDate へ揃えた） */
+    referenceDate: string | null
     /** @deprecated v1.10.0で削除。ExamTagに移行 */
     subject?: string | null
     description: string | null

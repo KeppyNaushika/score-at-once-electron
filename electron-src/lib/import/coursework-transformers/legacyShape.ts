@@ -20,6 +20,10 @@ import type {
   CourseworkExternalSections,
   CourseworkSections,
 } from "../../../../src/types/courseworkArchive.types"
+import type {
+  ArchiveCourseworkRowV1_1_0,
+  CollectedCourseworkDataV1_1_0,
+} from "./types"
 
 // =============================================================================
 // v1.0.0 の形状定義（ここだけが知っていればよい負債）
@@ -113,10 +117,16 @@ export function isLegacyCollectedCourseworkData(
   return !isCurrentCollectedCourseworkData(value)
 }
 
-/** 現行（v1.1.0）の形で内包されているか。全セクションが揃っていることを実際に確かめる */
+/**
+ * 平坦なセクション（v1.1.0 以降）の形で内包されているか。
+ * 全セクションが揃っていることを実際に確かめる。
+ *
+ * v1.1.0 と v1.2.0 の違いは資料1行の日付のキー名だけで、セクションの有無では見分けられない
+ * （資料0件のアーカイブもある）。どちらかは変換器が決めるので、ここは総和で名乗る。
+ */
 export function isCurrentCollectedCourseworkData(
   value: unknown
-): value is CollectedCourseworkData {
+): value is CollectedCourseworkData | CollectedCourseworkDataV1_1_0 {
   if (typeof value !== "object" || value === null) return false
   const sections = value as Record<string, unknown>
   const sectionKeys: (
@@ -141,8 +151,20 @@ export function isCurrentCollectedCourseworkData(
   )
 }
 
+/**
+ * 展開の行き先は v1.1.0 のセクション（資料の日付キーは旧名 date のまま）。
+ * date → referenceDate への改名は次の変換器（V1_1_0_to_V1_2_0）の仕事なので、
+ * ここで先回りして現行の形にしてしまうと、鎖の途中の版が飛ばされる。
+ */
+interface CourseworkSectionsV1_1_0 extends Omit<
+  CourseworkSections,
+  "courseworks"
+> {
+  courseworks: ArchiveCourseworkRowV1_1_0[]
+}
+
 interface FlattenedLegacyCourseworks {
-  sections: CourseworkSections
+  sections: CourseworkSectionsV1_1_0
   /** 名簿に載っていない生徒の点数として破棄した件数 */
   discardedScoreCount: number
 }
@@ -156,7 +178,7 @@ interface FlattenedLegacyCourseworks {
 export function flattenLegacyCourseworks(
   legacyCourseworks: LegacyArchiveCourseworkRef[]
 ): FlattenedLegacyCourseworks {
-  const sections: CourseworkSections = {
+  const sections: CourseworkSectionsV1_1_0 = {
     courseworks: [],
     courseworkClassrooms: [],
     courseworkTags: [],
@@ -240,7 +262,7 @@ export function flattenLegacyCourseworks(
 
 /** 評価項目の変換表・点数を展開し、破棄した点数の件数を返す */
 function flattenLegacyItemChildren(
-  sections: CourseworkSections,
+  sections: CourseworkSectionsV1_1_0,
   item: LegacyArchiveCourseworkItemRef,
   courseworkStudentIdByStudent: Map<string, string>
 ): number {

@@ -32,6 +32,7 @@ import { importCourseworkData } from "../coursework-archive/dataCreator"
 import {
   resolveClassrooms,
   resolveStudents,
+  resolveTags,
   restoreMemberships,
 } from "../coursework-archive/idRemapper"
 import { transformGradeToLatest } from "../grade-transformers"
@@ -405,6 +406,16 @@ export async function importGradeArchive(
         await tx.gradeIndividualReportSettings.create({
           data: { gradeId: grade.id, ...values },
         })
+      }
+
+      // タグは成績の外にある共有物なので、既存を uuid → 名前で当て、無ければ作る
+      // （資料アーカイブと同じ resolveTags を使う）。中間テーブルは常に新規作成した
+      // 成績に対して作るので、@@unique(gradeId, tagId) の衝突は起きない
+      const tagMap = await resolveTags(tx, data.tagsData)
+      for (const gradeTag of data.gradeTags) {
+        const tagId = tagMap.get(gradeTag.tagId)
+        if (!tagId) continue
+        await tx.gradeTag.create({ data: { gradeId: grade.id, tagId } })
       }
 
       for (const gradeClassroom of data.gradeClassrooms) {

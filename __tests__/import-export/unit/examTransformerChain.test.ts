@@ -331,15 +331,15 @@ function createV1_15_0_ArchiveData(): ExamArchiveData {
   return raw as unknown as ExamArchiveData
 }
 
-/** 現行 (v1.26.0) 最小形状 */
+/** 現行 (v1.27.0) 最小形状 */
 function createCurrentArchiveData(): ExamArchiveData {
   const raw = {
-    manifest: createManifest("1.26.0"),
+    manifest: createManifest("1.27.0"),
     examData: {
       exam: {
         id: "exam-1",
         examName: "現行試験",
-        examDate: null,
+        referenceDate: null,
         description: null,
         markerCorrectionEnabled: false,
         createdAt: TIMESTAMP,
@@ -373,7 +373,7 @@ function createCurrentArchiveData(): ExamArchiveData {
 }
 
 /**
- * 旧形状（1.26.0 未満）の行を差し込む。`ExamArchiveData` は最新版の形しか表せないため、
+ * 旧形状（1.27.0 未満）の行を差し込む。`ExamArchiveData` は最新版の形しか表せないため、
  * 旧キーの行は型の外から入れる（`Object.assign` で足りるので `as` は使わない）。
  */
 const putLegacyRows = (
@@ -384,13 +384,13 @@ const putLegacyRows = (
 }
 
 describe("transformExamArchiveToLatest", () => {
-  test("v1.0.0 実形状（project系キー）が全26変換を経て最新形式になる", () => {
+  test("v1.0.0 実形状（project系キー）が全27変換を経て最新形式になる", () => {
     const result = transformExamArchiveToLatest(createV1_0_0_ArchiveData())
 
     expect(result.originalVersion).toBe("1.0.0")
-    expect(result.finalVersion).toBe("1.26.0")
-    expect(result.appliedTransformations).toHaveLength(26)
-    expect(result.data.manifest.version).toBe("1.26.0")
+    expect(result.finalVersion).toBe("1.27.0")
+    expect(result.appliedTransformations).toHaveLength(27)
+    expect(result.data.manifest.version).toBe("1.27.0")
 
     const examData = result.data.examData
     const examDataRecord = examData as unknown as Record<string, unknown>
@@ -490,6 +490,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.23.0", to: "1.24.0" },
       { from: "1.24.0", to: "1.25.0" },
       { from: "1.25.0", to: "1.26.0" },
+      { from: "1.26.0", to: "1.27.0" },
     ])
 
     const examData = result.data.examData
@@ -608,7 +609,7 @@ describe("transformExamArchiveToLatest", () => {
     ]
 
     const detection = detectExamArchiveVersion(data)
-    expect(detection.version).toBe("1.26.0")
+    expect(detection.version).toBe("1.27.0")
     expect(detection.corrections).toEqual([])
 
     const result = transformExamArchiveToLatest(data)
@@ -711,6 +712,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.23.0", to: "1.24.0" },
       { from: "1.24.0", to: "1.25.0" },
       { from: "1.25.0", to: "1.26.0" },
+      { from: "1.26.0", to: "1.27.0" },
     ])
     // キーごと落ちる（取り込み先が存在しないため）
     const transformedExamData = result.data.examData as unknown as Record<
@@ -724,13 +726,13 @@ describe("transformExamArchiveToLatest", () => {
     ).toBe(true)
   })
 
-  test("廃止済みキーを持たない v1.17.0 アーカイブは警告なしで 1.26.0 になる", () => {
+  test("廃止済みキーを持たない v1.17.0 アーカイブは警告なしで 1.27.0 になる", () => {
     const data = createCurrentArchiveData()
     data.manifest.version = "1.17.0"
 
     const result = transformExamArchiveToLatest(data)
 
-    expect(result.finalVersion).toBe("1.26.0")
+    expect(result.finalVersion).toBe("1.27.0")
     expect(result.warnings).toEqual([])
   })
 
@@ -763,6 +765,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.23.0", to: "1.24.0" },
       { from: "1.24.0", to: "1.25.0" },
       { from: "1.25.0", to: "1.26.0" },
+      { from: "1.26.0", to: "1.27.0" },
     ])
     // キーごと落ちる（アーカイブは正本であり復活防止をしないため）
     const transformedRecord = result.data as unknown as Record<string, unknown>
@@ -788,6 +791,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.23.0", to: "1.24.0" },
       { from: "1.24.0", to: "1.25.0" },
       { from: "1.25.0", to: "1.26.0" },
+      { from: "1.26.0", to: "1.27.0" },
     ])
     expect(result.data.scoresData.cropRegionAssignments).toEqual([])
   })
@@ -855,6 +859,7 @@ describe("transformExamArchiveToLatest", () => {
       { from: "1.23.0", to: "1.24.0" },
       { from: "1.24.0", to: "1.25.0" },
       { from: "1.25.0", to: "1.26.0" },
+      { from: "1.26.0", to: "1.27.0" },
     ])
     expect(result.data.examData.studentAnswerImages).toEqual([
       expect.objectContaining({
@@ -1413,7 +1418,7 @@ describe("transformExamArchiveToLatest", () => {
     const data = createCurrentArchiveData()
     const result = transformExamArchiveToLatest(data)
 
-    expect(result.originalVersion).toBe("1.26.0")
+    expect(result.originalVersion).toBe("1.27.0")
     expect(result.appliedTransformations).toEqual([])
     expect(result.warnings).toEqual([])
     expect(result.data).toBe(data)
@@ -1425,6 +1430,49 @@ describe("transformExamArchiveToLatest", () => {
     expect(() => transformExamArchiveToLatest(data)).toThrow(
       /Unknown exam archive version/
     )
+  })
+
+  test("1.26.0 → 1.27.0: 試験日のキーが examDate から referenceDate へ移る", () => {
+    const data = createCurrentArchiveData()
+    data.manifest.version = "1.26.0"
+    // 1.26.0 のアーカイブは旧キーしか持たない。型の外から差し替える
+    const exam: Record<string, unknown> = data.examData.exam
+    delete exam.referenceDate
+    exam.examDate = "2026-03-01T00:00:00.000Z"
+
+    const result = transformExamArchiveToLatest(data)
+
+    expect(result.originalVersion).toBe("1.26.0")
+    expect(result.data.examData.exam.referenceDate).toBe(
+      "2026-03-01T00:00:00.000Z"
+    )
+    expect(result.data.examData.exam).not.toHaveProperty("examDate")
+    // キーの付け替えだけで値は失われないので警告は出さない
+    expect(result.warnings).toEqual([])
+  })
+
+  test("日付を持たない 1.26.0 アーカイブは referenceDate が null になる", () => {
+    const data = createCurrentArchiveData()
+    data.manifest.version = "1.26.0"
+    const exam: Record<string, unknown> = data.examData.exam
+    delete exam.referenceDate
+    exam.examDate = null
+
+    const result = transformExamArchiveToLatest(data)
+
+    expect(result.data.examData.exam.referenceDate).toBeNull()
+  })
+
+  test("旧キーを持つアーカイブは 1.27.0 を名乗っていても引き下げて変換される", () => {
+    const data = createCurrentArchiveData()
+    const exam: Record<string, unknown> = data.examData.exam
+    delete exam.referenceDate
+    exam.examDate = "2026-03-01T00:00:00.000Z"
+
+    const detection = detectExamArchiveVersion(data)
+
+    expect(detection.version).toBe("1.26.0")
+    expect(detection.corrections[0]).toContain("Exam.examDate")
   })
 
   test("変換は冪等（2回適用しても同一結果）", () => {

@@ -75,7 +75,7 @@ export async function fetchIndividualReportData(
   // 試験情報
   const examInfo: ExamInfoForReport = {
     examName: exam.examName,
-    examDate: exam.examDate,
+    referenceDate: exam.referenceDate,
     tags: examTags.map((examTag) => examTag.tag.name),
   }
 

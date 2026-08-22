@@ -50,7 +50,7 @@ export const examHandlers = {
     return exams.map((exam) => ({
       id: exam.id,
       examName: exam.examName,
-      examDate: exam.examDate,
+      referenceDate: exam.referenceDate,
       tags: exam.examTags.map((et) => et.tag),
       description: exam.description,
       createdAt: exam.createdAt,

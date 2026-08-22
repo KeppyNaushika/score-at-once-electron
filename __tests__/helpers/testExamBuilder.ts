@@ -145,7 +145,7 @@ export async function createFullTestExam(
     data: {
       id: crypto.randomUUID(),
       examName,
-      examDate: new Date("2025-07-01"),
+      referenceDate: new Date("2025-07-01"),
     },
   })
 
@@ -226,7 +226,7 @@ export async function createFullTestExam(
     students.push(student)
 
     // メンバーシップ。
-    // 在籍判定は受験日（examDate）基準なので、既定の startDate（作成時刻）のままだと
+    // 在籍判定は受験日（referenceDate）基準なので、既定の startDate（作成時刻）のままだと
     // 試験日時点では誰も在籍していないことになる。試験日より前から在籍させる。
     const membership = await prisma.studentClassroomMembership.create({
       data: {

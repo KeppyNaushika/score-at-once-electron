@@ -18,7 +18,6 @@ import type {
   ArchiveCwClass,
   ArchiveCwMembership,
   ArchiveCwStudent,
-  CollectedCourseworkData,
 } from "../../../../src/types/courseworkArchive.types"
 import type {
   ArchiveGradeClassroomRow,
@@ -29,7 +28,6 @@ import type {
   ArchiveGradeCropRegionRef,
   ArchiveGradeDataSourceEstimationSourceRow,
   ArchiveGradeDataSourceRow,
-  ArchiveGradeExamRef,
   ArchiveGradeFrozenScoreRow,
   ArchiveGradeItemExclusionRow,
   ArchiveGradeItemRow,
@@ -41,6 +39,7 @@ import type {
   GradeSections,
 } from "../../../../src/types/gradeArchive.types"
 import type { LegacyCollectedCourseworkData } from "../coursework-transformers/legacyShape"
+import type { AnyCollectedCourseworkData } from "../coursework-transformers/types"
 
 // =============================================================================
 // v1.14.0 の形状定義（出力設定を列へ割る前。1.15.0 との差分だけを宣言する）
@@ -51,6 +50,16 @@ import type { LegacyCollectedCourseworkData } from "../coursework-transformers/l
  *
  * 設定をまるごと JSON 文字列で持っていた。1.15.0 で列へ割った。
  */
+/**
+ * 1.13.0〜1.15.0 の試験参照。日付のキーが examDate だった
+ * （1.16.0 で DB の列名に合わせて referenceDate へ改名）。
+ */
+export interface ArchiveGradeExamRefV1_15_0 {
+  id: string
+  examName: string
+  examDate: string | null
+}
+
 export interface ArchiveGradeExportSettingsRowV1_14_0 {
   id: string
   gradeId: string
@@ -59,10 +68,10 @@ export interface ArchiveGradeExportSettingsRowV1_14_0 {
   updatedAt: string
 }
 
-/** v1.14.0 の成績本体セクション群 */
+/** v1.14.0 の成績本体セクション群（成績のタグはまだ無い） */
 export type GradeSectionsV1_14_0 = Omit<
   GradeSections,
-  "gradeIndividualReportSettings"
+  "gradeIndividualReportSettings" | "gradeTags"
 > & {
   gradeExportSettings: ArchiveGradeExportSettingsRowV1_14_0[]
 }
@@ -120,7 +129,7 @@ export interface LegacyGradeArchiveData {
   /** v1.4.0: 参照中の試験外成績資料の名前ベース埋め込み */
   courseworks?: LegacyArchiveCoursework[]
   /** v1.12.0: 内包資料を coursework-archive の平坦なセクションで持つ */
-  courseworkArchive?: CollectedCourseworkData
+  courseworkArchive?: AnyCollectedCourseworkData
   /** v1.5.0〜1.11.0 が内包していた入れ子・射影形式の資料データ */
   legacyCourseworkArchive?: LegacyCollectedCourseworkData
   boundariesData: LegacyArchiveBoundariesData
@@ -347,7 +356,7 @@ interface FlattenedLegacyGrade {
   studentsData: ArchiveCwStudent[]
   classesData: ArchiveCwClass[]
   membershipsData: ArchiveCwMembership[]
-  examRefs: ArchiveGradeExamRef[]
+  examRefs: ArchiveGradeExamRefV1_15_0[]
   subtotalRefs: ArchiveGradeSubtotalRef[]
   cropRegionRefs: ArchiveGradeCropRegionRef[]
   warnings: string[]
@@ -393,7 +402,7 @@ export function flattenLegacyGrade(
   // 旧形式は参照先の試験・小計・採点領域を名前でしか持たないことがある
   // （v1.10.0 未満）。行は uuid しか持てないので、名前から決定論的な id を組み立て、
   // 同定情報は refs セクションへ添える（取り込み側が名前で当て直す）。
-  const examRefs: ArchiveGradeExamRef[] = []
+  const examRefs: ArchiveGradeExamRefV1_15_0[] = []
   const subtotalRefs: ArchiveGradeSubtotalRef[] = []
   const cropRegionRefs: ArchiveGradeCropRegionRef[] = []
   const seenExamIds = new Set<string>()

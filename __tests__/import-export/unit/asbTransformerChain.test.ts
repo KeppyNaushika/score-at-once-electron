@@ -161,6 +161,25 @@ function createV1_2_0_ArchiveData(): AsbArchiveData {
   return raw as unknown as AsbArchiveData
 }
 
+/** v1.4.0 形状: 解答用紙に使用日も説明も無い */
+function createV1_4_0_ArchiveData(): AsbArchiveData {
+  const raw = {
+    manifest: {
+      version: "1.4.0",
+      appVersion: "test",
+      exportedAt: TIMESTAMP,
+      definitionName: "テスト解答用紙",
+      paperSize: "A4",
+      orientation: "portrait",
+      counts: createCounts(),
+    },
+    definition: createDefinition(),
+    tagsData: [],
+    asbDefinitionTags: [],
+  }
+  return raw as unknown as AsbArchiveData
+}
+
 describe("ASB transformer chain", () => {
   test("detectAsbVersion は範囲内バージョンを認識する", () => {
     expect(detectAsbVersion(createManifest("1.1.0"))).toBe("1.1.0")
@@ -171,8 +190,8 @@ describe("ASB transformer chain", () => {
   test("v1.1.0 → 最新: タグ情報が空配列で補完される（no-op）", () => {
     const result = transformAsbToLatest(createV1_1_0_ArchiveData())
 
-    expect(result.finalVersion).toBe("1.4.0")
-    expect(result.data.manifest.version).toBe("1.4.0")
+    expect(result.finalVersion).toBe("1.5.0")
+    expect(result.data.manifest.version).toBe("1.5.0")
     expect(result.data.manifest.counts.tags).toBe(0)
     expect(result.data.tagsData).toEqual([])
     expect(result.data.asbDefinitionTags).toEqual([])
@@ -191,7 +210,7 @@ describe("ASB transformer chain", () => {
   test("v1.3.0 → 最新: 原稿用紙が id と null 揃いの行になる", () => {
     const result = transformAsbToLatest(createV1_3_0_ArchiveData())
 
-    expect(result.finalVersion).toBe("1.4.0")
+    expect(result.finalVersion).toBe("1.5.0")
     const [withPaper, withoutPaper] =
       result.data.definition.majorQuestions[0].subQuestions
     // 旧形式は「有効なときだけ入れ子が在る」形。値はそのまま移り、
@@ -218,7 +237,7 @@ describe("ASB transformer chain", () => {
   test("v1.2.0: タグ情報がそのまま保持される（往復）", () => {
     const result = transformAsbToLatest(createV1_2_0_ArchiveData())
 
-    expect(result.finalVersion).toBe("1.4.0")
+    expect(result.finalVersion).toBe("1.5.0")
     expect(result.data.tagsData).toEqual([
       { id: "tag-1", name: "数学", order: 0, color: "#ff0000" },
       { id: "tag-2", name: "中間試験", order: 1, color: null },
@@ -228,5 +247,36 @@ describe("ASB transformer chain", () => {
       { tagId: "tag-2" },
     ])
     expect(result.data.manifest.counts.tags).toBe(2)
+  })
+
+  test("v1.4.0 → 1.5.0: 使用日と説明が null で補われる", () => {
+    const result = transformAsbToLatest(createV1_4_0_ArchiveData())
+
+    expect(result.originalVersion).toBe("1.4.0")
+    expect(result.finalVersion).toBe("1.5.0")
+    // 旧版には入力する画面が無かったので、失われた値というものが無い＝警告も出さない
+    expect(result.warnings).toEqual([])
+    expect(result.data.definition.referenceDate).toBeNull()
+    expect(result.data.definition.description).toBeNull()
+  })
+
+  test("既に 1.5.0 の値を持つ解答用紙は書き換えられない（冪等）", () => {
+    const archive = createV1_4_0_ArchiveData()
+    const withValues = {
+      ...archive,
+      manifest: { ...archive.manifest, version: "1.4.0" },
+      definition: {
+        ...archive.definition,
+        referenceDate: "2026-03-01T00:00:00.000Z",
+        description: "1学期期末の用紙",
+      },
+    }
+
+    const result = transformAsbToLatest(withValues)
+
+    expect(result.data.definition.referenceDate).toBe(
+      "2026-03-01T00:00:00.000Z"
+    )
+    expect(result.data.definition.description).toBe("1学期期末の用紙")
   })
 })

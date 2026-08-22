@@ -25,7 +25,7 @@ type RosterClient = typeof prisma | Prisma.TransactionClient
  * 各メソッドは自ドメインの Prisma delegate を閉じ込めて型安全に実装する。
  */
 export interface RosterAdapter {
-  /** 在籍フィルタの基準日（成績=referenceDate / 資料=date） */
+  /** 在籍フィルタの基準日（成績・資料とも referenceDate。DB の名前は4実体で揃えてある） */
   getReferenceDate(targetId: string): Promise<Date | null>
   /** 既存の対象生徒（studentId と customOrder） */
   listExistingStudents(

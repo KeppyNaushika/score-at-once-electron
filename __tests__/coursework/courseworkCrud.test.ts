@@ -91,7 +91,7 @@ describe("Coursework CRUD", () => {
     const created = await createCoursework({
       name: "第2回レポート",
       description: "説明",
-      date: "2026-06-01T00:00:00.000+00:00",
+      referenceDate: "2026-06-01T00:00:00.000+00:00",
     })
     const id = created.id
 

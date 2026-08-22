@@ -23,7 +23,7 @@ type AvailableStudentItem = Prisma.StudentGetPayload<{
  * 追加可能な生徒候補を返す
  *
  * @param excludeStudentIds 候補から除外する生徒ID（既に対象へ追加済みの生徒）
- * @param referenceDate 在籍判定の基準日（exam=examDate / grade=referenceDate、null可）
+ * @param referenceDate 在籍判定の基準日（試験・資料・成績が同名で持つ referenceDate。null可）
  * @param activeOnly true なら「未在籍・在籍中の生徒」のみに絞る（過去在籍のみ除外）
  */
 export async function getAvailableStudentsForTarget(params: {

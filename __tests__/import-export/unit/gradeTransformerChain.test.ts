@@ -20,6 +20,7 @@ import type { LegacyGradeArchiveData } from "../../../electron-src/lib/import/gr
 import type {
   GradeArchiveDataV1_13_0,
   GradeArchiveDataV1_14_0,
+  GradeArchiveDataV1_15_0,
 } from "../../../electron-src/lib/import/grade-transformers/types"
 import type { GradeArchiveManifest } from "../../../src/types/gradeArchive.types"
 import { GRADE_CURRENT_VERSION } from "../../../src/types/gradeArchive.types"
@@ -195,6 +196,7 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
       { from: "1.12.0", to: "1.13.0" },
       { from: "1.13.0", to: "1.14.0" },
       { from: "1.14.0", to: "1.15.0" },
+      { from: "1.15.0", to: "1.16.0" },
     ])
     expect(originalVersion).toBe("1.12.0")
   })
@@ -808,10 +810,20 @@ function buildV1_13_0Archive(): GradeArchiveDataV1_13_0 {
   const {
     gradeItemBoundaries: _currentBoundaries,
     gradeIndividualReportSettings: _currentReportSettings,
+    // 1.16.0 で足したもの（成績のタグ）と、1.16.0 で改名したもの（試験参照の日付）は
+    // 1.13.0 には無いので落とす
+    gradeTags: _currentGradeTags,
+    tagsData: _currentTagsData,
+    examRefs: currentExamRefs,
     ...withoutBoundaries
   } = data
   return {
     ...withoutBoundaries,
+    examRefs: currentExamRefs.map((examRef) => ({
+      id: examRef.id,
+      examName: examRef.examName,
+      examDate: examRef.referenceDate,
+    })),
     manifest: { ...data.manifest, version: "1.13.0" },
     gradeExportSettings: [],
     gradeBoundarySets: [
@@ -856,6 +868,7 @@ describe("transformGradeToLatest: 1.13.0 → 1.14.0（境界セットを畳む�
     expect(appliedTransformations).toEqual([
       { from: "1.13.0", to: "1.14.0" },
       { from: "1.14.0", to: "1.15.0" },
+      { from: "1.15.0", to: "1.16.0" },
     ])
     // 容器のセクションは残らない
     expect(data).not.toHaveProperty("gradeBoundarySets")
@@ -911,16 +924,98 @@ describe("transformGradeToLatest: 1.13.0 → 1.14.0（境界セットを畳む�
   })
 })
 
+describe("transformGradeToLatest: 1.15.0 → 1.16.0（成績のタグと日付のキー）", () => {
+  it("タグのセクションが空で足され、試験参照の日付キーが referenceDate へ移る", () => {
+    const archive = buildV1_15_0Archive()
+
+    const { data, originalVersion, appliedTransformations, warnings } =
+      transformGradeToLatest(archive)
+
+    expect(originalVersion).toBe("1.15.0")
+    expect(appliedTransformations).toEqual([{ from: "1.15.0", to: "1.16.0" }])
+    // 旧版には成績にタグを付ける手段が無かったので、空が正しい既定＝警告も出さない
+    expect(warnings).toEqual([])
+    expect(data.gradeTags).toEqual([])
+    expect(data.tagsData).toEqual([])
+    expect(data.examRefs).toEqual([
+      {
+        id: "exam-1",
+        examName: "1学期中間",
+        referenceDate: "2026-05-01T00:00:00.000Z",
+      },
+    ])
+    expect(data.examRefs[0]).not.toHaveProperty("examDate")
+  })
+
+  it("内包する資料の実施日も referenceDate へ移る", () => {
+    const { data } = transformGradeToLatest(buildV1_15_0Archive())
+
+    expect(data.courseworkArchive.courseworks[0].referenceDate).toBe(
+      "2026-06-01T00:00:00.000Z"
+    )
+    expect(data.courseworkArchive.courseworks[0]).not.toHaveProperty("date")
+  })
+})
+
+/**
+ * v1.15.0 が実際に書き出していた形。成績にタグが無く、試験参照の日付キーは examDate、
+ * 内包資料は coursework 1.1.0（実施日のキーが date）。
+ */
+function buildV1_15_0Archive(): GradeArchiveDataV1_15_0 {
+  const { data } = transformGradeToLatest(buildV1_9_0Archive())
+  const {
+    gradeTags: _currentGradeTags,
+    tagsData: _currentTagsData,
+    examRefs: _currentExamRefs,
+    courseworkArchive,
+    ...withoutNewSections
+  } = data
+  return {
+    ...withoutNewSections,
+    manifest: { ...data.manifest, version: "1.15.0" },
+    examRefs: [
+      {
+        id: "exam-1",
+        examName: "1学期中間",
+        examDate: "2026-05-01T00:00:00.000Z",
+      },
+    ],
+    courseworkArchive: {
+      ...courseworkArchive,
+      courseworks: [
+        {
+          id: "cw-1",
+          name: "第1回レポート",
+          description: null,
+          date: "2026-06-01T00:00:00.000Z",
+          createdAt: "2026-06-01T00:00:00.000Z",
+          updatedAt: "2026-06-01T00:00:00.000Z",
+        },
+      ],
+    },
+  }
+}
+
 /**
  * v1.14.0 が実際に書き出していた形。出力設定は列ではなく、通知書の設定をまるごと
  * 抱えた JSON 1本だった。
  */
 function buildV1_14_0Archive(settingsJson: string): GradeArchiveDataV1_14_0 {
   const { data } = transformGradeToLatest(buildV1_9_0Archive())
-  const { gradeIndividualReportSettings: _current, ...withoutReportSettings } =
-    data
+  const {
+    gradeIndividualReportSettings: _current,
+    gradeTags: _currentGradeTags,
+    tagsData: _currentTagsData,
+    examRefs: currentExamRefs,
+    ...withoutReportSettings
+  } = data
   return {
     ...withoutReportSettings,
+    examRefs: currentExamRefs.map((examRef) => ({
+      id: examRef.id,
+      examName: examRef.examName,
+      examDate: examRef.referenceDate,
+    })),
     manifest: { ...data.manifest, version: "1.14.0" },
     gradeExportSettings: [
       {
@@ -960,7 +1055,10 @@ describe("transformGradeToLatest: 1.14.0 → 1.15.0（出力設定を列へ割�
       transformGradeToLatest(archive)
 
     expect(originalVersion).toBe("1.14.0")
-    expect(appliedTransformations).toEqual([{ from: "1.14.0", to: "1.15.0" }])
+    expect(appliedTransformations).toEqual([
+      { from: "1.14.0", to: "1.15.0" },
+      { from: "1.15.0", to: "1.16.0" },
+    ])
     expect(data).not.toHaveProperty("gradeExportSettings")
     const [reportSettings] = data.gradeIndividualReportSettings
     expect(reportSettings.title).toBe("通知票")

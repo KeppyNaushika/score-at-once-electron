@@ -82,7 +82,7 @@ export async function collectCourseworkArchiveData(
       id: coursework.id,
       name: coursework.name,
       description: coursework.description,
-      date: coursework.date?.toISOString() ?? null,
+      referenceDate: coursework.referenceDate?.toISOString() ?? null,
       createdAt: coursework.createdAt.toISOString(),
       updatedAt: coursework.updatedAt.toISOString(),
     })

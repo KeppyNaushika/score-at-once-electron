@@ -16,6 +16,7 @@ import {
   isLegacyCollectedCourseworkData,
   type LegacyCollectedCourseworkData,
 } from "../coursework-transformers/legacyShape"
+import type { AnyCollectedCourseworkData } from "../coursework-transformers/types"
 import type {
   LegacyArchiveBoundariesData,
   LegacyArchiveCoursework,
@@ -94,7 +95,8 @@ export async function extractGradeArchive(
   //   v1.5.0〜1.11.0: 同じくオブジェクトだが入れ子・射影形式。変換器が展開する。
   //   v1.4.0 : courseworks.json は名前ベースの配列。
   let courseworks: LegacyArchiveCoursework[] | undefined
-  let courseworkArchive: CollectedCourseworkData | undefined
+  // 内包資料の版は資料側の変換器が決めるので、ここは読めた形の総和で受ける
+  let courseworkArchive: AnyCollectedCourseworkData | undefined
   let legacyCourseworkArchive: LegacyCollectedCourseworkData | undefined
   if (files["courseworks.json"]) {
     const parsed = normalizeLegacyClassroomKeys(
@@ -163,6 +165,15 @@ export async function extractGradeArchive(
               "gradeIndividualReportSettings"
             ),
           }),
+      // 成績のタグは 1.16.0 で足したセクション。無いものを空配列で埋めると
+      // 1.15.0 と 1.16.0 が見分けられなくなるので、読めたときだけ載せる
+      // （境界・出力設定と同じ扱い）
+      ...(Array.isArray(sections.gradeTags)
+        ? {
+            gradeTags: readArray(sections, "gradeTags"),
+            tagsData: readArray(sections, "tagsData"),
+          }
+        : {}),
       studentsData: readArray(sections, "studentsData"),
       classesData: readArray(sections, "classesData"),
       membershipsData: readArray(sections, "membershipsData"),

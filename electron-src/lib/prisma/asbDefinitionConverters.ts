@@ -559,6 +559,8 @@ export function dbToDefinition(row: DbDefinitionFull): AnswerSheetDefinition {
   return {
     id: row.id,
     name: row.name,
+    description: row.description,
+    referenceDate: row.referenceDate?.toISOString() ?? null,
     settings,
     majorQuestions,
     labelPresets: {

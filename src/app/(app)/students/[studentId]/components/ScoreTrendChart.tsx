@@ -238,7 +238,7 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
     for (const series of seriesList) {
       const scored = results.filter(
         (examResult) =>
-          examResult.examDate &&
+          examResult.referenceDate &&
           (examResult.status === "complete" ||
             examResult.status === "partial") &&
           (series.tags.size === 0 ||
@@ -246,7 +246,7 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
       )
 
       for (const examResult of scored) {
-        const key = new Date(examResult.examDate!).getTime()
+        const key = new Date(examResult.referenceDate!).getTime()
         let score: number
         let maxScore: number
 
@@ -266,7 +266,7 @@ export function ScoreTrendChart({ results }: ScoreTrendChartProps) {
 
         if (!dateMap.has(key)) {
           dateMap.set(key, {
-            date: formatShortDate(examResult.examDate!),
+            date: formatShortDate(examResult.referenceDate!),
             sortKey: key,
             examName: examResult.examName,
           })
