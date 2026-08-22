@@ -1,13 +1,27 @@
 "use client"
 
-import { useLocalStorageText } from "@/hooks/useLocalStorageText"
+import { useMutation, useQuery } from "@tanstack/react-query"
 
-export type SidebarBehavior = "collapse" | "expand" | "none"
+import type { SIDEBAR_BEHAVIORS } from "@/lib/userPreferences"
+import { parsePreference } from "@/lib/userPreferences"
+import {
+  setUserPreferenceMutation,
+  userPreferenceQuery,
+} from "@/queries/settings"
+
+export type SidebarBehavior = (typeof SIDEBAR_BEHAVIORS)[number]
+
+/** 区分ごとのサイドバー動作を持つ設定キー（`UserPreference` の1行） */
+export type SidebarBehaviorPreferenceKey =
+  | "sidebarBehaviorExams"
+  | "sidebarBehaviorAnswerSheetBuilder"
+  | "sidebarBehaviorPdfTools"
+  | "sidebarBehaviorGrades"
 
 export interface SidebarSectionConfig {
   key: string
   label: string
-  storageKey: string
+  preferenceKey: SidebarBehaviorPreferenceKey
   pathMatch: (pathname: string) => boolean
 }
 
@@ -15,44 +29,28 @@ export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
   {
     key: "exams",
     label: "試験一覧",
-    storageKey: "sidebarBehavior_exams",
+    preferenceKey: "sidebarBehaviorExams",
     pathMatch: (path) => path.startsWith("/exams"),
   },
   {
     key: "answerSheetBuilder",
     label: "解答用紙作成",
-    storageKey: "sidebarBehavior_answerSheetBuilder",
+    preferenceKey: "sidebarBehaviorAnswerSheetBuilder",
     pathMatch: (path) => path.startsWith("/answer-sheet-builder"),
   },
   {
     key: "pdfTools",
     label: "PDF加工",
-    storageKey: "sidebarBehavior_pdfTools",
+    preferenceKey: "sidebarBehaviorPdfTools",
     pathMatch: (path) => path.startsWith("/pdf-tools"),
   },
   {
     key: "grades",
     label: "成績算出",
-    storageKey: "sidebarBehavior_grades",
+    preferenceKey: "sidebarBehaviorGrades",
     pathMatch: (path) => path.startsWith("/grades"),
   },
 ]
-
-/** 旧キーからの移行用（セクション別の設定が無いときだけ参照する） */
-const LEGACY_SIDEBAR_BEHAVIOR_KEY = "sidebarBehaviorOnWorkPage"
-
-function parseSidebarBehavior(
-  storedText: string | null
-): SidebarBehavior | null {
-  if (
-    storedText === "collapse" ||
-    storedText === "expand" ||
-    storedText === "none"
-  ) {
-    return storedText
-  }
-  return null
-}
 
 export function findSidebarSection(
   pathname: string
@@ -63,24 +61,31 @@ export function findSidebarSection(
 /**
  * 区分ごとのサイドバー動作を読み書きする唯一の口。
  *
- * サイドバー本体（AppShell）と設定画面が同じ鍵を別々に読んでいたのをここへ寄せた。
- * 設定画面での書き込みは購読を通じてサイドバー側へもそのまま届く。
+ * **保存先は利用者の設定（`UserPreference`）。** 同じ画面制御タブの中で画面消灯だけが
+ * DB、サイドバーだけが `localStorage` という割れ方をしていたのを寄せた（段階55）。
+ * 端末ではなく利用者に付く設定なので、他の端末で入り直しても同じように働く。
+ *
+ * 設定画面での書き込みは、書いたあとの取り直しを通じてサイドバー本体へも届く。
+ * **取得は非同期なので、読めるまでは「変更しない」を返す**（事前描画に保存が無いのは
+ * `localStorage` の頃と同じ性質で、押し出し側はそれを見込んで組んである）。
  */
-export function useSidebarBehavior(section: SidebarSectionConfig | null): {
+export function useSidebarBehavior(
+  userId: string,
+  section: SidebarSectionConfig
+): {
   behavior: SidebarBehavior
   setBehavior: (behavior: SidebarBehavior) => void
 } {
-  const { storedText, setStoredText } = useLocalStorageText(
-    section?.storageKey ?? null
+  const { data: storedText } = useQuery(
+    userPreferenceQuery(userId, section.preferenceKey)
   )
-  const { storedText: legacyStoredText } = useLocalStorageText(
-    LEGACY_SIDEBAR_BEHAVIOR_KEY
-  )
+  const setPreference = useMutation(setUserPreferenceMutation(userId))
 
-  const behavior =
-    parseSidebarBehavior(storedText) ??
-    parseSidebarBehavior(legacyStoredText) ??
-    "none"
+  const behavior = parsePreference(section.preferenceKey, storedText ?? null)
 
-  return { behavior, setBehavior: setStoredText }
+  return {
+    behavior,
+    setBehavior: (nextBehavior) =>
+      setPreference.mutate({ key: section.preferenceKey, value: nextBehavior }),
+  }
 }

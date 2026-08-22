@@ -82,7 +82,7 @@ function ScoringMainViewContent() {
     closeModeSelectionModal,
     mouseBrush,
     setMouseBrush,
-  } = useScoringMode()
+  } = useScoringMode(currentUser.id)
   const effectiveMode = scoringOperationMode ?? "keyboard"
 
   /** モーダル用のキーバインディング */

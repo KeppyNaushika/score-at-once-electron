@@ -8,34 +8,45 @@ import Navigation from "@/components/layout/Navigation"
 import {
   findSidebarSection,
   type SidebarBehavior,
+  type SidebarSectionConfig,
   useSidebarBehavior,
 } from "@/components/layout/sidebarBehavior"
+import { useAuth } from "@/contexts/AuthContext"
 import { cn } from "@/lib/utils"
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
-  const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
-  const pathname = usePathname()
-  const section = useMemo(() => findSidebarSection(pathname), [pathname])
-  const { behavior } = useSidebarBehavior(section)
+/**
+ * 設定をサイドバーの開閉へ押し出す。描くものは無い。
+ *
+ * **この枠（AppShell）は関門の外にある**ので、利用者が決まっていない窓（ログイン画面・
+ * 認証の復元中）がある。設定は利用者に付いているので、決まってから読む——それを
+ * 「利用者と区分が揃ったときだけ載せる」という形で表した。詰め物の `userId ?? ""` を
+ * 置かずに済み、区分の外へ出れば載らない（＝戻ってきたら押し出し直す）も同じ形で出る。
+ */
+function SidebarBehaviorApplier({
+  userId,
+  section,
+  setIsSidebarMinimized,
+}: {
+  userId: string
+  section: SidebarSectionConfig
+  setIsSidebarMinimized: (isMinimized: boolean) => void
+}) {
+  const { behavior } = useSidebarBehavior(userId, section)
   const appliedRef = useRef<{
-    sectionKey: string | null
+    sectionKey: string
     behavior: SidebarBehavior
   } | null>(null)
 
-  const toggleSidebar = () => {
-    setIsSidebarMinimized((prev) => !prev)
-  }
-
-  // 設定をサイドバーの開閉へ押し出す。区分が変わったときと、設定が変わったときだけ効かせる
-  // （事前描画では設定を読めないので、初回は「読めた」時点がここに当たる）。
-  // 同じ区分の中の遷移では動かさないので、利用者が手で開き直した状態は保たれる。
+  // 区分が変わったときと、設定が変わったときだけ効かせる（設定の取得は非同期なので、
+  // 初回は「読めた」時点がここに当たる）。同じ区分の中の遷移では動かさないので、
+  // 利用者が手で開き直した状態は保たれる。
   useEffect(() => {
-    const sectionKey = section?.key ?? null
+    const sectionKey = section.key
     const applied = appliedRef.current
     if (applied?.sectionKey === sectionKey && applied.behavior === behavior) {
       return
     }
-    if (sectionKey === null || behavior === "none") {
+    if (behavior === "none") {
       appliedRef.current = { sectionKey, behavior }
       return
     }
@@ -47,10 +58,30 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     })
 
     return () => cancelAnimationFrame(frame)
-  }, [behavior, section])
+  }, [behavior, section, setIsSidebarMinimized])
+
+  return null
+}
+
+export default function AppShell({ children }: { children: React.ReactNode }) {
+  const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
+  const pathname = usePathname()
+  const section = useMemo(() => findSidebarSection(pathname), [pathname])
+  const { user } = useAuth()
+
+  const toggleSidebar = () => {
+    setIsSidebarMinimized((prev) => !prev)
+  }
 
   return (
     <div className="flex h-screen">
+      {user !== null && section !== null && (
+        <SidebarBehaviorApplier
+          userId={user.id}
+          section={section}
+          setIsSidebarMinimized={setIsSidebarMinimized}
+        />
+      )}
       <Navigation
         isSidebarMinimized={isSidebarMinimized}
         toggleSidebar={toggleSidebar}

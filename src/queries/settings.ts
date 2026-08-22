@@ -104,7 +104,7 @@ export const examExportSettingsQuery = (examId: string) =>
  * `parsePreference` と段数が食い違わない。呼び出し側が個別に `JSON.stringify`
  * していた頃は、同じキーへ2つの符号化が書かれて保存済みの値が読めなくなった。
  */
-type SetUserPreferenceInput = {
+export type SetUserPreferenceInput = {
   [TKey in PreferenceKey]: { key: TKey; value: PreferenceValueType[TKey] }
 }[PreferenceKey]
 

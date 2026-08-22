@@ -9,6 +9,7 @@ import {
 } from "@/components/layout/sidebarBehavior"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 
 const BEHAVIOR_OPTIONS: { behavior: SidebarBehavior; label: string }[] = [
   { behavior: "collapse", label: "縮小する" },
@@ -20,9 +21,13 @@ interface SidebarBehaviorRowProps {
   section: SidebarSectionConfig
 }
 
-/** 区分1つぶんのサイドバー動作。保存先はサイドバー本体と同じ購読（useSidebarBehavior）。 */
+/** 区分1つぶんのサイドバー動作。保存先はサイドバー本体と同じ設定（useSidebarBehavior）。 */
 export function SidebarBehaviorRow({ section }: SidebarBehaviorRowProps) {
-  const { behavior: currentBehavior, setBehavior } = useSidebarBehavior(section)
+  const userId = useCurrentUser().id
+  const { behavior: currentBehavior, setBehavior } = useSidebarBehavior(
+    userId,
+    section
+  )
 
   const handleBehaviorChange = (
     nextBehavior: SidebarBehavior,

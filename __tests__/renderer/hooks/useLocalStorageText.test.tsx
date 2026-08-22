@@ -7,19 +7,18 @@
  * 1. **事前描画では保存を読まない。** Next.js のサーバ側に localStorage は無いので、
  *    初期値として読むとハイドレーションでずれる。サーバのスナップショットは常に null で、
  *    実際の値はマウント後に入る。
- * 2. **同じ鍵を見ている画面どうしが揃う。** 設定画面の書き込みが、サイドバー本体が持つ
- *    購読へその場で届く（`storage` イベントは同じ document では発火しないので、
- *    自前の通知でここを担う）。
+ * 2. **同じ鍵を見ている画面どうしが揃う。** 片方の書き込みが、もう片方の持つ購読へ
+ *    その場で届く（`storage` イベントは同じ document では発火しないので、自前の通知で
+ *    ここを担う）。
  * 3. **並び順の保存も同じ口を通る。** マウント前は既定の並び、後で保存された並びへ。
+ *
+ * ここに残るのは**画面のその場の状態**だけである。利用者に付く設定（サイドバーの動作・
+ * 採点モード）は段階55 で `UserPreference` へ移した（`localPreferenceHandover.test.tsx`）。
  */
 import { act, renderHook } from "@testing-library/react"
 import { renderToString } from "react-dom/server"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import {
-  SIDEBAR_SECTIONS,
-  useSidebarBehavior,
-} from "@/components/layout/sidebarBehavior"
 import { useLocalStorageText } from "@/hooks/useLocalStorageText"
 import { useTableSort } from "@/hooks/useTableSort"
 
@@ -29,10 +28,10 @@ beforeEach(() => {
 
 describe("useLocalStorageText", () => {
   it("事前描画では保存を読まない", () => {
-    localStorage.setItem("sidebarBehavior_exams", "collapse")
+    localStorage.setItem("probe-key", "保存された値")
 
     function StoredTextProbe() {
-      const { storedText } = useLocalStorageText("sidebarBehavior_exams")
+      const { storedText } = useLocalStorageText("probe-key")
       return <span>{storedText ?? "未読"}</span>
     }
 
@@ -40,79 +39,34 @@ describe("useLocalStorageText", () => {
   })
 
   it("マウント後は保存された値を返す", () => {
-    localStorage.setItem("sidebarBehavior_exams", "collapse")
+    localStorage.setItem("probe-key", "保存された値")
 
-    const { result } = renderHook(() =>
-      useLocalStorageText("sidebarBehavior_exams")
-    )
+    const { result } = renderHook(() => useLocalStorageText("probe-key"))
 
-    expect(result.current.storedText).toBe("collapse")
+    expect(result.current.storedText).toBe("保存された値")
   })
 
   it("同じ鍵を見ている別の購読へ書き込みが届く", () => {
-    const writer = renderHook(() =>
-      useLocalStorageText("sidebarBehavior_exams")
-    )
-    const reader = renderHook(() =>
-      useLocalStorageText("sidebarBehavior_exams")
-    )
+    const writer = renderHook(() => useLocalStorageText("probe-key"))
+    const reader = renderHook(() => useLocalStorageText("probe-key"))
 
     act(() => {
-      writer.result.current.setStoredText("expand")
+      writer.result.current.setStoredText("書いた値")
     })
 
-    expect(reader.result.current.storedText).toBe("expand")
-    expect(localStorage.getItem("sidebarBehavior_exams")).toBe("expand")
+    expect(reader.result.current.storedText).toBe("書いた値")
+    expect(localStorage.getItem("probe-key")).toBe("書いた値")
   })
 
   it("鍵が無いときは読まず書かない", () => {
     const { result } = renderHook(() => useLocalStorageText(null))
 
     act(() => {
-      result.current.setStoredText("collapse")
+      result.current.setStoredText("書いた値")
     })
 
     expect(result.current.storedText).toBeNull()
     expect(localStorage.length).toBe(0)
-  })
-})
-
-describe("useSidebarBehavior", () => {
-  it("設定画面の書き込みがサイドバー側へ届く", () => {
-    const section = SIDEBAR_SECTIONS[0]
-    const settingsRow = renderHook(() => useSidebarBehavior(section))
-    const appShell = renderHook(() => useSidebarBehavior(section))
-
-    act(() => {
-      settingsRow.result.current.setBehavior("collapse")
-    })
-
-    expect(appShell.result.current.behavior).toBe("collapse")
-    expect(localStorage.getItem(section.storageKey)).toBe("collapse")
-  })
-
-  it("区分別の設定が無ければ旧キーを見る", () => {
-    localStorage.setItem("sidebarBehaviorOnWorkPage", "expand")
-
-    const { result } = renderHook(() => useSidebarBehavior(SIDEBAR_SECTIONS[1]))
-
-    expect(result.current.behavior).toBe("expand")
-  })
-
-  it("区分別の設定は旧キーより優先する", () => {
-    const section = SIDEBAR_SECTIONS[2]
-    localStorage.setItem("sidebarBehaviorOnWorkPage", "expand")
-    localStorage.setItem(section.storageKey, "collapse")
-
-    const { result } = renderHook(() => useSidebarBehavior(section))
-
-    expect(result.current.behavior).toBe("collapse")
-  })
-
-  it("どこにも設定が無ければ変更しない", () => {
-    const { result } = renderHook(() => useSidebarBehavior(SIDEBAR_SECTIONS[3]))
-
-    expect(result.current.behavior).toBe("none")
   })
 })
 

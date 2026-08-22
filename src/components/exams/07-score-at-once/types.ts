@@ -8,6 +8,7 @@ import type {
   LAYOUT_DIRECTIONS,
   MASTER_ANSWER_DISPLAY_MODES,
   MASTER_ANSWER_KEY_BEHAVIORS,
+  SCORING_OPERATION_MODES,
 } from "@/lib/userPreferences"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 /** Prisma拡張型をprismaExtensions.tsからインポート */
@@ -84,7 +85,7 @@ export interface ScoringData {
  * - "keyboard": キーボードモード（選択→キーで採点）
  * - "mouse": マウスモード（クリックで直接採点、選択概念なし）
  */
-export type ScoringOperationMode = "keyboard" | "mouse"
+export type ScoringOperationMode = (typeof SCORING_OPERATION_MODES)[number]
 
 /**
  * マウスモード時のブラシ（シングルクリック時の動作）

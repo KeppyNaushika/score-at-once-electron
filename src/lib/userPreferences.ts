@@ -32,9 +32,13 @@ export const MASTER_ANSWER_DISPLAY_MODES = [
   "split-vertical",
 ] as const
 export const MASTER_ANSWER_KEY_BEHAVIORS = ["toggle", "hold-to-show"] as const
+/** 区分の画面を開いたときに、サイドバーをどうするか */
+export const SIDEBAR_BEHAVIORS = ["collapse", "expand", "none"] as const
+/** 採点画面の操作モード（キーボード操作／マウス操作） */
+export const SCORING_OPERATION_MODES = ["keyboard", "mouse"] as const
 
 /** 一覧に含まれるかを、要素の型を保ったまま判定する */
-const isOneOf = <TValue extends string>(
+export const isOneOf = <TValue extends string>(
   candidates: readonly TValue[],
   value: string
 ): value is TValue => candidates.some((candidate) => candidate === value)
@@ -96,6 +100,48 @@ const USER_PREFERENCE_SCHEMA = {
   },
   /** 解答用紙の書き出しで、解答用紙と模範解答を別のファイルにするか */
   asbExportSeparateFiles: { type: "boolean" as const, default: true },
+  /**
+   * 区分の画面を開いたときのサイドバーの動作。**区分ごとに1つの値**なので行では
+   * なくここに置く（区分は `SIDEBAR_SECTIONS` が持つ固定の4つで、増減しない）。
+   *
+   * 端末ではなく利用者に付く設定。画面消灯と同じタブに並びながら、ここだけが
+   * `localStorage` に残っていたのを寄せた（段階55）。
+   */
+  sidebarBehaviorExams: {
+    type: "string" as const,
+    default: "none",
+    validate: (value: string) => isOneOf(SIDEBAR_BEHAVIORS, value),
+  },
+  sidebarBehaviorAnswerSheetBuilder: {
+    type: "string" as const,
+    default: "none",
+    validate: (value: string) => isOneOf(SIDEBAR_BEHAVIORS, value),
+  },
+  sidebarBehaviorPdfTools: {
+    type: "string" as const,
+    default: "none",
+    validate: (value: string) => isOneOf(SIDEBAR_BEHAVIORS, value),
+  },
+  sidebarBehaviorGrades: {
+    type: "string" as const,
+    default: "none",
+    validate: (value: string) => isOneOf(SIDEBAR_BEHAVIORS, value),
+  },
+  /**
+   * 採点画面の操作モードと、それを憶えるかどうか。
+   *
+   * **憶えないときは既定へ戻す**（`scoringOperationModeRemembered` が false）。
+   * 憶えていない間はモードの行を見ないので、次に採点画面へ入れば選択が出る。
+   */
+  scoringOperationMode: {
+    type: "string" as const,
+    default: "keyboard",
+    validate: (value: string) => isOneOf(SCORING_OPERATION_MODES, value),
+  },
+  scoringOperationModeRemembered: {
+    type: "boolean" as const,
+    default: false,
+  },
 } as const
 
 /** 設定キーの型 */
@@ -120,6 +166,12 @@ export type PreferenceValueType = {
   screenBlackoutAutoFullScreen: boolean
   asbRenderMode: RenderMode
   asbExportSeparateFiles: boolean
+  sidebarBehaviorExams: (typeof SIDEBAR_BEHAVIORS)[number]
+  sidebarBehaviorAnswerSheetBuilder: (typeof SIDEBAR_BEHAVIORS)[number]
+  sidebarBehaviorPdfTools: (typeof SIDEBAR_BEHAVIORS)[number]
+  sidebarBehaviorGrades: (typeof SIDEBAR_BEHAVIORS)[number]
+  scoringOperationMode: (typeof SCORING_OPERATION_MODES)[number]
+  scoringOperationModeRemembered: boolean
 }
 
 /**
