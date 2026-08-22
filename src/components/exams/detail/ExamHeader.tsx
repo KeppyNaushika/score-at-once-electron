@@ -4,12 +4,11 @@ import {
   Calendar,
   Edit,
   FolderOutput,
-  Info,
   MoreVertical,
   Tag,
   Trash2,
+  Users,
 } from "lucide-react"
-import Link from "next/link"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -28,6 +27,13 @@ interface ExamHeaderProps {
   onEdit: () => void
   onDelete: () => void
   onExport?: () => void
+  /**
+   * 協調採点のメンバーを招く。
+   *
+   * 段のヘッダーから外した（行き先を持たない操作はタブに並べられない）ので、
+   * 「この試験が何か」を見せるこの画面が引き受ける。参加者も試験の一部である。
+   */
+  onManageMembers: () => void
 }
 
 export default function ExamHeader({
@@ -35,6 +41,7 @@ export default function ExamHeader({
   onEdit,
   onDelete,
   onExport,
+  onManageMembers,
 }: ExamHeaderProps) {
   return (
     <div className="mb-6">
@@ -89,11 +96,9 @@ export default function ExamHeader({
                 <Edit className="mr-2 h-4 w-4" />
                 試験を編集
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href={`/exams/${exam.id}/score`}>
-                  <Info className="mr-2 h-4 w-4" />
-                  試験設定
-                </Link>
+              <DropdownMenuItem onClick={onManageMembers}>
+                <Users className="mr-2 h-4 w-4" />
+                メンバー
               </DropdownMenuItem>
               {onExport && (
                 <DropdownMenuItem onClick={onExport}>

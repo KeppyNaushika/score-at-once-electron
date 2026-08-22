@@ -16,6 +16,7 @@ import PhaseCard from "@/components/exams/detail/PhaseCard"
 import QuickStats from "@/components/exams/detail/QuickStats"
 import EditExamWindow from "@/components/exams/forms/EditExamWindow"
 import DeleteExamModal from "@/components/exams/shared/DeleteExamModal"
+import { MemberInviteDialog } from "@/components/exams/shared/MemberInviteDialog"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useExamDetail } from "@/hooks/useExamDetail"
 import { exportExamArchiveMutation } from "@/queries/archive"
@@ -30,6 +31,7 @@ export default function ExamDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
+  const [showMemberDialog, setShowMemberDialog] = useState(false)
   /** 書き出しの結果。渡している間はモーダルが結果の段を見せる */
   const [exportOutcome, setExportOutcome] = useState<ExportOutcome | null>(null)
   const exportExamArchive = useMutation(exportExamArchiveMutation())
@@ -151,6 +153,7 @@ export default function ExamDetailPage() {
             onEdit={() => setShowEditModal(true)}
             onDelete={() => setShowDeleteModal(true)}
             onExport={() => setShowExportModal(true)}
+            onManageMembers={() => setShowMemberDialog(true)}
           />
 
           <OverallProgress
@@ -190,6 +193,13 @@ export default function ExamDetailPage() {
               onSave={handleExamUpdated}
             />
           )}
+          <MemberInviteDialog
+            isOpen={showMemberDialog}
+            onClose={() => setShowMemberDialog(false)}
+            examId={examId}
+            currentUserId={currentUser.id}
+            examName={exam.examName}
+          />
           {exam && (
             <DeleteExamModal
               exam={exam}
