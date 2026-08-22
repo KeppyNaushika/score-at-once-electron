@@ -1,32 +1,22 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { ArrowLeft } from "lucide-react"
-import { useParams, usePathname } from "next/navigation"
+import { useParams } from "next/navigation"
 import React from "react"
 
-import { GuardedLink } from "@/components/common/GuardedLink"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import type { WorkflowTab } from "@/components/common/WorkflowTabHeader"
+import { WorkflowTabHeader } from "@/components/common/WorkflowTabHeader"
 import { answerSheetDefinitionQuery } from "@/queries/answerSheetBuilder"
 
-const workflowSteps = [
+const workflowTabs: readonly WorkflowTab[] = [
   { id: "detail", label: "概要", path: "" },
-  { id: "edit", label: "1. 作成", path: "/01-edit" },
-  { id: "export", label: "2. 書き出し", path: "/02-export" },
+  { id: "01-edit", label: "1. 作成", path: "/01-edit" },
+  { id: "02-export", label: "2. 書き出し", path: "/02-export" },
 ]
 
 /**
  * 解答用紙作成の個別定義レイアウト。
- * 概要 / 1. 作成 / 2. 書き出し の3ページをパンくずタブで束ねる。
+ * 概要 / 1. 作成 / 2. 書き出し の3ページをタブで束ねる。
  */
 /** パンくずに出すのは定義名だけ（select の同一性を保つため外に置く） */
 const selectDefinitionName = (definition: { name: string }) => definition.name
@@ -38,61 +28,21 @@ export default function AnswerSheetBuilderDefinitionLayout({
 }) {
   const params = useParams<{ definitionId: string }>()
   const definitionId = params.definitionId
-  const pathname = usePathname()
   // パンくずが要るのは定義名だけ。定義そのもののキャッシュを各ページと共有する
   const { data: definitionName = "" } = useQuery({
     ...answerSheetDefinitionQuery(definitionId),
     select: selectDefinitionName,
   })
 
-  const base = `/answer-sheet-builder/${definitionId}`
-
   return (
     <div className="flex h-screen flex-col">
-      <header className="shrink-0 border-b">
-        <div className="flex items-center justify-between gap-4 px-4 pt-2">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <GuardedLink href="/answer-sheet-builder">
-                    解答用紙作成
-                  </GuardedLink>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{definitionName || "解答用紙"}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          <Button variant="ghost" size="sm" asChild>
-            <GuardedLink href="/answer-sheet-builder">
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              一覧へ戻る
-            </GuardedLink>
-          </Button>
-        </div>
-        <nav className="flex gap-1 px-4 pt-1">
-          {workflowSteps.map((step) => {
-            const isCurrent = pathname === base + step.path
-            return (
-              <GuardedLink
-                key={step.id}
-                href={base + step.path}
-                className={cn(
-                  "border-b-2 px-3 py-2 text-sm transition-colors",
-                  isCurrent
-                    ? "border-green-600 font-semibold text-green-600"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {step.label}
-              </GuardedLink>
-            )
-          })}
-        </nav>
-      </header>
+      <WorkflowTabHeader
+        listHref="/answer-sheet-builder"
+        listLabel="解答用紙作成"
+        entityName={definitionName || "解答用紙"}
+        entityHref={`/answer-sheet-builder/${definitionId}`}
+        tabs={workflowTabs}
+      />
       <main className="min-h-0 flex-1 overflow-auto">{children}</main>
     </div>
   )

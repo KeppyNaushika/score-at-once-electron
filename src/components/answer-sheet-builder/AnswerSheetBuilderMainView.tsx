@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { ArrowLeft, Redo2, Undo2 } from "lucide-react"
+import { Redo2, Undo2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useState } from "react"
 
@@ -243,15 +243,6 @@ export function AnswerSheetBuilderMainView({
         <div className="flex w-1/2 max-w-2xl shrink-0 flex-col overflow-hidden border-r">
           {/* 名前入力 */}
           <div className="flex items-center gap-2 border-b p-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 shrink-0"
-              onClick={() => router.push("/answer-sheet-builder")}
-              title="一覧に戻る"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
             <Input
               value={definition.name}
               onChange={(e) =>
