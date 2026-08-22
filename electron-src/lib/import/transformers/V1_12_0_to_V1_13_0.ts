@@ -98,7 +98,6 @@ export function convertScoresDataToV1_13(scoresData: LegacyScoresData): {
       comment: null,
       decidedByUserId: latest.userId,
       decidedAt: latest.updatedAt,
-      sourceQuestionScoreId: null,
       createdAt: latest.createdAt,
       updatedAt: latest.updatedAt,
     })

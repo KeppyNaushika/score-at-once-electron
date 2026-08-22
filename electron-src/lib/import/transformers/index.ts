@@ -61,6 +61,7 @@ import { V1_20_0_to_V1_21_0_Transformer } from "./V1_20_0_to_V1_21_0"
 import { V1_21_0_to_V1_22_0_Transformer } from "./V1_21_0_to_V1_22_0"
 import { V1_22_0_to_V1_23_0_Transformer } from "./V1_22_0_to_V1_23_0"
 import { V1_23_0_to_V1_24_0_Transformer } from "./V1_23_0_to_V1_24_0"
+import { V1_24_0_to_V1_25_0_Transformer } from "./V1_24_0_to_V1_25_0"
 
 const EXAM_TRANSFORMERS: ExamVersionTransformer[] = [
   new V1_0_0_to_V1_1_0_Transformer(),
@@ -87,6 +88,7 @@ const EXAM_TRANSFORMERS: ExamVersionTransformer[] = [
   new V1_21_0_to_V1_22_0_Transformer(),
   new V1_22_0_to_V1_23_0_Transformer(),
   new V1_23_0_to_V1_24_0_Transformer(),
+  new V1_24_0_to_V1_25_0_Transformer(),
 ]
 
 /** マニフェストのバージョン文字列からサポート対象バージョンを判定する */
@@ -258,6 +260,16 @@ const SHAPE_VERSION_FLOORS: {
     applies: (data) =>
       (data.scoresData.drawingAnnotations ?? []).some(
         (drawingAnnotation) => "userId" in drawingAnnotation
+      ),
+  },
+  {
+    // 確定が採用元の提案を指していた頃の sourceQuestionScoreId（V1_24_0_to_V1_25_0 が処理）。
+    // 置き換え先のキーは無く単に消えるだけなので変換は冪等であり、併存条件は要らない
+    maxVersion: "1.24.0",
+    marker: "ScoreDecision.sourceQuestionScoreId",
+    applies: (data) =>
+      (data.scoresData.scoreDecisions ?? []).some(
+        (scoreDecision) => "sourceQuestionScoreId" in scoreDecision
       ),
   },
 ]

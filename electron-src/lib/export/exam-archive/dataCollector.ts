@@ -316,7 +316,6 @@ export async function collectExamData(
           comment: decision.comment,
           decidedByUserId: decision.decidedByUserId,
           decidedAt: decision.decidedAt.toISOString(),
-          sourceQuestionScoreId: decision.sourceQuestionScoreId,
           createdAt: decision.createdAt.toISOString(),
           updatedAt: decision.updatedAt.toISOString(),
         })

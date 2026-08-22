@@ -44,10 +44,14 @@ export interface EffectiveScore {
   status: ScoringStatus
   partialScore: number | null
   /**
-   * 採点マーク・描画注釈の参照に使う QuestionScore 行の id。
-   * 確定（decision）で採用元提案が無い場合は null。
+   * このセルで描画注釈を印刷する QuestionScore 行の id。
+   *
+   * 提案から解決したセルは採用した1行だけ。確定（decision）したセルはそのセルの
+   * 全行になる — 確定は「結果」を決める操作で、誰の採点を採ったかは記録していない
+   * （同じ結果を出した採点者が複数いれば、どれを採ったかは決まらない）ので、
+   * どの注釈を印刷するかも絞れない。当面すべて表示する。
    */
-  questionScoreId: string | null
+  annotationQuestionScoreIds: string[]
   /** 由来: OWNER の確定か、提案（単独/合意）か */
   source: "decision" | "proposal"
   /** 確定より新しい提案が存在する（OWNER の再確認を推奨） */
@@ -91,7 +95,7 @@ const proposalToEffective = (
   cropRegionId: proposal.cropRegionId,
   status: proposal.status,
   partialScore: proposal.partialScore,
-  questionScoreId: proposal.id,
+  annotationQuestionScoreIds: [proposal.id],
   source: "proposal",
   isStale,
 })
@@ -134,7 +138,7 @@ export function resolveEffectiveScores(
       cropRegionId: decision.cropRegionId,
       status: decision.verdict,
       partialScore: decision.score,
-      questionScoreId: decision.sourceQuestionScoreId,
+      annotationQuestionScoreIds: proposals.map((proposal) => proposal.id),
       source: "decision",
       isStale,
     })

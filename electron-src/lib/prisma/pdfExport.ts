@@ -43,7 +43,6 @@ export interface PdfExportPageData {
   // 用紙サイズ（mm→px変換基準。個別表示と一致させるため ExamPage.pageSize を反映）
   pageSize: string
   scoringData: Array<{
-    questionScoreId: string
     status: string
     partialScore: number | null
     cropRegion: {
@@ -157,52 +156,51 @@ export async function getPdfExportData(options: {
         (cropRegion) => cropRegion.examPageId === studentAnswer.examPageId
       )
 
-      // 採点データを構築
-      const scoringData = pageRegions
-        .map((region) => {
-          // examPageは必ず存在する（getCropRegionsByExamIdでincludeしている）
-          if (!region.examPage) {
-            console.warn(`CropRegion ${region.id} has no examPage, skipping`)
-            return null
-          }
-          const score = allScores.find(
-            (resolvedScore) =>
-              resolvedScore.cropRegionId === region.id &&
-              resolvedScore.examStudentId === examStudent.id
-          )
-          return {
-            questionScoreId: score?.questionScoreId || "",
-            status: score?.status || "unscored",
-            partialScore: score?.partialScore ?? null,
-            cropRegion: {
-              id: region.id,
-              x: region.x,
-              y: region.y,
-              width: region.width,
-              height: region.height,
-              label: region.label,
-              maxScore: region.points !== null ? Number(region.points) : null,
-              pageNumber: region.examPage.pageNumber,
-            },
-          }
-        })
-        .filter(
-          // 提案行が無くても確定（decision）で採点済みのセルはマークを描画する
-          (scoringEntry): scoringEntry is NonNullable<typeof scoringEntry> =>
-            scoringEntry !== null &&
-            (scoringEntry.questionScoreId !== "" ||
-              scoringEntry.status !== "unscored")
+      // このページの採点領域と、そこに解決済みの有効スコアがあるものだけを組にする。
+      // 有効スコアが1件も無い領域はこの受験者について描くものが何も無い
+      const scoredRegions = pageRegions.flatMap((region) => {
+        // examPageは必ず存在する（getCropRegionsByExamIdでincludeしている）
+        const { examPage } = region
+        if (!examPage) {
+          console.warn(`CropRegion ${region.id} has no examPage, skipping`)
+          return []
+        }
+        const effectiveScore = allScores.find(
+          (resolvedScore) =>
+            resolvedScore.cropRegionId === region.id &&
+            resolvedScore.examStudentId === examStudent.id
         )
+        if (!effectiveScore) return []
+        return [{ region, examPage, effectiveScore }]
+      })
 
-      // アノテーションを取得（行をそのまま持つ）
+      // 採点データを構築（提案行が無くても確定で採点済みのセルはマークを描画する）
+      const scoringData = scoredRegions.map(
+        ({ region, examPage, effectiveScore }) => ({
+          status: effectiveScore.status,
+          partialScore: effectiveScore.partialScore,
+          cropRegion: {
+            id: region.id,
+            x: region.x,
+            y: region.y,
+            width: region.width,
+            height: region.height,
+            label: region.label,
+            maxScore: region.points !== null ? Number(region.points) : null,
+            pageNumber: examPage.pageNumber,
+          },
+        })
+      )
+
+      // アノテーションを取得（行をそのまま持つ）。どの採点行の注釈を印刷するかは
+      // リゾルバが決める（確定したセルはそのセルの全行 = 当面すべて表示する）
       const annotations: PdfExportPageData["annotations"] = []
-      for (const scoringEntry of scoringData) {
-        if (!scoringEntry.questionScoreId) continue
-        annotations.push(
-          ...(await getDrawingAnnotationsByQuestionScore(
-            scoringEntry.questionScoreId
-          ))
-        )
+      for (const { effectiveScore } of scoredRegions) {
+        for (const questionScoreId of effectiveScore.annotationQuestionScoreIds) {
+          annotations.push(
+            ...(await getDrawingAnnotationsByQuestionScore(questionScoreId))
+          )
+        }
       }
 
       // 画像をbase64データURLに変換（Canvasのtainted問題を回避）

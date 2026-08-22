@@ -26,7 +26,6 @@ export interface ScoreDecisionSnapshot {
   comment: string | null
   decidedByName: string
   decidedAt: string
-  sourceQuestionScoreId: string | null
 }
 
 /** 裁定が必要になった理由 */

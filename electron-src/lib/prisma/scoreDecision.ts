@@ -54,8 +54,8 @@ const verdictLabel = (verdict: string | null | undefined): string => {
 
 /**
  * 確定1件の内容。**確定は「このセルの結果はこれだ」を一度に決める1つの操作**なので、
- * 省略できる項目は無い（`Required`）。コメントを空にする・採用元の紐付けを解くときは
- * `null` を明示する — 省略が「消す」を意味する形にしない（Prisma の流儀は逆で、
+ * 省略できる項目は無い（`Required`）。コメントを空にするときは `null` を明示する
+ * — 省略が「消す」を意味する形にしない（Prisma の流儀は逆で、
  * 2人目がそちらの流儀で書くと消えてしまう）。
  *
  * 土台は Prisma の入力型で、**DB と書き込みが決める列（id / createdAt / updatedAt /
@@ -162,7 +162,6 @@ export const upsertScoreDecision = async (
     comment: decisionData.comment,
     decidedByUserId: decisionData.decidedByUserId,
     decidedAt: new Date(),
-    sourceQuestionScoreId: decisionData.sourceQuestionScoreId,
   }
 
   const decision = await prisma.scoreDecision.upsert({

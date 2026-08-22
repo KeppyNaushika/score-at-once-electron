@@ -299,7 +299,6 @@ export async function applyStudentAnswerPlacements(
               decidedByUserId: scoreDecision.decidedByUserId,
               decidedAt: scoreDecision.decidedAt,
               createdAt: scoreDecision.createdAt,
-              sourceQuestionScoreId: scoreDecision.sourceQuestionScoreId,
             }))
           )
         }

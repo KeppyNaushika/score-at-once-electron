@@ -13,7 +13,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
 import { finalizeQuestionScoreMutation } from "@/queries/scoring"
-import type { ScoreDecisionCell } from "@/types/scoreDecision.types"
+import type {
+  ScoreDecisionCell,
+  ScoreProposal,
+} from "@/types/scoreDecision.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 /** 確定できる判定（未採点は確定の対象にならない） */
@@ -32,6 +35,46 @@ const NEEDS_SCORE: ScoringStatus[] = ["partial", "pending"]
 const formatDateTime = (isoString: string): string =>
   new Date(isoString).toLocaleString("ja-JP")
 
+/**
+ * 同じ結果を出した採点者を1つにまとめたもの。
+ *
+ * 確定は「結果を選ぶ」操作であって「人を選ぶ」操作ではない。2人が同じ「正答」を
+ * 付けていたら、どちらを採用したのかは決められないし、決める意味も無い。
+ * よって選択の単位は判定＋点で、その結果を出した人は横に並ぶだけにする。
+ */
+interface ProposedResult {
+  status: ScoringStatus
+  partialScore: number | null
+  /** status と partialScore から算出した実得点（束の中では全員同じ） */
+  scoreValue: number | null
+  /** この結果を出した採点者（表示のみ。選択の対象にしない） */
+  proposals: ScoreProposal[]
+}
+
+/** 判定と点が同じ提案は1つの結果として扱う（束ねるのは renderer 側の計算） */
+function groupProposalsByResult(proposals: ScoreProposal[]): ProposedResult[] {
+  const resultByKey = new Map<string, ProposedResult>()
+  for (const proposal of proposals) {
+    const key = `${proposal.status}:${proposal.partialScore ?? ""}`
+    const result = resultByKey.get(key)
+    if (result) {
+      result.proposals.push(proposal)
+    } else {
+      resultByKey.set(key, {
+        status: proposal.status,
+        partialScore: proposal.partialScore,
+        scoreValue: proposal.scoreValue,
+        proposals: [proposal],
+      })
+    }
+  }
+  return [...resultByKey.values()]
+}
+
+/** 結果を表す文字列（判定＋点）。行の同一性そのものなので React の key に使う */
+const resultKey = (result: ProposedResult): string =>
+  `${result.status}:${result.partialScore ?? ""}`
+
 interface ScoreDecisionFormProps {
   examId: string
   cell: ScoreDecisionCell
@@ -48,7 +91,6 @@ function toInitialFormValues(cell: ScoreDecisionFormProps["cell"]) {
       verdict: cell.decision.verdict,
       score: cell.decision.score !== null ? String(cell.decision.score) : "",
       comment: cell.decision.comment ?? "",
-      sourceQuestionScoreId: cell.decision.sourceQuestionScoreId,
     }
   }
 
@@ -61,7 +103,6 @@ function toInitialFormValues(cell: ScoreDecisionFormProps["cell"]) {
         ? String(firstProposal.partialScore)
         : "",
     comment: "",
-    sourceQuestionScoreId: firstProposal?.questionScoreId ?? null,
   }
 }
 
@@ -89,13 +130,11 @@ export function ScoreDecisionForm({
   const [verdict, setVerdict] = useState<ScoringStatus>(initial.verdict)
   const [score, setScore] = useState(initial.score)
   const [comment, setComment] = useState(initial.comment)
-  const [sourceQuestionScoreId, setSourceQuestionScoreId] = useState<
-    string | null
-  >(initial.sourceQuestionScoreId)
   const deciding = finalizeQuestionScore.isPending
 
   const needsScore = NEEDS_SCORE.includes(verdict)
   const parsedScore = score === "" ? null : Number(score)
+  const proposedResults = groupProposalsByResult(cell.proposals)
   const scoreIsInvalid =
     needsScore &&
     (parsedScore === null ||
@@ -110,11 +149,10 @@ export function ScoreDecisionForm({
         cropRegionId: cell.cropRegionId,
         decidedByUserId: currentUser.id,
         verdict,
-        // 点を持たない判定と、コメント無し・採用元なしは null を明示する
+        // 点を持たない判定と、コメント無しは null を明示する
         // （省略で消える形にしない）
         score: needsScore ? (parsedScore ?? 0) : null,
         comment: comment === "" ? null : comment,
-        sourceQuestionScoreId,
       })
       toast.success("採点結果を確定しました")
       onDecided()
@@ -157,49 +195,52 @@ export function ScoreDecisionForm({
           </div>
         )}
 
-        {/* 採点者ごとの提案 */}
+        {/* 出そろった結果（同じ結果を出した採点者は1行に束ねる） */}
         <div className="space-y-2">
           <div className="text-sm font-medium text-gray-700">
-            採点者ごとの結果（{cell.proposals.length}件）
+            出そろった結果（{proposedResults.length}通り・採点者
+            {cell.proposals.length}人）
           </div>
-          {cell.proposals.map((proposal) => (
+          {proposedResults.map((result) => (
             <div
-              key={proposal.questionScoreId}
-              className={`flex items-center justify-between rounded-lg border p-3 ${
-                sourceQuestionScoreId === proposal.questionScoreId
-                  ? "border-blue-400 bg-blue-50"
-                  : "border-gray-200"
-              }`}
+              key={resultKey(result)}
+              className="rounded-lg border border-gray-200 p-3"
             >
-              <div className="min-w-0">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">
-                    {SCORING_STATUS_LABELS[proposal.status]}
+                    {SCORING_STATUS_LABELS[result.status]}
                   </Badge>
                   <span className="font-semibold">
-                    {proposal.scoreValue ?? "-"} / {maxScore} 点
+                    {result.scoreValue ?? "-"} / {maxScore} 点
                   </span>
                 </div>
-                <div className="mt-1 truncate text-xs text-gray-500">
-                  {proposal.userName} ・ {formatDateTime(proposal.updatedAt)}
-                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!canDecide}
+                  onClick={() => {
+                    setVerdict(result.status)
+                    setScore(
+                      result.partialScore !== null
+                        ? String(result.partialScore)
+                        : ""
+                    )
+                  }}
+                >
+                  この結果にする
+                </Button>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!canDecide}
-                onClick={() => {
-                  setVerdict(proposal.status)
-                  setScore(
-                    proposal.partialScore !== null
-                      ? String(proposal.partialScore)
-                      : ""
-                  )
-                  setSourceQuestionScoreId(proposal.questionScoreId)
-                }}
-              >
-                採用
-              </Button>
+              <ul className="mt-2 space-y-0.5">
+                {result.proposals.map((proposal) => (
+                  <li
+                    key={proposal.questionScoreId}
+                    className="truncate text-xs text-gray-500"
+                  >
+                    {proposal.userName} ・ {formatDateTime(proposal.updatedAt)}
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
         </div>
@@ -214,11 +255,7 @@ export function ScoreDecisionForm({
                 size="sm"
                 variant={verdict === candidate ? "default" : "outline"}
                 disabled={!canDecide}
-                onClick={() => {
-                  setVerdict(candidate)
-                  // 手動で判定を変えたら採用元の紐付けを解除する
-                  setSourceQuestionScoreId(null)
-                }}
+                onClick={() => setVerdict(candidate)}
               >
                 {SCORING_STATUS_LABELS[candidate]}
               </Button>
@@ -235,10 +272,7 @@ export function ScoreDecisionForm({
                 max={maxScore}
                 value={score}
                 disabled={!canDecide}
-                onChange={(event) => {
-                  setScore(event.target.value)
-                  setSourceQuestionScoreId(null)
-                }}
+                onChange={(event) => setScore(event.target.value)}
               />
             </div>
           )}

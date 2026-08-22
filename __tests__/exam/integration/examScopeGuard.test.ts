@@ -148,7 +148,6 @@ describe("採点対象と受験者の試験スコープ", () => {
         score: null,
         comment: null,
         decidedByUserId: examA.user.id,
-        sourceQuestionScoreId: null,
       })
     ).rejects.toThrow()
 

@@ -85,6 +85,8 @@ export interface ArchiveDataCounts {
  * - 1.24.0: v0.17.x (DrawingAnnotation.userId 廃止 — 注釈の持ち主は親 QuestionScore
  *            （生徒×設問×採点者で1行）から一意に決まる冗長列だった)
  * - 1.21.0: v0.16.x (採点層を ExamStudent 経由へ配線変更 — studentAnswerImages / questionScores / scoreDecisions / compoundAnswerScores / returnSnapshots の studentId を examStudentId へ。ReturnSnapshot.examId は ExamStudent が持つため削除)
+ * - 1.25.0: v0.17.x (ScoreDecision.sourceQuestionScoreId 廃止 — 同じ結果を出した採点者が
+ *            複数いれば「どの提案を採ったか」は決まらない。保存するのは採点結果であって由来ではない)
  */
 export type ExamArchiveVersion =
   | "1.0.0"
@@ -112,9 +114,10 @@ export type ExamArchiveVersion =
   | "1.22.0"
   | "1.23.0"
   | "1.24.0"
+  | "1.25.0"
 
 /** 現在の最新バージョン */
-export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.24.0"
+export const EXAM_CURRENT_VERSION: ExamArchiveVersion = "1.25.0"
 
 /** サポートされている全バージョン（古い順） */
 export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
@@ -143,6 +146,7 @@ export const EXAM_SUPPORTED_VERSIONS: readonly ExamArchiveVersion[] = [
   "1.22.0",
   "1.23.0",
   "1.24.0",
+  "1.25.0",
 ] as const
 
 /**
@@ -912,7 +916,7 @@ export interface ArchiveScoresData {
     comment: string | null
     decidedByUserId: string
     decidedAt: string
-    sourceQuestionScoreId: string | null
+    /** 採用元は持たない（v1.25.0で廃止）。確定は verdict / score / comment / decidedByUserId で完結する */
     createdAt: string
     updatedAt: string
   }>

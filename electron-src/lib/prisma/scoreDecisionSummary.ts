@@ -248,7 +248,6 @@ export const getExamDecisionSummary = async (
             comment: decision.comment,
             decidedByName: decision.decidedBy.name,
             decidedAt: decision.decidedAt.toISOString(),
-            sourceQuestionScoreId: decision.sourceQuestionScoreId,
           }
         : null,
       scoreImpact,

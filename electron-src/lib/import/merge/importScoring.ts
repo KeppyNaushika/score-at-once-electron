@@ -133,9 +133,6 @@ export async function processScoreDecisions(
     const newExamStudentId = idMappings.examStudent[scoreDecision.examStudentId]
     if (!newRegionId || !newExamStudentId) continue
 
-    const newSourceQsId = scoreDecision.sourceQuestionScoreId
-      ? (idMappings.questionScore[scoreDecision.sourceQuestionScoreId] ?? null)
-      : null
     const incomingDecidedAt = new Date(scoreDecision.decidedAt)
 
     const existing = await tx.scoreDecision.findUnique({
@@ -158,7 +155,6 @@ export async function processScoreDecisions(
             comment: scoreDecision.comment,
             decidedByUserId: currentUserId,
             decidedAt: incomingDecidedAt,
-            sourceQuestionScoreId: newSourceQsId,
           },
         })
         counts.updated.scores++
@@ -188,7 +184,6 @@ export async function processScoreDecisions(
         comment: scoreDecision.comment,
         decidedByUserId: currentUserId,
         decidedAt: incomingDecidedAt,
-        sourceQuestionScoreId: newSourceQsId,
       },
     })
     idMappings.scoreDecision[scoreDecision.id] = scoreDecision.id

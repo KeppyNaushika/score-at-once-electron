@@ -53,7 +53,6 @@ function decision(
     comment: null,
     decidedByUserId: "user-1",
     decidedAt: new Date("2026-06-02T10:00:00Z"),
-    sourceQuestionScoreId: null,
     createdAt: new Date("2026-06-02T10:00:00Z"),
     updatedAt: new Date("2026-06-02T10:00:00Z"),
     ...overrides,
@@ -72,7 +71,7 @@ describe("resolveEffectiveScores - 提案のみ", () => {
       cropRegionId: "region-1",
       status: "correct",
       partialScore: null,
-      questionScoreId: scoreRow.id,
+      annotationQuestionScoreIds: [scoreRow.id],
       source: "proposal",
       isStale: false,
     })
@@ -98,7 +97,7 @@ describe("resolveEffectiveScores - 提案のみ", () => {
     const scored = score({ status: "correct" })
     const { resolved, conflicts } = resolveEffectiveScores([initRow, scored])
     expect(resolved).toHaveLength(1)
-    expect(resolved[0].questionScoreId).toBe(scored.id)
+    expect(resolved[0].annotationQuestionScoreIds).toEqual([scored.id])
     expect(conflicts).toEqual([])
   })
 
@@ -156,8 +155,8 @@ describe("resolveEffectiveScores - 提案のみ", () => {
     })
     const result1 = resolveEffectiveScores([scoreA, scoreB])
     const result2 = resolveEffectiveScores([scoreB, scoreA])
-    expect(result1.resolved[0].questionScoreId).toBe("id-zzz")
-    expect(result2.resolved[0].questionScoreId).toBe("id-zzz")
+    expect(result1.resolved[0].annotationQuestionScoreIds).toEqual(["id-zzz"])
+    expect(result2.resolved[0].annotationQuestionScoreIds).toEqual(["id-zzz"])
   })
 
   // 旧値 final / proposed の流入口は無い（DB は起動時 migration が、アーカイブは
@@ -205,13 +204,20 @@ describe("resolveEffectiveScores - 確定（ScoreDecision）", () => {
     const { resolved } = resolveEffectiveScores([], [decisionRow])
     expect(resolved).toHaveLength(1)
     expect(resolved[0].source).toBe("decision")
-    expect(resolved[0].questionScoreId).toBeNull()
+    expect(resolved[0].annotationQuestionScoreIds).toEqual([])
   })
 
-  it("採用元提案がある確定はquestionScoreIdに引き継がれる", () => {
-    const decisionRow = decision({ sourceQuestionScoreId: "qs-123" })
-    const { resolved } = resolveEffectiveScores([], [decisionRow])
-    expect(resolved[0].questionScoreId).toBe("qs-123")
+  it("確定したセルの注釈は、そのセルの全採点行から引く（採用元は記録していない）", () => {
+    // 2人が同じ「正答」を出していたら、どちらを採ったのかは決まらない。
+    // よって印刷する注釈も絞れず、当面すべて表示する
+    const teacherA = score({ id: "qs-a", userId: "user-a", status: "correct" })
+    const teacherB = score({ id: "qs-b", userId: "user-b", status: "correct" })
+    const decisionRow = decision({ verdict: "correct", score: null })
+    const { resolved } = resolveEffectiveScores(
+      [teacherA, teacherB],
+      [decisionRow]
+    )
+    expect(resolved[0].annotationQuestionScoreIds).toEqual(["qs-a", "qs-b"])
   })
 
   it("確定より新しい提案があればisStaleが立つ", () => {

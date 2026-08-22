@@ -157,14 +157,15 @@ const loadExamState = async (examId: string): Promise<ExamState> => {
   const { resolved } = resolveEffectiveScores(scoresResult, decisionsResult)
 
   const effectiveByExamStudent = new Map<string, EffectiveScore[]>()
-  const effectiveQsIds = new Set<string>()
+  const printedQuestionScoreIds = new Set<string>()
   for (const effectiveScore of resolved) {
     const list = effectiveByExamStudent.get(effectiveScore.examStudentId)
     if (list) list.push(effectiveScore)
     else
       effectiveByExamStudent.set(effectiveScore.examStudentId, [effectiveScore])
-    if (effectiveScore.questionScoreId)
-      effectiveQsIds.add(effectiveScore.questionScoreId)
+    for (const questionScoreId of effectiveScore.annotationQuestionScoreIds) {
+      printedQuestionScoreIds.add(questionScoreId)
+    }
   }
 
   // 印刷対象の注釈のみ（有効スコアとして採用された QuestionScore に紐づくもの）を取得
@@ -175,7 +176,7 @@ const loadExamState = async (examId: string): Promise<ExamState> => {
 
   const annotationsByExamStudent = new Map<string, SnapshotAnnotation[]>()
   for (const annotationRow of annotationRows) {
-    if (!effectiveQsIds.has(annotationRow.questionScoreId)) continue // 印刷されない注釈は除外
+    if (!printedQuestionScoreIds.has(annotationRow.questionScoreId)) continue // 印刷されない注釈は除外
     const normalized: SnapshotAnnotation = {
       r: annotationRow.questionScore.cropRegionId,
       t: annotationRow.type,
