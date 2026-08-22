@@ -19,6 +19,9 @@ export const initialState: ImportWizardState = {
     student: { strategy: "by_student_number", decisions: [] },
     classroom: { strategy: "by_name", decisions: [] },
     subtotalGroup: { strategy: "by_name", decisions: [] },
+    // 採点者は利用者名で結び付けるのが既定。id が一致すれば照合で先に片付くので、
+    // ここが効くのは別のパソコンから持ってきたときだけ
+    user: { strategy: "by_username", decisions: [] },
     // 試験IDが一致したときの既定。同じ試験の続きを取り込むのが普通なので「統合する」を
     // 初期選択にし、「上書きする」「別で追加する」は file_overview で選び直す
     exam: "merge",

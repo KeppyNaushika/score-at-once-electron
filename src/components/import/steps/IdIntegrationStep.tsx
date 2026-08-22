@@ -1,6 +1,6 @@
 "use client"
 
-import { Layers, Loader2, School, Settings, Users } from "lucide-react"
+import { Layers, Loader2, School, Settings, UserCog, Users } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,7 @@ import { ClassroomIntegrationPanel } from "./id-integration/ClassroomIntegration
 import { StudentIntegrationPanel } from "./id-integration/StudentIntegrationPanel"
 import { SubtotalGroupIntegrationPanel } from "./id-integration/SubtotalGroupIntegrationPanel"
 import type { CategoryType } from "./id-integration/types"
+import { UserIntegrationPanel } from "./id-integration/UserIntegrationPanel"
 
 interface IdIntegrationStepProps {
   wizard: UseImportWizardReturn
@@ -40,6 +41,14 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
     state.fileOverviewData &&
     state.fileOverviewData.subtotalGroup.byId.length <
       (state.manifest?.counts.subtotalGroups ?? 0)
+  // 採点者は manifest の件数と比べない。users.json には採点していない書き出し本人も
+  // 載るので、件数の差は「判断が要る採点者がいる」ことを意味しない。照合で
+  // 落ちたもの（利用者名一致・一致なし）を直接数える
+  const hasUserDecisions =
+    state.fileOverviewData?.user !== undefined &&
+    (state.fileOverviewData.user.byName?.length ?? 0) +
+      state.fileOverviewData.user.noMatch.length >
+      0
 
   // 小計グループnoMatchに未決定のアイテムがあるか
   const hasUndecidedSubtotalGroupNoMatch = (() => {
@@ -55,7 +64,10 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
 
   // 何も判断が必要ない場合はスキップ可能
   const canSkip =
-    !hasStudentDecisions && !hasClassroomDecisions && !hasSubtotalGroupDecisions
+    !hasStudentDecisions &&
+    !hasClassroomDecisions &&
+    !hasSubtotalGroupDecisions &&
+    !hasUserDecisions
 
   if (canSkip) {
     return (
@@ -68,7 +80,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
         </h3>
         <p className="mb-8 max-w-md text-center text-muted-foreground">
           同じパソコンで作成されたデータのため、
-          すべての生徒・学級・小計グループが自動的に紐づけられました。
+          すべての生徒・学級・小計グループ・採点者が自動的に紐づけられました。
         </p>
         <Button
           onClick={goToNextStep}
@@ -104,7 +116,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
         onValueChange={(v) => setActiveTab(v as CategoryType)}
         className="flex-1"
       >
-        <TabsList className="mb-4 grid w-full grid-cols-3">
+        <TabsList className="mb-4 grid w-full grid-cols-4">
           <TabsTrigger value="student" className="gap-2">
             <Users className="h-4 w-4" />
             生徒
@@ -127,6 +139,15 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
             <Layers className="h-4 w-4" />
             小計グループ
             {hasSubtotalGroupDecisions && (
+              <span className="ml-1 rounded-full bg-amber-500 px-1.5 text-xs text-white">
+                !
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="user" className="gap-2">
+            <UserCog className="h-4 w-4" />
+            採点者
+            {hasUserDecisions && (
               <span className="ml-1 rounded-full bg-amber-500 px-1.5 text-xs text-white">
                 !
               </span>
@@ -168,6 +189,11 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
               })
             }
           />
+        </TabsContent>
+
+        {/* 採点者タブ */}
+        <TabsContent value="user" className="mt-0">
+          <UserIntegrationPanel wizard={wizard} />
         </TabsContent>
       </Tabs>
 

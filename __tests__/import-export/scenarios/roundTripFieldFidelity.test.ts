@@ -272,9 +272,22 @@ describe("roundTripFieldFidelity", () => {
     for (const snapshot of imported) {
       expect(snapshot.scoresJson).toBe('{"v":1,"scores":[],"annotations":[]}')
       expect(snapshot.capturedAt.toISOString()).toBe(capturedAt.toISOString())
-      // 返却したのは取り込んだ人ではない。書き出し元の利用者はこのDBに居ないのでnull
-      expect(snapshot.capturedByUserId).toBeNull()
+      // 返却したのは取り込んだ人ではない
+      expect(snapshot.capturedByUserId).not.toBe(importUser.id)
     }
+    const capturedByExamStudentId = new Map(
+      imported.map((snapshot) => [
+        snapshot.examStudentId,
+        snapshot.capturedByUserId,
+      ])
+    )
+    // 書き出し元の利用者は「採点者」としてこのDBに作られる（採点行が親を失わないため）ので、
+    // 返却の記録者もその人のまま残る
+    expect(capturedByExamStudentId.get(firstExamStudent.id)).toBe(
+      testExam.user.id
+    )
+    // 元から記録者なしだったものは、なしのまま
+    expect(capturedByExamStudentId.get(secondExamStudent.id)).toBeNull()
     const totalScoreByExamStudentId = new Map(
       imported.map((snapshot) => [
         snapshot.examStudentId,
@@ -283,9 +296,14 @@ describe("roundTripFieldFidelity", () => {
     )
     expect(totalScoreByExamStudentId.get(firstExamStudent.id)).toBe(8)
     expect(totalScoreByExamStudentId.get(secondExamStudent.id)).toBeNull()
+    // 記録者は解決できたので「記録者なし」の警告は出ない。代わりに採点者を
+    // 新しく作ったことが伝わる
     expect(warnings.some((warning) => warning.includes("記録者なし"))).toBe(
-      true
+      false
     )
+    expect(
+      warnings.some((warning) => warning.includes("新しく作りました"))
+    ).toBe(true)
   })
 
   it("ReturnSnapshot の記録者は、同じ利用者が取り込み先に居れば引き継ぐ", async () => {

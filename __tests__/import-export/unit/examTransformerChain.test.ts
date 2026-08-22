@@ -1482,3 +1482,131 @@ describe("transformExamArchiveToLatest", () => {
     expect(twice.data).toEqual(once.data)
   })
 })
+
+/**
+ * セクションを丸ごと持たないアーカイブがチェーンを通るか
+ *
+ * **既定値（空配列）を埋めるのはチェーンを通した後**（版の判定がキーの有無を見るため）
+ * なので、変換器には「型の上では必ず在る配列」が undefined のまま届く。
+ * 守り忘れた変換器があると `TypeError` になり、`extractArchive` が
+ * 「アーカイブの展開に失敗しました」へ丸めてしまう。
+ */
+describe("セクションが欠けたアーカイブ", () => {
+  /**
+   * JSON が書き手の都合で落としうるセクション（archiveExtractor が既定値を入れる相手）。
+   *
+   * キーを消すのは `Reflect.deleteProperty`。`ExamArchiveData` は最新版の形しか
+   * 表せず、名前付き interface は `Record<string, unknown>` へ代入できないため
+   * （`as` を使わずにキーを外す手段がこれ）。
+   */
+  const OMITTABLE_SECTIONS: Array<{
+    path: string
+    drop: (data: ExamArchiveData) => void
+  }> = [
+    {
+      path: "scoresData.questionScores",
+      drop: (data) => {
+        Reflect.deleteProperty(data.scoresData, "questionScores")
+      },
+    },
+    {
+      path: "scoresData.drawingAnnotations",
+      drop: (data) => {
+        Reflect.deleteProperty(data.scoresData, "drawingAnnotations")
+      },
+    },
+    {
+      path: "examData.examStudents",
+      drop: (data) => {
+        Reflect.deleteProperty(data.examData, "examStudents")
+      },
+    },
+    {
+      path: "examData.examPages",
+      drop: (data) => {
+        Reflect.deleteProperty(data.examData, "examPages")
+      },
+    },
+    {
+      path: "examData.cropRegions",
+      drop: (data) => {
+        Reflect.deleteProperty(data.examData, "cropRegions")
+      },
+    },
+    {
+      path: "studentsData.students",
+      drop: (data) => {
+        Reflect.deleteProperty(data.studentsData, "students")
+      },
+    },
+    {
+      path: "tagsData.tags",
+      drop: (data) => {
+        if (data.tagsData) Reflect.deleteProperty(data.tagsData, "tags")
+      },
+    },
+  ]
+
+  // 最古の版から通すと全27変換が走るので、どの変換器の取りこぼしも捕まる
+  for (const section of OMITTABLE_SECTIONS) {
+    test(`${section.path} を持たない 1.0.0 アーカイブが最新まで変換できる`, () => {
+      const data = createV1_0_0_ArchiveData()
+      section.drop(data)
+
+      const result = transformExamArchiveToLatest(data)
+
+      expect(result.finalVersion).toBe("1.27.0")
+    })
+
+    test(`${section.path} を持たない現行アーカイブが変換を通る`, () => {
+      const data = createCurrentArchiveData()
+      section.drop(data)
+
+      expect(() => transformExamArchiveToLatest(data)).not.toThrow()
+    })
+  }
+
+  test("1.5.0 で drawingAnnotations セクションごと無くても isFavorite の補完が通る", () => {
+    const data = createCurrentArchiveData()
+    data.manifest.version = "1.5.0"
+    Reflect.deleteProperty(data.scoresData, "drawingAnnotations")
+
+    const result = transformExamArchiveToLatest(data)
+
+    expect(result.originalVersion).toBe("1.5.0")
+    expect(result.data.scoresData.drawingAnnotations).toEqual([])
+  })
+
+  test("1.10.0 で tags セクションごと無くても order/color の補完が通る", () => {
+    const data = createCurrentArchiveData()
+    data.manifest.version = "1.10.0"
+    if (data.tagsData) Reflect.deleteProperty(data.tagsData, "tags")
+
+    const result = transformExamArchiveToLatest(data)
+
+    expect(result.originalVersion).toBe("1.10.0")
+    expect(result.data.tagsData?.tags).toEqual([])
+  })
+
+  test("1.16.0 で examStudents セクションごと無くても status の正規化が通る", () => {
+    const data = createCurrentArchiveData()
+    data.manifest.version = "1.16.0"
+    Reflect.deleteProperty(data.examData, "examStudents")
+
+    const result = transformExamArchiveToLatest(data)
+
+    expect(result.originalVersion).toBe("1.16.0")
+    expect(result.data.examData.examStudents).toEqual([])
+  })
+
+  test("1.25.0 で questionScores セクションごと無くても覚え書きの補完が通る", () => {
+    const data = createCurrentArchiveData()
+    data.manifest.version = "1.25.0"
+    Reflect.deleteProperty(data.scoresData, "questionScores")
+
+    const result = transformExamArchiveToLatest(data)
+
+    expect(result.originalVersion).toBe("1.25.0")
+    expect(result.data.scoresData.questionScores).toEqual([])
+  })
+})

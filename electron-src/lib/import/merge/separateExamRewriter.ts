@@ -36,6 +36,15 @@ interface ExamScopedSections {
 }
 
 /**
+ * uuid（8-4-4-4-12 の16進）1個ぶんの並び。
+ *
+ * `g` 付きの正規表現をモジュール直下に置いているが、`String.prototype.replace` は
+ * 呼ぶたびに `lastIndex` を 0 へ戻すので、使い回しても取りこぼさない。
+ */
+const UUID_PATTERN =
+  /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g
+
+/**
  * 値の中に現れる古い id を、新しい id へ置き換えた同じ形の値を返す。
  *
  * 置換は JSON テキストの上で行う。**参照している列を1つずつ名指ししないため**で、
@@ -43,17 +52,24 @@ interface ExamScopedSections {
  * さらに ReturnSnapshot.scoresJson のように **文字列の中に JSON として畳まれた
  * cropRegionId** も同時に直る（構造をたどる置換では届かない）。
  *
- * id は uuid なので、たまたま同じ文字列が別の意味で入っていることは無い。
+ * **走査は1回。** id ごとに全文を `split/join` すると、走査回数が id の数だけ増える
+ * （200名規模で約25,000件 × 約20MB ＝ 実質固まる）。代わりに **uuid の形をした並びだけを
+ * 拾って表を引く** —— 走査は1回で済み、しかも「たまたま id を部分文字列として含む値」を
+ * 巻き込む余地が消える（拾うのは uuid 1個ぶんの並びに完全に重なる箇所だけ）。
+ *
+ * id が uuid であることはアプリ全体の不変式
+ * （`__tests__/import-export/unit/uuidIdCoverage.test.ts` が schema とソースで固定している）。
  */
 function withReplacedIds<T>(
   value: T,
   newIdByOldId: ReadonlyMap<string, string>
 ): T {
-  let serialized = JSON.stringify(value)
-  for (const [oldId, newId] of newIdByOldId) {
-    serialized = serialized.split(oldId).join(newId)
-  }
-  return JSON.parse(serialized)
+  const serialized = JSON.stringify(value)
+  const replaced = serialized.replace(
+    UUID_PATTERN,
+    (uuid) => newIdByOldId.get(uuid) ?? uuid
+  )
+  return JSON.parse(replaced)
 }
 
 /**

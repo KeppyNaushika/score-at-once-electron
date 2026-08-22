@@ -16,6 +16,7 @@ import {
   createIdIntegrationConfig,
   createMatchedItem,
   createPreMatchingResult,
+  createUserPreMatchingResult,
   generateId,
 } from "../../helpers/testDataFactory"
 import {
@@ -187,7 +188,8 @@ describe("detectScoringConflicts", () => {
       const result = await detectScoringConflicts(
         importData,
         studentIdMapping,
-        cropRegionIdMapping
+        cropRegionIdMapping,
+        { [user.id]: user.id }
       )
 
       expect(result.conflictCount).toBe(0)
@@ -267,7 +269,8 @@ describe("detectScoringConflicts", () => {
       const result = await detectScoringConflicts(
         importData,
         studentIdMapping,
-        cropRegionIdMapping
+        cropRegionIdMapping,
+        { [user.id]: user.id }
       )
 
       expect(result.conflictCount).toBe(1)
@@ -346,7 +349,8 @@ describe("detectScoringConflicts", () => {
       const result = await detectScoringConflicts(
         importData,
         { [studentId]: studentId },
-        { [cropRegionId]: cropRegionId }
+        { [cropRegionId]: cropRegionId },
+        { [user.id]: user.id }
       )
 
       expect(result.conflictCount).toBe(1)
@@ -417,7 +421,8 @@ describe("detectScoringConflicts", () => {
       const result = await detectScoringConflicts(
         importData,
         { [studentId]: studentId },
-        { [cropRegionId]: cropRegionId }
+        { [cropRegionId]: cropRegionId },
+        { [user.id]: user.id }
       )
 
       expect(result.conflictCount).toBe(0)
@@ -442,7 +447,7 @@ describe("detectScoringConflicts", () => {
         ]),
       })
 
-      const result = await detectScoringConflicts(importData, {}, {})
+      const result = await detectScoringConflicts(importData, {}, {}, {})
 
       expect(result.conflictCount).toBe(0)
       expect(result.newCount).toBe(1)
@@ -475,7 +480,8 @@ describe("detectScoringConflicts", () => {
       const result = await detectScoringConflicts(
         importData,
         {}, // マッピングなし
-        { [cropRegionId]: cropRegionId }
+        { [cropRegionId]: cropRegionId },
+        { [user.id]: user.id }
       )
 
       expect(result.conflictCount).toBe(0)
@@ -562,18 +568,21 @@ describe("detectScoringConflicts", () => {
             examStudentId: importExamStudent1,
             status: "correct",
             partialScore: "10",
+            userId: user.id,
           },
           {
             cropRegionId: cropRegion2,
             examStudentId: importExamStudent1,
             status: "correct",
             partialScore: "10",
+            userId: user.id,
           },
           {
             cropRegionId: cropRegion3,
             examStudentId: importExamStudent2,
             status: "correct",
             partialScore: "10",
+            userId: user.id,
           },
         ]),
       })
@@ -588,7 +597,8 @@ describe("detectScoringConflicts", () => {
       const result = await detectScoringConflicts(
         importData,
         studentMapping,
-        cropRegionMapping
+        cropRegionMapping,
+        { [user.id]: user.id }
       )
 
       expect(result.unchangedCount).toBe(1)
@@ -739,6 +749,7 @@ describe("detectScoringConflictsWithUserDecisions", () => {
       })
 
       const preMatchResult = createFileOverviewData({
+        user: createUserPreMatchingResult([user.id]),
         student: createPreMatchingResult({
           byId: [
             createMatchedItem({ importId: studentId, existingId: studentId }),
@@ -863,6 +874,7 @@ describe("detectScoringConflictsWithUserDecisions", () => {
       })
 
       const preMatchResult = createFileOverviewData({
+        user: createUserPreMatchingResult([user.id]),
         student: createPreMatchingResult({
           byId: [],
           byStudentNumber: [
@@ -989,6 +1001,7 @@ describe("detectScoringConflictsWithUserDecisions", () => {
       })
 
       const preMatchResult = createFileOverviewData({
+        user: createUserPreMatchingResult([user.id]),
         student: createPreMatchingResult({
           byId: [],
           byStudentNumber: [

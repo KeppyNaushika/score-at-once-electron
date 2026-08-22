@@ -434,6 +434,50 @@ describe("coursework-archive ラウンドトリップ", () => {
     expect(orders).toEqual([1, 2, 3])
   })
 
+  it("行が1つも増えなくても、名簿の並びは 1..n へ詰め直される", async () => {
+    const suffix = Date.now()
+    const seeded = await seedCoursework(suffix)
+    const collected = await collectCourseworkArchiveData([seeded.coursework.id])
+
+    // アーカイブには居ない生徒を、取り込み後にぶつかる番号で名簿へ入れておく
+    const otherStudent = await prisma.student.create({
+      data: {
+        studentNumber: `CW_OTHER_${suffix}`,
+        lastName: "佐藤",
+        firstName: "花子",
+        lastNameKana: "サトウ",
+        firstNameKana: "ハナコ",
+      },
+    })
+    await prisma.courseworkStudent.create({
+      data: {
+        courseworkId: seeded.coursework.id,
+        studentId: otherStudent.id,
+        customOrder: 1,
+      },
+    })
+
+    // アーカイブ側は行を増やさず、既にある1人の並び順だけを 1 へ動かす。
+    // 行ごとの規則だけだと 1 が2つ並んだまま残る
+    const archive = toArchive(collected)
+    archive.courseworkStudents[0].customOrder = 1
+    archive.courseworkStudents[0].updatedAt = new Date(
+      "2099-01-01T00:00:00.000Z"
+    ).toISOString()
+
+    await importCourseworkArchive(archive)
+
+    const roster = await prisma.courseworkStudent.findMany({
+      where: { courseworkId: seeded.coursework.id },
+    })
+    expect(roster).toHaveLength(2)
+    expect(
+      roster
+        .map((courseworkStudent) => courseworkStudent.customOrder)
+        .sort((left, right) => (left ?? 0) - (right ?? 0))
+    ).toEqual([1, 2])
+  })
+
   it("previewCourseworkImport が UUID一致と名前候補を返す", async () => {
     const suffix = Date.now()
     const seeded = await seedCoursework(suffix)

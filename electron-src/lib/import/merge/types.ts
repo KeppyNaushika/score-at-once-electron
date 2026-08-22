@@ -27,6 +27,14 @@ export interface IdMappings {
   compoundAnswerMember: Record<string, string>
   compoundAnswerScore: Record<string, string>
   scoreDecision: Record<string, string>
+  /**
+   * アーカイブの採点者 → 取り込み先の利用者。
+   *
+   * 採点行の同一性は (設問, 受験者, **採点者**) の3つ組なので、この表が無いと
+   * 「誰の行を書き換えるか」が決まらない。解決できなかった採点者は取り込んだ人へ倒すが、
+   * そのときも3つ組で引くので**別の教員の行には触らない**。
+   */
+  user: Record<string, string>
 }
 
 /** ID変更対象 */

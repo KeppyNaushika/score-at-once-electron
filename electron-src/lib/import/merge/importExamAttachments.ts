@@ -387,8 +387,10 @@ export async function processExamClassrooms(
   idMappings: IdMappings,
   policy: ImportValuePolicy,
   tx: PrismaTransaction
-): Promise<{ createdCount: number }> {
-  let createdCount = 0
+): Promise<{ orderWrittenCount: number }> {
+  // 詰め直しの起動条件は「作成**または更新**したとき」。上書き／統合は既存行の
+  // order も書き換えるので、行が1つも増えない取り込みでも番号は重なる
+  let orderWrittenCount = 0
 
   for (const examClassroom of data.examData.examClassrooms) {
     const newClassroomId = idMappings.classroom[examClassroom.classroomId]
@@ -420,6 +422,7 @@ export async function processExamClassrooms(
           where: { id: existing.id },
           data: { ...values, updatedAt },
         })
+        orderWrittenCount++
       }
       continue
     }
@@ -433,10 +436,10 @@ export async function processExamClassrooms(
         ...policy.createdTimestamps(examClassroom),
       },
     })
-    createdCount++
+    orderWrittenCount++
   }
 
-  return { createdCount }
+  return { orderWrittenCount }
 }
 
 /**

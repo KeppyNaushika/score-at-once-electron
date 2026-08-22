@@ -24,7 +24,9 @@ function normalizeExamStudentStatuses(
 ): ArchiveExamData {
   return {
     ...examData,
-    examStudents: examData.examStudents.map((examStudent) => ({
+    // 既定値を埋めるのは**チェーンを通したあと**（版の判定がキーの有無を見るため）
+    // なので、ここへはセクションごと欠けたアーカイブが来る
+    examStudents: (examData.examStudents ?? []).map((examStudent) => ({
       ...examStudent,
       // status は非nullable(string)。壊れた手編集アーカイブの falsy 値でも
       // 例外を出さず既定の participating に倒す（型は string のまま）。

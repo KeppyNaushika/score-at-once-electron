@@ -62,7 +62,9 @@ export class V1_10_0_to_V1_11_0_Transformer implements ExamVersionTransformer {
     const tagsData = data.tagsData
       ? {
           ...data.tagsData,
-          tags: data.tagsData.tags.map((tag) => ({
+          // 既定値を埋めるのは**チェーンを通したあと**（版の判定がキーの有無を見るため）
+          // なので、tags.json が在っても tags キーだけ欠けたアーカイブが来る
+          tags: (data.tagsData.tags ?? []).map((tag) => ({
             ...tag,
             order: tag.order ?? 0,
             color: tag.color ?? null,

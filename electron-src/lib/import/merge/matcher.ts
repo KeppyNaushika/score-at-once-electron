@@ -13,6 +13,7 @@ import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import { preMatchClassrooms } from "./matchers/classroomMatcher"
 import { preMatchStudents } from "./matchers/studentMatcher"
 import { preMatchSubtotalGroups } from "./matchers/subtotalGroupMatcher"
+import { preMatchUsers } from "./matchers/userMatcher"
 
 /**
  * 事前照合を実行し、FileOverviewData形式で返す
@@ -26,18 +27,25 @@ import { preMatchSubtotalGroups } from "./matchers/subtotalGroupMatcher"
 export async function performPreMatching(
   importData: ExtractedArchiveData
 ): Promise<FileOverviewData> {
-  const [studentResult, classroomResult, subtotalGroupResult, examResult] =
-    await Promise.all([
-      preMatchStudents(importData),
-      preMatchClassrooms(importData),
-      preMatchSubtotalGroups(importData),
-      preMatchExam(importData),
-    ])
+  const [
+    studentResult,
+    classroomResult,
+    subtotalGroupResult,
+    userResult,
+    examResult,
+  ] = await Promise.all([
+    preMatchStudents(importData),
+    preMatchClassrooms(importData),
+    preMatchSubtotalGroups(importData),
+    preMatchUsers(importData),
+    preMatchExam(importData),
+  ])
 
   return {
     student: studentResult,
     classroom: classroomResult,
     subtotalGroup: subtotalGroupResult,
+    user: userResult,
     exam: examResult,
   }
 }

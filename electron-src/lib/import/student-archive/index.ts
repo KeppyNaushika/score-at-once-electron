@@ -114,6 +114,8 @@ export async function executeStudentImport(
     compoundAnswerMember: {},
     compoundAnswerScore: {},
     scoreDecision: {},
+    // 生徒アーカイブに採点は入っていないので、採点者を解決する相手がいない
+    user: {},
   }
 
   const idChangeTargets: IdChangeTarget[] = []

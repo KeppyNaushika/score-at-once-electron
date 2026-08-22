@@ -334,6 +334,20 @@ export interface FileOverviewData {
   classroom: PreMatchingResult
   /** 小計グループの照合結果 */
   subtotalGroup: PreMatchingResult
+  /**
+   * 採点者（利用者）の照合結果。
+   *
+   * **採点行は採点者ごとに1行**（QuestionScore に unique が無いのはそのため）なので、
+   * 取り込んだ採点を取り込んだ人のものにすると、誰が付けた点か分からなくなり、
+   * 別の教員の行を奪って上書きすることになる。アーカイブの採点者をこのPCの利用者へ
+   * 解決するために、生徒・学級と同じ形で照合する。
+   *
+   * 数えるのは**採点層から実際に参照されている利用者だけ**（users.json に載っていても
+   * 採点していない人は、取り込み先に作る理由が無い）。
+   *
+   * 生徒アーカイブの取り込みには採点が無いので省略される。
+   */
+  user?: PreMatchingResult
   /** 試験の照合結果（ID一致 = 同じPCでマージ可能） */
   exam?: ExamPreMatchingResult
   /** 採点結果の競合（Step 3.5 表示用、試験ID一致時のみ） */
@@ -359,6 +373,17 @@ export type StudentMatchingStrategy =
 export type ClassroomMatchingStrategy = "by_name" | "individual" | "all_new"
 
 export type SubtotalGroupMatchingStrategy = "by_name" | "individual" | "all_new"
+
+/**
+ * 採点者（利用者）の紐づけ方法。
+ *
+ * `User.username` に `@unique` は無い（同姓同名の学級と同じ理由で外してある）ので、
+ * 利用者名の一致は「同じ人らしい」までしか言えない。だから既定でも人が選び直せる。
+ *
+ * **「取り込まない」は無い。** 採点行は採点者を親に持つので、結ばずに置くと行が
+ * 親を失う（外部キーが立たない）。答えは「既存の利用者に結ぶ」か「新しく作る」の2つ。
+ */
+export type UserMatchingStrategy = "by_username" | "individual" | "all_new"
 
 /**
  * ID選択（同一人物と判定した場合）
@@ -402,6 +427,7 @@ export interface CategoryIdIntegrationConfig {
     | StudentMatchingStrategy
     | ClassroomMatchingStrategy
     | SubtotalGroupMatchingStrategy
+    | UserMatchingStrategy
   /** 個別の決定（strategyがindividualの場合、またはstrategy適用後の個別調整） */
   decisions: IdIntegrationDecision[]
 }
@@ -413,6 +439,8 @@ export interface IdIntegrationConfig {
   student: CategoryIdIntegrationConfig
   classroom: CategoryIdIntegrationConfig
   subtotalGroup: CategoryIdIntegrationConfig
+  /** 採点者（利用者）。決定は same_person か create_new の2つだけ（skip は無い） */
+  user: CategoryIdIntegrationConfig
   /** 小計項目の直接マッピング（importSubtotalId → existingSubtotalId | "__new__"） */
   subtotalMappings?: Record<string, string>
   /**

@@ -47,7 +47,11 @@ export class V1_25_0_to_V1_26_0_Transformer implements ExamVersionTransformer {
         manifest: { ...data.manifest, version: this.toVersion },
         scoresData: {
           ...data.scoresData,
-          questionScores: data.scoresData.questionScores.map(fillComment),
+          // 既定値を埋めるのは**チェーンを通したあと**（版の判定がキーの有無を見るため）
+          // なので、ここへはセクションごと欠けたアーカイブが来る
+          questionScores: (data.scoresData.questionScores ?? []).map(
+            fillComment
+          ),
         },
       },
       warnings: [],

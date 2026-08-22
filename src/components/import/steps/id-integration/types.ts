@@ -12,7 +12,7 @@ import type {
   SubtotalGroupMatchingStrategy,
 } from "@/types/examArchive.types"
 
-export type CategoryType = "student" | "classroom" | "subtotalGroup"
+export type CategoryType = "student" | "classroom" | "subtotalGroup" | "user"
 
 export type EntityType = "student" | "classroom" | "subtotalGroup"
 

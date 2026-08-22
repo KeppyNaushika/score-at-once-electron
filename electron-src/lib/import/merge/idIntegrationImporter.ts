@@ -57,6 +57,7 @@ import {
   processClassroomIdIntegration,
   processStudentIdIntegration,
   processSubtotalGroupIdIntegration,
+  processUserIdIntegration,
 } from "./processors"
 import {
   reorderExamClassrooms,
@@ -154,6 +155,7 @@ export async function executeIdIntegrationImport(
     compoundAnswerMember: {},
     compoundAnswerScore: {},
     scoreDecision: {},
+    user: {},
   }
 
   // ID変更が必要なもの（Stage 2で処理）
@@ -204,8 +206,21 @@ export async function executeIdIntegrationImport(
           tx
         )
 
+        // 3b. 採点者（利用者）のID統合処理。**採点より前に張る必要がある** —
+        // 採点行を引く鍵が (設問, 受験者, 採点者) の3つ組で、その3つ目がこれ
+        await processUserIdIntegration(
+          data,
+          preMatchResult,
+          integrationConfig.user,
+          idMappings,
+          counts,
+          warnings,
+          policy,
+          tx
+        )
+
         // 4. 小計のマージ
-        const { groupIdsWithNewSubtotal } = await processSubtotals(
+        const { groupIdsWithOrderWritten } = await processSubtotals(
           data,
           idMappings,
           warnings,
@@ -298,35 +313,40 @@ export async function executeIdIntegrationImport(
           tx
         )
 
-        // 12. QuestionScore（競合解決対応）
-        await processQuestionScores(
-          data,
-          preMatchResult,
-          currentUserId,
-          idMappings,
-          counts,
-          policy,
-          tx
+        // 12. QuestionScore（(設問, 受験者, 採点者) の3つ組で行を引く）
+        warnings.push(
+          ...(await processQuestionScores(
+            data,
+            currentUserId,
+            idMappings,
+            counts,
+            policy,
+            tx
+          ))
         )
 
         // 12b. ScoreDecision（OWNER確定スコア。decidedAt LWWで競合解決） (v1.13.0+)
-        await processScoreDecisions(
-          data,
-          currentUserId,
-          idMappings,
-          counts,
-          policy,
-          tx
+        warnings.push(
+          ...(await processScoreDecisions(
+            data,
+            currentUserId,
+            idMappings,
+            counts,
+            policy,
+            tx
+          ))
         )
 
         // 12c. CompoundAnswerScore（複合解答スコア。updatedAt LWWで競合解決） (v1.11.0+)
-        await processCompoundAnswerScores(
-          data,
-          currentUserId,
-          idMappings,
-          counts,
-          policy,
-          tx
+        warnings.push(
+          ...(await processCompoundAnswerScores(
+            data,
+            currentUserId,
+            idMappings,
+            counts,
+            policy,
+            tx
+          ))
         )
 
         // 12d. CropRegionAssignment（設問ごとの採点担当。usernameで照合） (v1.20.0+)
@@ -374,15 +394,19 @@ export async function executeIdIntegrationImport(
         // 17. 並び順の詰め直し
         //
         // 並び順は列全体の性質なので、行ごとの規則で入れた値には重複と穴ができる。
-        // **行が増えたときだけ**詰め直す（毎回やると、触っていない名簿の並びまで
-        // 書き換えて updatedAt が動く）。
-        if (examStudentResult.createdCount > 0) {
+        // **並び順の列へ書き込んだときだけ**詰め直す —— 作成だけでなく更新も数える。
+        // 上書き／統合は既存行の customOrder / order もアーカイブの値へ書き換えるので、
+        // 行が1つも増えない取り込みでも番号は重なったまま残る。
+        //
+        // 何も書いていない取り込みで走らせないのは、触っていない名簿の updatedAt を
+        // 動かさないため（詰め直し自体も、既に 1..n の連番なら1行も書かない）。
+        if (examStudentResult.orderWrittenCount > 0) {
           await reorderExamStudents(newExamId, tx)
         }
-        if (examClassroomResult.createdCount > 0) {
+        if (examClassroomResult.orderWrittenCount > 0) {
           await reorderExamClassrooms(newExamId, tx)
         }
-        for (const subtotalGroupId of groupIdsWithNewSubtotal) {
+        for (const subtotalGroupId of groupIdsWithOrderWritten) {
           await reorderSubtotals(subtotalGroupId, tx)
         }
       },

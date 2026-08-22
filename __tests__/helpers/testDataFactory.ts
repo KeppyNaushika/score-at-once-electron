@@ -338,9 +338,26 @@ export function createFileOverviewData(
     student: overrides.student ?? createPreMatchingResult(),
     classroom: overrides.classroom ?? createPreMatchingResult(),
     subtotalGroup: overrides.subtotalGroup ?? createPreMatchingResult(),
+    user: overrides.user,
     exam: overrides.exam,
     scoringConflicts: overrides.scoringConflicts,
   }
+}
+
+/**
+ * 採点者が「同じパソコンで作ったデータ」として自動で紐づく事前照合結果。
+ *
+ * 採点行の同一性は (設問, 受験者, 採点者) の3つ組なので、採点を扱うテストは
+ * 採点者の照合結果も渡す必要がある（本番では performPreMatching が必ず埋める）。
+ */
+export function createUserPreMatchingResult(
+  userIds: string[]
+): PreMatchingResult {
+  return createPreMatchingResult({
+    byId: userIds.map((userId) =>
+      createMatchedItem({ importId: userId, existingId: userId })
+    ),
+  })
 }
 
 // =============================================================================
@@ -360,6 +377,7 @@ export function createIdIntegrationConfig(
       strategy: "by_name",
       decisions: [],
     },
+    user: overrides.user ?? { strategy: "by_username", decisions: [] },
     exam: overrides.exam,
   }
 }
@@ -401,6 +419,7 @@ export function createEmptyIdMappings(): IdMappings {
     compoundAnswerMember: {},
     compoundAnswerScore: {},
     scoreDecision: {},
+    user: {},
   }
 }
 

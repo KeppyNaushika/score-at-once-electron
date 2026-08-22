@@ -20,7 +20,9 @@ export class V1_5_0_to_V1_6_0_Transformer implements ExamVersionTransformer {
     const warnings: string[] = []
 
     // DrawingAnnotation に isFavorite を追加
-    const drawingAnnotations = data.scoresData.drawingAnnotations.map(
+    // 既定値を埋めるのは**チェーンを通したあと**（版の判定がキーの有無を見るため）
+    // なので、ここへはセクションごと欠けたアーカイブが来る
+    const drawingAnnotations = (data.scoresData.drawingAnnotations ?? []).map(
       (drawingAnnotation) => ({
         ...drawingAnnotation,
         isFavorite:

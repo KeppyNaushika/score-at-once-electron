@@ -19,11 +19,12 @@ export async function processSubtotals(
   policy: ImportValuePolicy,
   tx: PrismaTransaction,
   subtotalMappings?: Record<string, string>
-): Promise<{ groupIdsWithNewSubtotal: Set<string> }> {
+): Promise<{ groupIdsWithOrderWritten: Set<string> }> {
   // スキップされた小計をグループ別に集計
   const skippedByGroup: Record<string, string[]> = {}
-  // 行が増えたグループだけ、あとで並び順を詰め直す
-  const groupIdsWithNewSubtotal = new Set<string>()
+  // 並び順の列に書き込んだグループだけ、あとで詰め直す。**作成だけでなく更新も数える** —
+  // 上書き／統合は既存の小計の order も書き換えるので、行が増えなくても番号は重なる
+  const groupIdsWithOrderWritten = new Set<string>()
 
   for (const subtotal of data.subtotalsData.subtotals) {
     const newGroupId = idMappings.subtotalGroup[subtotal.subtotalGroupId]
@@ -49,7 +50,7 @@ export async function processSubtotals(
     // 2. "__new__" の場合は新規作成を強制
     if (explicitTarget === "__new__") {
       await createNewSubtotal(subtotal, newGroupId, idMappings, policy, tx)
-      groupIdsWithNewSubtotal.add(newGroupId)
+      groupIdsWithOrderWritten.add(newGroupId)
       continue
     }
 
@@ -78,6 +79,7 @@ export async function processSubtotals(
             updatedAt,
           },
         })
+        groupIdsWithOrderWritten.add(newGroupId)
       }
     } else {
       await tx.subtotal.create({
@@ -90,7 +92,7 @@ export async function processSubtotals(
         },
       })
       idMappings.subtotal[subtotal.id] = subtotal.id
-      groupIdsWithNewSubtotal.add(newGroupId)
+      groupIdsWithOrderWritten.add(newGroupId)
     }
   }
 
@@ -101,7 +103,7 @@ export async function processSubtotals(
     )
   }
 
-  return { groupIdsWithNewSubtotal }
+  return { groupIdsWithOrderWritten }
 }
 
 /**

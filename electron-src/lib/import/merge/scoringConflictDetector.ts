@@ -15,17 +15,22 @@ import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
  * 採点結果の競合を検出
  *
  * 既存DBにある採点結果と、インポートデータの採点結果を比較し、
- * 同じ生徒×設問で異なる採点がある場合に競合として検出する。
+ * **同じ生徒×設問×採点者**で異なる採点がある場合に競合として検出する。
+ *
+ * 採点者まで見るのは、採点行が採点者ごとに1行だから。別の教員が同じマスに付けた点は
+ * 競合ではなく、並んで増える別の行である（取り込みも3つ組で行を引く）。
  *
  * @param importData - 展開されたアーカイブデータ
  * @param studentIdMapping - 生徒IDのマッピング（インポートID → 既存ID）
  * @param cropRegionIdMapping - CropRegion IDのマッピング（インポートID → 既存ID）
+ * @param userIdMapping - 採点者IDのマッピング（インポートID → 既存ID）
  * @returns 採点競合データ
  */
 export async function detectScoringConflicts(
   importData: ExtractedArchiveData,
   studentIdMapping: Record<string, string>,
-  cropRegionIdMapping: Record<string, string>
+  cropRegionIdMapping: Record<string, string>,
+  userIdMapping: Record<string, string>
 ): Promise<ScoringConflictData> {
   const conflicts: ScoringConflict[] = []
   let newCount = 0
@@ -54,11 +59,15 @@ export async function detectScoringConflicts(
     },
   })
 
-  // 既存スコアをキー（examStudentId + cropRegionId）でインデックス化
+  // 既存スコアをキー（examStudentId + cropRegionId + userId）でインデックス化。
+  // 同じ3つ組の行が複数あるときは、取り込みと同じく updatedAt のいちばん新しい行を見る
   const existingScoreMap = new Map<string, (typeof existingScores)[0]>()
   for (const score of existingScores) {
-    const key = `${score.examStudentId}:${score.cropRegionId}`
-    existingScoreMap.set(key, score)
+    const key = `${score.examStudentId}:${score.cropRegionId}:${score.userId}`
+    const already = existingScoreMap.get(key)
+    if (!already || already.updatedAt < score.updatedAt) {
+      existingScoreMap.set(key, score)
+    }
   }
 
   // CropRegionのラベル・配点を取得（試験の同定にも使う）
@@ -109,13 +118,22 @@ export async function detectScoringConflicts(
       ? existingExamStudentByStudentId.get(mappedStudentId)
       : undefined
 
-    if (!mappedStudentId || !mappedCropRegionId || !existingExamStudent) {
+    // 採点者が解決できないものは新規として数える。取り込みでは取り込んだ人へ倒すが、
+    // ここは最終確認に見せる件数で、当たらなかった＝置き換えは起きないと言えれば足りる
+    const mappedUserId = userIdMapping[importScore.userId]
+
+    if (
+      !mappedStudentId ||
+      !mappedCropRegionId ||
+      !existingExamStudent ||
+      !mappedUserId
+    ) {
       // マッピングがない場合は新規
       newCount++
       continue
     }
 
-    const key = `${existingExamStudent.id}:${mappedCropRegionId}`
+    const key = `${existingExamStudent.id}:${mappedCropRegionId}:${mappedUserId}`
     const existingScore = existingScoreMap.get(key)
 
     if (!existingScore) {
@@ -271,10 +289,34 @@ export async function detectScoringConflictsWithUserDecisions(
     }
   }
 
+  // 採点者マッピングを構築（生徒と同じ手順。既定は利用者名一致、決定があれば上書き）
+  const userIdMapping: Record<string, string> = {}
+  const userPreMatch = preMatchResult.user
+  if (userPreMatch) {
+    for (const match of userPreMatch.byId) {
+      userIdMapping[match.importId] = match.existingId
+    }
+    if (integrationConfig.user.strategy !== "all_new") {
+      for (const match of userPreMatch.byName ?? []) {
+        if (!userIdMapping[match.importId]) {
+          userIdMapping[match.importId] = match.existingId
+        }
+      }
+    }
+    for (const decision of integrationConfig.user.decisions) {
+      if (decision.decisionType === "same_person" && decision.existingId) {
+        userIdMapping[decision.importId] = decision.existingId
+      } else {
+        delete userIdMapping[decision.importId]
+      }
+    }
+  }
+
   // 競合を検出
   return detectScoringConflicts(
     importData,
     studentIdMapping,
-    cropRegionIdMapping
+    cropRegionIdMapping,
+    userIdMapping
   )
 }

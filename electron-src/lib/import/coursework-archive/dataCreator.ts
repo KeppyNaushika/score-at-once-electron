@@ -99,13 +99,16 @@ export async function importCourseworkData(
     options.action ?? "merge"
   )
   /**
-   * 行が増えた資料。並び順は列全体の性質なので、行ごとに入れた値には重複と穴ができる。
-   * **増えたときだけ**、最後にその資料の名簿・評価項目・学級を詰め直す
-   * （毎回やると触っていない並びまで書き換えて updatedAt が動く）。
+   * 並び順の列へ書き込んだ資料。並び順は列全体の性質なので、行ごとに入れた値には
+   * 重複と穴ができる。**書き込んだときだけ**、最後にその資料の名簿・評価項目・学級を
+   * 詰め直す（毎回やると触っていない並びまで書き換えて updatedAt が動く）。
+   *
+   * **作成だけでなく更新も数える。** 上書き／統合は既存行の customOrder / order も
+   * アーカイブの値へ書き換えるので、行が1つも増えない取り込みでも番号は重なったまま残る。
    */
-  const courseworkIdsWithNewStudents = new Set<string>()
-  const courseworkIdsWithNewClassrooms = new Set<string>()
-  const courseworkIdsWithNewItems = new Set<string>()
+  const courseworkIdsWithStudentOrderWritten = new Set<string>()
+  const courseworkIdsWithClassroomOrderWritten = new Set<string>()
+  const courseworkIdsWithItemOrderWritten = new Set<string>()
   const warnings: string[] = []
   const createdCourseworkIds: string[] = []
   const itemIdMap = new Map<string, string>()
@@ -323,22 +326,24 @@ export async function importCourseworkData(
    * createdAt / updatedAt で全部。**変換表（letterScales）はこの項目の持ち物の集合**
    * なので、行ごとではなく項目ごと入れ替える（行ごとに当てると増減したときに
    * 古い記号が残り、半分古い表ができる）。
+   *
+   * 並び順（order）を書き換えたかどうかを返す。呼ぶ側が最後の詰め直しの要否を決める。
    */
   const applyItemColumns = async (
     courseworkItemId: string,
     item: ArchiveCourseworkItemRow
-  ): Promise<void> => {
+  ): Promise<boolean> => {
     const existing = await tx.courseworkItem.findUnique({
       where: { id: courseworkItemId },
     })
-    if (!existing) return
+    if (!existing) return false
 
     const updatedAt = replacementUpdatedAt(
       policy,
       item.updatedAt,
       existing.updatedAt
     )
-    if (!updatedAt) return
+    if (!updatedAt) return false
 
     await tx.courseworkItem.update({
       where: { id: courseworkItemId },
@@ -366,6 +371,7 @@ export async function importCourseworkData(
         },
       })
     }
+    return true
   }
 
   /**
@@ -399,6 +405,7 @@ export async function importCourseworkData(
             // 並び順は取り込みの最後に詰め直す
             data: { order: classroomRef.order, updatedAt },
           })
+          courseworkIdsWithClassroomOrderWritten.add(courseworkId)
         }
       } else {
         await tx.courseworkClassroom.create({
@@ -409,7 +416,7 @@ export async function importCourseworkData(
             ...policy.createdTimestamps(classroomRef),
           },
         })
-        courseworkIdsWithNewClassrooms.add(courseworkId)
+        courseworkIdsWithClassroomOrderWritten.add(courseworkId)
       }
     }
 
@@ -457,6 +464,7 @@ export async function importCourseworkData(
             // 並び順は取り込みの最後に詰め直す
             data: { customOrder: studentRef.customOrder, updatedAt },
           })
+          courseworkIdsWithStudentOrderWritten.add(courseworkId)
         }
       } else {
         await tx.courseworkStudent.create({
@@ -467,7 +475,7 @@ export async function importCourseworkData(
             ...policy.createdTimestamps(studentRef),
           },
         })
-        courseworkIdsWithNewStudents.add(courseworkId)
+        courseworkIdsWithStudentOrderWritten.add(courseworkId)
       }
     }
 
@@ -509,14 +517,16 @@ export async function importCourseworkData(
     for (const item of itemsByCoursework.get(coursework.id) ?? []) {
       let actualItemId = existingItemIdByName.get(item.name)
       if (actualItemId) {
-        await applyItemColumns(actualItemId, item)
+        if (await applyItemColumns(actualItemId, item)) {
+          courseworkIdsWithItemOrderWritten.add(courseworkId)
+        }
       } else {
         actualItemId = await createItem(
           courseworkId,
           preserveUuids ? item.id : crypto.randomUUID(),
           item
         )
-        courseworkIdsWithNewItems.add(courseworkId)
+        courseworkIdsWithItemOrderWritten.add(courseworkId)
       }
       const itemSkipped = await upsertScores(item.id, actualItemId, roster)
       skipped.orphaned += itemSkipped.orphaned
@@ -601,14 +611,14 @@ export async function importCourseworkData(
     )
   }
 
-  // 行が増えた資料だけ、並び順をまるごと詰め直す
-  for (const courseworkId of courseworkIdsWithNewStudents) {
+  // 並び順の列へ書き込んだ資料だけ、並び順をまるごと詰め直す
+  for (const courseworkId of courseworkIdsWithStudentOrderWritten) {
     await reorderCourseworkStudents(courseworkId, tx)
   }
-  for (const courseworkId of courseworkIdsWithNewItems) {
+  for (const courseworkId of courseworkIdsWithItemOrderWritten) {
     await reorderCourseworkItems(courseworkId, tx)
   }
-  for (const courseworkId of courseworkIdsWithNewClassrooms) {
+  for (const courseworkId of courseworkIdsWithClassroomOrderWritten) {
     await reorderCourseworkClassrooms(courseworkId, tx)
   }
 
