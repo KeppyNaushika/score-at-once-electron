@@ -36,6 +36,11 @@ import {
 } from "../coursework-archive/idRemapper"
 import { transformGradeToLatest } from "../grade-transformers"
 import type { AnyGradeArchiveData } from "../grade-transformers/types"
+import {
+  describeAmbiguity,
+  describeClassroom,
+  pickOldest,
+} from "../humanKeyMatching"
 
 /** アーカイブ内 uuid → 取り込み先の実 id */
 type IdMap = Map<string, string>
@@ -51,15 +56,34 @@ export async function previewGradeArchiveImport(
   const { data, warnings } = transformGradeToLatest(rawData)
   const courseworkArchive = data.courseworkArchive
 
-  // Classroom照合（uuid一次・学級名二次）。当たらなければ取り込みで新規作成される
-  const classroomMatches = await Promise.all(
-    data.classesData.map(async (classroom) => {
-      const existing =
-        (await prisma.classroom.findUnique({ where: { id: classroom.id } })) ??
-        (await prisma.classroom.findUnique({ where: { name: classroom.name } }))
-      return { found: !!existing, name: classroom.name }
+  // Classroom照合（uuid一次・学級名二次）。当たらなければ取り込みで新規作成される。
+  // 学級名は unique ではないので、名前で引くと複数当たりうる。どれを採るかは
+  // humanKeyMatching の決まり（いちばん古い行・数と相手を必ず伝える）に従う。
+  // 取り込み本体（resolveClassrooms）と同じ選び方をしないと、プレビューで
+  // 「見つかった」と出た学級が実際には別の学級へ結び付く。
+  const classroomMatches: { found: boolean; name: string }[] = []
+  for (const classroom of data.classesData) {
+    const matchedById = await prisma.classroom.findUnique({
+      where: { id: classroom.id },
     })
-  )
+    if (matchedById) {
+      classroomMatches.push({ found: true, name: classroom.name })
+      continue
+    }
+    const matchedByName = await prisma.classroom.findMany({
+      where: { name: classroom.name },
+    })
+    const chosen = pickOldest(matchedByName)
+    if (chosen) {
+      const ambiguity = describeAmbiguity(
+        `学級名「${classroom.name}」`,
+        matchedByName.length,
+        describeClassroom(chosen)
+      )
+      if (ambiguity) warnings.push(ambiguity)
+    }
+    classroomMatches.push({ found: Boolean(chosen), name: classroom.name })
+  }
   const classroomCreateCount = classroomMatches.filter(
     (classroomMatch) => !classroomMatch.found
   ).length

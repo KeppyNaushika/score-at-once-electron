@@ -41,33 +41,44 @@ export class DatabaseSetup {
 
   /**
    * シードデータを実行
+   *
+   * username / 学級名 / 学籍番号は unique ではないので upsert の鍵に取れない
+   * （20260822140000_drop_human_name_uniques）。ここが問うているのは
+   * 「同じ名前の行が既に在るか」という有無だけなので、findFirst で見て無ければ作る。
+   * 旧 upsert も update は `{}`（在れば何もしない）だったので振る舞いは変わらず、
+   * 2度走っても増えない。
    */
   async runSeed(): Promise<void> {
     try {
       // デフォルトユーザーの作成
-      await this.prisma.user.upsert({
+      const existingAdmin = await this.prisma.user.findFirst({
         where: { username: "admin" },
-        update: {},
-        create: {
-          username: "admin",
-          name: "管理者",
-          role: "admin",
-          passcodeType: "none",
-        },
       })
+      if (!existingAdmin) {
+        await this.prisma.user.create({
+          data: {
+            username: "admin",
+            name: "管理者",
+            role: "admin",
+            passcodeType: "none",
+          },
+        })
+      }
 
       // サンプル学級の作成
-      const sampleClassroom = await this.prisma.classroom.upsert({
-        where: { name: "サンプル学級" },
-        update: {},
-        create: {
-          name: "サンプル学級",
-          classroomCode: "SAMPLE01",
-          grade: 1,
-          description: "システム動作確認用のサンプル学級です",
-          isVisible: true,
-        },
-      })
+      const sampleClassroom =
+        (await this.prisma.classroom.findFirst({
+          where: { name: "サンプル学級" },
+        })) ??
+        (await this.prisma.classroom.create({
+          data: {
+            name: "サンプル学級",
+            classroomCode: "SAMPLE01",
+            grade: 1,
+            description: "システム動作確認用のサンプル学級です",
+            isVisible: true,
+          },
+        }))
 
       // サンプル生徒の作成
       const sampleStudents = [
@@ -98,11 +109,10 @@ export class DatabaseSetup {
       ]
 
       for (const [index, studentData] of sampleStudents.entries()) {
-        const student = await this.prisma.student.upsert({
-          where: { studentNumber: studentData.studentNumber },
-          update: {},
-          create: studentData,
-        })
+        const student =
+          (await this.prisma.student.findFirst({
+            where: { studentNumber: studentData.studentNumber },
+          })) ?? (await this.prisma.student.create({ data: studentData }))
 
         // 学級への所属を作成（既存チェック後に作成）
         const existingMembership =

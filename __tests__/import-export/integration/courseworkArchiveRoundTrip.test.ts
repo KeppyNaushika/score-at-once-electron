@@ -180,7 +180,8 @@ describe("coursework-archive ラウンドトリップ", () => {
       `CW_${suffix}`
     )
 
-    const classroom = await prisma.classroom.findUnique({
+    // 学級名は unique ではないので findFirst で引く（suffix 付きなので1件に決まる）
+    const classroom = await prisma.classroom.findFirst({
       where: { name: `学級_${suffix}` },
     })
     expect(classroom).not.toBeNull()

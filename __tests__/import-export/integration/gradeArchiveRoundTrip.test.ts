@@ -1898,7 +1898,8 @@ describe("grade-archive ラウンドトリップ", () => {
     const result = await importGradeArchive(toArchive(grade.id, collected))
 
     // 生徒・学級が作られ、学級所属（出席番号つき）まで戻る
-    const restoredStudent = await prisma.student.findUniqueOrThrow({
+    // 学籍番号は unique ではないので findFirst で引く（suffix 付きなので1件に決まる）
+    const restoredStudent = await prisma.student.findFirstOrThrow({
       where: { studentNumber: `SNEW${suffix}` },
       include: { memberships: { include: { classroom: true } } },
     })
@@ -2153,7 +2154,8 @@ describe("grade-archive ラウンドトリップ", () => {
 
     await importGradeArchive(legacy)
 
-    const created = await prisma.classroom.findUniqueOrThrow({
+    // 学級名は unique ではないので findFirst で引く（suffix 付きなので1件に決まる）
+    const created = await prisma.classroom.findFirstOrThrow({
       where: { name: `合成id学級_${suffix}` },
     })
     expect(created.id).not.toContain("legacy-classroom:")

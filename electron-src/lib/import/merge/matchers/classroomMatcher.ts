@@ -9,6 +9,7 @@ import type {
 } from "../../../../../src/types/examArchive.types"
 import prisma from "../../../prisma/client"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
+import { describeCandidateCount, groupByHumanKey } from "../../humanKeyMatching"
 
 /**
  * 学級の事前照合
@@ -25,8 +26,12 @@ export async function preMatchClassrooms(
   const existingById = new Map(
     existingClassrooms.map((classroom) => [classroom.id, classroom])
   )
-  const existingByName = new Map(
-    existingClassrooms.map((classroom) => [classroom.name, classroom])
+  // 学級名は unique ではないので、名前で引くと複数当たりうる。候補は
+  // humanKeyMatching の決まりで古い順に並び、先頭を候補として見せる。
+  // 何件あったかは matchReason に載せる（利用者はこの画面で結び付け先を決める）
+  const existingByName = groupByHumanKey(
+    existingClassrooms,
+    (classroom) => classroom.name
   )
 
   for (const importClassroom of importData.classesData.classrooms) {
@@ -52,7 +57,8 @@ export async function preMatchClassrooms(
     }
 
     // 名前照合
-    const nameMatch = existingByName.get(importClassroom.name)
+    const nameCandidates = existingByName.get(importClassroom.name) ?? []
+    const nameMatch = nameCandidates[0]
     if (nameMatch) {
       byName.push({
         importId: importClassroom.id,
@@ -60,7 +66,10 @@ export async function preMatchClassrooms(
         importData: importClassroom,
         existingData: nameMatch,
         displayLabel,
-        matchReason: "学級名が一致",
+        matchReason: describeCandidateCount(
+          "学級名が一致",
+          nameCandidates.length
+        ),
       })
       continue
     }

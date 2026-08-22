@@ -1,7 +1,15 @@
 /**
  * ユニーク名生成モジュール
  *
- * 重複を避けるための一意な名前を生成
+ * 取り込む学級名・学籍番号が既存とぶつかったとき、サフィックスを付けて別物として作る。
+ *
+ * 学級名・学籍番号は 2026-08-22 に `@unique` を外した
+ * （`20260822140000_drop_human_name_uniques`）ので、**DB 上は同じ値が2つ並んでも通る**。
+ * それでもここで名前をずらすのは、取り込みが「同名＝同一」と決めていないことを
+ * 利用者が名簿の上で見分けられるようにするためで、制約を満たすためではない。
+ *
+ * 有無を見るだけなので findFirst でよい（複数当たっても「在る」以上の意味は無く、
+ * どれを採るかを決める必要も無い）。
  */
 
 import type { PrismaClient } from "@prisma/client"
@@ -13,20 +21,19 @@ export type TransactionClient = Omit<
 >
 
 /**
- * 重複しないstudentNumberを生成
+ * 既存とぶつからないstudentNumberを生成
  *
- * 既存のstudentNumberがある場合は `_1`, `_2` のようなサフィックスを付与して
- * 一意性を保証する
+ * 既存のstudentNumberがある場合は `_1`, `_2` のようなサフィックスを付与する
  *
  * @param tx - Prismaトランザクションクライアント
  * @param originalStudentNumber - 元のstudentNumber
- * @returns 一意なstudentNumber
+ * @returns 既存のどれとも一致しないstudentNumber
  */
 export async function generateUniqueStudentNumber(
   tx: TransactionClient,
   originalStudentNumber: string
 ): Promise<string> {
-  const existing = await tx.student.findUnique({
+  const existing = await tx.student.findFirst({
     where: { studentNumber: originalStudentNumber },
   })
 
@@ -39,7 +46,7 @@ export async function generateUniqueStudentNumber(
   let newStudentNumber = `${originalStudentNumber}_${suffix}`
 
   while (
-    await tx.student.findUnique({ where: { studentNumber: newStudentNumber } })
+    await tx.student.findFirst({ where: { studentNumber: newStudentNumber } })
   ) {
     suffix++
     newStudentNumber = `${originalStudentNumber}_${suffix}`
@@ -49,20 +56,19 @@ export async function generateUniqueStudentNumber(
 }
 
 /**
- * 重複しない学級名を生成
+ * 既存とぶつからない学級名を生成
  *
- * 既存の名前がある場合は `(2)`, `(3)` のようなサフィックスを付与して
- * 一意性を保証する
+ * 既存の名前がある場合は `(2)`, `(3)` のようなサフィックスを付与する
  *
  * @param tx - Prismaトランザクションクライアント
  * @param originalName - 元の学級名
- * @returns 一意な学級名
+ * @returns 既存のどれとも一致しない学級名
  */
 export async function generateUniqueClassName(
   tx: TransactionClient,
   originalName: string
 ): Promise<string> {
-  const existing = await tx.classroom.findUnique({
+  const existing = await tx.classroom.findFirst({
     where: { name: originalName },
   })
 
@@ -74,7 +80,7 @@ export async function generateUniqueClassName(
   let suffix = 2
   let newName = `${originalName} (${suffix})`
 
-  while (await tx.classroom.findUnique({ where: { name: newName } })) {
+  while (await tx.classroom.findFirst({ where: { name: newName } })) {
     suffix++
     newName = `${originalName} (${suffix})`
   }

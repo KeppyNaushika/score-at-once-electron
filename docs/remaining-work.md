@@ -1208,8 +1208,8 @@ id と等しい。**畳みとは「敗者 id を消して勝者 id へ吸わせ�
 | ②b  | `ExamIndividualReportTableSection (examId, tableKind)`                   | 同上                                       | **残す**           |
 | ②b  | `ExamIndividualReportStatisticVisibility (examId, statisticKind, scope)` | 同上                                       | **残す**           |
 | ②b  | `UserSidePanelSection (userId, sectionId)`                               | 同上（**当初の一覧に無かった1件**）        | **残す**           |
-| ②c  | `CropRegionOmrChoiceOption (omrConfigId, choiceIndex)`                   | 下記                                       | 未判定             |
-| ②c  | `AsbOmrChoiceOption (omrConfigId, choiceIndex)`                          | 下記                                       | 未判定             |
+| ②c  | `CropRegionOmrChoiceOption (omrConfigId, choiceIndex)`                   | 下記                                       | **残す**           |
+| ②c  | `AsbOmrChoiceOption (omrConfigId, choiceIndex)`                          | 下記                                       | **残す**           |
 | ③   | `GradeConstraintLabelValue (constraintId, label)`                        | 下記                                       | 未判定             |
 | ③   | `GradeConstraintExclusionLabel (constraintId, label)`                    | 下記                                       | 未判定             |
 | ③   | `CourseworkLetterScale (courseworkItemId, label)`                        | 下記                                       | 未判定             |
@@ -1238,7 +1238,19 @@ id と等しい。**畳みとは「敗者 id を消して勝者 id へ吸わせ�
 必ず「同じもの」で、**1つのマスの取り合い**である。外すと同じマスの行が2つ並び、どちらを
 読むかが決まらなくなる。
 
-**残り5件** —— ②c の `choiceIndex` 2件と、③の3件。
+**②c の `choiceIndex` 2件は残す。** `Subtotal` と同型ではない —— **子がいない**ので畳んでも
+割り当ては移らず、**意味の単位はリスト全体で、位置がその選択肢の身元**である（画面は選択肢に
+id を持たず `string[]` で扱い、保存のときに添字ごとの行へ割っている）。
+
+外すと**壊れたリストになる**: `CropRegionOmrChoiceOption` は同じ番号の行が並んで**4択が8択に
+見え**、`AsbOmrChoiceOption` は読み出しが `labels` を**配列の並び順**、`correctAnswers` を
+**`choiceIndex` の値**で数えているため**正解の指す先がずれる**。残して混ざるほうが、外して
+壊れるよりよい（混ざっても4択のリストとしては成立する）。
+
+**混合そのものは畳みのせいではない。** リスト全体を1つの意図として扱わず、行に割って個別に
+勝ち負けを決めていることが原因で、直すなら別の作業になる。
+
+**残り3件** —— ③の3件。
 
 ---
 

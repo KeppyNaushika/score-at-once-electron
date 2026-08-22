@@ -7,9 +7,16 @@ datasource db {
   provider = "sqlite"
 }
 
+/// `username` に `@unique` は置かない（2026-08-22 に外した）。
+/// 共有フォルダ経由の同期は、別 id・同一ユニークキーの行を LWW で1つへ畳んで負けた行を消す。
+/// username は人が自由に打つ名前で、重複チェックも無いため、「同じものを2回作った」だけでなく
+/// 「別の人が偶然ぶつかった」が起きる（別の校舎の教員がそれぞれ `suzuki` を作る）。
+/// 畳むと負けた側の採点・答案が勝った側のものになるので、制約を置いてはいけない。
+/// 取り込み側も「同名＝同一」とは決めていない（サフィックスを付けて別物として作る）。
+/// 索引も置かない: 等値検索はシード（起動時に1回）だけで、行数も教員の人数どまり。
 model User {
   id                     String                   @id @default(uuid())
-  username               String                   @unique
+  username               String
   passcode               String?
   name                   String
   role                   String                   @default("teacher")
@@ -33,9 +40,16 @@ model User {
   returnSnapshots        ReturnSnapshot[]
 }
 
+/// `name` に `@unique` は置かない（2026-08-22 に外した。理由は User.username と同じ）。
+/// 同じ学級を2人が作った（＝畳んでよい）と、年度をまたぐ「2025年度の3年1組」と
+/// 「2026年度の3年1組」（＝別の学級）の両方が起きる。後者を畳むと2年分の在籍・試験・成績が
+/// 1つの学級に潰れる。名前に年度を埋めて避けるのは運用の習慣で、UI もスキーマも要求していない。
+/// 取り込みは名前が衝突したら `(2)` を足して別学級として作る（generateUniqueClassName）ので、
+/// 外すことでアプリの中の解釈が揃う。
+/// 索引も置かない: 等値検索は取り込み時だけで、学級は学校の規模ぶんしか増えない。
 model Classroom {
   id                   String                       @id @default(uuid())
-  name                 String                       @unique
+  name                 String
   classroomCode        String?
   grade                Int?
   description          String?
@@ -48,9 +62,16 @@ model Classroom {
   courseworkClassrooms CourseworkClassroom[]
 }
 
+/// `studentNumber` に `@unique` は置かない（2026-08-22 に外した。理由は User.username と同じ）。
+/// 付番は人が打つ／表から貼り付けるもので、教員ごとに規則が違えば別人が同じ番号を持つ。
+/// 畳むと消えた生徒の答案・点数がもう1人の生徒のものになる（子は ExamStudent 経由で
+/// QuestionScore まで再帰的に付け替わるので、被害がいちばん深いのがここ）。
+/// アーカイブ取り込みは `_1` を足して別人として作る（generateUniqueStudentNumber）。
+/// 索引は置く（下の `@@index`）: 3列のうち、等値検索が取り込む生徒1人につき1回走り、
+/// かつ表の行数が年度ごとに積み上がるのはここだけ。
 model Student {
   id                 String                       @id @default(uuid())
-  studentNumber      String                       @unique
+  studentNumber      String
   lastName           String
   firstName          String
   lastNameKana       String
@@ -62,6 +83,8 @@ model Student {
   memberships        StudentClassroomMembership[]
   gradeStudents      GradeStudent[]
   courseworkStudents CourseworkStudent[]
+
+  @@index([studentNumber])
 }
 
 model StudentClassroomMembership {

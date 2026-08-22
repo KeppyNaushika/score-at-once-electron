@@ -13,8 +13,11 @@
  * __tests__/import-export/unit/cascadeCoverage.test.ts が schema.prisma を解析して
  * 自動検証する（追加忘れはテストが赤くなって検出される）。
  *
- * UNIQUE制約のあるフィールド（Student.studentNumber, Classroom.name）は temp-value方式で回避:
- * 既存レコードのUNIQUEフィールドを一時値に変更してから新レコードを作成し、旧を削除する。
+ * Student.studentNumber / Classroom.name は temp-value方式を通す: 既存レコードの当該
+ * フィールドを一時値に変更してから新レコードを作成し、旧を削除する。
+ * この2列の UNIQUE は 2026-08-22 に外した（20260822140000_drop_human_name_uniques）ので
+ * **もう制約のための迂回ではない**。それでも一時値を挟むのは、旧と新が同じ値で並ぶ
+ * 時間帯を作らないため（この間に読んだ側からは同じ生徒・学級が2つに見える）。
  */
 
 import type { IdChangeTarget, IdMappings, PrismaTransaction } from "./types"
@@ -345,7 +348,7 @@ async function changeStudentId(
 
   if (!existingStudent) return
 
-  // 1. UNIQUE制約のあるstudentNumberを一時値に変更
+  // 1. 旧と新が同じ学籍番号で並ぶ時間帯を作らないよう、旧を一時値へ退避
   await tx.student.update({
     where: { id: target.existingId },
     data: { studentNumber: `__TEMP_${target.existingId}` },
@@ -397,7 +400,7 @@ async function changeClassroomId(
 
   if (!existingClassroom) return
 
-  // 1. UNIQUE制約のあるnameを一時値に変更
+  // 1. 旧と新が同じ学級名で並ぶ時間帯を作らないよう、旧を一時値へ退避
   await tx.classroom.update({
     where: { id: target.existingId },
     data: { name: `__TEMP_${target.existingId}` },

@@ -22,6 +22,12 @@ import {
   generateUniqueStudentNumber,
   type TransactionClient,
 } from "../exam-archive/uniqueNameGenerators"
+import {
+  describeAmbiguity,
+  describeClassroom,
+  describeStudent,
+  groupByHumanKey,
+} from "../humanKeyMatching"
 
 /** アーカイブ内 UUID → 実 DB ID のマッピング */
 type IdMap = Map<string, string>
@@ -55,17 +61,18 @@ export async function resolveStudents(
   const byId = new Map(
     existing.map((existingStudent) => [existingStudent.id, existingStudent])
   )
-  const byNumber = new Map(
-    existing.map((existingStudent) => [
-      existingStudent.studentNumber,
-      existingStudent,
-    ])
+  // 学籍番号も氏名も unique ではないので、どちらで引いても複数当たりうる。
+  // どれを採るかは humanKeyMatching の決まり（いちばん古い行）に従い、
+  // 2件以上あったことは warning で伝える（取り違えは静かに起きると気づけない）。
+  const byNumber = groupByHumanKey(
+    existing,
+    (existingStudent) => existingStudent.studentNumber
   )
-  const byName = new Map<string, (typeof existing)[number]>()
-  for (const existingStudent of existing) {
-    const key = `${existingStudent.lastName}|${existingStudent.firstName}`
-    if (!byName.has(key)) byName.set(key, existingStudent)
-  }
+  const byName = groupByHumanKey(
+    existing,
+    (existingStudent) =>
+      `${existingStudent.lastName}|${existingStudent.firstName}`
+  )
 
   for (const student of students) {
     // 1. UUID 一次照合
@@ -74,14 +81,24 @@ export async function resolveStudents(
       map.set(student.id, uuidMatch.id)
       continue
     }
-    // 2. 二次照合
-    let matched: (typeof existing)[number] | undefined
+    // 2. 二次照合（候補は古い順に並んでいる。先頭が採用される行）
+    let candidates: (typeof existing)[number][] = []
+    let matchedKeyLabel = ""
     if (options.method === "studentNumber") {
-      matched = byNumber.get(student.studentNumber)
+      candidates = byNumber.get(student.studentNumber) ?? []
+      matchedKeyLabel = `学籍番号「${student.studentNumber}」`
     } else if (options.method === "name") {
-      matched = byName.get(`${student.lastName}|${student.firstName}`)
+      candidates = byName.get(`${student.lastName}|${student.firstName}`) ?? []
+      matchedKeyLabel = `氏名「${student.lastName}${student.firstName}」`
     }
+    const matched = candidates[0]
     if (matched) {
+      const ambiguity = describeAmbiguity(
+        matchedKeyLabel,
+        candidates.length,
+        describeStudent(matched)
+      )
+      if (ambiguity) warnings.push(ambiguity)
       map.set(student.id, matched.id)
       continue
     }
@@ -142,11 +159,10 @@ export async function resolveClassrooms(
       existingClassroom,
     ])
   )
-  const byName = new Map(
-    existing.map((existingClassroom) => [
-      existingClassroom.name,
-      existingClassroom,
-    ])
+  // 学級名は unique ではないので、名前で引くと複数当たりうる（生徒と同じ扱い）
+  const byName = groupByHumanKey(
+    existing,
+    (existingClassroom) => existingClassroom.name
   )
 
   for (const classroom of classes) {
@@ -155,8 +171,15 @@ export async function resolveClassrooms(
       map.set(classroom.id, uuidMatch.id)
       continue
     }
-    const nameMatch = byName.get(classroom.name)
+    const nameCandidates = byName.get(classroom.name) ?? []
+    const nameMatch = nameCandidates[0]
     if (nameMatch) {
+      const ambiguity = describeAmbiguity(
+        `学級名「${classroom.name}」`,
+        nameCandidates.length,
+        describeClassroom(nameMatch)
+      )
+      if (ambiguity) warnings.push(ambiguity)
       map.set(classroom.id, nameMatch.id)
       continue
     }
