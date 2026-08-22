@@ -1,65 +1,70 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
+
+import { useLocalStorageText } from "@/hooks/useLocalStorageText"
 
 export type SortDirection = "asc" | "desc" | null
 
-interface SortConfig<T> {
-  key: (keyof T & string) | null
+/**
+ * 並び順の指定。保存から復元することがあり、そのときの列名は素の文字列でしか名乗れないので
+ * `key` は `string`（呼び手が渡す既定値と `requestSort` の引数は列名で縛る）
+ */
+interface TableSort {
+  key: string | null
   direction: SortDirection
 }
 
 interface UseTableSortOptions<T> {
-  defaultSort?: SortConfig<T>
+  defaultSort?: { key: (keyof T & string) | null; direction: SortDirection }
   /** localStorageに保存するキー（指定すると永続化される） */
   storageKey?: string
 }
 
 /**
- * localStorageからソート設定を読み込む
+ * 保存された並び順を読む。壊れていれば「保存が無い」とみなす
  */
-function loadSortConfig<T>(storageKey: string): SortConfig<T> | null {
-  if (typeof window === "undefined") return null
+function parseTableSort(storedText: string | null): TableSort | null {
+  if (storedText === null) return null
   try {
-    const stored = localStorage.getItem(storageKey)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      if (
-        parsed &&
-        typeof parsed === "object" &&
-        "key" in parsed &&
-        "direction" in parsed &&
-        (parsed.key === null || typeof parsed.key === "string") &&
-        (parsed.direction === null ||
-          parsed.direction === "asc" ||
-          parsed.direction === "desc")
-      ) {
-        return {
-          key: parsed.key as (keyof T & string) | null,
-          direction: parsed.direction,
-        }
-      }
+    const parsed: unknown = JSON.parse(storedText)
+    if (parsed === null || typeof parsed !== "object") return null
+    if (!("key" in parsed) || !("direction" in parsed)) return null
+
+    const storedKey = parsed.key
+    const storedDirection = parsed.direction
+    if (storedKey !== null && typeof storedKey !== "string") return null
+    if (
+      storedDirection !== null &&
+      storedDirection !== "asc" &&
+      storedDirection !== "desc"
+    ) {
+      return null
     }
+    return { key: storedKey, direction: storedDirection }
   } catch {
     // パースエラーは無視
+    return null
   }
-  return null
 }
 
 /**
- * localStorageにソート設定を保存
+ * 同じ列を押したときは null -> asc -> desc -> null のサイクル、別の列なら昇順から
  */
-function saveSortConfig<T>(storageKey: string, config: SortConfig<T>): void {
-  if (typeof window === "undefined") return
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(config))
-  } catch {
-    // 保存エラーは無視
-  }
+function nextTableSort(currentSort: TableSort, key: string): TableSort {
+  if (currentSort.key !== key) return { key, direction: "asc" }
+  if (currentSort.direction === null) return { key, direction: "asc" }
+  if (currentSort.direction === "asc") return { key, direction: "desc" }
+  return { key: null, direction: null }
 }
 
 /**
  * テーブルのソート機能を提供するカスタムフック
+ *
+ * `storageKey` を渡したときは localStorage が唯一の出所（購読するので、同じキーを見ている
+ * 別の画面とも揃う）。事前描画では localStorage を読めないため、マウントするまでは
+ * `defaultSort` で描き、読めた時点で保存された並び順へ差し替わる。
+ *
  * @param data ソート対象のデータ配列
  * @param options オプション設定
  * @returns ソート済みデータ、ソート設定、ソートリクエスト関数
@@ -68,23 +73,23 @@ export function useTableSort<T extends object>(
   data: T[],
   options?: UseTableSortOptions<T>
 ) {
-  // 初期値の決定: localStorage > defaultSort > null
-  const getInitialConfig = (): SortConfig<T> => {
-    if (options?.storageKey) {
-      const stored = loadSortConfig<T>(options.storageKey)
-      if (stored) return stored
-    }
-    return options?.defaultSort || { key: null, direction: null }
-  }
+  const storageKey = options?.storageKey ?? null
+  const defaultSortKey = options?.defaultSort?.key ?? null
+  const defaultSortDirection = options?.defaultSort?.direction ?? null
 
-  const [sortConfig, setSortConfig] = useState<SortConfig<T>>(getInitialConfig)
+  const { storedText, setStoredText } = useLocalStorageText(storageKey)
+  // 永続化しないときの置き場。永続化するときは触らない（出所を2つにしない）
+  const [chosenSort, setChosenSort] = useState<TableSort | null>(null)
 
-  // localStorageへの保存
-  useEffect(() => {
-    if (options?.storageKey) {
-      saveSortConfig(options.storageKey, sortConfig)
-    }
-  }, [sortConfig, options?.storageKey])
+  const storedSort = useMemo(() => parseTableSort(storedText), [storedText])
+  const activeSort = storageKey !== null ? storedSort : chosenSort
+
+  const sortKey = activeSort ? activeSort.key : defaultSortKey
+  const sortDirection = activeSort ? activeSort.direction : defaultSortDirection
+  const sortConfig = useMemo(
+    () => ({ key: sortKey, direction: sortDirection }),
+    [sortKey, sortDirection]
+  )
 
   const sortedData = useMemo((): T[] => {
     if (!sortConfig.key || !sortConfig.direction) {
@@ -92,59 +97,57 @@ export function useTableSort<T extends object>(
     }
 
     const key = sortConfig.key
-    return [...data].sort((a, b) => {
-      const aVal = a[key] as unknown
-      const bVal = b[key] as unknown
+    return [...data].sort((leftRow, rightRow) => {
+      const leftCell: unknown = Reflect.get(leftRow, key)
+      const rightCell: unknown = Reflect.get(rightRow, key)
 
       // null/undefined の処理
-      if (aVal == null && bVal == null) return 0
-      if (aVal == null) return sortConfig.direction === "asc" ? 1 : -1
-      if (bVal == null) return sortConfig.direction === "asc" ? -1 : 1
+      if (leftCell == null && rightCell == null) return 0
+      if (leftCell == null) return sortConfig.direction === "asc" ? 1 : -1
+      if (rightCell == null) return sortConfig.direction === "asc" ? -1 : 1
 
       let comparison: number
 
       // 型に応じた比較
-      if (typeof aVal === "number" && typeof bVal === "number") {
-        comparison = aVal - bVal
-      } else if (aVal instanceof Date && bVal instanceof Date) {
-        comparison = aVal.getTime() - bVal.getTime()
+      if (typeof leftCell === "number" && typeof rightCell === "number") {
+        comparison = leftCell - rightCell
+      } else if (leftCell instanceof Date && rightCell instanceof Date) {
+        comparison = leftCell.getTime() - rightCell.getTime()
       } else if (
-        typeof aVal === "string" &&
-        typeof bVal === "string" &&
-        isDateString(aVal) &&
-        isDateString(bVal)
+        typeof leftCell === "string" &&
+        typeof rightCell === "string" &&
+        isDateString(leftCell) &&
+        isDateString(rightCell)
       ) {
         // 日付文字列の比較
-        comparison = new Date(aVal).getTime() - new Date(bVal).getTime()
-      } else if (typeof aVal === "string" && typeof bVal === "string") {
+        comparison =
+          new Date(leftCell).getTime() - new Date(rightCell).getTime()
+      } else if (
+        typeof leftCell === "string" &&
+        typeof rightCell === "string"
+      ) {
         // 日本語対応の文字列比較
-        comparison = aVal.localeCompare(bVal, "ja")
+        comparison = leftCell.localeCompare(rightCell, "ja")
       } else {
         // その他の型はtoStringして比較
-        comparison = String(aVal).localeCompare(String(bVal), "ja")
+        comparison = String(leftCell).localeCompare(String(rightCell), "ja")
       }
 
       return sortConfig.direction === "asc" ? comparison : -comparison
     })
   }, [data, sortConfig])
 
-  const requestSort = useCallback((key: keyof T & string) => {
-    setSortConfig((prev) => {
-      if (prev.key !== key) {
-        // 新しいキーの場合は昇順から開始
-        return { key, direction: "asc" }
+  const requestSort = useCallback(
+    (key: keyof T & string) => {
+      const nextSort = nextTableSort(sortConfig, key)
+      if (storageKey !== null) {
+        setStoredText(JSON.stringify(nextSort))
+        return
       }
-
-      // 同じキーの場合は null -> asc -> desc -> null のサイクル
-      if (prev.direction === null) {
-        return { key, direction: "asc" }
-      }
-      if (prev.direction === "asc") {
-        return { key, direction: "desc" }
-      }
-      return { key: null, direction: null }
-    })
-  }, [])
+      setChosenSort(nextSort)
+    },
+    [setStoredText, sortConfig, storageKey]
+  )
 
   return {
     sortedData,

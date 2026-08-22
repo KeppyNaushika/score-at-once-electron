@@ -1,105 +1,53 @@
 "use client"
 
 import { usePathname } from "next/navigation"
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 
 import { ToastProvider } from "@/components/common/ToastProvider"
 import Navigation from "@/components/layout/Navigation"
+import {
+  findSidebarSection,
+  type SidebarBehavior,
+  useSidebarBehavior,
+} from "@/components/layout/sidebarBehavior"
 import { cn } from "@/lib/utils"
-
-export type SidebarBehavior = "collapse" | "expand" | "none"
-
-interface SidebarSectionConfig {
-  key: string
-  label: string
-  storageKey: string
-  pathMatch: (pathname: string) => boolean
-}
-
-export const SIDEBAR_SECTIONS: SidebarSectionConfig[] = [
-  {
-    key: "exams",
-    label: "試験一覧",
-    storageKey: "sidebarBehavior_exams",
-    pathMatch: (path) => path.startsWith("/exams"),
-  },
-  {
-    key: "answerSheetBuilder",
-    label: "解答用紙作成",
-    storageKey: "sidebarBehavior_answerSheetBuilder",
-    pathMatch: (path) => path.startsWith("/answer-sheet-builder"),
-  },
-  {
-    key: "pdfTools",
-    label: "PDF加工",
-    storageKey: "sidebarBehavior_pdfTools",
-    pathMatch: (path) => path.startsWith("/pdf-tools"),
-  },
-  {
-    key: "grades",
-    label: "成績算出",
-    storageKey: "sidebarBehavior_grades",
-    pathMatch: (path) => path.startsWith("/grades"),
-  },
-]
-
-// 旧キーからの移行用
-const LEGACY_SIDEBAR_BEHAVIOR_KEY = "sidebarBehaviorOnWorkPage"
-
-function getSidebarBehaviorForPath(pathname: string): SidebarBehavior | null {
-  const section = SIDEBAR_SECTIONS.find((sidebarSection) =>
-    sidebarSection.pathMatch(pathname)
-  )
-  if (!section) return null
-
-  try {
-    const stored = localStorage.getItem(section.storageKey)
-    if (stored === "collapse" || stored === "expand" || stored === "none") {
-      return stored
-    }
-    // 旧設定からの移行: セクション別設定がなければ旧設定を参照
-    const legacy = localStorage.getItem(LEGACY_SIDEBAR_BEHAVIOR_KEY)
-    if (legacy === "collapse" || legacy === "expand" || legacy === "none") {
-      return legacy
-    }
-  } catch {
-    // ignore
-  }
-  return "none"
-}
-
-function getCurrentSectionKey(pathname: string): string | null {
-  const section = SIDEBAR_SECTIONS.find((sidebarSection) =>
-    sidebarSection.pathMatch(pathname)
-  )
-  return section?.key ?? null
-}
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
   const pathname = usePathname()
-  const prevSectionRef = useRef<string | null>(null)
+  const section = useMemo(() => findSidebarSection(pathname), [pathname])
+  const { behavior } = useSidebarBehavior(section)
+  const appliedRef = useRef<{
+    sectionKey: string | null
+    behavior: SidebarBehavior
+  } | null>(null)
 
   const toggleSidebar = () => {
     setIsSidebarMinimized((prev) => !prev)
   }
 
+  // 設定をサイドバーの開閉へ押し出す。区分が変わったときと、設定が変わったときだけ効かせる
+  // （事前描画では設定を読めないので、初回は「読めた」時点がここに当たる）。
+  // 同じ区分の中の遷移では動かさないので、利用者が手で開き直した状態は保たれる。
   useEffect(() => {
-    const currentSection = getCurrentSectionKey(pathname)
+    const sectionKey = section?.key ?? null
+    const applied = appliedRef.current
+    if (applied?.sectionKey === sectionKey && applied.behavior === behavior) {
+      return
+    }
+    if (sectionKey === null || behavior === "none") {
+      appliedRef.current = { sectionKey, behavior }
+      return
+    }
 
-    // 同じセクション内の遷移では何もしない
-    if (currentSection === prevSectionRef.current) return
-    prevSectionRef.current = currentSection
-
-    const behavior = getSidebarBehaviorForPath(pathname)
-    if (behavior === null || behavior === "none") return
-
+    // 押し出せたときに「押し出した」と記録する（途中で取り消されたら記録も残さない）
     const frame = requestAnimationFrame(() => {
+      appliedRef.current = { sectionKey, behavior }
       setIsSidebarMinimized(behavior === "collapse")
     })
 
     return () => cancelAnimationFrame(frame)
-  }, [pathname])
+  }, [behavior, section])
 
   return (
     <div className="flex h-screen">

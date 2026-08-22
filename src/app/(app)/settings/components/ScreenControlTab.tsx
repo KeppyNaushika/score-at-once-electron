@@ -2,14 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Monitor, PanelLeftClose } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback } from "react"
 import { toast } from "sonner"
 
-import {
-  SIDEBAR_SECTIONS,
-  type SidebarBehavior,
-} from "@/components/layout/AppShell"
-import { Button } from "@/components/ui/button"
+import { SidebarBehaviorRow } from "@/app/(app)/settings/components/SidebarBehaviorRow"
+import { SIDEBAR_SECTIONS } from "@/components/layout/sidebarBehavior"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -56,39 +53,6 @@ export function ScreenControlTab() {
     "screenBlackoutAutoFullScreen",
     storedAutoFullScreen ?? null
   )
-
-  // サイドバー動作（セクション別）
-  const [sidebarBehaviors, setSidebarBehaviors] = useState<
-    Record<string, SidebarBehavior>
-  >(() =>
-    Object.fromEntries(SIDEBAR_SECTIONS.map((section) => [section.key, "none"]))
-  )
-
-  useEffect(() => {
-    const loadSettings = () => {
-      // サイドバー動作の設定を読み込み（セクション別）
-      try {
-        const loaded: Record<string, SidebarBehavior> = {}
-        for (const section of SIDEBAR_SECTIONS) {
-          const stored = localStorage.getItem(section.storageKey)
-          if (
-            stored === "collapse" ||
-            stored === "expand" ||
-            stored === "none"
-          ) {
-            loaded[section.key] = stored
-          } else {
-            loaded[section.key] = "none"
-          }
-        }
-        setSidebarBehaviors(loaded)
-      } catch {
-        // ignore
-      }
-    }
-
-    loadSettings()
-  }, [])
 
   // プロジェクターモードの切り替え
   const handleProjectorModeToggle = useCallback(
@@ -144,29 +108,6 @@ export function ScreenControlTab() {
       )
     },
     [setPreference]
-  )
-
-  // サイドバー動作の変更（セクション別）
-  const handleSidebarBehaviorChange = useCallback(
-    (sectionKey: string, behavior: SidebarBehavior) => {
-      setSidebarBehaviors((prev) => ({ ...prev, [sectionKey]: behavior }))
-      const section = SIDEBAR_SECTIONS.find(
-        (candidate) => candidate.key === sectionKey
-      )
-      if (section) {
-        localStorage.setItem(section.storageKey, behavior)
-      }
-      const labels: Record<SidebarBehavior, string> = {
-        collapse: "縮小する",
-        expand: "展開する",
-        none: "変更しない",
-      }
-      const sectionLabel = section?.label ?? ""
-      toast.success(
-        `${sectionLabel}のサイドバー動作を「${labels[behavior]}」に設定しました`
-      )
-    },
-    []
   )
 
   return (
@@ -274,33 +215,7 @@ export function ScreenControlTab() {
           {SIDEBAR_SECTIONS.map((section, index) => (
             <div key={section.key}>
               {index > 0 && <div className="my-3 border-t" />}
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">{section.label}</Label>
-                <div className="flex items-center gap-1.5">
-                  {(
-                    [
-                      { value: "collapse", label: "縮小する" },
-                      { value: "expand", label: "展開する" },
-                      { value: "none", label: "変更しない" },
-                    ] as const
-                  ).map((option) => (
-                    <Button
-                      key={option.value}
-                      variant={
-                        sidebarBehaviors[section.key] === option.value
-                          ? "default"
-                          : "outline"
-                      }
-                      size="sm"
-                      onClick={() =>
-                        handleSidebarBehaviorChange(section.key, option.value)
-                      }
-                    >
-                      {option.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
+              <SidebarBehaviorRow section={section} />
             </div>
           ))}
         </div>

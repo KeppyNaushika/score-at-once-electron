@@ -122,7 +122,7 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
                 <TableRow className="hover:bg-transparent">
                   <SortableTableHead
                     sortKey="examName"
-                    currentSortKey={sortConfig.key as string | null}
+                    currentSortKey={sortConfig.key}
                     currentDirection={sortConfig.direction}
                     onSort={(key) =>
                       requestSort(key as keyof ExamResultSortable)
@@ -133,7 +133,7 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
                   <TableHead>タグ</TableHead>
                   <SortableTableHead
                     sortKey="examDate"
-                    currentSortKey={sortConfig.key as string | null}
+                    currentSortKey={sortConfig.key}
                     currentDirection={sortConfig.direction}
                     onSort={(key) =>
                       requestSort(key as keyof ExamResultSortable)
@@ -143,7 +143,7 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
                   </SortableTableHead>
                   <SortableTableHead
                     sortKey="totalScore"
-                    currentSortKey={sortConfig.key as string | null}
+                    currentSortKey={sortConfig.key}
                     currentDirection={sortConfig.direction}
                     onSort={(key) =>
                       requestSort(key as keyof ExamResultSortable)
