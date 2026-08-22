@@ -19,6 +19,8 @@ import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type { PreMatchingResult } from "@/types/examArchive.types"
 
+import { ImportActionChoice } from "../ImportActionChoice"
+
 interface FileOverviewStepProps {
   wizard: UseImportWizardReturn
 }
@@ -30,7 +32,7 @@ interface FileOverviewStepProps {
  * 紐づけ方法の選択は行わない（それはStep 3で行う）。
  */
 export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
-  const { state, goToNextStep, performPreMatching } = wizard
+  const { state, goToNextStep, performPreMatching, setImportAction } = wizard
   const [isLoading, setIsLoading] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set()
@@ -100,6 +102,17 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
           </p>
         </CardContent>
       </Card>
+
+      {/* 取り込みの方針（この1つが読み込む全てのものに効く） */}
+      <ImportActionChoice
+        action={state.idIntegrationConfig.exam ?? "merge"}
+        onChange={setImportAction}
+        overlapLabel={
+          state.fileOverviewData?.exam?.isIdMatch
+            ? state.fileOverviewData.exam.displayLabel
+            : undefined
+        }
+      />
 
       {/* メイン: ファイル概要 */}
       <div className="flex-1 space-y-4">

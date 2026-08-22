@@ -17,12 +17,14 @@ import { Card, CardContent } from "@/components/ui/card"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type {
   CategoryIdIntegrationConfig,
+  MatchedItem,
   PreMatchingResult,
   ScoringConflict,
-  ScoringConflictConfig,
   ScoringConflictData,
-  UpdateDecisions,
 } from "@/types/examArchive.types"
+import type { ImportAction } from "@/types/importAction.types"
+
+import { ChangePreview } from "./final-confirm/ChangePreview"
 
 interface FinalConfirmStepProps {
   wizard: UseImportWizardReturn
@@ -48,8 +50,7 @@ interface CategorySummary {
 function calculateCategorySummary(
   preMatch: PreMatchingResult,
   config: CategoryIdIntegrationConfig,
-  updateDecisions: UpdateDecisions,
-  category: string
+  action: ImportAction
 ): CategorySummary {
   let newCount = 0
   let skipped = 0
@@ -57,27 +58,30 @@ function calculateCategorySummary(
   let updated = 0
   let kept = 0
 
-  const countUpdateDecision = (importId: string, category: string) => {
-    const key = `${category}:${importId}`
-    const fieldDecisions = updateDecisions[key]
-    if (fieldDecisions && Object.keys(fieldDecisions).length > 0) {
-      const hasUpdate = Object.values(fieldDecisions).some(
-        (strategy) => strategy === "use_import" || strategy === "use_newer"
-      )
-      if (hasUpdate) {
-        updated++
-      } else {
-        kept++
-      }
+  /**
+   * 同じ実体だと決まった行を「書き換わる」「そのまま」へ数える。
+   * どちらになるかは取り込みの方針だけで決まる（項目ごとの選択は無い）。
+   */
+  const countLinked = (match: MatchedItem) => {
+    if (takesArchiveRow(match, action)) {
+      updated++
     } else {
-      // フィールド変更がないならkept
       kept++
     }
   }
 
+  const countUpdateDecision = (importId: string) => {
+    const match = [
+      ...preMatch.byId,
+      ...(preMatch.byStudentNumber ?? []),
+      ...(preMatch.byName ?? []),
+    ].find((candidate) => candidate.importId === importId)
+    if (match) countLinked(match)
+  }
+
   // ID一致
   for (const match of preMatch.byId) {
-    countUpdateDecision(match.importId, category)
+    countLinked(match)
   }
 
   const getDecision = (importId: string) => {
@@ -94,7 +98,7 @@ function calculateCategorySummary(
         config.strategy === "by_name"
       ) {
         if (!decision || decision.decisionType === "same_person") {
-          countUpdateDecision(match.importId, category)
+          countUpdateDecision(match.importId)
           if (decision?.idChoice === "use_import_id") {
             idChangeToImport++
           }
@@ -111,7 +115,7 @@ function calculateCategorySummary(
         }
       } else {
         if (decision?.decisionType === "same_person") {
-          countUpdateDecision(match.importId, category)
+          countUpdateDecision(match.importId)
           if (decision.idChoice === "use_import_id") {
             idChangeToImport++
           }
@@ -136,7 +140,7 @@ function calculateCategorySummary(
 
       if (config.strategy === "by_name") {
         if (!decision || decision.decisionType === "same_person") {
-          countUpdateDecision(match.importId, category)
+          countUpdateDecision(match.importId)
           if (decision?.idChoice === "use_import_id") {
             idChangeToImport++
           }
@@ -153,7 +157,7 @@ function calculateCategorySummary(
         }
       } else {
         if (decision?.decisionType === "same_person") {
-          countUpdateDecision(match.importId, category)
+          countUpdateDecision(match.importId)
           if (decision.idChoice === "use_import_id") {
             idChangeToImport++
           }
@@ -194,7 +198,7 @@ function calculateCategorySummary(
  */
 function calculateScoringSummary(
   scoringConflicts: ScoringConflictData | undefined,
-  scoringConflictConfig: ScoringConflictConfig,
+  action: ImportAction,
   totalScoresInArchive: number
 ): Omit<CategorySummary, "idChangeToImport"> {
   if (!scoringConflicts) {
@@ -209,13 +213,10 @@ function calculateScoringSummary(
   let updated = 0
   let skipped = 0
 
-  // conflicts にはデータが異なるもののみ含まれる
+  // conflicts にはデータが異なるもののみ含まれる。
+  // 採点も他の値と同じ方針で決まる（上書き=ファイル / 統合=後に書かれた方）
   for (const conflict of scoringConflicts.conflicts) {
-    const resolution = simulateScoringResolution(
-      conflict,
-      scoringConflictConfig
-    )
-    if (resolution === "import") {
+    if (takesArchiveScore(conflict, action)) {
       updated++
     } else {
       skipped++
@@ -238,37 +239,36 @@ function calculateScoringSummary(
 }
 
 /**
- * 採点競合の解決結果をフロントエンドで予測
- * (scoringConflictResolver.ts と同じロジック)
+ * 同じ実体だと決まった行が、ファイル側の値で書き換わるか（実行前の見込み）
+ *
+ * main の importValuePolicy と同じ規則。別で追加するときは既存に触らない。
  */
-function simulateScoringResolution(
-  conflict: ScoringConflict,
-  config: ScoringConflictConfig
-): "import" | "existing" {
-  const strategy = config.strategy ?? "newer_wins"
-
-  switch (strategy) {
-    case "import_wins":
-      return "import"
-    case "existing_wins":
-      return "existing"
-    case "newer_wins":
-      return resolveByTimestamp(conflict)
-    case "manual": {
-      const manual = config.manualResolutions?.[conflict.importScoreId]
-      if (manual) return manual
-      return resolveByTimestamp(conflict)
-    }
-    default:
-      return resolveByTimestamp(conflict)
-  }
+function takesArchiveRow(match: MatchedItem, action: ImportAction): boolean {
+  if (action === "overwrite") return true
+  if (action === "separate") return false
+  const importUpdatedAt = match.importData.updatedAt
+  const existingUpdatedAt = match.existingData?.updatedAt
+  if (typeof importUpdatedAt !== "string") return false
+  if (typeof existingUpdatedAt !== "string") return true
+  return new Date(importUpdatedAt) > new Date(existingUpdatedAt)
 }
 
-function resolveByTimestamp(conflict: ScoringConflict): "import" | "existing" {
-  return new Date(conflict.importScore.updatedAt) >
+/**
+ * 重なった採点のうち、ファイル側が採られるか（実行前の見込み）
+ *
+ * 判定は main の importValuePolicy と同じ規則。ここは表示のための予測で、
+ * 書き込みの判断そのものは main が行う。
+ */
+function takesArchiveScore(
+  conflict: ScoringConflict,
+  action: ImportAction
+): boolean {
+  if (action === "overwrite") return true
+  if (action === "separate") return false
+  return (
+    new Date(conflict.importScore.updatedAt) >
     new Date(conflict.existingScore.updatedAt)
-    ? "import"
-    : "existing"
+  )
 }
 
 // =============================================================================
@@ -280,21 +280,15 @@ function resolveByTimestamp(conflict: ScoringConflict): "import" | "existing" {
  */
 export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
   const { state, goBack } = wizard
-  const {
-    fileOverviewData,
-    idIntegrationConfig,
-    manifest,
-    updateDecisions,
-    scoringConflictConfig,
-  } = state
+  const { fileOverviewData, idIntegrationConfig, manifest } = state
+  const importAction = idIntegrationConfig.exam ?? "merge"
 
   // サマリーを計算
   const studentSummary = fileOverviewData
     ? calculateCategorySummary(
         fileOverviewData.student,
         idIntegrationConfig.student,
-        updateDecisions,
-        "student"
+        importAction
       )
     : null
 
@@ -302,8 +296,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
     ? calculateCategorySummary(
         fileOverviewData.classroom,
         idIntegrationConfig.classroom,
-        updateDecisions,
-        "classroom"
+        importAction
       )
     : null
 
@@ -311,15 +304,14 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
     ? calculateCategorySummary(
         fileOverviewData.subtotalGroup,
         idIntegrationConfig.subtotalGroup,
-        updateDecisions,
-        "subtotalGroup"
+        importAction
       )
     : null
 
   const totalScoresInArchive = manifest?.counts.scores ?? 0
   const scoringSummary = calculateScoringSummary(
     fileOverviewData?.scoringConflicts,
-    scoringConflictConfig,
+    importAction,
     totalScoresInArchive
   )
 
@@ -336,6 +328,42 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
 
       {/* サマリー */}
       <div className="mb-8 w-full max-w-lg space-y-4">
+        {/* 試験（同じ試験が既にある場合の分かれ道） */}
+        {fileOverviewData?.exam?.isIdMatch && (
+          <Card>
+            <CardContent className="p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5 text-muted-foreground" />
+                <h4 className="font-medium">試験</h4>
+              </div>
+              <ul className="text-sm">
+                {idIntegrationConfig.exam === "separate" && (
+                  <li className="flex items-center gap-2 text-muted-foreground">
+                    <span className="text-blue-500">●</span>
+                    別で追加する（このパソコンの「
+                    {fileOverviewData.exam.displayLabel}」はそのまま残ります）
+                  </li>
+                )}
+                {idIntegrationConfig.exam === "overwrite" && (
+                  <li className="flex items-center gap-2 text-muted-foreground">
+                    <span className="text-amber-500">●</span>
+                    既存の試験「{fileOverviewData.exam.displayLabel}
+                    」を上書き（試験名・試験日・説明・マーク補正の既定を読み込んだ内容で置き換え）
+                  </li>
+                )}
+                {idIntegrationConfig.exam !== "separate" &&
+                  idIntegrationConfig.exam !== "overwrite" && (
+                    <li className="flex items-center gap-2 text-muted-foreground">
+                      <span className="text-purple-500">●</span>
+                      既存の試験「{fileOverviewData.exam.displayLabel}
+                      」へ統合（試験名・試験日・説明・マーク補正の既定は後に書かれた方を採用）
+                    </li>
+                  )}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
         {/* 生徒 */}
         {studentSummary && (
           <SummaryCard
@@ -363,6 +391,17 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
             title="小計グループ"
             unit="グループ"
             summary={subtotalGroupSummary}
+          />
+        )}
+
+        {/* このPCの情報が書き換わるもの（読み取り専用） */}
+        {fileOverviewData && (
+          <ChangePreview
+            fileOverviewData={fileOverviewData}
+            studentConfig={idIntegrationConfig.student}
+            classroomConfig={idIntegrationConfig.classroom}
+            subtotalGroupConfig={idIntegrationConfig.subtotalGroup}
+            action={importAction}
           />
         )}
 

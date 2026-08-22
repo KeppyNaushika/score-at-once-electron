@@ -26,7 +26,6 @@ import type {
   MatchedItem,
   PreMatchingResult,
   ScoringConflict,
-  ScoringConflictConfig,
 } from "../../src/types/examArchive.types"
 
 // =============================================================================
@@ -361,6 +360,7 @@ export function createIdIntegrationConfig(
       strategy: "by_name",
       decisions: [],
     },
+    exam: overrides.exam,
   }
 }
 
@@ -438,14 +438,5 @@ export function createScoringConflict(
       updatedAt: new Date("2025-06-01").toISOString(),
     },
     maxPoints: overrides.maxPoints ?? 10,
-  }
-}
-
-export function createScoringConflictConfig(
-  overrides: Partial<ScoringConflictConfig> = {}
-): ScoringConflictConfig {
-  return {
-    strategy: overrides.strategy ?? "newer_wins",
-    manualResolutions: overrides.manualResolutions ?? {},
   }
 }

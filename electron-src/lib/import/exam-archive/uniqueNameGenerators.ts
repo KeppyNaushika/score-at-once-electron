@@ -1,7 +1,7 @@
 /**
  * ユニーク名生成モジュール
  *
- * 取り込む学級名・学籍番号が既存とぶつかったとき、サフィックスを付けて別物として作る。
+ * 取り込む学級名・学籍番号・試験名が既存とぶつかったとき、サフィックスを付けて別物として作る。
  *
  * 学級名・学籍番号は 2026-08-22 に `@unique` を外した
  * （`20260822140000_drop_human_name_uniques`）ので、**DB 上は同じ値が2つ並んでも通る**。
@@ -53,6 +53,40 @@ export async function generateUniqueStudentNumber(
   }
 
   return newStudentNumber
+}
+
+/**
+ * 既存とぶつからない試験名を生成
+ *
+ * 「別の試験として取り込む」を選んだときだけ使う。統合しないと決めた以上、
+ * 同じ名前の試験が2つ並ぶので、一覧のどちらが取り込んだ方かを名前で見分けられるようにする。
+ * 試験名に DB の制約は無く、これは人が読むためのサフィックス。
+ *
+ * @param tx - Prismaトランザクションクライアント
+ * @param originalName - 元の試験名
+ * @returns 既存のどれとも一致しない試験名
+ */
+export async function generateUniqueExamName(
+  tx: TransactionClient,
+  originalName: string
+): Promise<string> {
+  const existing = await tx.exam.findFirst({
+    where: { examName: originalName },
+  })
+
+  if (!existing) {
+    return originalName
+  }
+
+  let suffix = 2
+  let newName = `${originalName} (${suffix})`
+
+  while (await tx.exam.findFirst({ where: { examName: newName } })) {
+    suffix++
+    newName = `${originalName} (${suffix})`
+  }
+
+  return newName
 }
 
 /**

@@ -2,6 +2,8 @@
  * 試験インポート/エクスポート機能の型定義
  */
 
+import type { ImportAction } from "./importAction.types"
+
 // =============================================================================
 // Archive Manifest (manifest.json)
 // =============================================================================
@@ -411,6 +413,11 @@ export interface IdIntegrationConfig {
   subtotalGroup: CategoryIdIntegrationConfig
   /** 小計項目の直接マッピング（importSubtotalId → existingSubtotalId | "__new__"） */
   subtotalMappings?: Record<string, string>
+  /**
+   * 取り込みの方針（上書きする / 統合する / 別で追加する）。
+   * 省略時は統合。**この1つが取り込む全レコードの全ての値に効く**（importValuePolicy）。
+   */
+  exam?: ImportAction
 }
 
 // =============================================================================
@@ -1028,17 +1035,18 @@ export interface ArchiveTagsData {
 /**
  * ウィザードのステップ（先生向けの表現）
  *
- * フロー: file_select → file_overview → id_integration → update_confirm → final_confirm → execute
+ * フロー: file_select → file_overview → id_integration → final_confirm → execute
  *
- * Step 2 (file_overview): ファイルの概要説明（ID一致数、判断必要数を表示）
+ * Step 2 (file_overview): ファイルの概要説明（ID一致数、判断必要数と、取り込みの方針）
  * Step 3 (id_integration): データの統合（レコードのIDをどうするか決める）
- * Step 4 (update_confirm): データの更新（ID以外のカラムをどうするか決める）
+ *
+ * **ID以外の列をどうするかを選ぶ段は無い。** 値の扱いは Step 2 で選ぶ1つの方針で
+ * 決まり（importAction.types）、何が書き換わるかは Step 4 が読み取り専用で見せる。
  */
 export type ImportWizardStep =
   | "file_select" // Step 1: ファイル選択
   | "file_overview" // Step 2: ファイルの概要説明
   | "id_integration" // Step 3: データの統合（ID選択）
-  | "update_confirm" // Step 4: 情報の更新確認（情報を上書きするか）
   | "final_confirm" // Step 5: 最終確認（サマリー表示）
   | "execute"
 /**
@@ -1055,14 +1063,10 @@ export interface ImportWizardState {
   fileOverviewData: FileOverviewData | null
   /** ID統合設定（Step 3 で設定） */
   idIntegrationConfig: IdIntegrationConfig
-  /** 採点結果の競合解決設定（Step 3.5 で設定） */
-  scoringConflictConfig: ScoringConflictConfig
   /** 処理中フラグ */
   isProcessing: boolean
   /** エラーメッセージ */
   error: string | null
-  /** ユーザーの更新判断（`${category}:${importId}` -> フィールドごとの戦略） */
-  updateDecisions: UpdateDecisions
   /** 外部フォーマットの種別（.hsz/.dat選択時に設定） */
   sourceFormat?: "score" | "hsz" | "dat"
   /** .hsz免責事項モーダル表示フラグ */
@@ -1074,44 +1078,11 @@ export interface ImportWizardState {
 }
 
 // =============================================================================
-// Step 4: データ更新 用の型
+// 採点の重なり（最終確認の表示と、取り込み時の付き合わせに使う）
+//
+// **どう解決するかの設定は持たない。** 取り込みの方針（importAction.types）で
+// 決まるので、方針・個別解決の型は畳んだ。
 // =============================================================================
-
-/**
- * フィールド更新戦略
- * - keep_existing: このPCの値を維持
- * - use_import: ファイルの値で上書き
- * - use_newer: updatedAtを比較して新しい方を採用
- */
-export type UpdateStrategy = "keep_existing" | "use_import" | "use_newer"
-
-/**
- * フィールド単位の更新決定
- * key: フィールド名, value: 更新戦略
- */
-type FieldUpdateDecision = Record<string, UpdateStrategy>
-
-/**
- * 全アイテムの更新決定
- * key: `${category}:${importId}`, value: フィールドごとの戦略
- */
-export type UpdateDecisions = Record<string, FieldUpdateDecision>
-
-// =============================================================================
-// Step 3.5: 採点結果の競合解決 用の型
-// =============================================================================
-
-/**
- * 採点結果の競合解決方針
- *
- * UI表現（先生向け）:
- * - import_wins: "すべてファイルの採点を使う"
- * - existing_wins: "すべてこのPCの採点を使う"
- * - newer_wins: "新しい方（最終更新日時）を使う"
- * - manual: "競合している採点を1つずつ確認する"
- */
-export type ScoringConflictResolutionStrategy =
-  "import_wins" | "existing_wins" | "newer_wins" | "manual"
 
 /**
  * 採点結果の競合（1件分）
@@ -1159,14 +1130,4 @@ export interface ScoringConflictData {
   unchangedCount: number
   /** 競合の詳細リスト */
   conflicts: ScoringConflict[]
-}
-
-/**
- * 採点結果の競合解決設定
- */
-export interface ScoringConflictConfig {
-  /** 解決方針 */
-  strategy: ScoringConflictResolutionStrategy
-  /** 個別選択結果（strategyがmanualの場合） */
-  manualResolutions: Record<string, "import" | "existing">
 }

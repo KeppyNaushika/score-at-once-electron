@@ -3,7 +3,8 @@
  *
  * - 外部参照（生徒/学級/タグ）は idRemapper で UUID 一次 + 名前マッチング解決。
  * - 資料本体は UUID 一次照合（decision 未指定）/ ユーザー判断（reuse/new）で流用 or 新規。
- * - 点数は @@unique([courseworkItemId, courseworkStudentId]) を updatedAt の LWW で upsert。
+ * - 値の扱いは merge/importValuePolicy に一本化されている（上書きする / 統合する /
+ *   別で追加する）。資料本体・評価項目・変換表・名簿・点数のどれも同じ規則で決まる。
  *
  * アーカイブはテーブルごとの平坦なセクションで来るので、courseworkId / courseworkItemId で
  * 束ね直してから資料単位に処理する。
@@ -20,7 +21,16 @@ import type {
   CourseworkImportOptions,
 } from "../../../../src/types/courseworkArchive.types"
 import type { TransactionClient } from "../exam-archive/uniqueNameGenerators"
-import { isNewerByLww } from "../merge/decisionMergePolicy"
+import type { ImportValuePolicy } from "../merge/importValuePolicy"
+import {
+  createImportValuePolicy,
+  replacementUpdatedAt,
+} from "../merge/importValuePolicy"
+import {
+  reorderCourseworkClassrooms,
+  reorderCourseworkItems,
+  reorderCourseworkStudents,
+} from "../merge/reorderAfterImport"
 import {
   resolveClassrooms,
   resolveStudents,
@@ -84,6 +94,18 @@ export async function importCourseworkData(
   const method = options.studentMatching ?? "studentNumber"
   const allowCreate = options.allowCreate ?? true
   const decisions = options.courseworkDecisions ?? {}
+  // 取り込みの方針。省略時は統合（従来の挙動＝点数だけ LWW）
+  const policy: ImportValuePolicy = createImportValuePolicy(
+    options.action ?? "merge"
+  )
+  /**
+   * 行が増えた資料。並び順は列全体の性質なので、行ごとに入れた値には重複と穴ができる。
+   * **増えたときだけ**、最後にその資料の名簿・評価項目・学級を詰め直す
+   * （毎回やると触っていない並びまで書き換えて updatedAt が動く）。
+   */
+  const courseworkIdsWithNewStudents = new Set<string>()
+  const courseworkIdsWithNewClassrooms = new Set<string>()
+  const courseworkIdsWithNewItems = new Set<string>()
   const warnings: string[] = []
   const createdCourseworkIds: string[] = []
   const itemIdMap = new Map<string, string>()
@@ -203,21 +225,62 @@ export async function importCourseworkData(
         comment: archiveScore.comment,
       }
       if (existing) {
-        if (
-          isNewerByLww(new Date(archiveScore.updatedAt), existing.updatedAt)
-        ) {
+        const updatedAt = replacementUpdatedAt(
+          policy,
+          archiveScore.updatedAt,
+          existing.updatedAt
+        )
+        if (updatedAt) {
           await tx.courseworkScore.update({
             where: { id: existing.id },
-            data: payload,
+            data: { ...payload, updatedAt },
           })
         }
       } else {
         await tx.courseworkScore.create({
-          data: { courseworkItemId, courseworkStudentId, ...payload },
+          data: {
+            courseworkItemId,
+            courseworkStudentId,
+            ...payload,
+            ...policy.createdTimestamps(archiveScore),
+          },
         })
       }
     }
     return skipped
+  }
+
+  /**
+   * 既にある資料の列を規則に従って書き換える。
+   *
+   * Coursework の列は id / name / description / date / createdAt / updatedAt で全部。
+   * id と createdAt は動かさない。列を足したらここにも足すこと。
+   */
+  const applyCourseworkColumns = async (
+    courseworkId: string,
+    coursework: ArchiveCourseworkRow
+  ): Promise<void> => {
+    const existing = await tx.coursework.findUnique({
+      where: { id: courseworkId },
+    })
+    if (!existing) return
+
+    const updatedAt = replacementUpdatedAt(
+      policy,
+      coursework.updatedAt,
+      existing.updatedAt
+    )
+    if (!updatedAt) return
+
+    await tx.coursework.update({
+      where: { id: courseworkId },
+      data: {
+        name: coursework.name,
+        description: coursework.description,
+        date: coursework.date ? new Date(coursework.date) : null,
+        updatedAt,
+      },
+    })
   }
 
   /** 評価項目を作成（変換表も投入）し実 ID を返す */
@@ -241,12 +304,66 @@ export async function importCourseworkData(
               label: letterScale.label,
               score: letterScale.score,
               order: letterScale.order,
+              ...policy.createdTimestamps(letterScale),
             })),
           },
         }),
+        ...policy.createdTimestamps(item),
       },
     })
     return created.id
+  }
+
+  /**
+   * 既にある評価項目の列を規則に従って書き換える。
+   *
+   * CourseworkItem の列は id / courseworkId / name / order / maxScore / inputMode /
+   * createdAt / updatedAt で全部。**変換表（letterScales）はこの項目の持ち物の集合**
+   * なので、行ごとではなく項目ごと入れ替える（行ごとに当てると増減したときに
+   * 古い記号が残り、半分古い表ができる）。
+   */
+  const applyItemColumns = async (
+    courseworkItemId: string,
+    item: ArchiveCourseworkItemRow
+  ): Promise<void> => {
+    const existing = await tx.courseworkItem.findUnique({
+      where: { id: courseworkItemId },
+    })
+    if (!existing) return
+
+    const updatedAt = replacementUpdatedAt(
+      policy,
+      item.updatedAt,
+      existing.updatedAt
+    )
+    if (!updatedAt) return
+
+    await tx.courseworkItem.update({
+      where: { id: courseworkItemId },
+      data: {
+        name: item.name,
+        // 並び順は取り込みの最後に詰め直す（列全体の性質なので行ごとには決められない）
+        order: item.order,
+        maxScore: item.maxScore,
+        inputMode: item.inputMode || "numeric",
+        updatedAt,
+      },
+    })
+
+    await tx.courseworkLetterScale.deleteMany({
+      where: { courseworkItemId },
+    })
+    for (const letterScale of letterScalesByItem.get(item.id) ?? []) {
+      await tx.courseworkLetterScale.create({
+        data: {
+          courseworkItemId,
+          label: letterScale.label,
+          score: letterScale.score,
+          order: letterScale.order,
+          ...policy.createdTimestamps(letterScale),
+        },
+      })
+    }
   }
 
   /**
@@ -268,10 +385,29 @@ export async function importCourseworkData(
       const exists = await tx.courseworkClassroom.findUnique({
         where: { courseworkId_classroomId: { courseworkId, classroomId } },
       })
-      if (!exists) {
+      if (exists) {
+        const updatedAt = replacementUpdatedAt(
+          policy,
+          classroomRef.updatedAt,
+          exists.updatedAt
+        )
+        if (updatedAt) {
+          await tx.courseworkClassroom.update({
+            where: { id: exists.id },
+            // 並び順は取り込みの最後に詰め直す
+            data: { order: classroomRef.order, updatedAt },
+          })
+        }
+      } else {
         await tx.courseworkClassroom.create({
-          data: { courseworkId, classroomId, order: classroomRef.order },
+          data: {
+            courseworkId,
+            classroomId,
+            order: classroomRef.order,
+            ...policy.createdTimestamps(classroomRef),
+          },
         })
+        courseworkIdsWithNewClassrooms.add(courseworkId)
       }
     }
 
@@ -282,7 +418,13 @@ export async function importCourseworkData(
         where: { courseworkId_tagId: { courseworkId, tagId } },
       })
       if (!exists) {
-        await tx.courseworkTag.create({ data: { courseworkId, tagId } })
+        await tx.courseworkTag.create({
+          data: {
+            courseworkId,
+            tagId,
+            ...policy.createdTimestamps(tagRef),
+          },
+        })
       }
     }
 
@@ -301,14 +443,29 @@ export async function importCourseworkData(
       const exists = await tx.courseworkStudent.findUnique({
         where: { courseworkId_studentId: { courseworkId, studentId } },
       })
-      if (!exists) {
+      if (exists) {
+        const updatedAt = replacementUpdatedAt(
+          policy,
+          studentRef.updatedAt,
+          exists.updatedAt
+        )
+        if (updatedAt) {
+          await tx.courseworkStudent.update({
+            where: { id: exists.id },
+            // 並び順は取り込みの最後に詰め直す
+            data: { customOrder: studentRef.customOrder, updatedAt },
+          })
+        }
+      } else {
         await tx.courseworkStudent.create({
           data: {
             courseworkId,
             studentId,
             customOrder: studentRef.customOrder,
+            ...policy.createdTimestamps(studentRef),
           },
         })
+        courseworkIdsWithNewStudents.add(courseworkId)
       }
     }
 
@@ -349,12 +506,15 @@ export async function importCourseworkData(
     const skipped: SkippedScoreCounts = { orphaned: 0, unresolved: 0 }
     for (const item of itemsByCoursework.get(coursework.id) ?? []) {
       let actualItemId = existingItemIdByName.get(item.name)
-      if (!actualItemId) {
+      if (actualItemId) {
+        await applyItemColumns(actualItemId, item)
+      } else {
         actualItemId = await createItem(
           courseworkId,
           preserveUuids ? item.id : crypto.randomUUID(),
           item
         )
+        courseworkIdsWithNewItems.add(courseworkId)
       }
       const itemSkipped = await upsertScores(item.id, actualItemId, roster)
       skipped.orphaned += itemSkipped.orphaned
@@ -387,7 +547,9 @@ export async function importCourseworkData(
     }
 
     if (reuseId) {
-      // 既存資料へ統合: 名簿/学級/タグの不足を補い、項目は名前で突合、点数は LWW
+      // 既存資料へ: 名簿/学級/タグの不足を補い、項目は名前で突合。
+      // 値を置き換えるかどうかは取り込みの方針が決める
+      await applyCourseworkColumns(reuseId, coursework)
       const roster = await ensureJoins(reuseId, coursework.id)
       const existing = await tx.coursework.findUnique({
         where: { id: reuseId },
@@ -418,6 +580,7 @@ export async function importCourseworkData(
         name: coursework.name,
         description: coursework.description,
         date: coursework.date ? new Date(coursework.date) : null,
+        ...policy.createdTimestamps(coursework),
       },
     })
     createdCourseworkIds.push(created.id)
@@ -432,6 +595,17 @@ export async function importCourseworkData(
         preserveUuids
       )
     )
+  }
+
+  // 行が増えた資料だけ、並び順をまるごと詰め直す
+  for (const courseworkId of courseworkIdsWithNewStudents) {
+    await reorderCourseworkStudents(courseworkId, tx)
+  }
+  for (const courseworkId of courseworkIdsWithNewItems) {
+    await reorderCourseworkItems(courseworkId, tx)
+  }
+  for (const courseworkId of courseworkIdsWithNewClassrooms) {
+    await reorderCourseworkClassrooms(courseworkId, tx)
   }
 
   return { createdCourseworkIds, itemIdMap, warnings }

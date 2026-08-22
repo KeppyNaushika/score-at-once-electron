@@ -19,9 +19,8 @@ import type {
   IdChoice,
   IdIntegrationDecision,
   ImportWizardState,
-  ScoringConflictResolutionStrategy,
-  UpdateStrategy,
 } from "@/types/examArchive.types"
+import type { ImportAction } from "@/types/importAction.types"
 
 import { initialState, STEP_ORDER } from "./constants"
 
@@ -32,9 +31,10 @@ import { initialState, STEP_ORDER } from "./constants"
  * Step 1 (file_select): ファイル選択
  * Step 2 (file_overview): ファイル概要説明（ID一致数、判断必要数を表示）
  * Step 3 (id_integration): データの統合（レコードのIDをどうするか決める）
- * Step 4 (update_confirm): データの更新（ID以外のカラムをどうするか決める）
- * Step 5 (final_confirm): 最終確認
- * Step 6 (execute): 実行
+ * Step 4 (final_confirm): 最終確認（何が書き換わるかを読み取り専用で表示）
+ * Step 5 (execute): 実行
+ *
+ * **ID以外の列をどうするかを選ぶ段は無い。** 値の扱いは Step 2 で選ぶ1つの方針で決まる。
  */
 export function useImportWizard() {
   const currentUser = useCurrentUser()
@@ -186,6 +186,14 @@ export function useImportWizard() {
     }
   }, [state.archivePath])
 
+  // 試験ID一致時の扱い（既存試験へ統合する / 別の試験として取り込む）を設定
+  const setImportAction = useCallback((action: ImportAction) => {
+    setState((prev) => ({
+      ...prev,
+      idIntegrationConfig: { ...prev.idIntegrationConfig, exam: action },
+    }))
+  }, [])
+
   /** カテゴリキーの型（subtotalMappingsを除く） */
   type IdIntegrationCategoryKey = "student" | "classroom" | "subtotalGroup"
 
@@ -268,76 +276,6 @@ export function useImportWizard() {
     []
   )
 
-  // フィールド単位の更新決定を設定
-  const setFieldUpdateDecision = useCallback(
-    (itemKey: string, field: string, strategy: UpdateStrategy) => {
-      setState((prev) => ({
-        ...prev,
-        updateDecisions: {
-          ...prev.updateDecisions,
-          [itemKey]: {
-            ...prev.updateDecisions[itemKey],
-            [field]: strategy,
-          },
-        },
-      }))
-    },
-    []
-  )
-
-  // カテゴリ一括の更新戦略を設定
-  const setBulkUpdateStrategy = useCallback(
-    (itemKeys: string[], fields: string[], strategy: UpdateStrategy) => {
-      setState((prev) => {
-        const newDecisions = { ...prev.updateDecisions }
-        for (const key of itemKeys) {
-          const existing = newDecisions[key] || {}
-          const updated = { ...existing }
-          for (const field of fields) {
-            updated[field] = strategy
-          }
-          newDecisions[key] = updated
-        }
-        return {
-          ...prev,
-          updateDecisions: newDecisions,
-        }
-      })
-    },
-    []
-  )
-
-  // 採点競合解決の方針を設定
-  const setScoringConflictStrategy = useCallback(
-    (strategy: ScoringConflictResolutionStrategy) => {
-      setState((prev) => ({
-        ...prev,
-        scoringConflictConfig: {
-          ...prev.scoringConflictConfig,
-          strategy,
-        },
-      }))
-    },
-    []
-  )
-
-  // 採点競合の個別解決を設定
-  const setScoringConflictResolution = useCallback(
-    (conflictId: string, resolution: "import" | "existing") => {
-      setState((prev) => ({
-        ...prev,
-        scoringConflictConfig: {
-          ...prev.scoringConflictConfig,
-          manualResolutions: {
-            ...prev.scoringConflictConfig.manualResolutions,
-            [conflictId]: resolution,
-          },
-        },
-      }))
-    },
-    []
-  )
-
   // 小計項目の直接マッピングを更新
   const updateSubtotalMapping = useCallback(
     (importSubtotalId: string, targetId: string) => {
@@ -375,30 +313,10 @@ export function useImportWizard() {
     })
   }, [])
 
-  // 複数の採点競合を一括解決
-  const setAllScoringConflictResolutions = useCallback(
-    (conflictIds: string[], resolution: "import" | "existing") => {
-      setState((prev) => {
-        const newResolutions = {
-          ...prev.scoringConflictConfig.manualResolutions,
-        }
-        for (const id of conflictIds) {
-          newResolutions[id] = resolution
-        }
-        return {
-          ...prev,
-          scoringConflictConfig: {
-            ...prev.scoringConflictConfig,
-            manualResolutions: newResolutions,
-          },
-        }
-      })
-    },
-    []
-  )
-
-  // 採点競合検出（id_integration → update_confirm 遷移時に実行）
-  const detectAndAdvanceToUpdateConfirm = useCallback(async () => {
+  // 採点の重なりを数える（id_integration → final_confirm 遷移時に実行）。
+  // どう解決するかは取り込みの方針で決まっているので、ここで数えるのは
+  // 最終確認に「何件が書き換わるか」を見せるため
+  const detectAndAdvanceToFinalConfirm = useCallback(async () => {
     if (!state.archivePath || !state.fileOverviewData) return
 
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
@@ -417,13 +335,13 @@ export function useImportWizard() {
             ? { ...prev.fileOverviewData, scoringConflicts }
             : prev.fileOverviewData,
           isProcessing: false,
-          currentStep: "update_confirm",
+          currentStep: "final_confirm",
         }))
       } else {
         setState((prev) => ({
           ...prev,
           isProcessing: false,
-          currentStep: "update_confirm",
+          currentStep: "final_confirm",
         }))
       }
     } catch (error) {
@@ -440,9 +358,9 @@ export function useImportWizard() {
 
   // 次のステップへ進む
   const goToNextStep = useCallback(() => {
-    // id_integration → update_confirm は採点競合検出を挟む
+    // id_integration → final_confirm は採点の重なりの集計を挟む
     if (state.currentStep === "id_integration") {
-      detectAndAdvanceToUpdateConfirm()
+      detectAndAdvanceToFinalConfirm()
       return
     }
 
@@ -451,7 +369,7 @@ export function useImportWizard() {
       if (currentIndex < 0 || currentIndex >= STEP_ORDER.length - 1) return prev
       return { ...prev, currentStep: STEP_ORDER[currentIndex + 1] }
     })
-  }, [state.currentStep, detectAndAdvanceToUpdateConfirm])
+  }, [state.currentStep, detectAndAdvanceToFinalConfirm])
 
   // ステップを戻る
   const goBack = useCallback(() => {
@@ -482,8 +400,6 @@ export function useImportWizard() {
         preMatchResult: state.fileOverviewData,
         integrationConfig: state.idIntegrationConfig,
         currentUserId: currentUser.id,
-        scoringConflictConfig: state.scoringConflictConfig,
-        updateDecisions: state.updateDecisions,
       })
 
       setState((prev) => ({ ...prev, isProcessing: false }))
@@ -501,8 +417,6 @@ export function useImportWizard() {
     state.archivePath,
     state.fileOverviewData,
     state.idIntegrationConfig,
-    state.scoringConflictConfig,
-    state.updateDecisions,
     currentUser.id,
     runImport,
   ])
@@ -521,14 +435,10 @@ export function useImportWizard() {
     state,
     selectFile,
     performPreMatching,
+    setImportAction,
     updateIdIntegrationConfig,
     updateIdIntegrationDecision,
     batchUpdateIdIntegrationDecisions,
-    setFieldUpdateDecision,
-    setBulkUpdateStrategy,
-    setScoringConflictStrategy,
-    setScoringConflictResolution,
-    setAllScoringConflictResolutions,
     acceptHszDisclaimer,
     dismissHszDisclaimer,
     updateSubtotalMapping,

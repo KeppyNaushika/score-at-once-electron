@@ -565,7 +565,7 @@ describe("useImportWizard", () => {
       expect(result.current.state.currentStep).toBe("id_integration")
     })
 
-    it("IW-46: id_integrationからdetectScoringConflictsを経由してupdate_confirmに遷移する", async () => {
+    it("IW-46: id_integrationから採点の重なりを数えてfinal_confirmに遷移する", async () => {
       const conflictData = createMockScoringConflictData({ conflictCount: 1 })
       mockArchive.detectScoringConflicts.mockResolvedValue({
         success: true,
@@ -585,40 +585,16 @@ describe("useImportWizard", () => {
       })
       expect(result.current.state.currentStep).toBe("id_integration")
 
-      // id_integrationからnext → detectScoringConflicts → update_confirm
+      // id_integrationからnext → detectScoringConflicts → final_confirm
       await act(async () => {
         result.current.goToNextStep()
       })
 
       expect(mockArchive.detectScoringConflicts).toHaveBeenCalled()
-      expect(result.current.state.currentStep).toBe("update_confirm")
-    })
-
-    it("IW-47: update_confirmからfinal_confirmに遷移する", async () => {
-      const { result } = renderHook(() => useImportWizard(), {
-        wrapper: createQueryWrapper(),
-      })
-
-      // update_confirmまで進める
-      await act(async () => {
-        await result.current.selectFile()
-      })
-      act(() => {
-        result.current.goToNextStep()
-      })
-      await act(async () => {
-        result.current.goToNextStep()
-      })
-      expect(result.current.state.currentStep).toBe("update_confirm")
-
-      act(() => {
-        result.current.goToNextStep()
-      })
-
       expect(result.current.state.currentStep).toBe("final_confirm")
     })
 
-    it("IW-48: final_confirmからexecuteに遷移する", async () => {
+    it("IW-47: final_confirmからexecuteに遷移する", async () => {
       const { result } = renderHook(() => useImportWizard(), {
         wrapper: createQueryWrapper(),
       })
@@ -633,9 +609,6 @@ describe("useImportWizard", () => {
       await act(async () => {
         result.current.goToNextStep()
       })
-      act(() => {
-        result.current.goToNextStep()
-      })
       expect(result.current.state.currentStep).toBe("final_confirm")
 
       act(() => {
@@ -643,6 +616,40 @@ describe("useImportWizard", () => {
       })
 
       expect(result.current.state.currentStep).toBe("execute")
+    })
+
+    it("IW-48: 段は5つで、更新の段は通らない", async () => {
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
+
+      const visited: string[] = []
+      await act(async () => {
+        await result.current.selectFile()
+      })
+      visited.push(result.current.state.currentStep)
+
+      act(() => {
+        result.current.goToNextStep()
+      })
+      visited.push(result.current.state.currentStep)
+
+      await act(async () => {
+        result.current.goToNextStep()
+      })
+      visited.push(result.current.state.currentStep)
+
+      act(() => {
+        result.current.goToNextStep()
+      })
+      visited.push(result.current.state.currentStep)
+
+      expect(visited).toEqual([
+        "file_overview",
+        "id_integration",
+        "final_confirm",
+        "execute",
+      ])
     })
 
     it("IW-50: goBackでid_integrationからfile_overviewに戻る", async () => {
@@ -679,117 +686,53 @@ describe("useImportWizard", () => {
   })
 
   // =========================================================================
-  // 採点競合設定
+  // 取り込みの方針
   // =========================================================================
 
-  describe("setScoringConflictStrategy - 採点競合方針設定", () => {
-    it("IW-60: 採点競合方針をnewer_winsに設定できる", () => {
+  describe("setImportAction - 取り込みの方針", () => {
+    it("IW-60: 既定は「統合する」", () => {
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
+      })
+
+      expect(result.current.state.idIntegrationConfig.exam).toBe("merge")
+    })
+
+    it("IW-61: 「上書きする」「別で追加する」を選び直せる", () => {
       const { result } = renderHook(() => useImportWizard(), {
         wrapper: createQueryWrapper(),
       })
 
       act(() => {
-        result.current.setScoringConflictStrategy("newer_wins")
+        result.current.setImportAction("overwrite")
+      })
+      expect(result.current.state.idIntegrationConfig.exam).toBe("overwrite")
+
+      act(() => {
+        result.current.setImportAction("separate")
+      })
+      expect(result.current.state.idIntegrationConfig.exam).toBe("separate")
+    })
+
+    it("IW-62: 方針を選び直しても、紐づけの設定は消えない", () => {
+      const { result } = renderHook(() => useImportWizard(), {
+        wrapper: createQueryWrapper(),
       })
 
-      expect(result.current.state.scoringConflictConfig.strategy).toBe(
-        "newer_wins"
+      act(() => {
+        result.current.updateIdIntegrationConfig("student", {
+          strategy: "all_new",
+          decisions: [],
+        })
+      })
+      act(() => {
+        result.current.setImportAction("overwrite")
+      })
+
+      expect(result.current.state.idIntegrationConfig.student.strategy).toBe(
+        "all_new"
       )
-    })
-
-    it("IW-61: 採点競合方針をimport_winsに設定できる", () => {
-      const { result } = renderHook(() => useImportWizard(), {
-        wrapper: createQueryWrapper(),
-      })
-
-      act(() => {
-        result.current.setScoringConflictStrategy("import_wins")
-      })
-
-      expect(result.current.state.scoringConflictConfig.strategy).toBe(
-        "import_wins"
-      )
-    })
-  })
-
-  describe("setScoringConflictResolution - 個別解決", () => {
-    it("IW-65: 個別の採点競合解決を設定できる", () => {
-      const { result } = renderHook(() => useImportWizard(), {
-        wrapper: createQueryWrapper(),
-      })
-
-      act(() => {
-        result.current.setScoringConflictResolution("conflict-1", "import")
-      })
-
-      expect(
-        result.current.state.scoringConflictConfig.manualResolutions[
-          "conflict-1"
-        ]
-      ).toBe("import")
-    })
-
-    it("IW-66: 複数の採点競合解決を一括設定できる", () => {
-      const { result } = renderHook(() => useImportWizard(), {
-        wrapper: createQueryWrapper(),
-      })
-
-      act(() => {
-        result.current.setAllScoringConflictResolutions(
-          ["conflict-1", "conflict-2"],
-          "existing"
-        )
-      })
-
-      const resolutions =
-        result.current.state.scoringConflictConfig.manualResolutions
-      expect(resolutions["conflict-1"]).toBe("existing")
-      expect(resolutions["conflict-2"]).toBe("existing")
-    })
-  })
-
-  // =========================================================================
-  // フィールド更新決定
-  // =========================================================================
-
-  describe("setFieldUpdateDecision / setBulkUpdateStrategy", () => {
-    it("IW-70: フィールド単位の更新決定を設定できる", () => {
-      const { result } = renderHook(() => useImportWizard(), {
-        wrapper: createQueryWrapper(),
-      })
-
-      act(() => {
-        result.current.setFieldUpdateDecision(
-          "student:import-1",
-          "lastName",
-          "use_import"
-        )
-      })
-
-      expect(
-        result.current.state.updateDecisions["student:import-1"]?.lastName
-      ).toBe("use_import")
-    })
-
-    it("IW-71: 一括更新戦略を設定できる", () => {
-      const { result } = renderHook(() => useImportWizard(), {
-        wrapper: createQueryWrapper(),
-      })
-
-      act(() => {
-        result.current.setBulkUpdateStrategy(
-          ["student:import-1", "student:import-2"],
-          ["lastName", "firstName"],
-          "use_newer"
-        )
-      })
-
-      expect(
-        result.current.state.updateDecisions["student:import-1"]?.lastName
-      ).toBe("use_newer")
-      expect(
-        result.current.state.updateDecisions["student:import-2"]?.firstName
-      ).toBe("use_newer")
+      expect(result.current.state.idIntegrationConfig.exam).toBe("overwrite")
     })
   })
 
@@ -917,7 +860,7 @@ describe("useImportWizard", () => {
       expect(result.current.state.error).toBe("インポート処理に失敗しました")
     })
 
-    it("IW-82: idIntegrationImportに全設定が正しく渡される", async () => {
+    it("IW-82: idIntegrationImportに取り込みの方針と紐づけ設定が渡される", async () => {
       const { result } = renderHook(() => useImportWizard(), {
         wrapper: createQueryWrapper(),
       })
@@ -928,12 +871,7 @@ describe("useImportWizard", () => {
 
       // 設定を変更
       act(() => {
-        result.current.setScoringConflictStrategy("import_wins")
-        result.current.setFieldUpdateDecision(
-          "student:1",
-          "lastName",
-          "use_import"
-        )
+        result.current.setImportAction("overwrite")
       })
 
       await act(async () => {
@@ -944,12 +882,7 @@ describe("useImportWizard", () => {
         expect.objectContaining({
           archivePath: "/path/to/test.score",
           currentUserId: "test-user-id",
-          scoringConflictConfig: expect.objectContaining({
-            strategy: "import_wins",
-          }),
-          updateDecisions: expect.objectContaining({
-            "student:1": { lastName: "use_import" },
-          }),
+          integrationConfig: expect.objectContaining({ exam: "overwrite" }),
         })
       )
     })

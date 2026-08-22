@@ -102,13 +102,21 @@ function prismaModelFields(): Map<string, Set<string>> {
  * 増えたときに同じ穴が開かないよう同じ形で並べる）。
  */
 function sourceFiles(): string[] {
-  return execSync(
-    "git ls-files --cached --others --exclude-standard 'src/*.ts' 'src/*.tsx' 'src/**/*.ts' 'src/**/*.tsx' 'electron-src/*.ts' 'electron-src/**/*.ts'",
-    { cwd: REPO_ROOT, encoding: "utf8" }
+  return (
+    execSync(
+      "git ls-files --cached --others --exclude-standard 'src/*.ts' 'src/*.tsx' 'src/**/*.ts' 'src/**/*.tsx' 'electron-src/*.ts' 'electron-src/**/*.ts'",
+      { cwd: REPO_ROOT, encoding: "utf8" }
+    )
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      // 消したファイルは、その削除を stage するまで `--cached` に残り続ける。
+      // 走査するのは**いま在るコード**なので、作業ツリーに無いものは外す
+      // （外さないと readFileSync が ENOENT で落ち、検査そのものが動かなくなる）
+      .filter((relativePath) =>
+        fs.existsSync(path.join(REPO_ROOT, relativePath))
+      )
   )
-    .trim()
-    .split("\n")
-    .filter(Boolean)
 }
 
 /** 走査で拾った宣言1件 */

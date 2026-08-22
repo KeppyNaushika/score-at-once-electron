@@ -51,6 +51,7 @@ import type {
   CourseworkArchiveImportPreview,
   CourseworkImportDecision,
 } from "@/types/courseworkArchive.types"
+import type { ImportAction } from "@/types/importAction.types"
 
 import { CourseworkCreateDialog } from "./CourseworkCreateDialog"
 import { CourseworkImportDialog } from "./CourseworkImportDialog"
@@ -158,7 +159,8 @@ export function CourseworkListContainer() {
   }
 
   const handleImportConfirm = async (
-    decisions: Record<string, CourseworkImportDecision>
+    decisions: Record<string, CourseworkImportDecision>,
+    action: ImportAction
   ) => {
     if (!importArchivePath) return
     setImporting(true)
@@ -166,6 +168,7 @@ export function CourseworkListContainer() {
       const result = await importArchive.mutateAsync({
         archivePath: importArchivePath,
         courseworkDecisions: decisions,
+        action,
       })
       if (result.warnings.length > 0) {
         toast.warning(

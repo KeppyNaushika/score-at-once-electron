@@ -4,7 +4,7 @@
 
 import { dialog } from "electron"
 
-import type { UpdateDecisions } from "../../src/types/examArchive.types"
+import type { ImportAction } from "../../src/types/importAction.types"
 import type {
   ExportStudentsArchiveOptions,
   StudentArchiveFileOverviewData,
@@ -89,7 +89,8 @@ export const studentArchiveHandlers = {
     archivePath: string
     preMatchResult: StudentArchiveFileOverviewData
     integrationConfig: StudentArchiveIdIntegrationConfig
-    updateDecisions?: UpdateDecisions
+    /** 取り込みの方針（上書きする / 統合する / 別で追加する）。省略時は統合 */
+    action?: ImportAction
   }) => {
     let tempDir: string | null = null
     try {
@@ -103,7 +104,7 @@ export const studentArchiveHandlers = {
         extractResult.data,
         options.preMatchResult,
         options.integrationConfig,
-        options.updateDecisions
+        options.action
       )
 
       return result

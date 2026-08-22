@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import type { StudentImportWizard } from "@/hooks/student-import/useStudentImportWizard"
 import type { PreMatchingResult } from "@/types/examArchive.types"
 
+import { ImportActionChoice } from "../../import/ImportActionChoice"
+
 interface FileOverviewStepProps {
   wizard: StudentImportWizard
 }
@@ -58,7 +60,7 @@ function CategoryOverviewCard({
 }
 
 export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
-  const { state, goToNextStep } = wizard
+  const { state, goToNextStep, setImportAction } = wizard
 
   if (!state.fileOverviewData || !state.manifest) {
     return (
@@ -79,6 +81,17 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
           生徒 {counts.students}名、学級 {counts.classrooms}件、所属{" "}
           {counts.memberships}件
         </p>
+      </div>
+
+      {/* 取り込みの方針（この1つが読み込む全てのものに効く）。
+          生徒・学級は試験ではないので「別で追加する」は選べない
+          （同じ生徒をもう1人作る操作にはならない） */}
+      <div className="mx-auto max-w-2xl">
+        <ImportActionChoice
+          action={state.action}
+          onChange={setImportAction}
+          allowSeparate={false}
+        />
       </div>
 
       <div className="mx-auto grid max-w-2xl gap-4">

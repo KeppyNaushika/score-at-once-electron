@@ -19,8 +19,6 @@ import type {
   ArchiveDataCounts,
   FileOverviewData,
   IdIntegrationConfig,
-  ScoringConflictConfig,
-  UpdateDecisions,
 } from "../../../../src/types/examArchive.types"
 import { recordAuditLog } from "../../prisma/auditLog"
 import prisma from "../../prisma/client"
@@ -54,11 +52,18 @@ import {
   processDrawingAnnotations,
   processMemberships,
 } from "./importSyncRecords"
+import { createImportValuePolicy } from "./importValuePolicy"
 import {
   processClassroomIdIntegration,
   processStudentIdIntegration,
   processSubtotalGroupIdIntegration,
 } from "./processors"
+import {
+  reorderExamClassrooms,
+  reorderExamStudents,
+  reorderSubtotals,
+} from "./reorderAfterImport"
+import { rewriteAsSeparateExam } from "./separateExamRewriter"
 import type { IdChangeTarget, IdMappings, ImportCounts } from "./types"
 import { createEmptyCounts } from "./types"
 
@@ -77,22 +82,48 @@ interface IdIntegrationImportResult {
 /**
  * ID統合インポートを実行
  *
- * @param data - 展開されたアーカイブデータ
- * @param preMatchResult - 事前照合結果
- * @param integrationConfig - ID統合設定（ユーザーの選択）
+ * @param archiveData - 展開されたアーカイブデータ
+ * @param archivePreMatchResult - 事前照合結果
+ * @param integrationConfig - ID統合設定（ユーザーの選択。試験ID一致時の扱いもここ）
  * @param currentUserId - 現在ログインしているユーザーID
- * @param scoringConflictConfig - 採点結果の競合解決設定
- * @param updateDecisions - フィールド更新決定（ユーザーの選択）
  * @returns インポート結果
  */
 export async function executeIdIntegrationImport(
-  data: ExtractedArchiveData,
-  preMatchResult: FileOverviewData,
+  archiveData: ExtractedArchiveData,
+  archivePreMatchResult: FileOverviewData,
   integrationConfig: IdIntegrationConfig,
-  currentUserId: string,
-  scoringConflictConfig?: ScoringConflictConfig,
-  updateDecisions?: UpdateDecisions
+  currentUserId: string
 ): Promise<IdIntegrationImportResult> {
+  // 取り込みの方針は人が最初に1回だけ選ぶ（上書きする / 統合する / 別で追加する）。
+  // 省略時は統合。**この1つが取り込む全レコードの全ての値に効く**。
+  const examAction = integrationConfig.exam ?? "merge"
+  const policy = createImportValuePolicy(examAction)
+
+  // 「別で追加する」を選んだときは、DBへ触る前に試験配下の id を振り直す。
+  // 振り直した後のデータは「一度も取り込んでいないアーカイブ」と同じ形になるので、
+  // 事前照合の試験の欄も一致なしへ倒し、後段は新規作成の道を通す。
+  const importAsSeparateExam =
+    (archivePreMatchResult.exam?.isIdMatch ?? false) &&
+    examAction === "separate"
+  const data = importAsSeparateExam
+    ? rewriteAsSeparateExam(archiveData)
+    : archiveData
+  const preMatchResult: FileOverviewData = importAsSeparateExam
+    ? {
+        ...archivePreMatchResult,
+        // 採点の競合は「同じ試験の同じ設問に別の採点がある」ことなので、別物として
+        // 取り込む以上どれも競合しない（全部が新しい採点として入る）
+        scoringConflicts: undefined,
+        exam: archivePreMatchResult.exam && {
+          ...archivePreMatchResult.exam,
+          isIdMatch: false,
+          existingExamId: undefined,
+          existingData: undefined,
+          importExamId: data.examData.exam.id,
+        },
+      }
+    : archivePreMatchResult
+
   // 旧バージョンアーカイブの変換チェーン警告を結果へ引き継ぐ
   const warnings: string[] = [...data.transformWarnings]
   const counts: ImportCounts = {
@@ -143,8 +174,8 @@ export async function executeIdIntegrationImport(
           idChangeTargets,
           counts,
           warnings,
-          tx,
-          updateDecisions
+          policy,
+          tx
         )
 
         // 2. 学級のID統合処理
@@ -156,8 +187,8 @@ export async function executeIdIntegrationImport(
           idChangeTargets,
           counts,
           warnings,
-          tx,
-          updateDecisions
+          policy,
+          tx
         )
 
         // 3. 小計グループのID統合処理
@@ -169,15 +200,16 @@ export async function executeIdIntegrationImport(
           idChangeTargets,
           counts,
           warnings,
-          tx,
-          updateDecisions
+          policy,
+          tx
         )
 
         // 4. 小計のマージ
-        await processSubtotals(
+        const { groupIdsWithNewSubtotal } = await processSubtotals(
           data,
           idMappings,
           warnings,
+          policy,
           tx,
           integrationConfig.subtotalMappings
         )
@@ -190,50 +222,71 @@ export async function executeIdIntegrationImport(
           idMappings,
           counts,
           warnings,
+          policy,
           tx
         )
 
         // 6. UserExam
-        await processUserExam(isExamIdMatch, newExamId, currentUserId, tx)
+        await processUserExam(
+          isExamIdMatch,
+          newExamId,
+          currentUserId,
+          policy,
+          tx
+        )
 
         // 7. ExamSubtotalGroup
-        await processExamSubtotalGroups(data, newExamId, idMappings, tx)
+        await processExamSubtotalGroups(data, newExamId, idMappings, policy, tx)
 
         // 8. ExamStudent
-        await processExamStudents(
+        const examStudentResult = await processExamStudents(
           data,
           isExamIdMatch,
           newExamId,
           idMappings,
+          policy,
           tx
         )
 
         // 9. ExamPage（不一致時のみ）
         if (!isExamIdMatch) {
-          await processExamPages(data, newExamId, idMappings, counts, tx)
+          await processExamPages(
+            data,
+            newExamId,
+            idMappings,
+            counts,
+            policy,
+            tx
+          )
         }
 
         // 10. CropRegion（不一致時のみ）
         if (!isExamIdMatch) {
-          await processCropRegions(data, idMappings, counts, tx)
+          await processCropRegions(data, idMappings, counts, policy, tx)
         }
 
         // 10a. ExamMarkingFormat (v1.4.0+)
 
         // 10b. ExamExportSettings (v1.4.0+)
-        await processExamExportSettings(data, newExamId, tx)
+        await processExamExportSettings(data, newExamId, policy, tx)
 
         // 10c. Tag & TagSubtotalGroup & ExamTag (v1.10.0+, 旧Subject)
-        await processTags(data, idMappings, warnings, tx)
+        await processTags(data, idMappings, warnings, policy, tx)
 
         // 10d. ExamClassroom (v1.1.0+)
-        await processExamClassrooms(data, newExamId, idMappings, tx)
+        const examClassroomResult = await processExamClassrooms(
+          data,
+          newExamId,
+          idMappings,
+          policy,
+          tx
+        )
 
         // 10e. OMR設定（CropRegionOmrConfig/ChoiceOption） (v1.7.0+)
-        await processOmrConfigs(data, idMappings, tx)
+        await processOmrConfigs(data, idMappings, policy, tx)
 
         // 10f. 複合解答（CompoundAnswer/Member） (v1.11.0+)
-        await processCompoundAnswers(data, idMappings, tx)
+        await processCompoundAnswers(data, idMappings, policy, tx)
 
         // 11. CropSubtotal
         await processCropSubtotals(
@@ -241,6 +294,7 @@ export async function executeIdIntegrationImport(
           isExamIdMatch,
           idMappings,
           warnings,
+          policy,
           tx
         )
 
@@ -251,12 +305,19 @@ export async function executeIdIntegrationImport(
           currentUserId,
           idMappings,
           counts,
-          scoringConflictConfig,
+          policy,
           tx
         )
 
         // 12b. ScoreDecision（OWNER確定スコア。decidedAt LWWで競合解決） (v1.13.0+)
-        await processScoreDecisions(data, currentUserId, idMappings, counts, tx)
+        await processScoreDecisions(
+          data,
+          currentUserId,
+          idMappings,
+          counts,
+          policy,
+          tx
+        )
 
         // 12c. CompoundAnswerScore（複合解答スコア。updatedAt LWWで競合解決） (v1.11.0+)
         await processCompoundAnswerScores(
@@ -264,6 +325,7 @@ export async function executeIdIntegrationImport(
           currentUserId,
           idMappings,
           counts,
+          policy,
           tx
         )
 
@@ -274,20 +336,32 @@ export async function executeIdIntegrationImport(
             currentUserId,
             idMappings,
             counts,
+            policy,
             tx
           ))
         )
 
         // 12e. ReturnSnapshot（返却版スナップショット。capturedAt LWWで競合解決） (v1.14.0+)
         warnings.push(
-          ...(await processReturnSnapshots(data, idMappings, counts, tx))
+          ...(await processReturnSnapshots(
+            data,
+            idMappings,
+            counts,
+            policy,
+            tx
+          ))
         )
 
         // 13. DrawingAnnotation
-        await processDrawingAnnotations(data, idMappings, counts, tx)
+        await processDrawingAnnotations(data, idMappings, counts, policy, tx)
 
         // 14. 学級所属
-        await processMemberships(data.classesData.memberships, idMappings, tx)
+        await processMemberships(
+          data.classesData.memberships,
+          idMappings,
+          policy,
+          tx
+        )
 
         // 15. ID変更処理（「書き出したPCに合わせる」を選んだ場合）
         if (idChangeTargets.length > 0) {
@@ -295,7 +369,22 @@ export async function executeIdIntegrationImport(
         }
 
         // 16. 画像レコード作成（DB操作のみ）
-        await createImportImageRecords(data, idMappings, tx)
+        await createImportImageRecords(data, idMappings, policy, tx)
+
+        // 17. 並び順の詰め直し
+        //
+        // 並び順は列全体の性質なので、行ごとの規則で入れた値には重複と穴ができる。
+        // **行が増えたときだけ**詰め直す（毎回やると、触っていない名簿の並びまで
+        // 書き換えて updatedAt が動く）。
+        if (examStudentResult.createdCount > 0) {
+          await reorderExamStudents(newExamId, tx)
+        }
+        if (examClassroomResult.createdCount > 0) {
+          await reorderExamClassrooms(newExamId, tx)
+        }
+        for (const subtotalGroupId of groupIdsWithNewSubtotal) {
+          await reorderSubtotals(subtotalGroupId, tx)
+        }
       },
       { timeout: 60000 }
     )

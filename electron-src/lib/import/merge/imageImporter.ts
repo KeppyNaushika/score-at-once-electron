@@ -7,6 +7,8 @@ import * as path from "path"
 
 import { getDataDirectory } from "../../dataManager"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
+import type { ImportValuePolicy } from "./importValuePolicy"
+import { replacementUpdatedAt } from "./importValuePolicy"
 import type { IdMappings, PrismaTransaction } from "./types"
 
 /**
@@ -54,6 +56,7 @@ export async function copyImportImages(
 export async function createImportImageRecords(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   const newExamId = idMappings.exam[data.examData.exam.id]
@@ -65,12 +68,18 @@ export async function createImportImageRecords(
     data.examData.studentAnswerImages &&
     data.examData.studentAnswerImages.length > 0
   ) {
-    await createStudentAnswerImageRecords(data, idMappings, newExamId, tx)
+    await createStudentAnswerImageRecords(
+      data,
+      idMappings,
+      newExamId,
+      policy,
+      tx
+    )
     return
   }
 
   // v1.1.0以前との後方互換性（pageImagesを使用）
-  await createLegacyImageRecords(data, idMappings, newExamId, tx)
+  await createLegacyImageRecords(data, idMappings, newExamId, policy, tx)
 }
 
 /**
@@ -80,6 +89,7 @@ async function createStudentAnswerImageRecords(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
   newExamId: string,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   for (const studentAnswerImage of data.examData.studentAnswerImages!) {
@@ -95,29 +105,48 @@ async function createStudentAnswerImageRecords(
         examStudentId: newExamStudentId,
       },
     })
-    if (existing) continue
 
-    const relativePath = studentAnswerImage.imagePath.substring(
+    const archiveRelativePath = studentAnswerImage.imagePath.substring(
       studentAnswerImage.imagePath.lastIndexOf("answer-sheets") +
         "answer-sheets".length +
         1
     )
     const newImagePath =
-      `exams/${newExamId}/answer-sheets/${relativePath}`.replace(/\\/g, "/")
+      `exams/${newExamId}/answer-sheets/${archiveRelativePath}`.replace(
+        /\\/g,
+        "/"
+      )
 
-    const existingById = await tx.studentAnswerImage.findUnique({
-      where: { id: studentAnswerImage.id },
-    })
-    if (!existingById) {
-      await tx.studentAnswerImage.create({
-        data: {
-          id: studentAnswerImage.id,
-          examPageId: newExamPageId,
-          examStudentId: newExamStudentId,
-          imagePath: newImagePath,
-        },
-      })
+    const existingImage =
+      existing ??
+      (await tx.studentAnswerImage.findUnique({
+        where: { id: studentAnswerImage.id },
+      }))
+
+    if (existingImage) {
+      const updatedAt = replacementUpdatedAt(
+        policy,
+        studentAnswerImage.updatedAt,
+        existingImage.updatedAt
+      )
+      if (updatedAt) {
+        await tx.studentAnswerImage.update({
+          where: { id: existingImage.id },
+          data: { imagePath: newImagePath, updatedAt },
+        })
+      }
+      continue
     }
+
+    await tx.studentAnswerImage.create({
+      data: {
+        id: studentAnswerImage.id,
+        examPageId: newExamPageId,
+        examStudentId: newExamStudentId,
+        imagePath: newImagePath,
+        ...policy.createdTimestamps(studentAnswerImage),
+      },
+    })
   }
 }
 
@@ -128,6 +157,7 @@ async function createLegacyImageRecords(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
   newExamId: string,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   for (const pageImage of data.examData.pageImages) {
@@ -175,6 +205,7 @@ async function createLegacyImageRecords(
             examPageId: newExamPageId,
             examStudentId: examStudent.id,
             imagePath: newImagePath,
+            ...policy.createdTimestamps(pageImage),
           },
         })
       }

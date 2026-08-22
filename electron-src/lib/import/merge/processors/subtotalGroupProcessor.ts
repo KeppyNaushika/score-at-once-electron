@@ -1,5 +1,9 @@
 /**
  * 小計グループのID統合処理
+ *
+ * どのグループとどのグループが同じかを決めるのがここ。
+ * **同じだと決まった行の値をどうするかは importValuePolicy に一本化されている**
+ * （上書きする／統合する／別で追加する）。項目ごとの選択は持たない。
  */
 
 import * as crypto from "crypto"
@@ -8,15 +12,52 @@ import type {
   FileOverviewData,
   IdIntegrationConfig,
   IdIntegrationDecision,
-  UpdateDecisions,
 } from "../../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
+import type { ImportValuePolicy } from "../importValuePolicy"
+import { replacementUpdatedAt } from "../importValuePolicy"
 import type {
   IdChangeTarget,
   IdMappings,
   ImportCounts,
   PrismaTransaction,
 } from "../types"
+
+/** アーカイブ側の小計グループ1行 */
+type ArchiveSubtotalGroup =
+  ExtractedArchiveData["subtotalsData"]["subtotalGroups"][number]
+
+/**
+ * 同じだと決まった既存のグループへ、アーカイブの値を規則に従って書き込む。
+ *
+ * SubtotalGroup の列は id / name / createdAt / updatedAt で全部。
+ * id と createdAt は動かさない。列を足したらここにも足すこと。
+ */
+async function applySubtotalGroupColumns(
+  importGroup: ArchiveSubtotalGroup,
+  existingId: string,
+  policy: ImportValuePolicy,
+  counts: ImportCounts,
+  tx: PrismaTransaction
+): Promise<void> {
+  const existing = await tx.subtotalGroup.findUnique({
+    where: { id: existingId },
+  })
+  if (!existing) return
+
+  const updatedAt = replacementUpdatedAt(
+    policy,
+    importGroup.updatedAt,
+    existing.updatedAt
+  )
+  if (!updatedAt) return
+
+  await tx.subtotalGroup.update({
+    where: { id: existingId },
+    data: { name: importGroup.name, updatedAt },
+  })
+  counts.updated.subtotalGroups++
+}
 
 /**
  * 小計グループのID統合処理を実行
@@ -29,14 +70,27 @@ export async function processSubtotalGroupIdIntegration(
   idChangeTargets: IdChangeTarget[],
   counts: ImportCounts,
   warnings: string[],
-  tx: PrismaTransaction,
-  updateDecisions?: UpdateDecisions
+  policy: ImportValuePolicy,
+  tx: PrismaTransaction
 ): Promise<void> {
   const groupPreMatch = preMatchResult.subtotalGroup
+  const importGroupById = new Map(
+    data.subtotalsData.subtotalGroups.map((group) => [group.id, group])
+  )
 
-  // ID一致したもの
+  // ID一致したもの。同じグループなので値も規則に従って書き込む
   for (const match of groupPreMatch.byId) {
     idMappings.subtotalGroup[match.importId] = match.existingId
+    const importGroup = importGroupById.get(match.importId)
+    if (importGroup) {
+      await applySubtotalGroupColumns(
+        importGroup,
+        match.existingId,
+        policy,
+        counts,
+        tx
+      )
+    }
   }
 
   const processDecision = async (
@@ -44,9 +98,7 @@ export async function processSubtotalGroupIdIntegration(
     decision: IdIntegrationDecision | undefined,
     defaultExistingId: string | undefined
   ) => {
-    const importGroup = data.subtotalsData.subtotalGroups.find(
-      (group) => group.id === importId
-    )
+    const importGroup = importGroupById.get(importId)
     if (!importGroup) return
 
     if (!decision || decision.decisionType === "create_new") {
@@ -62,6 +114,7 @@ export async function processSubtotalGroupIdIntegration(
           data: {
             id: newId,
             name: newName,
+            ...policy.createdTimestamps(importGroup),
           },
         })
         idMappings.subtotalGroup[importId] = newId
@@ -81,6 +134,7 @@ export async function processSubtotalGroupIdIntegration(
             data: {
               id: newId,
               name: importGroup.name,
+              ...policy.createdTimestamps(importGroup),
             },
           })
           idMappings.subtotalGroup[importId] = newId
@@ -90,6 +144,7 @@ export async function processSubtotalGroupIdIntegration(
             data: {
               id: importId,
               name: importGroup.name,
+              ...policy.createdTimestamps(importGroup),
             },
           })
           idMappings.subtotalGroup[importId] = importId
@@ -106,40 +161,13 @@ export async function processSubtotalGroupIdIntegration(
       }
 
       idMappings.subtotalGroup[importId] = existingId
-
-      // フィールド更新処理
-      const updateKey = `subtotalGroup:${importId}`
-      const fieldDecisions = updateDecisions?.[updateKey]
-      if (fieldDecisions && importGroup) {
-        const updateData: Record<string, unknown> = {}
-        const fieldMap: Record<string, unknown> = {
-          name: importGroup.name,
-        }
-        for (const [field, strategy] of Object.entries(fieldDecisions)) {
-          if (strategy === "use_import" && field in fieldMap) {
-            updateData[field] = fieldMap[field]
-          } else if (strategy === "use_newer" && field in fieldMap) {
-            const importUpdatedAt = importGroup.updatedAt
-              ? new Date(importGroup.updatedAt)
-              : null
-            if (importUpdatedAt) {
-              const existing = await tx.subtotalGroup.findUnique({
-                where: { id: existingId },
-              })
-              if (existing && importUpdatedAt > existing.updatedAt) {
-                updateData[field] = fieldMap[field]
-              }
-            }
-          }
-        }
-        if (Object.keys(updateData).length > 0) {
-          await tx.subtotalGroup.update({
-            where: { id: existingId },
-            data: updateData,
-          })
-          counts.updated.subtotalGroups++
-        }
-      }
+      await applySubtotalGroupColumns(
+        importGroup,
+        existingId,
+        policy,
+        counts,
+        tx
+      )
 
       if (decision.idChoice === "use_import_id") {
         idChangeTargets.push({

@@ -1,21 +1,68 @@
 /**
  * 生徒のID統合処理
+ *
+ * どの生徒とどの生徒が同じ人かを決めるのがここ（ID一致・学籍番号一致・氏名一致・人の判断）。
+ * **同じ人だと決まった行の値をどうするかは importValuePolicy に一本化されている**
+ * （上書きする／統合する／別で追加する）。項目ごとの選択は持たない。
  */
 
 import type {
   FileOverviewData,
   IdIntegrationConfig,
   IdIntegrationDecision,
-  UpdateDecisions,
 } from "../../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
 import { generateUniqueStudentNumber } from "../../exam-archive/uniqueNameGenerators"
+import type { ImportValuePolicy } from "../importValuePolicy"
+import { replacementUpdatedAt } from "../importValuePolicy"
 import type {
   IdChangeTarget,
   IdMappings,
   ImportCounts,
   PrismaTransaction,
 } from "../types"
+
+/** アーカイブ側の生徒1行 */
+type ArchiveStudent = ExtractedArchiveData["studentsData"]["students"][number]
+
+/**
+ * 同じ人だと決まった既存の生徒へ、アーカイブの値を規則に従って書き込む。
+ *
+ * Student の列は id / studentNumber / lastName / firstName / lastNameKana /
+ * firstNameKana / enrollmentYear / createdAt / updatedAt で全部。
+ * id と createdAt は動かさない。列を足したらここにも足すこと。
+ */
+async function applyStudentColumns(
+  importStudent: ArchiveStudent,
+  existingId: string,
+  policy: ImportValuePolicy,
+  counts: ImportCounts,
+  tx: PrismaTransaction
+): Promise<void> {
+  const existing = await tx.student.findUnique({ where: { id: existingId } })
+  if (!existing) return
+
+  const updatedAt = replacementUpdatedAt(
+    policy,
+    importStudent.updatedAt,
+    existing.updatedAt
+  )
+  if (!updatedAt) return
+
+  await tx.student.update({
+    where: { id: existingId },
+    data: {
+      studentNumber: importStudent.studentNumber,
+      lastName: importStudent.lastName,
+      firstName: importStudent.firstName,
+      lastNameKana: importStudent.lastNameKana ?? null,
+      firstNameKana: importStudent.firstNameKana ?? null,
+      enrollmentYear: importStudent.enrollmentYear ?? null,
+      updatedAt,
+    },
+  })
+  counts.updated.students++
+}
 
 /**
  * 生徒のID統合処理を実行
@@ -28,14 +75,27 @@ export async function processStudentIdIntegration(
   idChangeTargets: IdChangeTarget[],
   counts: ImportCounts,
   warnings: string[],
-  tx: PrismaTransaction,
-  updateDecisions?: UpdateDecisions
+  policy: ImportValuePolicy,
+  tx: PrismaTransaction
 ): Promise<void> {
   const studentPreMatch = preMatchResult.student
+  const importStudentById = new Map(
+    data.studentsData.students.map((student) => [student.id, student])
+  )
 
-  // ID一致したもの（自動で紐づく）
+  // ID一致したもの（自動で紐づく）。同じ人なので値も規則に従って書き込む
   for (const match of studentPreMatch.byId) {
     idMappings.student[match.importId] = match.existingId
+    const importStudent = importStudentById.get(match.importId)
+    if (importStudent) {
+      await applyStudentColumns(
+        importStudent,
+        match.existingId,
+        policy,
+        counts,
+        tx
+      )
+    }
   }
 
   // ID不一致のものを処理
@@ -44,9 +104,7 @@ export async function processStudentIdIntegration(
     decision: IdIntegrationDecision | undefined,
     defaultExistingId: string | undefined
   ) => {
-    const importStudent = data.studentsData.students.find(
-      (student) => student.id === importId
-    )
+    const importStudent = importStudentById.get(importId)
     if (!importStudent) return
 
     if (!decision || decision.decisionType === "create_new") {
@@ -70,6 +128,7 @@ export async function processStudentIdIntegration(
             lastNameKana: importStudent.lastNameKana ?? null,
             firstNameKana: importStudent.firstNameKana ?? null,
             enrollmentYear: importStudent.enrollmentYear ?? null,
+            ...policy.createdTimestamps(importStudent),
           },
         })
         idMappings.student[importId] = importId
@@ -91,45 +150,7 @@ export async function processStudentIdIntegration(
       }
 
       idMappings.student[importId] = existingId
-
-      // フィールド更新処理
-      const updateKey = `student:${importId}`
-      const fieldDecisions = updateDecisions?.[updateKey]
-      if (fieldDecisions && importStudent) {
-        const updateData: Record<string, unknown> = {}
-        const fieldMap: Record<string, unknown> = {
-          lastName: importStudent.lastName,
-          firstName: importStudent.firstName,
-          lastNameKana: importStudent.lastNameKana,
-          firstNameKana: importStudent.firstNameKana,
-          studentNumber: importStudent.studentNumber,
-          enrollmentYear: importStudent.enrollmentYear,
-        }
-        for (const [field, strategy] of Object.entries(fieldDecisions)) {
-          if (strategy === "use_import" && field in fieldMap) {
-            updateData[field] = fieldMap[field]
-          } else if (strategy === "use_newer" && field in fieldMap) {
-            const importUpdatedAt = importStudent.updatedAt
-              ? new Date(importStudent.updatedAt)
-              : null
-            if (importUpdatedAt) {
-              const existing = await tx.student.findUnique({
-                where: { id: existingId },
-              })
-              if (existing && importUpdatedAt > existing.updatedAt) {
-                updateData[field] = fieldMap[field]
-              }
-            }
-          }
-        }
-        if (Object.keys(updateData).length > 0) {
-          await tx.student.update({
-            where: { id: existingId },
-            data: updateData,
-          })
-          counts.updated.students++
-        }
-      }
+      await applyStudentColumns(importStudent, existingId, policy, counts, tx)
 
       if (decision.idChoice === "use_import_id") {
         // Stage 2でID変更を行う

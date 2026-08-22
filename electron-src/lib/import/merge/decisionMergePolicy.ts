@@ -11,9 +11,9 @@
  *   現状は OWNER のみだが、将来 OWNER 以外にも付与可能にする想定。権限制御を足すときも
  *   競合解決ポリシー（LWW）は変えないこと。
  *
- * cf. 採点者の「提案」レイヤー（QuestionScore）の競合解決は scoringConflictResolver.ts。
- *     提案レイヤーはユーザーが選んだ戦略（existing/import/newer_wins）に従うが、
- *     確定レイヤーは常に LWW。両者を混同しないこと。
+ * cf. 取り込み（アーカイブ）の値の扱いは importValuePolicy に一本化されている。
+ *     人が選んだ操作（上書きする / 統合する / 別で追加する）で決まり、「統合する」の
+ *     ときの判定にこの isNewerByLww を使う。同期の LWW と同じ物差し。
  */
 
 /**

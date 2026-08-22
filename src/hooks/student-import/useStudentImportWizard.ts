@@ -13,8 +13,8 @@ import type {
   CategoryIdIntegrationConfig,
   IdChoice,
   IdIntegrationDecision,
-  UpdateStrategy,
 } from "@/types/examArchive.types"
+import type { ImportAction } from "@/types/importAction.types"
 import type {
   StudentArchiveFileOverviewData,
   StudentImportWizardState,
@@ -25,7 +25,6 @@ export const STUDENT_IMPORT_STEP_ORDER = [
   "file_select",
   "file_overview",
   "id_integration",
-  "update_confirm",
   "final_confirm",
   "execute",
 ] as const
@@ -166,37 +165,9 @@ export function useStudentImportWizard() {
     []
   )
 
-  // フィールド更新決定を設定
-  const setFieldUpdateDecision = useCallback(
-    (key: string, field: string, strategy: UpdateStrategy) => {
-      setState((prev) => ({
-        ...prev,
-        updateDecisions: {
-          ...prev.updateDecisions,
-          [key]: {
-            ...(prev.updateDecisions[key] || {}),
-            [field]: strategy,
-          },
-        },
-      }))
-    },
-    []
-  )
-
-  // 一括更新戦略を設定
-  const setBulkUpdateStrategy = useCallback((strategy: UpdateStrategy) => {
-    setState((prev) => {
-      const newDecisions = { ...prev.updateDecisions }
-      for (const key of Object.keys(newDecisions)) {
-        const fields = newDecisions[key]
-        const updatedFields = { ...fields }
-        for (const field of Object.keys(updatedFields)) {
-          updatedFields[field] = strategy
-        }
-        newDecisions[key] = updatedFields
-      }
-      return { ...prev, updateDecisions: newDecisions }
-    })
+  // 取り込みの方針（上書きする / 統合する / 別で追加する）を設定
+  const setImportAction = useCallback((action: ImportAction) => {
+    setState((prev) => ({ ...prev, action }))
   }, [])
 
   // 次のステップへ
@@ -243,10 +214,7 @@ export function useStudentImportWizard() {
         archivePath: state.archivePath,
         preMatchResult: state.fileOverviewData,
         integrationConfig: state.idIntegrationConfig,
-        updateDecisions:
-          Object.keys(state.updateDecisions).length > 0
-            ? state.updateDecisions
-            : undefined,
+        action: state.action,
       })
 
       return result
@@ -266,7 +234,7 @@ export function useStudentImportWizard() {
     state.archivePath,
     state.fileOverviewData,
     state.idIntegrationConfig,
-    state.updateDecisions,
+    state.action,
     runImport,
   ])
 
@@ -286,8 +254,7 @@ export function useStudentImportWizard() {
     updateIdIntegrationConfig,
     updateIdIntegrationDecision,
     batchUpdateIdIntegrationDecisions,
-    setFieldUpdateDecision,
-    setBulkUpdateStrategy,
+    setImportAction,
     goToNextStep,
     goBack,
     executeImport,

@@ -22,7 +22,6 @@ import { FileOverviewStep } from "./steps/FileOverviewStep"
 import { FileSelectStep } from "./steps/FileSelectStep"
 import { FinalConfirmStep } from "./steps/FinalConfirmStep"
 import { IdIntegrationStep } from "./steps/IdIntegrationStep"
-import { UpdateConfirmStep } from "./steps/UpdateConfirmStep"
 
 interface StudentImportWizardModalProps {
   isOpen: boolean
@@ -34,7 +33,6 @@ const STEP_TITLES: Record<StudentImportWizardStep, string> = {
   file_select: "ファイル選択",
   file_overview: "内容確認",
   id_integration: "紐づけ",
-  update_confirm: "更新",
   final_confirm: "確認",
   execute: "実行",
 }
@@ -153,9 +151,6 @@ export function StudentImportWizardModal({
           )}
           {state.currentStep === "id_integration" && (
             <IdIntegrationStep wizard={wizard} />
-          )}
-          {state.currentStep === "update_confirm" && (
-            <UpdateConfirmStep wizard={wizard} />
           )}
           {state.currentStep === "final_confirm" && (
             <FinalConfirmStep

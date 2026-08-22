@@ -20,7 +20,6 @@ import { FileOverviewStep } from "./steps/FileOverviewStep"
 import { FileSelectStep } from "./steps/FileSelectStep"
 import { FinalConfirmStep } from "./steps/FinalConfirmStep"
 import { IdIntegrationStep } from "./steps/IdIntegrationStep"
-import { UpdateConfirmStep } from "./steps/UpdateConfirmStep"
 
 interface ImportWizardModalProps {
   isOpen: boolean
@@ -32,7 +31,6 @@ const STEP_TITLES: Record<ImportWizardStep, string> = {
   file_select: "ファイル選択",
   file_overview: "内容確認",
   id_integration: "紐づけ",
-  update_confirm: "更新",
   final_confirm: "確認",
   execute: "実行",
 }
@@ -41,7 +39,6 @@ const STEP_ORDER: ImportWizardStep[] = [
   "file_select",
   "file_overview",
   "id_integration",
-  "update_confirm",
   "final_confirm",
   "execute",
 ]
@@ -165,10 +162,6 @@ export function ImportWizardModal({
             )}
             {state.currentStep === "id_integration" && (
               <IdIntegrationStep wizard={wizard} />
-            )}
-
-            {state.currentStep === "update_confirm" && (
-              <UpdateConfirmStep wizard={wizard} />
             )}
             {state.currentStep === "final_confirm" && (
               <FinalConfirmStep

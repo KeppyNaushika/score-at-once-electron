@@ -190,8 +190,13 @@ export async function detectScoringConflictsWithUserDecisions(
   preMatchResult: FileOverviewData,
   integrationConfig: IdIntegrationConfig
 ): Promise<ScoringConflictData> {
-  // 試験IDが一致しない場合、競合なし
-  if (!preMatchResult.exam?.isIdMatch) {
+  // 試験IDが一致しない場合、競合なし。
+  // 「別の試験として取り込む」を選んだ場合も同じで、採点は全て新しい試験の側に入る
+  // （既存の試験の採点とは同じ設問を指さないので、比べる相手がいない）。
+  if (
+    !preMatchResult.exam?.isIdMatch ||
+    integrationConfig.exam === "separate"
+  ) {
     return {
       conflictCount: 0,
       newCount: importData.scoresData.questionScores.length,

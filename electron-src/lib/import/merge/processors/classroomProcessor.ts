@@ -1,21 +1,72 @@
 /**
  * 学級のID統合処理
+ *
+ * どの学級とどの学級が同じかを決めるのがここ。
+ * **同じだと決まった行の値をどうするかは importValuePolicy に一本化されている**
+ * （上書きする／統合する／別で追加する）。項目ごとの選択は持たない。
  */
 
 import type {
   FileOverviewData,
   IdIntegrationConfig,
   IdIntegrationDecision,
-  UpdateDecisions,
 } from "../../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
 import { generateUniqueClassName } from "../../exam-archive/uniqueNameGenerators"
+import type { ImportValuePolicy } from "../importValuePolicy"
+import { replacementUpdatedAt } from "../importValuePolicy"
 import type {
   IdChangeTarget,
   IdMappings,
   ImportCounts,
   PrismaTransaction,
 } from "../types"
+
+/** アーカイブ側の学級1行 */
+type ArchiveClassroom =
+  ExtractedArchiveData["classesData"]["classrooms"][number]
+
+/**
+ * 同じだと決まった既存の学級へ、アーカイブの値を規則に従って書き込む。
+ *
+ * Classroom の列は id / name / classroomCode / grade / description / isVisible /
+ * createdAt / updatedAt で全部。id と createdAt は動かさない。
+ * 列を足したらここにも足すこと。
+ *
+ * **isVisible もこの規則に含める。** 非表示にしてある学級でも、アーカイブ側の方が後に
+ * 書かれていれば表示へ戻る（それが書いた人の操作の希望だから）。作成時に
+ * `isVisible ?? true` としているのも同じ考えで、アーカイブに書かれた通りにする。
+ */
+async function applyClassroomColumns(
+  importClassroom: ArchiveClassroom,
+  existingId: string,
+  policy: ImportValuePolicy,
+  counts: ImportCounts,
+  tx: PrismaTransaction
+): Promise<void> {
+  const existing = await tx.classroom.findUnique({ where: { id: existingId } })
+  if (!existing) return
+
+  const updatedAt = replacementUpdatedAt(
+    policy,
+    importClassroom.updatedAt,
+    existing.updatedAt
+  )
+  if (!updatedAt) return
+
+  await tx.classroom.update({
+    where: { id: existingId },
+    data: {
+      name: importClassroom.name,
+      classroomCode: importClassroom.classroomCode ?? null,
+      grade: importClassroom.grade ?? null,
+      description: importClassroom.description ?? null,
+      isVisible: importClassroom.isVisible ?? true,
+      updatedAt,
+    },
+  })
+  counts.updated.classrooms++
+}
 
 /**
  * 学級のID統合処理を実行
@@ -28,14 +79,27 @@ export async function processClassroomIdIntegration(
   idChangeTargets: IdChangeTarget[],
   counts: ImportCounts,
   warnings: string[],
-  tx: PrismaTransaction,
-  updateDecisions?: UpdateDecisions
+  policy: ImportValuePolicy,
+  tx: PrismaTransaction
 ): Promise<void> {
   const classroomPreMatch = preMatchResult.classroom
+  const importClassroomById = new Map(
+    data.classesData.classrooms.map((classroom) => [classroom.id, classroom])
+  )
 
-  // ID一致したもの
+  // ID一致したもの。同じ学級なので値も規則に従って書き込む
   for (const match of classroomPreMatch.byId) {
     idMappings.classroom[match.importId] = match.existingId
+    const importClassroom = importClassroomById.get(match.importId)
+    if (importClassroom) {
+      await applyClassroomColumns(
+        importClassroom,
+        match.existingId,
+        policy,
+        counts,
+        tx
+      )
+    }
   }
 
   const processDecision = async (
@@ -43,9 +107,7 @@ export async function processClassroomIdIntegration(
     decision: IdIntegrationDecision | undefined,
     defaultExistingId: string | undefined
   ) => {
-    const importClassroom = data.classesData.classrooms.find(
-      (classroom) => classroom.id === importId
-    )
+    const importClassroom = importClassroomById.get(importId)
     if (!importClassroom) return
 
     if (!decision || decision.decisionType === "create_new") {
@@ -64,8 +126,10 @@ export async function processClassroomIdIntegration(
             classroomCode: importClassroom.classroomCode ?? null,
             grade: importClassroom.grade ?? null,
             description: importClassroom.description ?? null,
-            // 非表示にしてある学級が取り込みで表示へ戻らないようにする
+            // 表示設定もアーカイブに書かれた通りにする（規則の対象。
+            // applyClassroomColumns の説明を参照）
             isVisible: importClassroom.isVisible ?? true,
+            ...policy.createdTimestamps(importClassroom),
           },
         })
         idMappings.classroom[importId] = importId
@@ -85,47 +149,13 @@ export async function processClassroomIdIntegration(
       }
 
       idMappings.classroom[importId] = existingId
-
-      // フィールド更新処理
-      const updateKey = `classroom:${importId}`
-      const fieldDecisions = updateDecisions?.[updateKey]
-      if (fieldDecisions && importClassroom) {
-        const updateData: Record<string, unknown> = {}
-        const fieldMap: Record<string, unknown> = {
-          name: importClassroom.name,
-          classroomCode: importClassroom.classroomCode,
-          grade: importClassroom.grade,
-          description: importClassroom.description,
-          // 表示設定も学級の列の1つ。ここに載っていないと、値が食い違っていても
-          // 利用者が「ファイルに従う」を選ぶ手段が無い（UpdateConfirmStep の
-          // FIELD_LABELS.classroom と対で足すこと）
-          isVisible: importClassroom.isVisible,
-        }
-        for (const [field, strategy] of Object.entries(fieldDecisions)) {
-          if (strategy === "use_import" && field in fieldMap) {
-            updateData[field] = fieldMap[field]
-          } else if (strategy === "use_newer" && field in fieldMap) {
-            const importUpdatedAt = importClassroom.updatedAt
-              ? new Date(importClassroom.updatedAt)
-              : null
-            if (importUpdatedAt) {
-              const existing = await tx.classroom.findUnique({
-                where: { id: existingId },
-              })
-              if (existing && importUpdatedAt > existing.updatedAt) {
-                updateData[field] = fieldMap[field]
-              }
-            }
-          }
-        }
-        if (Object.keys(updateData).length > 0) {
-          await tx.classroom.update({
-            where: { id: existingId },
-            data: updateData,
-          })
-          counts.updated.classrooms++
-        }
-      }
+      await applyClassroomColumns(
+        importClassroom,
+        existingId,
+        policy,
+        counts,
+        tx
+      )
 
       if (decision.idChoice === "use_import_id") {
         idChangeTargets.push({

@@ -18,13 +18,19 @@ import type {
   CourseworkArchiveImportPreview,
   CourseworkImportDecision,
 } from "@/types/courseworkArchive.types"
+import type { ImportAction } from "@/types/importAction.types"
+
+import { ImportActionChoice } from "../../import/ImportActionChoice"
 
 interface CourseworkImportDialogProps {
   open: boolean
   preview: CourseworkArchiveImportPreview | null
   importing: boolean
   onCancel: () => void
-  onConfirm: (decisions: Record<string, CourseworkImportDecision>) => void
+  onConfirm: (
+    decisions: Record<string, CourseworkImportDecision>,
+    action: ImportAction
+  ) => void
 }
 
 /** 選択値 → 決定。"new" または "reuse:<existingId>" */
@@ -47,6 +53,7 @@ export function CourseworkImportDialog({
 }: CourseworkImportDialogProps) {
   // ユーザーが明示的に変更した分のみ保持する。どの preview に対する選択かを
   // 一緒に持ち、preview が切り替わったら前回の選択は無効になる
+  const [action, setAction] = useState<ImportAction>("merge")
   const [manualSelections, setManualSelections] = useState<{
     preview: CourseworkArchiveImportPreview | null
     values: Record<string, string>
@@ -87,7 +94,7 @@ export function CourseworkImportDialog({
         effectiveSelections[coursework.archiveId] ?? "new"
       )
     }
-    onConfirm(decisions)
+    onConfirm(decisions, action)
   }
 
   return (
@@ -99,6 +106,15 @@ export function CourseworkImportDialog({
             資料ごとの取り込み方法を選択してください。
           </DialogDescription>
         </DialogHeader>
+
+        {/* 取り込みの方針（この1つが読み込む全ての値に効く）。
+            「別で追加する」は下の資料ごとの選択で「新規作成」を選ぶことに当たるので、
+            ここには出さない */}
+        <ImportActionChoice
+          action={action}
+          onChange={setAction}
+          allowSeparate={false}
+        />
 
         <ScrollArea className="max-h-[60vh] pr-4">
           {preview.matches.length === 0 ? (

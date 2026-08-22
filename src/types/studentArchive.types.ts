@@ -5,8 +5,8 @@
 import type {
   CategoryIdIntegrationConfig,
   PreMatchingResult,
-  UpdateDecisions,
 } from "./examArchive.types"
+import type { ImportAction } from "./importAction.types"
 
 // =============================================================================
 // バージョン（トランスフォーマー機構用）
@@ -118,7 +118,6 @@ export type StudentImportWizardStep =
   | "file_select"
   | "file_overview"
   | "id_integration"
-  | "update_confirm"
   | "final_confirm"
   | "execute"
 
@@ -131,9 +130,10 @@ export interface StudentImportWizardState {
   manifest: StudentArchiveManifest | null
   fileOverviewData: StudentArchiveFileOverviewData | null
   idIntegrationConfig: StudentArchiveIdIntegrationConfig
+  /** 取り込みの方針（上書きする / 統合する / 別で追加する）。値の扱いはこの1つで決まる */
+  action: ImportAction
   isProcessing: boolean
   error: string | null
-  updateDecisions: UpdateDecisions
 }
 
 /**
@@ -154,7 +154,7 @@ export const INITIAL_STUDENT_IMPORT_WIZARD_STATE: StudentImportWizardState = {
   manifest: null,
   fileOverviewData: null,
   idIntegrationConfig: DEFAULT_STUDENT_ID_INTEGRATION_CONFIG,
+  action: "merge",
   isProcessing: false,
   error: null,
-  updateDecisions: {},
 }

@@ -1,20 +1,17 @@
 /**
  * ID統合インポート: 採点結果レイヤーの処理
  *
- * - QuestionScore（設問スコア。事前照合済みの競合はresolveScoringConflictで解決）
+ * - QuestionScore（設問スコア。事前照合済みの競合も importValuePolicy で解決）
  * - ScoreDecision（OWNER確定スコア。decidedAt LWWで競合解決）
  * - CompoundAnswerScore（複合解答スコア。updatedAt LWWで競合解決）
  * - CropRegionAssignment（設問ごとの採点担当。usernameで照合）
  * - ReturnSnapshot（返却版スナップショット。capturedAt LWWで競合解決）
  */
 
-import type {
-  FileOverviewData,
-  ScoringConflictConfig,
-} from "../../../../src/types/examArchive.types"
+import type { FileOverviewData } from "../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
-import { isNewerByLww } from "./decisionMergePolicy"
-import { resolveScoringConflict } from "./scoringConflictResolver"
+import type { ImportValuePolicy } from "./importValuePolicy"
+import { replacementUpdatedAt } from "./importValuePolicy"
 import type { IdMappings, ImportCounts, PrismaTransaction } from "./types"
 
 export async function processQuestionScores(
@@ -23,7 +20,7 @@ export async function processQuestionScores(
   currentUserId: string,
   idMappings: IdMappings,
   counts: ImportCounts,
-  scoringConflictConfig: ScoringConflictConfig | undefined,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   const scoringConflicts = preMatchResult.scoringConflicts?.conflicts ?? []
@@ -58,12 +55,14 @@ export async function processQuestionScores(
           continue
         }
 
-        const resolution = resolveScoringConflict(
-          conflict,
-          scoringConflictConfig
+        // 採点も他の値と同じ規則で決める（上書き=無条件に取り込み側 / 統合=LWW）。
+        // 「1件ずつ選ぶ」という実体ごとの特別扱いは持たない
+        const takesImportScore = policy.shouldReplaceExisting(
+          new Date(conflict.importScore.updatedAt),
+          new Date(conflict.existingScore.updatedAt)
         )
 
-        if (resolution === "existing") {
+        if (!takesImportScore) {
           idMappings.questionScore[questionScore.id] = conflict.existingScoreId
           counts.skipped.scores++
           continue
@@ -78,45 +77,69 @@ export async function processQuestionScores(
             status: questionScore.status,
             comment: questionScore.comment,
             userId: currentUserId,
+            updatedAt: policy.replacedUpdatedAt(
+              new Date(questionScore.updatedAt)
+            ),
           },
         })
         idMappings.questionScore[questionScore.id] = conflict.existingScoreId
         counts.updated.scores++
       } else {
-        // B11 fix: Check for existing score with same cropRegion+student
-        const existingByComposite = await tx.questionScore.findFirst({
-          where: {
-            cropRegionId: newRegionId,
-            examStudentId: newExamStudentId,
-          },
-        })
-        if (existingByComposite) {
-          idMappings.questionScore[questionScore.id] = existingByComposite.id
-          counts.unchanged.scores++
-        } else {
-          const existingById = await tx.questionScore.findUnique({
+        // 重なりの一覧に載っていなくても、同じ設問×受験者の行が既にあることはある
+        // （事前の突き合わせを通らずに取り込む経路）。**そこも同じ規則で決める** —
+        // 一覧に載ったかどうかで書き込みの規則が変わってはいけない
+        const existingScore =
+          (await tx.questionScore.findFirst({
+            where: {
+              cropRegionId: newRegionId,
+              examStudentId: newExamStudentId,
+            },
+          })) ??
+          (await tx.questionScore.findUnique({
             where: { id: questionScore.id },
-          })
-          if (existingById) {
-            idMappings.questionScore[questionScore.id] = questionScore.id
-            counts.unchanged.scores++
-          } else {
-            await tx.questionScore.create({
+          }))
+
+        if (existingScore) {
+          idMappings.questionScore[questionScore.id] = existingScore.id
+          const updatedAt = replacementUpdatedAt(
+            policy,
+            questionScore.updatedAt,
+            existingScore.updatedAt
+          )
+          if (updatedAt) {
+            await tx.questionScore.update({
+              where: { id: existingScore.id },
               data: {
-                id: questionScore.id,
-                cropRegionId: newRegionId,
-                examStudentId: newExamStudentId,
                 partialScore: questionScore.partialScore
                   ? parseFloat(questionScore.partialScore)
                   : null,
                 status: questionScore.status,
                 comment: questionScore.comment,
                 userId: currentUserId,
+                updatedAt,
               },
             })
-            idMappings.questionScore[questionScore.id] = questionScore.id
-            counts.created.scores++
+            counts.updated.scores++
+          } else {
+            counts.unchanged.scores++
           }
+        } else {
+          await tx.questionScore.create({
+            data: {
+              id: questionScore.id,
+              cropRegionId: newRegionId,
+              examStudentId: newExamStudentId,
+              partialScore: questionScore.partialScore
+                ? parseFloat(questionScore.partialScore)
+                : null,
+              status: questionScore.status,
+              comment: questionScore.comment,
+              userId: currentUserId,
+              ...policy.createdTimestamps(questionScore),
+            },
+          })
+          idMappings.questionScore[questionScore.id] = questionScore.id
+          counts.created.scores++
         }
       }
     }
@@ -134,6 +157,7 @@ export async function processScoreDecisions(
   currentUserId: string,
   idMappings: IdMappings,
   counts: ImportCounts,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   for (const scoreDecision of data.scoresData.scoreDecisions ?? []) {
@@ -153,8 +177,9 @@ export async function processScoreDecisions(
     })
 
     if (existing) {
-      // 確定レイヤーの競合解決はLWW（decisionMergePolicy参照）
-      if (isNewerByLww(incomingDecidedAt, existing.decidedAt)) {
+      // 置き換えるかどうかは取り込みの規則（上書き=無条件 / 統合=LWW）。
+      // 比べるのは確定の時刻（decidedAt）で、これが確定レイヤーの「書かれた時刻」
+      if (policy.shouldReplaceExisting(incomingDecidedAt, existing.decidedAt)) {
         await tx.scoreDecision.update({
           where: { id: existing.id },
           data: {
@@ -163,6 +188,9 @@ export async function processScoreDecisions(
             comment: scoreDecision.comment,
             decidedByUserId: currentUserId,
             decidedAt: incomingDecidedAt,
+            updatedAt: policy.replacedUpdatedAt(
+              new Date(scoreDecision.updatedAt)
+            ),
           },
         })
         counts.updated.scores++
@@ -192,6 +220,7 @@ export async function processScoreDecisions(
         comment: scoreDecision.comment,
         decidedByUserId: currentUserId,
         decidedAt: incomingDecidedAt,
+        ...policy.createdTimestamps(scoreDecision),
       },
     })
     idMappings.scoreDecision[scoreDecision.id] = scoreDecision.id
@@ -210,6 +239,7 @@ export async function processCompoundAnswerScores(
   currentUserId: string,
   idMappings: IdMappings,
   counts: ImportCounts,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   for (const compoundAnswerScore of data.examData.compoundAnswerScores ?? []) {
@@ -218,8 +248,6 @@ export async function processCompoundAnswerScores(
     const newExamStudentId =
       idMappings.examStudent[compoundAnswerScore.examStudentId]
     if (!newCompoundAnswerId || !newExamStudentId) continue
-
-    const incomingUpdatedAt = new Date(compoundAnswerScore.updatedAt)
 
     const existing = await tx.compoundAnswerScore.findUnique({
       where: {
@@ -231,8 +259,12 @@ export async function processCompoundAnswerScores(
     })
 
     if (existing) {
-      // 確定レイヤーの競合解決はLWW（decisionMergePolicy参照）
-      if (isNewerByLww(incomingUpdatedAt, existing.updatedAt)) {
+      const replacedUpdatedAt = replacementUpdatedAt(
+        policy,
+        compoundAnswerScore.updatedAt,
+        existing.updatedAt
+      )
+      if (replacedUpdatedAt) {
         await tx.compoundAnswerScore.update({
           where: { id: existing.id },
           data: {
@@ -242,6 +274,7 @@ export async function processCompoundAnswerScores(
             partialScore: compoundAnswerScore.partialScore
               ? parseFloat(compoundAnswerScore.partialScore)
               : null,
+            updatedAt: replacedUpdatedAt,
           },
         })
         counts.updated.scores++
@@ -273,6 +306,7 @@ export async function processCompoundAnswerScores(
         partialScore: compoundAnswerScore.partialScore
           ? parseFloat(compoundAnswerScore.partialScore)
           : null,
+        ...policy.createdTimestamps(compoundAnswerScore),
       },
     })
     idMappings.compoundAnswerScore[compoundAnswerScore.id] =
@@ -300,6 +334,7 @@ export async function processReturnSnapshots(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
   counts: ImportCounts,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<string[]> {
   const archivedSnapshots = data.scoresData.returnSnapshots ?? []
@@ -343,8 +378,10 @@ export async function processReturnSnapshots(
     })
 
     if (existing) {
-      // 返却版も確定レイヤーと同じくLWW（decisionMergePolicy参照）
-      if (isNewerByLww(incomingCapturedAt, existing.capturedAt)) {
+      // 置き換えるかどうかは取り込みの規則。比べるのは記録の時刻（capturedAt）
+      if (
+        policy.shouldReplaceExisting(incomingCapturedAt, existing.capturedAt)
+      ) {
         await tx.returnSnapshot.update({
           where: { id: existing.id },
           data: {
@@ -354,6 +391,7 @@ export async function processReturnSnapshots(
               : null,
             capturedByUserId,
             capturedAt: incomingCapturedAt,
+            updatedAt: policy.replacedUpdatedAt(new Date(snapshot.updatedAt)),
           },
         })
         counts.updated.scores++
@@ -381,6 +419,7 @@ export async function processReturnSnapshots(
           : null,
         capturedByUserId,
         capturedAt: incomingCapturedAt,
+        ...policy.createdTimestamps(snapshot),
       },
     })
     counts.created.scores++
@@ -412,6 +451,7 @@ export async function processCropRegionAssignments(
   currentUserId: string,
   idMappings: IdMappings,
   counts: ImportCounts,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<string[]> {
   const archivedAssignments = data.scoresData.cropRegionAssignments ?? []
@@ -456,8 +496,7 @@ export async function processCropRegionAssignments(
         cropRegionId: newRegionId,
         userId: assigneeUserId,
         assignedBy: currentUserId,
-        createdAt: new Date(assignment.createdAt),
-        updatedAt: new Date(assignment.updatedAt),
+        ...policy.createdTimestamps(assignment),
       },
     })
     counts.created.scores++

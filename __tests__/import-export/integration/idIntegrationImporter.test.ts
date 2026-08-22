@@ -21,7 +21,6 @@ import {
   createMatchedItem,
   createPreMatchingResult,
   createScoringConflict,
-  createScoringConflictConfig,
   generateId,
 } from "../../helpers/testDataFactory"
 import {
@@ -410,8 +409,8 @@ describe("executeIdIntegrationImport", () => {
     expect(result2.summary!.created.scores).toBe(0)
   })
 
-  // II-5: 同一PCリインポート+スコア更新: newer_wins
-  it("II-5: newer_wins戦略でスコア競合が解決される", async () => {
+  // II-5: 同一PCリインポート+スコア更新: 統合（LWW）
+  it("II-5: 統合を選ぶと、後に書かれた採点が採られる", async () => {
     const { data, examId, studentId, scoreId, regionId, classroomId, groupId } =
       createBasicTestData()
 
@@ -513,17 +512,16 @@ describe("executeIdIntegrationImport", () => {
     const result2 = await executeIdIntegrationImport(
       data,
       preMatch2,
-      createIdIntegrationConfig(),
-      currentUser.id,
-      createScoringConflictConfig({ strategy: "newer_wins" })
+      createIdIntegrationConfig({ exam: "merge" }),
+      currentUser.id
     )
 
     // import is newer, so it should be updated
     expect(result2.summary!.updated.scores).toBeGreaterThanOrEqual(0)
   })
 
-  // II-6: import_wins戦略
-  it("II-6: import_wins戦略でインポート側が優先される", async () => {
+  // II-6: 上書きする
+  it("II-6: 上書きを選ぶと、時刻を見ずにファイルの採点になる", async () => {
     // この戦略のテストは II-5 と同様の構造
     const { data, examId, studentId, scoreId, regionId, classroomId, groupId } =
       createBasicTestData()
@@ -622,16 +620,15 @@ describe("executeIdIntegrationImport", () => {
     const result = await executeIdIntegrationImport(
       data,
       preMatch2,
-      createIdIntegrationConfig(),
-      currentUser.id,
-      createScoringConflictConfig({ strategy: "import_wins" })
+      createIdIntegrationConfig({ exam: "overwrite" }),
+      currentUser.id
     )
 
     expect(result.summary!.updated.scores).toBeGreaterThanOrEqual(1)
   })
 
-  // II-7: existing_wins戦略
-  it("II-7: existing_wins戦略で既存側が優先される", async () => {
+  // II-7: 統合＋アーカイブの方が古い
+  it("II-7: 統合を選び、ファイルの採点が古ければこのPCの採点が残る", async () => {
     const { data, examId, studentId, scoreId, regionId, classroomId, groupId } =
       createBasicTestData()
 
@@ -687,12 +684,12 @@ describe("executeIdIntegrationImport", () => {
       importScore: {
         status: "incorrect",
         partialScore: 0,
-        updatedAt: new Date().toISOString(),
+        updatedAt: new Date("2025-06-01").toISOString(),
       },
       existingScore: {
         status: "correct",
         partialScore: 10,
-        updatedAt: new Date().toISOString(),
+        updatedAt: new Date("2025-07-01").toISOString(),
       },
     })
 
@@ -729,9 +726,8 @@ describe("executeIdIntegrationImport", () => {
     const result = await executeIdIntegrationImport(
       data,
       preMatch2,
-      createIdIntegrationConfig(),
-      currentUser.id,
-      createScoringConflictConfig({ strategy: "existing_wins" })
+      createIdIntegrationConfig({ exam: "merge" }),
+      currentUser.id
     )
 
     expect(result.summary!.skipped.scores).toBeGreaterThanOrEqual(1)

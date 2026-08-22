@@ -33,9 +33,16 @@ vi.mock("../../../electron-src/lib/prisma/client", () => {
   }
 })
 
+import { createImportValuePolicy } from "../../../electron-src/lib/import/merge/importValuePolicy"
 import { processStudentIdIntegration } from "../../../electron-src/lib/import/merge/processors/studentProcessor"
 
 const prisma = getTestPrismaClient()
+
+/**
+ * 取り込みの方針（上書きする / 統合する / 別で追加する）。
+ * 既定は「統合する」＝ LWW。上書きを見るテストだけ個別に作る。
+ */
+const policy = createImportValuePolicy("merge")
 
 describe("processStudentIdIntegration", () => {
   beforeEach(async () => {
@@ -100,6 +107,7 @@ describe("processStudentIdIntegration", () => {
           idChangeTargets,
           counts,
           warnings,
+          policy,
           tx
         )
       })
@@ -160,6 +168,7 @@ describe("processStudentIdIntegration", () => {
           idChangeTargets,
           counts,
           warnings,
+          policy,
           tx
         )
       })
@@ -223,6 +232,7 @@ describe("processStudentIdIntegration", () => {
           idChangeTargets,
           counts,
           warnings,
+          policy,
           tx
         )
       })
@@ -272,6 +282,7 @@ describe("processStudentIdIntegration", () => {
           idChangeTargets,
           counts,
           warnings,
+          policy,
           tx
         )
       })
@@ -349,6 +360,7 @@ describe("processStudentIdIntegration", () => {
           idChangeTargets,
           counts,
           warnings,
+          policy,
           tx
         )
       })
@@ -417,6 +429,7 @@ describe("processStudentIdIntegration", () => {
           idChangeTargets,
           counts,
           warnings,
+          policy,
           tx
         )
       })
@@ -474,6 +487,7 @@ describe("processStudentIdIntegration", () => {
           idChangeTargets,
           counts,
           warnings,
+          policy,
           tx
         )
       })
@@ -543,6 +557,7 @@ describe("processStudentIdIntegration", () => {
           idChangeTargets,
           counts,
           warnings,
+          policy,
           tx
         )
       })
@@ -569,10 +584,10 @@ describe("processStudentIdIntegration", () => {
   })
 
   // =========================================================================
-  // フィールド更新: use_import戦略
+  // 値の扱い: 上書きする
   // =========================================================================
-  describe("フィールド更新（use_import戦略）", () => {
-    it("use_importが指定されたフィールドがインポートデータで更新される", async () => {
+  describe("値の扱い（上書きする）", () => {
+    it("同じ人だと決まった行は、時刻を見ずに全ての列がファイルの値になる", async () => {
       const existingId = generateId()
       const importId = generateId()
 
@@ -621,13 +636,8 @@ describe("processStudentIdIntegration", () => {
       const counts = createEmptyImportCounts()
       const warnings: string[] = []
 
-      // updateDecisionsでlastNameとfirstNameをインポートデータで上書き
-      const updateDecisions = {
-        [`student:${importId}`]: {
-          lastName: "use_import" as const,
-          firstName: "use_import" as const,
-        },
-      }
+      // 「上書きする」は項目を選ばない。人が統合先を指定した行の列は全部が置き換わる
+      const overwritePolicy = createImportValuePolicy("overwrite")
 
       await prisma.$transaction(async (tx) => {
         await processStudentIdIntegration(
@@ -638,8 +648,8 @@ describe("processStudentIdIntegration", () => {
           idChangeTargets,
           counts,
           warnings,
-          tx,
-          updateDecisions
+          overwritePolicy,
+          tx
         )
       })
 
@@ -649,17 +659,18 @@ describe("processStudentIdIntegration", () => {
       })
       expect(updated!.lastName).toBe("新姓")
       expect(updated!.firstName).toBe("新名")
-      // 更新されていないフィールドは元のまま
-      expect(updated!.lastNameKana).toBe("キュウセイ")
-      expect(updated!.firstNameKana).toBe("キュウメイ")
+      // 項目ごとの選択が無いので、カナも入学年度もファイルの値になる
+      expect(updated!.lastNameKana).toBe("シンセイ")
+      expect(updated!.firstNameKana).toBe("シンメイ")
+      expect(updated!.enrollmentYear).toBe(2024)
       expect(counts.updated.students).toBe(1)
     })
   })
 
   // =========================================================================
-  // フィールド更新: use_newer戦略
+  // 値の扱い: 統合する（LWW）
   // =========================================================================
-  describe("フィールド更新（use_newer戦略）", () => {
+  describe("値の扱い（統合する）", () => {
     it("インポートデータの方が新しい場合にフィールドが更新される", async () => {
       const existingId = generateId()
       const importId = generateId()
@@ -712,13 +723,6 @@ describe("processStudentIdIntegration", () => {
       const counts = createEmptyImportCounts()
       const warnings: string[] = []
 
-      const updateDecisions = {
-        [`student:${importId}`]: {
-          lastName: "use_newer" as const,
-          firstName: "use_newer" as const,
-        },
-      }
-
       await prisma.$transaction(async (tx) => {
         await processStudentIdIntegration(
           data,
@@ -728,8 +732,8 @@ describe("processStudentIdIntegration", () => {
           idChangeTargets,
           counts,
           warnings,
-          tx,
-          updateDecisions
+          policy,
+          tx
         )
       })
 
@@ -792,12 +796,6 @@ describe("processStudentIdIntegration", () => {
       const counts = createEmptyImportCounts()
       const warnings: string[] = []
 
-      const updateDecisions = {
-        [`student:${importId}`]: {
-          lastName: "use_newer" as const,
-        },
-      }
-
       await prisma.$transaction(async (tx) => {
         await processStudentIdIntegration(
           data,
@@ -807,8 +805,8 @@ describe("processStudentIdIntegration", () => {
           idChangeTargets,
           counts,
           warnings,
-          tx,
-          updateDecisions
+          policy,
+          tx
         )
       })
 

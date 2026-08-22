@@ -1,3 +1,5 @@
+import type { ImportAction } from "./importAction.types"
+
 /**
  * 試験外成績資料アーカイブ（.coursework）の型定義
  *
@@ -220,6 +222,11 @@ export type CourseworkMatchingMethod = "studentNumber" | "name" | "none"
 
 /** import 実行オプション */
 export interface CourseworkImportOptions {
+  /**
+   * 取り込みの方針（上書きする / 統合する / 別で追加する）。省略時は統合。
+   * **この1つが取り込む全レコードの全ての値に効く**（merge/importValuePolicy）。
+   */
+  action?: ImportAction
   /** 資料ごとの取り込み判断（archiveCourseworkId → 決定）。未指定は uuid 一致なら流用、無ければ新規 */
   courseworkDecisions?: CourseworkImportDecisions
   /** 生徒の二次照合方法（既定: studentNumber） */

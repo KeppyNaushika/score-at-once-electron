@@ -1,8 +1,15 @@
 /**
  * ID統合インポート: 試験骨格（Exam根・ExamPage・CropRegion・参加情報）の処理
  *
- * 試験ID一致時は既存の試験にマージ（ExamPage/CropRegionはID一致でマッピング）、
+ * 試験ID一致時は既存の試験へ（ExamPage/CropRegionはID一致でマッピング）、
  * 不一致時は新規作成する。UserExam/ExamSubtotalGroup/ExamStudentの参加情報も扱う。
+ *
+ * **値の扱いは importValuePolicy に一本化されている**（上書きする／統合する／別で追加する）。
+ * 一致した行を置き換えるかどうかも、新しく作る行の時刻も、この規則だけで決まる。
+ *
+ * 「別で追加する」を人が選んだ場合、id は呼び出し前に振り直されている
+ * （separateExamRewriter）ので、ここから見ると単なるID不一致＝新規作成になる。
+ * 名前だけは既存とぶつかるため、この処理がサフィックスを付ける。
  */
 
 import * as crypto from "crypto"
@@ -10,6 +17,9 @@ import * as path from "path"
 
 import type { FileOverviewData } from "../../../../src/types/examArchive.types"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
+import { generateUniqueExamName } from "../exam-archive/uniqueNameGenerators"
+import type { ImportValuePolicy } from "./importValuePolicy"
+import { replacementUpdatedAt } from "./importValuePolicy"
 import type { IdMappings, ImportCounts, PrismaTransaction } from "./types"
 
 /**
@@ -26,27 +36,98 @@ function toImportedMasterImagePath(
 }
 
 /**
- * 既に存在するページに模範解答画像が無く、アーカイブ側が持っているなら補う。
+ * 既にある試験の列を、人が選んだ操作に従って書き換える。
  *
- * 旧実装（imageImporter の createMasterImageRecords）は「対象ページに MasterImage 行が
- * 無ければ作る」を行っていた。ページ作成時にしか画像を書かないと、模範解答を失った
- * ページを同じ試験のアーカイブから復旧する手段が無くなる（画像ファイルだけがコピーされ、
- * 参照されないまま残る）。既にある画像は上書きしない — 取り込みで現物を差し替えない
+ * **Exam の列は id / examName / examDate / description / markerCorrectionEnabled /
+ * createdAt / updatedAt で全部**（prisma/schema.prisma）。id は同定そのもの、
+ * createdAt は「既にある行」なので動かさない。残り4列がここの対象。
+ * 列を足したらここにも足すこと。
  */
-async function backfillMasterImage(
-  existingPage: { id: string; imagePath: string | null },
-  archivePage: { imagePath: string | null; pageSize: string },
-  newExamId: string,
+async function applyExamColumns(
+  exam: ExtractedArchiveData["examData"]["exam"],
+  existingExamId: string,
+  policy: ImportValuePolicy,
+  warnings: string[],
   tx: PrismaTransaction
 ): Promise<void> {
-  if (existingPage.imagePath) return
+  const existingExam = await tx.exam.findUnique({
+    where: { id: existingExamId },
+  })
+  if (!existingExam) return
 
-  const imagePath = toImportedMasterImagePath(newExamId, archivePage.imagePath)
-  if (!imagePath) return
+  const updatedAt = replacementUpdatedAt(
+    policy,
+    exam.updatedAt,
+    existingExam.updatedAt
+  )
+  if (!updatedAt) return
+
+  await tx.exam.update({
+    where: { id: existingExamId },
+    data: {
+      examName: exam.examName,
+      examDate: exam.examDate ? new Date(exam.examDate) : null,
+      description: exam.description,
+      // 旧アーカイブ（〜v1.11.0）はこの列を持たないので既定の false へ倒れる
+      markerCorrectionEnabled: exam.markerCorrectionEnabled ?? false,
+      updatedAt,
+    },
+  })
+
+  warnings.push(
+    policy.action === "overwrite"
+      ? `試験「${existingExam.examName}」の情報（試験名・試験日・説明・マーク補正の既定）を、` +
+          `読み込んだデータで上書きしました。`
+      : `試験「${existingExam.examName}」の情報（試験名・試験日・説明・マーク補正の既定）を、` +
+          `読み込んだデータの方が新しいため更新しました。`
+  )
+}
+
+/**
+ * 既にあるページの列を規則に従って書き換える。
+ *
+ * ExamPage の列は id / examId / pageNumber / imagePath / pageSize / createdAt / updatedAt。
+ * 模範解答画像だけは実体（ファイル）を伴うので、置き換えるのは**アーカイブが画像を
+ * 持っているときだけ**にする。持っていないアーカイブで既存の画像を消すと、
+ * 参照の切れたページになり画面から復旧できない。
+ */
+async function applyExamPageColumns(
+  existingPage: { id: string; imagePath: string | null; updatedAt: Date },
+  archivePage: ExtractedArchiveData["examData"]["examPages"][number],
+  newExamId: string,
+  policy: ImportValuePolicy,
+  tx: PrismaTransaction
+): Promise<void> {
+  const importedImagePath = toImportedMasterImagePath(
+    newExamId,
+    archivePage.imagePath
+  )
+  const updatedAt = replacementUpdatedAt(
+    policy,
+    archivePage.updatedAt,
+    existingPage.updatedAt
+  )
+
+  // 規則が「置き換えない」と言っても、模範解答を失ったページにアーカイブ側の画像が
+  // あるなら補う（欠けを埋めるだけで、既にあるものは書き換えない）
+  if (!updatedAt) {
+    if (!existingPage.imagePath && importedImagePath) {
+      await tx.examPage.update({
+        where: { id: existingPage.id },
+        data: { imagePath: importedImagePath, pageSize: archivePage.pageSize },
+      })
+    }
+    return
+  }
 
   await tx.examPage.update({
     where: { id: existingPage.id },
-    data: { imagePath, pageSize: archivePage.pageSize },
+    data: {
+      pageNumber: archivePage.pageNumber,
+      imagePath: importedImagePath ?? existingPage.imagePath,
+      pageSize: archivePage.pageSize,
+      updatedAt,
+    },
   })
 }
 
@@ -56,19 +137,30 @@ export async function processExam(
   idMappings: IdMappings,
   counts: ImportCounts,
   warnings: string[],
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<string> {
   const exam = data.examData.exam
   const isExamIdMatch = preMatchResult.exam?.isIdMatch ?? false
+  const importAsSeparateExam = policy.action === "separate"
 
   if (isExamIdMatch && preMatchResult.exam?.existingExamId) {
-    // 試験ID一致 → 既存試験を使用（マージ）
+    // 試験ID一致 → 既存試験を使用（上書き / 統合）
     const newExamId = preMatchResult.exam.existingExamId
     idMappings.exam[exam.id] = newExamId
 
+    await applyExamColumns(exam, newExamId, policy, warnings, tx)
+
     // 既存のExamPageとCropRegionをID一致でマッピング
-    await mapExistingExamPages(data, newExamId, idMappings, counts, tx)
-    await mapExistingCropRegions(data, newExamId, idMappings, counts, tx)
+    await mapExistingExamPages(data, newExamId, idMappings, counts, policy, tx)
+    await mapExistingCropRegions(
+      data,
+      newExamId,
+      idMappings,
+      counts,
+      policy,
+      tx
+    )
 
     return newExamId
   }
@@ -84,20 +176,34 @@ export async function processExam(
     )
     return exam.id
   }
-  // Exam の列は id / examName / examDate / description / markerCorrectionEnabled で全部。
-  // createdAt / updatedAt は取り込み時刻に倒す（この試験は取り込み先では新しい行なので、
-  // 同期の LWW が「新しく入った」と読めるようにする）。列を足したらここも足すこと。
+
+  // 別物として並べるので、一覧で見分けられるよう名前をずらす
+  const examName = importAsSeparateExam
+    ? await generateUniqueExamName(tx, exam.examName)
+    : exam.examName
+
+  // Exam の列は id / examName / examDate / description / markerCorrectionEnabled /
+  // createdAt / updatedAt で全部。列を足したらここも足すこと。
   await tx.exam.create({
     data: {
       id: exam.id,
-      examName: exam.examName,
+      examName,
       examDate: exam.examDate ? new Date(exam.examDate) : null,
       description: exam.description,
       // 旧アーカイブ（〜v1.11.0）はこの列を持たないので既定の false へ倒れる
       markerCorrectionEnabled: exam.markerCorrectionEnabled ?? false,
+      ...policy.createdTimestamps(exam),
     },
   })
   idMappings.exam[exam.id] = exam.id
+
+  if (importAsSeparateExam) {
+    warnings.push(
+      `「${exam.examName}」を別の試験として取り込みました` +
+        `${examName === exam.examName ? "" : `（試験名は「${examName}」）`}。既存の試験はそのまま残っています。`
+    )
+  }
+
   return exam.id
 }
 
@@ -106,6 +212,7 @@ async function mapExistingExamPages(
   newExamId: string,
   idMappings: IdMappings,
   counts: ImportCounts,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   const existingExamPages = await tx.examPage.findMany({
@@ -116,33 +223,29 @@ async function mapExistingExamPages(
   )
 
   for (const page of data.examData.examPages) {
-    const existingPage = existingPageById.get(page.id)
+    const existingPage =
+      existingPageById.get(page.id) ??
+      (await tx.examPage.findUnique({ where: { id: page.id } }))
+
     if (existingPage) {
-      await backfillMasterImage(existingPage, page, newExamId, tx)
+      await applyExamPageColumns(existingPage, page, newExamId, policy, tx)
       idMappings.examPage[page.id] = page.id
       counts.unchanged.pages++
-    } else {
-      const existingById = await tx.examPage.findUnique({
-        where: { id: page.id },
-      })
-      if (existingById) {
-        await backfillMasterImage(existingById, page, newExamId, tx)
-        idMappings.examPage[page.id] = page.id
-        counts.unchanged.pages++
-      } else {
-        await tx.examPage.create({
-          data: {
-            id: page.id,
-            examId: newExamId,
-            pageNumber: page.pageNumber,
-            imagePath: toImportedMasterImagePath(newExamId, page.imagePath),
-            pageSize: page.pageSize,
-          },
-        })
-        idMappings.examPage[page.id] = page.id
-        counts.created.pages++
-      }
+      continue
     }
+
+    await tx.examPage.create({
+      data: {
+        id: page.id,
+        examId: newExamId,
+        pageNumber: page.pageNumber,
+        imagePath: toImportedMasterImagePath(newExamId, page.imagePath),
+        pageSize: page.pageSize,
+        ...policy.createdTimestamps(page),
+      },
+    })
+    idMappings.examPage[page.id] = page.id
+    counts.created.pages++
   }
 }
 
@@ -151,6 +254,7 @@ async function mapExistingCropRegions(
   newExamId: string,
   idMappings: IdMappings,
   counts: ImportCounts,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   const existingCropRegions = await tx.cropRegion.findMany({
@@ -158,28 +262,28 @@ async function mapExistingCropRegions(
       examPage: { examId: newExamId },
     },
   })
-  const existingRegionIds = new Set(
-    existingCropRegions.map((cropRegion) => cropRegion.id)
+  const existingRegionById = new Map(
+    existingCropRegions.map((cropRegion) => [cropRegion.id, cropRegion])
   )
 
   for (const region of data.examData.cropRegions) {
     const mappedPageId = idMappings.examPage[region.examPageId]
     if (!mappedPageId) continue
 
-    if (existingRegionIds.has(region.id)) {
-      idMappings.cropRegion[region.id] = region.id
-      counts.unchanged.regions++
-    } else {
-      const existingById = await tx.cropRegion.findUnique({
-        where: { id: region.id },
-      })
-      if (existingById) {
-        idMappings.cropRegion[region.id] = region.id
-        counts.unchanged.regions++
-      } else {
-        await tx.cropRegion.create({
+    const existingRegion =
+      existingRegionById.get(region.id) ??
+      (await tx.cropRegion.findUnique({ where: { id: region.id } }))
+
+    if (existingRegion) {
+      const updatedAt = replacementUpdatedAt(
+        policy,
+        region.updatedAt,
+        existingRegion.updatedAt
+      )
+      if (updatedAt) {
+        await tx.cropRegion.update({
+          where: { id: existingRegion.id },
           data: {
-            id: region.id,
             examPageId: mappedPageId,
             label: region.label,
             type: region.type,
@@ -189,12 +293,34 @@ async function mapExistingCropRegions(
             height: region.height,
             points: region.points,
             orderIndex: region.orderIndex,
+            updatedAt,
           },
         })
-        idMappings.cropRegion[region.id] = region.id
-        counts.created.regions++
+        counts.updated.regions++
+      } else {
+        counts.unchanged.regions++
       }
+      idMappings.cropRegion[region.id] = region.id
+      continue
     }
+
+    await tx.cropRegion.create({
+      data: {
+        id: region.id,
+        examPageId: mappedPageId,
+        label: region.label,
+        type: region.type,
+        x: region.x,
+        y: region.y,
+        width: region.width,
+        height: region.height,
+        points: region.points,
+        orderIndex: region.orderIndex,
+        ...policy.createdTimestamps(region),
+      },
+    })
+    idMappings.cropRegion[region.id] = region.id
+    counts.created.regions++
   }
 }
 
@@ -202,6 +328,7 @@ export async function processUserExam(
   isExamIdMatch: boolean,
   newExamId: string,
   currentUserId: string,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   if (isExamIdMatch) {
@@ -213,36 +340,40 @@ export async function processUserExam(
         },
       },
     })
-    if (!existingUserExam) {
-      await tx.userExam.create({
-        data: {
-          id: crypto.randomUUID(),
-          userId: currentUserId,
-          examId: newExamId,
-          role: "MEMBER",
-          invitedAt: new Date(),
-          invitedBy: null,
-        },
-      })
-    }
-  } else {
+    if (existingUserExam) return
+
     await tx.userExam.create({
       data: {
         id: crypto.randomUUID(),
         userId: currentUserId,
         examId: newExamId,
-        role: "OWNER",
-        invitedAt: new Date(),
+        role: "MEMBER",
+        // 参加した事実はアーカイブに書かれていない（この取り込みで今いま起きた）ので
+        // 取り込み時刻。ここは規則の対象外＝アーカイブ由来の値を持たない行
+        invitedAt: policy.importedAt,
         invitedBy: null,
       },
     })
+    return
   }
+
+  await tx.userExam.create({
+    data: {
+      id: crypto.randomUUID(),
+      userId: currentUserId,
+      examId: newExamId,
+      role: "OWNER",
+      invitedAt: policy.importedAt,
+      invitedBy: null,
+    },
+  })
 }
 
 export async function processExamSubtotalGroups(
   data: ExtractedArchiveData,
   newExamId: string,
   idMappings: IdMappings,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   for (const examSubtotalGroup of data.examData.examSubtotalGroups) {
@@ -254,20 +385,41 @@ export async function processExamSubtotalGroups(
     // アーカイブ側の id とも一致しない。ここで id を探しにいくと、同じ組み合わせの行が
     // あるのに見つけられず create 側へ落ち、unique 違反でアーカイブ取り込みが
     // トランザクションごと巻き戻る。
-    await tx.examSubtotalGroup.upsert({
+    const existing = await tx.examSubtotalGroup.findUnique({
       where: {
         examId_subtotalGroupId: {
           examId: newExamId,
           subtotalGroupId: newGroupId,
         },
       },
-      create: {
+    })
+
+    if (existing) {
+      const updatedAt = replacementUpdatedAt(
+        policy,
+        examSubtotalGroup.updatedAt,
+        existing.updatedAt
+      )
+      if (!updatedAt) continue
+      await tx.examSubtotalGroup.update({
+        where: { id: existing.id },
+        data: {
+          selectedForTable: examSubtotalGroup.selectedForTable ?? false,
+          selectedForBoxPlot: examSubtotalGroup.selectedForBoxPlot ?? false,
+          updatedAt,
+        },
+      })
+      continue
+    }
+
+    await tx.examSubtotalGroup.create({
+      data: {
         examId: newExamId,
         subtotalGroupId: newGroupId,
         selectedForTable: examSubtotalGroup.selectedForTable ?? false,
         selectedForBoxPlot: examSubtotalGroup.selectedForBoxPlot ?? false,
+        ...policy.createdTimestamps(examSubtotalGroup),
       },
-      update: {},
     })
   }
 }
@@ -277,40 +429,58 @@ export async function processExamStudents(
   isExamIdMatch: boolean,
   newExamId: string,
   idMappings: IdMappings,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
-): Promise<void> {
+): Promise<{ createdCount: number }> {
+  let createdCount = 0
+
   for (const examStudent of data.examData.examStudents) {
     const newStudentId = idMappings.student[examStudent.studentId]
-    if (newStudentId) {
-      if (isExamIdMatch) {
-        const existing = await tx.examStudent.findFirst({
-          where: { examId: newExamId, studentId: newStudentId },
-        })
-        if (existing) {
-          idMappings.examStudent[examStudent.id] = existing.id
-          continue
-        }
-      }
+    if (!newStudentId) continue
 
-      const existingById = await tx.examStudent.findUnique({
-        where: { id: examStudent.id },
+    const existing = isExamIdMatch
+      ? ((await tx.examStudent.findFirst({
+          where: { examId: newExamId, studentId: newStudentId },
+        })) ??
+        (await tx.examStudent.findUnique({ where: { id: examStudent.id } })))
+      : await tx.examStudent.findUnique({ where: { id: examStudent.id } })
+
+    if (existing) {
+      idMappings.examStudent[examStudent.id] = existing.id
+      const updatedAt = replacementUpdatedAt(
+        policy,
+        examStudent.updatedAt,
+        existing.updatedAt
+      )
+      if (!updatedAt) continue
+      await tx.examStudent.update({
+        where: { id: existing.id },
+        data: {
+          status: examStudent.status,
+          // 並び順は列全体の性質なので、値をそのまま入れると重複と穴ができる。
+          // 取り込みの最後に名簿ごと詰め直す（reorderAfterImport）
+          customOrder: examStudent.customOrder,
+          updatedAt,
+        },
       })
-      if (existingById) {
-        idMappings.examStudent[examStudent.id] = examStudent.id
-      } else {
-        await tx.examStudent.create({
-          data: {
-            id: examStudent.id,
-            examId: newExamId,
-            studentId: newStudentId,
-            status: examStudent.status,
-            customOrder: examStudent.customOrder,
-          },
-        })
-        idMappings.examStudent[examStudent.id] = examStudent.id
-      }
+      continue
     }
+
+    await tx.examStudent.create({
+      data: {
+        id: examStudent.id,
+        examId: newExamId,
+        studentId: newStudentId,
+        status: examStudent.status,
+        customOrder: examStudent.customOrder,
+        ...policy.createdTimestamps(examStudent),
+      },
+    })
+    idMappings.examStudent[examStudent.id] = examStudent.id
+    createdCount++
   }
+
+  return { createdCount }
 }
 
 export async function processExamPages(
@@ -318,6 +488,7 @@ export async function processExamPages(
   newExamId: string,
   idMappings: IdMappings,
   counts: ImportCounts,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   for (const page of data.examData.examPages) {
@@ -325,6 +496,7 @@ export async function processExamPages(
       where: { id: page.id },
     })
     if (existingById) {
+      await applyExamPageColumns(existingById, page, newExamId, policy, tx)
       idMappings.examPage[page.id] = page.id
       counts.unchanged.pages++
     } else {
@@ -335,6 +507,7 @@ export async function processExamPages(
           pageNumber: page.pageNumber,
           imagePath: toImportedMasterImagePath(newExamId, page.imagePath),
           pageSize: page.pageSize,
+          ...policy.createdTimestamps(page),
         },
       })
       idMappings.examPage[page.id] = page.id
@@ -347,21 +520,26 @@ export async function processCropRegions(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
   counts: ImportCounts,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   for (const region of data.examData.cropRegions) {
     const newPageId = idMappings.examPage[region.examPageId]
-    if (newPageId) {
-      const existingById = await tx.cropRegion.findUnique({
-        where: { id: region.id },
-      })
-      if (existingById) {
-        idMappings.cropRegion[region.id] = region.id
-        counts.unchanged.regions++
-      } else {
-        await tx.cropRegion.create({
+    if (!newPageId) continue
+
+    const existingById = await tx.cropRegion.findUnique({
+      where: { id: region.id },
+    })
+    if (existingById) {
+      const updatedAt = replacementUpdatedAt(
+        policy,
+        region.updatedAt,
+        existingById.updatedAt
+      )
+      if (updatedAt) {
+        await tx.cropRegion.update({
+          where: { id: existingById.id },
           data: {
-            id: region.id,
             examPageId: newPageId,
             label: region.label,
             type: region.type,
@@ -371,11 +549,33 @@ export async function processCropRegions(
             height: region.height,
             points: region.points,
             orderIndex: region.orderIndex,
+            updatedAt,
           },
         })
-        idMappings.cropRegion[region.id] = region.id
-        counts.created.regions++
+        counts.updated.regions++
+      } else {
+        counts.unchanged.regions++
       }
+      idMappings.cropRegion[region.id] = region.id
+      continue
     }
+
+    await tx.cropRegion.create({
+      data: {
+        id: region.id,
+        examPageId: newPageId,
+        label: region.label,
+        type: region.type,
+        x: region.x,
+        y: region.y,
+        width: region.width,
+        height: region.height,
+        points: region.points,
+        orderIndex: region.orderIndex,
+        ...policy.createdTimestamps(region),
+      },
+    })
+    idMappings.cropRegion[region.id] = region.id
+    counts.created.regions++
   }
 }

@@ -12,8 +12,6 @@ import type {
   BulkExportExamsResult,
   FileOverviewData,
   IdIntegrationConfig,
-  ScoringConflictConfig,
-  UpdateDecisions,
 } from "../../src/types/examArchive.types"
 import { exportExam, exportExamTo } from "../lib/export/exam-archive"
 import { generateExportFileName } from "../lib/export/exam-archive/archiveCreator"
@@ -230,8 +228,6 @@ export const archiveHandlers = {
     preMatchResult: FileOverviewData
     integrationConfig: IdIntegrationConfig
     currentUserId: string
-    scoringConflictConfig?: ScoringConflictConfig
-    updateDecisions?: UpdateDecisions
   }) => {
     let tempDir: string | null = null
 
@@ -248,9 +244,7 @@ export const archiveHandlers = {
         extractResult.data,
         options.preMatchResult,
         options.integrationConfig,
-        options.currentUserId,
-        options.scoringConflictConfig,
-        options.updateDecisions
+        options.currentUserId
       )
     } finally {
       if (tempDir) {

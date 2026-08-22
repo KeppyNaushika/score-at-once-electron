@@ -8,17 +8,22 @@
 import * as crypto from "crypto"
 
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
+import type { ImportValuePolicy } from "./importValuePolicy"
+import { replacementUpdatedAt } from "./importValuePolicy"
 import type { IdMappings, PrismaTransaction } from "./types"
 
 export async function processSubtotals(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
   warnings: string[],
+  policy: ImportValuePolicy,
   tx: PrismaTransaction,
   subtotalMappings?: Record<string, string>
-): Promise<void> {
+): Promise<{ groupIdsWithNewSubtotal: Set<string> }> {
   // スキップされた小計をグループ別に集計
   const skippedByGroup: Record<string, string[]> = {}
+  // 行が増えたグループだけ、あとで並び順を詰め直す
+  const groupIdsWithNewSubtotal = new Set<string>()
 
   for (const subtotal of data.subtotalsData.subtotals) {
     const newGroupId = idMappings.subtotalGroup[subtotal.subtotalGroupId]
@@ -43,7 +48,8 @@ export async function processSubtotals(
 
     // 2. "__new__" の場合は新規作成を強制
     if (explicitTarget === "__new__") {
-      await createNewSubtotal(subtotal, newGroupId, idMappings, tx)
+      await createNewSubtotal(subtotal, newGroupId, idMappings, policy, tx)
+      groupIdsWithNewSubtotal.add(newGroupId)
       continue
     }
 
@@ -52,25 +58,39 @@ export async function processSubtotals(
       where: { subtotalGroupId: newGroupId, name: subtotal.name },
     })
 
-    if (!existing) {
-      const existingById = await tx.subtotal.findUnique({
-        where: { id: subtotal.id },
-      })
-      if (existingById) {
-        idMappings.subtotal[subtotal.id] = subtotal.id
-      } else {
-        await tx.subtotal.create({
+    const existingSubtotal =
+      existing ?? (await tx.subtotal.findUnique({ where: { id: subtotal.id } }))
+
+    if (existingSubtotal) {
+      idMappings.subtotal[subtotal.id] = existingSubtotal.id
+      const updatedAt = replacementUpdatedAt(
+        policy,
+        subtotal.updatedAt,
+        existingSubtotal.updatedAt
+      )
+      if (updatedAt) {
+        await tx.subtotal.update({
+          where: { id: existingSubtotal.id },
           data: {
-            id: subtotal.id,
             name: subtotal.name,
-            subtotalGroupId: newGroupId,
+            // 並び順は取り込みの最後に詰め直す（reorderAfterImport）
             order: subtotal.order,
+            updatedAt,
           },
         })
-        idMappings.subtotal[subtotal.id] = subtotal.id
       }
     } else {
-      idMappings.subtotal[subtotal.id] = existing.id
+      await tx.subtotal.create({
+        data: {
+          id: subtotal.id,
+          name: subtotal.name,
+          subtotalGroupId: newGroupId,
+          order: subtotal.order,
+          ...policy.createdTimestamps(subtotal),
+        },
+      })
+      idMappings.subtotal[subtotal.id] = subtotal.id
+      groupIdsWithNewSubtotal.add(newGroupId)
     }
   }
 
@@ -80,6 +100,8 @@ export async function processSubtotals(
       `小計グループ「${groupName}」がスキップされたため、配下の小計項目（${subtotalNames.join("、")}）もスキップされました`
     )
   }
+
+  return { groupIdsWithNewSubtotal }
 }
 
 /**
@@ -89,6 +111,7 @@ async function createNewSubtotal(
   subtotal: ExtractedArchiveData["subtotalsData"]["subtotals"][0],
   newGroupId: string,
   idMappings: IdMappings,
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   // 同名の小計が既にあるかチェック
@@ -122,6 +145,7 @@ async function createNewSubtotal(
       name: finalName,
       subtotalGroupId: newGroupId,
       order: subtotal.order,
+      ...policy.createdTimestamps(subtotal),
     },
   })
   idMappings.subtotal[subtotal.id] = newId
@@ -132,6 +156,7 @@ export async function processCropSubtotals(
   isExamIdMatch: boolean,
   idMappings: IdMappings,
   warnings: string[],
+  policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   let skippedCount = 0
@@ -155,6 +180,20 @@ export async function processCropSubtotals(
       })
       if (existingById) {
         idMappings.cropSubtotal[cropSubtotal.id] = cropSubtotal.id
+        const updatedAt = replacementUpdatedAt(
+          policy,
+          cropSubtotal.updatedAt,
+          existingById.updatedAt
+        )
+        if (updatedAt) {
+          await tx.cropSubtotal.update({
+            where: { id: existingById.id },
+            data: {
+              assignmentType: cropSubtotal.assignmentType,
+              updatedAt,
+            },
+          })
+        }
       } else {
         await tx.cropSubtotal.create({
           data: {
@@ -162,6 +201,7 @@ export async function processCropSubtotals(
             cropRegionId: newRegionId,
             subtotalId: newSubtotalId,
             assignmentType: cropSubtotal.assignmentType,
+            ...policy.createdTimestamps(cropSubtotal),
           },
         })
         idMappings.cropSubtotal[cropSubtotal.id] = cropSubtotal.id

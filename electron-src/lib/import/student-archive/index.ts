@@ -5,7 +5,7 @@
  * 既存の試験アーカイブインポートのマッチング・プロセッサーロジックを再利用
  */
 
-import type { UpdateDecisions } from "../../../../src/types/examArchive.types"
+import type { ImportAction } from "../../../../src/types/importAction.types"
 import type {
   StudentArchiveFileOverviewData,
   StudentArchiveIdIntegrationConfig,
@@ -16,6 +16,7 @@ import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import { executeIdChanges } from "../merge/idChangeExecutor"
 import { processMemberships } from "../merge/importSyncRecords"
+import { createImportValuePolicy } from "../merge/importValuePolicy"
 import { preMatchClassrooms } from "../merge/matchers/classroomMatcher"
 import { preMatchStudents } from "../merge/matchers/studentMatcher"
 import {
@@ -67,8 +68,13 @@ export async function executeStudentImport(
   rawData: ExtractedStudentArchiveData,
   preMatchResult: StudentArchiveFileOverviewData,
   integrationConfig: StudentArchiveIdIntegrationConfig,
-  updateDecisions?: UpdateDecisions
+  /**
+   * 取り込みの方針（上書きする / 統合する / 別で追加する）。省略時は統合。
+   * **この1つが取り込む全レコードの全ての値に効く**（merge/importValuePolicy）。
+   */
+  action: ImportAction = "merge"
 ): Promise<StudentArchiveImportResult> {
+  const policy = createImportValuePolicy(action)
   const { data, warnings: transformWarnings } =
     transformStudentToLatest(rawData)
   const warnings: string[] = [...transformWarnings]
@@ -133,8 +139,8 @@ export async function executeStudentImport(
           idChangeTargets,
           archiveCounts,
           warnings,
-          tx,
-          updateDecisions
+          policy,
+          tx
         )
 
         // 2. 学級のID統合処理
@@ -146,12 +152,17 @@ export async function executeStudentImport(
           idChangeTargets,
           archiveCounts,
           warnings,
-          tx,
-          updateDecisions
+          policy,
+          tx
         )
 
         // 3. 学級所属の処理
-        await processMemberships(data.classesData.memberships, idMappings, tx)
+        await processMemberships(
+          data.classesData.memberships,
+          idMappings,
+          policy,
+          tx
+        )
 
         // 4. ID変更処理
         if (idChangeTargets.length > 0) {

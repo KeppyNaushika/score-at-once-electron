@@ -19,7 +19,6 @@ import {
   createMatchedItem,
   createPreMatchingResult,
   createScoringConflict,
-  createScoringConflictConfig,
   generateId,
 } from "../../helpers/testDataFactory"
 import {
@@ -615,8 +614,8 @@ describe("edgeCases", () => {
     )
   })
 
-  // EC-8: 手動解決(manual)の採点競合
-  it("EC-8: manual戦略で手動解決が正しく適用される", async () => {
+  // EC-8: 上書きは採点の時刻を見ない
+  it("EC-8: 上書きを選ぶと、ファイルの採点が古くてもファイルの採点になる", async () => {
     const examId = generateId()
     const studentId = generateId()
     const studentNumber = `MANUAL_${Date.now()}`
@@ -744,12 +743,13 @@ describe("edgeCases", () => {
       importScore: {
         status: "incorrect",
         partialScore: 0,
-        updatedAt: new Date().toISOString(),
+        // ファイルの採点の方が古い。それでも「上書きする」は時刻を見ない
+        updatedAt: new Date("2025-06-01").toISOString(),
       },
       existingScore: {
         status: "correct",
         partialScore: 10,
-        updatedAt: new Date().toISOString(),
+        updatedAt: new Date("2025-07-01").toISOString(),
       },
     })
 
@@ -778,27 +778,18 @@ describe("edgeCases", () => {
       },
     })
 
-    // manual戦略で "existing" を選択
-    const conflictConfig = createScoringConflictConfig({
-      strategy: "manual",
-      manualResolutions: {
-        [scoreId]: "existing",
-      },
-    })
-
     await executeIdIntegrationImport(
       data,
       preMatch,
-      createIdIntegrationConfig(),
-      currentUser.id,
-      conflictConfig
+      createIdIntegrationConfig({ exam: "overwrite" }),
+      currentUser.id
     )
 
-    // 既存スコアが保持されている
+    // ファイルの採点で置き換わっている
     const score = await prisma.questionScore.findUnique({
       where: { id: existingScore.id },
     })
-    expect(score!.status).toBe("correct")
-    expect(Number(score!.partialScore)).toBe(10)
+    expect(score!.status).toBe("incorrect")
+    expect(Number(score!.partialScore)).toBe(0)
   })
 })

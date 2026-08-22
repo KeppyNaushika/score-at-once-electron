@@ -33,9 +33,16 @@ vi.mock("../../../electron-src/lib/prisma/client", () => {
   }
 })
 
+import { createImportValuePolicy } from "../../../electron-src/lib/import/merge/importValuePolicy"
 import { processSubtotalGroupIdIntegration } from "../../../electron-src/lib/import/merge/processors/subtotalGroupProcessor"
 
 const prisma = getTestPrismaClient()
+
+/**
+ * 取り込みの方針（上書きする / 統合する / 別で追加する）。
+ * 既定は「統合する」＝ LWW。上書きを見るテストだけ個別に作る。
+ */
+const policy = createImportValuePolicy("merge")
 
 describe("processSubtotalGroupIdIntegration", () => {
   beforeEach(async () => {
@@ -85,6 +92,7 @@ describe("processSubtotalGroupIdIntegration", () => {
         idChangeTargets,
         counts,
         warnings,
+        policy,
         tx
       )
     })
@@ -133,6 +141,7 @@ describe("processSubtotalGroupIdIntegration", () => {
         idChangeTargets,
         counts,
         warnings,
+        policy,
         tx
       )
     })
@@ -185,6 +194,7 @@ describe("processSubtotalGroupIdIntegration", () => {
         idChangeTargets,
         counts,
         warnings,
+        policy,
         tx
       )
     })
@@ -251,6 +261,7 @@ describe("processSubtotalGroupIdIntegration", () => {
         idChangeTargets,
         counts,
         warnings,
+        policy,
         tx
       )
     })

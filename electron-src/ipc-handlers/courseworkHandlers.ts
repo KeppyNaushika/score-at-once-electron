@@ -10,6 +10,7 @@ import type {
   CourseworkMatchingMethod,
 } from "../../src/types/courseworkArchive.types"
 import type { ConfirmedDeletionCount } from "../../src/types/deletionConfirmation.types"
+import type { ImportAction } from "../../src/types/importAction.types"
 import { exportCoursework } from "../lib/export/coursework-archive"
 import {
   cleanupCourseworkTempDir,
@@ -287,12 +288,15 @@ export const courseworkHandlers = {
     archivePath: string
     courseworkDecisions?: CourseworkImportDecisions
     studentMatching?: CourseworkMatchingMethod
+    /** 取り込みの方針（上書きする / 統合する / 別で追加する）。省略時は統合 */
+    action?: ImportAction
   }) => {
     const extracted = await extractCourseworkArchive(options.archivePath)
     try {
       return await importCourseworkArchive(extracted.data, {
         courseworkDecisions: options.courseworkDecisions,
         studentMatching: options.studentMatching,
+        action: options.action,
       })
     } finally {
       cleanupCourseworkTempDir(extracted.tempDir)

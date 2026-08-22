@@ -92,15 +92,16 @@ describe("ImportWizardModal", () => {
     expect(screen.getByText("エラー")).toBeInTheDocument()
   })
 
-  it("IM-6: ステップインジケーターが全ステップを表示する", () => {
+  it("IM-6: ステップインジケーターが全ステップを表示する（「更新」の段は無い）", () => {
     render(<ImportWizardModal isOpen={true} onClose={vi.fn()} />)
 
     expect(screen.getByText("ファイル選択")).toBeInTheDocument()
     expect(screen.getByText("内容確認")).toBeInTheDocument()
     expect(screen.getByText("紐づけ")).toBeInTheDocument()
-    expect(screen.getByText("更新")).toBeInTheDocument()
     expect(screen.getByText("確認")).toBeInTheDocument()
     expect(screen.getByText("実行")).toBeInTheDocument()
+    // 項目ごとに更新方法を選ぶ段は畳んだ（値の扱いは「内容確認」で選ぶ1つの方針で決まる）
+    expect(screen.queryByText("更新")).not.toBeInTheDocument()
   })
 
   it("IM-7: キャンセルボタンクリックでonCloseが呼ばれる", async () => {
