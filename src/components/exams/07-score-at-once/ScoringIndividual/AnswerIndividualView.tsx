@@ -99,13 +99,9 @@ export default function AnswerIndividualView({
       const questionScore = findQuestionScore(
         cropRegion,
         examStudentId,
-        currentUserId ?? null
+        currentUserId
       )
-      const status = getScoringStatus(
-        cropRegion,
-        examStudentId,
-        currentUserId ?? null
-      )
+      const status = getScoringStatus(cropRegion, examStudentId, currentUserId)
       const maxScore = cropRegion.points ?? 0
       let actualScore: number | null = null
       switch (status) {

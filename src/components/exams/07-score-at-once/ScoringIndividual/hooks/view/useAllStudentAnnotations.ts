@@ -17,7 +17,7 @@ interface UseAllStudentAnnotationsParams {
   /** 現在の設問領域（試験ID取得用） */
   currentCropRegion?: QuestionAnswerRegionRow | null
   /** 現在のユーザーID（アノテーション取得のフィルタリング用） */
-  currentUserId?: string
+  currentUserId: string
   /** 外部からのアノテーション変更通知キー（変更時にリロード） */
   refreshKey?: number
 }

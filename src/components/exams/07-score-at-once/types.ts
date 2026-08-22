@@ -135,10 +135,8 @@ export interface MasterGridItem {
 export function findQuestionScore(
   cropRegion: QuestionAnswerRegionRow,
   examStudentId: string,
-  userId: string | null
+  userId: string
 ): QuestionScoreRow | undefined {
-  if (!userId) return undefined
-
   const scores = cropRegion.questionScores.filter(
     (questionScore) =>
       questionScore.examStudentId === examStudentId &&
@@ -174,7 +172,7 @@ export function findQuestionScore(
 export function getScoringStatus(
   cropRegion: QuestionAnswerRegionRow | null | undefined,
   examStudentId: string,
-  userId: string | null
+  userId: string
 ): ScoringStatus {
   if (!cropRegion) return "unscored"
 

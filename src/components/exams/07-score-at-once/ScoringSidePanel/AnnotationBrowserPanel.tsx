@@ -41,7 +41,7 @@ import { useAnnotationBrowser } from "./hooks/useAnnotationBrowser"
 
 interface AnnotationBrowserPanelProps {
   examId: string
-  currentUserId?: string
+  currentUserId: string
   currentCropRegionId?: string
   currentExamStudentId?: string
   cropRegions: QuestionAnswerRegionRow[]
@@ -168,7 +168,6 @@ export function AnnotationBrowserPanel({
   // 「追加」ボタンハンドラ
   const handleAdd = useCallback(
     async (item: AnnotationDisplayItem) => {
-      if (!currentUserId) return
       if (isAddingRef.current) return
       isAddingRef.current = true
 

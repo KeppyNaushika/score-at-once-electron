@@ -26,7 +26,7 @@ interface UseBatchScoringProps {
   studentAnswerImages: StudentAnswerImageWithExamStudents[]
   cropRegions: QuestionAnswerRegionRow[]
   currentCropRegionId: string | null
-  currentUserId: string | null
+  currentUserId: string
 }
 
 /**
@@ -76,15 +76,6 @@ export function useBatchScoring({
         answerIds = statusOrAnswerIds as string | string[]
         status = statusOrPartialScore as ScoringStatus
         inputPartialScore = partialScore ?? null
-      }
-
-      // 採点は利用者ごとに別々に保存する。操作者が分からないまま書くと、
-      // 存在しない利用者の採点として残り、本人の画面には戻ってこない
-      if (!currentUserId) {
-        toast.error("採点できません", {
-          description: "ログインしている利用者が確認できませんでした。",
-        })
-        return
       }
 
       const ids = Array.isArray(answerIds) ? answerIds : [answerIds]

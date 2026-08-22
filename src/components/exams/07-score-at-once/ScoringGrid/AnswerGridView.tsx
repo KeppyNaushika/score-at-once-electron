@@ -49,7 +49,7 @@ interface AnswerGridViewProps {
   /** アノテーション描画用: 現在の設問 */
   currentCropRegion?: QuestionAnswerRegionRow
   /** アノテーション描画用: 現在のユーザーID */
-  currentUserId?: string
+  currentUserId: string
   /** アノテーションリフレッシュキー（変更検知用） */
   annotationRefreshKey?: number
   /** 用紙サイズ（mm→px変換基準） */

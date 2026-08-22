@@ -161,7 +161,7 @@ interface ScoringSidePanelProps {
     behavior: "next-student" | "next-question" | "stay"
   ) => void
   // アノテーションブラウザー用追加props
-  currentUserId?: string
+  currentUserId: string
   selectedScoringDataIds?: string[]
   allScoringData?: Array<{ id: string; examStudentId: string }>
   /** キャンバスでアノテーション変更時にブラウザ一覧をリロードするキー */

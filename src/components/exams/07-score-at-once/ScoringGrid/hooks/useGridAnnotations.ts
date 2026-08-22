@@ -7,7 +7,7 @@ import type { AnnotationWithContext } from "@/types/drawingAnnotation.types"
 
 interface UseGridAnnotationsProps {
   cropRegionId: string | undefined
-  currentUserId: string | undefined
+  currentUserId: string
   /** アノテーション変更検知用リフレッシュキー */
   refreshKey?: number
 }

@@ -49,7 +49,7 @@ interface UseScoringFilterProps {
   studentAnswerImages: StudentAnswerImageWithExamStudents[]
   cropRegions: QuestionAnswerRegionRow[]
   currentCropRegionId: string | null
-  currentUserId: string | null
+  currentUserId: string
   selectedStudentAnswerImageIds: Set<string>
   setSelectedPageImageIds: (answers: Set<string>) => void
   exam: ExamWithPages | null

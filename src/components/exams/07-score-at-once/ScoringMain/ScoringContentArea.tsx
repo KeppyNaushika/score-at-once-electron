@@ -34,7 +34,7 @@ interface ScoringContentAreaProps {
   expandMargin?: number
   studentAnswerImages?: StudentAnswerImageWithExamStudents[]
   currentExamStudentId?: string
-  currentUserId?: string
+  currentUserId: string
   onAnnotationChanged?: () => void
   annotationRefreshKey?: number
   gridAnnotationRefreshKey?: number

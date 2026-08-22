@@ -11,7 +11,7 @@ import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 export function calculateQuestionProgress(
   cropRegions: QuestionAnswerRegionRow[],
   pageImages: StudentAnswerImageWithExamStudents[],
-  currentUserId: string | null
+  currentUserId: string
 ): QuestionProgress {
   const progress: QuestionProgress = {}
 

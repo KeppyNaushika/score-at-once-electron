@@ -131,35 +131,6 @@ describe("calculateQuestionProgress が数えるのは自分の採点だけ", ()
     expect(progress.gradedAnswers).toBe(1)
     expect(progress.finalizedAnswers).toBe(0)
   })
-
-  it("操作者が分からないときは、誰の採点も自分のものとして数えない", () => {
-    const cropRegions = [
-      {
-        id: CROP_REGION_ID,
-        examPageId: EXAM_PAGE_ID,
-        questionScores: [
-          {
-            id: "qs-0",
-            cropRegionId: CROP_REGION_ID,
-            examStudentId: EXAM_STUDENT_A,
-            status: "correct",
-            partialScore: null,
-            userId: SELF_USER_ID,
-            updatedAt: "2026-08-18T00:00:00.000Z",
-          },
-        ],
-      },
-    ] as unknown as QuestionAnswerRegionRow[]
-    const answerImages = [
-      { examPageId: EXAM_PAGE_ID, examStudentId: EXAM_STUDENT_A },
-    ] as unknown as StudentAnswerImageWithExamStudents[]
-
-    const progress = calculateQuestionProgress(cropRegions, answerImages, null)[
-      CROP_REGION_ID
-    ]
-
-    expect(progress.gradedAnswers).toBe(0)
-  })
 })
 
 describe("同じマスに同じ利用者の行が2つある（同期のマージ）", () => {

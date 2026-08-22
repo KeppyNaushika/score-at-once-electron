@@ -7,7 +7,7 @@ import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 interface UseScoringDataProps {
   examId: string
-  currentUserId: string | null
+  currentUserId: string
   currentCropRegionId: string | null
   studentAnswerImages: StudentAnswerImageWithExamStudents[]
   cropRegions: QuestionAnswerRegionRow[]

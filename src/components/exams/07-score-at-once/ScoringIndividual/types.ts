@@ -33,7 +33,7 @@ export interface AnswerIndividualViewProps {
 
   // 手書き注釈の行き先（答案＋設問＋採点者）を組み立てるための文脈
   currentExamStudentId?: string
-  currentUserId?: string
+  currentUserId: string
 
   // Individual表示固有設定
   studentAnswerImages?: StudentAnswerImageWithExamStudents[] // 全答案データ
