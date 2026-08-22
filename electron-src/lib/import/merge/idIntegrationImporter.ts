@@ -46,6 +46,7 @@ import {
   processCompoundAnswerScores,
   processCropRegionAssignments,
   processQuestionScores,
+  processReturnSnapshots,
   processScoreDecisions,
 } from "./importScoring"
 import { processCropSubtotals, processSubtotals } from "./importSubtotals"
@@ -223,7 +224,7 @@ export async function executeIdIntegrationImport(
         await processExamExportSettings(data, newExamId, tx)
 
         // 10c. Tag & TagSubtotalGroup & ExamTag (v1.10.0+, 旧Subject)
-        await processTags(data, idMappings, tx)
+        await processTags(data, idMappings, warnings, tx)
 
         // 10d. ExamClassroom (v1.1.0+)
         await processExamClassrooms(data, newExamId, idMappings, tx)
@@ -275,6 +276,11 @@ export async function executeIdIntegrationImport(
             counts,
             tx
           ))
+        )
+
+        // 12e. ReturnSnapshot（返却版スナップショット。capturedAt LWWで競合解決） (v1.14.0+)
+        warnings.push(
+          ...(await processReturnSnapshots(data, idMappings, counts, tx))
         )
 
         // 13. DrawingAnnotation

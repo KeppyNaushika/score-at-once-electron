@@ -84,12 +84,17 @@ export async function processExam(
     )
     return exam.id
   }
+  // Exam の列は id / examName / examDate / description / markerCorrectionEnabled で全部。
+  // createdAt / updatedAt は取り込み時刻に倒す（この試験は取り込み先では新しい行なので、
+  // 同期の LWW が「新しく入った」と読めるようにする）。列を足したらここも足すこと。
   await tx.exam.create({
     data: {
       id: exam.id,
       examName: exam.examName,
       examDate: exam.examDate ? new Date(exam.examDate) : null,
       description: exam.description,
+      // 旧アーカイブ（〜v1.11.0）はこの列を持たないので既定の false へ倒れる
+      markerCorrectionEnabled: exam.markerCorrectionEnabled ?? false,
     },
   })
   idMappings.exam[exam.id] = exam.id

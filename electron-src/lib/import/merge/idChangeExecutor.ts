@@ -411,6 +411,8 @@ async function changeClassroomId(
       classroomCode: existingClassroom.classroomCode,
       grade: existingClassroom.grade,
       description: existingClassroom.description,
+      // ID の付け替えは同じ学級を作り直すだけなので、表示/非表示も持ち越す
+      isVisible: existingClassroom.isVisible,
       createdAt: existingClassroom.createdAt,
       updatedAt: existingClassroom.updatedAt,
     },

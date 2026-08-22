@@ -179,25 +179,30 @@ export async function collectExamData(
       }),
     ])
 
-    // 7.7. Tag/TagSubtotalGroup/ExamTagを取得（subtotalGroup経由、templateモードでは空）
+    // 7.7. Tag/TagSubtotalGroup/ExamTagを取得
+    //
+    // **タグ本体は「小計グループ経由」と「試験への直付け」の両方から集める。**
+    // かつては tagSubtotalGroups → tagIds の経路しか見ておらず、TagSubtotalGroup が
+    // 1行も無いデータベースでは tags が常に空になっていた。examTags は書き出せているのに
+    // 指す先の Tag がアーカイブに無いため、取り込み側がタグ付けを丸ごと落としていた。
+    // templateモードでも examTags は集めるので、タグ本体も同じ条件で集める。
     const subtotalGroupIdArray = Array.from(subtotalGroupIds)
     const tagSubtotalGroups = includeSubtotals
       ? await prisma.tagSubtotalGroup.findMany({
           where: { subtotalGroupId: { in: subtotalGroupIdArray } },
         })
       : []
-    const tagIds = [
-      ...new Set(
-        tagSubtotalGroups.map((tagSubtotalGroup) => tagSubtotalGroup.tagId)
-      ),
-    ]
-    const tags = includeSubtotals
-      ? await prisma.tag.findMany({
-          where: { id: { in: tagIds } },
-        })
-      : []
     const examTags = await prisma.examTag.findMany({
       where: { examId },
+    })
+    const tagIds = [
+      ...new Set([
+        ...tagSubtotalGroups.map((tagSubtotalGroup) => tagSubtotalGroup.tagId),
+        ...examTags.map((examTag) => examTag.tagId),
+      ]),
+    ]
+    const tags = await prisma.tag.findMany({
+      where: { id: { in: tagIds } },
     })
 
     // CropSubtotalを収集（templateモードでは空）

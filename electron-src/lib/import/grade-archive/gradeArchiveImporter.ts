@@ -666,7 +666,9 @@ export async function importGradeArchive(
                 (labelValue) => labelValue.constraintId === archiveConstraint.id
               )
               .sort((left, right) => left.order - right.order)
-              .map((labelValue) => [labelValue.label, Number(labelValue.value)])
+              // Decimal は文字列のまま渡す（tolerance と同じ扱い）。
+              // number へ倒すと有効桁16桁を超える値が丸まる
+              .map((labelValue) => [labelValue.label, labelValue.value])
           ),
           exclusionLabels: data.gradeConstraintExclusionLabels
             .filter(

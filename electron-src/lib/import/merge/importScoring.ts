@@ -5,6 +5,7 @@
  * - ScoreDecision（OWNER確定スコア。decidedAt LWWで競合解決）
  * - CompoundAnswerScore（複合解答スコア。updatedAt LWWで競合解決）
  * - CropRegionAssignment（設問ごとの採点担当。usernameで照合）
+ * - ReturnSnapshot（返却版スナップショット。capturedAt LWWで競合解決）
  */
 
 import type {
@@ -271,6 +272,125 @@ export async function processCompoundAnswerScores(
       compoundAnswerScore.id
     counts.created.scores++
   }
+}
+
+/**
+ * ReturnSnapshot（返却版スナップショット）を処理
+ *
+ * 受験者ごとに高々1件（examStudentId が @unique）。同一受験者の行がローカルに既にある
+ * 場合は capturedAt の新しい方を採用（LWW）。
+ *
+ * **記録者（capturedByUserId）は取り込む人へ倒さない。** QuestionScore.userId は
+ * 「誰の採点か」という持ち主で、取り込んだ人がその採点を自分のものとして引き受けるので
+ * 現在の利用者へ倒す。返却版の記録者はそうではなく「いつ誰が答案を返したか」という
+ * 済んだ出来事の記録で、取り込んだ人はその操作をしていない。現在の利用者を書けば
+ * 「この人が返却した」という嘘の記録になる。
+ * ユーザーはアーカイブを越えないので、書かれている id は取り込み先では宙に浮くのが普通で、
+ * capturedByUserId には Cascade の FK が張られている。そこで **同じ id の利用者が
+ * 取り込み先に実在するときだけ引き継ぎ、それ以外は null（＝記録者なし）へ倒す。**
+ */
+export async function processReturnSnapshots(
+  data: ExtractedArchiveData,
+  idMappings: IdMappings,
+  counts: ImportCounts,
+  tx: PrismaTransaction
+): Promise<string[]> {
+  const archivedSnapshots = data.scoresData.returnSnapshots ?? []
+  if (archivedSnapshots.length === 0) return []
+
+  const capturedByUserIds = [
+    ...new Set(
+      archivedSnapshots
+        .map((snapshot) => snapshot.capturedByUserId)
+        .filter((capturedByUserId) => capturedByUserId !== null)
+    ),
+  ]
+  const resolvedUsers = await tx.user.findMany({
+    where: { id: { in: capturedByUserIds } },
+  })
+  const resolvedUserIds = new Set(resolvedUsers.map((user) => user.id))
+
+  let unresolvedCapturerCount = 0
+  let unmappedExamStudentCount = 0
+
+  for (const snapshot of archivedSnapshots) {
+    const newExamStudentId = idMappings.examStudent[snapshot.examStudentId]
+    if (!newExamStudentId) {
+      unmappedExamStudentCount++
+      continue
+    }
+
+    let capturedByUserId: string | null = null
+    if (snapshot.capturedByUserId) {
+      if (resolvedUserIds.has(snapshot.capturedByUserId)) {
+        capturedByUserId = snapshot.capturedByUserId
+      } else {
+        unresolvedCapturerCount++
+      }
+    }
+
+    const incomingCapturedAt = new Date(snapshot.capturedAt)
+
+    const existing = await tx.returnSnapshot.findUnique({
+      where: { examStudentId: newExamStudentId },
+    })
+
+    if (existing) {
+      // 返却版も確定レイヤーと同じくLWW（decisionMergePolicy参照）
+      if (isNewerByLww(incomingCapturedAt, existing.capturedAt)) {
+        await tx.returnSnapshot.update({
+          where: { id: existing.id },
+          data: {
+            scoresJson: snapshot.scoresJson,
+            totalScore: snapshot.totalScore
+              ? parseFloat(snapshot.totalScore)
+              : null,
+            capturedByUserId,
+            capturedAt: incomingCapturedAt,
+          },
+        })
+        counts.updated.scores++
+      } else {
+        counts.skipped.scores++
+      }
+      continue
+    }
+
+    const existingById = await tx.returnSnapshot.findUnique({
+      where: { id: snapshot.id },
+    })
+    if (existingById) {
+      counts.unchanged.scores++
+      continue
+    }
+
+    await tx.returnSnapshot.create({
+      data: {
+        id: snapshot.id,
+        examStudentId: newExamStudentId,
+        scoresJson: snapshot.scoresJson,
+        totalScore: snapshot.totalScore
+          ? parseFloat(snapshot.totalScore)
+          : null,
+        capturedByUserId,
+        capturedAt: incomingCapturedAt,
+      },
+    })
+    counts.created.scores++
+  }
+
+  const warnings: string[] = []
+  if (unmappedExamStudentCount > 0) {
+    warnings.push(
+      `${unmappedExamStudentCount}件の返却版を取り込めませんでした（対応する受験者が取り込まれていません）。`
+    )
+  }
+  if (unresolvedCapturerCount > 0) {
+    warnings.push(
+      `${unresolvedCapturerCount}件の返却版は、記録した利用者がこのデータベースに存在しないため記録者なしとして取り込みました。`
+    )
+  }
+  return warnings
 }
 
 /**

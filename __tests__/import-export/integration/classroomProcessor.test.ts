@@ -544,6 +544,66 @@ describe("processClassroomIdIntegration", () => {
       expect(updated!.description).toBe("旧説明")
       expect(counts.updated.classrooms).toBe(1)
     })
+
+    it("表示設定も use_import で更新できる", async () => {
+      // 表示設定が更新できるフィールドの一覧に無いと、値が食い違っていても
+      // 利用者が「ファイルに従う」を選ぶ手段が無い
+      const existingId = generateId()
+      const importId = generateId()
+
+      await prisma.classroom.create({
+        data: { id: existingId, name: "表示クラス", isVisible: true },
+      })
+
+      const classesData = createArchiveClassesData([
+        { id: importId, name: "表示クラス" },
+      ])
+      classesData.classrooms[0].isVisible = false
+
+      const data = createExtractedArchiveData({ classesData })
+
+      const decision = createDecision({
+        importId,
+        decisionType: "same_person",
+        existingId,
+        idChoice: "use_existing_id",
+      })
+
+      const preMatchResult = createFileOverviewData({
+        classroom: createPreMatchingResult({
+          byName: [createMatchedItem({ importId, existingId })],
+          noMatch: [],
+        }),
+      })
+
+      const idMappings = createEmptyIdMappings()
+      const idChangeTargets: IdChangeTarget[] = []
+      const counts = createEmptyImportCounts()
+      const warnings: string[] = []
+
+      await prisma.$transaction(async (tx) => {
+        await processClassroomIdIntegration(
+          data,
+          preMatchResult,
+          { strategy: "by_name", decisions: [decision] },
+          idMappings,
+          idChangeTargets,
+          counts,
+          warnings,
+          tx,
+          {
+            [`classroom:${importId}`]: {
+              isVisible: "use_import" as const,
+            },
+          }
+        )
+      })
+
+      const updated = await prisma.classroom.findUnique({
+        where: { id: existingId },
+      })
+      expect(updated!.isVisible).toBe(false)
+    })
   })
 
   // =========================================================================

@@ -56,6 +56,7 @@ const FIELD_LABELS: Record<string, Record<string, string>> = {
     classroomCode: "学級コード",
     grade: "学年",
     description: "説明",
+    isVisible: "表示設定",
   },
   subtotalGroup: {
     name: "グループ名",

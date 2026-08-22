@@ -58,7 +58,9 @@ function buildConstraintViewpointRows(gradeItemIds: string[]) {
 }
 
 /** ラベル→数値の対応の nested create 行。 */
-function buildConstraintLabelValueRows(labelValues: Record<string, number>) {
+function buildConstraintLabelValueRows(
+  labelValues: Record<string, number | string>
+) {
   return Object.entries(labelValues).map(([label, value], index) => ({
     label,
     value,

@@ -154,15 +154,7 @@ export async function extractArchive(archivePath: string): Promise<{
       success: true,
       data: {
         ...transformed,
-        subjectsData: transformed.subjectsData ?? {
-          subjects: [],
-          subjectSubtotalGroups: [],
-        },
-        tagsData: transformed.tagsData ?? {
-          tags: [],
-          tagSubtotalGroups: [],
-          examTags: [],
-        },
+        ...withDefaultedSections(transformed),
         transformWarnings: chainResult.warnings,
         tempDir,
         masterImagePaths,
@@ -179,6 +171,71 @@ export async function extractArchive(archivePath: string): Promise<{
           ? error.message
           : "アーカイブの展開に失敗しました",
     }
+  }
+}
+
+/**
+ * 型の上では必ず在ることになっている配列に、無かったときの既定（空配列）を入れる。
+ *
+ * JSON は書き手が省いたキーを黙って落とすので、型が `T[]` を主張していても実物が
+ * `undefined` である可能性は消えない。取り込み側は `for...of` で回すため、欠けたキーは
+ * `TypeError: … is not iterable` でトランザクションごと巻き戻り、利用者には型エラーが
+ * そのまま出る。**読み込む側の1か所で潰しておく** — 各消費者に `?? []` を配ると
+ * 新しい消費者が書かれるたびに同じ穴が開く。
+ *
+ * **変換チェーンを通したあとに当てること。** バージョン判定は「キーが在るか」で
+ * 旧形式を見分けている（`classes` があって `classrooms` が無ければ旧版、等）ので、
+ * チェーンの前に既定のキーを生やすと旧版を新版と読み違えてデータを捨てる。
+ */
+function withDefaultedSections(
+  data: ExamArchiveData
+): Pick<
+  ExtractedArchiveData,
+  | "examData"
+  | "studentsData"
+  | "classesData"
+  | "usersData"
+  | "subtotalsData"
+  | "scoresData"
+  | "subjectsData"
+  | "tagsData"
+> {
+  return {
+    examData: {
+      ...data.examData,
+      examPages: data.examData.examPages ?? [],
+      cropRegions: data.examData.cropRegions ?? [],
+      pageImages: data.examData.pageImages ?? [],
+      examStudents: data.examData.examStudents ?? [],
+      userExams: data.examData.userExams ?? [],
+      examSubtotalGroups: data.examData.examSubtotalGroups ?? [],
+      examClassrooms: data.examData.examClassrooms ?? [],
+    },
+    studentsData: { students: data.studentsData.students ?? [] },
+    classesData: {
+      classrooms: data.classesData.classrooms ?? [],
+      memberships: data.classesData.memberships ?? [],
+    },
+    usersData: { users: data.usersData.users ?? [] },
+    subtotalsData: {
+      subtotalGroups: data.subtotalsData.subtotalGroups ?? [],
+      subtotals: data.subtotalsData.subtotals ?? [],
+      cropSubtotals: data.subtotalsData.cropSubtotals ?? [],
+    },
+    scoresData: {
+      ...data.scoresData,
+      questionScores: data.scoresData.questionScores ?? [],
+      drawingAnnotations: data.scoresData.drawingAnnotations ?? [],
+    },
+    subjectsData: {
+      subjects: data.subjectsData?.subjects ?? [],
+      subjectSubtotalGroups: data.subjectsData?.subjectSubtotalGroups ?? [],
+    },
+    tagsData: {
+      tags: data.tagsData?.tags ?? [],
+      tagSubtotalGroups: data.tagsData?.tagSubtotalGroups ?? [],
+      examTags: data.tagsData?.examTags ?? [],
+    },
   }
 }
 

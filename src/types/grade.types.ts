@@ -493,8 +493,14 @@ export interface GradeConstraintInput {
   tolerance: number
   /** 集計対象の観点の評価項目id。空配列なら「比較先以外の全項目」 */
   viewpointGradeItemIds: string[]
-  /** ラベル→数値の対応（例 { A: 5, B: 3, C: 1 }） */
-  labelValues: Record<string, number>
+  /**
+   * ラベル→数値の対応（例 { A: 5, B: 3, C: 1 }）。
+   *
+   * 書き込み先は Decimal 列なので、文字列も受ける。UI は number を作るが、
+   * アーカイブの取り込みは Decimal を文字列のまま運んでいる（tolerance も同じ）。
+   * ここで number へ倒すと有効桁16桁を超える値が丸まる。
+   */
+  labelValues: Record<string, number | string>
   /** 同時に現れてはいけないラベル集合（例 ["A", "C"]） */
   exclusionLabels: string[]
   expression: string

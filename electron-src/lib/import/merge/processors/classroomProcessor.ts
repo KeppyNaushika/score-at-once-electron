@@ -64,6 +64,8 @@ export async function processClassroomIdIntegration(
             classroomCode: importClassroom.classroomCode ?? null,
             grade: importClassroom.grade ?? null,
             description: importClassroom.description ?? null,
+            // 非表示にしてある学級が取り込みで表示へ戻らないようにする
+            isVisible: importClassroom.isVisible ?? true,
           },
         })
         idMappings.classroom[importId] = importId
@@ -94,6 +96,10 @@ export async function processClassroomIdIntegration(
           classroomCode: importClassroom.classroomCode,
           grade: importClassroom.grade,
           description: importClassroom.description,
+          // 表示設定も学級の列の1つ。ここに載っていないと、値が食い違っていても
+          // 利用者が「ファイルに従う」を選ぶ手段が無い（UpdateConfirmStep の
+          // FIELD_LABELS.classroom と対で足すこと）
+          isVisible: importClassroom.isVisible,
         }
         for (const [field, strategy] of Object.entries(fieldDecisions)) {
           if (strategy === "use_import" && field in fieldMap) {

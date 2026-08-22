@@ -161,6 +161,7 @@ export async function processExamExportSettings(
 export async function processTags(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
+  warnings: string[],
   tx: PrismaTransaction
 ): Promise<void> {
   if (!data.tagsData) return
@@ -181,8 +182,14 @@ export async function processTags(
     if (existingById) {
       tagIdMapping[tag.id] = tag.id
     } else {
+      // 表示順と色もタグの持ち物。旧アーカイブ（〜v1.10.0）は持たないので既定へ倒す
       await tx.tag.create({
-        data: { id: tag.id, name: tag.name },
+        data: {
+          id: tag.id,
+          name: tag.name,
+          order: tag.order ?? 0,
+          color: tag.color ?? null,
+        },
       })
       tagIdMapping[tag.id] = tag.id
     }
@@ -216,9 +223,15 @@ export async function processTags(
   // ExamTag処理
   const newExamId = idMappings.exam[data.examData.exam.id]
   if (newExamId) {
+    // 指す先の Tag がアーカイブに無いタグ付けは作れない。**黙って捨てず数えて伝える** —
+    // 書き出し側が tags を集め損ねていた頃、ここが警告なしに全件を落としていた
+    let unresolvedTagIdCount = 0
     for (const examTag of data.tagsData.examTags) {
       const newTagId = tagIdMapping[examTag.tagId]
-      if (!newTagId) continue
+      if (!newTagId) {
+        unresolvedTagIdCount++
+        continue
+      }
 
       const existing = await tx.examTag.findFirst({
         where: { examId: newExamId, tagId: newTagId },
@@ -237,6 +250,12 @@ export async function processTags(
           },
         })
       }
+    }
+
+    if (unresolvedTagIdCount > 0) {
+      warnings.push(
+        `${unresolvedTagIdCount}件のタグ付けを取り込めませんでした（アーカイブにタグ本体が含まれていません）。`
+      )
     }
   }
 }
