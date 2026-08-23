@@ -338,8 +338,8 @@ export function EntityOverviewPage({
   // ボタンが遠く離れて別々の物に見える。中身はどれも同じ幅の中へ置く。
   return (
     <div className="mx-auto max-w-5xl space-y-8 p-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-4">
+      <Card className="gap-4 py-4">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
           <CardTitle className="text-sm font-semibold text-muted-foreground">
             基本情報
           </CardTitle>
@@ -575,9 +575,13 @@ function WorkflowPhaseCard({
   )
 
   return (
+    /*
+      `Card` の既定は `gap-6 py-6`。見出しの下に `pb-4` を足すと、題と最初の段の
+      あいだだけ 40px 空いて理由の分からない隙間になる。段カードは詰める。
+    */
     <Card
       className={cn(
-        "h-full transition-all",
+        "h-full gap-3 py-4 transition-all",
         isActive
           ? "border-blue-300 shadow-lg"
           : isCompleted
@@ -585,7 +589,7 @@ function WorkflowPhaseCard({
             : "border-gray-200"
       )}
     >
-      <CardHeader className="pb-4">
+      <CardHeader>
         <CardTitle className="flex items-start justify-between gap-2">
           <div>
             <h3 className="text-lg font-semibold">{phase.title}</h3>
@@ -596,7 +600,12 @@ function WorkflowPhaseCard({
         </CardTitle>
       </CardHeader>
 
-      <CardContent>
+      {/*
+        足元（区切り線・「n/m 完了」・「次へ」）は**カードの下端へ寄せる。** 段の数は
+        まとまりごとに違うので、内容に続けて置くと横に並べたとき区切り線の高さが
+        揃わず、3枚がばらばらに見える。
+      */}
+      <CardContent className="flex flex-1 flex-col">
         <div className="space-y-2">
           {steps.map((step) => {
             const StepIcon = step.tab.icon
@@ -648,7 +657,7 @@ function WorkflowPhaseCard({
         </div>
 
         {isActive && nextStep && (
-          <div className="mt-4 border-t pt-4">
+          <div className="mt-auto border-t pt-4">
             <Button className="w-full" size="sm" asChild>
               <GuardedLink href={entityHref + nextStep.tab.path}>
                 次へ: {nextStep.tab.title}
@@ -658,7 +667,7 @@ function WorkflowPhaseCard({
         )}
 
         {isCompleted && (
-          <div className="mt-4 border-t pt-4">
+          <div className="mt-auto border-t pt-4">
             <p className="flex items-center justify-center gap-1 text-center text-sm font-medium text-green-600">
               <Check className="h-4 w-4" aria-hidden />
               {completedCount}/{measurableSteps.length} 完了
@@ -667,7 +676,7 @@ function WorkflowPhaseCard({
         )}
 
         {!isActive && !isCompleted && !canStart && (
-          <div className="mt-4 border-t pt-4">
+          <div className="mt-auto border-t pt-4">
             <p className="text-center text-sm font-medium text-gray-500">
               前の段の完了を待機中
             </p>
