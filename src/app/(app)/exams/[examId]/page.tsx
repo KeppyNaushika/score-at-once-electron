@@ -1,25 +1,37 @@
 "use client"
 
-import type { Exam } from "@prisma/client"
 import { useMutation } from "@tanstack/react-query"
-import Head from "next/head"
+import { FolderOutput, MoreVertical, Trash2, Users } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
 
+import type {
+  EntityOverviewBasics,
+  EntityOverviewStat,
+} from "@/components/common/EntityOverviewPage"
+import {
+  EntityOverviewPage,
+  toDateInputValue,
+} from "@/components/common/EntityOverviewPage"
 import type { ExportOutcome } from "@/components/common/ExportResultSummary"
 import ExamArchiveExportModal from "@/components/exams/detail/ExamArchiveExportModal"
-import ExamHeader from "@/components/exams/detail/ExamHeader"
-import { useWorkflowData } from "@/components/exams/detail/hooks/useWorkflowData"
-import OverallProgress from "@/components/exams/detail/OverallProgress"
-import PhaseCard from "@/components/exams/detail/PhaseCard"
-import QuickStats from "@/components/exams/detail/QuickStats"
-import EditExamWindow from "@/components/exams/forms/EditExamWindow"
 import DeleteExamModal from "@/components/exams/shared/DeleteExamModal"
 import { MemberInviteDialog } from "@/components/exams/shared/MemberInviteDialog"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useExamDetail } from "@/hooks/useExamDetail"
+import { getExamProgress } from "@/lib/examStatus"
+import { examWorkflowPhases, examWorkflowTabs } from "@/lib/workflowTabs"
 import { exportExamArchiveMutation } from "@/queries/archive"
+import { setExamTagsMutation } from "@/queries/tag"
 import type { ArchiveExportMode } from "@/types/examArchive.types"
 
 export default function ExamDetailPage() {
@@ -28,13 +40,13 @@ export default function ExamDetailPage() {
   const currentUser = useCurrentUser()
   const examId = typeof params.examId === "string" ? params.examId : ""
 
-  const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
   const [showMemberDialog, setShowMemberDialog] = useState(false)
   /** 書き出しの結果。渡している間はモーダルが結果の段を見せる */
   const [exportOutcome, setExportOutcome] = useState<ExportOutcome | null>(null)
   const exportExamArchive = useMutation(exportExamArchiveMutation())
+  const setExamTags = useMutation(setExamTagsMutation(examId))
 
   const {
     exam,
@@ -47,27 +59,18 @@ export default function ExamDetailPage() {
     updateExam,
   } = useExamDetail(examId)
 
-  // ワークフローデータを生成
-  const workflowData = useWorkflowData(
-    {
-      masterImageCount: modelAnswerCount,
-      cropRegionCount,
-      questionRegionCount,
-      studentCount,
-      answerSheetCount,
-    },
-    exam
-  )
+  const handleCommitBasics = async (basics: EntityOverviewBasics) => {
+    await updateExam({
+      examName: basics.name,
+      description: basics.description.trim() || null,
+      referenceDate: basics.referenceDate
+        ? new Date(basics.referenceDate)
+        : null,
+    })
+  }
 
-  const handleExamUpdated = async (
-    updatedExamData: Partial<
-      Pick<Exam, "examName" | "description" | "referenceDate">
-    >
-  ) => {
-    const success = await updateExam(updatedExamData)
-    if (success) {
-      setShowEditModal(false)
-    }
+  const handleReplaceTags = async (tagIds: string[]) => {
+    await setExamTags.mutateAsync(tagIds)
   }
 
   const handleExamDeleted = () => {
@@ -117,99 +120,115 @@ export default function ExamDetailPage() {
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
-          <p className="mt-4 text-muted-foreground">読み込み中...</p>
-        </div>
+        <p className="text-muted-foreground">読み込み中...</p>
       </div>
     )
   }
 
   if (!exam) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center">
-          <h1 className="mb-4 text-2xl font-bold">試験が見つかりません</h1>
-          <button
-            onClick={() => router.push("/")}
-            className="rounded bg-blue-500 px-4 py-2 text-white"
-          >
-            試験一覧に戻る
-          </button>
-        </div>
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-muted-foreground">試験が見つかりません</p>
       </div>
     )
   }
 
+  const progress = getExamProgress(exam)
+
+  const stats: EntityOverviewStat[] = [
+    { label: "模範解答", value: modelAnswerCount },
+    { label: "採点領域", value: cropRegionCount },
+    { label: "設問", value: questionRegionCount },
+    { label: "受験生徒", value: studentCount },
+    { label: "答案", value: answerSheetCount },
+  ]
+
   return (
     <>
-      <Head>
-        <title>{exam?.examName || "試験"} - 一括採点</title>
-      </Head>
-      <div className="h-full overflow-auto">
-        <div className="container mx-auto p-6">
-          <ExamHeader
-            exam={exam}
-            onEdit={() => setShowEditModal(true)}
-            onDelete={() => setShowDeleteModal(true)}
-            onExport={() => setShowExportModal(true)}
-            onManageMembers={() => setShowMemberDialog(true)}
-          />
+      <EntityOverviewPage
+        nameLabel="試験名"
+        dateLabel="試験日"
+        dateHint="学級から生徒を追加するとき、この日に在籍していた生徒が対象になります。"
+        basics={{
+          name: exam.examName,
+          referenceDate: toDateInputValue(exam.referenceDate),
+          description: exam.description ?? "",
+        }}
+        onCommitBasics={handleCommitBasics}
+        tags={exam.examTags.map((examTag) => examTag.tag)}
+        onReplaceTags={handleReplaceTags}
+        stats={stats}
+        tabs={examWorkflowTabs}
+        entityHref={`/exams/${examId}`}
+        phases={examWorkflowPhases}
+        stepCompletion={{
+          "01-upload": progress.hasImages,
+          "02-template": progress.hasLayout,
+          "03-region-info": progress.hasRegionInfo,
+          "04-question-group": progress.hasSubtotalGroupSetting,
+          "05-students": progress.hasStudents,
+          "06-student-answers": progress.hasAnswers,
+          "07-score-at-once": progress.hasScoring,
+          // 8. 採点確定は「要るかどうか」が採点者の食い違いで決まり、進捗の元データに
+          // その材料が無い。9. 結果は何度でも出せるので済みという状態を持たない
+          "08-finalize": null,
+          "09-export": null,
+        }}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowMemberDialog(true)}
+            >
+              <Users className="mr-2 h-4 w-4" />
+              メンバー
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" aria-label="その他の操作">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowExportModal(true)}>
+                  <FolderOutput className="mr-2 h-4 w-4" />
+                  .score 書き出し
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setShowDeleteModal(true)}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  試験を削除
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        }
+      />
 
-          <OverallProgress
-            phases={workflowData.phases}
-            currentPhase={workflowData.currentPhase}
-            overallProgress={workflowData.overallProgress}
-          />
-
-          <QuickStats
-            stats={{
-              masterImageCount: modelAnswerCount,
-              cropRegionCount,
-              questionRegionCount,
-              studentCount,
-              answerSheetCount,
-            }}
-          />
-
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {workflowData.phases.map((phase) => (
-              <PhaseCard key={phase.id} phase={phase} examId={examId} />
-            ))}
-          </div>
-
-          {/* Modals */}
-          <ExamArchiveExportModal
-            open={showExportModal}
-            onOpenChange={handleExportModalOpenChange}
-            onExport={handleExport}
-            isExporting={exportExamArchive.isPending}
-            exportOutcome={exportOutcome}
-          />
-          {exam && showEditModal && (
-            <EditExamWindow
-              examToEdit={exam}
-              setIsShowEditExamWindow={setShowEditModal}
-              onSave={handleExamUpdated}
-            />
-          )}
-          <MemberInviteDialog
-            isOpen={showMemberDialog}
-            onClose={() => setShowMemberDialog(false)}
-            examId={examId}
-            currentUserId={currentUser.id}
-            examName={exam.examName}
-          />
-          {exam && (
-            <DeleteExamModal
-              exam={exam}
-              open={showDeleteModal}
-              onOpenChange={setShowDeleteModal}
-              onExamDeleted={handleExamDeleted}
-            />
-          )}
-        </div>
-      </div>
+      <ExamArchiveExportModal
+        open={showExportModal}
+        onOpenChange={handleExportModalOpenChange}
+        onExport={handleExport}
+        isExporting={exportExamArchive.isPending}
+        exportOutcome={exportOutcome}
+      />
+      <MemberInviteDialog
+        isOpen={showMemberDialog}
+        onClose={() => setShowMemberDialog(false)}
+        examId={examId}
+        currentUserId={currentUser.id}
+        examName={exam.examName}
+      />
+      <DeleteExamModal
+        exam={exam}
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+        onExamDeleted={handleExamDeleted}
+      />
     </>
   )
 }

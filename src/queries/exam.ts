@@ -126,10 +126,17 @@ export const createExamMutation = (userId: string) =>
     },
   })
 
+/**
+ * 試験1件の列を書く。
+ *
+ * **`scope` で直列化する。** 概要ページの名前・日付・説明は1打鍵ごとに書くので、
+ * 並行に走らせると着地の順が入れ替わって古い文字が最後に残りうる。
+ */
 export const updateExamMutation = (examId: string, userId: string) =>
   defineMutation({
     mutationFn: (data: Prisma.ExamUpdateInput) =>
       window.electronAPI.updateExam(examId, data),
+    scope: { id: `exam:${examId}` },
     meta: {
       invalidates: [examScope(examId), examListQuery(userId).queryKey],
       errorMessage: "試験を保存できませんでした",

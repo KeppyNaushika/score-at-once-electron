@@ -102,12 +102,15 @@ export async function getGradeById(id: string) {
  * 成績算出試験を作成
  */
 export async function createGrade(data: {
+  /** renderer が振った uuid。渡されなければ Prisma の既定（取り込み・テスト経路） */
+  id?: string
   name: string
   description?: string
   referenceDate?: string | null
 }) {
   const grade = await prisma.grade.create({
     data: {
+      ...(data.id ? { id: data.id } : {}),
       name: data.name,
       description: data.description,
       referenceDate: data.referenceDate ? new Date(data.referenceDate) : null,

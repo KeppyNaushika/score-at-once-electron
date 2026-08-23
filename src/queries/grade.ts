@@ -205,9 +205,10 @@ export const gradeItemExclusionsQuery = (gradeId: string) =>
  */
 const gradeScope = (gradeId: string) => scopeKeys.grade(gradeId)
 
+/** 成績算出を1件作る（id は renderer が振る。作った先の概要へ直行するため） */
 export const createGradeMutation = () =>
   defineMutation({
-    mutationFn: (input: { name: string; description?: string }) =>
+    mutationFn: (input: { id: string; name: string; description?: string }) =>
       window.electronAPI.grade.create(input),
     meta: {
       invalidates: [gradeListQuery().queryKey],
@@ -215,6 +216,12 @@ export const createGradeMutation = () =>
     },
   })
 
+/**
+ * 成績算出1件の列を書く。
+ *
+ * **`scope` で直列化する。** 概要ページの名前・日付・説明は1打鍵ごとに書くので、
+ * 並行に走らせると着地の順が入れ替わって古い文字が最後に残りうる。
+ */
 export const updateGradeMutation = (gradeId: string) =>
   defineMutation({
     mutationFn: (input: {
@@ -222,6 +229,7 @@ export const updateGradeMutation = (gradeId: string) =>
       description?: string | null
       referenceDate?: string | null
     }) => window.electronAPI.grade.update(gradeId, input),
+    scope: { id: `grade:${gradeId}:detail` },
     meta: {
       invalidates: [gradeScope(gradeId), gradeListQuery().queryKey],
       errorMessage: "成績算出を保存できませんでした",

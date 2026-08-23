@@ -44,6 +44,7 @@ import {
   addTagToCourseworksMutation,
   analyzeCourseworkArchiveMutation,
   courseworkListQuery,
+  createCourseworkMutation,
   deleteCourseworkMutation,
   exportCourseworkArchiveMutation,
   importCourseworkArchiveMutation,
@@ -57,7 +58,6 @@ import type {
 } from "@/types/courseworkArchive.types"
 import type { ImportAction } from "@/types/importAction.types"
 
-import { CourseworkCreateDialog } from "./CourseworkCreateDialog"
 import { CourseworkImportDialog } from "./CourseworkImportDialog"
 
 /** 試験外成績資料一覧のフィルタ対象値（名前・説明・タグ名・学級名／タグ／学級／実施日） */
@@ -101,9 +101,9 @@ export function CourseworkListContainer() {
   const importArchive = useMutation(importCourseworkArchiveMutation())
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
   const addTagToCourseworks = useMutation(addTagToCourseworksMutation())
+  const createCoursework = useMutation(createCourseworkMutation())
   const { data: courseworks = EMPTY_COURSEWORKS, isPending: isLoading } =
     useQuery(courseworkListQuery())
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
   // インポート確認ウィザードの状態
   const [importPreview, setImportPreview] =
     useState<CourseworkArchiveImportPreview | null>(null)
@@ -125,11 +125,27 @@ export function CourseworkListContainer() {
     [queryClient]
   )
 
-  const handleCreated = (id: string) => {
-    setShowCreateDialog(false)
-    // 作成直後は基本設定を促すため編集モーダルを開いた状態で開く
-    router.push(`/coursework/${id}?setup=1`)
-  }
+  /**
+   * 新規作成。**ダイアログを出さずに既定値の1件を作り、その概要ページへ直行する。**
+   *
+   * 名前・実施日・説明・タグは概要ページでその場で編集できるので、作る前に訊く
+   * ことが無い。作成直後に基本設定を促すために編集モーダルを自動で開いていた
+   * （`?setup=1`）のも、開く先が概要ページそのものになったので要らない。
+   *
+   * id は renderer が振る（規約）。失敗したときは遷移しない。
+   */
+  const handleCreate = useCallback(async () => {
+    const courseworkId = crypto.randomUUID()
+    try {
+      await createCoursework.mutateAsync({
+        id: courseworkId,
+        name: "新しい資料",
+      })
+      router.push(`/coursework/${courseworkId}`)
+    } catch {
+      // 失敗の通知は MutationCache が出す
+    }
+  }, [createCoursework, router])
 
   const handleDelete = async (coursework: CourseworkSummary) => {
     const result = await deleteCoursework.mutateAsync(coursework.id)
@@ -313,7 +329,7 @@ export function CourseworkListContainer() {
         priority: 80,
         node: (
           <Button
-            onClick={() => setShowCreateDialog(true)}
+            onClick={() => void handleCreate()}
             variant="outline"
             size="sm"
             className="rounded-lg"
@@ -324,7 +340,7 @@ export function CourseworkListContainer() {
         ),
         collapsedNode: (
           <Button
-            onClick={() => setShowCreateDialog(true)}
+            onClick={() => void handleCreate()}
             variant="ghost"
             size="sm"
             className="w-full justify-start"
@@ -439,6 +455,7 @@ export function CourseworkListContainer() {
     classroomFilterConfig,
     dateRangeConfig,
     handleBulkAddTag,
+    handleCreate,
     handleImport,
     searchTerm,
     selectedIds,
@@ -517,7 +534,7 @@ export function CourseworkListContainer() {
         empty={{
           message: "試験外成績資料がありません",
           action: (
-            <Button variant="outline" onClick={() => setShowCreateDialog(true)}>
+            <Button variant="outline" onClick={() => void handleCreate()}>
               <Plus className="mr-2 h-4 w-4" />
               最初の資料を作成
             </Button>
@@ -525,12 +542,6 @@ export function CourseworkListContainer() {
         }}
         noMatchMessage="条件に一致する資料がありません"
         sortStorageKey="courseworkList-sort"
-      />
-
-      <CourseworkCreateDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        onCreated={handleCreated}
       />
 
       <CourseworkImportDialog

@@ -18,11 +18,16 @@ import * as path from "path"
 import { describe, expect, it } from "vitest"
 
 import type { WorkflowTab } from "@/components/common/WorkflowTabHeader"
+import type { WorkflowPhaseGroup } from "@/lib/workflowTabs"
 import {
+  answerSheetBuilderWorkflowPhases,
   answerSheetBuilderWorkflowTabs,
+  courseworkWorkflowPhases,
   courseworkWorkflowTabs,
+  examWorkflowPhases,
   examWorkflowTabs,
   findWorkflowStepLabel,
+  gradeWorkflowPhases,
   gradeWorkflowTabs,
 } from "@/lib/workflowTabs"
 
@@ -39,26 +44,31 @@ const THIS_TEST_FILE = path.join(__dirname, "workflowStepDefinitions.test.ts")
 const WORKFLOWS: {
   name: string
   tabs: readonly WorkflowTab[]
+  phases: readonly WorkflowPhaseGroup[]
   routeDir: string
 }[] = [
   {
     name: "試験",
     tabs: examWorkflowTabs,
+    phases: examWorkflowPhases,
     routeDir: "src/app/(app)/exams/[examId]",
   },
   {
     name: "成績算出",
     tabs: gradeWorkflowTabs,
+    phases: gradeWorkflowPhases,
     routeDir: "src/app/(app)/grades/[gradeId]",
   },
   {
     name: "試験外成績資料",
     tabs: courseworkWorkflowTabs,
+    phases: courseworkWorkflowPhases,
     routeDir: "src/app/(app)/coursework/[courseworkId]",
   },
   {
     name: "解答用紙作成",
     tabs: answerSheetBuilderWorkflowTabs,
+    phases: answerSheetBuilderWorkflowPhases,
     routeDir: "src/app/(app)/answer-sheet-builder/[definitionId]",
   },
 ]
@@ -129,6 +139,25 @@ describe("段の一覧と実際のルート", () => {
 
     expect(stepLabels.slice(-2)).toEqual(["8. 採点確定", "9. 結果"])
   })
+
+  it.each(WORKFLOWS)(
+    "$name の段カードは、段を1つずつ過不足なく束ねる",
+    ({ tabs, phases }) => {
+      // 概要は段ではないのでカードに載らない
+      const stepIds = tabs
+        .filter((tab) => tab.path !== "")
+        .map((tab) => tab.id)
+        .sort()
+      const groupedStepIds = phases
+        .flatMap((phase) => phase.stepIds)
+        .slice()
+        .sort()
+
+      // 段を1つ足してカードへ入れ忘れると、タブには在るのに概要から消える。
+      // 二重に入れると同じ段が2枚のカードに出る
+      expect(groupedStepIds).toEqual(stepIds)
+    }
+  )
 
   it("履歴のラベルは同じ一覧から引ける（写しを持たない）", () => {
     expect(findWorkflowStepLabel(examWorkflowTabs, "08-finalize")).toBe(

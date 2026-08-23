@@ -78,6 +78,10 @@ export function HelpContentCourseworkList() {
               <Badge variant="outline">.coursework 書き出し</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
+              「新規作成」を押すと、名前を訊かずに資料が1件できて概要ページが開きます。
+              資料名・実施日・説明・タグはそこで直に書き換えます（打つそばから保存されます）。
+            </p>
+            <p className="text-sm text-muted-foreground">
               書き出しと削除は行末の「…」から行います。成績算出から参照されている資料は削除できません
               （どの成績算出が使っているかを知らせます）。
             </p>

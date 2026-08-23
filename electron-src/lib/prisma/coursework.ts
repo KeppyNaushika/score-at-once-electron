@@ -123,12 +123,15 @@ export async function getCourseworkById(id: string) {
 
 /** 試験外成績資料を作成 */
 export async function createCoursework(data: {
+  /** renderer が振った uuid。渡されなければ Prisma の既定（取り込み・テスト経路） */
+  id?: string
   name: string
   description?: string | null
   referenceDate?: string | null
 }) {
   const coursework = await prisma.coursework.create({
     data: {
+      ...(data.id ? { id: data.id } : {}),
       name: data.name,
       description: data.description ?? null,
       referenceDate: data.referenceDate ? new Date(data.referenceDate) : null,

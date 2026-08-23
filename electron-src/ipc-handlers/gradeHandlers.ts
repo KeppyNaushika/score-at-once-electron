@@ -106,6 +106,8 @@ export const gradeHandlers = {
   },
 
   "grade:create": async (data: {
+    /** renderer が振った uuid（規約: id は呼び出し側で決める） */
+    id?: string
     name: string
     description?: string
     referenceDate?: string | null

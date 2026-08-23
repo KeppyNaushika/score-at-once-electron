@@ -78,6 +78,10 @@ export function HelpContentExamList() {
               <Badge variant="outline">.score 書き出し</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
+              「新規試験作成」を押すと、名前を訊かずに試験が1件できて概要ページが開きます。
+              試験名・試験日・説明・タグはそこで直に書き換えます（打つそばから保存されます）。
+            </p>
+            <p className="text-sm text-muted-foreground">
               別の端末で作った試験は「.score
               読み込み」で取り込めます。書き出しは行末の「…」から1件ずつ、
               チェックを付ければまとめて書き出せます。

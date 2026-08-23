@@ -527,53 +527,28 @@ test.describe.serial("第2章: 試験準備", () => {
     await nav(page, "/exams")
     await ss(page, "ch2-exam-prep/07-exam-list.png")
 
-    // (B) 新規試験作成ダイアログ（入力あり → 閉じる）
+    // (B) 新規作成（段階66 でダイアログは無くなった。押すと既定値の1件が
+    //     できて概要ページへ移り、名前・試験日・説明・タグをその場で入れる）
     try {
       await page.getByRole("button", { name: "新規試験作成" }).click()
-      await page.waitForSelector('[role="dialog"]', { timeout: 5000 })
-      await page.waitForTimeout(300)
+      await page.waitForURL(/\/exams\/[0-9a-f-]{36}$/, { timeout: 15_000 })
 
-      const examNameInput = page.getByLabel("試験名").first()
-      if (await examNameInput.isVisible({ timeout: 1000 })) {
-        await examNameInput.fill("第２回定期テスト 中２数学")
-      }
+      await page.getByLabel("試験名").fill("第２回定期テスト 中２数学")
+      await page.getByLabel("試験日").fill("2025-10-15")
+      await page.getByLabel("説明").fill("一次関数・連立方程式の範囲")
 
-      try {
-        const dateInput = page.getByLabel("試験日").first()
-        if (await dateInput.isVisible({ timeout: 500 })) {
-          await dateInput.fill("2025-10-15")
-        }
-      } catch {
-        /* skip */
-      }
-
-      try {
-        const descInput = page.getByLabel("説明").first()
-        if (await descInput.isVisible({ timeout: 500 })) {
-          await descInput.fill("一次関数・連立方程式の範囲")
-        }
-      } catch {
-        /* skip */
-      }
-
-      try {
-        const subjectInput = page.getByPlaceholder("科目を入力").first()
-        if (await subjectInput.isVisible({ timeout: 500 })) {
-          await subjectInput.fill("数学")
-          await page.keyboard.press("Enter")
-          await page.waitForTimeout(200)
-        }
-      } catch {
-        /* skip */
+      const tagInput = page.getByPlaceholder("タグを追加...").first()
+      if (await tagInput.isVisible({ timeout: 500 })) {
+        await tagInput.fill("数学")
+        await page.keyboard.press("Enter")
+        await page.waitForTimeout(300)
       }
 
       await page.waitForTimeout(300)
-      await ss(page, "ch2-exam-prep/08-new-exam-dialog.png")
-      await page.keyboard.press("Escape")
-      await page.waitForTimeout(300)
+      await ss(page, "ch2-exam-prep/08-new-exam-overview.png")
     } catch (e) {
       console.warn(
-        "  [SKIP] New exam dialog:",
+        "  [SKIP] New exam overview:",
         (e as Error).message?.slice(0, 80)
       )
     }

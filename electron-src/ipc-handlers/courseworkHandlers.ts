@@ -65,6 +65,8 @@ export const courseworkHandlers = {
   },
 
   "coursework:create": async (data: {
+    /** renderer が振った uuid（規約: id は呼び出し側で決める） */
+    id?: string
     name: string
     description?: string | null
     referenceDate?: string | null

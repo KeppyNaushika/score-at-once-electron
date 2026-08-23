@@ -79,6 +79,10 @@ export function HelpContentGradeList() {
               <Badge variant="outline">.grade 書き出し</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
+              「新規作成」を押すと、名前を訊かずに成績算出が1件できて概要ページが開きます。
+              名前・成績算出日・説明・タグはそこで直に書き換えます（打つそばから保存されます）。
+            </p>
+            <p className="text-sm text-muted-foreground">
               前の学期と同じ作りで出すときは、行末の「…」から「複製」を選ぶと設定ごと写せます。
             </p>
           </div>

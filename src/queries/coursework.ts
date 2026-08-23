@@ -113,9 +113,11 @@ export const courseworkScoresQuery = (courseworkItemId: string) =>
 const courseworkScope = (courseworkId: string) =>
   scopeKeys.coursework(courseworkId)
 
+/** 資料を1件作る（id は renderer が振る。作った先の概要へ直行するため） */
 export const createCourseworkMutation = () =>
   defineMutation({
     mutationFn: (input: {
+      id: string
       name: string
       description?: string | null
       referenceDate?: string | null
@@ -126,6 +128,12 @@ export const createCourseworkMutation = () =>
     },
   })
 
+/**
+ * 資料1件の列を書く。
+ *
+ * **`scope` で直列化する。** 概要ページの名前・日付・説明は1打鍵ごとに書くので、
+ * 並行に走らせると着地の順が入れ替わって古い文字が最後に残りうる。
+ */
 export const updateCourseworkMutation = (courseworkId: string) =>
   defineMutation({
     mutationFn: (input: {
@@ -133,6 +141,7 @@ export const updateCourseworkMutation = (courseworkId: string) =>
       description?: string | null
       referenceDate?: string | null
     }) => window.electronAPI.coursework.update(courseworkId, input),
+    scope: { id: `coursework:${courseworkId}:detail` },
     meta: {
       invalidates: [
         courseworkScope(courseworkId),

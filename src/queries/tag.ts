@@ -122,22 +122,6 @@ export const setExamTagsMutation = (examId: string) =>
   })
 
 /**
- * 作ったばかりの試験へタグを付ける。
- *
- * 作成のあとに続く操作なので、試験 id は呼び出し時にしか分からない。
- * 取り直す先も同じ理由で「試験に紐づくもの全部」の前方一致になる。
- */
-export const setExamTagsForNewExamMutation = () =>
-  defineMutation({
-    mutationFn: (input: { examId: string; tagIds: string[] }) =>
-      window.electronAPI.examTagSetExamTags(input.examId, input.tagIds),
-    meta: {
-      invalidates: [["exam"], tagListQuery().queryKey],
-      errorMessage: "タグを保存できませんでした",
-    },
-  })
-
-/**
  * 選んだ試験へ同じタグをまとめて足す。
  *
  * 既存のタグを保ったまま1件ずつ足す（全置換は他端末が付けたタグを巻き添えに

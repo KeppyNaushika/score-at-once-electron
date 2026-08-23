@@ -24,9 +24,7 @@ import {
 } from "@/components/common/ListFilterControls"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 import ExamArchiveExportModal from "@/components/exams/detail/ExamArchiveExportModal"
-import CreateExamWindow from "@/components/exams/forms/CreateExamWindow"
 import { usePageHelp } from "@/components/help/usePageHelp"
-import { useFileActions } from "@/components/hooks/useFileActions"
 import { ImportWizardModal } from "@/components/import/ImportWizardModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -49,7 +47,7 @@ import {
   bulkExportExamsMutation,
   exportExamArchiveMutation,
 } from "@/queries/archive"
-import { examListQuery } from "@/queries/exam"
+import { createExamMutation, examListQuery } from "@/queries/exam"
 import {
   addTagToExamsMutation,
   findOrCreateTagMutation,
@@ -107,8 +105,28 @@ const ExamList = () => {
   /** 書き出しの結果。渡している間はモーダルが結果の段を見せる */
   const [exportOutcome, setExportOutcome] = useState<ExportOutcome | null>(null)
 
-  const { createExamModal } = useFileActions()
+  const createExam = useMutation(createExamMutation(currentUser.id))
   const router = useRouter()
+
+  /**
+   * 新規作成。**ダイアログを出さずに既定値の1件を作り、その概要ページへ直行する。**
+   *
+   * 名前・試験日・説明・タグは概要ページでその場で編集できるので、作る前に訊く
+   * ことが無い。訊いていた頃は「作成は通ったがタグ付けで失敗した」という**途中まで
+   * 成功した状態**が生まれ、作り直しを避けるために作った試験を覚えておく必要があった
+   * （その覚えのせいで、名前を直して押し直しても名前が反映されなかった）。
+   *
+   * id は renderer が振る（規約）。失敗したときは遷移しない。
+   */
+  const handleCreate = useCallback(async () => {
+    const examId = crypto.randomUUID()
+    try {
+      await createExam.mutateAsync({ id: examId, examName: "新しい試験" })
+      router.push(`/exams/${examId}`)
+    } catch {
+      // 失敗の通知は MutationCache が出す
+    }
+  }, [createExam, router])
 
   const {
     filteredItems: filteredExams,
@@ -263,7 +281,7 @@ const ExamList = () => {
         priority: 80,
         node: (
           <Button
-            onClick={createExamModal.open}
+            onClick={() => void handleCreate()}
             variant="outline"
             size="sm"
             className="rounded-lg"
@@ -274,7 +292,7 @@ const ExamList = () => {
         ),
         collapsedNode: (
           <Button
-            onClick={createExamModal.open}
+            onClick={() => void handleCreate()}
             variant="ghost"
             size="sm"
             className="w-full justify-start"
@@ -404,8 +422,8 @@ const ExamList = () => {
     return toolbarActions
   }, [
     allTags,
-    createExamModal.open,
     handleBulkAddTag,
+    handleCreate,
     isExporting,
     searchTerm,
     selectedIds,
@@ -415,12 +433,6 @@ const ExamList = () => {
 
   return (
     <>
-      {createExamModal.isOpen && (
-        <CreateExamWindow
-          onClose={createExamModal.close}
-          onExamCreated={loadExams}
-        />
-      )}
       <ImportWizardModal
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
@@ -503,7 +515,7 @@ const ExamList = () => {
         empty={{
           message: "まだ試験がありません",
           action: (
-            <Button variant="outline" onClick={createExamModal.open}>
+            <Button variant="outline" onClick={() => void handleCreate()}>
               <PlusCircle className="mr-2 h-4 w-4" />
               最初の試験を作成
             </Button>

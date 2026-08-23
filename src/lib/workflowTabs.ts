@@ -167,6 +167,66 @@ export const answerSheetBuilderWorkflowTabs: readonly WorkflowTab[] = [
 ]
 
 /**
+ * 概要ページの段カード1枚が束ねる段。
+ *
+ * **段の名前も行き先もここには無い。** 持つのは「まとまりの名前」と「どの段が
+ * 属するか」だけで、名前は `WorkflowTab.title`、行き先は `entityHref + path` から
+ * 引く。概要のカードに段の名前を書き写すと、タブと概要で同じ段が違う名前で呼ばれる
+ * （履歴側の写しが実際にずれていた）。
+ */
+export interface WorkflowPhaseGroup {
+  /** まとまりの名前（準備 / 採点 / 確定 / 出力） */
+  title: string
+  /** このまとまりに属する段の id（`WorkflowTab.id`。並べる順そのもの） */
+  stepIds: readonly string[]
+}
+
+/**
+ * 試験の段カード。
+ *
+ * **「8. 採点確定」は自分のカードを持つ。** 中身の作り込みは無い（確定の機能は
+ * 後で全面的に書き直す）が、**段が在ることは概要から見えていなければならない**。
+ * ただし進み具合は出さない —— 確定が要るかどうかは採点者が複数いて食い違ったかで
+ * 決まり、`ExamProgressSource` にその材料が無い。％のために梯子（`examStatus.ts`）へ
+ * 段を足すと、単独採点の試験が一生満たされない条件で止まる。
+ */
+export const examWorkflowPhases: readonly WorkflowPhaseGroup[] = [
+  {
+    title: "準備",
+    stepIds: [
+      "01-upload",
+      "02-template",
+      "03-region-info",
+      "04-question-group",
+      "05-students",
+    ],
+  },
+  { title: "採点", stepIds: ["06-student-answers", "07-score-at-once"] },
+  { title: "確定", stepIds: ["08-finalize"] },
+  { title: "出力", stepIds: ["09-export"] },
+]
+
+/** 成績算出の段カード */
+export const gradeWorkflowPhases: readonly WorkflowPhaseGroup[] = [
+  { title: "準備", stepIds: ["02-students", "03-data-sources"] },
+  { title: "算出", stepIds: ["04-manual-scores", "05-boundaries"] },
+  { title: "出力", stepIds: ["06-results", "07-export"] },
+]
+
+/** 試験外成績資料の段カード */
+export const courseworkWorkflowPhases: readonly WorkflowPhaseGroup[] = [
+  { title: "準備", stepIds: ["02-students", "03-items"] },
+  { title: "入力", stepIds: ["04-scores"] },
+  { title: "結果", stepIds: ["05-results"] },
+]
+
+/** 解答用紙作成の段カード */
+export const answerSheetBuilderWorkflowPhases: readonly WorkflowPhaseGroup[] = [
+  { title: "作成", stepIds: ["01-edit"] },
+  { title: "書き出し", stepIds: ["02-export"] },
+]
+
+/**
  * URL のフォルダ名から段の表示名を引く（概要は段ではないので引かない）。
  * 引けなければ `undefined` ——履歴のラベルは段の名前を落として「試験｜期末考査」に戻る。
  */

@@ -44,6 +44,7 @@ import { getGradeStatus } from "@/lib/gradeStatus"
 import {
   addTagToGradesMutation,
   analyzeGradeArchiveMutation,
+  createGradeMutation,
   deleteGradeMutation,
   duplicateGradeMutation,
   executeGradeImportMutation,
@@ -56,7 +57,6 @@ import type { CourseworkImportDecision } from "@/types/courseworkArchive.types"
 import type { GradeSummary } from "@/types/grade.types"
 import type { GradeArchiveImportPreview } from "@/types/gradeArchive.types"
 
-import { GradeCreateDialog } from "./GradeCreateDialog"
 import { GradeImportDialog } from "./GradeImportDialog"
 
 /**
@@ -97,6 +97,7 @@ export function GradeListContainer() {
   const { data: grades = EMPTY_GRADES, isPending: isLoading } =
     useQuery(gradeListQuery())
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
+  const createGrade = useMutation(createGradeMutation())
   const deleteGrade = useMutation(deleteGradeMutation())
   const duplicateGrade = useMutation(duplicateGradeMutation())
   const exportArchive = useMutation(exportGradeArchiveMutation())
@@ -104,7 +105,6 @@ export function GradeListContainer() {
   const executeImport = useMutation(executeGradeImportMutation())
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
   const addTagToGrades = useMutation(addTagToGradesMutation())
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
   // インポート確認ウィザードの状態
   const [importPreview, setImportPreview] =
     useState<GradeArchiveImportPreview | null>(null)
@@ -113,11 +113,24 @@ export function GradeListContainer() {
   const [importArchiveData, setImportArchiveData] =
     useState<GradeArchivePayload | null>(null)
 
-  const handleCreated = (id: string) => {
-    setShowCreateDialog(false)
-    // 作成直後は基本設定（成績算出日など）を促すため編集モーダルを開いた状態で開く
-    router.push(`/grades/${id}?setup=1`)
-  }
+  /**
+   * 新規作成。**ダイアログを出さずに既定値の1件を作り、その概要ページへ直行する。**
+   *
+   * 名前・成績算出日・説明・タグは概要ページでその場で編集できるので、作る前に
+   * 訊くことが無い。作成直後に基本設定を促すために編集モーダルを自動で開いていた
+   * （`?setup=1`）のも、開く先が概要ページそのものになったので要らない。
+   *
+   * id は renderer が振る（規約）。失敗したときは遷移しない。
+   */
+  const handleCreate = useCallback(async () => {
+    const gradeId = crypto.randomUUID()
+    try {
+      await createGrade.mutateAsync({ id: gradeId, name: "新しい成績" })
+      router.push(`/grades/${gradeId}`)
+    } catch {
+      // 失敗の通知は MutationCache が出す
+    }
+  }, [createGrade, router])
 
   const handleDelete = (id: string) => {
     deleteGrade.mutate(id)
@@ -267,7 +280,7 @@ export function GradeListContainer() {
         priority: 80,
         node: (
           <Button
-            onClick={() => setShowCreateDialog(true)}
+            onClick={() => void handleCreate()}
             variant="outline"
             size="sm"
             className="rounded-lg"
@@ -278,7 +291,7 @@ export function GradeListContainer() {
         ),
         collapsedNode: (
           <Button
-            onClick={() => setShowCreateDialog(true)}
+            onClick={() => void handleCreate()}
             variant="ghost"
             size="sm"
             className="w-full justify-start"
@@ -393,6 +406,7 @@ export function GradeListContainer() {
     classroomFilterConfig,
     dateRangeConfig,
     handleBulkAddTag,
+    handleCreate,
     handleImport,
     searchTerm,
     selectedIds,
@@ -480,7 +494,7 @@ export function GradeListContainer() {
         empty={{
           message: "成績算出がありません",
           action: (
-            <Button variant="outline" onClick={() => setShowCreateDialog(true)}>
+            <Button variant="outline" onClick={() => void handleCreate()}>
               <Plus className="mr-2 h-4 w-4" />
               最初の成績算出を作成
             </Button>
@@ -488,12 +502,6 @@ export function GradeListContainer() {
         }}
         noMatchMessage="条件に一致する成績算出がありません"
         sortStorageKey="gradeList-sort"
-      />
-
-      <GradeCreateDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        onCreated={handleCreated}
       />
 
       <GradeImportDialog

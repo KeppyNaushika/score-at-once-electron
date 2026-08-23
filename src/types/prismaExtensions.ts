@@ -195,12 +195,17 @@ export type SerializedScoreDecision = Omit<
 /** 試験スカラー + examPages（masterImages 含む）。採点画面が1クエリで取得する形。 */
 export type ExamWithPages = Exam & { examPages: ExamPageWithContent[] }
 
-/** 試験の作成引数（renderer のフォームが組み立てる形） */
-export interface CreateExamArgs {
-  examName: string
-  description?: string | null
-  referenceDate?: Date | null
-}
+/**
+ * 試験の作成引数。
+ *
+ * **列は Prisma の作成入力から導く**（手で書き写すと、列が増減しても検査に掛からない）。
+ * **id だけは必須にする** —— このリポジトリの規約で uuid は renderer が振り、作った
+ * 直後にその試験の概要ページへ連れて行くので、作成の戻りを待たずに行き先が決まる。
+ */
+export type CreateExamArgs = Pick<
+  Prisma.ExamCreateInput,
+  "examName" | "description" | "referenceDate"
+> & { id: string }
 
 export type StudentAnswerImageWithExamPageAndStudent =
   Prisma.StudentAnswerImageGetPayload<{

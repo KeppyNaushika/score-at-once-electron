@@ -12,22 +12,27 @@ import { E2E_BASE_URL } from "./rendererPort"
 
 const ROOT = path.resolve(__dirname, "../../../..")
 
-/** 試験を1件作り、その id を返す */
+/**
+ * 試験を1件作り、その id を返す。
+ *
+ * **作成ダイアログは無い**（段階66）。「新規試験作成」を押すと既定値の1件が
+ * その場で作られ、概要ページへ直行する。名前はそこで付ける（1打鍵ごとに書くので
+ * 「保存」は押さない）。
+ */
 export async function createExam(page: Page, name: string): Promise<string> {
   await page.goto(`${E2E_BASE_URL}/exams`, { waitUntil: "domcontentloaded" })
   await page.getByRole("button", { name: "新規試験作成" }).click()
-  await page.getByLabel("試験名").fill(name)
-  await page.getByRole("button", { name: "作成", exact: true }).click()
 
-  // 一覧に現れたら「詳細」から開く（名前をクリックすると行の選択になる）
-  await expect(page.getByText(name, { exact: true }).first()).toBeVisible({
-    timeout: 15_000,
-  })
-  await page.getByRole("button", { name: "詳細" }).first().click()
-  await expect(page).toHaveURL(/\/exams\/[0-9a-f-]{36}/, { timeout: 15_000 })
+  await expect(page).toHaveURL(/\/exams\/[0-9a-f-]{36}$/, { timeout: 15_000 })
   const examId = /\/exams\/([0-9a-f-]{36})/.exec(page.url())?.[1]
   if (!examId)
     throw new Error(`試験の id を URL から取れなかった: ${page.url()}`)
+
+  await page.getByLabel("試験名").fill(name)
+  // 書けたことは、ヘッダーの題（同じ試験を別のクエリで取り直したもの）で待つ
+  await expect(page.getByRole("heading", { name })).toBeVisible({
+    timeout: 15_000,
+  })
   return examId
 }
 
@@ -70,16 +75,19 @@ export async function createCoursework(
     waitUntil: "domcontentloaded",
   })
   await page.getByRole("button", { name: "新規作成" }).click()
-  await page.getByLabel("資料名").fill(name)
-  await page.getByRole("button", { name: "作成", exact: true }).click()
 
-  // 作成すると、基本設定のモーダルを開いた状態でその資料へ移る
-  await expect(page).toHaveURL(/\/coursework\/[0-9a-f-]{36}/, {
+  // 作成ダイアログは無い。既定値の1件ができて概要ページへ移り、名前はそこで付ける
+  await expect(page).toHaveURL(/\/coursework\/[0-9a-f-]{36}$/, {
     timeout: 15_000,
   })
   const courseworkId = /\/coursework\/([0-9a-f-]{36})/.exec(page.url())?.[1]
   if (!courseworkId) {
     throw new Error(`資料の id を URL から取れなかった: ${page.url()}`)
   }
+
+  await page.getByLabel("資料名").fill(name)
+  await expect(page.getByRole("heading", { name })).toBeVisible({
+    timeout: 15_000,
+  })
   return courseworkId
 }
