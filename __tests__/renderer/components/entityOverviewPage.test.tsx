@@ -96,6 +96,7 @@ function renderOverview(
   overrides: {
     onCommitBasics?: (changed: Partial<EntityOverviewBasics>) => Promise<void>
     stepCompletion?: Record<string, boolean | null>
+    basics?: EntityOverviewBasics
   } = {}
 ) {
   const onCommitBasics =
@@ -104,7 +105,7 @@ function renderOverview(
     <EntityOverviewPage
       nameLabel="試験名"
       dateLabel="試験日"
-      basics={BASICS}
+      basics={overrides.basics ?? BASICS}
       onCommitBasics={onCommitBasics}
       tags={[]}
       isReloadingTags={false}
@@ -188,6 +189,37 @@ describe("その場編集", () => {
       referenceDate: "2026-07-10",
     })
     expect(onCommitBasics).toHaveBeenNthCalledWith(2, { description: "数学I" })
+  })
+
+  it("入力の途中で空になっても、設定済みの日付を消さない", () => {
+    // Chromium の input[type=date] は、年の桁に触った瞬間のように値が不完全に
+    // なった時点で "" を報告する。そのまま書くと、入力を終えずに他所を触っただけで
+    // 日付が消える
+    const onCommitBasics = vi.fn().mockResolvedValue(undefined)
+    renderOverview({ onCommitBasics })
+
+    fireEvent.change(screen.getByLabelText("試験日"), { target: { value: "" } })
+
+    expect(onCommitBasics).not.toHaveBeenCalled()
+  })
+
+  it("未設定に戻すのは明示のボタンだけ", () => {
+    const onCommitBasics = vi.fn().mockResolvedValue(undefined)
+    renderOverview({ onCommitBasics })
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "試験日を未設定にする" })
+    )
+
+    expect(onCommitBasics).toHaveBeenCalledWith({ referenceDate: "" })
+  })
+
+  it("日付が未設定のときは、未設定にするボタンを出さない", () => {
+    renderOverview({ basics: { ...BASICS, referenceDate: "" } })
+
+    expect(
+      screen.queryByRole("button", { name: "試験日を未設定にする" })
+    ).not.toBeInTheDocument()
   })
 
   /**

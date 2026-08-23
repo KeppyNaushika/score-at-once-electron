@@ -69,7 +69,18 @@ export function usePageHelp({ compact = false }: UsePageHelpOptions = {}) {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
 
-  // 現在のページを特定
+  /**
+   * 現在のページを特定する。**完全一致だけで引く。**
+   *
+   * かつては当たらなかったときに部分一致で探していた
+   * （`lastSegment.includes(key.split("-")[1])`）。ヘルプが一覧ページにしか無かった
+   * うちは表に出なかったが、段のヘッダーが全画面で呼ぶようになった途端、**別の画面の
+   * 手引きを出す**ようになった —— 成績の 04-manual-scores が "scores" で
+   * `07-score-at-once` に当たって一括採点の手引きを出す、資料や解答用紙の
+   * 02-students / 02-export が試験の 05 や 09 に当たる、など6ページ。
+   *
+   * **無いなら出さない。** 似たものを出すのは、無いより悪い。
+   */
   const getCurrentPageId = () => {
     const pathSegments = pathname.split("/")
     const lastSegment = pathSegments[pathSegments.length - 1]
@@ -85,15 +96,9 @@ export function usePageHelp({ compact = false }: UsePageHelpOptions = {}) {
       return "students"
     }
 
-    // 完全一致を優先的にチェック
-    if (Object.keys(pageHelpComponents).includes(lastSegment)) {
-      return lastSegment
-    }
-
-    // 部分一致での検索（従来の方法）
-    return Object.keys(pageHelpComponents).find((key) =>
-      lastSegment.includes(key.split("-")[1])
-    )
+    return Object.keys(pageHelpComponents).includes(lastSegment)
+      ? lastSegment
+      : undefined
   }
 
   const currentPageId = getCurrentPageId()

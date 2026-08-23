@@ -1,7 +1,7 @@
 "use client"
 
 import type { Tag } from "@prisma/client"
-import { Check, ChevronRight, Info } from "lucide-react"
+import { Check, ChevronRight, Info, X } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { EntityTagEditor } from "@/components/common/EntityTagEditor"
@@ -333,11 +333,29 @@ export function EntityOverviewPage({
     write({ name })
   }
 
+  /**
+   * 日付を書き換える。**空は書かない。**
+   *
+   * Chromium の `input[type=date]` は、年の桁に触った瞬間のように**値が不完全に
+   * なった時点で `""` を報告する**。そのまま書くと、入力を終えずに他所を触っただけで
+   * 設定済みの日付が消える。
+   *
+   * 消す手段は別に置く（下の「未設定にする」）。「打っている間の空は無視して、
+   * 離れたときだけ消す」という手もあるが、それは規約が禁じている `onBlur` 確定で
+   * あるうえ、**画面から見えない規則**になる（利用者は離れると消えることを知らない）。
+   */
   const changeReferenceDate = (text: string) => {
     const previous = shownText("referenceDate")
     remember(entityHref, "referenceDate", text)
+    if (text === "") return
     if (text === previous) return
     write({ referenceDate: text })
+  }
+
+  /** 日付を未設定へ戻す。空を書くのはこの明示の操作だけ */
+  const clearReferenceDate = () => {
+    remember(entityHref, "referenceDate", "")
+    write({ referenceDate: "" })
   }
 
   const changeDescription = (text: string) => {
@@ -416,6 +434,19 @@ export function EntityOverviewPage({
                   onBlur={() => forgetField(entityHref, "referenceDate")}
                   className={cn(QUIET_FIELD_CLASSES, "w-auto")}
                 />
+                {canEdit && shownText("referenceDate") !== "" && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-6 text-muted-foreground hover:text-foreground"
+                    aria-label={`${dateLabel}を未設定にする`}
+                    title={`${dateLabel}を未設定にする`}
+                    onClick={clearReferenceDate}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                )}
                 {/*
               日付が何に効くかは、書き換えるときだけ知りたい。常に添えておくと
               2行を占め、しかも毎回読み飛ばされる。訊いたときに答える形にする。
