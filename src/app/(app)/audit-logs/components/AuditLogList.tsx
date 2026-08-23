@@ -17,6 +17,7 @@ import { type PublicUser, userListQuery } from "@/queries/user"
 
 import {
   AUDIT_LOG_PAGE_SIZES,
+  AUTO_PAGE_SIZE,
   CATEGORY_LABELS,
   isAuditCategory,
 } from "../constants"
@@ -39,9 +40,11 @@ export function AuditLogList() {
     setFilter,
     pageNumber,
     pageSize,
+    pageSizeChoice,
     pageCount,
     setPageNumber,
-    setPageSize,
+    setPageSizeChoice,
+    viewportRef,
   } = useAuditLogs()
   const [searchText, setSearchText] = useState("")
 
@@ -127,16 +130,18 @@ export function AuditLogList() {
       </div>
 
       {/* ここだけが伸び縮みする。`min-h-0` が無いと flex の子は縮まず、
-          はみ出した分がページごとスクロールしてフッターが流れていく */}
-      <div className="min-h-0 flex-1 overflow-auto px-6 py-4">
+          はみ出した分がページごとスクロールしてフッターが流れていく。
+          上下の余白は置かない —— 「自動」はこの箱の高さ（`clientHeight`）を
+          1行の高さで割るので、余白を入れるとその分だけ多く数えてしまう */}
+      <div ref={viewportRef} className="min-h-0 flex-1 overflow-auto px-6">
         {error && (
-          <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div className="mt-4 mb-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {error}
           </div>
         )}
 
         {loading ? (
-          <div className="space-y-3">
+          <div className="space-y-3 py-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3">
                 <Skeleton className="h-8 w-8 rounded-full" />
@@ -153,7 +158,7 @@ export function AuditLogList() {
             <p className="text-sm">記録された操作はありません。</p>
           </div>
         ) : (
-          <div className="divide-y divide-border/60">
+          <div>
             {entries.map((entry) => (
               <AuditLogItem key={entry.id} entry={entry} />
             ))}
@@ -169,13 +174,24 @@ export function AuditLogList() {
             {total} 件中 {firstRowNumber}〜{lastRowNumber} 件
           </span>
           <Select
-            value={String(pageSize)}
-            onValueChange={(value) => setPageSize(Number(value))}
+            value={
+              pageSizeChoice === AUTO_PAGE_SIZE
+                ? AUTO_PAGE_SIZE
+                : String(pageSizeChoice)
+            }
+            onValueChange={(value) =>
+              setPageSizeChoice(
+                value === AUTO_PAGE_SIZE ? AUTO_PAGE_SIZE : Number(value)
+              )
+            }
           >
-            <SelectTrigger className="w-28">
+            <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value={AUTO_PAGE_SIZE}>
+                自動（{pageSize} 件）
+              </SelectItem>
               {AUDIT_LOG_PAGE_SIZES.map((size) => (
                 <SelectItem key={size} value={String(size)}>
                   {size} 件ずつ

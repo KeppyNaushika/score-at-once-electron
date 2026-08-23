@@ -41,8 +41,19 @@ export const VERB_META: Record<
   other: { label: "操作", className: "text-muted-foreground", Icon: History },
 }
 
-/** 1ページに並べる件数の選択肢 */
+/** 1ページに並べる件数を、表示領域の高さから決める指定 */
+export const AUTO_PAGE_SIZE = "auto"
+
+/** 1ページに並べる件数の選択肢（「自動」は別枠） */
 export const AUDIT_LOG_PAGE_SIZES = [10, 20, 50, 100] as const
 
-/** 既定のページあたり件数 */
-export const DEFAULT_AUDIT_LOG_PAGE_SIZE = 10
+/**
+ * 「自動」で高さから件数を割り出すときの、1行の見積もり（px）。
+ *
+ * 1行は「誰が何をした」と補足の2段（`AuditLogItem`）。実測より少し大きめに取り、
+ * はみ出すより余らせる（足りない分はスクロールできるが、余白は操作できない）。
+ */
+export const AUDIT_LOG_ROW_HEIGHT = 60
+
+/** 高さがまだ測れていないときに使う件数 */
+export const FALLBACK_AUDIT_LOG_PAGE_SIZE = 10

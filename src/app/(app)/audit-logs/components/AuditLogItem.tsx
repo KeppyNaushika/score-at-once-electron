@@ -1,14 +1,18 @@
 "use client"
 
-import { ChevronDown, ChevronRight } from "lucide-react"
-import { useState } from "react"
+import { ChevronDown } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import type { AuditLogEntry } from "@/types/auditLog.types"
 
-import { CATEGORY_LABELS, VERB_META } from "../constants"
+import { AUDIT_LOG_ROW_HEIGHT, CATEGORY_LABELS, VERB_META } from "../constants"
 
 const initials = (name: string | null): string => {
   if (!name) return "?"
@@ -47,13 +51,13 @@ function ChangeDiff({ entry }: { entry: AuditLogEntry }) {
   const changes = entry.metadata?.changes
   if (!changes || changes.length === 0) {
     return (
-      <div className="mt-2 ml-11 text-sm text-muted-foreground">
+      <div className="text-sm text-muted-foreground">
         詳細な変更内容は記録されていません。
       </div>
     )
   }
   return (
-    <div className="mt-2 ml-11 space-y-1.5">
+    <div className="max-h-80 space-y-1.5 overflow-auto">
       {changes.map((change) => (
         <div key={change.field} className="text-sm">
           <span className="text-muted-foreground">
@@ -70,67 +74,74 @@ function ChangeDiff({ entry }: { entry: AuditLogEntry }) {
   )
 }
 
+/**
+ * 監査ログ1行。
+ *
+ * **高さは `AUDIT_LOG_ROW_HEIGHT` に固定する。** 「自動」のページ件数が
+ * 表示領域の高さを1行の高さで割って決めるので、行が伸び縮みすると件数が
+ * 合わなくなる。文字は折り返さずに切り、変更内容は行を押し広げないよう
+ * ポップオーバーへ出す。
+ */
 export function AuditLogItem({ entry }: { entry: AuditLogEntry }) {
-  const [expanded, setExpanded] = useState(false)
   const verb = VERB_META[entry.verb] ?? VERB_META.other
   const { Icon } = verb
   const hasChanges = (entry.metadata?.changes?.length ?? 0) > 0
   const actor = entry.actorName ?? "不明なユーザー"
 
   return (
-    <div className="rounded-md px-2 py-2.5 transition-colors hover:bg-muted/40">
-      <div className="flex items-start gap-3">
-        <Avatar className="mt-0.5 h-8 w-8 shrink-0">
-          <AvatarFallback className="text-xs">
-            {initials(entry.actorName)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-            <Icon className={`h-3.5 w-3.5 shrink-0 ${verb.className}`} />
-            <span className="font-semibold">{actor}</span>
-            <span className="text-foreground">が {entry.summary}</span>
-          </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <Badge variant="secondary" className="font-normal">
-              {CATEGORY_LABELS[entry.category] ?? entry.category}
-            </Badge>
-            {entry.scopeLabel && (
-              <span className="truncate">{entry.scopeLabel}</span>
-            )}
-            {entry.occurrences > 1 && (
-              <span className="text-muted-foreground/80">
-                {entry.occurrences}回
-              </span>
-            )}
-          </div>
-          {hasChanges && expanded && <ChangeDiff entry={entry} />}
+    <div
+      className="flex items-center gap-3 border-b border-border/60 px-2 transition-colors hover:bg-muted/40"
+      style={{ height: AUDIT_LOG_ROW_HEIGHT }}
+    >
+      <Avatar className="h-8 w-8 shrink-0">
+        <AvatarFallback className="text-xs">
+          {initials(entry.actorName)}
+        </AvatarFallback>
+      </Avatar>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-2 text-sm">
+          <Icon className={`h-3.5 w-3.5 shrink-0 ${verb.className}`} />
+          <span className="shrink-0 font-semibold">{actor}</span>
+          <span className="truncate text-foreground">が {entry.summary}</span>
         </div>
-        {/* 時刻は行の右端で揃える。幅を決めておかないと、隣の「変更内容」が
-            出る行と出ない行で右端の位置がずれる */}
-        <div className="flex shrink-0 items-start gap-2">
-          {hasChanges && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2"
-              onClick={() => setExpanded((prev) => !prev)}
-            >
-              {expanded ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-              <span className="ml-1 text-xs">変更内容</span>
-            </Button>
+        <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+          <Badge variant="secondary" className="shrink-0 font-normal">
+            {CATEGORY_LABELS[entry.category] ?? entry.category}
+          </Badge>
+          {entry.scopeLabel && (
+            <span className="truncate">{entry.scopeLabel}</span>
           )}
-          <span
-            className="mt-1 w-20 text-right text-xs text-muted-foreground"
-            title={formatAbsoluteTime(entry.updatedAt)}
-          >
-            {formatRelativeTime(entry.updatedAt)}
-          </span>
+          {entry.occurrences > 1 && (
+            <span className="shrink-0 text-muted-foreground/80">
+              {entry.occurrences}回
+            </span>
+          )}
         </div>
+      </div>
+
+      {/* 時刻は行の右端で揃える。幅を決めておかないと、隣の「変更内容」が
+          出る行と出ない行で右端の位置がずれる */}
+      <div className="flex shrink-0 items-center gap-2">
+        {hasChanges && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-7 px-2">
+                <ChevronDown className="h-4 w-4" />
+                <span className="ml-1 text-xs">変更内容</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-96">
+              <ChangeDiff entry={entry} />
+            </PopoverContent>
+          </Popover>
+        )}
+        <span
+          className="w-20 text-right text-xs text-muted-foreground"
+          title={formatAbsoluteTime(entry.updatedAt)}
+        >
+          {formatRelativeTime(entry.updatedAt)}
+        </span>
       </div>
     </div>
   )
