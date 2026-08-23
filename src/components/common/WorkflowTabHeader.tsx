@@ -68,14 +68,12 @@ export function WorkflowTabHeader({
   return (
     <header className="shrink-0 border-b bg-background">
       {/*
-        タイトルは**行の中央**に置く。ツールバーと横並びにすると、アイコンの枚数や
-        名前の長さでタイトルの中心が押されて動く。行に対して絶対配置し、中心を
-        `left-1/2` + `-translate-x-1/2` で取ることで、左に何を足しても中心は動かない。
-        重なりは名前側の幅を切って避け（長い名前は省略記号）、下に居るボタンを
-        塞がないよう当たり判定も外す。
+        題は**クイックアクセスのすぐ右**に置く。行の中央に絶対配置していたが、
+        目が最初に行くのは左端で、そこから中央まで戻って読むことになる。左から
+        「どこへ行けるか → いま何を見ているか」と並べば、視線が一方向で済む。
       */}
-      <div className="relative flex items-center px-2 pt-1">
-        <div className="flex items-center gap-0.5">
+      <div className="flex items-center gap-2 px-2 pt-1">
+        <div className="flex shrink-0 items-center gap-0.5">
           <HistoryNavButtons />
           <Button variant="ghost" size="icon" className="size-7" asChild>
             <GuardedLink
@@ -87,9 +85,7 @@ export function WorkflowTabHeader({
             </GuardedLink>
           </Button>
         </div>
-        <h1 className="pointer-events-none absolute left-1/2 max-w-[60%] -translate-x-1/2 truncate text-sm font-semibold">
-          {entityName}
-        </h1>
+        <h1 className="truncate text-sm font-semibold">{entityName}</h1>
       </div>
       {/* 試験は概要込みで9枚並ぶ。窓が狭いときはタブ列だけを横に流す */}
       <nav

@@ -235,21 +235,21 @@ export function EntityListPage<TRow extends { id: string }>({
   return (
     <div className="flex h-full min-w-full flex-col">
       {/*
-        ヘッダーは**1行**。左にクイックアクセス（戻る／進む）、中央に題、右に操作。
+        ヘッダーは**1行**。左からクイックアクセス（戻る／進む）・題・件数、右に操作。
         詳細画面の `WorkflowTabHeader` の上段と同じ姿で、違うのは「一覧へ戻る」が
         無いこと（一覧に一覧の親は無い）と、下段のタブが無いことだけ。
 
-        題は**行に対して絶対配置**して中心を取る。flex の spacer や grid で挟むと、
-        左のアイコン数や右のボタン幅が変わるたびに中心が動く（窓が狭いときほど大きく
-        ずれる）。`left-1/2` + `-translate-x-1/2` なら左右に何を足しても中心は動かない。
-        重なりは題の幅を切って避け、下のボタンを塞がないよう当たり判定も外す。
+        題は**クイックアクセスのすぐ右**。行の中央に絶対配置していたが、目が最初に
+        行くのは左端で、そこから中央まで戻って読むことになる。左から
+        「どこへ行けるか → いま何を見ているか → 何件あるか」と並べば視線が一方向で済む。
       */}
-      <header className="relative flex shrink-0 items-center gap-2 border-b bg-background px-3 py-2">
+      <header className="flex shrink-0 items-center gap-2 border-b bg-background px-3 py-2">
         <div className="flex shrink-0 items-center gap-2">
           <HistoryNavButtons />
+          <h1 className="truncate text-sm font-semibold">{title}</h1>
           {/*
             件数は畳まない（畳むと「何件あるのか」が見えなくなる）ので、実測して
-            畳む並びの外＝左のクイックアクセスの隣に置く。絞り込むと分母と分子が出る
+            畳む並びの外に置く。絞り込むと分母と分子が出る
           */}
           <span className="text-xs whitespace-nowrap text-muted-foreground">
             {rows.length === totalCount
@@ -257,9 +257,6 @@ export function EntityListPage<TRow extends { id: string }>({
               : `${rows.length} / ${totalCount}件`}
           </span>
         </div>
-        <h1 className="pointer-events-none absolute left-1/2 max-w-[40%] -translate-x-1/2 truncate text-sm font-semibold">
-          {title}
-        </h1>
         <OverflowToolbar actions={actions} />
         {/* 「使い方」は畳まない。読み方が分からないときに真っ先に隠れると詰む */}
         {helpButton === undefined || helpButton === null ? null : (
