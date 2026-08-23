@@ -2,13 +2,18 @@
 
 import type { Tag } from "@prisma/client"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { TagIcon, XIcon } from "lucide-react"
+import { PencilIcon, TagIcon, XIcon } from "lucide-react"
 import type React from "react"
 import { useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { findOrCreateTagMutation, tagListQuery } from "@/queries/tag"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
@@ -52,7 +57,7 @@ export function EntityTagEditor({
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
   const [tagInput, setTagInput] = useState("")
-  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
   /**
    * 書き込みが飛んでいる間か。
    *
@@ -65,7 +70,7 @@ export function EntityTagEditor({
   const handleAdd = async (tagName?: string) => {
     const name = (tagName ?? tagInput).trim()
     setTagInput("")
-    setShowSuggestions(false)
+    // 続けて足せるよう開いたままにする（1つ付けるたびに開き直させない）
     if (!name || isWriting) return
     if (tags.some((tag) => tag.name === name)) return
     setIsWriting(true)
@@ -101,7 +106,7 @@ export function EntityTagEditor({
     if (e.key === "Escape") {
       e.preventDefault()
       setTagInput("")
-      setShowSuggestions(false)
+      setIsOpen(false)
     }
   }
 
@@ -113,84 +118,99 @@ export function EntityTagEditor({
   )
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        {tags.map((tag) => (
-          <Badge
-            key={tag.id}
-            variant="secondary"
-            style={
-              tag.color
-                ? { backgroundColor: tag.color, borderColor: tag.color }
-                : undefined
-            }
-          >
-            {tag.name}
-            {!disabled && (
-              <button
-                type="button"
-                onClick={() => void handleRemove(tag.id)}
-                disabled={isWriting}
-                className="ml-1.5 cursor-pointer appearance-none border-none bg-transparent p-0 hover:text-destructive"
-                aria-label={`${tag.name} を外す`}
-              >
-                <XIcon size={14} />
-              </button>
-            )}
-          </Badge>
-        ))}
-        {tags.length === 0 && (
-          <span className="text-xs text-muted-foreground">タグなし</span>
-        )}
-      </div>
-      {disabled ? (
-        disabledReason && (
-          <p className="text-xs text-muted-foreground">{disabledReason}</p>
-        )
-      ) : (
-        <div className="relative flex max-w-md items-center gap-2">
-          <Input
-            id="entity-overview-tag"
-            value={tagInput}
-            onChange={(e) => {
-              setTagInput(e.target.value)
-              setShowSuggestions(true)
-            }}
-            onFocus={() => setShowSuggestions(true)}
-            // 候補のクリックを拾えるように、閉じるのを少し遅らせる
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-            onKeyDown={handleKeyDown}
-            placeholder="タグを追加..."
-            className="h-8 text-sm"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={isWriting}
-            onClick={() => void handleAdd()}
-          >
-            追加
-          </Button>
-          {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute top-full right-16 left-0 z-50 mt-1 max-h-40 overflow-y-auto rounded-md border bg-popover shadow-md">
-              {suggestions.map((tag) => (
-                <button
-                  key={tag.id}
-                  type="button"
-                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-accent"
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    void handleAdd(tag.name)
-                  }}
-                >
-                  <TagIcon className="h-3.5 w-3.5 opacity-50" />
-                  {tag.name}
-                </button>
-              ))}
-            </div>
+    <div className="flex flex-wrap items-center gap-2">
+      {tags.map((tag) => (
+        <Badge
+          key={tag.id}
+          variant="secondary"
+          style={
+            tag.color
+              ? { backgroundColor: tag.color, borderColor: tag.color }
+              : undefined
+          }
+        >
+          {tag.name}
+          {!disabled && (
+            <button
+              type="button"
+              onClick={() => void handleRemove(tag.id)}
+              disabled={isWriting}
+              className="ml-1.5 cursor-pointer appearance-none border-none bg-transparent p-0 hover:text-destructive"
+              aria-label={`${tag.name} を外す`}
+            >
+              <XIcon size={14} />
+            </button>
           )}
-        </div>
+        </Badge>
+      ))}
+      {tags.length === 0 && (
+        <span className="text-xs text-muted-foreground">タグなし</span>
+      )}
+
+      {disabled
+        ? disabledReason && (
+            <p className="text-xs text-muted-foreground">{disabledReason}</p>
+          )
+        : null}
+
+      {/*
+        付けるための入力は**畳んでおく。** 概要を開く用のほとんどはタグを読むだけ
+        なので、入力欄と候補の一覧が常に出ていると、読むだけの人にも編集の画面を
+        見せることになる。鉛筆を押した人にだけ開く。
+      */}
+      {!disabled && (
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              id="entity-overview-tag"
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-6"
+              aria-label="タグを編集"
+              title="タグを編集"
+            >
+              <PencilIcon className="h-3.5 w-3.5" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64 space-y-2 p-2">
+            <div className="flex items-center gap-2">
+              <Input
+                value={tagInput}
+                autoFocus
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="タグを追加..."
+                className="h-8 text-sm"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isWriting}
+                onClick={() => void handleAdd()}
+              >
+                追加
+              </Button>
+            </div>
+            {suggestions.length > 0 && (
+              <div className="max-h-40 overflow-y-auto">
+                {suggestions.map((tag) => (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
+                    disabled={isWriting}
+                    onClick={() => void handleAdd(tag.name)}
+                  >
+                    <TagIcon className="h-3.5 w-3.5 opacity-50" />
+                    {tag.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
       )}
     </div>
   )
