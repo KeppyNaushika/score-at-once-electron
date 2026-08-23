@@ -117,10 +117,21 @@ test("解答用紙の一覧は担当の切り替えを持ち、担当でない�
     waitUntil: "domcontentloaded",
   })
 
-  // 既定は自分が担当の分だけ。切り替えで全員分
-  await expect(
-    page.getByText("全員の解答用紙を表示", { exact: true })
-  ).toBeVisible({ timeout: 15_000 })
+  // 既定は自分が担当の分だけ。切り替えで全員分。
+  //
+  // **一覧の操作は幅に入りきらないと「…」へ畳まれる**（段階64 で4画面の一覧を
+  // `OverflowToolbar` へ揃えた）ので、並びに出ているとは限らない。ここで見たいのは
+  // 切り替えが**触れること**なので、畳まれていたら開いてから探す。
+  //
+  // 役割で引くのは、幅を測るための控えの並びを避けるため。控えは `aria-hidden` なので
+  // 支援技術の木には出ないが、文字では引けてしまう（そちらは常に hidden）。
+  const ownerScopeToggle = page.getByRole("checkbox", {
+    name: "全員の解答用紙を表示",
+  })
+  if ((await ownerScopeToggle.count()) === 0) {
+    await page.getByRole("button", { name: "入りきらない操作" }).click()
+  }
+  await expect(ownerScopeToggle).toBeVisible({ timeout: 15_000 })
   // 自分が作ったものは担当が「自分」
   await expect(page.getByRole("cell", { name: "自分" }).first()).toBeVisible({
     timeout: 15_000,
@@ -213,9 +224,11 @@ test("資料の概要と評価項目を往復しても、どちらの画面も�
   await page.goto(`${E2E_BASE_URL}/coursework/${courseworkId}/03-items`, {
     waitUntil: "domcontentloaded",
   })
-  await expect(page.getByRole("heading", { name: /評価項目/ })).toBeVisible({
-    timeout: 30_000,
-  })
+  // 段のヘッダーも `評価項目の設定｜…` という見出しを出すので、部分一致では2つに
+  // 当たる（段階65）。画面そのものの見出しを名指しする
+  await expect(
+    page.getByRole("heading", { name: "評価項目", exact: true })
+  ).toBeVisible({ timeout: 30_000 })
 
   // 戻っても資料本体が出る（項目の配列で上書きされていない）
   await openDetail()
