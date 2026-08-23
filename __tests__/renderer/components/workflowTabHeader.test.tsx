@@ -455,8 +455,8 @@ describe("WorkflowTabHeader の戻るが未保存を捨てないこと", () => {
     await userEvent.click(screen.getByRole("button", { name: "戻る" }))
 
     expect(screen.getByText("未保存のデータがあります")).toBeInTheDocument()
-    // 確認する前に履歴を動かさない。ガードは popstate を見ていないので、
-    // ここで router.back() を直に呼ぶと書きかけを黙って捨てる
+    // 確認する前に履歴を動かさない。ここで router.back() を直に呼ぶと、
+    // 移動してから確認する形（popstate の横取り）に頼ることになる
     expect(router.back).not.toHaveBeenCalled()
   })
 

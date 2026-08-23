@@ -171,10 +171,11 @@ interface UseNavigationHistoryResult {
  * Electron のセッション履歴を用いてブラウザ的な戻る/進む・履歴一覧を提供するフック。
  * 履歴状態は遷移（pathname 変化）ごとに再取得し、各エントリのラベルを非同期解決する。
  *
- * **移動は必ず未保存のガードを通す。** ガードが見張っているのは `GuardedLink` の
- * クリックと `beforeunload` だけで `popstate` は監視していないので、ここで
- * `router.back()` を直に呼ぶと書きかけを黙って捨てる。ここで包んでおけば、この
- * フックを使う画面はどれも確認を通る。
+ * **移動は必ず未保存のガードを通す。** ここで `router.back()` を直に呼ぶと書きかけを
+ * 黙って捨てる。包んでおけば、このフックを使う画面はどれも確認を通る。
+ *
+ * ガードは `popstate`（Alt+← ・マウスの第4/第5ボタン）も横取りするが、あちらは
+ * **移動が起きた後**に確認して引き戻す形になる。押す前に訊けるこちらを通す方が素直。
  */
 export function useNavigationHistory(): UseNavigationHistoryResult {
   const router = useRouter()
