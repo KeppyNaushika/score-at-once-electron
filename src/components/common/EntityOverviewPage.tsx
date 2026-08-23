@@ -1,7 +1,7 @@
 "use client"
 
 import type { Tag } from "@prisma/client"
-import { Check } from "lucide-react"
+import { Check, ChevronRight } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { EntityTagEditor } from "@/components/common/EntityTagEditor"
@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Progress } from "@/components/ui/progress"
 import { Textarea } from "@/components/ui/textarea"
 import { useEditingText } from "@/hooks/useEditingText"
+import { cn } from "@/lib/utils"
 import type { WorkflowPhaseGroup } from "@/lib/workflowTabs"
 
 /**
@@ -81,11 +81,38 @@ interface EntityOverviewPageProps {
   phases: readonly WorkflowPhaseGroup[]
   /**
    * 段が済んだか。**載っていない段は「判定できない」**（`null` と同じ）で、
-   * 完了％の分母からも外れる ——「済んでいない」ではないので 0% とは書かない。
+   * 「n/m 完了」の分母からも外れる ——「済んでいない」ではないので 0/1 とは書かない。
    */
   stepCompletion: Record<string, boolean | null>
   /** 右上に置く操作（メンバー・書き出し・削除）。無くてよい */
   actions?: ReactNode
+}
+
+/**
+ * 段ごとの「着手できるか」を導く。
+ *
+ * **前後関係の表を持たない。** 以前は段ごとに `dependsOn: ["02-template"]` を手で
+ * 書いていたが、`phases` の `stepIds` は**やる順そのもの**なので、同じ前後関係を
+ * 2度書いていたことになる。2度書けば段を挟んだときに片方だけ古くなるので、
+ * 「それより前の段が全部済んでいれば着手できる」と読み替えて並びから導く。
+ *
+ * **判定できない段（`null`）は後ろを堰き止めない。** 済んでいないと分かったわけでは
+ * ないので、それを理由に止めると材料の無い段（採点確定）より後ろが一生着手できない
+ * ことになる。止めるのは**済んでいないと分かっている段**だけ。
+ */
+function deriveStepCanStart(
+  phases: readonly WorkflowPhaseGroup[],
+  stepCompletion: Record<string, boolean | null>
+): Record<string, boolean> {
+  const canStartByStepId: Record<string, boolean> = {}
+  let blockedByEarlierStep = false
+  phases.forEach((phase) => {
+    phase.stepIds.forEach((stepId) => {
+      canStartByStepId[stepId] = !blockedByEarlierStep
+      if (stepCompletion[stepId] === false) blockedByEarlierStep = true
+    })
+  })
+  return canStartByStepId
 }
 
 function isSameBasics(
@@ -111,7 +138,12 @@ function isSameBasics(
  * ────────────────────────────
  * 模範解答 3 / 採点領域 42 / 設問 38 / 受験生徒 120 / 答案 118
  * ────────────────────────────
- * [準備 100% 開く] [採点 62% 開く] [確定 開く] [出力 開く]
+ * ┌ 準備          5/5 完了 ┐┌ 採点          1/2 完了 ┐┌ 出力      ┐
+ * │ [済] 模範解答画像の管理 ›││ [済] 生徒答案の追加…  ›││ 採点結果… ›│
+ * │ [済] 答案の採点領域作成 ›││ [未] 一括採点         ›││           │
+ * │ …                      ││ [未] 採点の割り当てと…›││           │
+ * │        完了            ││  [次へ: 一括採点]      ││           │
+ * └────────────────────────┘└────────────────────────┘└───────────┘
  * ```
  *
  * **モーダルを置かない。** 名前・日付・説明・タグは、別の窓を開いて保存して閉じる
@@ -154,6 +186,7 @@ export function EntityOverviewPage({
   actions,
 }: EntityOverviewPageProps) {
   const { textOf, remember, forgetField } = useEditingText()
+  const stepCanStart = deriveStepCanStart(phases, stepCompletion)
 
   /**
    * いま書くべき3つ。**入力中の文字を優先**し、`override` はそれより優先する
@@ -298,7 +331,7 @@ export function EntityOverviewPage({
         ))}
       </section>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {phases.map((phase) => (
           <WorkflowPhaseCard
             key={phase.title}
@@ -306,6 +339,7 @@ export function EntityOverviewPage({
             tabs={tabs}
             entityHref={entityHref}
             stepCompletion={stepCompletion}
+            stepCanStart={stepCanStart}
           />
         ))}
       </section>
@@ -318,84 +352,183 @@ interface WorkflowPhaseCardProps {
   tabs: readonly WorkflowTab[]
   entityHref: string
   stepCompletion: Record<string, boolean | null>
+  stepCanStart: Record<string, boolean>
+}
+
+/** 段の名前とアイコンの色。済み＝緑／着手できる＝青／まだ＝灰 */
+function stepTextColor(isCompleted: boolean | null, canStart: boolean): string {
+  if (isCompleted) return "text-green-600"
+  if (canStart) return "text-blue-600"
+  return "text-gray-400"
+}
+
+/** 段の行の下地。色の意味は {@link stepTextColor} と同じ */
+function stepRowBackground(
+  isCompleted: boolean | null,
+  canStart: boolean
+): string {
+  if (isCompleted) return "bg-green-50"
+  if (canStart) return "bg-blue-50"
+  return "bg-gray-50"
 }
 
 /**
- * 段カード1枚。
+ * 段カード1枚。まとまりの見出しの下に、**段が1行ずつ並ぶ**。
  *
- * 完了％の分母は**判定できる段だけ**。出力や採点確定のように材料が無い段しか
- * 無いまとまりでは％を出さず、「開く」だけを置く（0% と書くと、何度でもやってよい
- * 出力が「まだやっていない」ことになる）。
+ * **行そのものがリンク。** 別に「開く」ボタンを置くと、同じ行き先への口が1枚の
+ * カードに2つ出て、しかもボタンの側は行き先を名前で言わない（どの段が開くのか
+ * 読めない）。進行中のまとまりにだけ「次へ: 〈段の名前〉」を足す ——これは
+ * 「どこから手を付けるか」を名指しするもので、行の複製ではない。
+ *
+ * **数えるのは判定できる段だけ**（`2/5 完了`）。出力のように材料が無い段しか
+ * 無いまとまりでは数そのものを出さない（`0/1` と書くと、何度でもやってよい出力が
+ * 「まだやっていない」ことになる）。％にはしない —— 5段のうち2段と言う方が、
+ * 40% と言うより残りが見える。
  */
 function WorkflowPhaseCard({
   phase,
   tabs,
   entityHref,
   stepCompletion,
+  stepCanStart,
 }: WorkflowPhaseCardProps) {
   const steps = phase.stepIds.flatMap((stepId) => {
     const tab = tabs.find((workflowTab) => workflowTab.id === stepId)
-    return tab ? [{ tab, isCompleted: stepCompletion[stepId] ?? null }] : []
+    if (!tab) return []
+    return [
+      {
+        tab,
+        isCompleted: stepCompletion[stepId] ?? null,
+        canStart: stepCanStart[stepId] ?? true,
+      },
+    ]
   })
 
   const measurableSteps = steps.filter((step) => step.isCompleted !== null)
   const completedCount = measurableSteps.filter(
-    (step) => step.isCompleted
+    (step) => step.isCompleted === true
   ).length
-  const percentage =
-    measurableSteps.length > 0
-      ? Math.round((completedCount / measurableSteps.length) * 100)
-      : null
 
-  // 「開く」の行き先は、まだ済んでいない最初の段。全部済んでいれば先頭へ戻す
-  const openStep = steps.find((step) => step.isCompleted !== true) ?? steps[0]
+  /**
+   * 済んだと言えるのは、判定できる段が在って、それが全部済んだとき。
+   * 判定できる段が1つも無いまとまり（出力）は「済み」という状態を持たない。
+   */
+  const isCompleted =
+    measurableSteps.length > 0 && completedCount === measurableSteps.length
+  /** 先頭の段に手を付けられるなら、このまとまりに手を付けられる */
+  const canStart = steps[0]?.canStart ?? true
+  const isActive = canStart && !isCompleted
+  const nextStep = steps.find(
+    (step) => step.isCompleted !== true && step.canStart
+  )
+  const PhaseIcon = phase.icon
 
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-baseline justify-between text-base">
-          <span>{phase.title}</span>
-          {percentage !== null && (
-            <span className="text-sm font-semibold text-muted-foreground">
-              {percentage}%
-            </span>
+    <Card
+      className={cn(
+        "h-full transition-all",
+        isActive
+          ? "border-blue-300 shadow-lg"
+          : isCompleted
+            ? "border-green-300"
+            : "border-gray-200"
+      )}
+    >
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <PhaseIcon className="h-6 w-6 shrink-0 text-gray-500" aria-hidden />
+            <div>
+              <h3 className="text-lg font-semibold">{phase.title}</h3>
+              <p className="text-sm font-normal text-gray-600">
+                {phase.description}
+              </p>
+            </div>
+          </div>
+          {measurableSteps.length > 0 && (
+            <div className="shrink-0 text-sm font-semibold text-gray-600">
+              {completedCount}/{measurableSteps.length} 完了
+            </div>
           )}
         </CardTitle>
-        {percentage !== null && <Progress value={percentage} className="h-2" />}
       </CardHeader>
-      <CardContent className="space-y-2">
-        <ul className="space-y-1">
-          {steps.map((step) => (
-            <li key={step.tab.id}>
+
+      <CardContent>
+        <div className="space-y-2">
+          {steps.map((step) => {
+            const StepIcon = step.tab.icon
+            return (
               <GuardedLink
+                key={step.tab.id}
                 href={entityHref + step.tab.path}
-                className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-accent"
+                className={cn(
+                  "block rounded-lg p-3 transition-all hover:shadow-sm",
+                  stepRowBackground(step.isCompleted, step.canStart)
+                )}
               >
-                <span
-                  className={
-                    step.isCompleted
-                      ? "text-green-600"
-                      : "text-muted-foreground"
-                  }
-                  aria-hidden
-                >
-                  {step.isCompleted ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <span className="inline-block h-4 w-4 text-center">・</span>
-                  )}
-                </span>
-                <span className="truncate">{step.tab.title}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-1 items-center gap-3">
+                    <div
+                      className={stepTextColor(step.isCompleted, step.canStart)}
+                      aria-hidden
+                    >
+                      {step.isCompleted ? (
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                          <Check className="h-3 w-3 text-white" />
+                        </div>
+                      ) : (
+                        <StepIcon className="h-4 w-4" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h4
+                        className={cn(
+                          "text-sm font-medium",
+                          stepTextColor(step.isCompleted, step.canStart)
+                        )}
+                      >
+                        {step.tab.title}
+                      </h4>
+                      <p className="mt-1 text-xs text-gray-600">
+                        {step.tab.description}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight
+                    className="ml-2 h-4 w-4 shrink-0 text-gray-400"
+                    aria-hidden
+                  />
+                </div>
               </GuardedLink>
-            </li>
-          ))}
-        </ul>
-        {openStep && (
-          <Button size="sm" className="w-full" asChild>
-            <GuardedLink href={entityHref + openStep.tab.path}>
-              開く
-            </GuardedLink>
-          </Button>
+            )
+          })}
+        </div>
+
+        {isActive && nextStep && (
+          <div className="mt-4 border-t pt-4">
+            <Button className="w-full" size="sm" asChild>
+              <GuardedLink href={entityHref + nextStep.tab.path}>
+                次へ: {nextStep.tab.title}
+              </GuardedLink>
+            </Button>
+          </div>
+        )}
+
+        {isCompleted && (
+          <div className="mt-4 border-t pt-4">
+            <p className="flex items-center justify-center gap-1 text-center text-sm font-medium text-green-600">
+              <Check className="h-4 w-4" aria-hidden />
+              完了
+            </p>
+          </div>
+        )}
+
+        {!isActive && !isCompleted && !canStart && (
+          <div className="mt-4 border-t pt-4">
+            <p className="text-center text-sm font-medium text-gray-500">
+              前の段の完了を待機中
+            </p>
+          </div>
         )}
       </CardContent>
     </Card>

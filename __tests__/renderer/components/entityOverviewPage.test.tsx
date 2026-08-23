@@ -6,9 +6,12 @@
  *
  * 1. **その場編集が書きに行くこと。** 名前・日付・説明は**1打鍵ごとに即時**に書き、
  *    値が変わっていなければ書かない。名前を消し切った途中でも書かない
- * 2. **段カードの名前と行き先が `workflowTabs` から来ること**（概要に写しを持たない）
- * 3. **進み具合の出し方。** 判定できる段だけを分母にし、材料が無いまとまり
- *    （採点確定・出力）には％を出さない ——「開く」だけを置く
+ * 2. **段カードの名前・説明・行き先が `workflowTabs` から来ること**
+ *    （概要に写しを持たない）。**段の行そのものがリンク**で、別口の「開く」は無い
+ * 3. **進み具合の出し方。** 判定できる段だけを分母に `n/m 完了` と数で出し、
+ *    材料が無いまとまり（出力）には数そのものを出さない。％も進捗バーも置かない
+ * 4. **まとまりの状態。** 進行中なら「次へ: 〈段の名前〉」、済んだなら「完了」、
+ *    前が済んでいないなら「前の段の完了を待機中」
  *
  * ## 共通のレンダラ用セットアップを読み込んでいない理由
  *
@@ -68,6 +71,19 @@ const STEP_COMPLETION: Record<string, boolean | null> = {
   "05-students": false,
   "06-student-answers": false,
   "07-score-at-once": false,
+  "08-finalize": null,
+  "09-export": null,
+}
+
+/** 判定できる段が全部済んだところ（採点確定と出力は元から判定できない） */
+const ALL_MEASURABLE_DONE: Record<string, boolean | null> = {
+  "01-upload": true,
+  "02-template": true,
+  "03-region-info": true,
+  "04-question-group": true,
+  "05-students": true,
+  "06-student-answers": true,
+  "07-score-at-once": true,
   "08-finalize": null,
   "09-export": null,
 }
@@ -185,50 +201,119 @@ describe("その場編集", () => {
 })
 
 describe("段カード", () => {
-  it("段の名前は workflowTabs の title から出す（概要に写しを持たない）", () => {
+  it("段の名前と説明は workflowTabs から出す（概要に写しを持たない）", () => {
     renderOverview()
     const preparation = phaseCard("準備")
 
     // 「1. 模範解答」（タブの短い名前）ではなく長い名前
     expect(within(preparation).getByText("模範解答画像の管理")).toBeVisible()
     expect(within(preparation).getByText("受験生徒の管理")).toBeVisible()
+    // その段が何をする所かの一文も、名前と同じ一覧から来る
+    expect(
+      within(preparation).getByText("試験問題の模範解答画像を取り込む")
+    ).toBeVisible()
   })
 
-  it("行き先は実体のURLに段の path を継ぐ", () => {
+  it("段の行そのものがリンクで、行き先は実体のURLに段の path を継ぐ", () => {
     renderOverview()
     const preparation = phaseCard("準備")
 
+    // 名前も説明も同じ1本のリンクの中にある（行のどこを押しても段が開く）
+    const uploadRow = within(preparation)
+      .getByText("模範解答画像の管理")
+      .closest("a")
+    expect(uploadRow).toHaveAttribute("href", "/exams/exam-1/01-upload")
+    expect(uploadRow).toHaveTextContent("試験問題の模範解答画像を取り込む")
+
+    // 準備の5段が5本のリンクとして並ぶ（1段1行）
     expect(
-      within(preparation).getByText("模範解答画像の管理").closest("a")
-    ).toHaveAttribute("href", "/exams/exam-1/01-upload")
-    // 「開く」はまだ済んでいない最初の段へ
-    expect(within(preparation).getByText("開く").closest("a")).toHaveAttribute(
+      within(preparation)
+        .getAllByRole("link")
+        .map((link) => link.getAttribute("href"))
+    ).toEqual([
+      "/exams/exam-1/01-upload",
+      "/exams/exam-1/02-template",
+      "/exams/exam-1/03-region-info",
+      "/exams/exam-1/04-question-group",
+      "/exams/exam-1/05-students",
+      // 最後の1本は「次へ」（下の検査で名指しを確かめる）
+      "/exams/exam-1/03-region-info",
+    ])
+  })
+
+  it("進行中のまとまりは「次へ: 〈段の名前〉」で手を付ける先を名指しする", () => {
+    renderOverview()
+    const nextButton = within(phaseCard("準備")).getByText(
+      "次へ: 採点領域の詳細情報設定"
+    )
+
+    // まだ済んでいない最初の段（01・02 は済み）へ
+    expect(nextButton.closest("a")).toHaveAttribute(
       "href",
       "/exams/exam-1/03-region-info"
     )
   })
 
-  it("判定できる段だけを分母にして％を出す", () => {
+  it("行き先を名指ししない「開く」ボタンは置かない", () => {
     renderOverview()
-    // 準備は5段のうち2段
-    expect(within(phaseCard("準備")).getByText("40%")).toBeVisible()
+    expect(screen.queryByText("開く")).toBeNull()
   })
 
-  it("採点確定は段として並び、％は出さない（材料が無い）", () => {
+  it("判定できる段だけを分母にして数で出す（％も進捗バーも出さない）", () => {
     renderOverview()
-    const finalize = phaseCard("確定")
+    const preparation = phaseCard("準備")
 
-    expect(within(finalize).getByText("採点の割り当てと確定")).toBeVisible()
-    expect(within(finalize).getByText("開く").closest("a")).toHaveAttribute(
-      "href",
-      "/exams/exam-1/08-finalize"
-    )
-    expect(within(finalize).queryByText(/%$/)).toBeNull()
+    // 準備は5段のうち2段。％ではなく数で言う（残りが何段か読める）
+    expect(within(preparation).getByText("2/5 完了")).toBeVisible()
+    expect(within(preparation).queryByText(/%/)).toBeNull()
+    expect(screen.queryByRole("progressbar")).toBeNull()
   })
 
-  it("出力にも％を出さない（何度でも出せるので済みが無い）", () => {
+  it("採点確定は採点のまとまりに並び、数の分母には入らない（材料が無い）", () => {
     renderOverview()
-    expect(within(phaseCard("出力")).queryByText(/%$/)).toBeNull()
+    // 確定だけのカードは無い（確定は採点の一部）
+    expect(screen.queryByText("確定")).toBeNull()
+
+    const scoring = phaseCard("採点")
+    expect(
+      within(scoring).getByText("採点の割り当てと確定").closest("a")
+    ).toHaveAttribute("href", "/exams/exam-1/08-finalize")
+    // 3段並ぶが、数えるのは判定できる2段だけ
+    expect(within(scoring).getByText("0/2 完了")).toBeVisible()
+  })
+
+  it("出力には数そのものを出さない（何度でも出せるので済みが無い）", () => {
+    renderOverview()
+    const output = phaseCard("出力")
+
+    expect(within(output).getByText("採点結果のファイル出力")).toBeVisible()
+    expect(within(output).queryByText(/^\d+\/\d+ 完了$/)).toBeNull()
+  })
+
+  it("前の段が済んでいないまとまりは待機中と言う（「次へ」を出さない）", () => {
+    renderOverview()
+    const scoring = phaseCard("採点")
+
+    // 03-region-info が済んでいないので、採点はまだ手を付けられない
+    expect(within(scoring).getByText("前の段の完了を待機中")).toBeVisible()
+    expect(within(scoring).queryByText(/^次へ: /)).toBeNull()
+  })
+
+  it("判定できる段が全部済んだまとまりは「完了」と言う", () => {
+    renderOverview({ stepCompletion: ALL_MEASURABLE_DONE })
+    const preparation = phaseCard("準備")
+
+    expect(within(preparation).getByText("5/5 完了")).toBeVisible()
+    // 見出しの数とは別に、まとまりの足元でも済んだことを言う
+    expect(within(preparation).getByText("完了")).toBeVisible()
+    expect(within(preparation).queryByText(/^次へ: /)).toBeNull()
+
+    // 判定できる段が済めば、その先のまとまりは待機中でなくなる
+    const output = phaseCard("出力")
+    expect(within(output).queryByText("前の段の完了を待機中")).toBeNull()
+    expect(
+      within(output).getByText("次へ: 採点結果のファイル出力").closest("a")
+    ).toHaveAttribute("href", "/exams/exam-1/09-export")
   })
 })
 

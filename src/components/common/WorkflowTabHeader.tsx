@@ -1,6 +1,6 @@
 "use client"
 
-import { List } from "lucide-react"
+import { List, type LucideIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
 
 import { GuardedLink } from "@/components/common/GuardedLink"
@@ -18,6 +18,11 @@ import { cn } from "@/lib/utils"
  * **短い名前と長い名前の両方を持つ。** タブは9枚並ぶので `label` は詰めるが
  * （「1. 模範解答」）、見出しと「次へ」は何をする画面かを言い切る必要がある
  * （「模範解答画像の管理」）。同じ段を2つの長さで呼ぶので、両方をここに置く。
+ *
+ * **一文の説明とアイコンもここに持つ。** 概要の段カードは名前だけでなく
+ * 「その段が何をする所か」とアイコンを出す。段について言えることは名前・行き先と
+ * 同じ1か所に置く —— 概要の側に写しの表を作ると、タブと概要で同じ段が違う言葉で
+ * 呼ばれる（写しは黙ってずれる）。
  */
 export interface WorkflowTab {
   id: string
@@ -25,6 +30,14 @@ export interface WorkflowTab {
   label: string
   /** 見出しと「次へ」に出す長い名前（「模範解答画像の管理」） */
   title: string
+  /** 概要の段カードに添える一文（「試験問題の模範解答画像を取り込む」） */
+  description: string
+  /**
+   * 概要の段カードの行頭に出すアイコン。
+   * **名前の文字列ではなく部品そのもの**を持つ（文字列にすると引く側が
+   * `{ FileImage, Settings, … }` という2つ目の表を持つことになる）。
+   */
+  icon: LucideIcon
   path: string
 }
 

@@ -26,6 +26,7 @@ import {
   within,
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { LayoutDashboard, Upload, Users } from "lucide-react"
 import type { ComponentProps, ReactNode } from "react"
 import { useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -204,17 +205,28 @@ describe("WorkflowTabHeader の現在地", () => {
     // `/05-students` は `/05-students-import` の先頭に丸ごと含まれる。
     // 長い方を開いたとき、部分一致だと短い方まで当たって2枚光る
     const overlappingTabs: readonly WorkflowTab[] = [
-      { id: "detail", label: "概要", title: "概要", path: "" },
+      {
+        id: "detail",
+        label: "概要",
+        title: "概要",
+        description: "名前・日付・タグと、段の進み具合",
+        icon: LayoutDashboard,
+        path: "",
+      },
       {
         id: "05-students",
         label: "1. 生徒管理",
         title: "生徒の登録",
+        description: "対象になる生徒を決める",
+        icon: Users,
         path: "/05-students",
       },
       {
         id: "05-students-import",
         label: "2. 生徒取り込み",
         title: "生徒の取り込み",
+        description: "名簿から生徒を取り込む",
+        icon: Upload,
         path: "/05-students-import",
       },
     ]
