@@ -1311,15 +1311,16 @@ Chromium が色パネルの操作中に `change` を何回出すかは実機で�
 > 一度学んだはずのものを、同じ画面の別の場所で踏んだ。**行・列・マスの同定は id。**
 
 **一意でない列で索引を張った（1件）** — マスの状態を `小計id → 割り当ての行` の
-`Map` で持った。`CropSubtotal` に `(cropRegionId, subtotalId, assignmentType)` の
-unique がいま無いため、同期のマージで2行残りうる。索引が2行目を握り潰すので、
+`Map` で持った。当時 `CropSubtotal` に `(cropRegionId, subtotalId, assignmentType)` の
+unique が無かったため、同期のマージで2行残りうる。索引が2行目を握り潰すので、
 チェックを外しても外れないマスができていた。
 
-> 無いのは規約が禁じているからではない（規約は「uuid 以外を unique にしない」で、この
+> 無いのは規約が禁じているからではなかった（規約は「uuid 以外を unique にしない」で、この
 > 3列は uuid 2つと固定値の区分）。張れば同期のマージが LWW で1行へ畳み、`CropSubtotal`
 > は子を持たないので
 > [sync-secondary-unique-hazard.md](./sync-secondary-unique-hazard.md) §3 の詰まりにも
-> 当たらない。実際に張るかどうかは**段階30** で判断する。
+> 当たらない。**段階30 で張った**（`20260823120000_subtotal_uniques_by_uuid`）ので、
+> いまは2行残らない。
 
 **索引そのものが要らなかった。** 行は `cropRegion.cropSubtotals` に実体で来ており、
 マスを描く時点で手元にある。`Map` を捨てて直に読む形にすると、一意性の仮定も

@@ -3,9 +3,12 @@
  *
  * 得点（computeSubtotalScore）と満点（computeMaxScoreFromPayload）は、以前それぞれが
  * 「この小計に割り当てられた、この試験の設問領域」を別々に実装しており、得点側だけが
- * 重複を畳んでいた。CropSubtotal には (subtotalId, cropRegionId, assignmentType) の
- * unique が無く同期のマージで割り当てが2行残りうるため、満点だけが二重に計上され、
- * 満点が2倍＝得点率が半分になって成績ラベルが静かに1段下がっていた。
+ * 重複を畳んでいた。満点だけが二重に計上され、満点が2倍＝得点率が半分になって
+ * 成績ラベルが静かに1段下がっていた。
+ *
+ * 重複が来るのは、小計点グループの中の複数の小計に同じ設問が割り当てられるため
+ * （グループ内は OR なので1回だけ数える）。1つの小計の中では
+ * CropSubtotal(cropRegionId, subtotalId, assignmentType) の unique が2行目を止める。
  *
  * 両者が同じヘルパーを通ることを、ここで固定する。
  */
@@ -63,7 +66,7 @@ describe("selectExamCropRegions", () => {
 })
 
 describe("満点と得点が同じ割り当て集合を見る", () => {
-  /** 同じ (小計, 設問) の割り当てが2行ある状態（同期マージ後に起こりうる） */
+  /** 同じ設問がグループ内の2つの小計に割り当てられ、束ねて渡された状態 */
   const duplicatedAssignments = [
     questionAssignment("q1", EXAM_ID, 10),
     questionAssignment("q1", EXAM_ID, 10),

@@ -270,6 +270,14 @@ model SubtotalGroup {
   tagSubtotalGroups  TagSubtotalGroup[]
 }
 
+/// 小計点グループの中の1項目。
+///
+/// **`(subtotalGroupId, name)` の `@@unique` は 2026-08-23 に外した**
+/// （`20260823120000_subtotal_uniques_by_uuid`）。名前は人が自由に打ち、改名もできるので、
+/// 2端末が別々の小計を同じ名前にすると同期が LWW で1行へ畳む。`Subtotal` は子
+/// （`CropSubtotal`＝04 で設定した設問の割り当て・`GradeDataSource`）を持つので、
+/// 畳まれると**2つの小計が1つに潰れ、負けた小計の割り当てが勝者へ移る**。
+/// 「同じものを2回作った」のか「別のものが偶然ぶつかった」のかで言えば後者である。
 model Subtotal {
   id               String            @id @default(uuid())
   name             String
@@ -280,10 +288,19 @@ model Subtotal {
   cropSubtotals    CropSubtotal[]
   subtotalGroup    SubtotalGroup     @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   gradeDataSources GradeDataSource[]
-
-  @@unique([subtotalGroupId, name], map: "sqlite_autoindex_Subtotal_2")
 }
 
+/// 採点領域と小計の紐付け（04 の割り当てマトリクスのマス1つ）。
+///
+/// **`(cropRegionId, subtotalId, assignmentType)` は 2026-08-23 に `@@unique` を張った**
+/// （`20260823120000_subtotal_uniques_by_uuid`）。鍵は uuid 2つと閉じた語彙の区分
+/// （`QUESTION_ASSIGNMENT` / `SUBTOTAL_DEFINITION`）なので、2端末が同じ値を作るのは
+/// 「同じマスに2人がチェックを入れた」＝**同じものを2回作った**ときだけで、畳むのが正しい。
+/// `CropSubtotal` は子を持たないので、敗者の子が消える／勝者の端末が外部キー違反で詰まる
+/// （docs/sync-secondary-unique-hazard.md §3）にも当たらない。
+///
+/// 張るまでは同じマスの行が2つ残りえたので、読む側が毎回畳んでいた（畳み忘れると配点が
+/// 二重に計上される）。
 model CropSubtotal {
   id             String     @id @default(uuid())
   cropRegionId   String
@@ -293,6 +310,8 @@ model CropSubtotal {
   updatedAt      DateTime   @default(now()) @updatedAt
   cropRegion     CropRegion @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   subtotal       Subtotal   @relation(fields: [subtotalId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([cropRegionId, subtotalId, assignmentType])
 }
 
 model UserExam {
@@ -1433,6 +1452,16 @@ model CourseworkScore {
 }
 
 /// 文字評価→点数の変換表（評価項目単位。例: A=100, B=80, C=60）
+///
+/// **`(courseworkItemId, label)` の `@@unique` は 2026-08-23 に外した**
+/// （`20260823120000_subtotal_uniques_by_uuid`）。評語は1行ずつ人が打ち、「行を追加」は
+/// `["A"…"F"]` の未使用の先頭を取るので、刻みがまだ無い評価項目で2人が同時に押すと
+/// **2人とも `"A"` を選ぶ**。A=100 と A=90 という別の刻みなのに同値になるので、畳むのは
+/// 「別のものが偶然ぶつかった」側である。畳まれると負けた刻みのラベルを持つ点数
+/// （`CourseworkScore.letterValue` は FK でない素の文字列なので付け替わらない）が換算先を
+/// 失って欠測になり、**画面上は何も起きていないように見える**。
+/// 外してあれば同じ `"A"` が2行並び、変換表の画面で教員が直せる。
+/// 同じ端末の中での重複は `LetterScaleEditor` が止めている。
 model CourseworkLetterScale {
   id               String   @id @default(uuid())
   courseworkItemId String
@@ -1444,7 +1473,6 @@ model CourseworkLetterScale {
 
   item CourseworkItem @relation(fields: [courseworkItemId], references: [id], onDelete: Cascade)
 
-  @@unique([courseworkItemId, label])
   @@index([courseworkItemId])
 }
 

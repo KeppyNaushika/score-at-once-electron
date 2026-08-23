@@ -304,14 +304,7 @@ export async function executeIdIntegrationImport(
         await processCompoundAnswers(data, idMappings, policy, tx)
 
         // 11. CropSubtotal
-        await processCropSubtotals(
-          data,
-          isExamIdMatch,
-          idMappings,
-          warnings,
-          policy,
-          tx
-        )
+        await processCropSubtotals(data, idMappings, warnings, policy, tx)
 
         // 12. QuestionScore（(設問, 受験者, 採点者) の3つ組で行を引く）
         warnings.push(

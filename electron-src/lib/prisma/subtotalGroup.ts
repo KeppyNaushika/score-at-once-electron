@@ -101,11 +101,10 @@ export async function createSubtotalGroup(data: {
  * その小計を参照する成績のデータソース（`GradeDataSource`）である。割り当て直しても
  * id が変わっているので元には戻らない。同期にも毎回 tombstone と新しい id が流れていた。
  *
- * **突き合わせは id で行う。** `Subtotal` は `@@unique([subtotalGroupId, name])` を
- * 持つが、名前で突き合わせると「並べ替えと改名が同時に来たとき」に別物として扱って
- * しまう。**新しい項目の id は受け取らない**（画面側が新しい行に持たせているのは
- * 並べ替えと React の key に使う値で、DB の行を指す id ではない）。作る行の id は
- * schema の `@default(uuid())` が振る。
+ * **突き合わせは id で行う。** 名前で突き合わせると「並べ替えと改名が同時に来たとき」に
+ * 別物として扱ってしまう。**新しい項目の id は受け取らない**（画面側が新しい行に
+ * 持たせているのは並べ替えと React の key に使う値で、DB の行を指す id ではない）。
+ * 作る行の id は schema の `@default(uuid())` が振る。
  *
  * **触った行が1つも無ければ何も書かない。** 書けば同期には「その行が変わった」として
  * 流れ、相手の端末の編集を巻き添えにする。
@@ -165,10 +164,9 @@ export async function updateSubtotalGroup(
         (subtotal) => !keptSubtotalIds.has(subtotal.id)
       )
 
-      // 消す・変える・作るの順で書く。名前は `@@unique` なので、消した項目が
-      // 名乗っていた名前を同じ保存の中で別の項目が名乗れるようにこの順にする
-      // （2つの項目が名前を入れ替えるときだけは中間で重複するため保存が通らない。
-      // その場合は1つずつ保存し直してもらう）
+      // 消す・変える・作るの順で書く。消えた行を参照したまま更新しないための順序で
+      // あって、名前の重複を避けるためではない（`(subtotalGroupId, name)` の unique は
+      // 2026-08-23 に外したので、2つの項目が名前を互いに入れ替える保存も通る）
       if (removedSubtotals.length > 0) {
         await tx.subtotal.deleteMany({
           where: {

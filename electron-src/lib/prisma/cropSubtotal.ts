@@ -51,6 +51,11 @@ const cropSubtotalForScoringInclude = {
  * かつては「その領域の紐付けを全消し → 作り直し」の2本で1マスの変更を表して
  * いた。マス1つを消しただけで全ての紐付けが一度 DB から消えるので、途中で
  * 落ちれば全滅し、同時に触れば互いの結果を消し合っていた。
+ *
+ * **書き込みは `upsert`。** `(cropRegionId, subtotalId, assignmentType)` は unique
+ * なので、既にその紐付けが在る状態で create すると失敗する。同じマスに2人が同時に
+ * チェックを入れるのは「同じことを2回言った」だけで、望んだ状態（そのマスに紐付けが
+ * 在る）は既に成立している。そこで失敗を返すのは誤りなので、在れば何も書かない。
  */
 export const createCropSubtotal = async (
   data: Prisma.CropSubtotalUncheckedCreateInput
@@ -93,7 +98,17 @@ export const createCropSubtotal = async (
     )
   }
 
-  return prisma.cropSubtotal.create({ data })
+  return prisma.cropSubtotal.upsert({
+    where: {
+      cropRegionId_subtotalId_assignmentType: {
+        cropRegionId: data.cropRegionId,
+        subtotalId: data.subtotalId,
+        assignmentType: data.assignmentType,
+      },
+    },
+    create: data,
+    update: {},
+  })
 }
 
 /**

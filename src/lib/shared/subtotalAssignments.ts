@@ -23,14 +23,14 @@ interface AssignedCropRegionRef {
 /**
  * 割り当て行から、当該試験の設問領域だけを重複なく取り出す。
  *
- * CropSubtotal には (subtotalId, cropRegionId, assignmentType) の unique がいま無く、
- * 同期のマージで同じ割り当てが2行残りうる。畳まないと配点が二重に計上される。
+ * **畳むのは、小計点グループの中の複数の小計に同じ設問が割り当てられるため。**
+ * グループ内は OR（どれかに割り当たっていれば1回数える）なので、複数の小計の
+ * 割り当てを束ねて渡す呼び出し（computeCropRegionSubtotalScore）では同じ設問領域が
+ * 何度も現れる。畳まないと配点が二重に計上される。
  *
- * 無いのは規約が禁じているからではない。規約は「uuid 以外を unique にしない」で、
- * この3列は uuid 2つと固定値の区分なので張ること自体は規約に反しない（張れば同期の
- * マージが LWW で1行へ畳む）。CropSubtotal は子を持たないので
- * docs/sync-secondary-unique-hazard.md §3 の詰まりにも当たらない。実際に張るかどうかは
- * 段階30 で判断する。
+ * 1つの小計の割り当てだけを渡す呼び出しでは、そもそも重複しない
+ * （CropSubtotal は 2026-08-23 に `(cropRegionId, subtotalId, assignmentType)` の
+ * unique を張ったので、同じ小計に同じ設問が2行付くことは無い）。
  *
  * 呼び出し側の cropRegion 型をそのまま返す（型引数で受けて返すため、配点や種別を
  * 持つ側は落とさずに受け取れる）。

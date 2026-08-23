@@ -301,8 +301,8 @@ export interface ArchiveGradeExamRef {
 
 /**
  * 参照している小計の同定情報。
- * 小計名は `@@unique([subtotalGroupId, name])` でグループ内でしか一意でないため、
- * 名前で当てるときは必ず所属試験で絞る。
+ * 小計名はどこでも一意でない（グループ内の unique も 2026-08-23 に外した）ため、
+ * 名前で当てるときは必ず所属試験で絞り、それでも複数当たったらいちばん古い行を採る。
  */
 export interface ArchiveGradeSubtotalRef {
   id: string

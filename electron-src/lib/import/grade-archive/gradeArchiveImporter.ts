@@ -312,7 +312,8 @@ export async function importGradeArchive(
       )
 
       // 小計・採点領域は uuid 一次、当該試験内の名前・ラベル二次。
-      // 小計名はグループ内、領域ラベルは試験内でしか一意でないので必ず試験で絞る
+      // 名前は試験の中でも一意ではない（小計名の `@@unique` は 2026-08-23 に外した）ので、
+      // 名前で当たったのが複数なら、いちばん古い行を採って件数を伝える
       const subtotalIdMap: IdMap = new Map()
       for (const subtotalRef of data.subtotalRefs) {
         const byId = await tx.subtotal.findUnique({
@@ -324,13 +325,21 @@ export async function importGradeArchive(
         }
         const examId = examIdMap.get(subtotalRef.examId)
         if (!examId) continue
-        const byName = await tx.subtotal.findFirst({
+        const sameNameSubtotals = await tx.subtotal.findMany({
           where: {
             name: subtotalRef.name,
             subtotalGroup: { examSubtotalGroups: { some: { examId } } },
           },
         })
-        if (byName) subtotalIdMap.set(subtotalRef.id, byName.id)
+        const byName = pickOldest(sameNameSubtotals)
+        if (!byName) continue
+        subtotalIdMap.set(subtotalRef.id, byName.id)
+        const ambiguity = describeAmbiguity(
+          `小計「${subtotalRef.name}」`,
+          sameNameSubtotals.length,
+          `作成 ${byName.createdAt.toISOString().slice(0, 10)}`
+        )
+        if (ambiguity) warnings.push(ambiguity)
       }
 
       const cropRegionIdMap: IdMap = new Map()

@@ -32,7 +32,7 @@ export interface MaxScorePayloadSource {
   } | null
   subtotal?: {
     cropSubtotals: Array<{
-      // id は重複割り当てを畳むために要る（CropSubtotal に unique が無い）
+      // id はグループ内の複数の小計に同じ設問が割り当たったときに畳むために要る
       cropRegion: {
         id: string
         points: number | null

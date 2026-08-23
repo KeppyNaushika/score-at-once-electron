@@ -8,6 +8,7 @@
 import * as crypto from "crypto"
 
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
+import { describeAmbiguity, pickOldest } from "../humanKeyMatching"
 import type { ImportValuePolicy } from "./importValuePolicy"
 import { replacementUpdatedAt } from "./importValuePolicy"
 import type { IdMappings, PrismaTransaction } from "./types"
@@ -55,9 +56,23 @@ export async function processSubtotals(
     }
 
     // 3. マッピング未設定（デフォルト動作: 従来の名前ベース自動マッチ）
-    const existing = await tx.subtotal.findFirst({
+    //
+    // 小計名は 2026-08-23 に `@@unique([subtotalGroupId, name])` を外した
+    // （`20260823120000_subtotal_uniques_by_uuid`）ので、同じグループに同名が2つ
+    // 並びうる。どれに結び付けるかは名前からは決まらないので、いちばん古い行を採り、
+    // 候補が2件以上あったことは必ず伝える（humanKeyMatching の決まりに従う）。
+    const sameNameSubtotals = await tx.subtotal.findMany({
       where: { subtotalGroupId: newGroupId, name: subtotal.name },
     })
+    const existing = pickOldest(sameNameSubtotals)
+    if (existing) {
+      const ambiguity = describeAmbiguity(
+        `小計「${subtotal.name}」`,
+        sameNameSubtotals.length,
+        `作成 ${existing.createdAt.toISOString().slice(0, 10)}`
+      )
+      if (ambiguity) warnings.push(ambiguity)
+    }
 
     const existingSubtotal =
       existing ?? (await tx.subtotal.findUnique({ where: { id: subtotal.id } }))
@@ -107,7 +122,11 @@ export async function processSubtotals(
 }
 
 /**
- * 小計項目を新規作成（名前重複時はサフィックス付き）
+ * 小計項目を新規作成（名前重複時はサフィックス付き）。
+ *
+ * 名前をずらすのは、取り込みが「同名＝同一」と決めていないことを利用者が画面の上で
+ * 見分けられるようにするためで、制約を満たすためではない（`(subtotalGroupId, name)` の
+ * unique は 2026-08-23 に外した）。有無を見るだけなので findFirst でよい。
  */
 async function createNewSubtotal(
   subtotal: ExtractedArchiveData["subtotalsData"]["subtotals"][0],
@@ -153,9 +172,19 @@ async function createNewSubtotal(
   idMappings.subtotal[subtotal.id] = newId
 }
 
+/**
+ * 設問-小計の紐付けを取り込む。
+ *
+ * **突き合わせは `(cropRegionId, subtotalId, assignmentType)`。** この組は unique なので
+ * （`20260823120000_subtotal_uniques_by_uuid`）、同じ組の行を作ろうとすれば必ず失敗する。
+ * 同じ試験へ取り込むときの既存はもちろん、**アーカイブ自身が同じ組を2行持っている場合**
+ * （制約を張る前の DB を同期した端末で書き出したもの）もここで1行へ落とす。
+ *
+ * id で引くより先に組で引くのは、行の同一性が組の側にあるため。同じ組の行が既に在れば、
+ * それがこの割り当てであって、id が違っても別の事実ではない。
+ */
 export async function processCropSubtotals(
   data: ExtractedArchiveData,
-  isExamIdMatch: boolean,
   idMappings: IdMappings,
   warnings: string[],
   policy: ImportValuePolicy,
@@ -167,14 +196,18 @@ export async function processCropSubtotals(
     const newRegionId = idMappings.cropRegion[cropSubtotal.cropRegionId]
     const newSubtotalId = idMappings.subtotal[cropSubtotal.subtotalId]
     if (newRegionId && newSubtotalId) {
-      if (isExamIdMatch) {
-        const existing = await tx.cropSubtotal.findFirst({
-          where: { cropRegionId: newRegionId, subtotalId: newSubtotalId },
-        })
-        if (existing) {
-          idMappings.cropSubtotal[cropSubtotal.id] = existing.id
-          continue
-        }
+      const existingByAssignment = await tx.cropSubtotal.findUnique({
+        where: {
+          cropRegionId_subtotalId_assignmentType: {
+            cropRegionId: newRegionId,
+            subtotalId: newSubtotalId,
+            assignmentType: cropSubtotal.assignmentType,
+          },
+        },
+      })
+      if (existingByAssignment) {
+        idMappings.cropSubtotal[cropSubtotal.id] = existingByAssignment.id
+        continue
       }
 
       const existingById = await tx.cropSubtotal.findUnique({

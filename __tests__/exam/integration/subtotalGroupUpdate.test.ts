@@ -258,6 +258,59 @@ describe("小計点グループの更新", () => {
     )
   })
 
+  it("2つの項目が名前を互いに入れ替える保存が通る", async () => {
+    // `(subtotalGroupId, name)` の unique を持っていた間は、差分書き込みが途中で必ず
+    // 重複するのでこの保存だけが落ちていた（docs/remaining-work.md 段階33・段階30）。
+    // 制約を戻すとここで P2002 が飛ぶ
+    const subtotalGroup = await createTestSubtotalGroup()
+    const [kanji, dokkai, sakubun] = subtotalGroup.subtotals
+
+    const updated = await updateSubtotalGroup(subtotalGroup.id, {
+      name: subtotalGroup.name,
+      subtotals: [
+        { id: kanji.id, name: dokkai.name, order: 0 },
+        { id: dokkai.id, name: kanji.name, order: 1 },
+        { id: sakubun.id, name: sakubun.name, order: 2 },
+      ],
+    })
+
+    expect(updated.subtotals.map((subtotal) => subtotal.name)).toEqual([
+      "読解",
+      "漢字",
+      "作文",
+    ])
+    // 入れ替えても行は作り直されない（id はそのまま名前だけが動く）
+    expect(updated.subtotals.map((subtotal) => subtotal.id)).toEqual([
+      kanji.id,
+      dokkai.id,
+      sakubun.id,
+    ])
+  })
+
+  it("同じグループの中に同じ名前の項目を2つ作れる", async () => {
+    // 名前の unique は外した。2端末が別々の小計を同じ名前にしたとき、同期が
+    // 「別のものが偶然ぶつかった」行を1つへ畳んで割り当てを移すのを止めるため
+    const subtotalGroup = await createTestSubtotalGroup()
+
+    const sameNameSubtotal = await testPrisma.subtotal.create({
+      data: {
+        subtotalGroupId: subtotalGroup.id,
+        name: subtotalGroup.subtotals[0].name,
+        order: 3,
+      },
+    })
+
+    expect(sameNameSubtotal.id).not.toBe(subtotalGroup.subtotals[0].id)
+    expect(
+      await testPrisma.subtotal.count({
+        where: {
+          subtotalGroupId: subtotalGroup.id,
+          name: subtotalGroup.subtotals[0].name,
+        },
+      })
+    ).toBe(2)
+  })
+
   it("何も変えずに保存すると、1行も書き換わらない", async () => {
     const subtotalGroup = await createTestSubtotalGroup()
 

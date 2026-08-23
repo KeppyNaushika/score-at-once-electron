@@ -25,19 +25,15 @@ interface UseCropSubtotalAssignmentsParams {
  * **割り当ては採点領域の子（`cropRegion.cropSubtotals`）なので、別に取得も索引化も
  * しない。** マスを描く時点で行は手元にあるので、そこから直に読む。
  *
- * かつては小計id をキーにした索引を組んでいたが、それは「1マス＝1行」という
- * 一意性を仮定する形だった。CropSubtotal に `(cropRegionId, subtotalId,
- * assignmentType)` の unique がいま無いため、同期のマージで同じ割り当てが2行残りうる。
- * 索引は2行目を握り潰すので、チェックを外しても外れないマスができていた。
+ * **マス1つは1レコード。** `(cropRegionId, subtotalId, assignmentType)` は
+ * 2026-08-23 に unique を張った（`20260823120000_subtotal_uniques_by_uuid`）ので、
+ * そのマスに当たる行は在るか無いかのどちらかで、2行にはならない。鍵は uuid 2つと
+ * 閉じた語彙の区分なので、2端末が同じ行を作るのは「同じマスに2人がチェックを入れた」
+ * ときだけ＝同期のマージが LWW で1行へ畳むのが正しい。
  *
- * 無いのは規約が禁じているからではない。規約は「uuid 以外を unique にしない」で、
- * この3列は uuid 2つと固定値の区分なので張ること自体は規約に反しない（張れば同期の
- * マージが LWW で1行へ畳む）。CropSubtotal は子を持たないので
- * docs/sync-secondary-unique-hazard.md §3 の詰まりにも当たらない。実際に張るかどうかは
- * 段階30 で判断する。
- *
- * **マス1つは1レコード。** チェックを入れれば1件作り、外せばそのマスに当たる行を
- * すべて消す（同じ事実の重複であって、2つの事実ではない）。
+ * それまでは同じ割り当てが2行残りえたので、ここが読むたびに畳んでいた
+ * （さらにその前は小計id をキーにした索引を組んでおり、2行目を握り潰すので
+ * チェックを外しても外れないマスができていた）。
  */
 export function useCropSubtotalAssignments({
   examId,
@@ -50,10 +46,10 @@ export function useCropSubtotalAssignments({
   const { mutateAsync: createAssignment } = createCropSubtotal
   const { mutateAsync: deleteAssignment } = deleteCropSubtotal
 
-  /** そのマスに当たる割り当ての行。同期のマージで2行あることがある */
-  const assignedRows = useCallback(
+  /** そのマスに当たる割り当ての行（unique なので在れば1行） */
+  const assignedRow = useCallback(
     (cropRegion: CropRegionWithSubtotals, subtotal: Subtotal) =>
-      cropRegion.cropSubtotals.filter(
+      cropRegion.cropSubtotals.find(
         (cropSubtotal) =>
           cropSubtotal.assignmentType === assignmentType &&
           cropSubtotal.subtotalId === subtotal.id
@@ -64,8 +60,8 @@ export function useCropSubtotalAssignments({
   /** そのマスにチェックが入っているか */
   const isAssigned = useCallback(
     (cropRegion: CropRegionWithSubtotals, subtotal: Subtotal) =>
-      assignedRows(cropRegion, subtotal).length > 0,
-    [assignedRows]
+      assignedRow(cropRegion, subtotal) !== undefined,
+    [assignedRow]
   )
 
   /** マス1つの割り当てを付け外しする。既にその姿なら何も書かない */
@@ -75,27 +71,25 @@ export function useCropSubtotalAssignments({
       subtotal: Subtotal,
       checked: boolean
     ) => {
-      const assigned = assignedRows(cropRegion, subtotal)
+      const assigned = assignedRow(cropRegion, subtotal)
       try {
         if (checked) {
-          if (assigned.length > 0) return
+          if (assigned) return
           await createAssignment({
             cropRegionId: cropRegion.id,
             subtotalId: subtotal.id,
             assignmentType,
           })
         } else {
-          // 重複していれば全部消す。1行だけ消しても割り当ては残ってしまう
-          await Promise.all(
-            assigned.map((cropSubtotal) => deleteAssignment(cropSubtotal.id))
-          )
+          if (!assigned) return
+          await deleteAssignment(assigned.id)
         }
       } catch {
         // 失敗の通知は MutationCache が出す。ここで受けるのは、投げっぱなしの
         // 拒否を作らないため
       }
     },
-    [assignedRows, assignmentType, createAssignment, deleteAssignment]
+    [assignedRow, assignmentType, createAssignment, deleteAssignment]
   )
 
   /**
