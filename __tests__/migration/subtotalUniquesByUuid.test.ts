@@ -30,7 +30,7 @@ const TEST_ROOT = path.join(os.tmpdir(), "subtotal-uniques-by-uuid")
 const DB_PATH = path.join(TEST_ROOT, "database.db")
 const REAL_MIGRATIONS = path.resolve(__dirname, "../../prisma/migrations")
 
-// deployPendingMigrations の接続先を、この一時DBへ向ける（既定ではデータを掴む）
+// deployPendingMigrations の接続先を、この一時DBへ向ける（既定では data/database.db を掴む）
 const chainPrisma = { current: createPrismaClientForPath(DB_PATH) }
 vi.mock("../../electron-src/lib/prisma/databaseInitializer", () => ({
   getDatabasePath: () => DB_PATH,

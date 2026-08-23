@@ -5,7 +5,7 @@
  * （docs/asb-ipc-split-plan.md §8.5）。保存 → 読込で、値・id・順序が保たれること、
  * **枝問にも原稿用紙が付くこと**、**オフにしても設定とマーカーが消えないこと**を見る。
  *
- * replaceAsbDefinition / getAsbDefinition は ./client シングルトン（DB）を使うため、
+ * replaceAsbDefinition / getAsbDefinition は ./client シングルトン（アプリ本体のDB）を使うため、
  * archiveRoundTrip と同様に client をテスト用クライアントへモックする。
  */
 

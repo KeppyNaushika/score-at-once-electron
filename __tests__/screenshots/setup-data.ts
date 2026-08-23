@@ -2,7 +2,7 @@
  * スクリーンショット用サンプルデータ生成スクリプト
  *
  * 専用の __tests__/screenshots/data/database.db にまっさらな状態からデータを生成する。
- * データ(database.db)には一切触れない。
+ * 既定の data/database.db には一切触れない。
  *
  * Phase 1（テスト前に実行）:
  *   - ユーザー作成

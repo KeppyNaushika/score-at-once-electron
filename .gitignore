@@ -88,3 +88,6 @@ scripts/*.config.json
 # lint/format のキャッシュ
 .eslintcache
 .prettiercache
+
+# データに基づく検証の記録（公開しない）
+docs/private/

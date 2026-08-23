@@ -12,7 +12,7 @@ import prisma from "./client"
  * いたが、実際に読んでいたのは採点画面の `findQuestionScore` 1箇所だけで、同じ木を
  * 引く 02・03・04・06・概要・PDF出力・返却スナップショット・Excel出力（採点行は
  * `getQuestionScoresForExam` で別に引いている）はどれも使っていなかった。
- * データの最大の試験で 多数行・大きな JSON が、枠を1つ動かすたびに付いてきていた。
+ * **試験ぜんぶの採点行**が、枠を1つ動かすたびに付いてきていた。
  * 採点行は `getQuestionScoresByCropRegion` が設問ごとに返す（段階70）。
  */
 const cropRegionWithSubtotalsInclude = {

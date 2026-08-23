@@ -1,7 +1,7 @@
 /**
  * Export→Import で「アーカイブには載っているのにコードが落としていた」行と列の回帰テスト
  *
- * データの試験を書き出して空DBへ取り込み、行ごと・列ごとに突き合わせて見つかった
+ * 中身の入った試験を書き出して空DBへ取り込み、行ごと・列ごとに突き合わせて見つかった
  * 3件（ReturnSnapshot が丸ごと消える／Exam.markerCorrectionEnabled が書かれない／
  * ExamTag と Tag が消える）を、往復で守る。
  *
@@ -145,7 +145,7 @@ describe("roundTripFieldFidelity", () => {
   })
 
   it("ExamTag と Tag が往復で保たれる（TagSubtotalGroup が1行も無くても）", async () => {
-    // データの形。TagSubtotalGroup が0行なので、タグ本体を小計グループ経由でしか
+    // 実際に起きていた形。TagSubtotalGroup が0行なので、タグ本体を小計グループ経由でしか
     // 集めていなかった頃はここが常に空になり、タグ付けが警告なしに全部消えていた
     const testExam = await createFullTestExam(prisma, {
       pageCount: 1,

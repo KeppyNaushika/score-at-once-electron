@@ -48,7 +48,7 @@ const LOCAL_DB = path.join(TEST_LOCAL_DIR, "score-at-once", "database.db")
 describe("getDatabasePath のsync分岐", () => {
   beforeEach(() => {
     // このファイルの electron モックが `__tests__/setup.ts` の全体モックを上書きできて
-    // いないと、sync設定の書き込み先がデータのある data/ 配下になる。
+    // いないと、sync設定の書き込み先が本来の data/ 配下になる。
     // `getLocalDbPath()` も `getConfigPath()` も同じ `app.getPath("userData")` を見るので、
     // 前者が /tmp を指していることを保存前に確かめておく。
     if (getLocalDbPath() !== LOCAL_DB) {

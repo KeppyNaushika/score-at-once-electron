@@ -153,7 +153,7 @@ function exclusionLabelRows(
 }
 
 describe("gradeConstraints: 整合ルール（評定は独立したGradeItem）", () => {
-  // 実データ構成: 知識・技能/思考・判断・表現/態度(A/B/C) + 評定(5..1) の4項目。
+  // 想定する構成: 知識・技能/思考・判断・表現/態度(A/B/C) + 評定(5..1) の4項目。
   // すべて GradeItem 同士の比較。評定 GradeItem を比較先にする。
   // order は段階の並び（小さいほど上位）。上書き方向の判定でのみ使われる
   const HYOTEI_BOUNDARIES = [

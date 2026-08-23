@@ -2,9 +2,9 @@
  * asar へ入れるトップ階層。**ここに無いものは入らない。**
  *
  * かつては「入れないもの」を並べていたが、書き忘れたものが黙って全部入った。
- * 2026-08-24 の実測で、24GB のパッケージの中に
- * **`data/`（アプリのデータ置き場 多数 件）**と
- * `.next/dev`（開発サーバの取り置き 8GB）と `__tests__` が入っていた。
+ * 2026-08-24 の実測で、パッケージの中に
+ * **`data/`（アプリのデータ置き場。データベースと答案画像）が丸ごと**、
+ * `.next/dev`（開発サーバの取り置き）、`__tests__` が入っていた。
  * 配ればそのまま個人情報が出ていく。**足し忘れは動かないだけだが、
  * 引き忘れは配ってしまう**ので、既定を「入れない」にする。
  *
@@ -29,6 +29,75 @@ const PACKAGED_TOP_LEVEL = new Set([
   "prisma",
   "public",
 ])
+
+/**
+ * 配布物へ入ってはいけないもの。**できあがりを見て確かめる。**
+ *
+ * `ignore` の理屈は `__tests__/packaging/packageContents.test.ts` が見ているが、
+ * それは**設定が正しいこと**しか言えない。`extraResource` や hook からも物は
+ * 入るので、設定が正しいまま汚れた配布物ができる道が残る。ここは**実際に
+ * できたもの**を数えて、汚れていたら組み立てを失敗させる。
+ *
+ * 名前で持つのは、`data` のような「在るだけで駄目」なものだけにする。
+ * 中身の判定（この .db は本物か）を始めると、判定を外した瞬間に通ってしまう。
+ */
+const FORBIDDEN_IN_PACKAGE = [
+  "data", // アプリのデータ置き場（DB・答案画像）。開発中はリポジトリ直下に作られる
+  "__tests__",
+  ".git",
+  ".next-e2e",
+  "out",
+]
+
+/** できあがった `.app` / フォルダの中身を見て、入ってはいけないものが在れば投げる */
+const assertPackageIsClean = (resourcesPath) => {
+  const fs = require("fs")
+  const path = require("path")
+
+  const offenders = []
+
+  // (1) Resources 直下（extraResource・hook が置いたものはここに出る）
+  for (const forbidden of FORBIDDEN_IN_PACKAGE) {
+    if (fs.existsSync(path.join(resourcesPath, forbidden))) {
+      offenders.push(`Resources/${forbidden}`)
+    }
+  }
+
+  // (2) asar の中（`ignore` を抜けたものはここに出る）
+  const asarPath = path.join(resourcesPath, "app.asar")
+  if (fs.existsSync(asarPath)) {
+    const { listPackage } = require("@electron/asar")
+    const entries = listPackage(asarPath)
+    for (const forbidden of FORBIDDEN_IN_PACKAGE) {
+      const hit = entries.find(
+        (entry) =>
+          entry === `/${forbidden}` || entry.startsWith(`/${forbidden}/`)
+      )
+      if (hit) offenders.push(`app.asar${hit}`)
+    }
+  }
+
+  // (3) asar から出したもの
+  const unpackedPath = path.join(resourcesPath, "app.asar.unpacked")
+  for (const forbidden of FORBIDDEN_IN_PACKAGE) {
+    if (fs.existsSync(path.join(unpackedPath, forbidden))) {
+      offenders.push(`app.asar.unpacked/${forbidden}`)
+    }
+  }
+
+  if (offenders.length > 0) {
+    throw new Error(
+      [
+        "配布物に入ってはいけないものが入っている。組み立てを中止した。",
+        ...offenders.map((offender) => `  - ${offender}`),
+        "",
+        "`data` はアプリが**生徒の答案と成績**を置く場所である。",
+        "配ってはいけない。forge.config.js の PACKAGED_TOP_LEVEL を確かめること。",
+      ].join("\n")
+    )
+  }
+  console.log("✅ 配布物に入ってはいけないものが無いことを確認しました")
+}
 
 module.exports = {
   packagerConfig: {
@@ -226,6 +295,9 @@ module.exports = {
         // オフラインファイル検証
         verifyOfflineFiles(resourcesPath)
 
+        // 入ってはいけないものが入っていないか（入っていれば投げる）
+        assertPackageIsClean(resourcesPath)
+
         // asar.unpackedの非ターゲットバイナリを削除
         const unpackedPath = path.join(resourcesPath, "app.asar.unpacked")
         if (fs.existsSync(unpackedPath)) {
@@ -254,6 +326,7 @@ module.exports = {
         // Windows/Linux用のパス
         const resourcesPath = path.join(options.outputPaths[0], "resources")
         verifyOfflineFiles(resourcesPath)
+        assertPackageIsClean(resourcesPath)
 
         // asar.unpackedの非ターゲットバイナリを削除
         const unpackedPath = path.join(resourcesPath, "app.asar.unpacked")
@@ -264,3 +337,12 @@ module.exports = {
     },
   },
 }
+
+/**
+ * 検査から呼べるように出す。**この関門は組み立てを止める側**なので、
+ * 「汚れていたら止まる」ことと「綺麗なら止まらない」ことの両方を固定する
+ * （後者が無いと、締めすぎて配布できなくなったことに気づけない）。
+ */
+module.exports.assertPackageIsClean = assertPackageIsClean
+module.exports.FORBIDDEN_IN_PACKAGE = FORBIDDEN_IN_PACKAGE
+module.exports.PACKAGED_TOP_LEVEL = PACKAGED_TOP_LEVEL

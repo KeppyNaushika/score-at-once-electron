@@ -306,7 +306,7 @@ src/hooks/grades/
 
 **Step 6 — IPC の付け替え**（中）
 
-- **6a（先に計測）**: 一時的に `grade:getCalcInput` を生やし、データで `JSON.stringify(input).length` と renderer 実行時間を測る。A/B の判断はここ
+- **6a（先に計測）**: 一時的に `grade:getCalcInput` を生やし、行の入ったDBで `JSON.stringify(input).length` と renderer 実行時間を測る。A/B の判断はここ
 - 6b: `useGradeCalculation.ts` を追加し、renderer 消費者 3 箇所を移行
 - 6c: `gradeHandlers.ts` / preload の `gradeApi.ts` から該当チャンネルを削除。`npx knip` で残骸確認
 

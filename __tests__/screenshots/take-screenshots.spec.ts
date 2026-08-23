@@ -8,7 +8,7 @@
  * 実行:
  *   npx playwright test --config=playwright.screenshot.config.ts
  *
- * 専用DB (__tests__/screenshots/data/database.db) を使用。データには一切触れない。
+ * 専用DB (__tests__/screenshots/data/database.db) を使用。既定の data/ には一切触れない。
  *
  * ストーリー:
  *   空の状態からUIを操作しながら段階的にデータを追加。
