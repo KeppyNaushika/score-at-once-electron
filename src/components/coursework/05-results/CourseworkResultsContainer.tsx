@@ -1,6 +1,7 @@
 "use client"
 
 import { useQueries, useQuery } from "@tanstack/react-query"
+import { AlertTriangle } from "lucide-react"
 import { useMemo } from "react"
 
 import {
@@ -11,6 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  duplicateLetterLabels,
+  findLetterScale,
+} from "@/lib/shared/letterScaleLookup"
 import {
   type CourseworkClassroomRow,
   courseworkClassroomsQuery,
@@ -42,9 +47,9 @@ function letterToScore(
   letterValue: string | null
 ): number | null {
   if (letterValue == null) return null
-  const match = item.letterScales.find(
-    (letterScale) => letterScale.label === letterValue
-  )
+  // 同じ評語の行が2つ在りうる。どちらを採るかは成績算出と同じ決まりで引く
+  // （別々に書くと、この画面の換算点と実際の成績が食い違う）
+  const match = findLetterScale(item.letterScales, letterValue)
   return match ? match.score : null
 }
 
@@ -100,6 +105,25 @@ export function CourseworkResultsContainer({
     [studentRows, items]
   )
 
+  /**
+   * 変換表に同じ評語が2行ある評価項目。
+   *
+   * 換算はどの端末でも同じ行（`id` のいちばん小さい方）を採るので**点は揃う**が、
+   * もう一方の行は何もしない幽霊として残る。A=100 のつもりで A=90 を足した人は、
+   * 自分の入れた点が効いていないことに気づけない。**直せるのは 2. 評価項目**なので、
+   * ここでは在ることだけを伝えて、そちらへ送る。
+   */
+  const itemsWithDuplicateLabels = useMemo(
+    () =>
+      items
+        .map((item) => ({
+          item,
+          labels: duplicateLetterLabels(item.letterScales),
+        }))
+        .filter(({ labels }) => labels.length > 0),
+    [items]
+  )
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -124,6 +148,28 @@ export function CourseworkResultsContainer({
       <p className="mb-4 text-sm text-muted-foreground">
         各生徒の評価項目ごとの値です。文字評価は記号と換算点、加減点・コメントを表示します。
       </p>
+
+      {itemsWithDuplicateLabels.length > 0 && (
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <div>
+            <p className="font-medium">
+              同じ評価記号が2つある評価項目があります
+            </p>
+            <ul className="mt-1 list-inside list-disc">
+              {itemsWithDuplicateLabels.map(({ item, labels }) => (
+                <li key={item.id}>
+                  {item.name}（{labels.join("・")}）
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1">
+              換算にはどちらか一方だけが使われます。「2. 評価項目」の変換表で、
+              要らない行を消してください。
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="overflow-x-auto rounded-xl border border-border/50 shadow-sm">
         <Table>

@@ -84,7 +84,12 @@ export function LetterScaleEditor({
   const changeLabel = (letterScale: LetterScale, text: string) => {
     remember(letterScale.id, "label", text)
     const label = text.trim()
-    // 空・重複のままでは書かない（DB の一意制約に触れる）。次の打鍵で確定する
+    // 空・重複のままでは書かない。次の打鍵で確定する。
+    //
+    // **DB が止めるからではない**（`(courseworkItemId, label)` の `@@unique` は
+    // 2026-08-23 に外した）。同じ評語が2行あると換算に使われるのは片方だけで、
+    // もう一方は何もしない幽霊になるので、自分の手では作らせない。
+    // **他の端末から降ってくる重複は止められない**ので、そちらは赤で知らせる。
     if (label === "" || isDuplicateLabel(letterScale, label)) return
     updateLetterScale.mutate({ id: letterScale.id, label })
   }
@@ -152,8 +157,12 @@ export function LetterScaleEditor({
                 letterScale={letterScale}
                 label={label}
                 score={textOf(letterScale, "score")}
-                isLabelInvalid={
-                  label.trim() === "" || isDuplicateLabel(letterScale, label)
+                labelIssue={
+                  label.trim() === ""
+                    ? "empty"
+                    : isDuplicateLabel(letterScale, label)
+                      ? "duplicate"
+                      : null
                 }
                 onChangeLabel={changeLabel}
                 onChangeScore={changeScore}
@@ -177,11 +186,27 @@ export function LetterScaleEditor({
   )
 }
 
+/**
+ * 評語の欄が赤いときの理由。
+ *
+ * **2つを分けるのは、直し方が違うから。** 空欄は打てば済むが、重複は
+ * 「どちらかを消す」しかない。しかも重複は**自分が作ったとは限らない**
+ * （別の端末が同じ評語を作ると同期で2行そろう）ので、何が起きているかを
+ * 言わないと消してよいのか判断できない。
+ */
+type LabelIssue = "empty" | "duplicate"
+
+const LABEL_ISSUE_MESSAGE: Record<LabelIssue, string> = {
+  empty: "記号を入れてください",
+  duplicate:
+    "同じ記号が2つあります。換算に使われるのは片方だけなので、要らない行を消してください",
+}
+
 interface ScaleRowProps {
   letterScale: LetterScale
   label: string
   score: string
-  isLabelInvalid: boolean
+  labelIssue: LabelIssue | null
   onChangeLabel: (letterScale: LetterScale, text: string) => void
   onChangeScore: (letterScale: LetterScale, text: string) => void
   /** 入力を離れた欄の覚えだけ捨てる（隣の欄はまだ入力中でありうる） */
@@ -194,7 +219,7 @@ function ScaleRow({
   letterScale,
   label,
   score,
-  isLabelInvalid,
+  labelIssue,
   onChangeLabel,
   onChangeScore,
   onBlur,
@@ -211,10 +236,10 @@ function ScaleRow({
         onBlur={() => onBlur(letterScale.id, "label")}
         className={cn(
           "h-7 w-20 text-xs",
-          isLabelInvalid && "border-red-500 focus-visible:ring-red-500"
+          labelIssue && "border-red-500 focus-visible:ring-red-500"
         )}
         placeholder="記号"
-        title={isLabelInvalid ? "記号は項目の中で重複できません" : undefined}
+        title={labelIssue ? LABEL_ISSUE_MESSAGE[labelIssue] : undefined}
       />
       <span className="text-xs text-muted-foreground">=</span>
       <Input

@@ -94,7 +94,12 @@ function buildGrade(
         estimationMode?: string
         estimationSourceIds?: string[]
         inputMode?: string
-        letterScales?: { label: string; score: number; order: number }[]
+        letterScales?: {
+          id?: string
+          label: string
+          score: number
+          order: number
+        }[]
       }[]
       boundaries?: {
         label: string
@@ -151,7 +156,14 @@ function buildGrade(
             ...manualScore,
             courseworkStudent: { studentId: manualScore.studentId },
           })),
-          letterScales: dataSource.letterScales ?? [],
+          // 変換表の行は id を持つ（同じ評語が2つあるときの決着に使う）。
+          // ケース側で id を書かなければ並び順から作る
+          letterScales: (dataSource.letterScales ?? []).map(
+            (letterScale, index) => ({
+              ...letterScale,
+              id: letterScale.id ?? `${dataSource.id}-scale-${index}`,
+            })
+          ),
         },
       }
     }),
@@ -807,6 +819,65 @@ describe("calculateGrades", () => {
     expect(result.students[0].gradeItemResults[0].percentage).toBeCloseTo(80)
     // 80% → 評価B
     expect(result.students[0].gradeItemResults[0].gradeLabel).toBe("B")
+  })
+
+  it("同じ評価記号が2つあっても、端末によらず同じ点で換算する", async () => {
+    // 刻みの無い評価項目で2人が同時に「行を追加」を押すと、両方が A を作る
+    // （`(courseworkItemId, label)` の unique は 2026-08-23 に外した）。
+    // order まで同値なので並びは端末ごとに変わる。`id` のいちばん小さい行に
+    // 決めることで、どの端末でも同じ点になる
+    const duplicated = [
+      { id: "uuid-b", label: "A", score: 90, order: 0 },
+      { id: "uuid-a", label: "A", score: 100, order: 0 },
+    ]
+
+    const rawScoreFor = async (
+      letterScales: {
+        id: string
+        label: string
+        score: number
+        order: number
+      }[]
+    ) => {
+      const grade = buildGrade({
+        gradeItems: [
+          {
+            id: "gi1",
+            name: "提出物",
+            order: 0,
+            dataSources: [
+              {
+                id: "ds1",
+                type: "manual",
+                name: "授業態度",
+                maxScore: 100,
+                weight: 100,
+                examId: null,
+                subtotalId: null,
+                cropRegionId: null,
+                exam: null,
+                subtotal: null,
+                cropRegion: null,
+                inputMode: "letter",
+                letterScales,
+                manualScores: [{ studentId: "s1", letterValue: "A" }],
+                order: 0,
+              },
+            ],
+          },
+        ],
+      })
+      mockFindUnique.mockResolvedValue(grade)
+      mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
+
+      const result = await calculateGrades("gp1")
+      return result.students[0].gradeItemResults[0].sourceScores[0].rawScore
+    }
+
+    // id の小さい uuid-a（100点）が採られる
+    expect(await rawScoreFor(duplicated)).toBe(100)
+    // 並びを入れ替えても変わらない（先頭勝ちなら 100 と 90 で割れる）
+    expect(await rawScoreFor([...duplicated].reverse())).toBe(100)
   })
 
   it("letterモード: 未定義の評価記号はnull", async () => {

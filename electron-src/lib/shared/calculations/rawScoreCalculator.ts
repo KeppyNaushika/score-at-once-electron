@@ -4,6 +4,8 @@
  * subtotal / coursework / coursework_total を本モジュールで扱う。
  */
 
+import { findLetterScale } from "@/lib/shared/letterScaleLookup"
+
 import {
   calculateCropRegionScore,
   calculateExamTotalScore,
@@ -30,7 +32,11 @@ interface CourseworkItemForRawScore {
     letterValue?: string | null
     adjustment?: unknown
   }[]
-  letterScales: { label: string; score: unknown }[]
+  /**
+   * 変換表。`id` を持つのは、同じ評語の行が2つ在りうるため
+   * （`findLetterScale` が `id` のいちばん小さい方に決める）。
+   */
+  letterScales: { id: string; label: string; score: unknown }[]
 }
 
 /**
@@ -156,8 +162,11 @@ function getCourseworkRawScore(
     ) {
       base = null
     } else {
-      const scale = item.letterScales.find(
-        (letterScale) => letterScale.label === courseworkScore.letterValue
+      // 同じ評語の行が2つ在りうる（unique を外した）。どちらを採るかは
+      // `findLetterScale` が1箇所で決める —— 先頭勝ちにすると端末ごとに違う点が出る
+      const scale = findLetterScale(
+        item.letterScales,
+        courseworkScore.letterValue
       )
       base = scale ? Number(scale.score) : null
     }
