@@ -51,16 +51,23 @@ export interface EntityOverviewStat {
   tone?: EntityOverviewStatTone
 }
 
+/**
+ * 数の色。**淡く置く。**
+ *
+ * 濃い色だと、画面の中でいちばん目立つのが「数がいくつか」になる。ここは
+ * 現在地の見取り図であって、読ませたいのは下の段カード（次に何をするか）である。
+ * 色は項目どうしを見分けるための印にとどめ、主張させない。
+ */
 const STAT_TONE_CLASSES: Record<EntityOverviewStatTone, string> = {
-  blue: "border-blue-200 bg-blue-100 text-blue-700",
-  green: "border-green-200 bg-green-100 text-green-700",
-  purple: "border-purple-200 bg-purple-100 text-purple-700",
-  indigo: "border-indigo-200 bg-indigo-100 text-indigo-700",
-  orange: "border-orange-200 bg-orange-100 text-orange-700",
+  blue: "border-blue-100 bg-blue-50 text-blue-700",
+  green: "border-green-100 bg-green-50 text-green-700",
+  purple: "border-purple-100 bg-purple-50 text-purple-700",
+  indigo: "border-indigo-100 bg-indigo-50 text-indigo-700",
+  orange: "border-orange-100 bg-orange-50 text-orange-700",
 }
 
 /** まだ1件も無い項目は灰へ落とす（色が付いているのは「在る」の合図） */
-const STAT_EMPTY_CLASSES = "border-gray-200 bg-gray-100 text-gray-600"
+const STAT_EMPTY_CLASSES = "border-gray-200 bg-gray-50 text-gray-500"
 
 function statBadgeClasses(stat: EntityOverviewStat): string {
   if (typeof stat.value === "number" && stat.value === 0)
@@ -271,7 +278,7 @@ export function EntityOverviewPage({
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6">
+    <div className="space-y-6 p-6">
       <section className="space-y-3">
         {(actions || (!canEdit && editDisabledReason)) && (
           <div className="flex items-center justify-end gap-2">
@@ -352,15 +359,18 @@ export function EntityOverviewPage({
         </div>
       </section>
 
-      <section className="flex flex-wrap items-center gap-4 border-y py-3">
+      {/*
+        現在地の見取り図。**仕切りで区切った1本の帯**にする（`模範解答 │ 1 │
+        採点領域 │ 43 │ …`）。項目ごとに間を空けて散らすと、どこまでが1組か目で
+        追うことになる。見出しと数は同じ枡に入れ、枡どうしを仕切りで割る。
+      */}
+      <section className="flex flex-wrap items-center divide-x rounded-md border">
         {stats.map((stat) => (
-          <div key={stat.label} className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-600">
-              {stat.label}
-            </span>
+          <div key={stat.label} className="flex items-center gap-2 px-3 py-2">
+            <span className="text-sm text-muted-foreground">{stat.label}</span>
             <span
               className={cn(
-                "rounded-md border px-3 text-lg font-bold",
+                "rounded border px-2 py-0.5 text-sm font-semibold",
                 statBadgeClasses(stat)
               )}
             >
