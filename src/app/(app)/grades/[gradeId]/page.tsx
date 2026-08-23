@@ -82,10 +82,10 @@ export default function GradeDetailPage() {
   ).length
 
   const stats: EntityOverviewStat[] = [
-    { label: "学級", value: grade.gradeClassrooms.length },
-    { label: "生徒", value: grade.gradeStudents.length },
-    { label: "評価項目", value: grade.gradeItems.length },
-    { label: "データソース", value: dataSourceCount },
+    { label: "学級", value: grade.gradeClassrooms.length, tone: "blue" },
+    { label: "生徒", value: grade.gradeStudents.length, tone: "indigo" },
+    { label: "評価項目", value: grade.gradeItems.length, tone: "purple" },
+    { label: "データソース", value: dataSourceCount, tone: "green" },
   ]
 
   return (

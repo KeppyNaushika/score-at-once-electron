@@ -20,7 +20,12 @@ const examProgressSourceInclude = {
   examPages: {
     include: {
       studentAnswerImages: true,
-      cropRegions: { include: { questionScores: true } },
+      // 確定（scoreDecisions）まで引くのは、「8. 採点確定」が済んだかを
+      // 他の段と同じ1本の計算（getExamProgress）で言えるようにするため。
+      // 生徒×設問ごとに高々1行しかなく、単独採点では0行なので軽い
+      cropRegions: {
+        include: { questionScores: true, scoreDecisions: true },
+      },
     },
   },
   examSubtotalGroups: true,
@@ -71,6 +76,11 @@ export const toExamProgressSource = (
           questionScore.partialScore == null
             ? null
             : Number(questionScore.partialScore),
+        updatedAt: questionScore.updatedAt,
+      })),
+      scoreDecisions: cropRegion.scoreDecisions.map((scoreDecision) => ({
+        examStudentId: scoreDecision.examStudentId,
+        decidedAt: scoreDecision.decidedAt,
       })),
     }))
   ),
@@ -101,9 +111,11 @@ export const getExamById = async (id: string) => {
             },
           },
           cropRegions: {
-            // 進捗計算は questionScores のスカラーのみ読むため examStudent/user は join しない
+            // 進捗計算は questionScores のスカラーのみ読むため examStudent/user は join しない。
+            // 確定（scoreDecisions）は「8. 採点確定」が済んだかの判定に要る
             include: {
               questionScores: true,
+              scoreDecisions: true,
             },
             orderBy: {
               orderIndex: "asc",

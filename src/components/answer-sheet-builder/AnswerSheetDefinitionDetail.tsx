@@ -121,8 +121,8 @@ export function AnswerSheetDefinitionDetail({
         ORIENTATION_LABELS[definition.settings.orientation] ??
         definition.settings.orientation,
     },
-    { label: "設問", value: `${questionCount}問` },
-    { label: "合計配点", value: `${totalPoints}点` },
+    { label: "設問", value: `${questionCount}問`, tone: "purple" },
+    { label: "合計配点", value: `${totalPoints}点`, tone: "orange" },
     { label: "担当", value: isOwner ? "自分" : (ownerName ?? "-") },
   ]
 

@@ -13,6 +13,7 @@ import {
   updateExam,
 } from "../lib/prisma/exam"
 import { getExamPagesByExamId } from "../lib/prisma/examPage"
+import { toSerializedScoreDecision } from "../lib/prisma/scoreDecision"
 import { serializePrisma } from "../lib/prisma/serializePrisma"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
@@ -38,6 +39,28 @@ function serializeQuestionScore(score: {
     userId: score.userId,
     createdAt: score.createdAt,
     updatedAt: score.updatedAt,
+  }
+}
+
+/**
+ * 採点領域をIPC用にシリアライズする。
+ *
+ * 子（QuestionScore・ScoreDecision）がどちらも Decimal 列を持つので、
+ * 領域を返す2か所（入れ子の examPages と、平坦化した cropRegions）で
+ * 同じ変換を書かずに済むよう1つにまとめる。
+ */
+function serializeCropRegion<
+  Row extends {
+    questionScores?: Parameters<typeof serializeQuestionScore>[0][]
+    scoreDecisions?: Parameters<typeof toSerializedScoreDecision>[0][]
+  },
+>(cropRegion: Row) {
+  return {
+    ...cropRegion,
+    questionScores:
+      cropRegion.questionScores?.map(serializeQuestionScore) || [],
+    scoreDecisions:
+      cropRegion.scoreDecisions?.map(toSerializedScoreDecision) || [],
   }
 }
 
@@ -86,22 +109,12 @@ export const examHandlers = {
       examPages:
         exam.examPages?.map((page) => ({
           ...page,
-          cropRegions:
-            page.cropRegions?.map((region) => ({
-              ...region,
-              questionScores:
-                region.questionScores?.map(serializeQuestionScore) || [],
-            })) || [],
+          cropRegions: page.cropRegions?.map(serializeCropRegion) || [],
         })) || [],
       // cropRegionsを平坦化（シリアライズ済み）
       cropRegions:
         exam.examPages?.flatMap(
-          (page) =>
-            page.cropRegions?.map((region) => ({
-              ...region,
-              questionScores:
-                region.questionScores?.map(serializeQuestionScore) || [],
-            })) || []
+          (page) => page.cropRegions?.map(serializeCropRegion) || []
         ) || [],
       // answerImagesを抽出
       answerImages:

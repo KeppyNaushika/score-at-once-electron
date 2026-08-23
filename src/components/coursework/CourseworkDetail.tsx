@@ -104,9 +104,9 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
   const completion = getCourseworkCompletion(coursework)
 
   const stats: EntityOverviewStat[] = [
-    { label: "学級", value: coursework.classrooms.length },
-    { label: "生徒", value: coursework.students.length },
-    { label: "評価項目", value: coursework.items.length },
+    { label: "学級", value: coursework.classrooms.length, tone: "blue" },
+    { label: "生徒", value: coursework.students.length, tone: "indigo" },
+    { label: "評価項目", value: coursework.items.length, tone: "purple" },
   ]
 
   return (

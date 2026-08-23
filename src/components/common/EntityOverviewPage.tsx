@@ -32,11 +32,41 @@ export interface EntityOverviewBasics {
   description: string
 }
 
+/**
+ * 要約の帯の1項目に付ける色。
+ *
+ * **どの語に何色かは呼ぶ側が決める。** 色は「模範解答は青、答案は橙」という
+ * 実体ごとの割り当てで、共通部品には決めようがない（以前の `QuickStats` は
+ * 試験の5項目を名前で決め打ちしていた）。省略すれば灰。
+ */
+export type EntityOverviewStatTone =
+  "blue" | "green" | "purple" | "indigo" | "orange"
+
 /** 要約の帯に並べる1項目 */
 export interface EntityOverviewStat {
   /** 見出しの語。帯の中で一意なので React の key も兼ねる */
   label: string
   value: ReactNode
+  /** 数が入っているときの色。省略すると灰 */
+  tone?: EntityOverviewStatTone
+}
+
+const STAT_TONE_CLASSES: Record<EntityOverviewStatTone, string> = {
+  blue: "border-blue-200 bg-blue-100 text-blue-700",
+  green: "border-green-200 bg-green-100 text-green-700",
+  purple: "border-purple-200 bg-purple-100 text-purple-700",
+  indigo: "border-indigo-200 bg-indigo-100 text-indigo-700",
+  orange: "border-orange-200 bg-orange-100 text-orange-700",
+}
+
+/** まだ1件も無い項目は灰へ落とす（色が付いているのは「在る」の合図） */
+const STAT_EMPTY_CLASSES = "border-gray-200 bg-gray-100 text-gray-600"
+
+function statBadgeClasses(stat: EntityOverviewStat): string {
+  if (typeof stat.value === "number" && stat.value === 0)
+    return STAT_EMPTY_CLASSES
+  if (!stat.tone) return STAT_EMPTY_CLASSES
+  return STAT_TONE_CLASSES[stat.tone]
 }
 
 /**
@@ -97,7 +127,7 @@ interface EntityOverviewPageProps {
  * 「それより前の段が全部済んでいれば着手できる」と読み替えて並びから導く。
  *
  * **判定できない段（`null`）は後ろを堰き止めない。** 済んでいないと分かったわけでは
- * ないので、それを理由に止めると材料の無い段（採点確定）より後ろが一生着手できない
+ * ないので、それを理由に止めると材料の無い段（出力）より後ろが一生着手できない
  * ことになる。止めるのは**済んでいないと分かっている段**だけ。
  */
 function deriveStepCanStart(
@@ -322,11 +352,20 @@ export function EntityOverviewPage({
         </div>
       </section>
 
-      <section className="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-y py-3">
+      <section className="flex flex-wrap items-center gap-4 border-y py-3">
         {stats.map((stat) => (
-          <div key={stat.label} className="flex items-baseline gap-2">
-            <span className="text-sm text-muted-foreground">{stat.label}</span>
-            <span className="text-lg font-semibold">{stat.value}</span>
+          <div key={stat.label} className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-600">
+              {stat.label}
+            </span>
+            <span
+              className={cn(
+                "rounded-md border px-3 text-lg font-bold",
+                statBadgeClasses(stat)
+              )}
+            >
+              {stat.value}
+            </span>
           </div>
         ))}
       </section>
@@ -421,7 +460,6 @@ function WorkflowPhaseCard({
   const nextStep = steps.find(
     (step) => step.isCompleted !== true && step.canStart
   )
-  const PhaseIcon = phase.icon
 
   return (
     <Card
@@ -436,14 +474,11 @@ function WorkflowPhaseCard({
     >
       <CardHeader className="pb-4">
         <CardTitle className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <PhaseIcon className="h-6 w-6 shrink-0 text-gray-500" aria-hidden />
-            <div>
-              <h3 className="text-lg font-semibold">{phase.title}</h3>
-              <p className="text-sm font-normal text-gray-600">
-                {phase.description}
-              </p>
-            </div>
+          <div>
+            <h3 className="text-lg font-semibold">{phase.title}</h3>
+            <p className="text-sm font-normal text-gray-600">
+              {phase.description}
+            </p>
           </div>
           {measurableSteps.length > 0 && (
             <div className="shrink-0 text-sm font-semibold text-gray-600">

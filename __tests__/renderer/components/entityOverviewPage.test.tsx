@@ -71,11 +71,11 @@ const STEP_COMPLETION: Record<string, boolean | null> = {
   "05-students": false,
   "06-student-answers": false,
   "07-score-at-once": false,
-  "08-finalize": null,
+  "08-finalize": false,
   "09-export": null,
 }
 
-/** 判定できる段が全部済んだところ（採点確定と出力は元から判定できない） */
+/** 判定できる段が全部済んだところ（出力は元から判定できない） */
 const ALL_MEASURABLE_DONE: Record<string, boolean | null> = {
   "01-upload": true,
   "02-template": true,
@@ -84,7 +84,7 @@ const ALL_MEASURABLE_DONE: Record<string, boolean | null> = {
   "05-students": true,
   "06-student-answers": true,
   "07-score-at-once": true,
-  "08-finalize": null,
+  "08-finalize": true,
   "09-export": null,
 }
 
@@ -269,7 +269,7 @@ describe("段カード", () => {
     expect(screen.queryByRole("progressbar")).toBeNull()
   })
 
-  it("採点確定は採点のまとまりに並び、数の分母には入らない（材料が無い）", () => {
+  it("採点確定は採点のまとまりに並び、他の段と同じく数に入る", () => {
     renderOverview()
     // 確定だけのカードは無い（確定は採点の一部）
     expect(screen.queryByText("確定")).toBeNull()
@@ -278,8 +278,17 @@ describe("段カード", () => {
     expect(
       within(scoring).getByText("採点の割り当てと確定").closest("a")
     ).toHaveAttribute("href", "/exams/exam-1/08-finalize")
-    // 3段並ぶが、数えるのは判定できる2段だけ
-    expect(within(scoring).getByText("0/2 完了")).toBeVisible()
+    // 答案・採点・確定の3段が分母になる
+    expect(within(scoring).getByText("0/3 完了")).toBeVisible()
+  })
+
+  it("判定できない段は数の分母から外れる", () => {
+    // 確定だけを「判定できない」に落とすと、分母が3から2へ減る
+    renderOverview({
+      stepCompletion: { ...STEP_COMPLETION, "08-finalize": null },
+    })
+
+    expect(within(phaseCard("採点")).getByText("0/2 完了")).toBeVisible()
   })
 
   it("出力には数そのものを出さない（何度でも出せるので済みが無い）", () => {

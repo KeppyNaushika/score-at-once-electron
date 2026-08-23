@@ -2,7 +2,6 @@ import {
   BarChart3,
   Calculator,
   Database,
-  Download,
   Edit,
   FileImage,
   FileOutput,
@@ -10,15 +9,11 @@ import {
   LayoutDashboard,
   LayoutTemplate,
   ListChecks,
-  type LucideIcon,
   PencilLine,
-  PencilRuler,
   Settings,
   SlidersHorizontal,
-  SquarePen,
   Upload,
   Users,
-  Wrench,
 } from "lucide-react"
 
 import type { WorkflowTab } from "@/components/common/WorkflowTabHeader"
@@ -275,8 +270,6 @@ export const answerSheetBuilderWorkflowTabs: readonly WorkflowTab[] = [
 export interface WorkflowPhaseGroup {
   /** まとまりの名前（準備 / 採点 / 出力） */
   title: string
-  /** 見出しの頭に置くアイコン（段と同じく部品そのものを持つ） */
-  icon: LucideIcon
   /** 見出しに添える一文（このまとまりで何をするか） */
   description: string
   /** このまとまりに属する段の id（`WorkflowTab.id`。並べる順そのもの） */
@@ -287,15 +280,14 @@ export interface WorkflowPhaseGroup {
  * 試験の段カード。
  *
  * **「8. 採点確定」は採点のまとまりに入る。** 確定は採点の一部であって別の仕事では
- * ない（採点者が複数いて食い違ったときに、どれを採るか決める段）。ただし進み具合は
- * 出さない —— 確定が要るかどうかは食い違いの有無で決まり、`ExamProgressSource` に
- * その材料が無い。％のために梯子（`examStatus.ts`）へ段を足すと、単独採点の試験が
- * 一生満たされない条件で止まる。数えるのは判定できる段だけにしてある。
+ * ない（採点者が複数いて食い違ったときに、どれを採るか決める段）。済んだかどうかも
+ * 他の段と同じく `getExamProgress` が言う（`hasFinalizedScores`）—— 裁定の要るマスが
+ * 残っていなければ済み。採点者が1人なら食い違いが構造的に起きないので常に済みになり、
+ * 「一生満たされない条件」で足が止まることはない。
  */
 export const examWorkflowPhases: readonly WorkflowPhaseGroup[] = [
   {
     title: "準備",
-    icon: Wrench,
     description: "試験を実施する前の設定",
     stepIds: [
       "01-upload",
@@ -307,13 +299,11 @@ export const examWorkflowPhases: readonly WorkflowPhaseGroup[] = [
   },
   {
     title: "採点",
-    icon: SquarePen,
     description: "答案の取り込みから採点・確定まで",
     stepIds: ["06-student-answers", "07-score-at-once", "08-finalize"],
   },
   {
     title: "出力",
-    icon: Download,
     description: "採点結果の書き出し（何度でもできる）",
     stepIds: ["09-export"],
   },
@@ -323,19 +313,16 @@ export const examWorkflowPhases: readonly WorkflowPhaseGroup[] = [
 export const gradeWorkflowPhases: readonly WorkflowPhaseGroup[] = [
   {
     title: "準備",
-    icon: Wrench,
     description: "生徒と、点数の元になるデータの設定",
     stepIds: ["02-students", "03-data-sources"],
   },
   {
     title: "算出",
-    icon: Calculator,
     description: "点数の入力と、評定を分ける境目の設定",
     stepIds: ["04-manual-scores", "05-boundaries"],
   },
   {
     title: "出力",
-    icon: Download,
     description: "成績の確認と書き出し（何度でもできる）",
     stepIds: ["06-results", "07-export"],
   },
@@ -345,19 +332,16 @@ export const gradeWorkflowPhases: readonly WorkflowPhaseGroup[] = [
 export const courseworkWorkflowPhases: readonly WorkflowPhaseGroup[] = [
   {
     title: "準備",
-    icon: Wrench,
     description: "生徒と評価項目の設定",
     stepIds: ["02-students", "03-items"],
   },
   {
     title: "入力",
-    icon: PencilLine,
     description: "生徒ごとの点数入力",
     stepIds: ["04-scores"],
   },
   {
     title: "結果",
-    icon: BarChart3,
     description: "入力した点数の確認（何度でもできる）",
     stepIds: ["05-results"],
   },
@@ -367,13 +351,11 @@ export const courseworkWorkflowPhases: readonly WorkflowPhaseGroup[] = [
 export const answerSheetBuilderWorkflowPhases: readonly WorkflowPhaseGroup[] = [
   {
     title: "作成",
-    icon: PencilRuler,
     description: "解答用紙の組み立て",
     stepIds: ["01-edit"],
   },
   {
     title: "書き出し",
-    icon: Download,
     description: "PDF への書き出し（何度でもできる）",
     stepIds: ["02-export"],
   },

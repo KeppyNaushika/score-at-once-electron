@@ -136,11 +136,11 @@ export default function ExamDetailPage() {
   const progress = getExamProgress(exam)
 
   const stats: EntityOverviewStat[] = [
-    { label: "模範解答", value: modelAnswerCount },
-    { label: "採点領域", value: cropRegionCount },
-    { label: "設問", value: questionRegionCount },
-    { label: "受験生徒", value: studentCount },
-    { label: "答案", value: answerSheetCount },
+    { label: "模範解答", value: modelAnswerCount, tone: "blue" },
+    { label: "採点領域", value: cropRegionCount, tone: "green" },
+    { label: "設問", value: questionRegionCount, tone: "purple" },
+    { label: "受験生徒", value: studentCount, tone: "indigo" },
+    { label: "答案", value: answerSheetCount, tone: "orange" },
   ]
 
   return (
@@ -169,9 +169,10 @@ export default function ExamDetailPage() {
           "05-students": progress.hasStudents,
           "06-student-answers": progress.hasAnswers,
           "07-score-at-once": progress.hasScoring,
-          // 8. 採点確定は「要るかどうか」が採点者の食い違いで決まり、進捗の元データに
-          // その材料が無い。9. 結果は何度でも出せるので済みという状態を持たない
-          "08-finalize": null,
+          // 8. 採点確定が済んだ＝裁定の要るマス（採点者の食い違い・確定より新しい
+          // 提案）が残っていない。採点者が1人なら食い違いが起きないので常に済み。
+          // 9. 結果は何度でも出せるので済みという状態を持たない
+          "08-finalize": progress.hasFinalizedScores,
           "09-export": null,
         }}
         actions={
