@@ -5,6 +5,9 @@ import { bind } from "./invoke"
 export function createScoringApi() {
   return {
     // QuestionScore related functions
+    getQuestionScoresByCropRegionId: bind(
+      "get-question-scores-by-crop-region-id"
+    ),
     setQuestionScore: bind("set-question-score"),
     updateQuestionScore: bind("update-question-score"),
     setQuestionScoreComment: bind("set-question-score-comment"),

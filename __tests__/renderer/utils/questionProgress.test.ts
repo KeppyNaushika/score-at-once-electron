@@ -5,14 +5,15 @@
  * かつて試験全体の進捗は main 側の専用IPCが別実装で数えていて、欠席者の扱いが
  * renderer 側と食い違っていた。IPCを廃してこちらへ寄せたので、数え方をここで固定する。
  *
- * 採点行は**採点領域の子**として渡す（段階13）。平らな配列を別に取っていた頃は、
- * 同じ行が2つのキーでキャッシュされていた。
+ * 採点行は**設問ごとの束**として渡す（段階70）。採点領域の木に縫い付けていた頃は、
+ * 1マス採点するたびに全設問ぶんを取り直していた。
  */
 import { describe, expect, it } from "vitest"
 
 import { calculateQuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/utils/progressCalculator"
 import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import type { QuestionScoreRow } from "@/queries/scoring"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 const EXAM_PAGE_ID = "page-1"
@@ -36,7 +37,13 @@ function buildProgress(questionScoreSeeds: QuestionScoreSeed[]) {
       id: CROP_REGION_ID,
       examPageId: EXAM_PAGE_ID,
       label: "問1",
-      questionScores: questionScoreSeeds.map((seed, index) => ({
+    },
+  ] as unknown as QuestionAnswerRegionRow[]
+
+  const questionScoresByCropRegionId = new Map<string, QuestionScoreRow[]>([
+    [
+      CROP_REGION_ID,
+      questionScoreSeeds.map((seed, index) => ({
         id: seed.id ?? `qs-${index}`,
         cropRegionId: CROP_REGION_ID,
         examStudentId: EXAM_STUDENT_A,
@@ -44,17 +51,20 @@ function buildProgress(questionScoreSeeds: QuestionScoreSeed[]) {
         partialScore: seed.partialScore,
         userId: seed.userId ?? SELF_USER_ID,
         updatedAt: seed.updatedAt ?? "2026-08-18T00:00:00.000Z",
-      })),
-    },
-  ] as unknown as QuestionAnswerRegionRow[]
+      })) as unknown as QuestionScoreRow[],
+    ],
+  ])
 
   const answerImages = [
     { examPageId: EXAM_PAGE_ID, examStudentId: EXAM_STUDENT_A },
   ] as unknown as StudentAnswerImageWithExamStudents[]
 
-  return calculateQuestionProgress(cropRegions, answerImages, SELF_USER_ID)[
-    CROP_REGION_ID
-  ]
+  return calculateQuestionProgress(
+    cropRegions,
+    questionScoresByCropRegionId,
+    answerImages,
+    SELF_USER_ID
+  )[CROP_REGION_ID]
 }
 
 /** 1マスに1行だけ置く従来の形 */

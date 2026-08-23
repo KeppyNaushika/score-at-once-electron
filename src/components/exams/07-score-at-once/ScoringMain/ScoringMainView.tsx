@@ -49,7 +49,7 @@ import type { MouseBrushAction } from "@/components/exams/07-score-at-once/types
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useExamDecisionSummary } from "@/hooks/useExamDecisionSummary"
 import { resolveExamPaperSize } from "@/lib/shared/examPaperSize"
-import { cropRegionScopes } from "@/queries/cropRegion"
+import { questionScoresScope } from "@/queries/scoring"
 import {
   setUserClickScoringActionMutation,
   setUserPreferenceMutation,
@@ -92,8 +92,13 @@ function ScoringMainViewContent() {
   )
 
   /** データローダーフック */
-  const { loading, exam, studentAnswerImages, cropRegions } =
-    useScoringDataLoader(examId)
+  const {
+    loading,
+    exam,
+    studentAnswerImages,
+    cropRegions,
+    questionScoresByCropRegionId,
+  } = useScoringDataLoader(examId)
 
   /** 設定管理フック */
   // 採点画面の設定。保存文字列を並べて取り、値の組み立ては純粋関数が行う
@@ -252,24 +257,23 @@ function ScoringMainViewContent() {
     currentCropRegionId,
     studentAnswerImages,
     cropRegions,
+    questionScoresByCropRegionId,
   })
 
   /**
-   * 採点行を取り直す。
+   * 採点行を全部取り直す。
    *
-   * 採点行は採点領域の子として載っているので、取り直す先は採点領域のまとまり。
-   * 採点の書き込みは自分で取り直すので、これが要るのは**手で頼まれたとき**
-   * （裁定パネルの再読み込みボタン・OMR の取り込み後）だけである。
+   * 採点の書き込みは自分の設問だけを取り直すので、これが要るのは**手で頼まれたとき**
+   * （裁定パネルの再読み込みボタン・OMR の取り込み後）だけである。どの設問が変わった
+   * かを絞れない場面なので、ここは前方一致でまとめて当てる。
    *
    * 手書き注釈の保存も採点行を増やしうるが、増えるのは `status:"unscored"` の行だけで
    * 画面の表示は行の有無で変わらない（行が無いのと未採点は同じに読まれる）。
    */
   const refetchQuestionScores = useCallback(async () => {
-    await Promise.all(
-      cropRegionScopes(examId).map((queryKey) =>
-        queryClient.invalidateQueries({ queryKey })
-      )
-    )
+    await queryClient.invalidateQueries({
+      queryKey: questionScoresScope(examId),
+    })
   }, [queryClient, examId])
 
   /**
@@ -314,6 +318,7 @@ function ScoringMainViewContent() {
   } = useScoringFilter({
     studentAnswerImages,
     cropRegions,
+    questionScoresByCropRegionId,
     currentCropRegionId: currentCropRegionId,
     currentUserId: currentUser.id,
     selectedStudentAnswerImageIds: selectedStudentAnswerImageIds,
@@ -765,6 +770,7 @@ function ScoringMainViewContent() {
             selectedScoringDataIds={selectedScoringDataIds}
             currentCropRegion={currentCropRegion}
             cropRegions={cropRegions}
+            questionScoresByCropRegionId={questionScoresByCropRegionId}
             studentAnswerImages={studentAnswerImages}
             onScoringDataSelect={(dataId, isSelected) =>
               handleAnswerSelect(dataId, isSelected, studentAnswerImages)
@@ -803,6 +809,11 @@ function ScoringMainViewContent() {
               examId={examId}
               cropRegions={selectableCropRegions}
               currentCropRegion={currentCropRegion}
+              currentQuestionScores={
+                currentCropRegion
+                  ? questionScoresByCropRegionId.get(currentCropRegion.id)
+                  : undefined
+              }
               onCropRegionChange={(cropRegion) => {
                 setCurrentCropRegionId(cropRegion?.id || null)
               }}

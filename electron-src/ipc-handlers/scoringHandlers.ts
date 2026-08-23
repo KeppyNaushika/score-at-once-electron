@@ -16,6 +16,7 @@ import {
 } from "../lib/prisma/cropRegionAssignment"
 import {
   batchUpdateQuestionScores,
+  getQuestionScoresByCropRegion,
   type QuestionScoreResult,
   SCORE_TARGET_DELETED,
   setQuestionScore,
@@ -63,6 +64,10 @@ function serializeScore(score: {
 
 /** 採点（QuestionScore）のCRUD・一括更新・確定・採点担当割当に関するIPCチャンネルを登録する */
 export const scoringHandlers = {
+  // その設問の採点行（採点画面が設問ごとに1本ずつ読む）
+  "get-question-scores-by-crop-region-id": async (cropRegionId: string) =>
+    getQuestionScoresByCropRegion(cropRegionId),
+
   // QuestionScore 関連のハンドラー
   // 採点する（無ければ作り、有れば上書きする）
   "set-question-score": async (questionScore: SetQuestionScoreData) =>

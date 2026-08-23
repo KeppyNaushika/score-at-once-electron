@@ -16,6 +16,7 @@ import type {
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import type { QuestionScoreRow } from "@/queries/scoring"
 
 interface ScoringContentAreaProps {
   gradingMode: GradingMode
@@ -25,6 +26,7 @@ interface ScoringContentAreaProps {
   selectedScoringDataIds: Set<string>
   currentCropRegion?: QuestionAnswerRegionRow
   cropRegions?: QuestionAnswerRegionRow[]
+  questionScoresByCropRegionId?: Map<string, QuestionScoreRow[]>
   onScoringDataSelect: (dataId: string, isSelected: boolean) => void
   onScoringDataReplace?: (ids: string[]) => void
   layoutDirection: LayoutDirection
@@ -62,6 +64,7 @@ export function ScoringContentArea({
   selectedScoringDataIds,
   currentCropRegion,
   cropRegions,
+  questionScoresByCropRegionId,
   onScoringDataSelect,
   onScoringDataReplace,
   layoutDirection,
@@ -238,6 +241,7 @@ export function ScoringContentArea({
       currentScoringDataId={currentScoringDataId}
       currentCropRegion={currentCropRegion}
       cropRegions={cropRegions}
+      questionScoresByCropRegionId={questionScoresByCropRegionId}
       studentAnswerImages={studentAnswerImages}
       currentExamStudentId={currentExamStudentId}
       currentUserId={currentUserId}

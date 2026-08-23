@@ -8,8 +8,12 @@ import prisma from "./client"
  * CropRegion の include 形状（SSOT）。型（GetPayload）と実クエリの双方がこの const を
  * 参照するため両者が乖離しない。
  *
- * 領域メタデータの作成/更新（create/update）は採点結果を必要としないため questionScores を
- * 引かない軽い形状。get 系のみ採点画面向けに questionScores も引く。
+ * **採点行（questionScores）は載せない。** かつて get 系だけが採点行込みの形を使って
+ * いたが、実際に読んでいたのは採点画面の `findQuestionScore` 1箇所だけで、同じ木を
+ * 引く 02・03・04・06・概要・PDF出力・返却スナップショット・Excel出力（採点行は
+ * `getQuestionScoresForExam` で別に引いている）はどれも使っていなかった。
+ * データの最大の試験で 多数行・大きな JSON が、枠を1つ動かすたびに付いてきていた。
+ * 採点行は `getQuestionScoresByCropRegion` が設問ごとに返す（段階70）。
  */
 const cropRegionWithSubtotalsInclude = {
   examPage: true,
@@ -18,16 +22,6 @@ const cropRegionWithSubtotalsInclude = {
       subtotal: true,
     },
   },
-} satisfies Prisma.CropRegionInclude
-
-const cropRegionWithSubtotalsAndScoresInclude = {
-  examPage: true,
-  cropSubtotals: {
-    include: {
-      subtotal: true,
-    },
-  },
-  questionScores: true,
 } satisfies Prisma.CropRegionInclude
 
 /** examPage・cropSubtotals.subtotal を含む CropRegion（create/update の返り値） */
@@ -137,7 +131,7 @@ export const deleteCropRegion = async (id: string) => {
   return region
 }
 
-/** 試験IDで全設問領域を取得する（orderIndexがnullの場合は自動設定、examPage・cropSubtotals・questionScores リレーション含む） */
+/** 試験IDで全設問領域を取得する（orderIndexがnullの場合は自動設定、examPage・cropSubtotals リレーション含む） */
 export const getCropRegionsByExamId = async (examId: string) => {
   const regions = await prisma.cropRegion.findMany({
     where: {
@@ -145,7 +139,7 @@ export const getCropRegionsByExamId = async (examId: string) => {
         examId: examId,
       },
     },
-    include: cropRegionWithSubtotalsAndScoresInclude,
+    include: cropRegionWithSubtotalsInclude,
     orderBy: [
       { orderIndex: "asc" }, // 手動順序（最優先）
       { examPage: { pageNumber: "asc" } }, // ページ順（フォールバック）
@@ -177,7 +171,7 @@ export const getCropRegionsByExamId = async (examId: string) => {
           examId: examId,
         },
       },
-      include: cropRegionWithSubtotalsAndScoresInclude,
+      include: cropRegionWithSubtotalsInclude,
       orderBy: [
         { orderIndex: "asc" },
         { examPage: { pageNumber: "asc" } },
@@ -203,7 +197,7 @@ export const getQuestionAnswerRegionsByExamId = async (examId: string) => {
       },
       type: "QUESTION_ANSWER", // DB レベルでフィルタリング
     },
-    include: cropRegionWithSubtotalsAndScoresInclude,
+    include: cropRegionWithSubtotalsInclude,
     orderBy: [
       { orderIndex: "asc" }, // 手動順序（最優先）
       { examPage: { pageNumber: "asc" } }, // ページ順（フォールバック）

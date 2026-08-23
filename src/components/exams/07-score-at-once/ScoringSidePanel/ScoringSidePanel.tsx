@@ -44,6 +44,7 @@ import {
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import type { QuestionScoreRow } from "@/queries/scoring"
 import {
   setUserSidePanelSectionMutation,
   userSidePanelSectionsQuery,
@@ -94,6 +95,8 @@ interface ScoringSidePanelProps {
   // Question Navigator props
   cropRegions: QuestionAnswerRegionRow[]
   currentCropRegion?: QuestionAnswerRegionRow | null
+  /** いま開いている設問の採点行（覚え書きの節が読む） */
+  currentQuestionScores?: readonly QuestionScoreRow[]
   onCropRegionChange: (cropRegion: QuestionAnswerRegionRow | null) => void
   onPrevQuestion: () => void
   onNextQuestion: () => void
@@ -195,6 +198,7 @@ export function ScoringSidePanel({
   examId,
   cropRegions,
   currentCropRegion,
+  currentQuestionScores,
   onCropRegionChange,
   onPrevQuestion,
   onNextQuestion,
@@ -479,6 +483,7 @@ export function ScoringSidePanel({
           <ScoreCommentSection
             examId={examId}
             currentCropRegion={currentCropRegion}
+            currentQuestionScores={currentQuestionScores}
             currentExamStudentId={currentExamStudentId}
             currentUserId={currentUserId}
             isOpen={isSectionOpen("scoreComment")}

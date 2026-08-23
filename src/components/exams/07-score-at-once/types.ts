@@ -11,6 +11,7 @@ import type {
   SCORING_OPERATION_MODES,
 } from "@/lib/userPreferences"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import type { QuestionScoreRow } from "@/queries/scoring"
 /** Prisma拡張型をprismaExtensions.tsからインポート */
 import type { StudentAnswerImageWithExamPageAndStudent } from "@/types/prismaExtensions"
 import {
@@ -25,14 +26,6 @@ import {
  */
 export type StudentAnswerImageWithExamStudents =
   StudentAnswerImageWithExamPageAndStudent
-
-/**
- * 採点行1件。**採点領域の子として届く形をそのまま名づける。**
- *
- * 手で宣言し直すと境界の実物とずれる（`status` の綴りの広さが実際に食い違って
- * いた）。所在は「その採点領域の中」なので、型の出どころも採点領域にする。
- */
-type QuestionScoreRow = QuestionAnswerRegionRow["questionScores"][number]
 
 /**
  * 採点モード
@@ -123,22 +116,21 @@ export interface MasterGridItem {
 }
 
 /**
- * その採点領域における、指定した利用者の採点行を1件取る。
+ * その設問の採点行から、指定した利用者のものを1件取る。
  *
- * **採点領域の木のまま受け取る。** 平らな配列へ潰すと
- * `(examStudentId, cropRegionId)` の2つで探し直すことになり、採点行が採点領域の
- * 子であるという事実が消える。木のままなら「その設問の中を見る」ので、照合は
- * `examStudentId` と `userId` だけで済む。
+ * **その設問ぶんの配列を受け取る**（キャッシュがその単位で持っている）。試験ぜんぶを
+ * 平らに渡されると `(examStudentId, cropRegionId)` の2つで探し直すことになるが、
+ * 設問ぶんに絞られていれば照合は `examStudentId` と `userId` だけで済む。
  *
- * 07 が出すのは**自分の採点だけ**。他の教員の採点も木には届いているが、ここで
- * 落とす。食い違いを裁くのは採点する場ではない（将来の 07-2-finalize）。
+ * 07 が出すのは**自分の採点だけ**。他の教員の採点も同じ配列で届いているが、ここで
+ * 落とす。食い違いを裁くのは採点する場ではない（8. 採点確定）。
  */
 export function findQuestionScore(
-  cropRegion: QuestionAnswerRegionRow,
+  questionScores: readonly QuestionScoreRow[],
   examStudentId: string,
   userId: string
 ): QuestionScoreRow | undefined {
-  const scores = cropRegion.questionScores.filter(
+  const scores = questionScores.filter(
     (questionScore) =>
       questionScore.examStudentId === examStudentId &&
       questionScore.userId === userId
@@ -169,15 +161,15 @@ export function findQuestionScore(
   )
 }
 
-/** その採点領域における、指定した利用者の採点状況 */
+/** その設問における、指定した利用者の採点状況 */
 export function getScoringStatus(
-  cropRegion: QuestionAnswerRegionRow | null | undefined,
+  questionScores: readonly QuestionScoreRow[] | undefined,
   examStudentId: string,
   userId: string
 ): ScoringStatus {
-  if (!cropRegion) return "unscored"
+  if (!questionScores) return "unscored"
 
-  const questionScore = findQuestionScore(cropRegion, examStudentId, userId)
+  const questionScore = findQuestionScore(questionScores, examStudentId, userId)
   return toScoringStatus(questionScore?.status)
 }
 

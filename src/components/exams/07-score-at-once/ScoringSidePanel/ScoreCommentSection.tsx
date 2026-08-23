@@ -9,6 +9,7 @@ import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKey
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import { Textarea } from "@/components/ui/textarea"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import type { QuestionScoreRow } from "@/queries/scoring"
 import { setQuestionScoreCommentMutation } from "@/queries/scoring"
 
 import { SidePanelSection } from "./SidePanelSection"
@@ -16,6 +17,8 @@ import { SidePanelSection } from "./SidePanelSection"
 interface ScoreCommentSectionProps {
   examId: string
   currentCropRegion: QuestionAnswerRegionRow | null | undefined
+  /** いま開いている設問の採点行（採点者は問わない） */
+  currentQuestionScores: readonly QuestionScoreRow[] | undefined
   currentExamStudentId: string | undefined
   currentUserId: string
   isOpen: boolean
@@ -42,6 +45,7 @@ interface ScoreCommentSectionProps {
 export function ScoreCommentSection({
   examId,
   currentCropRegion,
+  currentQuestionScores,
   currentExamStudentId,
   currentUserId,
   isOpen,
@@ -55,15 +59,17 @@ export function ScoreCommentSection({
   // 「節を開いてから入る」の“開いた後”を待つ合図。描画には出ないので state にしない
   const pendingFocus = useRef(false)
 
+  // 取り直す先は、いま開いている設問1本（設問が決まっていなければ書き込み自体が
+  // 起きないので、鍵は使われない）
   const { mutate: saveComment } = useMutation(
-    setQuestionScoreCommentMutation(examId)
+    setQuestionScoreCommentMutation(examId, currentCropRegion?.id ?? "")
   )
 
   // 保存済みの覚え書き。行がまだ無ければ空（列は NULL を持たない）
   const savedComment =
-    currentCropRegion && currentExamStudentId
+    currentQuestionScores && currentExamStudentId
       ? (findQuestionScore(
-          currentCropRegion,
+          currentQuestionScores,
           currentExamStudentId,
           currentUserId
         )?.comment ?? "")

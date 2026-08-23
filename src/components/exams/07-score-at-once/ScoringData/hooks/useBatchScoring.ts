@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-score-at-once/types"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import type { QuestionScoreRow } from "@/queries/scoring"
 import {
   setQuestionScoreMutation,
   updateQuestionScoreMutation,
@@ -25,9 +26,13 @@ interface UseBatchScoringProps {
   examId: string
   studentAnswerImages: StudentAnswerImageWithExamStudents[]
   cropRegions: QuestionAnswerRegionRow[]
+  questionScoresByCropRegionId: Map<string, QuestionScoreRow[]>
   currentCropRegionId: string | null
   currentUserId: string
 }
+
+/** 採点行がまだ1つも無い設問のための空値（毎回新しい配列を作らない） */
+const EMPTY_SCORES: QuestionScoreRow[] = []
 
 /**
  * 選択された答案をまとめて採点する。
@@ -40,14 +45,19 @@ export function useBatchScoring({
   examId,
   studentAnswerImages,
   cropRegions,
+  questionScoresByCropRegionId,
   currentCropRegionId,
   currentUserId,
 }: UseBatchScoringProps) {
+  // 書き込みは「いま開いている設問」へ向く。取り直す先もその設問1本なので、
+  // 書き込みを作るときに設問を渡す（設問が決まっていないときは採点そのものが
+  // 起きないので、鍵は使われない）
+  const cropRegionId = currentCropRegionId ?? ""
   const { mutateAsync: setScore } = useMutation(
-    setQuestionScoreMutation(examId)
+    setQuestionScoreMutation(examId, cropRegionId)
   )
   const { mutateAsync: updateQuestionScore } = useMutation(
-    updateQuestionScoreMutation(examId)
+    updateQuestionScoreMutation(examId, cropRegionId)
   )
 
   const handleBatchScore = useCallback(
@@ -90,9 +100,10 @@ export function useBatchScoring({
         )
         if (!studentAnswerImage?.examStudentId) continue
 
-        // 採点行はこの設問（採点領域）の子として手元にある
+        // 採点行はこの設問ぶんが手元にある
         const currentScore = findQuestionScore(
-          currentCropRegion,
+          questionScoresByCropRegionId.get(currentCropRegion.id) ??
+            EMPTY_SCORES,
           studentAnswerImage.examStudentId,
           currentUserId
         )
@@ -140,6 +151,7 @@ export function useBatchScoring({
     [
       setScore,
       cropRegions,
+      questionScoresByCropRegionId,
       currentCropRegionId,
       currentUserId,
       studentAnswerImages,

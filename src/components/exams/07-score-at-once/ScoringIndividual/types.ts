@@ -3,6 +3,7 @@ import type {
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import type { QuestionScoreRow } from "@/queries/scoring"
 import type {
   DrawingAnnotation,
   LineStyle,
@@ -30,6 +31,8 @@ export interface AnswerIndividualViewProps {
   // 設問情報（派生済みオブジェクト）
   currentCropRegion?: QuestionAnswerRegionRow | null // 現在の設問領域
   cropRegions?: QuestionAnswerRegionRow[] // 全採点領域（全設問マーク描画用）
+  /** 設問 id → その設問の採点行（全設問マークの色と点を出すのに要る） */
+  questionScoresByCropRegionId?: Map<string, QuestionScoreRow[]>
 
   // 手書き注釈の行き先（答案＋設問＋採点者）を組み立てるための文脈
   currentExamStudentId?: string

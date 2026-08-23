@@ -184,6 +184,27 @@ export const getQuestionScoresForExam = async (
   }
 }
 
+/**
+ * その設問の採点行を取る（採点者を問わない）。
+ *
+ * **採点画面が読む単位。** 採点は「その設問のそのマス」に書くので、書き込みで古くなるのも
+ * この単位になる。試験ぶんをまとめて1つのキーに載せていた頃は、1マス採点するたびに
+ * 全設問ぶん（データの最大で 多数行・大きな JSON）を取り直していた。
+ *
+ * `getQuestionScoresForExam` と違い**リレーションを同梱しない**。呼ぶのは採点画面で、
+ * 受験者も設問も画面が既に持っている（同梱すると1行あたり4段の木が付いてくる）。
+ *
+ * 採点者で絞らないのは、絞るのが画面の仕事だから。07 は自分の採点だけを出すが、
+ * 誰の採点かで別のキーにすると、同じ行が採点者の数だけキャッシュに載る。
+ */
+export const getQuestionScoresByCropRegion = async (cropRegionId: string) => {
+  const scores = await prisma.questionScore.findMany({
+    where: { cropRegionId },
+    orderBy: { id: "asc" },
+  })
+  return scores.map(toSerializedQuestionScore)
+}
+
 /** `ensureQuestionScore` の引数。判定を持たない（採点する関数ではないので） */
 export interface EnsureQuestionScoreData {
   examStudentId: string

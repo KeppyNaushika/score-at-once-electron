@@ -17,6 +17,7 @@ import type {
 } from "@/components/exams/07-score-at-once/types"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import type { QuestionScoreRow } from "@/queries/scoring"
 import type { ExamWithPages } from "@/types/prismaExtensions"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
@@ -45,9 +46,13 @@ interface FilterSettings {
   double_mark: boolean
 }
 
+/** 採点行がまだ1つも無い設問のための空値（毎回新しい配列を作らない） */
+const EMPTY_SCORES: QuestionScoreRow[] = []
+
 interface UseScoringFilterProps {
   studentAnswerImages: StudentAnswerImageWithExamStudents[]
   cropRegions: QuestionAnswerRegionRow[]
+  questionScoresByCropRegionId: Map<string, QuestionScoreRow[]>
   currentCropRegionId: string | null
   currentUserId: string
   selectedStudentAnswerImageIds: Set<string>
@@ -64,6 +69,7 @@ interface UseScoringFilterProps {
 export function useScoringFilter({
   studentAnswerImages,
   cropRegions,
+  questionScoresByCropRegionId,
   currentCropRegionId,
   currentUserId,
   selectedStudentAnswerImageIds,
@@ -143,7 +149,8 @@ export function useScoringFilter({
     const studentScoringData: ScoringData[] = sortedAnswerSheets.map(
       (pageImage) => {
         const score = findQuestionScore(
-          currentCropRegion,
+          questionScoresByCropRegionId.get(currentCropRegion.id) ??
+            EMPTY_SCORES,
           pageImage.examStudentId,
           currentUserId
         )
@@ -200,6 +207,7 @@ export function useScoringFilter({
     return studentScoringData
   }, [
     currentCropRegion,
+    questionScoresByCropRegionId,
     studentAnswerImages,
     currentUserId,
     gradingMode,

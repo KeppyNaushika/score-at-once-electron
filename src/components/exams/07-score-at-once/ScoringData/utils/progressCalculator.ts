@@ -2,6 +2,10 @@ import type { QuestionProgress } from "@/components/exams/07-score-at-once/Scori
 import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-score-at-once/types"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import type { QuestionScoreRow } from "@/queries/scoring"
+
+/** 採点行を持たない設問のための空値（毎回新しい配列を作らない） */
+const EMPTY_SCORES: QuestionScoreRow[] = []
 
 /**
  * 各設問の採点進捗（採点済み件数・割合）を計算する。
@@ -10,6 +14,7 @@ import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
  */
 export function calculateQuestionProgress(
   cropRegions: QuestionAnswerRegionRow[],
+  questionScoresByCropRegionId: Map<string, QuestionScoreRow[]>,
   pageImages: StudentAnswerImageWithExamStudents[],
   currentUserId: string
 ): QuestionProgress {
@@ -18,6 +23,8 @@ export function calculateQuestionProgress(
   cropRegions.forEach((cropRegion, _cropRegionIndex) => {
     // このCropRegionが属するExamPageのID
     const cropRegionExamPageId = cropRegion.examPageId
+    const questionScores =
+      questionScoresByCropRegionId.get(cropRegion.id) ?? EMPTY_SCORES
 
     if (!cropRegionExamPageId) {
       console.warn("⚠️ CropRegion has no examPageId:", {
@@ -41,7 +48,7 @@ export function calculateQuestionProgress(
 
     relevantPageImages.forEach((pageImage) => {
       const score = findQuestionScore(
-        cropRegion,
+        questionScores,
         pageImage.examStudentId,
         currentUserId
       )

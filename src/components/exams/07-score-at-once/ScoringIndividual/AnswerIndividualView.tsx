@@ -10,6 +10,7 @@ import {
   getScoringStatus,
 } from "@/components/exams/07-score-at-once/types"
 import { toggleAnnotationFavoriteMutation } from "@/queries/drawing"
+import type { QuestionScoreRow } from "@/queries/scoring"
 import { examExportSettingsQuery } from "@/queries/settings"
 import type {
   AnnotationTarget,
@@ -34,11 +35,15 @@ import type { AnswerIndividualViewProps } from "./types"
 /** 未読み込み時の空配列（毎レンダー作り直すと下流の再描画を誘発するため定数で持つ） */
 const NO_OVERLAY_IMAGES: HTMLImageElement[] = []
 
+/** 採点行がまだ1つも無い設問のための空値 */
+const EMPTY_SCORES: QuestionScoreRow[] = []
+
 export default function AnswerIndividualView({
   scoringDatas,
   currentScoringDataId,
   currentCropRegion,
   cropRegions,
+  questionScoresByCropRegionId,
   studentAnswerImages,
   showMultiplePages = true, // 常に複数ページ表示
   pageSpacing = 20,
@@ -96,13 +101,18 @@ export default function AnswerIndividualView({
     if (!cropRegions || !currentScoringData) return []
     const examStudentId = currentScoringData.examStudentId
     return cropRegions.map((cropRegion) => {
-      // 採点行はその設問の子。設問を跨いで探し直す必要は無い
+      // 採点行は設問ごとに届いている。設問を跨いで探し直す必要は無い
+      const questionScores = questionScoresByCropRegionId?.get(cropRegion.id)
       const questionScore = findQuestionScore(
-        cropRegion,
+        questionScores ?? EMPTY_SCORES,
         examStudentId,
         currentUserId
       )
-      const status = getScoringStatus(cropRegion, examStudentId, currentUserId)
+      const status = getScoringStatus(
+        questionScores,
+        examStudentId,
+        currentUserId
+      )
       const maxScore = cropRegion.points ?? 0
       let actualScore: number | null = null
       switch (status) {
@@ -123,7 +133,12 @@ export default function AnswerIndividualView({
       }
       return { cropRegion, status, actualScore }
     })
-  }, [cropRegions, currentUserId, currentScoringData])
+  }, [
+    cropRegions,
+    questionScoresByCropRegionId,
+    currentUserId,
+    currentScoringData,
+  ])
 
   /**
    * 手書き注釈の行き先（答案＋設問＋採点者）。

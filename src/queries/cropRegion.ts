@@ -14,12 +14,12 @@ import { scopeKeys } from "./keys"
 // 取得
 // =====================================================================
 
-/** 採点領域1件（小計点の割り当てと採点結果を子として持つ） */
+/** 採点領域1件（小計点の割り当てを子として持つ。採点行は載っていない） */
 export type CropRegionRow = Awaited<
   ReturnType<typeof window.electronAPI.getCropRegionsByExamId>
 >[number]
 
-/** 設問の解答欄1件（採点結果を子として持つ。採点画面が読むのはこちら） */
+/** 設問の解答欄1件（小計欄を除く。採点画面が読むのはこちら） */
 export type QuestionAnswerRegionRow = Awaited<
   ReturnType<typeof window.electronAPI.getQuestionAnswerRegionsByExamId>
 >[number]
@@ -37,18 +37,6 @@ export const questionAnswerRegionsQuery = (examId: string) =>
     queryKey: [...scopeKeys.exam(examId), "questionAnswerRegions"] as const,
     queryFn: () => window.electronAPI.getQuestionAnswerRegionsByExamId(examId),
   })
-
-/**
- * 採点領域を載せている2つのまとまり。
- *
- * 採点行（`QuestionScore`）は**採点領域の子**としてこの2つのキーに載っている。
- * 採点を1件書けばどちらも古くなるので、採点の書き込みの取り直し先もここになる。
- */
-export const cropRegionScopes = (examId: string) =>
-  [
-    [...scopeKeys.exam(examId), "cropRegions"],
-    [...scopeKeys.exam(examId), "questionAnswerRegions"],
-  ] as const
 
 // =====================================================================
 // 書き込み
