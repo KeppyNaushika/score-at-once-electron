@@ -389,6 +389,9 @@ model QuestionScore {
   user               User                @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([examStudentId])
+  /// SQLite は外部キーに索引を自動で作らない。この列が素通しだと、採点行を
+  /// 「その設問ぶん」引くたびに表の全走査になる（データ 多数 行で 8.5ms → 0.5ms）。
+  @@index([cropRegionId])
 }
 
 /// 生徒×設問ごとの確定スコア（試験OWNERによる裁定）。

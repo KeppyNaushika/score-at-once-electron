@@ -1,0 +1,18 @@
+-- QuestionScore.cropRegionId に索引を張る。
+--
+-- SQLite は外部キーに索引を自動で作らない。QuestionScore は3本の FK を持つが、索引が
+-- あったのは examStudentId だけで、cropRegionId は素通しだった。採点行を「その設問ぶん」
+-- 引くたびに表の全走査になる。
+--
+-- データ（採点行 多数 行）での実測:
+--
+--   設問1つぶん（1設問ぶん）を引く       8.5ms → 0.5ms
+--   設問ごとへ割って全部引く   377ms  → 20.9ms
+--   その試験ぶんをまとめて引く        33ms  → 21ms
+--
+-- 2番目が段階70 の前提になる。採点の取り直しを「書いた設問1つ」まで狭めると、開くときに
+-- 設問の数だけ引くことになるので、全走査のままだと18倍かかる。
+--
+-- 書き込み側は影響を受けない（既存行の照会 `(examStudentId, cropRegionId, userId)` は
+-- examStudentId の索引に当たっている）。
+CREATE INDEX IF NOT EXISTS "QuestionScore_cropRegionId_idx" ON "QuestionScore"("cropRegionId");
