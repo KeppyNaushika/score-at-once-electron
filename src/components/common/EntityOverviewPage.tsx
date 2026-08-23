@@ -52,24 +52,57 @@ export interface EntityOverviewStat {
 }
 
 /**
- * 数の色。**淡く置く。**
+ * 見出しと数の色。
  *
- * 濃い色だと、画面の中でいちばん目立つのが「数がいくつか」になる。ここは
- * 現在地の見取り図であって、読ませたいのは下の段カード（次に何をするか）である。
- * 色は項目どうしを見分けるための印にとどめ、主張させない。
+ * 見出しは**色で塗って白抜き**、数は**塗らずに色文字**。1組が1つの札に見えて、
+ * かつ数の方が地の白に乗るので読みやすい。高さと文字は小さく詰める——ここは
+ * 現在地の見取り図で、読ませたいのは下の段カード（次に何をするか）である。
  */
-const STAT_TONE_CLASSES: Record<EntityOverviewStatTone, string> = {
-  blue: "border-blue-100 bg-blue-50 text-blue-700",
-  green: "border-green-100 bg-green-50 text-green-700",
-  purple: "border-purple-100 bg-purple-50 text-purple-700",
-  indigo: "border-indigo-100 bg-indigo-50 text-indigo-700",
-  orange: "border-orange-100 bg-orange-50 text-orange-700",
+interface StatToneClasses {
+  /** 札の外枠 */
+  frame: string
+  /** 見出し側（塗りつぶし＋白抜き） */
+  label: string
+  /** 数側（塗らずに色文字） */
+  value: string
+}
+
+const STAT_TONE_CLASSES: Record<EntityOverviewStatTone, StatToneClasses> = {
+  blue: {
+    frame: "border-blue-500",
+    label: "bg-blue-500 text-white",
+    value: "text-blue-700",
+  },
+  green: {
+    frame: "border-green-600",
+    label: "bg-green-600 text-white",
+    value: "text-green-700",
+  },
+  purple: {
+    frame: "border-purple-500",
+    label: "bg-purple-500 text-white",
+    value: "text-purple-700",
+  },
+  indigo: {
+    frame: "border-indigo-500",
+    label: "bg-indigo-500 text-white",
+    value: "text-indigo-700",
+  },
+  orange: {
+    frame: "border-orange-500",
+    label: "bg-orange-500 text-white",
+    value: "text-orange-700",
+  },
 }
 
 /** まだ1件も無い項目は灰へ落とす（色が付いているのは「在る」の合図） */
-const STAT_EMPTY_CLASSES = "border-gray-200 bg-gray-50 text-gray-500"
+const STAT_EMPTY_CLASSES: StatToneClasses = {
+  frame: "border-gray-300",
+  label: "bg-gray-300 text-white",
+  value: "text-gray-500",
+}
 
-function statBadgeClasses(stat: EntityOverviewStat): string {
+function statToneClasses(stat: EntityOverviewStat): StatToneClasses {
   if (typeof stat.value === "number" && stat.value === 0)
     return STAT_EMPTY_CLASSES
   if (!stat.tone) return STAT_EMPTY_CLASSES
@@ -360,24 +393,30 @@ export function EntityOverviewPage({
       </section>
 
       {/*
-        現在地の見取り図。**仕切りで区切った1本の帯**にする（`模範解答 │ 1 │
-        採点領域 │ 43 │ …`）。項目ごとに間を空けて散らすと、どこまでが1組か目で
-        追うことになる。見出しと数は同じ枡に入れ、枡どうしを仕切りで割る。
+        現在地の見取り図。**1項目が1枚の札**で、左が見出し（色で塗って白抜き）、
+        右が数（塗らずに色文字）。高さも文字も詰める——ここで足を止めさせたいわけ
+        ではないので、面積を取らせない。
       */}
-      <section className="flex flex-wrap items-center divide-x rounded-md border">
-        {stats.map((stat) => (
-          <div key={stat.label} className="flex items-center gap-2 px-3 py-2">
-            <span className="text-sm text-muted-foreground">{stat.label}</span>
+      <section className="flex flex-wrap items-center gap-1.5">
+        {stats.map((stat) => {
+          const tone = statToneClasses(stat)
+          return (
             <span
+              key={stat.label}
               className={cn(
-                "rounded border px-2 py-0.5 text-sm font-semibold",
-                statBadgeClasses(stat)
+                "inline-flex overflow-hidden rounded border text-[11px] leading-none",
+                tone.frame
               )}
             >
-              {stat.value}
+              <span className={cn("px-1.5 py-1", tone.label)}>
+                {stat.label}
+              </span>
+              <span className={cn("px-1.5 py-1 font-semibold", tone.value)}>
+                {stat.value}
+              </span>
             </span>
-          </div>
-        ))}
+          )
+        })}
       </section>
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
