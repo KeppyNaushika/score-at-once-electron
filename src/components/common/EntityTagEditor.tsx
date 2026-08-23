@@ -126,11 +126,10 @@ export function EntityTagEditor({
       {tags.map((tag) => (
         <Badge
           key={tag.id}
-          variant="secondary"
+          variant="outline"
+          className="text-xs font-normal"
           style={
-            tag.color
-              ? { backgroundColor: tag.color, borderColor: tag.color }
-              : undefined
+            tag.color ? { borderColor: tag.color, color: tag.color } : undefined
           }
         >
           {tag.name}

@@ -114,16 +114,21 @@ export function AnswerSheetDefinitionDetail({
   }
 
   const stats: EntityOverviewStat[] = [
-    { label: "用紙", value: definition.settings.paperSize },
+    { label: "用紙", value: definition.settings.paperSize, tone: "teal" },
     {
       label: "向き",
       value:
         ORIENTATION_LABELS[definition.settings.orientation] ??
         definition.settings.orientation,
+      tone: "rose",
     },
     { label: "設問", value: `${questionCount}問`, tone: "purple" },
     { label: "合計配点", value: `${totalPoints}点`, tone: "orange" },
-    { label: "担当", value: isOwner ? "自分" : (ownerName ?? "-") },
+    {
+      label: "担当",
+      value: isOwner ? "自分" : (ownerName ?? "-"),
+      tone: "blue",
+    },
   ]
 
   return (

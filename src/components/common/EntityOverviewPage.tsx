@@ -45,7 +45,7 @@ export interface EntityOverviewBasics {
  * 試験の5項目を名前で決め打ちしていた）。省略すれば灰。
  */
 export type EntityOverviewStatTone =
-  "blue" | "green" | "purple" | "indigo" | "orange"
+  "blue" | "green" | "purple" | "indigo" | "orange" | "teal" | "rose"
 
 /** 要約の帯に並べる1項目 */
 export interface EntityOverviewStat {
@@ -78,51 +78,63 @@ const QUIET_FIELD_CLASSES = cn(
 /**
  * 見出しと数の色。
  *
- * 見出しは**色で塗って白抜き**、数は**塗らずに色文字**。1組が1つの札に見えて、
- * かつ数の方が地の白に乗るので読みやすい。高さと文字は小さく詰める——ここは
- * 現在地の見取り図で、読ませたいのは下の段カード（次に何をするか）である。
+ * **控えめに置く。** 濃く塗って白抜きにすると、画面の中でいちばん強い面が
+ * 「いくつあるか」になる。ここは現在地の見取り図で、読ませたいのは下の手順である。
+ * 淡く敷いて濃い文字を載せれば、色の違いは残したまま主張が下がる。
+ *
+ * **同系色にはしない。** 項目どうしを見分けるための印なので、色相は離す。
  */
 interface StatToneClasses {
   /** 札の外枠 */
   frame: string
-  /** 見出し側（塗りつぶし＋白抜き） */
+  /** 見出し側（淡く敷いて濃い文字） */
   label: string
-  /** 数側（塗らずに色文字） */
+  /** 数側（敷かずに色文字） */
   value: string
 }
 
 const STAT_TONE_CLASSES: Record<EntityOverviewStatTone, StatToneClasses> = {
   blue: {
-    frame: "border-blue-500",
-    label: "bg-blue-500 text-white",
+    frame: "border-blue-200",
+    label: "bg-blue-100 text-blue-800",
     value: "text-blue-700",
   },
   green: {
-    frame: "border-green-600",
-    label: "bg-green-600 text-white",
-    value: "text-green-700",
+    frame: "border-emerald-200",
+    label: "bg-emerald-100 text-emerald-800",
+    value: "text-emerald-700",
   },
   purple: {
-    frame: "border-purple-500",
-    label: "bg-purple-500 text-white",
+    frame: "border-purple-200",
+    label: "bg-purple-100 text-purple-800",
     value: "text-purple-700",
   },
   indigo: {
-    frame: "border-indigo-500",
-    label: "bg-indigo-500 text-white",
+    frame: "border-indigo-200",
+    label: "bg-indigo-100 text-indigo-800",
     value: "text-indigo-700",
   },
   orange: {
-    frame: "border-orange-500",
-    label: "bg-orange-500 text-white",
+    frame: "border-orange-200",
+    label: "bg-orange-100 text-orange-800",
     value: "text-orange-700",
+  },
+  teal: {
+    frame: "border-teal-200",
+    label: "bg-teal-100 text-teal-800",
+    value: "text-teal-700",
+  },
+  rose: {
+    frame: "border-rose-200",
+    label: "bg-rose-100 text-rose-800",
+    value: "text-rose-700",
   },
 }
 
 /** まだ1件も無い項目は灰へ落とす（色が付いているのは「在る」の合図） */
 const STAT_EMPTY_CLASSES: StatToneClasses = {
-  frame: "border-gray-300",
-  label: "bg-gray-300 text-white",
+  frame: "border-gray-200",
+  label: "bg-gray-100 text-gray-600",
   value: "text-gray-500",
 }
 
