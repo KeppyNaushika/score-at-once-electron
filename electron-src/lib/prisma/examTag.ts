@@ -7,14 +7,6 @@ import prisma from "./client"
 /**
  * 試験に紐づくタグを取得
  */
-export async function getExamTags(examId: string) {
-  return prisma.examTag.findMany({
-    where: { examId },
-    include: {
-      tag: true,
-    },
-  })
-}
 
 /**
  * 試験-タグ関連を作成

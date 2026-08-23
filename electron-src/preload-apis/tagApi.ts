@@ -16,7 +16,6 @@ export function createTagApi() {
     tagSubtotalGroupSetTags: bind("tagSubtotalGroup:setTags"),
 
     // ExamTag（試験-タグ関連）
-    examTagGetByExamId: bind("examTag:getByExamId"),
     examTagCreate: bind("examTag:create"),
     examTagSetExamTags: bind("examTag:setExamTags"),
 

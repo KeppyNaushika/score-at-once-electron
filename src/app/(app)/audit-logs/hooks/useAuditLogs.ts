@@ -22,7 +22,7 @@ import {
 } from "../constants"
 
 /** 1ページの件数の指定。「自動」は表示領域の高さから決める */
-export type AuditLogPageSizeChoice = typeof AUTO_PAGE_SIZE | number
+type AuditLogPageSizeChoice = typeof AUTO_PAGE_SIZE | number
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_ENTRIES: AuditLogEntry[] = []

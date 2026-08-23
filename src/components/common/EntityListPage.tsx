@@ -33,13 +33,13 @@ import { useTableSort } from "@/hooks/useTableSort"
 export type EntityListDate = Date | string | null
 
 /** 「次のステップ」列に出すもの */
-export interface EntityListNextStep {
+interface EntityListNextStep {
   label: string
   url: string
 }
 
 /** 1件も無いときに出すもの */
-export interface EntityListEmptyState {
+interface EntityListEmptyState {
   /** 本文（「まだ試験がありません」など） */
   message: string
   /** 作成へ導く導線。無くてもよい */

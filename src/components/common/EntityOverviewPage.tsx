@@ -44,7 +44,7 @@ export interface EntityOverviewBasics {
  * 実体ごとの割り当てで、共通部品には決めようがない（以前の `QuickStats` は
  * 試験の5項目を名前で決め打ちしていた）。省略すれば灰。
  */
-export type EntityOverviewStatTone =
+type EntityOverviewStatTone =
   "blue" | "green" | "purple" | "indigo" | "orange" | "teal" | "rose"
 
 /** 要約の帯に並べる1項目 */

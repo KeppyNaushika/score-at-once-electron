@@ -7,7 +7,7 @@ import {
   getAsbDefinitionTags,
   setAsbDefinitionTags,
 } from "../lib/prisma/asbDefinitionTag"
-import { createExamTag, getExamTags, setExamTags } from "../lib/prisma/examTag"
+import { createExamTag, setExamTags } from "../lib/prisma/examTag"
 import {
   createTag,
   deleteTag,
@@ -65,10 +65,6 @@ export const tagHandlers = {
   },
 
   // ExamTag CRUD
-  "examTag:getByExamId": async (examId: string) => {
-    return getExamTags(examId)
-  },
-
   "examTag:create": async (data: { examId: string; tagId: string }) => {
     return createExamTag(data)
   },

@@ -27,13 +27,6 @@ export const tagListQuery = () =>
     queryFn: () => window.electronAPI.tagGetAll(),
   })
 
-/** その試験に付いているタグ */
-export const examTagsQuery = (examId: string) =>
-  queryOptions({
-    queryKey: [...scopeKeys.exam(examId), "tags"] as const,
-    queryFn: () => window.electronAPI.examTagGetByExamId(examId),
-  })
-
 /** そのタグが付いている小計点グループ（一覧で開いたときだけ引く） */
 export const tagSubtotalGroupsQuery = (tagId: string) =>
   queryOptions({
@@ -116,7 +109,7 @@ export const setExamTagsMutation = (examId: string) =>
     mutationFn: (tagIds: string[]) =>
       window.electronAPI.examTagSetExamTags(examId, tagIds),
     meta: {
-      invalidates: [examTagsQuery(examId).queryKey, tagListQuery().queryKey],
+      invalidates: [scopeKeys.exam(examId), tagListQuery().queryKey],
       errorMessage: "タグを保存できませんでした",
     },
   })
