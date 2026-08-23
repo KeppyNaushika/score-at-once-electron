@@ -174,8 +174,9 @@ interface UseNavigationHistoryResult {
  * **移動は必ず未保存のガードを通す。** ここで `router.back()` を直に呼ぶと書きかけを
  * 黙って捨てる。包んでおけば、このフックを使う画面はどれも確認を通る。
  *
- * ガードは `popstate`（Alt+← ・マウスの第4/第5ボタン）も横取りするが、あちらは
- * **移動が起きた後**に確認して引き戻す形になる。押す前に訊けるこちらを通す方が素直。
+ * ガードは Navigation API の `navigate` でマウスの第4/第5ボタンも止めるが、
+ * そちらは main 側から呼ぶ移動を取り消せないことがある（画面に触っていない状態で
+ * `goBack()` を呼ぶと `cancelable` が false になる）。押す前に訊けるこちらを通す。
  */
 export function useNavigationHistory(): UseNavigationHistoryResult {
   const router = useRouter()

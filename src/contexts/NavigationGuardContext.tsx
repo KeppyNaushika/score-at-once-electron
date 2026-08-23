@@ -1,7 +1,6 @@
 "use client"
 
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { usePathname, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import {
   createContext,
   useCallback,
@@ -10,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { toast } from "sonner"
 
 import {
   AlertDialog,
@@ -21,10 +21,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import {
-  goToHistoryIndexMutation,
-  navigationStateQuery,
-} from "@/queries/navigation"
 
 export interface DirtyDetail {
   label: string
@@ -41,7 +37,8 @@ export interface DirtyDetail {
  * 広げている。
  *
  * 行き来の中身をここに書かず関数で受け取るのは、`router.back()` なのか Electron の
- * セッション履歴への `goToIndex` なのかを、このコンテキストが知らずに済ませるため。
+ * セッション履歴への `goToIndex` なのか、Navigation API の `traverseTo` なのかを、
+ * このコンテキストが知らずに済ませるため。
  */
 type NavigationIntent =
   { kind: "push"; href: string } | { kind: "traverse"; traverse: () => void }
@@ -80,9 +77,6 @@ export function NavigationGuardProvider({
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const pathname = usePathname()
-  const queryClient = useQueryClient()
-  const { mutate: goToHistoryIndex } = useMutation(goToHistoryIndexMutation())
   const [isDirty, setIsDirty] = useState(false)
   const [details, setDetails] = useState<DirtyDetail[]>([])
   const [pendingNavigation, setPendingNavigation] =
@@ -91,23 +85,21 @@ export function NavigationGuardProvider({
   const isDirtyRef = useRef(false)
 
   /**
-   * いま居る履歴エントリの位置（Chromium のセッション履歴が持つ添字）。
+   * 「離れる」で自分から起こしている行き来の行き先。**着いたら（または失敗したら）
+   * 必ず消す。**
    *
-   * `popstate` は**移動が終わってから**飛び、どちらへ何歩動いたかを持たない。
-   * 飛んだ後では「どこから来たか」が消えているので、直前の位置だけを手元に置く。
-   * 位置そのものは持たず、遷移のたびに窓へ訊き直す（写しを増やさない）。
-   */
-  const currentHistoryIndexRef = useRef<number | null>(null)
-
-  /**
-   * 確認のあいだ預かっている `popstate`（横取りしたもの）。
+   * ガードを外してから再実行すれば素通りする、と考えたが**実測で否定された**。
+   * `traverseTo` の `navigate` は同期でもマイクロタスクでもなく**マクロタスクの後**に
+   * 飛ぶ（実測 1〜3ms）。その隙に React が再描画して画面側が
+   * `setNavigationGuard(true)` を打ち直すと、再実行が自分の確認に捕まって
+   * `AbortError` で消える —— 利用者から見れば「離れるを押したのに何も起きない」。
    *
-   * `state` が `null` の popstate と「預かっていない」を区別するために入れ物で包む。
+   * だから外れていることに頼らず、**この行き先だけは通す**と名指しする。
+   * 残り続ける印にしないために、消す道を2本持つ（`navigate` が来たときと、
+   * 行き来が決着したとき）。印が残ったときの害も「その1つのエントリへの行き来が
+   * 1回だけ確認を素通りする」に留まり、次の戻るを丸ごと食う類のものにはならない。
    */
-  const heldPopStateRef = useRef<{ state: unknown } | null>(null)
-
-  /** 引き戻しのために自分で起こした移動。その `popstate` は Next へ渡さない */
-  const isRollingBackRef = useRef(false)
+  const replayingKeyRef = useRef<string | null>(null)
 
   const setNavigationGuard = useCallback(
     (dirty: boolean, newDetails?: DirtyDetail[]) => {
@@ -185,84 +177,99 @@ export function NavigationGuardProvider({
     [guardedNavigateIntent]
   )
 
-  // 履歴の位置は窓が持っている。遷移のたびに引き直す
-  useEffect(() => {
-    let cancelled = false
-    // 引き直すまでは「分からない」に倒す。古い位置を持ったまま横取りすると、
-    // 引き戻し先を1つ間違える（そちらの方が履歴を壊す）
-    currentHistoryIndexRef.current = null
-    void queryClient
-      .fetchQuery(navigationStateQuery())
-      .then((navigationState) => {
-        if (!cancelled) {
-          currentHistoryIndexRef.current = navigationState.activeIndex
-        }
-      })
-      // 履歴が引けない環境では位置を持たない（下の popstate は横取りしない）
-      .catch(() => undefined)
-    return () => {
-      cancelled = true
-    }
-  }, [pathname, queryClient])
-
   /**
-   * 預かっていた `popstate` をもう一度流す（「離れる」を選んだとき）。
+   * 戻る・進む（マウスの第4/第5ボタン）を、**動く前に**止める。
    *
-   * ブラウザの履歴は既に行き先に居るので、動かすものは何も無い。要るのは
-   * **Next へ知らせること**だけなので、横取りしたものをそのまま流し直す。
-   * このときガードは外れているので、今度は素通りして Next の購読へ届く。
-   */
-  const replayHeldPopState = useCallback(() => {
-    const held = heldPopStateRef.current
-    heldPopStateRef.current = null
-    if (!held) return
-    window.dispatchEvent(new PopStateEvent("popstate", { state: held.state }))
-  }, [])
-
-  /**
-   * 戻る・進む（Alt+← やマウスの第4/第5ボタン）をガードへ通す。
+   * ここが `popstate` ではなく Navigation API なのには理由がある。`popstate` は
+   * **遷移が終わってから**飛ぶので、そこで出す確認は「もう消えたデータ」について
+   * の確認になる。かつては Next より先に購読して握り潰し、履歴を元へ引き戻して
+   * いたが、**引き戻しがあるせいで穴が2つ**あった —— 引き戻し中の印が残ると次の
+   * 戻るを黙って食い、履歴の位置の写しがずれると1つ手前へ飛ばしていた。
    *
-   * **`popstate` は遷移が起きた後に飛ぶ。** ここで何もしなければ Next のルータが
-   * 画面を差し替え、書きかけを抱えていたコンポーネントが外れる ── そのあとで確認を
-   * 出しても、守るはずのデータはもう無い。だから **Next へ届く前に止める**。
+   * `navigate` は**遷移の前**に飛び、`preventDefault()` で取り消せる。取り消せば
+   * 何も動かないので（URL も Next も履歴も）、**引き戻すものが無い**。上の2つは
+   * 直すのではなく、成り立たなくなる。
    *
-   * 止め方は `stopImmediatePropagation`。同じ `popstate` を Next も購読しているが、
-   * 購読を始めるのは `AppRouter` の effect で、**このプロバイダはその子**（React は
-   * 子の effect を先に流す）なので、購読はこちらが先に並ぶ。先に並んだ側が止めれば
-   * Next の購読は呼ばれず、画面は動かない＝書きかけはそのまま残る。
+   * 実機で確かめたこと（Electron 43＝Chrome 150）:
    *
-   * 動いてしまうのはブラウザの履歴だけなので、選ばれた方で辻褄を合わせる。
+   * - マウスの第4ボタンの戻るも同じ `navigate` を起こし、`preventDefault()` で
+   *   止まる。**押下そのものが取り消しの権限を与える**ので、連打でも間を空けても
+   *   止まる（content 層が mouseup で `GoBack()` を呼ぶ経路なので、キー入力を
+   *   潰す形では止められない —— そちらを採らなかった理由でもある）
+   * - 取り消すと `location.href` も Chromium のセッション履歴の位置も動かず、
+   *   `popstate` も飛ばない。Next は最後まで何も知らない
    *
-   * - 「戻る」→ 元の位置へ引き戻す（`handleStay`）
-   * - 「離れる」→ 預かった `popstate` を流し直し、Next に追いつかせる
+   * **3つ、通す道がある。**
    *
-   * **書きかけが無いときは何もしない。** 素通しなので、履歴を往復させない。
-   * `GuardedLink` のクリックは `popstate` を起こさないので、確認が二重に出ることもない。
+   * 1. `navigationType` が `traverse` でないもの。押す・置き換えるは
+   *    `GuardedLink` と `guardedNavigate` が既に見ている。ここで拾うと、
+   *    **Next が行き来のあとに自分で打つ `replace`** まで捕まえてしまう
+   * 2. `event.cancelable` が false のもの。**取り消せないのに `preventDefault()`
+   *    を呼んでも例外は出ず、黙って遷移する**ので、呼ぶ前に見る。false になるのは
+   *    (a) 別の文書への行き来（履歴の先頭＝ログイン前まで戻る場合だけ。
+   *    アプリ内の遷移はすべて同じ文書なので通常は起こらない）と、(b) 画面に
+   *    触っていない状態で main 側から `goBack()` を呼んだとき。後者はアプリの
+   *    履歴ボタン経由だが、そちらは `guardedTraverse` が先に確認を出している
+   * 3. 書きかけが無いとき
+   *
+   * **「離れる」の再実行は `traverseTo`。** 取り消した時点で何も動いていないので、
+   * 行き先を `destination.key` で覚えておき、そこへ改めて行く。`history.go(delta)`
+   * ではない —— **取り消したあとの `go` は黙って何もしない**ことがある（多段の
+   * 行き来を取り消したあとで実測。1.2秒後・4秒後・8秒後のいずれでも落ちた）。
+   * 履歴一覧から数歩戻る操作もこの経路に来るので、多段が表せないと困る。
    */
   useEffect(() => {
-    const handlePopState = (event: PopStateEvent) => {
-      if (isRollingBackRef.current) {
-        // 自分で起こした引き戻し。Next は行き先を知らないままなので渡さない
-        isRollingBackRef.current = false
-        event.stopImmediatePropagation()
+    // Chromium 以外（`next dev` を素のブラウザで開いたとき）には無い
+    if (typeof window.navigation === "undefined") return
+    const navigation = window.navigation
+
+    const handleNavigate = (event: NavigateEvent) => {
+      if (event.navigationType !== "traverse") return
+      if (event.destination.key === replayingKeyRef.current) {
+        // 「離れる」で自分から起こしたもの。ここで止めると同じ確認が無限に出る
+        replayingKeyRef.current = null
         return
       }
       if (!isDirtyRef.current) return
-      if (currentHistoryIndexRef.current === null) {
-        // 引き戻す先が分からない。横取りすると URL と画面がずれたまま直せなく
-        // なるので、ここは通す（この場合だけ確認が出ない）
-        return
-      }
-      event.stopImmediatePropagation()
-      heldPopStateRef.current = { state: event.state }
-      setPendingNavigation({ kind: "traverse", traverse: replayHeldPopState })
+      // 取り消せない行き来は止められない。`preventDefault()` は例外も投げず、
+      // 黙って遷移する。ここで諦めるのが唯一できることで、`beforeunload` が
+      // 拾えるのは文書ごと消える場合だけ
+      if (!event.cancelable) return
+
+      event.preventDefault()
+      const destinationKey = event.destination.key
+      setPendingNavigation({
+        kind: "traverse",
+        traverse: () => {
+          replayingKeyRef.current = destinationKey
+          const result = navigation.traverseTo(destinationKey)
+          // 失敗は黙らせない。行き先が既に履歴から消えていれば
+          // `InvalidStateError`、途中で捕まれば `AbortError` で**拒否される**
+          //（例外は投げない）。拾わないと、押したのに何も起きない画面になる
+          void result.committed?.then(
+            () => {
+              replayingKeyRef.current = null
+            },
+            () => {
+              replayingKeyRef.current = null
+              toast.error("前の画面へ戻れませんでした")
+            }
+          )
+        },
+      })
       setDialogOpen(true)
     }
-    window.addEventListener("popstate", handlePopState)
-    return () => window.removeEventListener("popstate", handlePopState)
-  }, [replayHeldPopState])
 
-  // beforeunload handler
+    navigation.addEventListener("navigate", handleNavigate)
+    return () => navigation.removeEventListener("navigate", handleNavigate)
+  }, [])
+
+  /**
+   * 文書ごと消えるとき（窓を閉じる・再読み込み）。
+   *
+   * **`navigate` では拾えない。** あちらが見るのはこの文書の中の遷移だけで、
+   * 別の文書への行き来は取り消せない（実機で確認済み）。ここが唯一の防波堤になる。
+   */
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       if (isDirtyRef.current) {
@@ -276,27 +283,25 @@ export function NavigationGuardProvider({
   const handleLeave = useCallback(() => {
     setDialogOpen(false)
     if (pendingNavigation) {
+      // 外してから実行する。ただし**外れていることには頼らない**
+      //（`replayingKeyRef` の註釈のとおり、再実行の `navigate` が飛ぶ頃には
+      //  画面側が打ち直している場合がある）
       clearNavigationGuard()
       runNavigation(pendingNavigation)
       setPendingNavigation(null)
     }
   }, [pendingNavigation, clearNavigationGuard, runNavigation])
 
+  /**
+   * 「戻る」を選んだ（＝いまの画面に留まる）。
+   *
+   * **何も動いていないので、何も戻さない。** 行き来は `navigate` の時点で
+   * 取り消してあり、押すリンクは `GuardedLink` が既定動作を止めている。
+   */
   const handleStay = useCallback(() => {
     setDialogOpen(false)
     setPendingNavigation(null)
-
-    // `popstate` を横取りしていたときは、ブラウザだけが行き先へ動いている。
-    // 元の位置へ引き戻す（この移動で飛ぶ `popstate` も Next へは渡さない）。
-    // 何も預かっていなければ履歴は動いていないので、ここは何もしない
-    const held = heldPopStateRef.current
-    const cameFrom = currentHistoryIndexRef.current
-    heldPopStateRef.current = null
-    if (held && cameFrom !== null) {
-      isRollingBackRef.current = true
-      goToHistoryIndex(cameFrom)
-    }
-  }, [goToHistoryIndex])
+  }, [])
 
   return (
     <NavigationGuardContext.Provider
@@ -310,11 +315,8 @@ export function NavigationGuardProvider({
       }}
     >
       {children}
-      {/*
-        閉じ方は「戻る」と「離れる」の2つだけではない（Escape でも閉じる）。
-        閉じたのに引き戻さないと、横取りした `popstate` のぶん URL だけが行き先に
-        残る。閉じる道を1本にまとめて、必ず `handleStay` を通す
-      */}
+      {/* 閉じ方は「戻る」と「離れる」の2つだけではない（Escape でも閉じる）ので、
+          閉じる道を1本にまとめて必ず `handleStay` を通す */}
       <AlertDialog
         open={dialogOpen}
         onOpenChange={(open) => {

@@ -456,7 +456,8 @@ describe("WorkflowTabHeader の戻るが未保存を捨てないこと", () => {
 
     expect(screen.getByText("未保存のデータがあります")).toBeInTheDocument()
     // 確認する前に履歴を動かさない。ここで router.back() を直に呼ぶと、
-    // 移動してから確認する形（popstate の横取り）に頼ることになる
+    // Navigation API の取り消しに頼ることになるが、main 側から起こす移動は
+    // 取り消せないことがある（画面に触っていなければ `cancelable` が false）
     expect(router.back).not.toHaveBeenCalled()
   })
 
