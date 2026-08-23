@@ -2,7 +2,7 @@
 
 import type { UseQueryResult } from "@tanstack/react-query"
 import { useQueries, useQuery } from "@tanstack/react-query"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
@@ -94,6 +94,33 @@ export function useScoringDataLoader(examId: string): ScoringDataLoaderResult {
     combine: combineQuestionScores,
   })
 
+  const isFirstLoadPending =
+    exam.isPending ||
+    studentAnswerImages.isPending ||
+    cropRegions.isPending ||
+    questionScores.isPending
+
+  /**
+   * 一度でも全部そろったか。**待ち画面を出すのは初回だけ**にするための掛け金。
+   *
+   * 採点行を設問ごとに割ったので、**設問が1つ増えると新品のクエリが1本生える**
+   * （別の教員が 02・03 で設問を足し、同期で届いたとき）。「1本でも未取得なら
+   * 待つ」のままだと、既に41本そろっていても画面全体が `ScoringLoadingState` へ
+   * 差し替わり、採点中の選択・フォーカス・スクロールが消える。木に載せていた頃は
+   * 取り直しでも「もうデータはある」扱いだったので起きなかった。
+   *
+   * 2回目以降は、増えた設問の色が一瞬あとから付くだけでよい。
+   */
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+  // 別の試験を開いたら、その試験でもう一度そろうまで待つ
+  const [loadedExamId, setLoadedExamId] = useState(examId)
+  if (loadedExamId !== examId) {
+    setLoadedExamId(examId)
+    setHasLoadedOnce(false)
+  } else if (!hasLoadedOnce && !isFirstLoadPending) {
+    setHasLoadedOnce(true)
+  }
+
   // 読み込みの失敗は通知する（取得ではないので effect でよい）
   const error =
     exam.error ??
@@ -105,12 +132,8 @@ export function useScoringDataLoader(examId: string): ScoringDataLoaderResult {
   }, [error])
 
   return {
-    // 揃って初めて採点できる。1つでも来ていなければ待たせる
-    loading:
-      exam.isPending ||
-      studentAnswerImages.isPending ||
-      cropRegions.isPending ||
-      questionScores.isPending,
+    // 揃って初めて採点できる。1つでも来ていなければ待たせる（初回だけ）
+    loading: isFirstLoadPending && !hasLoadedOnce,
     exam: exam.data ?? null,
     studentAnswerImages: studentAnswerImages.data ?? EMPTY_ANSWER_IMAGES,
     cropRegions: cropRegions.data ?? EMPTY_CROP_REGIONS,
