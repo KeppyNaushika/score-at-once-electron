@@ -361,7 +361,11 @@ export function EntityOverviewPage({
           <CardContent className="space-y-4">
             {/*
             見出しの列は幅を決め打つ。中身に合わせて伸縮させると、実体ごとに
-            （「試験名」と「解答用紙名」）入力欄の左端がずれる
+            （「試験名」と「解答用紙名」）入力欄の左端がずれる。
+
+            **1行のときは4行とも同じ高さ（h-9）**にする。欄ごとに背の高さが違うと、
+            行の間隔だけでなく文字と文字の間も不揃いに見える（説明が2行以上に
+            なれば、その行だけ伸びるのは当然として）
           */}
             <div className="grid grid-cols-[6rem_1fr] items-center gap-x-3 gap-y-2">
               <Label
@@ -441,7 +445,12 @@ export function EntityOverviewPage({
                 placeholder="説明を書く"
                 onChange={(e) => changeDescription(e.target.value)}
                 onBlur={() => forgetField(entityHref, "description")}
-                className={cn(QUIET_FIELD_CLASSES, "min-h-0 resize-none")}
+                className={cn(
+                  QUIET_FIELD_CLASSES,
+                  // 1行のときは他の欄と同じ高さ（h-9）に収める。伸びるのは
+                  // 2行目からで、そこまでは4行が等間隔に並ぶ
+                  "min-h-9 resize-none py-1.5"
+                )}
               />
 
               <Label
@@ -451,7 +460,7 @@ export function EntityOverviewPage({
                 タグ
               </Label>
               <EntityTagEditor
-                className="px-2"
+                className="min-h-9 px-2"
                 tags={tags}
                 onReplace={onReplaceTags}
                 disabled={!canEdit}
