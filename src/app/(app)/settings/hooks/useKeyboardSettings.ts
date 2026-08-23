@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner"
 
 import { DEFAULT_KEYBINDINGS } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
+import { normalizeKey } from "@/components/exams/07-score-at-once/ScoringMain/utils/normalizeKey"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
 import {
@@ -67,11 +68,10 @@ export function useKeyboardSettings() {
         return
       }
 
-      // キーを記録
-      let key = event.key
-      if (key === " ") key = "Space"
-
-      setPendingKey(key)
+      // 記録は押す側と**同じ関数**を通す。ここで綴りを書き直すと規則が2つになり、
+      // 修飾キー付きの割り当てが記録の時点で食い違う（Shift+d を押したときに
+      // `event.key` は `"D"`、押す側の `normalizeKey` は `"Shift+d"` を作る）
+      setPendingKey(normalizeKey(event))
     }
 
     window.addEventListener("keydown", handleKeyDown)
