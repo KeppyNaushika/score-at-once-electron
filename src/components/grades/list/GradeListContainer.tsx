@@ -438,8 +438,16 @@ export function GradeListContainer() {
               {grade.gradeTags.map((gradeTag) => (
                 <Badge
                   key={gradeTag.tag.id}
-                  variant="secondary"
-                  className="text-xs"
+                  variant="outline"
+                  className="text-xs font-normal"
+                  style={
+                    gradeTag.tag.color
+                      ? {
+                          borderColor: gradeTag.tag.color,
+                          color: gradeTag.tag.color,
+                        }
+                      : undefined
+                  }
                 >
                   {gradeTag.tag.name}
                 </Badge>

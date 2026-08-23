@@ -579,7 +579,16 @@ export function AnswerSheetDefinitionList() {
                 : definition.ownerName}
             </span>
             {(definition.tags ?? []).map((tag) => (
-              <Badge key={tag.id} variant="secondary" className="text-xs">
+              <Badge
+                key={tag.id}
+                variant="outline"
+                className="text-xs font-normal"
+                style={
+                  tag.color
+                    ? { borderColor: tag.color, color: tag.color }
+                    : undefined
+                }
+              >
                 {tag.name}
               </Badge>
             ))}

@@ -483,8 +483,16 @@ export function CourseworkListContainer() {
             {coursework.tags.map((courseworkTag) => (
               <Badge
                 key={courseworkTag.tag.id}
-                variant="secondary"
-                className="text-xs"
+                variant="outline"
+                className="text-xs font-normal"
+                style={
+                  courseworkTag.tag.color
+                    ? {
+                        borderColor: courseworkTag.tag.color,
+                        color: courseworkTag.tag.color,
+                      }
+                    : undefined
+                }
               >
                 {courseworkTag.tag.name}
               </Badge>
