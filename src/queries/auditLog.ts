@@ -1,4 +1,4 @@
-import { infiniteQueryOptions } from "@tanstack/react-query"
+import { keepPreviousData, queryOptions } from "@tanstack/react-query"
 
 import type { AuditLogFilter } from "@/electron-src/lib/prisma/auditQuery"
 
@@ -8,7 +8,11 @@ import type { AuditLogFilter } from "@/electron-src/lib/prisma/auditQuery"
  * 対応する preload は `electron-src/preload-apis/auditLogApi.ts`。
  */
 
-const PAGE_SIZE = 50
+/** 一覧の何ページ目を何件で見ているか（ページ番号は1始まり） */
+export interface AuditLogPagination {
+  pageNumber: number
+  pageSize: number
+}
 
 /**
  * 監査ログ全体の行き先。
@@ -19,26 +23,30 @@ const PAGE_SIZE = 50
 export const auditLogListKey = ["auditLog", "list"] as const
 
 /**
- * 監査ログの一覧（無限スクロール）。
+ * 監査ログの一覧（1ページ分）。
  *
- * 絞り込み条件は要求そのものなのでキーに入る（同定用の id ではない）。条件を
- * 変えると先頭から取り直しになる。
+ * 絞り込み条件とページは要求そのものなのでキーに入る（同定用の id ではない）。
+ * 条件を変えると別のキーになり、先頭から取り直しになる。
+ *
+ * 行は保持日数のぶん積み上がるので（`docs/audit-log-redesign.md` の見積もりで
+ * 年12万行）、**切るのは main**（`take` / `skip` / `count`）で、renderer へ渡るのは
+ * 1ページ分と総件数だけである。ここは「計算は renderer 側」規約に対して
+ * `auditQuery.ts` の2関数だけに認められた例外にあたる。
+ *
+ * ページを送っている間は直前のページを出したままにする（`keepPreviousData`）。
+ * 空の一覧を挟むと高さが変わって画面が跳ねる。
  */
-export const auditLogListQuery = (filter: AuditLogFilter) =>
-  infiniteQueryOptions({
-    queryKey: ["auditLog", "list", filter] as const,
-    initialPageParam: 0,
-    queryFn: ({ pageParam }) =>
+export const auditLogListQuery = (
+  filter: AuditLogFilter,
+  pagination: AuditLogPagination
+) =>
+  queryOptions({
+    queryKey: ["auditLog", "list", filter, pagination] as const,
+    queryFn: () =>
       window.electronAPI.audit.getLogs({
         ...filter,
-        limit: PAGE_SIZE,
-        offset: pageParam,
+        limit: pagination.pageSize,
+        offset: (pagination.pageNumber - 1) * pagination.pageSize,
       }),
-    getNextPageParam: (lastPage, allPages) => {
-      const loaded = allPages.reduce(
-        (count, page) => count + page.entries.length,
-        0
-      )
-      return loaded < lastPage.total ? loaded : undefined
-    },
+    placeholderData: keepPreviousData,
   })

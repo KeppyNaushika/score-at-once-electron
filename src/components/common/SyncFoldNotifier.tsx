@@ -14,7 +14,7 @@ import { subscribeSyncRecordFolds } from "@/queries/sync"
  * 他の分散DBがやらない割り切りなので、**黙ってやらない**のがこの窓の役目。
  *
  * **既読は持たない。** 同期はアプリが動いている間しか走らないので、畳みの瞬間には
- * 必ず窓が開いていて、取りこぼさない。あとから見返すのは監査ログ（設定 › 監査ログ）で、
+ * 必ず窓が開いていて、取りこぼさない。あとから見返すのは監査ログ（サイドバーの「監査ログ」）で、
  * 見る場所を2つに割らないために専用の履歴画面は作らない。
  *
  * 描くものは無い。窓が開いている間ずっと聞いていられるよう AppShell に置く。
@@ -52,7 +52,7 @@ function showFoldToast(folds: SyncRecordFold[]): void {
       : ""
 
   toast.warning("同期で重複していたデータを1つにまとめました", {
-    description: `${breakdown}${movedNote}\n他のPCと同じものが二重にできていたため、片方を残してもう片方を取り込みました。詳しくは設定の監査ログに残しています。`,
+    description: `${breakdown}${movedNote}\n他のPCと同じものが二重にできていたため、片方を残してもう片方を取り込みました。詳しくは監査ログに残しています。`,
     duration: Infinity,
     closeButton: true,
   })
@@ -87,7 +87,7 @@ function showLostChildrenToast(folds: SyncRecordFold[]): void {
     .join("、")
 
   toast.error("まとめる際に、ぶら下がっていたデータを引き継げませんでした", {
-    description: `${breakdown}\n消えたデータは元に戻せません。設定の監査ログに、何がどれへまとまったかを残しています。`,
+    description: `${breakdown}\n消えたデータは元に戻せません。監査ログに、何がどれへまとまったかを残しています。`,
     duration: Infinity,
     closeButton: true,
   })
