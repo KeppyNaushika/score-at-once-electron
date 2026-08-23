@@ -338,11 +338,16 @@ export function EntityOverviewPage({
   // ボタンが遠く離れて別々の物に見える。中身はどれも同じ幅の中へ置く。
   return (
     <div className="mx-auto max-w-5xl space-y-8 p-6">
-      <Card className="gap-4 py-4">
-        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-          <CardTitle className="text-sm font-semibold text-muted-foreground">
+      {/*
+        見出しと操作は**枠の外**に置く。下の「手順」も同じ形（見出し → カード）
+        なので、2つの節が同じ骨になる。枠の中に見出しを入れると、上の節だけ
+        入れ子が1つ深く見えていた。
+      */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-muted-foreground">
             基本情報
-          </CardTitle>
+          </h2>
           <div className="flex items-center gap-2">
             {!canEdit && editDisabledReason && (
               <p className="text-xs text-muted-foreground">
@@ -351,137 +356,141 @@ export function EntityOverviewPage({
             )}
             {actions}
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/*
+        </div>
+        <Card className="py-4">
+          <CardContent className="space-y-4">
+            {/*
             見出しの列は幅を決め打つ。中身に合わせて伸縮させると、実体ごとに
             （「試験名」と「解答用紙名」）入力欄の左端がずれる
           */}
-          <div className="grid grid-cols-[6rem_1fr] items-center gap-x-3 gap-y-2">
-            <Label
-              htmlFor="entity-overview-name"
-              className="text-sm text-muted-foreground"
-            >
-              {nameLabel}
-            </Label>
-            <Input
-              id="entity-overview-name"
-              value={textOf(entityHref, "name", basics.name)}
-              disabled={!canEdit}
-              placeholder={`${nameLabel}を入力`}
-              onChange={(e) => changeName(e.target.value)}
-              onBlur={() => forgetField(entityHref, "name")}
-              className={cn(
-                QUIET_FIELD_CLASSES,
-                "max-w-sm text-base font-semibold md:text-base"
-              )}
-            />
-
-            <Label
-              htmlFor="entity-overview-reference-date"
-              className="text-sm text-muted-foreground"
-            >
-              {dateLabel}
-            </Label>
-            <div className="flex items-center gap-1">
+            <div className="grid grid-cols-[6rem_1fr] items-center gap-x-3 gap-y-2">
+              <Label
+                htmlFor="entity-overview-name"
+                className="text-sm text-muted-foreground"
+              >
+                {nameLabel}
+              </Label>
               <Input
-                id="entity-overview-reference-date"
-                type="date"
-                value={textOf(
-                  entityHref,
-                  "referenceDate",
-                  basics.referenceDate
-                )}
+                id="entity-overview-name"
+                value={textOf(entityHref, "name", basics.name)}
                 disabled={!canEdit}
-                onChange={(e) => changeReferenceDate(e.target.value)}
-                onBlur={() => forgetField(entityHref, "referenceDate")}
-                className={cn(QUIET_FIELD_CLASSES, "w-auto")}
+                placeholder={`${nameLabel}を入力`}
+                onChange={(e) => changeName(e.target.value)}
+                onBlur={() => forgetField(entityHref, "name")}
+                className={cn(
+                  QUIET_FIELD_CLASSES,
+                  "text-base font-semibold md:text-base"
+                )}
               />
-              {/*
+
+              <Label
+                htmlFor="entity-overview-reference-date"
+                className="text-sm text-muted-foreground"
+              >
+                {dateLabel}
+              </Label>
+              <div className="flex items-center gap-1">
+                <Input
+                  id="entity-overview-reference-date"
+                  type="date"
+                  value={textOf(
+                    entityHref,
+                    "referenceDate",
+                    basics.referenceDate
+                  )}
+                  disabled={!canEdit}
+                  onChange={(e) => changeReferenceDate(e.target.value)}
+                  onBlur={() => forgetField(entityHref, "referenceDate")}
+                  className={cn(QUIET_FIELD_CLASSES, "w-auto")}
+                />
+                {/*
               日付が何に効くかは、書き換えるときだけ知りたい。常に添えておくと
               2行を占め、しかも毎回読み飛ばされる。訊いたときに答える形にする。
             */}
-              {dateHint && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label={dateHint}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <Info className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-xs">
-                    {dateHint}
-                  </TooltipContent>
-                </Tooltip>
-              )}
+                {dateHint && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={dateHint}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <Info className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      {dateHint}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+
+              <Label
+                htmlFor="entity-overview-description"
+                className="text-sm text-muted-foreground"
+              >
+                説明
+              </Label>
+              <Textarea
+                id="entity-overview-description"
+                value={textOf(entityHref, "description", basics.description)}
+                disabled={!canEdit}
+                // 高さは中身に従う（`Textarea` の `field-sizing-content`）。行数で
+                // 決め打つと、1行しか書いていなくても2行ぶんの空白が居座る
+                rows={1}
+                placeholder="説明を書く"
+                onChange={(e) => changeDescription(e.target.value)}
+                onBlur={() => forgetField(entityHref, "description")}
+                className={cn(QUIET_FIELD_CLASSES, "min-h-0 resize-none")}
+              />
+
+              <Label
+                htmlFor="entity-overview-tag"
+                className="text-sm text-muted-foreground"
+              >
+                タグ
+              </Label>
+              <EntityTagEditor
+                className="px-2"
+                tags={tags}
+                onReplace={onReplaceTags}
+                disabled={!canEdit}
+                disabledReason={editDisabledReason}
+              />
             </div>
 
-            <Label
-              htmlFor="entity-overview-description"
-              className="text-sm text-muted-foreground"
-            >
-              説明
-            </Label>
-            <Textarea
-              id="entity-overview-description"
-              value={textOf(entityHref, "description", basics.description)}
-              disabled={!canEdit}
-              // 高さは中身に従う（`Textarea` の `field-sizing-content`）。行数で
-              // 決め打つと、1行しか書いていなくても2行ぶんの空白が居座る
-              rows={1}
-              placeholder="説明を書く"
-              onChange={(e) => changeDescription(e.target.value)}
-              onBlur={() => forgetField(entityHref, "description")}
-              className={cn(QUIET_FIELD_CLASSES, "min-h-0 resize-none")}
-            />
-
-            <Label
-              htmlFor="entity-overview-tag"
-              className="text-sm text-muted-foreground"
-            >
-              タグ
-            </Label>
-            <EntityTagEditor
-              className="px-2"
-              tags={tags}
-              onReplace={onReplaceTags}
-              disabled={!canEdit}
-              disabledReason={editDisabledReason}
-            />
-          </div>
-
-          {/*
+            {/*
             現在地の見取り図。**1項目が1枚の札**で、左が見出し（色で塗って白抜き）、
             右が数（塗らずに色文字）。高さも文字も詰める——ここで足を止めさせたい
             わけではないので、面積を取らせない。基本情報と同じ枠へ入れる——どちらも
             「この実体が何か」の話で、下の手順とは別である
           */}
-          <div className="flex flex-wrap items-center gap-1.5 border-t pt-4">
-            {stats.map((stat) => {
-              const tone = statToneClasses(stat)
-              return (
-                <span
-                  key={stat.label}
-                  className={cn(
-                    "inline-flex overflow-hidden rounded border text-[11px] leading-none",
-                    tone.frame
-                  )}
-                >
-                  <span className={cn("px-1.5 py-1", tone.label)}>
-                    {stat.label}
+            <div className="flex flex-wrap items-center gap-1.5 border-t pt-4">
+              {stats.map((stat) => {
+                const tone = statToneClasses(stat)
+                return (
+                  <span
+                    key={stat.label}
+                    className={cn(
+                      "inline-flex overflow-hidden rounded border text-[11px] leading-none",
+                      tone.frame
+                    )}
+                  >
+                    <span className={cn("px-1.5 py-1", tone.label)}>
+                      {stat.label}
+                    </span>
+                    <span
+                      className={cn("px-1.5 py-1 font-semibold", tone.value)}
+                    >
+                      {stat.value}
+                    </span>
                   </span>
-                  <span className={cn("px-1.5 py-1 font-semibold", tone.value)}>
-                    {stat.value}
-                  </span>
-                </span>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-muted-foreground">手順</h2>
