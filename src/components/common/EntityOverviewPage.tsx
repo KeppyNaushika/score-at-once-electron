@@ -502,6 +502,15 @@ export function EntityOverviewPage({
   )
 }
 
+/**
+ * 段カードの足元（「次へ」・「n/m 完了」・「前の段の完了を待機中」）の1行。
+ *
+ * **3態とも同じ高さにする。** ボタンだけ背が高いと、横に並べたときカードごとに
+ * 区切り線の下の厚みが変わり、下端が揃わない。
+ */
+const FOOTER_ROW_CLASSES =
+  "flex h-7 items-center justify-center text-center text-sm"
+
 interface WorkflowPhaseCardProps {
   phase: WorkflowPhaseGroup
   tabs: readonly WorkflowTab[]
@@ -608,7 +617,7 @@ function WorkflowPhaseCard({
         まとまりごとに違うので、内容に続けて置くと横に並べたとき区切り線の高さが
         揃わず、3枚がばらばらに見える。
       */}
-      <CardContent className="flex flex-1 flex-col">
+      <CardContent className="flex flex-1 flex-col gap-4">
         <div className="space-y-2">
           {steps.map((step) => {
             const StepIcon = step.tab.icon
@@ -659,9 +668,13 @@ function WorkflowPhaseCard({
           })}
         </div>
 
+        {/*
+          足元の3態は**同じ高さ**にする。ボタンだけ背が高いと、横に並べたとき
+          カードごとに区切り線の下の厚みが変わって、下端が揃わない。
+        */}
         {isActive && nextStep && (
           <div className="mt-auto border-t pt-4">
-            <Button className="w-full" size="sm" asChild>
+            <Button className={cn(FOOTER_ROW_CLASSES, "w-full")} asChild>
               <GuardedLink href={entityHref + nextStep.tab.path}>
                 次へ: {nextStep.tab.title}
               </GuardedLink>
@@ -671,7 +684,12 @@ function WorkflowPhaseCard({
 
         {isCompleted && (
           <div className="mt-auto border-t pt-4">
-            <p className="flex items-center justify-center gap-1 text-center text-sm font-medium text-green-600">
+            <p
+              className={cn(
+                FOOTER_ROW_CLASSES,
+                "gap-1 font-medium text-green-600"
+              )}
+            >
               <Check className="h-4 w-4" aria-hidden />
               {completedCount}/{measurableSteps.length} 完了
             </p>
@@ -680,7 +698,7 @@ function WorkflowPhaseCard({
 
         {!isActive && !isCompleted && !canStart && (
           <div className="mt-auto border-t pt-4">
-            <p className="text-center text-sm font-medium text-gray-500">
+            <p className={cn(FOOTER_ROW_CLASSES, "font-medium text-gray-500")}>
               前の段の完了を待機中
             </p>
           </div>
