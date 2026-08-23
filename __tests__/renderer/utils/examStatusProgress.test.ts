@@ -70,7 +70,10 @@ describe("getExamProgress の受験者スコープ", () => {
     expect(progress.actualScoringCount).toBe(1)
   })
 
-  it("欠席者は分母から外れる", () => {
+  it("欠席でも答案があれば分母に入る（在籍の状態では絞らない）", () => {
+    // 採点できるかは**答案画像があるか**で決まる。07 は在籍の状態で絞らずに答案を
+    // 並べるので、欠席の生徒でも画像があれば採点できる。ここで外すと「採点できる
+    // のに数えない」マスが生まれ、概要と 08 の画面が違うことを言い出す
     const progress = getExamProgress(
       buildExam([
         { id: EXAM_STUDENT_A, status: "participating" },
@@ -78,19 +81,39 @@ describe("getExamProgress の受験者スコープ", () => {
       ])
     )
 
-    expect(progress.answerSheetCount).toBe(1)
+    expect(progress.answerSheetCount).toBe(2)
   })
 
   it("受験者IDでない値を渡すと何も突き合わない（取り違えの検知）", () => {
-    const progress = getExamProgress(
-      buildExam([
-        { id: "student-a", status: "participating" },
-        { id: "student-b", status: "participating" },
-      ])
-    )
+    // 答案と採点は `ExamStudent.id` で結ぶ。`Student.id` を渡すと突き合わない。
+    // 在籍の一覧はもう突き合わせに使わないので、ここで見るのは
+    // **答案画像と採点行のあいだ**の取り違えである
+    const progress = getExamProgress({
+      examPages: [{ id: "page-1" }],
+      answerImages: [
+        { examStudentId: EXAM_STUDENT_A },
+        { examStudentId: EXAM_STUDENT_B },
+      ],
+      cropRegions: [
+        {
+          type: "QUESTION_ANSWER",
+          // 採点行だけ Student.id で持っている（取り違え）
+          questionScores: [
+            questionScore({ examStudentId: "student-a", status: "correct" }),
+          ],
+          scoreDecisions: [],
+        },
+      ],
+      examStudents: [
+        { id: EXAM_STUDENT_A, status: "participating" },
+        { id: EXAM_STUDENT_B, status: "participating" },
+      ],
+      examSubtotalGroups: [],
+    })
 
-    expect(progress.answerSheetCount).toBe(0)
-    expect(progress.expectedScoringCount).toBe(0)
+    // 答案は2枚あるので分母は2。だが採点行はどの答案とも結ばれない
+    expect(progress.answerSheetCount).toBe(2)
+    expect(progress.expectedScoringCount).toBe(2)
     expect(progress.actualScoringCount).toBe(0)
   })
 })
@@ -326,6 +349,71 @@ describe("getExamProgress の採点確定", () => {
     })
 
     expect(progress.hasFinalizedScores).toBe(true)
+  })
+
+  it("欠席でも答案画像があれば、食い違いを数える（07 が採点させるので）", () => {
+    // 採点できるかは**答案画像があるか**で決まる。07 は在籍の状態で絞らずに
+    // 答案を並べるので、欠席の生徒でも画像があれば採点でき、食い違いも起こせる。
+    // ここで欠席を外すと、07 で採点できるのに概要が「確定 済み」と言い、
+    // 08 の画面だけが「要裁定」と言う食い違いになる
+    const progress = getExamProgress({
+      examPages: [{ id: "page-1" }],
+      answerImages: [{ examStudentId: EXAM_STUDENT_B }],
+      cropRegions: [
+        {
+          type: "QUESTION_ANSWER",
+          questionScores: [
+            questionScore({
+              examStudentId: EXAM_STUDENT_B,
+              status: "correct",
+            }),
+            questionScore({
+              examStudentId: EXAM_STUDENT_B,
+              status: "incorrect",
+            }),
+          ],
+          scoreDecisions: [],
+        },
+      ],
+      examStudents: [
+        { id: EXAM_STUDENT_A, status: "participating" },
+        { id: EXAM_STUDENT_B, status: "absent" },
+      ],
+      examSubtotalGroups: [],
+    })
+
+    expect(progress.hasFinalizedScores).toBe(false)
+  })
+
+  it("欠席でも答案画像があれば、採点の分母に入る", () => {
+    const progress = getExamProgress({
+      examPages: [{ id: "page-1" }],
+      answerImages: [
+        { examStudentId: EXAM_STUDENT_A },
+        { examStudentId: EXAM_STUDENT_B },
+      ],
+      cropRegions: [
+        {
+          type: "QUESTION_ANSWER",
+          questionScores: [
+            questionScore({
+              examStudentId: EXAM_STUDENT_B,
+              status: "correct",
+            }),
+          ],
+          scoreDecisions: [],
+        },
+      ],
+      examStudents: [
+        { id: EXAM_STUDENT_A, status: "participating" },
+        { id: EXAM_STUDENT_B, status: "absent" },
+      ],
+      examSubtotalGroups: [],
+    })
+
+    // 設問1つ × 答案のある2人。欠席の B も採点できるので分母に入る
+    expect(progress.expectedScoringCount).toBe(2)
+    expect(progress.actualScoringCount).toBe(1)
   })
 })
 

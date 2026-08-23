@@ -73,7 +73,9 @@ describe("試験の裁定サマリ", () => {
   })
 
   it("裁定対象が無くても全ての設問を配点つきで返す", async () => {
-    const fixture = await createFullTestExam(testPrisma, {})
+    const fixture = await createFullTestExam(testPrisma, {
+      includeStudentAnswerImages: true,
+    })
 
     const summary = await getExamDecisionSummary(
       fixture.exam.id,
@@ -95,7 +97,9 @@ describe("試験の裁定サマリ", () => {
   })
 
   it("食い違ったセルを競合として挙げ、失われうる点を見積もる", async () => {
-    const fixture = await createFullTestExam(testPrisma, {})
+    const fixture = await createFullTestExam(testPrisma, {
+      includeStudentAnswerImages: true,
+    })
     const [examStudent] = fixture.examStudents
     const [firstCropRegion] = fixture.cropRegions
     const otherGrader = await createGrader("別の採点者", fixture.exam.id)
@@ -141,8 +145,75 @@ describe("試験の裁定サマリ", () => {
     expect(cell.studentName).not.toBe(examStudent.id)
   })
 
+  it("答案画像が無い受験者のマスは裁定対象に出さない", async () => {
+    // 押しても見る答案が無いので、裁定しようがない。概要と一覧の完了判定
+    //（getExamProgress）も同じ集合で数える——片方だけが絞ると、概要が
+    // 「確定 済み」と言う裏でこの画面が「要裁定」と言うことになる
+    const fixture = await createFullTestExam(testPrisma, {
+      includeStudentAnswerImages: true,
+    })
+    const [examStudent] = fixture.examStudents
+    const [firstCropRegion] = fixture.cropRegions
+    const otherGrader = await createGrader("別の採点者", fixture.exam.id)
+    await testPrisma.questionScore.create({
+      data: {
+        id: crypto.randomUUID(),
+        cropRegionId: firstCropRegion.id,
+        examStudentId: examStudent.id,
+        userId: otherGrader.id,
+        status: "incorrect",
+        partialScore: null,
+      },
+    })
+    // 採点したあとに答案を消す（差し替えの途中など）
+    await testPrisma.studentAnswerImage.deleteMany({
+      where: { examStudentId: examStudent.id },
+    })
+
+    const summary = await getExamDecisionSummary(
+      fixture.exam.id,
+      fixture.user.id
+    )
+
+    expect(summary.conflictCount).toBe(0)
+  })
+
+  it("欠席でも答案画像があれば裁定対象に出す", async () => {
+    // 07 は在籍の状態で絞らずに答案を並べるので、欠席の生徒でも画像があれば
+    // 採点できる。採点できたものは裁定もできなければ辻褄が合わない
+    const fixture = await createFullTestExam(testPrisma, {
+      includeStudentAnswerImages: true,
+    })
+    const [examStudent] = fixture.examStudents
+    const [firstCropRegion] = fixture.cropRegions
+    const otherGrader = await createGrader("別の採点者", fixture.exam.id)
+    await testPrisma.questionScore.create({
+      data: {
+        id: crypto.randomUUID(),
+        cropRegionId: firstCropRegion.id,
+        examStudentId: examStudent.id,
+        userId: otherGrader.id,
+        status: "incorrect",
+        partialScore: null,
+      },
+    })
+    await testPrisma.examStudent.update({
+      where: { id: examStudent.id },
+      data: { status: "absent" },
+    })
+
+    const summary = await getExamDecisionSummary(
+      fixture.exam.id,
+      fixture.user.id
+    )
+
+    expect(summary.conflictCount).toBe(1)
+  })
+
   it("確定より新しい提案が入ったセルを stale として挙げる", async () => {
-    const fixture = await createFullTestExam(testPrisma, {})
+    const fixture = await createFullTestExam(testPrisma, {
+      includeStudentAnswerImages: true,
+    })
     const [examStudent] = fixture.examStudents
     const [firstCropRegion] = fixture.cropRegions
     // 提案（試験作成時）より前に確定していた、という状態を作る
@@ -182,7 +253,9 @@ describe("試験の裁定サマリ", () => {
   })
 
   it("担当は試験のメンバーだけを数える", async () => {
-    const fixture = await createFullTestExam(testPrisma, {})
+    const fixture = await createFullTestExam(testPrisma, {
+      includeStudentAnswerImages: true,
+    })
     const [firstCropRegion, secondCropRegion] = fixture.cropRegions
     const member = await createGrader("担当の先生", fixture.exam.id)
     const nonMember = await createGrader("外れた先生", null)
@@ -218,6 +291,7 @@ describe("試験の裁定サマリ", () => {
   it("担当者の採点済み件数は未採点行を除いて数える", async () => {
     const fixture = await createFullTestExam(testPrisma, {
       includeScores: false,
+      includeStudentAnswerImages: true,
     })
     const [firstCropRegion] = fixture.cropRegions
     const [firstExamStudent, secondExamStudent] = fixture.examStudents
@@ -276,7 +350,9 @@ describe("試験の裁定サマリ", () => {
   })
 
   it("確定できるのは OWNER だけ", async () => {
-    const fixture = await createFullTestExam(testPrisma, {})
+    const fixture = await createFullTestExam(testPrisma, {
+      includeStudentAnswerImages: true,
+    })
     const grader = await createGrader("担当の先生", fixture.exam.id)
 
     const asOwner = await getExamDecisionSummary(

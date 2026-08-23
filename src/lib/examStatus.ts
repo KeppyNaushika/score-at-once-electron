@@ -106,25 +106,23 @@ export function getExamProgress(exam: ExamProgressSource): ExamProgress {
     exam.cropRegions?.filter((region) => region.type === "QUESTION_ANSWER")
       .length || 0
 
-  // 受験・見込み生徒のIDリストを取得（欠席生徒を除外）
-  const participatingExamStudentIds =
-    exam.examStudents
-      ?.filter(
-        (examStudent) =>
-          examStudent.status === "participating" ||
-          examStudent.status === "expected"
-      )
-      ?.map((examStudent) => examStudent.id) || []
-
-  // 採点の対象になる受験者（複数ページの答案でも1人1回のみ）。
-  // 答案画像が無い生徒は採点できないので、分母にも分子にもこの集合を使う
+  /**
+   * 採点の対象になる受験者（複数ページの答案でも1人1回のみ）。
+   *
+   * **答案画像があるかどうかだけで決める。在籍の状態は見ない。**
+   *
+   * 07 は答案が上がっていれば誰の答案でも採点させる（`getStudentAnswersByExamId`
+   * は状態で絞らない）。ここで欠席を外すと、**採点できるのに数えない**マスが生まれ、
+   * 概要が「確定 済み」と言う一方で 08 の画面は「要裁定」と言う食い違いになる。
+   *
+   * 「欠席」は答案を上げるときに飛ばした結果として付くもので、**採点できるか**の
+   * 答えは画像の有無そのものである。状態が効くのは出力の側 —— 誰を出すか（09 の
+   * 生徒選択）と、平均や分布に混ぜるか（箱ひげ図・R-Exametrika）——であって、
+   * 採点の作業ではない。
+   */
   const scorableExamStudentIds = [
     ...new Set(
-      exam.answerImages
-        ?.filter((answerImage) =>
-          participatingExamStudentIds.includes(answerImage.examStudentId)
-        )
-        ?.map((answerImage) => answerImage.examStudentId)
+      exam.answerImages?.map((answerImage) => answerImage.examStudentId)
     ),
   ]
 

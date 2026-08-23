@@ -80,8 +80,27 @@ export const getExamDecisionSummary = async (
 
   // 行を作ったのはここなので、Decimal→number と判定の絞り込みもここで1回だけ済ませる。
   // 以降このファイルに生の Decimal も生 string の判定も現れない。
-  const scores = questionScoreRows.map(toSerializedQuestionScore)
+  const allScores = questionScoreRows.map(toSerializedQuestionScore)
   const decisions = scoreDecisionRows.map(toSerializedScoreDecision)
+
+  /**
+   * 採点の対象になる受験者。**答案画像があるかどうかだけで決める。**
+   *
+   * 07 は答案が上がっていれば誰の答案でも採点させる（`getStudentAnswersByExamId`
+   * は在籍の状態で絞らない）。ここで絞らないと、**採点できない生徒のマス**——答案を
+   * 消した・そもそも上げていない——まで「要裁定」として並び、押しても見る答案が無い。
+   * 逆に在籍の状態で絞ると、欠席にした生徒の答案を採点できるのに裁定できなくなる。
+   *
+   * 概要と一覧の完了判定（`src/lib/examStatus.ts` の `getExamProgress`）も同じ集合を
+   * 使う。**片方だけが絞ると、概要が「確定 済み」と言う裏でこの画面が「要裁定」と
+   * 言う**ことになる。
+   */
+  const scorableExamStudentIds = new Set(
+    studentsWithAnswers.map((answerImage) => answerImage.examStudentId)
+  )
+  const scores = allScores.filter((score) =>
+    scorableExamStudentIds.has(score.examStudentId)
+  )
 
   const { resolved, conflicts } = resolveEffectiveScores(scores, decisions)
 
