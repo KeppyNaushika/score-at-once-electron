@@ -304,7 +304,7 @@ export const examWorkflowPhases: readonly WorkflowPhaseGroup[] = [
   },
   {
     title: "出力",
-    description: "採点結果の書き出し（何度でもできる）",
+    description: "採点結果の書き出し",
     stepIds: ["09-export"],
   },
 ]
@@ -323,7 +323,7 @@ export const gradeWorkflowPhases: readonly WorkflowPhaseGroup[] = [
   },
   {
     title: "出力",
-    description: "成績の確認と書き出し（何度でもできる）",
+    description: "成績の確認と書き出し",
     stepIds: ["06-results", "07-export"],
   },
 ]
@@ -342,7 +342,7 @@ export const courseworkWorkflowPhases: readonly WorkflowPhaseGroup[] = [
   },
   {
     title: "結果",
-    description: "入力した点数の確認（何度でもできる）",
+    description: "入力した点数の確認",
     stepIds: ["05-results"],
   },
 ]
@@ -356,7 +356,7 @@ export const answerSheetBuilderWorkflowPhases: readonly WorkflowPhaseGroup[] = [
   },
   {
     title: "書き出し",
-    description: "PDF への書き出し（何度でもできる）",
+    description: "PDF への書き出し",
     stepIds: ["02-export"],
   },
 ]

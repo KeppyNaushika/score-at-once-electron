@@ -593,11 +593,6 @@ function WorkflowPhaseCard({
               {phase.description}
             </p>
           </div>
-          {measurableSteps.length > 0 && (
-            <div className="shrink-0 text-sm font-semibold text-gray-600">
-              {completedCount}/{measurableSteps.length} 完了
-            </div>
-          )}
         </CardTitle>
       </CardHeader>
 
@@ -666,7 +661,7 @@ function WorkflowPhaseCard({
           <div className="mt-4 border-t pt-4">
             <p className="flex items-center justify-center gap-1 text-center text-sm font-medium text-green-600">
               <Check className="h-4 w-4" aria-hidden />
-              完了
+              {completedCount}/{measurableSteps.length} 完了
             </p>
           </div>
         )}

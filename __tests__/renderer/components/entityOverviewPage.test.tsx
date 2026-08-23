@@ -8,9 +8,10 @@
  *    値が変わっていなければ書かない。名前を消し切った途中でも書かない
  * 2. **段カードの名前・説明・行き先が `workflowTabs` から来ること**
  *    （概要に写しを持たない）。**段の行そのものがリンク**で、別口の「開く」は無い
- * 3. **進み具合の出し方。** 判定できる段だけを分母に `n/m 完了` と数で出し、
+ * 3. **進み具合の出し方。** 済んだまとまりの足元にだけ、判定できる段を分母にした
+ *    `n/m 完了` を出し、
  *    材料が無いまとまり（出力）には数そのものを出さない。％も進捗バーも置かない
- * 4. **まとまりの状態。** 進行中なら「次へ: 〈段の名前〉」、済んだなら「完了」、
+ * 4. **まとまりの状態。** 進行中なら「次へ: 〈段の名前〉」、済んだなら「n/m 完了」、
  *    前が済んでいないなら「前の段の完了を待機中」
  *
  * ## 共通のレンダラ用セットアップを読み込んでいない理由
@@ -259,14 +260,26 @@ describe("段カード", () => {
     expect(screen.queryByText("開く")).toBeNull()
   })
 
-  it("判定できる段だけを分母にして数で出す（％も進捗バーも出さない）", () => {
+  it("進み具合は数で出す（％も進捗バーも出さない）", () => {
+    renderOverview({ stepCompletion: ALL_MEASURABLE_DONE })
+    const preparation = phaseCard("準備")
+
+    // ％ではなく数で言う（残りが何段か読める）
+    expect(within(preparation).getByText("5/5 完了")).toBeVisible()
+    expect(within(preparation).queryByText(/%/)).toBeNull()
+    expect(screen.queryByRole("progressbar")).toBeNull()
+  })
+
+  it("途中のまとまりは数を出さず、次にやることだけを言う", () => {
+    // 数は済んだまとまりの足元にだけ出す。途中の「2/5」を見出しにも出すと、
+    // 同じカードが2か所で進み具合を語り、行の ✓ と合わせて3回同じことを言う
     renderOverview()
     const preparation = phaseCard("準備")
 
-    // 準備は5段のうち2段。％ではなく数で言う（残りが何段か読める）
-    expect(within(preparation).getByText("2/5 完了")).toBeVisible()
-    expect(within(preparation).queryByText(/%/)).toBeNull()
-    expect(screen.queryByRole("progressbar")).toBeNull()
+    expect(within(preparation).queryByText(/^\d+\/\d+ 完了$/)).toBeNull()
+    expect(
+      within(preparation).getByText("次へ: 採点領域の詳細情報設定")
+    ).toBeVisible()
   })
 
   it("採点確定は採点のまとまりに並び、他の段と同じく数に入る", () => {
@@ -278,17 +291,33 @@ describe("段カード", () => {
     expect(
       within(scoring).getByText("採点の割り当てと確定").closest("a")
     ).toHaveAttribute("href", "/exams/exam-1/08-finalize")
-    // 答案・採点・確定の3段が分母になる
-    expect(within(scoring).getByText("0/3 完了")).toBeVisible()
+  })
+
+  it("採点の分母は答案・採点・確定の3段", () => {
+    renderOverview({
+      stepCompletion: {
+        ...ALL_MEASURABLE_DONE,
+        "06-student-answers": true,
+        "07-score-at-once": true,
+        "08-finalize": true,
+      },
+    })
+
+    expect(within(phaseCard("採点")).getByText("3/3 完了")).toBeVisible()
   })
 
   it("判定できない段は数の分母から外れる", () => {
     // 確定だけを「判定できない」に落とすと、分母が3から2へ減る
     renderOverview({
-      stepCompletion: { ...STEP_COMPLETION, "08-finalize": null },
+      stepCompletion: {
+        ...ALL_MEASURABLE_DONE,
+        "06-student-answers": true,
+        "07-score-at-once": true,
+        "08-finalize": null,
+      },
     })
 
-    expect(within(phaseCard("採点")).getByText("0/2 完了")).toBeVisible()
+    expect(within(phaseCard("採点")).getByText("2/2 完了")).toBeVisible()
   })
 
   it("出力には数そのものを出さない（何度でも出せるので済みが無い）", () => {
@@ -312,9 +341,8 @@ describe("段カード", () => {
     renderOverview({ stepCompletion: ALL_MEASURABLE_DONE })
     const preparation = phaseCard("準備")
 
+    // 済んだことは足元の数で言う（見出しには出さない）
     expect(within(preparation).getByText("5/5 完了")).toBeVisible()
-    // 見出しの数とは別に、まとまりの足元でも済んだことを言う
-    expect(within(preparation).getByText("完了")).toBeVisible()
     expect(within(preparation).queryByText(/^次へ: /)).toBeNull()
 
     // 判定できる段が済めば、その先のまとまりは待機中でなくなる
