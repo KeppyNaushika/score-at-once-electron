@@ -10,7 +10,8 @@
  * そこで2つを走査で押さえる:
  *
  * 1. 段の `id` と `src/app` のフォルダが1対1であること（片方だけ増減させない）
- * 2. 改名した古い名前（`08-export`）がソースのどこにも残っていないこと
+ * 2. 改名した古い名前（`08-export`）が `src` / `electron-src` / `__tests__` の
+ *    どこにも残っていないこと
  */
 
 import * as fs from "fs"
@@ -87,7 +88,12 @@ function stepFolderNames(routeDir: string): string[] {
     .sort()
 }
 
-/** `src` と `__tests__` の TypeScript ファイルを全部集める */
+/**
+ * `src` と `electron-src` と `__tests__` の TypeScript ファイルを全部集める。
+ *
+ * `electron-src` を外すと、出力・アーカイブ・ヘルプの文言が main 側に持っている
+ * 段のURLが走査から漏れる（renderer だけ直して main が古い名前を指したままでも緑になる）。
+ */
 function collectSourceFiles(): string[] {
   const collected: string[] = []
   const walk = (directory: string) => {
@@ -104,6 +110,7 @@ function collectSourceFiles(): string[] {
     }
   }
   walk(path.join(REPO_ROOT, "src"))
+  walk(path.join(REPO_ROOT, "electron-src"))
   walk(path.join(REPO_ROOT, "__tests__"))
   return collected
 }
@@ -241,7 +248,7 @@ describe("段のページの題", () => {
 })
 
 describe("改名の取り残し", () => {
-  it("08-export を指す文字列は src にも __tests__ にも残っていない", () => {
+  it("08-export を指す文字列は src にも electron-src にも __tests__ にも残っていない", () => {
     const offenders = collectSourceFiles()
       .filter((filePath) => filePath !== THIS_TEST_FILE)
       .filter((filePath) =>

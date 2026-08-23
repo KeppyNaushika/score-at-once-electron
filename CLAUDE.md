@@ -47,7 +47,7 @@ npx vitest                 # ウォッチモード
 
 ## 確立済みワークフロー
 
-### 📋 8段階採点ワークフロー
+### 📋 9段階採点ワークフロー
 
 1. **模範解答アップロード** (`/exams/[examId]/01-upload`)
    - PDF・画像ファイルの高品質変換
@@ -74,21 +74,26 @@ npx vitest                 # ウォッチモード
 
 7. **採点実行** (`/exams/[examId]/07-score-at-once`)
    - キーボードファースト採点UI
-   - 複数教員協調採点、競合解決
+   - 複数教員による分担採点（食い違いの裁定は 8. 採点確定）
 
-8. **結果出力** (`/exams/[examId]/08-export`)
+8. **採点確定** (`/exams/[examId]/08-finalize`)
+   - 設問ごとの担当割り当て
+   - 採点者間の食い違いの裁定
+
+9. **結果出力** (`/exams/[examId]/09-export`)
    - Excel/PDF出力
    - 採点マーク設定
 
-### 📋 7段階成績ワークフロー
+### 📋 6段階成績ワークフロー
 
-1. **初期設定** (`/grades/[gradeId]/01-setup`)
-2. **生徒管理** (`/grades/[gradeId]/02-students`)
-3. **データソース** (`/grades/[gradeId]/03-data-sources`)
-4. **手動スコア** (`/grades/[gradeId]/04-manual-scores`)
-5. **境界設定** (`/grades/[gradeId]/05-boundaries`)
-6. **結果** (`/grades/[gradeId]/06-results`)
-7. **出力** (`/grades/[gradeId]/07-export`)
+1. **生徒管理** (`/grades/[gradeId]/02-students`)
+2. **データソース** (`/grades/[gradeId]/03-data-sources`)
+3. **外部成績** (`/grades/[gradeId]/04-manual-scores`)
+4. **成績境界** (`/grades/[gradeId]/05-boundaries`)
+5. **結果** (`/grades/[gradeId]/06-results`)
+6. **出力** (`/grades/[gradeId]/07-export`)
+
+段の番号とフォルダ名がずれているのは、初期設定（旧 `01-setup`）が概要ページへ畳まれてフォルダごと無くなったため。段の名前と URL の出どころは `src/lib/workflowTabs.ts` の1か所だけ。
 
 ### 🔄 ナビゲーション統一原則
 

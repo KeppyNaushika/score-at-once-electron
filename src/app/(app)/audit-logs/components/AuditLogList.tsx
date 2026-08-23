@@ -52,13 +52,20 @@ export function AuditLogList() {
   const { data: users = EMPTY_USERS } = useQuery(userListQuery())
 
   // 検索テキストはデバウンスしてフィルタへ反映。
-  // 更新関数形にすることで、待機中に他のフィルタが変わっても上書きしない
+  // 更新関数形にすることで、待機中に他のフィルタが変わっても上書きしない。
+  //
+  // **いま効いている検索語と同じなら書かない。** `setFilter` は条件が変わった合図
+  // なので、無条件に1ページ目へ戻す。書き換える理由が無いときに書くと、開いた直後
+  // （どちらも空）に 300ms 遅れて絞り込みを「変えた」ことになり、その間に送った
+  // ページが1ページ目へ引き戻される
+  const appliedSearchText = filter.search ?? ""
   useEffect(() => {
-    const id = setTimeout(() => {
+    if (searchText === appliedSearchText) return
+    const timeoutId = setTimeout(() => {
       setFilter((prev) => ({ ...prev, search: searchText || undefined }))
     }, 300)
-    return () => clearTimeout(id)
-  }, [searchText, setFilter])
+    return () => clearTimeout(timeoutId)
+  }, [searchText, appliedSearchText, setFilter])
 
   const categoryOptions = useMemo(
     () => Object.keys(CATEGORY_LABELS).filter(isAuditCategory),

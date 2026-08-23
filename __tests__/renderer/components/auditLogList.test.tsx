@@ -2,7 +2,7 @@
 /**
  * 監査ログ一覧（独立ページ `/audit-logs` の中身）の検査。
  *
- * 固定するのは4組。
+ * 固定するのは5組。
  *
  * 1. **切るのは main。** 画面は1ページ分しか要求せず（`limit` / `offset` 付き）、
  *    受け取った行だけを描く。保持365日ぶんの行を renderer へ運んでから切る形に
@@ -10,12 +10,14 @@
  * 2. **ページ送り。** ページ番号を押すと `offset` が動き、そのページの行に入れ替わる
  * 3. **絞り込みは先頭のページから。** 3ページ目のまま条件を変えると、一致が
  *    1ページ分しかないときに空の画面へ着地する
- * 4. **「自動」は表示領域の高さで決まる。** 高さ ÷ 1行の高さ（`AUDIT_LOG_ROW_HEIGHT`）
+ * 4. **絞り込みが変わっていないなら書かない。** 検索欄のデバウンスが初回にも走ると、
+ *    開いた直後の 300ms のあいだに送ったページが1ページ目へ引き戻される
+ * 5. **「自動」は表示領域の高さで決まる。** 高さ ÷ 1行の高さ（`AUDIT_LOG_ROW_HEIGHT`）
  *    が要求の件数になる。行の高さが固定であることが前提なので、行が伸び縮みする
  *    作りへ戻すとこの数は意味を失う
  *
- * jsdom は高さを持たない（`clientHeight` は 0）ので、1〜3 では「自動」が
- * `FALLBACK_AUDIT_LOG_PAGE_SIZE` へ落ちる。4 だけが高さを差し込む。
+ * jsdom は高さを持たない（`clientHeight` は 0）ので、1〜4 では「自動」が
+ * `FALLBACK_AUDIT_LOG_PAGE_SIZE` へ落ちる。5 だけが高さを差し込む。
  */
 
 import "../setup"
@@ -40,6 +42,9 @@ const TOTAL_ROWS = 120
 
 /** 高さが測れないときの件数。1〜3 の期待値はこれで組み立てる */
 const PAGE_SIZE = FALLBACK_AUDIT_LOG_PAGE_SIZE
+
+/** 検索欄のデバウンス（300ms）を確実に越える待ち時間 */
+const DEBOUNCE_WAIT_MS = 400
 
 const buildEntry = (rowNumber: number): AuditLogEntry => ({
   id: `audit-${rowNumber}`,
@@ -164,6 +169,34 @@ describe("監査ログ一覧", () => {
     for (const call of getLogs.mock.calls) {
       expect(call[0]?.offset).toBe(0)
     }
+  })
+
+  it("開いた直後にページを送っても、検索の待機に引き戻されない", async () => {
+    // 検索欄のデバウンスが**初回にも走る**と、開いて 300ms 後に「絞り込みを
+    // 変えた」ことになり（実際は空のまま）、先頭のページへ戻される。
+    // 開いてすぐ2ページ目を押した人だけが1ページ目に着地する
+    const user = userEvent.setup()
+    await renderList()
+
+    await user.click(screen.getByRole("link", { name: "2ページ目" }))
+    await waitFor(() => {
+      expect(
+        screen.getByText(`が テスト操作 ${PAGE_SIZE + 1}`)
+      ).toBeInTheDocument()
+    })
+
+    // デバウンスの待ち時間（300ms）を越えて待つ
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, DEBOUNCE_WAIT_MS))
+    })
+
+    expect(
+      screen.getByText(`が テスト操作 ${PAGE_SIZE + 1}`)
+    ).toBeInTheDocument()
+    expect(screen.queryByText("が テスト操作 1")).not.toBeInTheDocument()
+    // 一度2ページ目へ移った後で、先頭のページを取り直してもいない
+    const offsets = getLogs.mock.calls.map((call) => call[0]?.offset)
+    expect(offsets.lastIndexOf(0)).toBeLessThan(offsets.lastIndexOf(PAGE_SIZE))
   })
 
   it("絞り込むと条件が要求へ乗り、先頭のページから見直す", async () => {

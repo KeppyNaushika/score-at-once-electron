@@ -118,7 +118,11 @@ describe("一覧の新規作成はダイアログを出さない", () => {
 describe("概要ページに残らないもの", () => {
   it("?setup=1 を読む画面がもう無い", () => {
     for (const overviewFile of Object.values(OVERVIEW_FILES)) {
-      expect(readSource(overviewFile)).not.toContain("setup")
+      const source = readSource(overviewFile)
+      // URL に載る形（`?setup=1` / `&setup=...`）
+      expect(source).not.toMatch(/[?&]setup=/)
+      // クエリ名で読む形（`searchParams.get("setup")`）
+      expect(source).not.toMatch(/["']setup["']/)
     }
   })
 

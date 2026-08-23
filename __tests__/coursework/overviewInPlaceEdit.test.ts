@@ -27,11 +27,13 @@ import {
   createCoursework,
   updateCoursework,
 } from "@/electron-src/lib/prisma/coursework"
+import { createExam } from "@/electron-src/lib/prisma/exam"
 import { createGrade, updateGrade } from "@/electron-src/lib/prisma/grade"
 
 import {
   cleanupTestDatabase,
   createPrismaClientForPath,
+  createTestUser,
   disconnectTestPrisma,
 } from "../helpers/testPrismaClient"
 
@@ -76,6 +78,26 @@ describe("新規作成は renderer が振った id で作る", () => {
     })
     expect(stored?.name).toBe("新しい成績")
     expect(stored?.referenceDate).toBeNull()
+  })
+
+  it("試験: 渡した id がそのまま主キーになる", async () => {
+    const examId = crypto.randomUUID()
+    const user = await createTestUser()
+
+    const created = await createExam(
+      { id: examId, examName: "新しい試験" },
+      user.id
+    )
+
+    expect(created.id).toBe(examId)
+    const stored = await testPrisma.exam.findUnique({ where: { id: examId } })
+    expect(stored?.examName).toBe("新しい試験")
+    // 既定値で作る（試験日も説明も概要ページで後から入れる）
+    expect(stored?.referenceDate).toBeNull()
+    expect(stored?.description).toBeNull()
+    // 作った人は必ず OWNER として結び付く（作成直後に自分の試験として開ける）
+    const userExams = await testPrisma.userExam.findMany({ where: { examId } })
+    expect(userExams.map((userExam) => userExam.role)).toEqual(["OWNER"])
   })
 
   it("id を渡さない経路（取り込み・テスト）はこれまで通り自動採番", async () => {
