@@ -52,6 +52,25 @@ export interface EntityOverviewStat {
 }
 
 /**
+ * 編集欄は**触るまで文字に見せる。**
+ *
+ * 概要を開く用は「どこまで進んだか見て、次の段へ行く」がほとんどなのに、入力欄が
+ * 4つ開きっぱなしだと画面の上半分が設定フォームの顔になり、下の段カードと喧嘩する。
+ * 枠を消して文字として置き、**載せたときと打っている間だけ欄に見せる**。
+ *
+ * モーダルへ戻す手もあるが、1文字直すのに「開く→直す→閉じる」の3手が復活する。
+ * しかも保存ボタンが無い（打った時点で書かれる）ので、閉じることが保存に見えて
+ * かえって迷わせる。
+ */
+const QUIET_FIELD_CLASSES = cn(
+  "border-transparent bg-transparent shadow-none",
+  "hover:border-input hover:bg-background focus-visible:bg-background",
+  // 書き換えられない相手（持ち主でない解答用紙）では、載せても欄に見せない。
+  // `Textarea` は `disabled` でもポインタを受けるので、変化を明示的に止める
+  "disabled:hover:border-transparent disabled:hover:bg-transparent"
+)
+
+/**
  * 見出しと数の色。
  *
  * 見出しは**色で塗って白抜き**、数は**塗らずに色文字**。1組が1つの札に見えて、
@@ -334,9 +353,13 @@ export function EntityOverviewPage({
             id="entity-overview-name"
             value={textOf(entityHref, "name", basics.name)}
             disabled={!canEdit}
+            placeholder={`${nameLabel}を入力`}
             onChange={(e) => changeName(e.target.value)}
             onBlur={() => forgetField(entityHref, "name")}
-            className="max-w-md"
+            className={cn(
+              QUIET_FIELD_CLASSES,
+              "max-w-md text-base font-semibold md:text-base"
+            )}
           />
 
           <Label
@@ -353,7 +376,7 @@ export function EntityOverviewPage({
               disabled={!canEdit}
               onChange={(e) => changeReferenceDate(e.target.value)}
               onBlur={() => forgetField(entityHref, "referenceDate")}
-              className="w-48"
+              className={cn(QUIET_FIELD_CLASSES, "w-48")}
             />
             {dateHint && (
               <p className="text-xs text-muted-foreground">{dateHint}</p>
@@ -371,10 +394,10 @@ export function EntityOverviewPage({
             value={textOf(entityHref, "description", basics.description)}
             disabled={!canEdit}
             rows={2}
-            placeholder="任意"
+            placeholder="説明を書く"
             onChange={(e) => changeDescription(e.target.value)}
             onBlur={() => forgetField(entityHref, "description")}
-            className="max-w-md"
+            className={cn(QUIET_FIELD_CLASSES, "max-w-md resize-none")}
           />
 
           <Label
