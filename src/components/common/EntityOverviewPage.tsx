@@ -334,145 +334,166 @@ export function EntityOverviewPage({
     write({ description: text })
   }
 
+  // **1本の柱に揃える。** 端末の幅いっぱいに広げると、左端の入力欄と右端の
+  // ボタンが遠く離れて別々の物に見える。中身はどれも同じ幅の中へ置く。
   return (
-    <div className="space-y-6 p-6">
-      <section className="space-y-3">
-        {(actions || (!canEdit && editDisabledReason)) && (
-          <div className="flex items-center justify-end gap-2">
+    <div className="mx-auto max-w-5xl space-y-8 p-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-4">
+          <CardTitle className="text-sm font-semibold text-muted-foreground">
+            基本情報
+          </CardTitle>
+          <div className="flex items-center gap-2">
             {!canEdit && editDisabledReason && (
-              <p className="mr-auto text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {editDisabledReason}
               </p>
             )}
             {actions}
           </div>
-        )}
-        <div className="grid grid-cols-[auto_1fr] items-start gap-x-4 gap-y-3">
-          <Label
-            htmlFor="entity-overview-name"
-            className="pt-2 text-sm text-muted-foreground"
-          >
-            {nameLabel}
-          </Label>
-          <Input
-            id="entity-overview-name"
-            value={textOf(entityHref, "name", basics.name)}
-            disabled={!canEdit}
-            placeholder={`${nameLabel}を入力`}
-            onChange={(e) => changeName(e.target.value)}
-            onBlur={() => forgetField(entityHref, "name")}
-            className={cn(
-              QUIET_FIELD_CLASSES,
-              "max-w-md text-base font-semibold md:text-base"
-            )}
-          />
-
-          <Label
-            htmlFor="entity-overview-reference-date"
-            className="pt-2 text-sm text-muted-foreground"
-          >
-            {dateLabel}
-          </Label>
-          <div className="flex items-center gap-1">
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/*
+            見出しの列は幅を決め打つ。中身に合わせて伸縮させると、実体ごとに
+            （「試験名」と「解答用紙名」）入力欄の左端がずれる
+          */}
+          <div className="grid grid-cols-[6rem_1fr] items-start gap-x-3 gap-y-2">
+            <Label
+              htmlFor="entity-overview-name"
+              className="pt-2 text-sm text-muted-foreground"
+            >
+              {nameLabel}
+            </Label>
             <Input
-              id="entity-overview-reference-date"
-              type="date"
-              value={textOf(entityHref, "referenceDate", basics.referenceDate)}
+              id="entity-overview-name"
+              value={textOf(entityHref, "name", basics.name)}
               disabled={!canEdit}
-              onChange={(e) => changeReferenceDate(e.target.value)}
-              onBlur={() => forgetField(entityHref, "referenceDate")}
-              className={cn(QUIET_FIELD_CLASSES, "w-48")}
+              placeholder={`${nameLabel}を入力`}
+              onChange={(e) => changeName(e.target.value)}
+              onBlur={() => forgetField(entityHref, "name")}
+              className={cn(
+                QUIET_FIELD_CLASSES,
+                "max-w-sm text-base font-semibold md:text-base"
+              )}
             />
-            {/*
+
+            <Label
+              htmlFor="entity-overview-reference-date"
+              className="pt-2 text-sm text-muted-foreground"
+            >
+              {dateLabel}
+            </Label>
+            <div className="flex items-center gap-1">
+              <Input
+                id="entity-overview-reference-date"
+                type="date"
+                value={textOf(
+                  entityHref,
+                  "referenceDate",
+                  basics.referenceDate
+                )}
+                disabled={!canEdit}
+                onChange={(e) => changeReferenceDate(e.target.value)}
+                onBlur={() => forgetField(entityHref, "referenceDate")}
+                className={cn(QUIET_FIELD_CLASSES, "w-40")}
+              />
+              {/*
               日付が何に効くかは、書き換えるときだけ知りたい。常に添えておくと
               2行を占め、しかも毎回読み飛ばされる。訊いたときに答える形にする。
             */}
-            {dateHint && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label={dateHint}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <Info className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">{dateHint}</TooltipContent>
-              </Tooltip>
-            )}
+              {dateHint && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={dateHint}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    {dateHint}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+
+            <Label
+              htmlFor="entity-overview-description"
+              className="pt-2 text-sm text-muted-foreground"
+            >
+              説明
+            </Label>
+            <Textarea
+              id="entity-overview-description"
+              value={textOf(entityHref, "description", basics.description)}
+              disabled={!canEdit}
+              rows={2}
+              placeholder="説明を書く"
+              onChange={(e) => changeDescription(e.target.value)}
+              onBlur={() => forgetField(entityHref, "description")}
+              className={cn(QUIET_FIELD_CLASSES, "max-w-sm resize-none")}
+            />
+
+            <Label
+              htmlFor="entity-overview-tag"
+              className="pt-2 text-sm text-muted-foreground"
+            >
+              タグ
+            </Label>
+            <EntityTagEditor
+              tags={tags}
+              onReplace={onReplaceTags}
+              disabled={!canEdit}
+              disabledReason={editDisabledReason}
+            />
           </div>
 
-          <Label
-            htmlFor="entity-overview-description"
-            className="pt-2 text-sm text-muted-foreground"
-          >
-            説明
-          </Label>
-          <Textarea
-            id="entity-overview-description"
-            value={textOf(entityHref, "description", basics.description)}
-            disabled={!canEdit}
-            rows={2}
-            placeholder="説明を書く"
-            onChange={(e) => changeDescription(e.target.value)}
-            onBlur={() => forgetField(entityHref, "description")}
-            className={cn(QUIET_FIELD_CLASSES, "max-w-md resize-none")}
-          />
+          {/*
+            現在地の見取り図。**1項目が1枚の札**で、左が見出し（色で塗って白抜き）、
+            右が数（塗らずに色文字）。高さも文字も詰める——ここで足を止めさせたい
+            わけではないので、面積を取らせない。基本情報と同じ枠へ入れる——どちらも
+            「この実体が何か」の話で、下の手順とは別である
+          */}
+          <div className="flex flex-wrap items-center gap-1.5 border-t pt-4">
+            {stats.map((stat) => {
+              const tone = statToneClasses(stat)
+              return (
+                <span
+                  key={stat.label}
+                  className={cn(
+                    "inline-flex overflow-hidden rounded border text-[11px] leading-none",
+                    tone.frame
+                  )}
+                >
+                  <span className={cn("px-1.5 py-1", tone.label)}>
+                    {stat.label}
+                  </span>
+                  <span className={cn("px-1.5 py-1 font-semibold", tone.value)}>
+                    {stat.value}
+                  </span>
+                </span>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
-          <Label
-            htmlFor="entity-overview-tag"
-            className="pt-2 text-sm text-muted-foreground"
-          >
-            タグ
-          </Label>
-          <EntityTagEditor
-            tags={tags}
-            onReplace={onReplaceTags}
-            disabled={!canEdit}
-            disabledReason={editDisabledReason}
-          />
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-muted-foreground">手順</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {phases.map((phase) => (
+            <WorkflowPhaseCard
+              key={phase.title}
+              phase={phase}
+              tabs={tabs}
+              entityHref={entityHref}
+              stepCompletion={stepCompletion}
+              stepCanStart={stepCanStart}
+            />
+          ))}
         </div>
-      </section>
-
-      {/*
-        現在地の見取り図。**1項目が1枚の札**で、左が見出し（色で塗って白抜き）、
-        右が数（塗らずに色文字）。高さも文字も詰める——ここで足を止めさせたいわけ
-        ではないので、面積を取らせない。
-      */}
-      <section className="flex flex-wrap items-center gap-1.5">
-        {stats.map((stat) => {
-          const tone = statToneClasses(stat)
-          return (
-            <span
-              key={stat.label}
-              className={cn(
-                "inline-flex overflow-hidden rounded border text-[11px] leading-none",
-                tone.frame
-              )}
-            >
-              <span className={cn("px-1.5 py-1", tone.label)}>
-                {stat.label}
-              </span>
-              <span className={cn("px-1.5 py-1 font-semibold", tone.value)}>
-                {stat.value}
-              </span>
-            </span>
-          )
-        })}
-      </section>
-
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {phases.map((phase) => (
-          <WorkflowPhaseCard
-            key={phase.title}
-            phase={phase}
-            tabs={tabs}
-            entityHref={entityHref}
-            stepCompletion={stepCompletion}
-            stepCanStart={stepCanStart}
-          />
-        ))}
       </section>
     </div>
   )
