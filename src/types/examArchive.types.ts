@@ -864,6 +864,14 @@ export interface ArchiveClassesData {
 
 /**
  * ユーザーデータ (users.json)
+ *
+ * **アーカイブの行が指している利用者は全員載る**（採点者・確定を下した人・採点担当・
+ * 返却を記録した人・試験の参加者）。指されているのに載っていないと、取り込み側は
+ * その人が誰なのか決めようが無く、取り込んだ人へ倒すしかなくなる。
+ *
+ * 採点行そのものは書き出す人のぶんだけを収める（他の教員の採点まで持ち出さない）ので、
+ * **載っている＝採点している、ではない。** 取り込みで判断を求めるのは、採点層から実際に
+ * 参照されている利用者だけ（userMatcher の collectGraderUserIds）。
  */
 export interface ArchiveUsersData {
   users: Array<{
@@ -967,9 +975,10 @@ export interface ArchiveScoresData {
   /**
    * v1.20.0+ 設問ごとの採点担当。
    *
-   * ユーザーはアーカイブを越えない（users.json は currentUser のみ、UserExam は空）ため
    * `userId` ではなく `username` を denormalize して持ち、import 時に移行先DBの
    * `User.username` で lookup する。解決できない担当は破棄して警告する（新規ユーザーは作らない）。
+   * 担当者は users.json にも載る（アーカイブの行が指す利用者は全員載せる）が、
+   * 突き合わせの鍵は username のままにしてある —— 変えると形が変わり、版が上がる。
    * id は (cropRegionId, userId) から決定論的に再生成するので、ここでは持ち回らない。
    */
   cropRegionAssignments?: Array<{

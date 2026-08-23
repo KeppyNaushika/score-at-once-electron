@@ -39,7 +39,7 @@ export interface CollectedData {
  * 試験の全関連データを収集
  *
  * @param examId - 対象試験ID
- * @param userId - ログインユーザーID（このユーザーのデータのみ収集）
+ * @param userId - ログインユーザーID（採点行はこの利用者のぶんだけ収集する）
  * @param exportMode - エクスポートモード（デフォルト: full）
  * @returns 収集されたデータ
  */
@@ -129,8 +129,7 @@ export async function collectExamData(
           where: { id: { in: Array.from(classroomIds) } },
         })
 
-    // 5. 現在のユーザーのみを取得（パスコードは除外）
-    // v0.3.0以降: ログインユーザーのデータのみをエクスポート
+    // 5. 書き出す本人が実在するか確かめる（利用者そのものは後で集める）
     const currentUser = await prisma.user.findUnique({
       where: { id: userId },
       omit: { passcode: true },
@@ -140,7 +139,16 @@ export async function collectExamData(
       return { success: false, error: "ユーザーが見つかりません" }
     }
 
-    const users = [currentUser]
+    /**
+     * users.json に載せる利用者の id。
+     *
+     * **アーカイブの行が指している利用者は全員入れる。** 指されているのに居ないと、
+     * 取り込み側はその人を誰なのか決めようが無く、取り込んだ人へ倒すしかなくなる
+     * （確定を下した人が、取り込むたびに別人へすり替わっていた）。
+     * 採点行そのものを書き出す人のぶんへ絞るのは従来どおりで、ここで広げるのは
+     * 「行が指す先の人」だけである。
+     */
+    const referencedUserIds = new Set<string>([userId])
 
     // 7. 小計グループと小計を取得（templateモードでは空）
     const includeSubtotals = exportMode !== "template"
@@ -261,6 +269,7 @@ export async function collectExamData(
               continue
             }
 
+            referencedUserIds.add(questionScore.userId)
             questionScores.push({
               id: questionScore.id,
               cropRegionId: questionScore.cropRegionId,
@@ -313,6 +322,7 @@ export async function collectExamData(
         where: { cropRegion: { examPage: { examId } } },
       })
       for (const decision of decisions) {
+        referencedUserIds.add(decision.decidedByUserId)
         scoreDecisions.push({
           id: decision.id,
           cropRegionId: decision.cropRegionId,
@@ -336,6 +346,9 @@ export async function collectExamData(
         include: { user: true },
       })
       for (const assignment of assignments) {
+        // 担当は username で持ち回るが、指しているのは利用者なので users.json にも載せる
+        // （取り込み先に同じ名前が居ないと担当は捨てられる。誰だったのかは残しておく）
+        referencedUserIds.add(assignment.userId)
         cropRegionAssignments.push({
           cropRegionId: assignment.cropRegionId,
           username: assignment.user.username,
@@ -350,6 +363,9 @@ export async function collectExamData(
         where: { examStudent: { examId } },
       })
       for (const snapshot of snapshots) {
+        if (snapshot.capturedByUserId) {
+          referencedUserIds.add(snapshot.capturedByUserId)
+        }
         returnSnapshots.push({
           id: snapshot.id,
           examStudentId: snapshot.examStudentId,
@@ -360,6 +376,14 @@ export async function collectExamData(
           createdAt: snapshot.createdAt.toISOString(),
           updatedAt: snapshot.updatedAt.toISOString(),
         })
+      }
+
+      // 9.7. 試験の参加者（UserExam）も users.json に載せる。
+      // UserExam の行そのものは書き出さない（取り込み側が取り込む人で作り直す）が、
+      // 「この試験を誰と一緒にやっていたか」は採点行が1つも無い教員についても残る。
+      // テンプレートには入れない —— 配るのは用紙の形だけで、同僚の氏名は関係が無い
+      for (const userExam of exam.userExams) {
+        referencedUserIds.add(userExam.userId)
       }
     }
 
@@ -616,17 +640,6 @@ export async function collectExamData(
       })),
     }
 
-    const usersData: ArchiveUsersData = {
-      users: users.map((user) => ({
-        id: user.id,
-        username: user.username,
-        name: user.name,
-        role: user.role,
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt.toISOString(),
-      })),
-    }
-
     const subtotalsData: ArchiveSubtotalsData = {
       subtotalGroups: subtotalGroups.map((subtotalGroup) => ({
         id: subtotalGroup.id,
@@ -660,6 +673,31 @@ export async function collectExamData(
       scoreDecisions,
       cropRegionAssignments,
       returnSnapshots,
+    }
+
+    // 複合回答の採点者は、書き出す形のほうから拾う。いまは採点行と同じく書き出す本人へ
+    // 絞っているので本人しか出てこないが、絞りが変わったときに黙って漏れないようにする
+    for (const compoundAnswerScore of examData.compoundAnswerScores ?? []) {
+      referencedUserIds.add(compoundAnswerScore.userId)
+    }
+
+    // アーカイブが指している利用者を全員取る。パスコードは持ち出さない
+    // （取り込み先で新しく作られる利用者はログイン手段を持たない状態になる）
+    const users = await prisma.user.findMany({
+      where: { id: { in: Array.from(referencedUserIds) } },
+      omit: { passcode: true },
+      orderBy: { createdAt: "asc" },
+    })
+
+    const usersData: ArchiveUsersData = {
+      users: users.map((user) => ({
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
+      })),
     }
 
     const tagsData: ArchiveTagsData = {

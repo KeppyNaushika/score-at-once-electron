@@ -41,9 +41,10 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
     state.fileOverviewData &&
     state.fileOverviewData.subtotalGroup.byId.length <
       (state.manifest?.counts.subtotalGroups ?? 0)
-  // 採点者は manifest の件数と比べない。users.json には採点していない書き出し本人も
-  // 載るので、件数の差は「判断が要る採点者がいる」ことを意味しない。照合で
-  // 落ちたもの（利用者名一致・一致なし）を直接数える
+  // 採点者は manifest の件数と比べない。users.json にはアーカイブの行が指す利用者が
+  // 全員載る（書き出した本人・採点担当・返却の記録者・参加者）ので、件数の差は
+  // 「判断が要る採点者がいる」ことを意味しない。照合で落ちたもの
+  // （利用者名一致・一致なし）を直接数える
   const hasUserDecisions =
     state.fileOverviewData?.user !== undefined &&
     (state.fileOverviewData.user.byName?.length ?? 0) +
