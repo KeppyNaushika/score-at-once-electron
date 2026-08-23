@@ -1,3 +1,35 @@
+/**
+ * asar へ入れるトップ階層。**ここに無いものは入らない。**
+ *
+ * かつては「入れないもの」を並べていたが、書き忘れたものが黙って全部入った。
+ * 2026-08-24 の実測で、24GB のパッケージの中に
+ * **`data/`（アプリのデータ置き場 多数 件）**と
+ * `.next/dev`（開発サーバの取り置き 8GB）と `__tests__` が入っていた。
+ * 配ればそのまま個人情報が出ていく。**足し忘れは動かないだけだが、
+ * 引き忘れは配ってしまう**ので、既定を「入れない」にする。
+ *
+ * 各項目が要る理由（消す前に、その読み手を潰すこと）:
+ *
+ * - `package.json` —— packager が `main` を読む
+ * - `main` —— ビルド済みの main / preload と、その下の Prisma クライアント
+ * - `node_modules` —— 実行時の依存（packager が devDependencies を落とす）
+ * - `prisma` —— 起動時に当てる migration。`getMigrationsDir` が
+ *   `app.getAppPath()`（＝asar）の下を見る（`migrationDeployer.ts:148`）
+ * - `public` —— 窓のアイコン。`windowManager.ts:19` が
+ *   `resourcesPath/app.asar/public/icons/` を読む（`extraResource` の写しではない）
+ *
+ * **`.next` はここに無い。** 実行時に読むのは `extraResource` で置かれる
+ * `Resources/.next` の方で（`nextServerEmbedded.ts:68` が `dir: process.resourcesPath`）、
+ * asar の中の写しは一度も読まれない。
+ */
+const PACKAGED_TOP_LEVEL = new Set([
+  "package.json",
+  "main",
+  "node_modules",
+  "prisma",
+  "public",
+])
+
 module.exports = {
   packagerConfig: {
     asar: {
@@ -9,21 +41,22 @@ module.exports = {
     icon: "./public/icons/icon.icns", // macOS用に明示的に指定
     osxSign: false,
     osxNotarize: false,
-    ignore: [
-      /^\/src/,
-      /^\/\.git/,
-      /^\/docs/,
-      /^\/scripts/,
-      /^\/out/,
-      /^\/temp-test/,
-      /^\/dist/,
-      /^\/temp-prisma-backup/,
-    ],
+    // 既定で落とし、`PACKAGED_TOP_LEVEL` にあるものだけ通す。
+    // パスは根からの相対で、先頭に "/" が付く（根そのものは空文字）
+    ignore: (filePath) => {
+      if (filePath === "") return false
+      const topLevel = filePath.split("/")[1]
+      return !PACKAGED_TOP_LEVEL.has(topLevel)
+    },
     extraResource: [".next", "public"],
   },
   rebuildConfig: {
     buildPath: "./out",
-    electronVersion: "37.1.0",
+    // **版を書かない。** 書くと、入っている electron と食い違ったまま
+    // `forceABI: true` がその版の ABI でネイティブモジュールを焼く。
+    // 2026-08-24 まで "37.1.0" が残っており、実際の electron は 43 だった
+    // （パッケージ版だけがデータベースを開けない形の食い違い）。
+    // 書かなければ @electron/rebuild が入っている版から取る。
     onlyModules: ["sharp", "better-sqlite3"],
     forceABI: true,
   },
@@ -86,12 +119,16 @@ module.exports = {
         console.log("✓ Removed .next/node_modules")
       }
 
-      // Also clean .next/cache to reduce size
-      const nextCache = path.join(__dirname, ".next", "cache")
-      if (fs.existsSync(nextCache)) {
-        console.log("🧹 Removing .next/cache...")
-        fs.rmSync(nextCache, { recursive: true, force: true })
-        console.log("✓ Removed .next/cache")
+      // `.next` は `extraResource` で丸ごと配られる。開発サーバの取り置きは
+      // 製品に要らないので落とす（実測で `.next/dev` が 8GB あった）。
+      // **`cache` だけを見ていると取り逃す** —— Next の版で置き場が変わる
+      for (const throwaway of ["cache", "dev"]) {
+        const throwawayDir = path.join(__dirname, ".next", throwaway)
+        if (fs.existsSync(throwawayDir)) {
+          console.log(`🧹 Removing .next/${throwaway}...`)
+          fs.rmSync(throwawayDir, { recursive: true, force: true })
+          console.log(`✓ Removed .next/${throwaway}`)
+        }
       }
     },
     postPackage: async (forgeConfig, options) => {
