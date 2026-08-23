@@ -33,9 +33,13 @@
 
 -- Subtotal は UNIQUE(subtotalGroupId, name) を **CREATE TABLE の中に** 持つ DB がある
 -- （データがそれで、索引名は sqlite_autoindex_Subtotal_2）。表制約に付いた暗黙の索引は
--- DROP INDEX できないので、表を作り直す。新規インストールの側は同じ制約を名前付き索引
--- （Subtotal_subtotalGroupId_name_key）で持つが、DROP TABLE で一緒に消えるのでどちらの形も
--- ここで揃う。
+-- DROP INDEX できないので、表を作り直す。
+--
+-- 新規インストールの側も名前は同じ sqlite_autoindex_Subtotal_2 である。init のベースラインが
+-- Pragma writable_schema=1 で囲んで、その名前の索引を明示的に作っているため
+-- （20260322232329_init:739）。名前が予約語の形をしているだけで実体は普通の索引だが、
+-- 名前で狙って DROP するのは避けたい（writable_schema を開ける必要がある）。
+-- DROP TABLE なら索引の作られ方に関係なく一緒に消えるので、どちらの DB もここで揃う。
 --
 -- foreign_keys=OFF で囲むのは2つの理由から。(1) DROP TABLE "Subtotal" が子の
 -- ON DELETE CASCADE を発火させて CropSubtotal / GradeDataSource を消してしまうのを止める。

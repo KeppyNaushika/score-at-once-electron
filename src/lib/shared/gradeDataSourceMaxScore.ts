@@ -32,7 +32,9 @@ export interface MaxScorePayloadSource {
   } | null
   subtotal?: {
     cropSubtotals: Array<{
-      // id はグループ内の複数の小計に同じ設問が割り当たったときに畳むために要る
+      // id は `selectExamCropRegions` が重複を畳むのに要る。ここで渡すのは小計1つ
+      // ぶんで、`CropSubtotal` は 2026-08-23 から (領域, 小計, 区分) が一意なので
+      // 実際には重複しないが、得点側（複数の小計を束ねて渡す）と同じ関数を通す
       cropRegion: {
         id: string
         points: number | null
