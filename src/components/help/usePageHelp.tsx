@@ -54,8 +54,18 @@ const pageHelpComponents: {
   grades: HelpContentGradeList,
 }
 
+interface UsePageHelpOptions {
+  /**
+   * 段のヘッダーに並べる小さい形にする。
+   *
+   * ヘッダー上段はアイコン（`size-7` ＝ 28px）に高さを合わせてあり、既定の
+   * `size="sm"`（32px）を混ぜると行だけが伸びる。文字も周りの `text-xs` に合わせる。
+   */
+  compact?: boolean
+}
+
 /** 現在のページに対応するヘルプコンテンツを全画面モーダルで表示するフック */
-export function usePageHelp() {
+export function usePageHelp({ compact = false }: UsePageHelpOptions = {}) {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
 
@@ -120,8 +130,16 @@ export function usePageHelp() {
     return (
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1.5 text-gray-600">
-            <BookOpen className="h-4 w-4" />
+          <Button
+            variant="outline"
+            size="sm"
+            className={
+              compact
+                ? "h-7 gap-1 px-2 text-xs text-gray-600"
+                : "gap-1.5 text-gray-600"
+            }
+          >
+            <BookOpen className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
             使い方
           </Button>
         </DialogTrigger>

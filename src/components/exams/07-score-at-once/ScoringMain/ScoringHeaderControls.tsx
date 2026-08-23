@@ -2,6 +2,7 @@
 
 import { Gavel, PanelRightClose, PanelRightOpen, ScanLine } from "lucide-react"
 
+import { GuardedLink } from "@/components/common/GuardedLink"
 import GradingModeToggle from "@/components/exams/07-score-at-once/ScoringMain/GradingModeToggle"
 import { KeyboardHelpDialog } from "@/components/exams/07-score-at-once/ScoringMain/KeyboardHelpDialog"
 import type { GradingMode } from "@/components/exams/07-score-at-once/types"
@@ -15,10 +16,12 @@ interface ScoringHeaderControlsProps {
   showSidePanel: boolean
   onShowSidePanelChange: (show: boolean) => void
   modifierKeyLabel: string
-  helpButton: React.ReactNode
   onOmrRecognitionClick?: () => void
-  /** 確定パネルを開く。単独採点（裁定対象なし）では undefined でボタンを出さない */
-  onScoreDecisionClick?: () => void
+  /**
+   * 「8. 採点確定」の段へのリンク先。単独採点（裁定対象なし）では undefined で出さない。
+   * かつてはモーダルを開く `onClick` だったが、確定は段の1つになったので行き先を渡す
+   */
+  scoreDecisionHref?: string
   /** 裁定が必要なセル数（0なら件数バッジを出さない） */
   pendingDecisionCount?: number
 }
@@ -31,9 +34,8 @@ export function ScoringHeaderControls({
   showSidePanel,
   onShowSidePanelChange,
   modifierKeyLabel,
-  helpButton,
   onOmrRecognitionClick,
-  onScoreDecisionClick,
+  scoreDecisionHref,
   pendingDecisionCount = 0,
 }: ScoringHeaderControlsProps) {
   return (
@@ -57,21 +59,22 @@ export function ScoringHeaderControls({
         </Button>
       )}
 
-      {/* 採点結果の確定（協調採点で裁定対象が出たときだけ現れる） */}
-      {onScoreDecisionClick && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onScoreDecisionClick}
-          title="採点結果の確定"
-        >
-          <Gavel className="mr-1 h-4 w-4" />
-          確定
-          {pendingDecisionCount > 0 && (
-            <span className="ml-1 rounded-full bg-purple-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
-              {pendingDecisionCount}
-            </span>
-          )}
+      {/*
+        採点結果の確定へ渡す（協調採点で裁定対象が出たときだけ現れる）。
+        遷移は `GuardedLink` を通す —— 採点画面は書きかけを抱えうるので、
+        離脱の確認を挟む口を段のタブと1つに揃える
+      */}
+      {scoreDecisionHref && (
+        <Button variant="outline" size="sm" asChild>
+          <GuardedLink href={scoreDecisionHref} title="採点結果の確定へ">
+            <Gavel className="mr-1 h-4 w-4" />
+            確定
+            {pendingDecisionCount > 0 && (
+              <span className="ml-1 rounded-full bg-purple-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                {pendingDecisionCount}
+              </span>
+            )}
+          </GuardedLink>
         </Button>
       )}
 
@@ -94,8 +97,6 @@ export function ScoringHeaderControls({
           <PanelRightOpen className="h-4 w-4" />
         )}
       </Button>
-
-      {helpButton}
     </div>
   )
 }

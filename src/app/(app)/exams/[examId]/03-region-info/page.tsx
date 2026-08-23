@@ -2,13 +2,11 @@
 
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query"
 import Image from "next/image"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import { useMemo, useState } from "react"
 
 import RegionDetailsTable from "@/components/exams/03-region-info/components/RegionDetailsTable"
 import { useOmrConfig } from "@/components/exams/03-region-info/hooks/useOmrConfig"
-import { usePageHelp } from "@/components/help/usePageHelp"
-import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
 import { type CropRegionRow, cropRegionsQuery } from "@/queries/cropRegion"
@@ -22,8 +20,6 @@ const EMPTY_CROP_REGIONS: CropRegionRow[] = []
 
 export default function RegionInfoPage() {
   const params = useParams()
-  const router = useRouter()
-  const { helpButton } = usePageHelp()
   const examId = typeof params.examId === "string" ? params.examId : ""
 
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
@@ -92,7 +88,6 @@ export default function RegionInfoPage() {
   if (error) {
     return (
       <div className="flex h-full flex-col">
-        <PageHeader title="採点領域の詳細情報設定" helpButton={helpButton} />
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center">
             <h2 className="text-lg font-semibold text-red-600">
@@ -123,14 +118,6 @@ export default function RegionInfoPage() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <PageHeader title="採点領域の詳細情報設定" helpButton={helpButton}>
-        <Button
-          onClick={() => router.push(`/exams/${examId}/04-question-group`)}
-        >
-          次へ: 小計点の設定
-        </Button>
-      </PageHeader>
-
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left: All Pages Preview */}

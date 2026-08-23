@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import { useCallback, useState } from "react"
 
 import CropRegionEditor from "@/components/exams/02-template/components/CropRegionEditor"
@@ -10,9 +10,6 @@ import { TemplateStatus } from "@/components/exams/02-template/components/Templa
 import { useTemplateData } from "@/components/exams/02-template/hooks/useTemplateData"
 import type { RegionCoordinates } from "@/components/exams/02-template/types"
 import { buildNewCropRegionLabel } from "@/components/exams/02-template/utils/templateActions"
-import { usePageHelp } from "@/components/help/usePageHelp"
-import PageHeader from "@/components/layout/PageHeader"
-import { Button } from "@/components/ui/button"
 import {
   createCropRegionMutation,
   updateCropRegionMutation,
@@ -21,8 +18,6 @@ import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
 export default function TemplateStepPage() {
   const params = useParams()
-  const router = useRouter()
-  const { helpButton } = usePageHelp()
   const examId = typeof params.examId === "string" ? params.examId : ""
 
   const [defaultPoints, setDefaultPoints] = useState(10)
@@ -67,26 +62,12 @@ export default function TemplateStepPage() {
     [updateCropRegion]
   )
 
-  const goToNextStep = useCallback(() => {
-    router.push(`/exams/${examId}/03-region-info`)
-  }, [examId, router])
-
-  // 現在選択中の画像に領域があるときだけ次へ進める
-  const hasRegionsForCurrentImage = areas.length > 0
-
   if (isLoading || !examId) {
     return <TemplateStatus isLoading={isLoading} hasExamId={Boolean(examId)} />
   }
 
   return (
     <div className="flex h-full flex-col">
-      {/* ヘッダー */}
-      <PageHeader title="答案の採点領域作成" helpButton={helpButton}>
-        {hasRegionsForCurrentImage && (
-          <Button onClick={goToNextStep}>次へ: 採点領域の詳細情報設定</Button>
-        )}
-      </PageHeader>
-
       {/* メインコンテンツ */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* ページナビゲーション */}

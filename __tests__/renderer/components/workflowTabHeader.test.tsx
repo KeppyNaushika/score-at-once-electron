@@ -34,6 +34,7 @@ import type { WorkflowTab } from "@/components/common/WorkflowTabHeader"
 import { WorkflowTabHeader } from "@/components/common/WorkflowTabHeader"
 import { NavigationGuardProvider } from "@/contexts/NavigationGuardContext"
 import { useNavigationGuard } from "@/hooks/useNavigationGuard"
+import { examWorkflowTabs } from "@/lib/workflowTabs"
 
 // 共通セットアップ（`__tests__/renderer/setup.ts`）は取り込まない。あちらは
 // usePathname を "/" に固定していて、`vi.mock` は後から読み込まれた方が勝つため、
@@ -115,22 +116,12 @@ function TestProviders({ children }: { children: ReactNode }) {
   )
 }
 
-/** 試験のタブ（概要込みで9枚）。実物と同じ形で、段の枚数の多さもそのまま持つ */
-const examTabs: readonly WorkflowTab[] = [
-  { id: "detail", label: "概要", path: "" },
-  { id: "01-upload", label: "1. 模範解答", path: "/01-upload" },
-  { id: "02-template", label: "2. 採点領域", path: "/02-template" },
-  { id: "03-region-info", label: "3. 領域情報", path: "/03-region-info" },
-  { id: "04-question-group", label: "4. 小計点", path: "/04-question-group" },
-  { id: "05-students", label: "5. 受験生徒", path: "/05-students" },
-  {
-    id: "06-student-answers",
-    label: "6. 生徒答案",
-    path: "/06-student-answers",
-  },
-  { id: "07-score-at-once", label: "7. 採点", path: "/07-score-at-once" },
-  { id: "08-export", label: "8. 結果", path: "/08-export" },
-]
+/**
+ * 試験のタブ（概要込みで10枚）。**写しを作らず本物を読む。**
+ * ここに手で書き写すと、段を1つ足したときに写しの方だけ古いまま緑になり、
+ * 「現在地が正しく光る」という検査が実物について何も言わなくなる。
+ */
+const examTabs: readonly WorkflowTab[] = examWorkflowTabs
 
 const examHref = "/exams/exam-1"
 
@@ -162,6 +153,28 @@ function currentTabLabels(): string[] {
 }
 
 describe("WorkflowTabHeader の現在地", () => {
+  it("試験の段は概要込みで10枚並ぶ（8. 採点確定 と 9. 結果 を含む）", () => {
+    renderHeaderAt(examHref)
+
+    const tabNav = screen.getByRole("navigation", { name: "ワークフローの段" })
+    const tabLabels = within(tabNav)
+      .getAllByRole("link")
+      .map((tabLink) => tabLink.textContent ?? "")
+
+    expect(tabLabels).toEqual([
+      "概要",
+      "1. 模範解答",
+      "2. 採点領域",
+      "3. 領域情報",
+      "4. 小計点",
+      "5. 受験生徒",
+      "6. 生徒答案",
+      "7. 採点",
+      "8. 採点確定",
+      "9. 結果",
+    ])
+  })
+
   it("概要ページ（NN- の付かないパス）では概要が現在地になる", () => {
     renderHeaderAt(examHref)
 
@@ -191,11 +204,17 @@ describe("WorkflowTabHeader の現在地", () => {
     // `/05-students` は `/05-students-import` の先頭に丸ごと含まれる。
     // 長い方を開いたとき、部分一致だと短い方まで当たって2枚光る
     const overlappingTabs: readonly WorkflowTab[] = [
-      { id: "detail", label: "概要", path: "" },
-      { id: "05-students", label: "1. 生徒管理", path: "/05-students" },
+      { id: "detail", label: "概要", title: "概要", path: "" },
+      {
+        id: "05-students",
+        label: "1. 生徒管理",
+        title: "生徒の登録",
+        path: "/05-students",
+      },
       {
         id: "05-students-import",
         label: "2. 生徒取り込み",
+        title: "生徒の取り込み",
         path: "/05-students-import",
       },
     ]
@@ -214,6 +233,70 @@ describe("WorkflowTabHeader の現在地", () => {
     renderHeaderAt("/exams/exam-2/01-upload")
 
     expect(currentTabLabels()).toEqual([])
+  })
+})
+
+/**
+ * 見出しと右端の2つ。**段のページはもう自分の題を出さない**ので、ここが唯一の
+ * 「いまどの段に居るか」の表示になる。
+ */
+describe("WorkflowTabHeader の見出しと操作", () => {
+  it("見出しは「段の長い名前｜実体の名前」", () => {
+    renderHeaderAt(`${examHref}/01-upload`)
+
+    expect(
+      screen.getByRole("heading", { name: "模範解答画像の管理｜期末考査" })
+    ).toBeInTheDocument()
+  })
+
+  it("概要では段の名前を付けず、実体の名前だけを出す", () => {
+    renderHeaderAt(examHref)
+
+    expect(
+      screen.getByRole("heading", { name: "期末考査" })
+    ).toBeInTheDocument()
+  })
+
+  it("「次へ」は次の段へ向かい、その段の長い名前を言う", () => {
+    renderHeaderAt(`${examHref}/01-upload`)
+
+    const nextLink = screen.getByRole("link", {
+      name: "次へ：答案の採点領域作成",
+    })
+    expect(nextLink.getAttribute("href")).toBe(`${examHref}/02-template`)
+  })
+
+  it("最後の段には「次へ」が無い", () => {
+    renderHeaderAt(`${examHref}/09-export`)
+
+    expect(
+      screen.queryByRole("link", { name: /^次へ：/ })
+    ).not.toBeInTheDocument()
+  })
+
+  it("「次へ」に条件は付かない（模範解答が0枚でもタブと同じく進める）", () => {
+    // 以前は段のページ側が「1枚以上あるとき」だけ出していた。すぐ下のタブは
+    // 無条件で同じ場所へ連れて行くので、隠しても止められていない
+    renderHeaderAt(`${examHref}/02-template`)
+
+    expect(
+      screen.getByRole("link", { name: "次へ：採点領域の詳細情報設定" })
+    ).toBeInTheDocument()
+  })
+
+  it("右端は「使い方」で、その左が「次へ」", () => {
+    renderHeaderAt(`${examHref}/01-upload`)
+
+    const nextLink = screen.getByRole("link", {
+      name: "次へ：答案の採点領域作成",
+    })
+    const helpButton = screen.getByRole("button", { name: "使い方" })
+    // 同じ親（右端の並び）に、次へ → 使い方 の順で入っている
+    expect(nextLink.parentElement).toBe(helpButton.parentElement)
+    expect(
+      nextLink.compareDocumentPosition(helpButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
   })
 })
 

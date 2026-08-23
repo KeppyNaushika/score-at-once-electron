@@ -51,10 +51,14 @@ export async function uploadMasterPage(
 
   await page.locator('input[type="file"]').first().setInputFiles(uploaded)
 
-  // 取り込みが終わるとページが1枚出る
-  await expect(
-    page.getByRole("button", { name: "次へ: 答案の採点領域作成" })
-  ).toBeVisible({ timeout: 60_000 })
+  // 取り込みが終わるとページが1枚出る。
+  //
+  // かつては「次へ」が出たことを合図にしていたが、**「次へ」はヘッダーが常に
+  // 出す**ようになったので合図にならない（取り込み前から見えている）。
+  // 枚数の見出しで数える。
+  await expect(page.getByText("模範解答 (1ページ)")).toBeVisible({
+    timeout: 60_000,
+  })
 }
 
 /** 試験外成績資料を1件作り、その id を返す */

@@ -2,15 +2,13 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Calculator } from "lucide-react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import { useCallback, useMemo } from "react"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { QuestionAssignmentMatrixWithFillHandle } from "@/components/exams/04-question-group/components/QuestionAssignmentMatrixWithFillHandle"
 import { SubtotalAssignmentMatrixWithFillHandle } from "@/components/exams/04-question-group/components/SubtotalAssignmentMatrixWithFillHandle"
 import { SubtotalGroupSelector } from "@/components/exams/04-question-group/components/SubtotalGroupSelector"
-import { usePageHelp } from "@/components/help/usePageHelp"
-import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
 import { type CropRegionRow, cropRegionsQuery } from "@/queries/cropRegion"
 import { scopeKeys } from "@/queries/keys"
@@ -25,8 +23,6 @@ const EMPTY_EXAM_SUBTOTAL_GROUPS: ExamSubtotalGroupRow[] = []
 
 export default function SubtotalGroupPage() {
   const params = useParams()
-  const router = useRouter()
-  const { helpButton } = usePageHelp()
   const examId = typeof params.examId === "string" ? params.examId : ""
 
   const queryClient = useQueryClient()
@@ -86,7 +82,6 @@ export default function SubtotalGroupPage() {
   if (error) {
     return (
       <div className="flex h-full flex-col">
-        <PageHeader title="小計点の設定" helpButton={helpButton} />
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center">
             <h2 className="text-lg font-semibold text-red-600">
@@ -104,12 +99,6 @@ export default function SubtotalGroupPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader title="小計点の設定" helpButton={helpButton}>
-        <Button onClick={() => router.push(`/exams/${examId}/05-students`)}>
-          次へ: 受験生徒の管理
-        </Button>
-      </PageHeader>
-
       <div className="flex-1 overflow-auto p-6">
         <div className="space-y-8">
           {/* 小計点グループ選択 */}

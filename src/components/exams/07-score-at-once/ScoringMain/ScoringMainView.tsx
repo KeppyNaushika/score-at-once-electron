@@ -7,7 +7,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import Head from "next/head"
-import { useParams, useSearchParams } from "next/navigation"
+import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useContextValue } from "@/components/exams/07-score-at-once/hooks/useContextValue"
@@ -32,8 +32,6 @@ import { useScoringMode } from "@/components/exams/07-score-at-once/ScoringMain/
 import { useScoringNavigation } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringNavigation"
 import { useScoringShortcuts } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringShortcuts"
 import { useStudentAnswerManagement } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useStudentAnswerManagement"
-import { useExamDecisionSummary } from "@/components/exams/07-score-at-once/ScoringMain/ScoreDecisionPanel/hooks/useExamDecisionSummary"
-import { ScoreDecisionPanel } from "@/components/exams/07-score-at-once/ScoringMain/ScoreDecisionPanel/ScoreDecisionPanel"
 import { ScoringContentArea } from "@/components/exams/07-score-at-once/ScoringMain/ScoringContentArea"
 import { ScoringHeaderControls } from "@/components/exams/07-score-at-once/ScoringMain/ScoringHeaderControls"
 import { ScoringModals } from "@/components/exams/07-score-at-once/ScoringMain/ScoringModals"
@@ -48,9 +46,8 @@ import {
 } from "@/components/exams/07-score-at-once/ScoringMain/ScoringStates"
 import { ScoringSidePanel } from "@/components/exams/07-score-at-once/ScoringSidePanel/ScoringSidePanel"
 import type { MouseBrushAction } from "@/components/exams/07-score-at-once/types"
-import { usePageHelp } from "@/components/help/usePageHelp"
-import PageHeader from "@/components/layout/PageHeader"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import { useExamDecisionSummary } from "@/hooks/useExamDecisionSummary"
 import { resolveExamPaperSize } from "@/lib/shared/examPaperSize"
 import { cropRegionScopes } from "@/queries/cropRegion"
 import {
@@ -67,10 +64,8 @@ import {
 /** 内部コンポーネント（ShortcutProvider内で使用） */
 function ScoringMainViewContent() {
   const params = useParams()
-  const searchParams = useSearchParams()
   const examId = params.examId as string
   const currentUser = useCurrentUser()
-  const { helpButton } = usePageHelp()
   const { keyBindings } = useShortcutContext()
   const queryClient = useQueryClient()
 
@@ -182,7 +177,6 @@ function ScoringMainViewContent() {
     selectedStudentAnswerImageIds,
     currentCropRegionId,
     showKeyboardHelp,
-    showScoreDecisionPanel,
     showSidePanel,
     modifierKeyLabel,
     /** アクション関数 */
@@ -190,7 +184,6 @@ function ScoringMainViewContent() {
     setSelectedPageImageIds,
     setCurrentCropRegionId,
     setShowKeyboardHelp,
-    setShowScoreDecisionPanel,
     setShowSidePanel,
     /** ヘルパー関数 */
     handleAnswerSelect,
@@ -211,7 +204,6 @@ function ScoringMainViewContent() {
   const {
     selectableCropRegions,
     memberCount,
-    refresh: refreshAssignments,
     isFiltered: isQuestionSetFiltered,
   } = useAssignedCropRegions({
     examId,
@@ -280,13 +272,12 @@ function ScoringMainViewContent() {
     )
   }, [queryClient, examId])
 
-  /** 裁定状況（採点者間の食い違い・確定後の新提案） */
-  const {
-    summary: decisionSummary,
-    loading: decisionLoading,
-    error: decisionError,
-    refresh: refreshDecisionSummary,
-  } = useExamDecisionSummary(
+  /**
+   * 裁定状況。ここで要るのは**件数バッジだけ**で、裁定そのものは
+   * 「8. 採点確定」の段が持つ。件数を出すのは、確定が要る状態に気づく場所が
+   * 採点の最中だからで、段のタブを見に行かせないため。
+   */
+  const { summary: decisionSummary } = useExamDecisionSummary(
     examId,
     currentUser.id,
     // 単独利用（メンバー1人）では裁定サマリを引かない。全採点行の走査を
@@ -298,22 +289,12 @@ function ScoringMainViewContent() {
     (decisionSummary?.conflictCount ?? 0) + (decisionSummary?.staleCount ?? 0)
 
   /**
-   * 単独利用では割当・確定のUIを一切出さない。
+   * 単独利用では確定への導線を出さない。
    * メンバーが1人なら分担する相手がおらず、提案も常に1件なので
-   * 競合は構造的にゼロになる（＝このパネルに用が無い）。
+   * 競合は構造的にゼロになる（＝確定の段に用が無い）。
    * 裁定サマリを引くかの条件と同じものを使い、両者がずれないようにする。
    */
   const showDecisionEntry = memberCount > 1
-
-  /** 確定後は裁定状況と採点データの両方を取り直す */
-  const handleScoreDecided = useCallback(async () => {
-    await Promise.all([refreshDecisionSummary(), refetchQuestionScores()])
-  }, [refreshDecisionSummary, refetchQuestionScores])
-
-  /** 担当割当の変更は、裁定サマリと採点画面の選択可能設問の両方に効く */
-  const handleAssignmentChanged = useCallback(async () => {
-    await Promise.all([refreshDecisionSummary(), refreshAssignments()])
-  }, [refreshDecisionSummary, refreshAssignments])
 
   /** フィルタリング管理hook */
   const {
@@ -673,7 +654,9 @@ function ScoringMainViewContent() {
   useContextValue("hasSelectedAnswers", selectedStudentAnswerImageIds.size > 0)
   useContextValue("sidePanelVisible", showSidePanel)
   useContextValue("partialScoreModalOpen", showPartialScoreModal)
-  useContextValue("modalOpen", showPartialScoreModal || showScoreDecisionPanel)
+  // 確定は「8. 採点確定」の段へ出たので、ここで殺すのは部分点モーダルだけ。
+  // 別ページなら 07 のキー操作はそもそも載っていない（ガードが要らなくなった）
+  useContextValue("modalOpen", showPartialScoreModal)
   useContextValue("scoringOperationMode", effectiveMode)
 
   /**
@@ -689,13 +672,6 @@ function ScoringMainViewContent() {
       setCurrentCropRegionId(null)
     }
   }, [currentCropRegionId, selectableCropRegions, setCurrentCropRegionId])
-
-  /** 出力前警告からの誘導（?decide=1）で確定パネルを開く */
-  useEffect(() => {
-    if (searchParams?.get("decide") === "1") {
-      setShowScoreDecisionPanel(true)
-    }
-  }, [searchParams, setShowScoreDecisionPanel])
 
   /** キーボードショートカット登録 */
   useScoringShortcuts({
@@ -757,8 +733,11 @@ function ScoringMainViewContent() {
         <title>{`採点 - ${exam.examName}`}</title>
       </Head>
 
-      {/* PageHeader */}
-      <PageHeader title="一括採点" helpButton={helpButton}>
+      {/*
+        採点の操作だけを並べる帯。段の題・使い方・次へはヘッダー（layout の
+        `WorkflowTabHeader`）が出すので、ここでは持たない
+      */}
+      <div className="flex shrink-0 items-center justify-end gap-2 border-b px-3 py-2">
         <ScoringHeaderControls
           gradingMode={gradingMode}
           onGradingModeChange={setGradingMode}
@@ -767,16 +746,13 @@ function ScoringMainViewContent() {
           showSidePanel={showSidePanel}
           onShowSidePanelChange={setShowSidePanel}
           modifierKeyLabel={modifierKeyLabel}
-          helpButton={helpButton}
           onOmrRecognitionClick={() => setShowOmrModal(true)}
-          onScoreDecisionClick={
-            showDecisionEntry
-              ? () => setShowScoreDecisionPanel(true)
-              : undefined
+          scoreDecisionHref={
+            showDecisionEntry ? `/exams/${examId}/08-finalize` : undefined
           }
           pendingDecisionCount={pendingDecisionCount}
         />
-      </PageHeader>
+      </div>
 
       {/* 採点エリア */}
       <div className="relative flex h-full min-h-0 flex-1 overflow-hidden">
@@ -906,18 +882,6 @@ function ScoringMainViewContent() {
         open={showOmrModal}
         onOpenChange={setShowOmrModal}
         onScoresApplied={refetchQuestionScores}
-      />
-
-      {/* 採点結果の確定（裁定）パネル */}
-      <ScoreDecisionPanel
-        examId={examId}
-        isOpen={showScoreDecisionPanel}
-        onClose={() => setShowScoreDecisionPanel(false)}
-        summary={decisionSummary}
-        loading={decisionLoading}
-        error={decisionError}
-        onRefresh={handleScoreDecided}
-        onAssignmentChanged={handleAssignmentChanged}
       />
 
       {/* モード選択モーダル */}

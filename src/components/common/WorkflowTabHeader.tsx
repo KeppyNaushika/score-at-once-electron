@@ -4,6 +4,7 @@ import { List } from "lucide-react"
 import { usePathname } from "next/navigation"
 
 import { GuardedLink } from "@/components/common/GuardedLink"
+import { usePageHelp } from "@/components/help/usePageHelp"
 import { HistoryNavButtons } from "@/components/layout/HistoryNavButtons"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -13,6 +14,10 @@ import { cn } from "@/lib/utils"
  *
  * `path` は実体のURLに継ぐ残りで、先頭の `/` を含む（例: `/01-upload`）。
  * 概要だけは実体そのもののURLなので空文字になる。
+ *
+ * **短い名前と長い名前の両方を持つ。** タブは9枚並ぶので `label` は詰めるが
+ * （「1. 模範解答」）、見出しと「次へ」は何をする画面かを言い切る必要がある
+ * （「模範解答画像の管理」）。同じ段を2つの長さで呼ぶので、両方をここに置く。
  */
 export interface WorkflowTab {
   id: string
@@ -35,8 +40,21 @@ interface WorkflowTabHeaderProps {
 
 /**
  * 段のあるワークフローの詳細画面が共通で被るヘッダー。
- * 上段が Word のタイトルバー（左にクイックアクセスツールバー・中央に実体の名前）、
- * 下段が段のタブ。
+ * 上段が Word のタイトルバー、下段が段のタブ。
+ *
+ * ```
+ * [←][→][≡] 模範解答画像の管理｜期末考査（数学）  [次へ：答案の採点領域作成][使い方]
+ * 概要  1.模範解答  2.採点領域  …  9.結果
+ * ```
+ *
+ * **段の題も「使い方」も「次へ」もここが出す。** 以前は各段のページが `PageHeader` で
+ * 自分の題を出しており、タブに段の名前が出るようになってからは**同じ段の名前が上下に
+ * 2回**並んでいた。3つとも段が決まれば決まるもの ——「使い方」は `usePageHelp` が
+ * URL から引き、「次へ」は次のタブそのもの —— なので、段ごとに書き写す理由が無い。
+ *
+ * **「次へ」は条件を付けずに常に出す。** 以前は「模範解答が1枚以上あるとき」のように
+ * 段ごとの条件で隠していたが、**すぐ下のタブが同じ行き先へ無条件で連れて行く**ので
+ * 隠しても止められていない。止めたいものがあるなら行き先の画面で言う。
  *
  * **パンくずは置かない。** 段は上流から下流へ一本道に見えるが、実際はどの段へも
  * 行き来できる**兄弟**であって、いま居る段の親ではない。`›` で連なる道筋は
@@ -67,6 +85,14 @@ export function WorkflowTabHeader({
   tabs,
 }: WorkflowTabHeaderProps) {
   const pathname = usePathname()
+  const { helpButton } = usePageHelp({ compact: true })
+
+  const currentIndex = tabs.findIndex(
+    (tab) => pathname === entityHref + tab.path
+  )
+  const currentTab = currentIndex === -1 ? undefined : tabs[currentIndex]
+  // 最後の段には「次へ」が無い。現在地が引けないときも出さない（行き先を決められない）
+  const nextTab = currentIndex === -1 ? undefined : tabs[currentIndex + 1]
 
   return (
     <header className="shrink-0 border-b bg-background">
@@ -88,7 +114,22 @@ export function WorkflowTabHeader({
             </GuardedLink>
           </Button>
         </div>
-        <h1 className="truncate text-sm font-semibold">{entityName}</h1>
+        <h1 className="min-w-0 truncate text-sm font-semibold">
+          {currentTab && currentTab.path !== ""
+            ? `${currentTab.title}｜${entityName}`
+            : entityName}
+        </h1>
+        {/* 右端が「使い方」、その左が「次へ」（4画面で同じ並び） */}
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {nextTab && (
+            <Button size="sm" className="h-7 text-xs" asChild>
+              <GuardedLink href={entityHref + nextTab.path}>
+                次へ：{nextTab.title}
+              </GuardedLink>
+            </Button>
+          )}
+          {helpButton}
+        </div>
       </div>
       {/* 試験は概要込みで9枚並ぶ。窓が狭いときはタブ列だけを横に流す */}
       <nav

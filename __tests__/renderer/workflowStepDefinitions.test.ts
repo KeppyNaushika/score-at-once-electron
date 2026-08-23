@@ -141,6 +141,76 @@ describe("段の一覧と実際のルート", () => {
   })
 })
 
+/**
+ * 段の長い名前（`title`）は3か所で同じものを言う——ヘッダーの見出し、「次へ」の
+ * 文言、一覧の「次のステップ」。前2つは `workflowTabs` から出るが、3つ目の梯子
+ * （`src/lib/*Status.ts`）は自分で文字列を持っている。**同じ段を違う名前で呼ぶと、
+ * 一覧から入った人とタブから入った人が別の画面だと思う。**
+ */
+describe("段の題と「次のステップ」の文言", () => {
+  const LADDERS: { file: string; tabs: readonly WorkflowTab[] }[] = [
+    { file: "src/lib/examStatus.ts", tabs: examWorkflowTabs },
+    { file: "src/lib/gradeStatus.ts", tabs: gradeWorkflowTabs },
+    { file: "src/lib/courseworkStatus.ts", tabs: courseworkWorkflowTabs },
+    {
+      file: "src/lib/answerSheetStatus.ts",
+      tabs: answerSheetBuilderWorkflowTabs,
+    },
+  ]
+
+  it.each(LADDERS)(
+    "$file の text は、どれかの段の title と一致する",
+    ({ file, tabs }) => {
+      const source = fs.readFileSync(path.join(REPO_ROOT, file), "utf-8")
+      const ladderTexts = [...source.matchAll(/^\s*text: "([^"]+)",$/gm)].map(
+        (match) => match[1]
+      )
+      // 梯子が空なら検査が素通りする（段が減ったのか、書き方が変わったのか分からない）
+      expect(ladderTexts.length).toBeGreaterThan(0)
+
+      const titles = tabs.map((tab) => tab.title)
+      ladderTexts.forEach((text) => expect(titles).toContain(text))
+    }
+  )
+})
+
+/**
+ * 段のページは自分の題を出さない。
+ *
+ * タブに段の名前が出るようになってからは、`PageHeader` を置くと**同じ段の名前が
+ * 上下に2回**並ぶ。題・使い方・次へは `WorkflowTabHeader` の持ち物にしたので、
+ * 段の側に戻ってきていないことを走査で押さえる。
+ */
+describe("段のページの題", () => {
+  const WORKFLOW_DIRS = [
+    "src/app/(app)/exams/[examId]",
+    "src/app/(app)/grades/[gradeId]",
+    "src/app/(app)/coursework/[courseworkId]",
+    "src/app/(app)/answer-sheet-builder/[definitionId]",
+    "src/components/exams",
+    "src/components/grades",
+    "src/components/coursework",
+    "src/components/answer-sheet-builder",
+  ]
+
+  it("段の画面は PageHeader を被らない（題はヘッダーが1回だけ出す）", () => {
+    const offenders = collectSourceFiles()
+      .filter((filePath) =>
+        WORKFLOW_DIRS.some((dir) =>
+          filePath.startsWith(path.join(REPO_ROOT, dir) + path.sep)
+        )
+      )
+      .filter((filePath) =>
+        fs
+          .readFileSync(filePath, "utf-8")
+          .includes("@/components/layout/PageHeader")
+      )
+      .map((filePath) => path.relative(REPO_ROOT, filePath))
+
+    expect(offenders).toEqual([])
+  })
+})
+
 describe("改名の取り残し", () => {
   it("08-export を指す文字列は src にも __tests__ にも残っていない", () => {
     const offenders = collectSourceFiles()

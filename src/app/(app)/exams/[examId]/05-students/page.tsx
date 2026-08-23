@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus, Users } from "lucide-react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import { useCallback, useState } from "react"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
@@ -13,8 +13,6 @@ import { useExamStudentsData } from "@/components/exams/05-students/components/e
 import ExamStudentAddModal from "@/components/exams/05-students/components/ExamStudentAddModal"
 import SortableStudentTable from "@/components/exams/05-students/components/SortableStudentTable"
 import StudentRemovalConfirmModal from "@/components/exams/05-students/components/StudentRemovalConfirmModal"
-import { usePageHelp } from "@/components/help/usePageHelp"
-import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -30,8 +28,6 @@ const EMPTY_EXAM_CLASSROOMS: ExamClassroomRow[] = []
 export default function StudentsPage() {
   const queryClient = useQueryClient()
   const params = useParams()
-  const router = useRouter()
-  const { helpButton } = usePageHelp()
   const examId = typeof params.examId === "string" ? params.examId : ""
 
   const [activeTab, setActiveTab] = useState("students")
@@ -123,14 +119,6 @@ export default function StudentsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader title="受験生徒の管理" helpButton={helpButton}>
-        <Button
-          onClick={() => router.push(`/exams/${examId}/06-student-answers`)}
-        >
-          次へ: 生徒答案の追加と関連付け
-        </Button>
-      </PageHeader>
-
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
