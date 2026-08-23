@@ -154,7 +154,7 @@ test("04 を開いた後に 03 へ移っても、ページと採点領域の画�
   await expect(page.getByRole("heading", { name: /小計/ })).toHaveCount(0)
 })
 
-test("08 で変えた出力設定は、07 へ移って戻っても残る", async () => {
+test("09 で変えた出力設定は、07 へ移って戻っても残る", async () => {
   // 出力設定は取得結果を編集用 state へ写して使う。保存側が同じキーを更新しないと、
   // 戻ってきたときに保存前の値が種になり、そのまま上書き保存される
   launched = await launchApp()
@@ -165,7 +165,7 @@ test("08 で変えた出力設定は、07 へ移って戻っても残る", async
 
   // 採点マーク設定の「未採点にマークを付けるか」を使う（保存対象の設定）
   const openExport = async () => {
-    await page.goto(`${E2E_BASE_URL}/exams/${examId}/08-export`, {
+    await page.goto(`${E2E_BASE_URL}/exams/${examId}/09-export`, {
       waitUntil: "domcontentloaded",
     })
     const markUnscored = page.locator("#mark-unscored")

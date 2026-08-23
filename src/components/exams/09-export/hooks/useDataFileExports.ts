@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query"
 import type { Dispatch, SetStateAction } from "react"
 import { toast } from "sonner"
 
-import { generatePrintHtml } from "@/components/exams/08-export/components/individual-report/generatePrintHtml"
+import { generatePrintHtml } from "@/components/exams/09-export/components/individual-report/generatePrintHtml"
 import type { StudentExportPlacement } from "@/electron-src/lib/shared/types"
 import {
   exportGradingDataExcelMutation,

@@ -12,7 +12,7 @@ import {
   computeFilteredStats,
   computeFilteredSubtotalStats,
   groupSubtotalData,
-} from "@/components/exams/08-export/components/individual-report/computeReportData"
+} from "@/components/exams/09-export/components/individual-report/computeReportData"
 import type {
   ScoringData,
   SubtotalScore,

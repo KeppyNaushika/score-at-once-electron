@@ -4,15 +4,9 @@ import { useQuery } from "@tanstack/react-query"
 import { useParams } from "next/navigation"
 import React from "react"
 
-import type { WorkflowTab } from "@/components/common/WorkflowTabHeader"
 import { WorkflowTabHeader } from "@/components/common/WorkflowTabHeader"
+import { answerSheetBuilderWorkflowTabs } from "@/lib/workflowTabs"
 import { answerSheetDefinitionQuery } from "@/queries/answerSheetBuilder"
-
-const workflowTabs: readonly WorkflowTab[] = [
-  { id: "detail", label: "概要", path: "" },
-  { id: "01-edit", label: "1. 作成", path: "/01-edit" },
-  { id: "02-export", label: "2. 書き出し", path: "/02-export" },
-]
 
 /**
  * 解答用紙作成の個別定義レイアウト。
@@ -40,7 +34,7 @@ export default function AnswerSheetBuilderDefinitionLayout({
         listHref="/answer-sheet-builder"
         entityName={definitionName || "解答用紙"}
         entityHref={`/answer-sheet-builder/${definitionId}`}
-        tabs={workflowTabs}
+        tabs={answerSheetBuilderWorkflowTabs}
       />
       <main className="min-h-0 flex-1 overflow-auto">{children}</main>
     </div>

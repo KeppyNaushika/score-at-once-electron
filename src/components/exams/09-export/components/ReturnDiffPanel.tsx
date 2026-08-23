@@ -9,8 +9,8 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 
-import { CaptureReturnVersionButton } from "@/components/exams/08-export/components/CaptureReturnVersionButton"
-import type { Student } from "@/components/exams/08-export/types"
+import { CaptureReturnVersionButton } from "@/components/exams/09-export/components/CaptureReturnVersionButton"
+import type { Student } from "@/components/exams/09-export/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {

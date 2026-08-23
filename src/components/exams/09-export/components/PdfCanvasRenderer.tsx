@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type {
   RenderedPageData,
   RenderProgress,
-} from "@/components/exams/08-export/types"
+} from "@/components/exams/09-export/types"
 import type { PdfExportPageData } from "@/electron-src/lib/prisma/pdfExport"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 

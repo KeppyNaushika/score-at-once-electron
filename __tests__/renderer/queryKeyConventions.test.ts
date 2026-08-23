@@ -519,7 +519,7 @@ function scan(): Scan {
 /**
  * 既知の未修正。**増やさないこと。**
  *
- * 段階12 で 08-export のデバウンスごと消えたので、今は空。
+ * 段階12 で結果出力（現 09-export）のデバウンスごと消えたので、今は空。
  */
 const KNOWN_UNSTABLE_EFFECTS: string[] = []
 

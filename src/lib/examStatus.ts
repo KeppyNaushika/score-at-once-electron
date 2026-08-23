@@ -160,7 +160,7 @@ export function getExamProgress(exam: ExamProgressSource): ExamProgress {
 }
 
 /**
- * 試験一覧の「次のステップ」表示（8段階ワークフローの現在地）。
+ * 試験一覧の「次のステップ」表示（9段階ワークフローの現在地）。
  * 表示文言・遷移 URL・着手可否という presentation 情報であり、renderer 側で導出する。
  */
 interface ExamWorkflowStatus {
@@ -254,11 +254,20 @@ export function getExamWorkflowStatus(
       canStart: hasAnswers && hasRegionInfo,
     }
 
+  /**
+   * 採点まで済んだら「9. 結果」を指す。
+   *
+   * **「8. 採点確定」はこの梯子の段にしない。** 梯子は `ExamProgress`（DB の事実）
+   * だけで現在地を決めるが、確定が要るかどうかは採点者が複数いて食い違ったかで
+   * 決まり、`ExamProgressSource` にその材料が無い。無理に段を挟むと、単独採点の
+   * 試験が「採点確定へ」で止まり続ける（一生満たされない条件で足を止める）。
+   * 確定への誘導は、必要になった側 —— 07 のバッジと出力前の警告 —— が出す。
+   */
   return {
-    step: 8,
+    step: 9,
     action: "export",
     text: "採点結果のファイル出力",
-    url: `/exams/${examId}/08-export`,
+    url: `/exams/${examId}/09-export`,
     isCompleted: false,
     canStart: hasScoring,
   }

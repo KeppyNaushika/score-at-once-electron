@@ -28,8 +28,8 @@ interface ExportWarningModalProps {
   isOpen: boolean
   onClose: () => void
   onContinue: () => void
-  /** 確定パネル（07）へ誘導する。競合があるときだけ表示される */
-  onOpenDecisionPanel: () => void
+  /** 「8. 採点確定」の段へ誘導する。競合があるときだけ表示される */
+  onGoToFinalize: () => void
   warnings: ScoringValidationWarnings
   /** 食い違いを未解決のまま出力した場合に合計点から失われる最大値 */
   conflictScoreImpact: number
@@ -125,7 +125,7 @@ export default function ExportWarningModal({
   isOpen,
   onClose,
   onContinue,
-  onOpenDecisionPanel,
+  onGoToFinalize,
   warnings,
   conflictScoreImpact,
   conflictCheckError,
@@ -190,10 +190,10 @@ export default function ExportWarningModal({
                 <Button
                   size="sm"
                   className="bg-purple-600 hover:bg-purple-700"
-                  onClick={onOpenDecisionPanel}
+                  onClick={onGoToFinalize}
                 >
                   <Gavel className="mr-1 h-4 w-4" />
-                  確定パネルを開いて解決する
+                  採点確定のページで解決する
                 </Button>
               </AlertDescription>
             </Alert>

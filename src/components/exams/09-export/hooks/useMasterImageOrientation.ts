@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 
-import type { PdfOrientation } from "@/components/exams/08-export/types"
+import type { PdfOrientation } from "@/components/exams/09-export/types"
 import { masterImagesQuery } from "@/queries/exam"
 import { fileProtocolPathQuery } from "@/queries/misc"
 

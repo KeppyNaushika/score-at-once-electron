@@ -12,11 +12,11 @@ import {
 } from "@/components/help/common/DocComponents"
 
 // ============================================================================
-// このページ専用の図解アニメーション（keyframe 名は help08 で始める）
+// このページ専用の図解アニメーション（keyframe 名は help09 で始める）
 // ============================================================================
 
-const HELP08_KEYFRAMES = `
-@keyframes help08CardCycle {
+const HELP09_KEYFRAMES = `
+@keyframes help09CardCycle {
   0%, 6% {
     border-color: #3b82f6;
     box-shadow: 0 8px 18px -8px rgba(59, 130, 246, 0.55);
@@ -28,17 +28,17 @@ const HELP08_KEYFRAMES = `
     transform: translateY(0);
   }
 }
-@keyframes help08IconCycle {
+@keyframes help09IconCycle {
   0%, 6% { color: #2563eb; }
   28%, 100% { color: #9ca3af; }
 }
-@keyframes help08MarkPop {
+@keyframes help09MarkPop {
   0%, 18% { opacity: 0; transform: scale(0.2) rotate(-8deg); }
   32% { opacity: 1; transform: scale(1.15) rotate(-8deg); }
   44%, 86% { opacity: 1; transform: scale(1) rotate(-8deg); }
   100% { opacity: 0; transform: scale(1) rotate(-8deg); }
 }
-@keyframes help08ScoreFade {
+@keyframes help09ScoreFade {
   0%, 52% { opacity: 0; transform: translateY(4px); }
   66%, 90% { opacity: 1; transform: translateY(0); }
   100% { opacity: 0; transform: translateY(4px); }
@@ -61,11 +61,11 @@ function OutputFormatCard({
     <div
       aria-hidden
       className="flex w-28 flex-col items-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-3 py-4 text-center"
-      style={{ animation: `help08CardCycle 9s ${delay}s infinite` }}
+      style={{ animation: `help09CardCycle 9s ${delay}s infinite` }}
     >
       <span
         className="text-gray-400"
-        style={{ animation: `help08IconCycle 9s ${delay}s infinite` }}
+        style={{ animation: `help09IconCycle 9s ${delay}s infinite` }}
       >
         {icon}
       </span>
@@ -124,7 +124,7 @@ function GradedMarksFigure() {
         </span>
         <span
           className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-bold text-gray-700"
-          style={{ animation: "help08ScoreFade 6s infinite" }}
+          style={{ animation: "help09ScoreFade 6s infinite" }}
         >
           合計 14 点
         </span>
@@ -145,7 +145,7 @@ function GradedMarksFigure() {
               className="pointer-events-none absolute left-7 text-4xl leading-none"
               style={{
                 color: row.color,
-                animation: `help08MarkPop 6s ${row.delay}s infinite`,
+                animation: `help09MarkPop 6s ${row.delay}s infinite`,
               }}
             >
               {row.mark}
@@ -158,17 +158,17 @@ function GradedMarksFigure() {
 }
 
 /**
- * ステップ8「結果出力」の使い方ガイド。
+ * ステップ9「結果出力」の使い方ガイド。
  * 実機能（ExportMainView / ExportOptionsCard / StudentSelectionCard /
  * ScoringMarkSettings / IndividualReportSettings / ExportWarningModal /
  * ReturnDiffPanel）に基づき、3種類の出力と設定・プレビュー・再印刷を説明する。
  */
-export function HelpContent08Export() {
+export function HelpContent09Export() {
   return (
     <HelpDoc>
-      <style>{HELP08_KEYFRAMES}</style>
+      <style>{HELP09_KEYFRAMES}</style>
       <HelpHero
-        eyebrow="ステップ 8 / 出力"
+        eyebrow="ステップ 9 / 出力"
         title="採点結果をファイルに出力する"
         lead="採点が終わったら、その結果をファイルにまとめて保存します。生徒に返すための採点済み答案PDF、成績をまとめたExcel、生徒ごとの個人成績表PDFの3種類を作れます。最後のステップです。"
       />
@@ -299,7 +299,8 @@ export function HelpContent08Export() {
           <Pill>部分点が未入力</Pill>
         </p>
         <p>
-          採点者どうしで結果が食い違っている設問は、未採点として出力されます。採点画面の比較画面から、試験の所有者が結果を確定してください。警告の画面では、「キャンセル」を押していったん戻り採点を直すか、「警告を無視して続行」を押してそのまま出力するかを選べます。
+          採点者どうしで結果が食い違っている設問は、未採点として出力されます。「8.
+          採点確定」のページで、試験の所有者が結果を確定してください。警告の画面では、「キャンセル」を押していったん戻り採点を直すか、「警告を無視して続行」を押してそのまま出力するかを選べます。
         </p>
         <Callout type="warning" title="気になる点は直してから出力しましょう">
           警告が出たまま出力すると、その部分は正しく表示されないことがあります。急ぎでなければ、採点画面に戻って直してから出力するのが安心です。

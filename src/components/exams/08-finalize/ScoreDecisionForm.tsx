@@ -124,7 +124,7 @@ export function ScoreDecisionForm({
     finalizeQuestionScoreMutation(examId)
   )
 
-  // 呼び出し側（ScoreDecisionPanel）がセルごとの key でこのフォームを作り直すため、
+  // 呼び出し側（ScoreFinalizeMainView）がセルごとの key でこのフォームを作り直すため、
   // 既存の確定（あれば）を初期値としてそのまま state に置ける。
   const initial = toInitialFormValues(cell)
   const [verdict, setVerdict] = useState<ScoringStatus>(initial.verdict)

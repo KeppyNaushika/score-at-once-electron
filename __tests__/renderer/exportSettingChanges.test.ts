@@ -13,7 +13,7 @@ import { describe, expect, it } from "vitest"
 import {
   answerOverlayChanges,
   individualReportChanges,
-} from "@/components/exams/08-export/utils/exportSettingChanges"
+} from "@/components/exams/09-export/utils/exportSettingChanges"
 import { DEFAULT_INDIVIDUAL_REPORT_OPTIONS } from "@/types/individualReport.types"
 import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 

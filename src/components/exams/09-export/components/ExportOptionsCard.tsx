@@ -2,13 +2,13 @@
 
 import { Download } from "lucide-react"
 
-import { CaptureReturnVersionButton } from "@/components/exams/08-export/components/CaptureReturnVersionButton"
-import { IndividualReportSettings } from "@/components/exams/08-export/components/IndividualReportSettings"
-import { ScoringMarkSettingsContainer } from "@/components/exams/08-export/components/scoring-mark-settings/components/ScoringMarkSettingsContainer"
+import { CaptureReturnVersionButton } from "@/components/exams/09-export/components/CaptureReturnVersionButton"
+import { IndividualReportSettings } from "@/components/exams/09-export/components/IndividualReportSettings"
+import { ScoringMarkSettingsContainer } from "@/components/exams/09-export/components/scoring-mark-settings/components/ScoringMarkSettingsContainer"
 import type {
   ExportOptions,
   PdfOrientation,
-} from "@/components/exams/08-export/types"
+} from "@/components/exams/09-export/types"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"

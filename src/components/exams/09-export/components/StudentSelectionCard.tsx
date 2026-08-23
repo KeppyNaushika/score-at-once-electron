@@ -13,8 +13,8 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 
-import type { ScoredAnswerPreviewPage } from "@/components/exams/08-export/types"
-import type { Student } from "@/components/exams/08-export/types"
+import type { ScoredAnswerPreviewPage } from "@/components/exams/09-export/types"
+import type { Student } from "@/components/exams/09-export/types"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"

@@ -8,6 +8,9 @@ import { examDecisionSummaryQuery } from "@/queries/scoring"
  *
  * 競合は単独採点では構造的にゼロなので、`summary.graderCount <= 1` かつ
  * 対象0件のときは確定に関するUIを一切出さないための判断材料にも使う。
+ *
+ * 「8. 採点確定」の画面と、「7. 採点」のヘッダーに出す件数バッジの2か所が読むので、
+ * どちらの機能ディレクトリにも属さないトップレベルに置く。
  */
 export function useExamDecisionSummary(
   examId: string,

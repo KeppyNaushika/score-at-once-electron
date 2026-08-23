@@ -8,21 +8,19 @@ import LoadingSpinner from "@/components/common/LoadingSpinner"
 import {
   ExportOptionsCard,
   type ExportTabType,
-} from "@/components/exams/08-export/components/ExportOptionsCard"
-import ExportProgressModal from "@/components/exams/08-export/components/ExportProgressModal"
-import ExportWarningModal from "@/components/exams/08-export/components/ExportWarningModal"
-import { PdfCanvasRenderer } from "@/components/exams/08-export/components/PdfCanvasRenderer"
-import { StudentSelectionCard } from "@/components/exams/08-export/components/StudentSelectionCard"
-import { useDataFileExports } from "@/components/exams/08-export/hooks/useDataFileExports"
-import { useExcelPreview } from "@/components/exams/08-export/hooks/useExcelPreview"
-import { useExportPage } from "@/components/exams/08-export/hooks/useExportPage"
-import { useIndividualReportPreview } from "@/components/exams/08-export/hooks/useIndividualReportPreview"
-import { useReturnDiff } from "@/components/exams/08-export/hooks/useReturnDiff"
-import { useScoredAnswerPdfExport } from "@/components/exams/08-export/hooks/useScoredAnswerPdfExport"
-import { useScoredAnswerPreview } from "@/components/exams/08-export/hooks/useScoredAnswerPreview"
-import { toStudentExportPlacements } from "@/components/exams/08-export/utils/studentExportPlacements"
-import { usePageHelp } from "@/components/help/usePageHelp"
-import PageHeader from "@/components/layout/PageHeader"
+} from "@/components/exams/09-export/components/ExportOptionsCard"
+import ExportProgressModal from "@/components/exams/09-export/components/ExportProgressModal"
+import ExportWarningModal from "@/components/exams/09-export/components/ExportWarningModal"
+import { PdfCanvasRenderer } from "@/components/exams/09-export/components/PdfCanvasRenderer"
+import { StudentSelectionCard } from "@/components/exams/09-export/components/StudentSelectionCard"
+import { useDataFileExports } from "@/components/exams/09-export/hooks/useDataFileExports"
+import { useExcelPreview } from "@/components/exams/09-export/hooks/useExcelPreview"
+import { useExportPage } from "@/components/exams/09-export/hooks/useExportPage"
+import { useIndividualReportPreview } from "@/components/exams/09-export/hooks/useIndividualReportPreview"
+import { useReturnDiff } from "@/components/exams/09-export/hooks/useReturnDiff"
+import { useScoredAnswerPdfExport } from "@/components/exams/09-export/hooks/useScoredAnswerPdfExport"
+import { useScoredAnswerPreview } from "@/components/exams/09-export/hooks/useScoredAnswerPreview"
+import { toStudentExportPlacements } from "@/components/exams/09-export/utils/studentExportPlacements"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { administeredExamClassroomsQuery } from "@/queries/examClassroom"
 import {
@@ -35,7 +33,6 @@ import type {
 } from "@/types/exportValidation.types"
 
 export default function ExportMainView() {
-  const { helpButton } = usePageHelp()
   const currentUser = useCurrentUser()
   const router = useRouter()
   const [exportTab, setExportTab] = useState<ExportTabType>("scored-answers")
@@ -361,12 +358,16 @@ export default function ExportMainView() {
   const handleExportIndividualReports = () =>
     runValidatedExport("individual-reports", executeExportIndividualReports)
 
-  /** 出力前警告から採点画面の確定パネルへ移動する */
-  const handleOpenDecisionPanel = () => {
+  /**
+   * 出力前警告から「8. 採点確定」の段へ移動する。
+   * かつては 07 を `?decide=1` で開き、その中のモーダルを自動で開かせていた。
+   * 確定が段になったので、行き先をそのまま指す
+   */
+  const handleGoToFinalize = () => {
     if (!exam) return
     setShowWarningModal(false)
     setPendingExportType(null)
-    router.push(`/exams/${exam.id}/07-score-at-once?decide=1`)
+    router.push(`/exams/${exam.id}/08-finalize`)
   }
 
   const handleContinueExport = async () => {
@@ -407,8 +408,6 @@ export default function ExportMainView() {
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader title="採点結果のファイル出力" helpButton={helpButton} />
-
       <div className="container mx-auto flex min-h-0 flex-1 flex-col gap-6 px-4 py-6">
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2 lg:grid-rows-1">
           <div className="h-full min-h-0">
@@ -515,7 +514,7 @@ export default function ExportMainView() {
           isOpen={showWarningModal}
           onClose={() => setShowWarningModal(false)}
           onContinue={handleContinueExport}
-          onOpenDecisionPanel={handleOpenDecisionPanel}
+          onGoToFinalize={handleGoToFinalize}
           warnings={warningData}
           conflictScoreImpact={conflictScoreImpact}
           conflictCheckError={conflictCheckError}

@@ -16,7 +16,10 @@ import { cn } from "@/lib/utils"
  */
 export interface WorkflowTab {
   id: string
+  /** タブに出す短い名前（「1. 模範解答」） */
   label: string
+  /** 見出しと「次へ」に出す長い名前（「模範解答画像の管理」） */
+  title: string
   path: string
 }
 

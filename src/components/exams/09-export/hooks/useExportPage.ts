@@ -4,13 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useParams } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 
-import { useStudentSelection } from "@/components/exams/08-export/hooks/useStudentSelection"
-import type { ExportOptions, Student } from "@/components/exams/08-export/types"
-import type { ExportSettingChange } from "@/components/exams/08-export/utils/exportSettingChanges"
+import { useStudentSelection } from "@/components/exams/09-export/hooks/useStudentSelection"
+import type { ExportOptions, Student } from "@/components/exams/09-export/types"
+import type { ExportSettingChange } from "@/components/exams/09-export/utils/exportSettingChanges"
 import {
   answerOverlayChanges,
   individualReportChanges,
-} from "@/components/exams/08-export/utils/exportSettingChanges"
+} from "@/components/exams/09-export/utils/exportSettingChanges"
 import { examDetailQuery, examStudentsQuery } from "@/queries/exam"
 import {
   examExportSettingsQuery,

@@ -11,7 +11,8 @@ import { HelpContent04QuestionGroup } from "@/components/help/page-specific/Help
 import { HelpContent05Students } from "@/components/help/page-specific/HelpContent05Students"
 import { HelpContent06StudentAnswers } from "@/components/help/page-specific/HelpContent06StudentAnswers"
 import { HelpContent07Scoring } from "@/components/help/page-specific/HelpContent07Scoring"
-import { HelpContent08Export } from "@/components/help/page-specific/HelpContent08Export"
+import { HelpContent08Finalize } from "@/components/help/page-specific/HelpContent08Finalize"
+import { HelpContent09Export } from "@/components/help/page-specific/HelpContent09Export"
 import { HelpContentAnswerSheetList } from "@/components/help/page-specific/HelpContentAnswerSheetList"
 import { HelpContentClassrooms } from "@/components/help/page-specific/HelpContentClassrooms"
 import { HelpContentCourseworkList } from "@/components/help/page-specific/HelpContentCourseworkList"
@@ -40,7 +41,8 @@ const pageHelpComponents: {
   "05-students": HelpContent05Students,
   "06-student-answers": HelpContent06StudentAnswers,
   "07-score-at-once": HelpContent07Scoring,
-  "08-export": HelpContent08Export,
+  "08-finalize": HelpContent08Finalize,
+  "09-export": HelpContent09Export,
   "subtotal-groups": HelpContentSubtotalGroups,
   classrooms: HelpContentClassrooms,
   students: HelpContentStudents,
@@ -99,7 +101,8 @@ export function usePageHelp() {
       "05-students": "受験生徒管理",
       "06-student-answers": "答案アップロード",
       "07-score-at-once": "一括採点",
-      "08-export": "結果出力",
+      "08-finalize": "採点確定",
+      "09-export": "結果出力",
       "subtotal-groups": "小計点グループ管理",
       classrooms: "学級管理",
       students: "生徒管理",

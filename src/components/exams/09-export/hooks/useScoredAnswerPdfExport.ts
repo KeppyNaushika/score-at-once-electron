@@ -14,7 +14,7 @@ import type {
   ExportOptions,
   RenderedPageData,
   RenderProgress,
-} from "@/components/exams/08-export/types"
+} from "@/components/exams/09-export/types"
 import type { PdfExportPageData } from "@/electron-src/lib/prisma/pdfExport"
 import {
   addPageToStreamingSession,

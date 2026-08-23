@@ -8,7 +8,7 @@
  * 実行:
  *   npx playwright test --config=playwright.screenshot.config.ts
  *
- * 専用DB (__tests__/screenshots/data/database.db) を使用。実データには一切触れない。
+ * 専用DB (__tests__/screenshots/data/database.db) を使用。データには一切触れない。
  *
  * ストーリー:
  *   空の状態からUIを操作しながら段階的にデータを追加。
@@ -791,7 +791,7 @@ test.describe.serial("第3章: 試験ワークフロー", () => {
   })
 
   test("3-5 結果", async () => {
-    await nav(page, `/exams/${examId}/08-export`)
+    await nav(page, `/exams/${examId}/09-export`)
     await waitForReady(page)
     await ss(page, "ch3-scoring/05-results.png")
   })

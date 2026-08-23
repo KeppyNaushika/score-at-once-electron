@@ -6,6 +6,12 @@ import { usePathname, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 
 import { useNavigationGuardContext } from "@/contexts/NavigationGuardContext"
+import {
+  courseworkWorkflowTabs,
+  examWorkflowTabs,
+  findWorkflowStepLabel,
+  gradeWorkflowTabs,
+} from "@/lib/workflowTabs"
 import { answerSheetDefinitionQuery } from "@/queries/answerSheetBuilder"
 import { courseworkDetailQuery } from "@/queries/coursework"
 import { examDetailQuery } from "@/queries/exam"
@@ -29,39 +35,12 @@ type EntityKind = "exam" | "grade" | "coursework" | "asb"
 
 interface RouteLabel {
   base: string
-  /** ワークフローのサブステップ名（例: 「4. 小計点」）。試験詳細ページ配下でのみ付く */
+  /**
+   * ワークフローのサブステップ名（例: 「4. 小計点」）。段のある詳細ページ配下でのみ付く。
+   * 名前は各 layout.tsx と同じ `@/lib/workflowTabs` から引く（写しを持たない）。
+   */
   step?: string
   entity?: { kind: EntityKind; id: string }
-}
-
-// 各ワークフローのステップフォルダ→表示名（対応する [id]/layout.tsx のステップ定義と揃える）
-const EXAM_STEP_LABELS: Record<string, string> = {
-  "01-upload": "1. 模範解答",
-  "02-template": "2. 採点領域",
-  "03-region-info": "3. 領域情報",
-  "04-question-group": "4. 小計点",
-  "05-students": "5. 受験生徒",
-  "06-student-answers": "6. 生徒答案",
-  "07-score-at-once": "7. 採点",
-  "08-export": "8. 結果",
-}
-
-const GRADE_STEP_LABELS: Record<string, string> = {
-  "01-setup": "1. 基本設定",
-  "02-students": "2. 生徒管理",
-  "03-data-sources": "3. データソース",
-  "04-manual-scores": "4. 外部成績",
-  "05-boundaries": "5. 成績境界",
-  "06-results": "6. 結果",
-  "07-export": "7. 出力",
-}
-
-const COURSEWORK_STEP_LABELS: Record<string, string> = {
-  "01-setup": "1. 基本設定",
-  "02-students": "2. 生徒管理",
-  "03-items": "3. 評価項目",
-  "04-scores": "4. 点数入力",
-  "05-results": "5. 結果",
 }
 
 /** pathname を「セクション名」と（あれば）ステップ名・固有名を引くためのエンティティ情報へ変換する */
@@ -79,7 +58,7 @@ function routeToLabel(pathname: string): RouteLabel {
       return second
         ? {
             base: "試験",
-            step: EXAM_STEP_LABELS[third],
+            step: findWorkflowStepLabel(examWorkflowTabs, third),
             entity: { kind: "exam", id: second },
           }
         : { base: "試験一覧" }
@@ -91,7 +70,7 @@ function routeToLabel(pathname: string): RouteLabel {
       return second
         ? {
             base: "成績算出",
-            step: GRADE_STEP_LABELS[third],
+            step: findWorkflowStepLabel(gradeWorkflowTabs, third),
             entity: { kind: "grade", id: second },
           }
         : { base: "成績算出" }
@@ -99,7 +78,7 @@ function routeToLabel(pathname: string): RouteLabel {
       return second
         ? {
             base: "試験外成績資料",
-            step: COURSEWORK_STEP_LABELS[third],
+            step: findWorkflowStepLabel(courseworkWorkflowTabs, third),
             entity: { kind: "coursework", id: second },
           }
         : { base: "試験外成績資料" }

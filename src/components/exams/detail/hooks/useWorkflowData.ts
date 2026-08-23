@@ -114,10 +114,10 @@ export function useWorkflowData(
     // Phase 3: 出力
     const phase3Steps = [
       {
-        id: "08-export",
+        id: "09-export",
         title: "結果出力",
         description: "採点結果をExcel・PDFで出力",
-        path: "/08-export",
+        path: "/09-export",
         icon: "FileOutput",
         isCompleted: false, // 出力は何度でも実行可能
         canStart: progress?.hasScoring ?? false,

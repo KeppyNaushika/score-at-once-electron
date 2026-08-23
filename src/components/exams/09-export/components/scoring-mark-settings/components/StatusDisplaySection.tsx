@@ -2,8 +2,8 @@
 
 import Image from "next/image"
 
-import { statusLabels } from "@/components/exams/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
-import { getMarkImagePath } from "@/components/exams/08-export/components/scoring-mark-settings/utils/scoringMarkUtils"
+import { statusLabels } from "@/components/exams/09-export/components/scoring-mark-settings/constants/scoringMarkConstants"
+import { getMarkImagePath } from "@/components/exams/09-export/components/scoring-mark-settings/utils/scoringMarkUtils"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import type { AnswerOverlayVisibility } from "@/types/scoringOverlay.types"

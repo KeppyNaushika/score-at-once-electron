@@ -2,7 +2,7 @@
 
 import { Settings } from "lucide-react"
 
-import { StatusDisplaySection } from "@/components/exams/08-export/components/scoring-mark-settings/components/StatusDisplaySection"
+import { StatusDisplaySection } from "@/components/exams/09-export/components/scoring-mark-settings/components/StatusDisplaySection"
 import { Button } from "@/components/ui/button"
 import { InlineColorPicker } from "@/components/ui/color-picker"
 import { Input } from "@/components/ui/input"

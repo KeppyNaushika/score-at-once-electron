@@ -1,5 +1,5 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { cropRegionAssignmentsQuery } from "@/queries/scoring"
@@ -28,11 +28,6 @@ export function useAssignedCropRegions({
   userId,
   cropRegions,
 }: UseAssignedCropRegionsParams) {
-  const queryClient = useQueryClient()
-  const queryKey = useMemo(
-    () => cropRegionAssignmentsQuery(examId, userId).queryKey,
-    [examId, userId]
-  )
   const { data } = useQuery({
     ...cropRegionAssignmentsQuery(examId, userId),
     enabled: Boolean(examId),
@@ -40,11 +35,6 @@ export function useAssignedCropRegions({
   const assignments = data?.assignments ?? EMPTY_ASSIGNMENTS
   const canManage = data?.canManage ?? false
   const memberCount = data?.memberCount ?? 0
-
-  const refresh = useCallback(
-    () => queryClient.invalidateQueries({ queryKey }),
-    [queryClient, queryKey]
-  )
 
   const selectableCropRegions = useMemo(() => {
     if (assignments.length === 0 || canManage) return cropRegions
@@ -70,7 +60,6 @@ export function useAssignedCropRegions({
      * 引く必要がない（競合は構造的にゼロ）。
      */
     memberCount,
-    refresh,
     /** 担当割当によって設問が絞られている（採点者に理由を伝えるため） */
     isFiltered: selectableCropRegions.length < cropRegions.length,
   }
