@@ -1,7 +1,7 @@
 "use client"
 
 import type { Tag } from "@prisma/client"
-import { Check, ChevronRight } from "lucide-react"
+import { Check, ChevronRight, Info } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { EntityTagEditor } from "@/components/common/EntityTagEditor"
@@ -12,6 +12,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useEditingText } from "@/hooks/useEditingText"
 import { cn } from "@/lib/utils"
 import type { WorkflowPhaseGroup } from "@/lib/workflowTabs"
@@ -368,7 +373,7 @@ export function EntityOverviewPage({
           >
             {dateLabel}
           </Label>
-          <div className="space-y-1">
+          <div className="flex items-center gap-1">
             <Input
               id="entity-overview-reference-date"
               type="date"
@@ -378,8 +383,23 @@ export function EntityOverviewPage({
               onBlur={() => forgetField(entityHref, "referenceDate")}
               className={cn(QUIET_FIELD_CLASSES, "w-48")}
             />
+            {/*
+              日付が何に効くかは、書き換えるときだけ知りたい。常に添えておくと
+              2行を占め、しかも毎回読み飛ばされる。訊いたときに答える形にする。
+            */}
             {dateHint && (
-              <p className="text-xs text-muted-foreground">{dateHint}</p>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={dateHint}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Info className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">{dateHint}</TooltipContent>
+              </Tooltip>
             )}
           </div>
 
