@@ -278,6 +278,16 @@ describe("WorkflowTabHeader の見出しと操作", () => {
     expect(nextLink.getAttribute("href")).toBe(`${examHref}/02-template`)
   })
 
+  it("概要には「次へ」を出さない（段カードが同じことを言う）", () => {
+    // 概要はまとまりごとに「次へ: 〈段の名前〉」を出している。上でも言うと、
+    // 同じ行き先の口が2つになる
+    renderHeaderAt(examHref)
+
+    expect(
+      screen.queryByRole("link", { name: /^次へ：/ })
+    ).not.toBeInTheDocument()
+  })
+
   it("最後の段には「次へ」が無い", () => {
     renderHeaderAt(`${examHref}/09-export`)
 

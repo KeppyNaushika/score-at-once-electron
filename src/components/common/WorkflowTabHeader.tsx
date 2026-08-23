@@ -104,8 +104,18 @@ export function WorkflowTabHeader({
     (tab) => pathname === entityHref + tab.path
   )
   const currentTab = currentIndex === -1 ? undefined : tabs[currentIndex]
-  // 最後の段には「次へ」が無い。現在地が引けないときも出さない（行き先を決められない）
-  const nextTab = currentIndex === -1 ? undefined : tabs[currentIndex + 1]
+  /**
+   * 最後の段には「次へ」が無い。現在地が引けないときも出さない（行き先を決め
+   * られない）。
+   *
+   * **概要でも出さない。** 概要は段カードを並べており、まとまりごとに
+   * 「次へ: 〈段の名前〉」を出している。上でも同じことを言うと、同じ行き先の口が
+   * 2つになる。
+   */
+  const nextTab =
+    currentIndex === -1 || currentTab?.path === ""
+      ? undefined
+      : tabs[currentIndex + 1]
 
   return (
     <header className="shrink-0 border-b bg-background">

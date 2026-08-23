@@ -14,6 +14,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import { findOrCreateTagMutation, tagListQuery } from "@/queries/tag"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
@@ -34,6 +35,8 @@ interface EntityTagEditorProps {
   disabled?: boolean
   /** 触れない理由。`disabled` のときだけ出す */
   disabledReason?: string
+  /** 置かれる側が左端を揃えるために渡す */
+  className?: string
 }
 
 /**
@@ -53,6 +56,7 @@ export function EntityTagEditor({
   onReplace,
   disabled = false,
   disabledReason,
+  className,
 }: EntityTagEditorProps) {
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
@@ -118,7 +122,7 @@ export function EntityTagEditor({
   )
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className={cn("flex flex-wrap items-center gap-2", className)}>
       {tags.map((tag) => (
         <Badge
           key={tag.id}

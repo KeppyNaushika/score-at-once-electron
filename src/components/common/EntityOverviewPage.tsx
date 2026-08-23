@@ -68,7 +68,7 @@ export interface EntityOverviewStat {
  * かえって迷わせる。
  */
 const QUIET_FIELD_CLASSES = cn(
-  "border-transparent bg-transparent shadow-none",
+  "border-transparent bg-transparent px-2 shadow-none",
   "hover:border-input hover:bg-background focus-visible:bg-background",
   // 書き換えられない相手（持ち主でない解答用紙）では、載せても欄に見せない。
   // `Textarea` は `disabled` でもポインタを受けるので、変化を明示的に止める
@@ -357,10 +357,10 @@ export function EntityOverviewPage({
             見出しの列は幅を決め打つ。中身に合わせて伸縮させると、実体ごとに
             （「試験名」と「解答用紙名」）入力欄の左端がずれる
           */}
-          <div className="grid grid-cols-[6rem_1fr] items-start gap-x-3 gap-y-2">
+          <div className="grid grid-cols-[6rem_1fr] items-center gap-x-3 gap-y-2">
             <Label
               htmlFor="entity-overview-name"
-              className="pt-2 text-sm text-muted-foreground"
+              className="text-sm text-muted-foreground"
             >
               {nameLabel}
             </Label>
@@ -379,7 +379,7 @@ export function EntityOverviewPage({
 
             <Label
               htmlFor="entity-overview-reference-date"
-              className="pt-2 text-sm text-muted-foreground"
+              className="text-sm text-muted-foreground"
             >
               {dateLabel}
             </Label>
@@ -395,7 +395,7 @@ export function EntityOverviewPage({
                 disabled={!canEdit}
                 onChange={(e) => changeReferenceDate(e.target.value)}
                 onBlur={() => forgetField(entityHref, "referenceDate")}
-                className={cn(QUIET_FIELD_CLASSES, "w-40")}
+                className={cn(QUIET_FIELD_CLASSES, "w-auto")}
               />
               {/*
               日付が何に効くかは、書き換えるときだけ知りたい。常に添えておくと
@@ -412,7 +412,7 @@ export function EntityOverviewPage({
                       <Info className="h-4 w-4" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
+                  <TooltipContent side="right" className="max-w-xs">
                     {dateHint}
                   </TooltipContent>
                 </Tooltip>
@@ -421,7 +421,7 @@ export function EntityOverviewPage({
 
             <Label
               htmlFor="entity-overview-description"
-              className="pt-2 text-sm text-muted-foreground"
+              className="text-sm text-muted-foreground"
             >
               説明
             </Label>
@@ -429,20 +429,23 @@ export function EntityOverviewPage({
               id="entity-overview-description"
               value={textOf(entityHref, "description", basics.description)}
               disabled={!canEdit}
-              rows={2}
+              // 高さは中身に従う（`Textarea` の `field-sizing-content`）。行数で
+              // 決め打つと、1行しか書いていなくても2行ぶんの空白が居座る
+              rows={1}
               placeholder="説明を書く"
               onChange={(e) => changeDescription(e.target.value)}
               onBlur={() => forgetField(entityHref, "description")}
-              className={cn(QUIET_FIELD_CLASSES, "max-w-sm resize-none")}
+              className={cn(QUIET_FIELD_CLASSES, "min-h-0 resize-none")}
             />
 
             <Label
               htmlFor="entity-overview-tag"
-              className="pt-2 text-sm text-muted-foreground"
+              className="text-sm text-muted-foreground"
             >
               タグ
             </Label>
             <EntityTagEditor
+              className="px-2"
               tags={tags}
               onReplace={onReplaceTags}
               disabled={!canEdit}
