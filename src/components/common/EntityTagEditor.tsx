@@ -27,6 +27,13 @@ interface EntityTagEditorProps {
    */
   tags: Tag[]
   /**
+   * いま `tags` を取り直している最中か（取得の `isFetching` をそのまま）。
+   *
+   * **書き込みの後は必ず true になる。** 取り直しは待たれない（`invalidateQueries`
+   * は `void`）ので、`onReplace` が解決した時点の `tags` はまだ1往復ぶん古い。
+   */
+  isReloading: boolean
+  /**
    * 付け替える。渡すのは**置き換え後のタグ id ひとそろい**で、4実体とも
    * `setTags(entityId, tagIds)` という同じ形の書き込みを持っている。
    */
@@ -53,6 +60,7 @@ interface EntityTagEditorProps {
  */
 export function EntityTagEditor({
   tags,
+  isReloading,
   onReplace,
   disabled = false,
   disabledReason,
@@ -62,35 +70,46 @@ export function EntityTagEditor({
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
   const [tagInput, setTagInput] = useState("")
   const [isOpen, setIsOpen] = useState(false)
+  /** 書き込みが飛んでいる間か */
+  const [isSending, setIsSending] = useState(false)
+
   /**
-   * 書き込みが飛んでいる間か。
+   * まだ押させないか。
    *
    * 付け替えは**いま付いているタグを読んで組み立てる**（`setTags` は置き換え）ので、
-   * 前の結果が返る前に次を押されると、読んだ側が古いままになって付けた／外したが
-   * 消える。返るまで押せなくしておく。
+   * 読んだ側が古いまま次を押されると、付けた／外したが消える。したがって塞ぐのは
+   * 書き込みが飛んでいる間**だけでは足りない** —— `mutateAsync` は取り直しを
+   * 待たずに解決するので、そこで解くと `tags` は1往復ぶん古い。続けて2つ付けると
+   * 2つ目が `[…1往復前のタグ, 2つ目]` になり、1つ目が消えていた。
+   *
+   * 同じ古い `tags` から候補一覧と重複判定も作っているので、着地まで塞ぐことで
+   * 「付けたばかりのタグが候補に残り、押すと id が重複する」も止まる。
    */
-  const [isWriting, setIsWriting] = useState(false)
+  const isBlocked = isSending || isReloading
 
   const handleAdd = async (tagName?: string) => {
     const name = (tagName ?? tagInput).trim()
-    setTagInput("")
-    // 続けて足せるよう開いたままにする（1つ付けるたびに開き直させない）
-    if (!name || isWriting) return
+    // 塞がっている間は受け取らない。**打った文字は消さない**（消すと、付かないまま
+    // 消えたように見える）
+    if (!name || isBlocked) return
     if (tags.some((tag) => tag.name === name)) return
-    setIsWriting(true)
+    // 足す分は受け取ったので入力を空にする。続けて足せるよう、popover は開いたまま
+    // にする（1つ付けるたびに開き直させない）
+    setTagInput("")
+    setIsSending(true)
     try {
       const added = await findOrCreateTag.mutateAsync(name)
       await onReplace([...tags.map((tag) => tag.id), added.id])
     } catch {
       // 失敗の通知は MutationCache が出す
     } finally {
-      setIsWriting(false)
+      setIsSending(false)
     }
   }
 
   const handleRemove = async (tagId: string) => {
-    if (isWriting) return
-    setIsWriting(true)
+    if (isBlocked) return
+    setIsSending(true)
     try {
       await onReplace(
         tags.filter((tag) => tag.id !== tagId).map((tag) => tag.id)
@@ -98,7 +117,7 @@ export function EntityTagEditor({
     } catch {
       // 失敗の通知は MutationCache が出す
     } finally {
-      setIsWriting(false)
+      setIsSending(false)
     }
   }
 
@@ -137,7 +156,7 @@ export function EntityTagEditor({
             <button
               type="button"
               onClick={() => void handleRemove(tag.id)}
-              disabled={isWriting}
+              disabled={isBlocked}
               className="ml-1.5 cursor-pointer appearance-none border-none bg-transparent p-0 hover:text-destructive"
               aria-label={`${tag.name} を外す`}
             >
@@ -190,7 +209,7 @@ export function EntityTagEditor({
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={isWriting}
+                disabled={isBlocked}
                 onClick={() => void handleAdd()}
               >
                 追加
@@ -203,7 +222,7 @@ export function EntityTagEditor({
                     key={tag.id}
                     type="button"
                     className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
-                    disabled={isWriting}
+                    disabled={isBlocked}
                     onClick={() => void handleAdd(tag.name)}
                   >
                     <TagIcon className="h-3.5 w-3.5 opacity-50" />

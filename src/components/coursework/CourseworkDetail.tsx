@@ -44,19 +44,28 @@ interface CourseworkDetailProps {
  */
 export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
   const router = useRouter()
-  const { data: coursework = null, isPending: isLoading } = useQuery(
-    courseworkDetailQuery(courseworkId)
-  )
+  const {
+    data: coursework = null,
+    isPending: isLoading,
+    isFetching: isReloading,
+  } = useQuery(courseworkDetailQuery(courseworkId))
   const updateCoursework = useMutation(updateCourseworkMutation(courseworkId))
   const setCourseworkTags = useMutation(setCourseworkTagsMutation(courseworkId))
   const deleteCoursework = useMutation(deleteCourseworkMutation())
   const exportArchive = useMutation(exportCourseworkArchiveMutation())
 
-  const handleCommitBasics = async (basics: EntityOverviewBasics) => {
+  /** 触った欄だけが載って来る。載っていない列は `undefined` のまま送らない */
+  const handleCommitBasics = async (changed: Partial<EntityOverviewBasics>) => {
     await updateCoursework.mutateAsync({
-      name: basics.name,
-      description: basics.description.trim() || null,
-      referenceDate: basics.referenceDate || null,
+      name: changed.name,
+      description:
+        changed.description === undefined
+          ? undefined
+          : changed.description.trim() || null,
+      referenceDate:
+        changed.referenceDate === undefined
+          ? undefined
+          : changed.referenceDate || null,
     })
   }
 
@@ -121,6 +130,7 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
       }}
       onCommitBasics={handleCommitBasics}
       tags={coursework.tags.map((courseworkTag) => courseworkTag.tag)}
+      isReloadingTags={isReloading}
       onReplaceTags={handleReplaceTags}
       stats={stats}
       tabs={courseworkWorkflowTabs}

@@ -51,6 +51,7 @@ export default function ExamDetailPage() {
   const {
     exam,
     isLoading,
+    isReloading,
     studentCount,
     questionRegionCount,
     modelAnswerCount,
@@ -59,13 +60,20 @@ export default function ExamDetailPage() {
     updateExam,
   } = useExamDetail(examId)
 
-  const handleCommitBasics = async (basics: EntityOverviewBasics) => {
+  /** 触った欄だけが載って来る。載っていない列は `undefined` のまま送らない */
+  const handleCommitBasics = async (changed: Partial<EntityOverviewBasics>) => {
     await updateExam({
-      examName: basics.name,
-      description: basics.description.trim() || null,
-      referenceDate: basics.referenceDate
-        ? new Date(basics.referenceDate)
-        : null,
+      examName: changed.name,
+      description:
+        changed.description === undefined
+          ? undefined
+          : changed.description.trim() || null,
+      referenceDate:
+        changed.referenceDate === undefined
+          ? undefined
+          : changed.referenceDate
+            ? new Date(changed.referenceDate)
+            : null,
     })
   }
 
@@ -156,6 +164,7 @@ export default function ExamDetailPage() {
         }}
         onCommitBasics={handleCommitBasics}
         tags={exam.examTags.map((examTag) => examTag.tag)}
+        isReloadingTags={isReloading}
         onReplaceTags={handleReplaceTags}
         stats={stats}
         tabs={examWorkflowTabs}

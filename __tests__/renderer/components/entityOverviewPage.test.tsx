@@ -5,7 +5,9 @@
  * 固定するのは3組。
  *
  * 1. **その場編集が書きに行くこと。** 名前・日付・説明は**1打鍵ごとに即時**に書き、
- *    値が変わっていなければ書かない。名前を消し切った途中でも書かない
+ *    値が変わっていなければ書かない。名前を消し切った途中でも書かない。
+ *    運ぶのは**触った欄だけ**（触っていない欄を同梱すると、取り直しが遅れている
+ *    間に打った値を古い値で上書きする）
  * 2. **段カードの名前・説明・行き先が `workflowTabs` から来ること**
  *    （概要に写しを持たない）。**段の行そのものがリンク**で、別口の「開く」は無い
  * 3. **進み具合の出し方。** 済んだまとまりの足元にだけ、判定できる段を分母にした
@@ -36,6 +38,7 @@ import {
 } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import type { EntityOverviewBasics } from "@/components/common/EntityOverviewPage"
 import { EntityOverviewPage } from "@/components/common/EntityOverviewPage"
 import { examWorkflowPhases, examWorkflowTabs } from "@/lib/workflowTabs"
 
@@ -91,11 +94,7 @@ const ALL_MEASURABLE_DONE: Record<string, boolean | null> = {
 
 function renderOverview(
   overrides: {
-    onCommitBasics?: (basics: {
-      name: string
-      referenceDate: string
-      description: string
-    }) => Promise<void>
+    onCommitBasics?: (changed: Partial<EntityOverviewBasics>) => Promise<void>
     stepCompletion?: Record<string, boolean | null>
   } = {}
 ) {
@@ -108,6 +107,7 @@ function renderOverview(
       basics={BASICS}
       onCommitBasics={onCommitBasics}
       tags={[]}
+      isReloadingTags={false}
       onReplaceTags={vi.fn().mockResolvedValue(undefined)}
       stats={[
         { label: "模範解答", value: 3 },
@@ -142,11 +142,8 @@ describe("その場編集", () => {
     })
 
     expect(onCommitBasics).toHaveBeenCalledTimes(1)
-    expect(onCommitBasics).toHaveBeenCalledWith({
-      name: "期末考査（数学）",
-      referenceDate: "2026-03-01",
-      description: "数学",
-    })
+    // 触っていない日付・説明は載らない（載せると古い値で上書きすることになる）
+    expect(onCommitBasics).toHaveBeenCalledWith({ name: "期末考査（数学）" })
   })
 
   it("値が変わっていなければ書かない", () => {
@@ -176,7 +173,7 @@ describe("その場編集", () => {
     )
   })
 
-  it("日付と説明も同じ打鍵で書く", () => {
+  it("日付と説明も同じ打鍵で書く。運ぶのはそのつど触った欄だけ", () => {
     const onCommitBasics = vi.fn().mockResolvedValue(undefined)
     renderOverview({ onCommitBasics })
 
@@ -188,16 +185,39 @@ describe("その場編集", () => {
     })
 
     expect(onCommitBasics).toHaveBeenNthCalledWith(1, {
-      name: "期末考査",
       referenceDate: "2026-07-10",
-      description: "数学",
     })
-    // 2回目は、直前に打った日付も一緒に運ぶ（着地待ちの値を巻き戻さない）
+    expect(onCommitBasics).toHaveBeenNthCalledWith(2, { description: "数学I" })
+  })
+
+  /**
+   * 打った直後の値が、**取り直しが着地する前に**別の欄を触ったせいで消える不具合。
+   *
+   * `onBlur` は下書きを捨てるが、取り直しは待たれない（`queryClient.ts` の
+   * `void client.invalidateQueries(…)`）。ここでは `basics` を打つ前の姿のまま
+   * 据え置くことで、その「取り直しがまだ返っていない」状態を作っている。
+   */
+  it("blur の後で取り直しが遅れていても、他の欄の書き込みが古い値を運ばない", () => {
+    const onCommitBasics = vi.fn().mockResolvedValue(undefined)
+    renderOverview({ onCommitBasics })
+
+    const descriptionInput = screen.getByLabelText("説明")
+    fireEvent.change(descriptionInput, { target: { value: "数学I" } })
+    // 欄を離れる＝下書きを捨てる。`basics.description` はまだ古い「数学」のまま
+    fireEvent.blur(descriptionInput)
+    expect(descriptionInput).toHaveValue("数学")
+
+    fireEvent.change(screen.getByLabelText("試験日"), {
+      target: { value: "2026-07-10" },
+    })
+
+    // 日付の書き込みは日付だけを運ぶ。**古い説明を同梱しない**
     expect(onCommitBasics).toHaveBeenNthCalledWith(2, {
-      name: "期末考査",
       referenceDate: "2026-07-10",
-      description: "数学I",
     })
+    expect(onCommitBasics).not.toHaveBeenCalledWith(
+      expect.objectContaining({ description: "数学" })
+    )
   })
 })
 

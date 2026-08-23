@@ -35,19 +35,28 @@ export default function GradeDetailPage() {
   const router = useRouter()
   const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
 
-  const { data: grade = null, isPending: isLoading } = useQuery(
-    gradeDetailQuery(gradeId)
-  )
+  const {
+    data: grade = null,
+    isPending: isLoading,
+    isFetching: isReloading,
+  } = useQuery(gradeDetailQuery(gradeId))
   const updateGrade = useMutation(updateGradeMutation(gradeId))
   const setGradeTags = useMutation(setGradeTagsMutation(gradeId))
   const deleteGrade = useMutation(deleteGradeMutation())
   const exportArchive = useMutation(exportGradeArchiveMutation())
 
-  const handleCommitBasics = async (basics: EntityOverviewBasics) => {
+  /** 触った欄だけが載って来る。載っていない列は `undefined` のまま送らない */
+  const handleCommitBasics = async (changed: Partial<EntityOverviewBasics>) => {
     await updateGrade.mutateAsync({
-      name: basics.name,
-      description: basics.description.trim() || null,
-      referenceDate: basics.referenceDate || null,
+      name: changed.name,
+      description:
+        changed.description === undefined
+          ? undefined
+          : changed.description.trim() || null,
+      referenceDate:
+        changed.referenceDate === undefined
+          ? undefined
+          : changed.referenceDate || null,
     })
   }
 
@@ -100,6 +109,7 @@ export default function GradeDetailPage() {
       }}
       onCommitBasics={handleCommitBasics}
       tags={grade.gradeTags.map((gradeTag) => gradeTag.tag)}
+      isReloadingTags={isReloading}
       onReplaceTags={handleReplaceTags}
       stats={stats}
       tabs={gradeWorkflowTabs}

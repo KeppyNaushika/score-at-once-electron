@@ -165,12 +165,24 @@ interface EntityOverviewPageProps {
   dateHint?: string
   basics: EntityOverviewBasics
   /**
-   * 書く。**呼ばれるのは実際に値が変わったときだけ**（同じ値での書き込みは
-   * 同期の LWW を無意味に動かす）。
+   * 書く。**触った1つだけが載る**（`{ description: "…" }`）。呼ばれるのは実際に
+   * 値が変わったときだけ（同じ値での書き込みは同期の LWW を無意味に動かす）。
+   *
+   * **載っていない項目は「触っていない」の意**なので、受け取る側は書き換えない
+   * （`undefined` を素通しすれば Prisma も main の更新関数も見送る）。属性ひとそろい
+   * でしか更新できない実体（解答用紙）だけが、足りない分をいまの姿から埋める。
    */
-  onCommitBasics: (basics: EntityOverviewBasics) => Promise<void>
+  onCommitBasics: (changed: Partial<EntityOverviewBasics>) => Promise<void>
   /** いま付いているタグ（結合行の `tag` をそのまま） */
   tags: Tag[]
+  /**
+   * `tags` を取り直している最中か（取得の `isFetching` をそのまま）。
+   *
+   * **付け替えの後は必ず true になる。** 取り直しは待たれない（`invalidateQueries`
+   * は `void`）ので、これを渡さないと `tags` が1往復ぶん古いまま次の付け替えを
+   * 組み立てることになり、先に付けたタグが消える。
+   */
+  isReloadingTags: boolean
   /** 付け替える。渡すのは置き換え後のタグ id ひとそろい */
   onReplaceTags: (tagIds: string[]) => Promise<void>
   /** 書き換えられるか（解答用紙は担当だけ） */
@@ -219,17 +231,6 @@ function deriveStepCanStart(
     })
   })
   return canStartByStepId
-}
-
-function isSameBasics(
-  left: EntityOverviewBasics,
-  right: EntityOverviewBasics
-): boolean {
-  return (
-    left.name === right.name &&
-    left.referenceDate === right.referenceDate &&
-    left.description === right.description
-  )
 }
 
 /**
@@ -281,6 +282,7 @@ export function EntityOverviewPage({
   basics,
   onCommitBasics,
   tags,
+  isReloadingTags,
   onReplaceTags,
   canEdit = true,
   editDisabledReason,
@@ -295,54 +297,53 @@ export function EntityOverviewPage({
   const stepCanStart = deriveStepCanStart(phases, stepCompletion)
 
   /**
-   * いま書くべき3つ。**入力中の文字を優先**し、`override` はそれより優先する
-   * （`remember` は状態の更新なので、同じ打鍵の中ではまだ読み出せない）。
+   * **触った1つだけを書く。**
    *
-   * 変わっていない2つも毎回一緒に送る。書く先は1行なので UPDATE は1本のままで、
-   * かつ「片方の書き込みが着地する前にもう片方を打った」ときに古い値で上書き
-   * しない（画面が知っている最新をいつも丸ごと渡す）。
+   * 以前はここで3つをまとめ、下書きの無い欄は `basics` で埋めていた。ところが
+   * `onBlur` は下書きを捨てる一方で**取り直しは待たれない**（`queryClient.ts` の
+   * `void client.invalidateQueries(…)`）ので、捨てた直後の `basics` は打った値では
+   * なく**取り直し前の古い値**である。説明を打つ → 離す → 取り直しが返る前に日付を
+   * 触る、で日付の書き込みが古い説明を同梱し、打ったばかりの説明が消えていた。
+   *
+   * 触った欄だけを運べば、他の欄は載らないので上書きも起きない
+   * （docs/coding-style.md「IPC は意図を運ぶ。状態を運ばない」）。
    */
-  const currentBasics = (
-    override: Partial<EntityOverviewBasics>
-  ): EntityOverviewBasics => {
-    const name = override.name ?? textOf(entityHref, "name", basics.name)
-    const referenceDate =
-      override.referenceDate ??
-      textOf(entityHref, "referenceDate", basics.referenceDate)
-    const description =
-      override.description ??
-      textOf(entityHref, "description", basics.description)
-    return {
-      // 名前は空にできない（消し切ったままなら元の名前が残る）
-      name: name.trim() === "" ? basics.name : name.trim(),
-      referenceDate,
-      description,
-    }
-  }
-
-  const write = (override: Partial<EntityOverviewBasics>) => {
-    const next = currentBasics(override)
-    // 変わっていないなら書かない（同期の LWW を無意味に動かさない）
-    if (isSameBasics(next, basics)) return
-    void onCommitBasics(next).catch(() => {
+  const write = (changed: Partial<EntityOverviewBasics>) => {
+    void onCommitBasics(changed).catch(() => {
       // 失敗の通知は MutationCache が出す
     })
   }
 
+  /**
+   * その欄にいま出ている文字。入力中ならその文字、そうでなければ保存されている値。
+   * **「変わったか」はこれと比べて決める**（`basics` と比べると、取り直しが遅れて
+   * いる間に打った値が「変わっていない」に見える）。
+   */
+  const shownText = (field: keyof EntityOverviewBasics) =>
+    textOf(entityHref, field, basics[field])
+
   const changeName = (text: string) => {
+    const previous = shownText("name")
     remember(entityHref, "name", text)
-    // 消し切った途中では書かない（次の打鍵で確定する）
-    if (text.trim() === "") return
-    write({ name: text })
+    // 名前は空にできない。消し切った途中では書かない（次の打鍵で確定する）
+    const name = text.trim()
+    if (name === "") return
+    // 変わっていないなら書かない（同期の LWW を無意味に動かさない）
+    if (name === previous.trim()) return
+    write({ name })
   }
 
   const changeReferenceDate = (text: string) => {
+    const previous = shownText("referenceDate")
     remember(entityHref, "referenceDate", text)
+    if (text === previous) return
     write({ referenceDate: text })
   }
 
   const changeDescription = (text: string) => {
+    const previous = shownText("description")
     remember(entityHref, "description", text)
+    if (text === previous) return
     write({ description: text })
   }
 
@@ -388,7 +389,7 @@ export function EntityOverviewPage({
               </Label>
               <Input
                 id="entity-overview-name"
-                value={textOf(entityHref, "name", basics.name)}
+                value={shownText("name")}
                 disabled={!canEdit}
                 placeholder={`${nameLabel}を入力`}
                 onChange={(e) => changeName(e.target.value)}
@@ -409,11 +410,7 @@ export function EntityOverviewPage({
                 <Input
                   id="entity-overview-reference-date"
                   type="date"
-                  value={textOf(
-                    entityHref,
-                    "referenceDate",
-                    basics.referenceDate
-                  )}
+                  value={shownText("referenceDate")}
                   disabled={!canEdit}
                   onChange={(e) => changeReferenceDate(e.target.value)}
                   onBlur={() => forgetField(entityHref, "referenceDate")}
@@ -449,7 +446,7 @@ export function EntityOverviewPage({
               </Label>
               <Textarea
                 id="entity-overview-description"
-                value={textOf(entityHref, "description", basics.description)}
+                value={shownText("description")}
                 disabled={!canEdit}
                 // 高さは中身に従う（`Textarea` の `field-sizing-content`）。行数で
                 // 決め打つと、1行しか書いていなくても2行ぶんの空白が居座る
@@ -474,6 +471,7 @@ export function EntityOverviewPage({
               <EntityTagEditor
                 className="min-h-9 px-2"
                 tags={tags}
+                isReloading={isReloadingTags}
                 onReplace={onReplaceTags}
                 disabled={!canEdit}
                 disabledReason={editDisabledReason}

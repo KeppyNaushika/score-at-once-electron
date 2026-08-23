@@ -3,7 +3,6 @@
 import type { Exam } from "@prisma/client"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useCallback } from "react"
-import { toast } from "sonner"
 
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { cropRegionsQuery } from "@/queries/cropRegion"
@@ -17,9 +16,11 @@ import {
 export function useExamDetail(examId: string) {
   const currentUser = useCurrentUser()
 
-  const { data: exam = null, isPending: isLoading } = useQuery(
-    examForDetailQuery(examId)
-  )
+  const {
+    data: exam = null,
+    isPending: isLoading,
+    isFetching: isReloading,
+  } = useQuery(examForDetailQuery(examId))
   const { data: examStudents } = useQuery(examStudentsQuery(examId))
   const { data: cropRegions } = useQuery(cropRegionsQuery(examId))
   const updateExamMutate = useMutation(
@@ -35,25 +36,20 @@ export function useExamDetail(examId: string) {
         (cropRegion.orderIndex || cropRegion.label)
     ).length ?? 0
 
+  /**
+   * 試験の基本情報を書き換える。**渡された項目だけを運ぶ**（触っていない列は
+   * `undefined` のまま Prisma が見送る）。
+   *
+   * **成功を知らせない。** 概要ページは1打鍵ごとに書くので、成功トーストを出すと
+   * 12文字打てば12枚重なる。成績・資料・解答用紙の同じ操作も出していない
+   * （失敗だけを `MutationCache` が1箇所で知らせる）。
+   */
   const updateExam = useCallback(
-    async (
+    (
       examData: Partial<
         Pick<Exam, "examName" | "description" | "referenceDate">
       >
-    ) => {
-      try {
-        await updateExamMutate.mutateAsync({
-          examName: examData.examName,
-          description: examData.description,
-          referenceDate: examData.referenceDate,
-        })
-        toast.success("試験を更新しました")
-        return true
-      } catch {
-        // 失敗の知らせは中央のトーストが出す。ここでは閉じさせないだけ
-        return false
-      }
-    },
+    ) => updateExamMutate.mutateAsync(examData),
     [updateExamMutate]
   )
 
@@ -73,6 +69,8 @@ export function useExamDetail(examId: string) {
   return {
     exam,
     isLoading,
+    /** 書き込みの後の取り直しが着地するまで true。塞ぐ側（タグ欄）が見る */
+    isReloading,
     studentCount,
     questionRegionCount,
     modelAnswerCount,

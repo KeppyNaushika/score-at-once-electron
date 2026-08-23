@@ -58,7 +58,7 @@ export function AnswerSheetDefinitionDetail({
     isPending,
     error: loadError,
   } = useQuery(answerSheetDefinitionQuery(definitionId))
-  const { data: definitionTags } = useQuery(
+  const { data: definitionTags, isFetching: isReloadingTags } = useQuery(
     answerSheetDefinitionTagsQuery(definitionId)
   )
   const applyEdit = useMutation(applyAnswerSheetEditMutation(definitionId))
@@ -105,15 +105,27 @@ export function AnswerSheetDefinitionDetail({
   /**
    * 更新は**属性ひとそろい**を運ぶ（一部だけ運ぶと「載っていない」と「空にする」を
    * 区別できない）。概要が触るのは3つだけなので、残りはいまの姿から埋める。
+   *
+   * **ここだけ他の3実体と違う。** 概要から来るのは触った欄だけなので、触っていない
+   * 欄もいまの姿から埋める。埋める先は取り直しが着地した `definition` なので、
+   * 続けざまに別の欄を触ると取り直し前の値を運びうる —— それは属性ひとそろいで
+   * 運ぶ作りの帰結で、直すなら `asb:save-definition` の分割
+   * （docs/asb-ipc-split-plan.md）の側になる。
    */
-  const handleCommitBasics = async (basics: EntityOverviewBasics) => {
+  const handleCommitBasics = async (changed: Partial<EntityOverviewBasics>) => {
     await applyEdit.mutateAsync({
       type: "UPDATE_DEFINITION",
       payload: {
         attributes: {
-          name: basics.name,
-          description: basics.description.trim() || null,
-          referenceDate: basics.referenceDate || null,
+          name: changed.name ?? definition.name,
+          description:
+            changed.description === undefined
+              ? definition.description
+              : changed.description.trim() || null,
+          referenceDate:
+            changed.referenceDate === undefined
+              ? definition.referenceDate
+              : changed.referenceDate || null,
           labelPresets: definition.labelPresets,
           settings: definition.settings,
         },
@@ -184,6 +196,7 @@ export function AnswerSheetDefinitionDetail({
         }}
         onCommitBasics={handleCommitBasics}
         tags={(definitionTags ?? []).map((definitionTag) => definitionTag.tag)}
+        isReloadingTags={isReloadingTags}
         onReplaceTags={handleReplaceTags}
         canEdit={isOwner}
         editDisabledReason={`編集できるのは担当の${ownerName ?? "利用者"}さんだけです。`}
