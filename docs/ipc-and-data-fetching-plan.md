@@ -1,7 +1,8 @@
 # IPC の失敗表現と renderer のデータ取得 — 実装の記録
 
 main の失敗の伝え方、renderer の IPC 契約、renderer のデータ取得を、1つの計画として揃えた。
-**本書は済んだことの記録**である（段階0〜18 と R1〜R8）。**これからのことは
+**本書は済んだことの記録**である（段階0〜18 と R1〜R8）。**段階19 以降で済んだぶんは
+[completed-work.md](./completed-work.md)、これからのことは
 [remaining-work.md](./remaining-work.md)** にある。
 
 本書の数字は **2026-08-11 時点の実測**（TypeScript コンパイラ API による AST 走査。grep ではない）。
@@ -1169,7 +1170,7 @@ main は既に `src/types/` から型を引いているので前例があり、�
 | **R7**   | 段階17 の直後（ASB）    | `main...HEAD` 全差分 | 16件。修正済み   |
 | **R8**   | 段階18 の直後           | 同上（R7 と同時）    | 同上             |
 
-**R9 以降**（段階19〜22 の締め）は [remaining-work.md](./remaining-work.md) にある。
+**R9 以降**（段階19〜22 の締め）は [completed-work.md](./completed-work.md) にある。
 
 **R7 と R8 は1回で回した。** 段階18 が段階17 と独立（ASB を待たない）だったため、どちらの
 締めも同じ時点に来た。対象も段階の差分ではなく `main...HEAD` の全差分にしてある — この計画は
@@ -1953,14 +1954,15 @@ effect の撤去、バルクの `asb:replace-definition` への改名と4経路�
 
 → **R8**（R7 と同時に実施。指摘は [branch-review-findings.md](./branch-review-findings.md)）
 
-### 段階19 以降 — [remaining-work.md](./remaining-work.md) へ
+### 段階19 以降 — 本書から出した
 
 **まだ手を付けていないぶんは本書から出した。** 段階19（DB 行の手写し型の是正）、
 ASB 段階6（原稿用紙のテーブル化）、段階20（同期で負けた行の子の引き取り）、段階21
-（採点行の作成時点）、段階22（FK）と、判断待ちの2件は
-[remaining-work.md](./remaining-work.md) にある。
+（採点行の作成時点）、段階22（FK）と、判断待ちの2件がそれにあたる。
 
-**済んだことは本書に、これからのことはあちらに置く。**
+**そのほとんどは 0.17.0 までに片付いた。** 記録は
+[completed-work.md](./completed-work.md) にある。残っているものは
+[remaining-work.md](./remaining-work.md)。
 
 ---
 
