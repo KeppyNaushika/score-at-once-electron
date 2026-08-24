@@ -5,6 +5,7 @@ import type { UserExamWithUserAndInviter } from "@/types/prismaExtensions"
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope, resolveUserLabel } from "./auditScope"
 import prisma from "./client"
+import { PUBLIC_USER_OMIT } from "./publicUser"
 
 export type UserRole = "OWNER" | "GRADER"
 
@@ -24,8 +25,8 @@ export const getExamMembers = async (
     return await prisma.userExam.findMany({
       where: { examId },
       include: {
-        user: true,
-        inviter: true,
+        user: { omit: PUBLIC_USER_OMIT },
+        inviter: { omit: PUBLIC_USER_OMIT },
       },
     })
   } catch (error) {
@@ -103,8 +104,8 @@ export const inviteExamMember = async (
         invitedBy,
       },
       include: {
-        user: true,
-        inviter: true,
+        user: { omit: PUBLIC_USER_OMIT },
+        inviter: { omit: PUBLIC_USER_OMIT },
       },
     })
 

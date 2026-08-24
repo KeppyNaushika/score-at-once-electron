@@ -10,6 +10,7 @@ import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 import { deleteAfterRecount } from "./deleteAfterRecount"
 import { examPageWithContentInclude } from "./examPage"
+import { PUBLIC_USER_OMIT } from "./publicUser"
 
 /**
  * 進捗計算（renderer の getExamProgress）が読む元データの select。
@@ -100,7 +101,7 @@ export const getExamById = async (id: string) => {
     include: {
       userExams: {
         include: {
-          user: true,
+          user: { omit: PUBLIC_USER_OMIT },
         },
       },
       examPages: {
@@ -194,7 +195,7 @@ export const createExam = async (
     include: {
       userExams: {
         include: {
-          user: true,
+          user: { omit: PUBLIC_USER_OMIT },
         },
       },
       examPages: {

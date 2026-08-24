@@ -15,6 +15,7 @@ import {
 import prisma from "./client"
 import { assertCropRegionsInSameExam } from "./examScopeGuard"
 import { isRecordNotFoundError } from "./prismaErrors"
+import { PUBLIC_USER_OMIT } from "./publicUser"
 import { serializePrisma } from "./serializePrisma"
 
 /**
@@ -168,7 +169,7 @@ export const getQuestionScoresForExam = async (
             examPage: true,
           },
         },
-        user: true,
+        user: { omit: PUBLIC_USER_OMIT },
       },
       orderBy: [
         { examStudent: { student: { lastName: "asc" } } },
@@ -241,7 +242,7 @@ export const ensureQuestionScore = async (data: EnsureQuestionScoreData) => {
     const include = {
       examStudent: { include: { student: true } },
       cropRegion: true,
-      user: true,
+      user: { omit: PUBLIC_USER_OMIT },
     }
 
     const existing = await prisma.questionScore.findFirst({
@@ -321,7 +322,7 @@ export const setQuestionScore = async (questionScore: SetQuestionScoreData) => {
         include: {
           examStudent: { include: { student: true } },
           cropRegion: true,
-          user: true,
+          user: { omit: PUBLIC_USER_OMIT },
         },
       })
 
@@ -361,7 +362,7 @@ export const setQuestionScore = async (questionScore: SetQuestionScoreData) => {
         include: {
           examStudent: { include: { student: true } },
           cropRegion: true,
-          user: true,
+          user: { omit: PUBLIC_USER_OMIT },
         },
       })
 
@@ -420,7 +421,7 @@ export const updateQuestionScore = async (
       include: {
         examStudent: { include: { student: true } },
         cropRegion: true,
-        user: true,
+        user: { omit: PUBLIC_USER_OMIT },
       },
     })
 
@@ -494,7 +495,7 @@ export const setQuestionScoreComment = async (
   const include = {
     examStudent: { include: { student: true } },
     cropRegion: true,
-    user: true,
+    user: { omit: PUBLIC_USER_OMIT },
   }
 
   const existing = await prisma.questionScore.findFirst({
