@@ -16,6 +16,7 @@ import type {
   ArchiveUsersData,
 } from "../../../../src/types/examArchive.types"
 import prisma from "../../prisma/client"
+import { PUBLIC_USER_OMIT } from "../../prisma/publicUser"
 
 /**
  * 収集結果
@@ -343,7 +344,7 @@ export async function collectExamData(
       // （assignedBy は監査用の付随情報なので持ち回らない）。
       const assignments = await prisma.cropRegionAssignment.findMany({
         where: { cropRegion: { examPage: { examId } } },
-        include: { user: true },
+        include: { user: { omit: PUBLIC_USER_OMIT } },
       })
       for (const assignment of assignments) {
         // 担当は username で持ち回るが、指しているのは利用者なので users.json にも載せる

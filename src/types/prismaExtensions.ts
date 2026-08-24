@@ -265,9 +265,15 @@ export type StudentAnswerDatasetExamStudent = Omit<
 /**
  * ユーザーと招待者を含むUserExam型。
  * メンバー一覧・オーナー取得（userExam.getMembers/getOwner）が返す実形状の SSOT。
+ *
+ * **`passcode` を落とした形**（`PUBLIC_USER_OMIT`）。ユーザーの行は関連から
+ * 付いてくるので、1件ずつ引くところだけを直しても秘密は素通りする。
  */
 export type UserExamWithUserAndInviter = Prisma.UserExamGetPayload<{
-  include: { user: true; inviter: true }
+  include: {
+    user: { omit: { passcode: true } }
+    inviter: { omit: { passcode: true } }
+  }
 }>
 
 /**

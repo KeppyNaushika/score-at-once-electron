@@ -22,6 +22,7 @@ import {
 import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
 import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
+import { PUBLIC_USER_OMIT } from "./publicUser"
 import { updateRowIfChanged } from "./rowDiff"
 
 // =============================================================================
@@ -95,7 +96,7 @@ export type DbDefinitionFull = Prisma.AsbDefinitionGetPayload<{
 export async function listAsbDefinitions(): Promise<ASBDefinitionListItem[]> {
   const rows = await prisma.asbDefinition.findMany({
     include: {
-      user: true,
+      user: { omit: PUBLIC_USER_OMIT },
       tags: { include: { tag: true } },
       majorQuestions: {
         include: { subQuestions: { include: { branchQuestions: true } } },

@@ -1,20 +1,8 @@
-import type { User } from "@prisma/client"
 import bcrypt from "bcrypt"
 
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
-
-/**
- * renderer へ渡してよいユーザーの形。
- *
- * **`passcode` を落とす。** 中身は bcrypt ハッシュで、画面が使う場面は無い
- * （照合は `verify-passcode` が main 側で行う）。かつては行をそのまま返しており、
- * 画面側の手書き `interface User` が6箇所でその事実を隠していた。
- */
-const PUBLIC_USER_OMIT = { passcode: true } as const
-
-/** 秘密を含まないユーザー1件 */
-type PublicUser = Omit<User, "passcode">
+import { PUBLIC_USER_OMIT, type PublicUser } from "./publicUser"
 
 export const fetchUsers = async (): Promise<PublicUser[]> => {
   try {
