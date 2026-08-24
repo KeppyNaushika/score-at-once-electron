@@ -66,6 +66,13 @@ jobs:
             # Prerelease version
             if [ "$PRERELEASE_TYPE" = "alpha" ] || [ "$PRERELEASE_TYPE" = "beta" ] || [ "$PRERELEASE_TYPE" = "rc" ]; then
               NEW_VERSION=$(npm version "pre$VERSION_TYPE" --preid="$PRERELEASE_TYPE" --no-git-tag-version)
+              # npm は必ず末尾に .0 を付ける（0.18.0-beta.0）。この運用では使わないので落とす。
+              #
+              # 番号が要るのは「行き先を固定したまま、確認をやり直す」ときだけで、
+              # ここは直したら patch を上げる形にしている。alpha / beta / rc は
+              # 成熟度の札であって、試行の回数を数えるものではない。
+              NEW_VERSION=${NEW_VERSION%.0}
+              npm version "${NEW_VERSION#v}" --no-git-tag-version --allow-same-version > /dev/null
             else
               NEW_VERSION=$(npm version "pre$VERSION_TYPE" --no-git-tag-version)
             fi

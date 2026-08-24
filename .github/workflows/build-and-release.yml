@@ -292,7 +292,14 @@ jobs:
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/v}
             TAG_NAME=${GITHUB_REF#refs/tags/}
-            RELEASE_TYPE="release"
+            # 版に "-" が入っていれば前段の版（0.17.0-beta / 0.18.0-rc.1 など）。
+            # ここを無条件に release にしていたため、-alpha を付けたタグまで
+            # 正式版として公開されていた
+            if [[ $VERSION == *-* ]]; then
+              RELEASE_TYPE="prerelease"
+            else
+              RELEASE_TYPE="release"
+            fi
           else
             # Use package.json version for manual releases
             PACKAGE_VERSION=$(node -p "require('./package.json').version")
