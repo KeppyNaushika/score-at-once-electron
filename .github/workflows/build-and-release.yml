@@ -311,7 +311,17 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "release_type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
-          echo "is_prerelease=$([[ $RELEASE_TYPE == \"prerelease\" ]] && echo \"true\" || echo \"false\")" >> $GITHUB_OUTPUT
+
+          # **入れ子の $(...) で書かないこと。** 以前は
+          #   $([[ $RELEASE_TYPE == \"prerelease\" ]] && echo \"true\" || echo \"false\")
+          # と書いてあり、$( ) の中では \" が引用符そのものとして残るため
+          # `prerelease` を `"prerelease"`（引用符込み）と比べていた。**常に false** になり、
+          # -alpha を付けたタグまで正式版として公開されていた。
+          if [ "$RELEASE_TYPE" = "prerelease" ]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Generate release notes
         id: release_notes
