@@ -8,7 +8,7 @@ interface SpTablePreviewProps {
 
 /**
  * S-P表プレビュー（#838）
- * 生徒（正答数降順）×設問（正答者数降順）の正誤マトリクス。
+ * 生徒（正答数降順）×設問（正答者数降順）の正誤表。
  * S曲線（行の正答数境界）を右の太罫線、P曲線（列の正答者数境界）を下の太罫線で表現。
  */
 export function SpTablePreview({ data }: SpTablePreviewProps) {

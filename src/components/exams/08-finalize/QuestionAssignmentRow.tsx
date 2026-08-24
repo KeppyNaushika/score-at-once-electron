@@ -1,94 +1,34 @@
 "use client"
 
-import { useMutation } from "@tanstack/react-query"
-import { ChevronDown, ChevronRight, Plus, X } from "lucide-react"
+import { ChevronDown, ChevronRight } from "lucide-react"
 import { useState } from "react"
 
+import { CropRegionAssigneeBadges } from "@/components/exams/08-finalize/CropRegionAssigneeBadges"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useCurrentUser } from "@/contexts/CurrentUserContext"
-import {
-  assignCropRegionMutation,
-  unassignCropRegionMutation,
-} from "@/queries/scoring"
 import type {
-  ExamMemberSummary,
   ScoreDecisionCell,
   ScoreDecisionQuestion,
 } from "@/types/scoreDecision.types"
 
 interface QuestionAssignmentRowProps {
-  examId: string
   question: ScoreDecisionQuestion
-  members: ExamMemberSummary[]
-  canManage: boolean
   selectedCell: ScoreDecisionCell | null
   onSelectCell: (cell: ScoreDecisionCell) => void
-  /** 割当変更後にサマリと採点画面の設問集合を取り直す */
-  onAssignmentChanged: () => void
 }
 
 /**
  * 設問1行（担当バッジ・進捗・裁定対象）。
  *
- * 担当バッジは `User` 実体を持ち、割当の書き込みは必ず
- * (cropRegionId, userId) のペアで行う — 行や列の添字から引かない。
+ * **担当は読むだけ。直すのは「3. 領域情報」の採点担当タブ。** この画面の役目は
+ * 食い違いを裁くことに絞り、割当を直す場所を1つに保つ（同じ操作の口が2つあると、
+ * どちらで直したかで結果が違うように見える）。
  */
 export function QuestionAssignmentRow({
-  examId,
   question,
-  members,
-  canManage,
   selectedCell,
   onSelectCell,
-  onAssignmentChanged,
 }: QuestionAssignmentRowProps) {
-  const currentUser = useCurrentUser()
   const [isExpanded, setIsExpanded] = useState(false)
-  const assignCropRegion = useMutation(assignCropRegionMutation(examId))
-  const unassignCropRegion = useMutation(unassignCropRegionMutation(examId))
-  const isSaving = assignCropRegion.isPending || unassignCropRegion.isPending
-
-  const assignedUserIds = new Set(
-    question.assignees.map((assignee) => assignee.userId)
-  )
-  const assignableMembers = members.filter(
-    (member) => !assignedUserIds.has(member.userId)
-  )
-
-  // 失敗の通知と担当一覧の取り直しは MutationCache の後始末が担う。
-  // `onAssignmentChanged` は裁定サマリなど別の行き先を取り直すためのもの
-  const handleAssign = async (member: ExamMemberSummary) => {
-    try {
-      await assignCropRegion.mutateAsync({
-        cropRegionId: question.cropRegionId,
-        userId: member.userId,
-        assignedByUserId: currentUser.id,
-      })
-      onAssignmentChanged()
-    } catch {
-      // 通知済み
-    }
-  }
-
-  const handleUnassign = async (userId: string) => {
-    try {
-      await unassignCropRegion.mutateAsync({
-        cropRegionId: question.cropRegionId,
-        userId,
-        requestedByUserId: currentUser.id,
-      })
-      onAssignmentChanged()
-    } catch {
-      // 通知済み
-    }
-  }
 
   return (
     <div className="border-b border-gray-100">
@@ -123,59 +63,12 @@ export function QuestionAssignmentRow({
             </span>
           </div>
 
-          {/* 担当バッジ（担当0人は全員担当） */}
+          {/* 担当バッジ（担当0人は全員担当）。直す口はここには無い */}
           <div className="mt-1 flex flex-wrap items-center gap-1">
-            {question.assignees.length === 0 ? (
-              <span className="text-xs text-gray-400">担当なし（全員）</span>
-            ) : (
-              question.assignees.map((assignee) => (
-                <Badge
-                  key={assignee.userId}
-                  variant="outline"
-                  className="gap-1 font-normal"
-                >
-                  {assignee.userName}
-                  <span className="text-gray-500">
-                    {assignee.scoredCount}/{question.totalStudents}
-                  </span>
-                  {canManage && (
-                    <button
-                      onClick={() => handleUnassign(assignee.userId)}
-                      disabled={isSaving}
-                      className="text-gray-400 hover:text-red-600"
-                      title="担当を外す"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </Badge>
-              ))
-            )}
-
-            {canManage && assignableMembers.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-5 px-1"
-                    disabled={isSaving}
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {assignableMembers.map((member) => (
-                    <DropdownMenuItem
-                      key={member.userId}
-                      onClick={() => handleAssign(member)}
-                    >
-                      {member.userName}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            <CropRegionAssigneeBadges
+              assignees={question.assignees}
+              totalStudents={question.totalStudents}
+            />
 
             {question.cells.length > 0 && (
               <Badge className="ml-auto shrink-0 bg-purple-600">

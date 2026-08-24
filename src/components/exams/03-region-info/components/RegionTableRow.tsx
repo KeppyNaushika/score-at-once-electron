@@ -60,6 +60,7 @@ const typeIcons: Record<CropRegionAreaType, IconType> = {
 
 type RegionTableRowProps = {
   region: CropRegionRow
+  /** 表の中での並び（`#` 列の番号と、ドラッグの相手を指すのに使う） */
   globalIndex: number
   isSelected: boolean
   isDragged: boolean
@@ -81,7 +82,7 @@ type RegionTableRowProps = {
   /** 入力中の文字を優先して出す（打鍵と取り直しが競り合うため） */
   textOf: (rowId: string, field: string, stored: string) => string
   onRegionChange: (
-    globalIndex: number,
+    cropRegionId: string,
     field: string,
     value: string | number | null
   ) => void
@@ -89,13 +90,13 @@ type RegionTableRowProps = {
   onRegionBlur: (regionId: string, field: string) => void
   onKeyDown: (
     e: React.KeyboardEvent,
-    rowIndex: number,
+    cropRegionId: string,
     fieldName: string
   ) => void
   onCompositionStart: () => void
   onCompositionEnd: () => void
-  onDelete: (globalIndex: number) => void
-  onSelect: (globalIndex: number | null) => void
+  onDelete: (cropRegionId: string) => void
+  onSelect: (cropRegionId: string | null) => void
   onDragStart: (index: number) => void
   onDragOver: (e: React.DragEvent, index: number) => void
   onDragLeave: () => void
@@ -141,8 +142,20 @@ export const RegionTableRow = ({
 
   const ensureSelected = () => {
     if (!isSelected) {
-      onSelect(globalIndex)
+      onSelect(region.id)
     }
+  }
+
+  /**
+   * 入力欄のあるマスでは行のトグルを止める。
+   *
+   * 入力欄を押すと `onFocus` で選択が点くが、**同じマウス操作の click が `tr` まで
+   * 上がる**ので、点いた直後に「選択済みだから外す」と判断されて消えていた
+   * （「ハイライトが反応しない」の正体）。削除・OMR のボタンが既にそうしている
+   * のと同じ止め方をする。
+   */
+  const stopRowToggle = (e: React.MouseEvent) => {
+    e.stopPropagation()
   }
 
   return (
@@ -160,7 +173,7 @@ export const RegionTableRow = ({
         } ${isDragged ? "opacity-50" : ""} ${
           isDraggedOver ? "border-t-4 border-t-blue-500" : ""
         }`}
-        onClick={() => onSelect(isSelected ? null : globalIndex)}
+        onClick={() => onSelect(isSelected ? null : region.id)}
       >
         <td className="border border-border px-2 py-1">
           <div className="flex items-center justify-center">
@@ -182,12 +195,10 @@ export const RegionTableRow = ({
             {region.examPage ? region.examPage.pageNumber : "?"}
           </div>
         </td>
-        <td className="border border-border px-2 py-1">
+        <td className="border border-border px-2 py-1" onClick={stopRowToggle}>
           <Select
             value={region.type}
-            onValueChange={(value) =>
-              onRegionChange(globalIndex, "type", value)
-            }
+            onValueChange={(value) => onRegionChange(region.id, "type", value)}
             disabled={disabled}
           >
             <SelectTrigger className="w-full" onFocus={ensureSelected}>
@@ -202,15 +213,13 @@ export const RegionTableRow = ({
             </SelectContent>
           </Select>
         </td>
-        <td className="border border-border px-2 py-1">
+        <td className="border border-border px-2 py-1" onClick={stopRowToggle}>
           <Input
-            data-row={globalIndex}
+            data-row={region.id}
             data-field="label"
             value={textOf(region.id, "label", region.label || "")}
-            onChange={(e) =>
-              onRegionChange(globalIndex, "label", e.target.value)
-            }
-            onKeyDown={(e) => onKeyDown(e, globalIndex, "label")}
+            onChange={(e) => onRegionChange(region.id, "label", e.target.value)}
+            onKeyDown={(e) => onKeyDown(e, region.id, "label")}
             onCompositionStart={onCompositionStart}
             onCompositionEnd={onCompositionEnd}
             onFocus={ensureSelected}
@@ -220,10 +229,10 @@ export const RegionTableRow = ({
             className="h-8 w-full min-w-20"
           />
         </td>
-        <td className="border border-border px-2 py-1">
+        <td className="border border-border px-2 py-1" onClick={stopRowToggle}>
           {region.type === "QUESTION_ANSWER" ? (
             <Input
-              data-row={globalIndex}
+              data-row={region.id}
               data-field="points"
               type="number"
               value={textOf(
@@ -232,9 +241,9 @@ export const RegionTableRow = ({
                 region.points === null ? "" : String(region.points)
               )}
               onChange={(e) =>
-                onRegionChange(globalIndex, "points", e.target.value)
+                onRegionChange(region.id, "points", e.target.value)
               }
-              onKeyDown={(e) => onKeyDown(e, globalIndex, "points")}
+              onKeyDown={(e) => onKeyDown(e, region.id, "points")}
               onCompositionStart={onCompositionStart}
               onCompositionEnd={onCompositionEnd}
               onFocus={ensureSelected}
@@ -274,7 +283,7 @@ export const RegionTableRow = ({
             size="sm"
             onClick={(e) => {
               e.stopPropagation()
-              onDelete(globalIndex)
+              onDelete(region.id)
             }}
             className="text-destructive hover:text-destructive"
           >

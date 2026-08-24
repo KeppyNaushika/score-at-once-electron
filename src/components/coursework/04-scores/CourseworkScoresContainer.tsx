@@ -42,7 +42,7 @@ import {
   buildCourseworkStudentRows,
   type CourseworkCellPatch,
   sortCourseworkItems,
-} from "./courseworkScoreMatrix"
+} from "./courseworkScoreTable"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_STUDENTS: CourseworkStudentWithMemberships[] = []

@@ -223,6 +223,18 @@ export const batchUpdateQuestionScoresMutation = (examId: string) =>
 const assignmentsScope = (examId: string) =>
   [...scopeKeys.exam(examId), "cropRegionAssignments"] as const
 
+/**
+ * 担当を変えたときに古くなる行き先。
+ *
+ * 担当を直すのは「3. 領域情報」だが、裁定サマリ（08 が読む）も設問ごとの担当を
+ * 運んでいる。書いた画面のキーだけ取り直すと、08 が古い担当を出したままになる。
+ */
+const assignmentInvalidations = (examId: string) =>
+  [
+    assignmentsScope(examId),
+    [...scopeKeys.exam(examId), "decisionSummary"],
+  ] as const
+
 export const assignCropRegionMutation = (examId: string) =>
   defineMutation({
     mutationFn: (input: {
@@ -237,7 +249,7 @@ export const assignCropRegionMutation = (examId: string) =>
       ),
     scope: { id: `exam:${examId}:cropRegionAssignments` },
     meta: {
-      invalidates: [assignmentsScope(examId)],
+      invalidates: assignmentInvalidations(examId),
       errorMessage: "採点担当を割り当てられませんでした",
     },
   })
@@ -256,7 +268,7 @@ export const unassignCropRegionMutation = (examId: string) =>
       ),
     scope: { id: `exam:${examId}:cropRegionAssignments` },
     meta: {
-      invalidates: [assignmentsScope(examId)],
+      invalidates: assignmentInvalidations(examId),
       errorMessage: "採点担当を外せませんでした",
     },
   })
