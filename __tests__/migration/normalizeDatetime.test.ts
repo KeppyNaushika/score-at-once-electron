@@ -196,6 +196,9 @@ describe("DateTime正規化マイグレーション", () => {
   // の混在が発生しない。よって正規化 UPDATE の対象外（網羅チェックから除外する）。
   // 歴史migrationは編集禁止のため、ここで明示的にホワイトリスト管理する。
   const POST_MIGRATION_TABLES = new Set([
+    // 20260824120000 で追加（アプリ全体の設定）。
+    // normalize migration より後で ISO text 生成
+    "AppPreference",
     "AsbCharGuide",
     "AsbDefinitionTag", // 20260713000000 で追加。normalize migration より後で ISO text 生成
     // 表そのものは normalize migration より前からあるが、当時は DateTime 列を持たなかった。

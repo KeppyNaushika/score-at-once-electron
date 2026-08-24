@@ -601,6 +601,23 @@ model UserKeyboardShortcut {
   @@index([userId])
 }
 
+/// アプリ全体の設定（KV方式・JSON文字列で保存）。
+///
+/// **DB を共有する全員が同じ値を見る。** 利用者ごとの好み（表示・キー割り当て）は
+/// UserPreference の側で、こちらに置くのは組織の決めごと —— 年度がいつ始まるか、など。
+/// 人によって違うと、同じ絞り込みでも見えるものが変わってしまう。
+///
+/// 別の端末が同じキーを同時に作ると id の違う行が2つできるが、子を持たない表なので
+/// 同期は unique 違反を後勝ちで畳める。
+model AppPreference {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String // JSON文字列で保存
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model UserPreference {
   id     String @id @default(uuid())
   userId String

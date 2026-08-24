@@ -10,6 +10,7 @@ import type {
   AnswerOverlayStyle,
   AnswerOverlayVisibility,
 } from "../../src/types/scoringOverlay.types"
+import { getAppPreference, setAppPreference } from "../lib/prisma/appPreference"
 import type {
   ExamReportGraphSettingsValues,
   ExamReportTableSectionValues,
@@ -113,6 +114,15 @@ export const settingsHandlers = {
   "settings:resetUserKeyboardShortcuts": async (userId: string) => {
     await resetUserKeyboardShortcuts(userId)
   },
+
+  // =========================================================================
+  // AppPreference（KV方式・全員で同じ値）
+  // =========================================================================
+
+  "settings:getAppPreference": (key: string) => getAppPreference(key),
+
+  "settings:setAppPreference": (key: string, value: string) =>
+    setAppPreference(key, value),
 
   // =========================================================================
   // UserPreference（KV方式）

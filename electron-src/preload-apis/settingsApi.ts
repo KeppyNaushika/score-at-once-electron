@@ -16,6 +16,10 @@ export function createSettingsApi() {
       saveUserKeyboardShortcuts: bind("settings:saveUserKeyboardShortcuts"),
       resetUserKeyboardShortcuts: bind("settings:resetUserKeyboardShortcuts"),
 
+      // AppPreference（KV方式・DB を共有する全員で同じ値）
+      getAppPreference: bind("settings:getAppPreference"),
+      setAppPreference: bind("settings:setAppPreference"),
+
       // UserPreference（KV方式）
       getUserPreference: bind("settings:getUserPreference"),
       setUserPreference: bind("settings:setUserPreference"),
