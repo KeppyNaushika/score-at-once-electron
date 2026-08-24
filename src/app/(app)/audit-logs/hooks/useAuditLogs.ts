@@ -12,17 +12,15 @@ import {
 } from "react"
 
 import type { AuditLogFilter } from "@/electron-src/lib/prisma/auditQuery"
+import {
+  AUTO_PAGE_SIZE,
+  FALLBACK_PAGE_SIZE,
+  type PageSizeChoice,
+} from "@/lib/listPagination"
 import { auditLogListQuery } from "@/queries/auditLog"
 import type { AuditLogEntry } from "@/types/auditLog.types"
 
-import {
-  AUDIT_LOG_ROW_HEIGHT,
-  AUTO_PAGE_SIZE,
-  FALLBACK_AUDIT_LOG_PAGE_SIZE,
-} from "../constants"
-
-/** 1ページの件数の指定。「自動」は表示領域の高さから決める */
-type AuditLogPageSizeChoice = typeof AUTO_PAGE_SIZE | number
+import { AUDIT_LOG_ROW_HEIGHT } from "../constants"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_ENTRIES: AuditLogEntry[] = []
@@ -43,11 +41,11 @@ interface UseAuditLogsResult {
   pageNumber: number
   /** 実際に要求している件数（「自動」なら高さから決まった値） */
   pageSize: number
-  pageSizeChoice: AuditLogPageSizeChoice
+  pageSizeChoice: PageSizeChoice
   /** 総ページ数（0件でも1ページと数える） */
   pageCount: number
   setPageNumber: (pageNumber: number) => void
-  setPageSizeChoice: (choice: AuditLogPageSizeChoice) => void
+  setPageSizeChoice: (choice: PageSizeChoice) => void
   /** 「自動」が高さを測る相手。ログが縦に伸びる箱へ付ける */
   viewportRef: RefObject<HTMLDivElement | null>
 }
@@ -75,7 +73,7 @@ export function useAuditLogs(): UseAuditLogsResult {
    */
   const [firstRowIndex, setFirstRowIndex] = useState(0)
   const [pageSizeChoice, setPageSizeChoiceState] =
-    useState<AuditLogPageSizeChoice>(AUTO_PAGE_SIZE)
+    useState<PageSizeChoice>(AUTO_PAGE_SIZE)
 
   // 「自動」のときだけ使う。高さは表示領域そのものから測る（見積もりで
   // 決め打つと、サイドバーを畳んだ・窓を変えたときに合わなくなる）
@@ -98,7 +96,7 @@ export function useAuditLogs(): UseAuditLogsResult {
     pageSizeChoice === AUTO_PAGE_SIZE
       ? measuredPageSize > 0
         ? measuredPageSize
-        : FALLBACK_AUDIT_LOG_PAGE_SIZE
+        : FALLBACK_PAGE_SIZE
       : pageSizeChoice
 
   const pageNumber = Math.floor(firstRowIndex / pageSize) + 1
@@ -123,7 +121,7 @@ export function useAuditLogs(): UseAuditLogsResult {
 
   // 件数を選び直すのは利用者の操作なので、先頭から見直す（窓の大きさが変わった
   // ときと違い、いま見ている行に留まる理由がない）
-  const setPageSizeChoice = useCallback((choice: AuditLogPageSizeChoice) => {
+  const setPageSizeChoice = useCallback((choice: PageSizeChoice) => {
     setPageSizeChoiceState(choice)
     setFirstRowIndex(0)
   }, [])

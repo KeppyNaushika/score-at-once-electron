@@ -85,6 +85,16 @@ const ROWS: TestExamRow[] = [
   },
 ]
 
+/** ページ送りを見るための行。名前で並べれば順序が決まる */
+function manyRows(count: number): TestExamRow[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `exam-${String(i + 1).padStart(3, "0")}`,
+    examName: `試験${String(i + 1).padStart(3, "0")}`,
+    examDate: new Date(2026, 0, 1),
+    updatedAt: new Date(2026, 0, 1),
+  }))
+}
+
 const ACTIONS: ToolbarAction[] = [
   {
     id: "search",
@@ -94,8 +104,26 @@ const ACTIONS: ToolbarAction[] = [
   },
 ]
 
+/**
+ * jsdom は `ResizeObserver` を持たない。ページ送りの「自動」がこれで高さを測るので、
+ * 何も観測しないものを置く（高さ 0 のまま＝件数は既定へ落ちる）。
+ */
+global.ResizeObserver = class implements ResizeObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+
 const toggleSelectSpy = vi.fn()
 const toggleSelectAllSpy = vi.fn()
+
+/** 絞り込みは列見出しの popover に入る。ここでは値を持つだけの空の設定を渡す */
+const NO_DATE_FILTER = {
+  from: "",
+  to: "",
+  onFromChange: () => {},
+  onToChange: () => {},
+}
 
 function renderList(
   overrides: Partial<Parameters<typeof EntityListPage<TestExamRow>>[0]> = {}
@@ -122,6 +150,9 @@ function renderList(
         </button>
       )}
       actions={ACTIONS}
+      search={{ term: "", onChange: () => {}, placeholder: "試験名で検索" }}
+      dateFilter={NO_DATE_FILTER}
+      updatedAtFilter={NO_DATE_FILTER}
       selectedIds={new Set<string>()}
       onToggleSelect={toggleSelectSpy}
       onToggleSelectAll={toggleSelectAllSpy}
@@ -280,5 +311,179 @@ describe("EntityListPage の出し分け", () => {
     ).toBeInTheDocument()
     // examDate が null の行も「—」で埋まる（列に穴を作らない）
     expect(within(rowOf("中間考査")).getByText("—")).toBeInTheDocument()
+  })
+})
+
+describe("列見出しが並べ替えと絞り込みを持つ", () => {
+  it("見出しを押すと、昇順・降順と絞り込みが1つの popover に出る", async () => {
+    renderList()
+
+    fireEvent.click(screen.getByRole("button", { name: /名前/ }))
+
+    expect(
+      await screen.findByRole("button", { name: "昇順" })
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "降順" })).toBeInTheDocument()
+    // 横断検索は名前列の popover の中（ヘッダー右には置かない）
+    expect(screen.getByLabelText("試験名で検索")).toBeInTheDocument()
+  })
+
+  it("「昇順」「降順」は回さず名指しで並べる", async () => {
+    renderList({ rows: manyRows(3), totalCount: 3 })
+
+    const openNameFilter = () =>
+      fireEvent.click(screen.getByRole("button", { name: /名前/ }))
+    const rowNames = () =>
+      screen
+        .getAllByRole("row")
+        .slice(1)
+        .map((row) => row.getAttribute("aria-label"))
+
+    openNameFilter()
+    fireEvent.click(await screen.findByRole("button", { name: "昇順" }))
+    expect(rowNames()).toEqual([
+      "試験001の概要を開く",
+      "試験002の概要を開く",
+      "試験003の概要を開く",
+    ])
+
+    // 同じ「昇順」をもう一度押しても向きは回らない（押した通りになる）
+    openNameFilter()
+    fireEvent.click(await screen.findByRole("button", { name: "昇順" }))
+    expect(rowNames()[0]).toBe("試験001の概要を開く")
+
+    openNameFilter()
+    fireEvent.click(await screen.findByRole("button", { name: "降順" }))
+    expect(rowNames()).toEqual([
+      "試験003の概要を開く",
+      "試験002の概要を開く",
+      "試験001の概要を開く",
+    ])
+  })
+
+  it("タグと学級は名前列の popover に同居する（渡した画面だけ）", async () => {
+    renderList({
+      tagFilter: {
+        options: [{ id: "tag-1", name: "中間" }],
+        selectedIds: new Set<string>(),
+        onToggle: () => {},
+        onClear: () => {},
+      },
+      classroomFilter: {
+        options: [{ id: "classroom-1", name: "1年A組" }],
+        selectedIds: new Set<string>(),
+        onToggle: () => {},
+        onClear: () => {},
+      },
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: /名前/ }))
+
+    expect(await screen.findByText("タグ")).toBeInTheDocument()
+    expect(screen.getByText("中間")).toBeInTheDocument()
+    expect(screen.getByText("学級")).toBeInTheDocument()
+    expect(screen.getByText("1年A組")).toBeInTheDocument()
+  })
+
+  it("並べ替えているあいだは、filter の代わりに向きを出す", async () => {
+    const { container } = renderList()
+    const nameHead = () => screen.getByRole("columnheader", { name: /名前/ })
+
+    // 並べていない列は filter のまま
+    expect(nameHead()).toHaveAttribute("aria-sort", "none")
+    expect(container.querySelector(".lucide-list-filter")).not.toBeNull()
+
+    fireEvent.click(screen.getByRole("button", { name: /名前/ }))
+    fireEvent.click(await screen.findByRole("button", { name: "降順" }))
+
+    expect(nameHead()).toHaveAttribute("aria-sort", "descending")
+    // 印は1つだけ。filter は chevron に置き換わる（並べて2つ出さない）
+    expect(nameHead().querySelector(".lucide-chevron-down")).not.toBeNull()
+    expect(nameHead().querySelector(".lucide-list-filter")).toBeNull()
+  })
+
+  it("「次のステップ」列は絞り込みを持たない", () => {
+    renderList()
+
+    // 絞り込みを持つ列だけが押せる見出しになる（名前・試験日・更新日時の3つ）
+    expect(screen.queryByRole("button", { name: /次のステップ/ })).toBeNull()
+  })
+})
+
+describe("日付の出し方", () => {
+  it("試験日は yy/mm/dd", () => {
+    renderList({
+      rows: [
+        {
+          id: "exam-1",
+          examName: "期末考査",
+          examDate: new Date(2026, 2, 1),
+          updatedAt: new Date(2026, 2, 2),
+        },
+      ],
+      totalCount: 1,
+    })
+
+    expect(screen.getByText("26/03/01")).toBeInTheDocument()
+  })
+
+  it("更新日時は今日と昨日だけ時刻まで出す", () => {
+    const now = new Date()
+    const today = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      13,
+      24
+    )
+    const yesterday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() - 1,
+      9,
+      5
+    )
+    renderList({
+      rows: [
+        {
+          id: "exam-1",
+          examName: "今日の試験",
+          examDate: null,
+          updatedAt: today,
+        },
+        {
+          id: "exam-2",
+          examName: "昨日の試験",
+          examDate: null,
+          updatedAt: yesterday,
+        },
+      ],
+      totalCount: 2,
+    })
+
+    expect(screen.getByText("今日 13:24")).toBeInTheDocument()
+    expect(screen.getByText("昨日 09:05")).toBeInTheDocument()
+  })
+})
+
+describe("ページ送り", () => {
+  it("1ページに入りきらない行は次のページへ回す", () => {
+    renderList({ rows: manyRows(12), totalCount: 12 })
+
+    // 高さが測れないので既定の10件（`FALLBACK_PAGE_SIZE`）
+    expect(screen.getByText("12 件中 1〜10 件")).toBeInTheDocument()
+    expect(screen.getAllByRole("row")).toHaveLength(11) // 見出し + 10行
+
+    fireEvent.click(screen.getByRole("link", { name: "次のページ" }))
+
+    expect(screen.getByText("12 件中 11〜12 件")).toBeInTheDocument()
+    expect(screen.getAllByRole("row")).toHaveLength(3)
+  })
+
+  it("1ページに収まってもフッターは消えない（一覧の高さを動かさない）", () => {
+    renderList()
+
+    expect(screen.getByText("2 件中 1〜2 件")).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "次のページ" })).toBeNull()
   })
 })

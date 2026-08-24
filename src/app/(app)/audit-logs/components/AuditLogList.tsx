@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { History } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
+import { ListPaginationFooter } from "@/components/common/ListPaginationFooter"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -15,15 +16,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { type PublicUser, userListQuery } from "@/queries/user"
 
-import {
-  AUDIT_LOG_PAGE_SIZES,
-  AUTO_PAGE_SIZE,
-  CATEGORY_LABELS,
-  isAuditCategory,
-} from "../constants"
+import { CATEGORY_LABELS, isAuditCategory } from "../constants"
 import { useAuditLogs } from "../hooks/useAuditLogs"
 import { AuditLogItem } from "./AuditLogItem"
-import { AuditLogPager } from "./AuditLogPager"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_USERS: PublicUser[] = []
@@ -176,46 +171,17 @@ export function AuditLogList() {
       {/* 初回の取得中は総件数が 0 なので出ない。ページを送っている間は
           前のページを出したままなので、フッターは動かない */}
       {total > 0 && (
-        <div className="flex flex-wrap items-center gap-4 border-t px-6 py-3">
-          <span className="text-sm text-muted-foreground">
-            {total} 件中 {firstRowNumber}〜{lastRowNumber} 件
-          </span>
-          <Select
-            value={
-              pageSizeChoice === AUTO_PAGE_SIZE
-                ? AUTO_PAGE_SIZE
-                : String(pageSizeChoice)
-            }
-            onValueChange={(value) =>
-              setPageSizeChoice(
-                value === AUTO_PAGE_SIZE ? AUTO_PAGE_SIZE : Number(value)
-              )
-            }
-          >
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={AUTO_PAGE_SIZE}>
-                自動（{pageSize} 件）
-              </SelectItem>
-              {AUDIT_LOG_PAGE_SIZES.map((size) => (
-                <SelectItem key={size} value={String(size)}>
-                  {size} 件ずつ
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {pageCount > 1 && (
-            <div className="ml-auto">
-              <AuditLogPager
-                pageNumber={pageNumber}
-                pageCount={pageCount}
-                onPageChange={setPageNumber}
-              />
-            </div>
-          )}
-        </div>
+        <ListPaginationFooter
+          total={total}
+          firstRowNumber={firstRowNumber}
+          lastRowNumber={lastRowNumber}
+          pageSize={pageSize}
+          pageSizeChoice={pageSizeChoice}
+          onPageSizeChoiceChange={setPageSizeChoice}
+          pageNumber={pageNumber}
+          pageCount={pageCount}
+          onPageChange={setPageNumber}
+        />
       )}
     </div>
   )

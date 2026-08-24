@@ -17,11 +17,6 @@ import {
 } from "@/components/common/BulkTagAssignButton"
 import { EntityListPage } from "@/components/common/EntityListPage"
 import type { ExportOutcome } from "@/components/common/ExportResultSummary"
-import {
-  ListSearchInput,
-  MultiSelectFilterPanel,
-  TagFilterButton,
-} from "@/components/common/ListFilterControls"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 import ExamArchiveExportModal from "@/components/exams/detail/ExamArchiveExportModal"
 import { usePageHelp } from "@/components/help/usePageHelp"
@@ -59,7 +54,7 @@ import type { ArchiveExportMode } from "@/types/examArchive.types"
 const EMPTY_TAGS: TagWithAllRelations[] = []
 const EMPTY_EXAMS: ExamSummary[] = []
 
-/** 試験一覧のフィルタ対象値の取り出し（検索=試験名・説明・タグ名、タグ絞り込み=タグ id） */
+/** 試験一覧のフィルタ対象値の取り出し（列見出しの popover が絞る先） */
 const EXAM_FILTER_ACCESSORS: ListFilterAccessors<ExamSummary> = {
   searchTexts: (exam) => [
     exam.examName,
@@ -67,6 +62,8 @@ const EXAM_FILTER_ACCESSORS: ListFilterAccessors<ExamSummary> = {
     ...exam.tags.map((tag) => tag.name),
   ],
   tagIds: (exam) => exam.tags.map((tag) => tag.id),
+  date: (exam) => exam.referenceDate,
+  updatedAt: (exam) => exam.updatedAt,
 }
 
 /**
@@ -135,6 +132,14 @@ const ExamList = () => {
     filterTagIds,
     toggleTagId,
     clearTagIds,
+    dateFrom,
+    setDateFrom,
+    dateTo,
+    setDateTo,
+    updatedFrom,
+    setUpdatedFrom,
+    updatedTo,
+    setUpdatedTo,
   } = useListFilter(exams, EXAM_FILTER_ACCESSORS)
 
   const {
@@ -386,50 +391,8 @@ const ExamList = () => {
       )
     }
 
-    toolbarActions.push(
-      {
-        id: "tag-filter",
-        priority: 90,
-        node: <TagFilterButton config={tagFilterConfig} />,
-        collapsedNode: (
-          <div className="space-y-1">
-            <p className="px-2 text-xs text-muted-foreground">タグで絞り込み</p>
-            <MultiSelectFilterPanel config={tagFilterConfig} />
-          </div>
-        ),
-      },
-      {
-        // 検索欄は最後まで残す（検索できない一覧にしない）
-        id: "search",
-        priority: 100,
-        node: (
-          <ListSearchInput
-            searchTerm={searchTerm}
-            onSearchTermChange={setSearchTerm}
-            placeholder="試験名・タグで検索"
-          />
-        ),
-        collapsedNode: (
-          <ListSearchInput
-            searchTerm={searchTerm}
-            onSearchTermChange={setSearchTerm}
-            placeholder="試験名・タグで検索"
-          />
-        ),
-      }
-    )
-
     return toolbarActions
-  }, [
-    allTags,
-    handleBulkAddTag,
-    handleCreate,
-    isExporting,
-    searchTerm,
-    selectedIds,
-    setSearchTerm,
-    tagFilterConfig,
-  ])
+  }, [allTags, handleBulkAddTag, handleCreate, isExporting, selectedIds])
 
   return (
     <>
@@ -454,7 +417,6 @@ const ExamList = () => {
         name={(exam) => exam.examName}
         summary={(exam) => (
           <span className="flex flex-wrap items-center gap-1">
-            <span>{exam.description || "説明なし"}</span>
             {exam.tags.map((tag) => (
               <Badge
                 key={tag.id}
@@ -469,6 +431,7 @@ const ExamList = () => {
                 {tag.name}
               </Badge>
             ))}
+            <span>{exam.description || "説明なし"}</span>
           </span>
         )}
         dateLabel="試験日"
@@ -508,6 +471,24 @@ const ExamList = () => {
           </DropdownMenu>
         )}
         actions={actions}
+        search={{
+          term: searchTerm,
+          onChange: setSearchTerm,
+          placeholder: "試験名・タグで検索",
+        }}
+        tagFilter={tagFilterConfig}
+        dateFilter={{
+          from: dateFrom,
+          to: dateTo,
+          onFromChange: setDateFrom,
+          onToChange: setDateTo,
+        }}
+        updatedAtFilter={{
+          from: updatedFrom,
+          to: updatedTo,
+          onFromChange: setUpdatedFrom,
+          onToChange: setUpdatedTo,
+        }}
         selectedIds={selectedIds}
         onToggleSelect={toggleSelect}
         onToggleSelectAll={toggleSelectAll}
