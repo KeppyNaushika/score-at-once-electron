@@ -21,9 +21,9 @@ type RegionDetailsTableProps = {
   examId: string
   regions: CropRegionRow[]
   disabled?: boolean
-  selectedRowIndex: number | null
-  setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>
-  selectedMasterImageId?: string
+  /** 選択中の採点領域。**添字ではなく id で持つ**（取り直しで並びが変わるため） */
+  selectedCropRegionId: string | null
+  onSelectCropRegion: (cropRegionId: string | null) => void
   getOmrConfig: (cropRegionId: string) => CropRegionOmrConfigWithOptions | null
   onOmrSave: (data: {
     cropRegionId: string
@@ -43,15 +43,18 @@ const RegionDetailsTable = ({
   examId,
   regions,
   disabled = false,
-  selectedRowIndex,
-  setSelectedRowIndex,
-  selectedMasterImageId,
+  selectedCropRegionId,
+  onSelectCropRegion,
   getOmrConfig,
   onOmrSave,
   onOmrDelete,
 }: RegionDetailsTableProps) => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const [regionToDelete, setRegionToDelete] = useState<number | null>(null)
+  // 消す相手は id で覚える。添字で覚えると、モーダルを開いてから確定するまでに
+  // 取り直しが挟まったとき**別の領域を消す**
+  const [cropRegionIdToDelete, setCropRegionIdToDelete] = useState<
+    string | null
+  >(null)
 
   // 1打鍵ごとに書くので、打鍵と取り直しが競り合う。入力中の文字は手元に持つ
   const { textOf, remember, forgetField, forget } = useEditingText()
@@ -74,12 +77,9 @@ const RegionDetailsTable = ({
     [updateCropRegionOrders]
   )
 
-  // 全ページの領域を表示（統一順序）
-  const filteredRegions = regions
-
-  // カスタムフック
+  // 表は全ページの領域を統一順序で出す（ページで絞らない）
   const { handleKeyDown, handleCompositionStart, handleCompositionEnd } =
-    useKeyboardNavigation({ filteredRegions })
+    useKeyboardNavigation({ regions })
   const {
     dragState,
     handleDragStart,
@@ -87,23 +87,15 @@ const RegionDetailsTable = ({
     handleDragLeave,
     handleDrop,
     handleDragEnd,
-  } = useDragAndDrop({
-    regions,
-    onReorder: handleReorder,
-    selectedRowIndex,
-    setSelectedRowIndex,
-  })
+  } = useDragAndDrop({ regions, onReorder: handleReorder })
 
   const handleRegionChange = (
-    globalIndex: number,
+    cropRegionId: string,
     field: string,
     value: string | number | null
   ) => {
-    const region = regions[globalIndex]
-    if (!region) return
-
     // 配点だけ数値。空欄は「未設定」なので null へ倒す
-    remember(region.id, field, value === null ? "" : String(value))
+    remember(cropRegionId, field, value === null ? "" : String(value))
 
     const nextValue =
       field === "points"
@@ -115,62 +107,48 @@ const RegionDetailsTable = ({
     if (field === "points" && nextValue !== null && Number.isNaN(nextValue))
       return
 
-    updateCropRegion.mutate({ id: region.id, data: { [field]: nextValue } })
+    updateCropRegion.mutate({ id: cropRegionId, data: { [field]: nextValue } })
   }
 
-  const handleDeleteRegion = (index: number) => {
-    setRegionToDelete(index)
+  const handleDeleteRegion = (cropRegionId: string) => {
+    setCropRegionIdToDelete(cropRegionId)
     setDeleteModalOpen(true)
   }
 
   const confirmDeleteRegion = async () => {
-    if (regionToDelete !== null) {
-      const regionToDeleteData = regions[regionToDelete]
+    if (cropRegionIdToDelete === null) return
 
-      try {
-        forget(regionToDeleteData.id)
-        await deleteCropRegion.mutateAsync(regionToDeleteData.id)
+    try {
+      forget(cropRegionIdToDelete)
+      await deleteCropRegion.mutateAsync(cropRegionIdToDelete)
 
-        // 消した分だけ後ろが繰り上がるので、残りの並び順を振り直す
-        const remaining = regions.filter(
-          (region) => region.id !== regionToDeleteData.id
-        )
-        if (remaining.length > 0) handleReorder(remaining)
-
-        setDeleteModalOpen(false)
-        setRegionToDelete(null)
-
-        // 選択行インデックスを調整
-        if (selectedRowIndex === regionToDelete) {
-          setSelectedRowIndex(null)
-        } else if (
-          selectedRowIndex !== null &&
-          selectedRowIndex > regionToDelete
-        ) {
-          setSelectedRowIndex(selectedRowIndex - 1)
-        }
-      } catch (error) {
-        console.error("Error deleting layout region:", error)
-        // エラーが発生した場合はモーダルは閉じるが、データは削除しない
-        setDeleteModalOpen(false)
-        setRegionToDelete(null)
-      }
+      // 消した分だけ後ろが繰り上がるので、残りの並び順を振り直す
+      const remaining = regions.filter(
+        (region) => region.id !== cropRegionIdToDelete
+      )
+      if (remaining.length > 0) handleReorder(remaining)
+    } catch (error) {
+      console.error("Error deleting layout region:", error)
+      // エラーが発生した場合はモーダルは閉じるが、データは削除しない
+    } finally {
+      // 選択は id で持っているので、消えた領域を指したままでもどこも光らない。
+      // 添字のときのような「後ろの領域へ選択がずれる」直しは要らない
+      setDeleteModalOpen(false)
+      setCropRegionIdToDelete(null)
     }
   }
 
-  if (filteredRegions.length === 0) {
+  if (regions.length === 0) {
     return (
       <div className="p-8 text-center">
         <Palette className="mx-auto mb-4 h-12 w-12 text-muted-foreground/70" />
-        <h3 className="mb-2 text-lg font-medium">
-          {selectedMasterImageId
-            ? "このページに領域がありません"
-            : "領域を作成してください"}
-        </h3>
+        {/*
+          表はページで絞らないので「このページに領域がありません」は嘘になる
+          （出るのは試験ぜんぶで領域が0件のときだけ）。1つの言い方に寄せる
+        */}
+        <h3 className="mb-2 text-lg font-medium">領域を作成してください</h3>
         <p className="text-muted-foreground">
-          {selectedMasterImageId
-            ? "前のステップに戻って、このページに領域を作成してください。"
-            : "前のステップに戻って、模範解答上で領域を作成してください。"}
+          前のステップに戻って、模範解答上で領域を作成してください。
         </p>
       </div>
     )
@@ -206,14 +184,14 @@ const RegionDetailsTable = ({
           </tr>
         </thead>
         <tbody>
-          {filteredRegions.map((region, globalIndex) => {
-            const isSelected = selectedRowIndex === globalIndex
+          {regions.map((region, globalIndex) => {
+            const isSelected = selectedCropRegionId === region.id
             const isDragged = dragState.draggedIndex === globalIndex
             const isDraggedOver = dragState.dragOverIndex === globalIndex
 
             return (
               <RegionTableRow
-                key={region.id || `region-${globalIndex}`}
+                key={region.id}
                 region={region}
                 globalIndex={globalIndex}
                 isSelected={isSelected}
@@ -230,7 +208,7 @@ const RegionDetailsTable = ({
                 onCompositionStart={handleCompositionStart}
                 onCompositionEnd={handleCompositionEnd}
                 onDelete={handleDeleteRegion}
-                onSelect={setSelectedRowIndex}
+                onSelect={onSelectCropRegion}
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}

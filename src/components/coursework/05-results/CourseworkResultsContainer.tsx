@@ -31,7 +31,7 @@ import type {
 import {
   buildCourseworkStudentRows,
   sortCourseworkItems,
-} from "../04-scores/courseworkScoreMatrix"
+} from "../04-scores/courseworkScoreTable"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_STUDENTS: CourseworkStudentWithMemberships[] = []

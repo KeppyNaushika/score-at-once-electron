@@ -11,17 +11,10 @@ type UseDragAndDropProps = {
   regions: CropRegionRow[]
   /** 並べ替えた結果をそのまま渡す（書き込みは呼び出し側が持つ） */
   onReorder: (reordered: CropRegionRow[]) => void
-  selectedRowIndex: number | null
-  setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>
 }
 
 /** 領域情報テーブルの行ドラッグ&ドロップによる並び替えを管理するフック */
-export const useDragAndDrop = ({
-  regions,
-  onReorder,
-  selectedRowIndex,
-  setSelectedRowIndex,
-}: UseDragAndDropProps) => {
+export const useDragAndDrop = ({ regions, onReorder }: UseDragAndDropProps) => {
   const [dragState, setDragState] = useState<DragState>({
     draggedIndex: null,
     dragOverIndex: null,
@@ -56,19 +49,8 @@ export const useDragAndDrop = ({
       onReorder(
         reordered.map((region, index) => ({ ...region, orderIndex: index }))
       )
-
-      if (selectedRowIndex === draggedIndex) {
-        setSelectedRowIndex(dropIndex)
-      } else if (selectedRowIndex !== null) {
-        if (draggedIndex < selectedRowIndex && dropIndex >= selectedRowIndex) {
-          setSelectedRowIndex(selectedRowIndex - 1)
-        } else if (
-          draggedIndex > selectedRowIndex &&
-          dropIndex <= selectedRowIndex
-        ) {
-          setSelectedRowIndex(selectedRowIndex + 1)
-        }
-      }
+      // 選択は採点領域の id で持っているので、並びが変わっても指す先は変わらない
+      // （添字で持っていた頃はここで付け替えが要った）
     }
 
     setDragState({ draggedIndex: null, dragOverIndex: null })

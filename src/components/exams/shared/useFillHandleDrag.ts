@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
 
-import { smartFillCheckbox } from "../utils/smartFill"
+import { smartFillCheckbox } from "./smartFill"
 
 /**
  * マス1つの位置。

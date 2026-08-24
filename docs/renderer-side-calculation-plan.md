@@ -618,7 +618,7 @@ PDF 出力・生徒切り替え・受験状態フィルタ）が済むまで、�
 | 07 採点画面の注釈（個別・グリッド・ブラウザ） | include を SSOT 2 本へ畳み、payload が変化 |
 | 05 受験生徒の答案枚数列                       | `_count` → `.length`                       |
 | 成績・資料の一覧／詳細の件数表示              | `_count` → `.length`                       |
-| 04 設問グループの割り当てマトリクス           | `cropSubtotals` 同梱で payload が変化      |
+| 04 設問グループの割り当ての対応表             | `cropSubtotals` 同梱で payload が変化      |
 
 成績結果表も同様で、`resolveOverrideDirection` の純粋関数テストはあるが `ResultsTable` /
 `EditableGradeLabel` の描画テストは無い。

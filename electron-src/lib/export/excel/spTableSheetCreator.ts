@@ -29,7 +29,7 @@ const MEDIUM_BORDER: Partial<ExcelJS.Border> = {
 
 /**
  * S-P表シートを作成する（#838）
- * 生徒（正答数降順）×設問（正答者数降順）の正誤マトリクスと、佐藤の注意係数を出力。
+ * 生徒（正答数降順）×設問（正答者数降順）の正誤表と、佐藤の注意係数を出力。
  * S曲線（行ごとの正答数境界）・P曲線（列ごとの正答者数境界）を罫線で表現する。
  */
 export async function createSpTableSheet(

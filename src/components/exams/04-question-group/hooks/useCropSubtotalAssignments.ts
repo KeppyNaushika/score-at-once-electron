@@ -4,14 +4,13 @@ import type { Subtotal } from "@prisma/client"
 import { useMutation } from "@tanstack/react-query"
 import { useCallback } from "react"
 
+import type { FillUpdate } from "@/components/exams/shared/useFillHandleDrag"
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 import type { CropSubtotalAssignmentType } from "@/electron-src/lib/prisma/cropSubtotal"
 import {
   createCropSubtotalMutation,
   deleteCropSubtotalMutation,
 } from "@/queries/subtotal"
-
-import type { FillUpdate } from "./useFillHandleDrag"
 
 interface UseCropSubtotalAssignmentsParams {
   examId: string
@@ -20,7 +19,7 @@ interface UseCropSubtotalAssignmentsParams {
 }
 
 /**
- * 設問割当マトリクスのマスの読み書き。
+ * 設問割当の対応表のマスの読み書き。
  *
  * **割り当ては採点領域の子（`cropRegion.cropSubtotals`）なので、別に取得も索引化も
  * しない。** マスを描く時点で行は手元にあるので、そこから直に読む。

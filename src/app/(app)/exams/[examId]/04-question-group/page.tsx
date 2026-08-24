@@ -6,8 +6,8 @@ import { useParams } from "next/navigation"
 import { useCallback, useMemo } from "react"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
-import { QuestionAssignmentMatrixWithFillHandle } from "@/components/exams/04-question-group/components/QuestionAssignmentMatrixWithFillHandle"
-import { SubtotalAssignmentMatrixWithFillHandle } from "@/components/exams/04-question-group/components/SubtotalAssignmentMatrixWithFillHandle"
+import { QuestionAssignmentTableWithFillHandle } from "@/components/exams/04-question-group/components/QuestionAssignmentTableWithFillHandle"
+import { SubtotalAssignmentTableWithFillHandle } from "@/components/exams/04-question-group/components/SubtotalAssignmentTableWithFillHandle"
 import { SubtotalGroupSelector } from "@/components/exams/04-question-group/components/SubtotalGroupSelector"
 import { Button } from "@/components/ui/button"
 import { type CropRegionRow, cropRegionsQuery } from "@/queries/cropRegion"
@@ -41,7 +41,7 @@ export default function SubtotalGroupPage() {
   const loading = cropRegionsPending || subtotalGroupsPending
   const error = (cropRegionsError ?? subtotalGroupsError)?.message ?? null
 
-  // マトリクスの列は小計点グループ、行は採点領域。どちらも表示のたびに絞り込む
+  // 対応表の列は小計点グループ、行は採点領域。どちらも表示のたびに絞り込む
   const activeSubtotalGroups = useMemo(
     () =>
       examSubtotalGroups.map(
@@ -49,13 +49,13 @@ export default function SubtotalGroupPage() {
       ),
     [examSubtotalGroups]
   )
-  /** 設問領域（QUESTION_ANSWER）。設問割当マトリクスの行 */
+  /** 設問領域（QUESTION_ANSWER）。設問割当の対応表の行 */
   const questionRegions = useMemo(
     () =>
       cropRegions.filter((cropRegion) => cropRegion.type === "QUESTION_ANSWER"),
     [cropRegions]
   )
-  /** 小計欄領域（SUBTOTAL_SCORE）。小計点割当マトリクスの行 */
+  /** 小計欄領域（SUBTOTAL_SCORE）。小計点割当の対応表の行 */
   const subtotalRegions = useMemo(
     () =>
       cropRegions.filter((cropRegion) => cropRegion.type === "SUBTOTAL_SCORE"),
@@ -116,7 +116,7 @@ export default function SubtotalGroupPage() {
                   設問と小計項目の関連付け
                 </h2>
               </div>
-              <QuestionAssignmentMatrixWithFillHandle
+              <QuestionAssignmentTableWithFillHandle
                 examId={examId}
                 subtotalGroups={activeSubtotalGroups}
                 cropRegions={questionRegions}
@@ -134,7 +134,7 @@ export default function SubtotalGroupPage() {
                   小計点領域との関連付け
                 </h2>
               </div>
-              <SubtotalAssignmentMatrixWithFillHandle
+              <SubtotalAssignmentTableWithFillHandle
                 examId={examId}
                 subtotalGroups={activeSubtotalGroups}
                 subtotalRegions={subtotalRegions}

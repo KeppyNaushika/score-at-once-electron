@@ -453,18 +453,18 @@ DB 上 String の union 列（`inputMode` / `kind` / `aggregate` / `absentMethod
 | 形                                   | 移し先                               | 例                                       |
 | ------------------------------------ | ------------------------------------ | ---------------------------------------- |
 | 取得して表示するだけ                 | `useQuery`                           | 一覧・詳細・設定                         |
-| 取得して**編集可能な状態**の種にする | `useQuery` ＋ 編集の置き場所を決める | 名簿・割当マトリクス・追加パネル         |
+| 取得して**編集可能な状態**の種にする | `useQuery` ＋ 編集の置き場所を決める | 名簿・割当の対応表・追加パネル           |
 | 取得ではなく**派生値**               | `useMemo`                            | 採点画面の絞り込み（`useScoringFilter`） |
 
 2番目が一番判断を要した。編集中の値をどこに置くかで3つに割れた。
 
 - **キャッシュを直に差し替える**（`setQueryData`）… 編集がそのまま保存対象になるもの。
-  割当マトリクス・名簿の並び順・OMR設定・除外設定
+  割当の対応表・名簿の並び順・OMR設定・除外設定
 - **選択・ドラフトを別に持つ**… 編集が保存対象と別物のもの。生徒追加パネルの選択
   （id の集合）、評価項目の編集ドラフト
 - **取得結果から導く**… そもそも状態を持つ必要がなかったもの。採点領域画面の表示ページ
 
-この整理の過程で、同じ内容を2つの state で持っていた箇所（割当マトリクスの
+この整理の過程で、同じ内容を2つの state で持っていた箇所（割当の対応表の
 `assignments` と `originalAssignments`）が見つかった。保存のたびに両方を更新して
 いたので常に同じ値で、「変更をリセット」は何もしていなかった。
 
@@ -486,7 +486,7 @@ _格納する形_ ごとに分ける。同じキーに違う形を書くと、`i
 | #   | 場所                                                                                                                      | 衝突相手                                                                                               | 症状                                                                                                                   |
 | --- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
 | 1   | `CourseworkItemsContainer.tsx:191` が `queryKeys.coursework.detail` に**項目の配列**を書く                                | `CourseworkDetail.tsx:55` が同じキーに**資料オブジェクト**を書く                                       | 詳細→評価項目で `items.map is not a function`、逆順で `coursework.classrooms.map` が undefined。どちらも画面ごと落ちる |
-| 6   | `04-question-group/page.tsx:38` が `queryKeys.exam.cropRegions` に `{activeSubtotalGroups, cropRegions, subtotalRegions}` | `03-region-info/page.tsx:59` が同じキーに `{currentUser, examPages, backgroundImageUrls, cropRegions}` | 04→03 で 0ページ・背景なしの領域エディタが出る。しかも `currentUser` が null なので `autoSaveRegions` が `if (!examId  |     | !currentUser) return` で黙って何もせず**編集が失われる**。03→04 では type で絞られていない cropRegions が設問割当マトリクスの行に並び、小計欄に対して QUESTION_ASSIGNMENT を書き込む |
+| 6   | `04-question-group/page.tsx:38` が `queryKeys.exam.cropRegions` に `{activeSubtotalGroups, cropRegions, subtotalRegions}` | `03-region-info/page.tsx:59` が同じキーに `{currentUser, examPages, backgroundImageUrls, cropRegions}` | 04→03 で 0ページ・背景なしの領域エディタが出る。しかも `currentUser` が null なので `autoSaveRegions` が `if (!examId  |     | !currentUser) return` で黙って何もせず**編集が失われる**。03→04 では type で絞られていない cropRegions が設問割当の対応表の行に並び、小計欄に対して QUESTION_ASSIGNMENT を書き込む |
 
 **直した形**: 画面固有の複合ペイロードには画面固有のキーを与えた
 （`exam.regionInfoPage` / `exam.questionGroupPage` / `exam.exportPage` /

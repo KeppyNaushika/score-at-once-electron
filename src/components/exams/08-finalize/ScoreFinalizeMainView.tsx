@@ -1,11 +1,12 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react"
+import { AlertTriangle, CheckCircle2, RefreshCw, SquarePen } from "lucide-react"
 import Head from "next/head"
 import { useParams } from "next/navigation"
 import { useMemo, useState } from "react"
 
+import { GuardedLink } from "@/components/common/GuardedLink"
 import { QuestionAssignmentRow } from "@/components/exams/08-finalize/QuestionAssignmentRow"
 import { ScoreDecisionForm } from "@/components/exams/08-finalize/ScoreDecisionForm"
 import { Button } from "@/components/ui/button"
@@ -28,6 +29,10 @@ interface SelectedCell {
  * 状態を抱えたまま別の仕事をさせることになる。段の1つに出せばどちらも要らない。
  *
  * 左に設問行（担当・進捗・裁定対象）、右で比較・確定する。
+ *
+ * **担当の割り当ては 03（領域情報）の「採点担当」タブへ移した。** 設問 × 採点者の
+ * 対応表なので、設問ごとに開き直さずまとめて割り当てられる。ここは食い違いを裁く
+ * 画面であり、担当は「誰の採点を突き合わせているか」を読むために出しているだけである。
  */
 export default function ScoreFinalizeMainView() {
   const params = useParams()
@@ -88,9 +93,7 @@ export default function ScoreFinalizeMainView() {
         <p className="truncate text-sm text-muted-foreground">
           {summary
             ? `要裁定 ${pendingCount}件 ／ 確定済み ${summary.decidedCount}件` +
-              (summary.canDecide
-                ? ""
-                : "（担当の変更と確定は試験の所有者のみ）")
+              (summary.canDecide ? "" : "（確定は試験の所有者のみ）")
             : "状況を読み込んでいます"}
         </p>
         <Button variant="outline" size="sm" onClick={refreshSummary}>
@@ -102,6 +105,15 @@ export default function ScoreFinalizeMainView() {
       <div className="flex min-h-0 flex-1">
         {/* 左: 設問ごとの担当・進捗・裁定対象 */}
         <div className="w-96 shrink-0 overflow-y-auto border-r border-gray-200">
+          {/* 担当を直す口は1つだけ（3. 領域情報の採点担当タブ）。ここからはそこへ送る */}
+          <GuardedLink
+            href={`/exams/${examId}/03-region-info`}
+            className="flex items-center gap-1 border-b border-gray-100 px-3 py-2 text-xs text-blue-600 hover:underline"
+          >
+            <SquarePen className="h-3 w-3" />
+            採点の担当を割り当てる（3. 領域情報）
+          </GuardedLink>
+
           {loading && (
             <div className="p-4 text-sm text-gray-500">読み込み中...</div>
           )}
@@ -116,10 +128,7 @@ export default function ScoreFinalizeMainView() {
           {(summary?.questions ?? []).map((question) => (
             <QuestionAssignmentRow
               key={question.cropRegionId}
-              examId={examId}
               question={question}
-              members={summary?.members ?? []}
-              canManage={summary?.canDecide ?? false}
               selectedCell={selectedEntry?.cell ?? null}
               onSelectCell={(cell) =>
                 setSelected({
@@ -127,7 +136,6 @@ export default function ScoreFinalizeMainView() {
                   examStudentId: cell.examStudentId,
                 })
               }
-              onAssignmentChanged={refreshSummary}
             />
           ))}
         </div>

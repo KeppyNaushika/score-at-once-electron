@@ -1,9 +1,11 @@
 "use client"
 
 import type { Subtotal } from "@prisma/client"
-import { Grid3X3, RotateCcw } from "lucide-react"
+import { Calculator, RotateCcw } from "lucide-react"
 import { useState } from "react"
 
+import { CheckboxCellWithFillHandle } from "@/components/exams/shared/CheckboxCellWithFillHandle"
+import { useFillHandleDrag } from "@/components/exams/shared/useFillHandleDrag"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,24 +20,22 @@ import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegi
 import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
 
 import { useCropSubtotalAssignments } from "../hooks/useCropSubtotalAssignments"
-import { useFillHandleDrag } from "../hooks/useFillHandleDrag"
-import { CheckboxCellWithFillHandle } from "./CheckboxCellWithFillHandle"
 
-interface QuestionAssignmentMatrixWithFillHandleProps {
+interface SubtotalAssignmentTableWithFillHandleProps {
   examId: string
   subtotalGroups: SubtotalGroupWithSubtotals[]
-  /** 設問領域（QUESTION_ANSWER）。割り当ての出所でもある */
-  cropRegions: CropRegionWithSubtotals[]
+  /** 小計欄領域（SUBTOTAL_SCORE）。割り当ての出所でもある */
+  subtotalRegions: CropRegionWithSubtotals[]
   /** 保存済みの割り当てを取り直す */
   onReload: () => void
 }
 
-export function QuestionAssignmentMatrixWithFillHandle({
+export function SubtotalAssignmentTableWithFillHandle({
   examId,
   subtotalGroups,
-  cropRegions,
+  subtotalRegions,
   onReload,
-}: QuestionAssignmentMatrixWithFillHandleProps) {
+}: SubtotalAssignmentTableWithFillHandleProps) {
   // 選択されたセルの状態（rowId-colId形式）
   const [selectedCell, setSelectedCell] = useState<string | null>(null)
 
@@ -45,7 +45,7 @@ export function QuestionAssignmentMatrixWithFillHandle({
   const { isAssigned, saving, setCellAssignment, fillCells } =
     useCropSubtotalAssignments({
       examId,
-      assignmentType: "QUESTION_ASSIGNMENT",
+      assignmentType: "SUBTOTAL_DEFINITION",
     })
 
   // フィルハンドルのドラッグ管理
@@ -55,7 +55,7 @@ export function QuestionAssignmentMatrixWithFillHandle({
     handlePointerUp,
     isInFillRange,
   } = useFillHandleDrag({
-    rows: cropRegions,
+    rows: subtotalRegions,
     cols: allSubtotals,
     onFillComplete: fillCells,
   })
@@ -74,19 +74,19 @@ export function QuestionAssignmentMatrixWithFillHandle({
   if (subtotalGroups.length === 0) {
     return (
       <div className="py-8 text-center text-muted-foreground">
-        <Grid3X3 className="mx-auto mb-4 h-12 w-12 opacity-50" />
+        <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
         <p>小計点がありません</p>
         <p className="text-sm">まず小計点と項目を作成してください</p>
       </div>
     )
   }
 
-  if (cropRegions.length === 0) {
+  if (subtotalRegions.length === 0) {
     return (
       <div className="py-8 text-center text-muted-foreground">
-        <Grid3X3 className="mx-auto mb-4 h-12 w-12 opacity-50" />
-        <p>設問がありません</p>
-        <p className="text-sm">採点領域から設問を作成してください</p>
+        <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
+        <p>小計点領域がありません</p>
+        <p className="text-sm">採点領域から小計点領域を作成してください</p>
       </div>
     )
   }
@@ -96,8 +96,10 @@ export function QuestionAssignmentMatrixWithFillHandle({
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Grid3X3 className="h-5 w-5" />
-          <span className="font-medium">設問とグループ項目の関連付け</span>
+          <Calculator className="h-5 w-5" />
+          <span className="font-medium">
+            小計点領域とグループ項目の関連付け
+          </span>
           {saving && (
             <Badge
               variant="outline"
@@ -120,10 +122,10 @@ export function QuestionAssignmentMatrixWithFillHandle({
         </div>
       </div>
 
-      {/* マトリックステーブル */}
+      {/* 対応表 */}
       <div className="rounded-lg border">
         <div className="border-b bg-gray-50 px-4 py-3">
-          <h3 className="text-base font-medium">関連付けマトリックス</h3>
+          <h3 className="text-base font-medium">小計点の関連付け対応表</h3>
         </div>
         <div
           className="relative min-h-96 w-full overflow-auto"
@@ -145,15 +147,15 @@ export function QuestionAssignmentMatrixWithFillHandle({
                     maxWidth: "128px",
                   }}
                 >
-                  設問
+                  小計点領域
                 </TableHead>
                 {subtotalGroups.map((group) => (
                   <TableHead
                     key={group.id}
-                    className="sticky top-0 z-20 border-l-2 border-blue-200 bg-blue-50/50 text-center"
+                    className="sticky top-0 z-20 border-l-2 border-green-200 bg-green-50/50 text-center"
                     colSpan={group.subtotals.length}
                   >
-                    <div className="text-sm font-semibold text-blue-700">
+                    <div className="text-sm font-semibold text-green-700">
                       {group.name}
                     </div>
                   </TableHead>
@@ -185,7 +187,7 @@ export function QuestionAssignmentMatrixWithFillHandle({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cropRegions.map((region, rowIndex) => (
+              {subtotalRegions.map((region, rowIndex) => (
                 <TableRow key={region.id}>
                   <TableCell
                     className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white px-2 py-1"
@@ -197,10 +199,13 @@ export function QuestionAssignmentMatrixWithFillHandle({
                   >
                     <div className="flex items-center gap-1 overflow-hidden">
                       <div className="flex-1 text-sm font-medium">
-                        {region.label || `問${region.orderIndex || 1}`}
+                        {region.label || `小計${region.orderIndex || 1}`}
                       </div>
-                      <Badge variant="outline" className="shrink-0 text-xs">
-                        {region.points || 0}
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 bg-green-50 text-xs text-green-700"
+                      >
+                        小計点
                       </Badge>
                     </div>
                   </TableCell>
@@ -262,15 +267,22 @@ export function QuestionAssignmentMatrixWithFillHandle({
         </div>
       </div>
 
-      {/* 説明 */}
-      <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
-        <h4 className="mb-2 font-medium">使い方:</h4>
+      {/* 計算ロジック説明 */}
+      <div className="rounded-lg bg-green-50 p-4 text-sm text-muted-foreground">
+        <h4 className="mb-2 font-medium text-green-800">計算ロジック:</h4>
         <ul className="ml-4 space-y-1">
           <li>
-            • 各設問に対して、関連付けたいグループ項目にチェックを入れてください
+            • <strong>グループ内はOR条件</strong>:
+            同じグループ内のいずれかの項目に該当する設問の合計
           </li>
-          <li>• 一つの設問は複数のグループ項目に関連付けることができます</li>
-          <li>• 例: 「問1」を「大問1」と「知識・理解」の両方に関連付け可能</li>
+          <li>
+            • <strong>グループ間はAND条件</strong>:
+            複数グループを選択した場合、すべてのグループに該当する設問の合計
+          </li>
+          <li>
+            • 例: 「大問1」OR「大問2」の設問 AND 「知識・理解」の設問 =
+            該当する設問の合計点
+          </li>
           <li>
             •{" "}
             <strong>
