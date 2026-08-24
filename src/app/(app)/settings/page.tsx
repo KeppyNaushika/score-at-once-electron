@@ -1,11 +1,19 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { FolderSync, Keyboard, Monitor, Palette, Users } from "lucide-react"
+import {
+  CalendarRange,
+  FolderSync,
+  Keyboard,
+  Monitor,
+  Palette,
+  Users,
+} from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
 import { DisplaySettingsTab } from "@/app/(app)/settings/components/DisplaySettingsTab"
+import { FiscalYearTab } from "@/app/(app)/settings/components/FiscalYearTab"
 import { KeyboardShortcutSection } from "@/app/(app)/settings/components/KeyboardShortcutSection"
 import { ScreenControlTab } from "@/app/(app)/settings/components/ScreenControlTab"
 import { SyncSettingsTab } from "@/app/(app)/settings/components/SyncSettingsTab"
@@ -75,6 +83,10 @@ export default function SettingsPage() {
             <Palette className="h-4 w-4" />
             表示設定
           </TabsTrigger>
+          <TabsTrigger value="fiscal-year" className="gap-2">
+            <CalendarRange className="h-4 w-4" />
+            年度
+          </TabsTrigger>
           <TabsTrigger value="user" className="gap-2">
             <Users className="h-4 w-4" />
             ユーザー管理
@@ -105,6 +117,10 @@ export default function SettingsPage() {
 
         <TabsContent value="display">
           <DisplaySettingsTab />
+        </TabsContent>
+
+        <TabsContent value="fiscal-year">
+          <FiscalYearTab />
         </TabsContent>
 
         <TabsContent value="user">

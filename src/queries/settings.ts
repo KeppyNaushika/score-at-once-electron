@@ -37,6 +37,18 @@ import { scopeKeys } from "./keys"
  * **保存されている文字列をそのまま返す。** 値の解釈（`parsePreference`）は
  * 表示側の計算なので、キャッシュには載せない。
  */
+/**
+ * アプリ全体の設定を1キー分。**DB を共有する全員が同じ値を見る。**
+ *
+ * `userPreferenceQuery` と同じく、保存されている文字列をそのまま返す
+ * （解釈は表示側の計算）。
+ */
+export const appPreferenceQuery = (key: string) =>
+  queryOptions({
+    queryKey: ["appPreference", key] as const,
+    queryFn: () => window.electronAPI.settings.getAppPreference(key),
+  })
+
 export const userPreferenceQuery = (userId: string, key: PreferenceKey) =>
   queryOptions({
     queryKey: ["userPreference", userId, key] as const,
@@ -107,6 +119,18 @@ export const examExportSettingsQuery = (examId: string) =>
 export type SetUserPreferenceInput = {
   [TKey in PreferenceKey]: { key: TKey; value: PreferenceValueType[TKey] }
 }[PreferenceKey]
+
+/** アプリ全体の設定を1キー分書く（値は呼び手が JSON 文字列にする） */
+export const setAppPreferenceMutation = (key: string) =>
+  defineMutation({
+    mutationFn: (value: string) =>
+      window.electronAPI.settings.setAppPreference(key, value),
+    scope: { id: `appPreference:${key}` },
+    meta: {
+      invalidates: [["appPreference", key]],
+      errorMessage: "設定を保存できませんでした",
+    },
+  })
 
 export const setUserPreferenceMutation = (userId: string) =>
   defineMutation({
