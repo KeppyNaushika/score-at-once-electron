@@ -25,13 +25,6 @@ import {
   type ExportOutcome,
   ExportResultSummary,
 } from "@/components/common/ExportResultSummary"
-import {
-  DateRangeFilterButton,
-  DateRangeFilterPanel,
-  ListSearchInput,
-  MultiSelectFilterPanel,
-  TagFilterButton,
-} from "@/components/common/ListFilterControls"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import {
@@ -95,6 +88,7 @@ const ASB_FILTER_ACCESSORS: ListFilterAccessors<ASBDefinitionListItem> = {
   // 日付範囲の絞り込みは列に出している日付＝使用日に合わせる
   // （以前は更新日時で絞っていて、列の「更新日時」と語だけが揃っていなかった）
   date: (definition) => definition.referenceDate ?? null,
+  updatedAt: (definition) => definition.updatedAt ?? null,
 }
 
 /**
@@ -227,6 +221,10 @@ export function AnswerSheetDefinitionList() {
     setDateFrom,
     dateTo,
     setDateTo,
+    updatedFrom,
+    setUpdatedFrom,
+    updatedTo,
+    setUpdatedTo,
   } = useListFilter(visibleDefinitions, ASB_FILTER_ACCESSORS)
 
   /**
@@ -396,17 +394,6 @@ export function AnswerSheetDefinitionList() {
     [allTags, filterTagIds, toggleTagId, clearTagIds]
   )
 
-  const dateRangeConfig = useMemo(
-    () => ({
-      label: "使用日",
-      from: dateFrom,
-      to: dateTo,
-      onFromChange: setDateFrom,
-      onToChange: setDateTo,
-    }),
-    [dateFrom, dateTo, setDateFrom, setDateTo]
-  )
-
   const actions = useMemo<ToolbarAction[]>(() => {
     // 並びに出す姿と「…」の中の姿が同じもの。作るのは1回にして、幅を測る控えの
     // 並びと本物で同じ要素が使われるようにする
@@ -503,57 +490,14 @@ export function AnswerSheetDefinitionList() {
       })
     }
 
-    toolbarActions.push(
-      {
-        id: "tag-filter",
-        priority: 90,
-        node: <TagFilterButton config={tagFilterConfig} />,
-        collapsedNode: (
-          <div className="space-y-1">
-            <p className="px-2 text-xs text-muted-foreground">タグで絞り込み</p>
-            <MultiSelectFilterPanel config={tagFilterConfig} />
-          </div>
-        ),
-      },
-      {
-        id: "date-filter",
-        priority: 84,
-        node: <DateRangeFilterButton config={dateRangeConfig} />,
-        collapsedNode: <DateRangeFilterPanel config={dateRangeConfig} />,
-      },
-      {
-        // 検索欄は最後まで残す（検索できない一覧にしない）
-        id: "search",
-        priority: 100,
-        node: (
-          <ListSearchInput
-            searchTerm={searchTerm}
-            onSearchTermChange={setSearchTerm}
-            placeholder="名前・タグで検索"
-          />
-        ),
-        collapsedNode: (
-          <ListSearchInput
-            searchTerm={searchTerm}
-            onSearchTermChange={setSearchTerm}
-            placeholder="名前・タグで検索"
-          />
-        ),
-      }
-    )
-
     return toolbarActions
   }, [
     allTags,
-    dateRangeConfig,
     handleBulkAddTag,
     handleCreate,
     handleImport,
-    searchTerm,
     showAllOwners,
     selectedIds,
-    setSearchTerm,
-    tagFilterConfig,
   ])
 
   return (
@@ -567,17 +511,6 @@ export function AnswerSheetDefinitionList() {
         name={(definition) => definition.name}
         summary={(definition) => (
           <span className="flex flex-wrap items-center gap-1">
-            <span>
-              {definition.paperSize ?? "-"}{" "}
-              {definition.orientation === "landscape" ? "横" : "縦"}
-              {" / 設問数: "}
-              {definition.questionCount ?? 0}
-              {" / 合計配点: "}
-              {definition.totalPoints ?? 0}点 / 担当:{" "}
-              {definition.ownerId === currentUser.id
-                ? "自分"
-                : definition.ownerName}
-            </span>
             {(definition.tags ?? []).map((tag) => (
               <Badge
                 key={tag.id}
@@ -592,6 +525,17 @@ export function AnswerSheetDefinitionList() {
                 {tag.name}
               </Badge>
             ))}
+            <span>
+              {definition.paperSize ?? "-"}{" "}
+              {definition.orientation === "landscape" ? "横" : "縦"}
+              {" / 設問数: "}
+              {definition.questionCount ?? 0}
+              {" / 合計配点: "}
+              {definition.totalPoints ?? 0}点 / 担当:{" "}
+              {definition.ownerId === currentUser.id
+                ? "自分"
+                : definition.ownerName}
+            </span>
           </span>
         )}
         dateLabel="使用日"
@@ -660,6 +604,24 @@ export function AnswerSheetDefinitionList() {
           </DropdownMenu>
         )}
         actions={actions}
+        search={{
+          term: searchTerm,
+          onChange: setSearchTerm,
+          placeholder: "名前・タグで検索",
+        }}
+        tagFilter={tagFilterConfig}
+        dateFilter={{
+          from: dateFrom,
+          to: dateTo,
+          onFromChange: setDateFrom,
+          onToChange: setDateTo,
+        }}
+        updatedAtFilter={{
+          from: updatedFrom,
+          to: updatedTo,
+          onFromChange: setUpdatedFrom,
+          onToChange: setUpdatedTo,
+        }}
         selectedIds={selectedIds}
         selectionDisabledReason={(definition) =>
           isTaggable(definition)

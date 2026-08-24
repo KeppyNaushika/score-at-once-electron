@@ -18,14 +18,6 @@ import {
   BulkTagAssignPanel,
 } from "@/components/common/BulkTagAssignButton"
 import { EntityListPage } from "@/components/common/EntityListPage"
-import {
-  ClassroomFilterButton,
-  DateRangeFilterButton,
-  DateRangeFilterPanel,
-  ListSearchInput,
-  MultiSelectFilterPanel,
-  TagFilterButton,
-} from "@/components/common/ListFilterControls"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import { Badge } from "@/components/ui/badge"
@@ -75,6 +67,7 @@ const GRADE_FILTER_ACCESSORS: ListFilterAccessors<GradeSummary> = {
   classroomIds: (grade) =>
     grade.gradeClassrooms.map((gradeClassroom) => gradeClassroom.classroomId),
   date: (grade) => grade.referenceDate,
+  updatedAt: (grade) => grade.updatedAt,
 }
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
@@ -212,6 +205,10 @@ export function GradeListContainer() {
     setDateFrom,
     dateTo,
     setDateTo,
+    updatedFrom,
+    setUpdatedFrom,
+    updatedTo,
+    setUpdatedTo,
   } = useListFilter(grades, GRADE_FILTER_ACCESSORS)
 
   const {
@@ -260,17 +257,6 @@ export function GradeListContainer() {
       onClear: clearClassroomIds,
     }),
     [classroomOptions, filterClassroomIds, toggleClassroomId, clearClassroomIds]
-  )
-
-  const dateRangeConfig = useMemo(
-    () => ({
-      label: "成績算出日",
-      from: dateFrom,
-      to: dateTo,
-      onFromChange: setDateFrom,
-      onToChange: setDateTo,
-    }),
-    [dateFrom, dateTo, setDateFrom, setDateTo]
   )
 
   const actions = useMemo<ToolbarAction[]>(() => {
@@ -350,69 +336,8 @@ export function GradeListContainer() {
       })
     }
 
-    toolbarActions.push(
-      {
-        id: "tag-filter",
-        priority: 90,
-        node: <TagFilterButton config={tagFilterConfig} />,
-        collapsedNode: (
-          <div className="space-y-1">
-            <p className="px-2 text-xs text-muted-foreground">タグで絞り込み</p>
-            <MultiSelectFilterPanel config={tagFilterConfig} />
-          </div>
-        ),
-      },
-      {
-        id: "classroom-filter",
-        priority: 85,
-        node: <ClassroomFilterButton config={classroomFilterConfig} />,
-        collapsedNode: (
-          <div className="space-y-1">
-            <p className="px-2 text-xs text-muted-foreground">学級で絞り込み</p>
-            <MultiSelectFilterPanel config={classroomFilterConfig} />
-          </div>
-        ),
-      },
-      {
-        id: "date-filter",
-        priority: 84,
-        node: <DateRangeFilterButton config={dateRangeConfig} />,
-        collapsedNode: <DateRangeFilterPanel config={dateRangeConfig} />,
-      },
-      {
-        // 検索欄は最後まで残す（検索できない一覧にしない）
-        id: "search",
-        priority: 100,
-        node: (
-          <ListSearchInput
-            searchTerm={searchTerm}
-            onSearchTermChange={setSearchTerm}
-            placeholder="成績算出名・タグ・学級で検索"
-          />
-        ),
-        collapsedNode: (
-          <ListSearchInput
-            searchTerm={searchTerm}
-            onSearchTermChange={setSearchTerm}
-            placeholder="成績算出名・タグ・学級で検索"
-          />
-        ),
-      }
-    )
-
     return toolbarActions
-  }, [
-    allTags,
-    classroomFilterConfig,
-    dateRangeConfig,
-    handleBulkAddTag,
-    handleCreate,
-    handleImport,
-    searchTerm,
-    selectedIds,
-    setSearchTerm,
-    tagFilterConfig,
-  ])
+  }, [allTags, handleBulkAddTag, handleCreate, handleImport, selectedIds])
 
   return (
     <>
@@ -429,12 +354,6 @@ export function GradeListContainer() {
             .join("、")
           return (
             <span className="flex flex-wrap items-center gap-1">
-              <span>
-                {classroomNames || "学級未登録"}
-                {" / 生徒: "}
-                {grade.gradeStudents.length}名 / 評価項目:{" "}
-                {grade.gradeItems.length}
-              </span>
               {grade.gradeTags.map((gradeTag) => (
                 <Badge
                   key={gradeTag.tag.id}
@@ -452,6 +371,12 @@ export function GradeListContainer() {
                   {gradeTag.tag.name}
                 </Badge>
               ))}
+              <span>
+                {classroomNames || "学級未登録"}
+                {" / 生徒: "}
+                {grade.gradeStudents.length}名 / 評価項目:{" "}
+                {grade.gradeItems.length}
+              </span>
             </span>
           )
         }}
@@ -495,6 +420,25 @@ export function GradeListContainer() {
           </DropdownMenu>
         )}
         actions={actions}
+        search={{
+          term: searchTerm,
+          onChange: setSearchTerm,
+          placeholder: "成績算出名・タグ・学級で検索",
+        }}
+        tagFilter={tagFilterConfig}
+        classroomFilter={classroomFilterConfig}
+        dateFilter={{
+          from: dateFrom,
+          to: dateTo,
+          onFromChange: setDateFrom,
+          onToChange: setDateTo,
+        }}
+        updatedAtFilter={{
+          from: updatedFrom,
+          to: updatedTo,
+          onFromChange: setUpdatedFrom,
+          onToChange: setUpdatedTo,
+        }}
         selectedIds={selectedIds}
         onToggleSelect={toggleSelect}
         onToggleSelectAll={toggleSelectAll}

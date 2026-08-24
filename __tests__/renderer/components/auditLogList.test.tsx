@@ -17,7 +17,7 @@
  *    作りへ戻すとこの数は意味を失う
  *
  * jsdom は高さを持たない（`clientHeight` は 0）ので、1〜4 では「自動」が
- * `FALLBACK_AUDIT_LOG_PAGE_SIZE` へ落ちる。5 だけが高さを差し込む。
+ * `FALLBACK_PAGE_SIZE` へ落ちる。5 だけが高さを差し込む。
  */
 
 import "../setup"
@@ -27,21 +27,19 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AuditLogList } from "@/app/(app)/audit-logs/components/AuditLogList"
-import {
-  AUDIT_LOG_ROW_HEIGHT,
-  FALLBACK_AUDIT_LOG_PAGE_SIZE,
-} from "@/app/(app)/audit-logs/constants"
+import { AUDIT_LOG_ROW_HEIGHT } from "@/app/(app)/audit-logs/constants"
 import type {
   AuditLogEntry,
   AuditLogQueryOptions,
 } from "@/electron-src/lib/prisma/auditQuery"
+import { FALLBACK_PAGE_SIZE } from "@/lib/listPagination"
 
 import { createQueryWrapper } from "../../helpers/queryWrapper"
 
 const TOTAL_ROWS = 120
 
 /** 高さが測れないときの件数。1〜3 の期待値はこれで組み立てる */
-const PAGE_SIZE = FALLBACK_AUDIT_LOG_PAGE_SIZE
+const PAGE_SIZE = FALLBACK_PAGE_SIZE
 
 /** 検索欄のデバウンス（300ms）を確実に越える待ち時間 */
 const DEBOUNCE_WAIT_MS = 400
@@ -321,7 +319,7 @@ describe("監査ログ一覧の「自動」件数", () => {
 
   it("表示領域の高さを1行の高さで割った件数を要求する", async () => {
     const expectedPageSize = Math.floor(VIEWPORT_HEIGHT / AUDIT_LOG_ROW_HEIGHT)
-    expect(expectedPageSize).not.toBe(FALLBACK_AUDIT_LOG_PAGE_SIZE)
+    expect(expectedPageSize).not.toBe(FALLBACK_PAGE_SIZE)
 
     render(<AuditLogList />, { wrapper: createQueryWrapper() })
 

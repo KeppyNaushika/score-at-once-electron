@@ -24,6 +24,11 @@ export interface ListFilterAccessors<T> {
    * 両方を許す（下の絞り込みは `new Date(...)` でどちらも扱える）。
    */
   date?: (listItem: T) => string | Date | null
+  /**
+   * 更新日時の範囲フィルタ用の値。`date` と別に持つのは、一覧が日付列を2つ
+   * （実施日と更新日時）出しており、**列見出しごとに絞れる**ようにするため。
+   */
+  updatedAt?: (listItem: T) => string | Date | null
 }
 
 interface UseListFilterResult<T> {
@@ -42,6 +47,38 @@ interface UseListFilterResult<T> {
   /** 日付範囲の上端（YYYY-MM-DD、空文字は未指定） */
   dateTo: string
   setDateTo: (value: string) => void
+  /** 更新日時の下端（YYYY-MM-DD、空文字は未指定） */
+  updatedFrom: string
+  setUpdatedFrom: (value: string) => void
+  /** 更新日時の上端（YYYY-MM-DD、空文字は未指定） */
+  updatedTo: string
+  setUpdatedTo: (value: string) => void
+}
+
+/**
+ * ローカル日の `YYYY-MM-DD`。
+ *
+ * 一覧の日付列は `toLocaleDateString` で描いているので、絞り込みも同じローカル日で
+ * 比べる（UTC で切ると、画面に出ている日と1日ずれる行が出る）。
+ */
+function toLocalDay(date: string | Date): string {
+  const localDate = new Date(date)
+  return `${localDate.getFullYear()}-${String(
+    localDate.getMonth() + 1
+  ).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`
+}
+
+/** 日付が範囲に入っているか。**未設定の行は範囲を指定した時点で外れる** */
+function isWithinDayRange(
+  date: string | Date | null,
+  from: string,
+  to: string
+): boolean {
+  if (date === null) return false
+  const day = toLocalDay(date)
+  if (from && day < from) return false
+  if (to && day > to) return false
+  return true
 }
 
 export function useListFilter<T>(
@@ -55,6 +92,8 @@ export function useListFilter<T>(
   )
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
+  const [updatedFrom, setUpdatedFrom] = useState("")
+  const [updatedTo, setUpdatedTo] = useState("")
 
   const toggleTagId = useCallback((tagId: string, checked: boolean) => {
     setFilterTagIds((prev) => {
@@ -114,16 +153,23 @@ export function useListFilter<T>(
         )
         if (!hasMatch) return false
       }
-      // 日付範囲フィルタ（表示(toLocaleDateString)と一致させるためローカル日で比較）
+      // 日付範囲フィルタ（実施日など、画面が持つ日付の列）
       if (accessors.date && (dateFrom || dateTo)) {
-        const isoDate = accessors.date(listItem)
-        if (!isoDate) return false
-        const localDate = new Date(isoDate)
-        const day = `${localDate.getFullYear()}-${String(
-          localDate.getMonth() + 1
-        ).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`
-        if (dateFrom && day < dateFrom) return false
-        if (dateTo && day > dateTo) return false
+        if (!isWithinDayRange(accessors.date(listItem), dateFrom, dateTo)) {
+          return false
+        }
+      }
+      // 更新日時の範囲フィルタ
+      if (accessors.updatedAt && (updatedFrom || updatedTo)) {
+        if (
+          !isWithinDayRange(
+            accessors.updatedAt(listItem),
+            updatedFrom,
+            updatedTo
+          )
+        ) {
+          return false
+        }
       }
       return true
     })
@@ -135,6 +181,8 @@ export function useListFilter<T>(
     filterClassroomIds,
     dateFrom,
     dateTo,
+    updatedFrom,
+    updatedTo,
   ])
 
   return {
@@ -151,5 +199,9 @@ export function useListFilter<T>(
     setDateFrom,
     dateTo,
     setDateTo,
+    updatedFrom,
+    setUpdatedFrom,
+    updatedTo,
+    setUpdatedTo,
   }
 }

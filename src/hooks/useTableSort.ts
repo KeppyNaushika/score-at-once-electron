@@ -160,22 +160,44 @@ export function useTableSort<T extends object>(
     })
   }, [data, sortConfig])
 
-  const requestSort = useCallback(
-    (key: keyof T & string) => {
-      const nextSort = nextTableSort(sortConfig, key)
+  /** 並び順を書き込む。永続化するときは localStorage が唯一の出所 */
+  const storeSort = useCallback(
+    (nextSort: TableSort) => {
       if (storageKey !== null) {
         setStoredText(JSON.stringify(nextSort))
         return
       }
       setChosenSort(nextSort)
     },
-    [setStoredText, sortConfig, storageKey]
+    [setStoredText, storageKey]
+  )
+
+  const requestSort = useCallback(
+    (key: keyof T & string) => {
+      storeSort(nextTableSort(sortConfig, key))
+    },
+    [sortConfig, storeSort]
+  )
+
+  /**
+   * 方向を名指しして並べ替える。
+   *
+   * 見出しを押して回す `requestSort` と違い、**押した通りの向きになる**。
+   * 列見出しの popover が「昇順」「降順」を並べて出すために要る（回す作りだと、
+   * いま何順なのかを覚えていないと目当ての向きに合わせられない）。
+   */
+  const applySort = useCallback(
+    (key: keyof T & string, direction: Exclude<SortDirection, null>) => {
+      storeSort({ key, direction })
+    },
+    [storeSort]
   )
 
   return {
     sortedData,
     sortConfig,
     requestSort,
+    applySort,
   }
 }
 
