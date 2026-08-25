@@ -15,11 +15,18 @@
  *   npx tsx __tests__/screenshots/setup-data.ts
  */
 
+import { Prisma } from "@prisma/client"
 import * as crypto from "crypto"
 import * as fs from "fs"
+import * as Module from "module"
 import * as path from "path"
 
 import { createPrismaClientForPath } from "../helpers/testPrismaClient"
+import {
+  describeSyncAbort,
+  getSyncConfigPath,
+  isSyncEnabled,
+} from "./helpers/syncGuard"
 
 // ---------------------------------------------------------------------------
 // パス設定
@@ -27,16 +34,74 @@ import { createPrismaClientForPath } from "../helpers/testPrismaClient"
 const PROJECT_ROOT = path.resolve(__dirname, "../..")
 const TEST_DATA_DIR = path.join(__dirname, "data")
 const DB_PATH = path.join(TEST_DATA_DIR, "database.db")
+const MIGRATIONS_DIR = path.join(PROJECT_ROOT, "prisma/migrations")
 
 // ---------------------------------------------------------------------------
 // Prisma Client（専用DB）
 // ---------------------------------------------------------------------------
 const prisma = createPrismaClientForPath(DB_PATH)
 
+/**
+ * 空DBに、アプリ本体と同じ初期化連鎖でスキーマを作る
+ *
+ * init ベースライン適用（`bootstrapSchema`）→ `_prisma_migrations` のベースライン作成
+ * （`createBaseline`）→ `prisma/migrations` の昇順適用（`deployPendingMigrations`）。
+ * 例は `__tests__/migration/freshInstallChain.test.ts`。
+ *
+ * `prisma db push` を使わない理由は2つある。
+ * 1. `db push` はスキーマ定義から直接テーブルを作るので、実際の新規インストールが通る
+ *    migration の連鎖を飛ばす。撮影が写すのは「新規インストール直後のアプリ」なので、
+ *    本番と同じ道を通したほうが正確
+ * 2. Prisma 7 の `db push` は AI が実行した破壊的操作として拒否される
+ *
+ * `deployPendingMigrations()` は接続先を `getDatabasePath()` で決め、その中の
+ * `loadSyncConfig()` が Electron の `app.getPath("userData")` を読む。このスクリプトは
+ * 素の Node で動くので `app` が無い（`require("electron")` は実行ファイルのパス文字列を
+ * 返すだけ）。そこで `electron` を `app` だけ持つ形へ差し替えてから読み込む。同期設定は
+ * 呼び出し前に `isSyncEnabled()` で無効だと確かめてあるので、`getDatabasePath()` は
+ * `SCORE_AT_ONCE_DATA_DIR`（＝撮影用ディレクトリ）側を返す。
+ */
+async function createSchemaLikeFreshInstall(): Promise<void> {
+  process.env.SCORE_AT_ONCE_DATA_DIR = TEST_DATA_DIR
+
+  const electronEntry = require.resolve("electron")
+  const electronStub = new Module.Module(electronEntry)
+  electronStub.exports = { app: { getPath: () => TEST_DATA_DIR } }
+  electronStub.loaded = true
+  require.cache[electronEntry] = electronStub
+
+  // 差し替えたあとに読み込む必要があるので動的 import にする
+  const { bootstrapSchema } =
+    await import("../../electron-src/lib/prisma/schema/schemaBootstrap")
+  const { createBaseline } =
+    await import("../../electron-src/lib/prisma/schema/baselineMigrations")
+  const { deployPendingMigrations } =
+    await import("../../electron-src/lib/prisma/schema/migrationDeployer")
+
+  bootstrapSchema(DB_PATH)
+  const baselineClient = createPrismaClientForPath(DB_PATH)
+  try {
+    await createBaseline(baselineClient)
+  } finally {
+    await baselineClient.$disconnect()
+  }
+  const appliedCount = deployPendingMigrations({
+    migrationsDir: MIGRATIONS_DIR,
+  })
+  console.log(`  -> init + マイグレーション ${appliedCount} 本を適用`)
+}
+
 // ---------------------------------------------------------------------------
 // メイン処理
 // ---------------------------------------------------------------------------
 async function main() {
+  // 種を蒔く前に同期設定を見る。同期が有効だとアプリは userData のローカル DB を
+  // 開くので、ここで作る撮影用 DB は使われず、実運用のデータベースが撮られる。
+  // 作ってから気づくのは無駄なので、始める前に止める。
+  if (isSyncEnabled()) {
+    throw new Error(describeSyncAbort(`同期設定: ${getSyncConfigPath()}`))
+  }
+
   console.log("=== スクリーンショット専用データ生成 (Phase 1) ===")
   console.log(`DB: ${DB_PATH}`)
   console.log(`Data: ${TEST_DATA_DIR}\n`)
@@ -47,16 +112,16 @@ async function main() {
     if (fs.existsSync(dbFilePath)) fs.unlinkSync(dbFilePath)
   }
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true })
+  // マイグレーション適用前のバックアップは実行のたびに増えるので、作り直しの前に掃く
+  for (const fileName of fs.readdirSync(TEST_DATA_DIR)) {
+    if (fileName.startsWith("database.db.pre-migration-backup-")) {
+      fs.unlinkSync(path.join(TEST_DATA_DIR, fileName))
+    }
+  }
 
-  // Prisma db push でスキーマ作成
-  console.log("[0/2] スキーマ作成 (prisma db push)...")
-  const { execSync } = await import("child_process")
-  // Prisma 7では DATABASE_URL 環境変数が自動参照されないため --url で明示
-  execSync(`npx prisma db push --url=file:${DB_PATH} --accept-data-loss`, {
-    cwd: PROJECT_ROOT,
-    stdio: "pipe",
-  })
-  console.log("  -> スキーマ作成完了")
+  // スキーマ作成（アプリの新規インストールと同じ連鎖を通す）
+  console.log("[0/2] スキーマ作成 (init + migrations)...")
+  await createSchemaLikeFreshInstall()
 
   // ========== 1. ユーザー ==========
   console.log("[1/2] ユーザー作成...")
@@ -80,7 +145,17 @@ async function main() {
   if (fs.existsSync(asbTemplateFile)) {
     const template = JSON.parse(fs.readFileSync(asbTemplateFile, "utf-8"))
 
-    const defData: Record<string, unknown> = { ...template }
+    // 雛形は書き出した当時のスキーマで固まっているので、いま存在しない列が混じる
+    // （実際 `renderMode` が廃止済みで create が落ちていた）。生成された
+    // ScalarFieldEnum を正として、今ある列だけを通す
+    const asbDefinitionColumns: Set<string> = new Set(
+      Object.keys(Prisma.AsbDefinitionScalarFieldEnum)
+    )
+    const defData: Record<string, unknown> = Object.fromEntries(
+      Object.entries(template).filter(([columnName]) =>
+        asbDefinitionColumns.has(columnName)
+      )
+    )
     defData.id = asbDefId
     defData.name = "第２回定期テスト 中２数学"
     defData.userId = userId

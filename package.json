@@ -50,7 +50,7 @@
     "github:prerelease:rc": "node scripts/github-release.js patch rc",
     "postinstall": "prisma generate && node scripts/ensure-sqlite-abi.js electron && node scripts/setup-mathjax-fonts.js",
     "setup-assets": "node scripts/setup-mathjax-fonts.js",
-    "screenshot:setup": "npx tsx __tests__/screenshots/setup-data.ts",
+    "screenshot:setup": "node scripts/ensure-sqlite-abi.js node && npx tsx __tests__/screenshots/setup-data.ts",
     "screenshot:test": "npx playwright test --config=__tests__/playwright.screenshot.config.ts",
     "screenshot": "npm run screenshot:setup && npm run screenshot:test",
     "db:seed": "node prisma/seed.js",

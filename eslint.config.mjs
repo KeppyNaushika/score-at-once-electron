@@ -13,6 +13,7 @@ export default [
       "**/main/**",
       "**/.next/**",
       "**/.next-e2e/**",
+      "**/.next-screenshot/**",
       "**/out/**",
       "**/public/**",
       "**/scripts/**",

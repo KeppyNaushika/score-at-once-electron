@@ -5,19 +5,20 @@
  * Electronのメインプロセスは経由しない。
  */
 
-import type { PrismaClient } from "@prisma/client"
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
+import { PrismaClient } from "@prisma/client"
 import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 import sharp from "sharp"
 
-import { createPrismaClientForPath } from "../../helpers/testPrismaClient"
 import {
   computeRegionDefinitions,
   generateMasterAnswerImage,
   generateStudentAnswerImage,
   generateStudentScores,
 } from "./generate-images"
+import { requireNodeAbiBinding } from "./nodeAbiBinding"
 
 // ---------------------------------------------------------------------------
 // PrismaClient（テストプロセスから直接DB操作）
@@ -29,13 +30,42 @@ let prisma: PrismaClient
 
 function getPrisma(): PrismaClient {
   if (!prisma) {
-    prisma = createPrismaClientForPath(DB_PATH)
+    // node_modules のバイナリは Electron 向けにそろえてある（アプリが DB を開けるように）。
+    // こちらは素の Node なので、退避しておいたコピーを名指しで読む。
+    // 経緯は `nodeAbiBinding.ts`
+    prisma = new PrismaClient({
+      adapter: new PrismaBetterSqlite3({
+        url: DB_PATH,
+        nativeBinding: requireNodeAbiBinding(),
+      }),
+      log: ["error"],
+    })
   }
   return prisma
 }
 
 export async function disconnectPrisma() {
   if (prisma) await prisma.$disconnect()
+}
+
+/**
+ * 種データが撮影用 DB に入っていることを確かめる
+ *
+ * `screenshot-ids.json` は前回の setup が途中で落ちても残るので、ファイルの有無
+ * だけでは「古い ID を指したまま」「DB が空のまま」を見分けられない。撮影の土台
+ * なので、ここで実際に引けなければ落とす。
+ *
+ * @param userId - `screenshot-ids.json` が指す撮影用ユーザーの id
+ * @throws 種データが見つからない場合
+ */
+export async function assertSeedLoaded(userId: string): Promise<void> {
+  const user = await getPrisma().user.findUnique({ where: { id: userId } })
+  if (!user) {
+    throw new Error(
+      `撮影用DBに種データがありません（ユーザー ${userId} が見つかりません）。\n` +
+        `${DB_PATH} を作り直してください: npm run screenshot:setup`
+    )
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -374,13 +404,20 @@ export async function seedSubtotalAndTag(): Promise<{
     })
     subtotalIds.push(subtotal.id)
   }
-  const tag = await db.tag.create({
-    data: { id: crypto.randomUUID(), name: "数学" },
-  })
+  // タグ管理の画面が1行だけにならないよう、種類の違うタグを3つ置く
+  // （教科・試験種別・時期。どれも架空の運用を模したもの）
+  const tagNames = ["数学", "定期考査", "２学期"]
+  const [subjectTag] = await Promise.all(
+    tagNames.map((tagName, tagOrder) =>
+      db.tag.create({
+        data: { id: crypto.randomUUID(), name: tagName, order: tagOrder },
+      })
+    )
+  )
   await db.tagSubtotalGroup.create({
     data: {
       id: crypto.randomUUID(),
-      tagId: tag.id,
+      tagId: subjectTag.id,
       subtotalGroupId: subtotalGroup.id,
     },
   })
@@ -562,6 +599,275 @@ export async function seedExamWithScoring(
     `  [SEED] 試験 + 採点 (examId=${examId}, ${REGION_DEFINITIONS.length}領域)`
   )
   return examId
+}
+
+// ---------------------------------------------------------------------------
+// 2人目の採点者と、食い違いのある採点
+// ---------------------------------------------------------------------------
+
+/**
+ * 2人目の採点者を試験へ入れ、担当を割り当て、食い違う採点を書く
+ *
+ * **協調採点の画面は、参加者が1人だと構造的に写らない。**
+ *
+ * - 段階3 の「採点担当」タブは `memberCount > 1` でしか現れない
+ *   （`countExamMembers` は UserExam の行数を数える）
+ * - 段階8 の裁定は、同じマス（設問 × 受験者）に**食い違う提案**が無いと
+ *   「裁くものが無い」画面になる。食い違いの判定は userId を見ておらず、
+ *   同じマスの提案どうしで `status` と `partialScore` が揃わなければ conflict
+ *   （`scoreResolution.ts` の `resolveScores`）
+ *
+ * 名前は架空のもの。実在の人物とは関係がない。
+ *
+ * @returns 2人目の採点者の id と、作った食い違いのマス数
+ */
+export async function seedSecondGrader(
+  examId: string,
+  ownerUserId: string,
+  templatePath: string
+): Promise<{ graderUserId: string; conflictCellCount: number }> {
+  const db = getPrisma()
+  const regionDefinitions = computeRegionDefinitions(templatePath)
+
+  const grader = await db.user.create({
+    data: {
+      id: crypto.randomUUID(),
+      username: "otsuki-s",
+      name: "大槻 里美",
+      role: "teacher",
+      passcodeType: "none",
+    },
+  })
+  await db.userExam.create({
+    data: {
+      id: crypto.randomUUID(),
+      userId: grader.id,
+      examId,
+      role: "GRADER",
+      invitedBy: ownerUserId,
+    },
+  })
+
+  // 担当の割り当て。設問を交互に分け、先頭の1問だけ両方の担当にする
+  // （1設問に複数の担当を置けること＝ダブルチェックが対応表に写るように）
+  const cropRegions = await db.cropRegion.findMany({
+    where: { examPage: { examId }, type: "QUESTION_ANSWER" },
+    orderBy: { orderIndex: "asc" },
+  })
+  await Promise.all(
+    cropRegions.map((cropRegion, regionOrder) =>
+      db.cropRegionAssignment.create({
+        data: {
+          id: crypto.randomUUID(),
+          cropRegionId: cropRegion.id,
+          userId: regionOrder % 2 === 0 ? ownerUserId : grader.id,
+          assignedBy: ownerUserId,
+        },
+      })
+    )
+  )
+  if (cropRegions.length > 0) {
+    await db.cropRegionAssignment.create({
+      data: {
+        id: crypto.randomUUID(),
+        cropRegionId: cropRegions[0].id,
+        userId: grader.id,
+        assignedBy: ownerUserId,
+      },
+    })
+  }
+
+  // 2人目の採点。担当している設問（奇数番目）だけを付ける。
+  // 多くは1人目と同じ判定にし、一定の割合だけずらして食い違いを作る
+  const examStudents = await db.examStudent.findMany({
+    where: { examId },
+    orderBy: { customOrder: "asc" },
+  })
+  const graderRegions = cropRegions.filter(
+    (_cropRegion, regionOrder) => regionOrder % 2 === 1
+  )
+  let conflictCellCount = 0
+
+  for (const [studentOrder, examStudent] of examStudents.entries()) {
+    const ownerScores = generateStudentScores(studentOrder, regionDefinitions)
+    for (const cropRegion of graderRegions) {
+      const ownerScore = ownerScores.find(
+        (score) => score.regionIndex === cropRegion.orderIndex
+      )
+      if (!ownerScore) continue
+
+      const isConflict = (studentOrder + (cropRegion.orderIndex ?? 0)) % 9 === 0
+      conflictCellCount += isConflict ? 1 : 0
+      // 食い違いは「正答としたものを部分点にした」形にする。判定と点の両方が
+      // ずれるので、どちらか片方しか見ていない実装があっても裁定対象になる
+      const graderStatus = isConflict
+        ? ownerScore.status === "correct"
+          ? "partial"
+          : "correct"
+        : ownerScore.status
+      const graderPartialScore = isConflict
+        ? Math.max(1, Math.floor((cropRegion.points ?? 2) / 2))
+        : ownerScore.score
+
+      await db.questionScore.create({
+        data: {
+          id: crypto.randomUUID(),
+          cropRegionId: cropRegion.id,
+          examStudentId: examStudent.id,
+          partialScore: graderPartialScore,
+          status: graderStatus,
+          userId: grader.id,
+        },
+      })
+    }
+  }
+
+  console.log(
+    `  [SEED] 2人目の採点者: 大槻 里美（食い違い ${conflictCellCount} マス）`
+  )
+  return { graderUserId: grader.id, conflictCellCount }
+}
+
+// ---------------------------------------------------------------------------
+// 試験外成績資料（Coursework）
+// ---------------------------------------------------------------------------
+
+/**
+ * 試験外成績資料を1件、点数まで入った状態で作る
+ *
+ * 資料の画面は評価項目が0件だと表そのものが出ない（`CourseworkScoresContainer`）。
+ * 数値の項目だけでなく**文字評価の項目**も1つ置く ——「評語で付ける」は資料側にしか
+ * 無い入力方式で、置かないと画面の半分が写らない。コメントも1件入れる
+ * （結果画面の「コメント」列はコメントが1つ以上あるときだけ現れる）。
+ *
+ * 中身は架空のもの。
+ */
+export async function seedCoursework(
+  studentIds: string[],
+  classAId: string,
+  classBId: string
+): Promise<string> {
+  const db = getPrisma()
+
+  const courseworkId = crypto.randomUUID()
+  await db.coursework.create({
+    data: {
+      id: courseworkId,
+      name: "夏季課題 中２数学",
+      description: "夏休みの提出物と、休み明けの確認テスト",
+      referenceDate: new Date("2025-09-01"),
+    },
+  })
+  await Promise.all(
+    [classAId, classBId].map((classroomId, classroomOrder) =>
+      db.courseworkClassroom.create({
+        data: {
+          id: crypto.randomUUID(),
+          courseworkId,
+          classroomId,
+          order: classroomOrder,
+        },
+      })
+    )
+  )
+
+  const courseworkStudentIds: string[] = []
+  for (const [studentOrder, studentId] of studentIds.entries()) {
+    const courseworkStudent = await db.courseworkStudent.create({
+      data: {
+        id: crypto.randomUUID(),
+        courseworkId,
+        studentId,
+        customOrder: studentOrder + 1,
+      },
+    })
+    courseworkStudentIds.push(courseworkStudent.id)
+  }
+
+  const submission = await db.courseworkItem.create({
+    data: {
+      id: crypto.randomUUID(),
+      courseworkId,
+      name: "課題プリント",
+      order: 0,
+      maxScore: 20,
+      inputMode: "numeric",
+    },
+  })
+  const checkTest = await db.courseworkItem.create({
+    data: {
+      id: crypto.randomUUID(),
+      courseworkId,
+      name: "確認テスト",
+      order: 1,
+      maxScore: 50,
+      inputMode: "numeric",
+    },
+  })
+  const attitude = await db.courseworkItem.create({
+    data: {
+      id: crypto.randomUUID(),
+      courseworkId,
+      name: "取り組みの様子",
+      order: 2,
+      maxScore: 3,
+      inputMode: "letter",
+    },
+  })
+  const letterScales = [
+    { label: "A", score: 3 },
+    { label: "B", score: 2 },
+    { label: "C", score: 1 },
+  ]
+  await Promise.all(
+    letterScales.map((letterScale, scaleOrder) =>
+      db.courseworkLetterScale.create({
+        data: {
+          id: crypto.randomUUID(),
+          courseworkItemId: attitude.id,
+          label: letterScale.label,
+          score: letterScale.score,
+          order: scaleOrder,
+        },
+      })
+    )
+  )
+
+  for (const [
+    studentOrder,
+    courseworkStudentId,
+  ] of courseworkStudentIds.entries()) {
+    await db.courseworkScore.create({
+      data: {
+        id: crypto.randomUUID(),
+        courseworkItemId: submission.id,
+        courseworkStudentId,
+        score: 12 + ((studentOrder * 3) % 9),
+      },
+    })
+    await db.courseworkScore.create({
+      data: {
+        id: crypto.randomUUID(),
+        courseworkItemId: checkTest.id,
+        courseworkStudentId,
+        score: 28 + ((studentOrder * 7) % 23),
+        // 数人だけコメントを入れる。全員に付けると列の意図（一部にだけ添える）が
+        // 伝わらないし、全員空だと列そのものが出ない
+        comment: studentOrder % 13 === 0 ? "計算の途中式が丁寧" : null,
+      },
+    })
+    await db.courseworkScore.create({
+      data: {
+        id: crypto.randomUUID(),
+        courseworkItemId: attitude.id,
+        courseworkStudentId,
+        letterValue: letterScales[studentOrder % letterScales.length].label,
+      },
+    })
+  }
+
+  console.log(`  [SEED] 試験外成績資料 (courseworkId=${courseworkId})`)
+  return courseworkId
 }
 
 // ---------------------------------------------------------------------------
