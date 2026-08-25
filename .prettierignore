@@ -4,6 +4,7 @@ node_modules/
 # Build outputs
 .next/
 .next-e2e/
+.next-screenshot/
 out/
 main/
 dist/
