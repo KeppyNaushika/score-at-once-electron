@@ -214,6 +214,7 @@ function create4ChoiceBubbles(
     normalizedHeight: bubbleH,
     choiceIndex: i,
     label: ["①", "②", "③", "④"][i],
+    isCorrectAnswer: false,
   }))
 }
 
@@ -397,6 +398,7 @@ describe("markRecognizer", () => {
         normalizedHeight: 32 / imgHeight,
         choiceIndex: i,
         label: String(i),
+        isCorrectAnswer: false,
       })
     )
 

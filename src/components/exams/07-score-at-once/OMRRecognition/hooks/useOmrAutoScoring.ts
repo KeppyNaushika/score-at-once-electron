@@ -517,6 +517,7 @@ function buildCellsFromRegions(
             normalizedHeight: option.normalizedHeight!,
             choiceIndex: option.choiceIndex,
             label: option.label,
+            isCorrectAnswer: option.isCorrect,
           }))
       } else {
         cell.omrBubbles = computeBubblesFromRegion(region, config)
@@ -556,6 +557,7 @@ function computeBubblesFromRegion(
         normalizedHeight: bubbleH,
         choiceIndex: i,
         label: config.labels[i] ?? String(i + 1),
+        isCorrectAnswer: config.correctAnswers.includes(i),
       })
     }
   } else {
@@ -569,6 +571,7 @@ function computeBubblesFromRegion(
         normalizedHeight: bubbleH,
         choiceIndex: i,
         label: config.labels[i] ?? String(i + 1),
+        isCorrectAnswer: config.correctAnswers.includes(i),
       })
     }
   }

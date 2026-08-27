@@ -42,6 +42,13 @@ export const DEFAULT_DASH_RATIO = 3
 export const DEFAULT_GAP_RATIO = 2
 
 // =====================
+// 模範解答の表示
+// =====================
+
+/** 模範解答として見せる要素の色（文字・OMRバブルの塗りつぶし） */
+export const MODEL_ANSWER_COLOR = "#d00"
+
+// =====================
 // 用紙サイズ定数（mm）
 // =====================
 

@@ -95,6 +95,7 @@ function computeOMRBubbles(
         normalizedHeight: bubbleHeightMm / paperHeight,
         choiceIndex: i,
         label: config.labels[i] ?? String(i + 1),
+        isCorrectAnswer: config.correctAnswers.includes(i),
       })
     }
   } else {
@@ -110,6 +111,7 @@ function computeOMRBubbles(
         normalizedHeight: bubbleHeightMm / paperHeight,
         choiceIndex: i,
         label: config.labels[i] ?? String(i + 1),
+        isCorrectAnswer: config.correctAnswers.includes(i),
       })
     }
   }
