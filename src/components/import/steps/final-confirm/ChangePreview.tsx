@@ -90,7 +90,11 @@ function detectFieldChanges(
       existingValue === ""
     if (importEmpty && existingEmpty) continue
 
-    changes.push({ fieldLabel, currentValue: existingValue, newValue: importValue })
+    changes.push({
+      fieldLabel,
+      currentValue: existingValue,
+      newValue: importValue,
+    })
   }
   return changes
 }
