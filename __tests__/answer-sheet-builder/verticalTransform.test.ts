@@ -198,6 +198,7 @@ describe("transformLayoutToVertical", () => {
           normalizedHeight: 0.032,
           choiceIndex: 0,
           label: "ア",
+          isCorrectAnswer: false,
         },
       ],
     })

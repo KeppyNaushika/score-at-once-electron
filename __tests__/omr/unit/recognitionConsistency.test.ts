@@ -67,6 +67,7 @@ function createBubbles(positionedChoiceIndices: number[]): ComputedOMRBubble[] {
     normalizedHeight: 48 / IMAGE_HEIGHT,
     choiceIndex,
     label: LABELS[choiceIndex],
+    isCorrectAnswer: false,
   }))
 }
 

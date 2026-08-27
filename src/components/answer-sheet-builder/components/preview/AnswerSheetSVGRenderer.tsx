@@ -17,6 +17,7 @@ import {
   DEFAULT_DASH_RATIO,
   DEFAULT_GAP_RATIO,
   DEFAULT_MANUSCRIPT_BOUNDARY_WIDTH,
+  MODEL_ANSWER_COLOR,
 } from "../../constants"
 import {
   getLineDashRatio,
@@ -318,7 +319,7 @@ export function AnswerSheetSVGRenderer({
                     fill={
                       seg.modelAnswer
                         ? renderMode === "model-answer"
-                          ? "#d00"
+                          ? MODEL_ANSWER_COLOR
                           : "transparent"
                         : "#000"
                     }
@@ -531,6 +532,11 @@ export function AnswerSheetSVGRenderer({
             const cy = bubble.normalizedCy * pageHeightMm
             const rx = (bubble.normalizedWidth * pageWidthMm) / 2
             const ry = (bubble.normalizedHeight * pageHeightMm) / 2
+            // 模範解答では正解のバブルを塗りつぶす。枠は解答用紙と同じ黒のまま
+            // （どこがバブルかの見え方を模範解答でも変えない）。文字は塗りの上でも
+            // 読めるよう白抜き。
+            const filled =
+              renderMode === "model-answer" && bubble.isCorrectAnswer
             return (
               <g key={`omr-bubble-${cellIdx}-${cell.label}-${bi}`}>
                 <ellipse
@@ -538,7 +544,7 @@ export function AnswerSheetSVGRenderer({
                   cy={cy}
                   rx={rx}
                   ry={ry}
-                  fill="none"
+                  fill={filled ? MODEL_ANSWER_COLOR : "none"}
                   stroke="black"
                   strokeWidth={0.3}
                 />
@@ -549,7 +555,7 @@ export function AnswerSheetSVGRenderer({
                   fontFamily="'Noto Sans JP', sans-serif"
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fill="#333"
+                  fill={filled ? "white" : "#333"}
                 >
                   {bubble.label}
                 </text>

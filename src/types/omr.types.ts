@@ -198,6 +198,8 @@ export interface ComputedOMRBubble {
   choiceIndex: number
   /** ラベル（"ア", "イ" など） */
   label: string
+  /** この選択肢が正解か（模範解答の表示で塗りつぶす対象） */
+  isCorrectAnswer: boolean
 }
 
 // =====================

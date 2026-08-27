@@ -15,7 +15,11 @@ import type {
 } from "@/types/answerSheetDefinition.types"
 import type { DragInfo } from "@/types/answerSheetLayout.types"
 
-import { DEFAULT_DASH_RATIO, DEFAULT_GAP_RATIO } from "../../constants"
+import {
+  DEFAULT_DASH_RATIO,
+  DEFAULT_GAP_RATIO,
+  MODEL_ANSWER_COLOR,
+} from "../../constants"
 
 /**
  * BorderLineStyle に応じた SVG strokeDasharray / offset / linecap を返す。
@@ -105,7 +109,8 @@ function getSegmentStyle(
       : "underline"
   }
   if (seg.modelAnswer) {
-    style.color = renderMode === "model-answer" ? "#d00" : "transparent"
+    style.color =
+      renderMode === "model-answer" ? MODEL_ANSWER_COLOR : "transparent"
   }
   return style
 }
@@ -132,7 +137,7 @@ export function renderSegmentsTspan(
       fill={
         seg.modelAnswer
           ? renderMode === "model-answer"
-            ? "#d00"
+            ? MODEL_ANSWER_COLOR
             : "transparent"
           : undefined
       }
