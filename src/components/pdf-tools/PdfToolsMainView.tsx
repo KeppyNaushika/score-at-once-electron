@@ -14,7 +14,14 @@ import type {
 import ExportPanel from "./export-panel/ExportPanel"
 import ImportPanel from "./import-panel/ImportPanel"
 
-export default function PdfToolsMainView() {
+interface PdfToolsMainViewProps {
+  /** ページプレビューの1行あたりの枚数 */
+  previewColumns: number
+}
+
+export default function PdfToolsMainView({
+  previewColumns,
+}: PdfToolsMainViewProps) {
   const [importedFiles, setImportedFiles] = useState<ImportedFile[]>([])
   const [outputPages, setOutputPages] = useState<OutputPage[]>([])
   const [exportMode, setExportMode] = useState<PdfExportMode>("merge")
@@ -152,6 +159,7 @@ export default function PdfToolsMainView() {
           onFileUpdated={handleFileUpdated}
           onResetExcludedPages={handleResetExcludedPages}
           isProcessing={isProcessing}
+          previewColumns={previewColumns}
         />
       </div>
 
@@ -181,6 +189,7 @@ export default function PdfToolsMainView() {
           onPageExcluded={handlePageExcluded}
           onPageRotated={handlePageRotated}
           onProcessingChange={setIsProcessing}
+          previewColumns={previewColumns}
         />
       </div>
     </div>
