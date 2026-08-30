@@ -14,6 +14,11 @@
  *   - updateDrawingElements（一括） → 即時一括更新 + 非同期DB保存
  *   - removeDrawingElement → 即時削除 + 非同期DB削除
  *
+ * [保存の欠落 — オプティミスティック更新だけが残る壊れ方]
+ *   - 同じティックで続けて呼んでも、渡した値がDBまで届く（移動はポインタが動くたびに
+ *     呼ばれるので、1つのバッチに複数回入る。更新前の行を setState の updater の中で
+ *     掴むと、updater が走らない回の書き込みが黙って落ちる）
+ *
  * [エラー時のロールバック]
  *   - addDrawingElement失敗 → 追加を取り消し
  *   - updateDrawingElement失敗 → 更新前に戻す
@@ -62,6 +67,11 @@ function makeElement(
     id: `el-${crypto.randomUUID().slice(0, 8)}`,
     ...overrides,
   })
+}
+
+/** DBへ渡った行（update の第1引数）を呼ばれた順に取り出す */
+function writtenAnnotations(api: MockDrawingAPI): DrawingAnnotation[] {
+  return api.update.mock.calls.map((call) => call[0])
 }
 
 /** useLayoutEffect内の非同期loadAnnotationsの完了+useEffectの変換を待つ */
@@ -343,6 +353,69 @@ describe("useDrawingState", () => {
       // DB更新失敗してもローカル状態は更新されたまま（エラーが吸収されるため）
       expect(result.current.drawingElements[0].x).toBe(0.9)
     })
+
+    it("同じティックで続けて動かしても、最後の位置がDBへ渡る", async () => {
+      // 移動はポインタが動くたびに1回ずつ呼ばれる。再描画が追いつかないと複数回の
+      // 呼び出しが1つのバッチに入るので、**そのバッチの最後の位置**が保存されなければ
+      // 「動かしたのに元の場所に戻る」になる
+      mockAPI.getByTarget.mockResolvedValue([
+        createMockAnnotation({ id: "a1", x: 0.1 }),
+      ])
+
+      const { result } = renderHook(
+        () => useDrawingState(MOCK_ANNOTATION_TARGET, true),
+        { wrapper: createQueryWrapper() }
+      )
+
+      await waitForDrawingElements(result, 1)
+
+      await act(async () => {
+        await Promise.all([
+          result.current.updateDrawingElement("a1", { x: 0.3 }),
+          result.current.updateDrawingElement("a1", { x: 0.6 }),
+          result.current.updateDrawingElement("a1", { x: 0.9 }),
+        ])
+      })
+
+      // 「最後の位置」なので、含まれているだけでは足りない（0.9 の後に 0.3 を
+      // 書く実装でも通ってしまう）。最後の書き込みそのものを見る
+      const writtenXs = writtenAnnotations(mockAPI).map(
+        (annotation) => annotation.x
+      )
+      expect(writtenXs.at(-1)).toBe(0.9)
+    })
+
+    it("複数選択の移動で、選んだ全ての要素の位置がDBへ渡る", async () => {
+      // 複数選択の移動は選択の数だけ同じティックで呼ばれる（useElementMovement）。
+      // 先頭だけ保存されると、2つ目以降は動かしたそばから元に戻る
+      mockAPI.getByTarget.mockResolvedValue([
+        createMockAnnotation({ id: "a1", x: 0.1 }),
+        createMockAnnotation({ id: "a2", x: 0.2 }),
+      ])
+
+      const { result } = renderHook(
+        () => useDrawingState(MOCK_ANNOTATION_TARGET, true),
+        { wrapper: createQueryWrapper() }
+      )
+
+      await waitForDrawingElements(result, 2)
+
+      await act(async () => {
+        await Promise.all([
+          result.current.updateDrawingElement("a1", { x: 0.5 }),
+          result.current.updateDrawingElement("a2", { x: 0.6 }),
+        ])
+      })
+
+      const written = new Map(
+        writtenAnnotations(mockAPI).map((annotation) => [
+          annotation.id,
+          annotation.x,
+        ])
+      )
+      expect(written.get("a1")).toBe(0.5)
+      expect(written.get("a2")).toBe(0.6)
+    })
   })
 
   // =========================================================================
@@ -381,6 +454,39 @@ describe("useDrawingState", () => {
       expect(
         result.current.drawingElements.find((element) => element.id === "a3")?.x
       ).toBe(0.3)
+    })
+
+    it("直前に別の状態を変えていても、一括更新の全件がDBへ渡る", async () => {
+      // 移動やスタイル変更の直前には選択の更新が入る（マウス押下で選び、そのまま動かす）。
+      // 同じティックに別の状態更新が居るだけで書き込みが落ちてはいけない
+      mockAPI.getByTarget.mockResolvedValue([
+        createMockAnnotation({ id: "a1", x: 0.1 }),
+        createMockAnnotation({ id: "a2", x: 0.2 }),
+      ])
+
+      const { result } = renderHook(
+        () => useDrawingState(MOCK_ANNOTATION_TARGET, true),
+        { wrapper: createQueryWrapper() }
+      )
+
+      await waitForDrawingElements(result, 2)
+
+      await act(async () => {
+        result.current.setSelectedElementIds(["a1", "a2"])
+        await result.current.updateDrawingElements([
+          { id: "a1", updates: { x: 0.5 } },
+          { id: "a2", updates: { x: 0.6 } },
+        ])
+      })
+
+      const written = new Map(
+        writtenAnnotations(mockAPI).map((annotation) => [
+          annotation.id,
+          annotation.x,
+        ])
+      )
+      expect(written.get("a1")).toBe(0.5)
+      expect(written.get("a2")).toBe(0.6)
     })
   })
 

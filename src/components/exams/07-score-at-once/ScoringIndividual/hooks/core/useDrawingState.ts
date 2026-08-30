@@ -204,21 +204,30 @@ export function useDrawingState(
     [enablePersistence, annotationTarget, saveElement]
   )
 
+  /**
+   * 1つの要素を更新する。
+   *
+   * **更新前の行は setState の updater の外で引く。** updater は React が呼ぶかどうかを
+   * 決める純粋な関数で、保留中の更新があるときはその場では走らない。updater の中で
+   * 外の変数へ控えていた頃は、同じティックで2回目以降に呼ばれた更新が「前の行が無い」
+   * と判断されて DB へ1回も届かなかった（＝移動したのに元の位置のまま保存される）。
+   * 移動はポインタが動くたびに呼ばれるので、これは常に起きうる。
+   *
+   * ただし引く元はレンダー時点の行なので、**同じティックで同じ要素の別の列を
+   * 更新すると、後の呼び出しが前の分を打ち消す**（後勝ち）。1つの操作で複数の列を
+   * 動かすときは、呼び分けずに1回の `updates` へまとめること。
+   */
   const updateDrawingElement = useCallback(
     async (id: string, updates: Partial<DrawingAnnotation>) => {
-      let previousElement: DrawingAnnotation | null = null
+      const previousElement =
+        drawingElements.find((element) => element.id === id) ?? null
 
       // ローカル状態を即座に更新
-      setDrawingElements((prev) => {
-        const updated = prev.map((element) => {
-          if (element.id === id) {
-            previousElement = element
-            return { ...element, ...updates }
-          }
-          return element
-        })
-        return updated
-      })
+      setDrawingElements((prev) =>
+        prev.map((element) =>
+          element.id === id ? { ...element, ...updates } : element
+        )
+      )
 
       // データベース更新（バックグラウンド）
       // 既存アノテーションの更新はアノテーションIDで行うため行き先は不要
@@ -241,30 +250,31 @@ export function useDrawingState(
         }
       }
     },
-    [enablePersistence, updateElement]
+    [drawingElements, enablePersistence, updateElement]
   )
 
-  // 複数要素を一括更新（1回のsetStateで全て更新）
+  // 複数要素を一括更新（1回のsetStateで全て更新）。
+  // 更新前の行を updater の外で引く理由は updateDrawingElement と同じ
   const updateDrawingElements = useCallback(
     async (
       updates: Array<{ id: string; updates: Partial<DrawingAnnotation> }>
     ) => {
-      const previousElements: Map<string, DrawingAnnotation> = new Map()
       const updateMap = new Map(
         updates.map((update) => [update.id, update.updates])
       )
+      const previousElements = new Map(
+        drawingElements
+          .filter((element) => updateMap.has(element.id))
+          .map((element) => [element.id, element])
+      )
 
       // ローカル状態を即座に更新（1回のsetStateで全て更新）
-      setDrawingElements((prev) => {
-        return prev.map((element) => {
+      setDrawingElements((prev) =>
+        prev.map((element) => {
           const elementUpdates = updateMap.get(element.id)
-          if (elementUpdates) {
-            previousElements.set(element.id, element)
-            return { ...element, ...elementUpdates }
-          }
-          return element
+          return elementUpdates ? { ...element, ...elementUpdates } : element
         })
-      })
+      )
 
       // データベース更新（バックグラウンド、各要素を個別に更新）
       // 既存アノテーションの更新はアノテーションIDで行うため行き先は不要
@@ -282,18 +292,18 @@ export function useDrawingState(
         }
       }
     },
-    [enablePersistence, updateElement]
+    [drawingElements, enablePersistence, updateElement]
   )
 
   const removeDrawingElement = useCallback(
     async (id: string) => {
-      let removedElement: DrawingAnnotation | null = null
+      // 消す前の行も updater の外で引く（updateDrawingElement と同じ理由。
+      // ここで取り逃すと、削除に失敗したときに戻す先が無くなる）
+      const removedElement =
+        drawingElements.find((element) => element.id === id) ?? null
 
       // ローカル状態を即座に更新
-      setDrawingElements((prev) => {
-        removedElement = prev.find((element) => element.id === id) || null
-        return prev.filter((element) => element.id !== id)
-      })
+      setDrawingElements((prev) => prev.filter((element) => element.id !== id))
 
       // 複数選択からも削除
       setSelectedElementIds((prev) =>
@@ -309,12 +319,12 @@ export function useDrawingState(
           console.error("描画要素削除エラー:", error)
           // 削除に失敗した場合、ローカル状態をロールバック
           if (removedElement) {
-            setDrawingElements((prev) => [...prev, removedElement!])
+            setDrawingElements((prev) => [...prev, removedElement])
           }
         }
       }
     },
-    [enablePersistence, deleteElement]
+    [drawingElements, enablePersistence, deleteElement]
   )
 
   // 複数選択操作
