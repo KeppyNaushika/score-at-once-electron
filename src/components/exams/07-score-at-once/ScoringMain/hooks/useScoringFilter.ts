@@ -63,6 +63,8 @@ interface UseScoringFilterProps {
   manualSelectionVersion: number
   answerSortOrder: AnswerSortOrder
   whitenessByAnswerId: WhitenessByAnswerId
+  /** 白さ順・濃さ順で、並べる材料の算出をまだ待っているか */
+  isWhitenessPending: boolean
 }
 
 /** 採点ステータスによるフィルタリングと表示対象の答案リスト管理を行うフック */
@@ -80,6 +82,7 @@ export function useScoringFilter({
   manualSelectionVersion,
   answerSortOrder,
   whitenessByAnswerId,
+  isWhitenessPending,
 }: UseScoringFilterProps) {
   const [filterSettings, setFilterSettings] = useState<FilterSettings>({
     unscored: true,
@@ -223,7 +226,11 @@ export function useScoringFilter({
    * 呼び忘れた経路だけ古い一覧が残る）。
    */
   const derivedVisible = useMemo(() => {
-    if (!currentCropRegion) {
+    // 白さ順・濃さ順は、材料が揃うまで表示対象を持たない。表示順で並べて見せて
+    // おくと、算出が終わった瞬間に並びが総入れ替えになり、見ていた答案と操作の
+    // 対象がずれる（ドラッグ選択は範囲の顔ぶれごと変わる）。ここを空にすると
+    // 下流の 0 件の経路が選択も畳むので、算出待ちの間は誰も選ばれない。
+    if (!currentCropRegion || isWhitenessPending) {
       return {
         visibleAnswers: EMPTY_VISIBLE_ANSWERS,
         firstStudentAnswerId: null as string | null,
@@ -262,6 +269,7 @@ export function useScoringFilter({
     allScoringData,
     recentlyScoredAnswers,
     selectedStudentAnswerImageIds,
+    isWhitenessPending,
   ])
 
   // 中身が同じでも配列の同一性は変わり得るが、下流は areArraysEqual で

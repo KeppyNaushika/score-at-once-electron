@@ -20,6 +20,8 @@ import type { QuestionScoreRow } from "@/queries/scoring"
 
 interface ScoringContentAreaProps {
   gradingMode: GradingMode
+  /** 白さ順・濃さ順で、並べる材料の算出をまだ待っているか */
+  isWhitenessPending?: boolean
   allScoringData: ScoringData[]
   masterAnswerData: MasterGridItem | null
   filteredScoringDataIds: string[]
@@ -58,6 +60,7 @@ interface ScoringContentAreaProps {
 
 export function ScoringContentArea({
   gradingMode,
+  isWhitenessPending = false,
   allScoringData,
   masterAnswerData,
   filteredScoringDataIds,
@@ -204,6 +207,17 @@ export function ScoringContentArea({
   }, [gradingMode])
 
   if (gradingMode !== "individual") {
+    // 並びが決まる前の答案は見せない。見えていれば採点できてしまい、算出が
+    // 終わった瞬間の並べ替えで、見ていた答案と操作の対象がずれる。
+    if (isWhitenessPending) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center gap-1 p-4 text-sm text-gray-500">
+          <span>答案の濃淡を解析しています…</span>
+          <span className="text-xs">解析が終わると並べ替えて表示します</span>
+        </div>
+      )
+    }
+
     return (
       <AnswerGridView
         allScoringData={allScoringData}

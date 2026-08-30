@@ -221,6 +221,17 @@ function ScoringMainViewContent() {
     enabled: gradingMode === "grid",
   })
 
+  /**
+   * 白さ順・濃さ順は、並べる材料が揃うまで答案を出さない（表示も選択もしない）。
+   * 表示順で並べて見せておくと、算出が終わった瞬間に並びが総入れ替えになり、
+   * 見ていた答案と操作の対象がずれる。並び順は利用者ごとに憶えているので、
+   * 常用している人は一覧を開いた時点でこの状態から始まる。
+   */
+  const isWhitenessPending =
+    gradingMode === "grid" &&
+    (answerSortOrder === "whiteness" || answerSortOrder === "darkness") &&
+    !isWhitenessReady
+
   /** Effect処理フック */
   useScoringEffects({
     gradingMode,
@@ -326,6 +337,7 @@ function ScoringMainViewContent() {
     manualSelectionVersion,
     answerSortOrder,
     whitenessByAnswerId,
+    isWhitenessPending,
   })
 
   const handleReplaceSelection = useCallback(
@@ -761,6 +773,7 @@ function ScoringMainViewContent() {
         <div className="min-w-0 flex-1">
           <ScoringContentArea
             gradingMode={gradingMode}
+            isWhitenessPending={isWhitenessPending}
             allScoringData={allScoringData}
             masterAnswerData={masterAnswerData}
             filteredScoringDataIds={filteredScoringDataIds}
