@@ -98,6 +98,17 @@ export function useAnswerWhiteness({
 
   const signature = buildMeasurementSignature(pageAnswerImages, pageRegions)
 
+  /**
+   * 測る対象があるか。答案か採点領域が無いページでは算出そのものが起きないので、
+   * 「算出を待っている」と「待つものが無い」は分けて扱う必要がある。混ぜると、
+   * 揃うまで答案を出さない側（白さ順・濃さ順）がそのページで永久に待つ。
+   */
+  const isMeasurable =
+    enabled &&
+    Boolean(currentExamPageId) &&
+    pageAnswerImages.length > 0 &&
+    pageRegions.length > 0
+
   const { data: measurement } = useQuery({
     ...answerWhitenessQuery(currentExamPageId ?? "", signature, {
       answerImages: pageAnswerImages.map((answerImage) => ({
@@ -106,11 +117,7 @@ export function useAnswerWhiteness({
       })),
       regions: pageRegions,
     }),
-    enabled:
-      enabled &&
-      Boolean(currentExamPageId) &&
-      pageAnswerImages.length > 0 &&
-      pageRegions.length > 0,
+    enabled: isMeasurable,
   })
 
   // 答案 → 領域 → 白さ へ畳むのは計算。キャッシュには main が返した形が載っている
@@ -126,7 +133,7 @@ export function useAnswerWhiteness({
 
   return {
     whitenessByAnswerId,
-    /** 表示中のページの白さが揃っているか（並び順の選択可否に使う） */
-    isWhitenessReady: Boolean(measurement),
+    /** 表示中のページの白さが揃っているか（並び順の選択可否と表示可否に使う） */
+    isWhitenessReady: Boolean(measurement) || !isMeasurable,
   }
 }
