@@ -32,6 +32,8 @@ interface OutputPreviewProps {
   onDeletePage: (page: OutputPage) => void
   onRotatePage: (page: OutputPage, rotation: RotationDegree) => void
   disabled: boolean
+  /** 1行あたりに並べる枚数 */
+  columns: number
 }
 
 export default function OutputPreview({
@@ -40,6 +42,7 @@ export default function OutputPreview({
   onDeletePage,
   onRotatePage,
   disabled,
+  columns,
 }: OutputPreviewProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -102,7 +105,12 @@ export default function OutputPreview({
         items={pages.map((page) => page.id)}
         strategy={rectSortingStrategy}
       >
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        <div
+          className="grid gap-2"
+          style={{
+            gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+          }}
+        >
           {pages.map((page, index) => (
             <SortablePageItem
               key={page.id}

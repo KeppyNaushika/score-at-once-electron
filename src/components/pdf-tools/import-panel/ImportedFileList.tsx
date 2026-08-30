@@ -11,6 +11,7 @@ interface ImportedFileListProps {
   onFileUpdated: (file: ImportedFile) => void
   onResetExcludedPages: (fileId?: string) => void
   isProcessing: boolean
+  previewColumns: number
 }
 
 export default function ImportedFileList({
@@ -20,6 +21,7 @@ export default function ImportedFileList({
   onFileUpdated,
   onResetExcludedPages,
   isProcessing,
+  previewColumns,
 }: ImportedFileListProps) {
   if (files.length === 0) {
     return (
@@ -40,6 +42,7 @@ export default function ImportedFileList({
           onUpdate={onFileUpdated}
           onResetExcluded={() => onResetExcludedPages(file.id)}
           isProcessing={isProcessing}
+          previewColumns={previewColumns}
         />
       ))}
     </div>

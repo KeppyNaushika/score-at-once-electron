@@ -14,6 +14,7 @@ interface ImportPanelProps {
   onFileUpdated: (file: ImportedFile) => void
   onResetExcludedPages: (fileId?: string) => void
   isProcessing: boolean
+  previewColumns: number
 }
 
 export default function ImportPanel({
@@ -24,6 +25,7 @@ export default function ImportPanel({
   onFileUpdated,
   onResetExcludedPages,
   isProcessing,
+  previewColumns,
 }: ImportPanelProps) {
   return (
     <div className="flex h-full min-w-0 flex-col border-r">
@@ -47,6 +49,7 @@ export default function ImportPanel({
           onFileUpdated={onFileUpdated}
           onResetExcludedPages={onResetExcludedPages}
           isProcessing={isProcessing}
+          previewColumns={previewColumns}
         />
       </ScrollArea>
     </div>

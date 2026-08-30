@@ -39,6 +39,8 @@ interface ImportedFileItemProps {
   onUpdate: (file: ImportedFile) => void
   onResetExcluded: () => void
   isProcessing: boolean
+  /** 1行あたりに並べる枚数 */
+  previewColumns: number
 }
 
 export default function ImportedFileItem({
@@ -48,6 +50,7 @@ export default function ImportedFileItem({
   onUpdate,
   onResetExcluded,
   isProcessing,
+  previewColumns,
 }: ImportedFileItemProps) {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -214,7 +217,12 @@ export default function ImportedFileItem({
             </div>
 
             {/* ページサムネイル（多ページ時は縦スクロール） */}
-            <div className="grid max-h-80 grid-cols-4 gap-2 overflow-x-hidden overflow-y-auto">
+            <div
+              className="grid max-h-80 gap-2 overflow-x-hidden overflow-y-auto"
+              style={{
+                gridTemplateColumns: `repeat(${previewColumns}, minmax(0, 1fr))`,
+              }}
+            >
               {file.thumbnails.map((thumbnail, index) => {
                 const pageNumber = index + 1
                 const isSelected = file.selectedPages.has(pageNumber)

@@ -30,6 +30,7 @@ interface ExportPanelProps {
   onPageExcluded: (page: OutputPage) => void
   onPageRotated: (page: OutputPage, rotation: RotationDegree) => void
   onProcessingChange: (processing: boolean) => void
+  previewColumns: number
 }
 
 /**
@@ -51,6 +52,7 @@ export default function ExportPanel({
   onPageExcluded,
   onPageRotated,
   onProcessingChange,
+  previewColumns,
 }: ExportPanelProps) {
   // 除外ページ・ページ別回転の最新値をrefで保持する。
   // これらはプレビュー上で即時反映済みなので、依存配列に入れず再生成時のみ参照する
@@ -111,6 +113,7 @@ export default function ExportPanel({
             onDeletePage={onPageExcluded}
             onRotatePage={onPageRotated}
             disabled={isProcessing}
+            columns={previewColumns}
           />
         </ScrollArea>
       </div>
