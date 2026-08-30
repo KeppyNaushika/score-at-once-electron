@@ -1,8 +1,8 @@
 import { useCallback } from "react"
 
-import type { ScoringBehavior } from "@/components/exams/07-score-at-once/ScoringIndividual/ScoringBehaviorSelector"
 import type {
   GradingMode,
+  ScoringBehavior,
   ScoringData,
 } from "@/components/exams/07-score-at-once/types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
@@ -110,11 +110,10 @@ export function useBatchScoringWithProgress({
         if (scoringBehavior === "next-student") {
           // 次の生徒の同じ設問
           handleNextStudent()
-        } else if (scoringBehavior === "next-question") {
+        } else {
           // 同じ生徒の次の設問
           handleNextQuestion()
         }
-        // "stay"の場合は何もしない
       }
 
       // 採点実行完了

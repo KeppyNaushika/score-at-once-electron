@@ -36,6 +36,8 @@ export const MASTER_ANSWER_KEY_BEHAVIORS = ["toggle", "hold-to-show"] as const
 export const SIDEBAR_BEHAVIORS = ["collapse", "expand", "none"] as const
 /** 採点画面の操作モード（キーボード操作／マウス操作） */
 export const SCORING_OPERATION_MODES = ["keyboard", "mouse"] as const
+/** 個別表示で1つ採点し終えたあと、選択がどこへ動くか */
+export const SCORING_BEHAVIORS = ["next-student", "next-question"] as const
 
 /** 一覧に含まれるかを、要素の型を保ったまま判定する */
 export const isOneOf = <TValue extends string>(
@@ -142,6 +144,16 @@ const USER_PREFERENCE_SCHEMA = {
     type: "boolean" as const,
     default: false,
   },
+  /**
+   * 個別表示で1つ採点し終えたあと、選択をどこへ動かすか。
+   *
+   * 採点の進め方であって画面や試験の性質ではないので、利用者に付ける。
+   */
+  scoringBehavior: {
+    type: "string" as const,
+    default: "next-question",
+    validate: (value: string) => isOneOf(SCORING_BEHAVIORS, value),
+  },
 } as const
 
 /** 設定キーの型 */
@@ -172,6 +184,7 @@ export type PreferenceValueType = {
   sidebarBehaviorGrades: (typeof SIDEBAR_BEHAVIORS)[number]
   scoringOperationMode: (typeof SCORING_OPERATION_MODES)[number]
   scoringOperationModeRemembered: boolean
+  scoringBehavior: (typeof SCORING_BEHAVIORS)[number]
 }
 
 /**

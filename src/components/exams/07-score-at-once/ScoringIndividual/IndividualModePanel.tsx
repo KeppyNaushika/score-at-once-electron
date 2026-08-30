@@ -2,12 +2,12 @@
 
 import { useMemo } from "react"
 
-import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-score-at-once/types"
+import type {
+  ScoringBehavior,
+  StudentAnswerImageWithExamStudents,
+} from "@/components/exams/07-score-at-once/types"
 
-import {
-  type ScoringBehavior,
-  ScoringBehaviorSelector,
-} from "./ScoringBehaviorSelector"
+import { ScoringBehaviorSelector } from "./ScoringBehaviorSelector"
 import { StudentAnswerPanel } from "./StudentAnswerPanel"
 
 interface Student {
