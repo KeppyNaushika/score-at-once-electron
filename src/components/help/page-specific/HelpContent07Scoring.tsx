@@ -16,6 +16,7 @@ import {
 import { getDynamicScoreStatusConfig } from "@/components/exams/07-score-at-once/ScoringGrid/constants/scoreStatusConfig"
 import { useShortcutContext } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import PartialScoreModal from "@/components/exams/07-score-at-once/ScoringMain/PartialScoreModal"
+import type { ScoringBehavior } from "@/components/exams/07-score-at-once/types"
 import { Callout, HelpHero, Kbd } from "@/components/help/common/DocComponents"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -1926,11 +1927,7 @@ const BEHAVIOR_ROW_TOPS = [24, 48, 72]
  * - next-question: 同じ答案のまま、緑枠が次の設問へ下がっていく
  * - next-student : 緑枠は同じ位置のまま、答案（生徒）が次々と変わる
  */
-function BehaviorAnimation({
-  mode,
-}: {
-  mode: "next-question" | "next-student"
-}) {
+function BehaviorAnimation({ mode }: { mode: ScoringBehavior }) {
   const cycle = mode === "next-student"
   const frameStyle: CSSProperties = cycle
     ? { top: BEHAVIOR_ROW_TOPS[1] - 1 }
@@ -1988,7 +1985,7 @@ function BehaviorCard({
   title,
   desc,
 }: {
-  mode: "next-question" | "next-student"
+  mode: ScoringBehavior
   title: string
   desc: string
 }) {

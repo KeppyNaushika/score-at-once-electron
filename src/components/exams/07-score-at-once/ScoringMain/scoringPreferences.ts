@@ -24,6 +24,7 @@ export const SCORING_PREFERENCE_KEYS = [
   "masterAnswerDisplayMode",
   "masterAnswerOpacity",
   "masterAnswerKeyBehavior",
+  "scoringBehavior",
 ] as const satisfies readonly PreferenceKey[]
 
 /**
@@ -71,6 +72,7 @@ export function buildScoringSettings(
     masterAnswerDisplayMode: valueOf("masterAnswerDisplayMode"),
     masterAnswerOpacity: valueOf("masterAnswerOpacity"),
     masterAnswerKeyBehavior: valueOf("masterAnswerKeyBehavior"),
+    scoringBehavior: valueOf("scoringBehavior"),
 
     // キーごとに書く。まとめる関数を挟むと、キーと値の対応が総称の中へ隠れて
     // 型が確かめられなくなる（union のどの枝かが決まらない）
@@ -98,5 +100,7 @@ export function buildScoringSettings(
     setMasterAnswerKeyBehavior: (
       value: PreferenceValueType["masterAnswerKeyBehavior"]
     ) => write({ key: "masterAnswerKeyBehavior", value }),
+    setScoringBehavior: (value: PreferenceValueType["scoringBehavior"]) =>
+      write({ key: "scoringBehavior", value }),
   }
 }

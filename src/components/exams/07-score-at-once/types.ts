@@ -8,6 +8,7 @@ import type {
   LAYOUT_DIRECTIONS,
   MASTER_ANSWER_DISPLAY_MODES,
   MASTER_ANSWER_KEY_BEHAVIORS,
+  SCORING_BEHAVIORS,
   SCORING_OPERATION_MODES,
 } from "@/lib/userPreferences"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
@@ -79,6 +80,13 @@ export interface ScoringData {
  * - "mouse": マウスモード（クリックで直接採点、選択概念なし）
  */
 export type ScoringOperationMode = (typeof SCORING_OPERATION_MODES)[number]
+
+/**
+ * 採点時の動作（個別表示で1つ採点し終えたあと、選択がどこへ動くか）
+ * - "next-student": 次の生徒の同じ設問
+ * - "next-question": 同じ生徒の次の設問
+ */
+export type ScoringBehavior = (typeof SCORING_BEHAVIORS)[number]
 
 /**
  * マウスモード時のブラシ（シングルクリック時の動作）

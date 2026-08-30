@@ -12,7 +12,6 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useContextValue } from "@/components/exams/07-score-at-once/hooks/useContextValue"
 import { OMRAutoScoringModal } from "@/components/exams/07-score-at-once/OMRRecognition/OMRAutoScoringModal"
-import type { ScoringBehavior } from "@/components/exams/07-score-at-once/ScoringIndividual/ScoringBehaviorSelector"
 import {
   ShortcutProvider,
   useShortcutContext,
@@ -132,6 +131,7 @@ function ScoringMainViewContent() {
     masterAnswerDisplayMode,
     masterAnswerOpacity,
     masterAnswerKeyBehavior,
+    scoringBehavior,
     setItemsPerLine,
     setAutoScroll,
     setShowStudentNames,
@@ -142,6 +142,7 @@ function ScoringMainViewContent() {
     setMasterAnswerDisplayMode,
     setMasterAnswerOpacity,
     setMasterAnswerKeyBehavior,
+    setScoringBehavior,
   } = scoringSettings
 
   /** 模範解答表示状態（toggle/hold-to-show制御） */
@@ -170,10 +171,6 @@ function ScoringMainViewContent() {
 
   /** OMR自動採点モーダル */
   const [showOmrModal, setShowOmrModal] = useState(false)
-
-  /** 個別表示用の状態 */
-  const [scoringBehavior, setScoringBehavior] =
-    useState<ScoringBehavior>("next-student")
 
   /** メイン状態管理 */
   const {
@@ -856,9 +853,7 @@ function ScoringMainViewContent() {
               onStudentChange={handleStudentChange}
               studentAnswerImages={studentAnswerImages}
               scoringBehavior={scoringBehavior}
-              onScoringBehaviorChange={(behavior) =>
-                setScoringBehavior(behavior)
-              }
+              onScoringBehaviorChange={setScoringBehavior}
               currentUserId={currentUser.id}
               selectedScoringDataIds={Array.from(selectedStudentAnswerImageIds)}
               allScoringData={allScoringData}

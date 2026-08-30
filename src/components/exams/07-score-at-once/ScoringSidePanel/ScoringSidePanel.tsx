@@ -30,6 +30,7 @@ import type {
   MasterAnswerDisplayMode,
   MasterAnswerKeyBehavior,
   MouseBrushAction,
+  ScoringBehavior,
   ScoringOperationMode,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
@@ -160,10 +161,8 @@ interface ScoringSidePanelProps {
   onStudentChange?: (examStudentId: string) => void
   selectedStudentAnswerImageIds?: Set<string>
   studentAnswerImages?: StudentAnswerImageWithExamStudents[]
-  scoringBehavior?: "next-student" | "next-question" | "stay"
-  onScoringBehaviorChange?: (
-    behavior: "next-student" | "next-question" | "stay"
-  ) => void
+  scoringBehavior?: ScoringBehavior
+  onScoringBehaviorChange?: (behavior: ScoringBehavior) => void
   // アノテーションブラウザー用追加props
   currentUserId: string
   selectedScoringDataIds?: string[]
