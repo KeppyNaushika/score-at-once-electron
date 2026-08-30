@@ -93,7 +93,7 @@ export function useCanvasIntegration({
   const textboxIntegration = useTextboxIntegration({
     annotationTarget,
     drawingElements,
-    updateDrawingElements: setDrawingElements,
+    setDrawingElements,
     addDrawingElement,
     updateDrawingElement,
   })

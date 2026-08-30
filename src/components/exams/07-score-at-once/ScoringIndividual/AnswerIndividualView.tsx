@@ -376,6 +376,7 @@ export default function AnswerIndividualView({
       setDrawingElements: drawingState.setDrawingElements,
       addDrawingElement: drawingState.addDrawingElement,
       updateDrawingElement: drawingState.updateDrawingElement,
+      updateDrawingElements: drawingState.updateDrawingElements,
       removeDrawingElement: drawingState.removeDrawingElement,
       // テキストアンカー・再編集機能
       onTextAnchorClick: handleTextAnchorClick,

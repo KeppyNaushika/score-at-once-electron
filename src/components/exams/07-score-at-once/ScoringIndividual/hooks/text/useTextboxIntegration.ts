@@ -19,8 +19,8 @@ interface UseTextboxIntegrationProps {
   annotationTarget: AnnotationTarget | null
   /** 現在の描画要素配列 */
   drawingElements: DrawingAnnotation[]
-  /** 描画要素更新関数（直接state更新用、非推奨） */
-  updateDrawingElements: (elements: DrawingAnnotation[]) => void
+  /** 描画要素配列の差し替え（直接state更新用、非推奨） */
+  setDrawingElements: (elements: DrawingAnnotation[]) => void
   /** 新規描画要素追加関数（DB永続化対応） */
   addDrawingElement?: (element: DrawingAnnotation) => void | Promise<void>
   /** 描画要素更新関数（DB永続化対応） */
@@ -69,7 +69,7 @@ interface UseTextboxIntegrationReturn {
 export function useTextboxIntegration({
   annotationTarget,
   drawingElements,
-  updateDrawingElements,
+  setDrawingElements,
   addDrawingElement,
   updateDrawingElement,
 }: UseTextboxIntegrationProps): UseTextboxIntegrationReturn {
@@ -161,7 +161,7 @@ export function useTextboxIntegration({
           }
           return element
         })
-        updateDrawingElements(updatedElements)
+        setDrawingElements(updatedElements)
       }
     } else if (annotationTarget) {
       // 新規要素の追加
@@ -181,7 +181,7 @@ export function useTextboxIntegration({
         await addDrawingElement(newElement)
       } else {
         // フォールバック: 直接state更新
-        updateDrawingElements([...drawingElements, newElement])
+        setDrawingElements([...drawingElements, newElement])
       }
     }
 
@@ -195,7 +195,7 @@ export function useTextboxIntegration({
     editingElementId,
     annotationTarget,
     drawingElements,
-    updateDrawingElements,
+    setDrawingElements,
     addDrawingElement,
     updateDrawingElement,
     closeTextboxModal,

@@ -110,6 +110,9 @@ interface UseAnswerDisplayEventsProps {
     id: string,
     updates: Partial<DrawingAnnotation>
   ) => void
+  updateDrawingElements: (
+    updates: Array<{ id: string; updates: Partial<DrawingAnnotation> }>
+  ) => void
   removeDrawingElement: (id: string) => void
 
   // テキスト再編集
@@ -214,6 +217,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     setDrawingElements: props.setDrawingElements,
     addDrawingElement: props.addDrawingElement,
     updateDrawingElement: props.updateDrawingElement,
+    updateDrawingElements: props.updateDrawingElements,
     removeDrawingElement: props.removeDrawingElement,
     hitTestElement,
     hitTestHandle,

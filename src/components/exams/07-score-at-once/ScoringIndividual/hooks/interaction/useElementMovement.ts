@@ -19,9 +19,14 @@ interface UseElementMovementProps {
   setDragElementOffset: (offset: { x: number; y: number }) => void
   setLineEditMode: (mode: LineEditMode) => void
   setRectangleEditMode: (mode: RectangleEditMode) => void
-  updateDrawingElement: (
-    id: string,
-    updates: Partial<DrawingAnnotation>
+  /** 掴んでいる間の見た目を動かす（DBへは書かない） */
+  setDrawingElements: (
+    elements:
+      DrawingAnnotation[] | ((prev: DrawingAnnotation[]) => DrawingAnnotation[])
+  ) => void
+  /** 離したときに1回だけ書く */
+  updateDrawingElements: (
+    updates: Array<{ id: string; updates: Partial<DrawingAnnotation> }>
   ) => void
   // リサイズ操作用の追加
   setIsResizingElement?: (resizing: boolean) => void
@@ -36,7 +41,15 @@ interface UseElementMovementProps {
   ) => string | null
 }
 
-/** 描画要素の移動・リサイズ操作を管理するフック */
+/**
+ * 描画要素の移動・リサイズ操作を管理するフック。
+ *
+ * **掴んでいる間は書かない。** 動かしている途中の姿はローカル状態に持ち、離した
+ * ときに1回だけ DB へ書く（`handleMovementEnd`）。採点領域の編集（02-template の
+ * `usePointerHandlers`）・つまみ（`useAsbWriteGate`）・同じ画面のリサイズと同じ形で、
+ * かつては `pointermove` のたびに書いていたため、1回の移動で数十回 DB と監査ログを
+ * 叩いていた。
+ */
 export function useElementMovement({
   currentTool,
   drawingElements,
@@ -48,23 +61,46 @@ export function useElementMovement({
   setDragElementOffset,
   setLineEditMode,
   setRectangleEditMode,
-  updateDrawingElement,
+  setDrawingElements,
+  updateDrawingElements,
   setIsResizingElement = () => {},
   setResizeHandle = () => {},
 }: UseElementMovementProps) {
-  // パフォーマンス最適化: デバウンス用のタイマー
-  const updateTimerRef = useRef<NodeJS.Timeout | null>(null)
+  // 掴んでいる間に動かした結果。要素ごとに最後の姿だけを持ち、離したときに書く
   const pendingUpdatesRef = useRef<Map<string, Partial<DrawingAnnotation>>>(
     new Map()
   )
 
-  // 即時更新関数（デバウンスなし）
-  const debouncedUpdate = useCallback(
+  /**
+   * 掴んでいる間に動かした分を書く。ここが操作の終わり。
+   *
+   * `handleMovementEnd` と、ツールが掴んでいる間に変わってしまった経路
+   * （`handleSelectionMouseUp` の早期 return）の両方から呼ぶ。**溜めたまま次の操作へ
+   * 持ち越さない。**
+   */
+  const flushPendingMoves = useCallback(() => {
+    const pending = pendingUpdatesRef.current
+    if (pending.size === 0) return
+
+    updateDrawingElements(
+      Array.from(pending, ([id, updates]) => ({ id, updates }))
+    )
+    pending.clear()
+  }, [updateDrawingElements])
+
+  /** 見た目だけを動かし、書き込みは離すまで溜める */
+  const applyMove = useCallback(
     (elementId: string, updates: Partial<DrawingAnnotation>) => {
-      // 即座に更新を実行
-      updateDrawingElement(elementId, updates)
+      const pending = pendingUpdatesRef.current
+      pending.set(elementId, { ...pending.get(elementId), ...updates })
+
+      setDrawingElements((prev) =>
+        prev.map((element) =>
+          element.id === elementId ? { ...element, ...updates } : element
+        )
+      )
     },
-    [updateDrawingElement]
+    [setDrawingElements]
   )
 
   // リサイズ状態
@@ -166,10 +202,10 @@ export function useElementMovement({
         updates.textBoxHeight = newHeight
       }
 
-      debouncedUpdate(element.id, updates)
+      applyMove(element.id, updates)
       return true
     },
-    [isShiftPressed, debouncedUpdate]
+    [isShiftPressed, applyMove]
   )
 
   // 要素移動処理
@@ -219,7 +255,7 @@ export function useElementMovement({
             }
           }
 
-          debouncedUpdate(firstElementId, {
+          applyMove(firstElementId, {
             x: newX,
             y: newY,
           })
@@ -242,7 +278,7 @@ export function useElementMovement({
             }
           }
 
-          debouncedUpdate(firstElementId, {
+          applyMove(firstElementId, {
             endX: newEndX,
             endY: newEndY,
           })
@@ -272,7 +308,7 @@ export function useElementMovement({
                 updates.displayY = originalCoords.displayY + deltaY
               }
 
-              debouncedUpdate(elementId, updates)
+              applyMove(elementId, updates)
             }
           })
         }
@@ -301,7 +337,7 @@ export function useElementMovement({
               updates.displayY = originalCoords.displayY + deltaY
             }
 
-            debouncedUpdate(elementId, updates)
+            applyMove(elementId, updates)
           }
         })
       }
@@ -313,7 +349,7 @@ export function useElementMovement({
       selectedElementIds,
       lineEditMode,
       isShiftPressed,
-      debouncedUpdate,
+      applyMove,
       handleElementResize,
     ]
   )
@@ -326,15 +362,10 @@ export function useElementMovement({
 
     let handled = false
 
-    // 保留中の更新を即座に実行
-    if (updateTimerRef.current) {
-      clearTimeout(updateTimerRef.current)
-      pendingUpdatesRef.current.forEach((pendingUpdates, id) => {
-        updateDrawingElement(id, pendingUpdates)
-      })
-      pendingUpdatesRef.current.clear()
-      updateTimerRef.current = null
-    }
+    // 掴んでいる間に動かした分をまとめて1回で書く。
+    // **書いたことを `handled` にはしない。** ここが真になると、矩形選択の終わり
+    // （`completeRectangleSelection`）が呼ばれずに飛ばされる
+    flushPendingMoves()
 
     if (isDraggingElement) {
       setIsDraggingElement(false)
@@ -363,7 +394,7 @@ export function useElementMovement({
     setRectangleEditMode,
     setIsResizingElement,
     setResizeHandle,
-    updateDrawingElement,
+    flushPendingMoves,
   ])
 
   // 外部から移動開始状態を初期化する関数
@@ -383,6 +414,8 @@ export function useElementMovement({
         startMouseY: imageCoords.y,
         elements: elementsMap,
       }
+      // 前の操作の書き残しを次の操作へ持ち越さない
+      pendingUpdatesRef.current.clear()
     },
     [drawingElements]
   )
@@ -391,5 +424,6 @@ export function useElementMovement({
     handleElementMovement,
     handleMovementEnd,
     initializeMoveStart,
+    flushPendingMoves,
   }
 }

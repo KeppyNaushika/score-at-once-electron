@@ -91,6 +91,9 @@ interface UseCanvasInteractionProps {
     id: string,
     updates: Partial<DrawingAnnotation>
   ) => void
+  updateDrawingElements: (
+    updates: Array<{ id: string; updates: Partial<DrawingAnnotation> }>
+  ) => void
   removeDrawingElement: (id: string) => void
 
   // ユーティリティ
@@ -175,6 +178,7 @@ export function useCanvasInteraction({
   setDrawingElements,
   addDrawingElement,
   updateDrawingElement,
+  updateDrawingElements,
   hitTestElement,
   hitTestHandle,
   getLineEditMode,
@@ -245,21 +249,26 @@ export function useCanvasInteraction({
   })
 
   // 要素移動
-  const { handleElementMovement, handleMovementEnd, initializeMoveStart } =
-    useElementMovement({
-      currentTool,
-      drawingElements,
-      selectedElementIds,
-      isDraggingElement,
-      lineEditMode,
-      isShiftPressed,
-      setIsDraggingElement,
-      setDragElementOffset,
-      setLineEditMode,
-      setRectangleEditMode,
-      updateDrawingElement,
-      hitTestElement,
-    })
+  const {
+    handleElementMovement,
+    handleMovementEnd,
+    initializeMoveStart,
+    flushPendingMoves,
+  } = useElementMovement({
+    currentTool,
+    drawingElements,
+    selectedElementIds,
+    isDraggingElement,
+    lineEditMode,
+    isShiftPressed,
+    setIsDraggingElement,
+    setDragElementOffset,
+    setLineEditMode,
+    setRectangleEditMode,
+    setDrawingElements,
+    updateDrawingElements,
+    hitTestElement,
+  })
 
   // 矩形選択
   const {
@@ -694,7 +703,12 @@ export function useCanvasInteraction({
    */
   const handleSelectionMouseUp = useCallback(
     (originalEvent?: PointerEvent | MouseEvent): boolean => {
-      if (currentTool !== "select") return false
+      if (currentTool !== "select") {
+        // 掴んでいる間にツールが変わっても、動かした分はここで書く
+        // （選択ツールの操作として始めたので、終わりもここが受ける）
+        flushPendingMoves()
+        return false
+      }
 
       // ポインターリリースヘルパー
       const releasePointer = () => {
@@ -771,6 +785,7 @@ export function useCanvasInteraction({
       drawingElements,
       updateDrawingElement,
       handleMovementEnd,
+      flushPendingMoves,
       completeRectangleSelection,
       resetCursor,
       setIsDraggingElement,
