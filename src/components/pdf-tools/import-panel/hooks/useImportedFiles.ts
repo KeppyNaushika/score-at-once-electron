@@ -6,6 +6,7 @@ import { type ConvertedImage, PDF_RENDER_SCALE } from "@/lib/pdfConverter"
 import {
   createDecryptedPdfCopy,
   pathForFile,
+  readPdfFile,
   readPdfInfo,
 } from "@/queries/pdfTools"
 import type { ImportedFile, SourcePdfMetadata } from "@/types/pdfTools.types"
@@ -188,10 +189,12 @@ async function createDecryptedCopy(images: ConvertedImage[]): Promise<string> {
 
 /** ローカルパスからFileオブジェクトを読み込む */
 async function loadFileFromPath(filePath: string): Promise<File> {
-  const response = await fetch(`appimg:///${filePath}`)
-  const arrayBuffer = await response.arrayBuffer()
-  const blob = new Blob([arrayBuffer], { type: "application/pdf" })
-  return new File([blob], filePath.split("/").pop() || "file.pdf", {
+  // appimg:// は使わない。絶対パスを載せると URL 正規化でパスが壊れ、
+  // 404 の本文（PDFではないバイト列）が PDF.js に渡って
+  // "Invalid PDF structure" になる。main で読んだ中身をそのまま包む。
+  const bytes = await readPdfFile(filePath)
+  const blob = new Blob([bytes], { type: "application/pdf" })
+  return new File([blob], filePath.split(/[/\\]/).pop() || "file.pdf", {
     type: "application/pdf",
   })
 }
