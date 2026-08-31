@@ -65,6 +65,25 @@ export const pdfToolsHandlers = {
     return { canceled: false, filePaths: result.filePaths }
   },
 
+  // 取り込み対象PDFの中身を読む。
+  // renderer から appimg:// 経由で読むと、絶対パスは URL 正規化で壊れる
+  // （host 空 + `//` 始まりのパスに `/.` が挿し込まれ、相対パス扱いになる）ため、
+  // ダイアログで選ばれた絶対パスは main で読んで renderer へ渡す。
+  "pdf-tools:read-file": async (
+    filePath: string
+  ): Promise<Uint8Array<ArrayBuffer>> => {
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`ファイルが見つかりません: ${filePath}`)
+    }
+    const fileBuffer = fs.readFileSync(filePath)
+    return new Uint8Array(
+      fileBuffer.buffer.slice(
+        fileBuffer.byteOffset,
+        fileBuffer.byteOffset + fileBuffer.byteLength
+      )
+    )
+  },
+
   // PDFファイル情報を取得
   "pdf-tools:get-pdf-info": async (
     filePath: string

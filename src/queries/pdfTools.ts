@@ -80,6 +80,10 @@ export const createDecryptedPdfCopy = (
 export const readPdfInfo = (filePath: string) =>
   window.electronAPI.pdfTools.getPdfInfo(filePath)
 
+/** PDF の中身を読む（ダイアログで選ばれた絶対パス用） */
+export const readPdfFile = (filePath: string) =>
+  window.electronAPI.pdfTools.readFile(filePath)
+
 /** ドラッグ＆ドロップされた File から実ファイルのパスを取る */
 export const pathForFile = (file: File) =>
   window.electronAPI.pdfTools.getPathForFile(file)

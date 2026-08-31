@@ -14,6 +14,7 @@ export function createPdfToolsApi() {
       selectSavePath: bind("pdf-tools:select-save-path"),
       selectFiles: bind("pdf-tools:select-files"),
       getPdfInfo: bind("pdf-tools:get-pdf-info"),
+      readFile: bind("pdf-tools:read-file"),
       // ドラッグ&ドロップされたFileオブジェクトからパスを取得
       getPathForFile: (file: File) => webUtils.getPathForFile(file),
     },
