@@ -232,7 +232,7 @@ export function AnswerSheetDefinitionList() {
    *
    * タグ付けは他の編集と同じく担当の確認を通るので、他人の解答用紙を選んでも main が
    * 弾く。しかも一括の書き込みは「既に付いている」を飛ばすために失敗を握り潰すので、
-   * **弾かれたことが利用者に伝わらない**（docs/branch-review-findings.md #10 の余波）。
+   * **弾かれたことが利用者に伝わらない**。
    * 押す前に選べなくしておくのが本筋で、それでもすり抜けた分は下で数えて伝える。
    */
   const taggableDefinitions = useMemo(

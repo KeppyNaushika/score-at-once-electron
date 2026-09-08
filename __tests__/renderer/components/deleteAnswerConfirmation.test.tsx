@@ -8,8 +8,7 @@
  *
  * 関門が `isPending`（初回だけ）だった頃は、2回目以降に開いたとき古い件数を見せた
  * まま押せた（背景で取り直してはいるが、着地前に押せる）。ここで固定するのは
- * 「取り直している間は押せない」ことと「開くたびに数え直す」こと
- * （docs/branch-review-findings.md #13）。
+ * 「取り直している間は押せない」ことと「開くたびに数え直す」こと。
  */
 
 import { QueryClientProvider } from "@tanstack/react-query"

@@ -42,7 +42,7 @@ function buildMeasurementSignature(
   // 顔ぶれだけを見ていると、02 で解答欄を動かしたあと 07 へ戻っても測り直さず、
   // **古い矩形で測った値が使われ続ける**（足した領域は結果の map に無いので黙って
   // 落ちる）。この鍵は試験のまとまりの外にあり、どの書き込みでも無効化されない
-  // ので、入力を鍵で表しきる以外に手が無い（docs/branch-review-findings.md #11）。
+  // ので、入力を鍵で表しきる以外に手が無い。
   const rects = regions
     .map(
       (region) =>

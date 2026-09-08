@@ -40,7 +40,7 @@ interface UndoableResult<S, A> {
    *
    * 戻せるかどうかだけでなく**戻した先の姿**を外へ出すのは、呼び出し側がそれを
    * 保存しに行くため。undo は「過去の姿へ置き換える」操作で、対応する1つの意図が
-   * 無い（docs/asb-ipc-split-plan.md §6.6）。
+   * 無い。
    */
   previousState: S | undefined
   /** やり直したときに現れる状態（先の履歴が無ければ `undefined`） */

@@ -182,8 +182,7 @@ export function ScreenBlackout() {
       // **施錠したかどうかは `isLocked` だけで決める。** 目隠しを始めた瞬間の
       // `hasDigitPasscode` で施錠を決めたのに、解除側で読み直すと食い違う。
       // 利用者一覧が届く前は `hasDigitPasscode` が false なので、届く前に
-      // Cmd+L を押すと「施錠されていないのに解除できない」状態になっていた
-      // （docs/branch-review-findings.md #6）。
+      // Cmd+L を押すと「施錠されていないのに解除できない」状態になっていた。
       if (isBlackout) {
         // ここへ来るのは施錠していないときだけ（施錠中はこの effect を張らない）
         unlock()

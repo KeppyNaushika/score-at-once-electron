@@ -10,8 +10,6 @@
  *
  * ここは「実際に踏まないと分からない」ことだけを置く。ロジックの検証は
  * vitest 側（__tests__/renderer, __tests__/exam ほか）に置くこと。
- *
- * 詳細は docs/ipc-and-data-fetching-plan.md の段階7・段階8。
  */
 import { expect, test } from "@playwright/test"
 

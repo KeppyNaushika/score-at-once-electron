@@ -1,10 +1,10 @@
 # 競合で負けた行に子がいると、その子が消え、同期も止まる
 
-[ipc-and-data-fetching-plan.md](./ipc-and-data-fetching-plan.md) の**段階20**の裏付け。
+**段階20**（負けた行の子をライブラリ側で引き取る）の裏付け。
 2026-08-19 に `~/dev/sqlite-nas-sync` を**読んで、走らせて**確かめた。
 
-発端は「`@unique` は同期の規約違反ではないか」という問い（[asb-ipc-split-plan.md](./asb-ipc-split-plan.md)
-§8.5 で原稿用紙をテーブルへ出すとき）で、**答えは「`@unique` 自体は問題ない。問題は
+発端は「`@unique` は同期の規約違反ではないか」という問い（原稿用紙を小問の列から
+テーブルへ出すとき）で、**答えは「`@unique` 自体は問題ない。問題は
 負けた行に子がいるとき」**だった。
 
 **この文書の主張はすべて実測に基づく。** 検証は `~/dev/sqlite-nas-sync/__tests__/` に一時
@@ -25,21 +25,17 @@
 > §7 の未確認事項のうち、フルマージ経路と複合 `@@unique` は
 > `~/dev/sqlite-nas-sync/__tests__/secondary-unique-fold.test.ts` が押さえた。
 >
-> **ただし §3.2 と同じ形の詰まりが1つ残っている**（ライブラリ側・0.13.1 でも同じなので
-> 上げたことによる後退ではない）。**届いた UPDATE** がローカルの**別の行**のユニークに
-> 当たる場合、`applyUpdate`（`~/dev/sqlite-nas-sync/src/conflict.ts:1329-1341`）は
-> 素の `UPDATE` を投げるだけで `applyInsert` のような畳みを持たない。実測:
+> **かつて残っていた「届いた UPDATE が別の行のユニークに当たると詰まる」も塞がった**
+> （段階56）。`applyUpdate` と `applyInsert` は書き込みを共通の
+> `overwriteExistingRow`（`~/dev/sqlite-nas-sync/src/conflict/overwrite.ts`）へ寄せ、
+> **分岐の根拠を「同じ主キーの行が在るか」から「例外の種類」へ変えて**両方に畳みを
+> 通してある（主キーとセカンダリユニークが同時にぶつかると SQLite は
+> `SQLITE_CONSTRAINT_UNIQUE` の方を報告するので、主キーで先に振り分けると
+> 両方ぶつかる入力が永久に畳みへ辿り着かない）。2026-09-09 にソースで確認。
 >
-> ```
-> A: Tag(t1,"数学") を "国語" へ改名   B: 独立に Tag(t2,"国語") を作成
-> B 1回目 clientsSynced=0 warnings=["… UNIQUE constraint failed: Tag.name"]
-> B 2回目 clientsSynced=0 warnings=[同じ]   ← 以後ずっと A から何も届かない
-> ```
->
-> `applyInsert` の畳みへ落ちるのは**ローカルに同じ id の行が無いとき**だけである
-> （同 `:1301-1323`）。**`@unique` を持つ列を利用者が編集できる表**が該当する
-> （`Tag.name` / `Classroom.name` / `Subtotal.name` / `Student.studentNumber` /
-> `User.username`）。段階33・段階30 で unique を触るときに併せて扱う。
+> **`conflict.ts` はもう無い。** `src/conflict/` へ分割されている
+> （`insert.ts` / `update.ts` / `overwrite.ts` / `fold.ts` / `unique.ts` ほか）ので、
+> 以下の本文に出てくる `conflict.ts:NNNN` という行番号は**どれも当たらない**。
 
 ## 1. まず、規約の実際の中身
 
@@ -185,7 +181,7 @@ Classroom / User）は自然キーが人間の入力なので頻度は低いが�
 **`warnings` を見ないと何も起きていないように見える。** `clientsSynced` が 0 のままなのが
 唯一の手掛かりになる。
 
-## 6. 直し方 — 負けた行の子を、勝った行へ引き取る
+## 6. 直し方 — 負けた行の子を、勝った行へ引き取る（**実装済み**・0.14.0〜0.16.0）
 
 **負けた行を消す前に、負けた行を指している子を勝った行へ付け替える。**
 
@@ -245,18 +241,18 @@ Classroom / User）は自然キーが人間の入力なので頻度は低いが�
 
 ## 7. まだ確かめていないこと
 
-- **フルマージ経路**（`hasChangelogGap` 検出時）でも同じ詰まりが起きるか。`sync.ts:726` の
-  `catch` は同じ形をしているので起きると見ているが、走らせていない
+**多くは片付いた**（上の枠を参照）。フルマージ経路と複合 `@@unique` は
+`~/dev/sqlite-nas-sync/__tests__/secondary-unique-fold.test.ts` が押さえ、
+`applyUpdate` 経由も段階56 で塞がっている。残るのは次の2つ。
+
 - 詰まった状態から**回復する手立て**があるか（`_syncState` を手で進める等）
-- `applyUpdate` 経由（`conflict.ts:308` がセカンダリ UNIQUE 違反に触れている）でも同じことが
-  起きるか
-- **複合 `@@unique`（`ExamStudent` の形）では測っていない。** 機構は同じはずだが、
-  `parseUniqueConflictColumns` が複数列を正しく取れるかは未確認
+- **負けた行の属性はマージされない**（§6.1）。列の意味を知らないので勝った行が総取りする。
+  ライブラリの境界として据え置いており、`ExamSubtotalGroup` の
+  `selectedForTable` / `selectedForBoxPlot` が実例
 
 ## 関連
 
-| 文書                                                             | 関係                                                   |
-| ---------------------------------------------------------------- | ------------------------------------------------------ |
-| [ipc-and-data-fetching-plan.md](./ipc-and-data-fetching-plan.md) | **段階20** がこの修正。R10 が締め                      |
-| [asb-ipc-split-plan.md](./asb-ipc-split-plan.md) §8.5            | 発端。原稿用紙は普通の `@default(uuid())` のままにする |
-| [branch-review-findings.md](./branch-review-findings.md)         | 別件（枝の全差分レビュー）                             |
+| 文書                                          | 関係                                                       |
+| --------------------------------------------- | ---------------------------------------------------------- |
+| [remaining-work.md](./remaining-work.md)      | **段階20** がこの修正。索引は末尾の表                      |
+| `prisma/schema.prisma` の `ExamSubtotalGroup` | この文書を名指しで引いている（同じ形の表を足すときに読む） |

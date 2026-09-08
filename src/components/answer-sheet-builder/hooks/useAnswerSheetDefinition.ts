@@ -867,7 +867,7 @@ interface UseAnswerSheetDefinitionOptions {
    * 過去（または先）の姿へ戻した。
    *
    * undo / redo は「文書全体の過去の姿」を復元する操作で、対応する1つの意図が無い。
-   * 丸ごと置き換える経路へ流す（docs/asb-ipc-split-plan.md §6.6）。
+   * 丸ごと置き換える経路へ流す。
    */
   onRestore: (definition: AnswerSheetDefinition) => void
 }
@@ -1469,7 +1469,7 @@ export function useAnswerSheetDefinition({
  * 番号の既定を、いまの木のどの実体へ当てるかを決める。
  *
  * 大問と小問は通し、枝問は小問ごとに1から振り直す（従来の見え方をそのまま保つ）。
- * **計算は renderer に置く**（docs/asb-ipc-split-plan.md §4.3）。IPC が運ぶのは結果だけ。
+ * **計算は renderer に置く**。IPC が運ぶのは結果だけ。
  */
 function labelAssignments(
   definition: AnswerSheetDefinition,

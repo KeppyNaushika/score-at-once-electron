@@ -2,6 +2,9 @@
 
 調査日: 2026-08-23。テストは**実行していない**（全て通っている状態からの静的調査）。
 
+**§3〜§7 の指摘は 2026-09-09 時点でそのまま生きている**（§9 の4項目はどれも未着手で、
+対象ファイルの行数・本数も当時と同じ）。§8 だけ現況へ直した。
+
 ---
 
 ## 1. 背景と目的
@@ -179,12 +182,16 @@ EC-7 は自身のコメントで「バージョン変換は archiveExtractor の
 ## 8. 副次的な発見（テストの意味とは別件）
 
 - **ルートの `playwright.config.ts` は `testDir: "./tests"` を指しているが、そのディレクトリは
-  存在しない。** 実体は `__tests__/tests/electron/` で、`__tests__/playwrightElectron.config.ts`
-  が `--config` 経由で拾っている（`npm run test:e2e`）。素で `npx playwright test` を叩くと
-  0 件で緑になる。
-- **`__tests__/screenshots/take-screenshots.spec.ts`（942 行 / 29 本）は `expect` が 0 件**だが、
-  これは `npm run screenshot:test` から呼ぶ画像生成スクリプトであり想定どおり。ただし
+  存在しない**（2026-09-09 時点でもそのまま）。実体は `__tests__/tests/electron/` で、
+  `__tests__/playwrightElectron.config.ts` が `--config` 経由で拾っている（`npm run test:e2e`）。
+  素で `npx playwright test` を叩くと 0 件で緑になる。残作業は
+  [remaining-work.md](./remaining-work.md) の段階71 へ入れた。
+- **`__tests__/screenshots/take-screenshots.spec.ts` は画像生成スクリプト**であり、
+  `npm run screenshot:test`（`__tests__/playwright.screenshot.config.ts`）から呼ぶ。
   `test()` で書かれているぶん、レポート上はテストとして数えられる。
+  **調査時は 942 行・`expect` 0 件だったが、`c930d6f9` の書き直しで 1,157 行・21 件になった**
+  （撮る前に画面が出ていることを確かめるようになったため。**画像の正しさは見ていない**という
+  性質は変わらない）。
 
 ---
 

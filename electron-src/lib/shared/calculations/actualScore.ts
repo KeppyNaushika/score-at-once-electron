@@ -40,6 +40,6 @@ export const calculateActualScore = (
   }
   // **網羅していない値はここでコンパイルエラーになる。** `string` で受けていた頃は
   // `default: return 0` で黙って通り、未知の判定が「未採点（欠測）」ではなく
-  // **0点として成績に算入されていた**（docs/branch-review-findings.md #16）。
+  // **0点として成績に算入されていた**。
   return assertNever(questionScore.status)
 }

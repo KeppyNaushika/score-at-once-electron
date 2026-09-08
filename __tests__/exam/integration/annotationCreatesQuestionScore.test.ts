@@ -4,8 +4,7 @@
  * かつては renderer が**設問を表示した時点で** `ensureQuestionScore` を叩いていた。
  * 注釈（`DrawingAnnotation`）が親の `questionScoreId` を必須で持つため、描く前に
  * 置き場所の実体が要ったからである。その都合が「表示したら書き込む」という振る舞いに
- * なり、設問をめくるだけで `status:"unscored"` の空行が量産されていた
- * （docs/branch-review-findings.md #2）。
+ * なり、設問をめくるだけで `status:"unscored"` の空行が量産されていた。
  *
  * いまは IPC が意図（「この答案のこの設問に、この採点者が描いた」）を運び、置き場所は
  * main の内側で用意する。ここで固定するのは3つ。

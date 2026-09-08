@@ -219,8 +219,7 @@ export interface EnsureQuestionScoreData {
  * 手書き注釈は `DrawingAnnotation.questionScoreId` を必須で持つので、注釈を
  * ぶら下げる先として行の実体が要る。**それがこの関数の唯一の存在理由**で、
  * 「未採点である」ことを記録するためではない — 行の不在は既にアプリ全体で
- * 未採点として読まれている（採点画面・確定リゾルバ・成績算出・出力の全経路。
- * docs/branch-review-findings.md #2）。
+ * 未採点として読まれている（採点画面・確定リゾルバ・成績算出・出力の全経路）。
  *
  * **呼ぶのは注釈の保存だけ**（`createDrawingAnnotation`）。IPC の口は持たない。
  * renderer から呼べるようにすると「表示したら書き込む」に戻り、設問をめくるだけで
@@ -290,7 +289,7 @@ export const ensureQuestionScore = async (data: EnsureQuestionScoreData) => {
  * 利用者が採点したときだけで、置き場所が欲しいだけなら `ensureQuestionScore` を
  * 使う。かつてこの関数が `createQuestionScore` という名前で両方を兼ねており、
  * 設問を表示しただけで出る自動作成が、入れたばかりの採点を unscored で
- * 上書きしていた（docs/branch-review-findings.md #2）。
+ * 上書きしていた。
  */
 export const setQuestionScore = async (questionScore: SetQuestionScoreData) => {
   try {
@@ -484,7 +483,7 @@ export interface SetQuestionScoreCommentData extends EnsureQuestionScoreData {
  *
  * **ただし空の覚え書きで行は作らない。** 覚え書き欄を開いて何も書かずに離れた
  * だけで `status:"unscored"` の空行が増えると、設問をめくるだけで行が量産されて
- * いた頃（docs/branch-review-findings.md #2）に戻る。書いていない覚え書きは
+ * いた頃に戻る。書いていない覚え書きは
  * 行の不在でそのまま表せる。
  *
  * @returns 書いた行。何も書かなかったとき（行が無く、覚え書きも空）は null

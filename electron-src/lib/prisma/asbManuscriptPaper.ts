@@ -5,7 +5,7 @@
  * 文字位置マーカー（`AsbCharGuide`）を子に持つ。`AsbOmrConfig` と同じ形。
  *
  * 設定は元々 `AsbSubQuestion` の列だった。画面では入れ子に束ね直していたため、原稿用紙と
- * 無関係な更新が設定を消す事故が出た（docs/asb-ipc-split-plan.md §8.5）。
+ * 無関係な更新が設定を消す事故が出た。
  *
  * `tx` を先に取るものは木を書く側、`definitionId` を先に取るものが IPC の口。
  */

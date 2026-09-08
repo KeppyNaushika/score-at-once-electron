@@ -2,7 +2,7 @@ import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
 /**
- * 「数え直しでは中止しない」ことにするための件数（docs/remaining-work.md 段階26）。
+ * 「数え直しでは中止しない」ことにするための件数。
  *
  * 削除は「利用者に見せた件数」を添えることを要求し、消す直前に数え直して**見せた
  * ときより増えていたら中止**する。中止そのものの検査は

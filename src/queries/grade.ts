@@ -438,7 +438,7 @@ export const renameDataSourceMutation = (gradeId: string) =>
  * **列の顔ぶれは IPC の引数から導く。** ここで手書きすると、書き写しが1つずれても
  * 型検査に掛からない（対象が全て optional なので「必須の欠落」にならず、変数で渡す
  * 限り余剰プロパティ検査も働かない）。実際それで、一括設定が常に失敗していたのに
- * `tsc` が黙っていた（docs/branch-review-findings.md #3）。
+ * `tsc` が黙っていた。
  */
 export const updateDataSourceEstimationMutation = (gradeId: string) =>
   defineMutation({

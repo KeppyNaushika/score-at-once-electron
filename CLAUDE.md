@@ -146,7 +146,8 @@ npx vitest                 # ウォッチモード
 
 #### 📦 スキーマ変更時のImport/Export対応ルール（重要）
 
-データベーススキーマを変更した場合、試験アーカイブ（Import/Export）の互換性も対応が必要です。
+**手順の本文は [docs/import-export-architecture.md](./docs/import-export-architecture.md) にある。着手前に必ず読むこと。**
+ここには、それを読む必要があるのはどんなときか、と、数字の出どころだけを置く。
 
 **対応が必要なケース**:
 
@@ -154,83 +155,16 @@ npx vitest                 # ウォッチモード
 - フィールドの追加・削除・リネーム
 - リレーションの変更（中間テーブルの追加等）
 
-**必須ワークフロー**:
+**アーカイブは5種類ある**（`.score` / `.coursework` / `.grade` / `.asb` / `.students`）。
+**試験（`.score`）だけを直して済ませない** — 変えたテーブルがどの種に載っているかを、
+上記文書の各節で確かめる。
 
-1. **アーカイブバージョンを上げる**
-   - `src/types/examArchive.types.ts` の `EXAM_CURRENT_VERSION` を更新し、`ExamArchiveVersion` / `EXAM_SUPPORTED_VERSIONS` に新バージョンを追加
-   - バージョンは semver 形式（例: `1.9.0` → `1.10.0`）
+**数字と履歴をここに書かない**（必ず古くなる）。一次情報は次の2つだけ:
 
-2. **バージョントランスフォーマーを作成**
-   - `electron-src/lib/import/transformers/` に `V<FROM>_to_V<TO>.ts` を追加
-   - `ExamVersionTransformer` インターフェースを実装
-   - 旧バージョンのアーカイブを新バージョンの形式に変換するロジックを記述
-   - 新規フィールドにはデフォルト値（`[]`, `null`, `""` 等）を設定
-   - `transformers/index.ts` のトランスフォーマー配列（`EXAM_TRANSFORMERS`）に登録してチェーンに組み込む
-   - チェーンは `extractArchive`（`exam-archive/archiveExtractor.ts`）が全インポート経路で自動適用する。バージョン検出は manifest.version ＋ 形状ベース下方補正（`detectExamArchiveVersion`）
-   - 検証は `__tests__/import-export/unit/examTransformerChain.test.ts` に旧形状フィクスチャを追加
-
-3. **アーカイブ型定義を更新**
-   - `src/types/examArchive.types.ts` の `ArchiveData` や関連型にフィールドを追加・変更
-
-4. **Export側を更新**
-   - `electron-src/lib/export/exam-archive/dataCollector.ts` で新データを収集
-   - `electron-src/lib/export/exam-archive/archiveCreator.ts` でアーカイブに含める
-
-5. **Import側を更新**
-   - `electron-src/lib/import/merge/idIntegrationImporter.ts` で新データをDB挿入（`executeIdIntegrationImport` が唯一の投入経路）
-   - `electron-src/lib/import/merge/types.ts` の `IdMappings` と `merge/processors/` でID再マッピング対応
-   - `electron-src/lib/import/exam-archive/archiveExtractor.ts` でデータ抽出対応
-
-   旧 `exam-archive/dataCreator.ts` と `exam-archive/idRemapper.ts` は merge 経路へ置き換わって未使用化していたため削除済み。
-
-**トランスフォーマーの実装パターン**（参考: `V1_13_0_to_V1_14_0.ts`）:
-
-```typescript
-export class V1_9_0_to_V1_10_0_Transformer implements ExamVersionTransformer {
-  readonly fromVersion: ExamArchiveVersion = "1.9.0"
-  readonly toVersion: ExamArchiveVersion = "1.10.0"
-
-  transform(data: ExamArchiveData): ExamTransformResult {
-    return {
-      data: {
-        ...data,
-        manifest: { ...data.manifest, version: this.toVersion },
-        // 新規データにデフォルト値を設定
-        newData: data.newData ?? { items: [] },
-      },
-      warnings: ["1.9.0→1.10.0: 新機能Xのデータはデフォルト値で補完されました"],
-    }
-  }
-}
-```
-
-**バージョン履歴**（全履歴は `src/types/examArchive.types.ts` の `ExamArchiveVersion` コメントに記録）:
-
-| バージョン | 対応アプリ | 変更内容                                      |
-| ---------- | ---------- | --------------------------------------------- |
-| 1.0.0      | v0.2.x     | 初期バージョン                                |
-| 1.4.0      | v0.5.x     | Subject, ExamMarkingFormat等追加              |
-| 1.5.0      | v0.6.x     | Project→Examリネーム                          |
-| 1.9.0      | v0.9.x     | DeletedRecord tombstone追加                   |
-| 1.15.0     | v0.14.x    | 学級統計再設計（teacherStat/studentReport等） |
-| 1.16.0     | v0.14.x    | Class→Classroomリネーム（examClassrooms等）   |
-| 1.17.0     | v0.15.x    | ExamStudent.status小文字統一                  |
-| 1.19.0     | v0.16.x    | DeletedRecord tombstone廃止（1.9.0を撤回）    |
-
-**試験外成績資料アーカイブ（.coursework）** — exam-archive と同型の独立アーカイブ。`electron-src/lib/export|import/coursework-archive/`。id一次照合 + 名前マッチング（付加）+ スコア LWW。トランスフォーマー機構あり（`COURSEWORK_CURRENT_VERSION`）。**版ごとの「アーカイブ全体の型」と旧版の形は `import/coursework-transformers/types.ts` / `legacyShape.ts` が持ち、`src/types/courseworkArchive.types.ts` は現行の形だけを宣言する。**
-
-| バージョン | 変更内容                                                                                   |
-| ---------- | ------------------------------------------------------------------------------------------ |
-| 1.0.0      | 初版（独立化）。UUID参照 + full生徒/学級/タグ同梱。資料1件を入れ子ツリーへ射影             |
-| 1.1.0      | テーブルごとの平坦なセクションへ。Prisma の行をそのまま持つ。点数が courseworkStudentId へ |
-
-**成績アーカイブ（.grade）の Coursework 内包** — 収集・生成は coursework-archive モジュールへ委譲（二重実装の解消）。
-
-| バージョン | 変更内容                                                                      |
-| ---------- | ----------------------------------------------------------------------------- |
-| 1.4.0      | Coursework を名前ベースで `courseworks.json` に埋め込み（読込互換のみ）       |
-| 1.5.0      | `courseworks.json` を coursework-archive 形式（UUIDベース）へ。旧版は読込互換 |
-| 1.12.0     | 内包資料を coursework 1.1.0（平坦なセクション）へ。旧入れ子形式は読込互換     |
+- **現行版** — `src/types/<種>Archive.types.ts` の `*_CURRENT_VERSION`
+- **その版で何が変わったか** — 各変換器 `V<FROM>_to_V<TO>.ts` の冒頭コメント。1段ごとに、
+  何をどう移したか・なぜそうしたか・冪等かまで書いてある。置き場は
+  `electron-src/lib/import/` 配下の `<種>-transformers/`（**試験だけ `transformers/`**）
 
 #### 🔄 多対多関係の強化（2025年7月29日更新）
 
@@ -543,6 +477,8 @@ export interface SerializedQuestionScore extends Omit<
 ## 参考資料
 
 - [docs/coding-style.md](./docs/coding-style.md) - コーディングスタイルガイド
+- [docs/import-export-architecture.md](./docs/import-export-architecture.md) - アーカイブ5種の構造と、スキーマを変えたときの手順
+- [docs/remaining-work.md](./docs/remaining-work.md) - これからの課題と判断待ち
 - [Prisma Schema](./prisma/schema.prisma) - データベース設計
 - [Next.js 15 Docs](https://nextjs.org/docs)
 - [Electron Docs](https://www.electronjs.org/docs)

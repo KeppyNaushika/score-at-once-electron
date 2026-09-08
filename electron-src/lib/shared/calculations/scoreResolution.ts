@@ -184,8 +184,7 @@ export function resolveEffectiveScores(
  *
  * **`calculateActualScore` に委ねる。** かつては同じ規則を2箇所で書いており、
  * 一方は部分点として読む判定を、他方は `default: return 0` で0点にしていた。
- * 判定を union で受けるようにしたときに、その食い違いが表に出た
- * （docs/branch-review-findings.md #16）。
+ * 判定を union で受けるようにしたときに、その食い違いが表に出た。
  */
 export const calculateEffectiveScoreValue = (
   effective: Pick<EffectiveScore, "status" | "partialScore">,

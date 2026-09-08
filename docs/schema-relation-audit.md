@@ -222,11 +222,11 @@ PDF 出力に複製されており、過去2回のずれに続く3回目をこ�
 | #1127 | 解答用紙定義の所有と共有の設計（`userId` 絞り込みと `getCurrentUser`）。設計は [docs/ownership-and-sharing-design.md](./ownership-and-sharing-design.md) |
 | #1128 | 複合uniqueを持つ中間テーブルの id を決定論的にする（14テーブル）                                                                                         |
 
-**#1126 は IPC の分割へ発展した。** 調査の結果、delete → recreate は原因ではなく症状で、
+**#1126 は IPC の分割へ発展し、済んだ。** 調査の結果、delete → recreate は原因ではなく症状で、
 根本は「解答用紙作成だけが編集内容を書き換える IPC を1本しか持たず、そこに文書全体＝**状態**を
-流している」ことだった（他機能は実体ごとに22〜49本に割れている）。計画は
-[docs/asb-ipc-split-plan.md](./asb-ipc-split-plan.md) にある。#1128 には OMR 設定・選択肢の
-2テーブルを追加する必要がある（同計画 §7.1）。
+流している」ことだった（他機能は実体ごとに22〜49本に割れている）。**書き込みは実体 × 操作へ
+割れ、原稿用紙もテーブルへ出た**（残った2点は
+[docs/remaining-work.md](./remaining-work.md)）。なお #1128（決定論的 id）は撤回されている。
 
 ### 6.1 Asb 系の同期除外（5.1）✅ 対応済み
 
@@ -287,8 +287,8 @@ DELETE + INSERT が changelog と `_tombstone` に流れる。後の実測で、
 共有が成立するのは所有者システム（#1127、
 [docs/ownership-and-sharing-design.md](./ownership-and-sharing-design.md)）が入ってからである。
 
-対応は [docs/asb-ipc-split-plan.md](./asb-ipc-split-plan.md) の段階1で行う。同計画 §7 に、
-所有者システムを踏まえた優先順位を書いた。
+タグ消失と `createdAt` のリセットは、書き込みを実体 × 操作へ割ったときに解消した。
+「開くだけで保存が走る」も止めてある。
 
 ### 6.2 `ExamSubtotalGroup` の unique（4.2）✅ 対応済み
 

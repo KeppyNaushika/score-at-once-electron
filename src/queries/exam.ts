@@ -145,7 +145,7 @@ export const updateExamMutation = (examId: string, userId: string) =>
 
 /**
  * 試験を削除する。**利用者が見た件数を添える** — main は消す直前に数え直し、
- * 増えていれば中止する（docs/remaining-work.md 段階26）。
+ * 増えていれば中止する。
  */
 export const deleteExamMutation = (userId: string) =>
   defineMutation({
@@ -259,7 +259,7 @@ export const addStudentsToExamMutation = (examId: string) =>
 
 /**
  * 受験生徒を試験から外す。**利用者が見た件数を添える** — main は消す直前に
- * 数え直し、増えていれば中止する（docs/remaining-work.md 段階26）。
+ * 数え直し、増えていれば中止する。
  */
 export const removeStudentsFromExamMutation = (examId: string) =>
   defineMutation({

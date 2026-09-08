@@ -4,7 +4,7 @@
  * 設定はセル（小問・枝問）と1対1で、選択肢は設定に完全従属する。**選択肢は id を
  * 持たない**（renderer の `OMRCellConfig` が `labels: string[]` で持つ）ので、
  * 並び順の位置（`choiceIndex`）で既存行を使い回す。設定ごと upsert するのが
- * 意図の最小単位になる（docs/asb-ipc-split-plan.md §4.4）。
+ * 意図の最小単位になる。
  */
 
 import type { Prisma } from "@prisma/client"
@@ -114,8 +114,7 @@ export async function deleteRemovedAsbOmrConfigs(
  * セルの OMR 設定を書く（無ければ作る）。
  *
  * 選択肢は設定に完全従属し、個々の選択肢に id が無い。**id の無いレコードは
- * プリミティブで指せない**ので、設定単位の upsert が意図の最小単位になる
- * （docs/asb-ipc-split-plan.md §4.4）。
+ * プリミティブで指せない**ので、設定単位の upsert が意図の最小単位になる。
  */
 export async function upsertAsbOmrConfig(
   definitionId: string,

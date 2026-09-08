@@ -136,7 +136,7 @@ export const answerSheetBuilderHandlers = {
 
   // 定義まるごとの置き換え。**日常の編集をここへ流さない**（下の1件ずつの書き込みへ）。
   // 通すのは新規作成・undo/redo・複製・アーカイブ取り込みの4経路だけで、どれも
-  // 「全体を指定する」ことに意味がある（docs/asb-ipc-split-plan.md §4.5）
+  // 「全体を指定する」ことに意味がある
   "asb:replace-definition": async (
     definition: AnswerSheetDefinition,
     ownerUserId: string
@@ -583,7 +583,7 @@ export const answerSheetBuilderHandlers = {
     // 原稿用紙と文字位置マーカーは別テーブルの行なので、ここで id を振り直さないと
     // 元の id を引き継いだまま作成しようとして主キーが衝突する。画像ディレクトリの
     // 作成とコピーは先に走るため、トランザクションが巻き戻っても孤児のファイルが
-    // 残る（docs/branch-review-findings.md #8）
+    // 残る
     const copyManuscriptPaper = (
       manuscriptPaper: ManuscriptPaper
     ): ManuscriptPaper => ({

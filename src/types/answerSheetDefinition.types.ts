@@ -144,8 +144,7 @@ export interface ManuscriptCharGuide extends AsbCharGuideAttributes {
  * 原稿用紙1件の属性（自身の列だけ。文字位置マーカーは別テーブルの子）。
  *
  * **DB の行そのもの**を持つ。かつては小問の列を画面側で入れ子に束ね直していたため、
- * 合流の規則が平らな列と入れ子とで2種類になり、原稿用紙と無関係な更新が設定を消した
- * （docs/asb-ipc-split-plan.md §8.5）。
+ * 合流の規則が平らな列と入れ子とで2種類になり、原稿用紙と無関係な更新が設定を消した。
  *
  * `guidePosition` だけ union を注入する（DB は `String?` で、そのままでは絞れない）。
  */
