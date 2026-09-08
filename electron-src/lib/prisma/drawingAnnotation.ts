@@ -112,7 +112,7 @@ export const annotationWithContextInclude = {
  * ぶら下げる。既に採点済みの行が在れば触らない（判定も部分点もそのまま）。
  *
  * renderer に先に採点行を作らせない。かつてはそうしており、設問を表示しただけで
- * `status:"unscored"` の空行が量産されていた（docs/branch-review-findings.md #2）。
+ * `status:"unscored"` の空行が量産されていた。
  *
  * @param target 注釈の行き先（答案＋設問＋採点者）
  * @param annotation 作成する行（既定値は送り元が `newDrawingAnnotation` で埋める）
@@ -171,8 +171,8 @@ export async function createDrawingAnnotation(
 /**
  * 行き先（答案＋設問＋採点者）に紐づく描画アノテーションを取得する。
  *
- * **採点行が無ければ空配列を返す。用意はしない。** 読むだけで行が増えるのは
- * 段階21 でやめた振る舞いそのものである（docs/branch-review-findings.md #2）。
+ * **採点行が無ければ空配列を返す。用意はしない。** 読むだけで行が増えるのは、
+ * かつてやめた振る舞いそのものである。
  *
  * @param target 注釈の行き先（答案＋設問＋採点者）
  * @param type フィルタする描画タイプ（オプション）

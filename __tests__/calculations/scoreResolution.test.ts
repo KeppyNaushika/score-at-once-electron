@@ -309,8 +309,7 @@ describe("calculateEffectiveScoreValue", () => {
 describe("判定の集合を型で守る", () => {
   // `status: string` で受けていた頃は、得点化の switch が `default: return 0` で
   // 黙って通り、**未知の判定が「未採点（欠測）」ではなく0点として成績に算入されて
-  // いた**。いまは網羅していない値がコンパイルエラーになる
-  // （docs/branch-review-findings.md #16）。
+  // いた**。いまは網羅していない値がコンパイルエラーになる。
   it("未採点は0ではなく欠測（null）", () => {
     expect(
       calculateEffectiveScoreValue(

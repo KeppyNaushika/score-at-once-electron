@@ -1,6 +1,6 @@
 # 所有と共有の設計（所有者 / 編集者 / 閲覧者）
 
-対象: **#1127**。`docs/asb-ipc-split-plan.md` の段階4〜5 と、`docs/schema-relation-audit.md` §6.1 の前提。
+対象: **#1127**。`docs/schema-relation-audit.md` §6.1 の前提。
 検討日: 2026-08-03。着手は未定。
 
 `docs/scoring-scope-and-permissions-design.md`（試験の採点範囲と権限）と対になる。あちらは
@@ -60,7 +60,7 @@ model UserExam {
 
 ### 2.3 【訂正】main は誰がログインしているかを知っている
 
-`docs/asb-ipc-split-plan.md` の初版と検討の途上で「main は誰がログインしているか知らない」と
+解答用紙作成の IPC 分割を検討していた途上で「main は誰がログインしているか知らない」と
 書いたが、**これは誤り**。認証ストア経由で取得できる。
 
 ```ts
@@ -482,8 +482,10 @@ FROM "Grade" CROSS JOIN "User";
 
 **段階1は 2026-08-13 に完了した（差し替えではなく削除）。**
 
-`docs/asb-ipc-split-plan.md` の段階4〜5（IPC 分割のうち他端末の巻き戻し対策）は、本書の段階4が
-入って初めて意味を持つ。逆に ASB 分割の段階1〜3 は本書を待たない。
+**解答用紙作成の IPC 分割は、本書を待たずに全段が済んだ。** 当初は「他端末の巻き戻し対策は
+共有が成立してからでないと意味を持たない」と見ていたが、作りの連続性を優先して先に入れてある。
+したがって本書が入るまで**効かないまま置かれている**のは、一覧の絞り込み（`where: { userId }`）を
+外すことと、保存のたびに所有者が保存者へ移るのをやめることの2点である。
 
 ---
 
@@ -514,16 +516,16 @@ FROM "Grade" CROSS JOIN "User";
 
 ## 11. 関連
 
-| 文書 / issue                                                                              | 関係                                         |
-| ----------------------------------------------------------------------------------------- | -------------------------------------------- |
-| [docs/scoring-scope-and-permissions-design.md](./scoring-scope-and-permissions-design.md) | 試験固有の権限。§3.2 で対応付ける            |
-| [docs/asb-ipc-split-plan.md](./asb-ipc-split-plan.md)                                     | 段階4〜5 が本書の段階4を前提にする           |
-| [docs/schema-relation-audit.md](./schema-relation-audit.md) §6.1                          | 発端。Asb 系を同期対象にした作業             |
-| #1127                                                                                     | 本書の issue                                 |
-| #1071                                                                                     | 採点範囲と権限。試験側の実装                 |
-| #1126                                                                                     | ASB の保存方式。IPC 分割へ発展               |
-| #1128                                                                                     | 決定論的 id は撤回。§4.2 が同じ結論          |
-| #1140                                                                                     | ユーザー削除機能とカスケードの一律化（§4.4） |
+| 文書 / issue                                                                              | 関係                                          |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------- |
+| [docs/scoring-scope-and-permissions-design.md](./scoring-scope-and-permissions-design.md) | 試験固有の権限。§3.2 で対応付ける             |
+| [docs/remaining-work.md](./remaining-work.md)                                             | ASB 分割から残った2点（バックフィルと所有者） |
+| [docs/schema-relation-audit.md](./schema-relation-audit.md) §6.1                          | 発端。Asb 系を同期対象にした作業              |
+| #1127                                                                                     | 本書の issue                                  |
+| #1071                                                                                     | 採点範囲と権限。試験側の実装                  |
+| #1126                                                                                     | ASB の保存方式。IPC 分割へ発展                |
+| #1128                                                                                     | 決定論的 id は撤回。§4.2 が同じ結論           |
+| #1140                                                                                     | ユーザー削除機能とカスケードの一律化（§4.4）  |
 
 ---
 

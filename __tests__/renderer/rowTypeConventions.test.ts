@@ -5,9 +5,9 @@
  * 正しい TypeScript なので、**列が増減しても・写し違えても `tsc` は黙っている**。
  * 実際に「一括更新のラッパーが `GradeDataSource` の行を全 optional で手写ししていた」
  * ために、呼ぶ側が `{ id, data }` を渡していても検査を素通りし、機能が丸ごと動いて
- * いなかった（docs/branch-review-findings.md #3）。
+ * いなかった。
  *
- * 規約（CLAUDE.md / docs/coding-style.md §型管理の方針）:
+ * 規約（型管理の方針）:
  * DB 由来のデータの型は Prisma 型から導出する。手で書き写さない。表示のために
  * 小さくする `Pick` の独自 view も作らない（`include` の出力はそのまま持つ）。
  *

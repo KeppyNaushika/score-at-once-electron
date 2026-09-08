@@ -144,8 +144,7 @@ export default function ClassroomDetailPage() {
    * 学級を消す。**消せたかどうかを返す。**
    *
    * 投げっぱなしにすると、呼ぶ側が `await` しても待ったことにならず、外部キーや
-   * 権限で失敗しても一覧へ遷移して「消えていない学級」が並ぶ
-   * （docs/branch-review-findings.md #15）。
+   * 権限で失敗しても一覧へ遷移して「消えていない学級」が並ぶ。
    */
   const handleDeleteClassroom = async (): Promise<boolean> => {
     if (!window.confirm("この学級を削除しますか？")) return false

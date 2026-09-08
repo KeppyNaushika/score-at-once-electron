@@ -23,8 +23,7 @@ export async function getAsbDefinitionTags(asbDefinitionId: string) {
  * **関所を通す。** タグは利用者ごとの分類ではなく解答用紙そのものの属性
  * （`AsbDefinitionTag` は `userId` を持たない）なので、他の編集と扱いを分ける理由が
  * 無い。通さないと、担当でない教員が一覧から他人の解答用紙へタグを付けられるうえ、
- * 親の更新日時が繰り上がらず一覧の並べ替えや期間の絞り込みが古いまま残る
- * （docs/branch-review-findings.md #10）。
+ * 親の更新日時が繰り上がらず一覧の並べ替えや期間の絞り込みが古いまま残る。
  */
 export async function createAsbDefinitionTag(data: {
   asbDefinitionId: string

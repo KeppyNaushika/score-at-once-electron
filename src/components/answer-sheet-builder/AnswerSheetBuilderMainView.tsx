@@ -89,8 +89,7 @@ export function AnswerSheetBuilderMainView({
   // **`mutateAsync` で待つ。** 呼び出しごとのコールバック（`mutate(action, {onError})`）は
   // 使えない — 観測子が1つなので `MutationObserver.mutate` が前の分を切り離し、**解決前に
   // 次が来ると先の onError / onSuccess が発火しない**。`updateSubQuestion` は隣を降ろす分と
-  // 本体の分を同じ tick で2本出し、関所は溜めた分をまとめて出すので、重なるのが普通
-  // （docs/branch-review-findings.md #9）。
+  // 本体の分を同じ tick で2本出し、関所は溜めた分をまとめて出すので、重なるのが普通。
   const { mutateAsync: applyEdit } = useMutation(
     applyAnswerSheetEditMutation(definitionId)
   )

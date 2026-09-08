@@ -1,5 +1,5 @@
 /**
- * 小計点グループの更新が「差分だけを書く」ことの検証（docs/remaining-work.md 段階23）
+ * 小計点グループの更新が「差分だけを書く」ことの検証
  *
  * かつては更新のたびに小計項目を `deleteMany` して配列ごと作り直していたため、
  * **グループ名を1文字直して保存するだけで全ての `Subtotal` の id が振り直され**、
@@ -260,7 +260,7 @@ describe("小計点グループの更新", () => {
 
   it("2つの項目が名前を互いに入れ替える保存が通る", async () => {
     // `(subtotalGroupId, name)` の unique を持っていた間は、差分書き込みが途中で必ず
-    // 重複するのでこの保存だけが落ちていた（docs/remaining-work.md 段階33・段階30）。
+    // 重複するのでこの保存だけが落ちていた。
     // 制約を戻すとここで P2002 が飛ぶ
     const subtotalGroup = await createTestSubtotalGroup()
     const [kanji, dokkai, sakubun] = subtotalGroup.subtotals

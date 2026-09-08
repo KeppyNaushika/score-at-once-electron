@@ -6,7 +6,7 @@
  * - `invoke<Channel extends keyof Handlers>` のおかげで、**登録の無いチャンネルを
  *   呼ぶ**のはコンパイルエラーになる。ここでの検査は綴りを一覧で見せるためのもの
  * - 逆向き（**登録したまま誰も呼ばないチャンネル**）は型では止まらない。放っておくと
- *   到達不能なハンドラが残る（実例は docs/type-assertion-audit.md §13）
+ *   到達不能なハンドラが残る
  * - `src/` から `electron-src/` への**値** import も型では止まらない。値で引くと
  *   renderer のバンドルへ main の依存グラフ（Prisma・ネイティブモジュール）が
  *   入り込む。**例外は無い**（両側が同じ結果を出す必要のある計算は、段階14 で
@@ -177,7 +177,7 @@ function collectPropertyAccesses(): Set<string> {
  */
 const UNCALLED_PRELOAD_METHODS = new Set([
   // 監査ログのスコープ絞り込み（#1102）。UI がまだ無い。
-  // docs/audit-log-redesign.md「フィルタ次元」の対象（scopeId）で使う
+  // 操作履歴のフィルタ次元（scopeId）で使う
   "getScopes",
 ])
 

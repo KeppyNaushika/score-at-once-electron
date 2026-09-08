@@ -181,7 +181,6 @@ describe("useDrawingState", () => {
     it("設問を開いただけでは書き込みが1つも走らない", async () => {
       // 段階21 の本丸。かつては設問を表示した時点で採点行を作らせていたので、
       // めくるだけで status:"unscored" の空行が量産されていた
-      // （docs/branch-review-findings.md #2）
       mockAPI.getByTarget.mockResolvedValue([
         createMockAnnotation({ id: "a1" }),
       ])

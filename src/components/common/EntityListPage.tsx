@@ -148,7 +148,7 @@ interface EntityListPageProps<TRow extends { id: string }> {
    *
    * **選ばせてから弾くのでは伝わらない。** 解答用紙の一括タグ付けは担当でない行を
    * main が弾くが、一括の書き込みは「既に付いている」を飛ばすために失敗を握り潰すので、
-   * 弾かれたことが利用者へ届かない（docs/branch-review-findings.md #10）。押す前に
+   * 弾かれたことが利用者へ届かない。押す前に
    * 選べなくしておく。他の3画面は行の持ち主で分かれないので渡さない
    */
   selectionDisabledReason?: (row: TRow) => string | undefined

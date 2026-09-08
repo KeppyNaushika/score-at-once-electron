@@ -10,7 +10,6 @@
  *
  * なお #1126 §1 が言う「相手の端末から解答用紙が消えたまま復活しない」は、
  * sqlite-nas-sync の2端末ハーネスで実測したところ**再現しない**。
- * 詳細は docs/ipc-and-data-fetching-plan.md 段階8。
  *
  * ここでは「残るものは id ごと残り、消えたものだけ消える」ことと、
  * 担当者でなければ保存できないことを固定する。
@@ -310,8 +309,7 @@ describe("解答用紙の保存", () => {
 
   it("担当者でなければタグも付け替えられない", async () => {
     // タグ付けだけが関所を通っていなかった。一覧が全員の解答用紙を出すように
-    // なったので、他の編集は全部弾かれるのにタグ付けだけ通る状態だった
-    // （docs/branch-review-findings.md #10）
+    // なったので、他の編集は全部弾かれるのにタグ付けだけ通る状態だった。
     const definition = createDefaultDefinition()
     await replaceAsbDefinition(definition, ownerId)
     const tag = await prisma.tag.create({

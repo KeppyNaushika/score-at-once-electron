@@ -219,7 +219,7 @@ describe("オフラインでも止まらない", () => {
   // networkMode:"online" のままだと、Wi-Fi を切った端末で navigator.onLine が
   // false になり、**全クエリが paused のまま固まって採点も保存されない**。
   // NAS の共有ファイルに触れるのは sqlite-nas-sync だけで、その経路は
-  // React Query を通らない（docs/branch-review-findings.md #5）。
+  // React Query を通らない。
   afterEach(() => {
     onlineManager.setOnline(true)
   })

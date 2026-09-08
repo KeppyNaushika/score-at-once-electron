@@ -149,8 +149,7 @@ type NarrowAnnotationUnions<T> = Omit<T, AnnotationUnionColumn> & {
  * （`AnnotationTarget`）を受け取り、main が必要なら採点行を用意してからぶら下げる。
  *
  * かつては renderer が描く前に採点行を作らせており（そのための `questionScoreId`）、
- * 設問を表示しただけで `status:"unscored"` の空行が量産されていた
- * （docs/branch-review-findings.md #2）。
+ * 設問を表示しただけで `status:"unscored"` の空行が量産されていた。
  */
 export type DrawingAnnotation = NarrowAnnotationUnions<
   Omit<PrismaDrawingAnnotation, "questionScoreId">

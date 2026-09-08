@@ -4,7 +4,7 @@
  * かつては1本の `createQuestionScore` が両方を兼ねており、**名前に反して set**
  * （有れば `status` と `partialScore` を上書きする）だった。設問を表示しただけで出る
  * 自動作成と、保存済み注釈のドラッグがこれを `status:"unscored"` で叩くので、
- * **採点した直後にその採点が消えていた**（docs/branch-review-findings.md #2・#4）。
+ * **採点した直後にその採点が消えていた**。
  *
  * ここで固定するのは「`ensureQuestionScore` は既にある行を触らない」こと。関門は
  * renderer 側のキャッシュで、採点の直後は「行が無い」と見えるため、**main 側が

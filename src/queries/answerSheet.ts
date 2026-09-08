@@ -39,7 +39,7 @@ export const studentAnswerDeletionCountsQuery = (
     // 鍵は試験のまとまりの外にあるので採点の書き込みで古くならず、本体は開いている
     // 間しか mount されないので gcTime 内に開き直すとキャッシュがそのまま出る。
     // 無効化に頼っても他の教員が採点した分は届かない（同期はキャッシュを触らない）
-    // ので、開いたら必ず取り直す（docs/branch-review-findings.md #13）。
+    // ので、開いたら必ず取り直す。
     staleTime: 0,
     refetchOnMount: "always",
   })
@@ -61,7 +61,7 @@ export const uploadStudentAnswersMutation = (examId: string) =>
 
 /**
  * 答案を削除する。**利用者が見た件数を添える** — main は消す直前に数え直し、
- * 増えていれば中止する（docs/remaining-work.md 段階26）。
+ * 増えていれば中止する。
  */
 export const deleteStudentAnswerMutation = (examId: string) =>
   defineMutation({

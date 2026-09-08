@@ -205,7 +205,7 @@ describe("更新に子のまとまりが紛れ込まない", () => {
   it("ラベルだけを変えても、原稿用紙は残る", () => {
     // 原稿用紙が小問の属性の中の入れ子だった頃は、更新のたびに手で1段深く重ね直して
     // いた。その重ね直しを `&&` で書くと**原稿用紙と無関係な更新**のときに undefined に
-    // なり、設定ごと消えた（docs/branch-review-findings.md #1）。原稿用紙をテーブルへ
+    // なり、設定ごと消えた。原稿用紙をテーブルへ
     // 出したいまは、小問の属性に原稿用紙が入らないので混ざりようがない。
     const { result, edits } = renderEditor(twoMajorsWithTwoSubs())
     const cell = { subQuestionId: "sub-1a" }

@@ -5,8 +5,7 @@ import { useCallback, useState } from "react"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
 /**
- * 「見せた件数を添えて削除し、中止されたら数え直す」削除確認の共通の形
- * （docs/remaining-work.md 段階26）。
+ * 「見せた件数を添えて削除し、中止されたら数え直す」削除確認の共通の形。
  *
  * 削除の確認は「消すと何を巻き添えにするか」を数えて見せる。数え終わってから
  * 利用者が押すまでの間に他の教員が書き足すと、見せた件数は嘘になる。そこで

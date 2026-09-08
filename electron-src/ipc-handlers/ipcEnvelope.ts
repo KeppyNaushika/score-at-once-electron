@@ -7,8 +7,6 @@
  *
  * 旧来 payload が持つ `{ success, error }` とはキーを変えてある。同じキーだと、
  * まだ payload 側にエンベロープを持つ移行中のチャンネルと区別がつかない。
- *
- * 詳細は docs/ipc-and-data-fetching-plan.md。
  */
 
 type IpcEnvelope<TValue> =

@@ -4,8 +4,6 @@
  * 境界（`registerChannel`）が詰めた形を preload の `invoke` がほどけることを固定する。
  * ここが食い違うと全チャンネルが同時に壊れるが、他の単体テストは prisma クライアントを
  * 直接叩くのでこの層を一切通らない。
- *
- * 詳細は docs/ipc-and-data-fetching-plan.md 段階2・3・5。
  */
 
 import { Prisma } from "@prisma/client"

@@ -109,8 +109,7 @@ export function AnswerSheetDefinitionDetail({
    * **ここだけ他の3実体と違う。** 概要から来るのは触った欄だけなので、触っていない
    * 欄もいまの姿から埋める。埋める先は取り直しが着地した `definition` なので、
    * 続けざまに別の欄を触ると取り直し前の値を運びうる —— それは属性ひとそろいで
-   * 運ぶ作りの帰結で、直すなら `asb:save-definition` の分割
-   * （docs/asb-ipc-split-plan.md）の側になる。
+   * 運ぶ作りの帰結で、直すなら `asb:save-definition` の分割の側になる。
    */
   const handleCommitBasics = async (changed: Partial<EntityOverviewBasics>) => {
     await applyEdit.mutateAsync({

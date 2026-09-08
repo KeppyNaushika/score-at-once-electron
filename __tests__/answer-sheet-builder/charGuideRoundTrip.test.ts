@@ -2,7 +2,7 @@
  * 原稿用紙（AsbManuscriptPaper）と文字位置マーカー（AsbCharGuide）の往復テスト
  *
  * 原稿用紙を小問の列からテーブルへ出し、文字位置マーカーの親を原稿用紙へ付け替えた
- * （docs/asb-ipc-split-plan.md §8.5）。保存 → 読込で、値・id・順序が保たれること、
+ * 保存 → 読込で、値・id・順序が保たれること、
  * **枝問にも原稿用紙が付くこと**、**オフにしても設定とマーカーが消えないこと**を見る。
  *
  * replaceAsbDefinition / getAsbDefinition は ./client シングルトン（アプリ本体のDB）を使うため、
@@ -259,8 +259,8 @@ describe("解答用紙の複製", () => {
   it("文字位置マーカーの id を振り直す（元の id を引き継がない）", async () => {
     // 振り直さないと、元の AsbCharGuide.id のまま作成しようとして主キーが衝突し、
     // **マーカーを置いた解答用紙が一切複製できない**。しかも画像ディレクトリの
-    // 作成とコピーはトランザクションの前に走るので、巻き戻っても孤児が残る
-    // （docs/branch-review-findings.md #8）。OMR は同じ問題を既に直してある。
+    // 作成とコピーはトランザクションの前に走るので、巻き戻っても孤児が残る。
+    // OMR は同じ問題を既に直してある。
     const definition = createDefaultDefinition()
     const subQuestion = definition.majorQuestions[0].subQuestions[0]
     const charGuides: ManuscriptCharGuide[] = [

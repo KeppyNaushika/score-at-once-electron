@@ -547,8 +547,9 @@ DB は NAS 越しに共有され、収束はレコードごとの LWW（`updated
 レコードは何もしない。ただし**これは被害の緩和であって競合の解決ではない**。古い全体像を
 送れば、その差分は巻き戻しそのものである。
 
-**アンチパターン**: 解答用紙作成（`asb:save-definition`）が定義ツリー全体を1本で受け取る。
-分割の計画は [asb-ipc-split-plan.md](./asb-ipc-split-plan.md)。
+**アンチパターン**: 解答用紙作成（`asb:save-definition`）が定義ツリー全体を1本で受け取っていた。
+実体 × 操作へ割って解消済みで、丸ごと置き換える経路は新規作成・undo/redo・複製・取り込みの
+4つに限ってある。
 
 **割るときの注意**: action と書き込みを二重に持つことになるので、書き込み側の switch を
 網羅にして `default` で `assertNever(action)` を置く。片方に足して片方に足し忘れると
@@ -788,8 +789,8 @@ payload の一部として素直に返す（`null` / `{ canceled: true }` 等）
 - `window.electronAPI` の形（`MyAPI`）は preload の `create*Api()` の返り値から合成する
 
 手書きの契約を `.d.ts` に置くと `skipLibCheck: true` の下では**中身が検査されない**。
-壊れた import が暗黙の `any` になり、その先の食い違いが全部素通しになる（実例は
-[ipc-and-data-fetching-plan.md](./ipc-and-data-fetching-plan.md) 段階5）。
+壊れた import が暗黙の `any` になり、その先の食い違いが全部素通しになる（実際、手書きの
+契約を registry へ畳むまでこの穴が開いていた）。
 
 **DB 上 String の union 列は境界で倒す。** 型で union を名乗るだけでは値は絞られない。
 lib の返り値で `defineStringUnion` の `to*` を通し、renderer は union として扱う。
