@@ -554,7 +554,6 @@ export const exportHandlers = {
         landscape: options.landscape || false,
         printBackground: true,
         margins: {
-          marginType: "custom",
           top: margins.top ?? 0.2,
           bottom: margins.bottom ?? 0.2,
           left: margins.left ?? 0.2,
@@ -637,7 +636,6 @@ export const exportHandlers = {
         landscape: options.landscape || false,
         printBackground: true,
         margins: {
-          marginType: "custom",
           top: 0,
           bottom: 0,
           left: 0,
