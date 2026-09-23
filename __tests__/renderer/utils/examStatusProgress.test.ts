@@ -445,7 +445,7 @@ describe("getExamWorkflowStatus の採点確定", () => {
     const workflow = getExamWorkflowStatus(progressAfterScoring(1), "exam-1")
 
     expect(workflow.step).toBe(8)
-    expect(workflow.text).toBe("採点の割り当てと確定")
+    expect(workflow.text).toBe("採点の確定")
     expect(workflow.url).toBe("/exams/exam-1/08-finalize")
   })
 

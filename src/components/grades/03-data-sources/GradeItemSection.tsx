@@ -6,6 +6,16 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import { DragHandle, useSortableRow } from "@/components/common/sortable-table"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -37,6 +47,8 @@ export function GradeItemSection({
   const { setNodeRef, style, dragHandleProps } = useSortableRow(gradeItem.id)
   // null は非編集中。編集中の名前そのものを状態に持ち、フラグを別に持たない
   const [editingName, setEditingName] = useState<string | null>(null)
+  // 配下のデータソース・成績境界・手直しした成績まで消えるので、押しただけでは消さない
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 
   const handleSaveName = async () => {
     const trimmedName = editingName?.trim()
@@ -49,6 +61,7 @@ export function GradeItemSection({
   }
 
   const handleDelete = async () => {
+    setIsDeleteConfirmOpen(false)
     const result = await deleteGradeItem.mutateAsync(gradeItem.id)
     // 制約ルールの集計対象が変わると判定の意味が変わるため無効化される。
     // 黙って着色が消えるのを避け、その場で知らせる。
@@ -111,11 +124,37 @@ export function GradeItemSection({
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-destructive"
-            onClick={() => void handleDelete()}
+            onClick={() => setIsDeleteConfirmOpen(true)}
+            aria-label={`評価項目「${gradeItem.name}」を削除`}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
+
+        <AlertDialog
+          open={isDeleteConfirmOpen}
+          onOpenChange={setIsDeleteConfirmOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>評価項目を削除しますか？</AlertDialogTitle>
+              <AlertDialogDescription>
+                「{gradeItem.name}」を削除します。この評価項目のデータソース
+                {gradeItem.dataSources.length}
+                件・成績境界・手直しした成績・確定した成績も一緒に削除され、元に戻せません。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+              <AlertDialogAction
+                className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+                onClick={() => void handleDelete()}
+              >
+                削除
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {children}
       </div>

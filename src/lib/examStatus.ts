@@ -367,7 +367,7 @@ export function getExamWorkflowStatus(
     return {
       step: 8,
       action: "finalize",
-      text: "採点の割り当てと確定",
+      text: "採点の確定",
       url: `/exams/${examId}/08-finalize`,
       isCompleted: false,
       canStart: hasScoring,

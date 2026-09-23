@@ -341,7 +341,7 @@ describe("段カード", () => {
 
     const scoring = phaseCard("採点")
     expect(
-      within(scoring).getByText("採点の割り当てと確定").closest("a")
+      within(scoring).getByText("採点の確定").closest("a")
     ).toHaveAttribute("href", "/exams/exam-1/08-finalize")
   })
 

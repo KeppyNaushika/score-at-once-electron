@@ -331,8 +331,10 @@ export function IndividualReportTab({
             ? "準備中..."
             : `印刷 (${selectedStudentIds.length}名)`}
         </Button>
+        {/* 印刷ダイアログは出ない。main が PDF を作り、既定のアプリで開く（export:openPrintDialog） */}
         <p className="text-center text-[10px] text-muted-foreground">
-          選択した生徒の通知書を印刷ダイアログで出力
+          選択した生徒の通知書を PDF にして、PDF
+          を見るアプリで開きます。印刷・保存はそのアプリから行います
         </p>
       </div>
     </div>

@@ -17,6 +17,7 @@ import {
 import { StudentAddPanel } from "@/components/common/student-add-panel/components/StudentAddPanel"
 import type { StudentAddPanelAdapter } from "@/components/common/student-add-panel/types"
 import { Button } from "@/components/ui/button"
+import { gradeWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
 import {
   addStudentsFromClassroomMutation,
   addStudentsToGradeMutation,
@@ -167,6 +168,9 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
         id: gradeClassroom.classroomId,
         classroomId: gradeClassroom.classroomId,
         name: gradeClassroom.classroom.name,
+        // 共通の学級表は学年・学級コードを任意で受ける。渡さないと黙って「-」になる
+        classroomCode: gradeClassroom.classroom.classroomCode,
+        grade: gradeClassroom.classroom.grade,
         studentCount: gradeClassroom.classroom.memberships.length,
         order: gradeClassroom.order,
       })),
@@ -234,7 +238,7 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
       <div className="mt-6 flex justify-end">
         <Button asChild disabled={loading || studentCount === 0}>
           <Link href={`/grades/${gradeId}/03-data-sources`}>
-            次へ: データソース
+            {nextStepLabel(gradeWorkflowTabs, "03-data-sources")}
           </Link>
         </Button>
       </div>

@@ -5,6 +5,16 @@ import { Check, Pencil, Trash2, X } from "lucide-react"
 import { useState } from "react"
 
 import { DragHandle, useSortableRow } from "@/components/common/sortable-table"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -55,6 +65,8 @@ export function DataSourceRow({
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(dataSource.name)
   const [weight, setWeight] = useState(String(dataSource.weight))
+  // 押しただけでは消さない。欠測の推定元に使っている他のソースにも響くため
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
 
   const isCoursework =
     dataSource.type === "coursework" || dataSource.type === "coursework_total"
@@ -194,11 +206,40 @@ export function DataSourceRow({
           variant="ghost"
           size="icon"
           className="h-7 w-7 text-destructive"
-          onClick={() => deleteDataSource.mutate(dataSource.id)}
+          onClick={() => setIsDeleteConfirmOpen(true)}
+          aria-label={`データソース「${dataSource.name}」を削除`}
         >
           <Trash2 className="h-3 w-3" />
         </Button>
       </div>
+
+      <AlertDialog
+        open={isDeleteConfirmOpen}
+        onOpenChange={setIsDeleteConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>データソースを削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              「{dataSource.name}
+              」をこの評価項目から外します。元の試験や資料の点数は消えませんが、
+              欠測の推定元にこのデータソースを選んでいた設定からは外れます。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+              onClick={() => {
+                setIsDeleteConfirmOpen(false)
+                deleteDataSource.mutate(dataSource.id)
+              }}
+            >
+              削除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
