@@ -49,6 +49,7 @@ import type { CourseworkImportDecision } from "@/types/courseworkArchive.types"
 import type { GradeSummary } from "@/types/grade.types"
 import type { GradeArchiveImportPreview } from "@/types/gradeArchive.types"
 
+import { DeleteGradeModal } from "../DeleteGradeModal"
 import { GradeImportDialog } from "./GradeImportDialog"
 
 /**
@@ -105,6 +106,8 @@ export function GradeListContainer() {
   // 境界の返り値をそのまま持つ
   const [importArchiveData, setImportArchiveData] =
     useState<GradeArchivePayload | null>(null)
+  // 削除確認を開いている成績算出。押しただけでは消さず、確認で決めてもらう
+  const [deleteTarget, setDeleteTarget] = useState<GradeSummary | null>(null)
 
   /**
    * 新規作成。**ダイアログを出さずに既定値の1件を作り、その概要ページへ直行する。**
@@ -125,8 +128,13 @@ export function GradeListContainer() {
     }
   }, [createGrade, router])
 
-  const handleDelete = (id: string) => {
-    deleteGrade.mutate(id)
+  const handleDelete = async (gradeId: string) => {
+    try {
+      await deleteGrade.mutateAsync(gradeId)
+      setDeleteTarget(null)
+    } catch {
+      // 失敗の通知は MutationCache が出す。確認は開いたままにする
+    }
   }
 
   const handleDuplicate = async (id: string) => {
@@ -411,7 +419,7 @@ export function GradeListContainer() {
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive"
-                onClick={() => handleDelete(grade.id)}
+                onClick={() => setDeleteTarget(grade)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 削除
@@ -454,6 +462,20 @@ export function GradeListContainer() {
         }}
         noMatchMessage="条件に一致する成績算出がありません"
         sortStorageKey="gradeList-sort"
+      />
+
+      <DeleteGradeModal
+        target={
+          deleteTarget && {
+            id: deleteTarget.id,
+            name: deleteTarget.name,
+            studentCount: deleteTarget.gradeStudents.length,
+            gradeItemCount: deleteTarget.gradeItems.length,
+          }
+        }
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        loading={deleteGrade.isPending}
       />
 
       <GradeImportDialog

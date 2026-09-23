@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { courseworkWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
 import {
   courseworkDetailQuery,
   courseworkScoresQuery,
@@ -338,7 +339,7 @@ export function CourseworkItemsContainer({
       <div className="mt-8 flex justify-end">
         <Button asChild>
           <Link href={`/coursework/${courseworkId}/04-scores`}>
-            次へ: 点数入力
+            {nextStepLabel(courseworkWorkflowTabs, "04-scores")}
           </Link>
         </Button>
       </div>

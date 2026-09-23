@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { gradeWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
 import {
   createGradeItemMutation,
   type GradeClassroomRow,
@@ -183,7 +184,8 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
 
   const handleBatchApply = async () => {
     if (selectedDataSourceIds.size === 0) return
-    // 推定に使うソースは平均比率法・重回帰法のときのみ適用。ソースは自由に
+    // 推定に使うソースは他ソースを使う4手法（平均比率法・重回帰法・順位法・
+    // 標準偏差法。usesEstimationSources）のときのみ適用。ソースは自由に
     // 選べるが、各ターゲットは自分自身を推定ソースにできない（個別行popoverの
     // 自ソース除外と同じ規則）。そこでターゲットごとに自idだけを除いた列を
     // 組み立て、普遍的な個別更新をターゲット分だけ回す。
@@ -327,7 +329,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
             </Button>
           </div>
 
-          {/* 推定に使用するソース（平均比率法・重回帰法のみ） */}
+          {/* 推定に使用するソース（他ソースを使う4手法のみ。個別行 popover の methodUsesPredictors と同じ） */}
           {usesEstimationSources && (
             <div className="mt-3 space-y-2 border-t border-amber-200 pt-3">
               <Label className="text-xs">推定に使用するソース</Label>
@@ -436,7 +438,7 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
       <div className="mt-8 flex justify-end">
         <Button asChild>
           <Link href={`/grades/${gradeId}/04-manual-scores`}>
-            次へ: 外部成績入力
+            {nextStepLabel(gradeWorkflowTabs, "04-manual-scores")}
           </Link>
         </Button>
       </div>

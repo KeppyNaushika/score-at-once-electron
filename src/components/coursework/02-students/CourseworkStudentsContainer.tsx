@@ -172,6 +172,9 @@ export function CourseworkStudentsContainer({
         id: courseworkClassroom.classroomId,
         classroomId: courseworkClassroom.classroomId,
         name: courseworkClassroom.classroom.name,
+        // 共通の学級表は学年・学級コードを任意で受ける。渡さないと黙って「-」になる
+        classroomCode: courseworkClassroom.classroom.classroomCode,
+        grade: courseworkClassroom.classroom.grade,
         studentCount: courseworkClassroom.classroom.memberships.length,
         order: courseworkClassroom.order,
       })),

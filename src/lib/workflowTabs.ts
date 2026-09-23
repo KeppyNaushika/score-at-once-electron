@@ -107,8 +107,8 @@ export const examWorkflowTabs: readonly WorkflowTab[] = [
   {
     id: "08-finalize",
     label: "8. 採点確定",
-    title: "採点の割り当てと確定",
-    description: "設問ごとの担当を割り当て、食い違いを裁定する",
+    title: "採点の確定",
+    description: "採点者どうしで食い違った採点を見比べ、1つに決める",
     icon: Gavel,
     path: "/08-finalize",
   },
@@ -151,8 +151,11 @@ export const gradeWorkflowTabs: readonly WorkflowTab[] = [
   {
     id: "04-manual-scores",
     label: "3. 外部成績",
+    // 題は一覧の「次のステップ」（src/lib/gradeStatus.ts）と揃える必要があり、
+    // 変えるなら両方を同時に変える（__tests__/renderer/workflowStepDefinitions.test.ts）
     title: "外部成績の入力",
-    description: "試験にも資料にも無い点数を手で入れる",
+    description:
+      "参照している試験外成績資料の点数の入り具合を確かめる（入力は資料のページで）",
     icon: PencilLine,
     path: "/04-manual-scores",
   },
@@ -181,6 +184,19 @@ export const gradeWorkflowTabs: readonly WorkflowTab[] = [
     path: "/07-export",
   },
 ]
+
+/**
+ * 段の下端に置く「次へ」の文言。右上の「次へ」（`WorkflowTabHeader`）と同じく
+ * 行き先の段の `title` から作る。段ごとに文言を書き写すと、上と下で同じ行き先が
+ * 違う名前で呼ばれる（成績境界の下が「次へ: 結果」、上が「次へ：成績の確認」だった）。
+ */
+export function nextStepLabel(
+  tabs: readonly WorkflowTab[],
+  nextTabId: string
+): string {
+  const nextTab = tabs.find((tab) => tab.id === nextTabId)
+  return nextTab ? `次へ：${nextTab.title}` : "次へ"
+}
 
 /** 試験外成績資料の段 */
 export const courseworkWorkflowTabs: readonly WorkflowTab[] = [

@@ -7,6 +7,7 @@ import { useMemo } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { gradeWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
 import { courseworkScoresQuery } from "@/queries/coursework"
 import {
   gradeDetailQuery,
@@ -169,7 +170,9 @@ export function ManualScoresContainer({ gradeId }: ManualScoresContainerProps) {
 
       <div className="mt-6 flex justify-end">
         <Button asChild>
-          <Link href={`/grades/${gradeId}/05-boundaries`}>次へ: 成績境界</Link>
+          <Link href={`/grades/${gradeId}/05-boundaries`}>
+            {nextStepLabel(gradeWorkflowTabs, "05-boundaries")}
+          </Link>
         </Button>
       </div>
     </div>
