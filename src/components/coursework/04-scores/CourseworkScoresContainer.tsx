@@ -19,6 +19,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import { parsePreference } from "@/lib/userPreferences"
+import { courseworkWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
 import {
   type CourseworkClassroomRow,
   courseworkClassroomsQuery,
@@ -27,6 +32,10 @@ import {
   courseworkStudentsQuery,
   upsertCourseworkScoresMutation,
 } from "@/queries/coursework"
+import {
+  setUserPreferenceMutation,
+  userPreferenceQuery,
+} from "@/queries/settings"
 import type {
   CourseworkItemWithLetterScales,
   CourseworkStudentWithMemberships,
@@ -97,6 +106,20 @@ export function CourseworkScoresContainer({
     courseworkClassroomsQuery(courseworkId)
   )
   const upsertScores = useMutation(upsertCourseworkScoresMutation())
+  // 「点数だけ表示」は利用者の設定（既定は隠す。理由は userPreferences.ts）。
+  // 隠すのは列だけで、行の値（加減点・理由・コメント）は持ったまま。貼り付けも
+  // 行を写してから配るので、隠した列の値は変わらない
+  const currentUser = useCurrentUser()
+  const { data: storedScoreOnly } = useQuery(
+    userPreferenceQuery(currentUser.id, "courseworkScoresScoreOnly")
+  )
+  const scoreOnly = parsePreference(
+    "courseworkScoresScoreOnly",
+    storedScoreOnly ?? null
+  )
+  const { mutate: setPreference } = useMutation(
+    setUserPreferenceMutation(currentUser.id)
+  )
 
   const items = useMemo(
     () => sortCourseworkItems(coursework?.items ?? []),
@@ -196,36 +219,65 @@ export function CourseworkScoresContainer({
     return data
   }, [studentRows, items])
 
+  /** 隠している列（加減点・理由・コメント）に入力があるマスの数 */
+  const hiddenFilledCellCount = useMemo(() => {
+    if (!scoreOnly) return 0
+    let count = 0
+    for (const row of studentRows) {
+      for (const item of items) {
+        const cell = row.cells[item.id]
+        // 加減点は既定値が 0（schema の @default(0)）なので、0 は「入力なし」と数える。
+        // null かどうかだけで見ると、何も入れていない全員のマスが数えられる
+        if (
+          cell &&
+          ((cell.adjustment != null && cell.adjustment !== 0) ||
+            (cell.adjustmentReason ?? "") !== "" ||
+            (cell.comment ?? "") !== "")
+        ) {
+          count++
+        }
+      }
+    }
+    return count
+  }, [scoreOnly, studentRows, items])
+
   const columns = useMemo((): EditableColumnDef<ScoreRow>[] => {
+    // 氏名・学級は途中で改行すると読みにくいので、列の幅は中身に合わせて広がらせる
     const readOnlyCols: EditableColumnDef<ScoreRow>[] = [
       {
         id: "attendanceNumber",
-        header: "出席番号",
+        header: () => <span className="whitespace-nowrap">出席番号</span>,
         accessorKey: "attendanceNumber",
         size: 70,
         meta: { readOnly: true },
         cell: ({ getValue }) => (
-          <span className="text-sm">{String(getValue())}</span>
+          <span className="text-sm whitespace-nowrap">
+            {String(getValue())}
+          </span>
         ),
       },
       {
         id: "className",
-        header: "学級",
+        header: () => <span className="whitespace-nowrap">学級</span>,
         accessorKey: "className",
         size: 80,
         meta: { readOnly: true },
         cell: ({ getValue }) => (
-          <span className="text-sm">{String(getValue())}</span>
+          <span className="text-sm whitespace-nowrap">
+            {String(getValue())}
+          </span>
         ),
       },
       {
         id: "studentName",
-        header: "氏名",
+        header: () => <span className="whitespace-nowrap">氏名</span>,
         accessorKey: "studentName",
         size: 120,
         meta: { readOnly: true },
         cell: ({ getValue }) => (
-          <span className="text-sm">{String(getValue())}</span>
+          <span className="text-sm whitespace-nowrap">
+            {String(getValue())}
+          </span>
         ),
       },
     ]
@@ -236,30 +288,32 @@ export function CourseworkScoresContainer({
         const validLabels = item.letterScales
           .map((letterScale) => letterScale.label)
           .join("/")
-        return [
-          {
-            id: item.id,
-            header: isLetter
-              ? `${item.name} (評価)`
-              : `${item.name} (満点${item.maxScore})`,
-            accessorKey: item.id,
-            size: 110,
-            meta: {
-              placeholder: isLetter ? validLabels || "評価記号" : "数値",
-              // 文字評価は入力どおり保存する。赤は「変換表に無い」という注意で、
-              // 変換表を1つも作っていない段階では判定しない（全マスが赤くても
-              // 直しようがない）。数値は有限の数値なら有効で、満点超過も負数も
-              // 許容する（配点の枠を超えて成績へ加減できる仕様）。
-              invalidValuePolicy: isLetter ? "keep" : "reject",
-              validate: (value: string) => {
-                if (isLetter) return !isUnknownLetterValue(item, value)
-                const normalized = normalizeInput(value)
-                if (normalized === "") return true
-                const parsedValue = Number(normalized)
-                return !isNaN(parsedValue) && isFinite(parsedValue)
-              },
+        const valueColumn: EditableColumnDef<ScoreRow> = {
+          id: item.id,
+          header: isLetter
+            ? `${item.name} (評価)`
+            : `${item.name} (満点${item.maxScore})`,
+          accessorKey: item.id,
+          size: 110,
+          meta: {
+            placeholder: isLetter ? validLabels || "評価記号" : "数値",
+            // 文字評価は入力どおり保存する。赤は「変換表に無い」という注意で、
+            // 変換表を1つも作っていない段階では判定しない（全マスが赤くても
+            // 直しようがない）。数値は有限の数値なら有効で、満点超過も負数も
+            // 許容する（配点の枠を超えて成績へ加減できる仕様）。
+            invalidValuePolicy: isLetter ? "keep" : "reject",
+            validate: (value: string) => {
+              if (isLetter) return !isUnknownLetterValue(item, value)
+              const normalized = normalizeInput(value)
+              if (normalized === "") return true
+              const parsedValue = Number(normalized)
+              return !isNaN(parsedValue) && isFinite(parsedValue)
             },
           },
+        }
+        if (scoreOnly) return [valueColumn]
+        return [
+          valueColumn,
           {
             id: adjColId(item.id),
             header: `${item.name}·加減点`,
@@ -295,7 +349,7 @@ export function CourseworkScoresContainer({
     )
 
     return [...readOnlyCols, ...scoreCols]
-  }, [items])
+  }, [items, scoreOnly])
 
   const handleDataChange = useCallback(
     (newData: ScoreRow[]) => {
@@ -428,8 +482,36 @@ export function CourseworkScoresContainer({
       <h2 className="mb-4 text-lg font-semibold">点数入力</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         各生徒の評価項目ごとの点数を入力してください。文字評価の項目は評価記号（例:
-        A/B/C）で入力します。加減点・理由・コメントも記入できます。変更は自動保存されます。
+        A/B/C）で入力します。加減点・理由・コメントは、「点数だけ表示」を切ると記入できます。変更は自動保存されます。
       </p>
+
+      <div className="mb-4 space-y-1">
+        <div className="flex items-center gap-2">
+          <Switch
+            id="coursework-score-only"
+            checked={scoreOnly}
+            onCheckedChange={(checked) =>
+              setPreference({
+                key: "courseworkScoresScoreOnly",
+                value: checked,
+              })
+            }
+          />
+          <Label htmlFor="coursework-score-only">
+            点数だけ表示（加減点・理由・コメントを隠す）
+          </Label>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Excel
+          から点数を複数列まとめて貼るときは、点数だけ表示にしてください。加減点などの列が並んでいると、2列目以降が加減点の列に入ります。隠している間も、入力済みの加減点・理由・コメントは消えません。
+        </p>
+        {hiddenFilledCellCount > 0 && (
+          <p className="text-sm text-amber-700">
+            隠している列に入力があります（{hiddenFilledCellCount}
+            件）。見るときは「点数だけ表示」を切ってください。
+          </p>
+        )}
+      </div>
 
       <div className="overflow-x-auto">
         <EditableTable
@@ -474,7 +556,7 @@ export function CourseworkScoresContainer({
       <div className="mt-6 flex justify-end">
         <Button asChild>
           <Link href={`/coursework/${courseworkId}/05-results`}>
-            次へ: 結果
+            {nextStepLabel(courseworkWorkflowTabs, "05-results")}
           </Link>
         </Button>
       </div>

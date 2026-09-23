@@ -154,6 +154,14 @@ const USER_PREFERENCE_SCHEMA = {
     default: "next-question",
     validate: (value: string) => isOneOf(SCORING_BEHAVIORS, value),
   },
+  /**
+   * 試験外成績資料の点数入力で、加減点・理由・コメントの列を隠して点数だけを出すか。
+   *
+   * 表示の好みなので、採点画面の表示設定と同じく利用者に付ける。**既定は隠す。**
+   * 貼り付けは読み取り専用でない列へ左から順に配るので、補助列が並んでいると
+   * Excel の2列目が加減点へ入り、通知もなく成績の算出に使われる。
+   */
+  courseworkScoresScoreOnly: { type: "boolean" as const, default: true },
 } as const
 
 /** 設定キーの型 */
@@ -185,6 +193,7 @@ export type PreferenceValueType = {
   scoringOperationMode: (typeof SCORING_OPERATION_MODES)[number]
   scoringOperationModeRemembered: boolean
   scoringBehavior: (typeof SCORING_BEHAVIORS)[number]
+  courseworkScoresScoreOnly: boolean
 }
 
 /**
