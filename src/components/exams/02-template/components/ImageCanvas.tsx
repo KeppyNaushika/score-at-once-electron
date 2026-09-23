@@ -42,7 +42,7 @@ type ImageCanvasProps = {
     cropRegionId: string,
     coords: { x: number; y: number; width: number; height: number }
   ) => Promise<void>
-  onDeleteArea: (index: number) => void
+  onRequestDeleteArea: (index: number) => void
   disabled: boolean
   examPageId: string | null
   // 検出関連のプロパティ
@@ -65,7 +65,7 @@ const ImageCanvas = ({
   onSelectArea,
   onAddAreaByDrag,
   onUpdateArea,
-  onDeleteArea,
+  onRequestDeleteArea,
   disabled,
   examPageId,
   detectedRects = [],
@@ -74,8 +74,13 @@ const ImageCanvas = ({
   onSnapToDetectedRects,
 }: ImageCanvasProps) => {
   // Get zoom controls first
-  const { zoom, showZoomHelp, setShowZoomHelp, imageContainerRef } =
-    useZoomControls()
+  const {
+    zoom,
+    showZoomHelp,
+    setShowZoomHelp,
+    scrollContainerRef,
+    imageContainerRef,
+  } = useZoomControls()
 
   const {
     dragging,
@@ -99,7 +104,7 @@ const ImageCanvas = ({
     onSnapToDetectedRects,
   })
 
-  useKeyboardShortcuts(selectedAreaIndex, onDeleteArea)
+  useKeyboardShortcuts(selectedAreaIndex, onRequestDeleteArea)
 
   // 掴んでいる間は、その領域だけ手元の姿に差し替えて描く。DB にはまだ書いて
   // いないので、`areas` は掴む前の姿のままである
@@ -134,6 +139,7 @@ const ImageCanvas = ({
 
       {/* 標準HTMLスクロール可能なコンテナ */}
       <div
+        ref={scrollContainerRef}
         className="scrollbar-overlay h-full w-full overflow-auto"
         tabIndex={0}
       >
