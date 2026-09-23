@@ -273,39 +273,42 @@ export function IndividualReportPreview({
           <div
             key={page.pageIndex}
             style={{
-              width: "210mm",
-              height: "297mm",
-              padding: "5mm",
-              backgroundColor: "white",
-              fontFamily: '"Noto Sans JP", "Hiragino Sans", sans-serif',
-              fontSize: `${12 * fontScale}px`,
-              lineHeight: 1.5,
-              color: "#1a1a1a",
-              boxSizing: "border-box",
-              position: "relative",
               marginBottom: pageIdx < pages.length - 1 ? "10mm" : 0,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-              overflow: "hidden",
             }}
           >
             <div
               style={{
-                position: "absolute",
-                top: "2mm",
-                right: "4mm",
-                fontSize: "10px",
-                color: "#999",
-                backgroundColor: "#f5f5f5",
-                padding: "2px 6px",
-                borderRadius: "4px",
+                width: "210mm",
+                height: "297mm",
+                padding: "5mm",
+                backgroundColor: "white",
+                fontFamily: '"Noto Sans JP", "Hiragino Sans", sans-serif',
+                fontSize: `${12 * fontScale}px`,
+                lineHeight: 1.5,
+                color: "#1a1a1a",
+                boxSizing: "border-box",
+                position: "relative",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                overflow: "hidden",
+              }}
+            >
+              {page.sectionIndices.map((sectionIdx) => (
+                <div key={sectionIdx}>{renderSection(sectionIdx)}</div>
+              ))}
+            </div>
+
+            {/* ページ番号はプレビュー専用（PDFには印字しない）。紙面の中に重ねると右上の日付と
+                重なるので、紙面の外（下）に置く。縮小表示でも読める大きさにするため scale で割り戻す */}
+            <p
+              style={{
+                margin: "1mm 0 0 0",
+                textAlign: "center",
+                fontSize: `${10 / scale}px`,
+                color: "#666",
               }}
             >
               {pageIdx + 1} / {pages.length}
-            </div>
-
-            {page.sectionIndices.map((sectionIdx) => (
-              <div key={sectionIdx}>{renderSection(sectionIdx)}</div>
-            ))}
+            </p>
           </div>
         ))}
       </div>
