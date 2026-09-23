@@ -185,12 +185,11 @@ export function AnswerSheetBuilderMainView({
 
   useUndoRedoShortcuts({ undo, redo, canUndo, canRedo })
 
-  // 問題統計（設問数はレイアウトの解答セル数、合計配点は解答用紙から集計）
-  const allCells = multiPageLayout.pages.flatMap((page) => page.cells)
-  const totalQuestions = allCells.filter(
-    (cell) => cell.cellType === "answer"
-  ).length
-  const { totalPoints } = countAsbQuestions(definition.majorQuestions)
+  // 問題統計（一覧・概要の「設問数」と同じ規則で数える。解答欄の数で数えると
+  // 枝問の配点をまとめた小問が枝問の数だけ数えられ、一覧の設問数と食い違う）
+  const { questionCount, totalPoints } = countAsbQuestions(
+    definition.majorQuestions
+  )
 
   // 以下の関門はそれぞれ独立に見る。入れ子にすると、外側が先に外れた時点で
   // 内側へ到達しなくなる（担当の判定を `!isLoaded` の中に置いていて、担当で
@@ -385,7 +384,7 @@ export function AnswerSheetBuilderMainView({
           {/* フッター統計 */}
           <div className="flex justify-between border-t p-2 text-xs text-muted-foreground">
             <span>
-              {totalQuestions}問
+              {questionCount}問
               {multiPageLayout.totalPages > 1 &&
                 ` / ${multiPageLayout.totalPages}ページ`}
             </span>
