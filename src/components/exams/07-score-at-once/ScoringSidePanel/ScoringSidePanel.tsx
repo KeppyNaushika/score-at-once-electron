@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { useCallback } from "react"
 
+import { filterCommandIdOf } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import type { QuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/types"
 import { IndividualModePanel } from "@/components/exams/07-score-at-once/ScoringIndividual/IndividualModePanel"
@@ -378,13 +379,10 @@ export function ScoringSidePanel({
                         filterSettings[
                           button.key as keyof typeof filterSettings
                         ]
-                      const statusKey =
-                        button.key === "no_answer"
-                          ? "NoAnswer"
-                          : button.key.charAt(0).toUpperCase() +
-                            button.key.slice(1)
-                      const commandId = `filter.toggle${statusKey}`
-                      const keyBinding = keyBindings[commandId] || "?"
+                      const keyBinding =
+                        keyBindings[
+                          filterCommandIdOf(STATUS_MAP[button.key])
+                        ] || "?"
                       const colors = scoringColors[STATUS_MAP[button.key]]
                       return (
                         <Tooltip key={button.key}>

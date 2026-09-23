@@ -8,7 +8,14 @@ import {
 } from "react"
 import { toast } from "sonner"
 
-import { DEFAULT_KEYBINDINGS } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
+import {
+  findConflictingCommand,
+  resolveKeyBindings,
+} from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
+import {
+  formatKeyForDisplay,
+  getShortcutLabel,
+} from "@/components/exams/07-score-at-once/constants/shortcutCatalog"
 import { normalizeKey } from "@/components/exams/07-score-at-once/ScoringMain/utils/normalizeKey"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
@@ -44,8 +51,9 @@ export function useKeyboardSettings() {
   const resetKeyboardShortcuts = useMutation(
     resetKeyboardShortcutsMutation(userId)
   )
+  // 採点画面と同じ読み替えを通す（既定の変更で使えなくなった旧割り当てを移す）
   const shortcuts = useMemo(
-    () => ({ ...DEFAULT_KEYBINDINGS, ...storedShortcuts }),
+    () => resolveKeyBindings(storedShortcuts),
     [storedShortcuts]
   )
 
@@ -86,14 +94,16 @@ export function useKeyboardSettings() {
   const handleKeySave = useCallback(async () => {
     if (!editingKey || !pendingKey) return
 
-    // 重複チェック
-    const existingKey = Object.entries(shortcuts).find(
-      ([key, value]) => key !== editingKey && value === pendingKey
+    // 重複チェック（効く場面が重ならない組は同じキーでよい。既定の読み替えと同じ判定）
+    const conflictingCommand = findConflictingCommand(
+      shortcuts,
+      editingKey,
+      pendingKey
     )
 
-    if (existingKey) {
+    if (conflictingCommand) {
       toast.error(
-        `キー "${pendingKey}" は既に "${existingKey[0]}" で使用されています`
+        `${formatKeyForDisplay(pendingKey, modifierKeyLabel)} キーは「${getShortcutLabel(conflictingCommand)}」で使っています`
       )
       return
     }
@@ -111,7 +121,13 @@ export function useKeyboardSettings() {
     saveKeyboardShortcuts.mutate(newShortcuts, {
       onSuccess: () => toast.success("ショートカットキーを更新しました"),
     })
-  }, [editingKey, pendingKey, shortcuts, saveKeyboardShortcuts])
+  }, [
+    editingKey,
+    pendingKey,
+    shortcuts,
+    saveKeyboardShortcuts,
+    modifierKeyLabel,
+  ])
 
   const handleKeyCancel = () => {
     setEditingKey(null)
@@ -128,30 +144,8 @@ export function useKeyboardSettings() {
     })
   }, [resetKeyboardShortcuts])
 
-  const getKeyDisplayName = (key: string) => {
-    const KEY_DISPLAY_NAMES: { [key: string]: string } = {
-      q: "Q",
-      e: "E",
-      f: "F",
-      j: "J",
-      o: "O",
-      p: "P",
-      h: "H",
-      g: "G",
-      t: "T",
-      l: "L",
-      b: "B",
-      y: "Y",
-      ArrowRight: "→",
-      ArrowLeft: "←",
-      ArrowDown: "↓",
-      ArrowUp: "↑",
-      "=": "=",
-      "-": "-",
-      "0": "0",
-    }
-    return KEY_DISPLAY_NAMES[key] || key
-  }
+  const getKeyDisplayName = (key: string) =>
+    formatKeyForDisplay(key, modifierKeyLabel)
 
   return {
     shortcuts,

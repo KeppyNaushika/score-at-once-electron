@@ -30,7 +30,7 @@ import {
   saveKeyboardShortcutsMutation,
 } from "@/queries/settings"
 
-import { DEFAULT_KEYBINDINGS } from "../../constants/scoringKeybindings"
+import { resolveKeyBindings } from "../../constants/scoringKeybindings"
 import type {
   CommandHandler,
   KeyBinding,
@@ -146,7 +146,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
     resetKeyboardShortcutsMutation(userId)
   )
   const keyBindings: KeyBinding = useMemo(
-    () => ({ ...DEFAULT_KEYBINDINGS, ...storedKeyBindings }),
+    () => resolveKeyBindings(storedKeyBindings),
     [storedKeyBindings]
   )
 

@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 
+import { scoringCommandIdOf } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import type {
   MouseBrushAction,
@@ -464,9 +465,9 @@ export default function ScoringToolbar({
               <div style={GRID_4_3_STYLE}>
                 {SCORING_BUTTONS.map((button) => {
                   const Icon = button.icon
-                  const commandId = `scoring.${button.status === "no_answer" ? "noAnswer" : button.status}`
-                  const keyBinding = keyBindings[commandId] || "?"
                   const statusType = STATUS_MAP[button.status]
+                  const keyBinding =
+                    keyBindings[scoringCommandIdOf(statusType)] || "?"
                   const colors = scoringColors[statusType]
                   return (
                     <Tooltip key={button.status}>

@@ -1,9 +1,9 @@
 "use client"
 
 import {
+  getShortcutLabel,
   SHORTCUT_CATEGORIES,
-  SHORTCUT_LABELS,
-} from "@/app/(app)/settings/constants"
+} from "@/components/exams/07-score-at-once/constants/shortcutCatalog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -61,14 +61,16 @@ export function KeyboardShortcutSection({
                 >
                   <div className="flex-1">
                     <Label className="text-sm font-medium">
-                      {SHORTCUT_LABELS[key]}
+                      {getShortcutLabel(key)}
                     </Label>
                   </div>
                   <div className="flex items-center gap-2">
                     {editingKey === key ? (
                       <div className="flex items-center gap-2">
                         <Input
-                          value={pendingKey}
+                          value={
+                            pendingKey ? getKeyDisplayName(pendingKey) : ""
+                          }
                           placeholder="キーを押してください"
                           className="w-32 text-center"
                           readOnly
