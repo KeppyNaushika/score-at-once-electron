@@ -22,6 +22,7 @@ import { PreviewModeToggle } from "./PreviewModeToggle"
 export function TableHeader({
   maxPages,
   enabledFilesCount,
+  uploadPlacement,
   trashFiles,
   onFileRestore,
   isUploading,
@@ -45,12 +46,15 @@ export function TableHeader({
     id: "trash-area",
   })
 
-  const totalCapacity = maxPages * 100 // 仮の容量計算
+  // マスに置けずあふれた答案（アップロードされない）
+  const overflowCount = uploadPlacement
+    ? enabledFilesCount - uploadPlacement.placedCount
+    : 0
 
   return (
     <CardHeader className="pb-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex shrink-0 items-center gap-2 whitespace-nowrap">
           <FileText className="h-5 w-5" />
           {mode === "view" ? "配置済み答案の確認" : "答案配置テーブル"}
         </CardTitle>
@@ -174,9 +178,20 @@ export function TableHeader({
           </>
         ) : (
           <>
-            <span>配置済み: {enabledFilesCount}件</span>
+            {uploadPlacement && (
+              <>
+                <span>配置済み: {uploadPlacement.placedCount}件</span>
+                <span>
+                  置けるマス: {uploadPlacement.placeableCellCount}マス
+                </span>
+              </>
+            )}
+            {overflowCount > 0 && (
+              <span className="font-medium text-red-600">
+                マスに入りきらない答案: {overflowCount}件
+              </span>
+            )}
             <span>無効化済み: {trashFiles.length}件</span>
-            <span>容量: {totalCapacity}セル</span>
           </>
         )}
       </div>

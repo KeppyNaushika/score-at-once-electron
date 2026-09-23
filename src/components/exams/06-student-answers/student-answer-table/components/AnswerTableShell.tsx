@@ -166,6 +166,24 @@ export function AnswerTableShell({
     )
   }
 
+  // upload の配置状況。マスの種類から数える（配置の実体である tableRows と同じ出どころ）。
+  // 置けるマス＝手動無効化・上書きしない既存答案で塞がれていないマス。あふれた答案はどのマスにも
+  // 載らないので「配置済み」に数えない。
+  const uploadPlacement =
+    mode === "upload"
+      ? tableRows.reduce(
+          (acc, { cells }) => {
+            for (const cell of cells) {
+              if (cell.type === "disabled") continue
+              acc.placeableCellCount += 1
+              if (cell.type === "file") acc.placedCount += 1
+            }
+            return acc
+          },
+          { placedCount: 0, placeableCellCount: 0 }
+        )
+      : undefined
+
   // 孤立答案のカード（表示ラベル付き）。孤立が無いときは Set も確保しない。
   // 分類は partitionAnswerItemsByPlacement（tableDataUtils）の配置可能規則に対応する
   // ——名簿外（除籍）か、列に無い examPageId（ページ削除）か。規則を増やす場合は両者を揃えること。
@@ -303,6 +321,7 @@ export function AnswerTableShell({
           <TableHeader
             maxPages={maxPages}
             enabledFilesCount={enabledFilesCount}
+            uploadPlacement={uploadPlacement}
             trashFiles={trashFiles}
             onFileRestore={onFileRestore}
             isUploading={isUploading}

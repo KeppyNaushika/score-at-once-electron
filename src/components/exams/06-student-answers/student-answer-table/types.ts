@@ -119,6 +119,8 @@ export interface EmptyTableCellProps {
 export interface TableHeaderProps {
   maxPages: number
   enabledFilesCount: number
+  // upload のみ: 実際にマスへ置かれた答案の数と、答案を置けるマスの数
+  uploadPlacement?: { placedCount: number; placeableCellCount: number }
   // ゴミ箱は upload 専用（無効化した UnsavedAnswerImage）。表示に必要な最小形だけを受ける。
   trashFiles: Array<{ id: string; name: string; size?: number }>
   onFileRestore: (fileId: string) => void
