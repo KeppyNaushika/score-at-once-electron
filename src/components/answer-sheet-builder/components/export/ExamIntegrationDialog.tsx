@@ -19,7 +19,7 @@ interface ExamIntegrationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   definition: AnswerSheetDefinition
-  totalQuestions: number
+  questionCount: number
   totalPoints: number
 }
 
@@ -27,7 +27,7 @@ export function ExamIntegrationDialog({
   open,
   onOpenChange,
   definition,
-  totalQuestions,
+  questionCount,
   totalPoints,
 }: ExamIntegrationDialogProps) {
   const { convertToExam, isConverting } = useExamIntegration()
@@ -57,7 +57,7 @@ export function ExamIntegrationDialog({
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">設問数</span>
-              <span>{totalQuestions}問</span>
+              <span>{questionCount}問</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">合計配点</span>
@@ -69,7 +69,7 @@ export function ExamIntegrationDialog({
             <p>以下が自動作成されます:</p>
             <ul className="list-disc space-y-0.5 pl-4">
               <li>模範解答画像（PNG）</li>
-              <li>採点領域（CropRegion）× {totalQuestions}件</li>
+              <li>採点領域 × {questionCount}件</li>
               <li>配点設定</li>
             </ul>
           </div>

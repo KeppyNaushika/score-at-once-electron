@@ -153,8 +153,12 @@ export async function convertToExam(
             const maxY = Math.max(
               ...siblings.map((cell) => cell.normalizedY + cell.normalizedH)
             )
+            // 他のセルと同じ「大問-小問」の形にする（枝問は1つの設問へまとめた
+            // ので付けない）。小問が無名なら大問だけ（例: 「3」）。小問名だけだと
+            // 無名の小問でラベルが空になり、名前付きでも「(1)」だけで大問が抜ける
+            const majorLabel = definition.majorQuestions[mi]?.label ?? ""
             mergedCells.push({
-              label: sub.label,
+              label: [majorLabel, sub.label].filter(Boolean).join("-"),
               normalizedX: minX,
               normalizedY: minY,
               normalizedW: maxX - minX,

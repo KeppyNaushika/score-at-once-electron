@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 
 import { countAsbQuestions } from "../../answerSheetStats"
-import { useMultiPageLayout } from "../../hooks/useAnswerSheetLayout"
 import { ExamIntegrationDialog } from "./ExamIntegrationDialog"
 
 interface ExamIntegrationCardProps {
@@ -20,12 +19,11 @@ interface ExamIntegrationCardProps {
  */
 export function ExamIntegrationCard({ definition }: ExamIntegrationCardProps) {
   const [examDialogOpen, setExamDialogOpen] = useState(false)
-  const multiPageLayout = useMultiPageLayout(definition)
-
-  const totalQuestions = multiPageLayout.pages
-    .flatMap((page) => page.cells)
-    .filter((cell) => cell.cellType === "answer").length
-  const { totalPoints } = countAsbQuestions(definition.majorQuestions)
+  // 解答欄の数ではなく、変換で作られる採点領域の数で数える（枝問の配点を
+  // まとめた小問は、枝問の解答欄がいくつあっても1つの領域に統合される）
+  const { questionCount, totalPoints } = countAsbQuestions(
+    definition.majorQuestions
+  )
 
   return (
     <>
@@ -47,7 +45,7 @@ export function ExamIntegrationCard({ definition }: ExamIntegrationCardProps) {
         open={examDialogOpen}
         onOpenChange={setExamDialogOpen}
         definition={definition}
-        totalQuestions={totalQuestions}
+        questionCount={questionCount}
         totalPoints={totalPoints}
       />
     </>
