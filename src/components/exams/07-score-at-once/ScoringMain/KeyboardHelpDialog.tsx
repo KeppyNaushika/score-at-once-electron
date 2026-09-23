@@ -2,7 +2,12 @@
 
 import { Keyboard } from "lucide-react"
 
-import { KEYBOARD_SHORTCUTS } from "@/components/exams/07-score-at-once/ScoringMain/constants/keyboardShortcuts"
+import {
+  formatKeyForDisplay,
+  getShortcutLabel,
+} from "@/components/exams/07-score-at-once/constants/shortcutCatalog"
+import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
+import { KEYBOARD_HELP_SECTIONS } from "@/components/exams/07-score-at-once/ScoringMain/constants/keyboardShortcuts"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -24,6 +29,11 @@ export function KeyboardHelpDialog({
   onShowKeyboardHelpChange,
   modifierKeyLabel,
 }: KeyboardHelpDialogProps) {
+  // 一覧は実際に効く割り当て（利用者の設定を反映したもの）から作る
+  const { keyBindings } = useKeyBindings()
+  const displayKey = (commandId: string) =>
+    formatKeyForDisplay(keyBindings[commandId], modifierKeyLabel)
+
   return (
     <Dialog open={showKeyboardHelp} onOpenChange={onShowKeyboardHelpChange}>
       <DialogTrigger asChild>
@@ -32,46 +42,39 @@ export function KeyboardHelpDialog({
           キーボード
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>キーボードショートカット</DialogTitle>
           <DialogDescription>
-            効率的な採点のためのキーボードショートカット一覧
+            いま使えるキーの一覧です。キーは設定画面の「キーボード」で変えられます
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <h4 className="mb-3 font-medium">採点操作</h4>
-            <div className="space-y-2 text-sm">
-              {Object.entries(KEYBOARD_SHORTCUTS.SCORING).map(
-                ([key, shortcut]) => (
-                  <div key={key} className="flex justify-between">
-                    <span>{shortcut.label}</span>
+        <div className="grid max-h-[70vh] grid-cols-2 gap-6 overflow-y-auto pr-2">
+          {KEYBOARD_HELP_SECTIONS.map((section) => (
+            <div key={section.title}>
+              <h4 className="mb-3 font-medium">{section.title}</h4>
+              <div className="space-y-2 text-sm">
+                {section.commandIds.map((commandId) => (
+                  <div key={commandId} className="flex justify-between gap-2">
+                    <span>{getShortcutLabel(commandId)}</span>
                     <code className="rounded bg-gray-100 px-2 py-1">
-                      {shortcut.key}
+                      {displayKey(commandId)}
                     </code>
                   </div>
-                )
-              )}
-            </div>
-          </div>
-          <div>
-            <h4 className="mb-3 font-medium">ナビゲーション</h4>
-            <div className="space-y-2 text-sm">
-              {Object.entries(KEYBOARD_SHORTCUTS.NAVIGATION).map(
-                ([key, shortcut]) => (
-                  <div key={key} className="flex justify-between">
-                    <span>{shortcut.label}</span>
+                ))}
+                {section.showPartialScoreStart && (
+                  <div className="flex justify-between gap-2">
+                    <span>部分点の入力を始める</span>
                     <code className="rounded bg-gray-100 px-2 py-1">
-                      {shortcut.key === "採点キー"
-                        ? `${modifierKeyLabel}+採点キー`
-                        : shortcut.key}
+                      {displayKey("scoring.openPartialWith0")}〜
+                      {displayKey("scoring.openPartialWith9")}・
+                      {displayKey("scoring.openPartialWithDot")}
                     </code>
                   </div>
-                )
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       </DialogContent>
     </Dialog>

@@ -1,19 +1,43 @@
-export const KEYBOARD_SHORTCUTS = {
-  SCORING: {
-    UNSCORED: { key: "Q", label: "未採点" },
-    CORRECT: { key: "E", label: "正答" },
-    PARTIAL: { key: "F", label: "部分点" },
-    PENDING: { key: "J", label: "保留" },
-    INCORRECT: { key: "O", label: "誤答" },
-    NO_ANSWER: { key: "P", label: "無答" },
+import { SHORTCUT_CATEGORIES } from "../../constants/shortcutCatalog"
+
+/**
+ * 採点画面の「キーボード」一覧に出す項目。
+ *
+ * ここにはコマンドの並びだけを置き、**キーは書かない**。表示のたびに実際の割り当て
+ * （利用者の設定を反映したもの）から引く。キーを書き写すと、設定で変えたキーや
+ * 既定の変更が一覧にだけ反映されない。並びは設定画面の分類をそのまま使う。
+ */
+export const KEYBOARD_HELP_SECTIONS: readonly {
+  title: string
+  commandIds: readonly string[]
+  /** 数字キーで部分点の入力を始めることを1行にまとめて添える */
+  showPartialScoreStart?: boolean
+}[] = [
+  {
+    title: SHORTCUT_CATEGORIES.scoring.label,
+    commandIds: SHORTCUT_CATEGORIES.scoring.keys,
   },
-  NAVIGATION: {
-    PREV_QUESTION: { key: "Shift+A", label: "前の設問" },
-    NEXT_QUESTION: { key: "Shift+D", label: "次の設問" },
-    GRID_MOVEMENT: { key: "WASD", label: "WASD移動" },
-    REFRESH_FILTER: { key: "R", label: "フィルタ更新" },
-    TOGGLE_FILTER: { key: "採点キー", label: "フィルタ切替" },
-    PARTIAL_INPUT: { key: "0-9,.", label: "部分点入力" },
-    PARTIAL_RESET: { key: "Backspace", label: "部分点リセット" },
+  {
+    title: SHORTCUT_CATEGORIES.navigation.label,
+    commandIds: SHORTCUT_CATEGORIES.navigation.keys,
   },
-} as const
+  {
+    title: SHORTCUT_CATEGORIES.filter.label,
+    commandIds: SHORTCUT_CATEGORIES.filter.keys,
+  },
+  {
+    title: SHORTCUT_CATEGORIES.view.label,
+    commandIds: SHORTCUT_CATEGORIES.view.keys,
+  },
+  {
+    title: SHORTCUT_CATEGORIES.tool.label,
+    commandIds: SHORTCUT_CATEGORIES.tool.keys,
+  },
+  // 数字の1つずつは並べても読まれないので、入力欄の出入りと、
+  // 数字キーで入力を始めること（1行にまとめる）だけを出す
+  {
+    title: SHORTCUT_CATEGORIES.modal.label,
+    commandIds: ["modal.backspace", "modal.cancel"],
+    showPartialScoreStart: true,
+  },
+]
