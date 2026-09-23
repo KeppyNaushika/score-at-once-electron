@@ -5,6 +5,16 @@ import { Edit3, UserPen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { PublicUser } from "@/queries/user"
 
+/**
+ * パスコードの種類の表示名。語はパスコード編集画面の選択肢
+ * （PasscodeEditModal / UserCreateModal）と揃える
+ */
+const PASSCODE_TYPE_LABELS: Record<string, string> = {
+  "4digit": "4桁数字",
+  "6digit": "6桁数字",
+  alphanumeric: "英数字",
+}
+
 interface UserManagementTabProps {
   users: PublicUser[]
   onEditUser: (user: PublicUser) => void
@@ -37,7 +47,8 @@ export function UserManagementTab({
                 @{user.username} • {user.role}
                 {user.passcodeType && user.passcodeType !== "none" && (
                   <span className="ml-2 rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
-                    パスコード: {user.passcodeType}
+                    パスコード:{" "}
+                    {PASSCODE_TYPE_LABELS[user.passcodeType] ?? "設定済み"}
                   </span>
                 )}
               </div>

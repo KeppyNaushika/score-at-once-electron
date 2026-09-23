@@ -60,6 +60,7 @@ function formatTagUsage(tag: TagWithAllRelations): string {
   const usages = [
     { label: "試験", links: tag.examTags },
     { label: "資料", links: tag.courseworkTags },
+    { label: "成績算出", links: tag.gradeTags },
     { label: "解答用紙定義", links: tag.asbDefinitionTags },
     { label: "小計点グループ", links: tag.tagSubtotalGroups },
   ]
@@ -353,12 +354,14 @@ export function TagsPageContainer() {
   }
 
   const handleDelete = async (tag: TagWithAllRelations) => {
-    if (
-      !window.confirm(
-        `タグ「${tag.name}」を削除しますか？\n関連する全ての試験からこのタグが外れます。`
-      )
-    )
-      return
+    // 結合行はどれも onDelete: Cascade なので、付いている先すべてから外れる
+    // （付いている先そのものは消えない）。どこから外れるかは利用先の内訳で示す
+    const usage = formatTagUsage(tag)
+    const detail =
+      usage === "未使用"
+        ? ""
+        : `\n付いている先（${usage}）からこのタグが外れます。試験や資料などそのものは消えません。`
+    if (!window.confirm(`タグ「${tag.name}」を削除しますか？${detail}`)) return
 
     deleteTag.mutate(tag.id, {
       onSuccess: () => toast.success(`タグ「${tag.name}」を削除しました`),

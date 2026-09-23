@@ -11,6 +11,13 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { SortableTableHead } from "@/components/ui/SortableTableHead"
 import {
   Table,
@@ -44,11 +51,21 @@ interface ClassroomSortable {
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_CLASSROOMS: ClassroomWithMemberships[] = []
 
+/** 表示設定での絞り込み。非表示の学級も一覧から開いて表示に戻せるようにする */
+const VISIBILITY_FILTERS = ["visible", "hidden", "all"] as const
+type VisibilityFilter = (typeof VISIBILITY_FILTERS)[number]
+
+function isVisibilityFilter(value: string): value is VisibilityFilter {
+  return VISIBILITY_FILTERS.some((filter) => filter === value)
+}
+
 export default function ClassroomManagementTable() {
   const router = useRouter()
   // 学級は全画面で共有するキャッシュから引く（この画面だけ取り直さない）
   const { data: classrooms = EMPTY_CLASSROOMS } = useQuery(classroomListQuery())
   const [searchTerm, setSearchTerm] = useState("")
+  const [filterVisibility, setFilterVisibility] =
+    useState<VisibilityFilter>("visible")
   const [isClassroomModalOpen, setIsClassroomModalOpen] = useState(false)
   const [classroomToEdit, setClassroomToEdit] =
     useState<ClassroomWithMemberships | null>(null)
@@ -65,9 +82,12 @@ export default function ClassroomManagementTable() {
         .toLowerCase()
         .includes(searchTerm.toLowerCase())
       const isVisible = classroomItem.isVisible !== false
-      return matchesSearch && isVisible
+      const matchesVisibility =
+        filterVisibility === "all" ||
+        (filterVisibility === "visible" ? isVisible : !isVisible)
+      return matchesSearch && matchesVisibility
     })
-  }, [classrooms, searchTerm])
+  }, [classrooms, searchTerm, filterVisibility])
 
   // ソート用のデータ変換
   const sortableData = useMemo<ClassroomSortable[]>(() => {
@@ -219,6 +239,21 @@ export default function ClassroomManagementTable() {
               className="h-9 w-56 rounded-lg pl-9"
             />
           </div>
+          <Select
+            value={filterVisibility}
+            onValueChange={(value) => {
+              if (isVisibilityFilter(value)) setFilterVisibility(value)
+            }}
+          >
+            <SelectTrigger className="h-9 w-36 rounded-lg">
+              <SelectValue placeholder="表示設定" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="visible">表示中の学級</SelectItem>
+              <SelectItem value="hidden">非表示の学級</SelectItem>
+              <SelectItem value="all">すべて</SelectItem>
+            </SelectContent>
+          </Select>
           <span className="text-sm text-muted-foreground tabular-nums">
             {sortedData.length}学級
           </span>
@@ -307,6 +342,14 @@ export default function ClassroomManagementTable() {
                     </TableCell>
                     <TableCell className="font-medium">
                       {classroomItem.name}
+                      {classroomItem.isVisible === false && (
+                        <Badge
+                          variant="secondary"
+                          className="ml-2 rounded-full px-2 py-0 text-xs font-normal"
+                        >
+                          非表示
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       {classroomItem.classroomCode ? (
