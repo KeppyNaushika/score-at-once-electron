@@ -354,7 +354,8 @@ export const addStudentsFromClassroom = async (
         order: nextOrder,
       },
       // 再追加では構造（administered）のみ再宣言し、出力フラグ（teacherStatistics/studentReport）は
-      // 08 画面で設定したユーザーの選択を尊重して触らない
+      // 「9. 結果」の統計対象学級（StatisticsClassroomSelector）で設定したユーザーの選択を
+      // 尊重して触らない
       update: {
         administered: true,
       },

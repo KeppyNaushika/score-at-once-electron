@@ -115,7 +115,7 @@ export function SubtotalGroupsPageContainer() {
 
     if (
       !confirm(
-        `小計点グループ「${groupName}」を削除しますか？\n\n注意：設問との関連付けがある場合は削除できません。\n削除前に04-question-groupページで関連付けを解除してください。`
+        `小計点グループ「${groupName}」を削除しますか？\n\n注意：設問との関連付けがある場合は削除できません。\n削除前に、使っている試験の「4. 小計点」タブで設問の割り当てを解除してください。`
       )
     )
       return
