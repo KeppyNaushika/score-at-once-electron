@@ -6,6 +6,16 @@ import Link from "next/link"
 import { useState } from "react"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -38,6 +48,9 @@ export function SubtotalGroupSelector({
 }: SubtotalGroupSelectorProps) {
   const [showSelector, setShowSelector] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  // 外す確認を出している小計点グループ（null のとき閉じている）
+  const [removalTargetGroup, setRemovalTargetGroup] =
+    useState<SubtotalGroupWithSubtotals | null>(null)
 
   // 追加できる小計点グループは、選択を開いたときだけ取る
   const { data: availableGroups = EMPTY_GROUPS, isPending: loading } = useQuery(
@@ -56,19 +69,6 @@ export function SubtotalGroupSelector({
     addSubtotalGroup.mutate(groupId, {
       onSuccess: () => setShowSelector(false),
     })
-  }
-
-  // 小計点グループを試験から削除
-  const handleRemoveGroup = (groupId: string) => {
-    if (
-      !confirm(
-        "この小計点グループを試験から削除しますか？\\n\\n注意：関連する採点データにも影響する可能性があります。"
-      )
-    ) {
-      return
-    }
-
-    removeSubtotalGroup.mutate(groupId)
   }
 
   // 検索フィルタリング
@@ -124,7 +124,7 @@ export function SubtotalGroupSelector({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleRemoveGroup(group.id)}
+                    onClick={() => setRemovalTargetGroup(group)}
                     className="text-destructive hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -135,6 +135,38 @@ export function SubtotalGroupSelector({
           </div>
         )}
       </CardContent>
+
+      {/* 試験から外す確認。外すのは試験との結び付きだけで、グループ自体は残る。
+          設問に割り当て済みのときは main 側が外すのを断り、その理由を返す */}
+      <AlertDialog
+        open={removalTargetGroup !== null}
+        onOpenChange={(open) => {
+          if (!open) setRemovalTargetGroup(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              「{removalTargetGroup?.name}」をこの試験から外しますか？
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              この試験の小計点に使わなくなります。小計点グループ自体は残るので、あとで「グループを追加」から戻せます。設問に割り当てている場合は外せないため、先に設問の割り当てを解除してください。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (removalTargetGroup) {
+                  removeSubtotalGroup.mutate(removalTargetGroup.id)
+                }
+              }}
+            >
+              外す
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* 小計点グループ選択モーダル */}
       <Dialog open={showSelector} onOpenChange={setShowSelector}>

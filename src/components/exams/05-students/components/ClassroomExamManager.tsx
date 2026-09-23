@@ -121,7 +121,8 @@ export function ClassroomExamManager({
       onAddClassrooms={async (classroomIds) => {
         for (const classroomId of classroomIds) {
           // administered の学級は既定で教員集計・生徒表示の対象（移行の
-          // studentReport=administered と整合）。出力スコープは後から08で調整可能。
+          // studentReport=administered と整合）。出力スコープは後から「9. 結果」の
+          // 統計対象学級（StatisticsClassroomSelector）で調整可能。
           await addExamClassroom.mutateAsync({
             examId,
             classroomId,
