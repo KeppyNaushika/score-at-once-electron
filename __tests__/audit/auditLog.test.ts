@@ -24,7 +24,11 @@ vi.mock("../../electron-src/lib/prisma/auditActor", () => ({
   getCurrentActorUserId: () => null,
 }))
 
-import { diffFields, recordAuditLog } from "@/electron-src/lib/prisma/auditLog"
+import {
+  diffFields,
+  mergeCoalescedChanges,
+  recordAuditLog,
+} from "@/electron-src/lib/prisma/auditLog"
 import {
   getAuditLogs,
   pruneAuditLogs,
@@ -147,6 +151,75 @@ describe("監査ログ 集約（coalesce）", () => {
     const changes = page.entries[0].metadata?.changes as
       { after: unknown }[] | undefined
     expect(changes?.[0].after).toBe("B") // after は最新で上書き
+  })
+
+  it("複数項目の連続操作は、項目ごとに before は初回・after は最新になる", async () => {
+    const key = "omr_config:region-1"
+    await recordAuditLog({
+      action: "exam.omr_config.update",
+      userId: "u-1",
+      entityType: "CropRegionOmrConfig",
+      entityId: "config-1",
+      coalesceKey: key,
+      changes: [
+        { field: "a", before: 1, after: 2 },
+        { field: "b", before: "x", after: "y" },
+      ],
+    })
+    await recordAuditLog({
+      action: "exam.omr_config.update",
+      userId: "u-1",
+      entityType: "CropRegionOmrConfig",
+      entityId: "config-1",
+      coalesceKey: key,
+      changes: [
+        { field: "a", before: 2, after: 3 },
+        { field: "b", before: "y", after: "z" },
+      ],
+    })
+
+    const page = await getAuditLogs()
+    expect(page.total).toBe(1)
+    expect(page.entries[0].metadata?.changes).toEqual([
+      { field: "a", before: 1, after: 3 },
+      { field: "b", before: "x", after: "z" },
+    ])
+  })
+
+  it("まとめた行は最後の操作の時刻（updatedAt）で並ぶ", async () => {
+    const key = "annotation.update:mark-1"
+    const record = (entityId: string, coalesceKey?: string) =>
+      recordAuditLog({
+        action: "exam.annotation.update",
+        userId: "u-1",
+        entityType: "DrawingAnnotation",
+        entityId,
+        coalesceKey,
+      })
+    // 集約される行を先に作り、別の行を挟んでから、最初の行へもう一度集約する
+    await record("mark-1", key)
+    const earlier = new Date(Date.now() - 2 * 60 * 1000).toISOString()
+    await testPrisma.$executeRawUnsafe(
+      `UPDATE "AuditLog" SET "createdAt" = ?, "updatedAt" = ? WHERE "coalesceKey" = ?`,
+      earlier,
+      earlier,
+      key
+    )
+    await record("mark-2")
+    const middle = new Date(Date.now() - 60 * 1000).toISOString()
+    await testPrisma.$executeRawUnsafe(
+      `UPDATE "AuditLog" SET "createdAt" = ?, "updatedAt" = ? WHERE "entityId" = 'mark-2'`,
+      middle,
+      middle
+    )
+    await record("mark-1", key)
+
+    const page = await getAuditLogs()
+    expect(page.entries.map((entry) => entry.entityId)).toEqual([
+      "mark-1",
+      "mark-2",
+    ])
+    expect(page.entries[0].occurrences).toBe(2)
   })
 
   it("操作者が異なれば別行になる", async () => {
@@ -324,5 +397,46 @@ describe("diffFields", () => {
   it("変化が無ければ空配列", () => {
     const changes = diffFields({ a: 1 }, { a: 1 }, [{ field: "a" }])
     expect(changes).toHaveLength(0)
+  })
+})
+
+describe("mergeCoalescedChanges", () => {
+  it("同じ項目は before を初回のまま、after を今回の値にする", () => {
+    const merged = mergeCoalescedChanges(
+      [
+        { field: "a", label: "A", before: 1, after: 2 },
+        { field: "b", label: "B", before: "x", after: "y" },
+      ],
+      [
+        { field: "a", label: "A", before: 2, after: 3 },
+        { field: "b", label: "B", before: "y", after: "z" },
+      ]
+    )
+    expect(merged).toEqual([
+      { field: "a", label: "A", before: 1, after: 3 },
+      { field: "b", label: "B", before: "x", after: "z" },
+    ])
+  })
+
+  it("今回初めて変わった項目は足し、今回触れなかった項目は残す", () => {
+    const merged = mergeCoalescedChanges(
+      [{ field: "a", before: 1, after: 2 }],
+      [{ field: "b", before: "x", after: "y" }]
+    )
+    expect(merged).toEqual([
+      { field: "a", before: 1, after: 2 },
+      { field: "b", before: "x", after: "y" },
+    ])
+  })
+
+  it("既存行に changes が無ければ今回の changes をそのまま使う", () => {
+    const incoming = [{ field: "a", before: 1, after: 2 }]
+    expect(mergeCoalescedChanges(undefined, incoming)).toEqual(incoming)
+  })
+
+  it("既存の配列を書き換えない", () => {
+    const existing = [{ field: "a", before: 1, after: 2 }]
+    mergeCoalescedChanges(existing, [{ field: "a", before: 2, after: 3 }])
+    expect(existing[0].after).toBe(2)
   })
 })
