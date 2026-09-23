@@ -29,6 +29,8 @@ const ROTATION_CYCLE: RotationDegree[] = [0, 90, 180, 270]
 interface OutputPreviewProps {
   pages: OutputPage[]
   onPagesChange: (pages: OutputPage[]) => void
+  // ドラッグで並べ替えたとき（削除・回転の反映は onPagesChange）。並べ替えた順を覚えるために分ける
+  onPagesReorder: (pages: OutputPage[]) => void
   onDeletePage: (page: OutputPage) => void
   onRotatePage: (page: OutputPage, rotation: RotationDegree) => void
   disabled: boolean
@@ -39,6 +41,7 @@ interface OutputPreviewProps {
 export default function OutputPreview({
   pages,
   onPagesChange,
+  onPagesReorder,
   onDeletePage,
   onRotatePage,
   disabled,
@@ -59,7 +62,7 @@ export default function OutputPreview({
     const newIndex = pages.findIndex((page) => page.id === over.id)
 
     if (oldIndex !== -1 && newIndex !== -1) {
-      onPagesChange(arrayMove(pages, oldIndex, newIndex))
+      onPagesReorder(arrayMove(pages, oldIndex, newIndex))
     }
   }
 

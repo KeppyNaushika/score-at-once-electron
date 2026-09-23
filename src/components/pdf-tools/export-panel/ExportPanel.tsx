@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef } from "react"
 
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type {
@@ -13,7 +13,9 @@ import type {
 
 import ExportActions from "./ExportActions"
 import ExportModeSelector from "./ExportModeSelector"
+import { generateOutputPages } from "./generateOutputPages"
 import InterleaveSettings from "./InterleaveSettings"
+import { arrangeInManualOrder, outputPageKey } from "./outputPageOrder"
 import OutputPreview from "./OutputPreview"
 
 interface ExportPanelProps {
@@ -26,6 +28,7 @@ interface ExportPanelProps {
   isProcessing: boolean
   onExportModeChange: (mode: PdfExportMode) => void
   onInterleaveConfigChange: (config: InterleaveConfig) => void
+  onFileUpdated: (file: ImportedFile) => void
   onOutputPagesChange: (pages: OutputPage[]) => void
   onPageExcluded: (page: OutputPage) => void
   onPageRotated: (page: OutputPage, rotation: RotationDegree) => void
@@ -48,35 +51,70 @@ export default function ExportPanel({
   isProcessing,
   onExportModeChange,
   onInterleaveConfigChange,
+  onFileUpdated,
   onOutputPagesChange,
   onPageExcluded,
   onPageRotated,
   onProcessingChange,
   previewColumns,
 }: ExportPanelProps) {
-  // 除外ページ・ページ別回転の最新値をrefで保持する。
-  // これらはプレビュー上で即時反映済みなので、依存配列に入れず再生成時のみ参照する
-  // （依存に入れると再生成が走り、ドラッグで並べ替えた順序が失われる）
-  const excludedPagesRef = useRef(excludedPages)
-  const pageRotationsRef = useRef(pageRotations)
-  useEffect(() => {
-    excludedPagesRef.current = excludedPages
-    pageRotationsRef.current = pageRotations
-  })
+  // ドラッグで並べ替えた順（出力ページのキーの並び）。並べ替えていなければ null で、
+  // 設定から作った順をそのまま使う。設定を変えて出力ページを作り直しても、この順に並べ直す。
+  const manualOrderKeysRef = useRef<string[] | null>(null)
 
-  // インポートファイルが変更されたら出力ページを更新（除外ページ・ページ別回転を反映）
+  // 並べる方式（出力モードと交互挿入の1回あたりのページ数）。これを変えるのは順を選び直す
+  // 操作なので、そのときはドラッグで並べ替えた順を捨てて新しい方式の順にする
+  // （捨てないと、方式を変えても見た目が何も変わらない）。
+  const arrangementRef = useRef({ exportMode, interleaveConfig })
+
+  // 設定・除外ページ・ページ別回転が変わったら出力ページを作り直す（並べ替えた順は保つ）
   useEffect(() => {
+    const previousArrangement = arrangementRef.current
+    arrangementRef.current = { exportMode, interleaveConfig }
+    if (
+      isArrangementChanged(previousArrangement, {
+        exportMode,
+        interleaveConfig,
+      })
+    ) {
+      manualOrderKeysRef.current = null
+    }
+
     const pages = generateOutputPages(
       importedFiles,
       exportMode,
       interleaveConfig,
-      pageRotationsRef.current
+      pageRotations
     )
     const filtered = pages.filter(
-      (page) => !isPageExcluded(page, excludedPagesRef.current)
+      (page) => !isPageExcluded(page, excludedPages)
     )
-    onOutputPagesChange(filtered)
-  }, [importedFiles, exportMode, interleaveConfig, onOutputPagesChange])
+    const manualOrderKeys = manualOrderKeysRef.current
+    if (!manualOrderKeys) {
+      onOutputPagesChange(filtered)
+      return
+    }
+    const arranged = arrangeInManualOrder(filtered, manualOrderKeys)
+    // 増えたページを差し込んだ位置も覚える（次に作り直したときの基準にする）
+    manualOrderKeysRef.current = arranged.map(outputPageKey)
+    onOutputPagesChange(arranged)
+  }, [
+    importedFiles,
+    exportMode,
+    interleaveConfig,
+    excludedPages,
+    pageRotations,
+    onOutputPagesChange,
+  ])
+
+  /** プレビューでドラッグして並べ替えた */
+  const handlePagesReorder = useCallback(
+    (pages: OutputPage[]) => {
+      manualOrderKeysRef.current = pages.map(outputPageKey)
+      onOutputPagesChange(pages)
+    },
+    [onOutputPagesChange]
+  )
 
   return (
     <div className="flex h-full min-w-0 flex-col">
@@ -99,6 +137,7 @@ export default function ExportPanel({
             files={importedFiles}
             config={interleaveConfig}
             onConfigChange={onInterleaveConfigChange}
+            onFileUpdated={onFileUpdated}
             disabled={isProcessing}
           />
         </div>
@@ -110,6 +149,7 @@ export default function ExportPanel({
           <OutputPreview
             pages={outputPages}
             onPagesChange={onOutputPagesChange}
+            onPagesReorder={handlePagesReorder}
             onDeletePage={onPageExcluded}
             onRotatePage={onPageRotated}
             disabled={isProcessing}
@@ -130,6 +170,34 @@ export default function ExportPanel({
   )
 }
 
+/**
+ * 並べる方式が変わったか。出力モード、または交互挿入で1回に入れるページ数の変更を指す。
+ * ファイルの追加・削除に伴う交互挿入設定の増減、2-in-1・回転の変更は含めない
+ * （これらは並べ替えた順を保ったまま反映する）。
+ */
+function isArrangementChanged(
+  previous: { exportMode: PdfExportMode; interleaveConfig: InterleaveConfig },
+  current: { exportMode: PdfExportMode; interleaveConfig: InterleaveConfig }
+): boolean {
+  if (previous.exportMode !== current.exportMode) return true
+  if (current.exportMode !== "interleave") return false
+  const previousPagesPerGroupByFileId = new Map(
+    previous.interleaveConfig.transforms.map((transform) => [
+      transform.fileId,
+      transform.pagesPerGroup,
+    ])
+  )
+  return current.interleaveConfig.transforms.some((transform) => {
+    const previousPagesPerGroup = previousPagesPerGroupByFileId.get(
+      transform.fileId
+    )
+    return (
+      previousPagesPerGroup !== undefined &&
+      previousPagesPerGroup !== transform.pagesPerGroup
+    )
+  })
+}
+
 /** 除外対象かどうかを判定 */
 function isPageExcluded(page: OutputPage, excludedPages: Set<string>): boolean {
   if (page.isNUpCombined && page.combinedPages) {
@@ -138,169 +206,4 @@ function isPageExcluded(page: OutputPage, excludedPages: Set<string>): boolean {
     )
   }
   return excludedPages.has(`${page.sourceFileId}:${page.sourcePageNumber}`)
-}
-
-/**
- * 出力ページに適用する回転角を決める。
- * プレビューで個別に回した角度があればそれを、無ければファイル単位の設定を使う。
- */
-function resolveRotation(
-  pageRotations: Map<string, RotationDegree>,
-  fileId: string,
-  pageNumber: number,
-  fileRotation: RotationDegree
-): RotationDegree {
-  return pageRotations.get(`${fileId}:${pageNumber}`) ?? fileRotation
-}
-
-/**
- * インポートされたファイルから出力ページリストを生成
- *
- * @param files - インポートされたファイル一覧
- * @param mode - エクスポートモード（merge, interleave）
- * @param interleaveConfig - 交互挿入設定
- * @param pageRotations - プレビューで個別に指定されたページ別回転（"fileId:pageNumber"）
- * @returns 生成された出力ページ配列
- */
-function generateOutputPages(
-  files: ImportedFile[],
-  mode: PdfExportMode,
-  interleaveConfig: InterleaveConfig,
-  pageRotations: Map<string, RotationDegree>
-): OutputPage[] {
-  const pages: OutputPage[] = []
-
-  if (mode === "merge") {
-    // 結合モード: 選択されたページを順番に追加
-    for (const file of files) {
-      const sortedPages = Array.from(file.selectedPages).sort(
-        (pageNumberA, pageNumberB) => pageNumberA - pageNumberB
-      )
-
-      if (file.nUp.enabled) {
-        // 2-in-1モード: 2ページずつ結合
-        for (let i = 0; i < sortedPages.length; i += 2) {
-          const page1 = sortedPages[i]
-          const page2 = sortedPages[i + 1]
-          const combinedPages = page2 ? [page1, page2] : [page1]
-
-          pages.push({
-            id: crypto.randomUUID(),
-            sourceFileId: file.id,
-            sourceFileName: file.name,
-            sourcePageNumber: page1,
-            thumbnail: file.thumbnails[page1 - 1] || "",
-            rotation: resolveRotation(
-              pageRotations,
-              file.id,
-              page1,
-              file.rotation
-            ),
-            isNUpCombined: true,
-            combinedPages,
-            nUpLayout: file.nUp.layout,
-          })
-        }
-      } else {
-        // 通常モード
-        for (const pageNumber of sortedPages) {
-          pages.push({
-            id: crypto.randomUUID(),
-            sourceFileId: file.id,
-            sourceFileName: file.name,
-            sourcePageNumber: pageNumber,
-            thumbnail: file.thumbnails[pageNumber - 1] || "",
-            rotation: resolveRotation(
-              pageRotations,
-              file.id,
-              pageNumber,
-              file.rotation
-            ),
-            isNUpCombined: false,
-          })
-        }
-      }
-    }
-  } else {
-    // インターリーブモード: 交互に配置
-    const filePageGroups: OutputPage[][] = []
-
-    for (const transform of interleaveConfig.transforms) {
-      const file = files.find(
-        (candidateFile) => candidateFile.id === transform.fileId
-      )
-      if (!file) continue
-
-      const sortedPages = Array.from(file.selectedPages).sort(
-        (pageNumberA, pageNumberB) => pageNumberA - pageNumberB
-      )
-      const group: OutputPage[] = []
-
-      if (transform.nUp.enabled) {
-        for (let i = 0; i < sortedPages.length; i += 2) {
-          const page1 = sortedPages[i]
-          const page2 = sortedPages[i + 1]
-          group.push({
-            id: crypto.randomUUID(),
-            sourceFileId: file.id,
-            sourceFileName: file.name,
-            sourcePageNumber: page1,
-            thumbnail: file.thumbnails[page1 - 1] || "",
-            rotation: resolveRotation(
-              pageRotations,
-              file.id,
-              page1,
-              transform.rotation
-            ),
-            isNUpCombined: true,
-            combinedPages: page2 ? [page1, page2] : [page1],
-            nUpLayout: transform.nUp.layout,
-          })
-        }
-      } else {
-        for (const pageNumber of sortedPages) {
-          group.push({
-            id: crypto.randomUUID(),
-            sourceFileId: file.id,
-            sourceFileName: file.name,
-            sourcePageNumber: pageNumber,
-            thumbnail: file.thumbnails[pageNumber - 1] || "",
-            rotation: resolveRotation(
-              pageRotations,
-              file.id,
-              pageNumber,
-              transform.rotation
-            ),
-            isNUpCombined: false,
-          })
-        }
-      }
-
-      filePageGroups.push(group)
-    }
-
-    // pagesPerGroupに基づいてグループ化してインターリーブ
-    const groupedPages: OutputPage[][][] = filePageGroups.map(
-      (group, index) => {
-        const transform = interleaveConfig.transforms[index]
-        const perGroup = transform?.pagesPerGroup || 1
-        const chunks: OutputPage[][] = []
-        for (let i = 0; i < group.length; i += perGroup) {
-          chunks.push(group.slice(i, i + perGroup))
-        }
-        return chunks
-      }
-    )
-
-    const maxChunks = Math.max(...groupedPages.map((group) => group.length), 0)
-    for (let i = 0; i < maxChunks; i++) {
-      for (const chunks of groupedPages) {
-        if (chunks[i]) {
-          pages.push(...chunks[i])
-        }
-      }
-    }
-  }
-
-  return pages
 }
