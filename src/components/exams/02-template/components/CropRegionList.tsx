@@ -58,7 +58,7 @@ const CropRegionList = ({
         <h3 className="text-lg font-medium">領域一覧 ({areas.length})</h3>
         {areas.length > 0 && (
           <p className="mt-1 text-xs text-muted-foreground">
-            領域をクリックして詳細情報を編集
+            クリックで選択できます。設問番号や配点は「3. 領域情報」で編集します
           </p>
         )}
       </div>

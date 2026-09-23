@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import type { CropRegionArea } from "@/components/exams/02-template/types"
+import { DeleteConfirmModal } from "@/components/exams/03-region-info/components/DeleteConfirmModal"
 import { deleteCropRegionMutation } from "@/queries/cropRegion"
 import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
@@ -51,6 +52,11 @@ const CropRegionEditor = ({
     null
   )
   const [settingsCollapsed, setSettingsCollapsed] = useState(true)
+  // 削除の確認を待っている領域。添字ではなく id で持つ（確認の間に他の教員が
+  // 領域を消すと並びが変わり、添字では別の領域を消してしまう）
+  const [cropRegionIdToDelete, setCropRegionIdToDelete] = useState<
+    string | null
+  >(null)
 
   // 検出機能フック
   const {
@@ -94,15 +100,24 @@ const CropRegionEditor = ({
     [examPageId, onCreateRegion]
   )
 
-  const handleDeleteArea = async (index: number) => {
+  // Delete/Backspace では確認を挟む。領域を消すと、その領域の採点結果や
+  // 書き込みも一緒に消え、元に戻せないため（3. 領域情報 の削除と同じ）
+  const handleRequestDeleteArea = (index: number) => {
     const areaToDelete = areas[index]
-    if (!areaToDelete.id) return
+    if (!areaToDelete?.id) return
+    setCropRegionIdToDelete(areaToDelete.id)
+  }
+
+  const confirmDeleteArea = async () => {
+    if (cropRegionIdToDelete === null) return
 
     try {
-      await deleteCropRegion.mutateAsync(areaToDelete.id)
+      await deleteCropRegion.mutateAsync(cropRegionIdToDelete)
       setSelectedAreaIndex(null)
     } catch {
       // 失敗の知らせは中央のトーストが出す。ここでは選択を保つだけ
+    } finally {
+      setCropRegionIdToDelete(null)
     }
   }
 
@@ -136,7 +151,7 @@ const CropRegionEditor = ({
           onSelectArea={setSelectedAreaIndex}
           onAddAreaByDrag={addArea}
           onUpdateArea={onUpdateRegion}
-          onDeleteArea={handleDeleteArea}
+          onRequestDeleteArea={handleRequestDeleteArea}
           disabled={disabled}
           examPageId={examPageId}
           detectedRects={detectedRects}
@@ -196,6 +211,12 @@ const CropRegionEditor = ({
           disabled={disabled}
         />
       </div>
+
+      <DeleteConfirmModal
+        isOpen={cropRegionIdToDelete !== null}
+        onClose={() => setCropRegionIdToDelete(null)}
+        onConfirm={confirmDeleteArea}
+      />
     </div>
   )
 }

@@ -6,14 +6,17 @@
  * - Mouse wheel zoom with Ctrl key
  * - Zoom level management (0.1 to 5.0 range)
  *
- * @param imageContainerRef - Reference to the image container element
- * @returns Object containing zoom state and handlers
+ * @returns Object containing zoom state and handlers, and refs for the
+ *   focusable scroll container and the image container
  */
 
 import { useEffect, useRef, useState } from "react"
 
 /** キーボード・マウスホイールによるズーム操作を管理するフック */
 export function useZoomControls() {
+  // フォーカスを受けるのは外側のスクロール枠（tabIndex を持つ）。内側の画像の枠は
+  // フォーカスを受けないので、キーボードのズームはスクロール枠で判定する
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const imageContainerRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(1)
   const [showZoomHelp, setShowZoomHelp] = useState(true)
@@ -25,8 +28,8 @@ export function useZoomControls() {
     const handleKeyDown = (e: KeyboardEvent) => {
       // ズーム機能（ImageCanvasがフォーカスされているとき）
       if (
-        imageContainerRef.current &&
-        imageContainerRef.current.contains(document.activeElement)
+        scrollContainerRef.current &&
+        scrollContainerRef.current.contains(document.activeElement)
       ) {
         switch (e.key) {
           case "+":
@@ -57,7 +60,7 @@ export function useZoomControls() {
 
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [imageContainerRef])
+  }, [])
 
   /**
    * Handle mouse wheel zoom
@@ -88,6 +91,7 @@ export function useZoomControls() {
     zoom,
     showZoomHelp,
     setShowZoomHelp,
+    scrollContainerRef,
     imageContainerRef,
   }
 }
