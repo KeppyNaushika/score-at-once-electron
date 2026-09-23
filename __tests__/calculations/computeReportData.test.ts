@@ -5,12 +5,14 @@
  * - computeFilteredStats: 受験状態フィルタ付きの統計算出（null score の扱い含む）
  * - computeFilteredSubtotalStats: 小計別統計の受験状態フィルタ
  * - groupSubtotalData: subtotalScore.score が null の場合のグループ集計
+ * - formatStudentAffiliation: 学級名に学年が含まれるときに学年を二重に書かない
  */
 import { describe, expect, it } from "vitest"
 
 import {
   computeFilteredStats,
   computeFilteredSubtotalStats,
+  formatStudentAffiliation,
   groupSubtotalData,
 } from "@/components/exams/09-export/components/individual-report/computeReportData"
 import type {
@@ -406,5 +408,31 @@ describe("groupSubtotalData", () => {
     const sugaku = result.find((group) => group.groupName === "数学")
     expect(kokugo?.totalScore).toBe(30)
     expect(sugaku?.totalScore).toBe(0)
+  })
+})
+
+// ================== formatStudentAffiliation ==================
+
+describe("formatStudentAffiliation", () => {
+  it("学級名に学年が含まれないときは学年を前に付ける", () => {
+    expect(formatStudentAffiliation("2", "A組", 1)).toBe("2年 A組 1番")
+  })
+
+  it("学級名に同じ学年が含まれるときは学年を二重に書かない", () => {
+    expect(formatStudentAffiliation("2", "2年A組", 1)).toBe("2年A組 1番")
+  })
+
+  it("全角数字の学年も同じ学年とみなす", () => {
+    expect(formatStudentAffiliation("2", "２年A組", 1)).toBe("２年A組 1番")
+  })
+
+  it("「12年」の中の「2年」は同じ学年とみなさない", () => {
+    expect(formatStudentAffiliation("2", "12年会", 1)).toBe("2年 12年会 1番")
+  })
+
+  it("欠けている項目は飛ばす", () => {
+    expect(formatStudentAffiliation(null, "A組", null)).toBe("A組")
+    expect(formatStudentAffiliation("3", null, 5)).toBe("3年 5番")
+    expect(formatStudentAffiliation(null, null, null)).toBe("")
   })
 })

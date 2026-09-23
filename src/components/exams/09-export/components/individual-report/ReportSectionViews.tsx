@@ -4,7 +4,7 @@
  */
 import type { IndividualReportData } from "@/types/individualReport.types"
 
-import { formatDate } from "./computeReportData"
+import { formatDate, formatStudentAffiliation } from "./computeReportData"
 
 // ============================
 // HeaderView
@@ -124,10 +124,11 @@ export function StudentInfoView({ report, fontScale }: StudentInfoViewProps) {
             margin: 0,
           }}
         >
-          {report.studentInfo.grade && `${report.studentInfo.grade}年`}
-          {report.studentInfo.className && ` ${report.studentInfo.className}`}
-          {report.studentInfo.attendanceNumber != null &&
-            ` ${report.studentInfo.attendanceNumber}番`}
+          {formatStudentAffiliation(
+            report.studentInfo.grade,
+            report.studentInfo.className,
+            report.studentInfo.attendanceNumber
+          )}
         </p>
       </div>
     </section>
