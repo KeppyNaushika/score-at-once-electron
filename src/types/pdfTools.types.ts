@@ -80,11 +80,13 @@ export interface OutputPage {
   nUpLayout?: NUpLayout // 2-in-1レイアウト ("2x1" | "1x2")
 }
 
-/** ファイル別変換設定（複合インターリーブ用） */
+/**
+ * 交互挿入でのファイル別設定。
+ * 2-in-1・回転はここに持たず、ファイルの設定（ImportedFile の nUp / rotation）を使う
+ * （左のファイル欄と交互挿入の欄のどちらで変えても同じ値になるように）。
+ */
 export interface FileTransform {
   fileId: string
-  nUp: NUpConfig
-  rotation: RotationDegree
   pagesPerGroup: number // 交互挿入時の1グループあたりページ数
 }
 

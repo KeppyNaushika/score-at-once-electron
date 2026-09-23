@@ -23,18 +23,22 @@ interface InterleaveSettingsProps {
   files: ImportedFile[]
   config: InterleaveConfig
   onConfigChange: (config: InterleaveConfig) => void
+  /** 2-in-1・回転の変更。ファイルの設定を直接書き換える（左のファイル欄と共通） */
+  onFileUpdated: (file: ImportedFile) => void
   disabled: boolean
 }
 
 /**
  * 交互挿入設定コンポーネント
  *
- * 複数ファイルの交互挿入設定（N-up、回転など）を管理する
+ * 複数ファイルの交互挿入設定を管理する。1回に入れるページ数は交互挿入に固有の設定、
+ * 2-in-1・回転はファイルの設定（左のファイル欄と同じ値）を表示・変更する。
  */
 export default function InterleaveSettings({
   files,
   config,
   onConfigChange,
+  onFileUpdated,
   disabled,
 }: InterleaveSettingsProps) {
   // useRefで最新の値を保持（依存配列に入れずに最新値を参照するため）
@@ -60,12 +64,7 @@ export default function InterleaveSettings({
         (file) =>
           !existingTransforms.some((transform) => transform.fileId === file.id)
       )
-      .map((file) => ({
-        fileId: file.id,
-        nUp: { ...file.nUp },
-        rotation: file.rotation,
-        pagesPerGroup: 1,
-      }))
+      .map((file) => ({ fileId: file.id, pagesPerGroup: 1 }))
 
     if (
       existingTransforms.length !== currentConfig.transforms.length ||
@@ -101,7 +100,7 @@ export default function InterleaveSettings({
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        各ファイルの変換設定を個別に指定できます
+        2in1・回転は左のファイルの設定と共通です
       </p>
       {config.transforms.map((transform) => {
         const file = files.find(
@@ -117,12 +116,13 @@ export default function InterleaveSettings({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Select
-                value={transform.nUp.enabled ? transform.nUp.layout : "1in1"}
+                value={file.nUp.enabled ? file.nUp.layout : "1in1"}
                 onValueChange={(value) => {
                   const enabled = value !== "1in1"
                   const layout = value === "1in1" ? "2x1" : (value as NUpLayout)
-                  handleTransformChange(transform.fileId, {
-                    nUp: { ...transform.nUp, enabled, layout },
+                  onFileUpdated({
+                    ...file,
+                    nUp: { ...file.nUp, enabled, layout },
                   })
                 }}
                 disabled={disabled}
@@ -138,9 +138,10 @@ export default function InterleaveSettings({
               </Select>
 
               <Select
-                value={transform.rotation.toString()}
+                value={file.rotation.toString()}
                 onValueChange={(value) => {
-                  handleTransformChange(transform.fileId, {
+                  onFileUpdated({
+                    ...file,
                     rotation: parseInt(value) as RotationDegree,
                   })
                 }}

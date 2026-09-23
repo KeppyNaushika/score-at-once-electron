@@ -55,6 +55,7 @@ export default function PdfToolsMainView({
     setPageRotations((prev) => withoutFileRotations(prev, fileId))
   }
 
+  // 左のファイル欄と、交互挿入の欄（2-in-1・回転）の両方から呼ばれる
   const handleFileUpdated = (updatedFile: ImportedFile) => {
     // ファイル単位の回転を変えたら、そのファイルのページ別回転は指定し直しとみなす
     const previousFile = importedFiles.find(
@@ -185,6 +186,7 @@ export default function PdfToolsMainView({
           isProcessing={isProcessing}
           onExportModeChange={setExportMode}
           onInterleaveConfigChange={setInterleaveConfig}
+          onFileUpdated={handleFileUpdated}
           onOutputPagesChange={handleOutputPagesChange}
           onPageExcluded={handlePageExcluded}
           onPageRotated={handlePageRotated}
