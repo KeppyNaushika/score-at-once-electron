@@ -20,9 +20,9 @@ export interface AuditLogFilter {
   action?: string
   /** 親エンティティID（特定の試験・成績などに絞る） */
   scopeId?: string
-  /** ISO文字列。この日時以降 */
+  /** ISO文字列。最後の操作がこの日時以降 */
   dateFrom?: string
-  /** ISO文字列。この日時以前 */
+  /** ISO文字列。最後の操作がこの日時以前 */
   dateTo?: string
   /** サマリ部分一致 */
   search?: string
@@ -70,11 +70,12 @@ const buildWhere = (filter: AuditLogFilter): Prisma.AuditLogWhereInput => {
   if (filter.action) where.action = filter.action
   if (filter.scopeId) where.scopeId = filter.scopeId
   if (filter.search) where.summary = { contains: filter.search }
+  // 日時の絞り込みも、並びと表示に合わせて最後の操作の時刻（updatedAt）で見る
   if (filter.dateFrom || filter.dateTo) {
-    const createdAt: Prisma.DateTimeFilter = {}
-    if (filter.dateFrom) createdAt.gte = new Date(filter.dateFrom)
-    if (filter.dateTo) createdAt.lte = new Date(filter.dateTo)
-    where.createdAt = createdAt
+    const updatedAt: Prisma.DateTimeFilter = {}
+    if (filter.dateFrom) updatedAt.gte = new Date(filter.dateFrom)
+    if (filter.dateTo) updatedAt.lte = new Date(filter.dateTo)
+    where.updatedAt = updatedAt
   }
   return where
 }
@@ -99,10 +100,14 @@ export async function getAuditLogs(
   const offset = Math.max(options.offset ?? 0, 0)
   const where = buildWhere(options)
 
+  // 並びは最後の操作の時刻（updatedAt）の新しい順。一覧が表示する時刻も updatedAt
+  // なので、まとめた行（occurrences > 1）も表示時刻の並びに収まる。createdAt で
+  // 並べると、少し前に始めて今も続けている操作が、表示は「たった今」なのに
+  // 下の方へ沈む。同時刻は id で順を決め、ページをまたいで行が揺れないようにする
   const [rows, total] = await Promise.all([
     prisma.auditLog.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
       take: limit,
       skip: offset,
     }),

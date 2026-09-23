@@ -121,7 +121,8 @@ export function AuditLogItem({ entry }: { entry: AuditLogEntry }) {
       </div>
 
       {/* 時刻は行の右端で揃える。幅を決めておかないと、隣の「変更内容」が
-          出る行と出ない行で右端の位置がずれる */}
+          出る行と出ない行で右端の位置がずれる。出すのは最後の操作の時刻
+          （updatedAt）で、一覧の並び（auditQuery.ts）も同じ時刻で決まる */}
       <div className="flex shrink-0 items-center gap-2">
         {hasChanges && (
           <Popover>

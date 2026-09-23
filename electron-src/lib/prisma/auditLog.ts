@@ -49,7 +49,8 @@ interface RecordAuditLogInput {
   summary?: string
   /**
    * 連続操作の集約キー。指定すると、時間窓内の同一キー・同一操作者の既存行があれば
-   * 新規挿入せず、その行の after を上書き＋ occurrences を加算＋ updatedAt を更新する。
+   * 新規挿入せず、その行の changes を束ね直し（`mergeCoalescedChanges`）＋ occurrences を
+   * 加算＋ updatedAt を更新する。
    * （例: "annotation.update:<注釈id>:<操作者>"）
    */
   coalesceKey?: string
@@ -96,16 +97,8 @@ export async function recordAuditLog(
           [key: string]: unknown
         }
         meta.occurrences = (meta.occurrences ?? 1) + 1
-        // 連続操作は after のみ上書き（before は初回値を維持）
         if (input.changes && input.changes.length > 0) {
-          if (meta.changes && meta.changes.length > 0) {
-            meta.changes[0] = {
-              ...meta.changes[0],
-              after: input.changes[0].after,
-            }
-          } else {
-            meta.changes = input.changes
-          }
+          meta.changes = mergeCoalescedChanges(meta.changes, input.changes)
         }
         // updatedAt は @updatedAt により自動更新される
         await client.auditLog.update({
@@ -150,6 +143,31 @@ export async function recordAuditLog(
     // ベストエフォート: 記録失敗は主操作を壊さない
     console.error("recordAuditLog failed:", input.action, error)
   }
+}
+
+/**
+ * 連続操作を1行へまとめるときの changes の束ね方。
+ *
+ * まとめた行が表すのは「最初の操作の前 → 最後の操作の後」。項目（field）ごとに
+ * before は既存行の値（初回の値）を保ち、after だけを今回の値で置き換える。
+ * 今回初めて変わった項目は今回の before をそのまま使って足す（それより前の操作では
+ * 変わっていないので、今回の before が初回時点の値でもある）。今回触れなかった
+ * 項目は既存行のまま残す。
+ */
+export function mergeCoalescedChanges(
+  existing: AuditChange[] | undefined,
+  incoming: AuditChange[]
+): AuditChange[] {
+  const merged = [...(existing ?? [])]
+  for (const change of incoming) {
+    const index = merged.findIndex((prev) => prev.field === change.field)
+    if (index === -1) {
+      merged.push(change)
+    } else {
+      merged[index] = { ...merged[index], after: change.after }
+    }
+  }
+  return merged
 }
 
 /**

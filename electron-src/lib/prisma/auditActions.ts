@@ -236,6 +236,12 @@ const AUDIT_ACTIONS = {
     verb: "update",
     label: "出力設定を更新しました",
   },
+  /** 個人成績表の小計点テーブル／箱ひげ図に載せる小計グループの選択 */
+  "subtotal_group.selection_update": {
+    category: "exam",
+    verb: "update",
+    label: "個人成績表に載せる小計グループを更新しました",
+  },
   "exam.class.assign": {
     category: "exam",
     verb: "create",

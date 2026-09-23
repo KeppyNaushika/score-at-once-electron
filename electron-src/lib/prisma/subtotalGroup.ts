@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client"
 
 import { recordAuditLog } from "./auditLog"
+import { resolveExamScope } from "./auditScope"
 import prisma from "./client"
 import { subtotalWithQuestionAssignmentsInclude } from "./cropSubtotal"
 import { tagSubtotalGroupWithTagInclude } from "./tagSubtotalGroup"
@@ -472,9 +473,13 @@ export async function setSubtotalGroupSelection(
     }
   })
 
+  const scope = await resolveExamScope(examId)
   await recordAuditLog({
     action: "subtotal_group.selection_update",
     entityType: "ExamSubtotalGroup",
     entityId: examId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    coalesceKey: `subtotal_group_selection:${examId}`,
   })
 }
