@@ -22,6 +22,7 @@ import * as Module from "module"
 import * as path from "path"
 
 import { createPrismaClientForPath } from "../helpers/testPrismaClient"
+import { readScreenshotTemplate } from "./helpers/screenshotTemplate"
 import {
   describeSyncAbort,
   getSyncConfigPath,
@@ -35,6 +36,16 @@ const PROJECT_ROOT = path.resolve(__dirname, "../..")
 const TEST_DATA_DIR = path.join(__dirname, "data")
 const DB_PATH = path.join(TEST_DATA_DIR, "database.db")
 const MIGRATIONS_DIR = path.join(PROJECT_ROOT, "prisma/migrations")
+
+/**
+ * 撮影用ディレクトリのうち、手で置いた素材かどうか
+ *
+ * 解答用紙の雛形（`asb-template.json`）と、その元になった問題・解説の PDF。
+ * どれも git の管理外で作り直せないので、掃除で消さない。
+ */
+function isHandPlacedSeedInput(entryName: string): boolean {
+  return entryName === "asb-template.json" || entryName.endsWith(".pdf")
+}
 
 // ---------------------------------------------------------------------------
 // Prisma Client（専用DB）
@@ -106,17 +117,19 @@ async function main() {
   console.log(`DB: ${DB_PATH}`)
   console.log(`Data: ${TEST_DATA_DIR}\n`)
 
-  // 既存DB削除してまっさらに
-  for (const ext of ["", "-shm", "-wal", "-journal"]) {
-    const dbFilePath = DB_PATH + ext
-    if (fs.existsSync(dbFilePath)) fs.unlinkSync(dbFilePath)
-  }
+  // 手で置いた素材以外を消してまっさらにする。
+  //
+  // DB だけ消すと、前の実行が作った試験フォルダ（答案画像）・書き出し・同期フォルダ
+  // などが溜まり続ける（実際、どの DB からも参照されない3月の試験フォルダが
+  // 20個残っていた）。撮った図は公開するので、何が置かれているか分からない
+  // 場所から撮らない。
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true })
-  // マイグレーション適用前のバックアップは実行のたびに増えるので、作り直しの前に掃く
-  for (const fileName of fs.readdirSync(TEST_DATA_DIR)) {
-    if (fileName.startsWith("database.db.pre-migration-backup-")) {
-      fs.unlinkSync(path.join(TEST_DATA_DIR, fileName))
-    }
+  for (const entryName of fs.readdirSync(TEST_DATA_DIR)) {
+    if (isHandPlacedSeedInput(entryName)) continue
+    fs.rmSync(path.join(TEST_DATA_DIR, entryName), {
+      recursive: true,
+      force: true,
+    })
   }
 
   // スキーマ作成（アプリの新規インストールと同じ連鎖を通す）
@@ -143,7 +156,7 @@ async function main() {
   const asbDefId = crypto.randomUUID()
 
   if (fs.existsSync(asbTemplateFile)) {
-    const template = JSON.parse(fs.readFileSync(asbTemplateFile, "utf-8"))
+    const template = readScreenshotTemplate(asbTemplateFile)
 
     // 雛形は書き出した当時のスキーマで固まっているので、いま存在しない列が混じる
     // （実際 `renderMode` が廃止済みで create が落ちていた）。生成された
