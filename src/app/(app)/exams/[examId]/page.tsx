@@ -174,14 +174,20 @@ export default function ExamDetailPage() {
           "01-upload": progress.hasImages,
           "02-template": progress.hasLayout,
           "03-region-info": progress.hasRegionInfo,
-          "04-question-group": progress.hasSubtotalGroupSetting,
+          // 4 と 8 の hasSubtotalGroupSetting / hasFinalizedScores は「やることが残って
+          // いない」の意味で、やる対象がまだ無いときも真になる（一覧の「次のステップ」は
+          // 前の段が済むまでこれを見ないので、それで足りている）。段カードは段ごとに
+          // 独立に見せるので、一覧と同じく前提の段が済んでいることを合わせて求める。
+          // 4. 小計点が済んだ＝採点領域があり、小計点の領域があるなら小計点の設定もある
+          "04-question-group":
+            progress.hasRegionInfo && progress.hasSubtotalGroupSetting,
           "05-students": progress.hasStudents,
           "06-student-answers": progress.hasAnswers,
           "07-score-at-once": progress.hasScoring,
-          // 8. 採点確定が済んだ＝裁定の要るマス（採点者の食い違い・確定より新しい
-          // 提案）が残っていない。採点者が1人なら食い違いが起きないので常に済み。
-          // 9. 結果は何度でも出せるので済みという状態を持たない
-          "08-finalize": progress.hasFinalizedScores,
+          // 8. 採点確定が済んだ＝採点が済み、裁定の要るマス（採点者の食い違い・確定より
+          // 新しい提案）が残っていない。採点者が1人なら食い違いが起きないので、採点が
+          // 済めば済み。9. 結果は何度でも出せるので済みという状態を持たない
+          "08-finalize": progress.hasScoring && progress.hasFinalizedScores,
           "09-export": null,
         }}
         actions={

@@ -287,7 +287,7 @@ export default function AnswerIndividualView({
       splitMode: null,
     })
 
-  // 高品質テキスト編集モーダルが開いていることを、ショートカットの実行条件へ渡す。
+  // テキスト編集モーダルが開いていることを、ショートカットの実行条件へ渡す。
   // 採点キー・描画ツールキーの `when` 句はこの `textEditorActive` を読んでおり、
   // 書き手が居ないと常に既定値（false）のまま＝条件として効かない。
   // モーダル内でも書式ボタン等にフォーカスがあれば `inputFocus` は false なので、
@@ -739,7 +739,7 @@ export default function AnswerIndividualView({
         favoriteElementIds={favoriteElementIds}
       />
 
-      {/* 高品質テキストエディターモーダル */}
+      {/* テキスト編集モーダル */}
       <RichTextEditorModal
         open={textboxIntegration.showTextboxModal}
         onOpenChange={(open) => !open && textboxIntegration.closeTextboxModal()}
@@ -749,7 +749,7 @@ export default function AnswerIndividualView({
         onColorChange={textboxIntegration.setCurrentTextColor}
         onSubmit={textboxIntegration.confirmText}
         onCancel={textboxIntegration.cancelEdit}
-        title="高品質テキスト編集"
+        title="テキスト編集"
         position={textboxIntegration.currentPosition}
         canvasWidth={canvasWidth}
         canvasHeight={canvasHeight}

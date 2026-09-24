@@ -65,7 +65,7 @@ export function RichTextEditorModal({
   onColorChange,
   onSubmit,
   onCancel,
-  title = "高品質テキスト編集",
+  title = "テキスト編集",
   position = { x: 0.5, y: 0.5 },
   canvasWidth = 800,
   canvasHeight = 600,
