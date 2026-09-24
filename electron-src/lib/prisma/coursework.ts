@@ -228,12 +228,20 @@ export async function deleteCoursework(
   return { deleted: true }
 }
 
-/** 資料を参照している成績名の一覧を返す（重複排除） */
+/**
+ * 資料を参照している成績名の一覧を返す（重複排除）
+ *
+ * 参照の仕方は2つある。評価項目を1つずつ使う（`courseworkItemId`）ものと、資料全体を
+ * 「資料合計」として使う（`courseworkId`）もの。後者を見落とすと削除が通り、参照は
+ * `onDelete: SetNull` で黙って空になって、成績算出に名前だけのデータソースが残る。
+ */
 async function getReferencingGradeNamesForCoursework(
   courseworkId: string
 ): Promise<string[]> {
   const dataSources = await prisma.gradeDataSource.findMany({
-    where: { courseworkItem: { courseworkId } },
+    where: {
+      OR: [{ courseworkItem: { courseworkId } }, { courseworkId }],
+    },
     include: { gradeItem: { include: { grade: true } } },
   })
   return [

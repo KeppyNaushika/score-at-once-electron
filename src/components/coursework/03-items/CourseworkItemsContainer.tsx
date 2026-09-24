@@ -18,6 +18,16 @@ import {
   SortableTableProvider,
   useSortableRow,
 } from "@/components/common/sortable-table"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -80,7 +90,8 @@ const EMPTY_ITEMS: CourseworkItemWithLetterScales[] = []
  * 入力方式・刻みの配列）を1本の IPC で送っていた。そのため項目名を1文字直すだけで
  * 文字評価の刻みが全行 delete → create され、id が振り直されていた。
  *
- * 並べ替えはドラッグ&ドロップ。成績算出から参照中の項目は削除をブロックし、
+ * 並べ替えはドラッグ&ドロップ。削除は確認を通してから行う（入力した点数・評価も
+ * 一緒に消えて戻せないため）。成績算出から参照中の項目は削除をブロックし、
  * 参照元をトーストで通知する。
  */
 export function CourseworkItemsContainer({
@@ -138,6 +149,9 @@ export function CourseworkItemsContainer({
   )
 
   const [newItemName, setNewItemName] = useState("")
+  // 押しただけでは消さず、確認で決めてもらう
+  const [deleteTarget, setDeleteTarget] =
+    useState<CourseworkItemWithLetterScales | null>(null)
   const [editingText, setEditingText] = useState<ReadonlyMap<string, string>>(
     new Map()
   )
@@ -243,7 +257,14 @@ export function CourseworkItemsContainer({
   }
 
   const handleDelete = async (item: CourseworkItemWithLetterScales) => {
-    const result = await deleteItem.mutateAsync(item.id)
+    let result
+    try {
+      result = await deleteItem.mutateAsync(item.id)
+    } catch {
+      // 失敗の通知は MutationCache が出す。確認は開いたままにする
+      return
+    }
+    setDeleteTarget(null)
     if (!result.deleted) {
       toast.error("削除できません", {
         description: `次の成績算出で参照されています: ${result.usedBy.join("、")}`,
@@ -329,12 +350,45 @@ export function CourseworkItemsContainer({
                 onChangeMaxScore={changeMaxScore}
                 onChangeInputMode={handleInputModeChange}
                 onBlur={forgetText}
-                onDelete={handleDelete}
+                onDelete={setDeleteTarget}
               />
             ))}
           </SortableTableProvider>
         </div>
       )}
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>評価項目を削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              「{deleteTarget?.name}
+              」を削除します。この評価項目に入力した点数・評価、加減点とその理由、成績通知書に載せるコメント
+              {deleteTarget?.inputMode === "letter" && "、文字評価の変換表"}
+              も一緒に削除され、元に戻せません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+              disabled={deleteItem.isPending}
+              onClick={(event) => {
+                // 閉じるのは削除が済んでから（失敗したら開いたままにする）
+                event.preventDefault()
+                if (deleteTarget) void handleDelete(deleteTarget)
+              }}
+            >
+              削除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="mt-8 flex justify-end">
         <Button asChild>
@@ -451,7 +505,7 @@ function SortableItemRow({
           variant="ghost"
           size="icon"
           className="mt-5 h-7 w-7 text-destructive"
-          onClick={() => void onDelete(item)}
+          onClick={() => onDelete(item)}
           title="削除"
         >
           <Trash2 className="h-4 w-4" />

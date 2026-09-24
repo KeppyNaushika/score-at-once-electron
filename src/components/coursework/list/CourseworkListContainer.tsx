@@ -50,6 +50,7 @@ import type {
 } from "@/types/courseworkArchive.types"
 import type { ImportAction } from "@/types/importAction.types"
 
+import { DeleteCourseworkModal } from "../DeleteCourseworkModal"
 import { CourseworkImportDialog } from "./CourseworkImportDialog"
 
 /** 試験外成績資料一覧のフィルタ対象値（名前・説明・タグ名・学級名／タグ／学級／実施日） */
@@ -81,7 +82,8 @@ const EMPTY_COURSEWORKS: CourseworkSummary[] = []
  *
  * 列・当たり判定・並べ替え・空の出し分けは `EntityListPage` が1つだけ持つ。
  * ここが渡すのは「行1件から6つの列をどう作るか」と、ヘッダー右に並べる操作。
- * 成績算出から参照中の資料は削除をブロックし、参照元をトーストで通知する。
+ * 削除は確認（`DeleteCourseworkModal`）を通してから行う。成績算出から参照中の
+ * 資料は削除をブロックし、参照元をトーストで通知する。
  */
 export function CourseworkListContainer() {
   const router = useRouter()
@@ -104,6 +106,10 @@ export function CourseworkListContainer() {
     null
   )
   const [importing, setImporting] = useState(false)
+  // 押しただけでは消さず、確認で決めてもらう
+  const [deleteTarget, setDeleteTarget] = useState<CourseworkSummary | null>(
+    null
+  )
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const refreshTags = useCallback(
     () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
@@ -141,7 +147,14 @@ export function CourseworkListContainer() {
   }, [createCoursework, router])
 
   const handleDelete = async (coursework: CourseworkSummary) => {
-    const result = await deleteCoursework.mutateAsync(coursework.id)
+    let result
+    try {
+      result = await deleteCoursework.mutateAsync(coursework.id)
+    } catch {
+      // 失敗の通知は MutationCache が出す。確認は開いたままにする
+      return
+    }
+    setDeleteTarget(null)
     if (!result.deleted) {
       toast.error("削除できません", {
         description: `次の成績算出で参照されています: ${result.usedBy.join("、")}`,
@@ -451,7 +464,7 @@ export function CourseworkListContainer() {
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive"
-                onClick={() => handleDelete(coursework)}
+                onClick={() => setDeleteTarget(coursework)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 削除
@@ -494,6 +507,22 @@ export function CourseworkListContainer() {
         }}
         noMatchMessage="条件に一致する資料がありません"
         sortStorageKey="courseworkList-sort"
+      />
+
+      <DeleteCourseworkModal
+        target={
+          deleteTarget && {
+            id: deleteTarget.id,
+            name: deleteTarget.name,
+            studentCount: deleteTarget.students.length,
+            itemCount: deleteTarget.items.length,
+          }
+        }
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() =>
+          deleteTarget ? handleDelete(deleteTarget) : undefined
+        }
+        loading={deleteCoursework.isPending}
       />
 
       <CourseworkImportDialog
