@@ -10,13 +10,16 @@ import { PrismaClient } from "@prisma/client"
 import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
+import { PDFDocument } from "pdf-lib"
 import sharp from "sharp"
 
 import {
+  computeHeaderFieldBoxes,
   computeRegionDefinitions,
   generateMasterAnswerImage,
   generateStudentAnswerImage,
   generateStudentScores,
+  type StudentHeader,
 } from "./generate-images"
 import { requireNodeAbiBinding } from "./nodeAbiBinding"
 
@@ -314,6 +317,22 @@ const STUDENT_DATA = [
   },
 ]
 
+/**
+ * 答案の記入欄に書く受験番号と氏名
+ *
+ * 受験番号は「学年・組・出席番号」の4桁（2年A組1番なら 2101）。学級の割り当て
+ * （`seedClasses`: 先頭20名が A組、残りが B組）と揃えてある。
+ */
+function studentHeaderFor(studentIndex: number): StudentHeader {
+  const studentData = STUDENT_DATA[studentIndex]
+  const classNumber = studentIndex < 20 ? 1 : 2
+  const attendanceNumber = (studentIndex % 20) + 1
+  return {
+    examineeNumber: `2${classNumber}${String(attendanceNumber).padStart(2, "0")}`,
+    name: studentData ? `${studentData.lastName} ${studentData.firstName}` : "",
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 生徒40名をバルク追加
 // ---------------------------------------------------------------------------
@@ -330,7 +349,8 @@ export async function seedStudents(): Promise<string[]> {
         firstName: studentData.firstName,
         lastNameKana: studentData.lastNameKana,
         firstNameKana: studentData.firstNameKana,
-        enrollmentYear: 2025,
+        // 2025年度（試験・成績の日付の年度）に2年生の学年
+        enrollmentYear: 2024,
       },
     })
     ids.push(student.id)
@@ -342,6 +362,15 @@ export async function seedStudents(): Promise<string[]> {
 // ---------------------------------------------------------------------------
 // 学級2クラスを作成し生徒を割り当て
 // ---------------------------------------------------------------------------
+/**
+ * 学級に入った日（2025年度の始まり）
+ *
+ * 既定値（作成した日＝撮影した日）のままだと、2025年10月の試験の時点で誰も
+ * 学級に居ないことになる。アプリは試験日に在籍していた生徒を数えるので、
+ * 成績や出力の画面の学級が軒並み「0名」になる。
+ */
+const SCHOOL_YEAR_START = new Date("2025-04-01T00:00:00+09:00")
+
 export async function seedClasses(
   studentIds: string[]
 ): Promise<{ classAId: string; classBId: string }> {
@@ -359,6 +388,7 @@ export async function seedClasses(
         studentId: studentIds[i],
         classroomId: classroomA.id,
         attendanceNumber: i + 1,
+        startDate: SCHOOL_YEAR_START,
       },
     })
   }
@@ -369,6 +399,7 @@ export async function seedClasses(
         studentId: studentIds[i],
         classroomId: classroomB.id,
         attendanceNumber: i - 19,
+        startDate: SCHOOL_YEAR_START,
       },
     })
   }
@@ -439,6 +470,7 @@ export async function seedExamWithScoring(
 ): Promise<string> {
   const db = getPrisma()
   const REGION_DEFINITIONS = computeRegionDefinitions(templatePath)
+  const headerFieldBoxes = computeHeaderFieldBoxes(templatePath)
 
   const examId = crypto.randomUUID()
   await db.exam.create({
@@ -562,7 +594,8 @@ export async function seedExamWithScoring(
       studentId,
       masterDir,
       REGION_DEFINITIONS,
-      allScores[i]
+      allScores[i],
+      { student: studentHeaderFor(i), boxes: headerFieldBoxes }
     )
     const answerPath = path.join(answerDir, `${studentId}_page1.png`)
     const relAnswerPath = path
@@ -991,43 +1024,6 @@ export async function seedGradeProject(
 }
 
 // ---------------------------------------------------------------------------
-// 第2の試験（通常アップロード経路）— マスター画像は後からUIで確認用
-// ---------------------------------------------------------------------------
-export async function seedSimpleExam(
-  userId: string,
-  classAId: string
-): Promise<string> {
-  const db = getPrisma()
-  const examId = crypto.randomUUID()
-  await db.exam.create({
-    data: {
-      id: examId,
-      examName: "第１回実力テスト 中２英語",
-      referenceDate: new Date("2025-07-10"),
-      description: "Lesson 1-4 まとめ",
-    },
-  })
-  await db.userExam.create({
-    data: { id: crypto.randomUUID(), userId, examId, role: "OWNER" },
-  })
-  await db.examClassroom.create({
-    data: {
-      id: crypto.randomUUID(),
-      examId,
-      classroomId: classAId,
-      administered: true,
-      teacherStatistics: true,
-      studentReport: true,
-    },
-  })
-  await db.examPage.create({
-    data: { id: crypto.randomUUID(), examId, pageNumber: 1, imagePath: "" },
-  })
-  console.log(`  [SEED] 通常試験 (examId=${examId})`)
-  return examId
-}
-
-// ---------------------------------------------------------------------------
 // ASBマスター画像ベースで答案画像を再生成
 // ---------------------------------------------------------------------------
 export async function regenerateAnswerImages(
@@ -1037,12 +1033,12 @@ export async function regenerateAnswerImages(
   masterDir: string
 ): Promise<void> {
   const REGION_DEFINITIONS = computeRegionDefinitions(templatePath)
+  const headerFieldBoxes = computeHeaderFieldBoxes(templatePath)
   const answerDir = path.join(TEST_DATA_DIR, "exams", examId, "answer-sheets")
   fs.mkdirSync(answerDir, { recursive: true })
 
-  // 模範解答画像に正答テキストをオーバーレイ
-  await generateMasterAnswerImage(masterDir, REGION_DEFINITIONS)
-
+  // 生徒の答案を先に作る。模範解答の赤字はマスター画像を上書きするので、
+  // 先にやると全員の答案に模範解答が写り込む
   for (let i = 0; i < studentIds.length; i++) {
     const scores = generateStudentScores(i, REGION_DEFINITIONS)
     await generateStudentAnswerImage(
@@ -1051,8 +1047,245 @@ export async function regenerateAnswerImages(
       studentIds[i],
       masterDir,
       REGION_DEFINITIONS,
-      scores
+      scores,
+      { student: studentHeaderFor(i), boxes: headerFieldBoxes }
     )
   }
+
+  // 模範解答画像に正答テキストをオーバーレイ
+  await generateMasterAnswerImage(masterDir, REGION_DEFINITIONS)
   console.log(`  [REGEN] 模範解答 + 答案画像 ${studentIds.length}枚を再生成`)
+}
+
+// ---------------------------------------------------------------------------
+// 残った食い違いの裁定
+// ---------------------------------------------------------------------------
+
+/**
+ * 裁定されていない食い違いを、1人目（試験の持ち主）の判定で裁定する
+ *
+ * 採点確定の画面を撮るために食い違いを残してあるが、残したまま結果出力を撮ると
+ * 困る。問題分析の識別係数・D値・α は全設問が確定した生徒だけで計算するので
+ * （`src/lib/shared/itemAnalysis.ts`）、食い違いのある生徒が抜けて全行「---」になる。
+ * 採点確定を撮り終えた後、結果出力の前に呼ぶ。画面で裁定済みのマスには触れない。
+ *
+ * @returns 裁定したマスの数
+ */
+export async function resolveRemainingConflicts(
+  examId: string,
+  ownerUserId: string
+): Promise<number> {
+  const db = getPrisma()
+  const questionScores = await db.questionScore.findMany({
+    where: { examStudent: { examId } },
+  })
+  const decidedCells = new Set(
+    (
+      await db.scoreDecision.findMany({
+        where: { examStudent: { examId } },
+        select: { cropRegionId: true, examStudentId: true },
+      })
+    ).map((decision) => `${decision.cropRegionId}:${decision.examStudentId}`)
+  )
+
+  const proposalsByCell = new Map<string, typeof questionScores>()
+  for (const questionScore of questionScores) {
+    const cellKey = `${questionScore.cropRegionId}:${questionScore.examStudentId}`
+    proposalsByCell.set(cellKey, [
+      ...(proposalsByCell.get(cellKey) ?? []),
+      questionScore,
+    ])
+  }
+
+  let resolvedCount = 0
+  for (const [cellKey, proposals] of proposalsByCell) {
+    if (decidedCells.has(cellKey) || proposals.length < 2) continue
+    const isConflict = proposals.some(
+      (proposal) =>
+        proposal.status !== proposals[0].status ||
+        Number(proposal.partialScore) !== Number(proposals[0].partialScore)
+    )
+    if (!isConflict) continue
+    const ownerProposal =
+      proposals.find((proposal) => proposal.userId === ownerUserId) ??
+      proposals[0]
+    await db.scoreDecision.create({
+      data: {
+        id: crypto.randomUUID(),
+        cropRegionId: ownerProposal.cropRegionId,
+        examStudentId: ownerProposal.examStudentId,
+        verdict: ownerProposal.status,
+        score: ownerProposal.partialScore,
+        decidedByUserId: ownerUserId,
+      },
+    })
+    resolvedCount++
+  }
+  console.log(`  [SEED] 残りの食い違い ${resolvedCount} マスを裁定`)
+  return resolvedCount
+}
+
+// ---------------------------------------------------------------------------
+// 描いた注記を消す
+// ---------------------------------------------------------------------------
+
+/**
+ * 試験の答案に描いた注記（アノテーション）を消す
+ *
+ * アノテーションの図のために描いたものが、最後に撮るヒーロー画像に残る
+ * （消し忘れの赤い枠に見える）ので、撮る前に消す。
+ */
+export async function deleteDrawingAnnotations(
+  examId: string
+): Promise<number> {
+  const { count } = await getPrisma().drawingAnnotation.deleteMany({
+    where: { questionScore: { examStudent: { examId } } },
+  })
+  console.log(`  [SEED] 注記 ${count}件を削除`)
+  return count
+}
+
+// ---------------------------------------------------------------------------
+// 成績と試験外成績資料をつなぐ
+// ---------------------------------------------------------------------------
+
+/**
+ * 成績の項目へ、試験外成績資料の評価項目をデータソースとしてつなぐ
+ *
+ * つながないと成績算出の「04 外部成績」が「試験外成績資料のデータソースが
+ * ありません」だけの空の画面になる。画面から足したときと同じ形
+ * （`type: "coursework"` ＋ `courseworkItemId`）で作る。
+ *
+ * - 確認テスト → 思考・判断・表現
+ * - 課題プリント → 主体的に学習に取り組む態度
+ */
+export async function linkCourseworkToGrade(
+  gradeId: string,
+  courseworkId: string
+): Promise<void> {
+  const db = getPrisma()
+  const coursework = await db.coursework.findUniqueOrThrow({
+    where: { id: courseworkId },
+    include: { items: true },
+  })
+  const gradeItems = await db.gradeItem.findMany({ where: { gradeId } })
+  const links: [courseworkItemName: string, gradeItemName: string][] = [
+    ["確認テスト", "思考・判断・表現"],
+    ["課題プリント", "主体的に学習に取り組む態度"],
+  ]
+  for (const [courseworkItemName, gradeItemName] of links) {
+    const courseworkItem = coursework.items.find(
+      (item) => item.name === courseworkItemName
+    )
+    const gradeItem = gradeItems.find((item) => item.name === gradeItemName)
+    if (!courseworkItem || !gradeItem) {
+      throw new Error(
+        `成績とつなぐ項目が見つかりません: ${courseworkItemName} → ${gradeItemName}`
+      )
+    }
+    await db.gradeDataSource.create({
+      data: {
+        id: crypto.randomUUID(),
+        gradeItemId: gradeItem.id,
+        type: "coursework",
+        courseworkItemId: courseworkItem.id,
+        // 画面から足したときの既定名と同じ形（資料名(項目名)）
+        name: `${coursework.name}(${courseworkItem.name})`,
+        weight: 1.0,
+        order: 1,
+      },
+    })
+  }
+  console.log(`  [SEED] 成績に試験外成績資料をつないだ（${links.length}件）`)
+}
+
+// ---------------------------------------------------------------------------
+// 画面の操作に使う値
+// ---------------------------------------------------------------------------
+
+/** 名前から学級の id を引く（画面から作った学級の詳細を開くため） */
+export async function findClassroomId(name: string): Promise<string> {
+  const classroom = await getPrisma().classroom.findFirstOrThrow({
+    where: { name },
+  })
+  return classroom.id
+}
+
+/**
+ * 採点領域をドラッグで作るときの目標（用紙に対する割合）
+ *
+ * 氏名欄と、先頭の設問いくつか。画面からドラッグする位置を決めるのに使う。
+ */
+export async function sheetBoxesForDrawing(templatePath: string): Promise<{
+  nameBox: { x: number; y: number; width: number; height: number }
+  questionBoxes: {
+    label: string
+    x: number
+    y: number
+    width: number
+    height: number
+  }[]
+}> {
+  const nameBox = computeHeaderFieldBoxes(templatePath).find(
+    (box) => box.label === "氏名"
+  )
+  if (!nameBox) throw new Error("テンプレートに氏名欄がありません")
+  const questionBoxes = computeRegionDefinitions(templatePath)
+    .slice(0, 4)
+    .map(({ label, x, y, width, height }) => ({ label, x, y, width, height }))
+  return { nameBox, questionBoxes }
+}
+
+// ---------------------------------------------------------------------------
+// 画面からアップロードするファイル
+// ---------------------------------------------------------------------------
+
+/**
+ * 画面から取り込ませるファイルを作る（模範解答の PNG と、全員分の答案の PDF）
+ *
+ * 採点付きの試験（`seedExamWithScoring` + `regenerateAnswerImages`）の画像から
+ * 作る。どれも生成した架空の答案なので、公開する図に写ってよい。
+ * 答案の PDF は出席番号順（A組→B組）の1人1ページで、スキャナーでまとめて
+ * 読み込んだ形を模す。
+ *
+ * @returns 作ったファイルの絶対パス
+ */
+export async function buildUploadFiles(
+  examId: string,
+  studentIds: string[]
+): Promise<{ masterAnswerPngPath: string; answerSheetsPdfPath: string }> {
+  const examDir = path.join(TEST_DATA_DIR, "exams", examId)
+  const uploadDir = path.join(TEST_DATA_DIR, "uploads")
+  fs.mkdirSync(uploadDir, { recursive: true })
+
+  const masterAnswerPngPath = path.join(uploadDir, "模範解答.png")
+  fs.copyFileSync(
+    path.join(examDir, "master-images", "master-page-1.png"),
+    masterAnswerPngPath
+  )
+
+  const pdfDocument = await PDFDocument.create()
+  for (const studentId of studentIds) {
+    const answerPng = fs.readFileSync(
+      path.join(examDir, "answer-sheets", `${studentId}_page1.png`)
+    )
+    // PDF を軽くするため JPEG にしてから載せる（40ページ分の PNG は重い）
+    const answerJpeg = await sharp(answerPng).jpeg({ quality: 80 }).toBuffer()
+    const embeddedImage = await pdfDocument.embedJpg(answerJpeg)
+    // B4 縦（257mm × 364mm）をポイントで
+    const pdfPage = pdfDocument.addPage([728.5, 1031.8])
+    pdfPage.drawImage(embeddedImage, {
+      x: 0,
+      y: 0,
+      width: pdfPage.getWidth(),
+      height: pdfPage.getHeight(),
+    })
+  }
+  const answerSheetsPdfPath = path.join(uploadDir, "答案_スキャン.pdf")
+  fs.writeFileSync(answerSheetsPdfPath, await pdfDocument.save())
+
+  console.log(
+    `  [SEED] アップロード用ファイル（模範解答PNG・答案PDF ${studentIds.length}ページ）`
+  )
+  return { masterAnswerPngPath, answerSheetsPdfPath }
 }

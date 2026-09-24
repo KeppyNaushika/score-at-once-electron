@@ -24,6 +24,7 @@
 
 import { expect, test } from "@playwright/test"
 import * as fs from "fs"
+import * as os from "os"
 import * as path from "path"
 import type { ElectronApplication, Locator, Page } from "playwright"
 import { _electron as electron } from "playwright"
@@ -158,7 +159,67 @@ async function waitForReady(page: Page) {
   await page.waitForTimeout(800)
 }
 
+/**
+ * 撮影機の持ち主を指す文字列（ホームディレクトリのパスと OS のユーザー名）
+ *
+ * 撮った図は公式サイトに貼る。画面にこれが写っていれば、撮った人の名前と
+ * フォルダ構成が公開される（実際、同期設定の図に `/Users/<名前>/dev/...` が写っていた）。
+ */
+const MACHINE_OWNER_MARKERS = [os.homedir(), os.userInfo().username].filter(
+  (marker) => marker.length >= 3
+)
+
+/**
+ * 画面に撮影機の持ち主を指す文字列が無いことを確かめる
+ *
+ * 見える文字（`innerText`）に加えて入力欄の値も見る。読み取り専用の入力欄に
+ * パスを出す画面があり、その値は `innerText` に入らない。
+ */
+async function assertNoMachineOwnerInfo(page: Page, relativePath: string) {
+  const screenTexts = await page.evaluate(() => [
+    document.body.innerText,
+    ...Array.from(
+      document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+        "input, textarea"
+      ),
+      (field) => field.value
+    ),
+  ])
+  const leakedMarker = MACHINE_OWNER_MARKERS.find((marker) =>
+    screenTexts.some((text) => text.includes(marker))
+  )
+  if (leakedMarker) {
+    throw new Error(
+      `${relativePath} に撮影機のホームディレクトリかユーザー名が写ります。` +
+        `公開する図なので撮りません。表示を差し替えるか、撮る画面を変えてください。`
+    )
+  }
+}
+
+/**
+ * 画面のアニメーション（ダイアログのフェードイン等）が終わるのを待つ
+ *
+ * 待たないと、開きかけで半透明のダイアログの向こうに背景の文字が透けた絵が
+ * 撮れる（実際、学級追加のダイアログがそうなっていた）。回り続けるもの
+ * （読み込み中の輪など）は終わらないので待たない。
+ */
+async function waitForAnimationsToSettle(page: Page) {
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter(
+          (animation) =>
+            animation.effect?.getComputedTiming().iterations !== Infinity
+        )
+        .map((animation) => animation.finished.catch(() => undefined))
+    )
+  )
+}
+
 async function ss(page: Page, relativePath: string) {
+  await waitForAnimationsToSettle(page)
+  await assertNoMachineOwnerInfo(page, relativePath)
   const fullPath = path.join(SCREENSHOTS_DIR, relativePath)
   fs.mkdirSync(path.dirname(fullPath), { recursive: true })
   await page.screenshot({ path: fullPath, fullPage: false, type: "png" })
@@ -211,7 +272,7 @@ async function chooseScoringMode(page: Page) {
  * （模範解答も1マス数えるので、2つ以上あれば答案が並んでいる）。
  */
 async function showAllScoredAnswers(page: Page) {
-  for (const filterKey of ["e", "f", "j", "o", "p", "t"]) {
+  for (const filterKey of ["e", "f", "j", "o", "p", "u"]) {
     await page.keyboard.press(`Alt+${filterKey}`)
     await page.waitForTimeout(150)
   }
@@ -220,6 +281,26 @@ async function showAllScoredAnswers(page: Page) {
     .poll(() => answerCells.count(), { timeout: 15_000 })
     .toBeGreaterThan(1)
   await page.waitForTimeout(800)
+}
+
+/**
+ * 同期フォルダ欄の表示を、配布版で見える形の見本パスへ置き換える
+ *
+ * この欄はデータディレクトリの実パスを出す。撮影ではそれが撮影機のリポジトリ配下
+ * （ホームディレクトリの下）になり、撮影機の持ち主が写る。配布版（Windows）の
+ * データディレクトリは実行ファイルの隣の `data`（`electron-src/lib/dataManager.ts`）
+ * なので、その形の見本を見せる。**画面の表示だけ**を書き換え、設定には触れない。
+ */
+async function showExampleSyncPath(page: Page) {
+  // 見出しの直後の入力欄。読み取り専用の入力欄はクライアントIDにもあるので、
+  // 見出しから辿って取り違えないようにする
+  const syncFolderField = page
+    .getByText("同期フォルダ", { exact: true })
+    .locator("xpath=following-sibling::input[1]")
+  await expect(syncFolderField).toBeVisible()
+  await syncFolderField.evaluate((field: HTMLInputElement) => {
+    field.value = "C:\\一括採点\\data\\sync"
+  })
 }
 
 /** 押せる状態になってから押す（描き直しの途中を掴まない） */
@@ -243,7 +324,10 @@ let classBId = ""
 let subtotalGroupId = ""
 let subtotalIds: string[] = []
 let examId = ""
-let simpleExamId = ""
+/** 画面の操作だけで作る試験（模範解答・採点領域・答案を画面から入れる） */
+let regularExamId = ""
+/** 画面から取り込ませるファイル（`buildUploadFiles`） */
+let uploadFiles = { masterAnswerPngPath: "", answerSheetsPdfPath: "" }
 let gradeId = ""
 let courseworkId = ""
 /** ASB が書き出した解答用紙の PNG（試験のマスター画像の元になる） */
@@ -319,6 +403,15 @@ test.beforeAll(async () => {
   await assertOpenedScreenshotDatabase(electronApp)
 
   page = await electronApp.firstWindow({ timeout: 60000 })
+  // 取り込み前の答案を抱えた画面は beforeunload で離脱を止める。撮影は画面を
+  // 渡り歩くので、止められると次の page.goto が進まない。離脱は常に通す
+  await electronApp.evaluate(({ BrowserWindow }) => {
+    for (const browserWindow of BrowserWindow.getAllWindows()) {
+      browserWindow.webContents.on("will-prevent-unload", (event) =>
+        event.preventDefault()
+      )
+    }
+  })
   await setCaptureViewport(CAPTURE_WIDTH, CAPTURE_HEIGHT)
   await page.waitForLoadState("domcontentloaded", { timeout: 30000 })
   await page.waitForTimeout(3000)
@@ -343,8 +436,16 @@ test.afterAll(async () => {
 
 test.describe.serial("第1章: 初期設定", () => {
   test("1-1 ログイン画面", async () => {
-    await nav(page, "/login")
+    // ログインしたまま /login を開くと、サイドバーにログイン中の利用者と
+    // 「ログアウト」が出た絵になる。いったんログアウトしてから撮り、入り直す
+    await clickWhenReady(page.getByRole("button", { name: "ログアウト" }))
+    await page.waitForURL(`${BASE_URL}/login`, { timeout: 15_000 })
+    await waitForReady(page)
     await ss(page, "ch1-setup/01-login.png")
+
+    await page.getByText("山田 太郎").first().click()
+    await page.waitForURL(`${BASE_URL}/exams`, { timeout: 30_000 })
+    await waitForReady(page)
   })
 
   test("1-2 生徒管理", async () => {
@@ -452,11 +553,52 @@ test.describe.serial("第1章: 初期設定", () => {
       )
       await expect(classroomDialog).toBeHidden({ timeout: 15_000 })
 
-      await nav(page, "/classrooms")
-      await clickWhenReady(page.getByText("2年C組").first())
-      await waitForReady(page)
+      await nav(
+        page,
+        `/classrooms/${runSeedCommand("findClassroomId", ["2年C組"])}`
+      )
       await ss(page, "ch1-setup/09-classroom-empty.png")
     })
+
+    // (E') Excel から学籍番号を貼り付けて一括追加するダイアログ。貼り付けた
+    //      ところまでを撮って閉じる（C組は以降の図に使わないので、所属は増やさない）
+    await captureOptional(
+      "ch1-setup/15-classroom-excel-paste.png",
+      async () => {
+        await clickWhenReady(
+          page.getByRole("button", { name: "Excel 貼付一括追加" })
+        )
+        const importDialog = page.getByRole("dialog", {
+          name: /への生徒一括追加/,
+        })
+        await expect(importDialog).toBeVisible()
+        const pastedRows = [
+          "S021\t1\t2025/4/1\t",
+          "S022\t2\t2025/4/1\t",
+          "S023\t3\t2025/4/1\t",
+        ].join("\n")
+        await importDialog
+          .locator("table")
+          .first()
+          .evaluate((table, text) => {
+            const clipboard = new DataTransfer()
+            clipboard.setData("text/plain", text)
+            table.dispatchEvent(
+              new ClipboardEvent("paste", {
+                clipboardData: clipboard,
+                bubbles: true,
+                cancelable: true,
+              })
+            )
+          }, pastedRows)
+        await expect(
+          importDialog.getByRole("button", { name: "3名を追加" })
+        ).toBeEnabled()
+        await ss(page, "ch1-setup/15-classroom-excel-paste.png")
+        await page.keyboard.press("Escape")
+        await expect(importDialog).toBeHidden()
+      }
+    )
 
     // (F) 2年A組の詳細（生徒が20名いる）
     await nav(page, `/classrooms/${classAId}`)
@@ -619,10 +761,13 @@ test.describe.serial("第2章: 試験準備", () => {
       async () => {
         await clickWhenReady(page.getByRole("button", { name: "新規試験作成" }))
         await page.waitForURL(/\/exams\/[0-9a-f-]{36}$/, { timeout: 15_000 })
+        // この試験は以降、模範解答・採点領域・答案を画面から入れる「通常の手順」の
+        // 図に使う（2-9, 3-1b）。採点付きの試験（第２回定期テスト）とは別の名前にする
+        regularExamId = page.url().split("/").pop() ?? ""
 
-        await page.getByLabel("試験名").fill("第２回定期テスト 中２数学")
-        await page.getByLabel("試験日").fill("2025-10-15")
-        await page.getByLabel("説明").fill("一次関数・連立方程式の範囲")
+        await page.getByLabel("試験名").fill("第１回確認テスト 中２数学")
+        await page.getByLabel("試験日").fill("2025-06-20")
+        await page.getByLabel("説明").fill("式の計算・連立方程式")
         await page.waitForTimeout(500)
         await ss(page, "ch2-exam-prep/10-new-exam-overview.png")
       }
@@ -674,6 +819,12 @@ test.describe.serial("第2章: 試験準備", () => {
       ])
       console.log("  [OK] ASB PNG → マスター画像 + 答案画像を再生成")
     }
+
+    // 画面から取り込ませるファイル（模範解答の PNG と、A組20名分の答案 PDF）
+    uploadFiles = runSeedCommand("buildUploadFiles", [
+      examId,
+      studentIds.slice(0, 20),
+    ])
 
     // (E) 2人目の採点者を入れる。協調採点の画面（3の採点担当・8の裁定）は
     //     参加者が1人だと構造的に写らない
@@ -765,11 +916,8 @@ test.describe.serial("第2章: 試験準備", () => {
     await ss(page, "ch2-exam-prep/19-exam-students.png")
   })
 
-  test("2-9 通常アップロード経路（ASBを使わない試験作成）", async () => {
-    // 第2の試験を作成（通常のアップロード経路を示す）
-    simpleExamId = runSeedCommand("seedSimpleExam", [IDS.userId, classAId])
-
-    // 試験一覧（2つの試験が並ぶ）
+  test("2-9 通常の手順（模範解答と採点領域を画面から入れる）", async () => {
+    // 試験一覧（第１回確認テストと第２回定期テストが並ぶ）
     await nav(page, "/exams")
     await ss(page, "ch2-exam-prep/20-exam-list.png")
 
@@ -784,14 +932,143 @@ test.describe.serial("第2章: 試験準備", () => {
       }
     )
 
-    // 通常試験の模範解答アップロードページ（空の状態 = ドラッグ&ドロップUI）
-    await nav(page, `/exams/${simpleExamId}/01-upload`)
+    // (A) 模範解答: 空の取り込み画面 → PNG を取り込んだ後
+    await nav(page, `/exams/${regularExamId}/01-upload`)
     await ss(page, "ch2-exam-prep/22-regular-upload-empty.png")
+    await captureOptional(
+      "ch2-exam-prep/24-regular-master-uploaded.png",
+      async () => {
+        // 見えない input が2つ以上ある（ページごとの差し替え用）。取り込み枠の
+        // ものが DOM の先頭に来る
+        await page
+          .locator('input[type="file"]')
+          .first()
+          .setInputFiles(uploadFiles.masterAnswerPngPath)
+        await expect(
+          page.getByText(/枚の模範解答をアップロードしました/).first()
+        ).toBeVisible({ timeout: 60_000 })
+        await expect(page.getByText(/模範解答 \(1ページ\)/)).toBeVisible()
+        await page.waitForTimeout(800)
+        await ss(page, "ch2-exam-prep/24-regular-master-uploaded.png")
+      }
+    )
 
-    // 通常試験の採点領域ページ（空の状態）
-    await nav(page, `/exams/${simpleExamId}/02-template`)
-    await page.waitForTimeout(1000)
-    await ss(page, "ch2-exam-prep/23-regular-template-empty.png")
+    // (B) 採点領域: 何も無い状態 → ドラッグで氏名欄と設問を囲んだ後
+    const { nameBox, questionBoxes } = runSeedCommand("sheetBoxesForDrawing", [
+      TEMPLATE_PATH,
+    ])
+    await nav(page, `/exams/${regularExamId}/02-template`)
+    await captureOptional(
+      "ch2-exam-prep/23-regular-template-empty.png",
+      async () => {
+        // 右上の「操作:」はズームの説明。領域の作り方とは関係が無く、絵の上に
+        // 被さるので閉じる
+        await clickWhenReady(page.getByLabel("ヘルプを閉じる"))
+        // 自動検出は検出枠へ吸い付き、枠のクリックでも領域を作る。狙った矩形を
+        // 描くため手動指定にする
+        await clickWhenReady(page.getByRole("tab", { name: "手動指定" }))
+        await expect(page.getByText("領域を作成してください")).toBeVisible()
+        // 初めは用紙の実寸（100%）で、画面からはみ出す。はみ出した所には描けない
+        // ので、用紙全体が収まるまで縮める。キーの Ctrl+− は描画面の中に
+        // フォーカスがあるときしか効かないので、Ctrl+ホイールで縮める
+        const sheetArea = page.locator(".cursor-crosshair").first()
+        const initialBox = await sheetArea.boundingBox()
+        if (!initialBox) throw new Error("採点領域の描画面が見つかりません")
+        await page.mouse.move(initialBox.x + 200, initialBox.y + 200)
+        for (let zoomStep = 0; zoomStep < 15; zoomStep++) {
+          const sheetBox = await sheetArea.boundingBox()
+          if (sheetBox && sheetBox.y + sheetBox.height <= CAPTURE_HEIGHT - 20) {
+            break
+          }
+          await page.keyboard.down("Control")
+          await page.mouse.wheel(0, 20)
+          await page.keyboard.up("Control")
+          await page.waitForTimeout(250)
+        }
+        await ss(page, "ch2-exam-prep/23-regular-template-empty.png")
+      }
+    )
+    await captureOptional(
+      "ch2-exam-prep/25-regular-regions-drawn.png",
+      async () => {
+        // 画像は描画面の左上に、style の width/height の大きさで敷かれている。
+        // 描画面には最小の大きさ（400×300）があり、縮めると画像より大きくなるので、
+        // 位置は描画面の枠ではなく画像の大きさから割り出す
+        const sheetArea = page.locator(".cursor-crosshair").first()
+        const areaBox = await sheetArea.boundingBox()
+        if (!areaBox) throw new Error("採点領域の描画面が見つかりません")
+        const imageSize = await sheetArea.evaluate((element: HTMLElement) => ({
+          width: parseFloat(element.style.width),
+          height: parseFloat(element.style.height),
+        }))
+        const sheetBox = { x: areaBox.x, y: areaBox.y, ...imageSize }
+        const drawBox = async (box: {
+          x: number
+          y: number
+          width: number
+          height: number
+        }) => {
+          await page.mouse.move(
+            sheetBox.x + box.x * sheetBox.width,
+            sheetBox.y + box.y * sheetBox.height
+          )
+          await page.mouse.down()
+          await page.waitForTimeout(100)
+          await page.mouse.move(
+            sheetBox.x + (box.x + box.width) * sheetBox.width,
+            sheetBox.y + (box.y + box.height) * sheetBox.height,
+            { steps: 12 }
+          )
+          await page.mouse.up()
+          await page.waitForTimeout(600)
+        }
+        for (const box of [nameBox, ...questionBoxes]) await drawBox(box)
+        await expect(
+          page.getByText(`領域一覧 (${questionBoxes.length + 1})`)
+        ).toBeVisible({ timeout: 15_000 })
+        await ss(page, "ch2-exam-prep/25-regular-regions-drawn.png")
+      }
+    )
+
+    // (C) 領域情報: 氏名欄を囲んだ1つ目の種類を「氏名」にする。答案の取り込みで
+    //     「氏名欄のみ」の照合が使えるようになる
+    await nav(page, `/exams/${regularExamId}/03-region-info`)
+    await captureOptional(
+      "ch2-exam-prep/26-regular-region-type-name.png",
+      async () => {
+        await clickWhenReady(page.getByRole("combobox").first())
+        await clickWhenReady(page.getByRole("option", { name: "氏名" }))
+        await page.waitForTimeout(800)
+        await ss(page, "ch2-exam-prep/26-regular-region-type-name.png")
+      }
+    )
+
+    // (D) 受験生徒: 学級単位で追加するダイアログ → 学級の関連付け
+    await nav(page, `/exams/${regularExamId}/05-students`)
+    await captureOptional(
+      "ch2-exam-prep/27-regular-add-students.png",
+      async () => {
+        await clickWhenReady(page.getByRole("button", { name: "生徒を追加" }))
+        const addDialog = page.getByRole("dialog", { name: "受験生徒の追加" })
+        await expect(addDialog).toBeVisible()
+        await addDialog.getByLabel("2年A組").check()
+        await ss(page, "ch2-exam-prep/27-regular-add-students.png")
+        await clickWhenReady(
+          addDialog.getByRole("button", { name: /選択した学級を追加/ })
+        )
+        await page.waitForTimeout(800)
+        await clickWhenReady(addDialog.getByRole("button", { name: "閉じる" }))
+        await expect(addDialog).toBeHidden()
+      }
+    )
+    await captureOptional(
+      "ch2-exam-prep/28-regular-exam-classrooms.png",
+      async () => {
+        await clickWhenReady(page.getByRole("tab", { name: "学級の関連付け" }))
+        await page.waitForTimeout(800)
+        await ss(page, "ch2-exam-prep/28-regular-exam-classrooms.png")
+      }
+    )
   })
 })
 
@@ -803,6 +1080,44 @@ test.describe.serial("第3章: 採点と出力", () => {
   test("3-1 答案アップロード", async () => {
     await nav(page, `/exams/${examId}/06-student-answers`)
     await ss(page, "ch3-scoring/01-student-answers.png")
+  })
+
+  test("3-1b 答案の取り込み（通常の手順）", async () => {
+    // 2-9 で模範解答・採点領域（氏名欄を含む）・受験生徒（A組）を入れた試験に、
+    // スキャンした答案の PDF（A組20名分）を取り込む
+    await nav(page, `/exams/${regularExamId}/06-student-answers`)
+    await captureOptional("ch3-scoring/21-answers-added.png", async () => {
+      await page
+        .locator('input[type="file"]')
+        .first()
+        .setInputFiles(uploadFiles.answerSheetsPdfPath)
+      await expect(
+        page.getByText(/個のファイルを追加しました/).first()
+      ).toBeVisible({ timeout: 120_000 })
+      await page.waitForTimeout(1500)
+      await ss(page, "ch3-scoring/21-answers-added.png")
+    })
+    await captureOptional(
+      "ch3-scoring/22-answers-name-preview.png",
+      async () => {
+        await clickWhenReady(page.getByRole("button", { name: "氏名欄のみ" }))
+        await page.waitForTimeout(1500)
+        await ss(page, "ch3-scoring/22-answers-name-preview.png")
+      }
+    )
+    await captureOptional("ch3-scoring/23-answers-uploaded.png", async () => {
+      await clickWhenReady(
+        page.getByRole("button", { name: "アップロード実行" })
+      )
+      await expect(
+        page.getByText(/件の答案をアップロードしました/).first()
+      ).toBeVisible({ timeout: 120_000 })
+      await clickWhenReady(
+        page.getByRole("tab", { name: "配置済み答案の確認" })
+      )
+      await page.waitForTimeout(1500)
+      await ss(page, "ch3-scoring/23-answers-uploaded.png")
+    })
   })
 
   test("3-2 一括採点（一覧表示）", async () => {
@@ -829,6 +1144,67 @@ test.describe.serial("第3章: 採点と出力", () => {
       await clickWhenReady(page.getByRole("button", { name: "個別表示" }))
       await page.waitForTimeout(2000)
       await ss(page, "ch3-scoring/04-scoring-individual.png")
+    })
+  })
+
+  test("3-3b アノテーション（個別表示で描く）", async () => {
+    // 描けるのは個別表示だけ。道具の棚のボタンは名前を持たず、割り当てキーは
+    // 採点の操作とかち合う（t を押すと二重マークが付いて次の設問へ進んだ）ので、
+    // 棚のボタンを**位置で**押す。位置は 1440×900 の画面で固定（CAPTURE_WIDTH）。
+    // 答案の表示位置も、選んだ設問（1-(1)-ア）が中央に来るので毎回同じになる
+    const paletteButton = {
+      rectangle: { x: 288, y: 432 },
+      text: { x: 288, y: 504 },
+    }
+    // 棚は消えている間 pointer-events: none で、押しても下の答案に抜ける。
+    // 上にマウスを載せて出てくるのを待ってから押す
+    // 押すとその道具の設定（色・太さ）の吹き出しが開き、次のクリックはそれを
+    // 閉じるのに使われる。Esc で閉じてから描く
+    const pressPaletteButton = async (button: { x: number; y: number }) => {
+      await page.mouse.move(button.x, button.y)
+      await page.waitForTimeout(500)
+      await page.mouse.click(button.x, button.y)
+      await page.waitForTimeout(300)
+      await page.keyboard.press("Escape")
+      await page.waitForTimeout(300)
+    }
+    await captureOptional(
+      "ch3-scoring/18-annotation-text-dialog.png",
+      async () => {
+        await pressPaletteButton(paletteButton.text)
+        await page.waitForTimeout(300)
+        // 表の上の余白。右に置くと文字が表示域の右端で切れる
+        await page.mouse.click(560, 360)
+        const textDialog = page.getByRole("dialog", {
+          name: "テキスト編集",
+        })
+        await expect(textDialog).toBeVisible()
+        await textDialog
+          .getByPlaceholder("テキストを入力してください...")
+          .fill("よくできました")
+        await ss(page, "ch3-scoring/18-annotation-text-dialog.png")
+        await clickWhenReady(textDialog.getByRole("button", { name: /確定/ }))
+        await expect(textDialog).toBeHidden()
+      }
+    )
+    await captureOptional("ch3-scoring/19-annotation-drawn.png", async () => {
+      await pressPaletteButton(paletteButton.rectangle)
+      await page.waitForTimeout(300)
+      // 1-(1)-ア の答えを長方形で囲む
+      await page.mouse.move(560, 452)
+      await page.mouse.down()
+      await page.mouse.move(730, 528, { steps: 10 })
+      await page.mouse.up()
+      await page.waitForTimeout(800)
+      // 道具の棚は3秒触らないと消えるので、撮る直前にその上を通る
+      await page.mouse.move(300, 450)
+      await ss(page, "ch3-scoring/19-annotation-drawn.png")
+    })
+    await captureOptional("ch3-scoring/20-annotation-list.png", async () => {
+      await clickWhenReady(page.getByRole("tab", { name: "アノテーション" }))
+      await page.waitForTimeout(1000)
+      await ss(page, "ch3-scoring/20-annotation-list.png")
+      await clickWhenReady(page.getByRole("tab", { name: "採点" }))
     })
   })
 
@@ -887,6 +1263,11 @@ test.describe.serial("第3章: 採点と出力", () => {
   })
 
   test("3-6 結果出力", async () => {
+    // 採点確定の図のために残した食い違いを裁定し終えてから撮る。残したままだと
+    // 問題分析の識別係数・D値・α が全行「---」になる（全設問が確定した生徒だけで
+    // 計算するため）
+    runSeedCommand("resolveRemainingConflicts", [examId, IDS.userId])
+
     await nav(page, `/exams/${examId}/09-export`)
     await page.waitForTimeout(1500)
     // 画像の名前を「08」＋「-export」と綴らないこと。段の改名（結果の段は 09 へ
@@ -894,10 +1275,11 @@ test.describe.serial("第3章: 採点と出力", () => {
     // 「改名の取り残し」）が、その綴りをリポジトリ全体で禁じている
     await ss(page, "ch3-scoring/08-result-export.png")
 
-    // 左のカード: 統計対象学級 / 生徒選択 / プレビュー
+    // 左のカード: 統計対象学級 / 生徒選択 / プレビュー。
+    // 初期のタブは「生徒選択」なので、その絵は上の 08 が兼ねる（別に撮ると
+    // 08 と同じ絵が2枚になる）
     const selectionTabs: [string, string][] = [
       ["統計対象学級", "ch3-scoring/09-export-class-stats.png"],
-      ["生徒選択", "ch3-scoring/10-export-student-selection.png"],
     ]
     for (const [tabName, relativePath] of selectionTabs) {
       await captureOptional(relativePath, async () => {
@@ -975,6 +1357,8 @@ test.describe.serial("第4章: 成績算出・その他", () => {
       classAId,
       classBId,
     ])
+    // 成績の「外部成績」に写るよう、資料の評価項目を成績へつなぐ
+    runSeedCommand("linkCourseworkToGrade", [gradeId, courseworkId])
   })
 
   test("4-1 成績算出", async () => {
@@ -1041,13 +1425,39 @@ test.describe.serial("第4章: 成績算出・その他", () => {
     for (const [stepFolder, relativePath] of courseworkSteps) {
       await nav(page, `/coursework/${courseworkId}/${stepFolder}`)
       await page.waitForTimeout(600)
+      if (stepFolder === "04-scores") {
+        // 評価項目1つにつき4列あり、表が横に長い。サイドバーを畳んで幅を空ける
+        // （開閉は画面ごとに戻るので、開いた後に押す）
+        await clickWhenReady(
+          page.getByRole("button", { name: "サイドバーを閉じる" })
+        )
+        await page.waitForTimeout(400)
+      }
       await ss(page, relativePath)
     }
   })
 
   test("4-5 PDF加工", async () => {
     await nav(page, "/pdf-tools")
-    await ss(page, "ch4-grades/17-pdf-tools.png")
+    // ファイルの選択はネイティブのダイアログなので、答案の PDF を返すよう差し替える
+    await captureOptional("ch4-grades/17-pdf-tools.png", async () => {
+      await electronApp.evaluate(({ ipcMain }, filePath) => {
+        ipcMain.removeHandler("pdf-tools:select-files")
+        ipcMain.handle("pdf-tools:select-files", async () => ({
+          canceled: false,
+          filePaths: [filePath],
+        }))
+      }, uploadFiles.answerSheetsPdfPath)
+      await clickWhenReady(
+        page.getByText("ドラッグ&ドロップ または クリックしてPDFファイルを選択")
+      )
+      const addedToast = page.getByText(/件のファイルを追加しました/).first()
+      await expect(addedToast).toBeVisible({ timeout: 60_000 })
+      // 通知が右下の書き出しボタンに被さるので、消えてから撮る
+      await expect(addedToast).toBeHidden({ timeout: 15_000 })
+      await page.waitForTimeout(500)
+      await ss(page, "ch4-grades/17-pdf-tools.png")
+    })
   })
 
   test("4-6 設定", async () => {
@@ -1065,6 +1475,7 @@ test.describe.serial("第4章: 成績算出・その他", () => {
       await captureOptional(relativePath, async () => {
         await clickWhenReady(page.getByRole("tab", { name: tabName }))
         await page.waitForTimeout(600)
+        if (tabName === "同期設定") await showExampleSyncPath(page)
         await ss(page, relativePath)
       })
     }
@@ -1104,6 +1515,8 @@ test.describe.serial("ヒーロー画像", () => {
     // ウインドウを実際にその大きさにはできない。描くだけなら CDP の上書きで作れる
     // ので、幅を採って倍率を諦める（この5枚は1倍で焼き上がる）。上書きは以降ずっと
     // 効くので、**章を全部撮り終えた最後に置くこと**。
+    // アノテーションの図のために描いた注記を消す（残すと消し忘れに見える）
+    runSeedCommand("deleteDrawingAnnotations", [examId])
     await page.setViewportSize({ width: 1920, height: 1080 })
     await page.waitForTimeout(500)
 

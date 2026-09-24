@@ -59,6 +59,10 @@ export default defineConfig({
     url: SCREENSHOT_BASE_URL,
     reuseExistingServer: false,
     timeout: 180 * 1000,
-    env: { NEXT_DIST_DIR: ".next-screenshot" },
+    env: {
+      NEXT_DIST_DIR: ".next-screenshot",
+      // 図に開発中の印（左下の「N」）を写さない（next.config.js）
+      SCORE_AT_ONCE_HIDE_DEV_INDICATOR: "1",
+    },
   },
 })
