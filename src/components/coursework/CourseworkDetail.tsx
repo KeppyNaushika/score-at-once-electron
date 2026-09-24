@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { FolderOutput, MoreVertical, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import type {
@@ -34,6 +35,8 @@ import {
   updateCourseworkMutation,
 } from "@/queries/coursework"
 
+import { DeleteCourseworkModal } from "./DeleteCourseworkModal"
+
 interface CourseworkDetailProps {
   courseworkId: string
 }
@@ -53,6 +56,8 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
   const setCourseworkTags = useMutation(setCourseworkTagsMutation(courseworkId))
   const deleteCoursework = useMutation(deleteCourseworkMutation())
   const exportArchive = useMutation(exportCourseworkArchiveMutation())
+  // 押しただけでは消さず、確認で決めてもらう
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 
   /** 触った欄だけが載って来る。載っていない列は `undefined` のまま送らない */
   const handleCommitBasics = async (changed: Partial<EntityOverviewBasics>) => {
@@ -74,7 +79,14 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
   }
 
   const handleDelete = async () => {
-    const result = await deleteCoursework.mutateAsync(courseworkId)
+    let result
+    try {
+      result = await deleteCoursework.mutateAsync(courseworkId)
+    } catch {
+      // 失敗の通知は MutationCache が出す。確認は開いたままにする
+      return
+    }
+    setIsDeleteModalOpen(false)
     if (result.deleted) {
       router.push("/coursework")
       return
@@ -119,54 +131,71 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
   ]
 
   return (
-    <EntityOverviewPage
-      nameLabel="資料名"
-      dateLabel="実施日"
-      dateHint="学級から生徒を追加するとき、この日に在籍していた生徒が対象になります。"
-      basics={{
-        name: coursework.name,
-        referenceDate: toDateInputValue(coursework.referenceDate),
-        description: coursework.description ?? "",
-      }}
-      onCommitBasics={handleCommitBasics}
-      tags={coursework.tags.map((courseworkTag) => courseworkTag.tag)}
-      isReloadingTags={isReloading}
-      onReplaceTags={handleReplaceTags}
-      stats={stats}
-      tabs={courseworkWorkflowTabs}
-      entityHref={`/coursework/${courseworkId}`}
-      phases={courseworkWorkflowPhases}
-      stepCompletion={{
-        "02-students": completion.hasStudents,
-        "03-items": completion.hasItems,
-        // 点数は概要の取得に含まれていないので入力済みかを判定できない。
-        // 結果の確認は何度でもできるので済みという状態を持たない
-        "04-scores": null,
-        "05-results": null,
-      }}
-      actions={
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" aria-label="その他の操作">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleExportArchive}>
-              <FolderOutput className="mr-2 h-4 w-4" />
-              .coursework 書き出し
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => void handleDelete()}
-              className="text-red-600 focus:text-red-600"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              資料を削除
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      }
-    />
+    <>
+      <EntityOverviewPage
+        nameLabel="資料名"
+        dateLabel="実施日"
+        dateHint="学級から生徒を追加するとき、この日に在籍していた生徒が対象になります。"
+        basics={{
+          name: coursework.name,
+          referenceDate: toDateInputValue(coursework.referenceDate),
+          description: coursework.description ?? "",
+        }}
+        onCommitBasics={handleCommitBasics}
+        tags={coursework.tags.map((courseworkTag) => courseworkTag.tag)}
+        isReloadingTags={isReloading}
+        onReplaceTags={handleReplaceTags}
+        stats={stats}
+        tabs={courseworkWorkflowTabs}
+        entityHref={`/coursework/${courseworkId}`}
+        phases={courseworkWorkflowPhases}
+        stepCompletion={{
+          "02-students": completion.hasStudents,
+          "03-items": completion.hasItems,
+          // 点数は概要の取得に含まれていないので入力済みかを判定できない。
+          // 結果の確認は何度でもできるので済みという状態を持たない
+          "04-scores": null,
+          "05-results": null,
+        }}
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" aria-label="その他の操作">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportArchive}>
+                <FolderOutput className="mr-2 h-4 w-4" />
+                .coursework 書き出し
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                資料を削除
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      />
+      <DeleteCourseworkModal
+        target={
+          isDeleteModalOpen
+            ? {
+                id: coursework.id,
+                name: coursework.name,
+                studentCount: coursework.students.length,
+                itemCount: coursework.items.length,
+              }
+            : null
+        }
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        loading={deleteCoursework.isPending}
+      />
+    </>
   )
 }
