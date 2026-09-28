@@ -71,6 +71,10 @@ import {
   setGradeItemExclusion,
 } from "../lib/prisma/gradeItemExclusion"
 import {
+  getCourseworkGradeLockSources,
+  getExamGradeLockSources,
+} from "../lib/prisma/gradeLockSource"
+import {
   deleteGradeOverride,
   upsertGradeOverride,
 } from "../lib/prisma/gradeOverride"
@@ -139,6 +143,15 @@ export const gradeHandlers = {
   // 試験・資料とその中の項目を消す前に、どの成績算出がどう使っているかを調べる
   "grade:getReferences": async (target: GradeReferenceTarget) => {
     return findGradeReferences(target)
+  },
+
+  // 編集欄のロック。試験・資料1件ぶんを使うデータソースをまとめて返す
+  "grade:getExamLockSources": async (examId: string) => {
+    return getExamGradeLockSources(examId)
+  },
+
+  "grade:getCourseworkLockSources": async (courseworkId: string) => {
+    return getCourseworkGradeLockSources(courseworkId)
   },
 
   // タグ（GradeTag）

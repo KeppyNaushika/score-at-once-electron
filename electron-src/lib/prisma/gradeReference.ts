@@ -36,7 +36,7 @@ const DATA_SOURCE_TYPES = [
   "coursework_total",
 ] as const
 
-const toDataSourceType = (type: string): GradeReferenceDataSourceType =>
+export const toDataSourceType = (type: string): GradeReferenceDataSourceType =>
   DATA_SOURCE_TYPES.find((knownType) => knownType === type) ?? "other"
 
 /** 使われ方ごとの検索条件 */
