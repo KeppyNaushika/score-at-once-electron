@@ -10,6 +10,7 @@ import type {
   GradeConstraintInput,
   GradeItemExclusionInput,
 } from "../../src/types/grade.types"
+import type { GradeLockTarget } from "../../src/types/gradeLock.types"
 import type { GradeReferenceTarget } from "../../src/types/gradeReference.types"
 import type { GradeReportSettings } from "../../src/types/gradeReport.types"
 import { createGradeArchive } from "../lib/export/grade-archive/gradeArchiveCreator"
@@ -70,10 +71,7 @@ import {
   getGradeItemExclusions,
   setGradeItemExclusion,
 } from "../lib/prisma/gradeItemExclusion"
-import {
-  getCourseworkGradeLockSources,
-  getExamGradeLockSources,
-} from "../lib/prisma/gradeLockSource"
+import { getGradeLockSources } from "../lib/prisma/gradeLockSource"
 import {
   deleteGradeOverride,
   upsertGradeOverride,
@@ -145,13 +143,9 @@ export const gradeHandlers = {
     return findGradeReferences(target)
   },
 
-  // 編集欄のロック。試験・資料1件ぶんを使うデータソースをまとめて返す
-  "grade:getExamLockSources": async (examId: string) => {
-    return getExamGradeLockSources(examId)
-  },
-
-  "grade:getCourseworkLockSources": async (courseworkId: string) => {
-    return getCourseworkGradeLockSources(courseworkId)
+  // 試験・資料のロック。その試験・資料を使っているデータソースの一覧を返す
+  "grade:getLockSources": async (target: GradeLockTarget) => {
+    return getGradeLockSources(target)
   },
 
   // タグ（GradeTag）

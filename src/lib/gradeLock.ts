@@ -1,79 +1,13 @@
 /**
- * 成績算出（Grade）で使われている値の編集欄に付けるロックの判定と文言。
+ * 成績算出（Grade）で使われている試験・資料のロックを解除する前の、確認の文言。
  *
- * 材料は試験・資料1件ぶんのデータソース（`GradeLockSource`、main が取る）。
- * 表の行・列・欄ごとに「どのデータソースがこれを使っているか」を返し、空ならロックしない。
- * 解除はその場の state だけで持つ（`useGradeLockUnlocks`）。
+ * 材料は試験・資料1件を使っているデータソースの一覧（`GradeLockSource`、main が取る）。
+ * 空ならロックしない。ロックそのもの（書き込みを止める・解除を覚える）は
+ * `src/lib/gradeWriteLock.ts` と `GradeLockProvider` が持つ。
  */
 
 import type { GradeLockSource } from "@/types/gradeLock.types"
 import type { GradeReferenceDataSourceType } from "@/types/gradeReference.types"
-
-/**
- * 試験の設問（領域情報の行）を使っているデータソース。配点・種類を変えると点数が変わる。
- *
- * - 設問そのもののデータソース
- * - 試験の合計点。合計点に入るのは解答欄（QUESTION_ANSWER）だけなので、その試験の
- *   解答欄はすべて当たる
- * - 小計。その小計へ割り当てた設問だけが当たる
- */
-export function findCropRegionLockSources(
-  sources: GradeLockSource[],
-  cropRegion: { id: string; type: string }
-): GradeLockSource[] {
-  const isQuestionAnswer = cropRegion.type === "QUESTION_ANSWER"
-  return sources.filter((source) => {
-    if (source.cropRegionId === cropRegion.id) return true
-    if (!isQuestionAnswer) return false
-    if (source.dataSourceType === "exam_total") return true
-    return (
-      source.dataSourceType === "subtotal" &&
-      source.subtotalCropRegionIds.includes(cropRegion.id)
-    )
-  })
-}
-
-/** 小計（設問の割り当て表の列）を使っているデータソース。割り当てを変えると小計が変わる */
-export function findSubtotalLockSources(
-  sources: GradeLockSource[],
-  subtotalId: string
-): GradeLockSource[] {
-  return sources.filter(
-    (source) =>
-      source.dataSourceType === "subtotal" && source.subtotalId === subtotalId
-  )
-}
-
-/**
- * 評価項目を使っているデータソース。満点・入力方式・文字評価の換算表を変えると点数が変わる。
- * 資料合計は資料の評価項目をすべて足すので、どの評価項目にも当たる。
- */
-export function findCourseworkItemLockSources(
-  sources: GradeLockSource[],
-  courseworkItemId: string
-): GradeLockSource[] {
-  return sources.filter(
-    (source) =>
-      source.courseworkItemId === courseworkItemId ||
-      source.dataSourceType === "coursework_total"
-  )
-}
-
-/**
- * 受験状態を使っているデータソース。
- *
- * 受験状態が点数に効くのは「見込」を欠測とするデータソースだけ（成績算出はその試験の
- * 受験状態が「見込」なら点数を空として扱う）。算出は `examId` を持つデータソースでしか
- * 見ないので、同じ条件で拾う。
- */
-export function findExpectedAsMissingLockSources(
-  sources: GradeLockSource[],
-  examId: string
-): GradeLockSource[] {
-  return sources.filter(
-    (source) => source.treatExpectedAsMissing && source.examId === examId
-  )
-}
 
 const DATA_SOURCE_TYPE_LABEL: Record<GradeReferenceDataSourceType, string> = {
   exam_total: "試験の合計点",
@@ -148,7 +82,7 @@ export function groupGradeLockSources(
 /**
  * ロックを解除する前の確認の文言。
  *
- * @param subject ロックしている欄を言う主語（「この設問の配点・種類」など）
+ * @param subject ロックしているものを言う主語（「この試験」など）
  */
 export function buildGradeLockMessage(
   subject: string,

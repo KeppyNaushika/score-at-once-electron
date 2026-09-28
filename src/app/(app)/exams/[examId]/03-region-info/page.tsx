@@ -5,6 +5,7 @@ import Image from "next/image"
 import { useParams } from "next/navigation"
 import { useMemo, useState } from "react"
 
+import { useGradeLock } from "@/components/common/grade-lock/GradeLockProvider"
 import { GraderAssignmentTable } from "@/components/exams/03-region-info/components/GraderAssignmentTable"
 import RegionDetailsTable from "@/components/exams/03-region-info/components/RegionDetailsTable"
 import { useOmrConfig } from "@/components/exams/03-region-info/hooks/useOmrConfig"
@@ -41,6 +42,9 @@ export default function RegionInfoPage() {
   )
   const queryClient = useQueryClient()
   const currentUser = useCurrentUser()
+  // 成績算出が使う試験はロックされる（layout）。書き込みは中央で止まるが、
+  // 配点・種類・ラベルの欄は見た目でも打てなくする
+  const { locked: gradeLocked } = useGradeLock()
 
   // OMR設定管理
   const { getOmrConfig, upsertOmrConfig, deleteOmrConfig } =
@@ -189,6 +193,7 @@ export default function RegionInfoPage() {
         <RegionDetailsTable
           examId={examId}
           regions={cropRegions}
+          disabled={gradeLocked}
           selectedCropRegionId={selectedCropRegionId}
           onSelectCropRegion={setSelectedCropRegionId}
           getOmrConfig={getOmrConfig}
