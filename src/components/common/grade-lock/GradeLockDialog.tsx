@@ -2,6 +2,7 @@
 
 import { Lock } from "lucide-react"
 
+import { ScrollShadowArea } from "@/components/common/ScrollShadowArea"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,7 +51,7 @@ export function GradeLockDialog({
           <AlertDialogDescription>{message.lead}</AlertDialogDescription>
         </AlertDialogHeader>
         {/* 成績算出ごとに、評価項目とデータソースを表で並べる */}
-        <div className="max-h-72 space-y-3 overflow-y-auto">
+        <ScrollShadowArea className="max-h-72 space-y-3">
           {message.groups.map((group) => (
             <section
               key={group.gradeId}
@@ -90,7 +91,7 @@ export function GradeLockDialog({
               </table>
             </section>
           ))}
-        </div>
+        </ScrollShadowArea>
         <p className="text-sm text-muted-foreground">
           {message.frozenNote}
           解除は{subject}を離れるまで、どのタブでも続きます。
