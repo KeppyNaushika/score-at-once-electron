@@ -15,6 +15,7 @@ import {
 } from "@/components/common/roster-table"
 import { StudentAddPanel } from "@/components/common/student-add-panel/components/StudentAddPanel"
 import type { StudentAddPanelAdapter } from "@/components/common/student-add-panel/types"
+import { buildRosterRemovalWarning } from "@/lib/shared/gradeReferenceMessages"
 import {
   addCourseworkStudentsFromClassroomMutation,
   addCourseworkStudentsMutation,
@@ -29,6 +30,7 @@ import {
   setCourseworkClassroomOrdersMutation,
   updateCourseworkStudentOrdersMutation,
 } from "@/queries/coursework"
+import { gradeReferencesQuery } from "@/queries/grade"
 
 interface CourseworkStudentsContainerProps {
   courseworkId: string
@@ -69,6 +71,14 @@ export function CourseworkStudentsContainer({
   const previewRemoval = useMutation(
     previewCourseworkClassroomRemovalMutation(courseworkId)
   )
+  // この資料を使っている成績算出。対象生徒から外した生徒の点数はそこで欠測になる
+  // （名簿の削除確認は共通部品の中で開くので、ここで先に取って文言を渡す）
+  const { data: gradeReferences } = useQuery(
+    gradeReferencesQuery({ kind: "coursework", id: courseworkId })
+  )
+  const removalWarning = gradeReferences
+    ? buildRosterRemovalWarning("coursework", gradeReferences)
+    : null
   const [studentCount, setStudentCount] = useState(0)
   const [rosterHandle, setRosterHandle] = useState<RosterTableHandle | null>(
     null
@@ -208,6 +218,7 @@ export function CourseworkStudentsContainer({
               "加減点とその理由",
               "成績通知書に載せるコメント",
             ]}
+            deletionWarning={removalWarning}
             // 失敗は例外で伝わり、中央のトーストが知らせる（表示は読み直しで戻る）
             onReorder={async (orderedClassroomIds) => {
               await setClassroomOrders.mutateAsync(orderedClassroomIds)
@@ -241,6 +252,7 @@ export function CourseworkStudentsContainer({
             "加減点とその理由",
             "成績通知書に載せるコメント",
           ],
+          removalWarning,
         }}
         registerHandle={setRosterHandle}
         onRowsChange={(rows) => setStudentCount(rows.length)}

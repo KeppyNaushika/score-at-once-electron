@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   buildDeletionBlockedMessage,
   buildItemDeletionWarning,
+  buildRosterRemovalWarning,
   listReferencingGradeNames,
 } from "@/lib/shared/gradeReferenceMessages"
 import type { GradeReference } from "@/types/gradeReference.types"
@@ -146,5 +147,56 @@ describe("buildItemDeletionWarning", () => {
         reference({ dataSourceName: "計算", dataSourceType: "subtotal" }),
       ])
     ).toContain("データソース「計算」（この小計項目）が削除されます")
+  })
+})
+
+describe("buildItemDeletionWarning（模範解答ページ）", () => {
+  it("ページの設問を使うデータソースは削除、合計に含むものは点数が変わる", () => {
+    const message = buildItemDeletionWarning("examPage", [
+      reference({ dataSourceName: "問1" }),
+      reference({
+        dataSourceName: "中間テスト",
+        dataSourceType: "exam_total",
+        usage: "total",
+      }),
+    ])
+    expect(message).toContain("この模範解答ページは成績算出で使われています。")
+    expect(message).toContain(
+      "データソース「問1」（このページの設問）が削除されます"
+    )
+    expect(message).toContain(
+      "データソース「中間テスト」（試験の合計点）の点数が変わります"
+    )
+  })
+})
+
+describe("buildRosterRemovalWarning", () => {
+  it("使われていなければ null", () => {
+    expect(buildRosterRemovalWarning("exam", [])).toBeNull()
+  })
+
+  it("試験: 使っている成績算出を重複なく挙げ、欠測になることを伝える", () => {
+    const message = buildRosterRemovalWarning("exam", [
+      reference({ gradeName: "A", dataSourceType: "exam_total" }),
+      reference({ gradeName: "B" }),
+      reference({ gradeName: "A" }),
+    ])
+    expect(message).toBe(
+      "この試験は次の成績算出で使われています。" +
+        "受験生徒から外した生徒は、各成績算出でこの試験の点数が欠測になります" +
+        "（その成績算出の名簿に載っている場合）。\n" +
+        "・成績算出「A」\n" +
+        "・成績算出「B」"
+    )
+  })
+
+  it("資料の文言", () => {
+    expect(
+      buildRosterRemovalWarning("coursework", [
+        reference({ dataSourceType: "coursework_total" }),
+      ])
+    ).toContain(
+      "対象生徒から外した生徒は、各成績算出でこの試験外成績資料の点数が欠測になります"
+    )
   })
 })

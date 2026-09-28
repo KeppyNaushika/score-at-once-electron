@@ -95,6 +95,41 @@ async function buildUsageQueries(
     }
     case "subtotal":
       return [{ usage: "direct", where: { subtotalId: target.id } }]
+    case "examPage": {
+      // ページを消すと上の設問が Cascade で消える。設問1つずつの判定（cropRegion）を
+      // ページ上の設問すべてへ広げたもの
+      const examPage = await client.examPage.findUnique({
+        where: { id: target.id },
+        select: {
+          examId: true,
+          cropRegions: {
+            where: { type: "QUESTION_ANSWER" },
+            select: { id: true },
+          },
+        },
+      })
+      if (!examPage) return []
+      const onThisPage = { examPageId: target.id }
+      return [
+        { usage: "direct", where: { cropRegion: onThisPage } },
+        ...(examPage.cropRegions.length > 0
+          ? [
+              {
+                usage: "total" as const,
+                where: { type: "exam_total", examId: examPage.examId },
+              },
+            ]
+          : []),
+        {
+          usage: "total",
+          where: {
+            type: "subtotal",
+            examId: examPage.examId,
+            subtotal: { cropSubtotals: { some: { cropRegion: onThisPage } } },
+          },
+        },
+      ]
+    }
     case "coursework":
       // 評価項目を1つずつ使うものと、資料全体を「資料合計」として使うもの
       return [
