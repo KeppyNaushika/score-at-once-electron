@@ -23,6 +23,11 @@ export interface GradeLockSource {
   /** データソースの名前 */
   dataSourceName: string
   dataSourceType: GradeReferenceDataSourceType
+  /**
+   * その評価項目で成績算出が確定済みの生徒の数（`GradeFrozenScore`）。0 なら未確定。
+   * 確定済みなら値は残るが元データとずれる、と確認で言うのは、ここが 1 以上のときだけ
+   */
+  frozenScoreCount: number
 }
 
 /** ロックする単位（試験1件か、試験外成績資料1件） */

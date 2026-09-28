@@ -37,6 +37,7 @@ const SOURCE: GradeLockSource = {
   dataSourceId: "data-source-1",
   dataSourceName: "中間",
   dataSourceType: "exam_total",
+  frozenScoreCount: 0,
 }
 
 const updateCropRegion = vi.fn(async () => null)

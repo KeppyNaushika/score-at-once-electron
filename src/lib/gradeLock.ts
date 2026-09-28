@@ -24,6 +24,8 @@ export interface GradeLockMessageRow {
   dataSourceName: string
   /** データソースの種類（「試験の合計点」など） */
   dataSourceTypeLabel: string
+  /** その評価項目を成績算出で確定済みか（1人でも） */
+  isFrozen: boolean
 }
 
 /** 成績算出1つぶんのまとまり */
@@ -43,8 +45,11 @@ export interface GradeLockMessage {
    * 成績算出も行も、最初に出てきた順（同じ評価項目・データソースの組は畳む）
    */
   groups: GradeLockMessageGroup[]
-  /** 確定済みの成績について */
-  frozenNote: string
+  /**
+   * 確定済みの評価項目があるときの注意。無ければ null（確定の話は出さない。
+   * 出すと、確定済みの値があって守られるかのように読めるため）
+   */
+  frozenNote: string | null
 }
 
 /** データソースを成績算出ごとにまとめる */
@@ -70,6 +75,7 @@ export function groupGradeLockSources(
       gradeItemName: source.gradeItemName,
       dataSourceName: source.dataSourceName,
       dataSourceTypeLabel: DATA_SOURCE_TYPE_LABEL[source.dataSourceType],
+      isFrozen: source.frozenScoreCount > 0,
     }
     const key = JSON.stringify(row)
     if (group.keys.has(key)) continue
@@ -91,8 +97,9 @@ export function buildGradeLockMessage(
   return {
     lead: `${subject}は、次の成績算出で使われています。変えると、その成績の点数が変わります。`,
     groups: groupGradeLockSources(sources),
-    frozenNote:
-      "成績算出で確定済みの値は変わりませんが、「確定後に元データが変わっています」と表示されるようになります。",
+    frozenNote: sources.some((source) => source.frozenScoreCount > 0)
+      ? "「確定済み」の評価項目は、確定した値のまま変わりません。元データを変えると、成績算出に「確定後に元データが変わっています」と表示されます。"
+      : null,
   }
 }
 

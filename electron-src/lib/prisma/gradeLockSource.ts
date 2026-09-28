@@ -23,7 +23,9 @@ const orderBy = [
 ] satisfies Prisma.GradeDataSourceOrderByWithRelationInput[]
 
 const include = {
-  gradeItem: { include: { grade: true } },
+  gradeItem: {
+    include: { grade: true, _count: { select: { frozenScores: true } } },
+  },
 } satisfies Prisma.GradeDataSourceInclude
 
 type DataSourceWithGrade = Prisma.GradeDataSourceGetPayload<{
@@ -39,6 +41,7 @@ const toGradeLockSource = (
   dataSourceId: dataSource.id,
   dataSourceName: dataSource.name,
   dataSourceType: toDataSourceType(dataSource.type),
+  frozenScoreCount: dataSource.gradeItem._count.frozenScores,
 })
 
 /**
