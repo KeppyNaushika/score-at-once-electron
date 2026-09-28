@@ -13,6 +13,8 @@ import Link from "next/link"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import { LockedByGrade } from "@/components/common/grade-lock/LockedByGrade"
+import { useGradeLockUnlocks } from "@/components/common/grade-lock/useGradeLockUnlocks"
 import {
   DragHandle,
   SortableTableProvider,
@@ -38,6 +40,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  findCourseworkItemLockSources,
+  NO_GRADE_LOCK_SOURCES,
+} from "@/lib/gradeLock"
 import { buildItemDeletionWarning } from "@/lib/shared/gradeReferenceMessages"
 import { cn } from "@/lib/utils"
 import { courseworkWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
@@ -50,13 +56,17 @@ import {
   reorderCourseworkItemsMutation,
   updateCourseworkItemMutation,
 } from "@/queries/coursework"
-import { gradeReferencesQuery } from "@/queries/grade"
+import {
+  courseworkGradeLockSourcesQuery,
+  gradeReferencesQuery,
+} from "@/queries/grade"
 import type {
   CourseworkItemWithLetterScales,
   CourseworkWithRelations,
   InputMode,
 } from "@/types/coursework.types"
 import { toInputMode } from "@/types/coursework.types"
+import type { GradeLockSource } from "@/types/gradeLock.types"
 
 import {
   collectUnknownLetterValues,
@@ -81,6 +91,18 @@ const editingKey = (courseworkItemId: string, field: "name" | "maxScore") =>
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_ITEMS: CourseworkItemWithLetterScales[] = []
+
+/** 成績算出のロック1単位（評価項目の満点・入力方式、または文字評価の換算表） */
+interface ItemGradeLock {
+  sources: GradeLockSource[]
+  locked: boolean
+  onUnlock: () => void
+}
+
+/** 解除を覚える鍵。満点・入力方式と換算表は別々に解除する */
+const itemLockKey = (courseworkItemId: string) => `item:${courseworkItemId}`
+const letterScaleLockKey = (courseworkItemId: string) =>
+  `letterScale:${courseworkItemId}`
 
 /**
  * 試験外成績資料の評価項目管理コンテナ
@@ -150,6 +172,24 @@ export function CourseworkItemsContainer({
     createCourseworkLetterScaleMutation(courseworkId)
   )
 
+  // 成績算出が使う評価項目は、満点・入力方式と換算表をロックする（解除はこの画面の
+  // 中だけ）。資料合計で使われていれば全項目が当たる
+  const { data: gradeLockSources = NO_GRADE_LOCK_SOURCES } = useQuery(
+    courseworkGradeLockSourcesQuery(courseworkId)
+  )
+  const { isUnlocked, unlock } = useGradeLockUnlocks()
+  const gradeLockOf = (
+    item: CourseworkItemWithLetterScales,
+    key: string
+  ): ItemGradeLock => {
+    const sources = findCourseworkItemLockSources(gradeLockSources, item.id)
+    return {
+      sources,
+      locked: sources.length > 0 && !isUnlocked(key),
+      onUnlock: () => unlock(key),
+    }
+  }
+
   const [newItemName, setNewItemName] = useState("")
   // 押しただけでは消さず、確認で決めてもらう
   const [deleteTarget, setDeleteTarget] =
@@ -193,6 +233,8 @@ export function CourseworkItemsContainer({
     item: CourseworkItemWithLetterScales,
     text: string
   ) => {
+    // ロック中は書かない（欄は disabled だが、書き込みの口でも止める）
+    if (gradeLockOf(item, itemLockKey(item.id)).locked) return
     rememberText(item, "maxScore", text)
     const maxScore = Number(text)
     if (text.trim() === "" || Number.isNaN(maxScore) || maxScore <= 0) return
@@ -245,6 +287,7 @@ export function CourseworkItemsContainer({
     item: CourseworkItemWithLetterScales,
     inputMode: InputMode
   ) => {
+    if (gradeLockOf(item, itemLockKey(item.id)).locked) return
     changeInputMode(item, inputMode).catch(() => undefined)
   }
 
@@ -353,6 +396,8 @@ export function CourseworkItemsContainer({
                 unknownLetterValues={unknownLetterValuesByItem.get(item.id)}
                 name={textOf(item, "name")}
                 maxScore={textOf(item, "maxScore")}
+                gradeLock={gradeLockOf(item, itemLockKey(item.id))}
+                letterScaleLock={gradeLockOf(item, letterScaleLockKey(item.id))}
                 onChangeName={changeName}
                 onChangeMaxScore={changeMaxScore}
                 onChangeInputMode={handleInputModeChange}
@@ -423,6 +468,10 @@ interface SortableItemRowProps {
   unknownLetterValues: UnknownLetterValues | undefined
   name: string
   maxScore: string
+  /** 満点・入力方式のロック */
+  gradeLock: ItemGradeLock
+  /** 文字評価の換算表のロック */
+  letterScaleLock: ItemGradeLock
   onChangeName: (item: CourseworkItemWithLetterScales, text: string) => void
   onChangeMaxScore: (item: CourseworkItemWithLetterScales, text: string) => void
   onChangeInputMode: (
@@ -440,6 +489,8 @@ function SortableItemRow({
   unknownLetterValues,
   name,
   maxScore,
+  gradeLock,
+  letterScaleLock,
   onChangeName,
   onChangeMaxScore,
   onChangeInputMode,
@@ -450,6 +501,14 @@ function SortableItemRow({
   const maxScoreNumber = Number(maxScore)
   const maxScoreInvalid =
     maxScore.trim() === "" || isNaN(maxScoreNumber) || maxScoreNumber <= 0
+  // 満点・入力方式の欄のロック（どちらのマークを押しても両方を解除する）
+  const gradeLockMark = gradeLock.locked && (
+    <LockedByGrade
+      subject={`評価項目「${item.name}」の満点・入力方式`}
+      sources={gradeLock.sources}
+      onUnlock={gradeLock.onUnlock}
+    />
+  )
 
   return (
     <div ref={setNodeRef} style={style} className="rounded-lg border p-4">
@@ -470,40 +529,52 @@ function SortableItemRow({
             </div>
             <div className="space-y-1">
               <Label className="text-xs">満点</Label>
-              <Input
-                value={maxScore}
-                onChange={(e) => onChangeMaxScore(item, e.target.value)}
-                onBlur={() => onBlur(item)}
-                type="number"
-                step="any"
-                className={cn(
-                  "h-8 w-24",
-                  maxScoreInvalid && "border-red-400 bg-red-50 text-red-700"
-                )}
-              />
+              <div className="flex items-center gap-1">
+                <Input
+                  value={maxScore}
+                  onChange={(e) => onChangeMaxScore(item, e.target.value)}
+                  onBlur={() => onBlur(item)}
+                  type="number"
+                  step="any"
+                  disabled={gradeLock.locked}
+                  className={cn(
+                    "h-8 w-24",
+                    maxScoreInvalid && "border-red-400 bg-red-50 text-red-700"
+                  )}
+                />
+                {gradeLockMark}
+              </div>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">入力方式</Label>
-              <Select
-                value={item.inputMode}
-                onValueChange={(value) =>
-                  onChangeInputMode(item, toInputMode(value))
-                }
-              >
-                <SelectTrigger className="h-8 w-28 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="numeric">数値</SelectItem>
-                  <SelectItem value="letter">文字評価</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1">
+                <Select
+                  value={item.inputMode}
+                  onValueChange={(value) =>
+                    onChangeInputMode(item, toInputMode(value))
+                  }
+                  disabled={gradeLock.locked}
+                >
+                  <SelectTrigger className="h-8 w-28 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="numeric">数値</SelectItem>
+                    <SelectItem value="letter">文字評価</SelectItem>
+                  </SelectContent>
+                </Select>
+                {gradeLockMark}
+              </div>
             </div>
           </div>
 
           {item.inputMode === "letter" && (
             <>
-              <LetterScaleEditor courseworkId={courseworkId} item={item} />
+              <LetterScaleEditor
+                courseworkId={courseworkId}
+                item={item}
+                gradeLock={letterScaleLock}
+              />
               {unknownLetterValues !== undefined &&
                 unknownLetterValues.count > 0 && (
                   <p className="text-xs text-amber-700">
