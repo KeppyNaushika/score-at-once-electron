@@ -1,8 +1,10 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { UserCheck, Users, UserX } from "lucide-react"
 import { useMemo, useState } from "react"
 
+import { LockedByGrade } from "@/components/common/grade-lock/LockedByGrade"
 import type {
   RosterColumn,
   RosterFilter,
@@ -39,6 +41,11 @@ import {
 } from "@/components/ui/select"
 import { Table, TableBody } from "@/components/ui/table"
 import type { ExamClassroomPlacement } from "@/lib/examClassroomPlacement"
+import {
+  findExpectedAsMissingLockSources,
+  NO_GRADE_LOCK_SOURCES,
+} from "@/lib/gradeLock"
+import { examGradeLockSourcesQuery } from "@/queries/grade"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 /** 受験生徒（ExamStudent）と表示学級情報を共通の RosterRow へ変換 */
@@ -95,6 +102,18 @@ export function SortableStudentTableContainer(
 
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+
+  // 受験状態が成績に効くのは、「見込」を欠測とするデータソースがこの試験を使うときだけ。
+  // そのときだけ状態の列ごとロックする（解除はこの画面の中だけ）
+  const { data: gradeLockSources = NO_GRADE_LOCK_SOURCES } = useQuery(
+    examGradeLockSourcesQuery(examId)
+  )
+  const statusLockSources = useMemo(
+    () => findExpectedAsMissingLockSources(gradeLockSources, examId),
+    [gradeLockSources, examId]
+  )
+  const [statusUnlocked, setStatusUnlocked] = useState(false)
+  const statusLocked = statusLockSources.length > 0 && !statusUnlocked
 
   const allRows = useMemo(
     () =>
@@ -193,7 +212,18 @@ export function SortableStudentTableContainer(
   // 受験状態ボタン列（スロット）
   const rowActionButtons: RosterTableSlots["rowActionButtons"] = useMemo(
     () => ({
-      header: "受験状態",
+      header: (
+        <span className="inline-flex items-center gap-1">
+          受験状態
+          {statusLocked && (
+            <LockedByGrade
+              subject="受験状態（「見込」を欠測とする設定）"
+              sources={statusLockSources}
+              onUnlock={() => setStatusUnlocked(true)}
+            />
+          )}
+        </span>
+      ),
       render: (row) => {
         const status = examStudentByStudentId.get(row.id)?.status
         return (
@@ -202,6 +232,7 @@ export function SortableStudentTableContainer(
               size="sm"
               variant={status === "participating" ? "default" : "outline"}
               onClick={() => onStudentStatusUpdate(row.id, "participating")}
+              disabled={statusLocked}
               className="gap-1"
             >
               <UserCheck className="h-3 w-3" />
@@ -211,6 +242,7 @@ export function SortableStudentTableContainer(
               size="sm"
               variant={status === "expected" ? "secondary" : "outline"}
               onClick={() => onStudentStatusUpdate(row.id, "expected")}
+              disabled={statusLocked}
               className="gap-1"
             >
               <Users className="h-3 w-3" />
@@ -220,6 +252,7 @@ export function SortableStudentTableContainer(
               size="sm"
               variant={status === "absent" ? "destructive" : "outline"}
               onClick={() => onStudentStatusUpdate(row.id, "absent")}
+              disabled={statusLocked}
               className="gap-1"
             >
               <UserX className="h-3 w-3" />
@@ -229,7 +262,12 @@ export function SortableStudentTableContainer(
         )
       },
     }),
-    [onStudentStatusUpdate, examStudentByStudentId]
+    [
+      onStudentStatusUpdate,
+      examStudentByStudentId,
+      statusLocked,
+      statusLockSources,
+    ]
   )
 
   const handleConfirmReset = async () => {
