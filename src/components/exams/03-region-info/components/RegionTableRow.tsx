@@ -18,6 +18,7 @@ import {
 import type { ComponentType } from "react"
 import { useState } from "react"
 
+import { LockedByGrade } from "@/components/common/grade-lock/LockedByGrade"
 import { OmrConfigInlineForm } from "@/components/exams/03-region-info/components/OmrConfigInlineForm"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,6 +32,7 @@ import {
 import type { CropRegionRow } from "@/queries/cropRegion"
 import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 import { CROP_REGION_AREA_TYPES } from "@/types/cropRegionAreaType.types"
+import type { GradeLockSource } from "@/types/gradeLock.types"
 import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
 
 // AreaTypeの日本語表示マッピング
@@ -66,6 +68,15 @@ type RegionTableRowProps = {
   isDragged: boolean
   isDraggedOver: boolean
   disabled: boolean
+  /**
+   * 成績算出のロック。使われている設問は配点・種類を変えると成績の点数が変わるので、
+   * 行ごとにロックし、確認してから解除させる
+   */
+  gradeLock: {
+    sources: GradeLockSource[]
+    locked: boolean
+    onUnlock: () => void
+  }
   omrConfig: CropRegionOmrConfigWithOptions | null
   onOmrSave: (data: {
     cropRegionId: string
@@ -111,6 +122,7 @@ export const RegionTableRow = ({
   isDragged,
   isDraggedOver,
   disabled,
+  gradeLock,
   omrConfig,
   onOmrSave,
   onOmrDelete,
@@ -158,6 +170,15 @@ export const RegionTableRow = ({
     e.stopPropagation()
   }
 
+  // 配点・種類の欄のロック（どちらの欄のマークを押しても行ごと解除する）
+  const gradeLockMark = gradeLock.locked && (
+    <LockedByGrade
+      subject="この設問の配点・種類"
+      sources={gradeLock.sources}
+      onUnlock={gradeLock.onUnlock}
+    />
+  )
+
   return (
     <>
       <tr
@@ -196,22 +217,27 @@ export const RegionTableRow = ({
           </div>
         </td>
         <td className="border border-border px-2 py-1" onClick={stopRowToggle}>
-          <Select
-            value={region.type}
-            onValueChange={(value) => onRegionChange(region.id, "type", value)}
-            disabled={disabled}
-          >
-            <SelectTrigger className="w-full" onFocus={ensureSelected}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.values(CROP_REGION_AREA_TYPES).map((type) => (
-                <SelectItem key={type} value={type}>
-                  {areaTypeToJapanese[type]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-1">
+            <Select
+              value={region.type}
+              onValueChange={(value) =>
+                onRegionChange(region.id, "type", value)
+              }
+              disabled={disabled || gradeLock.locked}
+            >
+              <SelectTrigger className="w-full" onFocus={ensureSelected}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(CROP_REGION_AREA_TYPES).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {areaTypeToJapanese[type]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {gradeLockMark}
+          </div>
         </td>
         <td className="border border-border px-2 py-1" onClick={stopRowToggle}>
           <Input
@@ -231,27 +257,30 @@ export const RegionTableRow = ({
         </td>
         <td className="border border-border px-2 py-1" onClick={stopRowToggle}>
           {region.type === "QUESTION_ANSWER" ? (
-            <Input
-              data-row={region.id}
-              data-field="points"
-              type="number"
-              value={textOf(
-                region.id,
-                "points",
-                region.points === null ? "" : String(region.points)
-              )}
-              onChange={(e) =>
-                onRegionChange(region.id, "points", e.target.value)
-              }
-              onKeyDown={(e) => onKeyDown(e, region.id, "points")}
-              onCompositionStart={onCompositionStart}
-              onCompositionEnd={onCompositionEnd}
-              onFocus={ensureSelected}
-              onBlur={() => onRegionBlur(region.id, "points")}
-              disabled={disabled}
-              placeholder="10"
-              className="h-8 w-full min-w-20"
-            />
+            <div className="flex items-center gap-1">
+              <Input
+                data-row={region.id}
+                data-field="points"
+                type="number"
+                value={textOf(
+                  region.id,
+                  "points",
+                  region.points === null ? "" : String(region.points)
+                )}
+                onChange={(e) =>
+                  onRegionChange(region.id, "points", e.target.value)
+                }
+                onKeyDown={(e) => onKeyDown(e, region.id, "points")}
+                onCompositionStart={onCompositionStart}
+                onCompositionEnd={onCompositionEnd}
+                onFocus={ensureSelected}
+                onBlur={() => onRegionBlur(region.id, "points")}
+                disabled={disabled || gradeLock.locked}
+                placeholder="10"
+                className="h-8 w-full min-w-20"
+              />
+              {gradeLockMark}
+            </div>
           ) : (
             <span className="text-sm text-muted-foreground">-</span>
           )}

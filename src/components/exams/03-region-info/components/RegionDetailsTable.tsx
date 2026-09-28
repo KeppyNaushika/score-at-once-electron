@@ -1,20 +1,26 @@
 "use client"
 
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { Palette } from "lucide-react"
 import { useCallback, useState } from "react"
 
+import { useGradeLockUnlocks } from "@/components/common/grade-lock/useGradeLockUnlocks"
 import { DeleteConfirmModal } from "@/components/exams/03-region-info/components/DeleteConfirmModal"
 import { RegionTableRow } from "@/components/exams/03-region-info/components/RegionTableRow"
 import { useDragAndDrop } from "@/components/exams/03-region-info/hooks/useDragAndDrop"
 import { useKeyboardNavigation } from "@/components/exams/03-region-info/hooks/useKeyboardNavigation"
 import { useEditingText } from "@/hooks/useEditingText"
+import {
+  findCropRegionLockSources,
+  NO_GRADE_LOCK_SOURCES,
+} from "@/lib/gradeLock"
 import type { CropRegionRow } from "@/queries/cropRegion"
 import {
   deleteCropRegionMutation,
   updateCropRegionMutation,
   updateCropRegionOrdersMutation,
 } from "@/queries/cropRegion"
+import { examGradeLockSourcesQuery } from "@/queries/grade"
 import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
 
 type RegionDetailsTableProps = {
@@ -64,6 +70,20 @@ const RegionDetailsTable = ({
     updateCropRegionOrdersMutation(examId)
   )
 
+  // 成績算出が使う設問は、配点・種類を行ごとにロックする（解除はこの画面の中だけ）
+  const { data: gradeLockSources = NO_GRADE_LOCK_SOURCES } = useQuery(
+    examGradeLockSourcesQuery(examId)
+  )
+  const { isUnlocked, unlock } = useGradeLockUnlocks()
+  const gradeLockOf = (region: CropRegionRow) => {
+    const sources = findCropRegionLockSources(gradeLockSources, region)
+    return {
+      sources,
+      locked: sources.length > 0 && !isUnlocked(region.id),
+      onUnlock: () => unlock(region.id),
+    }
+  }
+
   /** 並べ替え。順番は行の並びそのものなので、全行の orderIndex を振り直す */
   const handleReorder = useCallback(
     (reordered: CropRegionRow[]) => {
@@ -94,6 +114,15 @@ const RegionDetailsTable = ({
     field: string,
     value: string | number | null
   ) => {
+    // ロック中の配点・種類は書かない（欄は disabled だが、書き込みの口でも止める）
+    const region = regions.find((candidate) => candidate.id === cropRegionId)
+    if (
+      (field === "points" || field === "type") &&
+      region &&
+      gradeLockOf(region).locked
+    )
+      return
+
     // 配点だけ数値。空欄は「未設定」なので null へ倒す
     remember(cropRegionId, field, value === null ? "" : String(value))
 
@@ -198,6 +227,7 @@ const RegionDetailsTable = ({
                 isDragged={isDragged}
                 isDraggedOver={isDraggedOver}
                 disabled={disabled}
+                gradeLock={gradeLockOf(region)}
                 omrConfig={getOmrConfig(region.id)}
                 onOmrSave={onOmrSave}
                 onOmrDelete={onOmrDelete}
