@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 
 import {
   buildGradeLockMessage,
-  describeGradeLockSource,
   findCourseworkItemLockSources,
   findCropRegionLockSources,
   findExpectedAsMissingLockSources,
@@ -132,25 +131,43 @@ describe("findExpectedAsMissingLockSources", () => {
 })
 
 describe("buildGradeLockMessage", () => {
-  it("どの成績算出のどの項目で使われているかを1行ずつ並べ、重複は畳む", () => {
+  it("成績算出ごとにまとめ、同じ評価項目・データソースの組は畳む", () => {
     const examTotal = source({ dataSourceName: "中間" })
     const message = buildGradeLockMessage("この設問の配点・種類", [
       examTotal,
       { ...examTotal, dataSourceId: "copy" },
+      source({
+        gradeItemName: "思考・判断・表現",
+        dataSourceType: "subtotal",
+        dataSourceName: "中間(思考)",
+      }),
+      source({ gradeId: "grade-2", gradeName: "2学期成績" }),
     ])
     expect(message.lead).toContain("この設問の配点・種類は")
     expect(message.lead).toContain("点数が変わります")
-    expect(message.sourceLines).toEqual([
-      "成績算出「1学期成績」の評価項目「知識・技能」のデータソース「中間」（試験の合計点）",
+    expect(message.groups).toEqual([
+      {
+        gradeId: "grade-1",
+        gradeName: "1学期成績",
+        rows: [
+          {
+            gradeItemName: "知識・技能",
+            dataSourceName: "中間",
+            dataSourceTypeLabel: "試験の合計点",
+          },
+          {
+            gradeItemName: "思考・判断・表現",
+            dataSourceName: "中間(思考)",
+            dataSourceTypeLabel: "小計",
+          },
+        ],
+      },
+      {
+        gradeId: "grade-2",
+        gradeName: "2学期成績",
+        rows: [expect.objectContaining({ gradeItemName: "知識・技能" })],
+      },
     ])
     expect(message.frozenNote).toContain("確定後に元データが変わっています")
-  })
-
-  it("データソースの種類を括弧で添える", () => {
-    expect(
-      describeGradeLockSource(
-        source({ dataSourceType: "coursework_total", dataSourceName: "提出物" })
-      )
-    ).toContain("（資料合計）")
   })
 })

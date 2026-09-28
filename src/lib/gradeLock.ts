@@ -84,19 +84,65 @@ const DATA_SOURCE_TYPE_LABEL: Record<GradeReferenceDataSourceType, string> = {
   other: "その他",
 }
 
-/** 「成績算出「A」の評価項目「B」のデータソース「C」（試験の合計点）」 */
-export function describeGradeLockSource(source: GradeLockSource): string {
-  return `成績算出「${source.gradeName}」の評価項目「${source.gradeItemName}」のデータソース「${source.dataSourceName}」（${DATA_SOURCE_TYPE_LABEL[source.dataSourceType]}）`
+/** 確認の表の1行。評価項目とデータソースの組 */
+export interface GradeLockMessageRow {
+  gradeItemName: string
+  dataSourceName: string
+  /** データソースの種類（「試験の合計点」など） */
+  dataSourceTypeLabel: string
+}
+
+/** 成績算出1つぶんのまとまり */
+export interface GradeLockMessageGroup {
+  gradeId: string
+  gradeName: string
+  rows: GradeLockMessageRow[]
 }
 
 /** 確認で見せる文言 */
 export interface GradeLockMessage {
   /** 何がどう使われていて、変えると何が起きるか */
   lead: string
-  /** 使っているデータソース1件ごとの行（重複は畳む） */
-  sourceLines: string[]
+  /**
+   * 使っているデータソースを成績算出ごとにまとめたもの。1行ずつ文にすると
+   * 成績算出名が毎行くり返されて読みにくいので、表にして見せる。
+   * 成績算出も行も、最初に出てきた順（同じ評価項目・データソースの組は畳む）
+   */
+  groups: GradeLockMessageGroup[]
   /** 確定済みの成績について */
   frozenNote: string
+}
+
+/** データソースを成績算出ごとにまとめる */
+export function groupGradeLockSources(
+  sources: GradeLockSource[]
+): GradeLockMessageGroup[] {
+  const groups = new Map<
+    string,
+    GradeLockMessageGroup & { keys: Set<string> }
+  >()
+  for (const source of sources) {
+    let group = groups.get(source.gradeId)
+    if (group === undefined) {
+      group = {
+        gradeId: source.gradeId,
+        gradeName: source.gradeName,
+        rows: [],
+        keys: new Set(),
+      }
+      groups.set(source.gradeId, group)
+    }
+    const row: GradeLockMessageRow = {
+      gradeItemName: source.gradeItemName,
+      dataSourceName: source.dataSourceName,
+      dataSourceTypeLabel: DATA_SOURCE_TYPE_LABEL[source.dataSourceType],
+    }
+    const key = JSON.stringify(row)
+    if (group.keys.has(key)) continue
+    group.keys.add(key)
+    group.rows.push(row)
+  }
+  return [...groups.values()].map(({ keys: _keys, ...group }) => group)
 }
 
 /**
@@ -110,7 +156,7 @@ export function buildGradeLockMessage(
 ): GradeLockMessage {
   return {
     lead: `${subject}は、次の成績算出で使われています。変えると、その成績の点数が変わります。`,
-    sourceLines: [...new Set(sources.map(describeGradeLockSource))],
+    groups: groupGradeLockSources(sources),
     frozenNote:
       "成績算出で確定済みの値は変わりませんが、「確定後に元データが変わっています」と表示されるようになります。",
   }
