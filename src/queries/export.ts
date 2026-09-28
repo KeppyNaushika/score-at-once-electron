@@ -158,6 +158,8 @@ export const recordUnresolvedConflictsMutation = () =>
       // 書き出したことは監査ログに残る＝DB を1行書く
       invalidates: [auditLogListKey],
       errorMessage: "競合の記録を残せませんでした",
+      // 書き出しの記録（監査ログ）。点数は変えない
+      bypassesGradeLock: true,
     },
   })
 
@@ -195,6 +197,8 @@ export const captureReturnSnapshotMutation = (examId: string) =>
     meta: {
       invalidates: [returnDiffQuery(examId).queryKey],
       errorMessage: "返却時点を記録できませんでした",
+      // 返却（書き出し）した時点の記録。点数は変えない
+      bypassesGradeLock: true,
     },
   })
 

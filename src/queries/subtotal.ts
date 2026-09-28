@@ -147,6 +147,8 @@ export const setSubtotalGroupSelectionMutation = (examId: string) =>
     meta: {
       invalidates: [subtotalGroupSelectionQuery(examId).queryKey],
       errorMessage: "小計点グループの選択を保存できませんでした",
+      // 個人成績表に出す小計の選択（出力の設定）。点数は変えない
+      bypassesGradeLock: true,
     },
   })
 

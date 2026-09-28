@@ -3,6 +3,12 @@ import "./registerMeta"
 import { MutationCache, QueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
+import {
+  GradeWriteLockedError,
+  isBlockedByGradeLock,
+  notifyGradeWriteLocked,
+} from "@/lib/gradeWriteLock"
+
 /**
  * アプリで使う QueryClient を作る。
  *
@@ -34,6 +40,15 @@ export function createAppQueryClient(): QueryClient {
       },
     },
     mutationCache: new MutationCache({
+      // 成績算出で使われている試験・資料を開いていてロック中なら、書き込みを
+      // 実行させない。個々の書き込みの `onMutate`（楽観的な書き換え）より先に走るので、
+      // 画面も DB も変わらない。断った書き込みも下の `onSettled` で取り直すので、
+      // 手元で先に変えていた表示は DB に揃う
+      onMutate: (_variables, mutation) => {
+        if (isBlockedByGradeLock(mutation.meta)) {
+          throw new GradeWriteLockedError()
+        }
+      },
       // 成功しても失敗しても DB から取り直す。失敗したときこそ、手元の表示を
       // DB に揃える必要がある（書けなかった値を保存済みとして見せない）。
       //
@@ -66,6 +81,11 @@ export function createAppQueryClient(): QueryClient {
         }
       },
       onError: (error, _variables, _context, mutation) => {
+        // ロックで断ったものは失敗ではない。通知は1つに畳む
+        if (error instanceof GradeWriteLockedError) {
+          notifyGradeWriteLocked()
+          return
+        }
         toast.error(mutation.meta?.errorMessage ?? "保存できませんでした", {
           description: error instanceof Error ? error.message : undefined,
         })
