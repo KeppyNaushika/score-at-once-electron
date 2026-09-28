@@ -25,6 +25,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CourseworkItemsContainer } from "@/components/coursework/03-items/CourseworkItemsContainer"
 import { CourseworkScoresContainer } from "@/components/coursework/04-scores/CourseworkScoresContainer"
+import { CurrentUserProvider } from "@/contexts/CurrentUserContext"
+import type { PublicUser } from "@/queries/user"
 
 import { createQueryWrapper } from "../../helpers/queryWrapper"
 
@@ -52,6 +54,17 @@ vi.mock("next/link", () => ({
 }))
 
 const AT = new Date("2026-08-01T00:00:00.000Z")
+/** 点数入力は利用者の設定（点数だけ表示）を読むので、ログイン中の利用者が要る */
+const currentUser: PublicUser = {
+  id: "user-1",
+  username: "testuser",
+  name: "テストユーザー",
+  role: "admin",
+  passcodeType: null,
+  createdAt: AT,
+  updatedAt: AT,
+}
+
 const COURSEWORK_ID = "coursework-1"
 const ITEM_ID = "item-1"
 const COURSEWORK_STUDENT_ID = "cs-1"
@@ -197,6 +210,11 @@ function mockCourseworkApi(
         getStudents: vi.fn().mockResolvedValue(courseworkStudents()),
         getClassrooms: vi.fn().mockResolvedValue(courseworkClassrooms()),
       },
+      // 「点数だけ表示」は利用者の設定。保存が無ければ既定（点数だけ表示）で描く
+      settings: {
+        getUserPreference: vi.fn().mockResolvedValue(null),
+        setUserPreference: vi.fn().mockResolvedValue(undefined),
+      },
     },
     writable: true,
     configurable: true,
@@ -206,9 +224,12 @@ function mockCourseworkApi(
 /** 点数入力（04）を載せ、評語のマスが出るまで待つ */
 async function renderScores(placeholder: string) {
   const QueryWrapper = createQueryWrapper()
-  render(<CourseworkScoresContainer courseworkId={COURSEWORK_ID} />, {
-    wrapper: QueryWrapper,
-  })
+  render(
+    <CurrentUserProvider user={currentUser}>
+      <CourseworkScoresContainer courseworkId={COURSEWORK_ID} />
+    </CurrentUserProvider>,
+    { wrapper: QueryWrapper }
+  )
   return await screen.findByPlaceholderText(placeholder)
 }
 

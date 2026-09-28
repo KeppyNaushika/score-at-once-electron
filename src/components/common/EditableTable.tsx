@@ -176,7 +176,11 @@ function EditableCell<T extends RowData>({
       if (colIndex < 0) return
 
       const targetRowIndex = e.shiftKey ? rowIndex - 1 : rowIndex + 1
-      if (targetRowIndex < 0 || targetRowIndex >= rows.length) return
+      if (targetRowIndex < 0 || targetRowIndex >= rows.length) {
+        // 移る先が無くてもフォーカスは外れないので、ここで確定する
+        onBlur()
+        return
+      }
       const targetInputs = Array.from(
         rows[targetRowIndex].querySelectorAll("input")
       )
@@ -199,6 +203,11 @@ function EditableCell<T extends RowData>({
       const nextIndex = e.shiftKey ? currentIndex - 1 : currentIndex + 1
       if (nextIndex >= 0 && nextIndex < cells.length) {
         moveFocus(cells[nextIndex])
+      } else {
+        // 表の最後（最初）のマス。移る先が無いとフォーカスが外れず onBlur が
+        // 来ないので、ここで確定する。確定しないと、そのまま画面を移ったときに
+        // 最後に打った値が保存されない
+        onBlur()
       }
     }
   }
