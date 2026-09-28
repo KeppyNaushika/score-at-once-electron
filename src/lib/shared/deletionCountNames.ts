@@ -24,7 +24,6 @@ export const DELETION_COUNT_NAME = {
   masterAnswer: "模範解答",
   cropRegion: "採点領域",
   answerSheet: "答案",
-  gradeDataSource: "参照している成績データソース",
   /** 模範解答ページの削除で一緒に消える答案（01 のページ削除） */
   pageAnswerSheet: "このページの答案",
 } as const

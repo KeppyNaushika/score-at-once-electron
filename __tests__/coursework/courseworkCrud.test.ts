@@ -344,7 +344,7 @@ describe("Coursework CRUD", () => {
     expect(roster).toHaveLength(1)
   })
 
-  it("成績算出から参照中の資料・評価項目は削除できない", async () => {
+  it("成績算出から参照中の資料は削除できず、評価項目は削除できて参照が空になる", async () => {
     const courseworkResult = await createCoursework({ name: "参照される資料" })
     const item = await createCourseworkItem({
       courseworkId: courseworkResult.id,
@@ -358,7 +358,7 @@ describe("Coursework CRUD", () => {
       gradeId: grade.id,
       name: "観点1",
     })
-    await createDataSource({
+    const dataSource = await createDataSource({
       gradeItemId: gradeItem.id,
       type: "coursework",
       courseworkItemId: item.id,
@@ -366,18 +366,42 @@ describe("Coursework CRUD", () => {
       weight: 100,
     })
 
-    // 評価項目の削除はブロックされ、使用中の成績名を返す
-    const deleteItemResult = await deleteCourseworkItem(item.id)
-    expect(deleteItemResult.deleted).toBe(false)
-    if (deleteItemResult.deleted) throw new Error("削除がブロックされていない")
-    expect(deleteItemResult.usedBy).toContain("成績A")
-
-    // 資料の削除もブロックされる
+    // 資料の削除はブロックされ、使用中の成績名を返す
     const deleteCourseworkResult = await deleteCoursework(courseworkResult.id)
     expect(deleteCourseworkResult.deleted).toBe(false)
     if (deleteCourseworkResult.deleted)
       throw new Error("削除がブロックされていない")
     expect(deleteCourseworkResult.usedBy).toContain("成績A")
+
+    // 評価項目は消せる（確認画面で警告する）。データソースは残り、参照が空になる
+    const deleteItemResult = await deleteCourseworkItem(item.id)
+    expect(deleteItemResult.deleted).toBe(true)
+    const orphaned = await testPrisma.gradeDataSource.findUnique({
+      where: { id: dataSource.id },
+    })
+    expect(orphaned).not.toBeNull()
+    expect(orphaned?.courseworkItemId).toBeNull()
+  })
+
+  it("資料合計として使われている資料も削除できない", async () => {
+    const courseworkResult = await createCoursework({ name: "合計で使う資料" })
+    const grade = await testPrisma.grade.create({ data: { name: "成績B" } })
+    const gradeItem = await createGradeItem({
+      gradeId: grade.id,
+      name: "観点1",
+    })
+    await createDataSource({
+      gradeItemId: gradeItem.id,
+      type: "coursework_total",
+      courseworkId: courseworkResult.id,
+      name: "資料合計",
+      weight: 100,
+    })
+
+    const result = await deleteCoursework(courseworkResult.id)
+    expect(result.deleted).toBe(false)
+    if (result.deleted) throw new Error("削除がブロックされていない")
+    expect(result.usedBy).toEqual(["成績B"])
   })
 
   it("getCourseworkCandidates が資料と評価項目を返す", async () => {

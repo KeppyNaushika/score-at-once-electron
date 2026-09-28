@@ -222,6 +222,7 @@ const RegionDetailsTable = ({
 
       <DeleteConfirmModal
         isOpen={deleteModalOpen}
+        cropRegionId={cropRegionIdToDelete}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={confirmDeleteRegion}
       />

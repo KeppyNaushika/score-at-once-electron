@@ -10,6 +10,7 @@ import type {
   GradeConstraintInput,
   GradeItemExclusionInput,
 } from "../../src/types/grade.types"
+import type { GradeReferenceTarget } from "../../src/types/gradeReference.types"
 import type { GradeReportSettings } from "../../src/types/gradeReport.types"
 import { createGradeArchive } from "../lib/export/grade-archive/gradeArchiveCreator"
 import { exportGradeExcel } from "../lib/export/gradeExcel/gradeExcelExportMain"
@@ -73,6 +74,7 @@ import {
   deleteGradeOverride,
   upsertGradeOverride,
 } from "../lib/prisma/gradeOverride"
+import { findGradeReferences } from "../lib/prisma/gradeReference"
 import {
   addStudentsFromClassroomToGrade,
   addStudentsToGrade,
@@ -132,6 +134,11 @@ export const gradeHandlers = {
 
   "grade:duplicate": async (id: string) => {
     return duplicateGrade(id)
+  },
+
+  // 試験・資料とその中の項目を消す前に、どの成績算出がどう使っているかを調べる
+  "grade:getReferences": async (target: GradeReferenceTarget) => {
+    return findGradeReferences(target)
   },
 
   // タグ（GradeTag）

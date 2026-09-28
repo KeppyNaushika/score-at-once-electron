@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { toast } from "sonner"
 
@@ -8,8 +8,10 @@ import ConfirmationModal from "@/components/common/ConfirmationModal"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
 import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
+import { buildDeletionBlockedMessage } from "@/lib/shared/gradeReferenceMessages"
 import type { ExamForDetail } from "@/queries/exam"
 import { deleteExamMutation, examForDetailQuery } from "@/queries/exam"
+import { gradeReferencesQuery } from "@/queries/grade"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
 interface DeleteExamModalProps {
@@ -47,10 +49,6 @@ function countExamDeletion(exam: ExamForDetail): ConfirmedDeletionCount[] {
         0
       ),
     },
-    {
-      countedName: DELETION_COUNT_NAME.gradeDataSource,
-      shownCount: exam.gradeDataSources?.length ?? 0,
-    },
   ].filter((deletionCount) => deletionCount.shownCount > 0)
 }
 
@@ -66,6 +64,15 @@ export default function DeleteExamModal({
 
   const deletionCounts = countExamDeletion(exam)
 
+  // 成績算出から使われている試験は消させない（main も最終判定で断る）
+  const gradeReferences = useQuery({
+    ...gradeReferencesQuery({ kind: "exam", id: exam.id }),
+    enabled: open,
+  })
+  const blockedMessage = gradeReferences.data
+    ? buildDeletionBlockedMessage("exam", gradeReferences.data)
+    : null
+
   const { isDeleting, refusalMessage, confirmDeletion } = useConfirmedDeletion({
     confirmedCounts: deletionCounts,
     deleteWithConfirmedCounts: useCallback(
@@ -74,12 +81,19 @@ export default function DeleteExamModal({
       },
       [deleteExam, exam.id]
     ),
-    // 件数は試験の取得結果から数えているので、取り直せば数え直したことになる
+    // 件数は試験の取得結果から数えているので、取り直せば数え直したことになる。
+    // 断られた理由が「成績算出で使われている」なら、その一覧も取り直して見せる
     recount: useCallback(
       () =>
-        queryClient.refetchQueries({
-          queryKey: examForDetailQuery(exam.id).queryKey,
-        }),
+        Promise.all([
+          queryClient.refetchQueries({
+            queryKey: examForDetailQuery(exam.id).queryKey,
+          }),
+          queryClient.refetchQueries({
+            queryKey: gradeReferencesQuery({ kind: "exam", id: exam.id })
+              .queryKey,
+          }),
+        ]),
       [exam.id, queryClient]
     ),
   })
@@ -91,21 +105,10 @@ export default function DeleteExamModal({
     onOpenChange(false)
   }
 
-  // 成績データソースは参照を失うだけで消えないため、警告文を分けて出す
-  const destroyedLabels = deletionCounts
-    .filter(
-      (deletionCount) =>
-        deletionCount.countedName !== DELETION_COUNT_NAME.gradeDataSource
-    )
-    .map(
-      (deletionCount) =>
-        `${deletionCount.countedName}${deletionCount.shownCount}件`
-    )
-  const gradeDataSourceCount =
-    deletionCounts.find(
-      (deletionCount) =>
-        deletionCount.countedName === DELETION_COUNT_NAME.gradeDataSource
-    )?.shownCount ?? 0
+  const destroyedLabels = deletionCounts.map(
+    (deletionCount) =>
+      `${deletionCount.countedName}${deletionCount.shownCount}件`
+  )
 
   // 試験情報をアイテムとして構成
   const examItems = [
@@ -147,17 +150,13 @@ export default function DeleteExamModal({
           },
         ]
       : []),
-    ...(gradeDataSourceCount > 0
-      ? [
-          {
-            type: "warning" as const,
-            message: `この試験を参照している成績データソース${gradeDataSourceCount}件が参照を失います。該当する成績の評価項目を確認してください。`,
-          },
-        ]
+    ...(blockedMessage
+      ? [{ type: "destructive" as const, message: blockedMessage }]
       : []),
     // 数えた後に他の教員が書き足していれば main が中止する。閉じずに
     // 数え直した結果を見せ、利用者にもう一度決めてもらう
-    ...(refusalMessage
+    // 成績算出で使われていて断られたときは、取り直した一覧と同じ文言になるので重ねない
+    ...(refusalMessage && refusalMessage !== blockedMessage
       ? [{ type: "destructive" as const, message: refusalMessage }]
       : []),
   ]
@@ -176,6 +175,9 @@ export default function DeleteExamModal({
       warnings={warnings}
       onConfirm={handleDelete}
       loading={isDeleting}
+      // 使われているかを調べ終わるまで、また使われている間は押させない
+      // （調べるのに失敗したときは押せるが、main が同じ判定で断る）
+      confirmDisabled={gradeReferences.isPending || blockedMessage !== null}
     />
   )
 }

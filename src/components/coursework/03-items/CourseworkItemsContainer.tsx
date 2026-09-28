@@ -38,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { buildItemDeletionWarning } from "@/lib/shared/gradeReferenceMessages"
 import { cn } from "@/lib/utils"
 import { courseworkWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
 import {
@@ -49,6 +50,7 @@ import {
   reorderCourseworkItemsMutation,
   updateCourseworkItemMutation,
 } from "@/queries/coursework"
+import { gradeReferencesQuery } from "@/queries/grade"
 import type {
   CourseworkItemWithLetterScales,
   CourseworkWithRelations,
@@ -256,21 +258,26 @@ export function CourseworkItemsContainer({
     setNewItemName("")
   }
 
+  // 成績算出で使われていても消せるが、確認で影響を見せる
+  const deleteTargetReferences = useQuery({
+    ...gradeReferencesQuery({
+      kind: "courseworkItem",
+      id: deleteTarget?.id ?? "",
+    }),
+    enabled: deleteTarget !== null,
+  })
+  const deleteTargetWarning = deleteTargetReferences.data
+    ? buildItemDeletionWarning("courseworkItem", deleteTargetReferences.data)
+    : null
+
   const handleDelete = async (item: CourseworkItemWithLetterScales) => {
-    let result
     try {
-      result = await deleteItem.mutateAsync(item.id)
+      await deleteItem.mutateAsync(item.id)
     } catch {
       // 失敗の通知は MutationCache が出す。確認は開いたままにする
       return
     }
     setDeleteTarget(null)
-    if (!result.deleted) {
-      toast.error("削除できません", {
-        description: `次の成績算出で参照されています: ${result.usedBy.join("、")}`,
-      })
-      return
-    }
     forgetText(item)
     toast.success("評価項目を削除しました", { description: item.name })
   }
@@ -373,11 +380,19 @@ export function CourseworkItemsContainer({
               も一緒に削除され、元に戻せません。
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {deleteTargetWarning && (
+            <div className="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm whitespace-pre-line text-orange-800">
+              {deleteTargetWarning}
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction
               className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
-              disabled={deleteItem.isPending}
+              // 使われているかを調べ終わるまでは押させない（影響を見せる前に消さない）
+              disabled={
+                deleteItem.isPending || deleteTargetReferences.isPending
+              }
               onClick={(event) => {
                 // 閉じるのは削除が済んでから（失敗したら開いたままにする）
                 event.preventDefault()

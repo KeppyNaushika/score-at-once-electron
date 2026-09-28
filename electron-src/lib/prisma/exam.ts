@@ -3,6 +3,7 @@ import * as fsPromises from "fs/promises"
 
 import type { ExamProgressSource } from "../../../src/lib/examStatus"
 import { DELETION_COUNT_NAME } from "../../../src/lib/shared/deletionCountNames"
+import { buildDeletionBlockedMessage } from "../../../src/lib/shared/gradeReferenceMessages"
 import type { ConfirmedDeletionCount } from "../../../src/types/deletionConfirmation.types"
 import { toScoringStatus } from "../../../src/types/scoringStatus.types"
 import { getExamDirectory } from "../dataManager"
@@ -10,6 +11,7 @@ import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 import { deleteAfterRecount } from "./deleteAfterRecount"
 import { examPageWithContentInclude } from "./examPage"
+import { findGradeReferences } from "./gradeReference"
 import { PUBLIC_USER_OMIT } from "./publicUser"
 
 /**
@@ -275,22 +277,17 @@ const countExamDeletionCounts = async (
   client: Prisma.TransactionClient,
   examId: string
 ): Promise<ConfirmedDeletionCount[]> => {
-  const [
-    masterAnswerCount,
-    cropRegionCount,
-    answerSheetCount,
-    gradeDataSourceCount,
-  ] = await Promise.all([
-    // 模範解答は「画像の入ったページ」を数える。画面は
-    // `filter((examPage) => examPage.imagePath)` なので、空文字も画像なしとして
-    // 落とす（旧データには imagePath="" のページがある）
-    client.examPage.count({
-      where: { examId, NOT: [{ imagePath: null }, { imagePath: "" }] },
-    }),
-    client.cropRegion.count({ where: { examPage: { examId } } }),
-    client.studentAnswerImage.count({ where: { examPage: { examId } } }),
-    client.gradeDataSource.count({ where: { examId } }),
-  ])
+  const [masterAnswerCount, cropRegionCount, answerSheetCount] =
+    await Promise.all([
+      // 模範解答は「画像の入ったページ」を数える。画面は
+      // `filter((examPage) => examPage.imagePath)` なので、空文字も画像なしとして
+      // 落とす（旧データには imagePath="" のページがある）
+      client.examPage.count({
+        where: { examId, NOT: [{ imagePath: null }, { imagePath: "" }] },
+      }),
+      client.cropRegion.count({ where: { examPage: { examId } } }),
+      client.studentAnswerImage.count({ where: { examPage: { examId } } }),
+    ])
 
   return [
     {
@@ -305,15 +302,16 @@ const countExamDeletionCounts = async (
       countedName: DELETION_COUNT_NAME.answerSheet,
       shownCount: answerSheetCount,
     },
-    {
-      countedName: DELETION_COUNT_NAME.gradeDataSource,
-      shownCount: gradeDataSourceCount,
-    },
   ].filter((deletionCount) => deletionCount.shownCount > 0)
 }
 
 /**
  * 試験を削除する（DBレコードのcascade削除に加え、画像ファイルのディレクトリも削除する）
+ *
+ * 成績算出から使われている試験（試験そのもの・その設問を指すデータソースがある）は
+ * 消さずに断る。確認画面も同じ仕組みで前もって見せて押させないが、最終判定はここで行う
+ * （画面を開いた後に他の教員が成績算出へ加えた場合も通さない）。数え直しと同じ
+ * トランザクションの中で調べる。
  *
  * @param confirmedCounts 利用者が確認ダイアログで見た件数。消す直前に数え直し、
  *   増えていれば削除を中止する（`deleteAfterRecount`）。
@@ -329,7 +327,14 @@ export const deleteExam = async (
   const exam = await deleteAfterRecount({
     confirmedCounts,
     recount: (tx) => countExamDeletionCounts(tx, id),
-    remove: (tx) => tx.exam.delete({ where: { id } }),
+    remove: async (tx) => {
+      const blockedMessage = buildDeletionBlockedMessage(
+        "exam",
+        await findGradeReferences({ kind: "exam", id }, tx)
+      )
+      if (blockedMessage !== null) throw new Error(blockedMessage)
+      return await tx.exam.delete({ where: { id } })
+    },
     // 採点済みの試験では cascade で消える行数が多く、既定の 5s を超えうる
     timeoutMs: 30000,
   })
