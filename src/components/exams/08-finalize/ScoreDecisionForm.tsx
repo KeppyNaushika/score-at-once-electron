@@ -81,6 +81,8 @@ interface ScoreDecisionFormProps {
   questionLabel: string
   maxScore: number
   canDecide: boolean
+  /** 成績算出で使われているためロック中（確定させない） */
+  locked: boolean
   onDecided: () => void
 }
 
@@ -117,6 +119,7 @@ export function ScoreDecisionForm({
   questionLabel,
   maxScore,
   canDecide,
+  locked,
   onDecided,
 }: ScoreDecisionFormProps) {
   const currentUser = useCurrentUser()
@@ -131,6 +134,8 @@ export function ScoreDecisionForm({
   const [score, setScore] = useState(initial.score)
   const [comment, setComment] = useState(initial.comment)
   const deciding = finalizeQuestionScore.isPending
+  // 確定の操作ができるか（所有者であり、成績算出のロックが外れている）
+  const editable = canDecide && !locked
 
   const needsScore = NEEDS_SCORE.includes(verdict)
   const parsedScore = score === "" ? null : Number(score)
@@ -143,6 +148,7 @@ export function ScoreDecisionForm({
       parsedScore > maxScore)
 
   const handleDecide = async () => {
+    if (!editable) return
     try {
       await finalizeQuestionScore.mutateAsync({
         examStudentId: cell.examStudentId,
@@ -218,7 +224,7 @@ export function ScoreDecisionForm({
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={!canDecide}
+                  disabled={!editable}
                   onClick={() => {
                     setVerdict(result.status)
                     setScore(
@@ -261,7 +267,7 @@ export function ScoreDecisionForm({
                 key={candidate}
                 size="sm"
                 variant={verdict === candidate ? "default" : "outline"}
-                disabled={!canDecide}
+                disabled={!editable}
                 onClick={() => setVerdict(candidate)}
               >
                 {SCORING_STATUS_LABELS[candidate]}
@@ -278,7 +284,7 @@ export function ScoreDecisionForm({
                 min={0}
                 max={maxScore}
                 value={score}
-                disabled={!canDecide}
+                disabled={!editable}
                 onChange={(event) => setScore(event.target.value)}
               />
             </div>
@@ -290,7 +296,7 @@ export function ScoreDecisionForm({
               id="decisionComment"
               rows={2}
               value={comment}
-              disabled={!canDecide}
+              disabled={!editable}
               placeholder="裁定の理由など"
               onChange={(event) => setComment(event.target.value)}
             />
@@ -303,7 +309,7 @@ export function ScoreDecisionForm({
           <Button
             className="w-full"
             onClick={handleDecide}
-            disabled={deciding || scoreIsInvalid}
+            disabled={deciding || scoreIsInvalid || locked}
           >
             {deciding ? (
               <>

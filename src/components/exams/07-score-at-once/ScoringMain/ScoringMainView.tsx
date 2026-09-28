@@ -10,6 +10,10 @@ import Head from "next/head"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
+import {
+  GradeLockBar,
+  useGradePageLock,
+} from "@/components/common/grade-lock/GradeLockBar"
 import { useContextValue } from "@/components/exams/07-score-at-once/hooks/useContextValue"
 import { OMRAutoScoringModal } from "@/components/exams/07-score-at-once/OMRRecognition/OMRAutoScoringModal"
 import {
@@ -47,7 +51,9 @@ import { ScoringSidePanel } from "@/components/exams/07-score-at-once/ScoringSid
 import type { MouseBrushAction } from "@/components/exams/07-score-at-once/types"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useExamDecisionSummary } from "@/hooks/useExamDecisionSummary"
+import { NO_GRADE_LOCK_SOURCES } from "@/lib/gradeLock"
 import { resolveExamPaperSize } from "@/lib/shared/examPaperSize"
+import { examGradeLockSourcesQuery } from "@/queries/grade"
 import { questionScoresScope } from "@/queries/scoring"
 import {
   setUserClickScoringActionMutation,
@@ -259,7 +265,10 @@ function ScoringMainViewContent() {
   })
 
   /** 採点データ管理hook */
-  const { handleBatchScore, calculateQuestionProgress } = useScoringData({
+  const {
+    handleBatchScore: handleBatchScoreUnguarded,
+    calculateQuestionProgress,
+  } = useScoringData({
     examId,
     currentUserId: currentUser.id,
     currentCropRegionId,
@@ -267,6 +276,24 @@ function ScoringMainViewContent() {
     cropRegions,
     questionScoresByCropRegionId,
   })
+
+  /**
+   * 成績算出が使う試験は、採点をページごとロックする。ロック中は採点の書き込み
+   * （キー操作・クリック・部分点・OMR）を何もしないで通知だけ出す。解除はこの画面に
+   * いる間だけで、離れると再びロックされる
+   */
+  const { data: gradeLockSources = NO_GRADE_LOCK_SOURCES } = useQuery(
+    examGradeLockSourcesQuery(examId)
+  )
+  const {
+    locked: scoringLocked,
+    unlock: unlockScoring,
+    guard: guardScoring,
+  } = useGradePageLock(gradeLockSources)
+  const handleBatchScore = useMemo(
+    () => guardScoring(handleBatchScoreUnguarded),
+    [guardScoring, handleBatchScoreUnguarded]
+  )
 
   /**
    * 採点行を全部取り直す。
@@ -437,7 +464,9 @@ function ScoringMainViewContent() {
     [layoutDirection, handleIndividualNextStudent, handleIndividualPrevStudent]
   )
 
-  const { handleBatchScoreWithProgress } = useBatchScoringWithProgress({
+  const {
+    handleBatchScoreWithProgress: handleBatchScoreWithProgressUnguarded,
+  } = useBatchScoringWithProgress({
     selectedAnswers: selectedStudentAnswerImageIds,
     gradingMode: gradingMode,
     scoringBehavior: scoringBehavior,
@@ -448,6 +477,11 @@ function ScoringMainViewContent() {
     handleNextStudent: handleIndividualNextStudent,
     handleNextQuestion,
   })
+  // ロック中は採点しないだけでなく、採点の後の自動進行もさせない
+  const handleBatchScoreWithProgress = useMemo(
+    () => guardScoring(handleBatchScoreWithProgressUnguarded),
+    [guardScoring, handleBatchScoreWithProgressUnguarded]
+  )
 
   /** 採点アクションフック */
   const {
@@ -464,8 +498,8 @@ function ScoringMainViewContent() {
   const {
     partialScoreInput,
     showPartialScoreModal,
-    openPartialScoreModal,
-    handlePartialScoreInput,
+    openPartialScoreModal: openPartialScoreModalUnguarded,
+    handlePartialScoreInput: handlePartialScoreInputUnguarded,
     handlePartialScoreConfirm,
     handlePartialScoreCancel,
     handlePartialScoreBackspace,
@@ -475,6 +509,15 @@ function ScoringMainViewContent() {
     currentCropRegion,
     onBatchScore: handleBatchScoreWithProgress,
   })
+  // 部分点の入力はモーダルを開くところから止める（開いても確定できないため）
+  const openPartialScoreModal = useMemo(
+    () => guardScoring(openPartialScoreModalUnguarded),
+    [guardScoring, openPartialScoreModalUnguarded]
+  )
+  const handlePartialScoreInput = useMemo(
+    () => guardScoring(handlePartialScoreInputUnguarded),
+    [guardScoring, handlePartialScoreInputUnguarded]
+  )
 
   /** クリック採点：デバウンス後にクリック回数に応じたアクションを実行 */
   const handleClickScoring = useCallback(
@@ -760,13 +803,20 @@ function ScoringMainViewContent() {
           showSidePanel={showSidePanel}
           onShowSidePanelChange={setShowSidePanel}
           modifierKeyLabel={modifierKeyLabel}
-          onOmrRecognitionClick={() => setShowOmrModal(true)}
+          onOmrRecognitionClick={guardScoring(() => setShowOmrModal(true))}
           scoreDecisionHref={
             showDecisionEntry ? `/exams/${examId}/08-finalize` : undefined
           }
           pendingDecisionCount={pendingDecisionCount}
         />
       </div>
+
+      <GradeLockBar
+        subject="この試験の採点"
+        sources={gradeLockSources}
+        locked={scoringLocked}
+        onUnlock={unlockScoring}
+      />
 
       {/* 採点エリア */}
       <div className="relative flex h-full min-h-0 flex-1 overflow-hidden">

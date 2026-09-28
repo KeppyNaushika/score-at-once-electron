@@ -9,6 +9,10 @@ import {
   EditableTable,
 } from "@/components/common/EditableTable"
 import {
+  GradeLockBar,
+  useGradePageLock,
+} from "@/components/common/grade-lock/GradeLockBar"
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -22,6 +26,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import { NO_GRADE_LOCK_SOURCES } from "@/lib/gradeLock"
 import { parsePreference } from "@/lib/userPreferences"
 import { courseworkWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
 import {
@@ -32,6 +37,7 @@ import {
   courseworkStudentsQuery,
   upsertCourseworkScoresMutation,
 } from "@/queries/coursework"
+import { courseworkGradeLockSourcesQuery } from "@/queries/grade"
 import {
   setUserPreferenceMutation,
   userPreferenceQuery,
@@ -106,6 +112,13 @@ export function CourseworkScoresContainer({
     courseworkClassroomsQuery(courseworkId)
   )
   const upsertScores = useMutation(upsertCourseworkScoresMutation())
+  // 成績算出が使う資料は、点数の入力をページごとロックする（解除はこの画面にいる間
+  // だけ）。ロック中は表を読み取り専用にし、書き込みの口でも止める
+  const { data: gradeLockSources = NO_GRADE_LOCK_SOURCES } = useQuery(
+    courseworkGradeLockSourcesQuery(courseworkId)
+  )
+  const { locked: scoresLocked, unlock: unlockScores } =
+    useGradePageLock(gradeLockSources)
   // 「点数だけ表示」は利用者の設定（既定は隠す。理由は userPreferences.ts）。
   // 隠すのは列だけで、行の値（加減点・理由・コメント）は持ったまま。貼り付けも
   // 行を写してから配るので、隠した列の値は変わらない
@@ -154,7 +167,7 @@ export function CourseworkScoresContainer({
         patch: CourseworkCellPatch
       }[]
     ) => {
-      if (changes.length === 0) return
+      if (changes.length === 0 || scoresLocked) return
       upsertScores.mutate(
         changes.map((change) => ({
           courseworkItemId: change.courseworkItemId,
@@ -163,7 +176,7 @@ export function CourseworkScoresContainer({
         }))
       )
     },
-    [upsertScores]
+    [upsertScores, scoresLocked]
   )
 
   /**
@@ -348,8 +361,16 @@ export function CourseworkScoresContainer({
       }
     )
 
-    return [...readOnlyCols, ...scoreCols]
-  }, [items, scoreOnly])
+    // ロック中は点数の列も読み取り専用にする（入力も貼り付けも受け付けない）
+    const lockedScoreCols = scoresLocked
+      ? scoreCols.map((column) => ({
+          ...column,
+          meta: { ...column.meta, readOnly: true },
+        }))
+      : scoreCols
+
+    return [...readOnlyCols, ...lockedScoreCols]
+  }, [items, scoreOnly, scoresLocked])
 
   const handleDataChange = useCallback(
     (newData: ScoreRow[]) => {
@@ -479,6 +500,14 @@ export function CourseworkScoresContainer({
 
   return (
     <div className="p-6">
+      <div className="-mx-6 -mt-6 mb-4">
+        <GradeLockBar
+          subject="この資料の点数"
+          sources={gradeLockSources}
+          locked={scoresLocked}
+          onUnlock={unlockScores}
+        />
+      </div>
       <h2 className="mb-4 text-lg font-semibold">点数入力</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         各生徒の評価項目ごとの点数を入力してください。文字評価の項目は評価記号（例:
