@@ -14,6 +14,9 @@ export type GradeReferenceTarget =
   | { kind: "subtotal"; id: string }
   | { kind: "coursework"; id: string }
   | { kind: "courseworkItem"; id: string }
+  | { kind: "subtotalGroup"; id: string }
+  /** 生徒は成績算出の名簿（GradeStudent）に載っているかを調べる（usage は `roster`） */
+  | { kind: "student"; id: string }
 
 /**
  * 使われ方。
@@ -22,8 +25,10 @@ export type GradeReferenceTarget =
  *   評価項目・資料合計のデータソースが、その試験・小計・設問・評価項目・資料を指す）
  * - `total`: 対象がデータソースの合計に含まれている（設問が「試験の合計点」や
  *   小計に含まれる、評価項目が「資料合計」に含まれる）。消すと合計が変わる
+ * - `roster`: 生徒が成績算出の名簿に載っている。データソースは介さないので、
+ *   評価項目・データソースの欄は空文字（`dataSourceType` は `other`）
  */
-export type GradeReferenceUsage = "direct" | "total"
+export type GradeReferenceUsage = "direct" | "total" | "roster"
 
 /** データソースの種類（`GradeDataSource.type`） */
 export type GradeReferenceDataSourceType =

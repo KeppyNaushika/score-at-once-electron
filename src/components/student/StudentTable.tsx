@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import { DeleteStudentModal } from "@/components/student/DeleteStudentModal"
 import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
 import { StudentArchiveExportDialog } from "@/components/student/StudentArchiveExportDialog"
 import StudentModal from "@/components/student/StudentModal"
@@ -45,7 +46,6 @@ import { isCurrentMembership } from "@/lib/membership"
 import {
   classroomListQuery,
   createStudentMutation,
-  deleteStudentMutation,
   exportStudentsExcelMutation,
   studentListQuery,
   updateStudentMutation,
@@ -106,6 +106,9 @@ export default function StudentTable() {
     useState(false)
   const [isArchiveImportModalOpen, setIsArchiveImportModalOpen] =
     useState(false)
+  // 削除の確認を開いている生徒（成績算出の名簿に載っていれば確認画面が断る）
+  const [studentToDelete, setStudentToDelete] =
+    useState<StudentWithMemberships | null>(null)
 
   // Data fetching
   // Filter students
@@ -221,15 +224,11 @@ export default function StudentTable() {
     setIsStudentModalOpen(true)
   }
 
-  const handleDeleteStudent = (studentId: string) => {
-    if (!window.confirm("本当にこの生徒を削除しますか？")) return
-    deleteStudent.mutate(studentId, {
-      onSuccess: () =>
-        setSelectedStudentIds((prev) => {
-          const remaining = new Set(prev)
-          remaining.delete(studentId)
-          return remaining
-        }),
+  const handleStudentDeleted = (studentId: string) => {
+    setSelectedStudentIds((prev) => {
+      const remaining = new Set(prev)
+      remaining.delete(studentId)
+      return remaining
     })
   }
 
@@ -263,7 +262,6 @@ export default function StudentTable() {
 
   const createStudent = useMutation(createStudentMutation())
   const updateStudent = useMutation(updateStudentMutation())
-  const deleteStudent = useMutation(deleteStudentMutation())
   const exportStudentsExcel = useMutation(exportStudentsExcelMutation())
 
   const refreshData = async () => {
@@ -507,7 +505,7 @@ export default function StudentTable() {
                           className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleDeleteStudent(student.id)
+                            setStudentToDelete(student)
                           }}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -533,6 +531,11 @@ export default function StudentTable() {
       </div>
 
       {/* Modals */}
+      <DeleteStudentModal
+        student={studentToDelete}
+        onClose={() => setStudentToDelete(null)}
+        onDeleted={handleStudentDeleted}
+      />
       {isStudentModalOpen && (
         <StudentModal
           isOpen={isStudentModalOpen}

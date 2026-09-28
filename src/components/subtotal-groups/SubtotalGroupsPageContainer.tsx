@@ -1,19 +1,18 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
-import { toast } from "sonner"
 
 import { ListFilterBar } from "@/components/common/ListFilterBar"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
+import { DeleteSubtotalGroupModal } from "@/components/subtotal-groups/components/DeleteSubtotalGroupModal"
 import { SubtotalGroupCard } from "@/components/subtotal-groups/components/SubtotalGroupCard"
 import { SubtotalGroupModal } from "@/components/subtotal-groups/components/SubtotalGroupModal"
 import { Button } from "@/components/ui/button"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import {
-  deleteSubtotalGroupMutation,
   subtotalGroupListQuery,
   type SubtotalGroupRow,
 } from "@/queries/subtotal"
@@ -51,7 +50,10 @@ export function SubtotalGroupsPageContainer() {
     error,
   } = useQuery(subtotalGroupListQuery())
   const ipcError = error?.message ?? null
-  const deleteSubtotalGroup = useMutation(deleteSubtotalGroupMutation())
+  // 削除の確認を開いているグループ
+  const [deletingGroup, setDeletingGroup] = useState<SubtotalGroupRow | null>(
+    null
+  )
 
   const fetchSubtotalGroups = useCallback(
     () =>
@@ -83,7 +85,7 @@ export function SubtotalGroupsPageContainer() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // モーダルが開いている時は無視
-      if (showModal) return
+      if (showModal || deletingGroup !== null) return
 
       if ((event.ctrlKey || event.metaKey) && event.key === "n") {
         event.preventDefault()
@@ -98,32 +100,12 @@ export function SubtotalGroupsPageContainer() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [fetchSubtotalGroups, handleCreate, showModal])
+  }, [deletingGroup, fetchSubtotalGroups, handleCreate, showModal])
 
   // 編集
   const handleEdit = (group: SubtotalGroupRow) => {
     setEditingGroup(group)
     setShowModal(true)
-  }
-
-  // 削除。使用中で削除できない場合、どの設問で使われているかが例外の文言に載っている
-  const handleDelete = (groupId: string) => {
-    const group = subtotalGroups.find(
-      (subtotalGroup) => subtotalGroup.id === groupId
-    )
-    const groupName = group?.name || "不明なグループ"
-
-    if (
-      !confirm(
-        `小計点グループ「${groupName}」を削除しますか？\n\n注意：設問との関連付けがある場合は削除できません。\n削除前に、使っている試験の「4. 小計点」タブで設問の割り当てを解除してください。`
-      )
-    )
-      return
-
-    deleteSubtotalGroup.mutate(groupId, {
-      onSuccess: () =>
-        toast.success(`小計点グループ「${groupName}」を削除しました`),
-    })
   }
 
   if (loading) {
@@ -202,12 +184,18 @@ export function SubtotalGroupsPageContainer() {
                 key={group.id}
                 group={group}
                 onEdit={() => handleEdit(group)}
-                onDelete={() => handleDelete(group.id)}
+                onDelete={() => setDeletingGroup(group)}
               />
             ))}
           </div>
         )}
       </div>
+
+      {/* 削除確認。成績算出・設問で使われていれば断る */}
+      <DeleteSubtotalGroupModal
+        group={deletingGroup}
+        onClose={() => setDeletingGroup(null)}
+      />
 
       {/* モーダル */}
       {showModal && (

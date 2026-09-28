@@ -1,9 +1,11 @@
 import type { Prisma } from "@prisma/client"
 
+import { buildDeletionBlockedMessage } from "../../../src/lib/shared/gradeReferenceMessages"
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope } from "./auditScope"
 import prisma from "./client"
 import { subtotalWithQuestionAssignmentsInclude } from "./cropSubtotal"
+import { findGradeReferences } from "./gradeReference"
 import { tagSubtotalGroupWithTagInclude } from "./tagSubtotalGroup"
 
 /**
@@ -281,6 +283,15 @@ export async function deleteSubtotalGroup(id: string) {
 
   // 試験に追加されているが実際には使用されていない場合はExamSubtotalGroupも削除
   await prisma.$transaction(async (tx) => {
+    // 成績算出のデータソースが中の小計を使っていれば断る。小計を消すとデータソースは
+    // Cascade で黙って消えるため。確認画面も同じ仕組みで前もって見せるが、最終判定は
+    // 削除と同じトランザクションの中で行う
+    const blockedMessage = buildDeletionBlockedMessage(
+      "subtotalGroup",
+      await findGradeReferences({ kind: "subtotalGroup", id }, tx)
+    )
+    if (blockedMessage !== null) throw new Error(blockedMessage)
+
     // ExamSubtotalGroupを削除
     await tx.examSubtotalGroup.deleteMany({
       where: { subtotalGroupId: id },

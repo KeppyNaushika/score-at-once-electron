@@ -108,6 +108,17 @@ async function buildUsageQueries(
           },
         },
       ]
+    case "subtotalGroup":
+      // グループの中の小計項目を使うもの（小計項目は Cascade で消え、データソースも消える）
+      return [
+        {
+          usage: "direct",
+          where: { subtotal: { subtotalGroupId: target.id } },
+        },
+      ]
+    case "student":
+      // データソースではなく名簿で調べる（findGradeReferences が別に扱う）
+      return []
     case "courseworkItem": {
       const courseworkItem = await client.courseworkItem.findUnique({
         where: { id: target.id },
@@ -142,6 +153,32 @@ const toGradeReference = (
 })
 
 /**
+ * 生徒が載っている成績算出の名簿を返す（成績算出の名前順）。
+ *
+ * 生徒を消すと名簿（GradeStudent）が Cascade で消え、その生徒の手動点数・上書き・
+ * 確定値も一緒に消える。
+ */
+async function findGradeRosterReferences(
+  client: Prisma.TransactionClient,
+  studentId: string
+): Promise<GradeReference[]> {
+  const gradeStudents = await client.gradeStudent.findMany({
+    where: { studentId },
+    include: { grade: { select: { id: true, name: true } } },
+    orderBy: { grade: { name: "asc" } },
+  })
+  return gradeStudents.map((gradeStudent) => ({
+    gradeId: gradeStudent.grade.id,
+    gradeName: gradeStudent.grade.name,
+    gradeItemName: "",
+    dataSourceId: "",
+    dataSourceName: "",
+    dataSourceType: "other",
+    usage: "roster",
+  }))
+}
+
+/**
  * 対象を使っている成績算出のデータソースを返す。
  *
  * 同じデータソースが「そのもの」と「合計に含まれる」の両方に当たることは無いが、
@@ -154,6 +191,9 @@ export async function findGradeReferences(
   target: GradeReferenceTarget,
   client: Prisma.TransactionClient = prisma
 ): Promise<GradeReference[]> {
+  if (target.kind === "student") {
+    return findGradeRosterReferences(client, target.id)
+  }
   const usageQueries = await buildUsageQueries(client, target)
   const references: GradeReference[] = []
   const seenDataSourceIds = new Set<string>()

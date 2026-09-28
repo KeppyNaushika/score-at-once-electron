@@ -1,11 +1,9 @@
 import type { Student, StudentClassroomMembership } from "@prisma/client"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { useRouter } from "next/navigation"
 
 import {
   addStudentToClassroomMutation,
   classroomListQuery,
-  deleteStudentMutation,
   endStudentMembershipMutation,
   studentListQuery,
   updateStudentMembershipMutation,
@@ -22,7 +20,6 @@ const EMPTY_STUDENTS: StudentWithMemberships[] = []
 const EMPTY_CLASSROOMS: ClassroomWithMemberships[] = []
 
 export function useStudentDetail(studentId: string) {
-  const router = useRouter()
   // 生徒・学級は全画面で共有するキャッシュから引く（この画面だけ取り直さない）
   const { data: students = EMPTY_STUDENTS, isPending: studentsPending } =
     useQuery(studentListQuery())
@@ -34,7 +31,6 @@ export function useStudentDetail(studentId: string) {
   // 失敗の通知も取り直しも `MutationCache` が持つ。ここが返す真偽は
   // 「モーダルを閉じてよいか」だけを言う
   const updateStudent = useMutation(updateStudentMutation())
-  const deleteStudent = useMutation(deleteStudentMutation())
   const addMembership = useMutation(addStudentToClassroomMutation())
   const updateMembership = useMutation(updateStudentMembershipMutation())
   const endMembership = useMutation(endStudentMembershipMutation())
@@ -42,23 +38,6 @@ export function useStudentDetail(studentId: string) {
   const handleEditStudent = async (studentData: Partial<Student>) => {
     try {
       await updateStudent.mutateAsync({ id: studentId, student: studentData })
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  const handleDeleteStudent = async () => {
-    if (
-      !window.confirm(
-        "本当にこの生徒を削除しますか？\nこの操作は取り消すことができません。"
-      )
-    ) {
-      return false
-    }
-    try {
-      await deleteStudent.mutateAsync(studentId)
-      router.push("/students")
       return true
     } catch {
       return false
@@ -114,7 +93,6 @@ export function useStudentDetail(studentId: string) {
     classrooms,
     loading,
     handleEditStudent,
-    handleDeleteStudent,
     handleSaveMembership,
     handleEndMembership,
   }

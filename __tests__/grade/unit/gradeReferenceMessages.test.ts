@@ -56,6 +56,45 @@ describe("buildDeletionBlockedMessage", () => {
       buildDeletionBlockedMessage("coursework", [reference({})])
     ).toContain("この試験外成績資料は次の成績算出で使われているため")
   })
+
+  it("小計点グループの文言", () => {
+    const message = buildDeletionBlockedMessage("subtotalGroup", [
+      reference({ dataSourceType: "subtotal", dataSourceName: "計算" }),
+    ])
+    expect(message).toContain(
+      "この小計点グループは次の成績算出で使われているため、削除できません。"
+    )
+    expect(message).toContain(
+      "・成績算出「1学期成績」の評価項目「知識・技能」のデータソース「計算」"
+    )
+  })
+
+  it("生徒: 名簿に載っている成績算出を重複なく挙げ、名簿から外すよう促す", () => {
+    const roster = (gradeName: string) =>
+      reference({
+        gradeName,
+        gradeItemName: "",
+        dataSourceId: "",
+        dataSourceName: "",
+        dataSourceType: "other",
+        usage: "roster",
+      })
+    const message = buildDeletionBlockedMessage("student", [
+      roster("1学期成績"),
+      roster("2学期成績"),
+      roster("1学期成績"),
+    ])
+    expect(message).toBe(
+      "この生徒は次の成績算出の名簿に載っているため、削除できません。" +
+        "削除するには、先に各成績算出の「1. 生徒管理」でこの生徒を名簿から外してください。\n" +
+        "・成績算出「1学期成績」\n" +
+        "・成績算出「2学期成績」"
+    )
+  })
+
+  it("生徒: 名簿に載っていなければ null", () => {
+    expect(buildDeletionBlockedMessage("student", [])).toBeNull()
+  })
 })
 
 describe("buildItemDeletionWarning", () => {
