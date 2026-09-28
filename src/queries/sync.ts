@@ -55,6 +55,8 @@ export const setSyncConfigMutation = () =>
     meta: {
       invalidates: [syncConfigQuery().queryKey, syncStatusQuery().queryKey],
       errorMessage: "同期の設定を保存できませんでした",
+      // 同期。試験・資料の中身を変える操作ではない
+      bypassesGradeLock: true,
     },
   })
 
@@ -65,5 +67,7 @@ export const triggerSyncMutation = () =>
     meta: {
       invalidates: [syncStatusQuery().queryKey],
       errorMessage: "同期を実行できませんでした",
+      // 同期。試験・資料の中身を変える操作ではない
+      bypassesGradeLock: true,
     },
   })

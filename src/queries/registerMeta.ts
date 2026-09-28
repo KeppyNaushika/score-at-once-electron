@@ -37,6 +37,15 @@ export type AppMutationMeta =
       writesDatabase?: never
       /** 失敗トーストの見出し */
       errorMessage: string
+      /**
+       * **成績算出のロック中でも止めない**と名乗る（`src/lib/gradeWriteLock.ts`）。
+       *
+       * 既定では、成績算出で使われている試験・資料を開いている間、DB を書く
+       * 書き込みはすべて止まる。試験・資料の中身を変えないもの（利用者の設定・
+       * 出力設定・同期・監査ログだけを書くもの）だけがこれを付ける。点数・配点・
+       * 受験者・答案などに1行でも触れるなら付けない
+       */
+      bypassesGradeLock?: true
     }
   | {
       /**
@@ -48,6 +57,8 @@ export type AppMutationMeta =
        */
       writesDatabase: false
       invalidates?: never
+      /** DB を書かないので、成績算出のロックはもともと掛からない */
+      bypassesGradeLock?: never
 
       /** 失敗トーストの見出し */
       errorMessage: string
