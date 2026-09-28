@@ -45,7 +45,10 @@ export function GradeLockDialog({
         ポータルの中のクリックも React の木をたどって親へ上がる。表の行に置いたとき、
         「編集する」で行の選択が切り替わらないよう止める
       */}
-      <AlertDialogContent onClick={(event) => event.stopPropagation()}>
+      <AlertDialogContent
+        className="sm:max-w-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <Lock className="h-4 w-4" />
@@ -53,11 +56,48 @@ export function GradeLockDialog({
           </AlertDialogTitle>
           <AlertDialogDescription>{message.lead}</AlertDialogDescription>
         </AlertDialogHeader>
-        <ul className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          {message.sourceLines.map((line) => (
-            <li key={line}>・{line}</li>
+        {/* 成績算出ごとに、評価項目とデータソースを表で並べる */}
+        <div className="max-h-72 space-y-3 overflow-y-auto">
+          {message.groups.map((group) => (
+            <section
+              key={group.gradeId}
+              className="overflow-hidden rounded-md border border-amber-200 dark:border-amber-900"
+            >
+              <h3 className="bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                {group.gradeName}
+              </h3>
+              <table className="w-full text-sm">
+                <thead className="text-xs text-muted-foreground">
+                  <tr className="border-b">
+                    <th className="px-3 py-1 text-left font-normal">
+                      評価項目
+                    </th>
+                    <th className="px-3 py-1 text-left font-normal">
+                      データソース
+                    </th>
+                    <th className="px-3 py-1 text-left font-normal">種類</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {group.rows.map((row) => (
+                    <tr
+                      key={`${row.gradeItemName}\u0000${row.dataSourceName}\u0000${row.dataSourceTypeLabel}`}
+                      className="border-b last:border-b-0"
+                    >
+                      <td className="px-3 py-1 whitespace-nowrap">
+                        {row.gradeItemName}
+                      </td>
+                      <td className="px-3 py-1">{row.dataSourceName}</td>
+                      <td className="px-3 py-1 whitespace-nowrap text-muted-foreground">
+                        {row.dataSourceTypeLabel}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
           ))}
-        </ul>
+        </div>
         <p className="text-sm text-muted-foreground">
           {message.frozenNote}
           解除はこのページを離れるまで有効です。

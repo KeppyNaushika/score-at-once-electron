@@ -142,11 +142,10 @@ describe("領域情報テーブルの成績算出ロック", () => {
       })[0]
     )
     // どの成績算出のどの項目で使われているかを見せる
-    expect(
-      screen.getByText(
-        "・成績算出「1学期成績」の評価項目「思考・判断・表現」のデータソース「大問1」（小計）"
-      )
-    ).toBeInTheDocument()
+    const sourceRow = screen.getByRole("row", { name: /思考・判断・表現/ })
+    expect(screen.getByText("1学期成績")).toBeInTheDocument()
+    expect(sourceRow).toHaveTextContent("大問1")
+    expect(sourceRow).toHaveTextContent("小計")
     await user.click(screen.getByRole("button", { name: "編集する" }))
 
     expect(pointsInputOf(REGION_A.id)).toBeEnabled()
