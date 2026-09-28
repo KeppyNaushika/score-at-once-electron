@@ -5,7 +5,6 @@ import { arrayMove } from "@dnd-kit/sortable"
 import { useMutation } from "@tanstack/react-query"
 import { Plus, X } from "lucide-react"
 
-import { LockedByGrade } from "@/components/common/grade-lock/LockedByGrade"
 import {
   DragHandle,
   SortableTableProvider,
@@ -22,7 +21,6 @@ import {
   updateCourseworkLetterScaleMutation,
 } from "@/queries/coursework"
 import type { CourseworkItemWithLetterScales } from "@/types/coursework.types"
-import type { GradeLockSource } from "@/types/gradeLock.types"
 
 /** 刻みの行 */
 type LetterScale = CourseworkItemWithLetterScales["letterScales"][number]
@@ -34,15 +32,6 @@ interface LetterScaleEditorProps {
   courseworkId: string
   /** 対象の評価項目。刻みは子として同梱されている */
   item: CourseworkItemWithLetterScales
-  /**
-   * 成績算出のロック。評価項目が使われていれば、換算表を変えるとその成績の点数が
-   * 変わるので、換算表ごとロックする
-   */
-  gradeLock: {
-    sources: GradeLockSource[]
-    locked: boolean
-    onUnlock: () => void
-  }
 }
 
 /**
@@ -58,9 +47,7 @@ interface LetterScaleEditorProps {
 export function LetterScaleEditor({
   courseworkId,
   item,
-  gradeLock,
 }: LetterScaleEditorProps) {
-  const { locked } = gradeLock
   const createLetterScale = useMutation(
     createCourseworkLetterScaleMutation(courseworkId)
   )
@@ -95,8 +82,6 @@ export function LetterScaleEditor({
     )
 
   const changeLabel = (letterScale: LetterScale, text: string) => {
-    // ロック中は書かない（欄は disabled だが、書き込みの口でも止める）
-    if (locked) return
     remember(letterScale.id, "label", text)
     const label = text.trim()
     // 空・重複のままでは書かない。次の打鍵で確定する。
@@ -110,7 +95,6 @@ export function LetterScaleEditor({
   }
 
   const changeScore = (letterScale: LetterScale, text: string) => {
-    if (locked) return
     remember(letterScale.id, "score", text)
     const score = Number(text)
     if (text.trim() === "" || Number.isNaN(score)) return
@@ -118,7 +102,6 @@ export function LetterScaleEditor({
   }
 
   const addRow = () => {
-    if (locked) return
     const usedLabels = new Set(
       letterScales.map((letterScale) => letterScale.label)
     )
@@ -134,7 +117,6 @@ export function LetterScaleEditor({
   }
 
   const removeRow = (letterScale: LetterScale) => {
-    if (locked) return
     forget(letterScale.id)
     deleteLetterScale.mutate(letterScale.id)
   }
@@ -159,18 +141,9 @@ export function LetterScaleEditor({
 
   return (
     <div className="space-y-2 rounded border border-dashed bg-muted/30 p-2">
-      <div className="flex items-center gap-1">
-        <p className="text-xs font-medium text-muted-foreground">
-          評価記号 → 点数の変換表
-        </p>
-        {locked && (
-          <LockedByGrade
-            subject={`評価項目「${item.name}」の変換表`}
-            sources={gradeLock.sources}
-            onUnlock={gradeLock.onUnlock}
-          />
-        )}
-      </div>
+      <p className="text-xs font-medium text-muted-foreground">
+        評価記号 → 点数の変換表
+      </p>
       <div className="space-y-1">
         <SortableTableProvider
           items={letterScales.map((letterScale) => letterScale.id)}
@@ -195,7 +168,6 @@ export function LetterScaleEditor({
                 onChangeScore={changeScore}
                 onBlur={forgetField}
                 onRemove={removeRow}
-                disabled={locked}
               />
             )
           })}
@@ -206,7 +178,6 @@ export function LetterScaleEditor({
         size="sm"
         className="h-6 text-xs text-muted-foreground"
         onClick={addRow}
-        disabled={locked}
       >
         <Plus className="mr-1 h-3 w-3" />
         評価を追加
@@ -241,8 +212,6 @@ interface ScaleRowProps {
   /** 入力を離れた欄の覚えだけ捨てる（隣の欄はまだ入力中でありうる） */
   onBlur: (letterScaleId: string, field: "label" | "score") => void
   onRemove: (letterScale: LetterScale) => void
-  /** 成績算出のロック中 */
-  disabled: boolean
 }
 
 /** ドラッグ&ドロップで並べ替え可能な変換表の1行 */
@@ -255,7 +224,6 @@ function ScaleRow({
   onChangeScore,
   onBlur,
   onRemove,
-  disabled,
 }: ScaleRowProps) {
   const { setNodeRef, style, dragHandleProps } = useSortableRow(letterScale.id)
 
@@ -271,7 +239,6 @@ function ScaleRow({
           labelIssue && "border-red-500 focus-visible:ring-red-500"
         )}
         placeholder="記号"
-        disabled={disabled}
         title={labelIssue ? LABEL_ISSUE_MESSAGE[labelIssue] : undefined}
       />
       <span className="text-xs text-muted-foreground">=</span>
@@ -283,14 +250,12 @@ function ScaleRow({
         type="number"
         step="any"
         placeholder="点数"
-        disabled={disabled}
       />
       <Button
         variant="ghost"
         size="icon"
         className="h-6 w-6"
         onClick={() => onRemove(letterScale)}
-        disabled={disabled}
         title="削除"
       >
         <X className="h-3 w-3" />
