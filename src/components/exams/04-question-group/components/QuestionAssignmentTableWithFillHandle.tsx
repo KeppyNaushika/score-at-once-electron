@@ -1,10 +1,14 @@
 "use client"
 
 import type { Subtotal } from "@prisma/client"
+import { useQuery } from "@tanstack/react-query"
 import { Grid3X3, RotateCcw } from "lucide-react"
 import { useState } from "react"
 
+import { LockedByGrade } from "@/components/common/grade-lock/LockedByGrade"
+import { useGradeLockUnlocks } from "@/components/common/grade-lock/useGradeLockUnlocks"
 import { CheckboxCellWithFillHandle } from "@/components/exams/shared/CheckboxCellWithFillHandle"
+import type { FillUpdate } from "@/components/exams/shared/useFillHandleDrag"
 import { useFillHandleDrag } from "@/components/exams/shared/useFillHandleDrag"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,6 +22,8 @@ import {
 } from "@/components/ui/table"
 import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
+import { findSubtotalLockSources, NO_GRADE_LOCK_SOURCES } from "@/lib/gradeLock"
+import { examGradeLockSourcesQuery } from "@/queries/grade"
 
 import { useCropSubtotalAssignments } from "../hooks/useCropSubtotalAssignments"
 
@@ -48,6 +54,23 @@ export function QuestionAssignmentTableWithFillHandle({
       assignmentType: "QUESTION_ASSIGNMENT",
     })
 
+  // 成績算出が使う小計は、列ごとにロックする（解除はこの画面の中だけ）。
+  // 割り当てを変えると小計の点数が変わるため。フックは小計点領域の表（成績に
+  // 効かない）と共有なので、ロックはこちらの表にだけ入れる
+  const { data: gradeLockSources = NO_GRADE_LOCK_SOURCES } = useQuery(
+    examGradeLockSourcesQuery(examId)
+  )
+  const { isUnlocked, unlock } = useGradeLockUnlocks()
+  const subtotalLockSourcesOf = (subtotal: Subtotal) =>
+    findSubtotalLockSources(gradeLockSources, subtotal.id)
+  const isSubtotalLocked = (subtotal: Subtotal) =>
+    subtotalLockSourcesOf(subtotal).length > 0 && !isUnlocked(subtotal.id)
+
+  // フィルハンドルはロック中の列をまたいで塗れるので、その列への更新を落とす
+  const fillUnlockedCells = (
+    updates: FillUpdate<CropRegionWithSubtotals, Subtotal>[]
+  ) => fillCells(updates.filter((update) => !isSubtotalLocked(update.col)))
+
   // フィルハンドルのドラッグ管理
   const {
     handleFillHandlePointerDown,
@@ -57,7 +80,7 @@ export function QuestionAssignmentTableWithFillHandle({
   } = useFillHandleDrag({
     rows: cropRegions,
     cols: allSubtotals,
-    onFillComplete: fillCells,
+    onFillComplete: fillUnlockedCells,
   })
 
   // セル選択
@@ -176,8 +199,15 @@ export function QuestionAssignmentTableWithFillHandle({
                       key={subtotal.id}
                       className="sticky top-10.25 z-20 bg-gray-50/50 px-2 text-center"
                     >
-                      <div className="text-xs text-muted-foreground">
+                      <div className="flex items-center justify-center gap-0.5 text-xs text-muted-foreground">
                         {subtotal.name}
+                        {isSubtotalLocked(subtotal) && (
+                          <LockedByGrade
+                            subject={`小計「${subtotal.name}」への設問の割り当て`}
+                            sources={subtotalLockSourcesOf(subtotal)}
+                            onUnlock={() => unlock(subtotal.id)}
+                          />
+                        )}
                       </div>
                     </TableHead>
                   ))
@@ -224,9 +254,14 @@ export function QuestionAssignmentTableWithFillHandle({
                           >
                             <CheckboxCellWithFillHandle
                               checked={isAssigned(region, subtotal)}
-                              onChange={(checked) =>
-                                setCellAssignment(region, subtotal, checked)
-                              }
+                              onChange={(checked) => {
+                                if (isSubtotalLocked(subtotal)) return
+                                void setCellAssignment(
+                                  region,
+                                  subtotal,
+                                  checked
+                                )
+                              }}
                               onFillHandleDragStart={(e, initialValue) => {
                                 e.preventDefault()
                                 handleFillHandlePointerDown(
@@ -246,7 +281,7 @@ export function QuestionAssignmentTableWithFillHandle({
                                 region.id,
                                 subtotal.id
                               )}
-                              disabled={saving}
+                              disabled={saving || isSubtotalLocked(subtotal)}
                               isInFillRange={isInFillRange(region, subtotal)}
                               disableFillHandle={false}
                             />
