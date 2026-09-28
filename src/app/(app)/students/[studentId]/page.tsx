@@ -18,6 +18,7 @@ import { useStudentDetail } from "@/app/(app)/students/[studentId]/hooks/useStud
 import { useStudentExamResults } from "@/app/(app)/students/[studentId]/hooks/useStudentExamResults"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import PageHeader from "@/components/layout/PageHeader"
+import { DeleteStudentModal } from "@/components/student/DeleteStudentModal"
 import StudentClassroomMembershipModal from "@/components/student/StudentClassroomMembershipModal"
 import StudentModal from "@/components/student/StudentModal"
 import { Button } from "@/components/ui/button"
@@ -34,7 +35,6 @@ export default function StudentDetailPage() {
     classrooms,
     loading,
     handleEditStudent,
-    handleDeleteStudent,
     handleSaveMembership,
     handleEndMembership,
   } = useStudentDetail(studentId)
@@ -43,6 +43,8 @@ export default function StudentDetailPage() {
     useStudentExamResults(studentId)
 
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
+  // 削除は確認で成績算出の名簿に載っていないかを見せてから（載っていれば断る）
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false)
   const [membershipToEdit, setMembershipToEdit] =
     useState<StudentClassroomMembershipWithStudentAndClassroom | null>(null)
@@ -132,7 +134,7 @@ export default function StudentDetailPage() {
           編集
         </Button>
         <Button
-          onClick={handleDeleteStudent}
+          onClick={() => setIsDeleteModalOpen(true)}
           variant="ghost"
           className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
         >
@@ -214,6 +216,12 @@ export default function StudentDetailPage() {
           membershipToEdit={membershipToEdit}
         />
       )}
+
+      <DeleteStudentModal
+        student={isDeleteModalOpen ? student : null}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onDeleted={() => router.push("/students")}
+      />
     </div>
   )
 }

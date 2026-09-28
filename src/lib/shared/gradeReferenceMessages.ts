@@ -28,12 +28,14 @@ const toBulletLines = (lines: string[]): string =>
 /** 消させないもの */
 type BlockedTargetKind = Extract<
   GradeReferenceTarget["kind"],
-  "exam" | "coursework"
+  "exam" | "coursework" | "subtotalGroup" | "student"
 >
 
 const BLOCKED_TARGET_LABEL: Record<BlockedTargetKind, string> = {
   exam: "試験",
   coursework: "試験外成績資料",
+  subtotalGroup: "小計点グループ",
+  student: "生徒",
 }
 
 /**
@@ -46,6 +48,18 @@ export function buildDeletionBlockedMessage(
 ): string | null {
   if (references.length === 0) return null
   const label = BLOCKED_TARGET_LABEL[kind]
+  if (kind === "student") {
+    // 生徒はデータソースではなく名簿（usage: roster）で使われる
+    return (
+      `この${label}は次の成績算出の名簿に載っているため、削除できません。` +
+      `削除するには、先に各成績算出の「1. 生徒管理」でこの${label}を名簿から外してください。\n` +
+      toBulletLines(
+        listReferencingGradeNames(references).map(
+          (gradeName) => `成績算出「${gradeName}」`
+        )
+      )
+    )
+  }
   return (
     `この${label}は次の成績算出で使われているため、削除できません。` +
     `削除するには、先に各成績算出の「2. データソース」でこの${label}を使っているデータソースを削除してください。\n` +

@@ -1,7 +1,9 @@
 import type { Prisma } from "@prisma/client"
 
+import { buildDeletionBlockedMessage } from "../../../src/lib/shared/gradeReferenceMessages"
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
+import { findGradeReferences } from "./gradeReference"
 
 const studentLabel = (student: {
   lastName: string
@@ -130,14 +132,27 @@ export const updateStudent = async (
   }
 }
 
-/** 生徒を削除する */
+/**
+ * 生徒を削除する。
+ *
+ * 成績算出の名簿（GradeStudent）に載っている生徒は消さずに断る。消すと名簿の行が
+ * Cascade で消え、その生徒の手動点数・上書き・確定値も黙って失われるため。確認画面も
+ * 同じ仕組みで前もって見せるが、最終判定は削除と同じトランザクションの中で行う。
+ */
 export const deleteStudent = async (id: string): Promise<void> => {
   try {
     const before = await prisma.student.findUnique({
       where: { id },
     })
 
-    await prisma.student.delete({ where: { id } })
+    await prisma.$transaction(async (tx) => {
+      const blockedMessage = buildDeletionBlockedMessage(
+        "student",
+        await findGradeReferences({ kind: "student", id }, tx)
+      )
+      if (blockedMessage !== null) throw new Error(blockedMessage)
+      await tx.student.delete({ where: { id } })
+    })
 
     await recordAuditLog({
       action: "student.delete",
