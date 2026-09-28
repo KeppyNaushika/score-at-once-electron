@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { ArrowLeft, ArrowRight, ImageUp, Loader2, Trash2 } from "lucide-react"
 import Image from "next/image"
 import React, { useRef, useState } from "react"
@@ -18,6 +19,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
 import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
+import { buildItemDeletionWarning } from "@/lib/shared/gradeReferenceMessages"
+import { gradeReferencesQuery } from "@/queries/grade"
 
 const PAGE_SIZE_OPTIONS = ["A3", "A4", "A5", "B4", "B5"] as const
 
@@ -26,7 +29,10 @@ const PAGE_SIZE_OPTIONS = ["A3", "A4", "A5", "B4", "B5"] as const
  *
  * 模範解答の差し替え・ページの削除・順序変更・用紙サイズ変更を行う。
  *
- * 削除はページごと消えるため、答案が取り込まれていれば件数を示して確認を取る。
+ * 削除はページごと消えるため、答案・設問（採点領域）が紐づいていれば、何が一緒に
+ * 消えるか（答案の件数・設問の数・成績算出への影響）を示して確認を取る。どれも
+ * 紐づいていない（画像を置いただけの）ページは確認なしで消す。成績算出が参照するのは
+ * 設問なので、設問が無ければ成績算出の参照も無い。
  * 画像を取り替えたいだけなら差し替えを使う（答案も採点結果も残る）。
  */
 const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
@@ -54,15 +60,28 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
     // **表示にも送信にも同じ配列を使う**（見せたものと送るものが同じなら食い違わない）。
     // main は消す直前にこれと同じ定義で数え直し、増えていれば中止する（段階26）
     const answerImageCount = answer.studentAnswerImages.length
-    const deletionCounts =
-      answerImageCount > 0
-        ? [
-            {
-              countedName: DELETION_COUNT_NAME.pageAnswerSheet,
-              shownCount: answerImageCount,
-            },
-          ]
-        : []
+    const cropRegionCount = answer.cropRegions.length
+    const deletionCounts = [
+      {
+        countedName: DELETION_COUNT_NAME.pageAnswerSheet,
+        shownCount: answerImageCount,
+      },
+      {
+        countedName: DELETION_COUNT_NAME.cropRegion,
+        shownCount: cropRegionCount,
+      },
+    ].filter((deletionCount) => deletionCount.shownCount > 0)
+    // 答案も設問も無ければ確認なしで消す（設問が無ければ成績算出の参照も無い）
+    const hasLinkedContent = deletionCounts.length > 0
+
+    // ページ上の設問を使っている成績算出（設問のデータソースは消え、合計・小計は変わる）
+    const gradeReferences = useQuery({
+      ...gradeReferencesQuery({ kind: "examPage", id: answer.id }),
+      enabled: confirmingDelete && cropRegionCount > 0,
+    })
+    const gradeWarning = gradeReferences.data
+      ? buildItemDeletionWarning("examPage", gradeReferences.data)
+      : null
 
     const { canConfirm, refusalMessage, confirmDeletion } =
       useConfirmedDeletion({
@@ -178,7 +197,17 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
               size="icon"
               variant="destructive"
               className="h-7 w-7"
-              onClick={() => setConfirmingDelete(true)}
+              onClick={() => {
+                if (hasLinkedContent) {
+                  setConfirmingDelete(true)
+                  return
+                }
+                // 何も紐づいていなければ確認なしで消す。見た後に他の教員が答案・
+                // 設問を足していて main が中止したときだけ、確認画面で文言を見せる
+                void confirmDeletion().then((deleted) => {
+                  if (!deleted) setConfirmingDelete(true)
+                })
+              }}
               disabled={isBusy}
               title="このページを削除"
             >
@@ -203,11 +232,33 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
               <AlertDialogTitle>
                 ページ {answer.pageNumber} を削除しますか？
               </AlertDialogTitle>
-              <AlertDialogDescription>
-                {deletionCounts.length > 0
-                  ? `このページに取り込まれている${DELETION_COUNT_NAME.pageAnswerSheet} ${answerImageCount} 件と、その採点結果も一緒に削除されます。模範解答の画像を取り替えたいだけなら、削除ではなく差し替えを使ってください。`
-                  : "このページと、ページ上の採点領域が削除されます。"}
+              <AlertDialogDescription className="space-y-2">
+                <span className="block">
+                  このページと一緒に、次のものも削除されます。
+                </span>
+                <span className="block pl-4 text-muted-foreground">
+                  {answerImageCount > 0 && (
+                    <span className="block">
+                      ・このページに取り込まれている
+                      {DELETION_COUNT_NAME.pageAnswerSheet} {answerImageCount}{" "}
+                      件と、その採点結果
+                    </span>
+                  )}
+                  {cropRegionCount > 0 && (
+                    <span className="block">
+                      ・ページ上の設問（採点領域） {cropRegionCount} 個
+                    </span>
+                  )}
+                </span>
+                <span className="block">
+                  模範解答の画像を取り替えたいだけなら、削除ではなく差し替えを使ってください。
+                </span>
               </AlertDialogDescription>
+              {gradeWarning && (
+                <p className="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm whitespace-pre-line text-orange-800">
+                  {gradeWarning}
+                </p>
+              )}
               {/* 数えた後に他の教員が取り込んでいれば main が中止する。閉じずに
                   文言を出し、利用者にもう一度決めてもらう */}
               {refusalMessage && (
@@ -226,7 +277,12 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
                     if (deleted) setConfirmingDelete(false)
                   })
                 }}
-                disabled={!canConfirm}
+                // 成績算出で使われているかを調べ終わるまでは押させない
+                // （影響を見せる前に消さない）
+                disabled={
+                  !canConfirm ||
+                  (cropRegionCount > 0 && gradeReferences.isPending)
+                }
                 className="bg-destructive text-white hover:bg-destructive/90"
               >
                 削除する

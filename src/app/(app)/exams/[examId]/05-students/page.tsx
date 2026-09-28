@@ -221,6 +221,7 @@ export default function StudentsPage() {
 
       {/* 削除確認モーダル */}
       <StudentRemovalConfirmModal
+        examId={examId}
         isOpen={showRemovalConfirm}
         onClose={() => {
           setShowRemovalConfirm(false)

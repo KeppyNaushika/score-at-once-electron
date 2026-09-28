@@ -115,4 +115,9 @@ export interface RosterTableSlots {
    * StudentRemovalConfirmModal と同じく何が失われるかを事前に明示する。
    */
   removalLosses?: string[]
+  /**
+   * 削除確認ダイアログに添える注意（例: この名簿を使っている成績算出では、外した
+   * 生徒の点数が欠測になる）。null・未指定なら出さない。
+   */
+  removalWarning?: string | null
 }

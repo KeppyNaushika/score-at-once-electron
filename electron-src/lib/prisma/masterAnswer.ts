@@ -185,33 +185,40 @@ interface DeleteMasterAnswerResult {
 }
 
 /**
- * 模範解答ページを消すと巻き添えになる答案を、削除の確認で見せる形で数える。
+ * 模範解答ページを消すと巻き添えになる答案・設問（採点領域）を、削除の確認で見せる
+ * 形で数える。
  *
  * **画面と同じ定義で数えること。** 画面（`MasterAnswerCard`）はページに載っている
- * `studentAnswerImages` の件数を出している（段階26）。
+ * `studentAnswerImages` と `cropRegions` の件数を出している（段階26）。どちらも
+ * 0件のページは確認なしで消すので、見た後に設問が足されていたら中止する
+ * （設問が無ければ成績算出の参照も無い、という前提で確認を省いているため）。
  */
 const countMasterAnswerDeletionCounts = async (
   client: Prisma.TransactionClient,
   examPageId: string
 ): Promise<ConfirmedDeletionCount[]> => {
-  const answerSheetCount = await client.studentAnswerImage.count({
-    where: { examPageId },
-  })
-  if (answerSheetCount === 0) return []
+  const [answerSheetCount, cropRegionCount] = await Promise.all([
+    client.studentAnswerImage.count({ where: { examPageId } }),
+    client.cropRegion.count({ where: { examPageId } }),
+  ])
   return [
     {
       countedName: DELETION_COUNT_NAME.pageAnswerSheet,
       shownCount: answerSheetCount,
     },
-  ]
+    {
+      countedName: DELETION_COUNT_NAME.cropRegion,
+      shownCount: cropRegionCount,
+    },
+  ].filter((deletionCount) => deletionCount.shownCount > 0)
 }
 
 /**
  * 模範解答ページを削除する。ページ番号は1から振り直す。
  *
  * ページに紐づく答案画像・採点領域・採点結果もカスケード削除される。画像を取り替えたい
- * だけなら replaceMasterAnswerImage を使う。呼び出し側は、答案が取り込まれている場合に
- * 何件消えるかを示して確認を取ること。
+ * だけなら replaceMasterAnswerImage を使う。呼び出し側は、答案・採点領域がある場合に
+ * 何件消えるか（と成績算出への影響）を示して確認を取ること。
  */
 export const deleteMasterAnswer = async (
   examPageId: string,

@@ -70,11 +70,12 @@ export function buildDeletionBlockedMessage(
 /** 消せるが警告するもの */
 type WarnedTargetKind = Extract<
   GradeReferenceTarget["kind"],
-  "cropRegion" | "subtotal" | "courseworkItem"
+  "cropRegion" | "subtotal" | "courseworkItem" | "examPage"
 >
 
 const WARNED_TARGET_LABEL: Record<WarnedTargetKind, string> = {
   cropRegion: "設問",
+  examPage: "模範解答ページ",
   subtotal: "小計項目",
   courseworkItem: "評価項目",
 }
@@ -97,6 +98,9 @@ function describeEffect(
   switch (kind) {
     case "cropRegion":
       return `${dataSource}（この設問）が削除されます`
+    case "examPage":
+      // ページを消すと上の設問が Cascade で消え、設問のデータソースも消える
+      return `${dataSource}（このページの設問）が削除されます`
     case "subtotal":
       return `${dataSource}（この小計項目）が削除されます`
     case "courseworkItem":
@@ -121,5 +125,41 @@ export function buildItemDeletionWarning(
     toBulletLines(
       references.map((reference) => describeEffect(kind, reference))
     )
+  )
+}
+
+/** 名簿から生徒を外すと点数が欠測になるもの */
+type RosterRemovalTargetKind = Extract<
+  GradeReferenceTarget["kind"],
+  "exam" | "coursework"
+>
+
+const ROSTER_REMOVAL_LABEL: Record<
+  RosterRemovalTargetKind,
+  { target: string; roster: string }
+> = {
+  exam: { target: "試験", roster: "受験生徒" },
+  coursework: { target: "試験外成績資料", roster: "対象生徒" },
+}
+
+/**
+ * 試験の受験生徒・資料の対象生徒から生徒を外すと成績算出に起きることを伝える文言。
+ * 使われていなければ null。
+ *
+ * 外すと生徒の点数（答案・採点、資料の入力値）は消え、データソースは残るので、
+ * その生徒の点数は成績算出で欠測になる（成績算出の名簿に載っている場合）。
+ */
+export function buildRosterRemovalWarning(
+  kind: RosterRemovalTargetKind,
+  references: GradeReference[]
+): string | null {
+  const gradeNames = listReferencingGradeNames(references)
+  if (gradeNames.length === 0) return null
+  const { target, roster } = ROSTER_REMOVAL_LABEL[kind]
+  return (
+    `この${target}は次の成績算出で使われています。` +
+    `${roster}から外した生徒は、各成績算出でこの${target}の点数が欠測になります` +
+    `（その成績算出の名簿に載っている場合）。\n` +
+    toBulletLines(gradeNames.map((gradeName) => `成績算出「${gradeName}」`))
   )
 }

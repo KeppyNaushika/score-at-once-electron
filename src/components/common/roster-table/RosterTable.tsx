@@ -377,6 +377,11 @@ export function RosterTable({
               <span className="block font-medium">
                 この操作は取り消すことができません。
               </span>
+              {slots?.removalWarning && (
+                <span className="block rounded-md border border-orange-200 bg-orange-50 p-3 whitespace-pre-line text-orange-800">
+                  {slots.removalWarning}
+                </span>
+              )}
               {removalError && (
                 <span className="block font-medium text-destructive">
                   {removalError}

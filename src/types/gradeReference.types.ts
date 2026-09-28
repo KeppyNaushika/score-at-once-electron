@@ -15,6 +15,8 @@ export type GradeReferenceTarget =
   | { kind: "coursework"; id: string }
   | { kind: "courseworkItem"; id: string }
   | { kind: "subtotalGroup"; id: string }
+  /** 模範解答ページ（ExamPage）。ページ上の設問すべてについて調べる */
+  | { kind: "examPage"; id: string }
   /** 生徒は成績算出の名簿（GradeStudent）に載っているかを調べる（usage は `roster`） */
   | { kind: "student"; id: string }
 

@@ -1,5 +1,6 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
 import { AlertTriangle, Trash2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -13,10 +14,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import type { ExamClassroomPlacement } from "@/lib/examClassroomPlacement"
+import { buildRosterRemovalWarning } from "@/lib/shared/gradeReferenceMessages"
+import { gradeReferencesQuery } from "@/queries/grade"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 interface StudentRemovalConfirmModalProps {
+  /** 成績算出で使われていれば、外した生徒の点数が欠測になることを見せる */
+  examId: string
   isOpen: boolean
   onClose: () => void
   onConfirm: () => void
@@ -35,6 +40,7 @@ interface StudentRemovalConfirmModalProps {
 }
 
 export default function StudentRemovalConfirmModal({
+  examId,
   isOpen,
   onClose,
   onConfirm,
@@ -44,6 +50,15 @@ export default function StudentRemovalConfirmModal({
   canConfirm,
   refusalMessage,
 }: StudentRemovalConfirmModalProps) {
+  // この試験を使っている成績算出。外した生徒の点数はそこで欠測になる
+  const gradeReferences = useQuery({
+    ...gradeReferencesQuery({ kind: "exam", id: examId }),
+    enabled: isOpen,
+  })
+  const gradeWarning = gradeReferences.data
+    ? buildRosterRemovalWarning("exam", gradeReferences.data)
+    : null
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg">
@@ -134,6 +149,12 @@ export default function StudentRemovalConfirmModal({
           )}
         </div>
 
+        {gradeWarning && (
+          <div className="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm whitespace-pre-line text-orange-800">
+            {gradeWarning}
+          </div>
+        )}
+
         {/* 数えている途中・数えられなかったとき。件数不明のまま押させない */}
         {deletionCounts === null && (
           <p className="text-sm text-muted-foreground">
@@ -156,7 +177,8 @@ export default function StudentRemovalConfirmModal({
           <Button
             variant="destructive"
             onClick={onConfirm}
-            disabled={!canConfirm}
+            // 成績算出で使われているかを調べ終わるまでは押させない（影響を見せる前に消さない）
+            disabled={!canConfirm || gradeReferences.isPending}
             className="gap-2"
           >
             <Trash2 className="h-4 w-4" />
