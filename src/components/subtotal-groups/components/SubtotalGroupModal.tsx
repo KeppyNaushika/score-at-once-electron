@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQueries, useQuery } from "@tanstack/react-query"
 import { GripVertical, Plus, TagIcon, Trash2, XIcon } from "lucide-react"
 import React, { useCallback, useState } from "react"
 
@@ -33,6 +33,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
+import { buildItemDeletionWarning } from "@/lib/shared/gradeReferenceMessages"
+import { gradeReferencesQuery } from "@/queries/grade"
 import {
   createSubtotalGroupMutation,
   type SubtotalGroupRow,
@@ -334,6 +336,29 @@ export function SubtotalGroupModal({
 
   const totalItems = subtotals.length
 
+  // 保存すると消える小計項目（編集前にあって、いまの並びに無いもの）。成績算出の
+  // データソースで使われていれば、保存でデータソースごと消える（Cascade）ので警告する
+  const removedSubtotals = (editingGroup?.subtotals ?? []).filter(
+    (savedSubtotal) =>
+      !subtotals.some((subtotal) => subtotal.subtotalId === savedSubtotal.id)
+  )
+  const removedSubtotalReferences = useQueries({
+    queries: removedSubtotals.map((removedSubtotal) =>
+      gradeReferencesQuery({ kind: "subtotal", id: removedSubtotal.id })
+    ),
+  })
+  const removedSubtotalWarnings = removedSubtotals.flatMap(
+    (removedSubtotal, index) => {
+      const references = removedSubtotalReferences[index]?.data
+      const warning = references
+        ? buildItemDeletionWarning("subtotal", references)
+        : null
+      return warning === null
+        ? []
+        : [{ id: removedSubtotal.id, name: removedSubtotal.name, warning }]
+    }
+  )
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
@@ -462,6 +487,23 @@ export function SubtotalGroupModal({
             )}
           </div>
         </div>
+
+        {removedSubtotalWarnings.length > 0 && (
+          <div className="space-y-2">
+            {removedSubtotalWarnings.map((removedSubtotalWarning) => (
+              <div
+                key={removedSubtotalWarning.id}
+                className="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm whitespace-pre-line text-orange-800"
+              >
+                <div className="font-medium">
+                  削除した小計項目「{removedSubtotalWarning.name}
+                  」は、保存すると次のようになります。
+                </div>
+                {removedSubtotalWarning.warning}
+              </div>
+            ))}
+          </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={saving}>

@@ -8,6 +8,7 @@
 
 import type { Prisma } from "@prisma/client"
 
+import { listReferencingGradeNames } from "../../../src/lib/shared/gradeReferenceMessages"
 import type { CourseworkScoreUpsertInput } from "../../../src/types/coursework.types"
 import type { InputMode } from "../../../src/types/coursework.types"
 import { toInputMode } from "../../../src/types/coursework.types"
@@ -20,6 +21,7 @@ import {
 import { getAvailableClassroomsForTarget } from "./availableClassrooms"
 import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
+import { findGradeReferences } from "./gradeReference"
 import { membershipFilterAt } from "./membershipFilter"
 import {
   type RosterAdapter,
@@ -199,13 +201,18 @@ type CourseworkDeleteResult =
 
 /**
  * 試験外成績資料を削除。
- * いずれかの評価項目が成績算出（GradeDataSource）から参照されている場合は削除をブロックし、
- * 使用中の成績名を返す（deleteSubtotalGroup と同型）。
+ * 成績算出（GradeDataSource）から評価項目または資料合計として使われている場合は
+ * 削除をブロックし、使用中の成績名を返す（確認画面も同じ仕組みで前もって見せる）。
  */
 export async function deleteCoursework(
   id: string
 ): Promise<CourseworkDeleteResult> {
-  const usedBy = await getReferencingGradeNamesForCoursework(id)
+  // 評価項目を1つずつ使う（courseworkItemId）ものと、資料全体を「資料合計」として
+  // 使う（courseworkId）ものの両方を見る。後者を見落とすと削除が通り、参照は
+  // `onDelete: SetNull` で黙って空になって、成績算出に名前だけのデータソースが残る
+  const usedBy = listReferencingGradeNames(
+    await findGradeReferences({ kind: "coursework", id })
+  )
   if (usedBy.length > 0) {
     return { deleted: false, usedBy }
   }
@@ -226,44 +233,6 @@ export async function deleteCoursework(
   })
 
   return { deleted: true }
-}
-
-/**
- * 資料を参照している成績名の一覧を返す（重複排除）
- *
- * 参照の仕方は2つある。評価項目を1つずつ使う（`courseworkItemId`）ものと、資料全体を
- * 「資料合計」として使う（`courseworkId`）もの。後者を見落とすと削除が通り、参照は
- * `onDelete: SetNull` で黙って空になって、成績算出に名前だけのデータソースが残る。
- */
-async function getReferencingGradeNamesForCoursework(
-  courseworkId: string
-): Promise<string[]> {
-  const dataSources = await prisma.gradeDataSource.findMany({
-    where: {
-      OR: [{ courseworkItem: { courseworkId } }, { courseworkId }],
-    },
-    include: { gradeItem: { include: { grade: true } } },
-  })
-  return [
-    ...new Set(
-      dataSources.map((dataSource) => dataSource.gradeItem.grade.name)
-    ),
-  ]
-}
-
-/** 評価項目を参照している成績名の一覧を返す（重複排除） */
-async function getReferencingGradeNamesForItem(
-  courseworkItemId: string
-): Promise<string[]> {
-  const dataSources = await prisma.gradeDataSource.findMany({
-    where: { courseworkItemId },
-    include: { gradeItem: { include: { grade: true } } },
-  })
-  return [
-    ...new Set(
-      dataSources.map((dataSource) => dataSource.gradeItem.grade.name)
-    ),
-  ]
 }
 
 // =============================================================================
@@ -354,16 +323,15 @@ export async function updateCourseworkItem(
 }
 
 /**
- * 評価項目を削除。成績算出から参照されている場合はブロックし使用中の成績名を返す。
+ * 評価項目を削除。
+ *
+ * 成績算出から使われていても消せる（確認画面が前もって影響を見せる）。評価項目を
+ * そのまま使うデータソースは `onDelete: SetNull` で参照先が空になり、資料合計を
+ * 使うデータソースは合計が変わる。
  */
 export async function deleteCourseworkItem(
   id: string
-): Promise<CourseworkDeleteResult> {
-  const usedBy = await getReferencingGradeNamesForItem(id)
-  if (usedBy.length > 0) {
-    return { deleted: false, usedBy }
-  }
-
+): Promise<{ deleted: true }> {
   const before = await prisma.courseworkItem.findUnique({
     where: { id },
   })

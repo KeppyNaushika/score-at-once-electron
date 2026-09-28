@@ -1,6 +1,10 @@
 "use client"
 
+import { useQuery } from "@tanstack/react-query"
+
 import ConfirmationModal from "@/components/common/ConfirmationModal"
+import { buildDeletionBlockedMessage } from "@/lib/shared/gradeReferenceMessages"
+import { gradeReferencesQuery } from "@/queries/grade"
 
 interface DeleteCourseworkModalProps {
   /** null のときは閉じている */
@@ -22,6 +26,9 @@ interface DeleteCourseworkModalProps {
  * 加減点・コメントまで一緒に消えて戻せない（schema.prisma の Cascade）。
  * 生徒・学級・タグそのものは資料との結び付きが外れるだけで消えないので、それも書いて、
  * 何が消えて何が残るかを押す前に分かるようにする（DeleteGradeModal と同じ作り）。
+ *
+ * 成績算出から使われている資料は消させない。押してから断られる前に、どの成績算出が
+ * 使っているかをここで見せて押させない（main の deleteCoursework も同じ判定で断る）。
  */
 export function DeleteCourseworkModal({
   target,
@@ -29,6 +36,14 @@ export function DeleteCourseworkModal({
   onConfirm,
   loading,
 }: DeleteCourseworkModalProps) {
+  const gradeReferences = useQuery({
+    ...gradeReferencesQuery({ kind: "coursework", id: target?.id ?? "" }),
+    enabled: target !== null,
+  })
+  const blockedMessage = gradeReferences.data
+    ? buildDeletionBlockedMessage("coursework", gradeReferences.data)
+    : null
+
   return (
     <ConfirmationModal
       open={target !== null}
@@ -70,9 +85,14 @@ export function DeleteCourseworkModal({
           message:
             "生徒・学級の名簿とタグそのものは削除されません（この資料との結び付きだけが外れます）。",
         },
+        ...(blockedMessage
+          ? [{ type: "destructive" as const, message: blockedMessage }]
+          : []),
       ]}
       onConfirm={() => (target ? onConfirm(target.id) : undefined)}
       loading={loading}
+      // 使われているかを調べ終わるまで、また使われている間は押させない
+      confirmDisabled={gradeReferences.isPending || blockedMessage !== null}
     />
   )
 }

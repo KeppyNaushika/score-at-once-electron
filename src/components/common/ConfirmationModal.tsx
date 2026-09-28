@@ -46,6 +46,8 @@ interface ConfirmationModalProps {
   warnings?: ConfirmationWarning[]
   onConfirm: () => void | Promise<void>
   loading?: boolean
+  /** 押させない（削除できない理由を warnings で見せているときなど） */
+  confirmDisabled?: boolean
   icon?: "trash" | "alert" | "file" | "users" | "info" | "help"
 }
 
@@ -85,6 +87,7 @@ export default function ConfirmationModal({
   warnings,
   onConfirm,
   loading = false,
+  confirmDisabled = false,
   icon = "alert",
 }: ConfirmationModalProps) {
   const IconComponent = icons[icon]
@@ -120,7 +123,7 @@ export default function ConfirmationModal({
               {warnings.map((warning, index) => (
                 <div
                   key={index}
-                  className={`rounded-md p-3 text-sm ${
+                  className={`rounded-md p-3 text-sm whitespace-pre-line ${
                     warning.type === "destructive"
                       ? "border border-red-200 bg-red-50 text-red-800"
                       : warning.type === "warning"
@@ -174,7 +177,7 @@ export default function ConfirmationModal({
           <Button
             variant={styles.button}
             onClick={handleConfirm}
-            disabled={loading}
+            disabled={loading || confirmDisabled}
           >
             {loading ? "処理中..." : confirmText}
           </Button>
