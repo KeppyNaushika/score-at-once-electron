@@ -80,6 +80,11 @@ export function GradeLockDialog({
                     >
                       <td className="px-3 py-1 whitespace-nowrap">
                         {row.gradeItemName}
+                        {row.isFrozen && (
+                          <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                            確定済み
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-1">{row.dataSourceName}</td>
                       <td className="px-3 py-1 whitespace-nowrap text-muted-foreground">
@@ -92,9 +97,12 @@ export function GradeLockDialog({
             </section>
           ))}
         </ScrollShadowArea>
+        {message.frozenNote && (
+          <p className="text-sm text-muted-foreground">{message.frozenNote}</p>
+        )}
         <p className="text-sm text-muted-foreground">
-          {message.frozenNote}
-          解除は{subject}を離れるまで、どのタブでも続きます。
+          「編集する」を押すと、{subject}
+          を離れるまで、どのタブでも編集できます。
         </p>
         <AlertDialogFooter>
           <AlertDialogCancel>キャンセル</AlertDialogCancel>
