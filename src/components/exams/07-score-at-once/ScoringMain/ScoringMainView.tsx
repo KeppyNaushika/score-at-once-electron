@@ -10,10 +10,7 @@ import Head from "next/head"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import {
-  GradeLockBar,
-  useGradePageLock,
-} from "@/components/common/grade-lock/GradeLockBar"
+import { useGradeLock } from "@/components/common/grade-lock/GradeLockProvider"
 import { useContextValue } from "@/components/exams/07-score-at-once/hooks/useContextValue"
 import { OMRAutoScoringModal } from "@/components/exams/07-score-at-once/OMRRecognition/OMRAutoScoringModal"
 import {
@@ -51,9 +48,7 @@ import { ScoringSidePanel } from "@/components/exams/07-score-at-once/ScoringSid
 import type { MouseBrushAction } from "@/components/exams/07-score-at-once/types"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useExamDecisionSummary } from "@/hooks/useExamDecisionSummary"
-import { NO_GRADE_LOCK_SOURCES } from "@/lib/gradeLock"
 import { resolveExamPaperSize } from "@/lib/shared/examPaperSize"
-import { examGradeLockSourcesQuery } from "@/queries/grade"
 import { questionScoresScope } from "@/queries/scoring"
 import {
   setUserClickScoringActionMutation,
@@ -278,18 +273,11 @@ function ScoringMainViewContent() {
   })
 
   /**
-   * 成績算出が使う試験は、採点をページごとロックする。ロック中は採点の書き込み
-   * （キー操作・クリック・部分点・OMR）を何もしないで通知だけ出す。解除はこの画面に
-   * いる間だけで、離れると再びロックされる
+   * 成績算出が使う試験は、試験ごとロックされる（layout の `GradeLockProvider`）。
+   * 書き込みそのものは中央で止まるが、採点の口（キー操作・クリック・部分点・OMR）は
+   * ここでも包み、採点の後の自動進行やモーダルまで止めて通知だけ出す
    */
-  const { data: gradeLockSources = NO_GRADE_LOCK_SOURCES } = useQuery(
-    examGradeLockSourcesQuery(examId)
-  )
-  const {
-    locked: scoringLocked,
-    unlock: unlockScoring,
-    guard: guardScoring,
-  } = useGradePageLock(gradeLockSources)
+  const { guard: guardScoring } = useGradeLock()
   const handleBatchScore = useMemo(
     () => guardScoring(handleBatchScoreUnguarded),
     [guardScoring, handleBatchScoreUnguarded]
@@ -810,13 +798,6 @@ function ScoringMainViewContent() {
           pendingDecisionCount={pendingDecisionCount}
         />
       </div>
-
-      <GradeLockBar
-        subject="この試験の採点"
-        sources={gradeLockSources}
-        locked={scoringLocked}
-        onUnlock={unlockScoring}
-      />
 
       {/* 採点エリア */}
       <div className="relative flex h-full min-h-0 flex-1 overflow-hidden">

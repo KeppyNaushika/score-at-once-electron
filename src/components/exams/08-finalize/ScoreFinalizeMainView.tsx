@@ -6,19 +6,14 @@ import Head from "next/head"
 import { useParams } from "next/navigation"
 import { useMemo, useState } from "react"
 
-import {
-  GradeLockBar,
-  useGradePageLock,
-} from "@/components/common/grade-lock/GradeLockBar"
+import { useGradeLock } from "@/components/common/grade-lock/GradeLockProvider"
 import { GuardedLink } from "@/components/common/GuardedLink"
 import { QuestionAssignmentRow } from "@/components/exams/08-finalize/QuestionAssignmentRow"
 import { ScoreDecisionForm } from "@/components/exams/08-finalize/ScoreDecisionForm"
 import { Button } from "@/components/ui/button"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useExamDecisionSummary } from "@/hooks/useExamDecisionSummary"
-import { NO_GRADE_LOCK_SOURCES } from "@/lib/gradeLock"
 import { examDetailQuery } from "@/queries/exam"
-import { examGradeLockSourcesQuery } from "@/queries/grade"
 
 /** 選択中セルの所在（設問とセルは必ずペアで持つ — 添字では引かない） */
 interface SelectedCell {
@@ -49,12 +44,8 @@ export default function ScoreFinalizeMainView() {
   // 題に出す試験名。段のヘッダーと同じキャッシュを読むので往復は増えない
   const { data: exam } = useQuery(examDetailQuery(examId))
 
-  // 成績算出が使う試験は、確定をページごとロックする（解除はこの画面にいる間だけ）
-  const { data: gradeLockSources = NO_GRADE_LOCK_SOURCES } = useQuery(
-    examGradeLockSourcesQuery(examId)
-  )
-  const { locked: decisionLocked, unlock: unlockDecision } =
-    useGradePageLock(gradeLockSources)
+  // 成績算出が使う試験は試験ごとロックされる（layout）。ロック中は確定の欄も押せなくする
+  const { locked: decisionLocked } = useGradeLock()
 
   // この画面は裁定のために開いた画面なので、常に取る。07 が「メンバー1人なら
   // 引かない」と絞っているのは、採点のたびに全採点行を走査させないためであって、
@@ -114,13 +105,6 @@ export default function ScoreFinalizeMainView() {
           更新
         </Button>
       </div>
-
-      <GradeLockBar
-        subject="この試験の採点の確定"
-        sources={gradeLockSources}
-        locked={decisionLocked}
-        onUnlock={unlockDecision}
-      />
 
       <div className="flex min-h-0 flex-1">
         {/* 左: 設問ごとの担当・進捗・裁定対象 */}

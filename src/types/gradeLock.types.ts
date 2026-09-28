@@ -1,17 +1,18 @@
 /**
- * 成績算出（Grade）で使われている値の編集欄に付けるロックの型。
+ * 成績算出（Grade）で使われている試験・試験外成績資料のロックの型。
  *
- * 配点・評価項目の満点・受験状態・点数などは、変えるとそれを使う成績算出の点数が
- * 黙って変わる。使われている欄だけにロックを出し、確認してから解除させる。
+ * 配点・受験状態・点数・評価項目の満点などは、変えるとそれを使う成績算出の点数が
+ * 黙って変わる。どの欄が効くかを欄ごとに見分けると漏れる（設問の追加・種類の変更・
+ * 答案の割り当て替えなども点数を変える）ので、使われている試験・資料は**まるごと**
+ * ロックし、確認してから解除させる。
  *
- * 取るのは main（`electron-src/lib/prisma/gradeLockSource.ts`）で、試験・資料1件ぶんを
- * まとめて返す（一覧の行ごとに IPC を打たないため）。どの行・列がロックされるかの判定は
- * `src/lib/gradeLock.ts`、確認の文言は同じファイルが組み立てる。
+ * 取るのは main（`electron-src/lib/prisma/gradeLockSource.ts`）で、試験・資料1件を
+ * 使っているデータソースの一覧を返す。確認の文言は `src/lib/gradeLock.ts` が組み立てる。
  */
 
 import type { GradeReferenceDataSourceType } from "./gradeReference.types"
 
-/** 試験・資料を使っているデータソース1件と、ロックの判定に要る参照先 */
+/** 試験・資料を使っているデータソース1件（確認の表の1行の材料） */
 export interface GradeLockSource {
   gradeId: string
   /** 成績算出の名前 */
@@ -22,15 +23,9 @@ export interface GradeLockSource {
   /** データソースの名前 */
   dataSourceName: string
   dataSourceType: GradeReferenceDataSourceType
-  examId: string | null
-  cropRegionId: string | null
-  subtotalId: string | null
-  courseworkItemId: string | null
-  /** 受験状態「見込」を欠測とする */
-  treatExpectedAsMissing: boolean
-  /**
-   * 小計のデータソースのとき、その小計へ割り当てた（`QUESTION_ASSIGNMENT`）この試験の
-   * 設問。小計の点数はこれらの設問の点数の和なので、配点を変えると小計が変わる
-   */
-  subtotalCropRegionIds: string[]
 }
+
+/** ロックする単位（試験1件か、試験外成績資料1件） */
+export type GradeLockTarget =
+  | { kind: "exam"; examId: string }
+  | { kind: "coursework"; courseworkId: string }
