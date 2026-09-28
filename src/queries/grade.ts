@@ -58,6 +58,28 @@ export const gradeReferencesQuery = (target: GradeReferenceTarget) =>
     staleTime: 0,
   })
 
+/**
+ * 試験を使っている成績算出のデータソース。配点・受験状態・採点などの編集欄のロックに使う。
+ *
+ * 削除の確認と同じく、成績算出側の書き込みはこのキーを無効にしないので、開くたびに
+ * 取り直す（データソースを足した直後に開いてもロックが付くように）。
+ */
+export const examGradeLockSourcesQuery = (examId: string) =>
+  queryOptions({
+    queryKey: ["grade", "lockSources", "exam", examId] as const,
+    queryFn: () => window.electronAPI.grade.getExamLockSources(examId),
+    staleTime: 0,
+  })
+
+/** 試験外成績資料を使っている成績算出のデータソース（編集欄のロック用） */
+export const courseworkGradeLockSourcesQuery = (courseworkId: string) =>
+  queryOptions({
+    queryKey: ["grade", "lockSources", "coursework", courseworkId] as const,
+    queryFn: () =>
+      window.electronAPI.grade.getCourseworkLockSources(courseworkId),
+    staleTime: 0,
+  })
+
 /** その成績の対象者1件（生徒と所属を同梱） */
 export type GradeStudentRow = Awaited<
   ReturnType<typeof window.electronAPI.grade.getStudents>
