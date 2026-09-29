@@ -86,14 +86,16 @@ npx vitest                 # ウォッチモード
 
 ### 📋 6段階成績ワークフロー
 
-1. **生徒管理** (`/grades/[gradeId]/02-students`)
-2. **データソース** (`/grades/[gradeId]/03-data-sources`)
-3. **外部成績** (`/grades/[gradeId]/04-manual-scores`)
-4. **成績境界** (`/grades/[gradeId]/05-boundaries`)
-5. **結果** (`/grades/[gradeId]/06-results`)
-6. **出力** (`/grades/[gradeId]/07-export`)
+1. **生徒管理** (`/grades/[gradeId]/01-students`)
+2. **データソース** (`/grades/[gradeId]/02-data-sources`)
+   - 資料のデータソースには点数の入り具合も出す（入力は資料のページで）
+3. **成績境界** (`/grades/[gradeId]/03-boundaries`)
+4. **比較** (`/grades/[gradeId]/04-comparisons`)
+   - 結果に並べて見る、別の成績算出や別の評価項目を対応付ける
+5. **結果** (`/grades/[gradeId]/05-results`)
+6. **出力** (`/grades/[gradeId]/06-export`)
 
-段の番号とフォルダ名がずれているのは、初期設定（旧 `01-setup`）が概要ページへ畳まれてフォルダごと無くなったため。段の名前と URL の出どころは `src/lib/workflowTabs.ts` の1か所だけ。
+段の名前と URL の出どころは `src/lib/workflowTabs.ts` の1か所だけ。
 
 ### 🔄 ナビゲーション統一原則
 

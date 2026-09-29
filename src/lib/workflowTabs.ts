@@ -6,6 +6,7 @@ import {
   FileImage,
   FileOutput,
   Gavel,
+  GitCompareArrows,
   LayoutDashboard,
   LayoutTemplate,
   ListChecks,
@@ -122,7 +123,7 @@ export const examWorkflowTabs: readonly WorkflowTab[] = [
   },
 ]
 
-/** 成績算出の段（`01-setup` は概要へ畳まれているのでフォルダごと無い） */
+/** 成績算出の段 */
 export const gradeWorkflowTabs: readonly WorkflowTab[] = [
   {
     id: "detail",
@@ -133,55 +134,52 @@ export const gradeWorkflowTabs: readonly WorkflowTab[] = [
     path: "",
   },
   {
-    id: "02-students",
+    id: "01-students",
     label: "1. 生徒管理",
     title: "生徒の登録",
     description: "成績を出す生徒を決める",
     icon: Users,
-    path: "/02-students",
+    path: "/01-students",
   },
   {
-    id: "03-data-sources",
+    id: "02-data-sources",
     label: "2. データソース",
     title: "データソースの設定",
     description: "評価項目ごとに、点数の元になる試験や資料を選ぶ",
     icon: Database,
-    path: "/03-data-sources",
+    path: "/02-data-sources",
   },
   {
-    id: "04-manual-scores",
-    label: "3. 外部成績",
-    // 題は一覧の「次のステップ」（src/lib/gradeStatus.ts）と揃える必要があり、
-    // 変えるなら両方を同時に変える（__tests__/renderer/workflowStepDefinitions.test.ts）
-    title: "外部成績の入力",
-    description:
-      "参照している試験外成績資料の点数の入り具合を確かめる（入力は資料のページで）",
-    icon: PencilLine,
-    path: "/04-manual-scores",
-  },
-  {
-    id: "05-boundaries",
-    label: "4. 成績境界",
+    id: "03-boundaries",
+    label: "3. 成績境界",
     title: "成績境界の設定",
     description: "評定を分ける境目を決める",
     icon: SlidersHorizontal,
-    path: "/05-boundaries",
+    path: "/03-boundaries",
   },
   {
-    id: "06-results",
+    id: "04-comparisons",
+    label: "4. 比較",
+    title: "比較の設定",
+    description: "結果に並べて見る、別の成績算出や別の評価項目を選ぶ",
+    icon: GitCompareArrows,
+    path: "/04-comparisons",
+  },
+  {
+    id: "05-results",
     label: "5. 結果",
     title: "成績の確認",
     description: "算出された成績を一覧で確かめる",
     icon: BarChart3,
-    path: "/06-results",
+    path: "/05-results",
   },
   {
-    id: "07-export",
+    id: "06-export",
     label: "6. 出力",
     title: "結果の出力",
     description: "成績を Excel・PDF で書き出す",
     icon: FileOutput,
-    path: "/07-export",
+    path: "/06-export",
   },
 ]
 
@@ -330,17 +328,17 @@ export const gradeWorkflowPhases: readonly WorkflowPhaseGroup[] = [
   {
     title: "準備",
     description: "生徒と、点数の元になるデータの設定",
-    stepIds: ["02-students", "03-data-sources"],
+    stepIds: ["01-students", "02-data-sources"],
   },
   {
     title: "算出",
-    description: "点数の入力と、評定を分ける境目の設定",
-    stepIds: ["04-manual-scores", "05-boundaries"],
+    description: "評定を分ける境目と、結果に並べる比較の設定",
+    stepIds: ["03-boundaries", "04-comparisons"],
   },
   {
     title: "出力",
     description: "成績の確認と書き出し",
-    stepIds: ["06-results", "07-export"],
+    stepIds: ["05-results", "06-export"],
   },
 ]
 

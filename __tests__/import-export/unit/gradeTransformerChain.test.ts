@@ -21,6 +21,7 @@ import type {
   GradeArchiveDataV1_13_0,
   GradeArchiveDataV1_14_0,
   GradeArchiveDataV1_15_0,
+  GradeArchiveDataV1_16_0,
 } from "../../../electron-src/lib/import/grade-transformers/types"
 import type { GradeArchiveManifest } from "../../../src/types/gradeArchive.types"
 import { GRADE_CURRENT_VERSION } from "../../../src/types/gradeArchive.types"
@@ -197,6 +198,7 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
       { from: "1.13.0", to: "1.14.0" },
       { from: "1.14.0", to: "1.15.0" },
       { from: "1.15.0", to: "1.16.0" },
+      { from: "1.16.0", to: "1.17.0" },
     ])
     expect(originalVersion).toBe("1.12.0")
   })
@@ -814,6 +816,9 @@ function buildV1_13_0Archive(): GradeArchiveDataV1_13_0 {
     // 1.13.0 には無いので落とす
     gradeTags: _currentGradeTags,
     tagsData: _currentTagsData,
+    // 1.17.0 で足したもの（比較）も 1.13.0 には無い
+    gradeComparisons: _currentComparisons,
+    comparedGradeItemRefs: _currentComparedGradeItemRefs,
     examRefs: currentExamRefs,
     ...withoutBoundaries
   } = data
@@ -869,6 +874,7 @@ describe("transformGradeToLatest: 1.13.0 → 1.14.0（境界セットを畳む�
       { from: "1.13.0", to: "1.14.0" },
       { from: "1.14.0", to: "1.15.0" },
       { from: "1.15.0", to: "1.16.0" },
+      { from: "1.16.0", to: "1.17.0" },
     ])
     // 容器のセクションは残らない
     expect(data).not.toHaveProperty("gradeBoundarySets")
@@ -932,7 +938,10 @@ describe("transformGradeToLatest: 1.15.0 → 1.16.0（成績のタグと日付�
       transformGradeToLatest(archive)
 
     expect(originalVersion).toBe("1.15.0")
-    expect(appliedTransformations).toEqual([{ from: "1.15.0", to: "1.16.0" }])
+    expect(appliedTransformations).toEqual([
+      { from: "1.15.0", to: "1.16.0" },
+      { from: "1.16.0", to: "1.17.0" },
+    ])
     // 旧版には成績にタグを付ける手段が無かったので、空が正しい既定＝警告も出さない
     expect(warnings).toEqual([])
     expect(data.gradeTags).toEqual([])
@@ -957,6 +966,45 @@ describe("transformGradeToLatest: 1.15.0 → 1.16.0（成績のタグと日付�
   })
 })
 
+/** v1.16.0 が実際に書き出していた形。比較のセクションが無い */
+function buildV1_16_0Archive(): GradeArchiveDataV1_16_0 {
+  const { data } = transformGradeToLatest(buildV1_9_0Archive())
+  const {
+    gradeComparisons: _currentComparisons,
+    comparedGradeItemRefs: _currentComparedGradeItemRefs,
+    ...withoutComparisons
+  } = data
+  return {
+    ...withoutComparisons,
+    manifest: { ...data.manifest, version: "1.16.0" },
+  }
+}
+
+describe("transformGradeToLatest: 1.16.0 → 1.17.0（比較）", () => {
+  it("比較のセクションが空で足され、警告は出ない", () => {
+    const { data, originalVersion, appliedTransformations, warnings } =
+      transformGradeToLatest(buildV1_16_0Archive())
+
+    expect(originalVersion).toBe("1.16.0")
+    expect(appliedTransformations).toEqual([{ from: "1.16.0", to: "1.17.0" }])
+    // 旧版には比較という機能が無かったので、空が正しい既定＝警告も出さない
+    expect(warnings).toEqual([])
+    expect(data.gradeComparisons).toEqual([])
+    expect(data.comparedGradeItemRefs).toEqual([])
+    expect(data.manifest.version).toBe(GRADE_CURRENT_VERSION)
+  })
+
+  it("1.17.0 の形には当たらない（冪等）", () => {
+    const current = transformGradeToLatest(buildV1_16_0Archive()).data
+
+    const { appliedTransformations, originalVersion } =
+      transformGradeToLatest(current)
+
+    expect(appliedTransformations).toEqual([])
+    expect(originalVersion).toBe("1.17.0")
+  })
+})
+
 /**
  * v1.15.0 が実際に書き出していた形。成績にタグが無く、試験参照の日付キーは examDate、
  * 内包資料は coursework 1.1.0（実施日のキーが date）。
@@ -966,6 +1014,8 @@ function buildV1_15_0Archive(): GradeArchiveDataV1_15_0 {
   const {
     gradeTags: _currentGradeTags,
     tagsData: _currentTagsData,
+    gradeComparisons: _currentComparisons,
+    comparedGradeItemRefs: _currentComparedGradeItemRefs,
     examRefs: _currentExamRefs,
     courseworkArchive,
     ...withoutNewSections
@@ -1006,6 +1056,8 @@ function buildV1_14_0Archive(settingsJson: string): GradeArchiveDataV1_14_0 {
     gradeIndividualReportSettings: _current,
     gradeTags: _currentGradeTags,
     tagsData: _currentTagsData,
+    gradeComparisons: _currentComparisons,
+    comparedGradeItemRefs: _currentComparedGradeItemRefs,
     examRefs: currentExamRefs,
     ...withoutReportSettings
   } = data
@@ -1058,6 +1110,7 @@ describe("transformGradeToLatest: 1.14.0 → 1.15.0（出力設定を列へ割�
     expect(appliedTransformations).toEqual([
       { from: "1.14.0", to: "1.15.0" },
       { from: "1.15.0", to: "1.16.0" },
+      { from: "1.16.0", to: "1.17.0" },
     ])
     expect(data).not.toHaveProperty("gradeExportSettings")
     const [reportSettings] = data.gradeIndividualReportSettings

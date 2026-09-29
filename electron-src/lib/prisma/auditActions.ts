@@ -376,6 +376,16 @@ const AUDIT_ACTIONS = {
     verb: "delete",
     label: "境界セットを削除しました",
   },
+  "grade.comparison.create": {
+    category: "grade",
+    verb: "create",
+    label: "成績項目「{target}」に比較を追加しました",
+  },
+  "grade.comparison.delete": {
+    category: "grade",
+    verb: "delete",
+    label: "成績項目「{target}」の比較を削除しました",
+  },
   "grade.item.create": {
     category: "grade",
     verb: "create",

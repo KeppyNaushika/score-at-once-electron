@@ -9,9 +9,8 @@
  *
  * | 開いている画面                        | 出ていた手引き        |
  * | ------------------------------------- | --------------------- |
- * | 成績 `04-manual-scores`               | 一括採点（試験 07）   |
- * | 成績 `02-students` / 資料 `02-students` | 受験生徒管理（試験 05） |
- * | 成績 `07-export` / 解答用紙 `02-export` | 結果出力（試験 09）   |
+ * | 成績 `01-students` / 資料 `02-students` | 受験生徒管理（試験 05） |
+ * | 成績 `06-export` / 解答用紙 `02-export` | 結果出力（試験 09）   |
  *
  * **無いなら出さない**が正しい。似たものを出すのは、無いより悪い。
  */
@@ -63,11 +62,10 @@ describe("ページごとの「使い方」", () => {
   })
 
   it.each([
-    ["/grades/grade-1/04-manual-scores", "一括採点（試験 07）"],
-    ["/grades/grade-1/02-students", "受験生徒管理（試験 05）"],
+    ["/grades/grade-1/01-students", "受験生徒管理（試験 05）"],
     ["/coursework/coursework-1/04-scores", "一括採点（試験 07）"],
     ["/coursework/coursework-1/02-students", "受験生徒管理（試験 05）"],
-    ["/grades/grade-1/07-export", "結果出力（試験 09）"],
+    ["/grades/grade-1/06-export", "結果出力（試験 09）"],
     ["/answer-sheet-builder/asb-1/02-export", "結果出力（試験 09）"],
   ])("手引きの無い %s では出さない（かつては %s を出していた）", (pathname) => {
     renderHelpAt(pathname)

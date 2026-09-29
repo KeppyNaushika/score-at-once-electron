@@ -39,6 +39,18 @@ export const SCORING_OPERATION_MODES = ["keyboard", "mouse"] as const
 /** 個別表示で1つ採点し終えたあと、選択がどこへ動くか */
 export const SCORING_BEHAVIORS = ["next-student", "next-question"] as const
 
+/**
+ * 成績の結果で、変化の記号（↑↓*）をどれだけ強く出すか。弱い順に並べる
+ * （結果画面のスライダーはこの並びの添字で動く）。
+ * off=出さない / symbol=色付きの記号 / tint=淡い背景 / solid=濃い背景に白文字
+ */
+export const GRADE_COMPARISON_EMPHASES = [
+  "off",
+  "symbol",
+  "tint",
+  "solid",
+] as const
+
 /** 一覧に含まれるかを、要素の型を保ったまま判定する */
 export const isOneOf = <TValue extends string>(
   candidates: readonly TValue[],
@@ -162,6 +174,16 @@ const USER_PREFERENCE_SCHEMA = {
    * Excel の2列目が加減点へ入り、通知もなく成績の算出に使われる。
    */
   courseworkScoresScoreOnly: { type: "boolean" as const, default: true },
+  /**
+   * 成績の結果に並べる比較の記号で、変化をどれだけ強く出すか。
+   *
+   * 見やすさの好みなので、成績算出ではなく利用者に付ける。
+   */
+  gradeComparisonEmphasis: {
+    type: "string" as const,
+    default: "symbol",
+    validate: (value: string) => isOneOf(GRADE_COMPARISON_EMPHASES, value),
+  },
 } as const
 
 /** 設定キーの型 */
@@ -194,6 +216,7 @@ export type PreferenceValueType = {
   scoringOperationModeRemembered: boolean
   scoringBehavior: (typeof SCORING_BEHAVIORS)[number]
   courseworkScoresScoreOnly: boolean
+  gradeComparisonEmphasis: (typeof GRADE_COMPARISON_EMPHASES)[number]
 }
 
 /**

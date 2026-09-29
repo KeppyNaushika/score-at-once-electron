@@ -1,7 +1,7 @@
 /**
  * 成績一覧（grade:getAll）の供給形の統合テスト
  *
- * 一覧は 03/04/05 画面用の include を丸ごと共有しており、満点の元データも参照先の
+ * 一覧は各段の画面用の include を丸ごと共有しており、満点の元データも参照先の
  * 表示名も使わないまま受け取っていた。一覧専用の最小 include へ分けたので、
  * 「一覧が読むものは来る」「一覧が読まないものは来ない」の両方を固定する。
  *
@@ -123,41 +123,22 @@ describe("成績一覧の供給形", () => {
     expect(dataSource.subtotal).toBeUndefined()
     expect(dataSource.cropRegion).toBeUndefined()
     expect(dataSource.coursework).toBeUndefined()
+    // 資料の点数は、外部成績の段を畳んで次のステップ判定が読まなくなった
+    expect(dataSource.courseworkItem).toBeUndefined()
     expect(dataSource.estimationSources).toBeUndefined()
     // 満点は表示しないので付与もしない（元データが無いので 0 を並べるだけになる）
     expect(dataSource.maxScore).toBeUndefined()
   })
 
-  it("次のステップ判定は点数の有無を行から導く", async () => {
+  it("データソースがあれば、資料の点数が未入力でも次は成績境界", async () => {
     const fixture = await createGradeWithCourseworkSource()
 
-    const before = await getAllGrades()
-    const gradeBefore = before.find(
-      (candidate) => candidate.id === fixture.gradeId
-    )!
-    // 点数が1件も無ければ「外部成績の入力」へ誘導する
-    expect(
-      gradeBefore.gradeItems[0].dataSources[0].courseworkItem!.scores
-    ).toEqual([])
-    expect(getGradeStatus(gradeBefore).step).toBe(4)
+    const result = await getAllGrades()
+    const grade = result.find((candidate) => candidate.id === fixture.gradeId)!
 
-    await testPrisma.courseworkScore.create({
-      data: {
-        courseworkItemId: fixture.courseworkItemId,
-        courseworkStudentId: fixture.courseworkStudentId,
-        score: 18,
-      },
-    })
-
-    const after = await getAllGrades()
-    const gradeAfter = after.find(
-      (candidate) => candidate.id === fixture.gradeId
-    )!
-    expect(
-      gradeAfter.gradeItems[0].dataSources[0].courseworkItem!.scores
-    ).toHaveLength(1)
-    // 入力に着手済みなので次は成績境界
-    expect(getGradeStatus(gradeAfter).step).toBe(5)
+    // 点数の入力は資料の段の仕事で、成績の段には入力の段が無い。
+    // 入り具合はデータソース画面が数えて見せる
+    expect(getGradeStatus(grade).step).toBe(3)
   })
 
   it("対象者が居なければ生徒の登録へ誘導する", async () => {
@@ -167,7 +148,7 @@ describe("成績一覧の供給形", () => {
     const grade = result.find((candidate) => candidate.id === created.id)!
 
     expect(grade.gradeStudents).toEqual([])
-    expect(getGradeStatus(grade).step).toBe(2)
+    expect(getGradeStatus(grade).step).toBe(1)
   })
 
   it("作成直後の成績も一覧と同じ形で返る", async () => {
@@ -175,6 +156,6 @@ describe("成績一覧の供給形", () => {
     const created = await createGrade({ name: "作った直後" })
 
     expect(created.gradeStudents).toEqual([])
-    expect(getGradeStatus(created).step).toBe(2)
+    expect(getGradeStatus(created).step).toBe(1)
   })
 })

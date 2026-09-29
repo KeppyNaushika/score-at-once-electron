@@ -31,6 +31,12 @@ import {
   updateGrade,
 } from "../lib/prisma/grade"
 import {
+  createGradeComparison,
+  deleteGradeComparison,
+  getGradeComparisons,
+  reorderGradeComparisons,
+} from "../lib/prisma/gradeComparison"
+import {
   createGradeConstraint,
   deleteGradeConstraint,
   getGradeConstraints,
@@ -371,6 +377,31 @@ export const gradeHandlers = {
 
   "grade:deleteGradeItemBoundaries": async (gradeItemId: string) => {
     return deleteGradeItemBoundaries(gradeItemId)
+  },
+
+  // =====================================================================
+  // GradeComparison
+  // =====================================================================
+
+  "grade:getComparisons": async (gradeId: string) => {
+    return getGradeComparisons(gradeId)
+  },
+
+  "grade:createComparison": async (data: {
+    gradeItemId: string
+    comparedGradeItemId: string
+  }) => {
+    return createGradeComparison(data)
+  },
+
+  "grade:deleteComparison": async (id: string) => {
+    return deleteGradeComparison(id)
+  },
+
+  "grade:reorderComparisons": async (
+    items: { id: string; order: number }[]
+  ) => {
+    return reorderGradeComparisons(items)
   },
 
   // =====================================================================

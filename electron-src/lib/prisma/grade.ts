@@ -43,9 +43,9 @@ const gradeWithRelationsInclude = {
  * 一覧が読む分だけの include（SSOT）。
  *
  * 一覧が使うのは「名前・学級・対象者数・評価項目数」と、次のステップ判定
- * （`gradeStatus`）が読む「境界の有無・データソースの種別・資料の点数の有無」だけ。
+ * （`gradeStatus`）が読む「境界の有無・データソースの有無」だけ。
  * 満点の元データ（exam.examPages / subtotal.cropSubtotals / coursework.items）も
- * 表示名用の参照先も、03/04/05 画面が使う `grade.getById` の側にだけあればよい。
+ * 表示名用の参照先も、02/03/06 画面が使う `grade.getById` の側にだけあればよい。
  *
  * 列は削らない（規約: Prisma include の出力を射影せずそのまま持つ）。減らすのは
  * 「引くリレーション」であって列ではない。
@@ -61,11 +61,7 @@ export const gradeSummaryInclude = {
   gradeItems: {
     include: {
       boundaries: { orderBy: { order: "asc" } },
-      dataSources: {
-        // 資料の点数は「入力に着手済みか」の判定に要る。判定するのは renderer。
-        include: { courseworkItem: { include: { scores: true } } },
-        orderBy: { order: "asc" },
-      },
+      dataSources: { orderBy: { order: "asc" } },
     },
     orderBy: { order: "asc" },
   },
@@ -243,6 +239,7 @@ export async function duplicateGrade(id: string) {
                 orderBy: { order: "asc" },
               },
               boundaries: { orderBy: { order: "asc" } },
+              comparisons: { orderBy: { order: "asc" } },
             },
             orderBy: { order: "asc" },
           },
@@ -473,6 +470,22 @@ export async function duplicateGrade(id: string) {
             (exclusionLabel) => exclusionLabel.label
           ),
         })
+      }
+
+      // 10. 比較。自分側は新しい評価項目へ付け替える。相手は、同じ成績算出の
+      //   項目なら複製先の項目へ、他の成績算出の項目ならそのまま指す
+      //   （複製しても「前学期と比べる」の前学期は同じ成績算出のまま）。
+      const comparisonRows = source.gradeItems.flatMap((sourceGradeItem) =>
+        sourceGradeItem.comparisons.map((comparison) => ({
+          gradeItemId: remapItemId(sourceGradeItem.id),
+          comparedGradeItemId:
+            itemIdMap.get(comparison.comparedGradeItemId) ??
+            comparison.comparedGradeItemId,
+          order: comparison.order,
+        }))
+      )
+      if (comparisonRows.length > 0) {
+        await tx.gradeComparison.createMany({ data: comparisonRows })
       }
 
       return { gradeId: grade.id, name: copyName }

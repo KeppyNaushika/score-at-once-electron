@@ -157,6 +157,22 @@ export const gradeReportSettingsQuery = (gradeId: string) =>
     queryFn: () => window.electronAPI.grade.getReportSettings(gradeId),
   })
 
+/** 比較1件（相手の評価項目・その成績算出・境界を同梱） */
+export type GradeComparisonRow = Awaited<
+  ReturnType<typeof window.electronAPI.grade.getComparisons>
+>[number]
+
+/**
+ * この成績算出の評価項目に付いた比較。
+ *
+ * 相手の値はここには無い。結果画面が相手の成績算出ごとに `gradeResultsQuery` を引く。
+ */
+export const gradeComparisonsQuery = (gradeId: string) =>
+  queryOptions({
+    queryKey: [...scopeKeys.grade(gradeId), "comparisons"] as const,
+    queryFn: () => window.electronAPI.grade.getComparisons(gradeId),
+  })
+
 /**
  * 欠測推定の当てはまり（相関）。
  *
@@ -593,6 +609,41 @@ export const deleteAllGradeItemBoundariesMutation = (gradeId: string) =>
     meta: {
       invalidates: [gradeScope(gradeId)],
       errorMessage: "評定の境界を削除できませんでした",
+    },
+  })
+
+// --- 比較 ---
+
+export const createGradeComparisonMutation = (gradeId: string) =>
+  defineMutation({
+    mutationFn: (input: { gradeItemId: string; comparedGradeItemId: string }) =>
+      window.electronAPI.grade.createComparison(input),
+    scope: { id: `grade:${gradeId}:comparisons` },
+    meta: {
+      invalidates: [gradeScope(gradeId)],
+      errorMessage: "比較を追加できませんでした",
+    },
+  })
+
+export const deleteGradeComparisonMutation = (gradeId: string) =>
+  defineMutation({
+    mutationFn: (comparisonId: string) =>
+      window.electronAPI.grade.deleteComparison(comparisonId),
+    scope: { id: `grade:${gradeId}:comparisons` },
+    meta: {
+      invalidates: [gradeScope(gradeId)],
+      errorMessage: "比較を削除できませんでした",
+    },
+  })
+
+export const reorderGradeComparisonsMutation = (gradeId: string) =>
+  defineMutation({
+    mutationFn: (orders: { id: string; order: number }[]) =>
+      window.electronAPI.grade.reorderComparisons(orders),
+    scope: { id: `grade:${gradeId}:comparisons` },
+    meta: {
+      invalidates: [gradeScope(gradeId)],
+      errorMessage: "比較の並び順を保存できませんでした",
     },
   })
 

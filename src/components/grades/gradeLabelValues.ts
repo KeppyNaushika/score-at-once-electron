@@ -3,7 +3,7 @@ import type { StudentGradeResult } from "@/types/grade.types"
 /**
  * 評定（成績ラベル）の上書きの扱いを1箇所に集める。
  *
- * 結果（06）と境界設定（05）の両方が同じ判断を使う。片方だけで判定すると、
+ * 結果（05）と境界設定（03）の両方が同じ判断を使う。片方だけで判定すると、
  * 「マスは赤いのに境界設定の画面には出ない」のような食い違いが起きる。
  *
  * **上書きは制限しない。** 校長判断の「／」のように、得点率から自動算出できない
@@ -18,6 +18,52 @@ import type { StudentGradeResult } from "@/types/grade.types"
  * 確定側の `isStale` が示す。ここで数えると同じ1人を二重に数えるか、
  * 「そのまま残す」と決めたものを基準違反として鳴らすかのどちらかになる。
  */
+
+/** 評定2つの上下（`resolveGradeLabelDirection`） */
+export type GradeLabelDirection = "up" | "down" | "same" | "unknown"
+
+/**
+ * 評定2つの上下。`fromLabel` から見て `toLabel` がどちら向きか。
+ *
+ * 上書きの向き（自動算出値 → 上書き値）と、比較の記号（比較先の評定 → 今回の評定）の
+ * 両方がこれを使う。物差しは渡された `boundaries`（上書きならその項目、比較なら
+ * 自分側の項目の成績境界）。
+ *
+ * **要求得点率（minPercentage）の大小で判定し、boundaries の並び順には依存しない。**
+ * 「配列の先頭ほど上位の評価」という取り決めはどこにも無いので、並びに寄りかかると
+ * 算出側のソートが変わった瞬間に、型もテストも通ったまま矢印だけが逆を向く。
+ *
+ * 要求得点率が同じ段階が複数ある場合は `order` で比較する。境界エディタは強い評価を
+ * 先頭に並べて `order` を振るので、**`order` が小さいほど上位**。同点時にどちらの
+ * ラベルを採るかを決めている determineGradeLabel の安定ソートとも向きが一致する。
+ *
+ * どちらかが境界に無いラベル（教員が任意入力したもの、語彙の違う項目の評定）なら
+ * "unknown"。
+ */
+export function resolveGradeLabelDirection(
+  fromLabel: string,
+  toLabel: string,
+  boundaries: readonly { label: string; minPercentage: number; order: number }[]
+): GradeLabelDirection {
+  const fromBoundary = boundaries.find(
+    (boundary) => boundary.label === fromLabel
+  )
+  const toBoundary = boundaries.find((boundary) => boundary.label === toLabel)
+  if (!fromBoundary || !toBoundary) return "unknown"
+
+  // 上向き＝行き先のほうが要求得点率が高い
+  if (toBoundary.minPercentage !== fromBoundary.minPercentage) {
+    return toBoundary.minPercentage > fromBoundary.minPercentage ? "up" : "down"
+  }
+
+  // 要求得点率が同じなら段階の並び（order が小さいほど上位）で比べる
+  if (toBoundary.order !== fromBoundary.order) {
+    return toBoundary.order < fromBoundary.order ? "up" : "down"
+  }
+
+  // 同じ段階（上書きなら固定用途）
+  return "same"
+}
 
 /** 成績境界のうち、ここで見るのはラベルだけ（結果画面と境界設定で行の形が違う） */
 interface GradeBoundaryLabel {

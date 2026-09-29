@@ -724,6 +724,60 @@ export async function importGradeArchive(
         })
       }
 
+      // ── 7. 比較 ────────────────────────────────────────
+      // 相手が同じ成績算出の項目なら、いま作った項目へ付け替える。別の成績算出の
+      // 項目なら uuid 一次 → 成績算出名＋項目名 二次で取り込み先の項目へ当てる。
+      // 当たらなければその比較は作らない（相手の無い比較は記号を出せない）
+      const comparedGradeItemIdMap: IdMap = new Map()
+      for (const comparedItemRef of data.comparedGradeItemRefs) {
+        const byId = await tx.gradeItem.findUnique({
+          where: { id: comparedItemRef.id },
+        })
+        if (byId) {
+          comparedGradeItemIdMap.set(comparedItemRef.id, byId.id)
+          continue
+        }
+        const sameNameGradeItems = await tx.gradeItem.findMany({
+          where: {
+            name: comparedItemRef.gradeItemName,
+            grade: { name: comparedItemRef.gradeName },
+          },
+        })
+        const byName = pickOldest(sameNameGradeItems)
+        if (!byName) continue
+        comparedGradeItemIdMap.set(comparedItemRef.id, byName.id)
+        const ambiguity = describeAmbiguity(
+          `比較先「${comparedItemRef.gradeName} > ${comparedItemRef.gradeItemName}」`,
+          sameNameGradeItems.length,
+          `作成 ${byName.createdAt.toISOString().slice(0, 10)}`
+        )
+        if (ambiguity) warnings.push(ambiguity)
+      }
+
+      let droppedComparisons = 0
+      for (const archiveComparison of data.gradeComparisons) {
+        const gradeItemId = gradeItemIdMap.get(archiveComparison.gradeItemId)
+        const comparedGradeItemId =
+          gradeItemIdMap.get(archiveComparison.comparedGradeItemId) ??
+          comparedGradeItemIdMap.get(archiveComparison.comparedGradeItemId)
+        if (!gradeItemId || !comparedGradeItemId) {
+          droppedComparisons++
+          continue
+        }
+        await tx.gradeComparison.create({
+          data: {
+            gradeItemId,
+            comparedGradeItemId,
+            order: archiveComparison.order,
+          },
+        })
+      }
+      if (droppedComparisons > 0) {
+        warnings.push(
+          `比較先の成績算出・評価項目が取り込み先に見つからない比較 ${droppedComparisons}件を取り込みませんでした`
+        )
+      }
+
       return { gradeId: grade.id }
     }
   )

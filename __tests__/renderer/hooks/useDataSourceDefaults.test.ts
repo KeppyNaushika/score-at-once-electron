@@ -13,11 +13,11 @@
 import { renderHook } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { useDataSourceDefaults } from "@/components/grades/03-data-sources/hooks/useDataSourceDefaults"
+import { useDataSourceDefaults } from "@/components/grades/02-data-sources/hooks/useDataSourceDefaults"
 import {
   type AddDataSourceSelection,
   COURSEWORK_WHOLE,
-} from "@/components/grades/03-data-sources/types"
+} from "@/components/grades/02-data-sources/types"
 import type { CourseworkCandidate } from "@/queries/coursework"
 import type {
   GradeExamCandidateRow,

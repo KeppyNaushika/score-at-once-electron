@@ -262,6 +262,22 @@ export interface ArchiveGradeTagRow {
   updatedAt: string
 }
 
+/**
+ * GradeComparison（比較）の行。v1.17.0+
+ *
+ * 自分側（gradeItemId）は常にこのアーカイブの評価項目。相手（comparedGradeItemId）は
+ * 同じ成績算出の項目か、アーカイブに含まれない別の成績算出の項目で、後者は
+ * `comparedGradeItemRefs` に同定情報を添える。
+ */
+export interface ArchiveGradeComparisonRow {
+  id: string
+  gradeItemId: string
+  comparedGradeItemId: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
 /** 成績本体のセクション群（テーブルごとに平坦） */
 export interface GradeSections {
   grades: ArchiveGradeRow[]
@@ -280,6 +296,7 @@ export interface GradeSections {
   gradeConstraintExclusionLabels: ArchiveGradeConstraintExclusionLabelRow[]
   gradeIndividualReportSettings: ArchiveGradeIndividualReportSettingsRow[]
   gradeTags: ArchiveGradeTagRow[]
+  gradeComparisons: ArchiveGradeComparisonRow[]
 }
 
 // =============================================================================
@@ -321,6 +338,21 @@ export interface ArchiveGradeCropRegionRef {
 }
 
 /**
+ * 比較の相手が別の成績算出の評価項目のときの同定情報。v1.17.0+
+ *
+ * 成績算出はアーカイブ1つに1件しか入らないので、相手の成績算出は carry できない。
+ * uuid が当たらなければ「成績算出名＋項目名」で当てる。名前はどちらも unique では
+ * ないので、複数当たったらいちばん古い成績算出を採って件数を伝える。
+ */
+export interface ArchiveGradeComparedItemRef {
+  /** 相手の評価項目の id */
+  id: string
+  gradeId: string
+  gradeName: string
+  gradeItemName: string
+}
+
+/**
  * 外部参照セクション。
  *
  * 生徒・学級・所属は coursework-archive と同形の full レコードで carry し、
@@ -340,6 +372,7 @@ interface GradeExternalSections {
   examRefs: ArchiveGradeExamRef[]
   subtotalRefs: ArchiveGradeSubtotalRef[]
   cropRegionRefs: ArchiveGradeCropRegionRef[]
+  comparedGradeItemRefs: ArchiveGradeComparedItemRef[]
 }
 
 /** 収集結果（export 側が組み立て、archiveCreator が JSON へ書く） */
@@ -435,6 +468,8 @@ export interface GradeArchiveImportPreview {
  *   gradeBoundarySets / gradeBoundaries → gradeItemBoundaries（参照が gradeItemId へ）
  * - 1.15.0: 出力設定の JSON（GradeExportSettings.settingsJson）を列へ割る。
  *   gradeExportSettings → gradeIndividualReportSettings（個人成績通知書の設定が列に並ぶ）
+ * - 1.16.0: 成績のタグ（gradeTags / tagsData）。日付のキーを referenceDate へ揃える
+ * - 1.17.0: 比較（gradeComparisons）と、別の成績算出にある相手の同定情報（comparedGradeItemRefs）
  *
  * 検出は manifest.version 文字列ではなくデータ形状で行う（旧アーカイブのバージョン
  * 表記が不正確でも確実に正規化するため。詳細は grade-transformers/index.ts）。
@@ -454,7 +489,8 @@ export type GradeArchiveVersion =
   | "1.14.0"
   | "1.15.0"
   | "1.16.0"
-export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.16.0"
+  | "1.17.0"
+export const GRADE_CURRENT_VERSION: GradeArchiveVersion = "1.17.0"
 
 // バージョン変換の型（版ごとのアーカイブ全体の型・変換器・チェーン）は
 // electron-src/lib/import/grade-transformers/types.ts が持つ。
