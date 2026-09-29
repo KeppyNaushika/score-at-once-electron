@@ -21,6 +21,8 @@ import type {
 } from "../../../../src/types/courseworkArchive.types"
 import type {
   ArchiveGradeClassroomRow,
+  ArchiveGradeComparedItemRef,
+  ArchiveGradeComparisonRow,
   ArchiveGradeConstraintExclusionLabelRow,
   ArchiveGradeConstraintLabelValueRow,
   ArchiveGradeConstraintRow,
@@ -365,6 +367,41 @@ export async function collectGradeArchiveData(
     updatedAt: dateToJson(gradeTag.updatedAt),
   }))
 
+  // 比較は自分側がこの成績算出の項目のものだけを持つ。相手が別の成績算出の項目なら、
+  // その成績算出はアーカイブに入らないので、取り込み先で当てるための名前を添える
+  const comparisonRows = await prisma.gradeComparison.findMany({
+    where: { gradeItemId: { in: gradeItemIds } },
+    include: { comparedGradeItem: { include: { grade: true } } },
+    orderBy: [{ gradeItemId: "asc" }, { order: "asc" }],
+  })
+  const gradeComparisons: ArchiveGradeComparisonRow[] = comparisonRows.map(
+    (comparison) => ({
+      id: comparison.id,
+      gradeItemId: comparison.gradeItemId,
+      comparedGradeItemId: comparison.comparedGradeItemId,
+      order: comparison.order,
+      createdAt: dateToJson(comparison.createdAt),
+      updatedAt: dateToJson(comparison.updatedAt),
+    })
+  )
+  const comparedGradeItemRefs: ArchiveGradeComparedItemRef[] = [
+    ...new Map(
+      comparisonRows
+        .filter(
+          (comparison) => comparison.comparedGradeItem.gradeId !== gradeId
+        )
+        .map((comparison) => [
+          comparison.comparedGradeItemId,
+          {
+            id: comparison.comparedGradeItemId,
+            gradeId: comparison.comparedGradeItem.gradeId,
+            gradeName: comparison.comparedGradeItem.grade.name,
+            gradeItemName: comparison.comparedGradeItem.name,
+          },
+        ])
+    ).values(),
+  ]
+
   const tagsData: ArchiveCwTag[] = tagJoinRows.map((gradeTag) => ({
     id: gradeTag.tag.id,
     name: gradeTag.tag.name,
@@ -534,6 +571,7 @@ export async function collectGradeArchiveData(
     gradeConstraintExclusionLabels,
     gradeIndividualReportSettings,
     gradeTags,
+    gradeComparisons,
     studentsData,
     classesData,
     membershipsData,
@@ -541,6 +579,7 @@ export async function collectGradeArchiveData(
     examRefs,
     subtotalRefs,
     cropRegionRefs,
+    comparedGradeItemRefs,
     courseworkArchive,
     counts: {
       gradeItems: gradeItems.length,

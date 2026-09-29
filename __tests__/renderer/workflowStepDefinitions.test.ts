@@ -259,4 +259,30 @@ describe("改名の取り残し", () => {
       offenders.map((filePath) => path.relative(REPO_ROOT, filePath))
     ).toEqual([])
   })
+
+  /**
+   * 成績算出の段は、外部成績の段を畳んだときにフォルダ番号を表示の番号へ揃えた。
+   * 旧名はどれも他のワークフローに同名の段が無いので、文字列のまま探してよい
+   * （`02-students` と `05-results` は資料に今もあるので探さない）
+   */
+  it.each([
+    "03-data-sources",
+    "04-manual-scores",
+    "05-boundaries",
+    "06-results",
+    "07-export",
+  ])(
+    "成績算出の旧フォルダ名 %s は src にも electron-src にも __tests__ にも残っていない",
+    (oldStepId) => {
+      const offenders = collectSourceFiles()
+        .filter((filePath) => filePath !== THIS_TEST_FILE)
+        .filter((filePath) =>
+          fs.readFileSync(filePath, "utf-8").includes(oldStepId)
+        )
+
+      expect(
+        offenders.map((filePath) => path.relative(REPO_ROOT, filePath))
+      ).toEqual([])
+    }
+  )
 })

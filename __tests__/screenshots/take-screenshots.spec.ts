@@ -1357,7 +1357,7 @@ test.describe.serial("第4章: 成績算出・その他", () => {
       classAId,
       classBId,
     ])
-    // 成績の「外部成績」に写るよう、資料の評価項目を成績へつなぐ
+    // 成績のデータソース画面に資料の入力状況が写るよう、資料の評価項目を成績へつなぐ
     runSeedCommand("linkCourseworkToGrade", [gradeId, courseworkId])
   })
 
@@ -1370,10 +1370,10 @@ test.describe.serial("第4章: 成績算出・その他", () => {
     await ss(page, "ch4-grades/02-grade-overview.png")
 
     const gradeSteps: [string, string][] = [
-      ["02-students", "ch4-grades/03-grade-students.png"],
-      ["03-data-sources", "ch4-grades/04-grade-data-sources.png"],
-      ["04-manual-scores", "ch4-grades/05-grade-manual-scores.png"],
-      ["05-boundaries", "ch4-grades/06-grade-boundaries.png"],
+      ["01-students", "ch4-grades/03-grade-students.png"],
+      ["02-data-sources", "ch4-grades/04-grade-data-sources.png"],
+      ["03-boundaries", "ch4-grades/05-grade-boundaries.png"],
+      ["04-comparisons", "ch4-grades/06-grade-comparisons.png"],
     ]
     for (const [stepFolder, relativePath] of gradeSteps) {
       await nav(page, `/grades/${gradeId}/${stepFolder}`)
@@ -1382,7 +1382,7 @@ test.describe.serial("第4章: 成績算出・その他", () => {
   })
 
   test("4-2 成績算出 - 結果", async () => {
-    await nav(page, `/grades/${gradeId}/06-results`)
+    await nav(page, `/grades/${gradeId}/05-results`)
     await page.waitForTimeout(2000)
     await ss(page, "ch4-grades/07-grade-results.png")
 
@@ -1395,7 +1395,7 @@ test.describe.serial("第4章: 成績算出・その他", () => {
   })
 
   test("4-3 成績算出 - 出力", async () => {
-    await nav(page, `/grades/${gradeId}/07-export`)
+    await nav(page, `/grades/${gradeId}/06-export`)
     await page.waitForTimeout(1000)
     await ss(page, "ch4-grades/09-grade-export-selection.png")
 
@@ -1534,7 +1534,7 @@ test.describe.serial("ヒーロー画像", () => {
     await ss(page, "hero/02-answer-sheet-builder.png")
 
     // 成績結果
-    await nav(page, `/grades/${gradeId}/06-results`)
+    await nav(page, `/grades/${gradeId}/05-results`)
     await page.waitForTimeout(1500)
     await ss(page, "hero/03-grade-results.png")
 

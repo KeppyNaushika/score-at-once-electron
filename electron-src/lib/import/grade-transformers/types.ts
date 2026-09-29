@@ -31,11 +31,25 @@ import {
 export type GradeArchiveDataUpTo1_12_0 = LegacyGradeArchiveData
 
 /**
+ * 1.16.0 のアーカイブ全体（比較のセクションがまだ無い）。
+ *
+ * キーが「無い」ことまで型で言う。Omit だけだと現行の形がこの型に代入できてしまい、
+ * 型ガードの否定側で現行の形まで除かれて never になる。
+ */
+export type GradeArchiveDataV1_16_0 = Omit<
+  GradeArchiveData,
+  "gradeComparisons" | "comparedGradeItemRefs"
+> & {
+  gradeComparisons?: undefined
+  comparedGradeItemRefs?: undefined
+}
+
+/**
  * 1.15.0 のアーカイブ全体。成績がタグを持たず、試験参照の日付キーが examDate で、
  * 内包資料が coursework 1.1.0 の形（資料側の版と .grade の版は別物なので名指しておく）。
  */
 export type GradeArchiveDataV1_15_0 = Omit<
-  GradeArchiveData,
+  GradeArchiveDataV1_16_0,
   "gradeTags" | "tagsData" | "examRefs" | "courseworkArchive"
 > & {
   examRefs: ArchiveGradeExamRefV1_15_0[]
@@ -59,8 +73,8 @@ export type GradeArchiveDataV1_13_0 = Omit<
   gradeBoundaries: ArchiveGradeBoundaryRowV1_13_0[]
 }
 
-/** 1.16.0 のアーカイブ全体（現行。成績にタグが付き、日付のキーが referenceDate へ揃った） */
-export type GradeArchiveDataV1_16_0 = GradeArchiveData
+/** 1.17.0 のアーカイブ全体（現行。比較が付いた） */
+export type GradeArchiveDataV1_17_0 = GradeArchiveData
 
 /** 読み込み時点では版が確定していないので、扱いうる版の総和で受ける */
 export type AnyGradeArchiveData =
@@ -69,6 +83,7 @@ export type AnyGradeArchiveData =
   | GradeArchiveDataV1_14_0
   | GradeArchiveDataV1_15_0
   | GradeArchiveDataV1_16_0
+  | GradeArchiveDataV1_17_0
 
 /** どの版の形かを判定する（manifest.version ではなくデータの形で決める） */
 export function isGradeArchiveUpTo1_12_0(
@@ -109,6 +124,25 @@ export function isGradeArchiveV1_15_0(
   return !("gradeTags" in data && Array.isArray(data.gradeTags))
 }
 
+/**
+ * 比較のセクションが無ければ 1.16.0 の形。
+ *
+ * gradeTags と同じく extractor は読めたセクションだけを載せるので、キーの有無で見分ける。
+ */
+export function isGradeArchiveV1_16_0(
+  data: AnyGradeArchiveData
+): data is GradeArchiveDataV1_16_0 {
+  if (isLegacyGradeArchiveData(data)) return false
+  if (
+    isGradeArchiveV1_13_0(data) ||
+    isGradeArchiveV1_14_0(data) ||
+    isGradeArchiveV1_15_0(data)
+  ) {
+    return false
+  }
+  return !("gradeComparisons" in data && Array.isArray(data.gradeComparisons))
+}
+
 export interface GradeTransformResult {
   data: AnyGradeArchiveData
   warnings: string[]
@@ -122,7 +156,7 @@ export interface GradeVersionTransformer {
 
 /** チェーン完了後は現行の形であることが保証される */
 export interface GradeChainTransformResult {
-  data: GradeArchiveDataV1_16_0
+  data: GradeArchiveDataV1_17_0
   originalVersion: GradeArchiveVersion
   finalVersion: GradeArchiveVersion
   appliedTransformations: {

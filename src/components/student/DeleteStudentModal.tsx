@@ -1,5 +1,6 @@
 "use client"
 
+import type { Student } from "@prisma/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -9,17 +10,9 @@ import { buildDeletionBlockedMessage } from "@/lib/shared/gradeReferenceMessages
 import { gradeReferencesQuery } from "@/queries/grade"
 import { deleteStudentMutation } from "@/queries/student"
 
-/** 削除確認に見せる生徒（一覧・詳細のどちらの行でも渡せる最小の形） */
-interface DeleteStudentTarget {
-  id: string
-  studentNumber: string
-  lastName: string
-  firstName: string
-}
-
 interface DeleteStudentModalProps {
-  /** 消そうとしている生徒（null のとき閉じている） */
-  student: DeleteStudentTarget | null
+  /** 消そうとしている生徒（null のとき閉じている）。一覧・詳細のどちらの行も渡せる */
+  student: Student | null
   onClose: () => void
   /** 削除できた後に呼ぶ（閉じるのはこのモーダルが行う） */
   onDeleted?: (studentId: string) => void

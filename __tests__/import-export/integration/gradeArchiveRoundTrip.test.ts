@@ -374,6 +374,135 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(importedTags[0].tag.name).toBe(`教科_${suffix}`)
   })
 
+  it("比較(GradeComparison)が往復で保持される (v1.17.0)", async () => {
+    const suffix = Date.now()
+    // 比較先になる別の成績算出（アーカイブには入らない）
+    const previousGrade = await prisma.grade.create({
+      data: { name: `1学期_${suffix}` },
+    })
+    const previousItem = await prisma.gradeItem.create({
+      data: { gradeId: previousGrade.id, name: "評定", order: 0 },
+    })
+    const grade = await prisma.grade.create({
+      data: { name: `2学期_${suffix}` },
+    })
+    const knowledgeItem = await prisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "知識", order: 0 },
+    })
+    const ratingItem = await prisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "評定", order: 1 },
+    })
+    // 同じ成績算出の別項目との比較と、別の成績算出の項目との比較
+    await prisma.gradeComparison.create({
+      data: {
+        gradeItemId: knowledgeItem.id,
+        comparedGradeItemId: ratingItem.id,
+        order: 0,
+      },
+    })
+    await prisma.gradeComparison.create({
+      data: {
+        gradeItemId: ratingItem.id,
+        comparedGradeItemId: previousItem.id,
+        order: 0,
+      },
+    })
+
+    const collected = await collectGradeArchiveData(grade.id)
+    expect(collected.gradeComparisons).toHaveLength(2)
+    // 同定情報を添えるのは、アーカイブに入らない成績算出の項目だけ
+    expect(collected.comparedGradeItemRefs).toEqual([
+      {
+        id: previousItem.id,
+        gradeId: previousGrade.id,
+        gradeName: `1学期_${suffix}`,
+        gradeItemName: "評定",
+      },
+    ])
+
+    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const importedItems = await prisma.gradeItem.findMany({
+      where: { gradeId: result.gradeId! },
+      include: { comparisons: true },
+    })
+    const importedKnowledge = importedItems.find(
+      (gradeItem) => gradeItem.name === "知識"
+    )!
+    const importedRating = importedItems.find(
+      (gradeItem) => gradeItem.name === "評定"
+    )!
+    // 同じ成績算出の相手は、取り込んで作った項目へ付け替わる
+    expect(
+      importedKnowledge.comparisons.map(
+        (comparison) => comparison.comparedGradeItemId
+      )
+    ).toEqual([importedRating.id])
+    // 別の成績算出の相手は、既存の項目へ uuid で当たる
+    expect(
+      importedRating.comparisons.map(
+        (comparison) => comparison.comparedGradeItemId
+      )
+    ).toEqual([previousItem.id])
+  })
+
+  it("比較先は uuid が当たらなければ成績算出名＋項目名で当て、当たらなければ落として伝える (v1.17.0)", async () => {
+    const suffix = Date.now()
+    const previousGrade = await prisma.grade.create({
+      data: { name: `前期_${suffix}` },
+    })
+    const previousItem = await prisma.gradeItem.create({
+      data: { gradeId: previousGrade.id, name: "評定", order: 0 },
+    })
+    const grade = await prisma.grade.create({
+      data: { name: `後期_${suffix}` },
+    })
+    const ratingItem = await prisma.gradeItem.create({
+      data: { gradeId: grade.id, name: "評定", order: 0 },
+    })
+    await prisma.gradeComparison.create({
+      data: {
+        gradeItemId: ratingItem.id,
+        comparedGradeItemId: previousItem.id,
+        order: 0,
+      },
+    })
+
+    const collected = await collectGradeArchiveData(grade.id)
+    // 別の PC から持ってきた想定: 比較先の uuid は取り込み先に無い
+    const byName = {
+      ...collected,
+      gradeComparisons: [
+        { ...collected.gradeComparisons[0], comparedGradeItemId: "other-pc-1" },
+        {
+          ...collected.gradeComparisons[0],
+          id: "comparison-missing",
+          comparedGradeItemId: "other-pc-2",
+          order: 1,
+        },
+      ],
+      comparedGradeItemRefs: [
+        { ...collected.comparedGradeItemRefs[0], id: "other-pc-1" },
+        {
+          id: "other-pc-2",
+          gradeId: "other-pc-grade",
+          gradeName: `存在しない成績_${suffix}`,
+          gradeItemName: "評定",
+        },
+      ],
+    }
+
+    const result = await importGradeArchive(toArchive(grade.id, byName))
+    const importedComparisons = await prisma.gradeComparison.findMany({
+      where: { gradeItem: { gradeId: result.gradeId! } },
+    })
+    expect(
+      importedComparisons.map((comparison) => comparison.comparedGradeItemId)
+    ).toEqual([previousItem.id])
+    expect(
+      result.warnings.some((warning) => warning.includes("比較 1件"))
+    ).toBe(true)
+  })
+
   it("試験外成績資料(Coursework)の項目・点数・コメント・名簿・タグが往復で保持される (v1.4.0)", async () => {
     const suffix = Date.now()
 

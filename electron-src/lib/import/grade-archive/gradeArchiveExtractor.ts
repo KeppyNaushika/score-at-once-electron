@@ -174,6 +174,13 @@ export async function extractGradeArchive(
             tagsData: readArray(sections, "tagsData"),
           }
         : {}),
+      // 比較は 1.17.0 で足したセクション。タグと同じ理由で、読めたときだけ載せる
+      ...(Array.isArray(sections.gradeComparisons)
+        ? {
+            gradeComparisons: readArray(sections, "gradeComparisons"),
+            comparedGradeItemRefs: readArray(sections, "comparedGradeItemRefs"),
+          }
+        : {}),
       studentsData: readArray(sections, "studentsData"),
       classesData: readArray(sections, "classesData"),
       membershipsData: readArray(sections, "membershipsData"),

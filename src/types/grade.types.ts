@@ -90,7 +90,7 @@ export const { to: toGradeDataSourceType } = defineStringUnion(
  *
  * 形の SSOT は取得側の `gradeSummaryInclude`。詳細（GradeWithRelations）と違い、
  * 満点の元データも参照先の表示名も持たない。一覧が読むのは名前・学級・件数と、
- * 次のステップ判定が読む「境界の有無・データソース種別・資料の点数の有無」だけ。
+ * 次のステップ判定が読む「境界の有無・データソースの有無」だけ。
  */
 export type GradeSummary = Serialized<
   Prisma.GradeGetPayload<{ include: typeof gradeSummaryInclude }>

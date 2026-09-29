@@ -232,6 +232,10 @@ courseworks.json    内包する試験外成績資料（coursework-archive 形�
 
 **試験・小計点グループ・採点領域の名前ベース lookup は仕様として残す。**
 
+比較（`GradeComparison`）の相手が別の成績算出の評価項目なら、その成績算出も
+アーカイブに入らないので、同じく lookup する（uuid 一次 → 成績算出名＋項目名）。
+当たらなければその比較は作らず warning で伝える。
+
 IPC は `gradeHandlers.ts` の `grade:exportArchive` / `importArchive` / `executeImport`。
 
 ---

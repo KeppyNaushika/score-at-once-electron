@@ -68,10 +68,10 @@ export interface ArchiveGradeExportSettingsRowV1_14_0 {
   updatedAt: string
 }
 
-/** v1.14.0 の成績本体セクション群（成績のタグはまだ無い） */
+/** v1.14.0 の成績本体セクション群（成績のタグも比較もまだ無い） */
 export type GradeSectionsV1_14_0 = Omit<
   GradeSections,
-  "gradeIndividualReportSettings" | "gradeTags"
+  "gradeIndividualReportSettings" | "gradeTags" | "gradeComparisons"
 > & {
   gradeExportSettings: ArchiveGradeExportSettingsRowV1_14_0[]
 }

@@ -127,13 +127,14 @@ export default function GradeDetailPage() {
         entityHref={`/grades/${gradeId}`}
         phases={gradeWorkflowPhases}
         stepCompletion={{
-          "02-students": completion.hasStudents,
-          "03-data-sources": completion.hasDataSources,
-          "04-manual-scores": completion.hasManualScores,
-          "05-boundaries": completion.hasBoundaries,
+          "01-students": completion.hasStudents,
+          "02-data-sources": completion.hasDataSources,
+          "03-boundaries": completion.hasBoundaries,
+          // 比較は任意の段で、置かなくても成績は出せるので済みという状態を持たない
+          "04-comparisons": null,
           // 結果の確認と出力は何度でもできるので、済みという状態を持たない
-          "06-results": null,
-          "07-export": null,
+          "05-results": null,
+          "06-export": null,
         }}
         actions={
           <DropdownMenu>

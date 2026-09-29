@@ -75,7 +75,7 @@ export function usePageHelp({ compact = false }: UsePageHelpOptions = {}) {
    * かつては当たらなかったときに部分一致で探していた
    * （`lastSegment.includes(key.split("-")[1])`）。ヘルプが一覧ページにしか無かった
    * うちは表に出なかったが、段のヘッダーが全画面で呼ぶようになった途端、**別の画面の
-   * 手引きを出す**ようになった —— 成績の 04-manual-scores が "scores" で
+   * 手引きを出す**ようになった —— 成績の外部成績の段（今は無い）が "scores" で
    * `07-score-at-once` に当たって一括採点の手引きを出す、資料や解答用紙の
    * 02-students / 02-export が試験の 05 や 09 に当たる、など6ページ。
    *

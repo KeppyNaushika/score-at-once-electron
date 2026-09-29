@@ -22,9 +22,9 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { BoundariesContainer } from "@/components/grades/05-boundaries/BoundariesContainer"
-import { ResultsContainer } from "@/components/grades/06-results/ResultsContainer"
-import { ResultsTable } from "@/components/grades/06-results/ResultsTable"
+import { BoundariesContainer } from "@/components/grades/03-boundaries/BoundariesContainer"
+import { ResultsContainer } from "@/components/grades/05-results/ResultsContainer"
+import { ResultsTable } from "@/components/grades/05-results/ResultsTable"
 import { CurrentUserProvider } from "@/contexts/CurrentUserContext"
 import type { PublicUser } from "@/queries/user"
 import type {
