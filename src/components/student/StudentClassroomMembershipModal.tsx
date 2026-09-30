@@ -195,7 +195,7 @@ export default function StudentClassroomMembershipModal({
                 onValueChange={setClassroomId}
                 disabled={!!initialClassroomId}
                 placeholder="学級を選択してください"
-                searchPlaceholder="学級名・学年・学級コードで検索"
+                searchPlaceholder="学級を検索"
                 emptyText="該当する学級がありません"
                 className="w-full"
               />

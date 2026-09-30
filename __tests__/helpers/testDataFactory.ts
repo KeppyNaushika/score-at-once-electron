@@ -26,6 +26,7 @@ import type {
   MatchedItem,
   PreMatchingResult,
   ScoringConflict,
+  UserPreMatchingResult,
 } from "../../src/types/examArchive.types"
 
 // =============================================================================
@@ -352,12 +353,15 @@ export function createFileOverviewData(
  */
 export function createUserPreMatchingResult(
   userIds: string[]
-): PreMatchingResult {
-  return createPreMatchingResult({
-    byId: userIds.map((userId) =>
-      createMatchedItem({ importId: userId, existingId: userId })
-    ),
-  })
+): UserPreMatchingResult {
+  return {
+    ...createPreMatchingResult({
+      byId: userIds.map((userId) =>
+        createMatchedItem({ importId: userId, existingId: userId })
+      ),
+    }),
+    allExistingUsers: [],
+  }
 }
 
 // =============================================================================

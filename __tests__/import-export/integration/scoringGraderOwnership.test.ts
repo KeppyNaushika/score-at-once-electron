@@ -291,15 +291,18 @@ describe("取り込みと採点者", () => {
         })),
       }),
       // 別PCの採点者なので、id でも利用者名でも当たらない
-      user: createPreMatchingResult({
-        noMatch: [
-          {
-            importId: archiveGraderId,
-            importData: {},
-            displayLabel: "grader-from-other-pc",
-          },
-        ],
-      }),
+      user: {
+        ...createPreMatchingResult({
+          noMatch: [
+            {
+              importId: archiveGraderId,
+              importData: {},
+              displayLabel: "grader-from-other-pc",
+            },
+          ],
+        }),
+        allExistingUsers: [],
+      },
       exam: {
         isIdMatch: false,
         importExamId: archive.examId,
@@ -350,15 +353,18 @@ describe("取り込みと採点者", () => {
           displayLabel: student.lastName,
         })),
       }),
-      user: createPreMatchingResult({
-        noMatch: [
-          {
-            importId: archiveGraderId,
-            importData: {},
-            displayLabel: "grader-from-other-pc",
-          },
-        ],
-      }),
+      user: {
+        ...createPreMatchingResult({
+          noMatch: [
+            {
+              importId: archiveGraderId,
+              importData: {},
+              displayLabel: "grader-from-other-pc",
+            },
+          ],
+        }),
+        allExistingUsers: [],
+      },
       exam: {
         isIdMatch: false,
         importExamId: archive.examId,

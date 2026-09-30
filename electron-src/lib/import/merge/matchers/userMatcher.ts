@@ -16,9 +16,10 @@
 import type {
   ImportItem,
   MatchedItem,
-  PreMatchingResult,
+  UserPreMatchingResult,
 } from "../../../../../src/types/examArchive.types"
 import prisma from "../../../prisma/client"
+import { PUBLIC_USER_OMIT } from "../../../prisma/publicUser"
 import type { ExtractedArchiveData } from "../../exam-archive/archiveExtractor"
 import { describeCandidateCount, groupByHumanKey } from "../../humanKeyMatching"
 
@@ -50,7 +51,13 @@ export function collectGraderUserIds(
   return graderUserIds
 }
 
-/** 画面に出す名乗り（利用者名だけだと同じ文字列が並ぶので氏名を添える） */
+/**
+ * 画面に出す名乗り（利用者名だけだと同じ文字列が並ぶので氏名を添える）
+ *
+ * 表示の組み立ては本来 renderer の仕事だが、`MatchedItem.displayLabel` は生徒・学級・
+ * 小計グループと共有の欄で、どれも main が埋めている。利用者だけ外すと種類ごとに
+ * 出どころが割れるので、移すなら全種類まとめて移す。
+ */
 const displayLabelOf = (archiveUser: ArchiveUser): string =>
   archiveUser.name && archiveUser.name !== archiveUser.username
     ? `${archiveUser.name}（${archiveUser.username}）`
@@ -65,7 +72,7 @@ const displayLabelOf = (archiveUser: ArchiveUser): string =>
  */
 export async function preMatchUsers(
   importData: ExtractedArchiveData
-): Promise<PreMatchingResult> {
+): Promise<UserPreMatchingResult> {
   const graderUserIds = collectGraderUserIds(importData)
   const archiveGraders = importData.usersData.users.filter((archiveUser) =>
     graderUserIds.has(archiveUser.id)
@@ -76,10 +83,11 @@ export async function preMatchUsers(
   const noMatch: ImportItem[] = []
 
   if (archiveGraders.length === 0) {
-    return { byId, byName, noMatch, allExistingItems: [] }
+    return { byId, byName, noMatch, allExistingUsers: [] }
   }
 
-  const existingUsers = await prisma.user.findMany()
+  // 行は existingData と allExistingUsers に載って画面へ渡る。passcode（ハッシュ）は落とす
+  const existingUsers = await prisma.user.findMany({ omit: PUBLIC_USER_OMIT })
   const existingById = new Map(existingUsers.map((user) => [user.id, user]))
   // 利用者名は unique ではない（2026-08-22 に外した）ので、名前で引くと複数当たりうる。
   // 候補は humanKeyMatching の決まりで古い順に並び、先頭を候補として見せる
@@ -133,13 +141,8 @@ export async function preMatchUsers(
     byId,
     byName,
     noMatch,
-    // 「既存の利用者に結ぶ」を人が選び直せるように、このPCの利用者を全部渡す
-    allExistingItems: existingUsers.map((user) => ({
-      id: user.id,
-      name:
-        user.name === user.username
-          ? user.name
-          : `${user.name}（${user.username}）`,
-    })),
+    // 「既存の利用者に結ぶ」を人が選び直せるように、このPCの利用者を全部渡す。
+    // 表示名と検索の手掛かりは renderer が行から作る
+    allExistingUsers: existingUsers,
   }
 }

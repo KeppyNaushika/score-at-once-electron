@@ -3,7 +3,6 @@
 import { Combobox } from "@/components/common/Combobox"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
-import type { ExistingItemInfo } from "@/types/examArchive.types"
 
 /**
  * 「新しく作る」を表す選択肢の値。
@@ -67,13 +66,17 @@ export function UserIntegrationPanel({ wizard }: UserIntegrationPanelProps) {
     )
   }
 
-  const existingUsers: ExistingItemInfo[] = overview.allExistingItems ?? []
-  // 利用者の名前には、表示名と違えば利用者名が括弧で添えてある（照合側で整える）
+  // 名前と利用者名が違えば「名前（利用者名）」、同じなら名前だけ。
+  // 利用者名は keywords にも載せて、利用者名でも探せるようにする
   const userOptions = [
     { value: CREATE_NEW_USER, label: "新しい利用者として登録する" },
-    ...existingUsers.map((existingUser) => ({
+    ...overview.allExistingUsers.map((existingUser) => ({
       value: existingUser.id,
-      label: existingUser.name,
+      label:
+        existingUser.name === existingUser.username
+          ? existingUser.name
+          : `${existingUser.name}（${existingUser.username}）`,
+      keywords: [existingUser.username],
     })),
   ]
   const decisionByImportId = new Map(
