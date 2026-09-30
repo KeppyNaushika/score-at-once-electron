@@ -1,4 +1,3 @@
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
 import { PrismaClient } from "@prisma/client"
 import * as path from "path"
 
@@ -8,6 +7,7 @@ import {
   bootstrapSchema,
   type SchemaBootstrapResult,
 } from "./schema/schemaBootstrap"
+import { PrismaBetterSqlite3WithRecursiveTriggers } from "./sqliteConnection"
 
 /**
  * データベースファイルの絶対パスを返す
@@ -28,10 +28,17 @@ export const getDatabasePath = (): string =>
     ? getLocalDbPath()
     : path.join(getDataDirectory(), "database.db")
 
-/** 指定パスのSQLiteファイルに接続するPrismaClientを生成する */
+/**
+ * 指定パスのSQLiteファイルに接続するPrismaClientを生成する。
+ *
+ * アダプタは接続のたびに `recursive_triggers` を立てるもの（`sqliteConnection.ts`）。
+ * 同期ライブラリのトリガーが、この接続の書き込みを取りこぼさないために要る。
+ */
 const createPrismaClientForPath = (dbPath: string): PrismaClient => {
   const absolutePath = path.resolve(dbPath)
-  const adapter = new PrismaBetterSqlite3({ url: absolutePath })
+  const adapter = new PrismaBetterSqlite3WithRecursiveTriggers({
+    url: absolutePath,
+  })
 
   return new PrismaClient({
     adapter,

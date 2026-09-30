@@ -1,21 +1,24 @@
 /**
  * 2端末同期の結合テスト（本物の sqlite-nas-sync × 本物の schema.prisma）
  *
- * ライブラリ側のテストは自前の小さなスキーマ（`tags` / `tag_notes`）で書かれている。
+ * ライブラリ側のテストは自前の小さなスキーマで書かれている。
  * ここで確かめるのは **アプリのスキーマを繋いだとき**に同じ結末になるかで、
  * 具体的には `Tag.name` の UNIQUE と `ExamStudent(examId, studentId)` の UNIQUE が
- * 起こす「畳み」を、実機2台を用意せずに再現する。
+ * 起こす「かぶり」を、実機2台を用意せずに再現する。
  *
- * 畳み = 別の id なのに同じユニークキーを持つ行が出会ったとき、LWW で片方を勝たせ、
- * 負けた行の子を勝った行へ付け替えてから負けた行を消すこと。
- * 直っていなかった頃の壊れ方は2つで、どちらもここで踏む形になっている:
+ * かぶり = 別の id なのに同じユニークキーを持つ行が出会うこと。sqlite-nas-sync は
+ * 版の順序の強い方をアプリの表に置き、弱い方を**隠す**（v0.19.0 までは弱い方を消して
+ * 子を付け替える「畳み」だった）。隠れた行の事実は残り、かぶりが解ければ表へ戻る。
+ * ただし**勝っている行を消したときは、隠れている方にも削除が書かれる**（v0.21.0 の原則3。
+ * 利用者から見れば1行なので、片方だけ残ると消したはずのものが姿を変えて現れる）。
+ * ここで踏む壊れ方は3つ:
  *
- * - **名前を直しただけで同期が永久に止まる** — ユニーク違反で取り込みが落ち、
- *   その相手の changelog を1件も先へ進められなくなる（`blockingWarnings` で見る）
- * - **採点データが消える** — 負けた ExamStudent を消すときに、その子の
- *   QuestionScore を道連れにする（行数と付け替え先で見る）
+ * - **名前を直しただけで同期が止まる** — 取り込みがユニーク違反で落ちる（`blockingWarnings`）
+ * - **採点データが見えなくなる** — 隠れた受験生徒にぶら下がる採点が、表に置けず外れる
+ *   （`Unplaceable` の警告と行数で見る）
+ * - **隠れた行が戻らない** — かぶりが解けても、隠れていた行が表に現れない
  *
- * 画面は通していない。畳みが renderer と監査ログへ出る経路は
+ * 画面は通していない。隠れた・戻ったことが renderer と監査ログへ出る経路は
  * `syncServiceFoldIntegration.test.ts` が syncService ごと動かして見る。
  */
 import * as fs from "fs"
@@ -30,7 +33,6 @@ import {
   createSyncInstance,
   deleteTag,
   examStudentRows,
-  idMergeRows,
   insertExamStudent,
   insertQuestionScore,
   insertTag,
@@ -39,7 +41,6 @@ import {
   renameTag,
   seedScoringSkeleton,
   tagRows,
-  tombstoneRows,
   withDatabase,
 } from "./twoClientHarness"
 
@@ -55,8 +56,8 @@ let syncA: SyncInstance
 let syncB: SyncInstance
 
 /**
- * 1巡回す。**同期を止める警告が出ていないこと**を毎回見るのがこの関数の主目的で、
- * 「畳みは起きたが、その相手からは以後何も届かない」状態を通過させない。
+ * 1巡回す。**同期を止める警告・行が表から外れた警告が出ていないこと**を毎回見るのが
+ * この関数の主目的で、「かぶりは片付いたが、その先で行が黙って消えた」状態を通過させない。
  */
 const syncRound = async (label: string, instance: SyncInstance) => {
   const result = await instance.syncNow()
@@ -159,10 +160,10 @@ describe("同じ id の行の LWW", () => {
   })
 })
 
-describe("畳み（別 id・同一ユニークキー）", () => {
+describe("かぶり（別 id・同一ユニークキー）", () => {
   /**
    * A が持っていたタグを改名し、B は独立に同じ名前のタグを作る。
-   * `Tag.name` は UNIQUE なので、この2行は同居できない。
+   * `Tag.name` は UNIQUE なので、この2行は同時には表示できない。
    */
   const seedTagNameCollision = async (): Promise<void> => {
     insertTag(DB_A, {
@@ -190,50 +191,37 @@ describe("畳み（別 id・同一ユニークキー）", () => {
     })
   }
 
-  it("改名がぶつかると1つへ畳まれ、両端末が同じ答えへ収束する", async () => {
+  it("改名がぶつかると片方が隠れ、両端末が同じ答えへ収束する", async () => {
     await seedTagNameCollision()
 
-    // B 側で畳みが起きる（届いた tag-math が、ローカルの新しい tag-japanese に負ける）
-    const foldResult = await syncRound("B 畳み", syncB)
-    expect(foldResult.folds).toEqual([
-      {
-        tableName: "Tag",
-        losingId: "tag-math",
-        winningId: "tag-japanese",
-        removedLocalRow: true,
-        // このタグには子が居ないので、付け替えも取りこぼしも起きない
-        movedChildren: 0,
-        lostChildren: 0,
-      },
+    // B 側でかぶりが起きる（届いた tag-math の改名が、ローカルの新しい tag-japanese に負ける）
+    const hideResult = await syncRound("B かぶり", syncB)
+    expect(hideResult.folds).toEqual([
+      { tableName: "Tag", losingId: "tag-math", winningId: "tag-japanese" },
     ])
-    // 畳みは行が1つ消える操作なので、消えた数にも出る
-    expect(foldResult.deleted).toBe(1)
+    // B が表示していた「数学」（tag-math）は表から外れる。隠れた行も消えた数に入る
+    expect(hideResult.deleted).toBe(1)
     expect(tagRows(DB_B)).toEqual([{ id: "tag-japanese", name: "国語" }])
 
-    // 畳み先は墓標に載る。ここが空だと、受け取った側は tag-math をただ消すだけになる
-    expect(tombstoneRows(DB_B, "Tag")).toEqual([
-      { recordId: "tag-math", mergedInto: "tag-japanese" },
-    ])
-    expect(idMergeRows(DB_B, "Tag")).toEqual([
-      { losingId: "tag-math", winningId: "tag-japanese" },
-    ])
-
-    // A は自分の tag-math をまだ持っている。畳みの決定が伝わって初めて揃う
+    // A は自分の tag-math を表示している。B の tag-japanese が届いて初めて揃う
     await syncRound("B 送出", syncB)
-    await syncRound("A 畳みの受け取り", syncA)
+    const hideOnA = await syncRound("A かぶりの受け取り", syncA)
+    expect(hideOnA.folds).toEqual([
+      { tableName: "Tag", losingId: "tag-math", winningId: "tag-japanese" },
+    ])
 
     expect(tagRows(DB_A)).toEqual([{ id: "tag-japanese", name: "国語" }])
     expect(tagRows(DB_B)).toEqual([{ id: "tag-japanese", name: "国語" }])
   })
 
-  it("畳みが起きても次の巡回が正常に走り、あとの変更も届く", async () => {
+  it("隠れた行ができても次の巡回が正常に走り、あとの変更も届く", async () => {
     await seedTagNameCollision()
 
-    await syncRound("B 畳み", syncB)
+    await syncRound("B かぶり", syncB)
     await syncRound("B 送出", syncB)
-    await syncRound("A 畳みの受け取り", syncA)
+    await syncRound("A かぶりの受け取り", syncA)
 
-    // 畳みの直後から3巡。新たな畳みが起き続けたら（= 端末どうしが相手を畳み合って
+    // かぶりの直後から3巡。新たに隠れる行が出続けたら（= 端末どうしが相手を隠し合って
     // いたら）収束していない。警告は syncRound が毎回見ている
     for (let round = 1; round <= 3; round++) {
       const resultA = await syncRound(`A ${round}巡目`, syncA)
@@ -244,7 +232,7 @@ describe("畳み（別 id・同一ユニークキー）", () => {
       expect(resultB.folds, `B ${round}巡目`).toEqual([])
     }
 
-    // 畳みのあとに作った行がちゃんと相手へ届く（＝止まっていない）
+    // かぶりのあとに作った行がちゃんと相手へ届く（＝止まっていない）
     insertTag(DB_A, {
       id: "tag-science",
       name: "理科",
@@ -258,12 +246,63 @@ describe("畳み（別 id・同一ユニークキー）", () => {
       { id: "tag-science", name: "理科" },
     ])
   })
+
+  it("表示している方を消すと、隠れていた方も一緒に消える", async () => {
+    await seedTagNameCollision()
+    await syncRound("B かぶり", syncB)
+    await syncRound("B 送出", syncB)
+    await syncRound("A かぶりの受け取り", syncA)
+
+    // B で勝った「国語」（tag-japanese）を消す。かぶって隠れている2行は利用者から見れば
+    // 1つのタグなので、v0.21.0 からは隠れていた tag-math にも削除が書かれる（原則3）。
+    // v0.20.0 では tag-math だけが表へ戻り、消したはずの名前のタグが残っていた。
+    deleteTag(DB_B, "tag-japanese")
+    const deleteOnB = await syncRound("B 削除の送出", syncB)
+    expect(deleteOnB.restores).toEqual([])
+    expect(tagRows(DB_B)).toEqual([])
+
+    const deleteOnA = await syncRound("A 削除の受け取り", syncA)
+    expect(deleteOnA.restores).toEqual([])
+    expect(tagRows(DB_A)).toEqual([])
+  })
+
+  it("表示している方の名前を変えると、隠れていた行が両端末で表示に戻る", async () => {
+    await seedTagNameCollision()
+    await syncRound("B かぶり", syncB)
+    await syncRound("B 送出", syncB)
+    await syncRound("A かぶりの受け取り", syncA)
+
+    // 勝っている tag-japanese を別の名前にすると、かぶりが解ける。隠れていた tag-math の
+    // 事実は残っているので、次の作り直しで「国語」として表へ戻る
+    renameTag(DB_B, {
+      id: "tag-japanese",
+      name: "現代文",
+      updatedAt: isoMinutesAgo(1),
+    })
+    const restoreOnB = await syncRound("B 改名の送出", syncB)
+    expect(restoreOnB.restores).toEqual([
+      { tableName: "Tag", losingId: "tag-math", winningId: "tag-japanese" },
+    ])
+    expect(tagRows(DB_B)).toEqual([
+      { id: "tag-japanese", name: "現代文" },
+      { id: "tag-math", name: "国語" },
+    ])
+
+    const restoreOnA = await syncRound("A 改名の受け取り", syncA)
+    expect(restoreOnA.restores).toEqual([
+      { tableName: "Tag", losingId: "tag-math", winningId: "tag-japanese" },
+    ])
+    expect(tagRows(DB_A)).toEqual([
+      { id: "tag-japanese", name: "現代文" },
+      { id: "tag-math", name: "国語" },
+    ])
+  })
 })
 
-describe("畳まれた行の子（採点データ）", () => {
+describe("隠れた行の子（採点データ）", () => {
   /**
    * 同じ試験・同じ生徒の ExamStudent を、両端末が別々の id で作った状態を仕込む。
-   * `@@unique([examId, studentId])` があるので2行は同居できず、必ず畳まれる。
+   * `@@unique([examId, studentId])` があるので2行は同時に表示できず、片方が隠れる。
    * 各端末はその ExamStudent にぶら下げた QuestionScore を1件ずつ持っている。
    */
   const seedExamStudentCollision = async (): Promise<void> => {
@@ -305,27 +344,23 @@ describe("畳まれた行の子（採点データ）", () => {
     })
   }
 
-  it("受験生徒が1行へ畳まれても、両端末の採点が勝った行へ移って消えない", async () => {
+  it("受験生徒の片方が隠れても、両端末の採点は表示している受験生徒の下に見えて消えない", async () => {
     await seedExamStudentCollision()
 
     // A が自分の行を NAS へ出す（syncNow はコピーの送出と取り込みを両方やる）
     await syncRound("A 送出", syncA)
 
-    // ローカルが勝つ側（B）— 届いた exam-student-a が負ける。
-    // 敗者の行を B は元々持っていないので removedLocalRow は false
-    const foldOnB = await syncRound("B 畳み", syncB)
-    expect(foldOnB.folds).toEqual([
+    // ローカルが勝つ側（B）— 届いた exam-student-a が隠れる
+    const hideOnB = await syncRound("B かぶり", syncB)
+    expect(hideOnB.folds).toEqual([
       {
         tableName: "ExamStudent",
         losingId: "exam-student-a",
         winningId: "exam-student-b",
-        removedLocalRow: false,
-        // 敗者行を持っていない端末には、付け替える子も居ない
-        movedChildren: 0,
-        lostChildren: 0,
       },
     ])
-    // 敗者にぶら下がっていた採点は、B のローカルでも勝者へ向け直されて入る
+    // 隠れた受験生徒にぶら下がる採点は、表示上は勝った受験生徒の下に置かれる
+    // （ライブラリが外部キーを勝者へ読み替える。事実の側の examStudentId は書き換えない）
     expect(questionScoreRows(DB_B)).toEqual([
       {
         id: "question-score-a",
@@ -339,17 +374,13 @@ describe("畳まれた行の子（採点データ）", () => {
       },
     ])
 
-    // 届いた行が勝つ側（A）— ローカルの exam-student-a が消え、その採点は移る
-    const foldOnA = await syncRound("A 畳み", syncA)
-    expect(foldOnA.folds).toEqual([
+    // 届いた行が勝つ側（A）— ローカルの exam-student-a が隠れる
+    const hideOnA = await syncRound("A かぶり", syncA)
+    expect(hideOnA.folds).toEqual([
       {
         tableName: "ExamStudent",
         losingId: "exam-student-a",
         winningId: "exam-student-b",
-        removedLocalRow: true,
-        // 消える受験生徒にぶら下がっていた採点行1件が、残る側へ移る
-        movedChildren: 1,
-        lostChildren: 0,
       },
     ])
 
@@ -371,7 +402,7 @@ describe("畳まれた行の子（採点データ）", () => {
           studentId: "student-collision",
         },
       ])
-      // 2件とも生きていて、どちらも勝った受験生徒にぶら下がっている
+      // 2件とも見えていて、どちらも表示している受験生徒にぶら下がっている
       expect(questionScoreRows(dbPath), `client-${label}`).toEqual([
         {
           id: "question-score-a",
@@ -387,7 +418,7 @@ describe("畳まれた行の子（採点データ）", () => {
     }
   })
 
-  it("採点データを巻き込む畳みのあとも同期が止まらない", async () => {
+  it("採点データを巻き込むかぶりのあとも同期が止まらない", async () => {
     await seedExamStudentCollision()
 
     for (let round = 1; round <= 4; round++) {
@@ -395,14 +426,14 @@ describe("畳まれた行の子（採点データ）", () => {
       const resultB = await syncRound(`B ${round}巡目`, syncB)
       expect(resultA.clientsSynced, `A ${round}巡目`).toBe(1)
       expect(resultB.clientsSynced, `B ${round}巡目`).toBe(1)
-      // 3巡目以降は新たな畳みが起きない（起き続けるなら収束していない）
+      // 3巡目以降は新たに隠れる行が出ない（出続けるなら収束していない）
       if (round >= 3) {
         expect(resultA.folds, `A ${round}巡目`).toEqual([])
         expect(resultB.folds, `B ${round}巡目`).toEqual([])
       }
     }
 
-    // 畳みのあとに付けた採点が相手へ届く
+    // かぶりのあとに付けた採点が相手へ届く
     insertQuestionScore(DB_B, {
       id: "question-score-after-fold",
       cropRegionId: "crop-region-collision",

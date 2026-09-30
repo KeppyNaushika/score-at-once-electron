@@ -669,14 +669,44 @@ const AUDIT_ACTIONS = {
     label: "{target}",
   },
   /**
-   * NAS同期が、別id・同一ユニークキーの行を1つへ「畳んだ」ことの記録。
-   * ユニーク制約が強制する操作なので利用者は止められない。何と何が1つになったかは
-   * metadata の `losingId` / `winningId` に入る（`entityId` は消えた側）。
+   * NAS同期が、別id・同一ユニークキーの行を1つへ「畳んだ」ことの記録（**過去の記録専用**）。
+   *
+   * sqlite-nas-sync v0.19.0 までは、かぶった行の片方を物理的に消し、子を残った側へ
+   * 付け替えていた。v0.20.0 で畳みそのものが無くなったので、**新しくは書かない**。
+   * 監査ログは同期で全端末へ渡り2年残るため、それまでに書かれた行を読めるように
+   * 定義だけ残す（意味が違う新しい出来事は `sync.duplicate.hide` へ分けた）。
    */
   "sync.merge": {
     category: "system",
     verb: "delete",
     label: "同期で重複していた{target}を1つにまとめました",
+  },
+  /**
+   * NAS同期で、別id・同一ユニークキーの行がかぶり、片方を**隠した**ことの記録。
+   *
+   * ユニーク制約がある以上、両方を同時には表示できないので、利用者は止められない。
+   * **何も消していない** — 隠した行の事実はライブラリの帳簿に残っていて、表示している
+   * 方が無くなれば次の同期で表示に戻る（`sync.duplicate.restore`）。だから verb は
+   * `delete` ではない。何と何がかぶったかは metadata の `losingId`（隠した側。
+   * `entityId` と同じ）/ `winningId`（表示している側）に入る。
+   */
+  "sync.duplicate.hide": {
+    category: "system",
+    verb: "other",
+    label: "同期で重複していた{target}の片方を隠しました",
+  },
+  /**
+   * NAS同期で隠していた行が、**表示に戻った**ことの記録。
+   *
+   * 表示していた方が削除された・隠れていた方が他端末で新しく書かれて版の順序が
+   * 入れ替わったなどで、隠れる理由が無くなったとき。
+   * metadata の `losingId` は戻った側（`entityId` と同じ）、`winningId` は隠れていた間に
+   * 表示されていた側。
+   */
+  "sync.duplicate.restore": {
+    category: "system",
+    verb: "other",
+    label: "同期で隠していた{target}を表示に戻しました",
   },
 } as const satisfies Record<string, AuditActionDef>
 

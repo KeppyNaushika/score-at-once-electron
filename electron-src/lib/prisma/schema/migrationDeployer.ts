@@ -1,9 +1,9 @@
-import Database from "better-sqlite3"
 import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 
 import { getDatabasePath } from "../databaseInitializer"
+import { openAppDatabase } from "../sqliteConnection"
 import { hasTable, type SqliteDatabase } from "../sqliteSchemaUtils"
 import { createBackup, restoreBackup } from "./bridgeMigrations"
 
@@ -55,8 +55,8 @@ export const deployPendingMigrations = (options?: {
     return 0
   }
 
-  const db = new Database(path.resolve(getDatabasePath()))
-  db.pragma("busy_timeout = 5000")
+  // マイグレーションもアプリの表を書くので、同期のトリガーが取りこぼさない接続で開く
+  const db = openAppDatabase(path.resolve(getDatabasePath()))
 
   try {
     if (!hasTable(db, "_prisma_migrations")) {

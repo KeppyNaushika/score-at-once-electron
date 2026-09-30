@@ -1,19 +1,20 @@
 /**
- * 「畳みが起きたときアプリが黙らない」ことの結合テスト（syncService を丸ごと動かす）
+ * 「かぶった行の片方が隠れたときアプリが黙らない」ことの結合テスト（syncService を丸ごと動かす）
  *
  * `syncFoldNotification.test.ts` は `sqlite-nas-sync` をモックし、`setupSync` に渡された
  * `onAfterSync` をテストから直接呼んでいる。つまり **`folds` は手で書いた作り物** で、
  * 「本物の同期が本当に `folds` を返すのか」「返ったものが監査ログまで届くのか」は
  * 一度も通っていない。ここはその隙間を埋める:
  *
- * - ライブラリはモックしない（本物の `setupSync` で本物の畳みを起こす）
+ * - ライブラリはモックしない（本物の `setupSync` で本物のかぶりを起こす）
  * - 監査ログもモックしない（本物の `recordAuditLog` が本物の Prisma で書く）
  * - モックするのは Electron（`app.getPath` / `BrowserWindow`）と、
  *   データディレクトリの場所だけ
  *
  * 仕込みは実際に起きうる形にする — 2人の教員が同じ試験の同じ生徒を、
  * それぞれの端末で受験生徒として登録し、それぞれ採点した状態。
- * `ExamStudent` は `@@unique([examId, studentId])` なので2行は同居できない。
+ * `ExamStudent` は `@@unique([examId, studentId])` なので2行は同時に表示できず、
+ * sqlite-nas-sync v0.20.0 は弱い方を隠す（v0.19.0 までは消して1つへ畳んでいた）。
  *
  * ## パスについて
  *
@@ -90,13 +91,14 @@ interface AuditLogRow {
   coalesceKey: string | null
 }
 
-const readSyncMergeAuditLogs = (dbPath: string): AuditLogRow[] =>
+/** 同期が書く監査ログ（隠した・戻した。過去の `sync.merge` も拾って、書かれていないことを見る） */
+const readSyncAuditLogs = (dbPath: string): AuditLogRow[] =>
   withDatabase(dbPath, (db) =>
     db
       .prepare<[], AuditLogRow>(
         `SELECT action, category, "userId" AS userId, "entityType" AS entityType,
                 "entityId" AS entityId, summary, metadata, "coalesceKey" AS coalesceKey
-           FROM "AuditLog" WHERE action = 'sync.merge' ORDER BY "entityId"`
+           FROM "AuditLog" WHERE action LIKE 'sync.%' ORDER BY "entityId"`
       )
       .all()
   )
@@ -110,24 +112,24 @@ const waitForAuditLogs = async (
   dbPath: string,
   expectedCount: number
 ): Promise<AuditLogRow[]> => {
-  let rows = readSyncMergeAuditLogs(dbPath)
+  let rows = readSyncAuditLogs(dbPath)
   for (
     let attempt = 0;
     attempt < 50 && rows.length < expectedCount;
     attempt++
   ) {
     await new Promise((resolve) => setTimeout(resolve, 100))
-    rows = readSyncMergeAuditLogs(dbPath)
+    rows = readSyncAuditLogs(dbPath)
   }
   return rows
 }
 
-/** 端末Aで畳みが起きた同期の結果（`onAfterSync` が受け取るのと同じオブジェクト） */
+/** 端末Aで行が隠れた同期の結果（`onAfterSync` が受け取るのと同じオブジェクト） */
 let foldSyncResult: SyncResult
-/** その次の巡回の結果（畳みのあとも同期が走ることを見る） */
+/** その次の巡回の結果（隠れたあとも同期が走ることを見る） */
 let nextRoundResult: SyncResult
 let auditLogs: AuditLogRow[]
-/** 畳みが起きる直前の監査ログ（ここが空でないと「畳みで書かれた」と言えない） */
+/** 行が隠れる直前の監査ログ（ここが空でないと「隠れたことで書かれた」と言えない） */
 let auditLogsBeforeFold: AuditLogRow[]
 let syncB: SyncInstance
 let stopSyncOnA: () => Promise<void>
@@ -203,13 +205,13 @@ beforeAll(async () => {
     updatedAt: isoMinutesAgo(20),
   })
 
-  // A が自分の行を出し、B がそれを取り込んで（B 側でも畳みが起きる）自分の行を出す
+  // A が自分の行を出し、B がそれを取り込んで（B 側でも隠れる）自分の行を出す
   await triggerSyncNow()
   await syncB.syncNow()
 
-  // A がそれを取り込む。ここで A のローカル行が消える畳みが起きる
+  // A がそれを取り込む。ここで A が表示していた exam-student-a が隠れる
   sentToRenderer.length = 0
-  auditLogsBeforeFold = readSyncMergeAuditLogs(LOCAL_DB_A)
+  auditLogsBeforeFold = readSyncAuditLogs(LOCAL_DB_A)
   foldSyncResult = await triggerSyncNow()
   auditLogs = await waitForAuditLogs(LOCAL_DB_A, 1)
 
@@ -223,55 +225,57 @@ afterAll(async () => {
   fs.rmSync(TEST_ROOT, { recursive: true, force: true })
 })
 
-describe("畳みが起きたときアプリが黙らない", () => {
+describe("かぶった行の片方が隠れたときアプリが黙らない", () => {
   it("本物の同期が folds を返す（作り物ではない）", () => {
     const expectedFolds: SyncRecordFold[] = [
       {
         tableName: "ExamStudent",
         losingId: "exam-student-a",
         winningId: "exam-student-b",
-        removedLocalRow: true,
-        // 消える受験生徒にぶら下がっていた採点行1件が、残る側へ移る
-        movedChildren: 1,
-        // 引き継げず消えた子は無い（参照列を一時的に外せる形なので）
-        lostChildren: 0,
       },
     ]
     expect(foldSyncResult.folds).toEqual(expectedFolds)
-    // 畳みは行が1つ消える操作なので、消えた数にも出る
+    // 隠れた行は表から外れるので、消えた数に出る（事実は残っている）
     expect(foldSyncResult.deleted).toBe(1)
+    expect(foldSyncResult.restores ?? []).toEqual([])
   })
 
-  it("畳みをそのまま renderer へ押し出す", () => {
+  it("隠れた行をそのまま renderer へ押し出す", () => {
     const foldMessages = sentToRenderer.filter(
-      (message) => message.channel === "sync:records-folded"
+      (message) => message.channel === "sync:record-folds-changed"
     )
     expect(foldMessages).toHaveLength(1)
     // main は加工しない（数え上げは renderer 側）
-    expect(foldMessages[0].payload).toEqual(foldSyncResult.folds)
+    expect(foldMessages[0].payload).toEqual({
+      folds: foldSyncResult.folds,
+      restores: [],
+    })
   })
 
-  it("畳みを監査ログへ残す（消えた行が対象・操作者は null・システム操作）", () => {
+  it("隠したことを監査ログへ残す（隠れた行が対象・操作者は null・システム操作）", () => {
     // 直前まで1件も無かったものが、この同期で書かれた
     expect(auditLogsBeforeFold).toEqual([])
     expect(auditLogs).toHaveLength(1)
     const auditLog = auditLogs[0]
+    // 行を消していないので、v0.19.0 までの `sync.merge` では書かない
+    expect(auditLog.action).toBe("sync.duplicate.hide")
     expect(auditLog.category).toBe("system")
     expect(auditLog.userId).toBeNull()
     expect(auditLog.entityType).toBe("ExamStudent")
     expect(auditLog.entityId).toBe("exam-student-a")
     expect(auditLog.summary).toBe(
-      "同期で重複していた試験の受験生徒を1つにまとめました"
+      "同期で重複していた試験の受験生徒の片方を隠しました"
     )
-    expect(auditLog.coalesceKey).toBe("sync.merge:ExamStudent:exam-student-a")
+    expect(auditLog.coalesceKey).toBe(
+      "sync.duplicate.hide:ExamStudent:exam-student-a"
+    )
     expect(JSON.parse(auditLog.metadata ?? "{}")).toMatchObject({
       losingId: "exam-student-a",
       winningId: "exam-student-b",
-      removedLocalRow: true,
     })
   })
 
-  it("畳まれても採点は消えず、勝った受験生徒へ移っている", () => {
+  it("隠れても採点は消えず、表示している受験生徒の下に見えている", () => {
     expect(questionScoreRows(LOCAL_DB_A)).toEqual([
       {
         id: "question-score-a",
@@ -286,10 +290,10 @@ describe("畳みが起きたときアプリが黙らない", () => {
     ])
   })
 
-  it("畳みのあとも次の巡回が正常に走る", () => {
+  it("隠れたあとも次の巡回が正常に走る", () => {
     expect(blockingWarnings(nextRoundResult.warnings)).toEqual([])
     expect(nextRoundResult.clientsSynced).toBe(1)
-    // 畳み直しが続くなら収束していない
+    // 隠し直しが続くなら収束していない
     expect(nextRoundResult.folds).toEqual([])
   })
 

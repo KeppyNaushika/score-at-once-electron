@@ -285,6 +285,23 @@ describe("deployPendingMigrations", () => {
     expect(childReferencingGuardian).toHaveLength(1)
   })
 
+  it("recursive_triggers を立てた接続で流す（同期のトリガーがマイグレーションの書き込みを取りこぼさない）", async () => {
+    // 接続の設定はファイルに残らないので、流している最中の値を表へ写し取って見る
+    writeMigration(
+      "20260101000003_probe_recursive_triggers",
+      `CREATE TABLE "Probe" AS
+         SELECT recursive_triggers AS flag FROM pragma_recursive_triggers;`
+    )
+    const deploy = await loadDeployer()
+
+    expect(deploy({ migrationsDir: MIGRATIONS_DIR })).toBe(1)
+
+    const probe = withDatabase((db) =>
+      db.prepare<[], { flag: number }>(`SELECT flag FROM "Probe"`).get()
+    )
+    expect(probe?.flag).toBe(1)
+  })
+
   it("_prisma_migrations テーブルが無ければ何もしない", async () => {
     fs.rmSync(DB_PATH, { force: true })
     withDatabase((db) => {

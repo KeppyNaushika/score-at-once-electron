@@ -10,15 +10,20 @@
  *
  * DB は `globalSetup` が `prisma db push` で作る `data/test-database.db` の複製を使う。
  * つまり UNIQUE 制約も外部キーも `schema.prisma` そのままで、
- * `Tag.name` / `ExamStudent(examId, studentId)` の畳みは実際の索引が起こす。
+ * `Tag.name` / `ExamStudent(examId, studentId)` のかぶり（片方が隠れる）は実際の索引が起こす。
+ *
+ * 行を書く接続はアプリと同じ開き方（`openAppDatabase`）にする。同期のトリガーは
+ * `recursive_triggers` が立った接続で書かれることを前提にしているので、テストだけ素の
+ * 接続で書くと、アプリでは起きない食い違いを見ることになる。
  *
  * このファイルは `*.test.ts` ではないので vitest の収集対象にならない（`include` 参照）。
  */
-import Database from "better-sqlite3"
 import * as fs from "fs"
 import * as path from "path"
 import { setupSync, type SyncInstance } from "sqlite-nas-sync"
 
+import { openAppDatabase } from "../../electron-src/lib/prisma/sqliteConnection"
+import type { SqliteDatabase } from "../../electron-src/lib/prisma/sqliteSchemaUtils"
 import {
   SYNC_EXCLUDE_TABLES,
   SYNC_TABLE_OPTIONS,
@@ -30,14 +35,12 @@ export const GROUND_TRUTH_DB = path.resolve(
   "../../data/test-database.db"
 )
 
-export type SqliteDatabase = InstanceType<typeof Database>
-
 /** 短命の接続で1操作だけ行う。ライブラリ側の接続とは WAL 経由で共存する */
 export const withDatabase = <T>(
   dbPath: string,
   operation: (db: SqliteDatabase) => T
 ): T => {
-  const db = new Database(dbPath)
+  const db = openAppDatabase(dbPath)
   try {
     return operation(db)
   } finally {
@@ -108,17 +111,21 @@ export const isoMinutesAgo = (minutes: number): string =>
   new Date(Date.now() - minutes * 60_000).toISOString().replace("Z", "+00:00")
 
 /**
- * 同期を止めうる警告だけを拾う。
+ * 同期を止めうる警告と、行が表から外れたことを知らせる警告だけを拾う。
  *
- * 畳みが壊れているときの症状はここに出る — ユニーク違反で取り込みが落ちるか、
- * 子の付け替えに失敗して外部キーで落ちるか。空でなければ「その相手からは以後
- * 何も届かない」状態になっている。
+ * v0.19.0 までは、ユニーク違反や外部キー違反で取り込みが落ちると「その相手からは以後
+ * 何も届かない」状態になった。v0.20.0 の取り込みは帳簿にしか書かないので、その形では
+ * 落ちなくなったが、代わりに**置けなかった行**（`Unplaceable …`）と**作り直しの失敗**
+ * （`Rebuild failed …`）が警告に出る。どちらも行が表から黙って外れる症状なので、
+ * 同じく通過させない。
  */
 export const blockingWarnings = (warnings: string[]): string[] =>
   warnings.filter(
     (warning) =>
       warning.includes("UNIQUE constraint failed") ||
-      warning.includes("FOREIGN KEY")
+      warning.includes("FOREIGN KEY") ||
+      warning.startsWith("Unplaceable") ||
+      warning.startsWith("Rebuild failed")
   )
 
 // ---------------------------------------------------------------------------
@@ -168,7 +175,7 @@ export const tagRows = (dbPath: string): Array<{ id: string; name: string }> =>
 /**
  * 採点1マスまで届く最小の骨組みを1端末へ入れる。
  *
- * ExamStudent の畳み（`@@unique([examId, studentId])`）を起こすには、
+ * ExamStudent のかぶり（`@@unique([examId, studentId])`）を起こすには、
  * 両端末が同じ試験・同じ生徒を持っている必要がある。ここで作った骨組みを
  * 先に同期しておくと、あとは各端末が独立に ExamStudent を作るだけで衝突が起きる。
  */
@@ -305,32 +312,4 @@ export const questionScoreRows = (
            FROM "QuestionScore" ORDER BY id`
       )
       .all()
-  )
-
-/** ライブラリが端末をまたいで畳み先を伝えるための墓標（`mergedInto`） */
-export const tombstoneRows = (
-  dbPath: string,
-  tableName: string
-): Array<{ recordId: string; mergedInto: string | null }> =>
-  withDatabase(dbPath, (db) =>
-    db
-      .prepare<[string], { recordId: string; mergedInto: string | null }>(
-        `SELECT recordId, mergedInto FROM _tombstone
-          WHERE tableName = ? ORDER BY recordId`
-      )
-      .all(tableName)
-  )
-
-/** ローカルの読み替え索引（あとから届く敗者の子を勝者へ向け直すために使う） */
-export const idMergeRows = (
-  dbPath: string,
-  tableName: string
-): Array<{ losingId: string; winningId: string }> =>
-  withDatabase(dbPath, (db) =>
-    db
-      .prepare<[string], { losingId: string; winningId: string }>(
-        `SELECT losingId, winningId FROM _id_merge
-          WHERE tableName = ? ORDER BY losingId`
-      )
-      .all(tableName)
   )

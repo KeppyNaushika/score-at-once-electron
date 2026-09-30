@@ -12,10 +12,10 @@
  * - 既にテーブルを持つDBには一切書き込まない（データ破壊・スキーマ上書きをしない）
  */
 
-import Database from "better-sqlite3"
 import * as fs from "fs"
 import * as path from "path"
 
+import { openAppDatabase } from "../sqliteConnection"
 import { countUserTables, type SqliteDatabase } from "../sqliteSchemaUtils"
 import { INDEX_SQL, MIGRATION_SQL } from "./migrationSql"
 
@@ -50,9 +50,9 @@ export const bootstrapSchema = (dbPath: string): SchemaBootstrapResult => {
 
   // ファイルが存在しない場合はSQLiteが作成する。
   // -wal/-shm が残っていれば、この接続で自動的にリプレイされ既存テーブルが見える。
-  const db = new Database(absolutePath)
-  // 共有ドライブ（NAS）で他クライアントが一時的にロックしている場合に備える
-  db.pragma("busy_timeout = 5000")
+  // 共有ドライブ（NAS）のロック待ちと、同期のトリガーの前提（recursive_triggers）を
+  // 立てた接続で開く。書くのはテーブルの無い DB だけだが、開き方を1つに揃えておく
+  const db = openAppDatabase(absolutePath)
 
   try {
     if (countUserTables(db) > 0) return "existing"

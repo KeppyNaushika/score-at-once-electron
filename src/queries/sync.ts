@@ -35,14 +35,39 @@ export const subscribeSyncStatus = (
 ) => window.electronAPI.sync.onStatusChanged(onChanged)
 
 /**
- * 同期が別id・同一ユニークキーの行を1つへ畳んだら呼ばれる購読を張る。
+ * 同期で、別id・同一ユニークキーでかぶった行の片方が隠れたり、隠れていた行が
+ * 表示に戻ったりしたら呼ばれる購読を張る。
  *
- * 畳みは黙って行が1つ消える操作なので、起きた瞬間に押し出される（既読は持たない）。
+ * どちらも画面の上では黙って行が消えた・現れたように見えるので、起きた瞬間に
+ * 押し出される（既読は持たない）。外すのは戻り値を呼ぶ。
+ */
+export const subscribeSyncRecordFoldsChanged = (
+  onChanged: Parameters<typeof window.electronAPI.sync.onRecordFoldsChanged>[0]
+) => window.electronAPI.sync.onRecordFoldsChanged(onChanged)
+
+/**
+ * 親の行が他のPCで削除されたために表から外れた行、親が作り直されて戻った行が
+ * 出たら呼ばれる購読を張る。
+ *
+ * こちらも画面の上では黙って行が消えた・現れたように見えるので、起きた瞬間に
+ * 押し出される（既読は持たない）。外すのは戻り値を呼ぶ。
+ */
+export const subscribeSyncParentDeletedChanged = (
+  onChanged: Parameters<
+    typeof window.electronAPI.sync.onParentDeletedChanged
+  >[0]
+) => window.electronAPI.sync.onParentDeletedChanged(onChanged)
+
+/**
+ * 同期が新しく出した注意書きが届いたら呼ばれる購読を張る。
+ *
+ * 同じ注意は原因が続くかぎり同期のたびに出るので、押し出されるのは**新しく出た回だけ**。
+ * 消えない一覧は同期の状態（`lastWarnings`）にあるので、取りこぼしても読める。
  * 外すのは戻り値を呼ぶ。
  */
-export const subscribeSyncRecordFolds = (
-  onFolded: Parameters<typeof window.electronAPI.sync.onRecordsFolded>[0]
-) => window.electronAPI.sync.onRecordsFolded(onFolded)
+export const subscribeSyncWarningsChanged = (
+  onChanged: Parameters<typeof window.electronAPI.sync.onWarningsChanged>[0]
+) => window.electronAPI.sync.onWarningsChanged(onChanged)
 
 // =====================================================================
 // 書き込み
