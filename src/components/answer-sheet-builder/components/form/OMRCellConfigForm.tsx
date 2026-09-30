@@ -153,11 +153,7 @@ export function OMRCellConfigForm({
           <Scan className="h-3.5 w-3.5 text-muted-foreground" />
           <Label className="text-xs text-muted-foreground">OMR自動認識</Label>
         </div>
-        <Switch
-          className="scale-75"
-          checked={enabled}
-          onCheckedChange={handleToggle}
-        />
+        <Switch checked={enabled} onCheckedChange={handleToggle} />
       </div>
 
       {enabled && config && (
@@ -294,9 +290,9 @@ function ChoiceConfigFields({
           <Label className="min-w-12 text-xs text-muted-foreground">
             選択肢数
           </Label>
-          <input
+          <Input
             type="number"
-            className="h-7 w-14 [appearance:textfield] rounded border border-input px-1.5 text-center text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="h-7 w-14 [appearance:textfield] rounded px-1.5 text-center text-xs md:text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             value={config.numChoices}
             min={2}
             max={10}

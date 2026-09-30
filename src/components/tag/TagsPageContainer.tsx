@@ -3,15 +3,25 @@
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { Calculator, Edit2, PlusCircle, Trash2, XIcon } from "lucide-react"
+import { Calculator, Edit2, PlusCircle, Tag, Trash2, XIcon } from "lucide-react"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
 import { DragHandle } from "@/components/common/sortable-table/DragHandle"
 import { SortableTableProvider } from "@/components/common/sortable-table/SortableTableProvider"
 import { useSortableRow } from "@/components/common/sortable-table/useSortableRow"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { ColorPicker } from "@/components/ui/color-picker"
 import {
   Dialog,
@@ -20,6 +30,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -31,6 +48,7 @@ import {
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import type { TagSubtotalGroupWithSubtotalGroup } from "@/electron-src/lib/prisma/tagSubtotalGroup"
 import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import {
   createTagMutation,
   deleteTagMutation,
@@ -307,6 +325,7 @@ export function TagsPageContainer() {
   const [modalTag, setModalTag] = useState<TagWithAllRelations | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [expandedTagId, setExpandedTagId] = useState<string | null>(null)
+  const tagDeletion = useDialogTarget<TagWithAllRelations>()
 
   // 紐づく小計点グループは開いたタグの分だけ引く
   const { data: linkedSubtotalGroups = null } = useQuery({
@@ -353,20 +372,19 @@ export function TagsPageContainer() {
     setShowModal(true)
   }
 
-  const handleDelete = async (tag: TagWithAllRelations) => {
-    // 結合行はどれも onDelete: Cascade なので、付いている先すべてから外れる
-    // （付いている先そのものは消えない）。どこから外れるかは利用先の内訳で示す
-    const usage = formatTagUsage(tag)
-    const detail =
-      usage === "未使用"
-        ? ""
-        : `\n付いている先（${usage}）からこのタグが外れます。試験や資料などそのものは消えません。`
-    if (!window.confirm(`タグ「${tag.name}」を削除しますか？${detail}`)) return
-
+  const handleConfirmDelete = () => {
+    const tag = tagDeletion.target
+    if (tag === null) return
     deleteTag.mutate(tag.id, {
       onSuccess: () => toast.success(`タグ「${tag.name}」を削除しました`),
     })
   }
+
+  // 結合行はどれも onDelete: Cascade なので、付いている先すべてから外れる
+  // （付いている先そのものは消えない）。どこから外れるかは利用先の内訳で示す
+  const tagToDeleteUsage = tagDeletion.target
+    ? formatTagUsage(tagDeletion.target)
+    : null
 
   const handleSave = async (name: string, color: string | null) => {
     // 失敗はそのまま投げ返す（モーダルを閉じないため）。
@@ -422,11 +440,17 @@ export function TagsPageContainer() {
 
         <div className="flex-1 overflow-auto p-4">
           {tags.length === 0 ? (
-            <div className="flex h-32 items-center justify-center">
-              <p className="text-muted-foreground">
-                タグがまだ作成されていません。教科名や試験種別などのタグを作成しましょう。
-              </p>
-            </div>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Tag />
+                </EmptyMedia>
+                <EmptyTitle>タグがまだ作成されていません</EmptyTitle>
+                <EmptyDescription>
+                  教科名や試験種別などのタグを作成しましょう。
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
             <TooltipProvider delayDuration={300}>
               <div className="mx-auto max-w-xl space-y-2">
@@ -446,7 +470,7 @@ export function TagsPageContainer() {
                         void handleToggleSubtotalGroups(tag)
                       }
                       onEdit={handleEdit}
-                      onDelete={(tag) => void handleDelete(tag)}
+                      onDelete={tagDeletion.openWith}
                     />
                   ))}
                 </SortableTableProvider>
@@ -455,6 +479,33 @@ export function TagsPageContainer() {
           )}
         </div>
       </div>
+
+      <AlertDialog
+        open={tagDeletion.isOpen}
+        onOpenChange={tagDeletion.handleOpenChange}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              タグ「{tagDeletion.target?.name}」を削除しますか？
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {tagToDeleteUsage === null || tagToDeleteUsage === "未使用"
+                ? null
+                : `付いている先（${tagToDeleteUsage}）からこのタグが外れます。試験や資料などそのものは消えません。`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={handleConfirmDelete}
+            >
+              削除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

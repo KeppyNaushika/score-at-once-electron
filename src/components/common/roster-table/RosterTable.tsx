@@ -26,8 +26,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Table, TableBody } from "@/components/ui/table"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { queryKeys } from "@/lib/queryKeys"
 
 export interface RosterTableHandle {
@@ -80,10 +81,8 @@ export function RosterTable({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
-  /** 削除確認の対象。null なら確認ダイアログを出していない */
-  const [pendingRemovalIds, setPendingRemovalIds] = useState<string[] | null>(
-    null
-  )
+  /** 削除確認の対象（確認を開いた時点の選択） */
+  const rowRemoval = useDialogTarget<string[]>()
   const [isRemoving, setIsRemoving] = useState(false)
   const [removalError, setRemovalError] = useState<string | null>(null)
 
@@ -224,14 +223,14 @@ export function RosterTable({
   }
 
   const handleConfirmRemove = async () => {
-    if (!pendingRemovalIds) return
+    if (!rowRemoval.target) return
     setIsRemoving(true)
     setRemovalError(null)
     try {
-      await adapter.removeRows(pendingRemovalIds)
+      await adapter.removeRows(rowRemoval.target)
       setSelectedIds(new Set())
       await loadData()
-      setPendingRemovalIds(null)
+      rowRemoval.close()
     } catch (error) {
       // 失敗はダイアログを開いたまま伝える。閉じてしまうと console 以外に痕跡が残らず、
       // 消えていないのに消えたように見える
@@ -260,7 +259,7 @@ export function RosterTable({
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => setPendingRemovalIds(Array.from(selectedIds))}
+            onClick={() => rowRemoval.openWith(Array.from(selectedIds))}
           >
             選択した生徒を削除 ({selectedIds.size})
           </Button>
@@ -348,10 +347,10 @@ export function RosterTable({
       {/* 生徒削除の確認ダイアログ。名簿から外すと子データも cascade で消えるため、
           何が失われるかを事前に明示する（試験05の削除確認と同じ扱い） */}
       <AlertDialog
-        open={pendingRemovalIds !== null}
+        open={rowRemoval.isOpen}
         onOpenChange={(open) => {
           if (!open && !isRemoving) {
-            setPendingRemovalIds(null)
+            rowRemoval.close()
             setRemovalError(null)
           }
         }}
@@ -359,7 +358,7 @@ export function RosterTable({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              選択した生徒{pendingRemovalIds?.length ?? 0}名を削除しますか？
+              選択した生徒{rowRemoval.target?.length ?? 0}名を削除しますか？
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
@@ -394,6 +393,7 @@ export function RosterTable({
               キャンセル
             </AlertDialogCancel>
             <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
               // 既定の「クリックで閉じる」を止め、削除が終わるまでダイアログを残す。
               // 閉じてしまうと進行表示も失敗通知も出せない。
               onClick={(event) => {

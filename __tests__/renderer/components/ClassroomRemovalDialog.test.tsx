@@ -49,6 +49,7 @@ describe("ClassroomRemovalDialog", () => {
 
     render(
       <ClassroomRemovalDialog
+        open
         entry={entry}
         mode="unlink-only"
         onConfirm={onConfirm}
@@ -69,6 +70,7 @@ describe("ClassroomRemovalDialog", () => {
 
     render(
       <ClassroomRemovalDialog
+        open
         entry={entry}
         mode="can-delete-students"
         fetchRemovalPreview={fetchRemovalPreview}
@@ -94,6 +96,7 @@ describe("ClassroomRemovalDialog", () => {
 
     render(
       <ClassroomRemovalDialog
+        open
         entry={entry}
         mode="can-delete-students"
         fetchRemovalPreview={fetchRemovalPreview}
@@ -128,6 +131,7 @@ describe("ClassroomRemovalDialog", () => {
 
     render(
       <ClassroomRemovalDialog
+        open
         entry={entry}
         mode="can-delete-students"
         fetchRemovalPreview={fetchRemovalPreview}
@@ -159,6 +163,7 @@ describe("ClassroomRemovalDialog", () => {
 
     render(
       <ClassroomRemovalDialog
+        open
         entry={entry}
         mode="can-delete-students"
         fetchRemovalPreview={fetchRemovalPreview}
@@ -202,6 +207,7 @@ describe("ClassroomRemovalDialog", () => {
 
     render(
       <ClassroomRemovalDialog
+        open
         entry={entry}
         mode="can-delete-students"
         fetchRemovalPreview={fetchRemovalPreview}

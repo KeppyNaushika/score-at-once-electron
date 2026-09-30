@@ -1,13 +1,7 @@
 "use client"
 
+import { Combobox } from "@/components/common/Combobox"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type { ExistingItemInfo } from "@/types/examArchive.types"
 
@@ -74,6 +68,14 @@ export function UserIntegrationPanel({ wizard }: UserIntegrationPanelProps) {
   }
 
   const existingUsers: ExistingItemInfo[] = overview.allExistingItems ?? []
+  // 利用者の名前には、表示名と違えば利用者名が括弧で添えてある（照合側で整える）
+  const userOptions = [
+    { value: CREATE_NEW_USER, label: "新しい利用者として登録する" },
+    ...existingUsers.map((existingUser) => ({
+      value: existingUser.id,
+      label: existingUser.name,
+    })),
+  ]
   const decisionByImportId = new Map(
     state.idIntegrationConfig.user.decisions.map((decision) => [
       decision.importId,
@@ -114,7 +116,8 @@ export function UserIntegrationPanel({ wizard }: UserIntegrationPanelProps) {
                       {graderRow.matchNote}
                     </span>
                   </div>
-                  <Select
+                  <Combobox
+                    options={userOptions}
                     value={selectedValue}
                     onValueChange={(value) =>
                       updateIdIntegrationDecision("user", graderRow.importId, {
@@ -127,24 +130,12 @@ export function UserIntegrationPanel({ wizard }: UserIntegrationPanelProps) {
                           value === CREATE_NEW_USER ? undefined : value,
                       })
                     }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={CREATE_NEW_USER}>
-                        新しい利用者として登録する
-                      </SelectItem>
-                      {existingUsers.map((existingUser) => (
-                        <SelectItem
-                          key={existingUser.id}
-                          value={existingUser.id}
-                        >
-                          {existingUser.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="利用者を選択"
+                    searchPlaceholder="名前・利用者名で検索"
+                    emptyText="該当する利用者がいません"
+                    aria-label={`${graderRow.displayLabel}を結ぶ利用者`}
+                    className="w-full"
+                  />
                 </div>
               )
             })}

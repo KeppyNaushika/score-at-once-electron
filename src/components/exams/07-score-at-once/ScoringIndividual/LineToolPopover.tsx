@@ -5,6 +5,7 @@ import { Ruler } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Kbd } from "@/components/ui/kbd"
 import { Label } from "@/components/ui/label"
 import {
   Popover,
@@ -12,10 +13,26 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { cn } from "@/lib/utils"
+import type { LineStyle } from "@/types/drawingAnnotation.types"
 
 import { COLOR_PALETTE } from "./constants/drawingConstants"
 import type { CanvasTool } from "./types"
+
+interface LineStyleOption {
+  lineStyle: LineStyle
+  label: string
+}
+
+const LINE_STYLE_OPTIONS: LineStyleOption[] = [
+  { lineStyle: "solid", label: "直線" },
+  { lineStyle: "wave", label: "波線" },
+  { lineStyle: "zigzag", label: "折線" },
+  { lineStyle: "double", label: "二重線" },
+  { lineStyle: "arrow", label: "矢印 →" },
+  { lineStyle: "both_arrow", label: "両矢印 ↔" },
+]
 
 interface LineToolPopoverProps {
   currentTool: CanvasTool
@@ -117,9 +134,9 @@ export function LineToolPopover({
               {shortcutKey && (
                 <div className="mt-1 text-xs text-gray-400">
                   キー:{" "}
-                  <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
+                  <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
                     {shortcutKey.toUpperCase()}
-                  </kbd>
+                  </Kbd>
                 </div>
               )}
             </div>
@@ -135,74 +152,35 @@ export function LineToolPopover({
           {/* 線種選択 */}
           <div onPointerDown={(e) => e.stopPropagation()}>
             <Label className="text-xs">線種</Label>
-            <div className="mt-1 grid grid-cols-2 gap-1">
-              <Button
-                size="sm"
-                variant={lineStyle === "solid" ? "default" : "outline"}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onLineStyleChange("solid")
-                }}
-                className="h-8 text-xs"
-              >
-                直線
-              </Button>
-              <Button
-                size="sm"
-                variant={lineStyle === "wave" ? "default" : "outline"}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onLineStyleChange("wave")
-                }}
-                className="h-8 text-xs"
-              >
-                波線
-              </Button>
-              <Button
-                size="sm"
-                variant={lineStyle === "zigzag" ? "default" : "outline"}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onLineStyleChange("zigzag")
-                }}
-                className="h-8 text-xs"
-              >
-                折線
-              </Button>
-              <Button
-                size="sm"
-                variant={lineStyle === "double" ? "default" : "outline"}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onLineStyleChange("double")
-                }}
-                className="h-8 text-xs"
-              >
-                二重線
-              </Button>
-              <Button
-                size="sm"
-                variant={lineStyle === "arrow" ? "default" : "outline"}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onLineStyleChange("arrow")
-                }}
-                className="h-8 text-xs"
-              >
-                矢印 →
-              </Button>
-              <Button
-                size="sm"
-                variant={lineStyle === "both_arrow" ? "default" : "outline"}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onLineStyleChange("both_arrow")
-                }}
-                className="h-8 text-xs"
-              >
-                両矢印 ↔
-              </Button>
-            </div>
+            {/* 採点画面はキーボード優先。Tab で1つずつ辿れる並びを保つため、矢印キーでの移動（roving focus）は切る */}
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              size="sm"
+              rovingFocus={false}
+              value={lineStyle}
+              aria-label="線種"
+              className="mt-1 grid w-full grid-cols-2 gap-1 data-[variant=outline]:shadow-none"
+              onValueChange={(value) => {
+                // 選択中をもう一度押すと空文字が来る。選択は外さない
+                const nextLineStyleOption = LINE_STYLE_OPTIONS.find(
+                  (candidateOption) => candidateOption.lineStyle === value
+                )
+                if (nextLineStyleOption)
+                  onLineStyleChange(nextLineStyleOption.lineStyle)
+              }}
+            >
+              {LINE_STYLE_OPTIONS.map((lineStyleOption) => (
+                <ToggleGroupItem
+                  key={lineStyleOption.lineStyle}
+                  value={lineStyleOption.lineStyle}
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-8 rounded-md text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[variant=outline]:border-l"
+                >
+                  {lineStyleOption.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
           </div>
 
           {/* 線幅 */}

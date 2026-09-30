@@ -1,16 +1,24 @@
 "use client"
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Plus } from "lucide-react"
+import { Calculator, Plus } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
 import { ListFilterBar } from "@/components/common/ListFilterBar"
-import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { DeleteSubtotalGroupModal } from "@/components/subtotal-groups/components/DeleteSubtotalGroupModal"
 import { SubtotalGroupCard } from "@/components/subtotal-groups/components/SubtotalGroupCard"
 import { SubtotalGroupModal } from "@/components/subtotal-groups/components/SubtotalGroupModal"
 import { Button } from "@/components/ui/button"
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { Spinner } from "@/components/ui/spinner"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import {
   subtotalGroupListQuery,
@@ -51,9 +59,7 @@ export function SubtotalGroupsPageContainer() {
   } = useQuery(subtotalGroupListQuery())
   const ipcError = error?.message ?? null
   // 削除の確認を開いているグループ
-  const [deletingGroup, setDeletingGroup] = useState<SubtotalGroupRow | null>(
-    null
-  )
+  const groupDeletion = useDialogTarget<SubtotalGroupRow>()
 
   const fetchSubtotalGroups = useCallback(
     () =>
@@ -85,7 +91,7 @@ export function SubtotalGroupsPageContainer() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // モーダルが開いている時は無視
-      if (showModal || deletingGroup !== null) return
+      if (showModal || groupDeletion.isOpen) return
 
       if ((event.ctrlKey || event.metaKey) && event.key === "n") {
         event.preventDefault()
@@ -100,7 +106,7 @@ export function SubtotalGroupsPageContainer() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [deletingGroup, fetchSubtotalGroups, handleCreate, showModal])
+  }, [groupDeletion.isOpen, fetchSubtotalGroups, handleCreate, showModal])
 
   // 編集
   const handleEdit = (group: SubtotalGroupRow) => {
@@ -111,7 +117,7 @@ export function SubtotalGroupsPageContainer() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <LoadingSpinner />
+        <Spinner className="size-6" />
       </div>
     )
   }
@@ -164,19 +170,26 @@ export function SubtotalGroupsPageContainer() {
       {/* グループ一覧 */}
       <div className="min-h-0 flex-1 overflow-auto p-4">
         {!ipcError && filteredGroups.length === 0 ? (
-          <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-            <p className="mb-2 text-muted-foreground">
-              {subtotalGroups.length > 0
-                ? "検索結果が見つかりません"
-                : "小計点グループがありません"}
-            </p>
+          <Empty className="h-full rounded-lg border border-dashed">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Calculator />
+              </EmptyMedia>
+              <EmptyTitle>
+                {subtotalGroups.length > 0
+                  ? "検索結果が見つかりません"
+                  : "小計点グループがありません"}
+              </EmptyTitle>
+            </EmptyHeader>
             {subtotalGroups.length === 0 && (
-              <Button variant="outline" onClick={handleCreate}>
-                <Plus className="mr-2 h-4 w-4" />
-                最初のグループを作成
-              </Button>
+              <EmptyContent>
+                <Button variant="outline" onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  最初のグループを作成
+                </Button>
+              </EmptyContent>
             )}
-          </div>
+          </Empty>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredGroups.map((group) => (
@@ -184,7 +197,7 @@ export function SubtotalGroupsPageContainer() {
                 key={group.id}
                 group={group}
                 onEdit={() => handleEdit(group)}
-                onDelete={() => setDeletingGroup(group)}
+                onDelete={() => groupDeletion.openWith(group)}
               />
             ))}
           </div>
@@ -193,8 +206,9 @@ export function SubtotalGroupsPageContainer() {
 
       {/* 削除確認。成績算出・設問で使われていれば断る */}
       <DeleteSubtotalGroupModal
-        group={deletingGroup}
-        onClose={() => setDeletingGroup(null)}
+        open={groupDeletion.isOpen}
+        group={groupDeletion.target}
+        onClose={groupDeletion.close}
       />
 
       {/* モーダル */}

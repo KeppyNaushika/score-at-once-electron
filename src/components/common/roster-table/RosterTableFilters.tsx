@@ -2,16 +2,12 @@
 
 import type { Classroom } from "@prisma/client"
 import { Search } from "lucide-react"
+import { useMemo } from "react"
 
+import { Combobox } from "@/components/common/Combobox"
 import type { RosterFilter } from "@/components/common/roster-table/types"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { classroomSearchKeywords } from "@/lib/searchKeywords"
 
 interface RosterTableFiltersProps {
   searchTerm: string
@@ -31,6 +27,18 @@ export function RosterTableFilters({
   classrooms,
   additionalFilters,
 }: RosterTableFiltersProps) {
+  const classroomFilterOptions = useMemo(
+    () => [
+      { value: "all", label: "すべての学級" },
+      ...classrooms.map((classroom) => ({
+        value: classroom.id,
+        label: classroom.name,
+        keywords: classroomSearchKeywords(classroom),
+      })),
+    ],
+    [classrooms]
+  )
+
   return (
     <div className="flex flex-1 items-center gap-3">
       <div className="relative flex-1">
@@ -43,19 +51,16 @@ export function RosterTableFilters({
         />
       </div>
 
-      <Select value={selectedClassroomId} onValueChange={onClassroomChange}>
-        <SelectTrigger className="w-40">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">すべての学級</SelectItem>
-          {classrooms.map((classroom) => (
-            <SelectItem key={classroom.id} value={classroom.id}>
-              {classroom.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Combobox
+        options={classroomFilterOptions}
+        value={selectedClassroomId}
+        onValueChange={onClassroomChange}
+        placeholder="学級フィルタ"
+        searchPlaceholder="学級名・学年・学級コードで検索"
+        emptyText="該当する学級がありません"
+        aria-label="学級で絞り込む"
+        className="w-40"
+      />
 
       {additionalFilters.map((filter, index) => (
         <div key={index}>{filter.render()}</div>

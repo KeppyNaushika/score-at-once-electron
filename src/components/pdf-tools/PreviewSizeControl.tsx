@@ -3,6 +3,11 @@
 import { ZoomIn, ZoomOut } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 /** ページプレビューの列数（1行あたりの枚数）の範囲と初期値 */
 export const PREVIEW_COLUMNS_MIN = 2
@@ -28,29 +33,39 @@ export default function PreviewSizeControl({
       <span className="mr-1 text-sm text-muted-foreground">
         ページプレビュー
       </span>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8 w-8 p-0"
-        onClick={() => onColumnsChange(columns + 1)}
-        disabled={columns >= PREVIEW_COLUMNS_MAX}
-        title="小さくする（1行の枚数を増やす）"
-      >
-        <ZoomOut className="h-4 w-4" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            aria-label="小さくする（1行の枚数を増やす）"
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => onColumnsChange(columns + 1)}
+            disabled={columns >= PREVIEW_COLUMNS_MAX}
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>小さくする（1行の枚数を増やす）</TooltipContent>
+      </Tooltip>
       <span className="w-14 text-center text-sm tabular-nums">
         {columns}枚/行
       </span>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8 w-8 p-0"
-        onClick={() => onColumnsChange(columns - 1)}
-        disabled={columns <= PREVIEW_COLUMNS_MIN}
-        title="大きくする（1行の枚数を減らす）"
-      >
-        <ZoomIn className="h-4 w-4" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            aria-label="大きくする（1行の枚数を減らす）"
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => onColumnsChange(columns - 1)}
+            disabled={columns <= PREVIEW_COLUMNS_MIN}
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>大きくする（1行の枚数を減らす）</TooltipContent>
+      </Tooltip>
     </div>
   )
 }

@@ -12,6 +12,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import { toast } from "sonner"
 
+import { Combobox } from "@/components/common/Combobox"
 import { Button } from "@/components/ui/button"
 import {
   ContextMenu,
@@ -26,6 +27,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type {
@@ -162,6 +168,20 @@ export function AnnotationBrowserPanel({
     )
   }, [displayItems])
 
+  const examStudentFilterOptions = useMemo(
+    () => [
+      { value: "all", label: "全生徒" },
+      ...uniqueExamStudents.map((examStudent) => ({
+        value: examStudent.id,
+        label: `${examStudent.student.studentNumber} ${examStudent.student.lastName}${examStudent.student.firstName}`,
+        keywords: [
+          `${examStudent.student.lastNameKana} ${examStudent.student.firstNameKana}`,
+        ],
+      })),
+    ],
+    [uniqueExamStudents]
+  )
+
   // 連打防止用フラグ
   const isAddingRef = useRef(false)
 
@@ -273,26 +293,18 @@ export function AnnotationBrowserPanel({
           </Select>
 
           {/* 生徒フィルタ */}
-          <Select
+          <Combobox
+            options={examStudentFilterOptions}
             value={filters.examStudentId ?? "all"}
-            onValueChange={(v) =>
-              onFiltersChange({ examStudentId: v === "all" ? null : v })
+            onValueChange={(value) =>
+              onFiltersChange({ examStudentId: value === "all" ? null : value })
             }
-          >
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="生徒" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全生徒</SelectItem>
-              {uniqueExamStudents.map((examStudent) => (
-                <SelectItem key={examStudent.id} value={examStudent.id}>
-                  {examStudent.student.studentNumber}{" "}
-                  {examStudent.student.lastName}
-                  {examStudent.student.firstName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            placeholder="生徒"
+            searchPlaceholder="番号・氏名で検索"
+            emptyText="該当する生徒がいません"
+            aria-label="生徒で絞り込む"
+            className="h-8 text-xs"
+          />
         </div>
 
         <div className="flex items-center gap-2">
@@ -405,22 +417,31 @@ export function AnnotationBrowserPanel({
                   item.representative.questionScore?.cropRegionId &&
                   (item.count > 1 ? (
                     <ContextMenu>
-                      <ContextMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 shrink-0 px-1.5 text-gray-400 hover:text-blue-500"
-                          title="クリック: 移動 / 右クリック: 生徒選択"
-                          onClick={() =>
-                            onNavigateTo(
-                              item.representative.questionScore!.examStudentId!,
-                              item.representative.questionScore!.cropRegionId!
-                            )
-                          }
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                      </ContextMenuTrigger>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <ContextMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 shrink-0 px-1.5 text-gray-400 hover:text-blue-500"
+                              aria-label="クリック: 移動 / 右クリック: 生徒選択"
+                              onClick={() =>
+                                onNavigateTo(
+                                  item.representative.questionScore!
+                                    .examStudentId!,
+                                  item.representative.questionScore!
+                                    .cropRegionId!
+                                )
+                              }
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          </ContextMenuTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          クリック: 移動 / 右クリック: 生徒選択
+                        </TooltipContent>
+                      </Tooltip>
                       <ContextMenuContent>
                         {item.allIds
                           .map((id) =>
@@ -456,7 +477,7 @@ export function AnnotationBrowserPanel({
                               >
                                 {label}
                                 {question && (
-                                  <span className="ml-2 text-xs text-gray-400">
+                                  <span className="text-xs text-gray-400">
                                     {question}
                                   </span>
                                 )}
@@ -466,20 +487,25 @@ export function AnnotationBrowserPanel({
                       </ContextMenuContent>
                     </ContextMenu>
                   ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 shrink-0 px-1.5 text-gray-400 hover:text-blue-500"
-                      title="この生徒・設問に移動"
-                      onClick={() =>
-                        onNavigateTo(
-                          item.representative.questionScore!.examStudentId!,
-                          item.representative.questionScore!.cropRegionId!
-                        )
-                      }
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          aria-label="この生徒・設問に移動"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 shrink-0 px-1.5 text-gray-400 hover:text-blue-500"
+                          onClick={() =>
+                            onNavigateTo(
+                              item.representative.questionScore!.examStudentId!,
+                              item.representative.questionScore!.cropRegionId!
+                            )
+                          }
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>この生徒・設問に移動</TooltipContent>
+                    </Tooltip>
                   ))}
 
                 {/* 追加ボタン */}

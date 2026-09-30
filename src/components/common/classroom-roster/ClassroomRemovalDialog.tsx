@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -24,12 +24,17 @@ import {
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
 import type { ClassroomRemovalMode, ClassroomRosterEntry } from "./types"
 
 interface ClassroomRemovalDialogProps {
-  /** 削除対象（null のとき閉じている） */
+  open: boolean
+  /**
+   * 削除対象。閉じても残す（閉じるアニメーションの間も学級名を出したままにする）。
+   * まだ一度も開いていなければ null
+   */
   entry: ClassroomRosterEntry | null
   mode: ClassroomRemovalMode
   /** can-delete-students モードで、巻き添えになるものを数える */
@@ -199,6 +204,7 @@ function RemovalChoiceForm({
  *   専属生徒を削除する選択かつ対象が1名以上なら、2段階目で取り消し不可の最終確認。
  */
 export function ClassroomRemovalDialog({
+  open,
   entry,
   mode,
   fetchRemovalPreview,
@@ -218,7 +224,7 @@ export function ClassroomRemovalDialog({
     preview !== null && preview.entry === entry ? preview.deletionCounts : null
 
   // プレビュー取得関数は毎レンダー identity が変わりうるので ref で持ち、
-  // useEffect の再発火を「対象(entry)が変わったとき」だけに限定する。
+  // useEffect の再発火を「開いたとき・対象(entry)が変わったとき」だけに限定する。
   const fetchRemovalPreviewRef = useRef(fetchRemovalPreview)
   useEffect(() => {
     fetchRemovalPreviewRef.current = fetchRemovalPreview
@@ -247,15 +253,14 @@ export function ClassroomRemovalDialog({
   )
 
   useEffect(() => {
-    if (!entry || mode !== "can-delete-students") return
+    if (!open || !entry || mode !== "can-delete-students") return
     void countRemovalImpact(entry)
-  }, [countRemovalImpact, entry, mode])
+  }, [countRemovalImpact, entry, mode, open])
 
   // 2段階目（取り消し不可の最終確認）に居る学級。**件数は持たない** —
   // 進むときに固定すると、中止されて数え直したあとも本文が古い件数を出し続け、
   // 読んだ数と消える数が食い違う（段階40）。件数は常に preview から読む
-  const [finalConfirmEntry, setFinalConfirmEntry] =
-    useState<ClassroomRosterEntry | null>(null)
+  const finalConfirm = useDialogTarget<ClassroomRosterEntry>()
 
   // 閉じたら選択を初期値へ戻す（次に開いたときに前回の選択を引きずらない）
   const handleClose = () => {
@@ -287,7 +292,7 @@ export function ClassroomRemovalDialog({
 
   const runConfirm = async () => {
     if (!(await confirmDeletion())) return
-    setFinalConfirmEntry(null)
+    finalConfirm.close()
     handleClose()
   }
 
@@ -295,8 +300,8 @@ export function ClassroomRemovalDialog({
   if (mode === "unlink-only") {
     return (
       <AlertDialog
-        open={entry !== null}
-        onOpenChange={(open) => !open && handleClose()}
+        open={open}
+        onOpenChange={(isOpen) => !isOpen && handleClose()}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -330,8 +335,8 @@ export function ClassroomRemovalDialog({
     <>
       {/* 1段階目: 外し方の選択 */}
       <Dialog
-        open={entry !== null && finalConfirmEntry === null}
-        onOpenChange={(open) => !open && handleClose()}
+        open={open && !finalConfirm.isOpen}
+        onOpenChange={(isOpen) => !isOpen && handleClose()}
       >
         <DialogContent>
           {entry && (
@@ -342,7 +347,7 @@ export function ClassroomRemovalDialog({
               choice={choice}
               onChoiceChange={setChoice}
               onCancel={handleClose}
-              onProceedToFinalConfirm={setFinalConfirmEntry}
+              onProceedToFinalConfirm={finalConfirm.openWith}
               onConfirm={() => void runConfirm()}
               refusalMessage={refusalMessage}
             />
@@ -352,15 +357,15 @@ export function ClassroomRemovalDialog({
 
       {/* 2段階目: 取り消し不可の最終確認 */}
       <AlertDialog
-        open={finalConfirmEntry !== null}
-        onOpenChange={(open) => !open && setFinalConfirmEntry(null)}
+        open={finalConfirm.isOpen}
+        onOpenChange={finalConfirm.handleOpenChange}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>生徒データを削除しますか？</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
-                「{finalConfirmEntry?.name}」にのみ所属する{" "}
+                「{finalConfirm.target?.name}」にのみ所属する{" "}
                 {sumDeletionCounts(deletionCounts)}名 を
                 対象から外します。連動して以下も削除されます：
               </span>
@@ -396,7 +401,7 @@ export function ClassroomRemovalDialog({
             </AlertDialogCancel>
             <AlertDialogAction
               disabled={!canConfirm}
-              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+              className={buttonVariants({ variant: "destructive" })}
               onClick={(e) => {
                 e.preventDefault()
                 void runConfirm()

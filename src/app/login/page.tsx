@@ -7,6 +7,7 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Spinner } from "@/components/ui/spinner"
 import { useAuth } from "@/contexts/AuthContext"
 import { type PublicUser, userListQuery } from "@/queries/user"
 
@@ -49,7 +50,7 @@ export default function UserSelection() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+          <Spinner className="mx-auto size-16 text-blue-500" />
           <p className="mt-4 text-lg text-gray-600">読み込み中...</p>
         </div>
       </div>

@@ -5,7 +5,6 @@ import { Calculator, Plus, Search, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 
-import LoadingSpinner from "@/components/common/LoadingSpinner"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +26,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Spinner } from "@/components/ui/spinner"
 import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import {
   addSubtotalGroupToExamMutation,
   availableSubtotalGroupsQuery,
@@ -49,8 +50,7 @@ export function SubtotalGroupSelector({
   const [showSelector, setShowSelector] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   // 外す確認を出している小計点グループ（null のとき閉じている）
-  const [removalTargetGroup, setRemovalTargetGroup] =
-    useState<SubtotalGroupWithSubtotals | null>(null)
+  const groupRemoval = useDialogTarget<SubtotalGroupWithSubtotals>()
 
   // 追加できる小計点グループは、選択を開いたときだけ取る
   const { data: availableGroups = EMPTY_GROUPS, isPending: loading } = useQuery(
@@ -124,7 +124,7 @@ export function SubtotalGroupSelector({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setRemovalTargetGroup(group)}
+                    onClick={() => groupRemoval.openWith(group)}
                     className="text-destructive hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -139,15 +139,13 @@ export function SubtotalGroupSelector({
       {/* 試験から外す確認。外すのは試験との結び付きだけで、グループ自体は残る。
           設問に割り当て済みのときは main 側が外すのを断り、その理由を返す */}
       <AlertDialog
-        open={removalTargetGroup !== null}
-        onOpenChange={(open) => {
-          if (!open) setRemovalTargetGroup(null)
-        }}
+        open={groupRemoval.isOpen}
+        onOpenChange={groupRemoval.handleOpenChange}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              「{removalTargetGroup?.name}」をこの試験から外しますか？
+              「{groupRemoval.target?.name}」をこの試験から外しますか？
             </AlertDialogTitle>
             <AlertDialogDescription>
               この試験の小計点に使わなくなります。小計点グループ自体は残るので、あとで「グループを追加」から戻せます。設問に割り当てている場合は外せないため、先に設問の割り当てを解除してください。
@@ -157,8 +155,8 @@ export function SubtotalGroupSelector({
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (removalTargetGroup) {
-                  removeSubtotalGroup.mutate(removalTargetGroup.id)
+                if (groupRemoval.target) {
+                  removeSubtotalGroup.mutate(groupRemoval.target.id)
                 }
               }}
             >
@@ -207,8 +205,8 @@ export function SubtotalGroupSelector({
 
             {/* グループ一覧 */}
             {loading ? (
-              <div className="flex justify-center py-8">
-                <LoadingSpinner />
+              <div className="flex justify-center py-16">
+                <Spinner className="size-6" />
               </div>
             ) : filteredGroups.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground">

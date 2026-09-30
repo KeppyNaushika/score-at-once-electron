@@ -8,7 +8,7 @@ import {
   FocusSection,
   HelpDoc,
   HelpHero,
-  Kbd,
+  KeyCap,
   Pill,
 } from "@/components/help/common/DocComponents"
 
@@ -287,7 +287,7 @@ export function HelpContent06StudentAnswers() {
         <p>
           答案がそろったら、画面右上の
           <span className="mx-1 inline-flex items-center">
-            <Kbd>次へ: 一括採点</Kbd>
+            <KeyCap>次へ: 一括採点</KeyCap>
           </span>
           からステップ7「一括採点」へ進みます。
         </p>

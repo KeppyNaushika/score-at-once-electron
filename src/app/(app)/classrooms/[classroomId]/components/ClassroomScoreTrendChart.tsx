@@ -9,7 +9,7 @@ import {
   Legend,
   Line,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
 } from "recharts"
@@ -26,6 +26,11 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import type { ClassroomStudentExamResult } from "@/electron-src/lib/prisma/student"
 
 // ── 型定義 ──
@@ -426,14 +431,20 @@ export function ClassroomScoreTrendChart({
               </Badge>
 
               {seriesList.length > 1 && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-auto h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => removeSeries(series.id)}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      aria-label="系列を削除"
+                      variant="ghost"
+                      size="icon"
+                      className="ml-auto h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => removeSeries(series.id)}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>系列を削除</TooltipContent>
+                </Tooltip>
               )}
             </div>
           ))}
@@ -469,7 +480,7 @@ export function ClassroomScoreTrendChart({
                 tickFormatter={(tickValue) => `${tickValue}%`}
                 width={45}
               />
-              <Tooltip
+              <RechartsTooltip
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null
                   const first = payload[0]?.payload

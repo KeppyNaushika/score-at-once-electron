@@ -23,6 +23,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import type { UserRole } from "@/electron-src/lib/prisma/userExam"
 import {
   type ExamMemberRow,
@@ -305,14 +310,22 @@ export function MemberInviteDialog({
                         {isOwner && (
                           <TableCell>
                             {member.role !== "OWNER" && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemove(member.user.id)}
-                                disabled={removingUserId === member.user.id}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    aria-label="メンバーから外す"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleRemove(member.user.id)}
+                                    disabled={removingUserId === member.user.id}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  メンバーから外す
+                                </TooltipContent>
+                              </Tooltip>
                             )}
                           </TableCell>
                         )}

@@ -8,6 +8,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import type { GradeFrozenInfo } from "@/types/grade.types"
 
 interface FrozenCellControlProps {
@@ -53,27 +58,31 @@ export function FrozenCellControl({
   onUnfreeze,
 }: FrozenCellControlProps) {
   const { isStale } = frozen
+  const frozenStateLabel = isStale
+    ? "確定済み（確定後に元データが変わっています）"
+    : "確定済み"
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={`inline-flex items-center rounded p-0.5 ${
-            isStale
-              ? "text-amber-600 hover:bg-amber-100 dark:text-amber-400 dark:hover:bg-amber-900/40"
-              : "text-muted-foreground hover:bg-muted"
-          }`}
-          title={
-            isStale
-              ? "確定済み（確定後に元データが変わっています）"
-              : "確定済み"
-          }
-        >
-          <Lock className="h-3 w-3" />
-          {isStale && <TriangleAlert className="h-3 w-3" />}
-        </button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={`inline-flex items-center rounded p-0.5 ${
+                isStale
+                  ? "text-amber-600 hover:bg-amber-100 dark:text-amber-400 dark:hover:bg-amber-900/40"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+              aria-label={frozenStateLabel}
+            >
+              <Lock className="h-3 w-3" />
+              {isStale && <TriangleAlert className="h-3 w-3" />}
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{frozenStateLabel}</TooltipContent>
+      </Tooltip>
       <PopoverContent className="w-72 text-xs" align="center">
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 font-medium">

@@ -1,6 +1,6 @@
 "use client"
 
-import { UserCheck, Users, UserX } from "lucide-react"
+import { type LucideIcon, UserCheck, Users, UserX } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import type {
@@ -38,8 +38,42 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Table, TableBody } from "@/components/ui/table"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { ExamClassroomPlacement } from "@/lib/examClassroomPlacement"
+import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
+
+interface ExamStudentStatusOption {
+  status: ExamStudentStatus
+  label: string
+  Icon: LucideIcon
+  /** 選択中の色（受験・見込・欠席で塗り分ける） */
+  selectedClassName: string
+}
+
+const EXAM_STUDENT_STATUS_OPTIONS: ExamStudentStatusOption[] = [
+  {
+    status: "participating",
+    label: "受験",
+    Icon: UserCheck,
+    selectedClassName:
+      "data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
+  },
+  {
+    status: "expected",
+    label: "見込",
+    Icon: Users,
+    selectedClassName:
+      "data-[state=on]:bg-amber-400 data-[state=on]:text-amber-950",
+  },
+  {
+    status: "absent",
+    label: "欠席",
+    Icon: UserX,
+    selectedClassName:
+      "data-[state=on]:bg-destructive data-[state=on]:text-white",
+  },
+]
 
 /** 受験生徒（ExamStudent）と表示学級情報を共通の RosterRow へ変換 */
 function toRosterRow(
@@ -197,35 +231,32 @@ export function SortableStudentTableContainer(
       render: (row) => {
         const status = examStudentByStudentId.get(row.id)?.status
         return (
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant={status === "participating" ? "default" : "outline"}
-              onClick={() => onStudentStatusUpdate(row.id, "participating")}
-              className="gap-1"
-            >
-              <UserCheck className="h-3 w-3" />
-              受験
-            </Button>
-            <Button
-              size="sm"
-              variant={status === "expected" ? "secondary" : "outline"}
-              onClick={() => onStudentStatusUpdate(row.id, "expected")}
-              className="gap-1"
-            >
-              <Users className="h-3 w-3" />
-              見込
-            </Button>
-            <Button
-              size="sm"
-              variant={status === "absent" ? "destructive" : "outline"}
-              onClick={() => onStudentStatusUpdate(row.id, "absent")}
-              className="gap-1"
-            >
-              <UserX className="h-3 w-3" />
-              欠席
-            </Button>
-          </div>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={status ?? ""}
+            aria-label="受験状態"
+            onValueChange={(value) => {
+              // 選択中をもう一度押すと空文字が来る。選択は外さない
+              const nextStatusOption = EXAM_STUDENT_STATUS_OPTIONS.find(
+                (candidateOption) => candidateOption.status === value
+              )
+              if (nextStatusOption)
+                onStudentStatusUpdate(row.id, nextStatusOption.status)
+            }}
+          >
+            {EXAM_STUDENT_STATUS_OPTIONS.map((statusOption) => (
+              <ToggleGroupItem
+                key={statusOption.status}
+                value={statusOption.status}
+                className={`gap-1 px-2.5 ${statusOption.selectedClassName}`}
+              >
+                <statusOption.Icon className="h-3 w-3" />
+                {statusOption.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
         )
       },
     }),

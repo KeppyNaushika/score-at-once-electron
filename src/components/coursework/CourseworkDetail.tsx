@@ -166,15 +166,15 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleExportArchive}>
-                <FolderOutput className="mr-2 h-4 w-4" />
+                <FolderOutput />
                 .coursework 書き出し
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => setIsDeleteModalOpen(true)}
-                className="text-red-600 focus:text-red-600"
+                variant="destructive"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 />
                 資料を削除
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -182,16 +182,13 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
         }
       />
       <DeleteCourseworkModal
-        target={
-          isDeleteModalOpen
-            ? {
-                id: coursework.id,
-                name: coursework.name,
-                studentCount: coursework.students.length,
-                itemCount: coursework.items.length,
-              }
-            : null
-        }
+        open={isDeleteModalOpen}
+        target={{
+          id: coursework.id,
+          name: coursework.name,
+          studentCount: coursework.students.length,
+          itemCount: coursework.items.length,
+        }}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDelete}
         loading={deleteCoursework.isPending}

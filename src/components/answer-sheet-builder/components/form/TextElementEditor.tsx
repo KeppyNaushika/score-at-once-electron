@@ -13,7 +13,13 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import type {
   AsbTextElementAttributes,
   CellTextElement,
@@ -110,21 +116,27 @@ export function TextElementEditor({
               }
               placeholder="テキスト（**太字** *斜体* __下線__ ~~打消~~ $数式$ ||模範解答||）"
             />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-              onClick={() => onDelete(textElement.id)}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="テキストを削除"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => onDelete(textElement.id)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>テキストを削除</TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Row 2: フォントサイズ + 配置 */}
           <div className="flex items-center gap-1">
-            <input
+            <Input
               type="number"
-              className="h-7 w-14 shrink-0 rounded border text-center text-xs"
+              className="h-7 w-14 shrink-0 rounded px-1 text-center text-xs md:text-xs"
               value={textElement.fontSize}
               min={2}
               max={24}
@@ -198,14 +210,19 @@ function CycleButton<T extends string>({
   }
 
   return (
-    <Button
-      variant="outline"
-      size="icon"
-      className="h-7 w-7 min-w-0 p-0"
-      onClick={handleClick}
-      title={titles[current]}
-    >
-      <Icon className={rotate ? "h-3.5 w-3.5 rotate-90" : "h-3.5 w-3.5"} />
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          aria-label={titles[current]}
+          variant="outline"
+          size="icon"
+          className="h-7 w-7 min-w-0 p-0"
+          onClick={handleClick}
+        >
+          <Icon className={rotate ? "h-3.5 w-3.5 rotate-90" : "h-3.5 w-3.5"} />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{titles[current]}</TooltipContent>
+    </Tooltip>
   )
 }

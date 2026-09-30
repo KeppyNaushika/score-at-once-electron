@@ -9,25 +9,10 @@ import { useCallback, useEffect, useMemo } from "react"
 
 import type {
   GradingMode,
+  ScoringExamStudent,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
-
-/**
- * 生徒データの型定義（UIコンポーネント用）
- */
-interface AnswerManagementStudent {
-  /** 受験者ID（ExamStudent.id / UUID） */
-  id: string
-  /** 学籍番号 */
-  studentNumber: string
-  /** 姓 */
-  lastName: string
-  /** 名 */
-  firstName: string
-  /** カスタム順序 */
-  customOrder: number
-}
 
 /**
  * useStudentAnswerManagementの入力パラメータ
@@ -50,8 +35,8 @@ interface UseStudentAnswerManagementParams {
  * useStudentAnswerManagementの戻り値
  */
 interface UseStudentAnswerManagementReturn {
-  /** 生徒一覧（ソート済み） */
-  students: AnswerManagementStudent[]
+  /** 受験者の一覧（受験者の並び順） */
+  examStudents: ScoringExamStudent[]
   /** 生徒変更ハンドラー */
   handleStudentChange: (examStudentId: string) => void
   /** 次の生徒へ移動（個別表示用） */
@@ -78,29 +63,19 @@ export function useStudentAnswerManagement(
   } = params
 
   /**
-   * 個別表示用の生徒データ（studentAnswerImagesから抽出、useMemoで安定化）
+   * 個別表示用の受験者（答案に同梱された受験者を重複なく、受験者の並び順で）
    */
-  const students = useMemo(() => {
-    if (!studentAnswerImages || studentAnswerImages.length === 0) return []
-
-    const uniqueStudents = new Map<string, AnswerManagementStudent>()
-
+  const examStudents = useMemo(() => {
+    const uniqueExamStudents = new Map<string, ScoringExamStudent>()
     studentAnswerImages.forEach((sheet) => {
-      if (uniqueStudents.has(sheet.examStudentId)) return
-      const { student } = sheet.examStudent
-      uniqueStudents.set(sheet.examStudentId, {
-        id: sheet.examStudentId,
-        studentNumber: student.studentNumber,
-        lastName: student.lastName,
-        firstName: student.firstName,
-        customOrder: sheet.examStudent.customOrder ?? 0,
-      })
+      if (!uniqueExamStudents.has(sheet.examStudentId)) {
+        uniqueExamStudents.set(sheet.examStudentId, sheet.examStudent)
+      }
     })
-
-    const sortedStudents = Array.from(uniqueStudents.values()).sort(
-      (answerA, answerB) => answerA.customOrder - answerB.customOrder
+    return Array.from(uniqueExamStudents.values()).sort(
+      (examStudentA, examStudentB) =>
+        (examStudentA.customOrder ?? 0) - (examStudentB.customOrder ?? 0)
     )
-    return sortedStudents
   }, [studentAnswerImages])
 
   /**
@@ -133,17 +108,14 @@ export function useStudentAnswerManagement(
   useEffect(() => {
     if (
       gradingMode === "individual" &&
-      students.length > 0 &&
+      examStudents.length > 0 &&
       selectedStudentAnswerImageIds.size === 0
     ) {
-      const sortedStudents = [...students].sort(
-        (answerA, answerB) => answerA.customOrder - answerB.customOrder
-      )
-      handleStudentChange(sortedStudents[0].id)
+      handleStudentChange(examStudents[0].id)
     }
   }, [
     gradingMode,
-    students,
+    examStudents,
     selectedStudentAnswerImageIds.size,
     handleStudentChange,
   ])
@@ -160,17 +132,14 @@ export function useStudentAnswerManagement(
     )
     if (!currentAnswer) return
 
-    const sortedStudents = [...students].sort(
-      (answerA, answerB) => answerA.customOrder - answerB.customOrder
+    const currentIndex = examStudents.findIndex(
+      (examStudent) => examStudent.id === currentAnswer.examStudentId
     )
-    const currentIndex = sortedStudents.findIndex(
-      (student) => student.id === currentAnswer.examStudentId
-    )
-    if (currentIndex < sortedStudents.length - 1) {
-      const nextStudent = sortedStudents[currentIndex + 1]
+    if (currentIndex < examStudents.length - 1) {
+      const nextExamStudent = examStudents[currentIndex + 1]
       // 現在の設問ページに対応するpageImageを優先選択
       const nextStudentSheets = studentAnswerImages.filter(
-        (sheet) => sheet.examStudentId === nextStudent.id
+        (sheet) => sheet.examStudentId === nextExamStudent.id
       )
       const nextStudentAnswer = currentCropRegion
         ? nextStudentSheets.find(
@@ -182,7 +151,7 @@ export function useStudentAnswerManagement(
       }
     }
   }, [
-    students,
+    examStudents,
     selectedStudentAnswerImageIds,
     studentAnswerImages,
     setSelectedPageImageIds,
@@ -201,16 +170,13 @@ export function useStudentAnswerManagement(
     )
     if (!currentAnswer) return
 
-    const sortedStudents = [...students].sort(
-      (answerA, answerB) => answerA.customOrder - answerB.customOrder
-    )
-    const currentIndex = sortedStudents.findIndex(
-      (student) => student.id === currentAnswer.examStudentId
+    const currentIndex = examStudents.findIndex(
+      (examStudent) => examStudent.id === currentAnswer.examStudentId
     )
     if (currentIndex > 0) {
-      const prevStudent = sortedStudents[currentIndex - 1]
+      const prevExamStudent = examStudents[currentIndex - 1]
       const prevStudentSheets = studentAnswerImages.filter(
-        (sheet) => sheet.examStudentId === prevStudent.id
+        (sheet) => sheet.examStudentId === prevExamStudent.id
       )
       const prevStudentAnswer = currentCropRegion
         ? prevStudentSheets.find(
@@ -222,7 +188,7 @@ export function useStudentAnswerManagement(
       }
     }
   }, [
-    students,
+    examStudents,
     selectedStudentAnswerImageIds,
     studentAnswerImages,
     setSelectedPageImageIds,
@@ -230,7 +196,7 @@ export function useStudentAnswerManagement(
   ])
 
   return {
-    students,
+    examStudents,
     handleStudentChange,
     handleIndividualNextStudent,
     handleIndividualPrevStudent,

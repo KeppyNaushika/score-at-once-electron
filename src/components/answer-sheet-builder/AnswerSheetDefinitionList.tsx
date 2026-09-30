@@ -3,6 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   Copy,
+  FileEdit,
   FolderInput,
   FolderOutput,
   MoreHorizontal,
@@ -38,7 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
@@ -56,6 +57,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
 import { getAnswerSheetStatus } from "@/lib/answerSheetStatus"
@@ -166,10 +168,7 @@ export function AnswerSheetDefinitionList() {
     useAnswerSheetDefinitions(currentUser.id)
 
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
-  const [deleteTarget, setDeleteTarget] = useState<{
-    id: string
-    name: string
-  } | null>(null)
+  const definitionDeletion = useDialogTarget<ASBDefinitionListItem>()
   const [transferTarget, setTransferTarget] =
     useState<ASBDefinitionListItem | null>(null)
   /** 書き出しの結果。渡している間は結果モーダルを見せる */
@@ -332,11 +331,12 @@ export function AnswerSheetDefinitionList() {
   )
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return
-    await deleteDefinition(deleteTarget.id)
+    const definition = definitionDeletion.target
+    if (!definition) return
+    await deleteDefinition(definition.id)
     // 削除した定義の id を選択から除く（stale id への一括タグ付与を防ぐ）
-    toggleSelect(deleteTarget.id, false)
-    setDeleteTarget(null)
+    toggleSelect(definition.id, false)
+    definitionDeletion.close()
   }
 
   const handleExport = useCallback(
@@ -563,18 +563,18 @@ export function AnswerSheetDefinitionList() {
                 <DropdownMenuItem
                   onClick={() => handleOpenEditor(definition.id)}
                 >
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil />
                   編集
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
                 onClick={() => duplicateDefinition(definition.id)}
               >
-                <Copy className="mr-2 h-4 w-4" />
+                <Copy />
                 複製
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleExport(definition)}>
-                <FolderOutput className="mr-2 h-4 w-4" />
+                <FolderOutput />
                 .asb 書き出し
               </DropdownMenuItem>
               {definition.ownerId === currentUser.id && (
@@ -582,20 +582,15 @@ export function AnswerSheetDefinitionList() {
                   <DropdownMenuItem
                     onClick={() => setTransferTarget(definition)}
                   >
-                    <UserRoundCog className="mr-2 h-4 w-4" />
+                    <UserRoundCog />
                     担当を渡す
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() =>
-                      setDeleteTarget({
-                        id: definition.id,
-                        name: definition.name,
-                      })
-                    }
+                    variant="destructive"
+                    onClick={() => definitionDeletion.openWith(definition)}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 />
                     削除
                   </DropdownMenuItem>
                 </>
@@ -632,6 +627,7 @@ export function AnswerSheetDefinitionList() {
         onToggleSelectAll={toggleSelectAll}
         allSelected={allSelected}
         empty={{
+          icon: FileEdit,
           message: showAllOwners
             ? "解答用紙がありません"
             : "担当している解答用紙がありません",
@@ -673,20 +669,21 @@ export function AnswerSheetDefinitionList() {
       />
 
       <AlertDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        open={definitionDeletion.isOpen}
+        onOpenChange={definitionDeletion.handleOpenChange}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>解答用紙を削除しますか？</AlertDialogTitle>
             <AlertDialogDescription>
-              「{deleteTarget?.name}」を削除します。この操作は取り消せません。
+              「{definitionDeletion.target?.name}
+              」を削除します。この操作は取り消せません。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction
-              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+              className={buttonVariants({ variant: "destructive" })}
               onClick={(event) => {
                 event.preventDefault()
                 void confirmDelete()

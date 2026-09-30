@@ -13,6 +13,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import type {
   AsbCharGuideAttributes,
   AsbManuscriptPaperSettings,
@@ -143,7 +148,6 @@ export function ManuscriptPaperSettings({
       <div className="flex items-center justify-between">
         <Label className="text-xs">原稿用紙</Label>
         <Switch
-          className="scale-75"
           checked={current.enabled}
           onCheckedChange={(enabled) => onSetEnabled(enabled, initialSettings)}
         />
@@ -316,14 +320,20 @@ export function ManuscriptPaperSettings({
                     onUpdateCharGuide(charGuide.id, { label: e.target.value })
                   }
                 />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-destructive"
-                  onClick={() => onDeleteCharGuide(charGuide.id)}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      aria-label="マーカーを削除"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-destructive"
+                      onClick={() => onDeleteCharGuide(charGuide.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>マーカーを削除</TooltipContent>
+                </Tooltip>
               </div>
               <div className="flex items-center gap-2">
                 <span className="shrink-0 text-[10px] text-muted-foreground">

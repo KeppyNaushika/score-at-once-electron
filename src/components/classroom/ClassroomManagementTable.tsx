@@ -1,15 +1,37 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { Download, Edit, PlusCircle, Search, Trash2 } from "lucide-react"
+import {
+  Download,
+  Edit,
+  PlusCircle,
+  School,
+  Search,
+  Trash2,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import ClassroomModal from "@/components/classroom/ClassroomModal"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -27,6 +49,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
 import {
@@ -69,6 +97,7 @@ export default function ClassroomManagementTable() {
   const [isClassroomModalOpen, setIsClassroomModalOpen] = useState(false)
   const [classroomToEdit, setClassroomToEdit] =
     useState<ClassroomWithMemberships | null>(null)
+  const classroomDeletion = useDialogTarget<ClassroomWithMemberships>()
 
   // Selection states
   const [selectedClassroomIds, setSelectedClassroomIds] = useState<Set<string>>(
@@ -157,8 +186,9 @@ export default function ClassroomManagementTable() {
     setIsClassroomModalOpen(true)
   }
 
-  const handleDeleteClassroom = (classroomId: string) => {
-    if (!window.confirm("本当にこの学級を削除しますか？")) return
+  const handleConfirmDeleteClassroom = () => {
+    if (classroomDeletion.target === null) return
+    const classroomId = classroomDeletion.target.id
     deleteClassroom.mutate(classroomId, {
       onSuccess: () =>
         setSelectedClassroomIds((prev) => {
@@ -382,28 +412,40 @@ export default function ClassroomManagementTable() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleEditClassroom(classroomItem)
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteClassroom(classroomItem.id)
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              aria-label="学級を編集"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditClassroom(classroomItem)
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>学級を編集</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              aria-label="学級を削除"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                classroomDeletion.openWith(classroomItem)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>学級を削除</TooltipContent>
+                        </Tooltip>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -411,11 +453,15 @@ export default function ClassroomManagementTable() {
               })}
               {sortedData.length === 0 && (
                 <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="h-32 text-center text-muted-foreground"
-                  >
-                    該当する学級が見つかりません。
+                  <TableCell colSpan={7}>
+                    <Empty>
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                          <School />
+                        </EmptyMedia>
+                        <EmptyTitle>該当する学級が見つかりません</EmptyTitle>
+                      </EmptyHeader>
+                    </Empty>
                   </TableCell>
                 </TableRow>
               )}
@@ -433,6 +479,27 @@ export default function ClassroomManagementTable() {
           classroomToEdit={classroomToEdit}
         />
       )}
+
+      <AlertDialog
+        open={classroomDeletion.isOpen}
+        onOpenChange={classroomDeletion.handleOpenChange}
+      >
+        {/* 問いかけの文言だけで足りるので、説明文は置かない */}
+        <AlertDialogContent aria-describedby={undefined}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>本当にこの学級を削除しますか？</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={handleConfirmDeleteClassroom}
+            >
+              削除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

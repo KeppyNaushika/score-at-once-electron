@@ -80,7 +80,7 @@ export function DraggableAnswerCell({
         <ContextMenuContent>
           <ContextMenuItem
             onClick={() => setShowDeleteModal(true)}
-            className="flex items-center gap-2 text-red-600"
+            variant="destructive"
           >
             <Trash2 className="h-4 w-4" />
             答案画像を削除

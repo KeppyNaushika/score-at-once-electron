@@ -1,8 +1,9 @@
 "use client"
 
-import { FileUp, Loader2, Users } from "lucide-react"
+import { FileUp, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import type { StudentImportWizard } from "@/hooks/student-import/useStudentImportWizard"
 
 interface FileSelectStepProps {
@@ -35,7 +36,7 @@ export function FileSelectStep({ wizard }: FileSelectStepProps) {
       >
         {state.isProcessing ? (
           <>
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Spinner />
             読み込み中...
           </>
         ) : (

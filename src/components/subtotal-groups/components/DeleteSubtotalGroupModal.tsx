@@ -13,7 +13,8 @@ import {
 } from "@/queries/subtotal"
 
 interface DeleteSubtotalGroupModalProps {
-  /** 消そうとしているグループ（null のとき閉じている） */
+  open: boolean
+  /** 消そうとしているグループ。閉じても残す（閉じるアニメーションの間も中身を出したままにする） */
   group: SubtotalGroupRow | null
   onClose: () => void
 }
@@ -26,6 +27,7 @@ interface DeleteSubtotalGroupModalProps {
  * 設問の割り当てがある場合も main が断り、その理由（どの設問か）は断られた文言に載る。
  */
 export function DeleteSubtotalGroupModal({
+  open,
   group,
   onClose,
 }: DeleteSubtotalGroupModalProps) {
@@ -39,10 +41,9 @@ export function DeleteSubtotalGroupModal({
   const refusalMessage =
     refusal !== null && refusal.groupId === group?.id ? refusal.message : null
 
-  const open = group !== null
   const gradeReferences = useQuery({
     ...gradeReferencesQuery({ kind: "subtotalGroup", id: group?.id ?? "" }),
-    enabled: open,
+    enabled: open && group !== null,
   })
   const blockedMessage = gradeReferences.data
     ? buildDeletionBlockedMessage("subtotalGroup", gradeReferences.data)

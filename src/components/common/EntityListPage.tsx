@@ -1,5 +1,6 @@
 "use client"
 
+import type { LucideIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import type { KeyboardEvent, MouseEvent, ReactNode } from "react"
 import { useMemo } from "react"
@@ -20,6 +21,13 @@ import { OverflowToolbar } from "@/components/common/OverflowToolbar"
 import { HistoryNavButtons } from "@/components/layout/HistoryNavButtons"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { Separator } from "@/components/ui/separator"
 import {
   Table,
@@ -57,6 +65,8 @@ interface EntityListNextStep {
 
 /** 1件も無いときに出すもの */
 interface EntityListEmptyState {
+  /** 本文の上に出すアイコン。サイドバーでその一覧に付けているものを渡す */
+  icon: LucideIcon
   /** 本文（「まだ試験がありません」など） */
   message: string
   /** 作成へ導く導線。無くてもよい */
@@ -412,10 +422,15 @@ export function EntityListPage<TRow extends { id: string }>({
 
       <div className="min-h-0 flex-1 p-4">
         {!isLoading && totalCount === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border/60">
-            <p className="text-muted-foreground">{empty.message}</p>
-            {empty.action}
-          </div>
+          <Empty className="h-full rounded-xl border border-dashed border-border/60">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <empty.icon />
+              </EmptyMedia>
+              <EmptyTitle>{empty.message}</EmptyTitle>
+            </EmptyHeader>
+            {empty.action && <EmptyContent>{empty.action}</EmptyContent>}
+          </Empty>
         ) : (
           <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/50 shadow-sm">
             {/*

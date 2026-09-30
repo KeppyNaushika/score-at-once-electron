@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { SidebarBehaviorRow } from "@/app/(app)/settings/components/SidebarBehaviorRow"
 import { SIDEBAR_SECTIONS } from "@/components/layout/sidebarBehavior"
 import { Input } from "@/components/ui/input"
+import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
@@ -121,9 +122,11 @@ export function ScreenControlTab() {
           </h2>
           <p className="text-sm text-muted-foreground">
             スクリーンセーバーの無効化や、一定時間後の画面消灯を設定できます。
-            <kbd className="mx-1 rounded border border-gray-300 px-1 py-0.5 text-xs">
-              {navigator.platform?.includes("Mac") ? "⌘" : "Ctrl"}+L
-            </kbd>
+            <KbdGroup className="mx-1">
+              <Kbd>{navigator.platform?.includes("Mac") ? "⌘" : "Ctrl"}</Kbd>
+              <span>+</span>
+              <Kbd>L</Kbd>
+            </KbdGroup>
             で手動消灯できます（数字パスコード設定時はロック付き）
           </p>
         </div>

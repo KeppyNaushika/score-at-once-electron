@@ -1,11 +1,17 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { FileImage, Files, FileText, Loader2 } from "lucide-react"
+import { FileImage, Files, FileText } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { computeNUpLayout } from "@/lib/pdf-tools/nUpLayout"
 import {
   exportPdfAsPngMutation,
@@ -208,47 +214,65 @@ export default function ExportActions({
         {fileCount}ファイル / {pageCount}ページを出力
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button
-          onClick={handleExportMergedPdf}
-          disabled={isProcessing || pageCount === 0}
-          className="min-w-32 flex-1"
-          title="全ページを1つのPDFにまとめて保存します"
-        >
-          {exportKind === "merged-pdf" ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <FileText className="mr-2 h-4 w-4" />
-          )}
-          PDF（1ファイル）
-        </Button>
-        <Button
-          variant="outline"
-          onClick={handleExportSplitPdf}
-          disabled={isProcessing || pageCount === 0}
-          className="min-w-32 flex-1"
-          title="1ページ1ファイルのPDFに分割して、選んだフォルダへ保存します"
-        >
-          {exportKind === "split-pdf" ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Files className="mr-2 h-4 w-4" />
-          )}
-          PDF（ページ別）
-        </Button>
-        <Button
-          variant="outline"
-          onClick={handleExportPng}
-          disabled={isProcessing || pageCount === 0}
-          className="min-w-32 flex-1"
-          title="1ページ1ファイルのPNGとして、選んだフォルダへ保存します"
-        >
-          {exportKind === "png" ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <FileImage className="mr-2 h-4 w-4" />
-          )}
-          PNG（ページ別）
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={handleExportMergedPdf}
+              disabled={isProcessing || pageCount === 0}
+              className="min-w-32 flex-1"
+            >
+              {exportKind === "merged-pdf" ? (
+                <Spinner className="mr-2" />
+              ) : (
+                <FileText className="mr-2 h-4 w-4" />
+              )}
+              PDF（1ファイル）
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            全ページを1つのPDFにまとめて保存します
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              onClick={handleExportSplitPdf}
+              disabled={isProcessing || pageCount === 0}
+              className="min-w-32 flex-1"
+            >
+              {exportKind === "split-pdf" ? (
+                <Spinner className="mr-2" />
+              ) : (
+                <Files className="mr-2 h-4 w-4" />
+              )}
+              PDF（ページ別）
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            1ページ1ファイルのPDFに分割して、選んだフォルダへ保存します
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              onClick={handleExportPng}
+              disabled={isProcessing || pageCount === 0}
+              className="min-w-32 flex-1"
+            >
+              {exportKind === "png" ? (
+                <Spinner className="mr-2" />
+              ) : (
+                <FileImage className="mr-2 h-4 w-4" />
+              )}
+              PNG（ページ別）
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            1ページ1ファイルのPNGとして、選んだフォルダへ保存します
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
   )

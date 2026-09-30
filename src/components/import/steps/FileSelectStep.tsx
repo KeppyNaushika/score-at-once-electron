@@ -1,9 +1,10 @@
 "use client"
 
-import { CheckCircle2, FileArchive, Info, Loader2, Upload } from "lucide-react"
+import { CheckCircle2, FileArchive, Info, Upload } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Spinner } from "@/components/ui/spinner"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 
 interface FileSelectStepProps {
@@ -44,7 +45,7 @@ export function FileSelectStep({ wizard }: FileSelectStepProps) {
       >
         {state.isProcessing ? (
           <>
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Spinner />
             読み込み中...
           </>
         ) : (

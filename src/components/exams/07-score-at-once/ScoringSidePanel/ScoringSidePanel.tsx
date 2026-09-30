@@ -32,10 +32,12 @@ import type {
   MasterAnswerKeyBehavior,
   MouseBrushAction,
   ScoringBehavior,
+  ScoringExamStudent,
   ScoringOperationMode,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
+import { Kbd } from "@/components/ui/kbd"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Tooltip,
@@ -152,13 +154,7 @@ interface ScoringSidePanelProps {
   expandMargin?: number
   onExpandMarginChange?: (value: number) => void
   // Individual mode props
-  students?: {
-    id: string
-    studentNumber: string
-    lastName: string
-    firstName: string
-    customOrder: number
-  }[]
+  examStudents?: ScoringExamStudent[]
   onStudentChange?: (examStudentId: string) => void
   selectedStudentAnswerImageIds?: Set<string>
   studentAnswerImages?: StudentAnswerImageWithExamStudents[]
@@ -232,7 +228,7 @@ export function ScoringSidePanel({
   isWhitenessReady,
   expandMargin,
   onExpandMarginChange,
-  students,
+  examStudents,
   onStudentChange,
   selectedStudentAnswerImageIds,
   studentAnswerImages,
@@ -418,10 +414,7 @@ export function ScoringSidePanel({
                                 {button.label}を{isActive ? "非表示" : "表示"}
                               </div>
                               <div className="mt-1 text-xs text-gray-400">
-                                キー:{" "}
-                                <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
-                                  {keyBinding.toUpperCase()}
-                                </kbd>
+                                キー: <Kbd>{keyBinding.toUpperCase()}</Kbd>
                               </div>
                             </div>
                           </TooltipContent>
@@ -492,7 +485,7 @@ export function ScoringSidePanel({
 
           {/* 個別表示モード時：生徒選択パネル */}
           {gradingMode === "individual" &&
-            students &&
+            examStudents &&
             onStudentChange &&
             onScoringBehaviorChange &&
             scoringBehavior && (
@@ -504,7 +497,7 @@ export function ScoringSidePanel({
                 onToggle={() => toggleSection("individualMode")}
               >
                 <IndividualModePanel
-                  students={students}
+                  examStudents={examStudents}
                   selectedAnswers={selectedStudentAnswerImageIds}
                   studentAnswerImages={studentAnswerImages}
                   onStudentChange={onStudentChange}

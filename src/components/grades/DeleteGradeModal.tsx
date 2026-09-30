@@ -3,7 +3,8 @@
 import ConfirmationModal from "@/components/common/ConfirmationModal"
 
 interface DeleteGradeModalProps {
-  /** null のときは閉じている */
+  open: boolean
+  /** 消そうとしている成績算出。閉じても残す（閉じるアニメーションの間も中身を出したままにする） */
   target: {
     id: string
     name: string
@@ -23,6 +24,7 @@ interface DeleteGradeModalProps {
  * それも書いて、何が消えて何が残るかを押す前に分かるようにする。
  */
 export function DeleteGradeModal({
+  open,
   target,
   onClose,
   onConfirm,
@@ -30,7 +32,7 @@ export function DeleteGradeModal({
 }: DeleteGradeModalProps) {
   return (
     <ConfirmationModal
-      open={target !== null}
+      open={open}
       onClose={onClose}
       title="成績算出の削除"
       description="以下の成績算出を完全に削除します。"

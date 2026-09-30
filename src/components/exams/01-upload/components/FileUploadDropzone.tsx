@@ -1,6 +1,6 @@
 "use client"
 
-import { FileUp, Loader2, Upload, X } from "lucide-react"
+import { FileUp, Upload, X } from "lucide-react"
 import React, { useCallback, useRef, useState } from "react"
 
 import type { FileUploadDropzoneProps } from "@/components/exams/01-upload/types"
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
+import { Spinner } from "@/components/ui/spinner"
 
 import { isValidMasterImageFile } from "../utils/fileValidation"
 
@@ -181,7 +182,7 @@ export function FileUploadDropzone({
           {/* アップロード中表示 */}
           {isUploading && (
             <div className="space-y-4">
-              <Loader2 className="mx-auto h-12 w-12 animate-spin text-blue-600" />
+              <Spinner className="mx-auto size-12 text-blue-600" />
               <div className="space-y-2">
                 <p className="text-sm font-medium">アップロード中...</p>
                 <Progress value={uploadProgress} className="w-full" />

@@ -10,7 +10,20 @@ import {
 import { useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
 import { Switch } from "@/components/ui/switch"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 import type {
   AsbSubQuestionUpdate,
   BranchQuestion,
@@ -131,6 +144,8 @@ export function SubQuestionForm({
     !!subQuestion.layoutWidth || isManuscriptPaper
 
   const goUpActive = subQuestion.goUp != null
+  const goUpLabel =
+    maxGoUp < 1 ? "戻れる行がありません" : `N行上に戻して配置 (最大${maxGoUp})`
   const isGoUpInvalid =
     goUpActive &&
     (!Number.isInteger(subQuestion.goUp) ||
@@ -141,24 +156,28 @@ export function SubQuestionForm({
     <div className="space-y-1 border-l-2 border-primary/30 pl-4">
       {/* 小問ヘッダー */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex h-7 items-center divide-x overflow-hidden rounded-md border text-xs">
-          <div className="flex items-center gap-0.5 px-1.5">
-            <span className="text-muted-foreground">番号</span>
-            <input
-              className="w-10 bg-transparent px-0.5 text-center outline-none focus:bg-accent/50"
+        <ButtonGroup>
+          <InputGroup className="h-7 w-auto has-focus-visible:z-10">
+            <InputGroupAddon className="py-0 pl-1.5 text-xs font-normal">
+              番号
+            </InputGroupAddon>
+            <InputGroupInput
+              className="h-full w-12 flex-none px-0.5 py-0 text-center text-xs md:text-xs"
               value={subQuestion.label}
               onChange={(e) => onUpdate({ label: e.target.value })}
               aria-label="小問番号"
             />
-          </div>
+          </InputGroup>
           {/* 配点: 枝問なし or 完答モード(usesBranchPoints=false)の時に表示 */}
           {(!hasBranches || subQuestion.usesBranchPoints === false) && (
-            <div className="flex items-center gap-0.5 px-1.5">
-              <span className="text-muted-foreground">配点</span>
-              <input
+            <InputGroup className="h-7 w-auto has-focus-visible:z-10">
+              <InputGroupAddon className="py-0 pl-1.5 text-xs font-normal">
+                配点
+              </InputGroupAddon>
+              <InputGroupInput
                 type="number"
                 aria-label="配点"
-                className="w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none focus:bg-accent/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="h-full w-11 flex-none [appearance:textfield] px-0.5 py-0 text-center text-xs md:text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 value={subQuestion.points}
                 min={0}
                 max={100}
@@ -167,16 +186,18 @@ export function SubQuestionForm({
                   e.target.value = String(Number(e.target.value))
                 }}
               />
-            </div>
+            </InputGroup>
           )}
           {/* 高さ: 枝問なしの時のみ（縦書き時はラベルを「幅」に） */}
           {!hasBranches && (
-            <div className="flex items-center gap-0.5 px-1.5">
-              <span className="text-muted-foreground">{heightLabel}</span>
-              <input
+            <InputGroup className="h-7 w-auto has-focus-visible:z-10">
+              <InputGroupAddon className="py-0 pl-1.5 text-xs font-normal">
+                {heightLabel}
+              </InputGroupAddon>
+              <InputGroupInput
                 type="number"
                 aria-label={heightLabel}
-                className="w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none focus:bg-accent/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="h-full w-11 flex-none [appearance:textfield] px-0.5 py-0 text-center text-xs md:text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 value={subQuestion.heightMultiplier}
                 min={1}
                 max={30}
@@ -188,15 +209,17 @@ export function SubQuestionForm({
                   e.target.value = String(Number(e.target.value))
                 }}
               />
-            </div>
+            </InputGroup>
           )}
           {/* 幅 (layoutWidth) - 原稿用紙有効時は列数から自動計算のため非表示。縦書き時はラベルを「高さ」に */}
           {!isManuscriptPaper && (
-            <div className="flex items-center gap-0.5 px-1.5">
-              <span className="text-muted-foreground">{widthLabel}</span>
-              <input
+            <InputGroup className="h-7 w-auto has-focus-visible:z-10">
+              <InputGroupAddon className="py-0 pl-1.5 text-xs font-normal">
+                {widthLabel}
+              </InputGroupAddon>
+              <InputGroupInput
                 aria-label={widthLabel}
-                className="w-10 bg-transparent px-0.5 text-center outline-none focus:bg-accent/50"
+                className="h-full w-12 flex-none px-0.5 py-0 text-center text-xs md:text-xs"
                 value={subQuestion.layoutWidth ?? ""}
                 onChange={(e) => {
                   const value = e.target.value.trim()
@@ -212,55 +235,75 @@ export function SubQuestionForm({
                 }}
                 placeholder="—"
               />
-            </div>
+            </InputGroup>
           )}
-        </div>
+        </ButtonGroup>
         {/* 改行ボタン */}
         {participatesInHorizontal && (
-          <Button
-            variant="outline"
-            size="icon"
-            className={`h-7 w-7 text-xs ${subQuestion.nextPlacement === "break" ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
-            onClick={() => {
-              if (subQuestion.nextPlacement === "break") {
-                onUpdate({ nextPlacement: undefined })
-              } else {
-                onUpdate({ nextPlacement: "break" })
-              }
-            }}
-            title="改行"
-          >
-            ↵
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label="改行"
+                variant="outline"
+                size="icon"
+                className={`h-7 w-7 text-xs ${subQuestion.nextPlacement === "break" ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
+                onClick={() => {
+                  if (subQuestion.nextPlacement === "break") {
+                    onUpdate({ nextPlacement: undefined })
+                  } else {
+                    onUpdate({ nextPlacement: "break" })
+                  }
+                }}
+              >
+                ↵
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>改行</TooltipContent>
+          </Tooltip>
         )}
         {/* 戻るボタン（自分自身をN行上に配置） */}
         {participatesInHorizontal && (
-          <div className="inline-flex items-center gap-0">
-            <Button
-              variant="outline"
-              size="icon"
-              className={`h-7 w-7 text-xs ${goUpActive && subQuestion.goUp! > 0 ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"} ${goUpActive ? "rounded-r-none" : ""}`}
-              onClick={() => {
-                if (goUpActive) {
-                  onUpdate({ goUp: undefined })
-                } else {
-                  onUpdate({ goUp: Math.min(1, maxGoUp) })
-                }
-              }}
-              disabled={!goUpActive && maxGoUp < 1}
-              title={
-                maxGoUp < 1
-                  ? "戻れる行がありません"
-                  : `N行上に戻して配置 (最大${maxGoUp})`
-              }
-            >
-              ↑
-            </Button>
+          <InputGroup
+            className={cn("h-7 w-auto", goUpActive && "border-primary/50")}
+          >
+            <InputGroupAddon className="py-0 pl-0 has-[>button]:ml-0">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <InputGroupButton
+                      aria-label={goUpLabel}
+                      size="icon-xs"
+                      className={cn(
+                        "size-6.5 text-xs",
+                        goUpActive && subQuestion.goUp! > 0
+                          ? "bg-primary/10 text-primary hover:bg-primary/20"
+                          : "text-muted-foreground"
+                      )}
+                      onClick={() => {
+                        if (goUpActive) {
+                          onUpdate({ goUp: undefined })
+                        } else {
+                          onUpdate({ goUp: Math.min(1, maxGoUp) })
+                        }
+                      }}
+                      disabled={!goUpActive && maxGoUp < 1}
+                    >
+                      ↑
+                    </InputGroupButton>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{goUpLabel}</TooltipContent>
+              </Tooltip>
+            </InputGroupAddon>
             {goUpActive && (
-              <input
+              <InputGroupInput
                 type="number"
                 aria-label="戻り行数"
-                className={`h-7 w-8 [appearance:textfield] rounded-r-md border border-l-0 border-primary/50 px-0.5 text-center text-xs outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${isGoUpInvalid ? "bg-red-100 dark:bg-red-900/30" : "bg-transparent"}`}
+                aria-invalid={isGoUpInvalid}
+                className={cn(
+                  "h-full w-8 flex-none [appearance:textfield] px-0.5 py-0 text-center text-xs md:text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+                  isGoUpInvalid && "bg-red-100 dark:bg-red-900/30"
+                )}
                 value={subQuestion.goUp || ""}
                 min={1}
                 max={maxGoUp}
@@ -294,7 +337,7 @@ export function SubQuestionForm({
                 }}
               />
             )}
-          </div>
+          </InputGroup>
         )}
 
         {/* 枝問配点スイッチ（枝問がある場合のみ） */}
@@ -304,7 +347,6 @@ export function SubQuestionForm({
               枝問配点
             </span>
             <Switch
-              className="scale-75"
               checked={subQuestion.usesBranchPoints !== false}
               onCheckedChange={(value) => onUpdate({ usesBranchPoints: value })}
             />
@@ -313,62 +355,88 @@ export function SubQuestionForm({
 
         {/* アクションボタン */}
         <div className="ml-auto flex items-center gap-1.5">
-          <div className="inline-flex items-center rounded-md border">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-r-none text-muted-foreground"
-              onClick={onMoveUp}
-              disabled={!onMoveUp}
-              title="上へ移動"
-            >
-              <ChevronUp className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-l-none border-l text-muted-foreground"
-              onClick={onMoveDown}
-              disabled={!onMoveDown}
-              title="下へ移動"
-            >
-              <ChevronDown className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+          <ButtonGroup className="rounded-md border">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="上へ移動"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground"
+                  onClick={onMoveUp}
+                  disabled={!onMoveUp}
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>上へ移動</TooltipContent>
+            </Tooltip>
+            <ButtonGroupSeparator />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="下へ移動"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground"
+                  onClick={onMoveDown}
+                  disabled={!onMoveDown}
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>下へ移動</TooltipContent>
+            </Tooltip>
+          </ButtonGroup>
           {!hasBranches && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`relative h-7 w-7 ${hasVisibilityRestricted ? "text-orange-500" : detailOpen ? "text-primary" : "text-muted-foreground"}`}
-              onClick={() => setDetailOpen(!detailOpen)}
-              title="詳細設定"
-            >
-              <Settings2 className="h-3.5 w-3.5" />
-              {hasDetailContent && (
-                <span
-                  className={`absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ${hasVisibilityRestricted ? "bg-orange-500" : "bg-primary"}`}
-                />
-              )}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="詳細設定"
+                  variant="ghost"
+                  size="icon"
+                  className={`relative h-7 w-7 ${hasVisibilityRestricted ? "text-orange-500" : detailOpen ? "text-primary" : "text-muted-foreground"}`}
+                  onClick={() => setDetailOpen(!detailOpen)}
+                >
+                  <Settings2 className="h-3.5 w-3.5" />
+                  {hasDetailContent && (
+                    <span
+                      className={`absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ${hasVisibilityRestricted ? "bg-orange-500" : "bg-primary"}`}
+                    />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>詳細設定</TooltipContent>
+            </Tooltip>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-primary"
-            onClick={() => actions.addBranchQuestion(subQuestion.id)}
-            title="枝問を追加"
-          >
-            <GitBranch className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => actions.deleteSubQuestion(subQuestion.id)}
-            title="小問を削除"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label="枝問を追加"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                onClick={() => actions.addBranchQuestion(subQuestion.id)}
+              >
+                <GitBranch className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>枝問を追加</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label="小問を削除"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                onClick={() => actions.deleteSubQuestion(subQuestion.id)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>小問を削除</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import { useMutation } from "@tanstack/react-query"
 import { Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 
+import { Combobox } from "@/components/common/Combobox"
 import {
   DragHandle,
   SortableTableProvider,
@@ -20,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { dateSearchKeywords } from "@/lib/searchKeywords"
 import {
   createGradeComparisonMutation,
   deleteGradeComparisonMutation,
@@ -109,6 +111,14 @@ export function GradeItemComparisons({
   const comparedGradeItemIds = new Set(
     comparisons.map((comparison) => comparison.comparedGradeItemId)
   )
+  const gradeOptions = candidateGrades.map((candidateGrade) => ({
+    value: candidateGrade.id,
+    label:
+      candidateGrade.id === gradeId
+        ? `${candidateGrade.name}（この成績算出）`
+        : candidateGrade.name,
+    keywords: dateSearchKeywords(candidateGrade.referenceDate),
+  }))
   const selectedGrade = candidateGrades.find(
     (candidateGrade) => candidateGrade.id === selectedGradeId
   )
@@ -170,26 +180,19 @@ export function GradeItemComparisons({
       )}
 
       <div className="flex items-center gap-2">
-        <Select
+        <Combobox
+          options={gradeOptions}
           value={selectedGradeId}
           onValueChange={(value) => {
             setSelectedGradeId(value)
             setSelectedGradeItemId("")
           }}
-        >
-          <SelectTrigger className="h-8 w-64">
-            <SelectValue placeholder="成績算出を選択" />
-          </SelectTrigger>
-          <SelectContent>
-            {candidateGrades.map((candidateGrade) => (
-              <SelectItem key={candidateGrade.id} value={candidateGrade.id}>
-                {candidateGrade.id === gradeId
-                  ? `${candidateGrade.name}（この成績算出）`
-                  : candidateGrade.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          placeholder="成績算出を選択"
+          searchPlaceholder="成績算出名・基準日で検索"
+          emptyText="該当する成績算出がありません"
+          aria-label="比較相手の成績算出"
+          className="h-8 w-64"
+        />
         <Select
           value={selectedGradeItemId}
           onValueChange={setSelectedGradeItemId}

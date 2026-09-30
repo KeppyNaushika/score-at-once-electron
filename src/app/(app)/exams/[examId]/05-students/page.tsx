@@ -5,7 +5,6 @@ import { Plus, Users } from "lucide-react"
 import { useParams } from "next/navigation"
 import { useCallback, useState } from "react"
 
-import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { ClassroomExamManager } from "@/components/exams/05-students/components/ClassroomExamManager"
 import { ClassroomStatisticsCards } from "@/components/exams/05-students/components/exam-students-page/components/ClassroomStatisticsCards"
 import { StudentStatisticsCards } from "@/components/exams/05-students/components/exam-students-page/components/StudentStatisticsCards"
@@ -14,6 +13,7 @@ import ExamStudentAddModal from "@/components/exams/05-students/components/ExamS
 import SortableStudentTable from "@/components/exams/05-students/components/SortableStudentTable"
 import StudentRemovalConfirmModal from "@/components/exams/05-students/components/StudentRemovalConfirmModal"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   type ExamClassroomRow,
@@ -112,7 +112,7 @@ export default function StudentsPage() {
   if (loading || classroomsLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <LoadingSpinner />
+        <Spinner className="size-6" />
       </div>
     )
   }

@@ -5,66 +5,62 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 
-import type { ComparisonEmphasis, ComparisonMark } from "./types"
+import type { ComparisonDisplay, ComparisonMark } from "./types"
 
-/** 強調の段階（off は記号ごと出さないので、ここには来ない） */
-type VisibleEmphasis = Exclude<ComparisonEmphasis, "off">
+/** 記号の出し方（off は記号ごと出さないので、ここには来ない） */
+type VisibleDisplay = Exclude<ComparisonDisplay, "none">
 
 /**
- * 記号と強さごとの見た目。→ と ・ はどの強さでも薄いまま、動いたもの（↑↓）と
- * 上下を決められないもの（*）だけが強さに応じて目立つ。
+ * 記号と出し方ごとの見た目。→ と ・ はどの出し方でも薄いまま、動いたもの（↑↓）と
+ * 上下を決められないもの（*）だけが「強調」で背景を塗って目立つ。
  */
 const MARK_STYLES: Record<
   ComparisonMark["direction"],
   {
     symbol: string
-    classNameByEmphasis: Record<VisibleEmphasis, string>
+    classNameByDisplay: Record<VisibleDisplay, string>
     description: string
   }
 > = {
   up: {
     symbol: "↑",
-    classNameByEmphasis: {
+    classNameByDisplay: {
       symbol: "text-emerald-600 dark:text-emerald-400",
-      tint: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200",
-      solid: "bg-emerald-600 text-white",
+      highlight: "bg-emerald-600 text-white",
     },
     description: "上がった",
   },
   down: {
     symbol: "↓",
-    classNameByEmphasis: {
+    classNameByDisplay: {
       symbol: "text-rose-600 dark:text-rose-400",
-      tint: "bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-200",
-      solid: "bg-rose-600 text-white",
+      highlight: "bg-rose-600 text-white",
     },
     description: "下がった",
   },
   same: {
     symbol: "→",
-    classNameByEmphasis: {
+    classNameByDisplay: {
       symbol: "text-muted-foreground/50",
-      tint: "text-muted-foreground/50",
-      solid: "text-muted-foreground/50",
+      highlight: "text-muted-foreground/50",
     },
     description: "同じ",
   },
   unknown: {
     symbol: "*",
-    classNameByEmphasis: {
+    classNameByDisplay: {
       symbol: "text-amber-600 dark:text-amber-400",
-      tint: "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200",
-      solid: "bg-amber-500 text-white",
+      highlight: "bg-amber-500 text-white",
     },
     description: "成績境界に無い評定なので上下を決められない",
   },
   missing: {
     symbol: "・",
-    classNameByEmphasis: {
+    classNameByDisplay: {
       symbol: "text-muted-foreground/40",
-      tint: "text-muted-foreground/40",
-      solid: "text-muted-foreground/40",
+      highlight: "text-muted-foreground/40",
     },
     description: "比較先に評定が無い",
   },
@@ -76,15 +72,15 @@ const MARK_STYLES: Record<
  */
 function MarkSymbol({
   direction,
-  emphasis,
+  display,
 }: {
   direction: ComparisonMark["direction"]
-  emphasis: VisibleEmphasis
+  display: VisibleDisplay
 }) {
   const style = MARK_STYLES[direction]
   return (
     <span
-      className={`inline-block w-4 rounded-sm text-center ${style.classNameByEmphasis[emphasis]}`}
+      className={`inline-block w-4 rounded-sm text-center ${style.classNameByDisplay[display]}`}
       title={style.description}
     >
       {style.symbol}
@@ -101,21 +97,21 @@ interface ComparisonMarksProps {
   /** 今回の評定と達成率（ポップオーバーの先頭に出す） */
   currentGradeLabel: string | null
   currentPercentage: number | null
-  emphasis: VisibleEmphasis
+  display: VisibleDisplay
 }
 
 /**
  * 結果のマスに並べる比較の記号。登録順に1文字ずつ並べ、位置は詰めない。
  *
  * 評定バッジの中の矢印（上書きの向き）と見分けられるよう、バッジの外に
- * 点線の枠で囲んで置く。強さ（`emphasis`）は結果画面のスライダーが決める。
+ * 点線の枠で囲んで置く。出し方（`display`）は結果画面の「変化の表示」が決める。
  * クリックで比較先の値を一覧する。
  */
 export function ComparisonMarks({
   marks,
   currentGradeLabel,
   currentPercentage,
-  emphasis,
+  display,
 }: ComparisonMarksProps) {
   return (
     <Popover>
@@ -129,41 +125,45 @@ export function ComparisonMarks({
             <MarkSymbol
               key={mark.comparisonId}
               direction={mark.direction}
-              emphasis={emphasis}
+              display={display}
             />
           ))}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-3" align="start">
-        <table className="text-xs">
-          <tbody>
-            <tr className="border-b">
-              <td className="py-1 pr-3 font-medium" colSpan={2}>
+        <Table className="w-auto text-xs">
+          <TableBody>
+            <TableRow>
+              <TableCell className="py-1 pr-3 pl-0 font-medium" colSpan={2}>
                 今回
-              </td>
-              <td className="py-1 pr-3 text-right tabular-nums">
+              </TableCell>
+              <TableCell className="py-1 pr-3 pl-0 text-right tabular-nums">
                 {formatPercentage(currentPercentage)}
-              </td>
-              <td className="py-1 font-medium">{currentGradeLabel ?? "-"}</td>
-            </tr>
+              </TableCell>
+              <TableCell className="px-0 py-1 font-medium">
+                {currentGradeLabel ?? "-"}
+              </TableCell>
+            </TableRow>
             {marks.map((mark) => (
-              <tr key={mark.comparisonId}>
-                <td className="py-1 pr-2">
-                  <MarkSymbol direction={mark.direction} emphasis={emphasis} />
-                </td>
-                <td className="py-1 pr-3">
+              <TableRow key={mark.comparisonId} className="border-b-0">
+                <TableCell className="py-1 pr-2 pl-0">
+                  <MarkSymbol direction={mark.direction} display={display} />
+                </TableCell>
+                <TableCell className="py-1 pr-3 pl-0 whitespace-normal">
                   {mark.comparedGradeName === null
                     ? mark.comparedGradeItemName
                     : `${mark.comparedGradeName} > ${mark.comparedGradeItemName}`}
-                </td>
-                <td className="py-1 pr-3 text-right tabular-nums">
+                </TableCell>
+                <TableCell className="py-1 pr-3 pl-0 text-right tabular-nums">
                   {formatPercentage(mark.comparedPercentage)}
-                </td>
-                <td className="py-1">{mark.comparedGradeLabel ?? "-"}</td>
-              </tr>
+                </TableCell>
+                <TableCell className="px-0 py-1">
+                  {mark.comparedGradeLabel ?? "-"}
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
         {marks.some((mark) => mark.direction === "unknown") && (
           <p className="mt-2 text-xs text-muted-foreground">
             *

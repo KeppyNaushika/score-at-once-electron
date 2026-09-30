@@ -6,7 +6,7 @@ import {
   FocusSection,
   HelpDoc,
   HelpHero,
-  Kbd,
+  KeyCap,
   Pill,
 } from "@/components/help/common/DocComponents"
 
@@ -145,10 +145,10 @@ function CellFocusFigure() {
       </div>
       <div className="flex items-center gap-3 text-[11px] text-gray-500">
         <span className="inline-flex items-center gap-1">
-          <Kbd>Tab</Kbd>横へ
+          <KeyCap>Tab</KeyCap>横へ
         </span>
         <span className="inline-flex items-center gap-1">
-          <Kbd>Enter</Kbd>下の行へ
+          <KeyCap>Enter</KeyCap>下の行へ
         </span>
       </div>
     </div>
@@ -279,23 +279,25 @@ export function HelpContent03RegionInfo() {
         </p>
         <ul className="ml-1 space-y-2">
           <li>
-            <Kbd>Tab</Kbd> … 同じ行の次の欄へ進みます。
+            <KeyCap>Tab</KeyCap> … 同じ行の次の欄へ進みます。
           </li>
           <li>
-            <Kbd>Shift</Kbd>+<Kbd>Tab</Kbd> … 同じ行の前の欄へ戻ります。
+            <KeyCap>Shift</KeyCap>+<KeyCap>Tab</KeyCap> …
+            同じ行の前の欄へ戻ります。
           </li>
           <li>
-            <Kbd>Enter</Kbd> … 次の行の同じ欄へ進みます。
+            <KeyCap>Enter</KeyCap> … 次の行の同じ欄へ進みます。
           </li>
           <li>
-            <Kbd>Shift</Kbd>+<Kbd>Enter</Kbd> … 前の行の同じ欄へ戻ります。
+            <KeyCap>Shift</KeyCap>+<KeyCap>Enter</KeyCap> …
+            前の行の同じ欄へ戻ります。
           </li>
         </ul>
         <Figure caption="Tab で同じ行の右の欄へ、Enter で次の行へとフォーカスが移ります。">
           <CellFocusFigure />
         </Figure>
         <Callout type="tip" title="同じ項目を続けて入力するとき">
-          <Kbd>Enter</Kbd>{" "}
+          <KeyCap>Enter</KeyCap>{" "}
           を使うと、ラベルだけ、または配点だけを上から順にどんどん入力していけます。同じ種類の作業をまとめて進めたいときに便利です。
         </Callout>
       </FocusSection>

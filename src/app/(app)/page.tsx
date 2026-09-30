@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 
+import { Spinner } from "@/components/ui/spinner"
+
 /**
  * 入口。**行き先は試験一覧の1つだけ。**
  *
@@ -20,7 +22,7 @@ const Page = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100">
       <div className="space-y-4 text-center">
-        <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+        <Spinner className="mx-auto size-16 text-blue-500" />
         <div className="space-y-2">
           <p className="text-lg font-medium text-gray-700">
             試験一覧へ移動しています...

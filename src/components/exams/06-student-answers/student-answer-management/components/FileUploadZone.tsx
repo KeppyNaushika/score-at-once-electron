@@ -2,13 +2,14 @@
 
 import { fromEvent } from "file-selector"
 import { COMMON_MIME_TYPES } from "file-selector/mime"
-import { RefreshCw, Upload } from "lucide-react"
+import { Upload } from "lucide-react"
 import { useDropzone } from "react-dropzone"
 
 import type { FileUploadZoneProps } from "@/components/exams/06-student-answers/student-answer-management/types"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { Spinner } from "@/components/ui/spinner"
 
 /**
  * 拡張子から MIME を補完してから File を渡す。
@@ -67,7 +68,7 @@ export function FileUploadZone({
 
           {isConverting ? (
             <div className="space-y-4">
-              <RefreshCw className="mx-auto h-12 w-12 animate-spin text-primary" />
+              <Spinner className="mx-auto size-12 text-primary" />
               <div className="space-y-2">
                 <p className="text-lg font-medium">ファイルを変換中...</p>
                 <Progress

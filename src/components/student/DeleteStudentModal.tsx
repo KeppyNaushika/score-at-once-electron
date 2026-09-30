@@ -11,7 +11,11 @@ import { gradeReferencesQuery } from "@/queries/grade"
 import { deleteStudentMutation } from "@/queries/student"
 
 interface DeleteStudentModalProps {
-  /** 消そうとしている生徒（null のとき閉じている）。一覧・詳細のどちらの行も渡せる */
+  open: boolean
+  /**
+   * 消そうとしている生徒。一覧・詳細のどちらの行も渡せる。
+   * 閉じても残す（閉じるアニメーションの間も中身を出したままにする）
+   */
   student: Student | null
   onClose: () => void
   /** 削除できた後に呼ぶ（閉じるのはこのモーダルが行う） */
@@ -26,6 +30,7 @@ interface DeleteStudentModalProps {
  * 判定で最終的に断る。
  */
 export function DeleteStudentModal({
+  open,
   student,
   onClose,
   onDeleted,
@@ -42,10 +47,9 @@ export function DeleteStudentModal({
       ? refusal.message
       : null
 
-  const open = student !== null
   const gradeReferences = useQuery({
     ...gradeReferencesQuery({ kind: "student", id: student?.id ?? "" }),
-    enabled: open,
+    enabled: open && student !== null,
   })
   const blockedMessage = gradeReferences.data
     ? buildDeletionBlockedMessage("student", gradeReferences.data)

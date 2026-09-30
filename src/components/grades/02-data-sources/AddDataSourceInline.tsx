@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
 import { useMemo, useState } from "react"
 
+import { Combobox } from "@/components/common/Combobox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -13,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { dateSearchKeywords } from "@/lib/searchKeywords"
 import {
   type CourseworkCandidate,
   courseworkCandidatesQuery,
@@ -91,6 +93,25 @@ export function AddDataSourceInline({
     ...gradeExamCropRegionsQuery(selectedExamId),
     enabled: Boolean(selectedExamId),
   })
+
+  const examOptions = useMemo(
+    () =>
+      exams.map((exam) => ({
+        value: exam.id,
+        label: exam.examName,
+        keywords: dateSearchKeywords(exam.referenceDate),
+      })),
+    [exams]
+  )
+  const courseworkOptions = useMemo(
+    () =>
+      courseworks.map((coursework) => ({
+        value: coursework.id,
+        label: coursework.name,
+        keywords: dateSearchKeywords(coursework.referenceDate),
+      })),
+    [courseworks]
+  )
 
   const selection = useMemo(
     () => ({
@@ -234,18 +255,16 @@ export function AddDataSourceInline({
 
         {/* 試験試験選択 */}
         {type !== "coursework" && (
-          <Select value={selectedExamId} onValueChange={setSelectedExamId}>
-            <SelectTrigger className="h-8 w-48">
-              <SelectValue placeholder="試験を選択" />
-            </SelectTrigger>
-            <SelectContent>
-              {exams.map((examOption) => (
-                <SelectItem key={examOption.id} value={examOption.id}>
-                  {examOption.examName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Combobox
+            options={examOptions}
+            value={selectedExamId}
+            onValueChange={setSelectedExamId}
+            placeholder="試験を選択"
+            searchPlaceholder="試験名・試験日で検索"
+            emptyText="該当する試験がありません"
+            aria-label="データ元にする試験"
+            className="h-8 w-48"
+          />
         )}
 
         {/* Subtotal選択 (subtotalタイプ) */}
@@ -311,25 +330,20 @@ export function AddDataSourceInline({
         {/* coursework型: 資料→評価項目の2段選択 */}
         {type === "coursework" && (
           <>
-            <Select
+            <Combobox
+              options={courseworkOptions}
               value={selectedCourseworkId}
               onValueChange={(value) => {
                 setSelectedCourseworkId(value)
                 // 資料を切り替えたら評価項目の選択をやり直させる
                 setSelectedCourseworkItemId("")
               }}
-            >
-              <SelectTrigger className="h-8 w-48">
-                <SelectValue placeholder="資料を選択" />
-              </SelectTrigger>
-              <SelectContent>
-                {courseworks.map((coursework) => (
-                  <SelectItem key={coursework.id} value={coursework.id}>
-                    {coursework.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="資料を選択"
+              searchPlaceholder="資料名・実施日で検索"
+              emptyText="該当する資料がありません"
+              aria-label="データ元にする資料"
+              className="h-8 w-48"
+            />
             {selectedCourseworkId && (
               <Select
                 value={selectedCourseworkItemId}

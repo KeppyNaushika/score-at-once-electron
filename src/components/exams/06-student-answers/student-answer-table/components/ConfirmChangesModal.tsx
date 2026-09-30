@@ -1,11 +1,6 @@
 "use client"
 
-import {
-  AlertTriangle,
-  ArrowLeftRight,
-  ArrowRight,
-  Loader2,
-} from "lucide-react"
+import { AlertTriangle, ArrowLeftRight, ArrowRight } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 
 import type { PendingChange } from "@/components/exams/06-student-answers/types"
@@ -19,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import type { PlacementScorePolicy } from "@/electron-src/lib/prisma/studentAnswer/placementApply"
 
@@ -262,9 +258,7 @@ export function ConfirmChangesModal({
                   disabled={isApplying}
                   className="bg-red-600 hover:bg-red-700"
                 >
-                  {isApplying && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
+                  {isApplying && <Spinner className="mr-2" />}
                   破棄して反映
                 </Button>
               </>
@@ -291,9 +285,7 @@ export function ConfirmChangesModal({
                   onClick={handleProceed}
                   disabled={isApplying || !allAcked}
                 >
-                  {isApplying && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
+                  {isApplying && <Spinner className="mr-2" />}
                   反映
                 </Button>
               </>

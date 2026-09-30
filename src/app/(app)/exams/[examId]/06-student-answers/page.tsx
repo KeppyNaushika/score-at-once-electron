@@ -5,11 +5,11 @@ import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import type { DirtyDetail } from "@/contexts/NavigationGuardContext"
 import { useNavigationGuard } from "@/hooks/useNavigationGuard"
 
 import {
-  LoadingSpinner,
   StudentAnswersTabContent,
   StudentAnswersTabsNavigation,
   type StudentAnswerTab,
@@ -105,7 +105,14 @@ export default function StudentAnswersPage() {
 
   // Show loading spinner while data is loading
   if (isLoading) {
-    return <LoadingSpinner />
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="text-center">
+          <Spinner className="mx-auto size-12 text-primary" />
+          <p className="mt-4 text-muted-foreground">読み込み中...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

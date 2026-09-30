@@ -9,7 +9,7 @@ import {
   FocusSection,
   HelpDoc,
   HelpHero,
-  Kbd,
+  KeyCap,
   Pill,
 } from "@/components/help/common/DocComponents"
 
@@ -242,7 +242,7 @@ export function HelpContent02Template() {
       <FocusSection title="③ いらない範囲を消す">
         <p>
           間違えて作ってしまった枠は、削除できます。まず消したい枠をクリックして選び、つぎに{" "}
-          <Kbd>Delete</Kbd> キーか <Kbd>Backspace</Kbd>{" "}
+          <KeyCap>Delete</KeyCap> キーか <KeyCap>Backspace</KeyCap>{" "}
           キーを押してください。選んでいた枠が消えます。
         </p>
         <p>
@@ -302,15 +302,15 @@ export function HelpContent02Template() {
       <FocusSection title="⑦ 画面を拡大・縮小する">
         <p>
           細かい場所を正確に囲みたいときは、画像を拡大すると作業がしやすくなります。{" "}
-          <Kbd>Ctrl</Kbd>{" "}
+          <KeyCap>Ctrl</KeyCap>{" "}
           キーを押しながらマウスのホイールを回すと、拡大・縮小ができます。
         </p>
         <p>
           キーボードでも操作できます。画像をクリックして選んでから、{" "}
-          <Kbd>Ctrl</Kbd>+<Kbd>+</Kbd> で拡大、<Kbd>Ctrl</Kbd>+<Kbd>-</Kbd>{" "}
-          で縮小、<Kbd>Ctrl</Kbd>+<Kbd>0</Kbd>{" "}
+          <KeyCap>Ctrl</KeyCap>+<KeyCap>+</KeyCap> で拡大、<KeyCap>Ctrl</KeyCap>
+          +<KeyCap>-</KeyCap> で縮小、<KeyCap>Ctrl</KeyCap>+<KeyCap>0</KeyCap>{" "}
           でもとの大きさに戻ります。拡大して画面からはみ出した部分は、通常どおりスクロールで見られます。画面右上の{" "}
-          <Kbd>?</Kbd>{" "}
+          <KeyCap>?</KeyCap>{" "}
           ボタンを押すと、これらの操作の一覧をいつでも確認できます。
         </p>
       </FocusSection>
@@ -327,8 +327,8 @@ export function HelpContent02Template() {
 
       <FocusSection title="困ったときは">
         <Callout type="warning" title="範囲を間違えてしまったとき">
-          間違えた枠をクリックして選び、<Kbd>Delete</Kbd> キーか{" "}
-          <Kbd>Backspace</Kbd>{" "}
+          間違えた枠をクリックして選び、<KeyCap>Delete</KeyCap> キーか{" "}
+          <KeyCap>Backspace</KeyCap>{" "}
           キーで削除してから、もう一度正しい場所を囲み直してください。
         </Callout>
         <Callout type="tip" title="枠が小さすぎて作れないとき">

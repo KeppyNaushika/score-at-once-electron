@@ -42,11 +42,11 @@ import type {
   GradeOverrideInput,
 } from "@/types/grade.types"
 
-import { ComparisonEmphasisSlider } from "./ComparisonEmphasisSlider"
+import { ComparisonDisplayToggle } from "./ComparisonDisplayToggle"
 import { GradeDistributionChart } from "./GradeDistributionChart"
 import { useComparisonMarks } from "./hooks/useComparisonMarks"
 import { ResultsTable } from "./ResultsTable"
-import type { ComparisonEmphasis } from "./types"
+import type { ComparisonDisplay } from "./types"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_CONSTRAINTS: GradeConstraintData[] = []
@@ -67,18 +67,19 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
     gradeConstraintsQuery(gradeId)
   )
   const { comparisonMarks } = useComparisonMarks(gradeId, result)
-  // 変化の強調（比較の記号の強さ）。利用者の設定に保存する。
+  // 変化の表示（比較の記号の出し方）。利用者の設定に保存する。
   // 「表示しない」にすると今までどおりの表に戻る。
   // 選んだ段は画面にも持つ。取り直しは待たずに走るので、書いた直後に設定の値へ
-  // 戻すと、着地するまでつまみが元の段へ跳ねる。書けなかったときだけ設定の値へ戻す
-  const { data: storedEmphasis = null } = useQuery(
-    userPreferenceQuery(currentUser.id, "gradeComparisonEmphasis")
+  // 戻すと、着地するまで選択が元の段へ跳ねる。書けなかったときだけ設定の値へ戻す
+  const { data: storedDisplay = null } = useQuery(
+    userPreferenceQuery(currentUser.id, "gradeComparisonDisplay")
   )
   const setPreference = useMutation(setUserPreferenceMutation(currentUser.id))
-  const [chosenEmphasis, setChosenEmphasis] =
-    useState<ComparisonEmphasis | null>(null)
-  const comparisonEmphasis =
-    chosenEmphasis ?? parsePreference("gradeComparisonEmphasis", storedEmphasis)
+  const [chosenDisplay, setChosenDisplay] = useState<ComparisonDisplay | null>(
+    null
+  )
+  const comparisonDisplay =
+    chosenDisplay ?? parsePreference("gradeComparisonDisplay", storedDisplay)
   const upsertOverride = useMutation(upsertGradeOverrideMutation(gradeId))
   const deleteOverride = useMutation(deleteGradeOverrideMutation(gradeId))
   const freezeScores = useMutation(freezeGradeScoresMutation(gradeId))
@@ -244,13 +245,13 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
       <GradeDistributionChart result={result} />
       {comparisonMarks && (
         <div className="mt-6 flex justify-end">
-          <ComparisonEmphasisSlider
-            emphasis={comparisonEmphasis}
-            onEmphasisChange={setChosenEmphasis}
-            onEmphasisCommit={(emphasis) => {
+          <ComparisonDisplayToggle
+            display={comparisonDisplay}
+            onDisplayChange={(display) => {
+              setChosenDisplay(display)
               setPreference.mutate(
-                { key: "gradeComparisonEmphasis", value: emphasis },
-                { onError: () => setChosenEmphasis(null) }
+                { key: "gradeComparisonDisplay", value: display },
+                { onError: () => setChosenDisplay(null) }
               )
             }}
           />
@@ -259,9 +260,9 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
       <ResultsTable
         result={result}
         constraints={constraints}
-        comparisonMarks={comparisonEmphasis === "off" ? null : comparisonMarks}
-        comparisonEmphasis={
-          comparisonEmphasis === "off" ? "symbol" : comparisonEmphasis
+        comparisonMarks={comparisonDisplay === "none" ? null : comparisonMarks}
+        comparisonDisplay={
+          comparisonDisplay === "none" ? "symbol" : comparisonDisplay
         }
         onGradeOverride={setGradeOverride}
         onRefreezeCell={(target: GradeCellTarget) =>

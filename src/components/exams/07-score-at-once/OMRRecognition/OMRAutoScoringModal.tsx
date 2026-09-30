@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle, Loader2, ScanLine, Sparkles, XCircle } from "lucide-react"
+import { CheckCircle, ScanLine, Sparkles, XCircle } from "lucide-react"
 import { useCallback } from "react"
 
 import { useOmrAutoScoring } from "@/components/exams/07-score-at-once/OMRRecognition/hooks/useOmrAutoScoring"
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import { Slider } from "@/components/ui/slider"
+import { Spinner } from "@/components/ui/spinner"
 
 interface OMRAutoScoringModalProps {
   examId: string
@@ -83,7 +84,7 @@ export function OMRAutoScoringModal({
           {isRecognizing && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Spinner />
                 <span>OMR認識実行中...</span>
               </div>
               {progress && (
@@ -219,7 +220,7 @@ export function OMRAutoScoringModal({
           {/* 反映中 */}
           {isApplying && (
             <div className="flex items-center gap-2 text-sm">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Spinner />
               採点データを反映中...
             </div>
           )}
@@ -241,7 +242,7 @@ export function OMRAutoScoringModal({
             >
               {isRecognizing ? (
                 <>
-                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  <Spinner className="mr-1" />
                   認識中...
                 </>
               ) : (
@@ -255,7 +256,7 @@ export function OMRAutoScoringModal({
             >
               {isApplying ? (
                 <>
-                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  <Spinner className="mr-1" />
                   反映中...
                 </>
               ) : (

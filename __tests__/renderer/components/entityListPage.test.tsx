@@ -30,6 +30,7 @@ import {
   screen,
   within,
 } from "@testing-library/react"
+import { PencilSparkles } from "lucide-react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { EntityListPage } from "@/components/common/EntityListPage"
@@ -158,6 +159,7 @@ function renderList(
       onToggleSelectAll={toggleSelectAllSpy}
       allSelected={false}
       empty={{
+        icon: PencilSparkles,
         message: "まだ試験がありません",
         action: <button type="button">最初の試験を作成</button>,
       }}

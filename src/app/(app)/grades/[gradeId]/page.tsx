@@ -145,15 +145,15 @@ export default function GradeDetailPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => exportArchive.mutate(gradeId)}>
-                <FolderOutput className="mr-2 h-4 w-4" />
+                <FolderOutput />
                 .grade 書き出し
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => setIsDeleteModalOpen(true)}
-                className="text-red-600 focus:text-red-600"
+                variant="destructive"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 />
                 成績算出を削除
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -161,16 +161,13 @@ export default function GradeDetailPage() {
         }
       />
       <DeleteGradeModal
-        target={
-          isDeleteModalOpen
-            ? {
-                id: grade.id,
-                name: grade.name,
-                studentCount: grade.gradeStudents.length,
-                gradeItemCount: grade.gradeItems.length,
-              }
-            : null
-        }
+        open={isDeleteModalOpen}
+        target={{
+          id: grade.id,
+          name: grade.name,
+          studentCount: grade.gradeStudents.length,
+          gradeItemCount: grade.gradeItems.length,
+        }}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDelete}
         loading={deleteGrade.isPending}

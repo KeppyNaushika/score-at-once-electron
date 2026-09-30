@@ -8,7 +8,19 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { ColorPicker } from "@/components/ui/color-picker"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useSlidingValue } from "@/hooks/useSlidingValue"
 import {
@@ -209,26 +221,29 @@ export function DisplaySettingsTab() {
                 <Label className="w-36 shrink-0 text-sm">
                   {labels[clickCount]}
                 </Label>
-                <select
-                  className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-                  value={
-                    clickScoringConfig[
-                      clickCount as keyof typeof clickScoringConfig
-                    ]
-                  }
-                  onChange={(e) =>
+                <Select
+                  value={clickScoringConfig[clickCount]}
+                  onValueChange={(value) =>
                     handleClickActionChange(
                       clickCount,
-                      toClickScoringAction(e.target.value)
+                      toClickScoringAction(value)
                     )
                   }
                 >
-                  {actionOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger size="sm" className="flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {actionOptions.map((actionOption) => (
+                      <SelectItem
+                        key={actionOption.value}
+                        value={actionOption.value}
+                      >
+                        {actionOption.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )
           })}
@@ -319,15 +334,20 @@ export function DisplaySettingsTab() {
           <Label className="text-sm font-medium">プリセット</Label>
           <div className="flex flex-wrap gap-2">
             {SCORING_COLOR_PRESETS.map((preset) => (
-              <Button
-                key={preset.id}
-                variant={isPresetSelected(preset.id) ? "default" : "outline"}
-                size="sm"
-                onClick={() => handlePresetSelect(preset.id)}
-                title={preset.description}
-              >
-                {preset.name}
-              </Button>
+              <Tooltip key={preset.id}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={
+                      isPresetSelected(preset.id) ? "default" : "outline"
+                    }
+                    size="sm"
+                    onClick={() => handlePresetSelect(preset.id)}
+                  >
+                    {preset.name}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{preset.description}</TooltipContent>
+              </Tooltip>
             ))}
           </div>
         </div>

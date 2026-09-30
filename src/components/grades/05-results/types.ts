@@ -1,4 +1,4 @@
-import type { GRADE_COMPARISON_EMPHASES } from "@/lib/userPreferences"
+import type { GRADE_COMPARISON_DISPLAYS } from "@/lib/userPreferences"
 
 import type { GradeLabelDirection } from "../gradeLabelValues"
 
@@ -23,7 +23,7 @@ export interface ComparisonMark {
 export type ComparisonMarksByCell = Map<string, Map<string, ComparisonMark[]>>
 
 /**
- * 変化の記号の強さ。値の一覧は利用者の設定（`GRADE_COMPARISON_EMPHASES`）が持つ。
- * → と ・ はどの強さでも薄いまま（動いたものだけを目立たせる）
+ * 変化の記号の出し方。値の一覧は利用者の設定（`GRADE_COMPARISON_DISPLAYS`）が持つ。
+ * → と ・ はどの出し方でも薄いまま（動いたものだけを目立たせる）
  */
-export type ComparisonEmphasis = (typeof GRADE_COMPARISON_EMPHASES)[number]
+export type ComparisonDisplay = (typeof GRADE_COMPARISON_DISPLAYS)[number]

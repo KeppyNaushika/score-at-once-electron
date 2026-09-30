@@ -4,22 +4,15 @@ import { useMemo } from "react"
 
 import type {
   ScoringBehavior,
+  ScoringExamStudent,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 
 import { ScoringBehaviorSelector } from "./ScoringBehaviorSelector"
 import { StudentAnswerPanel } from "./StudentAnswerPanel"
 
-interface Student {
-  id: string
-  studentNumber: string
-  lastName: string
-  firstName: string
-  customOrder: number
-}
-
 interface IndividualModePanelProps {
-  students: Student[]
+  examStudents: ScoringExamStudent[]
   selectedAnswers?: Set<string> // TODO: selectedPageImageIdsに統一予定
   studentAnswerImages?: StudentAnswerImageWithExamStudents[]
   onStudentChange: (examStudentId: string) => void
@@ -28,7 +21,7 @@ interface IndividualModePanelProps {
 }
 
 export function IndividualModePanel({
-  students,
+  examStudents,
   selectedAnswers,
   studentAnswerImages,
   onStudentChange,
@@ -49,7 +42,7 @@ export function IndividualModePanel({
   return (
     <>
       <StudentAnswerPanel
-        students={students}
+        examStudents={examStudents}
         currentExamStudentId={currentExamStudentId}
         onStudentChange={onStudentChange}
       />

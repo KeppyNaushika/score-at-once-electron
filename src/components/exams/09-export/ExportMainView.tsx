@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useRef, useState } from "react"
 
-import LoadingSpinner from "@/components/common/LoadingSpinner"
 import {
   ExportOptionsCard,
   type ExportTabType,
@@ -21,6 +20,7 @@ import { useReturnDiff } from "@/components/exams/09-export/hooks/useReturnDiff"
 import { useScoredAnswerPdfExport } from "@/components/exams/09-export/hooks/useScoredAnswerPdfExport"
 import { useScoredAnswerPreview } from "@/components/exams/09-export/hooks/useScoredAnswerPreview"
 import { toStudentExportPlacements } from "@/components/exams/09-export/utils/studentExportPlacements"
+import { Spinner } from "@/components/ui/spinner"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { administeredExamClassroomsQuery } from "@/queries/examClassroom"
 import {
@@ -204,8 +204,12 @@ export default function ExportMainView() {
     return students
       .filter((examStudent) => selectedStudents.has(examStudent.id))
       .map((examStudent) => ({
-        id: examStudent.id,
-        name: `${examStudent.student.lastName} ${examStudent.student.firstName}`,
+        value: examStudent.id,
+        label: `${examStudent.student.lastName} ${examStudent.student.firstName}`,
+        keywords: [
+          examStudent.student.studentNumber,
+          `${examStudent.student.lastNameKana} ${examStudent.student.firstNameKana}`,
+        ],
       }))
   }, [students, selectedStudents])
 
@@ -401,7 +405,7 @@ export default function ExportMainView() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <LoadingSpinner />
+        <Spinner className="size-6" />
       </div>
     )
   }

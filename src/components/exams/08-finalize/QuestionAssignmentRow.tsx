@@ -5,6 +5,11 @@ import { useState } from "react"
 
 import { CropRegionAssigneeBadges } from "@/components/exams/08-finalize/CropRegionAssigneeBadges"
 import { Badge } from "@/components/ui/badge"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import type {
   ScoreDecisionCell,
   ScoreDecisionQuestion,
@@ -29,26 +34,32 @@ export function QuestionAssignmentRow({
   onSelectCell,
 }: QuestionAssignmentRowProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const expandButtonLabel =
+    question.cells.length > 0 ? "裁定対象を表示" : "裁定対象はありません"
 
   return (
     <div className="border-b border-gray-100">
       <div className="flex items-start gap-2 px-3 py-2">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          disabled={question.cells.length === 0}
-          className="mt-0.5 shrink-0 text-gray-400 disabled:opacity-30"
-          title={
-            question.cells.length > 0
-              ? "裁定対象を表示"
-              : "裁定対象はありません"
-          }
-        >
-          {isExpanded ? (
-            <ChevronDown className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
-        </button>
+        {/* 無効のボタンには Tooltip が出ないので、span を引き金にする */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="mt-0.5 inline-flex shrink-0">
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                disabled={question.cells.length === 0}
+                className="text-gray-400 disabled:opacity-30"
+                aria-label={expandButtonLabel}
+              >
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>{expandButtonLabel}</TooltipContent>
+        </Tooltip>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">

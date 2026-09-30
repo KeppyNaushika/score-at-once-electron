@@ -1,17 +1,17 @@
 "use client"
 
-import { AlertTriangle, CheckCircle, Info, X } from "lucide-react"
+import { AlertTriangle, CheckCircle, Info } from "lucide-react"
 import React from "react"
 
 import { Button } from "@/components/ui/button"
 import {
-  Modal,
-  ModalContent,
-  ModalDescription,
-  ModalFooter,
-  ModalHeader,
-  ModalTitle,
-} from "@/components/ui/modal"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 type ModalVariant = "default" | "destructive" | "success" | "warning" | "info"
 
@@ -39,7 +39,6 @@ interface BaseModalProps {
     }
   }
   size?: "sm" | "md" | "lg" | "xl"
-  showCloseButton?: boolean
 }
 
 const variantConfig = {
@@ -70,11 +69,12 @@ const variantConfig = {
   },
 }
 
+// DialogContent は sm 以上で sm:max-w-lg を持つので、同じ sm: で上書きする
 const sizeClasses = {
-  sm: "max-w-sm",
-  md: "max-w-md",
-  lg: "max-w-lg",
-  xl: "max-w-xl",
+  sm: "sm:max-w-sm",
+  md: "sm:max-w-md",
+  lg: "sm:max-w-lg",
+  xl: "sm:max-w-xl",
 }
 
 const BaseModal = React.memo(
@@ -87,7 +87,6 @@ const BaseModal = React.memo(
     children,
     actions,
     size = "md",
-    showCloseButton = true,
   }: BaseModalProps) => {
     const config = variantConfig[variant]
     const Icon = config.icon
@@ -101,61 +100,47 @@ const BaseModal = React.memo(
     }
 
     return (
-      <Modal open={open} onOpenChange={onOpenChange}>
-        <ModalContent className={sizeClasses[size]}>
-          <ModalHeader>
-            <div className="flex items-center justify-between">
-              <ModalTitle className="flex items-center space-x-2">
-                <Icon className={`h-5 w-5 ${config.iconColor}`} />
-                <span>{title}</span>
-              </ModalTitle>
-              {showCloseButton && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onOpenChange(false)}
-                  className="h-6 w-6 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            {description && <ModalDescription>{description}</ModalDescription>}
-          </ModalHeader>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className={sizeClasses[size]}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Icon className={`h-5 w-5 ${config.iconColor}`} />
+              <span>{title}</span>
+            </DialogTitle>
+            {description && (
+              <DialogDescription>{description}</DialogDescription>
+            )}
+          </DialogHeader>
 
           <div className="py-4">{children}</div>
 
           {actions && (
-            <ModalFooter>
-              <div className="flex justify-end space-x-2">
-                {actions.cancel && (
-                  <Button variant="outline" onClick={handleCancel}>
-                    {actions.cancel.label || "キャンセル"}
-                  </Button>
-                )}
-                {actions.secondary && (
-                  <Button variant="outline" onClick={actions.secondary.onClick}>
-                    {actions.secondary.label}
-                  </Button>
-                )}
-                {actions.primary && (
-                  <Button
-                    variant={config.primaryVariant}
-                    onClick={actions.primary.onClick}
-                    disabled={
-                      actions.primary.disabled || actions.primary.loading
-                    }
-                  >
-                    {actions.primary.loading
-                      ? "処理中..."
-                      : actions.primary.label}
-                  </Button>
-                )}
-              </div>
-            </ModalFooter>
+            <DialogFooter>
+              {actions.cancel && (
+                <Button variant="outline" onClick={handleCancel}>
+                  {actions.cancel.label || "キャンセル"}
+                </Button>
+              )}
+              {actions.secondary && (
+                <Button variant="outline" onClick={actions.secondary.onClick}>
+                  {actions.secondary.label}
+                </Button>
+              )}
+              {actions.primary && (
+                <Button
+                  variant={config.primaryVariant}
+                  onClick={actions.primary.onClick}
+                  disabled={actions.primary.disabled || actions.primary.loading}
+                >
+                  {actions.primary.loading
+                    ? "処理中..."
+                    : actions.primary.label}
+                </Button>
+              )}
+            </DialogFooter>
           )}
-        </ModalContent>
-      </Modal>
+        </DialogContent>
+      </Dialog>
     )
   }
 )

@@ -4,6 +4,7 @@ import type {
   AnswerSortOrder,
   LayoutDirection,
 } from "@/components/exams/07-score-at-once/types"
+import { Kbd } from "@/components/ui/kbd"
 import {
   Select,
   SelectContent,
@@ -76,8 +77,14 @@ export default function NavigationControls({
               1{isColumnLayout ? "列" : "行"}あたりの表示答案
             </span>
             <span className="text-[10px] text-gray-400">
-              <kbd className="rounded bg-gray-100 px-1 py-0.5">=</kbd> 増 /{" "}
-              <kbd className="rounded bg-gray-100 px-1 py-0.5">-</kbd> 減
+              <Kbd className="h-auto min-w-0 rounded bg-gray-100 py-0.5 font-mono text-[10px] font-normal text-inherit">
+                =
+              </Kbd>{" "}
+              増 /{" "}
+              <Kbd className="h-auto min-w-0 rounded bg-gray-100 py-0.5 font-mono text-[10px] font-normal text-inherit">
+                -
+              </Kbd>{" "}
+              減
             </span>
           </div>
           <div className="mt-1 flex items-center gap-2">

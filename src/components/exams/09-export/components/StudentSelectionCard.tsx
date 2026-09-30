@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 
+import { Combobox, type ComboboxOption } from "@/components/common/Combobox"
 import type { ScoredAnswerPreviewPage } from "@/components/exams/09-export/types"
 import type { Student } from "@/components/exams/09-export/types"
 import { Button } from "@/components/ui/button"
@@ -24,13 +25,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ReturnStudentDiff } from "@/electron-src/lib/prisma/returnSnapshot"
 import type {
@@ -81,7 +75,7 @@ interface StudentSelectionCardProps {
   previewError?: string | null
   previewStudentId?: string
   onPreviewStudentChange?: (examStudentId: string) => void
-  previewStudentList?: Array<{ id: string; name: string }>
+  previewStudentList?: ComboboxOption[]
   individualReportOptions?: IndividualReportOptions
   // 採点済み答案プレビュー
   scoredAnswerPreviewPages?: ScoredAnswerPreviewPage[]
@@ -387,21 +381,16 @@ export function StudentSelectionCard({
           previewStudentList.length > 0 && (
             <div className="mb-2 flex items-center gap-2">
               <Label className="text-sm whitespace-nowrap">生徒:</Label>
-              <Select
+              <Combobox
+                options={previewStudentList}
                 value={previewStudentId || ""}
-                onValueChange={(v) => onPreviewStudentChange?.(v)}
-              >
-                <SelectTrigger className="h-8 flex-1">
-                  <SelectValue placeholder="選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {previewStudentList.map((student) => (
-                    <SelectItem key={student.id} value={student.id}>
-                      {student.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onValueChange={(value) => onPreviewStudentChange?.(value)}
+                placeholder="選択"
+                searchPlaceholder="氏名・番号・カナで検索"
+                emptyText="該当する生徒がいません"
+                aria-label="プレビューする生徒"
+                className="h-8 min-w-0 flex-1"
+              />
             </div>
           )}
 

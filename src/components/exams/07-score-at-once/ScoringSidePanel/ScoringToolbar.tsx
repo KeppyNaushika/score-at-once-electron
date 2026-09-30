@@ -28,6 +28,7 @@ import type {
 } from "@/components/exams/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Kbd } from "@/components/ui/kbd"
 import {
   Select,
   SelectContent,
@@ -37,6 +38,7 @@ import {
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   Tooltip,
   TooltipContent,
@@ -45,6 +47,7 @@ import {
 } from "@/components/ui/tooltip"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
+import { SCORING_OPERATION_MODES } from "@/lib/userPreferences"
 import type {
   ClickScoringAction,
   ClickScoringConfig,
@@ -57,8 +60,7 @@ import { SidePanelSection } from "./SidePanelSection"
 function KeyHint({ label }: { label: string }) {
   return (
     <div className="mt-1 text-xs text-gray-400">
-      キー:{" "}
-      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">{label}</kbd>
+      キー: <Kbd>{label}</Kbd>
     </div>
   )
 }
@@ -153,13 +155,13 @@ const SCORING_BUTTONS = [
 
 /** マウスモード用ブラシ（unscoredを除く） */
 const BRUSH_BUTTONS = SCORING_BUTTONS.filter(
-  (button) => button.status !== "unscored"
-) as Array<{
-  status: MouseBrushAction
-  label: string
-  icon: typeof CheckCircle
-  description: string
-}>
+  (
+    button
+  ): button is Extract<
+    (typeof SCORING_BUTTONS)[number],
+    { status: MouseBrushAction }
+  > => button.status !== "unscored"
+)
 
 /** マウスモード用の特殊ブラシ（採点せず選択／モーダル展開） */
 const SPECIAL_BRUSH_BUTTONS: Array<{
@@ -181,6 +183,9 @@ const SPECIAL_BRUSH_BUTTONS: Array<{
     description: "クリックで部分点入力モーダルを開く",
   },
 ]
+
+/** マウスモードのブラシ選択に並べる順（特殊ブラシ → 採点ブラシ） */
+const MOUSE_BRUSH_BUTTONS = [...SPECIAL_BRUSH_BUTTONS, ...BRUSH_BUTTONS]
 
 const CLICK_ACTION_OPTIONS: { value: ClickScoringAction; label: string }[] = [
   { value: "none", label: "なし" },
@@ -258,28 +263,38 @@ export default function ScoringToolbar({
         <div className="space-y-3">
           {/* モード切替トグル（グリッドモードのみ） */}
           {gradingMode === "grid" && onScoringOperationModeChange && (
-            <div className="flex items-center gap-1 rounded-md border border-gray-200 p-0.5">
-              <Button
-                variant={
-                  scoringOperationMode === "keyboard" ? "default" : "ghost"
-                }
-                size="sm"
-                className="flex flex-1 items-center gap-1.5 text-xs"
-                onClick={() => onScoringOperationModeChange("keyboard")}
+            // 採点画面はキーボード優先。Tab で1つずつ辿れる並びを保つため、矢印キーでの移動（roving focus）は切る
+            <ToggleGroup
+              type="single"
+              size="sm"
+              rovingFocus={false}
+              value={scoringOperationMode}
+              aria-label="採点操作モード"
+              className="w-full gap-1 rounded-md border border-gray-200 p-0.5"
+              onValueChange={(value) => {
+                // 選択中をもう一度押すと空文字が来る。選択は外さない
+                const nextOperationMode = SCORING_OPERATION_MODES.find(
+                  (candidateOperationMode) => candidateOperationMode === value
+                )
+                if (nextOperationMode)
+                  onScoringOperationModeChange(nextOperationMode)
+              }}
+            >
+              <ToggleGroupItem
+                value="keyboard"
+                className="gap-1.5 rounded-md px-2.5 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
               >
                 <Keyboard className="h-3.5 w-3.5" />
                 キーボード
-              </Button>
-              <Button
-                variant={scoringOperationMode === "mouse" ? "default" : "ghost"}
-                size="sm"
-                className="flex flex-1 items-center gap-1.5 text-xs"
-                onClick={() => onScoringOperationModeChange("mouse")}
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="mouse"
+                className="gap-1.5 rounded-md px-2.5 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
               >
                 <Mouse className="h-3.5 w-3.5" />
                 マウス
-              </Button>
-            </div>
+              </ToggleGroupItem>
+            </ToggleGroup>
           )}
 
           {/* 部分点入力モーダルを開くボタン（キーボード・マウス共通） */}
@@ -318,53 +333,58 @@ export default function ScoringToolbar({
                 <div className="mb-1 text-xs font-medium text-gray-600">
                   クリック時の採点ブラシ
                 </div>
-                <div style={GRID_4_3_STYLE}>
-                  {[...SPECIAL_BRUSH_BUTTONS, ...BRUSH_BUTTONS].map(
-                    (button) => {
-                      const Icon = button.icon
-                      const colors =
-                        button.status === "select"
-                          ? { bg: "#e5e7eb", text: "#374151" }
-                          : button.status === "partial_modal"
-                            ? scoringColors[STATUS_MAP.partial]
-                            : scoringColors[STATUS_MAP[button.status]]
-                      const isActive = mouseBrush === button.status
-                      return (
-                        <Tooltip key={button.status}>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className={`flex h-12 flex-col gap-1 border-2 ${
-                                isActive
-                                  ? "ring-2 ring-blue-500 ring-offset-1"
-                                  : "opacity-60 hover:opacity-80"
-                              }`}
-                              style={{
-                                backgroundColor: colors.bg,
-                                color: colors.text,
-                                borderColor: colors.bg,
-                              }}
-                              onClick={() =>
-                                onMouseBrushChange?.(button.status)
-                              }
-                            >
-                              <Icon className="h-4 w-4" />
-                              <div className="text-xs">{button.label}</div>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="text-center">
-                              <div className="font-medium">
-                                {button.description}
-                              </div>
+                {/* 採点画面はキーボード優先。Tab で1つずつ辿れる並びを保つため、矢印キーでの移動（roving focus）は切る */}
+                <ToggleGroup
+                  type="single"
+                  rovingFocus={false}
+                  value={mouseBrush}
+                  aria-label="クリック時の採点ブラシ"
+                  className="grid w-full grid-cols-4 gap-2"
+                  onValueChange={(value) => {
+                    // 選択中をもう一度押すと空文字が来る。選択は外さない
+                    const nextBrushButton = MOUSE_BRUSH_BUTTONS.find(
+                      (candidateBrushButton) =>
+                        candidateBrushButton.status === value
+                    )
+                    if (nextBrushButton)
+                      onMouseBrushChange?.(nextBrushButton.status)
+                  }}
+                >
+                  {MOUSE_BRUSH_BUTTONS.map((button) => {
+                    const Icon = button.icon
+                    const colors =
+                      button.status === "select"
+                        ? { bg: "#e5e7eb", text: "#374151" }
+                        : button.status === "partial_modal"
+                          ? scoringColors[STATUS_MAP.partial]
+                          : scoringColors[STATUS_MAP[button.status]]
+                    return (
+                      <Tooltip key={button.status}>
+                        <TooltipTrigger asChild>
+                          <ToggleGroupItem
+                            value={button.status}
+                            className="flex h-12 flex-col gap-1 rounded-md border-2 shadow-xs data-[state=off]:opacity-60 data-[state=off]:hover:opacity-80 data-[state=on]:ring-2 data-[state=on]:ring-blue-500 data-[state=on]:ring-offset-1"
+                            style={{
+                              backgroundColor: colors.bg,
+                              color: colors.text,
+                              borderColor: colors.bg,
+                            }}
+                          >
+                            <Icon className="h-4 w-4" />
+                            <div className="text-xs">{button.label}</div>
+                          </ToggleGroupItem>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="text-center">
+                            <div className="font-medium">
+                              {button.description}
                             </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      )
-                    }
-                  )}
-                </div>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  })}
+                </ToggleGroup>
               </div>
 
               {/* 一括採点ボタン（採点ブラシ選択時のみ） */}

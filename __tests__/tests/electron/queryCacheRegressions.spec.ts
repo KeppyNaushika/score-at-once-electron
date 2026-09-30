@@ -126,6 +126,10 @@ test("解答用紙の一覧は担当の切り替えを持ち、担当でない�
   const ownerScopeToggle = page.getByRole("checkbox", {
     name: "全員の解答用紙を表示",
   })
+  // count() は待たずに数えるので、並びが描き終わってから数える
+  await expect(page.getByRole("toolbar", { name: "一覧の操作" })).toBeVisible({
+    timeout: 15_000,
+  })
   if ((await ownerScopeToggle.count()) === 0) {
     await page.getByRole("button", { name: "入りきらない操作" }).click()
   }
@@ -157,7 +161,7 @@ test("04 を開いた後に 03 へ移っても、ページと採点領域の画�
     waitUntil: "domcontentloaded",
   })
   await expect(
-    page.getByRole("heading", { name: "領域情報テーブル（全ページ統一順序）" })
+    page.getByRole("heading", { name: /^採点領域の詳細情報設定/ })
   ).toBeVisible({ timeout: 30_000 })
   // 04 の画面ではなく 03 の画面が出ていること
   await expect(page.getByRole("heading", { name: /小計/ })).toHaveCount(0)

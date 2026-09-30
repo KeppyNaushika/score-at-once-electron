@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, FileArchive, Loader2 } from "lucide-react"
+import { AlertTriangle, FileArchive } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Spinner } from "@/components/ui/spinner"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 
 /**
@@ -156,7 +157,7 @@ function HszDisclaimerBody({
         <Button onClick={onAccept} disabled={isProcessing || !agreed}>
           {isProcessing ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Spinner className="mr-2" />
               変換中...
             </>
           ) : (

@@ -1,17 +1,12 @@
 "use client"
 
-import {
-  AlertTriangle,
-  ArrowRight,
-  CheckCircle2,
-  Loader2,
-  XCircle,
-} from "lucide-react"
+import { AlertTriangle, ArrowRight, CheckCircle2, XCircle } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { Spinner } from "@/components/ui/spinner"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type { ArchiveDataCounts } from "@/types/examArchive.types"
 
@@ -68,7 +63,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
     return (
       <div className="flex h-full flex-col items-center justify-center py-16">
         <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <Spinner className="size-10 text-primary" />
         </div>
         <h3 className="mb-2 text-xl font-semibold">インポート中...</h3>
         <p className="mb-8 text-muted-foreground">

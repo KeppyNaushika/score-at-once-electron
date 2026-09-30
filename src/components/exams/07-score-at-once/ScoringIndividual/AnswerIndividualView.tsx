@@ -9,6 +9,7 @@ import {
   findQuestionScore,
   getScoringStatus,
 } from "@/components/exams/07-score-at-once/types"
+import { Spinner } from "@/components/ui/spinner"
 import { toggleAnnotationFavoriteMutation } from "@/queries/drawing"
 import type { QuestionScoreRow } from "@/queries/scoring"
 import { examExportSettingsQuery } from "@/queries/settings"
@@ -706,7 +707,7 @@ export default function AnswerIndividualView({
       {!imageLoaded && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+            <Spinner className="mx-auto mb-2 size-8 text-blue-600" />
             <p className="text-sm text-muted-foreground">画像を読み込み中...</p>
           </div>
         </div>

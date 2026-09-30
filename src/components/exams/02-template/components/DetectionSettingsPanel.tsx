@@ -6,6 +6,8 @@
 
 import { memo, useCallback } from "react"
 
+import { Slider } from "@/components/ui/slider"
+
 import type { DetectionSettings } from "../types"
 
 interface DetectionSettingsPanelProps {
@@ -61,17 +63,15 @@ export const DetectionSettingsPanel = memo(function DetectionSettingsPanel({
               <span>検出感度</span>
               <span className="font-mono">{settings.sensitivity}/5</span>
             </label>
-            <input
-              type="range"
+            <Slider
               min={1}
               max={5}
               step={1}
-              value={settings.sensitivity}
-              onChange={(e) =>
-                handleChange("sensitivity", parseInt(e.target.value))
+              value={[settings.sensitivity]}
+              onValueChange={([nextSensitivity]) =>
+                handleChange("sensitivity", nextSensitivity)
               }
               title="検出感度（高いほど薄い線を検出）"
-              className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-600"
             />
             <div className="mt-0.5 flex justify-between text-[10px] text-gray-400">
               <span>くっきり</span>
@@ -85,17 +85,15 @@ export const DetectionSettingsPanel = memo(function DetectionSettingsPanel({
               <span>線の延長</span>
               <span className="font-mono">{settings.lineExtension}px</span>
             </label>
-            <input
-              type="range"
+            <Slider
               min={0}
               max={30}
               step={1}
-              value={settings.lineExtension}
-              onChange={(e) =>
-                handleChange("lineExtension", parseInt(e.target.value))
+              value={[settings.lineExtension]}
+              onValueChange={([nextLineExtension]) =>
+                handleChange("lineExtension", nextLineExtension)
               }
               title="線の延長"
-              className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-600"
             />
           </div>
 
@@ -107,17 +105,15 @@ export const DetectionSettingsPanel = memo(function DetectionSettingsPanel({
                 {Math.round(settings.minWidth * 100)}%
               </span>
             </label>
-            <input
-              type="range"
+            <Slider
               min={0.01}
               max={0.3}
               step={0.01}
-              value={settings.minWidth}
-              onChange={(e) =>
-                handleChange("minWidth", parseFloat(e.target.value))
+              value={[settings.minWidth]}
+              onValueChange={([nextMinWidth]) =>
+                handleChange("minWidth", nextMinWidth)
               }
               title="最小幅"
-              className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-600"
             />
           </div>
 
@@ -129,17 +125,15 @@ export const DetectionSettingsPanel = memo(function DetectionSettingsPanel({
                 {Math.round(settings.minHeight * 100)}%
               </span>
             </label>
-            <input
-              type="range"
+            <Slider
               min={0.01}
               max={0.3}
               step={0.01}
-              value={settings.minHeight}
-              onChange={(e) =>
-                handleChange("minHeight", parseFloat(e.target.value))
+              value={[settings.minHeight]}
+              onValueChange={([nextMinHeight]) =>
+                handleChange("minHeight", nextMinHeight)
               }
               title="最小高さ"
-              className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-600"
             />
           </div>
 

@@ -70,18 +70,15 @@ export function SortableTableCell({
         <ContextMenuContent>
           {hasFile && (
             <>
-              <ContextMenuItem
-                onClick={onToggleFileDisabled}
-                className="flex items-center gap-2"
-              >
+              <ContextMenuItem onClick={onToggleFileDisabled}>
                 {isFileDisabled ? (
                   <>
-                    <X className="h-4 w-4" />
+                    <X />
                     答案画像を有効化
                   </>
                 ) : (
                   <>
-                    <Ban className="h-4 w-4" />
+                    <Ban />
                     答案画像を無効化
                   </>
                 )}
@@ -89,18 +86,15 @@ export function SortableTableCell({
               <ContextMenuSeparator />
             </>
           )}
-          <ContextMenuItem
-            onClick={onTogglePosition}
-            className="flex items-center gap-2"
-          >
+          <ContextMenuItem onClick={onTogglePosition}>
             {isPositionDisabled ? (
               <>
-                <X className="h-4 w-4" />
+                <X />
                 セルを有効化
               </>
             ) : (
               <>
-                <Ban className="h-4 w-4" />
+                <Ban />
                 セルを無効化
               </>
             )}

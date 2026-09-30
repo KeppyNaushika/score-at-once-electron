@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle, Circle, Loader2, XCircle } from "lucide-react"
+import { CheckCircle, Circle, XCircle } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
+import { Spinner } from "@/components/ui/spinner"
 
 interface ExportProgressModalProps {
   isOpen: boolean
@@ -154,7 +155,7 @@ export default function ExportProgressModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {status === "processing" && (
-              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+              <Spinner className="size-5 text-blue-600" />
             )}
             {status === "completed" && (
               <CheckCircle className="h-5 w-5 text-green-600" />
@@ -195,9 +196,7 @@ export default function ExportProgressModal({
                         }`}
                       >
                         {isCompleted && <CheckCircle className="h-3 w-3" />}
-                        {isCurrent && (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        )}
+                        {isCurrent && <Spinner className="size-3" />}
                         {isPending && <Circle className="h-3 w-3" />}
                         <span>{phase.label}</span>
                       </div>
@@ -224,7 +223,7 @@ export default function ExportProgressModal({
                 ) && (
                   <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-3">
                     <div className="flex items-start space-x-3">
-                      <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-amber-600" />
+                      <Spinner className="mt-0.5 size-5 shrink-0 text-amber-600" />
                       <div className="flex-1">
                         <p className="font-medium text-amber-800">
                           保存先を選択してください
@@ -252,7 +251,7 @@ export default function ExportProgressModal({
                           <CheckCircle className="h-4 w-4 text-green-600" />
                           <span>Canvas描画完了</span>
                           <span className="text-blue-500">→</span>
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Spinner />
                           <span>PDF埋め込み中...</span>
                         </div>
                       </div>
@@ -339,7 +338,7 @@ export default function ExportProgressModal({
               {currentPhase === "saving" && (
                 <div className="rounded-lg bg-blue-50 p-3">
                   <div className="flex items-center space-x-3">
-                    <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                    <Spinner className="size-5 text-blue-600" />
                     <div>
                       <p className="font-medium text-blue-800">
                         PDFを保存中...

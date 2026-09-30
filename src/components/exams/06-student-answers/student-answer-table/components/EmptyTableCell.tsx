@@ -103,18 +103,15 @@ export function EmptyTableCell({
         </ContextMenuTrigger>
         {shouldShowContextMenu && (
           <ContextMenuContent>
-            <ContextMenuItem
-              onClick={onTogglePosition}
-              className="flex items-center gap-2"
-            >
+            <ContextMenuItem onClick={onTogglePosition}>
               {isPositionDisabled ? (
                 <>
-                  <X className="h-4 w-4" />
+                  <X />
                   セルを有効化
                 </>
               ) : (
                 <>
-                  <Ban className="h-4 w-4" />
+                  <Ban />
                   セル無効
                 </>
               )}

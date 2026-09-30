@@ -13,9 +13,10 @@ import {
   Underline,
   UnfoldVertical,
 } from "lucide-react"
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,11 @@ import {
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 // テキストボックスCanvas機能をインポート
 import type { TextBox } from "@/lib/textbox-canvas/types"
 import type { AnchorDirection } from "@/types/drawingAnnotation.types"
@@ -97,10 +103,7 @@ export function RichTextEditorModal({
   // 背景画像表示設定
   const [showBackground, setShowBackground] = useState(false)
 
-  // テキストエリアの参照
-  const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(
-    null
-  )
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // プレビュー用のTextBoxオブジェクトを作成
   const previewTextBox: TextBox = {
@@ -114,20 +117,14 @@ export function RichTextEditorModal({
     coordinateSystem: "absolute",
   }
 
-  // モーダルが開いたときにフォーカス
-  useEffect(() => {
-    if (open && textareaRef) {
-      textareaRef.focus()
-    }
-  }, [open, textareaRef])
-
   // テキスト装飾の挿入
   const insertFormatting = useCallback(
     (prefix: string, suffix: string = "") => {
-      if (!textareaRef) return
+      const textarea = textareaRef.current
+      if (!textarea) return
 
-      const start = textareaRef.selectionStart
-      const end = textareaRef.selectionEnd
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
       const selectedText = value.substring(start, end)
 
       let newText =
@@ -141,20 +138,17 @@ export function RichTextEditorModal({
       // カーソル位置を調整
       setTimeout(() => {
         if (selectedText) {
-          textareaRef.setSelectionRange(
-            start + prefix.length,
-            end + prefix.length
-          )
+          textarea.setSelectionRange(start + prefix.length, end + prefix.length)
         } else {
-          textareaRef.setSelectionRange(
+          textarea.setSelectionRange(
             start + prefix.length,
             start + prefix.length
           )
         }
-        textareaRef.focus()
+        textarea.focus()
       }, 0)
     },
-    [value, onValueChange, textareaRef]
+    [value, onValueChange]
   )
 
   // 書式設定ボタンのハンドラー
@@ -270,16 +264,39 @@ export function RichTextEditorModal({
             onSubmit()
             break
         }
-      } else if (e.key === "Escape") {
+      }
+    },
+    [handleBold, handleItalic, handleUnderline, onSubmit]
+  )
+
+  // Esc は窓のどこにフォーカスがあっても1回で閉じる。Radix に任せると、
+  // Tooltip が開いているあいだは Tooltip が一番上の層として Esc を取り、
+  // 窓は閉じない（最初の Esc が Tooltip を閉じるだけになる）。
+  // 変換中の Esc は変換の取り消しなので閉じない。
+  const handleDialogKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Escape" && !e.nativeEvent.isComposing) {
         onCancel()
       }
     },
-    [handleBold, handleItalic, handleUnderline, onSubmit, onCancel]
+    [onCancel]
   )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+      <DialogContent
+        className="max-h-[90vh] max-w-2xl overflow-y-auto"
+        // 開いてすぐ文字を打てるように入力欄へ。既定の「最初のボタン」へ
+        // フォーカスが行くと、そのボタンの Tooltip が開くたびに出てしまう
+        onOpenAutoFocus={(e) => {
+          const textarea = textareaRef.current
+          if (!textarea) return
+          e.preventDefault()
+          textarea.focus()
+        }}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onKeyDown={handleDialogKeyDown}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -289,77 +306,89 @@ export function RichTextEditorModal({
           <div className="flex items-center gap-2 rounded-md border bg-gray-50 p-2">
             {/* 基本書式 */}
             <div className="flex items-center gap-1">
-              <Button
-                size="sm"
-                variant={isBold ? "default" : "ghost"}
-                onClick={handleBold}
-                title="太字 (Ctrl+B)"
-              >
-                <Bold className="h-4 w-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant={isItalic ? "default" : "ghost"}
-                onClick={handleItalic}
-                title="斜体 (Ctrl+I)"
-              >
-                <Italic className="h-4 w-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant={isUnderline ? "default" : "ghost"}
-                onClick={handleUnderline}
-                title="下線 (Ctrl+U)"
-              >
-                <Underline className="h-4 w-4" />
-              </Button>
+              <ToolbarTooltip label="太字 (Ctrl+B)">
+                <Button
+                  size="sm"
+                  variant={isBold ? "default" : "ghost"}
+                  onClick={handleBold}
+                  aria-label="太字 (Ctrl+B)"
+                >
+                  <Bold className="h-4 w-4" />
+                </Button>
+              </ToolbarTooltip>
+              <ToolbarTooltip label="斜体 (Ctrl+I)">
+                <Button
+                  size="sm"
+                  variant={isItalic ? "default" : "ghost"}
+                  onClick={handleItalic}
+                  aria-label="斜体 (Ctrl+I)"
+                >
+                  <Italic className="h-4 w-4" />
+                </Button>
+              </ToolbarTooltip>
+              <ToolbarTooltip label="下線 (Ctrl+U)">
+                <Button
+                  size="sm"
+                  variant={isUnderline ? "default" : "ghost"}
+                  onClick={handleUnderline}
+                  aria-label="下線 (Ctrl+U)"
+                >
+                  <Underline className="h-4 w-4" />
+                </Button>
+              </ToolbarTooltip>
             </div>
 
             <Separator orientation="vertical" className="h-6" />
 
             {/* フォントサイズ */}
             <div className="flex items-center gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleFontSizeDecrease}
-                title="フォントサイズを小さく"
-              >
-                <Minus className="h-4 w-4" />
-              </Button>
+              <ToolbarTooltip label="フォントサイズを小さく">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleFontSizeDecrease}
+                  aria-label="フォントサイズを小さく"
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+              </ToolbarTooltip>
               <span className="min-w-8 text-center text-sm">{fontSize}</span>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleFontSizeIncrease}
-                title="フォントサイズを大きく"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+              <ToolbarTooltip label="フォントサイズを大きく">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleFontSizeIncrease}
+                  aria-label="フォントサイズを大きく"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </ToolbarTooltip>
             </div>
 
             <Separator orientation="vertical" className="h-6" />
 
             {/* 数式 */}
             <div className="flex items-center gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleMathInline}
-                title="インライン数式 $...$"
-                className="text-xs"
-              >
-                $x$
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleMathBlock}
-                title="ブロック数式 $$...$$"
-                className="text-xs"
-              >
-                $$
-              </Button>
+              <ToolbarTooltip label="インライン数式 $...$">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleMathInline}
+                  className="text-xs"
+                >
+                  $x$
+                </Button>
+              </ToolbarTooltip>
+              <ToolbarTooltip label="ブロック数式 $$...$$">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleMathBlock}
+                  className="text-xs"
+                >
+                  $$
+                </Button>
+              </ToolbarTooltip>
             </div>
           </div>
 
@@ -370,83 +399,95 @@ export function RichTextEditorModal({
               {/* 横方向 */}
               <div className="flex items-center gap-1">
                 <span className="text-xs text-gray-500">横:</span>
-                <Button
-                  size="sm"
-                  variant={
-                    getHorizontalAlign(anchorDirection) === "left"
-                      ? "default"
-                      : "ghost"
-                  }
-                  onClick={() => setHorizontalAlign("left")}
-                  title="左寄せ"
-                >
-                  <AlignLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant={
-                    getHorizontalAlign(anchorDirection) === "center"
-                      ? "default"
-                      : "ghost"
-                  }
-                  onClick={() => setHorizontalAlign("center")}
-                  title="中央寄せ"
-                >
-                  <AlignCenter className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant={
-                    getHorizontalAlign(anchorDirection) === "right"
-                      ? "default"
-                      : "ghost"
-                  }
-                  onClick={() => setHorizontalAlign("right")}
-                  title="右寄せ"
-                >
-                  <AlignRight className="h-4 w-4" />
-                </Button>
+                <ToolbarTooltip label="左寄せ">
+                  <Button
+                    size="sm"
+                    variant={
+                      getHorizontalAlign(anchorDirection) === "left"
+                        ? "default"
+                        : "ghost"
+                    }
+                    onClick={() => setHorizontalAlign("left")}
+                    aria-label="左寄せ"
+                  >
+                    <AlignLeft className="h-4 w-4" />
+                  </Button>
+                </ToolbarTooltip>
+                <ToolbarTooltip label="左右中央寄せ">
+                  <Button
+                    size="sm"
+                    variant={
+                      getHorizontalAlign(anchorDirection) === "center"
+                        ? "default"
+                        : "ghost"
+                    }
+                    onClick={() => setHorizontalAlign("center")}
+                    aria-label="左右中央寄せ"
+                  >
+                    <AlignCenter className="h-4 w-4" />
+                  </Button>
+                </ToolbarTooltip>
+                <ToolbarTooltip label="右寄せ">
+                  <Button
+                    size="sm"
+                    variant={
+                      getHorizontalAlign(anchorDirection) === "right"
+                        ? "default"
+                        : "ghost"
+                    }
+                    onClick={() => setHorizontalAlign("right")}
+                    aria-label="右寄せ"
+                  >
+                    <AlignRight className="h-4 w-4" />
+                  </Button>
+                </ToolbarTooltip>
               </div>
 
               {/* 縦方向 */}
               <div className="flex items-center gap-1">
                 <span className="text-xs text-gray-500">縦:</span>
-                <Button
-                  size="sm"
-                  variant={
-                    getVerticalAlign(anchorDirection) === "top"
-                      ? "default"
-                      : "ghost"
-                  }
-                  onClick={() => setVerticalAlign("top")}
-                  title="上寄せ"
-                >
-                  <ArrowUpToLine className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant={
-                    getVerticalAlign(anchorDirection) === "center"
-                      ? "default"
-                      : "ghost"
-                  }
-                  onClick={() => setVerticalAlign("center")}
-                  title="中央寄せ"
-                >
-                  <UnfoldVertical className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant={
-                    getVerticalAlign(anchorDirection) === "bottom"
-                      ? "default"
-                      : "ghost"
-                  }
-                  onClick={() => setVerticalAlign("bottom")}
-                  title="下寄せ"
-                >
-                  <ArrowDownToLine className="h-4 w-4" />
-                </Button>
+                <ToolbarTooltip label="上寄せ">
+                  <Button
+                    size="sm"
+                    variant={
+                      getVerticalAlign(anchorDirection) === "top"
+                        ? "default"
+                        : "ghost"
+                    }
+                    onClick={() => setVerticalAlign("top")}
+                    aria-label="上寄せ"
+                  >
+                    <ArrowUpToLine className="h-4 w-4" />
+                  </Button>
+                </ToolbarTooltip>
+                <ToolbarTooltip label="上下中央寄せ">
+                  <Button
+                    size="sm"
+                    variant={
+                      getVerticalAlign(anchorDirection) === "center"
+                        ? "default"
+                        : "ghost"
+                    }
+                    onClick={() => setVerticalAlign("center")}
+                    aria-label="上下中央寄せ"
+                  >
+                    <UnfoldVertical className="h-4 w-4" />
+                  </Button>
+                </ToolbarTooltip>
+                <ToolbarTooltip label="下寄せ">
+                  <Button
+                    size="sm"
+                    variant={
+                      getVerticalAlign(anchorDirection) === "bottom"
+                        ? "default"
+                        : "ghost"
+                    }
+                    onClick={() => setVerticalAlign("bottom")}
+                    aria-label="下寄せ"
+                  >
+                    <ArrowDownToLine className="h-4 w-4" />
+                  </Button>
+                </ToolbarTooltip>
               </div>
 
               {/* 現在の設定表示 */}
@@ -460,19 +501,20 @@ export function RichTextEditorModal({
           <div>
             <Label className="text-sm font-medium">テキスト色</Label>
             <div className="mt-2 grid grid-cols-8 gap-2">
-              {COLOR_PALETTE.map((paletteColor, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => onColorChange(paletteColor)}
-                  className={`h-8 w-8 rounded border-2 transition-transform hover:scale-110 ${
-                    color === paletteColor
-                      ? "scale-110 border-gray-800"
-                      : "border-gray-300"
-                  }`}
-                  style={{ backgroundColor: paletteColor }}
-                  title={paletteColor}
-                />
+              {COLOR_PALETTE.map((paletteColor) => (
+                <ToolbarTooltip key={paletteColor} label={paletteColor}>
+                  <button
+                    type="button"
+                    onClick={() => onColorChange(paletteColor)}
+                    className={`h-8 w-8 rounded border-2 transition-transform hover:scale-110 ${
+                      color === paletteColor
+                        ? "scale-110 border-gray-800"
+                        : "border-gray-300"
+                    }`}
+                    style={{ backgroundColor: paletteColor }}
+                    aria-label={paletteColor}
+                  />
+                </ToolbarTooltip>
               ))}
             </div>
           </div>
@@ -481,7 +523,7 @@ export function RichTextEditorModal({
           <div>
             <Label className="text-sm font-medium">テキスト内容</Label>
             <Textarea
-              ref={setTextareaRef}
+              ref={textareaRef}
               value={value}
               onChange={(e) => onValueChange(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -502,12 +544,12 @@ export function RichTextEditorModal({
                 <Label className="text-sm font-medium">プレビュー</Label>
                 {backgroundImageUrl && (
                   <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       id="showBackground"
                       checked={showBackground}
-                      onChange={(e) => setShowBackground(e.target.checked)}
-                      className="rounded"
+                      onCheckedChange={(checked) =>
+                        setShowBackground(checked === true)
+                      }
                     />
                     <label
                       htmlFor="showBackground"
@@ -535,5 +577,21 @@ export function RichTextEditorModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** 窓の中のボタンに、title の代わりに付ける短い説明 */
+function ToolbarTooltip({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactElement
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   )
 }

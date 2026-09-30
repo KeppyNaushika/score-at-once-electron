@@ -6,7 +6,6 @@ import {
   FileText,
   HelpCircle,
   Layers,
-  Loader2,
   School,
   User,
   Users,
@@ -16,6 +15,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Spinner } from "@/components/ui/spinner"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type { PreMatchingResult } from "@/types/examArchive.types"
 
@@ -118,7 +118,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
       <div className="flex-1 space-y-4">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <Spinner className="size-8 text-blue-500" />
             <p className="mt-4 text-muted-foreground">照合中...</p>
           </div>
         ) : state.fileOverviewData ? (
@@ -191,7 +191,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
         >
           {isLoading ? (
             <>
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Spinner />
               照合中...
             </>
           ) : (

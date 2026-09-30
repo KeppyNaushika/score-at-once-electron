@@ -1,6 +1,7 @@
 import type { Student, StudentClassroomMembership } from "@prisma/client"
 import { useMutation, useQuery } from "@tanstack/react-query"
 
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import {
   addStudentToClassroomMutation,
   classroomListQuery,
@@ -78,14 +79,12 @@ export function useStudentDetail(studentId: string) {
     }
   }
 
-  const handleEndMembership = async (membershipId: string) => {
-    if (!window.confirm("この所属関係を終了しますか？")) return false
-    try {
-      await endMembership.mutateAsync({ membershipId })
-      return true
-    } catch {
-      return false
-    }
+  // 終了は確認の窓を通してから。窓は呼び出し側で描く
+  const membershipEnding = useDialogTarget<string>()
+
+  const handleConfirmEndMembership = () => {
+    if (membershipEnding.target === null) return
+    endMembership.mutate({ membershipId: membershipEnding.target })
   }
 
   return {
@@ -94,6 +93,7 @@ export function useStudentDetail(studentId: string) {
     loading,
     handleEditStudent,
     handleSaveMembership,
-    handleEndMembership,
+    membershipEnding,
+    handleConfirmEndMembership,
   }
 }
