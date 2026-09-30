@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
 import { SyncFoldNotifier } from "@/components/common/SyncFoldNotifier"
+import { SyncParentDeletedNotifier } from "@/components/common/SyncParentDeletedNotifier"
+import { SyncWarningNotifier } from "@/components/common/SyncWarningNotifier"
 import { ToastProvider } from "@/components/common/ToastProvider"
 import Navigation from "@/components/layout/Navigation"
 import {
@@ -97,8 +99,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <ToastProvider />
-      {/* 同期の畳みは起きた瞬間に伝える。窓が開いている間ずっと聞く */}
+      {/* 同期で見え方が変わったことは起きた瞬間に伝える。窓が開いている間ずっと聞く */}
       <SyncFoldNotifier />
+      <SyncParentDeletedNotifier />
+      <SyncWarningNotifier />
     </div>
   )
 }

@@ -1,7 +1,11 @@
 /**
- * 同期の「畳み」を伝える経路のユニットテスト
+ * 同期で見え方が変わった行を伝える経路のユニットテスト
  *
- * 畳みは別id・同一ユニークキーの行を1つへまとめる操作で、黙って行が1つ消える。
+ * 伝えるものは2種類ある。ひとつは、別id・同一ユニークキーでかぶった行の片方が隠れる
+ * （`SyncResult.folds`）・かぶりが解けて戻る（`SyncResult.restores`）こと。もうひとつは、
+ * 他のPCで親を消されたために子が表から外れる（`SyncResult.parentDeleted`）・親が
+ * 作り直されて戻る（`SyncResult.parentReturned`）ことである。どれも画面の上では
+ * 黙って行が消えた・現れたように見える。
  * ここで見るのは「起きた瞬間に renderer へ押し出すか」と「監査ログへ残すか」の2点。
  * ライブラリ本体（sqlite-nas-sync）はモックし、`setupSync` に渡した `onAfterSync` を
  * 捕まえて直接呼ぶ（同期そのものの検証はライブラリ側のテストが持つ）。
@@ -77,18 +81,40 @@ import { saveSyncConfig } from "../../electron-src/lib/sync/syncConfig"
 import { startSync, stopSync } from "../../electron-src/lib/sync/syncService"
 import {
   DEFAULT_SYNC_CONFIG,
+  type SyncParentDeleted,
   type SyncRecordFold,
 } from "../../electron-src/lib/sync/types"
 
-/** 畳みが1件だけ載った同期結果（他の統計は使わないので0で埋める） */
-const syncResultWithFolds = (folds: SyncRecordFold[]) => ({
+const FOLDS_CHANNEL = "sync:record-folds-changed"
+const PARENT_DELETED_CHANNEL = "sync:parent-deleted-changed"
+
+/**
+ * 見え方が変わった行だけが載った同期結果（他の統計は使わないので0で埋める）。
+ *
+ * `folds` / `restores` / `parentDeleted` / `parentReturned` はライブラリの型では
+ * どれも必須なので、省いた回を作らない（v0.21.0 で `restores` も必須になった）。
+ */
+const syncResultWith = ({
+  folds = [],
+  restores = [],
+  parentDeleted = [],
+  parentReturned = [],
+}: {
+  folds?: SyncRecordFold[]
+  restores?: SyncRecordFold[]
+  parentDeleted?: SyncParentDeleted[]
+  parentReturned?: SyncParentDeleted[]
+}) => ({
   clientsSynced: 1,
   inserted: 0,
   updated: 0,
   deleted: folds.length,
   skipped: 0,
-  conflictsResolved: folds.length,
+  conflictsResolved: 0,
   folds,
+  restores,
+  parentDeleted,
+  parentReturned,
   warnings: [],
   skippedRemotes: [],
   hadChangelogGap: false,
@@ -116,7 +142,13 @@ const startWithCapturedCallback = async () => {
   return capturedOnAfterSync
 }
 
-describe("同期の畳みを伝える", () => {
+const foldMessagesOf = () =>
+  sentToRenderer.filter((message) => message.channel === FOLDS_CHANNEL)
+
+const parentDeletedMessagesOf = () =>
+  sentToRenderer.filter((message) => message.channel === PARENT_DELETED_CHANNEL)
+
+describe("同期で見え方が変わった行を伝える", () => {
   beforeEach(() => {
     fs.mkdirSync(TEST_DATA_DIR, { recursive: true })
     fs.mkdirSync(TEST_LOCAL_DIR, { recursive: true })
@@ -135,63 +167,89 @@ describe("同期の畳みを伝える", () => {
     }
   })
 
-  it("畳みが起きたら renderer へそのまま押し出す", async () => {
+  it("隠れた行と戻った行を1回の押し出しにまとめて、そのまま renderer へ送る", async () => {
     const onAfterSync = await startWithCapturedCallback()
     const folds: SyncRecordFold[] = [
       {
         tableName: "ExamStudent",
         losingId: "losing-1",
         winningId: "winning-1",
-        removedLocalRow: true,
-        movedChildren: 0,
-        lostChildren: 0,
       },
     ]
+    const restores: SyncRecordFold[] = [
+      { tableName: "Tag", losingId: "tag-2", winningId: "tag-1" },
+    ]
 
-    onAfterSync(null, syncResultWithFolds(folds))
+    onAfterSync(null, syncResultWith({ folds, restores }))
 
-    const foldMessages = sentToRenderer.filter(
-      (message) => message.channel === "sync:records-folded"
-    )
-    expect(foldMessages).toHaveLength(1)
+    expect(foldMessagesOf()).toHaveLength(1)
     // main は加工しない（数え上げは renderer 側）
-    expect(foldMessages[0].payload).toEqual(folds)
+    expect(foldMessagesOf()[0].payload).toEqual({ folds, restores })
   })
 
-  it("畳みが無い同期では押し出さないし記録もしない", async () => {
+  it("見え方の変わった行が無い同期では押し出さないし記録もしない", async () => {
     const onAfterSync = await startWithCapturedCallback()
 
-    onAfterSync(null, syncResultWithFolds([]))
+    onAfterSync(null, syncResultWith({}))
 
-    expect(
-      sentToRenderer.filter(
-        (message) => message.channel === "sync:records-folded"
-      )
-    ).toHaveLength(0)
+    expect(foldMessagesOf()).toHaveLength(0)
+    expect(parentDeletedMessagesOf()).toHaveLength(0)
     expect(mockRecordAuditLog).not.toHaveBeenCalled()
   })
 
-  it("畳みを監査ログへ残す（消えた行が対象・操作者は null）", async () => {
+  it("親の削除で外れた行と戻った行を1回の押し出しにまとめて、そのまま renderer へ送る", async () => {
+    const onAfterSync = await startWithCapturedCallback()
+    const parentDeleted: SyncParentDeleted[] = [
+      {
+        tableName: "QuestionScore",
+        recordId: "score-1",
+        content: { id: "score-1", examStudentId: "exam-student-1" },
+        causeTable: "ExamStudent",
+        causeId: "exam-student-1",
+      },
+    ]
+    const parentReturned: SyncParentDeleted[] = [
+      {
+        tableName: "StudentAnswerImage",
+        recordId: "image-1",
+        content: { id: "image-1", examPageId: "exam-page-1" },
+        causeTable: "ExamPage",
+        causeId: "exam-page-1",
+      },
+    ]
+
+    onAfterSync(null, syncResultWith({ parentDeleted, parentReturned }))
+
+    expect(parentDeletedMessagesOf()).toHaveLength(1)
+    // main は加工しない（数え上げは renderer 側）
+    expect(parentDeletedMessagesOf()[0].payload).toEqual({
+      parentDeleted,
+      parentReturned,
+    })
+    // かぶりとは別の押し出しで、混ざらない
+    expect(foldMessagesOf()).toHaveLength(0)
+  })
+
+  it("隠れた行を監査ログへ残す（隠れた行が対象・操作者は null・旧 sync.merge とは別の action）", async () => {
     const onAfterSync = await startWithCapturedCallback()
 
     onAfterSync(
       null,
-      syncResultWithFolds([
-        {
-          tableName: "ExamStudent",
-          losingId: "losing-1",
-          winningId: "winning-1",
-          removedLocalRow: true,
-          movedChildren: 0,
-          lostChildren: 0,
-        },
-      ])
+      syncResultWith({
+        folds: [
+          {
+            tableName: "ExamStudent",
+            losingId: "losing-1",
+            winningId: "winning-1",
+          },
+        ],
+      })
     )
     await waitForDetachedWrites()
 
     expect(mockRecordAuditLog).toHaveBeenCalledTimes(1)
     expect(mockRecordAuditLog).toHaveBeenCalledWith({
-      action: "sync.merge",
+      action: "sync.duplicate.hide",
       userId: null,
       entityType: "ExamStudent",
       entityId: "losing-1",
@@ -199,37 +257,56 @@ describe("同期の畳みを伝える", () => {
       extra: {
         losingId: "losing-1",
         winningId: "winning-1",
-        removedLocalRow: true,
-        movedChildren: 0,
-        lostChildren: 0,
       },
-      coalesceKey: "sync.merge:ExamStudent:losing-1",
+      coalesceKey: "sync.duplicate.hide:ExamStudent:losing-1",
     })
   })
 
-  it("1回の同期で複数の行が畳まれたら、行ごとに記録する", async () => {
+  it("表示に戻った行を監査ログへ残す（戻った行が対象）", async () => {
     const onAfterSync = await startWithCapturedCallback()
 
     onAfterSync(
       null,
-      syncResultWithFolds([
-        {
-          tableName: "ExamStudent",
-          losingId: "losing-1",
-          winningId: "winning-1",
-          removedLocalRow: true,
-          movedChildren: 0,
-          lostChildren: 0,
-        },
-        {
-          tableName: "QuestionScore",
-          losingId: "losing-2",
-          winningId: "winning-2",
-          removedLocalRow: false,
-          movedChildren: 0,
-          lostChildren: 0,
-        },
-      ])
+      syncResultWith({
+        restores: [{ tableName: "Tag", losingId: "tag-2", winningId: "tag-1" }],
+      })
+    )
+    await waitForDetachedWrites()
+
+    expect(mockRecordAuditLog).toHaveBeenCalledTimes(1)
+    expect(mockRecordAuditLog).toHaveBeenCalledWith({
+      action: "sync.duplicate.restore",
+      userId: null,
+      entityType: "Tag",
+      entityId: "tag-2",
+      target: "タグ",
+      extra: {
+        losingId: "tag-2",
+        winningId: "tag-1",
+      },
+      coalesceKey: "sync.duplicate.restore:Tag:tag-2",
+    })
+  })
+
+  it("1回の同期で複数の行が隠れたら、行ごとに記録する", async () => {
+    const onAfterSync = await startWithCapturedCallback()
+
+    onAfterSync(
+      null,
+      syncResultWith({
+        folds: [
+          {
+            tableName: "ExamStudent",
+            losingId: "losing-1",
+            winningId: "winning-1",
+          },
+          {
+            tableName: "AsbCharGuide",
+            losingId: "losing-2",
+            winningId: "winning-2",
+          },
+        ],
+      })
     )
     await waitForDetachedWrites()
 
@@ -237,9 +314,9 @@ describe("同期の畳みを伝える", () => {
     // 呼び名を知らない表はテーブル名をそのまま出す
     expect(mockRecordAuditLog).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        entityType: "QuestionScore",
+        entityType: "AsbCharGuide",
         entityId: "losing-2",
-        target: "QuestionScore",
+        target: "AsbCharGuide",
       })
     )
   })

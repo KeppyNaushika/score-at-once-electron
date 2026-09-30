@@ -21,13 +21,14 @@
  * （両方の時刻がトリガー由来になるため）。検出できるのはアプリ側のこのテストだけなので、
  * ライブラリを更新するたびの回帰ガードとして機能させる（issue #918）。
  */
-import Database from "better-sqlite3"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
 import { setupSync } from "sqlite-nas-sync"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
+import { openAppDatabase } from "../../electron-src/lib/prisma/sqliteConnection"
+import type { SqliteDatabase } from "../../electron-src/lib/prisma/sqliteSchemaUtils"
 import {
   SYNC_EXCLUDE_TABLES,
   SYNC_TABLE_OPTIONS,
@@ -41,13 +42,12 @@ const NAS_DIR = path.join(TEST_ROOT, "nas")
 const DB_A = path.join(TEST_ROOT, "client-a", "database.db")
 const DB_B = path.join(TEST_ROOT, "client-b", "database.db")
 
-type SqliteDatabase = InstanceType<typeof Database>
-
+/** アプリと同じ開き方（`recursive_triggers` を立てる）で、1操作だけ行う */
 const withDatabase = <T>(
   dbPath: string,
   operation: (db: SqliteDatabase) => T
 ) => {
-  const db = new Database(dbPath)
+  const db = openAppDatabase(dbPath)
   try {
     return operation(db)
   } finally {

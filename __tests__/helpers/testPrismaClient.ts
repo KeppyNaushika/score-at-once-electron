@@ -4,15 +4,21 @@
  * Electron依存のdataManagerを回避し、テスト用SQLiteファイルに直接接続する
  */
 
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
 import { PrismaClient } from "@prisma/client"
 import * as path from "path"
 
+import { PrismaBetterSqlite3WithRecursiveTriggers } from "../../electron-src/lib/prisma/sqliteConnection"
+
 const TEST_DB_PATH = path.resolve(__dirname, "../../data/test-database.db")
 
-/** 任意のSQLiteファイルパスからPrismaClientを生成する */
+/**
+ * 任意のSQLiteファイルパスからPrismaClientを生成する。
+ *
+ * アダプタはアプリと同じもの（接続のたびに `recursive_triggers` を立てる）。同期を
+ * 通すテストでは、この接続の書き込みを同期のトリガーが拾う前提がアプリと揃っている必要がある。
+ */
 export function createPrismaClientForPath(dbPath: string): PrismaClient {
-  const adapter = new PrismaBetterSqlite3({ url: dbPath })
+  const adapter = new PrismaBetterSqlite3WithRecursiveTriggers({ url: dbPath })
   return new PrismaClient({ adapter, log: ["error"] })
 }
 

@@ -3,8 +3,8 @@
  *
  * ライブラリはモックしない。端末A は本物の Prisma で `placementApply.ts` を走らせ、
  * 端末B は生SQLで覗くだけにする。確かめたいのは「A で行った配置が B にどう届くか」で、
- * そこには `_changelog` の重複排除・`_tombstone` の LWW・セカンダリ UNIQUE の畳みが
- * すべて絡む。作り物を1つでも挟むと何も確かめられない。
+ * そこには `_changelog` の通知・削除の版（`_tombstone`）・セカンダリ UNIQUE のかぶり
+ * （弱い方が隠れる）がすべて絡む。作り物を1つでも挟むと何も確かめられない。
  *
  * 数える対象:
  * - 移動（生徒X → 生徒Y）と入れ替え（生徒X ⇄ 生徒Y）
@@ -123,13 +123,21 @@ const drawingAnnotationsOf = (
       .all()
   )
 
-/** 同期を止めた（＝以後その相手から何も届かない）警告だけを拾う */
+/**
+ * 同期を止めた（＝以後その相手から何も届かない）警告と、行が表から黙って外れた警告を拾う。
+ *
+ * v0.20.0 の取り込みは帳簿にしか書かないので前者では落ちにくくなったが、代わりに
+ * 置けなかった行（`Unplaceable …`）と作り直しの失敗（`Rebuild failed …`）が出る。
+ * 配置の移動で親が隠れると、その下の採点が置けなくなるのはこちらに出る。
+ */
 const fatalWarnings = (result: SyncResult): string[] =>
   result.warnings.filter(
     (warning) =>
       warning.includes("UNIQUE constraint failed") ||
       warning.includes("FOREIGN KEY") ||
-      warning.includes("Sync failed")
+      warning.includes("Sync failed") ||
+      warning.startsWith("Unplaceable") ||
+      warning.startsWith("Rebuild failed")
   )
 
 // ---------------------------------------------------------------------------
@@ -717,7 +725,7 @@ describe("答案配置は同期を越えて伝わる: 相手が移動先に自�
     expect(fatalWarnings(rivalObservation.fromBtoA)).toEqual([])
   })
 
-  it("ScoreDecision は 1 マス 1 行へ畳まれる", () => {
+  it("ScoreDecision は 1 マス 1 行だけが表示される（もう片方は隠れる）", () => {
     expect(rivalObservation.scoreDecisionsB).toHaveLength(1)
     expect(rivalObservation.scoreDecisionsB[0].examStudentId).toBe(
       "exam-student-y"
@@ -727,7 +735,7 @@ describe("答案配置は同期を越えて伝わる: 相手が移動先に自�
     )
   })
 
-  it("QuestionScore は畳まれず両方が残る（unique が無い＝別の採点として扱う）", () => {
+  it("QuestionScore は隠れず両方が残る（unique が無い＝別の採点として扱う）", () => {
     expect(rivalQuestionScoreCountB).toBe(2)
     expect(rivalObservation.questionScoresA).toEqual(
       rivalObservation.questionScoresB

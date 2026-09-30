@@ -21,6 +21,7 @@ const DEFAULT_STATUS: SyncAppStatus = {
   lastError: null,
   syncCount: 0,
   versionMismatches: [],
+  lastWarnings: [],
 }
 
 export function useSyncSettings() {

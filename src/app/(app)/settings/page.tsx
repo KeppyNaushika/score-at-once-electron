@@ -21,6 +21,7 @@ import { UserManagementTab } from "@/app/(app)/settings/components/UserManagemen
 import { useKeyboardSettings } from "@/app/(app)/settings/hooks/useKeyboardSettings"
 import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
 import { UserEditModal } from "@/components/auth/UserEditModal"
+import { BetaBadge } from "@/components/common/BetaBadge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { type PublicUser, userListQuery } from "@/queries/user"
 
@@ -94,6 +95,7 @@ export default function SettingsPage() {
           <TabsTrigger value="sync" className="gap-2">
             <FolderSync className="h-4 w-4" />
             同期設定
+            <BetaBadge />
           </TabsTrigger>
         </TabsList>
 

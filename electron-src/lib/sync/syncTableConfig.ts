@@ -30,18 +30,17 @@ export const SYNC_EXCLUDE_TABLES: string[] = [
 /**
  * テーブル別の同期オプション
  *
- * `deleteProtected` が止めるのは**利用者操作による削除**だけである（v0.16.0 で範囲が
- * 狭まった）。別id・同一ユニークキーの行を1行へ統合する「畳み」は、ユニーク制約が
- * 強制するものなので保護されない。ここで指定できる表を足すときは、その表が
- * `id` 以外の unique を持つか、畳まれる行の外部キーの子かを見ること。
+ * 「この表では他端末の削除を効かせない」という指定（`deleteProtected`）は v0.21.0 で
+ * ライブラリから無くなった。**削除はどの表でも普通に伝わる**。消えてほしくない子行が
+ * あるときは、設定ではなく外部キーの宣言（`ON DELETE SET NULL` / `SET DEFAULT`）で守る。
  */
 export const SYNC_TABLE_OPTIONS: Record<string, TableOptions> = {
   // 監査ログ。連続操作の集約で既存行を上書きするため、LWWは updatedAt で収束させる。
-  // 削除はされない（deleteProtected）。AuditLog は `id` 以外の unique を持たず、
-  // どのモデルとも外部キーで繋がっていないため畳みの対象にならず、
-  // v0.16.0 での範囲の縮小の影響を受けない。
+  // v0.20.0 までは deleteProtected にしていたが、そのせいで保持期間を過ぎた行の整理
+  // （`pruneAuditLogs`）が同期している間は効かず、端末どうしが互いに戻し合って古い行が
+  // 消えなかった。v0.21.0 で指定ごと無くなり、削除はそのまま他端末へ伝わる（＝整理が効く）。
+  // AuditLog は外部キーを1本も持たないので、親の削除に巻き込まれて表から外れることもない。
   AuditLog: {
     timestampColumn: "updatedAt",
-    deleteProtected: true,
   },
 }

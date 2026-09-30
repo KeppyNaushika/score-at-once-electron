@@ -11,11 +11,12 @@
  *   npx tsx scripts/importTempSaiten.ts --config path/to/config  # 設定ファイル指定
  */
 
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
 import { PrismaClient } from "@prisma/client"
 import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
+
+import { PrismaBetterSqlite3WithRecursiveTriggers } from "../electron-src/lib/prisma/sqliteConnection"
 
 // =============================================================================
 // 設定
@@ -154,7 +155,8 @@ function buildLabel(q: QuestionEntry): string {
 // =============================================================================
 
 async function main() {
-  const adapter = new PrismaBetterSqlite3({ url: DB_PATH })
+  // アプリと同じアダプタ（同期のトリガーが書き込みを取りこぼさない接続）で開く
+  const adapter = new PrismaBetterSqlite3WithRecursiveTriggers({ url: DB_PATH })
   const prisma = new PrismaClient({ adapter, log: ["error"] })
 
   try {
