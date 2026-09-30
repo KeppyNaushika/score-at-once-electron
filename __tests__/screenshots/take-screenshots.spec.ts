@@ -1238,7 +1238,9 @@ test.describe.serial("第3章: 採点と出力", () => {
 
     // 設問を開いて裁定対象の生徒を選ぶと、右ペインに裁定フォームが出る
     await captureOptional("ch3-scoring/07-finalize-decision.png", async () => {
-      await clickWhenReady(page.getByTitle("裁定対象を表示").first())
+      await clickWhenReady(
+        page.getByRole("button", { name: "裁定対象を表示" }).first()
+      )
       await page.waitForTimeout(600)
       await clickWhenReady(
         page.locator("button").filter({ hasText: "食い違い" }).first()

@@ -7,6 +7,11 @@ import { GuardedLink } from "@/components/common/GuardedLink"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import { HistoryNavButtons } from "@/components/layout/HistoryNavButtons"
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 /**
@@ -127,15 +132,16 @@ export function WorkflowTabHeader({
       <div className="flex items-center gap-2 px-2 pt-1">
         <div className="flex shrink-0 items-center gap-0.5">
           <HistoryNavButtons />
-          <Button variant="ghost" size="icon" className="size-7" asChild>
-            <GuardedLink
-              href={listHref}
-              aria-label="一覧へ戻る"
-              title="一覧へ戻る"
-            >
-              <List />
-            </GuardedLink>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-7" asChild>
+                <GuardedLink href={listHref} aria-label="一覧へ戻る">
+                  <List />
+                </GuardedLink>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>一覧へ戻る</TooltipContent>
+          </Tooltip>
         </div>
         <h1 className="min-w-0 truncate text-sm font-semibold">
           {currentTab && currentTab.path !== ""

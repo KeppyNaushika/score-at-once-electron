@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Kbd } from "@/components/ui/kbd"
 import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
 
 /** キーバインディングの型 */
@@ -148,31 +149,33 @@ export default function PartialScoreModal({
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
               <div>
-                <kbd className="rounded border bg-white px-2 py-1">0-9, .</kbd>{" "}
+                <Kbd className="h-auto rounded border bg-white px-2 py-1 font-mono font-normal text-inherit">
+                  0-9, .
+                </Kbd>{" "}
                 入力
               </div>
               <div>
-                <kbd className="rounded border bg-white px-2 py-1">
+                <Kbd className="h-auto rounded border bg-white px-2 py-1 font-mono font-normal text-inherit">
                   Backspace
-                </kbd>{" "}
+                </Kbd>{" "}
                 削除
               </div>
               <div>
-                <kbd className="rounded border bg-white px-2 py-1">
+                <Kbd className="h-auto rounded border bg-white px-2 py-1 font-mono font-normal text-inherit">
                   {partialKeyDisplay}
-                </kbd>{" "}
+                </Kbd>{" "}
                 部分点で確定
               </div>
               <div>
-                <kbd className="rounded border bg-white px-2 py-1">
+                <Kbd className="h-auto rounded border bg-white px-2 py-1 font-mono font-normal text-inherit">
                   {pendingKeyDisplay}
-                </kbd>{" "}
+                </Kbd>{" "}
                 保留で確定
               </div>
               <div>
-                <kbd className="rounded border bg-white px-2 py-1">
+                <Kbd className="h-auto rounded border bg-white px-2 py-1 font-mono font-normal text-inherit">
                   {cancelKeyDisplay}
-                </kbd>{" "}
+                </Kbd>{" "}
                 キャンセル
               </div>
             </div>

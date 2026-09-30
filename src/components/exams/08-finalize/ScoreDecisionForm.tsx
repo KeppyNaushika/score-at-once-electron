@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { CheckCircle, Clock, Info } from "lucide-react"
+import { CheckCircle, Info } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
 import { finalizeQuestionScoreMutation } from "@/queries/scoring"
@@ -261,19 +263,32 @@ export function ScoreDecisionForm({
         {/* 確定内容 */}
         <div className="space-y-3 rounded-lg border border-gray-200 p-3">
           <div className="text-sm font-medium text-gray-700">確定する判定</div>
-          <div className="grid grid-cols-3 gap-2">
-            {VERDICTS.map((candidate) => (
-              <Button
-                key={candidate}
-                size="sm"
-                variant={verdict === candidate ? "default" : "outline"}
-                disabled={!editable}
-                onClick={() => setVerdict(candidate)}
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={verdict}
+            disabled={!editable}
+            aria-label="確定する判定"
+            className="grid w-full grid-cols-3 gap-2 data-[variant=outline]:shadow-none"
+            onValueChange={(value) => {
+              // 選択中をもう一度押すと空文字が来る。選択は外さない
+              const nextVerdict = VERDICTS.find(
+                (candidateVerdict) => candidateVerdict === value
+              )
+              if (nextVerdict) setVerdict(nextVerdict)
+            }}
+          >
+            {VERDICTS.map((candidateVerdict) => (
+              <ToggleGroupItem
+                key={candidateVerdict}
+                value={candidateVerdict}
+                className="rounded-md px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[variant=outline]:border-l"
               >
-                {SCORING_STATUS_LABELS[candidate]}
-              </Button>
+                {SCORING_STATUS_LABELS[candidateVerdict]}
+              </ToggleGroupItem>
             ))}
-          </div>
+          </ToggleGroup>
 
           {needsScore && (
             <div>
@@ -313,7 +328,7 @@ export function ScoreDecisionForm({
           >
             {deciding ? (
               <>
-                <Clock className="mr-1 h-4 w-4 animate-spin" />
+                <Spinner className="mr-1" />
                 確定中...
               </>
             ) : (

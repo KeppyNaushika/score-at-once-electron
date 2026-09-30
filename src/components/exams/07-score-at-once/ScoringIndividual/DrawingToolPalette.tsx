@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Kbd } from "@/components/ui/kbd"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
@@ -349,9 +350,9 @@ export function DrawingToolPalette({
                     <div className="font-medium">拡大</div>
                     <div className="mt-1 text-xs text-gray-400">
                       キー:{" "}
-                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
+                      <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
                         +
-                      </kbd>
+                      </Kbd>
                     </div>
                   </div>
                 </TooltipPrimitive.Content>
@@ -374,9 +375,9 @@ export function DrawingToolPalette({
                     <div className="font-medium">縮小</div>
                     <div className="mt-1 text-xs text-gray-400">
                       キー:{" "}
-                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
+                      <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
                         -
-                      </kbd>
+                      </Kbd>
                     </div>
                   </div>
                 </TooltipPrimitive.Content>
@@ -399,9 +400,9 @@ export function DrawingToolPalette({
                     <div className="font-medium">全体表示</div>
                     <div className="mt-1 text-xs text-gray-400">
                       キー:{" "}
-                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
+                      <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
                         {(keyBindings["view.fullView"] || "M").toUpperCase()}
-                      </kbd>
+                      </Kbd>
                     </div>
                   </div>
                 </TooltipPrimitive.Content>
@@ -429,11 +430,11 @@ export function DrawingToolPalette({
                     <div className="font-medium">設問表示</div>
                     <div className="mt-1 text-xs text-gray-400">
                       キー:{" "}
-                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
+                      <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
                         {(
                           keyBindings["view.questionView"] || "C"
                         ).toUpperCase()}
-                      </kbd>
+                      </Kbd>
                     </div>
                   </div>
                 </TooltipPrimitive.Content>
@@ -465,9 +466,9 @@ export function DrawingToolPalette({
                     <div className="text-xs text-gray-400">ドラッグで移動</div>
                     <div className="mt-1 text-xs text-gray-400">
                       キー:{" "}
-                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
+                      <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
                         {(keyBindings["tool.hand"] || "H").toUpperCase()}
-                      </kbd>
+                      </Kbd>
                     </div>
                   </div>
                 </TooltipPrimitive.Content>
@@ -497,9 +498,9 @@ export function DrawingToolPalette({
                     </div>
                     <div className="mt-1 text-xs text-gray-400">
                       キー:{" "}
-                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
+                      <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
                         {(keyBindings["tool.select"] || "G").toUpperCase()}
-                      </kbd>
+                      </Kbd>
                     </div>
                   </div>
                 </TooltipPrimitive.Content>

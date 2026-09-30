@@ -40,15 +40,14 @@ export const SCORING_OPERATION_MODES = ["keyboard", "mouse"] as const
 export const SCORING_BEHAVIORS = ["next-student", "next-question"] as const
 
 /**
- * 成績の結果で、変化の記号（↑↓*）をどれだけ強く出すか。弱い順に並べる
- * （結果画面のスライダーはこの並びの添字で動く）。
- * off=出さない / symbol=色付きの記号 / tint=淡い背景 / solid=濃い背景に白文字
+ * 成績の結果で、変化の記号（↑↓*）をどう出すか。弱い順に並べる
+ * （結果画面のボタンもこの順に並ぶ）。
+ * none=出さない / symbol=色付きの記号 / highlight=濃い背景に白文字
  */
-export const GRADE_COMPARISON_EMPHASES = [
-  "off",
+export const GRADE_COMPARISON_DISPLAYS = [
+  "none",
   "symbol",
-  "tint",
-  "solid",
+  "highlight",
 ] as const
 
 /** 一覧に含まれるかを、要素の型を保ったまま判定する */
@@ -175,14 +174,14 @@ const USER_PREFERENCE_SCHEMA = {
    */
   courseworkScoresScoreOnly: { type: "boolean" as const, default: true },
   /**
-   * 成績の結果に並べる比較の記号で、変化をどれだけ強く出すか。
+   * 成績の結果に並べる比較の記号で、変化をどう出すか。
    *
    * 見やすさの好みなので、成績算出ではなく利用者に付ける。
    */
-  gradeComparisonEmphasis: {
+  gradeComparisonDisplay: {
     type: "string" as const,
     default: "symbol",
-    validate: (value: string) => isOneOf(GRADE_COMPARISON_EMPHASES, value),
+    validate: (value: string) => isOneOf(GRADE_COMPARISON_DISPLAYS, value),
   },
 } as const
 
@@ -216,7 +215,7 @@ export type PreferenceValueType = {
   scoringOperationModeRemembered: boolean
   scoringBehavior: (typeof SCORING_BEHAVIORS)[number]
   courseworkScoresScoreOnly: boolean
-  gradeComparisonEmphasis: (typeof GRADE_COMPARISON_EMPHASES)[number]
+  gradeComparisonDisplay: (typeof GRADE_COMPARISON_DISPLAYS)[number]
 }
 
 /**

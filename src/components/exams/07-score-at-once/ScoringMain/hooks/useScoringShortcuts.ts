@@ -91,7 +91,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // 選択コマンド
   // ========================================
   useCommand("selection.selectAll", handleSelectAll, {
-    when: `!inputFocus && !modalOpen && gradingMode == 'grid'${kbOnly}`,
+    when: `!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'${kbOnly}`,
     metadata: {
       title: "全選択",
       category: "選択",
@@ -103,7 +103,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // 採点コマンド（サイドパネル非表示でも有効）
   // ========================================
   useCommand("scoring.unscored", () => handleScore("unscored"), {
-    when: `!inputFocus && !modalOpen && hasSelectedAnswers${kbOnly}`,
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: {
       title: "未採点として採点",
       category: "採点",
@@ -112,7 +112,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("scoring.correct", () => handleScore("correct"), {
-    when: `!inputFocus && !modalOpen && hasSelectedAnswers${kbOnly}`,
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: {
       title: "正答として採点",
       category: "採点",
@@ -121,7 +121,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("scoring.partial", () => handleScore("partial"), {
-    when: `!inputFocus && !modalOpen && hasSelectedAnswers${kbOnly}`,
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: {
       title: "部分点として採点",
       category: "採点",
@@ -130,7 +130,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("scoring.pending", () => handleScore("pending"), {
-    when: `!inputFocus && !modalOpen && hasSelectedAnswers${kbOnly}`,
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: {
       title: "保留として採点",
       category: "採点",
@@ -139,7 +139,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("scoring.incorrect", () => handleScore("incorrect"), {
-    when: `!inputFocus && !modalOpen && hasSelectedAnswers${kbOnly}`,
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: {
       title: "誤答として採点",
       category: "採点",
@@ -148,7 +148,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("scoring.noAnswer", () => handleScore("no_answer"), {
-    when: `!inputFocus && !modalOpen && hasSelectedAnswers${kbOnly}`,
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: {
       title: "無答として採点",
       category: "採点",
@@ -157,7 +157,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("scoring.doubleMark", () => handleScore("double_mark"), {
-    when: `!inputFocus && !modalOpen && hasSelectedAnswers${kbOnly}`,
+    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
     metadata: {
       title: "Wマークとして採点",
       category: "採点",
@@ -169,7 +169,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // フィルタトグルコマンド（サイドパネル非表示でも有効、グリッドモードのみ）
   // ========================================
   useCommand("filter.toggleUnscored", () => handleToggleFilter("unscored"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'",
     metadata: {
       title: "未採点フィルタトグル",
       category: "フィルタ",
@@ -178,7 +178,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("filter.toggleCorrect", () => handleToggleFilter("correct"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'",
     metadata: {
       title: "正答フィルタトグル",
       category: "フィルタ",
@@ -186,7 +186,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("filter.togglePartial", () => handleToggleFilter("partial"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'",
     metadata: {
       title: "部分点フィルタトグル",
       category: "フィルタ",
@@ -194,7 +194,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("filter.togglePending", () => handleToggleFilter("pending"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'",
     metadata: {
       title: "保留フィルタトグル",
       category: "フィルタ",
@@ -202,7 +202,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("filter.toggleIncorrect", () => handleToggleFilter("incorrect"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'",
     metadata: {
       title: "誤答フィルタトグル",
       category: "フィルタ",
@@ -210,7 +210,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("filter.toggleNoAnswer", () => handleToggleFilter("no_answer"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'",
     metadata: {
       title: "無答フィルタトグル",
       category: "フィルタ",
@@ -221,7 +221,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     "filter.toggleDoubleMark",
     () => handleToggleFilter("double_mark"),
     {
-      when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'",
       metadata: {
         title: "Wマークフィルタトグル",
         category: "フィルタ",
@@ -233,7 +233,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // 表示関連ショートカット
   // ========================================
   useCommand("view.toggleViewMode", handleToggleViewMode, {
-    when: "!inputFocus && !modalOpen",
+    when: "!inputFocus && !modalOpen && !textEditorActive",
     metadata: {
       title: "表示モード切り替え",
       category: "表示",
@@ -242,7 +242,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("view.toggleMasterAnswer", () => handleToggleMasterAnswer?.(), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'individual'",
+    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
     metadata: {
       title: "模範解答表示切り替え",
       category: "表示",
@@ -251,7 +251,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("view.toggleStudentNames", handleToggleStudentNames, {
-    when: "!inputFocus && !modalOpen",
+    when: "!inputFocus && !modalOpen && !textEditorActive",
     metadata: {
       title: "生徒名表示切り替え",
       category: "表示",
@@ -260,7 +260,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("filter.refresh", handleRefreshFilter, {
-    when: "!inputFocus && !modalOpen",
+    when: "!inputFocus && !modalOpen && !textEditorActive",
     metadata: {
       title: "フィルタ更新",
       category: "フィルタ",
@@ -272,7 +272,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // ナビゲーションショートカット
   // ========================================
   useCommand("navigation.nextQuestionArrow", handleNextQuestion, {
-    when: "!inputFocus && !modalOpen",
+    when: "!inputFocus && !modalOpen && !textEditorActive",
     metadata: {
       title: "次の問題へ（→）",
       category: "ナビゲーション",
@@ -280,7 +280,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("navigation.prevQuestionArrow", handlePrevQuestion, {
-    when: "!inputFocus && !modalOpen",
+    when: "!inputFocus && !modalOpen && !textEditorActive",
     metadata: {
       title: "前の問題へ（←）",
       category: "ナビゲーション",
@@ -288,7 +288,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("navigation.nextQuestion", handleNextQuestion, {
-    when: "!inputFocus && !modalOpen",
+    when: "!inputFocus && !modalOpen && !textEditorActive",
     metadata: {
       title: "次の問題へ（Shift+D）",
       category: "ナビゲーション",
@@ -296,7 +296,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("navigation.prevQuestion", handlePrevQuestion, {
-    when: "!inputFocus && !modalOpen",
+    when: "!inputFocus && !modalOpen && !textEditorActive",
     metadata: {
       title: "前の問題へ（Shift+A）",
       category: "ナビゲーション",
@@ -304,7 +304,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("navigation.moveUp", () => handleGridNavigation("w"), {
-    when: `!inputFocus && !modalOpen && gradingMode == 'grid'${kbOnly}`,
+    when: `!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'${kbOnly}`,
     metadata: {
       title: "上に移動",
       category: "ナビゲーション",
@@ -312,7 +312,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("navigation.moveDown", () => handleGridNavigation("s"), {
-    when: `!inputFocus && !modalOpen && gradingMode == 'grid'${kbOnly}`,
+    when: `!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'${kbOnly}`,
     metadata: {
       title: "下に移動",
       category: "ナビゲーション",
@@ -320,7 +320,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("navigation.moveLeft", () => handleGridNavigation("a"), {
-    when: `!inputFocus && !modalOpen && gradingMode == 'grid'${kbOnly}`,
+    when: `!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'${kbOnly}`,
     metadata: {
       title: "左に移動",
       category: "ナビゲーション",
@@ -328,7 +328,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("navigation.moveRight", () => handleGridNavigation("d"), {
-    when: `!inputFocus && !modalOpen && gradingMode == 'grid'${kbOnly}`,
+    when: `!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'${kbOnly}`,
     metadata: {
       title: "右に移動",
       category: "ナビゲーション",
@@ -379,7 +379,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     "navigation.nextStudentArrow",
     () => handleIndividualNavigation("ArrowDown"),
     {
-      when: "!inputFocus && !modalOpen && gradingMode == 'individual'",
+      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
       metadata: {
         title: "次の生徒（↓）",
         category: "ナビゲーション",
@@ -391,7 +391,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     "navigation.prevStudentArrow",
     () => handleIndividualNavigation("ArrowUp"),
     {
-      when: "!inputFocus && !modalOpen && gradingMode == 'individual'",
+      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
       metadata: {
         title: "前の生徒（↑）",
         category: "ナビゲーション",
@@ -400,7 +400,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   )
 
   useCommand("navigation.zoomIn", handleZoomIn, {
-    when: "!inputFocus && !modalOpen",
+    when: "!inputFocus && !modalOpen && !textEditorActive",
     metadata: {
       title: "ズームイン",
       category: "ナビゲーション",
@@ -408,7 +408,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("navigation.zoomOut", handleZoomOut, {
-    when: "!inputFocus && !modalOpen",
+    when: "!inputFocus && !modalOpen && !textEditorActive",
     metadata: {
       title: "ズームアウト",
       category: "ナビゲーション",
@@ -416,7 +416,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   useCommand("navigation.resetZoom", handleResetZoom, {
-    when: "!inputFocus && !modalOpen",
+    when: "!inputFocus && !modalOpen && !textEditorActive",
     metadata: {
       title: "ズームリセット",
       category: "ナビゲーション",

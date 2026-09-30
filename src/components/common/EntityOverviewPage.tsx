@@ -435,17 +435,21 @@ export function EntityOverviewPage({
                   className={cn(QUIET_FIELD_CLASSES, "w-auto")}
                 />
                 {canEdit && shownText("referenceDate") !== "" && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-6 text-muted-foreground hover:text-foreground"
-                    aria-label={`${dateLabel}を未設定にする`}
-                    title={`${dateLabel}を未設定にする`}
-                    onClick={clearReferenceDate}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-6 text-muted-foreground hover:text-foreground"
+                        aria-label={`${dateLabel}を未設定にする`}
+                        onClick={clearReferenceDate}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{`${dateLabel}を未設定にする`}</TooltipContent>
+                  </Tooltip>
                 )}
                 {/*
               日付が何に効くかは、書き換えるときだけ知りたい。常に添えておくと

@@ -1,7 +1,9 @@
 "use client"
 
 import { Plus, Search, UserPlus } from "lucide-react"
+import { useMemo } from "react"
 
+import { Combobox } from "@/components/common/Combobox"
 import { SortableClassroomList } from "@/components/common/student-add-panel/components/SortableClassroomList"
 import { StudentCandidateCard } from "@/components/common/student-add-panel/components/StudentCandidateCard"
 import { useStudentAddPanel } from "@/components/common/student-add-panel/hooks/useStudentAddPanel"
@@ -17,13 +19,6 @@ import {
 } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -32,6 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { classroomSearchKeywords } from "@/lib/searchKeywords"
 
 /**
  * 共通「生徒追加パネル」
@@ -79,6 +75,18 @@ export function StudentAddPanel({
     classroomActiveOnlyDefault,
     studentActiveOnlyDefault,
   })
+
+  const classroomFilterOptions = useMemo(
+    () => [
+      { value: "all", label: "すべての学級" },
+      ...classrooms.map((candidate) => ({
+        value: candidate.classroom.id,
+        label: candidate.classroom.name,
+        keywords: classroomSearchKeywords(candidate.classroom),
+      })),
+    ],
+    [classrooms]
+  )
 
   // 学級候補が空のときの理由別メッセージ（スイッチ状態で文言を変える）
   const classroomEmptyMessage = (() => {
@@ -296,25 +304,16 @@ export function StudentAddPanel({
                   className="pl-10"
                 />
               </div>
-              <Select
+              <Combobox
+                options={classroomFilterOptions}
                 value={filterClassroomId}
                 onValueChange={setFilterClassroomId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="学級フィルタ" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">すべての学級</SelectItem>
-                  {classrooms.map((candidate) => (
-                    <SelectItem
-                      key={candidate.classroom.id}
-                      value={candidate.classroom.id}
-                    >
-                      {candidate.classroom.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="学級フィルタ"
+                searchPlaceholder="学級名・学年・学級コードで検索"
+                emptyText="該当する学級がありません"
+                aria-label="学級で絞り込む"
+                className="w-full"
+              />
             </div>
           </CardHeader>
           <CardContent className={studentListContentClass}>

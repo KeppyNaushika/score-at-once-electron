@@ -25,6 +25,11 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
   type NavigationMenuEntry,
   useNavigationHistory,
 } from "@/hooks/useNavigationHistory"
@@ -72,19 +77,23 @@ function HistoryNavButton({
 
   return (
     <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          disabled={disabled}
-          aria-label={label}
-          title={`${label}（右クリックで履歴）`}
-          onClick={onNavigate}
-        >
-          <Icon className="h-4 w-4" />
-        </Button>
-      </ContextMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <ContextMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              disabled={disabled}
+              aria-label={label}
+              onClick={onNavigate}
+            >
+              <Icon className="h-4 w-4" />
+            </Button>
+          </ContextMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{label}（右クリックで履歴）</TooltipContent>
+      </Tooltip>
       {menuEntries.length > 0 && (
         <ContextMenuContent className="max-h-80 w-96 max-w-[90vw] overflow-auto">
           {menuEntries.map((entry) => {

@@ -1,7 +1,13 @@
 "use client"
 
 import type { PlacementStrategySelectorProps } from "@/components/exams/06-student-answers/student-answer-table/types"
-import { Button } from "@/components/ui/button"
+import type { PlacementStrategy } from "@/components/exams/06-student-answers/types"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+
+const PLACEMENT_STRATEGIES: PlacementStrategy[] = [
+  "page-first",
+  "student-first",
+]
 
 export function PlacementStrategySelector({
   fileOrder,
@@ -12,24 +18,33 @@ export function PlacementStrategySelector({
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm text-gray-600">配置戦略:</span>
-      <div className="flex rounded-md border">
-        <Button
-          variant={fileOrder === "page-first" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => onFileOrderChange("page-first")}
-          className="rounded-r-none border-r"
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        size="sm"
+        value={fileOrder}
+        aria-label="配置戦略"
+        onValueChange={(value) => {
+          // 選択中をもう一度押すと空文字が来る。選択は外さない
+          const nextPlacementStrategy = PLACEMENT_STRATEGIES.find(
+            (candidatePlacementStrategy) => candidatePlacementStrategy === value
+          )
+          if (nextPlacementStrategy) onFileOrderChange(nextPlacementStrategy)
+        }}
+      >
+        <ToggleGroupItem
+          value="page-first"
+          className="px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
         >
           ページ順
-        </Button>
-        <Button
-          variant={fileOrder === "student-first" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => onFileOrderChange("student-first")}
-          className="rounded-l-none"
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          value="student-first"
+          className="px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
         >
           生徒順
-        </Button>
-      </div>
+        </ToggleGroupItem>
+      </ToggleGroup>
     </div>
   )
 }

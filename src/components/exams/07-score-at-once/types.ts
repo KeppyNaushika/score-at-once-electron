@@ -29,6 +29,13 @@ export type StudentAnswerImageWithExamStudents =
   StudentAnswerImageWithExamPageAndStudent
 
 /**
+ * 答案に同梱された受験者（生徒つき）。個別表示の受験者の一覧はこれを並べる
+ * 変数名: examStudent, examStudents
+ */
+export type ScoringExamStudent =
+  StudentAnswerImageWithExamStudents["examStudent"]
+
+/**
  * 採点モード
  */
 export type GradingMode = "grid" | "individual"

@@ -1,59 +1,54 @@
 "use client"
 
 import { Users } from "lucide-react"
+import { useMemo } from "react"
 
+import { Combobox } from "@/components/common/Combobox"
 import { SidePanelSection } from "@/components/exams/07-score-at-once/ScoringSidePanel/SidePanelSection"
+import type { ScoringExamStudent } from "@/components/exams/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-
-interface Student {
-  id: string
-  studentNumber: string
-  lastName: string
-  firstName: string
-  customOrder: number
-}
 
 interface StudentAnswerPanelProps {
-  students: Student[]
+  /** 受験者の一覧（受験者の並び順に並べ済み） */
+  examStudents: ScoringExamStudent[]
   currentExamStudentId: string
   onStudentChange: (studentId: string) => void
 }
 
 export function StudentAnswerPanel({
-  students,
+  examStudents,
   currentExamStudentId,
   onStudentChange,
 }: StudentAnswerPanelProps) {
-  // 受験生徒順にソート
-  const sortedStudents = [...students].sort(
-    (studentA, studentB) => studentA.customOrder - studentB.customOrder
-  )
-  const currentStudent = sortedStudents.find(
-    (student) => student.id === currentExamStudentId
+  // 氏名・番号に加えて、読み（カナ）でも探せるようにする
+  const examStudentOptions = useMemo(
+    () =>
+      examStudents.map(({ id, student }) => ({
+        value: id,
+        label: `${student.lastName} ${student.firstName} (${student.studentNumber})`,
+        keywords: [
+          student.studentNumber,
+          `${student.lastNameKana} ${student.firstNameKana}`,
+        ],
+      })),
+    [examStudents]
   )
 
   const handlePrevStudent = () => {
-    const currentIndex = sortedStudents.findIndex(
-      (student) => student.id === currentExamStudentId
+    const currentIndex = examStudents.findIndex(
+      (examStudent) => examStudent.id === currentExamStudentId
     )
     if (currentIndex > 0) {
-      onStudentChange(sortedStudents[currentIndex - 1].id)
+      onStudentChange(examStudents[currentIndex - 1].id)
     }
   }
 
   const handleNextStudent = () => {
-    const currentIndex = sortedStudents.findIndex(
-      (student) => student.id === currentExamStudentId
+    const currentIndex = examStudents.findIndex(
+      (examStudent) => examStudent.id === currentExamStudentId
     )
-    if (currentIndex < sortedStudents.length - 1) {
-      onStudentChange(sortedStudents[currentIndex + 1].id)
+    if (currentIndex < examStudents.length - 1) {
+      onStudentChange(examStudents[currentIndex + 1].id)
     }
   }
 
@@ -66,38 +61,31 @@ export function StudentAnswerPanel({
           size="sm"
           onClick={handlePrevStudent}
           disabled={
-            sortedStudents.findIndex(
-              (student) => student.id === currentExamStudentId
+            examStudents.findIndex(
+              (examStudent) => examStudent.id === currentExamStudentId
             ) === 0
           }
         >
           ←
         </Button>
-        <Select value={currentExamStudentId} onValueChange={onStudentChange}>
-          <SelectTrigger className="flex-1">
-            <SelectValue>
-              {currentStudent
-                ? `${currentStudent.lastName} ${currentStudent.firstName} (${currentStudent.studentNumber})`
-                : "生徒を選択"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {sortedStudents.map((student) => (
-              <SelectItem key={student.id} value={student.id}>
-                {student.lastName} {student.firstName} ({student.studentNumber})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Combobox
+          options={examStudentOptions}
+          value={currentExamStudentId}
+          onValueChange={onStudentChange}
+          placeholder="生徒を選択"
+          searchPlaceholder="氏名・番号で検索"
+          emptyText="該当する生徒がいません"
+          className="min-w-0 flex-1"
+        />
         <Button
           variant="outline"
           size="sm"
           onClick={handleNextStudent}
           disabled={
-            sortedStudents.findIndex(
-              (student) => student.id === currentExamStudentId
+            examStudents.findIndex(
+              (examStudent) => examStudent.id === currentExamStudentId
             ) ===
-            sortedStudents.length - 1
+            examStudents.length - 1
           }
         >
           →
@@ -106,10 +94,10 @@ export function StudentAnswerPanel({
 
       {/* 現在の位置表示 */}
       <div className="text-center text-xs text-gray-500">
-        {sortedStudents.findIndex(
-          (student) => student.id === currentExamStudentId
+        {examStudents.findIndex(
+          (examStudent) => examStudent.id === currentExamStudentId
         ) + 1}{" "}
-        / {sortedStudents.length}
+        / {examStudents.length}
       </div>
     </SidePanelSection>
   )

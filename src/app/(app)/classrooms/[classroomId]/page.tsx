@@ -20,11 +20,20 @@ import { useClassroomExamResults } from "@/app/(app)/classrooms/[classroomId]/ho
 import ClassroomModal from "@/components/classroom/ClassroomModal"
 import ClassroomStudentImportModal from "@/components/classroom/ClassroomStudentImportModal"
 import MembershipTable from "@/components/classroom/MembershipTable"
-import LoadingSpinner from "@/components/common/LoadingSpinner"
 import PageHeader from "@/components/layout/PageHeader"
 import StudentClassroomMembershipModal from "@/components/student/StudentClassroomMembershipModal"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   addStudentToClassroomMutation,
@@ -71,6 +80,11 @@ export default function ClassroomDetailPage() {
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false)
   const [membershipToEdit, setMembershipToEdit] =
     useState<ClassroomMembership | null>(null)
+  const [membershipIdToDelete, setMembershipIdToDelete] = useState<
+    string | null
+  >(null)
+  const [isDeleteClassroomConfirmOpen, setIsDeleteClassroomConfirmOpen] =
+    useState(false)
 
   const handleSaveClassroom = async (
     classroomInfo: Partial<ClassroomWithMemberships>
@@ -125,8 +139,13 @@ export default function ClassroomDetailPage() {
   }
 
   const handleDeleteMembership = (membershipId: string) => {
-    if (!window.confirm("この所属関係を削除しますか？")) return
-    deleteMembership.mutate(membershipId)
+    setMembershipIdToDelete(membershipId)
+  }
+
+  const handleConfirmDeleteMembership = () => {
+    if (membershipIdToDelete === null) return
+    deleteMembership.mutate(membershipIdToDelete)
+    setMembershipIdToDelete(null)
   }
 
   const handleBulkDeleteMemberships = async (membershipIds: string[]) => {
@@ -147,7 +166,6 @@ export default function ClassroomDetailPage() {
    * 権限で失敗しても一覧へ遷移して「消えていない学級」が並ぶ。
    */
   const handleDeleteClassroom = async (): Promise<boolean> => {
-    if (!window.confirm("この学級を削除しますか？")) return false
     try {
       await deleteClassroom.mutateAsync(classroomId)
       return true
@@ -183,7 +201,7 @@ export default function ClassroomDetailPage() {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
+          <Spinner className="mx-auto size-12 text-primary" />
           <p className="mt-4 text-muted-foreground">読み込み中...</p>
         </div>
       </div>
@@ -272,7 +290,7 @@ export default function ClassroomDetailPage() {
         <Button
           variant="ghost"
           className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-          onClick={handleDeleteWithNavigation}
+          onClick={() => setIsDeleteClassroomConfirmOpen(true)}
         >
           <Trash2 className="mr-2 h-4 w-4" />
           削除
@@ -295,8 +313,8 @@ export default function ClassroomDetailPage() {
 
             <TabsContent value="analytics">
               {analyticsLoading ? (
-                <div className="flex items-center justify-center py-16">
-                  <LoadingSpinner />
+                <div className="flex items-center justify-center py-24">
+                  <Spinner className="size-6" />
                 </div>
               ) : studentResults.length > 0 ? (
                 <>
@@ -355,6 +373,49 @@ export default function ClassroomDetailPage() {
           membershipToEdit={membershipToEdit}
         />
       )}
+
+      <AlertDialog
+        open={membershipIdToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setMembershipIdToDelete(null)
+        }}
+      >
+        {/* 問いかけの文言だけで足りるので、説明文は置かない */}
+        <AlertDialogContent aria-describedby={undefined}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>この所属関係を削除しますか？</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={handleConfirmDeleteMembership}
+            >
+              削除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={isDeleteClassroomConfirmOpen}
+        onOpenChange={setIsDeleteClassroomConfirmOpen}
+      >
+        <AlertDialogContent aria-describedby={undefined}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>この学級を削除しますか？</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={() => void handleDeleteWithNavigation()}
+            >
+              削除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

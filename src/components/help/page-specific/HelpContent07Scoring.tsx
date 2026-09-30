@@ -17,9 +17,14 @@ import { getDynamicScoreStatusConfig } from "@/components/exams/07-score-at-once
 import { useShortcutContext } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import PartialScoreModal from "@/components/exams/07-score-at-once/ScoringMain/PartialScoreModal"
 import type { ScoringBehavior } from "@/components/exams/07-score-at-once/types"
-import { Callout, HelpHero, Kbd } from "@/components/help/common/DocComponents"
+import {
+  Callout,
+  HelpHero,
+  KeyCap,
+} from "@/components/help/common/DocComponents"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Kbd } from "@/components/ui/kbd"
 import {
   Tooltip,
   TooltipContent,
@@ -474,8 +479,7 @@ const DEMO_CELL_W = "w-36"
 function KeyHint({ label }: { label: string }) {
   return (
     <div className="mt-1 text-xs text-gray-400">
-      キー:{" "}
-      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">{label}</kbd>
+      キー: <Kbd>{label}</Kbd>
     </div>
   )
 }
@@ -1048,10 +1052,10 @@ function ScoringDemos({
               左上の黒い枠で囲まれているのが模範解答で、それ以外が生徒の答案です。
               クリック、または{" "}
               <span className="inline-flex items-center gap-1">
-                <Kbd>{formatKey(navKeys.up)}</Kbd>
-                <Kbd>{formatKey(navKeys.left)}</Kbd>
-                <Kbd>{formatKey(navKeys.down)}</Kbd>
-                <Kbd>{formatKey(navKeys.right)}</Kbd>
+                <KeyCap>{formatKey(navKeys.up)}</KeyCap>
+                <KeyCap>{formatKey(navKeys.left)}</KeyCap>
+                <KeyCap>{formatKey(navKeys.down)}</KeyCap>
+                <KeyCap>{formatKey(navKeys.right)}</KeyCap>
               </span>{" "}
               で選択を変えられます。
             </>
@@ -1076,8 +1080,9 @@ function ScoringDemos({
           instruction={
             <>
               選択した答案と、左上の模範解答を見くらべます。 正しければ 正答（
-              <Kbd>{keys.correct}</Kbd>
-              ）を、誤っていれば 誤答（<Kbd>{keys.incorrect}</Kbd>）を押します。
+              <KeyCap>{keys.correct}</KeyCap>
+              ）を、誤っていれば 誤答（<KeyCap>{keys.incorrect}</KeyCap>
+              ）を押します。
               採点すると、自動的に次の答案へ進みます。採点ボタンとキーボードのどちらでも操作できます。
             </>
           }
@@ -1106,9 +1111,11 @@ function ScoringDemos({
           title={DEMO_TITLE_PARTIAL}
           instruction={
             <>
-              部分点をつけたいときは数字キーを押します。たとえば <Kbd>5</Kbd>{" "}
+              部分点をつけたいときは数字キーを押します。たとえば{" "}
+              <KeyCap>5</KeyCap>{" "}
               を押すと部分点の入力画面が開き、点数を調整できます。点数を決めたら
-              確定（<Kbd>{keys.partial}</Kbd>）を押して部分点を確定します。
+              確定（<KeyCap>{keys.partial}</KeyCap>
+              ）を押して部分点を確定します。
             </>
           }
         >
@@ -1149,7 +1156,8 @@ function Troubleshoot({ pending }: { pending: string }) {
       <FocusSection title="困ったときは">
         <Callout type="success" title="間違えた・迷ったとき">
           <span className="inline-flex flex-wrap items-center gap-1">
-            印はつけ直すだけで直せます。迷ったら「保留」（<Kbd>{pending}</Kbd>）
+            印はつけ直すだけで直せます。迷ったら「保留」（
+            <KeyCap>{pending}</KeyCap>）
           </span>
           にして後で見直せます。採点内容は自動で保存されます。
         </Callout>
@@ -1183,8 +1191,8 @@ function GridGuide({
           <p>
             1つの設問について、全ての生徒の採点が終わったら、次の設問へ移ります。
             <span className="inline-flex flex-wrap items-center gap-1">
-              <Kbd>{keys.nextQuestion}</Kbd> で次の設問、
-              <Kbd>{keys.prevQuestion}</Kbd> で前の設問へ移動できます。
+              <KeyCap>{keys.nextQuestion}</KeyCap> で次の設問、
+              <KeyCap>{keys.prevQuestion}</KeyCap> で前の設問へ移動できます。
             </span>
             画面のボタンでも移動できます。
           </p>
@@ -1200,11 +1208,11 @@ function GridGuide({
           <p>
             画面右の「表示」パネルで
             <span className="inline-flex flex-wrap items-center gap-1">
-              ［正答］を押すか <Kbd>{keys.filterCorrect}</Kbd>
+              ［正答］を押すか <KeyCap>{keys.filterCorrect}</KeyCap>
             </span>
             を押すと、正答にした答案だけが表示されます。誤答なら
             <span className="inline-flex flex-wrap items-center gap-1">
-              ［誤答］または <Kbd>{keys.filterIncorrect}</Kbd>
+              ［誤答］または <KeyCap>{keys.filterIncorrect}</KeyCap>
             </span>
             です。もう一度押すと元に戻ります。
           </p>
@@ -1627,8 +1635,8 @@ function IndividualScoringDemo({
 
       <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
         <span className="inline-flex items-center gap-1">
-          前後の生徒へは <Kbd>{formatKey(navKeys.up)}</Kbd>
-          <Kbd>{formatKey(navKeys.down)}</Kbd> で移動できます。
+          前後の生徒へは <KeyCap>{formatKey(navKeys.up)}</KeyCap>
+          <KeyCap>{formatKey(navKeys.down)}</KeyCap> で移動できます。
         </span>
         <span>
           {cells.length}人のうち {scoredCount}人を採点しました。
@@ -1846,9 +1854,9 @@ function DrawToolCard({
       <div className="text-center">
         <div className="flex items-center justify-center gap-1.5">
           <span className="text-sm font-semibold text-gray-800">{name}</span>
-          <kbd className="rounded border border-gray-300 bg-white px-1 font-mono text-[10px] text-gray-600">
+          <Kbd className="h-auto min-w-0 rounded border border-gray-300 bg-white font-mono text-[10px] font-normal text-gray-600">
             {keyLabel}
-          </kbd>
+          </Kbd>
         </div>
         <div className="mt-0.5 text-xs leading-snug text-gray-500">{desc}</div>
       </div>
@@ -2054,10 +2062,10 @@ function IndividualGuide({
             <span className="inline-flex h-5 items-center rounded border border-gray-300 bg-white px-1.5 align-text-bottom">
               <Eye className="h-3.5 w-3.5 text-gray-700" />
             </span>{" "}
-            または <Kbd>{keys.toggleMaster}</Kbd>{" "}
+            または <KeyCap>{keys.toggleMaster}</KeyCap>{" "}
             を押して、模範解答を表示するか切り替えることができます。 ［
             <strong>押し続けて表示</strong>］をオンにすると、{" "}
-            <Kbd>{keys.toggleMaster}</Kbd>{" "}
+            <KeyCap>{keys.toggleMaster}</KeyCap>{" "}
             を押している時だけ模範解答を表示することもできます。
           </p>
           <p>オーバーレイのときは「不透明度」で濃さを調整できます。</p>
@@ -2068,8 +2076,8 @@ function IndividualGuide({
         <FocusSection title={INDIV_DEMO_TITLE}>
           <p>
             緑の領域の答案と、並べて表示した模範解答を見くらべます。 正しければ
-            正答（<Kbd>{keys.correct}</Kbd>）を、誤っていれば 誤答（
-            <Kbd>{keys.incorrect}</Kbd>
+            正答（<KeyCap>{keys.correct}</KeyCap>）を、誤っていれば 誤答（
+            <KeyCap>{keys.incorrect}</KeyCap>
             ）を押します。採点すると、自動的に次の答案へ進みます。採点ボタンとキーボードのどちらでも操作できます。
           </p>
           <IndividualScoringDemo
@@ -2083,9 +2091,10 @@ function IndividualGuide({
       <Scene>
         <FocusSection title="④ 部分点をつける">
           <p>
-            部分点をつけたいときは数字キーを押します。たとえば <Kbd>5</Kbd>{" "}
+            部分点をつけたいときは数字キーを押します。たとえば{" "}
+            <KeyCap>5</KeyCap>{" "}
             を押すと部分点の入力画面が開き、点数を調整できます。点数を決めたら
-            確定（<Kbd>{keys.partial}</Kbd>）を押して部分点を確定します。
+            確定（<KeyCap>{keys.partial}</KeyCap>）を押して部分点を確定します。
           </p>
         </FocusSection>
       </Scene>
@@ -2112,8 +2121,8 @@ function IndividualGuide({
           <p>
             手動で生徒を切り替えたいときは、画面上部の「生徒答案」にある{" "}
             <span className="inline-flex items-center gap-1">
-              ［←］［→］ボタンを押すか、<Kbd>{formatKey(navKeys.up)}</Kbd>
-              <Kbd>{formatKey(navKeys.down)}</Kbd> キー
+              ［←］［→］ボタンを押すか、<KeyCap>{formatKey(navKeys.up)}</KeyCap>
+              <KeyCap>{formatKey(navKeys.down)}</KeyCap> キー
             </span>
             を押します。名前のドロップダウンから直接選ぶこともできます。となりに表示される「1
             / 9」は、9人のうち何人目を表示しているかをあらわします。
@@ -2121,8 +2130,8 @@ function IndividualGuide({
           <p>
             設問を切り替えるには、
             <span className="inline-flex flex-wrap items-center gap-1">
-              <Kbd>{keys.nextQuestion}</Kbd> で次の設問、
-              <Kbd>{keys.prevQuestion}</Kbd> で前の設問へ移動できます。
+              <KeyCap>{keys.nextQuestion}</KeyCap> で次の設問、
+              <KeyCap>{keys.prevQuestion}</KeyCap> で前の設問へ移動できます。
             </span>
             画面のボタンでも移動できます。
           </p>
@@ -2135,21 +2144,21 @@ function IndividualGuide({
             採点が終わった後、正答にした答案や誤答にした答案だけを表示して、
             正しく採点できたかを確認できます。個別表示には状態でしぼり込む機能がないので、
             <span className="inline-flex flex-wrap items-center gap-1">
-              <Kbd>{keys.toggleView}</Kbd>{" "}
+              <KeyCap>{keys.toggleView}</KeyCap>{" "}
               で一覧表示に切り替えてから確認します。
             </span>
           </p>
           <p>
             画面右の「表示」パネルで
             <span className="inline-flex flex-wrap items-center gap-1">
-              ［正答］を押すか <Kbd>{keys.filterCorrect}</Kbd>
+              ［正答］を押すか <KeyCap>{keys.filterCorrect}</KeyCap>
             </span>
             を押すと、正答にした答案だけが表示されます。誤答なら
             <span className="inline-flex flex-wrap items-center gap-1">
-              ［誤答］または <Kbd>{keys.filterIncorrect}</Kbd>
+              ［誤答］または <KeyCap>{keys.filterIncorrect}</KeyCap>
             </span>
             です。もう一度押すと元に戻ります。確認できたら、
-            <Kbd>{keys.toggleView}</Kbd> で個別表示に戻れます。
+            <KeyCap>{keys.toggleView}</KeyCap> で個別表示に戻れます。
           </p>
         </FocusSection>
       </Scene>

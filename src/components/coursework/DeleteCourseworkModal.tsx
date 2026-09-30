@@ -7,7 +7,8 @@ import { buildDeletionBlockedMessage } from "@/lib/shared/gradeReferenceMessages
 import { gradeReferencesQuery } from "@/queries/grade"
 
 interface DeleteCourseworkModalProps {
-  /** null のときは閉じている */
+  open: boolean
+  /** 消そうとしている資料。閉じても残す（閉じるアニメーションの間も中身を出したままにする） */
   target: {
     id: string
     name: string
@@ -31,6 +32,7 @@ interface DeleteCourseworkModalProps {
  * 使っているかをここで見せて押させない（main の deleteCoursework も同じ判定で断る）。
  */
 export function DeleteCourseworkModal({
+  open,
   target,
   onClose,
   onConfirm,
@@ -38,7 +40,7 @@ export function DeleteCourseworkModal({
 }: DeleteCourseworkModalProps) {
   const gradeReferences = useQuery({
     ...gradeReferencesQuery({ kind: "coursework", id: target?.id ?? "" }),
-    enabled: target !== null,
+    enabled: open && target !== null,
   })
   const blockedMessage = gradeReferences.data
     ? buildDeletionBlockedMessage("coursework", gradeReferences.data)
@@ -46,7 +48,7 @@ export function DeleteCourseworkModal({
 
   return (
     <ConfirmationModal
-      open={target !== null}
+      open={open}
       onClose={onClose}
       title="試験外成績資料の削除"
       description="以下の試験外成績資料を完全に削除します。"

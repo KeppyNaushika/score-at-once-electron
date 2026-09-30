@@ -11,11 +11,13 @@ import {
   Search,
   Trash2,
   Upload,
+  Users,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import { Combobox } from "@/components/common/Combobox"
 import { DeleteStudentModal } from "@/components/student/DeleteStudentModal"
 import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
 import { StudentArchiveExportDialog } from "@/components/student/StudentArchiveExportDialog"
@@ -24,6 +26,12 @@ import { StudentImportWizardModal } from "@/components/student-import/StudentImp
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -41,8 +49,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
+import { classroomSearchKeywords } from "@/lib/searchKeywords"
 import {
   classroomListQuery,
   createStudentMutation,
@@ -107,8 +122,7 @@ export default function StudentTable() {
   const [isArchiveImportModalOpen, setIsArchiveImportModalOpen] =
     useState(false)
   // 削除の確認を開いている生徒（成績算出の名簿に載っていれば確認画面が断る）
-  const [studentToDelete, setStudentToDelete] =
-    useState<StudentWithMemberships | null>(null)
+  const studentDeletion = useDialogTarget<StudentWithMemberships>()
 
   // Data fetching
   // Filter students
@@ -159,6 +173,23 @@ export default function StudentTable() {
       return matchesSearch
     })
   }, [students, searchTerm, filterClassroomId, filterMembershipStatus])
+
+  const classroomFilterOptions = useMemo(
+    () => [
+      { value: "all", label: "すべての学級" },
+      ...classrooms
+        .filter((classroom) => classroom.isVisible !== false)
+        .sort((classroomA, classroomB) =>
+          classroomA.name.localeCompare(classroomB.name)
+        )
+        .map((classroom) => ({
+          value: classroom.id,
+          label: classroom.name,
+          keywords: classroomSearchKeywords(classroom),
+        })),
+    ],
+    [classrooms]
+  )
 
   // ソート用のデータ変換
   const sortableData = useMemo<StudentSortable[]>(() => {
@@ -346,27 +377,16 @@ export default function StudentTable() {
               className="h-9 w-56 rounded-lg pl-9"
             />
           </div>
-          <Select
+          <Combobox
+            options={classroomFilterOptions}
             value={filterClassroomId}
             onValueChange={setFilterClassroomId}
-          >
-            <SelectTrigger className="h-9 w-40 rounded-lg">
-              <SelectValue placeholder="学級フィルタ" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">すべての学級</SelectItem>
-              {classrooms
-                .filter((classroom) => classroom.isVisible !== false)
-                .sort((classroomA, classroomB) =>
-                  classroomA.name.localeCompare(classroomB.name)
-                )
-                .map((classroom) => (
-                  <SelectItem key={classroom.id} value={classroom.id}>
-                    {classroom.name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+            placeholder="学級フィルタ"
+            searchPlaceholder="学級名・学年・学級コードで検索"
+            emptyText="該当する学級がありません"
+            aria-label="学級で絞り込む"
+            className="h-9 w-40 rounded-lg"
+          />
           <Select
             value={filterMembershipStatus}
             onValueChange={setFilterMembershipStatus}
@@ -488,28 +508,40 @@ export default function StudentTable() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleEditStudent(student)
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setStudentToDelete(student)
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              aria-label="生徒を編集"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditStudent(student)
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>生徒を編集</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              aria-label="生徒を削除"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                studentDeletion.openWith(student)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>生徒を削除</TooltipContent>
+                        </Tooltip>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -517,11 +549,15 @@ export default function StudentTable() {
               })}
               {sortedData.length === 0 && (
                 <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="h-32 text-center text-muted-foreground"
-                  >
-                    該当する生徒が見つかりません。
+                  <TableCell colSpan={6}>
+                    <Empty>
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                          <Users />
+                        </EmptyMedia>
+                        <EmptyTitle>該当する生徒が見つかりません</EmptyTitle>
+                      </EmptyHeader>
+                    </Empty>
                   </TableCell>
                 </TableRow>
               )}
@@ -532,8 +568,9 @@ export default function StudentTable() {
 
       {/* Modals */}
       <DeleteStudentModal
-        student={studentToDelete}
-        onClose={() => setStudentToDelete(null)}
+        open={studentDeletion.isOpen}
+        student={studentDeletion.target}
+        onClose={studentDeletion.close}
         onDeleted={handleStudentDeleted}
       />
       {isStudentModalOpen && (

@@ -10,6 +10,7 @@ import {
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import {
   Select,
   SelectContent,
@@ -119,9 +120,11 @@ export default function QuestionNavigator({
                 <div>前の設問に移動</div>
                 <div className="mt-1 text-xs text-gray-400">
                   キー:{" "}
-                  <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
-                    Shift+A
-                  </kbd>
+                  <KbdGroup>
+                    <Kbd>Shift</Kbd>
+                    <span>+</span>
+                    <Kbd>A</Kbd>
+                  </KbdGroup>
                 </div>
               </div>
             </TooltipContent>
@@ -191,9 +194,11 @@ export default function QuestionNavigator({
                 <div>次の設問に移動</div>
                 <div className="mt-1 text-xs text-gray-400">
                   キー:{" "}
-                  <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
-                    Shift+D
-                  </kbd>
+                  <KbdGroup>
+                    <Kbd>Shift</Kbd>
+                    <span>+</span>
+                    <Kbd>D</Kbd>
+                  </KbdGroup>
                 </div>
               </div>
             </TooltipContent>

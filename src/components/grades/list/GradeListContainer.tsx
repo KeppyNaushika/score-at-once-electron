@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  BarChart3,
   Copy,
   FolderInput,
   FolderOutput,
@@ -29,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
 import { collectClassroomOptions } from "@/lib/filterOptions"
@@ -107,7 +109,7 @@ export function GradeListContainer() {
   const [importArchiveData, setImportArchiveData] =
     useState<GradeArchivePayload | null>(null)
   // 削除確認を開いている成績算出。押しただけでは消さず、確認で決めてもらう
-  const [deleteTarget, setDeleteTarget] = useState<GradeSummary | null>(null)
+  const gradeDeletion = useDialogTarget<GradeSummary>()
 
   /**
    * 新規作成。**ダイアログを出さずに既定値の1件を作り、その概要ページへ直行する。**
@@ -131,7 +133,7 @@ export function GradeListContainer() {
   const handleDelete = async (gradeId: string) => {
     try {
       await deleteGrade.mutateAsync(gradeId)
-      setDeleteTarget(null)
+      gradeDeletion.close()
     } catch {
       // 失敗の通知は MutationCache が出す。確認は開いたままにする
     }
@@ -410,18 +412,18 @@ export function GradeListContainer() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => handleDuplicate(grade.id)}>
-                <Copy className="mr-2 h-4 w-4" />
+                <Copy />
                 複製
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => exportArchive.mutate(grade.id)}>
-                <FolderOutput className="mr-2 h-4 w-4" />
+                <FolderOutput />
                 .grade 書き出し
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="text-destructive"
-                onClick={() => setDeleteTarget(grade)}
+                variant="destructive"
+                onClick={() => gradeDeletion.openWith(grade)}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 />
                 削除
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -452,6 +454,7 @@ export function GradeListContainer() {
         onToggleSelectAll={toggleSelectAll}
         allSelected={allSelected}
         empty={{
+          icon: BarChart3,
           message: "成績算出がありません",
           action: (
             <Button variant="outline" onClick={() => void handleCreate()}>
@@ -465,15 +468,16 @@ export function GradeListContainer() {
       />
 
       <DeleteGradeModal
+        open={gradeDeletion.isOpen}
         target={
-          deleteTarget && {
-            id: deleteTarget.id,
-            name: deleteTarget.name,
-            studentCount: deleteTarget.gradeStudents.length,
-            gradeItemCount: deleteTarget.gradeItems.length,
+          gradeDeletion.target && {
+            id: gradeDeletion.target.id,
+            name: gradeDeletion.target.name,
+            studentCount: gradeDeletion.target.gradeStudents.length,
+            gradeItemCount: gradeDeletion.target.gradeItems.length,
           }
         }
-        onClose={() => setDeleteTarget(null)}
+        onClose={gradeDeletion.close}
         onConfirm={handleDelete}
         loading={deleteGrade.isPending}
       />

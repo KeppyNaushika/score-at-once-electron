@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 
+import { Combobox } from "@/components/common/Combobox"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -153,6 +154,18 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
       .filter((student) => selectedStudents.has(student.studentId))
       .map((student) => student.studentId)
   }, [studentsRef, selectedStudents])
+
+  const previewStudentOptions = useMemo(
+    () =>
+      studentsRef
+        .filter((student) => selectedStudents.has(student.studentId))
+        .map((student) => ({
+          value: student.studentId,
+          label: `${student.attendanceNumber ?? "-"} ${student.lastName} ${student.firstName}${student.className ? ` (${student.className})` : ""}`,
+          keywords: [student.studentNumber],
+        })),
+    [studentsRef, selectedStudents]
+  )
 
   const previewHtml = useMemo(() => {
     if (!result || !previewStudentId || exportTab !== "individual-report")
@@ -371,32 +384,16 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
                   <>
                     <div className="mb-2 flex shrink-0 items-center gap-2">
                       <Label className="shrink-0 text-xs">生徒:</Label>
-                      <Select
+                      <Combobox
+                        options={previewStudentOptions}
                         value={previewStudentId}
                         onValueChange={setPreviewStudentId}
-                      >
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {result.students
-                            .filter((student) =>
-                              selectedStudents.has(student.studentId)
-                            )
-                            .map((student) => (
-                              <SelectItem
-                                key={student.studentId}
-                                value={student.studentId}
-                              >
-                                {student.attendanceNumber ?? "-"}{" "}
-                                {student.lastName} {student.firstName}
-                                {student.className
-                                  ? ` (${student.className})`
-                                  : ""}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="生徒を選択"
+                        searchPlaceholder="氏名・番号・学級で検索"
+                        emptyText="該当する生徒がいません"
+                        aria-label="プレビューする生徒"
+                        className="h-8 min-w-0 text-xs"
+                      />
                     </div>
                     {previewHtml && <PreviewPane html={previewHtml} />}
                   </>

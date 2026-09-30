@@ -6,6 +6,8 @@ import { toast } from "sonner"
 
 import type { CropRegionArea } from "@/components/exams/02-template/types"
 import { DeleteConfirmModal } from "@/components/exams/03-region-info/components/DeleteConfirmModal"
+import { Input } from "@/components/ui/input"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { deleteCropRegionMutation } from "@/queries/cropRegion"
 import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
@@ -54,9 +56,7 @@ const CropRegionEditor = ({
   const [settingsCollapsed, setSettingsCollapsed] = useState(true)
   // 削除の確認を待っている領域。添字ではなく id で持つ（確認の間に他の教員が
   // 領域を消すと並びが変わり、添字では別の領域を消してしまう）
-  const [cropRegionIdToDelete, setCropRegionIdToDelete] = useState<
-    string | null
-  >(null)
+  const cropRegionDeletion = useDialogTarget<string>()
 
   // 検出機能フック
   const {
@@ -105,19 +105,20 @@ const CropRegionEditor = ({
   const handleRequestDeleteArea = (index: number) => {
     const areaToDelete = areas[index]
     if (!areaToDelete?.id) return
-    setCropRegionIdToDelete(areaToDelete.id)
+    cropRegionDeletion.openWith(areaToDelete.id)
   }
 
   const confirmDeleteArea = async () => {
-    if (cropRegionIdToDelete === null) return
+    const cropRegionId = cropRegionDeletion.target
+    if (cropRegionId === null) return
 
     try {
-      await deleteCropRegion.mutateAsync(cropRegionIdToDelete)
+      await deleteCropRegion.mutateAsync(cropRegionId)
       setSelectedAreaIndex(null)
     } catch {
       // 失敗の知らせは中央のトーストが出す。ここでは選択を保つだけ
     } finally {
-      setCropRegionIdToDelete(null)
+      cropRegionDeletion.close()
     }
   }
 
@@ -190,7 +191,7 @@ const CropRegionEditor = ({
             <label className="text-xs whitespace-nowrap text-gray-600">
               配点の初期値
             </label>
-            <input
+            <Input
               type="number"
               min={0}
               value={defaultPoints}
@@ -198,7 +199,7 @@ const CropRegionEditor = ({
                 const points = parseInt(e.target.value)
                 if (!isNaN(points) && points >= 0) onDefaultPointsChange(points)
               }}
-              className="h-7 w-16 rounded border px-2 text-right text-sm"
+              className="h-7 w-16 rounded px-2 text-right"
             />
             <span className="text-xs text-gray-500">点</span>
           </div>
@@ -213,9 +214,9 @@ const CropRegionEditor = ({
       </div>
 
       <DeleteConfirmModal
-        isOpen={cropRegionIdToDelete !== null}
-        cropRegionId={cropRegionIdToDelete}
-        onClose={() => setCropRegionIdToDelete(null)}
+        isOpen={cropRegionDeletion.isOpen}
+        cropRegionId={cropRegionDeletion.target}
+        onClose={cropRegionDeletion.close}
         onConfirm={confirmDeleteArea}
       />
     </div>

@@ -9,16 +9,18 @@ import {
   Users,
 } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
+import { buttonVariants } from "@/components/ui/button"
 
 interface ConfirmationItem {
   id: string
@@ -93,28 +95,29 @@ export default function ConfirmationModal({
   const IconComponent = icons[icon]
   const styles = variantStyles[variant]
 
-  const handleConfirm = async () => {
-    await onConfirm()
-  }
-
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-125">
-        <DialogHeader>
+    <AlertDialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onClose()
+      }}
+    >
+      <AlertDialogContent className="sm:max-w-125">
+        <AlertDialogHeader>
           <div className="flex items-center space-x-3">
             <div className={`rounded-full bg-gray-100 p-2 ${styles.icon}`}>
               <IconComponent className="h-6 w-6" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-semibold">
+              <AlertDialogTitle className="text-lg font-semibold">
                 {title}
-              </DialogTitle>
+              </AlertDialogTitle>
             </div>
           </div>
-          <DialogDescription className="mt-3 text-gray-600">
+          <AlertDialogDescription className="mt-3 text-gray-600">
             {description}
-          </DialogDescription>
-        </DialogHeader>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
 
         <div className="space-y-4">
           {/* 警告メッセージ */}
@@ -170,19 +173,21 @@ export default function ConfirmationModal({
           )}
         </div>
 
-        <DialogFooter className="flex space-x-2">
-          <Button variant="outline" onClick={onClose} disabled={loading}>
-            {cancelText}
-          </Button>
-          <Button
-            variant={styles.button}
-            onClick={handleConfirm}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={loading}>{cancelText}</AlertDialogCancel>
+          <AlertDialogAction
+            className={buttonVariants({ variant: styles.button })}
+            onClick={(event) => {
+              // 閉じるのは呼び出し側が処理を終えてから（処理中は「処理中...」を見せる）
+              event.preventDefault()
+              void onConfirm()
+            }}
             disabled={loading || confirmDisabled}
           >
             {loading ? "処理中..." : confirmText}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

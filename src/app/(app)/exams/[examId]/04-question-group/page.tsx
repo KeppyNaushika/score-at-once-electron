@@ -5,11 +5,11 @@ import { Calculator } from "lucide-react"
 import { useParams } from "next/navigation"
 import { useCallback, useMemo } from "react"
 
-import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { QuestionAssignmentTableWithFillHandle } from "@/components/exams/04-question-group/components/QuestionAssignmentTableWithFillHandle"
 import { SubtotalAssignmentTableWithFillHandle } from "@/components/exams/04-question-group/components/SubtotalAssignmentTableWithFillHandle"
 import { SubtotalGroupSelector } from "@/components/exams/04-question-group/components/SubtotalGroupSelector"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { type CropRegionRow, cropRegionsQuery } from "@/queries/cropRegion"
 import { scopeKeys } from "@/queries/keys"
 import {
@@ -74,7 +74,7 @@ export default function SubtotalGroupPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <LoadingSpinner />
+        <Spinner className="size-6" />
       </div>
     )
   }

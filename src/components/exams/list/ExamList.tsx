@@ -5,6 +5,7 @@ import {
   FolderInput,
   FolderOutput,
   MoreHorizontal,
+  PencilSparkles,
   PlusCircle,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -464,7 +465,7 @@ const ExamList = () => {
                   })
                 }
               >
-                <FolderOutput className="mr-2 h-4 w-4" />
+                <FolderOutput />
                 .score 書き出し
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -494,6 +495,7 @@ const ExamList = () => {
         onToggleSelectAll={toggleSelectAll}
         allSelected={allSelected}
         empty={{
+          icon: PencilSparkles,
           message: "まだ試験がありません",
           action: (
             <Button variant="outline" onClick={() => void handleCreate()}>

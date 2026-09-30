@@ -3,6 +3,7 @@
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { useMemo, useState } from "react"
 
+import { Combobox } from "@/components/common/Combobox"
 import {
   Select,
   SelectContent,
@@ -113,6 +114,24 @@ export function NoMatchItemRow({
     )?.subtotals
   }, [selectedExistingId, allExistingItems])
 
+  // 既存グループの選択肢。他の行で紐づけ済みのグループは見せるが選ばせない
+  const existingGroupOptions = useMemo(
+    () =>
+      (allExistingItems ?? []).map((existing) => {
+        const isAlreadyMatched =
+          alreadyMatchedExistingIds?.has(existing.id) ?? false
+        return {
+          value: existing.id,
+          label: isAlreadyMatched
+            ? `${existing.name} (他で紐づけ済み)`
+            : existing.name,
+          keywords: (existing.subtotals ?? []).map((subtotal) => subtotal.name),
+          disabled: isAlreadyMatched,
+        }
+      }),
+    [allExistingItems, alreadyMatchedExistingIds]
+  )
+
   // 小計項目マッピングエディタの表示条件
   const showMappingEditor =
     isSubtotalGroup &&
@@ -221,30 +240,16 @@ export function NoMatchItemRow({
             <p className="text-xs text-muted-foreground">
               紐づけ先のグループを選択してください
             </p>
-            <Select
+            <Combobox
+              options={existingGroupOptions}
               value={selectedExistingId}
               onValueChange={handleExistingGroupChange}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="既存グループを選択..." />
-              </SelectTrigger>
-              <SelectContent>
-                {allExistingItems.map((existing) => {
-                  const isAlreadyMatched =
-                    alreadyMatchedExistingIds?.has(existing.id) ?? false
-                  return (
-                    <SelectItem
-                      key={existing.id}
-                      value={existing.id}
-                      disabled={isAlreadyMatched}
-                    >
-                      {existing.name}
-                      {isAlreadyMatched && " (他で紐づけ済み)"}
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
+              placeholder="既存グループを選択"
+              searchPlaceholder="グループ名・小計項目名で検索"
+              emptyText="該当するグループがありません"
+              aria-label="紐づけ先のグループ"
+              className="w-full"
+            />
 
             {/* ID選択 */}
             {selectedExistingId && (

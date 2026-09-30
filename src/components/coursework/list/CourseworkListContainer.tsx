@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  ClipboardList,
   FolderInput,
   FolderOutput,
   MoreHorizontal,
@@ -28,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
 import { getCourseworkStatus } from "@/lib/courseworkStatus"
@@ -107,9 +109,7 @@ export function CourseworkListContainer() {
   )
   const [importing, setImporting] = useState(false)
   // 押しただけでは消さず、確認で決めてもらう
-  const [deleteTarget, setDeleteTarget] = useState<CourseworkSummary | null>(
-    null
-  )
+  const courseworkDeletion = useDialogTarget<CourseworkSummary>()
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const refreshTags = useCallback(
     () => queryClient.invalidateQueries({ queryKey: tagListQuery().queryKey }),
@@ -154,7 +154,7 @@ export function CourseworkListContainer() {
       // 失敗の通知は MutationCache が出す。確認は開いたままにする
       return
     }
-    setDeleteTarget(null)
+    courseworkDeletion.close()
     if (!result.deleted) {
       toast.error("削除できません", {
         description: `次の成績算出で参照されています: ${result.usedBy.join("、")}`,
@@ -459,14 +459,14 @@ export function CourseworkListContainer() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => handleExport(coursework)}>
-                <FolderOutput className="mr-2 h-4 w-4" />
+                <FolderOutput />
                 .coursework 書き出し
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="text-destructive"
-                onClick={() => setDeleteTarget(coursework)}
+                variant="destructive"
+                onClick={() => courseworkDeletion.openWith(coursework)}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 />
                 削除
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -497,6 +497,7 @@ export function CourseworkListContainer() {
         onToggleSelectAll={toggleSelectAll}
         allSelected={allSelected}
         empty={{
+          icon: ClipboardList,
           message: "試験外成績資料がありません",
           action: (
             <Button variant="outline" onClick={() => void handleCreate()}>
@@ -510,17 +511,20 @@ export function CourseworkListContainer() {
       />
 
       <DeleteCourseworkModal
+        open={courseworkDeletion.isOpen}
         target={
-          deleteTarget && {
-            id: deleteTarget.id,
-            name: deleteTarget.name,
-            studentCount: deleteTarget.students.length,
-            itemCount: deleteTarget.items.length,
+          courseworkDeletion.target && {
+            id: courseworkDeletion.target.id,
+            name: courseworkDeletion.target.name,
+            studentCount: courseworkDeletion.target.students.length,
+            itemCount: courseworkDeletion.target.items.length,
           }
         }
-        onClose={() => setDeleteTarget(null)}
+        onClose={courseworkDeletion.close}
         onConfirm={() =>
-          deleteTarget ? handleDelete(deleteTarget) : undefined
+          courseworkDeletion.target
+            ? handleDelete(courseworkDeletion.target)
+            : undefined
         }
         loading={deleteCoursework.isPending}
       />

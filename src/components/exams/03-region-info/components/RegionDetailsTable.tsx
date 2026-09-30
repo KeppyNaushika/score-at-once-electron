@@ -2,12 +2,20 @@
 
 import { useMutation } from "@tanstack/react-query"
 import { Palette } from "lucide-react"
-import { useCallback, useState } from "react"
+import { useCallback } from "react"
 
 import { DeleteConfirmModal } from "@/components/exams/03-region-info/components/DeleteConfirmModal"
 import { RegionTableRow } from "@/components/exams/03-region-info/components/RegionTableRow"
 import { useDragAndDrop } from "@/components/exams/03-region-info/hooks/useDragAndDrop"
 import { useKeyboardNavigation } from "@/components/exams/03-region-info/hooks/useKeyboardNavigation"
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { useEditingText } from "@/hooks/useEditingText"
 import type { CropRegionRow } from "@/queries/cropRegion"
 import {
@@ -49,12 +57,9 @@ const RegionDetailsTable = ({
   onOmrSave,
   onOmrDelete,
 }: RegionDetailsTableProps) => {
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   // 消す相手は id で覚える。添字で覚えると、モーダルを開いてから確定するまでに
   // 取り直しが挟まったとき**別の領域を消す**
-  const [cropRegionIdToDelete, setCropRegionIdToDelete] = useState<
-    string | null
-  >(null)
+  const cropRegionDeletion = useDialogTarget<string>()
 
   // 1打鍵ごとに書くので、打鍵と取り直しが競り合う。入力中の文字は手元に持つ
   const { textOf, remember, forgetField, forget } = useEditingText()
@@ -111,21 +116,19 @@ const RegionDetailsTable = ({
   }
 
   const handleDeleteRegion = (cropRegionId: string) => {
-    setCropRegionIdToDelete(cropRegionId)
-    setDeleteModalOpen(true)
+    cropRegionDeletion.openWith(cropRegionId)
   }
 
   const confirmDeleteRegion = async () => {
-    if (cropRegionIdToDelete === null) return
+    const cropRegionId = cropRegionDeletion.target
+    if (cropRegionId === null) return
 
     try {
-      forget(cropRegionIdToDelete)
-      await deleteCropRegion.mutateAsync(cropRegionIdToDelete)
+      forget(cropRegionId)
+      await deleteCropRegion.mutateAsync(cropRegionId)
 
       // 消した分だけ後ろが繰り上がるので、残りの並び順を振り直す
-      const remaining = regions.filter(
-        (region) => region.id !== cropRegionIdToDelete
-      )
+      const remaining = regions.filter((region) => region.id !== cropRegionId)
       if (remaining.length > 0) handleReorder(remaining)
     } catch (error) {
       console.error("Error deleting layout region:", error)
@@ -133,8 +136,7 @@ const RegionDetailsTable = ({
     } finally {
       // 選択は id で持っているので、消えた領域を指したままでもどこも光らない。
       // 添字のときのような「後ろの領域へ選択がずれる」直しは要らない
-      setDeleteModalOpen(false)
-      setCropRegionIdToDelete(null)
+      cropRegionDeletion.close()
     }
   }
 
@@ -156,34 +158,41 @@ const RegionDetailsTable = ({
 
   return (
     <div className="h-full overflow-auto p-6">
-      <table className="w-full border-collapse border border-border">
-        <thead>
-          <tr className="bg-muted/50">
-            <th className="w-8 border border-border px-2 py-1 text-left font-medium"></th>
-            <th className="w-16 border border-border px-2 py-1 text-left font-medium">
+      {/*
+        スクロールはこの外側の箱が持つ（縦も横も）。Table の既定の包みは
+        overflow-auto なので、そのままだと横スクロールだけが表の直下へ移る
+      */}
+      <Table
+        className="border-collapse border border-border text-base"
+        wrapperClassName="overflow-visible"
+      >
+        <TableHeader>
+          <TableRow className="bg-muted/50 hover:bg-muted/50">
+            <TableHead className="h-auto w-8 border border-border bg-transparent px-2 py-1"></TableHead>
+            <TableHead className="h-auto w-16 border border-border bg-transparent px-2 py-1">
               #
-            </th>
-            <th className="w-16 border border-border px-2 py-1 text-left font-medium">
+            </TableHead>
+            <TableHead className="h-auto w-16 border border-border bg-transparent px-2 py-1">
               ページ
-            </th>
-            <th className="w-36 border border-border px-2 py-1 text-left font-medium">
+            </TableHead>
+            <TableHead className="h-auto w-36 border border-border bg-transparent px-2 py-1">
               種類
-            </th>
-            <th className="w-40 border border-border px-2 py-1 text-left font-medium">
+            </TableHead>
+            <TableHead className="h-auto w-40 border border-border bg-transparent px-2 py-1">
               ラベル
-            </th>
-            <th className="w-24 border border-border px-2 py-1 text-left font-medium">
+            </TableHead>
+            <TableHead className="h-auto w-24 border border-border bg-transparent px-2 py-1">
               配点
-            </th>
-            <th className="w-16 border border-border px-2 py-1 text-center font-medium">
+            </TableHead>
+            <TableHead className="h-auto w-16 border border-border bg-transparent px-2 py-1 text-center">
               OMR
-            </th>
-            <th className="w-20 border border-border px-2 py-1 text-center font-medium">
+            </TableHead>
+            <TableHead className="h-auto w-20 border border-border bg-transparent px-2 py-1 text-center">
               操作
-            </th>
-          </tr>
-        </thead>
-        <tbody>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {regions.map((region, globalIndex) => {
             const isSelected = selectedCropRegionId === region.id
             const isDragged = dragState.draggedIndex === globalIndex
@@ -217,13 +226,13 @@ const RegionDetailsTable = ({
               />
             )
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
 
       <DeleteConfirmModal
-        isOpen={deleteModalOpen}
-        cropRegionId={cropRegionIdToDelete}
-        onClose={() => setDeleteModalOpen(false)}
+        isOpen={cropRegionDeletion.isOpen}
+        cropRegionId={cropRegionDeletion.target}
+        onClose={cropRegionDeletion.close}
         onConfirm={confirmDeleteRegion}
       />
     </div>

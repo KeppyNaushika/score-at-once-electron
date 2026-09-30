@@ -12,6 +12,11 @@ import {
 } from "@/components/common/sortable-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useEditingText } from "@/hooks/useEditingText"
 import { cn } from "@/lib/utils"
 import {
@@ -251,15 +256,20 @@ function ScaleRow({
         step="any"
         placeholder="点数"
       />
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6"
-        onClick={() => onRemove(letterScale)}
-        title="削除"
-      >
-        <X className="h-3 w-3" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            aria-label="削除"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => onRemove(letterScale)}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>削除</TooltipContent>
+      </Tooltip>
     </div>
   )
 }

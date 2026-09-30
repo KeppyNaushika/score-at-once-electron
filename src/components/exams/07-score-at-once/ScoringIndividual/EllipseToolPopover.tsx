@@ -5,6 +5,7 @@ import { Circle } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Kbd } from "@/components/ui/kbd"
 import { Label } from "@/components/ui/label"
 import {
   Popover,
@@ -110,9 +111,9 @@ export function EllipseToolPopover({
               {shortcutKey && (
                 <div className="mt-1 text-xs text-gray-400">
                   キー:{" "}
-                  <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
+                  <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
                     {shortcutKey.toUpperCase()}
-                  </kbd>
+                  </Kbd>
                 </div>
               )}
             </div>

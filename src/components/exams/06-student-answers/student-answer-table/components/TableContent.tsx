@@ -164,16 +164,12 @@ export function TableContent({
                       onClick={() =>
                         bulkDisabling.disableColsExcept(examPage.id)
                       }
-                      className="flex items-center gap-2"
                     >
-                      <Ban className="h-4 w-4" />
+                      <Ban />
                       この列以外を無効
                     </ContextMenuItem>
-                    <ContextMenuItem
-                      onClick={bulkDisabling.enableAllCols}
-                      className="flex items-center gap-2"
-                    >
-                      <X className="h-4 w-4" />
+                    <ContextMenuItem onClick={bulkDisabling.enableAllCols}>
+                      <X />
                       列の無効をすべて解除
                     </ContextMenuItem>
                   </ContextMenuContent>
@@ -219,16 +215,12 @@ export function TableContent({
                       onClick={() =>
                         bulkDisabling.disableRowsExcept(examStudent.id)
                       }
-                      className="flex items-center gap-2"
                     >
-                      <Ban className="h-4 w-4" />
+                      <Ban />
                       この行以外を無効
                     </ContextMenuItem>
-                    <ContextMenuItem
-                      onClick={bulkDisabling.enableAllRows}
-                      className="flex items-center gap-2"
-                    >
-                      <X className="h-4 w-4" />
+                    <ContextMenuItem onClick={bulkDisabling.enableAllRows}>
+                      <X />
                       行の無効を解除（欠席を除く）
                     </ContextMenuItem>
                   </ContextMenuContent>

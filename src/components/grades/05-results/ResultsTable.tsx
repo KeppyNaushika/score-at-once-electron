@@ -2,6 +2,14 @@
 
 import { useMemo, useState } from "react"
 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { evaluateConstraints } from "@/lib/gradeConstraints"
 import type {
   GradeCalculationResult,
@@ -15,15 +23,15 @@ import { ConstraintLegend } from "./ConstraintLegend"
 import { EditableGradeLabel } from "./EditableGradeLabel"
 import { FrozenCellControl } from "./FrozenCellControl"
 import { GradeItemBreakdownPopover } from "./GradeItemBreakdownPopover"
-import type { ComparisonEmphasis, ComparisonMarksByCell } from "./types"
+import type { ComparisonDisplay, ComparisonMarksByCell } from "./types"
 
 interface ResultsTableProps {
   result: GradeCalculationResult
   constraints?: GradeConstraintData[]
   /** 比較の記号（対象者×評価項目）。null なら出さない */
   comparisonMarks?: ComparisonMarksByCell | null
-  /** 比較の記号の強さ（出さないときは comparisonMarks を null にする） */
-  comparisonEmphasis?: Exclude<ComparisonEmphasis, "off">
+  /** 比較の記号の出し方（出さないときは comparisonMarks を null にする） */
+  comparisonDisplay?: Exclude<ComparisonDisplay, "none">
   onGradeOverride: (params: GradeOverrideInput) => void
   /** 対象セルを現在のライブ値で確定し直す */
   onRefreezeCell: (target: GradeCellTarget) => void
@@ -47,13 +55,13 @@ const SortHeader = ({
   sortAsc: boolean
   onSort: (sortId: SortKey) => void
 }) => (
-  <th
-    className="cursor-pointer px-2 py-2 text-center font-medium hover:underline"
+  <TableHead
+    className="h-auto cursor-pointer bg-transparent px-2 py-2 text-center whitespace-normal hover:underline"
     onClick={() => onSort(sortId)}
   >
     {label}
     {sortKey === sortId && (sortAsc ? " ↑" : " ↓")}
-  </th>
+  </TableHead>
 )
 
 /**
@@ -66,7 +74,7 @@ export function ResultsTable({
   result,
   constraints = [],
   comparisonMarks = null,
-  comparisonEmphasis = "symbol",
+  comparisonDisplay = "symbol",
   onGradeOverride,
   onRefreezeCell,
   onUnfreezeCell,
@@ -139,10 +147,10 @@ export function ResultsTable({
           errors={constraintEvaluation.errors}
         />
       )}
-      <div className="mt-6 overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
+      <div className="mt-6 overflow-hidden rounded-lg border">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow className="hover:bg-transparent">
               <SortHeader
                 label="順序"
                 sortId="registrationOrder"
@@ -157,7 +165,9 @@ export function ResultsTable({
                 sortAsc={sortAsc}
                 onSort={handleSort}
               />
-              <th className="px-2 py-2 text-left font-medium">氏名</th>
+              <TableHead className="h-auto bg-transparent px-2 py-2 whitespace-normal">
+                氏名
+              </TableHead>
               {result.gradeItems.map((gradeItem) => (
                 <SortHeader
                   key={gradeItem.id}
@@ -168,9 +178,9 @@ export function ResultsTable({
                   onSort={handleSort}
                 />
               ))}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {sortedStudents.map((student) => {
               const violations =
                 violationsByStudent.get(student.gradeStudentId) ?? []
@@ -186,23 +196,22 @@ export function ResultsTable({
                       .join("\n")
                   : undefined
               return (
-                <tr
+                <TableRow
                   key={student.gradeStudentId}
-                  className="border-t"
                   style={rowColor ? { backgroundColor: rowColor } : undefined}
                   title={rowTitle}
                 >
-                  <td className="px-2 py-1.5 text-center text-muted-foreground">
+                  <TableCell className="px-2 py-1.5 text-center text-muted-foreground">
                     {(registrationRankByGradeStudentId.get(
                       student.gradeStudentId
                     ) ?? 0) + 1}
-                  </td>
-                  <td className="px-2 py-1.5 text-center">
+                  </TableCell>
+                  <TableCell className="px-2 py-1.5 text-center">
                     {student.attendanceNumber ?? "-"}
-                  </td>
-                  <td className="px-2 py-1.5">
+                  </TableCell>
+                  <TableCell className="px-2 py-1.5 whitespace-normal">
                     {student.lastName} {student.firstName}
-                  </td>
+                  </TableCell>
                   {result.gradeItems.map((gradeItem) => {
                     const itemResult = student.gradeItemResults.find(
                       (gradeItemResult) =>
@@ -212,14 +221,14 @@ export function ResultsTable({
                     // 除外表示
                     if (itemResult?.isExcluded) {
                       return (
-                        <td
+                        <TableCell
                           key={gradeItem.id}
                           className="px-2 py-1.5 text-center"
                         >
                           <span className="text-xs text-muted-foreground italic">
                             除外
                           </span>
-                        </td>
+                        </TableCell>
                       )
                     }
 
@@ -230,7 +239,7 @@ export function ResultsTable({
                       ?.get(student.gradeStudentId)
                       ?.get(gradeItem.id)
                     return (
-                      <td
+                      <TableCell
                         key={gradeItem.id}
                         className="px-2 py-1.5 text-center"
                       >
@@ -267,7 +276,7 @@ export function ResultsTable({
                               marks={cellComparisonMarks}
                               currentGradeLabel={itemResult?.gradeLabel ?? null}
                               currentPercentage={itemResult?.percentage ?? null}
-                              emphasis={comparisonEmphasis}
+                              display={comparisonDisplay}
                             />
                           )}
                           {itemResult?.frozen && (
@@ -290,14 +299,14 @@ export function ResultsTable({
                             />
                           )}
                         </div>
-                      </td>
+                      </TableCell>
                     )
                   })}
-                </tr>
+                </TableRow>
               )
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
         {result.students.some((student) =>
           student.gradeItemResults.some((gradeItemResult) =>
             gradeItemResult.sourceScores.some(

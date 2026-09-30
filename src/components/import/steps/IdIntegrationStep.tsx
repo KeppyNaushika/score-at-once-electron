@@ -1,9 +1,10 @@
 "use client"
 
-import { Layers, Loader2, School, Settings, UserCog, Users } from "lucide-react"
+import { Layers, School, Settings, UserCog, Users } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 
@@ -89,9 +90,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
           size="lg"
           className="px-8"
         >
-          {state.isProcessing && (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          )}
+          {state.isProcessing && <Spinner className="mr-2" />}
           次へ
         </Button>
       </div>
@@ -211,9 +210,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
           size="lg"
           className="px-8"
         >
-          {state.isProcessing && (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          )}
+          {state.isProcessing && <Spinner className="mr-2" />}
           次へ
         </Button>
       </div>

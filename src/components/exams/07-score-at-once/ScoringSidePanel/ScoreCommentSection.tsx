@@ -34,7 +34,8 @@ interface ScoreCommentSectionProps {
  * そこで出入りを明示的に決める:
  *
  * - **入る**: `scoring.comment`（既定 `k`）。畳んであれば開いてから中へ入れる。
- *   `when` は他の採点キーと同じ `!inputFocus && !modalOpen && hasSelectedAnswers` で、
+ *   `when` は他の採点キーと同じ
+ *   `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers` で、
  *   採点中にだけ効く（すでに文字を打っているときは `k` はただの `k`）
  * - **出る**: `Escape`（書きかけを捨てて戻る）／`Ctrl`(`⌘`)`+Enter`（残して戻る）／
  *   欄の外を触る（残して戻る）。`Enter` 単体は改行（覚え書きは複数行を書く）
@@ -109,7 +110,7 @@ export function ScoreCommentSection({
       onEnsureOpen()
     },
     {
-      when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+      when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
       metadata: {
         title: "覚え書きを書く",
         category: "採点",

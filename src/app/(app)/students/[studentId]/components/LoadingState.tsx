@@ -4,12 +4,13 @@ import { ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 
 export function LoadingState() {
   return (
     <div className="flex h-full items-center justify-center">
       <div className="text-center">
-        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
+        <Spinner className="mx-auto size-12 text-primary" />
         <p className="mt-4 text-muted-foreground">読み込み中...</p>
       </div>
     </div>

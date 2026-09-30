@@ -25,6 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import type {
   ImportedFile,
@@ -129,34 +134,45 @@ export default function ImportedFileItem({
                     >
                       削除 {excludedCount}ページ
                     </Badge>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-4 w-4"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onResetExcluded()
-                      }}
-                      title="削除をリセット"
-                    >
-                      <RotateCcw className="h-2.5 w-2.5" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          aria-label="削除をリセット"
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onResetExcluded()
+                          }}
+                        >
+                          <RotateCcw className="h-2.5 w-2.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>削除をリセット</TooltipContent>
+                    </Tooltip>
                   </div>
                 )}
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 shrink-0"
-              onClick={(e) => {
-                e.stopPropagation()
-                onRemove()
-              }}
-              disabled={isProcessing}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="ファイルを削除"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRemove()
+                  }}
+                  disabled={isProcessing}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>ファイルを削除</TooltipContent>
+            </Tooltip>
           </div>
         </CollapsibleTrigger>
 

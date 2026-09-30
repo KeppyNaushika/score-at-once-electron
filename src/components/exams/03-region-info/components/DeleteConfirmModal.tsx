@@ -3,15 +3,17 @@
 import { useQuery } from "@tanstack/react-query"
 import { AlertTriangle } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import {
-  Modal,
-  ModalContent,
-  ModalDescription,
-  ModalFooter,
-  ModalHeader,
-  ModalTitle,
-} from "@/components/ui/modal"
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { buttonVariants } from "@/components/ui/button"
 import { buildItemDeletionWarning } from "@/lib/shared/gradeReferenceMessages"
 import { gradeReferencesQuery } from "@/queries/grade"
 
@@ -44,37 +46,44 @@ export const DeleteConfirmModal = ({
     : null
 
   return (
-    <Modal open={isOpen} onOpenChange={onClose}>
-      <ModalContent>
-        <ModalHeader>
-          <ModalTitle className="flex items-center space-x-2">
+    <AlertDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center space-x-2">
             <AlertTriangle className="h-5 w-5 text-orange-500" />
             <span>領域の削除確認</span>
-          </ModalTitle>
-          <ModalDescription>
+          </AlertDialogTitle>
+          <AlertDialogDescription>
             この領域を削除しますか？ ⚠️
             注意：この領域に関連付けられた採点データがある場合、それらも一緒に削除されます。この操作は元に戻すことができません。
-          </ModalDescription>
-        </ModalHeader>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
         {gradeWarning && (
           <div className="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm whitespace-pre-line text-orange-800">
             {gradeWarning}
           </div>
         )}
-        <ModalFooter>
-          <Button variant="outline" onClick={onClose}>
-            キャンセル
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={onConfirm}
+        <AlertDialogFooter>
+          <AlertDialogCancel>キャンセル</AlertDialogCancel>
+          <AlertDialogAction
+            className={buttonVariants({ variant: "destructive" })}
+            onClick={(event) => {
+              // 閉じるのは呼び出し側が削除を終えてから
+              event.preventDefault()
+              onConfirm()
+            }}
             // 使われているかを調べ終わるまでは押させない（影響を見せる前に消さない）
             disabled={cropRegionId !== null && gradeReferences.isPending}
           >
             削除する
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

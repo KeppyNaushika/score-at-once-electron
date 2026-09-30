@@ -208,15 +208,15 @@ export default function ExamDetailPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setShowExportModal(true)}>
-                  <FolderOutput className="mr-2 h-4 w-4" />
+                  <FolderOutput />
                   .score 書き出し
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setShowDeleteModal(true)}
-                  className="text-red-600 focus:text-red-600"
+                  variant="destructive"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 />
                   試験を削除
                 </DropdownMenuItem>
               </DropdownMenuContent>

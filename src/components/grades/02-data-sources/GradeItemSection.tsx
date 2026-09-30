@@ -16,8 +16,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   deleteGradeItemMutation,
   renameGradeItemMutation,
@@ -110,14 +115,20 @@ export function GradeItemSection({
               <h3 className="text-sm font-semibold text-blue-600">
                 {gradeItem.name}
               </h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => setEditingName(gradeItem.name)}
-              >
-                <Pencil className="h-3 w-3" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    aria-label="評価項目名を編集"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setEditingName(gradeItem.name)}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>評価項目名を編集</TooltipContent>
+              </Tooltip>
             </div>
           )}
           <Button
@@ -147,7 +158,7 @@ export function GradeItemSection({
             <AlertDialogFooter>
               <AlertDialogCancel>キャンセル</AlertDialogCancel>
               <AlertDialogAction
-                className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+                className={buttonVariants({ variant: "destructive" })}
                 onClick={() => void handleDelete()}
               >
                 削除

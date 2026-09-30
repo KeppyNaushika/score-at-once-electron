@@ -247,7 +247,7 @@ function ScoringMainViewContent() {
 
   /** 生徒・答案管理フック */
   const {
-    students,
+    examStudents,
     handleStudentChange,
     handleIndividualNextStudent,
     handleIndividualPrevStudent,
@@ -893,7 +893,7 @@ function ScoringMainViewContent() {
               isWhitenessReady={isWhitenessReady}
               expandMargin={expandMargin}
               onExpandMarginChange={setExpandMargin}
-              students={students}
+              examStudents={examStudents}
               onStudentChange={handleStudentChange}
               studentAnswerImages={studentAnswerImages}
               scoringBehavior={scoringBehavior}

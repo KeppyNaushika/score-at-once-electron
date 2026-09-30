@@ -19,6 +19,20 @@ import React, { useCallback, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
 /** 編集セルの確定値をテーブルの外へ渡すために `meta` へ載せる項目 */
 interface EditableTableMeta {
@@ -287,15 +301,20 @@ export function EditableTable<T extends RowData>({
               id: "addRow",
               header: "",
               cell: ({ row }: { row: Row<EditableTableFeatures, T> }) => (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => addRowAfter(row.index)}
-                  className="h-6 w-6 p-0 text-green-600 hover:bg-green-50 hover:text-green-800"
-                  title="この行の下に新しい行を追加"
-                >
-                  <Plus className="h-3 w-3" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      aria-label="この行の下に新しい行を追加"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => addRowAfter(row.index)}
+                      className="h-6 w-6 p-0 text-green-600 hover:bg-green-50 hover:text-green-800"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>この行の下に新しい行を追加</TooltipContent>
+                </Tooltip>
               ),
               size: 40,
             },
@@ -501,14 +520,22 @@ export function EditableTable<T extends RowData>({
   return (
     <div className={`space-y-4 ${className}`}>
       <div className="rounded-md border">
-        <table className="w-full" onPaste={handlePaste}>
-          <thead>
-            <tr className="border-b bg-muted/50">
+        {/*
+          横に流すのは呼び出し側の箱（Table の既定の包みは overflow-auto）。
+          ここで流すと、端のマスの入力欄の focus ring が包みで切れる
+        */}
+        <Table
+          className="text-base"
+          wrapperClassName="overflow-visible"
+          onPaste={handlePaste}
+        >
+          <TableHeader>
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
               {table.getHeaderGroups().map((headerGroup) =>
                 headerGroup.headers.map((header) => (
-                  <th
+                  <TableHead
                     key={header.id}
-                    className="px-4 py-3 text-left text-sm font-medium text-muted-foreground"
+                    className="h-auto bg-transparent px-4 py-3 text-sm whitespace-normal text-muted-foreground"
                     style={{ width: header.getSize() }}
                   >
                     {header.isPlaceholder
@@ -517,32 +544,37 @@ export function EditableTable<T extends RowData>({
                           header.column.columnDef.header,
                           header.getContext()
                         )}
-                  </th>
+                  </TableHead>
                 ))
               )}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {table.getRowModel().rows.map((row) => {
               const rowProps = getRowProps?.(row) || {}
-              const rowClassName = `border-b hover:bg-muted/50 ${rowProps.className || ""}`
               return (
-                <tr key={row.id} className={rowClassName}>
+                <TableRow
+                  key={row.id}
+                  className={cn("hover:bg-muted/50", rowProps.className)}
+                >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="relative h-9 px-0 py-0">
+                    <TableCell
+                      key={cell.id}
+                      className="relative h-9 p-0 whitespace-normal"
+                    >
                       <div className="flex h-full items-center px-4 py-2">
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()
                         )}
                       </div>
-                    </td>
+                    </TableCell>
                   ))}
-                </tr>
+                </TableRow>
               )
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {allowInsertRow && (

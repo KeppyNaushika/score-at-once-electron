@@ -17,9 +17,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   deleteDataSourceMutation,
   renameDataSourceMutation,
@@ -123,22 +128,34 @@ export function DataSourceRow({
             type="text"
             placeholder="換算満点"
           />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleSave}
-          >
-            <Check className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setEditing(false)}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label="保存"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleSave}
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>保存</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label="キャンセル"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setEditing(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>キャンセル</TooltipContent>
+          </Tooltip>
         </div>
       </div>
     )
@@ -217,14 +234,20 @@ export function DataSourceRow({
         <span className="text-xs text-muted-foreground">
           満点: {displayMaxScore} / 換算満点: {dataSource.weight}
         </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => setEditing(true)}
-        >
-          <Pencil className="h-3 w-3" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              aria-label="データソースを編集"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setEditing(true)}
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>データソースを編集</TooltipContent>
+        </Tooltip>
         <Button
           variant="ghost"
           size="icon"
@@ -252,7 +275,7 @@ export function DataSourceRow({
           <AlertDialogFooter>
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction
-              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+              className={buttonVariants({ variant: "destructive" })}
               onClick={() => {
                 setIsDeleteConfirmOpen(false)
                 deleteDataSource.mutate(dataSource.id)

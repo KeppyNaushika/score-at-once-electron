@@ -38,6 +38,8 @@ import {
   useShortcutContext,
 } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import { useMasterAnswerHoldRelease } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useMasterAnswerHoldRelease"
+import { useScoringShortcuts } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringShortcuts"
+import { Checkbox } from "@/components/ui/checkbox"
 import { CurrentUserProvider } from "@/contexts/CurrentUserContext"
 import type { PublicUser } from "@/queries/user"
 
@@ -396,5 +398,103 @@ describe("when 句が読むコンテキストには書き手が居る", () => {
       )
 
     expect(readWithoutWriter).toEqual([])
+  })
+})
+
+// =====================================================================
+// テキスト編集モーダルが開いている間は、裏の画面のキーが効かない
+// =====================================================================
+
+/** 裏の画面で「設問を移る」「表示を切り替える」「採点する」が起きたことの記録 */
+const moveToNextQuestion = vi.fn()
+const toggleViewMode = vi.fn()
+const scoreSelectedAnswers = vi.fn()
+
+/**
+ * 07 の本物のコマンド表（`useScoringShortcuts`）を載せ、テキスト編集モーダルの
+ * チェックボックス（`ui/checkbox` ＝ button）にフォーカスを置いた状態を作る。
+ *
+ * button は入力欄ではないので `inputFocus` は false のまま。止められるのは
+ * `textEditorActive` だけ、という状況そのもの。
+ */
+function ScoringShortcutsWithTextEditor({
+  textEditorActive,
+}: {
+  textEditorActive: boolean
+}) {
+  useContextValue("hasSelectedAnswers", true)
+  useContextValue("gradingMode", "individual")
+  useContextValue("textEditorActive", textEditorActive)
+
+  useScoringShortcuts({
+    handleToggleStudentNames: vi.fn(),
+    handleRefreshFilter: vi.fn(),
+    handleNextQuestion: moveToNextQuestion,
+    handlePrevQuestion: vi.fn(),
+    handleGridNavigation: vi.fn(),
+    handleIndividualNavigation: vi.fn(),
+    handleZoomIn: vi.fn(),
+    handleZoomOut: vi.fn(),
+    handleResetZoom: vi.fn(),
+    handlePartialScoreInput: vi.fn(),
+    handlePartialScoreConfirmPartial: vi.fn(),
+    handlePartialScoreConfirmPending: vi.fn(),
+    handlePartialScoreCancel: vi.fn(),
+    handlePartialScoreBackspace: vi.fn(),
+    handleScore: scoreSelectedAnswers,
+    handleToggleFilter: vi.fn(),
+    handleSelectAll: vi.fn(),
+    handleToggleViewMode: toggleViewMode,
+  })
+
+  return <Checkbox data-testid="show-background" />
+}
+
+async function renderScoringShortcuts(textEditorActive: boolean) {
+  const QueryWrapper = createQueryWrapper()
+  render(
+    <QueryWrapper>
+      <CurrentUserProvider user={currentUser}>
+        <ShortcutProvider>
+          <ScoringShortcutsWithTextEditor textEditorActive={textEditorActive} />
+        </ShortcutProvider>
+      </CurrentUserProvider>
+    </QueryWrapper>
+  )
+  await act(async () => {
+    await Promise.resolve()
+  })
+  act(() => screen.getByTestId("show-background").focus())
+}
+
+describe("テキスト編集モーダルのチェックボックスにフォーカスがあるとき", () => {
+  beforeEach(() => {
+    moveToNextQuestion.mockReset()
+    toggleViewMode.mockReset()
+    scoreSelectedAnswers.mockReset()
+  })
+
+  it("モーダルが開いていれば、矢印キー・表示切替・採点キーは効かない", async () => {
+    await renderScoringShortcuts(true)
+
+    fireEvent.keyDown(document.body, { key: "ArrowRight" })
+    fireEvent.keyDown(document.body, { key: "v" })
+    fireEvent.keyDown(document.body, { key: "e" })
+
+    expect(moveToNextQuestion).not.toHaveBeenCalled()
+    expect(toggleViewMode).not.toHaveBeenCalled()
+    expect(scoreSelectedAnswers).not.toHaveBeenCalled()
+  })
+
+  it("モーダルが閉じていれば、同じキーは効く（button へのフォーカスでは止まらない）", async () => {
+    await renderScoringShortcuts(false)
+
+    fireEvent.keyDown(document.body, { key: "ArrowRight" })
+    fireEvent.keyDown(document.body, { key: "v" })
+    fireEvent.keyDown(document.body, { key: "e" })
+
+    expect(moveToNextQuestion).toHaveBeenCalledTimes(1)
+    expect(toggleViewMode).toHaveBeenCalledTimes(1)
+    expect(scoreSelectedAnswers).toHaveBeenCalledWith("correct")
   })
 })

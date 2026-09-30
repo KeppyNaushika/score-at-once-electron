@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { AlertTriangle, Loader2 } from "lucide-react"
+import { AlertTriangle } from "lucide-react"
 
 import {
   AlertDialog,
@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Spinner } from "@/components/ui/spinner"
 import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
 import { studentAnswerDeletionCountsQuery } from "@/queries/answerSheet"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
@@ -98,7 +99,7 @@ function DeleteConfirmationBody({
             <li>答案画像ファイルが完全に削除されます</li>
             {isLoadingCounts && (
               <li className="flex items-center gap-1">
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <Spinner className="size-3" />
                 採点データを確認しています…
               </li>
             )}

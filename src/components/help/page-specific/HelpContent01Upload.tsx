@@ -15,7 +15,7 @@ import {
   FocusSection,
   HelpDoc,
   HelpHero,
-  Kbd,
+  KeyCap,
   Pill,
 } from "@/components/help/common/DocComponents"
 
@@ -304,7 +304,7 @@ export function HelpContent01Upload() {
         </Callout>
         <Callout type="note" title="操作をやり直したいとき">
           並べ替えや削除を間違えても、矢印ボタンで動かし直したり、もう一度ファイルを取り込み直したりして直せます。あわてず落ち着いて操作してください。なお、ファイル選択の画面では{" "}
-          <Kbd>Esc</Kbd> を押すと選択をやめられます。
+          <KeyCap>Esc</KeyCap> を押すと選択をやめられます。
         </Callout>
       </FocusSection>
     </HelpDoc>

@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle, FileImage, Loader2, XCircle } from "lucide-react"
+import { CheckCircle, FileImage, XCircle } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 
@@ -9,6 +9,7 @@ import {
   getCachedStudentAnswerImage,
   loadStudentAnswerImageSource,
 } from "@/components/exams/06-student-answers/student-answer-table/utils/studentAnswerImageCache"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Tooltip,
   TooltipContent,
@@ -139,7 +140,7 @@ function AnswerThumbnail({
     if (isNameRegionLoading) {
       return (
         <div className="flex h-full items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+          <Spinner className="size-6 text-gray-400" />
         </div>
       )
     }
@@ -163,7 +164,7 @@ function AnswerThumbnail({
   if (isImageLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        <Spinner className="size-6 text-gray-400" />
       </div>
     )
   }
@@ -216,7 +217,7 @@ export function FilePreviewCell({
       case "loading":
         return (
           <div className="bg-opacity-75 absolute inset-0 flex items-center justify-center bg-white">
-            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+            <Spinner className="text-blue-500" />
           </div>
         )
       case "loaded":
@@ -294,7 +295,7 @@ export function FilePreviewCell({
 
       {isCorrecting && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-white/60">
-          <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+          <Spinner className="size-5 text-blue-500" />
         </div>
       )}
     </div>

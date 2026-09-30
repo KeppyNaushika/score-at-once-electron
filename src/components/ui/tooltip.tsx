@@ -30,10 +30,62 @@ function Tooltip({
   )
 }
 
+/**
+ * フォーカスで Tooltip を開いてよいのは、利用者がキーでフォーカスを動かしたときだけ。
+ * Dialog・AlertDialog・Popover などは閉じるとフォーカスを開いたボタンへ戻すが、
+ * そのボタンに Tooltip があると、戻っただけで Tooltip が開いてしまう。
+ *
+ * `:focus-visible` では見分けられない。Chromium（Electron）は直前の操作がキーなら
+ * プログラムによる focus() も `:focus-visible` にするので、Esc で閉じた直後に戻った
+ * フォーカスは、マウスで開いた窓であっても `:focus-visible` になる。
+ * そこで、直前の入力がフォーカスを動かすキーだったかを文書全体で覚えておく。
+ */
+const FOCUS_NAVIGATION_KEYS = new Set([
+  "Tab",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "Home",
+  "End",
+])
+
+let isLastInputFocusNavigation = false
+let isInputListenerInstalled = false
+
+function recordKeyDown(event: KeyboardEvent) {
+  isLastInputFocusNavigation = FOCUS_NAVIGATION_KEYS.has(event.key)
+}
+
+function recordPointerDown() {
+  isLastInputFocusNavigation = false
+}
+
+function installInputListener() {
+  if (isInputListenerInstalled) return
+  isInputListenerInstalled = true
+  // 捕獲段で聞くのは、窓の中で stopPropagation されたキーも取りこぼさないため
+  document.addEventListener("keydown", recordKeyDown, true)
+  document.addEventListener("pointerdown", recordPointerDown, true)
+}
+
 function TooltipTrigger({
+  onFocus,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
+  React.useEffect(installInputListener, [])
+
+  return (
+    <TooltipPrimitive.Trigger
+      data-slot="tooltip-trigger"
+      onFocus={(event) => {
+        onFocus?.(event)
+        // Radix は onFocus で開く。preventDefault すると Radix 側の処理だけを飛ばせる
+        if (!isLastInputFocusNavigation) event.preventDefault()
+      }}
+      {...props}
+    />
+  )
 }
 
 function TooltipContent({

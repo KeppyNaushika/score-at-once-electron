@@ -7,6 +7,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import type { GradeItemResult, SourceScoreResult } from "@/types/grade.types"
 
 // ---------------------------------------------------------------------------
@@ -94,6 +99,9 @@ const ESTIMATION_TOTAL_ROW =
  * table-fixed 下では見出しセルの w-* が列幅を決める（本文セルはこれに追従）。
  * 列幅を変えたいときはこの w-16 を調整する。
  */
+/** 表のマスの Tooltip は、ブラウザの title と同じくらい待ってから出す */
+const CELL_TOOLTIP_DELAY_MS = 500
+
 const PARENT_TH_NUM = "w-16 pb-1 text-center font-medium whitespace-nowrap"
 
 /**
@@ -505,15 +513,20 @@ export function GradeItemBreakdownPopover({
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={`w-12 cursor-pointer text-right text-xs tabular-nums hover:underline ${colorClass}`}
-          title="クリックで内訳を表示"
-        >
-          {pctText}
-        </button>
-      </PopoverTrigger>
+      {/* 表のマスを横切るたびに出ないよう、少し待ってから出す */}
+      <Tooltip delayDuration={CELL_TOOLTIP_DELAY_MS}>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={`w-12 cursor-pointer text-right text-xs tabular-nums hover:underline ${colorClass}`}
+            >
+              {pctText}
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>クリックで内訳を表示</TooltipContent>
+      </Tooltip>
       <PopoverContent className="w-160 p-3" align="start">
         <p className="mb-1 text-xs font-semibold">{itemResult.gradeItemName}</p>
         <p className="mb-2 text-[10px] text-muted-foreground">
@@ -543,16 +556,22 @@ export function GradeItemBreakdownPopover({
                   <td className="py-1 pr-1">
                     {sourceScore.isEstimated && sourceScore.estimation ? (
                       <Popover>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            className="cursor-pointer text-left text-amber-600 hover:underline"
-                            title="クリックで推定の計算式を表示"
-                          >
-                            {sourceScore.dataSourceName}
-                            <span className="ml-0.5">*</span>
-                          </button>
-                        </PopoverTrigger>
+                        <Tooltip delayDuration={CELL_TOOLTIP_DELAY_MS}>
+                          <TooltipTrigger asChild>
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                className="cursor-pointer text-left text-amber-600 hover:underline"
+                              >
+                                {sourceScore.dataSourceName}
+                                <span className="ml-0.5">*</span>
+                              </button>
+                            </PopoverTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            クリックで推定の計算式を表示
+                          </TooltipContent>
+                        </Tooltip>
                         <PopoverContent className="w-lg p-0" align="start">
                           <EstimationExplain sourceScore={sourceScore} />
                         </PopoverContent>

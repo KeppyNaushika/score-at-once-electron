@@ -2,7 +2,6 @@
 
 import { Lock } from "lucide-react"
 
-import { ScrollShadowArea } from "@/components/common/ScrollShadowArea"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,6 +12,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { buildGradeLockMessage } from "@/lib/gradeLock"
 import type { GradeLockSource } from "@/types/gradeLock.types"
 
@@ -51,7 +58,7 @@ export function GradeLockDialog({
           <AlertDialogDescription>{message.lead}</AlertDialogDescription>
         </AlertDialogHeader>
         {/* 成績算出ごとに、評価項目とデータソースを表で並べる */}
-        <ScrollShadowArea className="max-h-72 space-y-3">
+        <div className="max-h-72 scroll-fade space-y-3 overflow-y-auto">
           {message.groups.map((group) => (
             <section
               key={group.gradeId}
@@ -60,43 +67,46 @@ export function GradeLockDialog({
               <h3 className="bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
                 {group.gradeName}
               </h3>
-              <table className="w-full text-sm">
-                <thead className="text-xs text-muted-foreground">
-                  <tr className="border-b">
-                    <th className="px-3 py-1 text-left font-normal">
+              <Table>
+                <TableHeader className="text-xs">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="h-auto bg-transparent px-3 py-1 font-normal text-muted-foreground">
                       評価項目
-                    </th>
-                    <th className="px-3 py-1 text-left font-normal">
+                    </TableHead>
+                    <TableHead className="h-auto bg-transparent px-3 py-1 font-normal text-muted-foreground">
                       データソース
-                    </th>
-                    <th className="px-3 py-1 text-left font-normal">種類</th>
-                  </tr>
-                </thead>
-                <tbody>
+                    </TableHead>
+                    <TableHead className="h-auto bg-transparent px-3 py-1 font-normal text-muted-foreground">
+                      種類
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {group.rows.map((row) => (
-                    <tr
+                    <TableRow
                       key={`${row.gradeItemName}\u0000${row.dataSourceName}\u0000${row.dataSourceTypeLabel}`}
-                      className="border-b last:border-b-0"
                     >
-                      <td className="px-3 py-1 whitespace-nowrap">
+                      <TableCell className="px-3 py-1">
                         {row.gradeItemName}
                         {row.isFrozen && (
                           <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                             確定済み
                           </span>
                         )}
-                      </td>
-                      <td className="px-3 py-1">{row.dataSourceName}</td>
-                      <td className="px-3 py-1 whitespace-nowrap text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="px-3 py-1 whitespace-normal">
+                        {row.dataSourceName}
+                      </TableCell>
+                      <TableCell className="px-3 py-1 text-muted-foreground">
                         {row.dataSourceTypeLabel}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </section>
           ))}
-        </ScrollShadowArea>
+        </div>
         {message.frozenNote && (
           <p className="text-sm text-muted-foreground">{message.frozenNote}</p>
         )}

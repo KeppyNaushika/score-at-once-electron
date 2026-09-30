@@ -4,7 +4,14 @@ import { useQuery } from "@tanstack/react-query"
 import { History } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
+import { Combobox } from "@/components/common/Combobox"
 import { ListPaginationFooter } from "@/components/common/ListPaginationFooter"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -62,6 +69,18 @@ export function AuditLogList() {
     return () => clearTimeout(timeoutId)
   }, [searchText, appliedSearchText, setFilter])
 
+  const userFilterOptions = useMemo(
+    () => [
+      { value: ALL, label: "すべてのユーザー" },
+      ...users.map((user) => ({
+        value: user.id,
+        label: user.name,
+        keywords: [user.username],
+      })),
+    ],
+    [users]
+  )
+
   const categoryOptions = useMemo(
     () => Object.keys(CATEGORY_LABELS).filter(isAuditCategory),
     []
@@ -97,7 +116,8 @@ export function AuditLogList() {
           </SelectContent>
         </Select>
 
-        <Select
+        <Combobox
+          options={userFilterOptions}
           value={filter.userId ?? ALL}
           onValueChange={(value) =>
             setFilter((prev) => ({
@@ -105,19 +125,12 @@ export function AuditLogList() {
               userId: value === ALL ? undefined : value,
             }))
           }
-        >
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="ユーザー" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>すべてのユーザー</SelectItem>
-            {users.map((user) => (
-              <SelectItem key={user.id} value={user.id}>
-                {user.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          placeholder="ユーザー"
+          searchPlaceholder="名前・ユーザー名で検索"
+          emptyText="該当するユーザーがいません"
+          aria-label="ユーザーで絞り込む"
+          className="w-44"
+        />
 
         <Input
           placeholder="内容で検索..."
@@ -155,10 +168,14 @@ export function AuditLogList() {
             ))}
           </div>
         ) : entries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-16 text-muted-foreground">
-            <History className="h-8 w-8 opacity-50" />
-            <p className="text-sm">記録された操作はありません。</p>
-          </div>
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <History />
+              </EmptyMedia>
+              <EmptyTitle>記録された操作はありません</EmptyTitle>
+            </EmptyHeader>
+          </Empty>
         ) : (
           <div>
             {entries.map((entry) => (

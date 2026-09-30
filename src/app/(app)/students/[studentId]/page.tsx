@@ -16,12 +16,21 @@ import { ScoreTrendChart } from "@/app/(app)/students/[studentId]/components/Sco
 import { TagAnalyticsCard } from "@/app/(app)/students/[studentId]/components/TagAnalyticsCard"
 import { useStudentDetail } from "@/app/(app)/students/[studentId]/hooks/useStudentDetail"
 import { useStudentExamResults } from "@/app/(app)/students/[studentId]/hooks/useStudentExamResults"
-import LoadingSpinner from "@/components/common/LoadingSpinner"
 import PageHeader from "@/components/layout/PageHeader"
 import { DeleteStudentModal } from "@/components/student/DeleteStudentModal"
 import StudentClassroomMembershipModal from "@/components/student/StudentClassroomMembershipModal"
 import StudentModal from "@/components/student/StudentModal"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { StudentClassroomMembershipWithStudentAndClassroom } from "@/types/prismaExtensions"
 
@@ -36,7 +45,8 @@ export default function StudentDetailPage() {
     loading,
     handleEditStudent,
     handleSaveMembership,
-    handleEndMembership,
+    membershipEnding,
+    handleConfirmEndMembership,
   } = useStudentDetail(studentId)
 
   const { results: examResults, loading: examResultsLoading } =
@@ -159,8 +169,8 @@ export default function StudentDetailPage() {
 
             <TabsContent value="analytics">
               {examResultsLoading ? (
-                <div className="flex items-center justify-center py-16">
-                  <LoadingSpinner />
+                <div className="flex items-center justify-center py-24">
+                  <Spinner className="size-6" />
                 </div>
               ) : (
                 <>
@@ -177,7 +187,7 @@ export default function StudentDetailPage() {
                 student={student}
                 onAddMembership={handleAddMembership}
                 onEditMembership={handleEditMembership}
-                onEndMembership={handleEndMembership}
+                onEndMembership={membershipEnding.openWith}
               />
             </TabsContent>
           </Tabs>
@@ -217,8 +227,27 @@ export default function StudentDetailPage() {
         />
       )}
 
+      <AlertDialog
+        open={membershipEnding.isOpen}
+        onOpenChange={membershipEnding.handleOpenChange}
+      >
+        {/* 問いかけの文言だけで足りるので、説明文は置かない */}
+        <AlertDialogContent aria-describedby={undefined}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>この所属関係を終了しますか？</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmEndMembership}>
+              終了する
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <DeleteStudentModal
-        student={isDeleteModalOpen ? student : null}
+        open={isDeleteModalOpen}
+        student={student}
         onClose={() => setIsDeleteModalOpen(false)}
         onDeleted={() => router.push("/students")}
       />

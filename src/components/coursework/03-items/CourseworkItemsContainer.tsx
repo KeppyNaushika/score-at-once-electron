@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -38,6 +38,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { buildItemDeletionWarning } from "@/lib/shared/gradeReferenceMessages"
 import { cn } from "@/lib/utils"
 import { courseworkWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
@@ -152,8 +158,7 @@ export function CourseworkItemsContainer({
 
   const [newItemName, setNewItemName] = useState("")
   // 押しただけでは消さず、確認で決めてもらう
-  const [deleteTarget, setDeleteTarget] =
-    useState<CourseworkItemWithLetterScales | null>(null)
+  const itemDeletion = useDialogTarget<CourseworkItemWithLetterScales>()
   const [editingText, setEditingText] = useState<ReadonlyMap<string, string>>(
     new Map()
   )
@@ -262,9 +267,9 @@ export function CourseworkItemsContainer({
   const deleteTargetReferences = useQuery({
     ...gradeReferencesQuery({
       kind: "courseworkItem",
-      id: deleteTarget?.id ?? "",
+      id: itemDeletion.target?.id ?? "",
     }),
-    enabled: deleteTarget !== null,
+    enabled: itemDeletion.isOpen && itemDeletion.target !== null,
   })
   const deleteTargetWarning = deleteTargetReferences.data
     ? buildItemDeletionWarning("courseworkItem", deleteTargetReferences.data)
@@ -277,7 +282,7 @@ export function CourseworkItemsContainer({
       // 失敗の通知は MutationCache が出す。確認は開いたままにする
       return
     }
-    setDeleteTarget(null)
+    itemDeletion.close()
     forgetText(item)
     toast.success("評価項目を削除しました", { description: item.name })
   }
@@ -357,7 +362,7 @@ export function CourseworkItemsContainer({
                 onChangeMaxScore={changeMaxScore}
                 onChangeInputMode={handleInputModeChange}
                 onBlur={forgetText}
-                onDelete={setDeleteTarget}
+                onDelete={itemDeletion.openWith}
               />
             ))}
           </SortableTableProvider>
@@ -365,18 +370,17 @@ export function CourseworkItemsContainer({
       )}
 
       <AlertDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null)
-        }}
+        open={itemDeletion.isOpen}
+        onOpenChange={itemDeletion.handleOpenChange}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>評価項目を削除しますか？</AlertDialogTitle>
             <AlertDialogDescription>
-              「{deleteTarget?.name}
+              「{itemDeletion.target?.name}
               」を削除します。この評価項目に入力した点数・評価、加減点とその理由、成績通知書に載せるコメント
-              {deleteTarget?.inputMode === "letter" && "、文字評価の変換表"}
+              {itemDeletion.target?.inputMode === "letter" &&
+                "、文字評価の変換表"}
               も一緒に削除され、元に戻せません。
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -388,7 +392,7 @@ export function CourseworkItemsContainer({
           <AlertDialogFooter>
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction
-              className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+              className={buttonVariants({ variant: "destructive" })}
               // 使われているかを調べ終わるまでは押させない（影響を見せる前に消さない）
               disabled={
                 deleteItem.isPending || deleteTargetReferences.isPending
@@ -396,7 +400,7 @@ export function CourseworkItemsContainer({
               onClick={(event) => {
                 // 閉じるのは削除が済んでから（失敗したら開いたままにする）
                 event.preventDefault()
-                if (deleteTarget) void handleDelete(deleteTarget)
+                if (itemDeletion.target) void handleDelete(itemDeletion.target)
               }}
             >
               削除
@@ -516,15 +520,20 @@ function SortableItemRow({
           )}
         </div>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="mt-5 h-7 w-7 text-destructive"
-          onClick={() => onDelete(item)}
-          title="削除"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              aria-label="削除"
+              variant="ghost"
+              size="icon"
+              className="mt-5 h-7 w-7 text-destructive"
+              onClick={() => onDelete(item)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>削除</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   )

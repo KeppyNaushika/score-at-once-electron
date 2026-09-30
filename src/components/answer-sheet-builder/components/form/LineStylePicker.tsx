@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { Slider } from "@/components/ui/slider"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import type {
   BorderConfig,
@@ -256,24 +261,28 @@ function BorderFieldRow({
         </span>
         <div className="flex shrink-0 rounded-md border border-input">
           {LINE_STYLES.map((lineStyle) => (
-            <button
-              key={lineStyle.value}
-              type="button"
-              title={lineStyle.title}
-              className={cn(
-                "flex h-6 w-7 items-center justify-center transition-colors first:rounded-l-md last:rounded-r-md hover:bg-accent",
-                activeStyle === lineStyle.value
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground"
-              )}
-              onClick={() =>
-                onUpdate({
-                  [field.styleKey]: lineStyle.value as BorderLineStyle,
-                })
-              }
-            >
-              <LineIcon style={lineStyle.value} />
-            </button>
+            <Tooltip key={lineStyle.value}>
+              <TooltipTrigger asChild>
+                <button
+                  aria-label={lineStyle.title}
+                  type="button"
+                  className={cn(
+                    "flex h-6 w-7 items-center justify-center transition-colors first:rounded-l-md last:rounded-r-md hover:bg-accent",
+                    activeStyle === lineStyle.value
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground"
+                  )}
+                  onClick={() =>
+                    onUpdate({
+                      [field.styleKey]: lineStyle.value as BorderLineStyle,
+                    })
+                  }
+                >
+                  <LineIcon style={lineStyle.value} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>{lineStyle.title}</TooltipContent>
+            </Tooltip>
           ))}
         </div>
         <Slider

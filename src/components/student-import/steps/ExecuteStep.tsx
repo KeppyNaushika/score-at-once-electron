@@ -1,9 +1,10 @@
 "use client"
 
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
+import { AlertCircle, CheckCircle2 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import type { StudentImportWizard } from "@/hooks/student-import/useStudentImportWizard"
 import type { StudentArchiveImportResult } from "@/types/studentArchive.types"
 
@@ -52,7 +53,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
   if (!result) {
     return (
       <div className="flex flex-col items-center justify-center gap-6 py-16">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <Spinner className="size-12 text-primary" />
         <div className="text-center">
           <h3 className="text-lg font-semibold">インポート中...</h3>
           <p className="mt-2 text-sm text-muted-foreground">

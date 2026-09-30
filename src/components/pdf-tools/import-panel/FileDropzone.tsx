@@ -1,11 +1,12 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { FileUp, Loader2 } from "lucide-react"
+import { FileUp } from "lucide-react"
 import { type DragEvent, useCallback, useState } from "react"
 import { toast } from "sonner"
 
 import { PasswordDialog } from "@/components/ui/password-dialog"
+import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 import { selectPdfFilesMutation } from "@/queries/pdfTools"
 import type { ImportedFile } from "@/types/pdfTools.types"
@@ -125,7 +126,7 @@ export default function FileDropzone({
       >
         {isLoading ? (
           <>
-            <Loader2 className="mb-2 h-8 w-8 animate-spin text-muted-foreground" />
+            <Spinner className="mb-2 size-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">処理中...</p>
           </>
         ) : (

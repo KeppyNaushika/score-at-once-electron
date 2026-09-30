@@ -1,8 +1,9 @@
 "use client"
 
-import { Search } from "lucide-react"
-import { useState } from "react"
+import type { Classroom } from "@prisma/client"
+import { useMemo, useState } from "react"
 
+import { Combobox } from "@/components/common/Combobox"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -14,14 +15,8 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { classroomSearchKeywords } from "@/lib/searchKeywords"
 
 interface MembershipSaveData {
   studentId: string
@@ -46,11 +41,7 @@ interface StudentClassroomMembershipModalProps {
     lastNameKana: string
     firstNameKana: string
   }>
-  availableClassrooms: Array<{
-    id: string
-    name: string
-    classroomCode?: string | null
-  }>
+  availableClassrooms: Classroom[]
   membershipToEdit?: {
     id: string
     studentId: string
@@ -98,8 +89,31 @@ export default function StudentClassroomMembershipModal({
     formatDateForInput(membershipToEdit?.endDate)
   )
   const [notes, setNotes] = useState(membershipToEdit?.notes ?? "")
-  const [studentSearchTerm, setStudentSearchTerm] = useState("")
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
+
+  const studentOptions = useMemo(
+    () =>
+      availableStudents.map((student) => ({
+        value: student.id,
+        label: `${student.lastName} ${student.firstName} (${student.studentNumber})`,
+        keywords: [
+          student.studentNumber,
+          `${student.lastNameKana} ${student.firstNameKana}`,
+        ],
+      })),
+    [availableStudents]
+  )
+  const classroomOptions = useMemo(
+    () =>
+      availableClassrooms.map((classroom) => ({
+        value: classroom.id,
+        label: classroom.classroomCode
+          ? `${classroom.name} (${classroom.classroomCode})`
+          : classroom.name,
+        keywords: classroomSearchKeywords(classroom),
+      })),
+    [availableClassrooms]
+  )
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}
@@ -151,48 +165,17 @@ export default function StudentClassroomMembershipModal({
               生徒
             </Label>
             <div className="col-span-3 space-y-2">
-              {!initialStudentId && (
-                <div className="relative">
-                  <Search className="absolute top-2.5 left-2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="生徒名または学籍番号で検索"
-                    value={studentSearchTerm}
-                    onChange={(e) => setStudentSearchTerm(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
-              )}
-              <Select
+              <Combobox
+                id="student"
+                options={studentOptions}
                 value={studentId}
                 onValueChange={setStudentId}
                 disabled={!!initialStudentId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="生徒を選択してください" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableStudents
-                    .filter((student) => {
-                      if (!studentSearchTerm) return true
-                      const searchTerm = studentSearchTerm.toLowerCase()
-                      const fullName =
-                        `${student.lastName} ${student.firstName}`.toLowerCase()
-                      const fullNameKana =
-                        `${student.lastNameKana} ${student.firstNameKana}`.toLowerCase()
-                      return (
-                        fullName.includes(searchTerm) ||
-                        fullNameKana.includes(searchTerm) ||
-                        student.studentNumber.toLowerCase().includes(searchTerm)
-                      )
-                    })
-                    .map((student) => (
-                      <SelectItem key={student.id} value={student.id}>
-                        {student.lastName} {student.firstName} (
-                        {student.studentNumber})
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+                placeholder="生徒を選択してください"
+                searchPlaceholder="生徒名・カナ・学籍番号で検索"
+                emptyText="該当する生徒がいません"
+                className="w-full"
+              />
               {errors.studentId && (
                 <p className="mt-1 text-sm text-red-500">{errors.studentId}</p>
               )}
@@ -205,24 +188,17 @@ export default function StudentClassroomMembershipModal({
               学級
             </Label>
             <div className="col-span-3">
-              <Select
+              <Combobox
+                id="class"
+                options={classroomOptions}
                 value={classroomId}
                 onValueChange={setClassroomId}
                 disabled={!!initialClassroomId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="学級を選択してください" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableClassrooms.map((classroomItem) => (
-                    <SelectItem key={classroomItem.id} value={classroomItem.id}>
-                      {classroomItem.name}
-                      {classroomItem.classroomCode &&
-                        ` (${classroomItem.classroomCode})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="学級を選択してください"
+                searchPlaceholder="学級名・学年・学級コードで検索"
+                emptyText="該当する学級がありません"
+                className="w-full"
+              />
               {errors.classroomId && (
                 <p className="mt-1 text-sm text-red-500">
                   {errors.classroomId}

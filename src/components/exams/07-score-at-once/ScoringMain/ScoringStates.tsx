@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation"
 
-import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import type { ExamWithPages } from "@/types/prismaExtensions"
 
 interface ScoringStatesProps {
@@ -18,8 +18,11 @@ interface ScoringStatesProps {
 export function ScoringLoadingState() {
   return (
     <div className="flex flex-1">
-      <div className="flex flex-1 items-center justify-center">
-        <LoadingSpinner text="採点データを読み込み中..." />
+      <div className="flex flex-1 flex-col items-center justify-center">
+        <Spinner className="mb-2 size-6" />
+        <p className="text-sm text-muted-foreground">
+          採点データを読み込み中...
+        </p>
       </div>
     </div>
   )

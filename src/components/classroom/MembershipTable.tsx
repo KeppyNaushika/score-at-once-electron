@@ -3,8 +3,17 @@
 import { Calendar, Edit, Trash2, User } from "lucide-react"
 import { useMemo, useState } from "react"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -23,6 +32,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
 import { cn } from "@/lib/utils"
@@ -56,6 +71,8 @@ export default function ClassroomMembershipTable({
   onBulkDelete,
 }: ClassroomMembershipTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  // 確認を開いた時点の選択を写しておく（窓に出す件数と消す対象を一致させる）
+  const bulkDeletion = useDialogTarget<string[]>()
   const [statusFilter, setStatusFilter] = useState<"current" | "ended" | "all">(
     "current"
   )
@@ -123,12 +140,14 @@ export default function ClassroomMembershipTable({
 
   const handleBulkDelete = () => {
     if (selectedIds.size > 0 && onBulkDelete) {
-      if (
-        window.confirm(`選択された${selectedIds.size}件の所属を削除しますか？`)
-      ) {
-        onBulkDelete(Array.from(selectedIds))
-        setSelectedIds(new Set())
-      }
+      bulkDeletion.openWith(Array.from(selectedIds))
+    }
+  }
+
+  const handleConfirmBulkDelete = () => {
+    if (bulkDeletion.target !== null && onBulkDelete) {
+      onBulkDelete(bulkDeletion.target)
+      setSelectedIds(new Set())
     }
   }
 
@@ -295,32 +314,48 @@ export default function ClassroomMembershipTable({
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
-                            onClick={() => onViewStudent(membership)}
-                            title="個人ページを開く"
-                          >
-                            <User className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
-                            onClick={() => onEdit(membership)}
-                            title="所属を編集"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => onDelete(membership.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                aria-label="個人ページを開く"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
+                                onClick={() => onViewStudent(membership)}
+                              >
+                                <User className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>個人ページを開く</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                aria-label="所属を編集"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
+                                onClick={() => onEdit(membership)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>所属を編集</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                aria-label="所属を削除"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => onDelete(membership.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>所属を削除</TooltipContent>
+                          </Tooltip>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -335,6 +370,30 @@ export default function ClassroomMembershipTable({
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={bulkDeletion.isOpen}
+        onOpenChange={bulkDeletion.handleOpenChange}
+      >
+        {/* 問いかけの文言だけで足りるので、説明文は置かない */}
+        <AlertDialogContent aria-describedby={undefined}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              選択された{bulkDeletion.target?.length ?? 0}
+              件の所属を削除しますか？
+            </AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={handleConfirmBulkDelete}
+            >
+              削除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

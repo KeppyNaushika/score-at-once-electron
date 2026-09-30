@@ -4,36 +4,39 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
-  ({ className, ...props }, ref) => (
+// @radix-ui/react-avatar は入れていないので、Root/Fallback は素の div/span で組む。
+// AvatarImage は使われておらず、no-img-element にも掛かるため置かない
+function Avatar({
+  className,
+  size = "default",
+  ...props
+}: React.ComponentProps<"div"> & {
+  size?: "default" | "sm" | "lg"
+}) {
+  return (
     <div
-      ref={ref}
+      data-slot="avatar"
+      data-size={size}
       className={cn(
-        "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
+        "group/avatar relative flex size-8 shrink-0 overflow-hidden rounded-full select-none data-[size=lg]:size-10 data-[size=sm]:size-6",
         className
       )}
       {...props}
     />
   )
-)
-Avatar.displayName = "Avatar"
+}
 
-interface AvatarFallbackProps extends React.HTMLAttributes<HTMLSpanElement> {}
-
-const AvatarFallback = React.forwardRef<HTMLSpanElement, AvatarFallbackProps>(
-  ({ className, ...props }, ref) => (
+function AvatarFallback({ className, ...props }: React.ComponentProps<"span">) {
+  return (
     <span
-      ref={ref}
+      data-slot="avatar-fallback"
       className={cn(
-        "flex h-full w-full items-center justify-center rounded-full bg-muted",
+        "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
         className
       )}
       {...props}
     />
   )
-)
-AvatarFallback.displayName = "AvatarFallback"
+}
 
 export { Avatar, AvatarFallback }

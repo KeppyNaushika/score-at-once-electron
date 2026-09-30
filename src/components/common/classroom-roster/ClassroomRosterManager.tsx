@@ -28,6 +28,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { queryKeys } from "@/lib/queryKeys"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 import type { ClassroomWithMembershipRows } from "@/types/prismaExtensions"
@@ -132,9 +138,19 @@ function ClassroomRowCells({
         </TableCell>
       ))}
       <TableCell>
-        <Button variant="ghost" size="icon" onClick={() => onRemove(entry)}>
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              aria-label="学級を外す"
+              variant="ghost"
+              size="icon"
+              onClick={() => onRemove(entry)}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>学級を外す</TooltipContent>
+        </Tooltip>
       </TableCell>
     </>
   )
@@ -193,8 +209,7 @@ export function ClassroomRosterManager({
     new Set()
   )
   const [adding, setAdding] = useState(false)
-  const [removalTarget, setRemovalTarget] =
-    useState<ClassroomRosterEntry | null>(null)
+  const classroomRemoval = useDialogTarget<ClassroomRosterEntry>()
 
   const addEnabled =
     fetchAvailableClassrooms !== undefined && onAddClassrooms !== undefined
@@ -302,7 +317,7 @@ export function ClassroomRosterManager({
             key={entry.id}
             entry={entry}
             flagColumns={flagColumns}
-            onRemove={setRemovalTarget}
+            onRemove={classroomRemoval.openWith}
           />
         ))}
       </TableBody>
@@ -333,7 +348,8 @@ export function ClassroomRosterManager({
 
       {/* 削除確認（2段階モーダルを内包） */}
       <ClassroomRemovalDialog
-        entry={removalTarget}
+        open={classroomRemoval.isOpen}
+        entry={classroomRemoval.target}
         mode={removalMode}
         fetchRemovalPreview={fetchRemovalPreview}
         deletionLosses={deletionLosses}
@@ -342,7 +358,7 @@ export function ClassroomRosterManager({
           await onRemove(entry, deleteStudents, confirmedCounts)
           onChanged?.()
         }}
-        onClose={() => setRemovalTarget(null)}
+        onClose={classroomRemoval.close}
       />
 
       {/* 学級追加ダイアログ（add無効時は出さない） */}

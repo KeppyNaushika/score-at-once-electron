@@ -14,6 +14,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { findOrCreateTagMutation, tagListQuery } from "@/queries/tag"
 
@@ -182,19 +187,23 @@ export function EntityTagEditor({
       */}
       {!disabled && (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              id="entity-overview-tag"
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-6"
-              aria-label="タグを編集"
-              title="タグを編集"
-            >
-              <PencilIcon className="h-3.5 w-3.5" />
-            </Button>
-          </PopoverTrigger>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <Button
+                  id="entity-overview-tag"
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-6"
+                  aria-label="タグを編集"
+                >
+                  <PencilIcon className="h-3.5 w-3.5" />
+                </Button>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent>タグを編集</TooltipContent>
+          </Tooltip>
           <PopoverContent align="start" className="w-64 space-y-2 p-2">
             <div className="flex items-center gap-2">
               <Input

@@ -9,6 +9,7 @@ import type {
   MasterAnswerKeyBehavior,
 } from "@/components/exams/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
+import { Kbd } from "@/components/ui/kbd"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -139,10 +140,7 @@ export function MasterAnswerControls({
                   <div className="text-center">
                     <div className="font-medium">模範解答の表示切替</div>
                     <div className="mt-1 text-xs text-gray-400">
-                      キー:{" "}
-                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
-                        {toggleKey}
-                      </kbd>
+                      キー: <Kbd>{toggleKey}</Kbd>
                     </div>
                   </div>
                 </TooltipContent>

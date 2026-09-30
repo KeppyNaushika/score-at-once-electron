@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { ArrowLeft, ArrowRight, ImageUp, Loader2, Trash2 } from "lucide-react"
+import { ArrowLeft, ArrowRight, ImageUp, Trash2 } from "lucide-react"
 import Image from "next/image"
 import React, { useRef, useState } from "react"
 
@@ -17,6 +17,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Spinner } from "@/components/ui/spinner"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
 import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
 import { buildItemDeletionWarning } from "@/lib/shared/gradeReferenceMessages"
@@ -133,7 +146,7 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
 
         {isBusy && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-            <Loader2 className="h-8 w-8 animate-spin text-white" />
+            <Spinner className="size-8 text-white" />
           </div>
         )}
 
@@ -150,79 +163,105 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
           className={`absolute inset-0 flex flex-col items-center justify-center bg-black/50 ${
             isBusy
               ? "opacity-0"
-              : "opacity-0 transition-opacity group-hover:opacity-100"
+              : "opacity-0 transition-opacity group-hover:opacity-100 has-data-[state=open]:opacity-100"
           }`}
         >
           <p className="text-sm font-semibold text-white">
             ページ {answer.pageNumber}
           </p>
-          <select
-            className="mt-1 rounded bg-white/20 px-1.5 py-0.5 text-xs text-white backdrop-blur-sm"
+          <Select
             value={answer.pageSize}
-            onChange={(e) => {
-              e.stopPropagation()
-              onPageSizeChange(e.target.value)
-            }}
-            onClick={(e) => e.stopPropagation()}
+            onValueChange={onPageSizeChange}
             disabled={isBusy}
           >
-            {PAGE_SIZE_OPTIONS.map((size) => (
-              <option key={size} value={size} className="text-black">
-                {size}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              aria-label="用紙サイズ"
+              className="mt-1 gap-1 rounded border-0 bg-white/20 px-1.5 py-0.5 text-xs text-white shadow-none backdrop-blur-sm data-[size=default]:h-auto [&_svg:not([class*='text-'])]:text-white"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((pageSize) => (
+                <SelectItem key={pageSize} value={pageSize}>
+                  {pageSize}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <div className="mt-2 flex space-x-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 text-white hover:bg-white/20"
-              onClick={onMoveLeft}
-              disabled={!canMoveLeft || isBusy}
-              title="左へ移動"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 text-white hover:bg-white/20"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isBusy}
-              title="模範解答画像を差し替え（答案・採点結果は残る）"
-            >
-              <ImageUp className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="destructive"
-              className="h-7 w-7"
-              onClick={() => {
-                if (hasLinkedContent) {
-                  setConfirmingDelete(true)
-                  return
-                }
-                // 何も紐づいていなければ確認なしで消す。見た後に他の教員が答案・
-                // 設問を足していて main が中止したときだけ、確認画面で文言を見せる
-                void confirmDeletion().then((deleted) => {
-                  if (!deleted) setConfirmingDelete(true)
-                })
-              }}
-              disabled={isBusy}
-              title="このページを削除"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 text-white hover:bg-white/20"
-              onClick={onMoveRight}
-              disabled={!canMoveRight || isBusy}
-              title="右へ移動"
-            >
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="左へ移動"
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-white hover:bg-white/20"
+                  onClick={onMoveLeft}
+                  disabled={!canMoveLeft || isBusy}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>左へ移動</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="模範解答画像を差し替え（答案・採点結果は残る）"
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-white hover:bg-white/20"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isBusy}
+                >
+                  <ImageUp className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                模範解答画像を差し替え（答案・採点結果は残る）
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="このページを削除"
+                  size="icon"
+                  variant="destructive"
+                  className="h-7 w-7"
+                  onClick={() => {
+                    if (hasLinkedContent) {
+                      setConfirmingDelete(true)
+                      return
+                    }
+                    // 何も紐づいていなければ確認なしで消す。見た後に他の教員が答案・
+                    // 設問を足していて main が中止したときだけ、確認画面で文言を見せる
+                    void confirmDeletion().then((deleted) => {
+                      if (!deleted) setConfirmingDelete(true)
+                    })
+                  }}
+                  disabled={isBusy}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>このページを削除</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="右へ移動"
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-white hover:bg-white/20"
+                  onClick={onMoveRight}
+                  disabled={!canMoveRight || isBusy}
+                >
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>右へ移動</TooltipContent>
+            </Tooltip>
           </div>
         </div>
 

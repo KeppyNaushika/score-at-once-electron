@@ -1,12 +1,24 @@
 "use client"
 
-import { AlertCircle, CheckCircle2, Loader2, RefreshCw } from "lucide-react"
+import { AlertCircle, CheckCircle2, RefreshCw } from "lucide-react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { useSyncSettings } from "@/app/(app)/settings/hooks/useSyncSettings"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 
 function StateIndicator({ state }: { state: string }) {
@@ -21,7 +33,7 @@ function StateIndicator({ state }: { state: string }) {
     case "syncing":
       return (
         <span className="flex items-center gap-1.5 text-sm text-blue-600">
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Spinner />
           同期中...
         </span>
       )
@@ -40,24 +52,26 @@ function StateIndicator({ state }: { state: string }) {
 export function SyncSettingsTab() {
   const { config, syncPath, status, isLoading, updateConfig, triggerSync } =
     useSyncSettings()
+  const [isDisableConfirmOpen, setIsDisableConfirmOpen] = useState(false)
 
   if (isLoading || !config) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Spinner className="size-6 text-muted-foreground" />
       </div>
     )
   }
 
-  const handleToggleEnabled = async (enabled: boolean) => {
+  const handleToggleEnabled = (enabled: boolean) => {
     // 無効化時は確認ダイアログを表示
     if (!enabled) {
-      const confirmed = window.confirm(
-        "同期を無効にすると、ローカルDBの変更をNASに反映してからローカルDBを削除します。\n\nよろしいですか？"
-      )
-      if (!confirmed) return
+      setIsDisableConfirmOpen(true)
+      return
     }
+    void applyEnabled(true)
+  }
 
+  const applyEnabled = async (enabled: boolean) => {
     try {
       await updateConfig({ enabled })
       toast.success(
@@ -145,7 +159,7 @@ export function SyncSettingsTab() {
           disabled={!config.enabled || status.state === "syncing"}
         >
           {status.state === "syncing" ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Spinner className="mr-2" />
           ) : (
             <RefreshCw className="mr-2 h-4 w-4" />
           )}
@@ -153,6 +167,28 @@ export function SyncSettingsTab() {
         </Button>
         <StateIndicator state={status.state} />
       </div>
+
+      <AlertDialog
+        open={isDisableConfirmOpen}
+        onOpenChange={setIsDisableConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>同期を無効にしますか？</AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {
+                "同期を無効にすると、ローカルDBの変更をNASに反映してからローカルDBを削除します。\n\nよろしいですか？"
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void applyEnabled(false)}>
+              無効にする
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* スキーマバージョン不一致の通知 */}
       {(status.versionMismatches ?? []).length > 0 && (

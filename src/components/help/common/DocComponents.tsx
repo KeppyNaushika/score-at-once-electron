@@ -8,6 +8,9 @@ import React, {
   useState,
 } from "react"
 
+import { Kbd } from "@/components/ui/kbd"
+import { cn } from "@/lib/utils"
+
 /**
  * 初心者向けヘルプ（使い方ガイド）のドキュメント風プリミティブ。
  * 一般的なWebヘルプページのように、読みやすい1カラムで構成する。
@@ -256,7 +259,7 @@ const keyTones: Record<KeyTone, string> = {
 }
 
 /** 物理キー風の見た目（インライン） */
-export function Kbd({
+export function KeyCap({
   children,
   tone = "slate",
 }: {
@@ -264,11 +267,14 @@ export function Kbd({
   tone?: KeyTone
 }) {
   return (
-    <kbd
-      className={`inline-flex h-7 min-w-7 items-center justify-center rounded-md border border-b-2 bg-gradient-to-b px-2 font-mono text-sm font-bold ${keyTones[tone]}`}
+    <Kbd
+      className={cn(
+        "h-7 min-w-7 rounded-md border border-b-2 bg-gradient-to-b px-2 font-mono text-sm font-bold",
+        keyTones[tone]
+      )}
     >
       {children}
-    </kbd>
+    </Kbd>
   )
 }
 

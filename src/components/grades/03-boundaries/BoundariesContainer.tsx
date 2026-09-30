@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { Trash2 } from "lucide-react"
 import Link from "next/link"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 
 import {
   AlertDialog,
@@ -15,9 +15,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { gradeWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
 import {
   applyGradeBoundaryPresetMutation,
@@ -60,8 +61,7 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
     deleteAllGradeItemBoundariesMutation(gradeId)
   )
 
-  const [deletionTargetGradeItem, setDeletionTargetGradeItem] =
-    useState<GradeItemWithDataSources | null>(null)
+  const boundaryDeletion = useDialogTarget<GradeItemWithDataSources>()
 
   /**
    * 評価項目 id → 上書きされたが基準に無い評定。
@@ -113,7 +113,7 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
                     variant="ghost"
                     size="sm"
                     className="text-destructive"
-                    onClick={() => setDeletionTargetGradeItem(gradeItem)}
+                    onClick={() => boundaryDeletion.openWith(gradeItem)}
                   >
                     <Trash2 className="mr-1 h-3.5 w-3.5" />
                     境界設定を削除
@@ -152,15 +152,13 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
       </div>
 
       <AlertDialog
-        open={deletionTargetGradeItem !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeletionTargetGradeItem(null)
-        }}
+        open={boundaryDeletion.isOpen}
+        onOpenChange={boundaryDeletion.handleOpenChange}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              「{deletionTargetGradeItem?.name}
+              「{boundaryDeletion.target?.name}
               」の成績境界を削除しますか？
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -170,10 +168,10 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
           <AlertDialogFooter>
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
               onClick={() => {
-                if (deletionTargetGradeItem) {
-                  deleteAllBoundaries.mutate(deletionTargetGradeItem.id)
-                  setDeletionTargetGradeItem(null)
+                if (boundaryDeletion.target) {
+                  deleteAllBoundaries.mutate(boundaryDeletion.target.id)
                 }
               }}
             >

@@ -1,7 +1,12 @@
 "use client"
 
-import type { PreviewModeToggleProps } from "@/components/exams/06-student-answers/student-answer-table/types"
-import { Button } from "@/components/ui/button"
+import type {
+  PreviewMode,
+  PreviewModeToggleProps,
+} from "@/components/exams/06-student-answers/student-answer-table/types"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+
+const PREVIEW_MODES: PreviewMode[] = ["full", "name-only"]
 
 export function PreviewModeToggle({
   previewMode,
@@ -11,29 +16,34 @@ export function PreviewModeToggle({
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm text-gray-600">プレビュー:</span>
-      <div className="flex rounded-md border">
-        <Button
-          variant={previewMode === "full" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => {
-            onPreviewModeChange("full")
-          }}
-          className="rounded-r-none border-r"
+      <ToggleGroup
+        type="single"
+        variant="outline"
+        size="sm"
+        value={previewMode}
+        aria-label="プレビュー"
+        onValueChange={(value) => {
+          // 選択中をもう一度押すと空文字が来る。選択は外さない
+          const nextPreviewMode = PREVIEW_MODES.find(
+            (candidatePreviewMode) => candidatePreviewMode === value
+          )
+          if (nextPreviewMode) onPreviewModeChange(nextPreviewMode)
+        }}
+      >
+        <ToggleGroupItem
+          value="full"
+          className="px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
         >
           全体
-        </Button>
-        <Button
-          variant={previewMode === "name-only" ? "default" : "ghost"}
-          size="sm"
-          onClick={() => {
-            onPreviewModeChange("name-only")
-          }}
-          className="rounded-l-none"
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          value="name-only"
           disabled={!hasNameRegion}
+          className="px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
         >
           氏名欄のみ
-        </Button>
-      </div>
+        </ToggleGroupItem>
+      </ToggleGroup>
     </div>
   )
 }

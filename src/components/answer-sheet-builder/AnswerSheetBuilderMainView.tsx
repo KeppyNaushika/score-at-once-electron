@@ -11,6 +11,11 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { parsePreference } from "@/lib/userPreferences"
 import {
@@ -253,26 +258,36 @@ export function AnswerSheetBuilderMainView({
 
           {/* アクションバー */}
           <div className="flex gap-1 border-b p-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={undo}
-              disabled={!canUndo}
-              title="元に戻す (Ctrl+Z)"
-            >
-              <Undo2 className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={redo}
-              disabled={!canRedo}
-              title="やり直し (Ctrl+Shift+Z)"
-            >
-              <Redo2 className="h-3.5 w-3.5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="元に戻す (Ctrl+Z)"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={undo}
+                  disabled={!canUndo}
+                >
+                  <Undo2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>元に戻す (Ctrl+Z)</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="やり直し (Ctrl+Shift+Z)"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={redo}
+                  disabled={!canRedo}
+                >
+                  <Redo2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>やり直し (Ctrl+Shift+Z)</TooltipContent>
+            </Tooltip>
           </div>
 
           {/* タブ付きフォーム本体 */}

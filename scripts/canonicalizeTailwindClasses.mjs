@@ -52,9 +52,16 @@ async function resolveStylesheet(id, base) {
   // あるので require.resolve には頼らず node_modules を直接見る。
   const packageDirectory = path.join(projectRoot, "node_modules", packageName)
   const packageJsonPath = path.join(packageDirectory, "package.json")
-  if (subPath) return path.join(packageDirectory, subPath)
-
   const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf8"))
+  if (subPath) {
+    // shadcn/tailwind.css のように、サブパスを exports で別の置き場へ向けているものがある
+    const exportedSubPath = packageJson.exports?.[`./${subPath}`]
+    return path.join(
+      packageDirectory,
+      typeof exportedSubPath === "string" ? exportedSubPath : subPath
+    )
+  }
+
   const styleEntry =
     packageJson.style ?? packageJson.exports?.["."]?.style ?? packageJson.main
   return path.join(packageDirectory, styleEntry)

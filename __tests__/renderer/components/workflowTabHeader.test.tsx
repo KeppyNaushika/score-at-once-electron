@@ -42,6 +42,14 @@ import { examWorkflowTabs } from "@/lib/workflowTabs"
 // 取り込むと「いまどのページか」を差し替えられなくなる
 const navigation = vi.hoisted(() => ({ pathname: "/" }))
 
+// 共通セットアップを取り込まないので、Radix が要る分だけここで置く。「戻る」「一覧へ
+// 戻る」の Tooltip はクリックの前のホバーで開き、矢印の大きさを ResizeObserver で測る
+global.ResizeObserver = class implements ResizeObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+
 // 呼ばれたかを見たいので、毎回新しい関数を作らず1組を使い回す
 const router = vi.hoisted(() => ({
   push: vi.fn(),

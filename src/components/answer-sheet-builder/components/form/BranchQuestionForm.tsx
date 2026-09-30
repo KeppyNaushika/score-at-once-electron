@@ -4,6 +4,19 @@ import { ChevronDown, ChevronUp, Settings2, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 import type {
   AsbBranchQuestionAttributes,
   BranchQuestion,
@@ -59,6 +72,8 @@ export function BranchQuestionForm({
   )
 
   const goUpActive = branchQuestion.goUp != null
+  const goUpLabel =
+    maxGoUp < 1 ? "戻れる行がありません" : `N行上に戻して配置 (最大${maxGoUp})`
   const isGoUpInvalid =
     goUpActive &&
     (!Number.isInteger(branchQuestion.goUp) ||
@@ -69,22 +84,26 @@ export function BranchQuestionForm({
     <div className="ml-4 space-y-1 border-l-2 border-muted-foreground/20 py-1 pl-4">
       {/* 基本設定行 */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex h-7 items-center divide-x overflow-hidden rounded-md border text-xs">
-          <div className="flex items-center gap-0.5 px-1.5">
-            <span className="text-muted-foreground">番号</span>
-            <input
-              className="w-10 bg-transparent px-0.5 text-center outline-none focus:bg-accent/50"
+        <ButtonGroup>
+          <InputGroup className="h-7 w-auto has-focus-visible:z-10">
+            <InputGroupAddon className="py-0 pl-1.5 text-xs font-normal">
+              番号
+            </InputGroupAddon>
+            <InputGroupInput
+              className="h-full w-12 flex-none px-0.5 py-0 text-center text-xs md:text-xs"
               value={branchQuestion.label}
               onChange={(e) => onUpdate({ label: e.target.value })}
               placeholder=""
             />
-          </div>
+          </InputGroup>
           {showPoints && (
-            <div className="flex items-center gap-0.5 px-1.5">
-              <span className="text-muted-foreground">配点</span>
-              <input
+            <InputGroup className="h-7 w-auto has-focus-visible:z-10">
+              <InputGroupAddon className="py-0 pl-1.5 text-xs font-normal">
+                配点
+              </InputGroupAddon>
+              <InputGroupInput
                 type="number"
-                className="w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none focus:bg-accent/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="h-full w-11 flex-none [appearance:textfield] px-0.5 py-0 text-center text-xs md:text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 value={branchQuestion.points}
                 min={0}
                 max={100}
@@ -93,14 +112,16 @@ export function BranchQuestionForm({
                   e.target.value = String(Number(e.target.value))
                 }}
               />
-            </div>
+            </InputGroup>
           )}
-          <div className="flex items-center gap-0.5 px-1.5">
-            <span className="text-muted-foreground">{heightLabel}</span>
-            <input
+          <InputGroup className="h-7 w-auto has-focus-visible:z-10">
+            <InputGroupAddon className="py-0 pl-1.5 text-xs font-normal">
+              {heightLabel}
+            </InputGroupAddon>
+            <InputGroupInput
               type="number"
               aria-label={heightLabel}
-              className="w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none focus:bg-accent/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="h-full w-11 flex-none [appearance:textfield] px-0.5 py-0 text-center text-xs md:text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               value={branchQuestion.heightMultiplier}
               min={1}
               max={30}
@@ -112,13 +133,15 @@ export function BranchQuestionForm({
                 e.target.value = String(Number(e.target.value))
               }}
             />
-          </div>
+          </InputGroup>
           {/* 幅 (layoutWidth) */}
-          <div className="flex items-center gap-0.5 px-1.5">
-            <span className="text-muted-foreground">{widthLabel}</span>
-            <input
+          <InputGroup className="h-7 w-auto has-focus-visible:z-10">
+            <InputGroupAddon className="py-0 pl-1.5 text-xs font-normal">
+              {widthLabel}
+            </InputGroupAddon>
+            <InputGroupInput
               aria-label={widthLabel}
-              className="w-10 bg-transparent px-0.5 text-center outline-none focus:bg-accent/50"
+              className="h-full w-12 flex-none px-0.5 py-0 text-center text-xs md:text-xs"
               value={branchQuestion.layoutWidth ?? ""}
               onChange={(e) => {
                 const value = e.target.value.trim()
@@ -134,54 +157,74 @@ export function BranchQuestionForm({
               }}
               placeholder="—"
             />
-          </div>
-        </div>
+          </InputGroup>
+        </ButtonGroup>
         {/* 改行ボタン */}
         {branchQuestion.layoutWidth && (
-          <Button
-            variant="outline"
-            size="icon"
-            className={`h-7 w-7 text-xs ${branchQuestion.nextPlacement === "break" ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
-            onClick={() => {
-              if (branchQuestion.nextPlacement === "break") {
-                onUpdate({ nextPlacement: undefined })
-              } else {
-                onUpdate({ nextPlacement: "break" })
-              }
-            }}
-            title="改行"
-          >
-            ↵
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label="改行"
+                variant="outline"
+                size="icon"
+                className={`h-7 w-7 text-xs ${branchQuestion.nextPlacement === "break" ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
+                onClick={() => {
+                  if (branchQuestion.nextPlacement === "break") {
+                    onUpdate({ nextPlacement: undefined })
+                  } else {
+                    onUpdate({ nextPlacement: "break" })
+                  }
+                }}
+              >
+                ↵
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>改行</TooltipContent>
+          </Tooltip>
         )}
         {/* 戻るボタン（自分自身をN行上に配置） */}
         {branchQuestion.layoutWidth && (
-          <div className="inline-flex items-center gap-0">
-            <Button
-              variant="outline"
-              size="icon"
-              className={`h-7 w-7 text-xs ${goUpActive && branchQuestion.goUp! > 0 ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"} ${goUpActive ? "rounded-r-none" : ""}`}
-              onClick={() => {
-                if (goUpActive) {
-                  onUpdate({ goUp: undefined })
-                } else {
-                  onUpdate({ goUp: Math.min(1, maxGoUp) })
-                }
-              }}
-              disabled={!goUpActive && maxGoUp < 1}
-              title={
-                maxGoUp < 1
-                  ? "戻れる行がありません"
-                  : `N行上に戻して配置 (最大${maxGoUp})`
-              }
-            >
-              ↑
-            </Button>
+          <InputGroup
+            className={cn("h-7 w-auto", goUpActive && "border-primary/50")}
+          >
+            <InputGroupAddon className="py-0 pl-0 has-[>button]:ml-0">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <InputGroupButton
+                      aria-label={goUpLabel}
+                      size="icon-xs"
+                      className={cn(
+                        "size-6.5 text-xs",
+                        goUpActive && branchQuestion.goUp! > 0
+                          ? "bg-primary/10 text-primary hover:bg-primary/20"
+                          : "text-muted-foreground"
+                      )}
+                      onClick={() => {
+                        if (goUpActive) {
+                          onUpdate({ goUp: undefined })
+                        } else {
+                          onUpdate({ goUp: Math.min(1, maxGoUp) })
+                        }
+                      }}
+                      disabled={!goUpActive && maxGoUp < 1}
+                    >
+                      ↑
+                    </InputGroupButton>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{goUpLabel}</TooltipContent>
+              </Tooltip>
+            </InputGroupAddon>
             {goUpActive && (
-              <input
+              <InputGroupInput
                 type="number"
                 aria-label="戻り行数"
-                className={`h-7 w-8 [appearance:textfield] rounded-r-md border border-l-0 border-primary/50 px-0.5 text-center text-xs outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${isGoUpInvalid ? "bg-red-100 dark:bg-red-900/30" : "bg-transparent"}`}
+                aria-invalid={isGoUpInvalid}
+                className={cn(
+                  "h-full w-8 flex-none [appearance:textfield] px-0.5 py-0 text-center text-xs md:text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+                  isGoUpInvalid && "bg-red-100 dark:bg-red-900/30"
+                )}
                 value={branchQuestion.goUp || ""}
                 min={1}
                 max={maxGoUp}
@@ -215,54 +258,75 @@ export function BranchQuestionForm({
                 }}
               />
             )}
-          </div>
+          </InputGroup>
         )}
         <div className="ml-auto flex items-center gap-1.5">
-          <div className="inline-flex items-center rounded-md border">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-r-none text-muted-foreground"
-              onClick={onMoveUp}
-              disabled={!onMoveUp}
-              title="上へ移動"
-            >
-              <ChevronUp className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-l-none border-l text-muted-foreground"
-              onClick={onMoveDown}
-              disabled={!onMoveDown}
-              title="下へ移動"
-            >
-              <ChevronDown className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`relative h-7 w-7 ${hasVisibilityRestricted ? "text-orange-500" : detailOpen ? "text-primary" : "text-muted-foreground"}`}
-            onClick={() => setDetailOpen(!detailOpen)}
-            title="詳細設定"
-          >
-            <Settings2 className="h-3.5 w-3.5" />
-            {hasDetailContent && (
-              <span
-                className={`absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ${hasVisibilityRestricted ? "bg-orange-500" : "bg-primary"}`}
-              />
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={() => actions.deleteBranchQuestion(branchQuestion.id)}
-            title="枝問を削除"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          <ButtonGroup className="rounded-md border">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="上へ移動"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground"
+                  onClick={onMoveUp}
+                  disabled={!onMoveUp}
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>上へ移動</TooltipContent>
+            </Tooltip>
+            <ButtonGroupSeparator />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  aria-label="下へ移動"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground"
+                  onClick={onMoveDown}
+                  disabled={!onMoveDown}
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>下へ移動</TooltipContent>
+            </Tooltip>
+          </ButtonGroup>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label="詳細設定"
+                variant="ghost"
+                size="icon"
+                className={`relative h-7 w-7 ${hasVisibilityRestricted ? "text-orange-500" : detailOpen ? "text-primary" : "text-muted-foreground"}`}
+                onClick={() => setDetailOpen(!detailOpen)}
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+                {hasDetailContent && (
+                  <span
+                    className={`absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full ${hasVisibilityRestricted ? "bg-orange-500" : "bg-primary"}`}
+                  />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>詳細設定</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                aria-label="枝問を削除"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                onClick={() => actions.deleteBranchQuestion(branchQuestion.id)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>枝問を削除</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
