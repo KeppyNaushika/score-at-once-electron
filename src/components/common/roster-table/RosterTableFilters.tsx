@@ -56,7 +56,7 @@ export function RosterTableFilters({
         value={selectedClassroomId}
         onValueChange={onClassroomChange}
         placeholder="学級フィルタ"
-        searchPlaceholder="学級名・学年・学級コードで検索"
+        searchPlaceholder="学級を検索"
         emptyText="該当する学級がありません"
         aria-label="学級で絞り込む"
         className="w-40"

@@ -163,7 +163,7 @@ describe("個別採点の受験者の切り替え", () => {
     await renderPanel()
 
     await user.click(screen.getByRole("combobox"))
-    const searchInput = screen.getByPlaceholderText("氏名・番号で検索")
+    const searchInput = screen.getByPlaceholderText("氏名・番号・カナで検索")
     expect(searchInput).toHaveFocus()
 
     // e（正解）も f（部分点。入力欄の中でも評価へ進むキー）も、文字として入るだけ

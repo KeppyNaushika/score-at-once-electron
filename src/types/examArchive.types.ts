@@ -2,6 +2,8 @@
  * 試験インポート/エクスポート機能の型定義
  */
 
+import type { PublicUser } from "@/electron-src/lib/prisma/publicUser"
+
 import type { ImportAction } from "./importAction.types"
 
 // =============================================================================
@@ -250,6 +252,24 @@ export interface PreMatchingResult {
 }
 
 /**
+ * 採点者（利用者）の事前照合結果。
+ *
+ * 「既存の利用者に結ぶ」を選び直すための一覧は、`ExistingItemInfo`（id と表示名だけの
+ * 汎用の形）ではなく**利用者の行そのもの**で渡す。表示名（名前と利用者名の組み合わせ）も
+ * 検索の手掛かりも renderer が行から作る。main で文字列に畳むと、利用者名で探す手掛かりが
+ * 失われるため。
+ *
+ * 行は `PublicUser`（passcode を落とした形）。ハッシュは境界を越えない。
+ */
+export interface UserPreMatchingResult extends Omit<
+  PreMatchingResult,
+  "allExistingItems"
+> {
+  /** このPCの利用者全員（手動で結び直す選択肢） */
+  allExistingUsers: PublicUser[]
+}
+
+/**
  * 既存アイテムの概要情報（手動紐づけ用）
  */
 export interface ExistingItemInfo {
@@ -347,7 +367,7 @@ export interface FileOverviewData {
    *
    * 生徒アーカイブの取り込みには採点が無いので省略される。
    */
-  user?: PreMatchingResult
+  user?: UserPreMatchingResult
   /** 試験の照合結果（ID一致 = 同じPCでマージ可能） */
   exam?: ExamPreMatchingResult
   /** 採点結果の競合（Step 3.5 表示用、試験ID一致時のみ） */

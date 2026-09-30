@@ -73,7 +73,7 @@ export function StudentAnswerPanel({
           value={currentExamStudentId}
           onValueChange={onStudentChange}
           placeholder="生徒を選択"
-          searchPlaceholder="氏名・番号で検索"
+          searchPlaceholder="氏名・番号・カナで検索"
           emptyText="該当する生徒がいません"
           className="min-w-0 flex-1"
         />
