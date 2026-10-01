@@ -177,7 +177,7 @@ describe("useDrawingAnnotations", () => {
       expect("userId" in annotation).toBe(false)
     })
 
-    it("API失敗時にnullを返す", async () => {
+    it("API失敗時は失敗を投げる（握りつぶすと呼び出し側が元へ戻せない）", async () => {
       mockAPI.create.mockRejectedValue(new Error("作成失敗"))
 
       const { result } = renderHook(() => useDrawingAnnotations(), {
@@ -185,11 +185,9 @@ describe("useDrawingAnnotations", () => {
       })
 
       await act(async () => {
-        const saved = await result.current.saveElement(
-          MOCK_ANNOTATION_TARGET,
-          makeElement()
-        )
-        expect(saved).toBeNull()
+        await expect(
+          result.current.saveElement(MOCK_ANNOTATION_TARGET, makeElement())
+        ).rejects.toThrow("作成失敗")
       })
 
       expect(mockAPI.create).toHaveBeenCalledTimes(1)
@@ -244,14 +242,13 @@ describe("useDrawingAnnotations", () => {
   // 4. deleteElement — アノテーション削除
   // =========================================================================
   describe("deleteElement（アノテーション削除）", () => {
-    it("削除に成功するとtrueを返し対象IDでAPIを呼ぶ", async () => {
+    it("対象IDでAPIを呼ぶ", async () => {
       const { result } = renderHook(() => useDrawingAnnotations(), {
         wrapper: createQueryWrapper(),
       })
 
       await act(async () => {
-        const deleted = await result.current.deleteElement("a1")
-        expect(deleted).toBe(true)
+        await result.current.deleteElement("a1")
       })
 
       expect(mockAPI.delete).toHaveBeenCalledWith("a1")

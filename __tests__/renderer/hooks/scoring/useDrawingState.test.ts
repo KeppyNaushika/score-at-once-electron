@@ -26,6 +26,7 @@
  *
  * [全クリア]
  *   - clearDrawing → drawingElements空 + DB同期
+ *   - clearDrawing失敗 → 消す前の要素へ戻す
  *
  * [明示的DB再読み込み]
  *   - loadFromDatabase → 設問のアノテーションを再取得
@@ -242,9 +243,9 @@ describe("useDrawingState", () => {
       })
     })
 
-    it("DB保存失敗時もオプティミスティック更新は残る（useDrawingAnnotationsがエラーを吸収）", async () => {
-      // 注: useDrawingAnnotations.saveElementが内部でtry-catchしnullを返すため、
-      // useDrawingStateのcatch節に到達せずロールバックが発動しない
+    it("DB保存に失敗したら追加を取り消す", async () => {
+      // 失敗が useDrawingAnnotations で値に変わると戻す側へ届かず、保存されていない
+      // 線がキャンバスに残っていた
       mockAPI.getByTarget.mockResolvedValue([])
       mockAPI.create.mockRejectedValue(new Error("保存失敗"))
 
@@ -263,12 +264,11 @@ describe("useDrawingState", () => {
         await result.current.addDrawingElement(makeElement({ id: "fail-1" }))
       })
 
-      // DB保存は失敗するが、ローカル状態は残る（エラーがuseDrawingAnnotations内で吸収されるため）
       expect(
         result.current.drawingElements.find(
           (element) => element.id === "fail-1"
         )
-      ).toBeDefined()
+      ).toBeUndefined()
     })
 
     it("行き先が決まっていない場合は追加を拒否する", async () => {
@@ -328,9 +328,7 @@ describe("useDrawingState", () => {
       expect(result.current.drawingElements[0].x).toBe(0.9)
     })
 
-    it("DB更新失敗時もオプティミスティック更新は残る", async () => {
-      // 注: useDrawingAnnotations.updateElementが内部でtry-catchしnullを返すため、
-      // useDrawingStateのcatch節に到達せずロールバックが発動しない
+    it("DB更新に失敗したら更新前に戻す", async () => {
       mockAPI.getByTarget.mockResolvedValue([
         createMockAnnotation({ id: "a1", x: 0.1 }),
       ])
@@ -349,8 +347,7 @@ describe("useDrawingState", () => {
         await result.current.updateDrawingElement("a1", { x: 0.9 })
       })
 
-      // DB更新失敗してもローカル状態は更新されたまま（エラーが吸収されるため）
-      expect(result.current.drawingElements[0].x).toBe(0.9)
+      expect(result.current.drawingElements[0].x).toBe(0.1)
     })
 
     it("同じティックで続けて動かしても、最後の位置がDBへ渡る", async () => {
@@ -542,7 +539,7 @@ describe("useDrawingState", () => {
       expect(result.current.selectedElementIds).not.toContain("a1")
     })
 
-    it("DB削除失敗時もオプティミスティック削除は残る", async () => {
+    it("DB削除に失敗したら削除を取り消す", async () => {
       mockAPI.getByTarget.mockResolvedValue([
         createMockAnnotation({ id: "a1" }),
       ])
@@ -561,8 +558,8 @@ describe("useDrawingState", () => {
         await result.current.removeDrawingElement("a1")
       })
 
-      // DB削除失敗してもローカルからは削除されたまま
-      expect(result.current.drawingElements).toHaveLength(0)
+      expect(result.current.drawingElements).toHaveLength(1)
+      expect(result.current.drawingElements[0].id).toBe("a1")
     })
   })
 
@@ -592,6 +589,31 @@ describe("useDrawingState", () => {
 
       expect(result.current.drawingElements).toHaveLength(0)
       expect(result.current.selectedElementIds).toHaveLength(0)
+    })
+
+    it("DBの全消去に失敗したら消す前の要素へ戻す", async () => {
+      mockAPI.getByTarget.mockResolvedValue([
+        createMockAnnotation({ id: "a1" }),
+        createMockAnnotation({ id: "a2" }),
+      ])
+      mockAPI.deleteByTarget.mockRejectedValue(new Error("削除失敗"))
+
+      const { result } = renderHook(
+        () => useDrawingState(MOCK_ANNOTATION_TARGET, true),
+        {
+          wrapper: createQueryWrapper(),
+        }
+      )
+
+      await waitForDrawingElements(result, 2)
+
+      await act(async () => {
+        await result.current.clearDrawing()
+      })
+
+      expect(
+        result.current.drawingElements.map((element) => element.id)
+      ).toEqual(["a1", "a2"])
     })
   })
 

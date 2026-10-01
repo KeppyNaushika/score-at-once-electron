@@ -507,6 +507,30 @@ function ScoringMainViewContent() {
     [guardScoring, handlePartialScoreInputUnguarded]
   )
 
+  /**
+   * 答案を採点し、「いま採点した」印も付ける（クリック・ブラシ・表示中の一括）。
+   *
+   * 印付けまでを1つにして包む。採点だけを包むと、ロック中に断った採点にも
+   * 印が付き、採点していない答案が採点済みの並びへ寄せられる
+   */
+  const scoreAnswers = useMemo(
+    () =>
+      guardScoring(
+        (
+          status: Parameters<typeof handleBatchScoreUnguarded>[0],
+          answerIds: string[]
+        ) => {
+          handleBatchScoreUnguarded(status, null, null, new Set(answerIds))
+          setRecentlyScoredAnswers((prev) => {
+            const newSet = new Set(prev)
+            answerIds.forEach((answerId) => newSet.add(answerId))
+            return newSet
+          })
+        }
+      ),
+    [guardScoring, handleBatchScoreUnguarded, setRecentlyScoredAnswers]
+  )
+
   /** クリック採点：デバウンス後にクリック回数に応じたアクションを実行 */
   const handleClickScoring = useCallback(
     (answerId: string, clickCount: number) => {
@@ -527,21 +551,14 @@ function ScoringMainViewContent() {
       }
 
       // 採点ステータスを直接適用
-      const targetSet = new Set([answerId])
-      handleBatchScore(action, null, null, targetSet)
-      setRecentlyScoredAnswers((prev) => {
-        const newSet = new Set(prev)
-        newSet.add(answerId)
-        return newSet
-      })
+      scoreAnswers(action, [answerId])
     },
     [
       clickScoringConfig,
       replaceSelection,
       setGradingMode,
       openPartialScoreModal,
-      handleBatchScore,
-      setRecentlyScoredAnswers,
+      scoreAnswers,
     ]
   )
 
@@ -569,32 +586,14 @@ function ScoringMainViewContent() {
           (scoringData) => scoringData.id === answerId
         )
         if (currentData?.status === status) {
-          const targetSet = new Set([answerId])
-          handleBatchScore("unscored", null, null, targetSet)
-          setRecentlyScoredAnswers((prev) => {
-            const newSet = new Set(prev)
-            newSet.add(answerId)
-            return newSet
-          })
+          scoreAnswers("unscored", [answerId])
           return
         }
       }
 
-      const targetSet = new Set([answerId])
-      handleBatchScore(status, null, null, targetSet)
-      setRecentlyScoredAnswers((prev) => {
-        const newSet = new Set(prev)
-        newSet.add(answerId)
-        return newSet
-      })
+      scoreAnswers(status, [answerId])
     },
-    [
-      allScoringData,
-      handleBatchScore,
-      setRecentlyScoredAnswers,
-      replaceSelection,
-      openPartialScoreModal,
-    ]
+    [allScoringData, scoreAnswers, replaceSelection, openPartialScoreModal]
   )
 
   /** マウスモード: 表示中の未採点を一括採点 */
@@ -606,22 +605,12 @@ function ScoringMainViewContent() {
           filteredScoringDataIds.includes(scoringData.id)
       )
       if (unscoredVisible.length === 0) return
-      const targetSet = new Set(
+      scoreAnswers(
+        status,
         unscoredVisible.map((scoringData) => scoringData.id)
       )
-      handleBatchScore(status, null, null, targetSet)
-      setRecentlyScoredAnswers((prev) => {
-        const newSet = new Set(prev)
-        unscoredVisible.forEach((scoringData) => newSet.add(scoringData.id))
-        return newSet
-      })
     },
-    [
-      allScoringData,
-      filteredScoringDataIds,
-      handleBatchScore,
-      setRecentlyScoredAnswers,
-    ]
+    [allScoringData, filteredScoringDataIds, scoreAnswers]
   )
 
   /** 表示中の未採点件数 */

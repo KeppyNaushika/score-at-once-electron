@@ -49,11 +49,9 @@ interface UseDrawingAnnotationsReturn {
   saveElement: (
     target: AnnotationTarget,
     element: DrawingAnnotation
-  ) => Promise<DrawingAnnotation | null>
-  updateElement: (
-    element: DrawingAnnotation
-  ) => Promise<DrawingAnnotation | null>
-  deleteElement: (elementId: string) => Promise<boolean>
+  ) => Promise<DrawingAnnotation>
+  updateElement: (element: DrawingAnnotation) => Promise<DrawingAnnotation>
+  deleteElement: (elementId: string) => Promise<void>
 
   // バッチ操作
   syncElements: (
@@ -67,6 +65,10 @@ interface UseDrawingAnnotationsReturn {
  *
  * 描いている最中の要素はキャンバス側の state が持つ（`useDrawingState`）。
  * ここは**ストロークが終わった時点の1回**を DB へ渡すだけを担う。
+ *
+ * **書き込みの失敗は握りつぶさずに投げる。** キャンバスは先に描き変えてから保存し、
+ * 失敗したら元へ戻す（`useDrawingState`）。ここで失敗を値に変えると戻す側へ届かず、
+ * 保存されていない線が残る。失敗の通知（トースト）は MutationCache の後始末が出す。
  */
 export function useDrawingAnnotations(
   callbacks?: DrawingPersistenceCallbacks
@@ -152,16 +154,11 @@ export function useDrawingAnnotations(
     async (
       target: AnnotationTarget,
       element: DrawingAnnotation
-    ): Promise<DrawingAnnotation | null> => {
-      try {
-        // 採点者は行き先が持つ。注釈の持ち主は親 QuestionScore から決まる
-        const created = await createOne({ target, annotation: element })
-        callbacksRef.current.onAnnotationCreated?.(created)
-        return created
-      } catch {
-        // 失敗の通知は MutationCache の後始末が出す
-        return null
-      }
+    ): Promise<DrawingAnnotation> => {
+      // 採点者は行き先が持つ。注釈の持ち主は親 QuestionScore から決まる
+      const created = await createOne({ target, annotation: element })
+      callbacksRef.current.onAnnotationCreated?.(created)
+      return created
     },
     [createOne]
   )
@@ -170,15 +167,11 @@ export function useDrawingAnnotations(
    * 描画要素更新
    */
   const updateElement = useCallback(
-    async (element: DrawingAnnotation): Promise<DrawingAnnotation | null> => {
-      try {
-        // 行をそのまま送り返す。列を選んで詰め替えないので、列を足しても永続化から漏れない
-        const updated = await updateOne(element)
-        callbacksRef.current.onAnnotationUpdated?.(updated)
-        return updated
-      } catch {
-        return null
-      }
+    async (element: DrawingAnnotation): Promise<DrawingAnnotation> => {
+      // 行をそのまま送り返す。列を選んで詰め替えないので、列を足しても永続化から漏れない
+      const updated = await updateOne(element)
+      callbacksRef.current.onAnnotationUpdated?.(updated)
+      return updated
     },
     [updateOne]
   )
@@ -187,14 +180,9 @@ export function useDrawingAnnotations(
    * 描画要素削除
    */
   const deleteElement = useCallback(
-    async (elementId: string): Promise<boolean> => {
-      try {
-        await deleteOne(elementId)
-        callbacksRef.current.onAnnotationDeleted?.(elementId)
-        return true
-      } catch {
-        return false
-      }
+    async (elementId: string): Promise<void> => {
+      await deleteOne(elementId)
+      callbacksRef.current.onAnnotationDeleted?.(elementId)
     },
     [deleteOne]
   )
@@ -210,16 +198,12 @@ export function useDrawingAnnotations(
       elements: DrawingAnnotation[],
       target: AnnotationTarget
     ): Promise<DrawingAnnotation[]> => {
-      try {
-        // 消すのと作るのは**1つの書き込み**（`replace…`）。別々に積むと、
-        // 消す方が失敗しても作る方が走って注釈が二重に載る
-        return await replaceAnnotations({
-          target,
-          annotations: elements,
-        })
-      } catch {
-        return []
-      }
+      // 消すのと作るのは**1つの書き込み**（`replace…`）。別々に積むと、
+      // 消す方が失敗しても作る方が走って注釈が二重に載る
+      return await replaceAnnotations({
+        target,
+        annotations: elements,
+      })
     },
     [replaceAnnotations]
   )
