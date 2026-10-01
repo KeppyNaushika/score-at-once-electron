@@ -24,7 +24,6 @@ import {
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useSlidingValue } from "@/hooks/useSlidingValue"
 import {
-  DEFAULT_SCORING_STATUS_COLORS,
   SCORING_COLOR_PRESETS,
   SCORING_STATUS_LABELS,
   SCORING_STATUS_ORDER,
@@ -102,12 +101,11 @@ export function DisplaySettingsTab() {
     setClickScoringDebounceMs
   )
 
-  // 採点状態色も採点画面と同じキャッシュから読む。**状態ごとに1行**なので、
-  // 1色変えても他の色を書き戻さない
-  const { data: scoringColors = DEFAULT_SCORING_STATUS_COLORS } = useQuery({
-    ...userScoringStatusColorsQuery(userId),
-    select: toScoringStatusColors,
-  })
+  // 採点状態色も採点画面と同じキャッシュから読む。土台のプリセットに、個別に上書きした
+  // 色（**状態ごとに1行**）を重ねる。1色変えても他の色は書き戻さない
+  const { data: colorOverrides } = useQuery(
+    userScoringStatusColorsQuery(userId)
+  )
   const { mutate: setStatusColor } = useMutation(
     setUserScoringStatusColorMutation(userId)
   )
@@ -120,6 +118,10 @@ export function DisplaySettingsTab() {
   const currentPresetId = parsePreference(
     "scoringColorPresetId",
     storedPresetId ?? null
+  )
+  const scoringColors = toScoringStatusColors(
+    colorOverrides ?? [],
+    currentPresetId
   )
 
   // 選択枠色の変更。途中の色を持つのは ColorPicker の側で、ここへは確定した色だけ来る
@@ -144,28 +146,18 @@ export function DisplaySettingsTab() {
   /**
    * プリセット選択。
    *
-   * どの色になるかを決めるのは画面（プリセットの定義はここにある）で、DB へ渡すのは
-   * その結果。**プリセットidと色は同時に決まる**ので、書き込みは1つにまとめてある。
+   * DB へ渡すのは**プリセットの id だけ**（色の定義はこの画面が持ち、表示のたびに引く）。
+   * 選ぶのはまとまりなので、個別の上書きは DB 側で捨てられる。
    */
   const handlePresetSelect = useCallback(
     (presetId: string) => {
-      const preset = SCORING_COLOR_PRESETS.find(
-        (candidate) => candidate.id === presetId
-      )
-      if (!preset) return
-      applyColorPreset({
-        presetId,
-        colors: SCORING_STATUS_ORDER.map((status) => ({
-          status,
-          ...toStatusColorValues(preset.colors[status]),
-        })),
-      })
+      applyColorPreset({ presetId })
       toast.success("カラープリセットが適用されました")
     },
     [applyColorPreset]
   )
 
-  // 個別の色変更。触るのはその状態の行1つだけ（1色でも触ればプリセットからは外れる）
+  // 個別の色変更。触るのはその状態の行1つだけ（土台のプリセットはそのまま）
   const handleStatusColorChange = useCallback(
     (status: ScoringStatus, type: "bg" | "text" | "icon", color: string) => {
       setStatusColor({
@@ -331,7 +323,15 @@ export function DisplaySettingsTab() {
 
         {/* プリセット選択 */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium">プリセット</Label>
+          <Label className="text-sm font-medium">
+            プリセット
+            {/* 土台のプリセットは、個別に色を変えても選ばれたまま */}
+            {(colorOverrides?.length ?? 0) > 0 && (
+              <span className="ml-2 font-normal text-muted-foreground">
+                （一部の状態は個別に変更済み）
+              </span>
+            )}
+          </Label>
           <div className="flex flex-wrap gap-2">
             {SCORING_COLOR_PRESETS.map((preset) => (
               <Tooltip key={preset.id}>

@@ -28,20 +28,17 @@ import {
   listUserClickScoringActions,
   setUserClickScoringAction,
 } from "../lib/prisma/userClickScoringAction"
-import type {
-  UserScoringStatusColorEntry,
-  UserScoringStatusColorValues,
-} from "../lib/prisma/userScoringStatusColor"
+import type { UserScoringStatusColorValues } from "../lib/prisma/userScoringStatusColor"
 import {
   applyUserScoringColorPreset,
   listUserScoringStatusColors,
   setUserScoringStatusColor,
 } from "../lib/prisma/userScoringStatusColor"
 import {
-  bulkUpsertUserKeyboardShortcuts,
   getUserKeyboardShortcuts,
   getUserPreference,
   resetUserKeyboardShortcuts,
+  setUserKeyboardShortcut,
   setUserPreference,
 } from "../lib/prisma/userSettings"
 import {
@@ -102,13 +99,17 @@ export const settingsHandlers = {
   "settings:getUserKeyboardShortcuts": (userId: string) =>
     getUserKeyboardShortcuts(userId),
 
-  // 書き込み系は件数を返さない。呼び出し側が使っておらず、返すと契約に
+  // 書き込みは**割り当て1つにつき1回**。まとめて送ると触っていない行の updatedAt も
+  // 進み、同期で行ごとの勝ち負けが組ごとの勝ち負けに退化する。
+  //
+  // 書き込み系は結果を返さない。呼び出し側が使っておらず、返すと契約に
   // 意味の無い型が乗る
-  "settings:saveUserKeyboardShortcuts": async (
+  "settings:setUserKeyboardShortcut": async (
     userId: string,
-    shortcuts: Record<string, string>
+    action: string,
+    key: string
   ) => {
-    await bulkUpsertUserKeyboardShortcuts(userId, shortcuts)
+    await setUserKeyboardShortcut(userId, action, key)
   },
 
   "settings:resetUserKeyboardShortcuts": async (userId: string) => {
@@ -149,11 +150,9 @@ export const settingsHandlers = {
     colors: UserScoringStatusColorValues
   ) => setUserScoringStatusColor(userId, status, colors),
 
-  "settings:applyUserScoringColorPreset": (
-    userId: string,
-    presetId: string,
-    colors: UserScoringStatusColorEntry[]
-  ) => applyUserScoringColorPreset(userId, presetId, colors),
+  // プリセットは**土台の id だけ**を預かる。色の中身は画面側が持つ
+  "settings:applyUserScoringColorPreset": (userId: string, presetId: string) =>
+    applyUserScoringColorPreset(userId, presetId),
 
   "settings:listUserClickScoringActions": (userId: string) =>
     listUserClickScoringActions(userId),

@@ -148,7 +148,7 @@ beforeEach(() => {
     value: {
       settings: {
         getUserKeyboardShortcuts: vi.fn().mockResolvedValue({}),
-        saveUserKeyboardShortcuts: vi.fn().mockResolvedValue(undefined),
+        setUserKeyboardShortcut: vi.fn().mockResolvedValue(undefined),
         resetUserKeyboardShortcuts: vi.fn().mockResolvedValue(undefined),
       },
     },

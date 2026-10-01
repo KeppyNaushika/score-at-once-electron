@@ -27,7 +27,6 @@ import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import {
   keyboardShortcutsQuery,
   resetKeyboardShortcutsMutation,
-  saveKeyboardShortcutsMutation,
 } from "@/queries/settings"
 
 import { resolveKeyBindings } from "../../constants/scoringKeybindings"
@@ -139,9 +138,6 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
   // キーバインディングは設定画面と同じキャッシュを共有する
   // （設定画面で変えたら、開いている採点画面もそのまま追随する）
   const { data: storedKeyBindings } = useQuery(keyboardShortcutsQuery(userId))
-  const saveKeyboardShortcuts = useMutation(
-    saveKeyboardShortcutsMutation(userId)
-  )
   const resetKeyboardShortcuts = useMutation(
     resetKeyboardShortcutsMutation(userId)
   )
@@ -210,14 +206,6 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
   // ============================================
   // キーバインディングの管理
   // ============================================
-
-  const updateKeyBinding = useCallback(
-    (commandId: string, key: string) => {
-      if (!userId) return
-      saveKeyboardShortcuts.mutate({ ...keyBindings, [commandId]: key })
-    },
-    [keyBindings, saveKeyboardShortcuts, userId]
-  )
 
   const resetKeyBindings = useCallback(() => {
     if (!userId) return
@@ -387,7 +375,6 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
     registerCommand,
     unregisterCommand,
     keyBindings,
-    updateKeyBinding,
     resetKeyBindings,
     getAllCommands,
   }

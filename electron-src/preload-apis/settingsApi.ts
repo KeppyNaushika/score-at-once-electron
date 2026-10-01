@@ -13,7 +13,7 @@ export function createSettingsApi() {
 
       // UserKeyboardShortcut
       getUserKeyboardShortcuts: bind("settings:getUserKeyboardShortcuts"),
-      saveUserKeyboardShortcuts: bind("settings:saveUserKeyboardShortcuts"),
+      setUserKeyboardShortcut: bind("settings:setUserKeyboardShortcut"),
       resetUserKeyboardShortcuts: bind("settings:resetUserKeyboardShortcuts"),
 
       // AppPreference（KV方式・DB を共有する全員で同じ値）
