@@ -50,7 +50,7 @@ export function SyncFoldNotifier() {
 function showFoldToasts(report: SyncRecordFoldReport): void {
   if (report.folds.length > 0) {
     toast.warning(`${BETA_ORIGIN_PREFIX}重複していたデータの片方を隠しました`, {
-      description: `${breakdownByTable(report.folds)}\n他のPCと同じものが二重にできていたため、片方だけを表示しています。隠した方も消してはいないので、名前を変えるなどして重なりが解ければ自動で表示に戻ります。詳しくは監査ログに残しています。`,
+      description: `${breakdownByTable(report.folds)}\n他のPCと同じものが二重にできていたため、片方だけを表示しています。隠した方にぶら下がっていたものは、表示している方にまとめて表示されます。隠した方も消してはいないので、名前を変えるなどして重なりが解ければ自動で表示に戻ります。詳しくは監査ログに残しています。`,
       duration: Infinity,
       closeButton: true,
     })
