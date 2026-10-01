@@ -19,9 +19,9 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useKeyboardSettings } from "@/app/(app)/settings/hooks/useKeyboardSettings"
-// 押す側（`ShortcutProvider` の keydown）が突き合わせに使っている当のもの
-import { normalizeKey } from "@/components/exams/07-score-at-once/ScoringMain/utils/normalizeKey"
 import { CurrentUserProvider } from "@/contexts/CurrentUserContext"
+// 押す側（`ShortcutProvider` の keydown）が突き合わせに使っている当のもの
+import { normalizeKey } from "@/lib/normalizeKey"
 import type { PublicUser } from "@/queries/user"
 
 import { createQueryWrapper } from "../helpers/queryWrapper"

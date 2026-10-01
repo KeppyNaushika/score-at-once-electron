@@ -2,10 +2,6 @@
 
 import { Keyboard } from "lucide-react"
 
-import {
-  formatKeyForDisplay,
-  getShortcutLabel,
-} from "@/components/exams/07-score-at-once/constants/shortcutCatalog"
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import { KEYBOARD_HELP_SECTIONS } from "@/components/exams/07-score-at-once/ScoringMain/constants/keyboardShortcuts"
 import { Button } from "@/components/ui/button"
@@ -17,6 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { formatKeyForDisplay, getShortcutLabel } from "@/lib/shortcutCatalog"
 
 interface KeyboardHelpDialogProps {
   showKeyboardHelp: boolean

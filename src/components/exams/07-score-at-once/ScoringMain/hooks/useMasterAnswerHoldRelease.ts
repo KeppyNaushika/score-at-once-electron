@@ -22,9 +22,10 @@
 
 import { useEffect, useEffectEvent } from "react"
 
+import { baseKeyOfBinding, baseKeyOfEvent } from "@/lib/normalizeKey"
+
 import type { GradingMode, MasterAnswerKeyBehavior } from "../../types"
 import { useShortcutContext } from "../contexts/ShortcutProvider"
-import { baseKeyOfBinding, baseKeyOfEvent } from "../utils/normalizeKey"
 
 interface UseMasterAnswerHoldReleaseProps {
   /** 「押している間だけ」以外では購読しない */

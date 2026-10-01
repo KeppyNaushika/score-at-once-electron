@@ -24,19 +24,18 @@ import {
 } from "react"
 
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import { normalizeKey } from "@/lib/normalizeKey"
+import { resolveKeyBindings } from "@/lib/scoringKeybindings"
 import {
   keyboardShortcutsQuery,
   resetKeyboardShortcutsMutation,
 } from "@/queries/settings"
 
-import { resolveKeyBindings } from "../../constants/scoringKeybindings"
 import type {
   CommandHandler,
-  KeyBinding,
   ScoringContextState,
   ShortcutContextValue,
 } from "../../types"
-import { normalizeKey } from "../utils/normalizeKey"
 
 // ============================================
 // コンテキスト作成
@@ -141,7 +140,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
   const resetKeyboardShortcuts = useMutation(
     resetKeyboardShortcutsMutation(userId)
   )
-  const keyBindings: KeyBinding = useMemo(
+  const keyBindings = useMemo(
     () => resolveKeyBindings(storedKeyBindings),
     [storedKeyBindings]
   )

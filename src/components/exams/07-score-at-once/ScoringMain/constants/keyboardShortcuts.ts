@@ -1,4 +1,4 @@
-import { SHORTCUT_CATEGORIES } from "../../constants/shortcutCatalog"
+import { SHORTCUT_CATEGORIES } from "@/lib/shortcutCatalog"
 
 /**
  * 採点画面の「キーボード」一覧に出す項目。

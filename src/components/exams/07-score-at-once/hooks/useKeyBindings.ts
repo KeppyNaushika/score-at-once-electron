@@ -3,8 +3,9 @@
  * 採点画面でキーバインディングを取得するために使用
  */
 
+import type { KeyBinding } from "@/types/keyBinding.types"
+
 import { useShortcutContext } from "../ScoringMain/contexts/ShortcutProvider"
-import type { KeyBinding } from "../types"
 
 /**
  * キーバインディング管理の結果
