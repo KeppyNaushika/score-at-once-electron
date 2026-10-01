@@ -137,7 +137,10 @@ export const updateStudent = async (
  *
  * 成績算出の名簿（GradeStudent）に載っている生徒は消さずに断る。消すと名簿の行が
  * Cascade で消え、その生徒の手動点数・上書き・確定値も黙って失われるため。確認画面も
- * 同じ仕組みで前もって見せるが、最終判定は削除と同じトランザクションの中で行う。
+ * 同じ仕組みで前もって見せるが、最終判定は消す直前にここで行う。
+ *
+ * 判定と削除はトランザクションで包まない。DB は端末ごとにあり、他の教員が名簿へ
+ * 加えた行は同期で後から届くので、包んでも防げるのは同じ端末の割り込みだけになる。
  */
 export const deleteStudent = async (id: string): Promise<void> => {
   try {
@@ -145,14 +148,12 @@ export const deleteStudent = async (id: string): Promise<void> => {
       where: { id },
     })
 
-    await prisma.$transaction(async (tx) => {
-      const blockedMessage = buildDeletionBlockedMessage(
-        "student",
-        await findGradeReferences({ kind: "student", id }, tx)
-      )
-      if (blockedMessage !== null) throw new Error(blockedMessage)
-      await tx.student.delete({ where: { id } })
-    })
+    const blockedMessage = buildDeletionBlockedMessage(
+      "student",
+      await findGradeReferences({ kind: "student", id })
+    )
+    if (blockedMessage !== null) throw new Error(blockedMessage)
+    await prisma.student.delete({ where: { id } })
 
     await recordAuditLog({
       action: "student.delete",
