@@ -81,6 +81,16 @@ const SYNC_TABLE_LABELS: Record<string, string> = {
   AsbMajorQuestion: "解答用紙の大問",
   AsbSubQuestion: "解答用紙の小問",
   AsbBranchQuestion: "解答用紙の枝問",
+
+  // 設定（利用者ごと／全員で共通）。**テーブル名の直訳ではなく画面で見る言葉で呼ぶ。**
+  // 設定を同期に載せると初回は数十行がまとまって届くので、ここが抜けていると
+  // 「UserPreference 20件」のような英語のテーブル名がそのままトーストに出る
+  UserPreference: "自分の設定",
+  UserKeyboardShortcut: "ショートカットキー",
+  UserScoringStatusColor: "採点状態の表示色",
+  UserClickScoringAction: "クリック採点の設定",
+  UserSidePanelSection: "パネルの開閉",
+  AppPreference: "全員で共通の設定",
 }
 
 /** テーブル名を日本語の呼び名にする。知らない表はテーブル名をそのまま返す */

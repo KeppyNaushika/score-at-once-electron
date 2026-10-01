@@ -240,6 +240,40 @@ describe("LocalPreferenceHandover", () => {
     expect(setUserPreference).not.toHaveBeenCalled()
   })
 
+  it("DB に値があれば写さない（鍵だけ消す）", async () => {
+    const userId = nextUserId()
+    // 他の端末で設定し直した値が、同期で先に届いている状況
+    seedPreference(
+      userId,
+      "sidebarBehaviorExams",
+      serializePreference("sidebarBehaviorExams", "expand")
+    )
+    localStorage.setItem("sidebarBehavior_exams", "collapse")
+    localStorage.setItem("sidebarBehavior_grades", "collapse")
+
+    await renderHandover(userId)
+
+    // 空いていた方だけ写る
+    await waitFor(() =>
+      expect(storedPreferences.get(`${userId}:sidebarBehaviorGrades`)).toBe(
+        serializePreference("sidebarBehaviorGrades", "collapse")
+      )
+    )
+    // 既にある値は旧い鍵で塗り替えない（ここで書くと、まだ旧い鍵が残っている端末の
+    // 初回起動が「より新しい書き込み」として相手の変更を潰す）
+    expect(storedPreferences.get(`${userId}:sidebarBehaviorExams`)).toBe(
+      serializePreference("sidebarBehaviorExams", "expand")
+    )
+    expect(setUserPreference).not.toHaveBeenCalledWith(
+      userId,
+      "sidebarBehaviorExams",
+      expect.anything()
+    )
+    // 役目を終えた鍵は消す（写さなかった方も含めて）
+    expect(localStorage.getItem("sidebarBehavior_exams")).toBeNull()
+    expect(localStorage.getItem("sidebarBehavior_grades")).toBeNull()
+  })
+
   it("書けなかった回は鍵を残す", async () => {
     const userId = nextUserId()
     localStorage.setItem("sidebarBehavior_exams", "collapse")

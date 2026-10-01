@@ -8,24 +8,31 @@
 import type { TableOptions } from "sqlite-nas-sync"
 
 /**
- * 同期から除外するテーブル一覧
+ * 同期から除外するテーブル一覧。**いま除外する表は1つも無い。**
  *
- * **業務データはすべて同期する。** 解答用紙定義・試験・試験外成績資料・成績算出・生徒・学級・
- * 小計点・タグはいずれも共有される。除外するのは端末ごとの設定だけで、それ以外を足すときは
- * 「この端末でしか意味を持たないか」を基準に判断すること。
+ * 業務データはすべて同期する（解答用紙定義・試験・試験外成績資料・成績算出・生徒・学級・
+ * 小計点・タグ）。設定も同期する。利用者ごとの設定（`UserPreference` /
+ * `UserKeyboardShortcut`）は**端末ではなく利用者に付く**ので、同じ人がどの端末で採点しても
+ * 同じキー割り当て・同じ表示で始まるのが正しい。
+ *
+ * 空のまま残すのは、**除外という考え方そのものが要らなくなったわけではない**から。
+ * 除外に入るのは「同じ DB を共有していても、端末ごとに違う値であるべき表」——たとえば
+ * 窓の位置や大きさ、その端末のプリンタ、その端末のファイル置き場のような、他の端末へ
+ * 持っていくと誤った値になるものを**テーブルで**持つようになった場合。現時点でそういう値は
+ * DB に無い（窓の状態は main が持ち、DB には入らない）ので、一覧は空になる。
+ *
+ * **判断は「端末に付くか・利用者に付くか」で行う。** 同期を切ると競合しない、では無い
+ * （競合は同期で解くもので、除外で避けるものではない）。
  *
  * かつては Asb\* も端末固有として除外していたが、除外していたのは親（AsbDefinition /
  * AsbHeaderField / AsbMajorQuestion / AsbSubQuestion / AsbBranchQuestion）だけで、
  * 後から増えた子（AsbTextElement / AsbImageElement / AsbOmrConfig / AsbOmrChoiceOption /
  * AsbCharGuide / AsbDefinitionTag）は自動検出で同期されていた。親の作成は伝わらないのに
  * 子の削除は伝わるという歪んだ状態で、端末Aで小問を消すと端末Bでは枠だけ残って中身が消えた。
- * 除外リストは「テーブルを足したら書き足す」運用に依存していて2度漏れている（`AsbCharGuide` は
- * #913、`AsbDefinitionTag` はタグ対応）ため、`syncTableConfig.test.ts` で漏れを検知する。
+ * 除外リストは「テーブルを足したら書き足す」運用に依存して2度漏れた（`AsbCharGuide` は
+ * #913、`AsbDefinitionTag` はタグ対応）ので、`syncTableConfig.test.ts` で漏れを検知する。
  */
-export const SYNC_EXCLUDE_TABLES: string[] = [
-  "UserKeyboardShortcut",
-  "UserPreference",
-]
+export const SYNC_EXCLUDE_TABLES: string[] = []
 
 /**
  * テーブル別の同期オプション

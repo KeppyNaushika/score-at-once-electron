@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useEffect } from "react"
 
 import type { SidebarBehaviorPreferenceKey } from "@/components/layout/sidebarBehavior"
@@ -11,7 +11,10 @@ import {
   SIDEBAR_BEHAVIORS,
 } from "@/lib/userPreferences"
 import type { SetUserPreferenceInput } from "@/queries/settings"
-import { setUserPreferenceMutation } from "@/queries/settings"
+import {
+  setUserPreferenceMutation,
+  userPreferenceQuery,
+} from "@/queries/settings"
 
 /**
  * `localStorage` に残っている設定を、利用者の設定（`UserPreference`）へ一度だけ写す。
@@ -20,6 +23,11 @@ import { setUserPreferenceMutation } from "@/queries/settings"
  * サイドバーの動作と採点モードは端末に付いていたが、どちらも利用者に付く性質のもので、
  * 段階55 で DB へ寄せた。**寄せただけでは、既に設定していた人が設定し直す羽目になる**
  * ので、最初にこの部品が写す。
+ *
+ * **写すのは DB に値が無いときだけ。** 設定は同期の対象なので、他の端末で設定し直した
+ * 値が先に届いていることがある。そこへ旧い鍵の値を重ねると、まだ旧い鍵が残っている
+ * 端末の初回起動が「より新しい書き込み」として相手の変更を潰す。一度きりの移送なので、
+ * 空いているところへ入れるだけでよい。
  *
  * **旧い鍵を知っているのはここだけ。** 生きている側（`sidebarBehavior.ts` /
  * `useScoringMode.ts`）は DB の鍵しか持たない。写し終えれば鍵は消えるので、この部品も
@@ -137,6 +145,7 @@ const handedOverUserIds = new Set<string>()
 
 export function LocalPreferenceHandover() {
   const userId = useCurrentUser().id
+  const queryClient = useQueryClient()
   const { mutateAsync } = useMutation(setUserPreferenceMutation(userId))
 
   useEffect(() => {
@@ -153,6 +162,14 @@ export function LocalPreferenceHandover() {
         // 1キーずつ書く（同じ `scope` なのでどのみち直列に走る）。**全部書けてから
         // 鍵を消す**ので、途中で失敗した回は何も消えず、次の起動でもう一度写せる
         for (const input of inputs) {
+          // **DB に値が無いときだけ写す。** 引き継ぎは一度きりの移送なので、既に
+          // 設定されている値を旧い鍵で塗り替えてはいけない。同期がある以上、
+          // ここで書くと「他の端末で設定し直した値」を、まだ旧い鍵が残っている
+          // この端末の初回起動が**より新しい書き込み**として潰す
+          const storedValue = await queryClient.fetchQuery(
+            userPreferenceQuery(userId, input.key)
+          )
+          if (storedValue !== null) continue
           await mutateAsync(input)
         }
       } catch {
@@ -163,7 +180,7 @@ export function LocalPreferenceHandover() {
         removeLocalStorageText(storageKey)
       }
     })()
-  }, [userId, mutateAsync])
+  }, [userId, mutateAsync, queryClient])
 
   return null
 }
