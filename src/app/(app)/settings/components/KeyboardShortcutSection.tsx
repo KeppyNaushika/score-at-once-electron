@@ -1,15 +1,12 @@
 "use client"
 
-import {
-  getShortcutLabel,
-  SHORTCUT_CATEGORIES,
-} from "@/components/exams/07-score-at-once/constants/shortcutCatalog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { getShortcutLabel, SHORTCUT_CATEGORIES } from "@/lib/shortcutCatalog"
 
 interface KeyboardShortcutSectionProps {
   shortcuts: Record<string, string>

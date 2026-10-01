@@ -16,7 +16,6 @@ import {
 } from "lucide-react"
 import { useCallback } from "react"
 
-import { filterCommandIdOf } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import type { QuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/types"
 import { IndividualModePanel } from "@/components/exams/07-score-at-once/ScoringIndividual/IndividualModePanel"
@@ -47,6 +46,7 @@ import {
 } from "@/components/ui/tooltip"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
+import { filterCommandIdOf } from "@/lib/scoringKeybindings"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
 import {

@@ -14,6 +14,7 @@ import type {
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
 /** Prisma拡張型をprismaExtensions.tsからインポート */
+import type { KeyBinding } from "@/types/keyBinding.types"
 import type { StudentAnswerImageWithExamPageAndStudent } from "@/types/prismaExtensions"
 import {
   type ScoringStatus,
@@ -255,15 +256,6 @@ export interface CommandMetadata {
 
   /** コマンドの説明（オプション） */
   description?: string
-}
-
-/**
- * キーバインディングの定義
- * commandId -> key のマッピング
- * 例: { "scoring.correct": "e", "navigation.nextQuestion": "Shift+d" }
- */
-export interface KeyBinding {
-  [commandId: string]: string
 }
 
 /**

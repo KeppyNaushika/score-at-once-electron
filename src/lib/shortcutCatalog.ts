@@ -5,7 +5,7 @@
  * 片方にだけ書き足すと、設定で変えられるのに一覧に出ない（またはその逆）が起きる。
  */
 
-import { baseKeyOfBinding } from "../ScoringMain/utils/normalizeKey"
+import { baseKeyOfBinding } from "@/lib/normalizeKey"
 
 /**
  * コマンドの表示名。`DEFAULT_KEYBINDINGS` の**全コマンド**を載せる

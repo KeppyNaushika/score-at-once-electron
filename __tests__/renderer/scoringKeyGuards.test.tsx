@@ -29,7 +29,6 @@ import * as path from "node:path"
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DEFAULT_KEYBINDINGS } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
 import { useCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
 import { useContextValue } from "@/components/exams/07-score-at-once/hooks/useContextValue"
 import { useGridNavigation } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridNavigation"
@@ -41,6 +40,7 @@ import { useMasterAnswerHoldRelease } from "@/components/exams/07-score-at-once/
 import { useScoringShortcuts } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringShortcuts"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CurrentUserProvider } from "@/contexts/CurrentUserContext"
+import { DEFAULT_KEYBINDINGS } from "@/lib/scoringKeybindings"
 import type { PublicUser } from "@/queries/user"
 
 import { createQueryWrapper } from "../helpers/queryWrapper"

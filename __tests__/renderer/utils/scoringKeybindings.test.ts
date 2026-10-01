@@ -3,8 +3,8 @@
  *
  * - 既定どうしが同じ場面で重ならない（重なると when 句の && の数と登録順で片方だけが
  *   勝ち、もう片方が黙って効かなくなる。0 がズームリセットと部分点の入力で重なっていた）
- * - 既定を変える前に保存された割り当て（設定画面は1つ変えると全部を保存する）のうち、
- *   重なって使えなくなったものだけが新しい既定へ移る
+ * - 保存済みの割り当ては既定に重ねるだけ（旧既定の読み替えはマイグレーション
+ *   20261002120000 が DB の側で1回だけ行った。`dropDefaultKeyboardShortcuts.test.ts`）
  * - 設定画面・キーボード一覧・キーが重なったときの案内に、内部の名前が出ない
  */
 import { describe, expect, it } from "vitest"
@@ -16,21 +16,13 @@ import {
   findConflictingCommand,
   resolveKeyBindings,
   scoringCommandIdOf,
-} from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
+} from "@/lib/scoringKeybindings"
 import {
   formatKeyForDisplay,
   SHORTCUT_CATEGORIES,
   SHORTCUT_LABELS,
-} from "@/components/exams/07-score-at-once/constants/shortcutCatalog"
+} from "@/lib/shortcutCatalog"
 import { SCORING_STATUSES } from "@/types/scoringStatus.types"
-
-/** 旧既定のまま全部を保存した利用者の割り当て（W マーク t・ズームリセット 0 の頃） */
-const LEGACY_SNAPSHOT = {
-  ...DEFAULT_KEYBINDINGS,
-  "scoring.doubleMark": "t",
-  "filter.toggleDoubleMark": "Alt+t",
-  "navigation.resetZoom": "0",
-}
 
 describe("既定のキー割り当て", () => {
   it("同じ場面で効くコマンドどうしが同じキーを使っていない", () => {
@@ -88,48 +80,13 @@ describe("resolveKeyBindings", () => {
     expect(resolveKeyBindings({})).toEqual(DEFAULT_KEYBINDINGS)
   })
 
-  it("旧既定のまま重なっている割り当ては新しい既定へ移す", () => {
-    const resolved = resolveKeyBindings(LEGACY_SNAPSHOT)
-    expect(resolved["scoring.doubleMark"]).toBe(
-      DEFAULT_KEYBINDINGS["scoring.doubleMark"]
-    )
-    expect(resolved["filter.toggleDoubleMark"]).toBe(
-      DEFAULT_KEYBINDINGS["filter.toggleDoubleMark"]
-    )
-    expect(resolved["navigation.resetZoom"]).toBe(
-      DEFAULT_KEYBINDINGS["navigation.resetZoom"]
-    )
-    // 相手の側はそのまま
-    expect(resolved["tool.text"]).toBe("t")
-    expect(resolved["scoring.openPartialWith0"]).toBe("0")
+  it("保存済みの割り当ては、そのコマンドだけ既定を上書きする", () => {
+    const resolved = resolveKeyBindings({ "scoring.correct": "i" })
+    expect(resolved).toEqual({ ...DEFAULT_KEYBINDINGS, "scoring.correct": "i" })
   })
 
-  it("重なっていなければ、旧既定のキーでも利用者の割り当てとして残す", () => {
-    const resolved = resolveKeyBindings({
-      ...LEGACY_SNAPSHOT,
-      // 利用者がテキストツールを別のキーへ移していた
-      "tool.text": "i",
-    })
-    expect(resolved["scoring.doubleMark"]).toBe("t")
-    expect(resolved["filter.toggleDoubleMark"]).toBe("Alt+t")
-  })
-
-  it("W マークだけ移し、利用者が自分で変えたフィルタのキーは残す", () => {
-    const resolved = resolveKeyBindings({
-      ...LEGACY_SNAPSHOT,
-      "filter.toggleDoubleMark": "Alt+w",
-    })
-    expect(resolved["scoring.doubleMark"]).toBe(
-      DEFAULT_KEYBINDINGS["scoring.doubleMark"]
-    )
-    expect(resolved["filter.toggleDoubleMark"]).toBe("Alt+w")
-  })
-
-  it("移す先の既定キーを別のコマンドが使っていれば移さない（別の重なりを作らない）", () => {
-    const resolved = resolveKeyBindings({
-      ...LEGACY_SNAPSHOT,
-      "scoring.correct": DEFAULT_KEYBINDINGS["scoring.doubleMark"],
-    })
+  it("旧既定の値でも読み替えない（読み替えはマイグレーションが済ませた）", () => {
+    const resolved = resolveKeyBindings({ "scoring.doubleMark": "t" })
     expect(resolved["scoring.doubleMark"]).toBe("t")
   })
 })

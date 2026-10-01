@@ -8,17 +8,14 @@ import {
 } from "react"
 import { toast } from "sonner"
 
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import { normalizeKey } from "@/lib/normalizeKey"
+import { getModifierKeyLabel } from "@/lib/platformUtils"
 import {
   findConflictingCommand,
   resolveKeyBindings,
-} from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
-import {
-  formatKeyForDisplay,
-  getShortcutLabel,
-} from "@/components/exams/07-score-at-once/constants/shortcutCatalog"
-import { normalizeKey } from "@/components/exams/07-score-at-once/ScoringMain/utils/normalizeKey"
-import { useCurrentUser } from "@/contexts/CurrentUserContext"
-import { getModifierKeyLabel } from "@/lib/platformUtils"
+} from "@/lib/scoringKeybindings"
+import { formatKeyForDisplay, getShortcutLabel } from "@/lib/shortcutCatalog"
 import {
   keyboardShortcutsQuery,
   resetKeyboardShortcutsMutation,
@@ -49,7 +46,7 @@ export function useKeyboardSettings() {
   const resetKeyboardShortcuts = useMutation(
     resetKeyboardShortcutsMutation(userId)
   )
-  // 採点画面と同じ読み替えを通す（既定の変更で使えなくなった旧割り当てを移す）
+  // 採点画面と同じ重ね方を通す（保存済みの割り当てを既定に重ねる）
   const shortcuts = useMemo(
     () => resolveKeyBindings(storedShortcuts),
     [storedShortcuts]
@@ -92,7 +89,7 @@ export function useKeyboardSettings() {
   const handleKeySave = useCallback(async () => {
     if (!editingKey || !pendingKey) return
 
-    // 重複チェック（効く場面が重ならない組は同じキーでよい。既定の読み替えと同じ判定）
+    // 重複チェック（効く場面が重ならない組は同じキーでよい）
     const conflictingCommand = findConflictingCommand(
       shortcuts,
       editingKey,
@@ -109,8 +106,8 @@ export function useKeyboardSettings() {
     // 書いてから読み直す。手元のキャッシュへ先に置くと、保存に失敗したときに
     // 新しいキーが割り当たったまま残る（戻す道が無い）。
     //
-    // **直した1件だけを送る。** 画面が持っている `shortcuts` は既定の読み替えを
-    // 通した全コマンドなので、まとめて渡すと触っていない行まで書き直される
+    // **直した1件だけを送る。** 画面が持っている `shortcuts` は既定を重ねた
+    // 全コマンドなので、まとめて渡すと触っていない行まで書き直される
     const editedAction = editingKey
     const editedKey = pendingKey
 

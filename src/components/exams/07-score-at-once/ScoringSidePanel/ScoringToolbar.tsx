@@ -20,7 +20,6 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 
-import { scoringCommandIdOf } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import type {
   MouseBrushAction,
@@ -47,6 +46,7 @@ import {
 } from "@/components/ui/tooltip"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
+import { scoringCommandIdOf } from "@/lib/scoringKeybindings"
 import { SCORING_OPERATION_MODES } from "@/lib/userPreferences"
 import type {
   ClickScoringAction,

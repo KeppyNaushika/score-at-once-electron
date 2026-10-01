@@ -6,9 +6,8 @@
  * - ユーザー設定はDBに保存される
  */
 
+import type { KeyBinding } from "@/types/keyBinding.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
-
-import type { KeyBinding } from "../types"
 
 export const DEFAULT_KEYBINDINGS: KeyBinding = {
   // ============================================
@@ -136,35 +135,6 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   "tool.ellipse": "y",
 } as const
 
-/**
- * 既定を変える前の割り当てのうち、**同じ場面で別のコマンドと重なって使えなくなった**もの。
- *
- * 設定画面はキーを1つ変えると全部の割り当てを保存する（`useKeyboardSettings`）ので、
- * 一度でも変えた利用者には、あとから既定を変えても届かない。旧既定のまま残った
- * 割り当てのうち、`collidesWith` と同じキーになっているものだけを新しい既定へ移す。
- * 重なっていなければ（利用者が相手の側を別のキーへ変えていれば）そのまま使える
- * ので触らない。
- *
- * - `scoring.doubleMark`: 旧既定 t。個別表示でテキストツール（tool.text）と重なる
- * - `navigation.resetZoom`: 旧既定 0。答案を選んでいる間は部分点の入力が取る
- */
-const SUPERSEDED_BINDINGS: readonly {
-  commandId: string
-  collidesWith: string
-  /** 対になるコマンド。旧既定のまま（`Alt+` + 旧キー）なら一緒に移す */
-  companion?: { commandId: string; modifier: string }
-}[] = [
-  {
-    commandId: "scoring.doubleMark",
-    collidesWith: "tool.text",
-    companion: { commandId: "filter.toggleDoubleMark", modifier: "Alt+" },
-  },
-  {
-    commandId: "navigation.resetZoom",
-    collidesWith: "scoring.openPartialWith0",
-  },
-]
-
 /** 部分点の入力欄を開いている間だけ効くコマンドか（when 句が modalOpen / partialScoreModalOpen） */
 function isModalOnlyCommand(commandId: string): boolean {
   return commandId.startsWith("modal.")
@@ -212,37 +182,14 @@ export function findConflictingCommand(
 }
 
 /**
- * 保存済みの割り当てを既定に重ね、既定の変更で使えなくなったものを読み替える。
+ * 保存済みの割り当てを既定に重ねる。
  *
+ * 行を持つのは利用者が直したコマンドだけで、無いコマンドには既定が効く。
  * 採点画面（`ShortcutProvider`）と設定画面（`useKeyboardSettings`）は**必ずこれを通す**。
- * 片方だけ素の `{ ...DEFAULT_KEYBINDINGS, ...stored }` に戻ると、画面に出るキーと
- * 実際に効くキーが食い違う。読み替えた値は、次に設定画面で保存したときに DB へ残る。
- *
- * 移す先の既定キーをすでに別のコマンドが使っている場合は移さない（移すと別の重なりを
- * 作る）。その割り当ては設定画面から直してもらう。
+ * 片方だけ別の重ね方をすると、画面に出るキーと実際に効くキーが食い違う。
  */
 export function resolveKeyBindings(stored: KeyBinding | undefined): KeyBinding {
-  const bindings: KeyBinding = { ...DEFAULT_KEYBINDINGS, ...stored }
-
-  for (const { commandId, collidesWith, companion } of SUPERSEDED_BINDINGS) {
-    const currentKey = bindings[commandId]
-    const defaultKey = DEFAULT_KEYBINDINGS[commandId]
-    if (currentKey !== bindings[collidesWith]) continue
-    if (findConflictingCommand(bindings, commandId, defaultKey)) continue
-
-    bindings[commandId] = defaultKey
-
-    if (!companion) continue
-    const companionDefault = DEFAULT_KEYBINDINGS[companion.commandId]
-    if (
-      bindings[companion.commandId] === `${companion.modifier}${currentKey}` &&
-      !findConflictingCommand(bindings, companion.commandId, companionDefault)
-    ) {
-      bindings[companion.commandId] = companionDefault
-    }
-  }
-
-  return bindings
+  return { ...DEFAULT_KEYBINDINGS, ...stored }
 }
 
 /**
