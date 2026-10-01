@@ -4,6 +4,7 @@ import { useMutation, useQueries, useQuery } from "@tanstack/react-query"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import { useGradeLock } from "@/components/common/grade-lock/GradeLockProvider"
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
 import { usePdfPasswordConversion } from "@/hooks/usePdfPasswordConversion"
 import type { ConvertedImage } from "@/lib/pdfConverter"
@@ -91,7 +92,7 @@ export function useMasterAnswers(examId: string) {
     [convertPdfWithRetry]
   )
 
-  const uploadAnswers = useCallback(
+  const uploadAnswersUnguarded = useCallback(
     async (files: File[]) => {
       const allFilesData: ConvertedImage[] = []
 
@@ -136,7 +137,7 @@ export function useMasterAnswers(examId: string) {
    * 模範解答画像だけを差し替える。採点領域・答案・採点結果はそのまま残る。
    * 複数ページのPDFを渡された場合は1ページ目だけを使う（1ページ＝1枚のため）
    */
-  const replaceAnswerImage = useCallback(
+  const replaceAnswerImageUnguarded = useCallback(
     async (examPageId: string, file: File) => {
       let fileData: ConvertedImage[] | null
       try {
@@ -200,6 +201,20 @@ export function useMasterAnswers(examId: string) {
       )
     },
     [updateExamPagePageSize]
+  )
+
+  /**
+   * 成績算出のロック中は、変換に入る前に止める。書き込みは中央でも止まるが、
+   * そこまで待つと PDF の変換やパスワード入力を済ませてから断ることになる
+   */
+  const { guard } = useGradeLock()
+  const uploadAnswers = useMemo(
+    () => guard(uploadAnswersUnguarded),
+    [guard, uploadAnswersUnguarded]
+  )
+  const replaceAnswerImage = useMemo(
+    () => guard(replaceAnswerImageUnguarded),
+    [guard, replaceAnswerImageUnguarded]
   )
 
   return {

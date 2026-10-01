@@ -19,7 +19,8 @@ import {
 interface ClassroomExamManagerProps {
   examId: string
   examClassrooms: ExamClassroomWithMemberships[]
-  onRemoveClassroom: (examClassroomId: string) => Promise<boolean>
+  /** 失敗は throw で伝える（確認ダイアログが開いたまま理由を出す） */
+  onRemoveClassroom: (examClassroomId: string) => Promise<void>
   onUpdateClassroom: (
     examClassroomId: string,
     options: { administered?: boolean }

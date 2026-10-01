@@ -287,6 +287,12 @@ export function useDrawingState(
               await updateElement(updatedElement)
             } catch (error) {
               console.error("描画要素更新エラー:", error)
+              // 失敗した要素だけ元へ戻す（ほかの要素は保存できている）
+              setDrawingElements((prev) =>
+                prev.map((element) =>
+                  element.id === id ? previousElement : element
+                )
+              )
             }
           }
         }
@@ -416,6 +422,9 @@ export function useDrawingState(
   )
 
   const clearDrawing = useCallback(async () => {
+    // 消す前の要素を控える（全消去に失敗したら戻す）
+    const clearedElements = drawingElements
+
     // ローカル状態をクリア
     setDrawingElements([])
     setSelectedElementIds([])
@@ -431,9 +440,10 @@ export function useDrawingState(
         await syncElements([], annotationTarget)
       } catch (error) {
         console.error("全描画クリアエラー:", error)
+        setDrawingElements(clearedElements)
       }
     }
-  }, [enablePersistence, annotationTarget, syncElements])
+  }, [drawingElements, enablePersistence, annotationTarget, syncElements])
 
   // データベース同期関数
   const syncWithDatabase = useCallback(async () => {

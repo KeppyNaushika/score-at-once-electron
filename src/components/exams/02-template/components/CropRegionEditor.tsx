@@ -89,13 +89,18 @@ const CropRegionEditor = ({
     async (rect: DetectedRect) => {
       if (!examPageId) return
 
-      // クリックした検出枠を採点領域として作成
-      await onCreateRegion("QUESTION_ANSWER", {
-        x: rect.x,
-        y: rect.y,
-        width: rect.width,
-        height: rect.height,
-      })
+      // クリックした検出枠を採点領域として作成。失敗の知らせは中央のトーストが
+      // 出すので、ここでは受け止めるだけ（受けないと未処理の拒否になる）
+      try {
+        await onCreateRegion("QUESTION_ANSWER", {
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        })
+      } catch {
+        // 何も作られていないので戻すものも無い
+      }
     },
     [examPageId, onCreateRegion]
   )
@@ -131,12 +136,17 @@ const CropRegionEditor = ({
       return
     }
 
-    await onCreateRegion(type, {
-      x: customCoords?.x ?? 0.05,
-      y: customCoords?.y ?? 0.05,
-      width: customCoords?.width ?? 0.1,
-      height: customCoords?.height ?? 0.05,
-    })
+    try {
+      await onCreateRegion(type, {
+        x: customCoords?.x ?? 0.05,
+        y: customCoords?.y ?? 0.05,
+        width: customCoords?.width ?? 0.1,
+        height: customCoords?.height ?? 0.05,
+      })
+    } catch {
+      // 失敗の知らせは中央のトーストが出す。作られていない枠は選ばない
+      return
+    }
     setSelectedAreaIndex(areas.length) // 新しく追加されたエリアを選択
   }
 

@@ -77,14 +77,11 @@ export default function StudentsPage() {
       }),
     [queryClient, examId]
   )
+  // 失敗は投げたまま返す。握りつぶすと解除の確認が成功したように閉じる
+  // （確認側は失敗を受けて開いたまま理由を出す）
   const removeClassroom = useCallback(
     async (examClassroomId: string) => {
-      try {
-        await removeExamClassroom.mutateAsync(examClassroomId)
-        return true
-      } catch {
-        return false
-      }
+      await removeExamClassroom.mutateAsync(examClassroomId)
     },
     [removeExamClassroom]
   )

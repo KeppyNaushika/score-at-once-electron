@@ -253,14 +253,17 @@ export function CourseworkItemsContainer({
     changeInputMode(item, inputMode).catch(() => undefined)
   }
 
-  const handleAddItem = async () => {
+  // 失敗の通知は `MutationCache` が出す。打った名前は残して打ち直せるようにする
+  const handleAddItem = () => {
     if (!newItemName.trim()) return
-    await createItem.mutateAsync({
-      name: newItemName.trim(),
-      maxScore: 100,
-      inputMode: "numeric",
-    })
-    setNewItemName("")
+    createItem.mutate(
+      {
+        name: newItemName.trim(),
+        maxScore: 100,
+        inputMode: "numeric",
+      },
+      { onSuccess: () => setNewItemName("") }
+    )
   }
 
   // 成績算出で使われていても消せるが、確認で影響を見せる

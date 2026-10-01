@@ -154,12 +154,21 @@ export function useStudentAnswerUpload(
   // トグル変更時はDBにも反映（次回アップロード時の初期値となる）
   const setMarkerCorrectionEnabled = useCallback(
     (enabled: boolean) => {
+      if (!examId) {
+        setMarkerCorrectionEnabledState(enabled)
+        return
+      }
+      const previous = markerCorrectionEnabled
       setMarkerCorrectionEnabledState(enabled)
-      if (!examId) return
-      // 試験のキャッシュは他の画面も見ているので、紐づくものごと取り直す（meta）
-      updateExam.mutate({ markerCorrectionEnabled: enabled })
+      // 試験のキャッシュは他の画面も見ているので、紐づくものごと取り直す（meta）。
+      // 書けなかったら切り替える前へ戻す。戻さないとトグルだけが DB と食い違い、
+      // 保存されていない設定が次のアップロードの補正に効く
+      updateExam.mutate(
+        { markerCorrectionEnabled: enabled },
+        { onError: () => setMarkerCorrectionEnabledState(previous) }
+      )
     },
-    [examId, updateExam]
+    [examId, markerCorrectionEnabled, updateExam]
   )
 
   // マスターマーカー検出（補正可否判定のみ。トグル状態は試験設定に従う）

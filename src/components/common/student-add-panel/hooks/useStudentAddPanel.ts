@@ -315,11 +315,9 @@ export function useStudentAddPanel({
       await Promise.all([loadClassrooms(), loadStudents()])
       onAdded()
     } catch (error) {
+      // 利用者への知らせは中央のトースト（MutationCache.onError）が出す。
+      // ここで alert も出すと二重になり、しかも閉じるまで画面を止める
       console.error("Failed to add classrooms:", error)
-      alert(
-        "学級の追加に失敗しました: " +
-          (error instanceof Error ? error.message : "Unknown error")
-      )
     } finally {
       setIsAdding(false)
     }
@@ -335,11 +333,9 @@ export function useStudentAddPanel({
       await Promise.all([loadClassrooms(), loadStudents()])
       onAdded()
     } catch (error) {
+      // 利用者への知らせは中央のトースト（MutationCache.onError）が出す。
+      // ここで alert も出すと二重になり、しかも閉じるまで画面を止める
       console.error("Failed to add students:", error)
-      alert(
-        "生徒の追加に失敗しました: " +
-          (error instanceof Error ? error.message : "Unknown error")
-      )
     } finally {
       setIsAdding(false)
     }
