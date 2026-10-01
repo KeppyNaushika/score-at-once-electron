@@ -26,24 +26,33 @@ export async function getUserKeyboardShortcuts(userId: string) {
 }
 
 /**
- * 複数のキーボードショートカットを一括で追加/更新
+ * 割り当てを**1つだけ**追加/更新する。
+ *
+ * **直した1件しか書かない。** かつては画面が持っている割り当て全部（既定の読み替えを
+ * 通した全コマンド）をまとめて upsert していたが、それだと触っていない行の
+ * `updatedAt` も進む。同期を入れると行ごとの勝ち負けが**組ごとの勝ち負け**に退化し、
+ * 端末Aで `scoring.correct`、端末Bで `tool.text` を直すと、あとに保存した端末が
+ * 全行の勝者になってもう片方の変更が消える。
+ *
+ * 1件だけ書けば、既定と同じままの割り当ては行を持たない。既定を変えたときに
+ * 「保存済みの人には新しい既定が届かない」範囲も、実際に触った割り当てだけで済む。
+ *
  * @param userId - ユーザーID
- * @param shortcuts - action -> key のマッピング
+ * @param action - コマンドID（`scoring.correct` など）
+ * @param key - 割り当てるキー（押す側と同じ綴り）
  */
-export async function bulkUpsertUserKeyboardShortcuts(
+export async function setUserKeyboardShortcut(
   userId: string,
-  shortcuts: Record<string, string>
+  action: string,
+  key: string
 ) {
-  const operations = Object.entries(shortcuts).map(([action, key]) =>
-    prisma.userKeyboardShortcut.upsert({
-      where: {
-        userId_action: { userId, action },
-      },
-      update: { key },
-      create: { userId, action, key },
-    })
-  )
-  return prisma.$transaction(operations)
+  return prisma.userKeyboardShortcut.upsert({
+    where: {
+      userId_action: { userId, action },
+    },
+    update: { key },
+    create: { userId, action, key },
+  })
 }
 
 /**

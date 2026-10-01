@@ -10,11 +10,14 @@
  * かつてはこのファイルが自前のキャッシュと `window` イベントで変更を配っていたが、
  * 設定画面と採点画面が同じキャッシュを見る形にすれば、その仕掛けは要らない。
  *
- * **色は状態ごとに1行**（`UserScoringStatusColor`）。1キーの JSON に7状態を畳んで
- * いた頃は、続けて2色変えると先の1色が消えていた。
+ * **持ち方は土台のプリセット1つ＋状態ごとの上書き。**
+ * - 土台: `UserPreference` の `scoringColorPresetId`（id だけ。色の中身はこのファイル）
+ * - 上書き: `UserScoringStatusColor` の行（個別に触った状態の分だけ在る）
  *
- * プリセットidは中身が id そのものなので `UserPreference` のまま
- * （`parsePreference("scoringColorPresetId", …)` で足りる）。
+ * 1キーの JSON に7状態を畳んでいた頃は、続けて2色変えると先の1色が消えていた。行へ
+ * 割ったあとも、プリセットを当てるたびに全状態の色行を書き直していたので、同期では1回の
+ * 操作で全行の版が進み、他端末の個別の色を巻き取っていた。**色を DB へ入れるのは個別に
+ * 上書きしたときだけ**にすれば、プリセットの選択は1行で済む。
  */
 
 import type { UserScoringStatusColor } from "@prisma/client"
@@ -133,9 +136,21 @@ export const DEFAULT_SCORING_STATUS_COLORS: ScoringStatusColors =
   SCORING_COLOR_PRESETS[0].colors
 
 /**
- * 行（DB の列）から、状態で引ける形へ畳む。
+ * 土台にしているプリセットの色。
  *
- * **行が無い状態は既定のまま。** 状態は後から増えているので、「全部入っている」と
+ * 知らない id（プリセットを入れ替えた後の保存内容）と未選択はどちらも既定へ倒す。
+ */
+export function presetBaseColors(presetId: string | null): ScoringStatusColors {
+  const preset = SCORING_COLOR_PRESETS.find(
+    (candidate) => candidate.id === presetId
+  )
+  return preset?.colors ?? DEFAULT_SCORING_STATUS_COLORS
+}
+
+/**
+ * 土台のプリセットに、個別の上書き（DB の行）を重ねる。
+ *
+ * **行が無い状態は土台のまま。** 状態は後から増えているので、「全部入っている」と
  * 名乗って組むと、古い保存内容では `colors.double_mark.bg` が undefined になり、
  * 採点画面の描画で落ちる。
  *
@@ -143,9 +158,10 @@ export const DEFAULT_SCORING_STATUS_COLORS: ScoringStatusColors =
  * 1つ書いたときの取り直し先が畳んだ形になり、束ごと作り直すことになる。
  */
 export function toScoringStatusColors(
-  rows: UserScoringStatusColor[]
+  rows: UserScoringStatusColor[],
+  presetId: string | null = null
 ): ScoringStatusColors {
-  const colors = { ...DEFAULT_SCORING_STATUS_COLORS }
+  const colors = { ...presetBaseColors(presetId) }
   for (const row of rows) {
     // 知らない状態の行は**読み飛ばす**。未採点へ倒すと、無関係な行が未採点の色を
     // 塗り替えてしまう（状態が増減した後の DB で起こりうる）

@@ -288,9 +288,6 @@ export interface ShortcutContextValue {
   /** 現在のキーバインディング */
   keyBindings: KeyBinding
 
-  /** キーバインディングを更新する関数 */
-  updateKeyBinding: (commandId: string, key: string) => void
-
   /** キーバインディングをデフォルトに戻す関数 */
   resetKeyBindings: () => void
 

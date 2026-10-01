@@ -19,7 +19,6 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useKeyboardSettings } from "@/app/(app)/settings/hooks/useKeyboardSettings"
-import { DEFAULT_KEYBINDINGS } from "@/components/exams/07-score-at-once/constants/scoringKeybindings"
 // 押す側（`ShortcutProvider` の keydown）が突き合わせに使っている当のもの
 import { normalizeKey } from "@/components/exams/07-score-at-once/ScoringMain/utils/normalizeKey"
 import { CurrentUserProvider } from "@/contexts/CurrentUserContext"
@@ -38,17 +37,17 @@ const currentUser: PublicUser = {
 }
 
 const getUserKeyboardShortcuts = vi.fn()
-const saveUserKeyboardShortcuts = vi.fn()
+const setUserKeyboardShortcut = vi.fn()
 
 beforeEach(() => {
   getUserKeyboardShortcuts.mockReset()
-  saveUserKeyboardShortcuts.mockReset()
+  setUserKeyboardShortcut.mockReset()
   // 利用者はまだ何も変えていない（既定のまま）
   getUserKeyboardShortcuts.mockResolvedValue({})
-  saveUserKeyboardShortcuts.mockResolvedValue(undefined)
+  setUserKeyboardShortcut.mockResolvedValue(undefined)
   Object.defineProperty(window, "electronAPI", {
     value: {
-      settings: { getUserKeyboardShortcuts, saveUserKeyboardShortcuts },
+      settings: { getUserKeyboardShortcuts, setUserKeyboardShortcut },
     },
     writable: true,
     configurable: true,
@@ -135,14 +134,12 @@ describe("設定画面のキー記録", () => {
       await result.current.handleKeySave()
     })
 
-    await waitFor(() => expect(saveUserKeyboardShortcuts).toHaveBeenCalled())
-    const [userId, savedShortcuts] = saveUserKeyboardShortcuts.mock.calls[0]
-    expect(userId).toBe(currentUser.id)
-    expect(savedShortcuts["scoring.correct"]).toBe(normalizeKey(shiftZ))
-    expect(savedShortcuts["scoring.correct"]).toBe("Shift+z")
-    // 触っていない割り当ては既定のまま
-    expect(savedShortcuts["navigation.nextQuestion"]).toBe(
-      DEFAULT_KEYBINDINGS["navigation.nextQuestion"]
-    )
+    await waitFor(() => expect(setUserKeyboardShortcut).toHaveBeenCalled())
+    // **直した1件だけを送る。** 画面が持っている割り当て全部を渡していた頃は、
+    // 触っていない行の版も進み、同期で行ごとの勝ち負けが組ごとの勝ち負けに退化した
+    expect(setUserKeyboardShortcut.mock.calls).toEqual([
+      [currentUser.id, "scoring.correct", normalizeKey(shiftZ)],
+    ])
+    expect(setUserKeyboardShortcut.mock.calls[0][2]).toBe("Shift+z")
   })
 })

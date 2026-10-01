@@ -36,7 +36,10 @@ import {
   listUserSidePanelSections,
   setUserSidePanelSection,
 } from "../../electron-src/lib/prisma/userSidePanelSection"
-import { toScoringStatusColors } from "../../src/lib/scoringStatusColors"
+import {
+  presetBaseColors,
+  toScoringStatusColors,
+} from "../../src/lib/scoringStatusColors"
 import { toClickScoringConfig } from "../../src/types/clickScoring.types"
 import {
   cleanupTestDatabase,
@@ -79,20 +82,16 @@ describe("採点状態ごとの色", () => {
   })
 
   it("1色変えても、他の状態の行は書かない", async () => {
-    await applyUserScoringColorPreset(userId, "vivid", [
-      {
-        status: "correct",
-        backgroundColor: "#AAAAAA",
-        textColor: "#BBBBBB",
-        iconColor: "#CCCCCC",
-      },
-      {
-        status: "incorrect",
-        backgroundColor: "#DDDDDD",
-        textColor: "#EEEEEE",
-        iconColor: "#FFFFFF",
-      },
-    ])
+    await setUserScoringStatusColor(userId, "correct", {
+      backgroundColor: "#AAAAAA",
+      textColor: "#BBBBBB",
+      iconColor: "#CCCCCC",
+    })
+    await setUserScoringStatusColor(userId, "incorrect", {
+      backgroundColor: "#DDDDDD",
+      textColor: "#EEEEEE",
+      iconColor: "#FFFFFF",
+    })
     const before = await listUserScoringStatusColors(userId)
     const untouchedBefore = before.find((row) => row.status === "incorrect")!
 
@@ -109,35 +108,25 @@ describe("採点状態ごとの色", () => {
     )
   })
 
-  it("プリセットを当てると、色とプリセットidが揃う", async () => {
-    await applyUserScoringColorPreset(userId, "soft", [
-      {
-        status: "pending",
-        backgroundColor: "#123456",
-        textColor: "#234567",
-        iconColor: "#345678",
-      },
-    ])
+  it("プリセットを当てると、土台のidだけが残り、個別の上書きは消える", async () => {
+    await setUserScoringStatusColor(userId, "pending", {
+      backgroundColor: "#123456",
+      textColor: "#234567",
+      iconColor: "#345678",
+    })
 
-    const colors = toScoringStatusColors(
-      await listUserScoringStatusColors(userId)
-    )
-    expect(colors.pending.bg).toBe("#123456")
+    await applyUserScoringColorPreset(userId, "soft")
+
+    // 色の行は1本も残らない（色の中身は画面側がプリセットの id から引く）
+    expect(await listUserScoringStatusColors(userId)).toEqual([])
     const presetId = await prisma.userPreference.findUnique({
       where: { userId_key: { userId, key: "scoringColorPresetId" } },
     })
     expect(presetId?.value).toBe(JSON.stringify("soft"))
   })
 
-  it("色を1つ変えると、プリセットの記憶は外れる", async () => {
-    await applyUserScoringColorPreset(userId, "soft", [
-      {
-        status: "pending",
-        backgroundColor: "#123456",
-        textColor: "#234567",
-        iconColor: "#345678",
-      },
-    ])
+  it("色を1つ変えても、土台のプリセットは外れない", async () => {
+    await applyUserScoringColorPreset(userId, "soft")
 
     await setUserScoringStatusColor(userId, "pending", {
       backgroundColor: "#999999",
@@ -145,10 +134,19 @@ describe("採点状態ごとの色", () => {
       iconColor: "#345678",
     })
 
+    // 土台が外れると、触っていない状態の色まで既定へ戻ってしまう
     const presetId = await prisma.userPreference.findUnique({
       where: { userId_key: { userId, key: "scoringColorPresetId" } },
     })
-    expect(presetId).toBeNull()
+    expect(presetId?.value).toBe(JSON.stringify("soft"))
+
+    // 土台の色に、触った状態だけが重なる
+    const colors = toScoringStatusColors(
+      await listUserScoringStatusColors(userId),
+      "soft"
+    )
+    expect(colors.pending.bg).toBe("#999999")
+    expect(colors.correct).toEqual(presetBaseColors("soft").correct)
   })
 })
 

@@ -22,7 +22,7 @@ import { getModifierKeyLabel } from "@/lib/platformUtils"
 import {
   keyboardShortcutsQuery,
   resetKeyboardShortcutsMutation,
-  saveKeyboardShortcutsMutation,
+  setKeyboardShortcutMutation,
 } from "@/queries/settings"
 
 /** プラットフォームは変わらないので購読するものが無い */
@@ -45,9 +45,7 @@ export function useKeyboardSettings() {
 
   // 採点画面（ShortcutProvider）と同じキャッシュを共有する
   const { data: storedShortcuts } = useQuery(keyboardShortcutsQuery(userId))
-  const saveKeyboardShortcuts = useMutation(
-    saveKeyboardShortcutsMutation(userId)
-  )
+  const setKeyboardShortcut = useMutation(setKeyboardShortcutMutation(userId))
   const resetKeyboardShortcuts = useMutation(
     resetKeyboardShortcutsMutation(userId)
   )
@@ -109,25 +107,21 @@ export function useKeyboardSettings() {
     }
 
     // 書いてから読み直す。手元のキャッシュへ先に置くと、保存に失敗したときに
-    // 新しいキーが割り当たったまま残る（戻す道が無い）
-    const newShortcuts = {
-      ...shortcuts,
-      [editingKey]: pendingKey,
-    }
+    // 新しいキーが割り当たったまま残る（戻す道が無い）。
+    //
+    // **直した1件だけを送る。** 画面が持っている `shortcuts` は既定の読み替えを
+    // 通した全コマンドなので、まとめて渡すと触っていない行まで書き直される
+    const editedAction = editingKey
+    const editedKey = pendingKey
 
     setEditingKey(null)
     setPendingKey("")
 
-    saveKeyboardShortcuts.mutate(newShortcuts, {
-      onSuccess: () => toast.success("ショートカットキーを更新しました"),
-    })
-  }, [
-    editingKey,
-    pendingKey,
-    shortcuts,
-    saveKeyboardShortcuts,
-    modifierKeyLabel,
-  ])
+    setKeyboardShortcut.mutate(
+      { action: editedAction, key: editedKey },
+      { onSuccess: () => toast.success("ショートカットキーを更新しました") }
+    )
+  }, [editingKey, pendingKey, shortcuts, setKeyboardShortcut, modifierKeyLabel])
 
   const handleKeyCancel = () => {
     setEditingKey(null)

@@ -4,10 +4,7 @@ import type {
   ExamReportGraphSettingsValues,
   ExamReportTableSectionValues,
 } from "@/electron-src/lib/prisma/examSettings"
-import type {
-  UserScoringStatusColorEntry,
-  UserScoringStatusColorValues,
-} from "@/electron-src/lib/prisma/userScoringStatusColor"
+import type { UserScoringStatusColorValues } from "@/electron-src/lib/prisma/userScoringStatusColor"
 import type { PreferenceKey, PreferenceValueType } from "@/lib/userPreferences"
 import { serializePreference } from "@/lib/userPreferences"
 import type { ClickScoringAction } from "@/types/clickScoring.types"
@@ -152,10 +149,10 @@ export const setUserPreferenceMutation = (userId: string) =>
   })
 
 /**
- * 採点状態1つぶんの色を書く。
+ * 採点状態1つぶんの色を上書きする。
  *
- * **プリセットの記憶も外れる**（色を1つでも触ればプリセットからは外れるので、DB では
- * 同じトランザクションで消している）。取り直す先が2つあるのはそのため。
+ * **触るのはその状態の1行だけ。** 土台にしているプリセットの記憶（`UserPreference`）は
+ * そのままなので、取り直す先も1つで足りる。
  */
 export const setUserScoringStatusColorMutation = (userId: string) =>
   defineMutation({
@@ -170,27 +167,26 @@ export const setUserScoringStatusColorMutation = (userId: string) =>
       ),
     scope: { id: `userScoringStatusColor:${userId}` },
     meta: {
-      invalidates: [
-        userScoringStatusColorsQuery(userId).queryKey,
-        ["userPreference", userId],
-      ],
+      invalidates: [userScoringStatusColorsQuery(userId).queryKey],
       errorMessage: "色を保存できませんでした",
       // 利用者の設定。試験・資料の中身は変えない
       bypassesGradeLock: true,
     },
   })
 
-/** 配色プリセットを当てる（状態ぶんの色と、選んだプリセットは同時に決まる） */
+/**
+ * 配色プリセットを土台に据える（個別の上書きは捨てる）。
+ *
+ * 渡すのは**プリセットの id だけ**。色の中身は画面側（`SCORING_COLOR_PRESETS`）が持ち、
+ * 表示のたびに id から引く。色まで送って DB の全状態を書き直すと、1回の操作で全行の版が
+ * 進み、同期で他端末の個別の色を巻き取ってしまう。
+ */
 export const applyUserScoringColorPresetMutation = (userId: string) =>
   defineMutation({
-    mutationFn: (input: {
-      presetId: string
-      colors: UserScoringStatusColorEntry[]
-    }) =>
+    mutationFn: (input: { presetId: string }) =>
       window.electronAPI.settings.applyUserScoringColorPreset(
         userId,
-        input.presetId,
-        input.colors
+        input.presetId
       ),
     scope: { id: `userScoringStatusColor:${userId}` },
     meta: {
@@ -240,14 +236,22 @@ export const setUserSidePanelSectionMutation = (userId: string) =>
     },
   })
 
-export const saveKeyboardShortcutsMutation = (userId: string) =>
+/**
+ * 割り当てを**1つだけ**書く。
+ *
+ * 画面が持っている割り当て全部を渡していた頃は、触っていない行の `updatedAt` も
+ * 進んだ。同期すると行ごとの勝ち負けが組ごとの勝ち負けに退化し、別々のコマンドを
+ * 直した2台のうち、あとに保存した側の組が丸ごと勝つ（もう片方の変更が消える）。
+ */
+export const setKeyboardShortcutMutation = (userId: string) =>
   defineMutation({
-    mutationFn: (
-      shortcuts: Parameters<
-        typeof window.electronAPI.settings.saveUserKeyboardShortcuts
-      >[1]
-    ) =>
-      window.electronAPI.settings.saveUserKeyboardShortcuts(userId, shortcuts),
+    mutationFn: (input: { action: string; key: string }) =>
+      window.electronAPI.settings.setUserKeyboardShortcut(
+        userId,
+        input.action,
+        input.key
+      ),
+    scope: { id: `userKeyboardShortcut:${userId}` },
     meta: {
       invalidates: [keyboardShortcutsQuery(userId).queryKey],
       errorMessage: "キー設定を保存できませんでした",
@@ -260,6 +264,8 @@ export const resetKeyboardShortcutsMutation = (userId: string) =>
   defineMutation({
     mutationFn: () =>
       window.electronAPI.settings.resetUserKeyboardShortcuts(userId),
+    // 1つ書く方と同じ `scope`。戻すのと書くのが入れ違うと、戻したはずの1つが残る
+    scope: { id: `userKeyboardShortcut:${userId}` },
     meta: {
       invalidates: [keyboardShortcutsQuery(userId).queryKey],
       errorMessage: "キー設定を戻せませんでした",
