@@ -77,29 +77,27 @@ describe("SyncSettingsTab", () => {
 
     // 削除が取り消せないことと、控えがバックアップでないことは、開かなくても読める
     expect(
-      screen.getByText(/削除はすべてのPCに伝わり、取り消せません/)
+      screen.getByText(/あるPCで消したものは、他のPCからも消えます/)
     ).toBeTruthy()
     // 同期フォルダの説明にも同じ断りがあるので、複数当たってよい
     expect(
-      screen.getAllByText(/バックアップではありません/).length
+      screen.getAllByText(/ご自身でもバックアップを取ってください/).length
     ).toBeGreaterThan(0)
-    expect(screen.getByText(/この機能はまだ beta です/)).toBeTruthy()
+    expect(screen.getByText(/まだ beta です/)).toBeTruthy()
   })
 
-  it("残りの注意も、開けば読める", () => {
+  it("残りのご注意も、開かずに読める（畳まない）", () => {
     renderTab()
 
-    expect(screen.queryByText(/アプリ本体は共有ドライブに置かず/)).toBeNull()
-    fireEvent.click(screen.getByText(/残りの注意事項を見る/))
-    expect(screen.getByText(/アプリ本体は共有ドライブに置かず/)).toBeTruthy()
     expect(
-      screen.getByText(/すべてのPCで、同じバージョンの一括採点を使ってください/)
+      screen.getByText(/一括採点そのものは、PCごとに入れてください/)
     ).toBeTruthy()
     expect(
-      screen.getByText(
-        /別々のPCで同じ名前のものを作ると、片方が隠れることがあります/
-      )
+      screen.getByText(/すべて同じバージョンの一括採点にしてください/)
     ).toBeTruthy()
+    expect(screen.getByText(/タグは1つにまとまって表示されます/)).toBeTruthy()
+    // 畳む仕掛けそのものを置かない
+    expect(screen.queryByText(/残りのご注意を見る/)).toBeNull()
   })
 
   it("直近の同期で出た注意を、一覧で残す（トーストだけにしない）", () => {
@@ -127,21 +125,18 @@ describe("SyncSettingsTab", () => {
   })
 
   it("同期を切る確認は、最後の同期と、届くのが相手の次の同期であることを言う", () => {
-    const confirm = vi.fn(() => false)
-    vi.stubGlobal("confirm", confirm)
     renderTab()
 
     fireEvent.click(screen.getByRole("switch"))
 
-    const [message] = confirm.mock.calls[0] as unknown as [string]
+    const message = screen.getByRole("alertdialog").textContent ?? ""
     // 切る前に最後の同期が走る（取り込みもする）
     expect(message).toContain("最後にもう一度同期してから")
     // ただし、こちらの変更が相手に現れるのは相手の次の同期のとき
     expect(message).toContain("そのPCが次に同期したとき")
     // 取り込まれない、とは言えなくなった
     expect(message).not.toContain("取り込まれません")
-    // 取りやめたのだから、設定は書かない
+    // 確認を出しただけの段では、まだ設定を書かない
     expect(updateConfig).not.toHaveBeenCalled()
-    vi.unstubAllGlobals()
   })
 })

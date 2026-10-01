@@ -31,46 +31,52 @@ import { Switch } from "@/components/ui/switch"
 import { describeSyncWarnings } from "@/lib/shared/syncWarningMessages"
 
 /**
- * 同期を使う人が、**使い始める前に**知っておくべきこと。
+ * 同期を使う人への注意事項。**段ごとに役割を決めて並べる。**
  *
- * どれも「知らないまま使うと、データが消えたように見える」たぐいの話なので、
- * 畳まずに置く（最初の {@link ALWAYS_VISIBLE_NOTE_COUNT} 件は必ず見える）。
- * 技術の言葉（版・主キー・親行）は使わない。読むのは教員で、直せるのは運用だけである。
+ * 現象を思いついた順に並べると、何を決めればよいのか読み取れない。段の役割は次の4つで、
+ * この順に置く。どの段も畳まず、常に見えるようにする。
+ *
+ * 1. **この機能について** —— 何をする機能か、何を保証しないか
+ * 2. **元に戻せないこと** —— 取り返しがつかない操作
+ * 3. **使い始める前に** —— 満たしていないと使えない条件
+ * 4. **使っているあいだ** —— そういう仕様だと知っておくこと
+ *
+ * 技術の言葉（版・主キー・親行・畳み）は使わない。利用者はデータの作りを知らないので、
+ * **画面で見えるもの（試験・採点結果・タグ）を主語にする**。
  */
-const SYNC_NOTES: { title: string; body: string }[] = [
+const SYNC_NOTICE_SECTIONS: { heading: string; items: string[] }[] = [
   {
-    title: "この機能はまだ beta です",
-    body: "これから仕様が変わることがあります。大切なデータは、同期とは別に必ずバックアップを取ってください。",
+    heading: "この機能について",
+    items: [
+      "共有フォルダを通して、複数のPCで同じデータを使うための機能です。採点を分担するときに使います。",
+      "まだ beta です。これから動きが変わることがあり、不具合が残っている可能性もあります。",
+      "採点したデータは、同期とは別に、ご自身でもバックアップを取ってください。共有フォルダに置かれるのはPC同士がやりとりするための控えだけで、そこから一括採点のデータを元に戻すことはできません。",
+    ],
   },
   {
-    title: "削除はすべてのPCに伝わり、取り消せません",
-    body: "どれか1台で消したものは、他のPCからも消えます。元に戻す操作はありません。",
+    heading: "元に戻せないこと",
+    items: [
+      "あるPCで消したものは、他のPCからも消えます。消す前に、他の先生の分も消えてよいか確かめてください。",
+      "消したものを元に戻す操作はありません。試験を消すと、その試験の採点結果も見られなくなります。同じ名前の試験を作り直しても、前の採点結果は戻りません。",
+      "元に戻したいときは、消す前に書き出しておいたファイルから取り込み直してください。",
+    ],
   },
   {
-    title: "消したものにぶら下がっていたデータは、表示から外れます",
-    body: "消えてはいません。元になるものが同じものとして作り直されれば、そのまま表示に戻ります。",
+    heading: "使い始める前に",
+    items: [
+      "一括採点そのものは、PCごとに入れてください。共有フォルダに置いた一括採点を全員で開く使い方はできません。共有するのはデータだけです。",
+      "同期するPCは、すべて同じバージョンの一括採点にしてください。バージョンが違うPCとは、やりとりを行いません。",
+    ],
   },
   {
-    title:
-      "同期フォルダにあるのは同期のための控えで、バックアップではありません",
-    body: "同期フォルダの中身から、一括採点のデータを元に戻すことはできません。バックアップは別に取ってください。",
-  },
-  {
-    title: "すべてのPCで、同じバージョンの一括採点を使ってください",
-    body: "バージョンの違うPCとは同期しません。データが失われることはありませんが、そのPCとのあいだで変更が届かなくなります。",
-  },
-  {
-    title: "アプリ本体は共有ドライブに置かず、各PCに入れてください",
-    body: "共有ドライブから起動すると、ほとんど動きません。共有するのはデータだけです。",
-  },
-  {
-    title: "別々のPCで同じ名前のものを作ると、片方が隠れることがあります",
-    body: "隠れた方も消えてはいません。名前を変えて重なりを解けば、隠れていた方が表示に戻ります。",
+    heading: "使っているあいだ",
+    items: [
+      "直した内容が他のPCに現れるのは、そのPCが次に同期したときです。すぐには映りません。",
+      "別々の設問を採点していれば、どちらの採点も残ります。同じものを2人が同時に直したときだけ、あとに保存した方の内容が残ります。",
+      "別々のPCで同じ名前のタグを作ると、タグは1つにまとまって表示されます。名前を変えて分ければ、元の2つに戻ります。",
+    ],
   },
 ]
-
-/** 畳んでも必ず見えている注意事項の数。残りは開いたときだけ出す */
-const ALWAYS_VISIBLE_NOTE_COUNT = 4
 
 function StateIndicator({ state }: { state: string }) {
   switch (state) {
@@ -101,52 +107,32 @@ function StateIndicator({ state }: { state: string }) {
 }
 
 /**
- * 同期を使う前に読む注意事項。**常に画面にある。**
+ * 同期を使う人への注意事項。**全部が常に画面にある（畳まない）。**
  *
- * 同期のトーストは流れて消えるうえ、起きてからしか出ない。起きる前に読める場所が
- * 要る。全部を畳むと読まれないので、頭の数件は畳まない。
+ * 同期のトーストは流れて消えるうえ、起きてからしか出ない。起きる前に読める場所が要る。
+ * 畳むと読まれないので、畳む仕掛けは置かない。
  */
 function SyncNotes() {
-  const [showsAll, setShowsAll] = useState(false)
-  const visibleNotes = showsAll
-    ? SYNC_NOTES
-    : SYNC_NOTES.slice(0, ALWAYS_VISIBLE_NOTE_COUNT)
-  const hiddenCount = SYNC_NOTES.length - ALWAYS_VISIBLE_NOTE_COUNT
-
   return (
     <Alert>
       <AlertCircle className="h-4 w-4" />
       <AlertTitle className="flex items-center gap-2">
-        同期を使う前に
+        同期についてのご注意
         <BetaBadge />
       </AlertTitle>
       <AlertDescription>
-        <ul className="mt-2 space-y-2 text-sm">
-          {visibleNotes.map((note) => (
-            <li key={note.title}>
-              <span className="font-medium">{note.title}</span>
-              <span className="text-muted-foreground">。{note.body}</span>
-            </li>
+        <div className="mt-2 space-y-3 text-sm">
+          {SYNC_NOTICE_SECTIONS.map((section) => (
+            <section key={section.heading}>
+              <h4 className="font-medium">{section.heading}</h4>
+              <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
+                {section.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
-        {hiddenCount > 0 && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="mt-2 h-auto px-2 py-1"
-            onClick={() => setShowsAll(!showsAll)}
-          >
-            {showsAll ? (
-              <ChevronDown className="mr-1 h-4 w-4" />
-            ) : (
-              <ChevronRight className="mr-1 h-4 w-4" />
-            )}
-            {showsAll
-              ? "残りを畳む"
-              : `残りの注意事項を見る（${hiddenCount}件）`}
-          </Button>
-        )}
+        </div>
       </AlertDescription>
     </Alert>
   )
