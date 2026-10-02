@@ -20,15 +20,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { buildGradeLockMessage } from "@/lib/gradeLock"
-import type { GradeLockSource } from "@/types/gradeLock.types"
+import { buildGradeLockMessage, isFrozenDataSource } from "@/lib/gradeLock"
+import {
+  GRADE_DATA_SOURCE_TYPE_LABEL,
+  type UsingGradeDataSource,
+} from "@/lib/shared/gradeReferenceMessages"
+import { toGradeDataSourceType } from "@/types/grade.types"
 
 interface GradeLockDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   /** ロックしているものを言う主語（「この試験」「この資料」） */
   subject: string
-  sources: GradeLockSource[]
+  /** この試験・資料を使っているデータソース */
+  dataSources: UsingGradeDataSource[]
   /** 「編集する」で確認したとき */
   onUnlock: () => void
 }
@@ -43,10 +48,10 @@ export function GradeLockDialog({
   open,
   onOpenChange,
   subject,
-  sources,
+  dataSources,
   onUnlock,
 }: GradeLockDialogProps) {
-  const message = buildGradeLockMessage(subject, sources)
+  const message = buildGradeLockMessage(subject, dataSources)
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="sm:max-w-2xl">
@@ -61,11 +66,11 @@ export function GradeLockDialog({
         <div className="max-h-72 scroll-fade space-y-3 overflow-y-auto">
           {message.groups.map((group) => (
             <section
-              key={group.gradeId}
+              key={group.grade.id}
               className="overflow-hidden rounded-md border border-amber-200 dark:border-amber-900"
             >
               <h3 className="bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-                {group.gradeName}
+                {group.grade.name}
               </h3>
               <Table>
                 <TableHeader className="text-xs">
@@ -82,23 +87,25 @@ export function GradeLockDialog({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {group.rows.map((row) => (
-                    <TableRow
-                      key={`${row.gradeItemName}\u0000${row.dataSourceName}\u0000${row.dataSourceTypeLabel}`}
-                    >
+                  {group.dataSources.map((dataSource) => (
+                    <TableRow key={dataSource.id}>
                       <TableCell className="px-3 py-1">
-                        {row.gradeItemName}
-                        {row.isFrozen && (
+                        {dataSource.gradeItem.name}
+                        {isFrozenDataSource(dataSource) && (
                           <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                             確定済み
                           </span>
                         )}
                       </TableCell>
                       <TableCell className="px-3 py-1 whitespace-normal">
-                        {row.dataSourceName}
+                        {dataSource.name}
                       </TableCell>
                       <TableCell className="px-3 py-1 text-muted-foreground">
-                        {row.dataSourceTypeLabel}
+                        {
+                          GRADE_DATA_SOURCE_TYPE_LABEL[
+                            toGradeDataSourceType(dataSource.type)
+                          ]
+                        }
                       </TableCell>
                     </TableRow>
                   ))}

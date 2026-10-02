@@ -8,10 +8,16 @@ import ConfirmationModal from "@/components/common/ConfirmationModal"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
 import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
-import { buildDeletionBlockedMessage } from "@/lib/shared/gradeReferenceMessages"
+import {
+  buildDeletionBlockedMessage,
+  examUsingDataSources,
+} from "@/lib/shared/gradeReferenceMessages"
 import type { ExamForDetail } from "@/queries/exam"
-import { deleteExamMutation, examForDetailQuery } from "@/queries/exam"
-import { gradeReferencesQuery } from "@/queries/grade"
+import {
+  deleteExamMutation,
+  examDetailQuery,
+  examForDetailQuery,
+} from "@/queries/exam"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
 interface DeleteExamModalProps {
@@ -64,13 +70,14 @@ export default function DeleteExamModal({
 
   const deletionCounts = countExamDeletion(exam)
 
-  // 成績算出から使われている試験は消させない（main も最終判定で断る）
-  const gradeReferences = useQuery({
-    ...gradeReferencesQuery({ kind: "exam", id: exam.id }),
+  // 成績算出から使われている試験は消させない（main も最終判定で断る）。
+  // 使っているデータソースは試験の詳細に同梱してある
+  const examDetail = useQuery({
+    ...examDetailQuery(exam.id),
     enabled: open,
   })
-  const blockedMessage = gradeReferences.data
-    ? buildDeletionBlockedMessage("exam", gradeReferences.data)
+  const blockedMessage = examDetail.data
+    ? buildDeletionBlockedMessage("exam", examUsingDataSources(examDetail.data))
     : null
 
   const { isDeleting, refusalMessage, confirmDeletion } = useConfirmedDeletion({
@@ -90,8 +97,7 @@ export default function DeleteExamModal({
             queryKey: examForDetailQuery(exam.id).queryKey,
           }),
           queryClient.refetchQueries({
-            queryKey: gradeReferencesQuery({ kind: "exam", id: exam.id })
-              .queryKey,
+            queryKey: examDetailQuery(exam.id).queryKey,
           }),
         ]),
       [exam.id, queryClient]
@@ -177,7 +183,7 @@ export default function DeleteExamModal({
       loading={isDeleting}
       // 使われているかを調べ終わるまで、また使われている間は押させない
       // （調べるのに失敗したときは押せるが、main が同じ判定で断る）
-      confirmDisabled={gradeReferences.isPending || blockedMessage !== null}
+      confirmDisabled={examDetail.isPending || blockedMessage !== null}
     />
   )
 }

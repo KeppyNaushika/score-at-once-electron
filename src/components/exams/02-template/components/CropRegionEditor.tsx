@@ -225,6 +225,7 @@ const CropRegionEditor = ({
 
       <DeleteConfirmModal
         isOpen={cropRegionDeletion.isOpen}
+        examId={examId}
         cropRegionId={cropRegionDeletion.target}
         onClose={cropRegionDeletion.close}
         onConfirm={confirmDeleteArea}

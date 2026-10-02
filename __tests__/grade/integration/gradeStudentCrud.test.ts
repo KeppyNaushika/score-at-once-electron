@@ -29,6 +29,10 @@ import {
   setGradeClassroomOrders,
   updateGradeStudentOrders,
 } from "@/electron-src/lib/prisma/gradeStudent"
+import {
+  deleteStudent,
+  getStudentWithGradeRoster,
+} from "@/electron-src/lib/prisma/student"
 
 import { SAW_ALL_DELETION_COUNTS } from "../../helpers/deletionCounts"
 import {
@@ -241,6 +245,36 @@ describe("GradeStudent / GradeClassroom", () => {
 
       const result = await getAvailableClassroomsForGrade(grade.id)
       expect(result).toHaveLength(0)
+    })
+  })
+
+  describe("deleteStudent（成績算出の名簿に載っている生徒）", () => {
+    it("名簿に載っている生徒は削除を断り、確認が読む名簿にもその成績算出が出る", async () => {
+      const { grade, student3 } = await createTestData()
+      await addStudentsToGrade(grade.id, [student3.id])
+
+      await expect(deleteStudent(student3.id)).rejects.toThrow(
+        /名簿に載っているため、削除できません[\s\S]*成績算出「テスト成績PJ」/
+      )
+      expect(
+        await testPrisma.student.findUnique({ where: { id: student3.id } })
+      ).not.toBeNull()
+
+      // 削除の確認は、その生徒の名簿を読んで同じ判定をする
+      const studentWithRoster = await getStudentWithGradeRoster(student3.id)
+      expect(
+        studentWithRoster?.gradeStudents.map(
+          (gradeStudent) => gradeStudent.grade.name
+        )
+      ).toEqual(["テスト成績PJ"])
+    })
+
+    it("名簿に載っていなければ削除できる", async () => {
+      const { student3 } = await createTestData()
+      await deleteStudent(student3.id)
+      expect(
+        await testPrisma.student.findUnique({ where: { id: student3.id } })
+      ).toBeNull()
     })
   })
 

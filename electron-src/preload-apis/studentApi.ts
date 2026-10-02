@@ -7,6 +7,7 @@ export function createStudentApi() {
     fetchStudents: bind("fetch-students"),
     createStudent: bind("create-student"),
     updateStudent: bind("update-student"),
+    getStudentWithGradeRoster: bind("get-student-with-grade-roster"),
     deleteStudent: bind("delete-student"),
     getStudentExamResults: bind("get-student-exam-results"),
     getClassroomExamResults: bind("get-class-exam-results"),

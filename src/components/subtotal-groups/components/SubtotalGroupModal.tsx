@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { useMutation, useQueries, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { GripVertical, Plus, TagIcon, Trash2, XIcon } from "lucide-react"
 import React, { useCallback, useState } from "react"
 
@@ -33,8 +33,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
-import { buildItemDeletionWarning } from "@/lib/shared/gradeReferenceMessages"
-import { gradeReferencesQuery } from "@/queries/grade"
+import {
+  buildItemDeletionWarning,
+  subtotalUsages,
+} from "@/lib/shared/gradeReferenceMessages"
 import {
   createSubtotalGroupMutation,
   type SubtotalGroupRow,
@@ -337,22 +339,18 @@ export function SubtotalGroupModal({
   const totalItems = subtotals.length
 
   // 保存すると消える小計項目（編集前にあって、いまの並びに無いもの）。成績算出の
-  // データソースで使われていれば、保存でデータソースごと消える（Cascade）ので警告する
+  // データソースで使われていれば、保存でデータソースごと消える（Cascade）ので警告する。
+  // 使っているデータソースは一覧の行（小計項目）に同梱してある
   const removedSubtotals = (editingGroup?.subtotals ?? []).filter(
     (savedSubtotal) =>
       !subtotals.some((subtotal) => subtotal.subtotalId === savedSubtotal.id)
   )
-  const removedSubtotalReferences = useQueries({
-    queries: removedSubtotals.map((removedSubtotal) =>
-      gradeReferencesQuery({ kind: "subtotal", id: removedSubtotal.id })
-    ),
-  })
   const removedSubtotalWarnings = removedSubtotals.flatMap(
-    (removedSubtotal, index) => {
-      const references = removedSubtotalReferences[index]?.data
-      const warning = references
-        ? buildItemDeletionWarning("subtotal", references)
-        : null
+    (removedSubtotal) => {
+      const warning = buildItemDeletionWarning(
+        "subtotal",
+        subtotalUsages(removedSubtotal)
+      )
       return warning === null
         ? []
         : [{ id: removedSubtotal.id, name: removedSubtotal.name, warning }]

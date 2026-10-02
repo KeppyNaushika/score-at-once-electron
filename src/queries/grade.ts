@@ -7,8 +7,6 @@ import type {
   GradeDataSourceInput,
   GradeOverrideInput,
 } from "@/types/grade.types"
-import type { GradeLockTarget } from "@/types/gradeLock.types"
-import type { GradeReferenceTarget } from "@/types/gradeReference.types"
 import type { GradeReportSettings } from "@/types/gradeReport.types"
 
 import { auditLogListKey } from "./auditLog"
@@ -44,38 +42,6 @@ export const gradeDetailQuery = (gradeId: string) =>
   queryOptions({
     queryKey: [...scopeKeys.grade(gradeId), "detail"] as const,
     queryFn: () => window.electronAPI.grade.getById(gradeId),
-  })
-
-/**
- * 試験・資料とその中の項目を、どの成績算出がどう使っているか。削除の確認で見せる。
- *
- * 成績算出側の書き込みはこのキーを無効にしないので、開くたびに取り直す
- * （古いまま「使われていない」と見せないため。試験・資料の削除は main も断る）。
- */
-export const gradeReferencesQuery = (target: GradeReferenceTarget) =>
-  queryOptions({
-    queryKey: ["grade", "references", target.kind, target.id] as const,
-    queryFn: () => window.electronAPI.grade.getReferences(target),
-    staleTime: 0,
-  })
-
-/**
- * 試験・試験外成績資料を使っている成績算出のデータソース。空でなければ、その試験・
- * 資料の画面をまるごとロックする（`GradeLockProvider`）。
- *
- * 削除の確認と同じく、成績算出側の書き込みはこのキーを無効にしないので、開くたびに
- * 取り直す（データソースを足した直後に開いてもロックが掛かるように）。
- */
-export const gradeLockSourcesQuery = (target: GradeLockTarget) =>
-  queryOptions({
-    queryKey: [
-      "grade",
-      "lockSources",
-      target.kind,
-      target.kind === "exam" ? target.examId : target.courseworkId,
-    ] as const,
-    queryFn: () => window.electronAPI.grade.getLockSources(target),
-    staleTime: 0,
   })
 
 /** その成績の対象者1件（生徒と所属を同梱） */

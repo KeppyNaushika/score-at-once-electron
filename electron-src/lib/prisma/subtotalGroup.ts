@@ -1,18 +1,22 @@
 import type { Prisma } from "@prisma/client"
 
-import { buildDeletionBlockedMessage } from "../../../src/lib/shared/gradeReferenceMessages"
+import {
+  buildDeletionBlockedMessage,
+  subtotalGroupUsingDataSources,
+} from "../../../src/lib/shared/gradeReferenceMessages"
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope } from "./auditScope"
 import prisma from "./client"
 import { subtotalWithQuestionAssignmentsInclude } from "./cropSubtotal"
-import { findGradeReferences } from "./gradeReference"
+import { subtotalGroupGradeUsageInclude } from "./gradeDataSourceUsage"
+import { serializePrisma } from "./serializePrisma"
 import { tagSubtotalGroupWithTagInclude } from "./tagSubtotalGroup"
 
 /**
  * SubtotalGroup の include 形状（SSOT）。型（GetPayload）と実クエリの双方がこの const を
  * 参照するため両者が乖離しない。create/update/available は subtotals のみ、
- * getSubtotalGroups は examSubtotalGroups.exam（id・examName の部分 select）と
- * tagSubtotalGroups.tag も取る。
+ * getSubtotalGroups は examSubtotalGroups.exam と tagSubtotalGroups.tag、小計項目を
+ * 使う成績算出のデータソースも取る。
  */
 const subtotalGroupWithSubtotalsInclude = {
   subtotals: {
@@ -22,6 +26,9 @@ const subtotalGroupWithSubtotalsInclude = {
 
 const subtotalGroupWithSubtotalsExamsAndTagsInclude = {
   subtotals: {
+    // 小計項目を使っている成績算出のデータソース。編集で小計項目を消すときの警告と、
+    // グループの削除の確認がここから導く
+    include: subtotalGroupGradeUsageInclude.subtotals.include,
     orderBy: { order: "asc" },
   },
   examSubtotalGroups: { include: { exam: true } },
@@ -61,7 +68,8 @@ export async function getSubtotalGroups() {
     orderBy: { createdAt: "desc" },
   })
 
-  return subtotalGroups
+  // 同梱のデータソースが Decimal を持つので境界で変換する
+  return serializePrisma(subtotalGroups)
 }
 
 /**
@@ -279,19 +287,22 @@ export async function deleteSubtotalGroup(id: string) {
 
   const before = await prisma.subtotalGroup.findUnique({
     where: { id },
+    include: subtotalGroupGradeUsageInclude,
   })
+
+  // 成績算出のデータソースが中の小計を使っていれば断る。小計を消すとデータソースは
+  // Cascade で黙って消えるため。確認画面も同じ同梱から前もって見せるが、最終判定は
+  // 消す直前にここで行う
+  const blockedMessage = before
+    ? buildDeletionBlockedMessage(
+        "subtotalGroup",
+        subtotalGroupUsingDataSources(before)
+      )
+    : null
+  if (blockedMessage !== null) throw new Error(blockedMessage)
 
   // 試験に追加されているが実際には使用されていない場合はExamSubtotalGroupも削除
   await prisma.$transaction(async (tx) => {
-    // 成績算出のデータソースが中の小計を使っていれば断る。小計を消すとデータソースは
-    // Cascade で黙って消えるため。確認画面も同じ仕組みで前もって見せるが、最終判定は
-    // 削除と同じトランザクションの中で行う
-    const blockedMessage = buildDeletionBlockedMessage(
-      "subtotalGroup",
-      await findGradeReferences({ kind: "subtotalGroup", id }, tx)
-    )
-    if (blockedMessage !== null) throw new Error(blockedMessage)
-
     // ExamSubtotalGroupを削除
     await tx.examSubtotalGroup.deleteMany({
       where: { subtotalGroupId: id },

@@ -32,8 +32,11 @@ import {
 } from "@/components/ui/tooltip"
 import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
 import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
-import { buildItemDeletionWarning } from "@/lib/shared/gradeReferenceMessages"
-import { gradeReferencesQuery } from "@/queries/grade"
+import {
+  buildItemDeletionWarning,
+  examPageUsages,
+} from "@/lib/shared/gradeReferenceMessages"
+import { examDetailQuery } from "@/queries/exam"
 
 const PAGE_SIZE_OPTIONS = ["A3", "A4", "A5", "B4", "B5"] as const
 
@@ -87,13 +90,17 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
     // 答案も設問も無ければ確認なしで消す（設問が無ければ成績算出の参照も無い）
     const hasLinkedContent = deletionCounts.length > 0
 
-    // ページ上の設問を使っている成績算出（設問のデータソースは消え、合計・小計は変わる）
-    const gradeReferences = useQuery({
-      ...gradeReferencesQuery({ kind: "examPage", id: answer.id }),
+    // ページ上の設問を使っている成績算出（設問のデータソースは消え、合計・小計は変わる）。
+    // 使っているデータソースは試験の詳細（layout も読む）に同梱してある
+    const examDetail = useQuery({
+      ...examDetailQuery(answer.examId),
       enabled: confirmingDelete && cropRegionCount > 0,
     })
-    const gradeWarning = gradeReferences.data
-      ? buildItemDeletionWarning("examPage", gradeReferences.data)
+    const gradeWarning = examDetail.data
+      ? buildItemDeletionWarning(
+          "examPage",
+          examPageUsages(examDetail.data, answer.id)
+        )
       : null
 
     const { canConfirm, refusalMessage, confirmDeletion } =
@@ -316,11 +323,9 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
                     if (deleted) setConfirmingDelete(false)
                   })
                 }}
-                // 成績算出で使われているかを調べ終わるまでは押させない
-                // （影響を見せる前に消さない）
+                // 試験の詳細が読めるまでは押させない（影響を見せる前に消さない）
                 disabled={
-                  !canConfirm ||
-                  (cropRegionCount > 0 && gradeReferences.isPending)
+                  !canConfirm || (cropRegionCount > 0 && examDetail.isPending)
                 }
                 className="bg-destructive text-white hover:bg-destructive/90"
               >

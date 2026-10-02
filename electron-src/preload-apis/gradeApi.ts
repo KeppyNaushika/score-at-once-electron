@@ -12,8 +12,6 @@ export function createGradeApi() {
       update: bind("grade:update"),
       delete: bind("grade:delete"),
       duplicate: bind("grade:duplicate"),
-      getReferences: bind("grade:getReferences"),
-      getLockSources: bind("grade:getLockSources"),
       // 生徒・学級管理
       getStudents: bind("grade:getStudents"),
       getClassrooms: bind("grade:getClassrooms"),

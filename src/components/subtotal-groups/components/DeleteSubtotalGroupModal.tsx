@@ -5,10 +5,13 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import ConfirmationModal from "@/components/common/ConfirmationModal"
-import { buildDeletionBlockedMessage } from "@/lib/shared/gradeReferenceMessages"
-import { gradeReferencesQuery } from "@/queries/grade"
+import {
+  buildDeletionBlockedMessage,
+  subtotalGroupUsingDataSources,
+} from "@/lib/shared/gradeReferenceMessages"
 import {
   deleteSubtotalGroupMutation,
+  subtotalGroupListQuery,
   type SubtotalGroupRow,
 } from "@/queries/subtotal"
 
@@ -24,6 +27,7 @@ interface DeleteSubtotalGroupModalProps {
  *
  * 成績算出のデータソースが中の小計項目を使っていれば消させない（小計項目を消すと
  * データソースは Cascade で黙って消えるため）。main も同じ判定で最終的に断る。
+ * 使っているデータソースは一覧の行（小計項目）に同梱してある。
  * 設問の割り当てがある場合も main が断り、その理由（どの設問か）は断られた文言に載る。
  */
 export function DeleteSubtotalGroupModal({
@@ -41,12 +45,19 @@ export function DeleteSubtotalGroupModal({
   const refusalMessage =
     refusal !== null && refusal.groupId === group?.id ? refusal.message : null
 
-  const gradeReferences = useQuery({
-    ...gradeReferencesQuery({ kind: "subtotalGroup", id: group?.id ?? "" }),
+  // 断られたあと取り直した一覧を映すため、渡された行ではなく一覧から引く
+  const subtotalGroupList = useQuery({
+    ...subtotalGroupListQuery(),
     enabled: open && group !== null,
   })
-  const blockedMessage = gradeReferences.data
-    ? buildDeletionBlockedMessage("subtotalGroup", gradeReferences.data)
+  const groupRow = subtotalGroupList.data?.find(
+    (candidateGroup) => candidateGroup.id === group?.id
+  )
+  const blockedMessage = groupRow
+    ? buildDeletionBlockedMessage(
+        "subtotalGroup",
+        subtotalGroupUsingDataSources(groupRow)
+      )
     : null
 
   const handleDelete = async () => {
@@ -64,12 +75,7 @@ export function DeleteSubtotalGroupModal({
       })
       // 断られた理由が「成績算出で使われている」なら、その一覧も取り直して見せる
       await queryClient
-        .refetchQueries({
-          queryKey: gradeReferencesQuery({
-            kind: "subtotalGroup",
-            id: group.id,
-          }).queryKey,
-        })
+        .refetchQueries({ queryKey: subtotalGroupListQuery().queryKey })
         .catch(() => {})
       return
     }
@@ -123,9 +129,9 @@ export function DeleteSubtotalGroupModal({
       warnings={warnings}
       onConfirm={handleDelete}
       loading={deleteSubtotalGroup.isPending}
-      // 使われているかを調べ終わるまで、また使われている間は押させない
-      // （調べるのに失敗したときは押せるが、main が同じ判定で断る）
-      confirmDisabled={gradeReferences.isPending || blockedMessage !== null}
+      // 一覧が読めるまで、また使われている間は押させない
+      // （読むのに失敗したときは押せるが、main が同じ判定で断る）
+      confirmDisabled={subtotalGroupList.isPending || blockedMessage !== null}
     />
   )
 }

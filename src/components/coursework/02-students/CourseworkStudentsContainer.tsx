@@ -15,7 +15,10 @@ import {
 } from "@/components/common/roster-table"
 import { StudentAddPanel } from "@/components/common/student-add-panel/components/StudentAddPanel"
 import type { StudentAddPanelAdapter } from "@/components/common/student-add-panel/types"
-import { buildRosterRemovalWarning } from "@/lib/shared/gradeReferenceMessages"
+import {
+  buildRosterRemovalWarning,
+  courseworkUsingDataSources,
+} from "@/lib/shared/gradeReferenceMessages"
 import {
   addCourseworkStudentsFromClassroomMutation,
   addCourseworkStudentsMutation,
@@ -23,6 +26,7 @@ import {
   courseworkAvailableStudentsQuery,
   type CourseworkClassroomRow,
   courseworkClassroomsQuery,
+  courseworkDetailQuery,
   courseworkStudentsQuery,
   previewCourseworkClassroomRemovalMutation,
   removeCourseworkClassroomMutation,
@@ -30,7 +34,6 @@ import {
   setCourseworkClassroomOrdersMutation,
   updateCourseworkStudentOrdersMutation,
 } from "@/queries/coursework"
-import { gradeReferencesQuery } from "@/queries/grade"
 
 interface CourseworkStudentsContainerProps {
   courseworkId: string
@@ -72,12 +75,13 @@ export function CourseworkStudentsContainer({
     previewCourseworkClassroomRemovalMutation(courseworkId)
   )
   // この資料を使っている成績算出。対象生徒から外した生徒の点数はそこで欠測になる
-  // （名簿の削除確認は共通部品の中で開くので、ここで先に取って文言を渡す）
-  const { data: gradeReferences } = useQuery(
-    gradeReferencesQuery({ kind: "coursework", id: courseworkId })
-  )
-  const removalWarning = gradeReferences
-    ? buildRosterRemovalWarning("coursework", gradeReferences)
+  // （名簿の削除確認は共通部品の中で開くので、ここで先に文言を作って渡す）
+  const { data: coursework } = useQuery(courseworkDetailQuery(courseworkId))
+  const removalWarning = coursework
+    ? buildRosterRemovalWarning(
+        "coursework",
+        courseworkUsingDataSources(coursework)
+      )
     : null
   const [studentCount, setStudentCount] = useState(0)
   const [rosterHandle, setRosterHandle] = useState<RosterTableHandle | null>(

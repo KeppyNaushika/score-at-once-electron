@@ -14,9 +14,9 @@ import { useGradeLock } from "./GradeLockProvider"
  * ロック中は押して確認すると解除し、解除中はそのことだけを控えめに出す。
  */
 export function GradeLockBar() {
-  const { subject, sources, locked, unlock } = useGradeLock()
+  const { subject, dataSources, locked, unlock } = useGradeLock()
   const [open, setOpen] = useState(false)
-  if (sources.length === 0) return null
+  if (dataSources.length === 0) return null
 
   if (!locked) {
     return (
@@ -46,7 +46,7 @@ export function GradeLockBar() {
         open={open}
         onOpenChange={setOpen}
         subject={subject}
-        sources={sources}
+        dataSources={dataSources}
         onUnlock={unlock}
       />
     </div>
