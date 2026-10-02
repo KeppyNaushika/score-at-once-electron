@@ -8,6 +8,8 @@
  *    タブを移っても解除されたまま
  * 3. **試験を出ると（layout が外れると）再びロックされる。** 別の試験へ直接移っても
  *    解除を持ち越さない
+ * 4. **使われているかは試験の詳細に同梱したデータソースから導く。** 詳細を読み込む
+ *    までは分からないので、その間もロックしておく
  */
 
 import "../setup"
@@ -23,22 +25,33 @@ import { GradeLockBar } from "@/components/common/grade-lock/GradeLockBar"
 import { GradeLockProvider } from "@/components/common/grade-lock/GradeLockProvider"
 import { updateCropRegionMutation } from "@/queries/cropRegion"
 import { updateExamMutation } from "@/queries/exam"
-import type { GradeLockSource } from "@/types/gradeLock.types"
 
 import { createQueryWrapper } from "../../helpers/queryWrapper"
 
 const USED_EXAM_ID = "exam-used"
 const OTHER_USED_EXAM_ID = "exam-used-2"
 
-const SOURCE: GradeLockSource = {
-  gradeId: "grade-1",
-  gradeName: "1学期成績",
-  gradeItemName: "知識・技能",
-  dataSourceId: "data-source-1",
-  dataSourceName: "中間",
-  dataSourceType: "exam_total",
-  frozenScoreCount: 0,
+/** 試験の詳細（`get-exam`）が同梱する、試験を使っているデータソース1件 */
+const DATA_SOURCE = {
+  id: "data-source-1",
+  type: "exam_total",
+  name: "中間",
+  order: 0,
+  subtotalId: null,
+  gradeItem: {
+    id: "grade-item-1",
+    name: "知識・技能",
+    order: 0,
+    grade: { id: "grade-1", name: "1学期成績" },
+    frozenScores: [],
+  },
 }
+
+/** 試験の詳細。使われていればデータソースを同梱する */
+const examDetail = (
+  examId: string,
+  gradeDataSources: (typeof DATA_SOURCE)[]
+) => ({ id: examId, examName: "中間", gradeDataSources, examPages: [] })
 
 const updateCropRegion = vi.fn(async () => null)
 const updateExam = vi.fn(async () => null)
@@ -50,9 +63,9 @@ beforeEach(() => {
     value: {
       updateCropRegion,
       updateExam,
-      grade: {
-        getLockSources: vi.fn(async () => [SOURCE]),
-      },
+      getExam: vi.fn(async (examId: string) =>
+        examDetail(examId, [DATA_SOURCE])
+      ),
     },
   })
 })
@@ -224,7 +237,8 @@ describe("成績算出で使われている試験のロック", () => {
 
   it("成績算出で使われていなければ、帯を出さずに書ける", async () => {
     const user = userEvent.setup()
-    window.electronAPI.grade.getLockSources = vi.fn(async () => [])
+    const getExam = vi.fn(async (examId: string) => examDetail(examId, []))
+    Object.assign(window.electronAPI, { getExam })
     render(
       <ExamLayout examId="exam-unused">
         <RegionInfoTab examId="exam-unused" />
@@ -232,11 +246,34 @@ describe("成績算出で使われている試験のロック", () => {
       { wrapper: createQueryWrapper() }
     )
 
-    await waitFor(() =>
-      expect(window.electronAPI.grade.getLockSources).toHaveBeenCalled()
+    await waitFor(() => expect(getExam).toHaveBeenCalled())
+    // 詳細が届くまではロックしているので、届いてから押す
+    await waitFor(async () => {
+      await user.click(screen.getByRole("button", { name: "配点を保存" }))
+      expect(updateCropRegion).toHaveBeenCalledTimes(1)
+    })
+    expect(
+      screen.queryByRole("button", { name: "ロックを解除" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("詳細を読み込むまでは、使われているか分からないのでロックしておく", async () => {
+    const user = userEvent.setup()
+    // 詳細が届かないまま（読み込み中）にする
+    Object.assign(window.electronAPI, {
+      getExam: vi.fn(() => new Promise(() => {})),
+    })
+    render(
+      <ExamLayout examId="exam-loading">
+        <RegionInfoTab examId="exam-loading" />
+      </ExamLayout>,
+      { wrapper: createQueryWrapper() }
     )
+
     await user.click(screen.getByRole("button", { name: "配点を保存" }))
-    await waitFor(() => expect(updateCropRegion).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(toast.info).toHaveBeenCalled())
+    expect(updateCropRegion).not.toHaveBeenCalled()
+    // 使われていると分かったわけではないので、帯は出さない
     expect(
       screen.queryByRole("button", { name: "ロックを解除" })
     ).not.toBeInTheDocument()

@@ -8,7 +8,10 @@
 
 import type { Prisma } from "@prisma/client"
 
-import { listReferencingGradeNames } from "../../../src/lib/shared/gradeReferenceMessages"
+import {
+  courseworkUsingDataSources,
+  listReferencingGradeNames,
+} from "../../../src/lib/shared/gradeReferenceMessages"
 import type { CourseworkScoreUpsertInput } from "../../../src/types/coursework.types"
 import type { InputMode } from "../../../src/types/coursework.types"
 import { toInputMode } from "../../../src/types/coursework.types"
@@ -21,7 +24,10 @@ import {
 import { getAvailableClassroomsForTarget } from "./availableClassrooms"
 import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
-import { findGradeReferences } from "./gradeReference"
+import {
+  courseworkGradeUsageInclude,
+  gradeDataSourceUsageInclude,
+} from "./gradeDataSourceUsage"
 import { membershipFilterAt } from "./membershipFilter"
 import {
   type RosterAdapter,
@@ -84,11 +90,17 @@ const courseworkWithRelationsInclude = {
   },
   tags: { include: { tag: true } },
   items: {
-    include: { letterScales: { orderBy: { order: "asc" } } },
+    include: {
+      letterScales: { orderBy: { order: "asc" } },
+      gradeDataSources: { include: gradeDataSourceUsageInclude },
+    },
     orderBy: { order: "asc" },
   },
   // 名簿は行のまま渡し切る。件数は renderer が `.length` で取る
   students: true,
+  // この資料を使っている成績算出のデータソース（資料合計と、評価項目1つずつ）。
+  // 資料の画面（layout）のロックと、削除の確認がここから導く
+  gradeDataSources: { include: gradeDataSourceUsageInclude },
 } satisfies Prisma.CourseworkInclude
 
 /** 試験外成績資料の一覧（サマリ）を取得 */
@@ -210,16 +222,16 @@ export async function deleteCoursework(
   // 評価項目を1つずつ使う（courseworkItemId）ものと、資料全体を「資料合計」として
   // 使う（courseworkId）ものの両方を見る。後者を見落とすと削除が通り、参照は
   // `onDelete: SetNull` で黙って空になって、成績算出に名前だけのデータソースが残る
-  const usedBy = listReferencingGradeNames(
-    await findGradeReferences({ kind: "coursework", id })
-  )
+  const before = await prisma.coursework.findUnique({
+    where: { id },
+    include: courseworkGradeUsageInclude,
+  })
+  const usedBy = before
+    ? listReferencingGradeNames(courseworkUsingDataSources(before))
+    : []
   if (usedBy.length > 0) {
     return { deleted: false, usedBy }
   }
-
-  const before = await prisma.coursework.findUnique({
-    where: { id },
-  })
 
   await prisma.coursework.delete({ where: { id } })
 

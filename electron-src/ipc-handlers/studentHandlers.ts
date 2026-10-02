@@ -22,6 +22,7 @@ import {
   fetchStudents,
   getClassroomExamResults,
   getStudentExamResults,
+  getStudentWithGradeRoster,
   updateStudent,
 } from "../lib/prisma/student"
 import {
@@ -51,6 +52,10 @@ export const studentHandlers = {
     studentData: Prisma.StudentUpdateInput
   ) => {
     return await updateStudent(id, studentData)
+  },
+
+  "get-student-with-grade-roster": async (id: string) => {
+    return await getStudentWithGradeRoster(id)
   },
 
   "delete-student": async (id: string) => {

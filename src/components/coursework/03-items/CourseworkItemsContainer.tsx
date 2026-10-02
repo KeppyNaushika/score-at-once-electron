@@ -44,7 +44,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
-import { buildItemDeletionWarning } from "@/lib/shared/gradeReferenceMessages"
+import {
+  buildItemDeletionWarning,
+  courseworkItemUsages,
+} from "@/lib/shared/gradeReferenceMessages"
 import { cn } from "@/lib/utils"
 import { courseworkWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
 import {
@@ -56,7 +59,6 @@ import {
   reorderCourseworkItemsMutation,
   updateCourseworkItemMutation,
 } from "@/queries/coursework"
-import { gradeReferencesQuery } from "@/queries/grade"
 import type {
   CourseworkItemWithLetterScales,
   CourseworkWithRelations,
@@ -266,17 +268,16 @@ export function CourseworkItemsContainer({
     )
   }
 
-  // 成績算出で使われていても消せるが、確認で影響を見せる
-  const deleteTargetReferences = useQuery({
-    ...gradeReferencesQuery({
-      kind: "courseworkItem",
-      id: itemDeletion.target?.id ?? "",
-    }),
-    enabled: itemDeletion.isOpen && itemDeletion.target !== null,
-  })
-  const deleteTargetWarning = deleteTargetReferences.data
-    ? buildItemDeletionWarning("courseworkItem", deleteTargetReferences.data)
-    : null
+  // 成績算出で使われていても消せるが、確認で影響を見せる。使っているデータソースは
+  // 資料の詳細に同梱してある（上の評価項目と同じキャッシュ）
+  const { data: coursework } = useQuery(courseworkDetailQuery(courseworkId))
+  const deleteTargetWarning =
+    coursework && itemDeletion.target
+      ? buildItemDeletionWarning(
+          "courseworkItem",
+          courseworkItemUsages(coursework, itemDeletion.target.id)
+        )
+      : null
 
   const handleDelete = async (item: CourseworkItemWithLetterScales) => {
     try {
@@ -396,10 +397,8 @@ export function CourseworkItemsContainer({
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction
               className={buttonVariants({ variant: "destructive" })}
-              // 使われているかを調べ終わるまでは押させない（影響を見せる前に消さない）
-              disabled={
-                deleteItem.isPending || deleteTargetReferences.isPending
-              }
+              // 資料の詳細が読めるまでは押させない（影響を見せる前に消さない）
+              disabled={deleteItem.isPending || coursework === undefined}
               onClick={(event) => {
                 // 閉じるのは削除が済んでから（失敗したら開いたままにする）
                 event.preventDefault()

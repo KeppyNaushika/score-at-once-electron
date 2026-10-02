@@ -23,7 +23,8 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 })
 
 import { getExamDirectory } from "@/electron-src/lib/dataManager"
-import { createExam, deleteExam } from "@/electron-src/lib/prisma/exam"
+import { createExam, deleteExam, getExam } from "@/electron-src/lib/prisma/exam"
+import { examUsingDataSources } from "@/lib/shared/gradeReferenceMessages"
 
 import { SAW_ALL_DELETION_COUNTS } from "../../helpers/deletionCounts"
 import {
@@ -132,6 +133,18 @@ describe("deleteExam", () => {
     expect(
       await prisma.gradeDataSource.findUnique({ where: { id: dataSource.id } })
     ).not.toBeNull()
+
+    // 試験の詳細にも同じデータソースが同梱され、画面のロックと確認が同じものを見る。
+    // Decimal（weight）は境界で number になっている
+    const examDetail = await getExam(exam.id)
+    expect(examDetail).not.toBeNull()
+    const usingDataSources = examDetail ? examUsingDataSources(examDetail) : []
+    expect(
+      usingDataSources.map((usingDataSource) => usingDataSource.id)
+    ).toEqual([dataSource.id])
+    expect(
+      examDetail?.examPages[0]?.cropRegions[0]?.gradeDataSources[0]?.weight
+    ).toBe(100)
 
     await prisma.grade.delete({ where: { id: grade.id } })
     await deleteExam(exam.id, SAW_ALL_DELETION_COUNTS)

@@ -14,7 +14,6 @@ import {
 } from "../lib/prisma/exam"
 import { getExamPagesByExamId } from "../lib/prisma/examPage"
 import { toSerializedScoreDecision } from "../lib/prisma/scoreDecision"
-import { serializePrisma } from "../lib/prisma/serializePrisma"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
 /**
@@ -102,9 +101,6 @@ export const examHandlers = {
     // Decimal は非対応なので number へ倒す。
     return {
       ...exam,
-      // 成績データソースは Decimal 列（weight / absentRatio / absentOffset）を持つ。
-      // 手書きで列を選び直さず、共有シリアライザを1回通す。
-      gradeDataSources: serializePrisma(exam.gradeDataSources),
       // examPagesのcropRegionsのquestionScoresをシリアライズ
       examPages:
         exam.examPages?.map((page) => ({

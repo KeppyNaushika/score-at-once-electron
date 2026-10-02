@@ -3,7 +3,10 @@ import * as fsPromises from "fs/promises"
 
 import type { ExamProgressSource } from "../../../src/lib/examStatus"
 import { DELETION_COUNT_NAME } from "../../../src/lib/shared/deletionCountNames"
-import { buildDeletionBlockedMessage } from "../../../src/lib/shared/gradeReferenceMessages"
+import {
+  buildDeletionBlockedMessage,
+  examUsingDataSources,
+} from "../../../src/lib/shared/gradeReferenceMessages"
 import type { ConfirmedDeletionCount } from "../../../src/types/deletionConfirmation.types"
 import { toScoringStatus } from "../../../src/types/scoringStatus.types"
 import { getExamDirectory } from "../dataManager"
@@ -11,8 +14,9 @@ import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
 import { deleteAfterRecount } from "./deleteAfterRecount"
 import { examPageWithContentInclude } from "./examPage"
-import { findGradeReferences } from "./gradeReference"
+import { examGradeUsageInclude } from "./gradeDataSourceUsage"
 import { PUBLIC_USER_OMIT } from "./publicUser"
+import { serializePrisma } from "./serializePrisma"
 
 /**
  * 進捗計算（renderer の getExamProgress）が読む元データの select。
@@ -152,15 +156,23 @@ export const getExamById = async (id: string) => {
         include: { tag: true },
         orderBy: { tag: { order: "asc" } },
       },
-      // 試験削除時に参照を失う（examIdがSetNull・cropRegion経由はcascade削除）成績データソース
-      gradeDataSources: true,
     },
   })
 }
 
-/** 試験の基本スカラーのみを取得する（リレーション無し・軽量）。編集/スカラー参照用途向け。 */
+/**
+ * 試験1件。本体のスカラーに、この試験を使っている成績算出のデータソースを同梱する。
+ *
+ * 試験の画面（layout）がこれを読み、使われていればロックする（`GradeLockProvider`）。
+ * 削除の確認（試験・模範解答ページ・設問・受験生徒）も同じ同梱から影響を導く。
+ * データソースは Decimal を持つので境界で変換する。
+ */
 export const getExam = async (id: string) => {
-  return prisma.exam.findUnique({ where: { id } })
+  const exam = await prisma.exam.findUnique({
+    where: { id },
+    include: examGradeUsageInclude,
+  })
+  return exam ? serializePrisma(exam) : null
 }
 
 /**
@@ -328,10 +340,16 @@ export const deleteExam = async (
     confirmedCounts,
     recount: (tx) => countExamDeletionCounts(tx, id),
     remove: async (tx) => {
-      const blockedMessage = buildDeletionBlockedMessage(
-        "exam",
-        await findGradeReferences({ kind: "exam", id }, tx)
-      )
+      const examWithUsage = await tx.exam.findUnique({
+        where: { id },
+        include: examGradeUsageInclude,
+      })
+      const blockedMessage = examWithUsage
+        ? buildDeletionBlockedMessage(
+            "exam",
+            examUsingDataSources(examWithUsage)
+          )
+        : null
       if (blockedMessage !== null) throw new Error(blockedMessage)
       return await tx.exam.delete({ where: { id } })
     },

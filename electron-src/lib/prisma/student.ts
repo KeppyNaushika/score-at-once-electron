@@ -1,9 +1,9 @@
 import type { Prisma } from "@prisma/client"
 
-import { buildDeletionBlockedMessage } from "../../../src/lib/shared/gradeReferenceMessages"
+import { buildStudentDeletionBlockedMessage } from "../../../src/lib/shared/gradeReferenceMessages"
 import { diffFields, recordAuditLog } from "./auditLog"
 import prisma from "./client"
-import { findGradeReferences } from "./gradeReference"
+import { studentGradeRosterInclude } from "./gradeDataSourceUsage"
 
 const studentLabel = (student: {
   lastName: string
@@ -133,6 +133,19 @@ export const updateStudent = async (
 }
 
 /**
+ * 生徒1人と、その生徒が載っている成績算出の名簿。
+ *
+ * 生徒の削除の確認が開いたときだけ読む。生徒の一覧へ同梱すると、一覧を引く全部の
+ * 画面へ名簿が配られるため分けている。
+ */
+export const getStudentWithGradeRoster = async (id: string) => {
+  return prisma.student.findUnique({
+    where: { id },
+    include: studentGradeRosterInclude,
+  })
+}
+
+/**
  * 生徒を削除する。
  *
  * 成績算出の名簿（GradeStudent）に載っている生徒は消さずに断る。消すと名簿の行が
@@ -146,12 +159,12 @@ export const deleteStudent = async (id: string): Promise<void> => {
   try {
     const before = await prisma.student.findUnique({
       where: { id },
+      include: studentGradeRosterInclude,
     })
 
-    const blockedMessage = buildDeletionBlockedMessage(
-      "student",
-      await findGradeReferences({ kind: "student", id })
-    )
+    const blockedMessage = before
+      ? buildStudentDeletionBlockedMessage(before.gradeStudents)
+      : null
     if (blockedMessage !== null) throw new Error(blockedMessage)
     await prisma.student.delete({ where: { id } })
 

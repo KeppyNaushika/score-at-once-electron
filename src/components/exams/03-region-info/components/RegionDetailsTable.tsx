@@ -231,6 +231,7 @@ const RegionDetailsTable = ({
 
       <DeleteConfirmModal
         isOpen={cropRegionDeletion.isOpen}
+        examId={examId}
         cropRegionId={cropRegionDeletion.target}
         onClose={cropRegionDeletion.close}
         onConfirm={confirmDeleteRegion}

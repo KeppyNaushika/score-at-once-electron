@@ -14,8 +14,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import type { ExamClassroomPlacement } from "@/lib/examClassroomPlacement"
-import { buildRosterRemovalWarning } from "@/lib/shared/gradeReferenceMessages"
-import { gradeReferencesQuery } from "@/queries/grade"
+import {
+  buildRosterRemovalWarning,
+  examUsingDataSources,
+} from "@/lib/shared/gradeReferenceMessages"
+import { examDetailQuery } from "@/queries/exam"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
@@ -51,12 +54,13 @@ export default function StudentRemovalConfirmModal({
   refusalMessage,
 }: StudentRemovalConfirmModalProps) {
   // この試験を使っている成績算出。外した生徒の点数はそこで欠測になる
-  const gradeReferences = useQuery({
-    ...gradeReferencesQuery({ kind: "exam", id: examId }),
+  // （使っているデータソースは試験の詳細に同梱してある）
+  const examDetail = useQuery({
+    ...examDetailQuery(examId),
     enabled: isOpen,
   })
-  const gradeWarning = gradeReferences.data
-    ? buildRosterRemovalWarning("exam", gradeReferences.data)
+  const gradeWarning = examDetail.data
+    ? buildRosterRemovalWarning("exam", examUsingDataSources(examDetail.data))
     : null
 
   return (
@@ -177,8 +181,8 @@ export default function StudentRemovalConfirmModal({
           <Button
             variant="destructive"
             onClick={onConfirm}
-            // 成績算出で使われているかを調べ終わるまでは押させない（影響を見せる前に消さない）
-            disabled={!canConfirm || gradeReferences.isPending}
+            // 試験の詳細が読めるまでは押させない（影響を見せる前に消さない）
+            disabled={!canConfirm || examDetail.isPending}
             className="gap-2"
           >
             <Trash2 className="h-4 w-4" />

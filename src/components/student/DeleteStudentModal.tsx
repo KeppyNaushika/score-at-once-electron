@@ -6,9 +6,11 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import ConfirmationModal from "@/components/common/ConfirmationModal"
-import { buildDeletionBlockedMessage } from "@/lib/shared/gradeReferenceMessages"
-import { gradeReferencesQuery } from "@/queries/grade"
-import { deleteStudentMutation } from "@/queries/student"
+import { buildStudentDeletionBlockedMessage } from "@/lib/shared/gradeReferenceMessages"
+import {
+  deleteStudentMutation,
+  studentGradeRosterQuery,
+} from "@/queries/student"
 
 interface DeleteStudentModalProps {
   open: boolean
@@ -27,7 +29,7 @@ interface DeleteStudentModalProps {
  *
  * 成績算出の名簿に載っている生徒は消させない（名簿の行が Cascade で消え、手動点数・
  * 上書き・確定値も黙って失われるため）。どの成績算出かを前もって見せ、main も同じ
- * 判定で最終的に断る。
+ * 判定で最終的に断る。載っている名簿は、ダイアログが開いたときにその生徒の分だけ読む。
  */
 export function DeleteStudentModal({
   open,
@@ -47,12 +49,12 @@ export function DeleteStudentModal({
       ? refusal.message
       : null
 
-  const gradeReferences = useQuery({
-    ...gradeReferencesQuery({ kind: "student", id: student?.id ?? "" }),
+  const studentWithRoster = useQuery({
+    ...studentGradeRosterQuery(student?.id ?? ""),
     enabled: open && student !== null,
   })
-  const blockedMessage = gradeReferences.data
-    ? buildDeletionBlockedMessage("student", gradeReferences.data)
+  const blockedMessage = studentWithRoster.data
+    ? buildStudentDeletionBlockedMessage(studentWithRoster.data.gradeStudents)
     : null
 
   const handleDelete = async () => {
@@ -68,11 +70,10 @@ export function DeleteStudentModal({
             ? error.message
             : "削除できませんでした。もう一度確認してください。",
       })
-      // 断られた理由が「成績算出の名簿に載っている」なら、その一覧も取り直して見せる
+      // 断られた理由が「成績算出の名簿に載っている」なら、その名簿も取り直して見せる
       await queryClient
         .refetchQueries({
-          queryKey: gradeReferencesQuery({ kind: "student", id: student.id })
-            .queryKey,
+          queryKey: studentGradeRosterQuery(student.id).queryKey,
         })
         .catch(() => {})
       return
@@ -130,7 +131,7 @@ export function DeleteStudentModal({
       loading={deleteStudent.isPending}
       // 名簿に載っているかを調べ終わるまで、また載っている間は押させない
       // （調べるのに失敗したときは押せるが、main が同じ判定で断る）
-      confirmDisabled={gradeReferences.isPending || blockedMessage !== null}
+      confirmDisabled={studentWithRoster.isPending || blockedMessage !== null}
     />
   )
 }

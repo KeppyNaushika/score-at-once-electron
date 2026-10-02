@@ -3,8 +3,11 @@
 import { useQuery } from "@tanstack/react-query"
 
 import ConfirmationModal from "@/components/common/ConfirmationModal"
-import { buildDeletionBlockedMessage } from "@/lib/shared/gradeReferenceMessages"
-import { gradeReferencesQuery } from "@/queries/grade"
+import {
+  buildDeletionBlockedMessage,
+  courseworkUsingDataSources,
+} from "@/lib/shared/gradeReferenceMessages"
+import { courseworkDetailQuery } from "@/queries/coursework"
 
 interface DeleteCourseworkModalProps {
   open: boolean
@@ -30,6 +33,7 @@ interface DeleteCourseworkModalProps {
  *
  * 成績算出から使われている資料は消させない。押してから断られる前に、どの成績算出が
  * 使っているかをここで見せて押させない（main の deleteCoursework も同じ判定で断る）。
+ * 使っているデータソースは資料の詳細に同梱してある。
  */
 export function DeleteCourseworkModal({
   open,
@@ -38,12 +42,15 @@ export function DeleteCourseworkModal({
   onConfirm,
   loading,
 }: DeleteCourseworkModalProps) {
-  const gradeReferences = useQuery({
-    ...gradeReferencesQuery({ kind: "coursework", id: target?.id ?? "" }),
+  const courseworkDetail = useQuery({
+    ...courseworkDetailQuery(target?.id ?? ""),
     enabled: open && target !== null,
   })
-  const blockedMessage = gradeReferences.data
-    ? buildDeletionBlockedMessage("coursework", gradeReferences.data)
+  const blockedMessage = courseworkDetail.data
+    ? buildDeletionBlockedMessage(
+        "coursework",
+        courseworkUsingDataSources(courseworkDetail.data)
+      )
     : null
 
   return (
@@ -94,7 +101,7 @@ export function DeleteCourseworkModal({
       onConfirm={() => (target ? onConfirm(target.id) : undefined)}
       loading={loading}
       // 使われているかを調べ終わるまで、また使われている間は押させない
-      confirmDisabled={gradeReferences.isPending || blockedMessage !== null}
+      confirmDisabled={courseworkDetail.isPending || blockedMessage !== null}
     />
   )
 }

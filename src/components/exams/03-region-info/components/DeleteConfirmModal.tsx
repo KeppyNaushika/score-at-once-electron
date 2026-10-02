@@ -14,11 +14,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { buttonVariants } from "@/components/ui/button"
-import { buildItemDeletionWarning } from "@/lib/shared/gradeReferenceMessages"
-import { gradeReferencesQuery } from "@/queries/grade"
+import {
+  buildItemDeletionWarning,
+  cropRegionUsages,
+} from "@/lib/shared/gradeReferenceMessages"
+import { examDetailQuery } from "@/queries/exam"
 
 type DeleteConfirmModalProps = {
   isOpen: boolean
+  examId: string
   /** 消そうとしている領域。成績算出で使われていれば影響を見せる */
   cropRegionId: string | null
   onClose: () => void
@@ -30,20 +34,26 @@ type DeleteConfirmModalProps = {
  *
  * 成績算出で使われていても消せるが、どの成績算出のどのデータソースに影響するかを
  * 見せる（設問のデータソースはカスケードで消え、試験の合計点・小計は値が変わる）。
+ * 使っているデータソースは試験の詳細（layout も読む）に同梱してある。
  */
 export const DeleteConfirmModal = ({
   isOpen,
+  examId,
   cropRegionId,
   onClose,
   onConfirm,
 }: DeleteConfirmModalProps) => {
-  const gradeReferences = useQuery({
-    ...gradeReferencesQuery({ kind: "cropRegion", id: cropRegionId ?? "" }),
+  const examDetail = useQuery({
+    ...examDetailQuery(examId),
     enabled: isOpen && cropRegionId !== null,
   })
-  const gradeWarning = gradeReferences.data
-    ? buildItemDeletionWarning("cropRegion", gradeReferences.data)
-    : null
+  const gradeWarning =
+    examDetail.data && cropRegionId !== null
+      ? buildItemDeletionWarning(
+          "cropRegion",
+          cropRegionUsages(examDetail.data, cropRegionId)
+        )
+      : null
 
   return (
     <AlertDialog
@@ -77,8 +87,8 @@ export const DeleteConfirmModal = ({
               event.preventDefault()
               onConfirm()
             }}
-            // 使われているかを調べ終わるまでは押させない（影響を見せる前に消さない）
-            disabled={cropRegionId !== null && gradeReferences.isPending}
+            // 試験の詳細が読めるまでは押させない（影響を見せる前に消さない）
+            disabled={cropRegionId !== null && examDetail.isPending}
           >
             削除する
           </AlertDialogAction>

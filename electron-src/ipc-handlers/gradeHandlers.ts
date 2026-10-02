@@ -10,8 +10,6 @@ import type {
   GradeConstraintInput,
   GradeItemExclusionInput,
 } from "../../src/types/grade.types"
-import type { GradeLockTarget } from "../../src/types/gradeLock.types"
-import type { GradeReferenceTarget } from "../../src/types/gradeReference.types"
 import type { GradeReportSettings } from "../../src/types/gradeReport.types"
 import { createGradeArchive } from "../lib/export/grade-archive/gradeArchiveCreator"
 import { exportGradeExcel } from "../lib/export/gradeExcel/gradeExcelExportMain"
@@ -77,12 +75,10 @@ import {
   getGradeItemExclusions,
   setGradeItemExclusion,
 } from "../lib/prisma/gradeItemExclusion"
-import { getGradeLockSources } from "../lib/prisma/gradeLockSource"
 import {
   deleteGradeOverride,
   upsertGradeOverride,
 } from "../lib/prisma/gradeOverride"
-import { findGradeReferences } from "../lib/prisma/gradeReference"
 import {
   addStudentsFromClassroomToGrade,
   addStudentsToGrade,
@@ -142,16 +138,6 @@ export const gradeHandlers = {
 
   "grade:duplicate": async (id: string) => {
     return duplicateGrade(id)
-  },
-
-  // 試験・資料とその中の項目を消す前に、どの成績算出がどう使っているかを調べる
-  "grade:getReferences": async (target: GradeReferenceTarget) => {
-    return findGradeReferences(target)
-  },
-
-  // 試験・資料のロック。その試験・資料を使っているデータソースの一覧を返す
-  "grade:getLockSources": async (target: GradeLockTarget) => {
-    return getGradeLockSources(target)
   },
 
   // タグ（GradeTag）

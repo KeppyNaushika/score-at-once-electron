@@ -11,20 +11,29 @@ import {
   useState,
 } from "react"
 
-import { NO_GRADE_LOCK_SOURCES } from "@/lib/gradeLock"
 import {
   holdGradeWriteLock,
   notifyGradeWriteLocked,
 } from "@/lib/gradeWriteLock"
-import { gradeLockSourcesQuery } from "@/queries/grade"
-import type { GradeLockSource, GradeLockTarget } from "@/types/gradeLock.types"
+import {
+  courseworkUsingDataSources,
+  examUsingDataSources,
+  type UsingGradeDataSource,
+} from "@/lib/shared/gradeReferenceMessages"
+import { courseworkDetailQuery } from "@/queries/coursework"
+import { examDetailQuery } from "@/queries/exam"
+
+/** ロックする単位（試験1件か、試験外成績資料1件） */
+type GradeLockTarget =
+  | { kind: "exam"; examId: string }
+  | { kind: "coursework"; courseworkId: string }
 
 interface GradeLockContextValue {
   /** ロックしているものを言う主語（「この試験」「この資料」） */
   subject: string
-  /** この試験・資料を使っているデータソース。空なら使われていない */
-  sources: GradeLockSource[]
-  /** 使われていて、まだ解除していない */
+  /** この試験・資料を使っているデータソース。空なら使われていない（か、まだ読み込み中） */
+  dataSources: UsingGradeDataSource[]
+  /** 使われていて、まだ解除していない。詳細を読み込むまでもロックしておく */
   locked: boolean
   /** 確認のうえで解除する（この試験・資料を出るまで続く） */
   unlock: () => void
@@ -39,10 +48,13 @@ interface GradeLockContextValue {
   ) => (...args: Args) => void
 }
 
+/** 読み込み中・使われていないときの空値（毎回新しい配列を作らない。書き換えない） */
+const NO_DATA_SOURCES: UsingGradeDataSource[] = []
+
 /** Provider の外（試験・資料の画面でないところ）ではロックしない */
 const NOT_LOCKED: GradeLockContextValue = {
   subject: "",
-  sources: NO_GRADE_LOCK_SOURCES,
+  dataSources: NO_DATA_SOURCES,
   locked: false,
   unlock: () => undefined,
   guard: (write) => write,
@@ -50,14 +62,15 @@ const NOT_LOCKED: GradeLockContextValue = {
 
 const GradeLockContext = createContext<GradeLockContextValue>(NOT_LOCKED)
 
-const targetId = (target: GradeLockTarget) =>
-  target.kind === "exam" ? target.examId : target.courseworkId
-
 /**
  * 成績算出で使われている試験・資料を、**まるごと**ロックする。
  *
  * 試験・資料の layout に置く。使われていれば、解除するまでその試験・資料への
  * 書き込みをすべて止める（`holdGradeWriteLock` → `MutationCache`）。
+ *
+ * 使われているかは、layout も読む試験・資料の詳細に同梱したデータソースから導く
+ * （別に問い合わせない）。詳細を読み込むまでは使われているか分からないので、
+ * ロックしておく（読み込み中に書けてしまう隙間を作らない）。
  *
  * **解除は state だけで持つ。** layout はタブを移っても作り直されないので、解除は
  * その試験・資料の中にいる間どのタブでも続き、出れば（layout ごと外れれば）再び
@@ -71,12 +84,24 @@ export function GradeLockProvider({
   target: GradeLockTarget
   children: ReactNode
 }) {
-  const { data: sources = NO_GRADE_LOCK_SOURCES } = useQuery({
-    ...gradeLockSourcesQuery(target),
-    enabled: targetId(target) !== "",
+  const { data: exam } = useQuery({
+    ...examDetailQuery(target.kind === "exam" ? target.examId : ""),
+    enabled: target.kind === "exam" && target.examId !== "",
   })
+  const { data: coursework } = useQuery({
+    ...courseworkDetailQuery(
+      target.kind === "coursework" ? target.courseworkId : ""
+    ),
+    enabled: target.kind === "coursework" && target.courseworkId !== "",
+  })
+  const dataSources = useMemo(() => {
+    if (target.kind === "exam") {
+      return exam ? examUsingDataSources(exam) : null
+    }
+    return coursework ? courseworkUsingDataSources(coursework) : null
+  }, [target.kind, exam, coursework])
   const [unlocked, setUnlocked] = useState(false)
-  const locked = sources.length > 0 && !unlocked
+  const locked = dataSources === null || (dataSources.length > 0 && !unlocked)
 
   // ロック中だけ握る。解除する・layout を出ると手放す
   useEffect(() => {
@@ -98,19 +123,19 @@ export function GradeLockProvider({
     [locked]
   )
 
-  const value = useMemo<GradeLockContextValue>(
+  const gradeLock = useMemo<GradeLockContextValue>(
     () => ({
       subject: target.kind === "exam" ? "この試験" : "この資料",
-      sources,
+      dataSources: dataSources ?? NO_DATA_SOURCES,
       locked,
       unlock,
       guard,
     }),
-    [target.kind, sources, locked, unlock, guard]
+    [target.kind, dataSources, locked, unlock, guard]
   )
 
   return (
-    <GradeLockContext.Provider value={value}>
+    <GradeLockContext.Provider value={gradeLock}>
       {children}
     </GradeLockContext.Provider>
   )

@@ -1,69 +1,76 @@
 import { describe, expect, it } from "vitest"
 
-import { buildGradeLockMessage } from "@/lib/gradeLock"
-import type { GradeLockSource } from "@/types/gradeLock.types"
+import { buildGradeLockMessage, isFrozenDataSource } from "@/lib/gradeLock"
+import type { UsingGradeDataSource } from "@/lib/shared/gradeReferenceMessages"
 
-const source = (overrides: Partial<GradeLockSource>): GradeLockSource => ({
-  gradeId: "grade-1",
-  gradeName: "1学期成績",
-  gradeItemName: "知識・技能",
-  dataSourceId: crypto.randomUUID(),
-  dataSourceName: "中間",
-  dataSourceType: "exam_total",
-  frozenScoreCount: 0,
-  ...overrides,
+/** 試験・資料の詳細に同梱されるデータソース1件 */
+const dataSource = ({
+  gradeId = "grade-1",
+  gradeName = "1学期成績",
+  gradeItemName = "知識・技能",
+  name = "中間",
+  type = "exam_total",
+  frozenScoreIds = [],
+}: {
+  gradeId?: string
+  gradeName?: string
+  gradeItemName?: string
+  name?: string
+  type?: string
+  frozenScoreIds?: string[]
+}): UsingGradeDataSource => ({
+  id: crypto.randomUUID(),
+  type,
+  name,
+  order: 0,
+  subtotalId: null,
+  gradeItem: {
+    id: `${gradeId}-${gradeItemName}`,
+    name: gradeItemName,
+    order: 0,
+    grade: { id: gradeId, name: gradeName },
+    frozenScores: frozenScoreIds.map((id) => ({ id })),
+  },
 })
 
 describe("buildGradeLockMessage", () => {
-  it("成績算出ごとにまとめ、同じ評価項目・データソースの組は畳む", () => {
-    const examTotal = source({ dataSourceName: "中間" })
+  it("成績算出ごとに、渡された順でまとめる", () => {
+    const examTotal = dataSource({ name: "中間" })
+    const thinking = dataSource({
+      gradeItemName: "思考・判断・表現",
+      type: "subtotal",
+      name: "中間(思考)",
+    })
+    const secondGrade = dataSource({
+      gradeId: "grade-2",
+      gradeName: "2学期成績",
+    })
     const message = buildGradeLockMessage("この試験", [
       examTotal,
-      { ...examTotal, dataSourceId: "copy" },
-      source({
-        gradeItemName: "思考・判断・表現",
-        dataSourceType: "subtotal",
-        dataSourceName: "中間(思考)",
-      }),
-      source({ gradeId: "grade-2", gradeName: "2学期成績" }),
+      secondGrade,
+      thinking,
     ])
     expect(message.lead).toContain("この試験は")
     expect(message.lead).toContain("点数が変わります")
     expect(message.groups).toEqual([
       {
-        gradeId: "grade-1",
-        gradeName: "1学期成績",
-        rows: [
-          {
-            gradeItemName: "知識・技能",
-            dataSourceName: "中間",
-            dataSourceTypeLabel: "試験の合計点",
-            isFrozen: false,
-          },
-          {
-            gradeItemName: "思考・判断・表現",
-            dataSourceName: "中間(思考)",
-            dataSourceTypeLabel: "小計",
-            isFrozen: false,
-          },
-        ],
+        grade: { id: "grade-1", name: "1学期成績" },
+        dataSources: [examTotal, thinking],
       },
       {
-        gradeId: "grade-2",
-        gradeName: "2学期成績",
-        rows: [expect.objectContaining({ gradeItemName: "知識・技能" })],
+        grade: { id: "grade-2", name: "2学期成績" },
+        dataSources: [secondGrade],
       },
     ])
     // 確定済みの評価項目が無ければ、確定の話はしない
     expect(message.frozenNote).toBeNull()
   })
 
-  it("確定済みの評価項目があるときだけ、確定の注意を出して行に印を付ける", () => {
-    const message = buildGradeLockMessage("この試験", [
-      source({ frozenScoreCount: 3 }),
-      source({ gradeItemName: "思考・判断・表現" }),
-    ])
-    expect(message.groups[0].rows.map((row) => row.isFrozen)).toEqual([
+  it("確定済みの評価項目があるときだけ、確定の注意を出す", () => {
+    const frozen = dataSource({ frozenScoreIds: ["frozen-1", "frozen-2"] })
+    const notFrozen = dataSource({ gradeItemName: "思考・判断・表現" })
+    const message = buildGradeLockMessage("この試験", [frozen, notFrozen])
+    expect(message.groups[0].dataSources.map(isFrozenDataSource)).toEqual([
       true,
       false,
     ])
