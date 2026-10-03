@@ -11,10 +11,7 @@ import {
   useState,
 } from "react"
 
-import {
-  holdGradeWriteLock,
-  notifyGradeWriteLocked,
-} from "@/lib/gradeWriteLock"
+import { notifyGradeWriteLocked } from "@/lib/gradeWriteLock"
 import {
   courseworkUsingDataSources,
   examUsingDataSources,
@@ -22,6 +19,7 @@ import {
 } from "@/lib/shared/gradeReferenceMessages"
 import { courseworkDetailQuery } from "@/queries/coursework"
 import { examDetailQuery } from "@/queries/exam"
+import { holdGradeWriteLock } from "@/queries/gradeLock"
 
 /** ロックする単位（試験1件か、試験外成績資料1件） */
 type GradeLockTarget =
@@ -40,7 +38,7 @@ interface GradeLockContextValue {
   /**
    * 書き込みの口を包む。ロック中は何もせず通知だけ出す。
    *
-   * 書き込みそのものは `MutationCache` が止めるので、これは書き込みの前後にある
+   * 書き込みそのものは main が DB の手前で止めるので、これは書き込みの前後にある
    * 画面の動き（採点後の自動進行・部分点のモーダルを開くなど）まで止めたいところで使う
    */
   guard: <Args extends unknown[]>(
@@ -65,8 +63,10 @@ const GradeLockContext = createContext<GradeLockContextValue>(NOT_LOCKED)
 /**
  * 成績算出で使われている試験・資料を、**まるごと**ロックする。
  *
- * 試験・資料の layout に置く。使われていれば、解除するまでその試験・資料への
- * 書き込みをすべて止める（`holdGradeWriteLock` → `MutationCache`）。
+ * 試験・資料の layout に置く。使われていれば、解除するまで main にロックを握らせ、
+ * 成績算出が読むテーブルへの書き込みを止める（`holdGradeWriteLock` →
+ * `electron-src/lib/prisma/gradeWriteLock.ts`）。成績算出に関係ない書き込み
+ * （出力設定・タグ・メンバーなど）は止まらない。
  *
  * 使われているかは、layout も読む試験・資料の詳細に同梱したデータソースから導く
  * （別に問い合わせない）。詳細を読み込むまでは使われているか分からないので、

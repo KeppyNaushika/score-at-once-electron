@@ -48,8 +48,6 @@ export const createUserMutation = () =>
     meta: {
       invalidates: [usersKey],
       errorMessage: "利用者を作成できませんでした",
-      // 利用者の情報。試験・資料の中身は変えない
-      bypassesGradeLock: true,
     },
   })
 
@@ -62,8 +60,6 @@ export const updateUserMutation = () =>
     meta: {
       invalidates: [usersKey],
       errorMessage: "利用者を保存できませんでした",
-      // 利用者の情報。試験・資料の中身は変えない
-      bypassesGradeLock: true,
     },
   })
 
@@ -82,8 +78,6 @@ export const updateUserPasscodeMutation = () =>
     meta: {
       invalidates: [usersKey],
       errorMessage: "パスコードを保存できませんでした",
-      // 利用者の情報。試験・資料の中身は変えない
-      bypassesGradeLock: true,
     },
   })
 
@@ -105,8 +99,6 @@ export const saveAuthTokenMutation = () =>
     meta: {
       invalidates: [authTokenKey],
       errorMessage: "ログイン状態を保存できませんでした",
-      // 利用者の情報。試験・資料の中身は変えない
-      bypassesGradeLock: true,
     },
   })
 
@@ -117,7 +109,5 @@ export const clearAuthTokenMutation = () =>
     meta: {
       invalidates: [authTokenKey],
       errorMessage: "ログアウトできませんでした",
-      // 利用者の情報。試験・資料の中身は変えない
-      bypassesGradeLock: true,
     },
   })

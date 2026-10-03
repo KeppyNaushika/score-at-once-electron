@@ -19,8 +19,13 @@
  * アプリ自身はトリガーを持たないので、立てて変わるのはライブラリのトリガーだけである。
  */
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
+import type {
+  SqlDriverAdapter,
+  SqlQueryable,
+} from "@prisma/driver-adapter-utils"
 import Database from "better-sqlite3"
 
+import { assertGradeWriteAllowed } from "./gradeWriteLock"
 import type { SqliteDatabase } from "./sqliteSchemaUtils"
 
 /** 接続を開いた直後に流す文。ライブラリの前提 P12（アプリの表を書くすべての接続で ON） */
@@ -51,11 +56,42 @@ export const openAppDatabase = (absolutePath: string): SqliteDatabase => {
  * あとの問い合わせで**黙って `connect()` し直す**から。1回きりの実行では、張り直した
  * 接続が OFF のまま残る。`connect()` を包めば、何度張り直しても必ず通る。
  */
+/**
+ * 問い合わせの口に、成績算出のロックの関所を挟む（`gradeWriteLock.ts`）。
+ *
+ * Prisma の書き込みは、mutation・入れ子の書き込み・生 SQL のどれも最後はここを通る
+ * SQL になる。書き込み先のテーブルを見て、ロック中なら発行する前に断る。
+ */
+const guardGradeWrites = (queryable: SqlQueryable): void => {
+  const queryRaw = queryable.queryRaw.bind(queryable)
+  const executeRaw = queryable.executeRaw.bind(queryable)
+  queryable.queryRaw = async (query) => {
+    assertGradeWriteAllowed(query.sql)
+    return queryRaw(query)
+  }
+  queryable.executeRaw = async (query) => {
+    assertGradeWriteAllowed(query.sql)
+    return executeRaw(query)
+  }
+}
+
+/** 接続と、そこから始めるトランザクションの両方に関所を挟む */
+const guardConnection = (adapter: SqlDriverAdapter): SqlDriverAdapter => {
+  guardGradeWrites(adapter)
+  const startTransaction = adapter.startTransaction.bind(adapter)
+  adapter.startTransaction = async (isolationLevel) => {
+    const transaction = await startTransaction(isolationLevel)
+    guardGradeWrites(transaction)
+    return transaction
+  }
+  return adapter
+}
+
 export class PrismaBetterSqlite3WithRecursiveTriggers extends PrismaBetterSqlite3 {
   override async connect() {
     const adapter = await super.connect()
     await adapter.executeScript(RECURSIVE_TRIGGERS_PRAGMA)
-    return adapter
+    return guardConnection(adapter)
   }
 
   override async connectToShadowDb() {

@@ -9,6 +9,8 @@
 import type { IpcMainInvokeEvent } from "electron"
 import { ipcMain } from "electron"
 
+import { GRADE_WRITE_LOCKED_MESSAGE } from "../../src/lib/shared/gradeWriteLock"
+import { isGradeWriteLockedError } from "../lib/prisma/gradeWriteLock"
 import { serializePrisma } from "../lib/prisma/serializePrisma"
 import { toIpcErrorMessage } from "./ipcEnvelope"
 
@@ -53,6 +55,11 @@ export function registerChannel(
         : await call(...args)
       return { __ipc: "ok", value: serializePrisma(value) }
     } catch (err) {
+      // 成績算出のロックで断ったものは失敗ではない。renderer が見分けられるよう、
+      // 文言を取り決めの定数にそろえて渡す（`src/lib/shared/gradeWriteLock.ts`）
+      if (isGradeWriteLockedError(err)) {
+        return { __ipc: "failed", error: GRADE_WRITE_LOCKED_MESSAGE }
+      }
       console.error(`Error in IPC handler [${channel}]:`, err)
       return { __ipc: "failed", error: toIpcErrorMessage(err, "Unknown error") }
     }

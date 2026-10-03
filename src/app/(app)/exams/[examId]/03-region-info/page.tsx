@@ -42,7 +42,7 @@ export default function RegionInfoPage() {
   )
   const queryClient = useQueryClient()
   const currentUser = useCurrentUser()
-  // 成績算出が使う試験はロックされる（layout）。書き込みは中央で止まるが、
+  // 成績算出が使う試験はロックされる（layout）。書き込みは main が止めるが、
   // 配点・種類・ラベルの欄は見た目でも打てなくする
   const { locked: gradeLocked } = useGradeLock()
 

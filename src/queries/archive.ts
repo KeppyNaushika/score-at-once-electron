@@ -25,8 +25,6 @@ export const exportExamArchiveMutation = () =>
       // 書き出したことは監査ログに残る＝DB を1行書く
       invalidates: [auditLogListKey],
       errorMessage: "試験を書き出せませんでした",
-      // 書き出し。DB に書くのは監査ログだけ
-      bypassesGradeLock: true,
     },
   })
 
@@ -39,8 +37,6 @@ export const bulkExportExamsMutation = () =>
       // 書き出したことは監査ログに残る＝DB を1行書く
       invalidates: [auditLogListKey],
       errorMessage: "試験を書き出せませんでした",
-      // 書き出し。DB に書くのは監査ログだけ
-      bypassesGradeLock: true,
     },
   })
 
@@ -55,8 +51,6 @@ export const exportStudentArchiveMutation = () =>
       // 書き出したことは監査ログに残る＝DB を1行書く
       invalidates: [auditLogListKey],
       errorMessage: "生徒を書き出せませんでした",
-      // 書き出し。DB に書くのは監査ログだけ
-      bypassesGradeLock: true,
     },
   })
 

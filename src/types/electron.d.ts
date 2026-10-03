@@ -23,6 +23,7 @@ import type { createExamApi } from "@/electron-src/preload-apis/examApi"
 import type { createExamClassroomApi } from "@/electron-src/preload-apis/examClassroomApi"
 import type { createExportApi } from "@/electron-src/preload-apis/exportApi"
 import type { createGradeApi } from "@/electron-src/preload-apis/gradeApi"
+import type { createGradeLockApi } from "@/electron-src/preload-apis/gradeLockApi"
 import type { createMiscApi } from "@/electron-src/preload-apis/miscApi"
 import type { createNavigationApi } from "@/electron-src/preload-apis/navigationApi"
 import type { createOmrApi } from "@/electron-src/preload-apis/omrApi"
@@ -93,6 +94,7 @@ export type MyAPI = ReturnType<typeof createExamApi> &
   ReturnType<typeof createSettingsApi> &
   ReturnType<typeof createPdfToolsApi> &
   ReturnType<typeof createGradeApi> &
+  ReturnType<typeof createGradeLockApi> &
   ReturnType<typeof createCourseworkApi> &
   ReturnType<typeof createTagApi> &
   ReturnType<typeof createOmrApi> &
