@@ -5,18 +5,9 @@ import { Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
+import ConfirmationModal from "@/components/common/ConfirmationModal"
 import { DragHandle, useSortableRow } from "@/components/common/sortable-table"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Tooltip,
@@ -142,30 +133,16 @@ export function GradeItemSection({
           </Button>
         </div>
 
-        <AlertDialog
+        <ConfirmationModal
           open={isDeleteConfirmOpen}
-          onOpenChange={setIsDeleteConfirmOpen}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>評価項目を削除しますか？</AlertDialogTitle>
-              <AlertDialogDescription>
-                「{gradeItem.name}」を削除します。この評価項目のデータソース
-                {gradeItem.dataSources.length}
-                件・成績境界・手直しした成績・確定した成績も一緒に削除され、元に戻せません。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>キャンセル</AlertDialogCancel>
-              <AlertDialogAction
-                className={buttonVariants({ variant: "destructive" })}
-                onClick={() => void handleDelete()}
-              >
-                削除
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          onClose={() => setIsDeleteConfirmOpen(false)}
+          title="評価項目を削除しますか？"
+          description={`「${gradeItem.name}」を削除します。この評価項目のデータソース${gradeItem.dataSources.length}件・成績境界・手直しした成績・確定した成績も一緒に削除され、元に戻せません。`}
+          confirmText="削除"
+          variant="destructive"
+          icon="trash"
+          onConfirm={handleDelete}
+        />
 
         {children}
       </div>

@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, ImageUp, Trash2 } from "lucide-react"
 import Image from "next/image"
 import React, { useRef, useState } from "react"
 
+import { CautionNotice } from "@/components/common/CautionNotice"
 import type { MasterAnswerCardProps } from "@/components/exams/01-upload/types"
 import {
   AlertDialog,
@@ -300,11 +301,7 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
                   模範解答の画像を取り替えたいだけなら、削除ではなく差し替えを使ってください。
                 </span>
               </AlertDialogDescription>
-              {gradeWarning && (
-                <p className="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm whitespace-pre-line text-orange-800">
-                  {gradeWarning}
-                </p>
-              )}
+              {gradeWarning && <CautionNotice>{gradeWarning}</CautionNotice>}
               {/* 数えた後に他の教員が取り込んでいれば main が中止する。閉じずに
                   文言を出し、利用者にもう一度決めてもらう */}
               {refusalMessage && (

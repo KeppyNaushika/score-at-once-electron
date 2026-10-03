@@ -1,5 +1,10 @@
 "use client"
 
+import type {
+  Coursework,
+  CourseworkItem,
+  CourseworkStudent,
+} from "@prisma/client"
 import { useQuery } from "@tanstack/react-query"
 
 import ConfirmationModal from "@/components/common/ConfirmationModal"
@@ -12,12 +17,12 @@ import { courseworkDetailQuery } from "@/queries/coursework"
 interface DeleteCourseworkModalProps {
   open: boolean
   /** 消そうとしている資料。閉じても残す（閉じるアニメーションの間も中身を出したままにする） */
-  target: {
-    id: string
-    name: string
-    studentCount: number
-    itemCount: number
-  } | null
+  target:
+    | (Pick<Coursework, "id" | "name"> & {
+        students: readonly Pick<CourseworkStudent, "id">[]
+        items: readonly Pick<CourseworkItem, "id">[]
+      })
+    | null
   onClose: () => void
   onConfirm: (courseworkId: string) => void | Promise<void>
   loading: boolean
@@ -71,11 +76,11 @@ export function DeleteCourseworkModal({
                 display: target.name,
                 badges: [
                   {
-                    label: `生徒 ${target.studentCount}名`,
+                    label: `生徒 ${target.students.length}名`,
                     variant: "secondary",
                   },
                   {
-                    label: `評価項目 ${target.itemCount}`,
+                    label: `評価項目 ${target.items.length}`,
                     variant: "secondary",
                   },
                 ],

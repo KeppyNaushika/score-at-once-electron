@@ -349,10 +349,7 @@ export function DrawingToolPalette({
                   <div className="text-center">
                     <div className="font-medium">拡大</div>
                     <div className="mt-1 text-xs text-gray-400">
-                      キー:{" "}
-                      <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
-                        +
-                      </Kbd>
+                      キー: <Kbd variant="subtle">+</Kbd>
                     </div>
                   </div>
                 </TooltipPrimitive.Content>
@@ -374,10 +371,7 @@ export function DrawingToolPalette({
                   <div className="text-center">
                     <div className="font-medium">縮小</div>
                     <div className="mt-1 text-xs text-gray-400">
-                      キー:{" "}
-                      <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
-                        -
-                      </Kbd>
+                      キー: <Kbd variant="subtle">-</Kbd>
                     </div>
                   </div>
                 </TooltipPrimitive.Content>
@@ -400,7 +394,7 @@ export function DrawingToolPalette({
                     <div className="font-medium">全体表示</div>
                     <div className="mt-1 text-xs text-gray-400">
                       キー:{" "}
-                      <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
+                      <Kbd variant="subtle">
                         {(keyBindings["view.fullView"] || "M").toUpperCase()}
                       </Kbd>
                     </div>
@@ -430,7 +424,7 @@ export function DrawingToolPalette({
                     <div className="font-medium">設問表示</div>
                     <div className="mt-1 text-xs text-gray-400">
                       キー:{" "}
-                      <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
+                      <Kbd variant="subtle">
                         {(
                           keyBindings["view.questionView"] || "C"
                         ).toUpperCase()}
@@ -466,7 +460,7 @@ export function DrawingToolPalette({
                     <div className="text-xs text-gray-400">ドラッグで移動</div>
                     <div className="mt-1 text-xs text-gray-400">
                       キー:{" "}
-                      <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
+                      <Kbd variant="subtle">
                         {(keyBindings["tool.hand"] || "H").toUpperCase()}
                       </Kbd>
                     </div>
@@ -498,7 +492,7 @@ export function DrawingToolPalette({
                     </div>
                     <div className="mt-1 text-xs text-gray-400">
                       キー:{" "}
-                      <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
+                      <Kbd variant="subtle">
                         {(keyBindings["tool.select"] || "G").toUpperCase()}
                       </Kbd>
                     </div>

@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { AlertTriangle, Trash2 } from "lucide-react"
 
+import { CautionNotice } from "@/components/common/CautionNotice"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -153,11 +154,7 @@ export default function StudentRemovalConfirmModal({
           )}
         </div>
 
-        {gradeWarning && (
-          <div className="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm whitespace-pre-line text-orange-800">
-            {gradeWarning}
-          </div>
-        )}
+        {gradeWarning && <CautionNotice>{gradeWarning}</CautionNotice>}
 
         {/* 数えている途中・数えられなかったとき。件数不明のまま押させない */}
         {deletionCounts === null && (

@@ -319,84 +319,9 @@ export function groupSubtotalData(
   return Array.from(groupMap.values())
 }
 
-/**
- * ドント方式で列数を各グループに配分
- */
-export function allocateColumnsDHondt(
-  groups: { groupId: string; items: { length: number } }[],
-  totalColumns: number
-): Map<string, number> {
-  const allocation = new Map<string, number>()
-  if (groups.length === 0) return allocation
-
-  for (const group of groups) {
-    allocation.set(group.groupId, 1)
-  }
-
-  if (groups.length >= totalColumns) {
-    return allocation
-  }
-
-  let remainingColumns = totalColumns - groups.length
-  while (remainingColumns > 0) {
-    let maxQuotient = -1
-    let maxGroupId = ""
-    for (const group of groups) {
-      const currentAllocation = allocation.get(group.groupId)!
-      const quotient = group.items.length / (currentAllocation + 1)
-      if (quotient > maxQuotient) {
-        maxQuotient = quotient
-        maxGroupId = group.groupId
-      }
-    }
-    allocation.set(maxGroupId, allocation.get(maxGroupId)! + 1)
-    remainingColumns--
-  }
-
-  return allocation
-}
-
-/**
- * アイテムを指定列数に分割（縦方向に埋める）
- */
-export function splitItemsIntoColumns<T>(
-  items: T[],
-  columnCount: number
-): T[][] {
-  const result: T[][] = Array.from({ length: columnCount }, () => [])
-  const itemsPerColumn = Math.ceil(items.length / columnCount)
-  for (let i = 0; i < items.length; i++) {
-    const colIndex = Math.floor(i / itemsPerColumn)
-    if (colIndex < columnCount) {
-      result[colIndex].push(items[i])
-    }
-  }
-  return result
-}
-
 // ============================
-// 表示制御
+// 統計サマリー
 // ============================
-
-/**
- * 表示されるセクションのインデックスを取得
- */
-export function getVisibleSectionIndices(
-  options: IndividualReportOptions
-): number[] {
-  const indices: number[] = [0, 1, 2] // ヘッダー、生徒情報、統計サマリーは常に表示
-  if (options.showSubtotalTable) indices.push(3)
-  if (
-    options.statistics.boxPlot.overall ||
-    options.statistics.boxPlot.classroom
-  )
-    indices.push(4)
-  if (options.showQuestionTable) indices.push(5)
-  if (options.showLearningAdvice) indices.push(6)
-  if (options.showComment) indices.push(7)
-  if (options.showSignature) indices.push(8)
-  return indices
-}
 
 /**
  * 統計サマリーの表示アイテムを構築
@@ -466,46 +391,4 @@ export function buildStatsItems(
   }
 
   return items
-}
-
-// ============================
-// ユーティリティ
-// ============================
-
-/**
- * 日付をフォーマット
- */
-export function formatDate(date: Date | null): string {
-  if (!date) return ""
-  const parsedDate = new Date(date)
-  return `${parsedDate.getFullYear()}年${parsedDate.getMonth() + 1}月${parsedDate.getDate()}日`
-}
-
-/**
- * 生徒の所属表記（例: 「2年 A組 3番」）を組み立てる。
- * 学級名は先生が自由に付けるため「2年A組」のように学年を含むことがある。そのときに
- * 学年を前に付けると「2年 2年A組」と二重になるので、学級名が同じ学年を含むなら学年を省く。
- * 全角数字（「２年A組」）も同じ学年とみなす。「12年」の中の「2年」は同じ学年とみなさない。
- */
-export function formatStudentAffiliation(
-  grade: string | null,
-  className: string | null,
-  attendanceNumber: number | null
-): string {
-  const classNameIncludesGrade =
-    grade !== null &&
-    className !== null &&
-    new RegExp(`(^|[^0-9])${escapeRegExp(grade)}年`).test(
-      className.normalize("NFKC")
-    )
-  const parts = [
-    grade && !classNameIncludesGrade ? `${grade}年` : null,
-    className,
-    attendanceNumber != null ? `${attendanceNumber}番` : null,
-  ]
-  return parts.filter((part) => part).join(" ")
-}
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }

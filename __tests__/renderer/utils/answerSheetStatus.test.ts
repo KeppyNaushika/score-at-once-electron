@@ -53,7 +53,6 @@ describe("getAnswerSheetStatus", () => {
       questionCount: 0,
     })
 
-    expect(status.step).toBe(1)
     expect(status.text).toBe("解答用紙の作成")
     expect(status.url).toBe(urlOfStep(1))
   })
@@ -62,7 +61,6 @@ describe("getAnswerSheetStatus", () => {
     // 一覧の行では省略されうる（`questionCount?: number`）。無い＝0問として扱う
     const status = getAnswerSheetStatus({ id: DEFINITION_ID })
 
-    expect(status.step).toBe(1)
     expect(status.url).toBe(urlOfStep(1))
   })
 
@@ -72,7 +70,6 @@ describe("getAnswerSheetStatus", () => {
       questionCount: 12,
     })
 
-    expect(status.step).toBe(2)
     expect(status.text).toBe("解答用紙の書き出し")
     expect(status.url).toBe(urlOfStep(2))
   })

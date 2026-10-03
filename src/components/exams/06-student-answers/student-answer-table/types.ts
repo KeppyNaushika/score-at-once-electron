@@ -18,7 +18,9 @@ import type {
 } from "@/types/prismaExtensions"
 
 // Preview mode for different display options
-export type PreviewMode = "full" | "name-only"
+export const PREVIEW_MODES = ["full", "name-only"] as const
+
+export type PreviewMode = (typeof PREVIEW_MODES)[number]
 
 // セル同一性 = (examStudentId, examPageId)。序数 pageNumber は key にしない。
 export interface DisabledCell {

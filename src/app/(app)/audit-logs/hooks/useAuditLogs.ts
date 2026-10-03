@@ -31,8 +31,6 @@ interface UseAuditLogsResult {
   /** 絞り込みに一致する総件数（main が同じ where で数えたもの） */
   total: number
   loading: boolean
-  /** ページを送っている最中（前のページを出したまま次を待つ） */
-  fetching: boolean
   error: string | null
   filter: AuditLogFilter
   /** 直前のフィルタを受け取る更新関数も渡せる（デバウンス中の取りこぼしを防ぐため） */
@@ -105,7 +103,6 @@ export function useAuditLogs(): UseAuditLogsResult {
   const {
     data,
     isPending: loading,
-    isFetching: fetching,
     error,
   } = useQuery(auditLogListQuery(filter, { pageNumber, pageSize }))
 
@@ -139,7 +136,6 @@ export function useAuditLogs(): UseAuditLogsResult {
     entries: data?.entries ?? EMPTY_ENTRIES,
     total,
     loading,
-    fetching,
     error: error?.message ?? null,
     filter,
     setFilter,

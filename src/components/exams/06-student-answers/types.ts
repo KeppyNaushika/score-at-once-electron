@@ -63,10 +63,10 @@ export interface UnsavedAnswerImage extends AnswerImageIdentity {
 // テーブルDnD互換の型定義
 // ============================================================================
 
-/**
- * 配置戦略
- */
-export type PlacementStrategy = "page-first" | "student-first"
+/** 配置戦略（ページ順・生徒順） */
+export const PLACEMENT_STRATEGIES = ["page-first", "student-first"] as const
+
+export type PlacementStrategy = (typeof PLACEMENT_STRATEGIES)[number]
 
 // ============================================================================
 // データベース連携用の型定義

@@ -8,6 +8,11 @@
 
 import type { Prisma } from "@prisma/client"
 
+import {
+  courseworkWorkflowSteps,
+  nextWorkflowStep,
+  type WorkflowNextStep,
+} from "@/lib/shared/workflowSteps"
 import type { Serialized } from "@/types/prismaExtensions"
 
 /**
@@ -29,14 +34,8 @@ export type CourseworkProgressSource = Pick<
   "id" | "students" | "items"
 >
 
-interface CourseworkStatus {
-  step: number
-  text: string
-  url: string
-}
-
 /** 各段の完了状態 */
-export interface CourseworkStepCompletion {
+interface CourseworkStepCompletion {
   /** 1. 生徒管理（02-students） */
   hasStudents: boolean
   /** 2. 評価項目（03-items） */
@@ -70,29 +69,19 @@ export function getCourseworkCompletion(
  */
 export function getCourseworkStatus(
   coursework: CourseworkProgressSource
-): CourseworkStatus {
-  const id = coursework.id
+): WorkflowNextStep {
+  const courseworkHref = `/coursework/${coursework.id}`
   const completion = getCourseworkCompletion(coursework)
 
   if (!completion.hasStudents) {
-    return {
-      step: 2,
-      text: "生徒の登録",
-      url: `/coursework/${id}/02-students`,
-    }
+    return nextWorkflowStep(
+      courseworkHref,
+      courseworkWorkflowSteps,
+      "02-students"
+    )
   }
-
   if (!completion.hasItems) {
-    return {
-      step: 3,
-      text: "評価項目の設定",
-      url: `/coursework/${id}/03-items`,
-    }
+    return nextWorkflowStep(courseworkHref, courseworkWorkflowSteps, "03-items")
   }
-
-  return {
-    step: 4,
-    text: "点数の入力",
-    url: `/coursework/${id}/04-scores`,
-  }
+  return nextWorkflowStep(courseworkHref, courseworkWorkflowSteps, "04-scores")
 }

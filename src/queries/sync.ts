@@ -58,17 +58,6 @@ export const subscribeSyncParentDeletedChanged = (
   >[0]
 ) => window.electronAPI.sync.onParentDeletedChanged(onChanged)
 
-/**
- * 同期が新しく出した注意書きが届いたら呼ばれる購読を張る。
- *
- * 同じ注意は原因が続くかぎり同期のたびに出るので、押し出されるのは**新しく出た回だけ**。
- * 消えない一覧は同期の状態（`lastWarnings`）にあるので、取りこぼしても読める。
- * 外すのは戻り値を呼ぶ。
- */
-export const subscribeSyncWarningsChanged = (
-  onChanged: Parameters<typeof window.electronAPI.sync.onWarningsChanged>[0]
-) => window.electronAPI.sync.onWarningsChanged(onChanged)
-
 // =====================================================================
 // 書き込み
 // =====================================================================

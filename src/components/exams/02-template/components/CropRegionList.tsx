@@ -17,8 +17,8 @@ import type { CropRegionArea } from "@/components/exams/02-template/types"
 
 type CropRegionListProps = {
   areas: CropRegionArea[]
-  selectedAreaIndex: number | null
-  onSelectArea: (index: number) => void
+  selectedCropRegionId: string | null
+  onSelectArea: (cropRegionId: string) => void
   disabled: boolean
 }
 
@@ -48,7 +48,7 @@ const typeLabels = {
 
 const CropRegionList = ({
   areas,
-  selectedAreaIndex,
+  selectedCropRegionId,
   onSelectArea,
   disabled,
 }: CropRegionListProps) => {
@@ -75,7 +75,7 @@ const CropRegionList = ({
         ) : (
           <div className="space-y-3">
             {areas.map((area, index) => {
-              const isSelected = selectedAreaIndex === index
+              const isSelected = selectedCropRegionId === area.id
               const IconComponent =
                 typeIcons[area.type as keyof typeof typeIcons] ||
                 typeIcons["OTHER"]
@@ -85,9 +85,9 @@ const CropRegionList = ({
 
               return (
                 <button
-                  key={area.id || `new-${index}`}
+                  key={area.id}
                   type="button"
-                  onClick={() => onSelectArea(index)}
+                  onClick={() => onSelectArea(area.id)}
                   disabled={disabled}
                   className={`w-full rounded-lg border p-3 text-left transition-all hover:shadow-md ${
                     isSelected

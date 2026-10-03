@@ -5,19 +5,10 @@ import { Check, ExternalLink, Pencil, Trash2, X } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 
+import ConfirmationModal from "@/components/common/ConfirmationModal"
 import { DragHandle, useSortableRow } from "@/components/common/sortable-table"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import {
@@ -25,6 +16,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  courseworkWorkflowSteps,
+  workflowStepHref,
+} from "@/lib/shared/workflowSteps"
 import {
   deleteDataSourceMutation,
   renameDataSourceMutation,
@@ -223,7 +218,11 @@ export function DataSourceRow({
             </span>
             <Button asChild variant="ghost" size="sm" className="h-7">
               <Link
-                href={`/coursework/${dataSource.courseworkItem.coursework.id}/04-scores`}
+                href={workflowStepHref(
+                  `/coursework/${dataSource.courseworkItem.coursework.id}`,
+                  courseworkWorkflowSteps,
+                  "04-scores"
+                )}
               >
                 <ExternalLink className="mr-1 h-3 w-3" />
                 資料を開く
@@ -259,33 +258,19 @@ export function DataSourceRow({
         </Button>
       </div>
 
-      <AlertDialog
+      <ConfirmationModal
         open={isDeleteConfirmOpen}
-        onOpenChange={setIsDeleteConfirmOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>データソースを削除しますか？</AlertDialogTitle>
-            <AlertDialogDescription>
-              「{dataSource.name}
-              」をこの評価項目から外します。元の試験や資料の点数は消えませんが、
-              欠測の推定元にこのデータソースを選んでいた設定からは外れます。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction
-              className={buttonVariants({ variant: "destructive" })}
-              onClick={() => {
-                setIsDeleteConfirmOpen(false)
-                deleteDataSource.mutate(dataSource.id)
-              }}
-            >
-              削除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onClose={() => setIsDeleteConfirmOpen(false)}
+        title="データソースを削除しますか？"
+        description={`「${dataSource.name}」をこの評価項目から外します。元の試験や資料の点数は消えませんが、欠測の推定元にこのデータソースを選んでいた設定からは外れます。`}
+        confirmText="削除"
+        variant="destructive"
+        icon="trash"
+        onConfirm={() => {
+          setIsDeleteConfirmOpen(false)
+          deleteDataSource.mutate(dataSource.id)
+        }}
+      />
     </div>
   )
 }

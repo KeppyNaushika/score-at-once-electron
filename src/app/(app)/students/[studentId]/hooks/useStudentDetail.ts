@@ -85,6 +85,7 @@ export function useStudentDetail(studentId: string) {
   const handleConfirmEndMembership = () => {
     if (membershipEnding.target === null) return
     endMembership.mutate({ membershipId: membershipEnding.target })
+    membershipEnding.close()
   }
 
   return {

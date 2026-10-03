@@ -19,7 +19,7 @@ import { serializePrisma } from "./serializePrisma"
  * 相手の評価項目は別の成績算出にあってよいので、その成績算出（名前を出す）と
  * 境界（ポップオーバーで相手の評定の並びを示す）まで辿る。
  */
-export const gradeComparisonInclude = {
+const gradeComparisonInclude = {
   comparedGradeItem: { include: { grade: true, boundaries: true } },
 } satisfies Prisma.GradeComparisonInclude
 
@@ -40,28 +40,28 @@ export async function getGradeComparisons(gradeId: string) {
  * 自分自身と比べても常に → にしかならないので断る。同じ組の二重登録は画面で防ぐ
  * （スキーマに UNIQUE を置かない理由は schema.prisma の GradeComparison を参照）。
  */
-export async function createGradeComparison(data: {
+export async function createGradeComparison(comparisonInput: {
   gradeItemId: string
   comparedGradeItemId: string
 }) {
-  if (data.gradeItemId === data.comparedGradeItemId) {
+  if (comparisonInput.gradeItemId === comparisonInput.comparedGradeItemId) {
     throw new Error("評価項目を自分自身と比較することはできません")
   }
 
   const maxOrder = await prisma.gradeComparison.aggregate({
-    where: { gradeItemId: data.gradeItemId },
+    where: { gradeItemId: comparisonInput.gradeItemId },
     _max: { order: true },
   })
   const comparison = await prisma.gradeComparison.create({
     data: {
-      gradeItemId: data.gradeItemId,
-      comparedGradeItemId: data.comparedGradeItemId,
+      gradeItemId: comparisonInput.gradeItemId,
+      comparedGradeItemId: comparisonInput.comparedGradeItemId,
       order: (maxOrder._max.order ?? -1) + 1,
     },
     include: { ...gradeComparisonInclude, gradeItem: true },
   })
 
-  const scope = await resolveGradeScopeByItem(data.gradeItemId)
+  const scope = await resolveGradeScopeByItem(comparisonInput.gradeItemId)
   await recordAuditLog({
     action: "grade.comparison.create",
     entityType: "GradeComparison",
@@ -107,15 +107,15 @@ export async function deleteGradeComparison(id: string) {
  * （`docs/coding-style.md` の「日常の書き込みに `$transaction` を使わない」の例外）。
  */
 export async function reorderGradeComparisons(
-  items: { id: string; order: number }[]
+  comparisonOrders: { id: string; order: number }[]
 ) {
-  if (items.length === 0) return
+  if (comparisonOrders.length === 0) return
 
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    for (const item of items) {
+    for (const comparisonOrder of comparisonOrders) {
       await tx.gradeComparison.update({
-        where: { id: item.id },
-        data: { order: item.order },
+        where: { id: comparisonOrder.id },
+        data: { order: comparisonOrder.order },
       })
     }
   })

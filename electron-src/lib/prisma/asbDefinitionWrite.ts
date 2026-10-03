@@ -37,7 +37,7 @@ export function assertAsbDefinitionEditableBy(definition: AsbDefinition): void {
 }
 
 /** 解答用紙を引いて、編集してよいか確かめる */
-export async function assertAsbDefinitionEditable(
+async function assertAsbDefinitionEditable(
   tx: Prisma.TransactionClient,
   definitionId: string
 ): Promise<void> {

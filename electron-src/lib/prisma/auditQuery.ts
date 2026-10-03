@@ -240,7 +240,7 @@ export async function getAuditLogs(
 }
 
 /** フィルタUI用のファセット（出現したscopeの一覧をカテゴリ別に返す） */
-export interface AuditScopeFacet {
+interface AuditScopeFacet {
   scopeId: string
   scopeLabel: string | null
   category: string

@@ -32,8 +32,8 @@ type ImageCanvasProps = {
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
   areas: CropRegionArea[]
-  selectedAreaIndex: number | null
-  onSelectArea: (index: number) => void
+  selectedCropRegionId: string | null
+  onSelectArea: (cropRegionId: string) => void
   onAddAreaByDrag: (
     type: CropRegionAreaType,
     coords: { x: number; y: number; width: number; height: number }
@@ -42,7 +42,7 @@ type ImageCanvasProps = {
     cropRegionId: string,
     coords: { x: number; y: number; width: number; height: number }
   ) => Promise<void>
-  onRequestDeleteArea: (index: number) => void
+  onRequestDeleteArea: (cropRegionId: string) => void
   disabled: boolean
   examPageId: string | null
   // 検出関連のプロパティ
@@ -61,7 +61,7 @@ const ImageCanvas = ({
   backgroundImageUrl,
   imageDimensions,
   areas,
-  selectedAreaIndex,
+  selectedCropRegionId,
   onSelectArea,
   onAddAreaByDrag,
   onUpdateArea,
@@ -104,7 +104,7 @@ const ImageCanvas = ({
     onSnapToDetectedRects,
   })
 
-  useKeyboardShortcuts(selectedAreaIndex, onRequestDeleteArea)
+  useKeyboardShortcuts(selectedCropRegionId, onRequestDeleteArea)
 
   // 掴んでいる間は、その領域だけ手元の姿に差し替えて描く。DB にはまだ書いて
   // いないので、`areas` は掴む前の姿のままである
@@ -171,7 +171,7 @@ const ImageCanvas = ({
 
           <AreaRenderer
             areas={shownAreas}
-            selectedAreaIndex={selectedAreaIndex}
+            selectedCropRegionId={selectedCropRegionId}
             onSelectArea={onSelectArea}
             onResizePointerDown={handleResizePointerDown}
             onMovePointerDown={handleMovePointerDown}

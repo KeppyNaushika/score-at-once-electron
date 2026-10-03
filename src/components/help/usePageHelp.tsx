@@ -29,6 +29,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { examWorkflowSteps } from "@/lib/shared/workflowSteps"
 
 // ページごとのヘルプコンポーネント
 const pageHelpComponents: {
@@ -106,18 +107,14 @@ export function usePageHelp({ compact = false }: UsePageHelpOptions = {}) {
     ? pageHelpComponents[currentPageId]
     : null
 
-  // ページタイトルを取得
+  // ページタイトルを取得。試験の段は段の一覧（タブと同じ名前）から引く
   const getPageTitle = () => {
-    const titles: { [key: string]: string } = {
-      "01-upload": "模範解答アップロード",
-      "02-template": "採点領域作成",
-      "03-region-info": "領域情報",
-      "04-question-group": "小計点の設定",
-      "05-students": "受験生徒管理",
-      "06-student-answers": "答案アップロード",
-      "07-score-at-once": "一括採点",
-      "08-finalize": "採点確定",
-      "09-export": "結果出力",
+    if (!currentPageId) return "ヘルプ"
+    const examStep = examWorkflowSteps.find(
+      (step) => step.path !== "" && step.id === currentPageId
+    )
+    if (examStep) return examStep.title
+    const sectionTitles: { [key: string]: string } = {
       "subtotal-groups": "小計点グループ管理",
       classrooms: "学級管理",
       students: "生徒管理",
@@ -126,7 +123,7 @@ export function usePageHelp({ compact = false }: UsePageHelpOptions = {}) {
       coursework: "試験外成績資料",
       grades: "成績算出",
     }
-    return (currentPageId && titles[currentPageId]) || "ヘルプ"
+    return sectionTitles[currentPageId] ?? "ヘルプ"
   }
 
   const createHelpButton = () => {

@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query"
 import { NotebookPen } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
-import { useCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
+import { useSceneCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import { Textarea } from "@/components/ui/textarea"
@@ -97,7 +97,7 @@ export function ScoreCommentSection({
     enterField(textarea)
   }, [textarea])
 
-  useCommand(
+  useSceneCommand(
     "scoring.comment",
     () => {
       if (!currentCropRegion || !currentExamStudentId) return
@@ -110,7 +110,7 @@ export function ScoreCommentSection({
       onEnsureOpen()
     },
     {
-      when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
+      condition: "hasSelectedAnswers",
       metadata: {
         title: "覚え書きを書く",
         category: "採点",

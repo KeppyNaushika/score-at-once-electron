@@ -4,7 +4,7 @@
  */
 import type { IndividualReportData } from "@/types/individualReport.types"
 
-import { formatDate, formatStudentAffiliation } from "./computeReportData"
+import { formatDate, formatStudentAffiliation } from "./reportFormat"
 
 // ============================
 // HeaderView

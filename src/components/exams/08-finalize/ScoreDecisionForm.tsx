@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
+import { ignoreDeselect } from "@/lib/toggleSelection"
 import { finalizeQuestionScoreMutation } from "@/queries/scoring"
 import type {
   ScoreDecisionCell,
@@ -267,23 +268,18 @@ export function ScoreDecisionForm({
             type="single"
             variant="outline"
             size="sm"
+            selectedTone="primary"
             value={verdict}
             disabled={!editable}
             aria-label="確定する判定"
             className="grid w-full grid-cols-3 gap-2 data-[variant=outline]:shadow-none"
-            onValueChange={(value) => {
-              // 選択中をもう一度押すと空文字が来る。選択は外さない
-              const nextVerdict = VERDICTS.find(
-                (candidateVerdict) => candidateVerdict === value
-              )
-              if (nextVerdict) setVerdict(nextVerdict)
-            }}
+            onValueChange={ignoreDeselect(VERDICTS, setVerdict)}
           >
             {VERDICTS.map((candidateVerdict) => (
               <ToggleGroupItem
                 key={candidateVerdict}
                 value={candidateVerdict}
-                className="rounded-md px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[variant=outline]:border-l"
+                className="rounded-md px-3 data-[variant=outline]:border-l"
               >
                 {SCORING_STATUS_LABELS[candidateVerdict]}
               </ToggleGroupItem>

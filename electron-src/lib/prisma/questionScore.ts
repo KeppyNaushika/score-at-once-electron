@@ -207,7 +207,7 @@ export const getQuestionScoresByCropRegion = async (cropRegionId: string) => {
 }
 
 /** `ensureQuestionScore` の引数。判定を持たない（採点する関数ではないので） */
-export interface EnsureQuestionScoreData {
+interface EnsureQuestionScoreData {
   examStudentId: string
   cropRegionId: string
   userId: string

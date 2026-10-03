@@ -9,6 +9,40 @@
 import type { KeyBinding } from "@/types/keyBinding.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
+/**
+ * 部分点の入力欄（モーダル）を開いている間だけ効くコマンドの既定。
+ *
+ * ここに置いたコマンドが「入力欄の中だけ」の場面になる（`keySceneOf`）。場面は
+ * 名前の付け方からは推し量らない。
+ */
+const PARTIAL_INPUT_KEYBINDINGS: KeyBinding = {
+  // 注: 確定キー(f/j)は採点コマンドと共通（BOTH_SCENE_COMMANDS）
+  "modal.cancel": "Escape",
+  "modal.backspace": "Backspace",
+
+  // 数字入力（モーダル内）
+  "modal.input0": "0",
+  "modal.input1": "1",
+  "modal.input2": "2",
+  "modal.input3": "3",
+  "modal.input4": "4",
+  "modal.input5": "5",
+  "modal.input6": "6",
+  "modal.input7": "7",
+  "modal.input8": "8",
+  "modal.input9": "9",
+  "modal.inputDot": ".",
+}
+
+/**
+ * 入力欄の中でも外でも効くコマンド。部分点・保留は、入力欄の外では採点、
+ * 中では入力した部分点の確定キーになる。
+ */
+const BOTH_SCENE_COMMANDS: ReadonlySet<string> = new Set([
+  "scoring.partial",
+  "scoring.pending",
+])
+
 export const DEFAULT_KEYBINDINGS: KeyBinding = {
   // ============================================
   // 採点 (Scoring)
@@ -87,27 +121,6 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   "view.toggleMasterAnswer": "x", // 模範解答表示切り替え（個別モード）
 
   // ============================================
-  // モーダル (Modal)
-  // 部分点入力モーダル内の操作
-  // 注: 確定キー(f/j)は採点コマンドと共通
-  // ============================================
-  "modal.cancel": "Escape",
-  "modal.backspace": "Backspace",
-
-  // 数字入力（モーダル内）
-  "modal.input0": "0",
-  "modal.input1": "1",
-  "modal.input2": "2",
-  "modal.input3": "3",
-  "modal.input4": "4",
-  "modal.input5": "5",
-  "modal.input6": "6",
-  "modal.input7": "7",
-  "modal.input8": "8",
-  "modal.input9": "9",
-  "modal.inputDot": ".",
-
-  // ============================================
   // 部分点モーダルオープン (Scoring - Partial Modal)
   // 数字キーでモーダルを開いて入力開始
   // ============================================
@@ -133,23 +146,67 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   "tool.line": "l",
   "tool.rectangle": "b",
   "tool.ellipse": "y",
-} as const
 
-/** 部分点の入力欄を開いている間だけ効くコマンドか（when 句が modalOpen / partialScoreModalOpen） */
-function isModalOnlyCommand(commandId: string): boolean {
-  return commandId.startsWith("modal.")
+  // ============================================
+  // モーダル (Modal)
+  // 部分点入力モーダル内の操作
+  // ============================================
+  ...PARTIAL_INPUT_KEYBINDINGS,
 }
 
 /**
- * 部分点の入力欄の外でだけ効くコマンドか（when 句に !modalOpen を含む）。
- * 部分点・保留は入力欄の中でも確定キーとして効くので外す
+ * コマンドが効く場面。
+ *
+ * - `partialInput`: 部分点の入力欄（モーダル）を開いている間だけ
+ * - `scoring`: 入力欄を開いていない採点中だけ（文字の入力中・書き込み中も除く）
+ * - `both`: どちらでも（`BOTH_SCENE_COMMANDS`）
+ *
+ * 採点画面の when 句（`sceneWhen`）と、設定画面の重なりの判定（`canShareKey`）は
+ * どちらもここから導く。場面を変えるときは、既定の置き場所を変える。
  */
-function isOutsideModalOnlyCommand(commandId: string): boolean {
-  return (
-    !isModalOnlyCommand(commandId) &&
-    commandId !== "scoring.partial" &&
-    commandId !== "scoring.pending"
-  )
+export type KeyScene = "partialInput" | "scoring" | "both"
+
+/** 1回の登録が効く場面（`both` のコマンドは、登録ごとにどちらかを選ぶ） */
+type RegistrationScene = Exclude<KeyScene, "both">
+
+/** そのコマンドが効く場面 */
+export function keySceneOf(commandId: string): KeyScene {
+  if (BOTH_SCENE_COMMANDS.has(commandId)) return "both"
+  return commandId in PARTIAL_INPUT_KEYBINDINGS ? "partialInput" : "scoring"
+}
+
+/** 場面ごとの when 句の土台 */
+const SCENE_WHEN: Record<RegistrationScene, string> = {
+  scoring: "!inputFocus && !modalOpen && !textEditorActive",
+  partialInput: "partialScoreModalOpen",
+}
+
+/**
+ * コマンドの when 句。効く場面の土台に、登録ごとの条件を `&&` でつなぐ。
+ *
+ * `both` のコマンドは同じ id を2回登録するので、登録ごとに `scene` を渡す。
+ * 場面の違う登録（入力欄の中だけのコマンドを採点中に登録する等）は誤りとして投げる。
+ *
+ * @param condition 場面に加える条件（例: `hasSelectedAnswers`）
+ */
+export function sceneWhen(
+  commandId: string,
+  { scene, condition }: { scene?: RegistrationScene; condition?: string } = {}
+): string {
+  const commandScene = keySceneOf(commandId)
+  const registrationScene = scene ?? commandScene
+  if (registrationScene === "both") {
+    throw new Error(
+      `${commandId} は入力欄の中でも外でも効くので、登録ごとに場面を渡してください`
+    )
+  }
+  if (commandScene !== "both" && commandScene !== registrationScene) {
+    throw new Error(
+      `${commandId} は ${commandScene} の場面のコマンドで、${registrationScene} には登録できません`
+    )
+  }
+  const sceneCondition = SCENE_WHEN[registrationScene]
+  return condition ? `${sceneCondition} && ${condition}` : sceneCondition
 }
 
 /**
@@ -161,9 +218,11 @@ function isOutsideModalOnlyCommand(commandId: string): boolean {
  * もう片方が黙って効かなくなるので重ねない。
  */
 export function canShareKey(commandIdA: string, commandIdB: string): boolean {
+  const sceneA = keySceneOf(commandIdA)
+  const sceneB = keySceneOf(commandIdB)
   return (
-    (isModalOnlyCommand(commandIdA) && isOutsideModalOnlyCommand(commandIdB)) ||
-    (isModalOnlyCommand(commandIdB) && isOutsideModalOnlyCommand(commandIdA))
+    (sceneA === "partialInput" && sceneB === "scoring") ||
+    (sceneA === "scoring" && sceneB === "partialInput")
   )
 }
 

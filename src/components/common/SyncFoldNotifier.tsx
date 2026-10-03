@@ -1,14 +1,15 @@
 "use client"
 
 import { useEffect } from "react"
-import { toast } from "sonner"
 
-import { BETA_ORIGIN_PREFIX } from "@/components/common/BetaBadge"
+import {
+  countByTableLabel,
+  showSyncToast,
+} from "@/components/common/syncNoticeToast"
 import type {
   SyncRecordFold,
   SyncRecordFoldReport,
 } from "@/electron-src/lib/sync/types"
-import { syncTableLabel } from "@/lib/shared/syncTableLabels"
 import { subscribeSyncRecordFoldsChanged } from "@/queries/sync"
 
 /**
@@ -49,32 +50,23 @@ export function SyncFoldNotifier() {
  */
 function showFoldToasts(report: SyncRecordFoldReport): void {
   if (report.folds.length > 0) {
-    toast.warning(`${BETA_ORIGIN_PREFIX}重複していたデータの片方を隠しました`, {
-      description: `${breakdownByTable(report.folds)}\n他のPCと同じものが二重にできていたため、片方だけを表示しています。隠した方にぶら下がっていたものは、表示している方にまとめて表示されます。隠した方も消してはいないので、名前を変えるなどして重なりが解ければ自動で表示に戻ります。詳しくは監査ログに残しています。`,
-      duration: Infinity,
-      closeButton: true,
-    })
+    showSyncToast(
+      "warning",
+      "重複していたデータの片方を隠しました",
+      `${breakdownByTable(report.folds)}\n他のPCと同じものが二重にできていたため、片方だけを表示しています。隠した方にぶら下がっていたものは、表示している方にまとめて表示されます。隠した方も消してはいないので、名前を変えるなどして重なりが解ければ自動で表示に戻ります。詳しくは監査ログに残しています。`
+    )
   }
 
   if (report.restores.length > 0) {
-    toast.info(`${BETA_ORIGIN_PREFIX}隠していたデータを表示に戻しました`, {
-      description: `${breakdownByTable(report.restores)}\n他のPCと重複していたため隠していたものです。表示していた方が他のPCで直されて重なりが解けたので、ふたたび表示しています。詳しくは監査ログに残しています。`,
-      duration: Infinity,
-      closeButton: true,
-    })
+    showSyncToast(
+      "info",
+      "隠していたデータを表示に戻しました",
+      `${breakdownByTable(report.restores)}\n他のPCと重複していたため隠していたものです。表示していた方が他のPCで直されて重なりが解けたので、ふたたび表示しています。詳しくは監査ログに残しています。`
+    )
   }
 }
 
 /** 「試験の受験生徒 2件、タグ 1件」のように、テーブルごとの件数を並べる */
 function breakdownByTable(folds: SyncRecordFold[]): string {
-  const countByTable = new Map<string, number>()
-  for (const fold of folds) {
-    countByTable.set(
-      fold.tableName,
-      (countByTable.get(fold.tableName) ?? 0) + 1
-    )
-  }
-  return [...countByTable]
-    .map(([tableName, count]) => `${syncTableLabel(tableName)} ${count}件`)
-    .join("、")
+  return countByTableLabel(folds.map((fold) => fold.tableName))
 }

@@ -20,23 +20,24 @@
  * （`../prisma/sqliteConnection.ts`）。ライブラリの接続はライブラリが自分で立てる。
  */
 
-import { BrowserWindow } from "electron"
-import * as fs from "fs"
 import type { SyncInstance, SyncResult } from "sqlite-nas-sync"
 
-import { syncTableLabel } from "@/lib/shared/syncTableLabels"
-
-import { getDataDirectory } from "../dataManager"
-import type { AuditActionKey } from "../prisma/auditActions"
-import { recordAuditLog } from "../prisma/auditLog"
-import { openAppDatabase } from "../prisma/sqliteConnection"
+import {
+  ensureLocalDb,
+  removeLocalDbDirectory,
+  writeBackLocalDb,
+} from "./localDb"
 import { getSchemaVersion } from "./schemaVersion"
+import { recordFoldAuditLogs } from "./syncAuditLog"
+import {
+  broadcastParentDeleted,
+  broadcastRecordFolds,
+  broadcastSyncStatus,
+} from "./syncBroadcast"
 import {
   ensureClientId,
   ensureSyncDirectory,
-  getLocalDbDirectory,
   getLocalDbPath,
-  getNasDbPath,
   getNasSyncPath,
   loadSyncConfig,
   saveSyncConfig,
@@ -45,10 +46,7 @@ import { SYNC_EXCLUDE_TABLES, SYNC_TABLE_OPTIONS } from "./syncTableConfig"
 import type {
   SyncAppConfig,
   SyncAppStatus,
-  SyncParentDeletedReport,
-  SyncRecordFold,
   SyncRecordFoldReport,
-  SyncWarningReport,
   VersionMismatchRemote,
 } from "./types"
 
@@ -85,223 +83,9 @@ let currentStatus: SyncAppStatus = {
   lastWarnings: [],
 }
 
-/**
- * 前回の同期が出した注意書き。**新しく出たものだけ**をトーストにするために持つ。
- *
- * 同じ注意は、原因が続くかぎり同期のたびに出る。毎回トーストにすると、同期間隔ごとに
- * 同じ窓が積み上がって、他の知らせを覆ってしまう。直近1回ぶんの全文は
- * `currentStatus.lastWarnings` にあるので、ここで落としても設定画面から読める。
- */
-let previousWarnings: string[] = []
-
 function updateStatus(partial: Partial<SyncAppStatus>): void {
   currentStatus = { ...currentStatus, ...partial }
-  broadcastSyncStatus()
-}
-
-function broadcastSyncStatus(): void {
-  for (const win of BrowserWindow.getAllWindows()) {
-    try {
-      win.webContents.send("sync:status-changed", currentStatus)
-    } catch {
-      // ウィンドウが既に閉じられている場合は無視
-    }
-  }
-}
-
-/**
- * この回に**新しく出た**注意書きを renderer へ押し出す。
- *
- * ライブラリの `SyncResult.warnings` は「アプリケーションの利用者に見える場所へ出す」
- * ものだが、トーストだけに載せると流れて消える。消えない一覧は `SyncAppStatus` に
- * 載せてあるので、ここは**気づかせるためだけ**の押し出しで、取りこぼしても構わない。
- *
- * 中身は加工しない（利用者向けの言い換えは renderer 側で行う）。
- */
-function broadcastSyncWarnings(report: SyncWarningReport): void {
-  if (report.newWarnings.length === 0) return
-  for (const win of BrowserWindow.getAllWindows()) {
-    try {
-      win.webContents.send("sync:warnings-changed", report)
-    } catch {
-      // ウィンドウが既に閉じられている場合は無視
-    }
-  }
-}
-
-/**
- * かぶった行の見え方が変わった（隠れた・表示に戻った）ことを renderer へ押し出す。
- *
- * **既読は持たない。** 同期はアプリが動いている間しか走らないので、変わった瞬間には
- * 必ず窓が開いている。読んだかどうかを覚えると、その状態がまた新しい保存先になる。
- * あとから見返す口は監査ログ（`sync.duplicate.hide` / `sync.duplicate.restore`）に寄せる。
- *
- * 中身は加工しない（何件が何になったかの数え上げは renderer 側で組み立てる）。
- */
-function broadcastRecordFolds(report: SyncRecordFoldReport): void {
-  if (report.folds.length === 0 && report.restores.length === 0) return
-  for (const win of BrowserWindow.getAllWindows()) {
-    try {
-      win.webContents.send("sync:record-folds-changed", report)
-    } catch {
-      // ウィンドウが既に閉じられている場合は無視
-    }
-  }
-}
-
-/**
- * 親が他のPCで削除されたために表から外れた行・親が作り直されて戻った行を renderer へ
- * 押し出す。
- *
- * `broadcastRecordFolds` と同じく**既読は持たない**が、こちらは取りこぼしても事実は
- * 失われない（ライブラリの内部表 `_sns_unplaceable` に残っていて、外れたままの行は
- * 次の回でもう一度は出ないだけ）。
- *
- * 中身は加工しない（テーブルごとの数え上げは renderer 側で組み立てる）。
- */
-function broadcastParentDeleted(report: SyncParentDeletedReport): void {
-  if (report.parentDeleted.length === 0 && report.parentReturned.length === 0)
-    return
-  for (const win of BrowserWindow.getAllWindows()) {
-    try {
-      win.webContents.send("sync:parent-deleted-changed", report)
-    } catch {
-      // ウィンドウが既に閉じられている場合は無視
-    }
-  }
-}
-
-/**
- * 隠れた行と表示に戻った行を監査ログへ残す（あとから見返す口はここ1つ。専用の
- * 履歴画面は作らない）。
- *
- * v0.19.0 までの `sync.merge`（行を消して1つにまとめた）とは**別の action** にする。
- * 今は何も消えないので、同じ名前で書くと、過去の「消した」記録と今の「隠した」記録が
- * 監査ログの上で見分けられなくなる。
- *
- * `coalesceKey` は**同じ端末が同じ出来事を二度書くのを止めるだけ**で、端末をまたいだ
- * 重複は畳めない。隠れる・戻るは各端末の作り直しでそれぞれ起きるが、相手の記録が届くのは
- * 相手が書いた次の同期以降で、書く時点のローカルDBにはまだ無い（`recordAuditLog` の
- * 突き合わせは書く瞬間のローカル行に対してしか働かない）。端末数ぶん行が並ぶのはそのため。
- */
-async function recordFoldAuditLogs(
-  report: SyncRecordFoldReport
-): Promise<void> {
-  for (const fold of report.folds) {
-    await recordFoldAuditLog("sync.duplicate.hide", fold)
-  }
-  for (const fold of report.restores) {
-    await recordFoldAuditLog("sync.duplicate.restore", fold)
-  }
-}
-
-/** 隠れた（または表示に戻った）行1つを監査ログへ書く。対象はその行（`losingId`） */
-async function recordFoldAuditLog(
-  action: AuditActionKey,
-  fold: SyncRecordFold
-): Promise<void> {
-  await recordAuditLog({
-    action,
-    // システム操作は null（利用者が起こした操作ではない）
-    userId: null,
-    entityType: fold.tableName,
-    entityId: fold.losingId,
-    target: syncTableLabel(fold.tableName),
-    extra: {
-      losingId: fold.losingId,
-      winningId: fold.winningId,
-    },
-    coalesceKey: `${action}:${fold.tableName}:${fold.losingId}`,
-  })
-}
-
-/**
- * DB ファイルを丸ごと写す。**`fs.copyFileSync` を使ってはならない。**
- *
- * このアプリの DB は WAL モードで開く（`../prisma/databaseHealth.ts`）。WAL では、
- * 確定した書き込みがまだ `-wal` の中にしか無いことがあり、本体ファイルだけを写すと
- * 直近の書き込みが丸ごと落ちる。しかも写した直後に控えを消すので、取り戻せない。
- * better-sqlite3 の `backup()` は SQLite のバックアップ API を通るので、`-wal` の
- * 内容まで含んだ、その時点で一貫した写しを作る（ライブラリの README 制限事項 9）。
- *
- * 写し元は `openAppDatabase`（`PRAGMA recursive_triggers = ON`）で開く。失敗しても
- * 必ず閉じる。
- */
-async function backupDatabaseFile(
-  sourcePath: string,
-  destinationPath: string
-): Promise<void> {
-  const source = openAppDatabase(sourcePath)
-  try {
-    await source.backup(destinationPath)
-  } finally {
-    source.close()
-  }
-}
-
-/**
- * ローカルDBを準備する（sync有効化時）
- *
- * ローカルDBが存在しない場合、NAS上のDBを写して初期化する。
- */
-async function ensureLocalDb(): Promise<void> {
-  const localDir = getLocalDbDirectory()
-  if (!fs.existsSync(localDir)) {
-    fs.mkdirSync(localDir, { recursive: true })
-  }
-
-  const localDbPath = getLocalDbPath()
-  if (!fs.existsSync(localDbPath)) {
-    const nasDbPath = getNasDbPath()
-    if (fs.existsSync(nasDbPath)) {
-      console.log(`Copying NAS DB to local: ${nasDbPath} → ${localDbPath}`)
-      await backupDatabaseFile(nasDbPath, localDbPath)
-    }
-  }
-}
-
-/**
- * ローカルDBの内容をNAS側へ書き戻す（sync無効化時）。
- *
- * **ここが失敗したら同期を切ってはならない。** 切るのをやめればローカルDBはそのまま
- * 残るので、何も失われない。呼び出し側は例外をそのまま上へ投げること。
- *
- * @returns 書き戻した（ローカルDBがあった）なら true
- */
-async function writeBackLocalDb(): Promise<boolean> {
-  const localDbPath = getLocalDbPath()
-  if (!fs.existsSync(localDbPath)) return false
-
-  const nasDbPath = getNasDbPath()
-  const nasDir = getDataDirectory()
-  if (!fs.existsSync(nasDir)) {
-    fs.mkdirSync(nasDir, { recursive: true })
-  }
-  console.log(`Writing back local DB to NAS: ${localDbPath} → ${nasDbPath}`)
-  await backupDatabaseFile(localDbPath, nasDbPath)
-  return true
-}
-
-/**
- * ローカルDBの控えを消す。
- *
- * **失敗しても致命的ではない。** 書き戻しは済んでいて、設定も保存済みなので、消し残りは
- * ただのゴミである。ここで例外を投げると、同期を切れたのに切れなかったことになる
- * （issue #1270）。消し残りは次の起動時の `initializeSync` が拾う。
- *
- * @returns 消せたなら true
- */
-function removeLocalDbDirectory(): boolean {
-  const localDir = getLocalDbDirectory()
-  if (!fs.existsSync(localDir)) return true
-  try {
-    fs.rmSync(localDir, { recursive: true, force: true })
-    console.log(`Removed local DB directory: ${localDir}`)
-    return true
-  } catch (error) {
-    console.warn(`Failed to remove local DB directory: ${localDir}`, error)
-    return false
-  }
+  broadcastSyncStatus(currentStatus)
 }
 
 /**
@@ -372,14 +156,6 @@ export async function startSync(config: SyncAppConfig): Promise<void> {
         lastWarnings: result.warnings,
       })
 
-      // 注意書きは、原因が続くかぎり毎回出る。気づかせるのは新しく出た回だけにして、
-      // 全文は設定画面（消えない一覧）へ回す
-      const newWarnings = result.warnings.filter(
-        (warning) => !previousWarnings.includes(warning)
-      )
-      previousWarnings = result.warnings
-      broadcastSyncWarnings({ newWarnings })
-
       // 隠れた行は画面から黙って1つ消えたように見え、戻った行は消したはずのものが
       // 現れたように見える。どちらも起きた瞬間に伝える。
       const foldReport: SyncRecordFoldReport = {
@@ -420,8 +196,8 @@ export async function stopSync(): Promise<void> {
     syncInstance.stop()
     syncInstance = null
   }
-  // 止めた時点の注意は、次に始めたときには古い。新しく出た扱いでもう一度知らせる
-  previousWarnings = []
+  // 止めた時点の注意は、次に始めたときには古い。空にしておけば、次に出たときに
+  // renderer は新しく出たものとして知らせる
   updateStatus({ state: "disabled", lastWarnings: [] })
 }
 

@@ -5,7 +5,12 @@ import Link from "next/link"
 import { useMemo } from "react"
 
 import { Button } from "@/components/ui/button"
-import { gradeWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
+import {
+  gradeWorkflowSteps,
+  nextStepLabel,
+  workflowStep,
+  workflowStepHref,
+} from "@/lib/shared/workflowSteps"
 import {
   type GradeComparisonRow,
   gradeComparisonsQuery,
@@ -80,7 +85,7 @@ export function ComparisonsContainer({ gradeId }: ComparisonsContainerProps) {
 
       {grade.gradeItems.length === 0 ? (
         <div className="py-8 text-center text-sm text-muted-foreground">
-          評価項目がありません。データソースの段で追加してください。
+          {`評価項目がありません。「${workflowStep(gradeWorkflowSteps, "02-data-sources").label}」の段で追加してください。`}
         </div>
       ) : (
         <div className="space-y-4">
@@ -100,8 +105,14 @@ export function ComparisonsContainer({ gradeId }: ComparisonsContainerProps) {
 
       <div className="mt-8 flex justify-end">
         <Button asChild>
-          <Link href={`/grades/${gradeId}/05-results`}>
-            {nextStepLabel(gradeWorkflowTabs, "05-results")}
+          <Link
+            href={workflowStepHref(
+              `/grades/${gradeId}`,
+              gradeWorkflowSteps,
+              "05-results"
+            )}
+          >
+            {nextStepLabel(gradeWorkflowSteps, "05-results")}
           </Link>
         </Button>
       </div>

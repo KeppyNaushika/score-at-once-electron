@@ -32,6 +32,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { studentOption } from "@/lib/searchKeywords"
 import { cn } from "@/lib/utils"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type {
@@ -171,13 +172,9 @@ export function AnnotationBrowserPanel({
   const examStudentFilterOptions = useMemo(
     () => [
       { value: "all", label: "全生徒" },
-      ...uniqueExamStudents.map((examStudent) => ({
-        value: examStudent.id,
-        label: `${examStudent.student.studentNumber} ${examStudent.student.lastName}${examStudent.student.firstName}`,
-        keywords: [
-          `${examStudent.student.lastNameKana} ${examStudent.student.firstNameKana}`,
-        ],
-      })),
+      ...uniqueExamStudents.map((examStudent) =>
+        studentOption(examStudent.id, examStudent.student)
+      ),
     ],
     [uniqueExamStudents]
   )

@@ -162,12 +162,7 @@ export default function GradeDetailPage() {
       />
       <DeleteGradeModal
         open={isDeleteModalOpen}
-        target={{
-          id: grade.id,
-          name: grade.name,
-          studentCount: grade.gradeStudents.length,
-          gradeItemCount: grade.gradeItems.length,
-        }}
+        target={grade}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDelete}
         loading={deleteGrade.isPending}

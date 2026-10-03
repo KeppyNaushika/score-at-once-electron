@@ -47,6 +47,7 @@ import {
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
 import { scoringCommandIdOf } from "@/lib/scoringKeybindings"
+import { ignoreDeselect } from "@/lib/toggleSelection"
 import { SCORING_OPERATION_MODES } from "@/lib/userPreferences"
 import type {
   ClickScoringAction,
@@ -187,6 +188,9 @@ const SPECIAL_BRUSH_BUTTONS: Array<{
 /** マウスモードのブラシ選択に並べる順（特殊ブラシ → 採点ブラシ） */
 const MOUSE_BRUSH_BUTTONS = [...SPECIAL_BRUSH_BUTTONS, ...BRUSH_BUTTONS]
 
+/** ブラシ選択の選択肢（ボタンの並びと同じ順） */
+const MOUSE_BRUSH_ACTIONS = MOUSE_BRUSH_BUTTONS.map((button) => button.status)
+
 const CLICK_ACTION_OPTIONS: { value: ClickScoringAction; label: string }[] = [
   { value: "none", label: "なし" },
   { value: "correct", label: "正答" },
@@ -267,29 +271,26 @@ export default function ScoringToolbar({
             <ToggleGroup
               type="single"
               size="sm"
+              selectedTone="primary"
               rovingFocus={false}
               value={scoringOperationMode}
               aria-label="採点操作モード"
               className="w-full gap-1 rounded-md border border-gray-200 p-0.5"
-              onValueChange={(value) => {
-                // 選択中をもう一度押すと空文字が来る。選択は外さない
-                const nextOperationMode = SCORING_OPERATION_MODES.find(
-                  (candidateOperationMode) => candidateOperationMode === value
-                )
-                if (nextOperationMode)
-                  onScoringOperationModeChange(nextOperationMode)
-              }}
+              onValueChange={ignoreDeselect(
+                SCORING_OPERATION_MODES,
+                onScoringOperationModeChange
+              )}
             >
               <ToggleGroupItem
                 value="keyboard"
-                className="gap-1.5 rounded-md px-2.5 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                className="gap-1.5 rounded-md px-2.5 text-xs"
               >
                 <Keyboard className="h-3.5 w-3.5" />
                 キーボード
               </ToggleGroupItem>
               <ToggleGroupItem
                 value="mouse"
-                className="gap-1.5 rounded-md px-2.5 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                className="gap-1.5 rounded-md px-2.5 text-xs"
               >
                 <Mouse className="h-3.5 w-3.5" />
                 マウス
@@ -340,15 +341,9 @@ export default function ScoringToolbar({
                   value={mouseBrush}
                   aria-label="クリック時の採点ブラシ"
                   className="grid w-full grid-cols-4 gap-2"
-                  onValueChange={(value) => {
-                    // 選択中をもう一度押すと空文字が来る。選択は外さない
-                    const nextBrushButton = MOUSE_BRUSH_BUTTONS.find(
-                      (candidateBrushButton) =>
-                        candidateBrushButton.status === value
-                    )
-                    if (nextBrushButton)
-                      onMouseBrushChange?.(nextBrushButton.status)
-                  }}
+                  onValueChange={ignoreDeselect(MOUSE_BRUSH_ACTIONS, (brush) =>
+                    onMouseBrushChange?.(brush)
+                  )}
                 >
                   {MOUSE_BRUSH_BUTTONS.map((button) => {
                     const Icon = button.icon

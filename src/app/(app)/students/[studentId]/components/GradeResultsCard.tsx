@@ -15,6 +15,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  gradeWorkflowSteps,
+  workflowStepHref,
+} from "@/lib/shared/workflowSteps"
 
 type StudentGradeResults = ReturnType<
   typeof useStudentGradeResults
@@ -85,7 +89,11 @@ export function GradeResultsCard({
               <section key={gradeStudent.id} className="space-y-2">
                 <div className="flex items-center gap-2">
                   <GuardedLink
-                    href={`/grades/${gradeStudent.gradeId}/05-results`}
+                    href={workflowStepHref(
+                      `/grades/${gradeStudent.gradeId}`,
+                      gradeWorkflowSteps,
+                      "05-results"
+                    )}
                     className="flex items-center gap-1 font-medium hover:underline"
                   >
                     {gradeStudent.grade.name}

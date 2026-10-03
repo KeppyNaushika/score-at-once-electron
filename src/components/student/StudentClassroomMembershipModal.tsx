@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { classroomSearchKeywords } from "@/lib/searchKeywords"
+import { classroomSearchKeywords, studentOption } from "@/lib/searchKeywords"
 
 interface MembershipSaveData {
   studentId: string
@@ -93,14 +93,7 @@ export default function StudentClassroomMembershipModal({
 
   const studentOptions = useMemo(
     () =>
-      availableStudents.map((student) => ({
-        value: student.id,
-        label: `${student.lastName} ${student.firstName} (${student.studentNumber})`,
-        keywords: [
-          student.studentNumber,
-          `${student.lastNameKana} ${student.firstNameKana}`,
-        ],
-      })),
+      availableStudents.map((student) => studentOption(student.id, student)),
     [availableStudents]
   )
   const classroomOptions = useMemo(

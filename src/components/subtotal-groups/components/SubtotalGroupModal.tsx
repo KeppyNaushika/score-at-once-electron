@@ -21,6 +21,7 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { GripVertical, Plus, TagIcon, Trash2, XIcon } from "lucide-react"
 import React, { useCallback, useState } from "react"
 
+import { CautionNotice } from "@/components/common/CautionNotice"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -489,16 +490,12 @@ export function SubtotalGroupModal({
         {removedSubtotalWarnings.length > 0 && (
           <div className="space-y-2">
             {removedSubtotalWarnings.map((removedSubtotalWarning) => (
-              <div
-                key={removedSubtotalWarning.id}
-                className="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm whitespace-pre-line text-orange-800"
-              >
-                <div className="font-medium">
-                  削除した小計項目「{removedSubtotalWarning.name}
-                  」は、保存すると次のようになります。
-                </div>
+              <CautionNotice key={removedSubtotalWarning.id}>
+                <span className="block font-medium">
+                  {`削除した小計項目「${removedSubtotalWarning.name}」は、保存すると次のようになります。`}
+                </span>
                 {removedSubtotalWarning.warning}
-              </div>
+              </CautionNotice>
             ))}
           </div>
         )}

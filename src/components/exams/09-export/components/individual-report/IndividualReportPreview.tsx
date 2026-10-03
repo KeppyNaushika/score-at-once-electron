@@ -16,13 +16,10 @@ import type {
 
 import { calculateLearningAdvice } from "../../utils/learningAdviceCalculator"
 import { BoxPlotChart } from "./BoxPlotChart"
-import {
-  buildStatsItems,
-  computeFilteredStats,
-  getVisibleSectionIndices,
-} from "./computeReportData"
+import { buildStatsItems, computeFilteredStats } from "./computeReportData"
 import type { PageAllocation } from "./generatePrintHtml"
 import { LearningAdvicePreview } from "./LearningAdvicePreview"
+import { getVisibleSectionIndices } from "./reportLayout"
 import {
   CommentSectionView,
   HeaderView,

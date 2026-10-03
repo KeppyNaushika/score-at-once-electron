@@ -16,12 +16,8 @@ import type {
   SubtotalTableColumns,
 } from "@/types/individualReport.types"
 
-import {
-  allocateColumnsDHondt,
-  filterSubtotalScores,
-  groupSubtotalData,
-  splitItemsIntoColumns,
-} from "./computeReportData"
+import { filterSubtotalScores, groupSubtotalData } from "./computeReportData"
+import { allocateColumnsDHondt, splitItemsIntoColumns } from "./reportLayout"
 
 interface SubtotalTablePreviewProps {
   report: IndividualReportData

@@ -12,6 +12,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import type { WorkflowStep } from "@/lib/shared/workflowSteps"
 import { cn } from "@/lib/utils"
 
 /**
@@ -29,21 +30,13 @@ import { cn } from "@/lib/utils"
  * 同じ1か所に置く —— 概要の側に写しの表を作ると、タブと概要で同じ段が違う言葉で
  * 呼ばれる（写しは黙ってずれる）。
  */
-export interface WorkflowTab {
-  id: string
-  /** タブに出す短い名前（「1. 模範解答」） */
-  label: string
-  /** 見出しと「次へ」に出す長い名前（「模範解答画像の管理」） */
-  title: string
-  /** 概要の段カードに添える一文（「試験問題の模範解答画像を取り込む」） */
-  description: string
+export interface WorkflowTab extends WorkflowStep {
   /**
    * 概要の段カードの行頭に出すアイコン。
    * **名前の文字列ではなく部品そのもの**を持つ（文字列にすると引く側が
    * `{ FileImage, Settings, … }` という2つ目の表を持つことになる）。
    */
   icon: LucideIcon
-  path: string
 }
 
 interface WorkflowTabHeaderProps {

@@ -54,7 +54,7 @@ import { useTableSort } from "@/hooks/useTableSort"
  * `toISOString()` して返すので文字列である（`ASBDefinitionListItem.updatedAt`）。
  * 既存の `useListFilter` の `date` accessor も同じ理由で両方を受けている。
  */
-export type EntityListDate = Date | string | null
+type EntityListDate = Date | string | null
 
 /** 「次のステップ」列に出すもの */
 interface EntityListNextStep {
@@ -78,7 +78,7 @@ interface EntityListEmptyState {
  * 見出しの語は列の見出しと同じものを使うので、ここでは受け取らない
  * （呼び手が2回書くと、列の語と popover の語がずれる）。
  */
-export interface EntityListDateFilter {
+interface EntityListDateFilter {
   /** YYYY-MM-DD、空文字は未指定 */
   from: string
   to: string

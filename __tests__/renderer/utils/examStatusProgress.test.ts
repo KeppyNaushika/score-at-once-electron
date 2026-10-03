@@ -444,7 +444,6 @@ describe("getExamWorkflowStatus の採点確定", () => {
   it("裁定が残っていれば 8. 採点確定 を指す", () => {
     const workflow = getExamWorkflowStatus(progressAfterScoring(1), "exam-1")
 
-    expect(workflow.step).toBe(8)
     expect(workflow.text).toBe("採点の確定")
     expect(workflow.url).toBe("/exams/exam-1/08-finalize")
   })
@@ -452,7 +451,6 @@ describe("getExamWorkflowStatus の採点確定", () => {
   it("残っていなければ 9. 結果 へ飛ばす（単独採点はここを通る）", () => {
     const workflow = getExamWorkflowStatus(progressAfterScoring(0), "exam-1")
 
-    expect(workflow.step).toBe(9)
     expect(workflow.url).toBe("/exams/exam-1/09-export")
   })
 })

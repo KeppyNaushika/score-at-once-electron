@@ -7,6 +7,7 @@ import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import ClassroomModal from "@/components/classroom/ClassroomModal"
+import ConfirmationModal from "@/components/common/ConfirmationModal"
 import { ListSearchInput } from "@/components/common/ListFilterControls"
 import { ListPaginationFooter } from "@/components/common/ListPaginationFooter"
 import {
@@ -14,17 +15,8 @@ import {
   toolbarButtonAction,
 } from "@/components/common/OverflowToolbar"
 import PageHeader from "@/components/layout/PageHeader"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Empty,
@@ -58,6 +50,7 @@ import { useListPagination } from "@/hooks/useListPagination"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
 import { matchesSearchTerm } from "@/lib/searchText"
+import { isOneOf } from "@/lib/userPreferences"
 import {
   classroomListQuery,
   createClassroomMutation,
@@ -83,10 +76,6 @@ const EMPTY_CLASSROOMS: ClassroomWithMemberships[] = []
 /** 表示設定での絞り込み。非表示の学級も一覧から開いて表示に戻せるようにする */
 const VISIBILITY_FILTERS = ["visible", "hidden", "all"] as const
 type VisibilityFilter = (typeof VISIBILITY_FILTERS)[number]
-
-function isVisibilityFilter(value: string): value is VisibilityFilter {
-  return VISIBILITY_FILTERS.some((filter) => filter === value)
-}
 
 /** 1行の高さの見積もり（px）。「自動」の件数はこれで割る。はみ出すより余らせる */
 const CLASSROOM_TABLE_ROW_HEIGHT = 60
@@ -218,6 +207,7 @@ export default function ClassroomManagementTable() {
   const handleConfirmDeleteClassroom = () => {
     if (classroomDeletion.target === null) return
     const classroomId = classroomDeletion.target.id
+    classroomDeletion.close()
     deleteClassroom.mutate(classroomId, {
       onSuccess: () =>
         setSelectedClassroomIds((prev) => {
@@ -262,7 +252,7 @@ export default function ClassroomManagementTable() {
     <Select
       value={filterVisibility}
       onValueChange={(value) => {
-        if (isVisibilityFilter(value)) setFilterVisibility(value)
+        if (isOneOf(VISIBILITY_FILTERS, value)) setFilterVisibility(value)
       }}
     >
       <SelectTrigger size="sm" className="w-36 rounded-lg">
@@ -543,26 +533,15 @@ export default function ClassroomManagementTable() {
         />
       )}
 
-      <AlertDialog
+      <ConfirmationModal
         open={classroomDeletion.isOpen}
-        onOpenChange={classroomDeletion.handleOpenChange}
-      >
-        {/* 問いかけの文言だけで足りるので、説明文は置かない */}
-        <AlertDialogContent aria-describedby={undefined}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>本当にこの学級を削除しますか？</AlertDialogTitle>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction
-              className={buttonVariants({ variant: "destructive" })}
-              onClick={handleConfirmDeleteClassroom}
-            >
-              削除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onClose={classroomDeletion.close}
+        title="本当にこの学級を削除しますか？"
+        confirmText="削除"
+        variant="destructive"
+        icon="trash"
+        onConfirm={handleConfirmDeleteClassroom}
+      />
     </div>
   )
 }

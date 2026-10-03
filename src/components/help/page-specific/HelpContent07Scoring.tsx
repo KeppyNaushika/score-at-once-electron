@@ -1854,9 +1854,7 @@ function DrawToolCard({
       <div className="text-center">
         <div className="flex items-center justify-center gap-1.5">
           <span className="text-sm font-semibold text-gray-800">{name}</span>
-          <Kbd className="h-auto min-w-0 rounded border border-gray-300 bg-white font-mono text-[10px] font-normal text-gray-600">
-            {keyLabel}
-          </Kbd>
+          <Kbd variant="tinyOutlined">{keyLabel}</Kbd>
         </div>
         <div className="mt-0.5 text-xs leading-snug text-gray-500">{desc}</div>
       </div>

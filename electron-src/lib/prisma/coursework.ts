@@ -9,8 +9,8 @@
 import type { Prisma } from "@prisma/client"
 
 import {
+  buildDeletionBlockedMessage,
   courseworkUsingDataSources,
-  listReferencingGradeNames,
 } from "../../../src/lib/shared/gradeReferenceMessages"
 import type { CourseworkScoreUpsertInput } from "../../../src/types/coursework.types"
 import type { InputMode } from "../../../src/types/coursework.types"
@@ -205,20 +205,12 @@ export async function updateCoursework(
 }
 
 /**
- * 参照されていて消せなかったことは失敗ではなく結果なので、値で返す。
- * 呼び出し側は参照元の成績名を並べて知らせる。
- */
-type CourseworkDeleteResult =
-  { deleted: true } | { deleted: false; usedBy: string[] }
-
-/**
  * 試験外成績資料を削除。
  * 成績算出（GradeDataSource）から評価項目または資料合計として使われている場合は
- * 削除をブロックし、使用中の成績名を返す（確認画面も同じ仕組みで前もって見せる）。
+ * 消さずに断る（試験・小計点グループと同じく例外で。確認画面も同じ判定で前もって
+ * 見せて押させない）。
  */
-export async function deleteCoursework(
-  id: string
-): Promise<CourseworkDeleteResult> {
+export async function deleteCoursework(id: string): Promise<void> {
   // 評価項目を1つずつ使う（courseworkItemId）ものと、資料全体を「資料合計」として
   // 使う（courseworkId）ものの両方を見る。後者を見落とすと削除が通り、参照は
   // `onDelete: SetNull` で黙って空になって、成績算出に名前だけのデータソースが残る
@@ -226,12 +218,13 @@ export async function deleteCoursework(
     where: { id },
     include: courseworkGradeUsageInclude,
   })
-  const usedBy = before
-    ? listReferencingGradeNames(courseworkUsingDataSources(before))
-    : []
-  if (usedBy.length > 0) {
-    return { deleted: false, usedBy }
-  }
+  const blockedMessage = before
+    ? buildDeletionBlockedMessage(
+        "coursework",
+        courseworkUsingDataSources(before)
+      )
+    : null
+  if (blockedMessage !== null) throw new Error(blockedMessage)
 
   await prisma.coursework.delete({ where: { id } })
 
@@ -243,8 +236,6 @@ export async function deleteCoursework(
     scopeLabel: before?.name ?? null,
     target: before?.name ?? null,
   })
-
-  return { deleted: true }
 }
 
 // =============================================================================
@@ -341,9 +332,7 @@ export async function updateCourseworkItem(
  * そのまま使うデータソースは `onDelete: SetNull` で参照先が空になり、資料合計を
  * 使うデータソースは合計が変わる。
  */
-export async function deleteCourseworkItem(
-  id: string
-): Promise<{ deleted: true }> {
+export async function deleteCourseworkItem(id: string): Promise<void> {
   const before = await prisma.courseworkItem.findUnique({
     where: { id },
   })
@@ -359,8 +348,6 @@ export async function deleteCourseworkItem(
     scopeLabel: scope.scopeLabel,
     target: before?.name ?? null,
   })
-
-  return { deleted: true }
 }
 
 /** 評価項目の並び順を更新 */

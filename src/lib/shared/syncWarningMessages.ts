@@ -13,7 +13,9 @@
  * 分かるようにする。
  *
  * **同じ注意は1行にまとめて件数を出す。** 1回の同期で、表から外れた行の数だけ
- * 同じ形の注意が並ぶことがある。行ごとに並べると、他の注意が埋もれる。
+ * 同じ形の注意が並ぶことがある。行ごとに並べると、他の注意が埋もれる。まとめるのは
+ * **言い換えた本文が同じもの**どうしで、形が同じでも表が違えば別の行にする（表の名前を
+ * 本文に含む注意を形だけでまとめると、2つ目からの表の名前が消える）。
  *
  * 置き場が `src/lib/shared/` なのは、renderer（設定画面の一覧・トースト）と
  * main（将来の記録）の両方が同じ言い換えを引けるようにするため。
@@ -23,7 +25,7 @@ import { syncTableLabel } from "./syncTableLabels"
 
 /** 同じ種類にまとめた、利用者へ見せる1行ぶんの注意。 */
 export interface SyncWarningNotice {
-  /** 同じ種類をまとめるための鍵。React の key にも使う */
+  /** 同じ注意をまとめるための鍵（形と本文）。React の key にも使う */
   key: string
   /** 利用者へ見せる本文。言い換えられなかったときはライブラリの原文 */
   message: string
@@ -200,32 +202,50 @@ const RULES: SyncWarningRule[] = [
 /**
  * ライブラリの注意書きを、利用者へ見せる一覧に直す。
  *
- * 同じ種類は1行にまとめ、件数を添える。並びは受け取った順（最初に出た種類が先頭）で、
- * 数の多い順に並べ替えない。**起きた順が読み筋**で、並べ替えると原因と結果が離れる。
+ * 言い換えた本文が同じものは1行にまとめ、件数を添える。並びは受け取った順（最初に
+ * 出たものが先頭）で、数の多い順に並べ替えない。**起きた順が読み筋**で、並べ替えると
+ * 原因と結果が離れる。
  */
 export function describeSyncWarnings(warnings: string[]): SyncWarningNotice[] {
   const noticeByKey = new Map<string, SyncWarningNotice>()
 
   for (const warning of warnings) {
     const rule = RULES.find((candidate) => candidate.pattern.test(warning))
+    const match = rule ? warning.match(rule.pattern) : null
+    const translated = rule !== undefined && match !== null
+    const message = rule && match ? rule.describe(match) : warning
     // 言い換えられないものは、原文ごとに1行。知らない注意を握りつぶさない
-    const key = rule ? rule.key : `raw:${warning}`
+    const key = rule ? `${rule.key}:${message}` : `raw:${warning}`
     const existing = noticeByKey.get(key)
     if (existing) {
       existing.count += 1
       existing.originals.push(warning)
       continue
     }
-    const match = rule ? warning.match(rule.pattern) : null
     noticeByKey.set(key, {
       key,
-      message: rule && match ? rule.describe(match) : warning,
+      message,
       count: 1,
-      translated: rule !== undefined && match !== null,
+      translated,
       originals: [warning],
       severity: rule ? rule.severity : "warning",
     })
   }
 
   return [...noticeByKey.values()]
+}
+
+/**
+ * 今回の同期で**新しく出た**注意（前回の同期には無かったもの）。
+ *
+ * 同じ注意は原因が続くかぎり同期のたびに出る。毎回知らせると、同期間隔ごとに同じ窓が
+ * 積み上がって他の知らせを覆うので、知らせるのは新しく出た回だけにする。
+ */
+export function newlyAppearedWarnings(
+  previousWarnings: string[],
+  currentWarnings: string[]
+): string[] {
+  return currentWarnings.filter(
+    (warning) => !previousWarnings.includes(warning)
+  )
 }

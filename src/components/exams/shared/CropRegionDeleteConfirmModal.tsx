@@ -20,7 +20,7 @@ import {
 } from "@/lib/shared/gradeReferenceMessages"
 import { examDetailQuery } from "@/queries/exam"
 
-type DeleteConfirmModalProps = {
+type CropRegionDeleteConfirmModalProps = {
   isOpen: boolean
   examId: string
   /** 消そうとしている領域。成績算出で使われていれば影響を見せる */
@@ -36,13 +36,13 @@ type DeleteConfirmModalProps = {
  * 見せる（設問のデータソースはカスケードで消え、試験の合計点・小計は値が変わる）。
  * 使っているデータソースは試験の詳細（layout も読む）に同梱してある。
  */
-export const DeleteConfirmModal = ({
+export const CropRegionDeleteConfirmModal = ({
   isOpen,
   examId,
   cropRegionId,
   onClose,
   onConfirm,
-}: DeleteConfirmModalProps) => {
+}: CropRegionDeleteConfirmModalProps) => {
   const examDetail = useQuery({
     ...examDetailQuery(examId),
     enabled: isOpen && cropRegionId !== null,

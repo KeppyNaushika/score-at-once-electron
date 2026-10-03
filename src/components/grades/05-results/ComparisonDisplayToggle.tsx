@@ -1,6 +1,7 @@
 "use client"
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { ignoreDeselect } from "@/lib/toggleSelection"
 import { GRADE_COMPARISON_DISPLAYS } from "@/lib/userPreferences"
 
 import type { ComparisonDisplay } from "./types"
@@ -28,21 +29,19 @@ export function ComparisonDisplayToggle({
         type="single"
         variant="outline"
         size="sm"
+        selectedTone="primary"
         value={display}
         aria-label="変化の表示"
-        onValueChange={(value) => {
-          // 選択中の段をもう一度押すと空文字が来る。選択は外さない
-          const nextDisplay = GRADE_COMPARISON_DISPLAYS.find(
-            (candidateDisplay) => candidateDisplay === value
-          )
-          if (nextDisplay) onDisplayChange(nextDisplay)
-        }}
+        onValueChange={ignoreDeselect(
+          GRADE_COMPARISON_DISPLAYS,
+          onDisplayChange
+        )}
       >
         {GRADE_COMPARISON_DISPLAYS.map((stepDisplay) => (
           <ToggleGroupItem
             key={stepDisplay}
             value={stepDisplay}
-            className="px-2.5 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            className="px-2.5 text-xs"
           >
             {DISPLAY_LABELS[stepDisplay]}
           </ToggleGroupItem>

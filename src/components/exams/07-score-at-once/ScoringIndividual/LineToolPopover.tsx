@@ -14,25 +14,22 @@ import {
 } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { ignoreDeselect } from "@/lib/toggleSelection"
 import { cn } from "@/lib/utils"
-import type { LineStyle } from "@/types/drawingAnnotation.types"
+import { LINE_STYLES, type LineStyle } from "@/types/drawingAnnotation.types"
 
 import { COLOR_PALETTE } from "./constants/drawingConstants"
 import type { CanvasTool } from "./types"
 
-interface LineStyleOption {
-  lineStyle: LineStyle
-  label: string
+/** 線種の表示名（並びは正本 `LINE_STYLES` の順） */
+const LINE_STYLE_LABELS: Record<LineStyle, string> = {
+  solid: "直線",
+  wave: "波線",
+  zigzag: "折線",
+  double: "二重線",
+  arrow: "矢印 →",
+  both_arrow: "両矢印 ↔",
 }
-
-const LINE_STYLE_OPTIONS: LineStyleOption[] = [
-  { lineStyle: "solid", label: "直線" },
-  { lineStyle: "wave", label: "波線" },
-  { lineStyle: "zigzag", label: "折線" },
-  { lineStyle: "double", label: "二重線" },
-  { lineStyle: "arrow", label: "矢印 →" },
-  { lineStyle: "both_arrow", label: "両矢印 ↔" },
-]
 
 interface LineToolPopoverProps {
   currentTool: CanvasTool
@@ -133,10 +130,7 @@ export function LineToolPopover({
               </div>
               {shortcutKey && (
                 <div className="mt-1 text-xs text-gray-400">
-                  キー:{" "}
-                  <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
-                    {shortcutKey.toUpperCase()}
-                  </Kbd>
+                  キー: <Kbd variant="subtle">{shortcutKey.toUpperCase()}</Kbd>
                 </div>
               )}
             </div>
@@ -157,27 +151,21 @@ export function LineToolPopover({
               type="single"
               variant="outline"
               size="sm"
+              selectedTone="primary"
               rovingFocus={false}
               value={lineStyle}
               aria-label="線種"
               className="mt-1 grid w-full grid-cols-2 gap-1 data-[variant=outline]:shadow-none"
-              onValueChange={(value) => {
-                // 選択中をもう一度押すと空文字が来る。選択は外さない
-                const nextLineStyleOption = LINE_STYLE_OPTIONS.find(
-                  (candidateOption) => candidateOption.lineStyle === value
-                )
-                if (nextLineStyleOption)
-                  onLineStyleChange(nextLineStyleOption.lineStyle)
-              }}
+              onValueChange={ignoreDeselect(LINE_STYLES, onLineStyleChange)}
             >
-              {LINE_STYLE_OPTIONS.map((lineStyleOption) => (
+              {LINE_STYLES.map((lineStyleValue) => (
                 <ToggleGroupItem
-                  key={lineStyleOption.lineStyle}
-                  value={lineStyleOption.lineStyle}
+                  key={lineStyleValue}
+                  value={lineStyleValue}
                   onClick={(e) => e.stopPropagation()}
-                  className="h-8 rounded-md text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[variant=outline]:border-l"
+                  className="h-8 rounded-md text-xs data-[variant=outline]:border-l"
                 >
-                  {lineStyleOption.label}
+                  {LINE_STYLE_LABELS[lineStyleValue]}
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>

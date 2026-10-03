@@ -4,7 +4,7 @@
  */
 import { useCallback } from "react"
 
-import { useCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
+import { useSceneCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
 
 import type { CanvasTool } from "../../types"
 
@@ -36,9 +36,9 @@ export function useDrawingToolShortcuts({
   // 表示制御のキーボードショートカット
   // ============================================
 
-  // 全体表示（個別モード専用）
-  useCommand("view.fullView", handleMaximizeView, {
-    when: "!inputFocus && !modalOpen && gradingMode == 'individual'",
+  // 全体表示（個別モード専用）。ほかのキーと同じく、文字の書き込み中（textEditorActive）は効かない
+  useSceneCommand("view.fullView", handleMaximizeView, {
+    condition: "gradingMode == 'individual'",
     metadata: {
       title: "全体表示",
       category: "表示制御",
@@ -47,8 +47,8 @@ export function useDrawingToolShortcuts({
   })
 
   // 設問表示（個別モード専用）
-  useCommand("view.questionView", handleCropView, {
-    when: "!inputFocus && !modalOpen && gradingMode == 'individual'",
+  useSceneCommand("view.questionView", handleCropView, {
+    condition: "gradingMode == 'individual'",
     metadata: {
       title: "設問表示",
       category: "表示制御",
@@ -61,11 +61,11 @@ export function useDrawingToolShortcuts({
   // ============================================
 
   // ハンドツール
-  useCommand(
+  useSceneCommand(
     "tool.hand",
     useCallback(() => setCurrentTool("hand"), [setCurrentTool]),
     {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+      condition: "gradingMode == 'individual'",
       metadata: {
         title: "ハンドツール",
         category: "描画ツール",
@@ -75,11 +75,11 @@ export function useDrawingToolShortcuts({
   )
 
   // 選択ツール
-  useCommand(
+  useSceneCommand(
     "tool.select",
     useCallback(() => setCurrentTool("select"), [setCurrentTool]),
     {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+      condition: "gradingMode == 'individual'",
       metadata: {
         title: "選択ツール",
         category: "描画ツール",
@@ -89,11 +89,11 @@ export function useDrawingToolShortcuts({
   )
 
   // テキストツール
-  useCommand(
+  useSceneCommand(
     "tool.text",
     useCallback(() => setCurrentTool("text"), [setCurrentTool]),
     {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+      condition: "gradingMode == 'individual'",
       metadata: {
         title: "テキストツール",
         category: "描画ツール",
@@ -103,11 +103,11 @@ export function useDrawingToolShortcuts({
   )
 
   // 線ツール
-  useCommand(
+  useSceneCommand(
     "tool.line",
     useCallback(() => setCurrentTool("line"), [setCurrentTool]),
     {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+      condition: "gradingMode == 'individual'",
       metadata: {
         title: "線ツール",
         category: "描画ツール",
@@ -117,11 +117,11 @@ export function useDrawingToolShortcuts({
   )
 
   // 矩形ツール
-  useCommand(
+  useSceneCommand(
     "tool.rectangle",
     useCallback(() => setCurrentTool("rectangle"), [setCurrentTool]),
     {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+      condition: "gradingMode == 'individual'",
       metadata: {
         title: "矩形ツール",
         category: "描画ツール",
@@ -131,11 +131,11 @@ export function useDrawingToolShortcuts({
   )
 
   // 楕円ツール
-  useCommand(
+  useSceneCommand(
     "tool.ellipse",
     useCallback(() => setCurrentTool("ellipse"), [setCurrentTool]),
     {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+      condition: "gradingMode == 'individual'",
       metadata: {
         title: "楕円ツール",
         category: "描画ツール",

@@ -13,22 +13,13 @@ import Link from "next/link"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import ConfirmationModal from "@/components/common/ConfirmationModal"
 import {
   DragHandle,
   SortableTableProvider,
   useSortableRow,
 } from "@/components/common/sortable-table"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -48,8 +39,12 @@ import {
   buildItemDeletionWarning,
   courseworkItemUsages,
 } from "@/lib/shared/gradeReferenceMessages"
+import {
+  courseworkWorkflowSteps,
+  nextStepLabel,
+  workflowStepHref,
+} from "@/lib/shared/workflowSteps"
 import { cn } from "@/lib/utils"
-import { courseworkWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
 import {
   courseworkDetailQuery,
   courseworkScoresQuery,
@@ -373,48 +368,38 @@ export function CourseworkItemsContainer({
         </div>
       )}
 
-      <AlertDialog
+      <ConfirmationModal
         open={itemDeletion.isOpen}
-        onOpenChange={itemDeletion.handleOpenChange}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>評価項目を削除しますか？</AlertDialogTitle>
-            <AlertDialogDescription>
-              「{itemDeletion.target?.name}
-              」を削除します。この評価項目に入力した点数・評価、加減点とその理由、成績通知書に載せるコメント
-              {itemDeletion.target?.inputMode === "letter" &&
-                "、文字評価の変換表"}
-              も一緒に削除され、元に戻せません。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {deleteTargetWarning && (
-            <div className="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm whitespace-pre-line text-orange-800">
-              {deleteTargetWarning}
-            </div>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction
-              className={buttonVariants({ variant: "destructive" })}
-              // 資料の詳細が読めるまでは押させない（影響を見せる前に消さない）
-              disabled={deleteItem.isPending || coursework === undefined}
-              onClick={(event) => {
-                // 閉じるのは削除が済んでから（失敗したら開いたままにする）
-                event.preventDefault()
-                if (itemDeletion.target) void handleDelete(itemDeletion.target)
-              }}
-            >
-              削除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onClose={itemDeletion.close}
+        title="評価項目を削除しますか？"
+        description={`「${itemDeletion.target?.name ?? ""}」を削除します。この評価項目に入力した点数・評価、加減点とその理由、成績通知書に載せるコメント${itemDeletion.target?.inputMode === "letter" ? "、文字評価の変換表" : ""}も一緒に削除され、元に戻せません。`}
+        confirmText="削除"
+        variant="destructive"
+        icon="trash"
+        warnings={
+          deleteTargetWarning
+            ? [{ type: "warning", message: deleteTargetWarning }]
+            : []
+        }
+        // 資料の詳細が読めるまでは押させない（影響を見せる前に消さない）。
+        // 閉じるのは削除が済んでから（失敗したら開いたままにする）
+        loading={deleteItem.isPending}
+        confirmDisabled={coursework === undefined}
+        onConfirm={() =>
+          itemDeletion.target ? handleDelete(itemDeletion.target) : undefined
+        }
+      />
 
       <div className="mt-8 flex justify-end">
         <Button asChild>
-          <Link href={`/coursework/${courseworkId}/04-scores`}>
-            {nextStepLabel(courseworkWorkflowTabs, "04-scores")}
+          <Link
+            href={workflowStepHref(
+              `/coursework/${courseworkId}`,
+              courseworkWorkflowSteps,
+              "04-scores"
+            )}
+          >
+            {nextStepLabel(courseworkWorkflowSteps, "04-scores")}
           </Link>
         </Button>
       </div>

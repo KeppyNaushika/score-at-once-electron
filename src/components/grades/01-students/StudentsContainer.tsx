@@ -17,7 +17,11 @@ import {
 import { StudentAddPanel } from "@/components/common/student-add-panel/components/StudentAddPanel"
 import type { StudentAddPanelAdapter } from "@/components/common/student-add-panel/types"
 import { Button } from "@/components/ui/button"
-import { gradeWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
+import {
+  gradeWorkflowSteps,
+  nextStepLabel,
+  workflowStepHref,
+} from "@/lib/shared/workflowSteps"
 import {
   addStudentsFromClassroomMutation,
   addStudentsToGradeMutation,
@@ -237,8 +241,14 @@ export function StudentsContainer({ gradeId }: StudentsContainerProps) {
 
       <div className="mt-6 flex justify-end">
         <Button asChild disabled={loading || studentCount === 0}>
-          <Link href={`/grades/${gradeId}/02-data-sources`}>
-            {nextStepLabel(gradeWorkflowTabs, "02-data-sources")}
+          <Link
+            href={workflowStepHref(
+              `/grades/${gradeId}`,
+              gradeWorkflowSteps,
+              "02-data-sources"
+            )}
+          >
+            {nextStepLabel(gradeWorkflowSteps, "02-data-sources")}
           </Link>
         </Button>
       </div>

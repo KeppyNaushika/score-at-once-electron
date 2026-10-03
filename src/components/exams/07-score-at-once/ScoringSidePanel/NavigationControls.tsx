@@ -77,14 +77,7 @@ export default function NavigationControls({
               1{isColumnLayout ? "列" : "行"}あたりの表示答案
             </span>
             <span className="text-[10px] text-gray-400">
-              <Kbd className="h-auto min-w-0 rounded bg-gray-100 py-0.5 font-mono text-[10px] font-normal text-inherit">
-                =
-              </Kbd>{" "}
-              増 /{" "}
-              <Kbd className="h-auto min-w-0 rounded bg-gray-100 py-0.5 font-mono text-[10px] font-normal text-inherit">
-                -
-              </Kbd>{" "}
-              減
+              <Kbd variant="tiny">=</Kbd> 増 / <Kbd variant="tiny">-</Kbd> 減
             </span>
           </div>
           <div className="mt-1 flex items-center gap-2">

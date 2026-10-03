@@ -37,6 +37,8 @@ import type {
   RotationDegree,
 } from "@/types/pdfTools.types"
 
+import { isSourcePageKeyOf } from "../export-panel/outputPageOrder"
+
 interface ImportedFileItemProps {
   file: ImportedFile
   excludedPages: Set<string>
@@ -63,7 +65,7 @@ export default function ImportedFileItem({
   const excludedCount = useMemo(() => {
     let count = 0
     for (const key of excludedPages) {
-      if (key.startsWith(`${file.id}:`)) count++
+      if (isSourcePageKeyOf(key, file.id)) count++
     }
     return count
   }, [excludedPages, file.id])

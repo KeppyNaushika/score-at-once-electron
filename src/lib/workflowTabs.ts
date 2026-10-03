@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LayoutTemplate,
   ListChecks,
+  type LucideIcon,
   PencilLine,
   Settings,
   SlidersHorizontal,
@@ -18,255 +19,64 @@ import {
 } from "lucide-react"
 
 import type { WorkflowTab } from "@/components/common/WorkflowTabHeader"
+import {
+  answerSheetBuilderWorkflowSteps,
+  courseworkWorkflowSteps,
+  examWorkflowSteps,
+  gradeWorkflowSteps,
+  type WorkflowStep,
+} from "@/lib/shared/workflowSteps"
 
 /**
- * 段のあるワークフロー4つ（試験・成績算出・試験外成績資料・解答用紙作成）の段の一覧。
- *
- * **写しを持たない。** ここに置く前は、各 `layout.tsx` が自分の配列を持ち、
- * `useNavigationHistory` が「対応する layout.tsx のステップ定義と揃える」という
- * コメント付きで**同じものを手で書き写した2つ目**を持っていた。写しは黙ってずれる
- * ——実際、成績の段は layout 側が「1. 生徒管理」「2. データソース」…と繰り上がって
- * いるのに、履歴側の写しは「1. 基本設定」「2. 生徒管理」…のまま古い番号を出していた。
- *
- * `id` は URL のフォルダ名そのもの（`src/app/(app)/<section>/[id]/<id>/`）。履歴の
- * ラベルは URL の第3セグメントをこの `id` で引くので、フォルダ名と一致していないと
- * 引けない。概要だけは実体そのもののURLなので `path` が空文字になる。
+ * 段の一覧（`src/lib/shared/workflowSteps.ts`）に、概要の段カードの行頭に出す
+ * アイコンを添えたタブ。段の名前と URL はここに持たない。
  */
-
-/**
- * 試験の段。
- *
- * 8. 採点確定は**協調採点でだけ意味を持つ**段で、単独採点では裁定対象が構造的に
- * ゼロになる。それでもタブからは常に見せる ——「あるはずの段が状況によって消える」
- * 方が、開いて「対象なし」と分かるより読みにくい。
- */
-export const examWorkflowTabs: readonly WorkflowTab[] = [
-  {
-    id: "detail",
-    label: "概要",
-    title: "概要",
-    description: "名前・日付・タグと、段の進み具合",
-    icon: LayoutDashboard,
-    path: "",
-  },
-  {
-    id: "01-upload",
-    label: "1. 模範解答",
-    title: "模範解答画像の管理",
-    description: "試験問題の模範解答画像を取り込む",
-    icon: FileImage,
-    path: "/01-upload",
-  },
-  {
-    id: "02-template",
-    label: "2. 採点領域",
-    title: "答案の採点領域作成",
-    description: "各設問の採点範囲を枠で囲んで決める",
-    icon: Settings,
-    path: "/02-template",
-  },
-  {
-    id: "03-region-info",
-    label: "3. 領域情報",
-    title: "採点領域の詳細情報設定",
-    description: "各領域の種類・配点・ラベルを決める",
-    icon: Edit,
-    path: "/03-region-info",
-  },
-  {
-    id: "04-question-group",
-    label: "4. 小計点",
-    title: "小計点の設定",
-    description: "設問をまとめて小計点を出す",
-    icon: Calculator,
-    path: "/04-question-group",
-  },
-  {
-    id: "05-students",
-    label: "5. 受験生徒",
-    title: "受験生徒の管理",
-    description: "この試験を受ける生徒を決める",
-    icon: Users,
-    path: "/05-students",
-  },
-  {
-    id: "06-student-answers",
-    label: "6. 生徒答案",
-    title: "生徒答案の追加と関連付け",
-    description: "スキャンした答案画像を取り込み、生徒に結び付ける",
-    icon: Upload,
-    path: "/06-student-answers",
-  },
-  {
-    id: "07-score-at-once",
-    label: "7. 採点",
-    title: "一括採点",
-    description: "キーボード中心の画面で答案を採点する",
-    icon: BarChart3,
-    path: "/07-score-at-once",
-  },
-  {
-    id: "08-finalize",
-    label: "8. 採点確定",
-    title: "採点の確定",
-    description: "採点者どうしで食い違った採点を見比べ、1つに決める",
-    icon: Gavel,
-    path: "/08-finalize",
-  },
-  {
-    id: "09-export",
-    label: "9. 結果",
-    title: "採点結果のファイル出力",
-    description: "採点結果を Excel・PDF で書き出す",
-    icon: FileOutput,
-    path: "/09-export",
-  },
-]
-
-/** 成績算出の段 */
-export const gradeWorkflowTabs: readonly WorkflowTab[] = [
-  {
-    id: "detail",
-    label: "概要",
-    title: "概要",
-    description: "名前・日付・タグと、段の進み具合",
-    icon: LayoutDashboard,
-    path: "",
-  },
-  {
-    id: "01-students",
-    label: "1. 生徒管理",
-    title: "生徒の登録",
-    description: "成績を出す生徒を決める",
-    icon: Users,
-    path: "/01-students",
-  },
-  {
-    id: "02-data-sources",
-    label: "2. データソース",
-    title: "データソースの設定",
-    description: "評価項目ごとに、点数の元になる試験や資料を選ぶ",
-    icon: Database,
-    path: "/02-data-sources",
-  },
-  {
-    id: "03-boundaries",
-    label: "3. 成績境界",
-    title: "成績境界の設定",
-    description: "評定を分ける境目を決める",
-    icon: SlidersHorizontal,
-    path: "/03-boundaries",
-  },
-  {
-    id: "04-comparisons",
-    label: "4. 比較",
-    title: "比較の設定",
-    description: "結果に並べて見る、別の成績算出や別の評価項目を選ぶ",
-    icon: GitCompareArrows,
-    path: "/04-comparisons",
-  },
-  {
-    id: "05-results",
-    label: "5. 結果",
-    title: "成績の確認",
-    description: "算出された成績を一覧で確かめる",
-    icon: BarChart3,
-    path: "/05-results",
-  },
-  {
-    id: "06-export",
-    label: "6. 出力",
-    title: "結果の出力",
-    description: "成績を Excel・PDF で書き出す",
-    icon: FileOutput,
-    path: "/06-export",
-  },
-]
-
-/**
- * 段の下端に置く「次へ」の文言。右上の「次へ」（`WorkflowTabHeader`）と同じく
- * 行き先の段の `title` から作る。段ごとに文言を書き写すと、上と下で同じ行き先が
- * 違う名前で呼ばれる（成績境界の下が「次へ: 結果」、上が「次へ：成績の確認」だった）。
- */
-export function nextStepLabel(
-  tabs: readonly WorkflowTab[],
-  nextTabId: string
-): string {
-  const nextTab = tabs.find((tab) => tab.id === nextTabId)
-  return nextTab ? `次へ：${nextTab.title}` : "次へ"
+function withIcons<StepId extends string>(
+  steps: readonly (WorkflowStep & { id: StepId })[],
+  icons: Record<StepId, LucideIcon>
+): readonly WorkflowTab[] {
+  return steps.map((step) => ({ ...step, icon: icons[step.id] }))
 }
 
-/** 試験外成績資料の段 */
-export const courseworkWorkflowTabs: readonly WorkflowTab[] = [
-  {
-    id: "detail",
-    label: "概要",
-    title: "概要",
-    description: "名前・日付・タグと、段の進み具合",
-    icon: LayoutDashboard,
-    path: "",
-  },
-  {
-    id: "02-students",
-    label: "1. 生徒管理",
-    title: "生徒の登録",
-    description: "この資料の対象になる生徒を決める",
-    icon: Users,
-    path: "/02-students",
-  },
-  {
-    id: "03-items",
-    label: "2. 評価項目",
-    title: "評価項目の設定",
-    description: "点数を付ける項目と満点を決める",
-    icon: ListChecks,
-    path: "/03-items",
-  },
-  {
-    id: "04-scores",
-    label: "3. 点数入力",
-    title: "点数の入力",
-    description: "生徒ごとに点数を入れる",
-    icon: PencilLine,
-    path: "/04-scores",
-  },
-  {
-    id: "05-results",
-    label: "4. 結果",
-    title: "結果の確認",
-    description: "入力した点数を一覧で確かめる",
-    icon: BarChart3,
-    path: "/05-results",
-  },
-]
+export const examWorkflowTabs = withIcons(examWorkflowSteps, {
+  detail: LayoutDashboard,
+  "01-upload": FileImage,
+  "02-template": Settings,
+  "03-region-info": Edit,
+  "04-question-group": Calculator,
+  "05-students": Users,
+  "06-student-answers": Upload,
+  "07-score-at-once": BarChart3,
+  "08-finalize": Gavel,
+  "09-export": FileOutput,
+})
 
-/** 解答用紙作成の段 */
-export const answerSheetBuilderWorkflowTabs: readonly WorkflowTab[] = [
+export const gradeWorkflowTabs = withIcons(gradeWorkflowSteps, {
+  detail: LayoutDashboard,
+  "01-students": Users,
+  "02-data-sources": Database,
+  "03-boundaries": SlidersHorizontal,
+  "04-comparisons": GitCompareArrows,
+  "05-results": BarChart3,
+  "06-export": FileOutput,
+})
+
+export const courseworkWorkflowTabs = withIcons(courseworkWorkflowSteps, {
+  detail: LayoutDashboard,
+  "02-students": Users,
+  "03-items": ListChecks,
+  "04-scores": PencilLine,
+  "05-results": BarChart3,
+})
+
+export const answerSheetBuilderWorkflowTabs = withIcons(
+  answerSheetBuilderWorkflowSteps,
   {
-    id: "detail",
-    label: "概要",
-    title: "概要",
-    description: "名前・日付・タグと、段の進み具合",
-    icon: LayoutDashboard,
-    path: "",
-  },
-  {
-    id: "01-edit",
-    label: "1. 作成",
-    title: "解答用紙の作成",
-    description: "解答欄を並べて用紙を組み立てる",
-    icon: LayoutTemplate,
-    path: "/01-edit",
-  },
-  {
-    id: "02-export",
-    label: "2. 書き出し",
-    title: "解答用紙の書き出し",
-    description: "組んだ用紙を PDF で書き出す",
-    icon: FileOutput,
-    path: "/02-export",
-  },
-]
+    detail: LayoutDashboard,
+    "01-edit": LayoutTemplate,
+    "02-export": FileOutput,
+  }
+)
 
 /**
  * 概要ページの段カード1枚が束ねる段。

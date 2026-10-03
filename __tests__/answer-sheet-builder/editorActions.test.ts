@@ -434,4 +434,18 @@ describe("編集は書き込みの意図として渡る", () => {
     expect(findSubQuestion(restored[0], "sub-1a").points).toBe(1)
     expect(findSubQuestion(result.current.definition, "sub-1a").points).toBe(1)
   })
+
+  it("読み込んだ内容を置くだけでは、何も書き込まない", () => {
+    // 開くだけで保存が走ると、同期先へ全行の書き換えが流れ、作成日時も動く（#1126）
+    const { result, edits, restored } = renderEditor(createDefaultDefinition())
+    const loaded = twoMajorsWithTwoSubs()
+
+    act(() => {
+      result.current.setDefinition(loaded)
+    })
+
+    expect(edits).toHaveLength(0)
+    expect(restored).toHaveLength(0)
+    expect(result.current.definition).toEqual(loaded)
+  })
 })

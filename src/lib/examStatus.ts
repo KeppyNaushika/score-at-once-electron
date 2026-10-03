@@ -6,6 +6,13 @@
 
 import type { Exam, Tag } from "@prisma/client"
 
+import {
+  examWorkflowSteps,
+  nextWorkflowStep,
+  type WorkflowNextStep,
+  type WorkflowStepId,
+} from "@/lib/shared/workflowSteps"
+
 /**
  * 進捗計算 getExamProgress が読む最小入力形。
  * 一覧（fetch-exams-summary が返す軽量データ）と詳細（ExamForDetail）の双方がこれを満たすため、
@@ -262,15 +269,6 @@ function countPendingDecisions(
  * 試験一覧の「次のステップ」表示（9段階ワークフローの現在地）。
  * 表示文言・遷移 URL・着手可否という presentation 情報であり、renderer 側で導出する。
  */
-interface ExamWorkflowStatus {
-  step: number
-  action: string
-  text: string
-  url: string
-  isCompleted: boolean
-  canStart: boolean
-}
-
 /**
  * ExamProgress（DB 事実）から一覧の「次のステップ」表示を導出する。
  * 表示文言・renderer のルート URL を含むため、main ではなく renderer 側の唯一の実装とする。
@@ -278,81 +276,18 @@ interface ExamWorkflowStatus {
 export function getExamWorkflowStatus(
   progress: ExamProgress,
   examId: string
-): ExamWorkflowStatus {
-  const {
-    hasImages,
-    hasLayout,
-    hasRegionInfo,
-    hasSubtotalGroupSetting,
-    hasStudents,
-    hasAnswers,
-    hasScoring,
-    hasFinalizedScores,
-  } = progress
+): WorkflowNextStep {
+  const examHref = `/exams/${examId}`
+  const next = (stepId: WorkflowStepId<typeof examWorkflowSteps>) =>
+    nextWorkflowStep(examHref, examWorkflowSteps, stepId)
 
-  if (!hasImages)
-    return {
-      step: 1,
-      action: "upload",
-      text: "模範解答画像の管理",
-      url: `/exams/${examId}/01-upload`,
-      isCompleted: false,
-      canStart: true,
-    }
-  if (!hasLayout)
-    return {
-      step: 2,
-      action: "template",
-      text: "答案の採点領域作成",
-      url: `/exams/${examId}/02-template`,
-      isCompleted: false,
-      canStart: hasImages,
-    }
-  if (!hasRegionInfo)
-    return {
-      step: 3,
-      action: "region-info",
-      text: "採点領域の詳細情報設定",
-      url: `/exams/${examId}/03-region-info`,
-      isCompleted: false,
-      canStart: hasLayout,
-    }
-  if (!hasSubtotalGroupSetting)
-    return {
-      step: 4,
-      action: "question-group",
-      text: "小計点の設定",
-      url: `/exams/${examId}/04-question-group`,
-      isCompleted: false,
-      canStart: hasRegionInfo,
-    }
-  if (!hasStudents)
-    return {
-      step: 5,
-      action: "students",
-      text: "受験生徒の管理",
-      url: `/exams/${examId}/05-students`,
-      isCompleted: false,
-      canStart: hasSubtotalGroupSetting,
-    }
-  if (!hasAnswers)
-    return {
-      step: 6,
-      action: "student-answers",
-      text: "生徒答案の追加と関連付け",
-      url: `/exams/${examId}/06-student-answers`,
-      isCompleted: false,
-      canStart: hasStudents,
-    }
-  if (!hasScoring)
-    return {
-      step: 7,
-      action: "score-at-once",
-      text: "一括採点",
-      url: `/exams/${examId}/07-score-at-once`,
-      isCompleted: false,
-      canStart: hasAnswers && hasRegionInfo,
-    }
+  if (!progress.hasImages) return next("01-upload")
+  if (!progress.hasLayout) return next("02-template")
+  if (!progress.hasRegionInfo) return next("03-region-info")
+  if (!progress.hasSubtotalGroupSetting) return next("04-question-group")
+  if (!progress.hasStudents) return next("05-students")
+  if (!progress.hasAnswers) return next("06-student-answers")
+  if (!progress.hasScoring) return next("07-score-at-once")
 
   /**
    * 採点まで済んだら、裁定が残っていれば「8. 採点確定」、無ければ「9. 結果」。
@@ -363,24 +298,9 @@ export function getExamWorkflowStatus(
    * かつてこの段を梯子から外していたのは、進捗の元データに採点者（userId）も
    * 確定も載っていなかったためで、載せた今はその理由が消えている。
    */
-  if (!hasFinalizedScores)
-    return {
-      step: 8,
-      action: "finalize",
-      text: "採点の確定",
-      url: `/exams/${examId}/08-finalize`,
-      isCompleted: false,
-      canStart: hasScoring,
-    }
+  if (!progress.hasFinalizedScores) return next("08-finalize")
 
-  return {
-    step: 9,
-    action: "export",
-    text: "採点結果のファイル出力",
-    url: `/exams/${examId}/09-export`,
-    isCompleted: false,
-    canStart: hasScoring,
-  }
+  return next("09-export")
 }
 
 /**

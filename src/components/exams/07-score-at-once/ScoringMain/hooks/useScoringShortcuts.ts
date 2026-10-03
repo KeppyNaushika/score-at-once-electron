@@ -2,10 +2,10 @@
  * 採点画面のキーボードショートカット定義フック
  *
  * ScoringMainViewから抽出されたショートカット登録ロジック
- * useCommandを使用してショートカットを登録する
+ * 効く場面から when 句を導く useSceneCommand で登録する
  */
 
-import { useCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
+import { useSceneCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
 import type { ScoringOperationMode } from "@/components/exams/07-score-at-once/types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -84,14 +84,14 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     scoringOperationMode: _scoringOperationMode,
   } = handlers
 
-  // キーボードモード専用コマンドのwhen句サフィックス
-  const kbOnly = " && scoringOperationMode == 'keyboard'"
+  // キーボードモード専用コマンドに加える条件
+  const keyboardOnly = "scoringOperationMode == 'keyboard'"
 
   // ========================================
   // 選択コマンド
   // ========================================
-  useCommand("selection.selectAll", handleSelectAll, {
-    when: `!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'${kbOnly}`,
+  useSceneCommand("selection.selectAll", handleSelectAll, {
+    condition: `gradingMode == 'grid' && ${keyboardOnly}`,
     metadata: {
       title: "全選択",
       category: "選択",
@@ -102,8 +102,8 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // ========================================
   // 採点コマンド（サイドパネル非表示でも有効）
   // ========================================
-  useCommand("scoring.unscored", () => handleScore("unscored"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+  useSceneCommand("scoring.unscored", () => handleScore("unscored"), {
+    condition: `hasSelectedAnswers && ${keyboardOnly}`,
     metadata: {
       title: "未採点として採点",
       category: "採点",
@@ -111,8 +111,8 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     },
   })
 
-  useCommand("scoring.correct", () => handleScore("correct"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+  useSceneCommand("scoring.correct", () => handleScore("correct"), {
+    condition: `hasSelectedAnswers && ${keyboardOnly}`,
     metadata: {
       title: "正答として採点",
       category: "採点",
@@ -120,8 +120,9 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     },
   })
 
-  useCommand("scoring.partial", () => handleScore("partial"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+  useSceneCommand("scoring.partial", () => handleScore("partial"), {
+    scene: "scoring",
+    condition: `hasSelectedAnswers && ${keyboardOnly}`,
     metadata: {
       title: "部分点として採点",
       category: "採点",
@@ -129,8 +130,9 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     },
   })
 
-  useCommand("scoring.pending", () => handleScore("pending"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+  useSceneCommand("scoring.pending", () => handleScore("pending"), {
+    scene: "scoring",
+    condition: `hasSelectedAnswers && ${keyboardOnly}`,
     metadata: {
       title: "保留として採点",
       category: "採点",
@@ -138,8 +140,8 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     },
   })
 
-  useCommand("scoring.incorrect", () => handleScore("incorrect"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+  useSceneCommand("scoring.incorrect", () => handleScore("incorrect"), {
+    condition: `hasSelectedAnswers && ${keyboardOnly}`,
     metadata: {
       title: "誤答として採点",
       category: "採点",
@@ -147,8 +149,8 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     },
   })
 
-  useCommand("scoring.noAnswer", () => handleScore("no_answer"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+  useSceneCommand("scoring.noAnswer", () => handleScore("no_answer"), {
+    condition: `hasSelectedAnswers && ${keyboardOnly}`,
     metadata: {
       title: "無答として採点",
       category: "採点",
@@ -156,8 +158,8 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     },
   })
 
-  useCommand("scoring.doubleMark", () => handleScore("double_mark"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers${kbOnly}`,
+  useSceneCommand("scoring.doubleMark", () => handleScore("double_mark"), {
+    condition: `hasSelectedAnswers && ${keyboardOnly}`,
     metadata: {
       title: "Wマークとして採点",
       category: "採点",
@@ -168,60 +170,72 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // ========================================
   // フィルタトグルコマンド（サイドパネル非表示でも有効、グリッドモードのみ）
   // ========================================
-  useCommand("filter.toggleUnscored", () => handleToggleFilter("unscored"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'",
-    metadata: {
-      title: "未採点フィルタトグル",
-      category: "フィルタ",
-      description: "未採点の答案の表示を切り替えます",
-    },
-  })
+  useSceneCommand(
+    "filter.toggleUnscored",
+    () => handleToggleFilter("unscored"),
+    {
+      condition: "gradingMode == 'grid'",
+      metadata: {
+        title: "未採点フィルタトグル",
+        category: "フィルタ",
+        description: "未採点の答案の表示を切り替えます",
+      },
+    }
+  )
 
-  useCommand("filter.toggleCorrect", () => handleToggleFilter("correct"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'",
+  useSceneCommand("filter.toggleCorrect", () => handleToggleFilter("correct"), {
+    condition: "gradingMode == 'grid'",
     metadata: {
       title: "正答フィルタトグル",
       category: "フィルタ",
     },
   })
 
-  useCommand("filter.togglePartial", () => handleToggleFilter("partial"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'",
+  useSceneCommand("filter.togglePartial", () => handleToggleFilter("partial"), {
+    condition: "gradingMode == 'grid'",
     metadata: {
       title: "部分点フィルタトグル",
       category: "フィルタ",
     },
   })
 
-  useCommand("filter.togglePending", () => handleToggleFilter("pending"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'",
+  useSceneCommand("filter.togglePending", () => handleToggleFilter("pending"), {
+    condition: "gradingMode == 'grid'",
     metadata: {
       title: "保留フィルタトグル",
       category: "フィルタ",
     },
   })
 
-  useCommand("filter.toggleIncorrect", () => handleToggleFilter("incorrect"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'",
-    metadata: {
-      title: "誤答フィルタトグル",
-      category: "フィルタ",
-    },
-  })
+  useSceneCommand(
+    "filter.toggleIncorrect",
+    () => handleToggleFilter("incorrect"),
+    {
+      condition: "gradingMode == 'grid'",
+      metadata: {
+        title: "誤答フィルタトグル",
+        category: "フィルタ",
+      },
+    }
+  )
 
-  useCommand("filter.toggleNoAnswer", () => handleToggleFilter("no_answer"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'",
-    metadata: {
-      title: "無答フィルタトグル",
-      category: "フィルタ",
-    },
-  })
+  useSceneCommand(
+    "filter.toggleNoAnswer",
+    () => handleToggleFilter("no_answer"),
+    {
+      condition: "gradingMode == 'grid'",
+      metadata: {
+        title: "無答フィルタトグル",
+        category: "フィルタ",
+      },
+    }
+  )
 
-  useCommand(
+  useSceneCommand(
     "filter.toggleDoubleMark",
     () => handleToggleFilter("double_mark"),
     {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'",
+      condition: "gradingMode == 'grid'",
       metadata: {
         title: "Wマークフィルタトグル",
         category: "フィルタ",
@@ -232,8 +246,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // ========================================
   // 表示関連ショートカット
   // ========================================
-  useCommand("view.toggleViewMode", handleToggleViewMode, {
-    when: "!inputFocus && !modalOpen && !textEditorActive",
+  useSceneCommand("view.toggleViewMode", handleToggleViewMode, {
     metadata: {
       title: "表示モード切り替え",
       category: "表示",
@@ -241,17 +254,20 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     },
   })
 
-  useCommand("view.toggleMasterAnswer", () => handleToggleMasterAnswer?.(), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
-    metadata: {
-      title: "模範解答表示切り替え",
-      category: "表示",
-      description: "模範解答の表示を切り替えます",
-    },
-  })
+  useSceneCommand(
+    "view.toggleMasterAnswer",
+    () => handleToggleMasterAnswer?.(),
+    {
+      condition: "gradingMode == 'individual'",
+      metadata: {
+        title: "模範解答表示切り替え",
+        category: "表示",
+        description: "模範解答の表示を切り替えます",
+      },
+    }
+  )
 
-  useCommand("view.toggleStudentNames", handleToggleStudentNames, {
-    when: "!inputFocus && !modalOpen && !textEditorActive",
+  useSceneCommand("view.toggleStudentNames", handleToggleStudentNames, {
     metadata: {
       title: "生徒名表示切り替え",
       category: "表示",
@@ -259,8 +275,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     },
   })
 
-  useCommand("filter.refresh", handleRefreshFilter, {
-    when: "!inputFocus && !modalOpen && !textEditorActive",
+  useSceneCommand("filter.refresh", handleRefreshFilter, {
     metadata: {
       title: "フィルタ更新",
       category: "フィルタ",
@@ -271,64 +286,60 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // ========================================
   // ナビゲーションショートカット
   // ========================================
-  useCommand("navigation.nextQuestionArrow", handleNextQuestion, {
-    when: "!inputFocus && !modalOpen && !textEditorActive",
+  useSceneCommand("navigation.nextQuestionArrow", handleNextQuestion, {
     metadata: {
       title: "次の問題へ（→）",
       category: "ナビゲーション",
     },
   })
 
-  useCommand("navigation.prevQuestionArrow", handlePrevQuestion, {
-    when: "!inputFocus && !modalOpen && !textEditorActive",
+  useSceneCommand("navigation.prevQuestionArrow", handlePrevQuestion, {
     metadata: {
       title: "前の問題へ（←）",
       category: "ナビゲーション",
     },
   })
 
-  useCommand("navigation.nextQuestion", handleNextQuestion, {
-    when: "!inputFocus && !modalOpen && !textEditorActive",
+  useSceneCommand("navigation.nextQuestion", handleNextQuestion, {
     metadata: {
       title: "次の問題へ（Shift+D）",
       category: "ナビゲーション",
     },
   })
 
-  useCommand("navigation.prevQuestion", handlePrevQuestion, {
-    when: "!inputFocus && !modalOpen && !textEditorActive",
+  useSceneCommand("navigation.prevQuestion", handlePrevQuestion, {
     metadata: {
       title: "前の問題へ（Shift+A）",
       category: "ナビゲーション",
     },
   })
 
-  useCommand("navigation.moveUp", () => handleGridNavigation("w"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'${kbOnly}`,
+  useSceneCommand("navigation.moveUp", () => handleGridNavigation("w"), {
+    condition: `gradingMode == 'grid' && ${keyboardOnly}`,
     metadata: {
       title: "上に移動",
       category: "ナビゲーション",
     },
   })
 
-  useCommand("navigation.moveDown", () => handleGridNavigation("s"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'${kbOnly}`,
+  useSceneCommand("navigation.moveDown", () => handleGridNavigation("s"), {
+    condition: `gradingMode == 'grid' && ${keyboardOnly}`,
     metadata: {
       title: "下に移動",
       category: "ナビゲーション",
     },
   })
 
-  useCommand("navigation.moveLeft", () => handleGridNavigation("a"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'${kbOnly}`,
+  useSceneCommand("navigation.moveLeft", () => handleGridNavigation("a"), {
+    condition: `gradingMode == 'grid' && ${keyboardOnly}`,
     metadata: {
       title: "左に移動",
       category: "ナビゲーション",
     },
   })
 
-  useCommand("navigation.moveRight", () => handleGridNavigation("d"), {
-    when: `!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'grid'${kbOnly}`,
+  useSceneCommand("navigation.moveRight", () => handleGridNavigation("d"), {
+    condition: `gradingMode == 'grid' && ${keyboardOnly}`,
     metadata: {
       title: "右に移動",
       category: "ナビゲーション",
@@ -338,8 +349,8 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // ========================================
   // 個別モード用ナビゲーション（レイアウト方向対応）
   // ========================================
-  useCommand("navigation.moveUp", () => handleIndividualNavigation("w"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+  useSceneCommand("navigation.moveUp", () => handleIndividualNavigation("w"), {
+    condition: "gradingMode == 'individual'",
     metadata: {
       title: "前の生徒（上）",
       category: "ナビゲーション",
@@ -347,39 +358,51 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     },
   })
 
-  useCommand("navigation.moveDown", () => handleIndividualNavigation("s"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
-    metadata: {
-      title: "次の生徒（下）",
-      category: "ナビゲーション",
-      description: "レイアウト方向に応じて次の生徒に移動します",
-    },
-  })
+  useSceneCommand(
+    "navigation.moveDown",
+    () => handleIndividualNavigation("s"),
+    {
+      condition: "gradingMode == 'individual'",
+      metadata: {
+        title: "次の生徒（下）",
+        category: "ナビゲーション",
+        description: "レイアウト方向に応じて次の生徒に移動します",
+      },
+    }
+  )
 
-  useCommand("navigation.moveLeft", () => handleIndividualNavigation("a"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
-    metadata: {
-      title: "前の生徒（左）",
-      category: "ナビゲーション",
-      description: "レイアウト方向に応じて前の生徒に移動します",
-    },
-  })
+  useSceneCommand(
+    "navigation.moveLeft",
+    () => handleIndividualNavigation("a"),
+    {
+      condition: "gradingMode == 'individual'",
+      metadata: {
+        title: "前の生徒（左）",
+        category: "ナビゲーション",
+        description: "レイアウト方向に応じて前の生徒に移動します",
+      },
+    }
+  )
 
-  useCommand("navigation.moveRight", () => handleIndividualNavigation("d"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
-    metadata: {
-      title: "次の生徒（右）",
-      category: "ナビゲーション",
-      description: "レイアウト方向に応じて次の生徒に移動します",
-    },
-  })
+  useSceneCommand(
+    "navigation.moveRight",
+    () => handleIndividualNavigation("d"),
+    {
+      condition: "gradingMode == 'individual'",
+      metadata: {
+        title: "次の生徒（右）",
+        category: "ナビゲーション",
+        description: "レイアウト方向に応じて次の生徒に移動します",
+      },
+    }
+  )
 
   // 矢印キーによる個別モードの生徒移動
-  useCommand(
+  useSceneCommand(
     "navigation.nextStudentArrow",
     () => handleIndividualNavigation("ArrowDown"),
     {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+      condition: "gradingMode == 'individual'",
       metadata: {
         title: "次の生徒（↓）",
         category: "ナビゲーション",
@@ -387,11 +410,11 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     }
   )
 
-  useCommand(
+  useSceneCommand(
     "navigation.prevStudentArrow",
     () => handleIndividualNavigation("ArrowUp"),
     {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+      condition: "gradingMode == 'individual'",
       metadata: {
         title: "前の生徒（↑）",
         category: "ナビゲーション",
@@ -399,24 +422,21 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     }
   )
 
-  useCommand("navigation.zoomIn", handleZoomIn, {
-    when: "!inputFocus && !modalOpen && !textEditorActive",
+  useSceneCommand("navigation.zoomIn", handleZoomIn, {
     metadata: {
       title: "ズームイン",
       category: "ナビゲーション",
     },
   })
 
-  useCommand("navigation.zoomOut", handleZoomOut, {
-    when: "!inputFocus && !modalOpen && !textEditorActive",
+  useSceneCommand("navigation.zoomOut", handleZoomOut, {
     metadata: {
       title: "ズームアウト",
       category: "ナビゲーション",
     },
   })
 
-  useCommand("navigation.resetZoom", handleResetZoom, {
-    when: "!inputFocus && !modalOpen && !textEditorActive",
+  useSceneCommand("navigation.resetZoom", handleResetZoom, {
     metadata: {
       title: "ズームリセット",
       category: "ナビゲーション",
@@ -427,8 +447,8 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   // モーダル内ショートカット（採点キーと共通）
   // ========================================
   // 部分点/保留キーはモーダル内でも同じキーで確定動作
-  useCommand("scoring.partial", handlePartialScoreConfirmPartial, {
-    when: "partialScoreModalOpen",
+  useSceneCommand("scoring.partial", handlePartialScoreConfirmPartial, {
+    scene: "partialInput",
     metadata: {
       title: "部分点として確定",
       category: "モーダル",
@@ -436,8 +456,8 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     },
   })
 
-  useCommand("scoring.pending", handlePartialScoreConfirmPending, {
-    when: "partialScoreModalOpen",
+  useSceneCommand("scoring.pending", handlePartialScoreConfirmPending, {
+    scene: "partialInput",
     metadata: {
       title: "保留として確定",
       category: "モーダル",
@@ -445,16 +465,14 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     },
   })
 
-  useCommand("modal.cancel", handlePartialScoreCancel, {
-    when: "modalOpen",
+  useSceneCommand("modal.cancel", handlePartialScoreCancel, {
     metadata: {
       title: "モーダルを閉じる",
       category: "モーダル",
     },
   })
 
-  useCommand("modal.backspace", handlePartialScoreBackspace, {
-    when: "partialScoreModalOpen",
+  useSceneCommand("modal.backspace", handlePartialScoreBackspace, {
     metadata: {
       title: "文字削除",
       category: "モーダル",
@@ -462,116 +480,149 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   // モーダル内数字入力
-  useCommand("modal.input0", () => handlePartialScoreInput("0"), {
-    when: "partialScoreModalOpen",
+  useSceneCommand("modal.input0", () => handlePartialScoreInput("0"), {
     metadata: { title: "0を入力", category: "モーダル" },
   })
 
-  useCommand("modal.input1", () => handlePartialScoreInput("1"), {
-    when: "partialScoreModalOpen",
+  useSceneCommand("modal.input1", () => handlePartialScoreInput("1"), {
     metadata: { title: "1を入力", category: "モーダル" },
   })
 
-  useCommand("modal.input2", () => handlePartialScoreInput("2"), {
-    when: "partialScoreModalOpen",
+  useSceneCommand("modal.input2", () => handlePartialScoreInput("2"), {
     metadata: { title: "2を入力", category: "モーダル" },
   })
 
-  useCommand("modal.input3", () => handlePartialScoreInput("3"), {
-    when: "partialScoreModalOpen",
+  useSceneCommand("modal.input3", () => handlePartialScoreInput("3"), {
     metadata: { title: "3を入力", category: "モーダル" },
   })
 
-  useCommand("modal.input4", () => handlePartialScoreInput("4"), {
-    when: "partialScoreModalOpen",
+  useSceneCommand("modal.input4", () => handlePartialScoreInput("4"), {
     metadata: { title: "4を入力", category: "モーダル" },
   })
 
-  useCommand("modal.input5", () => handlePartialScoreInput("5"), {
-    when: "partialScoreModalOpen",
+  useSceneCommand("modal.input5", () => handlePartialScoreInput("5"), {
     metadata: { title: "5を入力", category: "モーダル" },
   })
 
-  useCommand("modal.input6", () => handlePartialScoreInput("6"), {
-    when: "partialScoreModalOpen",
+  useSceneCommand("modal.input6", () => handlePartialScoreInput("6"), {
     metadata: { title: "6を入力", category: "モーダル" },
   })
 
-  useCommand("modal.input7", () => handlePartialScoreInput("7"), {
-    when: "partialScoreModalOpen",
+  useSceneCommand("modal.input7", () => handlePartialScoreInput("7"), {
     metadata: { title: "7を入力", category: "モーダル" },
   })
 
-  useCommand("modal.input8", () => handlePartialScoreInput("8"), {
-    when: "partialScoreModalOpen",
+  useSceneCommand("modal.input8", () => handlePartialScoreInput("8"), {
     metadata: { title: "8を入力", category: "モーダル" },
   })
 
-  useCommand("modal.input9", () => handlePartialScoreInput("9"), {
-    when: "partialScoreModalOpen",
+  useSceneCommand("modal.input9", () => handlePartialScoreInput("9"), {
     metadata: { title: "9を入力", category: "モーダル" },
   })
 
-  useCommand("modal.inputDot", () => handlePartialScoreInput("."), {
-    when: "partialScoreModalOpen",
+  useSceneCommand("modal.inputDot", () => handlePartialScoreInput("."), {
     metadata: { title: "小数点を入力", category: "モーダル" },
   })
 
   // ========================================
   // 部分点入力ショートカット（グリッド・個別共通）
   // ========================================
-  useCommand("scoring.openPartialWith0", () => handlePartialScoreInput("0"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
-    metadata: { title: "0キーで部分点入力", category: "採点" },
-  })
+  useSceneCommand(
+    "scoring.openPartialWith0",
+    () => handlePartialScoreInput("0"),
+    {
+      condition: "hasSelectedAnswers",
+      metadata: { title: "0キーで部分点入力", category: "採点" },
+    }
+  )
 
-  useCommand("scoring.openPartialWith1", () => handlePartialScoreInput("1"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
-    metadata: { title: "1キーで部分点入力", category: "採点" },
-  })
+  useSceneCommand(
+    "scoring.openPartialWith1",
+    () => handlePartialScoreInput("1"),
+    {
+      condition: "hasSelectedAnswers",
+      metadata: { title: "1キーで部分点入力", category: "採点" },
+    }
+  )
 
-  useCommand("scoring.openPartialWith2", () => handlePartialScoreInput("2"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
-    metadata: { title: "2キーで部分点入力", category: "採点" },
-  })
+  useSceneCommand(
+    "scoring.openPartialWith2",
+    () => handlePartialScoreInput("2"),
+    {
+      condition: "hasSelectedAnswers",
+      metadata: { title: "2キーで部分点入力", category: "採点" },
+    }
+  )
 
-  useCommand("scoring.openPartialWith3", () => handlePartialScoreInput("3"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
-    metadata: { title: "3キーで部分点入力", category: "採点" },
-  })
+  useSceneCommand(
+    "scoring.openPartialWith3",
+    () => handlePartialScoreInput("3"),
+    {
+      condition: "hasSelectedAnswers",
+      metadata: { title: "3キーで部分点入力", category: "採点" },
+    }
+  )
 
-  useCommand("scoring.openPartialWith4", () => handlePartialScoreInput("4"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
-    metadata: { title: "4キーで部分点入力", category: "採点" },
-  })
+  useSceneCommand(
+    "scoring.openPartialWith4",
+    () => handlePartialScoreInput("4"),
+    {
+      condition: "hasSelectedAnswers",
+      metadata: { title: "4キーで部分点入力", category: "採点" },
+    }
+  )
 
-  useCommand("scoring.openPartialWith5", () => handlePartialScoreInput("5"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
-    metadata: { title: "5キーで部分点入力", category: "採点" },
-  })
+  useSceneCommand(
+    "scoring.openPartialWith5",
+    () => handlePartialScoreInput("5"),
+    {
+      condition: "hasSelectedAnswers",
+      metadata: { title: "5キーで部分点入力", category: "採点" },
+    }
+  )
 
-  useCommand("scoring.openPartialWith6", () => handlePartialScoreInput("6"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
-    metadata: { title: "6キーで部分点入力", category: "採点" },
-  })
+  useSceneCommand(
+    "scoring.openPartialWith6",
+    () => handlePartialScoreInput("6"),
+    {
+      condition: "hasSelectedAnswers",
+      metadata: { title: "6キーで部分点入力", category: "採点" },
+    }
+  )
 
-  useCommand("scoring.openPartialWith7", () => handlePartialScoreInput("7"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
-    metadata: { title: "7キーで部分点入力", category: "採点" },
-  })
+  useSceneCommand(
+    "scoring.openPartialWith7",
+    () => handlePartialScoreInput("7"),
+    {
+      condition: "hasSelectedAnswers",
+      metadata: { title: "7キーで部分点入力", category: "採点" },
+    }
+  )
 
-  useCommand("scoring.openPartialWith8", () => handlePartialScoreInput("8"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
-    metadata: { title: "8キーで部分点入力", category: "採点" },
-  })
+  useSceneCommand(
+    "scoring.openPartialWith8",
+    () => handlePartialScoreInput("8"),
+    {
+      condition: "hasSelectedAnswers",
+      metadata: { title: "8キーで部分点入力", category: "採点" },
+    }
+  )
 
-  useCommand("scoring.openPartialWith9", () => handlePartialScoreInput("9"), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
-    metadata: { title: "9キーで部分点入力", category: "採点" },
-  })
+  useSceneCommand(
+    "scoring.openPartialWith9",
+    () => handlePartialScoreInput("9"),
+    {
+      condition: "hasSelectedAnswers",
+      metadata: { title: "9キーで部分点入力", category: "採点" },
+    }
+  )
 
-  useCommand("scoring.openPartialWithDot", () => handlePartialScoreInput("."), {
-    when: "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers",
-    metadata: { title: ".キーで部分点入力", category: "採点" },
-  })
+  useSceneCommand(
+    "scoring.openPartialWithDot",
+    () => handlePartialScoreInput("."),
+    {
+      condition: "hasSelectedAnswers",
+      metadata: { title: ".キーで部分点入力", category: "採点" },
+    }
+  )
 }

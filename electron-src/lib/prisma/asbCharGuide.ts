@@ -40,7 +40,7 @@ function asbCharGuideRow(
   return { manuscriptPaperId, order, ...asbCharGuideColumns(charGuide) }
 }
 
-export async function writeAsbCharGuide(
+async function writeAsbCharGuide(
   tx: Prisma.TransactionClient,
   manuscriptPaperId: string,
   charGuide: ManuscriptCharGuide,
