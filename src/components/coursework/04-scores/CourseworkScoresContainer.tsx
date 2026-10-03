@@ -107,8 +107,9 @@ export function CourseworkScoresContainer({
     courseworkClassroomsQuery(courseworkId)
   )
   const upsertScores = useMutation(upsertCourseworkScoresMutation())
-  // 成績算出が使う資料は資料ごとロックされる（layout）。書き込みは中央で止まるが、
-  // ロック中は表も読み取り専用にして、打てるように見せない
+  // 成績算出が使う資料は資料ごとロックされる（layout）。点数の書き込みは main が
+  // 止めるが、ロック中は点数の列も読み取り専用にして、打てるように見せない
+  // （EditableTable は読み取り専用の列への入力・貼り付けを捨てるので、書き込みまで届かない）
   const { locked: scoresLocked } = useGradeLock()
   // 「点数だけ表示」は利用者の設定（既定は隠す。理由は userPreferences.ts）。
   // 隠すのは列だけで、行の値（加減点・理由・コメント）は持ったまま。貼り付けも
@@ -158,7 +159,7 @@ export function CourseworkScoresContainer({
         patch: CourseworkCellPatch
       }[]
     ) => {
-      if (changes.length === 0 || scoresLocked) return
+      if (changes.length === 0) return
       upsertScores.mutate(
         changes.map((change) => ({
           courseworkItemId: change.courseworkItemId,
@@ -167,7 +168,7 @@ export function CourseworkScoresContainer({
         }))
       )
     },
-    [upsertScores, scoresLocked]
+    [upsertScores]
   )
 
   /**

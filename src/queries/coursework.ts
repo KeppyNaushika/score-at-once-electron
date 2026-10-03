@@ -416,8 +416,6 @@ export const exportCourseworkArchiveMutation = () =>
       // 書き出したことは監査ログに残る＝DB を1行書く
       invalidates: [auditLogListKey],
       errorMessage: "試験外成績資料を書き出せませんでした",
-      // 書き出し。DB に書くのは監査ログだけ
-      bypassesGradeLock: true,
     },
   })
 

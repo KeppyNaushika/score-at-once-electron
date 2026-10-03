@@ -20,7 +20,6 @@ import {
   toGradeDataSourceType,
 } from "../../../../src/types/grade.types"
 import prisma from "../../prisma/client"
-import { subtotalWithQuestionAssignmentsInclude } from "../../prisma/cropSubtotal"
 import { toSerializedQuestionScore } from "../../prisma/questionScore"
 import { toSerializedScoreDecision } from "../../prisma/scoreDecision"
 import {
@@ -31,7 +30,7 @@ import {
 } from "./absentEstimation"
 import { findExamStudentScores } from "./examScoreCalculator"
 import type { DataSourceInfo, ExamDataCache } from "./gradeCalculatorTypes"
-import { gradeStudentForCalcInclude } from "./gradeCalculatorTypes"
+import { gradeCalculationReads } from "./gradeCalculatorTypes"
 import { determineGradeLabel } from "./gradeLabel"
 import { findCourseworkStudentScore, getRawScore } from "./rawScoreCalculator"
 import type { RawScoreCell, RawScoreRow } from "./rawScoreMatrix"
@@ -47,56 +46,7 @@ async function buildGradeCalcContext(gradeId: string) {
   // 1. Grade + リレーションを取得
   const grade = await prisma.grade.findUnique({
     where: { id: gradeId },
-    include: {
-      gradeClassrooms: {
-        include: { classroom: true },
-        orderBy: { order: "asc" },
-      },
-      gradeItems: {
-        include: {
-          dataSources: {
-            include: {
-              // 満点は元データからライブ算出する。その元データ（設問配点 / 評価項目満点）を
-              // データソースの行に同梱し、算出のための追加クエリを立てない。
-              exam: {
-                include: {
-                  examPages: {
-                    include: {
-                      cropRegions: { where: { type: "QUESTION_ANSWER" } },
-                    },
-                  },
-                },
-              },
-              // 小計の設問割り当て。満点も素点もこの行から読む
-              subtotal: { include: subtotalWithQuestionAssignmentsInclude },
-              cropRegion: true,
-              estimationSources: { orderBy: { order: "asc" } },
-              // 点数は資料の対象者（CourseworkStudent）経由でのみ引ける。
-              // 名簿から外された生徒の点数は存在しえないため算出に混ざらない（#962）。
-              courseworkItem: {
-                include: {
-                  scores: { include: { courseworkStudent: true } },
-                  letterScales: { orderBy: { order: "asc" } },
-                },
-              },
-              coursework: {
-                include: {
-                  items: {
-                    include: {
-                      scores: { include: { courseworkStudent: true } },
-                      letterScales: { orderBy: { order: "asc" } },
-                    },
-                  },
-                },
-              },
-            },
-            orderBy: { order: "asc" },
-          },
-          boundaries: { orderBy: { order: "asc" } },
-        },
-        orderBy: { order: "asc" },
-      },
-    },
+    include: gradeCalculationReads.grade,
   })
 
   if (!grade) return null
@@ -108,7 +58,7 @@ async function buildGradeCalcContext(gradeId: string) {
   // 名簿に居ない生徒の設定も一緒に読み込んでいた（#962 §3.3）。
   const gradeStudents = await prisma.gradeStudent.findMany({
     where: { gradeId },
-    include: gradeStudentForCalcInclude,
+    include: gradeCalculationReads.gradeStudent,
     orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
   })
 
@@ -147,11 +97,11 @@ async function buildGradeCalcContext(gradeId: string) {
     const [examStudentRows, examPages] = await Promise.all([
       prisma.examStudent.findMany({
         where: { examId },
-        include: { questionScores: true, scoreDecisions: true },
+        include: gradeCalculationReads.examStudent,
       }),
       prisma.examPage.findMany({
         where: { examId: examId },
-        include: { cropRegions: true },
+        include: gradeCalculationReads.examPage,
       }),
     ])
     const cropRegions = examPages.flatMap((examPage) => examPage.cropRegions)

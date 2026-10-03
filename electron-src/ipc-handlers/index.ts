@@ -20,6 +20,7 @@ import { examClassroomHandlers } from "./examClassroomHandlers"
 import { examHandlers } from "./examHandlers"
 import { exportHandlers } from "./exportHandlers"
 import { gradeHandlers } from "./gradeHandlers"
+import { gradeLockHandlers } from "./gradeLockHandlers"
 import { registerChannel } from "./ipcHandlerUtils"
 import { miscHandlers } from "./miscHandlers"
 import { navigationHandlers } from "./navigationHandlers"
@@ -48,6 +49,7 @@ const handlerGroups = [
   examHandlers,
   exportHandlers,
   gradeHandlers,
+  gradeLockHandlers,
   miscHandlers,
   navigationHandlers,
   omrConfigHandlers,
@@ -82,6 +84,7 @@ const handlers = {
   ...examHandlers,
   ...exportHandlers,
   ...gradeHandlers,
+  ...gradeLockHandlers,
   ...miscHandlers,
   ...navigationHandlers,
   ...omrConfigHandlers,

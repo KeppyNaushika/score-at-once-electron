@@ -126,8 +126,6 @@ export const setAppPreferenceMutation = (key: string) =>
     meta: {
       invalidates: [["appPreference", key]],
       errorMessage: "設定を保存できませんでした",
-      // 利用者の設定。試験・資料の中身は変えない
-      bypassesGradeLock: true,
     },
   })
 
@@ -143,8 +141,6 @@ export const setUserPreferenceMutation = (userId: string) =>
     meta: {
       invalidates: [["userPreference", userId]],
       errorMessage: "設定を保存できませんでした",
-      // 利用者の設定。試験・資料の中身は変えない
-      bypassesGradeLock: true,
     },
   })
 
@@ -169,8 +165,6 @@ export const setUserScoringStatusColorMutation = (userId: string) =>
     meta: {
       invalidates: [userScoringStatusColorsQuery(userId).queryKey],
       errorMessage: "色を保存できませんでした",
-      // 利用者の設定。試験・資料の中身は変えない
-      bypassesGradeLock: true,
     },
   })
 
@@ -195,8 +189,6 @@ export const applyUserScoringColorPresetMutation = (userId: string) =>
         ["userPreference", userId],
       ],
       errorMessage: "配色を保存できませんでした",
-      // 利用者の設定。試験・資料の中身は変えない
-      bypassesGradeLock: true,
     },
   })
 
@@ -213,8 +205,6 @@ export const setUserClickScoringActionMutation = (userId: string) =>
     meta: {
       invalidates: [userClickScoringActionsQuery(userId).queryKey],
       errorMessage: "クリック採点の設定を保存できませんでした",
-      // 利用者の設定。試験・資料の中身は変えない
-      bypassesGradeLock: true,
     },
   })
 
@@ -231,8 +221,6 @@ export const setUserSidePanelSectionMutation = (userId: string) =>
     meta: {
       invalidates: [userSidePanelSectionsQuery(userId).queryKey],
       errorMessage: "パネルの開閉を保存できませんでした",
-      // 利用者の設定。試験・資料の中身は変えない
-      bypassesGradeLock: true,
     },
   })
 
@@ -255,8 +243,6 @@ export const setKeyboardShortcutMutation = (userId: string) =>
     meta: {
       invalidates: [keyboardShortcutsQuery(userId).queryKey],
       errorMessage: "キー設定を保存できませんでした",
-      // 利用者の設定。試験・資料の中身は変えない
-      bypassesGradeLock: true,
     },
   })
 
@@ -269,8 +255,6 @@ export const resetKeyboardShortcutsMutation = (userId: string) =>
     meta: {
       invalidates: [keyboardShortcutsQuery(userId).queryKey],
       errorMessage: "キー設定を戻せませんでした",
-      // 利用者の設定。試験・資料の中身は変えない
-      bypassesGradeLock: true,
     },
   })
 
@@ -286,8 +270,6 @@ const exportSettingsWrite = (examId: string) =>
     meta: {
       invalidates: [examExportSettingsQuery(examId).queryKey],
       errorMessage: "出力設定を保存できませんでした",
-      // 出力（重ね描き・個人成績表）の設定。点数には効かない
-      bypassesGradeLock: true,
     },
   }) as const
 

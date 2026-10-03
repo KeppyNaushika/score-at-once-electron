@@ -3,8 +3,8 @@
  *
  * 材料は試験・資料1件を使っているデータソースの一覧（詳細の include から
  * `examUsingDataSources` / `courseworkUsingDataSources` で導いたもの）。空ならロックしない。
- * ロックそのもの（書き込みを止める・解除を覚える）は `src/lib/gradeWriteLock.ts` と
- * `GradeLockProvider` が持つ。
+ * ロックそのもの（書き込みを止める・解除を覚える）は main の
+ * `electron-src/lib/prisma/gradeWriteLock.ts` と `GradeLockProvider` が持つ。
  */
 
 import type { UsingGradeDataSource } from "@/lib/shared/gradeReferenceMessages"

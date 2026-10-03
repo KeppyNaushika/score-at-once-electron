@@ -3,13 +3,19 @@
  * 成績算出で使われている試験を、試験ごとロックする（`GradeLockProvider` と
  * `GradeLockBar`。試験・資料の layout に置く組）の検査。
  *
- * 1. **ロック中は、どのタブからの書き込みも走らない。** 画面上部に帯が出る
+ * 1. **ロック中は、成績算出が読むテーブルへの書き込みが main で断られる。** どのタブ
+ *    からでも同じで、画面上部に帯が出る。成績算出に関係ない書き込み（統計対象の
+ *    学級など）は止まらない
  * 2. **解除は試験単位。** 帯から確認して「編集する」を押すと、その試験の中にいる間は
  *    タブを移っても解除されたまま
  * 3. **試験を出ると（layout が外れると）再びロックされる。** 別の試験へ直接移っても
  *    解除を持ち越さない
  * 4. **使われているかは試験の詳細に同梱したデータソースから導く。** 詳細を読み込む
  *    までは分からないので、その間もロックしておく
+ *
+ * main 側は本物のロック（`electron-src/lib/prisma/gradeWriteLock.ts`）を使う。偽の
+ * IPC は、書き込み先のテーブルを本物の関所に通し、断られたら IPC の境界と同じ
+ * 取り決めの文言で例外を返す。
  */
 
 import "../setup"
@@ -23,8 +29,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { GradeLockBar } from "@/components/common/grade-lock/GradeLockBar"
 import { GradeLockProvider } from "@/components/common/grade-lock/GradeLockProvider"
+import {
+  assertGradeWriteAllowed,
+  holdGradeWriteLock,
+  releaseGradeWriteLock,
+  releaseGradeWriteLockOf,
+} from "@/electron-src/lib/prisma/gradeWriteLock"
+import { GRADE_WRITE_LOCKED_MESSAGE } from "@/lib/shared/gradeWriteLock"
 import { updateCropRegionMutation } from "@/queries/cropRegion"
 import { updateExamMutation } from "@/queries/exam"
+import { updateExamClassroomMutation } from "@/queries/examClassroom"
 
 import { createQueryWrapper } from "../../helpers/queryWrapper"
 
@@ -53,24 +67,55 @@ const examDetail = (
   gradeDataSources: (typeof DATA_SOURCE)[]
 ) => ({ id: examId, examName: "中間", gradeDataSources, examPages: [] })
 
-const updateCropRegion = vi.fn(async () => null)
-const updateExam = vi.fn(async () => null)
+/** 偽の main で、ロックを握った画面の id */
+const RENDERER_ID = 1
+
+/** 偽の main が DB まで通した書き込みの、書き込み先テーブル */
+let committedTables: string[] = []
+
+/**
+ * 偽の main のチャンネル。`table` への書き込みを本物の関所に通し、断られたら
+ * IPC の境界（`registerChannel`）と同じ取り決めの文言で例外を返す
+ */
+const writesTo = (table: string) =>
+  vi.fn(async () => {
+    try {
+      assertGradeWriteAllowed(`UPDATE \`main\`.\`${table}\` SET`)
+    } catch {
+      throw new Error(GRADE_WRITE_LOCKED_MESSAGE)
+    }
+    committedTables.push(table)
+    return null
+  })
+
+const updateCropRegion = writesTo("CropRegion")
+const updateExam = writesTo("Exam")
+const updateExamClassroom = writesTo("ExamClassroom")
 
 beforeEach(() => {
+  committedTables = []
   Object.defineProperty(window, "electronAPI", {
     configurable: true,
     writable: true,
     value: {
       updateCropRegion,
       updateExam,
+      examClassroom: { update: updateExamClassroom },
       getExam: vi.fn(async (examId: string) =>
         examDetail(examId, [DATA_SOURCE])
       ),
+      gradeLock: {
+        hold: vi.fn(async (token: string) =>
+          holdGradeWriteLock(token, RENDERER_ID)
+        ),
+        release: vi.fn(async (token: string) => releaseGradeWriteLock(token)),
+      },
     },
   })
 })
 
 afterEach(() => {
+  releaseGradeWriteLockOf(RENDERER_ID)
   Reflect.deleteProperty(window, "electronAPI")
   vi.clearAllMocks()
 })
@@ -90,7 +135,7 @@ function RegionInfoTab({ examId }: { examId: string }) {
   )
 }
 
-/** 概要タブ相当。試験名を書く（点数に効かない書き込みも止まる） */
+/** 概要タブ相当。試験名を書く（Exam は成績算出が読む表なので、点数に効かない列でも止まる） */
 function OverviewTab({ examId }: { examId: string }) {
   const updateExamInfo = useMutation(updateExamMutation(examId, "user-1"))
   return (
@@ -99,6 +144,24 @@ function OverviewTab({ examId }: { examId: string }) {
       onClick={() => updateExamInfo.mutate({ examName: "期末" })}
     >
       試験名を保存
+    </button>
+  )
+}
+
+/** 結果出力タブ相当。統計対象の学級を書く（成績算出が読まない表なので止まらない） */
+function StatisticsTab({ examId }: { examId: string }) {
+  const updateClassroom = useMutation(updateExamClassroomMutation(examId))
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        updateClassroom.mutate({
+          id: "exam-classroom-1",
+          teacherStatistics: true,
+        })
+      }
+    >
+      統計の学級を保存
     </button>
   )
 }
@@ -130,7 +193,7 @@ async function unlockFromBar(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("成績算出で使われている試験のロック", () => {
-  it("ロック中は、どのタブの書き込みも走らず、通知だけ出る", async () => {
+  it("ロック中は、どのタブからでも成績算出が読む表への書き込みが断られ、通知だけ出る", async () => {
     const user = userEvent.setup()
     const wrapper = createQueryWrapper()
     const { rerender } = render(
@@ -143,7 +206,7 @@ describe("成績算出で使われている試験のロック", () => {
 
     await user.click(screen.getByRole("button", { name: "配点を保存" }))
     await waitFor(() => expect(toast.info).toHaveBeenCalled())
-    expect(updateCropRegion).not.toHaveBeenCalled()
+    expect(committedTables).toEqual([])
 
     // 別のタブへ移っても同じ
     rerender(
@@ -153,7 +216,24 @@ describe("成績算出で使われている試験のロック", () => {
     )
     await user.click(screen.getByRole("button", { name: "試験名を保存" }))
     await waitFor(() => expect(toast.info).toHaveBeenCalledTimes(2))
-    expect(updateExam).not.toHaveBeenCalled()
+    expect(committedTables).toEqual([])
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it("ロック中でも、成績算出に関係ない書き込みは止まらない", async () => {
+    const user = userEvent.setup()
+    render(
+      <ExamLayout examId={USED_EXAM_ID}>
+        <StatisticsTab examId={USED_EXAM_ID} />
+      </ExamLayout>,
+      { wrapper: createQueryWrapper() }
+    )
+    await screen.findByRole("button", { name: "ロックを解除" })
+
+    await user.click(screen.getByRole("button", { name: "統計の学級を保存" }))
+
+    await waitFor(() => expect(committedTables).toEqual(["ExamClassroom"]))
+    expect(toast.info).not.toHaveBeenCalled()
     expect(toast.error).not.toHaveBeenCalled()
   })
 
@@ -169,9 +249,7 @@ describe("成績算出で使われている試験のロック", () => {
     await unlockFromBar(user)
 
     await user.click(screen.getByRole("button", { name: "配点を保存" }))
-    await waitFor(() =>
-      expect(updateCropRegion).toHaveBeenCalledWith("region-1", { points: 5 })
-    )
+    await waitFor(() => expect(committedTables).toEqual(["CropRegion"]))
 
     rerender(
       <ExamLayout examId={USED_EXAM_ID}>
@@ -183,7 +261,7 @@ describe("成績算出で使われている試験のロック", () => {
     ).not.toBeInTheDocument()
     expect(screen.getByText(/ロックを解除しています/)).toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: "試験名を保存" }))
-    await waitFor(() => expect(updateExam).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(committedTables).toEqual(["CropRegion", "Exam"]))
   })
 
   it("試験を出ると、再びロックされる", async () => {
@@ -209,7 +287,7 @@ describe("成績算出で使われている試験のロック", () => {
     await screen.findByRole("button", { name: "ロックを解除" })
     await user.click(screen.getByRole("button", { name: "配点を保存" }))
     await waitFor(() => expect(toast.info).toHaveBeenCalled())
-    expect(updateCropRegion).not.toHaveBeenCalled()
+    expect(committedTables).toEqual([])
   })
 
   it("別の試験へ直接移っても、解除を持ち越さない", async () => {
@@ -232,7 +310,7 @@ describe("成績算出で使われている試験のロック", () => {
     await screen.findByRole("button", { name: "ロックを解除" })
     await user.click(screen.getByRole("button", { name: "配点を保存" }))
     await waitFor(() => expect(toast.info).toHaveBeenCalled())
-    expect(updateCropRegion).not.toHaveBeenCalled()
+    expect(committedTables).toEqual([])
   })
 
   it("成績算出で使われていなければ、帯を出さずに書ける", async () => {
@@ -250,7 +328,7 @@ describe("成績算出で使われている試験のロック", () => {
     // 詳細が届くまではロックしているので、届いてから押す
     await waitFor(async () => {
       await user.click(screen.getByRole("button", { name: "配点を保存" }))
-      expect(updateCropRegion).toHaveBeenCalledTimes(1)
+      expect(committedTables).toEqual(["CropRegion"])
     })
     expect(
       screen.queryByRole("button", { name: "ロックを解除" })
@@ -272,7 +350,7 @@ describe("成績算出で使われている試験のロック", () => {
 
     await user.click(screen.getByRole("button", { name: "配点を保存" }))
     await waitFor(() => expect(toast.info).toHaveBeenCalled())
-    expect(updateCropRegion).not.toHaveBeenCalled()
+    expect(committedTables).toEqual([])
     // 使われていると分かったわけではないので、帯は出さない
     expect(
       screen.queryByRole("button", { name: "ロックを解除" })
