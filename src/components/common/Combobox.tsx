@@ -16,6 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { normalizeForSearch } from "@/lib/searchText"
 import { cn } from "@/lib/utils"
 
 /** 選択肢1つ。`value` は id、探すときは `label` と `keywords` だけを見る */
@@ -44,20 +45,6 @@ interface ComboboxProps {
   className?: string
   id?: string
   "aria-label"?: string
-}
-
-/**
- * 絞り込みに使う形へ揃える。全角英数は半角へ（NFKC）、英字は小文字へ、カタカナは
- * ひらがなへ寄せる。カナの列はカタカナで持っている一方、打つときはひらがなのまま
- * 確定しがちなので、どちらで打っても引っかかるようにする。
- */
-function normalizeForSearch(text: string): string {
-  return text
-    .normalize("NFKC")
-    .toLowerCase()
-    .replace(/[ァ-ヶ]/g, (katakana) =>
-      String.fromCharCode(katakana.charCodeAt(0) - 0x60)
-    )
 }
 
 /**

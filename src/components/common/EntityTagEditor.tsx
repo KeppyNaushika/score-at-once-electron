@@ -19,6 +19,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { matchesSearchTerm } from "@/lib/searchText"
 import { cn } from "@/lib/utils"
 import { findOrCreateTagMutation, tagListQuery } from "@/queries/tag"
 
@@ -141,8 +142,7 @@ export function EntityTagEditor({
   const suggestions = allTags.filter(
     (tag) =>
       !tags.some((attached) => attached.id === tag.id) &&
-      (tagInput.trim() === "" ||
-        tag.name.toLowerCase().includes(tagInput.trim().toLowerCase()))
+      matchesSearchTerm(tagInput, [tag.name])
   )
 
   return (

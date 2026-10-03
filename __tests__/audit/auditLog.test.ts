@@ -325,6 +325,47 @@ describe("監査ログ getAuditLogs フィルタ/ページネーション", () =
     expect(page.total).toBe(1)
   })
 
+  it("検索は空白（全角・半角・無し）を区別しない", async () => {
+    await recordAuditLog({
+      action: "student.update",
+      userId: "u-1",
+      entityType: "Student",
+      entityId: "s2",
+      summary: "山田 太郎を更新しました",
+    })
+    await recordAuditLog({
+      action: "student.update",
+      userId: "u-1",
+      entityType: "Student",
+      entityId: "s3",
+      summary: `山田${"　"}太郎の所属を変更しました`,
+    })
+    for (const search of ["山田太郎", "山田 太郎", `山田${"　"}太郎`]) {
+      const page = await getAuditLogs({ search })
+      expect(page.total).toBe(2)
+      expect(page.entries.map((entry) => entry.entityId).sort()).toEqual([
+        "s2",
+        "s3",
+      ])
+    }
+  })
+
+  it("検索しながら他の条件とページ分けも効き、並びは新しい順のまま", async () => {
+    const page = await getAuditLogs({
+      search: "を作成",
+      userId: "u-1",
+      limit: 1,
+      offset: 0,
+    })
+    expect(page.total).toBe(1)
+    expect(page.entries.map((entry) => entry.entityId)).toEqual(["e1"])
+  })
+
+  it("検索語の % や _ は文字として扱う", async () => {
+    const page = await getAuditLogs({ search: "%" })
+    expect(page.total).toBe(0)
+  })
+
   it("limit/offset でページングでき、total は全件数を返す", async () => {
     const page1 = await getAuditLogs({ limit: 2, offset: 0 })
     expect(page1.total).toBe(3)

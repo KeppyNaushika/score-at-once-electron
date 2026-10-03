@@ -27,7 +27,6 @@ import {
   ExportResultSummary,
 } from "@/components/common/ExportResultSummary"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
-import { usePageHelp } from "@/components/help/usePageHelp"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -163,7 +162,6 @@ const EMPTY_USERS: PublicUser[] = []
 export function AnswerSheetDefinitionList() {
   const currentUser = useCurrentUser()
   const router = useRouter()
-  const { helpButton } = usePageHelp()
   const { definitions, isLoading, deleteDefinition, duplicateDefinition } =
     useAnswerSheetDefinitions(currentUser.id)
 
@@ -504,7 +502,6 @@ export function AnswerSheetDefinitionList() {
     <>
       <EntityListPage<ASBDefinitionListItem>
         title="解答用紙作成"
-        helpButton={helpButton}
         rows={filteredDefinitions}
         totalCount={visibleDefinitions.length}
         isLoading={isLoading}

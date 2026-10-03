@@ -1,6 +1,6 @@
 "use client"
 
-import { MoreHorizontal } from "lucide-react"
+import { type LucideIcon, MoreHorizontal } from "lucide-react"
 import type { ComponentProps, ReactNode } from "react"
 import { useEffect, useEffectEvent, useState } from "react"
 
@@ -28,6 +28,56 @@ export interface ToolbarAction {
   node: ReactNode
   /** 「…」の中に入ったときの姿（popover を持つものは、入れ子にせず項目として開く形へ） */
   collapsedNode: ReactNode
+}
+
+/**
+ * ボタン1つの操作。並びでは枠付き、「…」の中では幅一杯の項目にする。
+ *
+ * ボタンは2つの姿の違いが見た目だけなので、呼び手ごとに書き写さずここで作る。
+ */
+export function toolbarButtonAction({
+  id,
+  priority,
+  icon: Icon,
+  label,
+  onClick,
+  disabled = false,
+}: {
+  id: string
+  priority: number
+  icon: LucideIcon
+  label: string
+  onClick: () => void
+  disabled?: boolean
+}): ToolbarAction {
+  return {
+    id,
+    priority,
+    node: (
+      <Button
+        onClick={onClick}
+        variant="outline"
+        size="sm"
+        className="rounded-lg"
+        disabled={disabled}
+      >
+        <Icon className="mr-2 h-4 w-4" />
+        {label}
+      </Button>
+    ),
+    collapsedNode: (
+      <Button
+        onClick={onClick}
+        variant="ghost"
+        size="sm"
+        className="w-full justify-start"
+        disabled={disabled}
+      >
+        <Icon className="mr-2 h-4 w-4" />
+        {label}
+      </Button>
+    ),
+  }
 }
 
 /**

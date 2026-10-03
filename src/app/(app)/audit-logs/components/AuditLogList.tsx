@@ -5,14 +5,16 @@ import { History } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { Combobox } from "@/components/common/Combobox"
+import { ListSearchInput } from "@/components/common/ListFilterControls"
 import { ListPaginationFooter } from "@/components/common/ListPaginationFooter"
+import { type ToolbarAction } from "@/components/common/OverflowToolbar"
+import PageHeader from "@/components/layout/PageHeader"
 import {
   Empty,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -90,59 +92,89 @@ export function AuditLogList() {
   const firstRowNumber = total === 0 ? 0 : (pageNumber - 1) * pageSize + 1
   const lastRowNumber = Math.min(total, pageNumber * pageSize)
 
-  return (
-    <div className="flex h-full flex-col">
-      {/* 絞り込みは動かさない。スクロールするのはログの並びだけ */}
-      <div className="flex flex-wrap items-center gap-2 border-b px-6 py-3">
-        <Select
-          value={filter.category ?? ALL}
-          onValueChange={(value) =>
-            setFilter((prev) => ({
-              ...prev,
-              category: isAuditCategory(value) ? value : undefined,
-            }))
-          }
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="カテゴリ" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>すべてのカテゴリ</SelectItem>
-            {categoryOptions.map((category) => (
-              <SelectItem key={category} value={category}>
-                {CATEGORY_LABELS[category]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Combobox
-          options={userFilterOptions}
-          value={filter.userId ?? ALL}
-          onValueChange={(value) =>
-            setFilter((prev) => ({
-              ...prev,
-              userId: value === ALL ? undefined : value,
-            }))
-          }
-          placeholder="ユーザー"
-          searchPlaceholder="名前・ユーザー名で検索"
-          emptyText="該当するユーザーがいません"
-          aria-label="ユーザーで絞り込む"
-          className="w-44"
-        />
-
-        <Input
-          placeholder="内容で検索..."
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
+  const categoryFilter = (
+    <Select
+      value={filter.category ?? ALL}
+      onValueChange={(value) =>
+        setFilter((prev) => ({
+          ...prev,
+          category: isAuditCategory(value) ? value : undefined,
+        }))
+      }
+    >
+      <SelectTrigger size="sm" className="w-40">
+        <SelectValue placeholder="カテゴリ" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL}>すべてのカテゴリ</SelectItem>
+        {categoryOptions.map((category) => (
+          <SelectItem key={category} value={category}>
+            {CATEGORY_LABELS[category]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+  const userFilter = (
+    <Combobox
+      options={userFilterOptions}
+      value={filter.userId ?? ALL}
+      onValueChange={(value) =>
+        setFilter((prev) => ({
+          ...prev,
+          userId: value === ALL ? undefined : value,
+        }))
+      }
+      placeholder="ユーザー"
+      searchPlaceholder="名前・ユーザー名で検索"
+      emptyText="該当するユーザーがいません"
+      aria-label="ユーザーで絞り込む"
+      className="h-8 w-44"
+    />
+  )
+  const toolbarActions: ToolbarAction[] = [
+    {
+      id: "search",
+      priority: 90,
+      node: (
+        <ListSearchInput
+          searchTerm={searchText}
+          onSearchTermChange={setSearchText}
+          placeholder="内容で検索"
           className="w-56"
         />
+      ),
+      collapsedNode: (
+        <ListSearchInput
+          searchTerm={searchText}
+          onSearchTermChange={setSearchText}
+          placeholder="内容で検索"
+          className="w-full"
+        />
+      ),
+    },
+    {
+      id: "category-filter",
+      priority: 85,
+      node: categoryFilter,
+      collapsedNode: categoryFilter,
+    },
+    {
+      id: "user-filter",
+      priority: 84,
+      node: userFilter,
+      collapsedNode: userFilter,
+    },
+  ]
 
-        <span className="ml-auto text-sm text-muted-foreground">
-          {total} 件
-        </span>
-      </div>
+  return (
+    <div className="flex h-full flex-col">
+      {/* 絞り込みはヘッダーに置く。スクロールするのはログの並びだけ */}
+      <PageHeader
+        title="監査ログ"
+        subtitle={`${total} 件`}
+        actions={toolbarActions}
+      />
 
       {/* ここだけが伸び縮みする。`min-h-0` が無いと flex の子は縮まず、
           はみ出した分がページごとスクロールしてフッターが流れていく。

@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import type { SubtotalGroupWithSubtotals } from "@/electron-src/lib/prisma/subtotalGroup"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
+import { matchesSearchTerm } from "@/lib/searchText"
 import {
   addSubtotalGroupToExamMutation,
   availableSubtotalGroupsQuery,
@@ -73,7 +74,7 @@ export function SubtotalGroupSelector({
 
   // 検索フィルタリング
   const filteredGroups = availableGroups.filter((group) =>
-    group.name.toLowerCase().includes(searchTerm.toLowerCase())
+    matchesSearchTerm(searchTerm, [group.name])
   )
 
   return (

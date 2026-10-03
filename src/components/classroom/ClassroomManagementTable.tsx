@@ -1,19 +1,19 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import {
-  Download,
-  Edit,
-  PlusCircle,
-  School,
-  Search,
-  Trash2,
-} from "lucide-react"
+import { Download, Edit, PlusCircle, School, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import ClassroomModal from "@/components/classroom/ClassroomModal"
+import { ListSearchInput } from "@/components/common/ListFilterControls"
+import { ListPaginationFooter } from "@/components/common/ListPaginationFooter"
+import {
+  type ToolbarAction,
+  toolbarButtonAction,
+} from "@/components/common/OverflowToolbar"
+import PageHeader from "@/components/layout/PageHeader"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +32,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -55,8 +54,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
+import { useListPagination } from "@/hooks/useListPagination"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
+import { matchesSearchTerm } from "@/lib/searchText"
 import {
   classroomListQuery,
   createClassroomMutation,
@@ -87,6 +88,12 @@ function isVisibilityFilter(value: string): value is VisibilityFilter {
   return VISIBILITY_FILTERS.some((filter) => filter === value)
 }
 
+/** 1行の高さの見積もり（px）。「自動」の件数はこれで割る。はみ出すより余らせる */
+const CLASSROOM_TABLE_ROW_HEIGHT = 60
+
+/** 行の上に居座る見出し行の高さ（`h-12`） */
+const CLASSROOM_TABLE_HEADER_HEIGHT = 48
+
 export default function ClassroomManagementTable() {
   const router = useRouter()
   // 学級は全画面で共有するキャッシュから引く（この画面だけ取り直さない）
@@ -107,9 +114,7 @@ export default function ClassroomManagementTable() {
   // Filter classrooms
   const filteredClassrooms = useMemo(() => {
     return classrooms.filter((classroomItem) => {
-      const matchesSearch = classroomItem.name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase())
+      const matchesSearch = matchesSearchTerm(searchTerm, [classroomItem.name])
       const isVisible = classroomItem.isVisible !== false
       const matchesVisibility =
         filterVisibility === "all" ||
@@ -133,6 +138,30 @@ export default function ClassroomManagementTable() {
   // ソート機能
   const { sortedData, sortConfig, requestSort } = useTableSort(sortableData, {
     defaultSort: { key: "name", direction: "asc" },
+  })
+
+  // 絞り込みと並び順を変えたら先頭のページから見る
+  const paginationResetKey = [
+    searchTerm,
+    filterVisibility,
+    sortConfig.key ?? "",
+    sortConfig.direction ?? "",
+  ].join("|")
+  const {
+    pageRows,
+    pageNumber,
+    pageSize,
+    pageSizeChoice,
+    setPageSizeChoice,
+    pageCount,
+    setPageNumber,
+    firstRowNumber,
+    lastRowNumber,
+    viewportRef,
+  } = useListPagination(sortedData, {
+    rowHeight: CLASSROOM_TABLE_ROW_HEIGHT,
+    reservedHeight: CLASSROOM_TABLE_HEADER_HEIGHT,
+    resetKey: paginationResetKey,
   })
 
   // Selection handlers
@@ -229,244 +258,278 @@ export default function ClassroomManagementTable() {
     })
   }
 
+  const visibilityFilter = (
+    <Select
+      value={filterVisibility}
+      onValueChange={(value) => {
+        if (isVisibilityFilter(value)) setFilterVisibility(value)
+      }}
+    >
+      <SelectTrigger size="sm" className="w-36 rounded-lg">
+        <SelectValue placeholder="表示設定" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="visible">表示中の学級</SelectItem>
+        <SelectItem value="hidden">非表示の学級</SelectItem>
+        <SelectItem value="all">すべて</SelectItem>
+      </SelectContent>
+    </Select>
+  )
+
+  const toolbarActions: ToolbarAction[] = [
+    {
+      id: "search",
+      priority: 90,
+      node: (
+        <ListSearchInput
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+          placeholder="学級名で検索"
+          className="w-56"
+        />
+      ),
+      collapsedNode: (
+        <ListSearchInput
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+          placeholder="学級名で検索"
+          className="w-full"
+        />
+      ),
+    },
+    {
+      id: "visibility-filter",
+      priority: 85,
+      node: visibilityFilter,
+      collapsedNode: visibilityFilter,
+    },
+    toolbarButtonAction({
+      id: "create",
+      priority: 80,
+      icon: PlusCircle,
+      label: "学級追加",
+      onClick: handleAddNewClassroom,
+    }),
+  ]
+  if (selectedClassroomIds.size > 0) {
+    // 選択中だけ現れる操作。幅が急に増えるが、畳みは実測なので自然に吸収される
+    toolbarActions.push(
+      toolbarButtonAction({
+        id: "excel-export",
+        priority: 50,
+        icon: Download,
+        label: exportClassroomsExcel.isPending
+          ? "出力中..."
+          : `Excel出力（${selectedClassroomIds.size}学級）`,
+        onClick: handleExportExcel,
+        disabled: exportClassroomsExcel.isPending,
+      })
+    )
+  }
+
   return (
     <div className="flex h-full min-w-full flex-col">
-      {/* Action Bar */}
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <div className="flex items-center space-x-2">
-          <Button
-            onClick={handleAddNewClassroom}
-            variant="outline"
-            className="rounded-lg"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            学級追加
-          </Button>
-          {selectedClassroomIds.size > 0 && (
-            <>
-              <span className="ml-2 text-sm text-muted-foreground tabular-nums">
-                {selectedClassroomIds.size}学級選択中
-              </span>
-              <Button
-                onClick={handleExportExcel}
-                variant="outline"
-                className="rounded-lg"
-                disabled={exportClassroomsExcel.isPending}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                {exportClassroomsExcel.isPending ? "出力中..." : "Excel出力"}
-              </Button>
-            </>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="学級名で検索"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-9 w-56 rounded-lg pl-9"
-            />
-          </div>
-          <Select
-            value={filterVisibility}
-            onValueChange={(value) => {
-              if (isVisibilityFilter(value)) setFilterVisibility(value)
-            }}
-          >
-            <SelectTrigger className="h-9 w-36 rounded-lg">
-              <SelectValue placeholder="表示設定" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="visible">表示中の学級</SelectItem>
-              <SelectItem value="hidden">非表示の学級</SelectItem>
-              <SelectItem value="all">すべて</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-muted-foreground tabular-nums">
-            {sortedData.length}学級
-          </span>
-        </div>
-      </div>
+      <PageHeader
+        title="学級管理"
+        subtitle={`${sortedData.length}学級`}
+        actions={toolbarActions}
+      />
 
       {/* Classes Table */}
       <div className="min-h-0 flex-1 p-4">
-        <div className="h-full overflow-hidden rounded-xl border border-border/50 shadow-sm">
-          <Table wrapperClassName="h-full">
-            <TableHeader className="sticky top-0 z-10 bg-card">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-10">
-                  <Checkbox
-                    checked={
-                      isAllSelected
-                        ? true
-                        : isSomeSelected
-                          ? "indeterminate"
-                          : false
-                    }
-                    onCheckedChange={toggleSelectAll}
-                    aria-label="全選択"
-                  />
-                </TableHead>
-                <SortableTableHead
-                  sortKey="name"
-                  currentSortKey={sortConfig.key}
-                  currentDirection={sortConfig.direction}
-                  onSort={(key) => requestSort(key)}
-                >
-                  学級名
-                </SortableTableHead>
-                <SortableTableHead
-                  sortKey="classroomCode"
-                  currentSortKey={sortConfig.key}
-                  currentDirection={sortConfig.direction}
-                  onSort={(key) => requestSort(key)}
-                >
-                  コード
-                </SortableTableHead>
-                <SortableTableHead
-                  sortKey="grade"
-                  currentSortKey={sortConfig.key}
-                  currentDirection={sortConfig.direction}
-                  onSort={(key) => requestSort(key)}
-                >
-                  学年
-                </SortableTableHead>
-                <TableHead>説明</TableHead>
-                <SortableTableHead
-                  sortKey="memberCount"
-                  currentSortKey={sortConfig.key}
-                  currentDirection={sortConfig.direction}
-                  onSort={(key) => requestSort(key)}
-                >
-                  所属数
-                </SortableTableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedData.map(({ original: classroomItem, memberCount }) => {
-                const isSelected = selectedClassroomIds.has(classroomItem.id)
-
-                return (
-                  <TableRow
-                    key={classroomItem.id}
-                    onClick={() =>
-                      router.push(`/classrooms/${classroomItem.id}`)
-                    }
-                    className="group cursor-pointer"
-                    data-state={isSelected ? "selected" : undefined}
+        <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/50 shadow-sm">
+          {/* 「自動」はこの箱の高さを1行の高さで割る。縦に流すのは中の Table の側 */}
+          <div ref={viewportRef} className="min-h-0 flex-1">
+            <Table wrapperClassName="h-full">
+              <TableHeader className="sticky top-0 z-10 bg-card">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={
+                        isAllSelected
+                          ? true
+                          : isSomeSelected
+                            ? "indeterminate"
+                            : false
+                      }
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="全選択"
+                    />
+                  </TableHead>
+                  <SortableTableHead
+                    sortKey="name"
+                    currentSortKey={sortConfig.key}
+                    currentDirection={sortConfig.direction}
+                    onSort={(key) => requestSort(key)}
                   >
-                    <TableCell
-                      className="w-10"
-                      onClick={(e) => e.stopPropagation()}
+                    学級名
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="classroomCode"
+                    currentSortKey={sortConfig.key}
+                    currentDirection={sortConfig.direction}
+                    onSort={(key) => requestSort(key)}
+                  >
+                    コード
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="grade"
+                    currentSortKey={sortConfig.key}
+                    currentDirection={sortConfig.direction}
+                    onSort={(key) => requestSort(key)}
+                  >
+                    学年
+                  </SortableTableHead>
+                  <TableHead>説明</TableHead>
+                  <SortableTableHead
+                    sortKey="memberCount"
+                    currentSortKey={sortConfig.key}
+                    currentDirection={sortConfig.direction}
+                    onSort={(key) => requestSort(key)}
+                  >
+                    所属数
+                  </SortableTableHead>
+                  <TableHead className="text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pageRows.map(({ original: classroomItem, memberCount }) => {
+                  const isSelected = selectedClassroomIds.has(classroomItem.id)
+
+                  return (
+                    <TableRow
+                      key={classroomItem.id}
+                      onClick={() =>
+                        router.push(`/classrooms/${classroomItem.id}`)
+                      }
+                      className="group cursor-pointer"
+                      data-state={isSelected ? "selected" : undefined}
                     >
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() =>
-                          toggleSelectClassroom(classroomItem.id)
-                        }
-                        aria-label={`${classroomItem.name}を選択`}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {classroomItem.name}
-                      {classroomItem.isVisible === false && (
-                        <Badge
-                          variant="secondary"
-                          className="ml-2 rounded-full px-2 py-0 text-xs font-normal"
-                        >
-                          非表示
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {classroomItem.classroomCode ? (
-                        <Badge
-                          variant="outline"
-                          className="rounded-full px-2.5 py-0.5 text-xs font-normal"
-                        >
-                          {classroomItem.classroomCode}
-                        </Badge>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {classroomItem.grade || (
-                        <span className="text-muted-foreground">未設定</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {classroomItem.description ? (
-                        <span className="max-w-xs truncate text-sm">
-                          {classroomItem.description}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {memberCount}名
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              aria-label="学級を編集"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleEditClassroom(classroomItem)
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>学級を編集</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              aria-label="学級を削除"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                classroomDeletion.openWith(classroomItem)
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>学級を削除</TooltipContent>
-                        </Tooltip>
-                      </div>
+                      <TableCell
+                        className="w-10"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() =>
+                            toggleSelectClassroom(classroomItem.id)
+                          }
+                          aria-label={`${classroomItem.name}を選択`}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {classroomItem.name}
+                        {classroomItem.isVisible === false && (
+                          <Badge
+                            variant="secondary"
+                            className="ml-2 rounded-full px-2 py-0 text-xs font-normal"
+                          >
+                            非表示
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {classroomItem.classroomCode ? (
+                          <Badge
+                            variant="outline"
+                            className="rounded-full px-2.5 py-0.5 text-xs font-normal"
+                          >
+                            {classroomItem.classroomCode}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            —
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {classroomItem.grade || (
+                          <span className="text-muted-foreground">未設定</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {classroomItem.description ? (
+                          <span className="max-w-xs truncate text-sm">
+                            {classroomItem.description}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            —
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {memberCount}名
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                aria-label="学級を編集"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditClassroom(classroomItem)
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>学級を編集</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                aria-label="学級を削除"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  classroomDeletion.openWith(classroomItem)
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>学級を削除</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+                {sortedData.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7}>
+                      <Empty>
+                        <EmptyHeader>
+                          <EmptyMedia variant="icon">
+                            <School />
+                          </EmptyMedia>
+                          <EmptyTitle>該当する学級が見つかりません</EmptyTitle>
+                        </EmptyHeader>
+                      </Empty>
                     </TableCell>
                   </TableRow>
-                )
-              })}
-              {sortedData.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7}>
-                    <Empty>
-                      <EmptyHeader>
-                        <EmptyMedia variant="icon">
-                          <School />
-                        </EmptyMedia>
-                        <EmptyTitle>該当する学級が見つかりません</EmptyTitle>
-                      </EmptyHeader>
-                    </Empty>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <ListPaginationFooter
+            total={sortedData.length}
+            firstRowNumber={firstRowNumber}
+            lastRowNumber={lastRowNumber}
+            pageSize={pageSize}
+            pageSizeChoice={pageSizeChoice}
+            onPageSizeChoiceChange={setPageSizeChoice}
+            pageNumber={pageNumber}
+            pageCount={pageCount}
+            onPageChange={setPageNumber}
+          />
         </div>
       </div>
 

@@ -27,7 +27,7 @@ export const classroomListQuery = () =>
     queryFn: () => window.electronAPI.fetchClassrooms(),
   })
 
-/** 生徒1人と、載っている成績算出の名簿（削除の確認が開いたときだけ読む） */
+/** 生徒1人と、載っている成績算出の名簿（削除の確認と、生徒詳細の成績算出の欄が読む） */
 export const studentGradeRosterQuery = (studentId: string) =>
   queryOptions({
     queryKey: ["studentGradeRoster", studentId] as const,

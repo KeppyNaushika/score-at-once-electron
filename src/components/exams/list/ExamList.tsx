@@ -20,7 +20,6 @@ import { EntityListPage } from "@/components/common/EntityListPage"
 import type { ExportOutcome } from "@/components/common/ExportResultSummary"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 import ExamArchiveExportModal from "@/components/exams/detail/ExamArchiveExportModal"
-import { usePageHelp } from "@/components/help/usePageHelp"
 import { ImportWizardModal } from "@/components/import/ImportWizardModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -81,7 +80,6 @@ type ExportTarget =
 const ExamList = () => {
   const currentUser = useCurrentUser()
   const queryClient = useQueryClient()
-  const { helpButton } = usePageHelp()
   const { data: exams = EMPTY_EXAMS, isPending: isLoading } = useQuery(
     examListQuery(currentUser.id)
   )
@@ -411,7 +409,6 @@ const ExamList = () => {
       />
       <EntityListPage<ExamSummary>
         title="試験一覧"
-        helpButton={helpButton}
         rows={filteredExams}
         totalCount={exams.length}
         isLoading={isLoading}

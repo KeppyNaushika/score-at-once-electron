@@ -210,7 +210,7 @@ describe("監査ログ一覧", () => {
       ).toBeInTheDocument()
     })
 
-    await user.type(screen.getByPlaceholderText("内容で検索..."), "77")
+    await user.type(screen.getByRole("textbox", { name: "内容で検索" }), "77")
 
     await waitFor(() => {
       expect(getLogs).toHaveBeenCalledWith(

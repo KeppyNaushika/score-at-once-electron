@@ -4,7 +4,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Calculator, Plus } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
-import { ListFilterBar } from "@/components/common/ListFilterBar"
+import {
+  ListSearchInput,
+  MultiSelectFilterPanel,
+  TagFilterButton,
+} from "@/components/common/ListFilterControls"
+import {
+  type ToolbarAction,
+  toolbarButtonAction,
+} from "@/components/common/OverflowToolbar"
+import PageHeader from "@/components/layout/PageHeader"
 import { DeleteSubtotalGroupModal } from "@/components/subtotal-groups/components/DeleteSubtotalGroupModal"
 import { SubtotalGroupCard } from "@/components/subtotal-groups/components/SubtotalGroupCard"
 import { SubtotalGroupModal } from "@/components/subtotal-groups/components/SubtotalGroupModal"
@@ -114,42 +123,61 @@ export function SubtotalGroupsPageContainer() {
     setShowModal(true)
   }
 
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Spinner className="size-6" />
-      </div>
-    )
+  const tagFilter = {
+    options: allTags,
+    selectedIds: filterTagIds,
+    onToggle: toggleTagId,
+    onClear: clearTagIds,
   }
+  const searchPlaceholder = "グループ名、小計項目名、タグで検索"
+  const toolbarActions: ToolbarAction[] = [
+    {
+      id: "search",
+      priority: 90,
+      node: (
+        <ListSearchInput
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+          placeholder={searchPlaceholder}
+        />
+      ),
+      collapsedNode: (
+        <ListSearchInput
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+          placeholder={searchPlaceholder}
+          className="w-full"
+        />
+      ),
+    },
+    {
+      id: "tag-filter",
+      priority: 85,
+      node: <TagFilterButton config={tagFilter} />,
+      collapsedNode: <MultiSelectFilterPanel config={tagFilter} />,
+    },
+    toolbarButtonAction({
+      id: "create",
+      priority: 80,
+      icon: Plus,
+      label: "新規作成",
+      onClick: handleCreate,
+    }),
+  ]
 
   return (
     <div className="flex h-full min-w-full flex-col">
-      {/* Action Bar */}
-      <div className="border-b px-4 py-3">
-        <ListFilterBar
-          searchTerm={searchTerm}
-          onSearchTermChange={setSearchTerm}
-          searchPlaceholder="グループ名、小計項目名、タグで検索"
-          totalCount={subtotalGroups.length}
-          filteredCount={filteredGroups.length}
-          tagFilter={{
-            options: allTags,
-            selectedIds: filterTagIds,
-            onToggle: toggleTagId,
-            onClear: clearTagIds,
-          }}
-          leading={
-            <Button
-              onClick={handleCreate}
-              variant="outline"
-              className="rounded-lg"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              新規作成
-            </Button>
-          }
-        />
-      </div>
+      <PageHeader
+        title="小計点グループ管理"
+        subtitle={
+          loading
+            ? undefined
+            : filteredGroups.length === subtotalGroups.length
+              ? `${subtotalGroups.length}件`
+              : `${filteredGroups.length} / ${subtotalGroups.length}件`
+        }
+        actions={toolbarActions}
+      />
 
       {/* エラーメッセージ */}
       {ipcError && (
@@ -169,7 +197,11 @@ export function SubtotalGroupsPageContainer() {
 
       {/* グループ一覧 */}
       <div className="min-h-0 flex-1 overflow-auto p-4">
-        {!ipcError && filteredGroups.length === 0 ? (
+        {loading ? (
+          <div className="flex h-full items-center justify-center">
+            <Spinner className="size-6" />
+          </div>
+        ) : !ipcError && filteredGroups.length === 0 ? (
           <Empty className="h-full rounded-lg border border-dashed">
             <EmptyHeader>
               <EmptyMedia variant="icon">
