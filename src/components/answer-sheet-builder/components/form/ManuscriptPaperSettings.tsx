@@ -2,6 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react"
 
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,11 +14,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import type {
   AsbCharGuideAttributes,
   AsbManuscriptPaperSettings,
@@ -320,20 +316,16 @@ export function ManuscriptPaperSettings({
                     onUpdateCharGuide(charGuide.id, { label: e.target.value })
                   }
                 />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      aria-label="マーカーを削除"
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-destructive"
-                      onClick={() => onDeleteCharGuide(charGuide.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>マーカーを削除</TooltipContent>
-                </Tooltip>
+                <TooltipButton
+                  label="マーカーを削除"
+
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-destructive"
+                  onClick={() => onDeleteCharGuide(charGuide.id)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </TooltipButton>
               </div>
               <div className="flex items-center gap-2">
                 <span className="shrink-0 text-[10px] text-muted-foreground">

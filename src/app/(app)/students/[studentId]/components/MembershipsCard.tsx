@@ -3,6 +3,7 @@
 import { Clock, Edit, PlusCircle, Users } from "lucide-react"
 import { useMemo } from "react"
 
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,11 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { isCurrentMembership } from "@/lib/membership"
 import type {
   StudentClassroomMembershipWithStudentAndClassroom,
@@ -149,40 +145,32 @@ export function MembershipsCard({
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                aria-label="所属を編集"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
-                                onClick={() =>
-                                  onEditMembership({
-                                    ...membership,
-                                    student,
-                                  } as StudentClassroomMembershipWithStudentAndClassroom)
-                                }
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>所属を編集</TooltipContent>
-                          </Tooltip>
+                          <TooltipButton
+                            label="所属を編集"
+
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
+                            onClick={() =>
+                              onEditMembership({
+                                ...membership,
+                                student,
+                              } as StudentClassroomMembershipWithStudentAndClassroom)
+                            }
+                          >
+                            <Edit className="h-4 w-4" />
+                          </TooltipButton>
                           {isCurrent && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  aria-label="所属を終了"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-muted"
-                                  onClick={() => onEndMembership(membership.id)}
-                                >
-                                  <Clock className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>所属を終了</TooltipContent>
-                            </Tooltip>
+                            <TooltipButton
+                              label="所属を終了"
+
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-muted"
+                              onClick={() => onEndMembership(membership.id)}
+                            >
+                              <Clock className="h-4 w-4" />
+                            </TooltipButton>
                           )}
                         </div>
                       </TableCell>

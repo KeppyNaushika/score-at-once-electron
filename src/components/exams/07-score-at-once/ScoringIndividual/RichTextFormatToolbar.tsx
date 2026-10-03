@@ -2,10 +2,10 @@
 
 import { Bold, Italic, Minus, Plus, Underline } from "lucide-react"
 
+import { TooltipButton } from "@/components/common/TooltipButton"
+import { WithTooltip } from "@/components/common/WithTooltip"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-
-import { ToolbarTooltip } from "./ToolbarTooltip"
 
 /** 文字の窓の書式ツールバー（太字・斜体・下線・文字サイズ・数式） */
 export function RichTextFormatToolbar({
@@ -37,70 +37,60 @@ export function RichTextFormatToolbar({
     <div className="flex items-center gap-2 rounded-md border bg-gray-50 p-2">
       {/* 基本書式 */}
       <div className="flex items-center gap-1">
-        <ToolbarTooltip label="太字 (Ctrl+B)">
-          <Button
-            size="sm"
-            variant={isBold ? "default" : "ghost"}
-            onClick={onBold}
-            aria-label="太字 (Ctrl+B)"
-          >
-            <Bold className="h-4 w-4" />
-          </Button>
-        </ToolbarTooltip>
-        <ToolbarTooltip label="斜体 (Ctrl+I)">
-          <Button
-            size="sm"
-            variant={isItalic ? "default" : "ghost"}
-            onClick={onItalic}
-            aria-label="斜体 (Ctrl+I)"
-          >
-            <Italic className="h-4 w-4" />
-          </Button>
-        </ToolbarTooltip>
-        <ToolbarTooltip label="下線 (Ctrl+U)">
-          <Button
-            size="sm"
-            variant={isUnderline ? "default" : "ghost"}
-            onClick={onUnderline}
-            aria-label="下線 (Ctrl+U)"
-          >
-            <Underline className="h-4 w-4" />
-          </Button>
-        </ToolbarTooltip>
+        <TooltipButton
+          label="太字 (Ctrl+B)"
+          size="sm"
+          variant={isBold ? "default" : "ghost"}
+          onClick={onBold}
+        >
+          <Bold className="h-4 w-4" />
+        </TooltipButton>
+        <TooltipButton
+          label="斜体 (Ctrl+I)"
+          size="sm"
+          variant={isItalic ? "default" : "ghost"}
+          onClick={onItalic}
+        >
+          <Italic className="h-4 w-4" />
+        </TooltipButton>
+        <TooltipButton
+          label="下線 (Ctrl+U)"
+          size="sm"
+          variant={isUnderline ? "default" : "ghost"}
+          onClick={onUnderline}
+        >
+          <Underline className="h-4 w-4" />
+        </TooltipButton>
       </div>
 
       <Separator orientation="vertical" className="h-6" />
 
       {/* フォントサイズ */}
       <div className="flex items-center gap-1">
-        <ToolbarTooltip label="フォントサイズを小さく">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onFontSizeDecrease}
-            aria-label="フォントサイズを小さく"
-          >
-            <Minus className="h-4 w-4" />
-          </Button>
-        </ToolbarTooltip>
+        <TooltipButton
+          label="フォントサイズを小さく"
+          size="sm"
+          variant="ghost"
+          onClick={onFontSizeDecrease}
+        >
+          <Minus className="h-4 w-4" />
+        </TooltipButton>
         <span className="min-w-8 text-center text-sm">{fontSize}</span>
-        <ToolbarTooltip label="フォントサイズを大きく">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onFontSizeIncrease}
-            aria-label="フォントサイズを大きく"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </ToolbarTooltip>
+        <TooltipButton
+          label="フォントサイズを大きく"
+          size="sm"
+          variant="ghost"
+          onClick={onFontSizeIncrease}
+        >
+          <Plus className="h-4 w-4" />
+        </TooltipButton>
       </div>
 
       <Separator orientation="vertical" className="h-6" />
 
       {/* 数式 */}
       <div className="flex items-center gap-1">
-        <ToolbarTooltip label="インライン数式 $...$">
+        <WithTooltip content="インライン数式 $...$">
           <Button
             size="sm"
             variant="ghost"
@@ -109,8 +99,8 @@ export function RichTextFormatToolbar({
           >
             $x$
           </Button>
-        </ToolbarTooltip>
-        <ToolbarTooltip label="ブロック数式 $$...$$">
+        </WithTooltip>
+        <WithTooltip content="ブロック数式 $$...$$">
           <Button
             size="sm"
             variant="ghost"
@@ -119,7 +109,7 @@ export function RichTextFormatToolbar({
           >
             $$
           </Button>
-        </ToolbarTooltip>
+        </WithTooltip>
       </div>
     </div>
   )

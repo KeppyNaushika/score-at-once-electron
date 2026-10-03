@@ -6,6 +6,7 @@ import Image from "next/image"
 import React, { useRef, useState } from "react"
 
 import { CautionNotice } from "@/components/common/CautionNotice"
+import { TooltipButton } from "@/components/common/TooltipButton"
 import type { MasterAnswerCardProps } from "@/components/exams/01-upload/types"
 import {
   AlertDialog,
@@ -17,7 +18,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -26,11 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useConfirmedDeletion } from "@/hooks/useConfirmedDeletion"
 import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
 import {
@@ -198,78 +193,60 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
             </SelectContent>
           </Select>
           <div className="mt-2 flex space-x-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label="左へ移動"
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 text-white hover:bg-white/20"
-                  onClick={onMoveLeft}
-                  disabled={!canMoveLeft || isBusy}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>左へ移動</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label="模範解答画像を差し替え（答案・採点結果は残る）"
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 text-white hover:bg-white/20"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isBusy}
-                >
-                  <ImageUp className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                模範解答画像を差し替え（答案・採点結果は残る）
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label="このページを削除"
-                  size="icon"
-                  variant="destructive"
-                  className="h-7 w-7"
-                  onClick={() => {
-                    if (hasLinkedContent) {
-                      setConfirmingDelete(true)
-                      return
-                    }
-                    // 何も紐づいていなければ確認なしで消す。見た後に他の教員が答案・
-                    // 設問を足していて main が中止したときだけ、確認画面で文言を見せる
-                    void confirmDeletion().then((deleted) => {
-                      if (!deleted) setConfirmingDelete(true)
-                    })
-                  }}
-                  disabled={isBusy}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>このページを削除</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label="右へ移動"
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 text-white hover:bg-white/20"
-                  onClick={onMoveRight}
-                  disabled={!canMoveRight || isBusy}
-                >
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>右へ移動</TooltipContent>
-            </Tooltip>
+            <TooltipButton
+              label="左へ移動"
+
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-white hover:bg-white/20"
+              onClick={onMoveLeft}
+              disabled={!canMoveLeft || isBusy}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </TooltipButton>
+            <TooltipButton
+              label="模範解答画像を差し替え（答案・採点結果は残る）"
+
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-white hover:bg-white/20"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isBusy}
+            >
+              <ImageUp className="h-4 w-4" />
+            </TooltipButton>
+            <TooltipButton
+              label="このページを削除"
+
+              size="icon"
+              variant="destructive"
+              className="h-7 w-7"
+              onClick={() => {
+                if (hasLinkedContent) {
+                  setConfirmingDelete(true)
+                  return
+                }
+                // 何も紐づいていなければ確認なしで消す。見た後に他の教員が答案・
+                // 設問を足していて main が中止したときだけ、確認画面で文言を見せる
+                void confirmDeletion().then((deleted) => {
+                  if (!deleted) setConfirmingDelete(true)
+                })
+              }}
+              disabled={isBusy}
+            >
+              <Trash2 className="h-4 w-4" />
+            </TooltipButton>
+            <TooltipButton
+              label="右へ移動"
+
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-white hover:bg-white/20"
+              onClick={onMoveRight}
+              disabled={!canMoveRight || isBusy}
+            >
+              <ArrowRight className="h-4 w-4" />
+            </TooltipButton>
           </div>
         </div>
 

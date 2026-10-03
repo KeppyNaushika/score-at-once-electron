@@ -24,7 +24,7 @@
 import { syncTableLabel } from "./syncTableLabels"
 
 /** 同じ種類にまとめた、利用者へ見せる1行ぶんの注意。 */
-export interface SyncWarningNotice {
+interface SyncWarningNotice {
   /** 同じ注意をまとめるための鍵（形と本文）。React の key にも使う */
   key: string
   /** 利用者へ見せる本文。言い換えられなかったときはライブラリの原文 */

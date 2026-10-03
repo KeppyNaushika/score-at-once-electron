@@ -4,6 +4,7 @@ import { Calendar, Edit, Trash2, User } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import ConfirmationModal from "@/components/common/ConfirmationModal"
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,11 +18,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { useTableSort } from "@/hooks/useTableSort"
 import {
@@ -296,48 +292,36 @@ export default function ClassroomMembershipTable({
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                aria-label="個人ページを開く"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
-                                onClick={() => onViewStudent(membership)}
-                              >
-                                <User className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>個人ページを開く</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                aria-label="所属を編集"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
-                                onClick={() => onEdit(membership)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>所属を編集</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                aria-label="所属を削除"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                                onClick={() => onDelete(membership.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>所属を削除</TooltipContent>
-                          </Tooltip>
+                          <TooltipButton
+                            label="個人ページを開く"
+
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
+                            onClick={() => onViewStudent(membership)}
+                          >
+                            <User className="h-4 w-4" />
+                          </TooltipButton>
+                          <TooltipButton
+                            label="所属を編集"
+
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
+                            onClick={() => onEdit(membership)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </TooltipButton>
+                          <TooltipButton
+                            label="所属を削除"
+
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => onDelete(membership.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </TooltipButton>
                         </div>
                       </TableCell>
                     </TableRow>

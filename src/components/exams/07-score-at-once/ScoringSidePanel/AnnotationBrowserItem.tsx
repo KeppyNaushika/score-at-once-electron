@@ -10,6 +10,7 @@ import {
   Type,
 } from "lucide-react"
 
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Button } from "@/components/ui/button"
 import {
   ContextMenu,
@@ -200,25 +201,21 @@ export function AnnotationBrowserItem({
             </ContextMenuContent>
           </ContextMenu>
         ) : (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                aria-label="この生徒・設問に移動"
-                variant="ghost"
-                size="sm"
-                className="h-6 shrink-0 px-1.5 text-gray-400 hover:text-blue-500"
-                onClick={() =>
-                  onNavigateTo(
-                    item.representative.questionScore!.examStudentId!,
-                    item.representative.questionScore!.cropRegionId!
-                  )
-                }
-              >
-                <Eye className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>この生徒・設問に移動</TooltipContent>
-          </Tooltip>
+          <TooltipButton
+            label="この生徒・設問に移動"
+
+            variant="ghost"
+            size="sm"
+            className="h-6 shrink-0 px-1.5 text-gray-400 hover:text-blue-500"
+            onClick={() =>
+              onNavigateTo(
+                item.representative.questionScore!.examStudentId!,
+                item.representative.questionScore!.cropRegionId!
+              )
+            }
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </TooltipButton>
         ))}
 
       {/* 追加ボタン */}

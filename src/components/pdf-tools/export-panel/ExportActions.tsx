@@ -5,13 +5,9 @@ import { FileImage, Files, FileText } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
+import { WithTooltip } from "@/components/common/WithTooltip"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { computeNUpLayout } from "@/lib/pdf-tools/nUpLayout"
 import {
   exportPdfAsPngMutation,
@@ -214,65 +210,50 @@ export default function ExportActions({
         {fileCount}ファイル / {pageCount}ページを出力
       </div>
       <div className="flex flex-wrap gap-2">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              onClick={handleExportMergedPdf}
-              disabled={isProcessing || pageCount === 0}
-              className="min-w-32 flex-1"
-            >
-              {exportKind === "merged-pdf" ? (
-                <Spinner className="mr-2" />
-              ) : (
-                <FileText className="mr-2 h-4 w-4" />
-              )}
-              PDF（1ファイル）
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            全ページを1つのPDFにまとめて保存します
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              onClick={handleExportSplitPdf}
-              disabled={isProcessing || pageCount === 0}
-              className="min-w-32 flex-1"
-            >
-              {exportKind === "split-pdf" ? (
-                <Spinner className="mr-2" />
-              ) : (
-                <Files className="mr-2 h-4 w-4" />
-              )}
-              PDF（ページ別）
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            1ページ1ファイルのPDFに分割して、選んだフォルダへ保存します
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              onClick={handleExportPng}
-              disabled={isProcessing || pageCount === 0}
-              className="min-w-32 flex-1"
-            >
-              {exportKind === "png" ? (
-                <Spinner className="mr-2" />
-              ) : (
-                <FileImage className="mr-2 h-4 w-4" />
-              )}
-              PNG（ページ別）
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            1ページ1ファイルのPNGとして、選んだフォルダへ保存します
-          </TooltipContent>
-        </Tooltip>
+        <WithTooltip content="全ページを1つのPDFにまとめて保存します">
+          <Button
+            onClick={handleExportMergedPdf}
+            disabled={isProcessing || pageCount === 0}
+            className="min-w-32 flex-1"
+          >
+            {exportKind === "merged-pdf" ? (
+              <Spinner className="mr-2" />
+            ) : (
+              <FileText className="mr-2 h-4 w-4" />
+            )}
+            PDF（1ファイル）
+          </Button>
+        </WithTooltip>
+        <WithTooltip content="1ページ1ファイルのPDFに分割して、選んだフォルダへ保存します">
+          <Button
+            variant="outline"
+            onClick={handleExportSplitPdf}
+            disabled={isProcessing || pageCount === 0}
+            className="min-w-32 flex-1"
+          >
+            {exportKind === "split-pdf" ? (
+              <Spinner className="mr-2" />
+            ) : (
+              <Files className="mr-2 h-4 w-4" />
+            )}
+            PDF（ページ別）
+          </Button>
+        </WithTooltip>
+        <WithTooltip content="1ページ1ファイルのPNGとして、選んだフォルダへ保存します">
+          <Button
+            variant="outline"
+            onClick={handleExportPng}
+            disabled={isProcessing || pageCount === 0}
+            className="min-w-32 flex-1"
+          >
+            {exportKind === "png" ? (
+              <Spinner className="mr-2" />
+            ) : (
+              <FileImage className="mr-2 h-4 w-4" />
+            )}
+            PNG（ページ別）
+          </Button>
+        </WithTooltip>
       </div>
     </div>
   )

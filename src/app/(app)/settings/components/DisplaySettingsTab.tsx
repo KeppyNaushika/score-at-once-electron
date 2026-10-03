@@ -5,6 +5,7 @@ import { RotateCcw } from "lucide-react"
 import { useCallback } from "react"
 import { toast } from "sonner"
 
+import { WithTooltip } from "@/components/common/WithTooltip"
 import { Button } from "@/components/ui/button"
 import { ColorPicker } from "@/components/ui/color-picker"
 import { Label } from "@/components/ui/label"
@@ -16,11 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useSlidingValue } from "@/hooks/useSlidingValue"
 import {
@@ -334,20 +330,15 @@ export function DisplaySettingsTab() {
           </Label>
           <div className="flex flex-wrap gap-2">
             {SCORING_COLOR_PRESETS.map((preset) => (
-              <Tooltip key={preset.id}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={
-                      isPresetSelected(preset.id) ? "default" : "outline"
-                    }
-                    size="sm"
-                    onClick={() => handlePresetSelect(preset.id)}
-                  >
-                    {preset.name}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{preset.description}</TooltipContent>
-              </Tooltip>
+              <WithTooltip key={preset.id} content={preset.description}>
+                <Button
+                  variant={isPresetSelected(preset.id) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handlePresetSelect(preset.id)}
+                >
+                  {preset.name}
+                </Button>
+              </WithTooltip>
             ))}
           </div>
         </div>

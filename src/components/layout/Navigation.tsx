@@ -22,6 +22,7 @@ import { usePathname } from "next/navigation"
 import { Fragment } from "react"
 
 import { GuardedLink } from "@/components/common/GuardedLink"
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
@@ -176,22 +177,17 @@ export default function Navigation({
                     {user.name} ({user.username})
                   </TooltipContent>
                 </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-full justify-center"
-                      onClick={logout}
-                      aria-label="ログアウト"
-                    >
-                      <LogOut className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={5}>
-                    ログアウト
-                  </TooltipContent>
-                </Tooltip>
+                <TooltipButton
+                  label="ログアウト"
+                  tooltipSide="right"
+                  tooltipSideOffset={5}
+                  variant="ghost"
+                  size="icon"
+                  className="w-full justify-center"
+                  onClick={logout}
+                >
+                  <LogOut className="h-5 w-5" />
+                </TooltipButton>
               </div>
             ) : (
               <div className="space-y-2">

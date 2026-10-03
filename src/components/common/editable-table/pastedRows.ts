@@ -28,7 +28,7 @@ export function emptyRow<T extends RowData>(
  * 入力どおり保存する列（`invalidValuePolicy: "keep"`）は、検証NGでも失われない
  * ので数えない。
  */
-export function isRejectedValue<T extends RowData>(
+function isRejectedValue<T extends RowData>(
   column: EditableColumnDef<T>,
   value: string
 ): boolean {

@@ -8,14 +8,9 @@ import {
   OverflowToolbar,
   type ToolbarAction,
 } from "@/components/common/OverflowToolbar"
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import { HistoryNavButtons } from "@/components/layout/HistoryNavButtons"
-import { Button } from "@/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 
 interface PageHeaderProps {
   title: string
@@ -52,16 +47,17 @@ export default function PageHeader({
         <div className="flex shrink-0 items-center gap-0.5">
           <HistoryNavButtons />
           {listHref && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-7" asChild>
-                  <GuardedLink href={listHref} aria-label="一覧へ戻る">
-                    <List />
-                  </GuardedLink>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>一覧へ戻る</TooltipContent>
-            </Tooltip>
+            <TooltipButton
+              label="一覧へ戻る"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              asChild
+            >
+              <GuardedLink href={listHref}>
+                <List />
+              </GuardedLink>
+            </TooltipButton>
           )}
         </div>
         <h1 className="shrink-0 truncate text-sm font-semibold">{title}</h1>

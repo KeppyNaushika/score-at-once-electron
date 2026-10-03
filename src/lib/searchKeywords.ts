@@ -82,7 +82,7 @@ type StudentOptionSource = Pick<
  * @param student - 選択肢にする生徒
  * @returns Combobox の選択肢の `keywords` に渡す文字列
  */
-export function studentSearchKeywords(student: StudentOptionSource): string[] {
+function studentSearchKeywords(student: StudentOptionSource): string[] {
   return [
     student.studentNumber,
     `${student.lastNameKana} ${student.firstNameKana}`,

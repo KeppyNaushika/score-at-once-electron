@@ -3,14 +3,9 @@
 import { GitBranch, Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
 
-import { Button } from "@/components/ui/button"
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { ButtonGroup } from "@/components/ui/button-group"
 import { Switch } from "@/components/ui/switch"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import type {
   AsbSubQuestionUpdate,
   BranchQuestion,
@@ -214,34 +209,26 @@ export function SubQuestionForm({
               visibilityRestricted={hasVisibilityRestricted}
             />
           )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                aria-label="枝問を追加"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-primary"
-                onClick={() => actions.addBranchQuestion(subQuestion.id)}
-              >
-                <GitBranch className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>枝問を追加</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                aria-label="小問を削除"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={() => actions.deleteSubQuestion(subQuestion.id)}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>小問を削除</TooltipContent>
-          </Tooltip>
+          <TooltipButton
+            label="枝問を追加"
+
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-primary"
+            onClick={() => actions.addBranchQuestion(subQuestion.id)}
+          >
+            <GitBranch className="h-3.5 w-3.5" />
+          </TooltipButton>
+          <TooltipButton
+            label="小問を削除"
+
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            onClick={() => actions.deleteSubQuestion(subQuestion.id)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </TooltipButton>
         </div>
       </div>
 

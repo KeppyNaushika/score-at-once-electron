@@ -9,14 +9,11 @@ import {
 } from "lucide-react"
 import { useMemo, useState } from "react"
 
+import { TooltipButton } from "@/components/common/TooltipButton"
+import { WithTooltip } from "@/components/common/WithTooltip"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
 import { Input } from "@/components/ui/input"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import type {
   GlobalSettings,
   MajorQuestion,
@@ -100,24 +97,20 @@ export function MajorQuestionForm({
     <div className="rounded-lg border bg-muted/30">
       {/* ── ヘッダーバー ── */}
       <div className="flex items-center gap-2 px-3 py-2">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              aria-label={isOpen ? "折りたたむ" : "展開する"}
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 shrink-0"
-              onClick={() => setIsOpen(!isOpen)}
-            >
-              {isOpen ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{isOpen ? "折りたたむ" : "展開する"}</TooltipContent>
-        </Tooltip>
+        <TooltipButton
+          label={isOpen ? "折りたたむ" : "展開する"}
+
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 shrink-0"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          {isOpen ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+        </TooltipButton>
         <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-primary">
           大問 {majorIndex + 1}
         </span>
@@ -132,67 +125,52 @@ export function MajorQuestionForm({
           placeholder=""
         />
         <div className="ml-auto flex items-center gap-1.5">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => actions.addSubQuestion(majorQuestion.id)}
-              >
-                <Plus className="mr-1 h-3 w-3" />
-                小問
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>小問を追加</TooltipContent>
-          </Tooltip>
+          <WithTooltip content="小問を追加">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => actions.addSubQuestion(majorQuestion.id)}
+            >
+              <Plus className="mr-1 h-3 w-3" />
+              小問
+            </Button>
+          </WithTooltip>
           <ButtonGroup className="rounded-md border">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label="上へ移動"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground"
-                  onClick={onMoveUp}
-                  disabled={!onMoveUp}
-                >
-                  <ChevronUp className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>上へ移動</TooltipContent>
-            </Tooltip>
+            <TooltipButton
+              label="上へ移動"
+
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground"
+              onClick={onMoveUp}
+              disabled={!onMoveUp}
+            >
+              <ChevronUp className="h-3.5 w-3.5" />
+            </TooltipButton>
             <ButtonGroupSeparator />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label="下へ移動"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground"
-                  onClick={onMoveDown}
-                  disabled={!onMoveDown}
-                >
-                  <ChevronDown className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>下へ移動</TooltipContent>
-            </Tooltip>
+            <TooltipButton
+              label="下へ移動"
+
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground"
+              onClick={onMoveDown}
+              disabled={!onMoveDown}
+            >
+              <ChevronDown className="h-3.5 w-3.5" />
+            </TooltipButton>
           </ButtonGroup>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                aria-label="大問を削除"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={() => actions.deleteMajorQuestion(majorQuestion.id)}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>大問を削除</TooltipContent>
-          </Tooltip>
+          <TooltipButton
+            label="大問を削除"
+
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            onClick={() => actions.deleteMajorQuestion(majorQuestion.id)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </TooltipButton>
         </div>
       </div>
 

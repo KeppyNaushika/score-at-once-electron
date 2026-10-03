@@ -1,7 +1,7 @@
 "use client"
 
 import type { LucideIcon } from "lucide-react"
-import { Calendar, School, Search, Tag, XIcon } from "lucide-react"
+import { Search, Tag, XIcon } from "lucide-react"
 import { useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -43,7 +43,7 @@ export interface MultiSelectFilterConfig {
 }
 
 /** 日付範囲フィルタの設定（値は YYYY-MM-DD、空文字は未指定） */
-export interface DateRangeFilterConfig {
+interface DateRangeFilterConfig {
   label: string
   from: string
   to: string
@@ -333,32 +333,6 @@ export function DateRangeFilterPanel({
   )
 }
 
-/** 日付範囲フィルタのボタン（押すと中身を popover で開く） */
-export function DateRangeFilterButton({
-  config,
-}: {
-  config: DateRangeFilterConfig
-}) {
-  const hasRange = config.from !== "" || config.to !== ""
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className={hasRange ? "border-primary text-primary" : ""}
-        >
-          <Calendar className="mr-1.5 h-3.5 w-3.5" />
-          {config.label}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-64 p-3" align="start">
-        <DateRangeFilterPanel config={config} />
-      </PopoverContent>
-    </Popover>
-  )
-}
-
 /**
  * タグ絞り込み。**語とアイコンをここで決めてしまう**のは、4画面すべてが持つ絞り込みで、
  * 呼び手ごとに書けば「タグ」「タグで絞り込み」のように割れるため。
@@ -369,13 +343,4 @@ export function TagFilterButton({
   config: MultiSelectFilterConfig
 }) {
   return <MultiSelectFilterButton label="タグ" icon={Tag} config={config} />
-}
-
-/** 学級絞り込み。タグと同じ理由で語とアイコンをここに持つ */
-export function ClassroomFilterButton({
-  config,
-}: {
-  config: MultiSelectFilterConfig
-}) {
-  return <MultiSelectFilterButton label="学級" icon={School} config={config} />
 }

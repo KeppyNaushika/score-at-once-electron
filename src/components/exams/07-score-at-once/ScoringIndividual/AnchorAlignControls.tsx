@@ -10,11 +10,10 @@ import {
 } from "lucide-react"
 import { useCallback } from "react"
 
+import { WithTooltip } from "@/components/common/WithTooltip"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import type { AnchorDirection } from "@/types/drawingAnnotation.types"
-
-import { ToolbarTooltip } from "./ToolbarTooltip"
 
 type HorizontalAnchor = "left" | "center" | "right"
 type VerticalAnchor = "top" | "center" | "bottom"
@@ -72,7 +71,7 @@ export function AnchorAlignControls({
         {/* 横方向 */}
         <div className="flex items-center gap-1">
           <span className="text-xs text-gray-500">横:</span>
-          <ToolbarTooltip label="左寄せ">
+          <WithTooltip content="左寄せ">
             <Button
               size="sm"
               variant={
@@ -85,8 +84,8 @@ export function AnchorAlignControls({
             >
               <AlignLeft className="h-4 w-4" />
             </Button>
-          </ToolbarTooltip>
-          <ToolbarTooltip label="左右中央寄せ">
+          </WithTooltip>
+          <WithTooltip content="左右中央寄せ">
             <Button
               size="sm"
               variant={
@@ -99,8 +98,8 @@ export function AnchorAlignControls({
             >
               <AlignCenter className="h-4 w-4" />
             </Button>
-          </ToolbarTooltip>
-          <ToolbarTooltip label="右寄せ">
+          </WithTooltip>
+          <WithTooltip content="右寄せ">
             <Button
               size="sm"
               variant={
@@ -113,13 +112,13 @@ export function AnchorAlignControls({
             >
               <AlignRight className="h-4 w-4" />
             </Button>
-          </ToolbarTooltip>
+          </WithTooltip>
         </div>
 
         {/* 縦方向 */}
         <div className="flex items-center gap-1">
           <span className="text-xs text-gray-500">縦:</span>
-          <ToolbarTooltip label="上寄せ">
+          <WithTooltip content="上寄せ">
             <Button
               size="sm"
               variant={
@@ -132,8 +131,8 @@ export function AnchorAlignControls({
             >
               <ArrowUpToLine className="h-4 w-4" />
             </Button>
-          </ToolbarTooltip>
-          <ToolbarTooltip label="上下中央寄せ">
+          </WithTooltip>
+          <WithTooltip content="上下中央寄せ">
             <Button
               size="sm"
               variant={
@@ -146,8 +145,8 @@ export function AnchorAlignControls({
             >
               <UnfoldVertical className="h-4 w-4" />
             </Button>
-          </ToolbarTooltip>
-          <ToolbarTooltip label="下寄せ">
+          </WithTooltip>
+          <WithTooltip content="下寄せ">
             <Button
               size="sm"
               variant={
@@ -160,7 +159,7 @@ export function AnchorAlignControls({
             >
               <ArrowDownToLine className="h-4 w-4" />
             </Button>
-          </ToolbarTooltip>
+          </WithTooltip>
         </div>
 
         {/* 現在の設定表示 */}

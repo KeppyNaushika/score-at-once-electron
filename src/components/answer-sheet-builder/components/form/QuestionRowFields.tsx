@@ -2,7 +2,7 @@
 
 import { ChevronDown, ChevronUp, Settings2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
 import {
   InputGroup,
@@ -154,27 +154,23 @@ export function PlacementControls({
 
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            aria-label="改行"
-            variant="outline"
-            size="icon"
-            className={cn(
-              "h-7 w-7 text-xs",
-              isBreak
-                ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20"
-                : "text-muted-foreground"
-            )}
-            onClick={() =>
-              onUpdate({ nextPlacement: isBreak ? undefined : "break" })
-            }
-          >
-            ↵
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>改行</TooltipContent>
-      </Tooltip>
+      <TooltipButton
+        label="改行"
+
+        variant="outline"
+        size="icon"
+        className={cn(
+          "h-7 w-7 text-xs",
+          isBreak
+            ? "border-primary/50 bg-primary/10 text-primary hover:bg-primary/20"
+            : "text-muted-foreground"
+        )}
+        onClick={() =>
+          onUpdate({ nextPlacement: isBreak ? undefined : "break" })
+        }
+      >
+        ↵
+      </TooltipButton>
       <InputGroup
         className={cn("h-7 w-auto", goUpActive && "border-primary/50")}
       >
@@ -252,37 +248,29 @@ export function MoveButtons({
 }) {
   return (
     <ButtonGroup className="rounded-md border">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            aria-label="上へ移動"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground"
-            onClick={onMoveUp}
-            disabled={!onMoveUp}
-          >
-            <ChevronUp className="h-3.5 w-3.5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>上へ移動</TooltipContent>
-      </Tooltip>
+      <TooltipButton
+        label="上へ移動"
+
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 text-muted-foreground"
+        onClick={onMoveUp}
+        disabled={!onMoveUp}
+      >
+        <ChevronUp className="h-3.5 w-3.5" />
+      </TooltipButton>
       <ButtonGroupSeparator />
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            aria-label="下へ移動"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground"
-            onClick={onMoveDown}
-            disabled={!onMoveDown}
-          >
-            <ChevronDown className="h-3.5 w-3.5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>下へ移動</TooltipContent>
-      </Tooltip>
+      <TooltipButton
+        label="下へ移動"
+
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 text-muted-foreground"
+        onClick={onMoveDown}
+        disabled={!onMoveDown}
+      >
+        <ChevronDown className="h-3.5 w-3.5" />
+      </TooltipButton>
     </ButtonGroup>
   )
 }
@@ -303,34 +291,30 @@ export function DetailToggleButton({
   visibilityRestricted: boolean
 }) {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          aria-label="詳細設定"
-          variant="ghost"
-          size="icon"
+    <TooltipButton
+      label="詳細設定"
+
+      variant="ghost"
+      size="icon"
+      className={cn(
+        "relative h-7 w-7",
+        visibilityRestricted
+          ? "text-orange-500"
+          : open
+            ? "text-primary"
+            : "text-muted-foreground"
+      )}
+      onClick={onToggle}
+    >
+      <Settings2 className="h-3.5 w-3.5" />
+      {hasContent && (
+        <span
           className={cn(
-            "relative h-7 w-7",
-            visibilityRestricted
-              ? "text-orange-500"
-              : open
-                ? "text-primary"
-                : "text-muted-foreground"
+            "absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full",
+            visibilityRestricted ? "bg-orange-500" : "bg-primary"
           )}
-          onClick={onToggle}
-        >
-          <Settings2 className="h-3.5 w-3.5" />
-          {hasContent && (
-            <span
-              className={cn(
-                "absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full",
-                visibilityRestricted ? "bg-orange-500" : "bg-primary"
-              )}
-            />
-          )}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>詳細設定</TooltipContent>
-    </Tooltip>
+        />
+      )}
+    </TooltipButton>
   )
 }

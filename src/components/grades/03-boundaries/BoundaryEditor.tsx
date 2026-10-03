@@ -11,13 +11,9 @@ import {
   SortableTableProvider,
   useSortableRow,
 } from "@/components/common/sortable-table"
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useEditingText } from "@/hooks/useEditingText"
 import { cn } from "@/lib/utils"
 import {
@@ -256,20 +252,16 @@ function BoundaryRow({
           isInvalid && "border-red-500 focus-visible:ring-red-500"
         )}
       />
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            aria-label="境界を削除"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-destructive"
-            onClick={() => onRemove(boundary)}
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>境界を削除</TooltipContent>
-      </Tooltip>
+      <TooltipButton
+        label="境界を削除"
+
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-destructive"
+        onClick={() => onRemove(boundary)}
+      >
+        <Trash2 className="h-3 w-3" />
+      </TooltipButton>
     </div>
   )
 }

@@ -7,15 +7,11 @@ import { useState } from "react"
 
 import ConfirmationModal from "@/components/common/ConfirmationModal"
 import { DragHandle, useSortableRow } from "@/components/common/sortable-table"
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import {
   courseworkWorkflowSteps,
   workflowStepHref,
@@ -123,34 +119,26 @@ export function DataSourceRow({
             type="text"
             placeholder="換算満点"
           />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                aria-label="保存"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleSave}
-              >
-                <Check className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>保存</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                aria-label="キャンセル"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setEditing(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>キャンセル</TooltipContent>
-          </Tooltip>
+          <TooltipButton
+            label="保存"
+
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={handleSave}
+          >
+            <Check className="h-4 w-4" />
+          </TooltipButton>
+          <TooltipButton
+            label="キャンセル"
+
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setEditing(false)}
+          >
+            <X className="h-4 w-4" />
+          </TooltipButton>
         </div>
       </div>
     )
@@ -233,20 +221,16 @@ export function DataSourceRow({
         <span className="text-xs text-muted-foreground">
           満点: {displayMaxScore} / 換算満点: {dataSource.weight}
         </span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              aria-label="データソースを編集"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => setEditing(true)}
-            >
-              <Pencil className="h-3 w-3" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>データソースを編集</TooltipContent>
-        </Tooltip>
+        <TooltipButton
+          label="データソースを編集"
+
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => setEditing(true)}
+        >
+          <Pencil className="h-3 w-3" />
+        </TooltipButton>
         <Button
           variant="ghost"
           size="icon"
