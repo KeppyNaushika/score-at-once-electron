@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from "react"
 
+import { matchesSearchTerm } from "@/lib/searchText"
+
 /**
  * 一覧フィルタ（検索・タグ・学級・日付範囲）の適用ロジック。
  *
@@ -132,12 +134,8 @@ export function useListFilter<T>(
   const filteredItems = useMemo(() => {
     return items.filter((listItem) => {
       // テキスト検索（対象文字列のいずれかに部分一致）
-      if (searchTerm.trim()) {
-        const term = searchTerm.trim().toLowerCase()
-        const hit = accessors
-          .searchTexts(listItem)
-          .some((text) => text?.toLowerCase().includes(term))
-        if (!hit) return false
+      if (!matchesSearchTerm(searchTerm, accessors.searchTexts(listItem))) {
+        return false
       }
       // タグフィルタ（選択タグのいずれかを持つ = OR）
       if (accessors.tagIds && filterTagIds.size > 0) {

@@ -17,8 +17,7 @@ import {
 } from "@/components/common/ListFilterControls"
 import { ListPaginationFooter } from "@/components/common/ListPaginationFooter"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
-import { OverflowToolbar } from "@/components/common/OverflowToolbar"
-import { HistoryNavButtons } from "@/components/layout/HistoryNavButtons"
+import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -101,10 +100,8 @@ interface EntityListSearch {
 }
 
 interface EntityListPageProps<TRow extends { id: string }> {
-  /** ヘッダーの中央に出す画面の題（「試験一覧」「解答用紙作成」など） */
+  /** ヘッダーに出す画面の題（「試験一覧」「解答用紙作成」など） */
   title: string
-  /** ヘッダー右端の「使い方」。`usePageHelp` が作ったものを呼び手が渡す */
-  helpButton?: ReactNode
   /** 絞り込み済みの行（並べ替えとページ分けは部品の中でやる） */
   rows: TRow[]
   /**
@@ -279,7 +276,6 @@ function formatFullDateTime(date: EntityListDate): string | null {
  */
 export function EntityListPage<TRow extends { id: string }>({
   title,
-  helpButton,
   rows,
   totalCount,
   isLoading,
@@ -389,36 +385,21 @@ export function EntityListPage<TRow extends { id: string }>({
   return (
     <div className="flex h-full min-w-full flex-col">
       {/*
-        ヘッダーは**1行**。左からクイックアクセス（戻る／進む）・題・件数、右に操作。
-        詳細画面の `WorkflowTabHeader` の上段と同じ姿で、違うのは「一覧へ戻る」が
-        無いこと（一覧に一覧の親は無い）と、下段のタブが無いことだけ。
+        ヘッダーは段の無いページと共通（`PageHeader`）。絞り込みはここに置かない
+        （列見出しへ移した）ので、並ぶのは操作だけである。
 
-        題は**クイックアクセスのすぐ右**。行の中央に絶対配置していたが、目が最初に
-        行くのは左端で、そこから中央まで戻って読むことになる。左から
-        「どこへ行けるか → いま何を見ているか → 何件あるか」と並べば視線が一方向で済む。
-
-        絞り込みはここに置かない（列見出しへ移した）ので、並ぶのは操作だけである。
+        件数は題のすぐ右。畳まない（畳むと「何件あるのか」が見えなくなる）。
+        絞り込むと分母と分子が出る
       */}
-      <header className="flex shrink-0 items-center gap-2 border-b bg-background px-3 py-2">
-        <div className="flex shrink-0 items-center gap-2">
-          <HistoryNavButtons />
-          <h1 className="truncate text-sm font-semibold">{title}</h1>
-          {/*
-            件数は畳まない（畳むと「何件あるのか」が見えなくなる）ので、実測して
-            畳む並びの外に置く。絞り込むと分母と分子が出る
-          */}
-          <span className="text-xs whitespace-nowrap text-muted-foreground">
-            {rows.length === totalCount
-              ? `${totalCount}件`
-              : `${rows.length} / ${totalCount}件`}
-          </span>
-        </div>
-        <OverflowToolbar actions={actions} />
-        {/* 「使い方」は畳まない。読み方が分からないときに真っ先に隠れると詰む */}
-        {helpButton === undefined || helpButton === null ? null : (
-          <div className="shrink-0">{helpButton}</div>
-        )}
-      </header>
+      <PageHeader
+        title={title}
+        subtitle={
+          rows.length === totalCount
+            ? `${totalCount}件`
+            : `${rows.length} / ${totalCount}件`
+        }
+        actions={actions}
+      />
 
       <div className="min-h-0 flex-1 p-4">
         {!isLoading && totalCount === 0 ? (

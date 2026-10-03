@@ -135,8 +135,8 @@ export const updateStudent = async (
 /**
  * 生徒1人と、その生徒が載っている成績算出の名簿。
  *
- * 生徒の削除の確認が開いたときだけ読む。生徒の一覧へ同梱すると、一覧を引く全部の
- * 画面へ名簿が配られるため分けている。
+ * 生徒の削除の確認と、生徒詳細の成績算出の欄が読む。生徒の一覧へ同梱すると、一覧を
+ * 引く全部の画面へ名簿が配られるため分けている。
  */
 export const getStudentWithGradeRoster = async (id: string) => {
   return prisma.student.findUnique({
@@ -362,19 +362,22 @@ export interface ClassroomStudentExamResult {
   studentNumber: string
   studentName: string
   attendanceNumber: number | null
+  /** この学級での所属の終了日。在籍中かどうかは renderer が判定する */
+  endDate: Date | null
   examResults: StudentExamResult[]
 }
 
-/** 学級に所属する全生徒の試験成績を一括取得する */
+/**
+ * 学級に所属した全生徒の試験成績を、所属1件ごとに一括取得する。
+ *
+ * 終了した所属も返す。在籍中への絞り込みは renderer で行う。
+ */
 export const getClassroomExamResults = async (
   classroomId: string
 ): Promise<ClassroomStudentExamResult[]> => {
   try {
     const memberships = await prisma.studentClassroomMembership.findMany({
-      where: {
-        classroomId,
-        OR: [{ endDate: null }, { endDate: { gte: new Date() } }],
-      },
+      where: { classroomId },
       include: {
         student: true,
       },
@@ -390,6 +393,7 @@ export const getClassroomExamResults = async (
         studentNumber: membership.student.studentNumber,
         studentName: `${membership.student.lastName} ${membership.student.firstName}`,
         attendanceNumber: membership.attendanceNumber,
+        endDate: membership.endDate,
         examResults,
       })
     }

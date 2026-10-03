@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { matchesSearchTerm } from "@/lib/searchText"
 import {
   gradeReportSettingsQuery,
   gradeResultsQuery,
@@ -117,13 +118,13 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
         student.className !== selectedClassroom
       )
         return false
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase()
-        const name = `${student.lastName} ${student.firstName}`.toLowerCase()
-        const studentNumberLower = student.studentNumber?.toLowerCase() ?? ""
-        if (!name.includes(term) && !studentNumberLower.includes(term))
-          return false
-      }
+      if (
+        !matchesSearchTerm(searchTerm, [
+          `${student.lastName}${student.firstName}`,
+          student.studentNumber,
+        ])
+      )
+        return false
       return true
     })
   }, [studentsRef, selectedClassroom, searchTerm])

@@ -4,7 +4,7 @@
  *   操作者（actor）の表示情報をサーバー側で付与して返す。
  */
 
-import type { Prisma } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 
 import {
   type AuditCategory,
@@ -24,7 +24,7 @@ export interface AuditLogFilter {
   dateFrom?: string
   /** ISO文字列。最後の操作がこの日時以前 */
   dateTo?: string
-  /** サマリ部分一致 */
+  /** サマリ部分一致（空白は全角・半角・無しを区別しない） */
   search?: string
 }
 
@@ -69,7 +69,6 @@ const buildWhere = (filter: AuditLogFilter): Prisma.AuditLogWhereInput => {
   if (filter.category) where.category = filter.category
   if (filter.action) where.action = filter.action
   if (filter.scopeId) where.scopeId = filter.scopeId
-  if (filter.search) where.summary = { contains: filter.search }
   // 日時の絞り込みも、並びと表示に合わせて最後の操作の時刻（updatedAt）で見る
   if (filter.dateFrom || filter.dateTo) {
     const updatedAt: Prisma.DateTimeFilter = {}
@@ -78,6 +77,64 @@ const buildWhere = (filter: AuditLogFilter): Prisma.AuditLogWhereInput => {
     where.updatedAt = updatedAt
   }
   return where
+}
+
+/** 検索語から空白（全角・半角）を抜き、小文字にする。summary 側も SQL で同じ形へ寄せる */
+const compactSearchTerm = (search: string): string =>
+  search.replace(/\s+/g, "").toLowerCase()
+
+/**
+ * 検索語があるときの1ページ分の id と総数。
+ *
+ * **空白を抜いて比べる式は Prisma の where に書けない**（`contains` は列をそのまま
+ * LIKE にかける）ので、絞り込み・並び・ページ分け・件数をここだけ SQL で行う。
+ * 一致した id を全部集めて `in` で渡す形は採らない —— 「試験」のような語は
+ * 数万件に当たり、SQLite の変数の上限に掛かる。返すのは1ページ分（最大200件）だけ。
+ *
+ * 並びは Prisma 側（`buildWhere` を使う経路）と同じ `updatedAt` の新しい順、同時刻は id。
+ * 日時の比較は `julianday()` を通す。列は `+00:00` 付きの ISO で入っており、
+ * `toISOString()` の `Z` とは文字列のままでは比べられない。
+ */
+const searchAuditLogPage = async (
+  filter: AuditLogFilter & { search: string },
+  limit: number,
+  offset: number
+): Promise<{ ids: string[]; total: number }> => {
+  const escapedTerm = compactSearchTerm(filter.search).replace(
+    /[\\%_]/g,
+    (character) => `\\${character}`
+  )
+  // 全角空白は char(12288)。ソースに直に書くと見分けが付かない
+  const conditions: Prisma.Sql[] = [
+    Prisma.sql`lower(replace(replace("summary", ' ', ''), char(12288), '')) LIKE ${`%${escapedTerm}%`} ESCAPE '\\'`,
+  ]
+  if (filter.userId) conditions.push(Prisma.sql`"userId" = ${filter.userId}`)
+  if (filter.category)
+    conditions.push(Prisma.sql`"category" = ${filter.category}`)
+  if (filter.action) conditions.push(Prisma.sql`"action" = ${filter.action}`)
+  if (filter.scopeId) conditions.push(Prisma.sql`"scopeId" = ${filter.scopeId}`)
+  if (filter.dateFrom)
+    conditions.push(
+      Prisma.sql`julianday("updatedAt") >= julianday(${new Date(filter.dateFrom).toISOString()})`
+    )
+  if (filter.dateTo)
+    conditions.push(
+      Prisma.sql`julianday("updatedAt") <= julianday(${new Date(filter.dateTo).toISOString()})`
+    )
+  const whereSql = Prisma.join(conditions, " AND ")
+
+  const [idRows, countRows] = await Promise.all([
+    prisma.$queryRaw<{ id: string }[]>`
+      SELECT "id" FROM "AuditLog" WHERE ${whereSql}
+      ORDER BY "updatedAt" DESC, "id" DESC
+      LIMIT ${limit} OFFSET ${offset}`,
+    prisma.$queryRaw<{ total: number | bigint }[]>`
+      SELECT COUNT(*) AS "total" FROM "AuditLog" WHERE ${whereSql}`,
+  ])
+  return {
+    ids: idRows.map((idRow) => idRow.id),
+    total: Number(countRows[0]?.total ?? 0),
+  }
 }
 
 const parseMetadata = (raw: string | null): Record<string, unknown> | null => {
@@ -98,21 +155,43 @@ export async function getAuditLogs(
 ): Promise<AuditLogPage> {
   const limit = Math.min(Math.max(options.limit ?? 50, 1), 200)
   const offset = Math.max(options.offset ?? 0, 0)
-  const where = buildWhere(options)
+  const search = options.search?.trim() ?? ""
 
   // 並びは最後の操作の時刻（updatedAt）の新しい順。一覧が表示する時刻も updatedAt
   // なので、まとめた行（occurrences > 1）も表示時刻の並びに収まる。createdAt で
   // 並べると、少し前に始めて今も続けている操作が、表示は「たった今」なのに
   // 下の方へ沈む。同時刻は id で順を決め、ページをまたいで行が揺れないようにする
-  const [rows, total] = await Promise.all([
-    prisma.auditLog.findMany({
-      where,
-      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
-      take: limit,
-      skip: offset,
-    }),
-    prisma.auditLog.count({ where }),
-  ])
+  const { rows, total } =
+    compactSearchTerm(search) === ""
+      ? await (async () => {
+          const where = buildWhere(options)
+          const [pageRows, pageTotal] = await Promise.all([
+            prisma.auditLog.findMany({
+              where,
+              orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+              take: limit,
+              skip: offset,
+            }),
+            prisma.auditLog.count({ where }),
+          ])
+          return { rows: pageRows, total: pageTotal }
+        })()
+      : await (async () => {
+          const page = await searchAuditLogPage(
+            { ...options, search },
+            limit,
+            offset
+          )
+          const pageRows = await prisma.auditLog.findMany({
+            where: { id: { in: page.ids } },
+          })
+          // in は順を守らないので、SQL が決めた並びへ戻す
+          const rowById = new Map(pageRows.map((row) => [row.id, row]))
+          return {
+            rows: page.ids.flatMap((id) => rowById.get(id) ?? []),
+            total: page.total,
+          }
+        })()
 
   // 操作者情報を一括解決
   const userIds = Array.from(

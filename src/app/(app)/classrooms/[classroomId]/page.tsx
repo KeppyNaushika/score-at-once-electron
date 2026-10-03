@@ -19,7 +19,12 @@ import { StudentInsightsCard } from "@/app/(app)/classrooms/[classroomId]/compon
 import { useClassroomExamResults } from "@/app/(app)/classrooms/[classroomId]/hooks/useClassroomExamResults"
 import ClassroomModal from "@/components/classroom/ClassroomModal"
 import ClassroomStudentImportModal from "@/components/classroom/ClassroomStudentImportModal"
+import { MembershipStatusToggle } from "@/components/classroom/MembershipStatusToggle"
 import MembershipTable from "@/components/classroom/MembershipTable"
+import {
+  type ToolbarAction,
+  toolbarButtonAction,
+} from "@/components/common/OverflowToolbar"
 import PageHeader from "@/components/layout/PageHeader"
 import StudentClassroomMembershipModal from "@/components/student/StudentClassroomMembershipModal"
 import {
@@ -35,6 +40,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { MembershipStatusFilter } from "@/lib/membership"
 import {
   addStudentToClassroomMutation,
   classroomListQuery,
@@ -175,8 +181,13 @@ export default function ClassroomDetailPage() {
     }
   }
 
-  const { studentResults, loading: analyticsLoading } =
-    useClassroomExamResults(classroomId)
+  // 成績分析と所属管理で共通の絞り込み
+  const [statusFilter, setStatusFilter] =
+    useState<MembershipStatusFilter>("all")
+  const { studentResults, loading: analyticsLoading } = useClassroomExamResults(
+    classroomId,
+    statusFilter
+  )
 
   const handleEditMembership = (membership: ClassroomMembership) => {
     setMembershipToEdit(membership)
@@ -229,9 +240,60 @@ export default function ClassroomDetailPage() {
     )
   }
 
+  const toolbarActions: ToolbarAction[] = [
+    toolbarButtonAction({
+      id: "add-student",
+      priority: 80,
+      icon: Plus,
+      label: "生徒を追加",
+      onClick: handleAddMembership,
+    }),
+    toolbarButtonAction({
+      id: "spreadsheet-import",
+      priority: 70,
+      icon: Upload,
+      label: "Excel 貼付一括追加",
+      onClick: () => setIsStudentImportModalOpen(true),
+    }),
+    toolbarButtonAction({
+      id: "edit",
+      priority: 60,
+      icon: Edit,
+      label: "編集",
+      onClick: () => setIsClassroomModalOpen(true),
+    }),
+    {
+      id: "delete",
+      priority: 10,
+      node: (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          onClick={() => setIsDeleteClassroomConfirmOpen(true)}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          削除
+        </Button>
+      ),
+      collapsedNode: (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+          onClick={() => setIsDeleteClassroomConfirmOpen(true)}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          削除
+        </Button>
+      ),
+    },
+  ]
+
   return (
     <div className="flex h-full flex-col">
       <PageHeader
+        listHref="/classrooms"
         title={classroomData.name}
         subtitle={
           <>
@@ -253,63 +315,28 @@ export default function ClassroomDetailPage() {
             )}
           </>
         }
-      >
-        <Button
-          variant="ghost"
-          size="sm"
-          className="rounded-lg"
-          onClick={() => router.push("/classrooms")}
-        >
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          一覧に戻る
-        </Button>
-        <Button
-          variant="outline"
-          className="rounded-lg"
-          onClick={handleAddMembership}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          生徒を追加
-        </Button>
-        <Button
-          variant="outline"
-          className="rounded-lg"
-          onClick={() => setIsStudentImportModalOpen(true)}
-        >
-          <Upload className="mr-2 h-4 w-4" />
-          Excel 貼付一括追加
-        </Button>
-        <Button
-          variant="outline"
-          className="rounded-lg"
-          onClick={() => setIsClassroomModalOpen(true)}
-        >
-          <Edit className="mr-2 h-4 w-4" />
-          編集
-        </Button>
-        <Button
-          variant="ghost"
-          className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-          onClick={() => setIsDeleteClassroomConfirmOpen(true)}
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          削除
-        </Button>
-      </PageHeader>
+        actions={toolbarActions}
+      />
 
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="container mx-auto max-w-6xl px-6 py-6">
           <Tabs defaultValue="analytics">
-            <TabsList className="mb-6 w-full">
-              <TabsTrigger value="analytics" className="flex-1">
-                <BarChart3 className="mr-1.5 h-4 w-4" />
-                成績分析
-              </TabsTrigger>
-              <TabsTrigger value="membership" className="flex-1">
-                <Users className="mr-1.5 h-4 w-4" />
-                所属管理
-              </TabsTrigger>
-            </TabsList>
+            <div className="mb-6 flex items-center gap-4">
+              <TabsList className="flex-1">
+                <TabsTrigger value="analytics" className="flex-1">
+                  <BarChart3 className="mr-1.5 h-4 w-4" />
+                  成績分析
+                </TabsTrigger>
+                <TabsTrigger value="membership" className="flex-1">
+                  <Users className="mr-1.5 h-4 w-4" />
+                  所属管理
+                </TabsTrigger>
+              </TabsList>
+              <MembershipStatusToggle
+                statusFilter={statusFilter}
+                onStatusFilterChange={setStatusFilter}
+              />
+            </div>
 
             <TabsContent value="analytics">
               {analyticsLoading ? (
@@ -332,6 +359,7 @@ export default function ClassroomDetailPage() {
             <TabsContent value="membership">
               <MembershipTable
                 memberships={classroomData.memberships}
+                statusFilter={statusFilter}
                 onEdit={handleEditMembership}
                 onViewStudent={handleViewStudent}
                 onDelete={handleDeleteMembership}

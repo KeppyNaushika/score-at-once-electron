@@ -20,7 +20,6 @@ import {
 } from "@/components/common/BulkTagAssignButton"
 import { EntityListPage } from "@/components/common/EntityListPage"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
-import { usePageHelp } from "@/components/help/usePageHelp"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -89,7 +88,6 @@ const EMPTY_TAGS: TagWithAllRelations[] = []
 export function GradeListContainer() {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { helpButton } = usePageHelp()
   const { data: grades = EMPTY_GRADES, isPending: isLoading } =
     useQuery(gradeListQuery())
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
@@ -353,7 +351,6 @@ export function GradeListContainer() {
     <>
       <EntityListPage<GradeSummary>
         title="成績算出"
-        helpButton={helpButton}
         rows={filteredGrades}
         totalCount={grades.length}
         isLoading={isLoading}

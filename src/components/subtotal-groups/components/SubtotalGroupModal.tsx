@@ -33,6 +33,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
+import { matchesSearchTerm } from "@/lib/searchText"
 import {
   buildItemDeletionWarning,
   subtotalUsages,
@@ -207,8 +208,7 @@ export function SubtotalGroupModal({
   const suggestions = allTags.filter(
     (tag) =>
       !tagNames.includes(tag.name) &&
-      (currentTagInput.trim() === "" ||
-        tag.name.toLowerCase().includes(currentTagInput.trim().toLowerCase()))
+      matchesSearchTerm(currentTagInput, [tag.name])
   )
 
   // 小計項目を追加。DB にはまだ無いので subtotalId は null

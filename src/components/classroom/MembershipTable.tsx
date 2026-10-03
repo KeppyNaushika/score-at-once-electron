@@ -16,13 +16,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { SortableTableHead } from "@/components/ui/SortableTableHead"
 import {
   Table,
@@ -39,12 +32,17 @@ import {
 } from "@/components/ui/tooltip"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { useTableSort } from "@/hooks/useTableSort"
-import { isCurrentMembership } from "@/lib/membership"
+import {
+  isCurrentMembership,
+  matchesMembershipStatusFilter,
+  type MembershipStatusFilter,
+} from "@/lib/membership"
 import { cn } from "@/lib/utils"
 import type { ClassroomMembership } from "@/types/prismaExtensions"
 
 interface ClassroomMembershipTableProps {
   memberships: ClassroomMembership[]
+  statusFilter: MembershipStatusFilter
   onEdit: (membership: ClassroomMembership) => void
   onViewStudent: (membership: ClassroomMembership) => void
   onDelete: (membershipId: string) => void
@@ -65,17 +63,15 @@ interface ClassroomMembershipSortable {
 
 export default function ClassroomMembershipTable({
   memberships,
+  statusFilter,
   onEdit,
   onViewStudent,
   onDelete,
   onBulkDelete,
 }: ClassroomMembershipTableProps) {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   // 確認を開いた時点の選択を写しておく（窓に出す件数と消す対象を一致させる）
   const bulkDeletion = useDialogTarget<string[]>()
-  const [statusFilter, setStatusFilter] = useState<"current" | "ended" | "all">(
-    "current"
-  )
 
   // ソート用のデータ変換
   const sortableData = useMemo<ClassroomMembershipSortable[]>(() => {
@@ -96,16 +92,14 @@ export default function ClassroomMembershipTable({
     defaultSort: { key: "attendanceNumber", direction: "asc" },
   })
 
-  // ステータスフィルター適用（既定は在籍中のみ）
-  const filteredData = useMemo(() => {
-    if (statusFilter === "current") {
-      return sortedData.filter((membership) => membership.isCurrent)
-    }
-    if (statusFilter === "ended") {
-      return sortedData.filter((membership) => !membership.isCurrent)
-    }
-    return sortedData
-  }, [sortedData, statusFilter])
+  // ステータスフィルター適用（絞り込みはページ側が持つ）
+  const filteredData = useMemo(
+    () =>
+      sortedData.filter((membership) =>
+        matchesMembershipStatusFilter(membership.isCurrent, statusFilter)
+      ),
+    [sortedData, statusFilter]
+  )
 
   // 現在の所属を優先表示（ソート後）
   const displayData = useMemo(() => {
@@ -120,11 +114,22 @@ export default function ClassroomMembershipTable({
     return filteredData
   }, [filteredData, sortConfig.key])
 
+  // 絞り込みで隠れた行は選択に数えない（見えない所属を一括削除しないため）
+  const selectedIds = useMemo(
+    () =>
+      new Set(
+        displayData
+          .filter((membership) => checkedIds.has(membership.id))
+          .map((membership) => membership.id)
+      ),
+    [displayData, checkedIds]
+  )
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(new Set(displayData.map((membership) => membership.id)))
+      setCheckedIds(new Set(displayData.map((membership) => membership.id)))
     } else {
-      setSelectedIds(new Set())
+      setCheckedIds(new Set())
     }
   }
 
@@ -135,7 +140,7 @@ export default function ClassroomMembershipTable({
     } else {
       newSelected.delete(id)
     }
-    setSelectedIds(newSelected)
+    setCheckedIds(newSelected)
   }
 
   const handleBulkDelete = () => {
@@ -147,7 +152,7 @@ export default function ClassroomMembershipTable({
   const handleConfirmBulkDelete = () => {
     if (bulkDeletion.target !== null && onBulkDelete) {
       onBulkDelete(bulkDeletion.target)
-      setSelectedIds(new Set())
+      setCheckedIds(new Set())
     }
   }
 
@@ -165,22 +170,6 @@ export default function ClassroomMembershipTable({
               </span>
             </CardTitle>
             <div className="flex items-center gap-2">
-              <Select
-                value={statusFilter}
-                onValueChange={(value) => {
-                  setStatusFilter(value as "current" | "ended" | "all")
-                  setSelectedIds(new Set())
-                }}
-              >
-                <SelectTrigger className="w-36 rounded-lg">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="current">在籍中のみ</SelectItem>
-                  <SelectItem value="ended">終了済みのみ</SelectItem>
-                  <SelectItem value="all">すべて</SelectItem>
-                </SelectContent>
-              </Select>
               {selectedIds.size > 0 && (
                 <Button
                   variant="destructive"

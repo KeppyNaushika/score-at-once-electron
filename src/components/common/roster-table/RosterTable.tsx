@@ -30,6 +30,7 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { Table, TableBody } from "@/components/ui/table"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { queryKeys } from "@/lib/queryKeys"
+import { matchesSearchTerm } from "@/lib/searchText"
 
 export interface RosterTableHandle {
   /** 外部から名簿を再読み込みする */
@@ -129,13 +130,11 @@ export function RosterTable({
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
-      const fullName = `${row.lastName} ${row.firstName}`.toLowerCase()
-      const fullKana = row.kana.toLowerCase()
-      const term = searchTerm.toLowerCase()
-      const matchesSearch =
-        fullName.includes(term) ||
-        fullKana.includes(term) ||
-        row.studentNumber.toLowerCase().includes(term)
+      const matchesSearch = matchesSearchTerm(searchTerm, [
+        `${row.lastName}${row.firstName}`,
+        row.kana,
+        row.studentNumber,
+      ])
 
       const matchesClassroom =
         selectedClassroomId === "all" ||

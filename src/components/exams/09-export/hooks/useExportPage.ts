@@ -11,6 +11,7 @@ import {
   answerOverlayChanges,
   individualReportChanges,
 } from "@/components/exams/09-export/utils/exportSettingChanges"
+import { matchesSearchTerm } from "@/lib/searchText"
 import { examDetailQuery, examStudentsQuery } from "@/queries/exam"
 import {
   examExportSettingsQuery,
@@ -371,11 +372,10 @@ export function useExportPage() {
   // フィルタリング（既にソート済みの students を使用）
   const filteredStudents = students.filter((examStudent) => {
     const student = examStudent.student
-    const matchesSearch =
-      searchTerm === "" ||
-      student.lastName.includes(searchTerm) ||
-      student.firstName.includes(searchTerm) ||
-      student.studentNumber.includes(searchTerm)
+    const matchesSearch = matchesSearchTerm(searchTerm, [
+      `${student.lastName}${student.firstName}`,
+      student.studentNumber,
+    ])
 
     const matchesClassroom =
       selectedClassrooms.length === 0 ||

@@ -7,9 +7,14 @@ import { Calculator, Edit2, PlusCircle, Tag, Trash2, XIcon } from "lucide-react"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
+import {
+  type ToolbarAction,
+  toolbarButtonAction,
+} from "@/components/common/OverflowToolbar"
 import { DragHandle } from "@/components/common/sortable-table/DragHandle"
 import { SortableTableProvider } from "@/components/common/sortable-table/SortableTableProvider"
 import { useSortableRow } from "@/components/common/sortable-table/useSortableRow"
+import PageHeader from "@/components/layout/PageHeader"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -405,13 +410,15 @@ export function TagsPageContainer() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">読み込み中...</p>
-      </div>
-    )
-  }
+  const toolbarActions: ToolbarAction[] = [
+    toolbarButtonAction({
+      id: "create",
+      priority: 80,
+      icon: PlusCircle,
+      label: "新規タグ作成",
+      onClick: handleCreate,
+    }),
+  ]
 
   return (
     <>
@@ -426,20 +433,18 @@ export function TagsPageContainer() {
       )}
 
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleCreate}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              新規タグ作成
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              {tags.length}件
-            </span>
-          </div>
-        </div>
+        <PageHeader
+          title="タグ管理"
+          subtitle={loading ? undefined : `${tags.length}件`}
+          actions={toolbarActions}
+        />
 
         <div className="flex-1 overflow-auto p-4">
-          {tags.length === 0 ? (
+          {loading ? (
+            <div className="flex h-full items-center justify-center">
+              <p className="text-muted-foreground">読み込み中...</p>
+            </div>
+          ) : tags.length === 0 ? (
             <Empty>
               <EmptyHeader>
                 <EmptyMedia variant="icon">

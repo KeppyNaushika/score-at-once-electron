@@ -1,12 +1,13 @@
 "use client"
 
 import type { StudentClassroomMembership } from "@prisma/client"
-import { ArrowLeft, BarChart3, Edit, Trash2, Users } from "lucide-react"
+import { BarChart3, Edit, Trash2, Users } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { ExamResultsCard } from "@/app/(app)/students/[studentId]/components/ExamResultsCard"
 import { ExamSummaryCards } from "@/app/(app)/students/[studentId]/components/ExamSummaryCards"
+import { GradeResultsCard } from "@/app/(app)/students/[studentId]/components/GradeResultsCard"
 import {
   LoadingState,
   StudentNotFoundState,
@@ -16,6 +17,11 @@ import { ScoreTrendChart } from "@/app/(app)/students/[studentId]/components/Sco
 import { TagAnalyticsCard } from "@/app/(app)/students/[studentId]/components/TagAnalyticsCard"
 import { useStudentDetail } from "@/app/(app)/students/[studentId]/hooks/useStudentDetail"
 import { useStudentExamResults } from "@/app/(app)/students/[studentId]/hooks/useStudentExamResults"
+import { useStudentGradeResults } from "@/app/(app)/students/[studentId]/hooks/useStudentGradeResults"
+import {
+  type ToolbarAction,
+  toolbarButtonAction,
+} from "@/components/common/OverflowToolbar"
 import PageHeader from "@/components/layout/PageHeader"
 import { DeleteStudentModal } from "@/components/student/DeleteStudentModal"
 import StudentClassroomMembershipModal from "@/components/student/StudentClassroomMembershipModal"
@@ -51,6 +57,8 @@ export default function StudentDetailPage() {
 
   const { results: examResults, loading: examResultsLoading } =
     useStudentExamResults(studentId)
+  const { gradeResults, loading: gradeResultsLoading } =
+    useStudentGradeResults(studentId)
 
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
   // 削除は確認で成績算出の名簿に載っていないかを見せてから（載っていれば断る）
@@ -106,9 +114,46 @@ export default function StudentDetailPage() {
 
   const studentName = `${student.lastName} ${student.firstName}`
 
+  const toolbarActions: ToolbarAction[] = [
+    toolbarButtonAction({
+      id: "edit",
+      priority: 60,
+      icon: Edit,
+      label: "編集",
+      onClick: handleEditStudentClick,
+    }),
+    {
+      id: "delete",
+      priority: 10,
+      node: (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          onClick={() => setIsDeleteModalOpen(true)}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          削除
+        </Button>
+      ),
+      collapsedNode: (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+          onClick={() => setIsDeleteModalOpen(true)}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          削除
+        </Button>
+      ),
+    },
+  ]
+
   return (
     <div className="flex h-full flex-col">
       <PageHeader
+        listHref="/students"
         title={studentName}
         subtitle={
           <>
@@ -125,33 +170,8 @@ export default function StudentDetailPage() {
             )}
           </>
         }
-      >
-        <Button
-          variant="ghost"
-          size="sm"
-          className="rounded-lg"
-          onClick={() => router.push("/students")}
-        >
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          一覧に戻る
-        </Button>
-        <Button
-          onClick={handleEditStudentClick}
-          variant="outline"
-          className="rounded-lg"
-        >
-          <Edit className="mr-2 h-4 w-4" />
-          編集
-        </Button>
-        <Button
-          onClick={() => setIsDeleteModalOpen(true)}
-          variant="ghost"
-          className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          削除
-        </Button>
-      </PageHeader>
+        actions={toolbarActions}
+      />
 
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="container mx-auto max-w-6xl px-6 py-6">
@@ -175,6 +195,10 @@ export default function StudentDetailPage() {
               ) : (
                 <>
                   <ExamSummaryCards results={examResults} />
+                  <GradeResultsCard
+                    gradeResults={gradeResults}
+                    loading={gradeResultsLoading}
+                  />
                   <ScoreTrendChart results={examResults} />
                   <TagAnalyticsCard results={examResults} />
                   <ExamResultsCard results={examResults} />

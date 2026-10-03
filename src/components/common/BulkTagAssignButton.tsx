@@ -12,6 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
+import { matchesSearchTerm } from "@/lib/searchText"
 
 interface BulkTagAssignPanelProps {
   /** 選択中の件数（0 のときは呼び出し側で非表示にする想定） */
@@ -82,11 +83,7 @@ export function BulkTagAssignPanel({
       {allTags.length > 0 && (
         <div className="max-h-28 overflow-y-auto">
           {allTags
-            .filter(
-              (tag) =>
-                !tagInput.trim() ||
-                tag.name.toLowerCase().includes(tagInput.trim().toLowerCase())
-            )
+            .filter((tag) => matchesSearchTerm(tagInput, [tag.name]))
             .map((tag) => (
               <button
                 key={tag.id}

@@ -19,7 +19,6 @@ import {
 } from "@/components/common/BulkTagAssignButton"
 import { EntityListPage } from "@/components/common/EntityListPage"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
-import { usePageHelp } from "@/components/help/usePageHelp"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -90,7 +89,6 @@ const EMPTY_COURSEWORKS: CourseworkSummary[] = []
 export function CourseworkListContainer() {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { helpButton } = usePageHelp()
   const deleteCoursework = useMutation(deleteCourseworkMutation())
   const exportArchive = useMutation(exportCourseworkArchiveMutation())
   const selectImportFile = useMutation(selectCourseworkImportFileMutation())
@@ -405,7 +403,6 @@ export function CourseworkListContainer() {
     <>
       <EntityListPage<CourseworkSummary>
         title="試験外成績資料"
-        helpButton={helpButton}
         rows={filteredCourseworks}
         totalCount={courseworks.length}
         isLoading={isLoading}
