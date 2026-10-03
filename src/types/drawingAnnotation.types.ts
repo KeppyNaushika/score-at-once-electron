@@ -17,7 +17,7 @@ import { defineStringUnion } from "./stringUnion"
  * 描画種別。SQLite に enum が無いため DB 上は String 列で、境界で `toDrawingType`
  * を通して literal union へ絞り込む（Decimal→number / ScoringStatus と同じ型注入）。
  */
-const DRAWING_TYPES = ["text", "line", "rectangle", "ellipse"] as const
+export const DRAWING_TYPES = ["text", "line", "rectangle", "ellipse"] as const
 export type DrawingType = (typeof DRAWING_TYPES)[number]
 
 /**
