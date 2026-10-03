@@ -72,14 +72,14 @@ export function mergePastedRows<T extends RowData>(
     if (targetRow >= newData.length) break
 
     const cells = pastedRows[ri].split("\t")
-    const updatedRow = { ...newData[targetRow] }
+    let updatedRow = newData[targetRow]
     for (let ci = 0; ci < cells.length; ci++) {
       const targetCol = origin.editableColumnIndex + ci
       if (targetCol >= editableColumns.length) break
       const targetColumn = editableColumns[targetCol]
       const colId = targetColumn.id
       if (colId) {
-        ;(updatedRow as Record<string, unknown>)[colId] = cells[ci]
+        updatedRow = { ...updatedRow, [colId]: cells[ci] }
         if (isRejectedValue(targetColumn, cells[ci])) rejectedCount++
       }
     }

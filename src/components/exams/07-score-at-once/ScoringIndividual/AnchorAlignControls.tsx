@@ -16,14 +16,26 @@ import type { AnchorDirection } from "@/types/drawingAnnotation.types"
 
 import { ToolbarTooltip } from "./ToolbarTooltip"
 
-// アンカー方向の取得関数
-const getHorizontalAlign = (direction: AnchorDirection) => {
+type HorizontalAnchor = "left" | "center" | "right"
+type VerticalAnchor = "top" | "center" | "bottom"
+
+/** 縦の寄せ × 横の寄せ → アンカー方向 */
+const ANCHOR_DIRECTION_BY_ALIGN: Record<
+  VerticalAnchor,
+  Record<HorizontalAnchor, AnchorDirection>
+> = {
+  top: { left: "top-left", center: "top", right: "top-right" },
+  center: { left: "left", center: "center", right: "right" },
+  bottom: { left: "bottom-left", center: "bottom", right: "bottom-right" },
+}
+
+const getHorizontalAlign = (direction: AnchorDirection): HorizontalAnchor => {
   if (direction.includes("left")) return "left"
   if (direction.includes("right")) return "right"
   return "center"
 }
 
-const getVerticalAlign = (direction: AnchorDirection) => {
+const getVerticalAlign = (direction: AnchorDirection): VerticalAnchor => {
   if (direction.includes("top")) return "top"
   if (direction.includes("bottom")) return "bottom"
   return "center"
@@ -37,44 +49,19 @@ export function AnchorAlignControls({
   anchorDirection: AnchorDirection
   onAnchorDirectionChange: (direction: AnchorDirection) => void
 }) {
-  // アンカー方向設定
   const setHorizontalAlign = useCallback(
-    (align: "left" | "center" | "right") => {
-      const vertical = getVerticalAlign(anchorDirection)
-      let newDirection: AnchorDirection
-
-      if (vertical === "center" && align === "center") {
-        newDirection = "center"
-      } else if (vertical === "center") {
-        newDirection = align as AnchorDirection
-      } else if (align === "center") {
-        newDirection = vertical as AnchorDirection
-      } else {
-        newDirection = `${vertical}-${align}` as AnchorDirection
-      }
-
-      onAnchorDirectionChange(newDirection)
-    },
+    (align: HorizontalAnchor) =>
+      onAnchorDirectionChange(
+        ANCHOR_DIRECTION_BY_ALIGN[getVerticalAlign(anchorDirection)][align]
+      ),
     [anchorDirection, onAnchorDirectionChange]
   )
 
   const setVerticalAlign = useCallback(
-    (align: "top" | "center" | "bottom") => {
-      const horizontal = getHorizontalAlign(anchorDirection)
-      let newDirection: AnchorDirection
-
-      if (align === "center" && horizontal === "center") {
-        newDirection = "center"
-      } else if (align === "center") {
-        newDirection = horizontal as AnchorDirection
-      } else if (horizontal === "center") {
-        newDirection = align as AnchorDirection
-      } else {
-        newDirection = `${align}-${horizontal}` as AnchorDirection
-      }
-
-      onAnchorDirectionChange(newDirection)
-    },
+    (align: VerticalAnchor) =>
+      onAnchorDirectionChange(
+        ANCHOR_DIRECTION_BY_ALIGN[align][getHorizontalAlign(anchorDirection)]
+      ),
     [anchorDirection, onAnchorDirectionChange]
   )
 

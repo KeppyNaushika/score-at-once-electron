@@ -8,10 +8,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import type {
-  ClickScoringAction,
-  ClickScoringConfig,
+import {
+  CLICK_SCORING_ACTIONS,
+  type ClickScoringAction,
+  type ClickScoringConfig,
 } from "@/types/clickScoring.types"
+import { isOneOf } from "@/types/stringUnion"
 
 import { CLICK_ACTION_OPTIONS } from "./scoringToolbarButtons"
 
@@ -49,9 +51,11 @@ export function ClickScoringSettings({
             <span className="text-gray-600">{labels[clickCount]}</span>
             <Select
               value={clickScoringConfig[clickCount]}
-              onValueChange={(value) =>
-                onClickActionChange(clickCount, value as ClickScoringAction)
-              }
+              onValueChange={(value) => {
+                if (isOneOf(CLICK_SCORING_ACTIONS, value)) {
+                  onClickActionChange(clickCount, value)
+                }
+              }}
             >
               <SelectTrigger className="h-7 w-60 text-xs">
                 <SelectValue />

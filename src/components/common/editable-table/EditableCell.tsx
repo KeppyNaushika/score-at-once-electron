@@ -101,8 +101,8 @@ export function EditableCell<T extends RowData>({
       const table = currentCell.closest("table")
       if (!table) return
       const cells = Array.from(
-        table.querySelectorAll("tbody input")
-      ) as HTMLInputElement[]
+        table.querySelectorAll<HTMLInputElement>("tbody input")
+      )
       const currentIndex = cells.indexOf(currentCell)
       if (currentIndex < 0) return
       const nextIndex = e.shiftKey ? currentIndex - 1 : currentIndex + 1

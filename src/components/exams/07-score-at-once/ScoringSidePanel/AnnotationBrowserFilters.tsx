@@ -13,8 +13,21 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import {
+  DRAWING_TYPES,
+  type DrawingType,
+} from "@/types/drawingAnnotation.types"
+import { isOneOf } from "@/types/stringUnion"
 
 import type { AnnotationFilters } from "./hooks/useAnnotationBrowser"
+
+/** 種類で絞り込む選択肢の表示名 */
+const DRAWING_TYPE_LABELS: Record<DrawingType, string> = {
+  text: "テキスト",
+  line: "直線",
+  rectangle: "長方形",
+  ellipse: "楕円",
+}
 
 /** 手書きの一覧の絞り込み（設問・生徒・種類・お気に入り） */
 export function AnnotationBrowserFilters({
@@ -72,10 +85,7 @@ export function AnnotationBrowserFilters({
           value={filters.type ?? "all"}
           onValueChange={(value) =>
             onFiltersChange({
-              type:
-                value === "all"
-                  ? null
-                  : (value as "text" | "line" | "rectangle" | "ellipse"),
+              type: isOneOf(DRAWING_TYPES, value) ? value : null,
             })
           }
         >
@@ -84,10 +94,11 @@ export function AnnotationBrowserFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">全種類</SelectItem>
-            <SelectItem value="text">テキスト</SelectItem>
-            <SelectItem value="line">直線</SelectItem>
-            <SelectItem value="rectangle">長方形</SelectItem>
-            <SelectItem value="ellipse">楕円</SelectItem>
+            {DRAWING_TYPES.map((drawingType) => (
+              <SelectItem key={drawingType} value={drawingType}>
+                {DRAWING_TYPE_LABELS[drawingType]}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
