@@ -17,7 +17,7 @@ import {
 import {
   deleteGradeItemMutation,
   renameGradeItemMutation,
-} from "@/queries/grade"
+} from "@/queries/gradeStructure"
 import type { GradeItemWithDataSources } from "@/types/grade.types"
 
 interface GradeItemSectionProps {

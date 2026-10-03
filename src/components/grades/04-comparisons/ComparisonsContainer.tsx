@@ -11,12 +11,11 @@ import {
   workflowStep,
   workflowStepHref,
 } from "@/lib/shared/workflowSteps"
+import { gradeDetailQuery, gradeListQuery } from "@/queries/grade"
 import {
   type GradeComparisonRow,
   gradeComparisonsQuery,
-  gradeDetailQuery,
-  gradeListQuery,
-} from "@/queries/grade"
+} from "@/queries/gradeStructure"
 import type { GradeSummary } from "@/types/grade.types"
 
 import { GradeItemComparisons } from "./GradeItemComparisons"

@@ -26,3 +26,14 @@ export function defineStringUnion<T extends string>(
     to: (value) => (isMember(value) ? value : fallback),
   }
 }
+
+/**
+ * 一覧に含まれるかを、要素の型を保ったまま判定する。
+ *
+ * `defineStringUnion` を立てるほどではない、その場の選択肢（ToggleGroup の値・
+ * 設定の値など）を絞り込むのに使う。
+ */
+export const isOneOf = <TValue extends string>(
+  candidates: readonly TValue[],
+  value: string
+): value is TValue => candidates.some((candidate) => candidate === value)

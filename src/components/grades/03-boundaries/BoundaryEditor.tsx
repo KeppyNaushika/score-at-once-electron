@@ -25,7 +25,7 @@ import {
   deleteGradeItemBoundaryMutation,
   reorderGradeItemBoundariesMutation,
   updateGradeItemBoundaryMutation,
-} from "@/queries/grade"
+} from "@/queries/gradeStructure"
 import type { GradeItemWithDataSources } from "@/types/grade.types"
 
 interface BoundaryEditorProps {

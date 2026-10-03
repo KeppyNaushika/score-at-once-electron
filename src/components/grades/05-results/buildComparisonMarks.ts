@@ -1,4 +1,4 @@
-import type { GradeComparisonRow } from "@/queries/grade"
+import type { GradeComparisonRow } from "@/queries/gradeStructure"
 import type {
   GradeCalculationResult,
   GradeItemResult,

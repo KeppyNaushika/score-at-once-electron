@@ -135,9 +135,9 @@ export async function removeStudentsFromExam(
 ) {
   await deleteAfterRecount({
     confirmedCounts,
-    recount: (tx) => countExamStudentDeletionCounts(tx, examId, studentIds),
-    remove: (tx) =>
-      tx.examStudent.deleteMany({
+    recount: () => countExamStudentDeletionCounts(prisma, examId, studentIds),
+    remove: () =>
+      prisma.examStudent.deleteMany({
         where: {
           examId,
           studentId: { in: studentIds },

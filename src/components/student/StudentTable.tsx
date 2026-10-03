@@ -4,11 +4,9 @@ import type { Prisma } from "@prisma/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Download,
-  Edit,
   FolderInput,
   FolderOutput,
   PlusCircle,
-  Trash2,
   Upload,
   Users,
 } from "lucide-react"
@@ -25,12 +23,12 @@ import {
 } from "@/components/common/OverflowToolbar"
 import PageHeader from "@/components/layout/PageHeader"
 import { DeleteStudentModal } from "@/components/student/DeleteStudentModal"
+import { useStudentTableRows } from "@/components/student/hooks/useStudentTableRows"
 import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
 import { StudentArchiveExportDialog } from "@/components/student/StudentArchiveExportDialog"
 import StudentModal from "@/components/student/StudentModal"
+import { StudentTableRow } from "@/components/student/StudentTableRow"
 import { StudentImportWizardModal } from "@/components/student-import/StudentImportWizardModal"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Empty,
@@ -54,20 +52,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { useListPagination } from "@/hooks/useListPagination"
-import { useTableSort } from "@/hooks/useTableSort"
-import { isCurrentMembership } from "@/lib/membership"
-import {
-  classroomFilterOptions,
-  studentSearchTerms,
-} from "@/lib/searchKeywords"
-import { matchesSearchTerm } from "@/lib/searchText"
 import {
   classroomListQuery,
   createStudentMutation,
@@ -77,15 +63,6 @@ import {
 } from "@/queries/student"
 import type { ClassroomWithMemberships } from "@/types/prismaExtensions"
 import type { StudentWithMemberships } from "@/types/prismaExtensions"
-
-// ソート用の型
-interface StudentSortable {
-  id: string
-  studentNumber: string
-  fullName: string
-  enrollmentYear: number | null
-  original: StudentWithMemberships
-}
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_STUDENTS: StudentWithMemberships[] = []
@@ -140,74 +117,14 @@ export default function StudentTable() {
   // 削除の確認を開いている生徒（成績算出の名簿に載っていれば確認画面が断る）
   const studentDeletion = useDialogTarget<StudentWithMemberships>()
 
-  // Data fetching
-  // Filter students
-  const filteredStudents = useMemo(() => {
-    return students.filter((student) => {
-      const matchesSearch = matchesSearchTerm(
-        searchTerm,
-        studentSearchTerms(student)
-      )
-
-      if (!matchesSearch) return false
-
-      // 学級は「その学級に所属したことがあるか」で絞る。在籍中に限ると、
-      // 前年度の学級を選んだときに誰も出なくなる（在籍中かは所属状況のほうで問う）
-      if (
-        filterClassroomId !== "all" &&
-        !student.memberships.some(
-          (membership) => membership.classroom.id === filterClassroomId
-        )
-      ) {
-        return false
-      }
-
-      const hasCurrentMembership = student.memberships.some((membership) =>
-        isCurrentMembership(membership)
-      )
-      if (filterMembershipStatus === "current_unassigned") {
-        return student.memberships.length === 0 || hasCurrentMembership
-      } else if (filterMembershipStatus === "current") {
-        return hasCurrentMembership
-      } else if (filterMembershipStatus === "past") {
-        return student.memberships.length > 0 && !hasCurrentMembership
-      } else if (filterMembershipStatus === "unassigned") {
-        return student.memberships.length === 0
-      }
-      return true
+  const { sortedData, sortConfig, requestSort, classroomOptions } =
+    useStudentTableRows({
+      students,
+      classrooms,
+      searchTerm,
+      classroomId: filterClassroomId,
+      membershipStatus: filterMembershipStatus,
     })
-  }, [students, searchTerm, filterClassroomId, filterMembershipStatus])
-
-  const classroomOptions = useMemo(
-    () =>
-      // 非表示の学級も選べるようにする。前年度の学級はたいてい非表示にされており、
-      // 外すと過去の所属で絞り込めない。表示中を先に並べる
-      classroomFilterOptions(
-        classrooms.toSorted(
-          (classroomA, classroomB) =>
-            Number(classroomA.isVisible === false) -
-              Number(classroomB.isVisible === false) ||
-            classroomA.name.localeCompare(classroomB.name)
-        )
-      ),
-    [classrooms]
-  )
-
-  // ソート用のデータ変換
-  const sortableData = useMemo<StudentSortable[]>(() => {
-    return filteredStudents.map((student) => ({
-      id: student.id,
-      studentNumber: student.studentNumber,
-      fullName: `${student.lastName}${student.firstName}`,
-      enrollmentYear: student.enrollmentYear ?? null,
-      original: student,
-    }))
-  }, [filteredStudents])
-
-  // ソート機能
-  const { sortedData, sortConfig, requestSort } = useTableSort(sortableData, {
-    defaultSort: { key: "fullName", direction: "asc" },
-  })
 
   // 絞り込みと並び順を変えたら先頭のページから見る
   const paginationResetKey = [
@@ -247,28 +164,19 @@ export default function StudentTable() {
   const isSomeSelected =
     !isAllSelected && filteredIds.some((id) => selectedStudentIds.has(id))
 
+  // 全選択・全解除は、表示中のものだけを対象にする
   const toggleSelectAll = () => {
-    if (isAllSelected) {
-      // 表示中のものだけ解除
-      const newSet = new Set(selectedStudentIds)
-      filteredIds.forEach((id) => newSet.delete(id))
-      setSelectedStudentIds(newSet)
-    } else {
-      // 表示中のものを全選択
-      const newSet = new Set(selectedStudentIds)
-      filteredIds.forEach((id) => newSet.add(id))
-      setSelectedStudentIds(newSet)
-    }
+    const nextSelected = new Set(selectedStudentIds)
+    filteredIds.forEach((id) =>
+      isAllSelected ? nextSelected.delete(id) : nextSelected.add(id)
+    )
+    setSelectedStudentIds(nextSelected)
   }
 
   const toggleSelectStudent = (studentId: string) => {
-    const newSet = new Set(selectedStudentIds)
-    if (newSet.has(studentId)) {
-      newSet.delete(studentId)
-    } else {
-      newSet.add(studentId)
-    }
-    setSelectedStudentIds(newSet)
+    const nextSelected = new Set(selectedStudentIds)
+    if (!nextSelected.delete(studentId)) nextSelected.add(studentId)
+    setSelectedStudentIds(nextSelected)
   }
 
   // Event handlers
@@ -497,116 +405,17 @@ export default function StudentTable() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pageRows.map(({ original: student }) => {
-                  const isSelected = selectedStudentIds.has(student.id)
-
-                  return (
-                    <TableRow
-                      key={student.id}
-                      onClick={() => router.push(`/students/${student.id}`)}
-                      className="group cursor-pointer"
-                      data-state={isSelected ? "selected" : undefined}
-                    >
-                      <TableCell
-                        className="w-10"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() =>
-                            toggleSelectStudent(student.id)
-                          }
-                          aria-label={`${student.lastName} ${student.firstName}を選択`}
-                        />
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {student.studentNumber}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {student.lastName} {student.firstName}
-                      </TableCell>
-                      <TableCell className="tabular-nums">
-                        {student.enrollmentYear || (
-                          <span className="text-muted-foreground">未設定</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1.5">
-                          {/* 在籍中を先に、過去の所属は薄い枠で（並びは開始日の新しい順） */}
-                          {student.memberships
-                            .toSorted(
-                              (membershipA, membershipB) =>
-                                Number(isCurrentMembership(membershipB)) -
-                                Number(isCurrentMembership(membershipA))
-                            )
-                            .map((membership) =>
-                              isCurrentMembership(membership) ? (
-                                <Badge
-                                  key={membership.id}
-                                  variant="secondary"
-                                  className="rounded-full px-2.5 py-0.5 text-xs font-normal"
-                                >
-                                  {membership.classroom.name}
-                                </Badge>
-                              ) : (
-                                <Badge
-                                  key={membership.id}
-                                  variant="outline"
-                                  title="過去の所属"
-                                  className="rounded-full px-2.5 py-0.5 text-xs font-normal text-muted-foreground"
-                                >
-                                  {membership.classroom.name}
-                                </Badge>
-                              )
-                            )}
-                          {student.memberships.length === 0 && (
-                            <span className="text-sm text-muted-foreground">
-                              未所属
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                aria-label="生徒を編集"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleEditStudent(student)
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>生徒を編集</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                aria-label="生徒を削除"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  studentDeletion.openWith(student)
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>生徒を削除</TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
+                {pageRows.map(({ original: student }) => (
+                  <StudentTableRow
+                    key={student.id}
+                    student={student}
+                    isSelected={selectedStudentIds.has(student.id)}
+                    onOpen={() => router.push(`/students/${student.id}`)}
+                    onToggleSelect={() => toggleSelectStudent(student.id)}
+                    onEdit={() => handleEditStudent(student)}
+                    onDelete={() => studentDeletion.openWith(student)}
+                  />
+                ))}
                 {sortedData.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6}>

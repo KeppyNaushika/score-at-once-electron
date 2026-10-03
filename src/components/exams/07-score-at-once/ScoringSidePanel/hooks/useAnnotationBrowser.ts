@@ -30,7 +30,7 @@ export interface AnnotationDisplayItem {
 }
 
 // フィルタ設定
-interface AnnotationFilters {
+export interface AnnotationFilters {
   cropRegionId: string | null
   examStudentId: string | null
   type: DrawingType | null

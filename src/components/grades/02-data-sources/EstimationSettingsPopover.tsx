@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { updateDataSourceEstimationMutation } from "@/queries/grade"
+import { updateDataSourceEstimationMutation } from "@/queries/gradeStructure"
 import type {
   AbsentMethod,
   EstimationMode,

@@ -23,7 +23,7 @@ import {
 import {
   deleteDataSourceMutation,
   renameDataSourceMutation,
-} from "@/queries/grade"
+} from "@/queries/gradeStructure"
 import type { GradeDataSourceWithRelations } from "@/types/grade.types"
 
 import { EstimationSettingsPopover } from "./EstimationSettingsPopover"

@@ -527,16 +527,19 @@ Prisma の1文はそれ自体が原子的である。1テーブルへの1操作�
 - **状態** — 「これが今の全体像です、合わせてください」。**利用者が触っていない行まで
   含めて全体の権威を主張する**
 
-DB は NAS 越しに共有され、収束はレコードごとの LWW（`updatedAt` が新しい方が勝つ）で
-決まる。状態を運ぶ IPC は、他端末が直した行まで自分の（古いかもしれない）値で上書きする。
+DB は端末ごとにあり、NAS 上の写しを互いに読んで同期する。収束はレコードごとの
+LWW（`updatedAt` が新しい方が勝つ）で決まる。状態を運ぶ IPC は、他端末が直した行まで
+自分の（古いかもしれない）値で上書きする。
 
 したがって編集内容を書き換える IPC は、**実体ごと・操作ごとに割る**。
 
-| 機能                    | ハンドラ                         | チャンネル数 |
-| ----------------------- | -------------------------------- | ------------ |
-| 成績算出                | `grade*Handlers.ts`（4ファイル） | 57           |
-| 試験外成績資料          | `courseworkHandlers.ts`          | 27           |
-| 採点領域（02-template） | `cropRegionHandlers.ts`          | 22           |
+| 機能                    | ハンドラ                |
+| ----------------------- | ----------------------- |
+| 成績算出                | `grade*Handlers.ts`     |
+| 試験外成績資料          | `courseworkHandlers.ts` |
+| 採点領域（02-template） | `cropRegionHandlers.ts` |
+
+チャンネルの一覧はそれぞれのハンドラのファイルにある（数はここに書かない）。
 
 **例外（状態を運んでよい経路）**: undo / redo・複製・アーカイブ取り込み。これらは本当に
 「この姿にしろ」という一括操作なので、文書丸ごとを運ぶのが正しい。名前で一括操作と分かる
@@ -577,7 +580,7 @@ src/queries/
 フックにしない（`useQuery` / `useMutation` は呼び出し側が呼ぶ）。
 
 ```typescript
-// src/queries/grade.ts
+// src/queries/gradeAdjustment.ts
 export const gradeItemExclusionsQuery = (gradeId: string) =>
   queryOptions({
     queryKey: [...scopeKeys.grade(gradeId), "exclusions"] as const,

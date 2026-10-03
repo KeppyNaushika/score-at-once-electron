@@ -7,7 +7,7 @@ import {
   type CourseworkScoreRow,
   courseworkScoresQuery,
 } from "@/queries/coursework"
-import { type GradeStudentRow, gradeStudentsQuery } from "@/queries/grade"
+import { type GradeStudentRow, gradeStudentsQuery } from "@/queries/gradeRoster"
 import type { GradeItemWithDataSources } from "@/types/grade.types"
 
 /** 未取得のときに毎回新しい値を作らないための空値 */

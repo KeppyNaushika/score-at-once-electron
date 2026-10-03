@@ -33,9 +33,7 @@ import {
   SYNC_EXCLUDE_TABLES,
   SYNC_TABLE_OPTIONS,
 } from "../../electron-src/lib/sync/syncTableConfig"
-
-/** globalSetup が prisma db push で作る、schema.prisma 忠実な基準DB */
-const GROUND_TRUTH_DB = path.resolve(__dirname, "../../data/test-database.db")
+import { GROUND_TRUTH_DB } from "./twoClientHarness"
 
 const TEST_ROOT = path.join(os.tmpdir(), "sync-delete-propagation")
 const NAS_DIR = path.join(TEST_ROOT, "nas")

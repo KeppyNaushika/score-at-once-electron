@@ -61,6 +61,10 @@ import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
 import { useRowSelection } from "@/hooks/useRowSelection"
 import { getAnswerSheetStatus } from "@/lib/answerSheetStatus"
 import {
+  answerSheetBuilderWorkflowSteps,
+  workflowStepHref,
+} from "@/lib/shared/workflowSteps"
+import {
   createAnswerSheetDefinitionMutation,
   exportAnswerSheetDefinitionMutation,
   importAnswerSheetDefinitionMutation,
@@ -302,7 +306,13 @@ export function AnswerSheetDefinitionList() {
 
       await createDefinition({ definition, userId: currentUser.id })
       // 作成直後は編集したいので作成ページへ直行
-      router.push(`/answer-sheet-builder/${newId}/01-edit`)
+      router.push(
+        workflowStepHref(
+          `/answer-sheet-builder/${newId}`,
+          answerSheetBuilderWorkflowSteps,
+          "01-edit"
+        )
+      )
     } catch {
       // 失敗の通知は MutationCache が出す
     }
@@ -311,7 +321,13 @@ export function AnswerSheetDefinitionList() {
   // ドロップダウン「編集」: 作成ページ（エディタ）へ直行
   const handleOpenEditor = useCallback(
     (id: string) => {
-      router.push(`/answer-sheet-builder/${id}/01-edit`)
+      router.push(
+        workflowStepHref(
+          `/answer-sheet-builder/${id}`,
+          answerSheetBuilderWorkflowSteps,
+          "01-edit"
+        )
+      )
     },
     [router]
   )

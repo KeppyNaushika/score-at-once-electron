@@ -8,9 +8,14 @@
  *
  * **拾えるのは、同期で届いたぶんだけ。** DB は端末ごとにあり、他の教員の書き込みは
  * sqlite-nas-sync が後から取り込む。数え直しの時点でまだ届いていない書き足しは
- * 拾えず、削除の後に届く（その行の扱いは同期の側で決まる）。数え直しから削除までは
- * 同じトランザクションに入るので、この端末の中で割り込まれることは無い。ここで
- * 保証するのは**「見せた後に届いて増えたものを黙って消さない」**だけ。
+ * 拾えず、削除の後に届く（その行の扱いは同期の側で決まる）。ここで保証するのは
+ * **「見せた後に届いて増えたものを黙って消さない」**だけ。
+ *
+ * **数え直しと削除はトランザクションで包まない**（docs/coding-style.md「日常の書き込みに
+ * `$transaction` を使わない」）。包んで防げるのは同じ端末の中の割り込みだけで、
+ * 他の教員の書き足しは包んでも包まなくても、数え直しまでに届いていれば止まり、
+ * 届いていなければ止まらない。削除の本体が複数の文で1つの意図を書くとき（消してから
+ * 採番し直す、など）は、その本体が自分でまとめる。
  *
  * **数える定義は、見せたものと揃えること。** 削除が実際に消す行数と、利用者に見せた
  * 件数は一致しない（答案の削除は `unscored` の初期化行も消すが、見せているのは
@@ -20,11 +25,7 @@
  * （`asbDefinitionWrite.ts` の書き込みの関所と同じ考え方）。
  */
 
-import type { Prisma } from "@prisma/client"
-
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
-
-import prisma from "./client"
 
 interface DeleteAfterRecountOptions<TDeleteResult> {
   /**
@@ -36,11 +37,9 @@ interface DeleteAfterRecountOptions<TDeleteResult> {
    * 消す直前に数え直す。**利用者に見せたときと同じ定義で数えること。**
    * 削除しても何も巻き添えにしない選択肢（登録解除だけ、など）では空配列を返す。
    */
-  recount: (tx: Prisma.TransactionClient) => Promise<ConfirmedDeletionCount[]>
+  recount: () => Promise<ConfirmedDeletionCount[]>
   /** 数え直しが見せた件数を超えなかったときだけ呼ばれる、削除の本体 */
-  remove: (tx: Prisma.TransactionClient) => Promise<TDeleteResult>
-  /** 対象が多く既定の 5s を超える削除で伸ばす（超えると P2028 で巻き戻る） */
-  timeoutMs?: number
+  remove: () => Promise<TDeleteResult>
 }
 
 /** 見せた件数と数え直した件数が食い違った1項目 */
@@ -93,25 +92,18 @@ function buildRefusalMessage(differences: RecountDifference[]): string {
 /**
  * 消す前に数え直し、増えていたら中止する。
  *
- * 数え直しと削除は同じトランザクションで行う（別々にすると、その間にこの端末の
- * 書き込みが割り込みうる）。中止は例外で伝える — 削除しなかったことを値で返すと、呼び出し側が
- * 見落としてもコンパイルが通る（docs/coding-style.md「IPC の失敗の伝え方」）。
+ * 中止は例外で伝える — 削除しなかったことを値で返すと、呼び出し側が見落としても
+ * コンパイルが通る（docs/coding-style.md「IPC の失敗の伝え方」）。
  */
 export async function deleteAfterRecount<TDeleteResult>({
   confirmedCounts,
   recount,
   remove,
-  timeoutMs,
 }: DeleteAfterRecountOptions<TDeleteResult>): Promise<TDeleteResult> {
-  return await prisma.$transaction(
-    async (tx) => {
-      const currentCounts = await recount(tx)
-      const differences = findIncreasedCounts(confirmedCounts, currentCounts)
-      if (differences.length > 0) {
-        throw new Error(buildRefusalMessage(differences))
-      }
-      return await remove(tx)
-    },
-    timeoutMs === undefined ? undefined : { timeout: timeoutMs }
-  )
+  const currentCounts = await recount()
+  const differences = findIncreasedCounts(confirmedCounts, currentCounts)
+  if (differences.length > 0) {
+    throw new Error(buildRefusalMessage(differences))
+  }
+  return await remove()
 }

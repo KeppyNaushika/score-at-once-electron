@@ -26,17 +26,19 @@ import {
   nextStepLabel,
   workflowStepHref,
 } from "@/lib/shared/workflowSteps"
+import { gradeDetailQuery } from "@/queries/grade"
 import {
-  createGradeItemMutation,
   type GradeClassroomRow,
   gradeClassroomsQuery,
-  gradeDetailQuery,
-  gradeSourceFitsQuery,
   gradeStudentsQuery,
+} from "@/queries/gradeRoster"
+import {
+  createGradeItemMutation,
+  gradeSourceFitsQuery,
   reorderDataSourcesMutation,
   reorderGradeItemsMutation,
   updateDataSourceEstimationMutation,
-} from "@/queries/grade"
+} from "@/queries/gradeStructure"
 import type {
   AbsentMethod,
   EstimationMode,

@@ -57,11 +57,25 @@ export default function PdfToolsMainView({
     setPageOrder((prev) =>
       prev === null ? null : [...prev, ...files.flatMap(filePageKeys)]
     )
+    // 交互挿入の設定は取り込んだ順に1ファイル1組で持つ（1回に入れるページ数は1から）
+    setInterleaveConfig((prev) => ({
+      ...prev,
+      transforms: [
+        ...prev.transforms,
+        ...files.map((file) => ({ fileId: file.id, pagesPerGroup: 1 })),
+      ],
+    }))
   }
 
   const handleFileRemoved = (fileId: string) => {
     setImportedFiles((prev) => prev.filter((file) => file.id !== fileId))
     setPageOrder((prev) => withoutFilePageOrder(prev, fileId))
+    setInterleaveConfig((prev) => ({
+      ...prev,
+      transforms: prev.transforms.filter(
+        (transform) => transform.fileId !== fileId
+      ),
+    }))
     // ファイル削除時に対応する除外ページ・ページ別回転もクリア
     setExcludedPages((prev) => withoutFilePages(prev, fileId))
     setPageRotations((prev) => withoutFileRotations(prev, fileId))

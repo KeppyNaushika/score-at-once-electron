@@ -9,7 +9,7 @@
 import { describe, expect, it } from "vitest"
 
 import { buildComparisonMarks } from "@/components/grades/05-results/buildComparisonMarks"
-import type { GradeComparisonRow } from "@/queries/grade"
+import type { GradeComparisonRow } from "@/queries/gradeStructure"
 import type {
   GradeCalculationResult,
   GradeItemResult,

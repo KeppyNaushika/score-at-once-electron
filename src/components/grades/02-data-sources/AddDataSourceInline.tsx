@@ -27,7 +27,7 @@ import {
   gradeExamCropRegionsQuery,
   type GradeExamSubtotalGroupRow,
   gradeExamSubtotalGroupsQuery,
-} from "@/queries/grade"
+} from "@/queries/gradeStructure"
 import type { GradeDataSourceInput } from "@/types/grade.types"
 
 import { useDataSourceDefaults } from "./hooks/useDataSourceDefaults"

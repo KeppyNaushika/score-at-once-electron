@@ -3,11 +3,11 @@
 import { useQueries, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 
+import { gradeResultsQuery } from "@/queries/grade"
 import {
   type GradeComparisonRow,
   gradeComparisonsQuery,
-  gradeResultsQuery,
-} from "@/queries/grade"
+} from "@/queries/gradeStructure"
 import type { GradeCalculationResult } from "@/types/grade.types"
 
 import { buildComparisonMarks } from "../buildComparisonMarks"

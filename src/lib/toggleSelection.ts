@@ -1,4 +1,4 @@
-import { isOneOf } from "@/lib/userPreferences"
+import { isOneOf } from "@/types/stringUnion"
 
 /**
  * 単一選択の ToggleGroup の `onValueChange` に渡す、選択を外させない受け口。

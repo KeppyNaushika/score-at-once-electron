@@ -13,12 +13,10 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { GripVertical, Plus, TagIcon, Trash2, XIcon } from "lucide-react"
+import { Plus, TagIcon, XIcon } from "lucide-react"
 import React, { useCallback, useState } from "react"
 
 import { CautionNotice } from "@/components/common/CautionNotice"
@@ -50,86 +48,15 @@ import {
   tagListQuery,
 } from "@/queries/tag"
 
+import {
+  SortableSubtotalItem,
+  type SubtotalFormData,
+} from "./SortableSubtotalItem"
+
 interface SubtotalGroupModalProps {
   isOpen: boolean
   onClose: () => void
   editingGroup: SubtotalGroupRow | null
-}
-
-interface SubtotalFormData {
-  /**
-   * 並べ替えと React の key に使う、この画面の中だけの値。
-   *
-   * **DB の行を指す id ではない。** まだ作られていない項目にも要るので、
-   * 既にある項目では `subtotalId` と同じ値を、新しい項目では uuid を入れる。
-   */
-  key: string
-  /** DB にある行の id。まだ作られていない項目は null */
-  subtotalId: string | null
-  name: string
-  order: number
-}
-
-// ドラッグ可能な小計項目コンポーネント
-function SortableSubtotalItem({
-  subtotal,
-  index,
-  onRename,
-  onDelete,
-}: {
-  subtotal: SubtotalFormData
-  index: number
-  onRename: (index: number, name: string) => void
-  onDelete: (index: number) => void
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: subtotal.key })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex items-center gap-3 rounded-lg border bg-background p-3"
-    >
-      <div
-        {...attributes}
-        {...listeners}
-        className="cursor-grab hover:cursor-grabbing"
-      >
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
-      </div>
-      <Badge variant="outline" className="w-8 text-center">
-        {index + 1}
-      </Badge>
-      <div className="flex-1">
-        <Input
-          placeholder="小計項目名"
-          value={subtotal.name}
-          onChange={(e) => onRename(index, e.target.value)}
-        />
-      </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => onDelete(index)}
-        className="text-destructive hover:text-destructive"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
-  )
 }
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
@@ -224,15 +151,17 @@ export function SubtotalGroupModal({
   }
 
   // 小計項目の名前を変える
-  const renameSubtotal = (index: number, name: string) => {
-    const updated = [...subtotals]
-    updated[index] = { ...updated[index], name }
-    setSubtotals(updated)
+  const renameSubtotal = (key: string, name: string) => {
+    setSubtotals((prev) =>
+      prev.map((subtotal) =>
+        subtotal.key === key ? { ...subtotal, name } : subtotal
+      )
+    )
   }
 
   // 小計項目を削除
-  const deleteSubtotal = (index: number) => {
-    setSubtotals(subtotals.filter((_, i) => i !== index))
+  const deleteSubtotal = (key: string) => {
+    setSubtotals((prev) => prev.filter((subtotal) => subtotal.key !== key))
   }
 
   // ドラッグ終了時の処理
@@ -471,11 +400,11 @@ export function SubtotalGroupModal({
                   strategy={verticalListSortingStrategy}
                 >
                   <div className="space-y-3">
-                    {subtotals.map((subtotal, index) => (
+                    {subtotals.map((subtotal, position) => (
                       <SortableSubtotalItem
                         key={subtotal.key}
                         subtotal={subtotal}
-                        index={index}
+                        position={position}
                         onRename={renameSubtotal}
                         onDelete={deleteSubtotal}
                       />

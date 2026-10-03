@@ -30,7 +30,10 @@ import {
 } from "../../electron-src/lib/sync/syncTableConfig"
 
 /** globalSetup が prisma db push で作る、schema.prisma 忠実な基準DB */
-const GROUND_TRUTH_DB = path.resolve(__dirname, "../../data/test-database.db")
+export const GROUND_TRUTH_DB = path.resolve(
+  __dirname,
+  "../../data/test-database.db"
+)
 
 /** 短命の接続で1操作だけ行う。ライブラリ側の接続とは WAL 経由で共存する */
 export const withDatabase = <T>(

@@ -310,22 +310,25 @@ export async function rosterRemoveClassroom(
   const studentsToRemove = await deleteAfterRecount({
     confirmedCounts,
     // 登録解除だけなら生徒は残るので、巻き添えは何も無い（数え直す対象も無い）
-    recount: (tx) =>
+    recount: () =>
       deleteStudents
-        ? countExclusiveStudentDeletion(tx, adapter, targetId, classroomId)
+        ? countExclusiveStudentDeletion(prisma, adapter, targetId, classroomId)
         : Promise.resolve([]),
-    remove: async (tx) => {
-      const exclusiveStudentIds = deleteStudents
-        ? await computeExclusiveStudents(tx, adapter, targetId, classroomId)
-        : []
-      await adapter.removeClassroomAndStudents(
-        tx,
-        targetId,
-        classroomId,
-        exclusiveStudentIds
-      )
-      return exclusiveStudentIds
-    },
+    // 名簿の行と学級の登録を消す2文で1つの操作（片方だけ残ると、学級を外したのに
+    // 生徒が残る・生徒を消したのに学級が残る）なので、全部か無しかでまとめる
+    remove: () =>
+      prisma.$transaction(async (tx) => {
+        const exclusiveStudentIds = deleteStudents
+          ? await computeExclusiveStudents(tx, adapter, targetId, classroomId)
+          : []
+        await adapter.removeClassroomAndStudents(
+          tx,
+          targetId,
+          classroomId,
+          exclusiveStudentIds
+        )
+        return exclusiveStudentIds
+      }),
   })
 
   const scope = await adapter.scope(targetId)

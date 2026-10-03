@@ -130,9 +130,10 @@ export default function ConfirmationModal({
           {/* 警告メッセージ */}
           {warnings && warnings.length > 0 && (
             <div className="space-y-2">
-              {warnings.map((warning, index) => (
+              {warnings.map((warning) => (
                 <div
-                  key={index}
+                  // 同じ種類・同じ文の注意を2度出すことは無いので、中身で同定する
+                  key={`${warning.type}:${warning.message}`}
                   className={`rounded-md p-3 text-sm whitespace-pre-line ${
                     warning.type === "destructive"
                       ? "border border-red-200 bg-red-50 text-red-800"
@@ -162,9 +163,10 @@ export default function ConfirmationModal({
                     <span className="font-medium">{item.display}</span>
                     {item.badges && (
                       <div className="flex space-x-1">
-                        {item.badges.map((badge, index) => (
+                        {item.badges.map((badge) => (
                           <Badge
-                            key={index}
+                            // 1つの項目に同じ札は付けないので、札の文言で同定する
+                            key={badge.label}
                             variant={badge.variant || "secondary"}
                             className="text-xs"
                           >

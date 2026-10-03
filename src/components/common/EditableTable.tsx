@@ -1,12 +1,7 @@
 "use client"
 "use no memo"
 
-import type {
-  CellContext,
-  ColumnDef,
-  Row,
-  RowData,
-} from "@tanstack/react-table"
+import type { ColumnDef, Row, RowData } from "@tanstack/react-table"
 import {
   columnSizingFeature,
   columnVisibilityFeature,
@@ -15,7 +10,7 @@ import {
   useTable,
 } from "@tanstack/react-table"
 import { Plus, Trash2 } from "lucide-react"
-import React, { useCallback, useMemo, useRef, useState } from "react"
+import React, { useCallback, useMemo } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -33,6 +28,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+
+import { EditableCell } from "./editable-table/EditableCell"
+import {
+  emptyRow,
+  mergePastedRows,
+  type PasteOrigin,
+  replaceWithPastedRows,
+  splitPastedRows,
+} from "./editable-table/pastedRows"
 
 /** 編集セルの確定値をテーブルの外へ渡すために `meta` へ載せる項目 */
 interface EditableTableMeta {
@@ -79,7 +83,7 @@ const editableTableFeatures = tableFeatures({
   columnMeta: {} as EditableColumnMeta,
 })
 
-type EditableTableFeatures = typeof editableTableFeatures
+export type EditableTableFeatures = typeof editableTableFeatures
 
 /** EditableTable に渡す列定義。`meta` はこのテーブル専用の型が付く */
 export type EditableColumnDef<TData extends RowData> = ColumnDef<
@@ -106,150 +110,6 @@ interface EditableTableProps<T extends RowData> {
    */
   transformPastedText?: (pastedText: string) => Promise<string>
 }
-
-/**
- * 貼り付け先の起点（フォーカスしているセル）。
- *
- * 確認ダイアログを開くとフォーカスが移るので、**待つ前に**読んでおく。
- */
-interface PasteOrigin {
-  rowIndex: number
-  editableColumnIndex: number
-}
-
-type EditableCellProps<T extends RowData> = CellContext<
-  EditableTableFeatures,
-  T,
-  unknown
->
-
-function EditableCell<T extends RowData>({
-  getValue,
-  row,
-  column,
-  table,
-}: EditableCellProps<T>) {
-  const committedValue = String(getValue() ?? "")
-  // 編集中の下書きは「どの確定値に対して打ったものか」を一緒に持つ。確定値が
-  // 入れ替われば一致しなくなって自然に外れるので、blur で消さなくてよい。
-  // 消してしまうと、親が受け付けなかった値（満点超過・未定義の評価記号など）が
-  // 無言で消え、赤い警告を出す機会が無くなる。
-  const [draft, setDraft] = useState<{
-    committedValue: string
-    text: string
-  } | null>(null)
-  const strValue =
-    draft?.committedValue === committedValue ? draft.text : committedValue
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const meta = column.columnDef.meta
-  const keepsInvalidValue = meta?.invalidValuePolicy === "keep"
-
-  // 非空かつ検証NGのセルは赤背景で警告
-  const isInvalid =
-    strValue.trim() !== "" && meta?.validate ? !meta.validate(strValue) : false
-
-  const onBlur = () => {
-    table.options.meta?.updateData(row.index, column.id, strValue)
-    // 下書きは残す。親が受け付ければ確定値が変わって外れ、弾かれれば残って赤いまま。
-    // 赤背景だけでは何が悪いか伝わらず、title はホバーしないと出ないので通知する。
-    // 入力どおり保存する列は失われるものが無いので、通知はしない（赤だけで足りる）
-    if (isInvalid && !keepsInvalidValue) {
-      toast.warning(`「${strValue}」は保存されません`, {
-        description: meta?.placeholder
-          ? `入力できる値: ${meta.placeholder}`
-          : undefined,
-      })
-    }
-  }
-
-  const moveFocus = (target: HTMLInputElement) => {
-    target.focus()
-    target.select()
-  }
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    // IME変換確定のEnter/Tabではセル移動しない
-    if (e.nativeEvent.isComposing) return
-
-    const currentCell = inputRef.current
-    if (!currentCell) return
-
-    if (e.key === "Enter") {
-      // 同じ列の上下行へ移動（Shift+Enterで上）
-      e.preventDefault()
-      const table = currentCell.closest("table")
-      if (!table) return
-      const rows = Array.from(table.querySelectorAll("tbody tr"))
-      const currentRow = currentCell.closest("tr")
-      const rowIndex = currentRow ? rows.indexOf(currentRow) : -1
-      if (rowIndex < 0 || !currentRow) return
-      const colIndex = Array.from(currentRow.querySelectorAll("input")).indexOf(
-        currentCell
-      )
-      if (colIndex < 0) return
-
-      const targetRowIndex = e.shiftKey ? rowIndex - 1 : rowIndex + 1
-      if (targetRowIndex < 0 || targetRowIndex >= rows.length) {
-        // 移る先が無くてもフォーカスは外れないので、ここで確定する
-        onBlur()
-        return
-      }
-      const targetInputs = Array.from(
-        rows[targetRowIndex].querySelectorAll("input")
-      )
-      const target =
-        targetInputs[colIndex] ?? targetInputs[targetInputs.length - 1]
-      if (target) moveFocus(target)
-      return
-    }
-
-    if (e.key === "Tab") {
-      // 左右へ移動。行末は次行の先頭、行頭は前行の末尾へ（Shift+Tabで逆）
-      e.preventDefault()
-      const table = currentCell.closest("table")
-      if (!table) return
-      const cells = Array.from(
-        table.querySelectorAll("tbody input")
-      ) as HTMLInputElement[]
-      const currentIndex = cells.indexOf(currentCell)
-      if (currentIndex < 0) return
-      const nextIndex = e.shiftKey ? currentIndex - 1 : currentIndex + 1
-      if (nextIndex >= 0 && nextIndex < cells.length) {
-        moveFocus(cells[nextIndex])
-      } else {
-        // 表の最後（最初）のマス。移る先が無いとフォーカスが外れず onBlur が
-        // 来ないので、ここで確定する。確定しないと、そのまま画面を移ったときに
-        // 最後に打った値が保存されない
-        onBlur()
-      }
-    }
-  }
-
-  return (
-    <input
-      ref={inputRef}
-      value={strValue}
-      onChange={(e) => setDraft({ committedValue, text: e.target.value })}
-      onBlur={onBlur}
-      onKeyDown={onKeyDown}
-      className={`absolute inset-0 h-full w-full border-none px-4 py-2 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none ${
-        isInvalid
-          ? "bg-red-100 text-red-700 focus:bg-red-50"
-          : "bg-transparent focus:bg-white"
-      }`}
-      placeholder={meta?.placeholder || ""}
-      title={
-        isInvalid
-          ? keepsInvalidValue
-            ? "想定していない値です（入力どおり保存します）"
-            : "無効な値です（このままでは保存されません）"
-          : undefined
-      }
-    />
-  )
-}
-
 export function EditableTable<T extends RowData>({
   data,
   columns,
@@ -269,14 +129,9 @@ export function EditableTable<T extends RowData>({
 
   const addRowAfter = useCallback(
     (index: number) => {
-      const newRow = columns.reduce<Record<string, string>>((acc, column) => {
-        if (column.id) acc[column.id] = ""
-        return acc
-      }, {}) as T
-
       onDataChange([
         ...data.slice(0, index + 1),
-        newRow,
+        emptyRow(columns),
         ...data.slice(index + 1),
       ])
     },
@@ -364,23 +219,11 @@ export function EditableTable<T extends RowData>({
   })
 
   const addRow = () => {
-    const newRow = columns.reduce<Record<string, string>>((acc, column) => {
-      if (column.id) acc[column.id] = ""
-      return acc
-    }, {}) as T
-
-    onDataChange([...data, newRow])
+    onDataChange([...data, emptyRow(columns)])
   }
 
   const addMultipleRows = (count: number) => {
-    const newRows = Array.from(
-      { length: count },
-      () =>
-        columns.reduce<Record<string, string>>((acc, column) => {
-          if (column.id) acc[column.id] = ""
-          return acc
-        }, {}) as T
-    )
+    const newRows = Array.from({ length: count }, () => emptyRow(columns))
 
     onDataChange([...data, ...newRows])
   }
@@ -397,19 +240,6 @@ export function EditableTable<T extends RowData>({
       description: "貼り付ける位置がずれていませんか？",
     })
   }
-
-  /**
-   * その列の検証に照らして保存されない値か。
-   *
-   * 入力どおり保存する列（`invalidValuePolicy: "keep"`）は、検証NGでも失われない
-   * ので数えない。
-   */
-  const isRejected = (column: EditableColumnDef<T>, value: string) =>
-    value.trim() !== "" &&
-    column.meta?.validate &&
-    column.meta.invalidValuePolicy !== "keep"
-      ? !column.meta.validate(value)
-      : false
 
   /** 編集できる列だけを、表に並んでいる順で */
   const editableColumnsForPaste = columns.filter(
@@ -447,58 +277,14 @@ export function EditableTable<T extends RowData>({
 
   /** 貼り付けられた文字列を表へ配る */
   const applyPastedText = (pastedText: string, origin: PasteOrigin) => {
-    // CRLF/CR を LF に正規化してから分割（末尾セルに \r が混入するのを防ぐ）
-    const rows = pastedText.replace(/\r\n?/g, "\n").split("\n")
-    // 末尾の終端改行による空行のみ除去。途中の空行は行対応を保つため残す
-    // （空行を除去すると空白セルの分だけ以降の行が上に詰まりズレる）
-    while (rows.length > 0 && rows[rows.length - 1].trim() === "") rows.pop()
+    const pastedRows = splitPastedRows(pastedText)
+    if (pastedRows.length === 0) return
 
-    if (rows.length === 0) return
-
-    if (hasReadOnlyColumns) {
-      // マージ型ペースト: readOnlyカラムをスキップし、editableカラムのみにデータをマッピング
-      const editableCols = editableColumnsForPaste
-      const newData = [...data]
-      let rejectedCount = 0
-      for (let ri = 0; ri < rows.length; ri++) {
-        const targetRow = origin.rowIndex + ri
-        if (targetRow >= newData.length) break
-
-        const cells = rows[ri].split("\t")
-        const updatedRow = { ...newData[targetRow] }
-        for (let ci = 0; ci < cells.length; ci++) {
-          const targetCol = origin.editableColumnIndex + ci
-          if (targetCol >= editableCols.length) break
-          const targetColumn = editableCols[targetCol]
-          const colId = targetColumn.id
-          if (colId) {
-            ;(updatedRow as Record<string, unknown>)[colId] = cells[ci]
-            if (isRejected(targetColumn, cells[ci])) rejectedCount++
-          }
-        }
-        newData[targetRow] = updatedRow
-      }
-
-      onDataChange(newData)
-      notifyRejectedPaste(rejectedCount)
-    } else {
-      // 全置換型ペースト（後方互換）
-      let rejectedCount = 0
-      const pastedData = rows.map((row) => {
-        const cells = row.split("\t")
-        return columns.reduce<Record<string, string>>((acc, column, index) => {
-          if (column.id) {
-            const value = cells[index] || ""
-            acc[column.id] = value
-            if (isRejected(column, value)) rejectedCount++
-          }
-          return acc
-        }, {}) as T
-      })
-
-      onDataChange(pastedData)
-      notifyRejectedPaste(rejectedCount)
-    }
+    const pasted = hasReadOnlyColumns
+      ? mergePastedRows(data, pastedRows, origin, editableColumnsForPaste)
+      : replaceWithPastedRows(pastedRows, columns)
+    onDataChange(pasted.rows)
+    notifyRejectedPaste(pasted.rejectedCount)
   }
 
   const handlePaste = (e: React.ClipboardEvent) => {

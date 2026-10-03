@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { Download, Edit, PlusCircle, School, Trash2 } from "lucide-react"
+import { Download, PlusCircle, School } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -15,8 +15,6 @@ import {
   toolbarButtonAction,
 } from "@/components/common/OverflowToolbar"
 import PageHeader from "@/components/layout/PageHeader"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Empty,
@@ -40,17 +38,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { useListPagination } from "@/hooks/useListPagination"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
 import { matchesSearchTerm } from "@/lib/searchText"
-import { isOneOf } from "@/lib/userPreferences"
 import {
   classroomListQuery,
   createClassroomMutation,
@@ -59,6 +51,9 @@ import {
   updateClassroomMutation,
 } from "@/queries/student"
 import type { ClassroomWithMemberships } from "@/types/prismaExtensions"
+import { isOneOf } from "@/types/stringUnion"
+
+import { ClassroomManagementRow } from "./ClassroomManagementRow"
 
 // ソート用の型
 interface ClassroomSortable {
@@ -383,115 +378,22 @@ export default function ClassroomManagementTable() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pageRows.map(({ original: classroomItem, memberCount }) => {
-                  const isSelected = selectedClassroomIds.has(classroomItem.id)
-
-                  return (
-                    <TableRow
-                      key={classroomItem.id}
-                      onClick={() =>
-                        router.push(`/classrooms/${classroomItem.id}`)
-                      }
-                      className="group cursor-pointer"
-                      data-state={isSelected ? "selected" : undefined}
-                    >
-                      <TableCell
-                        className="w-10"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() =>
-                            toggleSelectClassroom(classroomItem.id)
-                          }
-                          aria-label={`${classroomItem.name}を選択`}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {classroomItem.name}
-                        {classroomItem.isVisible === false && (
-                          <Badge
-                            variant="secondary"
-                            className="ml-2 rounded-full px-2 py-0 text-xs font-normal"
-                          >
-                            非表示
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {classroomItem.classroomCode ? (
-                          <Badge
-                            variant="outline"
-                            className="rounded-full px-2.5 py-0.5 text-xs font-normal"
-                          >
-                            {classroomItem.classroomCode}
-                          </Badge>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            —
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="tabular-nums">
-                        {classroomItem.grade || (
-                          <span className="text-muted-foreground">未設定</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {classroomItem.description ? (
-                          <span className="max-w-xs truncate text-sm">
-                            {classroomItem.description}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            —
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="tabular-nums">
-                        {memberCount}名
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                aria-label="学級を編集"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleEditClassroom(classroomItem)
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>学級を編集</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                aria-label="学級を削除"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  classroomDeletion.openWith(classroomItem)
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>学級を削除</TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
+                {pageRows.map(({ original: classroomItem, memberCount }) => (
+                  <ClassroomManagementRow
+                    key={classroomItem.id}
+                    classroom={classroomItem}
+                    memberCount={memberCount}
+                    isSelected={selectedClassroomIds.has(classroomItem.id)}
+                    onOpen={() =>
+                      router.push(`/classrooms/${classroomItem.id}`)
+                    }
+                    onToggleSelect={() =>
+                      toggleSelectClassroom(classroomItem.id)
+                    }
+                    onEdit={() => handleEditClassroom(classroomItem)}
+                    onDelete={() => classroomDeletion.openWith(classroomItem)}
+                  />
+                ))}
                 {sortedData.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7}>

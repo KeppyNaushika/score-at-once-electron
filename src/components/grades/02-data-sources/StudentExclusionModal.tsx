@@ -25,9 +25,9 @@ import {
   buildGradeExclusionKey,
   type GradeItemExclusionRow,
   gradeItemExclusionsQuery,
-  type GradeStudentRow,
   setGradeItemExclusionMutation,
-} from "@/queries/grade"
+} from "@/queries/gradeAdjustment"
+import { type GradeStudentRow } from "@/queries/gradeRoster"
 import type { GradeItemWithDataSources } from "@/types/grade.types"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
