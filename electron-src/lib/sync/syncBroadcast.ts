@@ -49,8 +49,9 @@ export function broadcastRecordFolds(report: SyncRecordFoldReport): void {
 /**
  * 親が他のPCで削除されたために表から外れた行・親が作り直されて戻った行を押し出す。
  *
- * `broadcastRecordFolds` と同じく**既読は持たない**が、こちらは取りこぼしても事実は
- * 失われない（ライブラリの内部表 `_sns_unplaceable` に残っていて、外れたままの行は
+ * `broadcastRecordFolds` と同じく**既読は持たない**。あとから見返す口は監査ログ
+ * （`sync.parent_deleted.hide` / `sync.parent_deleted.restore`）に寄せる。取りこぼしても
+ * 事実は失われない（ライブラリの内部表 `_sns_unplaceable` に残っていて、外れたままの行は
  * 次の回でもう一度は出ないだけ）。
  */
 export function broadcastParentDeleted(report: SyncParentDeletedReport): void {

@@ -708,6 +708,34 @@ const AUDIT_ACTIONS = {
     verb: "other",
     label: "同期で隠していた{target}を表示に戻しました",
   },
+  /**
+   * NAS同期で、親が他のPCで削除されていたため、そこへぶら下がる行を**表から外した**
+   * ことの記録。
+   *
+   * 親の削除と並行して、こちらで子を書き足していた場合に起きる。**何も消していない** —
+   * 子の版はライブラリの帳簿に残っていて、親が同じ id で作り直されれば表へ戻る
+   * （`sync.parent_deleted.restore`）。だから verb は `delete` ではない。
+   *
+   * 1回の同期で数百行出うるので、**削除された親1つにつき1行**にまとめる。対象
+   * （`entityType` / `entityId`）は削除された親（孫なら大元）で、metadata の
+   * `causeTable` / `causeId` も同じ。外れた行は `records`（テーブル名と id）、
+   * 件数は `count` と `countByTable` に入る。
+   */
+  "sync.parent_deleted.hide": {
+    category: "system",
+    verb: "other",
+    label:
+      "他のPCで{target}が削除されていたため、ぶら下がる行を表示から外しました",
+  },
+  /**
+   * NAS同期で、削除されていた親が作り直され、外していた行が**表示に戻った**ことの記録。
+   * metadata の形は `sync.parent_deleted.hide` と同じ。
+   */
+  "sync.parent_deleted.restore": {
+    category: "system",
+    verb: "other",
+    label: "他のPCで{target}が作り直されたため、外していた行を表示に戻しました",
+  },
 } as const satisfies Record<string, AuditActionDef>
 
 /** 定義済みアクションキーの型 */

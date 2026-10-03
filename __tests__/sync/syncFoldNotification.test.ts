@@ -320,4 +320,192 @@ describe("同期で見え方が変わった行を伝える", () => {
       })
     )
   })
+
+  it("親の削除で外れた行を、削除された親1つにつき1行で監査ログへ残す（親が対象・操作者は null・束ねない）", async () => {
+    const onAfterSync = await startWithCapturedCallback()
+
+    onAfterSync(
+      null,
+      syncResultWith({
+        parentDeleted: [
+          {
+            tableName: "QuestionScore",
+            recordId: "score-1",
+            content: { id: "score-1", examStudentId: "exam-student-1" },
+            causeTable: "ExamStudent",
+            causeId: "exam-student-1",
+          },
+          {
+            tableName: "QuestionScore",
+            recordId: "score-2",
+            content: { id: "score-2", examStudentId: "exam-student-1" },
+            causeTable: "ExamStudent",
+            causeId: "exam-student-1",
+          },
+        ],
+      })
+    )
+    await waitForDetachedWrites()
+
+    expect(mockRecordAuditLog).toHaveBeenCalledTimes(1)
+    // coalesceKey を持たない（後から届いた行の一覧を捨てない）ことも引数全体で確かめる
+    expect(mockRecordAuditLog).toHaveBeenCalledWith({
+      action: "sync.parent_deleted.hide",
+      userId: null,
+      entityType: "ExamStudent",
+      entityId: "exam-student-1",
+      target: "試験の受験生徒",
+      extra: {
+        causeTable: "ExamStudent",
+        causeId: "exam-student-1",
+        count: 2,
+        countByTable: { QuestionScore: 2 },
+        records: [
+          { tableName: "QuestionScore", recordId: "score-1" },
+          { tableName: "QuestionScore", recordId: "score-2" },
+        ],
+      },
+    })
+  })
+
+  it("同じ親の子が複数の表にまたがるとき、表ごとに数える", async () => {
+    const onAfterSync = await startWithCapturedCallback()
+
+    onAfterSync(
+      null,
+      syncResultWith({
+        parentDeleted: [
+          {
+            tableName: "QuestionScore",
+            recordId: "score-1",
+            content: { id: "score-1" },
+            causeTable: "ExamStudent",
+            causeId: "exam-student-1",
+          },
+          {
+            tableName: "StudentAnswerImage",
+            recordId: "image-1",
+            content: { id: "image-1" },
+            causeTable: "ExamStudent",
+            causeId: "exam-student-1",
+          },
+          {
+            tableName: "QuestionScore",
+            recordId: "score-2",
+            content: { id: "score-2" },
+            causeTable: "ExamStudent",
+            causeId: "exam-student-1",
+          },
+        ],
+      })
+    )
+    await waitForDetachedWrites()
+
+    expect(mockRecordAuditLog).toHaveBeenCalledTimes(1)
+    expect(mockRecordAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        extra: expect.objectContaining({
+          count: 3,
+          countByTable: { QuestionScore: 2, StudentAnswerImage: 1 },
+        }),
+      })
+    )
+  })
+
+  it("削除された親が2つなら、親ごとに2行で記録する", async () => {
+    const onAfterSync = await startWithCapturedCallback()
+
+    onAfterSync(
+      null,
+      syncResultWith({
+        parentDeleted: [
+          {
+            tableName: "QuestionScore",
+            recordId: "score-1",
+            content: { id: "score-1" },
+            causeTable: "ExamStudent",
+            causeId: "exam-student-1",
+          },
+          {
+            tableName: "StudentAnswerImage",
+            recordId: "image-1",
+            content: { id: "image-1" },
+            causeTable: "ExamPage",
+            causeId: "exam-page-1",
+          },
+          {
+            tableName: "QuestionScore",
+            recordId: "score-2",
+            content: { id: "score-2" },
+            causeTable: "ExamStudent",
+            causeId: "exam-student-1",
+          },
+        ],
+      })
+    )
+    await waitForDetachedWrites()
+
+    expect(mockRecordAuditLog).toHaveBeenCalledTimes(2)
+    expect(mockRecordAuditLog).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        entityType: "ExamStudent",
+        entityId: "exam-student-1",
+        extra: expect.objectContaining({
+          count: 2,
+          records: [
+            { tableName: "QuestionScore", recordId: "score-1" },
+            { tableName: "QuestionScore", recordId: "score-2" },
+          ],
+        }),
+      })
+    )
+    expect(mockRecordAuditLog).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        entityType: "ExamPage",
+        entityId: "exam-page-1",
+        extra: expect.objectContaining({
+          count: 1,
+          records: [{ tableName: "StudentAnswerImage", recordId: "image-1" }],
+        }),
+      })
+    )
+  })
+
+  it("親が作り直されて戻った行を、戻ったことを示す action で監査ログへ残す", async () => {
+    const onAfterSync = await startWithCapturedCallback()
+
+    onAfterSync(
+      null,
+      syncResultWith({
+        parentReturned: [
+          {
+            tableName: "QuestionScore",
+            recordId: "score-1",
+            content: { id: "score-1", examStudentId: "exam-student-1" },
+            causeTable: "ExamStudent",
+            causeId: "exam-student-1",
+          },
+        ],
+      })
+    )
+    await waitForDetachedWrites()
+
+    expect(mockRecordAuditLog).toHaveBeenCalledTimes(1)
+    expect(mockRecordAuditLog).toHaveBeenCalledWith({
+      action: "sync.parent_deleted.restore",
+      userId: null,
+      entityType: "ExamStudent",
+      entityId: "exam-student-1",
+      target: "試験の受験生徒",
+      extra: {
+        causeTable: "ExamStudent",
+        causeId: "exam-student-1",
+        count: 1,
+        countByTable: { QuestionScore: 1 },
+        records: [{ tableName: "QuestionScore", recordId: "score-1" }],
+      },
+    })
+  })
 })
