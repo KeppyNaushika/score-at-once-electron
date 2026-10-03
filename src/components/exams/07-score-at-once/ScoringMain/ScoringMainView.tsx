@@ -1,11 +1,6 @@
 "use client"
 
-import {
-  useMutation,
-  useQueries,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query"
+import { useQueryClient } from "@tanstack/react-query"
 import Head from "next/head"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -17,10 +12,17 @@ import {
   ShortcutProvider,
   useShortcutContext,
 } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
+import { useAnnotationVersions } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnnotationVersions"
+import { useAnswerSelection } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerSelection"
 import { useAnswerWhiteness } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerWhiteness"
 import { useAssignedCropRegions } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAssignedCropRegions"
 import { useBatchScoringWithProgress } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useBatchScoringWithProgress"
-import { useMasterAnswerHoldRelease } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useMasterAnswerHoldRelease"
+import { useClickAndMouseScoring } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useClickAndMouseScoring"
+import { useDecisionEntry } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useDecisionEntry"
+import { useGridZoom } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useGridZoom"
+import { useIndividualNavigation } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useIndividualNavigation"
+import { useMasterAnswerPages } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useMasterAnswerPages"
+import { useMasterAnswerVisibility } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useMasterAnswerVisibility"
 import { usePartialScore } from "@/components/exams/07-score-at-once/ScoringMain/hooks/usePartialScore"
 import { useScoringActions } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringActions"
 import { useScoringData } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringData"
@@ -30,6 +32,7 @@ import { useScoringFilter } from "@/components/exams/07-score-at-once/ScoringMai
 import { useScoringMainState } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringMainState"
 import { useScoringMode } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringMode"
 import { useScoringNavigation } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringNavigation"
+import { useScoringPreferences } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringPreferences"
 import { useScoringShortcuts } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringShortcuts"
 import { useStudentAnswerManagement } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useStudentAnswerManagement"
 import { ScoringContentArea } from "@/components/exams/07-score-at-once/ScoringMain/ScoringContentArea"
@@ -37,29 +40,13 @@ import { ScoringHeaderControls } from "@/components/exams/07-score-at-once/Scori
 import { ScoringModals } from "@/components/exams/07-score-at-once/ScoringMain/ScoringModals"
 import { ScoringModeModal } from "@/components/exams/07-score-at-once/ScoringMain/ScoringModeModal"
 import {
-  buildScoringSettings,
-  SCORING_PREFERENCE_KEYS,
-} from "@/components/exams/07-score-at-once/ScoringMain/scoringPreferences"
-import {
   ScoringErrorState,
   ScoringLoadingState,
 } from "@/components/exams/07-score-at-once/ScoringMain/ScoringStates"
 import { ScoringSidePanel } from "@/components/exams/07-score-at-once/ScoringSidePanel/ScoringSidePanel"
-import type { MouseBrushAction } from "@/components/exams/07-score-at-once/types"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
-import { useExamDecisionSummary } from "@/hooks/useExamDecisionSummary"
-import { resolveExamPaperSize } from "@/lib/shared/examPaperSize"
+import { examWorkflowSteps, workflowStepHref } from "@/lib/shared/workflowSteps"
 import { questionScoresScope } from "@/queries/scoring"
-import {
-  setUserClickScoringActionMutation,
-  setUserPreferenceMutation,
-  userClickScoringActionsQuery,
-  userPreferenceQuery,
-} from "@/queries/settings"
-import {
-  DEFAULT_CLICK_SCORING_CONFIG,
-  toClickScoringConfig,
-} from "@/types/clickScoring.types"
 
 /** 内部コンポーネント（ShortcutProvider内で使用） */
 function ScoringMainViewContent() {
@@ -101,26 +88,8 @@ function ScoringMainViewContent() {
   } = useScoringDataLoader(examId)
 
   /** 設定管理フック */
-  // 採点画面の設定。保存文字列を並べて取り、値の組み立ては純粋関数が行う
-  const preferenceQueries = useQueries({
-    queries: SCORING_PREFERENCE_KEYS.map((key) =>
-      userPreferenceQuery(currentUser.id, key)
-    ),
-  })
-  const setPreference = useMutation(setUserPreferenceMutation(currentUser.id))
-  // クリック回数ごとの動作は回数ごとに1行。**塊で書かない**（続けて2つ変えると
-  // 先の1つが消える）
-  const { data: clickScoringConfig = DEFAULT_CLICK_SCORING_CONFIG } = useQuery({
-    ...userClickScoringActionsQuery(currentUser.id),
-    select: toClickScoringConfig,
-  })
-  const { mutate: setClickAction } = useMutation(
-    setUserClickScoringActionMutation(currentUser.id)
-  )
-  const scoringSettings = buildScoringSettings(
-    preferenceQueries.map((preferenceQuery) => preferenceQuery.data ?? null),
-    setPreference.mutate
-  )
+  const { scoringSettings, clickScoringConfig, setClickAction } =
+    useScoringPreferences(currentUser.id)
   const {
     itemsPerLine,
     autoScroll,
@@ -146,29 +115,16 @@ function ScoringMainViewContent() {
     setScoringBehavior,
   } = scoringSettings
 
-  /** 模範解答表示状態（toggle/hold-to-show制御） */
-  const [masterAnswerVisible, setMasterAnswerVisible] = useState(false)
-
   const [questionChangeVersion, setQuestionChangeVersion] = useState(0)
 
   /** アノテーション双方向連携用バージョンカウンター */
-  const [annotationVersionForBrowser, setAnnotationVersionForBrowser] =
-    useState(0)
-  const [annotationVersionForCanvas, setAnnotationVersionForCanvas] =
-    useState(0)
-  const [annotationVersionForGrid, setAnnotationVersionForGrid] = useState(0)
-
-  // キャンバスでアノテーション変更 → ブラウザパネル一覧 + Grid一覧をリロード
-  const handleCanvasAnnotationChanged = useCallback(() => {
-    setAnnotationVersionForBrowser((v) => v + 1)
-    setAnnotationVersionForGrid((v) => v + 1)
-  }, [])
-
-  // ブラウザの+ボタンでアノテーション追加 → キャンバスプレビュー + Grid一覧をリロード
-  const handleBrowserAnnotationAdded = useCallback(() => {
-    setAnnotationVersionForCanvas((v) => v + 1)
-    setAnnotationVersionForGrid((v) => v + 1)
-  }, [])
+  const {
+    annotationVersionForBrowser,
+    annotationVersionForCanvas,
+    annotationVersionForGrid,
+    handleCanvasAnnotationChanged,
+    handleBrowserAnnotationAdded,
+  } = useAnnotationVersions()
 
   /** OMR自動採点モーダル */
   const [showOmrModal, setShowOmrModal] = useState(false)
@@ -299,29 +255,12 @@ function ScoringMainViewContent() {
     })
   }, [queryClient, examId])
 
-  /**
-   * 裁定状況。ここで要るのは**件数バッジだけ**で、裁定そのものは
-   * 「8. 採点確定」の段が持つ。件数を出すのは、確定が要る状態に気づく場所が
-   * 採点の最中だからで、段のタブを見に行かせないため。
-   */
-  const { summary: decisionSummary } = useExamDecisionSummary(
+  /** 採点確定の段への導線と、裁定待ちの件数（裁定そのものは「8. 採点確定」の段） */
+  const { showDecisionEntry, pendingDecisionCount } = useDecisionEntry(
     examId,
     currentUser.id,
-    // 単独利用（メンバー1人）では裁定サマリを引かない。全採点行の走査を
-    // 画面入場ごとに払わないため（競合は構造的にゼロで結果は常に空）。
-    memberCount > 1
+    memberCount
   )
-
-  const pendingDecisionCount =
-    (decisionSummary?.conflictCount ?? 0) + (decisionSummary?.staleCount ?? 0)
-
-  /**
-   * 単独利用では確定への導線を出さない。
-   * メンバーが1人なら分担する相手がおらず、提案も常に1件なので
-   * 競合は構造的にゼロになる（＝確定の段に用が無い）。
-   * 裁定サマリを引くかの条件と同じものを使い、両者がずれないようにする。
-   */
-  const showDecisionEntry = memberCount > 1
 
   /** フィルタリング管理hook */
   const {
@@ -355,32 +294,14 @@ function ScoringMainViewContent() {
     isWhitenessPending,
   })
 
-  const handleReplaceSelection = useCallback(
-    (ids: string[]) => {
-      replaceSelection(ids)
-    },
-    [replaceSelection]
-  )
-
-  /** 全選択：表示中（フィルタ適用後）の答案をすべて選択 */
-  const handleSelectAll = useCallback(() => {
-    replaceSelection(filteredScoringDataIds)
-  }, [replaceSelection, filteredScoringDataIds])
-
-  /** 未採点の生徒を全て選択（フィルターで非表示なら強制表示） */
-  const handleSelectUnscored = useCallback(() => {
-    // 未採点フィルターが無効なら有効にする
-    if (!filterSettings.unscored) {
-      handleToggleFilter("unscored")
-    }
-    // 次のレンダー後に選択するためqueueMicrotaskで遅延
-    queueMicrotask(() => {
-      const unscoredIds = allScoringData
-        .filter((scoringData) => scoringData.status === "unscored")
-        .map((scoringData) => scoringData.id)
-      replaceSelection(unscoredIds)
+  const { handleReplaceSelection, handleSelectAll, handleSelectUnscored } =
+    useAnswerSelection({
+      allScoringData,
+      filteredScoringDataIds,
+      filterSettings,
+      handleToggleFilter,
+      replaceSelection,
     })
-  }, [allScoringData, replaceSelection, filterSettings, handleToggleFilter])
 
   const { handleNextQuestion, handlePrevQuestion, handleGridNavigation } =
     useScoringNavigation({
@@ -396,61 +317,17 @@ function ScoringMainViewContent() {
     })
 
   /** 1行あたりの表示件数を増減（ショートカットキー =/-） */
-  const handleZoomIn = useCallback(() => {
-    const next = Math.min(itemsPerLine[0] + 1, 10)
-    setItemsPerLine([next])
-  }, [itemsPerLine, setItemsPerLine])
-
-  const handleZoomOut = useCallback(() => {
-    const next = Math.max(itemsPerLine[0] - 1, 1)
-    setItemsPerLine([next])
-  }, [itemsPerLine, setItemsPerLine])
-
-  const handleResetZoom = useCallback(() => {
-    setItemsPerLine([5])
-  }, [setItemsPerLine])
-
-  /**
-   * 個別モード用ナビゲーション
-   * レイアウト方向に応じてWASD/矢印キーを次/前の生徒に変換
-   */
-  const handleIndividualNavigation = useCallback(
-    (key: string) => {
-      // レイアウト方向ごとに「次の生徒」方向のキーを判定
-      let isNext = false
-      let isPrev = false
-
-      switch (layoutDirection) {
-        case "right-down":
-          // 右→下: d/s/ArrowDown = next, a/w/ArrowUp = prev
-          isNext = key === "d" || key === "s" || key === "ArrowDown"
-          isPrev = key === "a" || key === "w" || key === "ArrowUp"
-          break
-        case "left-down":
-          // 左→下: a/s/ArrowDown = next, d/w/ArrowUp = prev
-          isNext = key === "a" || key === "s" || key === "ArrowDown"
-          isPrev = key === "d" || key === "w" || key === "ArrowUp"
-          break
-        case "down-right":
-          // 下→右: s/d/ArrowDown = next, w/a/ArrowUp = prev
-          isNext = key === "s" || key === "d" || key === "ArrowDown"
-          isPrev = key === "w" || key === "a" || key === "ArrowUp"
-          break
-        case "down-left":
-          // 下→左: s/a/ArrowDown = next, w/d/ArrowUp = prev
-          isNext = key === "s" || key === "a" || key === "ArrowDown"
-          isPrev = key === "w" || key === "d" || key === "ArrowUp"
-          break
-      }
-
-      if (isNext) {
-        handleIndividualNextStudent()
-      } else if (isPrev) {
-        handleIndividualPrevStudent()
-      }
-    },
-    [layoutDirection, handleIndividualNextStudent, handleIndividualPrevStudent]
+  const { handleZoomIn, handleZoomOut, handleResetZoom } = useGridZoom(
+    itemsPerLine,
+    setItemsPerLine
   )
+
+  /** 個別モード用ナビゲーション（レイアウト方向に応じて次/前の生徒へ） */
+  const handleIndividualNavigation = useIndividualNavigation({
+    layoutDirection,
+    handleIndividualNextStudent,
+    handleIndividualPrevStudent,
+  })
 
   const {
     handleBatchScoreWithProgress: handleBatchScoreWithProgressUnguarded,
@@ -531,109 +408,21 @@ function ScoringMainViewContent() {
     [guardScoring, handleBatchScoreUnguarded, setRecentlyScoredAnswers]
   )
 
-  /** クリック採点：デバウンス後にクリック回数に応じたアクションを実行 */
-  const handleClickScoring = useCallback(
-    (answerId: string, clickCount: number) => {
-      if (answerId.startsWith("master-")) return
-      const action = clickScoringConfig[clickCount as 2 | 3 | 4] ?? "none"
-      if (action === "none") return
-
-      if (action === "individual") {
-        replaceSelection([answerId])
-        setGradingMode("individual")
-        return
-      }
-
-      if (action === "partial_modal") {
-        replaceSelection([answerId])
-        openPartialScoreModal(new Set([answerId]))
-        return
-      }
-
-      // 採点ステータスを直接適用
-      scoreAnswers(action, [answerId])
-    },
-    [
-      clickScoringConfig,
-      replaceSelection,
-      setGradingMode,
-      openPartialScoreModal,
-      scoreAnswers,
-    ]
-  )
-
-  /** マウスモード: クリック採点（トグル付き） */
-  const handleMouseScoring = useCallback(
-    (answerId: string, status: MouseBrushAction, isToggle: boolean) => {
-      if (answerId.startsWith("master-")) return
-
-      // 「部分点入力」ブラシ: クリックした答案の部分点入力モーダルを開く
-      // （ダブルクリックの「部分点入力」動作と同じ）
-      if (status === "partial_modal") {
-        replaceSelection([answerId])
-        openPartialScoreModal(new Set([answerId]))
-        return
-      }
-
-      // トグル: 同じステータスなら未採点に戻す。
-      //
-      // 判断の元にするのはキャッシュだが、**画面の色も同じキャッシュから出ている**。
-      // 利用者は色が変わったのを見てから押すので、両者が食い違うのは取り直しが
-      // 着地する前の一瞬だけ。そこで押したなら、見えている姿（未採点）に対する
-      // 「塗る」であって、意図とはずれない（R6 で検討して据え置き）
-      if (isToggle) {
-        const currentData = allScoringData.find(
-          (scoringData) => scoringData.id === answerId
-        )
-        if (currentData?.status === status) {
-          scoreAnswers("unscored", [answerId])
-          return
-        }
-      }
-
-      scoreAnswers(status, [answerId])
-    },
-    [allScoringData, scoreAnswers, replaceSelection, openPartialScoreModal]
-  )
-
-  /** マウスモード: 表示中の未採点を一括採点 */
-  const handleBatchScoreVisibleUnscored = useCallback(
-    (status: MouseBrushAction) => {
-      const unscoredVisible = allScoringData.filter(
-        (scoringData) =>
-          scoringData.status === "unscored" &&
-          filteredScoringDataIds.includes(scoringData.id)
-      )
-      if (unscoredVisible.length === 0) return
-      scoreAnswers(
-        status,
-        unscoredVisible.map((scoringData) => scoringData.id)
-      )
-    },
-    [allScoringData, filteredScoringDataIds, scoreAnswers]
-  )
-
-  /** 表示中の未採点件数 */
-  const visibleUnscoredCount = useMemo(
-    () =>
-      allScoringData.filter(
-        (scoringData) =>
-          scoringData.status === "unscored" &&
-          filteredScoringDataIds.includes(scoringData.id)
-      ).length,
-    [allScoringData, filteredScoringDataIds]
-  )
-
-  /** 非表示の未採点件数 */
-  const hiddenUnscoredCount = useMemo(
-    () =>
-      allScoringData.filter(
-        (scoringData) =>
-          scoringData.status === "unscored" &&
-          !filteredScoringDataIds.includes(scoringData.id)
-      ).length,
-    [allScoringData, filteredScoringDataIds]
-  )
+  const {
+    handleClickScoring,
+    handleMouseScoring,
+    handleBatchScoreVisibleUnscored,
+    visibleUnscoredCount,
+    hiddenUnscoredCount,
+  } = useClickAndMouseScoring({
+    clickScoringConfig,
+    allScoringData,
+    filteredScoringDataIds,
+    replaceSelection,
+    setGradingMode,
+    openPartialScoreModal,
+    scoreAnswers,
+  })
 
   /** 表示モード切り替え（グリッド⇔個別） */
   const handleToggleViewMode = useCallback(
@@ -641,47 +430,20 @@ function ScoringMainViewContent() {
     [setGradingMode]
   )
 
-  /** 模範解答表示トグル */
-  const handleToggleMasterAnswer = useCallback(() => {
-    if (masterAnswerDisplayMode === "off") return
-    if (masterAnswerKeyBehavior === "toggle") {
-      setMasterAnswerVisible((prev) => !prev)
-    } else {
-      // hold-to-show: keydownでon（keyupはネイティブイベントで処理）
-      setMasterAnswerVisible(true)
-    }
-  }, [masterAnswerDisplayMode, masterAnswerKeyBehavior])
-
-  /** 模範解答を直接表示/非表示（hold-to-show用） */
-  const handleMasterAnswerShow = useCallback(() => {
-    setMasterAnswerVisible(true)
-  }, [])
-  const handleMasterAnswerHide = useCallback(() => {
-    setMasterAnswerVisible(false)
-  }, [])
-
-  /** 用紙サイズ。PDF出力（pdfExport）と同じ関数で決めて注釈のmm→px変換基準を揃える */
-  const pageSize = useMemo(
-    () => resolveExamPaperSize(exam?.examPages),
-    [exam?.examPages]
-  )
-
-  /** 全ページの模範解答画像URL（ページ番号順） */
-  const allMasterImageUrls = useMemo(() => {
-    if (!exam?.examPages) return []
-    return exam.examPages
-      .slice()
-      .sort((pageA, pageB) => pageA.pageNumber - pageB.pageNumber)
-      .map((page) => (page.imagePath ? `appimg:///${page.imagePath}` : null))
-      .filter((url): url is string => url !== null)
-  }, [exam])
-
-  /** hold-to-show用: キーを離したら模範解答を隠す（押した側と同じ条件で守る） */
-  useMasterAnswerHoldRelease({
+  /** 模範解答の表示（トグル／押している間だけ） */
+  const {
+    masterAnswerVisible,
+    handleToggleMasterAnswer,
+    handleMasterAnswerShow,
+    handleMasterAnswerHide,
+  } = useMasterAnswerVisibility({
+    masterAnswerDisplayMode,
     masterAnswerKeyBehavior,
     gradingMode,
-    onRelease: handleMasterAnswerHide,
   })
+
+  /** 用紙サイズと、全ページの模範解答画像URL（ページ番号順） */
+  const { pageSize, allMasterImageUrls } = useMasterAnswerPages(exam?.examPages)
 
   /** コンテキスト値の設定 */
   useContextValue("gradingMode", gradingMode)
@@ -730,7 +492,6 @@ function ScoringMainViewContent() {
     handleSelectAll,
     handleToggleViewMode: handleToggleViewMode,
     handleToggleMasterAnswer,
-    scoringOperationMode: effectiveMode,
   })
 
   const currentExamStudentId = useMemo(() => {
@@ -782,7 +543,13 @@ function ScoringMainViewContent() {
           modifierKeyLabel={modifierKeyLabel}
           onOmrRecognitionClick={guardScoring(() => setShowOmrModal(true))}
           scoreDecisionHref={
-            showDecisionEntry ? `/exams/${examId}/08-finalize` : undefined
+            showDecisionEntry
+              ? workflowStepHref(
+                  `/exams/${examId}`,
+                  examWorkflowSteps,
+                  "08-finalize"
+                )
+              : undefined
           }
           pendingDecisionCount={pendingDecisionCount}
         />

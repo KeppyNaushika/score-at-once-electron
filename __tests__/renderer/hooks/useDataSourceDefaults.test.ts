@@ -23,7 +23,7 @@ import type {
   GradeExamCandidateRow,
   GradeExamCropRegionRow,
   GradeExamSubtotalGroupRow,
-} from "@/queries/grade"
+} from "@/queries/gradeStructure"
 
 /** 行の時刻は判定に使わないので固定値でよい */
 const FIXED_DATE = new Date("2026-01-01T00:00:00.000Z")

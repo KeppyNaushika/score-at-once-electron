@@ -21,13 +21,13 @@ import {
   evaluateConstraints,
   validateConstraintExpression,
 } from "@/lib/gradeConstraints"
+import { gradeResultsQuery } from "@/queries/grade"
 import {
   createGradeConstraintMutation,
   deleteGradeConstraintMutation,
   gradeConstraintsQuery,
-  gradeResultsQuery,
   updateGradeConstraintMutation,
-} from "@/queries/grade"
+} from "@/queries/gradeAdjustment"
 import type {
   GradeConstraintData,
   GradeConstraintInput,

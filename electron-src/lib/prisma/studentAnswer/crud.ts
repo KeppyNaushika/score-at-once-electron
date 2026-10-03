@@ -567,78 +567,83 @@ export async function deleteStudentAnswer(
     confirmedCounts,
     // 数え直しは「利用者から見た採点実績」の定義で行う（モーダルの表示と同じ）。
     // 削除自体は unscored の初期化行も含めて全て消すので、行数とは一致しない。
-    recount: async (tx) =>
+    recount: async () =>
       await countStudentAnswerScoreData(
-        tx,
-        await getPageScoreScope(tx, answerSheet.examPageId),
+        prisma,
+        await getPageScoreScope(prisma, answerSheet.examPageId),
         answerSheet.examStudentId
       ),
-    remove: async (tx) => {
-      const scope = await getPageScoreScope(tx, answerSheet.examPageId)
-      const { examStudentId } = answerSheet
-      const { cropRegionIds, compoundAnswerIds } = scope
+    // 採点の子（QuestionScore・ScoreDecision・CompoundAnswerScore）と答案の行を消して
+    // 消えた行数を数えるまでが1つの操作。途中で止まると答案だけ残って採点が消えるので、
+    // 全部か無しかでまとめる。採点済み答案では行数が多く既定の 5s を超えうる
+    // （超えると P2028 で削除ごとロールバックする）
+    remove: () =>
+      prisma.$transaction(
+        async (tx) => {
+          const scope = await getPageScoreScope(tx, answerSheet.examPageId)
+          const { examStudentId } = answerSheet
+          const { cropRegionIds, compoundAnswerIds } = scope
 
-      const scoreCounts = await countStudentAnswerScoreData(
-        tx,
-        scope,
-        examStudentId
-      )
+          const scoreCounts = await countStudentAnswerScoreData(
+            tx,
+            scope,
+            examStudentId
+          )
 
-      let questionScoreRows = 0
-      let drawingAnnotationRows = 0
-      let scoreDecisionRows = 0
-      let compoundAnswerScoreRows = 0
+          let questionScoreRows = 0
+          let drawingAnnotationRows = 0
+          let scoreDecisionRows = 0
+          let compoundAnswerScoreRows = 0
 
-      if (cropRegionIds.length > 0) {
-        // QuestionScore を削除（子の DrawingAnnotation は cascade で道連れ）
-        const questionScores = await tx.questionScore.findMany({
-          where: { examStudentId, cropRegionId: { in: cropRegionIds } },
-        })
-        const questionScoreIds = questionScores.map(
-          (questionScore) => questionScore.id
-        )
+          if (cropRegionIds.length > 0) {
+            // QuestionScore を削除（子の DrawingAnnotation は cascade で道連れ）
+            const questionScores = await tx.questionScore.findMany({
+              where: { examStudentId, cropRegionId: { in: cropRegionIds } },
+            })
+            const questionScoreIds = questionScores.map(
+              (questionScore) => questionScore.id
+            )
 
-        if (questionScoreIds.length > 0) {
-          drawingAnnotationRows = await tx.drawingAnnotation.count({
-            where: { questionScoreId: { in: questionScoreIds } },
-          })
-          const removed = await tx.questionScore.deleteMany({
-            where: { id: { in: questionScoreIds } },
-          })
-          questionScoreRows = removed.count
-        }
+            if (questionScoreIds.length > 0) {
+              drawingAnnotationRows = await tx.drawingAnnotation.count({
+                where: { questionScoreId: { in: questionScoreIds } },
+              })
+              const removed = await tx.questionScore.deleteMany({
+                where: { id: { in: questionScoreIds } },
+              })
+              questionScoreRows = removed.count
+            }
 
-        const removedDecisions = await tx.scoreDecision.deleteMany({
-          where: { examStudentId, cropRegionId: { in: cropRegionIds } },
-        })
-        scoreDecisionRows = removedDecisions.count
-      }
+            const removedDecisions = await tx.scoreDecision.deleteMany({
+              where: { examStudentId, cropRegionId: { in: cropRegionIds } },
+            })
+            scoreDecisionRows = removedDecisions.count
+          }
 
-      if (compoundAnswerIds.length > 0) {
-        const removedCompound = await tx.compoundAnswerScore.deleteMany({
-          where: {
-            examStudentId,
-            compoundAnswerId: { in: compoundAnswerIds },
-          },
-        })
-        compoundAnswerScoreRows = removedCompound.count
-      }
+          if (compoundAnswerIds.length > 0) {
+            const removedCompound = await tx.compoundAnswerScore.deleteMany({
+              where: {
+                examStudentId,
+                compoundAnswerId: { in: compoundAnswerIds },
+              },
+            })
+            compoundAnswerScoreRows = removedCompound.count
+          }
 
-      await tx.studentAnswerImage.delete({ where: { id: answerSheetId } })
+          await tx.studentAnswerImage.delete({ where: { id: answerSheetId } })
 
-      return {
-        deletedCounts: scoreCounts,
-        removedRows: {
-          questionScoreRows,
-          scoreDecisionRows,
-          drawingAnnotationRows,
-          compoundAnswerScoreRows,
+          return {
+            deletedCounts: scoreCounts,
+            removedRows: {
+              questionScoreRows,
+              scoreDecisionRows,
+              drawingAnnotationRows,
+              compoundAnswerScoreRows,
+            },
+          }
         },
-      }
-    },
-    // 採点済み答案では削除対象の行数が多く、既定の 5s を超えうる
-    // （超えると P2028 で削除ごとロールバックする）。
-    timeoutMs: 30000,
+        { timeout: 30000 }
+      ),
   })
 
   // ファイル削除は DB コミット後。失敗しても孤立ファイルが残るだけなので警告に留める

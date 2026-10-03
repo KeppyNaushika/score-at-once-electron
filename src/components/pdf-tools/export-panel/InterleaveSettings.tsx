@@ -1,7 +1,6 @@
 "use client"
 
 import { RotateCw, Settings2 } from "lucide-react"
-import { useEffect, useRef } from "react"
 
 import { Input } from "@/components/ui/input"
 import {
@@ -33,6 +32,7 @@ interface InterleaveSettingsProps {
  *
  * 複数ファイルの交互挿入設定を管理する。1回に入れるページ数は交互挿入に固有の設定、
  * 2-in-1・回転はファイルの設定（左のファイル欄と同じ値）を表示・変更する。
+ * ファイルの増減に伴う設定の増減は、取り込み・削除のときに親が行う（`PdfToolsMainView`）。
  */
 export default function InterleaveSettings({
   files,
@@ -41,42 +41,6 @@ export default function InterleaveSettings({
   onFileUpdated,
   disabled,
 }: InterleaveSettingsProps) {
-  // useRefで最新の値を保持（依存配列に入れずに最新値を参照するため）
-  const configRef = useRef(config)
-
-  const onConfigChangeRef = useRef(onConfigChange)
-  useEffect(() => {
-    configRef.current = config
-    onConfigChangeRef.current = onConfigChange
-  })
-
-  // ファイルが変更されたらtransformsを同期
-  useEffect(() => {
-    const currentConfig = configRef.current
-    const currentFileIds = new Set(files.map((file) => file.id))
-    const existingTransforms = currentConfig.transforms.filter((transform) =>
-      currentFileIds.has(transform.fileId)
-    )
-
-    // 新しいファイルのデフォルト設定を追加
-    const newTransforms: FileTransform[] = files
-      .filter(
-        (file) =>
-          !existingTransforms.some((transform) => transform.fileId === file.id)
-      )
-      .map((file) => ({ fileId: file.id, pagesPerGroup: 1 }))
-
-    if (
-      existingTransforms.length !== currentConfig.transforms.length ||
-      newTransforms.length > 0
-    ) {
-      onConfigChangeRef.current({
-        ...currentConfig,
-        transforms: [...existingTransforms, ...newTransforms],
-      })
-    }
-  }, [files])
-
   const handleTransformChange = (
     fileId: string,
     updates: Partial<FileTransform>

@@ -1,18 +1,5 @@
 "use client"
 
-import {
-  AlignCenter,
-  AlignLeft,
-  AlignRight,
-  ArrowDownToLine,
-  ArrowUpToLine,
-  Bold,
-  Italic,
-  Minus,
-  Plus,
-  Underline,
-  UnfoldVertical,
-} from "lucide-react"
 import React, { useCallback, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -25,19 +12,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 // テキストボックスCanvas機能をインポート
 import type { TextBox } from "@/lib/textbox-canvas/types"
 import type { AnchorDirection } from "@/types/drawingAnnotation.types"
 
+import { AnchorAlignControls } from "./AnchorAlignControls"
 import { COLOR_PALETTE } from "./constants/drawingConstants"
 import { EnhancedCanvasPreview } from "./EnhancedCanvasPreview"
+import { RichTextFormatToolbar } from "./RichTextFormatToolbar"
+import { ToolbarTooltip } from "./ToolbarTooltip"
 
 interface RichTextEditorModalProps {
   open: boolean
@@ -188,60 +172,6 @@ export function RichTextEditorModal({
     setFontSize(Math.max(fontSize - 1, 2))
   }, [fontSize, setFontSize])
 
-  // アンカー方向の取得関数
-  const getHorizontalAlign = (direction: AnchorDirection) => {
-    if (direction.includes("left")) return "left"
-    if (direction.includes("right")) return "right"
-    return "center"
-  }
-
-  const getVerticalAlign = (direction: AnchorDirection) => {
-    if (direction.includes("top")) return "top"
-    if (direction.includes("bottom")) return "bottom"
-    return "center"
-  }
-
-  // アンカー方向設定
-  const setHorizontalAlign = useCallback(
-    (align: "left" | "center" | "right") => {
-      const vertical = getVerticalAlign(anchorDirection)
-      let newDirection: AnchorDirection
-
-      if (vertical === "center" && align === "center") {
-        newDirection = "center"
-      } else if (vertical === "center") {
-        newDirection = align as AnchorDirection
-      } else if (align === "center") {
-        newDirection = vertical as AnchorDirection
-      } else {
-        newDirection = `${vertical}-${align}` as AnchorDirection
-      }
-
-      setAnchorDirection(newDirection)
-    },
-    [anchorDirection, setAnchorDirection]
-  )
-
-  const setVerticalAlign = useCallback(
-    (align: "top" | "center" | "bottom") => {
-      const horizontal = getHorizontalAlign(anchorDirection)
-      let newDirection: AnchorDirection
-
-      if (align === "center" && horizontal === "center") {
-        newDirection = "center"
-      } else if (align === "center") {
-        newDirection = horizontal as AnchorDirection
-      } else if (horizontal === "center") {
-        newDirection = align as AnchorDirection
-      } else {
-        newDirection = `${align}-${horizontal}` as AnchorDirection
-      }
-
-      setAnchorDirection(newDirection)
-    },
-    [anchorDirection, setAnchorDirection]
-  )
-
   // キーボードショートカット
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -302,200 +232,24 @@ export function RichTextEditorModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* 書式設定ツールバー */}
-          <div className="flex items-center gap-2 rounded-md border bg-gray-50 p-2">
-            {/* 基本書式 */}
-            <div className="flex items-center gap-1">
-              <ToolbarTooltip label="太字 (Ctrl+B)">
-                <Button
-                  size="sm"
-                  variant={isBold ? "default" : "ghost"}
-                  onClick={handleBold}
-                  aria-label="太字 (Ctrl+B)"
-                >
-                  <Bold className="h-4 w-4" />
-                </Button>
-              </ToolbarTooltip>
-              <ToolbarTooltip label="斜体 (Ctrl+I)">
-                <Button
-                  size="sm"
-                  variant={isItalic ? "default" : "ghost"}
-                  onClick={handleItalic}
-                  aria-label="斜体 (Ctrl+I)"
-                >
-                  <Italic className="h-4 w-4" />
-                </Button>
-              </ToolbarTooltip>
-              <ToolbarTooltip label="下線 (Ctrl+U)">
-                <Button
-                  size="sm"
-                  variant={isUnderline ? "default" : "ghost"}
-                  onClick={handleUnderline}
-                  aria-label="下線 (Ctrl+U)"
-                >
-                  <Underline className="h-4 w-4" />
-                </Button>
-              </ToolbarTooltip>
-            </div>
+          <RichTextFormatToolbar
+            isBold={isBold}
+            isItalic={isItalic}
+            isUnderline={isUnderline}
+            fontSize={fontSize}
+            onBold={handleBold}
+            onItalic={handleItalic}
+            onUnderline={handleUnderline}
+            onFontSizeDecrease={handleFontSizeDecrease}
+            onFontSizeIncrease={handleFontSizeIncrease}
+            onMathInline={handleMathInline}
+            onMathBlock={handleMathBlock}
+          />
 
-            <Separator orientation="vertical" className="h-6" />
-
-            {/* フォントサイズ */}
-            <div className="flex items-center gap-1">
-              <ToolbarTooltip label="フォントサイズを小さく">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleFontSizeDecrease}
-                  aria-label="フォントサイズを小さく"
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-              </ToolbarTooltip>
-              <span className="min-w-8 text-center text-sm">{fontSize}</span>
-              <ToolbarTooltip label="フォントサイズを大きく">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleFontSizeIncrease}
-                  aria-label="フォントサイズを大きく"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </ToolbarTooltip>
-            </div>
-
-            <Separator orientation="vertical" className="h-6" />
-
-            {/* 数式 */}
-            <div className="flex items-center gap-1">
-              <ToolbarTooltip label="インライン数式 $...$">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleMathInline}
-                  className="text-xs"
-                >
-                  $x$
-                </Button>
-              </ToolbarTooltip>
-              <ToolbarTooltip label="ブロック数式 $$...$$">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleMathBlock}
-                  className="text-xs"
-                >
-                  $$
-                </Button>
-              </ToolbarTooltip>
-            </div>
-          </div>
-
-          {/* アンカー位置設定 (Lucideアイコン使用) */}
-          <div>
-            <Label className="text-sm font-medium">アンカー位置</Label>
-            <div className="mt-2 flex items-center gap-4">
-              {/* 横方向 */}
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-gray-500">横:</span>
-                <ToolbarTooltip label="左寄せ">
-                  <Button
-                    size="sm"
-                    variant={
-                      getHorizontalAlign(anchorDirection) === "left"
-                        ? "default"
-                        : "ghost"
-                    }
-                    onClick={() => setHorizontalAlign("left")}
-                    aria-label="左寄せ"
-                  >
-                    <AlignLeft className="h-4 w-4" />
-                  </Button>
-                </ToolbarTooltip>
-                <ToolbarTooltip label="左右中央寄せ">
-                  <Button
-                    size="sm"
-                    variant={
-                      getHorizontalAlign(anchorDirection) === "center"
-                        ? "default"
-                        : "ghost"
-                    }
-                    onClick={() => setHorizontalAlign("center")}
-                    aria-label="左右中央寄せ"
-                  >
-                    <AlignCenter className="h-4 w-4" />
-                  </Button>
-                </ToolbarTooltip>
-                <ToolbarTooltip label="右寄せ">
-                  <Button
-                    size="sm"
-                    variant={
-                      getHorizontalAlign(anchorDirection) === "right"
-                        ? "default"
-                        : "ghost"
-                    }
-                    onClick={() => setHorizontalAlign("right")}
-                    aria-label="右寄せ"
-                  >
-                    <AlignRight className="h-4 w-4" />
-                  </Button>
-                </ToolbarTooltip>
-              </div>
-
-              {/* 縦方向 */}
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-gray-500">縦:</span>
-                <ToolbarTooltip label="上寄せ">
-                  <Button
-                    size="sm"
-                    variant={
-                      getVerticalAlign(anchorDirection) === "top"
-                        ? "default"
-                        : "ghost"
-                    }
-                    onClick={() => setVerticalAlign("top")}
-                    aria-label="上寄せ"
-                  >
-                    <ArrowUpToLine className="h-4 w-4" />
-                  </Button>
-                </ToolbarTooltip>
-                <ToolbarTooltip label="上下中央寄せ">
-                  <Button
-                    size="sm"
-                    variant={
-                      getVerticalAlign(anchorDirection) === "center"
-                        ? "default"
-                        : "ghost"
-                    }
-                    onClick={() => setVerticalAlign("center")}
-                    aria-label="上下中央寄せ"
-                  >
-                    <UnfoldVertical className="h-4 w-4" />
-                  </Button>
-                </ToolbarTooltip>
-                <ToolbarTooltip label="下寄せ">
-                  <Button
-                    size="sm"
-                    variant={
-                      getVerticalAlign(anchorDirection) === "bottom"
-                        ? "default"
-                        : "ghost"
-                    }
-                    onClick={() => setVerticalAlign("bottom")}
-                    aria-label="下寄せ"
-                  >
-                    <ArrowDownToLine className="h-4 w-4" />
-                  </Button>
-                </ToolbarTooltip>
-              </div>
-
-              {/* 現在の設定表示 */}
-              <div className="text-xs text-gray-500">
-                現在: {anchorDirection}
-              </div>
-            </div>
-          </div>
+          <AnchorAlignControls
+            anchorDirection={anchorDirection}
+            onAnchorDirectionChange={setAnchorDirection}
+          />
 
           {/* カラーパレット */}
           <div>
@@ -577,21 +331,5 @@ export function RichTextEditorModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-/** 窓の中のボタンに、title の代わりに付ける短い説明 */
-function ToolbarTooltip({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactElement
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
   )
 }

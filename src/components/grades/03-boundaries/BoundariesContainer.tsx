@@ -24,12 +24,11 @@ import {
   nextStepLabel,
   workflowStepHref,
 } from "@/lib/shared/workflowSteps"
+import { gradeDetailQuery, gradeResultsQuery } from "@/queries/grade"
 import {
   applyGradeBoundaryPresetMutation,
   deleteAllGradeItemBoundariesMutation,
-  gradeDetailQuery,
-  gradeResultsQuery,
-} from "@/queries/grade"
+} from "@/queries/gradeStructure"
 import type {
   GradeItemWithDataSources,
   StudentGradeResult,

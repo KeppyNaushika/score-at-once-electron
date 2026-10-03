@@ -23,6 +23,7 @@ import { toStudentExportPlacements } from "@/components/exams/09-export/utils/st
 import { Spinner } from "@/components/ui/spinner"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { studentOption } from "@/lib/searchKeywords"
+import { examWorkflowSteps, workflowStepHref } from "@/lib/shared/workflowSteps"
 import { administeredExamClassroomsQuery } from "@/queries/examClassroom"
 import {
   recordUnresolvedConflictsMutation,
@@ -365,7 +366,9 @@ export default function ExportMainView() {
     if (!exam) return
     setShowWarningModal(false)
     setPendingExportType(null)
-    router.push(`/exams/${exam.id}/08-finalize`)
+    router.push(
+      workflowStepHref(`/exams/${exam.id}`, examWorkflowSteps, "08-finalize")
+    )
   }
 
   const handleContinueExport = async () => {

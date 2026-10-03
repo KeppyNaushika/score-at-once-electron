@@ -1,45 +1,17 @@
 "use client"
 
-import {
-  Circle,
-  Eye,
-  Minus,
-  Plus,
-  RectangleHorizontal,
-  Star,
-  Type,
-} from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import { toast } from "sonner"
 
-import { Combobox } from "@/components/common/Combobox"
-import { Button } from "@/components/ui/button"
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { studentOption } from "@/lib/searchKeywords"
-import { cn } from "@/lib/utils"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type {
   AnnotationTarget,
   AnnotationWithContext,
 } from "@/types/drawingAnnotation.types"
 
+import { AnnotationBrowserFilters } from "./AnnotationBrowserFilters"
+import { AnnotationBrowserItem } from "./AnnotationBrowserItem"
 import type {
   AddToTargetsResult,
   AnnotationDisplayItem,
@@ -61,49 +33,6 @@ interface AnnotationBrowserPanelProps {
   onAnnotationAddedFromBrowser?: () => void
   /** アノテーションの生徒・設問に移動 */
   onNavigateTo?: (examStudentId: string, cropRegionId: string) => void
-}
-
-// アノテーションタイプのアイコン
-function TypeIcon({ type }: { type: string }) {
-  switch (type) {
-    case "text":
-      return <Type className="h-3.5 w-3.5" />
-    case "line":
-      return <Minus className="h-3.5 w-3.5" />
-    case "rectangle":
-      return <RectangleHorizontal className="h-3.5 w-3.5" />
-    case "ellipse":
-      return <Circle className="h-3.5 w-3.5" />
-    default:
-      return null
-  }
-}
-
-// アノテーションの説明テキスト
-function getDescription(annotation: AnnotationWithContext): string {
-  if (annotation.type === "text") {
-    const text = annotation.text || ""
-    return text.length > 20 ? text.substring(0, 20) + "…" : text || "(空)"
-  }
-  const typeNames: Record<string, string> = {
-    line: "直線",
-    rectangle: "長方形",
-    ellipse: "楕円",
-  }
-  return typeNames[annotation.type] || annotation.type
-}
-
-// ソース情報（設問 + 生徒）
-function getSourceInfo(annotation: AnnotationWithContext): string {
-  const parts: string[] = []
-  if (annotation.questionScore?.cropRegion?.label) {
-    parts.push(annotation.questionScore.cropRegion.label)
-  }
-  if (annotation.questionScore?.examStudent?.student) {
-    const { student } = annotation.questionScore.examStudent
-    parts.push(`${student.lastName}${student.firstName}`)
-  }
-  return parts.join(" / ") || "—"
 }
 
 export function AnnotationBrowserPanel({
@@ -266,87 +195,12 @@ export function AnnotationBrowserPanel({
 
   return (
     <div className="flex h-full flex-col">
-      {/* フィルタバー */}
-      <div className="space-y-2 border-b p-3">
-        <div className="grid grid-cols-2 gap-2">
-          {/* 設問フィルタ */}
-          <Select
-            value={filters.cropRegionId ?? "all"}
-            onValueChange={(v) =>
-              onFiltersChange({ cropRegionId: v === "all" ? null : v })
-            }
-          >
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="設問" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全設問</SelectItem>
-              {cropRegions.map((cropRegion) => (
-                <SelectItem key={cropRegion.id} value={cropRegion.id}>
-                  {cropRegion.label || cropRegion.id.slice(0, 6)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* 生徒フィルタ */}
-          <Combobox
-            options={examStudentFilterOptions}
-            value={filters.examStudentId ?? "all"}
-            onValueChange={(value) =>
-              onFiltersChange({ examStudentId: value === "all" ? null : value })
-            }
-            placeholder="生徒"
-            searchPlaceholder="番号・氏名で検索"
-            emptyText="該当する生徒がいません"
-            aria-label="生徒で絞り込む"
-            className="h-8 text-xs"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* 種類フィルタ */}
-          <Select
-            value={filters.type ?? "all"}
-            onValueChange={(v) =>
-              onFiltersChange({
-                type:
-                  v === "all"
-                    ? null
-                    : (v as "text" | "line" | "rectangle" | "ellipse"),
-              })
-            }
-          >
-            <SelectTrigger className="h-8 flex-1 text-xs">
-              <SelectValue placeholder="種類" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全種類</SelectItem>
-              <SelectItem value="text">テキスト</SelectItem>
-              <SelectItem value="line">直線</SelectItem>
-              <SelectItem value="rectangle">長方形</SelectItem>
-              <SelectItem value="ellipse">楕円</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* お気に入りのみトグル */}
-          <Button
-            variant={filters.favoritesOnly ? "default" : "outline"}
-            size="sm"
-            className="h-8 shrink-0 px-2"
-            onClick={() =>
-              onFiltersChange({ favoritesOnly: !filters.favoritesOnly })
-            }
-          >
-            <Star
-              className={cn(
-                "h-3.5 w-3.5",
-                filters.favoritesOnly && "fill-current"
-              )}
-            />
-          </Button>
-        </div>
-      </div>
+      <AnnotationBrowserFilters
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+        cropRegions={cropRegions}
+        examStudentFilterOptions={examStudentFilterOptions}
+      />
 
       {/* リスト */}
       <div className="flex-1 overflow-y-auto">
@@ -361,160 +215,14 @@ export function AnnotationBrowserPanel({
         ) : (
           <div className="divide-y">
             {displayItems.map((item) => (
-              <div
+              <AnnotationBrowserItem
                 key={item.representative.id}
-                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50"
-              >
-                {/* タイプアイコン */}
-                <div className="shrink-0 text-gray-500">
-                  <TypeIcon type={item.representative.type} />
-                </div>
-
-                {/* 説明 + ソース */}
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs font-medium">
-                    {getDescription(item.representative)}
-                  </div>
-                  <div className="truncate text-xs text-gray-400">
-                    {getSourceInfo(item.representative)}
-                  </div>
-                </div>
-
-                {/* 色ドット */}
-                <div
-                  className="h-3 w-3 shrink-0 rounded-full border border-gray-200"
-                  style={{ backgroundColor: item.representative.color }}
-                />
-
-                {/* 件数バッジ */}
-                {item.count > 1 && (
-                  <span className="shrink-0 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs text-gray-600">
-                    ×{item.count}
-                  </span>
-                )}
-
-                {/* 星アイコン */}
-                <button
-                  className="shrink-0 text-gray-400 hover:text-yellow-500"
-                  onClick={() =>
-                    onToggleFavorite(item.representative.id, item.isFavorite)
-                  }
-                >
-                  <Star
-                    className={cn(
-                      "h-3.5 w-3.5",
-                      item.isFavorite && "fill-yellow-400 text-yellow-400"
-                    )}
-                  />
-                </button>
-
-                {/* 移動ボタン（左クリック: 代表に移動, 右クリック: 生徒選択メニュー） */}
-                {onNavigateTo &&
-                  item.representative.questionScore?.examStudentId &&
-                  item.representative.questionScore?.cropRegionId &&
-                  (item.count > 1 ? (
-                    <ContextMenu>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <ContextMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 shrink-0 px-1.5 text-gray-400 hover:text-blue-500"
-                              aria-label="クリック: 移動 / 右クリック: 生徒選択"
-                              onClick={() =>
-                                onNavigateTo(
-                                  item.representative.questionScore!
-                                    .examStudentId!,
-                                  item.representative.questionScore!
-                                    .cropRegionId!
-                                )
-                              }
-                            >
-                              <Eye className="h-3.5 w-3.5" />
-                            </Button>
-                          </ContextMenuTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          クリック: 移動 / 右クリック: 生徒選択
-                        </TooltipContent>
-                      </Tooltip>
-                      <ContextMenuContent>
-                        {item.allIds
-                          .map((id) =>
-                            allAnnotations.find(
-                              (annotation) => annotation.id === id
-                            )
-                          )
-                          .filter(
-                            (annotation): annotation is AnnotationWithContext =>
-                              !!annotation?.questionScore?.examStudentId &&
-                              !!annotation?.questionScore?.cropRegionId
-                          )
-                          .map((annotation) => {
-                            const student =
-                              annotation.questionScore!.examStudent?.student
-                            const label = student
-                              ? `${student.studentNumber} ${student.lastName}${student.firstName}`
-                              : annotation.questionScore!.examStudentId!.slice(
-                                  0,
-                                  8
-                                )
-                            const question =
-                              annotation.questionScore!.cropRegion?.label ?? ""
-                            return (
-                              <ContextMenuItem
-                                key={annotation.id}
-                                onClick={() =>
-                                  onNavigateTo(
-                                    annotation.questionScore!.examStudentId!,
-                                    annotation.questionScore!.cropRegionId!
-                                  )
-                                }
-                              >
-                                {label}
-                                {question && (
-                                  <span className="text-xs text-gray-400">
-                                    {question}
-                                  </span>
-                                )}
-                              </ContextMenuItem>
-                            )
-                          })}
-                      </ContextMenuContent>
-                    </ContextMenu>
-                  ) : (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          aria-label="この生徒・設問に移動"
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 shrink-0 px-1.5 text-gray-400 hover:text-blue-500"
-                          onClick={() =>
-                            onNavigateTo(
-                              item.representative.questionScore!.examStudentId!,
-                              item.representative.questionScore!.cropRegionId!
-                            )
-                          }
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>この生徒・設問に移動</TooltipContent>
-                    </Tooltip>
-                  ))}
-
-                {/* 追加ボタン */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 shrink-0 px-1.5"
-                  onClick={() => handleAdd(item)}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+                item={item}
+                allAnnotations={allAnnotations}
+                onToggleFavorite={onToggleFavorite}
+                onNavigateTo={onNavigateTo}
+                onAdd={handleAdd}
+              />
             ))}
           </div>
         )}

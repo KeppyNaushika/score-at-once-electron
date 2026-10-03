@@ -338,9 +338,9 @@ export const deleteExam = async (
 
   const exam = await deleteAfterRecount({
     confirmedCounts,
-    recount: (tx) => countExamDeletionCounts(tx, id),
-    remove: async (tx) => {
-      const examWithUsage = await tx.exam.findUnique({
+    recount: () => countExamDeletionCounts(prisma, id),
+    remove: async () => {
+      const examWithUsage = await prisma.exam.findUnique({
         where: { id },
         include: examGradeUsageInclude,
       })
@@ -351,10 +351,8 @@ export const deleteExam = async (
           )
         : null
       if (blockedMessage !== null) throw new Error(blockedMessage)
-      return await tx.exam.delete({ where: { id } })
+      return await prisma.exam.delete({ where: { id } })
     },
-    // 採点済みの試験では cascade で消える行数が多く、既定の 5s を超えうる
-    timeoutMs: 30000,
   })
 
   // 模範解答・答案の画像はDBのcascadeでは消えないため、試験ディレクトリごと削除する。

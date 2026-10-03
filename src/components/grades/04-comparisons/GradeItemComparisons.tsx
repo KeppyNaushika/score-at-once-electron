@@ -27,7 +27,7 @@ import {
   deleteGradeComparisonMutation,
   type GradeComparisonRow,
   reorderGradeComparisonsMutation,
-} from "@/queries/grade"
+} from "@/queries/gradeStructure"
 import type {
   GradeItemWithDataSources,
   GradeSummary,

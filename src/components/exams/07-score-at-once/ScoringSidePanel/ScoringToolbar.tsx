@@ -1,41 +1,14 @@
 "use client"
 
-import {
-  AlertTriangle,
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
-  Calculator,
-  CheckCircle,
-  Circle,
-  Clock,
-  CopyX,
-  Keyboard,
-  Minus,
-  Mouse,
-  MousePointerClick,
-  Target,
-  X,
-} from "lucide-react"
+import { Calculator, Keyboard, Mouse, Target } from "lucide-react"
 import { useState } from "react"
 
-import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import type {
   MouseBrushAction,
   ScoringOperationMode,
 } from "@/components/exams/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Kbd } from "@/components/ui/kbd"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
@@ -44,9 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
-import { scoringCommandIdOf } from "@/lib/scoringKeybindings"
 import { ignoreDeselect } from "@/lib/toggleSelection"
 import { SCORING_OPERATION_MODES } from "@/lib/userPreferences"
 import type {
@@ -55,16 +26,12 @@ import type {
 } from "@/types/clickScoring.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
+import { ClickScoringSettings } from "./ClickScoringSettings"
+import { GridNavigationButtons } from "./GridNavigationButtons"
+import { KeyboardScoringButtons } from "./KeyboardScoringButtons"
+import { KeyHint } from "./KeyHint"
+import { MouseBrushControls } from "./MouseBrushControls"
 import { SidePanelSection } from "./SidePanelSection"
-
-/** ショートカットキー表示用ヘルパー */
-function KeyHint({ label }: { label: string }) {
-  return (
-    <div className="mt-1 text-xs text-gray-400">
-      キー: <Kbd>{label}</Kbd>
-    </div>
-  )
-}
 
 interface ScoringToolbarProps {
   selectedAnswersCount: number
@@ -99,117 +66,6 @@ interface ScoringToolbarProps {
   onBatchScoreVisibleUnscored?: (status: MouseBrushAction) => void
 }
 
-const STATUS_MAP: Record<ScoringStatus, ScoringStatus> = {
-  unscored: "unscored",
-  correct: "correct",
-  partial: "partial",
-  pending: "pending",
-  incorrect: "incorrect",
-  no_answer: "no_answer",
-  double_mark: "double_mark",
-}
-
-const SCORING_BUTTONS = [
-  {
-    status: "unscored",
-    label: "未採点",
-    icon: Circle,
-    description: "未採点にする",
-  },
-  {
-    status: "correct",
-    label: "正答",
-    icon: CheckCircle,
-    description: "正答にする",
-  },
-  {
-    status: "partial",
-    label: "部分点",
-    icon: AlertTriangle,
-    description: "部分点にする",
-  },
-  {
-    status: "pending",
-    label: "保留",
-    icon: Clock,
-    description: "保留にする",
-  },
-  {
-    status: "incorrect",
-    label: "誤答",
-    icon: X,
-    description: "誤答にする",
-  },
-  {
-    status: "no_answer",
-    label: "無答",
-    icon: Minus,
-    description: "無答にする",
-  },
-  {
-    status: "double_mark",
-    label: "Wマーク",
-    icon: CopyX,
-    description: "ダブルマークにする",
-  },
-] as const
-
-/** マウスモード用ブラシ（unscoredを除く） */
-const BRUSH_BUTTONS = SCORING_BUTTONS.filter(
-  (
-    button
-  ): button is Extract<
-    (typeof SCORING_BUTTONS)[number],
-    { status: MouseBrushAction }
-  > => button.status !== "unscored"
-)
-
-/** マウスモード用の特殊ブラシ（採点せず選択／モーダル展開） */
-const SPECIAL_BRUSH_BUTTONS: Array<{
-  status: MouseBrushAction
-  label: string
-  icon: typeof CheckCircle
-  description: string
-}> = [
-  {
-    status: "select",
-    label: "選択",
-    icon: MousePointerClick,
-    description: "クリックで選択（複数選択可）",
-  },
-  {
-    status: "partial_modal",
-    label: "部分点入力",
-    icon: Calculator,
-    description: "クリックで部分点入力モーダルを開く",
-  },
-]
-
-/** マウスモードのブラシ選択に並べる順（特殊ブラシ → 採点ブラシ） */
-const MOUSE_BRUSH_BUTTONS = [...SPECIAL_BRUSH_BUTTONS, ...BRUSH_BUTTONS]
-
-/** ブラシ選択の選択肢（ボタンの並びと同じ順） */
-const MOUSE_BRUSH_ACTIONS = MOUSE_BRUSH_BUTTONS.map((button) => button.status)
-
-const CLICK_ACTION_OPTIONS: { value: ClickScoringAction; label: string }[] = [
-  { value: "none", label: "なし" },
-  { value: "correct", label: "正答" },
-  { value: "incorrect", label: "誤答" },
-  { value: "partial_modal", label: "部分点入力" },
-  { value: "partial", label: "部分点（非推奨）" },
-  { value: "pending", label: "保留（非推奨）" },
-  { value: "unscored", label: "未採点" },
-  { value: "no_answer", label: "無答" },
-  { value: "double_mark", label: "Wマーク" },
-  { value: "individual", label: "個別表示" },
-]
-
-const GRID_4_3_STYLE = {
-  display: "grid",
-  gridTemplateColumns: "repeat(4, 1fr)",
-  gap: "0.5rem",
-} as const
-
 export default function ScoringToolbar({
   selectedAnswersCount,
   onScore,
@@ -236,8 +92,6 @@ export default function ScoringToolbar({
   hiddenUnscoredCount = 0,
   onBatchScoreVisibleUnscored,
 }: ScoringToolbarProps) {
-  const { keyBindings } = useKeyBindings()
-  const scoringColors = useScoringStatusColors()
   const [modifierKeyLabel] = useState(() => getModifierKeyLabel() || "Alt")
   const ctrlLabel = modifierKeyLabel === "Option" ? "⌘" : "Ctrl"
 
@@ -329,85 +183,13 @@ export default function ScoringToolbar({
           {/* マウスモード用UI（グリッドモードのみ） */}
           {scoringOperationMode === "mouse" && gradingMode === "grid" && (
             <>
-              {/* ブラシ選択 */}
-              <div>
-                <div className="mb-1 text-xs font-medium text-gray-600">
-                  クリック時の採点ブラシ
-                </div>
-                {/* 採点画面はキーボード優先。Tab で1つずつ辿れる並びを保つため、矢印キーでの移動（roving focus）は切る */}
-                <ToggleGroup
-                  type="single"
-                  rovingFocus={false}
-                  value={mouseBrush}
-                  aria-label="クリック時の採点ブラシ"
-                  className="grid w-full grid-cols-4 gap-2"
-                  onValueChange={ignoreDeselect(MOUSE_BRUSH_ACTIONS, (brush) =>
-                    onMouseBrushChange?.(brush)
-                  )}
-                >
-                  {MOUSE_BRUSH_BUTTONS.map((button) => {
-                    const Icon = button.icon
-                    const colors =
-                      button.status === "select"
-                        ? { bg: "#e5e7eb", text: "#374151" }
-                        : button.status === "partial_modal"
-                          ? scoringColors[STATUS_MAP.partial]
-                          : scoringColors[STATUS_MAP[button.status]]
-                    return (
-                      <Tooltip key={button.status}>
-                        <TooltipTrigger asChild>
-                          <ToggleGroupItem
-                            value={button.status}
-                            className="flex h-12 flex-col gap-1 rounded-md border-2 shadow-xs data-[state=off]:opacity-60 data-[state=off]:hover:opacity-80 data-[state=on]:ring-2 data-[state=on]:ring-blue-500 data-[state=on]:ring-offset-1"
-                            style={{
-                              backgroundColor: colors.bg,
-                              color: colors.text,
-                              borderColor: colors.bg,
-                            }}
-                          >
-                            <Icon className="h-4 w-4" />
-                            <div className="text-xs">{button.label}</div>
-                          </ToggleGroupItem>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="text-center">
-                            <div className="font-medium">
-                              {button.description}
-                            </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    )
-                  })}
-                </ToggleGroup>
-              </div>
-
-              {/* 一括採点ボタン（採点ブラシ選択時のみ） */}
-              {onBatchScoreVisibleUnscored &&
-                visibleUnscoredCount > 0 &&
-                mouseBrush !== "select" &&
-                mouseBrush !== "partial_modal" && (
-                  <div className="space-y-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-xs"
-                      onClick={() => onBatchScoreVisibleUnscored(mouseBrush)}
-                    >
-                      表示中の未採点{visibleUnscoredCount}件を
-                      {BRUSH_BUTTONS.find(
-                        (button) => button.status === mouseBrush
-                      )?.label ?? mouseBrush}
-                      にする
-                    </Button>
-                    {hiddenUnscoredCount > 0 && (
-                      <div className="flex items-center gap-1 text-[10px] text-amber-600">
-                        <AlertTriangle className="h-3 w-3" />
-                        非表示の未採点が{hiddenUnscoredCount}件あります
-                      </div>
-                    )}
-                  </div>
-                )}
+              <MouseBrushControls
+                mouseBrush={mouseBrush}
+                onMouseBrushChange={onMouseBrushChange}
+                visibleUnscoredCount={visibleUnscoredCount}
+                hiddenUnscoredCount={hiddenUnscoredCount}
+                onBatchScoreVisibleUnscored={onBatchScoreVisibleUnscored}
+              />
 
               {/* フィルタ更新 */}
               {onRefreshFilter && (
@@ -425,49 +207,10 @@ export default function ScoringToolbar({
               {gradingMode === "grid" &&
                 clickScoringConfig &&
                 onClickActionChange && (
-                  <div className="space-y-1.5">
-                    {([2, 3, 4] as const).map((clickCount) => {
-                      const labels = {
-                        2: "ダブルクリック:",
-                        3: "トリプルクリック:",
-                        4: "クアトロクリック:",
-                      }
-                      return (
-                        <div
-                          key={clickCount}
-                          className="flex items-center justify-between text-xs"
-                        >
-                          <span className="text-gray-600">
-                            {labels[clickCount]}
-                          </span>
-                          <Select
-                            value={clickScoringConfig[clickCount]}
-                            onValueChange={(v) =>
-                              onClickActionChange(
-                                clickCount,
-                                v as ClickScoringAction
-                              )
-                            }
-                          >
-                            <SelectTrigger className="h-7 w-60 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {CLICK_ACTION_OPTIONS.map((option) => (
-                                <SelectItem
-                                  key={option.value}
-                                  value={option.value}
-                                  className="text-xs"
-                                >
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )
-                    })}
-                  </div>
+                  <ClickScoringSettings
+                    clickScoringConfig={clickScoringConfig}
+                    onClickActionChange={onClickActionChange}
+                  />
                 )}
             </>
           )}
@@ -476,49 +219,10 @@ export default function ScoringToolbar({
           {(scoringOperationMode === "keyboard" ||
             gradingMode === "individual") && (
             <>
-              {/* 採点ボタン */}
-              <div style={GRID_4_3_STYLE}>
-                {SCORING_BUTTONS.map((button) => {
-                  const Icon = button.icon
-                  const statusType = STATUS_MAP[button.status]
-                  const keyBinding =
-                    keyBindings[scoringCommandIdOf(statusType)] || "?"
-                  const colors = scoringColors[statusType]
-                  return (
-                    <Tooltip key={button.status}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className={`flex h-12 flex-col gap-1 border-2 ${
-                            selectedAnswersCount === 0
-                              ? "cursor-not-allowed opacity-50"
-                              : "hover:opacity-80"
-                          }`}
-                          style={{
-                            backgroundColor: colors.bg,
-                            color: colors.text,
-                            borderColor: colors.bg,
-                          }}
-                          onClick={() => onScore(button.status)}
-                          disabled={selectedAnswersCount === 0}
-                        >
-                          <Icon className="h-4 w-4" />
-                          <div className="text-xs">{button.label}</div>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <div className="text-center">
-                          <div className="font-medium">
-                            {button.description}
-                          </div>
-                          <KeyHint label={keyBinding.toUpperCase()} />
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  )
-                })}
-              </div>
+              <KeyboardScoringButtons
+                selectedAnswersCount={selectedAnswersCount}
+                onScore={onScore}
+              />
 
               {/* 選択操作 */}
               {gradingMode === "grid" && (
@@ -582,78 +286,14 @@ export default function ScoringToolbar({
               {gradingMode === "grid" &&
                 clickScoringConfig &&
                 onClickActionChange && (
-                  <div className="space-y-1.5">
-                    {([2, 3, 4] as const).map((clickCount) => {
-                      const labels = {
-                        2: "ダブルクリック:",
-                        3: "トリプルクリック:",
-                        4: "クアトロクリック:",
-                      }
-                      return (
-                        <div
-                          key={clickCount}
-                          className="flex items-center justify-between text-xs"
-                        >
-                          <span className="text-gray-600">
-                            {labels[clickCount]}
-                          </span>
-                          <Select
-                            value={clickScoringConfig[clickCount]}
-                            onValueChange={(v) =>
-                              onClickActionChange(
-                                clickCount,
-                                v as ClickScoringAction
-                              )
-                            }
-                          >
-                            <SelectTrigger className="h-7 w-60 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {CLICK_ACTION_OPTIONS.map((option) => (
-                                <SelectItem
-                                  key={option.value}
-                                  value={option.value}
-                                  className="text-xs"
-                                >
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )
-                    })}
-
-                    {onClickScoringDebounceMsChange && (
-                      <div className="space-y-0.5">
-                        <span className="text-[10px] text-gray-500">
-                          クリックの最長間隔
-                        </span>
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <span className="shrink-0 text-base" title="速い">
-                            🐇
-                          </span>
-                          <Slider
-                            className="flex-1"
-                            value={[clickScoringDebounceMs]}
-                            min={100}
-                            max={800}
-                            step={50}
-                            onValueChange={([v]) =>
-                              onClickScoringDebounceMsChange(v)
-                            }
-                          />
-                          <span className="shrink-0 text-base" title="遅い">
-                            🐢
-                          </span>
-                          <span className="w-10 shrink-0 text-right text-[10px] text-gray-400">
-                            {clickScoringDebounceMs}ms
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <ClickScoringSettings
+                    clickScoringConfig={clickScoringConfig}
+                    onClickActionChange={onClickActionChange}
+                    clickScoringDebounceMs={clickScoringDebounceMs}
+                    onClickScoringDebounceMsChange={
+                      onClickScoringDebounceMsChange
+                    }
+                  />
                 )}
             </>
           )}
@@ -673,80 +313,7 @@ export default function ScoringToolbar({
           {scoringOperationMode === "keyboard" &&
             gradingMode === "grid" &&
             onGridNavigation && (
-              <div className="flex items-center justify-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 w-8"
-                      onClick={() => onGridNavigation("a")}
-                    >
-                      <ArrowLeft className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="text-center">
-                      <div className="font-medium">左に移動</div>
-                      <KeyHint label="A" />
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 w-8"
-                      onClick={() => onGridNavigation("w")}
-                    >
-                      <ArrowUp className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="text-center">
-                      <div className="font-medium">上に移動</div>
-                      <KeyHint label="W" />
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 w-8"
-                      onClick={() => onGridNavigation("s")}
-                    >
-                      <ArrowDown className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="text-center">
-                      <div className="font-medium">下に移動</div>
-                      <KeyHint label="S" />
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 w-8"
-                      onClick={() => onGridNavigation("d")}
-                    >
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="text-center">
-                      <div className="font-medium">右に移動</div>
-                      <KeyHint label="D" />
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
+              <GridNavigationButtons onGridNavigation={onGridNavigation} />
             )}
         </div>
       </SidePanelSection>

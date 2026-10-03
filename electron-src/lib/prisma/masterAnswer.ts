@@ -238,27 +238,30 @@ export const deleteMasterAnswer = async (
 
   await deleteAfterRecount({
     confirmedCounts,
-    recount: (tx) => countMasterAnswerDeletionCounts(tx, examPageId),
-    remove: async (tx) => {
-      await tx.examPage.delete({ where: { id: examPageId } })
+    recount: () => countMasterAnswerDeletionCounts(prisma, examPageId),
+    // 消したページの後ろを詰めて採番し直すまでが1つの操作。途中で止まると番号に
+    // 穴が残るので、並べ替えと同じく全部か無しかでまとめる
+    remove: () =>
+      prisma.$transaction(async (tx) => {
+        await tx.examPage.delete({ where: { id: examPageId } })
 
-      // 並びが採番結果を決めるので、id をタイブレークに入れて決定的にする
-      // （pageNumber は一意ではない。詳細は studentAnswer/crud.ts の
-      //  getStudentAnswersDataset のコメント）
-      const pages = await tx.examPage.findMany({
-        where: { examId },
-        orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
-      })
+        // 並びが採番結果を決めるので、id をタイブレークに入れて決定的にする
+        // （pageNumber は一意ではない。詳細は studentAnswer/crud.ts の
+        //  getStudentAnswersDataset のコメント）
+        const pages = await tx.examPage.findMany({
+          where: { examId },
+          orderBy: [{ pageNumber: "asc" }, { id: "asc" }],
+        })
 
-      for (const [index, page] of pages.entries()) {
-        if (page.pageNumber !== index + 1) {
-          await tx.examPage.update({
-            where: { id: page.id },
-            data: { pageNumber: index + 1 },
-          })
+        for (const [index, page] of pages.entries()) {
+          if (page.pageNumber !== index + 1) {
+            await tx.examPage.update({
+              where: { id: page.id },
+              data: { pageNumber: index + 1 },
+            })
+          }
         }
-      }
-    },
+      }),
   })
 
   // DB から消えた後に画像を消す。答案画像はページと一緒にカスケード削除されるため、

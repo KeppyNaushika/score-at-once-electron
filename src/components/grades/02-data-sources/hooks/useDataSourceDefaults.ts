@@ -11,7 +11,7 @@ import type {
   GradeExamCandidateRow,
   GradeExamCropRegionRow,
   GradeExamSubtotalGroupRow,
-} from "@/queries/grade"
+} from "@/queries/gradeStructure"
 
 import { type AddDataSourceSelection, COURSEWORK_WHOLE } from "../types"
 

@@ -2,23 +2,10 @@
 
 import { useMutation, useQueries, useQuery } from "@tanstack/react-query"
 import Link from "next/link"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo } from "react"
 
-import {
-  type EditableColumnDef,
-  EditableTable,
-} from "@/components/common/EditableTable"
+import { EditableTable } from "@/components/common/EditableTable"
 import { useGradeLock } from "@/components/common/grade-lock/GradeLockProvider"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -34,6 +21,7 @@ import {
   type CourseworkClassroomRow,
   courseworkClassroomsQuery,
   courseworkDetailQuery,
+  type CourseworkScoreRow,
   courseworkScoresQuery,
   courseworkStudentsQuery,
   upsertCourseworkScoresMutation,
@@ -42,52 +30,48 @@ import {
   setUserPreferenceMutation,
   userPreferenceQuery,
 } from "@/queries/settings"
-import type {
-  CourseworkItemWithLetterScales,
-  CourseworkStudentWithMemberships,
-} from "@/types/coursework.types"
+import type { CourseworkStudentWithMemberships } from "@/types/coursework.types"
 
-import {
-  containsFullWidth,
-  isUnknownLetterValue,
-  letterValueOf,
-  toHalfWidth,
-} from "../courseworkLetterValues"
+import { FullWidthPasteDialog } from "./components/FullWidthPasteDialog"
 import {
   buildCourseworkStudentRows,
-  type CourseworkCellPatch,
   sortCourseworkItems,
 } from "./courseworkScoreTable"
+import { useCourseworkScoreColumns } from "./hooks/useCourseworkScoreColumns"
+import { useFullWidthPasteConfirmation } from "./hooks/useFullWidthPasteConfirmation"
+import {
+  countFilledAuxiliaryCells,
+  diffScoreTableRows,
+  type ScoreRow,
+  toScoreTableRows,
+} from "./scoreTableRows"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_STUDENTS: CourseworkStudentWithMemberships[] = []
 const EMPTY_CLASSROOMS: CourseworkClassroomRow[] = []
 
+/**
+ * 評価項目ごとの点数を、評価項目の id で引ける形に集める。点数は自分の評価項目
+ * （courseworkItemId）を持つので、問い合わせの並び（添字）に頼らない。参照が
+ * 変わらないよう外に置く（`combine` は関数が同じなら結果を使い回す）
+ */
+const groupScoresByItem = (
+  queries: { data?: CourseworkScoreRow[] }[]
+): ReadonlyMap<string, CourseworkScoreRow[]> => {
+  const scoresByItem = new Map<string, CourseworkScoreRow[]>()
+  queries
+    .flatMap((query) => query.data ?? [])
+    .forEach((courseworkScore) => {
+      const itemScores = scoresByItem.get(courseworkScore.courseworkItemId)
+      if (itemScores) itemScores.push(courseworkScore)
+      else scoresByItem.set(courseworkScore.courseworkItemId, [courseworkScore])
+    })
+  return scoresByItem
+}
+
 interface CourseworkScoresContainerProps {
   courseworkId: string
 }
-
-interface ScoreRow {
-  _courseworkStudentId: string
-  attendanceNumber: string
-  className: string
-  studentName: string
-  [key: string]: string
-}
-
-/**
- * 数値の表記ゆれを吸収する（全角英数・全角記号を半角へ、前後の空白を落とす）。
- *
- * `１０` は 10 のことであって別の数ではないので、数値として読むために寄せる。
- * **文字評価には通さない。** 評語は `Ａ` と `A` が別の評語でありうるので、
- * 表記を寄せるかどうかは貼り付けのときに人へ尋ねる（`transformPastedText`）。
- */
-const normalizeInput = (value: string): string => toHalfWidth(value).trim()
-
-/** 評価項目ごとの列ID（value列はitem.id、補助列は接尾辞付き） */
-const adjColId = (itemId: string) => `${itemId}::adj`
-const reasonColId = (itemId: string) => `${itemId}::reason`
-const commentColId = (itemId: string) => `${itemId}::comment`
 
 /**
  * 試験外成績資料の点数入力コンテナ
@@ -136,13 +120,11 @@ export function CourseworkScoresContainer({
     [coursework]
   )
   // 評価項目ごとの点数。資料ページと同じキーなので取得は共有される
-  const scoreQueries = useQueries({
+  const scoresByItem = useQueries({
     queries: items.map((item) => courseworkScoresQuery(item.id)),
+    combine: groupScoresByItem,
   })
   const studentRows = useMemo(() => {
-    const scoresByItem = new Map(
-      items.map((item, index) => [item.id, scoreQueries[index]?.data ?? []])
-    )
     const registeredClassroomIds = new Set(
       courseworkClassrooms.map(
         (courseworkClassroom) => courseworkClassroom.classroomId
@@ -154,16 +136,28 @@ export function CourseworkScoresContainer({
       registeredClassroomIds,
       scoresByItem
     )
-  }, [items, scoreQueries, courseworkStudents, courseworkClassrooms])
+  }, [items, scoresByItem, courseworkStudents, courseworkClassrooms])
 
-  const bulkUpdateCells = useCallback(
-    (
-      changes: {
-        courseworkItemId: string
-        courseworkStudentId: string
-        patch: CourseworkCellPatch
-      }[]
-    ) => {
+  const { confirmPastedText, isAsking, answerPendingPaste } =
+    useFullWidthPasteConfirmation()
+
+  const tableData = useMemo(
+    () => toScoreTableRows(studentRows, items),
+    [studentRows, items]
+  )
+
+  /** 隠している列（加減点・理由・コメント）に入力があるマスの数 */
+  const hiddenFilledCellCount = useMemo(
+    () => (scoreOnly ? countFilledAuxiliaryCells(studentRows, items) : 0),
+    [scoreOnly, studentRows, items]
+  )
+
+  const columns = useCourseworkScoreColumns(items, scoreOnly, scoresLocked)
+
+  const handleDataChange = useCallback(
+    (nextRows: ScoreRow[]) => {
+      // 変更前の値は今描画しているテーブルデータそのもの
+      const changes = diffScoreTableRows(tableData, nextRows, items)
       if (changes.length === 0) return
       upsertScores.mutate(
         changes.map((change) => ({
@@ -173,298 +167,7 @@ export function CourseworkScoresContainer({
         }))
       )
     },
-    [upsertScores]
-  )
-
-  /**
-   * 全角の確認を待っている貼り付け。
-   *
-   * `answer` を呼ぶと `transformPastedText` の約束が果たされ、表への配布が進む。
-   * 尋ねるのは貼り付け1回につき1度で、設定としては持たない（効く瞬間にだけ尋ねる）。
-   */
-  const [pendingPaste, setPendingPaste] = useState<{
-    answer: (toHalfWidthChars: boolean) => void
-  } | null>(null)
-
-  const confirmPastedText = useCallback(
-    (pastedText: string) =>
-      new Promise<string>((resolve) => {
-        if (!containsFullWidth(pastedText)) {
-          resolve(pastedText)
-          return
-        }
-        setPendingPaste({
-          answer: (toHalfWidthChars: boolean) => {
-            setPendingPaste(null)
-            resolve(toHalfWidthChars ? toHalfWidth(pastedText) : pastedText)
-          },
-        })
-      }),
-    []
-  )
-
-  const tableData = useMemo(() => {
-    const data = studentRows.map((row): ScoreRow => {
-      const tableRow: ScoreRow = {
-        _courseworkStudentId: row.courseworkStudentId,
-        attendanceNumber:
-          row.attendanceNumber != null ? String(row.attendanceNumber) : "-",
-        className: row.className ?? "-",
-        studentName: `${row.lastName} ${row.firstName}`,
-      }
-      for (const item of items) {
-        const cell = row.cells[item.id]
-        if (item.inputMode === "letter") {
-          tableRow[item.id] = cell?.letterValue ?? ""
-        } else {
-          tableRow[item.id] = cell?.score != null ? String(cell.score) : ""
-        }
-        tableRow[adjColId(item.id)] =
-          cell?.adjustment != null ? String(cell.adjustment) : ""
-        tableRow[reasonColId(item.id)] = cell?.adjustmentReason ?? ""
-        tableRow[commentColId(item.id)] = cell?.comment ?? ""
-      }
-      return tableRow
-    })
-    return data
-  }, [studentRows, items])
-
-  /** 隠している列（加減点・理由・コメント）に入力があるマスの数 */
-  const hiddenFilledCellCount = useMemo(() => {
-    if (!scoreOnly) return 0
-    let count = 0
-    for (const row of studentRows) {
-      for (const item of items) {
-        const cell = row.cells[item.id]
-        // 加減点は既定値が 0（schema の @default(0)）なので、0 は「入力なし」と数える。
-        // null かどうかだけで見ると、何も入れていない全員のマスが数えられる
-        if (
-          cell &&
-          ((cell.adjustment != null && cell.adjustment !== 0) ||
-            (cell.adjustmentReason ?? "") !== "" ||
-            (cell.comment ?? "") !== "")
-        ) {
-          count++
-        }
-      }
-    }
-    return count
-  }, [scoreOnly, studentRows, items])
-
-  const columns = useMemo((): EditableColumnDef<ScoreRow>[] => {
-    // 氏名・学級は途中で改行すると読みにくいので、列の幅は中身に合わせて広がらせる
-    const readOnlyCols: EditableColumnDef<ScoreRow>[] = [
-      {
-        id: "attendanceNumber",
-        header: () => <span className="whitespace-nowrap">出席番号</span>,
-        accessorKey: "attendanceNumber",
-        size: 70,
-        meta: { readOnly: true },
-        cell: ({ getValue }) => (
-          <span className="text-sm whitespace-nowrap">
-            {String(getValue())}
-          </span>
-        ),
-      },
-      {
-        id: "className",
-        header: () => <span className="whitespace-nowrap">学級</span>,
-        accessorKey: "className",
-        size: 80,
-        meta: { readOnly: true },
-        cell: ({ getValue }) => (
-          <span className="text-sm whitespace-nowrap">
-            {String(getValue())}
-          </span>
-        ),
-      },
-      {
-        id: "studentName",
-        header: () => <span className="whitespace-nowrap">氏名</span>,
-        accessorKey: "studentName",
-        size: 120,
-        meta: { readOnly: true },
-        cell: ({ getValue }) => (
-          <span className="text-sm whitespace-nowrap">
-            {String(getValue())}
-          </span>
-        ),
-      },
-    ]
-
-    const scoreCols: EditableColumnDef<ScoreRow>[] = items.flatMap(
-      (item): EditableColumnDef<ScoreRow>[] => {
-        const isLetter = item.inputMode === "letter"
-        const validLabels = item.letterScales
-          .map((letterScale) => letterScale.label)
-          .join("/")
-        const valueColumn: EditableColumnDef<ScoreRow> = {
-          id: item.id,
-          header: isLetter
-            ? `${item.name} (評価)`
-            : `${item.name} (満点${item.maxScore})`,
-          accessorKey: item.id,
-          size: 110,
-          meta: {
-            placeholder: isLetter ? validLabels || "評価記号" : "数値",
-            // 文字評価は入力どおり保存する。赤は「変換表に無い」という注意で、
-            // 変換表を1つも作っていない段階では判定しない（全マスが赤くても
-            // 直しようがない）。数値は有限の数値なら有効で、満点超過も負数も
-            // 許容する（配点の枠を超えて成績へ加減できる仕様）。
-            invalidValuePolicy: isLetter ? "keep" : "reject",
-            validate: (value: string) => {
-              if (isLetter) return !isUnknownLetterValue(item, value)
-              const normalized = normalizeInput(value)
-              if (normalized === "") return true
-              const parsedValue = Number(normalized)
-              return !isNaN(parsedValue) && isFinite(parsedValue)
-            },
-          },
-        }
-        if (scoreOnly) return [valueColumn]
-        return [
-          valueColumn,
-          {
-            id: adjColId(item.id),
-            header: `${item.name}·加減点`,
-            accessorKey: adjColId(item.id),
-            size: 90,
-            meta: {
-              placeholder: "±0",
-              // 加減点は有限の数値のみ有効
-              validate: (value: string) => {
-                const normalized = normalizeInput(value)
-                if (normalized === "") return true
-                const parsedValue = Number(normalized)
-                return !isNaN(parsedValue) && isFinite(parsedValue)
-              },
-            },
-          },
-          {
-            id: reasonColId(item.id),
-            header: `${item.name}·理由`,
-            accessorKey: reasonColId(item.id),
-            size: 120,
-            meta: { placeholder: "期限超過 等" },
-          },
-          {
-            id: commentColId(item.id),
-            header: `${item.name}·コメント`,
-            accessorKey: commentColId(item.id),
-            size: 160,
-            meta: { placeholder: "通知書に表示" },
-          },
-        ]
-      }
-    )
-
-    // ロック中は点数の列も読み取り専用にする（入力も貼り付けも受け付けない）
-    const lockedScoreCols = scoresLocked
-      ? scoreCols.map((column) => ({
-          ...column,
-          meta: { ...column.meta, readOnly: true },
-        }))
-      : scoreCols
-
-    return [...readOnlyCols, ...lockedScoreCols]
-  }, [items, scoreOnly, scoresLocked])
-
-  const handleDataChange = useCallback(
-    (newData: ScoreRow[]) => {
-      // 変更前の値は今描画しているテーブルデータそのもの
-      const prev = tableData
-      const changes: {
-        courseworkItemId: string
-        courseworkStudentId: string
-        patch: CourseworkCellPatch
-      }[] = []
-
-      const pushPatch = (
-        item: CourseworkItemWithLetterScales,
-        courseworkStudentId: string,
-        patch: CourseworkCellPatch
-      ) => {
-        changes.push({
-          courseworkItemId: item.id,
-          courseworkStudentId,
-          patch,
-        })
-      }
-
-      for (let i = 0; i < newData.length; i++) {
-        const newRow = newData[i]
-        const oldRow = prev[i]
-        if (!oldRow || !newRow) continue
-
-        const courseworkStudentId = newRow._courseworkStudentId
-        for (const item of items) {
-          // value列（数値 or 文字評価）
-          const valueColumnId = item.id
-          if (newRow[valueColumnId] !== oldRow[valueColumnId]) {
-            if (item.inputMode === "letter") {
-              // 入力された文字をそのまま保存する。変換表に無い評語も保存し、
-              // 気づく口は「マスが赤いこと」と「評価項目の画面での列挙」が持つ
-              const letterValue = letterValueOf(newRow[valueColumnId] ?? "")
-              pushPatch(item, courseworkStudentId, {
-                letterValue: letterValue === "" ? null : letterValue,
-              })
-            } else {
-              const trimmed = normalizeInput(newRow[valueColumnId] ?? "")
-              if (trimmed === "") {
-                pushPatch(item, courseworkStudentId, { score: null })
-              } else {
-                const parsedValue = Number(trimmed)
-                // 満点超過・負数も入力どおり保存する
-                if (!isNaN(parsedValue) && isFinite(parsedValue)) {
-                  pushPatch(item, courseworkStudentId, { score: parsedValue })
-                }
-                // 数値として読めない値は無視
-              }
-            }
-          }
-
-          // 加減点列
-          const adjustmentColumnId = adjColId(item.id)
-          if (newRow[adjustmentColumnId] !== oldRow[adjustmentColumnId]) {
-            const trimmed = normalizeInput(newRow[adjustmentColumnId] ?? "")
-            if (trimmed === "") {
-              pushPatch(item, courseworkStudentId, { adjustment: null })
-            } else {
-              const parsedValue = Number(trimmed)
-              if (!isNaN(parsedValue) && isFinite(parsedValue)) {
-                pushPatch(item, courseworkStudentId, {
-                  adjustment: parsedValue,
-                })
-              }
-              // 無効値は無視
-            }
-          }
-
-          // 理由列
-          const reasonColumnId = reasonColId(item.id)
-          if (newRow[reasonColumnId] !== oldRow[reasonColumnId]) {
-            const reasonValue = (newRow[reasonColumnId] ?? "").trim()
-            pushPatch(item, courseworkStudentId, {
-              adjustmentReason: reasonValue === "" ? null : reasonValue,
-            })
-          }
-
-          // コメント列
-          const commentColumnId = commentColId(item.id)
-          if (newRow[commentColumnId] !== oldRow[commentColumnId]) {
-            const commentValue = (newRow[commentColumnId] ?? "").trim()
-            pushPatch(item, courseworkStudentId, {
-              comment: commentValue === "" ? null : commentValue,
-            })
-          }
-        }
-      }
-
-      if (changes.length > 0) {
-        bulkUpdateCells(changes)
-      }
-    },
-    [items, tableData, bulkUpdateCells]
+    [items, tableData, upsertScores]
   )
 
   if (loading) {
@@ -548,34 +251,7 @@ export function CourseworkScoresContainer({
         />
       </div>
 
-      {/*
-        全角を黙って半角へ変えない。`Ａ` と `A` が別の評語でありうるので、
-        寄せてよいかを貼り付けのたびに（1回だけ）尋ねる。閉じただけのときは
-        「そのまま」と同じ扱いにする（黙って変換する方には倒さない）。
-      */}
-      <AlertDialog
-        open={pendingPaste !== null}
-        onOpenChange={(open) => {
-          if (!open) pendingPaste?.answer(false)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>全角文字が検知されました</AlertDialogTitle>
-            <AlertDialogDescription>
-              半角文字でよろしいですか？「そのまま貼り付ける」を選ぶと、貼り付けた文字のまま入力します。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => pendingPaste?.answer(false)}>
-              そのまま貼り付ける
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={() => pendingPaste?.answer(true)}>
-              半角にする
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <FullWidthPasteDialog open={isAsking} onAnswer={answerPendingPaste} />
 
       <div className="mt-6 flex justify-end">
         <Button asChild>

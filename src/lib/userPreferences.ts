@@ -11,6 +11,7 @@
 
 import type { RenderMode } from "@/types/answerSheetDefinition.types"
 import { RENDER_MODES } from "@/types/answerSheetDefinition.types"
+import { isOneOf } from "@/types/stringUnion"
 
 /**
  * union を持つ設定の取りうる値。
@@ -49,12 +50,6 @@ export const GRADE_COMPARISON_DISPLAYS = [
   "symbol",
   "highlight",
 ] as const
-
-/** 一覧に含まれるかを、要素の型を保ったまま判定する */
-export const isOneOf = <TValue extends string>(
-  candidates: readonly TValue[],
-  value: string
-): value is TValue => candidates.some((candidate) => candidate === value)
 
 /** 設定キーごとのスキーマ定義 */
 const USER_PREFERENCE_SCHEMA = {

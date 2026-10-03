@@ -29,14 +29,14 @@ import {
   workflowStepHref,
 } from "@/lib/shared/workflowSteps"
 import { parsePreference } from "@/lib/userPreferences"
+import { gradeResultsQuery } from "@/queries/grade"
 import {
   deleteGradeOverrideMutation,
   freezeGradeScoresMutation,
   gradeConstraintsQuery,
-  gradeResultsQuery,
   unfreezeGradeScoresMutation,
   upsertGradeOverrideMutation,
-} from "@/queries/grade"
+} from "@/queries/gradeAdjustment"
 import {
   setUserPreferenceMutation,
   userPreferenceQuery,

@@ -6,7 +6,6 @@ import { useEffect } from "react"
 import type { SidebarBehaviorPreferenceKey } from "@/components/layout/sidebarBehavior"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import {
-  isOneOf,
   SCORING_OPERATION_MODES,
   SIDEBAR_BEHAVIORS,
 } from "@/lib/userPreferences"
@@ -15,6 +14,7 @@ import {
   setUserPreferenceMutation,
   userPreferenceQuery,
 } from "@/queries/settings"
+import { isOneOf } from "@/types/stringUnion"
 
 /**
  * `localStorage` に残っている設定を、利用者の設定（`UserPreference`）へ一度だけ写す。
