@@ -28,7 +28,10 @@ import {
   writeBackLocalDb,
 } from "./localDb"
 import { getSchemaVersion } from "./schemaVersion"
-import { recordFoldAuditLogs } from "./syncAuditLog"
+import {
+  recordFoldAuditLogs,
+  recordParentDeletedAuditLogs,
+} from "./syncAuditLog"
 import {
   broadcastParentDeleted,
   broadcastRecordFolds,
@@ -46,6 +49,7 @@ import { SYNC_EXCLUDE_TABLES, SYNC_TABLE_OPTIONS } from "./syncTableConfig"
 import type {
   SyncAppConfig,
   SyncAppStatus,
+  SyncParentDeletedReport,
   SyncRecordFoldReport,
   VersionMismatchRemote,
 } from "./types"
@@ -168,10 +172,12 @@ export async function startSync(config: SyncAppConfig): Promise<void> {
       void recordFoldAuditLogs(foldReport)
 
       // 親を他のPCで消されて表から外れた行も、画面からは黙って消えたように見える。
-      broadcastParentDeleted({
+      const parentDeletedReport: SyncParentDeletedReport = {
         parentDeleted: result.parentDeleted,
         parentReturned: result.parentReturned,
-      })
+      }
+      broadcastParentDeleted(parentDeletedReport)
+      void recordParentDeletedAuditLogs(parentDeletedReport)
     },
   })
 
