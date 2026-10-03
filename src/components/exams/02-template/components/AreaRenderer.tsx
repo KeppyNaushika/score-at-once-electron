@@ -7,8 +7,8 @@ import type { CropRegionArea } from "@/components/exams/02-template/types"
 
 interface AreaRendererProps {
   areas: CropRegionArea[]
-  selectedAreaIndex: number | null
-  onSelectArea: (index: number) => void
+  selectedCropRegionId: string | null
+  onSelectArea: (cropRegionId: string) => void
   /** 掴んだ領域そのものを渡す。書き込み先は添字でなく id で決まる */
   onResizePointerDown: (
     event: ReactPointerEvent<HTMLDivElement>,
@@ -26,7 +26,7 @@ interface AreaRendererProps {
 
 export function AreaRenderer({
   areas,
-  selectedAreaIndex,
+  selectedCropRegionId,
   onSelectArea,
   onResizePointerDown,
   onMovePointerDown,
@@ -123,7 +123,7 @@ export function AreaRenderer({
 
   return (
     <>
-      {areas.map((area, index) => {
+      {areas.map((area) => {
         const displayCoords = convertAreaToDisplayCoords(area)
 
         // サイズが0の場合は描画しない
@@ -133,9 +133,9 @@ export function AreaRenderer({
 
         return (
           <div
-            key={area.id || `area-${index}`}
+            key={area.id}
             className={`absolute cursor-pointer border-2 ${
-              selectedAreaIndex === index
+              selectedCropRegionId === area.id
                 ? "border-solid border-blue-500"
                 : "border-dashed border-white"
             }`}
@@ -148,7 +148,7 @@ export function AreaRenderer({
             }}
             onClick={(e) => {
               e.stopPropagation()
-              onSelectArea(index)
+              onSelectArea(area.id)
             }}
             onPointerDown={(e) => {
               e.stopPropagation()
@@ -161,7 +161,7 @@ export function AreaRenderer({
             </div>
 
             {/* リサイズハンドル */}
-            {selectedAreaIndex === index && (
+            {selectedCropRegionId === area.id && (
               <>
                 {/* 左上 */}
                 <div

@@ -14,7 +14,9 @@ import {
   DEFAULT_KEYBINDINGS,
   filterCommandIdOf,
   findConflictingCommand,
+  keySceneOf,
   resolveKeyBindings,
+  sceneWhen,
   scoringCommandIdOf,
 } from "@/lib/scoringKeybindings"
 import {
@@ -45,6 +47,34 @@ describe("既定のキー割り当て", () => {
     expect(
       canShareKey("navigation.resetZoom", "scoring.openPartialWith0")
     ).toBe(false)
+  })
+
+  it("効く場面は既定の置き場所で決まり、名前の付け方からは推し量らない", () => {
+    expect(keySceneOf("modal.input0")).toBe("partialInput")
+    expect(keySceneOf("modal.cancel")).toBe("partialInput")
+    expect(keySceneOf("scoring.partial")).toBe("both")
+    expect(keySceneOf("scoring.pending")).toBe("both")
+    expect(keySceneOf("scoring.correct")).toBe("scoring")
+    expect(keySceneOf("tool.text")).toBe("scoring")
+  })
+
+  it("when 句は場面の土台に登録ごとの条件をつなぐ", () => {
+    expect(
+      sceneWhen("scoring.correct", { condition: "hasSelectedAnswers" })
+    ).toBe(
+      "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers"
+    )
+    expect(sceneWhen("modal.input1")).toBe("partialScoreModalOpen")
+    expect(sceneWhen("scoring.partial", { scene: "partialInput" })).toBe(
+      "partialScoreModalOpen"
+    )
+  })
+
+  it("場面の食い違う登録は誤りとして投げる", () => {
+    // 両方の場面で効くコマンドは、登録ごとに場面を選ばせる
+    expect(() => sceneWhen("scoring.partial")).toThrow()
+    // 入力欄の中だけのコマンドを、採点中の場面へ登録しない
+    expect(() => sceneWhen("modal.input1", { scene: "scoring" })).toThrow()
   })
 
   it("全コマンドに表示名があり、設定画面の分類は実在するコマンドだけを指す", () => {

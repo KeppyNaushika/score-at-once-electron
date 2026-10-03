@@ -12,9 +12,9 @@ import { describe, expect, it } from "vitest"
 import {
   computeFilteredStats,
   computeFilteredSubtotalStats,
-  formatStudentAffiliation,
   groupSubtotalData,
 } from "@/components/exams/09-export/components/individual-report/computeReportData"
+import { formatStudentAffiliation } from "@/components/exams/09-export/components/individual-report/reportFormat"
 import type {
   ScoringData,
   SubtotalScore,

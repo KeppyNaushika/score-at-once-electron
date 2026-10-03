@@ -12,6 +12,7 @@ import type {
 } from "@/components/common/student-add-panel/types"
 import { isCurrentMembership } from "@/lib/membership"
 import { queryKeys } from "@/lib/queryKeys"
+import { studentSearchTerms } from "@/lib/searchKeywords"
 import { matchesSearchTerm } from "@/lib/searchText"
 import { studentListQuery } from "@/queries/student"
 import type {
@@ -344,11 +345,10 @@ export function useStudentAddPanel({
 
   /** 検索語（氏名・ふりがな・学籍番号）と学級プルダウンの両方に一致するか */
   const matchesStudentFilter = (student: SelectableStudent) => {
-    const matchesSearch = matchesSearchTerm(searchTerm, [
-      `${student.lastName}${student.firstName}`,
-      `${student.lastNameKana}${student.firstNameKana}`,
-      student.studentNumber,
-    ])
+    const matchesSearch = matchesSearchTerm(
+      searchTerm,
+      studentSearchTerms(student)
+    )
     const matchesClassroom =
       filterClassroomId === "all" ||
       student.memberships.some(

@@ -9,6 +9,7 @@ import {
   type ExamClassroomPlacement,
   resolveExamClassroomPlacement,
 } from "@/lib/examClassroomPlacement"
+import { studentSearchTerms } from "@/lib/searchKeywords"
 import { matchesSearchTerm } from "@/lib/searchText"
 import {
   examStudentDeletionCountsMutation,
@@ -206,11 +207,10 @@ export function useExamStudentsData({ examId }: UseExamStudentsDataProps) {
   const matchesFilters = useCallback(
     (examStudent: ExamStudentWithMemberships): boolean => {
       const student = examStudent.student
-      const matchesSearch = matchesSearchTerm(searchTerm, [
-        `${student.lastName}${student.firstName}`,
-        `${student.lastNameKana}${student.firstNameKana}`,
-        student.studentNumber,
-      ])
+      const matchesSearch = matchesSearchTerm(
+        searchTerm,
+        studentSearchTerms(student)
+      )
 
       const matchesStatus =
         statusFilter === "all" || examStudent.status === statusFilter

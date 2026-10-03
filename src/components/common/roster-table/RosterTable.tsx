@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { RotateCcw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
+import { CautionNotice } from "@/components/common/CautionNotice"
 import { RosterDragOverlay } from "@/components/common/roster-table/RosterDragOverlay"
 import { RosterTableFilters } from "@/components/common/roster-table/RosterTableFilters"
 import { RosterTableHeader } from "@/components/common/roster-table/RosterTableHeader"
@@ -376,9 +377,7 @@ export function RosterTable({
                 この操作は取り消すことができません。
               </span>
               {slots?.removalWarning && (
-                <span className="block rounded-md border border-orange-200 bg-orange-50 p-3 whitespace-pre-line text-orange-800">
-                  {slots.removalWarning}
-                </span>
+                <CautionNotice>{slots.removalWarning}</CautionNotice>
               )}
               {removalError && (
                 <span className="block font-medium text-destructive">

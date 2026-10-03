@@ -12,6 +12,15 @@ import type {
 } from "@/types/pdfTools.types"
 
 import ExportPanel from "./export-panel/ExportPanel"
+import {
+  filePageKeys,
+  isArrangementChanged,
+  isSourcePageKeyOf,
+  outputPageKey,
+  type PageOrder,
+  sourcePageKey,
+  withoutFilePageOrder,
+} from "./export-panel/outputPageOrder"
 import ImportPanel from "./import-panel/ImportPanel"
 
 interface PdfToolsMainViewProps {
@@ -23,7 +32,8 @@ export default function PdfToolsMainView({
   previewColumns,
 }: PdfToolsMainViewProps) {
   const [importedFiles, setImportedFiles] = useState<ImportedFile[]>([])
-  const [outputPages, setOutputPages] = useState<OutputPage[]>([])
+  // ページの並び順（取り込んだ全ページ。選択していないページも）。並べ替えていなければ null
+  const [pageOrder, setPageOrder] = useState<PageOrder>(null)
   const [exportMode, setExportMode] = useState<PdfExportMode>("merge")
   const [interleaveConfig, setInterleaveConfig] = useState<InterleaveConfig>({
     transforms: [],
@@ -43,13 +53,15 @@ export default function PdfToolsMainView({
 
   const handleFilesImported = (files: ImportedFile[]) => {
     setImportedFiles((prev) => [...prev, ...files])
+    // 並べ替えていれば、取り込んだファイルのページは並び順の末尾に付く
+    setPageOrder((prev) =>
+      prev === null ? null : [...prev, ...files.flatMap(filePageKeys)]
+    )
   }
 
   const handleFileRemoved = (fileId: string) => {
     setImportedFiles((prev) => prev.filter((file) => file.id !== fileId))
-    setOutputPages((prev) =>
-      prev.filter((page) => page.sourceFileId !== fileId)
-    )
+    setPageOrder((prev) => withoutFilePageOrder(prev, fileId))
     // ファイル削除時に対応する除外ページ・ページ別回転もクリア
     setExcludedPages((prev) => withoutFilePages(prev, fileId))
     setPageRotations((prev) => withoutFileRotations(prev, fileId))
@@ -70,9 +82,24 @@ export default function PdfToolsMainView({
     )
   }
 
-  const handleOutputPagesChange = useCallback((pages: OutputPage[]) => {
-    setOutputPages(pages)
-  }, [])
+  /** 出力モードを変えたら、並べ替えた順を捨てて新しい方式の順にする */
+  const handleExportModeChange = (mode: PdfExportMode) => {
+    setExportMode(mode)
+    setPageOrder(null)
+  }
+
+  /** 交互挿入で1回に入れるページ数を変えたら、並べ替えた順を捨てる */
+  const handleInterleaveConfigChange = (config: InterleaveConfig) => {
+    if (
+      isArrangementChanged(
+        { exportMode, interleaveConfig },
+        { exportMode, interleaveConfig: config }
+      )
+    ) {
+      setPageOrder(null)
+    }
+    setInterleaveConfig(config)
+  }
 
   /** 出力プレビューからページを除外（永続的） */
   const handlePageExcluded = useCallback((page: OutputPage) => {
@@ -80,10 +107,10 @@ export default function PdfToolsMainView({
       const next = new Set(prev)
       if (page.isNUpCombined && page.combinedPages) {
         for (const pageNumber of page.combinedPages) {
-          next.add(`${page.sourceFileId}:${pageNumber}`)
+          next.add(sourcePageKey(page.sourceFileId, pageNumber))
         }
       } else {
-        next.add(`${page.sourceFileId}:${page.sourcePageNumber}`)
+        next.add(outputPageKey(page))
       }
       return next
     })
@@ -95,7 +122,7 @@ export default function PdfToolsMainView({
       setPageRotations((prev) => {
         const next = new Map(prev)
         // 2-in-1結合ページは先頭ページ番号を代表キーにする（生成側のキーと揃える）
-        next.set(`${page.sourceFileId}:${page.sourcePageNumber}`, rotation)
+        next.set(outputPageKey(page), rotation)
         return next
       })
     },
@@ -178,16 +205,16 @@ export default function PdfToolsMainView({
       <div className="h-full min-w-0 flex-1 overflow-hidden">
         <ExportPanel
           importedFiles={importedFiles}
-          outputPages={outputPages}
           excludedPages={excludedPages}
           pageRotations={pageRotations}
           exportMode={exportMode}
           interleaveConfig={interleaveConfig}
+          pageOrder={pageOrder}
           isProcessing={isProcessing}
-          onExportModeChange={setExportMode}
-          onInterleaveConfigChange={setInterleaveConfig}
+          onExportModeChange={handleExportModeChange}
+          onInterleaveConfigChange={handleInterleaveConfigChange}
           onFileUpdated={handleFileUpdated}
-          onOutputPagesChange={handleOutputPagesChange}
+          onPageOrderChange={setPageOrder}
           onPageExcluded={handlePageExcluded}
           onPageRotated={handlePageRotated}
           onProcessingChange={setIsProcessing}
@@ -202,7 +229,7 @@ export default function PdfToolsMainView({
 function withoutFilePages(pageKeys: Set<string>, fileId: string): Set<string> {
   const next = new Set<string>()
   for (const pageKey of pageKeys) {
-    if (!pageKey.startsWith(`${fileId}:`)) next.add(pageKey)
+    if (!isSourcePageKeyOf(pageKey, fileId)) next.add(pageKey)
   }
   return next
 }
@@ -214,7 +241,7 @@ function withoutFileRotations(
 ): Map<string, RotationDegree> {
   const next = new Map<string, RotationDegree>()
   for (const [pageKey, rotation] of pageRotations) {
-    if (!pageKey.startsWith(`${fileId}:`)) next.set(pageKey, rotation)
+    if (!isSourcePageKeyOf(pageKey, fileId)) next.set(pageKey, rotation)
   }
   return next
 }

@@ -19,7 +19,11 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
-import { gradeWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
+import {
+  gradeWorkflowSteps,
+  nextStepLabel,
+  workflowStepHref,
+} from "@/lib/shared/workflowSteps"
 import {
   applyGradeBoundaryPresetMutation,
   deleteAllGradeItemBoundariesMutation,
@@ -145,8 +149,14 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
 
       <div className="mt-8 flex justify-end">
         <Button asChild>
-          <Link href={`/grades/${gradeId}/04-comparisons`}>
-            {nextStepLabel(gradeWorkflowTabs, "04-comparisons")}
+          <Link
+            href={workflowStepHref(
+              `/grades/${gradeId}`,
+              gradeWorkflowSteps,
+              "04-comparisons"
+            )}
+          >
+            {nextStepLabel(gradeWorkflowSteps, "04-comparisons")}
           </Link>
         </Button>
       </div>

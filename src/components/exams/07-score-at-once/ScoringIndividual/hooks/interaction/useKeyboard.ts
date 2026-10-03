@@ -4,6 +4,8 @@
  */
 import { useEffect } from "react"
 
+import { isTextEntryTarget } from "@/lib/textEntryTarget"
+
 /** キーボードフックのプロパティ */
 interface UseKeyboardHandlersProps {
   /** 選択中の要素ID配列 */
@@ -56,12 +58,7 @@ export function useKeyboard({
       // 入力欄（テキスト編集モーダルのtextarea等）にフォーカスがある場合は
       // 削除ショートカットを抑制する（モーダルでテキスト編集中のBackspaceで
       // アノテーションごと削除されるのを防ぐ）
-      const target = e.target as HTMLElement | null
-      const isEditableTarget =
-        !!target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
+      const isEditableTarget = isTextEntryTarget(e.target)
 
       // Delete/Backspaceで選択要素を削除（複数選択対応）
       if (

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import type { CropRegionArea } from "@/components/exams/02-template/types"
-import { DeleteConfirmModal } from "@/components/exams/03-region-info/components/DeleteConfirmModal"
+import { CropRegionDeleteConfirmModal } from "@/components/exams/shared/CropRegionDeleteConfirmModal"
 import { Input } from "@/components/ui/input"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { deleteCropRegionMutation } from "@/queries/cropRegion"
@@ -24,7 +24,7 @@ type CropRegionEditorProps = {
   onCreateRegion: (
     type: CropRegionAreaType,
     coords: { x: number; y: number; width: number; height: number }
-  ) => Promise<void>
+  ) => Promise<string | null>
   onUpdateRegion: (
     cropRegionId: string,
     coords: { x: number; y: number; width: number; height: number }
@@ -50,11 +50,11 @@ const CropRegionEditor = ({
   onDefaultPointsChange,
 }: CropRegionEditorProps) => {
   const deleteCropRegion = useMutation(deleteCropRegionMutation(examId))
-  const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | null>(
-    null
-  )
+  const [selectedCropRegionId, setSelectedCropRegionId] = useState<
+    string | null
+  >(null)
   const [settingsCollapsed, setSettingsCollapsed] = useState(true)
-  // 削除の確認を待っている領域。添字ではなく id で持つ（確認の間に他の教員が
+  // 削除の確認を待っている領域。選択と同じく id で持つ（確認の間に他の教員が
   // 領域を消すと並びが変わり、添字では別の領域を消してしまう）
   const cropRegionDeletion = useDialogTarget<string>()
 
@@ -107,10 +107,8 @@ const CropRegionEditor = ({
 
   // Delete/Backspace では確認を挟む。領域を消すと、その領域の採点結果や
   // 書き込みも一緒に消え、元に戻せないため（3. 領域情報 の削除と同じ）
-  const handleRequestDeleteArea = (index: number) => {
-    const areaToDelete = areas[index]
-    if (!areaToDelete?.id) return
-    cropRegionDeletion.openWith(areaToDelete.id)
+  const handleRequestDeleteArea = (cropRegionId: string) => {
+    cropRegionDeletion.openWith(cropRegionId)
   }
 
   const confirmDeleteArea = async () => {
@@ -119,7 +117,7 @@ const CropRegionEditor = ({
 
     try {
       await deleteCropRegion.mutateAsync(cropRegionId)
-      setSelectedAreaIndex(null)
+      setSelectedCropRegionId(null)
     } catch {
       // 失敗の知らせは中央のトーストが出す。ここでは選択を保つだけ
     } finally {
@@ -136,8 +134,9 @@ const CropRegionEditor = ({
       return
     }
 
+    let createdCropRegionId: string | null
     try {
-      await onCreateRegion(type, {
+      createdCropRegionId = await onCreateRegion(type, {
         x: customCoords?.x ?? 0.05,
         y: customCoords?.y ?? 0.05,
         width: customCoords?.width ?? 0.1,
@@ -147,7 +146,7 @@ const CropRegionEditor = ({
       // 失敗の知らせは中央のトーストが出す。作られていない枠は選ばない
       return
     }
-    setSelectedAreaIndex(areas.length) // 新しく追加されたエリアを選択
+    setSelectedCropRegionId(createdCropRegionId) // 新しく追加されたエリアを選択
   }
 
   return (
@@ -158,8 +157,8 @@ const CropRegionEditor = ({
           backgroundImageUrl={backgroundImageUrl}
           imageDimensions={imageDimensions}
           areas={areas}
-          selectedAreaIndex={selectedAreaIndex}
-          onSelectArea={setSelectedAreaIndex}
+          selectedCropRegionId={selectedCropRegionId}
+          onSelectArea={setSelectedCropRegionId}
           onAddAreaByDrag={addArea}
           onUpdateArea={onUpdateRegion}
           onRequestDeleteArea={handleRequestDeleteArea}
@@ -217,13 +216,13 @@ const CropRegionEditor = ({
 
         <CropRegionList
           areas={areas}
-          selectedAreaIndex={selectedAreaIndex}
-          onSelectArea={setSelectedAreaIndex}
+          selectedCropRegionId={selectedCropRegionId}
+          onSelectArea={setSelectedCropRegionId}
           disabled={disabled}
         />
       </div>
 
-      <DeleteConfirmModal
+      <CropRegionDeleteConfirmModal
         isOpen={cropRegionDeletion.isOpen}
         examId={examId}
         cropRegionId={cropRegionDeletion.target}

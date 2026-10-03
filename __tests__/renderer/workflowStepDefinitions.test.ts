@@ -179,33 +179,24 @@ describe("段の一覧と実際のルート", () => {
 
 /**
  * 段の長い名前（`title`）は3か所で同じものを言う——ヘッダーの見出し、「次へ」の
- * 文言、一覧の「次のステップ」。前2つは `workflowTabs` から出るが、3つ目の梯子
- * （`src/lib/*Status.ts`）は自分で文字列を持っている。**同じ段を違う名前で呼ぶと、
- * 一覧から入った人とタブから入った人が別の画面だと思う。**
+ * 文言、一覧の「次のステップ」。**同じ段を違う名前で呼ぶと、一覧から入った人と
+ * タブから入った人が別の画面だと思う。** 3つとも段の一覧
+ * （`src/lib/shared/workflowSteps.ts`）から引くので、一覧の「次のステップ」を出す
+ * 梯子（`src/lib/*Status.ts`）が自分で段の名前を書き始めていないことを確かめる。
  */
 describe("段の題と「次のステップ」の文言", () => {
-  const LADDERS: { file: string; tabs: readonly WorkflowTab[] }[] = [
-    { file: "src/lib/examStatus.ts", tabs: examWorkflowTabs },
-    { file: "src/lib/gradeStatus.ts", tabs: gradeWorkflowTabs },
-    { file: "src/lib/courseworkStatus.ts", tabs: courseworkWorkflowTabs },
-    {
-      file: "src/lib/answerSheetStatus.ts",
-      tabs: answerSheetBuilderWorkflowTabs,
-    },
+  const LADDER_FILES = [
+    "src/lib/examStatus.ts",
+    "src/lib/gradeStatus.ts",
+    "src/lib/courseworkStatus.ts",
+    "src/lib/answerSheetStatus.ts",
   ]
 
-  it.each(LADDERS)(
-    "$file の text は、どれかの段の title と一致する",
-    ({ file, tabs }) => {
+  it.each(LADDER_FILES)(
+    "%s は段の名前を文字列で持たない（段の一覧から引く）",
+    (file) => {
       const source = fs.readFileSync(path.join(REPO_ROOT, file), "utf-8")
-      const ladderTexts = [...source.matchAll(/^\s*text: "([^"]+)",$/gm)].map(
-        (match) => match[1]
-      )
-      // 梯子が空なら検査が素通りする（段が減ったのか、書き方が変わったのか分からない）
-      expect(ladderTexts.length).toBeGreaterThan(0)
-
-      const titles = tabs.map((tab) => tab.title)
-      ladderTexts.forEach((text) => expect(titles).toContain(text))
+      expect([...source.matchAll(/^\s*text: "([^"]+)",$/gm)]).toEqual([])
     }
   )
 })

@@ -367,15 +367,17 @@ describe("Coursework CRUD", () => {
     })
 
     // 資料の削除はブロックされ、使用中の成績名を返す
-    const deleteCourseworkResult = await deleteCoursework(courseworkResult.id)
-    expect(deleteCourseworkResult.deleted).toBe(false)
-    if (deleteCourseworkResult.deleted)
-      throw new Error("削除がブロックされていない")
-    expect(deleteCourseworkResult.usedBy).toContain("成績A")
+    await expect(deleteCoursework(courseworkResult.id)).rejects.toThrow(
+      /削除できません[\s\S]*成績A/
+    )
+    expect(
+      await testPrisma.coursework.findUnique({
+        where: { id: courseworkResult.id },
+      })
+    ).not.toBeNull()
 
     // 評価項目は消せる（確認画面で警告する）。データソースは残り、参照が空になる
-    const deleteItemResult = await deleteCourseworkItem(item.id)
-    expect(deleteItemResult.deleted).toBe(true)
+    await deleteCourseworkItem(item.id)
     const orphaned = await testPrisma.gradeDataSource.findUnique({
       where: { id: dataSource.id },
     })
@@ -398,10 +400,9 @@ describe("Coursework CRUD", () => {
       weight: 100,
     })
 
-    const result = await deleteCoursework(courseworkResult.id)
-    expect(result.deleted).toBe(false)
-    if (result.deleted) throw new Error("削除がブロックされていない")
-    expect(result.usedBy).toEqual(["成績B"])
+    await expect(deleteCoursework(courseworkResult.id)).rejects.toThrow(
+      /削除できません[\s\S]*成績B/
+    )
   })
 
   it("getCourseworkCandidates が資料と評価項目を返す", async () => {

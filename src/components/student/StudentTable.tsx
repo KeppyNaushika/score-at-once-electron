@@ -63,7 +63,10 @@ import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { useListPagination } from "@/hooks/useListPagination"
 import { useTableSort } from "@/hooks/useTableSort"
 import { isCurrentMembership } from "@/lib/membership"
-import { classroomSearchKeywords } from "@/lib/searchKeywords"
+import {
+  classroomFilterOptions,
+  studentSearchTerms,
+} from "@/lib/searchKeywords"
 import { matchesSearchTerm } from "@/lib/searchText"
 import {
   classroomListQuery,
@@ -141,11 +144,10 @@ export default function StudentTable() {
   // Filter students
   const filteredStudents = useMemo(() => {
     return students.filter((student) => {
-      const matchesSearch = matchesSearchTerm(searchTerm, [
-        `${student.lastName}${student.firstName}`,
-        `${student.lastNameKana}${student.firstNameKana}`,
-        student.studentNumber,
-      ])
+      const matchesSearch = matchesSearchTerm(
+        searchTerm,
+        studentSearchTerms(student)
+      )
 
       if (!matchesSearch) return false
 
@@ -176,27 +178,18 @@ export default function StudentTable() {
     })
   }, [students, searchTerm, filterClassroomId, filterMembershipStatus])
 
-  const classroomFilterOptions = useMemo(
-    () => [
-      { value: "all", label: "すべての学級" },
+  const classroomOptions = useMemo(
+    () =>
       // 非表示の学級も選べるようにする。前年度の学級はたいてい非表示にされており、
       // 外すと過去の所属で絞り込めない。表示中を先に並べる
-      ...classrooms
-        .toSorted(
+      classroomFilterOptions(
+        classrooms.toSorted(
           (classroomA, classroomB) =>
             Number(classroomA.isVisible === false) -
               Number(classroomB.isVisible === false) ||
             classroomA.name.localeCompare(classroomB.name)
         )
-        .map((classroom) => ({
-          value: classroom.id,
-          label:
-            classroom.isVisible === false
-              ? `${classroom.name}（非表示）`
-              : classroom.name,
-          keywords: classroomSearchKeywords(classroom),
-        })),
-    ],
+      ),
     [classrooms]
   )
 
@@ -340,7 +333,7 @@ export default function StudentTable() {
 
   const classroomFilter = (
     <Combobox
-      options={classroomFilterOptions}
+      options={classroomOptions}
       value={filterClassroomId}
       onValueChange={setFilterClassroomId}
       placeholder="学級フィルタ"

@@ -19,8 +19,11 @@ import { drawingHandlers } from "./drawingHandlers"
 import { examClassroomHandlers } from "./examClassroomHandlers"
 import { examHandlers } from "./examHandlers"
 import { exportHandlers } from "./exportHandlers"
+import { gradeAdjustmentHandlers } from "./gradeAdjustmentHandlers"
 import { gradeHandlers } from "./gradeHandlers"
 import { gradeLockHandlers } from "./gradeLockHandlers"
+import { gradeRosterHandlers } from "./gradeRosterHandlers"
+import { gradeStructureHandlers } from "./gradeStructureHandlers"
 import { registerChannel } from "./ipcHandlerUtils"
 import { miscHandlers } from "./miscHandlers"
 import { navigationHandlers } from "./navigationHandlers"
@@ -48,8 +51,11 @@ const handlerGroups = [
   examClassroomHandlers,
   examHandlers,
   exportHandlers,
+  gradeAdjustmentHandlers,
   gradeHandlers,
   gradeLockHandlers,
+  gradeRosterHandlers,
+  gradeStructureHandlers,
   miscHandlers,
   navigationHandlers,
   omrConfigHandlers,
@@ -83,8 +89,11 @@ const handlers = {
   ...examClassroomHandlers,
   ...examHandlers,
   ...exportHandlers,
+  ...gradeAdjustmentHandlers,
   ...gradeHandlers,
   ...gradeLockHandlers,
+  ...gradeRosterHandlers,
+  ...gradeStructureHandlers,
   ...miscHandlers,
   ...navigationHandlers,
   ...omrConfigHandlers,

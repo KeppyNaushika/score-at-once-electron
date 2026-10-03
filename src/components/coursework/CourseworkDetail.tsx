@@ -79,21 +79,15 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
   }
 
   const handleDelete = async () => {
-    let result
     try {
-      result = await deleteCoursework.mutateAsync(courseworkId)
+      await deleteCoursework.mutateAsync(courseworkId)
     } catch {
-      // 失敗の通知は MutationCache が出す。確認は開いたままにする
+      // 失敗の通知（成績算出で使われていて断られたときも）は MutationCache が出す。
+      // 確認は開いたままにする
       return
     }
     setIsDeleteModalOpen(false)
-    if (result.deleted) {
-      router.push("/coursework")
-      return
-    }
-    toast.error("削除できません", {
-      description: `成績算出から参照されています: ${result.usedBy.join("、")}`,
-    })
+    router.push("/coursework")
   }
 
   const handleExportArchive = () => {
@@ -183,12 +177,7 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
       />
       <DeleteCourseworkModal
         open={isDeleteModalOpen}
-        target={{
-          id: coursework.id,
-          name: coursework.name,
-          studentCount: coursework.students.length,
-          itemCount: coursework.items.length,
-        }}
+        target={coursework}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDelete}
         loading={deleteCoursework.isPending}

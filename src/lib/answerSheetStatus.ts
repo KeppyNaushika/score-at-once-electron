@@ -6,6 +6,11 @@
  * presentation 情報なので main では組まず renderer 側の唯一の実装として持つ。
  */
 
+import {
+  answerSheetBuilderWorkflowSteps,
+  nextWorkflowStep,
+  type WorkflowNextStep,
+} from "@/lib/shared/workflowSteps"
 import type { ASBDefinitionListItem } from "@/types/answerSheetBuilder.types"
 
 /**
@@ -21,14 +26,8 @@ type AnswerSheetProgressSource = Pick<
   "id" | "questionCount"
 >
 
-interface AnswerSheetStatus {
-  step: number
-  text: string
-  url: string
-}
-
 /** 各段の完了状態 */
-export interface AnswerSheetStepCompletion {
+interface AnswerSheetStepCompletion {
   /** 1. 作成（01-edit）。設問が1問でもあれば着手済みとみなす */
   hasQuestions: boolean
 }
@@ -56,21 +55,20 @@ export function getAnswerSheetCompletion(
  */
 export function getAnswerSheetStatus(
   definition: AnswerSheetProgressSource
-): AnswerSheetStatus {
-  const id = definition.id
+): WorkflowNextStep {
+  const definitionHref = `/answer-sheet-builder/${definition.id}`
   const completion = getAnswerSheetCompletion(definition)
 
   if (!completion.hasQuestions) {
-    return {
-      step: 1,
-      text: "解答用紙の作成",
-      url: `/answer-sheet-builder/${id}/01-edit`,
-    }
+    return nextWorkflowStep(
+      definitionHref,
+      answerSheetBuilderWorkflowSteps,
+      "01-edit"
+    )
   }
-
-  return {
-    step: 2,
-    text: "解答用紙の書き出し",
-    url: `/answer-sheet-builder/${id}/02-export`,
-  }
+  return nextWorkflowStep(
+    definitionHref,
+    answerSheetBuilderWorkflowSteps,
+    "02-export"
+  )
 }

@@ -9,7 +9,7 @@ import type { AuditLogFilter } from "@/electron-src/lib/prisma/auditQuery"
  */
 
 /** 一覧の何ページ目を何件で見ているか（ページ番号は1始まり） */
-export interface AuditLogPagination {
+interface AuditLogPagination {
   pageNumber: number
   pageSize: number
 }

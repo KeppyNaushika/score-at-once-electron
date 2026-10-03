@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 
 import type { ComparisonDisplay, ComparisonMark } from "./types"
 
-/** 記号の出し方（off は記号ごと出さないので、ここには来ない） */
+/** 記号の出し方（"none" は記号ごと出さないので、ここには来ない） */
 type VisibleDisplay = Exclude<ComparisonDisplay, "none">
 
 /**

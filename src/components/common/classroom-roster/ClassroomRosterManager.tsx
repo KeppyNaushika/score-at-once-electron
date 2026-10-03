@@ -89,7 +89,7 @@ interface ClassroomRosterManagerProps {
   /** 専属生徒を削除したときに連動して消えるもの（最終確認に列挙する） */
   deletionLosses?: string[]
   /** 専属生徒を削除するときの最終確認に添える注意（null・未指定なら出さない） */
-  deletionWarning?: string | null
+  removalWarning?: string | null
   /**
    * 変更後に親へ再読込を通知。
    *
@@ -191,7 +191,7 @@ export function ClassroomRosterManager({
   onRemove,
   fetchRemovalPreview,
   deletionLosses,
-  deletionWarning,
+  removalWarning,
   onChanged,
   showAddDialog: externalShowAddDialog,
   onShowAddDialogChange,
@@ -353,7 +353,7 @@ export function ClassroomRosterManager({
         mode={removalMode}
         fetchRemovalPreview={fetchRemovalPreview}
         deletionLosses={deletionLosses}
-        deletionWarning={deletionWarning}
+        removalWarning={removalWarning}
         onConfirm={async (entry, deleteStudents, confirmedCounts) => {
           await onRemove(entry, deleteStudents, confirmedCounts)
           onChanged?.()

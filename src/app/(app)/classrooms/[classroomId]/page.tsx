@@ -21,23 +21,15 @@ import ClassroomModal from "@/components/classroom/ClassroomModal"
 import ClassroomStudentImportModal from "@/components/classroom/ClassroomStudentImportModal"
 import { MembershipStatusToggle } from "@/components/classroom/MembershipStatusToggle"
 import MembershipTable from "@/components/classroom/MembershipTable"
+import ConfirmationModal from "@/components/common/ConfirmationModal"
 import {
   type ToolbarAction,
   toolbarButtonAction,
 } from "@/components/common/OverflowToolbar"
 import PageHeader from "@/components/layout/PageHeader"
 import StudentClassroomMembershipModal from "@/components/student/StudentClassroomMembershipModal"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { MembershipStatusFilter } from "@/lib/membership"
@@ -402,48 +394,26 @@ export default function ClassroomDetailPage() {
         />
       )}
 
-      <AlertDialog
+      <ConfirmationModal
         open={membershipIdToDelete !== null}
-        onOpenChange={(open) => {
-          if (!open) setMembershipIdToDelete(null)
-        }}
-      >
-        {/* 問いかけの文言だけで足りるので、説明文は置かない */}
-        <AlertDialogContent aria-describedby={undefined}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>この所属関係を削除しますか？</AlertDialogTitle>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction
-              className={buttonVariants({ variant: "destructive" })}
-              onClick={handleConfirmDeleteMembership}
-            >
-              削除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onClose={() => setMembershipIdToDelete(null)}
+        title="この所属関係を削除しますか？"
+        confirmText="削除"
+        variant="destructive"
+        icon="trash"
+        onConfirm={handleConfirmDeleteMembership}
+      />
 
-      <AlertDialog
+      <ConfirmationModal
         open={isDeleteClassroomConfirmOpen}
-        onOpenChange={setIsDeleteClassroomConfirmOpen}
-      >
-        <AlertDialogContent aria-describedby={undefined}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>この学級を削除しますか？</AlertDialogTitle>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction
-              className={buttonVariants({ variant: "destructive" })}
-              onClick={() => void handleDeleteWithNavigation()}
-            >
-              削除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onClose={() => setIsDeleteClassroomConfirmOpen(false)}
+        title="この学級を削除しますか？"
+        confirmText="削除"
+        variant="destructive"
+        icon="trash"
+        loading={deleteClassroom.isPending}
+        onConfirm={handleDeleteWithNavigation}
+      />
     </div>
   )
 }

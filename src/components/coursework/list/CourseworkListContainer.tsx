@@ -145,20 +145,14 @@ export function CourseworkListContainer() {
   }, [createCoursework, router])
 
   const handleDelete = async (coursework: CourseworkSummary) => {
-    let result
     try {
-      result = await deleteCoursework.mutateAsync(coursework.id)
+      await deleteCoursework.mutateAsync(coursework.id)
     } catch {
-      // 失敗の通知は MutationCache が出す。確認は開いたままにする
+      // 失敗の通知（成績算出で使われていて断られたときも）は MutationCache が出す。
+      // 確認は開いたままにする
       return
     }
     courseworkDeletion.close()
-    if (!result.deleted) {
-      toast.error("削除できません", {
-        description: `次の成績算出で参照されています: ${result.usedBy.join("、")}`,
-      })
-      return
-    }
     toast.success("資料を削除しました", { description: coursework.name })
   }
 
@@ -509,14 +503,7 @@ export function CourseworkListContainer() {
 
       <DeleteCourseworkModal
         open={courseworkDeletion.isOpen}
-        target={
-          courseworkDeletion.target && {
-            id: courseworkDeletion.target.id,
-            name: courseworkDeletion.target.name,
-            studentCount: courseworkDeletion.target.students.length,
-            itemCount: courseworkDeletion.target.items.length,
-          }
-        }
+        target={courseworkDeletion.target}
         onClose={courseworkDeletion.close}
         onConfirm={() =>
           courseworkDeletion.target

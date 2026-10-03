@@ -312,7 +312,7 @@ export function computeRegionDefinitions(templatePath: string): RegionDef[] {
 }
 
 /** 解答用紙の記入欄（受験番号・氏名など）の位置。座標は用紙に対する割合 */
-export interface HeaderFieldBox {
+interface HeaderFieldBox {
   label: string
   x: number
   y: number

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table"
 import type { StudentExamResult } from "@/electron-src/lib/prisma/student"
 import { useTableSort } from "@/hooks/useTableSort"
+import { examWorkflowSteps, workflowStepHref } from "@/lib/shared/workflowSteps"
 
 interface ExamResultSortable {
   examId: string
@@ -160,7 +161,13 @@ export function ExamResultsCard({ results }: ExamResultsCardProps) {
                     key={result.examId}
                     className="group cursor-pointer"
                     onClick={() =>
-                      router.push(`/exams/${result.examId}/07-score-at-once`)
+                      router.push(
+                        workflowStepHref(
+                          `/exams/${result.examId}`,
+                          examWorkflowSteps,
+                          "07-score-at-once"
+                        )
+                      )
                     }
                   >
                     <TableCell className="font-medium">

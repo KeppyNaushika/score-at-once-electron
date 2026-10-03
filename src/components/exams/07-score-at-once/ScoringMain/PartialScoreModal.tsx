@@ -149,34 +149,19 @@ export default function PartialScoreModal({
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
               <div>
-                <Kbd className="h-auto rounded border bg-white px-2 py-1 font-mono font-normal text-inherit">
-                  0-9, .
-                </Kbd>{" "}
-                入力
+                <Kbd variant="outlined">0-9, .</Kbd> 入力
               </div>
               <div>
-                <Kbd className="h-auto rounded border bg-white px-2 py-1 font-mono font-normal text-inherit">
-                  Backspace
-                </Kbd>{" "}
-                削除
+                <Kbd variant="outlined">Backspace</Kbd> 削除
               </div>
               <div>
-                <Kbd className="h-auto rounded border bg-white px-2 py-1 font-mono font-normal text-inherit">
-                  {partialKeyDisplay}
-                </Kbd>{" "}
-                部分点で確定
+                <Kbd variant="outlined">{partialKeyDisplay}</Kbd> 部分点で確定
               </div>
               <div>
-                <Kbd className="h-auto rounded border bg-white px-2 py-1 font-mono font-normal text-inherit">
-                  {pendingKeyDisplay}
-                </Kbd>{" "}
-                保留で確定
+                <Kbd variant="outlined">{pendingKeyDisplay}</Kbd> 保留で確定
               </div>
               <div>
-                <Kbd className="h-auto rounded border bg-white px-2 py-1 font-mono font-normal text-inherit">
-                  {cancelKeyDisplay}
-                </Kbd>{" "}
-                キャンセル
+                <Kbd variant="outlined">{cancelKeyDisplay}</Kbd> キャンセル
               </div>
             </div>
           </div>

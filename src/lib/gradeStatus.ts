@@ -7,6 +7,11 @@
 
 import type { Prisma } from "@prisma/client"
 
+import {
+  gradeWorkflowSteps,
+  nextWorkflowStep,
+  type WorkflowNextStep,
+} from "@/lib/shared/workflowSteps"
 import type { Serialized } from "@/types/prismaExtensions"
 
 /**
@@ -32,16 +37,8 @@ type GradeProgressSource = Serialized<
   }>
 >
 
-interface GradeStatus {
-  step: number
-  text: string
-  url: string
-}
-
 /** 各ステップの完了状態 */
 export interface GradeStepCompletion {
-  /** 基本設定（概要。名前が設定済みなら完了） */
-  hasSetup: boolean
   /** 1. 生徒管理 */
   hasStudents: boolean
   /** 2. データソース */
@@ -68,7 +65,6 @@ export function getGradeCompletion(
   )
 
   return {
-    hasSetup: true, // 試験が存在すれば基本設定は完了
     hasStudents: studentCount > 0,
     hasDataSources: dataSources.length > 0,
     hasBoundaries: hasAnyBoundary,
@@ -78,37 +74,18 @@ export function getGradeCompletion(
 /**
  * 成績算出試験の現在のステータス（次のステップ）を判定
  */
-export function getGradeStatus(grade: GradeProgressSource): GradeStatus {
-  const id = grade.id
+export function getGradeStatus(grade: GradeProgressSource): WorkflowNextStep {
+  const gradeHref = `/grades/${grade.id}`
   const completion = getGradeCompletion(grade)
 
   if (!completion.hasStudents) {
-    return {
-      step: 1,
-      text: "生徒の登録",
-      url: `/grades/${id}/01-students`,
-    }
+    return nextWorkflowStep(gradeHref, gradeWorkflowSteps, "01-students")
   }
-
   if (!completion.hasDataSources) {
-    return {
-      step: 2,
-      text: "データソースの設定",
-      url: `/grades/${id}/02-data-sources`,
-    }
+    return nextWorkflowStep(gradeHref, gradeWorkflowSteps, "02-data-sources")
   }
-
   if (!completion.hasBoundaries) {
-    return {
-      step: 3,
-      text: "成績境界の設定",
-      url: `/grades/${id}/03-boundaries`,
-    }
+    return nextWorkflowStep(gradeHref, gradeWorkflowSteps, "03-boundaries")
   }
-
-  return {
-    step: 6,
-    text: "結果の出力",
-    url: `/grades/${id}/06-export`,
-  }
+  return nextWorkflowStep(gradeHref, gradeWorkflowSteps, "06-export")
 }

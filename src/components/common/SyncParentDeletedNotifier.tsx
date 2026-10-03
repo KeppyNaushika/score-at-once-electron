@@ -1,9 +1,11 @@
 "use client"
 
 import { useEffect } from "react"
-import { toast } from "sonner"
 
-import { BETA_ORIGIN_PREFIX } from "@/components/common/BetaBadge"
+import {
+  countByTableLabel,
+  showSyncToast,
+} from "@/components/common/syncNoticeToast"
 import type {
   SyncParentDeleted,
   SyncParentDeletedReport,
@@ -42,24 +44,18 @@ export function SyncParentDeletedNotifier() {
  */
 function showToasts(report: SyncParentDeletedReport): void {
   if (report.parentDeleted.length > 0) {
-    toast.warning(
-      `${BETA_ORIGIN_PREFIX}他のPCでの削除にともない、一部のデータを表示から外しました`,
-      {
-        description: `${breakdown(report.parentDeleted)}\nもとになるものが他のPCで削除されたため、それにぶら下がっていたものを表示から外しています。中身は残してあるので、削除されたものが同じものとして作り直されれば、そのまま表示に戻ります。`,
-        duration: Infinity,
-        closeButton: true,
-      }
+    showSyncToast(
+      "warning",
+      "他のPCでの削除にともない、一部のデータを表示から外しました",
+      `${breakdown(report.parentDeleted)}\nもとになるものが他のPCで削除されたため、それにぶら下がっていたものを表示から外しています。中身は残してあるので、削除されたものが同じものとして作り直されれば、そのまま表示に戻ります。`
     )
   }
 
   if (report.parentReturned.length > 0) {
-    toast.info(
-      `${BETA_ORIGIN_PREFIX}表示から外していたデータを表示に戻しました`,
-      {
-        description: `${breakdown(report.parentReturned)}\nもとになるものが他のPCで作り直されたので、外していたものをふたたび表示しています。`,
-        duration: Infinity,
-        closeButton: true,
-      }
+    showSyncToast(
+      "info",
+      "表示から外していたデータを表示に戻しました",
+      `${breakdown(report.parentReturned)}\nもとになるものが他のPCで作り直されたので、外していたものをふたたび表示しています。`
     )
   }
 }
@@ -69,22 +65,16 @@ function showToasts(report: SyncParentDeletedReport): void {
  * 消されたものごとに、ぶら下がっていたものの件数を並べる。
  */
 function breakdown(records: SyncParentDeleted[]): string {
-  const countByCauseAndTable = new Map<string, Map<string, number>>()
+  const tableNamesByCause = new Map<string, string[]>()
   for (const record of records) {
-    const countByTable =
-      countByCauseAndTable.get(record.causeTable) ?? new Map<string, number>()
-    countByTable.set(
-      record.tableName,
-      (countByTable.get(record.tableName) ?? 0) + 1
-    )
-    countByCauseAndTable.set(record.causeTable, countByTable)
+    const tableNames = tableNamesByCause.get(record.causeTable) ?? []
+    tableNames.push(record.tableName)
+    tableNamesByCause.set(record.causeTable, tableNames)
   }
-  return [...countByCauseAndTable]
-    .map(([causeTable, countByTable]) => {
-      const tables = [...countByTable]
-        .map(([tableName, count]) => `${syncTableLabel(tableName)} ${count}件`)
-        .join("、")
-      return `${syncTableLabel(causeTable)}の削除にともない ${tables}`
-    })
+  return [...tableNamesByCause]
+    .map(
+      ([causeTable, tableNames]) =>
+        `${syncTableLabel(causeTable)}の削除にともない ${countByTableLabel(tableNames)}`
+    )
     .join("\n")
 }

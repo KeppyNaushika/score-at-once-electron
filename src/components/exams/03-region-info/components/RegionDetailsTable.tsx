@@ -4,10 +4,10 @@ import { useMutation } from "@tanstack/react-query"
 import { Palette } from "lucide-react"
 import { useCallback } from "react"
 
-import { DeleteConfirmModal } from "@/components/exams/03-region-info/components/DeleteConfirmModal"
 import { RegionTableRow } from "@/components/exams/03-region-info/components/RegionTableRow"
 import { useDragAndDrop } from "@/components/exams/03-region-info/hooks/useDragAndDrop"
 import { useKeyboardNavigation } from "@/components/exams/03-region-info/hooks/useKeyboardNavigation"
+import { CropRegionDeleteConfirmModal } from "@/components/exams/shared/CropRegionDeleteConfirmModal"
 import {
   Table,
   TableBody,
@@ -229,7 +229,7 @@ const RegionDetailsTable = ({
         </TableBody>
       </Table>
 
-      <DeleteConfirmModal
+      <CropRegionDeleteConfirmModal
         isOpen={cropRegionDeletion.isOpen}
         examId={examId}
         cropRegionId={cropRegionDeletion.target}

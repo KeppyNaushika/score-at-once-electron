@@ -10,7 +10,6 @@ import {
   useSensors,
 } from "@dnd-kit/core"
 import {
-  arrayMove,
   rectSortingStrategy,
   SortableContext,
   sortableKeyboardCoordinates,
@@ -28,9 +27,12 @@ const ROTATION_CYCLE: RotationDegree[] = [0, 90, 180, 270]
 
 interface OutputPreviewProps {
   pages: OutputPage[]
-  onPagesChange: (pages: OutputPage[]) => void
-  // ドラッグで並べ替えたとき（削除・回転の反映は onPagesChange）。並べ替えた順を覚えるために分ける
-  onPagesReorder: (pages: OutputPage[]) => void
+  /** ドラッグで動かした。移動先のページの直前（後ろへ動かしたなら直後）へ */
+  onPageMoved: (
+    movedPage: OutputPage,
+    targetPage: OutputPage,
+    placement: "before" | "after"
+  ) => void
   onDeletePage: (page: OutputPage) => void
   onRotatePage: (page: OutputPage, rotation: RotationDegree) => void
   disabled: boolean
@@ -40,8 +42,7 @@ interface OutputPreviewProps {
 
 export default function OutputPreview({
   pages,
-  onPagesChange,
-  onPagesReorder,
+  onPageMoved,
   onDeletePage,
   onRotatePage,
   disabled,
@@ -62,15 +63,12 @@ export default function OutputPreview({
     const newIndex = pages.findIndex((page) => page.id === over.id)
 
     if (oldIndex !== -1 && newIndex !== -1) {
-      onPagesReorder(arrayMove(pages, oldIndex, newIndex))
+      onPageMoved(
+        pages[oldIndex],
+        pages[newIndex],
+        oldIndex < newIndex ? "after" : "before"
+      )
     }
-  }
-
-  const handleDeletePage = (page: OutputPage) => {
-    // 即座に表示から除去（ドラッグ並び替えの順序を維持）
-    onPagesChange(pages.filter((otherPage) => otherPage.id !== page.id))
-    // 永続的に除外（設定変更による再生成時も反映）
-    onDeletePage(page)
   }
 
   /** ページを 90° 単位で回す（step: -1 = 左, 1 = 右） */
@@ -80,13 +78,6 @@ export default function OutputPreview({
       ROTATION_CYCLE[
         (currentIndex + step + ROTATION_CYCLE.length) % ROTATION_CYCLE.length
       ]
-    // 即座に表示へ反映（ドラッグ並び替えの順序を維持）
-    onPagesChange(
-      pages.map((otherPage) =>
-        otherPage.id === page.id ? { ...otherPage, rotation } : otherPage
-      )
-    )
-    // 永続化（設定変更による再生成時も反映）
     onRotatePage(page, rotation)
   }
 
@@ -120,7 +111,7 @@ export default function OutputPreview({
               page={page}
               index={index}
               disabled={disabled}
-              onDelete={() => handleDeletePage(page)}
+              onDelete={() => onDeletePage(page)}
               onRotateLeft={() => handleRotatePage(page, -1)}
               onRotateRight={() => handleRotatePage(page, 1)}
             />

@@ -110,10 +110,7 @@ export function EllipseToolPopover({
               <div className="text-xs text-gray-400">Shift+ドラッグで正円</div>
               {shortcutKey && (
                 <div className="mt-1 text-xs text-gray-400">
-                  キー:{" "}
-                  <Kbd className="min-w-0 rounded bg-gray-200 font-mono font-normal text-gray-800">
-                    {shortcutKey.toUpperCase()}
-                  </Kbd>
+                  キー: <Kbd variant="subtle">{shortcutKey.toUpperCase()}</Kbd>
                 </div>
               )}
             </div>

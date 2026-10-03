@@ -12,12 +12,14 @@ const ToggleGroupContext = React.createContext<
 >({
   size: "default",
   variant: "default",
+  selectedTone: "accent",
 })
 
 function ToggleGroup({
   className,
   variant,
   size,
+  selectedTone,
   children,
   ...props
 }: React.ComponentProps<typeof ToggleGroupPrimitive.Root> &
@@ -33,7 +35,7 @@ function ToggleGroup({
       )}
       {...props}
     >
-      <ToggleGroupContext.Provider value={{ variant, size }}>
+      <ToggleGroupContext.Provider value={{ variant, size, selectedTone }}>
         {children}
       </ToggleGroupContext.Provider>
     </ToggleGroupPrimitive.Root>
@@ -45,6 +47,7 @@ function ToggleGroupItem({
   children,
   variant,
   size,
+  selectedTone,
   ...props
 }: React.ComponentProps<typeof ToggleGroupPrimitive.Item> &
   VariantProps<typeof toggleVariants>) {
@@ -59,6 +62,7 @@ function ToggleGroupItem({
         toggleVariants({
           variant: context.variant || variant,
           size: context.size || size,
+          selectedTone: context.selectedTone || selectedTone,
         }),
         "min-w-0 flex-1 shrink-0 rounded-none shadow-none first:rounded-l-md last:rounded-r-md focus:z-10 focus-visible:z-10 data-[variant=outline]:border-l-0 data-[variant=outline]:first:border-l",
         className

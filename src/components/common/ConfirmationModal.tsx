@@ -40,7 +40,8 @@ interface ConfirmationModalProps {
   open: boolean
   onClose: () => void
   title: string
-  description: string
+  /** 問いかけ（title）だけで足りるときは省く */
+  description?: string
   confirmText: string
   cancelText?: string
   variant?: "destructive" | "default" | "warning"
@@ -102,7 +103,11 @@ export default function ConfirmationModal({
         if (!isOpen) onClose()
       }}
     >
-      <AlertDialogContent className="sm:max-w-125">
+      <AlertDialogContent
+        className="sm:max-w-125"
+        // 説明文を置かないときは、説明の無いことを支援技術へ明示する
+        {...(description === undefined && { "aria-describedby": undefined })}
+      >
         <AlertDialogHeader>
           <div className="flex items-center space-x-3">
             <div className={`rounded-full bg-gray-100 p-2 ${styles.icon}`}>
@@ -114,9 +119,11 @@ export default function ConfirmationModal({
               </AlertDialogTitle>
             </div>
           </div>
-          <AlertDialogDescription className="mt-3 text-gray-600">
-            {description}
-          </AlertDialogDescription>
+          {description !== undefined && (
+            <AlertDialogDescription className="mt-3 text-gray-600">
+              {description}
+            </AlertDialogDescription>
+          )}
         </AlertDialogHeader>
 
         <div className="space-y-4">

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
+import { CautionNotice } from "@/components/common/CautionNotice"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,7 +60,7 @@ interface ClassroomRemovalDialogProps {
    * 専属生徒を削除するときの最終確認に添える注意（例: この名簿を使っている成績算出
    * では、外した生徒の点数が欠測になる）。null・未指定なら出さない。
    */
-  deletionWarning?: string | null
+  removalWarning?: string | null
   onClose: () => void
 }
 
@@ -210,7 +211,7 @@ export function ClassroomRemovalDialog({
   fetchRemovalPreview,
   onConfirm,
   deletionLosses,
-  deletionWarning,
+  removalWarning,
   onClose,
 }: ClassroomRemovalDialogProps) {
   const [choice, setChoice] = useState<RemovalChoice>("unlink")
@@ -381,10 +382,8 @@ export function ClassroomRemovalDialog({
               <span className="block font-medium">
                 この操作は取り消せません。本当に削除しますか？
               </span>
-              {deletionWarning && (
-                <span className="block rounded-md border border-orange-200 bg-orange-50 p-3 whitespace-pre-line text-orange-800">
-                  {deletionWarning}
-                </span>
+              {removalWarning && (
+                <CautionNotice>{removalWarning}</CautionNotice>
               )}
               {/* 数えた後に他の教員が加えていれば main が中止する。閉じずに
                   数え直した結果を見せ、利用者にもう一度決めてもらう */}

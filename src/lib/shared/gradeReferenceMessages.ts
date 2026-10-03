@@ -24,6 +24,18 @@ import {
   toGradeDataSourceType,
 } from "@/types/grade.types"
 
+import { gradeWorkflowSteps, workflowStep } from "./workflowSteps"
+
+/** 断りの文言で外し方を案内する段の名前（タブと同じ名前で呼ぶ） */
+const STUDENTS_STEP_LABEL = workflowStep(
+  gradeWorkflowSteps,
+  "01-students"
+).label
+const DATA_SOURCES_STEP_LABEL = workflowStep(
+  gradeWorkflowSteps,
+  "02-data-sources"
+).label
+
 /** 評価項目（成績算出・確定値つき）を同梱したデータソース */
 export type UsingGradeDataSource = Pick<
   GradeDataSource,
@@ -271,7 +283,7 @@ export function buildDeletionBlockedMessage(
   const label = BLOCKED_TARGET_LABEL[kind]
   return (
     `この${label}は次の成績算出で使われているため、削除できません。` +
-    `削除するには、先に各成績算出の「2. データソース」でこの${label}を使っているデータソースを削除してください。\n` +
+    `削除するには、先に各成績算出の「${DATA_SOURCES_STEP_LABEL}」でこの${label}を使っているデータソースを削除してください。\n` +
     toBulletLines(dataSources.map(describeDataSource))
   )
 }
@@ -291,7 +303,7 @@ export function buildStudentDeletionBlockedMessage(
   if (gradeNames.length === 0) return null
   return (
     `この生徒は次の成績算出の名簿に載っているため、削除できません。` +
-    `削除するには、先に各成績算出の「1. 生徒管理」でこの生徒を名簿から外してください。\n` +
+    `削除するには、先に各成績算出の「${STUDENTS_STEP_LABEL}」でこの生徒を名簿から外してください。\n` +
     toBulletLines(gradeNames.map((gradeName) => `成績算出「${gradeName}」`))
   )
 }
@@ -344,7 +356,7 @@ export function buildItemDeletionWarning(
   const label = WARNED_TARGET_LABEL[kind]
   return (
     `この${label}は成績算出で使われています。削除すると次のようになります。` +
-    `削除した後は、各成績算出の「2. データソース」と結果を確認してください。\n` +
+    `削除した後は、各成績算出の「${DATA_SOURCES_STEP_LABEL}」と結果を確認してください。\n` +
     toBulletLines(usages.map((usage) => describeEffect(kind, usage)))
   )
 }

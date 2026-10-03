@@ -13,6 +13,11 @@ import { ScoreDecisionForm } from "@/components/exams/08-finalize/ScoreDecisionF
 import { Button } from "@/components/ui/button"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useExamDecisionSummary } from "@/hooks/useExamDecisionSummary"
+import {
+  examWorkflowSteps,
+  workflowStep,
+  workflowStepHref,
+} from "@/lib/shared/workflowSteps"
 import { examDetailQuery } from "@/queries/exam"
 
 /** 選択中セルの所在（設問とセルは必ずペアで持つ — 添字では引かない） */
@@ -109,13 +114,18 @@ export default function ScoreFinalizeMainView() {
       <div className="flex min-h-0 flex-1">
         {/* 左: 設問ごとの担当・進捗・裁定対象 */}
         <div className="w-96 shrink-0 overflow-y-auto border-r border-gray-200">
-          {/* 担当を直す口は1つだけ（3. 領域情報の採点担当タブ）。ここからはそこへ送る */}
+          {/* 担当を直す口は1つだけ（領域情報の段の採点担当タブ）。ここからはそこへ送る */}
           <GuardedLink
-            href={`/exams/${examId}/03-region-info`}
+            href={workflowStepHref(
+              `/exams/${examId}`,
+              examWorkflowSteps,
+              "03-region-info"
+            )}
             className="flex items-center gap-1 border-b border-gray-100 px-3 py-2 text-xs text-blue-600 hover:underline"
           >
             <SquarePen className="h-3 w-3" />
-            採点の担当を割り当てる（3. 領域情報）
+            採点の担当を割り当てる（
+            {workflowStep(examWorkflowSteps, "03-region-info").label}）
           </GuardedLink>
 
           {loading && (

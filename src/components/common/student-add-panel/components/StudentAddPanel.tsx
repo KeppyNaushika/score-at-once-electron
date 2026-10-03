@@ -27,7 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { classroomSearchKeywords } from "@/lib/searchKeywords"
+import { classroomFilterOptions } from "@/lib/searchKeywords"
 
 /**
  * 共通「生徒追加パネル」
@@ -76,15 +76,11 @@ export function StudentAddPanel({
     studentActiveOnlyDefault,
   })
 
-  const classroomFilterOptions = useMemo(
-    () => [
-      { value: "all", label: "すべての学級" },
-      ...classrooms.map((candidate) => ({
-        value: candidate.classroom.id,
-        label: candidate.classroom.name,
-        keywords: classroomSearchKeywords(candidate.classroom),
-      })),
-    ],
+  const classroomOptions = useMemo(
+    () =>
+      classroomFilterOptions(
+        classrooms.map((candidate) => candidate.classroom)
+      ),
     [classrooms]
   )
 
@@ -305,7 +301,7 @@ export function StudentAddPanel({
                 />
               </div>
               <Combobox
-                options={classroomFilterOptions}
+                options={classroomOptions}
                 value={filterClassroomId}
                 onValueChange={setFilterClassroomId}
                 placeholder="学級フィルタ"

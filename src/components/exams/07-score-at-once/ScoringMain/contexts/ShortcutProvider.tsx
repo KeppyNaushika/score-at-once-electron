@@ -25,7 +25,8 @@ import {
 
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { normalizeKey } from "@/lib/normalizeKey"
-import { resolveKeyBindings } from "@/lib/scoringKeybindings"
+import { keySceneOf, resolveKeyBindings } from "@/lib/scoringKeybindings"
+import { isTextEntryTarget } from "@/lib/textEntryTarget"
 import {
   keyboardShortcutsQuery,
   resetKeyboardShortcutsMutation,
@@ -224,12 +225,6 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
   // ============================================
 
   useEffect(() => {
-    /** 文字を打ち込める要素か（採点キーを黙らせる対象） */
-    const isTextEntryTarget = (target: EventTarget | null) =>
-      target instanceof HTMLInputElement ||
-      target instanceof HTMLTextAreaElement ||
-      (target instanceof HTMLElement && target.isContentEditable)
-
     /** 入った要素が入力欄かどうかで決める */
     const handleFocusIn = (event: FocusEvent) => {
       setContextValue("inputFocus", isTextEntryTarget(event.target))
@@ -273,27 +268,20 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
       // ============================================
       // 重要: input要素内での制御
       // ============================================
-      const target = event.target
-      const isInputElement =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        (target instanceof HTMLElement && target.isContentEditable)
+      const isInputElement = isTextEntryTarget(event.target)
 
       // input要素内では、モーダル制御キー以外をスルー
       // これにより、通常の文字入力（0-9, a-z, .等）とBackspace等は正常に動作する
       if (isInputElement) {
-        // モーダル用コマンド（modal.*）は when 句が partialScoreModalOpen だけで
-        // !inputFocus を含まない＝モーダルのinputにフォーカスがある状態でも
-        // 動く前提で登録されている。ここで弾くと再割当したキーが死ぬため、
-        // modal.* の割当キーは部分点・保留と同様に後続の評価へ通す。
-        // モーダルが開いていなければ when 句が偽になり通常の入力として扱われる。
-        const modalControlKeys = [
-          keyBindings["scoring.partial"],
-          keyBindings["scoring.pending"],
-          ...Object.entries(keyBindings)
-            .filter(([commandId]) => commandId.startsWith("modal."))
-            .map(([, boundKey]) => boundKey),
-        ].filter(Boolean)
+        // 部分点の入力欄の中で効くコマンド（場面が partialInput・both）は、when 句が
+        // partialScoreModalOpen だけで !inputFocus を含まない＝入力欄にフォーカスが
+        // ある状態でも動く前提で登録されている。ここで弾くと再割当したキーが死ぬため、
+        // その割当キーは後続の評価へ通す。入力欄が開いていなければ when 句が偽になり
+        // 通常の入力として扱われる。
+        const modalControlKeys = Object.entries(keyBindings)
+          .filter(([commandId]) => keySceneOf(commandId) !== "scoring")
+          .map(([, boundKey]) => boundKey)
+          .filter(Boolean)
 
         if (!modalControlKeys.includes(key)) {
           // モーダル制御キー以外は通常の入力として処理（Backspace含む）

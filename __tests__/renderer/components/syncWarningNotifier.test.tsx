@@ -12,13 +12,16 @@
  *   印が無いと自分の操作の結果だと読まれる
  * - **消えない置き場へ案内する。** これ1枚で完結すると読ませると、閉じた時点で終わる
  * - **言い換えられない注意も出す。** 知らないものを握りつぶさない
+ *
+ * main は直近の同期の注意の全文を状態に載せて押し出すだけなので、**新しく出たものだけ
+ * 知らせる**見分けもここで確かめる。
  */
 
 import { render } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SyncWarningNotifier } from "@/components/common/SyncWarningNotifier"
-import type { SyncWarningReport } from "@/electron-src/lib/sync/types"
+import type { SyncAppStatus } from "@/electron-src/lib/sync/types"
 
 /** sonner の呼ばれ方。本文（description）を型で引けるよう、使う形だけ名乗る */
 type ToastCall = (message: string, options: { description: string }) => void
@@ -37,23 +40,35 @@ vi.mock("sonner", () => ({
   },
 }))
 
-let pushReport: ((report: SyncWarningReport) => void) | null = null
+let pushStatus: ((status: SyncAppStatus) => void) | null = null
 vi.mock("@/queries/sync", () => ({
-  subscribeSyncWarningsChanged: (
-    onChanged: (report: SyncWarningReport) => void
-  ) => {
-    pushReport = onChanged
+  subscribeSyncStatus: (onChanged: (status: SyncAppStatus) => void) => {
+    pushStatus = onChanged
     return () => {
-      pushReport = null
+      pushStatus = null
     }
   },
 }))
 
-/** 画面に出して購読させ、main から押し出された体で1回ぶんの注意を流し込む */
-function emit(newWarnings: string[]): void {
+const IDLE_STATUS: SyncAppStatus = {
+  state: "idle",
+  lastSyncTime: null,
+  lastError: null,
+  syncCount: 1,
+  versionMismatches: [],
+  lastWarnings: [],
+}
+
+/** main から押し出された体で、直近の同期が出した注意の全文を流し込む */
+function pushWarnings(lastWarnings: string[]): void {
+  if (!pushStatus) throw new Error("購読が張られていない")
+  pushStatus({ ...IDLE_STATUS, lastWarnings })
+}
+
+/** 画面に出して購読させ、1回ぶんの注意を流し込む */
+function emit(warnings: string[]): void {
   render(<SyncWarningNotifier />)
-  if (!pushReport) throw new Error("購読が張られていない")
-  pushReport({ newWarnings })
+  pushWarnings(warnings)
 }
 
 function descriptionOf(spy: typeof toastWarning): string {
@@ -66,7 +81,7 @@ describe("SyncWarningNotifier", () => {
     toastWarning.mockClear()
     toastInfo.mockClear()
     toastError.mockClear()
-    pushReport = null
+    pushStatus = null
   })
 
   it("新しい注意が無ければ何も出さない", () => {
@@ -128,5 +143,33 @@ describe("SyncWarningNotifier", () => {
     expect(descriptionOf(toastWarning)).toContain(
       "Some future warning the app has never seen"
     )
+  })
+
+  it("同じ注意が続くあいだは、2回目から知らせない", () => {
+    emit(["Failed to open remote database: other-pc"])
+    pushWarnings(["Failed to open remote database: other-pc"])
+
+    expect(toastWarning).toHaveBeenCalledTimes(1)
+  })
+
+  it("前回に無かった注意だけを知らせる", () => {
+    emit(["Failed to open remote database: other-pc"])
+    pushWarnings([
+      "Failed to open remote database: other-pc",
+      "Rebuild failed: 外部キーの違反",
+    ])
+
+    expect(toastWarning).toHaveBeenCalledTimes(2)
+    const [, options] = toastWarning.mock.calls[1]
+    expect(options.description).toContain("反映できませんでした")
+    expect(options.description).not.toContain("読み取れませんでした")
+  })
+
+  it("一度消えた注意がまた出たら、もう一度知らせる", () => {
+    emit(["Failed to open remote database: other-pc"])
+    pushWarnings([])
+    pushWarnings(["Failed to open remote database: other-pc"])
+
+    expect(toastWarning).toHaveBeenCalledTimes(2)
   })
 })

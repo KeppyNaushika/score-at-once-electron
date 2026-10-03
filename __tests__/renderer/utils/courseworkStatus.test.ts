@@ -93,7 +93,6 @@ describe("getCourseworkStatus", () => {
   it("何も無いときは生徒管理を指す", () => {
     const status = getCourseworkStatus(buildCoursework(0, 0))
 
-    expect(status.step).toBe(2)
     expect(status.text).toBe("生徒の登録")
     expect(status.url).toBe(urlOfStep(2))
   })
@@ -101,7 +100,6 @@ describe("getCourseworkStatus", () => {
   it("生徒だけ登録されているときは評価項目を指す", () => {
     const status = getCourseworkStatus(buildCoursework(1, 0))
 
-    expect(status.step).toBe(3)
     expect(status.text).toBe("評価項目の設定")
     expect(status.url).toBe(urlOfStep(3))
   })
@@ -110,7 +108,6 @@ describe("getCourseworkStatus", () => {
     // 段は前から順に埋める。後ろの段が埋まっていても手前の穴を先に出す
     const status = getCourseworkStatus(buildCoursework(0, 1))
 
-    expect(status.step).toBe(2)
     expect(status.url).toBe(urlOfStep(2))
   })
 
@@ -119,7 +116,6 @@ describe("getCourseworkStatus", () => {
     // 試験・成績が最後の段を指し続けるのと同じく、ここが行き止まりになる
     const status = getCourseworkStatus(buildCoursework(2, 1))
 
-    expect(status.step).toBe(4)
     expect(status.text).toBe("点数の入力")
     expect(status.url).toBe(urlOfStep(4))
   })

@@ -93,7 +93,7 @@ export function isUnknownGradeLabel(
 }
 
 /** 基準に無い評定の一覧（多い順）と、それを付けられた生徒の人数 */
-export interface UnknownGradeLabels {
+interface UnknownGradeLabels {
   /** 上書きされた評定のうち基準に無いもの（多い順） */
   values: string[]
   /** その評定が付いている人数（上書きは生徒×評価項目に1行なので行数＝人数） */

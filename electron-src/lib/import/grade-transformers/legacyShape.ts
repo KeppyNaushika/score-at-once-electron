@@ -69,7 +69,7 @@ export interface ArchiveGradeExportSettingsRowV1_14_0 {
 }
 
 /** v1.14.0 の成績本体セクション群（成績のタグも比較もまだ無い） */
-export type GradeSectionsV1_14_0 = Omit<
+type GradeSectionsV1_14_0 = Omit<
   GradeSections,
   "gradeIndividualReportSettings" | "gradeTags" | "gradeComparisons"
 > & {

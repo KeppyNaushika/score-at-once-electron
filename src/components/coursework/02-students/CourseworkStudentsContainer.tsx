@@ -222,7 +222,7 @@ export function CourseworkStudentsContainer({
               "加減点とその理由",
               "成績通知書に載せるコメント",
             ]}
-            deletionWarning={removalWarning}
+            removalWarning={removalWarning}
             // 失敗は例外で伝わり、中央のトーストが知らせる（表示は読み直しで戻る）
             onReorder={async (orderedClassroomIds) => {
               await setClassroomOrders.mutateAsync(orderedClassroomIds)

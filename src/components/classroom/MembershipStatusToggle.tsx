@@ -3,8 +3,10 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   MEMBERSHIP_STATUS_FILTER_OPTIONS,
+  MEMBERSHIP_STATUS_FILTERS,
   type MembershipStatusFilter,
 } from "@/lib/membership"
+import { ignoreDeselect } from "@/lib/toggleSelection"
 
 interface MembershipStatusToggleProps {
   statusFilter: MembershipStatusFilter
@@ -23,14 +25,10 @@ export function MembershipStatusToggle({
       size="sm"
       value={statusFilter}
       aria-label="所属状況で絞り込む"
-      onValueChange={(value) => {
-        // 選択中をもう一度押すと空文字が来る。選択は外さない
-        const nextFilterOption = MEMBERSHIP_STATUS_FILTER_OPTIONS.find(
-          (candidateOption) => candidateOption.statusFilter === value
-        )
-        if (nextFilterOption)
-          onStatusFilterChange(nextFilterOption.statusFilter)
-      }}
+      onValueChange={ignoreDeselect(
+        MEMBERSHIP_STATUS_FILTERS,
+        onStatusFilterChange
+      )}
     >
       {MEMBERSHIP_STATUS_FILTER_OPTIONS.map((filterOption) => (
         <ToggleGroupItem

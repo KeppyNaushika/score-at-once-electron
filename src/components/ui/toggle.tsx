@@ -20,10 +20,17 @@ const toggleVariants = cva(
         sm: "h-8 px-1.5 min-w-8",
         lg: "h-10 px-2.5 min-w-10",
       },
+      /** 押されている（選択中）ときの色。primary は選んだものを主色で塗る */
+      selectedTone: {
+        accent: "",
+        primary:
+          "data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
+      },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      selectedTone: "accent",
     },
   }
 )
@@ -32,13 +39,14 @@ function Toggle({
   className,
   variant,
   size,
+  selectedTone,
   ...props
 }: React.ComponentProps<typeof TogglePrimitive.Root> &
   VariantProps<typeof toggleVariants>) {
   return (
     <TogglePrimitive.Root
       data-slot="toggle"
-      className={cn(toggleVariants({ variant, size, className }))}
+      className={cn(toggleVariants({ variant, size, selectedTone, className }))}
       {...props}
     />
   )

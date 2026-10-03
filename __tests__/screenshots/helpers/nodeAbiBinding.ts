@@ -41,7 +41,7 @@ const INSTALLED_BINDING = path.join(
  * `node_modules/.cache/` に置く。git の管理外であり、撮影用の `artifacts/` と違って
  * Playwright が実行のたびに空にすることもない。
  */
-export const NODE_ABI_BINDING_PATH = path.join(
+const NODE_ABI_BINDING_PATH = path.join(
   PROJECT_ROOT,
   "node_modules/.cache/score-at-once-screenshots/better_sqlite3-node.node"
 )

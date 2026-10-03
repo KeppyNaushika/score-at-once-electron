@@ -7,6 +7,7 @@ import { Combobox } from "@/components/common/Combobox"
 import { SidePanelSection } from "@/components/exams/07-score-at-once/ScoringSidePanel/SidePanelSection"
 import type { ScoringExamStudent } from "@/components/exams/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
+import { studentOption } from "@/lib/searchKeywords"
 
 interface StudentAnswerPanelProps {
   /** 受験者の一覧（受験者の並び順に並べ済み） */
@@ -22,15 +23,7 @@ export function StudentAnswerPanel({
 }: StudentAnswerPanelProps) {
   // 氏名・番号に加えて、読み（カナ）でも探せるようにする
   const examStudentOptions = useMemo(
-    () =>
-      examStudents.map(({ id, student }) => ({
-        value: id,
-        label: `${student.lastName} ${student.firstName} (${student.studentNumber})`,
-        keywords: [
-          student.studentNumber,
-          `${student.lastNameKana} ${student.firstNameKana}`,
-        ],
-      })),
+    () => examStudents.map(({ id, student }) => studentOption(id, student)),
     [examStudents]
   )
 

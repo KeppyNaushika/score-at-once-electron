@@ -7,7 +7,7 @@ import { useMemo } from "react"
 import { Combobox } from "@/components/common/Combobox"
 import type { RosterFilter } from "@/components/common/roster-table/types"
 import { Input } from "@/components/ui/input"
-import { classroomSearchKeywords } from "@/lib/searchKeywords"
+import { classroomFilterOptions } from "@/lib/searchKeywords"
 
 interface RosterTableFiltersProps {
   searchTerm: string
@@ -27,15 +27,8 @@ export function RosterTableFilters({
   classrooms,
   additionalFilters,
 }: RosterTableFiltersProps) {
-  const classroomFilterOptions = useMemo(
-    () => [
-      { value: "all", label: "すべての学級" },
-      ...classrooms.map((classroom) => ({
-        value: classroom.id,
-        label: classroom.name,
-        keywords: classroomSearchKeywords(classroom),
-      })),
-    ],
+  const classroomOptions = useMemo(
+    () => classroomFilterOptions(classrooms),
     [classrooms]
   )
 
@@ -52,7 +45,7 @@ export function RosterTableFilters({
       </div>
 
       <Combobox
-        options={classroomFilterOptions}
+        options={classroomOptions}
         value={selectedClassroomId}
         onValueChange={onClassroomChange}
         placeholder="学級フィルタ"

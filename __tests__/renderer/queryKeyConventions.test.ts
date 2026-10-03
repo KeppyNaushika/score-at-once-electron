@@ -353,11 +353,6 @@ function scan(): Scan {
   const configPath = path.join(REPO_ROOT, "tsconfig.json")
   const config = ts.readConfigFile(configPath, ts.sys.readFile)
   const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, REPO_ROOT)
-  const program = ts.createProgram(parsed.fileNames, {
-    ...parsed.options,
-    noEmit: true,
-  })
-  const checker = program.getTypeChecker()
 
   const files = execSync(
     "git ls-files --cached --others --exclude-standard 'src/**/*.ts' 'src/**/*.tsx'",
@@ -368,6 +363,16 @@ function scan(): Scan {
   )
     .trim()
     .split("\n")
+
+  // 根は走査する src だけにする。tsconfig の include は `**/*.ts`・`**/*.js` で、
+  // gitignore 済みのビルド出力（main/・out/）まで拾い、Program の構築が倍以上重くなる。
+  // src が import する先（electron-src・generated・.d.ts）は解決で自動的に入るので、
+  // 型の判定は変わらない（#1325）
+  const program = ts.createProgram(
+    files.map((relativePath) => path.join(REPO_ROOT, relativePath)),
+    { ...parsed.options, noEmit: true }
+  )
+  const checker = program.getTypeChecker()
 
   const readers: Reader[] = []
   const writers: Writer[] = []
@@ -526,9 +531,10 @@ const KNOWN_UNSTABLE_EFFECTS: string[] = []
 describe("クエリキーの規約", () => {
   let scanned: Scan
 
+  // Program を組んで型を引くので、絞っても重いときは10秒（hookTimeout の既定）に届く
   beforeAll(() => {
     scanned = scan()
-  })
+  }, 60_000)
 
   it("走査そのものが機能している（読みを見つけられている）", () => {
     expect(scanned.readers.length).toBeGreaterThan(30)

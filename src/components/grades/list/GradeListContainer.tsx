@@ -466,14 +466,7 @@ export function GradeListContainer() {
 
       <DeleteGradeModal
         open={gradeDeletion.isOpen}
-        target={
-          gradeDeletion.target && {
-            id: gradeDeletion.target.id,
-            name: gradeDeletion.target.name,
-            studentCount: gradeDeletion.target.gradeStudents.length,
-            gradeItemCount: gradeDeletion.target.gradeItems.length,
-          }
-        }
+        target={gradeDeletion.target}
         onClose={gradeDeletion.close}
         onConfirm={handleDelete}
         loading={deleteGrade.isPending}

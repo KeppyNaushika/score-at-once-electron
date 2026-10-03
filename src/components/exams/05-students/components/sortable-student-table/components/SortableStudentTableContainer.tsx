@@ -40,7 +40,11 @@ import {
 import { Table, TableBody } from "@/components/ui/table"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { ExamClassroomPlacement } from "@/lib/examClassroomPlacement"
-import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
+import { ignoreDeselect } from "@/lib/toggleSelection"
+import {
+  EXAM_STUDENT_STATUSES,
+  type ExamStudentStatus,
+} from "@/types/examStudentStatus.types"
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 interface ExamStudentStatusOption {
@@ -237,14 +241,9 @@ export function SortableStudentTableContainer(
             size="sm"
             value={status ?? ""}
             aria-label="受験状態"
-            onValueChange={(value) => {
-              // 選択中をもう一度押すと空文字が来る。選択は外さない
-              const nextStatusOption = EXAM_STUDENT_STATUS_OPTIONS.find(
-                (candidateOption) => candidateOption.status === value
-              )
-              if (nextStatusOption)
-                onStudentStatusUpdate(row.id, nextStatusOption.status)
-            }}
+            onValueChange={ignoreDeselect(EXAM_STUDENT_STATUSES, (nextStatus) =>
+              onStudentStatusUpdate(row.id, nextStatus)
+            )}
           >
             {EXAM_STUDENT_STATUS_OPTIONS.map((statusOption) => (
               <ToggleGroupItem

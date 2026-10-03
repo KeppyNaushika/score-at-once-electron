@@ -8,9 +8,24 @@ import type {
   SyncAppStatus,
   SyncParentDeletedReport,
   SyncRecordFoldReport,
-  SyncWarningReport,
 } from "../lib/sync/types"
 import { bind } from "./invoke"
+
+/**
+ * main が押し出してくるチャンネルを購読する。外すのは戻り値を呼ぶ。
+ *
+ * 押し出しはどれも「出来事を1つ受け取って callback へ渡す」だけなので、張り方と
+ * 外し方をここ1か所に置く。
+ */
+function subscribe<Payload>(
+  channel: string,
+  callback: (payload: Payload) => void
+): () => void {
+  const handler = (_event: Electron.IpcRendererEvent, payload: Payload) =>
+    callback(payload)
+  ipcRenderer.on(channel, handler)
+  return () => ipcRenderer.removeListener(channel, handler)
+}
 
 export function createSyncApi() {
   return {
@@ -23,66 +38,28 @@ export function createSyncApi() {
 
       getStatus: bind("sync:getStatus"),
 
-      onStatusChanged: (
-        callback: (status: SyncAppStatus) => void
-      ): (() => void) => {
-        const handler = (
-          _event: Electron.IpcRendererEvent,
-          status: SyncAppStatus
-        ) => callback(status)
-        ipcRenderer.on("sync:status-changed", handler)
-        return () => ipcRenderer.removeListener("sync:status-changed", handler)
-      },
+      /**
+       * 同期の状態が変わったら呼ばれる購読を張る。直近の同期が出した注意の全文
+       * （`lastWarnings`）もここに載る。
+       */
+      onStatusChanged: (callback: (status: SyncAppStatus) => void) =>
+        subscribe("sync:status-changed", callback),
 
       /**
        * 別id・同一ユニークキーでかぶった行の片方が隠れた、または隠れていた行が
-       * 表示に戻ったら呼ばれる購読を張る。外すのは戻り値を呼ぶ。
+       * 表示に戻ったら呼ばれる購読を張る。
        */
       onRecordFoldsChanged: (
         callback: (report: SyncRecordFoldReport) => void
-      ): (() => void) => {
-        const handler = (
-          _event: Electron.IpcRendererEvent,
-          report: SyncRecordFoldReport
-        ) => callback(report)
-        ipcRenderer.on("sync:record-folds-changed", handler)
-        return () =>
-          ipcRenderer.removeListener("sync:record-folds-changed", handler)
-      },
+      ) => subscribe("sync:record-folds-changed", callback),
 
       /**
        * 親の行が他のPCで削除されたために表から外れた行、親が作り直されて戻った行が
-       * 出たら呼ばれる購読を張る。外すのは戻り値を呼ぶ。
+       * 出たら呼ばれる購読を張る。
        */
       onParentDeletedChanged: (
         callback: (report: SyncParentDeletedReport) => void
-      ): (() => void) => {
-        const handler = (
-          _event: Electron.IpcRendererEvent,
-          report: SyncParentDeletedReport
-        ) => callback(report)
-        ipcRenderer.on("sync:parent-deleted-changed", handler)
-        return () =>
-          ipcRenderer.removeListener("sync:parent-deleted-changed", handler)
-      },
-
-      /**
-       * 同期が**新しく出した**注意書きが届いたら呼ばれる購読を張る。外すのは戻り値を呼ぶ。
-       *
-       * 直近1回ぶんの全文は `getStatus()` の `lastWarnings` にあり、こちらは気づかせる
-       * ためだけのもの。取りこぼしても読む場所は残る。
-       */
-      onWarningsChanged: (
-        callback: (report: SyncWarningReport) => void
-      ): (() => void) => {
-        const handler = (
-          _event: Electron.IpcRendererEvent,
-          report: SyncWarningReport
-        ) => callback(report)
-        ipcRenderer.on("sync:warnings-changed", handler)
-        return () =>
-          ipcRenderer.removeListener("sync:warnings-changed", handler)
-      },
+      ) => subscribe("sync:parent-deleted-changed", callback),
     },
   }
 }

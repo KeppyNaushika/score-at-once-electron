@@ -54,7 +54,7 @@ interface SlotPayloadCopy {
   fromRowId: string
 }
 
-export interface SlotPermutationPlan {
+interface SlotPermutationPlan {
   /** この順に適用すれば、途中でも2行が同じスロットに乗らない */
   keyMoves: SlotKeyMove[]
   payloadCopies: SlotPayloadCopy[]

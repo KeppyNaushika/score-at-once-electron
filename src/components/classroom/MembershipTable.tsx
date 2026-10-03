@@ -3,17 +3,9 @@
 import { Calendar, Edit, Trash2, User } from "lucide-react"
 import { useMemo, useState } from "react"
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import ConfirmationModal from "@/components/common/ConfirmationModal"
 import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { SortableTableHead } from "@/components/ui/SortableTableHead"
@@ -154,6 +146,7 @@ export default function ClassroomMembershipTable({
       onBulkDelete(bulkDeletion.target)
       setCheckedIds(new Set())
     }
+    bulkDeletion.close()
   }
 
   return (
@@ -360,29 +353,15 @@ export default function ClassroomMembershipTable({
         </CardContent>
       </Card>
 
-      <AlertDialog
+      <ConfirmationModal
         open={bulkDeletion.isOpen}
-        onOpenChange={bulkDeletion.handleOpenChange}
-      >
-        {/* 問いかけの文言だけで足りるので、説明文は置かない */}
-        <AlertDialogContent aria-describedby={undefined}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              選択された{bulkDeletion.target?.length ?? 0}
-              件の所属を削除しますか？
-            </AlertDialogTitle>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction
-              className={buttonVariants({ variant: "destructive" })}
-              onClick={handleConfirmBulkDelete}
-            >
-              削除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onClose={bulkDeletion.close}
+        title={`選択された${bulkDeletion.target?.length ?? 0}件の所属を削除しますか？`}
+        confirmText="削除"
+        variant="destructive"
+        icon="trash"
+        onConfirm={handleConfirmBulkDelete}
+      />
     </div>
   )
 }

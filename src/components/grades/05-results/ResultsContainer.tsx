@@ -23,6 +23,11 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import {
+  gradeWorkflowSteps,
+  nextStepLabel,
+  workflowStepHref,
+} from "@/lib/shared/workflowSteps"
 import { parsePreference } from "@/lib/userPreferences"
 import {
   deleteGradeOverrideMutation,
@@ -218,8 +223,14 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
             </Button>
           )}
           <Button asChild>
-            <Link href={`/grades/${gradeId}/06-export`}>
-              出力へ進む
+            <Link
+              href={workflowStepHref(
+                `/grades/${gradeId}`,
+                gradeWorkflowSteps,
+                "06-export"
+              )}
+            >
+              {nextStepLabel(gradeWorkflowSteps, "06-export")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>

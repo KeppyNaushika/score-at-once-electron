@@ -24,6 +24,8 @@ import {
   useRef,
 } from "react"
 
+import { type KeyScene, sceneWhen } from "@/lib/scoringKeybindings"
+
 import { useShortcutContext } from "../ScoringMain/contexts/ShortcutProvider"
 import type { CommandHandler, CommandMetadata } from "../types"
 
@@ -138,4 +140,32 @@ export function useCommand(
     registerCommand,
     unregisterCommand,
   ])
+}
+
+/** `useSceneCommand` のオプション */
+interface UseSceneCommandOptions {
+  /** 効く場面が両方のコマンド（部分点・保留）だけ、登録ごとに場面を選ぶ */
+  scene?: Exclude<KeyScene, "both">
+  /** 場面に加える条件（例: `hasSelectedAnswers`） */
+  condition?: string
+  /** コマンドのメタデータ（設定画面での表示用） */
+  metadata?: CommandMetadata
+}
+
+/**
+ * キーの割り当てを持つコマンドを登録する。when 句は、そのコマンドが効く場面
+ * （`keySceneOf`）から導く。
+ *
+ * 場面を when 句へ手で書くと、設定画面の重なりの判定（`canShareKey`）が見る場面と
+ * 食い違う。割り当てを持つコマンドはこれを通し、場面は既定の置き場所で決める。
+ */
+export function useSceneCommand(
+  commandId: string,
+  handler: () => void,
+  { scene, condition, metadata }: UseSceneCommandOptions = {}
+) {
+  useCommand(commandId, handler, {
+    when: sceneWhen(commandId, { scene, condition }),
+    metadata,
+  })
 }

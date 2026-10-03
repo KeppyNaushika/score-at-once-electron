@@ -138,7 +138,9 @@ describe("成績一覧の供給形", () => {
 
     // 点数の入力は資料の段の仕事で、成績の段には入力の段が無い。
     // 入り具合はデータソース画面が数えて見せる
-    expect(getGradeStatus(grade).step).toBe(3)
+    expect(getGradeStatus(grade).url).toBe(
+      `/grades/${fixture.gradeId}/03-boundaries`
+    )
   })
 
   it("対象者が居なければ生徒の登録へ誘導する", async () => {
@@ -148,7 +150,7 @@ describe("成績一覧の供給形", () => {
     const grade = result.find((candidate) => candidate.id === created.id)!
 
     expect(grade.gradeStudents).toEqual([])
-    expect(getGradeStatus(grade).step).toBe(1)
+    expect(getGradeStatus(grade).url).toBe(`/grades/${created.id}/01-students`)
   })
 
   it("作成直後の成績も一覧と同じ形で返る", async () => {
@@ -156,6 +158,8 @@ describe("成績一覧の供給形", () => {
     const created = await createGrade({ name: "作った直後" })
 
     expect(created.gradeStudents).toEqual([])
-    expect(getGradeStatus(created).step).toBe(1)
+    expect(getGradeStatus(created).url).toBe(
+      `/grades/${created.id}/01-students`
+    )
   })
 })

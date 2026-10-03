@@ -18,6 +18,7 @@ import { TagAnalyticsCard } from "@/app/(app)/students/[studentId]/components/Ta
 import { useStudentDetail } from "@/app/(app)/students/[studentId]/hooks/useStudentDetail"
 import { useStudentExamResults } from "@/app/(app)/students/[studentId]/hooks/useStudentExamResults"
 import { useStudentGradeResults } from "@/app/(app)/students/[studentId]/hooks/useStudentGradeResults"
+import ConfirmationModal from "@/components/common/ConfirmationModal"
 import {
   type ToolbarAction,
   toolbarButtonAction,
@@ -26,15 +27,6 @@ import PageHeader from "@/components/layout/PageHeader"
 import { DeleteStudentModal } from "@/components/student/DeleteStudentModal"
 import StudentClassroomMembershipModal from "@/components/student/StudentClassroomMembershipModal"
 import StudentModal from "@/components/student/StudentModal"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -251,23 +243,13 @@ export default function StudentDetailPage() {
         />
       )}
 
-      <AlertDialog
+      <ConfirmationModal
         open={membershipEnding.isOpen}
-        onOpenChange={membershipEnding.handleOpenChange}
-      >
-        {/* 問いかけの文言だけで足りるので、説明文は置かない */}
-        <AlertDialogContent aria-describedby={undefined}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>この所属関係を終了しますか？</AlertDialogTitle>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmEndMembership}>
-              終了する
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onClose={membershipEnding.close}
+        title="この所属関係を終了しますか？"
+        confirmText="終了する"
+        onConfirm={handleConfirmEndMembership}
+      />
 
       <DeleteStudentModal
         open={isDeleteModalOpen}

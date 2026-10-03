@@ -1,12 +1,11 @@
 "use client"
 
-import type {
-  PreviewMode,
-  PreviewModeToggleProps,
+import {
+  PREVIEW_MODES,
+  type PreviewModeToggleProps,
 } from "@/components/exams/06-student-answers/student-answer-table/types"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-
-const PREVIEW_MODES: PreviewMode[] = ["full", "name-only"]
+import { ignoreDeselect } from "@/lib/toggleSelection"
 
 export function PreviewModeToggle({
   previewMode,
@@ -20,26 +19,18 @@ export function PreviewModeToggle({
         type="single"
         variant="outline"
         size="sm"
+        selectedTone="primary"
         value={previewMode}
         aria-label="プレビュー"
-        onValueChange={(value) => {
-          // 選択中をもう一度押すと空文字が来る。選択は外さない
-          const nextPreviewMode = PREVIEW_MODES.find(
-            (candidatePreviewMode) => candidatePreviewMode === value
-          )
-          if (nextPreviewMode) onPreviewModeChange(nextPreviewMode)
-        }}
+        onValueChange={ignoreDeselect(PREVIEW_MODES, onPreviewModeChange)}
       >
-        <ToggleGroupItem
-          value="full"
-          className="px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-        >
+        <ToggleGroupItem value="full" className="px-3">
           全体
         </ToggleGroupItem>
         <ToggleGroupItem
           value="name-only"
           disabled={!hasNameRegion}
-          className="px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+          className="px-3"
         >
           氏名欄のみ
         </ToggleGroupItem>

@@ -37,10 +37,13 @@ export default function TemplateStepPage() {
 
   // 新規領域作成ハンドラー
   const handleCreateRegion = useCallback(
-    async (type: CropRegionAreaType, coords: RegionCoordinates) => {
-      if (!selectedMasterImage) return
+    async (
+      type: CropRegionAreaType,
+      coords: RegionCoordinates
+    ): Promise<string | null> => {
+      if (!selectedMasterImage) return null
 
-      await createCropRegion.mutateAsync({
+      const createdCropRegion = await createCropRegion.mutateAsync({
         examPageId: selectedMasterImage.id,
         type,
         x: coords.x,
@@ -50,6 +53,7 @@ export default function TemplateStepPage() {
         label: buildNewCropRegionLabel(type, areas),
         points: type === "QUESTION_ANSWER" ? defaultPoints : null,
       })
+      return createdCropRegion.id
     },
     [areas, createCropRegion, defaultPoints, selectedMasterImage]
   )

@@ -23,8 +23,13 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import {
+  courseworkWorkflowSteps,
+  nextStepLabel,
+  workflowStep,
+  workflowStepHref,
+} from "@/lib/shared/workflowSteps"
 import { parsePreference } from "@/lib/userPreferences"
-import { courseworkWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
 import {
   type CourseworkClassroomRow,
   courseworkClassroomsQuery,
@@ -476,13 +481,19 @@ export function CourseworkScoresContainer({
         <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
           <p className="mb-2 text-muted-foreground">評価項目がありません</p>
           <p className="text-sm text-muted-foreground">
-            「評価項目」ステップで評価項目を追加してください
+            {`「${workflowStep(courseworkWorkflowSteps, "03-items").label}」の段で評価項目を追加してください`}
           </p>
         </div>
         <div className="mt-6 flex justify-end">
           <Button asChild>
-            <Link href={`/coursework/${courseworkId}/03-items`}>
-              評価項目へ
+            <Link
+              href={workflowStepHref(
+                `/coursework/${courseworkId}`,
+                courseworkWorkflowSteps,
+                "03-items"
+              )}
+            >
+              {workflowStep(courseworkWorkflowSteps, "03-items").title}へ
             </Link>
           </Button>
         </div>
@@ -568,8 +579,14 @@ export function CourseworkScoresContainer({
 
       <div className="mt-6 flex justify-end">
         <Button asChild>
-          <Link href={`/coursework/${courseworkId}/05-results`}>
-            {nextStepLabel(courseworkWorkflowTabs, "05-results")}
+          <Link
+            href={workflowStepHref(
+              `/coursework/${courseworkId}`,
+              courseworkWorkflowSteps,
+              "05-results"
+            )}
+          >
+            {nextStepLabel(courseworkWorkflowSteps, "05-results")}
           </Link>
         </Button>
       </div>

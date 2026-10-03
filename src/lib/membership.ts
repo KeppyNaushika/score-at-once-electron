@@ -8,7 +8,9 @@ export const isCurrentMembership = (m: { endDate?: Date | null }): boolean => {
 }
 
 /** 学級の所属・成績分析の絞り込み */
-export type MembershipStatusFilter = "all" | "current" | "ended"
+export const MEMBERSHIP_STATUS_FILTERS = ["all", "current", "ended"] as const
+
+export type MembershipStatusFilter = (typeof MEMBERSHIP_STATUS_FILTERS)[number]
 
 export const MEMBERSHIP_STATUS_FILTER_OPTIONS: {
   statusFilter: MembershipStatusFilter

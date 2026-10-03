@@ -1,13 +1,9 @@
 "use client"
 
 import type { PlacementStrategySelectorProps } from "@/components/exams/06-student-answers/student-answer-table/types"
-import type { PlacementStrategy } from "@/components/exams/06-student-answers/types"
+import { PLACEMENT_STRATEGIES } from "@/components/exams/06-student-answers/types"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-
-const PLACEMENT_STRATEGIES: PlacementStrategy[] = [
-  "page-first",
-  "student-first",
-]
+import { ignoreDeselect } from "@/lib/toggleSelection"
 
 export function PlacementStrategySelector({
   fileOrder,
@@ -22,26 +18,15 @@ export function PlacementStrategySelector({
         type="single"
         variant="outline"
         size="sm"
+        selectedTone="primary"
         value={fileOrder}
         aria-label="配置戦略"
-        onValueChange={(value) => {
-          // 選択中をもう一度押すと空文字が来る。選択は外さない
-          const nextPlacementStrategy = PLACEMENT_STRATEGIES.find(
-            (candidatePlacementStrategy) => candidatePlacementStrategy === value
-          )
-          if (nextPlacementStrategy) onFileOrderChange(nextPlacementStrategy)
-        }}
+        onValueChange={ignoreDeselect(PLACEMENT_STRATEGIES, onFileOrderChange)}
       >
-        <ToggleGroupItem
-          value="page-first"
-          className="px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-        >
+        <ToggleGroupItem value="page-first" className="px-3">
           ページ順
         </ToggleGroupItem>
-        <ToggleGroupItem
-          value="student-first"
-          className="px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-        >
+        <ToggleGroupItem value="student-first" className="px-3">
           生徒順
         </ToggleGroupItem>
       </ToggleGroup>

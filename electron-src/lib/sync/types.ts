@@ -97,21 +97,6 @@ export interface SyncParentDeletedReport {
   parentReturned: SyncParentDeleted[]
 }
 
-/**
- * 1回の同期で新しく出た注意書き（renderer へ押し出す形）。
- *
- * 同じ注意は同期のたびに繰り返し出るので、押し出すのは**前回の同期に無かったものだけ**。
- * 毎回出すと、同じトーストが同期間隔ごとに積み上がる。直近1回ぶんの全文は
- * {@link SyncAppStatus.lastWarnings} にあるので、取りこぼしても設定画面で読める。
- *
- * **文面はライブラリの原文のまま**で、利用者向けの言い換えは renderer が行う
- * （`src/lib/shared/syncWarningMessages.ts`）。main は出来事を加工しない。
- */
-export interface SyncWarningReport {
-  /** 前回の同期には無く、この回に出た注意（ライブラリの `SyncResult.warnings`） */
-  newWarnings: string[]
-}
-
 /** syncステータス（ランタイム状態） */
 export interface SyncAppStatus {
   state: "idle" | "syncing" | "error" | "disabled"
@@ -126,6 +111,10 @@ export interface SyncAppStatus {
    * トーストは流れて消えるので、**消えない置き場**として状態に持つ。同じ注意は
    * 同期のたびに出るから、履歴ではなく直近1回ぶんだけを保つ（溜めると、直っていない
    * のか昔の話なのかが読めなくなる）。
+   *
+   * **文面はライブラリの原文のまま**で、利用者向けの言い換えと「新しく出たか」の
+   * 見分けは renderer が行う（`src/lib/shared/syncWarningMessages.ts`）。main は
+   * 出来事を加工しない。
    */
   lastWarnings: string[]
 }

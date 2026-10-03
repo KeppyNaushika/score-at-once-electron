@@ -21,7 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { gradeWorkflowTabs, nextStepLabel } from "@/lib/workflowTabs"
+import {
+  gradeWorkflowSteps,
+  nextStepLabel,
+  workflowStepHref,
+} from "@/lib/shared/workflowSteps"
 import {
   createGradeItemMutation,
   type GradeClassroomRow,
@@ -454,8 +458,14 @@ export function DataSourcesContainer({ gradeId }: DataSourcesContainerProps) {
 
       <div className="mt-8 flex justify-end">
         <Button asChild>
-          <Link href={`/grades/${gradeId}/03-boundaries`}>
-            {nextStepLabel(gradeWorkflowTabs, "03-boundaries")}
+          <Link
+            href={workflowStepHref(
+              `/grades/${gradeId}`,
+              gradeWorkflowSteps,
+              "03-boundaries"
+            )}
+          >
+            {nextStepLabel(gradeWorkflowSteps, "03-boundaries")}
           </Link>
         </Button>
       </div>

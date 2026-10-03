@@ -24,6 +24,11 @@ export const courseworkListQuery = () =>
     queryFn: () => window.electronAPI.coursework.getAll(),
   })
 
+/** 評価項目1つの点数1行（生徒の名簿行つき） */
+export type CourseworkScoreRow = Awaited<
+  ReturnType<typeof window.electronAPI.coursework.getScores>
+>[number]
+
 /** データソースに指定できる資料の候補1件 */
 export type CourseworkCandidate = Awaited<
   ReturnType<typeof window.electronAPI.coursework.getCandidates>

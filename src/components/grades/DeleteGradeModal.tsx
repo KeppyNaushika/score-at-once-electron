@@ -1,16 +1,18 @@
 "use client"
 
+import type { Grade, GradeItem, GradeStudent } from "@prisma/client"
+
 import ConfirmationModal from "@/components/common/ConfirmationModal"
 
 interface DeleteGradeModalProps {
   open: boolean
   /** 消そうとしている成績算出。閉じても残す（閉じるアニメーションの間も中身を出したままにする） */
-  target: {
-    id: string
-    name: string
-    studentCount: number
-    gradeItemCount: number
-  } | null
+  target:
+    | (Pick<Grade, "id" | "name"> & {
+        gradeStudents: readonly Pick<GradeStudent, "id">[]
+        gradeItems: readonly Pick<GradeItem, "id">[]
+      })
+    | null
   onClose: () => void
   onConfirm: (gradeId: string) => void | Promise<void>
   loading: boolean
@@ -48,11 +50,11 @@ export function DeleteGradeModal({
                 display: target.name,
                 badges: [
                   {
-                    label: `生徒 ${target.studentCount}名`,
+                    label: `生徒 ${target.gradeStudents.length}名`,
                     variant: "secondary",
                   },
                   {
-                    label: `評価項目 ${target.gradeItemCount}`,
+                    label: `評価項目 ${target.gradeItems.length}`,
                     variant: "secondary",
                   },
                 ],

@@ -14,20 +14,22 @@ import type {
 import { calculateLearningAdvice } from "../../utils/learningAdviceCalculator"
 import { BoxPlotChartView } from "./BoxPlotChart"
 import {
-  allocateColumnsDHondt,
   buildStatsItems,
   computeFilteredClassroomStats,
   computeFilteredOverallStat,
   computeFilteredStats,
   computeFilteredSubtotalStats,
   filterSubtotalScores,
-  getVisibleSectionIndices,
   groupSubtotalData,
   isTotalScoreStat,
   selectStudentClassrooms,
-  splitItemsIntoColumns,
 } from "./computeReportData"
 import { LearningAdvicePreview } from "./LearningAdvicePreview"
+import {
+  allocateColumnsDHondt,
+  getVisibleSectionIndices,
+  splitItemsIntoColumns,
+} from "./reportLayout"
 import {
   CommentSectionView,
   HeaderView,

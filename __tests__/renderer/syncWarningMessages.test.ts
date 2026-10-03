@@ -18,7 +18,10 @@
 
 import { describe, expect, it } from "vitest"
 
-import { describeSyncWarnings } from "@/lib/shared/syncWarningMessages"
+import {
+  describeSyncWarnings,
+  newlyAppearedWarnings,
+} from "@/lib/shared/syncWarningMessages"
 
 describe("describeSyncWarnings", () => {
   it("注意が無ければ何も返さない", () => {
@@ -67,10 +70,23 @@ describe("describeSyncWarnings", () => {
       "Failed to open remote database: other-pc",
     ])
 
-    expect(notices.map((notice) => notice.key)).toEqual([
-      "rebuild-deferred",
-      "remote-unreadable",
+    expect(notices).toHaveLength(2)
+    expect(notices[0].key).toMatch(/^rebuild-deferred:/)
+    expect(notices[1].key).toMatch(/^remote-unreadable:/)
+  })
+
+  it("同じ形でも表が違えば別の行にし、どの表の名前も落とさない", () => {
+    const notices = describeSyncWarnings([
+      "Unplaceable ExamStudent:a: 理由",
+      "Unplaceable Exam:b: 理由",
+      "Unplaceable ExamStudent:c: 理由",
     ])
+
+    expect(notices).toHaveLength(2)
+    expect(notices[0].message).toContain("試験の受験生徒")
+    expect(notices[0].count).toBe(2)
+    expect(notices[1].message).not.toContain("試験の受験生徒")
+    expect(notices[1].count).toBe(1)
   })
 
   it("言い換えられない注意は、原文のまま出して黙らない", () => {
@@ -137,5 +153,19 @@ describe("describeSyncWarnings", () => {
 
     expect(deferred.severity).toBe("info")
     expect(failed.severity).toBe("warning")
+  })
+})
+
+describe("newlyAppearedWarnings", () => {
+  it("前回の同期に無かった注意だけを返す", () => {
+    expect(newlyAppearedWarnings(["A", "B"], ["B", "C"])).toEqual(["C"])
+  })
+
+  it("同じ注意が続くあいだは何も返さない", () => {
+    expect(newlyAppearedWarnings(["A"], ["A"])).toEqual([])
+  })
+
+  it("一度消えた注意がまた出たら、新しく出たものとして返す", () => {
+    expect(newlyAppearedWarnings([], ["A"])).toEqual(["A"])
   })
 })

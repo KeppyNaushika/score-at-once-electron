@@ -22,6 +22,7 @@ import { useScoredAnswerPreview } from "@/components/exams/09-export/hooks/useSc
 import { toStudentExportPlacements } from "@/components/exams/09-export/utils/studentExportPlacements"
 import { Spinner } from "@/components/ui/spinner"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import { studentOption } from "@/lib/searchKeywords"
 import { administeredExamClassroomsQuery } from "@/queries/examClassroom"
 import {
   recordUnresolvedConflictsMutation,
@@ -203,14 +204,7 @@ export default function ExportMainView() {
   const previewStudentList = useMemo(() => {
     return students
       .filter((examStudent) => selectedStudents.has(examStudent.id))
-      .map((examStudent) => ({
-        value: examStudent.id,
-        label: `${examStudent.student.lastName} ${examStudent.student.firstName}`,
-        keywords: [
-          examStudent.student.studentNumber,
-          `${examStudent.student.lastNameKana} ${examStudent.student.firstNameKana}`,
-        ],
-      }))
+      .map((examStudent) => studentOption(examStudent.id, examStudent.student))
   }, [students, selectedStudents])
 
   // 採点済み答案プレビュー
