@@ -19,14 +19,16 @@
  * アプリ自身はトリガーを持たないので、立てて変わるのはライブラリのトリガーだけである。
  */
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
-import type {
-  SqlDriverAdapter,
-  SqlQueryable,
-} from "@prisma/driver-adapter-utils"
 import Database from "better-sqlite3"
 
 import { assertGradeWriteAllowed } from "./gradeWriteLock"
 import type { SqliteDatabase } from "./sqliteSchemaUtils"
+
+/** アダプタが張った接続（driver-adapter-utils を直接の依存にせず、アダプタの型から導く） */
+type SqlDriverAdapter = Awaited<ReturnType<PrismaBetterSqlite3["connect"]>>
+
+/** 問い合わせの口。接続とトランザクションの両方が持つ */
+type SqlQueryable = Pick<SqlDriverAdapter, "queryRaw" | "executeRaw">
 
 /** 接続を開いた直後に流す文。ライブラリの前提 P12（アプリの表を書くすべての接続で ON） */
 const RECURSIVE_TRIGGERS_PRAGMA = "PRAGMA recursive_triggers = ON"

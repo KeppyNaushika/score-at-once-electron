@@ -14,6 +14,7 @@ import {
   YAxis,
 } from "recharts"
 
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,11 +27,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import type { ClassroomStudentExamResult } from "@/electron-src/lib/prisma/student"
 
 // ── 型定義 ──
@@ -431,20 +427,16 @@ export function ClassroomScoreTrendChart({
               </Badge>
 
               {seriesList.length > 1 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      aria-label="系列を削除"
-                      variant="ghost"
-                      size="icon"
-                      className="ml-auto h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeSeries(series.id)}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>系列を削除</TooltipContent>
-                </Tooltip>
+                <TooltipButton
+                  label="系列を削除"
+
+                  variant="ghost"
+                  size="icon"
+                  className="ml-auto h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => removeSeries(series.id)}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </TooltipButton>
               )}
             </div>
           ))}

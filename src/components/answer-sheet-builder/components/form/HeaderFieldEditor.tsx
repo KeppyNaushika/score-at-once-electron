@@ -2,6 +2,7 @@
 
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react"
 
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -18,11 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import type {
   AsbHeaderFieldAttributes,
   BorderLineStyle,
@@ -126,54 +122,38 @@ export function HeaderFieldEditor({
                   placeholder="ラベル"
                 />
               )}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    aria-label="上へ移動"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() =>
-                      onReorder(movedIds(fields, index, index - 1))
-                    }
-                    disabled={index === 0}
-                  >
-                    <ArrowUp className="h-3 w-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>上へ移動</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    aria-label="下へ移動"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() =>
-                      onReorder(movedIds(fields, index, index + 1))
-                    }
-                    disabled={index === fields.length - 1}
-                  >
-                    <ArrowDown className="h-3 w-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>下へ移動</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    aria-label="フィールドを削除"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-destructive"
-                    onClick={() => onDelete(field.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>フィールドを削除</TooltipContent>
-              </Tooltip>
+              <TooltipButton
+                label="上へ移動"
+
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => onReorder(movedIds(fields, index, index - 1))}
+                disabled={index === 0}
+              >
+                <ArrowUp className="h-3 w-3" />
+              </TooltipButton>
+              <TooltipButton
+                label="下へ移動"
+
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => onReorder(movedIds(fields, index, index + 1))}
+                disabled={index === fields.length - 1}
+              >
+                <ArrowDown className="h-3 w-3" />
+              </TooltipButton>
+              <TooltipButton
+                label="フィールドを削除"
+
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-destructive"
+                onClick={() => onDelete(field.id)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </TooltipButton>
             </div>
 
             {/* タイプ切替 */}

@@ -2,6 +2,7 @@
 
 import React, { useCallback, useRef, useState } from "react"
 
+import { WithTooltip } from "@/components/common/WithTooltip"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -21,7 +22,6 @@ import { AnchorAlignControls } from "./AnchorAlignControls"
 import { COLOR_PALETTE } from "./constants/drawingConstants"
 import { EnhancedCanvasPreview } from "./EnhancedCanvasPreview"
 import { RichTextFormatToolbar } from "./RichTextFormatToolbar"
-import { ToolbarTooltip } from "./ToolbarTooltip"
 
 interface RichTextEditorModalProps {
   open: boolean
@@ -256,7 +256,7 @@ export function RichTextEditorModal({
             <Label className="text-sm font-medium">テキスト色</Label>
             <div className="mt-2 grid grid-cols-8 gap-2">
               {COLOR_PALETTE.map((paletteColor) => (
-                <ToolbarTooltip key={paletteColor} label={paletteColor}>
+                <WithTooltip key={paletteColor} content={paletteColor}>
                   <button
                     type="button"
                     onClick={() => onColorChange(paletteColor)}
@@ -268,7 +268,7 @@ export function RichTextEditorModal({
                     style={{ backgroundColor: paletteColor }}
                     aria-label={paletteColor}
                   />
-                </ToolbarTooltip>
+                </WithTooltip>
               ))}
             </div>
           </div>

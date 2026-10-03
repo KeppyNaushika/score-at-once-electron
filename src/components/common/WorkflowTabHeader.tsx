@@ -4,14 +4,10 @@ import { List, type LucideIcon } from "lucide-react"
 import { usePathname } from "next/navigation"
 
 import { GuardedLink } from "@/components/common/GuardedLink"
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import { HistoryNavButtons } from "@/components/layout/HistoryNavButtons"
 import { Button } from "@/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import type { WorkflowStep } from "@/lib/shared/workflowSteps"
 import { cn } from "@/lib/utils"
 
@@ -125,16 +121,17 @@ export function WorkflowTabHeader({
       <div className="flex items-center gap-2 px-2 pt-1">
         <div className="flex shrink-0 items-center gap-0.5">
           <HistoryNavButtons />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-7" asChild>
-                <GuardedLink href={listHref} aria-label="一覧へ戻る">
-                  <List />
-                </GuardedLink>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>一覧へ戻る</TooltipContent>
-          </Tooltip>
+          <TooltipButton
+            label="一覧へ戻る"
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            asChild
+          >
+            <GuardedLink href={listHref}>
+              <List />
+            </GuardedLink>
+          </TooltipButton>
         </div>
         <h1 className="min-w-0 truncate text-sm font-semibold">
           {currentTab && currentTab.path !== ""

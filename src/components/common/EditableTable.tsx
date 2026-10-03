@@ -13,6 +13,7 @@ import { Plus, Trash2 } from "lucide-react"
 import React, { useCallback, useMemo } from "react"
 import { toast } from "sonner"
 
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -22,11 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 import { EditableCell } from "./editable-table/EditableCell"
@@ -156,20 +152,16 @@ export function EditableTable<T extends RowData>({
               id: "addRow",
               header: "",
               cell: ({ row }: { row: Row<EditableTableFeatures, T> }) => (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      aria-label="この行の下に新しい行を追加"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => addRowAfter(row.index)}
-                      className="h-6 w-6 p-0 text-green-600 hover:bg-green-50 hover:text-green-800"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>この行の下に新しい行を追加</TooltipContent>
-                </Tooltip>
+                <TooltipButton
+                  label="この行の下に新しい行を追加"
+
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => addRowAfter(row.index)}
+                  className="h-6 w-6 p-0 text-green-600 hover:bg-green-50 hover:text-green-800"
+                >
+                  <Plus className="h-3 w-3" />
+                </TooltipButton>
               ),
               size: 40,
             },

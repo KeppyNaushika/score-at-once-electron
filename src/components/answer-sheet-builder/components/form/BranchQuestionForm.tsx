@@ -3,13 +3,8 @@
 import { Trash2 } from "lucide-react"
 import { useState } from "react"
 
-import { Button } from "@/components/ui/button"
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { ButtonGroup } from "@/components/ui/button-group"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import type {
   AsbBranchQuestionAttributes,
   BranchQuestion,
@@ -124,20 +119,16 @@ export function BranchQuestionForm({
             hasContent={hasDetailContent}
             visibilityRestricted={hasVisibilityRestricted}
           />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                aria-label="枝問を削除"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={() => actions.deleteBranchQuestion(branchQuestion.id)}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>枝問を削除</TooltipContent>
-          </Tooltip>
+          <TooltipButton
+            label="枝問を削除"
+
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            onClick={() => actions.deleteBranchQuestion(branchQuestion.id)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </TooltipButton>
         </div>
       </div>
 

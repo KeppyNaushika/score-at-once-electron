@@ -3,7 +3,7 @@
 import { Trash2 } from "lucide-react"
 
 import { DragHandle, useSortableRow } from "@/components/common/sortable-table"
-import { Button } from "@/components/ui/button"
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -13,11 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import type {
   CourseworkItemWithLetterScales,
@@ -128,20 +123,16 @@ export function CourseworkItemRow({
           )}
         </div>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              aria-label="削除"
-              variant="ghost"
-              size="icon"
-              className="mt-5 h-7 w-7 text-destructive"
-              onClick={() => onDelete(item)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>削除</TooltipContent>
-        </Tooltip>
+        <TooltipButton
+          label="削除"
+
+          variant="ghost"
+          size="icon"
+          className="mt-5 h-7 w-7 text-destructive"
+          onClick={() => onDelete(item)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </TooltipButton>
       </div>
     </div>
   )

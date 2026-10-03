@@ -6,6 +6,7 @@ import type { ReactNode } from "react"
 
 import { EntityTagEditor } from "@/components/common/EntityTagEditor"
 import { GuardedLink } from "@/components/common/GuardedLink"
+import { TooltipButton } from "@/components/common/TooltipButton"
 import type { WorkflowTab } from "@/components/common/WorkflowTabHeader"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -435,21 +436,17 @@ export function EntityOverviewPage({
                   className={cn(QUIET_FIELD_CLASSES, "w-auto")}
                 />
                 {canEdit && shownText("referenceDate") !== "" && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-6 text-muted-foreground hover:text-foreground"
-                        aria-label={`${dateLabel}を未設定にする`}
-                        onClick={clearReferenceDate}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{`${dateLabel}を未設定にする`}</TooltipContent>
-                  </Tooltip>
+                  <TooltipButton
+                    label={`${dateLabel}を未設定にする`}
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-6 text-muted-foreground hover:text-foreground"
+
+                    onClick={clearReferenceDate}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </TooltipButton>
                 )}
                 {/*
               日付が何に効くかは、書き換えるときだけ知りたい。常に添えておくと

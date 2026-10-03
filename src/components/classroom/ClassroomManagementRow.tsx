@@ -2,15 +2,10 @@
 
 import { Edit, Trash2 } from "lucide-react"
 
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { TableCell, TableRow } from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import type { ClassroomWithMemberships } from "@/types/prismaExtensions"
 
 interface ClassroomManagementRowProps {
@@ -88,40 +83,32 @@ export function ClassroomManagementRow({
       <TableCell className="tabular-nums">{memberCount}名</TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                aria-label="学級を編集"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onEdit()
-                }}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>学級を編集</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                aria-label="学級を削除"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete()
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>学級を削除</TooltipContent>
-          </Tooltip>
+          <TooltipButton
+            label="学級を編集"
+
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit()
+            }}
+          >
+            <Edit className="h-4 w-4" />
+          </TooltipButton>
+          <TooltipButton
+            label="学級を削除"
+
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete()
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </TooltipButton>
         </div>
       </TableCell>
     </TableRow>

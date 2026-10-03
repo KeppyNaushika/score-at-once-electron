@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { Crown, Search, Trash2, UserPlus } from "lucide-react"
 import { useEffect, useState } from "react"
 
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,11 +24,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import type { UserRole } from "@/electron-src/lib/prisma/userExam"
 import {
   type ExamMemberRow,
@@ -310,22 +306,16 @@ export function MemberInviteDialog({
                         {isOwner && (
                           <TableCell>
                             {member.role !== "OWNER" && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    aria-label="メンバーから外す"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleRemove(member.user.id)}
-                                    disabled={removingUserId === member.user.id}
-                                  >
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  メンバーから外す
-                                </TooltipContent>
-                              </Tooltip>
+                              <TooltipButton
+                                label="メンバーから外す"
+
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemove(member.user.id)}
+                                disabled={removingUserId === member.user.id}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </TooltipButton>
                             )}
                           </TableCell>
                         )}

@@ -2,14 +2,11 @@
 
 import { ChevronLeft, ChevronRight, Minus, Move, Plus } from "lucide-react"
 
+import { TooltipButton } from "@/components/common/TooltipButton"
+import { WithTooltip } from "@/components/common/WithTooltip"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import type { RenderMode } from "@/types/answerSheetDefinition.types"
 
 interface PreviewToolbarProps {
@@ -53,95 +50,76 @@ export function PreviewToolbar({
     <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-1.5">
       {/* ズーム */}
       <div className="flex items-center gap-1">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              aria-label="縮小"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={zoomOut}
-              disabled={zoom <= ZOOM_STEPS[0]}
-            >
-              <Minus className="h-3 w-3" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>縮小</TooltipContent>
-        </Tooltip>
+        <TooltipButton
+          label="縮小"
+
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={zoomOut}
+          disabled={zoom <= ZOOM_STEPS[0]}
+        >
+          <Minus className="h-3 w-3" />
+        </TooltipButton>
         <span className="w-10 text-center text-xs">{zoom}%</span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              aria-label="拡大"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={zoomIn}
-              disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]}
-            >
-              <Plus className="h-3 w-3" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>拡大</TooltipContent>
-        </Tooltip>
+        <TooltipButton
+          label="拡大"
+
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={zoomIn}
+          disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]}
+        >
+          <Plus className="h-3 w-3" />
+        </TooltipButton>
       </div>
 
       {/* 調整トグル + ページナビゲーション + ページ情報 */}
       <div className="flex items-center gap-2">
         {onInteractiveChange && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={interactive ? "secondary" : "ghost"}
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={() => onInteractiveChange(!interactive)}
-              >
-                <Move className="mr-1 h-3 w-3" />
-                調整
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>罫線ドラッグで微調整</TooltipContent>
-          </Tooltip>
+          <WithTooltip content="罫線ドラッグで微調整">
+            <Button
+              variant={interactive ? "secondary" : "ghost"}
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => onInteractiveChange(!interactive)}
+            >
+              <Move className="mr-1 h-3 w-3" />
+              調整
+            </Button>
+          </WithTooltip>
         )}
         {totalPages != null &&
           totalPages > 1 &&
           onPageChange &&
           currentPage != null && (
             <div className="flex items-center gap-0.5">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    aria-label="前のページ"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => onPageChange(currentPage - 1)}
-                    disabled={currentPage <= 0}
-                  >
-                    <ChevronLeft className="h-3 w-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>前のページ</TooltipContent>
-              </Tooltip>
+              <TooltipButton
+                label="前のページ"
+
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => onPageChange(currentPage - 1)}
+                disabled={currentPage <= 0}
+              >
+                <ChevronLeft className="h-3 w-3" />
+              </TooltipButton>
               <span className="min-w-12 text-center text-xs">
                 {currentPage + 1}/{totalPages}
               </span>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    aria-label="次のページ"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => onPageChange(currentPage + 1)}
-                    disabled={currentPage >= totalPages - 1}
-                  >
-                    <ChevronRight className="h-3 w-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>次のページ</TooltipContent>
-              </Tooltip>
+              <TooltipButton
+                label="次のページ"
+
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => onPageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages - 1}
+              >
+                <ChevronRight className="h-3 w-3" />
+              </TooltipButton>
             </div>
           )}
         <span className="text-xs text-muted-foreground">{pageInfo}</span>

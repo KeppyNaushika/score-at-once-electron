@@ -14,6 +14,7 @@ import {
 import { DragHandle } from "@/components/common/sortable-table/DragHandle"
 import { SortableTableProvider } from "@/components/common/sortable-table/SortableTableProvider"
 import { useSortableRow } from "@/components/common/sortable-table/useSortableRow"
+import { WithTooltip } from "@/components/common/WithTooltip"
 import PageHeader from "@/components/layout/PageHeader"
 import {
   AlertDialog,
@@ -153,21 +154,20 @@ function SortableTagRow({
         >
           プレビュー
         </Badge>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`h-7 w-7 p-0 ${expanded ? "text-primary" : ""}`}
-              onClick={() => onToggleSubtotalGroups(tag)}
-            >
-              <Calculator className="h-3.5 w-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top" sideOffset={5}>
-            紐づく小計点グループを表示
-          </TooltipContent>
-        </Tooltip>
+        <WithTooltip
+          content="紐づく小計点グループを表示"
+          side="top"
+          sideOffset={5}
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`h-7 w-7 p-0 ${expanded ? "text-primary" : ""}`}
+            onClick={() => onToggleSubtotalGroups(tag)}
+          >
+            <Calculator className="h-3.5 w-3.5" />
+          </Button>
+        </WithTooltip>
         <Button
           variant="ghost"
           size="sm"

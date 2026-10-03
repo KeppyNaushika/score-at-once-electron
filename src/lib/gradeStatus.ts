@@ -38,7 +38,7 @@ type GradeProgressSource = Serialized<
 >
 
 /** 各ステップの完了状態 */
-export interface GradeStepCompletion {
+interface GradeStepCompletion {
   /** 1. 生徒管理 */
   hasStudents: boolean
   /** 2. データソース */

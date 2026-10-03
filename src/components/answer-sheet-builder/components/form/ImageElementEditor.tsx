@@ -5,6 +5,7 @@ import { ImagePlus, Trash2 } from "lucide-react"
 import Image from "next/image"
 import { useCallback } from "react"
 
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -14,11 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import {
   deleteAnswerSheetImageMutation,
   uploadAnswerSheetImageMutation,
@@ -147,20 +143,16 @@ export function ImageElementEditor({
             <span className="min-w-0 flex-1 truncate text-xs">
               {imageElement.originalName}
             </span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label="画像を削除"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => handleRemove(imageElement)}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>画像を削除</TooltipContent>
-            </Tooltip>
+            <TooltipButton
+              label="画像を削除"
+
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+              onClick={() => handleRemove(imageElement)}
+            >
+              <Trash2 className="h-3 w-3" />
+            </TooltipButton>
           </div>
 
           {/* Row 2: objectFit + 表示モード */}

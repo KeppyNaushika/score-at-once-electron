@@ -10,6 +10,7 @@ import {
   SortableTableProvider,
   useSortableRow,
 } from "@/components/common/sortable-table"
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -28,11 +29,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { queryKeys } from "@/lib/queryKeys"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
@@ -138,19 +134,15 @@ function ClassroomRowCells({
         </TableCell>
       ))}
       <TableCell>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              aria-label="学級を外す"
-              variant="ghost"
-              size="icon"
-              onClick={() => onRemove(entry)}
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>学級を外す</TooltipContent>
-        </Tooltip>
+        <TooltipButton
+          label="学級を外す"
+
+          variant="ghost"
+          size="icon"
+          onClick={() => onRemove(entry)}
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </TooltipButton>
       </TableCell>
     </>
   )

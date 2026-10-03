@@ -7,13 +7,9 @@ import { toast } from "sonner"
 
 import ConfirmationModal from "@/components/common/ConfirmationModal"
 import { DragHandle, useSortableRow } from "@/components/common/sortable-table"
+import { TooltipButton } from "@/components/common/TooltipButton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import {
   deleteGradeItemMutation,
   renameGradeItemMutation,
@@ -106,20 +102,16 @@ export function GradeItemSection({
               <h3 className="text-sm font-semibold text-blue-600">
                 {gradeItem.name}
               </h3>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    aria-label="評価項目名を編集"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setEditingName(gradeItem.name)}
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>評価項目名を編集</TooltipContent>
-              </Tooltip>
+              <TooltipButton
+                label="評価項目名を編集"
+
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => setEditingName(gradeItem.name)}
+              >
+                <Pencil className="h-3 w-3" />
+              </TooltipButton>
             </div>
           )}
           <Button

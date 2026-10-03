@@ -23,7 +23,7 @@ export interface ScoreRow {
 }
 
 /** 表の変更から作った、対象者×評価項目1マスへの書き込み */
-export interface ScoreCellChange {
+interface ScoreCellChange {
   courseworkItemId: string
   courseworkStudentId: string
   patch: CourseworkCellPatch
@@ -41,8 +41,7 @@ export const commentColId = (itemId: string) => `${itemId}::comment`
  * **文字評価には通さない。** 評語は `Ａ` と `A` が別の評語でありうるので、
  * 表記を寄せるかどうかは貼り付けのときに人へ尋ねる（`transformPastedText`）。
  */
-export const normalizeInput = (value: string): string =>
-  toHalfWidth(value).trim()
+const normalizeInput = (value: string): string => toHalfWidth(value).trim()
 
 /** 空欄、または有限の数値として読める入力か（満点超過・負数も有効） */
 export const isBlankOrFiniteNumber = (value: string): boolean => {

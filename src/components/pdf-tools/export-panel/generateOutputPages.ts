@@ -135,7 +135,7 @@ export function generateOutputPages(
  * 初めて並べ替えるとき、見えていないページをどこに置くかの既定に使う
  * （`initialPageOrder`）。2-in-1で結合したページは、結合した各ページに展開する。
  */
-export function allPageKeysInArrangement(
+function allPageKeysInArrangement(
   files: ImportedFile[],
   mode: PdfExportMode,
   interleaveConfig: InterleaveConfig
