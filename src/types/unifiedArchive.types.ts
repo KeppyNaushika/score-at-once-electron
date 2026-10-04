@@ -15,7 +15,8 @@ export const UNIFIED_ARCHIVE_DATABASE_NAME = "archive.db"
 export const UNIFIED_ARCHIVE_FILES_DIR = "files"
 
 /** 書き出し画面で選べる項目（docs §5.5） */
-export type ArchiveOptionalItem = "userSettings" | "appPreference" | "auditLog"
+export type ArchiveOptionalItem =
+  "userSettings" | "appPreference" | "auditLog" | "aiGradingRecords"
 
 /** 採点の範囲。本人分のときは、他の教員の採点・確定・返却版などを外す（docs §5.3） */
 export type UnifiedArchiveScoringScope =

@@ -22,6 +22,7 @@ export const ARCHIVE_FILE_COLUMNS = [
   { table: "ExamPage", column: "imagePath" },
   { table: "StudentAnswerImage", column: "imagePath" },
   { table: "AsbImageElement", column: "imagePath" },
+  { table: "AiPrompt", column: "questionImagePath" },
 ] as const
 
 /** archive.db の行が指すファイルのパスを、重複なく並べて返す */

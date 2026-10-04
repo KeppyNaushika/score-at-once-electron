@@ -18,6 +18,23 @@ export const PAPER_DIMENSIONS: Record<
 }
 
 /**
+ * 用紙サイズ名と向きから、画像の左右・上下に対応する用紙の寸法（mm）を返す。
+ * 横向きなら幅と高さを入れ替える。未知の用紙サイズは A4 として扱う。
+ *
+ * @param pageSize 用紙サイズ名（"A4"等）
+ * @param isLandscape 横向きか（画像の幅が高さより大きいか）
+ */
+export function getOrientedPaperDimensions(
+  pageSize: string,
+  isLandscape: boolean
+): { width: number; height: number } {
+  const paper = PAPER_DIMENSIONS[pageSize] ?? PAPER_DIMENSIONS.A4
+  return isLandscape
+    ? { width: paper.height, height: paper.width }
+    : { width: paper.width, height: paper.height }
+}
+
+/**
  * 用紙サイズと画像ピクセル幅から、mm→ピクセル変換係数を取得
  *
  * @param pageSize 用紙サイズ名（"A4"等）
@@ -30,11 +47,9 @@ function getMmToPixelRatio(
   imageWidthPx: number,
   imageHeightPx: number
 ): number {
-  const paper = PAPER_DIMENSIONS[pageSize] ?? PAPER_DIMENSIONS.A4
   // 画像のアスペクト比から縦横を自動判定
   const isLandscape = imageWidthPx > imageHeightPx
-  const paperWidthMm = isLandscape ? paper.height : paper.width
-  return imageWidthPx / paperWidthMm
+  return imageWidthPx / getOrientedPaperDimensions(pageSize, isLandscape).width
 }
 
 /**

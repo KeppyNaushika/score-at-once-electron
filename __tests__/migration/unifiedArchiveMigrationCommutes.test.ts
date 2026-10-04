@@ -148,12 +148,24 @@ describe("migration は一部だけの DB でも全体と同じ結果になる",
   // 実際に検査する migration がまだ無いと、上の検査は空のまま通る。わざと作った
   // 良い例・悪い例で、検査器が食い違いを見つけ、見つけるべきでないものを見逃すことを確かめる
 
+  // 合成の migration は、固定データより後の実際の migration を当てた後に当てる。範囲の規則は
+  // 今の登録表（＝今の schema）で読むので、固定データの後に表が増えていると、その表が無い DB を
+  // 読めずに失敗する
   const check = (sql: string): string[] => {
     const baselineSql = fs.readFileSync(BASELINE_PATH, "utf-8")
+    // 固定データの DB を DB_PATH に作り、起点の id を読む
+    const roots = readBaselineRoots()
+    const baselineDb = new Database(DB_PATH, { readonly: true })
+    let pending: MigrationSource[]
+    try {
+      pending = pendingMigrations(baselineDb, MIGRATIONS_DIR)
+    } finally {
+      baselineDb.close()
+    }
     return checkMigrationsCommute({
       baselineSql,
-      migrations: [{ name: "99999999999999_synthetic", sql }],
-      selections: selectionsOf(readBaselineRoots()),
+      migrations: [...pending, { name: "99999999999999_synthetic", sql }],
+      selections: selectionsOf(roots),
       workDir: WORK_DIR,
     })
   }

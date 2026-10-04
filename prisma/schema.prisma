@@ -39,6 +39,8 @@ model User {
   clickScoringActions    UserClickScoringAction[]
   sidePanelSections      UserSidePanelSection[]
   returnSnapshots        ReturnSnapshot[]
+  aiPrompts              AiPrompt[]
+  aiGradingRuns          AiGradingRun[]
 }
 
 /// `name` に `@unique` は置かない（2026-08-22 に外した。理由は User.username と同じ）。
@@ -152,6 +154,7 @@ model ExamStudent {
   scoreDecisions       ScoreDecision[]
   compoundAnswerScores CompoundAnswerScore[]
   returnSnapshots      ReturnSnapshot[]
+  aiGradingAttempts    AiGradingAttempt[]
 
   @@unique([examId, studentId])
   @@index([examId])
@@ -227,6 +230,7 @@ model CropRegion {
   compoundMembership CompoundAnswerMember?
   scoreDecisions     ScoreDecision[]
   assignments        CropRegionAssignment[]
+  aiPrompts          AiPrompt[]
 }
 
 /// 設問（採点領域）ごとの採点担当。1設問に複数担当を許す（ダブルチェック）。
@@ -374,6 +378,7 @@ model QuestionScore {
   cropRegion         CropRegion          @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   examStudent        ExamStudent         @relation(fields: [examStudentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  aiGradingAttempts  AiGradingAttempt[]
 
   @@index([examStudentId])
   /// SQLite は外部キーに索引を自動で作らない。この列が素通しだと、採点行を
@@ -413,31 +418,32 @@ model ScoreDecision {
 /// 持ち主は親 QuestionScore（生徒×設問×採点者で1行）から一意に決まるので、
 /// 自前の userId は持たない。採点者で絞るときは questionScore.userId を辿る。
 model DrawingAnnotation {
-  id              String        @id @default(uuid())
-  questionScoreId String
-  type            String
-  x               Float
-  y               Float
-  color           String        @default("#ef4444")
-  strokeWidth     Float         @default(0.5)
-  width           Float         @default(0.0)
-  height          Float         @default(0.0)
-  endX            Float         @default(0.0)
-  endY            Float         @default(0.0)
-  lineStyle       String        @default("solid")
-  text            String        @default("")
-  fontSize        Float         @default(4.0)
-  textBoxWidth    Float         @default(0.0)
-  textBoxHeight   Float         @default(0.0)
-  horizontalAlign String        @default("left")
-  verticalAlign   String        @default("top")
-  anchorDirection String        @default("top-left")
-  displayX        Float         @default(0.0)
-  displayY        Float         @default(0.0)
-  isFavorite      Boolean       @default(false)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  questionScore   QuestionScore @relation(fields: [questionScoreId], references: [id], onDelete: Cascade)
+  id                String             @id @default(uuid())
+  questionScoreId   String
+  type              String
+  x                 Float
+  y                 Float
+  color             String             @default("#ef4444")
+  strokeWidth       Float              @default(0.5)
+  width             Float              @default(0.0)
+  height            Float              @default(0.0)
+  endX              Float              @default(0.0)
+  endY              Float              @default(0.0)
+  lineStyle         String             @default("solid")
+  text              String             @default("")
+  fontSize          Float              @default(4.0)
+  textBoxWidth      Float              @default(0.0)
+  textBoxHeight     Float              @default(0.0)
+  horizontalAlign   String             @default("left")
+  verticalAlign     String             @default("top")
+  anchorDirection   String             @default("top-left")
+  displayX          Float              @default(0.0)
+  displayY          Float              @default(0.0)
+  isFavorite        Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  questionScore     QuestionScore      @relation(fields: [questionScoreId], references: [id], onDelete: Cascade)
+  aiGradingAttempts AiGradingAttempt[]
 
   @@index([questionScoreId])
   @@index([type])
@@ -466,6 +472,165 @@ model ReturnSnapshot {
   updatedAt        DateTime    @default(now()) @updatedAt
   examStudent      ExamStudent @relation(fields: [examStudentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   capturedBy       User?       @relation(fields: [capturedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+}
+
+/// AI 採点のプロンプト（設問ごと）。VLM に送る文面のうち、教員が書く部分（または VLM に
+/// 改訂させた部分）を持つ。アプリ共通の指示（templateVersion で特定）と配点は送るときに
+/// アプリが組み立てて足すので、ここには持たない（docs/vlm-grading-design.md §3-1・§4-2）。
+///
+/// **書き換えない・消さない。** 直すたびに `parentPromptId` を元の行に向けた新しい行を作る。
+/// 過去のプロンプトがそのまま履歴になり、どの文面で付けた判定かを試行から辿れる。
+/// 更新・削除の API は作らない（消えるのは設問 = CropRegion ごと消したときだけ）。
+///
+/// 設問ごとに、その試験の協働採点者の間で共有する。作成者は記録するが持ち主ではない
+/// （他の教員のプロンプトもそのまま選んで使える）。「今の基準」という1つの状態は持たず、
+/// 実行のたびにどれを使うかを選ぶ。
+model AiPrompt {
+  id                   String         @id @default(uuid())
+  cropRegionId         String
+  /// 直す元になったプロンプト。最初の1行は null。行の文面は自己完結しているので、
+  /// 元が消えても SetNull で残す
+  parentPromptId       String?
+  /// 作った教員。利用者を消してもプロンプトは他の教員が使うので残し、ここだけ null にする
+  createdByUserId      String?
+  /// 問題文（テキスト）。省略できるので、空文字を「書いていない」とする（QuestionScore.comment と同じ形）
+  questionText         String         @default("")
+  /// 問題用紙の画像（data ディレクトリからの相対パス）。無ければ null
+  questionImagePath    String?
+  modelAnswerText      String         @default("")
+  /// 模範解答画像（模範解答のページから設問枠を切り出したもの）も送るか
+  sendModelAnswerImage Boolean        @default(false)
+  /// 採点基準（文章）
+  rubricText           String         @default("")
+  /// VLM に改訂させたときの教員の指示文。教員が直接書いた行は ""
+  revisionInstruction  String         @default("")
+  /// 改訂した VLM から教員への説明。教員が直接書いた行は ""
+  revisionMessage      String         @default("")
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @default(now()) @updatedAt
+  cropRegion           CropRegion     @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
+  parentPrompt         AiPrompt?      @relation("AiPromptRevision", fields: [parentPromptId], references: [id], onDelete: SetNull)
+  childPrompts         AiPrompt[]     @relation("AiPromptRevision")
+  createdBy            User?          @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  gradingRuns          AiGradingRun[] @relation("AiGradingRunPrompt")
+  revisionResultRuns   AiGradingRun[] @relation("AiGradingRunResultPrompt")
+
+  @@index([cropRegionId])
+}
+
+/// AI 採点の1回の実行（採点 grade、またはプロンプトの改訂 revise）。
+///
+/// **実行した教員のもの。** AI を独立した採点者（User）にはしない。判定を採用する先も実行した
+/// 教員自身の QuestionScore なので、利用者を消せば QuestionScore と同じく一緒に消える。
+///
+/// 送った全文は保存しない。プロンプトの行（書き換えない）・アプリ共通の指示の版
+/// （`templateVersion`）・送ったときの配点（`points`）から同じ文面を組み立て直せる。
+/// 答案画像の切り出しも `imageScale` と CropRegion から再現できる。
+///
+/// 文字列の列（purpose / provider / mode / status）の値の集合は
+/// `src/types/aiGrading.types.ts` が唯一の定義源（SQLite に enum が無いため）。
+/// `points` は Decimal なので、IPC へ返す経路は必ず serializePrisma を通す。
+model AiGradingRun {
+  id                String             @id @default(uuid())
+  /// 実行した教員
+  userId            String
+  /// 使ったプロンプト（revise では改訂の元）
+  promptId          String
+  /// "grade"（採点）| "revise"（プロンプトの改訂）
+  purpose           String
+  /// アプリ共通の指示（出力の形・答案内の指示に従わない等）の版
+  templateVersion   String
+  /// "anthropic" | "openai" | "gemini" | "openai_compatible"
+  provider          String
+  model             String
+  /// 推論の強さ。事業者が持たないときは ""
+  effort            String
+  /// "realtime" | "batch"
+  mode              String
+  /// queued / submitting / in_progress / ended / canceled / failed / expired
+  status            String             @default("queued")
+  /// 事業者側のバッチ id（batch のときだけ）
+  externalBatchId   String?
+  /// 送信した端末（同期の clientId）。バッチの結果はこの端末だけが回収する
+  /// （同じバッチを複数の端末が取り込んで、試行を二重に書かないため）
+  submittedClientId String
+  /// 答案の切り出しの拡大率（1 = 原寸）
+  imageScale        Float              @default(1)
+  /// 送ったときの配点（CropRegion.points の写し）。配点を後から直しても、この実行の
+  /// 文面と検証の上限は送ったときの値で再現する
+  points            Decimal?
+  /// revise のとき、できたプロンプト。grade では null
+  resultPromptId    String?
+  /// 使用量（revise 用。grade は試行ごとに持つ）
+  inputTokens       Int                @default(0)
+  outputTokens      Int                @default(0)
+  cacheReadTokens   Int                @default(0)
+  cacheWriteTokens  Int                @default(0)
+  /// 終わった（ended / canceled / failed / expired になった）日時
+  endedAt           DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @default(now()) @updatedAt
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt            AiPrompt           @relation("AiGradingRunPrompt", fields: [promptId], references: [id], onDelete: Cascade)
+  resultPrompt      AiPrompt?          @relation("AiGradingRunResultPrompt", fields: [resultPromptId], references: [id], onDelete: SetNull)
+  attempts          AiGradingAttempt[]
+
+  @@index([userId])
+  @@index([promptId])
+}
+
+/// 答案1件への、AI の1回の判定（試行）。
+///
+/// QuestionScore とは別の表に置く（docs/vlm-grading-design.md §1-1）。確認前の点が
+/// リゾルバを通って出力・成績算出に流れ込まないように、また教員が直しても AI の元の判定が
+/// 残って一致率を測れるように。教員が「採用」したときだけ、その教員自身の QuestionScore と
+/// DrawingAnnotation へ写し、写した先を `adopted*` に記録する。
+///
+/// **`id` をそのまま事業者への送信の custom_id に使う。** 生徒の情報を含まない uuid で、
+/// Anthropic の custom_id の制約（英数字・`_`・`-` の1〜64字）にも収まる。
+///
+/// 書き換えない（結果を受け取って state を決めるまでと、採用の記録を除く）。やり直しは
+/// 新しい run の新しい行。`state` は送信の成否、`status` は採点の判定で、別のもの。
+/// `partialScore` は Decimal なので、IPC へ返す経路は必ず serializePrisma を通す。
+model AiGradingAttempt {
+  id                         String             @id @default(uuid())
+  runId                      String
+  examStudentId              String
+  /// pending / succeeded / errored / refused / expired
+  state                      String             @default("pending")
+  /// AI の判定（ScoringStatus）。succeeded 以外は "unscored" のまま
+  status                     String             @default("unscored")
+  /// partial / pending のときの点。0〜run の points、0.01 単位（検証を通った値だけを書く）
+  partialScore               Decimal?
+  /// 教員向けの配点理由
+  comment                    String             @default("")
+  /// 生徒向けの朱書き（注釈の文言）。無ければ ""
+  annotationText             String             @default("")
+  /// 答案から読み取った内容
+  transcription              String             @default("")
+  /// "high" | "medium" | "low"。succeeded 以外は ""
+  confidence                 String             @default("")
+  /// errored / refused / expired の理由（検証で外れた理由を含む）
+  errorMessage               String             @default("")
+  inputTokens                Int                @default(0)
+  outputTokens               Int                @default(0)
+  cacheReadTokens            Int                @default(0)
+  cacheWriteTokens           Int                @default(0)
+  /// 採用して書いた QuestionScore。採用先が消えたら null（試行の記録は残す）
+  adoptedQuestionScoreId     String?
+  /// 採用して書いた注釈。採用先が消えたら null
+  adoptedDrawingAnnotationId String?
+  /// 採用した日時。採用するのは実行した教員なので、採用者の列は持たない
+  adoptedAt                  DateTime?
+  createdAt                  DateTime           @default(now())
+  updatedAt                  DateTime           @default(now()) @updatedAt
+  run                        AiGradingRun       @relation(fields: [runId], references: [id], onDelete: Cascade)
+  examStudent                ExamStudent        @relation(fields: [examStudentId], references: [id], onDelete: Cascade)
+  adoptedQuestionScore       QuestionScore?     @relation(fields: [adoptedQuestionScoreId], references: [id], onDelete: SetNull)
+  adoptedDrawingAnnotation   DrawingAnnotation? @relation(fields: [adoptedDrawingAnnotationId], references: [id], onDelete: SetNull)
+
+  @@index([runId])
+  @@index([examStudentId])
 }
 
 /// 監査ログ（Discord風の操作履歴）。

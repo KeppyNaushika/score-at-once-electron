@@ -97,7 +97,11 @@ export function readArchiveRows(databasePath: string): ArchiveRows {
  *   根の子孫は owner を辿って必ずここに当たる。在籍（生徒の配下）と小計（小計グループの
  *   配下）は参照先が共通の実体だけなので振り直さず、共通の実体と同じく「在れば触らない・
  *   無ければ作る」になる（振り直すと、同じ生徒の同じ在籍が2行になる）
- * - 共通の実体と選べる項目は振り直さない
+ * - 共通の実体は振り直さない
+ * - 選べる項目も配下と同じ規則に従う。利用者個人の設定は参照先が利用者（共通の実体）だけ、
+ *   組織の設定と監査ログは参照を持たないので振り直されない。AI 採点の記録は採点枠・受験生を
+ *   参照するので、試験を振り直せば一緒に振り直る（振り直さないと、同じアーカイブを2回
+ *   別で追加したときに2つ目の試験の記録が1つ目と同じ id になる）
  *
  * 表は親が先の順に並んでいるので1巡で決まるが、循環があっても取りこぼさないよう、
  * 増えなくなるまで回す。
@@ -114,7 +118,7 @@ export function renumberSeparateRows(
     changed = false
     for (const tableRows of tables) {
       const spec = ARCHIVE_TABLES[tableRows.table]
-      if (spec.role === "shared" || spec.role === "optional") continue
+      if (spec.role === "shared") continue
       const tableIdMap = (idMap[tableRows.table] ??= {})
       for (const row of tableRows.rows) {
         if (tableIdMap[row.id] !== undefined) continue

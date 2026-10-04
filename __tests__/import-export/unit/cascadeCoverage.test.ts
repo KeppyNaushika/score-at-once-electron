@@ -92,6 +92,8 @@ describe("ID変更時のカスケード網羅性（schema.prisma駆動）", () =
  */
 describe("採点層の親は ExamStudent（#962 の再発防止）", () => {
   const SCORING_TABLES = [
+    // AI 採点の判定（答案1件への AI の1回の判定）。受験生を外せば一緒に消える
+    "AiGradingAttempt",
     "CompoundAnswerScore",
     "QuestionScore",
     "ReturnSnapshot",
@@ -99,11 +101,11 @@ describe("採点層の親は ExamStudent（#962 の再発防止）", () => {
     "StudentAnswerImage",
   ]
 
-  it("採点系5テーブルは ExamStudent の onDelete:Cascade 子である", () => {
+  it("採点系6テーブルは ExamStudent の onDelete:Cascade 子である", () => {
     expect(cascadeChildrenFromSchema("ExamStudent")).toEqual(SCORING_TABLES)
   })
 
-  it("採点系5テーブルは Student 直結ではない", () => {
+  it("採点系6テーブルは Student 直結ではない", () => {
     const studentChildren = cascadeChildrenFromSchema("Student")
     for (const table of SCORING_TABLES) {
       expect(studentChildren).not.toContain(table)

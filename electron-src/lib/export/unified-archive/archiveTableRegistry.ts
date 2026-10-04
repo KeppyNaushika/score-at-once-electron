@@ -476,6 +476,41 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
   AppPreference: { role: "optional", option: "appPreference", references: [] },
   // 範囲（scopeId）が書き出した根を指す行だけ。外部キーは無い（多態参照）
   AuditLog: { role: "optional", option: "auditLog", references: [] },
+  // AI 採点の記録（docs/vlm-grading-design.md §4-2）。試験の配下だが、関連データではなく
+  // 実験の記録なので選んだときだけ入れる。プロンプトは設問に、実行はプロンプトに、判定は
+  // 実行に従う。判定は受験生を必須で参照するので、採点と答案を外せば判定も外れる。
+  // 本人分だけにしたときは、他の教員の実行（とその判定）を外す（archiveScopeResolver.ts）
+  AiPrompt: {
+    role: "optional",
+    option: "aiGradingRecords",
+    owner: ["cropRegionId"],
+    references: [
+      required("cropRegionId", "CropRegion"),
+      nullable("parentPromptId", "AiPrompt"),
+      nullable("createdByUserId", "User"),
+    ],
+  },
+  AiGradingRun: {
+    role: "optional",
+    option: "aiGradingRecords",
+    owner: ["promptId"],
+    references: [
+      required("userId", "User"),
+      required("promptId", "AiPrompt"),
+      nullable("resultPromptId", "AiPrompt"),
+    ],
+  },
+  AiGradingAttempt: {
+    role: "optional",
+    option: "aiGradingRecords",
+    owner: ["runId"],
+    references: [
+      required("runId", "AiGradingRun"),
+      required("examStudentId", "ExamStudent"),
+      nullable("adoptedQuestionScoreId", "QuestionScore"),
+      nullable("adoptedDrawingAnnotationId", "DrawingAnnotation"),
+    ],
+  },
 }
 
 /** 利用者が選ぶ4種の根 */

@@ -29,6 +29,7 @@ const OPTIONAL_ITEMS: readonly ArchiveOptionalItem[] = [
   "userSettings",
   "appPreference",
   "auditLog",
+  "aiGradingRecords",
 ]
 
 const MISSING_FILE_REASONS: readonly UnifiedArchiveMissingFile["reason"][] = [

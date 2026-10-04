@@ -7,7 +7,8 @@
  *
  * 自己参照・循環があると親を先に書けないので、そのときは `needsDeferredForeignKeys` を立てる。
  * 書く側はトランザクションの中で `PRAGMA defer_foreign_keys = ON` にし、外部キーの検査を
- * コミットまで遅らせる（違反が残ればコミットで SQLite が拒む）。今の schema には無い。
+ * コミットまで遅らせる（違反が残ればコミットで SQLite が拒む）。今の schema では
+ * AiPrompt.parentPromptId（直す元のプロンプト）が自己参照にあたる。
  */
 
 import { ARCHIVE_TABLES } from "../../export/unified-archive/archiveTableRegistry"
