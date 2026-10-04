@@ -102,6 +102,22 @@ export const createSyncInstance = (
   })
 
 /**
+ * 2端末を立ち上げて1往復させる下ごしらえ（`beforeEach` / `beforeAll`）に与える時間。
+ *
+ * `setupSync` は本物のスキーマ全表へトリガーと帳簿を張り、最初の `syncNow` は
+ * ワーカーで全表の作り直しを計算する。手が空いた機械でも数秒、ほかの仕事で
+ * 混んでいると1端末の1回目だけで10秒を越える（実測で下ごしらえ全体が9〜22秒）。
+ * vitest のフックの既定（`hookTimeout` = 10秒）は `testTimeout`（30秒）と別枠なので、
+ * 下ごしらえで同期を回すフックには必ずこれを渡す。
+ *
+ * **時間切れは、その試験1つの失敗では済まない。** vitest はフックの Promise を
+ * 止められないので、打ち切られた下ごしらえは裏で走り続け、次の試験が作り直した
+ * `syncA` / `syncB`（モジュールの変数）を横から使う。`Sync already in progress` で
+ * 次の試験まで落ちるのはこの連鎖である。
+ */
+export const TWO_CLIENT_SETUP_TIMEOUT_MS = 60_000
+
+/**
  * アプリ（Prisma driver adapter）が書くのと同じ ISO-T 形式で「少し前」の時刻を作る。
  *
  * 未来の時刻を置くと、`_tombstone.deletedAt`（トリガーの `datetime('now')` = UTC）との
