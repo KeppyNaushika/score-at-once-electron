@@ -47,9 +47,10 @@ const pruneOldBackups = (absolutePath: string): void => {
  * マイグレーション前にDBファイルをバックアップする。
  * NAS共有時に他クライアントのバックアップを上書きしないようタイムスタンプを付与する。
  */
-export const createBackup = (): string | null => {
+export const createBackup = (
+  dbPath: string = getDatabasePath()
+): string | null => {
   try {
-    const dbPath = getDatabasePath()
     const absolutePath = path.resolve(dbPath)
     if (!fs.existsSync(absolutePath)) return null
     const timestamp = new Date()
@@ -68,10 +69,12 @@ export const createBackup = (): string | null => {
 }
 
 /** バックアップからDBを復元する */
-export const restoreBackup = (backupPath: string): void => {
+export const restoreBackup = (
+  backupPath: string,
+  dbPath: string = getDatabasePath()
+): void => {
   try {
-    const dbPath = path.resolve(getDatabasePath())
-    fs.copyFileSync(backupPath, dbPath)
+    fs.copyFileSync(backupPath, path.resolve(dbPath))
     console.info("Database restored from backup")
   } catch (error) {
     console.error("Failed to restore database from backup:", error)

@@ -1,32 +1,24 @@
 import { PrismaClient } from "@prisma/client"
 import * as path from "path"
 
-import { getDataDirectory } from "../dataManager"
-import { getLocalDbPath, loadSyncConfig } from "../sync/syncConfig"
+import { getStorageRoots } from "../storageRoots"
 import {
   bootstrapSchema,
   type SchemaBootstrapResult,
 } from "./schema/schemaBootstrap"
-import { PrismaBetterSqlite3WithRecursiveTriggers } from "./sqliteConnection"
+import {
+  PrismaBetterSqlite3AtResolvedPath,
+  PrismaBetterSqlite3WithRecursiveTriggers,
+} from "./sqliteConnection"
 
 /**
- * データベースファイルの絶対パスを返す
+ * 接続する DB ファイルの絶対パスを返す。
  *
- * sync有効時はローカルDBパス、無効時はデータディレクトリ内のDBパスを返す
- * （sync有効時、NAS上のDBは同期先であって接続先ではない）。
- *
- * 分岐は sync設定の `enabled` だけで決める。設定ファイルが無い初回起動でも
- * `loadSyncConfig()` は既定値（`enabled: false`）を返すので、「読み込みに失敗したら
- * 既定パス」というフォールバックは要らない。かつてここは `require()` の失敗ごと
- * try/catch で飲んでいたが、それは失敗の理由を区別しないため
- * 「sync有効なのに従来パスを返す」事故を隠す形になっていた。
- * なお、ここで例外が出るとしたら Electron の `app` が使えないときだけで、
- * 逃げ先の `getDataDirectory()` も同じく `app` に依存する以上、隠しても直らない。
+ * 起動時に決まった根（`../storageRoots.ts`）から読むだけで、設定ファイルは見ない。
+ * ローカルモードは `data/database.db`、共有モードは `data/shared/<識別id>/database.db`
+ * （手元の控え）。動いている間にモードを変えても、ここは変わらない（再起動で効かせる）。
  */
-export const getDatabasePath = (): string =>
-  loadSyncConfig().enabled
-    ? getLocalDbPath()
-    : path.join(getDataDirectory(), "database.db")
+export const getDatabasePath = (): string => getStorageRoots().databasePath
 
 /**
  * 指定パスのSQLiteファイルに接続するPrismaClientを生成する。
@@ -34,7 +26,7 @@ export const getDatabasePath = (): string =>
  * アダプタは接続のたびに `recursive_triggers` を立てるもの（`sqliteConnection.ts`）。
  * 同期ライブラリのトリガーが、この接続の書き込みを取りこぼさないために要る。
  */
-const createPrismaClientForPath = (dbPath: string): PrismaClient => {
+export const createPrismaClientForPath = (dbPath: string): PrismaClient => {
   const absolutePath = path.resolve(dbPath)
   const adapter = new PrismaBetterSqlite3WithRecursiveTriggers({
     url: absolutePath,
@@ -46,10 +38,17 @@ const createPrismaClientForPath = (dbPath: string): PrismaClient => {
   })
 }
 
-/** 共有ドライブ対応のPrismaクライアントをドライバーアダプター経由で生成する */
-export const createSharedPrismaClient = (): PrismaClient => {
-  return createPrismaClientForPath(getDatabasePath())
-}
+/**
+ * アプリの Prisma クライアントを作る。開く DB は**接続するとき**に起動時の根から読む
+ * （`client.ts` はモジュールの読み込み時にこれを呼ぶので、根が決まる前に作られる）。
+ */
+export const createSharedPrismaClient = (): PrismaClient =>
+  new PrismaClient({
+    adapter: new PrismaBetterSqlite3AtResolvedPath(() =>
+      path.resolve(getDatabasePath())
+    ),
+    log: ["error", "warn", "info"],
+  })
 
 /**
  * 空のDBに初期スキーマを適用する。既にテーブルを持つDBは "existing" を返す。

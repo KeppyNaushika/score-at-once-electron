@@ -4,8 +4,10 @@
  * sqlite-nas-syncのSyncInstanceをラップし、
  * アプリライフサイクルとIPC通信を管理する。
  *
- * sync有効時はローカルDBを使用し、NAS経由で他PCと同期する。
- * sync無効時はNAS上のDBを直接使用する（従来動作）。
+ * **同期が動くのは共有モードで起動したときだけ**（issue #1322）。どの DB を使い、
+ * どの共有フォルダへ写しを置くかは起動時に決まった根（`../storageRoots.ts`）から読み、
+ * 動いている間は変えない。モードやプロファイルの切り替えは、設定を書いて再起動で
+ * 効かせる（`storageModeService.ts`）。ローカルモードへ切り替えても、何も書き戻さない。
  *
  * 削除の伝搬はライブラリの `_tombstone`（削除の版）に一本化している。
  * 時刻を見ずに id を消し続けるアプリ側の削除記録は持たない（issue #918）。
@@ -22,12 +24,11 @@
 
 import type { SyncInstance, SyncResult } from "sqlite-nas-sync"
 
+import { getStorageRoots } from "../storageRoots"
 import {
-  ensureLocalDb,
-  removeLocalDbDirectory,
-  writeBackLocalDb,
-} from "./localDb"
-import { getSchemaVersion } from "./schemaVersion"
+  getSharedFolderSyncDirectory,
+  readSharedFolderId,
+} from "./sharedFolder"
 import {
   recordFoldAuditLogs,
   recordParentDeletedAuditLogs,
@@ -37,15 +38,8 @@ import {
   broadcastRecordFolds,
   broadcastSyncStatus,
 } from "./syncBroadcast"
-import {
-  ensureClientId,
-  ensureSyncDirectory,
-  getLocalDbPath,
-  getNasSyncPath,
-  loadSyncConfig,
-  saveSyncConfig,
-} from "./syncConfig"
-import { SYNC_EXCLUDE_TABLES, SYNC_TABLE_OPTIONS } from "./syncTableConfig"
+import { loadSyncConfig, saveSyncConfig } from "./syncConfig"
+import { createAppSyncInstance } from "./syncInstanceFactory"
 import type {
   SyncAppConfig,
   SyncAppStatus,
@@ -78,6 +72,9 @@ function extractVersionMismatches(result: SyncResult): VersionMismatchRemote[] {
 
 let syncInstance: SyncInstance | null = null
 
+/** 定期実行のタイマー（ライブラリの `start()` は使わない。下の `runGuardedSync` 参照） */
+let intervalHandle: ReturnType<typeof setInterval> | null = null
+
 let currentStatus: SyncAppStatus = {
   state: "disabled",
   lastSyncTime: null,
@@ -93,32 +90,16 @@ function updateStatus(partial: Partial<SyncAppStatus>): void {
 }
 
 /**
- * アプリ起動時の初期化。設定が有効ならsyncを開始する。
- *
- * **起動時にローカルDBの控えを消してはならない。** 消し残りを掃除したくなるが、
- * `config.enabled === false` は「書き戻しが終わった」証拠にならない。
- * `loadSyncConfig()` は `sync-config.json` が無いときも、JSON として壊れているときも、
- * 例外を握りつぶして既定値（`enabled: false`）を返す。設定ファイルが消える・壊れるだけで
- * 起動時の掃除が走り、書き戻しを一度もしていないローカルDBを消すことになる。
- * 同期を切れなくなった利用者が設定ファイルを手で書き換えて回避する経路も同じで、
- * そのローカルDBは正本である。どちらも「ゴミ」ではなく唯一のデータなので、消さない。
- *
- * 消し残りはディスクを使うだけで害が無く、`updateSyncConfig` の正常な経路では既に
- * 消えている。積極的な証拠（「まだ消していない」という印）を設定ファイルへ持たせる案も
- * あるが、その印もまた設定ファイルが壊れれば失われ、守られる利益が消し残りのディスク
- * だけなので、印は持たずに掃除そのものを行わない。
+ * アプリ起動時の初期化。共有モードで起動したときだけ同期を始める。
  */
 export async function initializeSync(): Promise<void> {
-  let config = loadSyncConfig()
-  config = ensureClientId(config)
-
-  if (!config.enabled) {
+  if (getStorageRoots().mode !== "shared") {
     updateStatus({ state: "disabled" })
     return
   }
 
   try {
-    await startSync(config)
+    await startSync(loadSyncConfig())
   } catch (error) {
     console.error("Failed to initialize sync:", error)
     updateStatus({
@@ -128,28 +109,59 @@ export async function initializeSync(): Promise<void> {
   }
 }
 
-/** syncを開始する */
+/**
+ * 共有フォルダが、登録したときの共有フォルダのままかを確かめる。
+ *
+ * 同期の写しはパスへ置くので、そのパスが別のフォルダになっていたら（ドライブの
+ * 割り当てが変わった・別の共有フォルダが同じ場所に来た）、そこへ写しを置いては
+ * ならない。識別ファイルの id で確かめる。
+ */
+function checkSharedFolderIdentity(): string | null {
+  const { sharedFolder } = getStorageRoots()
+  if (sharedFolder === null) return "共有モードで起動していません"
+  try {
+    if (
+      readSharedFolderId(sharedFolder.sharedFolderPath) ===
+      sharedFolder.sharedFolderId
+    ) {
+      return null
+    }
+  } catch {
+    // 下の文面で知らせる
+  }
+  return `共有フォルダ（${sharedFolder.sharedFolderPath}）に接続できないか、別の共有フォルダになっています`
+}
+
+/**
+ * 共有フォルダを確かめてから1回同期する。
+ *
+ * ライブラリの `start()` は確かめずに同期する（写しの置き場が無ければ作りさえする）ので、
+ * 定期実行はこちらのタイマーで回し、毎回ここを通す。
+ */
+async function runGuardedSync(instance: SyncInstance): Promise<SyncResult> {
+  const problem = checkSharedFolderIdentity()
+  if (problem !== null) {
+    updateStatus({ state: "error", lastError: problem })
+    throw new Error(problem)
+  }
+  return instance.syncNow()
+}
+
+/** syncを開始する（共有モードで起動しているときだけ） */
 export async function startSync(config: SyncAppConfig): Promise<void> {
   await stopSync()
 
-  // ローカルDBを準備
-  await ensureLocalDb()
+  const roots = getStorageRoots()
+  if (roots.mode !== "shared" || roots.sharedFolder === null) {
+    throw new Error("同期は共有モードでだけ動きます")
+  }
 
-  const dbPath = getLocalDbPath()
-  const nasPath = getNasSyncPath()
-  ensureSyncDirectory()
-
-  const { setupSync } = await import("sqlite-nas-sync")
-
-  syncInstance = setupSync({
-    dbPath,
-    nasPath,
+  const instance = await createAppSyncInstance({
+    dbPath: roots.databasePath,
+    nasPath: getSharedFolderSyncDirectory(roots.sharedFolder.sharedFolderPath),
     clientId: config.clientId,
-    excludeTables: SYNC_EXCLUDE_TABLES,
-    tableOptions: SYNC_TABLE_OPTIONS,
     intervalMs: config.intervalMs,
     changelogRetentionDays: config.changelogRetentionDays,
-    schemaVersion: getSchemaVersion(),
     onAfterSync: (_localDb, result) => {
       updateStatus({
         state: "idle",
@@ -180,27 +192,39 @@ export async function startSync(config: SyncAppConfig): Promise<void> {
       void recordParentDeletedAuditLogs(parentDeletedReport)
     },
   })
+  syncInstance = instance
 
-  syncInstance.on("sync:start", () => {
+  instance.on("sync:start", () => {
     updateStatus({ state: "syncing" })
   })
 
-  syncInstance.on("sync:error", (error) => {
+  instance.on("sync:error", (error) => {
     updateStatus({
       state: "error",
       lastError: error instanceof Error ? error.message : String(error),
     })
   })
 
-  syncInstance.start()
+  intervalHandle = setInterval(() => {
+    runGuardedSync(instance).catch(() => {
+      // 失敗は状態（sync:error・runGuardedSync）で知らせてある
+    })
+  }, config.intervalMs)
   updateStatus({ state: "idle", lastError: null })
 }
 
 /** syncを停止する */
 export async function stopSync(): Promise<void> {
+  if (intervalHandle) {
+    clearInterval(intervalHandle)
+    intervalHandle = null
+  }
   if (syncInstance) {
-    syncInstance.stop()
+    const closing = syncInstance
     syncInstance = null
+    // 実行中の同期が終わるのを待ってから、`setupSync` が開いた接続を閉じる
+    // （アプリの終了時もここを通る。`index.ts` の before-quit）
+    await closing.close()
   }
   // 止めた時点の注意は、次に始めたときには古い。空にしておけば、次に出たときに
   // renderer は新しく出たものとして知らせる
@@ -210,9 +234,11 @@ export async function stopSync(): Promise<void> {
 /** 手動sync実行 */
 export async function triggerSyncNow(): Promise<SyncResult> {
   if (!syncInstance) {
-    throw new Error("同期が有効になっていません")
+    throw new Error(
+      "同期が動いていません（共有モードで起動したときだけ同期します）"
+    )
   }
-  return syncInstance.syncNow()
+  return runGuardedSync(syncInstance)
 }
 
 /** 現在のステータスを取得 */
@@ -220,49 +246,17 @@ export function getSyncStatus(): SyncAppStatus {
   return { ...currentStatus }
 }
 
-/** 設定を更新してsyncを再起動 */
-export async function updateSyncConfig(
-  partial: Partial<SyncAppConfig>
+/**
+ * 同期の間隔・保持期間を変える。共有モードで動いていれば、新しい値で同期を始め直す。
+ *
+ * モードとプロファイルはここでは変えない（`storageModeService.ts`。再起動で効かせる）。
+ */
+export async function updateSyncTiming(
+  partial: Partial<Pick<SyncAppConfig, "intervalMs" | "changelogRetentionDays">>
 ): Promise<void> {
-  const current = loadSyncConfig()
-  const updated = { ...current, ...partial }
-
-  // sync無効化時: 最後の同期 → 停止 → 書き戻し → 設定保存 → 控えの削除
-  //
-  // **順序に意味がある。**
-  // - 最後の同期は `stopSync()` の**前**でなければ走らない（止めると `syncInstance` が
-  //   消える）。上げるだけでなく取り込みもするので、切る前に1回やる値打ちがある。
-  //   ただし、ここで上げた内容を他のPCが受け取るのは、そのPCの次の同期のときである
-  // - 書き戻しに失敗したら**設定を変えずに投げる**。ローカルDBは残るので何も失われず、
-  //   同期が入ったままなのが正しい
-  // - 設定の保存は**削除より前**。順序が逆だと、削除の失敗で設定が保存されず、
-  //   二度と同期を切れなくなる（issue #1270）
-  if (current.enabled && !updated.enabled) {
-    try {
-      if (syncInstance) {
-        await syncInstance.syncNow()
-      }
-    } catch {
-      // 最終syncに失敗しても、切る処理は続行する
-    }
-
-    await stopSync()
-
-    await writeBackLocalDb()
-
-    saveSyncConfig(updated)
-
-    removeLocalDbDirectory()
-
-    return
-  }
-
+  const updated = { ...loadSyncConfig(), ...partial }
   saveSyncConfig(updated)
-
-  if (updated.enabled) {
+  if (syncInstance) {
     await startSync(updated)
-  } else if (!current.enabled) {
-    // 既に無効で、設定変更のみ（interval等）
-    await stopSync()
   }
 }

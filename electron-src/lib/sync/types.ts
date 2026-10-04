@@ -2,10 +2,60 @@
  * NAS同期機能の型定義
  */
 
-/** sync設定（sync-config.jsonに永続化） */
+/**
+ * どこを正本として動くか。**起動時に1度だけ決まり、動いている間は変わらない**
+ * （`../../storageRoots.ts`）。
+ *
+ * - `local`: 実行ファイルの隣の `data` の DB と画像だけを使う。同期はしない
+ * - `shared`: 共有プロファイルの1つを使う。DB は `data/shared/<識別id>/` の手元の控え、
+ *   画像と同期の写しは共有フォルダに置く
+ *
+ * 2つのモードは別々の世界で、データを暗黙に行き来させない。移すのは利用者が
+ * 「移行」を選んだときだけで、移行先が空のときに限る（`sharedProfileSetup.ts`）。
+ */
+export type StorageMode = "local" | "shared"
+
+/**
+ * 共有プロファイル1つ（＝接続先の共有フォルダ1つ）。
+ *
+ * 共有フォルダは**パスでなく識別ファイルの id で見分ける**。PCごとにドライブ文字や
+ * UNC の表記が違うので、パスでは同じフォルダと分からない。手元の控えの置き場は
+ * id から決まる（`data/shared/<sharedFolderId>/`）ので、ここには持たない。
+ */
+export interface SharedProfile {
+  /** 共有フォルダの識別ファイルに書かれた id（uuidv4）。プロファイルの鍵 */
+  sharedFolderId: string
+  /** このPCから見た共有フォルダのパス。同じ共有フォルダを別の表記で選び直すと書き換わる */
+  sharedFolderPath: string
+}
+
+/**
+ * clientId を振ったPC。data を丸ごと別のPCへ写すと clientId も写るので、
+ * 起動時にこれと今のPCを比べて、違えば振り直す（`machineIdentity.ts`）。
+ */
+export interface ClientIdOwner {
+  /** userData に置いた、このPC（OSの利用者）ごとの id（uuidv4）。data と一緒には写らない */
+  installationId: string
+  /** OS のホスト名。移動プロファイルで userData ごと別のPCへ渡った場合を見分ける */
+  hostname: string
+}
+
+/**
+ * 同期とモードの設定。`data/sync-config.json` に置く（`syncConfig.ts`）。
+ *
+ * **userData には置かない。** アプリの更新で利用者が data を写せば、設定も一緒に移る。
+ */
 export interface SyncAppConfig {
-  enabled: boolean
+  /** 次に起動したときのモード（動いている間のモードは `StorageRoots.mode`） */
+  mode: StorageMode
+  /** 共有モードで使うプロファイルの `sharedFolderId`。ローカルモードでは使わない */
+  activeSharedFolderId: string | null
+  /** 登録済みの共有プロファイル */
+  sharedProfiles: SharedProfile[]
+  /** このPCの同期クライアントの id（uuidv4）。PCで1つで、全プロファイルが共有する */
   clientId: string
+  /** `clientId` を振ったPC */
+  clientIdOwner: ClientIdOwner | null
   intervalMs: number
   changelogRetentionDays: number
 }
@@ -119,10 +169,13 @@ export interface SyncAppStatus {
   lastWarnings: string[]
 }
 
-/** デフォルトsync設定 */
+/** 設定ファイルが無いとき（新規インストール）の設定 */
 export const DEFAULT_SYNC_CONFIG: SyncAppConfig = {
-  enabled: false,
+  mode: "local",
+  activeSharedFolderId: null,
+  sharedProfiles: [],
   clientId: "",
+  clientIdOwner: null,
   intervalMs: 30000,
   changelogRetentionDays: 7,
 }

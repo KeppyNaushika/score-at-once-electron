@@ -20,11 +20,15 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import { createBaseline } from "../../electron-src/lib/prisma/schema/baselineMigrations"
 import { deployPendingMigrations } from "../../electron-src/lib/prisma/schema/migrationDeployer"
 import { bootstrapSchema } from "../../electron-src/lib/prisma/schema/schemaBootstrap"
+import { fixLocalStorageRootsForTest } from "../helpers/localStorageRoots"
 import { createPrismaClientForPath } from "../helpers/testPrismaClient"
 
 const TEST_ROOT = path.join(os.tmpdir(), "drop-human-name-uniques")
 const DB_PATH = path.join(TEST_ROOT, "database.db")
 const REAL_MIGRATIONS = path.resolve(__dirname, "../../prisma/migrations")
+
+// シードはローカルモードでだけ入る（共有モードの控えには入れない）
+fixLocalStorageRootsForTest(TEST_ROOT)
 
 // deployPendingMigrations / DatabaseSetup の接続先を、この一時DBへ向ける
 // （どちらも既定では data/database.db を掴む）

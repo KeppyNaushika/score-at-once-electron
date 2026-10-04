@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 
+import type { SharedFolderConnectAction } from "@/electron-src/lib/sync/storageModeService"
 import type { SyncAppConfig } from "@/electron-src/lib/sync/types"
 
 import { defineMutation } from "./defineMutation"
@@ -15,12 +16,23 @@ import { defineMutation } from "./defineMutation"
 // 取得
 // =====================================================================
 
-/** 同期の設定と保存先 */
+/** 同期とモードの設定と、いま動いている根（再起動待ちかは画面が見比べる） */
 export const syncConfigQuery = () =>
   queryOptions({
     queryKey: ["sync", "config"] as const,
     queryFn: () => window.electronAPI.sync.getConfig(),
   })
+
+/** 共有フォルダを選ぶダイアログを出す。選ばずに閉じたら null（DB は読まない） */
+export const chooseSharedFolder = () =>
+  window.electronAPI.sync.chooseSharedFolder()
+
+/** 共有フォルダを見る（何も書かない） */
+export const inspectSharedFolder = (sharedFolderPath: string) =>
+  window.electronAPI.sync.inspectSharedFolder(sharedFolderPath)
+
+/** アプリを再起動する（モード・プロファイルの切り替えを効かせる） */
+export const relaunchApp = () => window.electronAPI.sync.relaunch()
 
 /** 同期の現在の状態（この後は main から押し出されてくる） */
 export const syncStatusQuery = () =>
@@ -62,13 +74,56 @@ export const subscribeSyncParentDeletedChanged = (
 // 書き込み
 // =====================================================================
 
-export const setSyncConfigMutation = () =>
+/** 同期の間隔・保持期間を変える（モードは変えない） */
+export const setSyncTimingMutation = () =>
   defineMutation({
-    mutationFn: (partial: Partial<SyncAppConfig>) =>
-      window.electronAPI.sync.setConfig(partial),
+    mutationFn: (
+      partial: Partial<
+        Pick<SyncAppConfig, "intervalMs" | "changelogRetentionDays">
+      >
+    ) => window.electronAPI.sync.setTiming(partial),
     meta: {
       invalidates: [syncConfigQuery().queryKey, syncStatusQuery().queryKey],
       errorMessage: "同期の設定を保存できませんでした",
+    },
+  })
+
+/**
+ * 共有フォルダを登録し、次の起動でそのプロファイルを使う。
+ * 合流・移行を断った理由は、失敗トーストの説明に出る（main の例外の文面）。
+ */
+export const connectSharedFolderMutation = () =>
+  defineMutation({
+    mutationFn: (input: {
+      sharedFolderPath: string
+      action: SharedFolderConnectAction
+    }) => window.electronAPI.sync.connectSharedFolder(input),
+    meta: {
+      invalidates: [syncConfigQuery().queryKey],
+      errorMessage: "共有フォルダを使えるようにできませんでした",
+    },
+  })
+
+/** 次の起動で使うモード・プロファイルを選ぶ */
+export const selectStartupStorageMutation = () =>
+  defineMutation({
+    mutationFn: (
+      selection: { mode: "local" } | { mode: "shared"; sharedFolderId: string }
+    ) => window.electronAPI.sync.selectStartupStorage(selection),
+    meta: {
+      invalidates: [syncConfigQuery().queryKey],
+      errorMessage: "起動の設定を保存できませんでした",
+    },
+  })
+
+/** 共有プロファイルのデータを、空のローカルモードへ移す */
+export const migrateProfileToLocalMutation = () =>
+  defineMutation({
+    mutationFn: (sharedFolderId: string) =>
+      window.electronAPI.sync.migrateProfileToLocal(sharedFolderId),
+    meta: {
+      invalidates: [syncConfigQuery().queryKey],
+      errorMessage: "ローカルモードへ移行できませんでした",
     },
   })
 

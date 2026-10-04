@@ -29,7 +29,6 @@ import * as path from "path"
 import type { ElectronApplication, Locator, Page } from "playwright"
 import { _electron as electron } from "playwright"
 
-import { DATABASE_PATH_PROBE } from "./helpers/databasePathProbe"
 import {
   SCREENSHOT_BASE_URL,
   SCREENSHOT_RENDERER_PORT,
@@ -70,30 +69,14 @@ function loadIds(): { userId: string; asbDefId: string } {
 /**
  * アプリが実際に開いた DB が撮影用のものであることを確かめる
  *
- * `SCORE_AT_ONCE_DATA_DIR` を渡していても、同期が有効なら `getDatabasePath()` は
- * それを無視して userData のローカル DB（＝実運用のデータベース）を返す。同期設定は
- * userData 側にあり撮影側からは確実には見えないので、推測せず**起動したアプリ自身に
- * 訊く**。こうしておけば同期に限らず、どんな理由でパスがずれても捕まる。
- *
- * メインプロセスに読ませる束は globalSetup が毎回作り直す（`helpers/databasePathProbe.ts`）。
+ * `SCORE_AT_ONCE_DATA_DIR` を渡していても、撮影用 data の設定が共有モードを指していれば、
+ * アプリは共有プロファイルの手元の控えを開く。推測せず**起動したアプリ自身に訊く**
+ * （同期の設定画面が使う `sync.getConfig` は、起動時に決まった根を返す）。
+ * こうしておけばモードに限らず、どんな理由でパスがずれても捕まる。
  */
-async function assertOpenedScreenshotDatabase(
-  launchedApp: ElectronApplication
-) {
-  const openedDatabasePath: string = await launchedApp.evaluate(
-    (_electronModule, probePath) => {
-      // evaluate に渡した関数は CommonJS のスコープでは走らないので、`require` も
-      // 動的 import も居ない（実測: ReferenceError / A dynamic import callback was
-      // not specified）。メインプロセスの入口モジュール経由で読む
-      const mainModule = process.mainModule
-      if (!mainModule) {
-        throw new Error("メインプロセスの入口モジュールが取れませんでした")
-      }
-      const probe: { getDatabasePath: () => string } =
-        mainModule.require(probePath)
-      return probe.getDatabasePath()
-    },
-    DATABASE_PATH_PROBE
+async function assertOpenedScreenshotDatabase(openedPage: Page) {
+  const openedDatabasePath = await openedPage.evaluate(
+    async () => (await window.electronAPI.sync.getConfig()).running.databasePath
   )
 
   if (path.resolve(openedDatabasePath) !== path.resolve(SCREENSHOT_DB)) {
@@ -101,7 +84,7 @@ async function assertOpenedScreenshotDatabase(
       describeSyncAbort(
         `アプリが開いた DB: ${openedDatabasePath}\n` +
           `撮影用の DB:     ${SCREENSHOT_DB}\n` +
-          `（同期以外の理由でパスがずれている場合もこの検査に掛かります）`
+          `（モード以外の理由でパスがずれている場合もこの検査に掛かります）`
       )
     )
   }
@@ -400,9 +383,9 @@ test.beforeAll(async () => {
     timeout: 60000,
   })
 
-  await assertOpenedScreenshotDatabase(electronApp)
-
   page = await electronApp.firstWindow({ timeout: 60000 })
+  await page.waitForLoadState("domcontentloaded")
+  await assertOpenedScreenshotDatabase(page)
   // 取り込み前の答案を抱えた画面は beforeunload で離脱を止める。撮影は画面を
   // 渡り歩くので、止められると次の page.goto が進まない。離脱は常に通す
   await electronApp.evaluate(({ BrowserWindow }) => {

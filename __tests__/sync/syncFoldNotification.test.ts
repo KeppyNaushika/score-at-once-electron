@@ -41,7 +41,7 @@ vi.mock("electron", () => ({
 }))
 
 vi.mock("../../electron-src/lib/dataManager", () => ({
-  getDataDirectory: () => TEST_DATA_DIR,
+  getLocalDataDirectory: () => TEST_DATA_DIR,
 }))
 
 vi.mock("../../electron-src/lib/prisma/databaseInitializer", () => ({
@@ -66,6 +66,7 @@ vi.mock("sqlite-nas-sync", () => ({
       syncNow: vi.fn(),
       start: vi.fn(),
       stop: vi.fn(),
+      close: vi.fn().mockResolvedValue(undefined),
       on: vi.fn(),
       getStatus: () => ({
         isSyncing: false,
@@ -77,6 +78,10 @@ vi.mock("sqlite-nas-sync", () => ({
   }),
 }))
 
+import {
+  computeSharedRoots,
+  fixStorageRoots,
+} from "../../electron-src/lib/storageRoots"
 import { saveSyncConfig } from "../../electron-src/lib/sync/syncConfig"
 import { startSync, stopSync } from "../../electron-src/lib/sync/syncService"
 import {
@@ -84,6 +89,14 @@ import {
   type SyncParentDeleted,
   type SyncRecordFold,
 } from "../../electron-src/lib/sync/types"
+
+// 同期は共有モードで起動したときだけ動く
+fixStorageRoots(
+  computeSharedRoots(TEST_DATA_DIR, {
+    sharedFolderId: "5f0c1a43-8f1e-4b8e-9d3c-2a9b6f1e7c10",
+    sharedFolderPath: path.join(TEST_DATA_DIR, "shared-folder"),
+  })
+)
 
 const FOLDS_CHANNEL = "sync:record-folds-changed"
 const PARENT_DELETED_CHANNEL = "sync:parent-deleted-changed"
@@ -131,7 +144,6 @@ const waitForDetachedWrites = () =>
 const startWithCapturedCallback = async () => {
   const config = {
     ...DEFAULT_SYNC_CONFIG,
-    enabled: true,
     clientId: "test-client",
   }
   saveSyncConfig(config)

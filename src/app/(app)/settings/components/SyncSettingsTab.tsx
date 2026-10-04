@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertCircle, CheckCircle2, RefreshCw } from "lucide-react"
+import { AlertCircle, CheckCircle2, RefreshCw, RotateCw } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -20,8 +20,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
-import { Switch } from "@/components/ui/switch"
+import type { SharedFolderConnectAction } from "@/electron-src/lib/sync/storageModeService"
+import type { SharedProfile } from "@/electron-src/lib/sync/types"
 
+import {
+  type InspectedSharedFolder,
+  SharedFolderConnectDialog,
+} from "./SharedFolderConnectDialog"
+import { StorageProfileList } from "./StorageProfileList"
 import { SyncNotes } from "./SyncNotes"
 import { SyncWarningList } from "./SyncWarningList"
 
@@ -49,16 +55,39 @@ function StateIndicator({ state }: { state: string }) {
         </span>
       )
     default:
-      return <span className="text-sm text-muted-foreground">無効</span>
+      return (
+        <span className="text-sm text-muted-foreground">
+          同期していません（共有モードで起動したときだけ同期します）
+        </span>
+      )
   }
 }
 
 export function SyncSettingsTab() {
-  const { config, syncPath, status, isLoading, updateConfig, triggerSync } =
-    useSyncSettings()
-  const [isDisableConfirmOpen, setIsDisableConfirmOpen] = useState(false)
+  const {
+    config,
+    running,
+    restartPending,
+    status,
+    isLoading,
+    updateTiming,
+    triggerSync,
+    connectSharedFolder,
+    isConnecting,
+    selectStartupStorage,
+    migrateProfileToLocal,
+    isMigratingToLocal,
+    chooseSharedFolder,
+    inspectSharedFolder,
+    relaunch,
+  } = useSyncSettings()
+  const [inspected, setInspected] = useState<InspectedSharedFolder | null>(null)
+  const [migrationSource, setMigrationSource] = useState<SharedProfile | null>(
+    null
+  )
+  const [isRestartPromptOpen, setIsRestartPromptOpen] = useState(false)
 
-  if (isLoading || !config) {
+  if (isLoading || !config || !running) {
     return (
       <div className="flex items-center justify-center py-12">
         <Spinner className="size-6 text-muted-foreground" />
@@ -66,41 +95,50 @@ export function SyncSettingsTab() {
     )
   }
 
-  /**
-   * 同期の入切。**文面は実際の処理に合わせる。**
-   *
-   * 切るときは `updateSyncConfig` が、最後にもう一度同期してから止め、このPCの控えを
-   * 共有フォルダへ書き戻して控えを消す。最後の同期は取り込みも行うので、同期フォルダに
-   * 届いている他のPCの変更はここで入る。一方、このPCの変更が他のPCへ渡るのは、
-   * **そのPCが次に同期したとき**である。だから「他のPCにすぐ反映される」とは書かない。
-   */
-  const handleToggleEnabled = (enabled: boolean) => {
-    if (!enabled) {
-      setIsDisableConfirmOpen(true)
+  const isSharedRunning = running.mode === "shared"
+
+  /** 共有フォルダを選んで見る。共有できないフォルダなら理由を出して終わる */
+  const handleAddSharedFolder = async () => {
+    const sharedFolderPath = await chooseSharedFolder()
+    if (sharedFolderPath === null) return
+    const inspection = await inspectSharedFolder(sharedFolderPath)
+    if (inspection.kind === "unreachable" || inspection.kind === "unusable") {
+      toast.error("この共有フォルダは使えません", {
+        description: inspection.reason,
+      })
       return
     }
-    void applyEnabled(true)
+    setInspected({ sharedFolderPath, inspection })
   }
 
-  const applyEnabled = async (enabled: boolean) => {
-    try {
-      await updateConfig({ enabled })
-      toast.success(
-        enabled
-          ? "同期を始めました（このPCで使うデータの控えを用意しました）"
-          : "同期をやめました（最後の同期のあと、このPCのデータを共有フォルダへ書き戻しました）"
-      )
-    } catch (error) {
-      toast.error("設定を保存できませんでした", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    }
+  const handleConnect = async (action: SharedFolderConnectAction) => {
+    if (inspected === null) return
+    await connectSharedFolder({
+      sharedFolderPath: inspected.sharedFolderPath,
+      action,
+    })
+    setInspected(null)
+    setIsRestartPromptOpen(true)
+  }
+
+  const handleSelectStartup = async (
+    selection: { mode: "local" } | { mode: "shared"; sharedFolderId: string }
+  ) => {
+    await selectStartupStorage(selection)
+    setIsRestartPromptOpen(true)
+  }
+
+  const handleMigrateToLocal = async () => {
+    if (migrationSource === null) return
+    await migrateProfileToLocal(migrationSource.sharedFolderId)
+    setMigrationSource(null)
+    setIsRestartPromptOpen(true)
   }
 
   const handleIntervalChange = async (value: string) => {
     const seconds = parseInt(value, 10)
     if (isNaN(seconds) || seconds < 5) return
-    await updateConfig({ intervalMs: seconds * 1000 })
+    await updateTiming(seconds * 1000)
   }
 
   const handleTriggerSync = async () => {
@@ -122,39 +160,61 @@ export function SyncSettingsTab() {
           <BetaBadge />
         </h2>
         <p className="text-sm text-muted-foreground">
-          データディレクトリ内の同期フォルダを介して複数PCのデータを同期します。
+          ローカルモードと共有モードを切り替えます。共有モードでは、共有フォルダを介して複数のPCのデータを同期します。
         </p>
       </div>
 
       <SyncNotes />
 
-      {/* 同期の有効/無効 */}
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <div className="space-y-0.5">
-          <Label className="flex items-center gap-2 text-base">
-            NAS同期
-            <BetaBadge />
-          </Label>
-          <p className="text-sm text-muted-foreground">
-            データディレクトリ内での自動同期を有効にします
+      {restartPending && (
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <p className="text-sm text-amber-800">
+            起動の設定を変えました。再起動すると切り替わります。
           </p>
+          <Button size="sm" onClick={() => void relaunch()}>
+            <RotateCw className="mr-2 h-4 w-4" />
+            今すぐ再起動
+          </Button>
         </div>
-        <Switch
-          checked={config.enabled}
-          onCheckedChange={handleToggleEnabled}
+      )}
+
+      {/* モードと共有プロファイル */}
+      <div className="space-y-2">
+        <Label className="text-base">起動するデータ</Label>
+        <p className="text-sm text-muted-foreground">
+          ローカルモードと共有モードは別々のデータです。切り替えてもデータは行き来しません。切り替えは再起動したときに効きます。
+        </p>
+        <StorageProfileList
+          nextMode={config.mode}
+          nextSharedFolderId={config.activeSharedFolderId}
+          runningMode={running.mode}
+          runningSharedFolderId={running.sharedFolder?.sharedFolderId ?? null}
+          profiles={config.sharedProfiles}
+          isBusy={isConnecting || isMigratingToLocal}
+          onSelectLocal={() => void handleSelectStartup({ mode: "local" })}
+          onSelectProfile={(sharedFolderId) =>
+            void handleSelectStartup({ mode: "shared", sharedFolderId })
+          }
+          onMigrateProfileToLocal={setMigrationSource}
+          onAddSharedFolder={() => void handleAddSharedFolder()}
         />
       </div>
 
-      {/* 同期フォルダ（自動導出、読み取り専用） */}
+      {/* いま使っている置き場（読み取り専用） */}
       <div className="space-y-2">
-        <Label>同期フォルダ</Label>
+        <Label>いま使っているデータの置き場</Label>
         <Input
-          value={syncPath || "未設定"}
+          value={running.databasePath}
+          readOnly
+          className="bg-muted font-mono text-xs"
+        />
+        <Input
+          value={running.sharedFilesDirectory}
           readOnly
           className="bg-muted font-mono text-xs"
         />
         <p className="text-xs text-muted-foreground">
-          データディレクトリ内に自動作成されます。ここにあるのは同期のための控えで、バックアップではありません。
+          上がデータベース、下が答案・模範解答などの画像の置き場です。共有モードの共有フォルダにあるのは同期のための写しで、バックアップではありません。
         </p>
       </div>
 
@@ -175,7 +235,7 @@ export function SyncSettingsTab() {
       <div className="flex items-center gap-4">
         <Button
           onClick={handleTriggerSync}
-          disabled={!config.enabled || status.state === "syncing"}
+          disabled={!isSharedRunning || status.state === "syncing"}
         >
           {status.state === "syncing" ? (
             <Spinner className="mr-2" />
@@ -187,23 +247,59 @@ export function SyncSettingsTab() {
         <StateIndicator state={status.state} />
       </div>
 
+      <SharedFolderConnectDialog
+        inspected={inspected}
+        knownSharedFolderIds={config.sharedProfiles.map(
+          (profile) => profile.sharedFolderId
+        )}
+        isConnecting={isConnecting}
+        onConnect={(action) => void handleConnect(action)}
+        onClose={() => setInspected(null)}
+      />
+
       <AlertDialog
-        open={isDisableConfirmOpen}
-        onOpenChange={setIsDisableConfirmOpen}
+        open={migrationSource !== null}
+        onOpenChange={(open) => {
+          if (!open && !isMigratingToLocal) setMigrationSource(null)
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>同期をやめますか？</AlertDialogTitle>
-            <AlertDialogDescription className="whitespace-pre-line">
-              {
-                "最後にもう一度同期してから、このPCのデータを共有フォルダへ書き戻し、このPCに置いていた控えを削除します。共有フォルダのデータは、このPCの内容で置き換わります。\nこのPCの変更が他のPCに現れるのは、そのPCが次に同期したときです。"
-              }
+            <AlertDialogTitle>ローカルモードへ移行しますか？</AlertDialogTitle>
+            <AlertDialogDescription className="break-all whitespace-pre-line">
+              {`${migrationSource?.sharedFolderPath ?? ""}\n\nこの共有プロファイルのデータ（データベースと画像）を、このPCのローカルモードへ写します。移せるのは、ローカルモードにまだデータが無いときだけです。共有フォルダには何も書きません。\n統合したい場合は、アーカイブの書き出しと取り込みを使ってください。`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void applyEnabled(false)}>
-              同期をやめる
+            <AlertDialogCancel disabled={isMigratingToLocal}>
+              やめる
+            </AlertDialogCancel>
+            <Button
+              disabled={isMigratingToLocal}
+              onClick={() => void handleMigrateToLocal()}
+            >
+              {isMigratingToLocal && <Spinner className="mr-2" />}
+              移行する
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={isRestartPromptOpen}
+        onOpenChange={setIsRestartPromptOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>再起動して切り替えますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              起動するデータの設定を保存しました。切り替わるのは再起動したときです。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>あとで</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void relaunch()}>
+              今すぐ再起動
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

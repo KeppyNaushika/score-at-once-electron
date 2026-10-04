@@ -5,7 +5,7 @@ import { pathToFileURL } from "url"
 import { initializeApp } from "./appInitializer"
 import { setupAllIPCHandlers } from "./ipc-handlers"
 import { destroySharedSvgWindow } from "./ipc-handlers/exportHandlers"
-import { getAbsolutePathFromData } from "./lib/dataManager"
+import { getAbsolutePathFromSharedFiles } from "./lib/dataManager"
 import { closeAllUnifiedArchiveImportSessions } from "./lib/import/unified-archive/archiveImportSessions"
 import { cleanupDecryptedPdfCopies } from "./lib/pdf-tools/decryptedPdfCopy"
 import { getPrismaClient } from "./lib/prisma/client"
@@ -25,8 +25,9 @@ if (process.platform === "win32" && app.isPackaged) {
       const fs = require("fs")
 
       // データディレクトリにログファイルを配置
-      const { getDataDirectory } = require("./lib/dataManager")
-      const dataDir = getDataDirectory()
+      // ログは PCに残すものの根（モードによらない）に置く
+      const { getLocalDataDirectory } = require("./lib/dataManager")
+      const dataDir = getLocalDataDirectory()
 
       // データディレクトリが存在しない場合は作成
       if (!fs.existsSync(dataDir)) {
@@ -87,7 +88,7 @@ app.on("ready", async () => {
 
         // 相対パスの場合はデータディレクトリからの絶対パスに変換
         if (!path.isAbsolute(filePath)) {
-          filePath = getAbsolutePathFromData(filePath)
+          filePath = getAbsolutePathFromSharedFiles(filePath)
         }
 
         const fileUrl = pathToFileURL(filePath).href

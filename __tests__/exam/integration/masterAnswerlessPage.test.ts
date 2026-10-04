@@ -16,11 +16,13 @@ import * as path from "path"
 import sharp from "sharp"
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { fixLocalStorageRootsForTest } from "../../helpers/localStorageRoots"
+
 const TEST_DATA_DIR = path.join(
   os.tmpdir(),
   "score-at-once-imageless-page-test"
 )
-process.env.SCORE_AT_ONCE_DATA_DIR = TEST_DATA_DIR
+fixLocalStorageRootsForTest(TEST_DATA_DIR)
 
 vi.mock("../../../electron-src/lib/prisma/client", async () => {
   const { getTestPrismaClient } = await import("../../helpers/testPrismaClient")
@@ -30,7 +32,7 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
   }
 })
 
-import { getAbsolutePathFromData } from "@/electron-src/lib/dataManager"
+import { getAbsolutePathFromSharedFiles } from "@/electron-src/lib/dataManager"
 import { getMasterAnswersByExamId } from "@/electron-src/lib/prisma/masterAnswer"
 import { uploadStudentAnswers } from "@/electron-src/lib/prisma/studentAnswer/upload"
 
@@ -44,7 +46,7 @@ const prisma = getTestPrismaClient()
 
 /** 白紙PNGを実ファイルとして置き、data からの相対パスを返す */
 async function writeBlankPng(relativePath: string): Promise<string> {
-  const absolutePath = getAbsolutePathFromData(relativePath)
+  const absolutePath = getAbsolutePathFromSharedFiles(relativePath)
   await fsPromises.mkdir(path.dirname(absolutePath), { recursive: true })
   await sharp({
     create: {

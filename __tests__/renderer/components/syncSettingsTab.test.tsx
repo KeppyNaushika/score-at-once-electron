@@ -11,18 +11,23 @@
  * - **beta の印がある。** 仕様が変わりうることを、入口で名乗る
  * - **注意事項が畳まれていない。** 畳んでよいのは後ろの数件だけ
  * - **直近の同期で出た注意が、一覧で残る。** トーストだけだと流れて消える
- * - **同期を切るときの確認が、実際の処理と食い違わない。** 切るときに走るのは
- *   このPCの控えを共有フォルダへ写す処理だけで、他のPCの変更を取りに行く処理は無い
+ * - **モードとプロファイルの切り替えは、再起動で効く。** 設定を変えただけでは
+ *   動いている根は変わらないので、再起動待ちであることを出す。空の共有フォルダを
+ *   選んだら、ローカルのデータを移すか空で始めるかを選ばせ、選ぶまで何もしない
  */
 
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SyncSettingsTab } from "@/app/(app)/settings/components/SyncSettingsTab"
-import type { SyncAppStatus } from "@/electron-src/lib/sync/types"
+import type { SharedFolderInspection } from "@/electron-src/lib/sync/sharedFolder"
+import {
+  DEFAULT_SYNC_CONFIG,
+  type SyncAppStatus,
+} from "@/electron-src/lib/sync/types"
 
-const { updateConfig, triggerSync, syncSettings } = vi.hoisted(() => ({
-  updateConfig: vi.fn(async () => undefined),
+const { connectSharedFolder, triggerSync, syncSettings } = vi.hoisted(() => ({
+  connectSharedFolder: vi.fn(async () => undefined),
   triggerSync: vi.fn(async () => undefined),
   syncSettings: { current: null as unknown },
 }))
@@ -44,26 +49,54 @@ const IDLE_STATUS: SyncAppStatus = {
   lastWarnings: [],
 }
 
-function renderTab(lastWarnings: string[] = []): void {
+const SHARED_ID = "5d6e7f8a-9b0c-4d1e-8f2a-3b4c5d6e7f8a"
+
+function renderTab(
+  lastWarnings: string[] = [],
+  options: {
+    restartPending?: boolean
+    inspection?: SharedFolderInspection
+  } = {}
+): void {
   syncSettings.current = {
     config: {
-      enabled: true,
+      ...DEFAULT_SYNC_CONFIG,
+      mode: options.restartPending ? "shared" : "local",
+      activeSharedFolderId: options.restartPending ? SHARED_ID : null,
+      sharedProfiles: [
+        { sharedFolderId: SHARED_ID, sharedFolderPath: "/nas/share" },
+      ],
       clientId: "this-pc",
-      intervalMs: 30000,
-      changelogRetentionDays: 7,
     },
-    syncPath: "/nas/data/sync",
+    running: {
+      mode: "local",
+      sharedFolder: null,
+      databasePath: "/app/data/database.db",
+      sharedFilesDirectory: "/app/data",
+      localDataDirectory: "/app/data",
+    },
+    restartPending: options.restartPending ?? false,
     status: { ...IDLE_STATUS, lastWarnings },
     isLoading: false,
-    updateConfig,
+    updateTiming: vi.fn(async () => undefined),
     triggerSync,
+    connectSharedFolder,
+    isConnecting: false,
+    selectStartupStorage: vi.fn(async () => undefined),
+    migrateProfileToLocal: vi.fn(async () => undefined),
+    isMigratingToLocal: false,
+    chooseSharedFolder: vi.fn(async () => "/nas/new-share"),
+    inspectSharedFolder: vi.fn(
+      async () => options.inspection ?? { kind: "empty" }
+    ),
+    relaunch: vi.fn(async () => undefined),
   }
   render(<SyncSettingsTab />)
 }
 
 describe("SyncSettingsTab", () => {
   beforeEach(() => {
-    updateConfig.mockClear()
+    connectSharedFolder.mockClear()
     triggerSync.mockClear()
   })
 
@@ -124,19 +157,62 @@ describe("SyncSettingsTab", () => {
     expect(screen.queryByText("直近の同期で出た注意")).toBeNull()
   })
 
-  it("同期を切る確認は、最後の同期と、届くのが相手の次の同期であることを言う", () => {
+  it("再起動待ちなら、そのことと再起動の手段を出す", () => {
+    renderTab([], { restartPending: true })
+    expect(screen.getByText(/再起動すると切り替わります/)).toBeTruthy()
+    expect(screen.getByRole("button", { name: /今すぐ再起動/ })).toBeTruthy()
+  })
+
+  it("ローカルモードで動いている間は、共有プロファイルをローカルへ移せない", () => {
+    renderTab()
+    const button = screen.getByRole("button", { name: /ローカルへ移行/ })
+    expect(button.hasAttribute("disabled")).toBe(true)
+  })
+
+  it("空の共有フォルダを選ぶと、移すか空で始めるかを尋ね、選ぶまで何もしない", async () => {
     renderTab()
 
-    fireEvent.click(screen.getByRole("switch"))
+    fireEvent.click(screen.getByRole("button", { name: /共有フォルダを追加/ }))
 
-    const message = screen.getByRole("alertdialog").textContent ?? ""
-    // 切る前に最後の同期が走る（取り込みもする）
-    expect(message).toContain("最後にもう一度同期してから")
-    // ただし、こちらの変更が相手に現れるのは相手の次の同期のとき
-    expect(message).toContain("そのPCが次に同期したとき")
-    // 取り込まれない、とは言えなくなった
-    expect(message).not.toContain("取り込まれません")
-    // 確認を出しただけの段では、まだ設定を書かない
-    expect(updateConfig).not.toHaveBeenCalled()
+    const dialog = await screen.findByRole("alertdialog")
+    expect(dialog.textContent).toContain("共有しているデータがありません")
+    expect(
+      screen.getByRole("button", { name: "ローカルのデータを移して始める" })
+    ).toBeTruthy()
+    expect(
+      screen.getByRole("button", { name: "空のプロファイルで始める" })
+    ).toBeTruthy()
+    expect(connectSharedFolder).not.toHaveBeenCalled()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "空のプロファイルで始める" })
+    )
+    await waitFor(() =>
+      expect(connectSharedFolder).toHaveBeenCalledWith({
+        sharedFolderPath: "/nas/new-share",
+        action: "create-empty",
+      })
+    )
+  })
+
+  it("既に共有されているフォルダは、ローカルのデータと統合しないことを言って合流する", async () => {
+    renderTab([], {
+      inspection: {
+        kind: "shared",
+        sharedFolderId: "6e7f8a9b-0c1d-4e2f-8a3b-4c5d6e7f8a9b",
+      },
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: /共有フォルダを追加/ }))
+
+    const dialog = await screen.findByRole("alertdialog")
+    expect(dialog.textContent).toContain("統合しません")
+    fireEvent.click(screen.getByRole("button", { name: "合流する" }))
+    await waitFor(() =>
+      expect(connectSharedFolder).toHaveBeenCalledWith({
+        sharedFolderPath: "/nas/new-share",
+        action: "join",
+      })
+    )
   })
 })

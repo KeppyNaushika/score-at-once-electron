@@ -6,7 +6,7 @@ import type {
 } from "../../src/types/answerWhiteness.types"
 import type { SerializedQuestionScore } from "../../src/types/prismaExtensions"
 import { toScoringStatus } from "../../src/types/scoringStatus.types"
-import { getAbsolutePathFromData } from "../lib/dataManager"
+import { getAbsolutePathFromSharedFiles } from "../lib/dataManager"
 import {
   assignCropRegion,
   canManageAssignments,
@@ -149,7 +149,7 @@ export const scoringHandlers = {
       studentAnswerImageId: answerImage.studentAnswerImageId,
       imagePath: path.isAbsolute(answerImage.imagePath)
         ? answerImage.imagePath
-        : getAbsolutePathFromData(answerImage.imagePath),
+        : getAbsolutePathFromSharedFiles(answerImage.imagePath),
     }))
 
     return {

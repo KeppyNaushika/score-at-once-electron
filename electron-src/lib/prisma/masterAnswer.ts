@@ -15,9 +15,9 @@ import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
 import {
-  getAbsolutePathFromData,
+  getAbsolutePathFromSharedFiles,
   getMasterAnswersDirectory,
-  getRelativePathFromData,
+  getRelativePathFromSharedFiles,
 } from "../dataManager"
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope } from "./auditScope"
@@ -50,7 +50,7 @@ async function saveMasterAnswerFile(
   )
   await fsPromises.writeFile(destinationPath, Buffer.from(fileData.buffer))
 
-  return getRelativePathFromData(destinationPath)
+  return getRelativePathFromSharedFiles(destinationPath)
 }
 
 /**
@@ -60,7 +60,7 @@ async function saveMasterAnswerFile(
 async function removeImageFile(relativePath: string | null): Promise<void> {
   if (!relativePath) return
   try {
-    await fsPromises.unlink(getAbsolutePathFromData(relativePath))
+    await fsPromises.unlink(getAbsolutePathFromSharedFiles(relativePath))
   } catch (fileError: unknown) {
     if (
       fileError &&

@@ -3,6 +3,8 @@ import * as fs from "fs"
 import * as fsPromises from "fs/promises"
 import * as path from "path"
 
+import { getStorageRoots } from "./storageRoots"
+
 // アプリケーションのルートディレクトリ（実行ファイルがある場所）
 const getAppRootPath = (): string => {
   if (app.isPackaged) {
@@ -38,18 +40,36 @@ const getAppRootPath = (): string => {
   }
 }
 
-/** データディレクトリのパスを取得する（環境変数 SCORE_AT_ONCE_DATA_DIR が優先） */
-export const getDataDirectory = (): string => {
+/**
+ * PCに残すものの根（実行ファイルの隣の `data`）を返す。環境変数 `SCORE_AT_ONCE_DATA_DIR` が優先。
+ *
+ * 設定（`sync-config.json`）・出力・共有モードの手元の控え（`shared/<識別id>/`）・
+ * ログはここに置く。**モードによらず同じ場所**なので、根が決まる前（起動の準備の途中）
+ * から呼んでよい。
+ *
+ * DB と画像の置き場はモードで変わるので、ここからは導かない。DB は
+ * `getStorageRoots().databasePath`、画像は {@link getSharedFilesDirectory} を使う。
+ */
+export const getLocalDataDirectory = (): string => {
   if (process.env.SCORE_AT_ONCE_DATA_DIR) {
     return path.resolve(process.env.SCORE_AT_ONCE_DATA_DIR)
   }
-  const dataPath = path.join(getAppRootPath(), "data")
-  return dataPath
+  return path.join(getAppRootPath(), "data")
 }
+
+/**
+ * 共有するファイル（答案・模範解答・ASB の画像）の根を返す。
+ *
+ * ローカルモードは `data`、共有モードは `<共有フォルダ>/files`。起動時に決まった根から
+ * 読むので、動いている間は変わらない（`storageRoots.ts`）。DB の `imagePath` はここからの
+ * 相対パスで持つ。
+ */
+export const getSharedFilesDirectory = (): string =>
+  getStorageRoots().sharedFilesDirectory
 
 /** 指定した試験IDのディレクトリパスを取得する */
 export const getExamDirectory = (examId: string): string => {
-  return path.join(getDataDirectory(), "exams", examId)
+  return path.join(getSharedFilesDirectory(), "exams", examId)
 }
 
 /** 指定した試験の答案画像保存ディレクトリのパスを取得する */
@@ -65,36 +85,35 @@ export const getMasterAnswersDirectory = (examId: string): string => {
 /** 答案用紙ビルダー（ASB）の画像保存ディレクトリのパスを取得する */
 export const getAsbImagesDirectory = (definitionId: string): string => {
   return path.join(
-    getDataDirectory(),
+    getSharedFilesDirectory(),
     "answer-sheet-builder",
     definitionId,
     "images"
   )
 }
 
-/** Excel・PDF等の出力ファイル保存ディレクトリのパスを取得する */
+/** Excel・PDF等の出力ファイル保存ディレクトリのパスを取得する（PCに残す） */
 const getExportsDirectory = (): string => {
-  return path.join(getDataDirectory(), "exports")
+  return path.join(getLocalDataDirectory(), "exports")
 }
 
-/** データディレクトリとサブディレクトリ（exams, exports）を作成・初期化する */
+/**
+ * 根のディレクトリを作る。PCに残すもの（`data`・`exports`）と、共有するファイルの
+ * `exams` を用意する。根が決まったあとに呼ぶ。
+ */
 export const initializeDataDirectory = async (): Promise<void> => {
-  const dataDir = getDataDirectory()
+  const dataDir = getLocalDataDirectory()
 
   try {
-    // 親ディレクトリの存在確認と作成
-    const parentDir = path.dirname(dataDir)
-    await fsPromises.mkdir(parentDir, { recursive: true, mode: 0o755 })
-
-    // データディレクトリの作成
     await fsPromises.mkdir(dataDir, { recursive: true, mode: 0o755 })
-
-    // サブディレクトリの作成
-    const examsDir = path.join(dataDir, "exams")
-    const exportsDir = getExportsDirectory()
-
-    await fsPromises.mkdir(examsDir, { recursive: true, mode: 0o755 })
-    await fsPromises.mkdir(exportsDir, { recursive: true, mode: 0o755 })
+    await fsPromises.mkdir(getExportsDirectory(), {
+      recursive: true,
+      mode: 0o755,
+    })
+    await fsPromises.mkdir(path.join(getSharedFilesDirectory(), "exams"), {
+      recursive: true,
+      mode: 0o755,
+    })
   } catch (error) {
     console.error("Failed to initialize data directory:", error)
     console.error("Data directory path:", dataDir)
@@ -110,7 +129,7 @@ export const initializeDataDirectory = async (): Promise<void> => {
 
 /** data/projects/ を data/exams/ にマイグレーションする（v0.6.xリネーム対応、旧ディレクトリは削除される） */
 export const migrateProjectsToExams = async (): Promise<boolean> => {
-  const dataDir = getDataDirectory()
+  const dataDir = getSharedFilesDirectory()
   const oldProjectsDir = path.join(dataDir, "projects")
   const newExamsDir = path.join(dataDir, "exams")
 
@@ -173,14 +192,10 @@ const copyDirectory = async (src: string, dest: string): Promise<void> => {
   }
 }
 
-/** 絶対パスをデータディレクトリ基準の相対パスに変換する */
-export const getRelativePathFromData = (absolutePath: string): string => {
-  const dataDir = getDataDirectory()
-  return path.relative(dataDir, absolutePath).replace(/\\/g, "/")
-}
+/** 絶対パスを、共有するファイルの根からの相対パス（DB の `imagePath` の形）に変換する */
+export const getRelativePathFromSharedFiles = (absolutePath: string): string =>
+  path.relative(getSharedFilesDirectory(), absolutePath).replace(/\\/g, "/")
 
-/** データディレクトリ基準の相対パスを絶対パスに変換する */
-export const getAbsolutePathFromData = (relativePath: string): string => {
-  const dataDir = getDataDirectory()
-  return path.join(dataDir, relativePath)
-}
+/** 共有するファイルの根からの相対パス（DB の `imagePath`）を絶対パスに変換する */
+export const getAbsolutePathFromSharedFiles = (relativePath: string): string =>
+  path.join(getSharedFilesDirectory(), relativePath)

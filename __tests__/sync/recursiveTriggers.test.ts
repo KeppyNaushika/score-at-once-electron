@@ -24,8 +24,8 @@ import * as path from "path"
 import type { SyncInstance } from "sqlite-nas-sync"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
-import type * as DataManagerModule from "../../electron-src/lib/dataManager"
 import { openAppDatabase } from "../../electron-src/lib/prisma/sqliteConnection"
+import { fixLocalStorageRootsForTest } from "../helpers/localStorageRoots"
 import {
   createClientDatabase,
   createSyncInstance,
@@ -35,7 +35,7 @@ import {
 
 const TEST_ROOT = path.join(os.tmpdir(), "score-at-once-recursive-triggers")
 const USER_DATA = path.join(TEST_ROOT, "userData")
-/** 同期を切っているときの接続先（`getDataDirectory()/database.db`） */
+/** ローカルモードの接続先（`data/database.db`） */
 const DATA_DIR = path.join(TEST_ROOT, "data")
 const APP_DB = path.join(DATA_DIR, "database.db")
 const NAS_DIR = path.join(TEST_ROOT, "nas")
@@ -48,10 +48,8 @@ vi.mock("electron", () => ({
   },
 }))
 
-vi.mock("../../electron-src/lib/dataManager", async (importOriginal) => ({
-  ...(await importOriginal<typeof DataManagerModule>()),
-  getDataDirectory: () => DATA_DIR,
-}))
+// アプリの Prisma クライアントは、起動時に決まった根の DB を開く
+fixLocalStorageRootsForTest(DATA_DIR)
 
 let prisma: PrismaClient
 let syncInstance: SyncInstance
@@ -95,7 +93,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  syncInstance.stop()
+  await syncInstance.close()
   await prisma.$disconnect()
   fs.rmSync(TEST_ROOT, { recursive: true, force: true })
 })

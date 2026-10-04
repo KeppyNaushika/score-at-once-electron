@@ -26,7 +26,7 @@ import { readScreenshotTemplate } from "./helpers/screenshotTemplate"
 import {
   describeSyncAbort,
   getSyncConfigPath,
-  isSyncEnabled,
+  isSharedModeConfigured,
 } from "./helpers/syncGuard"
 
 // ---------------------------------------------------------------------------
@@ -65,12 +65,10 @@ const prisma = createPrismaClientForPath(DB_PATH)
  *    本番と同じ道を通したほうが正確
  * 2. Prisma 7 の `db push` は AI が実行した破壊的操作として拒否される
  *
- * `deployPendingMigrations()` は接続先を `getDatabasePath()` で決め、その中の
- * `loadSyncConfig()` が Electron の `app.getPath("userData")` を読む。このスクリプトは
- * 素の Node で動くので `app` が無い（`require("electron")` は実行ファイルのパス文字列を
- * 返すだけ）。そこで `electron` を `app` だけ持つ形へ差し替えてから読み込む。同期設定は
- * 呼び出し前に `isSyncEnabled()` で無効だと確かめてあるので、`getDatabasePath()` は
- * `SCORE_AT_ONCE_DATA_DIR`（＝撮影用ディレクトリ）側を返す。
+ * `deployPendingMigrations()` には当てる DB（撮影用の DB）を直に渡す。読み込む
+ * モジュールのいくつかは Electron の `app` を参照する。このスクリプトは素の Node で
+ * 動くので `app` が無い（`require("electron")` は実行ファイルのパス文字列を返すだけ）。
+ * そこで `electron` を `app` だけ持つ形へ差し替えてから読み込む。
  */
 async function createSchemaLikeFreshInstall(): Promise<void> {
   process.env.SCORE_AT_ONCE_DATA_DIR = TEST_DATA_DIR
@@ -98,6 +96,7 @@ async function createSchemaLikeFreshInstall(): Promise<void> {
   }
   const appliedCount = deployPendingMigrations({
     migrationsDir: MIGRATIONS_DIR,
+    dbPath: DB_PATH,
   })
   console.log(`  -> init + マイグレーション ${appliedCount} 本を適用`)
 }
@@ -106,11 +105,13 @@ async function createSchemaLikeFreshInstall(): Promise<void> {
 // メイン処理
 // ---------------------------------------------------------------------------
 async function main() {
-  // 種を蒔く前に同期設定を見る。同期が有効だとアプリは userData のローカル DB を
-  // 開くので、ここで作る撮影用 DB は使われず、実運用のデータベースが撮られる。
-  // 作ってから気づくのは無駄なので、始める前に止める。
-  if (isSyncEnabled()) {
-    throw new Error(describeSyncAbort(`同期設定: ${getSyncConfigPath()}`))
+  // 種を蒔く前にモードの設定を見る。共有モードだとアプリは共有プロファイルの手元の
+  // 控えを開くので、ここで作る撮影用 DB は使われない。作ってから気づくのは無駄なので、
+  // 始める前に止める。
+  if (isSharedModeConfigured(TEST_DATA_DIR)) {
+    throw new Error(
+      describeSyncAbort(`モードの設定: ${getSyncConfigPath(TEST_DATA_DIR)}`)
+    )
   }
 
   console.log("=== スクリーンショット専用データ生成 (Phase 1) ===")

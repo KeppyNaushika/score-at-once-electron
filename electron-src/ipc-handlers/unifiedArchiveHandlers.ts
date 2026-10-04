@@ -20,7 +20,7 @@ import {
 } from "../../src/types/archiveImportFile.types"
 import type { ImportAction } from "../../src/types/importAction.types"
 import { UNIFIED_ARCHIVE_EXTENSION } from "../../src/types/unifiedArchive.types"
-import { getDataDirectory } from "../lib/dataManager"
+import { getSharedFilesDirectory } from "../lib/dataManager"
 import { previewUnifiedArchiveExport } from "../lib/export/unified-archive/archiveExportPreview"
 import type { ArchiveSelection } from "../lib/export/unified-archive/archiveScopeResolver"
 import {
@@ -130,7 +130,7 @@ export const unifiedArchiveHandlers = {
   "unifiedArchive:previewExport": async (selection: ArchiveSelection) =>
     previewUnifiedArchiveExport({
       sourceDatabasePath: getDatabasePath(),
-      dataDirectory: getDataDirectory(),
+      dataDirectory: getSharedFilesDirectory(),
       selection,
     }),
 
@@ -158,7 +158,7 @@ export const unifiedArchiveHandlers = {
     try {
       exported = await createUnifiedArchive({
         sourceDatabasePath: getDatabasePath(),
-        dataDirectory: getDataDirectory(),
+        dataDirectory: getSharedFilesDirectory(),
         outputPath: partialPath,
         selection: input.selection,
         exportedByUserId: getCurrentActorUserId(),
@@ -318,7 +318,7 @@ export const unifiedArchiveHandlers = {
 
     const files = importUnifiedArchiveFiles(
       session.opened,
-      getDataDirectory(),
+      getSharedFilesDirectory(),
       result
     )
 

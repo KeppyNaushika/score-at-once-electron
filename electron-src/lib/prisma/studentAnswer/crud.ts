@@ -8,7 +8,7 @@ import * as fsPromises from "fs/promises"
 import { DELETION_COUNT_NAME } from "../../../../src/lib/shared/deletionCountNames"
 import type { ConfirmedDeletionCount } from "../../../../src/types/deletionConfirmation.types"
 import { toExamStudentStatus } from "../../../../src/types/examStudentStatus.types"
-import { getAbsolutePathFromData } from "../../dataManager"
+import { getAbsolutePathFromSharedFiles } from "../../dataManager"
 import { recordAuditLog } from "../auditLog"
 import { resolveExamScopeByPage } from "../auditScope"
 import prisma from "../client"
@@ -359,7 +359,9 @@ export async function deleteStudentAnswer(
   // ファイル削除は DB コミット後。失敗しても孤立ファイルが残るだけなので警告に留める
   // （パス解決の失敗も含めて握る。ここで例外を投げると削除済みの DB と矛盾する）。
   try {
-    await fsPromises.unlink(getAbsolutePathFromData(answerSheet.imagePath))
+    await fsPromises.unlink(
+      getAbsolutePathFromSharedFiles(answerSheet.imagePath)
+    )
   } catch (fileError) {
     console.warn("Failed to delete file:", fileError)
   }

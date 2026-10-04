@@ -39,7 +39,7 @@ vi.mock("../../../electron-src/lib/prisma/client", () => {
 })
 
 vi.mock("../../../electron-src/lib/dataManager", () => ({
-  getDataDirectory: () => "/tmp/test-data",
+  getSharedFilesDirectory: () => "/tmp/test-data",
 }))
 
 // 画像コピーのモック（ファイルI/Oのみモック）

@@ -5,7 +5,7 @@
 import * as fs from "fs"
 import * as path from "path"
 
-import { getDataDirectory } from "../../dataManager"
+import { getSharedFilesDirectory } from "../../dataManager"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import type { ImportValuePolicy } from "./importValuePolicy"
 import { replacementUpdatedAt } from "./importValuePolicy"
@@ -19,7 +19,7 @@ export async function copyImportImages(
   data: ExtractedArchiveData,
   newExamId: string
 ): Promise<void> {
-  const dataDir = getDataDirectory()
+  const dataDir = getSharedFilesDirectory()
   const examDir = path.join(dataDir, "exams", newExamId)
 
   const masterImagesDir = path.join(examDir, "master-images")

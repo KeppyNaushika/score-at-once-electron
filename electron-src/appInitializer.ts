@@ -1,4 +1,7 @@
+import { app, dialog } from "electron"
+
 import {
+  getLocalDataDirectory,
   initializeDataDirectory,
   migrateProjectsToExams,
 } from "./lib/dataManager"
@@ -7,6 +10,12 @@ import {
   checkDatabaseHealth,
   optimizeDatabaseForSharedDrive,
 } from "./lib/prisma/databaseHealth"
+import { fixStorageRoots } from "./lib/storageRoots"
+import { getCurrentClientIdOwner } from "./lib/sync/machineIdentity"
+import {
+  prepareStorageAtStartup,
+  StorageStartupError,
+} from "./lib/sync/startupStorage"
 import { initializeSync } from "./lib/sync/syncService"
 
 // DB内の imagePath を projects/ → exams/ に一括更新（v0.6.x リネーム対応）
@@ -35,8 +44,58 @@ async function migrateImagePathsInDatabase(): Promise<void> {
   }
 }
 
+/**
+ * データの根（DB・画像・PCに残すもの）を決めて確定する。**起動で最初に1度だけ。**
+ *
+ * 起動を続けられないとき（旧版からの引き継ぎに失敗した・利用者が終了を選んだ）は、
+ * 理由を見せてから例外を投げる。
+ */
+async function decideStorageRoots(): Promise<void> {
+  try {
+    const roots = await prepareStorageAtStartup({
+      localDataDirectory: getLocalDataDirectory(),
+      // data を差し替えて起動したとき（e2e・撮影）は、userData の旧版の控えはその data の
+      // ものではないので見ない
+      legacyUserDataDirectory: process.env.SCORE_AT_ONCE_DATA_DIR
+        ? null
+        : app.getPath("userData"),
+      currentOwner: getCurrentClientIdOwner(),
+      notify: async (message) => {
+        await dialog.showMessageBox({
+          type: "info",
+          title: "一括採点",
+          message,
+        })
+      },
+      confirmLocalFallback: async (message) => {
+        const { response } = await dialog.showMessageBox({
+          type: "warning",
+          title: "共有モードで起動できません",
+          message,
+          buttons: ["ローカルモードで起動", "終了"],
+          defaultId: 0,
+          cancelId: 1,
+        })
+        return response === 0
+      },
+    })
+    fixStorageRoots(roots)
+    console.log(
+      `Storage roots: mode=${roots.mode} database=${roots.databasePath} files=${roots.sharedFilesDirectory}`
+    )
+  } catch (error) {
+    if (error instanceof StorageStartupError) {
+      dialog.showErrorBox("一括採点を起動できません", error.message)
+    }
+    throw error
+  }
+}
+
 export async function initializeApp(): Promise<void> {
   try {
+    // データの根を決める（DB・画像の置き場はこれより前に参照しない）
+    await decideStorageRoots()
+
     // データディレクトリの初期化
     await initializeDataDirectory()
 

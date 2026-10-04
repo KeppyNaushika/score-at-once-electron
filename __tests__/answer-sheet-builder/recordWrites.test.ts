@@ -28,7 +28,7 @@ vi.mock("../../electron-src/lib/prisma/client", async () => {
 })
 
 vi.mock("../../electron-src/lib/dataManager", () => ({
-  getDataDirectory: () => "/tmp/test-data",
+  getSharedFilesDirectory: () => "/tmp/test-data",
 }))
 
 /** ログインしている利用者（担当かどうかの判定は main がこれで行う） */

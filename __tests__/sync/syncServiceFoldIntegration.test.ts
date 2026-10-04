@@ -18,11 +18,9 @@
  *
  * ## パスについて
  *
- * `getDatabasePath()` は sync 有効時にローカルDB（`getLocalDbPath()`）を、無効時に
- * `getDataDirectory()/database.db` を返す。ここではどちらの枝を通っても Prisma の宛先が
- * **アプリと同じ「同期対象のローカルDB」** になるよう、データディレクトリを
- * 端末Aのローカル DB があるディレクトリに重ねている。
- * （分岐そのものの検証は `databasePath.test.ts`）
+ * 同期は共有モードで起動したときだけ動く。ここでは根を共有モードで確定し、端末Aの
+ * 手元の控え（`data/shared/<識別id>/` の DB）を Prisma の宛先にする。共有フォルダには
+ * 識別ファイルを置く（同期は、識別ファイルの id が合うときだけ写しを置く）。
  */
 import * as fs from "fs"
 import * as os from "os"
@@ -31,6 +29,15 @@ import type { SyncInstance, SyncResult } from "sqlite-nas-sync"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 import type * as DataManagerModule from "../../electron-src/lib/dataManager"
+import {
+  computeSharedRoots,
+  fixStorageRoots,
+} from "../../electron-src/lib/storageRoots"
+import {
+  getSharedFolderSyncDirectory,
+  getSharedReplicaDatabasePath,
+  writeSharedFolderMarker,
+} from "../../electron-src/lib/sync/sharedFolder"
 import type { SyncRecordFold } from "../../electron-src/lib/sync/types"
 import {
   blockingWarnings,
@@ -46,10 +53,13 @@ import {
 
 const TEST_ROOT = path.join(os.tmpdir(), "score-at-once-sync-service-fold")
 const USER_DATA = path.join(TEST_ROOT, "userData")
-/** 端末A（アプリ本体）のローカルDB。`getLocalDbPath()` が返すのと同じ場所 */
-const LOCAL_DB_A = path.join(USER_DATA, "score-at-once", "database.db")
-/** 上記の注記のとおり、Prisma の宛先をローカルDBへ重ねるためここを指す */
-const DATA_DIR = path.dirname(LOCAL_DB_A)
+/** 端末A（アプリ本体）の data */
+const DATA_DIR = path.join(TEST_ROOT, "data")
+/** 共有フォルダ */
+const SHARED_FOLDER = path.join(TEST_ROOT, "shared-folder")
+const SHARED_FOLDER_ID = "0d6f2b7e-3c1a-4f5b-8e2d-9a7c4b1e6f30"
+/** 端末A（アプリ本体）の手元の控え */
+const LOCAL_DB_A = getSharedReplicaDatabasePath(DATA_DIR, SHARED_FOLDER_ID)
 /** 端末B（相手のPC）。アプリは通さず、ライブラリだけで動かす */
 const DB_B = path.join(TEST_ROOT, "client-b", "database.db")
 
@@ -77,8 +87,15 @@ vi.mock("electron", () => ({
 
 vi.mock("../../electron-src/lib/dataManager", async (importOriginal) => ({
   ...(await importOriginal<typeof DataManagerModule>()),
-  getDataDirectory: () => DATA_DIR,
+  getLocalDataDirectory: () => DATA_DIR,
 }))
+
+fixStorageRoots(
+  computeSharedRoots(DATA_DIR, {
+    sharedFolderId: SHARED_FOLDER_ID,
+    sharedFolderPath: SHARED_FOLDER,
+  })
+)
 
 interface AuditLogRow {
   action: string
@@ -138,14 +155,18 @@ let disconnectPrisma: () => Promise<void>
 beforeAll(async () => {
   fs.rmSync(TEST_ROOT, { recursive: true, force: true })
   fs.mkdirSync(USER_DATA, { recursive: true })
+  fs.mkdirSync(SHARED_FOLDER, { recursive: true })
+  writeSharedFolderMarker(SHARED_FOLDER, SHARED_FOLDER_ID)
   // Prisma クライアントはモジュール読み込み時に接続先を決めるので、DB を先に置く
   createClientDatabase(LOCAL_DB_A)
   createClientDatabase(DB_B)
 
   const { getSchemaVersion } =
     await import("../../electron-src/lib/sync/schemaVersion")
-  const { getNasSyncPath, saveSyncConfig } =
+  const { saveSyncConfig } =
     await import("../../electron-src/lib/sync/syncConfig")
+  const { DEFAULT_SYNC_CONFIG } =
+    await import("../../electron-src/lib/sync/types")
   const { startSync, stopSync, triggerSyncNow } =
     await import("../../electron-src/lib/sync/syncService")
   const prismaModule = await import("../../electron-src/lib/prisma/client")
@@ -153,7 +174,7 @@ beforeAll(async () => {
   disconnectPrisma = () => prismaModule.default.$disconnect()
 
   const config = {
-    enabled: true,
+    ...DEFAULT_SYNC_CONFIG,
     clientId: "client-a",
     // テストは syncNow を明示的に呼ぶ。定期実行に割り込まれないよう十分長く取る
     intervalMs: 600_000,
@@ -166,7 +187,7 @@ beforeAll(async () => {
   syncB = createSyncInstance(
     DB_B,
     "client-b",
-    getNasSyncPath(),
+    getSharedFolderSyncDirectory(SHARED_FOLDER),
     getSchemaVersion()
   )
 

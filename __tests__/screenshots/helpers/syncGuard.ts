@@ -1,75 +1,40 @@
 /**
- * 同期が有効なときに撮影を止める番人
+ * 共有モードの設定で撮影を止める番人
  *
- * `getDatabasePath()`（`electron-src/lib/prisma/databaseInitializer.ts`）は同期が
- * 有効だと `SCORE_AT_ONCE_DATA_DIR` を無視して userData 配下のローカル DB を返す。
- * アプリの挙動としてはこれが正しい（同期時に接続すべきなのは NAS 上の DB ではなく
- * 手元の DB）。だが撮影から見ると、画像だけ撮影用ディレクトリを向いたまま
- * **実運用のデータベースに繋がる**ということなので、止めるのは撮影の側の仕事になる。
+ * 撮影は `SCORE_AT_ONCE_DATA_DIR` で data を撮影用ディレクトリに差し替えて起動する。
+ * モードの設定（`sync-config.json`）もその data の中にあるので、そこが共有モードを
+ * 指していると、アプリは撮影用の `database.db` ではなく共有プロファイルの手元の控えを
+ * 開き、画像も共有フォルダから読む。止めるのは撮影の側の仕事になる。
  *
- * 同期設定は DB ではなく userData の `sync-config.json` にあり、撮影用ディレクトリ
- * からは見えない。ここではその置き場を Electron と同じ規則で組み立てて先回りに読む
- * （撮影用 DB を作ってから使われないと分かる、という無駄を避けるため）。
- *
- * **こちらは先回りの判定でしかない。** 置き場の組み立てが外れれば設定を読み落として
- * 素通りする。最後の砦は撮影側で、起動したアプリ自身に「実際に開いた DB」を訊いて
- * 突き合わせる（`take-screenshots.spec.ts`）。
+ * **こちらは先回りの判定でしかない。** 最後の砦は撮影側で、起動したアプリ自身に
+ * 「実際に開いた DB」を訊いて突き合わせる（`take-screenshots.spec.ts`）。
  */
 
 import * as fs from "fs"
-import * as os from "os"
 import * as path from "path"
 
-const PROJECT_ROOT = path.resolve(__dirname, "../../..")
-
-/**
- * Electron の `app.getName()` と同じ規則でアプリ名を決める
- * （`productName` があればそれ、無ければ `name`）。
- */
-function getElectronAppName(): string {
-  const packageJson: { productName?: string; name?: string } = JSON.parse(
-    fs.readFileSync(path.join(PROJECT_ROOT, "package.json"), "utf-8")
-  )
-  return packageJson.productName ?? packageJson.name ?? "Electron"
-}
-
-/** Electron の `app.getPath("userData")` と同じ場所を組み立てる */
-function getUserDataDirectory(): string {
-  const appName = getElectronAppName()
-  if (process.platform === "darwin") {
-    return path.join(os.homedir(), "Library", "Application Support", appName)
-  }
-  if (process.platform === "win32") {
-    return path.join(
-      process.env.APPDATA ?? path.join(os.homedir(), "AppData", "Roaming"),
-      appName
-    )
-  }
-  return path.join(
-    process.env.XDG_CONFIG_HOME ?? path.join(os.homedir(), ".config"),
-    appName
-  )
-}
-
-/** 同期設定ファイル（`syncConfig.ts` の `getConfigPath()` と同じ場所）のパス */
-export function getSyncConfigPath(): string {
-  return path.join(getUserDataDirectory(), "sync-config.json")
+/** 撮影用 data の設定ファイル（`electron-src/lib/sync/syncConfig.ts` と同じ場所） */
+export function getSyncConfigPath(dataDirectory: string): string {
+  return path.join(dataDirectory, "sync-config.json")
 }
 
 /**
- * 同期が有効かどうかを userData の設定ファイルから読む
+ * 撮影用 data の設定が共有モードを指しているか
  *
- * 設定ファイルが無い・壊れているときは無効とみなす（アプリ側の
- * `loadSyncConfig()` も既定値 `enabled: false` を返す）。
+ * 設定ファイルが無い・壊れているときはローカルモードとみなす（アプリ側の
+ * `loadSyncConfig()` も既定値のローカルモードを返す）。
  */
-export function isSyncEnabled(): boolean {
-  const configPath = getSyncConfigPath()
+export function isSharedModeConfigured(dataDirectory: string): boolean {
+  const configPath = getSyncConfigPath(dataDirectory)
   if (!fs.existsSync(configPath)) return false
   try {
-    const syncConfig: { enabled?: boolean } = JSON.parse(
-      fs.readFileSync(configPath, "utf-8")
+    const raw: unknown = JSON.parse(fs.readFileSync(configPath, "utf-8"))
+    return (
+      typeof raw === "object" &&
+      raw !== null &&
+      "mode" in raw &&
+      raw.mode === "shared"
     )
-    return syncConfig.enabled === true
   } catch {
     return false
   }
@@ -82,8 +47,8 @@ export function isSyncEnabled(): boolean {
  */
 export function describeSyncAbort(detail: string): string {
   return [
-    "同期が有効なので撮影を中止します。実運用のデータベースに繋がるためです。",
-    "アプリの 設定 → 同期設定 で同期を無効にしてから撮り直してください。",
+    "撮影用のデータが共有モードを指しているので撮影を中止します。撮影用の DB ではないデータベースに繋がるためです。",
+    "撮影用 data の sync-config.json を消すか、ローカルモードにしてから撮り直してください。",
     detail,
   ].join("\n")
 }

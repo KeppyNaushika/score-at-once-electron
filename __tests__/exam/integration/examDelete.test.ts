@@ -10,9 +10,11 @@ import * as os from "os"
 import * as path from "path"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
-// getExamDirectory がこのディレクトリを基準にするよう、import より前に設定する
+import { fixLocalStorageRootsForTest } from "../../helpers/localStorageRoots"
+
+// 画像の置き場（getExamDirectory 等）をこのディレクトリにする
 const TEST_DATA_DIR = path.join(os.tmpdir(), "score-at-once-exam-delete-test")
-process.env.SCORE_AT_ONCE_DATA_DIR = TEST_DATA_DIR
+fixLocalStorageRootsForTest(TEST_DATA_DIR)
 
 vi.mock("../../../electron-src/lib/prisma/client", async () => {
   const { getTestPrismaClient } = await import("../../helpers/testPrismaClient")
