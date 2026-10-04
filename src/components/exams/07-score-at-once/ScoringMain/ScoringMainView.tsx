@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import Head from "next/head"
 import { useCallback, useMemo, useState } from "react"
 
+import { AiGradingMode } from "@/components/exams/07-score-at-once/AiGrading/AiGradingMode"
 import { OMRAutoScoringModal } from "@/components/exams/07-score-at-once/OMRRecognition/OMRAutoScoringModal"
 import {
   ShortcutProvider,
@@ -20,11 +21,14 @@ import {
   ScoringLoadingState,
 } from "@/components/exams/07-score-at-once/ScoringMain/ScoringStates"
 import { ScoringSidePanel } from "@/components/exams/07-score-at-once/ScoringSidePanel/ScoringSidePanel"
+import { useAiGradingAvailability } from "@/hooks/useAiGradingAvailability"
 import { examWorkflowSteps, workflowStepHref } from "@/lib/shared/workflowSteps"
 import { questionScoresScope } from "@/queries/scoring"
 
 /** 内部コンポーネント（ShortcutProvider内で使用） */
 function ScoringMainViewContent() {
+  /** AI採点（実験的機能）を解放した事業者。1つも無ければ「AI採点」モードは出ない */
+  const { unlockedProviders } = useAiGradingAvailability()
   const {
     allMasterImageUrls,
     allScoringData,
@@ -119,7 +123,9 @@ function ScoringMainViewContent() {
     studentAnswerImages,
     visibleAnswers,
     visibleUnscoredCount,
-  } = useScoringScreen()
+  } = useScoringScreen({
+    isAiGradingAvailable: unlockedProviders.length > 0,
+  })
   const { keyBindings } = useShortcutContext()
   const queryClient = useQueryClient()
 
@@ -209,131 +215,155 @@ function ScoringMainViewContent() {
         />
       </div>
 
-      {/* 採点エリア */}
-      <div className="relative flex h-full min-h-0 flex-1 overflow-hidden">
-        <div className="min-w-0 flex-1">
-          <ScoringContentArea
-            gradingMode={gradingMode}
-            isWhitenessPending={isWhitenessPending}
-            allScoringData={allScoringData}
-            masterAnswerData={masterAnswerData}
-            filteredScoringDataIds={filteredScoringDataIds}
-            selectedScoringDataIds={selectedScoringDataIds}
-            currentCropRegion={currentCropRegion}
-            cropRegions={cropRegions}
-            questionScoresByCropRegionId={questionScoresByCropRegionId}
-            studentAnswerImages={studentAnswerImages}
-            onScoringDataSelect={(dataId, isSelected) =>
-              handleAnswerSelect(dataId, isSelected, studentAnswerImages)
-            }
-            onScoringDataReplace={handleReplaceSelection}
-            layoutDirection={layoutDirection}
-            itemsPerLine={itemsPerLine}
-            autoScroll={autoScroll}
-            showStudentNames={showStudentNames}
-            currentExamStudentId={currentExamStudentId || undefined}
+      {/* 採点エリア（AI採点モードは設問・答案・詳細の3列を自前で持つ） */}
+      {gradingMode === "ai" ? (
+        <div className="relative flex h-full min-h-0 flex-1 overflow-hidden">
+          <AiGradingMode
+            examId={examId}
             currentUserId={currentUser.id}
-            expandMargin={expandMargin}
-            onAnnotationChanged={handleCanvasAnnotationChanged}
-            annotationRefreshKey={annotationVersionForCanvas}
-            gridAnnotationRefreshKey={annotationVersionForGrid}
-            masterAnswerDisplayMode={masterAnswerDisplayMode}
-            masterAnswerOpacity={masterAnswerOpacity}
-            masterAnswerVisible={masterAnswerVisible}
-            allMasterImageUrls={allMasterImageUrls}
+            cropRegions={selectableCropRegions}
+            currentCropRegion={currentCropRegion}
+            onCropRegionChange={(cropRegion) => {
+              setCurrentCropRegionId(cropRegion?.id || null)
+            }}
+            onPrevQuestion={handlePrevQuestion}
+            onNextQuestion={handleNextQuestion}
+            questionProgress={questionProgress}
+            isQuestionSetFiltered={isQuestionSetFiltered}
+            studentAnswerImages={studentAnswerImages}
+            questionScoresByCropRegionId={questionScoresByCropRegionId}
             pageSize={pageSize}
-            onClickScoring={handleClickScoring}
-            clickScoringDebounceMs={clickScoringDebounceMs}
-            scoringOperationMode={effectiveMode}
-            mouseBrush={mouseBrush}
-            onMouseScoring={handleMouseScoring}
+            unlockedProviders={unlockedProviders}
           />
         </div>
-
-        {/* 右側サイドパネル（スライドイン/アウト） */}
-        <div
-          className="shrink-0 transition-[width] duration-300 ease-in-out"
-          style={{ width: showSidePanel ? "24rem" : "0" }}
-        >
-          <div className="h-full w-96">
-            <ScoringSidePanel
-              examId={examId}
-              cropRegions={selectableCropRegions}
-              currentCropRegion={currentCropRegion}
-              currentQuestionScores={
-                currentCropRegion
-                  ? questionScoresByCropRegionId.get(currentCropRegion.id)
-                  : undefined
-              }
-              onCropRegionChange={(cropRegion) => {
-                setCurrentCropRegionId(cropRegion?.id || null)
-              }}
-              onPrevQuestion={handlePrevQuestion}
-              onNextQuestion={handleNextQuestion}
-              questionProgress={questionProgress}
-              isQuestionSetFiltered={isQuestionSetFiltered}
-              selectedStudentAnswerImageIds={selectedStudentAnswerImageIds}
-              selectedAnswersCount={selectedStudentAnswerImageIds.size}
-              filterSettings={filterSettings}
-              onScore={handleBatchScoreWithProgress}
-              onToggleFilter={handleToggleFilter}
-              onRefreshFilter={handleRefreshFilter}
-              onSelectAll={handleSelectAll}
-              onSelectUnscored={handleSelectUnscored}
-              onOpenPartialScoreModal={openPartialScoreModal}
-              partialScoreInput={partialScoreInput}
-              clickScoringConfig={clickScoringConfig}
-              clickScoringDebounceMs={clickScoringDebounceMs}
-              onClickActionChange={(clickCount, action) =>
-                setClickAction({ clickCount, action })
-              }
-              onClickScoringDebounceMsChange={setClickScoringDebounceMs}
-              layoutDirection={layoutDirection}
-              visibleAnswersCount={visibleAnswers.length}
-              totalAnswersCount={studentAnswerImages.length}
-              onLayoutDirectionChange={setLayoutDirection}
-              onGridNavigation={handleGridNavigation}
-              itemsPerLine={itemsPerLine}
-              onItemsPerLineChange={handleItemsPerLineChange}
-              autoScroll={autoScroll}
-              onAutoScrollChange={handleAutoScrollChange}
+      ) : (
+        <div className="relative flex h-full min-h-0 flex-1 overflow-hidden">
+          <div className="min-w-0 flex-1">
+            <ScoringContentArea
               gradingMode={gradingMode}
-              answerSortOrder={answerSortOrder}
-              onAnswerSortOrderChange={setAnswerSortOrder}
-              isWhitenessReady={isWhitenessReady}
-              expandMargin={expandMargin}
-              onExpandMarginChange={setExpandMargin}
-              examStudents={examStudents}
-              onStudentChange={handleStudentChange}
-              studentAnswerImages={studentAnswerImages}
-              scoringBehavior={scoringBehavior}
-              onScoringBehaviorChange={setScoringBehavior}
-              currentUserId={currentUser.id}
-              selectedScoringDataIds={Array.from(selectedStudentAnswerImageIds)}
+              isWhitenessPending={isWhitenessPending}
               allScoringData={allScoringData}
-              annotationRefreshKey={annotationVersionForBrowser}
-              onAnnotationAddedFromBrowser={handleBrowserAnnotationAdded}
+              masterAnswerData={masterAnswerData}
+              filteredScoringDataIds={filteredScoringDataIds}
+              selectedScoringDataIds={selectedScoringDataIds}
+              currentCropRegion={currentCropRegion}
+              cropRegions={cropRegions}
+              questionScoresByCropRegionId={questionScoresByCropRegionId}
+              studentAnswerImages={studentAnswerImages}
+              onScoringDataSelect={(dataId, isSelected) =>
+                handleAnswerSelect(dataId, isSelected, studentAnswerImages)
+              }
+              onScoringDataReplace={handleReplaceSelection}
+              layoutDirection={layoutDirection}
+              itemsPerLine={itemsPerLine}
+              autoScroll={autoScroll}
+              showStudentNames={showStudentNames}
+              currentExamStudentId={currentExamStudentId || undefined}
+              currentUserId={currentUser.id}
+              expandMargin={expandMargin}
+              onAnnotationChanged={handleCanvasAnnotationChanged}
+              annotationRefreshKey={annotationVersionForCanvas}
+              gridAnnotationRefreshKey={annotationVersionForGrid}
               masterAnswerDisplayMode={masterAnswerDisplayMode}
               masterAnswerOpacity={masterAnswerOpacity}
-              masterAnswerKeyBehavior={masterAnswerKeyBehavior}
-              onMasterAnswerDisplayModeChange={setMasterAnswerDisplayMode}
-              onMasterAnswerOpacityChange={setMasterAnswerOpacity}
-              onMasterAnswerKeyBehaviorChange={setMasterAnswerKeyBehavior}
               masterAnswerVisible={masterAnswerVisible}
-              onToggleMasterAnswer={handleToggleMasterAnswer}
-              onMasterAnswerShow={handleMasterAnswerShow}
-              onMasterAnswerHide={handleMasterAnswerHide}
+              allMasterImageUrls={allMasterImageUrls}
+              pageSize={pageSize}
+              onClickScoring={handleClickScoring}
+              clickScoringDebounceMs={clickScoringDebounceMs}
               scoringOperationMode={effectiveMode}
-              onScoringOperationModeChange={setScoringOperationMode}
               mouseBrush={mouseBrush}
-              onMouseBrushChange={setMouseBrush}
-              visibleUnscoredCount={visibleUnscoredCount}
-              hiddenUnscoredCount={hiddenUnscoredCount}
-              onBatchScoreVisibleUnscored={handleBatchScoreVisibleUnscored}
+              onMouseScoring={handleMouseScoring}
             />
           </div>
+
+          {/* 右側サイドパネル（スライドイン/アウト） */}
+          <div
+            className="shrink-0 transition-[width] duration-300 ease-in-out"
+            style={{ width: showSidePanel ? "24rem" : "0" }}
+          >
+            <div className="h-full w-96">
+              <ScoringSidePanel
+                examId={examId}
+                cropRegions={selectableCropRegions}
+                currentCropRegion={currentCropRegion}
+                currentQuestionScores={
+                  currentCropRegion
+                    ? questionScoresByCropRegionId.get(currentCropRegion.id)
+                    : undefined
+                }
+                onCropRegionChange={(cropRegion) => {
+                  setCurrentCropRegionId(cropRegion?.id || null)
+                }}
+                onPrevQuestion={handlePrevQuestion}
+                onNextQuestion={handleNextQuestion}
+                questionProgress={questionProgress}
+                isQuestionSetFiltered={isQuestionSetFiltered}
+                selectedStudentAnswerImageIds={selectedStudentAnswerImageIds}
+                selectedAnswersCount={selectedStudentAnswerImageIds.size}
+                filterSettings={filterSettings}
+                onScore={handleBatchScoreWithProgress}
+                onToggleFilter={handleToggleFilter}
+                onRefreshFilter={handleRefreshFilter}
+                onSelectAll={handleSelectAll}
+                onSelectUnscored={handleSelectUnscored}
+                onOpenPartialScoreModal={openPartialScoreModal}
+                partialScoreInput={partialScoreInput}
+                clickScoringConfig={clickScoringConfig}
+                clickScoringDebounceMs={clickScoringDebounceMs}
+                onClickActionChange={(clickCount, action) =>
+                  setClickAction({ clickCount, action })
+                }
+                onClickScoringDebounceMsChange={setClickScoringDebounceMs}
+                layoutDirection={layoutDirection}
+                visibleAnswersCount={visibleAnswers.length}
+                totalAnswersCount={studentAnswerImages.length}
+                onLayoutDirectionChange={setLayoutDirection}
+                onGridNavigation={handleGridNavigation}
+                itemsPerLine={itemsPerLine}
+                onItemsPerLineChange={handleItemsPerLineChange}
+                autoScroll={autoScroll}
+                onAutoScrollChange={handleAutoScrollChange}
+                gradingMode={gradingMode}
+                answerSortOrder={answerSortOrder}
+                onAnswerSortOrderChange={setAnswerSortOrder}
+                isWhitenessReady={isWhitenessReady}
+                expandMargin={expandMargin}
+                onExpandMarginChange={setExpandMargin}
+                examStudents={examStudents}
+                onStudentChange={handleStudentChange}
+                studentAnswerImages={studentAnswerImages}
+                scoringBehavior={scoringBehavior}
+                onScoringBehaviorChange={setScoringBehavior}
+                currentUserId={currentUser.id}
+                selectedScoringDataIds={Array.from(
+                  selectedStudentAnswerImageIds
+                )}
+                allScoringData={allScoringData}
+                annotationRefreshKey={annotationVersionForBrowser}
+                onAnnotationAddedFromBrowser={handleBrowserAnnotationAdded}
+                masterAnswerDisplayMode={masterAnswerDisplayMode}
+                masterAnswerOpacity={masterAnswerOpacity}
+                masterAnswerKeyBehavior={masterAnswerKeyBehavior}
+                onMasterAnswerDisplayModeChange={setMasterAnswerDisplayMode}
+                onMasterAnswerOpacityChange={setMasterAnswerOpacity}
+                onMasterAnswerKeyBehaviorChange={setMasterAnswerKeyBehavior}
+                masterAnswerVisible={masterAnswerVisible}
+                onToggleMasterAnswer={handleToggleMasterAnswer}
+                onMasterAnswerShow={handleMasterAnswerShow}
+                onMasterAnswerHide={handleMasterAnswerHide}
+                scoringOperationMode={effectiveMode}
+                onScoringOperationModeChange={setScoringOperationMode}
+                mouseBrush={mouseBrush}
+                onMouseBrushChange={setMouseBrush}
+                visibleUnscoredCount={visibleUnscoredCount}
+                hiddenUnscoredCount={hiddenUnscoredCount}
+                onBatchScoreVisibleUnscored={handleBatchScoreVisibleUnscored}
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* OMR自動採点モーダル */}
       <OMRAutoScoringModal

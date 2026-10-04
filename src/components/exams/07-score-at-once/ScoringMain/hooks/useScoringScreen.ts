@@ -22,11 +22,21 @@ import { useScoringScreenBindings } from "@/components/exams/07-score-at-once/Sc
 import { useStudentAnswerManagement } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useStudentAnswerManagement"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 
+interface UseScoringScreenOptions {
+  /**
+   * AI採点（実験的機能）が今の利用者に解放されているか（`useAiGradingAvailability`）。
+   * 解放されていなければ「AI採点」を選んでいても一覧表示として扱う
+   */
+  isAiGradingAvailable: boolean
+}
+
 /**
  * 採点画面（07）の配線。データ・利用者の設定・選択・絞り込み・採点の口・キー操作を
  * つなぎ、画面（`ScoringMainView`）が描くものだけを返す。描き方は画面が持つ。
  */
-export function useScoringScreen() {
+export function useScoringScreen({
+  isAiGradingAvailable,
+}: UseScoringScreenOptions) {
   const params = useParams()
   const examId = params.examId as string
   const currentUser = useCurrentUser()
@@ -85,7 +95,7 @@ export function useScoringScreen() {
   /** メイン状態管理 */
   const {
     /** 個別の状態 */
-    gradingMode,
+    gradingMode: chosenGradingMode,
     selectedStudentAnswerImageIds,
     currentCropRegionId,
     showKeyboardHelp,
@@ -102,6 +112,15 @@ export function useScoringScreen() {
     replaceSelection,
     manualSelectionVersion,
   } = useScoringMainState()
+
+  /**
+   * 実際に使う採点モード。AI採点を選んだまま同意を取り消した（キーを消した）ときは
+   * 一覧表示として扱う。選んだ値は書き換えない（解放し直せばそのまま戻る）
+   */
+  const gradingMode =
+    chosenGradingMode === "ai" && !isAiGradingAvailable
+      ? "grid"
+      : chosenGradingMode
 
   /** 現在の設問 */
   const currentCropRegion = cropRegions.find(
@@ -324,7 +343,9 @@ export function useScoringScreen() {
   /** キー操作の文脈・ショートカット・担当外の設問からの退避 */
   useScoringScreenBindings({
     gradingMode,
-    hasSelectedAnswers: selectedStudentAnswerImageIds.size > 0,
+    // AI採点モードでは一覧の選択は見えていない。見えない選択に採点キーを効かせない
+    hasSelectedAnswers:
+      gradingMode !== "ai" && selectedStudentAnswerImageIds.size > 0,
     sidePanelVisible: showSidePanel,
     partialScoreModalOpen: showPartialScoreModal,
     scoringOperationMode: effectiveMode,

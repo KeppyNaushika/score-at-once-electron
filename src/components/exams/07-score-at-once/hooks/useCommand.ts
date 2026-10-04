@@ -52,7 +52,7 @@ interface UseCommandOptions {
    * 利用可能な変数:
    * - inputFocus: input/textareaにフォーカスがある
    * - textEditorActive: リッチテキストエディタが開いている
-   * - gradingMode: "grid" | "individual"
+   * - gradingMode: "grid" | "individual" | "ai"
    * - modalOpen: 何らかのモーダルが開いている
    * - partialScoreModalOpen: 部分点入力モーダルが開いている
    * - sidePanelVisible: サイドパネルが表示されている
