@@ -12,6 +12,14 @@ interface ClassroomStudentImportRow {
   endDate: string
 }
 
+/** 行を足したときの空の行 */
+const createEmptyClassroomStudentImportRow = (): ClassroomStudentImportRow => ({
+  studentId: "",
+  attendanceNumber: "",
+  startDate: "",
+  endDate: "",
+})
+
 interface ClassroomStudentImportTableProps {
   data: ClassroomStudentImportRow[]
   onDataChange: (data: ClassroomStudentImportRow[]) => void
@@ -65,7 +73,7 @@ export default function ClassroomStudentImportTable({
       data={data}
       columns={columns}
       onDataChange={onDataChange}
-      allowInsertRow={true}
+      createEmptyRow={createEmptyClassroomStudentImportRow}
       allowDeleteRow={true}
       className="min-w-162.5"
     />

@@ -15,6 +15,16 @@ interface StudentImportRow {
   isDuplicate?: boolean
 }
 
+/** 行を足したときの空の行（重複の印は付けない） */
+const createEmptyStudentImportRow = (): StudentImportRow => ({
+  studentNumber: "",
+  lastName: "",
+  firstName: "",
+  lastNameKana: "",
+  firstNameKana: "",
+  enrollmentYear: "",
+})
+
 interface StudentImportTableProps {
   data: StudentImportRow[]
   onDataChange: (data: StudentImportRow[]) => void
@@ -86,7 +96,7 @@ export default function StudentImportTable({
       data={data}
       columns={columns}
       onDataChange={onDataChange}
-      allowInsertRow={true}
+      createEmptyRow={createEmptyStudentImportRow}
       allowDeleteRow={true}
       className="min-h-100 min-w-200"
       getRowProps={(row) => ({

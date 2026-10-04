@@ -12,16 +12,6 @@ export interface PasteOrigin {
   editableColumnIndex: number
 }
 
-/** 列の id ごとに空文字を入れた新しい行 */
-export function emptyRow<T extends RowData>(
-  columns: EditableColumnDef<T>[]
-): T {
-  return columns.reduce<Record<string, string>>((acc, column) => {
-    if (column.id) acc[column.id] = ""
-    return acc
-  }, {}) as T
-}
-
 /**
  * その列の検証に照らして保存されない値か。
  *
@@ -88,22 +78,26 @@ export function mergePastedRows<T extends RowData>(
   return { rows: newData, rejectedCount }
 }
 
-/** 全置換型の貼り付け（読み取り専用の列が無い表）: 貼った行で表を置き換える */
+/**
+ * 全置換型の貼り付け（読み取り専用の列が無い表）: 貼った行で表を置き換える。
+ *
+ * 新しい行の形は列の id からは作れない（列に出ない項目も行は持ちうる）ので、
+ * 空の行は表の持ち主から `createEmptyRow` で受け取り、そこへ列ごとに値を入れる。
+ */
 export function replaceWithPastedRows<T extends RowData>(
   pastedRows: string[],
-  columns: EditableColumnDef<T>[]
+  columns: EditableColumnDef<T>[],
+  createEmptyRow: () => T
 ): PastedRows<T> {
   let rejectedCount = 0
-  const rows = pastedRows.map((row) => {
-    const cells = row.split("\t")
-    return columns.reduce<Record<string, string>>((acc, column, index) => {
-      if (column.id) {
-        const value = cells[index] || ""
-        acc[column.id] = value
-        if (isRejectedValue(column, value)) rejectedCount++
-      }
-      return acc
-    }, {}) as T
+  const rows = pastedRows.map((pastedRow) => {
+    const cells = pastedRow.split("\t")
+    return columns.reduce((row, column, index): T => {
+      if (!column.id) return row
+      const cell = cells[index] || ""
+      if (isRejectedValue(column, cell)) rejectedCount++
+      return { ...row, [column.id]: cell }
+    }, createEmptyRow())
   })
   return { rows, rejectedCount }
 }

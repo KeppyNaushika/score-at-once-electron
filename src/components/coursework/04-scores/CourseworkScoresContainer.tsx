@@ -245,7 +245,6 @@ export function CourseworkScoresContainer({
           data={tableData}
           columns={columns}
           onDataChange={handleDataChange}
-          allowInsertRow={false}
           allowDeleteRow={false}
           transformPastedText={confirmPastedText}
         />

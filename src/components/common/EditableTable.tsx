@@ -6,6 +6,7 @@ import {
   columnSizingFeature,
   columnVisibilityFeature,
   flexRender,
+  metaHelper,
   tableFeatures,
   useTable,
 } from "@tanstack/react-table"
@@ -27,7 +28,6 @@ import { cn } from "@/lib/utils"
 
 import { EditableCell } from "./editable-table/EditableCell"
 import {
-  emptyRow,
   mergePastedRows,
   type PasteOrigin,
   replaceWithPastedRows,
@@ -62,7 +62,7 @@ interface EditableColumnMeta {
  * このテーブルが使う機能と、`meta` の型。
  *
  * `tableMeta` / `columnMeta` は型専用スロットで、値は実行時に捨てられるので
- * `{} as` で型だけ渡す。この宣言はこのテーブルにしか効かないため、
+ * `metaHelper` で型だけ渡す。この宣言はこのテーブルにしか効かないため、
  * `updateData` を必須にできる（EditableTable が必ず渡す）。テーブルごとに
  * 分かれていない宣言マージでは、`meta` を持つ無関係なテーブルまで
  * この契約を満たす義務を負ってしまうので必須にできなかった。
@@ -75,8 +75,8 @@ interface EditableColumnMeta {
 const editableTableFeatures = tableFeatures({
   columnSizingFeature,
   columnVisibilityFeature,
-  tableMeta: {} as EditableTableMeta,
-  columnMeta: {} as EditableColumnMeta,
+  tableMeta: metaHelper<EditableTableMeta>(),
+  columnMeta: metaHelper<EditableColumnMeta>(),
 })
 
 export type EditableTableFeatures = typeof editableTableFeatures
@@ -91,7 +91,13 @@ interface EditableTableProps<T extends RowData> {
   data: T[]
   columns: EditableColumnDef<T>[]
   onDataChange: (data: T[]) => void
-  allowInsertRow?: boolean
+  /**
+   * 空の行の作り方。渡した表だけが行を足せる（行追加のボタンと、貼り付けの全置換）。
+   *
+   * 新しい行の形は列の id からは作れない（列に出ない項目も行は持ちうる）ので、
+   * 使う側が決める。渡さない表の貼り付けは全置換せず、今ある行へ配るだけになる。
+   */
+  createEmptyRow?: () => T
   allowDeleteRow?: boolean
   className?: string
   getRowProps?: (row: Row<EditableTableFeatures, T>) => { className?: string }
@@ -110,7 +116,7 @@ export function EditableTable<T extends RowData>({
   data,
   columns,
   onDataChange,
-  allowInsertRow = true,
+  createEmptyRow,
   allowDeleteRow = true,
   className = "",
   getRowProps,
@@ -124,14 +130,14 @@ export function EditableTable<T extends RowData>({
   )
 
   const addRowAfter = useCallback(
-    (index: number) => {
+    (index: number, createRow: () => T) => {
       onDataChange([
         ...data.slice(0, index + 1),
-        emptyRow(columns),
+        createRow(),
         ...data.slice(index + 1),
       ])
     },
-    [columns, data, onDataChange]
+    [data, onDataChange]
   )
 
   const hasReadOnlyColumns = useMemo(
@@ -146,7 +152,7 @@ export function EditableTable<T extends RowData>({
         return { ...column, cell: EditableCell }
       }),
       // 行追加ボタン列
-      ...(allowInsertRow
+      ...(createEmptyRow
         ? [
             {
               id: "addRow",
@@ -157,7 +163,7 @@ export function EditableTable<T extends RowData>({
 
                   variant="ghost"
                   size="sm"
-                  onClick={() => addRowAfter(row.index)}
+                  onClick={() => addRowAfter(row.index, createEmptyRow)}
                   className="h-6 w-6 p-0 text-green-600 hover:bg-green-50 hover:text-green-800"
                 >
                   <Plus className="h-3 w-3" />
@@ -187,7 +193,7 @@ export function EditableTable<T extends RowData>({
           ]
         : []),
     ],
-    [columns, allowInsertRow, allowDeleteRow, deleteRow, addRowAfter]
+    [columns, createEmptyRow, allowDeleteRow, deleteRow, addRowAfter]
   )
 
   // コア行モデルは v9 では常に自動で作られるので、明示的に渡す必要はない
@@ -210,14 +216,8 @@ export function EditableTable<T extends RowData>({
     },
   })
 
-  const addRow = () => {
-    onDataChange([...data, emptyRow(columns)])
-  }
-
-  const addMultipleRows = (count: number) => {
-    const newRows = Array.from({ length: count }, () => emptyRow(columns))
-
-    onDataChange([...data, ...newRows])
+  const addRows = (count: number, createRow: () => T) => {
+    onDataChange([...data, ...Array.from({ length: count }, createRow)])
   }
 
   /**
@@ -272,9 +272,11 @@ export function EditableTable<T extends RowData>({
     const pastedRows = splitPastedRows(pastedText)
     if (pastedRows.length === 0) return
 
-    const pasted = hasReadOnlyColumns
-      ? mergePastedRows(data, pastedRows, origin, editableColumnsForPaste)
-      : replaceWithPastedRows(pastedRows, columns)
+    // 全置換は行を作るので、空の行の作り方を渡された表だけ
+    const pasted =
+      hasReadOnlyColumns || !createEmptyRow
+        ? mergePastedRows(data, pastedRows, origin, editableColumnsForPaste)
+        : replaceWithPastedRows(pastedRows, columns, createEmptyRow)
     onDataChange(pasted.rows)
     notifyRejectedPaste(pasted.rejectedCount)
   }
@@ -355,12 +357,12 @@ export function EditableTable<T extends RowData>({
         </Table>
       </div>
 
-      {allowInsertRow && (
+      {createEmptyRow && (
         <div className="flex justify-start gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={addRow}
+            onClick={() => addRows(1, createEmptyRow)}
             className="flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
@@ -370,7 +372,7 @@ export function EditableTable<T extends RowData>({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => addMultipleRows(5)}
+              onClick={() => addRows(5, createEmptyRow)}
               className="px-2 text-xs"
             >
               +5行
@@ -378,7 +380,7 @@ export function EditableTable<T extends RowData>({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => addMultipleRows(10)}
+              onClick={() => addRows(10, createEmptyRow)}
               className="px-2 text-xs"
             >
               +10行
