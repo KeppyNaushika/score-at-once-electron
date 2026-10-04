@@ -252,6 +252,45 @@ describe("試験の裁定サマリ", () => {
     expect(cell.decision!.decidedByName).toBe(fixture.user.name)
   })
 
+  it("確定済みのセルは確定し直せるよう decided として載せ、要裁定には数えない", async () => {
+    const fixture = await createFullTestExam(testPrisma, {
+      includeStudentAnswerImages: true,
+    })
+    const [examStudent] = fixture.examStudents
+    const [firstCropRegion] = fixture.cropRegions
+    // 提案（試験作成時）より後に確定した＝再確認は要らない
+    await testPrisma.scoreDecision.create({
+      data: {
+        id: crypto.randomUUID(),
+        cropRegionId: firstCropRegion.id,
+        examStudentId: examStudent.id,
+        verdict: "incorrect",
+        score: null,
+        comment: null,
+        decidedByUserId: fixture.user.id,
+        decidedAt: new Date("2999-01-01"),
+      },
+    })
+
+    const summary = await getExamDecisionSummary(
+      fixture.exam.id,
+      fixture.user.id
+    )
+
+    expect(summary.conflictCount).toBe(0)
+    expect(summary.staleCount).toBe(0)
+    expect(summary.decidedCount).toBe(1)
+    expect(summary.totalScoreImpact).toBe(0)
+
+    const question = summary.questions.find(
+      (candidate) => candidate.cropRegionId === firstCropRegion.id
+    )!
+    const [cell] = question.cells
+    expect(cell.reason).toBe("decided")
+    expect(cell.scoreImpact).toBe(0)
+    expect(cell.decision!.verdict).toBe("incorrect")
+  })
+
   it("担当は試験のメンバーだけを数える", async () => {
     const fixture = await createFullTestExam(testPrisma, {
       includeStudentAnswerImages: true,

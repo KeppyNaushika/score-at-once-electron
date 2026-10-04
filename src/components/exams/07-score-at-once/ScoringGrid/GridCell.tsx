@@ -1,3 +1,5 @@
+import type { ReactNode } from "react"
+
 import {
   getDynamicScoreStatusConfig,
   type ScoreStatusKey,
@@ -35,6 +37,8 @@ interface GridCellProps {
   annotations?: DrawingAnnotation[]
   pageSize?: string
   onMouseDown: (e: React.MouseEvent, answerId: string) => void
+  /** 生徒答案の下に足す欄（8. 採点確定が採点者ごとの結果を出す）。模範解答には出さない */
+  detail?: ReactNode
 }
 
 export function GridCell({
@@ -49,6 +53,7 @@ export function GridCell({
   annotations,
   pageSize,
   onMouseDown,
+  detail,
 }: GridCellProps) {
   const statusConfig = getDynamicScoreStatusConfig(scoringColors)
   const statusKey: ScoreStatusKey = isValidStatusKey(answer.status)
@@ -177,6 +182,8 @@ export function GridCell({
           <Icon className="h-3 w-3 shrink-0" style={config.iconStyle} />
         )}
       </div>
+
+      {!isMaster && detail}
     </div>
   )
 }

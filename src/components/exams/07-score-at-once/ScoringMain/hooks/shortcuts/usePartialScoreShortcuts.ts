@@ -2,14 +2,24 @@ import { useSceneCommand } from "@/components/exams/07-score-at-once/hooks/useCo
 
 import type { ScoringShortcutHandlers } from "../useScoringShortcuts"
 
-/** 部分点の入力欄の中と、数字キーで部分点の入力を始めるショートカット */
+/**
+ * 部分点の入力欄の中と、数字キーで部分点の入力を始めるショートカット。
+ * 「8. 採点確定」も同じ入力欄で確定の点を入れるので、要る口だけを受け取る
+ */
 export function usePartialScoreShortcuts({
   handlePartialScoreInput,
   handlePartialScoreConfirmPartial,
   handlePartialScoreConfirmPending,
   handlePartialScoreCancel,
   handlePartialScoreBackspace,
-}: ScoringShortcutHandlers): void {
+}: Pick<
+  ScoringShortcutHandlers,
+  | "handlePartialScoreInput"
+  | "handlePartialScoreConfirmPartial"
+  | "handlePartialScoreConfirmPending"
+  | "handlePartialScoreCancel"
+  | "handlePartialScoreBackspace"
+>): void {
   // ========================================
   // モーダル内ショートカット（採点キーと共通）
   // ========================================

@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 
 import { DragSelectionOverlay } from "@/components/exams/07-score-at-once/ScoringGrid/DragSelectionOverlay"
 import { GridCell } from "@/components/exams/07-score-at-once/ScoringGrid/GridCell"
@@ -11,6 +11,7 @@ import { useGridDragSelection } from "@/components/exams/07-score-at-once/Scorin
 import { useGridLayout } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridLayout"
 import { useGridNavigation } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridNavigation"
 import { useGridSelection } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useGridSelection"
+import type { GridAnswerItem } from "@/components/exams/07-score-at-once/ScoringGrid/types"
 import type {
   LayoutDirection,
   MasterGridItem,
@@ -68,6 +69,8 @@ interface AnswerGridViewProps {
     status: MouseBrushAction,
     isToggle: boolean
   ) => void
+  /** 生徒答案の下に足す欄（8. 採点確定が採点者ごとの結果を出す） */
+  renderCellDetail?: (answer: GridAnswerItem) => ReactNode
   className?: string
 }
 
@@ -92,6 +95,7 @@ export default function AnswerGridView({
   scoringOperationMode,
   mouseBrush,
   onMouseScoring,
+  renderCellDetail,
   className = "",
 }: AnswerGridViewProps) {
   const isMouseMode = scoringOperationMode === "mouse"
@@ -372,6 +376,7 @@ export default function AnswerGridView({
               annotations={annotationsByExamStudent.get(answer.examStudentId)}
               pageSize={pageSize}
               onMouseDown={onCellMouseDown}
+              detail={renderCellDetail?.(answer)}
             />
           )
         })}
