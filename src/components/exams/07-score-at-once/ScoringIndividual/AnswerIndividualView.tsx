@@ -1,17 +1,10 @@
 "use client"
 
-import { useMutation, useQuery } from "@tanstack/react-query"
-import Image from "next/image"
+import { useQuery } from "@tanstack/react-query"
 import { useParams } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 
-import {
-  findQuestionScore,
-  getScoringStatus,
-} from "@/components/exams/07-score-at-once/types"
 import { Spinner } from "@/components/ui/spinner"
-import { toggleAnnotationFavoriteMutation } from "@/queries/drawing"
-import type { QuestionScoreRow } from "@/queries/scoring"
 import { examExportSettingsQuery } from "@/queries/settings"
 import type {
   AnnotationTarget,
@@ -20,24 +13,24 @@ import type {
 import { DEFAULT_ANSWER_OVERLAY_SETTINGS } from "@/types/scoringOverlay.types"
 
 import { useContextValue } from "../hooks/useContextValue"
+import { AnswerCanvasStack } from "./AnswerCanvasStack"
 import { DrawingToolPalette } from "./DrawingToolPalette"
 import { useDrawingState } from "./hooks/core/useDrawingState"
 import { useImageCanvas } from "./hooks/core/useImageCanvas"
 import { useImageNavigation } from "./hooks/navigation/useImageNavigation"
 import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
 import { useAllStudentAnnotations } from "./hooks/view/useAllStudentAnnotations"
+import { useAnnotationFavorites } from "./hooks/view/useAnnotationFavorites"
 import { useCanvasIntegration } from "./hooks/view/useCanvasIntegration"
+import { useCropRegionsWithStatus } from "./hooks/view/useCropRegionsWithStatus"
 import { useDrawingToolShortcuts } from "./hooks/view/useDrawingToolShortcuts"
+import { useMasterOverlayImages } from "./hooks/view/useMasterOverlayImages"
 import { useQuestionAutoScroll } from "./hooks/view/useQuestionAutoScroll"
 import { useZoomAndScroll } from "./hooks/view/useZoomAndScroll"
+import { MasterOverlayImages } from "./MasterOverlayImages"
 import { RichTextEditorModal } from "./RichTextEditorModal"
 import type { AnswerIndividualViewProps } from "./types"
-
-/** 未読み込み時の空配列（毎レンダー作り直すと下流の再描画を誘発するため定数で持つ） */
-const NO_OVERLAY_IMAGES: HTMLImageElement[] = []
-
-/** 採点行がまだ1つも無い設問のための空値 */
-const EMPTY_SCORES: QuestionScoreRow[] = []
+import { stackedCanvasSize } from "./utils/canvasPageLayout"
 
 export default function AnswerIndividualView({
   scoringDatas,
@@ -87,9 +80,6 @@ export default function AnswerIndividualView({
   })
   const scoringMarkConfig =
     exportSettings?.answerOverlay ?? DEFAULT_ANSWER_OVERLAY_SETTINGS
-  const { mutateAsync: toggleFavorite } = useMutation(
-    toggleAnnotationFavoriteMutation()
-  )
 
   // 現在表示中の採点データを取得
   const currentScoringData =
@@ -98,48 +88,12 @@ export default function AnswerIndividualView({
     ) ?? null
 
   // 全設問の採点ステータスと点数を計算（全設問マーク・点数描画用）
-  const allCropRegionsWithStatus = useMemo(() => {
-    if (!cropRegions || !currentScoringData) return []
-    const examStudentId = currentScoringData.examStudentId
-    return cropRegions.map((cropRegion) => {
-      // 採点行は設問ごとに届いている。設問を跨いで探し直す必要は無い
-      const questionScores = questionScoresByCropRegionId?.get(cropRegion.id)
-      const questionScore = findQuestionScore(
-        questionScores ?? EMPTY_SCORES,
-        examStudentId,
-        currentUserId
-      )
-      const status = getScoringStatus(
-        questionScores,
-        examStudentId,
-        currentUserId
-      )
-      const maxScore = cropRegion.points ?? 0
-      let actualScore: number | null = null
-      switch (status) {
-        case "correct":
-          actualScore = maxScore
-          break
-        case "incorrect":
-        case "no_answer":
-          actualScore = 0
-          break
-        case "partial":
-        case "pending":
-          actualScore =
-            questionScore?.partialScore != null
-              ? Number(questionScore.partialScore)
-              : null
-          break
-      }
-      return { cropRegion, status, actualScore }
-    })
-  }, [
+  const allCropRegionsWithStatus = useCropRegionsWithStatus({
     cropRegions,
     questionScoresByCropRegionId,
-    currentUserId,
     currentScoringData,
-  ])
+    currentUserId,
+  })
 
   /**
    * 手書き注釈の行き先（答案＋設問＋採点者）。
@@ -388,101 +342,20 @@ export default function AnswerIndividualView({
       textBoundsCacheRef,
     })
 
-  // お気に入りアノテーションIDのセット
-  const favoriteElementIds = useMemo(() => {
-    const ids = new Set<string>()
-    for (const element of drawingState.drawingElements) {
-      if (element.isFavorite) {
-        ids.add(element.id)
-      }
-    }
-    return ids
-  }, [drawingState.drawingElements])
+  // お気に入り（パレットの★ボタン）
+  const { favoriteElementIds, handleToggleFavorite } = useAnnotationFavorites({
+    drawingElements: drawingState.drawingElements,
+    setDrawingElements: drawingState.setDrawingElements,
+  })
 
-  // お気に入り切替ハンドラ
-  const handleToggleFavorite = useCallback(
-    async (elementIds: string[]) => {
-      for (const elementId of elementIds) {
-        const isFavorite = favoriteElementIds.has(elementId)
-        try {
-          await toggleFavorite({
-            annotationId: elementId,
-            isFavorite: !isFavorite,
-          })
-          // 手元の描画要素は state が持つ（キャンバスの描き直しはここを見る）
-          drawingState.setDrawingElements(
-            (prev: typeof drawingState.drawingElements) =>
-              prev.map((element: (typeof prev)[number]) =>
-                element.id === elementId
-                  ? { ...element, isFavorite: !isFavorite }
-                  : element
-              )
-          )
-        } catch {
-          // 失敗の通知は MutationCache の後始末が出す
-        }
-      }
-    },
-    [favoriteElementIds, drawingState, toggleFavorite]
-  )
-
-  // 模範解答オーバーレイ用の画像読み込み（全ページ）。
-  // 読み込み結果はどのURL列のものかを一緒に持ち、URLが差し替わったら（＝
-  // オーバーレイOFFや別の試験）自然に外れるようにする
-  const [loadedOverlay, setLoadedOverlay] = useState<{
-    urls: string[]
-    images: HTMLImageElement[]
-  } | null>(null)
-  const masterOverlayImages =
-    loadedOverlay !== null && loadedOverlay.urls === masterOverlayImageUrls
-      ? loadedOverlay.images
-      : NO_OVERLAY_IMAGES
-  useEffect(() => {
-    const urls = masterOverlayImageUrls
-    if (!urls || urls.length === 0) return
-    let cancelled = false
-    const loadAll = async () => {
-      const results = await Promise.allSettled(
-        urls.map(
-          (url) =>
-            new Promise<HTMLImageElement>((resolve, reject) => {
-              const image = document.createElement("img")
-              image.onload = () => resolve(image)
-              image.onerror = reject
-              image.src = url
-            })
-        )
-      )
-      if (cancelled) return
-      setLoadedOverlay({
-        urls,
-        images: results
-          .filter(
-            (result): result is PromiseFulfilledResult<HTMLImageElement> =>
-              result.status === "fulfilled"
-          )
-          .map((result) => result.value),
-      })
-    }
-    loadAll()
-    return () => {
-      cancelled = true
-    }
-  }, [masterOverlayImageUrls])
+  // 模範解答オーバーレイ用の画像読み込み（全ページ）
+  const masterOverlayImages = useMasterOverlayImages(masterOverlayImageUrls)
 
   // 答案コンテンツの自然サイズ（ズーム前、ピクセル単位）
-  const answerNaturalWidth =
-    loadedImages.length > 0 ? loadedImages[0].naturalWidth : 800
-  const answerNaturalHeight =
+  const answerNaturalSize =
     loadedImages.length > 0
-      ? loadedImages.reduce(
-          (total, image, index) =>
-            total +
-            image.naturalHeight +
-            (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
-          0
-        )
-      : 600
+      ? stackedCanvasSize(loadedImages, pageSpacing || 20)
+      : { width: 800, height: 600 }
 
   // overlay表示判定
   const isOverlayMode = masterDisplayMode === "overlay"
@@ -498,201 +371,32 @@ export default function AnswerIndividualView({
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      {/* CSS スクロール + scale 方式のメインキャンバス */}
-      <div
-        ref={setContainerElement}
-        className="grid h-full w-full overflow-auto"
-        style={{
-          cursor:
-            drawingState.currentTool === "hand"
-              ? drawingState.isDraggingElement
-                ? "grabbing"
-                : "grab"
-              : drawingState.currentTool === "select"
-                ? drawingState.isDraggingElement
-                  ? "move"
-                  : "default"
-                : "crosshair",
-        }}
+      <AnswerCanvasStack
+        containerRef={setContainerElement}
+        canvasRef={canvasRef}
+        textCanvasRef={textCanvasRef}
+        overlayCanvasRef={overlayCanvasRef}
+        naturalWidth={answerNaturalSize.width}
+        naturalHeight={answerNaturalSize.height}
+        zoom={zoom}
+        currentTool={drawingState.currentTool}
+        isDraggingElement={drawingState.isDraggingElement}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
       >
-        <div
-          className="relative grid place-items-center"
-          style={{
-            width: `${answerNaturalWidth * zoom}px`,
-            height: `${answerNaturalHeight * zoom}px`,
-            minWidth: "100%",
-            minHeight: "100%",
-          }}
-        >
-          {/* メインキャンバス（画像・描画要素） */}
-          <canvas
-            ref={canvasRef}
-            width={loadedImages.length > 0 ? loadedImages[0].naturalWidth : 800}
-            height={
-              loadedImages.length > 0
-                ? loadedImages.reduce(
-                    (total, image, index) =>
-                      total +
-                      image.naturalHeight +
-                      (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
-                    0
-                  )
-                : 600
-            }
-            className="absolute top-0 left-0 block"
-            style={{
-              width:
-                loadedImages.length > 0
-                  ? `${loadedImages[0].naturalWidth * zoom}px`
-                  : `${800 * zoom}px`,
-              height:
-                loadedImages.length > 0
-                  ? `${
-                      loadedImages.reduce(
-                        (total, image, index) =>
-                          total +
-                          image.naturalHeight +
-                          (index < loadedImages.length - 1
-                            ? pageSpacing || 20
-                            : 0),
-                        0
-                      ) * zoom
-                    }px`
-                  : `${600 * zoom}px`,
-              imageRendering: "pixelated", // 拡大時のぼけを防止
-              transform: "translateZ(0)", // ハードウェアアクセラレーション有効化
-              touchAction: "none", // ポインターイベント用タッチアクション無効化
-            }}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerLeave={handlePointerUp}
+        {/* 模範解答オーバーレイ画像（overlay モード時・ページごとに描画） */}
+        {isOverlayMode && (
+          <MasterOverlayImages
+            masterOverlayImages={masterOverlayImages}
+            loadedImages={loadedImages}
+            pageSpacing={pageSpacing}
+            zoom={zoom}
+            masterOverlayVisible={masterOverlayVisible}
+            masterOverlayOpacity={masterOverlayOpacity}
           />
-          {/* テキスト専用キャンバス */}
-          <canvas
-            ref={textCanvasRef}
-            width={loadedImages.length > 0 ? loadedImages[0].naturalWidth : 800}
-            height={
-              loadedImages.length > 0
-                ? loadedImages.reduce(
-                    (total, image, index) =>
-                      total +
-                      image.naturalHeight +
-                      (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
-                    0
-                  )
-                : 600
-            }
-            className="pointer-events-none absolute top-0 left-0 block"
-            style={{
-              width:
-                loadedImages.length > 0
-                  ? `${loadedImages[0].naturalWidth * zoom}px`
-                  : `${800 * zoom}px`,
-              height:
-                loadedImages.length > 0
-                  ? `${
-                      loadedImages.reduce(
-                        (total, image, index) =>
-                          total +
-                          image.naturalHeight +
-                          (index < loadedImages.length - 1
-                            ? pageSpacing || 20
-                            : 0),
-                        0
-                      ) * zoom
-                    }px`
-                  : `${600 * zoom}px`,
-              imageRendering: "pixelated",
-              transform: "translateZ(0)",
-            }}
-          />
-          {/* オーバーレイキャンバス（ハンドル表示専用） */}
-          <canvas
-            ref={overlayCanvasRef}
-            width={loadedImages.length > 0 ? loadedImages[0].naturalWidth : 800}
-            height={
-              loadedImages.length > 0
-                ? loadedImages.reduce(
-                    (total, image, index) =>
-                      total +
-                      image.naturalHeight +
-                      (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
-                    0
-                  )
-                : 600
-            }
-            className="pointer-events-none absolute top-0 left-0 block"
-            style={{
-              width:
-                loadedImages.length > 0
-                  ? `${loadedImages[0].naturalWidth * zoom}px`
-                  : `${800 * zoom}px`,
-              height:
-                loadedImages.length > 0
-                  ? `${
-                      loadedImages.reduce(
-                        (total, image, index) =>
-                          total +
-                          image.naturalHeight +
-                          (index < loadedImages.length - 1
-                            ? pageSpacing || 20
-                            : 0),
-                        0
-                      ) * zoom
-                    }px`
-                  : `${600 * zoom}px`,
-              imageRendering: "pixelated",
-              transform: "translateZ(0)",
-            }}
-          />
-          {/* 模範解答オーバーレイ画像（overlay モード時・ページごとに描画） */}
-          {isOverlayMode &&
-            masterOverlayImages.length > 0 &&
-            masterOverlayImages.map((masterImage, pageIndex) => {
-              let pageOffsetY = 0
-              for (let i = 0; i < pageIndex; i++) {
-                const sourceImage = loadedImages[i] || masterOverlayImages[i]
-                if (sourceImage) {
-                  pageOffsetY += sourceImage.naturalHeight + (pageSpacing || 20)
-                }
-              }
-              const pageImage = loadedImages[pageIndex]
-              const pageWidth = pageImage
-                ? pageImage.naturalWidth
-                : masterImage.naturalWidth
-              const pageHeight = pageImage
-                ? pageImage.naturalHeight
-                : masterImage.naturalHeight
-
-              return (
-                <Image
-                  key={`master-overlay-${pageIndex}`}
-                  src={masterImage.src}
-                  alt={`模範解答 ページ${pageIndex + 1}`}
-                  width={pageWidth}
-                  height={pageHeight}
-                  unoptimized
-                  // appimg:// は next/image の既定で lazy になる。重ね表示は
-                  // ズーム・スクロールされる領域にあり、素の <img> は eager だった
-                  loading="eager"
-                  className="pointer-events-none absolute left-0 block"
-                  style={{
-                    top: `${pageOffsetY * zoom}px`,
-                    width: `${pageWidth * zoom}px`,
-                    height: `${pageHeight * zoom}px`,
-                    imageRendering: "pixelated",
-                    opacity: masterOverlayVisible
-                      ? masterOverlayOpacity / 100
-                      : 0,
-                    transition: "opacity 0.15s ease-in-out",
-                  }}
-                  draggable={false}
-                />
-              )
-            })}
-        </div>
-      </div>
+        )}
+      </AnswerCanvasStack>
 
       {/* 模範解答ラベル（overlay表示時） */}
       {isOverlayMode &&

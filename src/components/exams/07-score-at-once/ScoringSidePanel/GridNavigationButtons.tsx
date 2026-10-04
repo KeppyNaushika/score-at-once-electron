@@ -3,13 +3,8 @@
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 
-import { KeyHint } from "./KeyHint"
+import { ShortcutTooltip } from "./ShortcutTooltip"
 
 /** WASD 移動のボタン（並びは 左・上・下・右） */
 const GRID_NAVIGATION_BUTTONS = [
@@ -30,24 +25,20 @@ export function GridNavigationButtons({
       {GRID_NAVIGATION_BUTTONS.map((navigationButton) => {
         const Icon = navigationButton.icon
         return (
-          <Tooltip key={navigationButton.direction}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 w-8"
-                onClick={() => onGridNavigation(navigationButton.direction)}
-              >
-                <Icon className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="text-center">
-                <div className="font-medium">{navigationButton.label}</div>
-                <KeyHint label={navigationButton.direction.toUpperCase()} />
-              </div>
-            </TooltipContent>
-          </Tooltip>
+          <ShortcutTooltip
+            key={navigationButton.direction}
+            description={navigationButton.label}
+            keys={[navigationButton.direction.toUpperCase()]}
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 w-8"
+              onClick={() => onGridNavigation(navigationButton.direction)}
+            >
+              <Icon className="h-3.5 w-3.5" />
+            </Button>
+          </ShortcutTooltip>
         )
       })}
     </div>

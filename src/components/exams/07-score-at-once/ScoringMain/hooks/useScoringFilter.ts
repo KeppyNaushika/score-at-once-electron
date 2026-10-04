@@ -1,40 +1,24 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import type { WhitenessByAnswerId } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerWhiteness"
 import type {
   AnswerSortOrder,
   GradingMode,
-  MasterGridItem,
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
-import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
 import type { ExamWithPages } from "@/types/prismaExtensions"
-import { toScoringStatus } from "@/types/scoringStatus.types"
+
+import {
+  useGridSelectionSync,
+  type VisibleAnswersDerivation,
+} from "./useGridSelectionSync"
+import { useQuestionScoringData } from "./useQuestionScoringData"
 
 /** 該当なしのときに毎回新しい配列を作らないための空値 */
 const EMPTY_VISIBLE_ANSWERS: string[] = []
-
-const areArraysEqual = (a: string[], b: string[]) => {
-  if (a.length !== b.length) {
-    return false
-  }
-  for (let i = 0; i < a.length; i += 1) {
-    if (a[i] !== b[i]) {
-      return false
-    }
-  }
-  return true
-}
 
 interface FilterSettings {
   unscored: boolean
@@ -45,9 +29,6 @@ interface FilterSettings {
   no_answer: boolean
   double_mark: boolean
 }
-
-/** 採点行がまだ1つも無い設問のための空値（毎回新しい配列を作らない） */
-const EMPTY_SCORES: QuestionScoreRow[] = []
 
 interface UseScoringFilterProps {
   studentAnswerImages: StudentAnswerImageWithExamStudents[]
@@ -125,98 +106,16 @@ export function useScoringFilter({
     [currentCropRegionId]
   )
 
-  const allScoringData = useMemo((): ScoringData[] => {
-    if (!currentCropRegion) return []
-
-    const pageFilteredSheets = studentAnswerImages.filter(
-      (pageImage) => pageImage.examPageId === currentCropRegion.examPageId
-    )
-
-    const sortedAnswerSheets = [...pageFilteredSheets].sort(
-      (sheetA, sheetB) => {
-        const aOrder = sheetA.examStudent.customOrder ?? 999999
-        const bOrder = sheetB.examStudent.customOrder ?? 999999
-
-        if (aOrder === bOrder) {
-          const studentA = sheetA.examStudent.student
-          const studentB = sheetB.examStudent.student
-          const aName = `${studentA.lastName}${studentA.firstName}`
-          const bName = `${studentB.lastName}${studentB.firstName}`
-          return aName.localeCompare(bName, "ja")
-        }
-
-        return aOrder - bOrder
-      }
-    )
-
-    const studentScoringData: ScoringData[] = sortedAnswerSheets.map(
-      (pageImage) => {
-        const score = findQuestionScore(
-          questionScoresByCropRegionId.get(currentCropRegion.id) ??
-            EMPTY_SCORES,
-          pageImage.examStudentId,
-          currentUserId
-        )
-        const { student } = pageImage.examStudent
-
-        return {
-          id: pageImage.id,
-          examStudentId: pageImage.examStudentId,
-          studentName: `${student.lastName} ${student.firstName}`,
-          imageUrl: pageImage.imagePath
-            ? `appimg:///${pageImage.imagePath}`
-            : "",
-          currentScore:
-            score?.partialScore !== undefined && score?.partialScore !== null
-              ? Number(score.partialScore)
-              : undefined,
-          maxScore: currentCropRegion.points ?? 0,
-          status: toScoringStatus(score?.status),
-          questionRegion: currentCropRegion,
-          customOrder: pageImage.examStudent.customOrder ?? 999999,
-        }
-      }
-    )
-
-    // 白さ順・濃さ順（一覧表示のみ）。並べる基準は平均輝度のみで、閾値は持たない
-    // （実採点データの「無答」を正解として比較した結果に基づく。
-    //   詳細は electron-src/lib/scoring/regionWhiteness.ts の冒頭コメント）。
-    // sortは安定なので、輝度が同値の答案は直前の表示順（customOrder）のまま残る。
-    // 白さが未算出の答案は、どちらの向きでも末尾へ送る。
-    if (
-      gradingMode === "grid" &&
-      (answerSortOrder === "whiteness" || answerSortOrder === "darkness")
-    ) {
-      const cropRegionId = currentCropRegion.id
-      // 濃さ順は白さ順の逆向き
-      const direction = answerSortOrder === "darkness" ? -1 : 1
-
-      studentScoringData.sort((scoringDataA, scoringDataB) => {
-        const whitenessA = whitenessByAnswerId
-          .get(scoringDataA.id)
-          ?.get(cropRegionId)
-        const whitenessB = whitenessByAnswerId
-          .get(scoringDataB.id)
-          ?.get(cropRegionId)
-
-        if (!whitenessA && !whitenessB) return 0
-        if (!whitenessA) return 1
-        if (!whitenessB) return -1
-
-        return direction * (whitenessB.meanLuminance - whitenessA.meanLuminance)
-      })
-    }
-
-    return studentScoringData
-  }, [
+  const { allScoringData, masterAnswerData } = useQuestionScoringData({
     currentCropRegion,
-    questionScoresByCropRegionId,
     studentAnswerImages,
+    questionScoresByCropRegionId,
     currentUserId,
+    exam,
     gradingMode,
     answerSortOrder,
     whitenessByAnswerId,
-  ])
+  })
 
   /**
    * 表示する答案と、選択の引き継ぎ材料を1つの派生値として組み立てる。
@@ -225,7 +124,7 @@ export function useScoringFilter({
    * 変更・採点履歴の変更のたびに「更新しに行く」呼び出しを書く必要があり、
    * 呼び忘れた経路だけ古い一覧が残る）。
    */
-  const derivedVisible = useMemo(() => {
+  const derivedVisible = useMemo((): VisibleAnswersDerivation => {
     // 白さ順・濃さ順は、材料が揃うまで表示対象を持たない。表示順で並べて見せて
     // おくと、算出が終わった瞬間に並びが総入れ替えになり、見ていた答案と操作の
     // 対象がずれる（ドラッグ選択は範囲の顔ぶれごと変わる）。ここを空にすると
@@ -233,7 +132,7 @@ export function useScoringFilter({
     if (!currentCropRegion || isWhitenessPending) {
       return {
         visibleAnswers: EMPTY_VISIBLE_ANSWERS,
-        firstStudentAnswerId: null as string | null,
+        firstStudentAnswerId: null,
         filteredSelection: EMPTY_VISIBLE_ANSWERS,
       }
     }
@@ -276,309 +175,16 @@ export function useScoringFilter({
   // 中身を比べているので取りこぼさない
   const visibleAnswers = derivedVisible.visibleAnswers
 
-  /**
-   * 選択の引き継ぎ材料を下流の effect へ渡す。
-   * 設問が変わったフレームでは前の設問の選択を持ち越さない（選択は設問ごとに
-   * 意味が違うので、引き継ぐと別の生徒が選ばれたまま見える）。
-   *
-   * 下流の effect より先に書く必要があるので、この位置の layout effect で行う。
-   */
-  useLayoutEffect(() => {
-    const questionVersionChanged =
-      questionChangeVersionRef.current !== null &&
-      questionChangeVersionRef.current !== questionChangeVersion
-    if (questionChangeVersionRef.current === null) {
-      questionChangeVersionRef.current = questionChangeVersion
-    }
-
-    const filteredSelection = questionVersionChanged
-      ? EMPTY_VISIBLE_ANSWERS
-      : derivedVisible.filteredSelection
-
-    selectionSnapshotVersionRef.current += 1
-    pendingSelectionSnapshotRef.current = {
-      firstStudentAnswerId: derivedVisible.firstStudentAnswerId,
-      hasVisibleSelection: filteredSelection.length > 0,
-      filteredSelection,
-      version: selectionSnapshotVersionRef.current,
-    }
-
-    if (questionVersionChanged) {
-      questionChangeVersionRef.current = questionChangeVersion
-    }
-  }, [derivedVisible, questionChangeVersion])
-
-  const prevGradingModeRef = useRef<GradingMode>(gradingMode)
-  const prevCropRegionIdRef = useRef<string | null>(currentCropRegionId)
-  const pendingGridSelectionRef = useRef(false)
-  const lastVisibleAnswersRef = useRef<string[]>(visibleAnswers)
-  const pendingSelectionSnapshotRef = useRef<{
-    firstStudentAnswerId: string | null
-    hasVisibleSelection: boolean
-    filteredSelection: string[]
-    version: number
-  } | null>(null)
-  const selectionSnapshotVersionRef = useRef(0)
-  const consumedSnapshotVersionRef = useRef(0)
-  const manualSelectionVersionRef = useRef(manualSelectionVersion)
-  const questionChangeVersionRef = useRef<number | null>(null)
-  const visibleAnswersRef = useRef(visibleAnswers)
-
-  // visibleAnswersの最新値を追跡
-  useLayoutEffect(() => {
-    visibleAnswersRef.current = visibleAnswers
-  }, [visibleAnswers])
-
-  useEffect(() => {
-    const manualSelectionChanged =
-      manualSelectionVersionRef.current !== manualSelectionVersion
-
-    manualSelectionVersionRef.current = manualSelectionVersion
-
-    if (manualSelectionChanged) {
-      pendingGridSelectionRef.current = false
-      return
-    }
-
-    if (selectedStudentAnswerImageIds.size > 1) {
-      pendingGridSelectionRef.current = false
-      return
-    }
-
-    const previousMode = prevGradingModeRef.current
-    const previousCropRegionId = prevCropRegionIdRef.current
-
-    const modeChangedToGrid = previousMode !== "grid" && gradingMode === "grid"
-    const cropRegionChanged = previousCropRegionId !== currentCropRegionId
-
-    const visibleChanged = !areArraysEqual(
-      visibleAnswers,
-      lastVisibleAnswersRef.current
-    )
-
-    if (visibleChanged) {
-      lastVisibleAnswersRef.current = visibleAnswers
-    }
-
-    if (cropRegionChanged && !visibleChanged) {
-      prevGradingModeRef.current = gradingMode
-      prevCropRegionIdRef.current = currentCropRegionId
-      return
-    }
-
-    if (modeChangedToGrid || cropRegionChanged || visibleChanged) {
-      pendingGridSelectionRef.current = true
-    }
-
-    prevGradingModeRef.current = gradingMode
-    prevCropRegionIdRef.current = currentCropRegionId
-
-    if (gradingMode !== "grid") {
-      return
-    }
-
-    const snapshot = pendingSelectionSnapshotRef.current
-    const hasFreshSnapshot = snapshot
-      ? snapshot.version > consumedSnapshotVersionRef.current
-      : false
-    const visibleIds = new Set(visibleAnswers)
-    const filteredSelection =
-      hasFreshSnapshot && snapshot?.filteredSelection
-        ? snapshot.filteredSelection
-        : Array.from(selectedStudentAnswerImageIds).filter(
-            (id) => visibleIds.has(id) && !id.startsWith("master-")
-          )
-    const firstStudentAnswerId =
-      hasFreshSnapshot && snapshot?.firstStudentAnswerId
-        ? snapshot.firstStudentAnswerId
-        : (visibleAnswers.find((id) => !id.startsWith("master-")) ?? null)
-
-    if (pendingGridSelectionRef.current) {
-      const shouldApplySelection =
-        modeChangedToGrid ||
-        cropRegionChanged ||
-        visibleChanged ||
-        visibleAnswers.length === 0
-
-      if (shouldApplySelection) {
-        if (cropRegionChanged) {
-          if (visibleAnswers.length === 0 || !firstStudentAnswerId) {
-            if (selectedStudentAnswerImageIds.size > 0) {
-              setSelectedPageImageIds(new Set())
-            }
-            pendingGridSelectionRef.current = false
-            return
-          }
-
-          if (
-            selectedStudentAnswerImageIds.size !== 1 ||
-            !selectedStudentAnswerImageIds.has(firstStudentAnswerId)
-          ) {
-            setSelectedPageImageIds(new Set([firstStudentAnswerId]))
-          }
-          pendingGridSelectionRef.current = false
-          return
-        }
-
-        const hasVisibleSelection =
-          hasFreshSnapshot && snapshot?.hasVisibleSelection
-            ? snapshot.hasVisibleSelection
-            : filteredSelection.length > 0
-
-        if (hasVisibleSelection) {
-          if (filteredSelection.length !== selectedStudentAnswerImageIds.size) {
-            setSelectedPageImageIds(new Set(filteredSelection))
-          }
-          pendingGridSelectionRef.current = false
-          if (hasFreshSnapshot && snapshot) {
-            consumedSnapshotVersionRef.current = snapshot.version
-          }
-          return
-        }
-
-        if (visibleAnswers.length === 0 || !firstStudentAnswerId) {
-          if (selectedStudentAnswerImageIds.size > 0) {
-            setSelectedPageImageIds(new Set())
-          }
-          if (visibleAnswers.length > 0) {
-            pendingGridSelectionRef.current = false
-          }
-          if (hasFreshSnapshot && snapshot) {
-            consumedSnapshotVersionRef.current = snapshot.version
-          }
-          return
-        }
-
-        if (
-          selectedStudentAnswerImageIds.size !== 1 ||
-          !selectedStudentAnswerImageIds.has(firstStudentAnswerId)
-        ) {
-          setSelectedPageImageIds(new Set([firstStudentAnswerId]))
-        }
-        pendingGridSelectionRef.current = false
-        if (hasFreshSnapshot && snapshot) {
-          consumedSnapshotVersionRef.current = snapshot.version
-        }
-        return
-      }
-    }
-  }, [
+  // 一覧の選択を、表示する答案の入れ替わりに追従させる
+  useGridSelectionSync({
+    derivedVisible,
     currentCropRegionId,
     gradingMode,
+    questionChangeVersion,
+    manualSelectionVersion,
     selectedStudentAnswerImageIds,
     setSelectedPageImageIds,
-    visibleAnswers,
-    manualSelectionVersion,
-  ])
-
-  // フィルター変更時のスクロール処理用ref（選択変更では発火しない）
-  const prevVisibleAnswersRef = useRef<string[]>(visibleAnswers)
-
-  useEffect(() => {
-    // visibleAnswersが変わっていない場合はスキップ（選択変更のみの場合）
-    const prevVisible = prevVisibleAnswersRef.current
-    const visibleChanged =
-      prevVisible.length !== visibleAnswers.length ||
-      prevVisible.some((id, i) => id !== visibleAnswers[i])
-    prevVisibleAnswersRef.current = visibleAnswers
-
-    if (!visibleChanged) {
-      return
-    }
-
-    if (gradingMode !== "grid") {
-      return
-    }
-
-    if (selectedStudentAnswerImageIds.size === 0) {
-      return
-    }
-
-    const snapshot = pendingSelectionSnapshotRef.current
-    const hasFreshSnapshot = snapshot
-      ? snapshot.version > consumedSnapshotVersionRef.current
-      : false
-    const visibleIds = new Set(visibleAnswers)
-    const firstCandidateId =
-      hasFreshSnapshot && snapshot?.filteredSelection?.length
-        ? snapshot.filteredSelection[0]
-        : undefined
-    const firstVisibleSelected = firstCandidateId
-      ? firstCandidateId
-      : Array.from(selectedStudentAnswerImageIds).find((id) =>
-          visibleIds.has(id)
-        )
-
-    if (!firstVisibleSelected) {
-      return
-    }
-
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("score-view:scroll-to-answer", {
-          detail: { answerId: firstVisibleSelected },
-        })
-      )
-    }
-  }, [gradingMode, selectedStudentAnswerImageIds, visibleAnswers])
-
-  // 設問変更時の選択処理用のref
-  const questionChangeVersionForSelectionRef = useRef(questionChangeVersion)
-
-  // 設問変更時の選択処理（グリッドモード専用）
-  useEffect(() => {
-    // バージョンが変わっていなければスキップ（初回も含む）
-    if (
-      questionChangeVersionForSelectionRef.current === questionChangeVersion
-    ) {
-      return
-    }
-    questionChangeVersionForSelectionRef.current = questionChangeVersion
-
-    // 個別モードでは選択処理は行わない（生徒は移動しない）
-    if (gradingMode !== "grid") return
-
-    // setTimeout(0)で全ての状態更新がコミットされた後に実行
-    // visibleAnswersの更新を待つ必要があるため
-    const timeoutId = setTimeout(() => {
-      const currentVisible = visibleAnswersRef.current
-      const firstStudentAnswerId = currentVisible.find(
-        (id) => !id.startsWith("master-")
-      )
-
-      if (firstStudentAnswerId) {
-        setSelectedPageImageIds(new Set([firstStudentAnswerId]))
-      } else {
-        setSelectedPageImageIds(new Set())
-      }
-    }, 0)
-
-    return () => clearTimeout(timeoutId)
-  }, [questionChangeVersion, gradingMode, setSelectedPageImageIds])
-
-  const masterAnswerData = useMemo((): MasterGridItem | null => {
-    if (!currentCropRegion || !exam?.examPages) return null
-
-    const examPage = exam.examPages.find(
-      (page) => page.id === currentCropRegion.examPageId
-    )
-
-    if (!examPage) return null
-
-    const masterImagePath = examPage.imagePath
-
-    return {
-      id: `master-${currentCropRegion.id}`,
-      examStudentId: "MASTER",
-      studentName: "模範解答",
-      imageUrl: masterImagePath ? `appimg:///${masterImagePath}` : "",
-      maxScore: currentCropRegion.points || 0,
-      status: "master",
-      questionRegion: currentCropRegion,
-      customOrder: -1,
-      isMaster: true,
-    }
-  }, [currentCropRegion, exam])
+  })
 
   const getAllGridAnswerData = useMemo(() => {
     return allScoringData.map((data) => ({

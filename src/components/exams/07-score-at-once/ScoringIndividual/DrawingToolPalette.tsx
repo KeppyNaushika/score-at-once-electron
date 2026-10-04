@@ -10,27 +10,23 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Kbd } from "@/components/ui/kbd"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
-import type {
-  DrawingAnnotation,
-  LineStyle,
-} from "@/types/drawingAnnotation.types"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 import { EllipseToolPopover } from "./EllipseToolPopover"
+import { usePaletteAutoHide } from "./hooks/view/usePaletteAutoHide"
 import { LineToolPopover } from "./LineToolPopover"
+import { PaletteTooltip } from "./PaletteTooltip"
 import { RectangleToolPopover } from "./RectangleToolPopover"
 import { TextToolPopover } from "./TextToolPopover"
 import type { CanvasTool } from "./types"
-
-const FADE_OUT_DELAY = 3000 // 3秒無操作でフェードアウト
+import { paletteStylesFor } from "./utils/paletteStyles"
 
 interface DrawingToolPaletteProps {
   // Container ref for mouse event monitoring
@@ -88,237 +84,32 @@ export function DrawingToolPalette({
   onToggleFavorite,
   favoriteElementIds,
 }: DrawingToolPaletteProps) {
-  // 選択中の各タイプの要素を取得（複数選択対応）
-  const selectedLines = selectedElements.filter(
-    (element) => element.type === "line"
-  )
-  const selectedRectangles = selectedElements.filter(
-    (element) => element.type === "rectangle"
-  )
-  const selectedEllipses = selectedElements.filter(
-    (element) => element.type === "ellipse"
-  )
-  const selectedTexts = selectedElements.filter(
-    (element) => element.type === "text"
-  )
+  // 種類ごとの表示値と変更ハンドラ（選択中の要素があればその値）
+  const {
+    selectedLines,
+    selectedRectangles,
+    selectedEllipses,
+    selectedTexts,
+    line,
+    rectangle,
+    ellipse,
+    text,
+  } = paletteStylesFor({
+    selectedElements,
+    strokeColor,
+    strokeWidth,
+    lineStyle,
+    onStrokeColorChange,
+    onStrokeWidthChange,
+    onLineStyleChange,
+    onUpdateSelectedElements,
+  })
 
-  // 代表要素（UI表示用に最初の要素を使用）
-  const firstLine = selectedLines[0]
-  const firstRectangle = selectedRectangles[0]
-  const firstEllipse = selectedEllipses[0]
-  const firstText = selectedTexts[0]
-
-  // 選択中の線がある場合はその値を、なければデフォルト値を使用
-  const effectiveLineStyle = firstLine?.lineStyle || lineStyle
-  const effectiveLineColor = firstLine?.color || strokeColor
-  const effectiveLineWidth = firstLine?.strokeWidth || strokeWidth
-
-  // 選択中の長方形がある場合はその値を使用
-  const effectiveRectColor = firstRectangle?.color || strokeColor
-  const effectiveRectWidth = firstRectangle?.strokeWidth || strokeWidth
-
-  // 選択中の楕円がある場合はその値を使用
-  const effectiveEllipseColor = firstEllipse?.color || strokeColor
-  const effectiveEllipseWidth = firstEllipse?.strokeWidth || strokeWidth
-
-  // 選択中のテキストがある場合はその色を使用
-  const effectiveTextColor = firstText?.color || strokeColor
-
-  // ===== 線用ハンドラ（線のみに適用） =====
-  const handleLineColorChange = useCallback(
-    (color: string) => {
-      if (selectedLines.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedLines.map((element) => ({
-          id: element.id,
-          updates: { color },
-        }))
-        onUpdateSelectedElements(updates)
-      }
-      onStrokeColorChange(color)
-    },
-    [selectedLines, onUpdateSelectedElements, onStrokeColorChange]
-  )
-
-  const handleLineWidthChange = useCallback(
-    (width: number) => {
-      if (selectedLines.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedLines.map((element) => ({
-          id: element.id,
-          updates: { strokeWidth: width },
-        }))
-        onUpdateSelectedElements(updates)
-      }
-      onStrokeWidthChange(width)
-    },
-    [selectedLines, onUpdateSelectedElements, onStrokeWidthChange]
-  )
-
-  const handleLineStyleChange = useCallback(
-    (style: string) => {
-      if (selectedLines.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedLines.map((element) => ({
-          id: element.id,
-          updates: { lineStyle: style as LineStyle },
-        }))
-        onUpdateSelectedElements(updates)
-      }
-      onLineStyleChange(style)
-    },
-    [selectedLines, onUpdateSelectedElements, onLineStyleChange]
-  )
-
-  // ===== 長方形用ハンドラ（長方形のみに適用） =====
-  const handleRectColorChange = useCallback(
-    (color: string) => {
-      if (selectedRectangles.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedRectangles.map((element) => ({
-          id: element.id,
-          updates: { color },
-        }))
-        onUpdateSelectedElements(updates)
-      }
-      onStrokeColorChange(color)
-    },
-    [selectedRectangles, onUpdateSelectedElements, onStrokeColorChange]
-  )
-
-  const handleRectWidthChange = useCallback(
-    (width: number) => {
-      if (selectedRectangles.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedRectangles.map((element) => ({
-          id: element.id,
-          updates: { strokeWidth: width },
-        }))
-        onUpdateSelectedElements(updates)
-      }
-      onStrokeWidthChange(width)
-    },
-    [selectedRectangles, onUpdateSelectedElements, onStrokeWidthChange]
-  )
-
-  // ===== 楕円用ハンドラ（楕円のみに適用） =====
-  const handleEllipseColorChange = useCallback(
-    (color: string) => {
-      if (selectedEllipses.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedEllipses.map((element) => ({
-          id: element.id,
-          updates: { color },
-        }))
-        onUpdateSelectedElements(updates)
-      }
-      onStrokeColorChange(color)
-    },
-    [selectedEllipses, onUpdateSelectedElements, onStrokeColorChange]
-  )
-
-  const handleEllipseWidthChange = useCallback(
-    (width: number) => {
-      if (selectedEllipses.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedEllipses.map((element) => ({
-          id: element.id,
-          updates: { strokeWidth: width },
-        }))
-        onUpdateSelectedElements(updates)
-      }
-      onStrokeWidthChange(width)
-    },
-    [selectedEllipses, onUpdateSelectedElements, onStrokeWidthChange]
-  )
-
-  // ===== テキスト用ハンドラ（テキストのみに適用） =====
-  const handleTextColorChange = useCallback(
-    (color: string) => {
-      if (selectedTexts.length > 0 && onUpdateSelectedElements) {
-        const updates = selectedTexts.map((element) => ({
-          id: element.id,
-          updates: { color },
-        }))
-        onUpdateSelectedElements(updates)
-      }
-      onStrokeColorChange(color)
-    },
-    [selectedTexts, onUpdateSelectedElements, onStrokeColorChange]
-  )
   // キーバインディング取得
   const { keyBindings } = useKeyBindings()
 
-  const [isVisible, setIsVisible] = useState(true)
-  const [isHovered, setIsHovered] = useState(false)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
-  const isHoveredRef = useRef(isHovered)
-
-  // isHoveredの最新値をrefで追跡
-  useEffect(() => {
-    isHoveredRef.current = isHovered
-  }, [isHovered])
-
-  // フェードアウトタイマーを開始（setStateを含まない、effect用）
-  const startFadeoutTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current)
-    }
-    timerRef.current = setTimeout(() => {
-      if (!isHoveredRef.current) {
-        setIsVisible(false)
-      }
-    }, FADE_OUT_DELAY)
-  }, [])
-
-  // タイマーをリセットして表示状態に戻す（イベントハンドラ用）
-  const resetTimer = useCallback(() => {
-    setIsVisible(true)
-    startFadeoutTimer()
-  }, [startFadeoutTimer])
-
-  // コンテナのマウスイベントを監視
-  useEffect(() => {
-    const container = containerRef?.current
-    if (!container) return
-
-    const handleMouseMove = () => {
-      resetTimer()
-    }
-
-    const handleMouseDown = () => {
-      resetTimer()
-    }
-
-    container.addEventListener("mousemove", handleMouseMove)
-    container.addEventListener("mousedown", handleMouseDown)
-
-    // 初回タイマー開始（setStateを呼ばずタイマーのみ設定）
-    startFadeoutTimer()
-
-    return () => {
-      container.removeEventListener("mousemove", handleMouseMove)
-      container.removeEventListener("mousedown", handleMouseDown)
-      if (timerRef.current) {
-        clearTimeout(timerRef.current)
-      }
-    }
-  }, [containerRef, resetTimer, startFadeoutTimer])
-
-  // ホバー状態変更時にタイマーを調整
-  useEffect(() => {
-    if (isHovered) {
-      // ホバー中はタイマーをクリア
-      if (timerRef.current) {
-        clearTimeout(timerRef.current)
-        timerRef.current = null
-      }
-    } else if (isVisible) {
-      // ホバー解除時にタイマーを再開（setStateを呼ばずタイマーのみ設定）
-      startFadeoutTimer()
-    }
-  }, [isHovered, isVisible, startFadeoutTimer])
-
-  // Tooltipコンテンツのスタイル
-  const tooltipContentClass = cn(
-    "bg-primary text-primary-foreground animate-in fade-in-0 zoom-in-95",
-    "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
-    "data-[side=right]:slide-in-from-left-2",
-    "z-50 w-fit rounded-md px-3 py-1.5 text-xs"
-  )
+  // 一定時間操作が無ければ隠す
+  const { isVisible, setIsHovered } = usePaletteAutoHide(containerRef)
 
   return (
     <TooltipPrimitive.Provider delayDuration={300} disableHoverableContent>
@@ -334,182 +125,84 @@ export function DrawingToolPalette({
         <Card className="p-2">
           <div className="flex flex-col space-y-1">
             {/* ズーム・ビュー操作 */}
-            <TooltipPrimitive.Root>
-              <TooltipPrimitive.Trigger asChild>
-                <Button size="sm" variant="ghost" onClick={onZoomIn}>
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-              </TooltipPrimitive.Trigger>
-              <TooltipPrimitive.Portal>
-                <TooltipPrimitive.Content
-                  side="right"
-                  sideOffset={5}
-                  className={tooltipContentClass}
-                >
-                  <div className="text-center">
-                    <div className="font-medium">拡大</div>
-                    <div className="mt-1 text-xs text-gray-400">
-                      キー: <Kbd variant="subtle">+</Kbd>
-                    </div>
-                  </div>
-                </TooltipPrimitive.Content>
-              </TooltipPrimitive.Portal>
-            </TooltipPrimitive.Root>
+            <PaletteTooltip label="拡大" shortcutKey="+">
+              <Button size="sm" variant="ghost" onClick={onZoomIn}>
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+            </PaletteTooltip>
 
-            <TooltipPrimitive.Root>
-              <TooltipPrimitive.Trigger asChild>
-                <Button size="sm" variant="ghost" onClick={onZoomOut}>
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-              </TooltipPrimitive.Trigger>
-              <TooltipPrimitive.Portal>
-                <TooltipPrimitive.Content
-                  side="right"
-                  sideOffset={5}
-                  className={tooltipContentClass}
-                >
-                  <div className="text-center">
-                    <div className="font-medium">縮小</div>
-                    <div className="mt-1 text-xs text-gray-400">
-                      キー: <Kbd variant="subtle">-</Kbd>
-                    </div>
-                  </div>
-                </TooltipPrimitive.Content>
-              </TooltipPrimitive.Portal>
-            </TooltipPrimitive.Root>
+            <PaletteTooltip label="縮小" shortcutKey="-">
+              <Button size="sm" variant="ghost" onClick={onZoomOut}>
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+            </PaletteTooltip>
 
-            <TooltipPrimitive.Root>
-              <TooltipPrimitive.Trigger asChild>
-                <Button size="sm" variant="ghost" onClick={onMaximizeView}>
-                  <Maximize className="h-4 w-4" />
-                </Button>
-              </TooltipPrimitive.Trigger>
-              <TooltipPrimitive.Portal>
-                <TooltipPrimitive.Content
-                  side="right"
-                  sideOffset={5}
-                  className={tooltipContentClass}
-                >
-                  <div className="text-center">
-                    <div className="font-medium">全体表示</div>
-                    <div className="mt-1 text-xs text-gray-400">
-                      キー:{" "}
-                      <Kbd variant="subtle">
-                        {(keyBindings["view.fullView"] || "M").toUpperCase()}
-                      </Kbd>
-                    </div>
-                  </div>
-                </TooltipPrimitive.Content>
-              </TooltipPrimitive.Portal>
-            </TooltipPrimitive.Root>
+            <PaletteTooltip
+              label="全体表示"
+              shortcutKey={(keyBindings["view.fullView"] || "M").toUpperCase()}
+            >
+              <Button size="sm" variant="ghost" onClick={onMaximizeView}>
+                <Maximize className="h-4 w-4" />
+              </Button>
+            </PaletteTooltip>
 
-            <TooltipPrimitive.Root>
-              <TooltipPrimitive.Trigger asChild>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={onCropView}
-                  disabled={!currentCropRegion}
-                >
-                  <Crop className="h-4 w-4" />
-                </Button>
-              </TooltipPrimitive.Trigger>
-              <TooltipPrimitive.Portal>
-                <TooltipPrimitive.Content
-                  side="right"
-                  sideOffset={5}
-                  className={tooltipContentClass}
-                >
-                  <div className="text-center">
-                    <div className="font-medium">設問表示</div>
-                    <div className="mt-1 text-xs text-gray-400">
-                      キー:{" "}
-                      <Kbd variant="subtle">
-                        {(
-                          keyBindings["view.questionView"] || "C"
-                        ).toUpperCase()}
-                      </Kbd>
-                    </div>
-                  </div>
-                </TooltipPrimitive.Content>
-              </TooltipPrimitive.Portal>
-            </TooltipPrimitive.Root>
+            <PaletteTooltip
+              label="設問表示"
+              shortcutKey={(
+                keyBindings["view.questionView"] || "C"
+              ).toUpperCase()}
+            >
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onCropView}
+                disabled={!currentCropRegion}
+              >
+                <Crop className="h-4 w-4" />
+              </Button>
+            </PaletteTooltip>
 
             {/* セパレーター */}
             <Separator className="my-1" />
 
             {/* ツール選択 */}
-            <TooltipPrimitive.Root>
-              <TooltipPrimitive.Trigger asChild>
-                <Button
-                  size="sm"
-                  variant={currentTool === "hand" ? "default" : "ghost"}
-                  onClick={() => onToolChange("hand")}
-                >
-                  <Hand className="h-4 w-4" />
-                </Button>
-              </TooltipPrimitive.Trigger>
-              <TooltipPrimitive.Portal>
-                <TooltipPrimitive.Content
-                  side="right"
-                  sideOffset={5}
-                  className={tooltipContentClass}
-                >
-                  <div className="text-center">
-                    <div className="font-medium">ハンドツール</div>
-                    <div className="text-xs text-gray-400">ドラッグで移動</div>
-                    <div className="mt-1 text-xs text-gray-400">
-                      キー:{" "}
-                      <Kbd variant="subtle">
-                        {(keyBindings["tool.hand"] || "H").toUpperCase()}
-                      </Kbd>
-                    </div>
-                  </div>
-                </TooltipPrimitive.Content>
-              </TooltipPrimitive.Portal>
-            </TooltipPrimitive.Root>
+            <PaletteTooltip
+              label="ハンドツール"
+              note="ドラッグで移動"
+              shortcutKey={(keyBindings["tool.hand"] || "H").toUpperCase()}
+            >
+              <Button
+                size="sm"
+                variant={currentTool === "hand" ? "default" : "ghost"}
+                onClick={() => onToolChange("hand")}
+              >
+                <Hand className="h-4 w-4" />
+              </Button>
+            </PaletteTooltip>
 
-            <TooltipPrimitive.Root>
-              <TooltipPrimitive.Trigger asChild>
-                <Button
-                  size="sm"
-                  variant={currentTool === "select" ? "default" : "ghost"}
-                  onClick={() => onToolChange("select")}
-                >
-                  <MousePointer2 className="h-4 w-4" />
-                </Button>
-              </TooltipPrimitive.Trigger>
-              <TooltipPrimitive.Portal>
-                <TooltipPrimitive.Content
-                  side="right"
-                  sideOffset={5}
-                  className={tooltipContentClass}
-                >
-                  <div className="text-center">
-                    <div className="font-medium">選択ツール</div>
-                    <div className="text-xs text-gray-400">
-                      図形を選択・移動・削除
-                    </div>
-                    <div className="mt-1 text-xs text-gray-400">
-                      キー:{" "}
-                      <Kbd variant="subtle">
-                        {(keyBindings["tool.select"] || "G").toUpperCase()}
-                      </Kbd>
-                    </div>
-                  </div>
-                </TooltipPrimitive.Content>
-              </TooltipPrimitive.Portal>
-            </TooltipPrimitive.Root>
+            <PaletteTooltip
+              label="選択ツール"
+              note="図形を選択・移動・削除"
+              shortcutKey={(keyBindings["tool.select"] || "G").toUpperCase()}
+            >
+              <Button
+                size="sm"
+                variant={currentTool === "select" ? "default" : "ghost"}
+                onClick={() => onToolChange("select")}
+              >
+                <MousePointer2 className="h-4 w-4" />
+              </Button>
+            </PaletteTooltip>
 
             <LineToolPopover
               currentTool={currentTool}
               onToolChange={onToolChange}
-              strokeColor={effectiveLineColor}
-              strokeWidth={effectiveLineWidth}
-              lineStyle={effectiveLineStyle}
-              onStrokeColorChange={handleLineColorChange}
-              onStrokeWidthChange={handleLineWidthChange}
-              onLineStyleChange={handleLineStyleChange}
+              strokeColor={line.color}
+              strokeWidth={line.width}
+              lineStyle={line.style}
+              onStrokeColorChange={line.onColorChange}
+              onStrokeWidthChange={line.onWidthChange}
+              onLineStyleChange={line.onStyleChange}
               hasSelectedElement={selectedLines.length > 0}
               hasOtherTypeSelected={
                 selectedRectangles.length > 0 ||
@@ -523,10 +216,10 @@ export function DrawingToolPalette({
             <RectangleToolPopover
               currentTool={currentTool}
               onToolChange={onToolChange}
-              strokeColor={effectiveRectColor}
-              strokeWidth={effectiveRectWidth}
-              onStrokeColorChange={handleRectColorChange}
-              onStrokeWidthChange={handleRectWidthChange}
+              strokeColor={rectangle.color}
+              strokeWidth={rectangle.width}
+              onStrokeColorChange={rectangle.onColorChange}
+              onStrokeWidthChange={rectangle.onWidthChange}
               hasSelectedElement={selectedRectangles.length > 0}
               hasOtherTypeSelected={
                 selectedLines.length > 0 ||
@@ -540,10 +233,10 @@ export function DrawingToolPalette({
             <EllipseToolPopover
               currentTool={currentTool}
               onToolChange={onToolChange}
-              strokeColor={effectiveEllipseColor}
-              strokeWidth={effectiveEllipseWidth}
-              onStrokeColorChange={handleEllipseColorChange}
-              onStrokeWidthChange={handleEllipseWidthChange}
+              strokeColor={ellipse.color}
+              strokeWidth={ellipse.width}
+              onStrokeColorChange={ellipse.onColorChange}
+              onStrokeWidthChange={ellipse.onWidthChange}
               hasSelectedElement={selectedEllipses.length > 0}
               hasOtherTypeSelected={
                 selectedLines.length > 0 ||
@@ -557,8 +250,8 @@ export function DrawingToolPalette({
             <TextToolPopover
               currentTool={currentTool}
               onToolChange={onToolChange}
-              textColor={effectiveTextColor}
-              onTextColorChange={handleTextColorChange}
+              textColor={text.color}
+              onTextColorChange={text.onColorChange}
               hasSelectedElement={selectedTexts.length > 0}
               hasOtherTypeSelected={
                 selectedLines.length > 0 ||
@@ -573,39 +266,26 @@ export function DrawingToolPalette({
             {selectedElements.length > 0 && onToggleFavorite && (
               <>
                 <Separator className="my-1" />
-                <TooltipPrimitive.Root>
-                  <TooltipPrimitive.Trigger asChild>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        onToggleFavorite(
-                          selectedElements.map((element) => element.id)
-                        )
-                      }
-                    >
-                      <Star
-                        className={cn(
-                          "h-4 w-4",
-                          selectedElements.some((element) =>
-                            favoriteElementIds?.has(element.id)
-                          ) && "fill-yellow-400 text-yellow-400"
-                        )}
-                      />
-                    </Button>
-                  </TooltipPrimitive.Trigger>
-                  <TooltipPrimitive.Portal>
-                    <TooltipPrimitive.Content
-                      side="right"
-                      sideOffset={5}
-                      className={tooltipContentClass}
-                    >
-                      <div className="text-center">
-                        <div className="font-medium">お気に入り</div>
-                      </div>
-                    </TooltipPrimitive.Content>
-                  </TooltipPrimitive.Portal>
-                </TooltipPrimitive.Root>
+                <PaletteTooltip label="お気に入り">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      onToggleFavorite(
+                        selectedElements.map((element) => element.id)
+                      )
+                    }
+                  >
+                    <Star
+                      className={cn(
+                        "h-4 w-4",
+                        selectedElements.some((element) =>
+                          favoriteElementIds?.has(element.id)
+                        ) && "fill-yellow-400 text-yellow-400"
+                      )}
+                    />
+                  </Button>
+                </PaletteTooltip>
               </>
             )}
           </div>

@@ -9,7 +9,6 @@ import type {
   MasterAnswerKeyBehavior,
 } from "@/components/exams/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
-import { Kbd } from "@/components/ui/kbd"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -20,14 +19,10 @@ import {
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { useSlidingValue } from "@/hooks/useSlidingValue"
 
+import { ShortcutTooltip } from "./ShortcutTooltip"
 import { SidePanelSection } from "./SidePanelSection"
 
 interface MasterAnswerControlsProps {
@@ -118,33 +113,26 @@ export function MasterAnswerControls({
             </div>
 
             {displayMode !== "off" && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={masterAnswerVisible ? "default" : "outline"}
-                    size="sm"
-                    className="h-8 shrink-0 px-3"
-                    onClick={handleClick}
-                    onPointerDown={handlePointerDown}
-                    onPointerUp={handlePointerUp}
-                    onPointerLeave={handlePointerUp}
-                  >
-                    {masterAnswerVisible ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div className="text-center">
-                    <div className="font-medium">模範解答の表示切替</div>
-                    <div className="mt-1 text-xs text-gray-400">
-                      キー: <Kbd>{toggleKey}</Kbd>
-                    </div>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
+              <ShortcutTooltip
+                description="模範解答の表示切替"
+                keys={[toggleKey]}
+              >
+                <Button
+                  variant={masterAnswerVisible ? "default" : "outline"}
+                  size="sm"
+                  className="h-8 shrink-0 px-3"
+                  onClick={handleClick}
+                  onPointerDown={handlePointerDown}
+                  onPointerUp={handlePointerUp}
+                  onPointerLeave={handlePointerUp}
+                >
+                  {masterAnswerVisible ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </ShortcutTooltip>
             )}
           </div>
 
