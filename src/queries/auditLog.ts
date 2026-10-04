@@ -41,12 +41,24 @@ export const auditLogListQuery = (
   pagination: AuditLogPagination
 ) =>
   queryOptions({
-    queryKey: ["auditLog", "list", filter, pagination] as const,
+    queryKey: [...auditLogListKey, filter, pagination] as const,
     queryFn: () =>
-      window.electronAPI.audit.getLogs({
-        ...filter,
-        limit: pagination.pageSize,
-        offset: (pagination.pageNumber - 1) * pagination.pageSize,
-      }),
+      window.electronAPI.audit.getLogs(
+        filter,
+        pagination.pageSize,
+        (pagination.pageNumber - 1) * pagination.pageSize
+      ),
     placeholderData: keepPreviousData,
+  })
+
+/**
+ * 絞り込みの選択肢（ログに現れた作業領域と対象）。
+ *
+ * 出どころはログ自身なので、削除済みの試験・生徒・採点領域も候補に出る。
+ * 引数なしで全件（作業領域は数十、対象は生徒×作業領域で数千行の規模）。
+ */
+export const auditLogScopesQuery = () =>
+  queryOptions({
+    queryKey: ["auditLog", "scopes"] as const,
+    queryFn: () => window.electronAPI.audit.getScopes(),
   })

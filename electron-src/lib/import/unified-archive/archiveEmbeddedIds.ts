@@ -13,8 +13,9 @@
  *
  * 今の schema で references の外に id を持つ列（2026-10-04 に schema を洗った結果）:
  * - ReturnSnapshot.scoresJson — 返却版の中身。cropRegionId（`r`）を持つ。ここで書き換える
- * - AuditLog.userId / scopeId / entityId / metadata / coalesceKey — 監査ログは振り直さず追記
- *   だけなので、元の id を指したまま残す（元の行は消えないので記録として正しい）
+ * - AuditLog.userId / scopeId / entityId / metadata / coalesceKey、AuditLogTarget.targetId —
+ *   監査ログ（とその対象）は振り直さず追記だけなので、元の id を指したまま残す（元の行は
+ *   消えないので記録として正しい）
  */
 
 /** id を JSON に埋め込んでいる列（表 → 列） */

@@ -7,7 +7,10 @@ import type { CropRegionOmrConfig } from "@prisma/client"
 import type { CropRegionOmrConfigWithOptions } from "@/types/omr.types"
 
 import { recordAuditLog } from "./auditLog"
-import { resolveExamScopeByCropRegion } from "./auditScope"
+import {
+  resolveCropRegionTargets,
+  resolveExamScopeByCropRegion,
+} from "./auditScope"
 import prisma from "./client"
 
 export interface UpsertOmrConfigData {
@@ -108,6 +111,7 @@ export async function upsertOmrConfig(
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
     coalesceKey: `omr_config:${data.cropRegionId}`,
+    targets: await resolveCropRegionTargets(data.cropRegionId),
   })
 
   return result
@@ -129,6 +133,7 @@ export async function deleteOmrConfig(cropRegionId: string): Promise<void> {
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
     summary: "OMR設定を削除しました",
+    targets: await resolveCropRegionTargets(cropRegionId),
   })
 }
 

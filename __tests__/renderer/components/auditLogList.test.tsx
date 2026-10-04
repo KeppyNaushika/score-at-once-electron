@@ -2,7 +2,7 @@
 /**
  * 監査ログ一覧（独立ページ `/audit-logs` の中身）の検査。
  *
- * 固定するのは5組。
+ * 固定するのは6組。
  *
  * 1. **切るのは main。** 画面は1ページ分しか要求せず（`limit` / `offset` 付き）、
  *    受け取った行だけを描く。保持365日ぶんの行を renderer へ運んでから切る形に
@@ -16,6 +16,13 @@
  *    が要求の件数になる。行の高さが固定であることが前提なので、行が伸び縮みする
  *    作りへ戻すとこの数は意味を失う
  *
+ * 6. **絞り込みの欄（構文 + 補完）。** `student:` と打つと候補が出て、選ぶと chip に
+ *    なり、要求の `targets` に乗る。採点領域を選ぶと、その試験の欄も一緒に足される。
+ *    操作種別は action の集合へ展開して渡す（DB に verb の列は無い）
+ *
+ * 7. **操作者の名前が引けないとき。** `userId` が null ならシステム操作、
+ *    `userId` があるのに利用者がいなければ削除された利用者。名前は残さない（削除の仕様）
+ *
  * jsdom は高さを持たない（`clientHeight` は 0）ので、1〜4 では「自動」が
  * `FALLBACK_PAGE_SIZE` へ落ちる。5 だけが高さを差し込む。
  */
@@ -26,13 +33,17 @@ import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AuditLogItem } from "@/app/(app)/audit-logs/components/AuditLogItem"
 import { AuditLogList } from "@/app/(app)/audit-logs/components/AuditLogList"
 import { AUDIT_LOG_ROW_HEIGHT } from "@/app/(app)/audit-logs/constants"
 import type {
-  AuditLogEntry,
-  AuditLogQueryOptions,
+  AuditLogFilter,
+  AuditScopeFacet,
+  AuditTargetFacet,
 } from "@/electron-src/lib/prisma/auditQuery"
 import { FALLBACK_PAGE_SIZE } from "@/lib/listPagination"
+import { auditActionKeysOfVerb } from "@/lib/shared/auditActions"
+import type { AuditLogRow } from "@/types/auditLog.types"
 
 import { createQueryWrapper } from "../../helpers/queryWrapper"
 
@@ -44,48 +55,89 @@ const PAGE_SIZE = FALLBACK_PAGE_SIZE
 /** 検索欄のデバウンス（300ms）を確実に越える待ち時間 */
 const DEBOUNCE_WAIT_MS = 400
 
-const buildEntry = (rowNumber: number): AuditLogEntry => ({
+const buildLog = (rowNumber: number): AuditLogRow => ({
   id: `audit-${rowNumber}`,
-  createdAt: "2026-08-20T00:00:00.000Z",
-  updatedAt: "2026-08-20T00:00:00.000Z",
-  occurrences: 1,
+  createdAt: new Date("2026-08-20T00:00:00.000Z"),
+  updatedAt: new Date("2026-08-20T00:00:00.000Z"),
   action: "exam.create",
   category: "exam",
-  verb: "create",
   userId: null,
-  actorName: "採点 太郎",
-  actorUsername: "taro",
   entityType: "Exam",
   entityId: `exam-${rowNumber}`,
   scopeId: `exam-${rowNumber}`,
   scopeLabel: null,
   summary: `テスト操作 ${rowNumber}`,
   metadata: null,
+  coalesceKey: null,
+  targets: [],
 })
 
-const allEntries = Array.from({ length: TOTAL_ROWS }, (_, i) =>
-  buildEntry(i + 1)
+const allLogs = Array.from({ length: TOTAL_ROWS }, (_, i) => buildLog(i + 1))
+
+const getLogs = vi.fn(
+  async (filter: AuditLogFilter, limit: number, offset: number) => {
+    const matched = filter.search
+      ? allLogs.filter((log) => log.summary.includes(filter.search ?? ""))
+      : allLogs
+    return {
+      logs: matched.slice(offset, offset + limit),
+      total: matched.length,
+      limit,
+      offset,
+    }
+  }
 )
 
-const getLogs = vi.fn(async (options: AuditLogQueryOptions = {}) => {
-  const matched = options.search
-    ? allEntries.filter((entry) => entry.summary.includes(options.search ?? ""))
-    : allEntries
-  const limit = options.limit ?? matched.length
-  const offset = options.offset ?? 0
-  return {
-    entries: matched.slice(offset, offset + limit),
-    total: matched.length,
-    limit,
-    offset,
-  }
-})
+/** 絞り込みの選択肢。採点領域「1-1」は試験Aにだけ現れる */
+const scopeFacets: AuditScopeFacet[] = [
+  { scopeId: "exam-a", scopeLabel: "試験A", category: "exam" },
+  { scopeId: "exam-b", scopeLabel: "試験B", category: "exam" },
+]
+const targetFacets: AuditTargetFacet[] = [
+  {
+    targetType: "Student",
+    targetId: "student-yamada",
+    targetLabel: "山田 太郎",
+    scopeId: "exam-a",
+    scopeLabel: "試験A",
+  },
+  {
+    targetType: "Student",
+    targetId: "student-yamada",
+    targetLabel: "山田 太郎",
+    scopeId: "exam-b",
+    scopeLabel: "試験B",
+  },
+  {
+    targetType: "Student",
+    targetId: "student-suzuki",
+    targetLabel: "鈴木 花子",
+    scopeId: "exam-a",
+    scopeLabel: "試験A",
+  },
+  {
+    targetType: "CropRegion",
+    targetId: "region-a",
+    targetLabel: "1-1",
+    scopeId: "exam-a",
+    scopeLabel: "試験A",
+  },
+]
+const getScopes = vi.fn(async () => ({
+  scopes: scopeFacets,
+  targets: targetFacets,
+}))
+
+/** 直近の要求の絞り込み条件 */
+const lastFilter = (): AuditLogFilter | undefined =>
+  getLogs.mock.calls.at(-1)?.[0]
 
 beforeEach(() => {
   getLogs.mockClear()
+  getScopes.mockClear()
   Object.defineProperty(window, "electronAPI", {
     value: {
-      audit: { getLogs },
+      audit: { getLogs, getScopes },
       fetchUsers: vi.fn().mockResolvedValue([]),
     },
     writable: true,
@@ -104,11 +156,9 @@ describe("監査ログ一覧", () => {
     await renderList()
 
     // 要求は必ず切られている（全件を運んでから画面で切らない）
-    expect(getLogs).toHaveBeenCalledWith(
-      expect.objectContaining({ limit: PAGE_SIZE, offset: 0 })
-    )
+    expect(getLogs).toHaveBeenCalledWith(expect.anything(), PAGE_SIZE, 0)
     for (const call of getLogs.mock.calls) {
-      expect(call[0]?.limit).toBe(PAGE_SIZE)
+      expect(call[1]).toBe(PAGE_SIZE)
     }
 
     expect(screen.getByText(`が テスト操作 ${PAGE_SIZE}`)).toBeInTheDocument()
@@ -132,7 +182,9 @@ describe("監査ログ一覧", () => {
       ).toBeInTheDocument()
     })
     expect(getLogs).toHaveBeenCalledWith(
-      expect.objectContaining({ limit: PAGE_SIZE, offset: PAGE_SIZE })
+      expect.anything(),
+      PAGE_SIZE,
+      PAGE_SIZE
     )
     expect(screen.queryByText("が テスト操作 1")).not.toBeInTheDocument()
     expect(
@@ -165,7 +217,7 @@ describe("監査ログ一覧", () => {
       expect(screen.getByText("が テスト操作 1")).toBeInTheDocument()
     })
     for (const call of getLogs.mock.calls) {
-      expect(call[0]?.offset).toBe(0)
+      expect(call[2]).toBe(0)
     }
   })
 
@@ -193,7 +245,7 @@ describe("監査ログ一覧", () => {
     ).toBeInTheDocument()
     expect(screen.queryByText("が テスト操作 1")).not.toBeInTheDocument()
     // 一度2ページ目へ移った後で、先頭のページを取り直してもいない
-    const offsets = getLogs.mock.calls.map((call) => call[0]?.offset)
+    const offsets = getLogs.mock.calls.map((call) => call[2])
     expect(offsets.lastIndexOf(0)).toBeLessThan(offsets.lastIndexOf(PAGE_SIZE))
   })
 
@@ -210,11 +262,16 @@ describe("監査ログ一覧", () => {
       ).toBeInTheDocument()
     })
 
-    await user.type(screen.getByRole("textbox", { name: "内容で検索" }), "77")
+    await user.type(
+      screen.getByRole("textbox", { name: "絞り込み・内容で検索" }),
+      "77"
+    )
 
     await waitFor(() => {
       expect(getLogs).toHaveBeenCalledWith(
-        expect.objectContaining({ search: "77", offset: 0 })
+        expect.objectContaining({ search: "77" }),
+        PAGE_SIZE,
+        0
       )
     })
     await waitFor(() => {
@@ -224,6 +281,117 @@ describe("監査ログ一覧", () => {
       screen.queryByText(`が テスト操作 ${PAGE_SIZE * 2 + 1}`)
     ).not.toBeInTheDocument()
     expect(screen.getByText("1 件中 1〜1 件")).toBeInTheDocument()
+  })
+})
+
+describe("監査ログの絞り込み欄", () => {
+  const filterInput = () =>
+    screen.getByRole("textbox", { name: "絞り込み・内容で検索" })
+
+  it("欄の名前を打つと候補が出て、選ぶと chip になり対象の条件が要求に乗る", async () => {
+    const user = userEvent.setup()
+    await renderList()
+
+    await user.click(filterInput())
+    await user.type(filterInput(), "student:山田")
+    await user.click(await screen.findByRole("option", { name: /山田 太郎/ }))
+
+    expect(
+      screen.getByRole("button", { name: "生徒「山田 太郎」を外す" })
+    ).toBeInTheDocument()
+    await waitFor(() => {
+      expect(lastFilter()?.targets).toEqual([
+        { targetType: "Student", targetId: "student-yamada" },
+      ])
+    })
+    // 欄の名前を付けて打った文字は全文検索に回らない
+    expect(lastFilter()?.search).toBeUndefined()
+  })
+
+  it("Tab で欄の名前を補完し、もう一度 Tab で候補を確定する", async () => {
+    const user = userEvent.setup()
+    await renderList()
+
+    await user.click(filterInput())
+    await user.type(filterInput(), "stu")
+    await user.keyboard("{Tab}")
+    expect(filterInput()).toHaveValue("student:")
+
+    await user.type(filterInput(), "鈴木")
+    await screen.findByRole("option", { name: /鈴木 花子/ })
+    await user.keyboard("{Tab}")
+
+    await waitFor(() => {
+      expect(lastFilter()?.targets).toEqual([
+        { targetType: "Student", targetId: "student-suzuki" },
+      ])
+    })
+    expect(filterInput()).toHaveValue("")
+  })
+
+  it("Enter で先頭の候補を確定する", async () => {
+    const user = userEvent.setup()
+    await renderList()
+
+    await user.click(filterInput())
+    await user.type(filterInput(), "is:作成")
+    await screen.findByRole("option", { name: "作成" })
+    await user.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(lastFilter()?.actions).toEqual(auditActionKeysOfVerb("create"))
+    })
+  })
+
+  it("試験が未確定のまま採点領域を選ぶと、その試験の欄も一緒に足される", async () => {
+    const user = userEvent.setup()
+    await renderList()
+
+    await user.click(filterInput())
+    await user.type(filterInput(), "region:1-1")
+    // 同じ名前の採点領域を見分けるため、試験名を添えて出す
+    await user.click(await screen.findByRole("option", { name: /1-1.*試験A/ }))
+
+    await waitFor(() => {
+      expect(lastFilter()).toEqual(
+        expect.objectContaining({
+          scopeId: "exam-a",
+          targets: [{ targetType: "CropRegion", targetId: "region-a" }],
+        })
+      )
+    })
+  })
+
+  it("試験を確定すると、採点領域の候補はその試験の中だけになる", async () => {
+    const user = userEvent.setup()
+    await renderList()
+
+    await user.click(filterInput())
+    await user.type(filterInput(), "scope:試験B")
+    await user.click(await screen.findByRole("option", { name: /試験B/ }))
+    await user.type(filterInput(), "region:")
+
+    await waitFor(() => {
+      expect(screen.getByText("該当する候補がありません")).toBeInTheDocument()
+    })
+  })
+
+  it("操作種別は action の集合へ展開して渡し、Backspace で直前の chip を外す", async () => {
+    const user = userEvent.setup()
+    await renderList()
+
+    await user.click(filterInput())
+    await user.type(filterInput(), "is:削除")
+    await user.click(await screen.findByRole("option", { name: "削除" }))
+
+    await waitFor(() => {
+      expect(lastFilter()?.actions).toEqual(auditActionKeysOfVerb("delete"))
+    })
+
+    await user.keyboard("{Backspace}")
+    await waitFor(() => {
+      expect(lastFilter()?.actions).toBeUndefined()
+    })
   })
 })
 
@@ -305,10 +473,9 @@ describe("監査ログ一覧の「自動」件数", () => {
       ).toBeInTheDocument()
     })
     expect(getLogs).toHaveBeenCalledWith(
-      expect.objectContaining({
-        limit: grownPageSize,
-        offset: TOTAL_ROWS - grownPageSize,
-      })
+      expect.anything(),
+      grownPageSize,
+      TOTAL_ROWS - grownPageSize
     )
     expect(
       screen.getByText(
@@ -325,7 +492,9 @@ describe("監査ログ一覧の「自動」件数", () => {
 
     await waitFor(() => {
       expect(getLogs).toHaveBeenCalledWith(
-        expect.objectContaining({ limit: expectedPageSize, offset: 0 })
+        expect.anything(),
+        expectedPageSize,
+        0
       )
     })
     expect(
@@ -334,5 +503,24 @@ describe("監査ログ一覧の「自動」件数", () => {
     expect(
       screen.queryByText(`が テスト操作 ${expectedPageSize + 1}`)
     ).not.toBeInTheDocument()
+  })
+})
+
+describe("監査ログの操作者", () => {
+  it("userId が null の操作は「システム」と出す", () => {
+    render(<AuditLogItem log={buildLog(1)} actorName={null} />)
+
+    expect(screen.getByText("システム")).toBeInTheDocument()
+  })
+
+  it("利用者が見つからない操作は「削除されたユーザー」と出す", () => {
+    render(
+      <AuditLogItem
+        log={{ ...buildLog(1), userId: "deleted-user" }}
+        actorName={null}
+      />
+    )
+
+    expect(screen.getByText("削除されたユーザー")).toBeInTheDocument()
   })
 })

@@ -1,25 +1,40 @@
 /**
  * @fileoverview 監査ログ取得サービス
- * @description Discord風監査ログの読み出し。フィルタ・ページネーションに対応し、
- *   操作者（actor）の表示情報をサーバー側で付与して返す。
+ * @description 監査ログの読み出し。絞り込み・ページ送り・総件数だけを main で行い、
+ *   **行は射影せずそのまま**（対象 `targets` を include して）返す。
+ *
+ *   ここは「計算は renderer 側」規約に対する、所有者が名指しで認めた例外である
+ *   （`docs/coding-style.md` の例外一覧）。監査ログは保持日数のぶん積み上がり、全行を
+ *   renderer へ渡せないため。認められているのは `where` / `orderBy` / `take` / `skip` /
+ *   `count` / 選択肢の `distinct` だけで、**行の射影・関連の平坦化・表示値の導出・表示の
+ *   ための集計はしない**（操作者名・種別・集約回数は renderer が行から導く）。
+ *   例外を負うのはこのファイルの `getAuditLogs` / `getAuditLogScopes` の2関数だけ。
  */
 
 import { Prisma } from "@prisma/client"
 
-import {
-  type AuditCategory,
-  type AuditVerb,
-  getAuditActionDef,
-} from "./auditActions"
+import type { AuditCategory, AuditTargetType } from "@/lib/shared/auditActions"
+
 import prisma from "./client"
+
+/** 対象1つでの絞り込み（`AuditLogTarget` の種類と id） */
+export interface AuditLogTargetFilter {
+  targetType: AuditTargetType
+  targetId: string
+}
 
 export interface AuditLogFilter {
   userId?: string
   category?: AuditCategory
-  /** 完全一致のアクションキー */
-  action?: string
+  /**
+   * アクションキーの集合（どれかに一致）。操作種別（verb）での絞り込みは renderer が
+   * ここへ展開して渡す（DB に verb の列は無い）。空の配列は何にも一致しない
+   */
+  actions?: string[]
   /** 親エンティティID（特定の試験・成績などに絞る） */
   scopeId?: string
+  /** 対象（生徒・採点領域など）。複数あれば、すべてを対象に持つログだけ */
+  targets?: AuditLogTargetFilter[]
   /** ISO文字列。最後の操作がこの日時以降 */
   dateFrom?: string
   /** ISO文字列。最後の操作がこの日時以前 */
@@ -28,38 +43,21 @@ export interface AuditLogFilter {
   search?: string
 }
 
-export interface AuditLogQueryOptions extends AuditLogFilter {
-  /** 取得件数（既定50、最大200） */
-  limit?: number
-  /** オフセット（既定0） */
-  offset?: number
-}
+/** 行と一緒に返す関連（対象）。行はこの形のまま renderer へ渡る */
+const auditLogInclude = {
+  targets: true,
+} satisfies Prisma.AuditLogInclude
 
-/** UIへ返す1件分の監査ログ（操作者情報・カテゴリ・verbを付与済み） */
-export interface AuditLogEntry {
-  id: string
-  createdAt: string // ISO（初回操作時刻）
-  updatedAt: string // ISO（最終更新時刻。集約された場合は createdAt より後）
-  occurrences: number // 集約回数（連続操作のまとめ件数。1なら単発）
-  action: string
-  category: AuditCategory
-  verb: AuditVerb
-  userId: string | null
-  actorName: string | null
-  actorUsername: string | null
-  entityType: string
-  entityId: string
-  scopeId: string | null
-  scopeLabel: string | null
-  summary: string
-  /** パース済み metadata（changes / target 等） */
-  metadata: Record<string, unknown> | null
-}
+export type AuditLogWithTargets = Prisma.AuditLogGetPayload<{
+  include: typeof auditLogInclude
+}>
 
 interface AuditLogPage {
-  entries: AuditLogEntry[]
+  logs: AuditLogWithTargets[]
   total: number
+  /** clamp 後の実効値 */
   limit: number
+  /** clamp 後の実効値 */
   offset: number
 }
 
@@ -67,8 +65,15 @@ const buildWhere = (filter: AuditLogFilter): Prisma.AuditLogWhereInput => {
   const where: Prisma.AuditLogWhereInput = {}
   if (filter.userId) where.userId = filter.userId
   if (filter.category) where.category = filter.category
-  if (filter.action) where.action = filter.action
+  if (filter.actions) where.action = { in: filter.actions }
   if (filter.scopeId) where.scopeId = filter.scopeId
+  if (filter.targets && filter.targets.length > 0) {
+    where.AND = filter.targets.map((target) => ({
+      targets: {
+        some: { targetType: target.targetType, targetId: target.targetId },
+      },
+    }))
+  }
   // 日時の絞り込みも、並びと表示に合わせて最後の操作の時刻（updatedAt）で見る
   if (filter.dateFrom || filter.dateTo) {
     const updatedAt: Prisma.DateTimeFilter = {}
@@ -91,6 +96,9 @@ const compactSearchTerm = (search: string): string =>
  * 一致した id を全部集めて `in` で渡す形は採らない —— 「試験」のような語は
  * 数万件に当たり、SQLite の変数の上限に掛かる。返すのは1ページ分（最大200件）だけ。
  *
+ * 絞り込みの条件は `buildWhere` と同じものを SQL で書く。**どちらかに条件を足したら
+ * もう片方にも足すこと**（検索語の有無で絞り込みの効き方が変わってしまう）。
+ *
  * 並びは Prisma 側（`buildWhere` を使う経路）と同じ `updatedAt` の新しい順、同時刻は id。
  * 日時の比較は `julianday()` を通す。列は `+00:00` 付きの ISO で入っており、
  * `toISOString()` の `Z` とは文字列のままでは比べられない。
@@ -111,8 +119,19 @@ const searchAuditLogPage = async (
   if (filter.userId) conditions.push(Prisma.sql`"userId" = ${filter.userId}`)
   if (filter.category)
     conditions.push(Prisma.sql`"category" = ${filter.category}`)
-  if (filter.action) conditions.push(Prisma.sql`"action" = ${filter.action}`)
+  if (filter.actions) {
+    conditions.push(
+      filter.actions.length > 0
+        ? Prisma.sql`"action" IN (${Prisma.join(filter.actions)})`
+        : Prisma.sql`0 = 1`
+    )
+  }
   if (filter.scopeId) conditions.push(Prisma.sql`"scopeId" = ${filter.scopeId}`)
+  for (const target of filter.targets ?? []) {
+    conditions.push(
+      Prisma.sql`EXISTS (SELECT 1 FROM "AuditLogTarget" WHERE "AuditLogTarget"."auditLogId" = "AuditLog"."id" AND "AuditLogTarget"."targetType" = ${target.targetType} AND "AuditLogTarget"."targetId" = ${target.targetId})`
+    )
+  }
   if (filter.dateFrom)
     conditions.push(
       Prisma.sql`julianday("updatedAt") >= julianday(${new Date(filter.dateFrom).toISOString()})`
@@ -137,128 +156,101 @@ const searchAuditLogPage = async (
   }
 }
 
-const parseMetadata = (raw: string | null): Record<string, unknown> | null => {
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as Record<string, unknown>
-  } catch {
-    return null
-  }
-}
-
 /**
- * 監査ログをフィルタ・ページネーションして取得する。
- * 操作者名は userId からまとめて解決して付与する。
+ * 監査ログを絞り込み、1ページ分の行（対象つき）と総件数を返す。
+ *
+ * 行はそのまま返す。操作者名（`userId` → 利用者一覧）・種別（`action` → カタログ）・
+ * 集約回数（`metadata`）は renderer が導く。
  */
 export async function getAuditLogs(
-  options: AuditLogQueryOptions = {}
+  filter: AuditLogFilter = {},
+  requestedLimit = 50,
+  requestedOffset = 0
 ): Promise<AuditLogPage> {
-  const limit = Math.min(Math.max(options.limit ?? 50, 1), 200)
-  const offset = Math.max(options.offset ?? 0, 0)
-  const search = options.search?.trim() ?? ""
+  const limit = Math.min(Math.max(requestedLimit, 1), 200)
+  const offset = Math.max(requestedOffset, 0)
+  const search = filter.search?.trim() ?? ""
 
   // 並びは最後の操作の時刻（updatedAt）の新しい順。一覧が表示する時刻も updatedAt
   // なので、まとめた行（occurrences > 1）も表示時刻の並びに収まる。createdAt で
   // 並べると、少し前に始めて今も続けている操作が、表示は「たった今」なのに
   // 下の方へ沈む。同時刻は id で順を決め、ページをまたいで行が揺れないようにする
-  const { rows, total } =
-    compactSearchTerm(search) === ""
-      ? await (async () => {
-          const where = buildWhere(options)
-          const [pageRows, pageTotal] = await Promise.all([
-            prisma.auditLog.findMany({
-              where,
-              orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
-              take: limit,
-              skip: offset,
-            }),
-            prisma.auditLog.count({ where }),
-          ])
-          return { rows: pageRows, total: pageTotal }
-        })()
-      : await (async () => {
-          const page = await searchAuditLogPage(
-            { ...options, search },
-            limit,
-            offset
-          )
-          const pageRows = await prisma.auditLog.findMany({
-            where: { id: { in: page.ids } },
-          })
-          // in は順を守らないので、SQL が決めた並びへ戻す
-          const rowById = new Map(pageRows.map((row) => [row.id, row]))
-          return {
-            rows: page.ids.flatMap((id) => rowById.get(id) ?? []),
-            total: page.total,
-          }
-        })()
+  if (compactSearchTerm(search) === "") {
+    const where = buildWhere(filter)
+    const [logs, total] = await Promise.all([
+      prisma.auditLog.findMany({
+        where,
+        include: auditLogInclude,
+        orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+        take: limit,
+        skip: offset,
+      }),
+      prisma.auditLog.count({ where }),
+    ])
+    return { logs, total, limit, offset }
+  }
 
-  // 操作者情報を一括解決
-  const userIds = Array.from(
-    new Set(rows.map((row) => row.userId).filter((id): id is string => !!id))
-  )
-  const users =
-    userIds.length > 0
-      ? await prisma.user.findMany({
-          where: { id: { in: userIds } },
-          // パスコードだけを落とす（機密除去。縮小射影ではない）
-          omit: { passcode: true },
-        })
-      : []
-  const userMap = new Map(users.map((user) => [user.id, user]))
-
-  const toIso = (v: Date | string): string =>
-    v instanceof Date ? v.toISOString() : String(v)
-
-  const entries: AuditLogEntry[] = rows.map((row) => {
-    const def = getAuditActionDef(row.action)
-    const actor = row.userId ? userMap.get(row.userId) : undefined
-    const metadata = parseMetadata(row.metadata)
-    const occurrences =
-      typeof metadata?.occurrences === "number" ? metadata.occurrences : 1
-    return {
-      id: row.id,
-      createdAt: toIso(row.createdAt),
-      updatedAt: toIso(row.updatedAt),
-      occurrences,
-      action: row.action,
-      category: def.category,
-      verb: def.verb,
-      userId: row.userId,
-      actorName: actor?.name ?? null,
-      actorUsername: actor?.username ?? null,
-      entityType: row.entityType,
-      entityId: row.entityId,
-      scopeId: row.scopeId,
-      scopeLabel: row.scopeLabel,
-      summary: row.summary,
-      metadata,
-    }
+  const page = await searchAuditLogPage({ ...filter, search }, limit, offset)
+  const pageLogs = await prisma.auditLog.findMany({
+    where: { id: { in: page.ids } },
+    include: auditLogInclude,
   })
-
-  return { entries, total, limit, offset }
+  // in は順を守らないので、SQL が決めた並びへ戻す
+  const logById = new Map(pageLogs.map((log) => [log.id, log]))
+  return {
+    logs: page.ids.flatMap((id) => logById.get(id) ?? []),
+    total: page.total,
+    limit,
+    offset,
+  }
 }
 
-/** フィルタUI用のファセット（出現したscopeの一覧をカテゴリ別に返す） */
-interface AuditScopeFacet {
+/** 絞り込みの選択肢: ログに現れた作業領域（試験・成績など）。名前が変われば別の行になる */
+export interface AuditScopeFacet {
   scopeId: string
   scopeLabel: string | null
   category: string
 }
 
-export async function getAuditLogScopes(): Promise<AuditScopeFacet[]> {
-  const rows = await prisma.auditLog.findMany({
-    where: { scopeId: { not: null } },
-    distinct: ["scopeId"],
-    orderBy: { createdAt: "desc" },
-  })
-  return rows
-    .filter((row): row is typeof row & { scopeId: string } => !!row.scopeId)
-    .map((row) => ({
-      scopeId: row.scopeId,
-      scopeLabel: row.scopeLabel,
-      category: row.category,
-    }))
+/**
+ * 絞り込みの選択肢: ログに現れた対象。採点領域の候補に試験名を併記するため、
+ * その対象が現れたログの作業領域も一緒に返す（同じ対象が作業領域の数だけ並ぶ）
+ */
+export interface AuditTargetFacet {
+  targetType: string
+  targetId: string
+  targetLabel: string | null
+  scopeId: string | null
+  scopeLabel: string | null
+}
+
+/**
+ * 絞り込みの選択肢（作業領域と対象）。引数なしで全件。
+ *
+ * **出どころはログ自身**（`CropRegion` などの表ではない）。削除済みの対象も候補に出し、
+ * 削除のログをラベルで探してから、その対象の全ログを引けるようにするため。
+ * Prisma の `distinct` は SQLite ではアプリ側で行う（全行を読む）ので、`SELECT DISTINCT`
+ * を SQL で書く。
+ */
+export async function getAuditLogScopes(): Promise<{
+  scopes: AuditScopeFacet[]
+  targets: AuditTargetFacet[]
+}> {
+  const [scopes, targets] = await Promise.all([
+    prisma.$queryRaw<AuditScopeFacet[]>`
+      SELECT DISTINCT "scopeId", "scopeLabel", "category" FROM "AuditLog"
+      WHERE "scopeId" IS NOT NULL`,
+    prisma.$queryRaw<AuditTargetFacet[]>`
+      SELECT DISTINCT
+        "AuditLogTarget"."targetType" AS "targetType",
+        "AuditLogTarget"."targetId" AS "targetId",
+        "AuditLogTarget"."targetLabel" AS "targetLabel",
+        "AuditLog"."scopeId" AS "scopeId",
+        "AuditLog"."scopeLabel" AS "scopeLabel"
+      FROM "AuditLogTarget"
+      JOIN "AuditLog" ON "AuditLog"."id" = "AuditLogTarget"."auditLogId"`,
+  ])
+  return { scopes, targets }
 }
 
 /** 監査ログの既定保持日数（これより古いエントリは起動時プルーニングの対象） */

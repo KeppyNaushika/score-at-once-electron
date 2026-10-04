@@ -2,8 +2,10 @@
  * @fileoverview 監査ログのアクションカタログ
  * @description Discord風監査ログで記録する全アクションの一元定義。
  *   アクションキーは `domain.entity.verb` 形式の名前空間付き文字列。
- *   記録側（auditLog.ts）はこのカタログから category とサマリ用ラベルを解決し、
- *   表示側（UI）は category / verb でフィルタ・アイコン分けを行う。
+ *   記録側（`electron-src/lib/prisma/auditLog.ts`）はこのカタログから category と
+ *   サマリ用ラベルを解決し、表示側（renderer）は verb でアイコンを分け、操作種別の
+ *   絞り込みを action の集合へ展開する。両側が同じ表を引くので `src/lib/shared/` に置く
+ *   （renderer は `electron-src/` を値で import できない）。
  *
  *   ※閲覧（read/view）は記録対象外。状態を変える操作とエクスポートのみを定義する。
  */
@@ -17,9 +19,25 @@ export type AuditCategory =
   | "user" // ユーザー・権限
   | "system" // システム・その他
 
-/** アクションの種別（アイコン・色分け用） */
-export type AuditVerb =
-  "create" | "update" | "delete" | "export" | "import" | "other"
+/** アクションの種別（アイコン・色分け・操作種別の絞り込み用） */
+export const AUDIT_VERBS = [
+  "create",
+  "update",
+  "delete",
+  "export",
+  "import",
+  "other",
+] as const
+export type AuditVerb = (typeof AUDIT_VERBS)[number]
+
+/**
+ * 監査ログの対象（`AuditLogTarget.targetType`）の種類。
+ *
+ * 記録側がこの名前で書き、絞り込みの欄（生徒・採点領域）がこの名前で引く。
+ * 値はテーブル名にそろえる（`AuditLog.entityType` と同じ流儀）。
+ */
+export const AUDIT_TARGET_TYPES = ["Student", "CropRegion"] as const
+export type AuditTargetType = (typeof AUDIT_TARGET_TYPES)[number]
 
 interface AuditActionDef {
   category: AuditCategory
@@ -773,6 +791,17 @@ export const getAuditActionDef = (action: string): AuditActionDef => {
     (AUDIT_ACTIONS as Record<string, AuditActionDef>)[action] ?? FALLBACK_ACTION
   )
 }
+
+/**
+ * その種別に当たる定義済みのアクションキー。
+ *
+ * DB に verb の列は無いので、操作種別での絞り込みは renderer がここで action の集合へ
+ * 展開して main へ渡す（main に導出を持ち込まない。docs/audit-log-redesign.md）。
+ */
+export const auditActionKeysOfVerb = (verb: AuditVerb): string[] =>
+  Object.entries(AUDIT_ACTIONS)
+    .filter(([, def]) => def.verb === verb)
+    .map(([action]) => action)
 
 /** サマリ文字列を生成（{target} を対象ラベルに置換） */
 export const buildAuditSummary = (

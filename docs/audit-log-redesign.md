@@ -118,10 +118,11 @@ model AuditLogTarget {
 
 `scopeId`/`scopeLabel` が既にこの形。`AuditLogTarget` も `targetLabel` を持つ。
 
-**例外は `userId`**（現在は `User.name` を都度解決）。ユーザー削除機能が存在せず、
-User が存在するうちに migration すれば過去ログを埋められるため、今は不要。
-→ **ユーザー削除機能を実装するなら、その前に `actorLabel` を足すこと**。
-順序を逆にすると、削除された時点でその人の名前が永久に失われる。
+**例外は `userId`**（`User.name` を都度解決し、ラベルを持たない）。`actorLabel` は**足さない**。
+利用者を削除すると、その利用者のデータも一緒に消えるのが仕様で、ログにだけ名前を
+残すのは筋が通らないため。削除された利用者の操作は「削除されたユーザー」と表示する
+（`userId` が null のシステム操作は「システム」）。誰がいつ誰を削除したかは、
+`user.delete` のログが消された人の名前を `metadata.target` に残すので追える。
 
 ### フィルタ UI：構文 + 補完（chips）
 
@@ -307,3 +308,30 @@ PR-2 を PR-3 より前に置くのは、**対象ラベルがないとフィル�
   `entityType='CropRegion'` は `entityId` がそのまま（5,155件中5,152件が生存）、
   `entityType='QuestionScore'` は join で `cropRegionId` と `examStudentId→studentId` の両方が取れる（8,922件すべて生存）
 - `idChangeExecutor.ts` は他セッションが編集中の可能性がある（着手前に `git status` を確認）
+
+## 実装の記録
+
+### PR-2（記録の充実）・PR-3（フィルタ）で設計から変えた点
+
+- **`AuditLogTarget` に `createdAt` / `updatedAt` を持たせた。** sqlite-nas-sync は `id` と
+  `updatedAt` を持つ表を同期対象として検出するので、無いと端末間で対象が伝わらない
+- **既存のログへの対象の補完はしない**（設計の「過去ログのバックフィルは82%可能」は採らない）。
+  migration は各端末が手元の DB へ別々に当てるので、乱数の id で埋めると同じログに端末の数だけ
+  対象が付いて同期で重なり、id をログから組み立てる形は id の方針（uuidv4。
+  `uuidIdCoverage.test.ts`）に反する。帰結として、**この変更より前に記録されたログは、生徒・
+  採点領域での絞り込みに掛からない**。一覧には記録時の `metadata.target` のラベルを出す
+  （作業領域・操作者・種別・期間・全文検索での絞り込みには、従来どおり掛かる）
+- 統合アーカイブ（`.sao`）は監査ログを「選べる項目」として収録するようになった（上の却下表の
+  「監査ログのアーカイブ収録」とは別の判断）。対象はログに従って入り、取り込みはログと同じく
+  追記だけ
+- 対象を記録するのは、絞り込みの欄がある生徒（`Student`）と採点領域（`CropRegion`）だけ。
+  種類の一覧は `src/lib/shared/auditActions.ts` の `AUDIT_TARGET_TYPES`
+- アクションのカタログは renderer も引く（種別の展開・アイコン）ので `src/lib/shared/auditActions.ts`
+  へ移した。main は行をそのまま返し、操作者名・種別・集約回数は renderer が導く
+
+### 残り
+
+- PR-1 の残り: 保持期間の設定画面（既定 730日 → 365日）と LWW 同期、表示名「操作履歴」
+- PR-3 の残り: 絞り込み状態の文字列化（parse / build と往復一致テスト）。今は画面の中だけで
+  構造として持ち、文字列にする場面（URL・リンク）がまだ無い。PR-4 のリンクと一緒に入れる
+- PR-4（双方向リンク）、PR-5（未計装9件、student / classroom の `scopeId`）

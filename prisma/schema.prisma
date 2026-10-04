@@ -650,6 +650,7 @@ model AuditLog {
   summary     String // 人間可読の要約（構造化レンダリングのフォールバック）
   metadata    String? // JSON: { changes:[{field,label,before,after}], occurrences, target:{...} }
   coalesceKey String? // 連続操作の集約キー（同一キーの行を窓内で上書き更新）。indexで高速一致
+  targets     AuditLogTarget[]
 
   @@index([createdAt])
   @@index([updatedAt])
@@ -658,6 +659,29 @@ model AuditLog {
   @@index([scopeId])
   @@index([action])
   @@index([coalesceKey])
+}
+
+/// 監査ログが何に対する操作か（生徒・採点領域など）。1行のログが複数の対象を持つ
+/// （採点は「生徒 × 採点領域」）ので列ではなく子テーブルにする（docs/audit-log-redesign.md）。
+/// 対象側（targetId）には FK を張らない。対象が削除されてもログは残るため、
+/// 表示用のラベル（targetLabel）をスナップショットで持つ。
+/// 生徒は Student.id で記録する（ExamStudent.id ではない。成績・資料と軸を揃えるため）。
+model AuditLogTarget {
+  id          String   @id @default(uuid())
+  auditLogId  String
+  /// 対象のテーブル名（"Student" | "CropRegion" | ...）
+  targetType  String
+  /// 対象の id。FKは張らない（targetType で指す先が変わる多態参照。削除後もログは残す）
+  targetId    String
+  /// 表示用スナップショット（対象が消えても残す。"山田 太郎" / "1-1" 等）
+  targetLabel String?
+  createdAt   DateTime @default(now())
+  /// 同期（sqlite-nas-sync）は id と updatedAt を持つ表を同期対象として検出する
+  updatedAt   DateTime @updatedAt
+  auditLog    AuditLog @relation(fields: [auditLogId], references: [id], onDelete: Cascade)
+
+  @@index([targetType, targetId])
+  @@index([auditLogId])
 }
 
 model ExamClassroom {

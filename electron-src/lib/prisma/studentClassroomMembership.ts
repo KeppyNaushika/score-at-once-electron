@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client"
 
 import { recordAuditLog } from "./auditLog"
+import { studentAuditLabel, studentAuditTarget } from "./auditTargets"
 import prisma from "./client"
 
 type StudentClassroomMembershipWithStudentAndClassroom =
@@ -67,9 +68,8 @@ export const deleteStudentClassroomMembership = async (
       entityId: id,
       scopeId: before?.classroomId ?? null,
       scopeLabel: before?.classroom.name ?? null,
-      target: before
-        ? `${before.student.lastName} ${before.student.firstName}`.trim()
-        : null,
+      target: before ? studentAuditLabel(before.student) : null,
+      targets: before ? [studentAuditTarget(before.student)] : [],
     })
   } catch (error) {
     console.error("Failed to delete student class membership:", error)
@@ -114,7 +114,8 @@ export const addStudentToClassroom = async (
       entityId: result.id,
       scopeId: classroomId,
       scopeLabel: result.classroom?.name ?? null,
-      target: `${result.student.lastName} ${result.student.firstName}`.trim(),
+      target: studentAuditLabel(result.student),
+      targets: [studentAuditTarget(result.student)],
     })
 
     return result

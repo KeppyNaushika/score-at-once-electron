@@ -10,7 +10,9 @@
 import { DELETION_COUNT_NAME } from "@/lib/shared/deletionCountNames"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
-import { recordAuditLog } from "./auditLog"
+import { type AuditTargetInput, recordAuditLog } from "./auditLog"
+import { resolveStudentTargets } from "./auditScope"
+import { studentAuditTarget } from "./auditTargets"
 import prisma from "./client"
 import { deleteAfterRecount } from "./deleteAfterRecount"
 import { membershipFilterAt } from "./membershipFilter"
@@ -108,6 +110,7 @@ export async function rosterAddStudentsFromClassroom(
   )
 
   const toAdd: { studentId: string; customOrder: number }[] = []
+  const addedTargets: AuditTargetInput[] = []
   let orderOffset = maxCustomOrder + 1
   for (const membership of memberships) {
     if (!existingIds.has(membership.studentId)) {
@@ -115,6 +118,7 @@ export async function rosterAddStudentsFromClassroom(
         studentId: membership.studentId,
         customOrder: orderOffset++,
       })
+      addedTargets.push(studentAuditTarget(membership.student))
       existingIds.add(membership.studentId)
     }
   }
@@ -130,6 +134,7 @@ export async function rosterAddStudentsFromClassroom(
       scopeLabel: scope.scopeLabel,
       summary: adapter.audit.addFromClassroomSummary(toAdd.length),
       extra: { count: toAdd.length, classroomId },
+      targets: addedTargets,
     })
   }
 
@@ -172,6 +177,7 @@ export async function rosterAddStudents(
       scopeLabel: scope.scopeLabel,
       summary: adapter.audit.addIndividualSummary(rows.length),
       extra: { count: rows.length },
+      targets: await resolveStudentTargets(newStudentIds),
     })
   }
 
@@ -320,6 +326,8 @@ export async function rosterRemoveClassroom(
     scopeLabel: scope.scopeLabel,
     summary: adapter.audit.removeClassroomSummary(studentsToRemove.length),
     extra: { removedStudents: studentsToRemove.length, classroomId },
+    // 生徒ごと消した場合は、生徒の行がもう無いので対象に付けられない
+    targets: await resolveStudentTargets(studentsToRemove),
   })
 
   return { removedStudents: studentsToRemove.length }

@@ -5,11 +5,15 @@
  *   （ログ欠落 < 主操作の失敗）。アクション定義は auditActions.ts を参照。
  */
 
+import type { Prisma } from "@prisma/client"
+
 import {
   type AuditActionKey,
+  type AuditTargetType,
   buildAuditSummary,
   getAuditActionDef,
-} from "./auditActions"
+} from "@/lib/shared/auditActions"
+
 import { getCurrentActorUserId } from "./auditActor"
 import prisma from "./client"
 import type { Tx } from "./transactionClient"
@@ -22,6 +26,17 @@ export interface AuditChange {
   before: unknown
   after: unknown
 }
+
+/**
+ * ログ1行の対象1つ（`AuditLogTarget` の行）。
+ *
+ * Prisma の入力型から DB が決める列を外し、種類だけを定義済みの名前へ絞る（型注入）。
+ * 組み立ては `auditTargets.ts` の関数で行う（ラベルの作り方を1か所にそろえるため）。
+ */
+export type AuditTargetInput = Omit<
+  Prisma.AuditLogTargetCreateWithoutAuditLogInput,
+  "id" | "createdAt" | "updatedAt" | "targetType"
+> & { targetType: AuditTargetType }
 
 interface RecordAuditLogInput {
   /** アクションキー（カタログ参照。型補完のため AuditActionKey を推奨） */
@@ -41,6 +56,11 @@ interface RecordAuditLogInput {
   scopeLabel?: string | null
   /** 対象ラベル（サマリ生成用。生徒名・設問名等） */
   target?: string | null
+  /**
+   * 絞り込みに使う対象（生徒・採点領域など）。`AuditLogTarget` の子行になる。
+   * 生徒は `Student.id` で記録する（`ExamStudent.id` ではない）。
+   */
+  targets?: AuditTargetInput[]
   /** before→after の差分（更新系で使用） */
   changes?: AuditChange[]
   /** metadata に追加する任意情報 */
@@ -89,6 +109,7 @@ export async function recordAuditLog(
           updatedAt: { gte: windowStart },
         },
         orderBy: { updatedAt: "desc" },
+        include: { targets: true },
       })
       if (match) {
         const meta = JSON.parse(match.metadata ?? "{}") as {
@@ -100,10 +121,24 @@ export async function recordAuditLog(
         if (input.changes && input.changes.length > 0) {
           meta.changes = mergeCoalescedChanges(meta.changes, input.changes)
         }
+        // まとめた行に無かった対象だけを足す（同じキーなら普通は同じ対象）
+        const addedTargets = (input.targets ?? []).filter(
+          (target) =>
+            !match.targets.some(
+              (existing) =>
+                existing.targetType === target.targetType &&
+                existing.targetId === target.targetId
+            )
+        )
         // updatedAt は @updatedAt により自動更新される
         await client.auditLog.update({
           where: { id: match.id },
-          data: { metadata: JSON.stringify(meta) },
+          data: {
+            metadata: JSON.stringify(meta),
+            ...(addedTargets.length > 0 && {
+              targets: { create: addedTargets },
+            }),
+          },
         })
         return
       }
@@ -137,6 +172,10 @@ export async function recordAuditLog(
         summary,
         metadata,
         coalesceKey: input.coalesceKey ?? null,
+        ...(input.targets &&
+          input.targets.length > 0 && {
+            targets: { create: input.targets },
+          }),
       },
     })
   } catch (error) {

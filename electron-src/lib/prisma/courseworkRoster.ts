@@ -7,7 +7,7 @@
 
 import type { ConfirmedDeletionCount } from "../../../src/types/deletionConfirmation.types"
 import { recordAuditLog } from "./auditLog"
-import { resolveCourseworkScope } from "./auditScope"
+import { resolveCourseworkScope, resolveStudentTargets } from "./auditScope"
 import { getAvailableClassroomsForTarget } from "./availableClassrooms"
 import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
@@ -277,6 +277,7 @@ export async function removeStudentsFromCoursework(
     scopeLabel: scope.scopeLabel,
     summary: `資料対象生徒を${studentIds.length}名削除しました`,
     extra: { count: studentIds.length },
+    targets: await resolveStudentTargets(studentIds),
   })
 
   return { removedCount: studentIds.length }

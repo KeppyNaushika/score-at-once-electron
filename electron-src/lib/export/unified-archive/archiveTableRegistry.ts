@@ -511,6 +511,12 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
       nullable("adoptedDrawingAnnotationId", "DrawingAnnotation"),
     ],
   },
+  // 監査ログの対象。ログに従う（対象側の targetId は外部キーではない多態参照）
+  AuditLogTarget: {
+    role: "owned",
+    owner: ["auditLogId"],
+    references: [required("auditLogId", "AuditLog")],
+  },
 }
 
 /** 利用者が選ぶ4種の根 */

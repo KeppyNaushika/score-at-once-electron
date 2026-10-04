@@ -6,10 +6,12 @@
  */
 
 import { recordAuditLog } from "./auditLog"
+import { resolveExamScopeByCropRegion } from "./auditScope"
 import {
-  resolveExamScopeByCropRegion,
-  resolveExamStudentLabel,
-} from "./auditScope"
+  cropRegionAuditTarget,
+  studentAuditLabel,
+  studentAuditTarget,
+} from "./auditTargets"
 import prisma from "./client"
 import { PUBLIC_USER_OMIT } from "./publicUser"
 import {
@@ -82,7 +84,8 @@ export const setQuestionScoreComment = async (
   })
 
   const scope = await resolveExamScopeByCropRegion(data.cropRegionId)
-  const studentLabel = await resolveExamStudentLabel(data.examStudentId)
+  // 生徒と採点領域は書き込みの include で取れている（取り直さない）
+  const studentLabel = studentAuditLabel(updated.examStudent.student)
   await recordAuditLog({
     action: "exam.score.comment",
     userId: data.userId,
@@ -100,6 +103,10 @@ export const setQuestionScoreComment = async (
         before: existing?.comment ?? "",
         after: data.comment,
       },
+    ],
+    targets: [
+      studentAuditTarget(updated.examStudent.student),
+      cropRegionAuditTarget(updated.cropRegion),
     ],
   })
 

@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client"
 
 import { buildStudentDeletionBlockedMessage } from "../../../src/lib/shared/gradeReferenceMessages"
 import { diffFields, recordAuditLog } from "./auditLog"
+import { studentAuditTarget } from "./auditTargets"
 import prisma from "./client"
 import { studentGradeRosterInclude } from "./gradeDataSourceUsage"
 
@@ -73,6 +74,7 @@ export const createStudent = async (
       entityType: "Student",
       entityId: student.id,
       target: studentLabel(student),
+      targets: [studentAuditTarget(student)],
     })
 
     return student
@@ -115,6 +117,7 @@ export const updateStudent = async (
       entityType: "Student",
       entityId: student.id,
       target: studentLabel(student),
+      targets: [studentAuditTarget(student)],
       changes: diffFields(before ?? undefined, student, [
         { field: "lastName", label: "姓" },
         { field: "firstName", label: "名" },
@@ -173,6 +176,7 @@ export const deleteStudent = async (id: string): Promise<void> => {
       entityType: "Student",
       entityId: id,
       target: before ? studentLabel(before) : null,
+      targets: before ? [studentAuditTarget(before)] : [],
     })
   } catch (error) {
     console.error("Failed to delete student:", error)

@@ -312,6 +312,68 @@ describe("executeIdChanges", () => {
       expect(warnings).toHaveLength(0)
     })
 
+    it("監査ログ（entityId・scopeId・対象）も新しいIDへ付け替え、並びの時刻は動かさない", async () => {
+      const existingStudentId = generateId()
+      const newStudentId = generateId()
+      await prisma.student.create({
+        data: {
+          id: existingStudentId,
+          studentNumber: "S010",
+          lastName: "田中",
+          firstName: "太郎",
+          lastNameKana: "タナカ",
+          firstNameKana: "タロウ",
+        },
+      })
+      const loggedAt = new Date("2026-08-01T00:00:00.000Z")
+      const auditLog = await prisma.auditLog.create({
+        data: {
+          action: "student.update",
+          category: "student",
+          entityType: "Student",
+          entityId: existingStudentId,
+          scopeId: existingStudentId,
+          summary: "生徒「田中 太郎」を編集しました",
+          createdAt: loggedAt,
+          updatedAt: loggedAt,
+          targets: {
+            create: {
+              targetType: "Student",
+              targetId: existingStudentId,
+              targetLabel: "田中 太郎",
+            },
+          },
+        },
+      })
+
+      await prisma.$transaction(async (tx) => {
+        await executeIdChanges(
+          [
+            {
+              category: "student",
+              existingId: existingStudentId,
+              newId: newStudentId,
+            },
+          ],
+          createEmptyIdMappings(),
+          [],
+          tx
+        )
+      })
+
+      const moved = await prisma.auditLog.findUniqueOrThrow({
+        where: { id: auditLog.id },
+        include: { targets: true },
+      })
+      expect(moved.entityId).toBe(newStudentId)
+      expect(moved.scopeId).toBe(newStudentId)
+      expect(moved.targets.map((target) => target.targetId)).toEqual([
+        newStudentId,
+      ])
+      // 一覧は updatedAt で並ぶので、付け替えで「たった今」へ浮き上がらない
+      expect(moved.updatedAt.toISOString()).toBe(loggedAt.toISOString())
+    })
+
     it("ScoreDecision/CompoundAnswerScore がカスケード削除されず受験者ごと引き継がれる", async () => {
       const existingStudentId = generateId()
       const newStudentId = generateId()

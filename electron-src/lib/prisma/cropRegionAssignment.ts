@@ -7,7 +7,11 @@
  * `useAssignedCropRegions` が持つ）。
  */
 import { recordAuditLog } from "./auditLog"
-import { resolveExamScopeByCropRegion, resolveUserLabel } from "./auditScope"
+import {
+  resolveCropRegionTargets,
+  resolveExamScopeByCropRegion,
+  resolveUserLabel,
+} from "./auditScope"
 import prisma from "./client"
 import { isRecordNotFoundError } from "./prismaErrors"
 import { canDecideExamScores } from "./scoreDecision"
@@ -90,6 +94,7 @@ export const assignCropRegion = async (
     entityId: assignment.id,
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
+    targets: await resolveCropRegionTargets(cropRegionId),
     summary: `設問の採点担当に${userLabel ?? userId}を割り当てました`,
   })
 
@@ -137,6 +142,7 @@ export const unassignCropRegion = async (
     entityId: deleted.id,
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
+    targets: await resolveCropRegionTargets(cropRegionId),
     summary: `設問の採点担当から${userLabel ?? userId}を外しました`,
   })
 }

@@ -1,8 +1,9 @@
 /**
  * 監査ログ 統合テスト
  *
- * recordAuditLog（操作者補完・ベストエフォート）、集約（同一キーの上書き）、
- * getAuditLogs（フィルタ/ページネーション/操作者付与）、pruneAuditLogs を検証する。
+ * recordAuditLog（操作者補完・ベストエフォート・対象の記録）、集約（同一キーの上書き）、
+ * getAuditLogs（フィルタ/ページネーション。行はそのまま返す）、getAuditLogScopes（選択肢）、
+ * pruneAuditLogs を検証する。
  * Electron依存を回避するため prisma/client をテスト用クライアントでモックする。
  */
 
@@ -24,6 +25,7 @@ vi.mock("../../electron-src/lib/prisma/auditActor", () => ({
   getCurrentActorUserId: () => null,
 }))
 
+import { parseAuditMetadata } from "@/app/(app)/audit-logs/auditLogRow"
 import {
   diffFields,
   mergeCoalescedChanges,
@@ -31,6 +33,7 @@ import {
 } from "@/electron-src/lib/prisma/auditLog"
 import {
   getAuditLogs,
+  getAuditLogScopes,
   pruneAuditLogs,
 } from "@/electron-src/lib/prisma/auditQuery"
 
@@ -53,7 +56,7 @@ describe("監査ログ recordAuditLog", () => {
     await testPrisma.$disconnect()
   })
 
-  it("1件記録し、getAuditLogsで取得できる（カテゴリ・verbが付与される）", async () => {
+  it("1件記録し、getAuditLogsで行のまま取得できる（カテゴリは記録時に列へ入る）", async () => {
     await recordAuditLog({
       action: "exam.create",
       userId: null,
@@ -66,16 +69,16 @@ describe("監査ログ recordAuditLog", () => {
 
     const page = await getAuditLogs()
     expect(page.total).toBe(1)
-    const entry = page.entries[0]
-    expect(entry.action).toBe("exam.create")
-    expect(entry.category).toBe("exam")
-    expect(entry.verb).toBe("create")
-    expect(entry.scopeLabel).toBe("数学 期末")
-    expect(entry.occurrences).toBe(1)
-    expect(entry.summary).toContain("数学 期末")
+    const log = page.logs[0]
+    expect(log.action).toBe("exam.create")
+    expect(log.category).toBe("exam")
+    expect(log.scopeLabel).toBe("数学 期末")
+    expect(log.targets).toEqual([])
+    expect(parseAuditMetadata(log.metadata).occurrences).toBeUndefined()
+    expect(log.summary).toContain("数学 期末")
   })
 
-  it("操作者名が userId から解決されて付与される", async () => {
+  it("操作者は userId のまま返す（名前の解決は renderer が利用者一覧で行う）", async () => {
     const user = await createTestUser({ name: "山田 太郎" })
     await recordAuditLog({
       action: "exam.update",
@@ -85,7 +88,66 @@ describe("監査ログ recordAuditLog", () => {
     })
 
     const page = await getAuditLogs()
-    expect(page.entries[0].actorName).toBe("山田 太郎")
+    expect(page.logs[0].userId).toBe(user.id)
+  })
+
+  it("対象（生徒・採点領域）を子行として記録し、行と一緒に返す", async () => {
+    await recordAuditLog({
+      action: "exam.score.propose",
+      userId: null,
+      entityType: "QuestionScore",
+      entityId: "score-1",
+      targets: [
+        {
+          targetType: "Student",
+          targetId: "student-1",
+          targetLabel: "山田 太郎",
+        },
+        { targetType: "CropRegion", targetId: "region-1", targetLabel: "1-1" },
+      ],
+    })
+
+    const page = await getAuditLogs()
+    expect(
+      page.logs[0].targets
+        .map((target) => [
+          target.targetType,
+          target.targetId,
+          target.targetLabel,
+        ])
+        .sort()
+    ).toEqual([
+      ["CropRegion", "region-1", "1-1"],
+      ["Student", "student-1", "山田 太郎"],
+    ])
+  })
+
+  it("集約した行には、まだ付いていない対象だけを足す", async () => {
+    const key = "compound_score:answer-1:u-1"
+    const record = (studentId: string) =>
+      recordAuditLog({
+        action: "exam.compound_answer.update",
+        userId: "u-1",
+        entityType: "CompoundAnswerScore",
+        entityId: `score-${studentId}`,
+        coalesceKey: key,
+        targets: [
+          {
+            targetType: "Student",
+            targetId: studentId,
+            targetLabel: studentId,
+          },
+        ],
+      })
+    await record("student-1")
+    await record("student-1")
+    await record("student-2")
+
+    const page = await getAuditLogs()
+    expect(page.total).toBe(1)
+    expect(
+      page.logs[0].targets.map((target) => target.targetId).sort()
+    ).toEqual(["student-1", "student-2"])
   })
 
   it("未知のアクションでも例外を投げず、category は system にフォールバックする", async () => {
@@ -100,7 +162,7 @@ describe("監査ログ recordAuditLog", () => {
 
     const page = await getAuditLogs()
     expect(page.total).toBe(1)
-    expect(page.entries[0].category).toBe("system")
+    expect(page.logs[0].category).toBe("system")
   })
 
   it("changes は metadata に格納される", async () => {
@@ -114,8 +176,7 @@ describe("監査ログ recordAuditLog", () => {
       ],
     })
     const page = await getAuditLogs()
-    const changes = page.entries[0].metadata?.changes as
-      { before: unknown; after: unknown }[] | undefined
+    const changes = parseAuditMetadata(page.logs[0].metadata).changes
     expect(changes?.[0].before).toBe("旧")
     expect(changes?.[0].after).toBe("新")
   })
@@ -147,10 +208,9 @@ describe("監査ログ 集約（coalesce）", () => {
 
     const page = await getAuditLogs()
     expect(page.total).toBe(1)
-    expect(page.entries[0].occurrences).toBe(2)
-    const changes = page.entries[0].metadata?.changes as
-      { after: unknown }[] | undefined
-    expect(changes?.[0].after).toBe("B") // after は最新で上書き
+    const metadata = parseAuditMetadata(page.logs[0].metadata)
+    expect(metadata.occurrences).toBe(2)
+    expect(metadata.changes?.[0].after).toBe("B") // after は最新で上書き
   })
 
   it("複数項目の連続操作は、項目ごとに before は初回・after は最新になる", async () => {
@@ -180,7 +240,7 @@ describe("監査ログ 集約（coalesce）", () => {
 
     const page = await getAuditLogs()
     expect(page.total).toBe(1)
-    expect(page.entries[0].metadata?.changes).toEqual([
+    expect(parseAuditMetadata(page.logs[0].metadata).changes).toEqual([
       { field: "a", before: 1, after: 3 },
       { field: "b", before: "x", after: "z" },
     ])
@@ -215,11 +275,8 @@ describe("監査ログ 集約（coalesce）", () => {
     await record("mark-1", key)
 
     const page = await getAuditLogs()
-    expect(page.entries.map((entry) => entry.entityId)).toEqual([
-      "mark-1",
-      "mark-2",
-    ])
-    expect(page.entries[0].occurrences).toBe(2)
+    expect(page.logs.map((log) => log.entityId)).toEqual(["mark-1", "mark-2"])
+    expect(parseAuditMetadata(page.logs[0].metadata).occurrences).toBe(2)
   })
 
   it("操作者が異なれば別行になる", async () => {
@@ -312,7 +369,7 @@ describe("監査ログ getAuditLogs フィルタ/ページネーション", () =
   it("カテゴリで絞り込める", async () => {
     const page = await getAuditLogs({ category: "grade" })
     expect(page.total).toBe(1)
-    expect(page.entries[0].action).toBe("grade.create")
+    expect(page.logs[0].action).toBe("grade.create")
   })
 
   it("操作者で絞り込める", async () => {
@@ -343,22 +400,14 @@ describe("監査ログ getAuditLogs フィルタ/ページネーション", () =
     for (const search of ["山田太郎", "山田 太郎", `山田${"　"}太郎`]) {
       const page = await getAuditLogs({ search })
       expect(page.total).toBe(2)
-      expect(page.entries.map((entry) => entry.entityId).sort()).toEqual([
-        "s2",
-        "s3",
-      ])
+      expect(page.logs.map((log) => log.entityId).sort()).toEqual(["s2", "s3"])
     }
   })
 
   it("検索しながら他の条件とページ分けも効き、並びは新しい順のまま", async () => {
-    const page = await getAuditLogs({
-      search: "を作成",
-      userId: "u-1",
-      limit: 1,
-      offset: 0,
-    })
+    const page = await getAuditLogs({ search: "を作成", userId: "u-1" }, 1, 0)
     expect(page.total).toBe(1)
-    expect(page.entries.map((entry) => entry.entityId)).toEqual(["e1"])
+    expect(page.logs.map((log) => log.entityId)).toEqual(["e1"])
   })
 
   it("検索語の % や _ は文字として扱う", async () => {
@@ -367,11 +416,153 @@ describe("監査ログ getAuditLogs フィルタ/ページネーション", () =
   })
 
   it("limit/offset でページングでき、total は全件数を返す", async () => {
-    const page1 = await getAuditLogs({ limit: 2, offset: 0 })
+    const page1 = await getAuditLogs({}, 2, 0)
     expect(page1.total).toBe(3)
-    expect(page1.entries).toHaveLength(2)
-    const page2 = await getAuditLogs({ limit: 2, offset: 2 })
-    expect(page2.entries).toHaveLength(1)
+    expect(page1.logs).toHaveLength(2)
+    const page2 = await getAuditLogs({}, 2, 2)
+    expect(page2.logs).toHaveLength(1)
+  })
+
+  it("limit/offset は範囲に収めた実効値を返す", async () => {
+    const page = await getAuditLogs({}, 1000, -3)
+    expect(page.limit).toBe(200)
+    expect(page.offset).toBe(0)
+  })
+
+  it("アクションの集合で絞り込め、空の集合は何にも一致しない（検索の有無で同じ）", async () => {
+    for (const search of [undefined, "作成"]) {
+      const page = await getAuditLogs({
+        actions: ["exam.create", "grade.create"],
+        search,
+      })
+      expect(page.logs.map((log) => log.action).sort()).toEqual([
+        "exam.create",
+        "grade.create",
+      ])
+      expect((await getAuditLogs({ actions: [], search })).total).toBe(0)
+    }
+  })
+})
+
+describe("監査ログ 対象・作業領域での絞り込みと選択肢", () => {
+  beforeEach(async () => {
+    await cleanupTestDatabase()
+    // 試験Aで山田と鈴木を採点し、試験Bで山田を採点する（採点領域は試験ごとに別）
+    const score = (
+      entityId: string,
+      scopeId: string,
+      scopeLabel: string,
+      studentId: string,
+      studentLabel: string,
+      cropRegionId: string
+    ) =>
+      recordAuditLog({
+        action: "exam.score.propose",
+        userId: "u-1",
+        entityType: "QuestionScore",
+        entityId,
+        scopeId,
+        scopeLabel,
+        summary: `「${studentLabel}」の「1-1」の採点を提案しました`,
+        targets: [
+          {
+            targetType: "Student",
+            targetId: studentId,
+            targetLabel: studentLabel,
+          },
+          {
+            targetType: "CropRegion",
+            targetId: cropRegionId,
+            targetLabel: "1-1",
+          },
+        ],
+      })
+    await score(
+      "q1",
+      "exam-a",
+      "試験A",
+      "student-yamada",
+      "山田 太郎",
+      "region-a"
+    )
+    await score(
+      "q2",
+      "exam-a",
+      "試験A",
+      "student-suzuki",
+      "鈴木 花子",
+      "region-a"
+    )
+    await score(
+      "q3",
+      "exam-b",
+      "試験B",
+      "student-yamada",
+      "山田 太郎",
+      "region-b"
+    )
+  })
+
+  it("生徒で絞ると、試験をまたいでその生徒のログだけが残る（検索の有無で同じ）", async () => {
+    for (const search of [undefined, "採点"]) {
+      const page = await getAuditLogs({
+        targets: [{ targetType: "Student", targetId: "student-yamada" }],
+        search,
+      })
+      expect(page.logs.map((log) => log.entityId).sort()).toEqual(["q1", "q3"])
+    }
+  })
+
+  it("対象を複数指定すると、すべてを持つログだけが残る（検索の有無で同じ）", async () => {
+    for (const search of [undefined, "採点"]) {
+      const page = await getAuditLogs({
+        targets: [
+          { targetType: "Student", targetId: "student-yamada" },
+          { targetType: "CropRegion", targetId: "region-a" },
+        ],
+        search,
+      })
+      expect(page.logs.map((log) => log.entityId)).toEqual(["q1"])
+    }
+  })
+
+  it("作業領域で絞り込める", async () => {
+    const page = await getAuditLogs({ scopeId: "exam-b" })
+    expect(page.logs.map((log) => log.entityId)).toEqual(["q3"])
+  })
+
+  it("選択肢は作業領域と対象を重複なく返し、対象には現れた作業領域を添える", async () => {
+    const { scopes, targets } = await getAuditLogScopes()
+    expect(
+      scopes.map((scope) => [scope.scopeId, scope.scopeLabel]).sort()
+    ).toEqual([
+      ["exam-a", "試験A"],
+      ["exam-b", "試験B"],
+    ])
+    expect(
+      targets
+        .filter((target) => target.targetType === "Student")
+        .map((target) => [target.targetId, target.scopeId])
+        .sort()
+    ).toEqual([
+      ["student-suzuki", "exam-a"],
+      ["student-yamada", "exam-a"],
+      ["student-yamada", "exam-b"],
+    ])
+    expect(
+      targets
+        .filter((target) => target.targetType === "CropRegion")
+        .map((target) => [target.targetId, target.scopeLabel])
+        .sort()
+    ).toEqual([
+      ["region-a", "試験A"],
+      ["region-b", "試験B"],
+    ])
+  })
+
+  it("ログを消すと対象も一緒に消える", async () => {
+    await testPrisma.auditLog.deleteMany({ where: { entityId: "q1" } })
+    expect(await testPrisma.auditLogTarget.count()).toBe(4)
   })
 })
 
@@ -404,7 +595,7 @@ describe("監査ログ pruneAuditLogs", () => {
     expect(deleted).toBe(1)
     const page = await getAuditLogs()
     expect(page.total).toBe(1)
-    expect(page.entries[0].entityId).toBe("new")
+    expect(page.logs[0].entityId).toBe("new")
   })
 
   it("retentionDays が不正なら何もしない", async () => {

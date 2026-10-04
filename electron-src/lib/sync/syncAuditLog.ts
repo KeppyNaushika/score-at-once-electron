@@ -5,9 +5,9 @@
  * ものと、親が他のPCで削除されて子が表から外れる（`parentDeleted` / `parentReturned`）もの。
  */
 
+import type { AuditActionKey } from "@/lib/shared/auditActions"
 import { syncTableLabel } from "@/lib/shared/syncTableLabels"
 
-import type { AuditActionKey } from "../prisma/auditActions"
 import { recordAuditLog } from "../prisma/auditLog"
 import type {
   SyncParentDeleted,
