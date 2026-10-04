@@ -117,7 +117,9 @@ export function ScoringGridDemo({
   const measureColumns = useCallback(() => {
     const grid = gridRef.current
     if (!grid) return 1
-    const items = Array.from(grid.children) as HTMLElement[]
+    const items = Array.from(grid.children).filter(
+      (child) => child instanceof HTMLElement
+    )
     if (items.length === 0) return 1
     const top0 = items[0].offsetTop
     let cols = 0

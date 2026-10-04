@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { ArrowRight } from "lucide-react"
-import type { CSSProperties } from "react"
 
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
@@ -11,6 +10,7 @@ import { userPreferenceQuery } from "@/queries/settings"
 
 import { FocusSection } from "./HeadingFocus"
 import { Scene } from "./Scene"
+import { withHelp07Variables } from "./utils"
 
 /** 一覧表示の説明アニメ：答案が並び、順に印がついていく */
 function GridStyleAnimation() {
@@ -28,7 +28,7 @@ function GridStyleAnimation() {
   return (
     <div
       className="grid grid-cols-3 gap-1.5"
-      style={{ "--help07-sel": selectionBorder } as CSSProperties}
+      style={withHelp07Variables({ "--help07-sel": selectionBorder })}
     >
       {marks.map((isCorrect, i) => (
         <div
@@ -104,13 +104,11 @@ function IndividualStyleAnimation() {
         stroke={red}
         strokeWidth="3"
         strokeLinecap="round"
-        style={
-          {
-            strokeDasharray: len,
-            "--help07-len": len,
-            animation: "help07Pen 4s infinite",
-          } as CSSProperties
-        }
+        style={withHelp07Variables({
+          strokeDasharray: len,
+          "--help07-len": len,
+          animation: "help07Pen 4s infinite",
+        })}
       />
     </svg>
   )

@@ -1,9 +1,9 @@
 "use client"
 
-import type { CSSProperties } from "react"
-
 import { Kbd } from "@/components/ui/kbd"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
+
+import { withHelp07Variables } from "./utils"
 
 type DrawToolKind =
   "line" | "rectangle" | "ellipse" | "text" | "select" | "hand"
@@ -84,13 +84,11 @@ function DrawToolAnimation({ tool }: { tool: DrawToolKind }) {
           stroke={red}
           strokeWidth="3"
           strokeLinecap="round"
-          style={
-            {
-              strokeDasharray: lineLen,
-              "--help07-len": lineLen,
-              animation: "help07Pen 3.6s infinite",
-            } as CSSProperties
-          }
+          style={withHelp07Variables({
+            strokeDasharray: lineLen,
+            "--help07-len": lineLen,
+            animation: "help07Pen 3.6s infinite",
+          })}
         />
       )}
       {tool === "rectangle" && (
@@ -103,13 +101,11 @@ function DrawToolAnimation({ tool }: { tool: DrawToolKind }) {
           fill="none"
           stroke={red}
           strokeWidth="3"
-          style={
-            {
-              strokeDasharray: rectLen,
-              "--help07-len": rectLen,
-              animation: "help07Pen 3.6s infinite",
-            } as CSSProperties
-          }
+          style={withHelp07Variables({
+            strokeDasharray: rectLen,
+            "--help07-len": rectLen,
+            animation: "help07Pen 3.6s infinite",
+          })}
         />
       )}
       {tool === "ellipse" && (
@@ -120,13 +116,11 @@ function DrawToolAnimation({ tool }: { tool: DrawToolKind }) {
           fill="none"
           stroke={red}
           strokeWidth="3"
-          style={
-            {
-              strokeDasharray: circleLen,
-              "--help07-len": circleLen,
-              animation: "help07Pen 3.6s infinite",
-            } as CSSProperties
-          }
+          style={withHelp07Variables({
+            strokeDasharray: circleLen,
+            "--help07-len": circleLen,
+            animation: "help07Pen 3.6s infinite",
+          })}
         />
       )}
       {tool === "text" && (
@@ -136,13 +130,11 @@ function DrawToolAnimation({ tool }: { tool: DrawToolKind }) {
           fill={red}
           fontSize="16"
           fontWeight="bold"
-          style={
-            {
-              fontFamily: "cursive",
-              transformOrigin: "56px 38px",
-              animation: "help07Mark 3.6s infinite",
-            } as CSSProperties
-          }
+          style={{
+            fontFamily: "cursive",
+            transformOrigin: "56px 38px",
+            animation: "help07Mark 3.6s infinite",
+          }}
         >
           よし!
         </text>

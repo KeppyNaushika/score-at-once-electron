@@ -94,8 +94,9 @@ export function StepResultView({
                   <canvas
                     ref={(canvas) => {
                       if (canvas && stepResults[6].canvas) {
-                        const ctx = canvas.getContext("2d")!
-                        ctx.drawImage(stepResults[6].canvas, 0, 0)
+                        // 2D コンテキストが取れないときは描かずに枠だけ残す
+                        const ctx = canvas.getContext("2d")
+                        ctx?.drawImage(stepResults[6].canvas, 0, 0)
                       }
                     }}
                     width="320"
