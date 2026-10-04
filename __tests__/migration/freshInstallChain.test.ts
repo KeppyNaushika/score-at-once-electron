@@ -198,4 +198,70 @@ describe("新規インストールの初期化連鎖", () => {
 
     expect(drift).toEqual([])
   })
+
+  it("適用後の外部キー制約が db push 基準（schema.prisma）と全テーブルで一致する", async () => {
+    await buildFreshChain()
+
+    // 列が揃っていても、ALTER TABLE ... ADD COLUMN で足した列には制約が付かない。
+    // GradeDataSource の courseworkItemId / courseworkId がそうだった（20261004130000 で直した）。
+    // 本番だけ親を消しても子が宙に浮き、テストは db push の DB で走るので気づけない
+    const groundTruthPath = path.resolve(
+      __dirname,
+      "../../data/test-database.db"
+    )
+    const foreignKeysByTable = (dbPath: string): Map<string, string[]> => {
+      const db = new Database(dbPath)
+      try {
+        const names = db
+          .prepare<[], { name: string }>(
+            `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name <> '_prisma_migrations'`
+          )
+          .all()
+          .map((row) => row.name)
+        return new Map(
+          names.map((tableName) => [
+            tableName,
+            db
+              .prepare<
+                [string],
+                {
+                  from: string
+                  table: string
+                  to: string | null
+                  on_update: string
+                  on_delete: string
+                }
+              >("SELECT * FROM pragma_foreign_key_list(?)")
+              .all(tableName)
+              .map(
+                (foreignKey) =>
+                  `${foreignKey.from} → ${foreignKey.table}(${foreignKey.to ?? "id"}) ON DELETE ${foreignKey.on_delete} ON UPDATE ${foreignKey.on_update}`
+              )
+              .sort(),
+          ])
+        )
+      } finally {
+        db.close()
+      }
+    }
+
+    const truth = foreignKeysByTable(groundTruthPath)
+    const chain = foreignKeysByTable(DB_PATH)
+    const drift: string[] = []
+    for (const [tableName, truthForeignKeys] of truth) {
+      const chainForeignKeys = chain.get(tableName) ?? []
+      const missing = truthForeignKeys.filter(
+        (foreignKey) => !chainForeignKeys.includes(foreignKey)
+      )
+      const extra = chainForeignKeys.filter(
+        (foreignKey) => !truthForeignKeys.includes(foreignKey)
+      )
+      if (missing.length > 0 || extra.length > 0) {
+        drift.push(
+          `${tableName}: 欠落[${missing.join(", ")}] 余分[${extra.join(", ")}]`
+        )
+      }
+    }
+    expect(drift).toEqual([])
+  })
 })
