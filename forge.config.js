@@ -104,7 +104,6 @@ module.exports = {
     asar: {
       unpack: "**/{node_modules,.next,main,sharp}/**/*",
     },
-    asarUnpack: ["**/.next/**/*", "**/node_modules/**/*", "**/main/**/*"],
     name: "一括採点",
     executableName: "score-at-once",
     icon: "./public/icons/icon.icns", // macOS用に明示的に指定
@@ -120,31 +119,23 @@ module.exports = {
     extraResource: [".next", "public"],
   },
   rebuildConfig: {
-    buildPath: "./out",
     // **版を書かない。** 書くと、入っている electron と食い違ったまま
-    // `forceABI: true` がその版の ABI でネイティブモジュールを焼く。
-    // 2026-08-24 まで "37.1.0" が残っており、実際の electron は 43 だった
-    // （パッケージ版だけがデータベースを開けない形の食い違い）。
-    // 書かなければ @electron/rebuild が入っている版から取る。
-    onlyModules: ["sharp", "better-sqlite3"],
-    forceABI: true,
+    // その版向けにネイティブモジュールを焼く。2026-08-24 まで "37.1.0" が
+    // 残っており、実際の electron は 43 だった（パッケージ版だけがデータベースを
+    // 開けない形の食い違い）。書かなければ @electron/rebuild が入っている版から取る。
+    onlyModules: ["better-sqlite3"],
+    // **毎回焼き直す。** @electron/rebuild は build/Release/.forge-meta の
+    // 「arm64--148」のような記録が今の electron と一致すると、焼き直しを飛ばす。
+    // 記録は .node の中身を見ていないので、テストが Node 向けに作り直したあとも
+    // 残っていれば、Node 向けのバイナリがそのまま配布物に入る（2026-10-04 に再現）。
+    // 以前の `forceABI: true` は ABI を文字列 "true" に化けさせ、記録が一致しない
+    // ことで偶然これを防いでいた。`forceABI` は ABI の番号を渡す項目で、真偽値ではない。
+    force: true,
   },
   makers: [
     {
       name: "@electron-forge/maker-zip",
       platforms: ["darwin", "win32", "linux"],
-      config: {
-        darwin: {
-          options: {
-            name: "一括採点.app",
-          },
-        },
-        win32: {
-          options: {
-            name: "一括採点.exe",
-          },
-        },
-      },
     },
     {
       name: "@electron-forge/maker-deb",
@@ -170,9 +161,7 @@ module.exports = {
   plugins: [
     {
       name: "@electron-forge/plugin-auto-unpack-natives",
-      config: {
-        unpackNatives: true,
-      },
+      config: {},
     },
   ],
   hooks: {
