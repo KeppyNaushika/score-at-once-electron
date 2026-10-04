@@ -65,6 +65,24 @@ export function detectVersionInRange<Version extends string>(
   return "unknown"
 }
 
+/**
+ * アプリより新しい版で書き出されたアーカイブなら、利用者向けの拒否理由を返す。
+ *
+ * `detectVersionInRange` は最新版以上を最新版へ丸めるので、それだけでは未来の版を
+ * 現行版として読み込んでしまう。新しい版で足された列は黙って欠ける。
+ * 版数が semver として読めないものは判定しない（null）
+ */
+export function newerArchiveVersionError(
+  version: unknown,
+  currentVersion: string
+): string | null {
+  if (typeof version !== "string" || !/^\d+\.\d+\.\d+$/.test(version)) {
+    return null
+  }
+  if (compareVersions(version, currentVersion) <= 0) return null
+  return `このアーカイブ（v${version}）は現在のアプリ（v${currentVersion}）より新しいため読み込めません。アプリを更新してください。`
+}
+
 /** fromVersion から toVersion へ到達する変換器列を構築する */
 function buildChain<Version extends string, Data>(
   transformers: readonly ChainTransformer<Version, Data>[],

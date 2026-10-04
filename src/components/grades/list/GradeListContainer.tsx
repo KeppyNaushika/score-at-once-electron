@@ -42,7 +42,6 @@ import {
   duplicateGradeMutation,
   executeGradeImportMutation,
   exportGradeArchiveMutation,
-  type GradeArchivePayload,
   gradeListQuery,
 } from "@/queries/grade"
 import { findOrCreateTagMutation, tagListQuery } from "@/queries/tag"
@@ -102,10 +101,10 @@ export function GradeListContainer() {
   // インポート確認ウィザードの状態
   const [importPreview, setImportPreview] =
     useState<GradeArchiveImportPreview | null>(null)
-  // 旧バージョンの形もそのまま来る（変換は取り込み実行時に main が行う）ので、
-  // 境界の返り値をそのまま持つ
-  const [importArchiveData, setImportArchiveData] =
-    useState<GradeArchivePayload | null>(null)
+  // 中身は持たず、実行時に main が読み直すファイルの場所だけを持つ
+  const [importArchivePath, setImportArchivePath] = useState<string | null>(
+    null
+  )
   // 削除確認を開いている成績算出。押しただけでは消さず、確認で決めてもらう
   const gradeDeletion = useDialogTarget<GradeSummary>()
 
@@ -147,14 +146,14 @@ export function GradeListContainer() {
     const result = await analyzeArchive.mutateAsync()
     if (result.canceled) return
     // ファイル選択後はウィザードを開き、照合方法をユーザーに判断させる
-    setImportArchiveData(result.archiveData)
+    setImportArchivePath(result.archivePath)
     setImportPreview(result.preview)
   }, [analyzeArchive])
 
   const handleImportConfirm = async (
     decisions: Record<string, CourseworkImportDecision>
   ) => {
-    if (!importArchiveData || !importPreview) return
+    if (!importArchivePath || !importPreview) return
     try {
       // 試験参照のマッピング（examName → 既存examId）を照合結果から構築
       const examMapping: Record<string, string> = {}
@@ -163,7 +162,7 @@ export function GradeListContainer() {
           examMapping[examMatch.examName] = examMatch.examId
       }
       const importResult = await executeImport.mutateAsync({
-        archiveData: importArchiveData,
+        archivePath: importArchivePath,
         options: { examMapping, courseworkDecisions: decisions },
       })
       // 取り込み警告（点数スキップ・参照先未検出など）があれば通知する。
@@ -181,13 +180,13 @@ export function GradeListContainer() {
       router.push(`/grades/${importResult.gradeId}`)
     } finally {
       setImportPreview(null)
-      setImportArchiveData(null)
+      setImportArchivePath(null)
     }
   }
 
   const handleImportCancel = () => {
     setImportPreview(null)
-    setImportArchiveData(null)
+    setImportArchivePath(null)
   }
 
   // 一覧に出現する学級を集約してフィルタ選択肢にする

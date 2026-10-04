@@ -77,9 +77,10 @@ export async function extractArchive(archivePath: string): Promise<{
       cleanupTempDir(tempDir)
       return { success: false, error: "マニフェストファイルが見つかりません" }
     }
-    const manifest: ArchiveManifest = JSON.parse(
-      fs.readFileSync(manifestPath, "utf-8")
-    )
+    const manifest = parseArchiveJson(
+      fs.readFileSync(manifestPath, "utf-8"),
+      "manifest.json"
+    ) as ArchiveManifest
 
     // 各JSONファイルを読み込み
     // v1.5.0+: exam.json, v1.4.0以前: project.json にフォールバック
@@ -240,17 +241,27 @@ function withDefaultedSections(
 }
 
 /**
- * JSONファイルを読み込む
+ * JSONファイルを読み込む。無ければ null。
+ *
+ * 在るのに JSON として読めないファイルは投げる。null を返すと、必須のファイルは
+ * 「見つかりません」と誤って案内され、省略可能なファイル（tags 等）は黙って欠ける
  */
 function readJsonFile<T>(tempDir: string, filename: string): T | null {
   const filePath = path.join(tempDir, filename)
   if (!fs.existsSync(filePath)) {
     return null
   }
+  return parseArchiveJson(fs.readFileSync(filePath, "utf-8"), filename) as T
+}
+
+/** JSON として読めなければ、どのファイルが壊れているかを利用者向けに言って投げる */
+function parseArchiveJson(text: string, filename: string): unknown {
   try {
-    return JSON.parse(fs.readFileSync(filePath, "utf-8")) as T
+    return JSON.parse(text)
   } catch {
-    return null
+    throw new Error(
+      `アーカイブ内の ${filename} が壊れているため読み込めません（JSON として読めません）`
+    )
   }
 }
 
@@ -320,7 +331,10 @@ export async function readManifestOnly(archivePath: string): Promise<{
     }
 
     const manifestData = zip.readAsText(manifestEntry)
-    const manifest: ArchiveManifest = JSON.parse(manifestData)
+    const manifest = parseArchiveJson(
+      manifestData,
+      "manifest.json"
+    ) as ArchiveManifest
 
     return { success: true, manifest }
   } catch (error) {

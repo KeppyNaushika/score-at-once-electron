@@ -10,7 +10,10 @@
 import AdmZip from "adm-zip"
 
 import type { CollectedCourseworkData } from "../../../../src/types/courseworkArchive.types"
-import type { GradeArchiveManifest } from "../../../../src/types/gradeArchive.types"
+import {
+  GRADE_CURRENT_VERSION,
+  type GradeArchiveManifest,
+} from "../../../../src/types/gradeArchive.types"
 import {
   isCurrentCollectedCourseworkData,
   isLegacyCollectedCourseworkData,
@@ -25,6 +28,7 @@ import type {
 } from "../grade-transformers/legacyShape"
 import type { AnyGradeArchiveData } from "../grade-transformers/types"
 import { normalizeLegacyClassroomKeys } from "../shared/legacyClassroomKeys"
+import { newerArchiveVersionError } from "../shared/transformChain"
 
 // archiver で作った ZIP を展開するために unzipper を使用
 // 試験に unzipper がない場合は adm-zip を使用
@@ -84,6 +88,15 @@ export async function extractGradeArchive(
     throw new Error("manifest.jsonが見つかりません")
   }
   const manifest: GradeArchiveManifest = JSON.parse(manifestJson)
+  // 版の判定は形状で行う（旧版の manifest.version が実際の版と食い違っていた）が、
+  // 食い違いは古い側に寄っていたので、未来の版を弾くのには使える
+  const newerError = newerArchiveVersionError(
+    manifest.version,
+    GRADE_CURRENT_VERSION
+  )
+  if (newerError) {
+    throw new Error(newerError)
+  }
 
   // 学級リネーム前の旧キー（classId/classes/className/classCode）は読取り時に現行キー（classroom*）へ正規化
   const gradeJson = normalizeLegacyClassroomKeys(

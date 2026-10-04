@@ -153,15 +153,19 @@ export const gradeHandlers = {
       return { canceled: true as const }
     }
 
-    const archiveData = await extractGradeArchive(result.filePaths[0])
+    const archivePath = result.filePaths[0]
+    const archiveData = await extractGradeArchive(archivePath)
     const preview = await previewGradeArchiveImport(archiveData)
-    return { canceled: false as const, preview, archiveData }
+    return { canceled: false as const, preview, archivePath }
   },
 
+  // 中身は renderer を往復させず、実行時に main がファイルから読み直す
+  // （.coursework と同じ。renderer から届いた値をそのまま DB へ書かない）
   "grade:executeImport": async (
-    archiveData: Parameters<typeof importGradeArchive>[0],
+    archivePath: string,
     options?: Parameters<typeof importGradeArchive>[1]
   ) => {
+    const archiveData = await extractGradeArchive(archivePath)
     return importGradeArchive(archiveData, options)
   },
 } satisfies HandlerMap

@@ -13,8 +13,12 @@ import type {
   ArchiveClassesData,
   ArchiveStudentsData,
 } from "../../../../src/types/examArchive.types"
-import type { StudentArchiveManifest } from "../../../../src/types/studentArchive.types"
+import {
+  STUDENT_CURRENT_VERSION,
+  type StudentArchiveManifest,
+} from "../../../../src/types/studentArchive.types"
 import { normalizeLegacyClassroomKeys } from "../shared/legacyClassroomKeys"
+import { newerArchiveVersionError } from "../shared/transformChain"
 
 /**
  * 展開された生徒アーカイブデータ
@@ -63,6 +67,14 @@ export async function extractStudentArchive(archivePath: string): Promise<{
         success: false,
         error: `このファイルは生徒データアーカイブではありません（archiveType: ${manifest.archiveType ?? "undefined"}）`,
       }
+    }
+
+    const newerError = newerArchiveVersionError(
+      manifest.version,
+      STUDENT_CURRENT_VERSION
+    )
+    if (newerError) {
+      return { success: false, error: newerError }
     }
 
     // students.json を読み込み

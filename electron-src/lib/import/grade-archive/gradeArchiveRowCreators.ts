@@ -167,6 +167,7 @@ export async function createGradeCells(
   warnings: string[]
 ): Promise<void> {
   let droppedCells = 0
+  let unknownFrozenByCells = 0
   const resolveCell = (archiveCell: {
     gradeStudentId: string
     gradeItemId: string
@@ -192,7 +193,7 @@ export async function createGradeCells(
     const cell = resolveCell(archiveFrozenScore)
     if (!cell) continue
     // 確定操作者は取り込み先に同じ User が居る保証が無い。
-    // 居なければ null（操作者不明）にして値そのものは残す
+    // 居なければ null（操作者不明）にして値そのものは残し、件数を伝える
     const frozenByUserId = archiveFrozenScore.frozenByUserId
       ? ((
           await tx.user.findUnique({
@@ -200,6 +201,9 @@ export async function createGradeCells(
           })
         )?.id ?? null)
       : null
+    if (archiveFrozenScore.frozenByUserId && !frozenByUserId) {
+      unknownFrozenByCells++
+    }
     await tx.gradeFrozenScore.create({
       data: {
         ...cell,
@@ -222,6 +226,11 @@ export async function createGradeCells(
   if (droppedCells > 0) {
     warnings.push(
       `対象生徒または評価項目を解決できない上書き・確定値・除外設定 ${droppedCells}件を取り込みませんでした`
+    )
+  }
+  if (unknownFrozenByCells > 0) {
+    warnings.push(
+      `確定した利用者がこの端末に居ない確定値 ${unknownFrozenByCells}件は、確定者を不明として取り込みました`
     )
   }
 }
