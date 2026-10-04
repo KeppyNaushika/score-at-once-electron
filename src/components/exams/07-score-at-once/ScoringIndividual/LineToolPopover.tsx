@@ -1,11 +1,9 @@
 "use client"
 
-import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 import { Ruler } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import { Kbd } from "@/components/ui/kbd"
 import { Label } from "@/components/ui/label"
 import {
   Popover,
@@ -15,10 +13,10 @@ import {
 import { Slider } from "@/components/ui/slider"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { ignoreDeselect } from "@/lib/toggleSelection"
-import { cn } from "@/lib/utils"
 import { LINE_STYLES, type LineStyle } from "@/types/drawingAnnotation.types"
 
 import { COLOR_PALETTE } from "./constants/drawingConstants"
+import { PaletteTooltip } from "./PaletteTooltip"
 import type { CanvasTool } from "./types"
 
 /** 線種の表示名（並びは正本 `LINE_STYLES` の順） */
@@ -88,55 +86,32 @@ export function LineToolPopover({
   // ボタンがアクティブ状態かどうか（線ツール選択中 または 線を選択中）
   const isActive = currentTool === "line" || hasSelectedElement
 
-  const tooltipContentClass = cn(
-    "bg-primary text-primary-foreground animate-in fade-in-0 zoom-in-95",
-    "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
-    "data-[side=right]:slide-in-from-left-2",
-    "z-50 w-fit rounded-md px-3 py-1.5 text-xs"
-  )
-
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <TooltipPrimitive.Root open={isOpen ? false : undefined}>
-        <TooltipPrimitive.Trigger asChild>
-          <PopoverTrigger asChild>
-            <Button
-              size="sm"
-              variant={isActive ? "default" : "ghost"}
-              onClick={handleClick}
-              onPointerDown={(e) => e.stopPropagation()}
-              style={{
-                backgroundColor: isActive ? strokeColor : undefined,
-                borderColor: isActive ? strokeColor : undefined,
-              }}
-            >
-              <Ruler
-                className="h-4 w-4"
-                style={{ color: isActive ? "white" : undefined }}
-              />
-            </Button>
-          </PopoverTrigger>
-        </TooltipPrimitive.Trigger>
-        <TooltipPrimitive.Portal>
-          <TooltipPrimitive.Content
-            side="right"
-            sideOffset={5}
-            className={tooltipContentClass}
+      <PaletteTooltip
+        label="線ツール"
+        note="Shift+ドラッグで鉛直・水平線"
+        shortcutKey={shortcutKey?.toUpperCase()}
+        open={isOpen ? false : undefined}
+      >
+        <PopoverTrigger asChild>
+          <Button
+            size="sm"
+            variant={isActive ? "default" : "ghost"}
+            onClick={handleClick}
+            onPointerDown={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: isActive ? strokeColor : undefined,
+              borderColor: isActive ? strokeColor : undefined,
+            }}
           >
-            <div className="text-center">
-              <div className="font-medium">線ツール</div>
-              <div className="text-xs text-gray-400">
-                Shift+ドラッグで鉛直・水平線
-              </div>
-              {shortcutKey && (
-                <div className="mt-1 text-xs text-gray-400">
-                  キー: <Kbd variant="subtle">{shortcutKey.toUpperCase()}</Kbd>
-                </div>
-              )}
-            </div>
-          </TooltipPrimitive.Content>
-        </TooltipPrimitive.Portal>
-      </TooltipPrimitive.Root>
+            <Ruler
+              className="h-4 w-4"
+              style={{ color: isActive ? "white" : undefined }}
+            />
+          </Button>
+        </PopoverTrigger>
+      </PaletteTooltip>
       <PopoverContent className="w-64" side="right">
         <div className="space-y-3">
           <h4 className="text-sm font-medium">

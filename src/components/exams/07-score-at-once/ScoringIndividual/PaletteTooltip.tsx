@@ -21,6 +21,11 @@ interface PaletteTooltipProps {
   note?: string
   /** 割り当てたキー（無ければキーの行を出さない） */
   shortcutKey?: string
+  /**
+   * 開閉を外から決める（省略時は Radix 任せ）。
+   * 設定 Popover を兼ねるボタンでは、Popover を開いている間だけ false を渡して隠す
+   */
+  open?: boolean
   /** Tooltip を付けるボタン */
   children: React.ReactElement
 }
@@ -35,10 +40,11 @@ export function PaletteTooltip({
   label,
   note,
   shortcutKey,
+  open,
   children,
 }: PaletteTooltipProps) {
   return (
-    <TooltipPrimitive.Root>
+    <TooltipPrimitive.Root open={open}>
       <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Content

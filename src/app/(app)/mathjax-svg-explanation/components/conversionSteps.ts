@@ -401,7 +401,10 @@ console.log('Canvas描画完了:', finalCanvas)`,
         const canvas = document.createElement("canvas")
         canvas.width = 320
         canvas.height = 24
-        const ctx = canvas.getContext("2d")!
+        const ctx = canvas.getContext("2d")
+        if (!ctx) {
+          throw new Error("Canvas の 2D コンテキストを取得できませんでした")
+        }
 
         // 背景
         ctx.fillStyle = "#f8f9fa"
