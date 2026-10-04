@@ -1,14 +1,22 @@
 /**
- * grade-archive のラウンドトリップ統合テスト
+ * 旧形式の成績算出アーカイブ（.grade）取り込みの統合テスト
  *
  * テスト対象:
- *   electron-src/lib/export/grade-archive/gradeArchiveDataCollector.ts
  *   electron-src/lib/import/grade-archive/gradeArchiveImporter.ts
  *
- * 実SQLiteで「収集(export) → インポート(import)」を一周し、
+ * 実SQLiteへ取り込み、
  *  - v1.2.0 の Grade.referenceDate / GradeExportSettings
  *  - v1.4.0 の試験外成績資料(Coursework: 複数項目・点数・コメント・名簿・タグ)
- * が往復で保持されること、および旧 v1.3.0 形式が Coursework へ変換されることを検証する。
+ * が取り込みで保持されること、および旧 v1.3.0 形式が Coursework へ変換されることを検証する。
+ *
+ * 取り込むアーカイブは2種類ある:
+ *  - 旧書き出しで作った固定ファイル（__tests__/fixtures/legacy-archives/grade-*.grade）。
+ *    書き出しが無くなったので、書き出しがあった頃に作って固定した。各テストの冒頭に
+ *    どんな成績算出を書き出したものかを書いてある。成績算出の外にある実体（生徒・学級・
+ *    試験・小計・資料・比較先の成績算出・利用者）が「書き出したパソコンに既にある」状態が
+ *    要るテストは、固定ファイルの JSON から同じ id の行を作って用意する
+ *  - v1.12.0 以前の形をテスト内で手組みしたもの（toLegacyArchive は固定ファイルの中身を
+ *    旧形式へ落とす。v1.3.0 / v1.4.0 はリテラルで組む）
  */
 
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
@@ -28,48 +36,41 @@ vi.mock("../../../electron-src/lib/prisma/client", () => {
   }
 })
 
-import { collectGradeArchiveData } from "../../../electron-src/lib/export/grade-archive/gradeArchiveDataCollector"
 import {
   importGradeArchive,
   previewGradeArchiveImport,
 } from "../../../electron-src/lib/import/grade-archive/gradeArchiveImporter"
+import {
+  readLegacyGradeArchive,
+  seedCourseworkSections,
+} from "../../helpers/legacyArchiveFixtures"
 
 const prisma = getTestPrismaClient()
 
-/** 収集結果をアーカイブ全体データに包む（manifestはテスト用に手組み） */
-function toArchive(
-  gradeId: string,
-  collected: Awaited<ReturnType<typeof collectGradeArchiveData>>
-): GradeArchiveData {
-  const { counts, ...sections } = collected
-  return {
-    manifest: {
-      version: "1.13.0",
-      appVersion: "test",
-      exportedAt: new Date("2026-06-23T00:00:00.000Z").toISOString(),
-      gradeId,
-      gradeName: collected.grades[0]?.name ?? "",
-      counts,
-    },
-    ...sections,
-  }
+/**
+ * 固定ファイルの生徒・学級・学級所属を、同じ id のまま DB に作る
+ * （＝書き出したパソコンに生徒・学級が既にある状態）
+ */
+async function seedRosterFromArchive(archive: GradeArchiveData) {
+  await prisma.student.createMany({ data: archive.studentsData })
+  await prisma.classroom.createMany({ data: archive.classesData })
+  await prisma.studentClassroomMembership.createMany({
+    data: archive.membershipsData,
+  })
 }
 
 /**
- * 収集結果を v1.12.0 以前の射影形式へ落とす（旧アーカイブの再現用）。
+ * 固定ファイルの中身を v1.12.0 以前の射影形式へ落とす（旧アーカイブの再現用）。
  * 変換器の逆向きで、旧形式の読込互換を検証するテストだけが使う。
  */
-function toLegacyArchive(
-  gradeId: string,
-  collected: Awaited<ReturnType<typeof collectGradeArchiveData>>
-): LegacyGradeArchiveData {
+function toLegacyArchive(archive: GradeArchiveData): LegacyGradeArchiveData {
   const gradeItemNameById = new Map(
-    collected.gradeItems.map((gradeItem) => [gradeItem.id, gradeItem.name])
+    archive.gradeItems.map((gradeItem) => [gradeItem.id, gradeItem.name])
   )
   const studentNumberByGradeStudentId = new Map(
-    collected.gradeStudents.map((gradeStudent) => [
+    archive.gradeStudents.map((gradeStudent) => [
       gradeStudent.id,
-      collected.studentsData.find(
+      archive.studentsData.find(
         (student) => student.id === gradeStudent.studentId
       )!.studentNumber,
     ])
@@ -88,30 +89,30 @@ function toLegacyArchive(
       version: "1.12.0",
       appVersion: "test",
       exportedAt: new Date("2026-06-23T00:00:00.000Z").toISOString(),
-      gradeId,
-      gradeName: collected.grades[0]?.name ?? "",
-      counts: collected.counts,
+      gradeId: archive.manifest.gradeId,
+      gradeName: archive.grades[0]?.name ?? "",
+      counts: archive.manifest.counts,
     },
     gradeData: {
       grade: {
-        name: collected.grades[0].name,
-        description: collected.grades[0].description,
-        referenceDate: collected.grades[0].referenceDate,
+        name: archive.grades[0].name,
+        description: archive.grades[0].description,
+        referenceDate: archive.grades[0].referenceDate,
       },
       // 旧形式は設定をまるごと JSON で持っていた。変換器（1.14.0→1.15.0）が列へ
-      // 割り直すところまでを、この往復で通す
-      exportSettings: collected.gradeIndividualReportSettings[0]
+      // 割り直すところまでを、この取り込みで通す
+      exportSettings: archive.gradeIndividualReportSettings[0]
         ? {
             settingsJson: toLegacySettingsJson(
-              collected.gradeIndividualReportSettings[0]
+              archive.gradeIndividualReportSettings[0]
             ),
           }
         : null,
-      gradeItems: collected.gradeItems.map((gradeItem) => ({
+      gradeItems: archive.gradeItems.map((gradeItem) => ({
         id: gradeItem.id,
         name: gradeItem.name,
         order: gradeItem.order,
-        dataSources: collected.gradeDataSources
+        dataSources: archive.gradeDataSources
           .filter((dataSource) => dataSource.gradeItemId === gradeItem.id)
           .map((dataSource) => ({
             id: dataSource.id,
@@ -120,15 +121,15 @@ function toLegacyArchive(
             weight: Number(dataSource.weight),
             order: dataSource.order,
             examName:
-              collected.examRefs.find(
+              archive.examRefs.find(
                 (examRef) => examRef.id === dataSource.examId
               )?.examName ?? null,
             subtotalName:
-              collected.subtotalRefs.find(
+              archive.subtotalRefs.find(
                 (subtotalRef) => subtotalRef.id === dataSource.subtotalId
               )?.name ?? null,
             cropRegionLabel:
-              collected.cropRegionRefs.find(
+              archive.cropRegionRefs.find(
                 (cropRegionRef) => cropRegionRef.id === dataSource.cropRegionId
               )?.label ?? null,
             absentMethod: dataSource.absentMethod,
@@ -136,7 +137,7 @@ function toLegacyArchive(
             absentOffset: Number(dataSource.absentOffset),
             treatExpectedAsMissing: dataSource.treatExpectedAsMissing,
             estimationMode: dataSource.estimationMode,
-            estimationSourceIds: collected.gradeDataSourceEstimationSources
+            estimationSourceIds: archive.gradeDataSourceEstimationSources
               .filter(
                 (estimationSource) =>
                   estimationSource.dataSourceId === dataSource.id
@@ -149,33 +150,33 @@ function toLegacyArchive(
             courseworkItemId: dataSource.courseworkItemId,
           })),
       })),
-      classroomRefs: collected.gradeClassrooms.map((gradeClassroom) => ({
+      classroomRefs: archive.gradeClassrooms.map((gradeClassroom) => ({
         id: gradeClassroom.classroomId,
-        name: collected.classesData.find(
+        name: archive.classesData.find(
           (classroom) => classroom.id === gradeClassroom.classroomId
         )!.name,
       })),
-      examRefs: collected.examRefs.map((examRef) => ({
+      examRefs: archive.examRefs.map((examRef) => ({
         id: examRef.id,
         examName: examRef.examName,
         examDate: examRef.referenceDate,
         dataSourceName:
-          collected.gradeDataSources.find(
+          archive.gradeDataSources.find(
             (dataSource) => dataSource.examId === examRef.id
           )?.name ?? "",
       })),
-      studentRefs: collected.gradeStudents.map((gradeStudent) => ({
+      studentRefs: archive.gradeStudents.map((gradeStudent) => ({
         id: gradeStudent.studentId,
         studentNumber: studentNumberByGradeStudentId.get(gradeStudent.id)!,
         classroomName: null,
         customOrder: gradeStudent.customOrder,
       })),
-      gradeItemExclusions: collected.gradeItemExclusions.map(legacyCell),
-      gradeOverrides: collected.gradeOverrides.map((override) => ({
+      gradeItemExclusions: archive.gradeItemExclusions.map(legacyCell),
+      gradeOverrides: archive.gradeOverrides.map((override) => ({
         ...legacyCell(override),
         overrideLabel: override.overrideLabel,
       })),
-      gradeFrozenScores: collected.gradeFrozenScores.map((frozenScore) => ({
+      gradeFrozenScores: archive.gradeFrozenScores.map((frozenScore) => ({
         ...legacyCell(frozenScore),
         weightedScore:
           frozenScore.weightedScore === null
@@ -189,7 +190,7 @@ function toLegacyArchive(
         gradeLabel: frozenScore.gradeLabel,
         frozenAt: frozenScore.frozenAt,
       })),
-      gradeConstraints: collected.gradeConstraints.map((constraint) => ({
+      gradeConstraints: archive.gradeConstraints.map((constraint) => ({
         name: constraint.name,
         kind: constraint.kind,
         targetGradeItemId: constraint.targetGradeItemId,
@@ -198,18 +199,18 @@ function toLegacyArchive(
           : null,
         aggregate: constraint.aggregate,
         tolerance: Number(constraint.tolerance),
-        viewpointGradeItemIds: collected.gradeConstraintViewpoints
+        viewpointGradeItemIds: archive.gradeConstraintViewpoints
           .filter((viewpoint) => viewpoint.constraintId === constraint.id)
           .map((viewpoint) => viewpoint.gradeItemId),
-        viewpointGradeItemNames: collected.gradeConstraintViewpoints
+        viewpointGradeItemNames: archive.gradeConstraintViewpoints
           .filter((viewpoint) => viewpoint.constraintId === constraint.id)
           .map((viewpoint) => gradeItemNameById.get(viewpoint.gradeItemId)!),
         labelValues: Object.fromEntries(
-          collected.gradeConstraintLabelValues
+          archive.gradeConstraintLabelValues
             .filter((labelValue) => labelValue.constraintId === constraint.id)
             .map((labelValue) => [labelValue.label, Number(labelValue.value)])
         ),
-        exclusionLabels: collected.gradeConstraintExclusionLabels
+        exclusionLabels: archive.gradeConstraintExclusionLabels
           .filter(
             (exclusionLabel) => exclusionLabel.constraintId === constraint.id
           )
@@ -221,14 +222,14 @@ function toLegacyArchive(
         order: constraint.order,
       })),
     },
-    courseworkArchive: collected.courseworkArchive,
+    courseworkArchive: archive.courseworkArchive,
     boundariesData: {
       // 旧形式は評価項目ごとの入れ子。境界を持つ項目だけを載せる
-      boundarySets: collected.gradeItems
+      boundarySets: archive.gradeItems
         .map((gradeItem) => ({
           gradeItemId: gradeItem.id,
           gradeItemName: gradeItemNameById.get(gradeItem.id)!,
-          boundaries: collected.gradeItemBoundaries
+          boundaries: archive.gradeItemBoundaries
             .filter((boundary) => boundary.gradeItemId === gradeItem.id)
             .map((boundary) => ({
               label: boundary.label,
@@ -243,9 +244,7 @@ function toLegacyArchive(
 
 /** 現行の設定の行を、旧形式（1.14.0 以前）の JSON へ畳み直す */
 function toLegacySettingsJson(
-  reportSettings: Awaited<
-    ReturnType<typeof collectGradeArchiveData>
-  >["gradeIndividualReportSettings"][number]
+  reportSettings: GradeArchiveData["gradeIndividualReportSettings"][number]
 ): string {
   return JSON.stringify({
     reportOptions: {
@@ -278,7 +277,7 @@ function toLegacySettingsJson(
   })
 }
 
-describe("grade-archive ラウンドトリップ", () => {
+describe("grade-archive 取り込み", () => {
   beforeEach(async () => {
     await cleanupTestDatabase()
   })
@@ -287,39 +286,14 @@ describe("grade-archive ラウンドトリップ", () => {
     await disconnectTestPrisma()
   })
 
-  it("Grade.referenceDate と個人成績通知書の設定が往復で保持される", async () => {
-    const referenceDate = new Date("2026-04-01T00:00:00.000Z")
-
-    const grade = await prisma.grade.create({
-      data: {
-        name: `成績_${Date.now()}`,
-        description: "説明",
-        referenceDate,
-      },
-    })
-    await prisma.gradeIndividualReportSettings.create({
-      data: {
-        gradeId: grade.id,
-        title: "通知票",
-        showItemGrades: false,
-        itemGradeColumnPercentage: false,
-        itemGradeFontSize: 14,
-        dataSourceLabel: "資料",
-        footerLeft: "左",
-      },
-    })
-    // 最低限の中身も持たせる（空でないことの確認）
-    await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
-    })
-
-    // 収集（export）
-    const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.grades[0].referenceDate).toBe(referenceDate.toISOString())
-    expect(collected.gradeIndividualReportSettings[0].title).toBe("通知票")
+  it("Grade.referenceDate と個人成績通知書の設定が取り込みで保持される", async () => {
+    // 固定ファイル: 成績「成績_通知書」（説明あり・基準日 2026-04-01）に、通知書の設定
+    // （題名「通知票」・評価項目の評定を出さない・割合の列を出さない・文字14・
+    // 資料の見出し「資料」・左フッター「左」）と評価項目1つを付けて書き出した
+    const archive = await readLegacyGradeArchive("grade-report-settings.grade")
 
     // インポート（新規Gradeとして作成される）
-    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const result = await importGradeArchive(archive)
     expect(result.gradeId).toBeDefined()
 
     const imported = await prisma.grade.findUnique({
@@ -327,7 +301,7 @@ describe("grade-archive ラウンドトリップ", () => {
     })
     expect(imported).not.toBeNull()
     expect(imported!.referenceDate?.toISOString()).toBe(
-      referenceDate.toISOString()
+      "2026-04-01T00:00:00.000Z"
     )
 
     const importedSettings =
@@ -345,82 +319,51 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(importedSettings!.itemGradeColumnScore).toBe(true)
   })
 
-  it("成績のタグ(GradeTag)が往復で保持される (v1.16.0)", async () => {
-    const suffix = Date.now()
-    const tag = await prisma.tag.create({ data: { name: `教科_${suffix}` } })
-    const grade = await prisma.grade.create({
-      data: { name: `タグ付き成績_${suffix}` },
-    })
-    await prisma.gradeTag.create({
-      data: { gradeId: grade.id, tagId: tag.id },
-    })
+  it("成績のタグ(GradeTag)が取り込みで保持される (v1.16.0)", async () => {
+    // 固定ファイル: 成績「タグ付き成績」にタグ「教科_国語」を1つ付けて書き出した
+    const archive = await readLegacyGradeArchive("grade-tag.grade")
+    // 中間テーブルの行と、タグの実体の両方が載っている（実体が無いと名前を復元できない）
+    expect(archive.gradeTags).toHaveLength(1)
+    expect(archive.tagsData).toHaveLength(1)
+    // 書き出したパソコンを模す: タグはこの DB に既にある
+    const tag = await prisma.tag.create({ data: archive.tagsData[0] })
 
-    const collected = await collectGradeArchiveData(grade.id)
-    // 中間テーブルの行と、タグの実体の両方が載る（実体が無いと名前を復元できない）
-    expect(collected.gradeTags).toHaveLength(1)
-    expect(collected.gradeTags[0].tagId).toBe(tag.id)
-    expect(collected.tagsData).toEqual([
-      { id: tag.id, name: `教科_${suffix}`, order: 0, color: null },
-    ])
-
-    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const result = await importGradeArchive(archive)
     const importedTags = await prisma.gradeTag.findMany({
       where: { gradeId: result.gradeId! },
       include: { tag: true },
     })
-    // タグは成績の外にある共有物なので、同じ名前の既存タグへ寄る（作り直さない）
+    // タグは成績の外にある共有物なので、既存タグへ寄る（作り直さない）
     expect(importedTags).toHaveLength(1)
     expect(importedTags[0].tagId).toBe(tag.id)
-    expect(importedTags[0].tag.name).toBe(`教科_${suffix}`)
+    expect(importedTags[0].tag.name).toBe("教科_国語")
+    expect(await prisma.tag.count()).toBe(1)
   })
 
-  it("比較(GradeComparison)が往復で保持される (v1.17.0)", async () => {
-    const suffix = Date.now()
-    // 比較先になる別の成績算出（アーカイブには入らない）
-    const previousGrade = await prisma.grade.create({
-      data: { name: `1学期_${suffix}` },
+  it("比較(GradeComparison)が取り込みで保持される (v1.17.0)", async () => {
+    // 固定ファイル: 成績「2学期」の評価項目「知識」「評定」。比較は2つで、知識→評定
+    // （同じ成績算出）と、評定→別の成績算出「1学期」の「評定」（アーカイブに入らない）
+    const archive = await readLegacyGradeArchive("grade-comparisons.grade")
+    expect(archive.gradeComparisons).toHaveLength(2)
+    // 同定情報を添えるのは、アーカイブに入らない成績算出の項目だけ
+    expect(archive.comparedGradeItemRefs).toHaveLength(1)
+    const [previousItemRef] = archive.comparedGradeItemRefs
+    expect(previousItemRef.gradeName).toBe("1学期")
+
+    // 書き出したパソコンを模す: 比較先の成績算出はこの DB に既にある
+    await prisma.grade.create({
+      data: { id: previousItemRef.gradeId, name: previousItemRef.gradeName },
     })
     const previousItem = await prisma.gradeItem.create({
-      data: { gradeId: previousGrade.id, name: "評定", order: 0 },
-    })
-    const grade = await prisma.grade.create({
-      data: { name: `2学期_${suffix}` },
-    })
-    const knowledgeItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "知識", order: 0 },
-    })
-    const ratingItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "評定", order: 1 },
-    })
-    // 同じ成績算出の別項目との比較と、別の成績算出の項目との比較
-    await prisma.gradeComparison.create({
       data: {
-        gradeItemId: knowledgeItem.id,
-        comparedGradeItemId: ratingItem.id,
-        order: 0,
-      },
-    })
-    await prisma.gradeComparison.create({
-      data: {
-        gradeItemId: ratingItem.id,
-        comparedGradeItemId: previousItem.id,
+        id: previousItemRef.id,
+        gradeId: previousItemRef.gradeId,
+        name: previousItemRef.gradeItemName,
         order: 0,
       },
     })
 
-    const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeComparisons).toHaveLength(2)
-    // 同定情報を添えるのは、アーカイブに入らない成績算出の項目だけ
-    expect(collected.comparedGradeItemRefs).toEqual([
-      {
-        id: previousItem.id,
-        gradeId: previousGrade.id,
-        gradeName: `1学期_${suffix}`,
-        gradeItemName: "評定",
-      },
-    ])
-
-    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const result = await importGradeArchive(archive)
     const importedItems = await prisma.gradeItem.findMany({
       where: { gradeId: result.gradeId! },
       include: { comparisons: true },
@@ -446,52 +389,46 @@ describe("grade-archive ラウンドトリップ", () => {
   })
 
   it("比較先は uuid が当たらなければ成績算出名＋項目名で当て、当たらなければ落として伝える (v1.17.0)", async () => {
-    const suffix = Date.now()
+    // 固定ファイル: 成績「後期」の評価項目「評定」から、別の成績算出「前期」の「評定」への比較1つ
+    const archive = await readLegacyGradeArchive(
+      "grade-comparison-other-grade.grade"
+    )
+    const [previousItemRef] = archive.comparedGradeItemRefs
     const previousGrade = await prisma.grade.create({
-      data: { name: `前期_${suffix}` },
+      data: { name: previousItemRef.gradeName },
     })
     const previousItem = await prisma.gradeItem.create({
-      data: { gradeId: previousGrade.id, name: "評定", order: 0 },
-    })
-    const grade = await prisma.grade.create({
-      data: { name: `後期_${suffix}` },
-    })
-    const ratingItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "評定", order: 0 },
-    })
-    await prisma.gradeComparison.create({
       data: {
-        gradeItemId: ratingItem.id,
-        comparedGradeItemId: previousItem.id,
+        gradeId: previousGrade.id,
+        name: previousItemRef.gradeItemName,
         order: 0,
       },
     })
 
-    const collected = await collectGradeArchiveData(grade.id)
     // 別の PC から持ってきた想定: 比較先の uuid は取り込み先に無い
-    const byName = {
-      ...collected,
+    const byName: GradeArchiveData = {
+      ...archive,
       gradeComparisons: [
-        { ...collected.gradeComparisons[0], comparedGradeItemId: "other-pc-1" },
+        { ...archive.gradeComparisons[0], comparedGradeItemId: "other-pc-1" },
         {
-          ...collected.gradeComparisons[0],
+          ...archive.gradeComparisons[0],
           id: "comparison-missing",
           comparedGradeItemId: "other-pc-2",
           order: 1,
         },
       ],
       comparedGradeItemRefs: [
-        { ...collected.comparedGradeItemRefs[0], id: "other-pc-1" },
+        { ...previousItemRef, id: "other-pc-1" },
         {
           id: "other-pc-2",
           gradeId: "other-pc-grade",
-          gradeName: `存在しない成績_${suffix}`,
+          gradeName: "存在しない成績",
           gradeItemName: "評定",
         },
       ],
     }
 
-    const result = await importGradeArchive(toArchive(grade.id, byName))
+    const result = await importGradeArchive(byName)
     const importedComparisons = await prisma.gradeComparison.findMany({
       where: { gradeItem: { gradeId: result.gradeId! } },
     })
@@ -503,149 +440,32 @@ describe("grade-archive ラウンドトリップ", () => {
     ).toBe(true)
   })
 
-  it("試験外成績資料(Coursework)の項目・点数・コメント・名簿・タグが往復で保持される (v1.4.0)", async () => {
-    const suffix = Date.now()
-
-    // 生徒・学級
-    const classroom = await prisma.classroom.create({
-      data: { name: `学級_${suffix}` },
-    })
-    const student = await prisma.student.create({
-      data: {
-        studentNumber: `CW_${suffix}`,
-        lastName: "鈴木",
-        firstName: "一郎",
-        lastNameKana: "スズキ",
-        firstNameKana: "イチロウ",
-      },
-    })
-    await prisma.studentClassroomMembership.create({
-      data: { classroomId: classroom.id, studentId: student.id },
-    })
-    const tag = await prisma.tag.create({
-      data: { name: `タグ_${suffix}` },
-    })
-
-    // 試験外成績資料（2項目: 数値 + 文字評価）
-    const coursework = await prisma.coursework.create({
-      data: {
-        name: `第2回レポート_${suffix}`,
-        description: "レポート評価",
-        classrooms: { create: [{ classroomId: classroom.id, order: 0 }] },
-        tags: { create: [{ tagId: tag.id }] },
-        students: { create: [{ studentId: student.id, customOrder: 0 }] },
-      },
-    })
-    const numItem = await prisma.courseworkItem.create({
-      data: {
-        courseworkId: coursework.id,
-        name: "提出物",
-        order: 0,
-        maxScore: 100,
-        inputMode: "numeric",
-      },
-    })
-    const letterItem = await prisma.courseworkItem.create({
-      data: {
-        courseworkId: coursework.id,
-        name: "授業態度",
-        order: 1,
-        maxScore: 100,
-        inputMode: "letter",
-        letterScales: {
-          create: [
-            { label: "A", score: 100, order: 0 },
-            { label: "B", score: 80, order: 1 },
-            { label: "C", score: 60, order: 2 },
-          ],
-        },
-      },
-    })
-    const courseworkStudent = await prisma.courseworkStudent.findUniqueOrThrow({
-      where: {
-        courseworkId_studentId: {
-          courseworkId: coursework.id,
-          studentId: student.id,
-        },
-      },
-    })
-    await prisma.courseworkScore.create({
-      data: {
-        courseworkItemId: numItem.id,
-        courseworkStudentId: courseworkStudent.id,
-        score: 85,
-        adjustment: -5,
-        adjustmentReason: "提出遅延",
-        comment: "丁寧にまとめられています",
-      },
-    })
-    await prisma.courseworkScore.create({
-      data: {
-        courseworkItemId: letterItem.id,
-        courseworkStudentId: courseworkStudent.id,
-        letterValue: "B",
-        comment: "発表が活発でした",
-      },
-    })
-
-    // 成績: 各項目を参照する coursework 型データソース
-    const grade = await prisma.grade.create({
-      data: { name: `成績_cw_${suffix}` },
-    })
-    const gradeItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "主体的態度", order: 0 },
-    })
-    await prisma.gradeDataSource.create({
-      data: {
-        gradeItemId: gradeItem.id,
-        type: "coursework",
-        courseworkItemId: numItem.id,
-        name: "提出物参照",
-        weight: 50,
-        order: 0,
-      },
-    })
-    await prisma.gradeDataSource.create({
-      data: {
-        gradeItemId: gradeItem.id,
-        type: "coursework",
-        courseworkItemId: letterItem.id,
-        name: "授業態度参照",
-        weight: 50,
-        order: 1,
-      },
-    })
-
-    // 収集（export）
-    const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.courseworkArchive.courseworks).toHaveLength(1)
-    expect(collected.courseworkArchive.courseworkItems).toHaveLength(2)
-    expect(collected.courseworkArchive.courseworkClassrooms).toHaveLength(1)
-    expect(collected.courseworkArchive.tagsData[0].name).toBe(`タグ_${suffix}`)
-    expect(collected.courseworkArchive.studentsData[0].studentNumber).toBe(
-      `CW_${suffix}`
+  it("試験外成績資料(Coursework)の項目・点数・コメント・名簿・タグが取り込みで保持される (v1.4.0)", async () => {
+    // 固定ファイル: 学級「学級_資料内包」・生徒「CW_101」・タグ「タグ_資料内包」を持つ資料
+    // 「第2回レポート」（数値の「提出物」85点・調整-5、文字評価の「授業態度」A/B/C で B）と、
+    // その2項目を参照する coursework 型データソース2つを持つ成績「成績_資料内包」
+    const archive = await readLegacyGradeArchive(
+      "grade-embedded-coursework.grade"
     )
-    const collectedNumDs = collected.gradeDataSources.find(
+    const embedded = archive.courseworkArchive
+    expect(embedded.courseworks).toHaveLength(1)
+    expect(embedded.courseworkItems).toHaveLength(2)
+    expect(embedded.courseworkClassrooms).toHaveLength(1)
+    // 参照先の資料・評価項目は内包する courseworkArchive の行として carry されている。
+    // データソースの行は uuid だけを持つ（名前を二重に持たない）
+    const archivedNumDs = archive.gradeDataSources.find(
       (dataSource) => dataSource.name === "提出物参照"
     )!
-    // 参照先の資料・評価項目は内包する courseworkArchive の行として carry される。
-    // データソースの行は uuid だけを持つ（名前を二重に持たない）
-    expect(collectedNumDs.courseworkItemId).not.toBeNull()
-    const referencedItem = collected.courseworkArchive.courseworkItems.find(
-      (item) => item.id === collectedNumDs.courseworkItemId
+    const referencedItem = embedded.courseworkItems.find(
+      (item) => item.id === archivedNumDs.courseworkItemId
     )!
     expect(referencedItem.name).toBe("提出物")
-    expect(
-      collected.courseworkArchive.courseworks.find(
-        (coursework) => coursework.id === referencedItem.courseworkId
-      )!.name
-    ).toBe(`第2回レポート_${suffix}`)
 
-    // インポート（新規 Grade + Coursework が作成される。同名Courseworkは無い前提）
-    // 既存 Coursework と名前衝突しないよう、元の資料は残るが import 時は
-    // 別名でないため findFirst で既存を再利用する → 名前を変えて検証する。
-    // ここでは元データを削除せず、import が既存同名を再利用することを確認する。
-    const result = await importGradeArchive(toArchive(grade.id, collected))
+    // 書き出したパソコンを模す: 資料（と生徒・学級・タグ）はこの DB に既にある
+    await seedCourseworkSections(embedded)
+
+    // インポート（新規 Grade が作成され、資料は既存のものが uuid 一致で再利用される）
+    const result = await importGradeArchive(archive)
 
     // import 後、coursework 型データソースが courseworkItem を正しく解決していること
     const importedDs = await prisma.gradeDataSource.findFirst({
@@ -665,13 +485,12 @@ describe("grade-archive ラウンドトリップ", () => {
       },
     })
     expect(importedDs!.courseworkItem).not.toBeNull()
+    expect(importedDs!.courseworkItem!.id).toBe(referencedItem.id)
     expect(importedDs!.courseworkItem!.name).toBe("提出物")
-    expect(importedDs!.courseworkItem!.coursework.name).toBe(
-      `第2回レポート_${suffix}`
-    )
+    expect(importedDs!.courseworkItem!.coursework.name).toBe("第2回レポート")
     // 既存同名 Coursework が再利用される（重複作成されない）
     const courseworkCount = await prisma.coursework.count({
-      where: { name: `第2回レポート_${suffix}` },
+      where: { name: "第2回レポート" },
     })
     expect(courseworkCount).toBe(1)
   })
@@ -1065,17 +884,14 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(dataSource!.courseworkItemId).not.toBeNull()
   })
 
-  it("referenceDate/通知書の設定が無いGradeも問題なく往復する（後方互換）", async () => {
-    const grade = await prisma.grade.create({
-      data: { name: `成績_min_${Date.now()}` },
-    })
+  it("referenceDate/通知書の設定が無いGradeも問題なく取り込める（後方互換）", async () => {
+    // 固定ファイル: 名前「成績_空」だけの成績算出（評価項目も名簿も無い）
+    const archive = await readLegacyGradeArchive("grade-empty.grade")
+    expect(archive.grades[0].referenceDate).toBeNull()
+    expect(archive.gradeIndividualReportSettings).toHaveLength(0)
+    expect(archive.courseworkArchive.courseworks).toHaveLength(0)
 
-    const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.grades[0].referenceDate).toBeNull()
-    expect(collected.gradeIndividualReportSettings).toHaveLength(0)
-    expect(collected.courseworkArchive.courseworks).toHaveLength(0)
-
-    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const result = await importGradeArchive(archive)
 
     const imported = await prisma.grade.findUnique({
       where: { id: result.gradeId! },
@@ -1346,107 +1162,18 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(dataSource!.courseworkItem!.courseworkId).toBe(existing.id)
   })
 
-  it("観点間の制約ルール(GradeConstraint)が往復で保持される (v1.7.0/v1.11.0)", async () => {
-    const suffix = Date.now()
-    const grade = await prisma.grade.create({
-      data: { name: `成績_constraint_${suffix}` },
-    })
-    const knowledgeItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
-    })
-    const hyoteiItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "評定", order: 1 },
-    })
-
-    const exclusionConstraint = await prisma.gradeConstraint.create({
-      data: {
-        gradeId: grade.id,
-        name: "A・C混在禁止",
-        kind: "mutual_exclusion",
-        expression: "",
-        color: "#fecaca",
-        message: "AとCは混在しません",
-        enabled: true,
-        order: 0,
-        exclusionLabels: {
-          create: [
-            { id: `x-${suffix}-A`, label: "A", order: 0 },
-            { id: `x-${suffix}-C`, label: "C", order: 1 },
-          ],
-        },
-      },
-    })
-
-    // v1.11.0: 比較先・集計対象は評価項目への参照として持つ（issue #1063）
-    await prisma.gradeConstraint.create({
-      data: {
-        gradeId: grade.id,
-        name: "評定と観点の整合",
-        kind: "consistency",
-        targetGradeItemId: hyoteiItem.id,
-        aggregate: "sum",
-        tolerance: 2,
-        expression: "",
-        color: "#fde68a",
-        message: null,
-        enabled: false,
-        order: 1,
-        viewpoints: {
-          create: [
-            {
-              id: `v-${suffix}-k`,
-              gradeItemId: knowledgeItem.id,
-              order: 0,
-            },
-          ],
-        },
-        labelValues: {
-          create: [
-            { id: `l-${suffix}-A`, label: "A", value: 5, order: 0 },
-            { id: `l-${suffix}-C`, label: "C", value: 1, order: 1 },
-          ],
-        },
-      },
-    })
-
-    // 収集（export）
-    const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeConstraints).toHaveLength(2)
-    const exclusion = collected.gradeConstraints.find(
-      (constraint) => constraint.kind === "mutual_exclusion"
+  it("観点間の制約ルール(GradeConstraint)が取り込みで保持される (v1.7.0/v1.11.0)", async () => {
+    // 固定ファイル: 成績「成績_制約」の評価項目「知識・技能」「評定」と、制約2つ。
+    // 「A・C混在禁止」（混在禁止・ラベル A,C・有効）と「評定と観点の整合」（整合・比較先は評定・
+    // 観点は知識・技能・合計・許容2・A=5,C=1・無効・色 #fde68a）
+    const archive = await readLegacyGradeArchive("grade-constraints.grade")
+    expect(archive.gradeConstraints).toHaveLength(2)
+    const archivedHyotei = archive.gradeItems.find(
+      (gradeItem) => gradeItem.name === "評定"
     )!
-    expect(exclusion.name).toBe("A・C混在禁止")
-    // 混在禁止ラベルは中間テーブルの行として持つ（配列へ潰さない）
-    expect(
-      collected.gradeConstraintExclusionLabels
-        .filter((row) => row.constraintId === exclusion.id)
-        .map((row) => row.label)
-    ).toEqual(["A", "C"])
-
-    const consistency = collected.gradeConstraints.find(
-      (constraint) => constraint.kind === "consistency"
-    )!
-    // 参照は行の uuid のまま。観点・ラベル値も中間テーブルの行として持つ
-    expect(consistency.targetGradeItemId).toBe(hyoteiItem.id)
-    expect(
-      collected.gradeConstraintViewpoints
-        .filter((row) => row.constraintId === consistency.id)
-        .map((row) => row.gradeItemId)
-    ).toEqual([knowledgeItem.id])
-    expect(
-      collected.gradeConstraintLabelValues
-        .filter((row) => row.constraintId === consistency.id)
-        .map((row) => [row.label, Number(row.value)])
-    ).toEqual([
-      ["A", 5],
-      ["C", 1],
-    ])
-    expect(consistency.aggregate).toBe("sum")
-    expect(Number(consistency.tolerance)).toBe(2)
 
     // インポート（新規Gradeとして作成される）
-    const result = await importGradeArchive(toArchive(grade.id, collected))
-    expect(exclusionConstraint.gradeId).toBe(grade.id)
+    const result = await importGradeArchive(archive)
 
     const imported = await prisma.gradeConstraint.findMany({
       where: { gradeId: result.gradeId! },
@@ -1477,7 +1204,7 @@ describe("grade-archive ラウンドトリップ", () => {
     const importedKnowledge = importedItems.find(
       (gradeItem) => gradeItem.name === "知識・技能"
     )!
-    expect(importedHyotei.id).not.toBe(hyoteiItem.id)
+    expect(importedHyotei.id).not.toBe(archivedHyotei.id)
     expect(imported[1].kind).toBe("consistency")
     expect(imported[1].targetGradeItemId).toBe(importedHyotei.id)
     expect(
@@ -1498,55 +1225,17 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(imported[1].color).toBe("#fde68a")
   })
 
-  it("成績値の確定(GradeFrozenScore)が往復で保持される (v1.9.0)", async () => {
-    const suffix = Date.now()
-    const student = await prisma.student.create({
-      data: {
-        studentNumber: `SF${suffix}`,
-        lastName: "確定",
-        firstName: "太郎",
-        lastNameKana: "カクテイ",
-        firstNameKana: "タロウ",
-      },
-    })
-    const grade = await prisma.grade.create({
-      data: { name: `成績_frozen_${suffix}` },
-    })
-    const gradeStudent = await prisma.gradeStudent.create({
-      data: { gradeId: grade.id, studentId: student.id },
-    })
-    const gradeItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
-    })
-    const frozenAt = new Date("2026-07-20T09:00:00.000Z")
-    await prisma.gradeFrozenScore.create({
-      data: {
-        gradeStudentId: gradeStudent.id,
-        gradeItemId: gradeItem.id,
-        weightedScore: 0.8,
-        weightedMaxScore: 1,
-        percentage: 80,
-        gradeLabel: "A",
-        frozenAt,
-      },
-    })
-
-    // 収集（export）: 行をそのまま持つ（Decimal は文字列、参照は uuid）
-    const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeFrozenScores).toHaveLength(1)
-    expect(collected.gradeFrozenScores[0]).toMatchObject({
-      gradeStudentId: gradeStudent.id,
-      gradeItemId: gradeItem.id,
-      weightedScore: "0.8",
-      weightedMaxScore: "1",
-      percentage: "80",
-      gradeLabel: "A",
-    })
-    // 生徒は full レコードとして carry される（uuid が当たらなければ学籍番号で当てる）
-    expect(collected.studentsData[0].studentNumber).toBe(`SF${suffix}`)
+  it("成績値の確定(GradeFrozenScore)が取り込みで保持される (v1.9.0)", async () => {
+    // 固定ファイル: 成績「成績_確定」の対象者1名（SF001）・評価項目「知識・技能」に、
+    // 確定値（0.8/1・80%・A・確定日時 2026-07-20T09:00Z・確定操作者なし）
+    const archive = await readLegacyGradeArchive("grade-frozen-score.grade")
+    expect(archive.gradeFrozenScores).toHaveLength(1)
+    // 書き出したパソコンを模す: 生徒はこの DB に既にある
+    await seedRosterFromArchive(archive)
+    const student = archive.studentsData[0]
 
     // インポート（新規Gradeとして作成される）
-    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const result = await importGradeArchive(archive)
 
     const imported = await prisma.gradeFrozenScore.findMany({
       where: { gradeStudent: { gradeId: result.gradeId! } },
@@ -1562,71 +1251,28 @@ describe("grade-archive ラウンドトリップ", () => {
     })
     expect(importedGradeStudent.studentId).toBe(student.id)
     expect(new Date(imported[0].frozenAt).toISOString()).toBe(
-      frozenAt.toISOString()
+      "2026-07-20T09:00:00.000Z"
     )
-    // 確定操作者は持ち出さないので取り込み先では不明になる
+    // 確定操作者の居ない確定値は、取り込み先でも不明のまま
     expect(imported[0].frozenByUserId).toBeNull()
   })
 
   it("同名の評価項目があっても uuid 照合で取り違えない (v1.10.0)", async () => {
     // 評価項目名は unique ではない（GradeItem に (gradeId, name) 制約が無い）。
     // 名前だけで照合すると、境界・上書き・確定値が別の同名項目へ付いてしまう。
-    const suffix = Date.now()
-    const student = await prisma.student.create({
-      data: {
-        studentNumber: `SD${suffix}`,
-        lastName: "同名",
-        firstName: "太郎",
-        lastNameKana: "ドウメイ",
-        firstNameKana: "タロウ",
-      },
-    })
-    const grade = await prisma.grade.create({
-      data: { name: `成績_dup_${suffix}` },
-    })
-    const gradeStudent = await prisma.gradeStudent.create({
-      data: { gradeId: grade.id, studentId: student.id },
-    })
-    // 同じ名前の評価項目を2つ作る（1つ目は「寄せられる先」になりうる側）
-    await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "評定", order: 0 },
-    })
-    const secondItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "評定", order: 1 },
-    })
-    // 確定値・上書き・境界はすべて「2つ目」に付ける
-    await prisma.gradeFrozenScore.create({
-      data: {
-        gradeStudentId: gradeStudent.id,
-        gradeItemId: secondItem.id,
-        weightedScore: 0.7,
-        weightedMaxScore: 1,
-        percentage: 70,
-        gradeLabel: "3",
-      },
-    })
-    await prisma.gradeOverride.create({
-      data: {
-        gradeStudentId: gradeStudent.id,
-        gradeItemId: secondItem.id,
-        overrideLabel: "4",
-      },
-    })
-    await prisma.gradeItemBoundary.create({
-      data: {
-        gradeItemId: secondItem.id,
-        label: "3",
-        minPercentage: 50,
-        order: 0,
-      },
-    })
-
-    const collected = await collectGradeArchiveData(grade.id)
+    // 固定ファイル: 成績「成績_同名」に同じ名前「評定」の評価項目を2つ（order 0, 1）。
+    // 確定値・上書き「4」・境界「3」(50%) はすべて2つ目に付けて書き出した
+    const archive = await readLegacyGradeArchive(
+      "grade-duplicate-item-names.grade"
+    )
+    const secondItem = archive.gradeItems.find(
+      (gradeItem) => gradeItem.order === 1
+    )!
     // 参照は uuid を持ち出している
-    expect(collected.gradeItems[1].id).toBe(secondItem.id)
-    expect(collected.gradeFrozenScores[0].gradeItemId).toBe(secondItem.id)
+    expect(archive.gradeFrozenScores[0].gradeItemId).toBe(secondItem.id)
+    await seedRosterFromArchive(archive)
 
-    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const result = await importGradeArchive(archive)
 
     // 取り込み先でも「2つ目」の評価項目に付いていること（1つ目へ寄らない）
     const importedItems = await prisma.gradeItem.findMany({
@@ -1656,45 +1302,28 @@ describe("grade-archive ラウンドトリップ", () => {
   })
 
   it("uuid を持たない旧アーカイブで同名項目があれば、取り違えず警告して落とす", async () => {
-    const suffix = Date.now()
-    const student = await prisma.student.create({
-      data: {
-        studentNumber: `SL${suffix}`,
-        lastName: "旧版",
-        firstName: "花子",
-        lastNameKana: "キュウハン",
-        firstNameKana: "ハナコ",
-      },
-    })
-    await prisma.classroom.create({ data: { name: `C${suffix}` } })
-    const grade = await prisma.grade.create({
-      data: { name: `成績_legacy_${suffix}` },
-    })
-    await prisma.gradeStudent.create({
-      data: { gradeId: grade.id, studentId: student.id },
-    })
-    await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "評定", order: 0 },
-    })
-    await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "評定", order: 1 },
-    })
+    // 固定ファイル: 成績「成績_旧同名」の対象者1名（SL001）と、同じ名前「評定」の
+    // 評価項目2つ（セルは無い）
+    const archive = await readLegacyGradeArchive(
+      "grade-duplicate-item-names-roster-only.grade"
+    )
+    // 旧形式は生徒を学籍番号で引くので、生徒はこの DB に既にある
+    await seedRosterFromArchive(archive)
 
-    const collected = await collectGradeArchiveData(grade.id)
-    const archive = toLegacyArchive(grade.id, collected)
+    const legacy = toLegacyArchive(archive)
     // uuid を持たない v1.9.0 以前のアーカイブを再現する
-    archive.gradeData.gradeItems = archive.gradeData.gradeItems.map(
+    legacy.gradeData.gradeItems = legacy.gradeData.gradeItems.map(
       (gradeItem) => ({ ...gradeItem, id: undefined })
     )
-    archive.gradeData.gradeOverrides = [
+    legacy.gradeData.gradeOverrides = [
       {
-        studentNumber: `SL${suffix}`,
+        studentNumber: archive.studentsData[0].studentNumber,
         gradeItemName: "評定",
         overrideLabel: "4",
       },
     ]
 
-    const result = await importGradeArchive(archive)
+    const result = await importGradeArchive(legacy)
 
     // どちらの項目か決められないので取り込まず、その旨を警告する
     const overrides = await prisma.gradeOverride.findMany({
@@ -1709,69 +1338,37 @@ describe("grade-archive ラウンドトリップ", () => {
   it("学籍番号・学級名・試験名が変わっても uuid で照合できる (v1.10.0)", async () => {
     // uuid 一次照合の核。名前や学籍番号は取り込み先で変わりうる（改姓・学級名変更・
     // 試験名の付け替え）が、同一PC由来なら uuid で確実に当たる。
-    const suffix = Date.now()
-    const classroom = await prisma.classroom.create({
-      data: { name: `旧学級_${suffix}` },
-    })
-    const student = await prisma.student.create({
-      data: {
-        studentNumber: `OLD${suffix}`,
-        lastName: "変更",
-        firstName: "前",
-        lastNameKana: "ヘンコウ",
-        firstNameKana: "マエ",
-      },
-    })
-    await prisma.studentClassroomMembership.create({
-      data: { classroomId: classroom.id, studentId: student.id },
-    })
-    const exam = await prisma.exam.create({
-      data: { examName: `旧試験_${suffix}` },
-    })
+    // 固定ファイル: 学級「旧学級」・生徒「OLD001」（その学級に在籍）・試験「旧試験」を参照する
+    // 成績「成績_参照」。名簿の並びは3、データソースは旧試験の合計点
+    const archive = await readLegacyGradeArchive("grade-external-refs.grade")
+    const classroom = archive.classesData[0]
+    const student = archive.studentsData[0]
+    const [examRef] = archive.examRefs
+    expect(archive.gradeStudents[0].studentId).toBe(student.id)
+    expect(archive.gradeClassrooms[0].classroomId).toBe(classroom.id)
+    expect(archive.gradeDataSources[0].examId).toBe(examRef.id)
 
-    const grade = await prisma.grade.create({
-      data: { name: `成績_uuid_${suffix}` },
+    // 書き出したパソコンを模す: 生徒・学級・試験はこの DB に既にある
+    await seedRosterFromArchive(archive)
+    await prisma.exam.create({
+      data: { id: examRef.id, examName: examRef.examName },
     })
-    await prisma.gradeClassroom.create({
-      data: { gradeId: grade.id, classroomId: classroom.id, order: 0 },
-    })
-    await prisma.gradeStudent.create({
-      data: { gradeId: grade.id, studentId: student.id, customOrder: 3 },
-    })
-    const gradeItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
-    })
-    await prisma.gradeDataSource.create({
-      data: {
-        gradeItemId: gradeItem.id,
-        type: "exam_total",
-        examId: exam.id,
-        name: "期末",
-        weight: 100,
-        order: 0,
-      },
-    })
-
-    const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeStudents[0].studentId).toBe(student.id)
-    expect(collected.gradeClassrooms[0].classroomId).toBe(classroom.id)
-    expect(collected.gradeDataSources[0].examId).toBe(exam.id)
 
     // 取り込み前に名前・学籍番号をすべて変える（名前照合なら全滅する状況）
     await prisma.student.update({
       where: { id: student.id },
-      data: { studentNumber: `NEW${suffix}`, lastName: "変更後" },
+      data: { studentNumber: "NEW001", lastName: "変更後" },
     })
     await prisma.classroom.update({
       where: { id: classroom.id },
-      data: { name: `新学級_${suffix}` },
+      data: { name: "新学級" },
     })
     await prisma.exam.update({
-      where: { id: exam.id },
-      data: { examName: `新試験_${suffix}` },
+      where: { id: examRef.id },
+      data: { examName: "新試験" },
     })
 
-    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const result = await importGradeArchive(archive)
 
     // 学級・生徒・試験すべてが uuid で解決されている
     const importedClassrooms = await prisma.gradeClassroom.findMany({
@@ -1791,115 +1388,85 @@ describe("grade-archive ラウンドトリップ", () => {
       where: { gradeItem: { gradeId: result.gradeId! } },
     })
     expect(importedDataSources).toHaveLength(1)
-    expect(importedDataSources[0].examId).toBe(exam.id)
+    expect(importedDataSources[0].examId).toBe(examRef.id)
   })
 
   it("uuid を持たない旧アーカイブは従来どおり学籍番号・名前で照合する", async () => {
-    const suffix = Date.now()
-    const classroom = await prisma.classroom.create({
-      data: { name: `学級L_${suffix}` },
-    })
-    const student = await prisma.student.create({
-      data: {
-        studentNumber: `LG${suffix}`,
-        lastName: "旧式",
-        firstName: "太郎",
-        lastNameKana: "キュウシキ",
-        firstNameKana: "タロウ",
-      },
-    })
-    const grade = await prisma.grade.create({
-      data: { name: `成績_legacyref_${suffix}` },
-    })
-    await prisma.gradeClassroom.create({
-      data: { gradeId: grade.id, classroomId: classroom.id, order: 0 },
-    })
-    await prisma.gradeStudent.create({
-      data: { gradeId: grade.id, studentId: student.id },
-    })
+    // 固定ファイル: 学級「学級L」と生徒「LG001」（学級所属なし）を名簿に持つ成績「成績_名簿」
+    const archive = await readLegacyGradeArchive("grade-roster-classroom.grade")
+    await seedRosterFromArchive(archive)
 
-    const collected = await collectGradeArchiveData(grade.id)
-    const archive = toLegacyArchive(grade.id, collected)
+    const legacy = toLegacyArchive(archive)
     // v1.9.0 以前を再現: 外部参照から uuid を落とす
-    archive.gradeData.studentRefs = archive.gradeData.studentRefs.map(
+    legacy.gradeData.studentRefs = legacy.gradeData.studentRefs.map(
       (studentRef) => ({ ...studentRef, id: undefined })
     )
-    archive.gradeData.classroomRefs = archive.gradeData.classroomRefs.map(
+    legacy.gradeData.classroomRefs = legacy.gradeData.classroomRefs.map(
       (classroomRef) => ({ ...classroomRef, id: undefined })
     )
 
-    const result = await importGradeArchive(archive)
+    const result = await importGradeArchive(legacy)
 
-    expect(
-      await prisma.gradeStudent.findMany({
-        where: { gradeId: result.gradeId! },
-      })
-    ).toHaveLength(1)
-    expect(
-      await prisma.gradeClassroom.findMany({
-        where: { gradeId: result.gradeId! },
-      })
-    ).toHaveLength(1)
+    const importedStudents = await prisma.gradeStudent.findMany({
+      where: { gradeId: result.gradeId! },
+    })
+    expect(importedStudents).toHaveLength(1)
+    expect(importedStudents[0].studentId).toBe(archive.studentsData[0].id)
+    const importedClassrooms = await prisma.gradeClassroom.findMany({
+      where: { gradeId: result.gradeId! },
+    })
+    expect(importedClassrooms).toHaveLength(1)
+    expect(importedClassrooms[0].classroomId).toBe(archive.classesData[0].id)
   })
 
   it("同名の小計が別試験にあっても、参照先の試験の小計に紐づく (v1.10.0)", async () => {
     // 旧実装は subtotal.findMany({ where: { name } }) と試験で絞らずに検索し
     // 先頭を採っていたため、別試験の同名小計に紐づきうる状態だった。
-    const suffix = Date.now()
-    const targetExam = await prisma.exam.create({
-      data: { examName: `対象試験_${suffix}` },
-    })
-    const otherExam = await prisma.exam.create({
-      data: { examName: `無関係試験_${suffix}` },
-    })
+    // 固定ファイル: 試験「対象試験」の小計「大問1」を参照するデータソース1つを持つ成績「成績_小計」
+    const archive = await readLegacyGradeArchive("grade-subtotal-source.grade")
+    const [examRef] = archive.examRefs
+    const [subtotalRef] = archive.subtotalRefs
+    expect(archive.gradeDataSources[0].subtotalId).toBe(subtotalRef.id)
+
     // どちらの試験にも同じ名前の小計を持つグループを付ける
-    const makeSubtotal = async (examId: string, groupName: string) => {
+    const makeSubtotal = async (
+      exam: { id?: string; examName: string },
+      groupName: string,
+      subtotalId?: string
+    ) => {
+      const createdExam = await prisma.exam.create({ data: exam })
       const group = await prisma.subtotalGroup.create({
         data: { name: groupName },
       })
       await prisma.examSubtotalGroup.create({
         data: {
-          examId,
+          examId: createdExam.id,
           subtotalGroupId: group.id,
         },
       })
       return prisma.subtotal.create({
-        data: { subtotalGroupId: group.id, name: "大問1", order: 0 },
+        data: {
+          id: subtotalId,
+          subtotalGroupId: group.id,
+          name: subtotalRef.name,
+          order: 0,
+        },
       })
     }
     // 無関係な試験の小計を先に作る（先頭採用なら誤ってこちらに当たる）
     const otherSubtotal = await makeSubtotal(
-      otherExam.id,
-      `他グループ_${suffix}`
+      { examName: "無関係試験" },
+      "他グループ"
     )
+    // 参照先の試験と小計は、書き出したパソコンと同じ id で作る
     const targetSubtotal = await makeSubtotal(
-      targetExam.id,
-      `対象グループ_${suffix}`
+      { id: examRef.id, examName: examRef.examName },
+      "対象グループ",
+      subtotalRef.id
     )
-
-    const grade = await prisma.grade.create({
-      data: { name: `成績_subtotal_${suffix}` },
-    })
-    const gradeItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
-    })
-    await prisma.gradeDataSource.create({
-      data: {
-        gradeItemId: gradeItem.id,
-        type: "subtotal",
-        examId: targetExam.id,
-        subtotalId: targetSubtotal.id,
-        name: "大問1参照",
-        weight: 100,
-        order: 0,
-      },
-    })
-
-    const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeDataSources[0].subtotalId).toBe(targetSubtotal.id)
 
     // uuid あり: 一次照合で対象の小計に当たる
-    const withUuid = await importGradeArchive(toArchive(grade.id, collected))
+    const withUuid = await importGradeArchive(archive)
     const uuidSources = await prisma.gradeDataSource.findMany({
       where: { gradeItem: { gradeId: withUuid.gradeId! } },
     })
@@ -1907,7 +1474,7 @@ describe("grade-archive ラウンドトリップ", () => {
 
     // uuid なし（v1.9.0 以前）: 名前フォールバックでも試験で絞られ、
     // 無関係な試験の同名小計には当たらない
-    const legacyArchive = toLegacyArchive(grade.id, collected)
+    const legacyArchive = toLegacyArchive(archive)
     legacyArchive.gradeData.gradeItems = legacyArchive.gradeData.gradeItems.map(
       (item) => ({
         ...item,
@@ -1925,14 +1492,12 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(legacySources[0].subtotalId).not.toBe(otherSubtotal.id)
   })
 
-  it("gradeFrozenScores が無いGradeも問題なく往復する（後方互換）", async () => {
-    const grade = await prisma.grade.create({
-      data: { name: `成績_nofrozen_${Date.now()}` },
-    })
-    const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeFrozenScores).toHaveLength(0)
+  it("gradeFrozenScores が無いGradeも問題なく取り込める（後方互換）", async () => {
+    // 固定ファイル: 名前「成績_空」だけの成績算出
+    const archive = await readLegacyGradeArchive("grade-empty.grade")
+    expect(archive.gradeFrozenScores).toHaveLength(0)
 
-    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const result = await importGradeArchive(archive)
     const imported = await prisma.gradeFrozenScore.findMany({
       where: { gradeStudent: { gradeId: result.gradeId! } },
     })
@@ -1940,30 +1505,23 @@ describe("grade-archive ラウンドトリップ", () => {
   })
 
   it("アーカイブの名簿に無い対象者を指すセルは取り込まず警告する（#962 Phase C）", async () => {
-    const suffix = Date.now()
     // セルは対象者（GradeStudent）を uuid で指す。その uuid が名簿セクションに
     // 無ければ、取り込み先で対象者を作れないのでセルも作ってはいけない
     // （作れてしまうと、どの画面にも出ない孤児が復活する）。
-    const grade = await prisma.grade.create({
-      data: { name: `成績_orphan_${suffix}` },
-    })
-    const gradeItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
-    })
-    const collected = await collectGradeArchiveData(grade.id)
+    // 固定ファイル: 評価項目「知識・技能」1つだけの成績「成績_孤児」（名簿は空）
+    const archive = await readLegacyGradeArchive("grade-one-item.grade")
+    expect(archive.gradeStudents).toHaveLength(0)
 
     const EPOCH = new Date(0).toISOString()
     // 名簿（gradeStudents）は空のまま、そこに載っていない対象者を指すセルを差し込む
     const cell = {
-      gradeStudentId: `orphan-grade-student-${suffix}`,
-      gradeItemId: gradeItem.id,
+      gradeStudentId: "orphan-grade-student",
+      gradeItemId: archive.gradeItems[0].id,
       createdAt: EPOCH,
       updatedAt: EPOCH,
     }
-    collected.gradeOverrides = [
-      { id: "override-1", ...cell, overrideLabel: "A" },
-    ]
-    collected.gradeFrozenScores = [
+    archive.gradeOverrides = [{ id: "override-1", ...cell, overrideLabel: "A" }]
+    archive.gradeFrozenScores = [
       {
         id: "frozen-1",
         ...cell,
@@ -1975,9 +1533,9 @@ describe("grade-archive ラウンドトリップ", () => {
         frozenAt: new Date("2026-07-20T09:00:00.000Z").toISOString(),
       },
     ]
-    collected.gradeItemExclusions = [{ id: "exclusion-1", ...cell }]
+    archive.gradeItemExclusions = [{ id: "exclusion-1", ...cell }]
 
-    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const result = await importGradeArchive(archive)
 
     const [overrides, frozenScores, itemExclusions] = await Promise.all([
       prisma.gradeOverride.count({
@@ -2003,69 +1561,22 @@ describe("grade-archive ラウンドトリップ", () => {
   })
 
   it("取り込み先に居ない生徒・学級は作られ、学級所属も復元される (v1.13.0)", async () => {
-    const suffix = Date.now()
-    const student = await prisma.student.create({
-      data: {
-        studentNumber: `SNEW${suffix}`,
-        lastName: "新規",
-        firstName: "太郎",
-        lastNameKana: "シンキ",
-        firstNameKana: "タロウ",
-      },
-    })
-    const classroom = await prisma.classroom.create({
-      data: { name: `新規学級_${suffix}` },
-    })
-    await prisma.studentClassroomMembership.create({
-      data: {
-        studentId: student.id,
-        classroomId: classroom.id,
-        attendanceNumber: 7,
-      },
-    })
-    const grade = await prisma.grade.create({
-      data: { name: `成績_new_${suffix}` },
-    })
-    await prisma.gradeClassroom.create({
-      data: { gradeId: grade.id, classroomId: classroom.id, order: 0 },
-    })
-    const gradeStudent = await prisma.gradeStudent.create({
-      data: { gradeId: grade.id, studentId: student.id },
-    })
-    const gradeItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
-    })
-    await prisma.gradeOverride.create({
-      data: {
-        gradeStudentId: gradeStudent.id,
-        gradeItemId: gradeItem.id,
-        overrideLabel: "A",
-      },
-    })
+    // 固定ファイル: 学級「新規学級」に出席番号7で在籍する生徒「SNEW001 新規 太郎」を名簿に持ち、
+    // 評価項目「知識・技能」に上書き「A」を付けた成績「成績_新規」。
+    // 取り込み先は空の DB（＝別PCへ持って行った状況）
+    const archive = await readLegacyGradeArchive("grade-override.grade")
 
-    const collected = await collectGradeArchiveData(grade.id)
-
-    // 取り込み先から生徒・学級を消して「別PCへ持って行った」状況を作る
-    await prisma.grade.delete({ where: { id: grade.id } })
-    await prisma.studentClassroomMembership.deleteMany({
-      where: { studentId: student.id },
-    })
-    await prisma.student.delete({ where: { id: student.id } })
-    await prisma.classroom.delete({ where: { id: classroom.id } })
-
-    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const result = await importGradeArchive(archive)
 
     // 生徒・学級が作られ、学級所属（出席番号つき）まで戻る
-    // 学籍番号は unique ではないので findFirst で引く（suffix 付きなので1件に決まる）
+    // 学籍番号は unique ではないので findFirst で引く（空の DB なので1件に決まる）
     const restoredStudent = await prisma.student.findFirstOrThrow({
-      where: { studentNumber: `SNEW${suffix}` },
+      where: { studentNumber: "SNEW001" },
       include: { memberships: { include: { classroom: true } } },
     })
     expect(restoredStudent.lastName).toBe("新規")
     expect(restoredStudent.memberships).toHaveLength(1)
-    expect(restoredStudent.memberships[0].classroom.name).toBe(
-      `新規学級_${suffix}`
-    )
+    expect(restoredStudent.memberships[0].classroom.name).toBe("新規学級")
     expect(restoredStudent.memberships[0].attendanceNumber).toBe(7)
 
     // 名簿と上書きも復元される（作られなければ両方落ちていた）
@@ -2078,60 +1589,16 @@ describe("grade-archive ラウンドトリップ", () => {
     expect(restoredOverrides[0].overrideLabel).toBe("A")
   })
 
-  it("収集結果は Prisma の行そのままで、射影した名前を持たない (v1.13.0)", async () => {
-    const suffix = Date.now()
-    const student = await prisma.student.create({
-      data: {
-        studentNumber: `SROW${suffix}`,
-        lastName: "行",
-        firstName: "太郎",
-        lastNameKana: "ギョウ",
-        firstNameKana: "タロウ",
-      },
-    })
-    const classroom = await prisma.classroom.create({
-      data: { name: `行学級_${suffix}` },
-    })
-    await prisma.studentClassroomMembership.create({
-      data: { studentId: student.id, classroomId: classroom.id },
-    })
-    const grade = await prisma.grade.create({
-      data: { name: `成績_row_${suffix}` },
-    })
-    await prisma.gradeClassroom.create({
-      data: { gradeId: grade.id, classroomId: classroom.id, order: 0 },
-    })
-    const gradeStudent = await prisma.gradeStudent.create({
-      data: { gradeId: grade.id, studentId: student.id },
-    })
-    const gradeItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
-    })
-    await prisma.gradeItemExclusion.create({
-      data: { gradeStudentId: gradeStudent.id, gradeItemId: gradeItem.id },
-    })
+  it("除外設定は取り込みで対象者・評価項目の対応を保つ (v1.13.0)", async () => {
+    // 固定ファイル: 学級「行学級」に在籍する生徒「SROW001」を名簿に持ち、評価項目
+    // 「知識・技能」の除外設定を1つ持つ成績「成績_除外」
+    const archive = await readLegacyGradeArchive("grade-item-exclusion.grade")
+    // 学級所属も carry されている（名簿の学級表示の裏付け）
+    expect(archive.membershipsData).toHaveLength(1)
+    await seedRosterFromArchive(archive)
+    const student = archive.studentsData[0]
 
-    const collected = await collectGradeArchiveData(grade.id)
-
-    // 行は DB の列そのまま。id・作成日時まで持ち、射影した名前を持たない
-    expect(collected.grades[0].id).toBe(grade.id)
-    expect(collected.grades[0].createdAt).toBe(grade.createdAt.toISOString())
-    expect(collected.gradeStudents[0]).toEqual({
-      id: gradeStudent.id,
-      gradeId: grade.id,
-      studentId: student.id,
-      customOrder: null,
-      createdAt: gradeStudent.createdAt.toISOString(),
-      updatedAt: gradeStudent.updatedAt.toISOString(),
-    })
-    expect(collected.gradeStudents[0]).not.toHaveProperty("studentNumber")
-    expect(collected.gradeItemExclusions[0]).not.toHaveProperty("gradeItemName")
-    // 学級所属も carry する（名簿の学級表示の裏付け）
-    expect(collected.membershipsData).toHaveLength(1)
-    expect(collected.membershipsData[0].studentId).toBe(student.id)
-
-    // 往復しても対象者・評価項目の対応が保たれる
-    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const result = await importGradeArchive(archive)
     const importedExclusions = await prisma.gradeItemExclusion.findMany({
       where: { gradeStudent: { gradeId: result.gradeId! } },
       include: {
@@ -2145,56 +1612,33 @@ describe("grade-archive ラウンドトリップ", () => {
   })
 
   it("確定操作者は取り込み先に居れば残り、居なければ操作者不明になる (v1.13.0)", async () => {
-    const suffix = Date.now()
-    const user = await prisma.user.create({
-      data: { username: `teacher_${suffix}`, name: "採点 教員" },
-    })
-    const student = await prisma.student.create({
+    // 固定ファイル: 生徒「SFU001」の評価項目「知識・技能」に、利用者「teacher_frozen」が
+    // 確定した確定値（80%・A）を持つ成績「成績_確定者」
+    const archive = await readLegacyGradeArchive("grade-frozen-by-user.grade")
+    const frozenByUserId = archive.gradeFrozenScores[0].frozenByUserId!
+    expect(frozenByUserId).toBeTruthy()
+    await seedRosterFromArchive(archive)
+    // 書き出したパソコンを模す: 確定した利用者はこの DB に居る
+    await prisma.user.create({
       data: {
-        studentNumber: `SFU${suffix}`,
-        lastName: "凍結",
-        firstName: "花子",
-        lastNameKana: "トウケツ",
-        firstNameKana: "ハナコ",
-      },
-    })
-    const grade = await prisma.grade.create({
-      data: { name: `成績_frozenby_${suffix}` },
-    })
-    const gradeStudent = await prisma.gradeStudent.create({
-      data: { gradeId: grade.id, studentId: student.id },
-    })
-    const gradeItem = await prisma.gradeItem.create({
-      data: { gradeId: grade.id, name: "知識・技能", order: 0 },
-    })
-    await prisma.gradeFrozenScore.create({
-      data: {
-        gradeStudentId: gradeStudent.id,
-        gradeItemId: gradeItem.id,
-        weightedScore: 0.8,
-        weightedMaxScore: 1,
-        percentage: 80,
-        gradeLabel: "A",
-        frozenByUserId: user.id,
+        id: frozenByUserId,
+        username: "teacher_frozen",
+        name: "採点 教員",
       },
     })
 
-    const collected = await collectGradeArchiveData(grade.id)
-    // 行そのままなので確定操作者も持ち出す（旧形式は落としていた）
-    expect(collected.gradeFrozenScores[0].frozenByUserId).toBe(user.id)
-
-    const kept = await importGradeArchive(toArchive(grade.id, collected))
+    const kept = await importGradeArchive(archive)
     expect(
       (
         await prisma.gradeFrozenScore.findFirstOrThrow({
           where: { gradeStudent: { gradeId: kept.gradeId! } },
         })
       ).frozenByUserId
-    ).toBe(user.id)
+    ).toBe(frozenByUserId)
 
     // 取り込み先に居ない操作者は null（値そのものは残す）
-    collected.gradeFrozenScores[0].frozenByUserId = `missing-user-${suffix}`
-    const dropped = await importGradeArchive(toArchive(grade.id, collected))
+    archive.gradeFrozenScores[0].frozenByUserId = "missing-user"
+    const dropped = await importGradeArchive(archive)
     const restored = await prisma.gradeFrozenScore.findFirstOrThrow({
       where: { gradeStudent: { gradeId: dropped.gradeId! } },
     })
@@ -2203,46 +1647,25 @@ describe("grade-archive ラウンドトリップ", () => {
   })
 
   it("既存生徒の学級所属は書き換えない（異動先を旧学級で上書きしない）", async () => {
-    const suffix = Date.now()
-    const student = await prisma.student.create({
-      data: {
-        studentNumber: `SMOVE${suffix}`,
-        lastName: "異動",
-        firstName: "太郎",
-        lastNameKana: "イドウ",
-        firstNameKana: "タロウ",
-      },
-    })
-    const oldClassroom = await prisma.classroom.create({
-      data: { name: `旧学級_${suffix}` },
-    })
-    await prisma.studentClassroomMembership.create({
-      data: { studentId: student.id, classroomId: oldClassroom.id },
-    })
-    const grade = await prisma.grade.create({
-      data: { name: `成績_move_${suffix}` },
-    })
-    await prisma.gradeClassroom.create({
-      data: { gradeId: grade.id, classroomId: oldClassroom.id, order: 0 },
-    })
-    await prisma.gradeStudent.create({
-      data: { gradeId: grade.id, studentId: student.id },
-    })
+    // 固定ファイル: 学級「異動前の学級」に在籍する生徒「SMOVE001」を名簿に持つ成績「成績_異動」。
+    // 学級所属（異動前の学級）も carry されている
+    const archive = await readLegacyGradeArchive(
+      "grade-classroom-membership.grade"
+    )
+    expect(archive.membershipsData).toHaveLength(1)
+    const student = archive.studentsData[0]
 
-    const collected = await collectGradeArchiveData(grade.id)
-
-    // 取り込み先では別学級へ異動済み、という状況を作る
-    await prisma.studentClassroomMembership.deleteMany({
-      where: { studentId: student.id },
-    })
+    // 取り込み先では生徒も学級もあるが、生徒は別学級へ異動済み、という状況を作る
+    await prisma.student.createMany({ data: archive.studentsData })
+    await prisma.classroom.createMany({ data: archive.classesData })
     const newClassroom = await prisma.classroom.create({
-      data: { name: `新学級_${suffix}` },
+      data: { name: "新学級" },
     })
     await prisma.studentClassroomMembership.create({
       data: { studentId: student.id, classroomId: newClassroom.id },
     })
 
-    await importGradeArchive(toArchive(grade.id, collected))
+    await importGradeArchive(archive)
 
     // 既存生徒なので学級所属は触らない。旧学級の在籍が復活してはいけない
     const memberships = await prisma.studentClassroomMembership.findMany({
@@ -2250,44 +1673,30 @@ describe("grade-archive ラウンドトリップ", () => {
       include: { classroom: true },
     })
     expect(memberships).toHaveLength(1)
-    expect(memberships[0].classroom.name).toBe(`新学級_${suffix}`)
+    expect(memberships[0].classroom.name).toBe("新学級")
   })
 
   it("アーカイブの別々の生徒が同じ既存生徒へ一致しても取り込みは失敗しない", async () => {
-    const suffix = Date.now()
-    const student = await prisma.student.create({
-      data: {
-        studentNumber: `SDUP${suffix}`,
-        lastName: "重複",
-        firstName: "太郎",
-        lastNameKana: "ジュウフク",
-        firstNameKana: "タロウ",
-      },
-    })
-    const grade = await prisma.grade.create({
-      data: { name: `成績_dupstudent_${suffix}` },
-    })
-    await prisma.gradeStudent.create({
-      data: { gradeId: grade.id, studentId: student.id },
-    })
+    // 固定ファイル: 生徒「SDUP001」1名だけを名簿に持つ成績「成績_一人」
+    const archive = await readLegacyGradeArchive("grade-one-student.grade")
+    await seedRosterFromArchive(archive)
 
-    const collected = await collectGradeArchiveData(grade.id)
     const EPOCH = new Date(0).toISOString()
     // uuid は違うが学籍番号が同じ、という2人目を差し込む（学籍番号の振り直しで起こる）
-    collected.studentsData.push({
-      ...collected.studentsData[0],
-      id: `other-uuid-${suffix}`,
+    archive.studentsData.push({
+      ...archive.studentsData[0],
+      id: "other-uuid",
     })
-    collected.gradeStudents.push({
-      id: `other-grade-student-${suffix}`,
-      gradeId: grade.id,
-      studentId: `other-uuid-${suffix}`,
+    archive.gradeStudents.push({
+      id: "other-grade-student",
+      gradeId: archive.grades[0].id,
+      studentId: "other-uuid",
       customOrder: 1,
       createdAt: EPOCH,
       updatedAt: EPOCH,
     })
 
-    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const result = await importGradeArchive(archive)
 
     // unique 違反で全体がロールバックせず、1名にまとめたことを伝える
     expect(
@@ -2301,20 +1710,18 @@ describe("grade-archive ラウンドトリップ", () => {
   })
 
   it("旧アーカイブから作る学級の id は uuid になる（合成idを主キーにしない）", async () => {
-    const suffix = Date.now()
-    const grade = await prisma.grade.create({
-      data: { name: `成績_clsid_${suffix}` },
-    })
-    const collected = await collectGradeArchiveData(grade.id)
-    const legacy = toLegacyArchive(grade.id, collected)
+    // 固定ファイル: 名前「成績_空」だけの成績算出
+    const legacy = toLegacyArchive(
+      await readLegacyGradeArchive("grade-empty.grade")
+    )
     // v1.10.0 未満を再現: 学級参照から uuid を落とす
-    legacy.gradeData.classroomRefs = [{ name: `合成id学級_${suffix}` }]
+    legacy.gradeData.classroomRefs = [{ name: "合成id学級" }]
 
     await importGradeArchive(legacy)
 
-    // 学級名は unique ではないので findFirst で引く（suffix 付きなので1件に決まる）
+    // 学級名は unique ではないので findFirst で引く（空の DB なので1件に決まる）
     const created = await prisma.classroom.findFirstOrThrow({
-      where: { name: `合成id学級_${suffix}` },
+      where: { name: "合成id学級" },
     })
     expect(created.id).not.toContain("legacy-classroom:")
     expect(created.id).toMatch(
@@ -2322,14 +1729,12 @@ describe("grade-archive ラウンドトリップ", () => {
     )
   })
 
-  it("gradeConstraints が無いGradeも問題なく往復する（後方互換）", async () => {
-    const grade = await prisma.grade.create({
-      data: { name: `成績_noconstraint_${Date.now()}` },
-    })
-    const collected = await collectGradeArchiveData(grade.id)
-    expect(collected.gradeConstraints).toHaveLength(0)
+  it("gradeConstraints が無いGradeも問題なく取り込める（後方互換）", async () => {
+    // 固定ファイル: 名前「成績_空」だけの成績算出
+    const archive = await readLegacyGradeArchive("grade-empty.grade")
+    expect(archive.gradeConstraints).toHaveLength(0)
 
-    const result = await importGradeArchive(toArchive(grade.id, collected))
+    const result = await importGradeArchive(archive)
     const imported = await prisma.gradeConstraint.findMany({
       where: { gradeId: result.gradeId! },
     })

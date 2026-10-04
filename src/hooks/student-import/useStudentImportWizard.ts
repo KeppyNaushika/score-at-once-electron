@@ -15,10 +15,7 @@ import type {
   IdIntegrationDecision,
 } from "@/types/examArchive.types"
 import type { ImportAction } from "@/types/importAction.types"
-import type {
-  StudentArchiveFileOverviewData,
-  StudentImportWizardState,
-} from "@/types/studentArchive.types"
+import type { StudentImportWizardState } from "@/types/studentArchive.types"
 import { INITIAL_STUDENT_IMPORT_WIZARD_STATE } from "@/types/studentArchive.types"
 
 export const STUDENT_IMPORT_STEP_ORDER = [
@@ -29,14 +26,38 @@ export const STUDENT_IMPORT_STEP_ORDER = [
   "execute",
 ] as const
 
+/** .students を読み、「内容確認」に要るもの（manifest と事前照合）を揃える */
+const loadStudentArchive = async (archivePath: string) => {
+  const manifest = await analyzeStudentArchive(archivePath)
+  const fileOverviewData = await preMatchStudentArchive(archivePath)
+  return { archivePath, manifest, fileOverviewData }
+}
+
+/**
+ * 一覧の「読み込み」で選んだファイルを読み、ウィザードを「内容確認」から始める状態を作る
+ * （ファイル選択の段を飛ばす）。読めなければ例外（ウィザードは開かない）
+ */
+export async function openStudentImportFile(
+  archivePath: string
+): Promise<StudentImportWizardState> {
+  return {
+    ...INITIAL_STUDENT_IMPORT_WIZARD_STATE,
+    ...(await loadStudentArchive(archivePath)),
+    currentStep: "file_overview",
+  }
+}
+
 /**
  * 生徒インポートウィザードの状態管理フック
+ *
+ * 一覧の「読み込み」から開くときは、`openStudentImportFile` で作った状態から始める。
+ * ファイル選択の段は、戻って選び直すときに使う。
  */
-export function useStudentImportWizard() {
+export function useStudentImportWizard(
+  startState: StudentImportWizardState = INITIAL_STUDENT_IMPORT_WIZARD_STATE
+) {
   const { mutateAsync: runImport } = useMutation(importStudentArchiveMutation())
-  const [state, setState] = useState<StudentImportWizardState>(
-    INITIAL_STUDENT_IMPORT_WIZARD_STATE
-  )
+  const [state, setState] = useState<StudentImportWizardState>(startState)
 
   // ファイル選択
   const selectFile = useCallback(async () => {
@@ -50,20 +71,12 @@ export function useStudentImportWizard() {
         return false
       }
 
-      const archivePath = result.filePath
-
-      // アーカイブ解析
-      const manifest = await analyzeStudentArchive(archivePath)
-
-      // 事前照合
-      const fileOverviewData: StudentArchiveFileOverviewData =
-        await preMatchStudentArchive(archivePath)
+      // アーカイブ解析と事前照合
+      const loaded = await loadStudentArchive(result.filePath)
 
       setState((prev) => ({
         ...prev,
-        archivePath,
-        manifest,
-        fileOverviewData,
+        ...loaded,
         isProcessing: false,
         currentStep: "file_overview",
       }))

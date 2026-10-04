@@ -2,7 +2,6 @@ import { queryOptions } from "@tanstack/react-query"
 
 import type { GradeReportSettings } from "@/types/gradeReport.types"
 
-import { auditLogListKey } from "./auditLog"
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
 import { tagListQuery } from "./tag"
@@ -173,26 +172,13 @@ export const exportGradeExcelMutation = (gradeId: string) =>
     },
   })
 
-export const exportGradeArchiveMutation = () =>
-  defineMutation({
-    mutationFn: (gradeId: string) =>
-      window.electronAPI.grade.exportArchive(gradeId),
-    meta: {
-      // 書き出したことは監査ログに残る＝DB を1行書く
-      invalidates: [auditLogListKey],
-      errorMessage: "成績アーカイブを書き出せませんでした",
-    },
-  })
-
-/** ファイルを選んで中身を読むだけ。取り込みの実行は `executeGradeImportMutation` */
-export const analyzeGradeArchiveMutation = () =>
-  defineMutation({
-    mutationFn: () => window.electronAPI.grade.importArchive(),
-    meta: {
-      writesDatabase: false,
-      errorMessage: "成績アーカイブを読み込めませんでした",
-    },
-  })
+/**
+ * .grade の中身を読んで照合の結果を返す（取り込みの下見。DB は変わらない）。取り込みの
+ * 実行は `executeGradeImportMutation`。一覧の「読み込み」が失敗をその場で知らせるので、
+ * 関数のまま出す
+ */
+export const analyzeGradeArchive = (archivePath: string) =>
+  window.electronAPI.grade.analyzeArchive(archivePath)
 
 export const executeGradeImportMutation = () =>
   defineMutation({

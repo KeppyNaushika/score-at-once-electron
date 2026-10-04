@@ -2,8 +2,6 @@
  * Coursework（試験外成績資料）IPC ハンドラー
  */
 
-import { dialog } from "electron"
-
 import type { CourseworkScoreUpsertInput } from "../../src/types/coursework.types"
 import type {
   CourseworkImportDecisions,
@@ -11,7 +9,6 @@ import type {
 } from "../../src/types/courseworkArchive.types"
 import type { ConfirmedDeletionCount } from "../../src/types/deletionConfirmation.types"
 import type { ImportAction } from "../../src/types/importAction.types"
-import { exportCoursework } from "../lib/export/coursework-archive"
 import {
   cleanupCourseworkTempDir,
   extractCourseworkArchive,
@@ -263,29 +260,8 @@ export const courseworkHandlers = {
     return addCourseworkTag(courseworkId, tagId)
   },
 
-  // ── アーカイブ（.coursework のエクスポート／インポート）────────────
-  // エクスポート（保存ダイアログは exportCoursework 内で表示）
-  "coursework:exportArchive": async (courseworkId: string) => {
-    return exportCoursework({ courseworkId })
-  },
-
-  // インポートファイル選択ダイアログ
-  "coursework:selectImportFile": async () => {
-    const result = await dialog.showOpenDialog({
-      title: "試験外成績資料をインポート",
-      filters: [
-        { name: "試験外成績資料", extensions: ["coursework"] },
-        { name: "すべてのファイル", extensions: ["*"] },
-      ],
-      properties: ["openFile"],
-    })
-    if (result.canceled || result.filePaths.length === 0) {
-      return { canceled: true as const }
-    }
-    return { canceled: false as const, filePath: result.filePaths[0] }
-  },
-
-  // アーカイブ解析（プレビュー）
+  // ── アーカイブ（.coursework の取り込み。旧形式は読み込みだけ残して凍結）──
+  // ファイルは一覧の「読み込み」で選ぶ
   "coursework:analyzeArchive": async (options: { archivePath: string }) => {
     const extracted = await extractCourseworkArchive(options.archivePath)
     try {

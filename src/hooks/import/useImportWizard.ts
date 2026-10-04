@@ -15,7 +15,6 @@ import {
 } from "@/queries/archive"
 import type {
   CategoryIdIntegrationConfig,
-  FileOverviewData,
   IdChoice,
   IdIntegrationDecision,
   ImportWizardState,
@@ -23,6 +22,37 @@ import type {
 import type { ImportAction } from "@/types/importAction.types"
 
 import { initialState, STEP_ORDER } from "./constants"
+
+/** .score を読み、「内容確認」に要るもの（manifest と事前照合）を揃える */
+const loadExamArchive = async (archivePath: string) => {
+  const analyzeResult = await analyzeExamArchive(archivePath)
+  const fileOverviewData = await preMatchExamArchive(archivePath)
+  return { archivePath, manifest: analyzeResult.manifest, fileOverviewData }
+}
+
+/**
+ * 一覧の「読み込み」で選んだファイルから、ウィザードを始める状態を作る（ファイル選択の段を
+ * 飛ばす）。.score は読んで「内容確認」から、.hsz/.dat は変換の前に免責事項の確認から始める。
+ * 読めなければ例外（ウィザードは開かない）
+ */
+export async function openExamImportFile(file: {
+  path: string
+  sourceFormat: "score" | "hsz" | "dat"
+}): Promise<ImportWizardState> {
+  if (file.sourceFormat !== "score") {
+    return {
+      ...initialState,
+      sourceFormat: file.sourceFormat,
+      showHszDisclaimer: true,
+      hszOriginalPath: file.path,
+    }
+  }
+  return {
+    ...initialState,
+    ...(await loadExamArchive(file.path)),
+    currentStep: "file_overview",
+  }
+}
 
 /**
  * インポートウィザードの状態管理フック
@@ -35,29 +65,26 @@ import { initialState, STEP_ORDER } from "./constants"
  * Step 5 (execute): 実行
  *
  * **ID以外の列をどうするかを選ぶ段は無い。** 値の扱いは Step 2 で選ぶ1つの方針で決まる。
+ *
+ * 一覧の「読み込み」から開くときは、`openExamImportFile` で作った状態から始める
+ * （ファイル選択の段を飛ばす）。ファイル選択の段は、戻って選び直すときに使う。
  */
-export function useImportWizard() {
+export function useImportWizard(startState: ImportWizardState = initialState) {
   const currentUser = useCurrentUser()
   const { mutateAsync: runImport } = useMutation(importExamArchiveMutation())
-  const [state, setState] = useState<ImportWizardState>(initialState)
+  const [state, setState] = useState<ImportWizardState>(startState)
 
   // アーカイブ解析 → 事前照合 → file_overview遷移（共通処理）
   const analyzeAndPreMatch = useCallback(async (archivePath: string) => {
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
     try {
-      // アーカイブを解析
-      const analyzeResult = await analyzeExamArchive(archivePath)
-
-      // 事前照合を実行
-      const fileOverviewData: FileOverviewData =
-        await preMatchExamArchive(archivePath)
+      // アーカイブを解析し、事前照合を実行
+      const loaded = await loadExamArchive(archivePath)
 
       setState((prev) => ({
         ...prev,
-        archivePath,
-        manifest: analyzeResult.manifest,
-        fileOverviewData,
+        ...loaded,
         isProcessing: false,
         currentStep: "file_overview",
       }))

@@ -6,19 +6,15 @@ import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import BaseModal from "@/components/common/BaseModal"
+import { ArchiveImportScreens } from "@/components/archive-import/ArchiveImportScreens"
+import { archiveImportToolbarAction } from "@/components/archive-import/archiveImportToolbarAction"
+import { useArchiveImportLauncher } from "@/components/archive-import/hooks/useArchiveImportLauncher"
 import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
 import { EntityListPage } from "@/components/common/EntityListPage"
-import {
-  type ExportOutcome,
-  ExportResultSummary,
-} from "@/components/common/ExportResultSummary"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
 import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
-import { unifiedArchiveImportToolbarAction } from "@/components/unified-archive/import/unifiedArchiveImportToolbarAction"
-import { UnifiedArchiveImportWizard } from "@/components/unified-archive/import/UnifiedArchiveImportWizard"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
@@ -29,7 +25,6 @@ import {
   answerSheetBuilderWorkflowSteps,
   workflowStepHref,
 } from "@/lib/shared/workflowSteps"
-import { exportAnswerSheetDefinitionMutation } from "@/queries/answerSheetBuilder"
 import {
   addTagToAnswerSheetDefinitionsMutation,
   findOrCreateTagMutation,
@@ -41,7 +36,6 @@ import { CreateDefinitionButton } from "./components/list/CreateDefinitionButton
 import { DefinitionRowMenu } from "./components/list/DefinitionRowMenu"
 import { DefinitionSummary } from "./components/list/DefinitionSummary"
 import { DeleteDefinitionDialog } from "./components/list/DeleteDefinitionDialog"
-import { ImportDefinitionButton } from "./components/list/ImportDefinitionButton"
 import { TransferOwnerDialog } from "./components/list/TransferOwnerDialog"
 import { useAnswerSheetDefinitions } from "./hooks/useAnswerSheetDefinitions"
 
@@ -72,11 +66,6 @@ export function AnswerSheetDefinitionList() {
   const definitionDeletion = useDialogTarget<ASBDefinitionListItem>()
   const [transferTarget, setTransferTarget] =
     useState<ASBDefinitionListItem | null>(null)
-  /** 書き出しの結果。渡している間は結果モーダルを見せる */
-  const [exportOutcome, setExportOutcome] = useState<ExportOutcome | null>(null)
-  const { mutateAsync: exportDefinition } = useMutation(
-    exportAnswerSheetDefinitionMutation()
-  )
   const { mutateAsync: findOrCreateTag } = useMutation(
     findOrCreateTagMutation()
   )
@@ -85,7 +74,9 @@ export function AnswerSheetDefinitionList() {
   )
   /** 一覧には全員の解答用紙が載る。既定は自分が担当のものだけを出す */
   const [showAllOwners, setShowAllOwners] = useState(false)
-  const [showUnifiedImport, setShowUnifiedImport] = useState(false)
+  const archiveImport = useArchiveImportLauncher()
+  const { start: startArchiveImport, isOpening: isOpeningArchive } =
+    archiveImport
   /** .sao 書き出しを開いたときの最初の選択。null の間は閉じている */
   const [unifiedExportSelection, setUnifiedExportSelection] =
     useState<UnifiedArchiveExportInitialSelection | null>(null)
@@ -209,31 +200,6 @@ export function AnswerSheetDefinitionList() {
     definitionDeletion.close()
   }
 
-  const handleExport = useCallback(
-    async (definition: ASBDefinitionListItem) => {
-      try {
-        const exportResult = await exportDefinition(definition.id)
-        // 保存先を選ばずに閉じたのは失敗ではないので、何も言わない
-        if (exportResult.canceled) return
-        // 結果はモーダルの中で見せる（欠けた画像はファイル名まで出す）
-        setExportOutcome({
-          archives: [
-            {
-              sourceId: definition.id,
-              sourceName: definition.name,
-              outputPath: exportResult.outputPath,
-              missingFiles: exportResult.missingFiles ?? [],
-            },
-          ],
-          failures: [],
-        })
-      } catch {
-        // 失敗の通知は MutationCache が出す
-      }
-    },
-    [exportDefinition]
-  )
-
   const tagFilterConfig = useMemo(
     () => ({
       options: allTags,
@@ -282,27 +248,10 @@ export function AnswerSheetDefinitionList() {
           </CreateDefinitionButton>
         ),
       },
-      {
-        id: "import",
+      archiveImportToolbarAction({
         priority: 70,
-        node: (
-          <ImportDefinitionButton
-            userId={currentUser.id}
-            variant="outline"
-            className="rounded-lg"
-          />
-        ),
-        collapsedNode: (
-          <ImportDefinitionButton
-            userId={currentUser.id}
-            variant="ghost"
-            className="w-full justify-start"
-          />
-        ),
-      },
-      unifiedArchiveImportToolbarAction({
-        priority: 69,
-        onClick: () => setShowUnifiedImport(true),
+        isOpening: isOpeningArchive,
+        onClick: () => void startArchiveImport(),
       }),
       {
         // 「誰の解答用紙を見るか」は絞り込みの一種なので、他の絞り込みと同じ側に置く
@@ -325,7 +274,15 @@ export function AnswerSheetDefinitionList() {
     }
 
     return toolbarActions
-  }, [allTags, currentUser.id, handleBulkAddTag, showAllOwners, selectedIds])
+  }, [
+    allTags,
+    currentUser.id,
+    handleBulkAddTag,
+    isOpeningArchive,
+    showAllOwners,
+    selectedIds,
+    startArchiveImport,
+  ])
 
   return (
     <>
@@ -355,7 +312,6 @@ export function AnswerSheetDefinitionList() {
             isOwner={definition.ownerId === currentUser.id}
             onEdit={() => handleOpenEditor(definition.id)}
             onDuplicate={() => duplicateDefinition(definition.id)}
-            onExport={() => handleExport(definition)}
             onUnifiedExport={() =>
               setUnifiedExportSelection({
                 roots: { AsbDefinition: [definition.id] },
@@ -408,25 +364,6 @@ export function AnswerSheetDefinitionList() {
         sortStorageKey="answerSheetList-sort"
       />
 
-      {exportOutcome && (
-        <BaseModal
-          open
-          onOpenChange={(open) => !open && setExportOutcome(null)}
-          title=".asb 書き出し"
-          variant={
-            exportOutcome.archives.some(
-              (archive) => archive.missingFiles.length > 0
-            )
-              ? "warning"
-              : "success"
-          }
-          size="lg"
-          actions={{ cancel: { label: "閉じる" } }}
-        >
-          <ExportResultSummary outcome={exportOutcome} />
-        </BaseModal>
-      )}
-
       <UnifiedArchiveExportDialog
         open={unifiedExportSelection !== null}
         onOpenChange={(open) => {
@@ -448,10 +385,7 @@ export function AnswerSheetDefinitionList() {
         onConfirm={confirmDelete}
       />
 
-      <UnifiedArchiveImportWizard
-        open={showUnifiedImport}
-        onOpenChange={setShowUnifiedImport}
-      />
+      <ArchiveImportScreens launcher={archiveImport} />
     </>
   )
 }

@@ -9,6 +9,12 @@
  *
  * ここは「行数が合う」ではなく「どの行にぶら下がったか」「どの値になったか」まで見る。
  * 試験名だけ更新して試験日を落とす、のような列の数え落としが起きた場所だから。
+ *
+ * 取り込むのは旧書き出しで作った固定ファイル `exam-full.score`。元データは
+ * createFullTestExam（2ページ×2設問・3名・採点ほか）で、試験の列は既定と違う値
+ * （試験名「書き出した側の試験名」・試験日 2026-03-01・説明「書き出した側の説明」・
+ * 赤ペン補正あり）にしてから書き出した。「このパソコンに同じ試験がある」状態は、
+ * 同じ固定ファイルを空の DB へ一度取り込んで作る（seedExamFromLegacyArchive）。
  */
 
 import * as fs from "fs"
@@ -25,11 +31,6 @@ import {
 } from "vitest"
 
 import type { ImportAction } from "../../../src/types/importAction.types"
-import {
-  createTestArchive,
-  verifyArchiveContents,
-} from "../../helpers/testArchiveHelper"
-import { createFullTestExam } from "../../helpers/testExamBuilder"
 import {
   cleanupTestDatabase,
   createTestUser,
@@ -62,44 +63,43 @@ vi.mock("../../../electron-src/lib/import/merge/imageImporter", () => ({
   createImportImageRecords: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { collectExamData } from "../../../electron-src/lib/export/exam-archive/dataCollector"
 import {
   cleanupTempDir,
-  extractArchive,
+  type ExtractedArchiveData,
 } from "../../../electron-src/lib/import/exam-archive/archiveExtractor"
 import { executeIdIntegrationImport } from "../../../electron-src/lib/import/merge/idIntegrationImporter"
 import { performPreMatching } from "../../../electron-src/lib/import/merge/matcher"
+import {
+  extractLegacyExamArchive,
+  seedExamFromLegacyArchive,
+} from "../../helpers/legacyArchiveFixtures"
 import { createIdIntegrationConfig } from "../../helpers/testDataFactory"
 
 const prisma = getTestPrismaClient()
 
-/** 試験を書き出してアーカイブのパスを返す */
-async function exportToArchive(
-  examId: string,
-  userId: string,
-  filename: string
-): Promise<string> {
-  const exportResult = await collectExamData(examId, userId)
-  expect(exportResult.success).toBe(true)
-  const archivePath = path.join(tmpDir, filename)
-  createTestArchive(exportResult.data!, archivePath, examId, "分岐テスト試験")
-  return archivePath
+const EXAM_FIXTURE = "exam-full.score"
+
+/** 固定ファイルの中身（期待値を組むために読むだけ。展開した一時ディレクトリは捨てる） */
+async function readFixtureContents(): Promise<ExtractedArchiveData> {
+  const extracted = await extractLegacyExamArchive(EXAM_FIXTURE)
+  cleanupTempDir(extracted.tempDir)
+  return extracted
 }
 
 /**
- * 同じDBへ取り込む（＝試験IDが一致する状況）。
+ * 固定ファイルを、同じ試験が既にある DB へ取り込む（＝試験IDが一致する状況）。
  *
- * 生徒・学級・小計グループは既定の戦略のまま（同じDBなのでID一致で自動的に紐づく）。
- * 分かれ道は試験の扱いだけ。
+ * 生徒・学級・小計グループは既定の戦略のまま（同じ固定ファイルから作った DB なので
+ * ID一致で自動的に紐づく）。分かれ道は試験の扱いだけ。
+ * `prepare` は取り込む前にアーカイブの中身を書き換えたいときに使う。
  */
 async function importIntoSameDatabase(
-  archivePath: string,
   currentUserId: string,
-  exam: ImportAction
+  exam: ImportAction,
+  prepare?: (extracted: ExtractedArchiveData) => void
 ): Promise<{ examId: string; warnings: string[] }> {
-  const extractResult = await extractArchive(archivePath)
-  expect(extractResult.success).toBe(true)
-  const extracted = extractResult.data!
+  const extracted = await extractLegacyExamArchive(EXAM_FIXTURE)
+  prepare?.(extracted)
   const preMatch = await performPreMatching(extracted)
   expect(preMatch.exam!.isIdMatch).toBe(true)
 
@@ -111,6 +111,20 @@ async function importIntoSameDatabase(
   )
   cleanupTempDir(extracted.tempDir)
   return { examId: importResult.examId, warnings: importResult.warnings }
+}
+
+/** この DB の試験の列を、アーカイブと違う値・指定の更新時刻にする */
+async function rewriteLocalExam(examId: string, updatedAt: Date) {
+  return prisma.exam.update({
+    where: { id: examId },
+    data: {
+      examName: "このPCの試験名",
+      referenceDate: new Date("2020-05-05T00:00:00.000Z"),
+      description: null,
+      markerCorrectionEnabled: false,
+      updatedAt,
+    },
+  })
 }
 
 describe("examMergeOrSeparate", () => {
@@ -130,35 +144,22 @@ describe("examMergeOrSeparate", () => {
   })
 
   it("別で追加すると、既存の試験が残ったまま2つになる（子も別々に付く）", async () => {
-    const testExam = await createFullTestExam(prisma, {
-      pageCount: 1,
-      cropRegionsPerPage: 2,
-      studentCount: 2,
-    })
+    const exporterId = await seedExamFromLegacyArchive(EXAM_FIXTURE)
+    const archive = await readFixtureContents()
+    const archivedExam = archive.examData.exam
 
-    const archivePath = await exportToArchive(
-      testExam.exam.id,
-      testExam.user.id,
-      "separate.score"
-    )
-    const archivedExam = verifyArchiveContents(archivePath).examData.exam
-
-    const { examId } = await importIntoSameDatabase(
-      archivePath,
-      testExam.user.id,
-      "separate"
-    )
+    const { examId } = await importIntoSameDatabase(exporterId, "separate")
 
     // 既存の試験は残り、取り込んだ方は別の試験になる
-    expect(examId).not.toBe(testExam.exam.id)
+    expect(examId).not.toBe(archivedExam.id)
     const exams = await prisma.exam.findMany()
     expect(exams.length).toBe(2)
-    expect(exams.find((exam) => exam.id === testExam.exam.id)!.examName).toBe(
-      "テスト試験"
+    expect(exams.find((exam) => exam.id === archivedExam.id)!.examName).toBe(
+      archivedExam.examName
     )
     // 一覧で見分けられるよう名前をずらす
     const importedExam = exams.find((exam) => exam.id === examId)!
-    expect(importedExam.examName).toBe("テスト試験 (2)")
+    expect(importedExam.examName).toBe(`${archivedExam.examName} (2)`)
     // 新しい行なので誰とも競合しない。時刻はアーカイブの値をそのまま持つ
     expect(importedExam.createdAt.toISOString()).toBe(
       new Date(archivedExam.createdAt).toISOString()
@@ -168,92 +169,76 @@ describe("examMergeOrSeparate", () => {
     )
 
     // ページ・設問は取り込んだ試験に別の行として付く（既存の行にぶら下がらない）
+    const archivedPageIds = new Set(
+      archive.examData.examPages.map((examPage) => examPage.id)
+    )
     const importedPages = await prisma.examPage.findMany({ where: { examId } })
-    expect(importedPages.length).toBe(1)
+    expect(importedPages.length).toBe(archivedPageIds.size)
     expect(
-      await prisma.examPage.count({ where: { examId: testExam.exam.id } })
-    ).toBe(1)
-    const originalPageIds = new Set(testExam.pages.map((page) => page.id))
-    expect(importedPages.some((page) => originalPageIds.has(page.id))).toBe(
+      await prisma.examPage.count({ where: { examId: archivedExam.id } })
+    ).toBe(archivedPageIds.size)
+    expect(importedPages.some((page) => archivedPageIds.has(page.id))).toBe(
       false
     )
 
+    const archivedRegionIds = new Set(
+      archive.examData.cropRegions.map((cropRegion) => cropRegion.id)
+    )
     const importedRegions = await prisma.cropRegion.findMany({
       where: { examPage: { examId } },
     })
-    expect(importedRegions.length).toBe(2)
-    const originalRegionIds = new Set(
-      testExam.cropRegions.map((cropRegion) => cropRegion.id)
-    )
+    expect(importedRegions.length).toBe(archivedRegionIds.size)
     expect(
-      importedRegions.some((cropRegion) => originalRegionIds.has(cropRegion.id))
+      importedRegions.some((cropRegion) => archivedRegionIds.has(cropRegion.id))
     ).toBe(false)
 
     // 受験者・採点も試験ごとに別々
-    expect(await prisma.examStudent.count({ where: { examId } })).toBe(2)
+    const archivedExamStudentCount = archive.examData.examStudents.length
+    expect(await prisma.examStudent.count({ where: { examId } })).toBe(
+      archivedExamStudentCount
+    )
     expect(
-      await prisma.examStudent.count({ where: { examId: testExam.exam.id } })
-    ).toBe(2)
+      await prisma.examStudent.count({ where: { examId: archivedExam.id } })
+    ).toBe(archivedExamStudentCount)
+    const archivedScoreCount = archive.scoresData.questionScores.length
     expect(
       await prisma.questionScore.count({
         where: { cropRegion: { examPage: { examId } } },
       })
-    ).toBe(testExam.questionScores.length)
+    ).toBe(archivedScoreCount)
     expect(
       await prisma.questionScore.count({
-        where: { cropRegion: { examPage: { examId: testExam.exam.id } } },
+        where: { cropRegion: { examPage: { examId: archivedExam.id } } },
       })
-    ).toBe(testExam.questionScores.length)
+    ).toBe(archivedScoreCount)
 
     // 生徒・学級・小計グループは試験をまたいで共有される実体なので増えない
-    expect(await prisma.student.count()).toBe(2)
-    expect(await prisma.classroom.count()).toBe(1)
-    expect(await prisma.subtotalGroup.count()).toBe(1)
+    expect(await prisma.student.count()).toBe(
+      archive.studentsData.students.length
+    )
+    expect(await prisma.classroom.count()).toBe(
+      archive.classesData.classrooms.length
+    )
+    expect(await prisma.subtotalGroup.count()).toBe(
+      archive.subtotalsData.subtotalGroups.length
+    )
   })
 
   it("統合を選ぶと、アーカイブが新しければ試験自身の列が更新される", async () => {
-    const testExam = await createFullTestExam(prisma, {
-      pageCount: 1,
-      cropRegionsPerPage: 1,
-      studentCount: 1,
-    })
-
-    // 書き出す側の値（全列を既定と違う値にしておく）
-    await prisma.exam.update({
-      where: { id: testExam.exam.id },
-      data: {
-        examName: "書き出した側の試験名",
-        referenceDate: new Date("2026-03-01T00:00:00.000Z"),
-        description: "書き出した側の説明",
-        markerCorrectionEnabled: true,
-      },
-    })
-
-    const archivePath = await exportToArchive(
-      testExam.exam.id,
-      testExam.user.id,
-      "merge-newer.score"
-    )
-    const archivedExam = verifyArchiveContents(archivePath).examData.exam
+    const exporterId = await seedExamFromLegacyArchive(EXAM_FIXTURE)
+    const archivedExam = (await readFixtureContents()).examData.exam
 
     // 取り込む側は別の値で、しかも更新が古い
-    await prisma.exam.update({
-      where: { id: testExam.exam.id },
-      data: {
-        examName: "このPCの試験名",
-        referenceDate: new Date("2020-05-05T00:00:00.000Z"),
-        description: null,
-        markerCorrectionEnabled: false,
-        updatedAt: new Date("2020-01-01T00:00:00.000Z"),
-      },
-    })
+    await rewriteLocalExam(
+      archivedExam.id,
+      new Date("2020-01-01T00:00:00.000Z")
+    )
 
     const { examId, warnings } = await importIntoSameDatabase(
-      archivePath,
-      testExam.user.id,
+      exporterId,
       "merge"
     )
-    expect(examId).toBe(testExam.exam.id)
+    expect(examId).toBe(archivedExam.id)
 
     const merged = await prisma.exam.findUnique({ where: { id: examId } })
     // Exam の列は id / examName / referenceDate / description /
@@ -277,11 +262,7 @@ describe("examMergeOrSeparate", () => {
     ).toBe(true)
 
     // 同じアーカイブをもう一度取り込んでも、もう新しくないので何も動かない
-    const secondImport = await importIntoSameDatabase(
-      archivePath,
-      testExam.user.id,
-      "merge"
-    )
+    const secondImport = await importIntoSameDatabase(exporterId, "merge")
     expect(
       secondImport.warnings.some((warning) =>
         warning.includes("読み込んだデータの方が新しい")
@@ -291,47 +272,18 @@ describe("examMergeOrSeparate", () => {
   })
 
   it("統合を選んでも、アーカイブが古ければ試験自身の列は更新されない", async () => {
-    const testExam = await createFullTestExam(prisma, {
-      pageCount: 1,
-      cropRegionsPerPage: 1,
-      studentCount: 1,
-    })
-
-    await prisma.exam.update({
-      where: { id: testExam.exam.id },
-      data: {
-        examName: "書き出した側の試験名",
-        referenceDate: new Date("2026-03-01T00:00:00.000Z"),
-        description: "書き出した側の説明",
-        markerCorrectionEnabled: true,
-      },
-    })
-
-    const archivePath = await exportToArchive(
-      testExam.exam.id,
-      testExam.user.id,
-      "merge-older.score"
-    )
+    const exporterId = await seedExamFromLegacyArchive(EXAM_FIXTURE)
+    const archivedExam = (await readFixtureContents()).examData.exam
 
     // 取り込む側の方が新しく書かれている
     const localUpdatedAt = new Date("2999-01-01T00:00:00.000Z")
-    await prisma.exam.update({
-      where: { id: testExam.exam.id },
-      data: {
-        examName: "このPCの試験名",
-        referenceDate: new Date("2020-05-05T00:00:00.000Z"),
-        description: null,
-        markerCorrectionEnabled: false,
-        updatedAt: localUpdatedAt,
-      },
-    })
+    await rewriteLocalExam(archivedExam.id, localUpdatedAt)
 
     const { examId, warnings } = await importIntoSameDatabase(
-      archivePath,
-      testExam.user.id,
+      exporterId,
       "merge"
     )
-    expect(examId).toBe(testExam.exam.id)
+    expect(examId).toBe(archivedExam.id)
 
     const merged = await prisma.exam.findUnique({ where: { id: examId } })
     expect(merged!.examName).toBe("このPCの試験名")
@@ -349,49 +301,19 @@ describe("examMergeOrSeparate", () => {
   })
 
   it("上書きを選ぶと、アーカイブが古くても置き換わり、updatedAt は取り込み時刻になる", async () => {
-    const testExam = await createFullTestExam(prisma, {
-      pageCount: 1,
-      cropRegionsPerPage: 1,
-      studentCount: 1,
-    })
-
-    await prisma.exam.update({
-      where: { id: testExam.exam.id },
-      data: {
-        examName: "書き出した側の試験名",
-        referenceDate: new Date("2026-03-01T00:00:00.000Z"),
-        description: "書き出した側の説明",
-        markerCorrectionEnabled: true,
-      },
-    })
-
-    const archivePath = await exportToArchive(
-      testExam.exam.id,
-      testExam.user.id,
-      "overwrite.score"
-    )
-    const archivedExam = verifyArchiveContents(archivePath).examData.exam
+    const exporterId = await seedExamFromLegacyArchive(EXAM_FIXTURE)
+    const archivedExam = (await readFixtureContents()).examData.exam
 
     // 取り込む側の方が後に書かれている（統合なら勝つ側）
     const localUpdatedAt = new Date("2999-01-01T00:00:00.000Z")
-    const beforeImport = await prisma.exam.update({
-      where: { id: testExam.exam.id },
-      data: {
-        examName: "このPCの試験名",
-        referenceDate: new Date("2020-05-05T00:00:00.000Z"),
-        description: null,
-        markerCorrectionEnabled: false,
-        updatedAt: localUpdatedAt,
-      },
-    })
+    const beforeImport = await rewriteLocalExam(archivedExam.id, localUpdatedAt)
 
     const importStartedAt = new Date()
     const { examId, warnings } = await importIntoSameDatabase(
-      archivePath,
-      testExam.user.id,
+      exporterId,
       "overwrite"
     )
-    expect(examId).toBe(testExam.exam.id)
+    expect(examId).toBe(archivedExam.id)
 
     // 「いまこれが正しい」と言い切る操作なので、時刻を見ずに置き換わる
     const overwritten = await prisma.exam.findUnique({ where: { id: examId } })
@@ -424,18 +346,9 @@ describe("examMergeOrSeparate", () => {
   })
 
   it("別で追加しても、このパソコンの生徒の情報には触らない", async () => {
-    const testExam = await createFullTestExam(prisma, {
-      pageCount: 1,
-      cropRegionsPerPage: 1,
-      studentCount: 1,
-    })
-    const student = testExam.students[0]
-
-    const archivePath = await exportToArchive(
-      testExam.exam.id,
-      testExam.user.id,
-      "separate-keeps-student.score"
-    )
+    const exporterId = await seedExamFromLegacyArchive(EXAM_FIXTURE)
+    const archive = await readFixtureContents()
+    const student = archive.studentsData.students[0]
 
     // 書き出したあとに、このパソコンで氏名を直した（＝アーカイブより新しい）
     await prisma.student.update({
@@ -443,30 +356,22 @@ describe("examMergeOrSeparate", () => {
       data: { lastName: "このPCで直した姓" },
     })
 
-    await importIntoSameDatabase(archivePath, testExam.user.id, "separate")
+    await importIntoSameDatabase(exporterId, "separate")
 
     const afterImport = await prisma.student.findUniqueOrThrow({
       where: { id: student.id },
     })
     expect(afterImport.lastName).toBe("このPCで直した姓")
     // 生徒は増えない（試験だけが2つになる）
-    expect(await prisma.student.count()).toBe(1)
+    expect(await prisma.student.count()).toBe(
+      archive.studentsData.students.length
+    )
     expect(await prisma.exam.count()).toBe(2)
   })
 
   it("統合すると、このパソコンの生徒の情報もアーカイブが新しければ書き換わる", async () => {
-    const testExam = await createFullTestExam(prisma, {
-      pageCount: 1,
-      cropRegionsPerPage: 1,
-      studentCount: 1,
-    })
-    const student = testExam.students[0]
-
-    const archivePath = await exportToArchive(
-      testExam.exam.id,
-      testExam.user.id,
-      "merge-updates-student.score"
-    )
+    const exporterId = await seedExamFromLegacyArchive(EXAM_FIXTURE)
+    const student = (await readFixtureContents()).studentsData.students[0]
 
     // このパソコンの側を古い時刻のまま別の値にしておく
     await prisma.student.update({
@@ -477,7 +382,7 @@ describe("examMergeOrSeparate", () => {
       },
     })
 
-    await importIntoSameDatabase(archivePath, testExam.user.id, "merge")
+    await importIntoSameDatabase(exporterId, "merge")
 
     const afterImport = await prisma.student.findUniqueOrThrow({
       where: { id: student.id },
@@ -486,44 +391,41 @@ describe("examMergeOrSeparate", () => {
   })
 
   it("別で追加した試験の受験者名簿は、1..n の連番になる", async () => {
-    const testExam = await createFullTestExam(prisma, {
-      pageCount: 1,
-      cropRegionsPerPage: 1,
-      studentCount: 3,
+    const exporterId = await seedExamFromLegacyArchive(EXAM_FIXTURE)
+    const archive = await readFixtureContents()
+    const archivedExamId = archive.examData.exam.id
+
+    // 取り込み元（このパソコン）の名簿の並びを、重複と穴のある状態にしておく
+    await prisma.examStudent.updateMany({
+      where: { examId: archivedExamId },
+      data: { customOrder: 7 },
     })
-    // 取り込み元の名簿の並びを、重複と穴のある状態にしておく
-    for (const examStudent of testExam.examStudents) {
-      await prisma.examStudent.update({
-        where: { id: examStudent.id },
-        data: { customOrder: 7 },
-      })
-    }
 
-    const archivePath = await exportToArchive(
-      testExam.exam.id,
-      testExam.user.id,
-      "separate-reorder.score"
-    )
-
+    // アーカイブ側も同じ並び（その状態で書き出したもの）として取り込む
     const { examId } = await importIntoSameDatabase(
-      archivePath,
-      testExam.user.id,
-      "separate"
+      exporterId,
+      "separate",
+      (extracted) => {
+        for (const examStudent of extracted.examData.examStudents) {
+          examStudent.customOrder = 7
+        }
+      }
     )
 
     const importedRoster = await prisma.examStudent.findMany({
       where: { examId },
     })
-    expect(importedRoster).toHaveLength(3)
+    const rosterSize = archive.examData.examStudents.length
+    expect(importedRoster).toHaveLength(rosterSize)
     expect(
       importedRoster
         .map((examStudent) => examStudent.customOrder)
         .sort((left, right) => (left ?? 0) - (right ?? 0))
-    ).toEqual([1, 2, 3])
+    ).toEqual(Array.from({ length: rosterSize }, (_, index) => index + 1))
 
     // 取り込み元の名簿は触らない（行が増えていないので詰め直しも走らない）
     const originalRoster = await prisma.examStudent.findMany({
-      where: { examId: testExam.exam.id },
+      where: { examId: archivedExamId },
     })
     expect(
       originalRoster.every((examStudent) => examStudent.customOrder === 7)
@@ -531,23 +433,10 @@ describe("examMergeOrSeparate", () => {
   })
 
   it("上書きすると、新しく作られる行の時刻も取り込み時刻になる", async () => {
-    const testExam = await createFullTestExam(prisma, {
-      pageCount: 1,
-      cropRegionsPerPage: 1,
-      studentCount: 1,
-    })
-    const archivePath = await exportToArchive(
-      testExam.exam.id,
-      testExam.user.id,
-      "overwrite-new-row.score"
-    )
-    const archivedExam = verifyArchiveContents(archivePath).examData.exam
-
     // 空のDBへ「上書きする」で取り込む（＝全部が新しく作る行になる）
-    await cleanupTestDatabase()
     const importUser = await createTestUser()
-    const extractResult = await extractArchive(archivePath)
-    const extracted = extractResult.data!
+    const extracted = await extractLegacyExamArchive(EXAM_FIXTURE)
+    const archivedExam = extracted.examData.exam
     const preMatch = await performPreMatching(extracted)
     const importStartedAt = new Date()
     const importResult = await executeIdIntegrationImport(

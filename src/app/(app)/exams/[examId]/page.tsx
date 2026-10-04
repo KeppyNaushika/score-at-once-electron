@@ -1,16 +1,9 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import {
-  FileArchive,
-  FolderOutput,
-  MoreVertical,
-  Trash2,
-  Users,
-} from "lucide-react"
+import { FileArchive, MoreVertical, Trash2, Users } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
-import { toast } from "sonner"
 
 import type {
   EntityOverviewBasics,
@@ -20,8 +13,6 @@ import {
   EntityOverviewPage,
   toDateInputValue,
 } from "@/components/common/EntityOverviewPage"
-import type { ExportOutcome } from "@/components/common/ExportResultSummary"
-import ExamArchiveExportModal from "@/components/exams/detail/ExamArchiveExportModal"
 import DeleteExamModal from "@/components/exams/shared/DeleteExamModal"
 import { MemberInviteDialog } from "@/components/exams/shared/MemberInviteDialog"
 import { Button } from "@/components/ui/button"
@@ -37,9 +28,7 @@ import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useExamDetail } from "@/hooks/useExamDetail"
 import { getExamProgress } from "@/lib/examStatus"
 import { examWorkflowPhases, examWorkflowTabs } from "@/lib/workflowTabs"
-import { exportExamArchiveMutation } from "@/queries/archive"
 import { setExamTagsMutation } from "@/queries/tag"
-import type { ArchiveExportMode } from "@/types/examArchive.types"
 
 export default function ExamDetailPage() {
   const params = useParams()
@@ -48,12 +37,8 @@ export default function ExamDetailPage() {
   const examId = typeof params.examId === "string" ? params.examId : ""
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [showExportModal, setShowExportModal] = useState(false)
   const [showUnifiedExportDialog, setShowUnifiedExportDialog] = useState(false)
   const [showMemberDialog, setShowMemberDialog] = useState(false)
-  /** 書き出しの結果。渡している間はモーダルが結果の段を見せる */
-  const [exportOutcome, setExportOutcome] = useState<ExportOutcome | null>(null)
-  const exportExamArchive = useMutation(exportExamArchiveMutation())
   const setExamTags = useMutation(setExamTagsMutation(examId))
 
   const {
@@ -91,46 +76,6 @@ export default function ExamDetailPage() {
 
   const handleExamDeleted = () => {
     router.push("/exams")
-  }
-
-  const handleExport = (exportMode: ArchiveExportMode) => {
-    if (exportExamArchive.isPending) return
-
-    toast("エクスポート中...", {
-      description: "試験をエクスポートしています。",
-    })
-
-    exportExamArchive.mutate(
-      { examId, userId: currentUser.id, exportMode },
-      {
-        onSuccess: (exportResult) => {
-          // 保存先を選ばずに閉じたのは失敗ではないので、何も言わない
-          if (exportResult.canceled) return
-          // 結果はモーダルの中で見せる（欠けたファイル名まで出す）。
-          // 書き出し中に閉じられていても、結果は見せる
-          setShowExportModal(true)
-          setExportOutcome({
-            archives: [
-              {
-                sourceId: examId,
-                sourceName: exam?.examName ?? "",
-                outputPath: exportResult.outputPath,
-                missingFiles: exportResult.missingFiles ?? [],
-              },
-            ],
-            failures: [],
-          })
-        },
-      }
-    )
-  }
-
-  /** 閉じたら結果を捨てる（次に開いたときは選択の段から始まる） */
-  const handleExportModalOpenChange = (open: boolean) => {
-    setShowExportModal(open)
-    if (!open) {
-      setExportOutcome(null)
-    }
   }
 
   if (isLoading) {
@@ -215,10 +160,6 @@ export default function ExamDetailPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setShowExportModal(true)}>
-                  <FolderOutput />
-                  .score 書き出し
-                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => setShowUnifiedExportDialog(true)}
                 >
@@ -239,13 +180,6 @@ export default function ExamDetailPage() {
         }
       />
 
-      <ExamArchiveExportModal
-        open={showExportModal}
-        onOpenChange={handleExportModalOpenChange}
-        onExport={handleExport}
-        isExporting={exportExamArchive.isPending}
-        exportOutcome={exportOutcome}
-      />
       <UnifiedArchiveExportDialog
         open={showUnifiedExportDialog}
         onOpenChange={setShowUnifiedExportDialog}

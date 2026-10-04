@@ -1,11 +1,10 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { FileArchive, FolderOutput } from "lucide-react"
+import { FileArchive } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
-import BaseModal from "@/components/common/BaseModal"
 import type {
   EntityOverviewBasics,
   EntityOverviewStat,
@@ -14,10 +13,6 @@ import {
   EntityOverviewPage,
   toDateInputValue,
 } from "@/components/common/EntityOverviewPage"
-import {
-  type ExportOutcome,
-  ExportResultSummary,
-} from "@/components/common/ExportResultSummary"
 import { Button } from "@/components/ui/button"
 import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import { getAnswerSheetCompletion } from "@/lib/answerSheetStatus"
@@ -28,7 +23,6 @@ import {
 import {
   answerSheetDefinitionQuery,
   applyAnswerSheetEditMutation,
-  exportAnswerSheetDefinitionMutation,
 } from "@/queries/answerSheetBuilder"
 import {
   answerSheetDefinitionTagsQuery,
@@ -67,10 +61,6 @@ export function AnswerSheetDefinitionDetail({
     setAnswerSheetDefinitionTagsMutation(definitionId)
   )
   const { isOwner, ownerName } = useAsbOwner(definitionId)
-  const { mutateAsync: exportDefinition } = useMutation(
-    exportAnswerSheetDefinitionMutation()
-  )
-  const [exportOutcome, setExportOutcome] = useState<ExportOutcome | null>(null)
   const [showUnifiedExportDialog, setShowUnifiedExportDialog] = useState(false)
 
   // 読み込みの失敗は通知する（取得ではないので effect でよい）
@@ -138,35 +128,6 @@ export function AnswerSheetDefinitionDetail({
     await setDefinitionTags.mutateAsync(tagIds)
   }
 
-  /**
-   * `.asb` の書き出し。
-   *
-   * **段ではなく概要に置く。** 2. 書き出しの段が出すのは用紙そのもの（印刷用の
-   * PDF）で、こちらは**実体を丸ごと持ち出すアーカイブ**である。試験の
-   * `.score 書き出し` が概要にあるのと同じ位置づけ。
-   */
-  const handleExportArchive = async () => {
-    try {
-      const exportResult = await exportDefinition(definitionId)
-      // 保存先を選ばずに閉じたのは失敗ではないので、何も言わない
-      if (exportResult.canceled) return
-      // 結果はモーダルの中で見せる（欠けた画像はファイル名まで出す）
-      setExportOutcome({
-        archives: [
-          {
-            sourceId: definitionId,
-            sourceName: definition.name,
-            outputPath: exportResult.outputPath,
-            missingFiles: exportResult.missingFiles ?? [],
-          },
-        ],
-        failures: [],
-      })
-    } catch {
-      // 失敗の通知は MutationCache が出す
-    }
-  }
-
   const stats: EntityOverviewStat[] = [
     { label: "用紙", value: definition.settings.paperSize, tone: "teal" },
     {
@@ -211,20 +172,16 @@ export function AnswerSheetDefinitionDetail({
           "02-export": null,
         }}
         actions={
-          <>
-            <Button variant="outline" size="sm" onClick={handleExportArchive}>
-              <FolderOutput className="mr-2 h-4 w-4" />
-              .asb 書き出し
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowUnifiedExportDialog(true)}
-            >
-              <FileArchive className="mr-2 h-4 w-4" />
-              .sao 書き出し
-            </Button>
-          </>
+          // 2. 書き出しの段が出すのは用紙そのもの（印刷用の PDF）で、こちらは実体を
+          // 丸ごと持ち出すアーカイブなので、段ではなく概要に置く
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowUnifiedExportDialog(true)}
+          >
+            <FileArchive className="mr-2 h-4 w-4" />
+            .sao 書き出し
+          </Button>
         }
       />
 
@@ -233,25 +190,6 @@ export function AnswerSheetDefinitionDetail({
         onOpenChange={setShowUnifiedExportDialog}
         initialSelection={{ roots: { AsbDefinition: [definitionId] } }}
       />
-
-      {exportOutcome && (
-        <BaseModal
-          open
-          onOpenChange={(open) => !open && setExportOutcome(null)}
-          title=".asb 書き出し"
-          variant={
-            exportOutcome.archives.some(
-              (archive) => archive.missingFiles.length > 0
-            )
-              ? "warning"
-              : "success"
-          }
-          size="lg"
-          actions={{ cancel: { label: "閉じる" } }}
-        >
-          <ExportResultSummary outcome={exportOutcome} />
-        </BaseModal>
-      )}
     </>
   )
 }

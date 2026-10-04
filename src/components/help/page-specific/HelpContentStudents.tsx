@@ -69,13 +69,13 @@ export function HelpContentStudents() {
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">生徒追加</Badge>
               <Badge variant="outline">Excel 貼付一括追加</Badge>
-              <Badge variant="outline">.students 読み込み</Badge>
+              <Badge variant="outline">読み込み</Badge>
             </div>
             <div className="rounded-lg bg-purple-50 p-4">
               <p className="text-sm text-purple-800">
                 大人数を登録するときは「Excel 貼付一括追加」が便利です。
-                別の端末で作った生徒データは「.students
-                読み込み」で取り込めます。
+                別の端末で作った生徒データは「読み込み」で取り込めます（.sao
+                のほか、以前の .students も選べます）。
               </p>
             </div>
           </div>
@@ -137,7 +137,7 @@ export function HelpContentStudents() {
           <div className="space-y-3">
             <TipItem type="success">
               <strong>書き出して共有：</strong>
-              生徒を選んでから「Excel出力」や「.students 書き出し」で、
+              生徒を選んでから「Excel出力」や「.sao 書き出し」で、
               一覧や生徒データを外部に保存できます。
             </TipItem>
 

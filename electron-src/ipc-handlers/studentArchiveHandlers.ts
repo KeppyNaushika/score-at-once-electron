@@ -1,16 +1,16 @@
 /**
- * 生徒アーカイブ（エクスポート/インポート）IPCハンドラー
+ * 生徒アーカイブ（.students）の取り込み IPC ハンドラー
+ *
+ * 旧形式は読み込みだけ残して凍結した（書き出しは統合アーカイブ .sao に一本化）。
  */
 
 import { dialog } from "electron"
 
 import type { ImportAction } from "../../src/types/importAction.types"
 import type {
-  ExportStudentsArchiveOptions,
   StudentArchiveFileOverviewData,
   StudentArchiveIdIntegrationConfig,
 } from "../../src/types/studentArchive.types"
-import { exportStudentsArchive } from "../lib/export/student-archive"
 import {
   cleanupStudentTempDir,
   executeStudentImport,
@@ -23,14 +23,7 @@ import { type HandlerMap } from "./ipcHandlerUtils"
  * 生徒アーカイブ関連のIPCハンドラーを登録
  */
 export const studentArchiveHandlers = {
-  // エクスポート
-  "studentArchive:exportStudents": async (
-    options: ExportStudentsArchiveOptions
-  ) => {
-    return await exportStudentsArchive(options)
-  },
-
-  // インポートファイル選択ダイアログ
+  // 取り込みウィザードの中でファイルを選び直す（最初のファイルは一覧の「読み込み」で選ぶ）
   "studentArchive:selectImportFile": async () => {
     const result = await dialog.showOpenDialog({
       title: "生徒データをインポート",

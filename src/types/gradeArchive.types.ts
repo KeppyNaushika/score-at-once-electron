@@ -254,7 +254,7 @@ export interface ArchiveGradeIndividualReportSettingsRow {
 }
 
 /** GradeTag（成績×タグ）の行。v1.16.0+ */
-export interface ArchiveGradeTagRow {
+interface ArchiveGradeTagRow {
   id: string
   gradeId: string
   tagId: string
@@ -269,7 +269,7 @@ export interface ArchiveGradeTagRow {
  * 同じ成績算出の項目か、アーカイブに含まれない別の成績算出の項目で、後者は
  * `comparedGradeItemRefs` に同定情報を添える。
  */
-export interface ArchiveGradeComparisonRow {
+interface ArchiveGradeComparisonRow {
   id: string
   gradeItemId: string
   comparedGradeItemId: string
@@ -344,7 +344,7 @@ export interface ArchiveGradeCropRegionRef {
  * uuid が当たらなければ「成績算出名＋項目名」で当てる。名前はどちらも unique では
  * ないので、複数当たったらいちばん古い成績算出を採って件数を伝える。
  */
-export interface ArchiveGradeComparedItemRef {
+interface ArchiveGradeComparedItemRef {
   /** 相手の評価項目の id */
   id: string
   gradeId: string
@@ -373,14 +373,6 @@ interface GradeExternalSections {
   subtotalRefs: ArchiveGradeSubtotalRef[]
   cropRegionRefs: ArchiveGradeCropRegionRef[]
   comparedGradeItemRefs: ArchiveGradeComparedItemRef[]
-}
-
-/** 収集結果（export 側が組み立て、archiveCreator が JSON へ書く） */
-export interface CollectedGradeData
-  extends GradeSections, GradeExternalSections {
-  /** 内包する試験外成績資料。収集・生成は coursework-archive モジュールへ委譲 */
-  courseworkArchive: CollectedCourseworkData
-  counts: GradeArchiveManifest["counts"]
 }
 
 /** アーカイブ全体（manifest + 各セクション） */

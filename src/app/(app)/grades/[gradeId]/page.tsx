@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { FileArchive, FolderOutput, MoreVertical, Trash2 } from "lucide-react"
+import { FileArchive, MoreVertical, Trash2 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -27,7 +27,6 @@ import { getGradeCompletion } from "@/lib/gradeStatus"
 import { gradeWorkflowPhases, gradeWorkflowTabs } from "@/lib/workflowTabs"
 import {
   deleteGradeMutation,
-  exportGradeArchiveMutation,
   gradeDetailQuery,
   setGradeTagsMutation,
   updateGradeMutation,
@@ -46,7 +45,6 @@ export default function GradeDetailPage() {
   const updateGrade = useMutation(updateGradeMutation(gradeId))
   const setGradeTags = useMutation(setGradeTagsMutation(gradeId))
   const deleteGrade = useMutation(deleteGradeMutation())
-  const exportArchive = useMutation(exportGradeArchiveMutation())
   // 押しただけでは消さず、確認で決めてもらう
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [showUnifiedExportDialog, setShowUnifiedExportDialog] = useState(false)
@@ -146,10 +144,6 @@ export default function GradeDetailPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => exportArchive.mutate(gradeId)}>
-                <FolderOutput />
-                .grade 書き出し
-              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setShowUnifiedExportDialog(true)}
               >

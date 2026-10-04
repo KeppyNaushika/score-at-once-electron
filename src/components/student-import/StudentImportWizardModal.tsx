@@ -15,7 +15,10 @@ import {
   useStudentImportWizard,
 } from "@/hooks/student-import/useStudentImportWizard"
 import { cn } from "@/lib/utils"
-import type { StudentImportWizardStep } from "@/types/studentArchive.types"
+import type {
+  StudentImportWizardState,
+  StudentImportWizardStep,
+} from "@/types/studentArchive.types"
 
 import { ExecuteStep } from "./steps/ExecuteStep"
 import { FileOverviewStep } from "./steps/FileOverviewStep"
@@ -27,6 +30,8 @@ interface StudentImportWizardModalProps {
   isOpen: boolean
   onClose: () => void
   onComplete?: () => void
+  /** 一覧の「読み込み」で選んだファイルから作った、始めの状態（`openStudentImportFile`） */
+  startState?: StudentImportWizardState
 }
 
 const STEP_TITLES: Record<StudentImportWizardStep, string> = {
@@ -41,8 +46,9 @@ export function StudentImportWizardModal({
   isOpen,
   onClose,
   onComplete,
+  startState,
 }: StudentImportWizardModalProps) {
-  const wizard = useStudentImportWizard()
+  const wizard = useStudentImportWizard(startState)
   const { state, reset } = wizard
 
   useEffect(() => {

@@ -65,7 +65,14 @@ export const exportUnifiedArchiveMutation = () =>
 // 取り込みの下見（DB は変わらない）
 // =====================================================================
 
-/** 取り込むファイルを尋ねるダイアログ。選ばずに閉じたら null */
+/**
+ * 一覧の「読み込み」のファイル選択。統合アーカイブも旧形式も受け付け、拡張子から決めた
+ * 種類を添えて返す。選ばずに閉じたら null
+ */
+export const selectAnyArchiveImportFile = () =>
+  window.electronAPI.unifiedArchive.selectAnyImportFile()
+
+/** 取り込みウィザードの中で統合アーカイブを選び直すダイアログ。選ばずに閉じたら null */
 export const selectUnifiedArchiveImportFile = () =>
   window.electronAPI.unifiedArchive.selectImportFile()
 

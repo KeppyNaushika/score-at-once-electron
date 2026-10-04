@@ -8,7 +8,7 @@ import type { AnswerSheetDefinition } from "./answerSheetDefinition.types"
 // マニフェスト
 // =============================================================================
 
-export interface AsbArchiveDataCounts {
+interface AsbArchiveDataCounts {
   headerFields: number
   majorQuestions: number
   subQuestions: number

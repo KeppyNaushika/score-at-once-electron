@@ -1,31 +1,23 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  FileArchive,
-  FolderInput,
-  FolderOutput,
-  PencilSparkles,
-  PlusCircle,
-} from "lucide-react"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { FileArchive, PencilSparkles, PlusCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import { ArchiveImportScreens } from "@/components/archive-import/ArchiveImportScreens"
+import { archiveImportToolbarAction } from "@/components/archive-import/archiveImportToolbarAction"
+import { useArchiveImportLauncher } from "@/components/archive-import/hooks/useArchiveImportLauncher"
 import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
 import { EntityListPage } from "@/components/common/EntityListPage"
-import type { ExportOutcome } from "@/components/common/ExportResultSummary"
 import {
   type ToolbarAction,
   toolbarButtonAction,
 } from "@/components/common/OverflowToolbar"
-import ExamArchiveExportModal from "@/components/exams/detail/ExamArchiveExportModal"
-import { ImportWizardModal } from "@/components/import/ImportWizardModal"
 import { Button } from "@/components/ui/button"
 import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
 import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
-import { unifiedArchiveImportToolbarAction } from "@/components/unified-archive/import/unifiedArchiveImportToolbarAction"
-import { UnifiedArchiveImportWizard } from "@/components/unified-archive/import/UnifiedArchiveImportWizard"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
@@ -35,17 +27,12 @@ import {
   getExamProgress,
   getExamWorkflowStatus,
 } from "@/lib/examStatus"
-import {
-  bulkExportExamsMutation,
-  exportExamArchiveMutation,
-} from "@/queries/archive"
 import { createExamMutation, examListQuery } from "@/queries/exam"
 import {
   addTagToExamsMutation,
   findOrCreateTagMutation,
   tagListQuery,
 } from "@/queries/tag"
-import type { ArchiveExportMode } from "@/types/examArchive.types"
 
 import { ExamRowMenu } from "./ExamRowMenu"
 import { ExamRowSummary } from "./ExamRowSummary"
@@ -66,44 +53,20 @@ const EXAM_FILTER_ACCESSORS: ListFilterAccessors<ExamSummary> = {
   updatedAt: (exam) => exam.updatedAt,
 }
 
-/**
- * 書き出しの相手。
- *
- * 1件（行の「…」から）とまとめて（選択してから）で同じモーダルを使う。相手が
- * 誰なのかを1つの state に持つことで、モーダルが開いている間に選択が変わっても
- * 押した時点の相手へ書き出す。
- */
-type ExportTarget =
-  | { kind: "single"; examId: string; examName: string }
-  | { kind: "bulk"; examIds: string[] }
-
 const ExamList = () => {
   const currentUser = useCurrentUser()
-  const queryClient = useQueryClient()
   const { data: exams = EMPTY_EXAMS, isPending: isLoading } = useQuery(
     examListQuery(currentUser.id)
-  )
-  const loadExams = useCallback(
-    () =>
-      queryClient.invalidateQueries({
-        queryKey: examListQuery(currentUser.id).queryKey,
-      }),
-    [queryClient, currentUser.id]
   )
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
   const addTagToExams = useMutation(addTagToExamsMutation())
-  const bulkExportExams = useMutation(bulkExportExamsMutation())
-  const exportExamArchive = useMutation(exportExamArchiveMutation())
-  const [showImportModal, setShowImportModal] = useState(false)
-  const [showUnifiedImport, setShowUnifiedImport] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
-  const [exportTarget, setExportTarget] = useState<ExportTarget | null>(null)
+  const archiveImport = useArchiveImportLauncher()
+  const { start: startArchiveImport, isOpening: isOpeningArchive } =
+    archiveImport
   /** .sao 書き出しを開いたときの最初の選択。null の間は閉じている */
   const [unifiedExportSelection, setUnifiedExportSelection] =
     useState<UnifiedArchiveExportInitialSelection | null>(null)
-  /** 書き出しの結果。渡している間はモーダルが結果の段を見せる */
-  const [exportOutcome, setExportOutcome] = useState<ExportOutcome | null>(null)
 
   const createExam = useMutation(createExamMutation(currentUser.id))
   const router = useRouter()
@@ -153,11 +116,6 @@ const ExamList = () => {
     clearSelection,
   } = useRowSelection(filteredExams)
 
-  const handleImportComplete = (examId: string) => {
-    loadExams()
-    router.push(`/exams/${examId}`)
-  }
-
   const handleBulkAddTag = useCallback(
     async (tagName: string) => {
       if (!tagName.trim() || selectedIds.size === 0) return
@@ -173,104 +131,6 @@ const ExamList = () => {
     },
     [selectedIds, clearSelection, findOrCreateTag, addTagToExams]
   )
-
-  const handleExport = useCallback(
-    async (exportMode: ArchiveExportMode) => {
-      if (exportTarget === null) return
-
-      setIsExporting(true)
-      toast("書き出し中...", {
-        description:
-          exportTarget.kind === "single"
-            ? `「${exportTarget.examName}」を書き出しています。`
-            : `${exportTarget.examIds.length}件の試験を書き出しています。`,
-      })
-
-      try {
-        if (exportTarget.kind === "single") {
-          const exportResult = await exportExamArchive.mutateAsync({
-            examId: exportTarget.examId,
-            userId: currentUser.id,
-            exportMode,
-          })
-          // 保存先を選ばずに閉じたのは失敗ではないので、何も言わない
-          if (exportResult.canceled) return
-          setExportOutcome({
-            archives: [
-              {
-                sourceId: exportTarget.examId,
-                sourceName: exportTarget.examName,
-                outputPath: exportResult.outputPath,
-                missingFiles: exportResult.missingFiles ?? [],
-              },
-            ],
-            failures: [],
-          })
-          return
-        }
-
-        const bulkResult = await bulkExportExams.mutateAsync({
-          examIds: exportTarget.examIds,
-          userId: currentUser.id,
-          exportMode,
-        })
-        if (bulkResult.canceled) return
-
-        // 結果はモーダルの中で見せる。**欠けたファイルも試験ごとの失敗も落とさない**。
-        // 書き出し中に閉じられていても、結果は見せる
-        setExportOutcome({
-          archives: bulkResult.results.flatMap((exportResult) =>
-            exportResult.success && exportResult.outputPath
-              ? [
-                  {
-                    sourceId: exportResult.examId,
-                    sourceName: exportResult.examName,
-                    outputPath: exportResult.outputPath,
-                    missingFiles: exportResult.missingFiles,
-                  },
-                ]
-              : []
-          ),
-          failures: bulkResult.results.flatMap((exportResult) =>
-            exportResult.success
-              ? []
-              : [
-                  {
-                    sourceId: exportResult.examId,
-                    sourceName: exportResult.examName,
-                    error: exportResult.error ?? "書き出しに失敗しました",
-                  },
-                ]
-          ),
-        })
-        clearSelection()
-      } catch (error) {
-        toast.error("書き出しに失敗しました", {
-          description:
-            error instanceof Error
-              ? error.message
-              : "予期しないエラーが発生しました",
-        })
-      } finally {
-        setIsExporting(false)
-      }
-    },
-    [
-      currentUser.id,
-      exportTarget,
-      clearSelection,
-      bulkExportExams,
-      exportExamArchive,
-    ]
-  )
-
-  /** 閉じたら相手も結果も捨てる（次に開いたときは選択の段から始まる） */
-  const handleExportModalOpenChange = useCallback((open: boolean) => {
-    if (!open) {
-      setExportTarget(null)
-      setExportOutcome(null)
-    }
-  }, [])
 
   const tagFilterConfig = useMemo(
     () => ({
@@ -291,16 +151,10 @@ const ExamList = () => {
         label: "新規試験作成",
         onClick: () => void handleCreate(),
       }),
-      toolbarButtonAction({
-        id: "import",
+      archiveImportToolbarAction({
         priority: 70,
-        icon: FolderInput,
-        label: ".score 読み込み",
-        onClick: () => setShowImportModal(true),
-      }),
-      unifiedArchiveImportToolbarAction({
-        priority: 69,
-        onClick: () => setShowUnifiedImport(true),
+        isOpening: isOpeningArchive,
+        onClick: () => void startArchiveImport(),
       }),
     ]
 
@@ -314,17 +168,8 @@ const ExamList = () => {
           onAssign: handleBulkAddTag,
         }),
         toolbarButtonAction({
-          id: "bulk-export",
-          priority: 50,
-          icon: FolderOutput,
-          label: `.score 一括書き出し（${selectedIds.size}件）`,
-          onClick: () =>
-            setExportTarget({ kind: "bulk", examIds: [...selectedIds] }),
-          disabled: isExporting,
-        }),
-        toolbarButtonAction({
           id: "bulk-unified-export",
-          priority: 49,
+          priority: 50,
           icon: FileArchive,
           label: `.sao 書き出し（${selectedIds.size}件）`,
           onClick: () =>
@@ -334,26 +179,18 @@ const ExamList = () => {
     }
 
     return toolbarActions
-  }, [allTags, handleBulkAddTag, handleCreate, isExporting, selectedIds])
+  }, [
+    allTags,
+    handleBulkAddTag,
+    handleCreate,
+    isOpeningArchive,
+    selectedIds,
+    startArchiveImport,
+  ])
 
   return (
     <>
-      <ImportWizardModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        onComplete={handleImportComplete}
-      />
-      <UnifiedArchiveImportWizard
-        open={showUnifiedImport}
-        onOpenChange={setShowUnifiedImport}
-      />
-      <ExamArchiveExportModal
-        open={exportTarget !== null}
-        onOpenChange={handleExportModalOpenChange}
-        onExport={handleExport}
-        isExporting={isExporting}
-        exportOutcome={exportOutcome}
-      />
+      <ArchiveImportScreens launcher={archiveImport} />
       <UnifiedArchiveExportDialog
         open={unifiedExportSelection !== null}
         onOpenChange={(open) => {
@@ -379,13 +216,6 @@ const ExamList = () => {
         rowMenu={(exam) => (
           <ExamRowMenu
             exam={exam}
-            onExport={() =>
-              setExportTarget({
-                kind: "single",
-                examId: exam.id,
-                examName: exam.examName,
-              })
-            }
             onUnifiedExport={() =>
               setUnifiedExportSelection({ roots: { Exam: [exam.id] } })
             }

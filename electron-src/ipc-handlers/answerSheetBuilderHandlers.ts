@@ -22,7 +22,6 @@ import {
   getAsbImagesDirectory,
   getRelativePathFromData,
 } from "../lib/dataManager"
-import { exportAsbDefinition } from "../lib/export/asb-archive"
 import { importAsbDefinition } from "../lib/import/asb-archive"
 import { htmlToPngBuffer } from "../lib/printUtils"
 import {
@@ -196,27 +195,7 @@ export const answerSheetBuilderHandlers = {
     return result
   },
 
-  // 定義のインポートファイル選択
-  "asb:select-import-file": async () => {
-    const result = await dialog.showOpenDialog({
-      title: "解答用紙を読み込み",
-      filters: [{ name: "解答用紙", extensions: ["asb"] }],
-      properties: ["openFile"],
-    })
-
-    // 選ばずに閉じたのは失敗ではない
-    if (result.canceled || result.filePaths.length === 0) {
-      return { canceled: true as const }
-    }
-    return { canceled: false as const, filePath: result.filePaths[0] }
-  },
-
-  // 定義エクスポート
-  "asb:export-definition": async (definitionId: string) => {
-    return await exportAsbDefinition(definitionId)
-  },
-
-  // 定義インポート
+  // 定義インポート（.asb。旧形式は読み込みだけ残して凍結。ファイルは一覧の「読み込み」で選ぶ）
   "asb:import-definition": async (filePath: string, userId: string) => {
     return await importAsbDefinition(filePath, userId)
   },

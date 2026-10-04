@@ -1,59 +1,82 @@
 # アーカイブ（インポート／エクスポート）アーキテクチャ
 
-**アーカイブは5種類ある。** どれも ZIP で、中身は JSON（＋画像）で、版と変換チェーンを
-持つ。だが**取り込みの規則は種ごとに違う。** 本書はその5つを同じ形で並べる。
+**書き出しは統合アーカイブ（`.sao`）だけである。** 試験・資料・成績算出・解答用紙定義と、
+共通の実体（生徒・学級・小計グループ・タグ）を、1つのファイルに選んだ範囲で入れる。
+旧5種（`.score` / `.coursework` / `.grade` / `.asb` / `.students`）は**読み込みだけを残して
+凍結した形式**で、書き出しのコードはもう無い。
 
-> **数字はコードが正しい。** 現行版の出どころは `src/types/*Archive.types.ts` の
-> `*_CURRENT_VERSION` の1箇所だけで、変換器の本数は `import/*transformers/` の
-> ファイル数がすべてである。本書と食い違ったらコードを信じること。
->
-> 統合の計画は [remaining-work.md](./remaining-work.md) の段階60。
+本書は「どのファイルが何をするか」と「スキーマを変えたときにやること」を置く。
+**範囲・照合・衝突の規則とその理由は [unified-archive-design.md](./unified-archive-design.md)
+が正本**で、本書はそこへの道案内である。
 
 ## 目次
 
-1. [5種の一覧](#5種の一覧)
-2. [共通の骨格](#共通の骨格)
-3. [取り込みの3択](#取り込みの3択)
-4. [版と変換チェーン](#版と変換チェーン)
-5. [試験（`.score`）](#試験score)
-6. [試験外成績資料（`.coursework`）](#試験外成績資料coursework)
-7. [成績（`.grade`）](#成績grade)
-8. [解答用紙（`.asb`）](#解答用紙asb)
-9. [生徒（`.students`）](#生徒students)
-10. [外部形式からの取り込み](#外部形式からの取り込み)
-11. [種ごとに違うところ（統合の材料）](#種ごとに違うところ統合の材料)
-12. [スキーマを変えたときにやること](#スキーマを変えたときにやること)
+1. [統合アーカイブ（`.sao`）](#統合アーカイブsao)
+2. [取り込みの3択](#取り込みの3択)
+3. [読み込みの入口](#読み込みの入口)
+4. [旧5種（読み込みだけの凍結した形式）](#旧5種読み込みだけの凍結した形式)
+5. [スキーマを変えたときにやること](#スキーマを変えたときにやること)
 
 ---
 
-## 5種の一覧
+## 統合アーカイブ（`.sao`）
 
-| 種             | 拡張子        | 書き出し                     | 取り込み                                  | 変換器 |
-| -------------- | ------------- | ---------------------------- | ----------------------------------------- | ------ |
-| 試験           | `.score`      | `export/exam-archive/`       | `import/exam-archive/` ＋ `import/merge/` | 27本   |
-| 試験外成績資料 | `.coursework` | `export/coursework-archive/` | `import/coursework-archive/`              | 2本    |
-| 成績           | `.grade`      | `export/grade-archive/`      | `import/grade-archive/`                   | 9本    |
-| 解答用紙       | `.asb`        | `export/asb-archive/`        | `import/asb-archive/`                     | 5本    |
-| 生徒           | `.students`   | `export/student-archive/`    | `import/student-archive/`                 | 0本    |
-
-**画像を持つのは試験（模範解答・答案）と解答用紙だけ。** 残る3種は JSON のみ。
-
----
-
-## 共通の骨格
-
-どの種も同じ3層でできている。
+### 中身
 
 ```
-書き出し   dataCollector（Prisma から集める） → archiveCreator（ZIP を作る） → index（ダイアログと入口）
-取り込み   archiveExtractor（ZIP を開き、版を判定し、変換チェーンを通す） → 照合 → 投入
+<名前>.sao  (ZIP)
+├── manifest.json   形式の識別子と版・アプリの版・最後の migration・範囲・外したもの・行数
+├── archive.db      現行スキーマと同じ SQLite（選んだ範囲の行だけ）。_prisma_migrations を含む
+└── files/          データディレクトリからの相対パスのまま（模範解答・答案・解答用紙の画像）
 ```
 
-- **ZIP** — 作るのは `archiver`（zlib level 9）、開くのは `adm-zip`
-- **`manifest.json`** — 必ず入る。版・作成日時・件数などを持つ。検証は各種の
-  `manifestValidator.ts`
-- **収集は射影しない** — `include` の出力をそのまま JSON にする。表示のための縮小や
-  `_count` は入れない（renderer が数える）
+**スキーマの版は `_prisma_migrations` そのもの**で、`*_CURRENT_VERSION` も変換器も持たない。
+取り込みは、アプリ起動時と同じ migration を `archive.db` に当てて現行化してから読む。
+アーカイブの型（`manifest.json` の形と定数）は `src/types/unifiedArchive.types.ts`。
+
+### 書き出し（`electron-src/lib/export/unified-archive/`）
+
+|                            |                                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------------------- |
+| `archiveTableRegistry.ts`  | **表ごとの役割と外部キーの登録表**。範囲の規則はここから表どうしのつながりを取る         |
+| `archiveScopeResolver.ts`  | 入れる行を決める（設計 §5）。既定は関連データを全て含め、利用者が外したものを外す        |
+| `archiveDatabaseWriter.ts` | 元の DB を複製し、範囲外の行を消す。外部キーが閉じていなければ失敗させる                 |
+| `archiveFileCollector.ts`  | `archive.db` の行が指すファイルを集める。ファイルのパスを持つ列は `ARCHIVE_FILE_COLUMNS` |
+| `archiveExportPreview.ts`  | 書き出し画面の下見（範囲を決めるだけで DB は書かない）                                   |
+| `unifiedArchiveCreator.ts` | 上を束ねて ZIP を作る                                                                    |
+
+### 取り込み（`electron-src/lib/import/unified-archive/`）
+
+|                                                               |                                                                                                     |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `archiveOpener.ts`                                            | 開く・守る・現行化（設計 §4.1）。外から来たファイルとして ZIP・manifest・DB を1つずつ確かめる       |
+| `archiveManifestParser.ts`                                    | `manifest.json` を `unknown` から実行時に検証して型へ絞る                                           |
+| `archiveImportSessions.ts`                                    | 開いたアーカイブを段（開く → 試し取り込み → 取り込む）をまたいで持つ                                |
+| `archiveRowImporter.ts`                                       | **汎用の書き込み**。表を外部キーの親が先の順に1表ずつ「決めて、書く」。表ごとの手書きの処理は無い   |
+| `archiveTableOrder.ts`                                        | 表を書く順（登録表の references から位相順）                                                        |
+| `archiveTableResolver.ts`                                     | 1表分の行の行き先を決める（照合の決定・3択・一意制約の衝突の解決・付け替え）                        |
+| `archiveUniqueIndexes.ts` / `archiveUniqueCollisions.ts`      | 一意制約での衝突を引く（取り込み先とは SQLite に比べさせる）                                        |
+| `archiveIdRenamer.ts`                                         | 取り込み先の行の id を付け替え、子の外部キーも `UPDATE` で付け替える（削除して作り直さない）        |
+| `archiveRowPlanning.ts`                                       | 1行を作る・置き換える・残すのどれにするかと、書く値。3択は `importValuePolicy.ts` をそのまま使う    |
+| `archiveRowReader.ts`                                         | `archive.db` から行を読む。「別で追加」で振り直す id もここで決める                                 |
+| `archiveEmbeddedIds.ts`                                       | 外部キーでない列に埋め込まれた id の書き換え（**名指しの一覧** `ARCHIVE_EMBEDDED_ID_COLUMNS`）      |
+| `archiveMatchCandidates.ts`                                   | id で一致しなかった共通の実体に、学籍番号・名前などで候補を当てる（付加機能。`ARCHIVE_MATCH_KEYS`） |
+| `archiveFileImporter.ts`                                      | `files/` をデータディレクトリへ写す（コミットの後。写すのは書いた行が指すファイルだけ）             |
+| `archiveGradeInputChanges.ts` / `archiveGradeImpactSource.ts` | 試し取り込みで、成績算出が読む表へ書いた行の前後と、評価項目へ写す手がかりを返す（設計 §7.5）       |
+
+### IPC と画面
+
+IPC は `ipc-handlers/unifiedArchiveHandlers.ts`（`unifiedArchive:previewExport` /
+`selectExportPath` / `export` / `open` / `analyze` / `import` / `close` ほか）。
+`analyze` は**本番と同じ処理を実際に書いてからロールバックする試し取り込み**で、確認画面の
+件数・衝突・成績算出への影響はこれが返す。
+
+画面は `src/components/unified-archive/` の `export/UnifiedArchiveExportDialog.tsx`（書き出し）と
+`import/UnifiedArchiveImportWizard.tsx`（取り込み）。表名・列名の日本語は
+`archiveTableLabels.ts`（載っていない名前はそのまま出る）。
+
+書き出しの入口は各画面の書き出しボタンで、どれも同じダイアログを、押した画面の実体を選んだ
+状態で開く。
 
 ---
 
@@ -69,292 +92,168 @@
 | `separate`  | （id を振り直すので一致が起きない）          | `createdAt`/`updatedAt` = アーカイブの値 |
 
 型は `src/types/importAction.types.ts`、**適用は
-`import/merge/importValuePolicy.ts` の1箇所**に寄せてある。
+`import/merge/importValuePolicy.ts` の1箇所**に寄せてある。統合版と、旧形式の試験・資料・
+生徒の取り込みがこれを共有する。一意制約の衝突での id の選び方は設計 §7.3。
 
 ---
 
-## 版と変換チェーン
+## 読み込みの入口
 
-**旧い版のアーカイブは、投入の前に必ず現行版まで引き上げる。**
+**各一覧（試験・資料・成績算出・解答用紙定義・生徒表）のツールバーにある「読み込み」1つ**
+から入る。ファイル選択は `.sao` と旧5種の拡張子を全て受け付け、拡張子（大文字小文字を区別
+しない）で振り分ける。
 
-- 基盤は `import/shared/transformChain.ts`（`detectVersionInRange` と
-  `runTransformChain`）で、**5種すべてがこれを共有する**
-- 種ごとの鎖は `import/transformers/`（試験）・`coursework-transformers/`・
-  `grade-transformers/`・`asb-transformers/`・`student-transformers/` の `index.ts` が持つ
-- 1段の変換器は `V<FROM>_to_V<TO>.ts` で、**入力の版から出力の版へ1段だけ上げる**。
-  新規フィールドには既定値（`[]` / `null` / `""`）を入れ、何を補ったかを `warnings` に積む
+| 選んだファイル | 開く画面                                     |
+| -------------- | -------------------------------------------- |
+| `.sao`         | 統合版の取り込みウィザード                   |
+| `.score`       | 試験の取り込み（`ImportWizardModal`）        |
+| `.coursework`  | 資料の取り込み（`CourseworkImportDialog`）   |
+| `.grade`       | 成績の取り込み（`GradeImportDialog`）        |
+| `.asb`         | 解答用紙定義の取り込み                       |
+| `.students`    | 生徒の取り込み（`StudentImportWizardModal`） |
 
-### 版の判定
-
-`manifest.version` は**信用しきらない**。過去に固定値を書き続けて嘘をついていた版が
-あったので、**形状を見て下方へ補正する**（manifest が名乗る版に無いはずのセクションが
-あれば、実際はもっと古い／新しいと判定する）。
-
-**版でセクション名が変わるとき、extractor は「読めた方だけ」を載せること。**
-両方載せると、新しい版のアーカイブが旧版に見えてデータを捨てる。
-
-### 既定値はチェーンの「あと」で埋める
-
-試験は `archiveExtractor` の1か所（`withDefaultedSections`）へ寄せてある。
-チェーンの途中で埋めると、後続の変換器が「無い」と「既定値」を区別できなくなる。
+どの一覧から押しても全ての拡張子を受け付ける（試験一覧で `.grade` を選べば成績の取り込みが
+開く）。旧形式の画面は、選んだファイルを最初から受け取って開く。
 
 ---
 
-## 試験（`.score`）
+## 旧5種（読み込みだけの凍結した形式）
 
-**5種でいちばん大きく、唯一 `merge/` という別モジュールを持つ。**
+**書き出しは無く、取り込みだけが残っている。** 手元に残った旧形式のファイルを読めるように
+するためのもので、形式そのものはもう変わらない。
 
-### 中身
+| 種             | 拡張子        | 取り込み                                  | 変換器                     | IPC                             |
+| -------------- | ------------- | ----------------------------------------- | -------------------------- | ------------------------------- |
+| 試験           | `.score`      | `import/exam-archive/` ＋ `import/merge/` | `import/transformers/`     | `archiveHandlers.ts`            |
+| 試験外成績資料 | `.coursework` | `import/coursework-archive/`              | `coursework-transformers/` | `courseworkHandlers.ts`         |
+| 成績           | `.grade`      | `import/grade-archive/`                   | `grade-transformers/`      | `gradeHandlers.ts`              |
+| 解答用紙       | `.asb`        | `import/asb-archive/`                     | `asb-transformers/`        | `answerSheetBuilderHandlers.ts` |
+| 生徒           | `.students`   | `import/student-archive/`                 | `student-transformers/`    | `studentArchiveHandlers.ts`     |
 
-```
-manifest.json      版・メタ情報
-exam.json          Exam 根・ExamPage・CropRegion・出力設定・OMR 設定 ほか
-students.json      Student
-classes.json       Classroom・StudentClassroomMembership
-users.json         User（パスワードは除外）
-subtotals.json     SubtotalGroup・Subtotal・CropSubtotal
-scores.json        QuestionScore・ScoreDecision・DrawingAnnotation ほか
-tags.json          Tag・ExamTag
-master-images/     模範解答画像
-answer-sheets/     答案画像
-```
+### 凍結の意味
 
-### ファイル
+- **版を上げない。** `src/types/<種>Archive.types.ts` の `*_CURRENT_VERSION` は今の値で止まり、
+  変換器も足さない。読めるのは、その版までのファイルである
+- **スキーマが変わったら、取り込みが今のスキーマで動くことだけを保つ。** 旧形式の取り込みが
+  書いている表を変えたら、投入の処理を直す（新しい列には取り込み側で既定値を入れる）。
+  アーカイブの型と変換器は触らない
+- **取り込みのテストは固定ファイルを読む。** 旧形式のファイルはもう作れないので、
+  `__tests__/fixtures/legacy-archives/` に置いた固定ファイルを取り込んで確かめる。版をまたぐ
+  変換は `__tests__/import-export/unit/*TransformerChain.test.ts`
+- 取り込む JSON の実行時検証（#1077）は、この旧形式の読み込みだけが対象になる
+  （統合版の `manifest.json` は `archiveManifestParser.ts` が既に検証している）
 
-|                                               |                                                    |
-| --------------------------------------------- | -------------------------------------------------- |
-| `export/exam-archive/index.ts`                | 入口。ダイアログ・収集・生成・**欠けた画像の報告** |
-| `export/exam-archive/dataCollector.ts`        | Prisma から集める                                  |
-| `export/exam-archive/archiveCreator.ts`       | ZIP を作る                                         |
-| `import/exam-archive/archiveExtractor.ts`     | ZIP 展開・版判定・**変換チェーン適用**・既定値埋め |
-| `import/exam-archive/manifestValidator.ts`    | manifest の検証                                    |
-| `import/exam-archive/uniqueNameGenerators.ts` | 名前の重複を避ける連番付け                         |
-
-### 照合と投入（`import/merge/`）
-
-|                                    |                                                                                              |
-| ---------------------------------- | -------------------------------------------------------------------------------------------- |
-| `matcher.ts`                       | 事前照合の統合（`performPreMatching`）                                                       |
-| `matchers/studentMatcher.ts`       | 生徒（uuid → 学籍番号 → 氏名）                                                               |
-| `matchers/classroomMatcher.ts`     | 学級（uuid → 名前 → `classroomCode`）                                                        |
-| `matchers/subtotalGroupMatcher.ts` | 小計点グループ（uuid → 名前）                                                                |
-| `matchers/userMatcher.ts`          | 利用者（uuid → `username`）                                                                  |
-| `idIntegrationImporter.ts`         | **Stage 1**。単一トランザクションで全部入れる。`executeIdIntegrationImport` が唯一の投入経路 |
-| `processors/`                      | 生徒・学級・小計点グループの id 統合（新規作成／既存紐づけ／ID 変更予約）                    |
-| `idChangeExecutor.ts`              | **Stage 2**。ID 変更（複製 → FK 更新 → 旧レコード削除）                                      |
-| `importExamCore.ts`                | 試験骨格（Exam 根・ExamPage・CropRegion・UserExam・ExamSubtotalGroup・ExamStudent）          |
-| `importExamAttachments.ts`         | 付随データ（採点マーク・出力設定・OMR・複合解答・タグ・ExamClassroom）                       |
-| `importSubtotals.ts`               | 小計・CropSubtotal                                                                           |
-| `importScoring.ts`                 | 採点層（QuestionScore・ScoreDecision・CompoundAnswerScore・CropRegionAssignment）            |
-| `importSyncRecords.ts`             | DrawingAnnotation・StudentClassroomMembership（追加とマージのみ。削除は推論しない）          |
-| `imageImporter.ts`                 | 画像のコピーと行の作成                                                                       |
-| `importValuePolicy.ts`             | **3択の適用**（値・`createdAt`/`updatedAt` をどう倒すか）                                    |
-| `separateExamRewriter.ts`          | `separate` のとき、試験まわりの id を振り直す                                                |
-| `reorderAfterImport.ts`            | 取り込み後の並び順の焼き直し                                                                 |
-| `scoringConflictDetector.ts`       | 採点の食い違いの検出（`examStudentId` + `cropRegionId`）                                     |
-| `decisionMergePolicy.ts`           | 確定層（ScoreDecision / CompoundAnswerScore）の解決を LWW に一本化                           |
-| `types.ts`                         | `IdMappings` / `IdChangeTarget` / `ImportCounts`                                             |
-
-### IPC
-
-`archiveHandlers.ts` — `archive:exportExam` / `bulkExportExams` / `selectImportFile` /
-`analyzeArchive` / `preMatch` / `detectScoringConflicts` / `idIntegrationImport`、
-および外部形式の変換（`convertHszToScore` / `convertDatToScore`）。
-
-### Stage 2 の罠
-
-`idChangeExecutor` の生徒 ID 変更は**delete ＋ 再作成**である。`Student` に
-カスケードの子を足したら、**必ずここへ `updateMany` を足すこと。** 足し忘れると
-取り込みで黙って消える。
-
----
-
-## 試験外成績資料（`.coursework`）
-
-**試験アーカイブと同型の独立アーカイブ。** id を一次の照合に使い、名前マッチングを
-付加として持ち、点数は LWW で解決する。
+### 共通の骨格
 
 ```
-manifest.json
-courseworks.json              coursework-classrooms.json
-coursework-tags.json          coursework-students.json
-coursework-items.json         coursework-letter-scales.json
-coursework-scores.json
-students.json  classes.json  memberships.json  tags.json
+archiveExtractor（ZIP を開き、版を判定し、変換チェーンを通す） → 照合 → 投入
 ```
 
-**1.1.0 でテーブルごとの平坦なセクションになった**（それ以前は資料1件を入れ子ツリーへ
-射影していた）。Prisma の行をそのまま持ち、点数は `courseworkStudentId` を持つ。
+- ZIP を開くのは `adm-zip`。中身は `manifest.json` ＋ JSON のセクション（＋試験と解答用紙は画像）
+- 変換チェーンの基盤は `import/shared/transformChain.ts`（`detectVersionInRange` と
+  `runTransformChain`）で、5種が共有する。1段の変換器は `V<FROM>_to_V<TO>.ts` で、入力の版から
+  出力の版へ1段だけ上げる
+- **`manifest.version` は信用しきらない。** 過去に固定値を書き続けて嘘をついていた版があるので、
+  形状を見て下方へ補正する。版でセクション名が変わるとき、extractor は「読めた方だけ」を載せる
+  （両方載せると、新しい版のアーカイブが旧版に見えてデータを捨てる）
+- **既定値はチェーンの「あと」で埋める。** 試験は `archiveExtractor` の `withDefaultedSections`。
+  チェーンの途中で埋めると、後続の変換器が「無い」と「既定値」を区別できなくなる
+- テストのフィクスチャで、`manifest.version` に現行版を書いて中身は旧い形、という組み合わせを
+  作らない。形状ベースの判定が効いて、検証したいはずの経路を通らなくなる
 
-**版ごとの「アーカイブ全体の型」と旧版の形は
-`import/coursework-transformers/types.ts` と `legacyShape.ts` が持つ。**
-`src/types/courseworkArchive.types.ts` は**現行の形だけ**を宣言する。
-
-|                                            |                                                                     |
-| ------------------------------------------ | ------------------------------------------------------------------- |
-| `import/coursework-archive/idRemapper.ts`  | 生徒・学級の解決。`allowCreate` で「作る／lookup のみ」が切り替わる |
-| `import/coursework-archive/dataCreator.ts` | 投入                                                                |
-| `import/coursework-archive/index.ts`       | `previewCourseworkImport` と `importCourseworkArchive`              |
-
-IPC は `courseworkHandlers.ts` の `coursework:exportArchive` /
-`selectImportFile` / `importArchive`。
-
----
-
-## 成績（`.grade`）
-
-**外部参照が名前ベースなのが、この種だけの性質。** 試験・小計点グループ・採点領域は
-アーカイブに**含めず**、取り込み先に既にあるものを lookup する。
+### 試験（`.score`）
 
 ```
-manifest.json
+manifest.json  exam.json  students.json  classes.json  users.json
+subtotals.json  scores.json  tags.json  master-images/  answer-sheets/
+```
+
+照合と投入は `import/merge/` が持つ。
+
+|                                       |                                                                                                                                     |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `matcher.ts` ／ `matchers/`           | 事前照合（生徒: uuid → 学籍番号 → 氏名、学級: uuid → 名前 → `classroomCode`、小計グループ: uuid → 名前、利用者: uuid → `username`） |
+| `idIntegrationImporter.ts`            | **Stage 1**。単一トランザクションで全部入れる（`executeIdIntegrationImport`）                                                       |
+| `processors/`                         | 生徒・学級・小計点グループの id 統合（新規作成／既存紐づけ／ID 変更予約）                                                           |
+| `idChangeExecutor.ts`                 | **Stage 2**。ID 変更（複製 → FK 更新 → 旧レコード削除）                                                                             |
+| `importExamCore.ts` ほか `import*.ts` | 試験骨格・付随データ・小計・採点層・同期記録の投入                                                                                  |
+| `imageImporter.ts`                    | 画像のコピーと行の作成                                                                                                              |
+| `separateExamRewriter.ts`             | `separate` のとき、試験まわりの id を振り直す                                                                                       |
+| `scoringConflictDetector.ts`          | 採点の食い違いの検出（`examStudentId` + `cropRegionId`）                                                                            |
+| `decisionMergePolicy.ts`              | 確定層（ScoreDecision / CompoundAnswerScore）の解決を LWW に一本化                                                                  |
+
+**Stage 2 の罠:** `idChangeExecutor` の生徒 ID 変更は**delete ＋ 再作成**である。`Student` に
+カスケードの子を足したら、**必ずここへ `updateMany` を足すこと。** 足し忘れると旧形式の
+取り込みで黙って消える（統合版の付け替えは `UPDATE` で、この罠は無い）。
+
+外部形式（`import/external-formats/` の `hsz/`（tkinter 版の `.hsz` / `.dat`）と
+`reattendant/`）は、`.score` の凍結した版の形へ変換してから、この取り込みへ流す。
+
+### 試験外成績資料（`.coursework`）
+
+テーブルごとの平坦なセクション（1.1.0 以降。それ以前は入れ子ツリー）。id を一次の照合に使い、
+名前マッチングを付加として持ち、点数は LWW で解決する。版ごとの形は
+`coursework-transformers/types.ts` と `legacyShape.ts`。生徒・学級の解決は
+`coursework-archive/idRemapper.ts`（`allowCreate` で「作る／lookup のみ」が切り替わる）。
+
+### 成績（`.grade`）
+
+```
 grade-exam.json     成績本体（評価項目・境界・観点間制約・上書き・確定値 ほか）
-courseworks.json    内包する試験外成績資料（coursework-archive 形式）
+courseworks.json    内包する試験外成績資料（coursework-archive 形式。投入も委譲する）
 ```
 
-### 内包する資料は coursework-archive へ委譲する
+- **外部参照が名前ベース。** 試験・小計点グループ・採点領域・比較先の成績算出は含まず、
+  取り込み先に在るものを名前で lookup する（比較先の成績算出だけは uuid 一次 → 成績算出名＋
+  項目名）。当たらなければ warning で伝える
+- 生徒・学級は作る（`allowCreate: true`）
+- **利用者を含まない。** `GradeFrozenScore.frozenByUserId` は、同じ id の利用者が取り込み先に
+  居なければ null（操作者不明）になる
+- 3択を持たず、取り込むたびに複製される
 
-二重実装を解消してあり、収集も生成も coursework-archive のモジュールを呼ぶ。
+### 解答用紙（`.asb`）
 
-| 版     | 変わったこと                                                                |
-| ------ | --------------------------------------------------------------------------- |
-| 1.4.0  | Coursework を**名前ベース**で `courseworks.json` に埋め込み（読込互換のみ） |
-| 1.5.0  | `courseworks.json` を coursework-archive 形式（UUID ベース）へ              |
-| 1.12.0 | 内包資料を coursework 1.1.0（平坦なセクション）へ。旧入れ子形式は読込互換   |
+`definition.json`（定義と全子テーブル）・`tags.json`・`images/`。**取り込みは常に新規作成**で、
+`idRemapper.ts` が全ての id を振り直す。**原稿用紙と文字位置マーカーの id を振り直し忘れると、
+マーカーを置いた解答用紙が一切複製できない**（主キー衝突）。
 
-### 生徒・学級は「作る」
+### 生徒（`.students`）
 
-**かつて lookup のみだったが、いまは作る**（`gradeArchiveImporter.ts` が
-`allowCreate: true` を渡す）。理由は、内包資料をここだけ lookup のみにすると、
-**同じ資料が単体の `.coursework` では点数まで復元されるのに `.grade` 経由だと空になる**
-から。生徒は uuid 一次 → 学籍番号、学級は uuid 一次 → 学級名で探し、
-どちらにも当たらなければ作る。
-
-**試験・小計点グループ・採点領域の名前ベース lookup は仕様として残す。**
-
-比較（`GradeComparison`）の相手が別の成績算出の評価項目なら、その成績算出も
-アーカイブに入らないので、同じく lookup する（uuid 一次 → 成績算出名＋項目名）。
-当たらなければその比較は作らず warning で伝える。
-
-IPC は `gradeHandlers.ts` の `grade:exportArchive` / `importArchive` / `executeImport`。
-
----
-
-## 解答用紙（`.asb`）
-
-```
-manifest.json
-definition.json    AsbDefinition と全子テーブル（大問・小問・枝問・原稿用紙・
-                   文字位置マーカー・OMR・テキスト・画像・ヘッダー欄）
-tags.json          タグ本体と定義への参照（1.2.0 以降）
-images/            貼り込んだ画像
-```
-
-**取り込みは常に新規作成**（`importAsbDefinition`）で、照合の段は無い。
-`idRemapper.ts` が全ての id を振り直す。**原稿用紙と文字位置マーカーの id を
-振り直し忘れると、マーカーを置いた解答用紙が一切複製できない**（主キー衝突）。
-
-IPC は `answerSheetBuilderHandlers.ts` の `asb:export-definition` /
-`asb:select-import-file` / `asb:import-definition`。
-
----
-
-## 生徒（`.students`）
-
-```
-manifest.json
-students.json   Student
-classes.json    Classroom・StudentClassroomMembership
-```
-
-**いちばん小さく、変換器を1本も持たない**（初版のまま）。事前照合
-（`performStudentPreMatching`）と投入（`executeStudentImport`）に分かれ、
-生徒ごとに「統合する／別で追加する」を選ばせる。
-
-IPC は `studentArchiveHandlers.ts` の `studentArchive:exportStudents` /
-`selectImportFile` / `analyzeArchive` / `preMatch` / `import`。
-
----
-
-## 外部形式からの取り込み
-
-`import/external-formats/` に2つある。どちらも `.score` へ変換してから、
-通常の取り込み経路へ流す。
-
-|                |                                      |
-| -------------- | ------------------------------------ |
-| `hsz/`         | 旧版（tkinter 版）の `.hsz` / `.dat` |
-| `reattendant/` | 再受験者のデータ                     |
-
----
-
-## 種ごとに違うところ（統合の材料）
-
-**同じことを5回別々に書いている。** ここが段階60（アーカイブの統合）の対象である。
-
-|                                       | 試験                         | 資料                               | 成績                                              | 解答用紙         | 生徒                 |
-| ------------------------------------- | ---------------------------- | ---------------------------------- | ------------------------------------------------- | ---------------- | -------------------- |
-| 3択（`overwrite`/`merge`/`separate`） | ある                         | ある                               | ある                                              | 無い（常に新規） | 無い（行ごとに選ぶ） |
-| 生徒・学級の照合                      | `merge/matchers/`            | `coursework-archive/idRemapper.ts` | 同左を呼ぶ                                        | —                | `student-archive/`   |
-| 既定値の埋め方                        | `archiveExtractor` の1か所   | 各所                               | `for...of` が14か所                               | 各所             | —                    |
-| 版の判定                              | manifest ＋ 形状フロア       | 同左                               | **形状のみ**                                      | manifest ＋ 形状 | —                    |
-| 利用者                                | 参照される利用者を全員入れる | 入れない                           | **入れない**（`frozenByUserId` が null へ倒れる） | 入れない         | —                    |
-
-### 残っている食い違い
-
-- **`createdAt` / `updatedAt`** — 3択で決まるようになったが、種によって適用の徹底度が違う
-- **`.grade` に利用者のセクションが無い** — `GradeFrozenScore.frozenByUserId` を行のまま
-  書き出すのに、取り込み側は同じ id の利用者が偶然居なければ **null（操作者不明）へ倒す**。
-  試験側は「参照される利用者を全員入れる」へ直してあるので、**統合するときはその形へ寄せる**
-- **人が統合先を選ぶ導線**が種ごとに別
-
-### やらないと決めていること
-
-- **`.grade` の名前ベース外部参照は仕様。** 統合してもこの非対称は残す
-- **資料の評語（`CourseworkLetterScale`）と成績の評定は別概念。** 前者は配点表で、
-  同じ `S` が項目ごとに 6/12/18/30 点になる。同じ語彙へ寄せない
+`students.json`・`classes.json`。変換器を持たない（初版のまま）。事前照合
+（`performStudentPreMatching`）と投入（`executeStudentImport`）に分かれ、生徒ごとに
+「統合する／別で追加する」を選ばせる。
 
 ---
 
 ## スキーマを変えたときにやること
 
-**テーブル・フィールド・リレーションを足したり消したり改名したら、必ず対応する。**
-手順は種によらず同じ。
+**テーブル・フィールド・リレーションを足したり消したり改名したら、必ず次を確かめる。**
+統合版はスキーマから回る汎用の書き込みなので、表ごとの書き出し・取り込みの処理を書き足す
+ことは無い。手で追うのは、スキーマから読み取れない「意味」だけである。
 
-1. **版を上げる** — `src/types/<種>Archive.types.ts` の `*_CURRENT_VERSION` を更新し、
-   `*ArchiveVersion` と `*_SUPPORTED_VERSIONS` に新しい版を足す（semver）
-2. **変換器を作る** — `import/<種>-transformers/V<FROM>_to_V<TO>.ts` を足し、
-   `index.ts` の配列へ登録する。新規フィールドには既定値を入れ、補ったことを
-   `warnings` に積む
-3. **アーカイブ型を更新する** — セクションの型にフィールドを足す
-4. **書き出しを更新する** — `dataCollector.ts` で集め、`archiveCreator.ts` で入れる
-5. **取り込みを更新する** — extractor で取り出し、投入経路（試験なら
-   `merge/idIntegrationImporter.ts` と `merge/processors/`）で入れる
-6. **検査を足す** — 変換チェーンのテストに**旧い形のフィクスチャ**を足す
-   （`__tests__/import-export/unit/*TransformerChain.test.ts`）。往復で値が落ちないことは
-   `__tests__/import-export/scenarios/roundTripFieldFidelity.test.ts`
-
-### 変換器の形
-
-```typescript
-export class V1_9_0_to_V1_10_0_Transformer implements ExamVersionTransformer {
-  readonly fromVersion: ExamArchiveVersion = "1.9.0"
-  readonly toVersion: ExamArchiveVersion = "1.10.0"
-
-  transform(data: ExamArchiveData): ExamTransformResult {
-    return {
-      data: {
-        ...data,
-        manifest: { ...data.manifest, version: this.toVersion },
-        newData: data.newData ?? { items: [] },
-      },
-      warnings: ["1.9.0→1.10.0: 新機能Xのデータは既定値で補いました"],
-    }
-  }
-}
-```
-
-### テストで版を偽らないこと
-
-フィクスチャを作るとき、`manifest.version` に現行版を書いて中身は旧い形、という
-組み合わせを作らない。**形状ベースの判定が効いて、検証したいはずの経路を通らなくなる。**
+1. **表と外部キーを登録表に載せる** — `export/unified-archive/archiveTableRegistry.ts` の
+   `ARCHIVE_TABLES` に、表の役割（`root` / `shared` / `owned` / `link` / `optional`）と、親の列
+   （`owner`）と、外部キー（`references`。必須か、成績算出が使うので外せないか）を足す・直す。
+   **規約テスト `__tests__/import-export/unit/unifiedArchiveRegistry.test.ts` が schema.prisma との
+   一致を縛る**（モデルの過不足・外部キーの列・参照先・必須か）
+2. **ファイルのパスを持つ列を足したら** — `export/unified-archive/archiveFileCollector.ts` の
+   `ARCHIVE_FILE_COLUMNS` に足す（同梱と取り込みでの写しがこれに従う）。パスに id を区切りとして
+   入れる表は、一意制約を持たせず照合の対象にもしない（`unifiedArchiveImportConflict.test.ts` の
+   規約テスト）
+3. **外部キーでない列に id を埋め込んだら** — `import/unified-archive/archiveEmbeddedIds.ts` の
+   `ARCHIVE_EMBEDDED_ID_COLUMNS` に名指しで足す（「別で追加」と id の付け替えで書き換わる）
+4. **migration は設計 §8 の規約4つを守る** — 既存の行の id と時刻を変えない／他の行を参照するのは
+   範囲の内側だけ／参照先が無いときは元の値を保つ／既存のデータから新しい行を作るのは一意制約を
+   持つ表だけ。**回帰テスト `__tests__/migration/unifiedArchiveMigrationCommutes.test.ts` が、
+   固定データ（`__tests__/fixtures/unifiedArchiveBaseline.sql`）より後の migration を全体と一部の
+   DB の両方に当てて突き合わせる。** 固定データの作り直しは
+   `UPDATE_UNIFIED_ARCHIVE_BASELINE=1` を付けてこのテストを走らせる（作り直すと、それまでの
+   migration は検査の対象から外れる）
+5. **旧5種の読み込み** — 変えた表を旧形式の取り込みが書いているなら、取り込みが今のスキーマで
+   動くよう投入の処理を直す。**変換器は足さず、`*_CURRENT_VERSION` も上げない**（凍結）。
+   `Student` にカスケードの子を足したら `idChangeExecutor` の罠（上記）も見る
+6. **画面の見せ方（必要なら）** — 表名・列名の日本語は
+   `src/components/unified-archive/archiveTableLabels.ts`。成績算出が読む表に、値に効かない列
+   （名前・並び順など）を足したら、`src/components/unified-archive/import/archiveGradeInputDiff.ts`
+   の `VALUE_NEUTRAL_COLUMNS` に足す（載っていない列は値に効くものとして扱われるので、足し忘れても
+   警告が増えるだけで見落としはしない）

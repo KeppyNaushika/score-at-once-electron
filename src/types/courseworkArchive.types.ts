@@ -261,21 +261,6 @@ export interface CourseworkArchiveImportPreview {
   warnings: string[]
 }
 
-export interface ExportCourseworkArchiveOptions {
-  courseworkId: string
-  /** 未指定なら保存ダイアログを表示 */
-  outputPath?: string
-}
-
-/** 保存ダイアログのキャンセルは失敗ではないので値で返す */
-export type ExportCourseworkArchiveResult =
-  | { canceled: true }
-  | {
-      canceled: false
-      outputPath: string
-      manifest: CourseworkArchiveManifest
-    }
-
 export interface CourseworkArchiveImportResult {
   createdCourseworkIds: string[]
   warnings: string[]

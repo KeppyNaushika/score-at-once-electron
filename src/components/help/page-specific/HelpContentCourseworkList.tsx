@@ -74,15 +74,17 @@ export function HelpContentCourseworkList() {
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">新規作成</Badge>
-              <Badge variant="outline">.coursework 読み込み</Badge>
-              <Badge variant="outline">.coursework 書き出し</Badge>
+              <Badge variant="outline">読み込み</Badge>
+              <Badge variant="outline">.sao 書き出し</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
               「新規作成」を押すと、名前を訊かずに資料が1件できて概要ページが開きます。
               資料名・実施日・説明・タグはそこで直に書き換えます（打つそばから保存されます）。
             </p>
             <p className="text-sm text-muted-foreground">
-              書き出しと削除は行末の「…」から行います。成績算出から参照されている資料は削除できません
+              別の端末で作った資料は「読み込み」で取り込めます（.sao
+              のほか、以前の .coursework
+              も選べます）。書き出しと削除は行末の「…」から行います。成績算出から参照されている資料は削除できません
               （どの成績算出が使っているかを知らせます）。
             </p>
           </div>

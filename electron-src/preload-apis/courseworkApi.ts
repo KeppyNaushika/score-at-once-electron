@@ -46,9 +46,7 @@ export function createCourseworkApi() {
       setTags: bind("coursework:setTags"),
       addTag: bind("coursework:addTag"),
 
-      // アーカイブ（.coursework のエクスポート／インポート）
-      exportArchive: bind("coursework:exportArchive"),
-      selectImportFile: bind("coursework:selectImportFile"),
+      // アーカイブ（.coursework の取り込み）
       analyzeArchive: bind("coursework:analyzeArchive"),
       importArchive: bind("coursework:importArchive"),
     },

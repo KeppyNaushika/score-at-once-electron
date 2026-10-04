@@ -2,19 +2,14 @@
 
 import type { Prisma } from "@prisma/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  Download,
-  FileArchive,
-  FolderInput,
-  FolderOutput,
-  PlusCircle,
-  Upload,
-  Users,
-} from "lucide-react"
+import { Download, FileArchive, PlusCircle, Upload, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import { ArchiveImportScreens } from "@/components/archive-import/ArchiveImportScreens"
+import { archiveImportToolbarAction } from "@/components/archive-import/archiveImportToolbarAction"
+import { useArchiveImportLauncher } from "@/components/archive-import/hooks/useArchiveImportLauncher"
 import { Combobox } from "@/components/common/Combobox"
 import { ListSearchInput } from "@/components/common/ListFilterControls"
 import { ListPaginationFooter } from "@/components/common/ListPaginationFooter"
@@ -26,10 +21,8 @@ import PageHeader from "@/components/layout/PageHeader"
 import { DeleteStudentModal } from "@/components/student/DeleteStudentModal"
 import { useStudentTableRows } from "@/components/student/hooks/useStudentTableRows"
 import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
-import { StudentArchiveExportDialog } from "@/components/student/StudentArchiveExportDialog"
 import StudentModal from "@/components/student/StudentModal"
 import { StudentTableRow } from "@/components/student/StudentTableRow"
-import { StudentImportWizardModal } from "@/components/student-import/StudentImportWizardModal"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Empty,
@@ -55,8 +48,6 @@ import {
 } from "@/components/ui/table"
 import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
 import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
-import { unifiedArchiveImportToolbarAction } from "@/components/unified-archive/import/unifiedArchiveImportToolbarAction"
-import { UnifiedArchiveImportWizard } from "@/components/unified-archive/import/UnifiedArchiveImportWizard"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { useListPagination } from "@/hooks/useListPagination"
 import {
@@ -92,13 +83,6 @@ export default function StudentTable() {
     [queryClient]
   )
   const { data: classrooms = EMPTY_CLASSROOMS } = useQuery(classroomListQuery())
-  const refreshClassrooms = useCallback(
-    () =>
-      queryClient.invalidateQueries({
-        queryKey: classroomListQuery().queryKey,
-      }),
-    [queryClient]
-  )
   const [searchTerm, setSearchTerm] = useState("")
   const [filterMembershipStatus, setFilterMembershipStatus] =
     useState<string>("current_unassigned")
@@ -115,11 +99,7 @@ export default function StudentTable() {
     useState<StudentWithMemberships | null>(null)
   const [isSpreadsheetImportModalOpen, setIsSpreadsheetImportModalOpen] =
     useState(false)
-  const [isArchiveExportDialogOpen, setIsArchiveExportDialogOpen] =
-    useState(false)
-  const [isArchiveImportModalOpen, setIsArchiveImportModalOpen] =
-    useState(false)
-  const [isUnifiedImportOpen, setIsUnifiedImportOpen] = useState(false)
+  const archiveImport = useArchiveImportLauncher()
   /** .sao 書き出しを開いたときの最初の選択（押した時点の選択中の生徒）。null の間は閉じている */
   const [unifiedExportSelection, setUnifiedExportSelection] =
     useState<UnifiedArchiveExportInitialSelection | null>(null)
@@ -239,10 +219,6 @@ export default function StudentTable() {
   const updateStudent = useMutation(updateStudentMutation())
   const exportStudentsExcel = useMutation(exportStudentsExcelMutation())
 
-  const refreshData = async () => {
-    await Promise.all([refreshStudents(), refreshClassrooms()])
-  }
-
   // 取り込んだ分は取り直して反映する（画面側で足し込むと重複の判定を二重に持つ）
   const onStudentsImported = () => {
     void refreshStudents()
@@ -325,16 +301,10 @@ export default function StudentTable() {
       label: "Excel 貼付一括追加",
       onClick: () => setIsSpreadsheetImportModalOpen(true),
     }),
-    toolbarButtonAction({
-      id: "archive-import",
+    archiveImportToolbarAction({
       priority: 60,
-      icon: FolderInput,
-      label: ".students 読み込み",
-      onClick: () => setIsArchiveImportModalOpen(true),
-    }),
-    unifiedArchiveImportToolbarAction({
-      priority: 59,
-      onClick: () => setIsUnifiedImportOpen(true),
+      isOpening: archiveImport.isOpening,
+      onClick: () => void archiveImport.start(),
     }),
   ]
   if (selectedStudentIds.size > 0) {
@@ -351,15 +321,8 @@ export default function StudentTable() {
         disabled: exportStudentsExcel.isPending,
       }),
       toolbarButtonAction({
-        id: "archive-export",
-        priority: 40,
-        icon: FolderOutput,
-        label: `.students 書き出し（${selectedStudentIds.size}名）`,
-        onClick: () => setIsArchiveExportDialogOpen(true),
-      }),
-      toolbarButtonAction({
         id: "unified-archive-export",
-        priority: 39,
+        priority: 40,
         icon: FileArchive,
         label: `.sao 書き出し（${selectedStudentIds.size}名）`,
         onClick: () =>
@@ -496,14 +459,6 @@ export default function StudentTable() {
         />
       )}
 
-      {isArchiveExportDialogOpen && (
-        <StudentArchiveExportDialog
-          isOpen={isArchiveExportDialogOpen}
-          onClose={() => setIsArchiveExportDialogOpen(false)}
-          selectedStudentIds={selectedStudentIds}
-        />
-      )}
-
       <UnifiedArchiveExportDialog
         open={unifiedExportSelection !== null}
         onOpenChange={(open) => {
@@ -512,19 +467,7 @@ export default function StudentTable() {
         initialSelection={unifiedExportSelection ?? {}}
       />
 
-      {isArchiveImportModalOpen && (
-        <StudentImportWizardModal
-          isOpen={isArchiveImportModalOpen}
-          onClose={() => setIsArchiveImportModalOpen(false)}
-          onComplete={refreshData}
-        />
-      )}
-
-      <UnifiedArchiveImportWizard
-        open={isUnifiedImportOpen}
-        onOpenChange={setIsUnifiedImportOpen}
-        onComplete={refreshData}
-      />
+      <ArchiveImportScreens launcher={archiveImport} />
     </div>
   )
 }
