@@ -67,6 +67,7 @@ export interface OpenAiGradingClient {
   files: {
     create(params: FileCreateParams): PromiseLike<FileObject>
     content(fileId: string): PromiseLike<Response>
+    delete(fileId: string): PromiseLike<unknown>
   }
   batches: {
     create(params: BatchCreateParams): PromiseLike<Batch>
@@ -530,6 +531,24 @@ export function createOpenAiProvider(
 
     async cancelBatch(externalBatchId) {
       await callOpenAi(() => client.batches.cancel(externalBatchId))
+    },
+
+    async cleanupBatch(externalBatchId) {
+      const batch = await callOpenAi(() =>
+        client.batches.retrieve(externalBatchId)
+      )
+      // 入力（答案の画像を含む JSONL）・出力・失敗のファイルを消す
+      const fileIds = [
+        batch.input_file_id,
+        batch.output_file_id,
+        batch.error_file_id,
+      ].filter(
+        (fileId): fileId is string =>
+          typeof fileId === "string" && fileId !== ""
+      )
+      for (const fileId of fileIds) {
+        await callOpenAi(() => client.files.delete(fileId))
+      }
     },
 
     async testConnection() {

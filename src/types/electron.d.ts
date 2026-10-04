@@ -11,6 +11,8 @@
 // 値ではなく型としてのみ import すること（renderer は main を実行できない）。
 // =============================================================================
 
+import type { createAiGradingApi } from "@/electron-src/preload-apis/aiGradingApi"
+import type { createAiProviderApi } from "@/electron-src/preload-apis/aiProviderApi"
 import type { createAnswerSheetApi } from "@/electron-src/preload-apis/answerSheetApi"
 import type { createAnswerSheetBuilderApi } from "@/electron-src/preload-apis/answerSheetBuilderApi"
 import type { createArchiveApi } from "@/electron-src/preload-apis/archiveApi"
@@ -104,7 +106,9 @@ export type MyAPI = ReturnType<typeof createExamApi> &
   ReturnType<typeof createNavigationApi> &
   ReturnType<typeof createSyncApi> &
   ReturnType<typeof createAuditLogApi> &
-  ReturnType<typeof createUnifiedArchiveApi>
+  ReturnType<typeof createUnifiedArchiveApi> &
+  ReturnType<typeof createAiGradingApi> &
+  ReturnType<typeof createAiProviderApi>
 
 // ---------------------------------------------------------------------------
 // Global Window declarations

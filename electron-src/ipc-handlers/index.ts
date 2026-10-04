@@ -9,6 +9,8 @@
  * `electron-src` を別ビルドへ切り出すとこの導出は成立しない。
  */
 
+import { aiGradingHandlers } from "./aiGradingHandlers"
+import { aiProviderHandlers } from "./aiProviderHandlers"
 import { answerSheetBuilderHandlers } from "./answerSheetBuilderHandlers"
 import { archiveHandlers } from "./archiveHandlers"
 import { asbEditHandlers } from "./asbEditHandlers"
@@ -43,6 +45,8 @@ import { userExamHandlers } from "./userExamHandlers"
 
 /** ドメインごとの登録簿。件数の照合（＝チャンネル名の衝突検出）に使う */
 const handlerGroups = [
+  aiGradingHandlers,
+  aiProviderHandlers,
   answerSheetBuilderHandlers,
   archiveHandlers,
   asbEditHandlers,
@@ -83,6 +87,8 @@ const handlerGroups = [
  * 登録時に件数を突き合わせて気付けるようにしてある（`setupAllIPCHandlers`）。
  */
 const handlers = {
+  ...aiGradingHandlers,
+  ...aiProviderHandlers,
   ...answerSheetBuilderHandlers,
   ...archiveHandlers,
   ...asbEditHandlers,

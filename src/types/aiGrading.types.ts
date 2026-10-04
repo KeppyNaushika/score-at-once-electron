@@ -72,3 +72,22 @@ export const AI_GRADING_PROVIDERS = [
 export type AiGradingProvider = (typeof AI_GRADING_PROVIDERS)[number]
 export const { is: isAiGradingProvider, to: toAiGradingProvider } =
   defineStringUnion(AI_GRADING_PROVIDERS, "anthropic")
+
+/**
+ * 実行の進み具合。main が試行を1件書くたびに `aiGrading:run-progress` で全ウィンドウへ
+ * 押し出す（OMR の一括認識と同じ形）。件数は進捗の表示のためだけのもので、結果そのものは
+ * 実行の一覧（試行の行）を取り直して読む
+ */
+export interface AiGradingRunProgress {
+  runId: string
+  cropRegionId: string
+  status: AiGradingRunStatus
+  /** 試行の数 */
+  total: number
+  /** 結果を書いた試行の数（成否を問わない） */
+  completed: number
+  /** 判定が出た試行の数 */
+  succeeded: number
+  /** 失敗・拒否・期限切れの試行の数 */
+  failed: number
+}

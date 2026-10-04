@@ -238,6 +238,39 @@ const AUDIT_ACTIONS = {
     label: "採点マークを削除しました",
   },
 
+  // ── AI 採点（docs/vlm-grading-design.md）。送り先の事業者・モデルは metadata に入る。
+  //    キーや送った本文は残さない
+  "exam.ai_prompt.create": {
+    category: "exam",
+    verb: "create",
+    label: "AI 採点のプロンプトを作成しました",
+  },
+  "exam.ai_prompt.revise": {
+    category: "exam",
+    verb: "other",
+    label: "AI にプロンプトの改訂を依頼しました",
+  },
+  "exam.ai_grading.run": {
+    category: "exam",
+    verb: "other",
+    label: "答案を AI 採点に送りました",
+  },
+  "exam.ai_grading.adopt": {
+    category: "exam",
+    verb: "update",
+    label: "AI の判定を採点に採用しました",
+  },
+  "exam.ai_grading.adopt_blank": {
+    category: "exam",
+    verb: "update",
+    label: "白紙の答案を無答にしました",
+  },
+  "exam.ai_grading.delete_attempts": {
+    category: "exam",
+    verb: "delete",
+    label: "AI の古い判定を消しました",
+  },
+
   "exam.return.capture": {
     category: "exam",
     verb: "export",
@@ -704,6 +737,22 @@ const AUDIT_ACTIONS = {
     category: "system",
     verb: "import",
     label: "統合アーカイブ「{target}」を取り込みました",
+  },
+  /**
+   * AI 採点（実験的機能）の事業者への同意（設計 §9-1）。同意は端末ごとの設定ファイルに
+   * 記録し、ここにも残す。`entityId` は事業者 id、metadata に同意文の版が入る。
+   * **キーや同意文の本文は残さない。**
+   */
+  "ai_grading.consent": {
+    category: "system",
+    verb: "other",
+    label: "AI採点（実験的機能）の送信先「{target}」への同意を記録しました",
+  },
+  /** AI 採点の同意の取り消し。その端末に保存した API キーも消える */
+  "ai_grading.consent_revoked": {
+    category: "system",
+    verb: "other",
+    label: "AI採点（実験的機能）の送信先「{target}」への同意を取り消しました",
   },
   /**
    * NAS同期が、別id・同一ユニークキーの行を1つへ「畳んだ」ことの記録（**過去の記録専用**）。
