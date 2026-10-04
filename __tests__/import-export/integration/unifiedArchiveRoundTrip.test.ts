@@ -183,12 +183,7 @@ describe("統合アーカイブの往復（書き出す → 開く → 取り込
     }
 
     const plan = await importArchiveRows(prisma, archive, "merge", IMPORTED_AT)
-    const files = importUnifiedArchiveFiles(
-      archive,
-      DATA_DIR,
-      "merge",
-      plan.idMap
-    )
+    const files = importUnifiedArchiveFiles(archive, DATA_DIR, plan)
 
     expect(plan.uniqueConflicts).toEqual([])
     expect(plan.warnings).toEqual([])
@@ -197,6 +192,7 @@ describe("統合アーカイブの往復（書き出す → 開く → 取り込
         created: ids.length,
         replaced: 0,
         kept: 0,
+        skipped: 0,
       })
     }
     const rowsAfterImport = readRowsByIds(TEST_DB_PATH, archiveIds)

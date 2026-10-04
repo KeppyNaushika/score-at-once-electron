@@ -6,16 +6,27 @@
  */
 
 import type { PrismaClient } from "@prisma/client"
+import AdmZip from "adm-zip"
 import Database from "better-sqlite3"
+import * as crypto from "crypto"
+import * as fs from "fs"
+import * as path from "path"
 
 import { ARCHIVE_TABLES } from "../../electron-src/lib/export/unified-archive/archiveTableRegistry"
 import {
+  analyzeUnifiedArchiveImport,
   importUnifiedArchiveRows,
-  planUnifiedArchiveImport,
-  prismaArchiveTarget,
+  prismaArchiveTransaction,
 } from "../../electron-src/lib/import/unified-archive/archiveRowImporter"
-import type { OpenedUnifiedArchive } from "../../electron-src/lib/import/unified-archive/types"
+import type {
+  OpenedUnifiedArchive,
+  UnifiedArchiveImportDecisions,
+} from "../../electron-src/lib/import/unified-archive/types"
 import type { ImportAction } from "../../src/types/importAction.types"
+import {
+  UNIFIED_ARCHIVE_DATABASE_NAME,
+  UNIFIED_ARCHIVE_FILES_DIR,
+} from "../../src/types/unifiedArchive.types"
 
 /** 表名 → 行（全列） */
 export type TableRows = Map<string, Record<string, unknown>[]>
@@ -136,31 +147,71 @@ export const findDanglingReferences = (databasePath: string): string[] =>
     return violations
   })
 
+const FILES_PREFIX = `${UNIFIED_ARCHIVE_FILES_DIR}/`
+
+/**
+ * ZIP を `workDirectory` の下へ展開して、取り込みに渡す形にする（開く側の守りと現行化は
+ * 通さない）
+ */
+export const openArchiveForTest = (
+  zipPath: string,
+  manifest: OpenedUnifiedArchive["manifest"],
+  workDirectory: string
+): OpenedUnifiedArchive => {
+  const openedDirectory = path.join(
+    workDirectory,
+    `opened-${crypto.randomUUID()}`
+  )
+  const filesDirectory = path.join(openedDirectory, UNIFIED_ARCHIVE_FILES_DIR)
+  fs.mkdirSync(filesDirectory, { recursive: true })
+  const databasePath = path.join(openedDirectory, UNIFIED_ARCHIVE_DATABASE_NAME)
+  for (const entry of new AdmZip(zipPath).getEntries()) {
+    if (entry.isDirectory) continue
+    if (entry.entryName === UNIFIED_ARCHIVE_DATABASE_NAME) {
+      fs.writeFileSync(databasePath, entry.getData())
+    } else if (entry.entryName.startsWith(FILES_PREFIX)) {
+      const relativePath = entry.entryName.slice(FILES_PREFIX.length)
+      const filePath = path.join(filesDirectory, ...relativePath.split("/"))
+      fs.mkdirSync(path.dirname(filePath), { recursive: true })
+      fs.writeFileSync(filePath, entry.getData())
+    }
+  }
+  return {
+    manifest,
+    databasePath,
+    filesDirectory,
+    appliedMigrations: [],
+    migratedRowIds: {},
+  }
+}
+
 /** 1本のトランザクションで行を取り込む */
 export const importArchiveRows = (
   prisma: PrismaClient,
   archive: OpenedUnifiedArchive,
   action: ImportAction,
-  importedAt: Date
+  importedAt: Date,
+  decisions: UnifiedArchiveImportDecisions = {}
 ) =>
-  prisma.$transaction(
-    (tx) =>
-      importUnifiedArchiveRows(
-        prismaArchiveTarget(tx),
-        archive,
-        action,
-        importedAt
-      ),
-    { timeout: IMPORT_TRANSACTION_TIMEOUT_MS }
+  prismaArchiveTransaction(
+    prisma,
+    IMPORT_TRANSACTION_TIMEOUT_MS
+  )((target) =>
+    importUnifiedArchiveRows(target, archive, action, importedAt, decisions)
   )
 
-/** 1本のトランザクションで計画だけを立てる */
-export const planArchiveImport = (
+/** 書いてからロールバックする試し取り込み */
+export const analyzeArchiveImport = (
   prisma: PrismaClient,
   archive: OpenedUnifiedArchive,
-  action: ImportAction
+  action: ImportAction,
+  importedAt: Date,
+  decisions: UnifiedArchiveImportDecisions = {}
 ) =>
-  prisma.$transaction(
-    (tx) => planUnifiedArchiveImport(prismaArchiveTarget(tx), archive, action),
-    { timeout: IMPORT_TRANSACTION_TIMEOUT_MS }
+  analyzeUnifiedArchiveImport(
+    prismaArchiveTransaction(prisma, IMPORT_TRANSACTION_TIMEOUT_MS),
+    archive,
+    action,
+    decisions,
+    importedAt
   )

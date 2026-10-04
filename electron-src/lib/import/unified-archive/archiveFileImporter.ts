@@ -4,10 +4,15 @@
  * `files/` の下は DB と同じ相対パスなので、そのままの位置へ写す（docs/unified-archive-design.md §7.4）。
  * DB のコミットの後に呼ぶ前提で、失敗しても投げずに結果へ載せる（DB は既に書けているため）。
  *
- * - 上書き: 既にあるファイルも置き換える
- * - 統合・別で追加: 既にあるファイルは残す
- * - 別で追加: パスに含まれる、振り直した id を新しい id へ書き換える。DB 側の imagePath も
- *   `archiveRowImporter.ts` が同じ `remapArchiveFilePath` で書き換える
+ * - 写すのは、行の取り込みが決めたファイル（`UnifiedArchiveImportResult.filePaths`）だけ。
+ *   取り込まなかった行・既存へ寄せて書かなかった行のファイルは写さない（どの行からも参照されず
+ *   孤立する）
+ * - 作った・置き換えた行のファイル: 上書きは既にあるファイルも置き換え、統合・別で追加は残す
+ * - 書かずに残した行のファイル: 取り込み先に無いときだけ写す（行は同じだが画像が欠けている
+ *   端末を直す）
+ * - パスに含まれる id を、行の取り込みの最終の写し（別で追加の振り直しと、既存の行へ寄せた
+ *   写し）で書き換える。DB 側の imagePath も `archiveRowPlanning.ts` が同じ写しと同じ
+ *   `remapArchiveFilePath` で書き換えるので、3択に関わらず同じ写しを当てる（写しが空なら何もしない）
  *
  * 展開した `files/` は外から来たものなので信用しない。写す先がデータディレクトリの外に
  * 出るものと、普通のファイルでないもの（シンボリックリンクなど）は写さない。
@@ -16,11 +21,11 @@
 import * as fs from "fs"
 import * as path from "path"
 
-import type { ImportAction } from "../../../../src/types/importAction.types"
 import { resolveArchiveFile } from "../../export/unified-archive/archiveFileCollector"
+import type { UnifiedArchiveImportResult } from "./archiveRowImporter"
 import type { OpenedUnifiedArchive } from "./types"
 
-/** 別で追加で振り直した id（表 → 旧 id → 新 id） */
+/** アーカイブの id と違う id で書いた行（表 → アーカイブの id → 取り込み先の id） */
 export type ArchiveIdMap = Readonly<
   Record<string, Readonly<Record<string, string>>>
 >
@@ -28,7 +33,10 @@ export type ArchiveIdMap = Readonly<
 export interface UnifiedArchiveFileImportResult {
   copied: string[]
   replaced: string[]
+  /** 取り込み先に既にあるので写さなかった */
   skipped: string[]
+  /** 書いた行からも残した行からも参照されないので写さなかった */
+  unreferenced: string[]
   failed: { path: string; message: string }[]
 }
 
@@ -89,24 +97,24 @@ const errorMessage = (error: unknown): string =>
 
 /**
  * 展開した `files/` の中身を `dataDirectory` へ写す。DB のコミットの後に呼ぶ。
- * 結果のパスは、写した先の（書き換えた後の）相対パス
+ * 写すのは、行の取り込みが決めたファイル（`imported.filePaths`）だけ。結果のパスは、写した先の
+ * （書き換えた後の）相対パス
  */
 export function importUnifiedArchiveFiles(
   archive: OpenedUnifiedArchive,
   dataDirectory: string,
-  action: ImportAction,
-  idMap: ArchiveIdMap
+  imported: Pick<UnifiedArchiveImportResult, "action" | "idMap" | "filePaths">
 ): UnifiedArchiveFileImportResult {
   const result: UnifiedArchiveFileImportResult = {
     copied: [],
     replaced: [],
     skipped: [],
+    unreferenced: [],
     failed: [],
   }
-  const newIdByOldId =
-    action === "separate"
-      ? flattenArchiveIdMap(idMap)
-      : new Map<string, string>()
+  const newIdByOldId = flattenArchiveIdMap(imported.idMap)
+  const writtenPaths = new Set(imported.filePaths.written)
+  const keptPaths = new Set(imported.filePaths.kept)
 
   const { files, irregular } = listArchiveFiles(archive.filesDirectory)
   for (const irregularPath of irregular) {
@@ -118,6 +126,12 @@ export function importUnifiedArchiveFiles(
 
   for (const archivePath of files) {
     const targetPath = remapArchiveFilePath(archivePath, newIdByOldId)
+    const written = writtenPaths.has(targetPath)
+    if (!written && !keptPaths.has(targetPath)) {
+      // 取り込まなかった行・既存へ寄せて書かなかった行のファイル（写すと孤立する）
+      result.unreferenced.push(targetPath)
+      continue
+    }
     const resolved = resolveArchiveFile(dataDirectory, targetPath)
     if (resolved.kind === "outsideDataDirectory") {
       result.failed.push({
@@ -128,7 +142,8 @@ export function importUnifiedArchiveFiles(
     }
     try {
       const exists = fs.existsSync(resolved.absolutePath)
-      if (exists && action !== "overwrite") {
+      // 既存のファイルを置き換えるのは、上書きで作った・置き換えた行のものだけ
+      if (exists && !(written && imported.action === "overwrite")) {
         result.skipped.push(targetPath)
         continue
       }
