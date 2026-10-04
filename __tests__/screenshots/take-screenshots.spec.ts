@@ -1236,28 +1236,20 @@ test.describe.serial("第3章: 採点と出力", () => {
     await page.waitForTimeout(1500)
     await ss(page, "ch3-scoring/06-finalize.png")
 
-    // 設問を開いて裁定対象の生徒を選ぶと、右ペインに裁定フォームが出る
+    // 先頭の答案が選ばれた状態で開き、右パネルに採点者ごとの結果が出る
     await captureOptional("ch3-scoring/07-finalize-decision.png", async () => {
-      await clickWhenReady(
-        page.getByRole("button", { name: "裁定対象を表示" }).first()
-      )
-      await page.waitForTimeout(600)
-      await clickWhenReady(
-        page.locator("button").filter({ hasText: "食い違い" }).first()
-      )
-      await expect(page.getByText("出そろった結果")).toBeVisible({
+      await expect(page.getByText("採点者の結果")).toBeVisible({
         timeout: 15_000,
       })
       await page.waitForTimeout(600)
       await ss(page, "ch3-scoring/07-finalize-decision.png")
     })
 
-    // 1件だけ実際に裁定する。確定は監査ログにも判定と得点の差分つきで残るので、
-    // 監査ログの絵（4-7）が「試験を編集しました」だけにならない
+    // 1件だけ実際に裁定する（判定キーで確定し、次の答案へ進む）。確定は監査ログにも
+    // 判定と得点の差分つきで残るので、監査ログの絵（4-7）が「試験を編集しました」
+    // だけにならない
     await captureOptional("（08 で1件を確定する）", async () => {
-      await clickWhenReady(
-        page.getByRole("button", { name: "この内容で確定する" })
-      )
+      await page.keyboard.press("e")
       await expect(page.getByText("確定済み 1件")).toBeVisible({
         timeout: 15_000,
       })

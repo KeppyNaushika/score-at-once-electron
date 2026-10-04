@@ -2,7 +2,8 @@
  * 試験全体の裁定サマリ。
  *
  * `resolveEffectiveScores` が有効スコアを解決できなかったセル（競合）と、
- * 確定後に新しい提案が入ったセル（stale）だけを裁定対象として集める。
+ * 確定後に新しい提案が入ったセル（stale）を裁定対象として集める。確定済みのセル
+ * （decided）も載せる — 確定はキー1つで書くので、一覧から消えると直す口が無くなる。
  * 出力の解決ルール自体には一切手を入れない — ここは表示のための派生計算に徹する。
  */
 import type {
@@ -10,6 +11,7 @@ import type {
   ExamDecisionSummary,
   ScoreDecisionCell,
   ScoreDecisionQuestion,
+  ScoreDecisionReason,
   ScoreProposal,
 } from "@/types/scoreDecision.types"
 
@@ -104,11 +106,12 @@ export const getExamDecisionSummary = async (
 
   const { resolved, conflicts } = resolveEffectiveScores(scores, decisions)
 
-  // 裁定対象セル: 解決できなかった競合と、確定後に新しい提案が入ったもの
+  // 裁定対象セル: 解決できなかった競合と、確定後に新しい提案が入ったもの。
+  // 加えて確定済みのセルも、確定し直せるように載せる
   const targets: Array<{
     examStudentId: string
     cropRegionId: string
-    reason: "conflict" | "stale"
+    reason: ScoreDecisionReason
   }> = [
     ...conflicts.map((conflict) => ({
       examStudentId: conflict.examStudentId,
@@ -123,6 +126,15 @@ export const getExamDecisionSummary = async (
         examStudentId: effective.examStudentId,
         cropRegionId: effective.cropRegionId,
         reason: "stale" as const,
+      })),
+    ...resolved
+      .filter(
+        (effective) => effective.source === "decision" && !effective.isStale
+      )
+      .map((effective) => ({
+        examStudentId: effective.examStudentId,
+        cropRegionId: effective.cropRegionId,
+        reason: "decided" as const,
       })),
   ]
 

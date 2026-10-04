@@ -36,14 +36,19 @@ export interface ScoreDecisionSnapshot {
   decidedAt: string
 }
 
-/** 裁定が必要になった理由 */
+/** 裁定の一覧に載っている理由 */
 export type ScoreDecisionReason =
   /** 提案が食い違い有効スコアを解決できない（出力では未採点になる） */
   | "conflict"
   /** 確定済みだが、その後に新しい提案が入った（再確認が必要） */
   | "stale"
+  /**
+   * 確定済みで、その後の提案も無い（裁定は要らない）。確定し直せるように載せる。
+   * 要裁定の件数（conflictCount / staleCount）には数えない
+   */
+  | "decided"
 
-/** 裁定対象の受験者×設問セル */
+/** 裁定の一覧に載る受験者×設問セル（要裁定と確定済み） */
 export interface ScoreDecisionCell {
   examStudentId: string
   studentName: string
@@ -83,7 +88,7 @@ export interface ScoreDecisionQuestion {
   totalStudents: number
   /** 誰か1人でも採点したセル数 */
   scoredCount: number
-  /** 裁定対象のセル（受験生徒順） */
+  /** 裁定の一覧に載るセル（要裁定と確定済み。受験生徒順） */
   cells: ScoreDecisionCell[]
   /** この設問で確定済みのセル数 */
   decidedCount: number
