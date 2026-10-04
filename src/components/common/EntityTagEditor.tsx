@@ -19,6 +19,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
 import { matchesSearchTerm } from "@/lib/searchText"
 import { cn } from "@/lib/utils"
 import { findOrCreateTagMutation, tagListQuery } from "@/queries/tag"
@@ -76,6 +77,7 @@ export function EntityTagEditor({
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
   const [tagInput, setTagInput] = useState("")
   const [isOpen, setIsOpen] = useState(false)
+  const { inputRef, onOpenAutoFocus } = useDialogAutoFocus(isOpen)
   /** 書き込みが飛んでいる間か */
   const [isSending, setIsSending] = useState(false)
 
@@ -204,11 +206,15 @@ export function EntityTagEditor({
             </TooltipTrigger>
             <TooltipContent>タグを編集</TooltipContent>
           </Tooltip>
-          <PopoverContent align="start" className="w-64 space-y-2 p-2">
+          <PopoverContent
+            align="start"
+            className="w-64 space-y-2 p-2"
+            onOpenAutoFocus={onOpenAutoFocus}
+          >
             <div className="flex items-center gap-2">
               <Input
+                ref={inputRef}
                 value={tagInput}
-                autoFocus
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="タグを追加..."

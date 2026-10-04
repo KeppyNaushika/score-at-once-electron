@@ -18,6 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
 import { cn } from "@/lib/utils"
 
 interface PageSlot {
@@ -62,6 +63,7 @@ function PageJumpEllipsis({
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [pageText, setPageText] = useState("")
+  const { inputRef, onOpenAutoFocus } = useDialogAutoFocus(isOpen)
 
   const target = Number(pageText)
   const canJump =
@@ -89,7 +91,11 @@ function PageJumpEllipsis({
           <PaginationEllipsis />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="center" className="w-52 p-2">
+      <PopoverContent
+        align="center"
+        className="w-52 p-2"
+        onOpenAutoFocus={onOpenAutoFocus}
+      >
         <form
           className="flex items-center gap-1"
           onSubmit={(event) => {
@@ -101,13 +107,13 @@ function PageJumpEllipsis({
           }}
         >
           <Input
+            ref={inputRef}
             value={pageText}
             onChange={(event) => setPageText(event.target.value)}
             inputMode="numeric"
             placeholder={`1〜${pageCount}`}
             aria-label={`移動先のページ（1〜${pageCount}）`}
             className="h-8 text-sm"
-            autoFocus
           />
           <Button type="submit" size="sm" className="h-8" disabled={!canJump}>
             移動
