@@ -25,9 +25,20 @@ export interface LaunchedApp {
   close: () => Promise<void>
 }
 
-/** 空のデータディレクトリで Electron を起動し、最初のウィンドウを返す */
-export async function launchApp(): Promise<LaunchedApp> {
-  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "score-at-once-e2e-"))
+/**
+ * Electron を起動し、最初のウィンドウを返す。
+ *
+ * 既定は空のデータディレクトリ（新規インストール）。`dataDir` を渡すと、その data で
+ * 起動し直す（モードの切り替えは再起動で効くので、同じ data で2度起動する試験に使う）。
+ * そのときの `close` は data を消さない（消すのは試験の側）。
+ */
+export async function launchApp(
+  options: { dataDir?: string } = {}
+): Promise<LaunchedApp> {
+  const ownsDataDir = options.dataDir === undefined
+  const dataDir =
+    options.dataDir ??
+    fs.mkdtempSync(path.join(os.tmpdir(), "score-at-once-e2e-"))
 
   const app = await electron.launch({
     executablePath: electronPath as unknown as string,
@@ -51,7 +62,7 @@ export async function launchApp(): Promise<LaunchedApp> {
     dataDir,
     close: async () => {
       await app.close().catch(() => {})
-      fs.rmSync(dataDir, { recursive: true, force: true })
+      if (ownsDataDir) fs.rmSync(dataDir, { recursive: true, force: true })
     },
   }
 }

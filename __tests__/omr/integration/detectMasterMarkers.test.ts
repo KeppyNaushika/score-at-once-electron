@@ -16,8 +16,10 @@ import * as path from "path"
 import sharp from "sharp"
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { fixLocalStorageRootsForTest } from "../../helpers/localStorageRoots"
+
 const TEST_DATA_DIR = path.join(os.tmpdir(), "score-at-once-omr-master-markers")
-process.env.SCORE_AT_ONCE_DATA_DIR = TEST_DATA_DIR
+fixLocalStorageRootsForTest(TEST_DATA_DIR)
 
 vi.mock("../../../electron-src/lib/prisma/client", async () => {
   const { getTestPrismaClient } = await import("../../helpers/testPrismaClient")
@@ -28,7 +30,7 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 })
 
 import { omrHandlers } from "@/electron-src/ipc-handlers/omrHandlers"
-import { getAbsolutePathFromData } from "@/electron-src/lib/dataManager"
+import { getAbsolutePathFromSharedFiles } from "@/electron-src/lib/dataManager"
 
 import { captureIpcHandler } from "../../helpers/ipcHandlerHarness"
 import {
@@ -48,7 +50,7 @@ const detectMasterMarkers = () =>
 
 /** 白紙PNGを置き、data からの相対パスを返す（マーカーは無いので検出は失敗する） */
 async function writeBlankPng(relativePath: string): Promise<string> {
-  const absolutePath = getAbsolutePathFromData(relativePath)
+  const absolutePath = getAbsolutePathFromSharedFiles(relativePath)
   await fsPromises.mkdir(path.dirname(absolutePath), { recursive: true })
   await sharp({
     create: {

@@ -31,6 +31,11 @@ import {
  */
 export const deployPendingMigrations = (options?: {
   migrationsDir?: string
+  /**
+   * 当てる DB。省略すると起動時に決まった DB（`getDatabasePath()`）。
+   * 共有プロファイルの手元の控えを、動いている DB とは別に作るときに渡す
+   */
+  dbPath?: string
 }): number => {
   const migrationsDir = options?.migrationsDir ?? getMigrationsDir()
   if (!migrationsDir || !fs.existsSync(migrationsDir)) {
@@ -39,7 +44,8 @@ export const deployPendingMigrations = (options?: {
   }
 
   // マイグレーションもアプリの表を書くので、同期のトリガーが取りこぼさない接続で開く
-  const db = openAppDatabase(path.resolve(getDatabasePath()))
+  const dbPath = path.resolve(options?.dbPath ?? getDatabasePath())
+  const db = openAppDatabase(dbPath)
 
   try {
     if (!hasTable(db, "_prisma_migrations")) {
@@ -63,7 +69,7 @@ export const deployPendingMigrations = (options?: {
 
     // 適用前にバックアップを作成（PRAGMAを含むSQLはトランザクション化できないため、
     // 失敗時はファイルレベルで復元する）
-    const backupPath = createBackup()
+    const backupPath = createBackup(dbPath)
 
     let appliedCount = 0
 
@@ -85,7 +91,7 @@ export const deployPendingMigrations = (options?: {
         db.close()
         if (backupPath) {
           console.info("Restoring database from pre-migration backup...")
-          restoreBackup(backupPath)
+          restoreBackup(backupPath, dbPath)
         }
         throw new Error(
           `Migration ${dirName} failed: ${error instanceof Error ? error.message : error}`,

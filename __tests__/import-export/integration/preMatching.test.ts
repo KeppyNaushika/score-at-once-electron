@@ -30,7 +30,7 @@ vi.mock("../../../electron-src/lib/prisma/client", () => {
 })
 
 vi.mock("../../../electron-src/lib/dataManager", () => ({
-  getDataDirectory: () => "/tmp/test-data",
+  getSharedFilesDirectory: () => "/tmp/test-data",
 }))
 
 import { performPreMatching } from "../../../electron-src/lib/import/merge/matcher"

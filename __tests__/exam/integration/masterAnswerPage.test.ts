@@ -16,9 +16,11 @@ import * as os from "os"
 import * as path from "path"
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
-// getMasterAnswersDirectory がこのディレクトリを基準にするよう、import より前に設定する
+import { fixLocalStorageRootsForTest } from "../../helpers/localStorageRoots"
+
+// 画像の置き場（getMasterAnswersDirectory 等）をこのディレクトリにする
 const TEST_DATA_DIR = path.join(os.tmpdir(), "score-at-once-master-answer-test")
-process.env.SCORE_AT_ONCE_DATA_DIR = TEST_DATA_DIR
+fixLocalStorageRootsForTest(TEST_DATA_DIR)
 
 vi.mock("../../../electron-src/lib/prisma/client", async () => {
   const { getTestPrismaClient } = await import("../../helpers/testPrismaClient")
@@ -28,7 +30,7 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
   }
 })
 
-import { getAbsolutePathFromData } from "@/electron-src/lib/dataManager"
+import { getAbsolutePathFromSharedFiles } from "@/electron-src/lib/dataManager"
 import {
   deleteMasterAnswer,
   moveExamPage,
@@ -55,7 +57,7 @@ const fileData = (name: string, content: string) => ({
 const exists = async (relativePath: string | null): Promise<boolean> => {
   if (!relativePath) return false
   try {
-    await fsPromises.stat(getAbsolutePathFromData(relativePath))
+    await fsPromises.stat(getAbsolutePathFromSharedFiles(relativePath))
     return true
   } catch {
     return false
@@ -104,7 +106,7 @@ async function seedExamWithScoredFirstPage() {
 
   // 答案画像は実ファイルも用意する（削除時に消えることを見るため）
   const answerImagePath = `exams/${exam.id}/answer-sheets/answer-1.png`
-  const answerAbsolutePath = getAbsolutePathFromData(answerImagePath)
+  const answerAbsolutePath = getAbsolutePathFromSharedFiles(answerImagePath)
   await fsPromises.mkdir(path.dirname(answerAbsolutePath), { recursive: true })
   await fsPromises.writeFile(answerAbsolutePath, "answer")
 
@@ -195,7 +197,9 @@ describe("replaceMasterAnswerImage", () => {
 
     // ページを引いた後・更新する前に他の教員が消した、NAS上でDBがロックされた等。
     // 片付けないと、失敗のたびにフル解像度の画像が共有ディレクトリへ溜まる
-    const masterDir = path.dirname(getAbsolutePathFromData(pages[0].imagePath!))
+    const masterDir = path.dirname(
+      getAbsolutePathFromSharedFiles(pages[0].imagePath!)
+    )
     const before = await fsPromises.readdir(masterDir)
 
     const update = vi

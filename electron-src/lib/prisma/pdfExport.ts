@@ -6,7 +6,7 @@ import { PageSizes, PDFDocument } from "pdf-lib"
 import { resolveExamPaperSize } from "@/lib/shared/examPaperSize"
 
 import type { DrawingAnnotation } from "../../../src/types/drawingAnnotation.types"
-import { getAbsolutePathFromData } from "../dataManager"
+import { getAbsolutePathFromSharedFiles } from "../dataManager"
 import { calculateActualScore } from "../shared/calculations/actualScore"
 import { resolveEffectiveScores } from "../shared/calculations/scoreResolution"
 import { calculateSubtotalScoreForStudent } from "../shared/calculations/subtotalCalculator"
@@ -145,7 +145,7 @@ export async function getPdfExportData(options: {
     if (studentAnswerList.length === 0) continue
 
     for (const studentAnswer of studentAnswerList) {
-      const imagePath = getAbsolutePathFromData(studentAnswer.imagePath)
+      const imagePath = getAbsolutePathFromSharedFiles(studentAnswer.imagePath)
 
       if (!imagePath || !fs.existsSync(imagePath)) continue
 

@@ -56,7 +56,7 @@ vi.mock("../../../electron-src/lib/prisma/client", () => {
 
 let tmpDir: string
 vi.mock("../../../electron-src/lib/dataManager", () => ({
-  getDataDirectory: () => tmpDir || "/tmp/test-data",
+  getSharedFilesDirectory: () => tmpDir || "/tmp/test-data",
 }))
 
 vi.mock("../../../electron-src/lib/import/merge/imageImporter", () => ({

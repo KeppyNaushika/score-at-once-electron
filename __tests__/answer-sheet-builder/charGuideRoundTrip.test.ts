@@ -38,7 +38,7 @@ const testDataDir = path.join(
   `asb-charguide-${process.pid}-${Date.now()}`
 )
 vi.mock("../../electron-src/lib/dataManager", () => ({
-  getDataDirectory: () => testDataDir,
+  getSharedFilesDirectory: () => testDataDir,
   getAsbImagesDirectory: (definitionId: string) =>
     path.join(testDataDir, "asb-images", definitionId),
 }))

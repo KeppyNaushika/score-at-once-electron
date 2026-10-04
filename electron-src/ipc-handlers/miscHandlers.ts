@@ -3,7 +3,7 @@ import * as fsPromises from "fs/promises"
 
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
-import { getAbsolutePathFromData } from "../lib/dataManager"
+import { getAbsolutePathFromSharedFiles } from "../lib/dataManager"
 import {
   createClassroom,
   deleteClassroom,
@@ -211,7 +211,7 @@ export const miscHandlers = {
 
   // 画像ファイル読み込みハンドラー
   "get-image-data": async (relativePath: string) => {
-    const absolutePath = getAbsolutePathFromData(relativePath)
+    const absolutePath = getAbsolutePathFromSharedFiles(relativePath)
     const imageBuffer = await fsPromises.readFile(absolutePath)
     const base64 = imageBuffer.toString("base64")
 
@@ -232,7 +232,7 @@ export const miscHandlers = {
   // ファイル存在確認ハンドラー
   // 存在しないことは失敗ではないので、例外にせず値で返す
   "check-file-exists": async (relativePath: string) => {
-    const absolutePath = getAbsolutePathFromData(relativePath)
+    const absolutePath = getAbsolutePathFromSharedFiles(relativePath)
     try {
       await fsPromises.access(absolutePath)
       return { exists: true, path: absolutePath }

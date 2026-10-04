@@ -18,9 +18,9 @@ import type {
 } from "../../src/types/answerSheetDefinition.types"
 import { convertToExam } from "../lib/answer-sheet-builder/examConverter"
 import {
-  getAbsolutePathFromData,
+  getAbsolutePathFromSharedFiles,
   getAsbImagesDirectory,
-  getRelativePathFromData,
+  getRelativePathFromSharedFiles,
 } from "../lib/dataManager"
 import { importAsbDefinition } from "../lib/import/asb-archive"
 import { htmlToPngBuffer } from "../lib/printUtils"
@@ -117,13 +117,13 @@ export const answerSheetBuilderHandlers = {
     fs.copyFileSync(args.filePath, destPath)
 
     // data/ からの相対パスを返す
-    const relativePath = getRelativePathFromData(destPath)
+    const relativePath = getRelativePathFromSharedFiles(destPath)
     return relativePath
   },
 
   // 画像削除
   "asb:delete-image": async (args: ASBDeleteImageArgs) => {
-    const absolutePath = getAbsolutePathFromData(args.imagePath)
+    const absolutePath = getAbsolutePathFromSharedFiles(args.imagePath)
     if (fs.existsSync(absolutePath)) {
       fs.unlinkSync(absolutePath)
     }
@@ -224,12 +224,14 @@ export const answerSheetBuilderHandlers = {
     ): T => {
       let newImagePath = imageElement.imagePath
       if (imageElement.imagePath) {
-        const absoluteSrc = getAbsolutePathFromData(imageElement.imagePath)
+        const absoluteSrc = getAbsolutePathFromSharedFiles(
+          imageElement.imagePath
+        )
         if (fs.existsSync(absoluteSrc)) {
           const filename = path.basename(imageElement.imagePath)
           const destPath = path.join(newImagesDir, filename)
           fs.copyFileSync(absoluteSrc, destPath)
-          newImagePath = getRelativePathFromData(destPath)
+          newImagePath = getRelativePathFromSharedFiles(destPath)
         }
       }
       return {

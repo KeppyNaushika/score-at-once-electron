@@ -14,7 +14,7 @@ import type {
 } from "../../../../src/types/asbArchive.types"
 import {
   getAsbImagesDirectory,
-  getRelativePathFromData,
+  getRelativePathFromSharedFiles,
 } from "../../dataManager"
 import { listAsbDefinitions } from "../../prisma/asbDefinition"
 import { replaceAsbDefinition } from "../../prisma/asbDefinitionReplace"
@@ -67,7 +67,7 @@ export function copyImagesAndUpdatePaths(
       if (sourcePath && fs.existsSync(sourcePath)) {
         const destPath = path.join(imagesDir, basename)
         fs.copyFileSync(sourcePath, destPath)
-        imageElement.imagePath = getRelativePathFromData(destPath)
+        imageElement.imagePath = getRelativePathFromSharedFiles(destPath)
       }
     }
   }

@@ -16,7 +16,7 @@ import type {
 import type { OMRCellConfig } from "../../../src/types/omr.types"
 import {
   getMasterAnswersDirectory,
-  getRelativePathFromData,
+  getRelativePathFromSharedFiles,
 } from "../dataManager"
 import { htmlToPngBuffer } from "../printUtils"
 import prisma from "../prisma/client"
@@ -93,7 +93,7 @@ export async function convertToExam(
       const masterImageFileName = `master-${timestamp}.png`
       const masterImagePath = path.join(masterDir, masterImageFileName)
       fs.writeFileSync(masterImagePath, modelBuffers[pi])
-      const relativeMasterPath = getRelativePathFromData(masterImagePath)
+      const relativeMasterPath = getRelativePathFromSharedFiles(masterImagePath)
 
       // 答案テンプレートPNG保存
       const templateFileName = `template-${timestamp}.png`

@@ -9,10 +9,10 @@ import type {
   MarkerDetectionResult,
 } from "../../../../src/types/omr.types"
 import {
-  getAbsolutePathFromData,
+  getAbsolutePathFromSharedFiles,
   getAnswerSheetsDirectory,
-  getDataDirectory,
-  getRelativePathFromData,
+  getRelativePathFromSharedFiles,
+  getSharedFilesDirectory,
 } from "../../dataManager"
 import { detectCornerMarkers } from "../../omr/cornerMarkerDetector"
 import { correctImage } from "../../omr/imageCorrector"
@@ -51,7 +51,7 @@ async function getMasterMarkersForExamPage(
     return null
   }
 
-  const dataDir = getDataDirectory()
+  const dataDir = getSharedFilesDirectory()
   const imagePath = path.join(dataDir, examPage.imagePath)
   const result: MarkerDetectionResult = await detectCornerMarkers(
     imagePath,
@@ -219,14 +219,16 @@ export async function uploadStudentAnswers(
     const sanitizedName = fileData.name.replace(/[^a-zA-Z0-9\-_.]/g, "_")
     const fileName = `${timestamp}_${sanitizedName}`
     const filePath = path.join(examDir, fileName)
-    const relativePath = getRelativePathFromData(filePath)
+    const relativePath = getRelativePathFromSharedFiles(filePath)
 
     if (existingRecord) {
       if (fileData.overwrite) {
         await fsPromises.writeFile(filePath, buffer)
 
         try {
-          const oldFilePath = getAbsolutePathFromData(existingRecord.imagePath)
+          const oldFilePath = getAbsolutePathFromSharedFiles(
+            existingRecord.imagePath
+          )
           await fsPromises.unlink(oldFilePath)
         } catch {
           // ファイルが存在しない場合は無視

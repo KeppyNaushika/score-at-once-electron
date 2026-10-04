@@ -53,7 +53,7 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 })
 
 vi.mock("../../../electron-src/lib/dataManager", () => ({
-  getDataDirectory: () => DATA_DIR,
+  getSharedFilesDirectory: () => DATA_DIR,
 }))
 
 vi.mock("../../../electron-src/lib/prisma/databaseInitializer", () => ({

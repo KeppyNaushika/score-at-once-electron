@@ -14,7 +14,7 @@ import type {
   OMRRecognitionParams,
   OMRSheetResult,
 } from "../../src/types/omr.types"
-import { getDataDirectory } from "../lib/dataManager"
+import { getSharedFilesDirectory } from "../lib/dataManager"
 import { createTransform } from "../lib/omr/coordinateTransform"
 import { detectCornerMarkers } from "../lib/omr/cornerMarkerDetector"
 import { correctImage } from "../lib/omr/imageCorrector"
@@ -111,7 +111,7 @@ export const omrHandlers = {
         // 相対パスを絶対パスに解決
         const absolutePath = path.isAbsolute(entry.path)
           ? entry.path
-          : path.join(getDataDirectory(), entry.path)
+          : path.join(getSharedFilesDirectory(), entry.path)
 
         const markerResult = await detectCornerMarkers(
           absolutePath,
@@ -225,7 +225,7 @@ export const omrHandlers = {
       result: MarkerDetectionResult
     }> = []
 
-    const dataDir = getDataDirectory()
+    const dataDir = getSharedFilesDirectory()
 
     for (const examPage of examPages) {
       // 模範解答画像の無いページは検出できない。飛ばさないと例外が
@@ -282,7 +282,7 @@ export const omrHandlers = {
     if (!examPage?.imagePath) {
       return { status: "skipped", reason: "マスター画像が見つかりません" }
     }
-    const dataDir = getDataDirectory()
+    const dataDir = getSharedFilesDirectory()
     const imagePath = path.join(dataDir, examPage.imagePath)
     const mtimeMs = getMtimeMs(imagePath)
 

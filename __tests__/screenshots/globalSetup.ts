@@ -6,7 +6,6 @@
  *   Electron 向けへそろえる（理由と仕組みは `helpers/nodeAbiBinding.ts`）
  * - メインプロセス／preload をビルドして `main/` に出力する。撮影は
  *   `main/electron-src/index.js` を起動するので、これが古いと古いアプリを撮る
- * - DB パスの照合に使う小さな束を作り直す（`helpers/databasePathProbe.ts`）
  *
  * 撮影のあとツリーは Electron 向けのまま残る（`npm run dev` はこれを要求する）。
  * vitest を走らせる場合は vitest 側の globalSetup が素の Node 向けへ戻すので、
@@ -16,7 +15,6 @@ import { execFileSync } from "child_process"
 import * as fs from "fs"
 import * as path from "path"
 
-import { buildDatabasePathProbe } from "./helpers/databasePathProbe"
 import { ensureNodeAbiBinding } from "./helpers/nodeAbiBinding"
 import { SCREENSHOTS_DIR } from "./helpers/screenshotPaths"
 
@@ -45,9 +43,6 @@ export default async function globalSetup() {
 
   runScript("scripts/buildMain.js")
   runScript("scripts/buildPreload.js")
-
-  // 「アプリが実際に開く DB はどれか」を訊くための小さな束（helpers/databasePathProbe.ts）
-  await buildDatabasePathProbe()
 
   // node_modules 側は Electron 向けにする（アプリが DB を開けるように）
   runScript("scripts/ensure-sqlite-abi.js", "electron")

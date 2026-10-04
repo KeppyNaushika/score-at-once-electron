@@ -102,3 +102,31 @@ export class PrismaBetterSqlite3WithRecursiveTriggers extends PrismaBetterSqlite
     return adapter
   }
 }
+
+/**
+ * 接続するときに DB のパスを決めるアダプタ（中身は {@link PrismaBetterSqlite3WithRecursiveTriggers}）。
+ *
+ * アプリの Prisma クライアント（`client.ts`）はモジュールを読み込んだ時点で作られるが、
+ * どの DB を開くかは起動時の準備（`../storageRoots.ts`）が決まるまで分からない。
+ * パスを接続の時点で読めば、クライアントを作る順序と根が決まる順序が絡まない。根は
+ * 一度決まると変わらないので、何度接続し直しても同じ DB を開く。
+ *
+ * 親クラスのコンストラクタには使わないパスを渡す（親の接続は呼ばない）。
+ */
+export class PrismaBetterSqlite3AtResolvedPath extends PrismaBetterSqlite3 {
+  constructor(private readonly resolvePath: () => string) {
+    super({ url: ":memory:" })
+  }
+
+  override async connect() {
+    return new PrismaBetterSqlite3WithRecursiveTriggers({
+      url: this.resolvePath(),
+    }).connect()
+  }
+
+  override async connectToShadowDb() {
+    return new PrismaBetterSqlite3WithRecursiveTriggers({
+      url: this.resolvePath(),
+    }).connectToShadowDb()
+  }
+}

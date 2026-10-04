@@ -5,6 +5,7 @@ import {
   createSharedPrismaClient,
   initializeDatabase,
 } from "./prisma/databaseInitializer"
+import { seedSampleData } from "./prisma/sampleSeed"
 import {
   createBackup,
   restoreBackup,
@@ -13,6 +14,7 @@ import {
 import { deployPendingMigrations } from "./prisma/schema/migrationDeployer"
 import { assertDatabaseNotNewerThanApp } from "./prisma/schema/migrationGuard"
 import { detectSchemaVersion } from "./prisma/schema/versionDetector"
+import { getStorageRoots } from "./storageRoots"
 
 /**
  * データベースセットアップユーティリティ
@@ -40,144 +42,15 @@ export class DatabaseSetup {
   }
 
   /**
-   * シードデータを実行
+   * 見本のデータ（シード）を入れる。中身は `./prisma/sampleSeed.ts`。
    *
-   * username / 学級名 / 学籍番号は unique ではないので upsert の鍵に取れない
-   * （20260822140000_drop_human_name_uniques）。ここが問うているのは
-   * 「同じ名前の行が既に在るか」という有無だけなので、findFirst で見て無ければ作る。
-   * 旧 upsert も update は `{}`（在れば何もしない）だったので振る舞いは変わらず、
-   * 2度走っても増えない。
+   * **共有モードでは入れない。** 共有モードの DB は共有フォルダの事実から作った
+   * 手元の控えで、ここで入れた行は同期で全員へ渡る。空の共有プロファイルの見本は、
+   * プロファイルを作るときに1度だけ入れる（`sync/sharedProfileSetup.ts`）。
    */
   async runSeed(): Promise<void> {
-    try {
-      // デフォルトユーザーの作成
-      const existingAdmin = await this.prisma.user.findFirst({
-        where: { username: "admin" },
-      })
-      if (!existingAdmin) {
-        await this.prisma.user.create({
-          data: {
-            username: "admin",
-            name: "管理者",
-            role: "admin",
-            passcodeType: "none",
-          },
-        })
-      }
-
-      // サンプル学級の作成
-      const sampleClassroom =
-        (await this.prisma.classroom.findFirst({
-          where: { name: "サンプル学級" },
-        })) ??
-        (await this.prisma.classroom.create({
-          data: {
-            name: "サンプル学級",
-            classroomCode: "SAMPLE01",
-            grade: 1,
-            description: "システム動作確認用のサンプル学級です",
-            isVisible: true,
-          },
-        }))
-
-      // サンプル生徒の作成
-      const sampleStudents = [
-        {
-          studentNumber: "STU001",
-          lastName: "山田",
-          firstName: "太郎",
-          lastNameKana: "ヤマダ",
-          firstNameKana: "タロウ",
-          enrollmentYear: new Date().getFullYear(),
-        },
-        {
-          studentNumber: "STU002",
-          lastName: "佐藤",
-          firstName: "花子",
-          lastNameKana: "サトウ",
-          firstNameKana: "ハナコ",
-          enrollmentYear: new Date().getFullYear(),
-        },
-        {
-          studentNumber: "STU003",
-          lastName: "田中",
-          firstName: "次郎",
-          lastNameKana: "タナカ",
-          firstNameKana: "ジロウ",
-          enrollmentYear: new Date().getFullYear(),
-        },
-      ]
-
-      for (const [index, studentData] of sampleStudents.entries()) {
-        const student =
-          (await this.prisma.student.findFirst({
-            where: { studentNumber: studentData.studentNumber },
-          })) ?? (await this.prisma.student.create({ data: studentData }))
-
-        // 学級への所属を作成（既存チェック後に作成）
-        const existingMembership =
-          await this.prisma.studentClassroomMembership.findFirst({
-            where: {
-              studentId: student.id,
-              classroomId: sampleClassroom.id,
-              endDate: null, // 現在有効な所属のみ
-            },
-          })
-
-        if (!existingMembership) {
-          await this.prisma.studentClassroomMembership.create({
-            data: {
-              studentId: student.id,
-              classroomId: sampleClassroom.id,
-              attendanceNumber: index + 1,
-              startDate: new Date(),
-            },
-          })
-        }
-      }
-
-      // サンプル小計グループの作成
-      let mathSubtotalGroup = await this.prisma.subtotalGroup.findFirst({
-        where: { name: "数学小計グループ" },
-      })
-
-      if (!mathSubtotalGroup) {
-        mathSubtotalGroup = await this.prisma.subtotalGroup.create({
-          data: {
-            name: "数学小計グループ",
-          },
-        })
-      }
-
-      // サンプル小計項目の作成
-      const mathSubtotals = [
-        { name: "計算問題", order: 1 },
-        { name: "文章題", order: 2 },
-        { name: "図形問題", order: 3 },
-      ]
-
-      for (const subtotalData of mathSubtotals) {
-        // 既存チェック後に作成（新しいスキーマではユニーク制約名が変更）
-        const existingSubtotal = await this.prisma.subtotal.findFirst({
-          where: {
-            subtotalGroupId: mathSubtotalGroup.id,
-            name: subtotalData.name,
-          },
-        })
-
-        if (!existingSubtotal) {
-          await this.prisma.subtotal.create({
-            data: {
-              ...subtotalData,
-              subtotalGroupId: mathSubtotalGroup.id,
-            },
-          })
-        }
-      }
-    } catch (error) {
-      console.error("❌ Error during seed:", error)
-      throw error
-    }
+    if (getStorageRoots().mode !== "local") return
+    await seedSampleData(this.prisma)
   }
 
   /**

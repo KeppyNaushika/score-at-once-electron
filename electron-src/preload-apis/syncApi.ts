@@ -15,7 +15,19 @@ export function createSyncApi() {
     sync: {
       getConfig: bind("sync:getConfig"),
 
-      setConfig: bind("sync:setConfig"),
+      setTiming: bind("sync:setTiming"),
+
+      chooseSharedFolder: bind("sync:chooseSharedFolder"),
+
+      inspectSharedFolder: bind("sync:inspectSharedFolder"),
+
+      connectSharedFolder: bind("sync:connectSharedFolder"),
+
+      selectStartupStorage: bind("sync:selectStartupStorage"),
+
+      migrateProfileToLocal: bind("sync:migrateProfileToLocal"),
+
+      relaunch: bind("sync:relaunch"),
 
       triggerNow: bind("sync:triggerNow"),
 
