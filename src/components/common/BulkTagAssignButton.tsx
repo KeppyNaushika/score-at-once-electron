@@ -30,7 +30,7 @@ interface BulkTagAssignPanelProps {
  * ボタン（popover）と別に中身だけを出せるのは、ヘッダーの並びが溢れたとき
  * `OverflowToolbar` の「…」の中へそのまま置くため（popover の入れ子を作らない）。
  */
-export function BulkTagAssignPanel({
+function BulkTagAssignPanel({
   selectedCount,
   allTags,
   onAssign,
@@ -106,7 +106,7 @@ export function BulkTagAssignPanel({
  * 選択中アイテムへタグを一括付与するボタン＋Popover。
  * タグ名の直接入力（Enter で新規作成込み）と既存タグからの選択に対応する。
  */
-export function BulkTagAssignButton(props: BulkTagAssignPanelProps) {
+function BulkTagAssignButton(props: BulkTagAssignPanelProps) {
   const [open, setOpen] = useState(false)
   const { inputRef, onOpenAutoFocus } = useDialogAutoFocus(open)
 

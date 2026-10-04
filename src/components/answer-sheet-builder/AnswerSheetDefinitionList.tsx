@@ -7,10 +7,7 @@ import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import BaseModal from "@/components/common/BaseModal"
-import {
-  BulkTagAssignButton,
-  BulkTagAssignPanel,
-} from "@/components/common/BulkTagAssignButton"
+import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
 import { EntityListPage } from "@/components/common/EntityListPage"
 import {
   type ExportOutcome,
@@ -305,24 +302,14 @@ export function AnswerSheetDefinitionList() {
     ]
 
     if (selectedIds.size > 0) {
-      toolbarActions.push({
-        id: "bulk-tag",
-        priority: 60,
-        node: (
-          <BulkTagAssignButton
-            selectedCount={selectedIds.size}
-            allTags={allTags}
-            onAssign={handleBulkAddTag}
-          />
-        ),
-        collapsedNode: (
-          <BulkTagAssignPanel
-            selectedCount={selectedIds.size}
-            allTags={allTags}
-            onAssign={handleBulkAddTag}
-          />
-        ),
-      })
+      toolbarActions.push(
+        bulkTagToolbarAction({
+          priority: 60,
+          selectedCount: selectedIds.size,
+          allTags,
+          onAssign: handleBulkAddTag,
+        })
+      )
     }
 
     return toolbarActions
