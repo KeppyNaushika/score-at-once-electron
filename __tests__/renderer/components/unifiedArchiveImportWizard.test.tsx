@@ -109,6 +109,16 @@ const openedResult = {
   },
 }
 
+const emptyGradeImpactSource = {
+  referencedRows: [],
+  exams: [],
+  courseworks: [],
+  subtotals: [],
+  gradeItems: [],
+  students: [],
+  classrooms: [],
+}
+
 const okAnalysis = (uniqueConflicts: unknown[] = []) => ({
   kind: "ok",
   result: {
@@ -123,6 +133,8 @@ const okAnalysis = (uniqueConflicts: unknown[] = []) => ({
     warnings: [],
     filePaths: { written: [], kept: [] },
   },
+  gradeInputChanges: [],
+  gradeImpactSource: emptyGradeImpactSource,
 })
 
 const tagConflict = {
@@ -380,6 +392,65 @@ describe("UnifiedArchiveImportWizard", () => {
     ).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /取り込む/ })).toBeDisabled()
     expect(unifiedArchive.import).not.toHaveBeenCalled()
+  })
+
+  it("UA-I8: 確認の段に、値が変わる成績算出と評価項目を出し、確定済みには強い注意を添える", async () => {
+    const user = userEvent.setup()
+    const grade = { id: "grade-1", name: "後学期" }
+    const knowledgeItem = {
+      id: "item-1",
+      name: "知識",
+      order: 0,
+      grade,
+      frozenScores: [{ id: "frozen-1" }],
+    }
+    unifiedArchive.analyze.mockResolvedValue({
+      ...okAnalysis(),
+      gradeInputChanges: [
+        {
+          table: "GradeItemBoundary",
+          id: "boundary-1",
+          before: null,
+          after: { id: "boundary-1", gradeItemId: "item-1", label: "A" },
+        },
+      ],
+      gradeImpactSource: {
+        ...emptyGradeImpactSource,
+        gradeItems: [knowledgeItem],
+      },
+    })
+    renderWizard()
+    await openArchive(user)
+    await clickNext(user)
+    await clickNext(user)
+    await clickNext(user)
+    await screen.findByText("取り込む内容の確認")
+
+    const section = screen.getByRole("region", { name: "成績算出への影響" })
+    expect(
+      within(section).getByText("この取り込みで値が変わる成績算出")
+    ).toBeInTheDocument()
+    expect(within(section).getByText("後学期")).toBeInTheDocument()
+    expect(within(section).getByText(/知識/)).toHaveTextContent(
+      "知識（確定済み）"
+    )
+    expect(within(section).getByRole("alert")).toHaveTextContent(
+      /確定した値のまま変わりません/
+    )
+  })
+
+  it("UA-I9: 値が変わる成績算出が無ければ、変わらないと出す", async () => {
+    const user = userEvent.setup()
+    renderWizard()
+    await openArchive(user)
+    await clickNext(user)
+    await clickNext(user)
+    await clickNext(user)
+    await screen.findByText("取り込む内容の確認")
+
+    expect(
+      screen.getByRole("region", { name: "成績算出への影響" })
+    ).toHaveTextContent("成績算出の値は変わりません。")
   })
 
   it("UA-I7: 取り込まずに閉じたら main の作業を閉じる", async () => {

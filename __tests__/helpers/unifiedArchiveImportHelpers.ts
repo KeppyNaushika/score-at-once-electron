@@ -13,6 +13,7 @@ import * as fs from "fs"
 import * as path from "path"
 
 import { ARCHIVE_TABLES } from "../../electron-src/lib/export/unified-archive/archiveTableRegistry"
+import { collectArchiveGradeImpactSource } from "../../electron-src/lib/import/unified-archive/archiveGradeImpactSource"
 import {
   analyzeUnifiedArchiveImport,
   importUnifiedArchiveRows,
@@ -200,8 +201,11 @@ export const importArchiveRows = (
     importUnifiedArchiveRows(target, archive, action, importedAt, decisions)
   )
 
-/** 書いてからロールバックする試し取り込み */
-export const analyzeArchiveImport = (
+/**
+ * 書いてからロールバックする試し取り込み。成績算出への影響の手がかりも、IPC の試し取り込みと
+ * 同じく読む
+ */
+export const analyzeArchiveImportWithGradeImpact = (
   prisma: PrismaClient,
   archive: OpenedUnifiedArchive,
   action: ImportAction,
@@ -213,5 +217,24 @@ export const analyzeArchiveImport = (
     archive,
     action,
     decisions,
-    importedAt
+    importedAt,
+    collectArchiveGradeImpactSource
   )
+
+/** 書いてからロールバックする試し取り込みの、本番と同じ計算の結果 */
+export const analyzeArchiveImport = async (
+  prisma: PrismaClient,
+  archive: OpenedUnifiedArchive,
+  action: ImportAction,
+  importedAt: Date,
+  decisions: UnifiedArchiveImportDecisions = {}
+) =>
+  (
+    await analyzeArchiveImportWithGradeImpact(
+      prisma,
+      archive,
+      action,
+      importedAt,
+      decisions
+    )
+  ).result

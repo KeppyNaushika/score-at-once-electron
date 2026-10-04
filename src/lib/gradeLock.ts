@@ -51,7 +51,14 @@ export function buildGradeLockMessage(
   }
 }
 
-/** その評価項目を成績算出で確定済みか（1人でも） */
+/** そのデータソースの評価項目を成績算出で確定済みか（1人でも） */
 export function isFrozenDataSource(dataSource: UsingGradeDataSource): boolean {
-  return dataSource.gradeItem.frozenScores.length > 0
+  return isFrozenGradeItem(dataSource.gradeItem)
+}
+
+/** その評価項目を成績算出で確定済みか（1人でも） */
+export function isFrozenGradeItem(
+  gradeItem: Pick<UsingGradeDataSource["gradeItem"], "frozenScores">
+): boolean {
+  return gradeItem.frozenScores.length > 0
 }
