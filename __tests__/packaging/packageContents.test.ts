@@ -201,3 +201,145 @@ describe("できあがりを見る関門", () => {
     expect(forgeConfig.FORBIDDEN_IN_PACKAGE).toContain(".git")
   })
 })
+
+describe("asar の外へ出すもの", () => {
+  it("sharp が読み込む共有ライブラリ（@img/）を外へ出す", () => {
+    // `.node` だけを外へ出すと、それが読み込む libvips が asar に残り、
+    // sharp が読めずにアプリが起動しない（2026-10-04 に再現）
+    expect(forgeConfig.packagerConfig.asar.unpack).toContain("@img")
+  })
+
+  it("node_modules を丸ごとは外へ出さない（ばらのファイルが約3万になる）", () => {
+    expect(forgeConfig.packagerConfig.asar.unpack).not.toMatch(
+      /\{node_modules|\*\*\/node_modules\/\*\*/
+    )
+  })
+})
+
+/**
+ * main/ が束ねた形かを見る関門。
+ *
+ * 型検査の tsc が main/ へ出力していたころ、build のあとに check-all を走らせると
+ * 別名（`@/…`）の残った出力で束が上書きされ、その配布物は起動しなかった。
+ */
+describe("main/ が束ねた形かを見る関門", () => {
+  const workspaces: string[] = []
+
+  const buildProject = (entrySource: string | null) => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "main-guard-"))
+    workspaces.push(workspace)
+    if (entrySource !== null) {
+      const entryPath = path.join(workspace, "main/electron-src/index.js")
+      fs.mkdirSync(path.dirname(entryPath), { recursive: true })
+      fs.writeFileSync(entryPath, entrySource)
+    }
+    return workspace
+  }
+
+  afterEach(() => {
+    for (const workspace of workspaces.splice(0)) {
+      fs.rmSync(workspace, { recursive: true, force: true })
+    }
+  })
+
+  it("束ねた形（パッケージ名だけを require）なら止めない", () => {
+    const project = buildProject(
+      'const next = require("next");\nconst sharp = require("sharp");\n'
+    )
+    expect(() => forgeConfig.assertMainIsBundled(project)).not.toThrow()
+  })
+
+  it.each([
+    ['require("./appInitializer")', "相対パス（tsc の出力）"],
+    ['require("@/lib/utils")', "解決されていない別名"],
+    ['require("@prisma/client")', "generated/prisma へ差し替えられていない"],
+  ])("%s が残っていたら止める（%s）", (requireCall) => {
+    const project = buildProject(`const x = ${requireCall};\n`)
+    expect(() => forgeConfig.assertMainIsBundled(project)).toThrow(
+      /束ねた形ではない/
+    )
+  })
+
+  it("main/ が無ければ止める", () => {
+    const project = buildProject(null)
+    expect(() => forgeConfig.assertMainIsBundled(project)).toThrow(
+      /npm run build/
+    )
+  })
+})
+
+/**
+ * オフライン用アセットを配布物の中で見る関門。
+ */
+describe("オフライン用アセットを見る関門", () => {
+  const {
+    OFFLINE_ASSET_FILES,
+    OFFLINE_ASSET_DIRS,
+  } = require("../../scripts/test-offline-build.js")
+  const workspaces: string[] = []
+
+  /** 供給元を置いたプロジェクトと、それを写した Resources を作る */
+  const buildWorkspace = () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "offline-guard-"))
+    workspaces.push(workspace)
+    const project = path.join(workspace, "project")
+    const resources = path.join(workspace, "Resources")
+    const place = (root: string, relativePath: string, content: string) => {
+      fs.mkdirSync(path.dirname(path.join(root, relativePath)), {
+        recursive: true,
+      })
+      fs.writeFileSync(path.join(root, relativePath), content)
+    }
+    for (const { deployed, source } of OFFLINE_ASSET_FILES) {
+      place(project, source, `source of ${source}`)
+      place(resources, deployed, `source of ${source}`)
+    }
+    for (const { deployed, source } of OFFLINE_ASSET_DIRS) {
+      for (const fileName of ["a.wasm", "b.js"]) {
+        place(project, path.posix.join(source, fileName), fileName)
+        place(resources, path.posix.join(deployed, fileName), fileName)
+      }
+    }
+    return { project, resources }
+  }
+
+  afterEach(() => {
+    for (const workspace of workspaces.splice(0)) {
+      fs.rmSync(workspace, { recursive: true, force: true })
+    }
+  })
+
+  it("供給元と同じなら止めない", () => {
+    const { project, resources } = buildWorkspace()
+    expect(() =>
+      forgeConfig.assertOfflineAssets(resources, project)
+    ).not.toThrow()
+  })
+
+  it("欠けていたら、どれが欠けたかを言って止める", () => {
+    const { project, resources } = buildWorkspace()
+    const missing = OFFLINE_ASSET_FILES[0].deployed
+    fs.rmSync(path.join(resources, missing))
+    expect(() => forgeConfig.assertOfflineAssets(resources, project)).toThrow(
+      missing
+    )
+  })
+
+  it("ディレクトリ単位のアセット（wasm）が1つ欠けても止める", () => {
+    const { project, resources } = buildWorkspace()
+    const deployedDir = OFFLINE_ASSET_DIRS[0].deployed
+    fs.rmSync(path.join(resources, deployedDir, "a.wasm"))
+    expect(() => forgeConfig.assertOfflineAssets(resources, project)).toThrow(
+      /a\.wasm/
+    )
+  })
+
+  it("中身が供給元と違えば止める（版ずれ・legacy の取り違え）", () => {
+    const { project, resources } = buildWorkspace()
+    const changed = OFFLINE_ASSET_FILES[0].deployed
+    fs.writeFileSync(path.join(resources, changed), "古い版")
+    expect(() => forgeConfig.assertOfflineAssets(resources, project)).toThrow(
+      /中身が違う/
+    )
+  })
+})

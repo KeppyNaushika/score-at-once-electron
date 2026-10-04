@@ -99,14 +99,123 @@ const assertPackageIsClean = (resourcesPath) => {
   console.log("✅ 配布物に入ってはいけないものが無いことを確認しました")
 }
 
+/**
+ * main/ が esbuild で束ねた形か。違えば配布物を作らない。
+ *
+ * main/ を作るのは `npm run build` の esbuild（scripts/buildMain.js）で、依存は
+ * 全部 1 つの index.js へ束ねられ、`@/…` や `@prisma/client` の別名もそこで
+ * 解決される。かつては型検査の tsc が同じ場所へ出力しており、build のあとに
+ * check-all を走らせると、別名が残ったままの出力で上書きされた。その状態で
+ * 作った配布物は起動しない（2026-10-04 に再現。CI は check-all → build の順なので
+ * 無事だった）。
+ *
+ * 束ねた index.js は、パッケージ名以外を require しない。
+ */
+const MAIN_ENTRY = "main/electron-src/index.js"
+const assertMainIsBundled = (projectDir) => {
+  const fs = require("fs")
+  const path = require("path")
+
+  const entryPath = path.join(projectDir, MAIN_ENTRY)
+  if (!fs.existsSync(entryPath)) {
+    throw new Error(`${MAIN_ENTRY} が無い。先に npm run build を実行すること。`)
+  }
+  const unresolved = [
+    ...fs
+      .readFileSync(entryPath, "utf8")
+      .matchAll(/require\("((?:\.\.?\/|@\/)[^"]*|@prisma\/client)"\)/g),
+  ].map((match) => match[1])
+  if (unresolved.length > 0) {
+    throw new Error(
+      [
+        `${MAIN_ENTRY} が esbuild で束ねた形ではない。配布物の組み立てを中止した。`,
+        ...unresolved
+          .slice(0, 5)
+          .map((specifier) => `  - require("${specifier}")`),
+        "",
+        "npm run build を実行し直すこと（main/ を作り直す）。",
+      ].join("\n")
+    )
+  }
+  console.log("✅ main/ が束ねた形であることを確認しました")
+}
+
+/**
+ * オフラインで要るアセットが、配布物の中で供給元と同じ中身か。違えば止める。
+ *
+ * 一覧は scripts/test-offline-build.js と共有する。組み立て前の検査（prebuild）は
+ * リポジトリの public/ を見るだけなので、できた配布物はここで見る。
+ * 欠けると数式・PDF の読み込み・スキャナ生成 PDF の表示が壊れる。
+ */
+const assertOfflineAssets = (resourcesPath, projectDir) => {
+  const fs = require("fs")
+  const path = require("path")
+  const {
+    OFFLINE_ASSET_FILES,
+    OFFLINE_ASSET_DIRS,
+    sha256,
+  } = require("./scripts/test-offline-build.js")
+
+  const pairs = [
+    ...OFFLINE_ASSET_FILES.map(({ deployed, source }) => ({
+      deployed,
+      source,
+    })),
+    ...OFFLINE_ASSET_DIRS.flatMap(({ deployed, source }) =>
+      fs
+        .readdirSync(path.join(projectDir, source))
+        .filter((entry) =>
+          fs.statSync(path.join(projectDir, source, entry)).isFile()
+        )
+        .map((entry) => ({
+          deployed: path.posix.join(deployed, entry),
+          source: path.posix.join(source, entry),
+        }))
+    ),
+  ]
+
+  const problems = pairs.flatMap(({ deployed, source }) => {
+    const packagedPath = path.join(resourcesPath, deployed)
+    if (!fs.existsSync(packagedPath)) return [`欠けている: ${deployed}`]
+    if (sha256(packagedPath) !== sha256(path.join(projectDir, source))) {
+      return [`供給元（${source}）と中身が違う: ${deployed}`]
+    }
+    return []
+  })
+
+  if (problems.length > 0) {
+    throw new Error(
+      [
+        "配布物のオフライン用アセットが揃っていない。組み立てを中止した。",
+        ...problems.map((problem) => `  - ${problem}`),
+        "",
+        "npm run update（postinstall で public/ へ同期）のあと、npm run build から作り直すこと。",
+      ].join("\n")
+    )
+  }
+  console.log(
+    `✅ オフライン用アセット ${pairs.length} 件が供給元と一致しています`
+  )
+}
+
 module.exports = {
   packagerConfig: {
+    // asar の外へ出すのは、OS が直接開くファイルだけ。`.node` は
+    // plugin-auto-unpack-natives が足す。ここで足すのは `.node` が読み込む
+    // 共有ライブラリで、sharp の libvips（mac は .dylib、Windows は .dll、
+    // Linux は .so）が `@img/` の下にある。これが asar に残ると sharp が読めず、
+    // アプリは起動しない（2026-10-04 に再現）。
+    //
+    // 以前は node_modules・.next・main を丸ごと外へ出しており、配布物に
+    // 約3万のばらのファイルが入っていた（いまは約1,500）。大きさはほぼ同じだが、
+    // ばらのファイルの数は Windows での展開とウイルス対策の走査の時間に効く。
     asar: {
-      unpack: "**/{node_modules,.next,main,sharp}/**/*",
+      unpack: "**/node_modules/@img/**",
     },
     name: "一括採点",
     executableName: "score-at-once",
-    icon: "./public/icons/icon.icns", // macOS用に明示的に指定
+    // 拡張子は packager が対象 OS に合わせて差し替える（Windows は icon.ico）
+    icon: "./public/icons/icon.icns",
     osxSign: false,
     osxNotarize: false,
     // 既定で落とし、`PACKAGED_TOP_LEVEL` にあるものだけ通す。
@@ -169,6 +278,9 @@ module.exports = {
       const fs = require("fs")
       const path = require("path")
 
+      // main/ が型検査の出力などで上書きされていないか（されていれば投げる）
+      assertMainIsBundled(__dirname)
+
       // Remove .next/node_modules which contains broken symlinks
       const nextNodeModules = path.join(__dirname, ".next", "node_modules")
       if (fs.existsSync(nextNodeModules)) {
@@ -192,13 +304,14 @@ module.exports = {
     postPackage: async (forgeConfig, options) => {
       const fs = require("fs")
       const path = require("path")
-      const { spawnSync } = require("child_process")
 
       // bare-*パッケージの非ターゲットプリビルドバイナリを削除
       // RPMビルド時にbrp-stripが.bareファイルをstripできず失敗するのを防止。
       // ハードコードのリストは新しいbare-*依存で取りこぼす（bare-pathが漏れて
       // RPMビルドが壊れた実績あり）ため、node_modules配下のprebuildsを持つ
       // bare-*パッケージを自動検出する。
+      // node_modules を丸ごと asar の外へ出すのをやめてからは、.bare は asar の
+      // 中に入り brp-strip の目に触れない。外へ出す範囲を広げたときの保険として残す。
       const removeNonTargetBarePrebuilds = (basePath) => {
         const nodeModulesPath = path.join(basePath, "node_modules")
         const bareModules = fs.existsSync(nodeModulesPath)
@@ -243,46 +356,15 @@ module.exports = {
         })
       }
 
-      // オフライン動作に必要な静的ファイルの存在確認
-      const verifyOfflineFiles = (resourcesPath) => {
-        const criticalFiles = [
-          "public/js/mathjax/tex-svg.js",
-          "public/js/pdf.worker.min.mjs",
-        ]
-
-        let allFilesExist = true
-        criticalFiles.forEach((file) => {
-          const filePath = path.join(resourcesPath, file)
-          if (!fs.existsSync(filePath)) {
-            console.error(`❌ Critical offline file missing: ${file}`)
-            allFilesExist = false
-          } else {
-            const stats = fs.statSync(filePath)
-            console.log(
-              `✓ Offline file verified: ${file} (${(stats.size / 1024 / 1024).toFixed(2)}MB)`
-            )
-          }
-        })
-
-        if (allFilesExist) {
-          console.log("✅ All offline files verified successfully")
-        } else {
-          console.error(
-            "❌ Some offline files are missing - app may not work offline"
-          )
-        }
-      }
-
       if (options.platform === "darwin") {
         const appPath = path.join(
           options.outputPaths[0],
           `${forgeConfig.packagerConfig.name}.app`
         )
         const resourcesPath = path.join(appPath, "Contents", "Resources")
-        const infoPlistPath = path.join(appPath, "Contents", "Info.plist")
 
-        // オフラインファイル検証
-        verifyOfflineFiles(resourcesPath)
+        // オフライン用アセットが供給元と同じか（違えば投げる）
+        assertOfflineAssets(resourcesPath, __dirname)
 
         // 入ってはいけないものが入っていないか（入っていれば投げる）
         assertPackageIsClean(resourcesPath)
@@ -292,29 +374,12 @@ module.exports = {
         if (fs.existsSync(unpackedPath)) {
           removeNonTargetBarePrebuilds(unpackedPath)
         }
-
-        // カスタムアイコンをコピー
-        const iconSource = path.join(__dirname, "public", "icons", "icon.icns")
-        const iconDest = path.join(resourcesPath, "icon.icns")
-
-        if (fs.existsSync(iconSource)) {
-          fs.copyFileSync(iconSource, iconDest)
-          console.log("✓ カスタムアイコンをコピーしました")
-
-          // Info.plistを更新
-          spawnSync("plutil", [
-            "-replace",
-            "CFBundleIconFile",
-            "-string",
-            "icon.icns",
-            infoPlistPath,
-          ])
-          console.log("✓ Info.plistを更新しました")
-        }
+        // アイコンは packager が `icon` から electron.icns として入れ、
+        // Info.plist もそれを指す（ここで写し直す必要は無い）
       } else {
         // Windows/Linux用のパス
         const resourcesPath = path.join(options.outputPaths[0], "resources")
-        verifyOfflineFiles(resourcesPath)
+        assertOfflineAssets(resourcesPath, __dirname)
         assertPackageIsClean(resourcesPath)
 
         // asar.unpackedの非ターゲットバイナリを削除
@@ -333,5 +398,7 @@ module.exports = {
  * （後者が無いと、締めすぎて配布できなくなったことに気づけない）。
  */
 module.exports.assertPackageIsClean = assertPackageIsClean
+module.exports.assertMainIsBundled = assertMainIsBundled
+module.exports.assertOfflineAssets = assertOfflineAssets
 module.exports.FORBIDDEN_IN_PACKAGE = FORBIDDEN_IN_PACKAGE
 module.exports.PACKAGED_TOP_LEVEL = PACKAGED_TOP_LEVEL

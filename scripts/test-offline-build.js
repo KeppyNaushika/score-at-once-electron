@@ -320,12 +320,14 @@ async function main() {
   }
 }
 
-// エラーハンドリング
-process.on("unhandledRejection", (error) => {
-  console.error("❌ 未処理エラー:", error)
-  process.exit(1)
-})
-
 if (require.main === module) {
+  // エラーハンドリング（forge.config.js から読まれたときは登録しない）
+  process.on("unhandledRejection", (error) => {
+    console.error("❌ 未処理エラー:", error)
+    process.exit(1)
+  })
   main()
 }
+
+// forge.config.js が配布物の中身を同じ一覧で照合する
+module.exports = { OFFLINE_ASSET_FILES, OFFLINE_ASSET_DIRS, sha256 }
