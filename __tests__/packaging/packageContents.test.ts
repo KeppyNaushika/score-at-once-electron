@@ -89,10 +89,18 @@ describe("配布物から落としてはいけないもの", () => {
 
 describe("ネイティブモジュールを焼く版", () => {
   it("electron の版を固定しない", () => {
-    // 書くと、入っている electron と食い違ったまま `forceABI: true` が
-    // その版の ABI で焼く。2026-08-24 まで "37.1.0" が残っており、実際は 43 だった
+    // 書くと、入っている electron と食い違ったままその版向けに焼く。
+    // 2026-08-24 まで "37.1.0" が残っており、実際は 43 だった
     //（パッケージ版だけがデータベースを開けない形の食い違い）
     expect(forgeConfig.rebuildConfig.electronVersion).toBeUndefined()
+  })
+
+  it("焼き直しを省かない（.forge-meta の記録を信じない）", () => {
+    // 記録が今の electron と一致すると焼き直しを飛ばす。テストが Node 向けに
+    // 作り直したあとも記録は残るので、省くと Node 向けのバイナリが配布物に入る
+    expect(forgeConfig.rebuildConfig.force).toBe(true)
+    // ABI の番号を渡す項目。true を渡すと文字列 "true" に化ける
+    expect(forgeConfig.rebuildConfig.forceABI).toBeUndefined()
   })
 })
 

@@ -95,6 +95,16 @@ function detectCurrentTarget() {
   return { kind: "none" }
 }
 
+// @electron/rebuild が Electron 向けに焼いたときの記録（例: "arm64--148"）。
+// Node 向けに作り直しても消えないので、Node 向けのバイナリの横に「Electron 向けに
+// 焼き済み」という嘘の記録が残り、記録を信じる組み立てが焼き直しを飛ばす。
+// Node 向けのときは中身と食い違うだけなので、満たしていても消しておく。
+const FORGE_META = path.resolve(
+  __dirname,
+  "../node_modules/better-sqlite3/build/Release/.forge-meta"
+)
+if (target === "node" && fs.existsSync(FORGE_META)) fs.rmSync(FORGE_META)
+
 const current = detectCurrentTarget()
 const wantedAbi = expectedElectronAbi()
 
