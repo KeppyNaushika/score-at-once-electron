@@ -11,6 +11,8 @@
  * 検査する。モデルや `@relation` を足したら、ここにも足すこと。
  */
 
+import type { ArchiveOptionalItem } from "../../../../src/types/unifiedArchive.types"
+
 /**
  * 表の役割。
  *
@@ -21,9 +23,6 @@
  * - optional: 関連データではないが、書き出し画面で選べば入る（既定は含めない）
  */
 export type ArchiveTableRole = "root" | "shared" | "owned" | "link" | "optional"
-
-/** 書き出し画面で選べる項目（docs §5.5） */
-export type ArchiveOptionalItem = "userSettings" | "appPreference" | "auditLog"
 
 /** 外部キーの列1本 */
 export interface ArchiveReference {

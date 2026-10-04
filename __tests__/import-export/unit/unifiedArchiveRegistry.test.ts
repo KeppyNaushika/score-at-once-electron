@@ -13,6 +13,7 @@ import * as fs from "fs"
 import * as path from "path"
 import { describe, expect, it } from "vitest"
 
+import { ARCHIVE_FILE_COLUMNS } from "../../../electron-src/lib/export/unified-archive/archiveFileCollector"
 import {
   ARCHIVE_ROOT_TABLES,
   ARCHIVE_TABLES,
@@ -22,6 +23,26 @@ interface SchemaReference {
   column: string
   table: string
   required: boolean
+}
+
+/** schema.prisma のモデル名 → 列名 */
+function columnsFromSchema(): Map<string, Set<string>> {
+  const source = fs.readFileSync(
+    path.resolve(process.cwd(), "prisma/schema.prisma"),
+    "utf8"
+  )
+  const modelPattern = /^model\s+(\w+)\s*\{([\s\S]*?)^\}/gm
+  const columnsByModel = new Map<string, Set<string>>()
+  for (const modelMatch of source.matchAll(modelPattern)) {
+    const columns = new Set<string>()
+    for (const line of modelMatch[2].split("\n")) {
+      // 例: "  imagePath  String?"（`///` のコメントと `@@` の行は除く）
+      const fieldMatch = line.match(/^\s*(\w+)\s+\w+/)
+      if (fieldMatch) columns.add(fieldMatch[1])
+    }
+    columnsByModel.set(modelMatch[1], columns)
+  }
+  return columnsByModel
 }
 
 /** schema.prisma のモデル名 → 外部キーを持つ側の `@relation`（列・参照先・必須か） */
@@ -107,5 +128,25 @@ describe("統合アーカイブの登録表", () => {
   it("解析が機能していることの保証（GradeDataSource は外部キーを6本持つ）", () => {
     // 解析が壊れて空になると、上の一致検査が空どうしで通ってしまう
     expect(schemaReferences.get("GradeDataSource")?.length).toBe(6)
+  })
+})
+
+describe("統合アーカイブに同梱するファイルの列", () => {
+  const schemaColumns = columnsFromSchema()
+
+  it("各表・列が登録表と schema.prisma に実在する", () => {
+    for (const fileColumn of ARCHIVE_FILE_COLUMNS) {
+      const label = `${fileColumn.table}.${fileColumn.column}`
+      expect(ARCHIVE_TABLES[fileColumn.table], label).toBeDefined()
+      expect(
+        schemaColumns.get(fileColumn.table)?.has(fileColumn.column),
+        label
+      ).toBe(true)
+    }
+  })
+
+  it("解析が機能していることの保証（存在しない列は見つからない）", () => {
+    expect(schemaColumns.get("ExamPage")?.has("imagePath")).toBe(true)
+    expect(schemaColumns.get("ExamPage")?.has("noSuchColumn")).toBe(false)
   })
 })

@@ -12,11 +12,14 @@
  * 4. 外せない参照先（成績算出が使う試験・資料など）が外されていたら失敗させる
  */
 
+import type {
+  ArchiveOptionalItem,
+  UnifiedArchiveScoringScope,
+} from "../../../../src/types/unifiedArchive.types"
 import type { SqliteDatabase } from "../../prisma/sqliteSchemaUtils"
 import {
   ARCHIVE_ROOT_TABLES,
   ARCHIVE_TABLES,
-  type ArchiveOptionalItem,
   type ArchiveRootTable,
   type ArchiveTableSpec,
 } from "./archiveTableRegistry"
@@ -24,10 +27,6 @@ import {
 /** 利用者が直接選べる共通の実体 */
 export type ArchiveSelectableSharedTable =
   "Student" | "Classroom" | "SubtotalGroup" | "Tag"
-
-/** 採点の範囲。本人分のときは、他の教員の採点・確定・返却版などを外す（docs §5.3） */
-export type ArchiveScoringScope =
-  { readonly kind: "all" } | { readonly kind: "self"; readonly userId: string }
 
 export interface ArchiveSelection {
   readonly roots: Partial<Record<ArchiveRootTable, readonly string[]>>
@@ -37,7 +36,7 @@ export interface ArchiveSelection {
   /** 利用者が外した行（表名 → id） */
   readonly exclusions?: Readonly<Record<string, readonly string[]>>
   /** 既定は全員分 */
-  readonly scoring?: ArchiveScoringScope
+  readonly scoring?: UnifiedArchiveScoringScope
   /** 受験生・採点・答案を含めるか（今の「雛形」が false）。既定は含める */
   readonly includeAnswers?: boolean
   readonly optionalItems?: readonly ArchiveOptionalItem[]
