@@ -2,8 +2,12 @@
  * ASBアーカイブマニフェストのバリデーション
  */
 
-import type { AsbArchiveManifest } from "../../../../src/types/asbArchive.types"
+import {
+  ASB_CURRENT_VERSION,
+  type AsbArchiveManifest,
+} from "../../../../src/types/asbArchive.types"
 import { detectAsbVersion } from "../asb-transformers"
+import { newerArchiveVersionError } from "../shared/transformChain"
 
 /**
  * マニフェストの必須フィールドとバージョン互換性を検証
@@ -24,6 +28,13 @@ export function validateAsbManifest(manifest: AsbArchiveManifest): {
   }
 
   // バージョン互換性チェック
+  const newerError = newerArchiveVersionError(
+    manifest.version,
+    ASB_CURRENT_VERSION
+  )
+  if (newerError) {
+    return { valid: false, error: newerError }
+  }
   const detectedVersion = detectAsbVersion(manifest)
   if (detectedVersion === "unknown") {
     return {

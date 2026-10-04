@@ -194,19 +194,13 @@ export const analyzeGradeArchiveMutation = () =>
     },
   })
 
-/** 取り込みの下見で読んだアーカイブの中身（版ごとの形はそのまま持つ） */
-export type GradeArchivePayload = Extract<
-  Awaited<ReturnType<typeof window.electronAPI.grade.importArchive>>,
-  { canceled: false }
->["archiveData"]
-
 export const executeGradeImportMutation = () =>
   defineMutation({
     mutationFn: (input: {
-      archiveData: GradeArchivePayload
+      archivePath: string
       options: Parameters<typeof window.electronAPI.grade.executeImport>[1]
     }) =>
-      window.electronAPI.grade.executeImport(input.archiveData, input.options),
+      window.electronAPI.grade.executeImport(input.archivePath, input.options),
     meta: {
       invalidates: [gradeListQuery().queryKey],
       errorMessage: "成績アーカイブを取り込めませんでした",
