@@ -1,33 +1,18 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  BarChart3,
-  Copy,
-  FolderInput,
-  FolderOutput,
-  MoreHorizontal,
-  Plus,
-  Trash2,
-} from "lucide-react"
+import { BarChart3, FolderInput, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import {
-  BulkTagAssignButton,
-  BulkTagAssignPanel,
-} from "@/components/common/BulkTagAssignButton"
+import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
 import { EntityListPage } from "@/components/common/EntityListPage"
-import type { ToolbarAction } from "@/components/common/OverflowToolbar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  type ToolbarAction,
+  toolbarButtonAction,
+} from "@/components/common/OverflowToolbar"
+import { Button } from "@/components/ui/button"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
@@ -51,6 +36,8 @@ import type { GradeArchiveImportPreview } from "@/types/gradeArchive.types"
 
 import { DeleteGradeModal } from "../DeleteGradeModal"
 import { GradeImportDialog } from "./GradeImportDialog"
+import { GradeRowMenu } from "./GradeRowMenu"
+import { GradeRowSummary } from "./GradeRowSummary"
 
 /**
  * 成績算出一覧のフィルタ対象値（名前・説明・学級名・タグ名／タグ／学級／成績算出日）
@@ -268,79 +255,31 @@ export function GradeListContainer() {
 
   const actions = useMemo<ToolbarAction[]>(() => {
     const toolbarActions: ToolbarAction[] = [
-      {
+      toolbarButtonAction({
         id: "create",
         priority: 80,
-        node: (
-          <Button
-            onClick={() => void handleCreate()}
-            variant="outline"
-            size="sm"
-            className="rounded-lg"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            新規作成
-          </Button>
-        ),
-        collapsedNode: (
-          <Button
-            onClick={() => void handleCreate()}
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            新規作成
-          </Button>
-        ),
-      },
-      {
+        icon: Plus,
+        label: "新規作成",
+        onClick: () => void handleCreate(),
+      }),
+      toolbarButtonAction({
         id: "import",
         priority: 70,
-        node: (
-          <Button
-            onClick={handleImport}
-            variant="outline"
-            size="sm"
-            className="rounded-lg"
-          >
-            <FolderInput className="mr-2 h-4 w-4" />
-            .grade 読み込み
-          </Button>
-        ),
-        collapsedNode: (
-          <Button
-            onClick={handleImport}
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start"
-          >
-            <FolderInput className="mr-2 h-4 w-4" />
-            .grade 読み込み
-          </Button>
-        ),
-      },
+        icon: FolderInput,
+        label: ".grade 読み込み",
+        onClick: handleImport,
+      }),
     ]
 
     if (selectedIds.size > 0) {
-      toolbarActions.push({
-        id: "bulk-tag",
-        priority: 60,
-        node: (
-          <BulkTagAssignButton
-            selectedCount={selectedIds.size}
-            allTags={allTags}
-            onAssign={handleBulkAddTag}
-          />
-        ),
-        collapsedNode: (
-          <BulkTagAssignPanel
-            selectedCount={selectedIds.size}
-            allTags={allTags}
-            onAssign={handleBulkAddTag}
-          />
-        ),
-      })
+      toolbarActions.push(
+        bulkTagToolbarAction({
+          priority: 60,
+          selectedCount: selectedIds.size,
+          allTags,
+          onAssign: handleBulkAddTag,
+        })
+      )
     }
 
     return toolbarActions
@@ -354,38 +293,7 @@ export function GradeListContainer() {
         totalCount={grades.length}
         isLoading={isLoading}
         name={(grade) => grade.name}
-        summary={(grade) => {
-          const classroomNames = grade.gradeClassrooms
-            .map((gradeClassroom) => gradeClassroom.classroom.name)
-            .join("、")
-          return (
-            <span className="flex flex-wrap items-center gap-1">
-              {grade.gradeTags.map((gradeTag) => (
-                <Badge
-                  key={gradeTag.tag.id}
-                  variant="outline"
-                  className="text-xs font-normal"
-                  style={
-                    gradeTag.tag.color
-                      ? {
-                          borderColor: gradeTag.tag.color,
-                          color: gradeTag.tag.color,
-                        }
-                      : undefined
-                  }
-                >
-                  {gradeTag.tag.name}
-                </Badge>
-              ))}
-              <span>
-                {classroomNames || "学級未登録"}
-                {" / 生徒: "}
-                {grade.gradeStudents.length}名 / 評価項目:{" "}
-                {grade.gradeItems.length}
-              </span>
-            </span>
-          )
-        }}
+        summary={(grade) => <GradeRowSummary grade={grade} />}
         dateLabel="成績算出日"
         referenceDate={(grade) => grade.referenceDate}
         updatedAt={(grade) => grade.updatedAt}
@@ -395,35 +303,12 @@ export function GradeListContainer() {
           return { label: status.text, url: status.url }
         }}
         rowMenu={(grade) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                aria-label={`${grade.name}の操作`}
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleDuplicate(grade.id)}>
-                <Copy />
-                複製
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportArchive.mutate(grade.id)}>
-                <FolderOutput />
-                .grade 書き出し
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => gradeDeletion.openWith(grade)}
-              >
-                <Trash2 />
-                削除
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <GradeRowMenu
+            grade={grade}
+            onDuplicate={() => handleDuplicate(grade.id)}
+            onExport={() => exportArchive.mutate(grade.id)}
+            onRequestDelete={() => gradeDeletion.openWith(grade)}
+          />
         )}
         actions={actions}
         search={{
