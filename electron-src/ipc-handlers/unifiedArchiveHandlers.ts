@@ -1,0 +1,309 @@
+/**
+ * 統合アーカイブ（.sao）の書き出し・取り込みの IPC ハンドラー
+ *
+ * 設計は docs/unified-archive-design.md §6・§7。範囲・書き出し・開く・取り込むの規則は core
+ * （`lib/export/unified-archive/`・`lib/import/unified-archive/`）にあり、ここは electron の
+ * ダイアログ・DB とデータディレクトリの場所・進捗の押し出し・監査ログをつなぐだけ。
+ *
+ * 下見・開く・試し取り込みは失敗を `kind` で返す（ウィザードがモーダルの中に出す）。
+ * 想定外の失敗だけを例外にする。
+ */
+
+import * as crypto from "crypto"
+import { app, BrowserWindow, dialog } from "electron"
+import * as fs from "fs"
+import * as path from "path"
+
+import type { ImportAction } from "../../src/types/importAction.types"
+import { UNIFIED_ARCHIVE_EXTENSION } from "../../src/types/unifiedArchive.types"
+import { getDataDirectory } from "../lib/dataManager"
+import { previewUnifiedArchiveExport } from "../lib/export/unified-archive/archiveExportPreview"
+import type { ArchiveSelection } from "../lib/export/unified-archive/archiveScopeResolver"
+import {
+  createUnifiedArchive,
+  type UnifiedArchiveExportPhase,
+} from "../lib/export/unified-archive/unifiedArchiveCreator"
+import { importUnifiedArchiveFiles } from "../lib/import/unified-archive/archiveFileImporter"
+import {
+  closeUnifiedArchiveImportSession,
+  getUnifiedArchiveImportSession,
+  openUnifiedArchiveImportSession,
+} from "../lib/import/unified-archive/archiveImportSessions"
+import {
+  findArchiveMatchCandidates,
+  suggestedMatchDecisions,
+} from "../lib/import/unified-archive/archiveMatchCandidates"
+import {
+  analyzeUnifiedArchiveImport,
+  importUnifiedArchiveRows,
+  prismaArchiveTarget,
+  prismaArchiveTransaction,
+  UnifiedArchiveUnresolvableConflictError,
+} from "../lib/import/unified-archive/archiveRowImporter"
+import type { UnifiedArchiveImportDecisions } from "../lib/import/unified-archive/types"
+import { getCurrentActorUserId } from "../lib/prisma/auditActor"
+import { recordAuditLog } from "../lib/prisma/auditLog"
+import prisma from "../lib/prisma/client"
+import { getDatabasePath } from "../lib/prisma/databaseInitializer"
+import { getMigrationsDir } from "../lib/prisma/schema/migrationApplier"
+import { type HandlerMap } from "./ipcHandlerUtils"
+
+/** 試し取り込み・取り込みのトランザクションの時間切れ（Prisma の既定の5秒では足りない） */
+const IMPORT_TRANSACTION_TIMEOUT_MS = 10 * 60_000
+
+const ARCHIVE_FILE_FILTER = {
+  name: "統合アーカイブ (.sao)",
+  extensions: [UNIFIED_ARCHIVE_EXTENSION.slice(1)],
+}
+
+interface UnifiedArchiveImportInput {
+  sessionId: string
+  action: ImportAction
+  decisions: UnifiedArchiveImportDecisions
+}
+
+const getAppVersion = (): string => {
+  try {
+    return app.getVersion()
+  } catch {
+    return "0.0.0"
+  }
+}
+
+const requireMigrationsDir = (): string => {
+  const migrationsDir = getMigrationsDir()
+  if (!migrationsDir) {
+    throw new Error("アプリに同梱の migration が見つかりません")
+  }
+  return migrationsDir
+}
+
+/** 書き出しの進捗を開いている全部の窓へ送る。閉じかけの窓に送って失敗しても無視する */
+const broadcastExportProgress = (phase: UnifiedArchiveExportPhase): void => {
+  for (const browserWindow of BrowserWindow.getAllWindows()) {
+    try {
+      browserWindow.webContents.send("unifiedArchive:export-progress", phase)
+    } catch {
+      // ウィンドウが既に閉じられている場合は無視
+    }
+  }
+}
+
+/** 表名 → id の一覧を、表名 → 件数にする（空の表は載せない） */
+const countIdLists = (
+  idsByTable: Readonly<Record<string, readonly string[] | undefined>>
+): Record<string, number> =>
+  Object.fromEntries(
+    Object.entries(idsByTable).flatMap(([table, ids]) =>
+      ids && ids.length > 0 ? [[table, ids.length]] : []
+    )
+  )
+
+export const unifiedArchiveHandlers = {
+  /** 選択から、書き出す範囲の件数・実体の id・外せない理由・欠けたファイルを返す（DB は書かない） */
+  "unifiedArchive:previewExport": async (selection: ArchiveSelection) =>
+    previewUnifiedArchiveExport({
+      sourceDatabasePath: getDatabasePath(),
+      dataDirectory: getDataDirectory(),
+      selection,
+    }),
+
+  /** 書き出し先を尋ねる。選ばずに閉じたら null */
+  "unifiedArchive:selectExportPath": async (defaultFileName: string) => {
+    const result = await dialog.showSaveDialog({
+      title: "統合アーカイブを書き出す",
+      defaultPath: defaultFileName,
+      filters: [ARCHIVE_FILE_FILTER],
+    })
+    if (result.canceled || !result.filePath) return null
+    return result.filePath
+  },
+
+  /**
+   * 書き出す。同じ場所の一時ファイルへ書いてから置き換えるので、書きかけのファイルが残らず、
+   * 保存ダイアログで上書きを選んだ既存のファイルは書き終えてから置き換わる
+   */
+  "unifiedArchive:export": async (input: {
+    selection: ArchiveSelection
+    outputPath: string
+  }) => {
+    const partialPath = `${input.outputPath}.${crypto.randomUUID()}.partial`
+    let exported: Awaited<ReturnType<typeof createUnifiedArchive>>
+    try {
+      exported = await createUnifiedArchive({
+        sourceDatabasePath: getDatabasePath(),
+        dataDirectory: getDataDirectory(),
+        outputPath: partialPath,
+        selection: input.selection,
+        exportedByUserId: getCurrentActorUserId(),
+        appVersion: getAppVersion(),
+        onProgress: broadcastExportProgress,
+      })
+      fs.renameSync(partialPath, input.outputPath)
+    } finally {
+      fs.rmSync(partialPath, { force: true })
+    }
+    const { manifest } = exported
+
+    await recordAuditLog({
+      action: "archive.unified.export",
+      entityType: "UnifiedArchive",
+      entityId: path.basename(input.outputPath),
+      target: path.basename(input.outputPath),
+      extra: {
+        outputPath: input.outputPath,
+        roots: countIdLists(manifest.selection.roots),
+        shared: countIdLists(manifest.selection.shared),
+        scoring: manifest.selection.scoring.kind,
+        includeAnswers: manifest.selection.includeAnswers,
+        optionalItems: manifest.selection.optionalItems,
+        excludedRowCounts: manifest.exclusions.excludedRowCounts,
+        missingFileCount: manifest.files.missing.length,
+      },
+    })
+
+    return { outputPath: input.outputPath, manifest }
+  },
+
+  /** 取り込むファイルを尋ねる。選ばずに閉じたら null */
+  "unifiedArchive:selectImportFile": async () => {
+    const result = await dialog.showOpenDialog({
+      title: "統合アーカイブを読み込む",
+      filters: [ARCHIVE_FILE_FILTER],
+      properties: ["openFile"],
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths[0]
+  },
+
+  /**
+   * アーカイブを開いて現行化し、照合の候補と初期値を返す。守りに掛かったら `rejected`。
+   * 開いたものは閉じるか取り込むまで main が持つ
+   */
+  "unifiedArchive:open": async (input: { archivePath: string }) => {
+    const openResult = openUnifiedArchiveImportSession({
+      archivePath: input.archivePath,
+      migrationsDir: requireMigrationsDir(),
+      referenceDatabasePath: getDatabasePath(),
+    })
+    if (openResult.kind === "rejected") {
+      return {
+        kind: "rejected" as const,
+        reason: openResult.reason,
+        details: [...openResult.details],
+      }
+    }
+
+    const { sessionId, session } = openResult
+    try {
+      const matchCandidates = await findArchiveMatchCandidates(
+        prismaArchiveTarget(prisma),
+        session.opened
+      )
+      return {
+        kind: "opened" as const,
+        sessionId,
+        manifest: session.opened.manifest,
+        appliedMigrations: [...session.opened.appliedMigrations],
+        migratedRowCounts: countIdLists(session.opened.migratedRowIds),
+        matchCandidates,
+        suggestedDecisions: suggestedMatchDecisions(matchCandidates),
+      }
+    } catch (error) {
+      closeUnifiedArchiveImportSession(sessionId)
+      throw error
+    }
+  },
+
+  /** 書いてからロールバックする試し取り込み（確認画面用）。解けない衝突は `unresolvable` */
+  "unifiedArchive:analyze": async (input: UnifiedArchiveImportInput) => {
+    const session = getUnifiedArchiveImportSession(input.sessionId)
+    try {
+      const result = await analyzeUnifiedArchiveImport(
+        prismaArchiveTransaction(prisma, IMPORT_TRANSACTION_TIMEOUT_MS),
+        session.opened,
+        input.action,
+        input.decisions,
+        new Date()
+      )
+      return { kind: "ok" as const, result }
+    } catch (error) {
+      if (error instanceof UnifiedArchiveUnresolvableConflictError) {
+        return { kind: "unresolvable" as const, reasons: error.reasons }
+      }
+      throw error
+    }
+  },
+
+  /**
+   * 取り込む。1本のトランザクションで行を書き、コミットの後に画像を写して監査ログを残す。
+   * 成功したら作業を閉じる。解けない衝突は `unresolvable`（作業は開いたまま）
+   */
+  "unifiedArchive:import": async (input: UnifiedArchiveImportInput) => {
+    const session = getUnifiedArchiveImportSession(input.sessionId)
+    let result: Awaited<ReturnType<typeof importUnifiedArchiveRows>>
+    try {
+      result = await prismaArchiveTransaction(
+        prisma,
+        IMPORT_TRANSACTION_TIMEOUT_MS
+      )((target) =>
+        importUnifiedArchiveRows(
+          target,
+          session.opened,
+          input.action,
+          new Date(),
+          input.decisions
+        )
+      )
+    } catch (error) {
+      if (error instanceof UnifiedArchiveUnresolvableConflictError) {
+        return { kind: "unresolvable" as const, reasons: error.reasons }
+      }
+      throw error
+    }
+
+    const files = importUnifiedArchiveFiles(
+      session.opened,
+      getDataDirectory(),
+      result
+    )
+
+    const countTotals = { created: 0, replaced: 0, kept: 0, skipped: 0 }
+    for (const tableCounts of Object.values(result.counts)) {
+      countTotals.created += tableCounts.created
+      countTotals.replaced += tableCounts.replaced
+      countTotals.kept += tableCounts.kept
+      countTotals.skipped += tableCounts.skipped
+    }
+    const { manifest } = session.opened
+    await recordAuditLog({
+      action: "archive.unified.import",
+      entityType: "UnifiedArchive",
+      entityId: manifest.exportedAt,
+      target: path.basename(session.archivePath),
+      extra: {
+        archivePath: session.archivePath,
+        importAction: input.action,
+        roots: countIdLists(manifest.selection.roots),
+        counts: countTotals,
+        uniqueConflictCount: result.uniqueConflicts.length,
+        renamedIdCount: result.renamedIds.length,
+        warningCount: result.warnings.length,
+        files: {
+          copied: files.copied.length,
+          replaced: files.replaced.length,
+          skipped: files.skipped.length,
+          failed: files.failed.length,
+        },
+      },
+    })
+
+    closeUnifiedArchiveImportSession(input.sessionId)
+    return { kind: "ok" as const, result, files }
+  },
+
+  /** 作業を閉じ、作業ディレクトリを消す（取り込まずにウィザードを閉じたとき） */
+  "unifiedArchive:close": async (input: { sessionId: string }) => {
+    closeUnifiedArchiveImportSession(input.sessionId)
+  },
+} satisfies HandlerMap

@@ -15,6 +15,10 @@ import {
 } from "@/components/common/ExportResultSummary"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 import { Checkbox } from "@/components/ui/checkbox"
+import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
+import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
+import { unifiedArchiveImportToolbarAction } from "@/components/unified-archive/import/unifiedArchiveImportToolbarAction"
+import { UnifiedArchiveImportWizard } from "@/components/unified-archive/import/UnifiedArchiveImportWizard"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
@@ -81,6 +85,10 @@ export function AnswerSheetDefinitionList() {
   )
   /** 一覧には全員の解答用紙が載る。既定は自分が担当のものだけを出す */
   const [showAllOwners, setShowAllOwners] = useState(false)
+  const [showUnifiedImport, setShowUnifiedImport] = useState(false)
+  /** .sao 書き出しを開いたときの最初の選択。null の間は閉じている */
+  const [unifiedExportSelection, setUnifiedExportSelection] =
+    useState<UnifiedArchiveExportInitialSelection | null>(null)
 
   const visibleDefinitions = useMemo(
     () =>
@@ -292,6 +300,10 @@ export function AnswerSheetDefinitionList() {
           />
         ),
       },
+      unifiedArchiveImportToolbarAction({
+        priority: 69,
+        onClick: () => setShowUnifiedImport(true),
+      }),
       {
         // 「誰の解答用紙を見るか」は絞り込みの一種なので、他の絞り込みと同じ側に置く
         id: "owner-scope",
@@ -344,6 +356,11 @@ export function AnswerSheetDefinitionList() {
             onEdit={() => handleOpenEditor(definition.id)}
             onDuplicate={() => duplicateDefinition(definition.id)}
             onExport={() => handleExport(definition)}
+            onUnifiedExport={() =>
+              setUnifiedExportSelection({
+                roots: { AsbDefinition: [definition.id] },
+              })
+            }
             onTransfer={() => setTransferTarget(definition)}
             onDelete={() => definitionDeletion.openWith(definition)}
           />
@@ -410,6 +427,14 @@ export function AnswerSheetDefinitionList() {
         </BaseModal>
       )}
 
+      <UnifiedArchiveExportDialog
+        open={unifiedExportSelection !== null}
+        onOpenChange={(open) => {
+          if (!open) setUnifiedExportSelection(null)
+        }}
+        initialSelection={unifiedExportSelection ?? {}}
+      />
+
       <TransferOwnerDialog
         definition={transferTarget}
         currentUserId={currentUser.id}
@@ -421,6 +446,11 @@ export function AnswerSheetDefinitionList() {
         onOpenChange={definitionDeletion.handleOpenChange}
         definitionName={definitionDeletion.target?.name}
         onConfirm={confirmDelete}
+      />
+
+      <UnifiedArchiveImportWizard
+        open={showUnifiedImport}
+        onOpenChange={setShowUnifiedImport}
       />
     </>
   )

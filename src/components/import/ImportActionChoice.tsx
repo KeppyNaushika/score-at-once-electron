@@ -20,6 +20,8 @@ import { isImportAction } from "@/types/importAction.types"
  * 失われる唯一の操作である「上書きする」を選んだときに、そこを名指しで警告する。
  *
  * 試験・生徒どちらの取り込みでも同じ3択なので、ウィザードをまたいで共有する。
+ * 統合アーカイブ（.sao）の取り込みは最終確認に全ての表の件数を出すので、
+ * `confirmCoversAllTables` で注意書きをそれに合わせる。
  */
 
 /** 選択肢の見出しと説明（並び順＝画面の並び順） */
@@ -55,6 +57,8 @@ interface ImportActionChoiceProps {
   overlapLabel?: string
   /** 「別で追加する」を選べるか（生徒・学級だけの取り込みでは別物にできない） */
   allowSeparate?: boolean
+  /** 最終確認が全ての表の件数を出すか（統合アーカイブ）。名前に「(2)」も付けない */
+  confirmCoversAllTables?: boolean
 }
 
 export function ImportActionChoice({
@@ -62,10 +66,21 @@ export function ImportActionChoice({
   onChange,
   overlapLabel,
   allowSeparate = true,
+  confirmCoversAllTables = false,
 }: ImportActionChoiceProps) {
-  const choices = allowSeparate
-    ? IMPORT_ACTION_CHOICES
-    : IMPORT_ACTION_CHOICES.filter((choice) => choice.action !== "separate")
+  const choices = (
+    allowSeparate
+      ? IMPORT_ACTION_CHOICES
+      : IMPORT_ACTION_CHOICES.filter((choice) => choice.action !== "separate")
+  ).map((choice) =>
+    confirmCoversAllTables && choice.action === "separate"
+      ? {
+          ...choice,
+          description:
+            "このパソコンにあるものには手を触れず、もう1つとして追加します。",
+        }
+      : choice
+  )
 
   return (
     <Card className="mb-6 border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20">
@@ -108,7 +123,9 @@ export function ImportActionChoice({
         </RadioGroup>
 
         <p className="text-xs text-amber-700/80 dark:text-amber-300/80">
-          この選択は、試験・生徒・学級・小計・採点など、読み込む全てのものに同じように効きます。最後の確認画面が一覧にするのは、生徒・学級・小計グループだけです。
+          {confirmCoversAllTables
+            ? "この選択は、読み込む全てのものに同じように効きます。最後の確認画面に、表ごとの件数が出ます。"
+            : "この選択は、試験・生徒・学級・小計・採点など、読み込む全てのものに同じように効きます。最後の確認画面が一覧にするのは、生徒・学級・小計グループだけです。"}
         </p>
 
         {/*
@@ -117,7 +134,7 @@ export function ImportActionChoice({
           名指しで書く。上書き以外は既存の値を消さない（統合は後に書かれた方、
           別で追加はこのパソコンのものに触らない）ので、選んだときだけ出す。
         */}
-        {action === "overwrite" && (
+        {action === "overwrite" && !confirmCoversAllTables && (
           <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
             「上書きする」では、一覧に出ないものも置き換わります。とくに模範解答ページ（ページ番号・用紙サイズ・画像）と採点枠（位置・設問番号・配点・ラベルなど）の値は、このパソコンで直したぶんが読み込んだ内容に戻ります。
           </p>

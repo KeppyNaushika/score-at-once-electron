@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { FolderOutput } from "lucide-react"
+import { FileArchive, FolderOutput } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
@@ -19,6 +19,7 @@ import {
   ExportResultSummary,
 } from "@/components/common/ExportResultSummary"
 import { Button } from "@/components/ui/button"
+import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import { getAnswerSheetCompletion } from "@/lib/answerSheetStatus"
 import {
   answerSheetBuilderWorkflowPhases,
@@ -70,6 +71,7 @@ export function AnswerSheetDefinitionDetail({
     exportAnswerSheetDefinitionMutation()
   )
   const [exportOutcome, setExportOutcome] = useState<ExportOutcome | null>(null)
+  const [showUnifiedExportDialog, setShowUnifiedExportDialog] = useState(false)
 
   // 読み込みの失敗は通知する（取得ではないので effect でよい）
   useEffect(() => {
@@ -209,11 +211,27 @@ export function AnswerSheetDefinitionDetail({
           "02-export": null,
         }}
         actions={
-          <Button variant="outline" size="sm" onClick={handleExportArchive}>
-            <FolderOutput className="mr-2 h-4 w-4" />
-            .asb 書き出し
-          </Button>
+          <>
+            <Button variant="outline" size="sm" onClick={handleExportArchive}>
+              <FolderOutput className="mr-2 h-4 w-4" />
+              .asb 書き出し
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowUnifiedExportDialog(true)}
+            >
+              <FileArchive className="mr-2 h-4 w-4" />
+              .sao 書き出し
+            </Button>
+          </>
         }
+      />
+
+      <UnifiedArchiveExportDialog
+        open={showUnifiedExportDialog}
+        onOpenChange={setShowUnifiedExportDialog}
+        initialSelection={{ roots: { AsbDefinition: [definitionId] } }}
       />
 
       {exportOutcome && (

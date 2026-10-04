@@ -1,4 +1,4 @@
-import { FolderOutput, MoreHorizontal, Trash2 } from "lucide-react"
+import { FileArchive, FolderOutput, MoreHorizontal, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -12,6 +12,8 @@ import type { CourseworkSummary } from "@/types/coursework.types"
 interface CourseworkRowMenuProps {
   coursework: CourseworkSummary
   onExport: () => void
+  /** 「.sao 書き出し」を押したとき（統合アーカイブの書き出しをこの1件から始める） */
+  onUnifiedExport: () => void
   /** 押しただけでは消さない。確認を開く */
   onRequestDelete: () => void
 }
@@ -20,6 +22,7 @@ interface CourseworkRowMenuProps {
 export function CourseworkRowMenu({
   coursework,
   onExport,
+  onUnifiedExport,
   onRequestDelete,
 }: CourseworkRowMenuProps) {
   return (
@@ -38,6 +41,10 @@ export function CourseworkRowMenu({
         <DropdownMenuItem onClick={onExport}>
           <FolderOutput />
           .coursework 書き出し
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onUnifiedExport}>
+          <FileArchive />
+          .sao 書き出し
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" onClick={onRequestDelete}>
           <Trash2 />

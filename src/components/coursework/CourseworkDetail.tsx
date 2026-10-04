@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { FolderOutput, MoreVertical, Trash2 } from "lucide-react"
+import { FileArchive, FolderOutput, MoreVertical, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import { getCourseworkCompletion } from "@/lib/courseworkStatus"
 import {
   courseworkWorkflowPhases,
@@ -58,6 +59,7 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
   const exportArchive = useMutation(exportCourseworkArchiveMutation())
   // 押しただけでは消さず、確認で決めてもらう
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [showUnifiedExportDialog, setShowUnifiedExportDialog] = useState(false)
 
   /** 触った欄だけが載って来る。載っていない列は `undefined` のまま送らない */
   const handleCommitBasics = async (changed: Partial<EntityOverviewBasics>) => {
@@ -163,6 +165,12 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
                 <FolderOutput />
                 .coursework 書き出し
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setShowUnifiedExportDialog(true)}
+              >
+                <FileArchive />
+                .sao 書き出し
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => setIsDeleteModalOpen(true)}
@@ -174,6 +182,11 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         }
+      />
+      <UnifiedArchiveExportDialog
+        open={showUnifiedExportDialog}
+        onOpenChange={setShowUnifiedExportDialog}
+        initialSelection={{ roots: { Coursework: [courseworkId] } }}
       />
       <DeleteCourseworkModal
         open={isDeleteModalOpen}

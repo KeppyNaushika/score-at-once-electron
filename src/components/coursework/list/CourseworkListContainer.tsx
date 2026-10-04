@@ -13,6 +13,10 @@ import {
   toolbarButtonAction,
 } from "@/components/common/OverflowToolbar"
 import { Button } from "@/components/ui/button"
+import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
+import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
+import { unifiedArchiveImportToolbarAction } from "@/components/unified-archive/import/unifiedArchiveImportToolbarAction"
+import { UnifiedArchiveImportWizard } from "@/components/unified-archive/import/UnifiedArchiveImportWizard"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
@@ -94,6 +98,10 @@ export function CourseworkListContainer() {
     null
   )
   const [importing, setImporting] = useState(false)
+  const [showUnifiedImport, setShowUnifiedImport] = useState(false)
+  /** .sao 書き出しを開いたときの最初の選択。null の間は閉じている */
+  const [unifiedExportSelection, setUnifiedExportSelection] =
+    useState<UnifiedArchiveExportInitialSelection | null>(null)
   // 押しただけでは消さず、確認で決めてもらう
   const courseworkDeletion = useDialogTarget<CourseworkSummary>()
   const { data: allTags = EMPTY_TAGS } = useQuery(tagListQuery())
@@ -317,6 +325,10 @@ export function CourseworkListContainer() {
         label: ".coursework 読み込み",
         onClick: handleImport,
       }),
+      unifiedArchiveImportToolbarAction({
+        priority: 69,
+        onClick: () => setShowUnifiedImport(true),
+      }),
     ]
 
     if (selectedIds.size > 0) {
@@ -356,6 +368,11 @@ export function CourseworkListContainer() {
           <CourseworkRowMenu
             coursework={coursework}
             onExport={() => handleExport(coursework)}
+            onUnifiedExport={() =>
+              setUnifiedExportSelection({
+                roots: { Coursework: [coursework.id] },
+              })
+            }
             onRequestDelete={() => courseworkDeletion.openWith(coursework)}
           />
         )}
@@ -409,12 +426,25 @@ export function CourseworkListContainer() {
         loading={deleteCoursework.isPending}
       />
 
+      <UnifiedArchiveExportDialog
+        open={unifiedExportSelection !== null}
+        onOpenChange={(open) => {
+          if (!open) setUnifiedExportSelection(null)
+        }}
+        initialSelection={unifiedExportSelection ?? {}}
+      />
+
       <CourseworkImportDialog
         open={importPreview !== null}
         preview={importPreview}
         importing={importing}
         onCancel={handleImportCancel}
         onConfirm={handleImportConfirm}
+      />
+
+      <UnifiedArchiveImportWizard
+        open={showUnifiedImport}
+        onOpenChange={setShowUnifiedImport}
       />
     </>
   )

@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Download,
+  FileArchive,
   FolderInput,
   FolderOutput,
   PlusCircle,
@@ -52,6 +53,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
+import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
+import { unifiedArchiveImportToolbarAction } from "@/components/unified-archive/import/unifiedArchiveImportToolbarAction"
+import { UnifiedArchiveImportWizard } from "@/components/unified-archive/import/UnifiedArchiveImportWizard"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { useListPagination } from "@/hooks/useListPagination"
 import {
@@ -114,6 +119,10 @@ export default function StudentTable() {
     useState(false)
   const [isArchiveImportModalOpen, setIsArchiveImportModalOpen] =
     useState(false)
+  const [isUnifiedImportOpen, setIsUnifiedImportOpen] = useState(false)
+  /** .sao 書き出しを開いたときの最初の選択（押した時点の選択中の生徒）。null の間は閉じている */
+  const [unifiedExportSelection, setUnifiedExportSelection] =
+    useState<UnifiedArchiveExportInitialSelection | null>(null)
   // 削除の確認を開いている生徒（成績算出の名簿に載っていれば確認画面が断る）
   const studentDeletion = useDialogTarget<StudentWithMemberships>()
 
@@ -323,6 +332,10 @@ export default function StudentTable() {
       label: ".students 読み込み",
       onClick: () => setIsArchiveImportModalOpen(true),
     }),
+    unifiedArchiveImportToolbarAction({
+      priority: 59,
+      onClick: () => setIsUnifiedImportOpen(true),
+    }),
   ]
   if (selectedStudentIds.size > 0) {
     // 選択中だけ現れる操作。幅が急に増えるが、畳みは実測なので自然に吸収される
@@ -343,6 +356,16 @@ export default function StudentTable() {
         icon: FolderOutput,
         label: `.students 書き出し（${selectedStudentIds.size}名）`,
         onClick: () => setIsArchiveExportDialogOpen(true),
+      }),
+      toolbarButtonAction({
+        id: "unified-archive-export",
+        priority: 39,
+        icon: FileArchive,
+        label: `.sao 書き出し（${selectedStudentIds.size}名）`,
+        onClick: () =>
+          setUnifiedExportSelection({
+            shared: { Student: [...selectedStudentIds] },
+          }),
       })
     )
   }
@@ -481,6 +504,14 @@ export default function StudentTable() {
         />
       )}
 
+      <UnifiedArchiveExportDialog
+        open={unifiedExportSelection !== null}
+        onOpenChange={(open) => {
+          if (!open) setUnifiedExportSelection(null)
+        }}
+        initialSelection={unifiedExportSelection ?? {}}
+      />
+
       {isArchiveImportModalOpen && (
         <StudentImportWizardModal
           isOpen={isArchiveImportModalOpen}
@@ -488,6 +519,12 @@ export default function StudentTable() {
           onComplete={refreshData}
         />
       )}
+
+      <UnifiedArchiveImportWizard
+        open={isUnifiedImportOpen}
+        onOpenChange={setIsUnifiedImportOpen}
+        onComplete={refreshData}
+      />
     </div>
   )
 }

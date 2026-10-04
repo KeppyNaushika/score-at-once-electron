@@ -1,4 +1,10 @@
-import { Copy, FolderOutput, MoreHorizontal, Trash2 } from "lucide-react"
+import {
+  Copy,
+  FileArchive,
+  FolderOutput,
+  MoreHorizontal,
+  Trash2,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -13,6 +19,8 @@ interface GradeRowMenuProps {
   grade: GradeSummary
   onDuplicate: () => void
   onExport: () => void
+  /** 「.sao 書き出し」を押したとき（統合アーカイブの書き出しをこの1件から始める） */
+  onUnifiedExport: () => void
   /** 押しただけでは消さない。確認を開く */
   onRequestDelete: () => void
 }
@@ -22,6 +30,7 @@ export function GradeRowMenu({
   grade,
   onDuplicate,
   onExport,
+  onUnifiedExport,
   onRequestDelete,
 }: GradeRowMenuProps) {
   return (
@@ -44,6 +53,10 @@ export function GradeRowMenu({
         <DropdownMenuItem onClick={onExport}>
           <FolderOutput />
           .grade 書き出し
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onUnifiedExport}>
+          <FileArchive />
+          .sao 書き出し
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" onClick={onRequestDelete}>
           <Trash2 />

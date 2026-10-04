@@ -6,6 +6,7 @@ import { initializeApp } from "./appInitializer"
 import { setupAllIPCHandlers } from "./ipc-handlers"
 import { destroySharedSvgWindow } from "./ipc-handlers/exportHandlers"
 import { getAbsolutePathFromData } from "./lib/dataManager"
+import { closeAllUnifiedArchiveImportSessions } from "./lib/import/unified-archive/archiveImportSessions"
 import { cleanupDecryptedPdfCopies } from "./lib/pdf-tools/decryptedPdfCopy"
 import { getPrismaClient } from "./lib/prisma/client"
 import { DB_NEWER_THAN_APP_MARKER } from "./lib/prisma/schema/migrationGuard"
@@ -170,6 +171,13 @@ app.on("before-quit", async (_event) => {
     destroySharedSvgWindow()
   } catch (error) {
     console.warn("Failed to destroy shared SVG window:", error)
+  }
+
+  // 統合アーカイブの取り込みで開いたまま残った作業ディレクトリを消す
+  try {
+    closeAllUnifiedArchiveImportSessions()
+  } catch (error) {
+    console.warn("Failed to close unified archive import sessions:", error)
   }
 
   // NAS同期の停止

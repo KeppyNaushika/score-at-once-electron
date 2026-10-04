@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  FileArchive,
   FolderInput,
   FolderOutput,
   PencilSparkles,
@@ -21,6 +22,10 @@ import {
 import ExamArchiveExportModal from "@/components/exams/detail/ExamArchiveExportModal"
 import { ImportWizardModal } from "@/components/import/ImportWizardModal"
 import { Button } from "@/components/ui/button"
+import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
+import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
+import { unifiedArchiveImportToolbarAction } from "@/components/unified-archive/import/unifiedArchiveImportToolbarAction"
+import { UnifiedArchiveImportWizard } from "@/components/unified-archive/import/UnifiedArchiveImportWizard"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
@@ -91,8 +96,12 @@ const ExamList = () => {
   const bulkExportExams = useMutation(bulkExportExamsMutation())
   const exportExamArchive = useMutation(exportExamArchiveMutation())
   const [showImportModal, setShowImportModal] = useState(false)
+  const [showUnifiedImport, setShowUnifiedImport] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [exportTarget, setExportTarget] = useState<ExportTarget | null>(null)
+  /** .sao 書き出しを開いたときの最初の選択。null の間は閉じている */
+  const [unifiedExportSelection, setUnifiedExportSelection] =
+    useState<UnifiedArchiveExportInitialSelection | null>(null)
   /** 書き出しの結果。渡している間はモーダルが結果の段を見せる */
   const [exportOutcome, setExportOutcome] = useState<ExportOutcome | null>(null)
 
@@ -289,6 +298,10 @@ const ExamList = () => {
         label: ".score 読み込み",
         onClick: () => setShowImportModal(true),
       }),
+      unifiedArchiveImportToolbarAction({
+        priority: 69,
+        onClick: () => setShowUnifiedImport(true),
+      }),
     ]
 
     if (selectedIds.size > 0) {
@@ -308,6 +321,14 @@ const ExamList = () => {
           onClick: () =>
             setExportTarget({ kind: "bulk", examIds: [...selectedIds] }),
           disabled: isExporting,
+        }),
+        toolbarButtonAction({
+          id: "bulk-unified-export",
+          priority: 49,
+          icon: FileArchive,
+          label: `.sao 書き出し（${selectedIds.size}件）`,
+          onClick: () =>
+            setUnifiedExportSelection({ roots: { Exam: [...selectedIds] } }),
         })
       )
     }
@@ -322,12 +343,23 @@ const ExamList = () => {
         onClose={() => setShowImportModal(false)}
         onComplete={handleImportComplete}
       />
+      <UnifiedArchiveImportWizard
+        open={showUnifiedImport}
+        onOpenChange={setShowUnifiedImport}
+      />
       <ExamArchiveExportModal
         open={exportTarget !== null}
         onOpenChange={handleExportModalOpenChange}
         onExport={handleExport}
         isExporting={isExporting}
         exportOutcome={exportOutcome}
+      />
+      <UnifiedArchiveExportDialog
+        open={unifiedExportSelection !== null}
+        onOpenChange={(open) => {
+          if (!open) setUnifiedExportSelection(null)
+        }}
+        initialSelection={unifiedExportSelection ?? {}}
       />
       <EntityListPage<ExamSummary>
         title="試験一覧"
@@ -353,6 +385,9 @@ const ExamList = () => {
                 examId: exam.id,
                 examName: exam.examName,
               })
+            }
+            onUnifiedExport={() =>
+              setUnifiedExportSelection({ roots: { Exam: [exam.id] } })
             }
           />
         )}
