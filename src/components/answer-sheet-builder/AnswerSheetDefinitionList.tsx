@@ -1,17 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import {
-  Copy,
-  FileEdit,
-  FolderInput,
-  FolderOutput,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Trash2,
-  UserRoundCog,
-} from "lucide-react"
+import { FileEdit } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -27,33 +17,7 @@ import {
   ExportResultSummary,
 } from "@/components/common/ExportResultSummary"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
@@ -64,22 +28,20 @@ import {
   answerSheetBuilderWorkflowSteps,
   workflowStepHref,
 } from "@/lib/shared/workflowSteps"
-import {
-  createAnswerSheetDefinitionMutation,
-  exportAnswerSheetDefinitionMutation,
-  importAnswerSheetDefinitionMutation,
-  selectAnswerSheetImportFileMutation,
-  transferAnswerSheetDefinitionOwnerMutation,
-} from "@/queries/answerSheetBuilder"
+import { exportAnswerSheetDefinitionMutation } from "@/queries/answerSheetBuilder"
 import {
   addTagToAnswerSheetDefinitionsMutation,
   findOrCreateTagMutation,
   tagListQuery,
 } from "@/queries/tag"
-import type { PublicUser } from "@/queries/user"
-import { userListQuery } from "@/queries/user"
 import type { ASBDefinitionListItem } from "@/types/answerSheetBuilder.types"
 
+import { CreateDefinitionButton } from "./components/list/CreateDefinitionButton"
+import { DefinitionRowMenu } from "./components/list/DefinitionRowMenu"
+import { DefinitionSummary } from "./components/list/DefinitionSummary"
+import { DeleteDefinitionDialog } from "./components/list/DeleteDefinitionDialog"
+import { ImportDefinitionButton } from "./components/list/ImportDefinitionButton"
+import { TransferOwnerDialog } from "./components/list/TransferOwnerDialog"
 import { useAnswerSheetDefinitions } from "./hooks/useAnswerSheetDefinitions"
 
 /** 解答用紙一覧のフィルタ対象値（名前・説明・タグ名／タグ／使用日） */
@@ -96,72 +58,8 @@ const ASB_FILTER_ACCESSORS: ListFilterAccessors<ASBDefinitionListItem> = {
   updatedAt: (definition) => definition.updatedAt ?? null,
 }
 
-/**
- * 担当を別の利用者へ渡すダイアログ。
- *
- * 編集できるのは担当者ひとりだけなので、他の人が直したいときはここで渡す。
- * 渡せるのは今の担当者だけ（横から取り上げられない）。
- */
-function TransferOwnerDialog({
-  definition,
-  currentUserId,
-  onClose,
-  onTransfer,
-}: {
-  definition: ASBDefinitionListItem | null
-  currentUserId: string
-  onClose: () => void
-  onTransfer: (nextUserId: string) => Promise<void>
-}) {
-  const { data: users = EMPTY_USERS } = useQuery(userListQuery())
-  const candidates = users.filter((candidate) => candidate.id !== currentUserId)
-
-  return (
-    <Dialog
-      open={definition !== null}
-      onOpenChange={(open) => !open && onClose()}
-    >
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>担当を渡す</DialogTitle>
-          <DialogDescription>
-            「{definition?.name}
-            」を編集できる人を切り替えます。渡した後は自分では
-            編集できなくなります（閲覧と書き出しはできます）。
-          </DialogDescription>
-        </DialogHeader>
-        <div className="max-h-72 overflow-y-auto rounded-lg border border-border/50">
-          {candidates.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">
-              他に利用者がいません。
-            </p>
-          ) : (
-            candidates.map((candidate) => (
-              <button
-                key={candidate.id}
-                type="button"
-                className="flex w-full items-center px-4 py-2.5 text-left text-sm hover:bg-muted/50"
-                onClick={async () => {
-                  if (!definition) return
-                  await onTransfer(candidate.id)
-                  onClose()
-                }}
-              >
-                {candidate.name}
-              </button>
-            ))
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_TAGS: TagWithAllRelations[] = []
-
-/** 未取得のときに毎回新しい配列を作らないための空値 */
-const EMPTY_USERS: PublicUser[] = []
 
 export function AnswerSheetDefinitionList() {
   const currentUser = useCurrentUser()
@@ -175,22 +73,8 @@ export function AnswerSheetDefinitionList() {
     useState<ASBDefinitionListItem | null>(null)
   /** 書き出しの結果。渡している間は結果モーダルを見せる */
   const [exportOutcome, setExportOutcome] = useState<ExportOutcome | null>(null)
-  // 担当を渡す相手は選んだ1件ぶん。取り直す先もその1件のまとまりになるので、
-  // 書き込みの宣言は「今どれを選んでいるか」から組む
-  const { mutateAsync: transferOwnerOf } = useMutation(
-    transferAnswerSheetDefinitionOwnerMutation(transferTarget?.id ?? "")
-  )
-  const { mutateAsync: createDefinition } = useMutation(
-    createAnswerSheetDefinitionMutation()
-  )
   const { mutateAsync: exportDefinition } = useMutation(
     exportAnswerSheetDefinitionMutation()
-  )
-  const { mutateAsync: selectImportFile } = useMutation(
-    selectAnswerSheetImportFileMutation()
-  )
-  const { mutateAsync: importDefinition } = useMutation(
-    importAnswerSheetDefinitionMutation()
   )
   const { mutateAsync: findOrCreateTag } = useMutation(
     findOrCreateTagMutation()
@@ -297,27 +181,6 @@ export function AnswerSheetDefinitionList() {
     ]
   )
 
-  const handleCreate = useCallback(async () => {
-    try {
-      const newId = crypto.randomUUID()
-      const { createDefaultDefinition } = await import("./constants")
-      const definition = createDefaultDefinition()
-      definition.id = newId
-
-      await createDefinition({ definition, userId: currentUser.id })
-      // 作成直後は編集したいので作成ページへ直行
-      router.push(
-        workflowStepHref(
-          `/answer-sheet-builder/${newId}`,
-          answerSheetBuilderWorkflowSteps,
-          "01-edit"
-        )
-      )
-    } catch {
-      // 失敗の通知は MutationCache が出す
-    }
-  }, [currentUser.id, router, createDefinition])
-
   // ドロップダウン「編集」: 作成ページ（エディタ）へ直行
   const handleOpenEditor = useCallback(
     (id: string) => {
@@ -330,18 +193,6 @@ export function AnswerSheetDefinitionList() {
       )
     },
     [router]
-  )
-
-  const handleTransferOwner = useCallback(
-    async (nextUserId: string) => {
-      try {
-        await transferOwnerOf({ currentUserId: currentUser.id, nextUserId })
-        toast.success("担当を渡しました")
-      } catch {
-        // 失敗の通知は MutationCache が出す
-      }
-    },
-    [currentUser.id, transferOwnerOf]
   )
 
   const confirmDelete = async () => {
@@ -378,26 +229,6 @@ export function AnswerSheetDefinitionList() {
     [exportDefinition]
   )
 
-  const handleImport = useCallback(async () => {
-    try {
-      // 1. ファイル選択
-      const fileResult = await selectImportFile()
-      if (fileResult.canceled) return
-
-      // 2. インポート実行
-      const { warnings } = await importDefinition({
-        filePath: fileResult.filePath,
-        userId: currentUser.id,
-      })
-      toast.success("解答用紙を読み込みました")
-      for (const warning of warnings) {
-        toast.warning(warning)
-      }
-    } catch {
-      // 失敗の通知は MutationCache が出す
-    }
-  }, [currentUser.id, selectImportFile, importDefinition])
-
   const tagFilterConfig = useMemo(
     () => ({
       options: allTags,
@@ -426,52 +257,42 @@ export function AnswerSheetDefinitionList() {
         id: "create",
         priority: 80,
         node: (
-          <Button
-            onClick={handleCreate}
+          <CreateDefinitionButton
+            userId={currentUser.id}
             variant="outline"
             size="sm"
             className="rounded-lg"
           >
-            <Plus className="mr-2 h-4 w-4" />
             新規作成
-          </Button>
+          </CreateDefinitionButton>
         ),
         collapsedNode: (
-          <Button
-            onClick={handleCreate}
+          <CreateDefinitionButton
+            userId={currentUser.id}
             variant="ghost"
             size="sm"
             className="w-full justify-start"
           >
-            <Plus className="mr-2 h-4 w-4" />
             新規作成
-          </Button>
+          </CreateDefinitionButton>
         ),
       },
       {
         id: "import",
         priority: 70,
         node: (
-          <Button
-            onClick={handleImport}
+          <ImportDefinitionButton
+            userId={currentUser.id}
             variant="outline"
-            size="sm"
             className="rounded-lg"
-          >
-            <FolderInput className="mr-2 h-4 w-4" />
-            .asb 読み込み
-          </Button>
+          />
         ),
         collapsedNode: (
-          <Button
-            onClick={handleImport}
+          <ImportDefinitionButton
+            userId={currentUser.id}
             variant="ghost"
-            size="sm"
             className="w-full justify-start"
-          >
-            <FolderInput className="mr-2 h-4 w-4" />
-            .asb 読み込み
-          </Button>
+          />
         ),
       },
       {
@@ -505,14 +326,7 @@ export function AnswerSheetDefinitionList() {
     }
 
     return toolbarActions
-  }, [
-    allTags,
-    handleBulkAddTag,
-    handleCreate,
-    handleImport,
-    showAllOwners,
-    selectedIds,
-  ])
+  }, [allTags, currentUser.id, handleBulkAddTag, showAllOwners, selectedIds])
 
   return (
     <>
@@ -523,33 +337,10 @@ export function AnswerSheetDefinitionList() {
         isLoading={isLoading}
         name={(definition) => definition.name}
         summary={(definition) => (
-          <span className="flex flex-wrap items-center gap-1">
-            {(definition.tags ?? []).map((tag) => (
-              <Badge
-                key={tag.id}
-                variant="outline"
-                className="text-xs font-normal"
-                style={
-                  tag.color
-                    ? { borderColor: tag.color, color: tag.color }
-                    : undefined
-                }
-              >
-                {tag.name}
-              </Badge>
-            ))}
-            <span>
-              {definition.paperSize ?? "-"}{" "}
-              {definition.orientation === "landscape" ? "横" : "縦"}
-              {" / 設問数: "}
-              {definition.questionCount ?? 0}
-              {" / 合計配点: "}
-              {definition.totalPoints ?? 0}点 / 担当:{" "}
-              {definition.ownerId === currentUser.id
-                ? "自分"
-                : definition.ownerName}
-            </span>
-          </span>
+          <DefinitionSummary
+            definition={definition}
+            currentUserId={currentUser.id}
+          />
         )}
         dateLabel="使用日"
         referenceDate={(definition) => definition.referenceDate ?? null}
@@ -560,56 +351,15 @@ export function AnswerSheetDefinitionList() {
           return { label: status.text, url: status.url }
         }}
         rowMenu={(definition) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                aria-label={`${definition.name}の操作`}
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {definition.ownerId === currentUser.id && (
-                <DropdownMenuItem
-                  onClick={() => handleOpenEditor(definition.id)}
-                >
-                  <Pencil />
-                  編集
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem
-                onClick={() => duplicateDefinition(definition.id)}
-              >
-                <Copy />
-                複製
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport(definition)}>
-                <FolderOutput />
-                .asb 書き出し
-              </DropdownMenuItem>
-              {definition.ownerId === currentUser.id && (
-                <>
-                  <DropdownMenuItem
-                    onClick={() => setTransferTarget(definition)}
-                  >
-                    <UserRoundCog />
-                    担当を渡す
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => definitionDeletion.openWith(definition)}
-                  >
-                    <Trash2 />
-                    削除
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <DefinitionRowMenu
+            definition={definition}
+            isOwner={definition.ownerId === currentUser.id}
+            onEdit={() => handleOpenEditor(definition.id)}
+            onDuplicate={() => duplicateDefinition(definition.id)}
+            onExport={() => handleExport(definition)}
+            onTransfer={() => setTransferTarget(definition)}
+            onDelete={() => definitionDeletion.openWith(definition)}
+          />
         )}
         actions={actions}
         search={{
@@ -645,10 +395,9 @@ export function AnswerSheetDefinitionList() {
             ? "解答用紙がありません"
             : "担当している解答用紙がありません",
           action: (
-            <Button variant="outline" onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" />
+            <CreateDefinitionButton userId={currentUser.id} variant="outline">
               最初の解答用紙を作成
-            </Button>
+            </CreateDefinitionButton>
           ),
         }}
         noMatchMessage="条件に一致する解答用紙がありません"
@@ -678,35 +427,14 @@ export function AnswerSheetDefinitionList() {
         definition={transferTarget}
         currentUserId={currentUser.id}
         onClose={() => setTransferTarget(null)}
-        onTransfer={handleTransferOwner}
       />
 
-      <AlertDialog
+      <DeleteDefinitionDialog
         open={definitionDeletion.isOpen}
         onOpenChange={definitionDeletion.handleOpenChange}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>解答用紙を削除しますか？</AlertDialogTitle>
-            <AlertDialogDescription>
-              「{definitionDeletion.target?.name}
-              」を削除します。この操作は取り消せません。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction
-              className={buttonVariants({ variant: "destructive" })}
-              onClick={(event) => {
-                event.preventDefault()
-                void confirmDelete()
-              }}
-            >
-              削除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        definitionName={definitionDeletion.target?.name}
+        onConfirm={confirmDelete}
+      />
     </>
   )
 }

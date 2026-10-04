@@ -160,7 +160,7 @@ TypeError: designSystem.canonicalizeCandidates is not a function
 （`gridBuilder.ts:186-191`）。通常のセルと同じ形にしてしまっているので切れ目が消えている。
 ここを**行の集まりとして持てるようにする**のが土台になる。
 
-いまの配置ループ（`computeMultiPageLayout.ts:689`）は、
+いまの配置ループ（`computeMultiPageLayout.ts` の「大問を各段・ページに配置」）は、
 
 ```ts
 if (colCurrentY[...] + spacingHeight + majorHeight > contentMaxY &&

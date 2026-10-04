@@ -4,7 +4,8 @@
  * 一覧・単体取得・削除・担当の受け渡しと、解答用紙1件の列（{@link asbDefinitionRow}）。
  * 子（ヘッダー項目・設問・セルの中身）の書き込みは実体ごとのモジュールが持ち、
  * 木をまるごと置き換える経路は `asbDefinitionReplace.ts` にある。
- * DB行 ↔ AnswerSheetDefinition の変換は `asbDefinitionConverters.ts`。
+ * DB行 → AnswerSheetDefinition の変換は `asbDefinitionConverters.ts`、
+ * 用紙設定 ↔ DBフラットカラムの変換は `asbPaperSettingsConverters.ts`。
  */
 
 import type { Prisma } from "@prisma/client"
@@ -15,11 +16,9 @@ import type {
   AsbDefinitionAttributes,
   LabelCategory,
 } from "../../../src/types/answerSheetDefinition.types"
-import {
-  dbToDefinition,
-  flattenGlobalSettings,
-} from "./asbDefinitionConverters"
+import { dbToDefinition } from "./asbDefinitionConverters"
 import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
+import { flattenGlobalSettings } from "./asbPaperSettingsConverters"
 import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
 import { PUBLIC_USER_OMIT } from "./publicUser"
