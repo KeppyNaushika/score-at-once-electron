@@ -6,13 +6,28 @@
 
 import "@testing-library/jest-dom/vitest"
 
-import { cleanup } from "@testing-library/react"
+import { cleanup, configure } from "@testing-library/react"
 import { afterEach, vi } from "vitest"
 
 // 各テスト後にReactツリーをクリーンアップ
 afterEach(() => {
   cleanup()
 })
+
+/**
+ * `findBy*` / `waitFor` が待つ上限（Testing Library の既定は 1000ms）。
+ *
+ * 画面は取得を段で重ねて描く。たとえば評価項目（03）は、資料の詳細が届いてから
+ * 項目ごとの点数を取りに行き、両方そろってはじめて「変換表にない評価」が出る。
+ * 手元で単独に走らせれば 50ms 前後だが、同じ機械で他の検査や型検査が並走すると
+ * 1000ms に届く（CPU を 8 倍に詰めた実測で最大 1040ms）。既定のままだと、
+ * 画面は正しいのに待ち時間切れで落ちる。
+ *
+ * 上限は条件がそろうまでの猶予であって、そろえば即座に先へ進む。表示の誤りは
+ * 待っても直らないので、上限を延ばしても見逃しは増えない。テスト1本の上限
+ * （`vitest.config.ts` の `testTimeout`）より十分短く保つ
+ */
+configure({ asyncUtilTimeout: 5000 })
 
 /**
  * Radix UI と `OverflowToolbar` が必要とするグローバルAPI（jsdom は持たない）。

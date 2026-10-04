@@ -28,6 +28,7 @@ import {
   createClientDatabase,
   createSyncInstance,
   isoMinutesAgo,
+  TWO_CLIENT_SETUP_TIMEOUT_MS,
   withDatabase,
 } from "./twoClientHarness"
 
@@ -60,10 +61,19 @@ const {
   setUserScoringStatusColor,
 } = await import("../../electron-src/lib/prisma/userScoringStatusColor")
 
-const TEST_ROOT = path.join(os.tmpdir(), "score-at-once-scoring-color-sync")
-const NAS_DIR = path.join(TEST_ROOT, "nas")
-const DB_A = path.join(TEST_ROOT, "client-a", "database.db")
-const DB_B = path.join(TEST_ROOT, "client-b", "database.db")
+/**
+ * 試験ごとに作り直す置き場（NAS と2端末の DB）。
+ *
+ * **名前を固定しない。** `os.tmpdir()` は利用者ごとに1つで、別の作業ツリーや並行して
+ * 走る別の vitest とも同じ場所を指す。固定名だと相手の `beforeEach` が DB と NAS を
+ * 消して作り直し、`no such table: _sns_tick`・`disk I/O error`・`database disk image
+ * is malformed` で落ちる。試験ごとに分けるのは、時間切れで打ち切られた前の試験の
+ * 下ごしらえ（裏で走り続ける）に次の試験の置き場を触らせないためでもある。
+ */
+let testRoot: string
+let nasDir: string
+let dbA: string
+let dbB: string
 
 /** 両端末で同じ値でなければ相手がスキーマ不一致でスキップされる */
 const SCHEMA_VERSION = "scoring-color-sync-test"
@@ -144,20 +154,25 @@ const roundTrip = async () => {
 }
 
 beforeEach(async () => {
-  fs.rmSync(TEST_ROOT, { recursive: true, force: true })
-  fs.mkdirSync(NAS_DIR, { recursive: true })
-  createClientDatabase(DB_A)
-  createClientDatabase(DB_B)
-  prismaA = createPrismaClientForPath(DB_A)
-  prismaB = createPrismaClientForPath(DB_B)
-  syncA = createSyncInstance(DB_A, "client-a", NAS_DIR, SCHEMA_VERSION)
-  syncB = createSyncInstance(DB_B, "client-b", NAS_DIR, SCHEMA_VERSION)
+  testRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), "score-at-once-scoring-color-sync-")
+  )
+  nasDir = path.join(testRoot, "nas")
+  dbA = path.join(testRoot, "client-a", "database.db")
+  dbB = path.join(testRoot, "client-b", "database.db")
+  fs.mkdirSync(nasDir, { recursive: true })
+  createClientDatabase(dbA)
+  createClientDatabase(dbB)
+  prismaA = createPrismaClientForPath(dbA)
+  prismaB = createPrismaClientForPath(dbB)
+  syncA = createSyncInstance(dbA, "client-a", nasDir, SCHEMA_VERSION)
+  syncB = createSyncInstance(dbB, "client-b", nasDir, SCHEMA_VERSION)
 
   // 設定の親になる利用者を先に行き渡らせる（外部キーの相手が無いと検査にならない）
-  insertUser(DB_A, isoMinutesAgo(120))
+  insertUser(dbA, isoMinutesAgo(120))
   await syncRound("A 利用者の送出", syncA)
   await syncRound("B 利用者の取り込み", syncB)
-})
+}, TWO_CLIENT_SETUP_TIMEOUT_MS)
 
 afterEach(async () => {
   syncA.stop()
@@ -165,7 +180,7 @@ afterEach(async () => {
   activeClient = null
   await prismaA.$disconnect()
   await prismaB.$disconnect()
-  fs.rmSync(TEST_ROOT, { recursive: true, force: true })
+  fs.rmSync(testRoot, { recursive: true, force: true })
 })
 
 describe("採点状態の表示色の同期", () => {
@@ -211,8 +226,8 @@ describe("採点状態の表示色の同期", () => {
       })
     }
     for (const [label, dbPath] of [
-      ["端末A", DB_A],
-      ["端末B", DB_B],
+      ["端末A", dbA],
+      ["端末B", dbB],
     ] as const) {
       expect(presetIdOf(dbPath), label).toBe("vivid")
     }
@@ -226,8 +241,8 @@ describe("採点状態の表示色の同期", () => {
 
     // 土台は1行なので、組ごとの勝ち負けではなくその1行の勝ち負けで決まる
     for (const [label, dbPath] of [
-      ["端末A", DB_A],
-      ["端末B", DB_B],
+      ["端末A", dbA],
+      ["端末B", dbB],
     ] as const) {
       expect(presetIdOf(dbPath), label).toBe("soft")
     }
