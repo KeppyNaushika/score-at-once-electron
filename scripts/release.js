@@ -2,7 +2,6 @@ const { execSync } = require("child_process")
 const fs = require("fs")
 const path = require("path")
 const { notifyRelease } = require("./discord-notify").default
-require("dotenv").config()
 
 async function createRelease() {
   try {

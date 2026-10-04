@@ -1,6 +1,10 @@
-import dotenv from "dotenv"
 import { request } from "https"
-dotenv.config()
+
+try {
+  process.loadEnvFile()
+} catch {
+  // .env が無ければ DISCORD_WEBHOOK_URL 未設定として通知をスキップする
+}
 
 /**
  * Discord Webhookにメッセージを送信

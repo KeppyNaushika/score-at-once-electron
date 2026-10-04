@@ -1,5 +1,4 @@
 const { execSync } = require("child_process")
-require("dotenv").config()
 
 /**
  * GitHub Actions経由でリリースをトリガーする
