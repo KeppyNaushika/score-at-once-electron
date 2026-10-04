@@ -1,9 +1,10 @@
 "use client"
 
-import { Grid, type LucideIcon, User } from "lucide-react"
+import { Bot, Grid, type LucideIcon, User } from "lucide-react"
 
 import type { GradingMode } from "@/components/exams/07-score-at-once/types"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { useAiGradingAvailability } from "@/hooks/useAiGradingAvailability"
 import { ignoreDeselect } from "@/lib/toggleSelection"
 
 interface GradingModeOption {
@@ -12,14 +13,17 @@ interface GradingModeOption {
   Icon: LucideIcon
 }
 
-const GRADING_MODE_OPTIONS: GradingModeOption[] = [
+const MANUAL_GRADING_MODE_OPTIONS: GradingModeOption[] = [
   { mode: "grid", label: "一覧表示", Icon: Grid },
   { mode: "individual", label: "個別表示", Icon: User },
 ]
 
-const GRADING_MODES = GRADING_MODE_OPTIONS.map(
-  (gradingModeOption) => gradingModeOption.mode
-)
+/** AI採点（実験的機能）。同意して API キーを保存した事業者があるときだけ並べる（設計 §9-1） */
+const AI_GRADING_MODE_OPTION: GradingModeOption = {
+  mode: "ai",
+  label: "AI採点",
+  Icon: Bot,
+}
 
 interface GradingModeToggleProps {
   mode: GradingMode
@@ -32,6 +36,15 @@ export default function GradingModeToggle({
   onModeChange,
   className = "",
 }: GradingModeToggleProps) {
+  const { unlockedProviders } = useAiGradingAvailability()
+  const gradingModeOptions =
+    unlockedProviders.length > 0
+      ? [...MANUAL_GRADING_MODE_OPTIONS, AI_GRADING_MODE_OPTION]
+      : MANUAL_GRADING_MODE_OPTIONS
+  const gradingModes = gradingModeOptions.map(
+    (gradingModeOption) => gradingModeOption.mode
+  )
+
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <span className="text-sm font-medium text-muted-foreground">
@@ -46,9 +59,9 @@ export default function GradingModeToggle({
         value={mode}
         aria-label="採点モード"
         className="rounded-lg border bg-muted p-1"
-        onValueChange={ignoreDeselect(GRADING_MODES, onModeChange)}
+        onValueChange={ignoreDeselect(gradingModes, onModeChange)}
       >
-        {GRADING_MODE_OPTIONS.map((gradingModeOption) => (
+        {gradingModeOptions.map((gradingModeOption) => (
           <ToggleGroupItem
             key={gradingModeOption.mode}
             value={gradingModeOption.mode}

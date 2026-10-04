@@ -38,8 +38,12 @@ export type ScoringExamStudent =
 
 /**
  * 採点モード
+ * - "grid": 一覧表示
+ * - "individual": 個別表示
+ * - "ai": AI採点（実験的機能。同意して API キーを保存した利用者にだけ現れる。
+ *   docs/vlm-grading-design.md §9-1・§10）
  */
-export type GradingMode = "grid" | "individual"
+export type GradingMode = "grid" | "individual" | "ai"
 
 /**
  * レイアウト方向

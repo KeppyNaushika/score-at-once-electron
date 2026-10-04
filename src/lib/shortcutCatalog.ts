@@ -98,6 +98,11 @@ export const SHORTCUT_LABELS: Record<string, string> = {
   "tool.line": "線ツール",
   "tool.rectangle": "矩形ツール",
   "tool.ellipse": "楕円ツール",
+
+  // AI採点（実験的機能。同意するまで設定画面にも出さないので、分類には載せない）
+  "aiGrading.adopt": "AI の判定を採用",
+  "aiGrading.prevAttempt": "前の AI の判定",
+  "aiGrading.nextAttempt": "次の AI の判定",
 }
 
 /**
