@@ -24,6 +24,7 @@ import { createStudentApi } from "./preload-apis/studentApi"
 import { createSubtotalApi } from "./preload-apis/subtotalApi"
 import { createSyncApi } from "./preload-apis/syncApi"
 import { createTagApi } from "./preload-apis/tagApi"
+import { createUnifiedArchiveApi } from "./preload-apis/unifiedArchiveApi"
 import { createUserExamApi } from "./preload-apis/userExamApi"
 
 declare global {
@@ -60,6 +61,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ...createNavigationApi(),
   ...createSyncApi(),
   ...createAuditLogApi(),
+  ...createUnifiedArchiveApi(),
 })
 
 process.once("loaded", () => {

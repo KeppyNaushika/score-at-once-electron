@@ -13,6 +13,10 @@ import {
   toolbarButtonAction,
 } from "@/components/common/OverflowToolbar"
 import { Button } from "@/components/ui/button"
+import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
+import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
+import { unifiedArchiveImportToolbarAction } from "@/components/unified-archive/import/unifiedArchiveImportToolbarAction"
+import { UnifiedArchiveImportWizard } from "@/components/unified-archive/import/UnifiedArchiveImportWizard"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
@@ -92,6 +96,10 @@ export function GradeListContainer() {
   const [importArchivePath, setImportArchivePath] = useState<string | null>(
     null
   )
+  const [showUnifiedImport, setShowUnifiedImport] = useState(false)
+  /** .sao 書き出しを開いたときの最初の選択。null の間は閉じている */
+  const [unifiedExportSelection, setUnifiedExportSelection] =
+    useState<UnifiedArchiveExportInitialSelection | null>(null)
   // 削除確認を開いている成績算出。押しただけでは消さず、確認で決めてもらう
   const gradeDeletion = useDialogTarget<GradeSummary>()
 
@@ -269,6 +277,10 @@ export function GradeListContainer() {
         label: ".grade 読み込み",
         onClick: handleImport,
       }),
+      unifiedArchiveImportToolbarAction({
+        priority: 69,
+        onClick: () => setShowUnifiedImport(true),
+      }),
     ]
 
     if (selectedIds.size > 0) {
@@ -307,6 +319,9 @@ export function GradeListContainer() {
             grade={grade}
             onDuplicate={() => handleDuplicate(grade.id)}
             onExport={() => exportArchive.mutate(grade.id)}
+            onUnifiedExport={() =>
+              setUnifiedExportSelection({ roots: { Grade: [grade.id] } })
+            }
             onRequestDelete={() => gradeDeletion.openWith(grade)}
           />
         )}
@@ -356,12 +371,25 @@ export function GradeListContainer() {
         loading={deleteGrade.isPending}
       />
 
+      <UnifiedArchiveExportDialog
+        open={unifiedExportSelection !== null}
+        onOpenChange={(open) => {
+          if (!open) setUnifiedExportSelection(null)
+        }}
+        initialSelection={unifiedExportSelection ?? {}}
+      />
+
       <GradeImportDialog
         open={importPreview !== null}
         preview={importPreview}
         importing={executeImport.isPending}
         onCancel={handleImportCancel}
         onConfirm={handleImportConfirm}
+      />
+
+      <UnifiedArchiveImportWizard
+        open={showUnifiedImport}
+        onOpenChange={setShowUnifiedImport}
       />
     </>
   )

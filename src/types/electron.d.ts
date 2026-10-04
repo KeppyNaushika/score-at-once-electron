@@ -34,6 +34,7 @@ import type { createStudentApi } from "@/electron-src/preload-apis/studentApi"
 import type { createSubtotalApi } from "@/electron-src/preload-apis/subtotalApi"
 import type { createSyncApi } from "@/electron-src/preload-apis/syncApi"
 import type { createTagApi } from "@/electron-src/preload-apis/tagApi"
+import type { createUnifiedArchiveApi } from "@/electron-src/preload-apis/unifiedArchiveApi"
 import type { createUserExamApi } from "@/electron-src/preload-apis/userExamApi"
 
 // ---------------------------------------------------------------------------
@@ -102,7 +103,8 @@ export type MyAPI = ReturnType<typeof createExamApi> &
   ReturnType<typeof createMiscApi> &
   ReturnType<typeof createNavigationApi> &
   ReturnType<typeof createSyncApi> &
-  ReturnType<typeof createAuditLogApi>
+  ReturnType<typeof createAuditLogApi> &
+  ReturnType<typeof createUnifiedArchiveApi>
 
 // ---------------------------------------------------------------------------
 // Global Window declarations

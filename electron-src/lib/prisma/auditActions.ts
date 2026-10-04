@@ -669,6 +669,25 @@ const AUDIT_ACTIONS = {
     label: "{target}",
   },
   /**
+   * 統合アーカイブ（.sao）の書き出し。試験・資料・成績算出・解答用紙定義をまたぐので
+   * どの作業領域にも属さない。`entityId` は出力ファイル名、metadata に選んだ根の件数・
+   * 外した行の件数・欠けたファイルの数が入る。
+   */
+  "archive.unified.export": {
+    category: "system",
+    verb: "export",
+    label: "統合アーカイブ「{target}」を書き出しました",
+  },
+  /**
+   * 統合アーカイブ（.sao）の取り込み。`entityId` はアーカイブの書き出し日時
+   * （manifest.exportedAt）、metadata に方針と、表をまたいだ件数の合計が入る。
+   */
+  "archive.unified.import": {
+    category: "system",
+    verb: "import",
+    label: "統合アーカイブ「{target}」を取り込みました",
+  },
+  /**
    * NAS同期が、別id・同一ユニークキーの行を1つへ「畳んだ」ことの記録（**過去の記録専用**）。
    *
    * sqlite-nas-sync v0.19.0 までは、かぶった行の片方を物理的に消し、子を残った側へ

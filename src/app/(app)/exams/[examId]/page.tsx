@@ -1,7 +1,13 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { FolderOutput, MoreVertical, Trash2, Users } from "lucide-react"
+import {
+  FileArchive,
+  FolderOutput,
+  MoreVertical,
+  Trash2,
+  Users,
+} from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -26,6 +32,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useExamDetail } from "@/hooks/useExamDetail"
 import { getExamProgress } from "@/lib/examStatus"
@@ -42,6 +49,7 @@ export default function ExamDetailPage() {
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
+  const [showUnifiedExportDialog, setShowUnifiedExportDialog] = useState(false)
   const [showMemberDialog, setShowMemberDialog] = useState(false)
   /** 書き出しの結果。渡している間はモーダルが結果の段を見せる */
   const [exportOutcome, setExportOutcome] = useState<ExportOutcome | null>(null)
@@ -211,6 +219,12 @@ export default function ExamDetailPage() {
                   <FolderOutput />
                   .score 書き出し
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setShowUnifiedExportDialog(true)}
+                >
+                  <FileArchive />
+                  .sao 書き出し
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setShowDeleteModal(true)}
@@ -231,6 +245,11 @@ export default function ExamDetailPage() {
         onExport={handleExport}
         isExporting={exportExamArchive.isPending}
         exportOutcome={exportOutcome}
+      />
+      <UnifiedArchiveExportDialog
+        open={showUnifiedExportDialog}
+        onOpenChange={setShowUnifiedExportDialog}
+        initialSelection={{ roots: { Exam: [examId] } }}
       />
       <MemberInviteDialog
         isOpen={showMemberDialog}

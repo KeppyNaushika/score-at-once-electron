@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { FolderOutput, MoreVertical, Trash2 } from "lucide-react"
+import { FileArchive, FolderOutput, MoreVertical, Trash2 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import { getGradeCompletion } from "@/lib/gradeStatus"
 import { gradeWorkflowPhases, gradeWorkflowTabs } from "@/lib/workflowTabs"
 import {
@@ -48,6 +49,7 @@ export default function GradeDetailPage() {
   const exportArchive = useMutation(exportGradeArchiveMutation())
   // 押しただけでは消さず、確認で決めてもらう
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [showUnifiedExportDialog, setShowUnifiedExportDialog] = useState(false)
 
   /** 触った欄だけが載って来る。載っていない列は `undefined` のまま送らない */
   const handleCommitBasics = async (changed: Partial<EntityOverviewBasics>) => {
@@ -148,6 +150,12 @@ export default function GradeDetailPage() {
                 <FolderOutput />
                 .grade 書き出し
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setShowUnifiedExportDialog(true)}
+              >
+                <FileArchive />
+                .sao 書き出し
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => setIsDeleteModalOpen(true)}
@@ -159,6 +167,11 @@ export default function GradeDetailPage() {
             </DropdownMenuContent>
           </DropdownMenu>
         }
+      />
+      <UnifiedArchiveExportDialog
+        open={showUnifiedExportDialog}
+        onOpenChange={setShowUnifiedExportDialog}
+        initialSelection={{ roots: { Grade: [gradeId] } }}
       />
       <DeleteGradeModal
         open={isDeleteModalOpen}

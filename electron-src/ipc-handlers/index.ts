@@ -38,6 +38,7 @@ import { studentHandlers } from "./studentHandlers"
 import { subtotalGroupHandlers } from "./subtotalGroupHandlers"
 import { syncHandlers } from "./syncHandlers"
 import { tagHandlers } from "./tagHandlers"
+import { unifiedArchiveHandlers } from "./unifiedArchiveHandlers"
 import { userExamHandlers } from "./userExamHandlers"
 
 /** ドメインごとの登録簿。件数の照合（＝チャンネル名の衝突検出）に使う */
@@ -70,6 +71,7 @@ const handlerGroups = [
   subtotalGroupHandlers,
   syncHandlers,
   tagHandlers,
+  unifiedArchiveHandlers,
   userExamHandlers,
 ]
 
@@ -109,6 +111,7 @@ const handlers = {
   ...subtotalGroupHandlers,
   ...syncHandlers,
   ...tagHandlers,
+  ...unifiedArchiveHandlers,
   ...userExamHandlers,
 }
 
