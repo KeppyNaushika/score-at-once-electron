@@ -1,32 +1,18 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  ClipboardList,
-  FolderInput,
-  FolderOutput,
-  MoreHorizontal,
-  Plus,
-  Trash2,
-} from "lucide-react"
+import { ClipboardList, FolderInput, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import {
-  BulkTagAssignButton,
-  BulkTagAssignPanel,
-} from "@/components/common/BulkTagAssignButton"
+import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
 import { EntityListPage } from "@/components/common/EntityListPage"
-import type { ToolbarAction } from "@/components/common/OverflowToolbar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  type ToolbarAction,
+  toolbarButtonAction,
+} from "@/components/common/OverflowToolbar"
+import { Button } from "@/components/ui/button"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
@@ -53,6 +39,8 @@ import type { ImportAction } from "@/types/importAction.types"
 
 import { DeleteCourseworkModal } from "../DeleteCourseworkModal"
 import { CourseworkImportDialog } from "./CourseworkImportDialog"
+import { CourseworkRowMenu } from "./CourseworkRowMenu"
+import { CourseworkRowSummary } from "./CourseworkRowSummary"
 
 /** 試験外成績資料一覧のフィルタ対象値（名前・説明・タグ名・学級名／タグ／学級／実施日） */
 const COURSEWORK_FILTER_ACCESSORS: ListFilterAccessors<CourseworkSummary> = {
@@ -315,79 +303,31 @@ export function CourseworkListContainer() {
 
   const actions = useMemo<ToolbarAction[]>(() => {
     const toolbarActions: ToolbarAction[] = [
-      {
+      toolbarButtonAction({
         id: "create",
         priority: 80,
-        node: (
-          <Button
-            onClick={() => void handleCreate()}
-            variant="outline"
-            size="sm"
-            className="rounded-lg"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            新規作成
-          </Button>
-        ),
-        collapsedNode: (
-          <Button
-            onClick={() => void handleCreate()}
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            新規作成
-          </Button>
-        ),
-      },
-      {
+        icon: Plus,
+        label: "新規作成",
+        onClick: () => void handleCreate(),
+      }),
+      toolbarButtonAction({
         id: "import",
         priority: 70,
-        node: (
-          <Button
-            onClick={handleImport}
-            variant="outline"
-            size="sm"
-            className="rounded-lg"
-          >
-            <FolderInput className="mr-2 h-4 w-4" />
-            .coursework 読み込み
-          </Button>
-        ),
-        collapsedNode: (
-          <Button
-            onClick={handleImport}
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start"
-          >
-            <FolderInput className="mr-2 h-4 w-4" />
-            .coursework 読み込み
-          </Button>
-        ),
-      },
+        icon: FolderInput,
+        label: ".coursework 読み込み",
+        onClick: handleImport,
+      }),
     ]
 
     if (selectedIds.size > 0) {
-      toolbarActions.push({
-        id: "bulk-tag",
-        priority: 60,
-        node: (
-          <BulkTagAssignButton
-            selectedCount={selectedIds.size}
-            allTags={allTags}
-            onAssign={handleBulkAddTag}
-          />
-        ),
-        collapsedNode: (
-          <BulkTagAssignPanel
-            selectedCount={selectedIds.size}
-            allTags={allTags}
-            onAssign={handleBulkAddTag}
-          />
-        ),
-      })
+      toolbarActions.push(
+        bulkTagToolbarAction({
+          priority: 60,
+          selectedCount: selectedIds.size,
+          allTags,
+          onAssign: handleBulkAddTag,
+        })
+      )
     }
 
     return toolbarActions
@@ -402,31 +342,7 @@ export function CourseworkListContainer() {
         isLoading={isLoading}
         name={(coursework) => coursework.name}
         summary={(coursework) => (
-          <span className="flex flex-wrap items-center gap-1">
-            {coursework.tags.map((courseworkTag) => (
-              <Badge
-                key={courseworkTag.tag.id}
-                variant="outline"
-                className="text-xs font-normal"
-                style={
-                  courseworkTag.tag.color
-                    ? {
-                        borderColor: courseworkTag.tag.color,
-                        color: courseworkTag.tag.color,
-                      }
-                    : undefined
-                }
-              >
-                {courseworkTag.tag.name}
-              </Badge>
-            ))}
-            <span>
-              {coursework.description || "説明なし"}
-              {" / 生徒: "}
-              {coursework.students.length}名 / 評価項目:{" "}
-              {coursework.items.length}
-            </span>
-          </span>
+          <CourseworkRowSummary coursework={coursework} />
         )}
         dateLabel="実施日"
         referenceDate={(coursework) => coursework.referenceDate}
@@ -437,31 +353,11 @@ export function CourseworkListContainer() {
           return { label: status.text, url: status.url }
         }}
         rowMenu={(coursework) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                aria-label={`${coursework.name}の操作`}
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport(coursework)}>
-                <FolderOutput />
-                .coursework 書き出し
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => courseworkDeletion.openWith(coursework)}
-              >
-                <Trash2 />
-                削除
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <CourseworkRowMenu
+            coursework={coursework}
+            onExport={() => handleExport(coursework)}
+            onRequestDelete={() => courseworkDeletion.openWith(coursework)}
+          />
         )}
         actions={actions}
         search={{

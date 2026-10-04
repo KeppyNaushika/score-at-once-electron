@@ -38,7 +38,7 @@ import {
 } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import type { EntityOverviewBasics } from "@/components/common/EntityOverviewPage"
+import type { EntityOverviewBasics } from "@/components/common/entity-overview/types"
 import { EntityOverviewPage } from "@/components/common/EntityOverviewPage"
 import { examWorkflowPhases, examWorkflowTabs } from "@/lib/workflowTabs"
 

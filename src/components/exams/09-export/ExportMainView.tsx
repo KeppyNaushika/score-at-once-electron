@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import {
   ExportOptionsCard,
@@ -15,6 +15,11 @@ import { StudentSelectionCard } from "@/components/exams/09-export/components/St
 import { useDataFileExports } from "@/components/exams/09-export/hooks/useDataFileExports"
 import { useExcelPreview } from "@/components/exams/09-export/hooks/useExcelPreview"
 import { useExportPage } from "@/components/exams/09-export/hooks/useExportPage"
+import { useExportPreviewTarget } from "@/components/exams/09-export/hooks/useExportPreviewTarget"
+import {
+  useExportWarning,
+  type ValidatedExportType,
+} from "@/components/exams/09-export/hooks/useExportWarning"
 import { useIndividualReportPreview } from "@/components/exams/09-export/hooks/useIndividualReportPreview"
 import { useReturnDiff } from "@/components/exams/09-export/hooks/useReturnDiff"
 import { useScoredAnswerPdfExport } from "@/components/exams/09-export/hooks/useScoredAnswerPdfExport"
@@ -29,29 +34,22 @@ import {
   recordUnresolvedConflictsMutation,
   validateScoringDataMutation,
 } from "@/queries/export"
-import type {
-  ConflictWarning,
-  ScoringValidationWarnings,
-} from "@/types/exportValidation.types"
 
 export default function ExportMainView() {
   const currentUser = useCurrentUser()
   const router = useRouter()
   const [exportTab, setExportTab] = useState<ExportTabType>("scored-answers")
-  const [showWarningModal, setShowWarningModal] = useState(false)
-  const [warningData, setWarningData] = useState<ScoringValidationWarnings>({
-    noScoringData: [],
-    ungraded: [],
-    missingPartialScore: [],
-    conflicted: [],
-  })
-  const [conflictScoreImpact, setConflictScoreImpact] = useState(0)
-  const [conflictCheckError, setConflictCheckError] = useState<
-    string | undefined
-  >(undefined)
-  const [pendingExportType, setPendingExportType] = useState<
-    "scored-answers" | "grading-data" | "individual-reports" | null
-  >(null)
+  const {
+    showWarningModal,
+    warningData,
+    conflictScoreImpact,
+    conflictCheckError,
+    openWarning,
+    closeWarning,
+    abandonWarning,
+    acceptWarning,
+    takeAcknowledgedConflicts,
+  } = useExportWarning()
 
   const {
     exam,
@@ -145,29 +143,25 @@ export default function ExportMainView() {
     capture: captureReturn,
   } = useReturnDiff(exam?.id ?? "")
 
-  // プレビュー対象の生徒は個人成績表と採点済み答案で共通。生徒セレクタは1つしか
-  // 無いので、タブごとに別々の状態を持つと「別の生徒を見ている」状態が生まれる。
-  const [pickedStudentId, setPickedStudentId] = useState<string | null>(null)
-  const previewStudentId =
-    pickedStudentId && selectedExamStudentIds.includes(pickedStudentId)
-      ? pickedStudentId
-      : (selectedExamStudentIds[0] ?? null)
+  const {
+    previewStudentId,
+    setPickedStudentId,
+    previewReloadKey,
+    reloadPreview,
+    toggleStudentDroppingPick,
+    removeStudentsDroppingPick,
+    replaceSelectionDroppingPick,
+  } = useExportPreviewTarget({
+    selectedExamStudentIds,
+    selectedStudents,
+    toggleStudent,
+    removeStudents,
+    replaceSelection,
+  })
 
-  // タブへ戻るたびに増やす読み直しの合図。出力はデータを読み直すので、
-  // 取得済みのまま据え置くとプレビューと出力が食い違う。
-  const [previewReloadKey, setPreviewReloadKey] = useState(0)
   const handleTabChange = (tab: ExportTabType) => {
     setExportTab(tab)
-    setPreviewReloadKey((key) => key + 1)
-  }
-
-  /** 出力対象から外れた生徒はプレビューの選択ごと捨てる（戻したときに跳ばない） */
-  const dropPickIfRemoved = (
-    isStillSelected: (studentId: string) => boolean
-  ) => {
-    if (pickedStudentId && !isStillSelected(pickedStudentId)) {
-      setPickedStudentId(null)
-    }
+    reloadPreview()
   }
 
   const {
@@ -222,21 +216,12 @@ export default function ExportMainView() {
     reloadKey: previewReloadKey,
   })
 
-  /**
-   * 「このまま出力」で承知した食い違い。
-   * 出力が実際に完了した時点で監査ログへ書く（保存ダイアログのキャンセルや
-   * 失敗で「配った」という嘘の記録が残らないように、記録は完了後に限る）。
-   */
-  const acknowledgedConflictsRef = useRef<{
-    conflicts: ConflictWarning[]
-    scoreImpact: number
-  } | null>(null)
-
+  /** 「このまま出力」で承知した食い違いを、出力の完了後に監査ログへ書く */
   const recordUnresolvedConflictExport = useCallback(
     async (exportType: string) => {
-      const acknowledged = acknowledgedConflictsRef.current
-      if (!exam || !acknowledged) return
-      acknowledgedConflictsRef.current = null
+      if (!exam) return
+      const acknowledged = takeAcknowledgedConflicts()
+      if (!acknowledged) return
       await recordUnresolvedConflicts({
         examId: exam.id,
         userId: currentUser.id,
@@ -248,7 +233,7 @@ export default function ExportMainView() {
         scoreImpact: acknowledged.scoreImpact,
       })
     },
-    [exam, recordUnresolvedConflicts, currentUser.id]
+    [exam, recordUnresolvedConflicts, currentUser.id, takeAcknowledgedConflicts]
   )
 
   // 採点済み答案の Canvas 描画ベース PDF 出力（ストリーミング処理）
@@ -294,7 +279,7 @@ export default function ExportMainView() {
    * @returns true: バリデーション通過（警告なし）、false: 警告あり（モーダル表示）
    */
   const validateBeforeExport = async (
-    exportType: "scored-answers" | "grading-data" | "individual-reports"
+    exportType: ValidatedExportType
   ): Promise<boolean> => {
     if (!exam) return false
     const result = await validateScoringData({
@@ -304,11 +289,7 @@ export default function ExportMainView() {
     })
 
     if (result.hasWarnings) {
-      setWarningData(result.warnings)
-      setConflictScoreImpact(result.conflictScoreImpact)
-      setConflictCheckError(result.conflictCheckError)
-      setPendingExportType(exportType)
-      setShowWarningModal(true)
+      openWarning(result, exportType)
       return false
     }
 
@@ -321,7 +302,7 @@ export default function ExportMainView() {
    * 警告モーダルを表示し、続行時は handleContinueExport から execute が呼ばれる。
    */
   const runValidatedExport = async (
-    exportType: "scored-answers" | "grading-data" | "individual-reports",
+    exportType: ValidatedExportType,
     // 警告なしで通った経路なので食い違いはゼロ＝監査記録は不要。
     // execute の成否（boolean を返すものもある）はここでは見ない。
     execute: () => Promise<void | boolean>
@@ -364,26 +345,15 @@ export default function ExportMainView() {
    */
   const handleGoToFinalize = () => {
     if (!exam) return
-    setShowWarningModal(false)
-    setPendingExportType(null)
+    abandonWarning()
     router.push(
       workflowStepHref(`/exams/${exam.id}`, examWorkflowSteps, "08-finalize")
     )
   }
 
   const handleContinueExport = async () => {
-    setShowWarningModal(false)
-    const exportType = pendingExportType
-    setPendingExportType(null)
-
     // 未解決の食い違いを承知したことを控える。記録は出力の完了後（下記）。
-    acknowledgedConflictsRef.current =
-      warningData.conflicted.length > 0
-        ? {
-            conflicts: warningData.conflicted,
-            scoreImpact: conflictScoreImpact,
-          }
-        : null
+    const exportType = acceptWarning()
 
     if (exportType === "grading-data") {
       if (await executeExportGradingData()) {
@@ -423,31 +393,14 @@ export default function ExportMainView() {
               selectedStatuses={selectedStatuses}
               setSelectedStatuses={setSelectedStatuses}
               selectedStudents={selectedStudents}
-              toggleStudent={(examStudentId) => {
-                dropPickIfRemoved(
-                  (pickedId) =>
-                    pickedId !== examStudentId ||
-                    !selectedStudents.has(examStudentId)
-                )
-                toggleStudent(examStudentId)
-              }}
+              toggleStudent={toggleStudentDroppingPick}
               addStudents={addStudents}
-              removeStudents={(examStudentIds) => {
-                dropPickIfRemoved(
-                  (pickedId) => !examStudentIds.includes(pickedId)
-                )
-                removeStudents(examStudentIds)
-              }}
+              removeStudents={removeStudentsDroppingPick}
               // 答案返却・差分（生徒選択タブ内に表示）
               // 差分の件数・詳細は表示フィルタと独立させるため未フィルタの全生徒を渡す
               allStudents={allStudents}
               selectedExamStudentIds={selectedExamStudentIds}
-              onSelectExamStudentIds={(examStudentIds) => {
-                dropPickIfRemoved((pickedId) =>
-                  examStudentIds.includes(pickedId)
-                )
-                replaceSelection(examStudentIds)
-              }}
+              onSelectExamStudentIds={replaceSelectionDroppingPick}
               diffByExamStudent={diffByExamStudent}
               changedExamStudentIds={changedExamStudentIds}
               hasAnySnapshot={hasAnySnapshot}
@@ -513,7 +466,7 @@ export default function ExportMainView() {
         {/* 警告モーダル */}
         <ExportWarningModal
           isOpen={showWarningModal}
-          onClose={() => setShowWarningModal(false)}
+          onClose={closeWarning}
           onContinue={handleContinueExport}
           onGoToFinalize={handleGoToFinalize}
           warnings={warningData}

@@ -9,7 +9,7 @@ import { toast } from "sonner"
 import type {
   EntityOverviewBasics,
   EntityOverviewStat,
-} from "@/components/common/EntityOverviewPage"
+} from "@/components/common/entity-overview/types"
 import {
   EntityOverviewPage,
   toDateInputValue,

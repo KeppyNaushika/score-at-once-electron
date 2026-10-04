@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   FolderInput,
   FolderOutput,
-  MoreHorizontal,
   PencilSparkles,
   PlusCircle,
 } from "lucide-react"
@@ -12,23 +11,16 @@ import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import {
-  BulkTagAssignButton,
-  BulkTagAssignPanel,
-} from "@/components/common/BulkTagAssignButton"
+import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
 import { EntityListPage } from "@/components/common/EntityListPage"
 import type { ExportOutcome } from "@/components/common/ExportResultSummary"
-import type { ToolbarAction } from "@/components/common/OverflowToolbar"
+import {
+  type ToolbarAction,
+  toolbarButtonAction,
+} from "@/components/common/OverflowToolbar"
 import ExamArchiveExportModal from "@/components/exams/detail/ExamArchiveExportModal"
 import { ImportWizardModal } from "@/components/import/ImportWizardModal"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
@@ -49,6 +41,9 @@ import {
   tagListQuery,
 } from "@/queries/tag"
 import type { ArchiveExportMode } from "@/types/examArchive.types"
+
+import { ExamRowMenu } from "./ExamRowMenu"
+import { ExamRowSummary } from "./ExamRowSummary"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_TAGS: TagWithAllRelations[] = []
@@ -280,113 +275,40 @@ const ExamList = () => {
 
   const actions = useMemo<ToolbarAction[]>(() => {
     const toolbarActions: ToolbarAction[] = [
-      {
+      toolbarButtonAction({
         id: "create",
         priority: 80,
-        node: (
-          <Button
-            onClick={() => void handleCreate()}
-            variant="outline"
-            size="sm"
-            className="rounded-lg"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            新規試験作成
-          </Button>
-        ),
-        collapsedNode: (
-          <Button
-            onClick={() => void handleCreate()}
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            新規試験作成
-          </Button>
-        ),
-      },
-      {
+        icon: PlusCircle,
+        label: "新規試験作成",
+        onClick: () => void handleCreate(),
+      }),
+      toolbarButtonAction({
         id: "import",
         priority: 70,
-        node: (
-          <Button
-            onClick={() => setShowImportModal(true)}
-            variant="outline"
-            size="sm"
-            className="rounded-lg"
-          >
-            <FolderInput className="mr-2 h-4 w-4" />
-            .score 読み込み
-          </Button>
-        ),
-        collapsedNode: (
-          <Button
-            onClick={() => setShowImportModal(true)}
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start"
-          >
-            <FolderInput className="mr-2 h-4 w-4" />
-            .score 読み込み
-          </Button>
-        ),
-      },
+        icon: FolderInput,
+        label: ".score 読み込み",
+        onClick: () => setShowImportModal(true),
+      }),
     ]
 
     if (selectedIds.size > 0) {
       // 選択中だけ現れる操作。幅が急に増えるが、畳みは実測なので自然に吸収される
       toolbarActions.push(
-        {
-          id: "bulk-tag",
+        bulkTagToolbarAction({
           priority: 60,
-          node: (
-            <BulkTagAssignButton
-              selectedCount={selectedIds.size}
-              allTags={allTags}
-              onAssign={handleBulkAddTag}
-            />
-          ),
-          collapsedNode: (
-            <BulkTagAssignPanel
-              selectedCount={selectedIds.size}
-              allTags={allTags}
-              onAssign={handleBulkAddTag}
-            />
-          ),
-        },
-        {
+          selectedCount: selectedIds.size,
+          allTags,
+          onAssign: handleBulkAddTag,
+        }),
+        toolbarButtonAction({
           id: "bulk-export",
           priority: 50,
-          node: (
-            <Button
-              onClick={() =>
-                setExportTarget({ kind: "bulk", examIds: [...selectedIds] })
-              }
-              variant="outline"
-              size="sm"
-              className="rounded-lg"
-              disabled={isExporting}
-            >
-              <FolderOutput className="mr-2 h-4 w-4" />
-              .score 一括書き出し（{selectedIds.size}件）
-            </Button>
-          ),
-          collapsedNode: (
-            <Button
-              onClick={() =>
-                setExportTarget({ kind: "bulk", examIds: [...selectedIds] })
-              }
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start"
-              disabled={isExporting}
-            >
-              <FolderOutput className="mr-2 h-4 w-4" />
-              .score 一括書き出し（{selectedIds.size}件）
-            </Button>
-          ),
-        }
+          icon: FolderOutput,
+          label: `.score 一括書き出し（${selectedIds.size}件）`,
+          onClick: () =>
+            setExportTarget({ kind: "bulk", examIds: [...selectedIds] }),
+          disabled: isExporting,
+        })
       )
     }
 
@@ -413,25 +335,7 @@ const ExamList = () => {
         totalCount={exams.length}
         isLoading={isLoading}
         name={(exam) => exam.examName}
-        summary={(exam) => (
-          <span className="flex flex-wrap items-center gap-1">
-            {exam.tags.map((tag) => (
-              <Badge
-                key={tag.id}
-                variant="outline"
-                className="text-xs font-normal"
-                style={
-                  tag.color
-                    ? { borderColor: tag.color, color: tag.color }
-                    : undefined
-                }
-              >
-                {tag.name}
-              </Badge>
-            ))}
-            <span>{exam.description || "説明なし"}</span>
-          </span>
-        )}
+        summary={(exam) => <ExamRowSummary exam={exam} />}
         dateLabel="試験日"
         referenceDate={(exam) => exam.referenceDate}
         updatedAt={(exam) => exam.updatedAt}
@@ -441,32 +345,16 @@ const ExamList = () => {
           return { label: workflow.text, url: workflow.url }
         }}
         rowMenu={(exam) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                aria-label={`${exam.examName}の操作`}
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() =>
-                  setExportTarget({
-                    kind: "single",
-                    examId: exam.id,
-                    examName: exam.examName,
-                  })
-                }
-              >
-                <FolderOutput />
-                .score 書き出し
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ExamRowMenu
+            exam={exam}
+            onExport={() =>
+              setExportTarget({
+                kind: "single",
+                examId: exam.id,
+                examName: exam.examName,
+              })
+            }
+          />
         )}
         actions={actions}
         search={{
