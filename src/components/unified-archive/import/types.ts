@@ -5,6 +5,7 @@
  * id の選択）の型は、使う側が main の core（`unified-archive/types`）から `import type` で引く。
  */
 
+import type { UsingGradeDataSource } from "@/lib/shared/gradeReferenceMessages"
 import type {
   analyzeUnifiedArchiveImport,
   importUnifiedArchiveMutation,
@@ -34,10 +35,8 @@ export type ArchiveMatchCandidate =
 export type ArchiveAnalyzeOutcome = Awaited<
   ReturnType<typeof analyzeUnifiedArchiveImport>
 >
-export type ArchiveImportResult = Extract<
-  ArchiveAnalyzeOutcome,
-  { kind: "ok" }
->["result"]
+type ArchiveAnalysis = Extract<ArchiveAnalyzeOutcome, { kind: "ok" }>
+export type ArchiveImportResult = ArchiveAnalysis["result"]
 export type ArchiveUniqueConflict =
   ArchiveImportResult["uniqueConflicts"][number]
 export type ArchiveUnresolvableReason = Extract<
@@ -51,3 +50,25 @@ export type ArchiveImportOutcome = Awaited<
     NonNullable<ReturnType<typeof importUnifiedArchiveMutation>["mutationFn"]>
   >
 >
+
+/**
+ * この取り込みで値が変わる成績算出1件（`archiveGradeImpact.ts` が導き、確認の段が見せる）。
+ * 取り込み先に既にある成績算出だけ（取り込みで新しく作られるものは載らない）
+ */
+export interface ArchiveGradeImpact {
+  readonly grade: UsingGradeDataSource["gradeItem"]["grade"]
+  /** 値が変わりそうな評価項目（並び順） */
+  readonly items: readonly ArchiveGradeItemImpact[]
+  /** 名簿（名簿の行・生徒・在籍・統計対象の学級）が変わる */
+  readonly rosterChanged: boolean
+  /** 成績算出そのものの設定（基準日・統計対象の学級の選び方）が変わる */
+  readonly settingsChanged: boolean
+}
+
+export interface ArchiveGradeItemImpact {
+  readonly gradeItem: UsingGradeDataSource["gradeItem"]
+  /** 確定済み（1人でも）。確定した値は元データが変わっても変わらない */
+  readonly frozen: boolean
+  /** 確定した値そのもの（GradeFrozenScore）を置き換える */
+  readonly frozenScoresReplaced: boolean
+}

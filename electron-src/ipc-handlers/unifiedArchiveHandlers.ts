@@ -24,6 +24,7 @@ import {
   type UnifiedArchiveExportPhase,
 } from "../lib/export/unified-archive/unifiedArchiveCreator"
 import { importUnifiedArchiveFiles } from "../lib/import/unified-archive/archiveFileImporter"
+import { collectArchiveGradeImpactSource } from "../lib/import/unified-archive/archiveGradeImpactSource"
 import {
   closeUnifiedArchiveImportSession,
   getUnifiedArchiveImportSession,
@@ -215,18 +216,30 @@ export const unifiedArchiveHandlers = {
     }
   },
 
-  /** 書いてからロールバックする試し取り込み（確認画面用）。解けない衝突は `unresolvable` */
+  /**
+   * 書いてからロールバックする試し取り込み（確認画面用）。解けない衝突は `unresolvable`。
+   *
+   * 成績算出への影響（docs §7.5）の材料として、成績算出が読む表へ書いた行の前と後
+   * （`gradeInputChanges`）と、それを評価項目へ写す手がかり（`gradeImpactSource`）を生のまま
+   * 同梱する。差分も写し方も renderer が持つ
+   */
   "unifiedArchive:analyze": async (input: UnifiedArchiveImportInput) => {
     const session = getUnifiedArchiveImportSession(input.sessionId)
     try {
-      const result = await analyzeUnifiedArchiveImport(
+      const analysis = await analyzeUnifiedArchiveImport(
         prismaArchiveTransaction(prisma, IMPORT_TRANSACTION_TIMEOUT_MS),
         session.opened,
         input.action,
         input.decisions,
-        new Date()
+        new Date(),
+        collectArchiveGradeImpactSource
       )
-      return { kind: "ok" as const, result }
+      return {
+        kind: "ok" as const,
+        result: analysis.result,
+        gradeInputChanges: analysis.gradeInputChanges,
+        gradeImpactSource: analysis.inspection,
+      }
     } catch (error) {
       if (error instanceof UnifiedArchiveUnresolvableConflictError) {
         return { kind: "unresolvable" as const, reasons: error.reasons }

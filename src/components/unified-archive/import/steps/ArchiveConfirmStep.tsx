@@ -14,8 +14,10 @@ import {
 } from "@/components/ui/table"
 
 import { archiveTableLabel } from "../../archiveTableLabels"
+import { mapArchiveGradeImpacts } from "../archiveGradeImpact"
 import type { UnifiedArchiveImportWizardState } from "../hooks/useUnifiedArchiveImportWizard"
 import type { ArchiveImportResult } from "../types"
+import { ArchiveGradeImpactSection } from "./ArchiveGradeImpactSection"
 import { StepNextButton } from "./StepNextButton"
 import { UnresolvableReasonList } from "./UnresolvableReasonList"
 
@@ -42,7 +44,7 @@ function sumCounts(counts: ArchiveImportResult["counts"]): TableCounts {
 
 /**
  * 5. 確認。試し取り込み（書いてからロールバック）の数字を、表ごとに見せる。
- * 解けない衝突があれば理由を出し、取り込ませない
+ * 解けない衝突があれば理由を出し、取り込ませない。値が変わる成績算出も示す（docs §7.5）
  */
 export function ArchiveConfirmStep({
   wizard,
@@ -55,6 +57,13 @@ export function ArchiveConfirmStep({
   const result = lastAnalysis.kind === "ok" ? lastAnalysis.result : null
   const countEntries = result ? Object.entries(result.counts) : []
   const totals = result ? sumCounts(result.counts) : null
+  const gradeImpacts =
+    lastAnalysis.kind === "ok"
+      ? mapArchiveGradeImpacts(
+          lastAnalysis.gradeInputChanges,
+          lastAnalysis.gradeImpactSource
+        )
+      : []
 
   return (
     <div className="flex h-full flex-col">
@@ -116,6 +125,8 @@ export function ArchiveConfirmStep({
               </TableFooter>
             </Table>
           </div>
+
+          <ArchiveGradeImpactSection impacts={gradeImpacts} />
 
           <p className="text-sm text-muted-foreground">
             同じ値の行の衝突: {result.uniqueConflicts.length}件

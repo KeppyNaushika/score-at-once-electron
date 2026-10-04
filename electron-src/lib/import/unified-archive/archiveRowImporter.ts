@@ -28,6 +28,10 @@ import type { Prisma, PrismaClient } from "@prisma/client"
 import type { ImportAction } from "../../../../src/types/importAction.types"
 import { createImportValuePolicy } from "../merge/importValuePolicy"
 import type { ArchiveIdMap } from "./archiveFileImporter"
+import {
+  type ArchiveGradeInputChange,
+  captureGradeInputChanges,
+} from "./archiveGradeInputChanges"
 import { filePathsOf, type PlannedRow } from "./archiveRowPlanning"
 import { readArchiveRows, renumberSeparateRows } from "./archiveRowReader"
 import {
@@ -155,9 +159,13 @@ export interface ArchiveTargetConnection {
   execute(sql: string, params: readonly unknown[]): Promise<number>
 }
 
-/** 1本のトランザクションの中で work を走らせる。work が投げればロールバックして投げ直す */
-export type ArchiveTransactionRunner = <Result>(
-  work: (target: ArchiveTargetConnection) => Promise<Result>
+/**
+ * 1本のトランザクションの中で work を走らせる。work が投げればロールバックして投げ直す。
+ * `handle` は実装が渡すトランザクションそのもの（Prisma なら interactive transaction の
+ * クライアント）。試し取り込みが、ロールバックする前に include で読むのに使う
+ */
+export type ArchiveTransactionRunner<Handle = unknown> = <Result>(
+  work: (target: ArchiveTargetConnection, handle: Handle) => Promise<Result>
 ) => Promise<Result>
 
 /** Prisma の interactive transaction を包む */
@@ -178,9 +186,9 @@ export function prismaArchiveTarget(
 export function prismaArchiveTransaction(
   prisma: PrismaClient,
   timeoutMs: number
-): ArchiveTransactionRunner {
+): ArchiveTransactionRunner<Prisma.TransactionClient> {
   return (work) =>
-    prisma.$transaction((tx) => work(prismaArchiveTarget(tx)), {
+    prisma.$transaction((tx) => work(prismaArchiveTarget(tx), tx), {
       timeout: timeoutMs,
     })
 }
@@ -220,6 +228,32 @@ export async function importUnifiedArchiveRows(
   importedAt: Date,
   decisions: UnifiedArchiveImportDecisions = {}
 ): Promise<UnifiedArchiveImportResult> {
+  const written = await writeUnifiedArchiveRows(
+    target,
+    archive,
+    action,
+    importedAt,
+    decisions,
+    false
+  )
+  return written.result
+}
+
+/**
+ * 行を書く本体。`collectGradeInputChanges` のときは、成績算出が読む表へ書いた行の前と後を
+ * 控える（試し取り込みだけ。行を引き直すぶん重い）
+ */
+async function writeUnifiedArchiveRows(
+  target: ArchiveTargetConnection,
+  archive: OpenedUnifiedArchive,
+  action: ImportAction,
+  importedAt: Date,
+  decisions: UnifiedArchiveImportDecisions,
+  collectGradeInputChanges: boolean
+): Promise<{
+  result: UnifiedArchiveImportResult
+  gradeInputChanges: ArchiveGradeInputChange[]
+}> {
   const archiveRows = readArchiveRows(archive.databasePath)
   const idMap: Record<string, Record<string, string>> = action === "separate"
     ? renumberSeparateRows(archiveRows.tables)
@@ -244,21 +278,36 @@ export async function importUnifiedArchiveRows(
   const writtenFilePaths = new Set<string>()
   const keptFilePaths = new Set<string>()
   const uniqueConflicts: UnifiedArchiveUniqueConflict[] = []
+  const gradeInputChanges: ArchiveGradeInputChange[] = []
   for (const tableRows of archiveRows.tables) {
     const resolved = await resolveArchiveTable(context, tableRows)
     if (resolved.reasons.length > 0) {
       throw new UnifiedArchiveUnresolvableConflictError(resolved.reasons)
     }
-    await insertPlannedRows(
-      target,
-      tableRows.table,
-      resolved.plans.filter((plan) => plan.kind === "create")
-    )
-    await updatePlannedRows(
-      target,
-      tableRows.table,
-      resolved.plans.filter((plan) => plan.kind === "replace")
-    )
+    const writePlans = async (): Promise<void> => {
+      await insertPlannedRows(
+        target,
+        tableRows.table,
+        resolved.plans.filter((plan) => plan.kind === "create")
+      )
+      await updatePlannedRows(
+        target,
+        tableRows.table,
+        resolved.plans.filter((plan) => plan.kind === "replace")
+      )
+    }
+    if (collectGradeInputChanges) {
+      gradeInputChanges.push(
+        ...(await captureGradeInputChanges(
+          target,
+          tableRows.table,
+          resolved.plans,
+          writePlans
+        ))
+      )
+    } else {
+      await writePlans()
+    }
     counts[tableRows.table] = countRows(resolved.plans, resolved.skipped)
     uniqueConflicts.push(...resolved.conflicts)
     for (const plan of resolved.plans) {
@@ -270,24 +319,37 @@ export async function importUnifiedArchiveRows(
     for (const filePath of resolved.keptFilePaths) keptFilePaths.add(filePath)
   }
   return {
-    action,
-    counts,
-    uniqueConflicts,
-    renamedIds: context.renamedIds,
-    idMap: finalIdMap(context),
-    warnings: context.warnings,
-    filePaths: {
-      written: [...writtenFilePaths].sort(),
-      kept: [...keptFilePaths]
-        .filter((filePath) => !writtenFilePaths.has(filePath))
-        .sort(),
+    result: {
+      action,
+      counts,
+      uniqueConflicts,
+      renamedIds: context.renamedIds,
+      idMap: finalIdMap(context),
+      warnings: context.warnings,
+      filePaths: {
+        written: [...writtenFilePaths].sort(),
+        kept: [...keptFilePaths]
+          .filter((filePath) => !writtenFilePaths.has(filePath))
+          .sort(),
+      },
     },
+    gradeInputChanges,
   }
 }
 
-/** 試し取り込みの結果を持ったまま、トランザクションをロールバックさせるための例外 */
+/** 試し取り込みの結果 */
+export interface UnifiedArchiveAnalysis<Inspection> {
+  /** 本番と同じ計算の結果 */
+  readonly result: UnifiedArchiveImportResult
+  /** 成績算出が読む表へ書いた行の、書く前と書いた後（差分は取らない。docs §7.5） */
+  readonly gradeInputChanges: readonly ArchiveGradeInputChange[]
+  /** ロールバックする前に、書いた後の取り込み先から `inspect` が読んだもの */
+  readonly inspection: Inspection
+}
+
+/** 試し取り込みを終えて、トランザクションをロールバックさせるための例外 */
 class ArchiveImportAnalysisRollback extends Error {
-  constructor(readonly result: UnifiedArchiveImportResult) {
+  constructor() {
     super("統合アーカイブの試し取り込みをロールバックします")
     this.name = "ArchiveImportAnalysisRollback"
   }
@@ -296,28 +358,47 @@ class ArchiveImportAnalysisRollback extends Error {
 /**
  * 実際に書いてからロールバックする試し取り込み（確認画面用）。結果は本番と同じ計算。
  * 別で追加の振り直しは呼ぶたびに新しい id になるので、`idMap` の値は目安（実際の id は
- * `importUnifiedArchiveRows` の戻り値のもの）。解けない衝突はそのまま投げる
+ * `importUnifiedArchiveRows` の戻り値のもの）。解けない衝突はそのまま投げる。
+ *
+ * `inspect` は、書いた後・ロールバックする前に、同じトランザクションの中で取り込み先を読む
+ * （成績算出への影響の手がかり。`archiveGradeImpactSource.ts`）
  */
-export async function analyzeUnifiedArchiveImport(
-  runInTransaction: ArchiveTransactionRunner,
+export async function analyzeUnifiedArchiveImport<Handle, Inspection>(
+  runInTransaction: ArchiveTransactionRunner<Handle>,
   archive: OpenedUnifiedArchive,
   action: ImportAction,
   decisions: UnifiedArchiveImportDecisions,
-  importedAt: Date
-): Promise<UnifiedArchiveImportResult> {
+  importedAt: Date,
+  inspect: (
+    handle: Handle,
+    gradeInputChanges: readonly ArchiveGradeInputChange[]
+  ) => Promise<Inspection>
+): Promise<UnifiedArchiveAnalysis<Inspection>> {
+  // 投げてロールバックさせるので、結果はトランザクションの外の入れ物で受け取る
+  const captured: { analysis?: UnifiedArchiveAnalysis<Inspection> } = {}
   try {
-    await runInTransaction(async (target) => {
-      const result = await importUnifiedArchiveRows(
+    await runInTransaction(async (target, handle) => {
+      const written = await writeUnifiedArchiveRows(
         target,
         archive,
         action,
         importedAt,
-        decisions
+        decisions,
+        true
       )
-      throw new ArchiveImportAnalysisRollback(result)
+      captured.analysis = {
+        ...written,
+        inspection: await inspect(handle, written.gradeInputChanges),
+      }
+      throw new ArchiveImportAnalysisRollback()
     })
   } catch (error) {
-    if (error instanceof ArchiveImportAnalysisRollback) return error.result
+    if (
+      error instanceof ArchiveImportAnalysisRollback &&
+      captured.analysis !== undefined
+    ) {
+      return captured.analysis
+    }
     throw error
   }
   throw new Error("統合アーカイブの試し取り込みがロールバックされませんでした")
