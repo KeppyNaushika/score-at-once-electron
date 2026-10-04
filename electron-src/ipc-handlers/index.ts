@@ -11,6 +11,7 @@
 
 import { answerSheetBuilderHandlers } from "./answerSheetBuilderHandlers"
 import { archiveHandlers } from "./archiveHandlers"
+import { asbEditHandlers } from "./asbEditHandlers"
 import { auditLogHandlers } from "./auditLogHandlers"
 import { authHandlers } from "./authHandlers"
 import { courseworkHandlers } from "./courseworkHandlers"
@@ -43,6 +44,7 @@ import { userExamHandlers } from "./userExamHandlers"
 const handlerGroups = [
   answerSheetBuilderHandlers,
   archiveHandlers,
+  asbEditHandlers,
   auditLogHandlers,
   authHandlers,
   courseworkHandlers,
@@ -81,6 +83,7 @@ const handlerGroups = [
 const handlers = {
   ...answerSheetBuilderHandlers,
   ...archiveHandlers,
+  ...asbEditHandlers,
   ...auditLogHandlers,
   ...authHandlers,
   ...courseworkHandlers,
