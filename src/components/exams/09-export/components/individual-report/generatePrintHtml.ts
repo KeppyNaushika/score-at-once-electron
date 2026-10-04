@@ -12,7 +12,7 @@ import type {
 } from "@/types/individualReport.types"
 
 import { calculateLearningAdvice } from "../../utils/learningAdviceCalculator"
-import { BoxPlotChartView } from "./BoxPlotChart"
+import { BoxPlotChartView } from "./BoxPlotChartView"
 import {
   buildStatsItems,
   computeFilteredClassroomStats,

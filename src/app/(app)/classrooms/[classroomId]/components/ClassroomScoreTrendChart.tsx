@@ -1,7 +1,6 @@
 "use client"
 
-import { ChevronDown, Plus, TrendingUp, X } from "lucide-react"
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo } from "react"
 import {
   Area,
   CartesianGrid,
@@ -14,56 +13,52 @@ import {
   YAxis,
 } from "recharts"
 
-import { TooltipButton } from "@/components/common/TooltipButton"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  collectSubtotalOptions,
+  collectTrendTags,
+  formatDateTick,
+  formatPercentTick,
+  formatShortDate,
+  groupSubtotalOptions,
+  SERIES_COLORS,
+} from "@/components/score-trend/scoreTrendOptions"
+import { TrendSeriesEditor } from "@/components/score-trend/TrendSeriesEditor"
+import {
+  TOTAL_SUBTOTAL_ID,
+  type TrendSeries,
+} from "@/components/score-trend/types"
+import { useTrendSeriesList } from "@/components/score-trend/useTrendSeriesList"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
 import type { ClassroomStudentExamResult } from "@/electron-src/lib/prisma/student"
 
-// ── 型定義 ──
-
-interface SeriesConfig {
-  id: string
-  label: string
-  tags: Set<string>
-  subtotalId: string
-  color: string
+/** 学級の系列は平均の上下に標準偏差の帯を重ねられる */
+interface ClassroomTrendSeries extends TrendSeries {
   showStdDev: boolean
 }
 
-interface SubtotalOption {
-  id: string
-  label: string
-  groupName: string
+/** 学級の推移は色を6つで回す（生徒の推移より系列が少ない前提の配色） */
+const CLASSROOM_SERIES_COLORS = SERIES_COLORS.slice(0, 6)
+
+/** 系列を足したときの姿（合計得点率・タグ無し・帯なし） */
+function createSeries(id: string, color: string): ClassroomTrendSeries {
+  return {
+    id,
+    label: "学級平均（合計）",
+    tags: new Set<string>(),
+    subtotalId: TOTAL_SUBTOTAL_ID,
+    color,
+    showStdDev: false,
+  }
 }
 
-// ── 定数 ──
-
-const SERIES_COLORS = [
-  "hsl(210, 70%, 50%)",
-  "hsl(150, 60%, 45%)",
-  "hsl(30, 80%, 55%)",
-  "hsl(280, 60%, 55%)",
-  "hsl(0, 65%, 55%)",
-  "hsl(180, 55%, 45%)",
-]
-
-const formatShortDate = (date: Date) =>
-  new Date(date).toLocaleDateString("ja-JP", {
-    month: "short",
-    day: "numeric",
-  })
-
-// ── コンポーネント ──
+/** 最初の1本だけは帯を出しておく */
+function createInitialSeries(): ClassroomTrendSeries {
+  return {
+    ...createSeries("cs0", CLASSROOM_SERIES_COLORS[0]),
+    showStdDev: true,
+  }
+}
 
 interface ClassroomScoreTrendChartProps {
   studentResults: ClassroomStudentExamResult[]
@@ -72,71 +67,30 @@ interface ClassroomScoreTrendChartProps {
 export function ClassroomScoreTrendChart({
   studentResults,
 }: ClassroomScoreTrendChartProps) {
-  const nextIdRef = useRef(1)
-  const createId = useCallback(() => `cs${nextIdRef.current++}`, [])
-
-  const [seriesList, setSeriesList] = useState<SeriesConfig[]>(() => [
-    {
-      // 初期系列のidは固定。nextIdRef は追加系列（createId）専用にする
-      id: "cs0",
-      label: "学級平均（合計）",
-      tags: new Set<string>(),
-      subtotalId: "__total__",
-      color: SERIES_COLORS[0],
-      showStdDev: true,
-    },
-  ])
+  const examResults = useMemo(
+    () => studentResults.flatMap((studentResult) => studentResult.examResults),
+    [studentResults]
+  )
 
   // 全タグ一覧
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>()
-    studentResults.forEach((studentResult) =>
-      studentResult.examResults.forEach((examResult) =>
-        examResult.tags.forEach((tag) => tagSet.add(tag))
-      )
-    )
-    return Array.from(tagSet).sort()
-  }, [studentResults])
+  const allTags = useMemo(() => collectTrendTags(examResults), [examResults])
 
   // 全小計一覧
-  const subtotalOptions = useMemo<SubtotalOption[]>(() => {
-    const map = new Map<string, SubtotalOption>()
-    studentResults.forEach((studentResult) =>
-      studentResult.examResults.forEach((examResult) =>
-        examResult.subtotalScores.forEach((subtotalScore) => {
-          if (!map.has(subtotalScore.subtotalId)) {
-            map.set(subtotalScore.subtotalId, {
-              id: subtotalScore.subtotalId,
-              label: subtotalScore.subtotalName,
-              groupName: subtotalScore.subtotalGroupName,
-            })
-          }
-        })
-      )
-    )
-    return Array.from(map.values()).sort((optionA, optionB) => {
-      const groupComparison = optionA.groupName.localeCompare(optionB.groupName)
-      return groupComparison !== 0
-        ? groupComparison
-        : optionA.label.localeCompare(optionB.label)
-    })
-  }, [studentResults])
+  const subtotalOptions = useMemo(
+    () => collectSubtotalOptions(examResults),
+    [examResults]
+  )
 
-  const subtotalGroups = useMemo(() => {
-    const groups = new Map<string, SubtotalOption[]>()
-    for (const option of subtotalOptions) {
-      const list = groups.get(option.groupName) || []
-      list.push(option)
-      groups.set(option.groupName, list)
-    }
-    return Array.from(groups.entries())
-  }, [subtotalOptions])
+  const subtotalGroups = useMemo(
+    () => groupSubtotalOptions(subtotalOptions),
+    [subtotalOptions]
+  )
 
   const buildLabel = useCallback(
     (tags: Set<string>, subtotalId: string): string => {
       const parts: string[] = ["学級平均"]
       if (tags.size > 0) parts.push(Array.from(tags).join("・"))
-      if (subtotalId !== "__total__") {
+      if (subtotalId !== TOTAL_SUBTOTAL_ID) {
         const matchedOption = subtotalOptions.find(
           (option) => option.id === subtotalId
         )
@@ -149,87 +103,28 @@ export function ClassroomScoreTrendChart({
     [subtotalOptions]
   )
 
-  const addSeries = useCallback(() => {
-    setSeriesList((prev) => [
-      ...prev,
-      {
-        id: createId(),
-        label: "学級平均（合計）",
-        tags: new Set<string>(),
-        subtotalId: "__total__",
-        color: SERIES_COLORS[prev.length % SERIES_COLORS.length],
-        showStdDev: false,
-      },
-    ])
-  }, [createId])
+  const {
+    seriesList,
+    addSeries,
+    removeSeries,
+    updateSeries,
+    toggleTag,
+    clearTags,
+    setSubtotal,
+  } = useTrendSeriesList({
+    idPrefix: "cs",
+    createInitialSeries,
+    createSeries,
+    colors: CLASSROOM_SERIES_COLORS,
+    buildLabel,
+  })
 
-  const removeSeries = useCallback((id: string) => {
-    setSeriesList((prev) =>
-      prev.length <= 1 ? prev : prev.filter((series) => series.id !== id)
-    )
-  }, [])
-
-  const toggleTag = useCallback(
-    (seriesId: string, tag: string) => {
-      setSeriesList((prev) =>
-        prev.map((series) => {
-          if (series.id !== seriesId) return series
-          const next = new Set(series.tags)
-          if (next.has(tag)) next.delete(tag)
-          else next.add(tag)
-          return {
-            ...series,
-            tags: next,
-            label: buildLabel(next, series.subtotalId),
-          }
-        })
-      )
-    },
-    [buildLabel]
-  )
-
-  const clearTags = useCallback(
-    (seriesId: string) => {
-      setSeriesList((prev) =>
-        prev.map((series) => {
-          if (series.id !== seriesId) return series
-          const empty = new Set<string>()
-          return {
-            ...series,
-            tags: empty,
-            label: buildLabel(empty, series.subtotalId),
-          }
-        })
-      )
-    },
-    [buildLabel]
-  )
-
-  const setSubtotal = useCallback(
-    (seriesId: string, subtotalId: string) => {
-      setSeriesList((prev) =>
-        prev.map((series) => {
-          if (series.id !== seriesId) return series
-          return {
-            ...series,
-            subtotalId,
-            label: buildLabel(series.tags, subtotalId),
-          }
-        })
-      )
-    },
-    [buildLabel]
-  )
-
-  const toggleStdDev = useCallback((seriesId: string) => {
-    setSeriesList((prev) =>
-      prev.map((series) =>
-        series.id === seriesId
-          ? { ...series, showStdDev: !series.showStdDev }
-          : series
-      )
-    )
-  }, [])
+  const toggleStdDev = (seriesId: string) => {
+    updateSeries(seriesId, (series) => ({
+      ...series,
+      showStdDev: !series.showStdDev,
+    }))
+  }
 
   // チャートデータ生成
   const { mergedData, hasData } = useMemo(() => {
@@ -280,7 +175,7 @@ export function ClassroomScoreTrendChart({
 
           let score: number
           let maxScore: number
-          if (series.subtotalId === "__total__") {
+          if (series.subtotalId === TOTAL_SUBTOTAL_ID) {
             score = result.totalScore
             maxScore = result.maxScore
           } else {
@@ -326,122 +221,27 @@ export function ClassroomScoreTrendChart({
 
   return (
     <Card className="mb-8 border-border/50 shadow-sm">
-      <CardHeader className="space-y-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            学級成績の推移
-          </CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-lg"
-            onClick={addSeries}
+      <TrendSeriesEditor
+        title="学級成績の推移"
+        seriesList={seriesList}
+        subtotalOptions={subtotalOptions}
+        subtotalGroups={subtotalGroups}
+        allTags={allTags}
+        onAddSeries={addSeries}
+        onRemoveSeries={removeSeries}
+        onToggleTag={toggleTag}
+        onClearTags={clearTags}
+        onSetSubtotal={setSubtotal}
+        renderExtraControls={(series) => (
+          <Badge
+            variant={series.showStdDev ? "default" : "outline"}
+            className="h-5 cursor-pointer rounded-full px-2 text-[10px] font-normal"
+            onClick={() => toggleStdDev(series.id)}
           >
-            <Plus className="mr-1 h-4 w-4" />
-            系列を追加
-          </Button>
-        </div>
-
-        <div className="space-y-2">
-          {seriesList.map((series) => (
-            <div
-              key={series.id}
-              className="flex flex-wrap items-center gap-2 rounded-lg border border-border/50 px-3 py-2"
-            >
-              <div
-                className="h-3 w-3 shrink-0 rounded-full"
-                style={{ backgroundColor: series.color }}
-              />
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 gap-1 rounded px-2 text-xs font-normal"
-                  >
-                    {series.subtotalId === "__total__"
-                      ? "合計得点率"
-                      : (subtotalOptions.find(
-                          (option) => option.id === series.subtotalId
-                        )?.label ?? "合計得点率")}
-                    <ChevronDown className="h-3 w-3 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem
-                    onClick={() => setSubtotal(series.id, "__total__")}
-                  >
-                    合計得点率
-                  </DropdownMenuItem>
-                  {subtotalGroups.map(([groupName, items]) => (
-                    <DropdownMenuSub key={groupName}>
-                      <DropdownMenuSubTrigger>
-                        {groupName}
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent>
-                        {items.map((option) => (
-                          <DropdownMenuItem
-                            key={option.id}
-                            onClick={() => setSubtotal(series.id, option.id)}
-                          >
-                            {option.label}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {allTags.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1">
-                  <span className="text-xs text-muted-foreground">タグ:</span>
-                  <Badge
-                    variant={series.tags.size === 0 ? "default" : "outline"}
-                    className="h-5 cursor-pointer rounded-full px-2 text-[10px] font-normal"
-                    onClick={() => clearTags(series.id)}
-                  >
-                    全て
-                  </Badge>
-                  {allTags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant={series.tags.has(tag) ? "default" : "outline"}
-                      className="h-5 cursor-pointer rounded-full px-2 text-[10px] font-normal"
-                      onClick={() => toggleTag(series.id, tag)}
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
-              <Badge
-                variant={series.showStdDev ? "default" : "outline"}
-                className="h-5 cursor-pointer rounded-full px-2 text-[10px] font-normal"
-                onClick={() => toggleStdDev(series.id)}
-              >
-                ±σ
-              </Badge>
-
-              {seriesList.length > 1 && (
-                <TooltipButton
-                  label="系列を削除"
-
-                  variant="ghost"
-                  size="icon"
-                  className="ml-auto h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => removeSeries(series.id)}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </TooltipButton>
-              )}
-            </div>
-          ))}
-        </div>
-      </CardHeader>
+            ±σ
+          </Badge>
+        )}
+      />
 
       <CardContent>
         {hasData && mergedData.length >= 2 ? (
@@ -459,17 +259,14 @@ export function ClassroomScoreTrendChart({
                 tick={{ fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(tickValue) => {
-                  const date = new Date(tickValue)
-                  return `${date.getMonth() + 1}/${date.getDate()}`
-                }}
+                tickFormatter={formatDateTick}
               />
               <YAxis
                 domain={[0, 100]}
                 tick={{ fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(tickValue) => `${tickValue}%`}
+                tickFormatter={formatPercentTick}
                 width={45}
               />
               <RechartsTooltip

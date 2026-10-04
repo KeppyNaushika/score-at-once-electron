@@ -9,7 +9,7 @@ import BaseModal from "@/components/common/BaseModal"
 import type {
   EntityOverviewBasics,
   EntityOverviewStat,
-} from "@/components/common/EntityOverviewPage"
+} from "@/components/common/entity-overview/types"
 import {
   EntityOverviewPage,
   toDateInputValue,

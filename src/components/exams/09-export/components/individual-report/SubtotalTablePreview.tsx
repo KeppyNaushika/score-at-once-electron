@@ -18,6 +18,7 @@ import type {
 
 import { filterSubtotalScores, groupSubtotalData } from "./computeReportData"
 import { allocateColumnsDHondt, splitItemsIntoColumns } from "./reportLayout"
+import { ScoreDisplay } from "./ScoreDisplay"
 
 interface SubtotalTablePreviewProps {
   report: IndividualReportData
@@ -38,27 +39,6 @@ interface GroupTableData {
   maxRows: number
   totalScore: number
   totalMaxScore: number
-}
-
-/** 得点/配点の表示コンポーネント */
-function ScoreDisplay({
-  score,
-  maxScore,
-  fontSize,
-}: {
-  score: number | null
-  maxScore: number
-  fontSize: number
-}) {
-  return (
-    <span>
-      {score ?? "-"}
-      <span style={{ fontSize: `${fontSize * 0.8}px`, color: "#666" }}>
-        {" "}
-        / {maxScore}
-      </span>
-    </span>
-  )
 }
 
 /**

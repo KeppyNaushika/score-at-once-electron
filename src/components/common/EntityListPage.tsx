@@ -2,24 +2,13 @@
 
 import type { LucideIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import type { KeyboardEvent, MouseEvent, ReactNode } from "react"
+import type { ReactNode } from "react"
 import { useMemo } from "react"
 
-import {
-  ColumnDivider,
-  FilterableTableHead,
-} from "@/components/common/FilterableTableHead"
 import type { MultiSelectFilterConfig } from "@/components/common/ListFilterControls"
-import {
-  DateRangeFilterPanel,
-  ListSearchInput,
-  MultiSelectFilterPanel,
-} from "@/components/common/ListFilterControls"
 import { ListPaginationFooter } from "@/components/common/ListPaginationFooter"
 import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 import PageHeader from "@/components/layout/PageHeader"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Empty,
   EmptyContent,
@@ -27,40 +16,19 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { Separator } from "@/components/ui/separator"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 import { useListPagination } from "@/hooks/useListPagination"
 import { useTableSort } from "@/hooks/useTableSort"
 
-/**
- * 日付列に出す値。
- *
- * `Date` と ISO 文字列の両方を受けるのは、**いまの4画面で型が割れているから**。
- * 試験・資料・成績は Prisma の行がそのまま IPC の structured clone を通るので `Date`
- * （4実体とも `referenceDate` と `updatedAt`）だが、
- * 解答用紙だけは `listAsbDefinitions`（`electron-src/lib/prisma/asbDefinition.ts`）が
- * `toISOString()` して返すので文字列である（`ASBDefinitionListItem.updatedAt`）。
- * 既存の `useListFilter` の `date` accessor も同じ理由で両方を受けている。
- */
-type EntityListDate = Date | string | null
-
-/** 「次のステップ」列に出すもの */
-interface EntityListNextStep {
-  label: string
-  url: string
-}
+import { EntityListRow } from "./entity-list/EntityListRow"
+import { EntityListTableHeader } from "./entity-list/EntityListTableHeader"
+import type {
+  EntityListDate,
+  EntityListDateFilter,
+  EntityListNextStep,
+  EntityListSearch,
+  SortableEntityRow,
+} from "./entity-list/types"
 
 /** 1件も無いときに出すもの */
 interface EntityListEmptyState {
@@ -70,33 +38,6 @@ interface EntityListEmptyState {
   message: string
   /** 作成へ導く導線。無くてもよい */
   action?: ReactNode
-}
-
-/**
- * 日付列の絞り込み。`useListFilter` が持っている値と setter をそのまま渡す。
- *
- * 見出しの語は列の見出しと同じものを使うので、ここでは受け取らない
- * （呼び手が2回書くと、列の語と popover の語がずれる）。
- */
-interface EntityListDateFilter {
-  /** YYYY-MM-DD、空文字は未指定 */
-  from: string
-  to: string
-  onFromChange: (value: string) => void
-  onToChange: (value: string) => void
-}
-
-/**
- * 名前列の popover に入る横断検索。
- *
- * 名前だけでなく説明・タグ名・学級名も見ているので、どの列の値でもない。
- * 名前列に置くのは、行の中でいちばん多く目に入る列だからである。
- */
-interface EntityListSearch {
-  term: string
-  onChange: (value: string) => void
-  /** 「試験名・タグで検索」など、何を見ているかを言う */
-  placeholder: string
 }
 
 interface EntityListPageProps<TRow extends { id: string }> {
@@ -169,15 +110,6 @@ interface EntityListPageProps<TRow extends { id: string }> {
   sortStorageKey: string
 }
 
-/** 並べ替えに載せるために、行から値だけ抜いた形 */
-interface SortableEntityRow<TRow> {
-  id: string
-  name: string
-  referenceDate: EntityListDate
-  updatedAt: EntityListDate
-  row: TRow
-}
-
 /** 列は6つで固定なので、空・読み込みの行が跨ぐ数もここで決まる */
 const COLUMN_COUNT = 6
 
@@ -200,61 +132,6 @@ const ENTITY_LIST_ROW_HEIGHT = 72
 
 /** 行の上に居座る見出し行の高さ（`h-12`） */
 const ENTITY_LIST_HEADER_HEIGHT = 48
-
-/** `yy/mm/dd`。列幅を食わないよう西暦は下2桁 */
-function formatDay(date: EntityListDate): string {
-  if (date === null) return "—"
-  const parsed = new Date(date)
-  if (Number.isNaN(parsed.getTime())) return "—"
-  return `${String(parsed.getFullYear()).slice(-2)}/${String(
-    parsed.getMonth() + 1
-  ).padStart(2, "0")}/${String(parsed.getDate()).padStart(2, "0")}`
-}
-
-/** その日を指す鍵（`toLocaleDateString` を挟まず、ローカルの年月日で比べる） */
-function toDayKey(date: Date): string {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
-}
-
-/**
- * 更新日時の短い姿。今日と昨日は時刻まで、それより前は `yy/mm/dd`。
- *
- * 「今日」は**描いた時点の判定**なので、一覧を開いたまま日付を跨ぐと「今日」のまま
- * 残る。正確な値は tooltip で常に読めるので、そのために時計を持たない。
- */
-function formatUpdatedAt(date: EntityListDate): string {
-  if (date === null) return "—"
-  const parsed = new Date(date)
-  if (Number.isNaN(parsed.getTime())) return "—"
-
-  const now = new Date()
-  const dayKey = toDayKey(parsed)
-  const time = `${String(parsed.getHours()).padStart(2, "0")}:${String(
-    parsed.getMinutes()
-  ).padStart(2, "0")}`
-
-  if (dayKey === toDayKey(now)) return `今日 ${time}`
-  const yesterday = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate() - 1
-  )
-  if (dayKey === toDayKey(yesterday)) return `昨日 ${time}`
-  return formatDay(parsed)
-}
-
-/** tooltip に出す `yyyy/mm/dd hh:mm`。省略のない形はここだけ */
-function formatFullDateTime(date: EntityListDate): string | null {
-  if (date === null) return null
-  const parsed = new Date(date)
-  if (Number.isNaN(parsed.getTime())) return null
-  return `${parsed.getFullYear()}/${String(parsed.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}/${String(parsed.getDate()).padStart(2, "0")} ${String(
-    parsed.getHours()
-  ).padStart(2, "0")}:${String(parsed.getMinutes()).padStart(2, "0")}`
-}
 
 /**
  * 4つのトップページ（解答用紙 / 試験 / 試験外成績資料 / 成績算出）で共通の一覧。
@@ -324,14 +201,6 @@ export function EntityListPage<TRow extends { id: string }>({
     sortableKeys: SORTABLE_KEYS,
   })
 
-  const isNameFiltered =
-    search.term !== "" ||
-    (tagFilter?.selectedIds.size ?? 0) > 0 ||
-    (classroomFilter?.selectedIds.size ?? 0) > 0
-  const isDateFiltered = dateFilter.from !== "" || dateFilter.to !== ""
-  const isUpdatedAtFiltered =
-    updatedAtFilter.from !== "" || updatedAtFilter.to !== ""
-
   // 条件か並び順が変わったら先頭のページから見る
   const paginationResetKey = [
     search.term,
@@ -362,24 +231,8 @@ export function EntityListPage<TRow extends { id: string }>({
     resetKey: paginationResetKey,
   })
 
-  /** 押されたのが行そのものか、行の中の別の導線かを分ける */
-  const stopRowActivation = (event: MouseEvent<HTMLTableCellElement>) => {
-    event.stopPropagation()
-  }
-
   const openOverview = (row: TRow) => {
     router.push(overviewUrl(row))
-  }
-
-  const handleRowKeyDown = (
-    event: KeyboardEvent<HTMLTableRowElement>,
-    row: TRow
-  ) => {
-    // 行そのものが導線なので、マウスと同じことをキーボードからもできるようにする
-    if (event.key !== "Enter" && event.key !== " ") return
-    if (event.target !== event.currentTarget) return
-    event.preventDefault()
-    openOverview(row)
   }
 
   return (
@@ -424,107 +277,19 @@ export function EntityListPage<TRow extends { id: string }>({
             */}
             <div ref={viewportRef} className="min-h-0 flex-1">
               <Table wrapperClassName="h-full">
-                <TableHeader className="sticky top-0 z-10 bg-card">
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-10 text-center">
-                      <Checkbox
-                        checked={allSelected}
-                        onCheckedChange={(checked) =>
-                          onToggleSelectAll(checked === true)
-                        }
-                        aria-label="全選択"
-                      />
-                    </TableHead>
-                    <FilterableTableHead
-                      label="名前"
-                      sortKey="name"
-                      currentSortKey={sortConfig.key}
-                      currentDirection={sortConfig.direction}
-                      onSort={applySort}
-                      isFiltered={isNameFiltered}
-                      showDivider={false}
-                    >
-                      <div className="space-y-2">
-                        <ListSearchInput
-                          searchTerm={search.term}
-                          onSearchTermChange={search.onChange}
-                          placeholder={search.placeholder}
-                          className="w-full"
-                        />
-                        {tagFilter && tagFilter.options.length > 0 && (
-                          <>
-                            <Separator />
-                            <div>
-                              <p className="px-1 pb-1 text-xs text-muted-foreground">
-                                タグ
-                              </p>
-                              <MultiSelectFilterPanel
-                                config={tagFilter}
-                                clearLabel="タグの選択を消す"
-                              />
-                            </div>
-                          </>
-                        )}
-                        {classroomFilter &&
-                          classroomFilter.options.length > 0 && (
-                            <>
-                              <Separator />
-                              <div>
-                                <p className="px-1 pb-1 text-xs text-muted-foreground">
-                                  学級
-                                </p>
-                                <MultiSelectFilterPanel
-                                  config={classroomFilter}
-                                  clearLabel="学級の選択を消す"
-                                />
-                              </div>
-                            </>
-                          )}
-                      </div>
-                    </FilterableTableHead>
-                    <FilterableTableHead
-                      label={dateLabel}
-                      sortKey="referenceDate"
-                      currentSortKey={sortConfig.key}
-                      currentDirection={sortConfig.direction}
-                      onSort={applySort}
-                      isFiltered={isDateFiltered}
-                      className="w-36"
-                    >
-                      <DateRangeFilterPanel
-                        config={{ label: dateLabel, ...dateFilter }}
-                      />
-                    </FilterableTableHead>
-                    <FilterableTableHead
-                      label="更新日時"
-                      sortKey="updatedAt"
-                      currentSortKey={sortConfig.key}
-                      currentDirection={sortConfig.direction}
-                      onSort={applySort}
-                      isFiltered={isUpdatedAtFiltered}
-                      className="w-40"
-                    >
-                      <DateRangeFilterPanel
-                        config={{ label: "更新日", ...updatedAtFilter }}
-                      />
-                    </FilterableTableHead>
-                    {/*
-                      絞り込みを持たない列。見出しに印は出さないが、列の区切り線は
-                      他の列と同じように引く
-                    */}
-                    <TableHead className="w-52 p-0 text-center">
-                      <div className="flex h-12 items-center">
-                        <ColumnDivider />
-                        <span className="flex-1 px-4">次のステップ</span>
-                      </div>
-                    </TableHead>
-                    <TableHead className="w-12 p-0">
-                      <div className="flex h-12 items-center">
-                        <ColumnDivider />
-                      </div>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
+                <EntityListTableHeader
+                  allSelected={allSelected}
+                  onToggleSelectAll={onToggleSelectAll}
+                  currentSortKey={sortConfig.key}
+                  currentDirection={sortConfig.direction}
+                  onSort={applySort}
+                  search={search}
+                  tagFilter={tagFilter}
+                  classroomFilter={classroomFilter}
+                  dateLabel={dateLabel}
+                  dateFilter={dateFilter}
+                  updatedAtFilter={updatedAtFilter}
+                />
                 <TableBody>
                   {isLoading && (
                     <TableRow>
@@ -550,84 +315,23 @@ export function EntityListPage<TRow extends { id: string }>({
                     pageRows.map((sortableRow) => {
                       const row = sortableRow.row
                       const step = nextStep(row)
-                      const disabledReason = selectionDisabledReason?.(row)
-                      const fullUpdatedAt = formatFullDateTime(
-                        sortableRow.updatedAt
-                      )
                       return (
-                        <TableRow
+                        <EntityListRow
                           key={sortableRow.id}
-                          className="group cursor-pointer"
-                          tabIndex={0}
-                          aria-label={`${sortableRow.name}の概要を開く`}
-                          onClick={() => openOverview(row)}
-                          onKeyDown={(event) => handleRowKeyDown(event, row)}
-                        >
-                          {/* 選択の当たり判定はこのセルの中のチェックボックスだけ */}
-                          <TableCell
-                            className="text-center"
-                            onClick={stopRowActivation}
-                          >
-                            <Checkbox
-                              checked={selectedIds.has(sortableRow.id)}
-                              onCheckedChange={(checked) =>
-                                onToggleSelect(sortableRow.id, checked === true)
-                              }
-                              disabled={disabledReason !== undefined}
-                              title={disabledReason}
-                              aria-label={`${sortableRow.name}を選択`}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-medium">
-                              {sortableRow.name}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {summary(row)}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center text-sm text-muted-foreground tabular-nums">
-                            {formatDay(sortableRow.referenceDate)}
-                          </TableCell>
-                          {/*
-                            短い姿だけを出し、省略のない日時は hover で読ませる。
-                            行はどこを押しても概要ページへ飛ぶので、押して開く形にはできない
-                          */}
-                          <TableCell className="text-center text-sm text-muted-foreground tabular-nums">
-                            {fullUpdatedAt === null ? (
-                              formatUpdatedAt(sortableRow.updatedAt)
-                            ) : (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span>
-                                    {formatUpdatedAt(sortableRow.updatedAt)}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>{fullUpdatedAt}</TooltipContent>
-                              </Tooltip>
-                            )}
-                          </TableCell>
-                          {/* 概要とは別の飛び先なので、行の当たり判定を止める */}
-                          <TableCell
-                            className="text-center"
-                            onClick={stopRowActivation}
-                          >
-                            <Button
-                              size="sm"
-                              className="w-48 justify-start rounded-lg text-left"
-                              onClick={() => router.push(step.url)}
-                            >
-                              <span className="text-xs">{step.label}</span>
-                            </Button>
-                          </TableCell>
-                          {/* 行メニュー。ここも行の当たり判定を止める */}
-                          <TableCell
-                            className="text-center"
-                            onClick={stopRowActivation}
-                          >
-                            {rowMenu(row)}
-                          </TableCell>
-                        </TableRow>
+                          sortableRow={sortableRow}
+                          summary={summary(row)}
+                          step={step}
+                          selectionDisabledReason={selectionDisabledReason?.(
+                            row
+                          )}
+                          isSelected={selectedIds.has(sortableRow.id)}
+                          onToggleSelect={(checked) =>
+                            onToggleSelect(sortableRow.id, checked)
+                          }
+                          onOpenOverview={() => openOverview(row)}
+                          onOpenNextStep={() => router.push(step.url)}
+                          rowMenu={rowMenu(row)}
+                        />
                       )
                     })}
                 </TableBody>

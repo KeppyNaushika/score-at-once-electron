@@ -4,6 +4,7 @@ import { Tag } from "lucide-react"
 import type { RefObject } from "react"
 import { useState } from "react"
 
+import type { ToolbarAction } from "@/components/common/OverflowToolbar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -130,4 +131,20 @@ export function BulkTagAssignButton(props: BulkTagAssignPanelProps) {
       </PopoverContent>
     </Popover>
   )
+}
+
+/**
+ * 一覧ヘッダーに並べる「タグを一括追加」。並びではボタン＋popover、「…」の中では
+ * popover を入れ子にせず中身をその場に開く（`ToolbarAction` の2つの姿）。
+ */
+export function bulkTagToolbarAction({
+  priority,
+  ...panelProps
+}: BulkTagAssignPanelProps & { priority: number }): ToolbarAction {
+  return {
+    id: "bulk-tag",
+    priority,
+    node: <BulkTagAssignButton {...panelProps} />,
+    collapsedNode: <BulkTagAssignPanel {...panelProps} />,
+  }
 }

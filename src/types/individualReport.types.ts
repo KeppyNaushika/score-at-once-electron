@@ -81,7 +81,7 @@ export function toTableColumns(value: number): TableColumns {
 }
 
 /** 設問テーブル列数 */
-export type QuestionTableColumns = TableColumns
+type QuestionTableColumns = TableColumns
 
 /** 小計点テーブル列数 */
 export type SubtotalTableColumns = TableColumns
