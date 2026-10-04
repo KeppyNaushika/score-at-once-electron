@@ -1,28 +1,21 @@
 "use client"
 
-import { RotateCw, Settings2 } from "lucide-react"
+import { Settings2 } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import type {
   FileTransform,
   ImportedFile,
   InterleaveConfig,
-  NUpLayout,
-  RotationDegree,
 } from "@/types/pdfTools.types"
+
+import FileLayoutSettings from "../FileLayoutSettings"
 
 interface InterleaveSettingsProps {
   files: ImportedFile[]
   config: InterleaveConfig
   onConfigChange: (config: InterleaveConfig) => void
-  /** 2-in-1・回転の変更。ファイルの設定を直接書き換える（左のファイル欄と共通） */
+  /** N-up・回転の変更。ファイルの設定を直接書き換える（左のファイル欄と共通） */
   onFileUpdated: (file: ImportedFile) => void
   disabled: boolean
 }
@@ -31,7 +24,7 @@ interface InterleaveSettingsProps {
  * 交互挿入設定コンポーネント
  *
  * 複数ファイルの交互挿入設定を管理する。1回に入れるページ数は交互挿入に固有の設定、
- * 2-in-1・回転はファイルの設定（左のファイル欄と同じ値）を表示・変更する。
+ * N-up・回転はファイルの設定（左のファイル欄と同じ値）を表示・変更する。
  * ファイルの増減に伴う設定の増減は、取り込み・削除のときに親が行う（`PdfToolsMainView`）。
  */
 export default function InterleaveSettings({
@@ -64,7 +57,7 @@ export default function InterleaveSettings({
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        2in1・回転は左のファイルの設定と共通です
+        N-up・回転は左のファイルの設定と共通です。頁/組をN-upの枚数に合わせると、面ごとに交互になります
       </p>
       {config.transforms.map((transform) => {
         const file = files.find(
@@ -79,49 +72,11 @@ export default function InterleaveSettings({
               <span className="truncate text-sm font-medium">{file.name}</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={file.nUp.enabled ? file.nUp.layout : "1in1"}
-                onValueChange={(value) => {
-                  const enabled = value !== "1in1"
-                  const layout = value === "1in1" ? "2x1" : (value as NUpLayout)
-                  onFileUpdated({
-                    ...file,
-                    nUp: { ...file.nUp, enabled, layout },
-                  })
-                }}
+              <FileLayoutSettings
+                file={file}
+                onFileUpdated={onFileUpdated}
                 disabled={disabled}
-              >
-                <SelectTrigger className="h-8 w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1in1">1in1</SelectItem>
-                  <SelectItem value="2x1">2in1(横)</SelectItem>
-                  <SelectItem value="1x2">2in1(縦)</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={file.rotation.toString()}
-                onValueChange={(value) => {
-                  onFileUpdated({
-                    ...file,
-                    rotation: parseInt(value) as RotationDegree,
-                  })
-                }}
-                disabled={disabled}
-              >
-                <SelectTrigger className="h-8 w-20">
-                  <RotateCw className="mr-1 h-3 w-3" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">0°</SelectItem>
-                  <SelectItem value="90">90°</SelectItem>
-                  <SelectItem value="180">180°</SelectItem>
-                  <SelectItem value="270">270°</SelectItem>
-                </SelectContent>
-              </Select>
+              />
 
               <div className="flex items-center gap-1">
                 <Input

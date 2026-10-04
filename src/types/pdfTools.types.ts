@@ -3,8 +3,9 @@
  * PDF加工機能で使用する共通型定義
  */
 
-/** ページ回転角度 */
-export type RotationDegree = 0 | 90 | 180 | 270
+/** ページ回転角度（時計回り） */
+export const ROTATION_DEGREES = [0, 90, 180, 270] as const
+export type RotationDegree = (typeof ROTATION_DEGREES)[number]
 
 /**
  * エクスポートモード
@@ -14,13 +15,32 @@ export type RotationDegree = 0 | 90 | 180 | 270
  */
 export type PdfExportMode = "merge" | "interleave"
 
-/** 2-in-1 レイアウト */
-export type NUpLayout = "2x1" | "1x2" // 横並び / 縦並び
+/** 1面に入れるページ数（N-up）。1 は面にまとめず、元のページをそのまま出す */
+export const PAGES_PER_SHEET_OPTIONS = [1, 2, 4, 8, 9, 16] as const
+export type PagesPerSheet = (typeof PAGES_PER_SHEET_OPTIONS)[number]
 
-/** 2-in-1 (Nアップ) 設定 */
+/**
+ * 面の中でページを置いていく順（どの角から、どちら向きに埋めるか）。
+ * 左上から右へ（Z）・左上から下へ（N）・右上から左へ・右上から下へ。
+ */
+export const SLOT_ORDERS = [
+  "from-top-left-rightward",
+  "from-top-left-downward",
+  "from-top-right-leftward",
+  "from-top-right-downward",
+] as const
+export type SlotOrder = (typeof SLOT_ORDERS)[number]
+
+/**
+ * N-up の設定（1面に何ページを、どの順に置くか）。
+ *
+ * 行×列と用紙の縦横は持たない。置くページの縦横（回転後）から、ページが最も大きく
+ * 収まる方を描くときに決める（`computeSheetLayout`）。ページの寸法を知っているのは
+ * 描く側（PDF は元ファイル、PNG はページ画像）だけなので。
+ */
 export interface NUpConfig {
-  enabled: boolean
-  layout: NUpLayout
+  pagesPerSheet: PagesPerSheet
+  slotOrder: SlotOrder
 }
 
 /** 元PDFファイルのメタデータ（取り込み時に getPdfInfo で取得） */
@@ -34,21 +54,38 @@ export interface SourcePdfMetadata {
   isEncrypted: boolean
 }
 
-/**
- * 書き出す1ページ分の入力（IPC境界を渡る）。
- * 結合（1ファイルへ全ページ）とページ別書き出し（1ページ1ファイル）で共通。
- */
-export interface PdfPageInput {
+/** 書き出す元ページ1枚（IPC境界を渡る） */
+export interface PdfSourcePageInput {
+  kind: "page"
   filePath: string
   /** 1-indexed */
   pageNumber: number
-  rotation?: RotationDegree
-  /** 2-in-1で結合されたページか */
-  isNUpCombined?: boolean
-  /** 結合する元ページ番号 (例: [1, 2]) */
-  combinedPages?: number[]
-  nUpLayout?: NUpLayout
+  /** 時計回り。元PDFの /Rotate に足して回す */
+  rotation: RotationDegree
 }
+
+/**
+ * N-up の面のスロットに入るもの。
+ *
+ * いまは元ページだけ。全体 N-up（ファイルごとの面や単独ページを1スロットへ縮めて
+ * 入れ子にする）では、ここに `PdfNUpSheetInput` を足す。配置の計算は中身の寸法
+ * （面なら用紙の寸法）しか見ないので、足しても `computeSheetLayout` は変わらない。
+ */
+export type PdfSheetSlotInput = PdfSourcePageInput
+
+/** 書き出す N-up の面1枚（IPC境界を渡る） */
+export interface PdfNUpSheetInput {
+  kind: "sheet"
+  nUp: NUpConfig
+  /** 並べ方（`nUp.slotOrder`）の順に並べたスロットの中身。null は空きスロット */
+  slots: (PdfSheetSlotInput | null)[]
+}
+
+/**
+ * 書き出す1ページ分の入力（IPC境界を渡る）。元ページそのままか、N-up の面。
+ * 結合（1ファイルへ全ページ）とページ別書き出し（1ページ1ファイル）で共通。
+ */
+export type PdfPageInput = PdfSourcePageInput | PdfNUpSheetInput
 
 /** インポートされたファイル */
 export interface ImportedFile {
@@ -59,6 +96,7 @@ export interface ImportedFile {
   thumbnails: string[] // base64 data URLs
   selectedPages: Set<number> // 1-indexed
   nUp: NUpConfig
+  /** ページごとの回転の既定（プレビューで個別に回したページはそちらが優先） */
   rotation: RotationDegree
   /**
    * 元PDF（パスワード保護時の復号済み複製への差し替え前）のメタデータ。
@@ -67,22 +105,42 @@ export interface ImportedFile {
   sourcePdfMetadata: SourcePdfMetadata | null
 }
 
-/** 出力ページ（並び替え用） */
+/**
+ * 出力に載る元ページ1枚（プレビューの1マス。並べ替え・除外・回転の単位）。
+ * id は元ページのキー（"fileId:pageNumber"）で、作り直しても変わらない。
+ */
 export interface OutputPage {
+  kind: "page"
   id: string
   sourceFileId: string
   sourceFileName: string
   sourcePageNumber: number // 1-indexed
   thumbnail: string
+  /** 時計回り。N-up の面では、スロットの中でこのページだけを回す */
   rotation: RotationDegree
-  isNUpCombined: boolean // 2-in-1で結合されたページか
-  combinedPages?: number[] // 結合された元ページ番号 (例: [1, 2])
-  nUpLayout?: NUpLayout // 2-in-1レイアウト ("2x1" | "1x2")
 }
+
+/** N-up の面のスロットに入るもの（全体 N-up では `NUpSheet` を足す。`PdfSheetSlotInput` 参照） */
+type SheetSlotContent = OutputPage
+
+/**
+ * N-up の面（出力の1ページに、複数のページを縮めて並べたもの）。
+ * id は先頭スロットのページのキー。
+ */
+export interface NUpSheet {
+  kind: "sheet"
+  id: string
+  nUp: NUpConfig
+  /** 並べ方（`nUp.slotOrder`）の順に並べたスロットの中身。null は空きスロット（端数） */
+  slots: (SheetSlotContent | null)[]
+}
+
+/** 出力の1ページ: 元ページそのままか、N-up の面 */
+export type OutputSheet = OutputPage | NUpSheet
 
 /**
  * 交互挿入でのファイル別設定。
- * 2-in-1・回転はここに持たず、ファイルの設定（ImportedFile の nUp / rotation）を使う
+ * N-up・回転はここに持たず、ファイルの設定（ImportedFile の nUp / rotation）を使う
  * （左のファイル欄と交互挿入の欄のどちらで変えても同じ値になるように）。
  */
 export interface FileTransform {

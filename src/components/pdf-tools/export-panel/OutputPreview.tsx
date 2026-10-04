@@ -13,20 +13,26 @@ import {
   rectSortingStrategy,
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
 } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, RotateCcw, RotateCw, Trash2 } from "lucide-react"
-import Image from "next/image"
+import { useRef, useState } from "react"
 
-import { cn } from "@/lib/utils"
-import type { OutputPage, RotationDegree } from "@/types/pdfTools.types"
+import type { NUpSize } from "@/lib/pdf-tools/nUpLayout"
+import {
+  type OutputPage,
+  type OutputSheet,
+  ROTATION_DEGREES,
+  type RotationDegree,
+} from "@/types/pdfTools.types"
 
-/** 回転角の並び。左右の回転はこの並びを1つずらす */
-const ROTATION_CYCLE: RotationDegree[] = [0, 90, 180, 270]
+import { pageIdToFocusAfterRemoval } from "./focusAfterRemoval"
+import { pagePlacements } from "./pagePlacements"
+import SortablePageItem from "./SortablePageItem"
 
 interface OutputPreviewProps {
+  /** 出力に載るページ（並び順のとおり）。1ページ1マスで並べる */
   pages: OutputPage[]
+  /** pages を N-up の面に組んだもの。同じ面のページを枠でくくるのに使う */
+  sheets: OutputSheet[]
   /** ドラッグで動かした。移動先のページの直前（後ろへ動かしたなら直後）へ */
   onPageMoved: (
     movedPage: OutputPage,
@@ -40,8 +46,16 @@ interface OutputPreviewProps {
   columns: number
 }
 
+/**
+ * 出力プレビュー。
+ *
+ * 面ではなくページを1マスずつ並べ、同じ面に入るページを同じ色の枠でくくる。面は
+ * 並び順の後で組むので、ドラッグでページを動かすと組み合わせが変わる。それが見て
+ * 分かるように、面の単位ではなくページの単位で並べ替え・回転・除外をさせる。
+ */
 export default function OutputPreview({
   pages,
+  sheets,
   onPageMoved,
   onDeletePage,
   onRotatePage,
@@ -49,11 +63,60 @@ export default function OutputPreview({
   columns,
 }: OutputPreviewProps) {
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    // 押しただけではドラッグにせず、少し動かしてから始める。カードのどこを
+    // つかんでもドラッグでき（回転・除外のボタンの上も）、動かさずに離せばボタンの
+    // クリックになる。ドラッグした後のクリックは dnd-kit が握りつぶす
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   )
+
+  // サムネイル画像の寸法（ページの id → 寸法。読めなかったら null）。面の格子を
+  // 出力と同じ計算で選ぶのに使う。カードの画像が読み込まれたときに測って入れる
+  const [thumbnailSizes, setThumbnailSizes] = useState<
+    ReadonlyMap<string, NUpSize | null>
+  >(new Map())
+  const handleThumbnailMeasured = (pageId: string, size: NUpSize | null) => {
+    setThumbnailSizes((prev) => {
+      const known = prev.get(pageId)
+      if (
+        prev.has(pageId) &&
+        known?.width === size?.width &&
+        known?.height === size?.height
+      ) {
+        return prev
+      }
+      return new Map(prev).set(pageId, size)
+    })
+  }
+
+  const placementByPageId = pagePlacements(sheets, thumbnailSizes)
+
+  // カードの要素（ページの id → フォーカスを受ける要素）。除外したあとに隣のカードへ
+  // フォーカスを移すのに使う
+  const cardElements = useRef(new Map<string, HTMLElement>())
+
+  /**
+   * ページを除外する。キーボードで除外したときは、先に隣のカードへフォーカスを移す
+   * （カードの id は並び順のキーで、除外しても残るカードの要素は作り直されないので、
+   * 移したフォーカスはそのまま残る）。ポインタで除外したときは移さない
+   */
+  const handleDeletePage = (
+    page: OutputPage,
+    trigger: "keyboard" | "pointer"
+  ) => {
+    if (trigger === "keyboard") {
+      const nextPageId = pageIdToFocusAfterRemoval(
+        pages.map((candidatePage) => candidatePage.id),
+        page.id
+      )
+      if (nextPageId !== undefined) {
+        cardElements.current.get(nextPageId)?.focus()
+      }
+    }
+    onDeletePage(page)
+  }
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
@@ -73,10 +136,11 @@ export default function OutputPreview({
 
   /** ページを 90° 単位で回す（step: -1 = 左, 1 = 右） */
   const handleRotatePage = (page: OutputPage, step: -1 | 1) => {
-    const currentIndex = ROTATION_CYCLE.indexOf(page.rotation)
+    const currentIndex = ROTATION_DEGREES.indexOf(page.rotation)
     const rotation =
-      ROTATION_CYCLE[
-        (currentIndex + step + ROTATION_CYCLE.length) % ROTATION_CYCLE.length
+      ROTATION_DEGREES[
+        (currentIndex + step + ROTATION_DEGREES.length) %
+          ROTATION_DEGREES.length
       ]
     onRotatePage(page, rotation)
   }
@@ -86,6 +150,19 @@ export default function OutputPreview({
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
         ページを選択してください
       </div>
+    )
+  }
+
+  /** 同じ行で隣のマスが同じ面か（枠をつなげて1つにくくる） */
+  const isSameSheetAs = (pageIndex: number, neighborIndex: number) => {
+    const isSameRow =
+      Math.floor(pageIndex / columns) === Math.floor(neighborIndex / columns)
+    const neighbor = pages[neighborIndex]
+    if (!isSameRow || !neighbor) return false
+    const sheetId = placementByPageId.get(pages[pageIndex].id)?.sheetId
+    return (
+      sheetId !== undefined &&
+      placementByPageId.get(neighbor.id)?.sheetId === sheetId
     )
   }
 
@@ -105,163 +182,30 @@ export default function OutputPreview({
             gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
           }}
         >
-          {pages.map((page, index) => (
+          {pages.map((page, pageIndex) => (
             <SortablePageItem
               key={page.id}
               page={page}
-              index={index}
+              placement={placementByPageId.get(page.id)}
+              joinsPrevious={isSameSheetAs(pageIndex, pageIndex - 1)}
+              joinsNext={isSameSheetAs(pageIndex, pageIndex + 1)}
               disabled={disabled}
-              onDelete={() => onDeletePage(page)}
+              cardRef={(element) => {
+                cardElements.current.set(page.id, element)
+                return () => {
+                  cardElements.current.delete(page.id)
+                }
+              }}
+              onDelete={(trigger) => handleDeletePage(page, trigger)}
               onRotateLeft={() => handleRotatePage(page, -1)}
               onRotateRight={() => handleRotatePage(page, 1)}
+              onThumbnailMeasured={(size) =>
+                handleThumbnailMeasured(page.id, size)
+              }
             />
           ))}
         </div>
       </SortableContext>
     </DndContext>
-  )
-}
-
-interface SortablePageItemProps {
-  page: OutputPage
-  index: number
-  disabled: boolean
-  onDelete: () => void
-  onRotateLeft: () => void
-  onRotateRight: () => void
-}
-
-function SortablePageItem({
-  page,
-  index,
-  disabled,
-  onDelete,
-  onRotateLeft,
-  onRotateRight,
-}: SortablePageItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: page.id, disabled })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  // ファイル名の短縮表示
-  const shortFileName =
-    page.sourceFileName.length > 8
-      ? page.sourceFileName.slice(0, 6) + "…"
-      : page.sourceFileName
-
-  // 回転スタイル
-  const rotationStyle = {
-    transform: `rotate(${page.rotation}deg)`,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "group relative aspect-3/4 cursor-grab overflow-hidden rounded-lg border-2 bg-white shadow-sm transition-all",
-        isDragging ? "z-50 opacity-50 shadow-lg" : "hover:border-primary/50",
-        disabled && "cursor-not-allowed opacity-50"
-      )}
-      {...attributes}
-      {...listeners}
-    >
-      {/* サムネイル */}
-      <div className="relative h-full w-full overflow-hidden">
-        {page.thumbnail ? (
-          <Image
-            src={page.thumbnail}
-            alt={`Page ${index + 1}`}
-            fill
-            unoptimized
-            className="object-cover"
-            style={page.rotation !== 0 ? rotationStyle : undefined}
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-muted">
-            <span className="text-xs text-muted-foreground">
-              {page.sourcePageNumber}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* ホバー時オーバーレイ（回転・削除ボタン） */}
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 bg-black/40 opacity-0 transition-opacity",
-          !disabled && "group-hover:opacity-100"
-        )}
-      >
-        <button
-          className="pointer-events-auto rounded-full bg-white/90 p-1.5 text-foreground shadow-md transition-colors hover:bg-white"
-          onClick={(e) => {
-            e.stopPropagation()
-            onRotateLeft()
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          title="左に90°回転"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-        </button>
-        <button
-          className="pointer-events-auto rounded-full bg-white/90 p-1.5 text-foreground shadow-md transition-colors hover:bg-white"
-          onClick={(e) => {
-            e.stopPropagation()
-            onRotateRight()
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          title="右に90°回転"
-        >
-          <RotateCw className="h-3.5 w-3.5" />
-        </button>
-        <button
-          className="pointer-events-auto rounded-full bg-red-500 p-1.5 text-white shadow-md transition-colors hover:bg-red-600"
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete()
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-          title="削除"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </div>
-
-      {/* ドラッグハンドル */}
-      <div className="absolute top-1 left-1 rounded bg-black/40 p-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-        <GripVertical className="h-3 w-3 text-white" />
-      </div>
-
-      {/* ページ情報 */}
-      <div className="absolute right-0 bottom-0 left-0 bg-black/60 px-1 py-0.5">
-        <div className="flex items-center justify-between">
-          <span className="truncate text-[10px] text-white">
-            {shortFileName}
-          </span>
-          <span className="text-[10px] whitespace-nowrap text-white/80">
-            {page.rotation !== 0 && `${page.rotation}° `}
-            {page.isNUpCombined && page.combinedPages
-              ? page.combinedPages.join("+")
-              : page.sourcePageNumber}
-          </span>
-        </div>
-      </div>
-
-      {/* 出力順番号 */}
-      <div className="absolute top-1 right-1 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
-        {index + 1}
-      </div>
-    </div>
   )
 }

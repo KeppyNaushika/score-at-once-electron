@@ -46,8 +46,8 @@ export function useImportedFiles() {
         thumbnails,
         selectedPages,
         nUp: {
-          enabled: false,
-          layout: "2x1",
+          pagesPerSheet: 1,
+          slotOrder: "from-top-left-rightward",
         },
         rotation: 0,
         sourcePdfMetadata,

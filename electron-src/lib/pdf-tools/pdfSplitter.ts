@@ -13,10 +13,10 @@ import { appendPageToPdf, type SourcePdfCache } from "./pdfMerger"
 /**
  * 出力ページを1ページ1ファイルのPDFへ分割して書き出す。
  *
- * 結合（mergePdfs）と同じページ入力を受け取るので、並び替え・除外・回転・2-in-1
+ * 結合（mergePdfs）と同じページ入力を受け取るので、並び替え・除外・回転・N-up
  * といった出力プレビューの編集内容がそのまま反映される。
  *
- * @param pages 書き出す順のページ入力。1件が1ファイルになる
+ * @param pages 書き出す順のページ入力。1件（元ページ1枚か、N-up の面1つ）が1ファイルになる
  * @param outputDir 出力先ディレクトリ
  * @param prefix 出力ファイル名の接頭辞（既定は "page"）
  */

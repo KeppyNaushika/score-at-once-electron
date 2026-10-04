@@ -14,7 +14,7 @@ import { splitPdf } from "../lib/pdf-tools/pdfSplitter"
 import { exportPagesToPng } from "../lib/pdf-tools/pdfToPng"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
-/** PDFツール（結合・分割・2-in-1・PNG書き出し）に関するIPCチャンネルを登録する */
+/** PDFツール（結合・分割・N-up・PNG書き出し）に関するIPCチャンネルを登録する */
 export const pdfToolsHandlers = {
   // PDF結合
   "pdf-tools:merge-pdfs": async (options: {
