@@ -207,17 +207,10 @@ model AsbDefinitionMember {
 ### 4.2 id は uuidv4、同定は `@@unique`
 
 2端末が同じ人を同じ資料に追加すると id 違い・`@@unique` 同値の行が2つできるが、**これは
-sqlite-nas-sync が解決する**（`conflict.ts` の `applyInsert` が `updatedAt` の LWW で敗者行を
-削除し、1行へ収束させる）。id を親子キーから組み立てる必要はない。
-
-**ただし、この解決は「敗者行に子がいない場合に限る」**（実測:
-[sync-secondary-unique-hazard.md](./sync-secondary-unique-hazard.md)）。敗者に子がぶら下がって
-いると、その子はカスケードで消えて世界から失われるうえ、負けた側ではなく**勝った側の端末**が
-子の INSERT で外部キー違反を起こして取り込みが丸ごと巻き戻り、読んだ位置も進まないため
-**その相手からの以後すべての変更が永久に届かなくなる**（利用者には何も見えない）。
-`AsbDefinitionMember` / `GradeMember` / `CourseworkMember` は子を持たないので該当しないが、
-**メンバーに子（権限の詳細など）を足すときは、この条件に入る**。該当は「セカンダリ unique を
-持ち、かつ子を持つ」10モデルで、最重は `ExamStudent`。直すのはライブラリ側。
+sqlite-nas-sync が解決する**（0.20.0 からは、`updatedAt` の LWW で勝った行だけが表に入り、
+負けた行は隠れる。負けた行の子は勝った行の子として見え、制約違反で同期が止まることはない。
+経緯は [sync-secondary-unique-hazard.md](./sync-secondary-unique-hazard.md)）。id を親子キーから
+組み立てる必要はない。
 
 > 当初は #1128 に倣って「新設の時点で決定論的 id にする」方針だったが、作成の衝突は
 > ライブラリが解決するため根拠が成り立たず、撤回した（2026-08-03）。

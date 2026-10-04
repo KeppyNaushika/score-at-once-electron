@@ -37,8 +37,8 @@ export async function getGradeComparisons(gradeId: string) {
 /**
  * 比較を1つ足す。並びはその項目の末尾。
  *
- * 自分自身と比べても常に → にしかならないので断る。同じ組の二重登録は画面で防ぐ
- * （スキーマに UNIQUE を置かない理由は schema.prisma の GradeComparison を参照）。
+ * 自分自身と比べても常に → にしかならないので断る。同じ組が既に在れば、その行を
+ * そのまま返す（`@@unique` の組が同定の鍵。二度押しでも望んだ状態にはなっている）。
  */
 export async function createGradeComparison(comparisonInput: {
   gradeItemId: string
@@ -47,6 +47,17 @@ export async function createGradeComparison(comparisonInput: {
   if (comparisonInput.gradeItemId === comparisonInput.comparedGradeItemId) {
     throw new Error("評価項目を自分自身と比較することはできません")
   }
+
+  const existing = await prisma.gradeComparison.findUnique({
+    where: {
+      gradeItemId_comparedGradeItemId: {
+        gradeItemId: comparisonInput.gradeItemId,
+        comparedGradeItemId: comparisonInput.comparedGradeItemId,
+      },
+    },
+    include: { ...gradeComparisonInclude, gradeItem: true },
+  })
+  if (existing) return serializePrisma(existing)
 
   const maxOrder = await prisma.gradeComparison.aggregate({
     where: { gradeItemId: comparisonInput.gradeItemId },
