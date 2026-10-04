@@ -8,7 +8,8 @@ datasource db {
 }
 
 /// `username` に `@unique` は置かない（2026-08-22 に外した）。
-/// 共有フォルダ経由の同期は、別 id・同一ユニークキーの行を LWW で1つへ畳んで負けた行を消す。
+/// 共有フォルダ経由の同期は、別 id・同一ユニークキーの行を LWW で1つへ統合する（負けた行は
+/// 隠れ、その子は勝った行の子として見える）。
 /// username は人が自由に打つ名前で、重複チェックも無いため、「同じものを2回作った」だけでなく
 /// 「別の人が偶然ぶつかった」が起きる（別の校舎の教員がそれぞれ `suzuki` を作る）。
 /// 畳むと負けた側の採点・答案が勝った側のものになるので、制約を置いてはいけない。
@@ -235,15 +236,8 @@ model CropRegion {
 /// 割当を使っていない既存試験の後方互換）。
 ///
 /// 2端末が同じ(設問, 担当者)ペアを割り当てるとid違い・`@@unique`同値の行ができるが、
-/// これは sqlite-nas-sync が解決する（`conflict.ts` の applyInsert が敗者行をLWWで
-/// 削除し、DELETEトリガー経由で全クライアントが勝者へ収束する）。idは uuidv4 でよい。
-///
-/// **ただし、この解決は「敗者行に子がいない場合に限る」**（実測:
-/// docs/sync-secondary-unique-hazard.md）。敗者に子がぶら下がっていると、その子はカスケードで
-/// 消えるうえ、負けた側ではなく**勝った側の端末**が子のINSERTで外部キー違反を起こして
-/// 取り込みが丸ごと巻き戻り、**その相手からの以後すべての変更が永久に届かなくなる**
-/// （画面には何も出ない）。該当するのは「セカンダリuniqueを持ち、かつ子を持つ」10モデルで、
-/// 最重は ExamStudent。CropRegionAssignment は子を持たないので該当しない。
+/// これは sqlite-nas-sync が解決する（0.20.0 から: LWW で勝った行だけが表に入り、負けた行は
+/// 隠れる。制約違反で同期が止まることはない）。idは uuidv4 でよい。
 model CropRegionAssignment {
   id           String     @id @default(uuid())
   cropRegionId String
@@ -296,8 +290,6 @@ model Subtotal {
 /// （`20260823120000_subtotal_uniques_by_uuid`）。鍵は uuid 2つと閉じた語彙の区分
 /// （`QUESTION_ASSIGNMENT` / `SUBTOTAL_DEFINITION`）なので、2端末が同じ値を作るのは
 /// 「同じマスに2人がチェックを入れた」＝**同じものを2回作った**ときだけで、畳むのが正しい。
-/// `CropSubtotal` は子を持たないので、敗者の子が消える／勝者の端末が外部キー違反で詰まる
-/// （docs/sync-secondary-unique-hazard.md §3）にも当たらない。
 ///
 /// 張るまでは同じマスの行が2つ残りえたので、読む側が毎回畳んでいた（畳み忘れると配点が
 /// 二重に計上される）。
@@ -334,17 +326,12 @@ model UserExam {
 /// 試験で使う小計点グループ。どの集計に含めるかのフラグを持つ。
 ///
 /// 2端末が同じ(試験, 小計点グループ)を追加するとid違い・`@@unique`同値の行ができるが、
-/// これは sqlite-nas-sync が解決する（敗者行をLWWで削除して1行へ収束させる）。
+/// これは sqlite-nas-sync が解決する（LWW で勝った行だけが表に入り、負けた行は隠れる）。
 /// 書き込みは必ず `@@unique` を鍵に upsert すること（idは同定に使わない）。
 ///
-/// **ただし、この解決は「敗者行に子がいない場合に限る」**（実測:
-/// docs/sync-secondary-unique-hazard.md）。敗者に子がいると、その子はカスケードで消え、
-/// さらに負けた側ではなく**勝った側の端末**が子のINSERTで外部キー違反を起こして取り込みが
-/// 丸ごと巻き戻り、**その相手からの以後すべての変更が永久に届かなくなる**。該当するのは
-/// 「セカンダリuniqueを持ち、かつ子を持つ」10モデルで、最重は ExamStudent。
-/// ExamSubtotalGroup は子を持たないので該当しないが、**敗者行の属性は失われる**
-/// （selectedForTable / selectedForBoxPlot は「1行でもtrueなら選択」と読まれるのに、
-/// 勝った行が総取りする。同文書 §6.1 が既知の穴として名指ししている）。
+/// **敗者行の属性は表に出ない**（ライブラリは属性をマージせず、勝った行が総取りする）。
+/// selectedForTable / selectedForBoxPlot は「1行でもtrueなら選択」と読まれるのに、
+/// 負けた側の選択は見えなくなる（docs/sync-secondary-unique-hazard.md §6.1 の既知の穴）。
 model ExamSubtotalGroup {
   id                 String        @id @default(uuid())
   examId             String
@@ -607,8 +594,8 @@ model UserKeyboardShortcut {
 /// UserPreference の側で、こちらに置くのは組織の決めごと —— 年度がいつ始まるか、など。
 /// 人によって違うと、同じ絞り込みでも見えるものが変わってしまう。
 ///
-/// 別の端末が同じキーを同時に作ると id の違う行が2つできるが、子を持たない表なので
-/// 同期は unique 違反を後勝ちで畳める。
+/// 別の端末が同じキーを同時に作ると id の違う行が2つできるが、同期が unique 違反を
+/// 後勝ちで1行へ統合する。
 model AppPreference {
   id    String @id @default(uuid())
   key   String @unique
@@ -1014,16 +1001,8 @@ model GradeConstraint {
 /// 空なら target 以外の全項目を対象にする、という既定の意味は評価側が持つ。
 ///
 /// 2端末が同じ(ルール, 項目)を追加するとid違い・`@@unique`同値の行ができるが、これは
-/// sqlite-nas-sync が解決する（敗者行をLWWで削除して1行へ収束させる）。
+/// sqlite-nas-sync が解決する（LWW で勝った行だけが表に入り、負けた行は隠れる）。
 /// 書き込みは必ず `@@unique` を鍵に upsert すること（idは同定に使わない）。
-///
-/// **ただし、この解決は「敗者行に子がいない場合に限る」**（実測:
-/// docs/sync-secondary-unique-hazard.md）。敗者に子がいると、その子はカスケードで消え、
-/// さらに負けた側ではなく**勝った側の端末**が子のINSERTで外部キー違反を起こして取り込みが
-/// 丸ごと巻き戻り、**その相手からの以後すべての変更が永久に届かなくなる**。該当するのは
-/// 「セカンダリuniqueを持ち、かつ子を持つ」10モデルで、最重は ExamStudent。
-/// GradeConstraintViewpoint は子を持たないので該当しない。**この表に子を足すときは、
-/// 上の条件に入ることを踏まえること。**
 model GradeConstraintViewpoint {
   id           String   @id @default(uuid())
   constraintId String
@@ -1105,8 +1084,9 @@ model GradeItem {
 /// 上下の判定は**自分側の項目の成績境界**を物差しにする（学期ごとに同じ A でも要求得点率が
 /// 違いうるので、どちらの基準で見るかを1つに決めておく）。判定は renderer が行う。
 ///
-/// 同じ組の二重登録は画面で防ぐ。`@@unique` は付けない —— 別端末で同時に同じ組を足すと、
-/// 同期で別id・同一キーの行がぶつかる。二重に残っても記号が1つ増えるだけで壊れない。
+/// 同じ組は1行だけ（`@@unique`）。別端末で同時に同じ組を足すと id 違いの行が2つできるが、
+/// 同期が LWW で1行へ統合する（負けた行は隠れる）。書き込みは `@@unique` を鍵にすること
+/// （idは同定に使わない）。
 model GradeComparison {
   id                  String   @id @default(uuid())
   /// 自分側（この成績算出の評価項目）。成績算出は gradeItem から辿る
@@ -1120,6 +1100,7 @@ model GradeComparison {
   gradeItem         GradeItem @relation("GradeComparisonSubject", fields: [gradeItemId], references: [id], onDelete: Cascade)
   comparedGradeItem GradeItem @relation("GradeComparisonCompared", fields: [comparedGradeItemId], references: [id], onDelete: Cascade)
 
+  @@unique([gradeItemId, comparedGradeItemId])
   @@index([gradeItemId])
   @@index([comparedGradeItemId])
 }

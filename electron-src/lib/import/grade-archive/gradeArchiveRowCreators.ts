@@ -354,6 +354,9 @@ export async function createGradeComparisons(
   }
 
   let droppedComparisons = 0
+  // 同じ組は1行だけ（`@@unique`）。一意制約を張る前のアーカイブには重複が在りうるので、
+  // 先に出てきた方だけを作る
+  const createdPairs = new Set<string>()
   for (const archiveComparison of archive.gradeComparisons) {
     const gradeItemId = gradeItemIdMap.get(archiveComparison.gradeItemId)
     const comparedGradeItemId =
@@ -363,6 +366,9 @@ export async function createGradeComparisons(
       droppedComparisons++
       continue
     }
+    const pairKey = JSON.stringify([gradeItemId, comparedGradeItemId])
+    if (createdPairs.has(pairKey)) continue
+    createdPairs.add(pairKey)
     await tx.gradeComparison.create({
       data: {
         gradeItemId,
