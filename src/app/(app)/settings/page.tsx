@@ -20,6 +20,7 @@ import { SyncSettingsTab } from "@/app/(app)/settings/components/SyncSettingsTab
 import { UserManagementTab } from "@/app/(app)/settings/components/UserManagementTab"
 import { useKeyboardSettings } from "@/app/(app)/settings/hooks/useKeyboardSettings"
 import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
+import { UserDeleteModal } from "@/components/auth/UserDeleteModal"
 import { UserEditModal } from "@/components/auth/UserEditModal"
 import { BetaBadge } from "@/components/common/BetaBadge"
 import PageHeader from "@/components/layout/PageHeader"
@@ -46,6 +47,7 @@ export default function SettingsPage() {
   const [isPasscodeEditOpen, setIsPasscodeEditOpen] = useState(false)
   const [isUserEditOpen, setIsUserEditOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<PublicUser | null>(null)
+  const [deletingUser, setDeletingUser] = useState<PublicUser | null>(null)
 
   const handleEditUser = (user: PublicUser) => {
     setSelectedUser(user)
@@ -127,6 +129,7 @@ export default function SettingsPage() {
                 users={users}
                 onEditUser={handleEditUser}
                 onEditPasscode={handleEditPasscode}
+                onDeleteUser={setDeletingUser}
               />
             </TabsContent>
 
@@ -147,6 +150,15 @@ export default function SettingsPage() {
           }}
           onUserUpdated={handleUserUpdated}
           user={selectedUser}
+        />
+      )}
+
+      {/* 閉じている間はマウントしない。開くたびに消えるデータを数え直す */}
+      {deletingUser && (
+        <UserDeleteModal
+          isOpen
+          onClose={() => setDeletingUser(null)}
+          user={deletingUser}
         />
       )}
 

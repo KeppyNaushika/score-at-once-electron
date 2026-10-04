@@ -373,7 +373,7 @@ model QuestionScore {
   drawingAnnotations DrawingAnnotation[]
   cropRegion         CropRegion          @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   examStudent        ExamStudent         @relation(fields: [examStudentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user               User                @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([examStudentId])
   /// SQLite は外部キーに索引を自動で作らない。この列が素通しだと、採点行を
@@ -403,7 +403,7 @@ model ScoreDecision {
   updatedAt       DateTime    @default(now()) @updatedAt
   cropRegion      CropRegion  @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   examStudent     ExamStudent @relation(fields: [examStudentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  decidedBy       User        @relation(fields: [decidedByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  decidedBy       User        @relation(fields: [decidedByUserId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([cropRegionId, examStudentId])
   @@index([examStudentId])
@@ -457,14 +457,15 @@ model ReturnSnapshot {
   scoresJson       String
   /// 返却時点の合計点（表示用。null可）
   totalScore       Decimal?
-  /// 返却操作を行った操作者。システム操作はnull
+  /// 返却操作を行った操作者。システム操作はnull。
+  /// 利用者を削除しても返却版は残し、ここだけ null にする（実行者の記録なので SetNull）
   capturedByUserId String?
   /// 返却版として記録した日時（ISO text）
   capturedAt       DateTime    @default(now())
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @default(now()) @updatedAt
   examStudent      ExamStudent @relation(fields: [examStudentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  capturedBy       User?       @relation(fields: [capturedByUserId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  capturedBy       User?       @relation(fields: [capturedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }
 
 /// 監査ログ（Discord風の操作履歴）。
@@ -914,7 +915,7 @@ model CompoundAnswerScore {
 
   compoundAnswer CompoundAnswer @relation(fields: [compoundAnswerId], references: [id], onDelete: Cascade)
   examStudent    ExamStudent    @relation(fields: [examStudentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user           User           @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([compoundAnswerId, examStudentId])
   @@index([compoundAnswerId])

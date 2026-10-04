@@ -35,6 +35,8 @@ import {
   removeExamMemberMutation,
 } from "@/queries/userExam"
 
+import { MemberRoleButton } from "./MemberRoleButton"
+
 interface MemberInviteDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -47,6 +49,7 @@ interface MemberInviteDialogProps {
  * 試験メンバー管理ダイアログ
  * - 現在のメンバー一覧表示
  * - ユーザー検索・招待
+ * - 役割の変更（採点者 ⇄ オーナー。オーナーを別の教員へ移すのもここ）
  * - メンバー削除（GRADERのみ）
  */
 /** 未検索のときに毎回新しい配列を作らないための空値 */
@@ -83,6 +86,7 @@ export function MemberInviteDialog({
   const [mutationError, setMutationError] = useState<string | null>(null)
   const error =
     mutationError ?? (membersError ? "メンバー情報の取得に失敗しました" : null)
+  const ownerCount = members.filter((member) => member.role === "OWNER").length
 
   const { data: isOwner = false } = useQuery({
     ...examOwnerQuery(examId, currentUserId),
@@ -259,7 +263,7 @@ export function MemberInviteDialog({
                     <TableHead>ユーザー</TableHead>
                     <TableHead>ロール</TableHead>
                     <TableHead>招待日</TableHead>
-                    {isOwner && <TableHead className="w-20"></TableHead>}
+                    {isOwner && <TableHead className="w-48"></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -305,18 +309,26 @@ export function MemberInviteDialog({
                         </TableCell>
                         {isOwner && (
                           <TableCell>
-                            {member.role !== "OWNER" && (
-                              <TooltipButton
-                                label="メンバーから外す"
+                            <div className="flex items-center justify-end gap-1">
+                              <MemberRoleButton
+                                examId={examId}
+                                member={member}
+                                currentUserId={currentUserId}
+                                ownerCount={ownerCount}
+                              />
+                              {member.role !== "OWNER" && (
+                                <TooltipButton
+                                  label="メンバーから外す"
 
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemove(member.user.id)}
-                                disabled={removingUserId === member.user.id}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </TooltipButton>
-                            )}
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemove(member.user.id)}
+                                  disabled={removingUserId === member.user.id}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </TooltipButton>
+                              )}
+                            </div>
                           </TableCell>
                         )}
                       </TableRow>
@@ -333,10 +345,14 @@ export function MemberInviteDialog({
           <ul className="mt-1 list-inside list-disc space-y-1">
             <li>
               <strong>オーナー</strong>:
-              試験設定の変更、メンバーの招待・削除が可能
+              試験設定の変更、メンバーの招待・削除・役割の変更が可能。複数人にできる
             </li>
             <li>
               <strong>採点者</strong>: 採点作業、結果出力が可能
+            </li>
+            <li>
+              オーナーを別の教員へ移すときは、相手を「オーナーにする」で
+              オーナーにしてから、自分を「採点者に戻す」
             </li>
           </ul>
         </div>

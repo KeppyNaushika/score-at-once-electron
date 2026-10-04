@@ -1,5 +1,6 @@
-import type { InviteMemberOptions } from "../lib/prisma/userExam"
+import type { InviteMemberOptions, UserRole } from "../lib/prisma/userExam"
 import {
+  changeExamMemberRole,
   getExamMembers,
   inviteExamMember,
   isExamOwner,
@@ -32,6 +33,15 @@ export const userExamHandlers = {
     removedBy: string
   ) => {
     return await removeExamMember(examId, userId, removedBy)
+  },
+
+  // 参加者の役割を変える（操作者と権限は main が判定する）
+  "user-exam:change-role": async (
+    examId: string,
+    userId: string,
+    role: UserRole
+  ) => {
+    return await changeExamMemberRole(examId, userId, role)
   },
 
   // Search users for invitation

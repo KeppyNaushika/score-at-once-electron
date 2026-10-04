@@ -32,7 +32,10 @@ import {
 import { uploadStudentAnswers } from "../lib/prisma/studentAnswer/upload"
 import {
   createUser,
+  deleteUser,
+  fetchUserExamOwnerships,
   fetchUsers,
+  getUserDeletionCounts,
   updateUser,
   updateUserPasscode,
   verifyPasscode,
@@ -82,6 +85,21 @@ export const miscHandlers = {
       passcode,
       passcodeType as "none" | "4digit" | "6digit" | "alphanumeric"
     )
+  },
+
+  // 削除確認ダイアログで「何が消えるか」を提示するための事前照会
+  "get-user-deletion-counts": (userId: string) => getUserDeletionCounts(userId),
+
+  // その利用者だけが所有者になっている試験を、確認ダイアログが前もって見せるため
+  "fetch-user-exam-ownerships": (userId: string) =>
+    fetchUserExamOwnerships(userId),
+
+  // 利用者が見た件数を添えて削除する（消す直前に数え直し、増えていれば中止する）
+  "delete-user": async (
+    userId: string,
+    confirmedCounts: ConfirmedDeletionCount[]
+  ) => {
+    return await deleteUser(userId, confirmedCounts)
   },
 
   // Answer sheet handlers

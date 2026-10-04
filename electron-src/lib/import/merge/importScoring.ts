@@ -387,7 +387,7 @@ export async function processCompoundAnswerScores(
  * 済んだ出来事の記録で、取り込んだ人はその操作をしていない。現在の利用者を書けば
  * 「この人が返却した」という嘘の記録になる。
  *
- * capturedByUserId には Cascade の FK が張られているので、取り込み先に居ない利用者は
+ * capturedByUserId には User への FK が張られているので、取り込み先に居ない利用者は
  * 書けない。そこで **同じ id の利用者が取り込み先に実在するときだけ引き継ぎ、それ以外は
  * null（＝記録者なし）へ倒す。** 採点者は processUserIdIntegration が先に作るので、
  * 返却したのがその試験の採点者でもある普通の場合は、記録者はそのまま残る。

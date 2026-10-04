@@ -1,8 +1,10 @@
 "use client"
 
-import { Edit3, UserPen } from "lucide-react"
+import { Edit3, Trash2, UserPen } from "lucide-react"
 
+import { WithTooltip } from "@/components/common/WithTooltip"
 import { Button } from "@/components/ui/button"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { PublicUser } from "@/queries/user"
 
 /**
@@ -19,13 +21,17 @@ interface UserManagementTabProps {
   users: PublicUser[]
   onEditUser: (user: PublicUser) => void
   onEditPasscode: (user: PublicUser) => void
+  onDeleteUser: (user: PublicUser) => void
 }
 
 export function UserManagementTab({
   users,
   onEditUser,
   onEditPasscode,
+  onDeleteUser,
 }: UserManagementTabProps) {
+  const currentUser = useCurrentUser()
+
   return (
     <div className="space-y-4">
       <div>
@@ -70,6 +76,28 @@ export function UserManagementTab({
                 <UserPen className="mr-2 h-4 w-4" />
                 パスコード編集
               </Button>
+              {user.id === currentUser.id ? (
+                // ログイン中の本人は消せない（main も断る）。押せない理由を添える。
+                // 無効のボタンはポインタを拾わないので、外側の span で受ける
+                <WithTooltip content="ログイン中の利用者は削除できません">
+                  <span tabIndex={0} className="inline-flex">
+                    <Button variant="outline" size="sm" disabled>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      削除
+                    </Button>
+                  </span>
+                </WithTooltip>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => onDeleteUser(user)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  削除
+                </Button>
+              )}
             </div>
           </div>
         ))}

@@ -2,7 +2,8 @@ import type { User, UserExam } from "@prisma/client"
 
 import type { UserExamWithUserAndInviter } from "@/types/prismaExtensions"
 
-import { recordAuditLog } from "./auditLog"
+import { getCurrentActorUserId } from "./auditActor"
+import { diffFields, recordAuditLog } from "./auditLog"
 import { resolveExamScope, resolveUserLabel } from "./auditScope"
 import prisma from "./client"
 import { PUBLIC_USER_OMIT } from "./publicUser"
@@ -183,6 +184,90 @@ export const removeExamMember = async (
     console.error(`Failed to remove member ${userId} from ${examId}:`, error)
     throw error
   }
+}
+
+/** 役割の表示名（監査ログの文言用。メンバー管理ダイアログのバッジと同じ語） */
+const ROLE_LABELS: Record<UserRole, string> = {
+  OWNER: "オーナー",
+  GRADER: "採点者",
+}
+
+/**
+ * 参加者の役割を変える（採点者 → オーナー、オーナー → 採点者）。
+ *
+ * オーナーを別の教員へ移すときは、相手をオーナーにしてから自分を採点者へ戻す。
+ * 利用者の削除は、その利用者だけがオーナーの試験があると断るので、その前に
+ * これでオーナーを移す（docs/ownership-and-sharing-design.md §4.4）。
+ *
+ * - **変えられるのはその試験のオーナーだけ。** 操作者は main が決める
+ *   （`getCurrentActorUserId`）。renderer が渡した id を信じると、他端末で役割が
+ *   変わった後も手元の古い判定で通ってしまう
+ * - **最後の1人のオーナーは採点者へ戻せない。** オーナーの居ない試験が残る
+ *   （docs/scoring-scope-and-permissions-design.md §3-3）
+ *
+ * これはセキュリティではなく、アプリの導線を通した誤操作を防ぐだけである
+ * （同 §2-4）。
+ */
+export const changeExamMemberRole = async (
+  examId: string,
+  userId: string,
+  role: UserRole
+): Promise<UserExamWithUserAndInviter> => {
+  const actorUserId = getCurrentActorUserId()
+  if (actorUserId === null) {
+    throw new Error(
+      "ログインしている利用者が分からないため、役割を変更できません"
+    )
+  }
+  if ((await getUserRoleInExam(actorUserId, examId)) !== "OWNER") {
+    throw new Error("役割を変更できるのは、この試験のオーナーだけです")
+  }
+
+  const before = await prisma.userExam.findUnique({
+    where: { userId_examId: { userId, examId } },
+  })
+  if (!before) {
+    throw new Error("この利用者は試験の参加者ではありません")
+  }
+
+  if (before.role === "OWNER" && role !== "OWNER") {
+    const ownerCount = await prisma.userExam.count({
+      where: { examId, role: "OWNER" },
+    })
+    if (ownerCount <= 1) {
+      throw new Error(
+        "最後のオーナーは採点者に戻せません。先に別の参加者をオーナーにしてください"
+      )
+    }
+  }
+
+  const updated = await prisma.userExam.update({
+    where: { userId_examId: { userId, examId } },
+    data: { role },
+    include: {
+      user: { omit: PUBLIC_USER_OMIT },
+      inviter: { omit: PUBLIC_USER_OMIT },
+    },
+  })
+
+  const changes = diffFields(before, updated, [
+    { field: "role", label: "役割" },
+  ])
+  if (changes.length > 0) {
+    const scope = await resolveExamScope(examId)
+    await recordAuditLog({
+      action: "exam.user.role_update",
+      entityType: "UserExam",
+      entityId: updated.id,
+      scopeId: scope.scopeId,
+      scopeLabel: scope.scopeLabel,
+      target: updated.user.name,
+      summary: `「${updated.user.name}」を${ROLE_LABELS[role]}にしました`,
+      changes,
+    })
+  }
+
+  return updated
 }
 
 /**

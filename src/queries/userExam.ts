@@ -64,6 +64,26 @@ export const inviteExamMemberMutation = (examId: string) =>
     },
   })
 
+/**
+ * 参加者の役割を変える（採点者 ⇄ オーナー）。操作者と権限は main が決める。
+ *
+ * 役割は試験のあちこちの入口（招待・担当の割り当て・採点の確定）を左右するので、
+ * その試験に紐づく取得をまとめて取り直す。自分を採点者へ戻したときに、
+ * オーナー用の操作が画面に残らないようにするため。
+ */
+export const changeExamMemberRoleMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (input: {
+      userId: string
+      role: Parameters<typeof window.electronAPI.userExam.changeRole>[2]
+    }) =>
+      window.electronAPI.userExam.changeRole(examId, input.userId, input.role),
+    meta: {
+      invalidates: [scopeKeys.exam(examId)],
+      errorMessage: "参加者の役割を変更できませんでした",
+    },
+  })
+
 export const removeExamMemberMutation = (
   examId: string,
   currentUserId: string

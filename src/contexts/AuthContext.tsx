@@ -6,6 +6,7 @@ import type { ReactNode } from "react"
 import { createContext, useContext, useEffect, useEffectEvent } from "react"
 import { toast } from "sonner"
 
+import { showSyncToast } from "@/components/common/syncNoticeToast"
 import {
   authTokenQuery,
   clearAuthTokenMutation,
@@ -40,8 +41,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     null
 
   // トークンが指す利用者が消えていたらトークンごと捨てる（次回から未ログイン）。
-  // 書き先は electron-store という外の入れ物なので effect で同期する
-  const dropStaleToken = useEffectEvent(() => clearAuthToken.mutate())
+  // 書き先は electron-store という外の入れ物なので effect で同期する。
+  //
+  // ここに来るのは、ログイン中の利用者が他のPCで削除され、同期で届いた後に利用者
+  // 一覧を読み直したときだけ（自分でのログアウトはトークンを先に消すので来ない。
+  // 本人は自分を削除できない）。黙ってログイン画面へ戻すと何が起きたか分からない
+  // ので、閉じるまで残る知らせを出す。名前は一覧から消えているので出せない。
+  //
+  // 気づくのは一覧を読み直したときで、同期のたびには読み直さない（他のデータも
+  // 同期で読み直していないので、利用者だけを特別扱いしない）
+  const dropStaleToken = useEffectEvent(() => {
+    showSyncToast(
+      "warning",
+      "ログイン中の利用者は、他のPCで削除されたためログアウトしました",
+      "この利用者と、その採点結果などのデータは、同期で削除されています。別の利用者でログインしてください。"
+    )
+    clearAuthToken.mutate()
+  })
   useEffect(() => {
     if (!authUserId || !users) return
     if (users.some((candidate) => candidate.id === authUserId)) return

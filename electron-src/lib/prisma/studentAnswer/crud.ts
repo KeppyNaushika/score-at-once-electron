@@ -147,12 +147,12 @@ export async function getStudentAnswersDataset(examId: string) {
  * 「採点済み」と扱うと常に true になるので、判定と削除で定義がずれないよう定数にする
  * （削除側は unscored の行も含めて全て消す＝この条件は使わない）。
  */
-const SCORED_QUESTION_SCORE_FILTER = {
+export const SCORED_QUESTION_SCORE_FILTER = {
   OR: [{ status: { not: "unscored" } }, { partialScore: { not: null } }],
 } satisfies Prisma.QuestionScoreWhereInput
 
 /** 「実際に採点された」CompoundAnswerScore の条件（部分点のみ入力済みの状態も拾う） */
-const SCORED_COMPOUND_ANSWER_SCORE_FILTER = {
+export const SCORED_COMPOUND_ANSWER_SCORE_FILTER = {
   OR: [
     { status: { not: "unscored" } },
     { partialScore: { not: null } },

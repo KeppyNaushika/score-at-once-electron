@@ -11,6 +11,9 @@ export function createAuthApi() {
     updateUser: bind("update-user"),
     updateUserPasscode: bind("update-user-passcode"),
     verifyPasscode: bind("verify-passcode"),
+    getUserDeletionCounts: bind("get-user-deletion-counts"),
+    fetchUserExamOwnerships: bind("fetch-user-exam-ownerships"),
+    deleteUser: bind("delete-user"),
 
     // Auth token persistence (electron-store)
     saveAuthToken: bind("auth:saveToken"),
