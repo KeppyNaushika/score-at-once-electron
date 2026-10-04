@@ -185,6 +185,67 @@ function pixelArea(rect: PixelRect): number {
   return (rect.right - rect.left) * (rect.bottom - rect.top)
 }
 
+/** 画像の大きさ（画素）を読む */
+async function readImageSize(
+  imagePath: string
+): Promise<{ imageWidth: number; imageHeight: number }> {
+  const metadata = await sharp(imagePath).metadata()
+  const imageWidth = metadata.width
+  const imageHeight = metadata.height
+  if (!imageWidth || !imageHeight) {
+    throw new Error(`画像の大きさを読み取れません: ${imagePath}`)
+  }
+  return { imageWidth, imageHeight }
+}
+
+/** 送信用の切り出し範囲（余白 0.008 を足し、画像の範囲でクランプした画素の矩形） */
+function computeSendingCropRect(
+  imagePath: string,
+  region: NormalizedRect,
+  imageWidth: number,
+  imageHeight: number
+): PixelRect {
+  const cropRect = toPixelRect(
+    insetRect(region, -SENDING_PADDING),
+    imageWidth,
+    imageHeight
+  )
+  if (pixelArea(cropRect) === 0) {
+    throw new Error(`解答欄が画像の外にあります: ${imagePath}`)
+  }
+  return cropRect
+}
+
+/** 拡大率を掛けた画素数（最低1） */
+function scaledLength(length: number, imageScale: number): number {
+  return imageScale === 1
+    ? length
+    : Math.max(1, Math.round(length * imageScale))
+}
+
+/**
+ * 送信用に切り出したときの大きさ（画素）だけを求める。画像はデコードしない
+ * （件数と費用の見積もりに使う。金額の計算は renderer が行う）
+ */
+export async function measureSendingCropSize(
+  imagePath: string,
+  region: NormalizedRect,
+  options: SendingCropOptions = {}
+): Promise<{ width: number; height: number }> {
+  const imageScale = options.imageScale ?? 1
+  const { imageWidth, imageHeight } = await readImageSize(imagePath)
+  const cropRect = computeSendingCropRect(
+    imagePath,
+    region,
+    imageWidth,
+    imageHeight
+  )
+  return {
+    width: scaledLength(cropRect.right - cropRect.left, imageScale),
+    height: scaledLength(cropRect.bottom - cropRect.top, imageScale),
+  }
+}
+
 /**
  * 解答欄を、余白 0.008 を足して切り出した PNG にする（AI へ送る画像）。
  *
@@ -197,23 +258,15 @@ export async function cropRegionForSending(
   options: SendingCropOptions = {}
 ): Promise<SendingCrop> {
   const imageScale = options.imageScale ?? 1
-  const metadata = await sharp(imagePath).metadata()
-  const imageWidth = metadata.width
-  const imageHeight = metadata.height
-  if (!imageWidth || !imageHeight) {
-    throw new Error(`画像の大きさを読み取れません: ${imagePath}`)
-  }
-
-  const cropRect = toPixelRect(
-    insetRect(region, -SENDING_PADDING),
+  const { imageWidth, imageHeight } = await readImageSize(imagePath)
+  const cropRect = computeSendingCropRect(
+    imagePath,
+    region,
     imageWidth,
     imageHeight
   )
   const cropWidth = cropRect.right - cropRect.left
   const cropHeight = cropRect.bottom - cropRect.top
-  if (cropWidth === 0 || cropHeight === 0) {
-    throw new Error(`解答欄が画像の外にあります: ${imagePath}`)
-  }
 
   let pipeline = sharp(imagePath).extract({
     left: cropRect.left,
@@ -223,8 +276,8 @@ export async function cropRegionForSending(
   })
   if (imageScale !== 1) {
     pipeline = pipeline.resize(
-      Math.max(1, Math.round(cropWidth * imageScale)),
-      Math.max(1, Math.round(cropHeight * imageScale))
+      scaledLength(cropWidth, imageScale),
+      scaledLength(cropHeight, imageScale)
     )
   }
 

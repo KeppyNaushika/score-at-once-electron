@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query"
 import {
   CalendarRange,
+  FlaskConical,
   FolderSync,
   Keyboard,
   Monitor,
@@ -12,6 +13,7 @@ import {
 import { useState } from "react"
 import { toast } from "sonner"
 
+import { AiGradingSettingsTab } from "@/app/(app)/settings/components/AiGradingSettingsTab"
 import { DisplaySettingsTab } from "@/app/(app)/settings/components/DisplaySettingsTab"
 import { FiscalYearTab } from "@/app/(app)/settings/components/FiscalYearTab"
 import { KeyboardShortcutSection } from "@/app/(app)/settings/components/KeyboardShortcutSection"
@@ -96,6 +98,10 @@ export default function SettingsPage() {
                 同期設定
                 <BetaBadge />
               </TabsTrigger>
+              <TabsTrigger value="ai-grading" className="gap-2">
+                <FlaskConical className="h-4 w-4" />
+                実験的機能：AI採点
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="keyboard">
@@ -135,6 +141,10 @@ export default function SettingsPage() {
 
             <TabsContent value="sync">
               <SyncSettingsTab />
+            </TabsContent>
+
+            <TabsContent value="ai-grading">
+              <AiGradingSettingsTab />
             </TabsContent>
           </Tabs>
         </div>

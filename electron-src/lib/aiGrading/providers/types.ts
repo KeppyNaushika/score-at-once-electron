@@ -164,6 +164,12 @@ export interface GradingProvider {
   getBatchStatus(externalBatchId: string): Promise<ProviderBatchStatus>
   readBatchResults(externalBatchId: string): AsyncIterable<ProviderBatchResult>
   cancelBatch(externalBatchId: string): Promise<void>
+  /**
+   * 結果を取り込んだバッチの、事業者側に残る預け物を消す（OpenAI は入力・出力の
+   * ファイルを files に残す。答案の画像を含むので、取り込んだら残しておかない）。
+   * 預け物を残さない事業者は持たない。失敗は投げる
+   */
+  cleanupBatch?(externalBatchId: string): Promise<void>
   /** キーと接続先を確かめる（トークンを消費しない呼び出しを使う）。失敗は投げる */
   testConnection(): Promise<void>
 }

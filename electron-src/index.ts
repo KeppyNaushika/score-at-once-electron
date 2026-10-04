@@ -5,6 +5,7 @@ import { pathToFileURL } from "url"
 import { initializeApp } from "./appInitializer"
 import { setupAllIPCHandlers } from "./ipc-handlers"
 import { destroySharedSvgWindow } from "./ipc-handlers/exportHandlers"
+import { startAiGradingBatchPolling } from "./lib/aiGrading/aiGradingMainServices"
 import { getAbsolutePathFromSharedFiles } from "./lib/dataManager"
 import { closeAllUnifiedArchiveImportSessions } from "./lib/import/unified-archive/archiveImportSessions"
 import { cleanupDecryptedPdfCopies } from "./lib/pdf-tools/decryptedPdfCopy"
@@ -13,6 +14,9 @@ import { DB_NEWER_THAN_APP_MARKER } from "./lib/prisma/schema/migrationGuard"
 import { stopSync } from "./lib/sync/syncService"
 import { startEmbeddedNextServer } from "./nextServerEmbedded"
 import { createMainWindow, setupWindowEvents } from "./windowManager"
+
+/** AI 採点のバッチ回収を止める口（起動に成功したときだけ入る） */
+let stopAiGradingBatchPolling: (() => void) | null = null
 
 // Windows用デバッグ出力の有効化
 if (process.platform === "win32" && app.isPackaged) {
@@ -138,6 +142,14 @@ app.on("ready", async () => {
     // IPCハンドラーの設定
     setupAllIPCHandlers()
 
+    // AI 採点: この端末が預けたバッチの結果を、起動時と一定間隔で回収する
+    // （同意してキーを設定した事業者が無い端末では何もしない）
+    try {
+      stopAiGradingBatchPolling = startAiGradingBatchPolling()
+    } catch (error) {
+      console.warn("Failed to start AI grading batch polling:", error)
+    }
+
     console.log("Application startup completed successfully")
   } catch (error) {
     console.error("Critical error during application startup:", error)
@@ -180,6 +192,9 @@ app.on("before-quit", async (_event) => {
   } catch (error) {
     console.warn("Failed to close unified archive import sessions:", error)
   }
+
+  // AI 採点のバッチ回収を止める（預けたバッチは次の起動で回収する）
+  stopAiGradingBatchPolling?.()
 
   // NAS同期の停止
   try {

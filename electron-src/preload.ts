@@ -1,6 +1,8 @@
 import type { IpcRenderer } from "electron"
 import { contextBridge, ipcRenderer } from "electron"
 
+import { createAiGradingApi } from "./preload-apis/aiGradingApi"
+import { createAiProviderApi } from "./preload-apis/aiProviderApi"
 import { createAnswerSheetApi } from "./preload-apis/answerSheetApi"
 import { createAnswerSheetBuilderApi } from "./preload-apis/answerSheetBuilderApi"
 import { createArchiveApi } from "./preload-apis/archiveApi"
@@ -62,6 +64,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ...createSyncApi(),
   ...createAuditLogApi(),
   ...createUnifiedArchiveApi(),
+  ...createAiGradingApi(),
+  ...createAiProviderApi(),
 })
 
 process.once("loaded", () => {

@@ -135,12 +135,17 @@ function createFakeClient(options: {
   const createBatchCall = vi.fn(async (_params: BatchCreateParams) =>
     createBatch()
   )
+  const deleteFileCall = vi.fn(async (fileId: string) => ({
+    id: fileId,
+    deleted: true,
+  }))
   const client: OpenAiGradingClient = {
     responses: { create: createResponseCall },
     files: {
       create: createFileCall,
       content: async (fileId: string) =>
         new Response(options.fileContents?.[fileId] ?? ""),
+      delete: deleteFileCall,
     },
     batches: {
       create: createBatchCall,
@@ -149,7 +154,13 @@ function createFakeClient(options: {
     },
     models: { list: async () => ({ data: [] }) },
   }
-  return { client, createResponseCall, createFileCall, createBatchCall }
+  return {
+    client,
+    createResponseCall,
+    createFileCall,
+    createBatchCall,
+    deleteFileCall,
+  }
 }
 
 describe("openaiProvider", () => {
@@ -441,6 +452,24 @@ describe("openaiProvider", () => {
           createOpenAiProvider(client).getBatchStatus("batch_test")
         ).resolves.toBe(expected)
       }
+    })
+
+    it("取り込んだバッチの入力・出力・失敗のファイルを消す（答案の画像を残さない）", async () => {
+      const { client, deleteFileCall } = createFakeClient({
+        batch: createBatch({
+          status: "completed",
+          output_file_id: "file_output",
+          error_file_id: "file_error",
+        }),
+      })
+      const provider = createOpenAiProvider(client)
+      await provider.cleanupBatch?.("batch_test")
+
+      expect(deleteFileCall.mock.calls.map(([fileId]) => fileId)).toEqual([
+        "file_input",
+        "file_output",
+        "file_error",
+      ])
     })
   })
 })
