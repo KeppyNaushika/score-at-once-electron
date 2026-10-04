@@ -1,7 +1,6 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 
 import {
   Dialog,
@@ -10,19 +9,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useCurrentUser } from "@/contexts/CurrentUserContext"
-import { answerSheetDefinitionListQuery } from "@/queries/answerSheetBuilder"
-import { courseworkListQuery } from "@/queries/coursework"
-import { examListQuery } from "@/queries/exam"
-import { gradeListQuery } from "@/queries/grade"
-import { classroomListQuery, studentListQuery } from "@/queries/student"
-import { subtotalGroupListQuery } from "@/queries/subtotal"
-import { tagListQuery } from "@/queries/tag"
-import { userListQuery } from "@/queries/user"
 
-import { buildArchiveEntityCatalog } from "./archiveEntityCatalog"
-import { ExportDialogBody } from "./ExportDialogBody"
 import type { UnifiedArchiveExportInitialSelection } from "./types"
+import { UnifiedArchiveExportPanel } from "./UnifiedArchiveExportPanel"
 
 interface UnifiedArchiveExportDialogProps {
   open: boolean
@@ -61,73 +50,12 @@ export function UnifiedArchiveExportDialog({
             選んだものと、それに関連するデータをまとめて1つのファイルに書き出します。
           </DialogDescription>
         </DialogHeader>
-        <ExportDialogContent
+        <UnifiedArchiveExportPanel
           initialSelection={initialSelection}
           onExportingChange={setIsExporting}
           onClose={() => onOpenChange(false)}
         />
       </DialogContent>
     </Dialog>
-  )
-}
-
-interface ExportDialogContentProps {
-  initialSelection: UnifiedArchiveExportInitialSelection
-  onExportingChange: (isExporting: boolean) => void
-  onClose: () => void
-}
-
-/** 実体の名前を引くために、既存の一覧を取ってから中身を描く */
-function ExportDialogContent({
-  initialSelection,
-  onExportingChange,
-  onClose,
-}: ExportDialogContentProps) {
-  const currentUser = useCurrentUser()
-  const { data: exams } = useQuery(examListQuery(currentUser.id))
-  const { data: courseworks } = useQuery(courseworkListQuery())
-  const { data: grades } = useQuery(gradeListQuery())
-  const { data: answerSheetDefinitions } = useQuery(
-    answerSheetDefinitionListQuery()
-  )
-  const { data: students } = useQuery(studentListQuery())
-  const { data: classrooms } = useQuery(classroomListQuery())
-  const { data: subtotalGroups } = useQuery(subtotalGroupListQuery())
-  const { data: tags } = useQuery(tagListQuery())
-  const { data: users } = useQuery(userListQuery())
-
-  const catalog = useMemo(
-    () =>
-      buildArchiveEntityCatalog({
-        exams: exams ?? [],
-        courseworks: courseworks ?? [],
-        grades: grades ?? [],
-        answerSheetDefinitions: answerSheetDefinitions ?? [],
-        students: students ?? [],
-        classrooms: classrooms ?? [],
-        subtotalGroups: subtotalGroups ?? [],
-        tags: tags ?? [],
-        users: users ?? [],
-      }),
-    [
-      exams,
-      courseworks,
-      grades,
-      answerSheetDefinitions,
-      students,
-      classrooms,
-      subtotalGroups,
-      tags,
-      users,
-    ]
-  )
-
-  return (
-    <ExportDialogBody
-      catalog={catalog}
-      initialSelection={initialSelection}
-      onExportingChange={onExportingChange}
-      onClose={onClose}
-    />
   )
 }

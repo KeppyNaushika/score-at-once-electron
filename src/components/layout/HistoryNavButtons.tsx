@@ -6,6 +6,7 @@ import {
   BarChart3,
   Calculator,
   ClipboardList,
+  FileArchive,
   FileEdit,
   FileStack,
   LogIn,
@@ -46,6 +47,7 @@ const SECTION_ICONS: Record<string, LucideIcon> = {
   classrooms: School,
   "subtotal-groups": Calculator,
   tags: Tag,
+  "data-export": FileArchive,
   settings: Settings,
   login: LogIn,
 }

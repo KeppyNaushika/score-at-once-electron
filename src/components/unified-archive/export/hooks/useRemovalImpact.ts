@@ -16,7 +16,7 @@ import {
   parseScopeViolationTarget,
   toArchiveSelection,
 } from "../archiveExportSelection"
-import { MAJOR_TABLES } from "../exportLabels"
+import { withClassroomStudents } from "../classroomStudents"
 import {
   type ActiveArchiveEntity,
   ARCHIVE_ENTITY_KINDS,
@@ -32,17 +32,11 @@ const REMOVAL_PREVIEW_DELAY_MS = 200
  */
 const REMOVAL_PREVIEW_CACHE_MS = 10 * 60 * 1000
 
-/** 赤枠の代わりに件数で出す表から除く表（一覧に名前で並ぶ実体の表） */
-const LISTED_ENTITY_TABLES: ReadonlySet<string> = new Set(ARCHIVE_ENTITY_KINDS)
-
-/** 並べる順: 主な表を先に、残りは下見の並びのまま */
-const tableOrder = (table: string): number => {
-  const majorIndex = MAJOR_TABLES.indexOf(table)
-  return majorIndex === -1 ? MAJOR_TABLES.length : majorIndex
-}
-
 interface UseRemovalImpactOptions {
+  /** 利用者が選んだままの選択（学級から入った生徒を足す前） */
   selection: ExportSelectionState
+  /** 学級 → その学級の生徒（学級から生徒を選ぶ範囲に従う） */
+  classroomStudentIndex: ReadonlyMap<string, readonly string[]>
   currentUserId: string
   /** チェック一覧で今いる行。一覧から離れていれば null */
   activeEntity: ActiveArchiveEntity | null
@@ -56,11 +50,12 @@ interface UseRemovalImpactOptions {
  * 外した選択で下見をもう1回引き、今の下見と比べる。今いる行が変わってから少し待って引き、
  * 引いている間・外せない行・チェックの無い行では null を返す（古い結果を出さない）。
  *
- * @returns 一緒に外れる実体（`${種}:${id}`。その行自身は除く）と、一覧に出ない表の減る件数。
+ * @returns 一緒に外れる実体（`${種}:${id}`。その行自身は除く）。
  *   外すと外せないものが外れるときは、それを使う成績算出の id
  */
 export function useRemovalImpact({
   selection,
+  classroomStudentIndex,
   currentUserId,
   activeEntity,
   currentPreview,
@@ -68,20 +63,30 @@ export function useRemovalImpact({
   const removalSelection = useMemo(() => {
     if (activeEntity === null || currentPreview === null) return null
     const rowState = createArchiveEntityRowStateLookup(
-      selection,
+      withClassroomStudents(selection, classroomStudentIndex),
       currentPreview,
       activeEntity.kind
     )(activeEntity.entityId)
     const selectionWithout = selectionWithoutRow(
       selection,
+      classroomStudentIndex,
       activeEntity.kind,
       activeEntity.entityId,
       rowState
     )
     return selectionWithout === null
       ? null
-      : toArchiveSelection(selectionWithout, currentUserId)
-  }, [selection, currentUserId, activeEntity, currentPreview])
+      : toArchiveSelection(
+          withClassroomStudents(selectionWithout, classroomStudentIndex),
+          currentUserId
+        )
+  }, [
+    selection,
+    classroomStudentIndex,
+    currentUserId,
+    activeEntity,
+    currentPreview,
+  ])
 
   const debouncedRemovalSelection = useDebouncedValue(
     removalSelection,
@@ -142,22 +147,9 @@ function compareRemovalPreview(
         .filter((entityKey) => entityKey !== activeEntityKey)
     })
   )
-  const lostRowCounts = Object.entries(currentPreview.rowCounts)
-    .filter(([table]) => !LISTED_ENTITY_TABLES.has(table))
-    .map(
-      ([table, rowCount]) =>
-        [table, rowCount - (removalResult.rowCounts[table] ?? 0)] as const
-    )
-    .filter(([, lostCount]) => lostCount > 0)
-    .sort(
-      ([leftTable], [rightTable]) =>
-        tableOrder(leftTable) - tableOrder(rightTable)
-    )
-
   return {
     activeEntity,
     kind: "lost" as const,
     lostEntityKeys,
-    lostRowCounts,
   }
 }

@@ -90,6 +90,8 @@ function routeToLabel(pathname: string): RouteLabel {
       return { base: "小計点管理" }
     case "tags":
       return { base: "タグ管理" }
+    case "data-export":
+      return { base: "データ書き出し" }
     case "pdf-tools":
       return { base: "PDF加工" }
     case "settings":

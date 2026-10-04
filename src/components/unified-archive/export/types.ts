@@ -59,7 +59,19 @@ export interface ExportSelectionState {
   includeAnswers: boolean
   /** 選べる項目（既定は含めない） */
   optionalItems: ArchiveOptionalItem[]
+  /** 選んだ学級から、生徒の一覧で選んだ状態にする生徒の範囲 */
+  classroomStudentScope: ClassroomStudentScope
+  /**
+   * 選んだ学級から入ったが、1人ずつ外した生徒。切り替えを変えても学級を付け外ししても
+   * 勝手には戻らない（その生徒を自分でチェックし直したときだけ外れる）
+   */
+  removedClassroomStudentIds: string[]
 }
+
+/** 学級から生徒を選ぶ範囲。選ばない／在籍中の生徒／過去在籍も含む */
+export const CLASSROOM_STUDENT_SCOPES = ["none", "current", "all"] as const
+
+export type ClassroomStudentScope = (typeof CLASSROOM_STUDENT_SCOPES)[number]
 
 /** チェック一覧で今いる行（マウスを当てた・↑↓ で来た行）の実体 */
 export interface ActiveArchiveEntity {

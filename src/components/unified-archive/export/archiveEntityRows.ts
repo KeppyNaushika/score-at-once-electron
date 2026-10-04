@@ -17,6 +17,7 @@ import {
   setEntityExcluded,
   unpickEntity,
 } from "./archiveExportSelection"
+import { updateRemovedClassroomStudents } from "./classroomStudents"
 import type { ArchiveSelectableKind, ExportSelectionState } from "./types"
 
 /** 下見が ok のときの中身 */
@@ -52,6 +53,8 @@ export interface ArchiveEntityRow {
   state: ArchiveEntityRowState
   /** forced のとき、それを使う成績算出の id */
   forcedGradeIds: readonly string[]
+  /** 選んだ学級から入った生徒のとき、どの学級から入ったか（選んだ学級の順） */
+  sourceClassroomIds: readonly string[]
 }
 
 /**
@@ -80,12 +83,16 @@ export function createArchiveEntityRowStateLookup(
 /**
  * 1つの種の行。全件に、一覧 query に無いが選択・下見に出てくる id（自分が見られない試験
  * など）を足し、状態の順に並べる（同じ状態の中は、選んだものは選んだ順、ほかは一覧の順）
+ *
+ * @param selection - 学級から入った生徒を足した選択（`withClassroomStudents`）
+ * @param classroomSourcesByStudent - 学級から入った生徒 → どの学級から入ったか
  */
 export function buildArchiveEntityRows(
   kind: ArchiveSelectableKind,
   catalog: ArchiveEntityCatalog,
   selection: ExportSelectionState,
-  preview: ArchiveExportPreviewOk | null
+  preview: ArchiveExportPreviewOk | null,
+  classroomSourcesByStudent: ReadonlyMap<string, readonly string[]>
 ): ArchiveEntityRow[] {
   const ids = new Set([
     ...selection.picked[kind],
@@ -105,6 +112,10 @@ export function buildArchiveEntityRows(
       state,
       forcedGradeIds:
         state === "forced" ? (preview?.forcedBy[`${kind}:${id}`] ?? []) : [],
+      sourceClassroomIds:
+        kind === "Student" && state === "picked"
+          ? (classroomSourcesByStudent.get(id) ?? [])
+          : [],
     }
   })
   // sort は安定なので、同じ状態の中は上の並び（選んだ順 → 一覧の順）のまま
@@ -125,25 +136,66 @@ export const isArchiveEntityRowChecked = (
  * - 選んだ行 → 選ぶのをやめる
  * - 関連で入る行 → 含めない（exclusions に足す）
  * - 含めない行 → 戻す（exclusions から外す）
+ *
+ * 生徒は、選んだ学級から入った生徒のチェックを外すと「1人ずつ外した生徒」に足し、チェックを
+ * 入れるとそこから除く（`updateRemovedClassroomStudents`）。
+ *
+ * @param selection - 利用者が選んだままの選択（学級から入った生徒を足す前）
+ * @param state - 学級から入った生徒を足した選択での、その行の状態
  */
 export function toggleArchiveEntityRow(
   selection: ExportSelectionState,
+  classroomStudentIndex: ReadonlyMap<string, readonly string[]>,
   kind: ArchiveSelectableKind,
   id: string,
   state: ArchiveEntityRowState
 ): ExportSelectionState {
-  switch (state) {
-    case "notIncluded":
-      return pickEntity(selection, kind, id)
-    case "picked":
-      return unpickEntity(selection, kind, id)
-    case "related":
-      return setEntityExcluded(selection, kind, id, true)
-    case "excluded":
-      return setEntityExcluded(selection, kind, id, false)
-    case "forced":
-      return selection
-  }
+  if (state === "forced") return selection
+  const toggled = (() => {
+    switch (state) {
+      case "notIncluded":
+        return pickEntity(selection, kind, id)
+      case "picked":
+        return unpickEntity(selection, kind, id)
+      case "related":
+        return setEntityExcluded(selection, kind, id, true)
+      case "excluded":
+        return setEntityExcluded(selection, kind, id, false)
+    }
+  })()
+  return updateRemovedClassroomStudents(
+    toggled,
+    classroomStudentIndex,
+    kind,
+    id,
+    !isArchiveEntityRowChecked(state)
+  )
+}
+
+/**
+ * 見えている行にまとめてチェックを当てる（見出しの「全選択」）。チェックが既にその向きの行と、
+ * 外せない行はそのまま
+ */
+export function setArchiveEntityRowsChecked(
+  selection: ExportSelectionState,
+  classroomStudentIndex: ReadonlyMap<string, readonly string[]>,
+  kind: ArchiveSelectableKind,
+  rows: readonly ArchiveEntityRow[],
+  isChecked: boolean
+): ExportSelectionState {
+  return rows
+    .filter((row) => isArchiveEntityRowChecked(row.state) !== isChecked)
+    .reduce(
+      (acc, row) =>
+        toggleArchiveEntityRow(
+          acc,
+          classroomStudentIndex,
+          kind,
+          row.id,
+          row.state
+        ),
+      selection
+    )
 }
 
 /**
@@ -152,12 +204,19 @@ export function toggleArchiveEntityRow(
  */
 export function selectionWithoutRow(
   selection: ExportSelectionState,
+  classroomStudentIndex: ReadonlyMap<string, readonly string[]>,
   kind: ArchiveSelectableKind,
   id: string,
   state: ArchiveEntityRowState
 ): ExportSelectionState | null {
   if (state !== "picked" && state !== "related") return null
-  return toggleArchiveEntityRow(selection, kind, id, state)
+  return toggleArchiveEntityRow(
+    selection,
+    classroomStudentIndex,
+    kind,
+    id,
+    state
+  )
 }
 
 /** 成績算出が使うため外せない理由（例: 成績算出『期末成績』が使うため） */
