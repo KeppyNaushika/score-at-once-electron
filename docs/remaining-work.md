@@ -419,7 +419,7 @@ SQLite の Session 拡張には `sqlite3changeset_invert()` があり、changese
 | [sync-secondary-unique-hazard.md](./sync-secondary-unique-hazard.md)                 | 段階20 の裏付け（読んで走らせた実測）                    |
 | [import-export-architecture.md](./import-export-architecture.md)                     | 段階60 の対象（アーカイブ5種）の構造                     |
 | [scoring-scope-and-permissions-design.md](./scoring-scope-and-permissions-design.md) | 採点範囲と権限。#1071                                    |
-| [ownership-and-sharing-design.md](./ownership-and-sharing-design.md)                 | 所有と共有。#1127                                        |
+| [ownership-and-sharing-design.md](./ownership-and-sharing-design.md)                 | 所有と共有（3ロール）。発端の #1127 は閉じた             |
 | [audit-log-redesign.md](./audit-log-redesign.md)                                     | 監査ログの拡充。#1102                                    |
 | [renderer-side-calculation-plan.md](./renderer-side-calculation-plan.md)             | main 側の計算専用 IPC 撤去の残り                         |
 | [test-suite-audit.md](./test-suite-audit.md)                                         | 本番を守っていないテストの全数調査                       |

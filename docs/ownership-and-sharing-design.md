@@ -1,6 +1,7 @@
 # 所有と共有の設計（所有者 / 編集者 / 閲覧者）
 
-対象: **#1127**。`docs/schema-relation-audit.md` §6.1 の前提。
+発端: #1127（閉じた。解答用紙の共有範囲と `getCurrentUser` の暫定実装はそこで解決済み）。
+`docs/schema-relation-audit.md` §6.1 の前提。3ロールの実装を扱う issue はまだ無い。
 検討日: 2026-08-03。着手は未定。
 
 `docs/scoring-scope-and-permissions-design.md`（試験の採点範囲と権限）と対になる。あちらは
@@ -514,7 +515,7 @@ FROM "Grade" CROSS JOIN "User";
 | [docs/scoring-scope-and-permissions-design.md](./scoring-scope-and-permissions-design.md) | 試験固有の権限。§3.2 で対応付ける             |
 | [docs/remaining-work.md](./remaining-work.md)                                             | ASB 分割から残った2点（バックフィルと所有者） |
 | [docs/schema-relation-audit.md](./schema-relation-audit.md) §6.1                          | 発端。Asb 系を同期対象にした作業              |
-| #1127                                                                                     | 本書の issue                                  |
+| #1127                                                                                     | 発端の issue（閉じた）                        |
 | #1071                                                                                     | 採点範囲と権限。試験側の実装                  |
 | #1126                                                                                     | ASB の保存方式。IPC 分割へ発展                |
 | #1128                                                                                     | 決定論的 id は撤回。§4.2 が同じ結論           |
@@ -531,3 +532,4 @@ FROM "Grade" CROSS JOIN "User";
 | 2026-08-03 | §4.5 を訂正。Cascade を外す案を撤回（ユーザー削除の経路が存在せず、外すと孤児行ができる）                              |
 | 2026-08-03 | §6.1.1 を追加。移行は最古のユーザーを暫定の所有者にし、所有者ゼロの行き止まりを作らない                                |
 | 2026-08-03 | §4.4 を新設。ユーザー削除は仕様・カスケードは一律 `Cascade`。採点系3テーブルが `NoAction` で削除を塞いでいることが判明 |
+| 2026-10-04 | #1127 を閉じたので、冒頭と §11 の参照を「発端」に改める                                                                |
