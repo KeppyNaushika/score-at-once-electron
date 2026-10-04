@@ -32,6 +32,12 @@ export const ARCHIVE_SELECTABLE_KINDS: readonly ArchiveSelectableKind[] = [
 /** 名前を引く実体の種（利用者は選べないが、含まれる人として並べる） */
 export type ArchiveEntityKind = ArchivePreviewEntityTable
 
+/** 名前を引く実体の種の全部（選べる種と利用者） */
+export const ARCHIVE_ENTITY_KINDS: readonly ArchiveEntityKind[] = [
+  ...ARCHIVE_SELECTABLE_KINDS,
+  "User",
+]
+
 /**
  * 書き出しダイアログを開いたときに最初から入っている実体（押した画面の実体）。
  * 生徒表からは生徒だけを渡す。
@@ -53,4 +59,10 @@ export interface ExportSelectionState {
   includeAnswers: boolean
   /** 選べる項目（既定は含めない） */
   optionalItems: ArchiveOptionalItem[]
+}
+
+/** チェック一覧で今いる行（マウスを当てた・↑↓ で来た行）の実体 */
+export interface ActiveArchiveEntity {
+  kind: ArchiveSelectableKind
+  entityId: string
 }

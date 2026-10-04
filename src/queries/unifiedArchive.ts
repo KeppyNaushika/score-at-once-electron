@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query"
+import { queryOptions, skipToken } from "@tanstack/react-query"
 
 import { auditLogListKey } from "./auditLog"
 import { defineMutation } from "./defineMutation"
@@ -20,6 +20,12 @@ import { scopeKeys } from "./keys"
 // 書き出し
 // =====================================================================
 
+/** 書き出しの下見のキーの前半（選択ごとの下見をまとめて捨てるときに使う） */
+export const unifiedArchiveExportPreviewKey = [
+  "unifiedArchive",
+  "exportPreview",
+] as const
+
 /**
  * 書き出す範囲の下見（件数・実体の id・外せない理由・欠けたファイル）。書き出し画面が選択を
  * 変えるたびに引く。
@@ -27,15 +33,20 @@ import { scopeKeys } from "./keys"
  * 画面は選択を debounce してキーに渡す（`useDebouncedValue`）。effect で取らずに
  * `useQuery` に載せるのは、選択が続けて変わったときに古い応答が新しい結果を上書きしない
  * ため（docs/coding-style.md「データ取得は useQuery」）。DB は書かない。
+ *
+ * チェック一覧の行に当てたときの「その行を外した選択」の下見も同じ形で引く（同じ選択なら
+ * キャッシュから返る）。引くものが無いときは null を渡す（取得しない）。
  */
 export const unifiedArchiveExportPreviewQuery = (
-  selection: Parameters<
-    typeof window.electronAPI.unifiedArchive.previewExport
-  >[0]
+  selection:
+    Parameters<typeof window.electronAPI.unifiedArchive.previewExport>[0] | null
 ) =>
   queryOptions({
-    queryKey: ["unifiedArchive", "exportPreview", selection] as const,
-    queryFn: () => window.electronAPI.unifiedArchive.previewExport(selection),
+    queryKey: [...unifiedArchiveExportPreviewKey, selection] as const,
+    queryFn:
+      selection === null
+        ? skipToken
+        : () => window.electronAPI.unifiedArchive.previewExport(selection),
   })
 
 /** 書き出し先を尋ねるダイアログ。選ばずに閉じたら null */
