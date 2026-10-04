@@ -83,6 +83,15 @@ const keepOnlyScopedRows = (db: SqliteDatabase, scope: ArchiveScope): void => {
 }
 
 /**
+ * 利用者の passcode を空にする（docs §5.1）。アーカイブは端末の外へ渡るファイルなので、
+ * 照合に使う値を載せない。取り込み側は既存の利用者の passcode を書き換えない（段階3。docs §7）。
+ * updatedAt は変えない（取り込みの LWW を、書き出したことで動かさないため）
+ */
+const clearUserPasscodes = (db: SqliteDatabase): void => {
+  db.exec(`UPDATE "User" SET passcode = NULL, passcodeType = 'none'`)
+}
+
+/**
  * 外部キーが閉じていることを確かめる。DB の制約（`foreign_key_check`）に加えて、登録表の
  * 参照でも確かめる（DB の制約は schema とずれうる。GradeDataSource の資料への参照は
  * 20261004130000 で直すまで本番だけ制約が無かった）
@@ -150,7 +159,10 @@ export function writeArchiveDatabase(
     archive.pragma("foreign_keys = OFF")
     dropNonApplicationObjects(archive)
     assertAllTablesRegistered(archive)
-    archive.transaction(() => keepOnlyScopedRows(archive, scope))()
+    archive.transaction(() => {
+      keepOnlyScopedRows(archive, scope)
+      clearUserPasscodes(archive)
+    })()
     assertReferencesClosed(archive)
     archive.exec("VACUUM")
   } catch (error) {
