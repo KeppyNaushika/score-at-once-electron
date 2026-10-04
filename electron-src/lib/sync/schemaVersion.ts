@@ -6,13 +6,13 @@
  * 起動時チェックと同期ゲートが必ず同じバージョン文字列を参照するようにする。
  *
  * syncConfig.ts ではなくこのファイルに置いている理由:
- * `databaseInitializer` → `sync/syncConfig` → `prisma/schema/migrationDeployer`
- * → `databaseInitializer` という循環を作らないため。DBパスの決定（syncConfig）と
- * マイグレーション一覧の読み取り（migrationDeployer）は別の関心なので、
- * 後者に依存するのはこのファイルだけに閉じる。
+ * DBパスの決定（syncConfig）とマイグレーション一覧の読み取り（migrationApplier）は
+ * 別の関心なので、後者に依存するのはこのファイルだけに閉じる。（一覧の読み取りが
+ * migrationDeployer にあった頃は、`databaseInitializer` → `sync/syncConfig` →
+ * `migrationDeployer` → `databaseInitializer` の循環を避ける意味もあった）
  */
 
-import { listLocalMigrationNames } from "../prisma/schema/migrationDeployer"
+import { listLocalMigrationNames } from "../prisma/schema/migrationApplier"
 
 export function getSchemaVersion(): string {
   try {

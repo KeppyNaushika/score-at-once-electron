@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client"
 
 import { tableExists } from "../databaseUtils"
-import { listLocalMigrationNames } from "./migrationDeployer"
+import { listLocalMigrationNames } from "./migrationApplier"
 
 /** ベースラインマイグレーション（現行スキーマの完全な初期マイグレーション） */
 const MIGRATION_CHECKSUMS: ReadonlyArray<{ name: string; checksum: string }> = [
