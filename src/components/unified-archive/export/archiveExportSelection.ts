@@ -150,7 +150,7 @@ export function setOptionalItem(
 }
 
 /** 外せない参照先の `表(id)` を表と id に分ける。読めなければ null */
-function parseScopeViolationTarget(
+export function parseScopeViolationTarget(
   target: string
 ): { table: string; id: string } | null {
   const match = /^([A-Za-z]+)\((.+)\)$/.exec(target)

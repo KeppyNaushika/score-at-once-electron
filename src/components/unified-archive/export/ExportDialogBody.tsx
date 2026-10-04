@@ -1,6 +1,11 @@
 "use client"
 
-import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
 
 import {
@@ -15,6 +20,7 @@ import {
   exportUnifiedArchiveMutation,
   selectUnifiedArchiveExportPath,
   subscribeUnifiedArchiveExportProgress,
+  unifiedArchiveExportPreviewKey,
   unifiedArchiveExportPreviewQuery,
 } from "@/queries/unifiedArchive"
 
@@ -22,16 +28,15 @@ import {
   type ArchiveEntityCatalog,
   archiveEntityLabel,
 } from "./archiveEntityCatalog"
+import { ArchiveEntityCheckListSection } from "./ArchiveEntityCheckListSection"
+import { toggleArchiveEntityRow } from "./archiveEntityRows"
 import {
   archiveFileName,
   createExportSelectionState,
   hasPickedEntity,
-  pickEntity,
   restoreForcedExclusions,
-  setEntityExcluded,
   setOptionalItem,
   toArchiveSelection,
-  unpickEntity,
 } from "./archiveExportSelection"
 import { ExcludedSummary } from "./ExcludedSummary"
 import { ExportDialogFooter } from "./ExportDialogFooter"
@@ -40,15 +45,21 @@ import { missingFileDescription } from "./exportLabels"
 import { ExportOptionsSection } from "./ExportOptionsSection"
 import { ExportPreviewDetails } from "./ExportPreviewDetails"
 import { ForcedExclusionAlert } from "./ForcedExclusionAlert"
-import { PickedEntityList } from "./PickedEntityList"
-import { RelatedEntitiesSection } from "./RelatedEntitiesSection"
+import { useRemovalImpact } from "./hooks/useRemovalImpact"
+import { RemovalImpactBand } from "./RemovalImpactBand"
 import {
+  type ActiveArchiveEntity,
   ARCHIVE_SELECTABLE_KINDS,
+  type ArchiveSelectableKind,
+  type ExportSelectionState,
   type UnifiedArchiveExportInitialSelection,
 } from "./types"
 
 /** 選択を変えてから下見を引くまでの待ち時間（ms） */
 const PREVIEW_DEBOUNCE_MS = 300
+
+/** 赤枠で囲むものが無いとき（毎回作り直して一覧の描き直しを招かないよう、1つを使い回す） */
+const NO_LOST_ENTITIES: ReadonlySet<string> = new Set()
 
 interface ExportDialogBodyProps {
   /** 実体の名前と、一覧に足すときの選択肢 */
@@ -70,8 +81,13 @@ export function ExportDialogBody({
   onClose,
 }: ExportDialogBodyProps) {
   const currentUser = useCurrentUser()
+  const queryClient = useQueryClient()
   const [selection, setSelection] = useState(() =>
     createExportSelectionState(initialSelection)
+  )
+  /** チェック一覧で今いる行（赤枠を出す元） */
+  const [activeEntity, setActiveEntity] = useState<ActiveArchiveEntity | null>(
+    null
   )
   const [isExporting, setIsExporting] = useState(false)
   const [exportPhase, setExportPhase] =
@@ -97,6 +113,39 @@ export function ExportDialogBody({
   const previewResult = canPreview ? preview.data : undefined
   const isPreviewCurrent =
     debouncedSelection === archiveSelection && !preview.isFetching
+  const previewOk = previewResult?.kind === "ok" ? previewResult : null
+  const removalImpact = useRemovalImpact({
+    selection,
+    currentUserId: currentUser.id,
+    activeEntity,
+    currentPreview: isPreviewCurrent ? previewOk : null,
+  })
+
+  /**
+   * 選択を変える。覚えておいた下見（行を外した選択のもの）は、今の選択との比較にしか
+   * 使わないので、ここでまとめて捨てる（今見ている下見は残る）
+   */
+  const updateSelection = (
+    update: (prev: ExportSelectionState) => ExportSelectionState
+  ) => {
+    setSelection(update)
+    queryClient.removeQueries({
+      queryKey: unifiedArchiveExportPreviewKey,
+      type: "inactive",
+    })
+  }
+
+  const handleActiveEntityChange = (
+    kind: ArchiveSelectableKind,
+    id: string | null
+  ) =>
+    setActiveEntity((prev) => {
+      // 別の一覧から離れた知らせで、今いる行を消さない
+      if (id === null) return prev?.kind === kind ? null : prev
+      return prev?.kind === kind && prev.entityId === id
+        ? prev
+        : { kind, entityId: id }
+    })
 
   // 書き出しの段は main から押し出される（購読のコールバックで受ける）
   useEffect(
@@ -169,13 +218,14 @@ export function ExportDialogBody({
   }
 
   const canExport =
-    canPreview &&
-    isPreviewCurrent &&
-    previewResult?.kind === "ok" &&
-    !isExporting
+    canPreview && isPreviewCurrent && previewOk !== null && !isExporting
 
   return (
     <>
+      {/* 一覧をスクロールしても見えるよう、スクロールの外に置く */}
+      <div aria-live="polite" className="border-b px-6 py-2">
+        <RemovalImpactBand impact={removalImpact} catalog={catalog} />
+      </div>
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-4">
         {exportError !== null && (
           <ExportErrorBand title="書き出せませんでした" message={exportError} />
@@ -191,72 +241,55 @@ export function ExportDialogBody({
             violations={previewResult.violations}
             catalog={catalog}
             onRestore={() =>
-              setSelection((prev) =>
+              updateSelection((prev) =>
                 restoreForcedExclusions(prev, previewResult.violations)
               )
             }
           />
         )}
 
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold">書き出すもの</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {ARCHIVE_SELECTABLE_KINDS.map((kind) => (
-              <PickedEntityList
-                key={kind}
-                kind={kind}
-                pickedIds={selection.picked[kind]}
-                catalog={catalog}
-                onPick={(id) =>
-                  setSelection((prev) => pickEntity(prev, kind, id))
-                }
-                onUnpick={(id) =>
-                  setSelection((prev) => unpickEntity(prev, kind, id))
-                }
-              />
-            ))}
-          </div>
-          {!canPreview && (
-            <p className="text-sm text-muted-foreground">
-              書き出すものを1つ以上選んでください
-            </p>
-          )}
-        </section>
-
-        {previewResult?.kind === "ok" && (
-          <RelatedEntitiesSection
-            entityIds={previewResult.entityIds}
-            forcedBy={previewResult.forcedBy}
-            selection={selection}
-            catalog={catalog}
-            onExcludedChange={(kind, id, isExcluded) =>
-              setSelection((prev) =>
-                setEntityExcluded(prev, kind, id, isExcluded)
-              )
-            }
-          />
+        <ArchiveEntityCheckListSection
+          selection={selection}
+          preview={previewOk}
+          catalog={catalog}
+          lostEntityKeys={
+            removalImpact?.kind === "lost"
+              ? removalImpact.lostEntityKeys
+              : NO_LOST_ENTITIES
+          }
+          onToggle={(kind, row) =>
+            updateSelection((prev) =>
+              toggleArchiveEntityRow(prev, kind, row.id, row.state)
+            )
+          }
+          onActiveEntityChange={handleActiveEntityChange}
+        />
+        {!canPreview && (
+          <p className="text-sm text-muted-foreground">
+            書き出すものを1つ以上選んでください
+          </p>
         )}
 
         <ExportOptionsSection
           selection={selection}
           currentUserName={currentUser.name}
           onScoringKindChange={(scoringKind) =>
-            setSelection((prev) => ({ ...prev, scoringKind }))
+            updateSelection((prev) => ({ ...prev, scoringKind }))
           }
           onIncludeAnswersChange={(includeAnswers) =>
-            setSelection((prev) => ({ ...prev, includeAnswers }))
+            updateSelection((prev) => ({ ...prev, includeAnswers }))
           }
           onOptionalItemChange={(optionalItem, isIncluded) =>
-            setSelection((prev) =>
+            updateSelection((prev) =>
               setOptionalItem(prev, optionalItem, isIncluded)
             )
           }
         />
 
-        {previewResult?.kind === "ok" && (
+        {previewOk && (
           <ExportPreviewDetails
-            rowCounts={previewResult.rowCounts}
-            missingFiles={previewResult.missingFiles}
+            rowCounts={previewOk.rowCounts}
+            missingFiles={previewOk.missingFiles}
           />
         )}
       </div>
@@ -264,11 +297,7 @@ export function ExportDialogBody({
       <div className="border-t px-6 py-3">
         <ExcludedSummary
           selection={selection}
-          excludedRowCounts={
-            previewResult?.kind === "ok"
-              ? previewResult.excludedRowCounts
-              : null
-          }
+          excludedRowCounts={previewOk ? previewOk.excludedRowCounts : null}
           catalog={catalog}
         />
       </div>

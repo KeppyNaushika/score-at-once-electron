@@ -1,7 +1,7 @@
 "use client"
 
-import { CheckIcon, ChevronsUpDownIcon } from "lucide-react"
-import { useMemo, useState } from "react"
+import { CheckIcon, ChevronsUpDownIcon, LockIcon } from "lucide-react"
+import { type KeyboardEvent, useMemo, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -68,6 +68,29 @@ function filterByKeywords(
 }
 
 /**
+ * 選択肢に、絞り込みに使う形（`filterByKeywords` が見る keywords）を添える。
+ *
+ * 打つたびに全件の文字列を作り直さないよう、選択肢が変わったときだけ作る。
+ */
+function useSearchableOptions<TOption extends ComboboxOption>(
+  options: readonly TOption[]
+) {
+  return useMemo(
+    () =>
+      options.map((option) => {
+        const searchText = [option.label, ...(option.keywords ?? [])].join(" ")
+        const normalizedText = normalizeForSearch(searchText)
+        return {
+          option,
+          // 「山田太郎」と続けて打っても「山田 太郎」に引っかかるよう、空白を抜いた形も持つ
+          searchKeywords: [normalizedText, normalizedText.replace(/\s+/g, "")],
+        }
+      }),
+    [options]
+  )
+}
+
+/**
  * 件数の多い選択肢から、打って絞り込んで1つ選ぶ部品（Popover + cmdk）。
  *
  * - キーボードだけで、開く（Enter/Space）・打つ・選ぶ（↑↓ と Enter）・閉じる（Esc）ができる
@@ -91,20 +114,7 @@ export function Combobox({
 
   const selectedOption = options.find((option) => option.value === value)
 
-  // 打つたびに全件の文字列を作り直さないよう、絞り込みに使う形を先に作っておく
-  const searchableOptions = useMemo(
-    () =>
-      options.map((option) => {
-        const searchText = [option.label, ...(option.keywords ?? [])].join(" ")
-        const normalizedText = normalizeForSearch(searchText)
-        return {
-          option,
-          // 「山田太郎」と続けて打っても「山田 太郎」に引っかかるよう、空白を抜いた形も持つ
-          searchKeywords: [normalizedText, normalizedText.replace(/\s+/g, "")],
-        }
-      }),
-    [options]
-  )
+  const searchableOptions = useSearchableOptions(options)
 
   return (
     <Popover open={open} onOpenChange={setOpen} modal>
@@ -166,5 +176,230 @@ export function Combobox({
         </Command>
       </PopoverContent>
     </Popover>
+  )
+}
+
+/** チェック一覧の1行。チェックの有無と、行に添える状態を持つ */
+export interface ComboboxCheckOption extends ComboboxOption {
+  checked: boolean
+  /**
+   * 行の右に出す状態（「選択中」「含めない」など）。行の読み上げ文にも入るので、
+   * チェックの有無はここで言葉にする（cmdk は今いる行に aria-selected を使うため、
+   * チェックの有無を aria-selected で伝えられない）
+   */
+  statusText?: string
+  /** 入れ替えられない理由。鍵と一緒に出し、選んでもチェックは変わらない */
+  lockedReason?: string
+  /** 外したものとして、薄く打ち消し線で残す */
+  isStruckOut?: boolean
+  /** 赤枠で囲む。文言は読み上げにだけ添える（例「外すと一緒に外れます」） */
+  warningText?: string
+}
+
+interface ComboboxCheckListProps {
+  /** 並べる行（並び順は呼び出し側が決める） */
+  options: readonly ComboboxCheckOption[]
+  /** 行を選んだ（クリック・Enter・Space）。外せない行・選べない行では呼ばない */
+  onCheckedChange: (value: string, checked: boolean) => void
+  /**
+   * 今いる行（マウスを当てた・↑↓ で来た）が変わった。マウスもフォーカスも一覧から
+   * 離れたとき・絞り込みを打ったときは null。開いたとき・絞り込んだときに cmdk が先頭へ
+   * 寄せた行は知らせない
+   */
+  onActiveValueChange?: (value: string | null) => void
+  searchPlaceholder: string
+  emptyText: string
+  /** 一覧（listbox）と検索欄の名前 */
+  "aria-label": string
+  className?: string
+  /** 一覧の高さ（既定は h-48。中でスクロールする） */
+  listClassName?: string
+}
+
+/** 日本語入力の変換中のキー（cmdk の Enter と同じ判定。Safari は keyCode 229 だけを立てる） */
+const isComposingKey = (event: KeyboardEvent): boolean =>
+  event.nativeEvent.isComposing || event.keyCode === 229
+
+/**
+ * 今いる行が無いときに cmdk へ渡す値（どの行の value とも一致しない）。
+ *
+ * cmdk は value が空だと、行が並んだ時点で先頭の行を選び、その行を scrollIntoView する。
+ * 開いたままの一覧ではそれで外側（ダイアログの本文）までスクロールし、触ってもいない一覧の
+ * 先頭が全部「今いる行」の色になる。空でない値を渡しておくと、先頭を選びにいかない
+ */
+const NO_ACTIVE_VALUE = "__combobox-check-list-no-active-value__"
+
+/** 行を移るキー（cmdk の ↑↓・Home・End と、Ctrl+N/J/P/K） */
+const isNavigationKey = (event: KeyboardEvent): boolean =>
+  ["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key) ||
+  (event.ctrlKey && ["n", "j", "p", "k"].includes(event.key))
+
+/**
+ * 開いたままのチェック一覧（cmdk）。複数を選ぶ。
+ *
+ * - 行そのものを選ぶ（クリック・↑↓ と Enter）とチェックが入れ替わる。行の中に操作できる
+ *   部品は置かない（チェックの印は見た目だけ）
+ * - Space は検索欄が空のときだけ入れ替えに使う（打った語の区切りの空白は奪わない）
+ * - 検索欄にフォーカスを置いたまま ↑↓ で行を移れる。絞り込みは Combobox と同じ規則
+ * - 日本語入力の変換中の Enter・Space では入れ替えない
+ * - 検索欄にフォーカスするか行にマウスを当てるまで、今いる行を持たない（開いた直後に
+ *   先頭の行を選ばない。外側がスクロールしない）。一覧から離れると今いる行は消える
+ */
+export function ComboboxCheckList({
+  options,
+  onCheckedChange,
+  onActiveValueChange,
+  searchPlaceholder,
+  emptyText,
+  "aria-label": ariaLabel,
+  className,
+  listClassName,
+}: ComboboxCheckListProps) {
+  const [search, setSearch] = useState("")
+  const [activeValue, setActiveValue] = useState("")
+  const searchableOptions = useSearchableOptions(options)
+  // 以下はイベントの中でだけ読み書きする（描画には使わない）
+  const isPointerInsideRef = useRef(false)
+  const isFocusInsideRef = useRef(false)
+  /** 今の keydown が行を移るキーか（cmdk はその keydown の中で onValueChange を呼ぶ） */
+  const isKeyNavigationRef = useRef(false)
+  const reportedValueRef = useRef<string | null>(null)
+
+  const reportActiveValue = (value: string | null) => {
+    if (reportedValueRef.current === value) return
+    reportedValueRef.current = value
+    onActiveValueChange?.(value)
+  }
+
+  const toggleOption = (value: string) => {
+    const option = options.find((candidate) => candidate.value === value)
+    if (!option || option.disabled || option.lockedReason) return
+    onCheckedChange(option.value, !option.checked)
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const isComposing = isComposingKey(event)
+    isKeyNavigationRef.current = !isComposing && isNavigationKey(event)
+    // 端で押して行が動かないときも、今の行を「↑↓ で来た行」として知らせる（動けば
+    // 続く onValueChange が移った先で上書きする）
+    if (isKeyNavigationRef.current) reportActiveValue(activeValue || null)
+    if (event.key !== " " || search !== "" || isComposing) return
+    event.preventDefault()
+    if (activeValue) toggleOption(activeValue)
+  }
+
+  return (
+    <Command
+      label={ariaLabel}
+      filter={filterByKeywords}
+      value={activeValue || NO_ACTIVE_VALUE}
+      onValueChange={(value) => {
+        // 触れていない一覧では今いる行を持たない（フォーカスかマウスが入ってから）
+        if (!isFocusInsideRef.current && !isPointerInsideRef.current) return
+        setActiveValue(value)
+        // ↑↓ で来た行だけを知らせる（開いたとき・絞り込んだときに cmdk が先頭へ寄せた行は
+        // 利用者が選んだ「今いる行」ではない）。マウスで来た行は onPointerMove が知らせる
+        if (isKeyNavigationRef.current) reportActiveValue(value || null)
+      }}
+      onKeyDown={handleKeyDown}
+      onFocus={() => {
+        isFocusInsideRef.current = true
+      }}
+      onBlur={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget)) return
+        isFocusInsideRef.current = false
+        if (isPointerInsideRef.current) return
+        // 一覧から離れたら、今いる行の強調も消す
+        setActiveValue("")
+        reportActiveValue(null)
+      }}
+      onPointerEnter={() => {
+        isPointerInsideRef.current = true
+      }}
+      onPointerMove={(event) => {
+        // 行の上にいるときだけ、その行を今いる行として知らせる（行の間・検索欄では変えない）
+        const optionElement =
+          event.target instanceof Element
+            ? event.target.closest("[data-check-option-value]")
+            : null
+        const hoveredValue = optionElement?.getAttribute(
+          "data-check-option-value"
+        )
+        if (hoveredValue) reportActiveValue(hoveredValue)
+      }}
+      onPointerLeave={() => {
+        isPointerInsideRef.current = false
+        if (isFocusInsideRef.current) return
+        setActiveValue("")
+        reportActiveValue(null)
+      }}
+      className={cn("h-auto rounded-md border bg-background", className)}
+    >
+      <CommandInput
+        placeholder={searchPlaceholder}
+        value={search}
+        onValueChange={(nextSearch) => {
+          setSearch(nextSearch)
+          // 絞り込むと今いる行が隠れうるので、↑↓ かマウスで選び直すまで知らせない
+          reportActiveValue(null)
+        }}
+      />
+      <CommandList label={ariaLabel} className={cn("h-48", listClassName)}>
+        <CommandEmpty>{emptyText}</CommandEmpty>
+        {searchableOptions.map(({ option, searchKeywords }) => (
+          <CommandItem
+            key={option.value}
+            value={option.value}
+            keywords={searchKeywords}
+            disabled={option.disabled}
+            data-check-option-value={option.value}
+            onSelect={toggleOption}
+            className={cn(
+              option.warningText !== undefined &&
+                "ring-1 ring-destructive ring-inset",
+              option.isStruckOut &&
+                "bg-amber-50 text-amber-800 dark:bg-amber-950/20 dark:text-amber-300"
+            )}
+          >
+            <span
+              aria-hidden
+              className={cn(
+                "flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input",
+                option.checked &&
+                  "border-primary bg-primary text-primary-foreground",
+                option.lockedReason && "opacity-60"
+              )}
+            >
+              {option.checked && (
+                <CheckIcon className="size-3.5 text-primary-foreground" />
+              )}
+            </span>
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate",
+                option.isStruckOut &&
+                  "text-amber-700/60 line-through dark:text-amber-300/60"
+              )}
+            >
+              {option.label}
+            </span>
+            {option.statusText && (
+              <span className="shrink-0 text-xs font-medium">
+                {option.statusText}
+              </span>
+            )}
+            {option.lockedReason && (
+              <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+                <LockIcon aria-hidden className="size-3" />
+                {option.lockedReason}
+              </span>
+            )}
+            {option.warningText !== undefined && (
+              <span className="sr-only">{option.warningText}</span>
+            )}
+          </CommandItem>
+        ))}
+      </CommandList>
+    </Command>
   )
 }
