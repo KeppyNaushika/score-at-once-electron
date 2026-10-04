@@ -34,6 +34,12 @@ const OPTIONAL_ITEMS: readonly {
     label: "監査ログ",
     description: "書き出す試験・資料・成績算出・解答用紙定義についての記録",
   },
+  {
+    value: "aiGradingRecords",
+    label: "AI採点の記録",
+    description:
+      "書き出す試験の設問のプロンプトと、AI採点の実行・判定（採点の範囲に従う）",
+  },
 ]
 
 interface ExportOptionsSectionProps {

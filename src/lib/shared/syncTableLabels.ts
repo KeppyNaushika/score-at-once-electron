@@ -47,6 +47,9 @@ const SYNC_TABLE_LABELS: Record<string, string> = {
   Subtotal: "小計点",
   CropSubtotal: "小計点の対象領域",
   TagSubtotalGroup: "タグと小計点グループの紐付け",
+  AiPrompt: "AI採点のプロンプト",
+  AiGradingRun: "AI採点の実行",
+  AiGradingAttempt: "AI採点の判定",
 
   // 成績算出
   Grade: "成績算出",

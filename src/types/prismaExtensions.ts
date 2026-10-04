@@ -7,10 +7,24 @@
  * @module types/prisma-extensions
  */
 
-import type { Exam, Prisma, QuestionScore, ScoreDecision } from "@prisma/client"
+import type {
+  AiGradingAttempt,
+  AiGradingRun,
+  Exam,
+  Prisma,
+  QuestionScore,
+  ScoreDecision,
+} from "@prisma/client"
 
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
 
+import type {
+  AiGradingAttemptState,
+  AiGradingProvider,
+  AiGradingRunMode,
+  AiGradingRunPurpose,
+  AiGradingRunStatus,
+} from "./aiGrading.types"
 import type { ExamStudentStatus } from "./examStudentStatus.types"
 import type { ScoringStatus } from "./scoringStatus.types"
 
@@ -186,6 +200,47 @@ export type SerializedScoreDecision = Omit<
 > & {
   score: number | null
   verdict: ScoringStatus
+}
+
+// =============================================================================
+// AI 採点関連型
+// =============================================================================
+
+/**
+ * 境界を越えた AiGradingRun の実体型（type injection）。
+ *
+ * `points`（送ったときの配点の写し、Decimal）を number へ、文字列の列を
+ * `aiGrading.types.ts` の union へ絞る。**Decimal 列を持つので、この行を IPC へ返す経路は
+ * すべて `serializePrisma` を通すこと**（通さないと型は number を主張したまま実体は
+ * decimal.js のインスタンスで、structured clone を渡れない。typecheck もユニットテストも
+ * 捕まえない）。union への絞り込みは `toAiGradingRun*` で境界で1回だけ行う。
+ */
+export type SerializedAiGradingRun = Omit<
+  AiGradingRun,
+  "points" | "purpose" | "provider" | "mode" | "status"
+> & {
+  points: number | null
+  purpose: AiGradingRunPurpose
+  provider: AiGradingProvider
+  mode: AiGradingRunMode
+  status: AiGradingRunStatus
+}
+
+/**
+ * 境界を越えた AiGradingAttempt の実体型（type injection）。
+ *
+ * {@link SerializedQuestionScore} と同じく `partialScore`（Decimal）を number へ、`status` を
+ * ScoringStatus へ絞り、加えて `state`（送信の成否）を union へ絞る。`partialScore` が
+ * Decimal なので、IPC へ返す経路はすべて `serializePrisma` を通すこと。
+ * `confidence` は succeeded 以外で "" を取るので union へは絞らず string のまま持つ。
+ */
+export type SerializedAiGradingAttempt = Omit<
+  AiGradingAttempt,
+  "partialScore" | "status" | "state"
+> & {
+  partialScore: number | null
+  status: ScoringStatus
+  state: AiGradingAttemptState
 }
 
 // =============================================================================

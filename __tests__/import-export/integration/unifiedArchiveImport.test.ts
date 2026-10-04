@@ -129,7 +129,7 @@ describe("id を埋め込んだ列の書き換え", () => {
 })
 
 describe("表を書く順番", () => {
-  it("登録表の全ての表を、参照する先が必ず先になる順に並べ、今の schema では検査を遅らせなくてよい", () => {
+  it("登録表の全ての表を、参照する先（自己参照を除く）が必ず先になる順に並べ、自己参照がある今の schema では検査を遅らせる", () => {
     const order = orderArchiveTables(Object.keys(ARCHIVE_TABLES))
     expect([...order.tables].sort()).toEqual(Object.keys(ARCHIVE_TABLES).sort())
     const positionByTable = new Map(
@@ -137,13 +137,21 @@ describe("表を書く順番", () => {
     )
     for (const [table, spec] of Object.entries(ARCHIVE_TABLES)) {
       for (const reference of spec.references) {
+        if (reference.table === table) continue
         expect(
           positionByTable.get(reference.table) ?? Infinity,
           `${table}.${reference.column} → ${reference.table}`
         ).toBeLessThan(positionByTable.get(table) ?? -1)
       }
     }
-    expect(order.needsDeferredForeignKeys).toBe(false)
+    // AiPrompt.parentPromptId（直す元のプロンプト）は同じ表の行を指すので、表の順では
+    // 親を先に書けない
+    expect(order.needsDeferredForeignKeys).toBe(true)
+    expect(
+      orderArchiveTables(
+        Object.keys(ARCHIVE_TABLES).filter((table) => table !== "AiPrompt")
+      ).needsDeferredForeignKeys
+    ).toBe(false)
   })
 })
 
