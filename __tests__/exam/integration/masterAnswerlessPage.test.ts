@@ -32,7 +32,7 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 
 import { getAbsolutePathFromData } from "@/electron-src/lib/dataManager"
 import { getMasterAnswersByExamId } from "@/electron-src/lib/prisma/masterAnswer"
-import { uploadStudentAnswers } from "@/electron-src/lib/prisma/studentAnswer/crud"
+import { uploadStudentAnswers } from "@/electron-src/lib/prisma/studentAnswer/upload"
 
 import {
   cleanupTestDatabase,

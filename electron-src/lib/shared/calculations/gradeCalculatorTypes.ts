@@ -89,7 +89,7 @@ const gradeForCalcInclude = {
  * **成績算出が DB から読むものの全部。** キーは Prisma の問い合わせ口（`prisma.<キー>`）、
  * 値はそこで使う include。
  *
- * 算出（`gradeCalculator.ts`）はここに無い問い合わせを立てない。成績算出のロック
+ * 算出（`gradeCalculationContext.ts`）はここに無い問い合わせを立てない。成績算出のロック
  * （`electron-src/lib/prisma/gradeWriteLock.ts`）が、ここから「成績算出が読むテーブル」を
  * 型で導いて、ロック中の書き込みを止める。読むものを増やすときはここに足せば、ロックも
  * 追従する（足さずに `prisma.<別の口>` を呼ぶと規約テストが落ちる）。

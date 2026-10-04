@@ -21,7 +21,7 @@ import {
   addSubtotalGroupToExam,
   getSubtotalGroupSelection,
   setSubtotalGroupSelection,
-} from "@/electron-src/lib/prisma/subtotalGroup"
+} from "@/electron-src/lib/prisma/examSubtotalGroup"
 
 import {
   cleanupTestDatabase,

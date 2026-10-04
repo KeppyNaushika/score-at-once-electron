@@ -24,12 +24,12 @@ import {
   getStudentAnswerDeletionCounts,
   getStudentAnswersByExamId,
   getStudentAnswersDataset,
-  uploadStudentAnswers,
 } from "../lib/prisma/studentAnswer/crud"
 import {
   applyStudentAnswerPlacements,
   type StudentAnswerPlacementMove,
 } from "../lib/prisma/studentAnswer/placementApply"
+import { uploadStudentAnswers } from "../lib/prisma/studentAnswer/upload"
 import {
   createUser,
   fetchUsers,

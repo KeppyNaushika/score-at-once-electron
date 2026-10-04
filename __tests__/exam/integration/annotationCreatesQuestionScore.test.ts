@@ -31,13 +31,13 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
   }
 })
 
+import { getDrawingAnnotationsByTarget } from "@/electron-src/lib/prisma/drawingAnnotation"
 import {
   batchCreateDrawingAnnotations,
   createDrawingAnnotation,
   deleteDrawingAnnotationsByTarget,
-  getDrawingAnnotationsByTarget,
-} from "@/electron-src/lib/prisma/drawingAnnotation"
-import { setQuestionScore } from "@/electron-src/lib/prisma/questionScore"
+} from "@/electron-src/lib/prisma/drawingAnnotationWrite"
+import { setQuestionScore } from "@/electron-src/lib/prisma/questionScoreWrite"
 import type { AnnotationTarget } from "@/types/drawingAnnotation.types"
 import { newDrawingAnnotation } from "@/types/drawingAnnotation.types"
 

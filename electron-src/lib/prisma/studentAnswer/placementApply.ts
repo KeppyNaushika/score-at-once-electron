@@ -26,23 +26,17 @@
  *
  * - **FK は実行時強制**。衝突回避のために偽IDの一時レコードを挟む方式は FK 違反で壊れる
  *   （旧 `batchUpdateStudentAnswerPlacements`/`swap*` がそれで破綻していた）。
- * - **delete → 同一 id での再作成は NAS 同期を越えられない**（2026-08 実測。
- *   `__tests__/sync/studentAnswerPlacementSync.test.ts`）。`sqlite-nas-sync` の
- *   `deduplicateEntries` が同じ (表, id) のエントリを最後の1件へ畳むため、相手には
- *   **INSERT 1件**しか届かず、相手はそれを主キー衝突として `applyInsert` のケース1
- *   （素の UPDATE）で当てる。そこがセカンダリ unique に当たると例外が catch されず、
- *   取り込みが丸ごと巻き戻り `lastSeenId` も進まない ＝ **その相手からの変更が以後
- *   永久に届かなくなる**。実測では「生徒swap」と「相手が移動先に自分の行を持っていた」の
- *   両方で `UNIQUE constraint failed: ScoreDecision.cropRegionId, ScoreDecision.examStudentId`
- *   が出て同期が止まった。ここに削除→再作成を戻してはいけない。
- * - 上と同じ理由で、**入れ替え（輪）を unique キーの書き換えで表現することもできない**。
- *   相手は変更を1件ずつ当てるので、どの順でも途中で2行が同じスロットに乗る。輪だけは
+ * - **入れ替え（輪）を unique キーの書き換えで表現できない**。手元の SQLite は UNIQUE を
+ *   行ごとに即時検査するので、どの順で書いても途中で2行が同じスロットに乗る。輪だけは
  *   「行をスロットに残して中身を回す」以外に手が無い（`slotPermutation.ts` 参照）。
- * - 二次 `@@unique` の衝突そのものは `conflict.ts` の `applyUpdate` が LWW で畳んでくれる。
- *   **ただしこれは「敗者行に子がいない場合に限る」**（実測: docs/sync-secondary-unique-hazard.md）。
- *   ここで扱う `ScoreDecision` / `CompoundAnswerScore` / `StudentAnswerImage` はいずれも
- *   子を持たないので該当しないが、「全表汎用だから個別対応は不要」とは言えない
- *   （該当は10モデル、最重は `ExamStudent`）。
+ * - **削除→再作成に戻さない**。2026-08 に、旧方式の同期（変更を1件ずつ相手へ当てる）で
+ *   これが相手の取り込みを止めることを実測した。今の `sqlite-nas-sync`（0.21・行の版の表）は
+ *   版の集合からアプリの表を作り直すので値の入れ替えも届く（設計書 §3.7.2）が、削除→
+ *   再作成を今の方式で測り直してはいない。今の書き方が同期を越えることは
+ *   `__tests__/sync/studentAnswerPlacementSync.test.ts` が本物のライブラリで確かめている。
+ * - **全体を1つのトランザクションで包む**（規約の「並べ替え・一括」の経路）。保留していた
+ *   N 件の移動・入れ替えをまとめて当てるスロットの置換そのもので、途中で止まると同じ
+ *   画像が2つのスロットに乗る・採点が別の生徒に付いたまま残る、が黙って起きる。
  */
 import prisma from "../client"
 import { getPageScoreScope, type PageScoreScope } from "./pageScope"

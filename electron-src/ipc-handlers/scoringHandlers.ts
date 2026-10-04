@@ -14,17 +14,19 @@ import {
   getAssignmentsForExam,
   unassignCropRegion,
 } from "../lib/prisma/cropRegionAssignment"
+import { getQuestionScoresByCropRegion } from "../lib/prisma/questionScore"
+import {
+  setQuestionScoreComment,
+  type SetQuestionScoreCommentData,
+} from "../lib/prisma/questionScoreComment"
 import {
   batchUpdateQuestionScores,
-  getQuestionScoresByCropRegion,
   type QuestionScoreResult,
   SCORE_TARGET_DELETED,
   setQuestionScore,
-  setQuestionScoreComment,
-  type SetQuestionScoreCommentData,
   type SetQuestionScoreData,
   updateQuestionScore,
-} from "../lib/prisma/questionScore"
+} from "../lib/prisma/questionScoreWrite"
 import {
   toSerializedScoreDecision,
   upsertScoreDecision,

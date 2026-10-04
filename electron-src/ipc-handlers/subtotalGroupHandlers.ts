@@ -1,13 +1,15 @@
 import {
   addSubtotalGroupToExam,
+  getSubtotalGroupSelection,
+  removeSubtotalGroupFromExam,
+  setSubtotalGroupSelection,
+} from "../lib/prisma/examSubtotalGroup"
+import {
   createSubtotalGroup,
   deleteSubtotalGroup,
   getActiveSubtotalGroupsForExam,
   getAvailableSubtotalGroupsForExam,
   getSubtotalGroups,
-  getSubtotalGroupSelection,
-  removeSubtotalGroupFromExam,
-  setSubtotalGroupSelection,
   updateSubtotalGroup,
 } from "../lib/prisma/subtotalGroup"
 import { type HandlerMap } from "./ipcHandlerUtils"

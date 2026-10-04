@@ -27,7 +27,7 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
 import {
   SCORE_TARGET_DELETED,
   updateQuestionScore,
-} from "@/electron-src/lib/prisma/questionScore"
+} from "@/electron-src/lib/prisma/questionScoreWrite"
 import {
   deleteStudentAnswer,
   getStudentAnswerDeletionCounts,

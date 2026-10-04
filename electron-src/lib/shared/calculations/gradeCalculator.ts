@@ -2,9 +2,10 @@
  * 成績算出エンジン
  * GradeItem × DataSource ベースで評価項目ごとの成績を算出（評定も評価項目の一つ）
  * 欠測時の代替スコア推定（average / regression / zero）に対応
+ *
+ * DB から読むのは `gradeCalculationContext.ts`（素点行列の組み立て）で、ここは読まない。
+ * 手法選択画面のモデル適合度 R は `gradeSourceFit.ts`。
  */
-
-import { computeMaxScoreFromPayload } from "@/lib/shared/gradeDataSourceMaxScore"
 
 import type {
   EstimationDetail,
@@ -16,274 +17,18 @@ import type {
 } from "../../../../src/types/grade.types"
 import {
   toAbsentMethod,
-  toEstimationMode,
   toGradeDataSourceType,
 } from "../../../../src/types/grade.types"
-import prisma from "../../prisma/client"
-import { toSerializedQuestionScore } from "../../prisma/questionScore"
-import { toSerializedScoreDecision } from "../../prisma/scoreDecision"
 import {
   adjustEstimate,
   applyAdjustmentAndClamp,
-  computeSourceFit,
   estimateAbsentScore,
 } from "./absentEstimation"
-import { findExamStudentScores } from "./examScoreCalculator"
-import type { DataSourceInfo, ExamDataCache } from "./gradeCalculatorTypes"
-import { gradeCalculationReads } from "./gradeCalculatorTypes"
+import { buildGradeCalcContext } from "./gradeCalculationContext"
+import type { DataSourceInfo } from "./gradeCalculatorTypes"
 import { determineGradeLabel } from "./gradeLabel"
-import { findCourseworkStudentScore, getRawScore } from "./rawScoreCalculator"
-import type { RawScoreCell, RawScoreRow } from "./rawScoreMatrix"
-import { RawScoreMatrix } from "./rawScoreMatrix"
-import { resolveEffectiveScores } from "./scoreResolution"
-
-/**
- * 素点行列と推定に必要な付随データを構築する。
- * calculateGrades のパス1と computeSourceFits が共有する（素点組み立ての単一実装＝SSOT）。
- * @returns 構築した文脈。Grade が存在しない場合は null。
- */
-async function buildGradeCalcContext(gradeId: string) {
-  // 1. Grade + リレーションを取得
-  const grade = await prisma.grade.findUnique({
-    where: { id: gradeId },
-    include: gradeCalculationReads.grade,
-  })
-
-  if (!grade) return null
-
-  // 2. 成績の対象者一覧を取得。
-  //
-  // 上書き・確定値・除外設定は対象者の子として同じクエリで引く。以前は Grade 単位で
-  // 別々に引いて `${studentId}:${gradeItemId}` の文字列キーで突き合わせており、
-  // 名簿に居ない生徒の設定も一緒に読み込んでいた（#962 §3.3）。
-  const gradeStudents = await prisma.gradeStudent.findMany({
-    where: { gradeId },
-    include: gradeCalculationReads.gradeStudent,
-    orderBy: [{ customOrder: "asc" }, { createdAt: "asc" }],
-  })
-
-  const classroomIds = grade.gradeClassrooms.map(
-    (gradeClassroom) => gradeClassroom.classroomId
-  )
-
-  // 3. 全DataSourceから使用される試験試験IDを収集
-  const allDataSources = grade.gradeItems.flatMap(
-    (gradeItem) => gradeItem.dataSources
-  )
-  const examIds = [
-    ...new Set(
-      allDataSources
-        .filter(
-          (dataSource) =>
-            (dataSource.type === "exam_total" ||
-              dataSource.type === "subtotal" ||
-              dataSource.type === "crop_region") &&
-            dataSource.examId
-        )
-        .map((dataSource) => dataSource.examId!)
-    ),
-  ]
-
-  // 4. 試験のスコアデータを事前取得
-  //
-  // 起点は ExamStudent（その試験の受験者）で、採点行はその子として引く。
-  // 「試験から外した生徒の採点行」は受験者が居ないので構造的に集まらない
-  // （以前は CropRegion 起点で引いており、外したはずの生徒の得点が
-  //  成績算出でだけ算入されていた）。受験状態も同じ行から取れるので、
-  //  見込→欠測の判定に別途 status のプリロードを持たない。
-  const examDataCache = new Map<string, ExamDataCache>()
-
-  for (const examId of examIds) {
-    const [examStudentRows, examPages] = await Promise.all([
-      prisma.examStudent.findMany({
-        where: { examId },
-        include: gradeCalculationReads.examStudent,
-      }),
-      prisma.examPage.findMany({
-        where: { examId: examId },
-        include: gradeCalculationReads.examPage,
-      }),
-    ])
-    const cropRegions = examPages.flatMap((examPage) => examPage.cropRegions)
-
-    examDataCache.set(examId, {
-      examStudents: examStudentRows.map((examStudentRow) => {
-        // 受験者×設問ごとに有効スコア1件へ解決（確定 > 提案合意 > 競合）
-        const { resolved: resolvedScores } = resolveEffectiveScores(
-          examStudentRow.questionScores.map(toSerializedQuestionScore),
-          examStudentRow.scoreDecisions.map(toSerializedScoreDecision)
-        )
-        return {
-          examStudentId: examStudentRow.id,
-          studentId: examStudentRow.studentId,
-          status: examStudentRow.status,
-          questionScores: resolvedScores.map((resolvedScore) => ({
-            examStudentId: resolvedScore.examStudentId,
-            cropRegionId: resolvedScore.cropRegionId,
-            status: resolvedScore.status,
-            partialScore: resolvedScore.partialScore,
-          })),
-        }
-      }),
-      cropRegions: cropRegions.map((cropRegion) => ({
-        id: cropRegion.id,
-        type: cropRegion.type,
-        points: cropRegion.points,
-      })),
-    })
-  }
-
-  // 満点は元データ（設問配点 / 評価項目満点）からライブ算出する。
-  // GradeDataSource.maxScore 列のスナップショットは使わない（元データ追従）。
-  // 元データは行に同梱済みなので同期算出で足りる。
-  const liveMaxScoreMap = new Map(
-    allDataSources.map((dataSource) => [
-      dataSource.id,
-      computeMaxScoreFromPayload(dataSource),
-    ])
-  )
-
-  // DataSource情報をまとめる（推定で使用）
-  const dataSourceInfos: DataSourceInfo[] = allDataSources.map((dataSource) => {
-    const sourceIds = dataSource.estimationSources.map(
-      (estimationSource) => estimationSource.sourceDataSourceId
-    )
-    return {
-      id: dataSource.id,
-      name: dataSource.name,
-      maxScore: liveMaxScoreMap.get(dataSource.id) ?? 0,
-      absentMethod: toAbsentMethod(dataSource.absentMethod),
-      absentRatio: Number(dataSource.absentRatio ?? 1),
-      absentOffset: Number(dataSource.absentOffset ?? 0),
-      estimationMode: toEstimationMode(dataSource.estimationMode),
-      estimationSourceIds: sourceIds,
-    }
-  })
-
-  // データソース id → 実体。素点行列のセルへ列の実体を同梱するために引く
-  const dataSourceInfoById = new Map(
-    dataSourceInfos.map((dataSourceInfo) => [dataSourceInfo.id, dataSourceInfo])
-  )
-
-  // === パス1: 全対象者 × 全DataSourceの rawScore を収集して素点行列を組む ===
-  const rawScoreRows: RawScoreRow[] = []
-
-  for (const gradeStudent of gradeStudents) {
-    const cells: RawScoreCell[] = []
-    for (const dataSource of allDataSources) {
-      let raw = getRawScore(gradeStudent.studentId, dataSource, examDataCache)
-
-      // 見込→欠測対応: treatExpectedAsMissing が true かつ
-      // その試験の ExamStudent.status === "expected" → null扱い
-      if (
-        raw !== null &&
-        dataSource.treatExpectedAsMissing &&
-        dataSource.examId
-      ) {
-        const examStudentScores = findExamStudentScores(
-          gradeStudent.studentId,
-          dataSource.examId,
-          examDataCache
-        )
-        if (examStudentScores?.status === "expected") {
-          raw = null
-        }
-      }
-
-      const dataSourceInfo = dataSourceInfoById.get(dataSource.id)
-      if (dataSourceInfo)
-        cells.push({ dataSource: dataSourceInfo, rawScore: raw })
-    }
-    rawScoreRows.push({ gradeStudent, cells })
-  }
-
-  return {
-    grade,
-    classroomIds,
-    liveMaxScoreMap,
-    dataSourceInfos,
-    rawScoreMatrix: new RawScoreMatrix(rawScoreRows),
-    allDataSources,
-  }
-}
-
-/**
- * 構造的兄弟ソースの同定キー。同一試験（examId）または同一資料（courseworkId）に属する
- * ソースは「合計＝小計の和」等の定義上の従属関係を持つ。生徒がその試験/資料を欠席すると
- * 兄弟も同時に欠測するため、モデル適合度 R の説明変数からは除外する（復元でなく予測のRを出す）。
- * グループに属さないソースは自身の id を返し、他と兄弟にならない。
- */
-function siblingGroupKey(dataSource: {
-  id: string
-  examId: string | null
-  coursework: { id: string } | null
-  courseworkItem: { courseworkId: string } | null
-}): string {
-  if (dataSource.examId) return `exam:${dataSource.examId}`
-  if (dataSource.coursework) return `cw:${dataSource.coursework.id}`
-  if (dataSource.courseworkItem) {
-    return `cw:${dataSource.courseworkItem.courseworkId}`
-  }
-  return `self:${dataSource.id}`
-}
-
-/**
- * 各データソースの「モデル適合度 R」を保存済みの推定ソース設定で算出する。
- * 手法選択（03-データソース）画面で「このソースが他ソースからどれだけ当てられるか」を示す。
- * R は手法に依らないデータ側の予測しやすさ＝重回帰の縮小率で、
- * 高いほど重回帰でも中心へ寄りにくい（順位法・標準偏差法は縮小そのものを避ける）。
- * @returns 各 dataSourceId → { correlation, sampleSize }（算出不能なソースは null）
- */
-export async function computeSourceFits(
-  gradeId: string
-): Promise<Record<string, { correlation: number; sampleSize: number } | null>> {
-  const context = await buildGradeCalcContext(gradeId)
-  if (!context) {
-    throw new Error("Grade exam not found")
-  }
-  const { dataSourceInfos, rawScoreMatrix, allDataSources } = context
-
-  // 構造的兄弟（同一試験/資料）の同定キー。R算出時に説明変数から除外する。
-  const groupKeyById = new Map<string, string>()
-  for (const dataSource of allDataSources) {
-    groupKeyById.set(dataSource.id, siblingGroupKey(dataSource))
-  }
-
-  const fits: Record<
-    string,
-    { correlation: number; sampleSize: number } | null
-  > = {}
-  for (const dataSourceInfo of dataSourceInfos) {
-    const targetGroupKey = groupKeyById.get(dataSourceInfo.id)
-    // 推定ソース: selected なら指定ID、all なら自ソース以外。満点0（算出ソース無し）は常に除く。
-    // さらに両モードとも構造的兄弟（同一試験/資料）を除外する。合計=観点の和 等の派生関係は
-    // R=1（＝予測ではなく復元）を生み現実の予測精度を表さないため。
-    //
-    // これは実際の推定挙動とも整合する: 生徒が試験を丸ごと欠席すると兄弟（同一試験の他観点/合計）も
-    // 同時に欠測し、estimateByRegression の availablePredictors から自動的に外れる。合計・観点は
-    // 派生値なので「兄弟だけ在る partial 欠測」は起きず、Rと推定が乖離するケースは生じない。
-    // selected で兄弟のみ選んだ退化構成では R=算出不能 になるが、その構成では実推定も兄弟を使えず
-    // average へ落ちるため、算出不能の表示は誠実（レビュー指摘#1への回答）。
-    const predictors = (
-      dataSourceInfo.estimationMode === "selected"
-        ? dataSourceInfos.filter((candidate) =>
-            dataSourceInfo.estimationSourceIds.includes(candidate.id)
-          )
-        : dataSourceInfos.filter(
-            (candidate) => candidate.id !== dataSourceInfo.id
-          )
-    )
-      .filter((candidate) => candidate.maxScore > 0)
-      .filter((candidate) => groupKeyById.get(candidate.id) !== targetGroupKey)
-
-    fits[dataSourceInfo.id] = computeSourceFit(
-      dataSourceInfo,
-      predictors,
-      rawScoreMatrix
-    )
-  }
-  return fits
-}
+import { findCourseworkStudentScore } from "./rawScoreCalculator"
+import type { RawScoreMatrix } from "./rawScoreMatrix"
 
 /** float の丸め誤差で確定値とライブ値の食い違いを誤検知しないよう小数4桁で比較する */
 const roundForCompare = (value: number): number => Math.round(value * 1e4) / 1e4
@@ -644,7 +389,7 @@ export async function calculateGrades(
  * クラスの実測分布なので、どの生徒の内訳popoverでも同一値になる（＝表示ラベルと一致）。
  * 標準偏差算出のため2名以上を要する。ソース単位で一定のため生徒ループの外で1回だけ呼ぶ。
  *
- * 注: 標準偏差法・順位法の載せ替えで使う absentEstimation.collectTargetDistribution とは
+ * 注: 標準偏差法・順位法の載せ替えで使う absentEstimationEquating.collectTargetDistribution とは
  * 意味論が異なる（あちらは対象生徒を母数から除く leave-one-out ＋整列列を返す）ため別実装。
  */
 function computeSourceDistribution(

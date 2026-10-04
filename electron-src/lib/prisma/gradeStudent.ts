@@ -184,17 +184,19 @@ const gradeRosterAdapter: RosterAdapter = {
       )
     )
   },
-  listOtherClassroomIds: async (client, targetId, exceptClassroomId) => {
-    const rows = await client.gradeClassroom.findMany({
+  listOtherClassroomIds: async (targetId, exceptClassroomId) => {
+    const rows = await prisma.gradeClassroom.findMany({
       where: { gradeId: targetId, classroomId: { not: exceptClassroomId } },
     })
     return rows.map((gradeClassroom) => gradeClassroom.classroomId)
   },
-  removeClassroomAndStudents: async (tx, targetId, classroomId, studentIds) => {
-    await tx.gradeStudent.deleteMany({
+  removeStudents: async (targetId, studentIds) => {
+    await prisma.gradeStudent.deleteMany({
       where: { gradeId: targetId, studentId: { in: studentIds } },
     })
-    await tx.gradeClassroom.delete({
+  },
+  removeClassroom: async (targetId, classroomId) => {
+    await prisma.gradeClassroom.delete({
       where: { gradeId_classroomId: { gradeId: targetId, classroomId } },
     })
   },

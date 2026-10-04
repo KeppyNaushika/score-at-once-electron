@@ -21,20 +21,18 @@ import {
   addGradeTag,
   createGrade,
   deleteGrade,
-  duplicateGrade,
   getAllGrades,
   getGradeById,
   setGradeTags,
   updateGrade,
 } from "../lib/prisma/grade"
+import { duplicateGrade } from "../lib/prisma/gradeDuplicate"
 import {
   getGradeIndividualReportSettings,
   updateGradeIndividualReportSettings,
 } from "../lib/prisma/gradeIndividualReportSettings"
-import {
-  calculateGrades,
-  computeSourceFits,
-} from "../lib/shared/calculations/gradeCalculator"
+import { calculateGrades } from "../lib/shared/calculations/gradeCalculator"
+import { computeSourceFits } from "../lib/shared/calculations/gradeSourceFit"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
 /** 成績算出（Grade）本体の CRUD・タグ・個人成績表の設定・算出・Excel出力・アーカイブの IPC チャンネル */

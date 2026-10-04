@@ -21,7 +21,7 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
   }
 })
 
-import { removeStudentsFromCoursework } from "@/electron-src/lib/prisma/coursework"
+import { removeStudentsFromCoursework } from "@/electron-src/lib/prisma/courseworkRoster"
 import { calculateGrades } from "@/electron-src/lib/shared/calculations/gradeCalculator"
 
 import {

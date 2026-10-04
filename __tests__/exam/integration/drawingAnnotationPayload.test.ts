@@ -27,9 +27,11 @@ import {
   getDrawingAnnotationsByCropRegion,
   getDrawingAnnotationsByExamStudent,
   getDrawingAnnotationsByQuestionScore,
+} from "@/electron-src/lib/prisma/drawingAnnotation"
+import {
   toggleAnnotationFavorite,
   updateDrawingAnnotation,
-} from "@/electron-src/lib/prisma/drawingAnnotation"
+} from "@/electron-src/lib/prisma/drawingAnnotationWrite"
 
 import { createFullTestExam } from "../../helpers/testExamBuilder"
 import {

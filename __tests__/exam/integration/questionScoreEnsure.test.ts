@@ -28,11 +28,11 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
   }
 })
 
+import { setQuestionScoreComment } from "@/electron-src/lib/prisma/questionScoreComment"
 import {
   ensureQuestionScore,
   setQuestionScore,
-  setQuestionScoreComment,
-} from "@/electron-src/lib/prisma/questionScore"
+} from "@/electron-src/lib/prisma/questionScoreWrite"
 
 import { createFullTestExam } from "../../helpers/testExamBuilder"
 import {
