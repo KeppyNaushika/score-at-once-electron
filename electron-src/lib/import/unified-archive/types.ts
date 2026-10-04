@@ -16,3 +16,24 @@ export interface OpenedUnifiedArchive {
   /** 現行化で生まれた行（表名 → id）。現行化の前後で id 集合を比べた差。段階4で使う */
   readonly migratedRowIds: Readonly<Record<string, readonly string[]>>
 }
+
+export type ArchiveIdChoice = "existing" | "archive"
+/** 照合で id が一致しなかった共通の実体を、どう扱うか */
+export type ArchiveMatchDecision =
+  | {
+      readonly kind: "same"
+      readonly existingId: string
+      readonly adoptId: ArchiveIdChoice
+    } // 同じもの。adoptId=archive は取り込み先の id をアーカイブの id へ付け替える（今の ID 統合 = idChangeExecutor の後継。設計 §9）
+  | { readonly kind: "new" } // 新しく作る（既定）
+  | { readonly kind: "skip" } // 取り込まない。この行を必須で参照する行も取り込まない（任意の参照は NULL）
+export interface UnifiedArchiveImportDecisions {
+  /** 一意制約の衝突で採用する id。既定 "existing" */
+  readonly conflictIdChoice?: ArchiveIdChoice
+  /** 1件ずつの上書き。キーは `${table}:${archiveId}` */
+  readonly conflictIdOverrides?: Readonly<Record<string, ArchiveIdChoice>>
+  /** 照合の決定。キーは `${table}:${archiveId}`。無ければ new */
+  readonly matches?: Readonly<Record<string, ArchiveMatchDecision>>
+}
+export const archiveRowKey = (table: string, id: string): string =>
+  `${table}:${id}`

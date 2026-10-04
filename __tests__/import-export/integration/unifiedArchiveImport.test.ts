@@ -11,10 +11,10 @@
  * - 書き出し → 空にした DB へ統合で取り込むと、範囲の全表の行が書き出し前と一致する（§10 の段階3）
  * - 3択（上書き・統合・別で追加）が全行に同じように効く。別で追加は根の子孫の id を振り直す
  * - 利用者の passcode は書かない。監査ログは追記だけ
- * - 一意制約の衝突があれば何も書かずに止める
+ *
+ * 一意制約の衝突・照合の決定・試し取り込み（段階4）は unifiedArchiveImportConflict.test.ts が見る。
  */
 
-import AdmZip from "adm-zip"
 import Database from "better-sqlite3"
 import * as crypto from "crypto"
 import * as fs from "fs"
@@ -29,14 +29,9 @@ import {
   importUnifiedArchiveFiles,
   remapArchiveFilePath,
 } from "../../../electron-src/lib/import/unified-archive/archiveFileImporter"
-import { UnifiedArchiveUniqueConflictError } from "../../../electron-src/lib/import/unified-archive/archiveRowImporter"
 import { orderArchiveTables } from "../../../electron-src/lib/import/unified-archive/archiveTableOrder"
 import type { OpenedUnifiedArchive } from "../../../electron-src/lib/import/unified-archive/types"
 import type { ImportAction } from "../../../src/types/importAction.types"
-import {
-  UNIFIED_ARCHIVE_DATABASE_NAME,
-  UNIFIED_ARCHIVE_FILES_DIR,
-} from "../../../src/types/unifiedArchive.types"
 import {
   cleanupTestDatabase,
   disconnectTestPrisma,
@@ -55,7 +50,7 @@ import {
   countTableRows,
   findDanglingReferences,
   importArchiveRows,
-  planArchiveImport,
+  openArchiveForTest as openArchiveIn,
   readRowsByIds as readRowsByIdsFrom,
   readTableIds,
   type TableRows,
@@ -67,36 +62,11 @@ const WORK_DIR = path.join(os.tmpdir(), "unified-archive-import")
 const DATA_DIR = path.join(WORK_DIR, "data")
 const OUTPUT_PATH = path.join(WORK_DIR, "export.sao")
 const IMPORTED_AT = new Date("2026-10-05T09:00:00.000Z")
-const FILES_PREFIX = `${UNIFIED_ARCHIVE_FILES_DIR}/`
-
 /** ZIP を展開して、取り込みに渡す形にする（開く側の守りと現行化は通さない） */
 const openArchiveForTest = (
   zipPath: string,
   manifest: OpenedUnifiedArchive["manifest"]
-): OpenedUnifiedArchive => {
-  const openedDirectory = path.join(WORK_DIR, `opened-${crypto.randomUUID()}`)
-  const filesDirectory = path.join(openedDirectory, UNIFIED_ARCHIVE_FILES_DIR)
-  fs.mkdirSync(filesDirectory, { recursive: true })
-  const databasePath = path.join(openedDirectory, UNIFIED_ARCHIVE_DATABASE_NAME)
-  for (const entry of new AdmZip(zipPath).getEntries()) {
-    if (entry.isDirectory) continue
-    if (entry.entryName === UNIFIED_ARCHIVE_DATABASE_NAME) {
-      fs.writeFileSync(databasePath, entry.getData())
-    } else if (entry.entryName.startsWith(FILES_PREFIX)) {
-      const relativePath = entry.entryName.slice(FILES_PREFIX.length)
-      const filePath = path.join(filesDirectory, ...relativePath.split("/"))
-      fs.mkdirSync(path.dirname(filePath), { recursive: true })
-      fs.writeFileSync(filePath, entry.getData())
-    }
-  }
-  return {
-    manifest,
-    databasePath,
-    filesDirectory,
-    appliedMigrations: [],
-    migratedRowIds: {},
-  }
-}
+): OpenedUnifiedArchive => openArchiveIn(zipPath, manifest, WORK_DIR)
 
 const readArchiveIds = (databasePath: string) => readTableIds(databasePath)
 const readRowsByIds = (idsByTable: ReadonlyMap<string, string[]>) =>
@@ -108,8 +78,6 @@ const importRows = (
   action: ImportAction,
   importedAt: Date = IMPORTED_AT
 ) => importArchiveRows(prisma, archive, action, importedAt)
-const planImport = (archive: OpenedUnifiedArchive, action: ImportAction) =>
-  planArchiveImport(prisma, archive, action)
 
 const readFileIfExists = (filePath: string): Buffer | null =>
   fs.existsSync(filePath) ? fs.readFileSync(filePath) : null
@@ -283,19 +251,21 @@ describe("統合アーカイブの取り込み", () => {
     }
 
     const plan = await importRows(archive, "merge")
-    const files = importUnifiedArchiveFiles(archive, DATA_DIR, "merge", {})
+    const files = importUnifiedArchiveFiles(archive, DATA_DIR, plan)
 
     for (const [table, ids] of archiveIds) {
       expect(plan.counts[table], table).toEqual({
         created: ids.length,
         replaced: 0,
         kept: 0,
+        skipped: 0,
       })
     }
     expect(Object.keys(plan.counts).sort()).toEqual(
       [...archiveIds.keys()].sort()
     )
     expect(plan.uniqueConflicts).toEqual([])
+    expect(plan.renamedIds).toEqual([])
     expect(plan.idMap).toEqual({})
 
     const rowsAfterImport = readRowsByIds(archiveIds)
@@ -328,13 +298,14 @@ describe("統合アーカイブの取り込み", () => {
     const countsBefore = countTestDatabaseRows()
 
     const plan = await importRows(archive, "merge")
-    const files = importUnifiedArchiveFiles(archive, DATA_DIR, "merge", {})
+    const files = importUnifiedArchiveFiles(archive, DATA_DIR, plan)
 
     for (const [table, ids] of archiveIds) {
       expect(plan.counts[table], table).toEqual({
         created: 0,
         replaced: 0,
         kept: ids.length,
+        skipped: 0,
       })
     }
     expect(countTestDatabaseRows()).toEqual(countsBefore)
@@ -355,14 +326,14 @@ describe("統合アーカイブの取り込み", () => {
     fs.writeFileSync(dataFilePath(changedImagePath), "取り込み先で変えた画像")
 
     const plan = await importRows(archive, "overwrite")
-    const files = importUnifiedArchiveFiles(archive, DATA_DIR, "overwrite", {})
+    const files = importUnifiedArchiveFiles(archive, DATA_DIR, plan)
 
     for (const [table, ids] of archiveIds) {
       // 監査ログは3択に関わらず書き換えない
       const expected =
         table === "AuditLog"
-          ? { created: 0, replaced: 0, kept: ids.length }
-          : { created: 0, replaced: ids.length, kept: 0 }
+          ? { created: 0, replaced: 0, kept: ids.length, skipped: 0 }
+          : { created: 0, replaced: ids.length, kept: 0, skipped: 0 }
       expect(plan.counts[table], table).toEqual(expected)
     }
 
@@ -420,7 +391,12 @@ describe("統合アーカイブの取り込み", () => {
 
     const plan = await importRows(archive, "merge")
 
-    expect(plan.counts.Exam).toEqual({ created: 0, replaced: 0, kept: 1 })
+    expect(plan.counts.Exam).toEqual({
+      created: 0,
+      replaced: 0,
+      kept: 1,
+      skipped: 0,
+    })
     expect(plan.counts.Student.replaced).toBe(1)
     const exam = await prisma.exam.findUniqueOrThrow({
       where: { id: fixture.examA.exam.id },
@@ -441,12 +417,7 @@ describe("統合アーカイブの取り込み", () => {
     const countsBefore = countTestDatabaseRows()
 
     const plan = await importRows(archive, "separate")
-    const files = importUnifiedArchiveFiles(
-      archive,
-      DATA_DIR,
-      "separate",
-      plan.idMap
-    )
+    const files = importUnifiedArchiveFiles(archive, DATA_DIR, plan)
 
     const sharedTables = new Set([
       "User",
@@ -469,6 +440,7 @@ describe("統合アーカイブの取り込み", () => {
           created: 0,
           replaced: 0,
           kept: ids.length,
+          skipped: 0,
         })
         expect(countsAfter.get(table), table).toBe(countsBefore.get(table))
       } else {
@@ -478,6 +450,7 @@ describe("統合アーカイブの取り込み", () => {
           created: ids.length,
           replaced: 0,
           kept: 0,
+          skipped: 0,
         })
         expect(countsAfter.get(table), table).toBe(
           (countsBefore.get(table) ?? 0) + ids.length
@@ -576,38 +549,6 @@ describe("統合アーカイブの取り込み", () => {
     expect(user.updatedAt.toISOString()).toBe(IMPORTED_AT.toISOString())
   })
 
-  it("一意制約の衝突: 取り込み先に別 id・同じ一意キーの行があれば、何も書かずに止める", async () => {
-    // 書き出した後で、利用者の設定を別 id・同じ (userId, key) の行に作り直す
-    const preferenceId = fixture.preferenceIds.scorer
-    await prisma.userPreference.delete({ where: { id: preferenceId } })
-    const replacement = await prisma.userPreference.create({
-      data: { userId: fixture.examA.user.id, key: "theme", value: "light" },
-    })
-    // 取り込めば作られるはずの行も消しておく（止まったら作られないことを見る）
-    await prisma.exam.delete({ where: { id: fixture.examA.exam.id } })
-    const countsBefore = countTestDatabaseRows()
-
-    const plan = await planImport(archive, "merge")
-    expect(plan.uniqueConflicts).toEqual([
-      {
-        table: "UserPreference",
-        columns: ["userId", "key"],
-        archiveId: preferenceId,
-        existingId: replacement.id,
-        migrated: false,
-      },
-    ])
-
-    const failure = await importRows(archive, "merge").catch(
-      (error: unknown) => error
-    )
-    expect(failure).toBeInstanceOf(UnifiedArchiveUniqueConflictError)
-    if (failure instanceof UnifiedArchiveUniqueConflictError) {
-      expect(failure.conflicts).toEqual(plan.uniqueConflicts)
-    }
-    expect(countTestDatabaseRows()).toEqual(countsBefore)
-  })
-
   it("監査ログは追記だけ: 在れば3択に関わらず書き換えず、無ければアーカイブの時刻のまま作る", async () => {
     const changedAt = new Date("2000-01-01T00:00:00.000Z")
     await prisma.auditLog.update({
@@ -622,6 +563,7 @@ describe("統合アーカイブの取り込み", () => {
         created: 0,
         replaced: 0,
         kept: 1,
+        skipped: 0,
       })
     }
     const kept = await prisma.auditLog.findUniqueOrThrow({
@@ -632,7 +574,12 @@ describe("統合アーカイブの取り込み", () => {
 
     await prisma.auditLog.delete({ where: { id: auditLogId } })
     const plan = await importRows(archive, "overwrite")
-    expect(plan.counts.AuditLog).toEqual({ created: 1, replaced: 0, kept: 0 })
+    expect(plan.counts.AuditLog).toEqual({
+      created: 1,
+      replaced: 0,
+      kept: 0,
+      skipped: 0,
+    })
     const recreated = readRowsByIds(new Map([["AuditLog", [auditLogId]]]))
     expect(recreated.get("AuditLog")).toEqual(rowsBeforeExport.get("AuditLog"))
   })
