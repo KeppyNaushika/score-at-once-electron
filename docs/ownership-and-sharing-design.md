@@ -345,7 +345,7 @@ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 `OWNER` / `EDITOR` / `VIEWER` へ再分類する。ただし**設計は #1071 で行い、本書では実装しない**。
 
 理由は、試験のロールが `scoring-scope-and-permissions-design.md` の設計（段階アクセス・匿名採点・
-担当割当）と一体で単独では動かせないこと、`transferOwnership` / `removeExamMember` /
+担当割当）と一体で単独では動かせないこと、`changeExamMemberRole` / `removeExamMember` /
 `canExportResults` が絡むことによる。
 
 #### #1071 が解く必要のある点
@@ -358,7 +358,7 @@ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 | 「準備段階に入れない」の表現          | §3.3 の方針に従えばフラグ。ただし `scoring-scope-and-permissions-design.md` §3-3 は「段階ごとのスイッチ」を一度**却下している**。3ロール化はその判断の再検討を含む |
 | 匿名採点の根拠を保てるか              | 同 §3-3 は「GRADER を 07 に閉じ込めれば匿名性が自動的に成立する」ことを2ロールの根拠にしていた。3ロールでもこの性質を保つ必要がある                                |
 | `VIEWER` と `canExportResults` の重複 | 「採点はしないが結果を見る人」は `VIEWER` そのもの。3ロール化で `canExportResults` の一部がロールに吸収されうる                                                    |
-| 昇格・降格の経路                      | ロールが3つになると `transferOwnership`（OWNER 常に1人前提）の見直しが要る。**最後の1人の OWNER を降格できない**規則も同時に入れる                                 |
+| 昇格・降格の経路                      | 2ロールの昇格・降格は `changeExamMemberRole`（#1140）で入り、**最後の1人の OWNER は降格できない**。ロールが3つになると、どのロール間を誰が動かせるかの見直しが要る |
 
 #### 対象が2つある問題は残る
 
@@ -559,3 +559,4 @@ FROM "Grade" CROSS JOIN "User";
 | 2026-10-04 | #1127 を閉じたので、冒頭と §11 の参照を「発端」に改める                                                                                       |
 | 2026-10-04 | #1140 を実装。§4.4 を今の状態に直す（User を参照するリレーションは15本。`ReturnSnapshot.capturedByUserId` を `SetNull` へ。削除機能の手当て） |
 | 2026-10-04 | §4.4 に試験のオーナーを移す操作（参加者の昇格・降格）を実装済みとして追記                                                                     |
+| 2026-10-04 | §4.6 の昇格・降格の記述を、削除済みの関数名から `changeExamMemberRole` へ直す                                                                 |
