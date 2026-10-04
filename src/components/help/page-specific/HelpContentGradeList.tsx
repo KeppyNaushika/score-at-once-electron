@@ -75,8 +75,8 @@ export function HelpContentGradeList() {
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">新規作成</Badge>
               <Badge variant="outline">複製</Badge>
-              <Badge variant="outline">.grade 読み込み</Badge>
-              <Badge variant="outline">.grade 書き出し</Badge>
+              <Badge variant="outline">読み込み</Badge>
+              <Badge variant="outline">.sao 書き出し</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
               「新規作成」を押すと、名前を訊かずに成績算出が1件できて概要ページが開きます。
@@ -84,6 +84,11 @@ export function HelpContentGradeList() {
             </p>
             <p className="text-sm text-muted-foreground">
               前の学期と同じ作りで出すときは、行末の「…」から「複製」を選ぶと設定ごと写せます。
+            </p>
+            <p className="text-sm text-muted-foreground">
+              別の端末で作った成績算出は「読み込み」で取り込めます（.sao
+              のほか、以前の .grade
+              も選べます）。書き出しは行末の「…」から行います。
             </p>
           </div>
         </HelpSection>

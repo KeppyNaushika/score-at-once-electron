@@ -14,6 +14,10 @@ import { app, BrowserWindow, dialog } from "electron"
 import * as fs from "fs"
 import * as path from "path"
 
+import {
+  ARCHIVE_IMPORT_FILE_KINDS,
+  type SelectedArchiveImportFile,
+} from "../../src/types/archiveImportFile.types"
 import type { ImportAction } from "../../src/types/importAction.types"
 import { UNIFIED_ARCHIVE_EXTENSION } from "../../src/types/unifiedArchive.types"
 import { getDataDirectory } from "../lib/dataManager"
@@ -23,6 +27,7 @@ import {
   createUnifiedArchive,
   type UnifiedArchiveExportPhase,
 } from "../lib/export/unified-archive/unifiedArchiveCreator"
+import { archiveImportFileKindOf } from "../lib/import/archiveImportFileKind"
 import { importUnifiedArchiveFiles } from "../lib/import/unified-archive/archiveFileImporter"
 import { collectArchiveGradeImpactSource } from "../lib/import/unified-archive/archiveGradeImpactSource"
 import {
@@ -56,6 +61,26 @@ const ARCHIVE_FILE_FILTER = {
   name: "統合アーカイブ (.sao)",
   extensions: [UNIFIED_ARCHIVE_EXTENSION.slice(1)],
 }
+
+/**
+ * 一覧の「読み込み」が受け付けるファイル。統合アーカイブと、読み込みだけ残した旧形式・
+ * 外部の形式を全て受け付け、選ばれた拡張子で開く取り込み画面が決まる
+ */
+const ANY_IMPORT_FILE_FILTERS = [
+  {
+    name: "読み込めるファイル",
+    extensions: [...ARCHIVE_IMPORT_FILE_KINDS],
+  },
+  ARCHIVE_FILE_FILTER,
+  {
+    name: "旧形式 (.score, .coursework, .grade, .asb, .students)",
+    extensions: ["score", "coursework", "grade", "asb", "students"],
+  },
+  {
+    name: "百問繚乱™・リアテンダント™データ（採点情報のみ）(.hsz, .dat)",
+    extensions: ["hsz", "dat"],
+  },
+]
 
 interface UnifiedArchiveImportInput {
   sessionId: string
@@ -166,7 +191,23 @@ export const unifiedArchiveHandlers = {
     return { outputPath: input.outputPath, manifest }
   },
 
-  /** 取り込むファイルを尋ねる。選ばずに閉じたら null */
+  /**
+   * 一覧の「読み込み」のファイル選択。統合アーカイブも旧形式も受け付け、拡張子から種類を
+   * 決めて返す（どの取り込み画面を開くかは renderer が種類で決める）。選ばずに閉じたら null
+   */
+  "unifiedArchive:selectAnyImportFile":
+    async (): Promise<SelectedArchiveImportFile | null> => {
+      const result = await dialog.showOpenDialog({
+        title: "読み込む",
+        filters: ANY_IMPORT_FILE_FILTERS,
+        properties: ["openFile"],
+      })
+      if (result.canceled || result.filePaths.length === 0) return null
+      const filePath = result.filePaths[0]
+      return { path: filePath, kind: archiveImportFileKindOf(filePath) }
+    },
+
+  /** 取り込みウィザードの中で、統合アーカイブを選び直す。選ばずに閉じたら null */
   "unifiedArchive:selectImportFile": async () => {
     const result = await dialog.showOpenDialog({
       title: "統合アーカイブを読み込む",

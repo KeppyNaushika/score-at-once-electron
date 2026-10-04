@@ -148,8 +148,8 @@ npx vitest                 # ウォッチモード
 
 #### 📦 スキーマ変更時のImport/Export対応ルール（重要）
 
-**手順の本文は [docs/import-export-architecture.md](./docs/import-export-architecture.md) にある。着手前に必ず読むこと。**
-ここには、それを読む必要があるのはどんなときか、と、数字の出どころだけを置く。
+**手順の本文は [docs/import-export-architecture.md](./docs/import-export-architecture.md) の「スキーマを変えたときにやること」にある。着手前に必ず読むこと。**
+ここには、それを読む必要があるのはどんなときか、と、何が縛っているかだけを置く。
 
 **対応が必要なケース**:
 
@@ -157,16 +157,20 @@ npx vitest                 # ウォッチモード
 - フィールドの追加・削除・リネーム
 - リレーションの変更（中間テーブルの追加等）
 
-**アーカイブは5種類ある**（`.score` / `.coursework` / `.grade` / `.asb` / `.students`）。
-**試験（`.score`）だけを直して済ませない** — 変えたテーブルがどの種に載っているかを、
-上記文書の各節で確かめる。
+**書き出しは統合アーカイブ（`.sao`）だけ。** 中身は現行スキーマと同じ SQLite で、スキーマから
+回る汎用の書き込みなので、表ごとの書き出し・取り込みは書き足さない。手で追うのはスキーマから
+読み取れない意味だけ:
 
-**数字と履歴をここに書かない**（必ず古くなる）。一次情報は次の2つだけ:
+- **表と外部キー** — `electron-src/lib/export/unified-archive/archiveTableRegistry.ts` に役割と
+  参照を足す（規約テスト `unifiedArchiveRegistry` が schema.prisma との一致を縛る）
+- **ファイルのパスを持つ列** — `archiveFileCollector.ts` の `ARCHIVE_FILE_COLUMNS`。
+  **外部キーでない列に埋め込んだ id** — `archiveEmbeddedIds.ts`
+- **migration** — 設計 [docs/unified-archive-design.md](./docs/unified-archive-design.md) §8 の
+  規約4つを守る（回帰テスト `unifiedArchiveMigrationCommutes` が検査する）
 
-- **現行版** — `src/types/<種>Archive.types.ts` の `*_CURRENT_VERSION`
-- **その版で何が変わったか** — 各変換器 `V<FROM>_to_V<TO>.ts` の冒頭コメント。1段ごとに、
-  何をどう移したか・なぜそうしたか・冪等かまで書いてある。置き場は
-  `electron-src/lib/import/` 配下の `<種>-transformers/`（**試験だけ `transformers/`**）
+**旧5種（`.score` / `.coursework` / `.grade` / `.asb` / `.students`）は読み込みだけの凍結した形式。**
+変えた表を旧形式の取り込みが書いているなら、取り込みが今のスキーマで動くよう直す。
+**変換器は足さず、`*_CURRENT_VERSION` も上げない。**
 
 #### 🔄 多対多関係の強化（2025年7月29日更新）
 
@@ -479,7 +483,7 @@ export interface SerializedQuestionScore extends Omit<
 ## 参考資料
 
 - [docs/coding-style.md](./docs/coding-style.md) - コーディングスタイルガイド
-- [docs/import-export-architecture.md](./docs/import-export-architecture.md) - アーカイブ5種の構造と、スキーマを変えたときの手順
+- [docs/import-export-architecture.md](./docs/import-export-architecture.md) - 統合アーカイブ（`.sao`）と凍結した旧5種の読み込みの構造、スキーマを変えたときの手順
 - [docs/remaining-work.md](./docs/remaining-work.md) - これからの課題と判断待ち
 - [Prisma Schema](./prisma/schema.prisma) - データベース設計
 - [Next.js 15 Docs](https://nextjs.org/docs)

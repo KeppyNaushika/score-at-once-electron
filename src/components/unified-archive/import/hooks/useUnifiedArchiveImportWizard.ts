@@ -23,6 +23,9 @@ import type {
   RejectedUnifiedArchive,
 } from "../types"
 
+/** 開いた結果（開けた / 開けなかった） */
+type UnifiedArchiveOpenResult = OpenedUnifiedArchive | RejectedUnifiedArchive
+
 const errorMessageOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
 
@@ -47,22 +50,30 @@ const decisionForAction = (
  *
  * 決定（方針・紐づけ・衝突の id）が変わったら、段を進めるときに試し取り込みをやり直す。
  * 試し取り込みの結果は「どの決定に対するものか」を同梱して持ち、表示時に引き直す。
+ *
+ * 一覧の「読み込み」から開くときは、そこで開いた結果（`startWith`）から始める。開けていれば
+ * 「内容確認」から、開けなかったら理由をファイル選択の段に出す（選び直せる）。
  */
 export function useUnifiedArchiveImportWizard({
   onComplete,
+  startWith,
 }: {
   onComplete?: () => void
+  startWith?: UnifiedArchiveOpenResult
 }) {
-  const [step, setStep] = useState<ArchiveImportStep>("fileSelect")
-  const [opened, setOpened] = useState<OpenedUnifiedArchive | null>(null)
+  const startOpened = startWith?.kind === "opened" ? startWith : null
+  const [step, setStep] = useState<ArchiveImportStep>(
+    startOpened ? "overview" : "fileSelect"
+  )
+  const [opened, setOpened] = useState<OpenedUnifiedArchive | null>(startOpened)
   const [rejection, setRejection] = useState<RejectedUnifiedArchive | null>(
-    null
+    startWith?.kind === "rejected" ? startWith : null
   )
   // 同じ試験の続きを取り込むのが普通なので、今の試験の取り込みと同じく「統合する」が既定
   const [action, setAction] = useState<ImportAction>("merge")
   const [matchDecisions, setMatchDecisions] = useState<
     Record<string, ArchiveMatchDecision>
-  >({})
+  >(() => ({ ...startOpened?.suggestedDecisions }))
   const [conflictIdChoice, setConflictIdChoiceState] =
     useState<ArchiveIdChoice>("existing")
   const [conflictIdOverrides, setConflictIdOverrides] = useState<

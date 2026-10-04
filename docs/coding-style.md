@@ -433,20 +433,14 @@ export type CropRegionWithDetails = Prisma.CropRegionGetPayload<{
 ### 後方互換性の方針
 
 - **コードベース全体**: 後方互換性のためのエイリアスや deprecated 型は廃止する
-- **Importer**: 後方互換性は全て `/electron-src/lib/import/transformers/` 内で処理する
+- **アーカイブ**: 書き出しは統合アーカイブ（`.sao`）だけで、版の差は取り込み時に migration を当てて吸収する（`docs/unified-archive-design.md` §4.1）。旧5種の読み込みは凍結しており、変換器（`transformers/` など）は足さない
 
 ```typescript
 // ❌ NG: コードベースに後方互換エイリアスを残す
 /** @deprecated Use StudentWithMemberships instead */
 export type StudentWithClass = StudentWithMemberships
 
-// ✅ OK: Transformerで旧形式を変換
-// V1_2_0_to_V1_3_0.ts
-export class V1_2_0_to_V1_3_0 implements VersionTransformer {
-  transform(data: ArchiveData): TransformResult {
-    // studentId → studentNumber のリネーム処理
-  }
-}
+// ✅ OK: 参照する側を全て新しい名前に直し、エイリアスを置かない
 ```
 
 ### 判断フロー

@@ -1,10 +1,9 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { FileArchive, FolderOutput, MoreVertical, Trash2 } from "lucide-react"
+import { FileArchive, MoreVertical, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { toast } from "sonner"
 
 import type {
   EntityOverviewBasics,
@@ -31,7 +30,6 @@ import {
 import {
   courseworkDetailQuery,
   deleteCourseworkMutation,
-  exportCourseworkArchiveMutation,
   setCourseworkTagsMutation,
   updateCourseworkMutation,
 } from "@/queries/coursework"
@@ -56,7 +54,6 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
   const updateCoursework = useMutation(updateCourseworkMutation(courseworkId))
   const setCourseworkTags = useMutation(setCourseworkTagsMutation(courseworkId))
   const deleteCoursework = useMutation(deleteCourseworkMutation())
-  const exportArchive = useMutation(exportCourseworkArchiveMutation())
   // 押しただけでは消さず、確認で決めてもらう
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [showUnifiedExportDialog, setShowUnifiedExportDialog] = useState(false)
@@ -90,16 +87,6 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
     }
     setIsDeleteModalOpen(false)
     router.push("/coursework")
-  }
-
-  const handleExportArchive = () => {
-    exportArchive.mutate(courseworkId, {
-      onSuccess: (result) => {
-        if (!result.canceled) {
-          toast.success(`書き出しました: ${result.outputPath}`)
-        }
-      },
-    })
   }
 
   if (isLoading) {
@@ -161,10 +148,6 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportArchive}>
-                <FolderOutput />
-                .coursework 書き出し
-              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setShowUnifiedExportDialog(true)}
               >

@@ -9,6 +9,7 @@ export function createUnifiedArchiveApi() {
       previewExport: bind("unifiedArchive:previewExport"),
       selectExportPath: bind("unifiedArchive:selectExportPath"),
       export: bind("unifiedArchive:export"),
+      selectAnyImportFile: bind("unifiedArchive:selectAnyImportFile"),
       selectImportFile: bind("unifiedArchive:selectImportFile"),
       open: bind("unifiedArchive:open"),
       analyze: bind("unifiedArchive:analyze"),

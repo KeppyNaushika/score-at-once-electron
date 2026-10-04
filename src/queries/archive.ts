@@ -1,12 +1,12 @@
-import { auditLogListKey } from "./auditLog"
 import { defineMutation } from "./defineMutation"
 import { classroomListQuery, studentListQuery } from "./student"
 import { tagListQuery } from "./tag"
 
 /**
- * 試験アーカイブ（`.score`）と生徒アーカイブの書き出し・取り込み。
+ * 試験アーカイブ（`.score`）と生徒アーカイブ（`.students`）の取り込み。
  *
- * 書き出しと下見は DB を変えないが、取り込みの実行は書く。
+ * 旧形式は読み込みだけ残して凍結した（書き出しは統合アーカイブ .sao に一本化）。
+ * 下見は DB を変えないが、取り込みの実行は書く。
  *
  * 対応する preload は `electron-src/preload-apis/archiveApi.ts`。
  *
@@ -15,44 +15,6 @@ import { tagListQuery } from "./tag"
  * 与えると取り直す先が無いのに失敗トーストが二重に出るので、DB を触らない下見は
  * 関数のままにする（`misc.ts` の `checkFileExists` と同じ扱い）。
  */
-
-export const exportExamArchiveMutation = () =>
-  defineMutation({
-    mutationFn: (
-      input: Parameters<typeof window.electronAPI.archive.exportExam>[0]
-    ) => window.electronAPI.archive.exportExam(input),
-    meta: {
-      // 書き出したことは監査ログに残る＝DB を1行書く
-      invalidates: [auditLogListKey],
-      errorMessage: "試験を書き出せませんでした",
-    },
-  })
-
-export const bulkExportExamsMutation = () =>
-  defineMutation({
-    mutationFn: (
-      input: Parameters<typeof window.electronAPI.archive.bulkExportExams>[0]
-    ) => window.electronAPI.archive.bulkExportExams(input),
-    meta: {
-      // 書き出したことは監査ログに残る＝DB を1行書く
-      invalidates: [auditLogListKey],
-      errorMessage: "試験を書き出せませんでした",
-    },
-  })
-
-export const exportStudentArchiveMutation = () =>
-  defineMutation({
-    mutationFn: (
-      input: Parameters<
-        typeof window.electronAPI.studentArchive.exportStudents
-      >[0]
-    ) => window.electronAPI.studentArchive.exportStudents(input),
-    meta: {
-      // 書き出したことは監査ログに残る＝DB を1行書く
-      invalidates: [auditLogListKey],
-      errorMessage: "生徒を書き出せませんでした",
-    },
-  })
 
 // =====================================================================
 // 取り込みの下見（DB は変わらない）

@@ -481,56 +481,11 @@ export interface IdIntegrationConfig {
  * - template: 模範解答＋領域情報のみ（採点テンプレート）
  * - template_with_subtotals: テンプレート＋小計設定
  */
-export type ArchiveExportMode = "full" | "template" | "template_with_subtotals"
+type ArchiveExportMode = "full" | "template" | "template_with_subtotals"
 
 // =============================================================================
 // IPC API Types
 // =============================================================================
-
-/**
- * 一括エクスポートの個別試験結果
- */
-export interface BulkExportExamResult {
-  examId: string
-  examName: string
-  success: boolean
-  outputPath?: string
-  error?: string
-  /**
-   * 同梱できなかったファイルの説明。**空でなければ、中身が欠けたまま作られている。**
-   *
-   * 捨てると「画像が1枚も入っていないのに5件書き出しました」と言うことになる。
-   */
-  missingFiles: string[]
-}
-
-/**
- * 一括エクスポート全体の結果
- */
-/**
- * 一括書き出しの結果。
- *
- * 出力先を選ばずに閉じた場合は canceled で返る（失敗ではない）。results の各要素が
- * 持つ success は試験ごとの結果で、これは payload の一部として残る。
- */
-export type BulkExportExamsResult =
-  | { canceled: true }
-  | {
-      canceled: false
-      results: BulkExportExamResult[]
-      outputDirectory: string
-    }
-
-/**
- * エクスポートオプション
- */
-export interface ExportExamOptions {
-  examId: string
-  /** ログインユーザーID（このユーザーのデータのみエクスポート） */
-  userId: string
-  /** エクスポートモード（デフォルト: full） */
-  exportMode?: ArchiveExportMode
-}
 
 /**
  * アーカイブ解析オプション

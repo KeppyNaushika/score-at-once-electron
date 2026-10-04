@@ -1,16 +1,13 @@
 /**
  * Grade（成績算出）IPC ハンドラー
  *
- * 成績算出本体（CRUD・タグ・個人成績表の設定）・算出・Excel 出力・アーカイブ。
+ * 成績算出本体（CRUD・タグ・個人成績表の設定）・算出・Excel 出力・アーカイブの取り込み。
  * 名簿は `gradeRosterHandlers.ts`、評価項目とその中身（データソース・境界・比較）は
  * `gradeStructureHandlers.ts`、セルの調整（上書き・制約・除外・確定）は
  * `gradeAdjustmentHandlers.ts`。チャンネル名はすべて `grade:` のまま。
  */
 
-import { dialog } from "electron"
-
 import type { GradeReportSettings } from "../../src/types/gradeReport.types"
-import { createGradeArchive } from "../lib/export/grade-archive/gradeArchiveCreator"
 import { exportGradeExcel } from "../lib/export/gradeExcel/gradeExcelExportMain"
 import { extractGradeArchive } from "../lib/import/grade-archive/gradeArchiveExtractor"
 import {
@@ -125,36 +122,13 @@ export const gradeHandlers = {
   },
 
   // =====================================================================
-  // アーカイブ Export/Import
+  // アーカイブ（.grade の取り込み。旧形式は読み込みだけ残して凍結）
   // =====================================================================
 
-  "grade:exportArchive": async (gradeId: string) => {
-    const result = await dialog.showSaveDialog({
-      title: "成績アーカイブの保存先",
-      defaultPath: `grade-exam.grade`,
-      filters: [{ name: "成績アーカイブ", extensions: ["grade"] }],
-    })
-    if (result.canceled || !result.filePath) {
-      return { canceled: true as const }
-    }
-    await createGradeArchive(gradeId, result.filePath)
-    return { canceled: false as const, outputPath: result.filePath }
-  },
-
-  "grade:importArchive": async () => {
-    const result = await dialog.showOpenDialog({
-      title: "成績アーカイブを選択",
-      filters: [{ name: "成績アーカイブ", extensions: ["grade"] }],
-      properties: ["openFile"],
-    })
-    if (result.canceled || result.filePaths.length === 0) {
-      return { canceled: true as const }
-    }
-
-    const archivePath = result.filePaths[0]
+  // ファイルは一覧の「読み込み」で選ぶ。中身を読んで照合の結果を返すだけ（DB は書かない）
+  "grade:analyzeArchive": async (archivePath: string) => {
     const archiveData = await extractGradeArchive(archivePath)
-    const preview = await previewGradeArchiveImport(archiveData)
-    return { canceled: false as const, preview, archivePath }
+    return previewGradeArchiveImport(archiveData)
   },
 
   // 中身は renderer を往復させず、実行時に main がファイルから読み直す

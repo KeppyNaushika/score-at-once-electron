@@ -12,7 +12,10 @@ import {
 } from "@/components/ui/dialog"
 import { useImportWizard } from "@/hooks/import/useImportWizard"
 import { cn } from "@/lib/utils"
-import type { ImportWizardStep } from "@/types/examArchive.types"
+import type {
+  ImportWizardState,
+  ImportWizardStep,
+} from "@/types/examArchive.types"
 
 import { HszDisclaimerModal } from "./HszDisclaimerModal"
 import { ExecuteStep } from "./steps/ExecuteStep"
@@ -25,6 +28,8 @@ interface ImportWizardModalProps {
   isOpen: boolean
   onClose: () => void
   onComplete?: (examId: string) => void
+  /** 一覧の「読み込み」で選んだファイルから作った、始めの状態（`openExamImportFile`） */
+  startState?: ImportWizardState
 }
 
 const STEP_TITLES: Record<ImportWizardStep, string> = {
@@ -47,8 +52,9 @@ export function ImportWizardModal({
   isOpen,
   onClose,
   onComplete,
+  startState,
 }: ImportWizardModalProps) {
-  const wizard = useImportWizard()
+  const wizard = useImportWizard(startState)
   const { state, reset } = wizard
 
   // モーダルを閉じたらリセット

@@ -1,11 +1,14 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { BarChart3, FolderInput, Plus } from "lucide-react"
+import { BarChart3, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import { ArchiveImportScreens } from "@/components/archive-import/ArchiveImportScreens"
+import { archiveImportToolbarAction } from "@/components/archive-import/archiveImportToolbarAction"
+import { useArchiveImportLauncher } from "@/components/archive-import/hooks/useArchiveImportLauncher"
 import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
 import { EntityListPage } from "@/components/common/EntityListPage"
 import {
@@ -15,8 +18,6 @@ import {
 import { Button } from "@/components/ui/button"
 import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
 import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
-import { unifiedArchiveImportToolbarAction } from "@/components/unified-archive/import/unifiedArchiveImportToolbarAction"
-import { UnifiedArchiveImportWizard } from "@/components/unified-archive/import/UnifiedArchiveImportWizard"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
@@ -25,21 +26,15 @@ import { collectClassroomOptions } from "@/lib/filterOptions"
 import { getGradeStatus } from "@/lib/gradeStatus"
 import {
   addTagToGradesMutation,
-  analyzeGradeArchiveMutation,
   createGradeMutation,
   deleteGradeMutation,
   duplicateGradeMutation,
-  executeGradeImportMutation,
-  exportGradeArchiveMutation,
   gradeListQuery,
 } from "@/queries/grade"
 import { findOrCreateTagMutation, tagListQuery } from "@/queries/tag"
-import type { CourseworkImportDecision } from "@/types/courseworkArchive.types"
 import type { GradeSummary } from "@/types/grade.types"
-import type { GradeArchiveImportPreview } from "@/types/gradeArchive.types"
 
 import { DeleteGradeModal } from "../DeleteGradeModal"
-import { GradeImportDialog } from "./GradeImportDialog"
 import { GradeRowMenu } from "./GradeRowMenu"
 import { GradeRowSummary } from "./GradeRowSummary"
 
@@ -84,19 +79,11 @@ export function GradeListContainer() {
   const createGrade = useMutation(createGradeMutation())
   const deleteGrade = useMutation(deleteGradeMutation())
   const duplicateGrade = useMutation(duplicateGradeMutation())
-  const exportArchive = useMutation(exportGradeArchiveMutation())
-  const analyzeArchive = useMutation(analyzeGradeArchiveMutation())
-  const executeImport = useMutation(executeGradeImportMutation())
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
   const addTagToGrades = useMutation(addTagToGradesMutation())
-  // インポート確認ウィザードの状態
-  const [importPreview, setImportPreview] =
-    useState<GradeArchiveImportPreview | null>(null)
-  // 中身は持たず、実行時に main が読み直すファイルの場所だけを持つ
-  const [importArchivePath, setImportArchivePath] = useState<string | null>(
-    null
-  )
-  const [showUnifiedImport, setShowUnifiedImport] = useState(false)
+  const archiveImport = useArchiveImportLauncher()
+  const { start: startArchiveImport, isOpening: isOpeningArchive } =
+    archiveImport
   /** .sao 書き出しを開いたときの最初の選択。null の間は閉じている */
   const [unifiedExportSelection, setUnifiedExportSelection] =
     useState<UnifiedArchiveExportInitialSelection | null>(null)
@@ -134,54 +121,6 @@ export function GradeListContainer() {
   const handleDuplicate = async (id: string) => {
     const duplicated = await duplicateGrade.mutateAsync(id)
     toast.success(`「${duplicated.name}」を複製しました`)
-  }
-
-  // ヘッダーの並び（useMemo）から参照するので、参照を安定させる
-  const handleImport = useCallback(async () => {
-    const result = await analyzeArchive.mutateAsync()
-    if (result.canceled) return
-    // ファイル選択後はウィザードを開き、照合方法をユーザーに判断させる
-    setImportArchivePath(result.archivePath)
-    setImportPreview(result.preview)
-  }, [analyzeArchive])
-
-  const handleImportConfirm = async (
-    decisions: Record<string, CourseworkImportDecision>
-  ) => {
-    if (!importArchivePath || !importPreview) return
-    try {
-      // 試験参照のマッピング（examName → 既存examId）を照合結果から構築
-      const examMapping: Record<string, string> = {}
-      for (const examMatch of importPreview.examMatches) {
-        if (examMatch.found && examMatch.examId)
-          examMapping[examMatch.examName] = examMatch.examId
-      }
-      const importResult = await executeImport.mutateAsync({
-        archivePath: importArchivePath,
-        options: { examMapping, courseworkDecisions: decisions },
-      })
-      // 取り込み警告（点数スキップ・参照先未検出など）があれば通知する。
-      // 自動で消えると見落とすため手動で閉じるまで表示し、全件を本文に載せる。
-      if (importResult.warnings.length > 0) {
-        toast.warning(
-          `インポートは完了しましたが ${importResult.warnings.length} 件の警告があります`,
-          {
-            description: importResult.warnings.join("\n"),
-            duration: Infinity,
-            closeButton: true,
-          }
-        )
-      }
-      router.push(`/grades/${importResult.gradeId}`)
-    } finally {
-      setImportPreview(null)
-      setImportArchivePath(null)
-    }
-  }
-
-  const handleImportCancel = () => {
-    setImportPreview(null)
-    setImportArchivePath(null)
   }
 
   // 一覧に出現する学級を集約してフィルタ選択肢にする
@@ -270,16 +209,10 @@ export function GradeListContainer() {
         label: "新規作成",
         onClick: () => void handleCreate(),
       }),
-      toolbarButtonAction({
-        id: "import",
+      archiveImportToolbarAction({
         priority: 70,
-        icon: FolderInput,
-        label: ".grade 読み込み",
-        onClick: handleImport,
-      }),
-      unifiedArchiveImportToolbarAction({
-        priority: 69,
-        onClick: () => setShowUnifiedImport(true),
+        isOpening: isOpeningArchive,
+        onClick: () => void startArchiveImport(),
       }),
     ]
 
@@ -295,7 +228,14 @@ export function GradeListContainer() {
     }
 
     return toolbarActions
-  }, [allTags, handleBulkAddTag, handleCreate, handleImport, selectedIds])
+  }, [
+    allTags,
+    handleBulkAddTag,
+    handleCreate,
+    isOpeningArchive,
+    selectedIds,
+    startArchiveImport,
+  ])
 
   return (
     <>
@@ -318,7 +258,6 @@ export function GradeListContainer() {
           <GradeRowMenu
             grade={grade}
             onDuplicate={() => handleDuplicate(grade.id)}
-            onExport={() => exportArchive.mutate(grade.id)}
             onUnifiedExport={() =>
               setUnifiedExportSelection({ roots: { Grade: [grade.id] } })
             }
@@ -379,18 +318,7 @@ export function GradeListContainer() {
         initialSelection={unifiedExportSelection ?? {}}
       />
 
-      <GradeImportDialog
-        open={importPreview !== null}
-        preview={importPreview}
-        importing={executeImport.isPending}
-        onCancel={handleImportCancel}
-        onConfirm={handleImportConfirm}
-      />
-
-      <UnifiedArchiveImportWizard
-        open={showUnifiedImport}
-        onOpenChange={setShowUnifiedImport}
-      />
+      <ArchiveImportScreens launcher={archiveImport} />
     </>
   )
 }

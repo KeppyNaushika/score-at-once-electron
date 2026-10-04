@@ -3,7 +3,6 @@ import { queryOptions } from "@tanstack/react-query"
 import type { CourseworkScoreUpsertInput } from "@/types/coursework.types"
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 
-import { auditLogListKey } from "./auditLog"
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
 import { tagListQuery } from "./tag"
@@ -413,36 +412,12 @@ export const addTagToCourseworksMutation = () =>
 // DB を書かない操作
 // =====================================================================
 
-export const exportCourseworkArchiveMutation = () =>
-  defineMutation({
-    mutationFn: (courseworkId: string) =>
-      window.electronAPI.coursework.exportArchive(courseworkId),
-    meta: {
-      // 書き出したことは監査ログに残る＝DB を1行書く
-      invalidates: [auditLogListKey],
-      errorMessage: "試験外成績資料を書き出せませんでした",
-    },
-  })
-
-export const selectCourseworkImportFileMutation = () =>
-  defineMutation({
-    mutationFn: () => window.electronAPI.coursework.selectImportFile(),
-    meta: {
-      writesDatabase: false,
-      errorMessage: "ファイルを選択できませんでした",
-    },
-  })
-
-export const analyzeCourseworkArchiveMutation = () =>
-  defineMutation({
-    mutationFn: (
-      input: Parameters<typeof window.electronAPI.coursework.analyzeArchive>[0]
-    ) => window.electronAPI.coursework.analyzeArchive(input),
-    meta: {
-      writesDatabase: false,
-      errorMessage: "アーカイブを読み込めませんでした",
-    },
-  })
+/**
+ * .coursework の中身を読んで照合の結果を返す（取り込みの下見。DB は変わらない）。
+ * 一覧の「読み込み」が失敗をその場で知らせるので、関数のまま出す
+ */
+export const analyzeCourseworkArchive = (archivePath: string) =>
+  window.electronAPI.coursework.analyzeArchive({ archivePath })
 
 export const importCourseworkArchiveMutation = () =>
   defineMutation({

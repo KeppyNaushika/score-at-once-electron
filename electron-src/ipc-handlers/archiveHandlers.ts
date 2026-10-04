@@ -1,20 +1,16 @@
 /**
- * 試験アーカイブ（エクスポート/インポート）IPCハンドラー
+ * 試験アーカイブ（.score）の取り込み IPC ハンドラー
+ *
+ * 旧形式は読み込みだけ残して凍結した（書き出しは統合アーカイブ .sao に一本化）。
  */
 
-import AdmZip from "adm-zip"
 import { dialog } from "electron"
-import * as path from "path"
 
 import type {
-  ArchiveExportMode,
-  BulkExportExamResult,
-  BulkExportExamsResult,
   FileOverviewData,
   IdIntegrationConfig,
 } from "../../src/types/examArchive.types"
-import { exportExam, exportExamTo } from "../lib/export/exam-archive"
-import { generateExportFileName } from "../lib/export/exam-archive/archiveCreator"
+import { archiveImportFileKindOf } from "../lib/import/archiveImportFileKind"
 import { analyzeArchive } from "../lib/import/exam-archive"
 import {
   cleanupTempDir,
@@ -25,84 +21,13 @@ import { convertDatToScore } from "../lib/import/external-formats/reattendant/da
 import { executeIdIntegrationImport } from "../lib/import/merge/idIntegrationImporter"
 import { performPreMatching } from "../lib/import/merge/matcher"
 import { detectScoringConflictsWithUserDecisions } from "../lib/import/merge/scoringConflictDetector"
-import { getExamById } from "../lib/prisma/exam"
 import { type HandlerMap } from "./ipcHandlerUtils"
-
-/**
- * 一括エクスポートのコアロジック
- *
- * ダイアログを含まず、指定されたディレクトリに順次エクスポートする
- */
-export async function executeBulkExport(
-  examIds: string[],
-  userId: string,
-  outputDirectory: string,
-  exportMode?: ArchiveExportMode
-): Promise<{ results: BulkExportExamResult[]; outputDirectory: string }> {
-  const results: BulkExportExamResult[] = []
-
-  // 順次処理（SQLite同時書き込み制限のため）
-  for (const examId of examIds) {
-    try {
-      const exam = await getExamById(examId)
-      if (!exam) {
-        results.push({
-          examId,
-          examName: examId,
-          success: false,
-          error: "試験が見つかりません",
-          missingFiles: [],
-        })
-        continue
-      }
-
-      const fileName = generateExportFileName(exam.examName, exportMode)
-      const outputPath = path.join(outputDirectory, fileName)
-
-      const exportResult = await exportExamTo({
-        examId,
-        userId,
-        outputPath,
-        exportMode,
-      })
-
-      results.push({
-        examId,
-        examName: exam.examName,
-        success: true,
-        outputPath: exportResult.outputPath,
-        // 欠けたまま作られていることは、試験ごとに画面まで届ける
-        missingFiles: exportResult.missingFiles,
-      })
-    } catch (error) {
-      results.push({
-        examId,
-        examName: examId,
-        success: false,
-        error:
-          error instanceof Error ? error.message : "エクスポートに失敗しました",
-        missingFiles: [],
-      })
-    }
-  }
-
-  return { results, outputDirectory }
-}
 
 /**
  * アーカイブ関連のIPCハンドラーを登録
  */
 export const archiveHandlers = {
-  // エクスポート
-  "archive:exportExam": async (options: {
-    examId: string
-    userId: string
-    exportMode?: ArchiveExportMode
-  }) => {
-    return await exportExam(options)
-  },
-
-  // インポートファイル選択ダイアログ
+  // 取り込みウィザードの中でファイルを選び直す（最初のファイルは一覧の「読み込み」で選ぶ）
   "archive:selectImportFile": async () => {
     const result = await dialog.showOpenDialog({
       title: "試験をインポート",
@@ -134,26 +59,10 @@ export const archiveHandlers = {
     }
 
     const filePath = result.filePaths[0]
-    const ext = path.extname(filePath).toLowerCase()
-
-    // .datファイルはリアテンダント形式かどうかをZIP内のファイルで判定
-    let sourceFormat: "score" | "hsz" | "dat" = ext === ".hsz" ? "hsz" : "score"
-
-    if (ext === ".dat") {
-      try {
-        const zip = new AdmZip(filePath)
-        const hasVersion = zip
-          .getEntries()
-          .some((entry) =>
-            entry.entryName.endsWith("RealtendantAppVersion.txt")
-          )
-        if (hasVersion) {
-          sourceFormat = "dat"
-        }
-      } catch {
-        // ZIPとして開けない場合は.score扱い（後段でエラーになる）
-      }
-    }
+    // .dat はリアテンダント™の形式でなければ .score 扱い（後段でエラーになる）
+    const kind = archiveImportFileKindOf(filePath)
+    const sourceFormat: "score" | "hsz" | "dat" =
+      kind === "hsz" || kind === "dat" ? kind : "score"
 
     return { canceled: false as const, filePath, sourceFormat }
   },
@@ -250,34 +159,6 @@ export const archiveHandlers = {
       if (tempDir) {
         cleanupTempDir(tempDir)
       }
-    }
-  },
-
-  // 一括エクスポート
-  "archive:bulkExportExams": async (options: {
-    examIds: string[]
-    userId: string
-    exportMode?: ArchiveExportMode
-  }): Promise<BulkExportExamsResult> => {
-    // フォルダ選択ダイアログを表示
-    const dialogResult = await dialog.showOpenDialog({
-      title: "一括書き出し先フォルダを選択",
-      properties: ["openDirectory", "createDirectory"],
-    })
-
-    // 出力先を選ばずに閉じたのは失敗ではない
-    if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
-      return { canceled: true as const }
-    }
-
-    return {
-      canceled: false as const,
-      ...(await executeBulkExport(
-        options.examIds,
-        options.userId,
-        dialogResult.filePaths[0],
-        options.exportMode
-      )),
     }
   },
 } satisfies HandlerMap

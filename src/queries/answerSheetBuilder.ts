@@ -7,7 +7,6 @@ import type {
   AsbCellParent,
 } from "@/types/answerSheetDefinition.types"
 
-import { auditLogListKey } from "./auditLog"
 import { defineMutation } from "./defineMutation"
 import { examListQuery } from "./exam"
 import { scopeKeys } from "./keys"
@@ -417,16 +416,6 @@ export const selectAnswerSheetSavePathMutation = () =>
     },
   })
 
-/** 読み込むファイルを尋ねるダイアログ */
-export const selectAnswerSheetImportFileMutation = () =>
-  defineMutation({
-    mutationFn: () => window.electronAPI.answerSheetBuilder.selectImportFile(),
-    meta: {
-      writesDatabase: false,
-      errorMessage: "ファイルを選べませんでした",
-    },
-  })
-
 /** HTML を PNG にして書き出す */
 export const exportAnswerSheetPngMutation = () =>
   defineMutation({
@@ -438,18 +427,6 @@ export const exportAnswerSheetPngMutation = () =>
     meta: {
       writesDatabase: false,
       errorMessage: "PNGを出力できませんでした",
-    },
-  })
-
-/** 定義をファイルへ書き出す */
-export const exportAnswerSheetDefinitionMutation = () =>
-  defineMutation({
-    mutationFn: (definitionId: string) =>
-      window.electronAPI.answerSheetBuilder.exportDefinition(definitionId),
-    meta: {
-      // 書き出したことは監査ログに残る＝DB を1行書く
-      invalidates: [auditLogListKey],
-      errorMessage: "解答用紙を書き出せませんでした",
     },
   })
 

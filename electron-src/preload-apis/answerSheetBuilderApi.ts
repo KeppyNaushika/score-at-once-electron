@@ -25,8 +25,6 @@ export function createAnswerSheetBuilderApi() {
       convertToExam: bind("asb:convert-to-exam"),
       uploadImage: bind("asb:upload-image"),
       deleteImage: bind("asb:delete-image"),
-      selectImportFile: bind("asb:select-import-file"),
-      exportDefinition: bind("asb:export-definition"),
       importDefinition: bind("asb:import-definition"),
       duplicateDefinition: bind("asb:duplicate-definition"),
 

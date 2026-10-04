@@ -18,6 +18,7 @@ import { ArchiveExecuteStep } from "./steps/ArchiveExecuteStep"
 import { ArchiveFileSelectStep } from "./steps/ArchiveFileSelectStep"
 import { ArchiveMatchStep } from "./steps/ArchiveMatchStep"
 import { ArchiveOverviewStep } from "./steps/ArchiveOverviewStep"
+import type { OpenedUnifiedArchive, RejectedUnifiedArchive } from "./types"
 import { WizardStepIndicator } from "./WizardStepIndicator"
 
 interface UnifiedArchiveImportWizardProps {
@@ -25,6 +26,8 @@ interface UnifiedArchiveImportWizardProps {
   onOpenChange: (open: boolean) => void
   /** 取り込みに成功したとき */
   onComplete?: () => void
+  /** 一覧の「読み込み」で選んだファイルを開いた結果。ここから始める（ファイル選択の段を飛ばす） */
+  startWith?: OpenedUnifiedArchive | RejectedUnifiedArchive
 }
 
 /**
@@ -39,12 +42,14 @@ export function UnifiedArchiveImportWizard({
   open,
   onOpenChange,
   onComplete,
+  startWith,
 }: UnifiedArchiveImportWizardProps) {
   if (!open) return null
   return (
     <UnifiedArchiveImportWizardDialog
       onClose={() => onOpenChange(false)}
       onComplete={onComplete}
+      startWith={startWith}
     />
   )
 }
@@ -52,11 +57,13 @@ export function UnifiedArchiveImportWizard({
 function UnifiedArchiveImportWizardDialog({
   onClose,
   onComplete,
+  startWith,
 }: {
   onClose: () => void
   onComplete?: () => void
+  startWith?: OpenedUnifiedArchive | RejectedUnifiedArchive
 }) {
-  const wizard = useUnifiedArchiveImportWizard({ onComplete })
+  const wizard = useUnifiedArchiveImportWizard({ onComplete, startWith })
   const { step, isProcessing, error } = wizard
 
   const handleClose = () => {

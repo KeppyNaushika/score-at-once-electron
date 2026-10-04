@@ -3,7 +3,6 @@
 import {
   Copy,
   FileArchive,
-  FolderOutput,
   MoreHorizontal,
   Pencil,
   Trash2,
@@ -26,7 +25,6 @@ interface DefinitionRowMenuProps {
   isOwner: boolean
   onEdit: () => void
   onDuplicate: () => void
-  onExport: () => void
   /** 「.sao 書き出し」を押したとき（統合アーカイブの書き出しをこの1件から始める） */
   onUnifiedExport: () => void
   onTransfer: () => void
@@ -39,7 +37,6 @@ export function DefinitionRowMenu({
   isOwner,
   onEdit,
   onDuplicate,
-  onExport,
   onUnifiedExport,
   onTransfer,
   onDelete,
@@ -66,10 +63,6 @@ export function DefinitionRowMenu({
         <DropdownMenuItem onClick={onDuplicate}>
           <Copy />
           複製
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={onExport}>
-          <FolderOutput />
-          .asb 書き出し
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onUnifiedExport}>
           <FileArchive />

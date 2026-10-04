@@ -1,11 +1,11 @@
 /**
- * アーカイブ往復テスト
+ * 試験アーカイブ（.score）の展開テスト
  *
  * テスト対象:
- * - electron-src/lib/export/exam-archive/archiveCreator.ts
  * - electron-src/lib/import/exam-archive/archiveExtractor.ts
  *
- * Electron非依存でZIPの作成・抽出・検証を行う
+ * 旧書き出しで作った固定ファイル（__tests__/fixtures/legacy-archives/exam-full.score）と、
+ * テスト内で手組みした ZIP（testArchiveHelper）を展開して確かめる。
  */
 
 import AdmZip from "adm-zip"
@@ -14,13 +14,12 @@ import * as os from "os"
 import * as path from "path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { EXAM_CURRENT_VERSION } from "../../../src/types/examArchive.types"
 import {
-  createMinimalCollectedData,
+  createMinimalArchiveContents,
   createTestArchive,
-  verifyArchiveContents,
 } from "../../helpers/testArchiveHelper"
 import { createMinimalPngBuffer } from "../../helpers/testImageHelper"
+import { getTestPrismaClient } from "../../helpers/testPrismaClient"
 
 // electronモック
 vi.mock("electron", () => ({
@@ -33,7 +32,6 @@ vi.mock("electron", () => ({
 
 // Prismaクライアントモック（archiveExtractorでは不使用だが依存チェーン対策）
 vi.mock("../../../electron-src/lib/prisma/client", () => {
-  const { getTestPrismaClient } = require("../../helpers/testPrismaClient")
   return {
     default: getTestPrismaClient(),
     getPrismaClient: () => getTestPrismaClient(),
@@ -49,6 +47,7 @@ import {
   extractArchive,
   readManifestOnly,
 } from "../../../electron-src/lib/import/exam-archive/archiveExtractor"
+import { legacyArchivePath } from "../../helpers/legacyArchiveFixtures"
 
 let testDir: string
 
@@ -65,13 +64,13 @@ describe("archiveRoundTrip", () => {
 
   // RT-1: CollectedDataからアーカイブ作成→抽出→全JSONファイル一致
   it("RT-1: アーカイブ作成→抽出で全JSONデータが一致する", async () => {
-    const collectedData = createMinimalCollectedData({
+    const archiveContents = createMinimalArchiveContents({
       examId: "rt-exam-1",
       examName: "RT試験",
     })
 
     // students追加
-    collectedData.studentsData.students = [
+    archiveContents.studentsData.students = [
       {
         id: "s1",
         studentNumber: "S001",
@@ -84,10 +83,10 @@ describe("archiveRoundTrip", () => {
         updatedAt: new Date().toISOString(),
       },
     ]
-    collectedData.counts.students = 1
+    archiveContents.counts.students = 1
 
     const archivePath = path.join(testDir, "test.score")
-    createTestArchive(collectedData, archivePath, "rt-exam-1", "RT試験")
+    createTestArchive(archiveContents, archivePath, "rt-exam-1", "RT試験")
 
     // 抽出
     const result = await extractArchive(archivePath)
@@ -106,36 +105,54 @@ describe("archiveRoundTrip", () => {
     cleanupTempDir(data.tempDir)
   })
 
-  // RT-2: マニフェスト構造の検証
-  it("RT-2: マニフェスト構造が正しく作成される", async () => {
-    const collectedData = createMinimalCollectedData({
-      examId: "rt-exam-2",
-      examName: "マニフェストテスト",
-    })
+  // RT-F: 旧書き出しが実際に書いた形を読めること。固定ファイル exam-full.score は
+  // createFullTestExam（2ページ×2設問・3名・採点・注釈・模範解答と答案の画像・
+  // 出力設定・タグ）に返却版・覚え書き・非表示の学級を足した試験を、旧書き出しで書いたもの
+  it("RT-F: 旧書き出しで作った試験アーカイブを、ZIP の各 JSON どおりに展開できる", async () => {
+    const archivePath = legacyArchivePath("exam-full.score")
+    const zip = new AdmZip(archivePath)
+    const readZipJson = (entryName: string): unknown =>
+      JSON.parse(zip.readAsText(entryName))
 
-    const archivePath = path.join(testDir, "manifest-test.score")
-    createTestArchive(
-      collectedData,
-      archivePath,
-      "rt-exam-2",
-      "マニフェストテスト"
+    const result = await extractArchive(archivePath)
+    expect(result.success).toBe(true)
+    const data = result.data!
+
+    expect(data.manifest).toEqual(readZipJson("manifest.json"))
+    expect(data.examData).toEqual(readZipJson("exam.json"))
+    expect(data.studentsData).toEqual(readZipJson("students.json"))
+    expect(data.classesData).toEqual(readZipJson("classes.json"))
+    expect(data.usersData).toEqual(readZipJson("users.json"))
+    expect(data.subtotalsData).toEqual(readZipJson("subtotals.json"))
+    expect(data.scoresData).toEqual(readZipJson("scores.json"))
+    expect(data.tagsData).toEqual(readZipJson("tags.json"))
+    expect(data.transformWarnings).toEqual([])
+
+    // 画像は模範解答・答案とも、件数どおりに展開される
+    expect(data.masterImagePaths).toHaveLength(
+      data.manifest.counts.masterImages
     )
+    expect(data.answerSheetPaths).toHaveLength(
+      data.manifest.counts.answerSheetImages
+    )
+    expect(data.answerSheetPaths.length).toBeGreaterThan(0)
+    for (const imagePath of [
+      ...data.masterImagePaths,
+      ...data.answerSheetPaths,
+    ]) {
+      expect(fs.existsSync(imagePath)).toBe(true)
+    }
 
-    const contents = verifyArchiveContents(archivePath)
-    expect(contents.manifest.version).toBe(EXAM_CURRENT_VERSION)
-    expect(contents.manifest.examId).toBe("rt-exam-2")
-    expect(contents.manifest.examName).toBe("マニフェストテスト")
-    expect(contents.manifest.exportedAt).toBeDefined()
-    expect(contents.manifest.counts).toBeDefined()
+    cleanupTempDir(data.tempDir)
   })
 
   // RT-3: マスター画像がアーカイブに含まれ抽出可能
   it("RT-3: マスター画像がアーカイブに含まれ抽出可能", async () => {
-    const collectedData = createMinimalCollectedData()
+    const archiveContents = createMinimalArchiveContents()
     const pngBuffer = createMinimalPngBuffer()
 
     const archivePath = path.join(testDir, "images-test.score")
-    createTestArchive(collectedData, archivePath, "img-exam", "画像テスト", {
+    createTestArchive(archiveContents, archivePath, "img-exam", "画像テスト", {
       masterImageFiles: [
         { archivePath: "master-images/page1.png", content: pngBuffer },
       ],
@@ -154,18 +171,24 @@ describe("archiveRoundTrip", () => {
 
   // RT-4: 答案画像がアーカイブに含まれ抽出可能
   it("RT-4: 答案画像がアーカイブに含まれ抽出可能", async () => {
-    const collectedData = createMinimalCollectedData()
+    const archiveContents = createMinimalArchiveContents()
     const pngBuffer = createMinimalPngBuffer()
 
     const archivePath = path.join(testDir, "answer-images.score")
-    createTestArchive(collectedData, archivePath, "img-exam-2", "答案テスト", {
-      answerSheetFiles: [
-        {
-          archivePath: "answer-sheets/S001_page1.png",
-          content: pngBuffer,
-        },
-      ],
-    })
+    createTestArchive(
+      archiveContents,
+      archivePath,
+      "img-exam-2",
+      "答案テスト",
+      {
+        answerSheetFiles: [
+          {
+            archivePath: "answer-sheets/S001_page1.png",
+            content: pngBuffer,
+          },
+        ],
+      }
+    )
 
     const result = await extractArchive(archivePath)
     expect(result.success).toBe(true)
@@ -177,10 +200,10 @@ describe("archiveRoundTrip", () => {
 
   // RT-5: 画像なしアーカイブが成功
   it("RT-5: 画像なしアーカイブが正常に処理される", async () => {
-    const collectedData = createMinimalCollectedData()
+    const archiveContents = createMinimalArchiveContents()
 
     const archivePath = path.join(testDir, "no-images.score")
-    createTestArchive(collectedData, archivePath, "no-img-exam", "画像なし")
+    createTestArchive(archiveContents, archivePath, "no-img-exam", "画像なし")
 
     const result = await extractArchive(archivePath)
     expect(result.success).toBe(true)
@@ -192,10 +215,10 @@ describe("archiveRoundTrip", () => {
 
   // RT-6: 存在しないファイルパスでも成功（画像なしの場合）
   it("RT-6: アーカイブの抽出自体は成功する（画像ディレクトリなし）", async () => {
-    const collectedData = createMinimalCollectedData()
+    const archiveContents = createMinimalArchiveContents()
 
     const archivePath = path.join(testDir, "sparse.score")
-    createTestArchive(collectedData, archivePath, "sparse-exam", "疎テスト")
+    createTestArchive(archiveContents, archivePath, "sparse-exam", "疎テスト")
 
     const result = await extractArchive(archivePath)
     expect(result.success).toBe(true)
@@ -234,13 +257,13 @@ describe("archiveRoundTrip", () => {
 
   // RT-10: readManifestOnlyで完全抽出なしにマニフェスト取得
   it("RT-10: readManifestOnlyで完全抽出なしにマニフェストを取得できる", async () => {
-    const collectedData = createMinimalCollectedData({
+    const archiveContents = createMinimalArchiveContents({
       examId: "manifest-only-exam",
     })
 
     const archivePath = path.join(testDir, "manifest-only.score")
     createTestArchive(
-      collectedData,
+      archiveContents,
       archivePath,
       "manifest-only-exam",
       "マニフェストのみ"

@@ -89,11 +89,13 @@ export function HelpContentAnswerSheetList() {
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline">新規作成</Badge>
-              <Badge variant="outline">.asb 読み込み</Badge>
-              <Badge variant="outline">.asb 書き出し</Badge>
+              <Badge variant="outline">読み込み</Badge>
+              <Badge variant="outline">.sao 書き出し</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              書き出しと複製は行末の「…」から行います。
+              別の端末で作った解答用紙は「読み込み」で取り込めます（.sao
+              のほか、以前の .asb
+              も選べます）。書き出しと複製は行末の「…」から行います。
             </p>
           </div>
         </HelpSection>

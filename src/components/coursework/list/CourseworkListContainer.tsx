@@ -1,11 +1,14 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ClipboardList, FolderInput, Plus } from "lucide-react"
+import { ClipboardList, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
+import { ArchiveImportScreens } from "@/components/archive-import/ArchiveImportScreens"
+import { archiveImportToolbarAction } from "@/components/archive-import/archiveImportToolbarAction"
+import { useArchiveImportLauncher } from "@/components/archive-import/hooks/useArchiveImportLauncher"
 import { bulkTagToolbarAction } from "@/components/common/BulkTagAssignButton"
 import { EntityListPage } from "@/components/common/EntityListPage"
 import {
@@ -15,8 +18,6 @@ import {
 import { Button } from "@/components/ui/button"
 import type { UnifiedArchiveExportInitialSelection } from "@/components/unified-archive/export/types"
 import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
-import { unifiedArchiveImportToolbarAction } from "@/components/unified-archive/import/unifiedArchiveImportToolbarAction"
-import { UnifiedArchiveImportWizard } from "@/components/unified-archive/import/UnifiedArchiveImportWizard"
 import type { TagWithAllRelations } from "@/electron-src/lib/prisma/tag"
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { type ListFilterAccessors, useListFilter } from "@/hooks/useListFilter"
@@ -25,24 +26,14 @@ import { getCourseworkStatus } from "@/lib/courseworkStatus"
 import { collectClassroomOptions } from "@/lib/filterOptions"
 import {
   addTagToCourseworksMutation,
-  analyzeCourseworkArchiveMutation,
   courseworkListQuery,
   createCourseworkMutation,
   deleteCourseworkMutation,
-  exportCourseworkArchiveMutation,
-  importCourseworkArchiveMutation,
-  selectCourseworkImportFileMutation,
 } from "@/queries/coursework"
 import { findOrCreateTagMutation, tagListQuery } from "@/queries/tag"
 import type { CourseworkSummary } from "@/types/coursework.types"
-import type {
-  CourseworkArchiveImportPreview,
-  CourseworkImportDecision,
-} from "@/types/courseworkArchive.types"
-import type { ImportAction } from "@/types/importAction.types"
 
 import { DeleteCourseworkModal } from "../DeleteCourseworkModal"
-import { CourseworkImportDialog } from "./CourseworkImportDialog"
 import { CourseworkRowMenu } from "./CourseworkRowMenu"
 import { CourseworkRowSummary } from "./CourseworkRowSummary"
 
@@ -82,23 +73,14 @@ export function CourseworkListContainer() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const deleteCoursework = useMutation(deleteCourseworkMutation())
-  const exportArchive = useMutation(exportCourseworkArchiveMutation())
-  const selectImportFile = useMutation(selectCourseworkImportFileMutation())
-  const analyzeArchive = useMutation(analyzeCourseworkArchiveMutation())
-  const importArchive = useMutation(importCourseworkArchiveMutation())
   const findOrCreateTag = useMutation(findOrCreateTagMutation())
   const addTagToCourseworks = useMutation(addTagToCourseworksMutation())
   const createCoursework = useMutation(createCourseworkMutation())
   const { data: courseworks = EMPTY_COURSEWORKS, isPending: isLoading } =
     useQuery(courseworkListQuery())
-  // インポート確認ウィザードの状態
-  const [importPreview, setImportPreview] =
-    useState<CourseworkArchiveImportPreview | null>(null)
-  const [importArchivePath, setImportArchivePath] = useState<string | null>(
-    null
-  )
-  const [importing, setImporting] = useState(false)
-  const [showUnifiedImport, setShowUnifiedImport] = useState(false)
+  const archiveImport = useArchiveImportLauncher()
+  const { start: startArchiveImport, isOpening: isOpeningArchive } =
+    archiveImport
   /** .sao 書き出しを開いたときの最初の選択。null の間は閉じている */
   const [unifiedExportSelection, setUnifiedExportSelection] =
     useState<UnifiedArchiveExportInitialSelection | null>(null)
@@ -150,70 +132,6 @@ export function CourseworkListContainer() {
     }
     courseworkDeletion.close()
     toast.success("資料を削除しました", { description: coursework.name })
-  }
-
-  const handleExport = (coursework: CourseworkSummary) => {
-    exportArchive.mutate(coursework.id, {
-      onSuccess: (result) => {
-        if (!result.canceled) {
-          toast.success("資料をエクスポートしました", {
-            description: coursework.name,
-          })
-        }
-      },
-    })
-  }
-
-  // ヘッダーの並び（useMemo）から参照するので、参照を安定させる
-  const handleImport = useCallback(async () => {
-    const selected = await selectImportFile.mutateAsync()
-    if (selected.canceled) return
-    const preview = await analyzeArchive.mutateAsync({
-      archivePath: selected.filePath,
-    })
-    setImportArchivePath(selected.filePath)
-    setImportPreview(preview)
-  }, [analyzeArchive, selectImportFile])
-
-  const handleImportConfirm = async (
-    decisions: Record<string, CourseworkImportDecision>,
-    action: ImportAction
-  ) => {
-    if (!importArchivePath) return
-    setImporting(true)
-    try {
-      const result = await importArchive.mutateAsync({
-        archivePath: importArchivePath,
-        courseworkDecisions: decisions,
-        action,
-      })
-      if (result.warnings.length > 0) {
-        toast.warning(
-          `インポートは完了しましたが ${result.warnings.length} 件の警告があります`,
-          {
-            description: result.warnings.join("\n"),
-            duration: Infinity,
-            closeButton: true,
-          }
-        )
-      } else {
-        toast.success("資料をインポートしました")
-      }
-      await loadCourseworks()
-    } catch (error) {
-      toast.error("インポートに失敗しました", {
-        description: error instanceof Error ? error.message : undefined,
-      })
-    } finally {
-      setImporting(false)
-      setImportPreview(null)
-      setImportArchivePath(null)
-    }
-  }
-
-  const handleImportCancel = () => {
-    setImportPreview(null)
-    setImportArchivePath(null)
   }
 
   const classroomOptions = useMemo(
@@ -318,16 +236,10 @@ export function CourseworkListContainer() {
         label: "新規作成",
         onClick: () => void handleCreate(),
       }),
-      toolbarButtonAction({
-        id: "import",
+      archiveImportToolbarAction({
         priority: 70,
-        icon: FolderInput,
-        label: ".coursework 読み込み",
-        onClick: handleImport,
-      }),
-      unifiedArchiveImportToolbarAction({
-        priority: 69,
-        onClick: () => setShowUnifiedImport(true),
+        isOpening: isOpeningArchive,
+        onClick: () => void startArchiveImport(),
       }),
     ]
 
@@ -343,7 +255,14 @@ export function CourseworkListContainer() {
     }
 
     return toolbarActions
-  }, [allTags, handleBulkAddTag, handleCreate, handleImport, selectedIds])
+  }, [
+    allTags,
+    handleBulkAddTag,
+    handleCreate,
+    isOpeningArchive,
+    selectedIds,
+    startArchiveImport,
+  ])
 
   return (
     <>
@@ -367,7 +286,6 @@ export function CourseworkListContainer() {
         rowMenu={(coursework) => (
           <CourseworkRowMenu
             coursework={coursework}
-            onExport={() => handleExport(coursework)}
             onUnifiedExport={() =>
               setUnifiedExportSelection({
                 roots: { Coursework: [coursework.id] },
@@ -434,18 +352,7 @@ export function CourseworkListContainer() {
         initialSelection={unifiedExportSelection ?? {}}
       />
 
-      <CourseworkImportDialog
-        open={importPreview !== null}
-        preview={importPreview}
-        importing={importing}
-        onCancel={handleImportCancel}
-        onConfirm={handleImportConfirm}
-      />
-
-      <UnifiedArchiveImportWizard
-        open={showUnifiedImport}
-        onOpenChange={setShowUnifiedImport}
-      />
+      <ArchiveImportScreens launcher={archiveImport} />
     </>
   )
 }
