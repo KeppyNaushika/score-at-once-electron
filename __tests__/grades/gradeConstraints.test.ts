@@ -574,6 +574,42 @@ describe("gradeConstraints: 参照はidで持つ（issue #1063）", () => {
     expect(violatedIds(result, [expr])).toEqual(["s1"])
   })
 
+  // expr-eval 時代は組込みの min/max が先に解決され、ここで用意した min/max は
+  // 一度も呼ばれていなかった（無引数で全項目、項目名で絞る、が効いていなかった）。
+  it("式ルールの min() / max() は観点を集計する（無引数=全項目、名前で絞り込み）", () => {
+    const result = makeResult([
+      makeStudent("high", ["5", "4", "3"]),
+      makeStudent("low", ["2", "1", "1"]),
+    ])
+    const maxAll: GradeConstraintData = {
+      ...baseConstraint,
+      kind: "expression",
+      expression: "max() >= 5",
+    }
+    const minNamed: GradeConstraintData = {
+      ...baseConstraint,
+      kind: "expression",
+      expression: 'min("思考・判断・表現", "態度") = 1',
+    }
+    expect(violatedIds(result, [maxAll])).toEqual(["high"])
+    expect(violatedIds(result, [minNamed])).toEqual(["low"])
+  })
+
+  it("式ルールは全角・「」・= で書いても評価できる", () => {
+    const result = makeResult([
+      makeStudent("ok", ["A", "B", "B"]),
+      makeStudent("ng", ["A", "B", "C"]),
+    ])
+    const expr: GradeConstraintData = {
+      ...baseConstraint,
+      kind: "expression",
+      expression: "has（「A」） and label(「態度」) = 「C」",
+    }
+    const { errors } = evaluateConstraints(result, [expr])
+    expect(errors.size).toBe(0)
+    expect(violatedIds(result, [expr])).toEqual(["ng"])
+  })
+
   it("混在禁止ラベルが1つ以下なら無言失火せずエラーになる", () => {
     const singleLabel: GradeConstraintData = {
       ...baseConstraint,

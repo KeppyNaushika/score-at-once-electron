@@ -7,8 +7,6 @@
  * の両方で使用する。
  */
 
-import { Parser, type Value } from "expr-eval"
-
 import type {
   ConstraintAggregate,
   ConstraintViolation,
@@ -16,6 +14,16 @@ import type {
   GradeConstraintData,
   StudentGradeResult,
 } from "@/types/grade.types"
+
+import {
+  evaluateExpression,
+  type ExpressionFunctionArity,
+  type ExpressionFunctionTable,
+  type ExpressionNode,
+  type ExpressionValue,
+  isExpressionTruthy,
+  parseExpression,
+} from "./constraintExpression"
 
 /** 整合ルールの既定のラベル→数値対応（Excel流: A=5, B=3, C=1） */
 export const DEFAULT_CONSTRAINT_LABEL_VALUES: Record<string, number> = {
@@ -45,18 +53,18 @@ interface ConstraintEvaluation {
   errors: Map<string, string>
 }
 
-// 式評価器（安全: eval不使用）。代入・条件演算子は無効化する。
-const parser = new Parser({
-  operators: {
-    assignment: false,
-    conditional: false,
-    logical: true,
-    comparison: true,
-    concatenate: false,
-    in: false,
-    factorial: false,
-  },
-})
+/** 式から呼べる関数と引数の数（null は可変長）。中身は buildExpressionFunctions */
+const EXPRESSION_FUNCTION_ARITY: ExpressionFunctionArity = {
+  item: 1,
+  label: 1,
+  has: 1,
+  count: 1,
+  sum: null,
+  mean: null,
+  min: null,
+  max: null,
+  abs: 1,
+}
 
 interface ViewpointLabel {
   gradeItemId: string
@@ -204,15 +212,16 @@ function evalMutualExclusion(
 }
 
 /**
- * 式評価用スコープを構築。関数名は英語（label/item/has/count/sum/mean/min/max）。
- * 観点名・ラベルは文字列引数（ダブルクォート）で渡す。
+ * 式から呼ぶ関数を、生徒1人分の観点ラベルに結び付けて作る。
+ * 関数名は英語（label/item/has/count/sum/mean/min/max/abs）。
+ * 観点名・ラベルは文字列引数（"…" か 「…」）で渡す。
  * 集計関数は引数に項目名を並べるとその項目だけ、無引数なら全項目を対象にする。
  */
-function buildExpressionScope(
+function buildExpressionFunctions(
   viewpoints: ViewpointLabel[],
   ordered: Map<string, string[]>,
   allItemNames: Set<string>
-): Record<string, Value> {
+): ExpressionFunctionTable {
   // 各項目の数値（ラベル値: 数値ラベルはそのまま、A/B/C等は弱→強の順位）。
   // ordered は評価項目idで引く（式の中では項目を名前で書くが、順位表のキーはid）。
   const itemValue = (viewpoint: ViewpointLabel) =>
@@ -227,55 +236,58 @@ function buildExpressionScope(
   }
 
   // 対象項目を名前で絞る（名前無し=全項目）
-  const selected = (names: Value[]) => {
+  const selected = (names: ExpressionValue[]) => {
     if (names.length === 0) return viewpoints
     const wanted = names.map(String)
     wanted.forEach(requireKnownItem)
     return viewpoints.filter((viewpoint) => wanted.includes(viewpoint.name))
   }
-  const numericOf = (names: Value[]) =>
+  const numericOf = (names: ExpressionValue[]) =>
     selected(names)
       .map(itemValue)
       .filter((value): value is number => value !== null)
 
   return {
-    label: (name: Value) => {
+    label: (name) => {
       requireKnownItem(String(name))
       return (
         viewpoints.find((viewpoint) => viewpoint.name === String(name))
           ?.label ?? ""
       )
     },
-    item: (name: Value) => {
+    item: (name) => {
       requireKnownItem(String(name))
       const found = viewpoints.find(
         (viewpoint) => viewpoint.name === String(name)
       )
       return found ? (itemValue(found) ?? NaN) : NaN
     },
-    has: (labelValue: Value) =>
-      viewpoints.some((viewpoint) => viewpoint.label === String(labelValue))
-        ? 1
-        : 0,
-    count: (labelValue: Value) =>
+    has: (labelValue) =>
+      viewpoints.some((viewpoint) => viewpoint.label === String(labelValue)),
+    count: (labelValue) =>
       viewpoints.filter((viewpoint) => viewpoint.label === String(labelValue))
         .length,
-    sum: (...names: Value[]) =>
+    sum: (...names) =>
       numericOf(names).reduce((accumulator, value) => accumulator + value, 0),
-    mean: (...names: Value[]) => {
+    mean: (...names) => {
       const values = numericOf(names)
       return values.length
         ? values.reduce((accumulator, value) => accumulator + value, 0) /
             values.length
         : NaN
     },
-    min: (...names: Value[]) => {
+    min: (...names) => {
       const values = numericOf(names)
       return values.length ? Math.min(...values) : NaN
     },
-    max: (...names: Value[]) => {
+    max: (...names) => {
       const values = numericOf(names)
       return values.length ? Math.max(...values) : NaN
+    },
+    abs: (value) => {
+      const number = Number(value)
+      if (typeof value === "string" && value.trim() === "") return NaN
+      return Math.abs(number)
     },
   }
 }
@@ -288,7 +300,7 @@ export function validateConstraintExpression(
 ): string | null {
   if (!expression.trim()) return "式が空です"
   try {
-    parser.parse(expression)
+    parseExpression(expression, EXPRESSION_FUNCTION_ARITY)
     return null
   } catch (error) {
     return error instanceof Error ? error.message : "式の解析に失敗しました"
@@ -324,11 +336,14 @@ export function evaluateConstraints(
   //
   // 参照はFKで守られているため通常は壊れない。アーカイブ取込直後など、算出対象の
   // 項目集合と食い違う復元経路でだけ起きうる。そのとき黙って「違反なし」に落とさない。
-  const compiled = new Map<string, ReturnType<typeof parser.parse> | null>()
+  const compiled = new Map<string, ExpressionNode | null>()
   for (const constraint of active) {
     if (constraint.kind === "expression") {
       try {
-        compiled.set(constraint.id, parser.parse(constraint.expression))
+        compiled.set(
+          constraint.id,
+          parseExpression(constraint.expression, EXPRESSION_FUNCTION_ARITY)
+        )
       } catch (error) {
         compiled.set(constraint.id, null)
         errors.set(
@@ -374,8 +389,14 @@ export function evaluateConstraints(
         } else if (constraint.kind === "expression") {
           const compiledExpression = compiled.get(constraint.id)
           if (!compiledExpression) continue // パースエラーは着色しない
-          const scope = buildExpressionScope(viewpoints, ordered, allItemNames)
-          violated = Boolean(compiledExpression.evaluate(scope))
+          const functions = buildExpressionFunctions(
+            viewpoints,
+            ordered,
+            allItemNames
+          )
+          violated = isExpressionTruthy(
+            evaluateExpression(compiledExpression, functions)
+          )
         }
       } catch (error) {
         // 評価時エラー（未定義観点名など）はルール単位で記録し着色しない
