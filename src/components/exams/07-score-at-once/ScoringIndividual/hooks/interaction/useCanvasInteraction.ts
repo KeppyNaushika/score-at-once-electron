@@ -2,7 +2,7 @@
  * @fileoverview キャンバスインタラクションオーケストレーター
  * 選択・移動・リサイズ・新規描画を統合管理
  */
-import { useCallback, useState } from "react"
+import { useCallback } from "react"
 
 import { useCursor } from "@/components/exams/07-score-at-once/ScoringIndividual/hooks/utils/useCursor"
 import type { SelectionRectangle } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
@@ -12,11 +12,15 @@ import type {
   LineStyle,
 } from "@/types/drawingAnnotation.types"
 
+import { findClosestHandleHit } from "../../utils/handleHit"
 import { useDrawingCreation } from "./useDrawingCreation"
 import { useElementMovement } from "./useElementMovement"
-import { type ResizeOriginalBounds, useElementResize } from "./useElementResize"
+import { useElementResize } from "./useElementResize"
 import { useElementSelection } from "./useElementSelection"
+import { useIdleHoverCursor } from "./useIdleHoverCursor"
+import { usePointerCapture } from "./usePointerCapture"
 import { useRectangleSelection } from "./useRectangleSelection"
+import { useResizeDrag } from "./useResizeDrag"
 
 /** キャンバスインタラクションフックのプロパティ */
 interface UseCanvasInteractionProps {
@@ -187,21 +191,14 @@ export function useCanvasInteraction({
   onTextElementReClick,
   setHoveredElementId,
 }: UseCanvasInteractionProps): UseCanvasInteractionReturn {
-  // リサイズ状態
-  const [isResizing, setIsResizing] = useState(false)
-  const [resizeHandle, setResizeHandle] = useState<string | null>(null)
-  const [resizeElementId, setResizeElementId] = useState<string | null>(null)
-  const [resizeOriginalBounds, setResizeOriginalBounds] =
-    useState<ResizeOriginalBounds | null>(null)
-  const [capturedPointerId, setCapturedPointerId] = useState<number | null>(
-    null
-  )
-
   // カーソル管理
   const { setCursor, resetCursor, getResizeCursor } = useCursor({
     canvasRef,
     hitTestHandle,
   })
+
+  // 掴んでいる間のポインターキャプチャ
+  const { capturePointer, releasePointer } = usePointerCapture(canvasRef)
 
   // 新規描画
   const {
@@ -231,6 +228,12 @@ export function useCanvasInteraction({
     setDrawingElements,
     hitTestHandle,
   })
+  const { isResizing, resizeHandle, startResize, resizeTo, finishResize } =
+    useResizeDrag({
+      drawingElements,
+      handleElementResize,
+      updateDrawingElement,
+    })
 
   // 要素選択
   const { handleElementSelection } = useElementSelection({
@@ -291,14 +294,16 @@ export function useCanvasInteraction({
     setRectangleEditMode,
   })
 
-  /**
-   * 2点間の距離を計算
-   */
-  const calcDistance = useCallback(
-    (x1: number, y1: number, x2: number, y2: number) =>
-      Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2),
-    []
-  )
+  // 何も掴んでいないときのホバー表示
+  const updateIdleHoverCursor = useIdleHoverCursor({
+    drawingElements,
+    getLineEditMode,
+    getResizeHandle,
+    hitTestElement,
+    setCursor,
+    getResizeCursor,
+    setHoveredElementId,
+  })
 
   /**
    * 選択ツールのマウスダウンハンドラー
@@ -310,149 +315,37 @@ export function useCanvasInteraction({
     ): boolean => {
       if (currentTool !== "select") return false
 
-      // ハンドルヒット情報を収集
-      type HandleHit = {
-        element: DrawingAnnotation
-        type: "line-endpoint" | "resize-handle" | "text-anchor"
-        handleName: string
-        distance: number
-      }
-      const handleHits: HandleHit[] = []
-
-      for (const element of drawingElements) {
-        if (element.type === "line") {
-          const editMode = getLineEditMode(
-            element,
-            imageCoords.x,
-            imageCoords.y
-          )
-          if (editMode === "start" || editMode === "end") {
-            const handleX = editMode === "start" ? element.x : element.endX
-            const handleY = editMode === "start" ? element.y : element.endY
-            handleHits.push({
-              element,
-              type: "line-endpoint",
-              handleName: editMode,
-              distance: calcDistance(
-                imageCoords.x,
-                imageCoords.y,
-                handleX,
-                handleY
-              ),
-            })
-          }
-        } else if (element.type === "text") {
-          const handleName = getResizeHandle(
-            imageCoords.x,
-            imageCoords.y,
-            element
-          )
-          if (handleName === "anchor") {
-            handleHits.push({
-              element,
-              type: "text-anchor",
-              handleName: "anchor",
-              distance: calcDistance(
-                imageCoords.x,
-                imageCoords.y,
-                element.x,
-                element.y
-              ),
-            })
-          }
-        } else {
-          const handleName = getResizeHandle(
-            imageCoords.x,
-            imageCoords.y,
-            element
-          )
-          if (handleName) {
-            const width = element.width || 0
-            const height = element.height || 0
-            let handleX = element.x
-            let handleY = element.y
-            if (handleName.includes("right")) handleX += width
-            if (handleName.includes("bottom")) handleY += height
-            handleHits.push({
-              element,
-              type: "resize-handle",
-              handleName,
-              distance: calcDistance(
-                imageCoords.x,
-                imageCoords.y,
-                handleX,
-                handleY
-              ),
-            })
-          }
-        }
-      }
-
       // 最も近いハンドルを選択
-      if (handleHits.length > 0) {
-        const closest = handleHits.reduce((handleHitA, handleHitB) =>
-          handleHitA.distance < handleHitB.distance ? handleHitA : handleHitB
-        )
-
-        // ポインターキャプチャのヘルパー
-        const capturePointer = () => {
-          if (originalEvent && "pointerId" in originalEvent) {
-            const canvas = canvasRef.current
-            if (canvas) {
-              try {
-                canvas.setPointerCapture(originalEvent.pointerId)
-                setCapturedPointerId(originalEvent.pointerId)
-              } catch {
-                // キャプチャ失敗は無視
-              }
-            }
-          }
+      const closest = findClosestHandleHit(drawingElements, imageCoords, {
+        getLineEditMode,
+        getResizeHandle,
+      })
+      if (closest) {
+        if (!selectedElementIds.includes(closest.element.id)) {
+          setSelectedElementIds([closest.element.id])
         }
 
         if (closest.type === "line-endpoint") {
-          if (!selectedElementIds.includes(closest.element.id)) {
-            setSelectedElementIds([closest.element.id])
-          }
-          setLineEditMode(closest.handleName as "start" | "end")
+          setLineEditMode(closest.handleName)
           setIsDraggingElement(true)
           setDragElementOffset({ x: 0, y: 0 })
           initializeMoveStart(imageCoords, [closest.element.id])
-          capturePointer()
-
-          const cursor = getResizeCursor(closest.element, closest.handleName)
-          setCursor(cursor)
-          return true
+          capturePointer(originalEvent)
+          setCursor(getResizeCursor(closest.element, closest.handleName))
         } else if (closest.type === "text-anchor") {
-          if (!selectedElementIds.includes(closest.element.id)) {
-            setSelectedElementIds([closest.element.id])
-          }
           setIsDraggingElement(true)
           setDragElementOffset({ x: 0, y: 0 })
           initializeMoveStart(imageCoords, [closest.element.id])
-          capturePointer()
+          capturePointer(originalEvent)
           setCursor("move")
-          return true
         } else {
           // リサイズハンドル
-          if (!selectedElementIds.includes(closest.element.id)) {
-            setSelectedElementIds([closest.element.id])
-          }
-          setIsResizing(true)
+          startResize(closest.element, closest.handleName)
           setIsDraggingElement(true)
-          setResizeHandle(closest.handleName)
-          setResizeElementId(closest.element.id)
-          setResizeOriginalBounds({
-            x: closest.element.x,
-            y: closest.element.y,
-            width: closest.element.width || 0,
-            height: closest.element.height || 0,
-          })
-          capturePointer()
-
-          const cursor = getResizeCursor(closest.element, closest.handleName)
-          setCursor(cursor)
-          return true
+          capturePointer(originalEvent)
+          setCursor(getResizeCursor(closest.element, closest.handleName))
         }
+        return true
       }
 
       // 要素選択を試みる
@@ -462,37 +355,24 @@ export function useCanvasInteraction({
       if (!elementSelected) {
         setCursor("crosshair")
         startRectangleSelection(imageCoords)
-      } else {
-        if (clickedElement && clickedCoords) {
-          if (clickedElement.type === "text") {
-            if (onTextElementReClick) {
-              onTextElementReClick(clickedElement)
-            }
-            return true
+      } else if (clickedElement && clickedCoords) {
+        if (clickedElement.type === "text") {
+          if (onTextElementReClick) {
+            onTextElementReClick(clickedElement)
           }
-
-          setIsDraggingElement(true)
-          const dragOffsetX = clickedCoords.x - clickedElement.x
-          const dragOffsetY = clickedCoords.y - clickedElement.y
-          setDragElementOffset({ x: dragOffsetX, y: dragOffsetY })
-
-          const idsForMoveStart = selectedElementIds.includes(clickedElement.id)
-            ? selectedElementIds
-            : [clickedElement.id]
-          initializeMoveStart(clickedCoords, idsForMoveStart)
-
-          if (originalEvent && "pointerId" in originalEvent) {
-            const canvas = canvasRef.current
-            if (canvas) {
-              try {
-                canvas.setPointerCapture(originalEvent.pointerId)
-                setCapturedPointerId(originalEvent.pointerId)
-              } catch {
-                // キャプチャ失敗は無視
-              }
-            }
-          }
+          return true
         }
+
+        setIsDraggingElement(true)
+        const dragOffsetX = clickedCoords.x - clickedElement.x
+        const dragOffsetY = clickedCoords.y - clickedElement.y
+        setDragElementOffset({ x: dragOffsetX, y: dragOffsetY })
+
+        const idsForMoveStart = selectedElementIds.includes(clickedElement.id)
+          ? selectedElementIds
+          : [clickedElement.id]
+        initializeMoveStart(clickedCoords, idsForMoveStart)
+        capturePointer(originalEvent)
       }
 
       return true
@@ -507,45 +387,15 @@ export function useCanvasInteraction({
       setCursor,
       getResizeCursor,
       startRectangleSelection,
+      startResize,
       setIsDraggingElement,
       setDragElementOffset,
       setLineEditMode,
       setSelectedElementIds,
-      canvasRef,
+      capturePointer,
       initializeMoveStart,
       onTextElementReClick,
-      calcDistance,
     ]
-  )
-
-  /**
-   * 要素ホバーをチェック
-   */
-  const checkElementHover = useCallback(
-    (imageCoords: {
-      x: number
-      y: number
-    }): {
-      hasElement: boolean
-      elementId: string | null
-      elementType: string | null
-    } => {
-      if (currentTool !== "select")
-        return { hasElement: false, elementId: null, elementType: null }
-
-      for (let i = drawingElements.length - 1; i >= 0; i--) {
-        const element = drawingElements[i]
-        if (hitTestElement(element, imageCoords.x, imageCoords.y)) {
-          return {
-            hasElement: true,
-            elementId: element.id,
-            elementType: element.type,
-          }
-        }
-      }
-      return { hasElement: false, elementId: null, elementType: null }
-    },
-    [currentTool, drawingElements, hitTestElement]
   )
 
   /**
@@ -559,31 +409,11 @@ export function useCanvasInteraction({
       }
 
       // リサイズ操作
-      if (
-        isResizing &&
-        resizeHandle &&
-        resizeElementId &&
-        resizeOriginalBounds
-      ) {
-        const resizeElement = drawingElements.find(
-          (element) => element.id === resizeElementId
-        )
-        if (resizeElement) {
-          handleElementResize(
-            imageCoords.x,
-            imageCoords.y,
-            resizeHandle,
-            resizeElement,
-            resizeOriginalBounds
-          )
-          return true
-        }
-      }
+      if (resizeTo(imageCoords)) return true
 
       // カーソル更新
       if (isResizing) {
-        const cursor = getResizeCursor(null, resizeHandle || "")
-        setCursor(cursor)
+        setCursor(getResizeCursor(null, resizeHandle || ""))
       } else if (isDrawingSelection) {
         setCursor("crosshair")
       } else if (isDraggingElement) {
@@ -592,78 +422,13 @@ export function useCanvasInteraction({
             selectedElementIds.includes(element.id)
           )
           if (selectedElement) {
-            const cursor = getResizeCursor(selectedElement, lineEditMode)
-            setCursor(cursor)
+            setCursor(getResizeCursor(selectedElement, lineEditMode))
           }
         } else {
           setCursor("move")
         }
       } else {
-        // アイドル状態でのカーソル判定
-        let cursorSet = false
-        let hoveredId: string | null = null
-
-        for (let i = drawingElements.length - 1; i >= 0 && !cursorSet; i--) {
-          const element = drawingElements[i]
-
-          if (element.type === "line") {
-            const editMode = getLineEditMode(
-              element,
-              imageCoords.x,
-              imageCoords.y
-            )
-            if (editMode === "start" || editMode === "end") {
-              const cursor = getResizeCursor(element, editMode)
-              setCursor(cursor)
-              hoveredId = element.id
-              cursorSet = true
-            }
-          } else if (element.type === "text") {
-            const handleName = getResizeHandle(
-              imageCoords.x,
-              imageCoords.y,
-              element
-            )
-            if (handleName === "anchor") {
-              setCursor("move")
-              hoveredId = element.id
-              cursorSet = true
-            }
-          } else {
-            const handleName = getResizeHandle(
-              imageCoords.x,
-              imageCoords.y,
-              element
-            )
-            if (handleName) {
-              const cursor = getResizeCursor(element, handleName)
-              setCursor(cursor)
-              hoveredId = element.id
-              cursorSet = true
-            }
-          }
-        }
-
-        if (!cursorSet) {
-          const hoverResult = checkElementHover(imageCoords)
-          if (hoverResult.hasElement) {
-            if (hoverResult.elementType === "text") {
-              setCursor("text")
-            } else {
-              setCursor("move")
-            }
-            hoveredId = hoverResult.elementId
-            cursorSet = true
-          }
-        }
-
-        if (!cursorSet) {
-          setCursor("crosshair")
-        }
-
-        if (setHoveredElementId) {
-          setHoveredElementId(hoveredId)
-        }
+        updateIdleHoverCursor(imageCoords)
       }
 
       // 要素移動
@@ -676,25 +441,20 @@ export function useCanvasInteraction({
     },
     [
       currentTool,
+      resizeTo,
       isResizing,
       resizeHandle,
-      resizeElementId,
-      resizeOriginalBounds,
       drawingElements,
-      handleElementResize,
       selectedElementIds,
-      getResizeHandle,
       isDrawingSelection,
       isDraggingElement,
       lineEditMode,
-      getLineEditMode,
       handleElementMovement,
       updateRectangleSelection,
+      updateIdleHoverCursor,
       resetCursor,
       setCursor,
       getResizeCursor,
-      checkElementHover,
-      setHoveredElementId,
     ]
   )
 
@@ -710,62 +470,18 @@ export function useCanvasInteraction({
         return false
       }
 
-      // ポインターリリースヘルパー
-      const releasePointer = () => {
-        if (
-          capturedPointerId !== null &&
-          originalEvent &&
-          "pointerId" in originalEvent
-        ) {
-          const canvas = canvasRef.current
-          if (canvas) {
-            try {
-              canvas.releasePointerCapture(originalEvent.pointerId)
-            } catch {
-              // リリース失敗は無視
-            }
-          }
-        }
-      }
-
       // リサイズ終了
       if (isResizing) {
-        releasePointer()
-
-        if (resizeElementId) {
-          const resizedElement = drawingElements.find(
-            (element) => element.id === resizeElementId
-          )
-          if (resizedElement) {
-            const updates: Partial<DrawingAnnotation> = {
-              x: resizedElement.x,
-              y: resizedElement.y,
-            }
-            if (resizedElement.type === "text") {
-              updates.textBoxWidth = resizedElement.textBoxWidth
-              updates.textBoxHeight = resizedElement.textBoxHeight
-            } else {
-              updates.width = resizedElement.width
-              updates.height = resizedElement.height
-            }
-            updateDrawingElement(resizedElement.id, updates)
-          }
-        }
-
-        setIsResizing(false)
+        releasePointer(originalEvent)
+        finishResize()
         setIsDraggingElement(false)
-        setResizeHandle(null)
-        setResizeElementId(null)
-        setResizeOriginalBounds(null)
-        setCapturedPointerId(null)
         resetCursor()
         return true
       }
 
       // 移動終了
       if (handleMovementEnd()) {
-        releasePointer()
-        setCapturedPointerId(null)
+        releasePointer(originalEvent)
         resetCursor()
         return true
       }
@@ -779,11 +495,8 @@ export function useCanvasInteraction({
     [
       currentTool,
       isResizing,
-      capturedPointerId,
-      canvasRef,
-      resizeElementId,
-      drawingElements,
-      updateDrawingElement,
+      releasePointer,
+      finishResize,
       handleMovementEnd,
       flushPendingMoves,
       completeRectangleSelection,

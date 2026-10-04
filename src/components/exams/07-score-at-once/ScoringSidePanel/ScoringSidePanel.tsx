@@ -1,27 +1,12 @@
 "use client"
 
-import { useMutation, useQuery } from "@tanstack/react-query"
-import {
-  AlertTriangle,
-  BarChart3,
-  CheckCircle,
-  Circle,
-  Clock,
-  CopyX,
-  Eye,
-  Layout,
-  Minus,
-  User,
-  X,
-} from "lucide-react"
+import { BarChart3, Eye, User } from "lucide-react"
 import { useCallback } from "react"
 
-import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import type { QuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/types"
 import { IndividualModePanel } from "@/components/exams/07-score-at-once/ScoringIndividual/IndividualModePanel"
 import ExamProgressCard from "@/components/exams/07-score-at-once/ScoringSidePanel/ExamProgressCard"
 import { MasterAnswerControls } from "@/components/exams/07-score-at-once/ScoringSidePanel/MasterAnswerControls"
-import NavigationControls from "@/components/exams/07-score-at-once/ScoringSidePanel/NavigationControls"
 import QuestionNavigator from "@/components/exams/07-score-at-once/ScoringSidePanel/QuestionNavigator"
 import ScoringToolbar from "@/components/exams/07-score-at-once/ScoringSidePanel/ScoringToolbar"
 import type {
@@ -35,62 +20,18 @@ import type {
   ScoringOperationMode,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
-import { Button } from "@/components/ui/button"
-import { Kbd } from "@/components/ui/kbd"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { useCurrentUser } from "@/contexts/CurrentUserContext"
-import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
-import { filterCommandIdOf } from "@/lib/scoringKeybindings"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
-import {
-  setUserSidePanelSectionMutation,
-  userSidePanelSectionsQuery,
-} from "@/queries/settings"
 import type {
   ClickScoringAction,
   ClickScoringConfig,
 } from "@/types/clickScoring.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
-import { toCollapsedSections } from "./sidePanelSections"
-
-/** 取得が終わるまでは全展開（畳んでいる節が無い） */
-const EMPTY_COLLAPSED_SECTIONS: ReadonlySet<string> = new Set()
-
-const STATUS_MAP: Record<string, ScoringStatus> = {
-  unscored: "unscored",
-  correct: "correct",
-  partial: "partial",
-  pending: "pending",
-  incorrect: "incorrect",
-  no_answer: "no_answer",
-  double_mark: "double_mark",
-}
-
-const FILTER_BUTTONS = [
-  { key: "unscored", label: "未採点", icon: Circle },
-  { key: "correct", label: "正答", icon: CheckCircle },
-  { key: "partial", label: "部分点", icon: AlertTriangle },
-  { key: "pending", label: "保留", icon: Clock },
-  { key: "incorrect", label: "誤答", icon: X },
-  { key: "no_answer", label: "無答", icon: Minus },
-  { key: "double_mark", label: "Wマーク", icon: CopyX },
-] as const
-
-const GRID_4_3_STYLE = {
-  display: "grid",
-  gridTemplateColumns: "repeat(4, 1fr)",
-  gap: "0.5rem",
-} as const
-
 import { AnnotationBrowserPanel } from "./AnnotationBrowserPanel"
+import { DisplaySection } from "./DisplaySection"
+import { useSidePanelSections } from "./hooks/useSidePanelSections"
 import { ScoreCommentSection } from "./ScoreCommentSection"
 import { SidePanelSection } from "./SidePanelSection"
 
@@ -258,24 +199,8 @@ export function ScoringSidePanel({
   hiddenUnscoredCount,
   onBatchScoreVisibleUnscored,
 }: ScoringSidePanelProps) {
-  const { keyBindings } = useKeyBindings()
-  const scoringColors = useScoringStatusColors()
   // 閉じているセクションIDを設定へ残す（既定は全展開）
-  const currentUser = useCurrentUser()
-  const { data: collapsedSections = EMPTY_COLLAPSED_SECTIONS } = useQuery({
-    ...userSidePanelSectionsQuery(currentUser.id),
-    select: toCollapsedSections,
-  })
-  const { mutate: setSectionCollapsed } = useMutation(
-    setUserSidePanelSectionMutation(currentUser.id)
-  )
-  const isSectionOpen = (sectionId: string) => !collapsedSections.has(sectionId)
-  // 触るのはその節の行1つだけ。**他の節の開閉を書き戻さない**
-  const toggleSection = (sectionId: string) =>
-    setSectionCollapsed({
-      sectionId,
-      collapsed: !collapsedSections.has(sectionId),
-    })
+  const { isSectionOpen, toggleSection } = useSidePanelSections()
   // アノテーションの生徒・設問に移動
   const handleNavigateTo = useCallback(
     (examStudentId: string, cropRegionId: string) => {
@@ -337,109 +262,25 @@ export function ScoringSidePanel({
           />
 
           {/* 表示 */}
-          <SidePanelSection
-            icon={Layout}
-            title="表示"
-            collapsible
+          <DisplaySection
+            gradingMode={gradingMode}
+            selectedAnswersCount={selectedAnswersCount}
+            visibleAnswersCount={visibleAnswersCount}
+            totalAnswersCount={totalAnswersCount}
+            filterSettings={filterSettings}
+            onToggleFilter={onToggleFilter}
+            layoutDirection={layoutDirection}
+            onLayoutDirectionChange={onLayoutDirectionChange}
+            itemsPerLine={itemsPerLine}
+            onItemsPerLineChange={onItemsPerLineChange}
+            expandMargin={expandMargin}
+            onExpandMarginChange={onExpandMarginChange}
+            answerSortOrder={answerSortOrder}
+            onAnswerSortOrderChange={onAnswerSortOrderChange}
+            isWhitenessReady={isWhitenessReady}
             isOpen={isSectionOpen("display")}
             onToggle={() => toggleSection("display")}
-            rightElement={
-              gradingMode === "grid" ? (
-                <div className="flex items-center gap-0.5 text-[10px] text-gray-500">
-                  {selectedAnswersCount > 0 && (
-                    <>
-                      <span>選択</span>
-                      <span className="font-medium text-blue-600">
-                        {selectedAnswersCount}
-                      </span>
-                      <span className="text-gray-300">|</span>
-                    </>
-                  )}
-                  <span>表示</span>
-                  <span className="font-medium">{visibleAnswersCount}</span>
-                  <span className="text-gray-300">|</span>
-                  <span>全体</span>
-                  <span className="font-medium">{totalAnswersCount}</span>
-                </div>
-              ) : undefined
-            }
-          >
-            <div className="space-y-3">
-              {/* 表示フィルター */}
-              {gradingMode === "grid" && onToggleFilter && (
-                <TooltipProvider delayDuration={300}>
-                  <div style={GRID_4_3_STYLE}>
-                    {FILTER_BUTTONS.map((button) => {
-                      const Icon = button.icon
-                      const isActive =
-                        filterSettings[
-                          button.key as keyof typeof filterSettings
-                        ]
-                      const keyBinding =
-                        keyBindings[
-                          filterCommandIdOf(STATUS_MAP[button.key])
-                        ] || "?"
-                      const colors = scoringColors[STATUS_MAP[button.key]]
-                      return (
-                        <Tooltip key={button.key}>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex h-10 w-full min-w-0 items-center gap-1 border-2 px-1"
-                              style={
-                                isActive
-                                  ? {
-                                      backgroundColor: colors.bg,
-                                      color: colors.text,
-                                      borderColor: colors.icon,
-                                    }
-                                  : {
-                                      backgroundColor: "transparent",
-                                      color: colors.icon,
-                                      borderColor: colors.icon,
-                                    }
-                              }
-                              onClick={() => onToggleFilter(button.key)}
-                            >
-                              <Icon className="h-3 w-3 shrink-0" />
-                              <span className="w-10 shrink-0 text-center text-[10px]">
-                                {button.label}
-                              </span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="text-center">
-                              <div className="font-medium">
-                                {button.label}を{isActive ? "非表示" : "表示"}
-                              </div>
-                              <div className="mt-1 text-xs text-gray-400">
-                                キー: <Kbd>{keyBinding.toUpperCase()}</Kbd>
-                              </div>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      )
-                    })}
-                  </div>
-                </TooltipProvider>
-              )}
-
-              {/* レイアウト・表示設定 */}
-              <NavigationControls
-                layoutDirection={layoutDirection}
-                onLayoutDirectionChange={onLayoutDirectionChange}
-                itemsPerRow={itemsPerLine}
-                onItemsPerRowChange={onItemsPerLineChange}
-                gradingMode={gradingMode}
-                expandMargin={expandMargin}
-                onExpandMarginChange={onExpandMarginChange}
-                answerSortOrder={answerSortOrder}
-                onAnswerSortOrderChange={onAnswerSortOrderChange}
-                isWhitenessReady={isWhitenessReady}
-              />
-            </div>
-          </SidePanelSection>
+          />
 
           {/* 採点ツールバー */}
           <ScoringToolbar

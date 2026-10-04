@@ -3,7 +3,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useState } from "react"
 
-import type { CropRegionWithSubtotals } from "@/electron-src/lib/prisma/cropRegion"
 import { cropRegionsQuery } from "@/queries/cropRegion"
 import { studentAnswerImagesQuery } from "@/queries/exam"
 import {
@@ -13,15 +12,18 @@ import {
   subscribeOmrBatchProgress,
 } from "@/queries/omr"
 import { batchUpdateQuestionScoresMutation } from "@/queries/scoring"
-import type { ComputedCell } from "@/types/answerSheetLayout.types"
 import type {
-  ComputedOMRBubble,
   CropRegionOmrConfigWithOptions,
   OMRBatchProgress,
-  OMRCellConfig,
   OMRSheetResult,
 } from "@/types/omr.types"
 
+import {
+  buildCellConfigs,
+  buildCellsFromRegions,
+  expectedCornersOf,
+  pointsMapOf,
+} from "../utils/omrRecognitionInput"
 import {
   recommendAreaThreshold,
   recommendMinInkDarkness,
@@ -146,24 +148,7 @@ export function useOmrAutoScoring(examId: string) {
       }
 
       // 3. DBからOMR設定を読み込み、cellConfigsを構築
-      const cellConfigs: Record<string, OMRCellConfig> = {}
-      for (const omrConfig of configs) {
-        if (omrConfig.type === "choice") {
-          const labels = omrConfig.choiceOptions.map((option) => option.label)
-          const correctAnswers = omrConfig.choiceOptions
-            .filter((option) => option.isCorrect)
-            .map((option) => option.choiceIndex)
-          cellConfigs[omrConfig.cropRegionId] = {
-            type: "choice",
-            numChoices: omrConfig.numChoices ?? labels.length,
-            labels,
-            correctAnswers,
-            layout:
-              (omrConfig.choiceLayout as "horizontal" | "vertical") ??
-              "horizontal",
-          }
-        }
-      }
+      const cellConfigs = buildCellConfigs(configs)
       // null は「自動算出」。ユーザーが明示した上書き値だけをそのまま渡す
       const recognitionParams = {
         colorThreshold: configs[0].colorThreshold,
@@ -184,28 +169,7 @@ export function useOmrAutoScoring(examId: string) {
       }
 
       // 期待されるコーナー座標を構築
-      const expectedCorners: [
-        { x: number; y: number },
-        { x: number; y: number },
-        { x: number; y: number },
-        { x: number; y: number },
-      ] = page1.result.markers
-        .sort((markerA, markerB) => {
-          const cornerOrder = { TL: 0, TR: 1, BL: 2, BR: 3 }
-          return (
-            cornerOrder[markerA.corner as keyof typeof cornerOrder] -
-            cornerOrder[markerB.corner as keyof typeof cornerOrder]
-          )
-        })
-        .map((marker) => ({
-          x: marker.centerX / page1.result.imageWidth,
-          y: marker.centerY / page1.result.imageHeight,
-        })) as [
-        { x: number; y: number },
-        { x: number; y: number },
-        { x: number; y: number },
-        { x: number; y: number },
-      ]
+      const expectedCorners = expectedCornersOf(page1.result)
 
       // 5. 答案画像パスを収集
       const cropRegions = await queryClient.fetchQuery(cropRegionsQuery(examId))
@@ -261,12 +225,7 @@ export function useOmrAutoScoring(examId: string) {
       })
 
       // 7. 配点マップ構築
-      const pointsMap: Record<string, number> = {}
-      for (const region of page1Regions) {
-        if (region.points != null) {
-          pointsMap[region.id] = region.points
-        }
-      }
+      const pointsMap = pointsMapOf(page1Regions)
 
       // マーカー検出失敗の診断
       const failedSheets = results.filter((result) => !result.success)
@@ -463,118 +422,4 @@ export function useOmrAutoScoring(examId: string) {
     updateConfidenceThreshold,
     applyRecommendedThreshold,
   }
-}
-
-/**
- * CropRegion座標 + OMR設定からComputedCellを構築
- * DBの正規化座標（0-1）を直接使用し、バブル/数字欄の位置を計算する
- */
-function buildCellsFromRegions(
-  regions: CropRegionWithSubtotals[],
-  configs: CropRegionOmrConfigWithOptions[],
-  cellConfigs: Record<string, OMRCellConfig>
-): ComputedCell[] {
-  const cells: ComputedCell[] = []
-
-  for (const omrConfig of configs) {
-    const region = regions.find(
-      (candidateRegion) => candidateRegion.id === omrConfig.cropRegionId
-    )
-    if (!region) continue
-
-    const config = cellConfigs[omrConfig.cropRegionId]
-    if (!config) continue
-
-    const cell: ComputedCell = {
-      questionPath: [],
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
-      normalizedX: region.x,
-      normalizedY: region.y,
-      normalizedW: region.width,
-      normalizedH: region.height,
-      label: omrConfig.cropRegionId,
-      points: region.points ?? 0,
-      cellType: "answer",
-      pageIndex: 0,
-      textElements: [],
-    }
-
-    if (config.type === "choice") {
-      // DB保存済みバブル位置を優先、なければ推定計算にフォールバック
-      const hasSavedPositions = omrConfig.choiceOptions.some(
-        (option) => option.normalizedCx != null
-      )
-      if (hasSavedPositions) {
-        cell.omrBubbles = omrConfig.choiceOptions
-          .filter((option) => option.normalizedCx != null)
-          .map((option) => ({
-            normalizedCx: option.normalizedCx!,
-            normalizedCy: option.normalizedCy!,
-            normalizedWidth: option.normalizedWidth!,
-            normalizedHeight: option.normalizedHeight!,
-            choiceIndex: option.choiceIndex,
-            label: option.label,
-            isCorrectAnswer: option.isCorrect,
-          }))
-      } else {
-        cell.omrBubbles = computeBubblesFromRegion(region, config)
-      }
-    }
-
-    cells.push(cell)
-  }
-
-  return cells
-}
-
-/** CropRegionの正規化座標内にバブル位置を等間隔配置 */
-function computeBubblesFromRegion(
-  region: CropRegionWithSubtotals,
-  config: OMRCellConfig & { type: "choice" }
-): ComputedOMRBubble[] {
-  const numChoices = config.numChoices
-  const bubbles: ComputedOMRBubble[] = []
-
-  // バブルサイズ: 間隔の60%幅、高さは領域高さの70%（実際の印刷バブルに近似）
-  const spacing =
-    config.layout === "horizontal"
-      ? region.width / (numChoices + 1)
-      : region.height / (numChoices + 1)
-  const bubbleW = spacing * 0.6
-  const bubbleH = Math.min(bubbleW * 1.6, region.height * 0.7)
-
-  if (config.layout === "horizontal") {
-    const spacing = region.width / (numChoices + 1)
-    const cy = region.y + region.height / 2
-    for (let i = 0; i < numChoices; i++) {
-      bubbles.push({
-        normalizedCx: region.x + spacing * (i + 1),
-        normalizedCy: cy,
-        normalizedWidth: bubbleW,
-        normalizedHeight: bubbleH,
-        choiceIndex: i,
-        label: config.labels[i] ?? String(i + 1),
-        isCorrectAnswer: config.correctAnswers.includes(i),
-      })
-    }
-  } else {
-    const spacing = region.height / (numChoices + 1)
-    const cx = region.x + region.width / 2
-    for (let i = 0; i < numChoices; i++) {
-      bubbles.push({
-        normalizedCx: cx,
-        normalizedCy: region.y + spacing * (i + 1),
-        normalizedWidth: bubbleW,
-        normalizedHeight: bubbleH,
-        choiceIndex: i,
-        label: config.labels[i] ?? String(i + 1),
-        isCorrectAnswer: config.correctAnswers.includes(i),
-      })
-    }
-  }
-
-  return bubbles
 }

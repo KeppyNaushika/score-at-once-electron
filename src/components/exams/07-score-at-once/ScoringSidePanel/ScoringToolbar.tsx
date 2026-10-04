@@ -11,12 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
 import { ignoreDeselect } from "@/lib/toggleSelection"
 import { SCORING_OPERATION_MODES } from "@/lib/userPreferences"
@@ -29,8 +24,8 @@ import type { ScoringStatus } from "@/types/scoringStatus.types"
 import { ClickScoringSettings } from "./ClickScoringSettings"
 import { GridNavigationButtons } from "./GridNavigationButtons"
 import { KeyboardScoringButtons } from "./KeyboardScoringButtons"
-import { KeyHint } from "./KeyHint"
 import { MouseBrushControls } from "./MouseBrushControls"
+import { ShortcutTooltip } from "./ShortcutTooltip"
 import { SidePanelSection } from "./SidePanelSection"
 
 interface ScoringToolbarProps {
@@ -154,30 +149,25 @@ export default function ScoringToolbar({
 
           {/* 部分点入力モーダルを開くボタン（キーボード・マウス共通） */}
           {onOpenPartialScoreModal && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={`w-full text-xs ${
-                    selectedAnswersCount === 0
-                      ? "cursor-not-allowed opacity-50"
-                      : ""
-                  }`}
-                  onClick={onOpenPartialScoreModal}
-                  disabled={selectedAnswersCount === 0}
-                >
-                  <Calculator className="mr-1 h-3.5 w-3.5" />
-                  部分点入力
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-center">
-                  <div className="font-medium">選択中の答案に部分点を入力</div>
-                  <KeyHint label="0〜9" />
-                </div>
-              </TooltipContent>
-            </Tooltip>
+            <ShortcutTooltip
+              description="選択中の答案に部分点を入力"
+              keys={["0〜9"]}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className={`w-full text-xs ${
+                  selectedAnswersCount === 0
+                    ? "cursor-not-allowed opacity-50"
+                    : ""
+                }`}
+                onClick={onOpenPartialScoreModal}
+                disabled={selectedAnswersCount === 0}
+              >
+                <Calculator className="mr-1 h-3.5 w-3.5" />
+                部分点入力
+              </Button>
+            </ShortcutTooltip>
           )}
 
           {/* マウスモード用UI（グリッドモードのみ） */}
@@ -238,46 +228,34 @@ export default function ScoringToolbar({
                     </Button>
                   )}
                   {onSelectAll && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full text-xs"
-                          onClick={onSelectAll}
-                        >
-                          表示されている生徒答案を全て選択
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <div className="text-center">
-                          <div className="font-medium">
-                            表示中の答案を全て選択
-                          </div>
-                          <KeyHint label={`${ctrlLabel}+A`} />
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
+                    <ShortcutTooltip
+                      description="表示中の答案を全て選択"
+                      keys={[`${ctrlLabel}+A`]}
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs"
+                        onClick={onSelectAll}
+                      >
+                        表示されている生徒答案を全て選択
+                      </Button>
+                    </ShortcutTooltip>
                   )}
                   {onRefreshFilter && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full text-xs"
-                          onClick={onRefreshFilter}
-                        >
-                          表示フィルターに合わせて表示を更新
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <div className="text-center">
-                          <div className="font-medium">フィルターを再適用</div>
-                          <KeyHint label="R" />
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
+                    <ShortcutTooltip
+                      description="フィルターを再適用"
+                      keys={["R"]}
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs"
+                        onClick={onRefreshFilter}
+                      >
+                        表示フィルターに合わせて表示を更新
+                      </Button>
+                    </ShortcutTooltip>
                   )}
                 </div>
               )}

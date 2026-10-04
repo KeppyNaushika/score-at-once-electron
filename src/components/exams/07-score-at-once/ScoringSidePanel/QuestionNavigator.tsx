@@ -10,7 +10,6 @@ import {
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import {
   Select,
   SelectContent,
@@ -26,6 +25,7 @@ import {
 } from "@/components/ui/tooltip"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
+import { ShortcutTooltip } from "./ShortcutTooltip"
 import { SidePanelSection } from "./SidePanelSection"
 
 interface QuestionNavigatorProps {
@@ -104,31 +104,16 @@ export default function QuestionNavigator({
 
         {/* ナビゲーション: [前] [設問プルダウン] [次] */}
         <div className="flex items-center gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onPrevQuestion}
-                disabled={currentIndex === 0 || currentIndex === -1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="text-center">
-                <div>前の設問に移動</div>
-                <div className="mt-1 text-xs text-gray-400">
-                  キー:{" "}
-                  <KbdGroup>
-                    <Kbd>Shift</Kbd>
-                    <span>+</span>
-                    <Kbd>A</Kbd>
-                  </KbdGroup>
-                </div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
+          <ShortcutTooltip description="前の設問に移動" keys={["Shift", "A"]}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onPrevQuestion}
+              disabled={currentIndex === 0 || currentIndex === -1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          </ShortcutTooltip>
 
           <Select
             value={currentCropRegion?.id || ""}
@@ -175,34 +160,19 @@ export default function QuestionNavigator({
             </SelectContent>
           </Select>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onNextQuestion}
-                disabled={
-                  currentIndex === questionRegions.length - 1 ||
-                  currentIndex === -1
-                }
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="text-center">
-                <div>次の設問に移動</div>
-                <div className="mt-1 text-xs text-gray-400">
-                  キー:{" "}
-                  <KbdGroup>
-                    <Kbd>Shift</Kbd>
-                    <span>+</span>
-                    <Kbd>D</Kbd>
-                  </KbdGroup>
-                </div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
+          <ShortcutTooltip description="次の設問に移動" keys={["Shift", "D"]}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onNextQuestion}
+              disabled={
+                currentIndex === questionRegions.length - 1 ||
+                currentIndex === -1
+              }
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </ShortcutTooltip>
         </div>
 
         {/* 設問一覧（サムネイル表示） */}
