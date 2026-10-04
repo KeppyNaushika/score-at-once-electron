@@ -61,6 +61,12 @@ describe("ページごとの「使い方」", () => {
     expect(hasHelpButton()).toBe(true)
   })
 
+  it("設定画面にも出る（同期の使い方を辿れる唯一の入口）", () => {
+    renderHelpAt("/settings")
+
+    expect(hasHelpButton()).toBe(true)
+  })
+
   it.each([
     ["/grades/grade-1/01-students", "受験生徒管理（試験 05）"],
     ["/coursework/coursework-1/04-scores", "一括採点（試験 07）"],
