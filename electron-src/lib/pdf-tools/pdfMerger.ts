@@ -4,18 +4,20 @@
  */
 import * as fs from "fs"
 import * as path from "path"
-import { degrees, PDFDocument } from "pdf-lib"
+import { degrees, PDFDocument, type PDFPage } from "pdf-lib"
 
-import { computeNUpLayout } from "@/lib/pdf-tools/nUpLayout"
+import {
+  A4_PAPER,
+  computeSheetLayout,
+  normalizeRotation,
+  toPdfDrawing,
+} from "@/lib/pdf-tools/nUpLayout"
 import type {
-  NUpLayout,
+  PdfNUpSheetInput,
   PdfPageInput,
-  RotationDegree,
+  PdfSheetSlotInput,
+  PdfSourcePageInput,
 } from "@/types/pdfTools.types"
-
-// A4サイズ (ポイント単位: 1pt = 1/72 inch)
-const A4_WIDTH = 595.28 // 210mm
-const A4_HEIGHT = 841.89 // 297mm
 
 /**
  * 相対パスを絶対パスに解決
@@ -33,19 +35,11 @@ function resolveFilePath(filePath: string): string {
  */
 export type SourcePdfCache = Map<string, PDFDocument>
 
-/**
- * ページ入力を解決して対象PDFへ1ページ追加する。
- *
- * 結合（1ファイルへ全ページ）とページ別書き出し（1ページ1ファイル）で
- * 同じ変換（2-in-1合成・回転）を共有するための単位。
- *
- * @returns 追加できた場合 true。元ファイルやページ番号が無効で飛ばした場合 false
- */
-export async function appendPageToPdf(
-  targetPdf: PDFDocument,
-  page: PdfPageInput,
+/** 元ページを読み込む（元ファイルが無い・ページ番号が範囲外なら null） */
+async function loadSourcePage(
+  page: PdfSourcePageInput,
   pdfCache: SourcePdfCache
-): Promise<boolean> {
+): Promise<{ sourcePdf: PDFDocument; sourcePage: PDFPage } | null> {
   const resolvedPath = resolveFilePath(page.filePath)
 
   let sourcePdf = pdfCache.get(resolvedPath)
@@ -54,7 +48,7 @@ export async function appendPageToPdf(
       console.warn(
         `File not found: ${resolvedPath} (original: ${page.filePath})`
       )
-      return false
+      return null
     }
     const fileBuffer = fs.readFileSync(resolvedPath)
     // owner-password のみの暗号化PDF（印刷/コピー制限）はユーザーパスワード無しで
@@ -66,29 +60,38 @@ export async function appendPageToPdf(
     pdfCache.set(resolvedPath, sourcePdf)
   }
 
-  // 2-in-1モードの処理
-  if (
-    page.isNUpCombined &&
-    page.combinedPages &&
-    page.combinedPages.length > 0
-  ) {
-    return await addNUpPage(
-      targetPdf,
-      sourcePdf,
-      page.combinedPages,
-      page.nUpLayout || "2x1",
-      page.rotation
-    )
-  }
-
-  // 通常モード: 単一ページをコピー
   const pageIndex = page.pageNumber - 1
   if (pageIndex < 0 || pageIndex >= sourcePdf.getPageCount()) {
     console.warn(`Invalid page number ${page.pageNumber} for ${resolvedPath}`)
-    return false
+    return null
+  }
+  return { sourcePdf, sourcePage: sourcePdf.getPage(pageIndex) }
+}
+
+/**
+ * ページ入力を解決して対象PDFへ1ページ追加する。
+ *
+ * 結合（1ファイルへ全ページ）とページ別書き出し（1ページ1ファイル）で
+ * 同じ変換（N-up の面・回転）を共有するための単位。
+ *
+ * @returns 追加できた場合 true。元ファイルやページ番号が無効で飛ばした場合 false
+ */
+export async function appendPageToPdf(
+  targetPdf: PDFDocument,
+  page: PdfPageInput,
+  pdfCache: SourcePdfCache
+): Promise<boolean> {
+  if (page.kind === "sheet") {
+    return await addNUpSheet(targetPdf, page, pdfCache)
   }
 
-  const [copiedPage] = await targetPdf.copyPages(sourcePdf, [pageIndex])
+  // 元ページそのまま: 単一ページをコピー（注釈なども元のまま残る）
+  const loaded = await loadSourcePage(page, pdfCache)
+  if (!loaded) return false
+
+  const [copiedPage] = await targetPdf.copyPages(loaded.sourcePdf, [
+    page.pageNumber - 1,
+  ])
 
   // 回転を適用
   if (page.rotation) {
@@ -121,68 +124,68 @@ export async function mergePdfs(
   return outputPath
 }
 
-/**
- * 2-in-1ページを作成して追加
- *
- * @returns 追加できた場合 true。全スロットが範囲外で追加しなかった場合 false
- */
-async function addNUpPage(
+/** 面のスロットに置く元ページを埋め込む（読めなければ null） */
+async function embedSlotPage(
   targetPdf: PDFDocument,
-  sourcePdf: PDFDocument,
-  pageNumbers: number[],
-  layout: NUpLayout,
-  rotation?: RotationDegree
-): Promise<boolean> {
-  // 各ページをスロット順(=pageNumbers順)に埋め込む。範囲外ページは空スロット(null)
-  const slots: ({
-    page: Awaited<ReturnType<typeof targetPdf.embedPages>>[0]
-    width: number
-    height: number
-  } | null)[] = []
+  slot: PdfSheetSlotInput,
+  pdfCache: SourcePdfCache
+) {
+  const loaded = await loadSourcePage(slot, pdfCache)
+  if (!loaded) return null
+  // getSize は /Rotate を含まない向きの寸法。回転は /Rotate と指定の回転を足して持つ
+  const { width, height } = loaded.sourcePage.getSize()
+  const [embeddedPage] = await targetPdf.embedPages([loaded.sourcePage])
+  return {
+    embeddedPage,
+    width,
+    height,
+    rotation: normalizeRotation(
+      loaded.sourcePage.getRotation().angle + slot.rotation
+    ),
+  }
+}
 
-  for (const pageNum of pageNumbers) {
-    const pageIndex = pageNum - 1
-    if (pageIndex >= 0 && pageIndex < sourcePdf.getPageCount()) {
-      const srcPage = sourcePdf.getPage(pageIndex)
-      const { width, height } = srcPage.getSize()
-      const [embedded] = await targetPdf.embedPages([srcPage])
-      slots.push({ page: embedded, width, height })
-    } else {
-      slots.push(null)
-    }
+/**
+ * N-up の面を1ページ作って追加する。
+ *
+ * 各スロットの元ページを埋め込み、スロットの中でそのページだけを回して置く
+ * （面全体は回さない）。埋め込んだページは元PDFの /Rotate を含まない向きで描かれる
+ * ので、/Rotate と指定の回転を足した角度で回す。寸法も /Rotate を反映した向きで
+ * 配置を決める（そうしないと、/Rotate 付きのページが横倒しの縦横で収められる）。
+ *
+ * @returns 追加できた場合 true。全スロットが読めず追加しなかった場合 false
+ */
+async function addNUpSheet(
+  targetPdf: PDFDocument,
+  sheet: PdfNUpSheetInput,
+  pdfCache: SourcePdfCache
+): Promise<boolean> {
+  // スロット順に1つずつ埋め込む（並行にすると同じ元ファイルを二重に読み込む）。
+  // 読めないページは空スロット(null)
+  const slots: Awaited<ReturnType<typeof embedSlotPage>>[] = []
+  for (const slot of sheet.slots) {
+    slots.push(slot ? await embedSlotPage(targetPdf, slot, pdfCache) : null)
   }
 
   if (slots.every((slot) => slot === null)) return false
 
   // スロット配置はPNG出力(canvas)と共有する純粋関数で計算する
-  const { pageWidth, pageHeight, placements } = computeNUpLayout(
-    layout,
-    slots.map((slot) =>
-      slot ? { width: slot.width, height: slot.height } : null
-    ),
-    { width: A4_WIDTH, height: A4_HEIGHT }
-  )
+  const layout = computeSheetLayout(sheet.nUp, slots, A4_PAPER)
 
-  const newPage = targetPdf.addPage([pageWidth, pageHeight])
+  const sheetPage = targetPdf.addPage([layout.paper.width, layout.paper.height])
 
-  placements.forEach((placement, index) => {
-    const slot = slots[index]
+  layout.placements.forEach((placement, slotIndex) => {
+    const slot = slots[slotIndex]
     if (!placement || !slot) return
-    // computeNUpLayout は左上原点。pdf-lib は左下原点なので y を変換する
-    const y = pageHeight - (placement.yTop + placement.height)
-    newPage.drawPage(slot.page, {
-      x: placement.x,
-      y,
-      width: placement.width,
-      height: placement.height,
+    const drawing = toPdfDrawing(placement, slot.rotation, layout.paper.height)
+    sheetPage.drawPage(slot.embeddedPage, {
+      x: drawing.x,
+      y: drawing.y,
+      width: drawing.width,
+      height: drawing.height,
+      rotate: degrees(drawing.counterClockwiseDegrees),
     })
   })
-
-  // 回転を適用
-  if (rotation) {
-    const currentRotation = newPage.getRotation().angle
-    newPage.setRotation(degrees(currentRotation + rotation))
-  }
 
   return true
 }

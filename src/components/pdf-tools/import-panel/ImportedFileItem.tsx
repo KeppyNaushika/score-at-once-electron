@@ -5,7 +5,6 @@ import {
   ChevronRight,
   FileText,
   RotateCcw,
-  RotateCw,
   Trash2,
 } from "lucide-react"
 import Image from "next/image"
@@ -19,21 +18,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import type {
-  ImportedFile,
-  NUpLayout,
-  RotationDegree,
-} from "@/types/pdfTools.types"
+import type { ImportedFile } from "@/types/pdfTools.types"
 
 import { isSourcePageKeyOf } from "../export-panel/outputPageOrder"
+import FileLayoutSettings from "../FileLayoutSettings"
 
 interface ImportedFileItemProps {
   file: ImportedFile
@@ -66,22 +55,6 @@ export default function ImportedFileItem({
     return count
   }, [excludedPages, file.id])
 
-  const handleNUpChange = (value: string) => {
-    const enabled = value !== "1in1"
-    const layout = value === "1in1" ? "2x1" : (value as NUpLayout)
-    onUpdate({
-      ...file,
-      nUp: { ...file.nUp, enabled, layout },
-    })
-  }
-
-  const handleRotationChange = (value: string) => {
-    onUpdate({
-      ...file,
-      rotation: parseInt(value) as RotationDegree,
-    })
-  }
-
   const handlePageToggle = (pageNumber: number) => {
     const newSelectedPages = new Set(file.selectedPages)
     if (newSelectedPages.has(pageNumber)) {
@@ -104,7 +77,6 @@ export default function ImportedFileItem({
     onUpdate({ ...file, selectedPages: new Set<number>() })
   }
 
-  const nUpValue = file.nUp.enabled ? file.nUp.layout : "1in1"
   const selectedCount = file.selectedPages.size
 
   return (
@@ -175,32 +147,7 @@ export default function ImportedFileItem({
 
             {/* 変換設定 */}
             <div className="mb-3 flex flex-wrap gap-2">
-              <Select value={nUpValue} onValueChange={handleNUpChange}>
-                <SelectTrigger className="h-8 w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1in1">1in1</SelectItem>
-                  <SelectItem value="2x1">2in1(横)</SelectItem>
-                  <SelectItem value="1x2">2in1(縦)</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={file.rotation.toString()}
-                onValueChange={handleRotationChange}
-              >
-                <SelectTrigger className="h-8 w-20">
-                  <RotateCw className="mr-1 h-3 w-3" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">0°</SelectItem>
-                  <SelectItem value="90">90°</SelectItem>
-                  <SelectItem value="180">180°</SelectItem>
-                  <SelectItem value="270">270°</SelectItem>
-                </SelectContent>
-              </Select>
+              <FileLayoutSettings file={file} onFileUpdated={onUpdate} />
 
               <div className="flex gap-1">
                 <Button
@@ -238,7 +185,7 @@ export default function ImportedFileItem({
                     type="button"
                     onClick={() => handlePageToggle(pageNumber)}
                     className={cn(
-                      "relative aspect-3/4 overflow-hidden rounded border-2 transition-all",
+                      "relative aspect-3/4 overflow-hidden rounded border-2 bg-white transition-all",
                       isSelected
                         ? "border-primary ring-2 ring-primary/20"
                         : "border-muted hover:border-muted-foreground/50"
@@ -250,7 +197,7 @@ export default function ImportedFileItem({
                         alt={`Page ${pageNumber}`}
                         fill
                         unoptimized
-                        className="object-cover"
+                        className="object-contain"
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-muted">

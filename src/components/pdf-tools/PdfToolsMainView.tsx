@@ -14,11 +14,10 @@ import type {
 import ExportPanel from "./export-panel/ExportPanel"
 import {
   filePageKeys,
-  isArrangementChanged,
   isSourcePageKeyOf,
   outputPageKey,
   type PageOrder,
-  sourcePageKey,
+  rebuildPageOrder,
   withoutFilePageOrder,
 } from "./export-panel/outputPageOrder"
 import ImportPanel from "./import-panel/ImportPanel"
@@ -32,8 +31,8 @@ export default function PdfToolsMainView({
   previewColumns,
 }: PdfToolsMainViewProps) {
   const [importedFiles, setImportedFiles] = useState<ImportedFile[]>([])
-  // ページの並び順（取り込んだ全ページ。選択していないページも）。並べ替えていなければ null
-  const [pageOrder, setPageOrder] = useState<PageOrder>(null)
+  // ページの並び順（取り込んだ全ページ。選択していないページも）。出力の順はこれだけで決まる
+  const [pageOrder, setPageOrder] = useState<PageOrder>([])
   const [exportMode, setExportMode] = useState<PdfExportMode>("merge")
   const [interleaveConfig, setInterleaveConfig] = useState<InterleaveConfig>({
     transforms: [],
@@ -53,10 +52,8 @@ export default function PdfToolsMainView({
 
   const handleFilesImported = (files: ImportedFile[]) => {
     setImportedFiles((prev) => [...prev, ...files])
-    // 並べ替えていれば、取り込んだファイルのページは並び順の末尾に付く
-    setPageOrder((prev) =>
-      prev === null ? null : [...prev, ...files.flatMap(filePageKeys)]
-    )
+    // 取り込んだファイルのページは、ページ番号順に並び順の末尾に付く
+    setPageOrder((prev) => [...prev, ...files.flatMap(filePageKeys)])
     // 交互挿入の設定は取り込んだ順に1ファイル1組で持つ（1回に入れるページ数は1から）
     setInterleaveConfig((prev) => ({
       ...prev,
@@ -81,7 +78,8 @@ export default function PdfToolsMainView({
     setPageRotations((prev) => withoutFileRotations(prev, fileId))
   }
 
-  // 左のファイル欄と、交互挿入の欄（2-in-1・回転）の両方から呼ばれる
+  // 左のファイル欄と、交互挿入の欄（N-up・回転）の両方から呼ばれる。N-up は並び順の
+  // 後で面を組むだけなので、変えても並び順は作り直さない
   const handleFileUpdated = (updatedFile: ImportedFile) => {
     // ファイル単位の回転を変えたら、そのファイルのページ別回転は指定し直しとみなす
     const previousFile = importedFiles.find(
@@ -96,49 +94,40 @@ export default function PdfToolsMainView({
     )
   }
 
-  /** 出力モードを変えたら、並べ替えた順を捨てて新しい方式の順にする */
+  /**
+   * 出力モードを変えたら、並び順をその方式の順に作り直す。方式を選ぶのは順を選ぶ
+   * 操作なので、作り直さないと方式を変えても見た目が何も変わらない。
+   */
   const handleExportModeChange = (mode: PdfExportMode) => {
     setExportMode(mode)
-    setPageOrder(null)
+    setPageOrder(rebuildPageOrder(importedFiles, mode, interleaveConfig))
   }
 
-  /** 交互挿入で1回に入れるページ数を変えたら、並べ替えた順を捨てる */
+  /**
+   * 交互挿入の欄から来るのは1回に入れるページ数の変更だけなので、来たら並び順を
+   * 作り直す。ファイルの増減に伴う設定の増減は取り込み・削除が直接持つのでここを
+   * 通らず、N-up・回転はファイルの設定なので並び順に触れない（`handleFileUpdated`）。
+   */
   const handleInterleaveConfigChange = (config: InterleaveConfig) => {
-    if (
-      isArrangementChanged(
-        { exportMode, interleaveConfig },
-        { exportMode, interleaveConfig: config }
-      )
-    ) {
-      setPageOrder(null)
-    }
     setInterleaveConfig(config)
+    setPageOrder(rebuildPageOrder(importedFiles, exportMode, config))
   }
 
-  /** 出力プレビューからページを除外（永続的） */
+  /**
+   * 出力プレビューからページを除外（永続的）。除外はページ単位で、面は残りのページで
+   * 組み直される（除外したページの分は詰まる）
+   */
   const handlePageExcluded = useCallback((page: OutputPage) => {
-    setExcludedPages((prev) => {
-      const next = new Set(prev)
-      if (page.isNUpCombined && page.combinedPages) {
-        for (const pageNumber of page.combinedPages) {
-          next.add(sourcePageKey(page.sourceFileId, pageNumber))
-        }
-      } else {
-        next.add(outputPageKey(page))
-      }
-      return next
-    })
+    setExcludedPages((prev) => new Set(prev).add(outputPageKey(page)))
   }, [])
 
   /** 出力プレビューでページ単位に指定された回転を記録（永続的） */
   const handlePageRotated = useCallback(
     (page: OutputPage, rotation: RotationDegree) => {
-      setPageRotations((prev) => {
-        const next = new Map(prev)
-        // 2-in-1結合ページは先頭ページ番号を代表キーにする（生成側のキーと揃える）
-        next.set(outputPageKey(page), rotation)
-        return next
-      })
+      // 回すのはそのページだけ（N-up の面ではスロットの中で回る）
+      setPageRotations((prev) =>
+        new Map(prev).set(outputPageKey(page), rotation)
+      )
     },
     []
   )
