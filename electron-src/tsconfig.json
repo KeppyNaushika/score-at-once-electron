@@ -11,7 +11,10 @@
     "lib": ["dom", "es2022"],
     "module": "commonjs",
     "moduleResolution": "node",
-    "noEmit": false,
+    // 型を調べるだけ。main/ を作るのは esbuild（scripts/buildMain.js）で、ここが
+    // 出力すると束ねた index.js を `@/…` の別名が残ったままの出力で上書きし、
+    // そのまま配布物を作ると起動しなくなる（2026-10-04 に再現）
+    "noEmit": true,
     "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
@@ -20,7 +23,6 @@
     "strict": true,
     "target": "ES2022",
     "rootDir": "..",
-    "outDir": "../main",
     "paths": {
       "@/*": ["../src/*"],
       "@/electron-src/*": ["../electron-src/*"],
