@@ -18,6 +18,7 @@ import { HelpContentClassrooms } from "@/components/help/page-specific/HelpConte
 import { HelpContentCourseworkList } from "@/components/help/page-specific/HelpContentCourseworkList"
 import { HelpContentExamList } from "@/components/help/page-specific/HelpContentExamList"
 import { HelpContentGradeList } from "@/components/help/page-specific/HelpContentGradeList"
+import { HelpContentSettings } from "@/components/help/page-specific/HelpContentSettings"
 import { HelpContentStudents } from "@/components/help/page-specific/HelpContentStudents"
 import { HelpContentSubtotalGroups } from "@/components/help/page-specific/HelpContentSubtotalGroups"
 import { Button } from "@/components/ui/button"
@@ -53,6 +54,8 @@ const pageHelpComponents: {
   "answer-sheet-builder": HelpContentAnswerSheetList,
   coursework: HelpContentCourseworkList,
   grades: HelpContentGradeList,
+  // 設定。中身はいまのところ「同期設定」のタブだけ（他のタブは見て分かる設定の並び）
+  settings: HelpContentSettings,
 }
 
 interface UsePageHelpOptions {
@@ -122,6 +125,7 @@ export function usePageHelp({ compact = false }: UsePageHelpOptions = {}) {
       "answer-sheet-builder": "解答用紙作成",
       coursework: "試験外成績資料",
       grades: "成績算出",
+      settings: "設定",
     }
     return sectionTitles[currentPageId] ?? "ヘルプ"
   }
