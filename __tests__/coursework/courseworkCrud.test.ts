@@ -1,7 +1,7 @@
 /**
  * Coursework（試験外成績資料）lib の統合テスト
  *
- * coursework.ts の CRUD・評価項目・点数 upsert・名簿操作・削除ブロックを検証する。
+ * coursework.ts / courseworkItem.ts / courseworkScore.ts / courseworkRoster.ts の CRUD・評価項目・点数 upsert・名簿操作・削除ブロックを検証する。
  */
 import * as path from "path"
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
@@ -17,31 +17,37 @@ vi.mock("../../electron-src/lib/prisma/client", async () => {
 })
 
 import {
-  addStudentsFromClassroomToCoursework,
-  addStudentsToCoursework,
-  batchUpsertCourseworkScores,
   createCoursework,
-  createCourseworkItem,
   deleteCoursework,
-  deleteCourseworkItem,
   getCourseworkById,
   getCourseworkCandidates,
-  getCourseworkClassroomRemovalPreview,
-  getCourseworkClassrooms,
   getCourseworks,
-  getCourseworkScoresByItemId,
-  getCourseworkStudents,
-  removeClassroomFromCoursework,
-  removeStudentsFromCoursework,
-  setCourseworkClassroomOrders,
   updateCoursework,
-  updateCourseworkItem,
-  updateCourseworkStudentOrders,
 } from "@/electron-src/lib/prisma/coursework"
+import {
+  createCourseworkItem,
+  deleteCourseworkItem,
+  updateCourseworkItem,
+} from "@/electron-src/lib/prisma/courseworkItem"
 import {
   deleteCourseworkLetterScale,
   updateCourseworkLetterScale,
 } from "@/electron-src/lib/prisma/courseworkLetterScale"
+import {
+  addStudentsFromClassroomToCoursework,
+  addStudentsToCoursework,
+  getCourseworkClassroomRemovalPreview,
+  getCourseworkClassrooms,
+  getCourseworkStudents,
+  removeClassroomFromCoursework,
+  removeStudentsFromCoursework,
+  setCourseworkClassroomOrders,
+  updateCourseworkStudentOrders,
+} from "@/electron-src/lib/prisma/courseworkRoster"
+import {
+  batchUpsertCourseworkScores,
+  getCourseworkScoresByItemId,
+} from "@/electron-src/lib/prisma/courseworkScore"
 import { createDataSource } from "@/electron-src/lib/prisma/gradeDataSource"
 import { createGradeItem } from "@/electron-src/lib/prisma/gradeItem"
 

@@ -20,37 +20,43 @@ import {
 } from "../lib/import/coursework-archive"
 import {
   addCourseworkTag,
-  addStudentsFromClassroomToCoursework,
-  addStudentsToCoursework,
-  batchUpsertCourseworkScores,
   createCoursework,
-  createCourseworkItem,
   deleteCoursework,
-  deleteCourseworkItem,
-  getAvailableClassroomsForCoursework,
-  getAvailableStudentsForCoursework,
   getCourseworkById,
   getCourseworkCandidates,
-  getCourseworkClassroomRemovalPreview,
-  getCourseworkClassrooms,
   getCourseworks,
-  getCourseworkScoresByItemId,
-  getCourseworkStudents,
-  removeClassroomFromCoursework,
-  removeStudentsFromCoursework,
-  reorderCourseworkItems,
-  setCourseworkClassroomOrders,
   setCourseworkTags,
   updateCoursework,
-  updateCourseworkItem,
-  updateCourseworkStudentOrders,
 } from "../lib/prisma/coursework"
+import {
+  createCourseworkItem,
+  deleteCourseworkItem,
+  reorderCourseworkItems,
+  updateCourseworkItem,
+} from "../lib/prisma/courseworkItem"
 import {
   createCourseworkLetterScale,
   deleteCourseworkLetterScale,
   reorderCourseworkLetterScales,
   updateCourseworkLetterScale,
 } from "../lib/prisma/courseworkLetterScale"
+import {
+  addStudentsFromClassroomToCoursework,
+  addStudentsToCoursework,
+  getAvailableClassroomsForCoursework,
+  getAvailableStudentsForCoursework,
+  getCourseworkClassroomRemovalPreview,
+  getCourseworkClassrooms,
+  getCourseworkStudents,
+  removeClassroomFromCoursework,
+  removeStudentsFromCoursework,
+  setCourseworkClassroomOrders,
+  updateCourseworkStudentOrders,
+} from "../lib/prisma/courseworkRoster"
+import {
+  batchUpsertCourseworkScores,
+  getCourseworkScoresByItemId,
+} from "../lib/prisma/courseworkScore"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
 /** 試験外成績資料の CRUD・評価項目・点数・名簿・タグ用 IPC チャンネルを登録する */

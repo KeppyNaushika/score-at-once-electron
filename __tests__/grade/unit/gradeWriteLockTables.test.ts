@@ -96,13 +96,24 @@ describe("成績算出のロックが止めるテーブル", () => {
   })
 
   it("成績算出は gradeCalculationReads の問い合わせ口だけを使う", () => {
-    const source = fs.readFileSync(
-      path.resolve(
-        __dirname,
-        "../../../electron-src/lib/shared/calculations/gradeCalculator.ts"
-      ),
-      "utf8"
-    )
+    // 成績算出を成すファイル全部を見る。DB を読むのは文脈の組み立てだけだが、
+    // 算出や適合度の側に問い合わせが足されても、ここで捕まえる
+    const source = [
+      "gradeCalculator.ts",
+      "gradeCalculationContext.ts",
+      "gradeSourceFit.ts",
+    ]
+      .map((fileName) =>
+        fs.readFileSync(
+          path.resolve(
+            __dirname,
+            "../../../electron-src/lib/shared/calculations",
+            fileName
+          ),
+          "utf8"
+        )
+      )
+      .join("\n")
     const delegates = [...source.matchAll(/\bprisma\.(\w+)\./g)].map(
       (match) => match[1]
     )

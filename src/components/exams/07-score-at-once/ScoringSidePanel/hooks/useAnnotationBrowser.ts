@@ -62,7 +62,7 @@ type BrowsedAnnotation = AnnotationWithContext & { questionScoreId?: string }
  *
  * 外すのは同定用の id、履歴（時刻）、独立した書き込み経路を持つお気に入り、同梱した
  * 関係、そして置き場所（`questionScoreId`）。main 側の `toAppearance`
- * （drawingAnnotation.ts）と同じ切り方で、列を足すと自動的に対象へ入る。
+ * （drawingAnnotationWrite.ts）と同じ切り方で、列を足すと自動的に対象へ入る。
  *
  * 置き場所は型の上では持たないが、DB の行には載っている。見た目の比較へ混ぜると
  * 「どの採点行にぶら下がっているか」まで一致を求めることになり、コピー先の重複判定が

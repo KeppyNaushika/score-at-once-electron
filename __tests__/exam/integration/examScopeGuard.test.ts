@@ -24,7 +24,7 @@ import { upsertCompoundAnswerScore } from "@/electron-src/lib/prisma/compoundAns
 import {
   batchUpdateQuestionScores,
   setQuestionScore,
-} from "@/electron-src/lib/prisma/questionScore"
+} from "@/electron-src/lib/prisma/questionScoreWrite"
 import { upsertScoreDecision } from "@/electron-src/lib/prisma/scoreDecision"
 
 import { createFullTestExam } from "../../helpers/testExamBuilder"

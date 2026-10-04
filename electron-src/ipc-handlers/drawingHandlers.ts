@@ -9,6 +9,7 @@ import type {
   DrawingType,
 } from "../../src/types/drawingAnnotation.types"
 import * as drawingService from "../lib/prisma/drawingAnnotation"
+import * as drawingWriteService from "../lib/prisma/drawingAnnotationWrite"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
 /**
@@ -26,7 +27,7 @@ export const drawingHandlers = {
     target: AnnotationTarget,
     annotation: DrawingAnnotation
   ) => {
-    const result = await drawingService.createDrawingAnnotation(
+    const result = await drawingWriteService.createDrawingAnnotation(
       target,
       annotation
     )
@@ -70,13 +71,13 @@ export const drawingHandlers = {
 
   /** 描画アノテーション更新 */
   "drawing:update": async (annotation: DrawingAnnotation) => {
-    const result = await drawingService.updateDrawingAnnotation(annotation)
+    const result = await drawingWriteService.updateDrawingAnnotation(annotation)
     return result
   },
 
   /** 描画アノテーション削除 */
   "drawing:delete": async (id: string) => {
-    await drawingService.deleteDrawingAnnotation(id)
+    await drawingWriteService.deleteDrawingAnnotation(id)
   },
 
   /** 行き先（答案＋設問＋採点者）に紐づく描画アノテーション一括削除 */
@@ -84,7 +85,7 @@ export const drawingHandlers = {
     target: AnnotationTarget,
     type?: DrawingType
   ) => {
-    await drawingService.deleteDrawingAnnotationsByTarget(target, type)
+    await drawingWriteService.deleteDrawingAnnotationsByTarget(target, type)
   },
 
   // バッチ操作
@@ -93,7 +94,8 @@ export const drawingHandlers = {
   "drawing:batchCreate": async (
     writes: Array<{ target: AnnotationTarget; annotation: DrawingAnnotation }>
   ) => {
-    const result = await drawingService.batchCreateDrawingAnnotations(writes)
+    const result =
+      await drawingWriteService.batchCreateDrawingAnnotations(writes)
     return result
   },
 
@@ -101,7 +103,10 @@ export const drawingHandlers = {
 
   /** アノテーションお気に入り切替 */
   "drawing:toggleFavorite": async (id: string, isFavorite: boolean) => {
-    const result = await drawingService.toggleAnnotationFavorite(id, isFavorite)
+    const result = await drawingWriteService.toggleAnnotationFavorite(
+      id,
+      isFavorite
+    )
     return result
   },
 

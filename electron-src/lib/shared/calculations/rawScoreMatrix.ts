@@ -44,7 +44,7 @@ export interface RawScoreRow<
  * 素点行列。行＝対象者、列＝データソース。
  *
  * 推定（absentEstimation）とモデル適合度（computeSourceFit）が共有する読み取り専用の入力で、
- * 構築は gradeCalculator の buildGradeCalcContext が一手に担う（素点組み立ての単一実装）。
+ * 構築は gradeCalculationContext の buildGradeCalcContext が一手に担う（素点組み立ての単一実装）。
  */
 export class RawScoreMatrix<
   TGradeStudent extends RawScoreRowEntity = GradeStudentForCalc,
