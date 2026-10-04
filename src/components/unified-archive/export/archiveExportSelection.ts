@@ -46,6 +46,8 @@ export function createExportSelectionState(
     scoringKind: "all",
     includeAnswers: true,
     optionalItems: [],
+    classroomStudentScope: "current",
+    removedClassroomStudentIds: [],
   }
 }
 

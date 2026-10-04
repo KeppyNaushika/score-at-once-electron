@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { UnifiedArchiveExportPhase } from "@/electron-src/lib/export/unified-archive/unifiedArchiveCreator"
 import { useDebouncedValue } from "@/hooks/useDebouncedValue"
+import { studentListQuery } from "@/queries/student"
 import {
   exportUnifiedArchiveMutation,
   selectUnifiedArchiveExportPath,
@@ -29,7 +30,10 @@ import {
   archiveEntityLabel,
 } from "./archiveEntityCatalog"
 import { ArchiveEntityCheckListSection } from "./ArchiveEntityCheckListSection"
-import { toggleArchiveEntityRow } from "./archiveEntityRows"
+import {
+  setArchiveEntityRowsChecked,
+  toggleArchiveEntityRow,
+} from "./archiveEntityRows"
 import {
   archiveFileName,
   createExportSelectionState,
@@ -38,6 +42,11 @@ import {
   setOptionalItem,
   toArchiveSelection,
 } from "./archiveExportSelection"
+import {
+  buildClassroomStudentIndex,
+  classroomSourcesOfStudents,
+  withClassroomStudents,
+} from "./classroomStudents"
 import { ExcludedSummary } from "./ExcludedSummary"
 import { ExportDialogFooter } from "./ExportDialogFooter"
 import { ExportErrorBand } from "./ExportErrorBand"
@@ -46,7 +55,6 @@ import { ExportOptionsSection } from "./ExportOptionsSection"
 import { ExportPreviewDetails } from "./ExportPreviewDetails"
 import { ForcedExclusionAlert } from "./ForcedExclusionAlert"
 import { useRemovalImpact } from "./hooks/useRemovalImpact"
-import { RemovalImpactBand } from "./RemovalImpactBand"
 import {
   type ActiveArchiveEntity,
   ARCHIVE_SELECTABLE_KINDS,
@@ -57,9 +65,6 @@ import {
 
 /** 選択を変えてから下見を引くまでの待ち時間（ms） */
 const PREVIEW_DEBOUNCE_MS = 300
-
-/** 赤枠で囲むものが無いとき（毎回作り直して一覧の描き直しを招かないよう、1つを使い回す） */
-const NO_LOST_ENTITIES: ReadonlySet<string> = new Set()
 
 interface ExportDialogBodyProps {
   /** 実体の名前と、一覧に足すときの選択肢 */
@@ -96,15 +101,36 @@ export function ExportDialogBody({
   const [exportOutcome, setExportOutcome] = useState<ExportOutcome | null>(null)
   const exportArchive = useMutation(exportUnifiedArchiveMutation())
 
+  // 学級から生徒を選ぶための名簿と在籍（生徒一覧は在籍を同梱している。一覧は親も引いて
+  // いるのでキャッシュから返る）
+  const { data: students } = useQuery(studentListQuery())
+  const classroomStudentIndex = useMemo(
+    () =>
+      buildClassroomStudentIndex(
+        students ?? [],
+        selection.classroomStudentScope
+      ),
+    [students, selection.classroomStudentScope]
+  )
+  /** 学級から入った生徒 → どの学級から入ったか（行の「選択中（1年1組）」に使う） */
+  const classroomSourcesByStudent = useMemo(
+    () => classroomSourcesOfStudents(selection, classroomStudentIndex),
+    [selection, classroomStudentIndex]
+  )
+  /** 学級から入った生徒を足した選択（下見・書き出し・行の状態はこちらで決める） */
+  const effectiveSelection = useMemo(
+    () => withClassroomStudents(selection, classroomStudentIndex),
+    [selection, classroomStudentIndex]
+  )
   const archiveSelection = useMemo(
-    () => toArchiveSelection(selection, currentUser.id),
-    [selection, currentUser.id]
+    () => toArchiveSelection(effectiveSelection, currentUser.id),
+    [effectiveSelection, currentUser.id]
   )
   const debouncedSelection = useDebouncedValue(
     archiveSelection,
     PREVIEW_DEBOUNCE_MS
   )
-  const canPreview = hasPickedEntity(selection)
+  const canPreview = hasPickedEntity(effectiveSelection)
   const preview = useQuery({
     ...unifiedArchiveExportPreviewQuery(debouncedSelection),
     enabled: canPreview,
@@ -116,6 +142,7 @@ export function ExportDialogBody({
   const previewOk = previewResult?.kind === "ok" ? previewResult : null
   const removalImpact = useRemovalImpact({
     selection,
+    classroomStudentIndex,
     currentUserId: currentUser.id,
     activeEntity,
     currentPreview: isPreviewCurrent ? previewOk : null,
@@ -222,10 +249,6 @@ export function ExportDialogBody({
 
   return (
     <>
-      {/* 一覧をスクロールしても見えるよう、スクロールの外に置く */}
-      <div aria-live="polite" className="border-b px-6 py-2">
-        <RemovalImpactBand impact={removalImpact} catalog={catalog} />
-      </div>
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-4">
         {exportError !== null && (
           <ExportErrorBand title="書き出せませんでした" message={exportError} />
@@ -249,18 +272,36 @@ export function ExportDialogBody({
         )}
 
         <ArchiveEntityCheckListSection
-          selection={selection}
+          selection={effectiveSelection}
+          classroomSourcesByStudent={classroomSourcesByStudent}
+          classroomStudentScope={selection.classroomStudentScope}
           preview={previewOk}
           catalog={catalog}
-          lostEntityKeys={
-            removalImpact?.kind === "lost"
-              ? removalImpact.lostEntityKeys
-              : NO_LOST_ENTITIES
-          }
+          removalImpact={removalImpact}
           onToggle={(kind, row) =>
             updateSelection((prev) =>
-              toggleArchiveEntityRow(prev, kind, row.id, row.state)
+              toggleArchiveEntityRow(
+                prev,
+                classroomStudentIndex,
+                kind,
+                row.id,
+                row.state
+              )
             )
+          }
+          onToggleMany={(kind, rows, isChecked) =>
+            updateSelection((prev) =>
+              setArchiveEntityRowsChecked(
+                prev,
+                classroomStudentIndex,
+                kind,
+                rows,
+                isChecked
+              )
+            )
+          }
+          onClassroomStudentScopeChange={(classroomStudentScope) =>
+            updateSelection((prev) => ({ ...prev, classroomStudentScope }))
           }
           onActiveEntityChange={handleActiveEntityChange}
         />

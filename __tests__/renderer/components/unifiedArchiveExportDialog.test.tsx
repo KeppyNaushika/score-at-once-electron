@@ -8,8 +8,9 @@
  * - 関連して入る行のチェックを外すと `exclusions` に入り、「含めない」として残り、画面下の
  *   「含めないもの」に名前と書き出されなくなる行の数が出る（外す前は「全て含めます」）
  * - 成績算出が使うものは外せない（鍵と理由。選んでも入れ替わらない）
- * - チェックの入った行に当てると、その行を外した選択で下見を引き、一緒に消える行を赤枠で、
- *   一覧に出ない表の減る件数を帯で出す。同じ行に戻っても引き直さない
+ * - チェックの入った行に当てると、その行を外した選択で下見を引き、一緒に消える行を赤枠で
+ *   囲み、当てた行の右端に「○件の選択を解除」（外せなければ「外せません」）を赤字で出す。
+ *   同じ行に戻っても引き直さない
  * - 本人分を選ぶと、今の利用者の id で下見される
  * - 書き出しは 保存先 → 書き出し → 進捗 → 結果（欠けた画像を理由つきで）の順に進む
  * - 外せないものを外していたら、ダイアログの中で知らせて戻せる
@@ -95,6 +96,14 @@ beforeEach(() => {
           lastNameKana: "ヤマダ",
           firstNameKana: "タロウ",
           studentNumber: "1001",
+          // 1年1組に在籍中
+          memberships: [
+            {
+              classroomId: "classroom-1",
+              startDate: "2026-04-01",
+              endDate: null,
+            },
+          ],
         },
         {
           id: "student-2",
@@ -103,6 +112,14 @@ beforeEach(() => {
           lastNameKana: "サトウ",
           firstNameKana: "ハナコ",
           studentNumber: "1002",
+          // 1年1組に過去に在籍していた
+          memberships: [
+            {
+              classroomId: "classroom-1",
+              startDate: "2025-04-01",
+              endDate: "2026-03-31",
+            },
+          ],
         },
       ]),
       fetchClassrooms: vi.fn().mockResolvedValue([
@@ -407,24 +424,30 @@ describe("統合アーカイブの書き出しダイアログ", () => {
         (selection.exclusions?.Student ?? []).includes(studentId)
       ).length
 
-    it("外した選択で下見を引き、消える行を赤枠に、減る件数を帯に出す", async () => {
+    it("外した選択で下見を引き、消える行を赤枠に、当てた行の右端に解除される件数を赤字で出す", async () => {
       const user = userEvent.setup()
       mockPreviewWithRemoval()
       const dialog = renderDialog({ roots: { Exam: ["exam-1"] } })
 
       const studentList = await findKindList(dialog, "生徒")
       const classroomList = await findKindList(dialog, "学級")
-      await user.hover(
-        await within(studentList).findByRole("option", {
-          name: /山田 太郎.*関連で入る/,
-        })
-      )
+      const yamadaOption = await within(studentList).findByRole("option", {
+        name: /山田 太郎.*関連で入る/,
+      })
+      await user.hover(yamadaOption)
 
-      expect(
-        await within(dialog).findByText(
-          "「山田 太郎 (1001)」を外すと、赤枠の1件・受験生徒 1件・採点 617件・答案画像 28件も書き出されなくなります"
+      // ふだんの状態は見た目だけ隠し、読み上げには両方入る
+      await waitFor(() =>
+        expect(yamadaOption).toHaveTextContent(
+          "山田 太郎 (1001)関連で入る1件の選択を解除"
         )
-      ).toBeInTheDocument()
+      )
+      expect(within(yamadaOption).getByText("1件の選択を解除")).toHaveClass(
+        "text-destructive"
+      )
+      expect(within(yamadaOption).getByText("関連で入る")).toHaveClass(
+        "opacity-0"
+      )
       expect(lastPreviewSelection()).toMatchObject({
         roots: { Exam: ["exam-1"] },
         exclusions: { Student: ["student-1"] },
@@ -444,19 +467,39 @@ describe("統合アーカイブの書き出しダイアログ", () => {
         within(dialog).getByRole("listbox", { name: "試験の一覧" })
       ).not.toHaveTextContent(LOST_TEXT)
 
-      // チェックの無い行では引かず、帯は案内に戻る
+      // チェックの無い行では引かず、赤字も赤枠も消える
       await user.hover(
         within(dialog).getByRole("option", { name: "英語テスト" })
       )
+      await waitFor(() =>
+        expect(
+          within(classroomList).queryByRole("option", {
+            name: new RegExp(LOST_TEXT),
+          })
+        ).not.toBeInTheDocument()
+      )
       expect(
-        await within(dialog).findByText(
-          "チェックの入った行に当てると、外したときに一緒に外れるものを赤枠で示します"
-        )
-      ).toBeInTheDocument()
+        within(dialog).queryByText(/件の選択を解除/)
+      ).not.toBeInTheDocument()
+    })
+
+    it("一緒に外れるものが無い行には、赤字を出さない", async () => {
+      const user = userEvent.setup()
+      mockPreviewWithRemoval()
+      const dialog = renderDialog({ roots: { Exam: ["exam-1"] } })
+
+      const studentList = await findKindList(dialog, "生徒")
+      const satoOption = await within(studentList).findByRole("option", {
+        name: /佐藤 花子.*関連で入る/,
+      })
+      await user.hover(satoOption)
+
+      await waitFor(() => expect(removalPreviewCount("student-2")).toBe(1))
+      // 下見が届いてからも、ふだんの状態のまま
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      expect(satoOption).toHaveTextContent(/^佐藤 花子 \(1002\)関連で入る$/)
       expect(
-        within(classroomList).queryByRole("option", {
-          name: new RegExp(LOST_TEXT),
-        })
+        within(dialog).queryByText(/件の選択を解除/)
       ).not.toBeInTheDocument()
     })
 
@@ -475,19 +518,342 @@ describe("統合アーカイブの書き出しダイアログ", () => {
 
       await user.hover(yamadaOption)
       expect(
-        await within(dialog).findByText(/「山田 太郎 \(1001\)」を外すと/)
+        await within(yamadaOption).findByText("1件の選択を解除")
       ).toBeInTheDocument()
       await user.hover(satoOption)
-      expect(
-        await within(dialog).findByText(/「佐藤 花子 \(1002\)」を外すと/)
-      ).toBeInTheDocument()
+      await waitFor(() => expect(removalPreviewCount("student-2")).toBe(1))
+      expect(within(yamadaOption).queryByText("1件の選択を解除")).toBeNull()
       await user.hover(yamadaOption)
       expect(
-        await within(dialog).findByText(/「山田 太郎 \(1001\)」を外すと/)
+        await within(yamadaOption).findByText("1件の選択を解除")
       ).toBeInTheDocument()
 
       expect(removalPreviewCount("student-1")).toBe(1)
       expect(removalPreviewCount("student-2")).toBe(1)
+    })
+
+    it("外すと成績算出が使うものが外れる行には「外せません」と理由を出す", async () => {
+      const user = userEvent.setup()
+      previewExport.mockImplementation(
+        (selection: { exclusions?: Record<string, string[]> }) =>
+          Promise.resolve(
+            selection.exclusions?.Exam
+              ? {
+                  kind: "forcedExcluded",
+                  violations: [
+                    {
+                      table: "GradeDataSource",
+                      id: "source-1",
+                      column: "cropRegionId",
+                      target: "CropRegion(crop-1)",
+                    },
+                  ],
+                }
+              : okPreview({
+                  entityIds: {
+                    ...EMPTY_ENTITY_IDS,
+                    Grade: ["grade-1"],
+                    Exam: ["exam-1"],
+                  },
+                  forcedBy: { "CropRegion:crop-1": ["grade-1"] },
+                })
+          )
+      )
+      const dialog = renderDialog({ roots: { Grade: ["grade-1"] } })
+
+      const examList = await findKindList(dialog, "試験")
+      const examOption = await within(examList).findByRole("option", {
+        name: /数学テスト.*関連で入る/,
+      })
+      await user.hover(examOption)
+
+      const cannotRemove = await within(examOption).findByText("外せません")
+      expect(cannotRemove).toHaveClass("text-destructive")
+      expect(cannotRemove).toHaveAttribute(
+        "title",
+        "成績算出『期末成績』が使うため"
+      )
+      expect(examOption).toHaveTextContent(
+        "数学テスト関連で入る外せません成績算出『期末成績』が使うため"
+      )
+    })
+  })
+
+  describe("見出しの全選択", () => {
+    const selectAllOf = (dialog: HTMLElement, kindLabel: string) =>
+      within(dialog).getByRole("checkbox", {
+        name: `表示中の${kindLabel}を全て選ぶ`,
+      })
+
+    it("全部選ぶと入っていない行を選び、一部のときは indeterminate", async () => {
+      const user = userEvent.setup()
+      previewExport.mockResolvedValue(okPreview())
+      const dialog = renderDialog({ roots: { Exam: ["exam-1"] } })
+      await findKindList(dialog, "試験")
+
+      await waitFor(() =>
+        expect(selectAllOf(dialog, "試験")).toHaveAttribute(
+          "aria-checked",
+          "mixed"
+        )
+      )
+      await user.click(selectAllOf(dialog, "試験"))
+      await waitFor(() =>
+        expect(lastPreviewSelection()).toMatchObject({
+          roots: { Exam: ["exam-1", "exam-2"] },
+        })
+      )
+      expect(selectAllOf(dialog, "試験")).toHaveAttribute(
+        "aria-checked",
+        "true"
+      )
+    })
+
+    it("全部外すと関連の行は「含めない」へ、もう一度で戻る。検索で絞れば見えている行だけ", async () => {
+      const user = userEvent.setup()
+      previewExport.mockResolvedValue(
+        okPreview({
+          entityIds: {
+            ...EMPTY_ENTITY_IDS,
+            Exam: ["exam-1"],
+            Student: ["student-1", "student-2"],
+          },
+        })
+      )
+      const dialog = renderDialog({ roots: { Exam: ["exam-1"] } })
+      const studentList = await findKindList(dialog, "生徒")
+      await within(studentList).findByRole("option", {
+        name: /山田 太郎.*関連で入る/,
+      })
+
+      await user.click(selectAllOf(dialog, "生徒"))
+      await waitFor(() =>
+        expect(lastPreviewSelection()).toMatchObject({
+          exclusions: { Student: ["student-1", "student-2"] },
+        })
+      )
+      await user.click(selectAllOf(dialog, "生徒"))
+      await waitFor(() =>
+        expect(lastPreviewSelection()).toMatchObject({ exclusions: {} })
+      )
+
+      await user.type(
+        within(dialog).getByRole("combobox", { name: "生徒の一覧" }),
+        "やまだ"
+      )
+      await user.click(selectAllOf(dialog, "生徒"))
+      await waitFor(() =>
+        expect(lastPreviewSelection()).toMatchObject({
+          exclusions: { Student: ["student-1"] },
+        })
+      )
+    })
+
+    it("外せない行は全選択でも変わらない", async () => {
+      const user = userEvent.setup()
+      previewExport.mockResolvedValue(
+        okPreview({
+          entityIds: {
+            ...EMPTY_ENTITY_IDS,
+            Grade: ["grade-1"],
+            Exam: ["exam-1"],
+          },
+          forcedBy: { "Exam:exam-1": ["grade-1"] },
+        })
+      )
+      const dialog = renderDialog({ roots: { Grade: ["grade-1"] } })
+      const examList = await findKindList(dialog, "試験")
+      await within(examList).findByRole("option", {
+        name: /数学テスト.*成績算出『期末成績』が使うため/,
+      })
+
+      await user.click(selectAllOf(dialog, "試験"))
+      await waitFor(() =>
+        expect(lastPreviewSelection()).toMatchObject({
+          roots: { Exam: ["exam-2"], Grade: ["grade-1"] },
+          exclusions: {},
+        })
+      )
+      await user.click(selectAllOf(dialog, "試験"))
+      await waitFor(() =>
+        expect(lastPreviewSelection()).toMatchObject({
+          roots: { Grade: ["grade-1"] },
+          exclusions: {},
+        })
+      )
+    })
+  })
+
+  describe("学級から生徒を選ぶ", () => {
+    const scopeToggle = (dialog: HTMLElement, label: string) =>
+      within(
+        within(dialog).getByRole("radiogroup", {
+          name: "選んだ学級から選ぶ生徒",
+        })
+      ).getByRole("radio", { name: label })
+
+    /** 学級を選ぶ（学級の一覧の行をクリック） */
+    const pickClassroom = async (
+      user: ReturnType<typeof userEvent.setup>,
+      dialog: HTMLElement
+    ) =>
+      user.click(
+        await within(await findKindList(dialog, "学級")).findByRole("option", {
+          name: /1年1組/,
+        })
+      )
+
+    it("既定は在籍中の生徒。切り替えると選んである学級にさかのぼって効く", async () => {
+      const user = userEvent.setup()
+      previewExport.mockResolvedValue(okPreview())
+      const dialog = renderDialog({ roots: { Exam: ["exam-1"] } })
+      const studentList = await findKindList(dialog, "生徒")
+      expect(scopeToggle(dialog, "在籍中の生徒")).toHaveAttribute(
+        "aria-checked",
+        "true"
+      )
+
+      await pickClassroom(user, dialog)
+      await waitFor(() =>
+        expect(lastPreviewSelection()).toMatchObject({
+          shared: { Classroom: ["classroom-1"], Student: ["student-1"] },
+        })
+      )
+      expect(
+        within(studentList).getByRole("option", {
+          name: /山田 太郎.*選択中（1年1組）/,
+        })
+      ).toBeInTheDocument()
+
+      await user.click(scopeToggle(dialog, "過去在籍も含む"))
+      await waitFor(() =>
+        expect(lastPreviewSelection()).toMatchObject({
+          shared: {
+            Classroom: ["classroom-1"],
+            Student: ["student-1", "student-2"],
+          },
+        })
+      )
+
+      await user.click(scopeToggle(dialog, "生徒は選ばない"))
+      await waitFor(() =>
+        expect(lastPreviewSelection()?.shared).toEqual({
+          Classroom: ["classroom-1"],
+        })
+      )
+    })
+
+    /** 下見: 選んだ生徒と学級がそのまま入る（main の範囲の規則の写し。学級は生徒を引き上げない） */
+    const mockPreviewOfShared = () =>
+      previewExport.mockImplementation(
+        (selection: { shared?: Record<string, string[]> }) =>
+          Promise.resolve(
+            okPreview({
+              entityIds: {
+                ...EMPTY_ENTITY_IDS,
+                Exam: ["exam-1"],
+                Student: selection.shared?.Student ?? [],
+                Classroom: selection.shared?.Classroom ?? [],
+              },
+            })
+          )
+      )
+
+    it("選んだ学級に当てると、その学級から入った生徒が赤枠になり、件数が出る", async () => {
+      const user = userEvent.setup()
+      mockPreviewOfShared()
+      const dialog = renderDialog({ roots: { Exam: ["exam-1"] } })
+      const studentList = await findKindList(dialog, "生徒")
+      const classroomList = await findKindList(dialog, "学級")
+
+      await user.click(scopeToggle(dialog, "過去在籍も含む"))
+      await pickClassroom(user, dialog)
+      await within(studentList).findByRole("option", {
+        name: /佐藤 花子.*選択中（1年1組）/,
+      })
+
+      const classroomOption = within(classroomList).getByRole("option", {
+        name: /1年1組.*選択中/,
+      })
+      await user.hover(classroomOption)
+      expect(
+        await within(classroomOption).findByText("2件の選択を解除")
+      ).toBeInTheDocument()
+      expect(
+        within(studentList).getAllByRole("option", {
+          name: new RegExp(LOST_TEXT),
+        })
+      ).toHaveLength(2)
+    })
+
+    it("学級から入った生徒を1人外すときも、外した選択から学級の生徒を求め直して下見する", async () => {
+      const user = userEvent.setup()
+      mockPreviewOfShared()
+      const dialog = renderDialog({ roots: { Exam: ["exam-1"] } })
+      const studentList = await findKindList(dialog, "生徒")
+
+      await pickClassroom(user, dialog)
+      const yamadaOption = await within(studentList).findByRole("option", {
+        name: /山田 太郎.*選択中（1年1組）/,
+      })
+      await user.hover(yamadaOption)
+      // 山田を外した選択（学級は残る・山田は外した生徒）で下見する
+      await waitFor(() =>
+        expect(
+          previewExport.mock.calls.some(
+            ([selection]) =>
+              JSON.stringify(selection.shared) ===
+              JSON.stringify({ Classroom: ["classroom-1"] })
+          )
+        ).toBe(true)
+      )
+    })
+
+    it("1人ずつ外した生徒は、切り替えや学級の付け外しで戻らない。自分でチェックし直せば戻る", async () => {
+      const user = userEvent.setup()
+      previewExport.mockResolvedValue(okPreview())
+      const dialog = renderDialog({ roots: { Exam: ["exam-1"] } })
+      const studentList = await findKindList(dialog, "生徒")
+
+      await user.click(scopeToggle(dialog, "過去在籍も含む"))
+      await pickClassroom(user, dialog)
+      await user.click(
+        await within(studentList).findByRole("option", {
+          name: /佐藤 花子.*選択中（1年1組）/,
+        })
+      )
+      await waitFor(() =>
+        expect(lastPreviewSelection()).toMatchObject({
+          shared: { Classroom: ["classroom-1"], Student: ["student-1"] },
+        })
+      )
+
+      // 切り替えを行き来しても戻らない
+      await user.click(scopeToggle(dialog, "在籍中の生徒"))
+      await user.click(scopeToggle(dialog, "過去在籍も含む"))
+      // 学級を外して付け直しても戻らない
+      await pickClassroom(user, dialog)
+      await waitFor(() => expect(lastPreviewSelection()?.shared).toEqual({}))
+      await pickClassroom(user, dialog)
+      await waitFor(() =>
+        expect(lastPreviewSelection()?.shared).toEqual({
+          Classroom: ["classroom-1"],
+          Student: ["student-1"],
+        })
+      )
+
+      // 自分でチェックし直せば戻る
+      await user.click(
+        within(studentList).getByRole("option", { name: /佐藤 花子/ })
+      )
+      await waitFor(() =>
+        expect(lastPreviewSelection()).toMatchObject({
+          shared: {
+            Classroom: ["classroom-1"],
+            Student: ["student-1", "student-2"],
+          },
+        })
+      )
     })
   })
 

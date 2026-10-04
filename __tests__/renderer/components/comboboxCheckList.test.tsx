@@ -19,7 +19,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest"
 import {
   ComboboxCheckList,
   type ComboboxCheckOption,
-} from "@/components/common/Combobox"
+} from "@/components/common/ComboboxCheckList"
 
 beforeAll(() => {
   // cmdk は選択中の項目を scrollIntoView する。jsdom は持たない
@@ -52,6 +52,7 @@ const studentOptions: ComboboxCheckOption[] = [
 function renderCheckList(options: ComboboxCheckOption[] = studentOptions) {
   const handleCheckedChange = vi.fn()
   const handleActiveValueChange = vi.fn()
+  const handleCheckedChangeMany = vi.fn()
   function Harness() {
     const [checkedValues, setCheckedValues] = useState(
       () =>
@@ -81,6 +82,21 @@ function renderCheckList(options: ComboboxCheckOption[] = studentOptions) {
             })
           }}
           onActiveValueChange={handleActiveValueChange}
+          onCheckedChangeMany={(values, checked) => {
+            handleCheckedChangeMany(values, checked)
+            setCheckedValues((prev) => {
+              const next = new Set(prev)
+              values.forEach((value) => {
+                if (checked) {
+                  next.add(value)
+                } else {
+                  next.delete(value)
+                }
+              })
+              return next
+            })
+          }}
+          selectAllLabel="表示中の生徒を全て選ぶ"
           searchPlaceholder="氏名で検索"
           emptyText="該当する生徒がいません"
           aria-label="生徒の一覧"
@@ -90,7 +106,11 @@ function renderCheckList(options: ComboboxCheckOption[] = studentOptions) {
     )
   }
   render(<Harness />)
-  return { handleCheckedChange, handleActiveValueChange }
+  return {
+    handleCheckedChange,
+    handleActiveValueChange,
+    handleCheckedChangeMany,
+  }
 }
 
 /** 一覧に今見えている行の名前（読み上げ文） */
@@ -109,7 +129,9 @@ describe("ComboboxCheckList", () => {
       "鈴木 一郎 (1003)成績算出『期末』が使うため",
     ])
     // 行の中に操作できる部品を置かない
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
+    expect(
+      within(screen.getByRole("listbox")).queryByRole("checkbox")
+    ).not.toBeInTheDocument()
     expect(
       within(screen.getByRole("listbox")).queryByRole("button")
     ).not.toBeInTheDocument()
@@ -285,6 +307,122 @@ describe("ComboboxCheckList", () => {
     await user.hover(screen.getByRole("button", { name: "外のボタン" }))
     expect(selectedOptions()).toEqual([])
     scrollIntoView.mockRestore()
+  })
+
+  it("右端の赤字を出している間、ふだんの状態は見た目だけ隠し、読み上げには両方入れる", () => {
+    render(
+      <ComboboxCheckList
+        options={[
+          { ...studentOptions[0], impactText: "2件の選択を解除" },
+          {
+            ...studentOptions[1],
+            checked: true,
+            statusText: "関連で入る",
+            impactText: "外せません",
+            impactDescription: "成績算出『期末』が使うため",
+          },
+        ]}
+        onCheckedChange={vi.fn()}
+        searchPlaceholder="氏名で検索"
+        emptyText="該当する生徒がいません"
+        aria-label="生徒の一覧"
+      />
+    )
+    const yamadaOption = screen.getByRole("option", { name: /山田 太郎/ })
+    expect(yamadaOption).toHaveTextContent(
+      "山田 太郎 (1001)選択中2件の選択を解除"
+    )
+    const impact = within(yamadaOption).getByText("2件の選択を解除")
+    const status = within(yamadaOption).getByText("選択中")
+    expect(impact).toHaveClass("text-destructive")
+    expect(status).toHaveClass("opacity-0")
+    // 同じ升目に重ねる（行の大きさが変わらない）
+    expect(impact.parentElement).toBe(status.parentElement)
+    expect(impact).toHaveClass("col-start-1", "row-start-1")
+    expect(status).toHaveClass("col-start-1", "row-start-1")
+
+    const satoOption = screen.getByRole("option", { name: /佐藤 花子/ })
+    expect(within(satoOption).getByText("外せません")).toHaveAttribute(
+      "title",
+      "成績算出『期末』が使うため"
+    )
+    expect(satoOption).toHaveTextContent(
+      "佐藤 花子 (1002)関連で入る外せません成績算出『期末』が使うため"
+    )
+  })
+
+  describe("見出しの全選択", () => {
+    const selectAllCheckbox = () =>
+      screen.getByRole("checkbox", { name: "表示中の生徒を全て選ぶ" })
+
+    it("一覧の外にあって Tab で届き、一部だけ入っているときは indeterminate", async () => {
+      const user = userEvent.setup()
+      renderCheckList()
+      // 外せない行（鈴木）は数えない。山田だけが入り、佐藤が入っていない
+      expect(selectAllCheckbox()).toHaveAttribute("aria-checked", "mixed")
+      // 一部のときは横棒を描く（チェックの印ではない）
+      expect(
+        selectAllCheckbox().querySelector('svg[class*="lucide-minus"]')
+      ).not.toBeNull()
+      expect(
+        selectAllCheckbox().querySelector('svg[class*="lucide-check"]')
+      ).toBeNull()
+      expect(
+        within(screen.getByRole("listbox")).queryByRole("checkbox")
+      ).not.toBeInTheDocument()
+      await user.tab()
+      expect(selectAllCheckbox()).toHaveFocus()
+    })
+
+    it("全部選ぶ → 全部外す。外せない行は渡さない", async () => {
+      const user = userEvent.setup()
+      const { handleCheckedChangeMany } = renderCheckList()
+
+      await user.click(selectAllCheckbox())
+      expect(handleCheckedChangeMany).toHaveBeenLastCalledWith(
+        ["a1b2c3d4-0002"],
+        true
+      )
+      expect(selectAllCheckbox()).toHaveAttribute("aria-checked", "true")
+      expect(
+        selectAllCheckbox().querySelector('svg[class*="lucide-check"]')
+      ).not.toBeNull()
+
+      await user.click(selectAllCheckbox())
+      expect(handleCheckedChangeMany).toHaveBeenLastCalledWith(
+        ["a1b2c3d4-0001", "a1b2c3d4-0002"],
+        false
+      )
+      expect(selectAllCheckbox()).toHaveAttribute("aria-checked", "false")
+    })
+
+    it("検索で絞っているときは、見えている行だけに効く", async () => {
+      const user = userEvent.setup()
+      const { handleCheckedChangeMany } = renderCheckList()
+
+      await user.type(screen.getByPlaceholderText("氏名で検索"), "さとう")
+      expect(selectAllCheckbox()).toHaveAttribute("aria-checked", "false")
+      await user.click(selectAllCheckbox())
+      expect(handleCheckedChangeMany).toHaveBeenLastCalledWith(
+        ["a1b2c3d4-0002"],
+        true
+      )
+
+      await user.clear(screen.getByPlaceholderText("氏名で検索"))
+      await user.type(screen.getByPlaceholderText("氏名で検索"), "やまだ")
+      await user.click(selectAllCheckbox())
+      expect(handleCheckedChangeMany).toHaveBeenLastCalledWith(
+        ["a1b2c3d4-0001"],
+        false
+      )
+    })
+
+    it("見えている行が外せない行だけなら、押せない", async () => {
+      const user = userEvent.setup()
+      renderCheckList()
+      await user.type(screen.getByPlaceholderText("氏名で検索"), "すずき")
+      expect(selectAllCheckbox()).toBeDisabled()
+    })
   })
 
   it("赤枠の行は、読み上げに添えた文言で伝える", () => {

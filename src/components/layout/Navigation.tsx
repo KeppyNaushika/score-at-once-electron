@@ -6,6 +6,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ClipboardList,
+  FileArchive,
   FileEdit,
   FileStack,
   History,
@@ -55,6 +56,7 @@ const navGroups: NavItem[][] = [
     { href: "/subtotal-groups", label: "小計点管理", icon: Calculator },
     { href: "/tags", label: "タグ管理", icon: Tag },
   ],
+  [{ href: "/data-export", label: "データ書き出し", icon: FileArchive }],
   [
     { href: "/settings", label: "設定", icon: Settings },
     { href: "/audit-logs", label: "監査ログ", icon: History },
