@@ -12,7 +12,11 @@ import type {
 } from "../../../src/types/drawingAnnotation.types"
 import { narrowAnnotationUnions } from "../../../src/types/drawingAnnotation.types"
 import { recordAuditLog } from "./auditLog"
-import { resolveExamScope, resolveExamScopeByQuestionScore } from "./auditScope"
+import {
+  resolveExamScope,
+  resolveExamScopeByQuestionScore,
+  resolveScoreCellTargets,
+} from "./auditScope"
 import prisma from "./client"
 import { annotationWithContextInclude } from "./drawingAnnotation"
 import { ensureQuestionScore } from "./questionScoreWrite"
@@ -107,6 +111,10 @@ export async function createDrawingAnnotation(
       entityId: result.id,
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
+      targets: await resolveScoreCellTargets(
+        parentQuestionScore.cropRegionId,
+        parentQuestionScore.examStudentId
+      ),
     })
 
     return narrowAnnotationUnions(serializePrisma(result))
@@ -153,6 +161,10 @@ export async function updateDrawingAnnotation(
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
       coalesceKey: `annotation.update:${result.id}`,
+      targets: await resolveScoreCellTargets(
+        result.questionScore.cropRegionId,
+        result.questionScore.examStudentId
+      ),
       // テキスト注釈は after（最新テキスト）を上書き表示。
       // 種別で判定する。行を丸ごと受け取る以上、線や矩形にも空文字の text が乗って
       // いるので「text が来たか」では区別できない
@@ -209,6 +221,10 @@ export async function deleteDrawingAnnotation(id: string): Promise<void> {
         entityId: id,
         scopeId: scope.scopeId,
         scopeLabel: scope.scopeLabel,
+        targets: await resolveScoreCellTargets(
+          annotation.questionScore.cropRegionId,
+          annotation.questionScore.examStudentId
+        ),
       })
     }
   } catch (error) {

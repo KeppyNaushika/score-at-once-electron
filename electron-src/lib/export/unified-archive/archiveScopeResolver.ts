@@ -399,15 +399,17 @@ const includeRelated = (
     }
   }
 
-  // 監査ログは、範囲（scopeId）が書き出した根を指す行だけ。参照を持たないので最後に足す
+  // 監査ログは、範囲（scopeId）が書き出した根を指す行だけ。参照を持たないので最後に足す。
+  // 足したログの配下（対象 AuditLogTarget）は drain が辿って入れる
   if (optionalItems.has("auditLog")) {
     const rootIds = new Set(
       ARCHIVE_ROOT_TABLES.flatMap((table) => [...included.idsOf(table)])
     )
     for (const row of tableRows.get("AuditLog")?.values() ?? []) {
       const scopeId = row.values.scopeId
-      if (scopeId && rootIds.has(scopeId)) included.add("AuditLog", row.id)
+      if (scopeId && rootIds.has(scopeId)) add("AuditLog", row.id)
     }
+    drain()
   }
 
   return { included, nulledReferences: [...nulled.values()] }

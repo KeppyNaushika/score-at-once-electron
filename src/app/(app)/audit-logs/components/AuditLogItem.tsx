@@ -10,9 +10,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import type { AuditLogEntry } from "@/types/auditLog.types"
+import { getAuditActionDef } from "@/lib/shared/auditActions"
+import type { AuditLogRow, AuditMetadata } from "@/types/auditLog.types"
 
-import { AUDIT_LOG_ROW_HEIGHT, CATEGORY_LABELS, VERB_META } from "../constants"
+import { displayTargetLabels, parseAuditMetadata } from "../auditLogRow"
+import {
+  AUDIT_LOG_ROW_HEIGHT,
+  CATEGORY_LABELS,
+  isAuditCategory,
+  VERB_META,
+} from "../constants"
 
 const initials = (name: string | null): string => {
   if (!name) return "?"
@@ -20,19 +27,18 @@ const initials = (name: string | null): string => {
   return trimmed.length > 0 ? trimmed.slice(0, 2) : "?"
 }
 
-const formatRelativeTime = (iso: string): string => {
-  const then = new Date(iso).getTime()
+const formatRelativeTime = (time: Date): string => {
+  const then = time.getTime()
   if (Number.isNaN(then)) return ""
   const diffSec = Math.floor((Date.now() - then) / 1000)
   if (diffSec < 60) return "たった今"
   if (diffSec < 3600) return `${Math.floor(diffSec / 60)}分前`
   if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}時間前`
   if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}日前`
-  return new Date(iso).toLocaleDateString("ja-JP")
+  return time.toLocaleDateString("ja-JP")
 }
 
-const formatAbsoluteTime = (iso: string): string =>
-  new Date(iso).toLocaleString("ja-JP")
+const formatAbsoluteTime = (time: Date): string => time.toLocaleString("ja-JP")
 
 const formatValue = (value: unknown): string => {
   if (value === null || value === undefined || value === "") return "（なし）"
@@ -47,8 +53,8 @@ const formatValue = (value: unknown): string => {
   return String(value)
 }
 
-function ChangeDiff({ entry }: { entry: AuditLogEntry }) {
-  const changes = entry.metadata?.changes
+function ChangeDiff({ metadata }: { metadata: AuditMetadata }) {
+  const changes = metadata.changes
   if (!changes || changes.length === 0) {
     return (
       <div className="text-sm text-muted-foreground">
@@ -82,11 +88,23 @@ function ChangeDiff({ entry }: { entry: AuditLogEntry }) {
  * 合わなくなる。文字は折り返さずに切り、変更内容は行を押し広げないよう
  * ポップオーバーへ出す。
  */
-export function AuditLogItem({ entry }: { entry: AuditLogEntry }) {
-  const verb = VERB_META[entry.verb] ?? VERB_META.other
+export function AuditLogItem({
+  log,
+  actorName,
+}: {
+  log: AuditLogRow
+  /** 操作者の名前（利用者一覧から引いたもの）。システム操作・削除済みの利用者は null */
+  actorName: string | null
+}) {
+  const verb = VERB_META[getAuditActionDef(log.action).verb]
   const { Icon } = verb
-  const hasChanges = (entry.metadata?.changes?.length ?? 0) > 0
-  const actor = entry.actorName ?? "不明なユーザー"
+  const metadata = parseAuditMetadata(log.metadata)
+  const hasChanges = (metadata.changes?.length ?? 0) > 0
+  // 削除された利用者は名前を残さない（削除の仕様。docs/audit-log-redesign.md「削除耐性の原則」）
+  const actor =
+    actorName ?? (log.userId === null ? "システム" : "削除されたユーザー")
+  const occurrences = metadata.occurrences ?? 1
+  const targetLabels = displayTargetLabels(log, metadata)
 
   return (
     <div
@@ -95,7 +113,7 @@ export function AuditLogItem({ entry }: { entry: AuditLogEntry }) {
     >
       <Avatar className="h-8 w-8 shrink-0">
         <AvatarFallback className="text-xs">
-          {initials(entry.actorName)}
+          {initials(actorName)}
         </AvatarFallback>
       </Avatar>
 
@@ -103,18 +121,23 @@ export function AuditLogItem({ entry }: { entry: AuditLogEntry }) {
         <div className="flex min-w-0 items-center gap-2 text-sm">
           <Icon className={`h-3.5 w-3.5 shrink-0 ${verb.className}`} />
           <span className="shrink-0 font-semibold">{actor}</span>
-          <span className="truncate text-foreground">が {entry.summary}</span>
+          <span className="truncate text-foreground">が {log.summary}</span>
         </div>
         <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
           <Badge variant="secondary" className="shrink-0 font-normal">
-            {CATEGORY_LABELS[entry.category] ?? entry.category}
+            {isAuditCategory(log.category)
+              ? CATEGORY_LABELS[log.category]
+              : log.category}
           </Badge>
-          {entry.scopeLabel && (
-            <span className="truncate">{entry.scopeLabel}</span>
+          {log.scopeLabel && (
+            <span className="shrink-0 truncate">{log.scopeLabel}</span>
           )}
-          {entry.occurrences > 1 && (
+          {targetLabels.length > 0 && (
+            <span className="truncate">{targetLabels.join("・")}</span>
+          )}
+          {occurrences > 1 && (
             <span className="shrink-0 text-muted-foreground/80">
-              {entry.occurrences}回
+              {occurrences}回
             </span>
           )}
         </div>
@@ -133,15 +156,15 @@ export function AuditLogItem({ entry }: { entry: AuditLogEntry }) {
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-96">
-              <ChangeDiff entry={entry} />
+              <ChangeDiff metadata={metadata} />
             </PopoverContent>
           </Popover>
         )}
         <span
           className="w-20 text-right text-xs text-muted-foreground"
-          title={formatAbsoluteTime(entry.updatedAt)}
+          title={formatAbsoluteTime(log.updatedAt)}
         >
-          {formatRelativeTime(entry.updatedAt)}
+          {formatRelativeTime(log.updatedAt)}
         </span>
       </div>
     </div>

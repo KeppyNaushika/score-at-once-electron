@@ -10,7 +10,7 @@ import {
 import { recordAuditLog } from "./auditLog"
 import {
   resolveExamScopeByCropRegion,
-  resolveExamStudentLabel,
+  resolveScoreCellTargets,
 } from "./auditScope"
 import prisma from "./client"
 import { assertCropRegionsInSameExam } from "./examScopeGuard"
@@ -184,7 +184,13 @@ export const upsertScoreDecision = async (
 
   // 監査ログ: 採点確定（OWNERによる確定。提案連打は記録しない）
   const scope = await resolveExamScopeByCropRegion(decisionData.cropRegionId)
-  const studentLabel = await resolveExamStudentLabel(decisionData.examStudentId)
+  const targets = await resolveScoreCellTargets(
+    decisionData.cropRegionId,
+    decisionData.examStudentId
+  )
+  const studentLabel = targets.find(
+    (target) => target.targetType === "Student"
+  )?.targetLabel
   const prevScore = previous?.score != null ? Number(previous.score) : null
   const newScore = score != null ? Number(score) : null
   await recordAuditLog({
@@ -206,6 +212,7 @@ export const upsertScoreDecision = async (
       },
       { field: "score", label: "得点", before: prevScore, after: newScore },
     ],
+    targets,
   })
 
   return decision

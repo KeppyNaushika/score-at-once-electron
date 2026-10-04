@@ -290,6 +290,32 @@ async function moveCascadeChildren(
 }
 
 /**
+ * 監査ログが旧IDを指している箇所を新IDへ付け替える。
+ *
+ * 監査ログは対象へ FK を張らない（削除後も残すため）ので、カスケードでは追随しない。
+ * 付け替えないと、生徒の絞り込みや作業領域（scopeId）での絞り込みから、ID 変更より前の
+ * ログだけが静かに抜け落ちる（docs/audit-log-redesign.md「既存の問題」1）。
+ * id は uuid で表をまたいで重ならないので、どの列も値の一致だけで付け替えてよい。
+ *
+ * `AuditLog` は updatedAt を動かさない（生 SQL で書く）。一覧は updatedAt で並べ、
+ * 「最後に操作した時刻」として表示するので、Prisma の updateMany（@updatedAt を打ち直す）
+ * を使うと、付け替えた過去のログが全部「たった今」の位置へ浮き上がる。同期は時刻が
+ * 同じでも書き込み順で新しい版として伝わる。
+ */
+async function retargetAuditLogs(
+  tx: PrismaTransaction,
+  fromId: string,
+  toId: string
+): Promise<void> {
+  await tx.$executeRaw`UPDATE "AuditLog" SET "entityId" = ${toId} WHERE "entityId" = ${fromId}`
+  await tx.$executeRaw`UPDATE "AuditLog" SET "scopeId" = ${toId} WHERE "scopeId" = ${fromId}`
+  await tx.auditLogTarget.updateMany({
+    where: { targetId: fromId },
+    data: { targetId: toId },
+  })
+}
+
+/**
  * idMappings 内で existingId を指す全エントリを newId に張り替える。
  */
 function remapMappingValues(
@@ -377,10 +403,13 @@ async function changeStudentId(
     target.newId
   )
 
-  // 4. 古いレコードを削除
+  // 4. 監査ログを新IDへ付け替え（FK が無いのでカスケードでは追随しない）
+  await retargetAuditLogs(tx, target.existingId, target.newId)
+
+  // 5. 古いレコードを削除
   await tx.student.delete({ where: { id: target.existingId } })
 
-  // 5. マッピングを更新
+  // 6. マッピングを更新
   remapMappingValues(idMappings.student, target.existingId, target.newId)
 }
 
@@ -429,10 +458,13 @@ async function changeClassroomId(
     target.newId
   )
 
-  // 4. 古いレコードを削除
+  // 4. 監査ログを新IDへ付け替え（FK が無いのでカスケードでは追随しない）
+  await retargetAuditLogs(tx, target.existingId, target.newId)
+
+  // 5. 古いレコードを削除
   await tx.classroom.delete({ where: { id: target.existingId } })
 
-  // 5. マッピングを更新
+  // 6. マッピングを更新
   remapMappingValues(idMappings.classroom, target.existingId, target.newId)
 }
 
@@ -468,6 +500,8 @@ async function changeSubtotalGroupId(
     target.existingId,
     target.newId
   )
+
+  await retargetAuditLogs(tx, target.existingId, target.newId)
 
   await tx.subtotalGroup.delete({ where: { id: target.existingId } })
 

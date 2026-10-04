@@ -7,7 +7,7 @@
 
 import type { GradeCellTarget } from "../../../src/types/grade.types"
 import { recordAuditLog } from "./auditLog"
-import { resolveGradeScope } from "./auditScope"
+import { resolveGradeScope, resolveGradeStudentTargets } from "./auditScope"
 import prisma from "./client"
 import { assertGradeCellsInSameGrade } from "./gradeScopeGuard"
 
@@ -56,6 +56,7 @@ export async function upsertGradeOverride(
       entityId: result.id,
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
+      targets: await resolveGradeStudentTargets([data.gradeStudentId]),
     })
   }
 
@@ -86,6 +87,7 @@ export async function deleteGradeOverride(target: GradeCellTarget) {
         entityId: existing.id,
         scopeId: scope.scopeId,
         scopeLabel: scope.scopeLabel,
+        targets: await resolveGradeStudentTargets([target.gradeStudentId]),
       })
     }
   }

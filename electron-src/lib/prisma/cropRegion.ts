@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client"
 
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScope, resolveExamScopeByCropRegion } from "./auditScope"
+import { cropRegionAuditTarget } from "./auditTargets"
 import prisma from "./client"
 
 /**
@@ -79,6 +80,7 @@ export const createCropRegion = async (
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
     target: region.label || null,
+    targets: [cropRegionAuditTarget(region)],
   })
 
   return region
@@ -103,6 +105,7 @@ export const updateCropRegion = async (
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
     target: region.label || null,
+    targets: [cropRegionAuditTarget(region)],
   })
 
   return region
@@ -111,10 +114,8 @@ export const updateCropRegion = async (
 /** 設問領域を削除する */
 export const deleteCropRegion = async (id: string) => {
   const scope = await resolveExamScopeByCropRegion(id)
-  const before = await prisma.cropRegion.findUnique({
-    where: { id },
-  })
 
+  // 消した行がそのまま返るので、ラベルはそこから取る
   const region = await prisma.cropRegion.delete({
     where: { id },
   })
@@ -125,7 +126,8 @@ export const deleteCropRegion = async (id: string) => {
     entityId: id,
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
-    target: before?.label || null,
+    target: region.label || null,
+    targets: [cropRegionAuditTarget(region)],
   })
 
   return region

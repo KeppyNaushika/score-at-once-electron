@@ -6,7 +6,10 @@
 
 import type { CourseworkScoreUpsertInput } from "../../../src/types/coursework.types"
 import { recordAuditLog } from "./auditLog"
-import { resolveCourseworkScopeByItem } from "./auditScope"
+import {
+  resolveCourseworkScopeByItem,
+  resolveCourseworkStudentTargets,
+} from "./auditScope"
 import prisma from "./client"
 import { serializePrisma } from "./serializePrisma"
 
@@ -128,6 +131,9 @@ export async function batchUpsertCourseworkScores(
       scopeLabel: scope.scopeLabel,
       summary: `資料の点数を更新しました（${scores.length}件）`,
       extra: { count: scores.length },
+      targets: await resolveCourseworkStudentTargets([
+        ...new Set(scores.map((score) => score.courseworkStudentId)),
+      ]),
     })
   }
 }

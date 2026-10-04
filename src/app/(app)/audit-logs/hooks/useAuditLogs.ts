@@ -7,34 +7,36 @@ import {
   type SetStateAction,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
 
-import type { AuditLogFilter } from "@/electron-src/lib/prisma/auditQuery"
 import {
   AUTO_PAGE_SIZE,
   FALLBACK_PAGE_SIZE,
   type PageSizeChoice,
 } from "@/lib/listPagination"
 import { auditLogListQuery } from "@/queries/auditLog"
-import type { AuditLogEntry } from "@/types/auditLog.types"
+import type { AuditLogRow } from "@/types/auditLog.types"
 
 import { AUDIT_LOG_ROW_HEIGHT } from "../constants"
+import { type AuditFilterState, toAuditLogFilter } from "../filterFields"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
-const EMPTY_ENTRIES: AuditLogEntry[] = []
+const EMPTY_LOGS: AuditLogRow[] = []
 
 interface UseAuditLogsResult {
   /** 今見ているページの行だけ（一覧全体は renderer へ運ばない） */
-  entries: AuditLogEntry[]
+  logs: AuditLogRow[]
   /** 絞り込みに一致する総件数（main が同じ where で数えたもの） */
   total: number
   loading: boolean
   error: string | null
-  filter: AuditLogFilter
+  /** 絞り込みの画面の状態（確定した欄と全文検索） */
+  filter: AuditFilterState
   /** 直前のフィルタを受け取る更新関数も渡せる（デバウンス中の取りこぼしを防ぐため） */
-  setFilter: Dispatch<SetStateAction<AuditLogFilter>>
+  setFilter: Dispatch<SetStateAction<AuditFilterState>>
   /** 1始まり。件数が変われば「いま見ている行」から計算し直される */
   pageNumber: number
   /** 実際に要求している件数（「自動」なら高さから決まった値） */
@@ -56,7 +58,7 @@ interface UseAuditLogsResult {
  * 割り込みうる。
  */
 export function useAuditLogs(): UseAuditLogsResult {
-  const [filter, setFilterState] = useState<AuditLogFilter>({})
+  const [filter, setFilterState] = useState<AuditFilterState>({ tokens: [] })
   /**
    * 覚えているのは**ページ番号ではなく先頭の行**（0始まり）。
    *
@@ -99,16 +101,20 @@ export function useAuditLogs(): UseAuditLogsResult {
 
   const pageNumber = Math.floor(firstRowIndex / pageSize) + 1
 
+  // 画面の状態（欄の並び）を main へ渡す条件にする。欄の文言（label）は条件に
+  // 入らないので、同じ条件なら同じクエリキーになる
+  const queryFilter = useMemo(() => toAuditLogFilter(filter), [filter])
+
   // 絞り込みとページはクエリキーの一部。どちらを変えても別のキーになる
   const {
     data,
     isPending: loading,
     error,
-  } = useQuery(auditLogListQuery(filter, { pageNumber, pageSize }))
+  } = useQuery(auditLogListQuery(queryFilter, { pageNumber, pageSize }))
 
   // 条件を変えたら先頭のページから見る。3ページ目のまま絞り込むと、
   // 一致が1ページ分しかないときに空の画面へ着地する
-  const setFilter = useCallback<Dispatch<SetStateAction<AuditLogFilter>>>(
+  const setFilter = useCallback<Dispatch<SetStateAction<AuditFilterState>>>(
     (update) => {
       setFilterState(update)
       setFirstRowIndex(0)
@@ -133,7 +139,7 @@ export function useAuditLogs(): UseAuditLogsResult {
   const total = data?.total ?? 0
 
   return {
-    entries: data?.entries ?? EMPTY_ENTRIES,
+    logs: data?.logs ?? EMPTY_LOGS,
     total,
     loading,
     error: error?.message ?? null,

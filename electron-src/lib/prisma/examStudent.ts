@@ -6,7 +6,7 @@ import {
 import type { ExamStudentWithMemberships } from "@/types/prismaExtensions"
 
 import { recordAuditLog } from "./auditLog"
-import { resolveExamScope, resolveStudentLabel } from "./auditScope"
+import { resolveExamScope, resolveStudentTargets } from "./auditScope"
 import { getAvailableClassroomsForTarget } from "./availableClassrooms"
 import { getAvailableStudentsForTarget } from "./availableStudents"
 import prisma from "./client"
@@ -97,7 +97,8 @@ export async function addStudentsToExam(examId: string, studentIds: string[]) {
 
     // 監査ログ: 受験生徒の追加（追加分をまとめて1件）
     const scope = await resolveExamScope(examId)
-    const firstLabel = await resolveStudentLabel(newStudentIds[0])
+    const targets = await resolveStudentTargets(newStudentIds)
+    const firstLabel = targets[0]?.targetLabel
     const summary =
       newStudentIds.length === 1 && firstLabel
         ? `受験生徒「${firstLabel}」を追加しました`
@@ -110,6 +111,7 @@ export async function addStudentsToExam(examId: string, studentIds: string[]) {
       scopeLabel: scope.scopeLabel,
       summary,
       extra: { studentIds: newStudentIds, count: newStudentIds.length },
+      targets,
     })
   }
   return {
@@ -147,7 +149,9 @@ export async function removeStudentsFromExam(
 
   // 監査ログ: 受験生徒の削除
   const scope = await resolveExamScope(examId)
-  const firstLabel = await resolveStudentLabel(studentIds[0])
+  // 受験者の行は消えたが、生徒の行は残っている
+  const targets = await resolveStudentTargets(studentIds)
+  const firstLabel = targets[0]?.targetLabel
   const summary =
     studentIds.length === 1 && firstLabel
       ? `受験生徒「${firstLabel}」を削除しました`
@@ -160,6 +164,7 @@ export async function removeStudentsFromExam(
     scopeLabel: scope.scopeLabel,
     summary,
     extra: { studentIds, count: studentIds.length },
+    targets,
   })
 }
 
@@ -183,7 +188,8 @@ export async function updateStudentExamStatus(
 
   // 監査ログ: 受験状態の変更
   const scope = await resolveExamScope(examId)
-  const studentLabel = await resolveStudentLabel(studentId)
+  const targets = await resolveStudentTargets([studentId])
+  const studentLabel = targets[0]?.targetLabel ?? null
   const statusJa: Record<string, string> = {
     participating: "受験",
     expected: "見込",
@@ -196,6 +202,7 @@ export async function updateStudentExamStatus(
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
     target: studentLabel,
+    targets,
     summary: studentLabel
       ? `「${studentLabel}」の受験状態を「${statusJa[status] ?? status}」に変更しました`
       : `受験状態を「${statusJa[status] ?? status}」に変更しました`,

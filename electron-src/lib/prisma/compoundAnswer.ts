@@ -6,7 +6,7 @@
 import type { CompoundAnswerScore, Prisma } from "@prisma/client"
 
 import { recordAuditLog } from "./auditLog"
-import { resolveExamScopeByPage } from "./auditScope"
+import { resolveExamScopeByPage, resolveExamStudentTargets } from "./auditScope"
 import prisma from "./client"
 import { assertCompoundAnswersInSameExam } from "./examScopeGuard"
 
@@ -68,6 +68,7 @@ export async function upsertCompoundAnswerScore(data: {
     scopeLabel: scope.scopeLabel,
     summary: "複合解答を採点しました",
     coalesceKey: `compound_score:${data.compoundAnswerId}:${data.userId}`,
+    targets: await resolveExamStudentTargets([data.examStudentId]),
   })
 
   return result

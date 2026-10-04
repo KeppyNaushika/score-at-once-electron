@@ -6,16 +6,18 @@
  * 読み取りは `questionScore.ts`、覚え書きは `questionScoreComment.ts` にある。
  */
 
-import type { Prisma } from "@prisma/client"
+import type { CropRegion, Prisma, Student } from "@prisma/client"
 import { Decimal } from "@prisma/client/runtime/client"
 
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { type AuditChange, recordAuditLog } from "./auditLog"
+import { resolveExamScopeByCropRegion } from "./auditScope"
 import {
-  resolveExamScopeByCropRegion,
-  resolveExamStudentLabel,
-} from "./auditScope"
+  cropRegionAuditTarget,
+  studentAuditLabel,
+  studentAuditTarget,
+} from "./auditTargets"
 import prisma from "./client"
 import { assertCropRegionsInSameExam } from "./examScopeGuard"
 import { isRecordNotFoundError } from "./prismaErrors"
@@ -52,23 +54,37 @@ const scoreStatusLabel = (status: string | null | undefined): string => {
   }
 }
 
-/** 採点提案の監査ログを記録（ベストエフォート） */
+/**
+ * 採点提案の監査ログを記録（ベストエフォート）。
+ *
+ * 生徒と採点領域は、書き込みの `include` で既に取れている行をそのまま受け取る
+ * （ここで取り直さない。採点はいちばん件数の多い操作で、1回ごとに1クエリ増える）。
+ * 生徒と採点領域の両方を対象（`AuditLogTarget`）に付け、要約にも両方のラベルを載せる
+ * （全文検索が「山田 太郎」「1-1」で引けるように）。
+ */
 async function recordScoreAudit(opts: {
   action: "exam.score.propose" | "exam.score.update" | "exam.score.delete"
   scoreId: string
-  cropRegionId: string
-  examStudentId: string
+  student: Student
+  cropRegion: CropRegion
   userId: string
   changes?: AuditChange[]
 }): Promise<void> {
-  const scope = await resolveExamScopeByCropRegion(opts.cropRegionId)
-  const studentLabel = await resolveExamStudentLabel(opts.examStudentId)
+  const scope = await resolveExamScopeByCropRegion(opts.cropRegion.id)
+  const studentLabel = studentAuditLabel(opts.student)
+  const regionLabel = opts.cropRegion.label
   const verb =
     opts.action === "exam.score.propose"
       ? "提案しました"
       : opts.action === "exam.score.delete"
         ? "削除しました"
         : "変更しました"
+  const subject = [
+    studentLabel && `「${studentLabel}」`,
+    regionLabel && `「${regionLabel}」`,
+  ]
+    .filter(Boolean)
+    .join("の")
   await recordAuditLog({
     action: opts.action,
     userId: opts.userId,
@@ -76,10 +92,12 @@ async function recordScoreAudit(opts: {
     entityId: opts.scoreId,
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
-    summary: studentLabel
-      ? `「${studentLabel}」の採点を${verb}`
-      : `採点を${verb}`,
+    summary: subject ? `${subject}の採点を${verb}` : `採点を${verb}`,
     changes: opts.changes,
+    targets: [
+      studentAuditTarget(opts.student),
+      cropRegionAuditTarget(opts.cropRegion),
+    ],
   })
 }
 
@@ -245,8 +263,8 @@ export const setQuestionScore = async (questionScore: SetQuestionScoreData) => {
       await recordScoreAudit({
         action: "exam.score.update",
         scoreId: updated.id,
-        cropRegionId: questionScore.cropRegionId,
-        examStudentId: questionScore.examStudentId,
+        student: updated.examStudent.student,
+        cropRegion: updated.cropRegion,
         userId: questionScore.userId,
         changes: [
           {
@@ -285,8 +303,8 @@ export const setQuestionScore = async (questionScore: SetQuestionScoreData) => {
       await recordScoreAudit({
         action: "exam.score.propose",
         scoreId: created.id,
-        cropRegionId: questionScore.cropRegionId,
-        examStudentId: questionScore.examStudentId,
+        student: created.examStudent.student,
+        cropRegion: created.cropRegion,
         userId: questionScore.userId,
         changes: [
           {
@@ -344,8 +362,8 @@ export const updateQuestionScore = async (
     await recordScoreAudit({
       action: "exam.score.update",
       scoreId: updated.id,
-      cropRegionId: updated.cropRegionId,
-      examStudentId: updated.examStudentId,
+      student: updated.examStudent.student,
+      cropRegion: updated.cropRegion,
       userId: updated.userId,
       changes: [
         {

@@ -70,8 +70,11 @@ const USER_SECRET_COLUMNS: ReadonlySet<string> = new Set([
   "passcode",
   "passcodeType",
 ])
-/** 追記だけの表（§5.5） */
-const APPEND_ONLY_TABLES: ReadonlySet<string> = new Set(["AuditLog"])
+/** 追記だけの表（§5.5）。監査ログの対象はログに従う */
+const APPEND_ONLY_TABLES: ReadonlySet<string> = new Set([
+  "AuditLog",
+  "AuditLogTarget",
+])
 
 /** ISO 8601 の日時の文字列か（同期のトリガーは時刻列にこれ以外を拒む） */
 const ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/

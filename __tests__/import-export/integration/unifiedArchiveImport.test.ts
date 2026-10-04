@@ -155,6 +155,12 @@ describe("表を書く順番", () => {
   })
 })
 
+/** 追記だけの表（監査ログとその対象）。3択に関わらず書き換えない */
+const APPEND_ONLY_TABLES: ReadonlySet<string> = new Set([
+  "AuditLog",
+  "AuditLogTarget",
+])
+
 describe("統合アーカイブの取り込み", () => {
   let fixture: UnifiedArchiveFixture
   let fileFixture: UnifiedArchiveFileFixture
@@ -195,6 +201,14 @@ describe("統合アーカイブの取り込み", () => {
         entityType: "Exam",
         entityId: fixture.examA.exam.id,
         summary: "試験名を変えた",
+        // 監査ログの対象はログに従って書き出され、ログと同じく追記だけになる
+        targets: {
+          create: {
+            targetType: "Student",
+            targetId: fixture.examA.examStudents[0].studentId,
+            targetLabel: "対象の生徒",
+          },
+        },
       },
     })
     auditLogId = auditLog.id
@@ -247,6 +261,7 @@ describe("統合アーカイブの取り込み", () => {
       "GradeComparison",
       "UserPreference",
       "AuditLog",
+      "AuditLogTarget",
     ]) {
       expect(archiveIds.get(table)?.length ?? 0, table).toBeGreaterThan(0)
     }
@@ -337,11 +352,10 @@ describe("統合アーカイブの取り込み", () => {
     const files = importUnifiedArchiveFiles(archive, DATA_DIR, plan)
 
     for (const [table, ids] of archiveIds) {
-      // 監査ログは3択に関わらず書き換えない
-      const expected =
-        table === "AuditLog"
-          ? { created: 0, replaced: 0, kept: ids.length, skipped: 0 }
-          : { created: 0, replaced: ids.length, kept: 0, skipped: 0 }
+      // 監査ログ（とその対象）は3択に関わらず書き換えない
+      const expected = APPEND_ONLY_TABLES.has(table)
+        ? { created: 0, replaced: 0, kept: ids.length, skipped: 0 }
+        : { created: 0, replaced: ids.length, kept: 0, skipped: 0 }
       expect(plan.counts[table], table).toEqual(expected)
     }
 
@@ -354,8 +368,9 @@ describe("統合アーカイブの取り込み", () => {
         expect(rowAfter.createdAt, `${table}.createdAt`).toEqual(
           rowBefore.createdAt
         )
-        const expectedUpdatedAt =
-          table === "AuditLog" ? rowBefore.updatedAt : IMPORTED_AT.toISOString()
+        const expectedUpdatedAt = APPEND_ONLY_TABLES.has(table)
+          ? rowBefore.updatedAt
+          : IMPORTED_AT.toISOString()
         expect(rowAfter.updatedAt, `${table}.updatedAt`).toEqual(
           expectedUpdatedAt
         )
@@ -438,6 +453,7 @@ describe("統合アーカイブの取り込み", () => {
       "TagSubtotalGroup",
       "UserPreference",
       "AuditLog",
+      "AuditLogTarget",
     ])
     const countsAfter = countTestDatabaseRows()
     for (const [table, ids] of archiveIds) {
@@ -580,16 +596,26 @@ describe("統合アーカイブの取り込み", () => {
     expect(kept.summary).toBe("取り込み先で変えた要約")
     expect(kept.updatedAt.toISOString()).toBe(changedAt.toISOString())
 
+    // ログを消すと対象もカスケードで消え、取り込みで両方がアーカイブのまま戻る
     await prisma.auditLog.delete({ where: { id: auditLogId } })
     const plan = await importRows(archive, "overwrite")
-    expect(plan.counts.AuditLog).toEqual({
-      created: 1,
-      replaced: 0,
-      kept: 0,
-      skipped: 0,
-    })
-    const recreated = readRowsByIds(new Map([["AuditLog", [auditLogId]]]))
-    expect(recreated.get("AuditLog")).toEqual(rowsBeforeExport.get("AuditLog"))
+    for (const table of APPEND_ONLY_TABLES) {
+      expect(plan.counts[table], table).toEqual({
+        created: 1,
+        replaced: 0,
+        kept: 0,
+        skipped: 0,
+      })
+    }
+    const recreated = readRowsByIds(
+      new Map([
+        ["AuditLog", [auditLogId]],
+        ["AuditLogTarget", archiveIds.get("AuditLogTarget") ?? []],
+      ])
+    )
+    for (const table of APPEND_ONLY_TABLES) {
+      expect(recreated.get(table), table).toEqual(rowsBeforeExport.get(table))
+    }
   })
 
   it("別で追加: 新しい返却版の scoresJson は新しい採点枠の id を指し、元の返却版は旧 id のまま", async () => {

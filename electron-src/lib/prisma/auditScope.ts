@@ -4,6 +4,8 @@
  *   解決するための軽量クエリ群。失敗時は null を返す（ベストエフォート）。
  */
 
+import type { AuditTargetInput } from "./auditLog"
+import { cropRegionAuditTarget, studentAuditTarget } from "./auditTargets"
 import prisma from "./client"
 
 /** examId から監査ログ用スコープを解決（試験名スナップショット付き） */
@@ -142,35 +144,117 @@ export async function resolveExamScopeByQuestionScore(
   }
 }
 
-/** studentId から「姓 名」ラベルを解決 */
-export async function resolveStudentLabel(
-  studentId: string
-): Promise<string | null> {
+/**
+ * 採点領域の id から、監査ログの対象（採点領域）を解決する。手元に行が無い経路のためのもの。
+ * 見つからなければ空（ベストエフォート）
+ */
+export async function resolveCropRegionTargets(
+  cropRegionId: string
+): Promise<AuditTargetInput[]> {
   try {
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
+    const cropRegion = await prisma.cropRegion.findUnique({
+      where: { id: cropRegionId },
     })
-    if (!student) return null
-    return `${student.lastName} ${student.firstName}`.trim()
+    return cropRegion ? [cropRegionAuditTarget(cropRegion)] : []
   } catch {
-    return null
+    return []
   }
 }
 
-/** examStudentId から「姓 名」ラベルを解決 */
-export async function resolveExamStudentLabel(
-  examStudentId: string
-): Promise<string | null> {
+/** 生徒の id から、監査ログの対象（生徒）を解決する。見つからない生徒は入れない */
+export async function resolveStudentTargets(
+  studentIds: string[]
+): Promise<AuditTargetInput[]> {
+  if (studentIds.length === 0) return []
   try {
-    const examStudent = await prisma.examStudent.findUnique({
-      where: { id: examStudentId },
+    const students = await prisma.student.findMany({
+      where: { id: { in: studentIds } },
+    })
+    return students.map(studentAuditTarget)
+  } catch {
+    return []
+  }
+}
+
+/** 受験者（ExamStudent）の id から、監査ログの対象（生徒）を解決する */
+export async function resolveExamStudentTargets(
+  examStudentIds: string[]
+): Promise<AuditTargetInput[]> {
+  if (examStudentIds.length === 0) return []
+  try {
+    const examStudents = await prisma.examStudent.findMany({
+      where: { id: { in: examStudentIds } },
       include: { student: true },
     })
-    if (!examStudent) return null
-    const { lastName, firstName } = examStudent.student
-    return `${lastName} ${firstName}`.trim()
+    return examStudents.map((examStudent) =>
+      studentAuditTarget(examStudent.student)
+    )
   } catch {
-    return null
+    return []
+  }
+}
+
+/** 成績算出の対象者（GradeStudent）の id から、監査ログの対象（生徒）を解決する */
+export async function resolveGradeStudentTargets(
+  gradeStudentIds: string[]
+): Promise<AuditTargetInput[]> {
+  if (gradeStudentIds.length === 0) return []
+  try {
+    const gradeStudents = await prisma.gradeStudent.findMany({
+      where: { id: { in: gradeStudentIds } },
+      include: { student: true },
+    })
+    return gradeStudents.map((gradeStudent) =>
+      studentAuditTarget(gradeStudent.student)
+    )
+  } catch {
+    return []
+  }
+}
+
+/** 資料の対象者（CourseworkStudent）の id から、監査ログの対象（生徒）を解決する */
+export async function resolveCourseworkStudentTargets(
+  courseworkStudentIds: string[]
+): Promise<AuditTargetInput[]> {
+  if (courseworkStudentIds.length === 0) return []
+  try {
+    const courseworkStudents = await prisma.courseworkStudent.findMany({
+      where: { id: { in: courseworkStudentIds } },
+      include: { student: true },
+    })
+    return courseworkStudents.map((courseworkStudent) =>
+      studentAuditTarget(courseworkStudent.student)
+    )
+  } catch {
+    return []
+  }
+}
+
+/**
+ * 採点のマス（受験者 × 採点領域）から、監査ログの対象（生徒・採点領域）を解決する。
+ *
+ * 書き込みの `include` に生徒と採点領域が無い経路（確定など）のためのもの。手元に
+ * 行があるなら `auditTargets.ts` の関数で直接組み立て、ここで取り直さないこと。
+ * 見つからないものは対象に入れない（ベストエフォート）。
+ */
+export async function resolveScoreCellTargets(
+  cropRegionId: string,
+  examStudentId: string
+): Promise<AuditTargetInput[]> {
+  try {
+    const [examStudent, cropRegion] = await Promise.all([
+      prisma.examStudent.findUnique({
+        where: { id: examStudentId },
+        include: { student: true },
+      }),
+      prisma.cropRegion.findUnique({ where: { id: cropRegionId } }),
+    ])
+    return [
+      ...(examStudent ? [studentAuditTarget(examStudent.student)] : []),
+      ...(cropRegion ? [cropRegionAuditTarget(cropRegion)] : []),
+    ]
+  } catch {
+    return []
   }
 }
 

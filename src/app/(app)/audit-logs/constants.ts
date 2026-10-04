@@ -7,10 +7,7 @@ import {
   Upload,
 } from "lucide-react"
 
-import type {
-  AuditCategory,
-  AuditVerb,
-} from "@/electron-src/lib/prisma/auditActions"
+import type { AuditCategory, AuditVerb } from "@/lib/shared/auditActions"
 
 export const CATEGORY_LABELS: Record<AuditCategory, string> = {
   exam: "試験",
@@ -28,6 +25,10 @@ export const CATEGORY_LABELS: Record<AuditCategory, string> = {
  */
 export const isAuditCategory = (value: string): value is AuditCategory =>
   value in CATEGORY_LABELS
+
+/** 素の文字列（絞り込みの欄の値）を、種別の集合と突き合わせて絞る */
+export const isAuditVerb = (value: string): value is AuditVerb =>
+  value in VERB_META
 
 export const VERB_META: Record<
   AuditVerb,

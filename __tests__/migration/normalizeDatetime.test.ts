@@ -213,6 +213,8 @@ describe("DateTime正規化マイグレーション", () => {
     // normalize migration より後で ISO text 生成
     "AsbManuscriptPaper",
     "AuditLog",
+    // 20261005120000 で追加（監査ログの対象）。normalize migration より後で ISO text 生成
+    "AuditLogTarget",
     "Coursework",
     "CourseworkClassroom", // 旧 CourseworkClass（20260704010000 でリネーム）
     "CourseworkItem",

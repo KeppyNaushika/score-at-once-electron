@@ -27,6 +27,7 @@ const ARCHIVE_TABLE_LABELS: Readonly<Record<string, string>> = {
   DrawingAnnotation: "注釈",
   ReturnSnapshot: "返却版",
   AuditLog: "監査ログ",
+  AuditLogTarget: "監査ログの対象",
   ExamClassroom: "試験の学級",
   Tag: "タグ",
   TagSubtotalGroup: "小計グループのタグ",
