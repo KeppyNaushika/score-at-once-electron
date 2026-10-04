@@ -55,7 +55,7 @@ export default function InterleaveSettings({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <p className="text-xs text-muted-foreground">
         N-up・回転は左のファイルの設定と共通です。頁/組をN-upの枚数に合わせると、面ごとに交互になります
       </p>
@@ -66,9 +66,17 @@ export default function InterleaveSettings({
         if (!file) return null
 
         return (
-          <div key={transform.fileId} className="rounded-lg border bg-card p-3">
-            <div className="mb-2 flex items-center gap-2">
-              <Settings2 className="h-4 w-4 text-muted-foreground" />
+          // ファイル名と設定を1行に並べる。ファイル名は残りの幅に縮めて切り詰め、設定が
+          // 入りきらないときだけ設定を折り返す（なるべく1ファイル1段で済ませる）
+          <div
+            key={transform.fileId}
+            className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2"
+          >
+            <div
+              className="flex min-w-20 flex-1 basis-20 items-center gap-2"
+              title={file.name}
+            >
+              <Settings2 className="h-4 w-4 shrink-0 text-muted-foreground" />
               <span className="truncate text-sm font-medium">{file.name}</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -92,7 +100,7 @@ export default function InterleaveSettings({
                       })
                     }
                   }}
-                  className="h-8 w-14 text-center"
+                  className="h-8 w-12 text-center"
                   disabled={disabled}
                 />
                 <span className="text-xs whitespace-nowrap text-muted-foreground">

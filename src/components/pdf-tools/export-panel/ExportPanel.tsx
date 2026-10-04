@@ -6,13 +6,15 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import type {
   ImportedFile,
   InterleaveConfig,
+  NUpConfig,
   OutputPage,
   PdfExportMode,
   RotationDegree,
 } from "@/types/pdfTools.types"
 
 import ExportActions from "./ExportActions"
-import ExportModeSelector from "./ExportModeSelector"
+import ExportModeToggle from "./ExportModeToggle"
+import GlobalNUpSettings from "./GlobalNUpSettings"
 import InterleaveSettings from "./InterleaveSettings"
 import {
   movePageInOrder,
@@ -20,7 +22,11 @@ import {
   type PageOrder,
 } from "./outputPageOrder"
 import OutputPreview from "./OutputPreview"
-import { deriveOutputPages, groupIntoSheets } from "./outputSheets"
+import {
+  deriveOutputPages,
+  groupIntoGlobalSheets,
+  groupIntoSheets,
+} from "./outputSheets"
 
 interface ExportPanelProps {
   importedFiles: ImportedFile[]
@@ -28,11 +34,14 @@ interface ExportPanelProps {
   pageRotations: Map<string, RotationDegree>
   exportMode: PdfExportMode
   interleaveConfig: InterleaveConfig
+  /** 全体の N-up（ファイルごとの面や単独ページを、さらに N 個ずつ1面にまとめる） */
+  globalNUp: NUpConfig
   /** ページの並び順（全ページ） */
   pageOrder: PageOrder
   isProcessing: boolean
   onExportModeChange: (mode: PdfExportMode) => void
   onInterleaveConfigChange: (config: InterleaveConfig) => void
+  onGlobalNUpChange: (globalNUp: NUpConfig) => void
   onFileUpdated: (file: ImportedFile) => void
   onPageOrderChange: (pageOrder: PageOrder) => void
   onPageExcluded: (page: OutputPage) => void
@@ -47,8 +56,8 @@ interface ExportPanelProps {
  * エクスポートモード選択、交互挿入設定、出力プレビュー、エクスポート実行を管理する。
  *
  * 出力ページは state に持たず、描画のたびに導く: ページの並び順から、選択していて
- * 除外していないページを残す → ファイルごとの N-up の面に組む。利用者の操作として
- * 持つのは並び順・除外・回転だけ。
+ * 除外していないページを残す → ファイルごとの N-up の面に組む → 全体の N-up の面に
+ * まとめる。利用者の操作として持つのは並び順・除外・回転だけ。
  */
 export default function ExportPanel({
   importedFiles,
@@ -56,10 +65,12 @@ export default function ExportPanel({
   pageRotations,
   exportMode,
   interleaveConfig,
+  globalNUp,
   pageOrder,
   isProcessing,
   onExportModeChange,
   onInterleaveConfigChange,
+  onGlobalNUpChange,
   onFileUpdated,
   onPageOrderChange,
   onPageExcluded,
@@ -78,8 +89,12 @@ export default function ExportPanel({
     [importedFiles, pageRotations, pageOrder, excludedPages]
   )
   const outputSheets = useMemo(
-    () => groupIntoSheets(outputPages, importedFiles),
-    [outputPages, importedFiles]
+    () =>
+      groupIntoGlobalSheets(
+        groupIntoSheets(outputPages, importedFiles),
+        globalNUp
+      ),
+    [outputPages, importedFiles, globalNUp]
   )
 
   /** プレビューでドラッグして並べ替えた（全ページの並び順に写す） */
@@ -100,36 +115,47 @@ export default function ExportPanel({
 
   return (
     <div className="flex h-full min-w-0 flex-col">
-      <div className="border-b p-4">
-        <h2 className="text-lg font-semibold">エクスポート</h2>
-        <p className="text-sm text-muted-foreground">出力設定とプレビュー</p>
-      </div>
-
       {/*
-        出力モードと出力ボタンを1行にまとめ、プレビューに縦の場所を残す。幅が足りなければ
-        折り返し、ボタン群は右寄せのまま下の行へ回る。
-        @container/export-row は、狭いときに出力ボタンをアイコンだけにする判定に使う（ExportActions）。
-        出力ボタンはプレビューの上に置く。下端に置くと、出力の完了を知らせるトースト
-        （アプリ共通で右下に出る）が消えるまでの数秒、ボタンに重なって押せなくなる
+        パネルの見出し（左のインポート欄の見出しと同じ段）。出力モードはその右端に置く。
+        モードは並び順ごと作り直す大きな切り替えなので、出力の設定より上に置く
       */}
-      <div className="@container/export-row flex flex-wrap items-center gap-2 border-b p-4">
-        <ExportModeSelector
+      <div className="flex items-center justify-between gap-2 border-b p-4">
+        {/* 狭いときは見出しの文字を切り詰め、出力モードを同じ行に残す */}
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-semibold">エクスポート</h2>
+          <p className="truncate text-sm text-muted-foreground">
+            出力設定とプレビュー
+          </p>
+        </div>
+        <ExportModeToggle
           mode={exportMode}
           onModeChange={onExportModeChange}
           disabled={isProcessing}
         />
-        <div className="ml-auto">
-          <ExportActions
-            outputSheets={outputSheets}
-            importedFiles={importedFiles}
-            isProcessing={isProcessing}
-            onProcessingChange={onProcessingChange}
-          />
-        </div>
       </div>
 
+      {/*
+        全体の N-up と出力ボタン（横幅いっぱいを3等分）。プレビューに縦の場所を残すよう
+        余白を詰める。出力ボタンはプレビューの上に置く。下端に置くと、出力の完了を知らせる
+        トースト（アプリ共通で右下に出る）が消えるまでの数秒、ボタンに重なって押せなくなる
+      */}
+      <div className="space-y-2 border-b px-4 py-3">
+        <GlobalNUpSettings
+          globalNUp={globalNUp}
+          onGlobalNUpChange={onGlobalNUpChange}
+          disabled={isProcessing}
+        />
+        <ExportActions
+          outputSheets={outputSheets}
+          importedFiles={importedFiles}
+          isProcessing={isProcessing}
+          onProcessingChange={onProcessingChange}
+        />
+      </div>
+
+      {/* ファイルが多いとプレビューを押し出すので、高さに上限を付けて中でスクロールさせる */}
       {exportMode === "interleave" && (
-        <div className="border-b p-4">
+        <div className="max-h-[35%] shrink-0 overflow-y-auto border-b px-4 py-3">
           <InterleaveSettings
             files={importedFiles}
             config={interleaveConfig}

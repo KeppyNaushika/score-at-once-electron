@@ -17,7 +17,9 @@ import {
 } from "@/components/pdf-tools/export-panel/outputPageOrder"
 import {
   deriveOutputPages,
+  groupIntoGlobalSheets,
   groupIntoSheets,
+  sheetLeafPages,
 } from "@/components/pdf-tools/export-panel/outputSheets"
 import { buildPdfPageInputs } from "@/components/pdf-tools/export-panel/pdfPageInputs"
 import type {
@@ -54,6 +56,8 @@ function buildImportedFile(
 
 interface SheetSettings {
   files: ImportedFile[]
+  /** 全体の N-up（既定は 1in1 = まとめない） */
+  globalNUp?: NUpConfig
   pageOrder?: PageOrder
   excludedPages?: Set<string>
   pageRotations?: Map<string, RotationDegree>
@@ -66,16 +70,32 @@ function sheetsOf(settings: SheetSettings): OutputSheet[] {
     excludedPages: settings.excludedPages ?? new Set(),
     pageRotations: settings.pageRotations ?? new Map(),
   })
-  return groupIntoSheets(pages, settings.files)
+  return groupIntoGlobalSheets(
+    groupIntoSheets(pages, settings.files),
+    settings.globalNUp ?? nUpOf(1)
+  )
 }
 
-/** 面を "A:1+A:2"（空きスロットは "_"）、単独ページを "B:1" と書く */
+/**
+ * 面を "A:1+A:2"（空きスロットは "_"）、単独ページを "B:1" と書く。
+ * 入れ子の面（全体の面に入ったファイルごとの面）は "[A:1+A:2]" と括る
+ */
+function describeSheet(sheet: OutputSheet): string {
+  return sheet.kind === "page"
+    ? sheet.id
+    : sheet.slots
+        .map((slot) =>
+          slot === null
+            ? "_"
+            : slot.kind === "sheet"
+              ? `[${describeSheet(slot)}]`
+              : slot.id
+        )
+        .join("+")
+}
+
 function describeSheets(sheets: OutputSheet[]): string[] {
-  return sheets.map((sheet) =>
-    sheet.kind === "page"
-      ? sheet.id
-      : sheet.slots.map((slot) => slot?.id ?? "_").join("+")
-  )
+  return sheets.map(describeSheet)
 }
 
 const interleaveConfig = (
@@ -159,7 +179,9 @@ describe("ファイルごとの N-up の面", () => {
     })
     expect(sheet.kind).toBe("sheet")
     if (sheet.kind !== "sheet") return
-    expect(sheet.slots.map((slot) => slot?.rotation)).toEqual([90, 180])
+    expect(
+      sheet.slots.map((slot) => (slot?.kind === "page" ? slot.rotation : null))
+    ).toEqual([90, 180])
   })
 
   it("1in1 のファイルのページは面にせず、そのまま1ページとして出す", () => {
@@ -225,6 +247,103 @@ describe("交互挿入との組み合わせ", () => {
   })
 })
 
+describe("全体の N-up", () => {
+  const files = [
+    buildImportedFile("A", 4, { pagesPerSheet: 2 }),
+    buildImportedFile("B", 2),
+  ]
+  const pageOrder = rebuildPageOrder(
+    files,
+    "interleave",
+    interleaveConfig(["A", 2], ["B", 1])
+  )
+
+  it("全体 1in1 なら、ファイルごとの面に組んだ結果をそのまま出す", () => {
+    const fileSheets = groupIntoSheets(
+      deriveOutputPages({
+        files,
+        pageOrder,
+        excludedPages: new Set(),
+        pageRotations: new Map(),
+      }),
+      files
+    )
+    expect(groupIntoGlobalSheets(fileSheets, nUpOf(1))).toBe(fileSheets)
+    expect(describeSheets(sheetsOf({ files, pageOrder }))).toEqual([
+      "A:1+A:2",
+      "B:1",
+      "A:3+A:4",
+      "B:2",
+    ])
+  })
+
+  it("交互挿入した A の面と B のページをまたいで、隣り合う N 個ずつ1面にまとめる", () => {
+    const sheets = sheetsOf({ files, pageOrder, globalNUp: nUpOf(2) })
+    expect(describeSheets(sheets)).toEqual(["[A:1+A:2]+B:1", "[A:3+A:4]+B:2"])
+    // 全体の面の id は先頭の元ページのキー
+    expect(sheets.map((sheet) => sheet.id)).toEqual(["A:1", "A:3"])
+  })
+
+  it("ファイルごとの N が 1 なら、ページどうしをファイルをまたいでまとめる", () => {
+    const singlePageFiles = files.map((file) => ({ ...file, nUp: nUpOf(1) }))
+    const interleavedOrder = rebuildPageOrder(
+      singlePageFiles,
+      "interleave",
+      interleaveConfig(["A", 1], ["B", 1])
+    )
+    expect(
+      describeSheets(
+        sheetsOf({
+          files: singlePageFiles,
+          pageOrder: interleavedOrder,
+          globalNUp: nUpOf(2),
+        })
+      )
+    ).toEqual(["A:1+B:1", "A:2+B:2", "A:3+A:4"])
+  })
+
+  it("全体の端数は空きスロットにする", () => {
+    expect(
+      describeSheets(sheetsOf({ files, pageOrder, globalNUp: nUpOf(4) }))
+    ).toEqual(["[A:1+A:2]+B:1+[A:3+A:4]+B:2"])
+    expect(
+      describeSheets(
+        sheetsOf({
+          files,
+          pageOrder,
+          globalNUp: nUpOf(4),
+          excludedPages: new Set(["B:2"]),
+        })
+      )
+    ).toEqual(["[A:1+A:2]+B:1+[A:3+A:4]+_"])
+  })
+
+  it("除外はページ単位で詰め、ファイルごとの面を組み直してから全体をまとめる", () => {
+    expect(
+      describeSheets(
+        sheetsOf({
+          files,
+          pageOrder,
+          globalNUp: nUpOf(2),
+          excludedPages: new Set(["A:2"]),
+        })
+      )
+    ).toEqual(["[A:1+A:3]+B:1", "[A:4+_]+B:2"])
+  })
+
+  it("全体の面の元ページは、入れ子の面もスロットの順にたどって読む順に並ぶ", () => {
+    const [sheet] = sheetsOf({ files, pageOrder, globalNUp: nUpOf(4) })
+    expect(sheetLeafPages(sheet).map((page) => page.id)).toEqual([
+      "A:1",
+      "A:2",
+      "B:1",
+      "A:3",
+      "A:4",
+      "B:2",
+    ])
+  })
+})
+
 describe("main プロセスへ渡すページ入力", () => {
   it("面はスロットの並び（空きスロットの null も）のまま、ページごとの回転を付けて渡す", () => {
     const files = [
@@ -256,6 +375,46 @@ describe("main プロセスへ渡すページ入力", () => {
         ],
       },
       { kind: "page", filePath: "/tmp/B.pdf", pageNumber: 1, rotation: 270 },
+    ])
+  })
+
+  it("全体の面は、ファイルごとの面を面のまま入れ子にして、葉ごとにファイルを付けて渡す", () => {
+    const files = [
+      buildImportedFile("A", 2, { pagesPerSheet: 2 }),
+      buildImportedFile("B", 1, { rotation: 90 }),
+    ]
+    const inputs = buildPdfPageInputs(
+      sheetsOf({ files, globalNUp: nUpOf(4) }),
+      files
+    )
+    expect(inputs).toEqual([
+      {
+        kind: "sheet",
+        nUp: nUpOf(4),
+        slots: [
+          {
+            kind: "sheet",
+            nUp: nUpOf(2),
+            slots: [
+              {
+                kind: "page",
+                filePath: "/tmp/A.pdf",
+                pageNumber: 1,
+                rotation: 0,
+              },
+              {
+                kind: "page",
+                filePath: "/tmp/A.pdf",
+                pageNumber: 2,
+                rotation: 0,
+              },
+            ],
+          },
+          { kind: "page", filePath: "/tmp/B.pdf", pageNumber: 1, rotation: 90 },
+          null,
+          null,
+        ],
+      },
     ])
   })
 })

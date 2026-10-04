@@ -13,7 +13,8 @@ export type RotationDegree = (typeof ROTATION_DEGREES)[number]
  * ページ分割は出力プレビューを経由しない元ファイル単位の操作なので、
  * ここではなくインポート済みファイルのアクションとして提供する。
  */
-export type PdfExportMode = "merge" | "interleave"
+export const PDF_EXPORT_MODES = ["merge", "interleave"] as const
+export type PdfExportMode = (typeof PDF_EXPORT_MODES)[number]
 
 /** 1面に入れるページ数（N-up）。1 は面にまとめず、元のページをそのまま出す */
 export const PAGES_PER_SHEET_OPTIONS = [1, 2, 4, 8, 9, 16] as const
@@ -65,20 +66,17 @@ export interface PdfSourcePageInput {
 }
 
 /**
- * N-up の面のスロットに入るもの。
+ * 書き出す N-up の面1枚（IPC境界を渡る）。
  *
- * いまは元ページだけ。全体 N-up（ファイルごとの面や単独ページを1スロットへ縮めて
- * 入れ子にする）では、ここに `PdfNUpSheetInput` を足す。配置の計算は中身の寸法
- * （面なら用紙の寸法）しか見ないので、足しても `computeSheetLayout` は変わらない。
+ * スロットには元ページのほか、面も入る（全体 N-up: ファイルごとの面を1スロットへ
+ * 縮めて入れる）。面は木になり、葉が元ページ。葉ごとにファイルを持つので、1つの面が
+ * 複数のファイルをまたいでよい。
  */
-export type PdfSheetSlotInput = PdfSourcePageInput
-
-/** 書き出す N-up の面1枚（IPC境界を渡る） */
 export interface PdfNUpSheetInput {
   kind: "sheet"
   nUp: NUpConfig
   /** 並べ方（`nUp.slotOrder`）の順に並べたスロットの中身。null は空きスロット */
-  slots: (PdfSheetSlotInput | null)[]
+  slots: (PdfPageInput | null)[]
 }
 
 /**
@@ -120,19 +118,20 @@ export interface OutputPage {
   rotation: RotationDegree
 }
 
-/** N-up の面のスロットに入るもの（全体 N-up では `NUpSheet` を足す。`PdfSheetSlotInput` 参照） */
-type SheetSlotContent = OutputPage
-
 /**
  * N-up の面（出力の1ページに、複数のページを縮めて並べたもの）。
- * id は先頭スロットのページのキー。
+ *
+ * スロットには元ページか、面が入る。ファイルごとの面をさらに全体の面へまとめると、
+ * 全体の面のスロットにファイルごとの面が入る（`groupIntoGlobalSheets`）。
+ * id は先頭の元ページのキー（入れ子の面とその外側の面で同じ値になりうるので、
+ * 比べるときは同じ段どうしで比べる）。
  */
 export interface NUpSheet {
   kind: "sheet"
   id: string
   nUp: NUpConfig
   /** 並べ方（`nUp.slotOrder`）の順に並べたスロットの中身。null は空きスロット（端数） */
-  slots: (SheetSlotContent | null)[]
+  slots: (OutputSheet | null)[]
 }
 
 /** 出力の1ページ: 元ページそのままか、N-up の面 */

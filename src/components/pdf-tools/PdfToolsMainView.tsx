@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type {
   ImportedFile,
   InterleaveConfig,
+  NUpConfig,
   OutputPage,
   PdfExportMode,
   RotationDegree,
@@ -36,6 +37,11 @@ export default function PdfToolsMainView({
   const [exportMode, setExportMode] = useState<PdfExportMode>("merge")
   const [interleaveConfig, setInterleaveConfig] = useState<InterleaveConfig>({
     transforms: [],
+  })
+  // 全体の N-up。並び順の後で面をまとめるだけなので、変えても並び順は作り直さない
+  const [globalNUp, setGlobalNUp] = useState<NUpConfig>({
+    pagesPerSheet: 1,
+    slotOrder: "from-top-left-rightward",
   })
   const [isProcessing, setIsProcessing] = useState(false)
   // 出力プレビューから除外されたページ（"fileId:pageNumber" のセット）
@@ -212,10 +218,12 @@ export default function PdfToolsMainView({
           pageRotations={pageRotations}
           exportMode={exportMode}
           interleaveConfig={interleaveConfig}
+          globalNUp={globalNUp}
           pageOrder={pageOrder}
           isProcessing={isProcessing}
           onExportModeChange={handleExportModeChange}
           onInterleaveConfigChange={handleInterleaveConfigChange}
+          onGlobalNUpChange={setGlobalNUp}
           onFileUpdated={handleFileUpdated}
           onPageOrderChange={setPageOrder}
           onPageExcluded={handlePageExcluded}

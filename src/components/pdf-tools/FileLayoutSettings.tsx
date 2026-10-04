@@ -9,21 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  type ImportedFile,
-  PAGES_PER_SHEET_OPTIONS,
-  ROTATION_DEGREES,
-  SLOT_ORDERS,
-  type SlotOrder,
-} from "@/types/pdfTools.types"
+import { type ImportedFile, ROTATION_DEGREES } from "@/types/pdfTools.types"
 
-/** 並べ方の表示名 */
-const SLOT_ORDER_LABELS: Record<SlotOrder, string> = {
-  "from-top-left-rightward": "左上から右へ（Z）",
-  "from-top-left-downward": "左上から下へ（N）",
-  "from-top-right-leftward": "右上から左へ",
-  "from-top-right-downward": "右上から下へ",
-}
+import NUpSelects from "./NUpSelects"
 
 interface FileLayoutSettingsProps {
   file: ImportedFile
@@ -48,59 +36,15 @@ export default function FileLayoutSettings({
 }: FileLayoutSettingsProps) {
   return (
     <>
-      <Select
-        value={String(file.nUp.pagesPerSheet)}
-        onValueChange={(value) => {
-          const pagesPerSheet = PAGES_PER_SHEET_OPTIONS.find(
-            (option) => String(option) === value
-          )
-          if (pagesPerSheet === undefined) return
-          onFileUpdated({ ...file, nUp: { ...file.nUp, pagesPerSheet } })
-        }}
+      <NUpSelects
+        nUp={file.nUp}
+        onNUpChange={(nUp) => onFileUpdated({ ...file, nUp })}
         disabled={disabled}
-      >
-        <SelectTrigger className="h-8 w-24" aria-label="1面のページ数">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {PAGES_PER_SHEET_OPTIONS.map((option) => (
-            <SelectItem key={option} value={String(option)}>
-              {option}in1
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={file.nUp.slotOrder}
-        onValueChange={(value) => {
-          const slotOrder = SLOT_ORDERS.find((option) => option === value)
-          if (slotOrder === undefined) return
-          onFileUpdated({ ...file, nUp: { ...file.nUp, slotOrder } })
+        accessibleNames={{
+          pagesPerSheet: "1面のページ数",
+          slotOrder: "面の中の並べ方",
         }}
-        // 1in1 には並べる順が無い
-        disabled={disabled || file.nUp.pagesPerSheet === 1}
-      >
-        {/*
-          並べ方と回転は幅を決め打ちせず、表示中の名前に合わせる（既定の w-fit）。
-          決め打ちの幅では、フォントや角度の桁数しだいで名前や「0°」が切れた。
-          min-w は、選び直すたびに幅が変わって隣の欄が動かないように、いちばん長い
-          名前のおおよその幅を取っておくもの。並ぶ欄は折り返す
-        */}
-        <SelectTrigger
-          className="h-8 max-w-full min-w-44"
-          aria-label="面の中の並べ方"
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {SLOT_ORDERS.map((slotOrder) => (
-            <SelectItem key={slotOrder} value={slotOrder}>
-              {SLOT_ORDER_LABELS[slotOrder]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      />
 
       <Select
         value={String(file.rotation)}
@@ -113,7 +57,8 @@ export default function FileLayoutSettings({
         }}
         disabled={disabled}
       >
-        <SelectTrigger className="h-8 min-w-24" aria-label="ページの回転">
+        {/* 回転は幅を決め打ちしない（決め打ちでは角度の桁数しだいで「0°」が切れた） */}
+        <SelectTrigger size="sm" aria-label="ページの回転">
           <RotateCw className="mr-1 h-3 w-3" />
           <SelectValue />
         </SelectTrigger>

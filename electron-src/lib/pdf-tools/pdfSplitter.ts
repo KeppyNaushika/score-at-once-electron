@@ -8,7 +8,8 @@ import { PDFDocument } from "pdf-lib"
 
 import type { PdfPageInput } from "@/types/pdfTools.types"
 
-import { appendPageToPdf, type SourcePdfCache } from "./pdfMerger"
+import { appendPageToPdf } from "./pdfMerger"
+import type { SourcePdfCache } from "./sourcePdfPages"
 
 /**
  * 出力ページを1ページ1ファイルのPDFへ分割して書き出す。
