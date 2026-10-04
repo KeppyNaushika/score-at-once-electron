@@ -4,7 +4,7 @@ import * as path from "path"
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
 
 import { ensureBaselineUpToDate } from "../../electron-src/lib/prisma/schema/baselineMigrations"
-import { listLocalMigrationNames } from "../../electron-src/lib/prisma/schema/migrationDeployer"
+import { listLocalMigrationNames } from "../../electron-src/lib/prisma/schema/migrationApplier"
 import {
   assertDatabaseNotNewerThanApp,
   DatabaseNewerThanAppError,

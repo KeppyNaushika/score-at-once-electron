@@ -39,7 +39,7 @@ const IGNORED_COLUMNS = new Set(["id", "createdAt", "updatedAt"])
 const quote = (identifier: string): string =>
   `"${identifier.replaceAll('"', '""')}"`
 
-/** アプリと同じ当て方（migrationDeployer の applyMigrationSql）で当てて記録する */
+/** アプリと同じ当て方（migrationApplier.ts の applyMigrationSql）で当てて記録する */
 export function applyMigration(
   db: SqliteDatabase,
   migration: MigrationSource
