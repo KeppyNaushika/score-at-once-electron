@@ -8,7 +8,7 @@
  *
  * 配置は中身の寸法と回転だけを見る。全体 N-up で面を1スロットへ入れ子にするときは、
  * 内側の面を先に `computeSheetLayout` し、その用紙の寸法を外側の中身の寸法として
- * 渡せば同じ関数で済む。
+ * 渡せば同じ関数で済む（`nestedSheetLayout.ts` がそうしている）。
  */
 import type {
   NUpConfig,
@@ -29,7 +29,7 @@ export interface NUpSize {
 export const A4_PAPER: NUpSize = { width: 595.28, height: 841.89 }
 
 /** 左上原点の矩形 */
-interface NUpRect {
+export interface NUpRect {
   x: number
   yTop: number
   width: number
@@ -163,7 +163,7 @@ function placedArea(grid: SheetGrid, contents: (NUpSize | null)[]): number {
  * 候補（そのページ数で選べる行×列 × 用紙の縦・横）のうち、中身が最も大きく収まる
  * もの（収めた面積の合計が最大）を選ぶ。縦長のページ2枚なら用紙横で左右に、横長なら
  * 用紙縦で上下に並ぶ。中身が正方形などで同じ大きさになるときは、列の多い格子は用紙横・
- * 行の多い格子と正方の格子は用紙縦を先に取る。
+ * 行の多い格子と正方の格子は用紙縦を先に取る（面積の差が 0.5% 未満なら同じ大きさとみなす）。
  *
  * @param paper 用紙（向きは問わない。縦横はここで決める）
  */
@@ -186,8 +186,12 @@ export function chooseSheetGrid(
   }
   const candidates = [...naturalCandidates, ...otherCandidates]
 
-  // 浮動小数の誤差で、同じ大きさの候補が後ろのものに入れ替わらないようにする
-  const tolerance = 1e-9
+  // 面積の差がこれより小さければ同点とみなし、先の候補（上の規則の順）を取る。
+  // 同じページでも、PDF は元ページのポイント、PNG とプレビューはサムネイルの画素
+  // （丸めた整数）で寸法を測るので、縦横比が 0.1% ほどずれる。ちょうど同点になる
+  // 並び（A4 の横長の面と横長のページの 2in1 など）で、そのずれだけで用紙の向きが
+  // 出力ごとに入れ替わらないよう、浮動小数の誤差より十分大きく取る
+  const tolerance = 0.005
   return candidates.reduce((best, candidate) => {
     const bestArea = placedArea(best, contents)
     return placedArea(candidate, contents) > bestArea * (1 + tolerance)

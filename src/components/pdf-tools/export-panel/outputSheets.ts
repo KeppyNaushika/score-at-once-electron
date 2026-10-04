@@ -1,5 +1,8 @@
+import type { LayoutSheet } from "@/lib/pdf-tools/nestedSheetLayout"
+import type { NUpSize } from "@/lib/pdf-tools/nUpLayout"
 import type {
   ImportedFile,
+  NUpConfig,
   NUpSheet,
   OutputPage,
   OutputSheet,
@@ -105,4 +108,77 @@ export function groupIntoSheets(
     const sheet = sheetByFirstPageId.get(page.id)
     return sheet ? [sheet] : []
   })
+}
+
+/**
+ * ファイルごとの面に組んだ並び（面、または単独ページ）を、並びの順に隣り合う N 個ずつ
+ * 全体の面にまとめる（全体 N-up）。
+ *
+ * ファイルごとの面とちがい、ファイルを分けずに隣り合うものをまとめる（交互挿入した
+ * A と B をまたいでよい）。ファイルごとの面は1スロットに縮めて入る。N で割り切れない
+ * 最後の面は空きスロット（null）を残す。N=1 なら何もしない。並び順には触れないので、
+ * N や並べ方を変えても並び順は作り直さない。
+ */
+export function groupIntoGlobalSheets(
+  sheets: OutputSheet[],
+  globalNUp: NUpConfig
+): OutputSheet[] {
+  const { pagesPerSheet } = globalNUp
+  if (pagesPerSheet === 1) return sheets
+  return Array.from(
+    { length: Math.ceil(sheets.length / pagesPerSheet) },
+    (_, sheetIndex): NUpSheet => {
+      const slots = sheets.slice(
+        sheetIndex * pagesPerSheet,
+        (sheetIndex + 1) * pagesPerSheet
+      )
+      return {
+        kind: "sheet",
+        id: slots[0].id,
+        nUp: globalNUp,
+        slots: Array.from(
+          { length: pagesPerSheet },
+          (_, slotIndex) => slots[slotIndex] ?? null
+        ),
+      }
+    }
+  )
+}
+
+/** 出力の1ページに載る元ページ（入れ子の面も、スロットの順＝読む順にたどる） */
+export function sheetLeafPages(sheet: OutputSheet): OutputPage[] {
+  if (sheet.kind === "page") return [sheet]
+  return sheet.slots.flatMap((slot) => (slot ? sheetLeafPages(slot) : []))
+}
+
+/**
+ * 面を、配置を計算する木（`layoutNestedSheet`）に写す。
+ *
+ * @param pageSize ページの回す前の寸法。分からない（読めない・画像が無い）ページは
+ *   null を返し、そのスロットは空きスロットとして格子を選ぶ
+ */
+export function toLayoutSheet(
+  sheet: NUpSheet,
+  pageSize: (page: OutputPage) => NUpSize | null
+): LayoutSheet<OutputPage> {
+  return {
+    kind: "sheet",
+    nUp: sheet.nUp,
+    slots: sheet.slots.map((slot) => {
+      if (!slot) return null
+      if (slot.kind === "sheet") return toLayoutSheet(slot, pageSize)
+      const size = pageSize(slot)
+      // 寸法は名前で1つずつ写す（展開しない）。画像要素の width・height はプロトタイプの
+      // ゲッターなので、展開すると写らずに undefined になり、配置が NaN になる
+      return size
+        ? {
+            kind: "page",
+            leaf: slot,
+            width: size.width,
+            height: size.height,
+            rotation: slot.rotation,
+          }
+        : null
+    }),
+  }
 }

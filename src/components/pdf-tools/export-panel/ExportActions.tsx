@@ -69,29 +69,31 @@ export default function ExportActions({
     },
   ]
 
-  // 幅は出力パネルの上段（ExportPanel の @container/export-row）で切り替える。狭いと
-  // アイコンだけにする。ボタンの幅は揃え、並びの左端がボタンごとにずれないようにする
+  // 横幅いっぱいを3等分した1行に並べる。3等分の1つにアイコンと文字（いちばん長い
+  // 「PDF 分割」）が収まらない幅（行全体が 18rem 未満）では、アイコンだけにする
   return (
-    <div className="flex flex-wrap justify-end gap-2">
-      {exportButtons.map((exportButton) => (
-        <WithTooltip
-          key={exportButton.label}
-          content={`${exportButton.accessibleName}: ${exportButton.description}`}
-        >
-          <Button
-            variant={exportButton.variant}
-            onClick={exportButton.onClick}
-            disabled={isProcessing || pageCount === 0}
-            aria-label={exportButton.accessibleName}
-            className="w-9 px-0 @min-[36rem]/export-row:w-28"
+    <div className="@container/export-actions w-full">
+      <div className="grid grid-cols-3 gap-2">
+        {exportButtons.map((exportButton) => (
+          <WithTooltip
+            key={exportButton.label}
+            content={`${exportButton.accessibleName}: ${exportButton.description}`}
           >
-            {exportButton.isExporting ? <Spinner /> : <exportButton.Icon />}
-            <span className="hidden @min-[36rem]/export-row:inline">
-              {exportButton.label}
-            </span>
-          </Button>
-        </WithTooltip>
-      ))}
+            <Button
+              variant={exportButton.variant}
+              onClick={exportButton.onClick}
+              disabled={isProcessing || pageCount === 0}
+              aria-label={exportButton.accessibleName}
+              className="w-full min-w-0 px-0"
+            >
+              {exportButton.isExporting ? <Spinner /> : <exportButton.Icon />}
+              <span className="hidden @min-[18rem]/export-actions:inline">
+                {exportButton.label}
+              </span>
+            </Button>
+          </WithTooltip>
+        ))}
+      </div>
     </div>
   )
 }

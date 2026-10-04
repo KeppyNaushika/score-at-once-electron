@@ -11,6 +11,7 @@ import {
 import type { ImportedFile, OutputSheet } from "@/types/pdfTools.types"
 
 import { composeSheetImage } from "../composeSheetImage"
+import { sheetLeafPages } from "../outputSheets"
 import { buildPdfPageInputs } from "../pdfPageInputs"
 
 /** 実行中の書き出し種別（ボタンごとのスピナー表示に使う） */
@@ -140,12 +141,12 @@ export function useOutputExport({
               rotation: outputSheet.rotation,
             }
           }
-          // N-up の面: ページ画像をスロットの中で回してA4キャンバスに合成する
+          // N-up の面（入れ子も）: ページ画像をスロットの中で回してA4キャンバスに合成する
           // （回転は合成に織り込み済みなので、面としては回さない）
           const composed = await composeSheetImage(outputSheet)
           // 合成に失敗（全ページ欠損・描画不可）した場合は先頭ページの画像へフォールバック
           const fallbackThumbnail =
-            outputSheet.slots.find((slot) => slot !== null)?.thumbnail ?? ""
+            sheetLeafPages(outputSheet)[0]?.thumbnail ?? ""
           return {
             buffer: dataUrlToBuffer(composed ?? fallbackThumbnail),
             name,

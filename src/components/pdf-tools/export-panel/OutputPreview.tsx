@@ -26,12 +26,13 @@ import {
 
 import { pageIdToFocusAfterRemoval } from "./focusAfterRemoval"
 import { pagePlacements } from "./pagePlacements"
+import { sheetFramesByPageId } from "./sheetFrames"
 import SortablePageItem from "./SortablePageItem"
 
 interface OutputPreviewProps {
   /** 出力に載るページ（並び順のとおり）。1ページ1マスで並べる */
   pages: OutputPage[]
-  /** pages を N-up の面に組んだもの。同じ面のページを枠でくくるのに使う */
+  /** pages を N-up の面（全体 N-up なら入れ子）に組んだもの。同じ面のページを枠でくくるのに使う */
   sheets: OutputSheet[]
   /** ドラッグで動かした。移動先のページの直前（後ろへ動かしたなら直後）へ */
   onPageMoved: (
@@ -49,7 +50,8 @@ interface OutputPreviewProps {
 /**
  * 出力プレビュー。
  *
- * 面ではなくページを1マスずつ並べ、同じ面に入るページを同じ色の枠でくくる。面は
+ * 面ではなくページを1マスずつ並べ、同じ面に入るページを同じ色の枠でくくる（全体
+ * N-up では、全体の面を外側の色の枠、その中のファイルごとの面を内側の破線の枠で）。面は
  * 並び順の後で組むので、ドラッグでページを動かすと組み合わせが変わる。それが見て
  * 分かるように、面の単位ではなくページの単位で並べ替え・回転・除外をさせる。
  */
@@ -92,6 +94,11 @@ export default function OutputPreview({
   }
 
   const placementByPageId = pagePlacements(sheets, thumbnailSizes)
+  const sheetFramesOfPage = sheetFramesByPageId(
+    pages.map((page) => page.id),
+    placementByPageId,
+    columns
+  )
 
   // カードの要素（ページの id → フォーカスを受ける要素）。除外したあとに隣のカードへ
   // フォーカスを移すのに使う
@@ -153,19 +160,6 @@ export default function OutputPreview({
     )
   }
 
-  /** 同じ行で隣のマスが同じ面か（枠をつなげて1つにくくる） */
-  const isSameSheetAs = (pageIndex: number, neighborIndex: number) => {
-    const isSameRow =
-      Math.floor(pageIndex / columns) === Math.floor(neighborIndex / columns)
-    const neighbor = pages[neighborIndex]
-    if (!isSameRow || !neighbor) return false
-    const sheetId = placementByPageId.get(pages[pageIndex].id)?.sheetId
-    return (
-      sheetId !== undefined &&
-      placementByPageId.get(neighbor.id)?.sheetId === sheetId
-    )
-  }
-
   return (
     <DndContext
       sensors={sensors}
@@ -182,13 +176,12 @@ export default function OutputPreview({
             gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
           }}
         >
-          {pages.map((page, pageIndex) => (
+          {pages.map((page) => (
             <SortablePageItem
               key={page.id}
               page={page}
               placement={placementByPageId.get(page.id)}
-              joinsPrevious={isSameSheetAs(pageIndex, pageIndex - 1)}
-              joinsNext={isSameSheetAs(pageIndex, pageIndex + 1)}
+              sheetFrames={sheetFramesOfPage.get(page.id) ?? []}
               disabled={disabled}
               cardRef={(element) => {
                 cardElements.current.set(page.id, element)

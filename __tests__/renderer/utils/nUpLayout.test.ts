@@ -67,6 +67,24 @@ describe("格子と用紙の向き", () => {
     expect(layout.paper.height).toBeGreaterThan(layout.paper.width)
   })
 
+  it("面積の差が 0.5% 未満なら同点とみなし、寸法の丸めで向きが入れ替わらない", () => {
+    // 縦長の A4 と横長の A4 の 2in1 は、用紙縦の 2×1 と用紙横の 1×2 がちょうど同点。
+    // 用紙やページの寸法を画素に丸めても、丸めないときと同じ候補（1×2 用紙横）を取る
+    const contents = [PORTRAIT_PAGE, LANDSCAPE_PAGE]
+    const roundedPaper = { width: 1191, height: 1684 }
+    const roundedContents = [
+      { width: 1190, height: 1684 },
+      { width: 1683, height: 1190 },
+    ]
+    const gridLabel = (grid: ReturnType<typeof chooseSheetGrid>) =>
+      `${grid.rows}x${grid.columns} ${grid.paper.width > grid.paper.height ? "横" : "縦"}`
+    expect(gridLabel(chooseSheetGrid(2, contents, A4))).toBe("1x2 横")
+    expect(gridLabel(chooseSheetGrid(2, contents, roundedPaper))).toBe("1x2 横")
+    expect(gridLabel(chooseSheetGrid(2, roundedContents, roundedPaper))).toBe(
+      "1x2 横"
+    )
+  })
+
   it("正方形のページで大きさが同じなら、2枚は用紙横で左右に並べる", () => {
     expect(describeGrid(2, { width: 100, height: 100 })).toBe("1x2 横")
   })

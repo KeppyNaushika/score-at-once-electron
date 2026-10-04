@@ -1,14 +1,13 @@
 import type {
   ImportedFile,
-  OutputPage,
   OutputSheet,
   PdfPageInput,
-  PdfSourcePageInput,
 } from "@/types/pdfTools.types"
 
 /**
  * 出力の各ページを、main プロセスへ渡すページ入力に変換する。
- * 面はスロットの並び（空きスロットの null も）をそのまま渡す。
+ * 面はスロットの並び（空きスロットの null も）をそのまま渡す。全体の面に入った
+ * ファイルごとの面も、面のまま入れ子にして渡す（配置は main が葉ごとに畳む）。
  */
 export function buildPdfPageInputs(
   outputSheets: OutputSheet[],
@@ -17,21 +16,20 @@ export function buildPdfPageInputs(
   const filePathById = new Map(
     importedFiles.map((importedFile) => [importedFile.id, importedFile.path])
   )
-  const toSourcePageInput = (page: OutputPage): PdfSourcePageInput => ({
-    kind: "page",
-    filePath: filePathById.get(page.sourceFileId) ?? "",
-    pageNumber: page.sourcePageNumber,
-    rotation: page.rotation,
-  })
-  return outputSheets.map((outputSheet) =>
+  const toPageInput = (outputSheet: OutputSheet): PdfPageInput =>
     outputSheet.kind === "page"
-      ? toSourcePageInput(outputSheet)
+      ? {
+          kind: "page",
+          filePath: filePathById.get(outputSheet.sourceFileId) ?? "",
+          pageNumber: outputSheet.sourcePageNumber,
+          rotation: outputSheet.rotation,
+        }
       : {
           kind: "sheet",
           nUp: outputSheet.nUp,
           slots: outputSheet.slots.map((slot) =>
-            slot ? toSourcePageInput(slot) : null
+            slot ? toPageInput(slot) : null
           ),
         }
-  )
+  return outputSheets.map(toPageInput)
 }

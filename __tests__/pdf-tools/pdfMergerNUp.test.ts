@@ -4,6 +4,9 @@
  * 面全体は回さず、スロットの中で各ページを回して置く。埋め込んだページは元PDFの
  * /Rotate を含まない向きで描かれるので、/Rotate を寸法にも回転にも足す必要がある
  * （足さないと、/Rotate 付きのページが横倒しの縦横で収められる）。
+ *
+ * 全体 N-up の入れ子の面も、葉（元ページ）ごとに出力用紙へ直接描く（内側の面を一度
+ * ページにしてから縮めない）。
  */
 import * as fs from "fs"
 import * as os from "os"
@@ -21,6 +24,7 @@ import { mergePdfs } from "@/electron-src/lib/pdf-tools/pdfMerger"
 import type {
   NUpConfig,
   PdfNUpSheetInput,
+  PdfSourcePageInput,
   RotationDegree,
 } from "@/types/pdfTools.types"
 
@@ -97,6 +101,56 @@ async function readFirstPage(outputPath: string) {
   }
 }
 
+/** 変換行列 [a b c d e f]（点 (x, y) → (a·x + c·y + e, b·x + d·y + f)） */
+type Matrix = [number, number, number, number, number, number]
+
+/**
+ * 描画命令から、描いたページ（Do）ごとに、元ページ（A4 縦の MediaBox）が出力用紙の
+ * どこを覆うかと、回転の向き（変換行列の回転・拡大の部分の符号）を取り出す。
+ * drawPage は q・平行移動・回転・拡大の cm・Do・Q を出すので、q から Do までの cm を
+ * 合成する（後に書いた cm から先に点へ掛かる）。
+ */
+function drawnPages(operators: string) {
+  const blocks = operators.split(/\bq\b/).filter((block) => / Do/.test(block))
+  return blocks.map((block) => {
+    const matrices = [...block.matchAll(/((?:\S+ ){6})cm/g)].map(
+      (match): Matrix => {
+        const [a, b, c, d, e, f] = match[1].trim().split(" ").map(Number)
+        return [a, b, c, d, e, f]
+      }
+    )
+    const transform = (point: { x: number; y: number }) =>
+      matrices.reduceRight(
+        (current, [a, b, c, d, e, f]) => ({
+          x: a * current.x + c * current.y + e,
+          y: b * current.x + d * current.y + f,
+        }),
+        point
+      )
+    const corners = [
+      { x: 0, y: 0 },
+      { x: A4.width, y: 0 },
+      { x: 0, y: A4.height },
+      { x: A4.width, y: A4.height },
+    ].map(transform)
+    const origin = transform({ x: 0, y: 0 })
+    const unitX = transform({ x: 1, y: 0 })
+    const xs = corners.map((corner) => corner.x)
+    const ys = corners.map((corner) => corner.y)
+    return {
+      left: Math.min(...xs),
+      bottom: Math.min(...ys),
+      right: Math.max(...xs),
+      top: Math.max(...ys),
+      // 元ページの x 軸が出力でどちらを向くか（時計回り90°なら下、270°なら上）
+      xAxis: {
+        x: Math.sign(Math.round((unitX.x - origin.x) * 1e6)),
+        y: Math.sign(Math.round((unitX.y - origin.y) * 1e6)),
+      },
+    }
+  })
+}
+
 describe("N-up の面の書き出し", () => {
   it("縦長のページ2枚は、用紙横で左右に並べる（面全体は回さない）", async () => {
     const filePath = await writeSourcePdf("portrait.pdf", [0, 0])
@@ -170,5 +224,106 @@ describe("N-up の面の書き出し", () => {
     expect(output.operators.match(/ Do/g)).toHaveLength(1)
     // 左のスロット（x=0）に置く
     expect(output.operators).toMatch(/1 0 0 1 0 0 cm/)
+  })
+})
+
+describe("全体 N-up の入れ子の面の書き出し", () => {
+  /** A4 の短辺÷長辺 */
+  const A4_RATIO = A4.width / A4.height
+
+  it("2ファイルをまたぎ、ファイルごとの面と単独ページを1面に描く（葉ごとに用紙へ直接描く）", async () => {
+    // A: /Rotate 90 のページ2枚（横長として扱う）、B: 縦長のページを 270° 回して横長に
+    const filePathA = await writeSourcePdf("a.pdf", [90, 90])
+    const filePathB = await writeSourcePdf("b.pdf", [0])
+    const pageOf = (
+      filePath: string,
+      pageNumber: number,
+      rotation: RotationDegree
+    ): PdfSourcePageInput => ({ kind: "page", filePath, pageNumber, rotation })
+    const outputPath = path.join(workDir, "out.pdf")
+    await mergePdfs(
+      [
+        {
+          kind: "sheet",
+          nUp: TWO_UP,
+          slots: [
+            {
+              kind: "sheet",
+              nUp: TWO_UP,
+              slots: [pageOf(filePathA, 1, 0), pageOf(filePathA, 2, 0)],
+            },
+            pageOf(filePathB, 1, 270),
+          ],
+        },
+      ],
+      outputPath
+    )
+
+    const output = await readFirstPage(outputPath)
+    // A の面（横長2枚を上下 = 縦長）と横長の B1 → 用紙横で左右
+    expect(output.pageCount).toBe(1)
+    expect(output.size.width).toBeCloseTo(A4.height)
+    expect(output.size.height).toBeCloseTo(A4.width)
+    expect(output.rotation).toBe(0)
+
+    const [a1, a2, b1] = drawnPages(output.operators)
+    expect(drawnPages(output.operators)).toHaveLength(3)
+
+    // A の面は左のスロット（幅 A4.height / 2）の高さに合わせて A4_RATIO 倍に縮む。
+    // 面の中の横長のページは、面のスロット（A4.width × A4.height / 2）の幅に合わせて縮む
+    const slotWidth = A4.height / 2
+    const fileSheetLeft = (slotWidth - A4.width * A4_RATIO) / 2
+    const pageHeightInFileSheet = A4.width * A4_RATIO
+    const pageTopInFileSheet = (A4.height / 2 - pageHeightInFileSheet) / 2
+    const a1Top = A4.width - pageTopInFileSheet * A4_RATIO
+    const a2Top = A4.width - (A4.height / 2 + pageTopInFileSheet) * A4_RATIO
+    for (const [drawn, top] of [
+      [a1, a1Top],
+      [a2, a2Top],
+    ] as const) {
+      expect(drawn.left).toBeCloseTo(fileSheetLeft, 3)
+      expect(drawn.right).toBeCloseTo(fileSheetLeft + A4.width * A4_RATIO, 3)
+      expect(drawn.top).toBeCloseTo(top, 3)
+      expect(drawn.top - drawn.bottom).toBeCloseTo(
+        pageHeightInFileSheet * A4_RATIO,
+        3
+      )
+      // /Rotate 90 の分だけ時計回りに回して描く（元ページの x 軸が下を向く）
+      expect(drawn.xAxis).toEqual({ x: 0, y: -1 })
+    }
+
+    // B1 は右のスロットの幅に合わせて半分に縮み、上下中央
+    expect(b1.left).toBeCloseTo(slotWidth, 3)
+    expect(b1.right).toBeCloseTo(A4.height, 3)
+    expect(b1.top - b1.bottom).toBeCloseTo(A4.width / 2, 3)
+    expect(b1.bottom).toBeCloseTo(A4.width / 4, 3)
+    // 指定の 270°（反時計回り90°）で描く（元ページの x 軸が上を向く）
+    expect(b1.xAxis).toEqual({ x: 0, y: 1 })
+  })
+
+  it("全体の端数の空きスロットは描かない", async () => {
+    const filePathA = await writeSourcePdf("a.pdf", [0, 0])
+    const outputPath = path.join(workDir, "out.pdf")
+    await mergePdfs(
+      [
+        {
+          kind: "sheet",
+          nUp: { pagesPerSheet: 4, slotOrder: "from-top-left-rightward" },
+          slots: [
+            sheetOf(filePathA, [
+              { pageNumber: 1, rotation: 0 },
+              { pageNumber: 2, rotation: 0 },
+            ]),
+            null,
+            null,
+            null,
+          ],
+        },
+      ],
+      outputPath
+    )
+    const output = await readFirstPage(outputPath)
+    expect(output.pageCount).toBe(1)
+    expect(drawnPages(output.operators)).toHaveLength(2)
   })
 })

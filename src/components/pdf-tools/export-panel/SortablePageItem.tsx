@@ -12,25 +12,14 @@ import type { OutputPage } from "@/types/pdfTools.types"
 import PageCardActions from "./PageCardActions"
 import { describePlacement, type PagePlacement } from "./pagePlacements"
 import PlacementBadge from "./PlacementBadge"
-
-/**
- * 面をくくる枠の色。隣り合う面を見分けられれば足りるので、出力のページ番号で巡回させる
- * （Tailwind がクラス名を拾えるよう、組み立てずに書き並べる）
- */
-const SHEET_FRAME_COLORS = [
-  "border-sky-500",
-  "border-amber-500",
-  "border-emerald-500",
-  "border-fuchsia-500",
-]
+import SheetFrame from "./SheetFrame"
+import type { SheetFrameSpec } from "./sheetFrames"
 
 interface SortablePageItemProps {
   page: OutputPage
   placement: PagePlacement | undefined
-  /** 同じ行の左隣が同じ面か（枠の左辺を開けてつなぐ） */
-  joinsPrevious: boolean
-  /** 同じ行の右隣が同じ面か（枠の右辺を開けてつなぐ） */
-  joinsNext: boolean
+  /** ページを入れる面ごとの枠（外側の面から） */
+  sheetFrames: SheetFrameSpec[]
   disabled: boolean
   /** フォーカスを受けるカードの要素（キーボードで除外したあと、隣へフォーカスを移すのに使う） */
   cardRef: (element: HTMLDivElement) => () => void
@@ -51,8 +40,7 @@ interface SortablePageItemProps {
 export default function SortablePageItem({
   page,
   placement,
-  joinsPrevious,
-  joinsNext,
+  sheetFrames,
   disabled,
   cardRef,
   onDelete,
@@ -86,7 +74,6 @@ export default function SortablePageItem({
     transform: `rotate(${page.rotation}deg)${isSideways ? " scale(0.75)" : ""}`,
   }
 
-  const isInSheet = placement?.sheetId !== undefined
   const placementDescription =
     placement === undefined ? "" : `、${describePlacement(placement)}`
 
@@ -115,21 +102,15 @@ export default function SortablePageItem({
       className={cn("@container relative", isDragging && "z-50")}
       onKeyDown={handleKeyDown}
     >
-      {/* 同じ面のページをくくる枠（隣のマスと辺を開けてつなぐ。gap の半分だけ外へ出す。
-        外へ出たぶんは、プレビューのスクロール領域の内側の余白に収める（ExportPanel） */}
-      {isInSheet && placement && !isDragging && (
-        <div
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute -inset-1 border-2",
-            SHEET_FRAME_COLORS[
-              placement.outputPageNumber % SHEET_FRAME_COLORS.length
-            ],
-            joinsPrevious ? "border-l-0" : "rounded-l-xl",
-            joinsNext ? "border-r-0" : "rounded-r-xl"
-          )}
-        />
-      )}
+      {placement &&
+        !isDragging &&
+        sheetFrames.map((sheetFrame) => (
+          <SheetFrame
+            key={sheetFrame.key}
+            frame={sheetFrame}
+            outputPageNumber={placement.outputPageNumber}
+          />
+        ))}
 
       <div
         ref={cardRef}
