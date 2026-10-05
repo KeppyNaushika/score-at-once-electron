@@ -16,6 +16,8 @@ export function createScoringApi() {
     getCropRegionAssignments: bind("get-crop-region-assignments"),
     assignCropRegion: bind("assign-crop-region"),
     unassignCropRegion: bind("unassign-crop-region"),
+    getExamStudentAssignments: bind("get-exam-student-assignments"),
+    setExamStudentAssignments: bind("set-exam-student-assignments"),
     batchUpdateQuestionScores: bind("batch-update-question-scores"),
     measureAnswerWhiteness: bind("measure-answer-whiteness"),
   }

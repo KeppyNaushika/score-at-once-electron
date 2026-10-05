@@ -35,6 +35,8 @@ model User {
   gradeFrozenScores      GradeFrozenScore[]
   cropRegionAssignments  CropRegionAssignment[]
   assignedCropRegions    CropRegionAssignment[]   @relation("AssignedByUser")
+  examStudentAssignments ExamStudentAssignment[]
+  assignedExamStudents   ExamStudentAssignment[]  @relation("StudentAssignedByUser")
   scoringStatusColors    UserScoringStatusColor[]
   clickScoringActions    UserClickScoringAction[]
   sidePanelSections      UserSidePanelSection[]
@@ -140,21 +142,22 @@ model Exam {
 /// （Student 直結にすると、試験から外した生徒の採点データが孤児として残り、
 /// 試験側には現れないのに成績算出でだけ算入されてしまうため）。
 model ExamStudent {
-  id                   String                @id @default(uuid())
+  id                   String                  @id @default(uuid())
   examId               String
   studentId            String
   status               String
   customOrder          Int?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  exam                 Exam                  @relation(fields: [examId], references: [id], onDelete: Cascade)
-  student              Student               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  exam                 Exam                    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student              Student                 @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentAnswerImages  StudentAnswerImage[]
   questionScores       QuestionScore[]
   scoreDecisions       ScoreDecision[]
   compoundAnswerScores CompoundAnswerScore[]
   returnSnapshots      ReturnSnapshot[]
   aiGradingAttempts    AiGradingAttempt[]
+  assignments          ExamStudentAssignment[]
 
   @@unique([examId, studentId])
   @@index([examId])
@@ -255,6 +258,27 @@ model CropRegionAssignment {
   assigner     User?      @relation("AssignedByUser", fields: [assignedBy], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@unique([cropRegionId, userId])
+  @@index([userId])
+}
+
+/// 受験生徒ごとの採点担当（docs/scoring-scope-and-permissions-design.md §3-1）。
+/// 設問側の CropRegionAssignment と対等な軸で、採点画面で見える答案は「自分の設問 × 自分の生徒」。
+/// 担当0人の生徒は全員担当とみなす（学級に属さない生徒が絞り込みで消えないため）。
+/// 学級は担当の鍵にしない。学級から割り当てるときも、その時点の生徒の行へ焼き込む。
+/// 同定は @@unique([examStudentId, userId])、id は uuidv4（CropRegionAssignment と同じ）。
+model ExamStudentAssignment {
+  id            String      @id @default(uuid())
+  examStudentId String
+  userId        String
+  /// 割り当てたOWNER（監査用）。ユーザー削除時はnullにして割当自体は残す
+  assignedBy    String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @default(now()) @updatedAt
+  examStudent   ExamStudent @relation(fields: [examStudentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  assigner      User?       @relation("StudentAssignedByUser", fields: [assignedBy], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@unique([examStudentId, userId])
   @@index([userId])
 }
 
@@ -639,9 +663,9 @@ model AiGradingAttempt {
 /// 追記専用・不変。状態を変える全操作とエクスポートを記録する（閲覧は対象外）。
 /// userIdはFKを張らず素の文字列とし、ユーザー削除後もログが残るようにする。
 model AuditLog {
-  id          String   @id @default(uuid())
-  createdAt   DateTime @default(now()) // 初回操作日時（ISO text）
-  updatedAt   DateTime @updatedAt // 最終更新日時。連続操作の集約時に上書きされる（LWW同期のタイムスタンプ列）
+  id          String           @id @default(uuid())
+  createdAt   DateTime         @default(now()) // 初回操作日時（ISO text）
+  updatedAt   DateTime         @updatedAt // 最終更新日時。連続操作の集約時に上書きされる（LWW同期のタイムスタンプ列）
   userId      String? // 操作者。システム操作はnull
   action      String // "exam.update" / "grade.boundary.update" 等の名前空間付きアクション
   category    String // "exam" | "grade" | "answer_sheet" | "student" | "user" | "system"

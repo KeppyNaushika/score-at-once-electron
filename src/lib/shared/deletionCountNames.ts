@@ -34,4 +34,5 @@ export const DELETION_COUNT_NAME = {
   answerSheetDefinition: "解答用紙",
   examMembership: "試験への参加",
   cropRegionAssignment: "設問の担当",
+  examStudentAssignment: "生徒の担当",
 } as const

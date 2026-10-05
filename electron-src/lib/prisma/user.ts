@@ -199,6 +199,7 @@ const countUserDeletionCounts = async (
     answerSheetDefinitionCount,
     examMembershipCount,
     cropRegionAssignmentCount,
+    examStudentAssignmentCount,
   ] = await Promise.all([
     prisma.questionScore.count({
       where: { userId, ...SCORED_QUESTION_SCORE_FILTER },
@@ -211,6 +212,7 @@ const countUserDeletionCounts = async (
     prisma.asbDefinition.count({ where: { userId } }),
     prisma.userExam.count({ where: { userId } }),
     prisma.cropRegionAssignment.count({ where: { userId } }),
+    prisma.examStudentAssignment.count({ where: { userId } }),
   ])
 
   return [
@@ -241,6 +243,10 @@ const countUserDeletionCounts = async (
     {
       countedName: DELETION_COUNT_NAME.cropRegionAssignment,
       shownCount: cropRegionAssignmentCount,
+    },
+    {
+      countedName: DELETION_COUNT_NAME.examStudentAssignment,
+      shownCount: examStudentAssignmentCount,
     },
   ].filter((deletionCount) => deletionCount.shownCount > 0)
 }

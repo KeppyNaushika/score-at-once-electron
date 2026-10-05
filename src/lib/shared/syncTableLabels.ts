@@ -34,6 +34,7 @@ const SYNC_TABLE_LABELS: Record<string, string> = {
   StudentAnswerImage: "答案画像",
   CropRegion: "採点領域",
   CropRegionAssignment: "採点領域の担当割り当て",
+  ExamStudentAssignment: "受験生徒の担当割り当て",
   CropRegionOmrConfig: "採点領域のOMR設定",
   CropRegionOmrChoiceOption: "OMRの選択肢",
   CompoundAnswer: "複合解答",
