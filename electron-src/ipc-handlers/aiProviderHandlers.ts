@@ -17,12 +17,14 @@ import {
   findAiGradingTermsLink,
 } from "../../src/lib/shared/aiGrading/consentText"
 import { electronFetch } from "../lib/aiGrading/electronFetch"
+import { fetchPricingPage } from "../lib/aiGrading/pricingPageFetch"
 import {
   fetchProviderModels,
   testProviderConnection,
 } from "../lib/aiGrading/providerConnectionTest"
 import {
   type AiGradingSettings,
+  type AiModelPrice,
   getProviderCredentialStore,
 } from "../lib/aiGrading/providerCredentialStore"
 import { createGradingProvider } from "../lib/aiGrading/providers/createGradingProvider"
@@ -107,7 +109,7 @@ export const aiProviderHandlers = {
     getProviderCredentialStore().clearApiKey(assertProviderId(provider))
   },
 
-  /** 機密でない既定値（モデル・effort・同時実行数・予算の警告額） */
+  /** 機密でない既定値（モデル・effort・同時実行数・送信1回の見積もりの警告額） */
   "aiProvider:getSettings": async () =>
     getProviderCredentialStore().getSettings(),
 
@@ -139,6 +141,44 @@ export const aiProviderHandlers = {
       currentUserId: getCurrentActorUserId(),
       consentVersion: AI_GRADING_CONSENT_VERSION,
     }),
+
+  /** 利用者が入れた単価（モデルごと・事業者ごとのバッチの割合）。入れていなければ空 */
+  "aiProvider:getPricing": async () =>
+    getProviderCredentialStore().getPricing(),
+
+  /** モデルの単価を入れる（同じ事業者・モデルの行は置き換える。1行でも正しくなければ何も変えない） */
+  "aiProvider:setModelPrices": async (modelPrices: AiModelPrice[]) =>
+    getProviderCredentialStore().setModelPrices(modelPrices),
+
+  /**
+   * 設定にある Anthropic の料金のページを取ってきて、本文をそのまま返す（読み解くのは renderer）。
+   * URL は renderer から受け取らず、保存した設定から引く（https だけ）
+   */
+  "aiProvider:fetchPricingPage": async () =>
+    fetchPricingPage(
+      getProviderCredentialStore().getSettings().anthropicPricingSourceUrl,
+      { fetch: electronFetch }
+    ),
+
+  /** モデル1つの単価を消す */
+  "aiProvider:removeModelPrice": async (
+    provider: GradingProviderId,
+    model: string
+  ) =>
+    getProviderCredentialStore().removeModelPrice(
+      assertProviderId(provider),
+      model
+    ),
+
+  /** 事業者のバッチの単価が通常の何 % か（null で未設定） */
+  "aiProvider:setBatchPricePercent": async (
+    provider: GradingProviderId,
+    percent: number | null
+  ) =>
+    getProviderCredentialStore().setBatchPricePercent(
+      assertProviderId(provider),
+      percent
+    ),
 
   /**
    * 事業者の規約のページを既定のブラウザで開く。

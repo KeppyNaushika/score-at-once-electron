@@ -40,7 +40,7 @@ function resolveProvider(providerId: GradingProviderId) {
   const apiKey = store.readApiKeyForMainProcessOnly(providerId)
   if (apiKey === null) {
     throw new Error(
-      "この事業者には同意していないか、API キーが設定されていません（設定の「実験的機能：AI採点」）"
+      "この事業者には同意していないか、API キーが設定されていません（「AI採点」の画面の「設定」）"
     )
   }
   return createGradingProvider({

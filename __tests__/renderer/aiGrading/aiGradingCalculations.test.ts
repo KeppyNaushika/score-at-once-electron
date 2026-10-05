@@ -1,5 +1,5 @@
 /**
- * AI採点モードの計算（費用の概算・設定ごとの一致率・プロンプトの差分・注釈の用紙の向き）。
+ * AI採点モードの計算（費用の概算・実行の履歴と一致率・プロンプトの差分・注釈の用紙の向き）。
  */
 
 import { describe, expect, it } from "vitest"
@@ -8,12 +8,17 @@ import {
   inferPaperDimensionsFromInkGrid,
   placeAdoptionAnnotation,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/adoptionAnnotation"
+import { resolveDisplayedAttempt } from "@/components/exams/07-score-at-once/AiGrading/utils/attemptSelection"
 import {
   estimateImageTokens,
   estimateRunCost,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/costEstimate"
 import { diffPromptLines } from "@/components/exams/07-score-at-once/AiGrading/utils/promptDiff"
-import { aggregateSettingsAgreement } from "@/components/exams/07-score-at-once/AiGrading/utils/settingsComparison"
+import {
+  resolveChosenRunId,
+  summarizeRunHistory,
+} from "@/components/exams/07-score-at-once/AiGrading/utils/runHistory"
+import type { AiPricing } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 
 import {
   CROP_REGION_ID,
@@ -25,8 +30,24 @@ import {
 } from "./helpers/aiGradingRowFixtures"
 
 describe("費用の概算", () => {
+  // 単価は作り物（アプリは単価を持たず、利用者が入れた値で計算する）
+  const pricing: AiPricing = {
+    modelPrices: [
+      {
+        provider: "anthropic",
+        model: "test-model",
+        inputPerMillionUsd: 3,
+        outputPerMillionUsd: 7,
+        cacheReadPerMillionUsd: 0.3,
+        cacheWrite5mPerMillionUsd: 3.5,
+        cacheWrite1hPerMillionUsd: 6,
+      },
+    ],
+    batchPricePercents: { anthropic: 40, openai: null },
+  }
   const baseInput = {
-    model: "claude-opus-5-5",
+    provider: "anthropic" as const,
+    model: "test-model",
     effort: "medium" as const,
     mode: "realtime" as const,
     // 750画素 × 1000画素 → 1000トークン
@@ -39,46 +60,57 @@ describe("費用の概算", () => {
     expect(estimateImageTokens({ width: 750, height: 1000 })).toBe(1000)
   })
 
-  it("Opus 5.5 は 入力 $4 / 出力 $20（100万トークンあたり）", () => {
-    const estimate = estimateRunCost(baseInput)
+  it("入れた単価で金額にする（100万トークンあたり）", () => {
+    const estimate = estimateRunCost(baseInput, pricing)
     // 入力 = 文字 (500 + 1500) + 画像 1000 = 3000、出力 = 1500
     expect(estimate.inputTokens).toBe(3000)
     expect(estimate.outputTokens).toBe(1500)
-    expect(estimate.costUsd).toBeCloseTo((3000 * 4 + 1500 * 20) / 1_000_000)
+    expect(estimate.cost).toEqual({
+      isPriced: true,
+      costUsd: expect.closeTo((3000 * 3 + 1500 * 7) / 1_000_000),
+    })
   })
 
-  it("バッチは半額、単価の分からないモデルは金額を出さない", () => {
-    const realtime = estimateRunCost(baseInput).costUsd ?? 0
+  it("バッチは入れた割合を掛け、単価の無いモデルは金額を出さない", () => {
+    const realtime = estimateRunCost(baseInput, pricing).cost
+    const batch = estimateRunCost({ ...baseInput, mode: "batch" }, pricing).cost
+    expect(realtime.isPriced && batch.isPriced).toBe(true)
+    if (realtime.isPriced && batch.isPriced) {
+      expect(batch.costUsd).toBeCloseTo(realtime.costUsd * 0.4)
+    }
     expect(
-      estimateRunCost({ ...baseInput, mode: "batch" }).costUsd
-    ).toBeCloseTo(realtime / 2)
-    expect(
-      estimateRunCost({ ...baseInput, model: "gpt-unknown" }).costUsd
-    ).toBeNull()
+      estimateRunCost({ ...baseInput, model: "unknown-model" }, pricing).cost
+    ).toEqual({ isPriced: false, missing: "model_price" })
   })
 })
 
-describe("設定ごとの一致率", () => {
-  it("モデル・effort・拡大率でまとめ、採用した試行は数えない", () => {
-    const opusRun = makeRun({
-      id: "run-opus",
+describe("実行の履歴", () => {
+  it("自分の採点の実行を新しい順に並べ、実行ごとに判定の数と一致を数える（採用した試行は数えない）", () => {
+    const olderRun = makeRun({
+      id: "run-older",
+      createdAt: new Date("2026-10-01T00:00:00.000Z"),
       attempts: [
-        makeAttempt({ examStudentId: "s1", inputTokens: 10, outputTokens: 5 }),
+        makeAttempt({ examStudentId: "s1" }),
         makeAttempt({
           examStudentId: "s2",
           status: "partial",
           partialScore: 3,
         }),
         makeAttempt({ examStudentId: "s3", adoptedAt: new Date() }),
+        makeAttempt({ examStudentId: "s4", state: "errored" }),
       ],
     })
-    const haikuRun = makeRun({
-      id: "run-haiku",
+    const newerRun = makeRun({
+      id: "run-newer",
       model: "claude-haiku-4-5",
+      createdAt: new Date("2026-10-02T00:00:00.000Z"),
       attempts: [makeAttempt({ examStudentId: "s1", status: "incorrect" })],
     })
-    const agreements = aggregateSettingsAgreement({
-      runs: [opusRun, haikuRun],
+    const reviseRun = makeRun({ id: "run-revise", purpose: "revise" })
+    const otherUsersRun = makeRun({ id: "run-other", userId: "user-2" })
+
+    const runHistory = summarizeRunHistory({
+      runs: [olderRun, newerRun, reviseRun, otherUsersRun],
       questionScores: [
         makeQuestionScore({ examStudentId: "s1" }),
         makeQuestionScore({ examStudentId: "s2" }),
@@ -88,21 +120,67 @@ describe("設定ごとの一致率", () => {
       currentUserId: CURRENT_USER_ID,
       points: 4,
     })
-    expect(agreements).toHaveLength(2)
-    expect(agreements[0]).toMatchObject({
-      model: "claude-opus-5-5",
-      comparedCount: 2,
-      exactMatchCount: 1,
-      withinOnePointCount: 2,
-      inputTokens: 10,
-      outputTokens: 5,
-    })
-    expect(agreements[1]).toMatchObject({
-      model: "claude-haiku-4-5",
+
+    expect(runHistory.map((entry) => entry.run.id)).toEqual([
+      "run-newer",
+      "run-older",
+    ])
+    expect(runHistory[0]).toMatchObject({
+      attemptCount: 1,
+      succeededCount: 1,
       comparedCount: 1,
       exactMatchCount: 0,
       withinOnePointCount: 0,
     })
+    expect(runHistory[1]).toMatchObject({
+      attemptCount: 4,
+      succeededCount: 3,
+      comparedCount: 2,
+      exactMatchCount: 1,
+      withinOnePointCount: 2,
+    })
+  })
+
+  it("選んだ実行が無くなった・自分の採点の実行でないときは最新（null）として扱う", () => {
+    const run = makeRun({ id: "run-1" })
+    const reviseRun = makeRun({ id: "run-revise", purpose: "revise" })
+    expect(resolveChosenRunId("run-1", [run], CURRENT_USER_ID)).toBe("run-1")
+    expect(resolveChosenRunId("run-gone", [run], CURRENT_USER_ID)).toBeNull()
+    expect(
+      resolveChosenRunId("run-revise", [run, reviseRun], CURRENT_USER_ID)
+    ).toBeNull()
+    expect(resolveChosenRunId(null, [run], CURRENT_USER_ID)).toBeNull()
+  })
+
+  it("表示する試行: `<` `>` の選択 → 選んだ実行の試行 → 最新の成功", () => {
+    const newerAttempt = makeAttempt({
+      examStudentId: "s1",
+      id: "attempt-newer",
+      createdAt: new Date("2026-10-02T00:00:00.000Z"),
+    })
+    const olderAttempt = makeAttempt({
+      examStudentId: "s1",
+      id: "attempt-older",
+      state: "errored",
+      createdAt: new Date("2026-10-01T00:00:00.000Z"),
+    })
+    const attempts = [
+      { attempt: newerAttempt, run: makeRun({ id: "run-newer" }) },
+      { attempt: olderAttempt, run: makeRun({ id: "run-older" }) },
+    ]
+    // 選んだ実行の試行は、失敗でもそれを出す
+    expect(
+      resolveDisplayedAttempt(attempts, undefined, "run-older")?.attempt.id
+    ).toBe("attempt-older")
+    // 答案ごとの選択が優先する
+    expect(
+      resolveDisplayedAttempt(attempts, "attempt-newer", "run-older")?.attempt
+        .id
+    ).toBe("attempt-newer")
+    // 選んだ実行にこの答案の試行が無ければ最新の成功
+    expect(
+      resolveDisplayedAttempt(attempts, undefined, "run-elsewhere")?.attempt.id
+    ).toBe("attempt-newer")
   })
 })
 

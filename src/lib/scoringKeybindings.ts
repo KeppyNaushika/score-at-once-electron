@@ -155,6 +155,14 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   // 同じ答案の試行を見比べる（< と > を押したときの割り当て文字列）
   "aiGrading.prevAttempt": "Shift+<",
   "aiGrading.nextAttempt": "Shift+>",
+  // AI の判定の絞り込み（自分の採点の絞り込みと同じ文字に Opt+Shift）
+  "aiGrading.filterUnscored": "Alt+Shift+q",
+  "aiGrading.filterCorrect": "Alt+Shift+e",
+  "aiGrading.filterPartial": "Alt+Shift+f",
+  "aiGrading.filterPending": "Alt+Shift+j",
+  "aiGrading.filterIncorrect": "Alt+Shift+o",
+  "aiGrading.filterNoAnswer": "Alt+Shift+p",
+  "aiGrading.filterDoubleMark": "Alt+Shift+u",
 
   // ============================================
   // モーダル (Modal)
@@ -285,4 +293,13 @@ export function scoringCommandIdOf(status: ScoringStatus): string {
 export function filterCommandIdOf(status: ScoringStatus): string {
   const name = STATUS_COMMAND_NAMES[status]
   return `filter.toggle${name.charAt(0).toUpperCase()}${name.slice(1)}`
+}
+
+/**
+ * AI採点モードで、AI の判定の状態のフィルタを切り替えるコマンド
+ * （例: `no_answer` → `aiGrading.filterNoAnswer`）
+ */
+export function aiFilterCommandIdOf(status: ScoringStatus): string {
+  const name = STATUS_COMMAND_NAMES[status]
+  return `aiGrading.filter${name.charAt(0).toUpperCase()}${name.slice(1)}`
 }

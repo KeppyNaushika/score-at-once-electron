@@ -25,6 +25,7 @@ import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatu
 import { parsePreference } from "@/lib/userPreferences"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { userPreferenceQuery } from "@/queries/settings"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 interface AnswerGridViewProps {
   /** 統一されたデータ引数 */
@@ -76,6 +77,10 @@ interface AnswerGridViewProps {
   proposalStatusOf?: (answer: GridAnswerItem) => ScoreStatusKey | null
   /** 採点マークの左隣に置くもの（AI採点モードの AI の判定の札） */
   renderBeforeStatusMark?: (answer: GridAnswerItem) => ReactNode
+  /** 保存した注釈に重ねて描く、まだ保存していない注釈（AI採点モードの未反映の朱書き） */
+  pendingAnnotationsOf?: (
+    answer: GridAnswerItem
+  ) => readonly DrawingAnnotation[]
   className?: string
 }
 
@@ -103,6 +108,7 @@ export default function AnswerGridView({
   renderCellDetail,
   proposalStatusOf,
   renderBeforeStatusMark,
+  pendingAnnotationsOf,
   className = "",
 }: AnswerGridViewProps) {
   const isMouseMode = scoringOperationMode === "mouse"
@@ -380,7 +386,10 @@ export default function AnswerGridView({
               selectionBorderColor={selectionBorderColor}
               scoringColors={scoringColors}
               expandMargin={expandMargin}
-              annotations={annotationsByExamStudent.get(answer.examStudentId)}
+              annotations={withPendingAnnotations(
+                annotationsByExamStudent.get(answer.examStudentId),
+                pendingAnnotationsOf?.(answer)
+              )}
               pageSize={pageSize}
               onMouseDown={onCellMouseDown}
               detail={renderCellDetail?.(answer)}
@@ -402,4 +411,15 @@ export default function AnswerGridView({
       </div>
     </div>
   )
+}
+
+/** 保存した注釈に、まだ保存していない注釈を重ねる（無ければ保存したものをそのまま渡す） */
+function withPendingAnnotations(
+  savedAnnotations: DrawingAnnotation[] | undefined,
+  pendingAnnotations: readonly DrawingAnnotation[] | undefined
+): DrawingAnnotation[] | undefined {
+  if (!pendingAnnotations || pendingAnnotations.length === 0) {
+    return savedAnnotations
+  }
+  return [...(savedAnnotations ?? []), ...pendingAnnotations]
 }

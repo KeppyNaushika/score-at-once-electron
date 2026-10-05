@@ -29,6 +29,8 @@ import {
 import {
   deleteAiGradingAttempts,
   listAiGradingRunsByCropRegion,
+  listAiGradingRunsByExam,
+  listAiGradingRunsByUser,
 } from "../lib/prisma/aiGradingRun"
 import {
   createAiPrompt,
@@ -128,6 +130,14 @@ export const aiGradingHandlers = {
       cropRegionId,
       includeOtherUsers ? null : requireActorUserId()
     ),
+
+  /** 試験の全設問の、自分の実行と試行（設問一覧の印に使う） */
+  "aiGrading:listRunsByExam": async (examId: string) =>
+    listAiGradingRunsByExam(examId, requireActorUserId()),
+
+  /** すべての試験の、自分の実行と試行（試験・設問付き。使用トークンの集計に使う） */
+  "aiGrading:listMyRuns": async () =>
+    listAiGradingRunsByUser(requireActorUserId()),
 
   /** 古い試行を消す（採用済み・結果待ち・他の教員の試行は消さない）。消した件数を返す */
   "aiGrading:deleteAttempts": async (attemptIds: string[]) =>

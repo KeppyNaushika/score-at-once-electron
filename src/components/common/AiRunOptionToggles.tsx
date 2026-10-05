@@ -24,7 +24,13 @@ const EFFORT_LABELS: Record<GradingEffort, string> = {
   high: "高",
 }
 
-const RUN_MODE_LABELS: Record<AiGradingRunMode, string> = {
+/** 実行の行の effort の文字列を見せる形にする（事業者が持たない "" などはそのまま） */
+export function effortLabelOf(effort: string): string {
+  const knownEffort = EFFORT_OPTIONS.find((option) => option === effort)
+  return knownEffort ? EFFORT_LABELS[knownEffort] : effort
+}
+
+export const RUN_MODE_LABELS: Record<AiGradingRunMode, string> = {
   realtime: "すぐに",
   batch: "バッチ",
 }
@@ -66,7 +72,7 @@ interface AiRunOptionTogglesProps {
 
 /**
  * AI 採点の実行の、少数で固定の選択肢（Effort・処理）を、横並びの切り替えボタンで
- * 1行に並べる。設定画面の既定値と、07 の実行のダイアログが使う。
+ * 1行に並べる。「AI採点」の画面の既定値と、07 の実行のダイアログが使う。
  *
  * 画像の拡大率は選ばせない（常に原寸で送る）。拡大しても画像の情報は増えず、縮小は
  * 読み取りへの影響を目で確かめてから入れる

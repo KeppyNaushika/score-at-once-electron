@@ -14,7 +14,10 @@ import type {
   GradingProviderId,
 } from "@/electron-src/lib/aiGrading/providers/types"
 import type { measureCropRegionInk } from "@/electron-src/lib/aiGrading/sendingImageInspection"
-import type { listAiGradingRunsByCropRegion } from "@/electron-src/lib/prisma/aiGradingRun"
+import type {
+  listAiGradingRunsByCropRegion,
+  listAiGradingRunsByExam,
+} from "@/electron-src/lib/prisma/aiGradingRun"
 import type {
   getAsbModelAnswerSource,
   listAiPromptsByCropRegion,
@@ -36,6 +39,11 @@ export type AiPromptRow = Serialized<
 /** 設問の実行1件（試行・プロンプト・改訂の結果・実行者付き） */
 export type AiGradingRunRow = Serialized<
   Awaited<ReturnType<typeof listAiGradingRunsByCropRegion>>
+>[number]
+
+/** 試験の全設問の実行1件（試行・プロンプト付き。設問一覧の印と、試験の費用に使う） */
+export type AiGradingRunOfExamRow = Serialized<
+  Awaited<ReturnType<typeof listAiGradingRunsByExam>>
 >[number]
 
 /** 試行（答案1件への1回の判定） */

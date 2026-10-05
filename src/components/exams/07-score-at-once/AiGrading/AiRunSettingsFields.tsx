@@ -31,7 +31,7 @@ interface AiRunSettingsFieldsProps {
 }
 
 /**
- * 事業者・モデル・手間（と送り方・拡大率）の選択。既定値は設定画面の既定値。
+ * 事業者・モデル・手間（と送り方・拡大率）の選択。既定値は「AI採点」の画面の既定値。
  * 手間はモデルが受け付けないとき、バッチは事業者が送れないときに選ばせない
  */
 export function AiRunSettingsFields({

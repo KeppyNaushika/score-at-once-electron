@@ -33,6 +33,8 @@ interface AiGradingModeProps {
   unlockedProviders: GradingProviderId[]
   /** 一覧の表示の設定（一覧表示と同じもの） */
   display: AiGridDisplaySettings
+  /** AI の判定が未反映の設問（設問一覧の印。一覧表示・個別表示と同じもの） */
+  unreflectedAiQuestionIds: ReadonlySet<string>
 }
 
 /** 採点行がまだ届いていない設問の空の配列（毎回作り直さない） */
@@ -41,7 +43,7 @@ const NO_QUESTION_SCORES: QuestionScoreRow[] = []
 /**
  * 07 の「AI採点」モード（実験的機能。docs/vlm-grading-design.md §10）。
  *
- * 左に設問（採点画面と同じナビゲーター）、右に設問ごとの作業場（中央は一覧表示と同じ一覧）。設問を変えたら
+ * 設問ごとの作業場（左にプロンプト、中央に一覧表示と同じ一覧、右端に設問・表示・採用の操作）。設問を変えたら
  * 作業場を作り直す（選んでいるプロンプト・答案・試行は設問ごとのもの）。
  */
 export function AiGradingMode({
@@ -59,9 +61,11 @@ export function AiGradingMode({
   pageSize,
   unlockedProviders,
   display,
+  unreflectedAiQuestionIds,
 }: AiGradingModeProps) {
   return (
-    <div className="flex h-full min-h-0">
+    // 外枠を採点エリアいっぱいに広げる（縮むと右パネルが一覧の幅に引きずられて動く）
+    <div className="flex h-full min-h-0 min-w-0 flex-1">
       {currentCropRegion ? (
         <AiGradingWorkspace
           key={currentCropRegion.id}
@@ -85,6 +89,7 @@ export function AiGradingMode({
               onNextQuestion={onNextQuestion}
               questionProgress={questionProgress}
               isFilteredByAssignment={isQuestionSetFiltered}
+              unreflectedAiQuestionIds={unreflectedAiQuestionIds}
             />
           }
         />

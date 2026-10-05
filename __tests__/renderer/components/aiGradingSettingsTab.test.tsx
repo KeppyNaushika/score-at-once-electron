@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * 「実験的機能：AI採点」タブ（docs/vlm-grading-design.md §9）。
+ * 「AI採点」の画面の「設定」タブ（docs/vlm-grading-design.md §9）。
  *
  * ここで固定すること:
  * - 同意するまでキーの入力欄を出さない（入口と説明だけ）
@@ -19,9 +19,12 @@ import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AiGradingSettingsTab } from "@/app/(app)/settings/components/AiGradingSettingsTab"
+import { AiGradingSettingsTab } from "@/app/(app)/ai-grading/components/AiGradingSettingsTab"
+import { AiGradingTabs } from "@/app/(app)/ai-grading/components/AiGradingTabs"
 import type {
   AiGradingSettings,
+  AiModelPrice,
+  AiPricing,
   ProviderConsent,
   ProviderModelCatalogs,
   ProviderStatus,
@@ -55,6 +58,7 @@ const DEFAULT_SETTINGS: AiGradingSettings = {
   concurrency: 4,
   budgetWarningUsd: null,
   openaiCompatibleBaseUrl: null,
+  anthropicPricingSourceUrl: "https://example.test/pricing",
 }
 
 /** main の代わりに状態を持つ偽の口。キーは保存したことだけを覚え、返さない */
@@ -63,6 +67,10 @@ function installFakeAiProviderApi(
   providersWithApiKey: GradingProviderId[] = []
 ) {
   let settings: AiGradingSettings = DEFAULT_SETTINGS
+  let pricing: AiPricing = {
+    modelPrices: [],
+    batchPricePercents: { anthropic: null, openai: null },
+  }
   const modelCatalogs: ProviderModelCatalogs = { anthropic: null, openai: null }
   const statuses: Record<GradingProviderId, ProviderStatus> = {
     anthropic: {
@@ -134,14 +142,63 @@ function installFakeAiProviderApi(
     }),
     testConnection: vi.fn(async () => ({ outcome: "ok", message: "" })),
     openTermsLink: vi.fn(async () => undefined),
+    getPricing: vi.fn(async () => pricing),
+    setModelPrices: vi.fn(async (modelPrices: AiModelPrice[]) => {
+      pricing = {
+        ...pricing,
+        modelPrices: [
+          ...pricing.modelPrices.filter(
+            (storedPrice) =>
+              !modelPrices.some(
+                (modelPrice) =>
+                  modelPrice.provider === storedPrice.provider &&
+                  modelPrice.model === storedPrice.model
+              )
+          ),
+          ...modelPrices,
+        ],
+      }
+      return pricing
+    }),
+    removeModelPrice: vi.fn(async () => pricing),
+    setBatchPricePercent: vi.fn(
+      async (provider: GradingProviderId, percent: number | null) => {
+        pricing = {
+          ...pricing,
+          batchPricePercents: {
+            ...pricing.batchPricePercents,
+            [provider]: percent,
+          },
+        }
+        return pricing
+      }
+    ),
+    fetchPricingPage: vi.fn(async () => ({
+      outcome: "ok",
+      url: DEFAULT_SETTINGS.anthropicPricingSourceUrl,
+      fetchedAt: "2026-10-05T03:00:00.000Z",
+      contentType: "text/markdown",
+      body: SYNTHETIC_PRICING_PAGE,
+    })),
   }
+  // 使用トークンの集計と、単価の行に並べる「使ったモデル」の元（実行は無い）
+  const aiGrading = { listMyRuns: vi.fn(async () => []) }
   Object.defineProperty(window, "electronAPI", {
-    value: { aiProvider },
+    value: { aiProvider, aiGrading },
     writable: true,
     configurable: true,
   })
   return aiProvider
 }
+
+/** 作り物の料金のページ（列の見出しだけ本物の形に似せる。値は作り物） */
+const SYNTHETIC_PRICING_PAGE = [
+  "| Model | Base input tokens | 5m cache writes | 1h cache writes | Cache hits and refreshes | Output tokens |",
+  "| --- | --- | --- | --- | --- | --- |",
+  "| Claude Opus 5.5 | $1 / MTok | $2 / MTok | $3 / MTok | $0.5 / MTok | $7 / MTok |",
+  "| Claude Other 1 | $1 / MTok | $2 / MTok | $3 / MTok | $0.5 / MTok | $7 / MTok |",
+  "| Something Else | $1 / MTok | $1 / MTok | $1 / MTok | $1 / MTok | $1 / MTok |",
+].join("\n")
 
 function renderTab() {
   render(<AiGradingSettingsTab />, { wrapper: createQueryWrapper() })
@@ -418,5 +475,109 @@ describe("AiGradingSettingsTab", () => {
     expect(
       within(defaultsSection).getByText(/このモデルは Effort を受け付けません/)
     ).toBeTruthy()
+  })
+})
+
+describe("AiGradingTabs（AI採点の画面）", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    Element.prototype.scrollIntoView = () => {}
+  })
+
+  it("同意するまで「料金」「使用トークン」は押せない", async () => {
+    installFakeAiProviderApi()
+    render(<AiGradingTabs initialTab="pricing" />, {
+      wrapper: createQueryWrapper(),
+    })
+    expect(await screen.findByRole("tab", { name: "料金" })).toBeDisabled()
+    expect(screen.getByRole("tab", { name: "使用トークン" })).toBeDisabled()
+    // クエリで「料金」を頼まれても、同意の入口（設定）を出す
+    expect(
+      await screen.findByRole("region", { name: "送信先: Anthropic" })
+    ).toBeTruthy()
+  })
+
+  it("料金: ページから読み込んだ値は下書きで、保存するまで単価は変わらない", async () => {
+    const user = userEvent.setup()
+    const consent: ProviderConsent = {
+      userId: CURRENT_USER_ID,
+      consentVersion: AI_GRADING_CONSENT_VERSION,
+      consentedAt: "2026-10-05T00:00:00.000Z",
+    }
+    const aiProvider = installFakeAiProviderApi({ anthropic: consent }, [
+      "anthropic",
+    ])
+    render(<AiGradingTabs initialTab="pricing" />, {
+      wrapper: createQueryWrapper(),
+    })
+
+    const anthropicPricing = await screen.findByRole("region", {
+      name: "Anthropic の単価",
+    })
+    // 既定のモデルは単価未設定として並ぶ
+    expect(within(anthropicPricing).getByText("単価未設定")).toBeTruthy()
+
+    await user.click(
+      within(anthropicPricing).getByRole("button", {
+        name: "ページから読み込む",
+      })
+    )
+    const draft = await screen.findByRole("region", {
+      name: "読み込んだ単価の下書き",
+    })
+    expect(aiProvider.setModelPrices).not.toHaveBeenCalled()
+    // 対応づけられなかった名前は挙げるだけ
+    expect(within(draft).getByText("Something Else")).toBeTruthy()
+    expect(
+      within(draft).getByTestId("ai-pricing-draft-status-claude-opus-5-5")
+    ).toHaveTextContent("新規")
+
+    // 使っている（既定の）モデルの新規だけが最初に選ばれている
+    await user.click(
+      within(draft).getByRole("button", { name: "選んだ 1 件を保存" })
+    )
+    expect(aiProvider.setModelPrices).toHaveBeenCalledWith([
+      {
+        provider: "anthropic",
+        model: "claude-opus-5-5",
+        inputPerMillionUsd: 1,
+        outputPerMillionUsd: 7,
+        cacheReadPerMillionUsd: 0.5,
+        cacheWrite5mPerMillionUsd: 2,
+        cacheWrite1hPerMillionUsd: 3,
+      },
+    ])
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("region", { name: "読み込んだ単価の下書き" })
+      ).toBeNull()
+    )
+  })
+
+  it("料金: 読み込めなかったときは理由を出し、何も保存しない", async () => {
+    const user = userEvent.setup()
+    const consent: ProviderConsent = {
+      userId: CURRENT_USER_ID,
+      consentVersion: AI_GRADING_CONSENT_VERSION,
+      consentedAt: "2026-10-05T00:00:00.000Z",
+    }
+    const aiProvider = installFakeAiProviderApi({ anthropic: consent })
+    aiProvider.fetchPricingPage.mockResolvedValueOnce({
+      outcome: "ok",
+      url: DEFAULT_SETTINGS.anthropicPricingSourceUrl,
+      fetchedAt: "2026-10-05T03:00:00.000Z",
+      contentType: "text/html",
+      body: "<html></html>",
+    })
+    render(<AiGradingTabs initialTab="pricing" />, {
+      wrapper: createQueryWrapper(),
+    })
+    await user.click(
+      await screen.findByRole("button", { name: "ページから読み込む" })
+    )
+    expect(
+      await screen.findByText("読み込めませんでした（手入力してください）")
+    ).toBeTruthy()
+    expect(aiProvider.setModelPrices).not.toHaveBeenCalled()
   })
 })

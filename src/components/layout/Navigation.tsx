@@ -9,6 +9,7 @@ import {
   FileArchive,
   FileEdit,
   FileStack,
+  FlaskConical,
   History,
   LogIn,
   LogOut,
@@ -22,6 +23,7 @@ import {
 import { usePathname } from "next/navigation"
 import { Fragment } from "react"
 
+import { ExperimentalBadge } from "@/components/common/ExperimentalBadge"
 import { GuardedLink } from "@/components/common/GuardedLink"
 import { TooltipButton } from "@/components/common/TooltipButton"
 import { Button } from "@/components/ui/button"
@@ -40,6 +42,13 @@ interface NavItem {
   href: string
   label: string
   icon: React.ComponentType<{ className?: string }>
+  /** 研究・実験のための機能。名前の横に「実験的」の印を置く（AI 採点。設計 §9-1） */
+  isExperimental?: boolean
+}
+
+/** 読み上げ・ツールチップの名前（実験的機能なら「（実験的）」を添える） */
+function navItemAccessibleName(navItem: NavItem): string {
+  return navItem.isExperimental ? `${navItem.label}（実験的）` : navItem.label
 }
 
 const navGroups: NavItem[][] = [
@@ -59,6 +68,12 @@ const navGroups: NavItem[][] = [
   [{ href: "/data-export", label: "データ書き出し", icon: FileArchive }],
   [
     { href: "/settings", label: "設定", icon: Settings },
+    {
+      href: "/ai-grading",
+      label: "AI採点",
+      icon: FlaskConical,
+      isExperimental: true,
+    },
     { href: "/audit-logs", label: "操作履歴", icon: History },
   ],
 ]
@@ -129,14 +144,14 @@ export default function Navigation({
                             }
                             size="icon"
                             className="w-full justify-center"
-                            aria-label={navItem.label}
+                            aria-label={navItemAccessibleName(navItem)}
                           >
                             <navItem.icon className="h-5 w-5" />
                           </Button>
                         </GuardedLink>
                       </TooltipTrigger>
                       <TooltipContent side="right" sideOffset={5}>
-                        {navItem.label}
+                        {navItemAccessibleName(navItem)}
                       </TooltipContent>
                     </Tooltip>
                   ) : (
@@ -150,9 +165,23 @@ export default function Navigation({
                           pathname === navItem.href ? "secondary" : "ghost"
                         }
                         className="w-full justify-start"
+                        aria-label={
+                          navItem.isExperimental
+                            ? navItemAccessibleName(navItem)
+                            : undefined
+                        }
                       >
                         <navItem.icon className="mr-3 h-5 w-5" />
                         {navItem.label}
+                        {navItem.isExperimental && (
+                          <ExperimentalBadge
+                            label="実験的"
+                            tone={
+                              pathname === navItem.href ? "default" : "muted"
+                            }
+                            className="ml-auto px-1.5 py-0 text-[10px]"
+                          />
+                        )}
                       </Button>
                     </GuardedLink>
                   )

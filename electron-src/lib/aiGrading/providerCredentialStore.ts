@@ -11,6 +11,9 @@
  *
  * 事業者から取得したモデルの一覧（`modelCatalogs`）も同じファイルに置く。機密ではなく、
  * キーも含めない（一覧は事業者が返した id・名前・日時・能力だけ）。
+ *
+ * 費用の計算に使う単価（`pricing`）も同じファイルに置く。**単価は利用者が入れた値だけで、
+ * アプリは単価を持たない**（事業者の料金は変わるし、契約でも違う）。入れていなければ空。
  */
 
 import { app, safeStorage } from "electron"
@@ -57,10 +60,18 @@ export interface AiGradingSettings {
   defaultMode: AiGradingRunMode
   /** その場の採点で同時に投げる数 */
   concurrency: number
-  /** 予算の警告額（米ドル）。null なら警告しない */
+  /**
+   * 送信1回の見積もりの警告額（米ドル）。送信前の概算がこれを超えると警告する。
+   * 月の予算ではない（月ごとの上限は持たない）。null なら警告しない
+   */
   budgetWarningUsd: number | null
   /** OpenAI 互換の接続先。null なら使わない */
   openaiCompatibleBaseUrl: string | null
+  /**
+   * 「料金」タブの「ページから読み込む」で読む、Anthropic の料金のページ（https だけ）。
+   * 読んだ値は下書きとして見せるだけで、教員が保存するまで単価は変わらない
+   */
+  anthropicPricingSourceUrl: string
 }
 
 /** 事業者から取得したモデルの一覧 */
@@ -76,12 +87,42 @@ export type ProviderModelCatalogs = Record<
   ProviderModelCatalog | null
 >
 
+/** モデル1つの単価（100万トークンあたりの米ドル）。利用者が入れた値 */
+export interface AiModelPrice {
+  /** 実行の `provider` 列と同じ値 */
+  provider: GradingProviderId
+  /** 実行の `model` 列と同じ値（事業者のモデルの id） */
+  model: string
+  inputPerMillionUsd: number
+  outputPerMillionUsd: number
+  /** キャッシュから読んだ入力 */
+  cacheReadPerMillionUsd: number
+  /**
+   * キャッシュへ書いた入力（5分の保持）。その場の送信はこの保持で書く
+   * （`providers/anthropicProvider.ts`）。書き込みに別の料金の無い事業者は 0
+   */
+  cacheWrite5mPerMillionUsd: number
+  /** キャッシュへ書いた入力（1時間の保持）。バッチはこの保持で書く。別の料金が無ければ 0 */
+  cacheWrite1hPerMillionUsd: number
+}
+
+/** 費用の計算に使う単価。どれも利用者が入れた値で、入れていなければ空 */
+export interface AiPricing {
+  modelPrices: AiModelPrice[]
+  /**
+   * 事業者ごとの、バッチで送ったときの単価が通常の何 % か（0〜100）。入力・出力・
+   * キャッシュの読み書きのすべての欄に掛ける。null なら未設定で、バッチの実行の費用は出さない
+   */
+  batchPricePercents: Record<GradingProviderId, number | null>
+}
+
 /** ファイルの中身 */
 interface AiProvidersFile {
   version: 1
   providers: Record<GradingProviderId, StoredProviderEntry>
   settings: AiGradingSettings
   modelCatalogs: ProviderModelCatalogs
+  pricing: AiPricing
 }
 
 /** 事業者ごとの状態（IPC へ出してよい形。キーそのものは含めない） */
@@ -104,6 +145,8 @@ const DEFAULT_SETTINGS: AiGradingSettings = {
   concurrency: 4,
   budgetWarningUsd: null,
   openaiCompatibleBaseUrl: null,
+  anthropicPricingSourceUrl:
+    "https://platform.claude.com/docs/ja/about-claude/pricing",
 }
 
 /** 保存・読み出しの失敗の種類 */
@@ -159,6 +202,15 @@ function createDefaultFile(): AiProvidersFile {
       defaultModels: { ...DEFAULT_SETTINGS.defaultModels },
     },
     modelCatalogs: { anthropic: null, openai: null },
+    pricing: createEmptyPricing(),
+  }
+}
+
+/** 単価を何も入れていない状態 */
+function createEmptyPricing(): AiPricing {
+  return {
+    modelPrices: [],
+    batchPricePercents: { anthropic: null, openai: null },
   }
 }
 
@@ -198,6 +250,107 @@ function isValidBaseUrl(candidate: unknown): candidate is string | null {
   try {
     const url = new URL(candidate)
     return url.protocol === "https:" || url.protocol === "http:"
+  } catch {
+    return false
+  }
+}
+
+function isValidUnitPrice(candidate: unknown): candidate is number {
+  return (
+    typeof candidate === "number" &&
+    Number.isFinite(candidate) &&
+    candidate >= 0
+  )
+}
+
+function isValidBatchPricePercent(
+  candidate: unknown
+): candidate is number | null {
+  return (
+    candidate === null ||
+    (typeof candidate === "number" &&
+      Number.isFinite(candidate) &&
+      candidate >= 0 &&
+      candidate <= 100)
+  )
+}
+
+/** 単価1行を確かめる。形が崩れていれば null（項目を名指しで組み、余計な項目を持たない） */
+function toModelPrice(candidate: unknown): AiModelPrice | null {
+  if (!isRecord(candidate)) return null
+  const {
+    provider,
+    model,
+    inputPerMillionUsd,
+    outputPerMillionUsd,
+    cacheReadPerMillionUsd,
+    cacheWrite5mPerMillionUsd,
+    cacheWrite1hPerMillionUsd,
+  } = candidate
+  if (
+    !isGradingProviderId(provider) ||
+    !isNonEmptyString(model) ||
+    !isValidUnitPrice(inputPerMillionUsd) ||
+    !isValidUnitPrice(outputPerMillionUsd) ||
+    !isValidUnitPrice(cacheReadPerMillionUsd) ||
+    !isValidUnitPrice(cacheWrite5mPerMillionUsd) ||
+    !isValidUnitPrice(cacheWrite1hPerMillionUsd)
+  ) {
+    return null
+  }
+  return {
+    provider,
+    model: model.trim(),
+    inputPerMillionUsd,
+    outputPerMillionUsd,
+    cacheReadPerMillionUsd,
+    cacheWrite5mPerMillionUsd,
+    cacheWrite1hPerMillionUsd,
+  }
+}
+
+/** 読んだ単価を確かめる。崩れた行だけを捨て、同じモデルが重なれば後の行を残す */
+function toPricing(candidate: unknown): AiPricing {
+  const pricing = createEmptyPricing()
+  if (!isRecord(candidate)) return pricing
+  const storedPrices = Array.isArray(candidate.modelPrices)
+    ? candidate.modelPrices
+    : []
+  const priceByKey = new Map<string, AiModelPrice>()
+  storedPrices.forEach((storedPrice) => {
+    const modelPrice = toModelPrice(storedPrice)
+    if (modelPrice) {
+      priceByKey.set(
+        modelPriceKey(modelPrice.provider, modelPrice.model),
+        modelPrice
+      )
+    }
+  })
+  const storedPercents = isRecord(candidate.batchPricePercents)
+    ? candidate.batchPricePercents
+    : {}
+  return {
+    modelPrices: [...priceByKey.values()],
+    batchPricePercents: {
+      anthropic: isValidBatchPricePercent(storedPercents.anthropic)
+        ? storedPercents.anthropic
+        : null,
+      openai: isValidBatchPricePercent(storedPercents.openai)
+        ? storedPercents.openai
+        : null,
+    },
+  }
+}
+
+/** 単価の行を見分けるキー（事業者とモデルの組） */
+function modelPriceKey(provider: GradingProviderId, model: string): string {
+  return JSON.stringify([provider, model])
+}
+
+function isValidHttpsUrl(candidate: unknown): candidate is string {
+  if (typeof candidate !== "string") return false
+  try {
+    return new URL(candidate).protocol === "https:"
   } catch {
     return false
   }
@@ -298,6 +451,11 @@ function toSettings(candidate: unknown): AiGradingSettings {
     openaiCompatibleBaseUrl: isValidBaseUrl(candidate.openaiCompatibleBaseUrl)
       ? candidate.openaiCompatibleBaseUrl
       : settings.openaiCompatibleBaseUrl,
+    anthropicPricingSourceUrl: isValidHttpsUrl(
+      candidate.anthropicPricingSourceUrl
+    )
+      ? candidate.anthropicPricingSourceUrl
+      : settings.anthropicPricingSourceUrl,
   }
 }
 
@@ -312,6 +470,7 @@ function toAiProvidersFile(candidate: unknown): AiProvidersFile {
     },
     settings: toSettings(candidate.settings),
     modelCatalogs: toModelCatalogs(candidate.modelCatalogs),
+    pricing: toPricing(candidate.pricing),
   }
 }
 
@@ -344,6 +503,10 @@ function assertValidSettingsUpdate(update: Partial<AiGradingSettings>): void {
     update.openaiCompatibleBaseUrl !== undefined &&
     !isValidBaseUrl(update.openaiCompatibleBaseUrl)
       ? "openaiCompatibleBaseUrl"
+      : null,
+    update.anthropicPricingSourceUrl !== undefined &&
+    !isValidHttpsUrl(update.anthropicPricingSourceUrl)
+      ? "anthropicPricingSourceUrl"
       : null,
   ].filter((problem) => problem !== null)
   if (problems.length > 0) {
@@ -556,6 +719,8 @@ export function createProviderCredentialStore(
         update.openaiCompatibleBaseUrl !== undefined
           ? update.openaiCompatibleBaseUrl
           : current.openaiCompatibleBaseUrl,
+      anthropicPricingSourceUrl:
+        update.anthropicPricingSourceUrl ?? current.anthropicPricingSourceUrl,
     }
     saveFile({ ...file, settings })
     return settings
@@ -590,6 +755,89 @@ export function createProviderCredentialStore(
     return catalog
   }
 
+  /** 利用者が入れた単価 */
+  function getPricing(): AiPricing {
+    return loadFile().pricing
+  }
+
+  function savePricing(pricing: AiPricing): AiPricing {
+    saveFile({ ...loadFile(), pricing })
+    return pricing
+  }
+
+  /**
+   * モデルの単価を入れる（同じ事業者・モデルの行があれば置き換える）。
+   * 「ページから読み込む」の下書きを保存するときは何行も一度に入れる
+   *
+   * @throws {ProviderCredentialError} 1行でも値が正しくないとき（何も変えない）
+   */
+  function setModelPrices(modelPrices: readonly AiModelPrice[]): AiPricing {
+    const validPrices = modelPrices.map(toModelPrice)
+    if (validPrices.some((validPrice) => validPrice === null)) {
+      throw new ProviderCredentialError(
+        "invalid_settings",
+        "単価の値が正しくありません（モデルの id と、0 以上の数が5つ要ります）"
+      )
+    }
+    const pricing = getPricing()
+    const priceByKey = new Map(
+      pricing.modelPrices.map((storedPrice) => [
+        modelPriceKey(storedPrice.provider, storedPrice.model),
+        storedPrice,
+      ])
+    )
+    validPrices.forEach((validPrice) => {
+      if (validPrice) {
+        priceByKey.set(
+          modelPriceKey(validPrice.provider, validPrice.model),
+          validPrice
+        )
+      }
+    })
+    return savePricing({ ...pricing, modelPrices: [...priceByKey.values()] })
+  }
+
+  /** モデル1つの単価を消す（無ければ何もしない） */
+  function removeModelPrice(
+    provider: GradingProviderId,
+    model: string
+  ): AiPricing {
+    const pricing = getPricing()
+    const key = modelPriceKey(provider, model)
+    return savePricing({
+      ...pricing,
+      modelPrices: pricing.modelPrices.filter(
+        (storedPrice) =>
+          modelPriceKey(storedPrice.provider, storedPrice.model) !== key
+      ),
+    })
+  }
+
+  /**
+   * 事業者のバッチの単価が通常の何 % かを入れる（null で未設定に戻す）
+   *
+   * @throws {ProviderCredentialError} 0〜100 の数でないとき（何も変えない）
+   */
+  function setBatchPricePercent(
+    provider: GradingProviderId,
+    percent: number | null
+  ): AiPricing {
+    if (!isGradingProviderId(provider) || !isValidBatchPricePercent(percent)) {
+      throw new ProviderCredentialError(
+        "invalid_settings",
+        "バッチの割合は 0〜100 の数にしてください"
+      )
+    }
+    const pricing = getPricing()
+    return savePricing({
+      ...pricing,
+      batchPricePercents: {
+        ...pricing.batchPricePercents,
+        [provider]: percent,
+      },
+    })
+  }
+
   return {
     getProviderStatus,
     getProviderStatuses,
@@ -602,6 +850,10 @@ export function createProviderCredentialStore(
     updateSettings,
     getModelCatalogs,
     saveModelCatalog,
+    getPricing,
+    setModelPrices,
+    removeModelPrice,
+    setBatchPricePercent,
   }
 }
 

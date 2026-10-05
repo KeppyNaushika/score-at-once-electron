@@ -225,6 +225,39 @@ export async function listAiGradingRunsByCropRegion(
   return runs.map(narrowAiGradingRun)
 }
 
+/**
+ * 試験の全設問について、その教員の実行（試行とプロンプト付き）。設問一覧で
+ * 「AI の判定があるのに自分がまだ採点していない答案」のある設問を示すのに使う
+ * （数えるのは画面側）
+ */
+export async function listAiGradingRunsByExam(examId: string, userId: string) {
+  return prisma.aiGradingRun.findMany({
+    where: { userId, prompt: { cropRegion: { examPage: { examId } } } },
+    include: { attempts: true, prompt: true },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  })
+}
+
+/**
+ * その教員の実行（試行と、どの試験のどの設問か）を、すべての試験について。
+ * 「AI採点」の画面の使用トークンに使う
+ * （使用量は revise なら実行の列、grade なら試行の列にある。足し算・金額・集計は画面側）
+ */
+export async function listAiGradingRunsByUser(userId: string) {
+  return prisma.aiGradingRun.findMany({
+    where: { userId },
+    include: {
+      attempts: true,
+      prompt: {
+        include: {
+          cropRegion: { include: { examPage: { include: { exam: true } } } },
+        },
+      },
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  })
+}
+
 /** この端末が投入して、まだ結果を取り込んでいないバッチの実行 */
 export async function listBatchRunsToCollect(submittedClientId: string) {
   return prisma.aiGradingRun.findMany({

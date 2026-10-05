@@ -93,6 +93,11 @@ describe("providerCredentialStore", () => {
       openaiCompatibleBaseUrl: null,
     })
     expect(store.getModelCatalogs()).toEqual({ anthropic: null, openai: null })
+    // 単価はアプリが持たない（入れるまで空）
+    expect(store.getPricing()).toEqual({
+      modelPrices: [],
+      batchPricePercents: { anthropic: null, openai: null },
+    })
   })
 
   it("同意していない事業者のキーは保存しない", () => {
@@ -197,8 +202,14 @@ describe("providerCredentialStore", () => {
         concurrency: 8,
         budgetWarningUsd: 12.5,
         openaiCompatibleBaseUrl: null,
+        anthropicPricingSourceUrl:
+          "https://platform.claude.com/docs/ja/about-claude/pricing",
       },
       modelCatalogs: { anthropic: null, openai: null },
+      pricing: {
+        modelPrices: [],
+        batchPricePercents: { anthropic: null, openai: null },
+      },
     })
     // 暗号文は base64
     expect(
@@ -367,6 +378,120 @@ describe("providerCredentialStore", () => {
     expect(createStore().getModelCatalogs()).toEqual({
       anthropic: null,
       openai: null,
+    })
+  })
+  describe("単価（利用者が入れた値）", () => {
+    // 値は作り物
+    const samplePrice = {
+      provider: "anthropic" as const,
+      model: "test-model-a",
+      inputPerMillionUsd: 3,
+      outputPerMillionUsd: 9,
+      cacheReadPerMillionUsd: 0.3,
+      cacheWrite5mPerMillionUsd: 3.75,
+      cacheWrite1hPerMillionUsd: 6,
+    }
+
+    it("入れた単価を保存し、同じ事業者・モデルは置き換える", () => {
+      const store = createStore()
+      store.setModelPrices([samplePrice])
+      store.setModelPrices([
+        { ...samplePrice, inputPerMillionUsd: 4 },
+        { ...samplePrice, provider: "openai", model: "test-model-b" },
+      ])
+      expect(createStore().getPricing().modelPrices).toEqual([
+        { ...samplePrice, inputPerMillionUsd: 4 },
+        { ...samplePrice, provider: "openai", model: "test-model-b" },
+      ])
+
+      store.removeModelPrice("anthropic", "test-model-a")
+      expect(
+        createStore()
+          .getPricing()
+          .modelPrices.map((modelPrice) => modelPrice.model)
+      ).toEqual(["test-model-b"])
+    })
+
+    it("1行でも正しくない単価があれば全体を拒否し、何も変えない", () => {
+      const store = createStore()
+      store.setModelPrices([samplePrice])
+      expect(
+        getErrorCode(() =>
+          store.setModelPrices([
+            { ...samplePrice, model: "test-model-c" },
+            { ...samplePrice, outputPerMillionUsd: -1 },
+          ])
+        )
+      ).toBe("invalid_settings")
+      expect(
+        getErrorCode(() =>
+          store.setModelPrices([{ ...samplePrice, model: "  " }])
+        )
+      ).toBe("invalid_settings")
+      expect(
+        getErrorCode(() =>
+          store.setModelPrices([
+            { ...samplePrice, cacheReadPerMillionUsd: Number.NaN },
+          ])
+        )
+      ).toBe("invalid_settings")
+      expect(store.getPricing().modelPrices).toEqual([samplePrice])
+    })
+
+    it("バッチの割合は 0〜100（null で未設定に戻す）", () => {
+      const store = createStore()
+      store.setBatchPricePercent("anthropic", 50)
+      expect(store.getPricing().batchPricePercents).toEqual({
+        anthropic: 50,
+        openai: null,
+      })
+      expect(
+        getErrorCode(() => store.setBatchPricePercent("openai", 101))
+      ).toBe("invalid_settings")
+      expect(getErrorCode(() => store.setBatchPricePercent("openai", -1))).toBe(
+        "invalid_settings"
+      )
+      store.setBatchPricePercent("anthropic", null)
+      expect(store.getPricing().batchPricePercents.anthropic).toBeNull()
+    })
+
+    it("ファイルの崩れた単価の行だけを捨てて読む", () => {
+      fs.writeFileSync(
+        configFilePath,
+        JSON.stringify({
+          pricing: {
+            modelPrices: [
+              samplePrice,
+              { ...samplePrice, model: "broken", inputPerMillionUsd: "x" },
+              { ...samplePrice, provider: "gemini", model: "other" },
+              "not-a-row",
+            ],
+            batchPricePercents: { anthropic: 150, openai: 30 },
+          },
+        }),
+        "utf-8"
+      )
+      expect(createStore().getPricing()).toEqual({
+        modelPrices: [samplePrice],
+        batchPricePercents: { anthropic: null, openai: 30 },
+      })
+    })
+
+    it("料金のページの読み込み元は https だけ", () => {
+      const store = createStore()
+      expect(
+        getErrorCode(() =>
+          store.updateSettings({
+            anthropicPricingSourceUrl: "http://example.test/pricing",
+          })
+        )
+      ).toBe("invalid_settings")
+      store.updateSettings({
+        anthropicPricingSourceUrl: "https://example.test/pricing",
+      })
+      expect(store.getSettings().anthropicPricingSourceUrl).toBe(
+        "https://example.test/pricing"
+      )
     })
   })
 })

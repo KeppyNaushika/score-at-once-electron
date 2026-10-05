@@ -11,12 +11,12 @@ import {
 } from "lucide-react"
 
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
-import { Button } from "@/components/ui/button"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { filterCommandIdOf } from "@/lib/scoringKeybindings"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
+import { FilterToggleButton } from "./FilterToggleButton"
 import { GRID_4_3_STYLE } from "./scoringToolbarButtons"
 import { ShortcutTooltip } from "./ShortcutTooltip"
 
@@ -34,6 +34,10 @@ interface ScoringStatusFilterButtonsProps {
   /** 状態ごとの表示の有無（無い状態は非表示として扱う） */
   filterSettings: Partial<Record<ScoringStatus, boolean>>
   onToggleFilter: (status: ScoringStatus) => void
+  /** ツールチップに出すキーのコマンド（既定は一覧表示の絞り込み `filter.toggle*`） */
+  commandIdOf?: (status: ScoringStatus) => string
+  /** ボタンの組の名前（同じ画面に2組並べるときに読み上げで区別する） */
+  "aria-label"?: string
 }
 
 /**
@@ -43,18 +47,18 @@ interface ScoringStatusFilterButtonsProps {
 export function ScoringStatusFilterButtons({
   filterSettings,
   onToggleFilter,
+  commandIdOf = filterCommandIdOf,
+  "aria-label": groupLabel,
 }: ScoringStatusFilterButtonsProps) {
   const { keyBindings } = useKeyBindings()
   const scoringColors = useScoringStatusColors()
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div style={GRID_4_3_STYLE}>
+      <div style={GRID_4_3_STYLE} role="group" aria-label={groupLabel}>
         {FILTER_BUTTONS.map((button) => {
-          const Icon = button.icon
           const isActive = filterSettings[button.status] ?? false
-          const keyBinding =
-            keyBindings[filterCommandIdOf(button.status)] || "?"
+          const keyBinding = keyBindings[commandIdOf(button.status)] || "?"
           const colors = scoringColors[button.status]
           return (
             <ShortcutTooltip
@@ -62,31 +66,13 @@ export function ScoringStatusFilterButtons({
               description={`${button.label}を${isActive ? "非表示" : "表示"}`}
               keys={[keyBinding.toUpperCase()]}
             >
-              <Button
-                variant="outline"
-                size="sm"
-                aria-pressed={isActive}
-                className="flex h-10 w-full min-w-0 items-center gap-1 border-2 px-1"
-                style={
-                  isActive
-                    ? {
-                        backgroundColor: colors.bg,
-                        color: colors.text,
-                        borderColor: colors.icon,
-                      }
-                    : {
-                        backgroundColor: "transparent",
-                        color: colors.icon,
-                        borderColor: colors.icon,
-                      }
-                }
-                onClick={() => onToggleFilter(button.status)}
-              >
-                <Icon className="h-3 w-3 shrink-0" />
-                <span className="w-10 shrink-0 text-center text-[10px]">
-                  {button.label}
-                </span>
-              </Button>
+              <FilterToggleButton
+                label={button.label}
+                icon={button.icon}
+                colors={colors}
+                isActive={isActive}
+                onToggle={() => onToggleFilter(button.status)}
+              />
             </ShortcutTooltip>
           )
         })}

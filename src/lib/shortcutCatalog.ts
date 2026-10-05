@@ -103,6 +103,13 @@ export const SHORTCUT_LABELS: Record<string, string> = {
   "aiGrading.adopt": "AI の判定を採用",
   "aiGrading.prevAttempt": "前の AI の判定",
   "aiGrading.nextAttempt": "次の AI の判定",
+  "aiGrading.filterUnscored": "AI の判定: 未採点フィルタ",
+  "aiGrading.filterCorrect": "AI の判定: 正答フィルタ",
+  "aiGrading.filterPartial": "AI の判定: 部分点フィルタ",
+  "aiGrading.filterPending": "AI の判定: 保留フィルタ",
+  "aiGrading.filterIncorrect": "AI の判定: 誤答フィルタ",
+  "aiGrading.filterNoAnswer": "AI の判定: 無答フィルタ",
+  "aiGrading.filterDoubleMark": "AI の判定: Wマークフィルタ",
 }
 
 /**

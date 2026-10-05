@@ -4,9 +4,16 @@
  * 一覧・詳細・まとめての操作が同じものを見るよう、導き方をここに集める。
  */
 
+import { SCORING_STATUS_ORDER } from "@/lib/scoringStatusColors"
+
 import type { AiGradingAnswer, AttemptWithRun } from "../types"
+import { cellStatusOf } from "./aiGridFilter"
 import { isAdoptedAttempt, resolveDisplayedAttempt } from "./attemptSelection"
-import { classifyReviewReasons, type ReviewReason } from "./reviewReasons"
+import {
+  classifyReviewReasons,
+  confidenceRank,
+  type ReviewReason,
+} from "./reviewReasons"
 import {
   isSameJudgement,
   isScored,
@@ -28,6 +35,8 @@ export interface AnswerReview {
 export interface AnswerReviewContext {
   /** 答案ごとに `<` `>` で選んだ試行 */
   chosenAttemptIdByExamStudentId: ReadonlyMap<string, string>
+  /** 実行の履歴で選んだ実行（null は最新）。`<` `>` の選択が優先する */
+  chosenRunId?: string | null
   selectedPromptId: string | null
   points: number | null
 }
@@ -41,7 +50,8 @@ export function reviewAnswer(
     answer.attempts,
     context.chosenAttemptIdByExamStudentId.get(
       answer.studentAnswerImage.examStudentId
-    )
+    ),
+    context.chosenRunId ?? null
   )
   const reviewInput = {
     displayedAttempt,
@@ -74,28 +84,46 @@ export function reviewAnswer(
 }
 
 /** 一覧の並べ方 */
-export const ANSWER_ORDERS = ["display", "reviewFirst"] as const
+export const ANSWER_ORDERS = ["display", "confidence", "status"] as const
 export type AnswerOrder = (typeof ANSWER_ORDERS)[number]
 
 export const ANSWER_ORDER_LABELS: Record<AnswerOrder, string> = {
-  display: "表示順",
-  reviewFirst: "要確認を先に",
+  display: "生徒順",
+  confidence: "確信度順",
+  status: "採点種順",
+}
+
+/** 表示中の試行の確信度の順位（成功していなければ 0） */
+function displayedConfidenceRank({ review }: ReviewedAiGradingAnswer): number {
+  const attempt = review.displayedAttempt?.attempt
+  return attempt?.state === "succeeded" ? confidenceRank(attempt.confidence) : 0
 }
 
 /**
- * 並べる。要確認を先にするときは、理由のある答案を先へ出し、その中も外も表示順を保つ
- * （安定な並べ替え）
+ * 並べる（どれも安定な並べ替えで、同じ組の中は生徒順を保つ）。
+ * - confidence: 表示中の AI の判定の確信度が高い順（判定の無い答案は最後）
+ * - status: マスに見えている状態（自分の採点、無ければ AI の提案）の、絞り込みのボタンと同じ順
  */
-export function orderReviewedAnswers<Reviewed extends { review: AnswerReview }>(
+export function orderReviewedAnswers<Reviewed extends ReviewedAiGradingAnswer>(
   reviewedAnswers: readonly Reviewed[],
   answerOrder: AnswerOrder
 ): Reviewed[] {
-  if (answerOrder === "display") return [...reviewedAnswers]
-  return reviewedAnswers.toSorted(
-    (reviewedA, reviewedB) =>
-      Number(reviewedB.review.reviewReasons.length > 0) -
-      Number(reviewedA.review.reviewReasons.length > 0)
-  )
+  switch (answerOrder) {
+    case "display":
+      return [...reviewedAnswers]
+    case "confidence":
+      return reviewedAnswers.toSorted(
+        (reviewedA, reviewedB) =>
+          displayedConfidenceRank(reviewedB) -
+          displayedConfidenceRank(reviewedA)
+      )
+    case "status":
+      return reviewedAnswers.toSorted(
+        (reviewedA, reviewedB) =>
+          SCORING_STATUS_ORDER.indexOf(cellStatusOf(reviewedA)) -
+          SCORING_STATUS_ORDER.indexOf(cellStatusOf(reviewedB))
+      )
+  }
 }
 
 /** 答案と、そこから導いた印の組（一覧・詳細・まとめての操作が受け取る形） */

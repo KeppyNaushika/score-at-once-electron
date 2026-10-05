@@ -202,6 +202,7 @@ function AiGradingRunForm({
               prompt={prompt}
               examStudentIds={targetExamStudentIds}
               runSettings={runSettings}
+              budgetWarningUsd={settings.budgetWarningUsd}
             />
           )}
         </div>
