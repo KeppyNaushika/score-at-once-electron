@@ -2,9 +2,13 @@
 
 import { useMemo } from "react"
 
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { CheckboxDropdown } from "@/components/common/CheckboxDropdown"
+import {
+  MEMBERSHIP_PHASE_LABELS,
+  MEMBERSHIP_PHASES,
+  type MembershipPhase,
+} from "@/lib/membership"
 import { cn } from "@/lib/utils"
-import { isOneOf } from "@/types/stringUnion"
 
 import {
   type ArchiveEntityCatalog,
@@ -20,27 +24,25 @@ import type { useRemovalImpact } from "./hooks/useRemovalImpact"
 import {
   ARCHIVE_SELECTABLE_KINDS,
   type ArchiveSelectableKind,
-  CLASSROOM_STUDENT_SCOPES,
-  type ClassroomStudentScope,
   type ExportSelectionState,
 } from "./types"
 
 /** 赤枠で囲むものが無いとき（毎回作り直して一覧の描き直しを招かないよう、1つを使い回す） */
 const NO_LOST_ENTITIES: ReadonlySet<string> = new Set()
 
-/** 学級から生徒を選ぶ範囲の切り替え */
-const CLASSROOM_STUDENT_SCOPE_LABELS: Record<ClassroomStudentScope, string> = {
-  none: "生徒は選ばない",
-  current: "在籍中の生徒",
-  all: "過去在籍も含む",
-}
+/** 学級から生徒を選ぶ時期の選択肢（名前は生徒管理の一覧と同じ） */
+const CLASSROOM_STUDENT_PHASE_OPTIONS = MEMBERSHIP_PHASES.map((phase) => ({
+  value: phase,
+  label: MEMBERSHIP_PHASE_LABELS[phase],
+}))
 
 interface ArchiveEntityCheckListSectionProps {
   /** 学級から入った生徒を足した選択 */
   selection: ExportSelectionState
   /** 学級から入った生徒 → どの学級から入ったか */
   classroomSourcesByStudent: ReadonlyMap<string, readonly string[]>
-  classroomStudentScope: ClassroomStudentScope
+  /** 選んだ学級から生徒を選ぶ所属の時期 */
+  classroomStudentPhases: ReadonlySet<MembershipPhase>
   /** 下見（ok のときだけ）。関連で入るか・外せないかはここから決まる */
   preview: ArchiveExportPreviewOk | null
   catalog: ArchiveEntityCatalog
@@ -52,8 +54,8 @@ interface ArchiveEntityCheckListSectionProps {
     rows: ArchiveEntityRow[],
     isChecked: boolean
   ) => void
-  onClassroomStudentScopeChange: (
-    classroomStudentScope: ClassroomStudentScope
+  onClassroomStudentPhasesChange: (
+    classroomStudentPhases: ReadonlySet<MembershipPhase>
   ) => void
   onActiveEntityChange: (kind: ArchiveSelectableKind, id: string | null) => void
 }
@@ -65,13 +67,13 @@ interface ArchiveEntityCheckListSectionProps {
 export function ArchiveEntityCheckListSection({
   selection,
   classroomSourcesByStudent,
-  classroomStudentScope,
+  classroomStudentPhases,
   preview,
   catalog,
   removalImpact,
   onToggle,
   onToggleMany,
-  onClassroomStudentScopeChange,
+  onClassroomStudentPhasesChange,
   onActiveEntityChange,
 }: ArchiveEntityCheckListSectionProps) {
   const lostEntityKeys =
@@ -118,30 +120,15 @@ export function ArchiveEntityCheckListSection({
             }
             headerControls={
               kind === "Classroom" && (
-                <ToggleGroup
-                  type="single"
-                  variant="outline"
-                  size="sm"
-                  className="h-5"
+                <CheckboxDropdown
+                  options={CLASSROOM_STUDENT_PHASE_OPTIONS}
+                  selectedValues={classroomStudentPhases}
+                  onSelectedValuesChange={onClassroomStudentPhasesChange}
+                  emptyText="生徒を選ばない"
                   aria-label="選んだ学級から選ぶ生徒"
-                  value={classroomStudentScope}
-                  onValueChange={(value) => {
-                    // もう一度押して何も選ばない状態にはしない
-                    if (isOneOf(CLASSROOM_STUDENT_SCOPES, value)) {
-                      onClassroomStudentScopeChange(value)
-                    }
-                  }}
-                >
-                  {CLASSROOM_STUDENT_SCOPES.map((scope) => (
-                    <ToggleGroupItem
-                      key={scope}
-                      value={scope}
-                      className="h-5 px-2 text-xs"
-                    >
-                      {CLASSROOM_STUDENT_SCOPE_LABELS[scope]}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
+                  // 見出しの文字の高さにそろえる（隣の生徒の一覧と縦位置をそろえる）
+                  className="h-5 w-32 px-2 text-xs"
+                />
               )
             }
             onActiveIdChange={(id) => onActiveEntityChange(kind, id)}

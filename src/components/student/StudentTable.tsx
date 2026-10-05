@@ -10,6 +10,7 @@ import { toast } from "sonner"
 import { ArchiveImportScreens } from "@/components/archive-import/ArchiveImportScreens"
 import { archiveImportToolbarAction } from "@/components/archive-import/archiveImportToolbarAction"
 import { useArchiveImportLauncher } from "@/components/archive-import/hooks/useArchiveImportLauncher"
+import { CheckboxDropdown } from "@/components/common/CheckboxDropdown"
 import { Combobox } from "@/components/common/Combobox"
 import { ListSearchInput } from "@/components/common/ListFilterControls"
 import { ListPaginationFooter } from "@/components/common/ListPaginationFooter"
@@ -19,7 +20,13 @@ import {
 } from "@/components/common/OverflowToolbar"
 import PageHeader from "@/components/layout/PageHeader"
 import { DeleteStudentModal } from "@/components/student/DeleteStudentModal"
-import { useStudentTableRows } from "@/components/student/hooks/useStudentTableRows"
+import {
+  DEFAULT_STUDENT_MEMBERSHIP_STATUSES,
+  STUDENT_MEMBERSHIP_STATUS_LABELS,
+  STUDENT_MEMBERSHIP_STATUSES,
+  type StudentMembershipStatus,
+  useStudentTableRows,
+} from "@/components/student/hooks/useStudentTableRows"
 import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
 import StudentModal from "@/components/student/StudentModal"
 import { StudentTableRow } from "@/components/student/StudentTableRow"
@@ -30,13 +37,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { SortableTableHead } from "@/components/ui/SortableTableHead"
 import {
   Table,
@@ -67,6 +67,12 @@ const EMPTY_STUDENTS: StudentWithMemberships[] = []
 const EMPTY_CLASSROOMS: ClassroomWithMemberships[] = []
 
 /** 1行の高さの見積もり（px）。「自動」の件数はこれで割る。はみ出すより余らせる */
+/** 所属状況の絞り込みの選択肢 */
+const MEMBERSHIP_STATUS_OPTIONS = STUDENT_MEMBERSHIP_STATUSES.map((status) => ({
+  value: status,
+  label: STUDENT_MEMBERSHIP_STATUS_LABELS[status],
+}))
+
 const STUDENT_TABLE_ROW_HEIGHT = 60
 
 /** 行の上に居座る見出し行の高さ（`h-12`） */
@@ -84,8 +90,9 @@ export default function StudentTable() {
   )
   const { data: classrooms = EMPTY_CLASSROOMS } = useQuery(classroomListQuery())
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterMembershipStatus, setFilterMembershipStatus] =
-    useState<string>("current_unassigned")
+  const [filterMembershipStatuses, setFilterMembershipStatuses] = useState<
+    ReadonlySet<StudentMembershipStatus>
+  >(DEFAULT_STUDENT_MEMBERSHIP_STATUSES)
   const [filterClassroomId, setFilterClassroomId] = useState<string>("all")
 
   // Selection states
@@ -112,14 +119,16 @@ export default function StudentTable() {
       classrooms,
       searchTerm,
       classroomId: filterClassroomId,
-      membershipStatus: filterMembershipStatus,
+      membershipStatuses: filterMembershipStatuses,
     })
 
   // 絞り込みと並び順を変えたら先頭のページから見る
   const paginationResetKey = [
     searchTerm,
     filterClassroomId,
-    filterMembershipStatus,
+    STUDENT_MEMBERSHIP_STATUSES.filter((status) =>
+      filterMembershipStatuses.has(status)
+    ).join(","),
     sortConfig.key ?? "",
     sortConfig.direction ?? "",
   ].join("|")
@@ -237,21 +246,14 @@ export default function StudentTable() {
     />
   )
   const membershipStatusFilter = (
-    <Select
-      value={filterMembershipStatus}
-      onValueChange={setFilterMembershipStatus}
-    >
-      <SelectTrigger size="sm" className="w-36 rounded-lg">
-        <SelectValue placeholder="所属状況" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">すべて</SelectItem>
-        <SelectItem value="unassigned">未在籍</SelectItem>
-        <SelectItem value="current">在籍中</SelectItem>
-        <SelectItem value="current_unassigned">未在籍・在籍中</SelectItem>
-        <SelectItem value="past">過去在籍</SelectItem>
-      </SelectContent>
-    </Select>
+    <CheckboxDropdown
+      options={MEMBERSHIP_STATUS_OPTIONS}
+      selectedValues={filterMembershipStatuses}
+      onSelectedValuesChange={setFilterMembershipStatuses}
+      emptyText="所属状況"
+      aria-label="所属状況で絞り込む"
+      className="w-36"
+    />
   )
 
   const toolbarActions: ToolbarAction[] = [

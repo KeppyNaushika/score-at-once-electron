@@ -21,8 +21,10 @@ import {
 import { useDialogTarget } from "@/hooks/useDialogTarget"
 import { useTableSort } from "@/hooks/useTableSort"
 import {
-  isCurrentMembership,
+  compareMembershipPhase,
   matchesMembershipStatusFilter,
+  type MembershipPhase,
+  membershipPhase,
   type MembershipStatusFilter,
 } from "@/lib/membership"
 import { cn } from "@/lib/utils"
@@ -45,7 +47,7 @@ interface ClassroomMembershipSortable {
   fullName: string
   startDate: string
   endDate: string | null
-  isCurrent: boolean
+  phase: MembershipPhase
   original: ClassroomMembership
 }
 
@@ -70,7 +72,7 @@ export default function ClassroomMembershipTable({
       fullName: `${membership.student.lastName}${membership.student.firstName}`,
       startDate: membership.startDate.toISOString(),
       endDate: membership.endDate ? membership.endDate.toISOString() : null,
-      isCurrent: isCurrentMembership(membership),
+      phase: membershipPhase(membership),
       original: membership,
     }))
   }, [memberships])
@@ -84,20 +86,18 @@ export default function ClassroomMembershipTable({
   const filteredData = useMemo(
     () =>
       sortedData.filter((membership) =>
-        matchesMembershipStatusFilter(membership.isCurrent, statusFilter)
+        matchesMembershipStatusFilter(membership.phase, statusFilter)
       ),
     [sortedData, statusFilter]
   )
 
-  // 現在の所属を優先表示（ソート後）
+  // 在籍中 → 在籍予定 → 過去の順に表示（ソート後）
   const displayData = useMemo(() => {
-    // デフォルトソートの場合のみ、現在の所属を優先
+    // デフォルトソートの場合のみ、時期で並べる
     if (sortConfig.key === "attendanceNumber" || sortConfig.key === null) {
-      return [...filteredData].sort((membershipA, membershipB) => {
-        if (membershipA.isCurrent && !membershipB.isCurrent) return -1
-        if (!membershipA.isCurrent && membershipB.isCurrent) return 1
-        return 0
-      })
+      return [...filteredData].sort((membershipA, membershipB) =>
+        compareMembershipPhase(membershipA.phase, membershipB.phase)
+      )
     }
     return filteredData
   }, [filteredData, sortConfig.key])
@@ -232,12 +232,12 @@ export default function ClassroomMembershipTable({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayData.map(({ original: membership, isCurrent }) => (
+                  {displayData.map(({ original: membership, phase }) => (
                     <TableRow
                       key={membership.id}
                       className={cn(
                         "group",
-                        !isCurrent && "bg-muted/20 opacity-50"
+                        phase === "past" && "bg-muted/20 opacity-50"
                       )}
                     >
                       <TableCell className="px-4">
@@ -260,14 +260,23 @@ export default function ClassroomMembershipTable({
                         <div className="flex items-center gap-2">
                           {membership.student.lastName}{" "}
                           {membership.student.firstName}
-                          {isCurrent ? (
+                          {phase === "current" && (
                             <Badge
                               variant="default"
                               className="rounded-full px-2 py-0.5 text-xs font-normal"
                             >
                               在籍中
                             </Badge>
-                          ) : (
+                          )}
+                          {phase === "upcoming" && (
+                            <Badge
+                              variant="outline"
+                              className="rounded-full border-dashed px-2 py-0.5 text-xs font-normal"
+                            >
+                              在籍予定
+                            </Badge>
+                          )}
+                          {phase === "past" && (
                             <Badge
                               variant="secondary"
                               className="rounded-full px-2 py-0.5 text-xs font-normal"

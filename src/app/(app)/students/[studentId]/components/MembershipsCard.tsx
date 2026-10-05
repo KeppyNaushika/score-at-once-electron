@@ -15,7 +15,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { isCurrentMembership } from "@/lib/membership"
+import {
+  compareMembershipPhase,
+  isCurrentMembership,
+  membershipPhase,
+} from "@/lib/membership"
 import type {
   StudentClassroomMembershipWithStudentAndClassroom,
   StudentWithMemberships,
@@ -39,17 +43,20 @@ export function MembershipsCard({
   onEndMembership,
 }: MembershipsCardProps) {
   const sortedMemberships = useMemo(() => {
-    return [...student.memberships].sort((membershipA, membershipB) => {
-      const membershipAIsCurrent = isCurrentMembership(membershipA)
-      const membershipBIsCurrent = isCurrentMembership(membershipB)
-      if (membershipAIsCurrent && !membershipBIsCurrent) return -1
-      if (!membershipAIsCurrent && membershipBIsCurrent) return 1
-      return (
+    // 在籍中 → 在籍予定 → 過去。同じ時期の中は開始日の新しい順
+    return [...student.memberships].sort(
+      (membershipA, membershipB) =>
+        compareMembershipPhase(
+          membershipPhase(membershipA),
+          membershipPhase(membershipB)
+        ) ||
         new Date(membershipB.startDate).getTime() -
-        new Date(membershipA.startDate).getTime()
-      )
-    })
+          new Date(membershipA.startDate).getTime()
+    )
   }, [student.memberships])
+
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
 
   return (
     <Card className="mb-8 border-border/50 shadow-sm">
@@ -88,12 +95,12 @@ export function MembershipsCard({
               </TableHeader>
               <TableBody>
                 {sortedMemberships.map((membership) => {
-                  const isCurrent = isCurrentMembership(membership)
+                  const phase = membershipPhase(membership)
 
                   return (
                     <TableRow
                       key={membership.id}
-                      className={`group ${!isCurrent ? "opacity-50" : ""}`}
+                      className={`group ${phase === "past" ? "opacity-50" : ""}`}
                     >
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -108,14 +115,23 @@ export function MembershipsCard({
                               {membership.classroom.classroomCode}
                             </Badge>
                           )}
-                          {isCurrent ? (
+                          {phase === "current" && (
                             <Badge
                               variant="default"
                               className="rounded-full px-2 py-0.5 text-xs font-normal"
                             >
                               在籍中
                             </Badge>
-                          ) : (
+                          )}
+                          {phase === "upcoming" && (
+                            <Badge
+                              variant="outline"
+                              className="rounded-full border-dashed px-2 py-0.5 text-xs font-normal"
+                            >
+                              在籍予定
+                            </Badge>
+                          )}
+                          {phase === "past" && (
                             <Badge
                               variant="secondary"
                               className="rounded-full px-2 py-0.5 text-xs font-normal"
@@ -160,18 +176,23 @@ export function MembershipsCard({
                           >
                             <Edit className="h-4 w-4" />
                           </TooltipButton>
-                          {isCurrent && (
-                            <TooltipButton
-                              label="所属を終了"
+                          {/* 明日も在籍している所属だけ終了できる（今日で終了させる）。終了日は当日を
+                              含むので、今日終了した所属は今日いっぱい在籍中のまま — 今日の在籍だけで
+                              見ると、押しても消えないボタンになる。在籍予定の所属は今日で終了させると
+                              開始日より前に終わってしまうので出さない（編集か削除で直す） */}
+                          {phase === "current" &&
+                            isCurrentMembership(membership, tomorrow) && (
+                              <TooltipButton
+                                label="所属を終了"
 
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-muted"
-                              onClick={() => onEndMembership(membership.id)}
-                            >
-                              <Clock className="h-4 w-4" />
-                            </TooltipButton>
-                          )}
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-muted"
+                                onClick={() => onEndMembership(membership.id)}
+                              >
+                                <Clock className="h-4 w-4" />
+                              </TooltipButton>
+                            )}
                         </div>
                       </TableCell>
                     </TableRow>

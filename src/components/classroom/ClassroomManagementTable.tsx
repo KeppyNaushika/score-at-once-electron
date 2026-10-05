@@ -114,7 +114,10 @@ export default function ClassroomManagementTable() {
       name: classroomItem.name,
       classroomCode: classroomItem.classroomCode ?? null,
       grade: classroomItem.grade ?? null,
-      memberCount: classroomItem.memberships.filter(isCurrentMembership).length,
+      // 今日在籍している人数。在籍予定（新年度に向けて前もって組んだ所属）は数えない
+      memberCount: classroomItem.memberships.filter((membership) =>
+        isCurrentMembership(membership)
+      ).length,
       original: classroomItem,
     }))
   }, [filteredClassrooms])

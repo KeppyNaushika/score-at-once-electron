@@ -6,7 +6,7 @@ import { TooltipButton } from "@/components/common/TooltipButton"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { TableCell, TableRow } from "@/components/ui/table"
-import { isCurrentMembership } from "@/lib/membership"
+import { compareMembershipPhase, membershipPhase } from "@/lib/membership"
 import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
 interface StudentTableRowProps {
@@ -54,23 +54,42 @@ export function StudentTableRow({
       </TableCell>
       <TableCell>
         <div className="flex flex-wrap gap-1.5">
-          {/* 在籍中を先に、過去の所属は薄い枠で（並びは開始日の新しい順） */}
+          {/* 在籍中 → 在籍予定 → 過去の順に（同じ時期の中は開始日の新しい順）。
+              在籍予定は点線の枠と「予定」で、過去の所属は薄い枠で分ける */}
           {student.memberships
-            .toSorted(
-              (membershipA, membershipB) =>
-                Number(isCurrentMembership(membershipB)) -
-                Number(isCurrentMembership(membershipA))
+            .toSorted((membershipA, membershipB) =>
+              compareMembershipPhase(
+                membershipPhase(membershipA),
+                membershipPhase(membershipB)
+              )
             )
-            .map((membership) =>
-              isCurrentMembership(membership) ? (
-                <Badge
-                  key={membership.id}
-                  variant="secondary"
-                  className="rounded-full px-2.5 py-0.5 text-xs font-normal"
-                >
-                  {membership.classroom.name}
-                </Badge>
-              ) : (
+            .map((membership) => {
+              const phase = membershipPhase(membership)
+              if (phase === "current") {
+                return (
+                  <Badge
+                    key={membership.id}
+                    variant="secondary"
+                    className="rounded-full px-2.5 py-0.5 text-xs font-normal"
+                  >
+                    {membership.classroom.name}
+                  </Badge>
+                )
+              }
+              if (phase === "upcoming") {
+                return (
+                  <Badge
+                    key={membership.id}
+                    variant="outline"
+                    title={`在籍予定（${new Date(membership.startDate).toLocaleDateString("ja-JP")}から）`}
+                    className="rounded-full border-dashed px-2.5 py-0.5 text-xs font-normal"
+                  >
+                    {membership.classroom.name}
+                    <span className="ml-1 text-muted-foreground">予定</span>
+                  </Badge>
+                )
+              }
+              return (
                 <Badge
                   key={membership.id}
                   variant="outline"
@@ -80,7 +99,7 @@ export function StudentTableRow({
                   {membership.classroom.name}
                 </Badge>
               )
-            )}
+            })}
           {student.memberships.length === 0 && (
             <span className="text-sm text-muted-foreground">未所属</span>
           )}

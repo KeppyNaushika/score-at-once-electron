@@ -5,8 +5,10 @@ import { useMemo } from "react"
 
 import type { ClassroomStudentExamResult } from "@/electron-src/lib/prisma/student"
 import {
-  isCurrentMembership,
+  compareMembershipPhase,
   matchesMembershipStatusFilter,
+  type MembershipPhase,
+  membershipPhase,
   type MembershipStatusFilter,
 } from "@/lib/membership"
 import { classroomExamResultsQuery } from "@/queries/student"
@@ -18,7 +20,8 @@ const EMPTY_RESULTS: ClassroomStudentExamResult[] = []
  * 学級の生徒ごとの試験結果一覧。
  *
  * 結果は所属1件ごとに届くので、同じ学級に2度所属した生徒は1人にまとめる。
- * 在籍中の所属が1件でもあれば在籍中の生徒とし、出席番号もその所属のものを使う。
+ * 所属の時期は 在籍中 → 在籍予定 → 過去 の順に優先し（在籍中の所属が1件でもあれば在籍中の
+ * 生徒）、出席番号もその所属のものを使う。
  */
 export function useClassroomExamResults(
   classroomId: string,
@@ -30,22 +33,20 @@ export function useClassroomExamResults(
   const studentResults = useMemo(() => {
     const resultByStudentId = new Map<
       string,
-      { studentResult: ClassroomStudentExamResult; isCurrent: boolean }
+      { studentResult: ClassroomStudentExamResult; phase: MembershipPhase }
     >()
     membershipResults.forEach((membershipResult) => {
-      const isCurrent = isCurrentMembership(membershipResult)
+      const phase = membershipPhase(membershipResult)
       const existing = resultByStudentId.get(membershipResult.studentId)
-      if (!existing || (isCurrent && !existing.isCurrent)) {
+      if (!existing || compareMembershipPhase(phase, existing.phase) < 0) {
         resultByStudentId.set(membershipResult.studentId, {
           studentResult: membershipResult,
-          isCurrent,
+          phase,
         })
       }
     })
     return Array.from(resultByStudentId.values())
-      .filter(({ isCurrent }) =>
-        matchesMembershipStatusFilter(isCurrent, statusFilter)
-      )
+      .filter(({ phase }) => matchesMembershipStatusFilter(phase, statusFilter))
       .map(({ studentResult }) => studentResult)
   }, [membershipResults, statusFilter])
 

@@ -685,12 +685,27 @@ describe("統合アーカイブの書き出しダイアログ", () => {
   })
 
   describe("学級から生徒を選ぶ", () => {
-    const scopeToggle = (dialog: HTMLElement, label: string) =>
-      within(
-        within(dialog).getByRole("radiogroup", {
-          name: "選んだ学級から選ぶ生徒",
-        })
-      ).getByRole("radio", { name: label })
+    /** 学級から選ぶ生徒の時期のボタン（開いている間はメニューの外が aria-hidden になる） */
+    const phaseButton = (dialog: HTMLElement) =>
+      within(dialog).getByRole("button", {
+        name: "選んだ学級から選ぶ生徒",
+        hidden: true,
+      })
+
+    /** プルダウンを開いて時期を付け外しし、閉じる */
+    const togglePhases = async (
+      user: ReturnType<typeof userEvent.setup>,
+      dialog: HTMLElement,
+      labels: string[]
+    ) => {
+      await user.click(phaseButton(dialog))
+      for (const label of labels) {
+        await user.click(
+          await screen.findByRole("menuitemcheckbox", { name: label })
+        )
+      }
+      await user.keyboard("{Escape}")
+    }
 
     /** 学級を選ぶ（学級の一覧の行をクリック） */
     const pickClassroom = async (
@@ -703,15 +718,12 @@ describe("統合アーカイブの書き出しダイアログ", () => {
         })
       )
 
-    it("既定は在籍中の生徒。切り替えると選んである学級にさかのぼって効く", async () => {
+    it("既定は在籍中・在籍予定。時期を変えると選んである学級にさかのぼって効き、何も選ばなければ入らない", async () => {
       const user = userEvent.setup()
       previewExport.mockResolvedValue(okPreview())
       const dialog = renderDialog({ roots: { Exam: ["exam-1"] } })
       const studentList = await findKindList(dialog, "生徒")
-      expect(scopeToggle(dialog, "在籍中の生徒")).toHaveAttribute(
-        "aria-checked",
-        "true"
-      )
+      expect(phaseButton(dialog)).toHaveTextContent("在籍中ほか1")
 
       await pickClassroom(user, dialog)
       await waitFor(() =>
@@ -725,7 +737,8 @@ describe("統合アーカイブの書き出しダイアログ", () => {
         })
       ).toBeInTheDocument()
 
-      await user.click(scopeToggle(dialog, "過去在籍も含む"))
+      await togglePhases(user, dialog, ["過去在籍"])
+      expect(phaseButton(dialog)).toHaveTextContent("すべて")
       await waitFor(() =>
         expect(lastPreviewSelection()).toMatchObject({
           shared: {
@@ -735,12 +748,30 @@ describe("統合アーカイブの書き出しダイアログ", () => {
         })
       )
 
-      await user.click(scopeToggle(dialog, "生徒は選ばない"))
+      // 過去在籍だけ: 在籍中の山田は入らず、過去在籍の佐藤だけ
+      await togglePhases(user, dialog, ["在籍中", "在籍予定"])
+      expect(phaseButton(dialog)).toHaveTextContent("過去在籍")
+      await waitFor(() =>
+        expect(lastPreviewSelection()).toMatchObject({
+          shared: { Classroom: ["classroom-1"], Student: ["student-2"] },
+        })
+      )
+
+      // 在籍予定だけ: 1年1組に在籍予定の生徒はいない
+      await togglePhases(user, dialog, ["過去在籍", "在籍予定"])
+      expect(phaseButton(dialog)).toHaveTextContent("在籍予定")
       await waitFor(() =>
         expect(lastPreviewSelection()?.shared).toEqual({
           Classroom: ["classroom-1"],
         })
       )
+
+      // 何も選ばない
+      await togglePhases(user, dialog, ["在籍予定"])
+      expect(phaseButton(dialog)).toHaveTextContent("生徒を選ばない")
+      expect(lastPreviewSelection()?.shared).toEqual({
+        Classroom: ["classroom-1"],
+      })
     })
 
     /** 下見: 選んだ生徒と学級がそのまま入る（main の範囲の規則の写し。学級は生徒を引き上げない） */
@@ -766,7 +797,7 @@ describe("統合アーカイブの書き出しダイアログ", () => {
       const studentList = await findKindList(dialog, "生徒")
       const classroomList = await findKindList(dialog, "学級")
 
-      await user.click(scopeToggle(dialog, "過去在籍も含む"))
+      await togglePhases(user, dialog, ["過去在籍"])
       await pickClassroom(user, dialog)
       await within(studentList).findByRole("option", {
         name: /佐藤 花子.*選択中（1年1組）/,
@@ -815,7 +846,7 @@ describe("統合アーカイブの書き出しダイアログ", () => {
       const dialog = renderDialog({ roots: { Exam: ["exam-1"] } })
       const studentList = await findKindList(dialog, "生徒")
 
-      await user.click(scopeToggle(dialog, "過去在籍も含む"))
+      await togglePhases(user, dialog, ["過去在籍"])
       await pickClassroom(user, dialog)
       await user.click(
         await within(studentList).findByRole("option", {
@@ -828,9 +859,9 @@ describe("統合アーカイブの書き出しダイアログ", () => {
         })
       )
 
-      // 切り替えを行き来しても戻らない
-      await user.click(scopeToggle(dialog, "在籍中の生徒"))
-      await user.click(scopeToggle(dialog, "過去在籍も含む"))
+      // 時期を付け外ししても戻らない
+      await togglePhases(user, dialog, ["過去在籍"])
+      await togglePhases(user, dialog, ["過去在籍"])
       // 学級を外して付け直しても戻らない
       await pickClassroom(user, dialog)
       await waitFor(() => expect(lastPreviewSelection()?.shared).toEqual({}))

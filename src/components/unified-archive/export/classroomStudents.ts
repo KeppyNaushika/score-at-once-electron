@@ -5,33 +5,28 @@
  * 範囲の規則（main の resolver）は変えず、書き出しに渡す `shared.Student` を増やすだけ。
  */
 
-import { isCurrentMembership } from "@/lib/membership"
+import { type MembershipPhase, membershipPhase } from "@/lib/membership"
 import type { StudentWithMemberships } from "@/types/prismaExtensions"
 
-import type {
-  ArchiveSelectableKind,
-  ClassroomStudentScope,
-  ExportSelectionState,
-} from "./types"
+import type { ArchiveSelectableKind, ExportSelectionState } from "./types"
 
 /**
- * 学級 → その学級の生徒（範囲に従う）。在籍中 = 今日の時点で在籍している（アプリ共通の
- * `isCurrentMembership`）、過去も含める = 一度でも在籍した。選ばない なら空
+ * 学級 → その学級の生徒。選んだ時期（アプリ共通の `membershipPhase`: 在籍中・在籍予定・
+ * 過去在籍）のどれかに当たる所属をその学級に持つ生徒。時期を1つも選んでいなければ空
  *
  * @param students - 生徒一覧（在籍つき）。並びは一覧の並びのまま使う
  */
 export function buildClassroomStudentIndex(
   students: readonly StudentWithMemberships[],
-  scope: ClassroomStudentScope
+  phases: ReadonlySet<MembershipPhase>
 ): ReadonlyMap<string, readonly string[]> {
   const studentIdsByClassroom = new Map<string, string[]>()
-  if (scope === "none") return studentIdsByClassroom
+  if (phases.size === 0) return studentIdsByClassroom
+  const today = new Date()
   for (const student of students) {
     const classroomIds = new Set(
       student.memberships
-        .filter(
-          (membership) => scope === "all" || isCurrentMembership(membership)
-        )
+        .filter((membership) => phases.has(membershipPhase(membership, today)))
         .map((membership) => membership.classroomId)
     )
     for (const classroomId of classroomIds) {

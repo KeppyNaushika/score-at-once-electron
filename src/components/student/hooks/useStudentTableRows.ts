@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 
 import { useTableSort } from "@/hooks/useTableSort"
-import { isCurrentMembership } from "@/lib/membership"
+import { MEMBERSHIP_PHASE_LABELS, membershipPhase } from "@/lib/membership"
 import {
   classroomFilterOptions,
   studentSearchTerms,
@@ -11,6 +11,32 @@ import type {
   ClassroomWithMemberships,
   StudentWithMemberships,
 } from "@/types/prismaExtensions"
+
+/** 生徒の所属状況。絞り込みはこの中から複数を選び、どれかに当てはまる生徒を出す */
+export const STUDENT_MEMBERSHIP_STATUSES = [
+  "unassigned",
+  "current",
+  "upcoming",
+  "past",
+] as const
+
+export type StudentMembershipStatus =
+  (typeof STUDENT_MEMBERSHIP_STATUSES)[number]
+
+export const STUDENT_MEMBERSHIP_STATUS_LABELS: Record<
+  StudentMembershipStatus,
+  string
+> = {
+  unassigned: "未在籍",
+  ...MEMBERSHIP_PHASE_LABELS,
+}
+
+/**
+ * 既定で出す所属状況。過去在籍だけの生徒（卒業・転出）を除き、在籍予定は含める
+ * （新年度の学級を前もって組んだ生徒が、登録したはずなのに見つからなくならないよう）
+ */
+export const DEFAULT_STUDENT_MEMBERSHIP_STATUSES: ReadonlySet<StudentMembershipStatus> =
+  new Set(["unassigned", "current", "upcoming"])
 
 /** 並べ替えの鍵を持った1行 */
 interface StudentSortable {
@@ -27,30 +53,27 @@ interface StudentTableFilters {
   searchTerm: string
   /** 所属したことのある学級で絞る（"all" で絞らない） */
   classroomId: string
-  /** 所属状況（"all" / "unassigned" / "current" / "current_unassigned" / "past"） */
-  membershipStatus: string
+  /** 出す所属状況。どれかに当てはまる生徒を出す */
+  membershipStatuses: ReadonlySet<StudentMembershipStatus>
 }
 
-/** 所属状況の絞り込みに合うか */
-function matchesMembershipStatus(
-  student: StudentWithMemberships,
-  membershipStatus: string
-): boolean {
-  const hasCurrentMembership = student.memberships.some((membership) =>
-    isCurrentMembership(membership)
+/**
+ * 生徒の所属状況。所属が無ければ未在籍、今日在籍している所属があれば在籍中、開始日が
+ * まだ来ていない所属があれば在籍予定（在籍中と在籍予定は両方当てはまりうる）、所属が
+ * 終わったものしか無ければ過去在籍
+ */
+function studentMembershipStatuses(
+  student: StudentWithMemberships
+): Set<StudentMembershipStatus> {
+  if (student.memberships.length === 0) return new Set(["unassigned"])
+  const phases = new Set(
+    student.memberships.map((membership) => membershipPhase(membership))
   )
-  switch (membershipStatus) {
-    case "current_unassigned":
-      return student.memberships.length === 0 || hasCurrentMembership
-    case "current":
-      return hasCurrentMembership
-    case "past":
-      return student.memberships.length > 0 && !hasCurrentMembership
-    case "unassigned":
-      return student.memberships.length === 0
-    default:
-      return true
-  }
+  const statuses = new Set<StudentMembershipStatus>()
+  if (phases.has("current")) statuses.add("current")
+  if (phases.has("upcoming")) statuses.add("upcoming")
+  if (statuses.size === 0) statuses.add("past")
+  return statuses
 }
 
 /**
@@ -61,7 +84,7 @@ export function useStudentTableRows({
   classrooms,
   searchTerm,
   classroomId,
-  membershipStatus,
+  membershipStatuses,
 }: StudentTableFilters) {
   const filteredStudents = useMemo(
     () =>
@@ -74,9 +97,11 @@ export function useStudentTableRows({
             student.memberships.some(
               (membership) => membership.classroom.id === classroomId
             )) &&
-          matchesMembershipStatus(student, membershipStatus)
+          [...studentMembershipStatuses(student)].some((status) =>
+            membershipStatuses.has(status)
+          )
       ),
-    [students, searchTerm, classroomId, membershipStatus]
+    [students, searchTerm, classroomId, membershipStatuses]
   )
 
   const classroomOptions = useMemo(

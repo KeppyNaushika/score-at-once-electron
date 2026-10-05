@@ -7,11 +7,15 @@
  *
  * 下見・開く・試し取り込みは失敗を `kind` で返す（ウィザードがモーダルの中に出す）。
  * 想定外の失敗だけを例外にする。
+ *
+ * 書き出しと下見は better-sqlite3 の同期処理が重いので、main では行わず作業者（utilityProcess）に
+ * 頼む（`archiveExportWorkerClient.ts`）。.partial からの置き換えと監査ログは main に残す。
  */
 
 import * as crypto from "crypto"
-import { app, BrowserWindow, dialog } from "electron"
+import { app, BrowserWindow, dialog, utilityProcess } from "electron"
 import * as fs from "fs"
+import * as os from "os"
 import * as path from "path"
 
 import {
@@ -21,11 +25,15 @@ import {
 import type { ImportAction } from "../../src/types/importAction.types"
 import { UNIFIED_ARCHIVE_EXTENSION } from "../../src/types/unifiedArchive.types"
 import { getSharedFilesDirectory } from "../lib/dataManager"
-import { previewUnifiedArchiveExport } from "../lib/export/unified-archive/archiveExportPreview"
-import type { ArchiveSelection } from "../lib/export/unified-archive/archiveScopeResolver"
+import type { ArchiveExportWorkerResponse } from "../lib/export/unified-archive/archiveExportJob"
 import {
-  createUnifiedArchive,
-  type UnifiedArchiveExportPhase,
+  type ArchiveExportWorkerProcess,
+  createArchiveExportWorkerClient,
+} from "../lib/export/unified-archive/archiveExportWorkerClient"
+import type { ArchiveSelection } from "../lib/export/unified-archive/archiveScopeResolver"
+import type {
+  UnifiedArchiveExportPhase,
+  UnifiedArchiveExportResult,
 } from "../lib/export/unified-archive/unifiedArchiveCreator"
 import { archiveImportFileKindOf } from "../lib/import/archiveImportFileKind"
 import { importUnifiedArchiveFiles } from "../lib/import/unified-archive/archiveFileImporter"
@@ -104,6 +112,44 @@ const requireMigrationsDir = (): string => {
   return migrationsDir
 }
 
+/**
+ * 作業者の入り口。esbuild が main の束（main/electron-src/index.js）の隣に別の束として出す
+ * （scripts/buildMain.js）。このファイルは main の束に入るので、`__dirname` はその置き場を指す。
+ * パッケージでは app.asar の中にあり、utilityProcess は asar の中のスクリプトも起こせる
+ */
+const ARCHIVE_EXPORT_WORKER_PATH = path.join(
+  __dirname,
+  "unifiedArchiveExportWorker.js"
+)
+
+const spawnArchiveExportWorker = (): ArchiveExportWorkerProcess => {
+  const child = utilityProcess.fork(ARCHIVE_EXPORT_WORKER_PATH, [], {
+    serviceName: "統合アーカイブの書き出し",
+    stdio: "inherit",
+  })
+  return {
+    postMessage: (request) => child.postMessage(request),
+    // 返事を送るのは同じビルドの作業者だけ（`ArchiveExportWorkerResponse` の形で送る）
+    onMessage: (listener) =>
+      child.on("message", (response: ArchiveExportWorkerResponse) =>
+        listener(response)
+      ),
+    onExit: (listener) => child.on("exit", listener),
+    kill: () => {
+      child.kill()
+    },
+  }
+}
+
+const archiveExportWorker = createArchiveExportWorkerClient({
+  spawn: spawnArchiveExportWorker,
+})
+
+/** 書き出しの作業者を終わらせ、終わっていない書き出し・下見を失敗にする（アプリの終了時） */
+export function stopUnifiedArchiveExportWorker(): void {
+  archiveExportWorker.shutdown()
+}
+
 /** 書き出しの進捗を開いている全部の窓へ送る。閉じかけの窓に送って失敗しても無視する */
 const broadcastExportProgress = (phase: UnifiedArchiveExportPhase): void => {
   for (const browserWindow of BrowserWindow.getAllWindows()) {
@@ -128,7 +174,7 @@ const countIdLists = (
 export const unifiedArchiveHandlers = {
   /** 選択から、書き出す範囲の件数・実体の id・外せない理由・欠けたファイルを返す（DB は書かない） */
   "unifiedArchive:previewExport": async (selection: ArchiveSelection) =>
-    previewUnifiedArchiveExport({
+    archiveExportWorker.previewExport({
       sourceDatabasePath: getDatabasePath(),
       dataDirectory: getSharedFilesDirectory(),
       selection,
@@ -147,27 +193,35 @@ export const unifiedArchiveHandlers = {
 
   /**
    * 書き出す。同じ場所の一時ファイルへ書いてから置き換えるので、書きかけのファイルが残らず、
-   * 保存ダイアログで上書きを選んだ既存のファイルは書き終えてから置き換わる
+   * 保存ダイアログで上書きを選んだ既存のファイルは書き終えてから置き換わる。
+   * 作業者の作業ディレクトリも main が用意して消すので、作業者が途中で終わっても残らない
    */
   "unifiedArchive:export": async (input: {
     selection: ArchiveSelection
     outputPath: string
   }) => {
     const partialPath = `${input.outputPath}.${crypto.randomUUID()}.partial`
-    let exported: Awaited<ReturnType<typeof createUnifiedArchive>>
+    const temporaryDirectory = fs.mkdtempSync(
+      path.join(os.tmpdir(), "sao-export-job-")
+    )
+    let exported: UnifiedArchiveExportResult
     try {
-      exported = await createUnifiedArchive({
-        sourceDatabasePath: getDatabasePath(),
-        dataDirectory: getSharedFilesDirectory(),
-        outputPath: partialPath,
-        selection: input.selection,
-        exportedByUserId: getCurrentActorUserId(),
-        appVersion: getAppVersion(),
-        onProgress: broadcastExportProgress,
-      })
+      exported = await archiveExportWorker.exportArchive(
+        {
+          sourceDatabasePath: getDatabasePath(),
+          dataDirectory: getSharedFilesDirectory(),
+          outputPath: partialPath,
+          selection: input.selection,
+          exportedByUserId: getCurrentActorUserId(),
+          appVersion: getAppVersion(),
+          temporaryDirectory,
+        },
+        broadcastExportProgress
+      )
       fs.renameSync(partialPath, input.outputPath)
     } finally {
       fs.rmSync(partialPath, { force: true })
+      fs.rmSync(temporaryDirectory, { recursive: true, force: true })
     }
     const { manifest } = exported
 
