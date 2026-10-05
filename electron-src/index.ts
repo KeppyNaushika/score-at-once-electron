@@ -5,6 +5,7 @@ import { pathToFileURL } from "url"
 import { initializeApp } from "./appInitializer"
 import { setupAllIPCHandlers } from "./ipc-handlers"
 import { destroySharedSvgWindow } from "./ipc-handlers/exportHandlers"
+import { stopUnifiedArchiveExportWorker } from "./ipc-handlers/unifiedArchiveHandlers"
 import { startAiGradingBatchPolling } from "./lib/aiGrading/aiGradingMainServices"
 import { getAbsolutePathFromSharedFiles } from "./lib/dataManager"
 import { closeAllUnifiedArchiveImportSessions } from "./lib/import/unified-archive/archiveImportSessions"
@@ -191,6 +192,13 @@ app.on("before-quit", async (_event) => {
     closeAllUnifiedArchiveImportSessions()
   } catch (error) {
     console.warn("Failed to close unified archive import sessions:", error)
+  }
+
+  // 統合アーカイブの書き出しの作業者を終わらせる
+  try {
+    stopUnifiedArchiveExportWorker()
+  } catch (error) {
+    console.warn("Failed to stop unified archive export worker:", error)
   }
 
   // AI 採点のバッチ回収を止める（預けたバッチは次の起動で回収する）

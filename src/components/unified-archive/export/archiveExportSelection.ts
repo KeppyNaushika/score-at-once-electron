@@ -46,7 +46,8 @@ export function createExportSelectionState(
     scoringKind: "all",
     includeAnswers: true,
     optionalItems: [],
-    classroomStudentScope: "current",
+    // 新年度に向けて前もって組んだ学級も書き出せるよう、在籍予定も既定で含める
+    classroomStudentPhases: new Set(["current", "upcoming"]),
     removedClassroomStudentIds: [],
   }
 }

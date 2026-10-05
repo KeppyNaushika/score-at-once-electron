@@ -366,7 +366,8 @@ export interface ClassroomStudentExamResult {
   studentNumber: string
   studentName: string
   attendanceNumber: number | null
-  /** この学級での所属の終了日。在籍中かどうかは renderer が判定する */
+  /** この学級での所属の開始日・終了日。在籍中かどうかは renderer が判定する */
+  startDate: Date
   endDate: Date | null
   examResults: StudentExamResult[]
 }
@@ -397,6 +398,7 @@ export const getClassroomExamResults = async (
         studentNumber: membership.student.studentNumber,
         studentName: `${membership.student.lastName} ${membership.student.firstName}`,
         attendanceNumber: membership.attendanceNumber,
+        startDate: membership.startDate,
         endDate: membership.endDate,
         examResults,
       })

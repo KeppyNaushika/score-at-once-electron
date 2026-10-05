@@ -104,7 +104,9 @@ async function resolveStudentEmptyReason(
     const hasCurrentOrUnassigned = allStudents.some(
       (student) =>
         student.memberships.length === 0 ||
-        student.memberships.some(isCurrentMembership)
+        student.memberships.some((membership) =>
+          isCurrentMembership(membership)
+        )
     )
     return hasCurrentOrUnassigned ? "allAdded" : "noCurrentEnrollment"
   }

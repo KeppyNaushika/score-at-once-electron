@@ -7,6 +7,10 @@
  * 規則そのもの（範囲・現行化・行の書き方）は core の各テストが見るので、ここはつなぎ目
  * （ダイアログ・DB とデータディレクトリの場所・進捗・監査ログ・作業の出し入れ・失敗の返し方）を見る。
  *
+ * 書き出しと下見は main では作業者（utilityProcess）が行う。作業者はテストでは起こせないので、
+ * `utilityProcess.fork` を、作業者と同じ `runArchiveExportJob` をこのプロセスで動かし、返事を
+ * 非同期に返す偽物に差し替える（依頼・返事の受け渡しと、失敗の戻し方はハンドラーのまま通る）。
+ *
  * テスト DB は `_prisma_migrations` を持たないので、unifiedArchiveRoundTrip.test.ts と同じく
  * 複製にアプリの全 migration を適用済みとして記録し、それを「ライブ DB」（getDatabasePath）にする。
  * 書き込みはテスト DB（Prisma）へ行く。
@@ -28,21 +32,50 @@ const electronMocks = vi.hoisted(() => ({
   showSaveDialog: vi.fn(),
   showOpenDialog: vi.fn(),
   send: vi.fn(),
+  fork: vi.fn(),
 }))
-vi.mock("electron", () => ({
-  app: {
-    getVersion: () => "0.0.0-test",
-    getAppPath: () => process.cwd(),
-  },
-  dialog: {
-    showSaveDialog: electronMocks.showSaveDialog,
-    showOpenDialog: electronMocks.showOpenDialog,
-  },
-  BrowserWindow: {
-    getAllWindows: () => [{ webContents: { send: electronMocks.send } }],
-  },
-  ipcMain: { handle: vi.fn() },
-}))
+vi.mock("electron", async () => {
+  const { runArchiveExportJob } =
+    await import("../../../electron-src/lib/export/unified-archive/archiveExportJob")
+  /** 作業者の偽物。依頼をこのプロセスでこなし、返事は次の周回で届ける（本物も非同期に届く） */
+  const forkInProcessWorker = () => {
+    const messageListeners: ((
+      response: ArchiveExportWorkerResponse
+    ) => void)[] = []
+    return {
+      postMessage: (request: ArchiveExportWorkerRequest) => {
+        void runArchiveExportJob(request, (response) =>
+          setImmediate(() =>
+            messageListeners.forEach((listener) => listener(response))
+          )
+        )
+      },
+      on: (
+        event: string,
+        listener: (response: ArchiveExportWorkerResponse) => void
+      ) => {
+        if (event === "message") messageListeners.push(listener)
+      },
+      kill: () => true,
+    }
+  }
+  electronMocks.fork.mockImplementation(forkInProcessWorker)
+  return {
+    app: {
+      getVersion: () => "0.0.0-test",
+      getAppPath: () => process.cwd(),
+    },
+    dialog: {
+      showSaveDialog: electronMocks.showSaveDialog,
+      showOpenDialog: electronMocks.showOpenDialog,
+    },
+    BrowserWindow: {
+      getAllWindows: () => [{ webContents: { send: electronMocks.send } }],
+    },
+    ipcMain: { handle: vi.fn() },
+    utilityProcess: { fork: electronMocks.fork },
+  }
+})
 
 vi.mock("../../../electron-src/lib/prisma/client", async () => {
   const { getTestPrismaClient } = await import("../../helpers/testPrismaClient")
@@ -68,6 +101,11 @@ vi.mock("../../../electron-src/lib/prisma/auditActor", () => ({
 }))
 
 import { unifiedArchiveHandlers } from "../../../electron-src/ipc-handlers/unifiedArchiveHandlers"
+import type {
+  ArchiveExportWorkerRequest,
+  ArchiveExportWorkerResponse,
+} from "../../../electron-src/lib/export/unified-archive/archiveExportJob"
+import { ArchiveScopeError } from "../../../electron-src/lib/export/unified-archive/archiveScopeResolver"
 import { listLocalMigrationNames } from "../../../electron-src/lib/prisma/schema/migrationApplier"
 import {
   cleanupTestDatabase,
@@ -271,6 +309,36 @@ describe("統合アーカイブの IPC ハンドラー", () => {
         target: `Exam(${fixture.examA.exam.id})`,
       }),
     ])
+  })
+
+  it("書き出し: 成績算出が使うものを外すと、作業者からの ArchiveScopeError をそのまま投げ、一時ファイルも監査ログも残さない", async () => {
+    const exporting = unifiedArchiveHandlers["unifiedArchive:export"]({
+      selection: {
+        roots: { Grade: [fixture.gradeId] },
+        exclusions: { Exam: [fixture.examA.exam.id] },
+      },
+      outputPath: OUTPUT_PATH,
+    })
+
+    await expect(exporting).rejects.toBeInstanceOf(ArchiveScopeError)
+    await expect(exporting).rejects.toMatchObject({
+      violations: [
+        expect.objectContaining({
+          table: "GradeDataSource",
+          column: "examId",
+          target: `Exam(${fixture.examA.exam.id})`,
+        }),
+      ],
+    })
+    expect(fs.existsSync(OUTPUT_PATH)).toBe(false)
+    expect(
+      fs.readdirSync(WORK_DIR).filter((name) => name.endsWith(".partial"))
+    ).toEqual([])
+    expect(
+      await prisma.auditLog.count({
+        where: { action: "archive.unified.export" },
+      })
+    ).toBe(0)
   })
 
   it("書き出し → 開く → 試し取り込み → 取り込みを通すと、行と画像が入り、進捗と監査ログが残り、作業が閉じる", async () => {

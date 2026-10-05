@@ -18,6 +18,9 @@ const MAIN_OUTPUTS = new Set([
   "electron-src/index.js",
   "electron-src/index.js.map",
   "electron-src/preload.js", // scripts/buildPreload.js が作る
+  // 統合アーカイブの書き出しの作業者（utilityProcess で起こす。unifiedArchiveHandlers.ts）
+  "electron-src/unifiedArchiveExportWorker.js",
+  "electron-src/unifiedArchiveExportWorker.js.map",
 ])
 
 const removeStaleOutputs = () => {
@@ -53,7 +56,18 @@ const prismaClientPlugin = {
 
 async function buildMain() {
   await esbuild.build({
-    entryPoints: [path.join(__dirname, "../electron-src/index.ts")],
+    // 作業者は main と別のプロセスで動くので、別の束にする（同じ outdir に並べ、main は
+    // `__dirname` から作業者を見つける）
+    entryPoints: [
+      { in: path.join(__dirname, "../electron-src/index.ts"), out: "index" },
+      {
+        in: path.join(
+          __dirname,
+          "../electron-src/lib/export/unified-archive/unifiedArchiveExportWorker.ts"
+        ),
+        out: "unifiedArchiveExportWorker",
+      },
+    ],
     bundle: true,
     platform: "node",
     target: "es2022",

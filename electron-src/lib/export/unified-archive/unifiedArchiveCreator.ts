@@ -49,6 +49,11 @@ export interface CreateUnifiedArchiveOptions {
   exportedByUserId: string | null
   appVersion: string
   onProgress?: (phase: UnifiedArchiveExportPhase) => void
+  /**
+   * 作業用のディレクトリを作る場所。既定は OS の一時ディレクトリ。作業者で書き出すとき、
+   * 作業者が途中で終わっても作りかけを main が消せるよう、main が用意した場所を渡す
+   */
+  temporaryDirectory?: string
   /** テスト用。既定は現在時刻 */
   now?: () => Date
 }
@@ -284,7 +289,9 @@ export async function createUnifiedArchive(
   }
   fs.mkdirSync(path.dirname(outputPath), { recursive: true })
 
-  const workDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "sao-export-"))
+  const workDirectory = fs.mkdtempSync(
+    path.join(options.temporaryDirectory ?? os.tmpdir(), "sao-export-")
+  )
   try {
     onProgress?.("resolvingScope")
     const scope = resolveScopeFromSource(

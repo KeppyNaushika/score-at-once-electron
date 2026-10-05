@@ -108,9 +108,9 @@ export function ExportDialogBody({
     () =>
       buildClassroomStudentIndex(
         students ?? [],
-        selection.classroomStudentScope
+        selection.classroomStudentPhases
       ),
-    [students, selection.classroomStudentScope]
+    [students, selection.classroomStudentPhases]
   )
   /** 学級から入った生徒 → どの学級から入ったか（行の「選択中（1年1組）」に使う） */
   const classroomSourcesByStudent = useMemo(
@@ -274,7 +274,7 @@ export function ExportDialogBody({
         <ArchiveEntityCheckListSection
           selection={effectiveSelection}
           classroomSourcesByStudent={classroomSourcesByStudent}
-          classroomStudentScope={selection.classroomStudentScope}
+          classroomStudentPhases={selection.classroomStudentPhases}
           preview={previewOk}
           catalog={catalog}
           removalImpact={removalImpact}
@@ -300,8 +300,8 @@ export function ExportDialogBody({
               )
             )
           }
-          onClassroomStudentScopeChange={(classroomStudentScope) =>
-            updateSelection((prev) => ({ ...prev, classroomStudentScope }))
+          onClassroomStudentPhasesChange={(classroomStudentPhases) =>
+            updateSelection((prev) => ({ ...prev, classroomStudentPhases }))
           }
           onActiveEntityChange={handleActiveEntityChange}
         />
