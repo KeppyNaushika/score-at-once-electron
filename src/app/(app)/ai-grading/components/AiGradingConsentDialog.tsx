@@ -32,7 +32,7 @@ interface AiGradingConsentDialogProps {
 }
 
 /**
- * 事業者ごとの同意（設計 §9-1）。8項目を1つずつ確かめないと「同意して解放」を押せない。
+ * 事業者ごとの同意（設計 §9-1）。8項目を1つずつ確かめないと「同意して有効にする」を押せない。
  *
  * 開くたびにマウントし直す前提（確かめた印を持ち越さない）。
  */
@@ -68,7 +68,7 @@ export function AiGradingConsentDialog({
     recordConsent.mutate(provider, {
       onSuccess: () => {
         toast.success(
-          `${providerTerms.providerName} への送信を伴う AI 採点（実験的機能）を解放しました`
+          `${providerTerms.providerName} への送信を伴う AI 採点（実験的機能）を有効にしました`
         )
         onClose()
       },
@@ -89,8 +89,8 @@ export function AiGradingConsentDialog({
             <ExperimentalBadge />
           </DialogTitle>
           <DialogDescription>
-            次の{AI_GRADING_CONSENT_ITEMS.length}
-            項目を読み、1つずつ確かめてください。すべて確かめると解放できます。
+            以下の{AI_GRADING_CONSENT_ITEMS.length}
+            項目をお読みいただき、それぞれ確認のうえチェックしてください。すべての項目を確認すると、この機能を有効にできます。
           </DialogDescription>
         </DialogHeader>
 
@@ -157,8 +157,7 @@ export function AiGradingConsentDialog({
 
         <DialogFooter className="items-center gap-2 sm:justify-between">
           <span className="text-xs text-muted-foreground">
-            確かめた項目: {checkedItemKeys.size} /{" "}
-            {AI_GRADING_CONSENT_ITEMS.length}
+            確認済み: {checkedItemKeys.size} / {AI_GRADING_CONSENT_ITEMS.length}
           </span>
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
@@ -169,7 +168,7 @@ export function AiGradingConsentDialog({
               disabled={!allChecked || recordConsent.isPending}
               onClick={handleConsent}
             >
-              同意して解放
+              同意して有効にする
             </Button>
           </div>
         </DialogFooter>

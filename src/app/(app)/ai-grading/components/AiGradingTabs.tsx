@@ -1,17 +1,23 @@
 "use client"
 
-import { BarChart3, CircleDollarSign, Settings } from "lucide-react"
+import {
+  BarChart3,
+  CircleDollarSign,
+  Settings,
+  SlidersHorizontal,
+} from "lucide-react"
 import { useState } from "react"
 
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { useAiGradingSettings } from "../hooks/useAiGradingSettings"
+import { AiGradingDefaultsTab } from "./AiGradingDefaultsTab"
 import { AiGradingSettingsTab } from "./AiGradingSettingsTab"
 import { AiPricingTab } from "./AiPricingTab"
 import { AiTokenUsageTab } from "./AiTokenUsageTab"
 
-const AI_GRADING_TABS = ["settings", "pricing", "usage"] as const
+const AI_GRADING_TABS = ["settings", "defaults", "pricing", "usage"] as const
 export type AiGradingTab = (typeof AI_GRADING_TABS)[number]
 
 /** URL のクエリの値をタブにする。知らない値なら「設定」 */
@@ -27,7 +33,7 @@ interface AiGradingTabsProps {
 }
 
 /**
- * 「設定」「料金」「使用トークン」のタブ。
+ * 「設定」「既定値」「料金」「使用トークン」のタブ。
  *
  * 機能は同意するまで存在しないものとして扱う（設計 §9-1）。今の利用者の今の同意が
  * 1つも無いうちは「設定」（同意の入口と説明）だけを使え、他のタブは押せない
@@ -58,6 +64,14 @@ export function AiGradingTabs({ initialTab }: AiGradingTabsProps) {
           設定
         </TabsTrigger>
         <TabsTrigger
+          value="defaults"
+          className="gap-2"
+          disabled={!hasAnyCurrentConsent}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          既定値
+        </TabsTrigger>
+        <TabsTrigger
           value="pricing"
           className="gap-2"
           disabled={!hasAnyCurrentConsent}
@@ -76,7 +90,7 @@ export function AiGradingTabs({ initialTab }: AiGradingTabsProps) {
       </TabsList>
       {!hasAnyCurrentConsent && (
         <p className="text-xs text-muted-foreground">
-          「料金」と「使用トークン」は、事業者に同意すると使えます。
+          「既定値」「料金」「使用トークン」は、いずれかの事業者を有効にすると使えます。
         </p>
       )}
 
@@ -85,6 +99,9 @@ export function AiGradingTabs({ initialTab }: AiGradingTabsProps) {
       </TabsContent>
       {hasAnyCurrentConsent && (
         <>
+          <TabsContent value="defaults">
+            <AiGradingDefaultsTab />
+          </TabsContent>
           <TabsContent value="pricing">
             <AiPricingTab />
           </TabsContent>

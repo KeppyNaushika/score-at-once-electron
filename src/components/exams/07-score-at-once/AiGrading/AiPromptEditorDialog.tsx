@@ -29,6 +29,11 @@ interface AiPromptEditorDialogProps {
   cropRegion: QuestionAnswerRegionRow
   /** 写す元の版（「編集」から開いたとき）。新規追加なら null で、白紙から書く */
   basePrompt: AiPromptRow | null
+  /**
+   * 新規追加のとき「朱書きの指示」に最初から入れる文言（「AI採点」の画面の「既定値」タブで決める）。
+   * 元の版を写すときは使わず、元の版の値を引き継ぐ
+   */
+  defaultAnnotationInstruction: string
   /** 保存したプロンプトを選ぶ */
   onCreated: (promptId: string) => void
 }
@@ -52,6 +57,7 @@ function AiPromptEditorForm({
   examId,
   cropRegion,
   basePrompt,
+  defaultAnnotationInstruction,
   onCreated,
 }: AiPromptEditorDialogProps) {
   const [questionText, setQuestionText] = useState(
@@ -66,7 +72,7 @@ function AiPromptEditorForm({
   )
   const [rubricText, setRubricText] = useState(basePrompt?.rubricText ?? "")
   const [annotationInstruction, setAnnotationInstruction] = useState(
-    basePrompt?.annotationInstruction ?? ""
+    basePrompt ? basePrompt.annotationInstruction : defaultAnnotationInstruction
   )
   const createPrompt = useMutation(
     createAiPromptMutation(examId, cropRegion.id)

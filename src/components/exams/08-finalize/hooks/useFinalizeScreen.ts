@@ -8,6 +8,7 @@ import { useGridZoom } from "@/components/exams/07-score-at-once/ScoringMain/hoo
 import { usePartialScore } from "@/components/exams/07-score-at-once/ScoringMain/hooks/usePartialScore"
 import { useScoringNavigation } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringNavigation"
 import { useScoringPreferences } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringPreferences"
+import { effectiveSelection } from "@/components/exams/07-score-at-once/ScoringMain/utils/effectiveSelection"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { finalizeQuestionScoreMutation } from "@/queries/scoring"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
@@ -157,11 +158,10 @@ export function useFinalizeScreen(examId: string) {
    * 何も残らなければ先頭の答案を選んでいるものとする（07 の一覧と同じ）
    */
   const [chosenIds, setChosenIds] = useState<ReadonlySet<string>>(new Set())
-  const selectedIds = useMemo(() => {
-    const stillVisible = visibleIds.filter((id) => chosenIds.has(id))
-    if (stillVisible.length > 0) return new Set(stillVisible)
-    return new Set(visibleIds.slice(0, 1))
-  }, [chosenIds, visibleIds])
+  const selectedIds = useMemo(
+    () => effectiveSelection(chosenIds, visibleIds),
+    [chosenIds, visibleIds]
+  )
   const selectedItems = useMemo(
     () => visibleItems.filter((item) => selectedIds.has(item.id)),
     [visibleItems, selectedIds]
@@ -171,17 +171,22 @@ export function useFinalizeScreen(examId: string) {
     setChosenIds(ids)
   }, [])
 
-  const handleSelectAnswer = useCallback((id: string, isSelected: boolean) => {
-    setChosenIds((prev) => {
-      const next = new Set(prev)
-      if (isSelected) {
-        next.add(id)
-      } else {
-        next.delete(id)
-      }
-      return next
-    })
-  }, [])
+  const handleSelectAnswer = useCallback(
+    (id: string, isSelected: boolean) => {
+      // 見えている選択（何も選んでいなければ先頭の答案）から足し引きする。
+      // 選んだ答案だけから足すと、Ctrl/Cmd+クリックで先頭の答案が選択から落ちる
+      setChosenIds((prev) => {
+        const next = effectiveSelection(prev, visibleIds)
+        if (isSelected) {
+          next.add(id)
+        } else {
+          next.delete(id)
+        }
+        return next
+      })
+    },
+    [visibleIds]
+  )
 
   const changeQuestion = useCallback((cropRegionId: string | null) => {
     setSelectedCropRegionId(cropRegionId)

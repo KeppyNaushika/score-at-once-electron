@@ -26,6 +26,7 @@ import { AiOwnScoringSection } from "./AiOwnScoringSection"
 import { AiPromptPanel } from "./AiPromptPanel"
 import { AiRunHistorySection } from "./AiRunHistorySection"
 import { AiSelectedAnswerSection } from "./AiSelectedAnswerSection"
+import { AiSelectedJudgementSection } from "./AiSelectedJudgementSection"
 import { useAiAnnotationDrafts } from "./hooks/useAiAnnotationDrafts"
 import { useAiAnswerReviewState } from "./hooks/useAiAnswerReviewState"
 import { useAiAttemptNavigation } from "./hooks/useAiAttemptNavigation"
@@ -79,7 +80,8 @@ interface AiGradingWorkspaceProps {
 
 /**
  * 設問1つぶんの AI 採点の作業場。左にプロンプト・採点反映・アノテーション反映のタブ
- * （選んだ答案の詳細はアノテーション反映のタブ）、中央に**一覧表示と同じ答案の一覧**
+ * （選んだ答案の AI の判定は採点反映のタブでも見え、朱書きを直す詳細はアノテーション反映のタブ）、
+ * 中央に**一覧表示と同じ答案の一覧**
  * （色は自分の採点、斜線と札と朱書きで AI の提案）、右端に設問・絞り込み。
  *
  * 表示する試行・選んでいるプロンプト・答案の選択は、ここが持つ利用者の選択だけで、
@@ -196,7 +198,7 @@ export function AiGradingWorkspace({
     onAdopt: adoption.requestAdopt,
   })
   // 採点反映のタブでは、一覧表示と同じキーで自分の採点を直接書ける
-  const { scoreSelected } = useAiOwnScoring({
+  const { scoreSelected, partialScore } = useAiOwnScoring({
     examId,
     currentUserId,
     cropRegion,
@@ -204,7 +206,7 @@ export function AiGradingWorkspace({
     questionScores,
     selectedItems: grid.selectedItems,
     isShortcutEnabled: leftTab === "score",
-    onScored: grid.markAdopted,
+    onScored: grid.markScored,
   })
   if (!provider) return null
 
@@ -280,10 +282,20 @@ export function AiGradingWorkspace({
                 isAdopting={adoption.isAdopting}
               />
               {kind === "score" && (
-                <AiOwnScoringSection
-                  selectedCount={grid.selectedItems.length}
-                  onScore={scoreSelected}
-                />
+                <>
+                  <AiSelectedJudgementSection
+                    singleSelectedItem={grid.singleSelectedItem}
+                    promptNumberById={promptNumberById}
+                    onPrevAttempt={showOlderAttempt}
+                    onNextAttempt={showNewerAttempt}
+                  />
+                  <AiOwnScoringSection
+                    cropRegion={cropRegion}
+                    selectedCount={grid.selectedItems.length}
+                    onScore={scoreSelected}
+                    partialScore={partialScore}
+                  />
+                </>
               )}
               {kind === "annotation" && (
                 <AiSelectedAnswerSection

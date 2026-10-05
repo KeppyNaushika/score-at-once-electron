@@ -7,7 +7,6 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  cleanModelName,
   modelIdFromDisplayName,
   parseAnthropicPricingPage,
   parseMtokPrice,
@@ -20,6 +19,7 @@ import {
   buildPricingDraft,
   type PricingDraftRow,
 } from "@/app/(app)/ai-grading/utils/pricingImportDraft"
+import { cleanModelName } from "@/app/(app)/ai-grading/utils/pricingPageMarkdown"
 import type { AiPricing } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 
 /** 列の並びを入れ替え、注記・脚注・読めない行を混ぜた作り物の表 */
@@ -150,6 +150,7 @@ describe("下書きと入力欄", () => {
     ]
     expect(
       buildPricingDraft(
+        "anthropic",
         [...parsed.prices, extraPrice, unusedPrice],
         pricing,
         new Set(["claude-epsilon-1"])

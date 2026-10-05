@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { AiModelPrice } from "@/electron-src/lib/aiGrading/providerCredentialStore"
+import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
 import { cn } from "@/lib/utils"
 import {
   setAiBatchPricePercentMutation,
@@ -35,6 +36,7 @@ import {
 import type { PricingImportDraft } from "./AiPricingPageImport"
 
 interface AiPricingDraftProps {
+  provider: GradingProviderId
   draft: PricingImportDraft
   currentBatchPricePercent: number | null
   onClose: () => void
@@ -56,6 +58,7 @@ function formatFetchedAt(fetchedAt: string): string {
  * 「保存」で入れる。1行でも値が正しくなければ何も保存しない
  */
 export function AiPricingDraft({
+  provider,
   draft,
   currentBatchPricePercent,
   onClose,
@@ -82,7 +85,7 @@ export function AiPricingDraft({
 
   const handleSave = async () => {
     const parsedRows = selectedRows.map((row) =>
-      parseModelPriceFields("anthropic", row.pagePrice.model, row.fields)
+      parseModelPriceFields(provider, row.pagePrice.model, row.fields)
     )
     const invalidRow = parsedRows.find((parsedRow) => !parsedRow.isValid)
     if (invalidRow && !invalidRow.isValid) {
@@ -98,7 +101,7 @@ export function AiPricingDraft({
       }
       if (willSaveBatch) {
         await setBatchPercent.mutateAsync({
-          provider: "anthropic",
+          provider,
           percent: draft.batchPricePercent,
         })
       }
@@ -224,6 +227,19 @@ export function AiPricingDraft({
             バッチの割合は今の値（{draft.batchPricePercent}%）と同じです。
           </p>
         )}
+        {draft.batchPricePercent !== null &&
+          draft.batchExceptionNames.length > 0 && (
+            <div className="text-muted-foreground">
+              <p>
+                バッチの単価がこの割合と違うモデル（割合は事業者に1つなので、これらのバッチの金額はずれます）:
+              </p>
+              <ul className="list-disc pl-5">
+                {draft.batchExceptionNames.map((batchExceptionName) => (
+                  <li key={batchExceptionName}>{batchExceptionName}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         {draft.unmappedNames.length > 0 && (
           <div className="text-muted-foreground">
             <p>

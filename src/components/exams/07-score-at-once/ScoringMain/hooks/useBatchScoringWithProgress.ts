@@ -7,6 +7,8 @@ import type {
 } from "@/components/exams/07-score-at-once/types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
+import { findNextAnswerIdAfterScoring } from "../utils/nextAnswerAfterScoring"
+
 /** ScoringDataに選択状態を追加した型 */
 type ScoringDataWithSelection = ScoringData & { isSelected: boolean }
 
@@ -68,42 +70,14 @@ export function useBatchScoringWithProgress({
 
       // 採点後の自動進行
       if (gradingMode === "grid" && selectedAnswers.size >= 1) {
-        // グリッドモード: 次の答案を自動選択
-        const gridAnswers = getGridAnswerData()
-
-        // 最適化: 答案IDのインデックスマップを事前作成
-        const answerIndexMap = new Map<string, number>()
-        gridAnswers.forEach((answer, index) => {
-          answerIndexMap.set(answer.id, index)
-        })
-
-        // 複数選択の場合は最終答案（最後にソートされた答案）を基準にする
-        let maxIndex = -1
-        for (const selectedId of selectedAnswers) {
-          const index = answerIndexMap.get(selectedId)
-          if (index !== undefined && index > maxIndex) {
-            maxIndex = index
-          }
-        }
-
-        if (maxIndex >= 0 && maxIndex < gridAnswers.length - 1) {
-          // 最終答案の次の答案を選択（模範解答をスキップ）
-          let nextIndex = maxIndex + 1
-          while (
-            nextIndex < gridAnswers.length &&
-            gridAnswers[nextIndex].id.startsWith("master-")
-          ) {
-            nextIndex++
-          }
-
-          if (nextIndex < gridAnswers.length) {
-            const nextAnswerId = gridAnswers[nextIndex].id
-            setSelectedAnswers(new Set([nextAnswerId]))
-          } else {
-            // 選択をクリアせず保持する
-          }
-        } else {
-          // 選択をクリアせず保持する
+        // グリッドモード: 選んでいた答案のうち最後のものの次を選ぶ（末尾なら選択を残す）。
+        // getGridAnswerData はこの描画のもので、書き込む前の並びを返す
+        const nextAnswerId = findNextAnswerIdAfterScoring(
+          getGridAnswerData().map((answer) => answer.id),
+          selectedAnswers
+        )
+        if (nextAnswerId) {
+          setSelectedAnswers(new Set([nextAnswerId]))
         }
       } else if (gradingMode === "individual") {
         // 個別モード: scoringBehaviorに従って自動進行

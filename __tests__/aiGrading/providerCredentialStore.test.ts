@@ -204,6 +204,9 @@ describe("providerCredentialStore", () => {
         openaiCompatibleBaseUrl: null,
         anthropicPricingSourceUrl:
           "https://platform.claude.com/docs/ja/about-claude/pricing",
+        openaiPricingSourceUrl:
+          "https://developers.openai.com/api/docs/pricing",
+        defaultAnnotationInstruction: "",
       },
       modelCatalogs: { anthropic: null, openai: null },
       pricing: {
@@ -492,6 +495,60 @@ describe("providerCredentialStore", () => {
       expect(store.getSettings().anthropicPricingSourceUrl).toBe(
         "https://example.test/pricing"
       )
+      expect(
+        getErrorCode(() =>
+          store.updateSettings({
+            openaiPricingSourceUrl: "http://example.test/openai-pricing",
+          })
+        )
+      ).toBe("invalid_settings")
+      store.updateSettings({
+        openaiPricingSourceUrl: "https://example.test/openai-pricing",
+      })
+      expect(store.getSettings()).toMatchObject({
+        anthropicPricingSourceUrl: "https://example.test/pricing",
+        openaiPricingSourceUrl: "https://example.test/openai-pricing",
+      })
+    })
+
+    it("朱書きの指示の既定の文言は、未設定なら空で、入れた文言（複数行も）をそのまま残す", () => {
+      const store = createStore()
+      // アプリは文言を決め打ちしない
+      expect(store.getSettings().defaultAnnotationInstruction).toBe("")
+
+      const instruction = "部分点の答案にだけ書く。\n「です・ます」で、20字以内"
+      store.updateSettings({ defaultAnnotationInstruction: instruction })
+      expect(createStore().getSettings().defaultAnnotationInstruction).toBe(
+        instruction
+      )
+      // 他の項目を変えても消えない
+      store.updateSettings({ concurrency: 2 })
+      expect(createStore().getSettings().defaultAnnotationInstruction).toBe(
+        instruction
+      )
+      // 空に戻せる
+      store.updateSettings({ defaultAnnotationInstruction: "" })
+      expect(createStore().getSettings().defaultAnnotationInstruction).toBe("")
+    })
+
+    it("朱書きの指示の既定の文言が文字列でなければ、変更を拒否し、読むときは空として扱う", () => {
+      const store = createStore()
+      expect(
+        getErrorCode(() =>
+          store.updateSettings({
+            // IPC を渡ってくる値は型どおりとは限らない
+            // @ts-expect-error 型の外の値を渡す
+            defaultAnnotationInstruction: 42,
+          })
+        )
+      ).toBe("invalid_settings")
+
+      fs.writeFileSync(
+        configFilePath,
+        JSON.stringify({ settings: { defaultAnnotationInstruction: ["x"] } }),
+        "utf-8"
+      )
+      expect(createStore().getSettings().defaultAnnotationInstruction).toBe("")
     })
   })
 })

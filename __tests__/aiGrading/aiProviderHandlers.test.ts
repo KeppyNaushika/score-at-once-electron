@@ -120,7 +120,7 @@ const CALL_EVERY_CHANNEL: Record<ChannelName, () => Promise<unknown>> = {
     aiProviderHandlers["aiProvider:setBatchPricePercent"]("anthropic", 50),
   // 偽の net.fetch は投げるので、つながらなかったとして種類で返る
   "aiProvider:fetchPricingPage": () =>
-    aiProviderHandlers["aiProvider:fetchPricingPage"](),
+    aiProviderHandlers["aiProvider:fetchPricingPage"]("anthropic"),
 }
 
 describe("aiProviderHandlers", () => {
@@ -344,6 +344,24 @@ describe("aiProviderHandlers", () => {
       // IPC を渡ってくる値は型どおりとは限らない
       // @ts-expect-error 型の外の値を渡す
       aiProviderHandlers["aiProvider:recordConsent"]("gemini")
+    ).rejects.toThrow()
+  })
+
+  it("料金のページは、事業者ごとに設定した URL を取ってくる（URL は renderer から受け取らない）", async () => {
+    mocks.netFetch.mockClear()
+    await aiProviderHandlers["aiProvider:updateSettings"]({
+      anthropicPricingSourceUrl: "https://example.test/anthropic-pricing",
+      openaiPricingSourceUrl: "https://example.test/openai-pricing",
+    })
+    await aiProviderHandlers["aiProvider:fetchPricingPage"]("openai")
+    await aiProviderHandlers["aiProvider:fetchPricingPage"]("anthropic")
+    expect(mocks.netFetch.mock.calls.map((call) => call.at(0))).toEqual([
+      "https://example.test/openai-pricing",
+      "https://example.test/anthropic-pricing",
+    ])
+    await expect(
+      // @ts-expect-error 型の外の値を渡す
+      aiProviderHandlers["aiProvider:fetchPricingPage"]("gemini")
     ).rejects.toThrow()
   })
 

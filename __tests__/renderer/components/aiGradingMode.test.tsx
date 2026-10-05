@@ -87,6 +87,8 @@ const SETTINGS: AiGradingSettings = {
   budgetWarningUsd: null,
   openaiCompatibleBaseUrl: null,
   anthropicPricingSourceUrl: "https://example.test/pricing",
+  openaiPricingSourceUrl: "https://example.test/openai-pricing",
+  defaultAnnotationInstruction: "",
 }
 
 const cropRegion: QuestionAnswerRegionRow = {
@@ -767,7 +769,7 @@ function OwnScoringHarness({
   const selectedItems = answers
     .map((answer) => toAiGridItem(reviewed(answer), cropRegion))
     .filter((gridItem) => selectedExamStudentIds.includes(gridItem.id))
-  const { scoreSelected } = useAiOwnScoring({
+  const { scoreSelected, partialScore } = useAiOwnScoring({
     examId: "exam-1",
     currentUserId: CURRENT_USER_ID,
     cropRegion,
@@ -781,8 +783,10 @@ function OwnScoringHarness({
   })
   return (
     <AiOwnScoringSection
+      cropRegion={cropRegion}
       selectedCount={selectedItems.length}
       onScore={scoreSelected}
+      partialScore={partialScore}
     />
   )
 }

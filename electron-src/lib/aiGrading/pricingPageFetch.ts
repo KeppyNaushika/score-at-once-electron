@@ -2,12 +2,14 @@
  * 「料金」タブの「ページから読み込む」の取得（main）。
  *
  * **main は取ってくるだけで、読み解かない。** 返すのは本文の文字列そのもので、表を探して
- * 単価を読むのは renderer（`src/app/(app)/ai-grading/utils/anthropicPricingPage.ts`）。
+ * 単価を読むのは renderer（`src/app/(app)/ai-grading/utils/` の `anthropicPricingPage.ts`・
+ * `openaiPricingPage.ts`）。
  *
  * 形式は Markdown を頼む（`Accept: text/markdown`）。2026-10 に確かめたところ、Anthropic の
  * 料金のページは同じ URL のまま、この見出しを付けると Markdown（表は `| … |` の行）を返し、
  * 付けないと 1MB 近い HTML を返した（URL の末尾に `.md` を足しても同じ Markdown が返るが、
  * 利用者が URL を変えたときに壊れやすいので、URL はそのまま使い見出しで頼む）。
+ * OpenAI の料金のページも、この見出しを付けると同じ URL のまま Markdown を返した。
  * HTML が返ってきたときは renderer が「表が見つからない」として読み込めなかったことにする。
  *
  * 学校のプロキシを通すため、事業者への通信と同じく Electron の `net.fetch` を使う

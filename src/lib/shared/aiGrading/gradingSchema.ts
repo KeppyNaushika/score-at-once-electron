@@ -83,7 +83,8 @@ export function buildGradingOutputSchema(): GradingJsonSchema {
     },
     comment: {
       type: "string",
-      description: "教員向けの、その点にした理由",
+      description:
+        "教員向けの、その点にした理由だけ（不自然な記述があったときは、その報告も）",
     },
     annotation: {
       type: ["string", "null"],

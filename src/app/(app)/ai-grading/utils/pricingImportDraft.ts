@@ -10,14 +10,15 @@ import type {
   AiModelPrice,
   AiPricing,
 } from "@/electron-src/lib/aiGrading/providerCredentialStore"
+import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
 import { findModelPrice } from "@/lib/aiUsageCost"
 
-import type { PagePrice } from "./anthropicPricingPage"
 import {
   fieldsFromPrice,
   isSamePriceAmounts,
   type ModelPriceFields,
 } from "./modelPriceForm"
+import type { PagePrice } from "./pricingPageMarkdown"
 
 /** 今の単価と比べた状態 */
 export type PricingDraftStatus = "new" | "changed" | "unchanged"
@@ -40,14 +41,15 @@ export const PRICING_DRAFT_STATUS_LABELS: Record<PricingDraftStatus, string> = {
   unchanged: "同じ",
 }
 
-/** 読めた単価から下書きを作る（Anthropic の分） */
+/** 読めた単価から下書きを作る（事業者1つ分） */
 export function buildPricingDraft(
+  provider: GradingProviderId,
   pagePrices: readonly PagePrice[],
   pricing: AiPricing,
   modelsInUse: ReadonlySet<string>
 ): PricingDraftRow[] {
   return pagePrices.map((pagePrice) => {
-    const currentPrice = findModelPrice(pricing, "anthropic", pagePrice.model)
+    const currentPrice = findModelPrice(pricing, provider, pagePrice.model)
     const status: PricingDraftStatus =
       currentPrice === null
         ? "new"
