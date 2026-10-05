@@ -6,7 +6,7 @@
  *
  * 関数の形は2種類ある。**`tx` を先に取るものは木を書く側**（バルクと、新しい枝を
  * まとめて入れるところ）で、**`definitionId` を先に取るものが IPC の口**。後者は
- * 担当の確認と解答用紙の更新日時を `writeAsbDefinitionContent` に任せる。
+ * 担当の確認・解答用紙の更新日時・操作履歴を `editAsbDefinitionContent` に任せる。
  */
 
 import type { AsbBranchQuestion, Prisma } from "@prisma/client"
@@ -17,7 +17,7 @@ import type {
 } from "../../../src/types/answerSheetDefinition.types"
 import type { CurrentAsbCellRows } from "./asbCellContents"
 import { writeAsbCellContents } from "./asbCellContents"
-import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
+import { editAsbDefinitionContent } from "./asbDefinitionWrite"
 import { updateRowIfChanged, writeRow } from "./rowDiff"
 import { sortRowsByIds, writeRowOrders } from "./rowOrder"
 
@@ -111,7 +111,7 @@ export async function createAsbBranchQuestion(
   subQuestionId: string,
   branchQuestion: BranchQuestion
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const order = await tx.asbBranchQuestion.count({ where: { subQuestionId } })
     return writeAsbBranchQuestionTree(tx, subQuestionId, branchQuestion, order)
   })
@@ -122,7 +122,7 @@ export async function updateAsbBranchQuestion(
   branchQuestionId: string,
   attributes: AsbBranchQuestionAttributes
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const existing = await tx.asbBranchQuestion.findUnique({
       where: { id: branchQuestionId },
     })
@@ -139,7 +139,7 @@ export async function deleteAsbBranchQuestion(
   definitionId: string,
   branchQuestionId: string
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const removed = await tx.asbBranchQuestion.delete({
       where: { id: branchQuestionId },
     })
@@ -160,7 +160,7 @@ export async function reorderAsbBranchQuestions(
   subQuestionId: string,
   orderedIds: string[]
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const rows = await tx.asbBranchQuestion.findMany({
       where: { subQuestionId },
       orderBy: { order: "asc" },

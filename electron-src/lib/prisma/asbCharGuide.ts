@@ -12,7 +12,7 @@ import type {
   AsbCharGuideAttributes,
   ManuscriptCharGuide,
 } from "../../../src/types/answerSheetDefinition.types"
-import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
+import { editAsbDefinitionContent } from "./asbDefinitionWrite"
 import { updateRowIfChanged, writeRow } from "./rowDiff"
 import { writeRowOrders } from "./rowOrder"
 
@@ -104,7 +104,7 @@ export async function createAsbCharGuide(
   manuscriptPaperId: string,
   charGuide: ManuscriptCharGuide
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const order = await tx.asbCharGuide.count({ where: { manuscriptPaperId } })
     const data = asbCharGuideRow(manuscriptPaperId, charGuide, order)
     await tx.asbCharGuide.create({ data: { id: charGuide.id, ...data } })
@@ -117,7 +117,7 @@ export async function updateAsbCharGuide(
   charGuideId: string,
   attributes: AsbCharGuideAttributes
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const existing = await tx.asbCharGuide.findUnique({
       where: { id: charGuideId },
     })
@@ -134,7 +134,7 @@ export async function deleteAsbCharGuide(
   definitionId: string,
   charGuideId: string
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const removed = await tx.asbCharGuide.delete({ where: { id: charGuideId } })
     const remaining = await tx.asbCharGuide.findMany({
       where: { manuscriptPaperId: removed.manuscriptPaperId },

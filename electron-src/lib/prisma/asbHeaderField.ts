@@ -12,7 +12,7 @@ import type {
   AsbHeaderFieldAttributes,
   HeaderFieldDefinition,
 } from "../../../src/types/answerSheetDefinition.types"
-import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
+import { editAsbDefinitionContent } from "./asbDefinitionWrite"
 import { updateRowIfChanged, writeRow } from "./rowDiff"
 import { sortRowsByIds, writeRowOrders } from "./rowOrder"
 
@@ -87,7 +87,7 @@ export async function createAsbHeaderField(
   definitionId: string,
   headerField: HeaderFieldDefinition
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const order = await tx.asbHeaderField.count({ where: { definitionId } })
     const data = asbHeaderFieldRow(definitionId, headerField, order)
     await tx.asbHeaderField.create({ data: { id: headerField.id, ...data } })
@@ -101,7 +101,7 @@ export async function updateAsbHeaderField(
   headerFieldId: string,
   attributes: AsbHeaderFieldAttributes
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const existing = await tx.asbHeaderField.findUnique({
       where: { id: headerFieldId },
     })
@@ -118,7 +118,7 @@ export async function deleteAsbHeaderField(
   definitionId: string,
   headerFieldId: string
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     await tx.asbHeaderField.delete({ where: { id: headerFieldId } })
     const remaining = await tx.asbHeaderField.findMany({
       where: { definitionId },
@@ -136,7 +136,7 @@ export async function reorderAsbHeaderFields(
   definitionId: string,
   orderedIds: string[]
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const rows = await tx.asbHeaderField.findMany({
       where: { definitionId },
       orderBy: { order: "asc" },

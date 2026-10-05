@@ -537,6 +537,21 @@ const AUDIT_ACTIONS = {
     verb: "delete",
     label: "観点間の制約ルールを削除しました",
   },
+  /**
+   * 評価項目ごとの対象生徒の付け外し（除外）。対象生徒設定の表でチェックを続けて
+   * 切り替えるので成績算出ごとに1行へまとめる。changes は「生徒 → 評価項目」ごと
+   */
+  "grade.exclusion.update": {
+    category: "grade",
+    verb: "update",
+    label: "評価項目の対象生徒を変更しました",
+  },
+  /** 個人成績通知書の設定。出力画面で続けて触るので成績算出ごとに1行へまとめる */
+  "grade.report_settings.update": {
+    category: "grade",
+    verb: "update",
+    label: "個人成績通知書の設定を更新しました",
+  },
 
   // ── 試験外成績資料（coursework） ─────────────────────────────
   "coursework.create": {
@@ -742,6 +757,38 @@ const AUDIT_ACTIONS = {
     category: "student",
     verb: "update",
     label: "タグの並び順を変更しました",
+  },
+  // タグの付け外し。接頭辞は付けた先の作業領域（操作履歴から作業領域へのリンクが接頭辞で
+  // 行き先を決めるため）。changes に付け替え前後のタグ名を残す。
+  /** 試験のタグの付け外し。概要のタグ欄で続けて付けるので試験ごとに1行へまとめる */
+  "exam.tag.update": {
+    category: "exam",
+    verb: "update",
+    label: "試験「{target}」のタグを変更しました",
+  },
+  /** 解答用紙のタグの付け外し。概要のタグ欄で続けて付けるので解答用紙ごとに1行へまとめる */
+  "answer_sheet.tag.update": {
+    category: "answer_sheet",
+    verb: "update",
+    label: "解答用紙「{target}」のタグを変更しました",
+  },
+  /** 成績算出のタグの付け外し。概要のタグ欄で続けて付けるので成績算出ごとに1行へまとめる */
+  "grade.tag.update": {
+    category: "grade",
+    verb: "update",
+    label: "成績算出「{target}」のタグを変更しました",
+  },
+  /** 資料のタグの付け外し。概要のタグ欄で続けて付けるので資料ごとに1行へまとめる */
+  "coursework.tag.update": {
+    category: "grade",
+    verb: "update",
+    label: "試験外成績資料「{target}」のタグを変更しました",
+  },
+  /** 小計グループのタグの付け替え。編集画面の保存1回で1行（作業領域は持たない） */
+  "subtotal_group.tag.update": {
+    category: "student",
+    verb: "update",
+    label: "小計グループ「{target}」のタグを変更しました",
   },
 
   // ── ユーザー・権限（user） ───────────────────────────────────

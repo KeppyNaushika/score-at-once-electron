@@ -86,6 +86,20 @@ export async function resolveGradeScopeByItem(
   }
 }
 
+/** 解答用紙定義の id から監査ログ用スコープを解決（定義名スナップショット付き） */
+export async function resolveAnswerSheetScope(
+  definitionId: string
+): Promise<{ scopeId: string; scopeLabel: string | null }> {
+  try {
+    const definition = await prisma.asbDefinition.findUnique({
+      where: { id: definitionId },
+    })
+    return { scopeId: definitionId, scopeLabel: definition?.name ?? null }
+  } catch {
+    return { scopeId: definitionId, scopeLabel: null }
+  }
+}
+
 /** examPageId から試験スコープを解決 */
 export async function resolveExamScopeByPage(
   examPageId: string

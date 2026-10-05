@@ -28,7 +28,10 @@ import type { AnswerSheetDefinition } from "../../../src/types/answerSheetDefini
 import { deleteRemovedAsbBranchQuestions } from "./asbBranchQuestion"
 import { deleteRemovedAsbCharGuides } from "./asbCharGuide"
 import { asbDefinitionRow } from "./asbDefinition"
-import { assertAsbDefinitionEditableBy } from "./asbDefinitionWrite"
+import {
+  asbDefinitionEditCoalesceKey,
+  assertAsbDefinitionEditableBy,
+} from "./asbDefinitionWrite"
 import {
   deleteRemovedAsbHeaderFields,
   writeAsbHeaderField,
@@ -313,7 +316,8 @@ export async function replaceAsbDefinition(
     }
   })
 
-  // 監査ログ: 解答用紙の作成/更新
+  // 監査ログ: 解答用紙の作成/更新。更新（undo / redo など）は1件ずつの編集と同じキーで
+  // まとめる（続けて押すと押した数だけ行が増えるため）
   await recordAuditLog({
     action: existed ? "answer_sheet.update" : "answer_sheet.create",
     userId: ownerUserId,
@@ -322,5 +326,8 @@ export async function replaceAsbDefinition(
     scopeId: definitionId,
     scopeLabel: definition.name,
     target: definition.name,
+    coalesceKey: existed
+      ? asbDefinitionEditCoalesceKey(definitionId)
+      : undefined,
   })
 }

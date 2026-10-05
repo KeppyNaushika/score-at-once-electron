@@ -11,8 +11,46 @@
 
 import type { GradeIndividualReportSettings } from "@prisma/client"
 
-import type { GradeReportSettings } from "../../../src/types/gradeReport.types"
+import {
+  DEFAULT_GRADE_REPORT_SETTINGS,
+  type GradeReportSettings,
+} from "../../../src/types/gradeReport.types"
+import { diffFields, recordAuditLog } from "./auditLog"
+import { resolveGradeScope } from "./auditScope"
 import prisma from "./client"
+
+/**
+ * 操作履歴の変更内容に出す項目名（出力画面の見出しに合わせる）。
+ *
+ * 列ごとに書くので、列を足すと型がここへの追記を求める（足し忘れると記録から漏れる）。
+ */
+const REPORT_SETTINGS_FIELD_LABELS: Record<keyof GradeReportSettings, string> =
+  {
+    title: "タイトル",
+    showItemGrades: "項目別評価",
+    itemGradeColumnScore: "項目別評価：得点",
+    itemGradeColumnPercentage: "項目別評価：得点率",
+    itemGradeColumnGradeLabel: "項目別評価：評価",
+    itemGradeFontSize: "項目別評価：文字",
+    itemGradeTableColumns: "項目別評価：列数",
+    showSourceBreakdown: "資料の内訳",
+    sourceBreakdownColumnScore: "資料の内訳：得点",
+    sourceBreakdownColumnWeight: "資料の内訳：換算得点",
+    sourceBreakdownColumnComment: "資料の内訳：コメント",
+    sourceBreakdownFontSize: "資料の内訳：文字",
+    sourceBreakdownTableColumns: "資料の内訳：列数",
+    dataSourceLabel: "資料の内訳：表示名",
+    showCommentSection: "コメント欄",
+    showSignatureSection: "押印欄",
+    footerLeft: "フッター（左）",
+    footerCenter: "フッター（中）",
+    footerRight: "フッター（右）",
+  }
+
+/** 比べる項目（`diffFields` の形）。項目名の表から作る */
+const REPORT_SETTINGS_WATCHED_FIELDS = Object.entries(
+  REPORT_SETTINGS_FIELD_LABELS
+).map(([field, label]) => ({ field, label }))
 
 /** 設定を引く。まだ無ければ `null`（画面が既定で描く） */
 export async function getGradeIndividualReportSettings(
@@ -31,9 +69,48 @@ export async function updateGradeIndividualReportSettings(
   gradeId: string,
   values: Partial<GradeReportSettings>
 ): Promise<void> {
-  await prisma.gradeIndividualReportSettings.upsert({
+  const settingsBefore = await prisma.gradeIndividualReportSettings.findUnique({
+    where: { gradeId },
+  })
+  const settingsAfter = await prisma.gradeIndividualReportSettings.upsert({
     where: { gradeId },
     update: values,
     create: { gradeId, ...values },
+  })
+
+  await recordReportSettingsAudit(
+    gradeId,
+    settingsBefore ?? DEFAULT_GRADE_REPORT_SETTINGS,
+    settingsAfter
+  )
+}
+
+/**
+ * 設定を触ったことを操作履歴へ残す。変わった項目が無ければ記録しない。
+ *
+ * 出力画面はチェックを続けて切り替え、文字の欄は打つたびに書く（触った列だけ）ので、
+ * **成績算出ごとに1行へまとめる**（`coalesceKey`）。変更内容は項目ごとに
+ * 「最初の値 → 最後の値」。行がまだ無かったときの「前」は DB の既定と同じ姿で比べる。
+ */
+async function recordReportSettingsAudit(
+  gradeId: string,
+  settingsBefore: GradeReportSettings,
+  settingsAfter: GradeReportSettings
+): Promise<void> {
+  const changes = diffFields<Record<string, unknown>>(
+    settingsBefore,
+    settingsAfter,
+    REPORT_SETTINGS_WATCHED_FIELDS
+  )
+  if (changes.length === 0) return
+  const scope = await resolveGradeScope(gradeId)
+  await recordAuditLog({
+    action: "grade.report_settings.update",
+    entityType: "GradeIndividualReportSettings",
+    entityId: gradeId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    changes,
+    coalesceKey: `grade_report_settings:${gradeId}`,
   })
 }

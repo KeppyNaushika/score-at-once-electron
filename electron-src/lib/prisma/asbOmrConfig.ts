@@ -11,7 +11,7 @@ import type { Prisma } from "@prisma/client"
 
 import type { AsbCellParent } from "../../../src/types/answerSheetDefinition.types"
 import type { OMRCellConfig } from "../../../src/types/omr.types"
-import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
+import { editAsbDefinitionContent } from "./asbDefinitionWrite"
 import { isUnchanged, writeRow } from "./rowDiff"
 
 /** 設定と選択肢をまとめて書く。書いたら `true` */
@@ -121,7 +121,7 @@ export async function upsertAsbOmrConfig(
   parent: AsbCellParent,
   config: OMRCellConfig
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, (tx) =>
+  await editAsbDefinitionContent(definitionId, (tx) =>
     writeAsbOmrConfig(tx, parent, config)
   )
 }
@@ -131,7 +131,7 @@ export async function deleteAsbOmrConfig(
   definitionId: string,
   parent: AsbCellParent
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const { count } = await tx.asbOmrConfig.deleteMany({ where: parent })
     return count > 0
   })
