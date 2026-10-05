@@ -6,7 +6,7 @@ import { useState } from "react"
 import type { UnifiedArchiveMissingFile } from "@/types/unifiedArchive.types"
 
 import { archiveTableLabel } from "../archiveTableLabels"
-import { MAJOR_TABLES, missingFileDescription } from "./exportLabels"
+import { missingFileDescription } from "./exportLabels"
 
 interface ExportPreviewDetailsProps {
   /** 表名 → 範囲に入る行の数 */
@@ -14,7 +14,7 @@ interface ExportPreviewDetailsProps {
   missingFiles: readonly UnifiedArchiveMissingFile[]
 }
 
-/** 書き出す前の確認: 表ごとの行数（主な表と、折りたたんだ全表）と、欠けている画像 */
+/** 書き出す前の確認: 折りたたんだ全表の行数と、欠けている画像（主な表の数は「書き出すもの」の右に出す） */
 export function ExportPreviewDetails({
   rowCounts,
   missingFiles,
@@ -22,27 +22,11 @@ export function ExportPreviewDetails({
   const [isAllTablesOpen, setIsAllTablesOpen] = useState(false)
   const [isMissingFilesOpen, setIsMissingFilesOpen] = useState(false)
 
-  const majorTables = MAJOR_TABLES.filter(
-    (table) => (rowCounts[table] ?? 0) > 0
-  )
   const allTableCounts = Object.entries(rowCounts)
 
   return (
     <section className="space-y-2">
       <h3 className="text-sm font-semibold">書き出す内容</h3>
-      {majorTables.length > 0 && (
-        <dl className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm">
-          {majorTables.map((table) => (
-            <div key={table} className="flex justify-between gap-2">
-              <dt className="text-muted-foreground">
-                {archiveTableLabel(table)}
-              </dt>
-              <dd className="tabular-nums">{rowCounts[table]}件</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
       <button
         type="button"
         onClick={() => setIsAllTablesOpen((prev) => !prev)}

@@ -101,6 +101,13 @@ class RowSet {
     return true
   }
 
+  isEmpty(): boolean {
+    for (const ids of this.idsByTable.values()) {
+      if (ids.size > 0) return false
+    }
+    return true
+  }
+
   idsOf(table: string): ReadonlySet<string> {
     return this.idsByTable.get(table) ?? new Set()
   }
@@ -182,10 +189,38 @@ const ownerOf = (
   return null
 }
 
+type OwnedChildren = ReadonlyMap<
+  string,
+  readonly { table: string; id: string }[]
+>
+type Referrers = ReadonlyMap<
+  string,
+  readonly { table: string; id: string; mustFollow: boolean }[]
+>
+
+/**
+ * 読んだ行 → その行から作った索引。索引は行だけで決まり、全行を舐めるので重い
+ * （生徒千人・採点4万件で約140ms）。下見は同じ行を使い回して選択だけを変えるので、
+ * 行ごとに一度だけ作る
+ */
+const scopeIndexCache = new WeakMap<
+  TableRows,
+  { ownedChildren: OwnedChildren; referrers: Referrers }
+>()
+
+const scopeIndexOf = (tableRows: TableRows) => {
+  const cached = scopeIndexCache.get(tableRows)
+  if (cached) return cached
+  const index = {
+    ownedChildren: indexOwnedChildren(tableRows),
+    referrers: indexReferrers(tableRows),
+  }
+  scopeIndexCache.set(tableRows, index)
+  return index
+}
+
 /** 親 → 所有している子 */
-const indexOwnedChildren = (
-  tableRows: TableRows
-): Map<string, { table: string; id: string }[]> => {
+const indexOwnedChildren = (tableRows: TableRows): OwnedChildren => {
   const children = new Map<string, { table: string; id: string }[]>()
   for (const [table, rowsById] of tableRows) {
     for (const row of rowsById.values()) {
@@ -201,9 +236,7 @@ const indexOwnedChildren = (
 }
 
 /** 参照先 → それを参照している行（外す行の伝播に使う） */
-const indexReferrers = (
-  tableRows: TableRows
-): Map<string, { table: string; id: string; mustFollow: boolean }[]> => {
+const indexReferrers = (tableRows: TableRows): Referrers => {
   const referrers = new Map<
     string,
     { table: string; id: string; mustFollow: boolean }[]
@@ -283,7 +316,7 @@ const closeExclusions = (
   selection: ArchiveSelection
 ): RowSet => {
   const excluded = new RowSet()
-  const referrers = indexReferrers(tableRows)
+  const { referrers } = scopeIndexOf(tableRows)
   const pending = exclusionSeeds(tableRows, selection)
   while (pending.length > 0) {
     const next = pending.pop()
@@ -311,7 +344,7 @@ const includeRelated = (
 ): IncludeResult => {
   const included = new RowSet()
   const nulled = new Map<string, NulledReference>()
-  const ownedChildren = indexOwnedChildren(tableRows)
+  const { ownedChildren } = scopeIndexOf(tableRows)
   const optionalItems = new Set(selection.optionalItems ?? [])
   const pending: { table: string; id: string }[] = []
 
@@ -482,21 +515,23 @@ export function resolveArchiveScope(
   )
   assertForcedReferences(tableRows, included, excluded)
 
-  // 何も外さなかった場合（関連データを全て）と比べ、外したことで入らなくなった行を数える
+  // 何も外さなかった場合（関連データを全て）と比べ、外したことで入らなくなった行を数える。
+  // 何も外していなければ同じ範囲になるので、辿り直さない
   const everythingSelection: ArchiveSelection = {
     roots: selection.roots,
     shared: selection.shared,
     optionalItems: selection.optionalItems,
   }
-  const baseline = includeRelated(
-    tableRows,
-    everythingSelection,
-    new RowSet()
-  ).included
+  const excludedRowCounts = excluded.isEmpty()
+    ? {}
+    : countExcluded(
+        includeRelated(tableRows, everythingSelection, new RowSet()).included,
+        included
+      )
 
   return {
     rows: included.toMap(),
     nulledReferences,
-    excludedRowCounts: countExcluded(baseline, included),
+    excludedRowCounts,
   }
 }
