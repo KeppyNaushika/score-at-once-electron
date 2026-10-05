@@ -70,6 +70,10 @@ const AUDIT_ACTIONS = {
     verb: "delete",
     label: "試験「{target}」を削除しました",
   },
+  /**
+   * **過去の記録専用。** 旧形式（.score / .grade など）の書き出し。書き出しは統合アーカイブ
+   * （`archive.unified.export`）に一本化した（2026-10-04）。保持期間内の行を読むために残す
+   */
   "exam.export": {
     category: "exam",
     verb: "export",
@@ -117,12 +121,11 @@ const AUDIT_ACTIONS = {
     verb: "delete",
     label: "採点領域を削除しました",
   },
-  "exam.region_info.update": {
-    category: "exam",
-    verb: "update",
-    label: "領域情報を更新しました",
-  },
 
+  /**
+   * **過去の記録専用（create / update / delete の3つ）。** 設問グループは小計グループ
+   * （`subtotal_group.*`）と設問・小計の対応（`exam.subtotal_assignment.update`）に置き換わった
+   */
   "exam.question_group.create": {
     category: "exam",
     verb: "create",
@@ -165,6 +168,10 @@ const AUDIT_ACTIONS = {
     verb: "create",
     label: "生徒答案をアップロードしました",
   },
+  /**
+   * 答案の配置（移動・入れ替え）の一括適用。1回の適用で1行。採点を破棄したときは
+   * 消えた行数を要約に書く
+   */
   "exam.answer.assign": {
     category: "exam",
     verb: "update",
@@ -287,6 +294,10 @@ const AUDIT_ACTIONS = {
     label: "返却版として記録しました",
   },
 
+  /**
+   * **過去の記録専用。** 採点マークを文字で持つ旧方式の設定。画像と配置の設定に置き換わり、
+   * 変更は `exam.export_settings.update` に記録する
+   */
   "exam.marking_format.update": {
     category: "exam",
     verb: "update",
@@ -313,6 +324,7 @@ const AUDIT_ACTIONS = {
     verb: "delete",
     label: "学級の試験割り当てを解除しました",
   },
+  /** 設問と小計の対応の付け外し。04 の表で続けて触るので試験ごとに1行へまとめる */
   "exam.subtotal_assignment.update": {
     category: "exam",
     verb: "update",
@@ -371,6 +383,10 @@ const AUDIT_ACTIONS = {
     verb: "create",
     label: "成績「{target}」を複製しました",
   },
+  /**
+   * **過去の記録専用。** 旧形式（.score / .grade など）の書き出し。書き出しは統合アーカイブ
+   * （`archive.unified.export`）に一本化した（2026-10-04）。保持期間内の行を読むために残す
+   */
   "grade.export": {
     category: "grade",
     verb: "export",
@@ -407,6 +423,10 @@ const AUDIT_ACTIONS = {
     verb: "delete",
     label: "データソースを削除しました",
   },
+  /**
+   * **過去の記録専用。** 成績算出の手入力の点数。資料（Coursework）へ昇格し、
+   * 変更は `coursework.score.update` に記録する
+   */
   "grade.manual_score.update": {
     category: "grade",
     verb: "update",
@@ -574,6 +594,10 @@ const AUDIT_ACTIONS = {
     verb: "update",
     label: "資料の点数を更新しました",
   },
+  /**
+   * **過去の記録専用。** 旧形式（.score / .grade など）の書き出し。書き出しは統合アーカイブ
+   * （`archive.unified.export`）に一本化した（2026-10-04）。保持期間内の行を読むために残す
+   */
   "coursework.export": {
     category: "grade",
     verb: "export",
@@ -601,6 +625,10 @@ const AUDIT_ACTIONS = {
     verb: "delete",
     label: "解答用紙「{target}」を削除しました",
   },
+  /**
+   * **過去の記録専用。** 旧形式（.score / .grade など）の書き出し。書き出しは統合アーカイブ
+   * （`archive.unified.export`）に一本化した（2026-10-04）。保持期間内の行を読むために残す
+   */
   "answer_sheet.export": {
     category: "answer_sheet",
     verb: "export",
@@ -633,6 +661,10 @@ const AUDIT_ACTIONS = {
     verb: "import",
     label: "生徒をインポートしました",
   },
+  /**
+   * **過去の記録専用。** 旧形式（.score / .grade など）の書き出し。書き出しは統合アーカイブ
+   * （`archive.unified.export`）に一本化した（2026-10-04）。保持期間内の行を読むために残す
+   */
   "student.export": {
     category: "student",
     verb: "export",

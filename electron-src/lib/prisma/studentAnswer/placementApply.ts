@@ -37,6 +37,8 @@
  *   N 件の移動・入れ替えをまとめて当てるスロットの置換そのもので、途中で止まると同じ
  *   画像が2つのスロットに乗る・採点が別の生徒に付いたまま残る、が黙って起きる。
  */
+import { recordAuditLog } from "../auditLog"
+import { resolveExamScope, resolveExamStudentTargets } from "../auditScope"
 import prisma from "../client"
 import { getPageScoreScope, type PageScoreScope } from "./pageScope"
 import { planSlotPermutation, type SlotOccupant } from "./slotPermutation"
@@ -81,7 +83,7 @@ export async function applyStudentAnswerPlacements(
     )
   }
 
-  await prisma.$transaction(
+  const applied = await prisma.$transaction(
     async (tx) => {
       // 1. 現在の配置を取得
       const currentAnswers = await Promise.all(
@@ -505,9 +507,46 @@ export async function applyStudentAnswerPlacements(
           },
         })
       }
+
+      // 操作履歴に残すもの（試験・動いた受験者・消えた採点の行数）
+      return {
+        examId: plans[0].current.examPage.examId,
+        examStudentIds: Array.from(
+          new Set(
+            plans.flatMap((plan) => [
+              plan.current.examStudentId,
+              plan.finalExamStudentId,
+            ])
+          )
+        ),
+        removedQuestionScoreRows: questionScoreIdsToDelete.length,
+        removedScoreDecisionRows: scoreDecisionIdsToDelete.length,
+        removedCompoundAnswerScoreRows: compoundAnswerScoreIdsToDelete.length,
+      }
     },
     // 学級分の一括移動では plan ごとの照会が積み上がり、既定の 5s を超えうる
     // （超えると P2028 で全体がロールバックする）。
     { timeout: 30000 }
   )
+
+  // 1回の適用（保留していた移動・入れ替えの一括）を1行に残す。採点を破棄した行数は
+  // 答案の削除（`exam.answer.delete`）と同じく要約に書く — 戻せない変更なので
+  const scope = await resolveExamScope(applied.examId)
+  const removedRowCount =
+    applied.removedQuestionScoreRows +
+    applied.removedScoreDecisionRows +
+    applied.removedCompoundAnswerScoreRows
+  await recordAuditLog({
+    action: "exam.answer.assign",
+    entityType: "StudentAnswerImage",
+    entityId: applied.examId,
+    scopeId: scope.scopeId,
+    scopeLabel: scope.scopeLabel,
+    targets: await resolveExamStudentTargets(applied.examStudentIds),
+    summary:
+      removedRowCount > 0
+        ? `生徒答案の配置を変更（${moves.length} 件。採点を破棄: QuestionScore ${applied.removedQuestionScoreRows} 行 / ScoreDecision ${applied.removedScoreDecisionRows} 行 / CompoundAnswerScore ${applied.removedCompoundAnswerScoreRows} 行）`
+        : `生徒答案の配置を変更（${moves.length} 件）`,
+    extra: { count: moves.length },
+  })
 }

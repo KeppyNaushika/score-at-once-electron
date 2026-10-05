@@ -2,6 +2,7 @@
 
 import { ChevronDown } from "lucide-react"
 
+import { GuardedLink } from "@/components/common/GuardedLink"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -13,7 +14,11 @@ import {
 import { getAuditActionDef } from "@/lib/shared/auditActions"
 import type { AuditLogRow, AuditMetadata } from "@/types/auditLog.types"
 
-import { displayTargetLabels, parseAuditMetadata } from "../auditLogRow"
+import {
+  auditLogScopeHref,
+  displayTargetLabels,
+  parseAuditMetadata,
+} from "../auditLogRow"
 import {
   AUDIT_LOG_ROW_HEIGHT,
   CATEGORY_LABELS,
@@ -105,6 +110,7 @@ export function AuditLogItem({
     actorName ?? (log.userId === null ? "システム" : "削除されたユーザー")
   const occurrences = metadata.occurrences ?? 1
   const targetLabels = displayTargetLabels(log, metadata)
+  const scopeHref = auditLogScopeHref(log)
 
   return (
     <div
@@ -129,9 +135,17 @@ export function AuditLogItem({
               ? CATEGORY_LABELS[log.category]
               : log.category}
           </Badge>
-          {log.scopeLabel && (
-            <span className="shrink-0 truncate">{log.scopeLabel}</span>
-          )}
+          {log.scopeLabel &&
+            (scopeHref ? (
+              <GuardedLink
+                href={scopeHref}
+                className="shrink-0 truncate underline-offset-2 hover:text-foreground hover:underline"
+              >
+                {log.scopeLabel}
+              </GuardedLink>
+            ) : (
+              <span className="shrink-0 truncate">{log.scopeLabel}</span>
+            ))}
           {targetLabels.length > 0 && (
             <span className="truncate">{targetLabels.join("・")}</span>
           )}

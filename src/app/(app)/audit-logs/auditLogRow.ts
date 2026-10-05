@@ -65,3 +65,37 @@ export function displayTargetLabels(
   }
   return [...labelByKey.values()]
 }
+
+/**
+ * 作業領域の行き先（パスの頭）。**action の接頭辞で決める**（`category` では決められない —
+ * `coursework.*` は `category: "grade"` に分類されている。docs/audit-log-redesign.md §リンク）。
+ */
+const SCOPE_PATH_BY_ACTION_PREFIX: Record<string, string> = {
+  exam: "/exams",
+  grade: "/grades",
+  coursework: "/coursework",
+  answer_sheet: "/answer-sheet-builder",
+  class: "/classrooms",
+}
+
+/** 接頭辞では決まらないもの。小計グループの選択は試験の作業領域に記録している */
+const SCOPE_PATH_BY_ACTION: Record<string, string> = {
+  "subtotal_group.selection_update": "/exams",
+}
+
+/**
+ * 行の作業領域（試験・成績算出など）の詳細ページへのパス。行き先が無ければ null。
+ *
+ * 作業領域そのものを削除した行（`exam.delete` など）には付けない（行き先が無いと
+ * 行から分かる）。それ以外で後から消えた作業領域は確かめない（行ごとに問い合わせる
+ * ことになる。行き先が無ければ開いた先で分かる）。
+ */
+export function auditLogScopeHref(log: AuditLogRow): string | null {
+  if (!log.scopeId) return null
+  const actionPrefix = log.action.split(".")[0]
+  if (log.action === `${actionPrefix}.delete`) return null
+  const scopePath =
+    SCOPE_PATH_BY_ACTION[log.action] ??
+    SCOPE_PATH_BY_ACTION_PREFIX[actionPrefix]
+  return scopePath ? `${scopePath}/${log.scopeId}` : null
+}

@@ -147,7 +147,9 @@ beforeEach(() => {
 
 /** 一覧を描いて最初のページが出るまで待つ */
 async function renderList() {
-  render(<AuditLogList />, { wrapper: createQueryWrapper() })
+  render(<AuditLogList initialFilter={{ tokens: [] }} />, {
+    wrapper: createQueryWrapper(),
+  })
   await screen.findByText("が テスト操作 1")
 }
 
@@ -287,6 +289,21 @@ describe("監査ログ一覧", () => {
 describe("監査ログの絞り込み欄", () => {
   const filterInput = () =>
     screen.getByRole("textbox", { name: "絞り込み・内容で検索" })
+
+  it("最初の絞り込み（詳細ページからのリンク）が chip になり、条件が最初の要求から乗る", async () => {
+    render(
+      <AuditLogList
+        initialFilter={{
+          tokens: [{ field: "scope", value: "exam-a", label: "試験A" }],
+        }}
+      />,
+      { wrapper: createQueryWrapper() }
+    )
+    expect(
+      await screen.findByRole("button", { name: "作業領域「試験A」を外す" })
+    ).toBeInTheDocument()
+    expect(getLogs.mock.calls[0][0].scopeId).toBe("exam-a")
+  })
 
   it("欄の名前を打つと候補が出て、選ぶと chip になり対象の条件が要求に乗る", async () => {
     const user = userEvent.setup()
@@ -447,7 +464,9 @@ describe("監査ログ一覧の「自動」件数", () => {
     const smallPageSize = Math.floor(600 / AUDIT_LOG_ROW_HEIGHT)
     const lastPageNumber = Math.ceil(TOTAL_ROWS / smallPageSize)
 
-    render(<AuditLogList />, { wrapper: createQueryWrapper() })
+    render(<AuditLogList initialFilter={{ tokens: [] }} />, {
+      wrapper: createQueryWrapper(),
+    })
     await screen.findByText("が テスト操作 1")
 
     await user.click(
@@ -488,7 +507,9 @@ describe("監査ログ一覧の「自動」件数", () => {
     const expectedPageSize = Math.floor(VIEWPORT_HEIGHT / AUDIT_LOG_ROW_HEIGHT)
     expect(expectedPageSize).not.toBe(FALLBACK_PAGE_SIZE)
 
-    render(<AuditLogList />, { wrapper: createQueryWrapper() })
+    render(<AuditLogList initialFilter={{ tokens: [] }} />, {
+      wrapper: createQueryWrapper(),
+    })
 
     await waitFor(() => {
       expect(getLogs).toHaveBeenCalledWith(

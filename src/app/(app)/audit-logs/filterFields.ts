@@ -1,7 +1,8 @@
 /**
  * 監査ログの絞り込みの欄（フィールド）の定義。**次元を足すときはここに1項目足すだけ。**
  *
- * 画面の状態は「確定した欄（トークン）の並び＋未確定の文字列」という構造で持つ。
+ * 画面の状態は「確定した欄（トークン）の並び＋未確定の文字列」という構造で持つ
+ * （状態の型と URL との往復は `src/lib/auditLogFilterQuery.ts`）。
  * 文字列の構文（`student:…`）は入力の手がかりにだけ使い、任意の文字列をパースして
  * 状態を作ることはしない（docs/audit-log-redesign.md「フィルタ UI」）。
  *
@@ -15,6 +16,12 @@ import type {
   AuditScopeFacet,
   AuditTargetFacet,
 } from "@/electron-src/lib/prisma/auditQuery"
+import {
+  type AuditFilterFieldKey,
+  type AuditFilterState,
+  type AuditFilterToken,
+  isDateText,
+} from "@/lib/auditLogFilterQuery"
 import { matchesSearchTerm } from "@/lib/searchText"
 import {
   AUDIT_VERBS,
@@ -29,32 +36,6 @@ import {
   isAuditVerb,
   VERB_META,
 } from "./constants"
-
-export type AuditFilterFieldKey =
-  | "scope"
-  | "student"
-  | "cropRegion"
-  | "user"
-  | "verb"
-  | "category"
-  | "since"
-  | "until"
-
-/** 確定した絞り込み1つ（画面では chip になる） */
-export interface AuditFilterToken {
-  field: AuditFilterFieldKey
-  /** 条件に使う値（id・種別・日付） */
-  value: string
-  /** chip に出す文言 */
-  label: string
-}
-
-/** 絞り込みの画面の状態 */
-export interface AuditFilterState {
-  tokens: AuditFilterToken[]
-  /** 内容（要約）の全文検索 */
-  search?: string
-}
 
 /** 候補1つ。選ぶと `tokens` が足される（採点領域は試験の欄も一緒に足す） */
 export interface AuditFilterCandidate {
@@ -152,11 +133,6 @@ const matching = (
   candidates.filter((candidate) =>
     matchesSearchTerm(query, [candidate.label, candidate.description])
   )
-
-/** `YYYY-MM-DD` の実在する日付か */
-const isDateText = (text: string): boolean =>
-  /^\d{4}-\d{2}-\d{2}$/.test(text) &&
-  !Number.isNaN(new Date(`${text}T00:00:00`).getTime())
 
 /** 日付の欄の候補: 打った日付が読めれば、それを1つだけ出す */
 const dateCandidates =

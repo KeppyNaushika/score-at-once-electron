@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   BarChart3,
   Edit,
+  History,
   Plus,
   Trash2,
   Upload,
@@ -32,6 +33,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useNavigationGuardContext } from "@/contexts/NavigationGuardContext"
+import { auditLogsHrefOfScope } from "@/lib/auditLogFilterQuery"
 import type { MembershipStatusFilter } from "@/lib/membership"
 import {
   addStudentToClassroomMutation,
@@ -56,6 +59,7 @@ const EMPTY_STUDENTS: StudentWithMemberships[] = []
 export default function ClassroomDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const { guardedNavigate } = useNavigationGuardContext()
   const classroomId =
     typeof params.classroomId === "string" ? params.classroomId : ""
 
@@ -253,6 +257,14 @@ export default function ClassroomDetailPage() {
       icon: Edit,
       label: "編集",
       onClick: () => setIsClassroomModalOpen(true),
+    }),
+    toolbarButtonAction({
+      id: "audit-log",
+      priority: 20,
+      icon: History,
+      label: "操作履歴",
+      onClick: () =>
+        guardedNavigate(auditLogsHrefOfScope(classroomId, classroomData.name)),
     }),
     {
       id: "delete",

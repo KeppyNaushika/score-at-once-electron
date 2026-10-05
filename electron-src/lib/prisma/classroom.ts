@@ -63,6 +63,9 @@ export const createClassroom = async (
       action: "class.create",
       entityType: "Classroom",
       entityId: created.id,
+      // 学級も作業領域として絞り込めるように（所属の追加・削除と同じ作業領域）
+      scopeId: created.id,
+      scopeLabel: created.name,
       target: created.name,
     })
 
@@ -104,6 +107,8 @@ export const updateClassroom = async (
       action: "class.update",
       entityType: "Classroom",
       entityId: updated.id,
+      scopeId: updated.id,
+      scopeLabel: updated.name,
       target: updated.name,
       changes: diffFields(before ?? undefined, updated, [
         { field: "name", label: "学級名" },
@@ -145,6 +150,8 @@ export const deleteClassroom = async (
       action: "class.delete",
       entityType: "Classroom",
       entityId: classroomId,
+      scopeId: classroomId,
+      scopeLabel: deleted.name,
       target: deleted.name,
     })
 

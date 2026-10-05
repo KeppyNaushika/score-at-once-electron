@@ -5,6 +5,7 @@ import { FileArchive, MoreVertical, Trash2, Users } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 
+import { AuditLogMenuItem } from "@/components/common/AuditLogMenuItem"
 import type {
   EntityOverviewBasics,
   EntityOverviewStat,
@@ -166,6 +167,7 @@ export default function ExamDetailPage() {
                   <FileArchive />
                   .sao 書き出し
                 </DropdownMenuItem>
+                <AuditLogMenuItem scopeId={examId} scopeLabel={exam.examName} />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setShowDeleteModal(true)}
