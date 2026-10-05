@@ -10,7 +10,7 @@
  * 文字評価の刻みは `courseworkLetterScale.ts` にある。
  */
 
-import type { Prisma } from "@prisma/client"
+import type { Prisma, Tag } from "@prisma/client"
 
 import {
   buildDeletionBlockedMessage,
@@ -18,6 +18,7 @@ import {
 } from "../../../src/lib/shared/gradeReferenceMessages"
 import type { InputMode } from "../../../src/types/coursework.types"
 import { recordAuditLog } from "./auditLog"
+import { recordTagLinkAudit } from "./auditTagLinks"
 import prisma from "./client"
 import { withInputMode } from "./courseworkItem"
 import {
@@ -207,28 +208,90 @@ export async function deleteCoursework(id: string): Promise<void> {
 // タグ（CourseworkTag）
 // =============================================================================
 
+/** 付け替え前の姿（名前とタグ）。タグの付け外しの記録に使う */
+const courseworkWithTagsInclude = {
+  tags: { include: { tag: true } },
+} satisfies Prisma.CourseworkInclude
+
+/**
+ * 資料のタグの付け外しを操作履歴へ残す。
+ *
+ * 概要のタグ欄は1つ付けるたびに書き、続けて付けられる（popover を開いたまま）ので、
+ * **資料ごとに1行へまとめる**（`coalesceKey`）。変更内容は「最初のタグ → 最後のタグ」。
+ */
+async function recordCourseworkTagAudit(
+  courseworkBefore: Prisma.CourseworkGetPayload<{
+    include: typeof courseworkWithTagsInclude
+  }>,
+  afterTags: Tag[]
+): Promise<void> {
+  await recordTagLinkAudit({
+    action: "coursework.tag.update",
+    entityType: "CourseworkTag",
+    entityId: courseworkBefore.id,
+    scopeId: courseworkBefore.id,
+    scopeLabel: courseworkBefore.name,
+    target: courseworkBefore.name,
+    beforeTags: courseworkBefore.tags.map((courseworkTag) => courseworkTag.tag),
+    afterTags,
+    coalesceKey: `coursework_tags:${courseworkBefore.id}`,
+  })
+}
+
 /** 資料のタグを一括設定（既存を全削除して再作成） */
 export async function setCourseworkTags(
   courseworkId: string,
   tagIds: string[]
 ) {
-  await prisma.$transaction(async (tx) => {
-    await tx.courseworkTag.deleteMany({ where: { courseworkId } })
-    if (tagIds.length > 0) {
-      await tx.courseworkTag.createMany({
-        data: tagIds.map((tagId) => ({ courseworkId, tagId })),
+  const { courseworkBefore, afterLinks } = await prisma.$transaction(
+    async (tx) => {
+      const coursework = await tx.coursework.findUniqueOrThrow({
+        where: { id: courseworkId },
+        include: courseworkWithTagsInclude,
       })
+      await tx.courseworkTag.deleteMany({ where: { courseworkId } })
+      if (tagIds.length > 0) {
+        await tx.courseworkTag.createMany({
+          data: tagIds.map((tagId) => ({ courseworkId, tagId })),
+        })
+      }
+      const links = await tx.courseworkTag.findMany({
+        where: { courseworkId },
+        include: { tag: true },
+      })
+      return { courseworkBefore: coursework, afterLinks: links }
     }
-  })
+  )
+
+  await recordCourseworkTagAudit(
+    courseworkBefore,
+    afterLinks.map((courseworkTag) => courseworkTag.tag)
+  )
 }
 
-/** 資料にタグを1件追加（既存タグは保持・冪等）。一括付与での既存タグ消失を避ける */
+/**
+ * 資料にタグを1件追加（既存タグは保持・冪等）。一括付与での既存タグ消失を避ける。
+ * 既に付いていたなら何も変わらないので記録しない。
+ */
 export async function addCourseworkTag(courseworkId: string, tagId: string) {
-  await prisma.courseworkTag.upsert({
+  const courseworkBefore = await prisma.coursework.findUniqueOrThrow({
+    where: { id: courseworkId },
+    include: courseworkWithTagsInclude,
+  })
+  const link = await prisma.courseworkTag.upsert({
     where: { courseworkId_tagId: { courseworkId, tagId } },
     update: {},
     create: { courseworkId, tagId },
+    include: { tag: true },
   })
+
+  const beforeTags = courseworkBefore.tags.map(
+    (courseworkTag) => courseworkTag.tag
+  )
+  const afterTags = beforeTags.some((tag) => tag.id === link.tagId)
+    ? beforeTags
+    : [...beforeTags, link.tag]
+  await recordCourseworkTagAudit(courseworkBefore, afterTags)
 }
 
 // =============================================================================

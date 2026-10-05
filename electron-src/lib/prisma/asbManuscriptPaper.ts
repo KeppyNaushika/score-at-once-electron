@@ -20,7 +20,7 @@ import type {
 } from "../../../src/types/answerSheetDefinition.types"
 import type { CurrentAsbCharGuideRows } from "./asbCharGuide"
 import { writeAsbCharGuides } from "./asbCharGuide"
-import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
+import { editAsbDefinitionContent } from "./asbDefinitionWrite"
 import { updateRowIfChanged, writeRow } from "./rowDiff"
 
 /** 原稿用紙とその子のうち、既に DB にある行 */
@@ -151,7 +151,7 @@ export async function setAsbManuscriptPaperEnabled(
   initialSettings: AsbManuscriptPaperSettings
 ): Promise<string> {
   let writtenManuscriptPaperId = manuscriptPaperId
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const existing = await tx.asbManuscriptPaper.findFirst({ where: parent })
     writtenManuscriptPaperId = existing?.id ?? manuscriptPaperId
     return writeRow(
@@ -187,7 +187,7 @@ export async function updateAsbManuscriptPaper(
   manuscriptPaperId: string,
   settings: AsbManuscriptPaperSettings
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const existing = await tx.asbManuscriptPaper.findUnique({
       where: { id: manuscriptPaperId },
     })

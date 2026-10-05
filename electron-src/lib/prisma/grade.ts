@@ -4,9 +4,10 @@
  * ツリーごとの複製は `gradeDuplicate.ts` にある。
  */
 
-import type { Prisma } from "@prisma/client"
+import type { Prisma, Tag } from "@prisma/client"
 
 import { diffFields, recordAuditLog } from "./auditLog"
+import { recordTagLinkAudit } from "./auditTagLinks"
 import prisma from "./client"
 import {
   gradeItemWithDataSourcesInclude,
@@ -190,27 +191,81 @@ export async function deleteGrade(id: string) {
 // タグ（GradeTag）
 // =============================================================================
 
+/** 付け替え前の姿（名前とタグ）。タグの付け外しの記録に使う */
+const gradeWithTagsInclude = {
+  gradeTags: { include: { tag: true } },
+} satisfies Prisma.GradeInclude
+
+/**
+ * 成績算出のタグの付け外しを操作履歴へ残す。
+ *
+ * 概要のタグ欄は1つ付けるたびに書き、続けて付けられる（popover を開いたまま）ので、
+ * **成績算出ごとに1行へまとめる**（`coalesceKey`）。変更内容は「最初のタグ → 最後のタグ」。
+ */
+async function recordGradeTagAudit(
+  gradeBefore: Prisma.GradeGetPayload<{ include: typeof gradeWithTagsInclude }>,
+  afterTags: Tag[]
+): Promise<void> {
+  await recordTagLinkAudit({
+    action: "grade.tag.update",
+    entityType: "GradeTag",
+    entityId: gradeBefore.id,
+    scopeId: gradeBefore.id,
+    scopeLabel: gradeBefore.name,
+    target: gradeBefore.name,
+    beforeTags: gradeBefore.gradeTags.map((gradeTag) => gradeTag.tag),
+    afterTags,
+    coalesceKey: `grade_tags:${gradeBefore.id}`,
+  })
+}
+
 /** 成績算出のタグを一括設定（既存を全削除して再作成） */
 export async function setGradeTags(gradeId: string, tagIds: string[]) {
-  await prisma.$transaction(async (tx) => {
+  const { gradeBefore, afterLinks } = await prisma.$transaction(async (tx) => {
+    const grade = await tx.grade.findUniqueOrThrow({
+      where: { id: gradeId },
+      include: gradeWithTagsInclude,
+    })
     await tx.gradeTag.deleteMany({ where: { gradeId } })
     if (tagIds.length > 0) {
       await tx.gradeTag.createMany({
         data: tagIds.map((tagId) => ({ gradeId, tagId })),
       })
     }
+    const links = await tx.gradeTag.findMany({
+      where: { gradeId },
+      include: { tag: true },
+    })
+    return { gradeBefore: grade, afterLinks: links }
   })
+
+  await recordGradeTagAudit(
+    gradeBefore,
+    afterLinks.map((gradeTag) => gradeTag.tag)
+  )
 }
 
 /**
  * 成績算出にタグを1件追加（既存タグは保持・冪等）。
  *
  * 一覧の一括タグ付けはこちらを使う。全置換にすると、他端末が付けたタグを巻き添えにする。
+ * 既に付いていたなら何も変わらないので記録しない。
  */
 export async function addGradeTag(gradeId: string, tagId: string) {
-  await prisma.gradeTag.upsert({
+  const gradeBefore = await prisma.grade.findUniqueOrThrow({
+    where: { id: gradeId },
+    include: gradeWithTagsInclude,
+  })
+  const link = await prisma.gradeTag.upsert({
     where: { gradeId_tagId: { gradeId, tagId } },
     update: {},
     create: { gradeId, tagId },
+    include: { tag: true },
   })
+
+  const beforeTags = gradeBefore.gradeTags.map((gradeTag) => gradeTag.tag)
+  const afterTags = beforeTags.some((tag) => tag.id === link.tagId)
+    ? beforeTags
+    : [...beforeTags, link.tag]
+  await recordGradeTagAudit(gradeBefore, afterTags)
 }

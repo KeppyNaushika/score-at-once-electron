@@ -17,7 +17,7 @@ import type {
   LabelCategory,
 } from "../../../src/types/answerSheetDefinition.types"
 import { dbToDefinition } from "./asbDefinitionConverters"
-import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
+import { editAsbDefinitionContent } from "./asbDefinitionWrite"
 import { flattenGlobalSettings } from "./asbPaperSettingsConverters"
 import { recordAuditLog } from "./auditLog"
 import prisma from "./client"
@@ -201,7 +201,7 @@ export async function updateAsbDefinition(
   definitionId: string,
   attributes: AsbDefinitionAttributes
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const existing = await tx.asbDefinition.findUnique({
       where: { id: definitionId },
     })
@@ -229,7 +229,7 @@ export async function applyAsbLabelPreset(
   preset: string,
   relabeled: { id: string; label: string }[]
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const existing = await tx.asbDefinition.findUnique({
       where: { id: definitionId },
     })

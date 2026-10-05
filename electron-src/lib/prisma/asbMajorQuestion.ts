@@ -13,7 +13,7 @@ import type {
   AsbMajorQuestionAttributes,
   MajorQuestion,
 } from "../../../src/types/answerSheetDefinition.types"
-import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
+import { editAsbDefinitionContent } from "./asbDefinitionWrite"
 import type { CurrentAsbSubQuestionRows } from "./asbSubQuestion"
 import { writeAsbSubQuestionTree } from "./asbSubQuestion"
 import { updateRowIfChanged, writeRow } from "./rowDiff"
@@ -103,7 +103,7 @@ export async function createAsbMajorQuestion(
   definitionId: string,
   majorQuestion: MajorQuestion
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const order = await tx.asbMajorQuestion.count({ where: { definitionId } })
     return writeAsbMajorQuestionTree(tx, definitionId, majorQuestion, order)
   })
@@ -114,7 +114,7 @@ export async function updateAsbMajorQuestion(
   majorQuestionId: string,
   attributes: AsbMajorQuestionAttributes
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const existing = await tx.asbMajorQuestion.findUnique({
       where: { id: majorQuestionId },
     })
@@ -131,7 +131,7 @@ export async function deleteAsbMajorQuestion(
   definitionId: string,
   majorQuestionId: string
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     await tx.asbMajorQuestion.delete({ where: { id: majorQuestionId } })
     const remaining = await tx.asbMajorQuestion.findMany({
       where: { definitionId },
@@ -149,7 +149,7 @@ export async function reorderAsbMajorQuestions(
   definitionId: string,
   orderedIds: string[]
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const rows = await tx.asbMajorQuestion.findMany({
       where: { definitionId },
       orderBy: { order: "asc" },

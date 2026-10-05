@@ -15,7 +15,7 @@ import type {
   CellTextElement,
 } from "../../../src/types/answerSheetDefinition.types"
 import { cellOf, inDefinitionCells } from "./asbCellContents"
-import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
+import { editAsbDefinitionContent } from "./asbDefinitionWrite"
 import { updateRowIfChanged, writeRow } from "./rowDiff"
 import { writeRowOrders } from "./rowOrder"
 
@@ -78,7 +78,7 @@ export async function createAsbTextElement(
   parent: AsbCellParent,
   textElement: CellTextElement
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const order = await tx.asbTextElement.count({ where: parent })
     const data = asbTextElementRow(parent, textElement, order)
     await tx.asbTextElement.create({ data: { id: textElement.id, ...data } })
@@ -91,7 +91,7 @@ export async function updateAsbTextElement(
   textElementId: string,
   attributes: AsbTextElementAttributes
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const existing = await tx.asbTextElement.findUnique({
       where: { id: textElementId },
     })
@@ -108,7 +108,7 @@ export async function deleteAsbTextElement(
   definitionId: string,
   textElementId: string
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const removed = await tx.asbTextElement.delete({
       where: { id: textElementId },
     })

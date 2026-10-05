@@ -17,7 +17,7 @@ import type {
 import type { CurrentAsbBranchQuestionRows } from "./asbBranchQuestion"
 import { writeAsbBranchQuestionTree } from "./asbBranchQuestion"
 import { writeAsbCellContents } from "./asbCellContents"
-import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
+import { editAsbDefinitionContent } from "./asbDefinitionWrite"
 import { updateRowIfChanged, writeRow } from "./rowDiff"
 import { sortRowsByIds, writeRowOrders } from "./rowOrder"
 
@@ -127,7 +127,7 @@ export async function createAsbSubQuestion(
   majorQuestionId: string,
   subQuestion: SubQuestion
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const order = await tx.asbSubQuestion.count({ where: { majorQuestionId } })
     return writeAsbSubQuestionTree(tx, majorQuestionId, subQuestion, order)
   })
@@ -138,7 +138,7 @@ export async function updateAsbSubQuestion(
   subQuestionId: string,
   attributes: AsbSubQuestionAttributes
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const existing = await tx.asbSubQuestion.findUnique({
       where: { id: subQuestionId },
     })
@@ -155,7 +155,7 @@ export async function deleteAsbSubQuestion(
   definitionId: string,
   subQuestionId: string
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const removed = await tx.asbSubQuestion.delete({
       where: { id: subQuestionId },
     })
@@ -176,7 +176,7 @@ export async function reorderAsbSubQuestions(
   majorQuestionId: string,
   orderedIds: string[]
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const rows = await tx.asbSubQuestion.findMany({
       where: { majorQuestionId },
       orderBy: { order: "asc" },

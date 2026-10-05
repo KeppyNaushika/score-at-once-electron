@@ -15,7 +15,7 @@ import type {
   CellImageElement,
 } from "../../../src/types/answerSheetDefinition.types"
 import { cellOf, inDefinitionCells } from "./asbCellContents"
-import { writeAsbDefinitionContent } from "./asbDefinitionWrite"
+import { editAsbDefinitionContent } from "./asbDefinitionWrite"
 import { updateRowIfChanged, writeRow } from "./rowDiff"
 import { writeRowOrders } from "./rowOrder"
 
@@ -81,7 +81,7 @@ export async function createAsbImageElement(
   parent: AsbCellParent,
   imageElement: CellImageElement
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const order = await tx.asbImageElement.count({ where: parent })
     const data = asbImageElementRow(parent, imageElement, order)
     await tx.asbImageElement.create({ data: { id: imageElement.id, ...data } })
@@ -94,7 +94,7 @@ export async function updateAsbImageElement(
   imageElementId: string,
   attributes: AsbImageElementAttributes
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const existing = await tx.asbImageElement.findUnique({
       where: { id: imageElementId },
     })
@@ -111,7 +111,7 @@ export async function deleteAsbImageElement(
   definitionId: string,
   imageElementId: string
 ): Promise<void> {
-  await writeAsbDefinitionContent(definitionId, async (tx) => {
+  await editAsbDefinitionContent(definitionId, async (tx) => {
     const removed = await tx.asbImageElement.delete({
       where: { id: imageElementId },
     })
