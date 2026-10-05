@@ -65,6 +65,74 @@ export interface PreviewUnifiedArchiveExportOptions {
 
 type ScopeTableRows = ReturnType<typeof loadScopeRows>
 
+/** 同梱できないファイルの理由。同梱できるなら null */
+type FileProblem = UnifiedArchiveMissingFile["reason"] | null
+
+/**
+ * 下見どうしで使い回すもの。
+ *
+ * 書き出し画面は選択を変えるたび・行に当てるたびに下見を引くが、DB が変わっていなければ
+ * 読む行も、そこから作る範囲の索引（`resolveArchiveScope` が行ごとに覚える）も同じになる。
+ * 毎回読み直すと、生徒千人・採点4万件の DB で下見1回に約250ms かかっていた。
+ *
+ * 読み取りの接続を開いたままにし、`PRAGMA data_version`（他の接続が書くと変わる）で DB が
+ * 変わったかを見る。DB が別のファイルに置き換わったら（inode が変わったら）開き直す。
+ * ファイルの有無も DB が変わるまで覚える（書き出しは改めて確かめるので、外で消されたファイルを
+ * 書き出しの結果が見落とすことはない）。
+ */
+interface PreviewSource {
+  readonly databasePath: string
+  readonly inode: number
+  readonly connection: Database.Database
+  readonly dataVersion: number
+  readonly tableRows: ScopeTableRows
+  /** データディレクトリ → ファイルのパス → 同梱できないなら理由 */
+  readonly fileProblems: Map<string, Map<string, FileProblem>>
+}
+
+let previewSource: PreviewSource | null = null
+
+const closePreviewSource = (): void => {
+  previewSource?.connection.close()
+  previewSource = null
+}
+
+/** 今の DB の行。前の下見から DB が変わっていなければ、前に読んだものを返す */
+const previewSourceOf = (databasePath: string): PreviewSource => {
+  const inode = fs.statSync(databasePath).ino
+  if (
+    previewSource !== null &&
+    (previewSource.databasePath !== databasePath ||
+      previewSource.inode !== inode)
+  ) {
+    closePreviewSource()
+  }
+  const connection =
+    previewSource?.connection ??
+    new Database(databasePath, { readonly: true, fileMustExist: true })
+  const dataVersion = Number(
+    connection.pragma("data_version", { simple: true })
+  )
+  if (previewSource !== null && previewSource.dataVersion === dataVersion) {
+    return previewSource
+  }
+  try {
+    previewSource = {
+      databasePath,
+      inode,
+      connection,
+      dataVersion,
+      tableRows: loadScopeRows(connection),
+      fileProblems: new Map(),
+    }
+  } catch (error) {
+    connection.close()
+    previewSource = null
+    throw error
+  }
+  return previewSource
+}
+
 const idsOf = (scope: ArchiveScope, table: string): ReadonlySet<string> =>
   scope.rows.get(table) ?? new Set()
 
@@ -140,15 +208,18 @@ const collectForcedBy = (
 
 /** 範囲内の行が指すファイルのうち、同梱できないもの（書き出しと同じ規則） */
 const collectMissingFiles = (
-  source: Database.Database,
+  source: PreviewSource,
   scope: ArchiveScope,
   dataDirectory: string
 ): UnifiedArchiveMissingFile[] => {
+  const fileProblems =
+    source.fileProblems.get(dataDirectory) ?? new Map<string, FileProblem>()
+  source.fileProblems.set(dataDirectory, fileProblems)
   const filePaths = new Set<string>()
   for (const fileColumn of ARCHIVE_FILE_COLUMNS) {
     const scopedIds = idsOf(scope, fileColumn.table)
     if (scopedIds.size === 0) continue
-    const records = source
+    const records = source.connection
       .prepare<[], { id: string; filePath: string }>(
         `SELECT "id" AS id, "${fileColumn.column}" AS filePath FROM "${fileColumn.table}"
          WHERE "${fileColumn.column}" IS NOT NULL AND "${fileColumn.column}" <> ''`
@@ -161,64 +232,67 @@ const collectMissingFiles = (
   return [...filePaths]
     .sort()
     .flatMap((filePath): UnifiedArchiveMissingFile[] => {
-      const resolved = resolveArchiveFile(dataDirectory, filePath)
-      if (resolved.kind === "outsideDataDirectory") {
-        return [{ path: filePath, reason: "outsideDataDirectory" }]
+      let problem = fileProblems.get(filePath)
+      if (problem === undefined) {
+        problem = fileProblemOf(dataDirectory, filePath)
+        fileProblems.set(filePath, problem)
       }
-      const fileStat = fs.statSync(resolved.absolutePath, {
-        throwIfNoEntry: false,
-      })
-      return fileStat?.isFile() ? [] : [{ path: filePath, reason: "notFound" }]
+      return problem === null ? [] : [{ path: filePath, reason: problem }]
     })
+}
+
+const fileProblemOf = (
+  dataDirectory: string,
+  filePath: string
+): FileProblem => {
+  const resolved = resolveArchiveFile(dataDirectory, filePath)
+  if (resolved.kind === "outsideDataDirectory") return "outsideDataDirectory"
+  const fileStat = fs.statSync(resolved.absolutePath, {
+    throwIfNoEntry: false,
+  })
+  return fileStat?.isFile() ? null : "notFound"
 }
 
 /** 選択から、書き出す範囲の件数・実体の id・外せない理由・欠けたファイルを返す */
 export function previewUnifiedArchiveExport(
   options: PreviewUnifiedArchiveExportOptions
 ): UnifiedArchiveExportPreview {
-  const source = new Database(options.sourceDatabasePath, {
-    readonly: true,
-    fileMustExist: true,
-  })
+  const source = previewSourceOf(options.sourceDatabasePath)
+  const { tableRows } = source
+  let scope: ArchiveScope
   try {
-    const tableRows = loadScopeRows(source)
-    let scope: ArchiveScope
-    try {
-      scope = resolveArchiveScope(tableRows, options.selection)
-    } catch (error) {
-      if (error instanceof ArchiveScopeError) {
-        return { kind: "forcedExcluded", violations: error.violations }
-      }
-      throw error
+    scope = resolveArchiveScope(tableRows, options.selection)
+  } catch (error) {
+    if (error instanceof ArchiveScopeError) {
+      return { kind: "forcedExcluded", violations: error.violations }
     }
+    throw error
+  }
 
-    const rowCounts: Record<string, number> = {}
-    for (const [table, ids] of scope.rows) {
-      if (ids.size > 0) rowCounts[table] = ids.size
-    }
-    const sortedIdsOf = (table: ArchivePreviewEntityTable): string[] =>
-      [...idsOf(scope, table)].sort()
-    const entityIds: Record<ArchivePreviewEntityTable, string[]> = {
-      Exam: sortedIdsOf("Exam"),
-      Coursework: sortedIdsOf("Coursework"),
-      Grade: sortedIdsOf("Grade"),
-      AsbDefinition: sortedIdsOf("AsbDefinition"),
-      Student: sortedIdsOf("Student"),
-      Classroom: sortedIdsOf("Classroom"),
-      SubtotalGroup: sortedIdsOf("SubtotalGroup"),
-      Tag: sortedIdsOf("Tag"),
-      User: sortedIdsOf("User"),
-    }
+  const rowCounts: Record<string, number> = {}
+  for (const [table, ids] of scope.rows) {
+    if (ids.size > 0) rowCounts[table] = ids.size
+  }
+  const sortedIdsOf = (table: ArchivePreviewEntityTable): string[] =>
+    [...idsOf(scope, table)].sort()
+  const entityIds: Record<ArchivePreviewEntityTable, string[]> = {
+    Exam: sortedIdsOf("Exam"),
+    Coursework: sortedIdsOf("Coursework"),
+    Grade: sortedIdsOf("Grade"),
+    AsbDefinition: sortedIdsOf("AsbDefinition"),
+    Student: sortedIdsOf("Student"),
+    Classroom: sortedIdsOf("Classroom"),
+    SubtotalGroup: sortedIdsOf("SubtotalGroup"),
+    Tag: sortedIdsOf("Tag"),
+    User: sortedIdsOf("User"),
+  }
 
-    return {
-      kind: "ok",
-      rowCounts,
-      excludedRowCounts: { ...scope.excludedRowCounts },
-      entityIds,
-      forcedBy: collectForcedBy(tableRows, scope),
-      missingFiles: collectMissingFiles(source, scope, options.dataDirectory),
-    }
-  } finally {
-    source.close()
+  return {
+    kind: "ok",
+    rowCounts,
+    excludedRowCounts: { ...scope.excludedRowCounts },
+    entityIds,
+    forcedBy: collectForcedBy(tableRows, scope),
+    missingFiles: collectMissingFiles(source, scope, options.dataDirectory),
   }
 }

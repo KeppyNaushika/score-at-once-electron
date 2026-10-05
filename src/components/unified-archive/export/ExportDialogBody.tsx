@@ -246,31 +246,14 @@ export function ExportDialogBody({
 
   const canExport =
     canPreview && isPreviewCurrent && previewOk !== null && !isExporting
+  const hasAlert =
+    exportError !== null ||
+    Boolean(preview.error) ||
+    previewResult?.kind === "forcedExcluded"
 
   return (
     <>
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-4">
-        {exportError !== null && (
-          <ExportErrorBand title="書き出せませんでした" message={exportError} />
-        )}
-        {preview.error && (
-          <ExportErrorBand
-            title="書き出す範囲を確かめられませんでした"
-            message={preview.error.message}
-          />
-        )}
-        {previewResult?.kind === "forcedExcluded" && (
-          <ForcedExclusionAlert
-            violations={previewResult.violations}
-            catalog={catalog}
-            onRestore={() =>
-              updateSelection((prev) =>
-                restoreForcedExclusions(prev, previewResult.violations)
-              )
-            }
-          />
-        )}
-
         <ArchiveEntityCheckListSection
           selection={effectiveSelection}
           classroomSourcesByStudent={classroomSourcesByStudent}
@@ -335,7 +318,35 @@ export function ExportDialogBody({
         )}
       </div>
 
-      <div className="border-t px-6 py-3">
+      {/* 失敗の知らせは下端に出す。上に出すと、押した直後に一覧が下へずれる */}
+      <div className="space-y-3 border-t px-6 py-3">
+        {hasAlert && (
+          <div className="max-h-48 space-y-3 overflow-y-auto">
+            {exportError !== null && (
+              <ExportErrorBand
+                title="書き出せませんでした"
+                message={exportError}
+              />
+            )}
+            {preview.error && (
+              <ExportErrorBand
+                title="書き出す範囲を確かめられませんでした"
+                message={preview.error.message}
+              />
+            )}
+            {previewResult?.kind === "forcedExcluded" && (
+              <ForcedExclusionAlert
+                violations={previewResult.violations}
+                catalog={catalog}
+                onRestore={() =>
+                  updateSelection((prev) =>
+                    restoreForcedExclusions(prev, previewResult.violations)
+                  )
+                }
+              />
+            )}
+          </div>
+        )}
         <ExcludedSummary
           selection={selection}
           excludedRowCounts={previewOk ? previewOk.excludedRowCounts : null}

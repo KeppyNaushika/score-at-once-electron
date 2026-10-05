@@ -84,11 +84,23 @@ function UnifiedArchiveImportWizardDialog({
           <WizardStepIndicator currentStep={step} />
         </DialogHeader>
 
-        {/* エラー（非中断。閉じずにその場で直せる） */}
+        {/* 段の中身 */}
+        <div className="min-h-100 flex-1 overflow-y-auto px-6 py-6">
+          {step === "fileSelect" && <ArchiveFileSelectStep wizard={wizard} />}
+          {step === "overview" && <ArchiveOverviewStep wizard={wizard} />}
+          {step === "match" && <ArchiveMatchStep wizard={wizard} />}
+          {step === "conflict" && <ArchiveConflictStep wizard={wizard} />}
+          {step === "confirm" && <ArchiveConfirmStep wizard={wizard} />}
+          {step === "execute" && (
+            <ArchiveExecuteStep wizard={wizard} onClose={handleClose} />
+          )}
+        </div>
+
+        {/* エラー（非中断。閉じずにその場で直せる）。上に出すと押した直後に中身が下へずれるので、フッターの上に出す */}
         {error && (
           <div
             role="alert"
-            className="mx-6 mt-4 rounded-lg border border-destructive/20 bg-destructive/10 p-4"
+            className="mx-6 mb-4 rounded-lg border border-destructive/20 bg-destructive/10 p-4"
           >
             <div className="flex items-start gap-3">
               <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
@@ -108,18 +120,6 @@ function UnifiedArchiveImportWizardDialog({
             </div>
           </div>
         )}
-
-        {/* 段の中身 */}
-        <div className="min-h-100 flex-1 overflow-y-auto px-6 py-6">
-          {step === "fileSelect" && <ArchiveFileSelectStep wizard={wizard} />}
-          {step === "overview" && <ArchiveOverviewStep wizard={wizard} />}
-          {step === "match" && <ArchiveMatchStep wizard={wizard} />}
-          {step === "conflict" && <ArchiveConflictStep wizard={wizard} />}
-          {step === "confirm" && <ArchiveConfirmStep wizard={wizard} />}
-          {step === "execute" && (
-            <ArchiveExecuteStep wizard={wizard} onClose={handleClose} />
-          )}
-        </div>
 
         {/* フッター */}
         <div className="flex items-center justify-between border-t bg-muted/30 px-6 py-4">

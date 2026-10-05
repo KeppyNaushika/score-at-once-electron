@@ -74,6 +74,8 @@ function statToneClasses(stat: EntityOverviewStat): StatToneClasses {
 
 interface EntityOverviewStatStripProps {
   stats: EntityOverviewStat[]
+  /** 帯の外側の上書き（既定は上に区切り線を引いて折り返す） */
+  className?: string
 }
 
 /**
@@ -84,9 +86,15 @@ interface EntityOverviewStatStripProps {
  */
 export function EntityOverviewStatStrip({
   stats,
+  className,
 }: EntityOverviewStatStripProps) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5 border-t pt-4">
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-1.5 border-t pt-4",
+        className
+      )}
+    >
       {stats.map((stat) => {
         const tone = statToneClasses(stat)
         return (

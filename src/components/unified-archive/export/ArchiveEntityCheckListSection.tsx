@@ -20,6 +20,7 @@ import {
   type ArchiveExportPreviewOk,
   buildArchiveEntityRows,
 } from "./archiveEntityRows"
+import { ExportRowCountStrip } from "./ExportRowCountStrip"
 import type { useRemovalImpact } from "./hooks/useRemovalImpact"
 import {
   ARCHIVE_SELECTABLE_KINDS,
@@ -98,7 +99,19 @@ export function ArchiveEntityCheckListSection({
 
   return (
     <section className="space-y-2">
-      <h3 className="text-sm font-semibold">書き出すもの</h3>
+      <div className="flex items-center gap-3">
+        <h3 className="shrink-0 text-sm font-semibold">書き出すもの</h3>
+        {preview && (
+          <ExportRowCountStrip
+            rowCounts={preview.rowCounts}
+            rowCountDeltas={
+              removalImpact?.kind === "lost"
+                ? removalImpact.rowCountDeltas
+                : null
+            }
+          />
+        )}
+      </div>
       <p className="text-xs text-muted-foreground">
         行を選ぶとチェックが入れ替わります（↑↓ で移り、Enter
         で入れ替え）。関連で入るものを外すと「含めない」として残ります。

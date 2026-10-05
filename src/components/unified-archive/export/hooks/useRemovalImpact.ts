@@ -50,7 +50,7 @@ interface UseRemovalImpactOptions {
  * 外した選択で下見をもう1回引き、今の下見と比べる。今いる行が変わってから少し待って引き、
  * 引いている間・外せない行・チェックの無い行では null を返す（古い結果を出さない）。
  *
- * @returns 一緒に外れる実体（`${種}:${id}`。その行自身は除く）。
+ * @returns 一緒に外れる実体（`${種}:${id}`。その行自身は除く）と、表ごとの行の数の増減。
  *   外すと外せないものが外れるときは、それを使う成績算出の id
  */
 export function useRemovalImpact({
@@ -147,9 +147,19 @@ function compareRemovalPreview(
         .filter((entityKey) => entityKey !== activeEntityKey)
     })
   )
+  const rowCountDeltas = Object.fromEntries(
+    Object.keys({ ...currentPreview.rowCounts, ...removalResult.rowCounts })
+      .map((table): [string, number] => [
+        table,
+        (removalResult.rowCounts[table] ?? 0) -
+          (currentPreview.rowCounts[table] ?? 0),
+      ])
+      .filter(([, delta]) => delta !== 0)
+  )
   return {
     activeEntity,
     kind: "lost" as const,
     lostEntityKeys,
+    rowCountDeltas,
   }
 }

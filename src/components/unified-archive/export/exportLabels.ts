@@ -22,7 +22,7 @@ export const missingFileDescription = (
 ): string =>
   `${MISSING_FILE_REASON_LABELS[missingFile.reason]}: ${missingFile.path}`
 
-/** 書き出す前の確認で先に見せる表（残りは折りたたみ） */
+/** 「書き出すもの」の右に1行で数を出す表（残りは「全ての表」の折りたたみ） */
 export const MAJOR_TABLES: readonly string[] = [
   "Exam",
   "ExamStudent",
