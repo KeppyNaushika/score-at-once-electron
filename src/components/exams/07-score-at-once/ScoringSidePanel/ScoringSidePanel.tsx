@@ -30,6 +30,10 @@ import type {
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { AnnotationBrowserPanel } from "./AnnotationBrowserPanel"
+import {
+  type AssignmentScope,
+  AssignmentScopeNotice,
+} from "./AssignmentScopeNotice"
 import { DisplaySection } from "./DisplaySection"
 import { useSidePanelSections } from "./hooks/useSidePanelSections"
 import { ScoreCommentSection } from "./ScoreCommentSection"
@@ -46,8 +50,8 @@ interface ScoringSidePanelProps {
   onPrevQuestion: () => void
   onNextQuestion: () => void
   questionProgress: QuestionProgress
-  /** 採点担当により設問が絞られている */
-  isQuestionSetFiltered?: boolean
+  /** 採点担当による絞り込みと「すべて表示」 */
+  assignmentScope: AssignmentScope
   // Scoring Toolbar props
   selectedAnswersCount: number
   filterSettings: {
@@ -140,7 +144,7 @@ export function ScoringSidePanel({
   onPrevQuestion,
   onNextQuestion,
   questionProgress,
-  isQuestionSetFiltered,
+  assignmentScope,
   selectedAnswersCount,
   filterSettings,
   onScore,
@@ -247,6 +251,9 @@ export function ScoringSidePanel({
             <ExamProgressCard questionProgress={questionProgress} />
           </SidePanelSection>
 
+          {/* 採点担当による絞り込み（設問・生徒の両方をここで1度だけ言う） */}
+          <AssignmentScopeNotice assignmentScope={assignmentScope} />
+
           {/* 設問ナビゲーター */}
           <QuestionNavigator
             questionRegions={cropRegions}
@@ -255,7 +262,6 @@ export function ScoringSidePanel({
             onPrevQuestion={onPrevQuestion}
             onNextQuestion={onNextQuestion}
             questionProgress={questionProgress}
-            isFilteredByAssignment={isQuestionSetFiltered}
             collapsible
             isOpen={isSectionOpen("question")}
             onToggle={() => toggleSection("question")}

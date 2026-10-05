@@ -5,7 +5,8 @@ import { examForDetailQuery } from "./exam"
 import { scopeKeys } from "./keys"
 
 /**
- * 採点（QuestionScore）と、設問ごとの採点担当（CropRegionAssignment）の読み書き。
+ * 採点（QuestionScore）と、設問ごと・受験生徒ごとの採点担当（CropRegionAssignment・
+ * ExamStudentAssignment）の読み書き。
  *
  * **採点行は設問ごとに1本のキーへ載せる。** 採点は「その設問のそのマス」に書くので、
  * 書き込みで古くなるのもその設問だけである。試験ぶんを1本にまとめていた頃は、
@@ -73,6 +74,21 @@ export const cropRegionAssignmentsQuery = (examId: string, userId: string) =>
       userId,
     ] as const,
     queryFn: () => window.electronAPI.getCropRegionAssignments(examId, userId),
+  })
+
+/** 受験生徒ごとの採点担当1件（DB の行に担当者を同梱した形） */
+export type ExamStudentAssignmentRow = Awaited<
+  ReturnType<typeof window.electronAPI.getExamStudentAssignments>
+>[number]
+
+/**
+ * 受験生徒ごとの採点担当（05 の担当表と、07・06 の生徒の絞り込みが読む）。
+ * 誰の担当かは見る人によらないので、キーに利用者を入れない。
+ */
+export const examStudentAssignmentsQuery = (examId: string) =>
+  queryOptions({
+    queryKey: [...scopeKeys.exam(examId), "examStudentAssignments"] as const,
+    queryFn: () => window.electronAPI.getExamStudentAssignments(examId),
   })
 
 /**
@@ -270,5 +286,24 @@ export const unassignCropRegionMutation = (examId: string) =>
     meta: {
       invalidates: assignmentInvalidations(examId),
       errorMessage: "採点担当を外せませんでした",
+    },
+  })
+
+/**
+ * 1人の採点者について、何人かの受験生徒の担当をまとめて付け外しする
+ * （マス1つ・フィルハンドルで塗った範囲・学級からの一括のどれもこれを通る）。
+ */
+export const setExamStudentAssignmentsMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (input: {
+      userId: string
+      examStudentIds: string[]
+      assigned: boolean
+      requestedByUserId: string
+    }) => window.electronAPI.setExamStudentAssignments({ examId, ...input }),
+    scope: { id: `exam:${examId}:examStudentAssignments` },
+    meta: {
+      invalidates: [examStudentAssignmentsQuery(examId).queryKey],
+      errorMessage: "採点担当を変えられませんでした",
     },
   })

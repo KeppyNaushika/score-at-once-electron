@@ -14,6 +14,10 @@ import {
   getAssignmentsForExam,
   unassignCropRegion,
 } from "../lib/prisma/cropRegionAssignment"
+import {
+  getExamStudentAssignmentsForExam,
+  setExamStudentAssignments,
+} from "../lib/prisma/examStudentAssignment"
 import { getQuestionScoresByCropRegion } from "../lib/prisma/questionScore"
 import {
   setQuestionScoreComment,
@@ -132,6 +136,14 @@ export const scoringHandlers = {
     userId: string,
     requestedByUserId: string
   ) => unassignCropRegion(cropRegionId, userId, requestedByUserId),
+
+  // 受験生徒ごとの採点担当。05 の担当表と、07・06 の生徒の絞り込みが読む
+  "get-exam-student-assignments": (examId: string) =>
+    getExamStudentAssignmentsForExam(examId),
+
+  "set-exam-student-assignments": (
+    input: Parameters<typeof setExamStudentAssignments>[0]
+  ) => setExamStudentAssignments(input),
 
   // QuestionScore 一括更新（OMR自動採点結果反映）
   "batch-update-question-scores": async (

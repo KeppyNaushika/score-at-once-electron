@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus, Users } from "lucide-react"
 import { useParams } from "next/navigation"
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import { ClassroomExamManager } from "@/components/exams/05-students/components/ClassroomExamManager"
 import { ClassroomStatisticsCards } from "@/components/exams/05-students/components/exam-students-page/components/ClassroomStatisticsCards"
@@ -11,22 +11,30 @@ import { StudentStatisticsCards } from "@/components/exams/05-students/component
 import { useExamStudentsData } from "@/components/exams/05-students/components/exam-students-page/hooks/useExamStudentsData"
 import ExamStudentAddModal from "@/components/exams/05-students/components/ExamStudentAddModal"
 import SortableStudentTable from "@/components/exams/05-students/components/SortableStudentTable"
+import { StudentGraderAssignmentTable } from "@/components/exams/05-students/components/StudentGraderAssignmentTable"
 import StudentRemovalConfirmModal from "@/components/exams/05-students/components/StudentRemovalConfirmModal"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import {
   type ExamClassroomRow,
   examClassroomsQuery,
   removeExamClassroomMutation,
   updateExamClassroomMutation,
 } from "@/queries/examClassroom"
+import {
+  cropRegionAssignmentsQuery,
+  examStudentAssignmentsQuery,
+} from "@/queries/scoring"
+import { examMembersQuery } from "@/queries/userExam"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_EXAM_CLASSROOMS: ExamClassroomRow[] = []
 
 export default function StudentsPage() {
   const queryClient = useQueryClient()
+  const currentUser = useCurrentUser()
   const params = useParams()
   const examId = typeof params.examId === "string" ? params.examId : ""
 
@@ -70,6 +78,43 @@ export default function StudentsPage() {
   } = useQuery(examClassroomsQuery(examId))
   const removeExamClassroom = useMutation(removeExamClassroomMutation(examId))
   const updateExamClassroom = useMutation(updateExamClassroomMutation(examId))
+
+  /**
+   * 採点担当を出すかと、直せるか。設問の担当（03）と同じ取得で決める
+   * （参加者が1人なら担当という概念そのものが要らないので、タブを出さない）。
+   */
+  const { data: cropRegionAssignmentData } = useQuery({
+    ...cropRegionAssignmentsQuery(examId, currentUser.id),
+    enabled: Boolean(examId),
+  })
+  const showAssignments = (cropRegionAssignmentData?.memberCount ?? 0) > 1
+  const canManageAssignments = cropRegionAssignmentData?.canManage ?? false
+  // 誰が担当かは所有者でなくても知りたいので、協調採点の試験なら全員が引く
+  const { data: examMembers } = useQuery({
+    ...examMembersQuery(examId),
+    enabled: Boolean(examId) && showAssignments,
+  })
+  const { data: examStudentAssignments } = useQuery({
+    ...examStudentAssignmentsQuery(examId),
+    enabled: Boolean(examId) && showAssignments,
+  })
+  /** 担当の対応表の列。参加者の実体をそのまま並べる */
+  const graders = useMemo(
+    () => (examMembers ?? []).map((member) => member.user),
+    [examMembers]
+  )
+  /** どのマスに担当が入っているか。取得は行のまま持ち、マスを引く id の対へここで畳む */
+  const assignedUserIdsByExamStudentId = useMemo(() => {
+    const assignedUserIds = new Map<string, Set<string>>()
+    for (const assignment of examStudentAssignments ?? []) {
+      const userIds =
+        assignedUserIds.get(assignment.examStudentId) ?? new Set<string>()
+      userIds.add(assignment.userId)
+      assignedUserIds.set(assignment.examStudentId, userIds)
+    }
+    return assignedUserIds
+  }, [examStudentAssignments])
+
   const refreshExamClassrooms = useCallback(
     () =>
       queryClient.invalidateQueries({
@@ -130,6 +175,11 @@ export default function StudentsPage() {
             <TabsTrigger value="classrooms" className="px-4">
               学級の関連付け
             </TabsTrigger>
+            {showAssignments && (
+              <TabsTrigger value="grader-assignment" className="px-4">
+                採点担当
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <div className="flex items-center gap-4">
@@ -152,7 +202,7 @@ export default function StudentsPage() {
                   </Button>
                 </div>
               </>
-            ) : (
+            ) : activeTab === "classrooms" ? (
               <>
                 <ClassroomStatisticsCards examClassrooms={examClassrooms} />
                 <Button onClick={() => setShowAddClassroomDialog(true)}>
@@ -160,7 +210,7 @@ export default function StudentsPage() {
                   学級を追加
                 </Button>
               </>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -203,6 +253,23 @@ export default function StudentsPage() {
             onShowAddDialogChange={setShowAddClassroomDialog}
           />
         </TabsContent>
+
+        {/* 採点担当タブ（協調採点の試験だけ） */}
+        {showAssignments && (
+          <TabsContent
+            value="grader-assignment"
+            className="flex-1 overflow-auto pb-6"
+          >
+            <StudentGraderAssignmentTable
+              examId={examId}
+              examStudents={students}
+              placementByStudent={placementByStudent}
+              graders={graders}
+              assignedUserIdsByExamStudentId={assignedUserIdsByExamStudentId}
+              canManage={canManageAssignments}
+            />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* 追加モーダル */}

@@ -231,6 +231,8 @@ describe("DateTime正規化マイグレーション", () => {
     "ExamIndividualReportSettings",
     "ExamIndividualReportStatisticVisibility",
     "ExamIndividualReportTableSection",
+    // 20261005160000 で追加（受験生徒ごとの採点担当）。normalize migration より後で ISO text 生成
+    "ExamStudentAssignment",
     "GradeComparison", // 20260929120000 で追加。normalize migration より後で ISO text 生成
     "GradeConstraint",
     // 20260726110000 で追加（制約ルールの設定JSON正規化）。normalize migration より後で ISO text 生成

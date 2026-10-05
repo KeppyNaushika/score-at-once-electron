@@ -187,6 +187,15 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
       nullable("assignedBy", "User"),
     ],
   },
+  ExamStudentAssignment: {
+    role: "owned",
+    owner: ["examStudentId"],
+    references: [
+      required("examStudentId", "ExamStudent"),
+      required("userId", "User"),
+      nullable("assignedBy", "User"),
+    ],
+  },
   CropSubtotal: {
     role: "owned",
     owner: ["cropRegionId"],

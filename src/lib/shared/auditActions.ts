@@ -221,6 +221,16 @@ const AUDIT_ACTIONS = {
     verb: "delete",
     label: "設問の採点担当を解除しました",
   },
+  "exam.student.assign": {
+    category: "exam",
+    verb: "create",
+    label: "生徒の採点担当を割り当てました",
+  },
+  "exam.student.unassign": {
+    category: "exam",
+    verb: "delete",
+    label: "生徒の採点担当を解除しました",
+  },
 
   "exam.annotation.create": {
     category: "exam",

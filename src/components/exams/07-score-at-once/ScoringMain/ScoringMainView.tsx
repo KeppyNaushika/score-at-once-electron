@@ -31,6 +31,7 @@ function ScoringMainViewContent() {
   const { unlockedProviders } = useAiGradingAvailability()
   const {
     allMasterImageUrls,
+    assignmentScope,
     allScoringData,
     answerSortOrder,
     autoScroll,
@@ -310,7 +311,7 @@ function ScoringMainViewContent() {
                 onPrevQuestion={handlePrevQuestion}
                 onNextQuestion={handleNextQuestion}
                 questionProgress={questionProgress}
-                isQuestionSetFiltered={isQuestionSetFiltered}
+                assignmentScope={assignmentScope}
                 selectedStudentAnswerImageIds={selectedStudentAnswerImageIds}
                 selectedAnswersCount={selectedStudentAnswerImageIds.size}
                 filterSettings={filterSettings}

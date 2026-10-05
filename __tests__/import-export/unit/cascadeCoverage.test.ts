@@ -102,7 +102,10 @@ describe("採点層の親は ExamStudent（#962 の再発防止）", () => {
   ]
 
   it("採点系6テーブルは ExamStudent の onDelete:Cascade 子である", () => {
-    expect(cascadeChildrenFromSchema("ExamStudent")).toEqual(SCORING_TABLES)
+    // 採点系のほかに、受験生徒ごとの採点担当も受験者の子（受験生を外せば担当も消える）
+    expect(cascadeChildrenFromSchema("ExamStudent")).toEqual(
+      [...SCORING_TABLES, "ExamStudentAssignment"].sort()
+    )
   })
 
   it("採点系6テーブルは Student 直結ではない", () => {

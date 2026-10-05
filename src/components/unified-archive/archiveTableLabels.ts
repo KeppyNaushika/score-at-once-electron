@@ -17,6 +17,7 @@ const ARCHIVE_TABLE_LABELS: Readonly<Record<string, string>> = {
   StudentAnswerImage: "答案画像",
   CropRegion: "採点枠",
   CropRegionAssignment: "採点の担当",
+  ExamStudentAssignment: "生徒の採点担当",
   SubtotalGroup: "小計グループ",
   Subtotal: "小計",
   CropSubtotal: "採点枠の小計",

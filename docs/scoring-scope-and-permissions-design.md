@@ -140,13 +140,13 @@ UI 文言もこの範囲で書く。「アクセスを禁止します」は過�
 | 軸   | テーブル                | 何を絞るか         | 状態                 |
 | ---- | ----------------------- | ------------------ | -------------------- |
 | 設問 | `CropRegionAssignment`  | 選択できる設問     | **実装済み**（#840） |
-| 生徒 | `ExamStudentAssignment` | グリッドに出る生徒 | 新規                 |
+| 生徒 | `ExamStudentAssignment` | グリッドに出る生徒 | **実装済み**（2b）   |
 
 ```prisma
 /// 生徒ごとの採点担当。設問側の CropRegionAssignment と対等な軸。
 /// idは uuidv4。同定は @@unique([examStudentId, userId]) で行う（CropRegionAssignment と同じ）。
 model ExamStudentAssignment {
-  id            String      @id
+  id            String      @id @default(uuid())
   examStudentId String
   userId        String
   assignedBy    String?
@@ -171,6 +171,17 @@ model ExamStudentAssignment {
 「学級を選ぶ → その時点の所属生徒を担当として焼き込む」。`customOrder` の実体化と同じパターン。
 焼き込んだ後は生徒単位の割当行なので、後から所属が変わっても担当は揺れない。
 
+**実装（2026-10-05）:**
+
+- 割当の表は 05（受験生徒管理）の「採点担当」タブ（`StudentGraderAssignmentTable`）。03 の設問の表と同じ
+  操作感（マスのチェックとフィルハンドル）で、参加者が2人以上のときだけタブを出す
+- 学級は採番学級（受験日時点の所属。05 の一覧と同じ `resolveExamClassroomPlacement`）で決め、列見出しの
+  「学級から」でその学級の生徒の行へ焼き込む
+- 書き込みは1つの口（`setExamStudentAssignments`）で、1人の採点者について何人かをまとめて付け外しする。
+  マス1つ・塗った範囲・学級からの一括のどれもここを通り、既にその姿の生徒には書かない
+- 絞り込みの規則は `useAssignedExamStudents`（07 と 06 が共有）。07 は読み込んだ答案をここで絞ってから
+  先の処理へ渡すので、一覧・個別・選択・前後移動・進み具合のどれも自分の担当の範囲になる
+
 #### 06（生徒答案）も同じ規則で絞る
 
 生徒割り当ては 07 だけでなく **06 にも効かせる**。パターンBで各教員が自分の学級の答案を
@@ -182,12 +193,19 @@ model ExamStudentAssignment {
 未割り当ての生徒の答案を扱えなくなる懸念は、2-3 の「担当0人の生徒は全員担当」で解消する。
 誰にも割り当てられていない生徒は常に全員に見えるので、絞り込みで消えることはない。
 
+06 では**行と配置済み答案の両方を絞る**。行の無い生徒の答案は「孤立答案」として扱われるので、行だけを
+絞ると他の先生の生徒の答案が孤立して見える。書きかけ（未アップロード・未反映の配置）がある間は
+「すべて表示」を切り替えさせない（行が入れ替わると書きかけの置き場所が消える）。
+
 ### 3-2. 【#840 の訂正】OWNER の絞り込みバイパスを撤回する
 
-**実装済みの以下は誤り。**
+**2026-10-05 に直した（2a）。** 「すべて表示」は 07 のサイドパネル（`AssignmentScopeNotice`。設問と
+生徒の両方の担当の範囲をここで1度だけ言う）と 06 の上端に置き、画面にいる間だけの切り替えとした。
+
+直す前は次のとおりだった。
 
 ```ts
-// src/components/exams/07-score-at-once/ScoringMain/hooks/useAssignedCropRegions.ts:40
+// src/components/exams/07-score-at-once/ScoringMain/hooks/useAssignedCropRegions.ts（直す前）
 if (assignments.length === 0 || canManage) return cropRegions
 //                               ^^^^^^^^^ OWNER なら絞り込みを丸ごと素通り
 ```
@@ -195,7 +213,7 @@ if (assignments.length === 0 || canManage) return cropRegions
 パターンBでは両者 OWNER なので、これでは割り当てても2人とも全生徒・全設問が見えてしまい、
 **割り当てが無意味になる**。
 
-|                | 誤（実装済み）             | 正                                                 |
+|                | 誤（直す前）               | 正                                                 |
 | -------------- | -------------------------- | -------------------------------------------------- |
 | 絞り込みの根拠 | **役割**（OWNER なら無視） | **自分の割り当て**（役割は無関係）                 |
 | OWNER の特権   | 全部見える                 | **割り当てを変更できる**（自分への割り当てを含む） |
@@ -204,11 +222,8 @@ if (assignments.length === 0 || canManage) return cropRegions
 裁定のために全設問を見たいケースは実在するが、自動バイパスではなく明示トグルであるべき。
 確定パネル自体は割り当てと無関係に全競合を出すので影響を受けない。
 
-あわせて `electron-src/lib/prisma/cropRegionAssignment.ts` の冒頭コメントを訂正する（「OWNER は担当に関係なく
-全設問を選択可」という #840 当時の前提が書かれている）。
-
 **自分への割り当ては既に可能**（`assignCropRegion` は割当先を `UserExam` メンバーに限り OWNER もメンバー、
-`QuestionAssignmentRow` のプルダウンも `members` をそのまま出す）。ここは変更不要。
+03 の対応表 `GraderAssignmentTable` の列も参加者をそのまま並べる）。ここは変更不要。
 
 ### 3-3. 段階アクセスは「3ロール＋昇格/降格」＋ 09 のみ OWNER が個別に外せる
 
@@ -358,7 +373,8 @@ disabled にし、「この試験では匿名採点が有効です」と表示�
 | **2b. 生徒別担当**      | `ExamStudentAssignment` 新設。割当UIを2軸に。学級からの一括割り当て。06 への絞り込み適用                                                                                                                               | 2a   | 3日      |
 | **3. 匿名採点（#839）** | `Exam.anonymousScoringEnforced` と二層判定。07 の表示制御 ＋ 氏名欄マスク ＋ 並び順                                                                                                                                    | 1    | 1.5〜2日 |
 
-2a は小さいので 2b と同じPRに含めるのが自然。
+2a と 2b は 2026-10-05 に1つの PR で実装した（`ExamStudentAssignment` は migration
+`20261005160000_add_exam_student_assignment`）。残りは 1 と 3。
 3 は 1 の後（05-06 が導線から外れて初めて意味を持つ）。
 
 アーカイブは `.sao` なので、段ごとにスキーマを変えても改版の手間は増えない（→ 1-4）。

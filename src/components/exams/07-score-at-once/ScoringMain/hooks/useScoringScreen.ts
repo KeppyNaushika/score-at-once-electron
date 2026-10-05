@@ -20,6 +20,8 @@ import { useScoringNavigation } from "@/components/exams/07-score-at-once/Scorin
 import { useScoringPreferences } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringPreferences"
 import { useScoringScreenBindings } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringScreenBindings"
 import { useStudentAnswerManagement } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useStudentAnswerManagement"
+import type { AssignmentScope } from "@/components/exams/07-score-at-once/ScoringSidePanel/AssignmentScopeNotice"
+import { useAssignedExamStudents } from "@/components/exams/shared/useAssignedExamStudents"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 
 interface UseScoringScreenOptions {
@@ -57,10 +59,30 @@ export function useScoringScreen({
   const {
     loading,
     exam,
-    studentAnswerImages,
+    studentAnswerImages: loadedStudentAnswerImages,
     cropRegions,
     questionScoresByCropRegionId,
   } = useScoringDataLoader(examId)
+
+  /** 採点担当の「すべて表示」。画面にいる間だけの切り替えで、憶えない */
+  const [showAllAssignments, setShowAllAssignments] = useState(false)
+
+  /**
+   * 受験生徒の担当による答案の絞り込み。**ここから先は絞った答案だけを扱う**
+   * （一覧・個別・選択・前後移動・進み具合のどれも、自分の担当の生徒の答案になる）。
+   */
+  const { isVisibleExamStudent, isAssignedToMe } = useAssignedExamStudents({
+    examId,
+    userId: currentUser.id,
+    showAll: showAllAssignments,
+  })
+  const studentAnswerImages = useMemo(
+    () =>
+      loadedStudentAnswerImages.filter((answerImage) =>
+        isVisibleExamStudent(answerImage.examStudentId)
+      ),
+    [loadedStudentAnswerImages, isVisibleExamStudent]
+  )
 
   /** 設定管理フック */
   const { scoringSettings, clickScoringConfig, setClickAction } =
@@ -136,11 +158,38 @@ export function useScoringScreen({
     selectableCropRegions,
     memberCount,
     isFiltered: isQuestionSetFiltered,
+    assignedCropRegionCount,
   } = useAssignedCropRegions({
     examId,
     userId: currentUser.id,
     cropRegions,
+    showAll: showAllAssignments,
   })
+
+  /** 担当の範囲と「すべて表示」（サイドパネルが知らせる） */
+  const assignmentScope = useMemo<AssignmentScope>(() => {
+    const examStudentIds = new Set(
+      loadedStudentAnswerImages.map((answerImage) => answerImage.examStudentId)
+    )
+    return {
+      showAll: showAllAssignments,
+      onShowAllChange: setShowAllAssignments,
+      questions: {
+        assigned: assignedCropRegionCount,
+        total: cropRegions.length,
+      },
+      students: {
+        assigned: [...examStudentIds].filter(isAssignedToMe).length,
+        total: examStudentIds.size,
+      },
+    }
+  }, [
+    loadedStudentAnswerImages,
+    showAllAssignments,
+    assignedCropRegionCount,
+    cropRegions.length,
+    isAssignedToMe,
+  ])
 
   /** 白さ順ソート用: 一覧表示中のページの白さを先読みする */
   const { whitenessByAnswerId, isWhitenessReady } = useAnswerWhiteness({
@@ -392,6 +441,7 @@ export function useScoringScreen({
 
   return {
     allMasterImageUrls,
+    assignmentScope,
     allScoringData,
     answerSortOrder,
     autoScroll,

@@ -4,8 +4,10 @@ import { FileEdit } from "lucide-react"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
+import { useAssignedExamStudents } from "@/components/exams/shared/useAssignedExamStudents"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { DirtyDetail } from "@/contexts/NavigationGuardContext"
 import { useNavigationGuard } from "@/hooks/useNavigationGuard"
 
@@ -31,6 +33,7 @@ import { usePendingChanges, useStudentAnswersData } from "./hooks"
 export default function StudentAnswersPage() {
   const params = useParams()
   const examId = typeof params.examId === "string" ? params.examId : ""
+  const currentUser = useCurrentUser()
 
   const [activeTab, setActiveTab] = useState<StudentAnswerTab>("new-grid")
   const [uploadFileCount, setUploadFileCount] = useState(0)
@@ -39,8 +42,45 @@ export default function StudentAnswersPage() {
   >(new Map())
 
   // Data loading hook
-  const { students, examPages, isLoading, loadData } =
-    useStudentAnswersData(examId)
+  const {
+    students: loadedStudents,
+    examPages: loadedExamPages,
+    isLoading,
+    loadData,
+  } = useStudentAnswersData(examId)
+
+  /**
+   * 受験生徒の担当による絞り込み（07 と同じ規則。担当0人の生徒は全員に出る）。
+   * 行だけでなく配置済み答案も同じ規則で絞る。行の無い生徒の答案は「孤立答案」として
+   * 扱われるので、行だけ絞ると他の先生の生徒の答案が孤立して見えてしまう。
+   */
+  const [showAllAssignments, setShowAllAssignments] = useState(false)
+  const { isVisibleExamStudent, isAssignedToMe } = useAssignedExamStudents({
+    examId,
+    userId: currentUser.id,
+    showAll: showAllAssignments,
+  })
+  const students = useMemo(
+    () =>
+      loadedStudents.filter((examStudent) =>
+        isVisibleExamStudent(examStudent.id)
+      ),
+    [loadedStudents, isVisibleExamStudent]
+  )
+  const examPages = useMemo(
+    () =>
+      loadedExamPages.map((examPage) => ({
+        ...examPage,
+        studentAnswerImages: examPage.studentAnswerImages.filter(
+          (answerImage) => isVisibleExamStudent(answerImage.examStudentId)
+        ),
+      })),
+    [loadedExamPages, isVisibleExamStudent]
+  )
+  const assignedStudentCount = loadedStudents.filter((examStudent) =>
+    isAssignedToMe(examStudent.id)
+  ).length
+  const isStudentSetNarrowed = assignedStudentCount < loadedStudents.length
 
   // Pending changes management hook
   const {
@@ -117,6 +157,33 @@ export default function StudentAnswersPage() {
 
   return (
     <div className="flex h-full flex-col">
+      {/*
+        担当で生徒が絞られていることと「すべて表示」。書きかけ（未アップロード・未反映の
+        配置）がある間は切り替えさせない。行が入れ替わると、書きかけの置き場所が消える
+      */}
+      {isStudentSetNarrowed && (
+        <div className="flex items-center gap-2 border-b bg-blue-50 px-3 py-1.5 text-xs text-blue-700">
+          <span className="flex-1">
+            {showAllAssignments
+              ? `すべての生徒を表示しています（自分の担当は${assignedStudentCount}/${loadedStudents.length}人）`
+              : `自分の担当の生徒だけ表示しています（${assignedStudentCount}/${loadedStudents.length}人）`}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 px-2 text-xs"
+            disabled={isDirty}
+            title={
+              isDirty
+                ? "未アップロードの画像や未反映の変更があるあいだは切り替えられません"
+                : undefined
+            }
+            onClick={() => setShowAllAssignments(!showAllAssignments)}
+          >
+            {showAllAssignments ? "担当だけに戻す" : "すべて表示"}
+          </Button>
+        </div>
+      )}
       {/*
         書きかけの反映だけはこの画面固有の操作なので、ヘッダーではなく中身の側に
         置く（段の題・使い方・次へは `WorkflowTabHeader` が出す）。
