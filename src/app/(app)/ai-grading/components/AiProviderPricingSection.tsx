@@ -138,7 +138,9 @@ export function AiProviderPricingSection({
         </li>
         <li>
           キャッシュへの書き込みは、その場の送信が5分、バッチが1時間の保持です。
-          書き込みに別の料金の無い事業者では、キャッシュの欄は空欄（0）のままにします。
+          {provider === "openai"
+            ? "OpenAI のキャッシュの書き込みに保持の長さの区別は無いので、5分・1時間に同じ値を入れます。アプリは使用量のうちキャッシュの読み書きを入力から分けて数えるので、別の料金の無いモデルでは入力と同じ値にします（0 だと安く見積もります）。"
+            : "書き込みに別の料金の無い事業者では、キャッシュの欄は空欄（0）のままにします。"}
         </li>
       </ul>
 
@@ -167,13 +169,12 @@ export function AiProviderPricingSection({
         </p>
       </div>
 
-      {provider === "anthropic" && (
-        <AiPricingPageImport
-          settings={settings}
-          pricing={pricing}
-          modelsInUse={new Set(listedModels)}
-        />
-      )}
+      <AiPricingPageImport
+        provider={provider}
+        settings={settings}
+        pricing={pricing}
+        modelsInUse={new Set(listedModels)}
+      />
     </section>
   )
 }

@@ -63,14 +63,14 @@ export const recordAiProviderConsentMutation = () =>
     },
   })
 
-/** 同意を取り消す。保存した API キーも消える */
+/** 同意を取り消す（画面では「無効にする」）。保存した API キーも消える */
 export const revokeAiProviderConsentMutation = () =>
   defineMutation({
     mutationFn: (provider: GradingProviderId) =>
       window.electronAPI.aiProvider.revokeConsent(provider),
     meta: {
       invalidates: [aiProviderStatusesQuery().queryKey],
-      errorMessage: "同意を取り消せませんでした",
+      errorMessage: "無効にできませんでした",
     },
   })
 
@@ -194,7 +194,8 @@ export const setAiBatchPricePercentMutation = () =>
  */
 export const fetchAiPricingPageMutation = () =>
   defineMutation({
-    mutationFn: () => window.electronAPI.aiProvider.fetchPricingPage(),
+    mutationFn: (provider: GradingProviderId) =>
+      window.electronAPI.aiProvider.fetchPricingPage(provider),
     meta: {
       writesDatabase: false,
       errorMessage: "料金のページを読み込めませんでした",

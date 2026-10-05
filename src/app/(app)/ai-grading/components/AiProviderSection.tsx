@@ -51,7 +51,7 @@ export function AiProviderSection({
     revokeConsent.mutate(status.provider, {
       onSuccess: () =>
         toast.success(
-          `${providerName} への同意を取り消し、この端末の API キーを削除しました`
+          `${providerName} を無効にし、この端末の API キーを削除しました`
         ),
     })
   }
@@ -88,7 +88,7 @@ export function AiProviderSection({
               className="text-destructive"
               onClick={() => setIsRevokeConfirmOpen(true)}
             >
-              同意を取り消す
+              無効にする
             </Button>
           </div>
         </>
@@ -96,15 +96,15 @@ export function AiProviderSection({
         <div className="space-y-3">
           {status.consent !== null && (
             <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-              同意文が改められたか、別の利用者の同意が記録されています。この利用者で使うには、改めて同意してください。
+              同意文が改訂されたか、別の利用者による同意が記録されています。この利用者で使用するには、改めて同意してください。
             </p>
           )}
           <p className="text-sm text-muted-foreground">
             {providerName}{" "}
-            へ答案の切り出し画像などを送り、採点の候補を受け取ります。使うには、送られるもの・送り先・責任の所在などを
+            へ答案の切り出し画像などを送信し、採点の候補を受け取ります。ご利用にあたっては、送信される内容・送信先・責任の所在などに関する
             {AI_GRADING_CONSENT_ITEMS.length}
-            項目に分けて確かめ、同意してください。同意するまで API
-            キーの入力欄は表示しません。
+            項目を確認のうえ、同意してください。同意するまで、API
+            キーの入力欄は表示されません。
           </p>
           <Button type="button" onClick={() => setIsConsentDialogOpen(true)}>
             同意の手順へ進む
@@ -127,16 +127,18 @@ export function AiProviderSection({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {providerName} への同意を取り消しますか？
+              {providerName} を無効にしますか？
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {AI_GRADING_REVOCATION_ITEM.body}
+              この端末に保存した {providerName} の API
+              キーを削除し、以後は送信しません。再び使用するには、同意から始め直してください。
+              {AI_GRADING_REVOCATION_ITEM.title}。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction onClick={handleRevoke}>
-              同意を取り消す
+              無効にする
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

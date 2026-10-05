@@ -27,6 +27,9 @@ import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { userPreferenceQuery } from "@/queries/settings"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
+/** これより動かすまではクリックとみなし、ドラッグ選択にしない（px） */
+const DRAG_THRESHOLD_PX = 5
+
 interface AnswerGridViewProps {
   /** 統一されたデータ引数 */
   allScoringData: ScoringData[]
@@ -204,31 +207,35 @@ export default function AnswerGridView({
     containerRef,
   })
 
+  /** 押した位置から動かした距離が閾値を超えたか（超えるまではクリック扱い） */
+  const hasMovedBeyondDragThreshold = (event: React.MouseEvent) => {
+    if (!dragStart || !gridRef.current) return false
+    const gridRect = gridRef.current.getBoundingClientRect()
+    const distance = Math.hypot(
+      event.clientX - gridRect.left - dragStart.x,
+      event.clientY - gridRect.top - dragStart.y
+    )
+    return distance > DRAG_THRESHOLD_PX
+  }
+
   /** ドラッグ中のマウス移動ハンドラー */
   const handleMouseMove = (event: React.MouseEvent) => {
     if (isMouseMode) return // マウスモードではドラッグ無効
-    if (dragStart && gridRef.current) {
+    if (!dragStart || !gridRef.current) return
+    if (isDragging || hasMovedBeyondDragThreshold(event)) {
       const gridRect = gridRef.current.getBoundingClientRect()
-      const currentX = event.clientX - gridRect.left
-      const currentY = event.clientY - gridRect.top
-
-      const distance = Math.sqrt(
-        Math.pow(currentX - dragStart.x, 2) +
-          Math.pow(currentY - dragStart.y, 2)
-      )
-      if (distance > 5 && !isDragging) {
-        updateDrag(currentX, currentY)
-      }
-
-      if (isDragging || distance > 5) {
-        updateDrag(currentX, currentY)
-      }
+      updateDrag(event.clientX - gridRect.left, event.clientY - gridRect.top)
     }
   }
 
+  /**
+   * ドラッグしていたときだけ、囲んだ範囲で選択を置き換える。
+   * 押して離しただけ（クリック）の選択は mousedown で済んでいるので触らない
+   * （ここで置き換えると Shift/Ctrl+クリックで広げた選択が押した1つに戻る）
+   */
   const handleMouseUp = (event: React.MouseEvent) => {
     if (isMouseMode) return // マウスモードではドラッグ無効
-    if (isDragging) {
+    if (isDragging || hasMovedBeyondDragThreshold(event)) {
       handleDragSelection(event, dragStart)
     }
     endDrag()

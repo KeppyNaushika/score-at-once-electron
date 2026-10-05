@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from "react"
 
 import { useScoringNavigation } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringNavigation"
+import { effectiveSelection } from "@/components/exams/07-score-at-once/ScoringMain/utils/effectiveSelection"
+import { findNextAnswerIdAfterScoring } from "@/components/exams/07-score-at-once/ScoringMain/utils/nextAnswerAfterScoring"
 import type { LayoutDirection } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
@@ -70,12 +72,10 @@ export function useAiGridSelection({
     [visibleItems]
   )
 
-  const selectedIds = useMemo(() => {
-    const stillVisible = visibleIds.filter((id) => chosenIds.has(id))
-    return new Set(
-      stillVisible.length > 0 ? stillVisible : visibleIds.slice(0, 1)
-    )
-  }, [chosenIds, visibleIds])
+  const selectedIds = useMemo(
+    () => effectiveSelection(chosenIds, visibleIds),
+    [chosenIds, visibleIds]
+  )
   const selectedItems = useMemo(
     () => visibleItems.filter((gridItem) => selectedIds.has(gridItem.id)),
     [visibleItems, selectedIds]
@@ -86,17 +86,22 @@ export function useAiGridSelection({
   const setSelection = useCallback((ids: Set<string>) => {
     setChosenIds(ids)
   }, [])
-  const handleSelectAnswer = useCallback((id: string, isSelected: boolean) => {
-    setChosenIds((prev) => {
-      const next = new Set(prev)
-      if (isSelected) {
-        next.add(id)
-      } else {
-        next.delete(id)
-      }
-      return next
-    })
-  }, [])
+  const handleSelectAnswer = useCallback(
+    (id: string, isSelected: boolean) => {
+      // 見えている選択（何も選んでいなければ先頭の答案）から足し引きする。
+      // 選んだ答案だけから足すと、Ctrl/Cmd+クリックで先頭の答案が選択から落ちる
+      setChosenIds((prev) => {
+        const next = effectiveSelection(prev, visibleIds)
+        if (isSelected) {
+          next.add(id)
+        } else {
+          next.delete(id)
+        }
+        return next
+      })
+    },
+    [visibleIds]
+  )
   const handleSelectAll = useCallback(() => {
     setChosenIds(new Set(visibleIds))
   }, [visibleIds])
@@ -124,6 +129,21 @@ export function useAiGridSelection({
   const markAdopted = useCallback((ids: readonly string[]) => {
     setRecentlyAdoptedIds((prev) => new Set([...prev, ...ids]))
   }, [])
+  /**
+   * 自分で採点した答案を残し、選択を次の答案へ移す（一覧表示の採点と同じ規則。
+   * 末尾まで来ていれば選択はそのまま）。
+   *
+   * 次の答案は、この描画の並び＝**書き込む前の並び**で決める。採点した答案が絞り込みから
+   * 外れて並びが詰まっても、決めた答案を id で選んでいるのでずれない
+   */
+  const markScored = useCallback(
+    (ids: readonly string[]) => {
+      markAdopted(ids)
+      const nextId = findNextAnswerIdAfterScoring(visibleIds, new Set(ids))
+      if (nextId) setChosenIds(new Set([nextId]))
+    },
+    [markAdopted, visibleIds]
+  )
 
   const getGridAnswerData = useCallback(
     () =>
@@ -165,5 +185,6 @@ export function useAiGridSelection({
     toggleFilter,
     toggleConfidenceFilter,
     markAdopted,
+    markScored,
   }
 }

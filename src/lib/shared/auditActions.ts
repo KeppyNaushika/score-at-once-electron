@@ -861,7 +861,7 @@ const AUDIT_ACTIONS = {
   "ai_grading.consent_revoked": {
     category: "system",
     verb: "other",
-    label: "AI採点（実験的機能）の送信先「{target}」への同意を取り消しました",
+    label: "AI採点（実験的機能）の送信先「{target}」を無効にしました",
   },
   /**
    * NAS同期が、別id・同一ユニークキーの行を1つへ「畳んだ」ことの記録（**過去の記録専用**）。

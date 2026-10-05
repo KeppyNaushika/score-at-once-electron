@@ -4,14 +4,15 @@ import { useAiGradingSettings } from "@/app/(app)/ai-grading/hooks/useAiGradingS
 import { ExperimentalBadge } from "@/components/common/ExperimentalBadge"
 import { Spinner } from "@/components/ui/spinner"
 
-import { AiGradingDefaultsSection } from "./AiGradingDefaultsSection"
+import { AiGradingSendingLimitsSection } from "./AiGradingSendingLimitsSection"
 import { AiProviderSection } from "./AiProviderSection"
 
 /**
  * 「AI採点」の画面の「設定」タブ（設計 §9）。
  *
  * 機能は同意するまで存在しないものとして扱う。このタブには入口と説明だけを置き、
- * 事業者ごとに同意した後で、キーの入力欄・接続テスト・既定値を出す。
+ * 事業者ごとに同意した後で、キーの入力欄・接続テスト・送信の設定を出す。
+ * 新しい実行やプロンプトに最初から入る値は「既定値」タブ（`AiGradingDefaultsTab`）。
  * 同意は端末・利用者・同意文の版ごと（`ai-providers.json`）で、組織単位のスイッチは無い。
  */
 export function AiGradingSettingsTab() {
@@ -39,7 +40,7 @@ export function AiGradingSettingsTab() {
           の判定は候補にすぎず、教員が確かめて採用しない限り採点には入りません。
         </p>
         <p className="text-sm text-muted-foreground">
-          使うには、事業者ごとに同意が要ります。同意はこの端末で、ログインしている利用者として記録します。
+          ご利用には、事業者ごとの同意が必要です。同意は、この端末で、ログイン中の利用者として記録されます。
         </p>
       </div>
 
@@ -52,12 +53,7 @@ export function AiGradingSettingsTab() {
       ))}
 
       {hasAnyCurrentConsent && (
-        <AiGradingDefaultsSection
-          settings={settings}
-          consentedProviderStates={providerStates.filter(
-            (providerState) => providerState.isConsentCurrent
-          )}
-        />
+        <AiGradingSendingLimitsSection settings={settings} />
       )}
     </div>
   )

@@ -27,18 +27,27 @@ export function useGridDragSelection({
     // ダブルクリック以上はAnswerGridView側で処理（採点・部分点モーダル等）
     if (event.detail >= 2) return
 
-    if (event.ctrlKey) {
+    if (event.ctrlKey || event.metaKey) {
       event.preventDefault()
       onAnswerSelect(answerId, !selectedAnswers.has(answerId))
     } else if (event.shiftKey) {
       event.preventDefault()
       handleShiftSelect(answerId)
     } else {
-      if (!selectedAnswers.has(answerId)) {
-        selectedAnswers.forEach((id) => onAnswerSelect(id, false))
-        onAnswerSelect(answerId, true)
-      }
+      // 修飾キー無しのクリックは、選択中の答案を押しても、その1つだけを選ぶ
+      replaceSelection([answerId])
     }
+  }
+
+  const replaceSelection = (answerIds: string[]) => {
+    if (onReplaceSelection) {
+      onReplaceSelection(answerIds)
+      return
+    }
+    selectedAnswers.forEach((id) => {
+      if (!answerIds.includes(id)) onAnswerSelect(id, false)
+    })
+    answerIds.forEach((id) => onAnswerSelect(id, true))
   }
 
   const handleShiftSelect = (endAnswerId: string) => {
@@ -138,15 +147,8 @@ export function useGridDragSelection({
       (id) => !id.startsWith("master-")
     )
 
-    if (uniqueSelectedIds.length > 0) {
-      if (onReplaceSelection) {
-        onReplaceSelection(uniqueSelectedIds)
-      } else {
-        selectedAnswers.forEach((id) => onAnswerSelect(id, false))
-        uniqueSelectedIds.forEach((id) => onAnswerSelect(id, true))
-      }
-    } else if (onReplaceSelection) {
-      onReplaceSelection([])
+    if (uniqueSelectedIds.length > 0 || onReplaceSelection) {
+      replaceSelection(uniqueSelectedIds)
     }
   }
 

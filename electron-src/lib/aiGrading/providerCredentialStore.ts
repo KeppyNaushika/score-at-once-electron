@@ -72,6 +72,13 @@ export interface AiGradingSettings {
    * 読んだ値は下書きとして見せるだけで、教員が保存するまで単価は変わらない
    */
   anthropicPricingSourceUrl: string
+  /** 同じく OpenAI の料金のページ（https だけ） */
+  openaiPricingSourceUrl: string
+  /**
+   * 新しく作るプロンプトの「朱書きの指示」（`AiPrompt.annotationInstruction`）に最初から入れる文言。
+   * 空なら空欄から始まる。既存のプロンプトには触れない（入れるのは renderer の作成画面）
+   */
+  defaultAnnotationInstruction: string
 }
 
 /** 事業者から取得したモデルの一覧 */
@@ -147,6 +154,9 @@ const DEFAULT_SETTINGS: AiGradingSettings = {
   openaiCompatibleBaseUrl: null,
   anthropicPricingSourceUrl:
     "https://platform.claude.com/docs/ja/about-claude/pricing",
+  openaiPricingSourceUrl: "https://developers.openai.com/api/docs/pricing",
+  // アプリは文言を決め打ちしない。入れていなければ空欄（設計 §3-1）
+  defaultAnnotationInstruction: "",
 }
 
 /** 保存・読み出しの失敗の種類 */
@@ -456,6 +466,13 @@ function toSettings(candidate: unknown): AiGradingSettings {
     )
       ? candidate.anthropicPricingSourceUrl
       : settings.anthropicPricingSourceUrl,
+    openaiPricingSourceUrl: isValidHttpsUrl(candidate.openaiPricingSourceUrl)
+      ? candidate.openaiPricingSourceUrl
+      : settings.openaiPricingSourceUrl,
+    defaultAnnotationInstruction:
+      typeof candidate.defaultAnnotationInstruction === "string"
+        ? candidate.defaultAnnotationInstruction
+        : settings.defaultAnnotationInstruction,
   }
 }
 
@@ -507,6 +524,14 @@ function assertValidSettingsUpdate(update: Partial<AiGradingSettings>): void {
     update.anthropicPricingSourceUrl !== undefined &&
     !isValidHttpsUrl(update.anthropicPricingSourceUrl)
       ? "anthropicPricingSourceUrl"
+      : null,
+    update.openaiPricingSourceUrl !== undefined &&
+    !isValidHttpsUrl(update.openaiPricingSourceUrl)
+      ? "openaiPricingSourceUrl"
+      : null,
+    update.defaultAnnotationInstruction !== undefined &&
+    typeof update.defaultAnnotationInstruction !== "string"
+      ? "defaultAnnotationInstruction"
       : null,
   ].filter((problem) => problem !== null)
   if (problems.length > 0) {
@@ -721,6 +746,11 @@ export function createProviderCredentialStore(
           : current.openaiCompatibleBaseUrl,
       anthropicPricingSourceUrl:
         update.anthropicPricingSourceUrl ?? current.anthropicPricingSourceUrl,
+      openaiPricingSourceUrl:
+        update.openaiPricingSourceUrl ?? current.openaiPricingSourceUrl,
+      defaultAnnotationInstruction:
+        update.defaultAnnotationInstruction ??
+        current.defaultAnnotationInstruction,
     }
     saveFile({ ...file, settings })
     return settings

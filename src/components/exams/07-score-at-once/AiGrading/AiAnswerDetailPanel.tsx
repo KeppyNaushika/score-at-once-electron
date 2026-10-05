@@ -1,17 +1,17 @@
 "use client"
 
-import { Check, ChevronLeft, ChevronRight } from "lucide-react"
+import { Check } from "lucide-react"
 import { type ComponentProps, useMemo } from "react"
 
 import { DEFAULT_DRAWING_SETTINGS } from "@/components/exams/07-score-at-once/ScoringIndividual/constants/drawingConstants"
 import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
-import { toScoringStatus } from "@/types/scoringStatus.types"
 
 import { AiAnnotationEditor } from "./AiAnnotationEditor"
+import { AiAnswerHeading } from "./AiAnswerHeading"
 import { AiAttemptDetail } from "./AiAttemptDetail"
+import { AiAttemptNavigator } from "./AiAttemptNavigator"
 import { placeAdoptionAnnotation } from "./utils/adoptionAnnotation"
-import { describeJudgement } from "./utils/answerDisplay"
 
 /** 編集の部品に渡すもの（置き場所はここで求める） */
 type EditorProps = Omit<ComponentProps<typeof AiAnnotationEditor>, "placement">
@@ -46,14 +46,8 @@ export function AiAnswerDetailPanel({
 }: AiAnswerDetailPanelProps) {
   const { gridItem, cropRegion, pageSize } = editorProps
   const { answer, review } = gridItem.reviewedAnswer
-  const { questionScore, inkMeasurement, attempts } = answer
+  const { inkMeasurement, attempts } = answer
   const displayedAttempt = review.displayedAttempt
-  const displayedIndex = displayedAttempt
-    ? attempts.findIndex(
-        (attemptWithRun) =>
-          attemptWithRun.attempt.id === displayedAttempt.attempt.id
-      )
-    : -1
 
   const inkGrid = inkMeasurement?.inkGrid ?? null
   const displayedAnnotationText =
@@ -79,18 +73,7 @@ export function AiAnswerDetailPanel({
 
   return (
     <div className="space-y-3 py-3" aria-label="答案の詳細">
-      <div className="flex items-baseline justify-between gap-2">
-        <h3 className="font-medium">{gridItem.studentName}</h3>
-        <span className="text-sm text-muted-foreground">
-          自分:{" "}
-          {questionScore
-            ? describeJudgement(
-                toScoringStatus(questionScore.status),
-                questionScore.partialScore
-              )
-            : "未採点"}
-        </span>
-      </div>
+      <AiAnswerHeading gridItem={gridItem} />
 
       <AiAnnotationEditor {...editorProps} placement={placement} />
       <p className="text-[11px] text-muted-foreground">
@@ -112,31 +95,12 @@ export function AiAnswerDetailPanel({
 
       {displayedAttempt ? (
         <>
-          <div className="flex items-center justify-between">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onPrevAttempt}
-              disabled={displayedIndex >= attempts.length - 1}
-              aria-label="古い判定"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <Kbd variant="tiny">&lt;</Kbd>
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              判定 {attempts.length - displayedIndex} / {attempts.length}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onNextAttempt}
-              disabled={displayedIndex <= 0}
-              aria-label="新しい判定"
-            >
-              <Kbd variant="tiny">&gt;</Kbd>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          <AiAttemptNavigator
+            attempts={attempts}
+            displayedAttempt={displayedAttempt}
+            onPrevAttempt={onPrevAttempt}
+            onNextAttempt={onNextAttempt}
+          />
           <AiAttemptDetail
             attemptWithRun={displayedAttempt}
             promptNumber={

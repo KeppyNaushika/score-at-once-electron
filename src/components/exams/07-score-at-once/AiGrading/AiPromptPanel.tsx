@@ -65,6 +65,8 @@ export function AiPromptPanel({
           variant="outline"
           size="sm"
           onClick={() => setEditorTarget({ basePrompt: null })}
+          // 既定値（朱書きの指示の初期値）を読む前に開くと、空欄で始まってしまう
+          disabled={!settings}
         >
           <Plus className="h-4 w-4" />
           新規追加
@@ -158,6 +160,9 @@ export function AiPromptPanel({
         examId={examId}
         cropRegion={cropRegion}
         basePrompt={editorTarget?.basePrompt ?? null}
+        defaultAnnotationInstruction={
+          settings?.defaultAnnotationInstruction ?? ""
+        }
         onCreated={onSelectPrompt}
       />
       {revisionBasePrompt && settings && (

@@ -151,14 +151,17 @@ export const aiProviderHandlers = {
     getProviderCredentialStore().setModelPrices(modelPrices),
 
   /**
-   * 設定にある Anthropic の料金のページを取ってきて、本文をそのまま返す（読み解くのは renderer）。
+   * 設定にある、事業者の料金のページを取ってきて、本文をそのまま返す（読み解くのは renderer）。
    * URL は renderer から受け取らず、保存した設定から引く（https だけ）
    */
-  "aiProvider:fetchPricingPage": async () =>
-    fetchPricingPage(
-      getProviderCredentialStore().getSettings().anthropicPricingSourceUrl,
-      { fetch: electronFetch }
-    ),
+  "aiProvider:fetchPricingPage": async (provider: GradingProviderId) => {
+    const settings = getProviderCredentialStore().getSettings()
+    const sourceUrl =
+      assertProviderId(provider) === "anthropic"
+        ? settings.anthropicPricingSourceUrl
+        : settings.openaiPricingSourceUrl
+    return fetchPricingPage(sourceUrl, { fetch: electronFetch })
+  },
 
   /** モデル1つの単価を消す */
   "aiProvider:removeModelPrice": async (
