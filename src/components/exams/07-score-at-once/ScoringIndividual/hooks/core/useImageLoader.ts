@@ -4,7 +4,7 @@
  * - 複数ページ対応
  * - ファイル存在確認
  */
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import type {
   ScoringData,
@@ -21,6 +21,12 @@ interface UseImageLoaderProps {
   imageRef: React.RefObject<HTMLImageElement | null>
 }
 
+/** 読み込んだ答案ページ1枚（画像と、それがどのページか） */
+interface LoadedAnswerPage {
+  image: HTMLImageElement
+  examPageId: string
+}
+
 /**
  * 画像読み込みを管理するフック
  */
@@ -31,7 +37,7 @@ export function useImageLoader({
   imageRef,
 }: UseImageLoaderProps): ImageLoaderReturn {
   const [imageLoaded, setImageLoaded] = useState(false)
-  const [loadedImages, setLoadedImages] = useState<HTMLImageElement[]>([])
+  const [loadedPages, setLoadedPages] = useState<LoadedAnswerPage[]>([])
 
   // 画像読み込み処理（Grid Viewと同じロジックを使用）
   useEffect(() => {
@@ -42,7 +48,11 @@ export function useImageLoader({
         return
       }
 
-      let imagesToLoad: { path: string; pageNumber: number }[]
+      let imagesToLoad: {
+        path: string
+        pageNumber: number
+        examPageId: string
+      }[]
 
       if (showMultiplePages && studentAnswerImages) {
         // 複数ページ表示：同一生徒の全ページを取得
@@ -59,6 +69,7 @@ export function useImageLoader({
         imagesToLoad = studentAnswerSheets.map((sheet) => ({
           path: sheet.imagePath,
           pageNumber: sheet.examPage?.pageNumber || 1,
+          examPageId: sheet.examPageId,
         }))
       } else {
         // 単一ページ表示：ScoringDataのimageUrlを使用（Grid Viewと同じ）
@@ -67,7 +78,14 @@ export function useImageLoader({
           /^appimg:\/\/\/?/,
           ""
         )
-        imagesToLoad = [{ path: imagePath, pageNumber: 1 }]
+        // 設問の載っているページの答案なので、ページは設問の採点領域のページ
+        imagesToLoad = [
+          {
+            path: imagePath,
+            pageNumber: 1,
+            examPageId: currentScoringData.questionRegion.examPageId,
+          },
+        ]
       }
 
       // 画像を並列読み込み
@@ -105,7 +123,12 @@ export function useImageLoader({
 
       try {
         const loadedImageArray = await Promise.all(loadPromises)
-        setLoadedImages(loadedImageArray)
+        setLoadedPages(
+          loadedImageArray.map((image, index) => ({
+            image,
+            examPageId: imagesToLoad[index].examPageId,
+          }))
+        )
         setImageLoaded(true)
 
         // 隠しimg要素に最初の画像のsrcを設定（座標計算用）
@@ -117,15 +140,20 @@ export function useImageLoader({
         console.error("Failed to load some images:", error)
         // 部分的に読み込めた画像があれば表示
         const partialResults = await Promise.allSettled(loadPromises)
-        const successfulImages = partialResults
-          .filter(
-            (result): result is PromiseFulfilledResult<HTMLImageElement> =>
-              result.status === "fulfilled"
-          )
-          .map((result) => result.value)
+        const successfulPages = partialResults.flatMap((result, index) =>
+          result.status === "fulfilled"
+            ? [
+                {
+                  image: result.value,
+                  examPageId: imagesToLoad[index].examPageId,
+                },
+              ]
+            : []
+        )
+        const successfulImages = successfulPages.map((page) => page.image)
 
         if (successfulImages.length > 0) {
-          setLoadedImages(successfulImages)
+          setLoadedPages(successfulPages)
           setImageLoaded(true)
 
           // 隠しimg要素に最初の画像のsrcを設定（部分読み込みの場合）
@@ -144,8 +172,18 @@ export function useImageLoader({
     }
   }, [currentScoringData, studentAnswerImages, showMultiplePages, imageRef])
 
+  const loadedImages = useMemo(
+    () => loadedPages.map((page) => page.image),
+    [loadedPages]
+  )
+  const loadedExamPageIds = useMemo(
+    () => loadedPages.map((page) => page.examPageId),
+    [loadedPages]
+  )
+
   return {
     imageLoaded,
     loadedImages,
+    loadedExamPageIds,
   }
 }

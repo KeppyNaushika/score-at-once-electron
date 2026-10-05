@@ -38,6 +38,8 @@ export function useAssignedCropRegions({
   })
   const assignments = data?.assignments ?? EMPTY_ASSIGNMENTS
   const memberCount = data?.memberCount ?? 0
+  /** 採点を確定できるか（試験のオーナー）。担当の絞り込みには使わない */
+  const canDecideScores = data?.canManage ?? false
 
   /** 自分の担当で絞った設問（「すべて表示」に関わらず、担当の範囲を数えるのに使う） */
   const assignedCropRegions = useMemo(() => {
@@ -66,6 +68,7 @@ export function useAssignedCropRegions({
      * 引く必要がない（競合は構造的にゼロ）。
      */
     memberCount,
+    canDecideScores,
     /** 担当割当によって設問が絞られている（採点者に理由を伝えるため） */
     isFiltered: selectableCropRegions.length < cropRegions.length,
     /** 自分の担当の設問の数（「すべて表示」中でも、担当の範囲を伝えるため） */

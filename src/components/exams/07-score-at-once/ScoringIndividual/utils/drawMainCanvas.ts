@@ -14,6 +14,10 @@ import type {
 } from "@/types/drawingAnnotation.types"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 
+import {
+  fillNameMasks,
+  type Rect,
+} from "../../ScoringMain/utils/nameRegionMasks"
 import type { CropRegionWithStatus } from "../hooks/core/types"
 import type { useDrawingRenderer } from "../hooks/core/useDrawingRenderer"
 import {
@@ -29,6 +33,8 @@ interface MainCanvasParams {
   pageSpacing: number
   zoom: number
   pageSize: string
+  /** ページごとの、塗りつぶす氏名欄（images と同じ並び。匿名採点中でなければ空） */
+  nameRegionsByPageIndex: readonly (readonly Rect[])[]
   currentCropRegion: QuestionAnswerRegionRow | null | undefined
   currentCropRegionId: string | null | undefined
   currentScoringData: ScoringData | null
@@ -54,6 +60,7 @@ export function drawMainCanvas(
     pageSpacing,
     zoom,
     pageSize,
+    nameRegionsByPageIndex,
     currentCropRegion,
     currentCropRegionId,
     currentScoringData,
@@ -95,6 +102,21 @@ export function drawMainCanvas(
   ctx.setLineDash([])
 
   drawPageStack(ctx, canvas, images, canvasWidth, pageSpacing)
+
+  // 匿名採点中は氏名欄を塗りつぶす（ページの直後、枠・記号・描画要素より下）
+  images.forEach((image, index) => {
+    fillNameMasks(
+      ctx,
+      nameRegionsByPageIndex[index] ?? [],
+      { x: 0, y: 0, width: 1, height: 1 },
+      {
+        x: pageOffsetX(canvasWidth, image),
+        y: pageOffsetY(images, index, pageSpacing),
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      }
+    )
+  })
 
   // 全設問の枠と採点記号・点数を描画
   drawCropRegionMarks(

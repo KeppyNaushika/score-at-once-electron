@@ -284,7 +284,7 @@ describe("利用者の削除", () => {
     loggedIn.userId = otherUser.id
     // 所有者でない参加者が居ても、所有者が1人なら断る
     await testPrisma.userExam.create({
-      data: { userId: otherUser.id, examId: exam.exam.id, role: "GRADER" },
+      data: { userId: otherUser.id, examId: exam.exam.id, role: "EDITOR" },
     })
 
     await expect(

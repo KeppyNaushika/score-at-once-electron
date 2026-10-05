@@ -356,6 +356,16 @@ const AUDIT_ACTIONS = {
     verb: "update",
     label: "「{target}」の試験ロールを変更しました",
   },
+  "exam.anonymous_scoring.update": {
+    category: "exam",
+    verb: "update",
+    label: "試験「{target}」の匿名採点の設定を変更しました",
+  },
+  "exam.user.export_permission_update": {
+    category: "exam",
+    verb: "update",
+    label: "「{target}」の結果出力の許可を変更しました",
+  },
   "exam.user.remove": {
     category: "exam",
     verb: "delete",

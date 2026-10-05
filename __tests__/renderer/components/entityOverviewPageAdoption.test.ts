@@ -85,7 +85,10 @@ describe("4つの概要ページは同じ部品に載る", () => {
     })
 
     it(`${screenName}: 段の名前を書き写さない（workflowTabs から引く）`, () => {
-      expect(source).toContain('from "@/lib/workflowTabs"')
+      // 試験はロールで入れる段だけを出すので、workflowTabs を絞った `useExamAccess` から引く
+      expect(source).toMatch(
+        /from "@\/lib\/workflowTabs"|from "@\/components\/exams\/shared\/useExamAccess"/
+      )
     })
   }
 })

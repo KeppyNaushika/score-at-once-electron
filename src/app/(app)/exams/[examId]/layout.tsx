@@ -8,7 +8,8 @@ import React from "react"
 import { GradeLockBar } from "@/components/common/grade-lock/GradeLockBar"
 import { GradeLockProvider } from "@/components/common/grade-lock/GradeLockProvider"
 import { WorkflowTabHeader } from "@/components/common/WorkflowTabHeader"
-import { examWorkflowTabs } from "@/lib/workflowTabs"
+import { ExamStepGuard } from "@/components/exams/shared/ExamStepGuard"
+import { useExamAccess } from "@/components/exams/shared/useExamAccess"
 import { examDetailQuery } from "@/queries/exam"
 
 /** ヘッダーに出すのは試験名だけ（select の同一性を保つため外に置く） */
@@ -28,6 +29,8 @@ export default function ExamWorkflowLayout({
     ...examDetailQuery(examId),
     select: selectExamName,
   })
+  // ロールで入れる段だけをタブに出し、入れない段は中身の代わりに理由を出す（§3-3）
+  const access = useExamAccess(examId)
 
   return (
     <>
@@ -45,10 +48,19 @@ export default function ExamWorkflowLayout({
             listHref="/exams"
             entityName={examName || "試験"}
             entityHref={`/exams/${examId}`}
-            tabs={examWorkflowTabs}
+            tabs={access.tabs}
           />
           <GradeLockBar />
-          <main className="min-h-0 flex-1 overflow-auto">{children}</main>
+          <main className="min-h-0 flex-1 overflow-auto">
+            <ExamStepGuard
+              examId={examId}
+              isPending={access.isPending}
+              role={access.role}
+              allowedTabs={access.tabs}
+            >
+              {children}
+            </ExamStepGuard>
+          </main>
         </div>
       </GradeLockProvider>
     </>

@@ -6,8 +6,9 @@
  * 各キャンバスに何を描くかは utils/ の drawMainCanvas・drawOverlayCanvas・
  * drawTextCanvas にある。
  */
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react"
 
+import { useScoringAnonymity } from "@/components/exams/07-score-at-once/anonymity/ScoringAnonymityContext"
 import type { SelectionRectangle } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import type { ScoringData } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
@@ -35,6 +36,8 @@ interface UseCanvasDrawingProps {
   scoringMarkImagesRef: React.MutableRefObject<Map<string, HTMLImageElement>>
   imageLoaded: boolean
   loadedImages: HTMLImageElement[]
+  /** loadedImages と同じ並びの、各画像のページ（ExamPage.id） */
+  loadedExamPageIds: string[]
   currentScoringData: ScoringData | null
   currentCropRegion?: QuestionAnswerRegionRow | null
   zoom: number
@@ -65,6 +68,7 @@ export function useCanvasDrawing({
   scoringMarkImagesRef,
   imageLoaded,
   loadedImages,
+  loadedExamPageIds,
   currentScoringData,
   currentCropRegion,
   zoom,
@@ -83,6 +87,16 @@ export function useCanvasDrawing({
   pageSize = "A4",
 }: UseCanvasDrawingProps): void {
   const { drawSingleElement } = useDrawingRenderer()
+
+  // 匿名採点中に隠す氏名欄（images と同じ並び）。個別表示は生徒の答案だけを描く
+  const { nameRegionsByExamPageId } = useScoringAnonymity()
+  const nameRegionsByPageIndex = useMemo(
+    () =>
+      loadedExamPageIds.map(
+        (examPageId) => nameRegionsByExamPageId.get(examPageId) ?? []
+      ),
+    [loadedExamPageIds, nameRegionsByExamPageId]
+  )
 
   // ドラッグ状態を同期的に追跡するref
   const isDraggingRef = useRef(isDraggingElement ?? false)
@@ -108,6 +122,7 @@ export function useCanvasDrawing({
         pageSpacing,
         zoom,
         pageSize,
+        nameRegionsByPageIndex,
         currentCropRegion,
         currentCropRegionId,
         currentScoringData,
@@ -142,6 +157,7 @@ export function useCanvasDrawing({
       allCropRegionsWithStatus,
       scoringMarkConfig,
       pageSize,
+      nameRegionsByPageIndex,
     ]
   )
 

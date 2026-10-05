@@ -70,6 +70,8 @@ async function applyExamColumns(
       description: exam.description,
       // 旧アーカイブ（〜v1.11.0）はこの列を持たないので既定の false へ倒れる
       markerCorrectionEnabled: exam.markerCorrectionEnabled ?? false,
+      // 旧形式（凍結）はこの列を持たない。読み込んだ側の試験は固定していなかったものとして既定へ倒す
+      anonymousScoringEnforced: false,
       updatedAt,
     },
   })

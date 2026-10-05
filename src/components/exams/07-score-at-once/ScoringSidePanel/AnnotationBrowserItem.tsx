@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 
 import { TooltipButton } from "@/components/common/TooltipButton"
+import { useScoringAnonymity } from "@/components/exams/07-score-at-once/anonymity/ScoringAnonymityContext"
 import { Button } from "@/components/ui/button"
 import {
   ContextMenu,
@@ -58,15 +59,17 @@ function getDescription(annotation: AnnotationWithContext): string {
   return typeNames[annotation.type] || annotation.type
 }
 
-// ソース情報（設問 + 生徒）
-function getSourceInfo(annotation: AnnotationWithContext): string {
+// ソース情報（設問 + 生徒）。生徒の呼び方は匿名採点かどうかで変わるので外から受ける
+function getSourceInfo(
+  annotation: AnnotationWithContext,
+  studentLabel: string | null
+): string {
   const parts: string[] = []
   if (annotation.questionScore?.cropRegion?.label) {
     parts.push(annotation.questionScore.cropRegion.label)
   }
-  if (annotation.questionScore?.examStudent?.student) {
-    const { student } = annotation.questionScore.examStudent
-    parts.push(`${student.lastName}${student.firstName}`)
+  if (studentLabel) {
+    parts.push(studentLabel)
   }
   return parts.join(" / ") || "—"
 }
@@ -85,6 +88,23 @@ export function AnnotationBrowserItem({
   onNavigateTo?: (examStudentId: string, cropRegionId: string) => void
   onAdd: (item: AnnotationDisplayItem) => void
 }) {
+  const { isAnonymous, pseudonymOf } = useScoringAnonymity()
+  /**
+   * 手書きの出どころの生徒の呼び方。匿名採点のあいだは仮の名前だけを出す
+   * （番号を出すと名簿と突き合わせられる）
+   */
+  const studentLabelOf = (
+    annotation: AnnotationWithContext,
+    withStudentNumber: boolean
+  ): string | null => {
+    const examStudent = annotation.questionScore?.examStudent
+    if (!examStudent?.student) return null
+    if (isAnonymous) return pseudonymOf(examStudent.id)
+    const { student } = examStudent
+    const name = `${student.lastName}${student.firstName}`
+    return withStudentNumber ? `${student.studentNumber} ${name}` : name
+  }
+
   return (
     <div
       key={item.representative.id}
@@ -101,7 +121,10 @@ export function AnnotationBrowserItem({
           {getDescription(item.representative)}
         </div>
         <div className="truncate text-xs text-gray-400">
-          {getSourceInfo(item.representative)}
+          {getSourceInfo(
+            item.representative,
+            studentLabelOf(item.representative, false)
+          )}
         </div>
       </div>
 
@@ -173,10 +196,9 @@ export function AnnotationBrowserItem({
                     !!annotation?.questionScore?.cropRegionId
                 )
                 .map((annotation) => {
-                  const student = annotation.questionScore!.examStudent?.student
-                  const label = student
-                    ? `${student.studentNumber} ${student.lastName}${student.firstName}`
-                    : annotation.questionScore!.examStudentId!.slice(0, 8)
+                  const label =
+                    studentLabelOf(annotation, true) ??
+                    annotation.questionScore!.examStudentId!.slice(0, 8)
                   const question =
                     annotation.questionScore!.cropRegion?.label ?? ""
                   return (

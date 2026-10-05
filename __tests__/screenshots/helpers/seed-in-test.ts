@@ -676,7 +676,7 @@ export async function seedSecondGrader(
       id: crypto.randomUUID(),
       userId: grader.id,
       examId,
-      role: "GRADER",
+      role: "EDITOR",
       invitedBy: ownerUserId,
     },
   })

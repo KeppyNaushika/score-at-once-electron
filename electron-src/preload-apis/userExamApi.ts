@@ -10,6 +10,10 @@ export function createUserExamApi() {
       invite: bind("user-exam:invite"),
       remove: bind("user-exam:remove"),
       changeRole: bind("user-exam:change-role"),
+      setExportPermission: bind("user-exam:set-export-permission"),
+      setAnonymousScoringEnforced: bind(
+        "user-exam:set-anonymous-scoring-enforced"
+      ),
       searchUsers: bind("user-exam:search-users"),
     },
   }
