@@ -1,11 +1,14 @@
 /**
  * 操作履歴の絞り込みの状態と URL のクエリとの往復（`src/lib/auditLogFilterQuery.ts`）、
- * および行から作業領域へのリンク（`auditLogScopeHref`）の検査。
+ * 行から作業領域へのリンク（`auditLogScopeHref`）と、行に出す対象の名前の検査。
  */
 
 import { describe, expect, it } from "vitest"
 
-import { auditLogScopeHref } from "@/app/(app)/audit-logs/auditLogRow"
+import {
+  auditLogScopeHref,
+  displayTargetLabels,
+} from "@/app/(app)/audit-logs/auditLogRow"
 import {
   type AuditFilterState,
   auditLogsHrefOfScope,
@@ -115,5 +118,59 @@ describe("行から作業領域へのリンク", () => {
     expect(auditLogScopeHref(row("class.delete", "k1"))).toBeNull()
     expect(auditLogScopeHref(row("exam.update", null))).toBeNull()
     expect(auditLogScopeHref(row("subtotal_group.update", "s1"))).toBeNull()
+  })
+})
+
+describe("行に出す対象の名前", () => {
+  const row = (
+    scopeLabel: string | null,
+    targetLabels: string[]
+  ): AuditLogRow => ({
+    id: "audit-1",
+    createdAt: new Date("2026-10-06T00:00:00.000Z"),
+    updatedAt: new Date("2026-10-06T00:00:00.000Z"),
+    action: "exam.update",
+    category: "exam",
+    userId: null,
+    entityType: "Exam",
+    entityId: "exam-1",
+    scopeId: "exam-1",
+    scopeLabel,
+    summary: "",
+    metadata: null,
+    coalesceKey: null,
+    targets: targetLabels.map((targetLabel, index) => ({
+      id: `target-${index}`,
+      createdAt: new Date("2026-10-06T00:00:00.000Z"),
+      updatedAt: new Date("2026-10-06T00:00:00.000Z"),
+      auditLogId: "audit-1",
+      targetType: "Student",
+      targetId: `student-${index}`,
+      targetLabel,
+    })),
+  })
+
+  it("作業領域と同じ名前は出さない（作業領域そのものが対象の行）", () => {
+    expect(
+      displayTargetLabels(row("数学 期末", []), {
+        target: { type: "Exam", label: "数学 期末" },
+      })
+    ).toEqual([])
+    expect(
+      displayTargetLabels(row("数学 期末", ["数学 期末", "山田 太郎"]), {})
+    ).toEqual(["山田 太郎"])
+  })
+
+  it("作業領域と違う名前は出す", () => {
+    expect(
+      displayTargetLabels(row("数学 期末", []), {
+        target: { type: "CropRegion", label: "1-1" },
+      })
+    ).toEqual(["1-1"])
+    expect(
+      displayTargetLabels(row(null, []), {
+        target: { type: "Classroom", label: "1年A組" },
+      })
+    ).toEqual(["1年A組"])
   })
 })

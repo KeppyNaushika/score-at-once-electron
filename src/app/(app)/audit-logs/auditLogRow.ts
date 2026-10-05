@@ -48,13 +48,19 @@ export function parseAuditMetadata(metadata: string | null): AuditMetadata {
 /**
  * 表示する対象。同じ対象が2度付いている行（同じ生徒を2度渡した等）は1つにまとめる。
  * 対象が付いていない過去の行は、記録時に残した metadata の対象ラベルを出す。
+ *
+ * 作業領域と同じ名前のラベルは出さない。試験の作成・編集のように作業領域そのものが
+ * 対象の行では、隣に出す作業領域名と同じ名前が2度並ぶだけになる。
  */
 export function displayTargetLabels(
   log: AuditLogRow,
   metadata: AuditMetadata
 ): string[] {
+  const isScopeLabel = (label: string) => label === log.scopeLabel
   if (log.targets.length === 0) {
-    return metadata.target ? [metadata.target.label] : []
+    return metadata.target && !isScopeLabel(metadata.target.label)
+      ? [metadata.target.label]
+      : []
   }
   const labelByKey = new Map<string, string>()
   for (const target of log.targets) {
@@ -63,7 +69,7 @@ export function displayTargetLabels(
       labelByKey.set(key, target.targetLabel)
     }
   }
-  return [...labelByKey.values()]
+  return [...labelByKey.values()].filter((label) => !isScopeLabel(label))
 }
 
 /**

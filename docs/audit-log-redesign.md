@@ -385,7 +385,7 @@ PR-2 を PR-3 より前に置くのは、**対象ラベルがないとフィル�
 - **評価項目の除外**（`grade.exclusion.update`）と**個人成績通知書の設定**（`grade.report_settings.update`）。
   どちらも続けて切り替える画面なので成績算出ごとに集約する
 
-### 残り
-
-- 解答用紙作成の画像ファイル（`asb:upload-image` / `asb:delete-image`）と担当の受け渡し
-  （`asb:transfer-owner`）が記録されているかは確かめていない
+解答用紙作成の画像ファイル（`asb:upload-image` / `asb:delete-image`）と担当の受け渡し
+（`asb:transfer-owner`）は足さなかった。画像はファイルを写す・消すだけで DB を書かず、
+画像要素の追加・削除は上の解答用紙の編集として記録される。担当の受け渡しは
+`answer_sheet.transfer_owner` として記録済みだった（2026-10-06 確認）
