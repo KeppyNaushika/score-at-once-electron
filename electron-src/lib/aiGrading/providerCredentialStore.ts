@@ -8,13 +8,25 @@
  * **復号したキーを返すのは `readApiKeyForMainProcessOnly` だけで、これは main の中で
  * 事業者のクライアントを作るためだけに使う。IPC のハンドラから呼んで値を返してはならない。**
  * IPC へ出すのは `getProviderStatus`（キーがあるかどうか）だけにする。
+ *
+ * 事業者から取得したモデルの一覧（`modelCatalogs`）も同じファイルに置く。機密ではなく、
+ * キーも含めない（一覧は事業者が返した id・名前・日時・能力だけ）。
  */
 
 import { app, safeStorage } from "electron"
 import * as fs from "fs"
 import * as path from "path"
 
-import type { GradingEffort, GradingProviderId } from "./providers/types"
+import {
+  type AiGradingRunMode,
+  isAiGradingRunMode,
+} from "@/types/aiGrading.types"
+
+import type {
+  GradingEffort,
+  GradingProviderId,
+  ProviderModelInfo,
+} from "./providers/types"
 import {
   GRADING_PROVIDER_IDS,
   isGradingEffort,
@@ -41,6 +53,8 @@ export interface AiGradingSettings {
   defaultProvider: GradingProviderId
   defaultModels: Record<GradingProviderId, string>
   defaultEffort: GradingEffort
+  /** 既定の送り方（その場か、バッチか） */
+  defaultMode: AiGradingRunMode
   /** その場の採点で同時に投げる数 */
   concurrency: number
   /** 予算の警告額（米ドル）。null なら警告しない */
@@ -49,11 +63,25 @@ export interface AiGradingSettings {
   openaiCompatibleBaseUrl: string | null
 }
 
+/** 事業者から取得したモデルの一覧 */
+export interface ProviderModelCatalog {
+  /** 取得した日時（ISO 8601） */
+  fetchedAt: string
+  models: ProviderModelInfo[]
+}
+
+/** 事業者ごとのモデルの一覧。まだ取得していなければ null */
+export type ProviderModelCatalogs = Record<
+  GradingProviderId,
+  ProviderModelCatalog | null
+>
+
 /** ファイルの中身 */
 interface AiProvidersFile {
   version: 1
   providers: Record<GradingProviderId, StoredProviderEntry>
   settings: AiGradingSettings
+  modelCatalogs: ProviderModelCatalogs
 }
 
 /** 事業者ごとの状態（IPC へ出してよい形。キーそのものは含めない） */
@@ -72,6 +100,7 @@ const DEFAULT_SETTINGS: AiGradingSettings = {
   // OpenAI の既定は仮の値。P0 の実測で決める（設計 §3-3）
   defaultModels: { anthropic: "claude-opus-5-5", openai: "gpt-5.5" },
   defaultEffort: "medium",
+  defaultMode: "realtime",
   concurrency: 4,
   budgetWarningUsd: null,
   openaiCompatibleBaseUrl: null,
@@ -129,6 +158,7 @@ function createDefaultFile(): AiProvidersFile {
       ...DEFAULT_SETTINGS,
       defaultModels: { ...DEFAULT_SETTINGS.defaultModels },
     },
+    modelCatalogs: { anthropic: null, openai: null },
   }
 }
 
@@ -196,6 +226,44 @@ function toProviderEntry(candidate: unknown): StoredProviderEntry {
   }
 }
 
+function toModelInfo(candidate: unknown): ProviderModelInfo | null {
+  if (!isRecord(candidate)) return null
+  const { id, displayName, createdAt, supportsAdaptiveThinking } = candidate
+  if (
+    !isNonEmptyString(id) ||
+    typeof displayName !== "string" ||
+    !(createdAt === null || isNonEmptyString(createdAt)) ||
+    !(
+      supportsAdaptiveThinking === null ||
+      typeof supportsAdaptiveThinking === "boolean"
+    )
+  ) {
+    return null
+  }
+  return { id, displayName, createdAt, supportsAdaptiveThinking }
+}
+
+/** 読んだモデルの一覧を確かめる。1件でも形が崩れていれば一覧ごと捨てる（取得し直せばよい） */
+function toModelCatalog(candidate: unknown): ProviderModelCatalog | null {
+  if (!isRecord(candidate)) return null
+  const { fetchedAt, models } = candidate
+  if (!isNonEmptyString(fetchedAt) || !Array.isArray(models)) return null
+  const modelInfos = models.map(toModelInfo)
+  if (modelInfos.some((modelInfo) => modelInfo === null)) return null
+  return {
+    fetchedAt,
+    models: modelInfos.flatMap((modelInfo) => (modelInfo ? [modelInfo] : [])),
+  }
+}
+
+function toModelCatalogs(candidate: unknown): ProviderModelCatalogs {
+  const catalogs = isRecord(candidate) ? candidate : {}
+  return {
+    anthropic: toModelCatalog(catalogs.anthropic),
+    openai: toModelCatalog(catalogs.openai),
+  }
+}
+
 /** 読んだ設定のうち、正しい値だけを既定値に重ねる */
 function toSettings(candidate: unknown): AiGradingSettings {
   const settings = createDefaultFile().settings
@@ -218,6 +286,9 @@ function toSettings(candidate: unknown): AiGradingSettings {
     defaultEffort: isGradingEffort(candidate.defaultEffort)
       ? candidate.defaultEffort
       : settings.defaultEffort,
+    defaultMode: isAiGradingRunMode(candidate.defaultMode)
+      ? candidate.defaultMode
+      : settings.defaultMode,
     concurrency: isValidConcurrency(candidate.concurrency)
       ? candidate.concurrency
       : settings.concurrency,
@@ -240,6 +311,7 @@ function toAiProvidersFile(candidate: unknown): AiProvidersFile {
       openai: toProviderEntry(providers.openai),
     },
     settings: toSettings(candidate.settings),
+    modelCatalogs: toModelCatalogs(candidate.modelCatalogs),
   }
 }
 
@@ -258,6 +330,9 @@ function assertValidSettingsUpdate(update: Partial<AiGradingSettings>): void {
       : null,
     update.defaultEffort !== undefined && !isGradingEffort(update.defaultEffort)
       ? "defaultEffort"
+      : null,
+    update.defaultMode !== undefined && !isAiGradingRunMode(update.defaultMode)
+      ? "defaultMode"
       : null,
     update.concurrency !== undefined && !isValidConcurrency(update.concurrency)
       ? "concurrency"
@@ -471,6 +546,7 @@ export function createProviderCredentialStore(
           }
         : current.defaultModels,
       defaultEffort: update.defaultEffort ?? current.defaultEffort,
+      defaultMode: update.defaultMode ?? current.defaultMode,
       concurrency: update.concurrency ?? current.concurrency,
       budgetWarningUsd:
         update.budgetWarningUsd !== undefined
@@ -485,6 +561,35 @@ export function createProviderCredentialStore(
     return settings
   }
 
+  /** 事業者ごとの、取得しておいたモデルの一覧 */
+  function getModelCatalogs(): ProviderModelCatalogs {
+    return loadFile().modelCatalogs
+  }
+
+  /**
+   * 事業者から取得したモデルの一覧を保存する（前の一覧は置き換える）。日時はここで付ける。
+   * 形の崩れた項目は保存しない（読むときに一覧ごと捨てられるため）
+   */
+  function saveModelCatalog(
+    provider: GradingProviderId,
+    models: readonly ProviderModelInfo[]
+  ): ProviderModelCatalog {
+    const catalog: ProviderModelCatalog = {
+      fetchedAt: now().toISOString(),
+      // 項目を名指しで組む（事業者の SDK が返した余計な項目を書き込まない）
+      models: models.flatMap((model) => {
+        const modelInfo = toModelInfo(model)
+        return modelInfo ? [modelInfo] : []
+      }),
+    }
+    const file = loadFile()
+    saveFile({
+      ...file,
+      modelCatalogs: { ...file.modelCatalogs, [provider]: catalog },
+    })
+    return catalog
+  }
+
   return {
     getProviderStatus,
     getProviderStatuses,
@@ -495,6 +600,8 @@ export function createProviderCredentialStore(
     readApiKeyForMainProcessOnly,
     getSettings,
     updateSettings,
+    getModelCatalogs,
+    saveModelCatalog,
   }
 }
 

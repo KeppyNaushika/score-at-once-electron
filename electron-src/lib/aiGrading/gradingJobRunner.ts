@@ -9,6 +9,8 @@
  * 認証・権限の失敗は、どの答案でも同じ結果になるので run 全体を止める。
  */
 
+import { getOrientedPaperDimensions } from "@/lib/paperSize"
+import { estimateAnnotationCharacterLimit } from "@/lib/shared/aiGrading/annotationPlacement"
 import { buildGradingOutputSchema } from "@/lib/shared/aiGrading/gradingSchema"
 import {
   AI_GRADING_TEMPLATE_VERSION,
@@ -144,11 +146,20 @@ export function createGradingJobRunner(dependencies: AiGradingJobDependencies) {
       imageScale: input.imageScale,
       resolveDataPath: dependencies.resolveDataPath,
     })
+    // 朱書きの字数の目安は面積から出すので、用紙の向きは問わない（縦として換算する）
+    const paperDimensions = getOrientedPaperDimensions(
+      cropRegion.examPage.pageSize,
+      false
+    )
     const { systemText, fixedParts } = buildGradingRequestParts({
       prompt,
       points,
       questionImage,
       modelAnswerImage,
+      annotationCharacterLimit: estimateAnnotationCharacterLimit(
+        cropRegion.width * paperDimensions.width,
+        cropRegion.height * paperDimensions.height
+      ),
     })
     const outputSchema = toJsonSchemaObject(buildGradingOutputSchema())
 

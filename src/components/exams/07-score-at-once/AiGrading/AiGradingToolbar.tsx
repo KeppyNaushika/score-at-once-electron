@@ -1,7 +1,6 @@
 "use client"
 
 import { Bot } from "lucide-react"
-import { useState } from "react"
 
 import { ExperimentalBadge } from "@/components/common/ExperimentalBadge"
 import { Button } from "@/components/ui/button"
@@ -43,6 +42,9 @@ interface AiGradingToolbarProps {
   selectedExamStudentIds: ReadonlySet<string>
   answerOrder: AnswerOrder
   onAnswerOrderChange: (answerOrder: AnswerOrder) => void
+  /** 送信ダイアログの開閉（プロンプト欄の「採点実行」からも開くので親が持つ） */
+  isRunDialogOpen: boolean
+  onRunDialogOpenChange: (open: boolean) => void
 }
 
 /**
@@ -64,9 +66,9 @@ export function AiGradingToolbar({
   selectedExamStudentIds,
   answerOrder,
   onAnswerOrderChange,
+  isRunDialogOpen,
+  onRunDialogOpenChange,
 }: AiGradingToolbarProps) {
-  const [isRunDialogOpen, setIsRunDialogOpen] = useState(false)
-
   return (
     <div className="flex flex-wrap items-center gap-3 border-b px-3 py-2">
       <ExperimentalBadge />
@@ -102,7 +104,7 @@ export function AiGradingToolbar({
 
       <Button
         size="sm"
-        onClick={() => setIsRunDialogOpen(true)}
+        onClick={() => onRunDialogOpenChange(true)}
         disabled={!selectedPrompt || !settings}
         title={selectedPrompt ? undefined : "先にプロンプトを作ってください"}
       >
@@ -143,7 +145,7 @@ export function AiGradingToolbar({
       {selectedPrompt && settings && (
         <AiGradingRunDialog
           open={isRunDialogOpen}
-          onOpenChange={setIsRunDialogOpen}
+          onOpenChange={onRunDialogOpenChange}
           examId={examId}
           cropRegion={cropRegion}
           settings={settings}

@@ -4,7 +4,12 @@ import OpenAI from "openai"
 import { createAnthropicProvider } from "./anthropicProvider"
 import { createOpenAiProvider } from "./openaiProvider"
 import { GradingProviderError } from "./providerShared"
-import type { GradingProvider, GradingProviderId, ProviderFetch } from "./types"
+import type {
+  GradingProvider,
+  GradingProviderId,
+  ProviderFetch,
+  ProviderModelInfo,
+} from "./types"
 
 interface CreateGradingProviderOptions {
   provider: GradingProviderId
@@ -14,6 +19,11 @@ interface CreateGradingProviderOptions {
   baseUrl?: string
   /** 学校のプロキシに従わせるための fetch（main では Electron の net.fetch を包んで渡す） */
   fetch?: ProviderFetch
+  /**
+   * 取得しておいたその事業者のモデルの一覧。Anthropic では adaptive thinking を送るかの
+   * 判断に使う（無ければ許可リストで決める）
+   */
+  catalogModels?: readonly ProviderModelInfo[]
 }
 
 /**
@@ -37,7 +47,8 @@ export function createGradingProvider(
           apiKey,
           baseURL: options.baseUrl,
           fetch: options.fetch,
-        })
+        }),
+        { catalogModels: options.catalogModels }
       )
     case "openai":
       return createOpenAiProvider(

@@ -123,7 +123,8 @@ function AiPromptRevisionForm({
     <>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          AI にプロンプトを改訂させる（版 {promptNumberById.get(basePrompt.id)}
+          プロンプト修正（AI に直させる。版{" "}
+          {promptNumberById.get(basePrompt.id)}
           から）
           <ExperimentalBadge />
         </DialogTitle>
@@ -199,7 +200,7 @@ function AiPromptRevisionForm({
             }
           >
             <Sparkles className="h-4 w-4" />
-            改訂を頼む
+            修正を頼む
           </Button>
         )}
       </DialogFooter>

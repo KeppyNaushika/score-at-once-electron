@@ -6,6 +6,10 @@
  */
 
 import type {
+  LayoutDirection,
+  ScoringData,
+} from "@/components/exams/07-score-at-once/types"
+import type {
   GradingEffort,
   GradingProviderId,
 } from "@/electron-src/lib/aiGrading/providers/types"
@@ -21,6 +25,8 @@ import type {
   Serialized,
   StudentAnswerImageWithExamPageAndStudent,
 } from "@/types/prismaExtensions"
+
+import type { ReviewedAiGradingAnswer } from "./utils/answerReview"
 
 /** 設問のプロンプト1行（作成者付き） */
 export type AiPromptRow = Serialized<
@@ -71,5 +77,30 @@ export interface AiRunSettings {
   model: string
   effort: GradingEffort
   mode: AiGradingRunMode
-  imageScale: number
+}
+
+/**
+ * 一覧の1マス。一覧表示と同じ答案（`ScoringData`。色は自分の採点）に、AI の判定と
+ * 印を同梱する。**id は受験者の id**（試行・選択・採用がすべて受験者で引ける）
+ */
+export interface AiGridItem extends ScoringData {
+  reviewedAnswer: ReviewedAiGradingAnswer
+}
+
+/**
+ * 一覧の表示の設定（一覧表示と同じ設定を読み書きする。採点画面から受け取る）
+ */
+export interface AiGridDisplaySettings {
+  layoutDirection: LayoutDirection
+  onLayoutDirectionChange: (direction: LayoutDirection) => void
+  itemsPerLine: number[]
+  onItemsPerLineChange: (itemsPerLine: number[]) => void
+  expandMargin: number
+  onExpandMarginChange: (expandMargin: number) => void
+  autoScroll: boolean
+  showStudentNames: boolean
+  /** 一覧の注釈を取り直す合図（詳細で注釈を直したら増える） */
+  annotationRefreshKey: number
+  /** 詳細で保存した注釈を変えた */
+  onAnnotationChanged: () => void
 }

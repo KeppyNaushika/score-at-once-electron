@@ -2,9 +2,10 @@
  * OpenAI の事業者実装のテスト。SDK のクライアントは偽物を渡し、通信はしない
  */
 
-import { RateLimitError } from "openai"
+import { AuthenticationError, RateLimitError } from "openai"
 import type { Batch, BatchCreateParams } from "openai/resources/batches"
 import type { FileCreateParams, FileObject } from "openai/resources/files"
+import type { Model } from "openai/resources/models"
 import type {
   Response as OpenAiResponse,
   ResponseCreateParamsNonStreaming,
@@ -16,6 +17,8 @@ import type { OpenAiGradingClient } from "../../electron-src/lib/aiGrading/provi
 import { createOpenAiProvider } from "../../electron-src/lib/aiGrading/providers/openaiProvider"
 import { GradingProviderError } from "../../electron-src/lib/aiGrading/providers/providerShared"
 import type { GradingRequest } from "../../electron-src/lib/aiGrading/providers/types"
+import { PROVIDER_SUPPORTS_BATCH } from "../../src/lib/shared/aiGrading/modelFeatures"
+import { createFakeModelPage } from "./helpers/fakeModelPage"
 
 const OUTPUT_SCHEMA = {
   type: "object",
@@ -119,6 +122,8 @@ function createFakeClient(options: {
   createError?: Error
   batch?: Batch
   fileContents?: Record<string, string>
+  models?: Model[]
+  listModelsError?: Error
 }) {
   const createResponseCall = vi.fn(
     async (
@@ -152,7 +157,10 @@ function createFakeClient(options: {
       retrieve: async () => options.batch ?? createBatch(),
       cancel: async () => createBatch({ status: "cancelling" }),
     },
-    models: { list: async () => ({ data: [] }) },
+    models: {
+      list: () =>
+        createFakeModelPage(options.models ?? [], options.listModelsError),
+    },
   }
   return {
     client,
@@ -325,6 +333,11 @@ describe("openaiProvider", () => {
 
       const [fileParams] = createFileCall.mock.calls[0]
       expect(fileParams.purpose).toBe("batch")
+      // 取り込めなかったときも事業者側に残り続けないよう、期限を付けて上げる（2日）
+      expect(fileParams.expires_after).toEqual({
+        anchor: "created_at",
+        seconds: 2 * 24 * 60 * 60,
+      })
       const uploadedFile = fileParams.file
       expect(uploadedFile).toBeInstanceOf(File)
       const jsonlText =
@@ -343,6 +356,10 @@ describe("openaiProvider", () => {
         input_file_id: "file_input",
         endpoint: "/v1/responses",
         completion_window: "24h",
+        output_expires_after: {
+          anchor: "created_at",
+          seconds: 7 * 24 * 60 * 60,
+        },
       })
     })
 
@@ -470,6 +487,67 @@ describe("openaiProvider", () => {
         "file_output",
         "file_error",
       ])
+    })
+  })
+
+  describe("モデルの一覧", () => {
+    function createModel(id: string, created: number): Model {
+      return { id, created, object: "model", owned_by: "openai" }
+    }
+
+    it("全件を読み、新しい順に並べ、名前は id・能力は null にする", async () => {
+      const { client } = createFakeClient({
+        models: [
+          createModel("gpt-old", 1_600_000_000),
+          createModel("gpt-unknown-date", 0),
+          createModel("gpt-new", 1_800_000_000),
+        ],
+      })
+      const models = await createOpenAiProvider(client).listModels()
+      expect(models).toEqual([
+        {
+          id: "gpt-new",
+          displayName: "gpt-new",
+          createdAt: new Date(1_800_000_000_000).toISOString(),
+          supportsAdaptiveThinking: null,
+        },
+        {
+          id: "gpt-old",
+          displayName: "gpt-old",
+          createdAt: new Date(1_600_000_000_000).toISOString(),
+          supportsAdaptiveThinking: null,
+        },
+        {
+          id: "gpt-unknown-date",
+          displayName: "gpt-unknown-date",
+          createdAt: null,
+          supportsAdaptiveThinking: null,
+        },
+      ])
+    })
+
+    it("一覧の取得の失敗は種類を付けて投げる", async () => {
+      const { client } = createFakeClient({
+        listModelsError: new AuthenticationError(
+          401,
+          undefined,
+          "bad key",
+          new Headers()
+        ),
+      })
+      const failure = await createOpenAiProvider(client)
+        .listModels()
+        .catch((error: unknown) => error)
+      expect(failure instanceof GradingProviderError && failure.kind).toBe(
+        "authentication"
+      )
+    })
+
+    it("バッチで送れるかは、画面が使う値と同じ", () => {
+      const { client } = createFakeClient({})
+      expect(createOpenAiProvider(client).capabilities.batch).toBe(
+        PROVIDER_SUPPORTS_BATCH.openai
+      )
     })
   })
 })

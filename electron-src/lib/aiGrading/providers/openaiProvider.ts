@@ -25,6 +25,7 @@ import {
 } from "openai"
 import type { Batch, BatchCreateParams } from "openai/resources/batches"
 import type { FileCreateParams, FileObject } from "openai/resources/files"
+import type { Model } from "openai/resources/models"
 import type {
   Response as OpenAiResponse,
   ResponseCreateParamsNonStreaming,
@@ -50,6 +51,7 @@ import type {
   ProviderBatchStatus,
   ProviderErrorKind,
   ProviderGradingResponse,
+  ProviderModelInfo,
   ProviderUsage,
 } from "./types"
 
@@ -75,8 +77,38 @@ export interface OpenAiGradingClient {
     cancel(batchId: string): PromiseLike<Batch>
   }
   models: {
-    list(): PromiseLike<unknown>
+    /** 待てば最初のページ、for await で回せば全ページのモデルが順に来る（SDK の PagePromise） */
+    list(): PromiseLike<unknown> & AsyncIterable<Model>
   }
+}
+
+/**
+ * SDK のモデルの情報を、事業者に依存しない形にする。
+ * OpenAI の一覧は名前も能力も返さないので、名前は id、能力は null にする
+ */
+export function toOpenAiModelInfo(model: Model): ProviderModelInfo {
+  return {
+    id: model.id,
+    displayName: model.id,
+    createdAt:
+      Number.isFinite(model.created) && model.created > 0
+        ? new Date(model.created * 1000).toISOString()
+        : null,
+    supportsAdaptiveThinking: null,
+  }
+}
+
+/** 公開日時の新しい順（日時の分からないものは後ろ）。同じなら id の順 */
+function compareByCreatedAtDescending(
+  left: ProviderModelInfo,
+  right: ProviderModelInfo
+): number {
+  if (left.createdAt !== right.createdAt) {
+    if (left.createdAt === null) return 1
+    if (right.createdAt === null) return -1
+    return left.createdAt < right.createdAt ? 1 : -1
+  }
+  return left.id.localeCompare(right.id)
 }
 
 /** 構造化出力のスキーマ名（OpenAI は名前を必須にする） */
@@ -143,6 +175,15 @@ function buildOpenAiResponseParams(
     store: false,
   }
 }
+
+/**
+ * バッチに上げるファイル（答案画像を含む）の寿命。取り込めば `cleanupBatch` がその場で
+ * 消すが、アプリが長く起動されず取り込めなかったときも事業者側に残り続けないよう、
+ * 期限を付けて自動で消させる（期限を付けないと、batch 用のファイルは既定で 30 日残る）。
+ * 送信用は処理の期限（24h）に余裕を見た 2 日、結果は取り込みを待つ 7 日
+ */
+const BATCH_INPUT_FILE_LIFETIME_SECONDS = 2 * 24 * 60 * 60
+const BATCH_OUTPUT_FILE_LIFETIME_SECONDS = 7 * 24 * 60 * 60
 
 /**
  * 応答から、揃えた形を作るのに要るものだけを抜き出したもの。
@@ -489,13 +530,24 @@ export function createOpenAiProvider(
         type: "application/jsonl",
       })
       const uploadedFile = await callOpenAi(() =>
-        client.files.create({ file, purpose: "batch" })
+        client.files.create({
+          file,
+          purpose: "batch",
+          expires_after: {
+            anchor: "created_at",
+            seconds: BATCH_INPUT_FILE_LIFETIME_SECONDS,
+          },
+        })
       )
       const batch = await callOpenAi(() =>
         client.batches.create({
           input_file_id: uploadedFile.id,
           endpoint: BATCH_ENDPOINT,
           completion_window: "24h",
+          output_expires_after: {
+            anchor: "created_at",
+            seconds: BATCH_OUTPUT_FILE_LIFETIME_SECONDS,
+          },
         })
       )
       return { externalBatchId: batch.id }
@@ -553,6 +605,19 @@ export function createOpenAiProvider(
 
     async testConnection() {
       await callOpenAi(() => client.models.list())
+    },
+
+    async listModels() {
+      try {
+        const models: ProviderModelInfo[] = []
+        for await (const model of client.models.list()) {
+          models.push(toOpenAiModelInfo(model))
+        }
+        // OpenAI の一覧は並び順を約束しないので、新しい順に並べ直す
+        return models.sort(compareByCreatedAtDescending)
+      } catch (error) {
+        throw toOpenAiProviderError(error)
+      }
     },
   }
 }

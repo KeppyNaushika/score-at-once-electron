@@ -1,54 +1,23 @@
 "use client"
 
-import {
-  AlertTriangle,
-  CheckCircle,
-  Circle,
-  Clock,
-  CopyX,
-  Layout,
-  Minus,
-  X,
-} from "lucide-react"
+import { Layout } from "lucide-react"
 
-import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import NavigationControls from "@/components/exams/07-score-at-once/ScoringSidePanel/NavigationControls"
 import type {
   AnswerSortOrder,
   LayoutDirection,
 } from "@/components/exams/07-score-at-once/types"
-import { Button } from "@/components/ui/button"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
-import { filterCommandIdOf } from "@/lib/scoringKeybindings"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
-import { GRID_4_3_STYLE, STATUS_MAP } from "./scoringToolbarButtons"
-import { ShortcutTooltip } from "./ShortcutTooltip"
+import { ScoringStatusFilterButtons } from "./ScoringStatusFilterButtons"
 import { SidePanelSection } from "./SidePanelSection"
-
-const FILTER_BUTTONS = [
-  { key: "unscored", label: "未採点", icon: Circle },
-  { key: "correct", label: "正答", icon: CheckCircle },
-  { key: "partial", label: "部分点", icon: AlertTriangle },
-  { key: "pending", label: "保留", icon: Clock },
-  { key: "incorrect", label: "誤答", icon: X },
-  { key: "no_answer", label: "無答", icon: Minus },
-  { key: "double_mark", label: "Wマーク", icon: CopyX },
-] as const
 
 interface DisplaySectionProps {
   gradingMode: "grid" | "individual"
   selectedAnswersCount: number
   visibleAnswersCount: number
   totalAnswersCount: number
-  filterSettings: {
-    unscored: boolean
-    correct: boolean
-    incorrect: boolean
-    partial: boolean
-    pending: boolean
-    no_answer: boolean
-  }
+  filterSettings: Partial<Record<ScoringStatus, boolean>>
   onToggleFilter: (filterId: string) => void
   layoutDirection: LayoutDirection
   onLayoutDirectionChange: (direction: LayoutDirection) => void
@@ -83,9 +52,6 @@ export function DisplaySection({
   isOpen,
   onToggle,
 }: DisplaySectionProps) {
-  const { keyBindings } = useKeyBindings()
-  const scoringColors = useScoringStatusColors()
-
   return (
     <SidePanelSection
       icon={Layout}
@@ -117,50 +83,10 @@ export function DisplaySection({
       <div className="space-y-3">
         {/* 表示フィルター */}
         {gradingMode === "grid" && onToggleFilter && (
-          <TooltipProvider delayDuration={300}>
-            <div style={GRID_4_3_STYLE}>
-              {FILTER_BUTTONS.map((button) => {
-                const Icon = button.icon
-                const isActive =
-                  filterSettings[button.key as keyof typeof filterSettings]
-                const keyBinding =
-                  keyBindings[filterCommandIdOf(STATUS_MAP[button.key])] || "?"
-                const colors = scoringColors[STATUS_MAP[button.key]]
-                return (
-                  <ShortcutTooltip
-                    key={button.key}
-                    description={`${button.label}を${isActive ? "非表示" : "表示"}`}
-                    keys={[keyBinding.toUpperCase()]}
-                  >
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex h-10 w-full min-w-0 items-center gap-1 border-2 px-1"
-                      style={
-                        isActive
-                          ? {
-                              backgroundColor: colors.bg,
-                              color: colors.text,
-                              borderColor: colors.icon,
-                            }
-                          : {
-                              backgroundColor: "transparent",
-                              color: colors.icon,
-                              borderColor: colors.icon,
-                            }
-                      }
-                      onClick={() => onToggleFilter(button.key)}
-                    >
-                      <Icon className="h-3 w-3 shrink-0" />
-                      <span className="w-10 shrink-0 text-center text-[10px]">
-                        {button.label}
-                      </span>
-                    </Button>
-                  </ShortcutTooltip>
-                )
-              })}
-            </div>
-          </TooltipProvider>
+          <ScoringStatusFilterButtons
+            filterSettings={filterSettings}
+            onToggleFilter={onToggleFilter}
+          />
         )}
 
         {/* レイアウト・表示設定 */}

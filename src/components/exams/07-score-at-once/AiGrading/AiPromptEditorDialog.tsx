@@ -27,7 +27,7 @@ interface AiPromptEditorDialogProps {
   onOpenChange: (open: boolean) => void
   examId: string
   cropRegion: QuestionAnswerRegionRow
-  /** 直す元（選んでいるプロンプト）。無ければ白紙から書く */
+  /** 写す元の版（「編集」から開いたとき）。新規追加なら null で、白紙から書く */
   basePrompt: AiPromptRow | null
   /** 保存したプロンプトを選ぶ */
   onCreated: (promptId: string) => void
@@ -61,9 +61,13 @@ function AiPromptEditorForm({
     basePrompt?.modelAnswerText ?? ""
   )
   const [sendModelAnswerImage, setSendModelAnswerImage] = useState(
-    basePrompt?.sendModelAnswerImage ?? false
+    // 新規追加では既定で送る（図や記号の読み取りに効き、前置きに入るのでキャッシュも効く）
+    basePrompt?.sendModelAnswerImage ?? true
   )
   const [rubricText, setRubricText] = useState(basePrompt?.rubricText ?? "")
+  const [annotationInstruction, setAnnotationInstruction] = useState(
+    basePrompt?.annotationInstruction ?? ""
+  )
   const createPrompt = useMutation(
     createAiPromptMutation(examId, cropRegion.id)
   )
@@ -78,6 +82,7 @@ function AiPromptEditorForm({
         modelAnswerText,
         sendModelAnswerImage,
         rubricText,
+        annotationInstruction,
       },
       {
         onSuccess: (createdPrompt) => {
@@ -93,8 +98,10 @@ function AiPromptEditorForm({
     <>
       <DialogHeader>
         <DialogTitle>
-          {basePrompt ? "プロンプトを直す" : "プロンプトを書く"}（
-          {cropRegion.label}）
+          {basePrompt
+            ? "元の版を写して、新しい版を作る"
+            : "プロンプトを新規追加"}
+          （{cropRegion.label}）
         </DialogTitle>
         <DialogDescription>
           どの欄も省略できます。保存すると新しい版になり、元の版は残ります。
@@ -150,6 +157,19 @@ function AiPromptEditorForm({
             rows={5}
             placeholder="例: 根拠まで書かれていれば満点。結論だけなら部分点 1 点"
           />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="ai-prompt-annotation-instruction">朱書きの指示</Label>
+          <Textarea
+            id="ai-prompt-annotation-instruction"
+            value={annotationInstruction}
+            onChange={(event) => setAnnotationInstruction(event.target.value)}
+            rows={3}
+            placeholder="例: 部分点の答案にだけ、足りない根拠を20字以内で。正答と誤答には書かない。「です・ます」で"
+          />
+          <p className="text-xs text-muted-foreground">
+            朱書き（生徒向けの注釈）の量・書き方・どの答案に入れるか。空ならアプリ共通の決まりだけで書きます。解答欄の大きさから決まる字数の上限は、指示があっても上限として伝えます
+          </p>
         </div>
       </div>
 

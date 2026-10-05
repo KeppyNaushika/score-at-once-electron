@@ -36,6 +36,37 @@ export const REVIEW_REASON_LABELS: Record<ReviewReason, string> = {
   borderline: "白紙か際どい",
 }
 
+/**
+ * 理由の出どころ。画面では出どころごとに分けて示す（AI の判断と、アプリが画像から
+ * 測ったものを同じ並びに置くと、どれが AI の判断か読み分けられないため）
+ * - ai: AI の判定そのもの（結果・確信度）
+ * - comparison: AI の判定と自分の採点との比べ合わせ
+ * - image: アプリが答案画像から測ったもの（AI は関わらない）
+ */
+export type ReviewReasonSource = "ai" | "comparison" | "image"
+
+export const REVIEW_REASON_SOURCES: Record<ReviewReason, ReviewReasonSource> = {
+  awaitingResult: "ai",
+  errored: "ai",
+  refused: "ai",
+  aiHold: "ai",
+  lowConfidence: "ai",
+  mediumConfidence: "ai",
+  overflow: "image",
+  disagreement: "comparison",
+  borderline: "image",
+}
+
+/** 出どころが source の理由だけを、画面に出す順で返す */
+export function reviewReasonsFrom(
+  reviewReasons: readonly ReviewReason[],
+  source: ReviewReasonSource
+): ReviewReason[] {
+  return reviewReasons.filter(
+    (reviewReason) => REVIEW_REASON_SOURCES[reviewReason] === source
+  )
+}
+
 /** 理由を求めるのに要るもの */
 export interface ReviewReasonInput {
   displayedAttempt: AttemptWithRun | null
@@ -81,17 +112,53 @@ export function classifyReviewReasons({
 }
 
 /**
- * まとめて採用してよいか。成功・確信度 high・要確認の理由なし・自分が未採点・
- * まだ採用していない、をすべて満たすものだけ
+ * まとめて採用の確信度の下限。"low" は確信度を問わない（すべて）。
+ * 教員が画面で選ぶ（既定は "high"）
  */
-export function isBulkAdoptable(input: ReviewReasonInput): boolean {
+export const BULK_ADOPT_MINIMUM_CONFIDENCES = ["high", "medium", "low"] as const
+export type BulkAdoptMinimumConfidence =
+  (typeof BULK_ADOPT_MINIMUM_CONFIDENCES)[number]
+
+export const BULK_ADOPT_MINIMUM_CONFIDENCE_LABELS: Record<
+  BulkAdoptMinimumConfidence,
+  string
+> = {
+  high: "確信度 高のみ",
+  medium: "確信度 中以上",
+  low: "すべて",
+}
+
+/** 確信度の順位（高いほど大きい）。成功していない試行の空文字は 0 */
+function confidenceRank(confidence: string): number {
+  switch (confidence) {
+    case "high":
+      return 3
+    case "medium":
+      return 2
+    case "low":
+      return 1
+    default:
+      return 0
+  }
+}
+
+/**
+ * まとめて採用してよいか。成功・確信度が下限以上・自分が未採点・まだ採用していない、を
+ * すべて満たすもの。
+ *
+ * 確信度以外の要確認の理由（はみ出し・際どい白紙など）では外さない。外すかどうかは
+ * 確信度の下限を選ぶ教員の判断に任せ、画面ではその件数を示す
+ */
+export function isBulkAdoptable(
+  input: ReviewReasonInput,
+  minimumConfidence: BulkAdoptMinimumConfidence
+): boolean {
   const { displayedAttempt, questionScore } = input
   if (!displayedAttempt) return false
   const { attempt } = displayedAttempt
   return (
     attempt.state === "succeeded" &&
-    attempt.confidence === "high" &&
-    classifyReviewReasons(input).length === 0 &&
+    confidenceRank(attempt.confidence) >= confidenceRank(minimumConfidence) &&
     !isScored(questionScore) &&
     !isAdoptedAttempt(displayedAttempt)
   )

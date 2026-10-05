@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { useParams } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef } from "react"
 
 import { Spinner } from "@/components/ui/spinner"
 import { examExportSettingsQuery } from "@/queries/settings"
@@ -53,6 +53,8 @@ export default function AnswerIndividualView({
   scrollContainerRef,
   onImageSizeChanged,
   pageSize = "A4",
+  draftAnnotations,
+  fitQuestionOnLoad = false,
 }: AnswerIndividualViewProps) {
   // 画像ナビゲーション状態管理（内部管理）
   const {
@@ -117,11 +119,12 @@ export default function AnswerIndividualView({
     [currentExamStudentId, currentCropRegionId, currentUserId]
   )
 
-  // 描画状態管理（データベース統合対応）
+  // 描画状態管理（データベース統合対応）。下書きを渡されたら保存しない
   const drawingState = useDrawingState(
     annotationTarget,
-    true, // データベース永続化を有効化
-    onAnnotationChanged
+    draftAnnotations === undefined,
+    onAnnotationChanged,
+    draftAnnotations
   )
 
   // 外部からのアノテーション追加（ブラウザパネルの+ボタン等）後にキャンバスをリロード
@@ -255,6 +258,14 @@ export default function AnswerIndividualView({
     handleMaximizeView,
     handleCropView,
   })
+
+  // 狭い枠に埋め込むときは、読み込んだら設問に合わせて拡大する（以後は利用者の操作に任せる）
+  const fitQuestion = useEffectEvent(() => {
+    if (fitQuestionOnLoad) handleCropView()
+  })
+  useEffect(() => {
+    if (imageLoaded) fitQuestion()
+  }, [imageLoaded])
 
   // 設問変更時の自動スクロール
   useQuestionAutoScroll({

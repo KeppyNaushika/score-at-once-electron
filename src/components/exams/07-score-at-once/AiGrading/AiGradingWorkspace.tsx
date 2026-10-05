@@ -14,15 +14,20 @@ import { aiGradingSettingsQuery } from "@/queries/aiProvider"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
 
-import { AiAnswerDetailPanel } from "./AiAnswerDetailPanel"
-import { AiAnswerList } from "./AiAnswerList"
-import { AiBulkActionsBar } from "./AiBulkActionsBar"
+import { AiGradingGrid } from "./AiGradingGrid"
+import { AiGradingSidePanel } from "./AiGradingSidePanel"
 import { AiGradingToolbar } from "./AiGradingToolbar"
 import { AiPromptPanel } from "./AiPromptPanel"
 import { AiSettingsComparisonTable } from "./AiSettingsComparisonTable"
+import { useAiAnnotationDrafts } from "./hooks/useAiAnnotationDrafts"
 import { useAiAnswerReviewState } from "./hooks/useAiAnswerReviewState"
 import { useAiGradingAnswers } from "./hooks/useAiGradingAnswers"
-import type { AiGradingRunRow, AiPromptRow } from "./types"
+import { useAiGridSelection } from "./hooks/useAiGridSelection"
+import type {
+  AiGradingRunRow,
+  AiGridDisplaySettings,
+  AiPromptRow,
+} from "./types"
 import { resolveDefaultPromptId } from "./utils/attemptSelection"
 import {
   buildInkMeasurementSignature,
@@ -42,12 +47,15 @@ interface AiGradingWorkspaceProps {
   questionScores: QuestionScoreRow[]
   pageSize: string
   unlockedProviders: GradingProviderId[]
+  /** 一覧の表示の設定（一覧表示と同じもの） */
+  display: AiGridDisplaySettings
   /** 左の列の上に置く設問ナビゲーター */
   questionNavigator: ReactNode
 }
 
 /**
- * 設問1つぶんの AI 採点の作業場。左にプロンプト、中央に答案の一覧、右に詳細。
+ * 設問1つぶんの AI 採点の作業場。左にプロンプト、中央に**一覧表示と同じ答案の一覧**
+ * （色は自分の採点、答案の下に AI の提案）、右に絞り込み・まとめての操作・選んだ答案の詳細。
  *
  * 表示する試行・選んでいるプロンプト・答案の選択は、ここが持つ利用者の選択だけで、
  * 表示はそこから毎回導く（消えた選択を状態へ書き戻さない）。
@@ -60,6 +68,7 @@ export function AiGradingWorkspace({
   questionScores,
   pageSize,
   unlockedProviders,
+  display,
   questionNavigator,
 }: AiGradingWorkspaceProps) {
   const promptsQuery = useQuery(aiPromptsQuery(examId, cropRegion.id))
@@ -98,6 +107,7 @@ export function AiGradingWorkspace({
 
   // ── 利用者の選択（表示はここから導く） ───────────────────────
   const [chosenPromptId, setChosenPromptId] = useState<string | null>(null)
+  const [isRunDialogOpen, setIsRunDialogOpen] = useState(false)
   const [chosenProvider, setChosenProvider] =
     useState<GradingProviderId | null>(null)
 
@@ -125,17 +135,15 @@ export function AiGradingWorkspace({
       ),
     [prompts]
   )
-  const {
+  const { reviewedAnswers, chooseAttempt, answerOrder, setAnswerOrder } =
+    useAiAnswerReviewState({ answers, selectedPromptId, points })
+  const grid = useAiGridSelection({
+    cropRegion,
     reviewedAnswers,
-    focusedAnswer,
-    setFocusedExamStudentId,
-    selectedExamStudentIds,
-    toggleSelected,
-    chooseAttempt,
-    answerOrder,
-    setAnswerOrder,
-  } = useAiAnswerReviewState({ answers, selectedPromptId, points })
-
+    layoutDirection: display.layoutDirection,
+    itemsPerLine: display.itemsPerLine,
+  })
+  const { draftAnnotationsByAttemptId, updateDraft } = useAiAnnotationDrafts()
   if (!provider) return null
 
   return (
@@ -150,10 +158,14 @@ export function AiGradingWorkspace({
           promptNumberById={promptNumberById}
           selectedPromptId={selectedPromptId}
           onSelectPrompt={setChosenPromptId}
+          onRunWithPrompt={(promptId) => {
+            setChosenPromptId(promptId)
+            setIsRunDialogOpen(true)
+          }}
           provider={provider}
           settings={settings}
           reviewedAnswers={reviewedAnswers}
-          selectedExamStudentIds={selectedExamStudentIds}
+          selectedExamStudentIds={grid.selectedIds}
         />
         <AiSettingsComparisonTable
           runs={runs}
@@ -164,7 +176,7 @@ export function AiGradingWorkspace({
         />
       </aside>
 
-      {/* 中央: 答案の一覧 */}
+      {/* 中央: 一覧表示と同じ答案の一覧（答案の下に AI の提案） */}
       <section
         aria-label="答案と AI の判定"
         className="flex min-w-0 flex-1 flex-col"
@@ -181,56 +193,62 @@ export function AiGradingWorkspace({
           reviewedAnswers={reviewedAnswers}
           questionScores={questionScores}
           currentUserId={currentUserId}
-          selectedExamStudentIds={selectedExamStudentIds}
+          selectedExamStudentIds={grid.selectedIds}
           answerOrder={answerOrder}
           onAnswerOrderChange={setAnswerOrder}
-        />
-        <AiBulkActionsBar
-          examId={examId}
-          cropRegion={cropRegion}
-          pageSize={pageSize}
-          reviewedAnswers={reviewedAnswers}
+          isRunDialogOpen={isRunDialogOpen}
+          onRunDialogOpenChange={setIsRunDialogOpen}
         />
         {inkQuery.error && (
           <p className="border-b bg-amber-50 px-3 py-1 text-xs text-amber-800">
             答案のインクを測れませんでした。白紙の除外と注釈の自動配置は使えません
           </p>
         )}
-        <AiAnswerList
-          cropRegion={cropRegion}
-          reviewedAnswers={reviewedAnswers}
-          focusedExamStudentId={
-            focusedAnswer?.answer.studentAnswerImage.examStudentId ?? null
-          }
-          onFocus={setFocusedExamStudentId}
-          selectedExamStudentIds={selectedExamStudentIds}
-          onToggleSelected={toggleSelected}
-        />
+        <div className="min-h-0 flex-1">
+          <AiGradingGrid
+            cropRegion={cropRegion}
+            currentUserId={currentUserId}
+            pageSize={pageSize}
+            display={display}
+            visibleItems={grid.visibleItems}
+            visibleIds={grid.visibleIds}
+            selectedIds={grid.selectedIds}
+            onSelect={grid.handleSelectAnswer}
+            onReplaceSelection={(ids) => grid.setSelection(new Set(ids))}
+            totalCount={reviewedAnswers.length}
+          />
+        </div>
       </section>
 
-      {/* 右: 詳細 */}
-      <aside className="flex w-md shrink-0 flex-col overflow-y-auto border-l">
-        {focusedAnswer ? (
-          <AiAnswerDetailPanel
-            key={focusedAnswer.answer.studentAnswerImage.examStudentId}
-            examId={examId}
-            cropRegion={cropRegion}
-            pageSize={pageSize}
-            reviewedAnswer={focusedAnswer}
-            promptNumberById={promptNumberById}
-            onChooseAttempt={(attemptId) =>
-              chooseAttempt(
-                focusedAnswer.answer.studentAnswerImage.examStudentId,
-                attemptId
-              )
-            }
-          />
-        ) : (
-          <p className="p-4 text-sm text-muted-foreground">
-            この設問の答案がありません
-          </p>
-        )}
-      </aside>
+      {/* 右: 表示・まとめての操作・選んだ答案の詳細 */}
+      <div className="w-96 shrink-0">
+        <AiGradingSidePanel
+          examId={examId}
+          cropRegion={cropRegion}
+          pageSize={pageSize}
+          currentUserId={currentUserId}
+          studentAnswerImages={studentAnswerImages}
+          displaySection={{
+            display,
+            filterBasis: grid.filterBasis,
+            onFilterBasisChange: grid.changeFilterBasis,
+            filterSettings: grid.filterSettings,
+            onToggleFilter: grid.toggleFilter,
+            selectedCount: grid.selectedIds.size,
+            visibleCount: grid.visibleItems.length,
+            totalCount: reviewedAnswers.length,
+          }}
+          reviewedAnswers={reviewedAnswers}
+          selectedItems={grid.selectedItems}
+          singleSelectedItem={grid.singleSelectedItem}
+          promptNumberById={promptNumberById}
+          onChooseAttempt={chooseAttempt}
+          draftAnnotationsByAttemptId={draftAnnotationsByAttemptId}
+          onDraftChange={updateDraft}
+          onAdopted={grid.markAdopted}
+          onAnnotationChanged={display.onAnnotationChanged}
+        />
+      </div>
     </div>
   )
 }

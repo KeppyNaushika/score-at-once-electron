@@ -148,6 +148,32 @@ describe("その場の採点", () => {
     })
   })
 
+  it("最初の1件を送り終えてから残りを並行させる（前置きのキャッシュを先に作る）", async () => {
+    const events: string[] = []
+    const { provider } = createFakeProvider({
+      respond: async (request) => {
+        events.push(`start:${request.customId}`)
+        await new Promise((resolve) => setTimeout(resolve, 10))
+        events.push(`end:${request.customId}`)
+        return completedResponse(PARTIAL_JUDGEMENT)
+      },
+    })
+    const runner = createGradingJobRunner(
+      createTestDependencies(provider, fixture.dataDirectory)
+    )
+    const { finished } = await runner.startGradingRun(
+      startInput(),
+      fixture.exam.user.id
+    )
+    await finished
+
+    // 1件目が終わるまで2件目は始まらない。残り2件は並行（同時実行数 2）
+    expect(events[0]).toMatch(/^start:/)
+    expect(events[1]).toBe(events[0].replace("start:", "end:"))
+    expect(events[2]).toMatch(/^start:/)
+    expect(events[3]).toMatch(/^start:/)
+  })
+
   it("検証で外れた判定は errored、拒否は refused、打ち切りは errored で書く", async () => {
     const responses: ProviderGradingResponse[] = [
       completedResponse({ ...PARTIAL_JUDGEMENT, partialScore: 7 }),
@@ -436,6 +462,7 @@ describe("プロンプトの改訂", () => {
           questionText: "x^2 - 5x + 6 = 0 を解け。",
           modelAnswerText: "x = 2, 3",
           rubricText: "因数分解で2点、途中式があれば4点、解がそろって満点。",
+          annotationInstruction: "部分点の答案にだけ入れる",
           message: "途中式の配点を足しました",
         }),
     })

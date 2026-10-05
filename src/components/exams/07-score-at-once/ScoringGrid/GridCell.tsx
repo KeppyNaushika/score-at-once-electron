@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 
+import { hatchedFill } from "@/components/exams/07-score-at-once/ScoringGrid/constants/proposalFill"
 import {
   getDynamicScoreStatusConfig,
   type ScoreStatusKey,
@@ -39,6 +40,13 @@ interface GridCellProps {
   onMouseDown: (e: React.MouseEvent, answerId: string) => void
   /** 生徒答案の下に足す欄（8. 採点確定が採点者ごとの結果を出す）。模範解答には出さない */
   detail?: ReactNode
+  /**
+   * 未確定の提案の状態（AI採点モードの AI の判定）。自分がまだ採点していないマスだけ、
+   * その状態の色の斜線で塗る（斜線 = 提案、塗り = 確定）。採点済みのマスは確定の塗りのまま
+   */
+  proposalStatus?: ScoreStatusKey | null
+  /** 採点マーク（状態のアイコン）の左隣に置くもの（AI採点モードの AI の判定の札）。模範解答には出さない */
+  beforeStatusMark?: ReactNode
 }
 
 export function GridCell({
@@ -54,6 +62,8 @@ export function GridCell({
   pageSize,
   onMouseDown,
   detail,
+  proposalStatus,
+  beforeStatusMark,
 }: GridCellProps) {
   const statusConfig = getDynamicScoreStatusConfig(scoringColors)
   const statusKey: ScoreStatusKey = isValidStatusKey(answer.status)
@@ -104,6 +114,22 @@ export function GridCell({
 
   const isColumnLayout =
     layoutDirection === "down-right" || layoutDirection === "down-left"
+
+  // 未採点のマスに未確定の提案があれば、その状態の色の斜線を重ねる
+  if (
+    !isMaster &&
+    statusKey === "unscored" &&
+    proposalStatus &&
+    proposalStatus !== "unscored" &&
+    proposalStatus !== "master"
+  ) {
+    cellBgStyle = {
+      ...cellBgStyle,
+      backgroundImage: hatchedFill(
+        statusConfig[proposalStatus].iconStyle.color
+      ),
+    }
+  }
 
   // 列レイアウト時は明示的に高さを設定、背景色・ボーダー色を適用
   const cellStyle: React.CSSProperties = {
@@ -179,7 +205,10 @@ export function GridCell({
         </div>
 
         {!isMaster && (
-          <Icon className="h-3 w-3 shrink-0" style={config.iconStyle} />
+          <div className="flex shrink-0 items-center gap-1">
+            {beforeStatusMark}
+            <Icon className="h-3 w-3 shrink-0" style={config.iconStyle} />
+          </div>
         )}
       </div>
 

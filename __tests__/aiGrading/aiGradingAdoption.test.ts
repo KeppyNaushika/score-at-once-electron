@@ -219,6 +219,117 @@ describe("adoptAiGradingAttempts", () => {
     expect(questionScore?.drawingAnnotations).toHaveLength(1)
   })
 
+  it("点だけの採用では朱書きを書かない", async () => {
+    const [attempt] = await gradeAll()
+    const results = await adoptAiGradingAttempts(
+      {
+        adoptions: [{ attemptId: attempt.id, annotation: PLACEMENT }],
+        overwrite: false,
+        parts: { score: true, annotation: false },
+      },
+      fixture.exam.user.id
+    )
+    expect(results[0].outcome).toBe("adopted")
+    const questionScore = await ownScore(attempt.examStudentId)
+    expect(questionScore?.status).toBe("partial")
+    expect(questionScore?.drawingAnnotations).toHaveLength(0)
+    const adoptedAttempt = await testPrisma.aiGradingAttempt.findUniqueOrThrow({
+      where: { id: attempt.id },
+    })
+    expect(adoptedAttempt.adoptedAt).not.toBeNull()
+    expect(adoptedAttempt.adoptedDrawingAnnotationId).toBeNull()
+  })
+
+  it("朱書きだけの採用では点を書かず、採点済みのマスにも書ける", async () => {
+    const [attempt] = await gradeAll()
+    await setQuestionScore({
+      examStudentId: attempt.examStudentId,
+      cropRegionId: fixture.cropRegion.id,
+      userId: fixture.exam.user.id,
+      status: "correct",
+      partialScore: null,
+    })
+    const results = await adoptAiGradingAttempts(
+      {
+        adoptions: [{ attemptId: attempt.id, annotation: PLACEMENT }],
+        overwrite: false,
+        parts: { score: false, annotation: true },
+      },
+      fixture.exam.user.id
+    )
+    expect(results[0].outcome).toBe("adopted")
+    const questionScore = await ownScore(attempt.examStudentId)
+    // 教員が付けた点はそのまま
+    expect(questionScore?.status).toBe("correct")
+    expect(questionScore?.drawingAnnotations).toHaveLength(1)
+    const adoptedAttempt = await testPrisma.aiGradingAttempt.findUniqueOrThrow({
+      where: { id: attempt.id },
+    })
+    expect(adoptedAttempt.adoptedAt).toBeNull()
+    expect(adoptedAttempt.adoptedDrawingAnnotationId).toBe(
+      questionScore?.drawingAnnotations[0].id
+    )
+  })
+
+  it("朱書きだけの採用は、反映済み・朱書きが無いものを飛ばす", async () => {
+    const [attempt, otherAttempt] = await gradeAll()
+    const annotationOnly = { score: false, annotation: true }
+    await adoptAiGradingAttempts(
+      {
+        adoptions: [{ attemptId: attempt.id, annotation: PLACEMENT }],
+        overwrite: false,
+        parts: annotationOnly,
+      },
+      fixture.exam.user.id
+    )
+    const results = await adoptAiGradingAttempts(
+      {
+        adoptions: [
+          { attemptId: attempt.id, annotation: PLACEMENT },
+          { attemptId: otherAttempt.id, annotation: null },
+        ],
+        overwrite: false,
+        parts: annotationOnly,
+      },
+      fixture.exam.user.id
+    )
+    expect(results.map((result) => result.outcome)).toEqual([
+      "skipped_annotation_already_adopted",
+      "skipped_no_annotation",
+    ])
+    expect(
+      (await ownScore(attempt.examStudentId))?.drawingAnnotations
+    ).toHaveLength(1)
+  })
+
+  it("朱書きを反映済みなら、あとで点を採用しても朱書きは書き直さない", async () => {
+    const [attempt] = await gradeAll()
+    await adoptAiGradingAttempts(
+      {
+        adoptions: [{ attemptId: attempt.id, annotation: PLACEMENT }],
+        overwrite: false,
+        parts: { score: false, annotation: true },
+      },
+      fixture.exam.user.id
+    )
+    const firstAnnotationId = (await ownScore(attempt.examStudentId))
+      ?.drawingAnnotations[0].id
+    await adoptAiGradingAttempts(
+      {
+        adoptions: [
+          { attemptId: attempt.id, annotation: { ...PLACEMENT, x: 0.5 } },
+        ],
+        overwrite: false,
+      },
+      fixture.exam.user.id
+    )
+    const questionScore = await ownScore(attempt.examStudentId)
+    expect(questionScore?.status).toBe("partial")
+    expect(questionScore?.drawingAnnotations.map((row) => row.id)).toEqual([
+      firstAnnotationId,
+    ])
+  })
+
   it("実行した教員でなければ採用できない", async () => {
     const [attempt] = await gradeAll()
 

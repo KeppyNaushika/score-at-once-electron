@@ -15,6 +15,7 @@ import type {
   DrawingAnnotation,
 } from "@/types/drawingAnnotation.types"
 
+import type { DraftAnnotationsSource } from "../../types"
 // データベース統合フックのインポート
 import {
   type DrawingPersistenceCallbacks,
@@ -28,6 +29,11 @@ interface UsePersistedDrawingElementsParams {
   onAnnotationChanged: (() => void) | undefined
   /** 選択中の要素（行き先が変わったとき・要素を消したときに外す） */
   setSelectedElementIds: React.Dispatch<React.SetStateAction<string[]>>
+  /**
+   * 保存しない下書き。渡すと要素はここの状態になり、行き先が変わっても空にせず
+   * DB からも読まない（書かないのは enablePersistence を false にして決める）
+   */
+  draftAnnotations?: DraftAnnotationsSource
 }
 
 /**
@@ -40,10 +46,16 @@ export function usePersistedDrawingElements({
   enablePersistence,
   onAnnotationChanged,
   setSelectedElementIds,
+  draftAnnotations,
 }: UsePersistedDrawingElementsParams) {
-  const [drawingElements, setDrawingElements] = useState<DrawingAnnotation[]>(
-    []
-  )
+  const [ownDrawingElements, setOwnDrawingElements] = useState<
+    DrawingAnnotation[]
+  >([])
+  // 下書きがあれば要素は呼び出し側の状態（setter は useState のものなので参照は安定）
+  const drawingElements = draftAnnotations?.elements ?? ownDrawingElements
+  const setDrawingElements =
+    draftAnnotations?.setElements ?? setOwnDrawingElements
+  const isDraft = draftAnnotations !== undefined
 
   // onAnnotationChangedのref（コールバック変更でフックが再作成されないようにする）
   const onAnnotationChangedRef = useRef(onAnnotationChanged)
@@ -104,7 +116,8 @@ export function usePersistedDrawingElements({
 
       // 設問変更時は即座にdrawingElementsと選択をクリア
       // useLayoutEffectにより、描画effectが実行される前にクリアが完了する
-      setDrawingElements([])
+      // （下書きは呼び出し側の状態なので消さない）
+      if (!isDraft) setDrawingElements([])
       setSelectedElementIds([])
 
       // DB読み込みは非同期 → ロード完了時にバージョンチェックで最新のみ適用
@@ -122,6 +135,8 @@ export function usePersistedDrawingElements({
     annotationTarget,
     loadAnnotations,
     setSelectedElementIds,
+    isDraft,
+    setDrawingElements,
   ])
 
   // 描画要素操作（データベース統合対応）
@@ -153,7 +168,7 @@ export function usePersistedDrawingElements({
         }
       }
     },
-    [enablePersistence, annotationTarget, saveElement]
+    [enablePersistence, annotationTarget, saveElement, setDrawingElements]
   )
 
   /**
@@ -202,7 +217,7 @@ export function usePersistedDrawingElements({
         }
       }
     },
-    [drawingElements, enablePersistence, updateElement]
+    [drawingElements, enablePersistence, updateElement, setDrawingElements]
   )
 
   // 複数要素を一括更新（1回のsetStateで全て更新）。
@@ -250,7 +265,7 @@ export function usePersistedDrawingElements({
         }
       }
     },
-    [drawingElements, enablePersistence, updateElement]
+    [drawingElements, enablePersistence, updateElement, setDrawingElements]
   )
 
   const removeDrawingElement = useCallback(
@@ -282,7 +297,13 @@ export function usePersistedDrawingElements({
         }
       }
     },
-    [drawingElements, enablePersistence, deleteElement, setSelectedElementIds]
+    [
+      drawingElements,
+      enablePersistence,
+      deleteElement,
+      setSelectedElementIds,
+      setDrawingElements,
+    ]
   )
 
   /** 全要素を消す（DBも空にする。失敗したら手元を戻す） */
@@ -302,7 +323,13 @@ export function usePersistedDrawingElements({
         setDrawingElements(clearedElements)
       }
     }
-  }, [drawingElements, enablePersistence, annotationTarget, syncElements])
+  }, [
+    drawingElements,
+    enablePersistence,
+    annotationTarget,
+    syncElements,
+    setDrawingElements,
+  ])
 
   // データベース同期関数
   const syncWithDatabase = useCallback(async () => {
@@ -328,7 +355,7 @@ export function usePersistedDrawingElements({
     } catch (error) {
       console.error("データベース読み込みエラー:", error)
     }
-  }, [enablePersistence, annotationTarget, loadAnnotations])
+  }, [enablePersistence, annotationTarget, loadAnnotations, setDrawingElements])
 
   return {
     drawingElements,

@@ -6,11 +6,7 @@
 
 import type { AiGradingAnswer, AttemptWithRun } from "../types"
 import { isAdoptedAttempt, resolveDisplayedAttempt } from "./attemptSelection"
-import {
-  classifyReviewReasons,
-  isBulkAdoptable,
-  type ReviewReason,
-} from "./reviewReasons"
+import { classifyReviewReasons, type ReviewReason } from "./reviewReasons"
 import {
   isSameJudgement,
   isScored,
@@ -21,8 +17,6 @@ import {
 export interface AnswerReview {
   displayedAttempt: AttemptWithRun | null
   reviewReasons: ReviewReason[]
-  /** まとめて採用してよい */
-  isBulkAdoptable: boolean
   /** 表示中の試行が、選んでいるプロンプトとは別のプロンプトのもの */
   isFromOtherPrompt: boolean
   /** 表示中の試行を採用した */
@@ -61,7 +55,6 @@ export function reviewAnswer(
   return {
     displayedAttempt,
     reviewReasons: classifyReviewReasons(reviewInput),
-    isBulkAdoptable: isBulkAdoptable(reviewInput),
     isFromOtherPrompt:
       displayedAttempt !== null &&
       context.selectedPromptId !== null &&

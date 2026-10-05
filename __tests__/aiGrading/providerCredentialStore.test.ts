@@ -87,10 +87,12 @@ describe("providerCredentialStore", () => {
       defaultProvider: "anthropic",
       defaultModels: { anthropic: "claude-opus-5-5" },
       defaultEffort: "medium",
+      defaultMode: "realtime",
       concurrency: 4,
       budgetWarningUsd: null,
       openaiCompatibleBaseUrl: null,
     })
+    expect(store.getModelCatalogs()).toEqual({ anthropic: null, openai: null })
   })
 
   it("同意していない事業者のキーは保存しない", () => {
@@ -191,10 +193,12 @@ describe("providerCredentialStore", () => {
         defaultProvider: "anthropic",
         defaultModels: { anthropic: "claude-opus-5-5", openai: "gpt-5.5" },
         defaultEffort: "medium",
+        defaultMode: "realtime",
         concurrency: 8,
         budgetWarningUsd: 12.5,
         openaiCompatibleBaseUrl: null,
       },
+      modelCatalogs: { anthropic: null, openai: null },
     })
     // 暗号文は base64
     expect(
@@ -276,5 +280,93 @@ describe("providerCredentialStore", () => {
     expect(
       getErrorCode(() => brokenStore.readApiKeyForMainProcessOnly("anthropic"))
     ).toBe("decryption_failed")
+  })
+
+  it("送り方の既定値は、選択肢の値だけを保存する", () => {
+    const store = createStore()
+    expect(store.updateSettings({ defaultMode: "batch" })).toMatchObject({
+      defaultMode: "batch",
+    })
+    expect(createStore().getSettings()).toMatchObject({
+      defaultMode: "batch",
+    })
+    expect(
+      getErrorCode(() =>
+        // IPC を渡ってくる値は型どおりとは限らない
+        // @ts-expect-error 型の外の値を渡す
+        store.updateSettings({ defaultMode: "later" })
+      )
+    ).toBe("invalid_settings")
+
+    // ファイルに書かれた正しくない値は既定値に戻す
+    fs.writeFileSync(
+      configFilePath,
+      JSON.stringify({
+        settings: { defaultMode: "x" },
+      }),
+      "utf-8"
+    )
+    expect(createStore().getSettings()).toMatchObject({
+      defaultMode: "realtime",
+    })
+  })
+
+  it("モデルの一覧を事業者ごとに保存し、別の口からも読め、キーは含まない", () => {
+    const store = createStore()
+    store.recordConsent("anthropic", { userId: "user-1", consentVersion: "1" })
+    store.setApiKey("anthropic", TEST_API_KEY)
+    const catalog = store.saveModelCatalog("anthropic", [
+      {
+        id: "claude-opus-5-5",
+        displayName: "Claude Opus 5.5",
+        createdAt: "2026-09-01T00:00:00.000Z",
+        supportsAdaptiveThinking: true,
+      },
+      {
+        id: "claude-legacy",
+        displayName: "claude-legacy",
+        createdAt: null,
+        supportsAdaptiveThinking: null,
+      },
+    ])
+    expect(catalog.fetchedAt).toBe("2026-10-04T09:00:00.000Z")
+    expect(catalog.models).toHaveLength(2)
+    expect(createStore().getModelCatalogs()).toEqual({
+      anthropic: catalog,
+      openai: null,
+    })
+    expect(JSON.stringify(createStore().getModelCatalogs())).not.toContain(
+      TEST_API_KEY
+    )
+    // 設定を変えても一覧は残る
+    store.updateSettings({ concurrency: 3 })
+    expect(createStore().getModelCatalogs().anthropic).toEqual(catalog)
+  })
+
+  it("形の崩れたモデルの一覧は、一覧ごと null に戻して読む", () => {
+    fs.writeFileSync(
+      configFilePath,
+      JSON.stringify({
+        modelCatalogs: {
+          anthropic: {
+            fetchedAt: "2026-10-04T09:00:00.000Z",
+            models: [
+              {
+                id: "claude-opus-5-5",
+                displayName: "Opus",
+                createdAt: null,
+                supportsAdaptiveThinking: "yes",
+              },
+            ],
+          },
+          openai: { fetchedAt: 42, models: [] },
+        },
+      }),
+      "utf-8"
+    )
+    expect(createStore().getModelCatalogs()).toEqual({
+      anthropic: null,
+      openai: null,
+    })
   })
 })

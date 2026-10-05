@@ -20,6 +20,7 @@ import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/t
 import { startAiGradingRunMutation } from "@/queries/aiGrading"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
+import { AI_GRADING_SENDING_IMAGE_SCALE } from "@/types/aiGrading.types"
 
 import { AiGradingTargetSelector } from "./AiGradingTargetSelector"
 import { AiRunCostEstimate } from "./AiRunCostEstimate"
@@ -75,9 +76,9 @@ function AiGradingRunForm({
   currentUserId,
   selectedExamStudentIds,
 }: AiGradingRunDialogProps) {
-  const [targetMode, setTargetMode] = useState<GradingTargetMode>(
-    selectedExamStudentIds.size > 0 ? "selected" : "unscored"
-  )
+  // 選び方は前もって選ばない。開くたびに未選択から始め、前回の選択も覚えない
+  // （閉じるとこのフォームごと捨てられる）
+  const [targetMode, setTargetMode] = useState<GradingTargetMode | null>(null)
   const [includeBorderline, setIncludeBorderline] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
   const { runSettings, updateRunSettings } = useAiRunSettings(
@@ -115,7 +116,8 @@ function AiGradingRunForm({
       includeBorderline,
     ]
   )
-  const targetExamStudentIds = selectionByMode[targetMode].examStudentIds
+  const targetExamStudentIds =
+    targetMode === null ? [] : selectionByMode[targetMode].examStudentIds
   const providerName = providerDisplayName(runSettings.provider)
 
   const handleSend = () => {
@@ -127,7 +129,7 @@ function AiGradingRunForm({
         model: runSettings.model.trim(),
         effort: runSettings.effort,
         mode: runSettings.mode,
-        imageScale: runSettings.imageScale,
+        imageScale: AI_GRADING_SENDING_IMAGE_SCALE,
       },
       {
         onSuccess: () => {
@@ -187,11 +189,21 @@ function AiGradingRunForm({
             unlockedProviders={unlockedProviders}
             showSendingOptions
           />
-          <AiRunCostEstimate
-            prompt={prompt}
-            examStudentIds={targetExamStudentIds}
-            runSettings={runSettings}
-          />
+          {targetMode === null ? (
+            <div
+              className="flex justify-between rounded-md border bg-muted/40 p-3 text-sm font-medium"
+              data-testid="ai-run-cost-unselected"
+            >
+              <span>費用（概算）</span>
+              <span>—</span>
+            </div>
+          ) : (
+            <AiRunCostEstimate
+              prompt={prompt}
+              examStudentIds={targetExamStudentIds}
+              runSettings={runSettings}
+            />
+          )}
         </div>
       )}
 
@@ -208,12 +220,18 @@ function AiGradingRunForm({
           </>
         ) : (
           <>
+            {targetMode === null && (
+              <span className="mr-auto self-center text-xs text-muted-foreground">
+                先に採点する答案を選んでください
+              </span>
+            )}
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               やめる
             </Button>
             <Button
               onClick={() => setIsConfirming(true)}
               disabled={
+                targetMode === null ||
                 targetExamStudentIds.length === 0 ||
                 runSettings.model.trim() === ""
               }

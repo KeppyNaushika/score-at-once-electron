@@ -1,33 +1,46 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
+import { useState } from "react"
 import { toast } from "sonner"
 
-import { DEFAULT_DRAWING_SETTINGS } from "@/components/exams/07-score-at-once/ScoringIndividual/constants/drawingConstants"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   adoptAiGradingAttemptsMutation,
   adoptBlankAnswersMutation,
 } from "@/queries/aiGrading"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 import { AiDeleteOldAttemptsButton } from "./AiDeleteOldAttemptsButton"
 import { ConfirmActionButton } from "./ConfirmActionButton"
-import {
-  buildAdoption,
-  placeAdoptionAnnotation,
-} from "./utils/adoptionAnnotation"
 import type { ReviewedAiGradingAnswer } from "./utils/answerReview"
+import {
+  BULK_ADOPT_MINIMUM_CONFIDENCE_LABELS,
+  BULK_ADOPT_MINIMUM_CONFIDENCES,
+  type BulkAdoptMinimumConfidence,
+  isBulkAdoptable,
+} from "./utils/reviewReasons"
 import { isScored } from "./utils/scoreComparison"
+import { adoptionOfAnswer } from "./utils/selectionAdoption"
 
 interface AiBulkActionsBarProps {
   examId: string
   cropRegion: QuestionAnswerRegionRow
   pageSize: string
   reviewedAnswers: ReviewedAiGradingAnswer[]
+  /** 試行の id → 教員が直した朱書きの下書き（あればそれで採用する） */
+  draftAnnotationsByAttemptId: ReadonlyMap<string, DrawingAnnotation[]>
 }
 
 /**
- * まとめての操作。採用（要確認の理由が無いものだけ）・白紙を無答に・古い判定を消す。
+ * まとめての操作。採用（確信度の下限を教員が選ぶ）・白紙を無答に・古い判定を消す。
  * どれも件数を先に見せ、確かめてから書く
  */
 export function AiBulkActionsBar({
@@ -35,6 +48,7 @@ export function AiBulkActionsBar({
   cropRegion,
   pageSize,
   reviewedAnswers,
+  draftAnnotationsByAttemptId,
 }: AiBulkActionsBarProps) {
   const adoptAttempts = useMutation(
     adoptAiGradingAttemptsMutation(examId, cropRegion.id)
@@ -43,9 +57,26 @@ export function AiBulkActionsBar({
     adoptBlankAnswersMutation(examId, cropRegion.id)
   )
 
-  const bulkAdoptableAnswers = reviewedAnswers.filter(
-    (reviewedAnswer) => reviewedAnswer.review.isBulkAdoptable
+  const [minimumConfidence, setMinimumConfidence] =
+    useState<BulkAdoptMinimumConfidence>("high")
+  const bulkAdoptableAnswers = reviewedAnswers.filter((reviewedAnswer) =>
+    isBulkAdoptable(
+      {
+        displayedAttempt: reviewedAnswer.review.displayedAttempt,
+        questionScore: reviewedAnswer.answer.questionScore,
+        inkMeasurement: reviewedAnswer.answer.inkMeasurement,
+        points: cropRegion.points,
+      },
+      minimumConfidence
+    )
   )
+  // 確信度以外の要確認の理由（はみ出し・際どい白紙など）がある件数。対象からは外さず示すだけ
+  const withOtherReviewReasonCount = bulkAdoptableAnswers.filter(
+    (reviewedAnswer) =>
+      reviewedAnswer.review.reviewReasons.some(
+        (reason) => reason !== "lowConfidence" && reason !== "mediumConfidence"
+      )
+  ).length
   // 白紙はその場のインク率だけで決める（境界帯・測れなかった答案は含めない）
   const blankUnscoredAnswers = reviewedAnswers.filter(
     (reviewedAnswer) =>
@@ -55,25 +86,26 @@ export function AiBulkActionsBar({
 
   const handleBulkAdopt = () => {
     const adoptions = bulkAdoptableAnswers.flatMap((reviewedAnswer) => {
-      const displayedAttempt = reviewedAnswer.review.displayedAttempt
-      if (!displayedAttempt) return []
-      const placement = placeAdoptionAnnotation({
-        annotationText: displayedAttempt.attempt.annotationText,
-        inkGrid: reviewedAnswer.answer.inkMeasurement?.inkGrid ?? null,
-        region: cropRegion,
+      const adoption = adoptionOfAnswer(reviewedAnswer, {
+        cropRegion,
         pageSize,
-        fontSizeMm: DEFAULT_DRAWING_SETTINGS.fontSize,
+        draftAnnotationsByAttemptId,
       })
-      return [buildAdoption(displayedAttempt.attempt.id, placement)]
+      return adoption ? [adoption] : []
     })
+    // 点だけを書く。朱書きは「朱書きの反映」で別に確定する
     adoptAttempts.mutate(
-      { adoptions, overwrite: false },
+      {
+        adoptions,
+        overwrite: false,
+        parts: { score: true, annotation: false },
+      },
       {
         onSuccess: (results) => {
           const adoptedCount = results.filter(
             (result) => result.outcome === "adopted"
           ).length
-          toast.success(`AI の判定を${adoptedCount}件採用しました`)
+          toast.success(`AI の点を${adoptedCount}件採用しました`)
         },
       }
     )
@@ -101,11 +133,38 @@ export function AiBulkActionsBar({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b bg-muted/30 px-3 py-1.5">
+    <div className="flex flex-wrap items-center gap-2">
+      <Select
+        value={minimumConfidence}
+        onValueChange={(value) => {
+          const chosen = BULK_ADOPT_MINIMUM_CONFIDENCES.find(
+            (option) => option === value
+          )
+          if (chosen) setMinimumConfidence(chosen)
+        }}
+      >
+        <SelectTrigger
+          className="h-8 w-40"
+          aria-label="まとめて採用する確信度の下限"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {BULK_ADOPT_MINIMUM_CONFIDENCES.map((option) => (
+            <SelectItem key={option} value={option}>
+              {BULK_ADOPT_MINIMUM_CONFIDENCE_LABELS[option]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <ConfirmActionButton
-        label={`確認不要の判定を採用（${bulkAdoptableAnswers.length}件）`}
-        title="AI の判定をまとめて採用しますか"
-        description={`成功・確信度が高い・はみ出しや食い違いの無い判定のうち、自分がまだ採点していない ${bulkAdoptableAnswers.length} 件を、自分の採点として書きます。`}
+        label={`点をまとめて採用（${bulkAdoptableAnswers.length}件）`}
+        title="AI の点をまとめて採用しますか"
+        description={`${BULK_ADOPT_MINIMUM_CONFIDENCE_LABELS[minimumConfidence]}の成功した判定のうち、自分がまだ採点していない ${bulkAdoptableAnswers.length} 件の点（判定・部分点・配点理由）を、自分の採点として書きます。朱書きは書きません。${
+          withOtherReviewReasonCount > 0
+            ? `うち ${withOtherReviewReasonCount} 件には、確信度以外の要確認の理由（枠からのはみ出し・白紙か際どい など）があります。`
+            : ""
+        }`}
         confirmLabel="採用する"
         disabled={bulkAdoptableAnswers.length === 0 || adoptAttempts.isPending}
         onConfirm={handleBulkAdopt}

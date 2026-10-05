@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 
+import type { ScoreStatusKey } from "@/components/exams/07-score-at-once/ScoringGrid/constants/scoreStatusConfig"
 import { DragSelectionOverlay } from "@/components/exams/07-score-at-once/ScoringGrid/DragSelectionOverlay"
 import { GridCell } from "@/components/exams/07-score-at-once/ScoringGrid/GridCell"
 import { useAutoScroll } from "@/components/exams/07-score-at-once/ScoringGrid/hooks/useAutoScroll"
@@ -71,6 +72,10 @@ interface AnswerGridViewProps {
   ) => void
   /** 生徒答案の下に足す欄（8. 採点確定が採点者ごとの結果を出す） */
   renderCellDetail?: (answer: GridAnswerItem) => ReactNode
+  /** マスの未確定の提案の状態（AI採点モード）。未採点のマスをその色の斜線で塗る */
+  proposalStatusOf?: (answer: GridAnswerItem) => ScoreStatusKey | null
+  /** 採点マークの左隣に置くもの（AI採点モードの AI の判定の札） */
+  renderBeforeStatusMark?: (answer: GridAnswerItem) => ReactNode
   className?: string
 }
 
@@ -96,6 +101,8 @@ export default function AnswerGridView({
   mouseBrush,
   onMouseScoring,
   renderCellDetail,
+  proposalStatusOf,
+  renderBeforeStatusMark,
   className = "",
 }: AnswerGridViewProps) {
   const isMouseMode = scoringOperationMode === "mouse"
@@ -377,6 +384,8 @@ export default function AnswerGridView({
               pageSize={pageSize}
               onMouseDown={onCellMouseDown}
               detail={renderCellDetail?.(answer)}
+              proposalStatus={proposalStatusOf?.(answer) ?? null}
+              beforeStatusMark={renderBeforeStatusMark?.(answer)}
             />
           )
         })}

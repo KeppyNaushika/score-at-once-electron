@@ -23,6 +23,7 @@ import { AiGradingSettingsTab } from "@/app/(app)/settings/components/AiGradingS
 import type {
   AiGradingSettings,
   ProviderConsent,
+  ProviderModelCatalogs,
   ProviderStatus,
 } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
@@ -50,6 +51,7 @@ const DEFAULT_SETTINGS: AiGradingSettings = {
   defaultProvider: "anthropic",
   defaultModels: { anthropic: "claude-opus-5-5", openai: "gpt-5.5" },
   defaultEffort: "medium",
+  defaultMode: "realtime",
   concurrency: 4,
   budgetWarningUsd: null,
   openaiCompatibleBaseUrl: null,
@@ -57,18 +59,21 @@ const DEFAULT_SETTINGS: AiGradingSettings = {
 
 /** main の代わりに状態を持つ偽の口。キーは保存したことだけを覚え、返さない */
 function installFakeAiProviderApi(
-  initialConsents: Partial<Record<GradingProviderId, ProviderConsent>> = {}
+  initialConsents: Partial<Record<GradingProviderId, ProviderConsent>> = {},
+  providersWithApiKey: GradingProviderId[] = []
 ) {
+  let settings: AiGradingSettings = DEFAULT_SETTINGS
+  const modelCatalogs: ProviderModelCatalogs = { anthropic: null, openai: null }
   const statuses: Record<GradingProviderId, ProviderStatus> = {
     anthropic: {
       provider: "anthropic",
-      hasApiKey: false,
+      hasApiKey: providersWithApiKey.includes("anthropic"),
       isEncryptionAvailable: true,
       consent: initialConsents.anthropic ?? null,
     },
     openai: {
       provider: "openai",
-      hasApiKey: false,
+      hasApiKey: providersWithApiKey.includes("openai"),
       isEncryptionAvailable: true,
       consent: initialConsents.openai ?? null,
     },
@@ -78,7 +83,7 @@ function installFakeAiProviderApi(
       { ...statuses.anthropic },
       { ...statuses.openai },
     ]),
-    getSettings: vi.fn(async () => DEFAULT_SETTINGS),
+    getSettings: vi.fn(async () => settings),
     recordConsent: vi.fn(async (provider: GradingProviderId) => {
       const consent: ProviderConsent = {
         userId: CURRENT_USER_ID,
@@ -101,7 +106,32 @@ function installFakeAiProviderApi(
     clearApiKey: vi.fn(async (provider: GradingProviderId) => {
       statuses[provider] = { ...statuses[provider], hasApiKey: false }
     }),
-    updateSettings: vi.fn(async () => DEFAULT_SETTINGS),
+    updateSettings: vi.fn(async (update: Partial<AiGradingSettings>) => {
+      settings = { ...settings, ...update }
+      return settings
+    }),
+    getModelCatalogs: vi.fn(async () => ({ ...modelCatalogs })),
+    fetchModels: vi.fn(async (provider: GradingProviderId) => {
+      const catalog = {
+        fetchedAt: "2026-10-05T03:00:00.000Z",
+        models: [
+          {
+            id: "claude-opus-5-5",
+            displayName: "Claude Opus 5.5",
+            createdAt: null,
+            supportsAdaptiveThinking: true,
+          },
+          {
+            id: "claude-new-6",
+            displayName: "Claude New 6",
+            createdAt: null,
+            supportsAdaptiveThinking: true,
+          },
+        ],
+      }
+      modelCatalogs[provider] = catalog
+      return { outcome: "ok", message: "", catalog }
+    }),
     testConnection: vi.fn(async () => ({ outcome: "ok", message: "" })),
     openTermsLink: vi.fn(async () => undefined),
   }
@@ -124,6 +154,8 @@ async function findProviderSection(providerName: string) {
 describe("AiGradingSettingsTab", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // cmdk は選択中の項目を scrollIntoView する。jsdom は持たない
+    Element.prototype.scrollIntoView = () => {}
   })
 
   it("同意するまでキーの入力欄を出さず、入口と実験的機能の印だけを出す", async () => {
@@ -293,6 +325,98 @@ describe("AiGradingSettingsTab", () => {
       await within(anthropicSection).findByRole("button", {
         name: "同意の手順へ進む",
       })
+    ).toBeTruthy()
+  })
+
+  it("既定値: 一覧を取得して既定のモデルを選び、Effort・処理は切り替えボタンで保存する（拡大率は選ばせない）", async () => {
+    const user = userEvent.setup()
+    const consent: ProviderConsent = {
+      userId: CURRENT_USER_ID,
+      consentVersion: AI_GRADING_CONSENT_VERSION,
+      consentedAt: "2026-10-05T00:00:00.000Z",
+    }
+    const aiProvider = installFakeAiProviderApi(
+      { anthropic: consent, openai: consent },
+      ["anthropic"]
+    )
+    renderTab()
+
+    const defaultsSection = await screen.findByRole("region", {
+      name: "AI採点の既定値",
+    })
+    const anthropicGroup = within(defaultsSection).getByRole("group", {
+      name: "Anthropic のモデル",
+    })
+    expect(
+      within(anthropicGroup).getByText("まだ取得していません")
+    ).toBeTruthy()
+    // キーの無い OpenAI は取得できない
+    const openaiGroup = within(defaultsSection).getByRole("group", {
+      name: "OpenAI のモデル",
+    })
+    expect(
+      within(openaiGroup).getByRole("button", { name: "モデル一覧を取得" })
+    ).toBeDisabled()
+
+    await user.click(
+      within(anthropicGroup).getByRole("button", { name: "モデル一覧を取得" })
+    )
+    expect(aiProvider.fetchModels).toHaveBeenCalledWith("anthropic")
+    expect(await within(anthropicGroup).findByText(/2 件/)).toBeTruthy()
+
+    // 手間は既定のモデル（Opus 5.5）が受け付けるので選べる
+    await user.click(within(defaultsSection).getByRole("radio", { name: "高" }))
+    expect(aiProvider.updateSettings).toHaveBeenLastCalledWith({
+      defaultEffort: "high",
+    })
+
+    // 取得した一覧から選ぶ（名前と id が出る）
+    await user.click(within(anthropicGroup).getByRole("combobox"))
+    await user.click(
+      await screen.findByRole("option", {
+        name: /Claude New 6（claude-new-6）/,
+      })
+    )
+    expect(aiProvider.updateSettings).toHaveBeenCalledWith({
+      defaultModels: { anthropic: "claude-new-6", openai: "gpt-5.5" },
+    })
+
+    // 一覧に無い id も打って使える
+    await user.click(within(anthropicGroup).getByRole("combobox"))
+    await user.type(
+      await screen.findByPlaceholderText("名前か id で絞り込む・id を打つ"),
+      "claude-custom-x"
+    )
+    await user.click(
+      await screen.findByRole("option", { name: /claude-custom-x.*を使う/ })
+    )
+    expect(aiProvider.updateSettings).toHaveBeenLastCalledWith({
+      defaultModels: { anthropic: "claude-custom-x", openai: "gpt-5.5" },
+    })
+
+    // 既定の送信先は、キーのある事業者（Anthropic）を選んだ状態
+    expect(
+      within(defaultsSection).getByLabelText("既定の送信先")
+    ).toHaveTextContent("Anthropic")
+
+    await user.click(
+      within(defaultsSection).getByRole("radio", { name: "バッチ" })
+    )
+    expect(aiProvider.updateSettings).toHaveBeenLastCalledWith({
+      defaultMode: "batch",
+    })
+    // 拡大率は選ばせない（常に原寸）
+    expect(
+      within(defaultsSection).queryByRole("radiogroup", { name: "拡大率" })
+    ).not.toBeInTheDocument()
+    // 一覧にも許可リストにも無いモデルは手間を受け付けるか分からないので、選ばせない
+    await waitFor(() =>
+      expect(
+        within(defaultsSection).getByRole("radio", { name: "高" })
+      ).toBeDisabled()
+    )
+    expect(
+      within(defaultsSection).getByText(/このモデルは Effort を受け付けません/)
     ).toBeTruthy()
   })
 })

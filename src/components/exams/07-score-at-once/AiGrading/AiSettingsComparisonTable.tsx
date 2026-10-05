@@ -78,7 +78,7 @@ export function AiSettingsComparisonTable({
                   settingsAgreement.comparedCount
                 )}
               </td>
-              <td className="text-right font-mono">
+              <td className="text-right tabular-nums">
                 {(
                   settingsAgreement.inputTokens + settingsAgreement.outputTokens
                 ).toLocaleString()}

@@ -25,6 +25,10 @@ export function createAiProviderApi() {
 
       testConnection: bind("aiProvider:testConnection"),
 
+      getModelCatalogs: bind("aiProvider:getModelCatalogs"),
+
+      fetchModels: bind("aiProvider:fetchModels"),
+
       openTermsLink: bind("aiProvider:openTermsLink"),
     },
   }

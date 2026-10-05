@@ -110,44 +110,70 @@ describe("要確認の理由", () => {
     ).toEqual(["refused"])
   })
 
-  it("まとめて採用できるのは、成功・確信度 high・理由なし・未採点・未採用のものだけ", () => {
-    const cleanAttempt = makeAttemptWithRun({ examStudentId: "s" })
+  it("まとめて採用は、成功・確信度が下限以上・未採点・未採用のものだけ", () => {
+    const highAttempt = makeAttemptWithRun({ examStudentId: "s" })
     const base = {
-      displayedAttempt: cleanAttempt,
+      displayedAttempt: highAttempt,
       questionScore: undefined,
       inkMeasurement: makeInk(),
       points: POINTS,
     }
-    expect(isBulkAdoptable(base)).toBe(true)
+    expect(isBulkAdoptable(base, "high")).toBe(true)
+    // 採点済み・採用済みは、下限によらず外す
     expect(
-      isBulkAdoptable({
-        ...base,
-        questionScore: makeQuestionScore({ examStudentId: "s" }),
-      })
+      isBulkAdoptable(
+        { ...base, questionScore: makeQuestionScore({ examStudentId: "s" }) },
+        "low"
+      )
     ).toBe(false)
     expect(
-      isBulkAdoptable({
-        ...base,
-        inkMeasurement: makeInk({ overflowsFrame: true }),
-      })
+      isBulkAdoptable(
+        {
+          ...base,
+          displayedAttempt: makeAttemptWithRun({
+            examStudentId: "s",
+            adoptedAt: new Date(),
+          }),
+        },
+        "low"
+      )
     ).toBe(false)
+    // 確信度以外の理由（はみ出し）では外さない
     expect(
-      isBulkAdoptable({
-        ...base,
-        displayedAttempt: makeAttemptWithRun({
-          examStudentId: "s",
-          confidence: "medium",
-        }),
-      })
-    ).toBe(false)
+      isBulkAdoptable(
+        { ...base, inkMeasurement: makeInk({ overflowsFrame: true }) },
+        "high"
+      )
+    ).toBe(true)
+  })
+
+  it("確信度の下限: 高のみ / 中以上 / すべて", () => {
+    const withConfidence = (confidence: string) => ({
+      displayedAttempt: makeAttemptWithRun({ examStudentId: "s", confidence }),
+      questionScore: undefined,
+      inkMeasurement: makeInk(),
+      points: POINTS,
+    })
+    expect(isBulkAdoptable(withConfidence("medium"), "high")).toBe(false)
+    expect(isBulkAdoptable(withConfidence("medium"), "medium")).toBe(true)
+    expect(isBulkAdoptable(withConfidence("low"), "medium")).toBe(false)
+    expect(isBulkAdoptable(withConfidence("low"), "low")).toBe(true)
+  })
+
+  it("失敗した試行は「すべて」でも採用しない", () => {
     expect(
-      isBulkAdoptable({
-        ...base,
-        displayedAttempt: makeAttemptWithRun({
-          examStudentId: "s",
-          adoptedAt: new Date(),
-        }),
-      })
+      isBulkAdoptable(
+        {
+          displayedAttempt: makeAttemptWithRun({
+            examStudentId: "s",
+            state: "errored",
+          }),
+          questionScore: undefined,
+          inkMeasurement: makeInk(),
+          points: POINTS,
+        },
+        "low"
+      )
     ).toBe(false)
   })
 })

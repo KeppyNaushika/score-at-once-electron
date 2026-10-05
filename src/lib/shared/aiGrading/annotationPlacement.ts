@@ -8,7 +8,12 @@
  * 3. 占有グリッドを1セル膨らませ、累積和の表で各候補を全位置について O(1) で判定する
  * 4. 置ける位置のうち、いちばん下 → 左寄り → 行数の少ないもの を選ぶ
  *    （書き終わりの下に置く。横方向の空きも使う）
- * 5. どこにも収まらなければ、重なるインクが最少の位置に置き `overlapsInk: true` を返す
+ * 5. 収まらなければ文字を小さくして（`MINIMUM_FONT_SIZE_MM` まで 0.5mm 刻み）1〜4 をやり直す。
+ *    収まる中でいちばん大きい文字を採る
+ * 6. 最小の文字でも収まらなければ、枠の中に入る箱のうち重なるインクが最少の位置に置き
+ *    `overlapsInk: true` を返す。枠に入る箱すら無ければ（注釈文が長すぎる）、最小の文字・
+ *    全幅で折り返して枠の左上に置き、`exceedsRegion: true` を返す。
+ *    枠の外へのはみ出しは「重なり」より悪いものとして扱う（はみ出した分は他の設問に掛かる）
  *
  * 描画側（`textConversionUtils.ts` の convertTextToSvg）は自分では折り返さず、
  * `\n` で行に分け、1行ごとの高さ＋固定 5px の間隔で縦に並べる。そのためここで改行を入れる。
@@ -22,6 +27,12 @@ import type { AnswerInkGrid } from "./answerInkGrid"
  * 描画結果と照らして校正する（定数はこの1つだけにしておく）
  */
 export const LINE_PITCH_RATIO = 1.4
+
+/** 文字を縮めるときの下限（mm）。これより小さいと印刷して読めない */
+export const MINIMUM_FONT_SIZE_MM = 2.5
+
+/** 文字を縮める刻み（mm） */
+const FONT_SIZE_STEP_MM = 0.5
 
 /** 半角文字の表示幅（全角を1とした比） */
 const HALF_WIDTH_CHARACTER_WIDTH = 0.55
@@ -50,7 +61,7 @@ interface PaperDimensionsMm {
 interface AnnotationPlacementInput {
   /** 注釈文（改行なし。含まれていても取り除く） */
   annotationText: string
-  /** 文字の大きさ（mm） */
+  /** 文字の大きさ（mm）。収まらなければ `MINIMUM_FONT_SIZE_MM` まで縮める */
   fontSizeMm: number
   /** 用紙の寸法（mm）。`getOrientedPaperDimensions` で向きを合わせたもの */
   paperDimensions: PaperDimensionsMm
@@ -71,6 +82,8 @@ export interface AnnotationPlacement {
   lineCount: number
   /** どこにも収まらず、手書きに重ねて置いた */
   overlapsInk: boolean
+  /** 最小の文字でも枠に入りきらず、枠の外へはみ出す（注釈文を短くする必要がある） */
+  exceedsRegion: boolean
 }
 
 /** 折り返した注釈文の箱の候補 */
@@ -295,43 +308,75 @@ function comparePositions(
   )
 }
 
-/**
- * 注釈を置く位置と、改行を入れた注釈文を決める。
- * 注釈文が空（`$` と改行を除いて何も残らない）なら null。
- */
-export function placeAnnotation(
-  input: AnnotationPlacementInput
-): AnnotationPlacement | null {
-  const { fontSizeMm, paperDimensions, inkGrid } = input
-  const text = sanitizeAnnotationText(input.annotationText)
-  if (text === "") return null
-
-  const candidates = buildWrappedCandidates(
-    text,
-    fontSizeMm,
-    paperDimensions,
-    inkGrid
+/** 大きい順に試す文字の大きさ（mm）。指定が下限より小さければ指定の大きさだけ */
+function listFontSizesToTry(preferredFontSizeMm: number): number[] {
+  if (preferredFontSizeMm <= MINIMUM_FONT_SIZE_MM) return [preferredFontSizeMm]
+  const stepCount = Math.floor(
+    (preferredFontSizeMm - MINIMUM_FONT_SIZE_MM) / FONT_SIZE_STEP_MM +
+      ROUNDING_TOLERANCE
   )
-  const summedAreaTable = buildDilatedSummedAreaTable(inkGrid)
+  const fontSizes = Array.from(
+    { length: stepCount + 1 },
+    (_, stepIndex) => preferredFontSizeMm - stepIndex * FONT_SIZE_STEP_MM
+  )
+  return fontSizes.at(-1) === MINIMUM_FONT_SIZE_MM
+    ? fontSizes
+    : [...fontSizes, MINIMUM_FONT_SIZE_MM]
+}
+
+/** ある文字の大きさで、手書きに重ならず枠に収まる最良の位置。無ければ null */
+function findBestFittingPosition(
+  candidates: readonly WrappedCandidate[],
+  inkGrid: AnswerInkGrid,
+  summedAreaTable: readonly number[]
+): CandidatePosition | null {
   const tableWidth = inkGrid.columnCount + 1
-
   let bestFittingPosition: CandidatePosition | null = null
-  let leastOverlappingPosition: CandidatePosition | null = null
-
-  for (const candidate of candidates) {
-    // 枠より大きい箱は、重なり最少の位置探しのときだけ枠に収まる大きさで数える
-    const columnSpan = Math.min(candidate.columnSpan, inkGrid.columnCount)
-    const rowSpan = Math.min(candidate.rowSpan, inkGrid.rowCount)
-    const isInsideGrid =
-      columnSpan === candidate.columnSpan && rowSpan === candidate.rowSpan
-
-    for (let row = 0; row + rowSpan <= inkGrid.rowCount; row += 1) {
+  candidates.forEach((candidate) => {
+    for (let row = 0; row + candidate.rowSpan <= inkGrid.rowCount; row += 1) {
       for (
         let column = 0;
-        column + columnSpan <= inkGrid.columnCount;
+        column + candidate.columnSpan <= inkGrid.columnCount;
         column += 1
       ) {
-        const position: CandidatePosition = {
+        const overlappedCellCount = countOccupiedCells(
+          summedAreaTable,
+          tableWidth,
+          column,
+          row,
+          candidate.columnSpan,
+          candidate.rowSpan
+        )
+        if (overlappedCellCount !== 0) continue
+        const position = { candidate, column, row, overlappedCellCount }
+        if (
+          !bestFittingPosition ||
+          comparePositions(position, bestFittingPosition) < 0
+        ) {
+          bestFittingPosition = position
+        }
+      }
+    }
+  })
+  return bestFittingPosition
+}
+
+/** 枠の中に入る箱のうち、重なるインクが最少の位置。枠に入る箱が無ければ null */
+function findLeastOverlappingPosition(
+  candidates: readonly WrappedCandidate[],
+  inkGrid: AnswerInkGrid,
+  summedAreaTable: readonly number[]
+): CandidatePosition | null {
+  const tableWidth = inkGrid.columnCount + 1
+  let leastOverlappingPosition: CandidatePosition | null = null
+  candidates.forEach((candidate) => {
+    for (let row = 0; row + candidate.rowSpan <= inkGrid.rowCount; row += 1) {
+      for (
+        let column = 0;
+        column + candidate.columnSpan <= inkGrid.columnCount;
+        column += 1
+      ) {
+        const position = {
           candidate,
           column,
           row,
@@ -340,20 +385,10 @@ export function placeAnnotation(
             tableWidth,
             column,
             row,
-            columnSpan,
-            rowSpan
+            candidate.columnSpan,
+            candidate.rowSpan
           ),
         }
-
-        if (isInsideGrid && position.overlappedCellCount === 0) {
-          if (
-            !bestFittingPosition ||
-            comparePositions(position, bestFittingPosition) < 0
-          ) {
-            bestFittingPosition = position
-          }
-        }
-
         if (
           !leastOverlappingPosition ||
           position.overlappedCellCount <
@@ -366,17 +401,125 @@ export function placeAnnotation(
         }
       }
     }
-  }
+  })
+  return leastOverlappingPosition
+}
 
-  const chosenPosition = bestFittingPosition ?? leastOverlappingPosition
-  if (!chosenPosition) return null
-
+function toPlacement(
+  position: CandidatePosition,
+  inkGrid: AnswerInkGrid,
+  fontSizeMm: number,
+  flags: { overlapsInk: boolean; exceedsRegion: boolean }
+): AnnotationPlacement {
   return {
-    x: inkGrid.originX + chosenPosition.column * inkGrid.cellWidth,
-    y: inkGrid.originY + chosenPosition.row * inkGrid.cellHeight,
-    text: chosenPosition.candidate.lines.join("\n"),
+    x: inkGrid.originX + position.column * inkGrid.cellWidth,
+    y: inkGrid.originY + position.row * inkGrid.cellHeight,
+    text: position.candidate.lines.join("\n"),
     fontSize: fontSizeMm,
-    lineCount: chosenPosition.candidate.lines.length,
-    overlapsInk: bestFittingPosition === null,
+    lineCount: position.candidate.lines.length,
+    ...flags,
   }
+}
+
+/**
+ * 注釈を置く位置・文字の大きさと、改行を入れた注釈文を決める。
+ * 注釈文が空（`$` と改行を除いて何も残らない）なら null。
+ */
+export function placeAnnotation(
+  input: AnnotationPlacementInput
+): AnnotationPlacement | null {
+  const { paperDimensions, inkGrid } = input
+  const text = sanitizeAnnotationText(input.annotationText)
+  if (text === "") return null
+
+  const summedAreaTable = buildDilatedSummedAreaTable(inkGrid)
+  const fontSizes = listFontSizesToTry(input.fontSizeMm)
+
+  for (const fontSizeMm of fontSizes) {
+    const candidates = buildWrappedCandidates(
+      text,
+      fontSizeMm,
+      paperDimensions,
+      inkGrid
+    )
+    const fittingPosition = findBestFittingPosition(
+      candidates,
+      inkGrid,
+      summedAreaTable
+    )
+    if (fittingPosition) {
+      return toPlacement(fittingPosition, inkGrid, fontSizeMm, {
+        overlapsInk: false,
+        exceedsRegion: false,
+      })
+    }
+  }
+
+  // 最小の文字でも空きに収まらない。枠に入る箱のうち重なり最少の位置に置く
+  const smallestFontSizeMm = fontSizes[fontSizes.length - 1]
+  const smallestCandidates = buildWrappedCandidates(
+    text,
+    smallestFontSizeMm,
+    paperDimensions,
+    inkGrid
+  )
+  const leastOverlappingPosition = findLeastOverlappingPosition(
+    smallestCandidates,
+    inkGrid,
+    summedAreaTable
+  )
+  if (leastOverlappingPosition) {
+    return toPlacement(leastOverlappingPosition, inkGrid, smallestFontSizeMm, {
+      overlapsInk: true,
+      exceedsRegion: false,
+    })
+  }
+
+  // 枠に入る箱すら無い（注釈文が長すぎる）。全幅で折り返した箱を枠の左上に置く
+  return toPlacement(
+    {
+      candidate: smallestCandidates[0],
+      column: 0,
+      row: 0,
+      overlappedCellCount: 0,
+    },
+    inkGrid,
+    smallestFontSizeMm,
+    { overlapsInk: true, exceedsRegion: true }
+  )
+}
+
+/** 字数の目安を出すときに想定する文字の大きさ（mm） */
+const CHARACTER_LIMIT_FONT_SIZE_MM = 4
+
+/**
+ * 解答欄の面積のうち、朱書きに使えるとみなす割合。手書きが占める分と、箱が長方形で
+ * 隙間に詰められない分を見込む
+ */
+const ANNOTATION_USABLE_AREA_RATIO = 0.35
+
+/** 字数の目安の下限・上限（全角） */
+const ANNOTATION_CHARACTER_LIMIT_RANGE = { minimum: 10, maximum: 80 } as const
+
+/**
+ * 解答欄の大きさから、朱書きの字数の目安（全角）を出す。VLM に「◯字以内」と伝えるのに使う。
+ *
+ * 面積（mm²）から求めるので、用紙の向きによらない（縦横を入れ替えても面積は同じ）。
+ */
+export function estimateAnnotationCharacterLimit(
+  regionWidthMm: number,
+  regionHeightMm: number
+): number {
+  const characterArea =
+    CHARACTER_LIMIT_FONT_SIZE_MM *
+    CHARACTER_LIMIT_FONT_SIZE_MM *
+    LINE_PITCH_RATIO
+  const estimated = Math.floor(
+    (regionWidthMm * regionHeightMm * ANNOTATION_USABLE_AREA_RATIO) /
+      characterArea
+  )
+  return Math.min(
+    ANNOTATION_CHARACTER_LIMIT_RANGE.maximum,
+    Math.max(ANNOTATION_CHARACTER_LIMIT_RANGE.minimum, estimated)
+  )
 }

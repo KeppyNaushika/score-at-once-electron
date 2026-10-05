@@ -24,6 +24,13 @@ export const { is: isAiGradingRunMode, to: toAiGradingRunMode } =
   defineStringUnion(AI_GRADING_RUN_MODES, "realtime")
 
 /**
+ * 送る画像の拡大率。常に原寸（1）で送り、利用者には選ばせない。
+ * 拡大しても画像の情報は増えない。縮小は読み取りへの影響を目で確かめてから入れる。
+ * run の `imageScale` 列と main の切り出しの引数は、そのときのために残している
+ */
+export const AI_GRADING_SENDING_IMAGE_SCALE = 1
+
+/**
  * 実行の状態。queued → submitting → in_progress → ended が正常の流れで、
  * canceled / failed / expired は途中で終わったもの。
  * 外れ値は failed に倒す（知らない状態の実行を「まだ動いている」と見せないため）

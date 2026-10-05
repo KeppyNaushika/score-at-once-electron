@@ -17,7 +17,10 @@ import {
   findAiGradingTermsLink,
 } from "../../src/lib/shared/aiGrading/consentText"
 import { electronFetch } from "../lib/aiGrading/electronFetch"
-import { testProviderConnection } from "../lib/aiGrading/providerConnectionTest"
+import {
+  fetchProviderModels,
+  testProviderConnection,
+} from "../lib/aiGrading/providerConnectionTest"
 import {
   type AiGradingSettings,
   getProviderCredentialStore,
@@ -118,6 +121,23 @@ export const aiProviderHandlers = {
       store: getProviderCredentialStore(),
       createProvider: createGradingProvider,
       fetch: electronFetch,
+    }),
+
+  /** 事業者ごとの、取得しておいたモデルの一覧（まだ取得していなければ null） */
+  "aiProvider:getModelCatalogs": async () =>
+    getProviderCredentialStore().getModelCatalogs(),
+
+  /**
+   * 保存したキーで事業者からモデルの一覧を取得し、保存して返す。
+   * 今の利用者の今の同意とキーが要る。結果は接続テストと同じく種類で返し、キーは返さない
+   */
+  "aiProvider:fetchModels": async (provider: GradingProviderId) =>
+    fetchProviderModels(assertProviderId(provider), {
+      store: getProviderCredentialStore(),
+      createProvider: createGradingProvider,
+      fetch: electronFetch,
+      currentUserId: getCurrentActorUserId(),
+      consentVersion: AI_GRADING_CONSENT_VERSION,
     }),
 
   /**

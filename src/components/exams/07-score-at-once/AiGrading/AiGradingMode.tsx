@@ -9,6 +9,7 @@ import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
 
 import { AiGradingWorkspace } from "./AiGradingWorkspace"
+import type { AiGridDisplaySettings } from "./types"
 
 /** 採点画面の設問ナビゲーターに渡すものと同じ */
 type QuestionNavigatorProps = ComponentProps<typeof QuestionNavigator>
@@ -30,6 +31,8 @@ interface AiGradingModeProps {
   pageSize: string
   /** 同意して API キーを保存した事業者 */
   unlockedProviders: GradingProviderId[]
+  /** 一覧の表示の設定（一覧表示と同じもの） */
+  display: AiGridDisplaySettings
 }
 
 /** 採点行がまだ届いていない設問の空の配列（毎回作り直さない） */
@@ -38,7 +41,7 @@ const NO_QUESTION_SCORES: QuestionScoreRow[] = []
 /**
  * 07 の「AI採点」モード（実験的機能。docs/vlm-grading-design.md §10）。
  *
- * 左に設問（採点画面と同じナビゲーター）、右に設問ごとの作業場。設問を変えたら
+ * 左に設問（採点画面と同じナビゲーター）、右に設問ごとの作業場（中央は一覧表示と同じ一覧）。設問を変えたら
  * 作業場を作り直す（選んでいるプロンプト・答案・試行は設問ごとのもの）。
  */
 export function AiGradingMode({
@@ -55,6 +58,7 @@ export function AiGradingMode({
   questionScoresByCropRegionId,
   pageSize,
   unlockedProviders,
+  display,
 }: AiGradingModeProps) {
   return (
     <div className="flex h-full min-h-0">
@@ -71,6 +75,7 @@ export function AiGradingMode({
           }
           pageSize={pageSize}
           unlockedProviders={unlockedProviders}
+          display={display}
           questionNavigator={
             <QuestionNavigator
               questionRegions={cropRegions}
