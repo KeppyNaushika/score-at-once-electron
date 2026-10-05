@@ -67,7 +67,7 @@ export const inviteExamMemberMutation = (examId: string) =>
   })
 
 /**
- * 参加者の役割を変える（採点者 ⇄ オーナー）。操作者と権限は main が決める。
+ * 参加者の役割を変える（オーナー・採点者・閲覧者）。操作者と権限は main が決める。
  *
  * 役割は試験のあちこちの入口（招待・担当の割り当て・採点の確定）を左右するので、
  * その試験に紐づく取得をまとめて取り直す。自分を採点者へ戻したときに、
@@ -83,6 +83,41 @@ export const changeExamMemberRoleMutation = (examId: string) =>
     meta: {
       invalidates: [scopeKeys.exam(examId)],
       errorMessage: "参加者の役割を変更できませんでした",
+    },
+  })
+
+/**
+ * 採点者が「9. 結果出力」を使えるかを変える。操作者と権限は main が決める。
+ * 入れる段は参加者の取得から決まるので、参加者を取り直す。
+ */
+export const setExamMemberExportPermissionMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (input: { userId: string; canExportResults: boolean }) =>
+      window.electronAPI.userExam.setExportPermission(
+        examId,
+        input.userId,
+        input.canExportResults
+      ),
+    meta: {
+      invalidates: [examMembersQuery(examId).queryKey],
+      errorMessage: "結果出力の許可を変更できませんでした",
+    },
+  })
+
+/**
+ * 匿名採点を試験として固定する・外す。操作者と権限は main が決める。
+ * 採点画面・概要・メンバー管理が試験の行から読むので、試験に紐づく取得をまとめて取り直す。
+ */
+export const setExamAnonymousScoringEnforcedMutation = (examId: string) =>
+  defineMutation({
+    mutationFn: (anonymousScoringEnforced: boolean) =>
+      window.electronAPI.userExam.setAnonymousScoringEnforced(
+        examId,
+        anonymousScoringEnforced
+      ),
+    meta: {
+      invalidates: [scopeKeys.exam(examId)],
+      errorMessage: "匿名採点の設定を変更できませんでした",
     },
   })
 

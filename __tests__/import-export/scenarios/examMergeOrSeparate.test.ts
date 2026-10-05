@@ -485,6 +485,7 @@ describe("examMergeOrSeparate", () => {
     // 列が増減したらここが落ちる。増えた列を LWW の対象にするか決めること
     expect(scalarFields.sort()).toEqual(
       [
+        "anonymousScoringEnforced",
         "createdAt",
         "description",
         "referenceDate",

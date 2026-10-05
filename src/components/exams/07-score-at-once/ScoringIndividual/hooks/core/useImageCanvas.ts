@@ -52,7 +52,7 @@ export function useImageCanvas({
   } = useCanvasRefs()
 
   // 画像読み込み
-  const { imageLoaded, loadedImages } = useImageLoader({
+  const { imageLoaded, loadedImages, loadedExamPageIds } = useImageLoader({
     currentScoringData,
     studentAnswerImages,
     showMultiplePages,
@@ -74,6 +74,7 @@ export function useImageCanvas({
     scoringMarkImagesRef,
     imageLoaded,
     loadedImages,
+    loadedExamPageIds,
     currentScoringData,
     currentCropRegion,
     zoom,

@@ -1,6 +1,8 @@
 import { useParams } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
+import { toast } from "sonner"
 
+import { useScoringAnonymity } from "@/components/exams/07-score-at-once/anonymity/ScoringAnonymityContext"
 import { useAnswerSelection } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerSelection"
 import { useAnswerWhiteness } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerWhiteness"
 import { useAssignedCropRegions } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAssignedCropRegions"
@@ -76,13 +78,41 @@ export function useScoringScreen({
     userId: currentUser.id,
     showAll: showAllAssignments,
   })
-  const studentAnswerImages = useMemo(
-    () =>
-      loadedStudentAnswerImages.filter((answerImage) =>
-        isVisibleExamStudent(answerImage.examStudentId)
-      ),
-    [loadedStudentAnswerImages, isVisibleExamStudent]
-  )
+  /**
+   * 匿名採点（docs/scoring-scope-and-permissions-design.md §3-5）。名前を仮の名前に、
+   * 並び（customOrder）を名簿と関係ない順に置き換えた答案を、ここから先へ渡す。
+   * 一覧・個別・AI 採点のどれも名前と並びをこの行から取るので、ここ1か所で効く。
+   * 書き込みは id で行うので、置き換えた名前や並びが DB へ戻ることはない
+   */
+  const { isAnonymous, isEnforcedForMe, pseudonymOf, anonymousOrderOf } =
+    useScoringAnonymity()
+  const studentAnswerImages = useMemo(() => {
+    const assignedAnswerImages = loadedStudentAnswerImages.filter(
+      (answerImage) => isVisibleExamStudent(answerImage.examStudentId)
+    )
+    if (!isAnonymous) return assignedAnswerImages
+    return assignedAnswerImages.map((answerImage) => ({
+      ...answerImage,
+      examStudent: {
+        ...answerImage.examStudent,
+        customOrder: anonymousOrderOf(answerImage.examStudentId),
+        student: {
+          ...answerImage.examStudent.student,
+          studentNumber: "",
+          lastName: pseudonymOf(answerImage.examStudentId),
+          firstName: "",
+          lastNameKana: "",
+          firstNameKana: "",
+        },
+      },
+    }))
+  }, [
+    loadedStudentAnswerImages,
+    isVisibleExamStudent,
+    isAnonymous,
+    pseudonymOf,
+    anonymousOrderOf,
+  ])
 
   /** 設定管理フック */
   const { scoringSettings, clickScoringConfig, setClickAction } =
@@ -90,7 +120,7 @@ export function useScoringScreen({
   const {
     itemsPerLine,
     autoScroll,
-    showStudentNames,
+    showStudentNames: preferredShowStudentNames,
     layoutDirection,
     answerSortOrder,
     expandMargin,
@@ -101,7 +131,7 @@ export function useScoringScreen({
     scoringBehavior,
     setItemsPerLine,
     setAutoScroll,
-    setShowStudentNames,
+    setShowStudentNames: setPreferredShowStudentNames,
     setLayoutDirection,
     setAnswerSortOrder,
     setExpandMargin,
@@ -111,6 +141,22 @@ export function useScoringScreen({
     setMasterAnswerKeyBehavior,
     setScoringBehavior,
   } = scoringSettings
+
+  /** 名前を出すか。試験の固定が効いていれば出さない（自分の設定より優先） */
+  const showStudentNames = preferredShowStudentNames && !isEnforcedForMe
+  /** 名前の表示の切り替え。試験の固定が効いているあいだは自分では解除できない */
+  const setShowStudentNames = useCallback(
+    (show: boolean) => {
+      if (isEnforcedForMe) {
+        toast.info(
+          "この試験では匿名採点が固定されています。名前を出せるのは、オーナーが固定を外したときだけです"
+        )
+        return
+      }
+      setPreferredShowStudentNames(show)
+    },
+    [isEnforcedForMe, setPreferredShowStudentNames]
+  )
 
   const [questionChangeVersion, setQuestionChangeVersion] = useState(0)
 
@@ -157,6 +203,7 @@ export function useScoringScreen({
   const {
     selectableCropRegions,
     memberCount,
+    canDecideScores,
     isFiltered: isQuestionSetFiltered,
     assignedCropRegionCount,
   } = useAssignedCropRegions({
@@ -240,7 +287,8 @@ export function useScoringScreen({
   const { showDecisionEntry, pendingDecisionCount } = useDecisionEntry(
     examId,
     currentUser.id,
-    memberCount
+    memberCount,
+    canDecideScores
   )
 
   /** フィルタリング管理hook */

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 
+import { useScoringAnonymity } from "@/components/exams/07-score-at-once/anonymity/ScoringAnonymityContext"
 import { hatchedFill } from "@/components/exams/07-score-at-once/ScoringGrid/constants/proposalFill"
 import {
   getDynamicScoreStatusConfig,
@@ -73,6 +74,11 @@ export function GridCell({
   const Icon = config.icon
   const isMaster =
     answer.examStudentId === "MASTER" || answer.studentName === "模範解答"
+  // 匿名採点中は生徒の答案の氏名欄を隠す（模範解答には隠すものが無い）
+  const { nameRegionsByExamPageId } = useScoringAnonymity()
+  const nameRegions = isMaster
+    ? undefined
+    : nameRegionsByExamPageId.get(answer.questionRegion.examPageId)
 
   // 基本のセルクラス
   const cellClasses = ["flex shrink-0 flex-col gap-1 p-2 border-2"]
@@ -167,6 +173,7 @@ export function GridCell({
         expandMargin={expandMargin}
         annotations={annotations}
         pageSize={pageSize}
+        nameRegions={nameRegions}
       />
 
       {/* 学生情報と採点状況 */}

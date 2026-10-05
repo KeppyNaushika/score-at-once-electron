@@ -1,4 +1,6 @@
-import type { InviteMemberOptions, UserRole } from "../lib/prisma/userExam"
+import type { ExamRole } from "@/lib/shared/examRoles"
+
+import type { InviteMemberOptions } from "../lib/prisma/userExam"
 import {
   changeExamMemberRole,
   getExamMembers,
@@ -6,6 +8,8 @@ import {
   isExamOwner,
   removeExamMember,
   searchUsersForInvitation,
+  setExamAnonymousScoringEnforced,
+  setExamMemberExportPermission,
 } from "../lib/prisma/userExam"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
@@ -39,9 +43,29 @@ export const userExamHandlers = {
   "user-exam:change-role": async (
     examId: string,
     userId: string,
-    role: UserRole
+    role: ExamRole
   ) => {
     return await changeExamMemberRole(examId, userId, role)
+  },
+
+  // 採点者が結果出力を使えるかを変える（操作者と権限は main が判定する）
+  "user-exam:set-export-permission": async (
+    examId: string,
+    userId: string,
+    canExportResults: boolean
+  ) => {
+    return await setExamMemberExportPermission(examId, userId, canExportResults)
+  },
+
+  // 匿名採点を試験として固定する・外す（操作者と権限は main が判定する）
+  "user-exam:set-anonymous-scoring-enforced": async (
+    examId: string,
+    anonymousScoringEnforced: boolean
+  ) => {
+    return await setExamAnonymousScoringEnforced(
+      examId,
+      anonymousScoringEnforced
+    )
   },
 
   // Search users for invitation

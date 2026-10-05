@@ -96,4 +96,6 @@ export interface CanvasRefs {
 export interface ImageLoaderReturn {
   imageLoaded: boolean
   loadedImages: HTMLImageElement[]
+  /** loadedImages と同じ並びの、各画像のページ（ExamPage.id） */
+  loadedExamPageIds: string[]
 }

@@ -16,6 +16,7 @@ import {
 } from "@/components/common/EntityOverviewPage"
 import DeleteExamModal from "@/components/exams/shared/DeleteExamModal"
 import { MemberInviteDialog } from "@/components/exams/shared/MemberInviteDialog"
+import { useExamAccess } from "@/components/exams/shared/useExamAccess"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -28,7 +29,6 @@ import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useExamDetail } from "@/hooks/useExamDetail"
 import { getExamProgress } from "@/lib/examStatus"
-import { examWorkflowPhases, examWorkflowTabs } from "@/lib/workflowTabs"
 import { setExamTagsMutation } from "@/queries/tag"
 
 export default function ExamDetailPage() {
@@ -41,6 +41,8 @@ export default function ExamDetailPage() {
   const [showUnifiedExportDialog, setShowUnifiedExportDialog] = useState(false)
   const [showMemberDialog, setShowMemberDialog] = useState(false)
   const setExamTags = useMutation(setExamTagsMutation(examId))
+  // 段カードは入れる段だけ。試験の名前・タグ・削除・書き出しはオーナーだけ（§3-3）
+  const access = useExamAccess(examId)
 
   const {
     exam,
@@ -117,13 +119,15 @@ export default function ExamDetailPage() {
           description: exam.description ?? "",
         }}
         onCommitBasics={handleCommitBasics}
+        canEdit={access.canManageExam}
+        editDisabledReason="試験の名前・試験日・説明・タグを変えられるのは、この試験のオーナーだけです"
         tags={exam.examTags.map((examTag) => examTag.tag)}
         isReloadingTags={isReloading}
         onReplaceTags={handleReplaceTags}
         stats={stats}
-        tabs={examWorkflowTabs}
+        tabs={access.tabs}
         entityHref={`/exams/${examId}`}
-        phases={examWorkflowPhases}
+        phases={access.phases}
         stepCompletion={{
           "01-upload": progress.hasImages,
           "02-template": progress.hasLayout,
@@ -154,30 +158,35 @@ export default function ExamDetailPage() {
               <Users className="mr-2 h-4 w-4" />
               メンバー
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" aria-label="その他の操作">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => setShowUnifiedExportDialog(true)}
-                >
-                  <FileArchive />
-                  .sao 書き出し
-                </DropdownMenuItem>
-                <AuditLogMenuItem scopeId={examId} scopeLabel={exam.examName} />
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => setShowDeleteModal(true)}
-                  variant="destructive"
-                >
-                  <Trash2 />
-                  試験を削除
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {access.canManageExam && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" aria-label="その他の操作">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => setShowUnifiedExportDialog(true)}
+                  >
+                    <FileArchive />
+                    .sao 書き出し
+                  </DropdownMenuItem>
+                  <AuditLogMenuItem
+                    scopeId={examId}
+                    scopeLabel={exam.examName}
+                  />
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowDeleteModal(true)}
+                    variant="destructive"
+                  >
+                    <Trash2 />
+                    試験を削除
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </>
         }
       />

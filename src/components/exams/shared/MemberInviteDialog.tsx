@@ -17,6 +17,14 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import {
   Table,
   TableBody,
   TableCell,
@@ -24,7 +32,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import type { UserRole } from "@/electron-src/lib/prisma/userExam"
+import {
+  EXAM_ROLE_DESCRIPTIONS,
+  EXAM_ROLE_LABELS,
+  EXAM_ROLES,
+  type ExamRole,
+  parseExamRole,
+} from "@/lib/shared/examRoles"
 import {
   type ExamMemberRow,
   examMembersQuery,
@@ -33,9 +47,11 @@ import {
   type ExamUserSearchRow,
   inviteExamMemberMutation,
   removeExamMemberMutation,
+  setExamMemberExportPermissionMutation,
 } from "@/queries/userExam"
 
-import { MemberRoleButton } from "./MemberRoleButton"
+import { AnonymousScoringSection } from "./AnonymousScoringSection"
+import { MemberRoleSelect } from "./MemberRoleSelect"
 
 interface MemberInviteDialogProps {
   isOpen: boolean
@@ -46,11 +62,12 @@ interface MemberInviteDialogProps {
 }
 
 /**
- * 試験メンバー管理ダイアログ
+ * 試験メンバー管理ダイアログ（docs/scoring-scope-and-permissions-design.md §3-3）
  * - 現在のメンバー一覧表示
- * - ユーザー検索・招待
- * - 役割の変更（採点者 ⇄ オーナー。オーナーを別の教員へ移すのもここ）
- * - メンバー削除（GRADERのみ）
+ * - ユーザー検索・招待（招待するときの役割を選ぶ）
+ * - 役割の変更（オーナー・採点者・閲覧者。オーナーを別の教員へ移すのもここ）
+ * - 採点者ごとの結果出力の許可（既定は許可）
+ * - メンバー削除（最後の1人のオーナーは外せない）
  */
 /** 未検索のときに毎回新しい配列を作らないための空値 */
 const EMPTY_MEMBERS: ExamMemberRow[] = []
@@ -70,7 +87,12 @@ export function MemberInviteDialog({
   const removeMember = useMutation(
     removeExamMemberMutation(examId, currentUserId)
   )
+  const setExportPermission = useMutation(
+    setExamMemberExportPermissionMutation(examId)
+  )
   const [invitingUserId, setInvitingUserId] = useState<string | null>(null)
+  /** 招待するときの役割。多いのは採点を頼む場合なので採点者から始める */
+  const [inviteRole, setInviteRole] = useState<ExamRole>("EDITOR")
   const [removingUserId, setRemovingUserId] = useState<string | null>(null)
 
   // ダイアログを閉じている間は取りに行かない（開くたびに取り直す）
@@ -117,6 +139,7 @@ export function MemberInviteDialog({
         examId,
         userId,
         invitedBy: currentUserId,
+        role: inviteRole,
       })
       // 招待した人は候補から外れるので、検索語ごと畳んで一覧へ戻す
       setSearchQuery("")
@@ -143,7 +166,7 @@ export function MemberInviteDialog({
   }
 
   // ロールに応じたバッジを表示
-  const getRoleBadge = (role: UserRole) => {
+  const getRoleBadge = (role: ExamRole | null) => {
     if (role === "OWNER") {
       return (
         <Badge variant="default" className="flex items-center gap-1">
@@ -152,7 +175,41 @@ export function MemberInviteDialog({
         </Badge>
       )
     }
-    return <Badge variant="secondary">採点者</Badge>
+    return (
+      <Badge variant="secondary">
+        {role ? EXAM_ROLE_LABELS[role] : "不明"}
+      </Badge>
+    )
+  }
+
+  /**
+   * 結果出力の欄。許可を切り替えられるのは採点者の行だけで、オーナーと閲覧者はいつでも使える。
+   * 切り替えはオーナーだけ（ほかの人には許可の有無だけを見せる）
+   */
+  const renderExportPermission = (member: ExamMemberRow) => {
+    if (parseExamRole(member.role) !== "EDITOR") {
+      return <span className="text-sm text-muted-foreground">いつでも可</span>
+    }
+    if (!isOwner) {
+      return (
+        <span className="text-sm text-muted-foreground">
+          {member.canExportResults ? "可" : "不可"}
+        </span>
+      )
+    }
+    return (
+      <Switch
+        checked={member.canExportResults}
+        onCheckedChange={(checked) =>
+          setExportPermission.mutate({
+            userId: member.user.id,
+            canExportResults: checked,
+          })
+        }
+        disabled={setExportPermission.isPending}
+        aria-label={`${member.user.name}の結果出力`}
+      />
+    )
   }
 
   // ユーザーのイニシャルを取得
@@ -182,14 +239,33 @@ export function MemberInviteDialog({
         {isOwner && (
           <div className="space-y-2">
             <label className="text-sm font-medium">メンバーを招待</label>
-            <div className="relative">
-              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="ユーザー名または名前で検索..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="ユーザー名または名前で検索..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select
+                value={inviteRole}
+                onValueChange={(value) =>
+                  setInviteRole(parseExamRole(value) ?? "EDITOR")
+                }
+              >
+                <SelectTrigger className="w-32" aria-label="招待するときの役割">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXAM_ROLES.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {EXAM_ROLE_LABELS[role]}として
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 検索結果 */}
@@ -242,6 +318,13 @@ export function MemberInviteDialog({
           </div>
         )}
 
+        {/* 匿名採点の固定（オーナーだけが変えられる。ほかの人には状態だけを見せる） */}
+        <AnonymousScoringSection
+          examId={examId}
+          members={members}
+          canManage={isOwner}
+        />
+
         {/* メンバー一覧 */}
         <div className="mt-4 min-w-0">
           <label className="text-sm font-medium">
@@ -262,8 +345,9 @@ export function MemberInviteDialog({
                   <TableRow>
                     <TableHead>ユーザー</TableHead>
                     <TableHead>ロール</TableHead>
+                    <TableHead>結果出力</TableHead>
                     <TableHead>招待日</TableHead>
-                    {isOwner && <TableHead className="w-48"></TableHead>}
+                    {isOwner && <TableHead className="w-12"></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -295,8 +379,18 @@ export function MemberInviteDialog({
                           </div>
                         </TableCell>
                         <TableCell>
-                          {getRoleBadge(member.role as UserRole)}
+                          {isOwner ? (
+                            <MemberRoleSelect
+                              examId={examId}
+                              member={member}
+                              currentUserId={currentUserId}
+                              ownerCount={ownerCount}
+                            />
+                          ) : (
+                            getRoleBadge(parseExamRole(member.role))
+                          )}
                         </TableCell>
+                        <TableCell>{renderExportPermission(member)}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {new Date(member.invitedAt).toLocaleDateString(
                             "ja-JP"
@@ -310,13 +404,10 @@ export function MemberInviteDialog({
                         {isOwner && (
                           <TableCell>
                             <div className="flex items-center justify-end gap-1">
-                              <MemberRoleButton
-                                examId={examId}
-                                member={member}
-                                currentUserId={currentUserId}
-                                ownerCount={ownerCount}
-                              />
-                              {member.role !== "OWNER" && (
+                              {/* 最後の1人のオーナーは外せない（オーナーの居ない試験が残る） */}
+                              {!(
+                                member.role === "OWNER" && ownerCount <= 1
+                              ) && (
                                 <TooltipButton
                                   label="メンバーから外す"
 
@@ -343,16 +434,17 @@ export function MemberInviteDialog({
         <div className="mt-4 rounded-md bg-muted p-3 text-sm text-muted-foreground">
           <p className="font-medium">ロールについて</p>
           <ul className="mt-1 list-inside list-disc space-y-1">
+            {EXAM_ROLES.map((role) => (
+              <li key={role}>
+                <strong>{EXAM_ROLE_LABELS[role]}</strong>:{" "}
+                {EXAM_ROLE_DESCRIPTIONS[role]}
+              </li>
+            ))}
             <li>
-              <strong>オーナー</strong>:
-              試験設定の変更、メンバーの招待・削除・役割の変更が可能。複数人にできる
+              採点者の結果出力は、最初は許可されています。採点者に結果を見せたくないときは「結果出力」を切ってください
             </li>
             <li>
-              <strong>採点者</strong>: 採点作業、結果出力が可能
-            </li>
-            <li>
-              オーナーを別の教員へ移すときは、相手を「オーナーにする」で
-              オーナーにしてから、自分を「採点者に戻す」
+              オーナーを別の教員へ移すときは、相手の役割を「オーナー」にしてから、自分の役割を変える
             </li>
           </ul>
         </div>

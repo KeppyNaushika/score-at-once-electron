@@ -34,6 +34,7 @@ const EXAM: GradeExamCandidateRow = {
   referenceDate: null,
   description: null,
   markerCorrectionEnabled: false,
+  anonymousScoringEnforced: false,
   createdAt: FIXED_DATE,
   updatedAt: FIXED_DATE,
 }

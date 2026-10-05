@@ -48,7 +48,7 @@ async function createGrader(name: string, examId: string | null) {
         id: crypto.randomUUID(),
         userId: user.id,
         examId,
-        role: "GRADER",
+        role: "EDITOR",
       },
     })
   }

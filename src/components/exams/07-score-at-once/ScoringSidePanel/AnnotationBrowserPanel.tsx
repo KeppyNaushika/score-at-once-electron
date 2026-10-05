@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import { toast } from "sonner"
 
+import { useScoringAnonymity } from "@/components/exams/07-score-at-once/anonymity/ScoringAnonymityContext"
 import { studentOption } from "@/lib/searchKeywords"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type {
@@ -58,6 +59,7 @@ export function AnnotationBrowserPanel({
     toggleFavorite: onToggleFavorite,
     addToTargets: onAddToTargets,
   } = useAnnotationBrowser(examId)
+  const { isAnonymous, pseudonymOf, anonymousOrderOf } = useScoringAnonymity()
 
   // キャンバスで手書きが変わったら取り直す。合図が来たときだけ
   const prevRefreshKeyRef = useRef(annotationRefreshKey)
@@ -88,24 +90,34 @@ export function AnnotationBrowserPanel({
         examStudentMap.set(examStudent.id, examStudent)
       }
     }
-    return Array.from(examStudentMap.values()).sort(
-      (examStudentA, examStudentB) =>
-        examStudentA.student.studentNumber.localeCompare(
-          examStudentB.student.studentNumber,
-          "ja",
-          { numeric: true }
-        )
+    const examStudents = Array.from(examStudentMap.values())
+    // 匿名採点のあいだは生徒番号（名簿の順）で並べない
+    if (isAnonymous) {
+      return examStudents.sort(
+        (examStudentA, examStudentB) =>
+          anonymousOrderOf(examStudentA.id) - anonymousOrderOf(examStudentB.id)
+      )
+    }
+    return examStudents.sort((examStudentA, examStudentB) =>
+      examStudentA.student.studentNumber.localeCompare(
+        examStudentB.student.studentNumber,
+        "ja",
+        { numeric: true }
+      )
     )
-  }, [displayItems])
+  }, [displayItems, isAnonymous, anonymousOrderOf])
 
   const examStudentFilterOptions = useMemo(
     () => [
       { value: "all", label: "全生徒" },
       ...uniqueExamStudents.map((examStudent) =>
-        studentOption(examStudent.id, examStudent.student)
+        // 匿名採点のあいだは仮の名前だけを出す（番号・かなで引けると名前が分かる）
+        isAnonymous
+          ? { value: examStudent.id, label: pseudonymOf(examStudent.id) }
+          : studentOption(examStudent.id, examStudent.student)
       ),
     ],
-    [uniqueExamStudents]
+    [uniqueExamStudents, isAnonymous, pseudonymOf]
   )
 
   // 連打防止用フラグ

@@ -37,7 +37,7 @@ import {
 
 const testPrisma = createPrismaClientForPath(TEST_DB_PATH)
 
-/** 採点者を作る。試験を渡せば、その試験のメンバー（GRADER）にする */
+/** 採点者を作る。試験を渡せば、その試験のメンバー（採点者）にする */
 async function createGrader(name: string, examId: string | null) {
   const user = await testPrisma.user.create({
     data: {
@@ -53,7 +53,7 @@ async function createGrader(name: string, examId: string | null) {
         id: crypto.randomUUID(),
         userId: user.id,
         examId,
-        role: "GRADER",
+        role: "EDITOR",
       },
     })
   }

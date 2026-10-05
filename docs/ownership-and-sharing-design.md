@@ -367,7 +367,8 @@ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   09 を常に使える（フラグとロールの重なりはこれで解ける）
 - **昇格・降格は OWNER が3ロールの間で行う。** 最後の1人の OWNER は降格・削除できない
 
-詳細は `scoring-scope-and-permissions-design.md` §3-3。
+詳細は `scoring-scope-and-permissions-design.md` §3-3。**2026-10-05 に実装した**（migration
+`20261005170000_exam_member_three_roles`。既存の `GRADER` は `EDITOR` へ書き換え、全員を結果出力の許可つきで始める）。
 
 ---
 
@@ -564,4 +565,5 @@ FROM "Grade" CROSS JOIN "User";
 | 2026-10-04 | #1140 を実装。§4.4 を今の状態に直す（User を参照するリレーションは15本。`ReturnSnapshot.capturedByUserId` を `SetNull` へ。削除機能の手当て） |
 | 2026-10-04 | §4.4 に試験のオーナーを移す操作（参加者の昇格・降格）を実装済みとして追記                                                                     |
 | 2026-10-04 | §4.6 の昇格・降格の記述を、削除済みの関数名から `changeExamMemberRole` へ直す                                                                 |
+| 2026-10-05 | 試験の3ロールを実装した（§4.6）                                                                                                               |
 | 2026-10-05 | OWNER 裁定を §4.6 に反映。試験は3ロール・ロール1つで表す・`GRADER` は `EDITOR` へ・結果出力は既定で許可。§10 の未決2つを決着済みへ            |

@@ -6,6 +6,7 @@ import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 import { drawGridAnnotations } from "./utils/gridAnnotationRenderer"
+import { fillNameMasks, type Rect } from "./utils/nameRegionMasks"
 
 /**
  * 画像表示について：
@@ -39,7 +40,11 @@ interface CroppedAnswerImageProps {
   expandMargin?: number // 表示領域拡張率 (0-50%)
   annotations?: DrawingAnnotation[] // Grid表示用アノテーション
   pageSize?: string // 用紙サイズ（mm→px変換基準）
+  /** 塗りつぶす氏名欄（匿名採点中の生徒の答案だけ。ページ上の比） */
+  nameRegions?: readonly Rect[]
 }
+
+const NO_NAME_REGIONS: readonly Rect[] = []
 
 // セル内の固定オフセット（padding + gap + footer）
 const CELL_CONTENT_OFFSET = 32 // p-2(16px) + gap-1(4px) + footer(~12px)
@@ -56,6 +61,7 @@ export default function CroppedAnswerImage({
   expandMargin = 0,
   annotations,
   pageSize,
+  nameRegions = NO_NAME_REGIONS,
 }: CroppedAnswerImageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -136,6 +142,14 @@ export default function CroppedAnswerImage({
       canvas.height
     )
 
+    // 匿名採点中は、見えている範囲に掛かる氏名欄を塗りつぶす（アノテーションより下）
+    fillNameMasks(
+      ctx,
+      nameRegions,
+      { x: newX, y: newY, width: newWidth, height: newHeight },
+      { x: 0, y: 0, width: canvas.width, height: canvas.height }
+    )
+
     // アノテーション描画（非同期: MathJaxテキスト変換を含む）
     if (annotations && annotations.length > 0) {
       let cancelled = false
@@ -169,6 +183,7 @@ export default function CroppedAnswerImage({
     expandMargin,
     annotations,
     pageSize,
+    nameRegions,
   ])
 
   const handleImageLoad = () => {
