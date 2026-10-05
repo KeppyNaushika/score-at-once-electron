@@ -245,7 +245,7 @@ describe("UnifiedArchiveImportWizard", () => {
         "他の教員の採点・確定・返却版（本人分だけを書き出しています）"
       )
     ).toBeInTheDocument()
-    expect(screen.getByText("監査ログ")).toBeInTheDocument()
+    expect(screen.getByText("操作履歴")).toBeInTheDocument()
 
     await clickNext(user)
     expect(await screen.findByText("データの紐づけ")).toBeInTheDocument()

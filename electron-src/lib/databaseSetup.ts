@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client"
 
+import { getAuditLogRetentionDays } from "./prisma/appPreference"
 import { pruneAuditLogs } from "./prisma/auditQuery"
 import {
   createSharedPrismaClient,
@@ -100,9 +101,10 @@ export class DatabaseSetup {
         }
       }
 
-      // 監査ログの保持期間プルーニング（ベストエフォート。失敗しても起動を妨げない）
+      // 監査ログの保持期間プルーニング（ベストエフォート。失敗しても起動を妨げない）。
+      // 日数は全員で1つの設定（`AppPreference`）から読む
       try {
-        await pruneAuditLogs()
+        await pruneAuditLogs(await getAuditLogRetentionDays())
       } catch (pruneError) {
         console.error("Audit log pruning skipped:", pruneError)
       }

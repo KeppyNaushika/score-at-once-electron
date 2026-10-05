@@ -10,7 +10,11 @@ import type {
   AnswerOverlayStyle,
   AnswerOverlayVisibility,
 } from "../../src/types/scoringOverlay.types"
-import { getAppPreference, setAppPreference } from "../lib/prisma/appPreference"
+import {
+  getAppPreference,
+  setAppPreference,
+  setAuditLogRetentionDays,
+} from "../lib/prisma/appPreference"
 import type {
   ExamReportGraphSettingsValues,
   ExamReportTableSectionValues,
@@ -124,6 +128,10 @@ export const settingsHandlers = {
 
   "settings:setAppPreference": (key: string, value: string) =>
     setAppPreference(key, value),
+
+  // 操作履歴を残す日数。読むのは汎用の getAppPreference。書くときだけ変更を記録する
+  "settings:setAuditLogRetentionDays": (days: number) =>
+    setAuditLogRetentionDays(days),
 
   // =========================================================================
   // UserPreference（KV方式）

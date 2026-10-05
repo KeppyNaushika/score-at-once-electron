@@ -253,9 +253,6 @@ export async function getAuditLogScopes(): Promise<{
   return { scopes, targets }
 }
 
-/** 監査ログの既定保持日数（これより古いエントリは起動時プルーニングの対象） */
-const DEFAULT_AUDIT_RETENTION_DAYS = 730 // 2年
-
 /**
  * 保持期間を超えた監査ログを削除する（無制限な肥大化の防止）。
  *
@@ -267,9 +264,7 @@ const DEFAULT_AUDIT_RETENTION_DAYS = 730 // 2年
  *
  * @returns 削除した件数
  */
-export async function pruneAuditLogs(
-  retentionDays: number = DEFAULT_AUDIT_RETENTION_DAYS
-): Promise<number> {
+export async function pruneAuditLogs(retentionDays: number): Promise<number> {
   if (!Number.isFinite(retentionDays) || retentionDays <= 0) return 0
   const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000)
   const result = await prisma.auditLog.deleteMany({

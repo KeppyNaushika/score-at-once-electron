@@ -22,7 +22,7 @@ import { subscribeSyncRecordFoldsChanged } from "@/queries/sync"
  * この窓の役目。
  *
  * **既読は持たない。** 同期はアプリが動いている間しか走らないので、変わった瞬間には
- * 必ず窓が開いていて、取りこぼさない。あとから見返すのは監査ログ（サイドバーの「監査ログ」）で、
+ * 必ず窓が開いていて、取りこぼさない。あとから見返すのは監査ログ（サイドバーの「操作履歴」）で、
  * 見る場所を2つに割らないために専用の履歴画面は作らない。
  *
  * 描くものは無い。窓が開いている間ずっと聞いていられるよう AppShell に置く。
@@ -53,7 +53,7 @@ function showFoldToasts(report: SyncRecordFoldReport): void {
     showSyncToast(
       "warning",
       "重複していたデータの片方を隠しました",
-      `${breakdownByTable(report.folds)}\n他のPCと同じものが二重にできていたため、片方だけを表示しています。隠した方にぶら下がっていたものは、表示している方にまとめて表示されます。隠した方も消してはいないので、名前を変えるなどして重なりが解ければ自動で表示に戻ります。詳しくは監査ログに残しています。`
+      `${breakdownByTable(report.folds)}\n他のPCと同じものが二重にできていたため、片方だけを表示しています。隠した方にぶら下がっていたものは、表示している方にまとめて表示されます。隠した方も消してはいないので、名前を変えるなどして重なりが解ければ自動で表示に戻ります。詳しくは操作履歴に残しています。`
     )
   }
 
@@ -61,7 +61,7 @@ function showFoldToasts(report: SyncRecordFoldReport): void {
     showSyncToast(
       "info",
       "隠していたデータを表示に戻しました",
-      `${breakdownByTable(report.restores)}\n他のPCと重複していたため隠していたものです。表示していた方が他のPCで直されて重なりが解けたので、ふたたび表示しています。詳しくは監査ログに残しています。`
+      `${breakdownByTable(report.restores)}\n他のPCと重複していたため隠していたものです。表示していた方が他のPCで直されて重なりが解けたので、ふたたび表示しています。詳しくは操作履歴に残しています。`
     )
   }
 }

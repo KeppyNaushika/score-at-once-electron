@@ -739,6 +739,16 @@ const AUDIT_ACTIONS = {
     label: "統合アーカイブ「{target}」を取り込みました",
   },
   /**
+   * 操作履歴を残す期間の変更。全員で1つの設定（`AppPreference`）なので作業領域に
+   * 属さない。記録しないと「なぜ去年の記録が無いのか」を後から追えない。
+   * `entityId` は設定のキー、changes に変更前後の期間が入る。
+   */
+  "system.audit_log_retention.update": {
+    category: "system",
+    verb: "update",
+    label: "操作履歴を残す期間を変更しました",
+  },
+  /**
    * AI 採点（実験的機能）の事業者への同意（設計 §9-1）。同意は端末ごとの設定ファイルに
    * 記録し、ここにも残す。`entityId` は事業者 id、metadata に同意文の版が入る。
    * **キーや同意文の本文は残さない。**

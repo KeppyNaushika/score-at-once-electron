@@ -53,7 +53,7 @@ export function AuditLogList() {
   return (
     <div className="flex h-full flex-col">
       {/* 絞り込みはヘッダーに置く。スクロールするのはログの並びだけ */}
-      <PageHeader title="監査ログ" subtitle={`${total} 件`} />
+      <PageHeader title="操作履歴" subtitle={`${total} 件`} />
       <div className="px-6 pb-3">
         <AuditLogFilterBar
           filter={filter}
