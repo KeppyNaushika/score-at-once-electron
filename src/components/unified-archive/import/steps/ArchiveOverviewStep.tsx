@@ -39,7 +39,7 @@ const MAIN_TABLES = [
 const OPTIONAL_ITEM_LABELS: Record<ArchiveOptionalItem, string> = {
   userSettings: "利用者個人の設定",
   appPreference: "組織の設定",
-  auditLog: "監査ログ",
+  auditLog: "操作履歴",
   aiGradingRecords: "AI採点の記録",
 }
 

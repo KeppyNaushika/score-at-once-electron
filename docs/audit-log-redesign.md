@@ -329,9 +329,17 @@ PR-2 を PR-3 より前に置くのは、**対象ラベルがないとフィル�
 - アクションのカタログは renderer も引く（種別の展開・アイコン）ので `src/lib/shared/auditActions.ts`
   へ移した。main は行をそのまま返し、操作者名・種別・集約回数は renderer が導く
 
+### PR-1 の残り（保持期間の設定・表示名）で決めた点（#1387）
+
+- 日数は `AppPreference` の `auditLogRetentionDays`（年度の開始日と同じ、全員で1つの設定）。
+  キー・既定（365日）・選択肢（90 / 180 / 365 / 730日）は `src/lib/shared/auditLogRetention.ts`
+- 書き込みは汎用の `settings:setAppPreference` ではなく専用の `settings:setAuditLogRetentionDays`
+  を通す。変更の記録（`system.audit_log_retention.update`、changes に変更前後の期間）を main で書くため
+- 設定画面は `/settings` の「操作履歴」タブ。短くするときだけ確認を出す
+- 表示名は画面に出る文言だけを「操作履歴」に変えた。コメント中の「監査ログ」は据え置き
+
 ### 残り
 
-- PR-1 の残り: 保持期間の設定画面（既定 730日 → 365日）と LWW 同期、表示名「操作履歴」
 - PR-3 の残り: 絞り込み状態の文字列化（parse / build と往復一致テスト）。今は画面の中だけで
   構造として持ち、文字列にする場面（URL・リンク）がまだ無い。PR-4 のリンクと一緒に入れる
 - PR-4（双方向リンク）、PR-5（未計装9件、student / classroom の `scopeId`）

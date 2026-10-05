@@ -5,6 +5,7 @@ import type {
   ExamReportTableSectionValues,
 } from "@/electron-src/lib/prisma/examSettings"
 import type { UserScoringStatusColorValues } from "@/electron-src/lib/prisma/userScoringStatusColor"
+import { AUDIT_LOG_RETENTION_DAYS_KEY } from "@/lib/shared/auditLogRetention"
 import type { PreferenceKey, PreferenceValueType } from "@/lib/userPreferences"
 import { serializePreference } from "@/lib/userPreferences"
 import type { ClickScoringAction } from "@/types/clickScoring.types"
@@ -15,6 +16,7 @@ import type {
 } from "@/types/scoringOverlay.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
+import { auditLogListKey } from "./auditLog"
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
 
@@ -126,6 +128,25 @@ export const setAppPreferenceMutation = (key: string) =>
     meta: {
       invalidates: [["appPreference", key]],
       errorMessage: "設定を保存できませんでした",
+    },
+  })
+
+/**
+ * 操作履歴を残す日数を書く。**変えたことは main が操作履歴に残す**ので、汎用の
+ * `setAppPreferenceMutation` ではなく専用の口を通す。
+ */
+export const setAuditLogRetentionDaysMutation = () =>
+  defineMutation({
+    mutationFn: (days: number) =>
+      window.electronAPI.settings.setAuditLogRetentionDays(days),
+    scope: { id: `appPreference:${AUDIT_LOG_RETENTION_DAYS_KEY}` },
+    meta: {
+      // 変更の記録が1行増えるので、操作履歴の一覧も取り直す
+      invalidates: [
+        ["appPreference", AUDIT_LOG_RETENTION_DAYS_KEY],
+        auditLogListKey,
+      ],
+      errorMessage: "操作履歴を残す期間を保存できませんでした",
     },
   })
 

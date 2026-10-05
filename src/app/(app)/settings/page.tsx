@@ -5,6 +5,7 @@ import {
   CalendarRange,
   FlaskConical,
   FolderSync,
+  History,
   Keyboard,
   Monitor,
   Palette,
@@ -14,6 +15,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import { AiGradingSettingsTab } from "@/app/(app)/settings/components/AiGradingSettingsTab"
+import { AuditLogRetentionTab } from "@/app/(app)/settings/components/AuditLogRetentionTab"
 import { DisplaySettingsTab } from "@/app/(app)/settings/components/DisplaySettingsTab"
 import { FiscalYearTab } from "@/app/(app)/settings/components/FiscalYearTab"
 import { KeyboardShortcutSection } from "@/app/(app)/settings/components/KeyboardShortcutSection"
@@ -89,6 +91,10 @@ export default function SettingsPage() {
                 <CalendarRange className="h-4 w-4" />
                 年度
               </TabsTrigger>
+              <TabsTrigger value="audit-log" className="gap-2">
+                <History className="h-4 w-4" />
+                操作履歴
+              </TabsTrigger>
               <TabsTrigger value="user" className="gap-2">
                 <Users className="h-4 w-4" />
                 ユーザー管理
@@ -128,6 +134,10 @@ export default function SettingsPage() {
 
             <TabsContent value="fiscal-year">
               <FiscalYearTab />
+            </TabsContent>
+
+            <TabsContent value="audit-log">
+              <AuditLogRetentionTab />
             </TabsContent>
 
             <TabsContent value="user">

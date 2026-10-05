@@ -59,7 +59,7 @@ const navGroups: NavItem[][] = [
   [{ href: "/data-export", label: "データ書き出し", icon: FileArchive }],
   [
     { href: "/settings", label: "設定", icon: Settings },
-    { href: "/audit-logs", label: "監査ログ", icon: History },
+    { href: "/audit-logs", label: "操作履歴", icon: History },
   ],
 ]
 
