@@ -21,6 +21,8 @@ export function createAiGradingApi() {
       startRun: bind("aiGrading:startRun"),
       cancelRun: bind("aiGrading:cancelRun"),
       listRuns: bind("aiGrading:listRuns"),
+      listRunsByExam: bind("aiGrading:listRunsByExam"),
+      listMyRuns: bind("aiGrading:listMyRuns"),
       deleteAttempts: bind("aiGrading:deleteAttempts"),
       adoptAttempts: bind("aiGrading:adoptAttempts"),
       adoptBlankAnswers: bind("aiGrading:adoptBlankAnswers"),

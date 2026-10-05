@@ -1,5 +1,5 @@
 /**
- * 要確認の理由・まとめて採用してよいか・食い違いの判断・表示する試行・消してよい古い試行
+ * 要確認の理由・食い違いの判断・表示する試行・消してよい古い試行
  * （docs/vlm-grading-design.md §3・§4-3・§4-4）。
  */
 
@@ -14,11 +14,7 @@ import {
   resolveDisplayedAttempt,
   selectDeletableOldAttemptIds,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/attemptSelection"
-import {
-  classifyReviewReasons,
-  isBulkAdoptable,
-  type ReviewReason,
-} from "@/components/exams/07-score-at-once/AiGrading/utils/reviewReasons"
+import { classifyReviewReasons } from "@/components/exams/07-score-at-once/AiGrading/utils/reviewReasons"
 import {
   findOwnQuestionScore,
   isDisagreeing,
@@ -35,8 +31,6 @@ import {
 } from "./helpers/aiGradingRowFixtures"
 
 const POINTS = 4
-const OVERFLOW_ONLY: ReviewReason[] = ["overflow"]
-const NO_REASONS: ReviewReason[] = []
 
 describe("食い違いの判断", () => {
   it("判定と点の両方で比べ、自分が採点していなければ食い違いではない", () => {
@@ -109,73 +103,6 @@ describe("要確認の理由", () => {
       })
     ).toEqual(["refused"])
   })
-
-  it("まとめて採用は、成功・確信度が下限以上・未採点・未採用のものだけ", () => {
-    const highAttempt = makeAttemptWithRun({ examStudentId: "s" })
-    const base = {
-      displayedAttempt: highAttempt,
-      questionScore: undefined,
-      inkMeasurement: makeInk(),
-      points: POINTS,
-    }
-    expect(isBulkAdoptable(base, "high")).toBe(true)
-    // 採点済み・採用済みは、下限によらず外す
-    expect(
-      isBulkAdoptable(
-        { ...base, questionScore: makeQuestionScore({ examStudentId: "s" }) },
-        "low"
-      )
-    ).toBe(false)
-    expect(
-      isBulkAdoptable(
-        {
-          ...base,
-          displayedAttempt: makeAttemptWithRun({
-            examStudentId: "s",
-            adoptedAt: new Date(),
-          }),
-        },
-        "low"
-      )
-    ).toBe(false)
-    // 確信度以外の理由（はみ出し）では外さない
-    expect(
-      isBulkAdoptable(
-        { ...base, inkMeasurement: makeInk({ overflowsFrame: true }) },
-        "high"
-      )
-    ).toBe(true)
-  })
-
-  it("確信度の下限: 高のみ / 中以上 / すべて", () => {
-    const withConfidence = (confidence: string) => ({
-      displayedAttempt: makeAttemptWithRun({ examStudentId: "s", confidence }),
-      questionScore: undefined,
-      inkMeasurement: makeInk(),
-      points: POINTS,
-    })
-    expect(isBulkAdoptable(withConfidence("medium"), "high")).toBe(false)
-    expect(isBulkAdoptable(withConfidence("medium"), "medium")).toBe(true)
-    expect(isBulkAdoptable(withConfidence("low"), "medium")).toBe(false)
-    expect(isBulkAdoptable(withConfidence("low"), "low")).toBe(true)
-  })
-
-  it("失敗した試行は「すべて」でも採用しない", () => {
-    expect(
-      isBulkAdoptable(
-        {
-          displayedAttempt: makeAttemptWithRun({
-            examStudentId: "s",
-            state: "errored",
-          }),
-          questionScore: undefined,
-          inkMeasurement: makeInk(),
-          points: POINTS,
-        },
-        "low"
-      )
-    ).toBe(false)
-  })
 })
 
 describe("表示する試行と印", () => {
@@ -226,23 +153,37 @@ describe("表示する試行と印", () => {
     expect(review.isChangedAfterAdoption).toBe(true)
   })
 
-  it("要確認を先にしても、その中と外は表示順のまま", () => {
-    const reviewed = ["a", "b", "c"].map((name, index) => ({
-      name,
-      review: {
-        ...reviewAnswer(makeAnswer(name), {
-          chosenAttemptIdByExamStudentId: new Map(),
-          selectedPromptId: null,
-          points: POINTS,
-        }),
-        reviewReasons: index === 2 ? OVERFLOW_ONLY : NO_REASONS,
-      },
+  it("確信度順は高い順で、判定の無い答案は最後。同じ確信度の中は生徒順のまま", () => {
+    const withConfidence = (name: string, confidence: string) =>
+      makeAnswer(name, {
+        attempts: [
+          makeAttemptWithRun({
+            examStudentId: name,
+            id: `attempt-${name}`,
+            confidence,
+          }),
+        ],
+      })
+    const reviewed = [
+      makeAnswer("none"),
+      withConfidence("low", "low"),
+      withConfidence("high1", "high"),
+      withConfidence("medium", "medium"),
+      withConfidence("high2", "high"),
+    ].map((answer) => ({
+      answer,
+      review: reviewAnswer(answer, {
+        chosenAttemptIdByExamStudentId: new Map(),
+        selectedPromptId: null,
+        points: POINTS,
+      }),
     }))
     expect(
-      orderReviewedAnswers(reviewed, "reviewFirst").map(
-        (reviewedAnswer) => reviewedAnswer.name
+      orderReviewedAnswers(reviewed, "confidence").map(
+        (reviewedAnswer) =>
+          reviewedAnswer.answer.studentAnswerImage.examStudentId
       )
-    ).toEqual(["c", "a", "b"])
+    ).toEqual(["high1", "high2", "medium", "low", "none"])
   })
 
   it("古い試行: 最新・採用済み・結果待ちは消さない", () => {

@@ -28,6 +28,39 @@ import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { ShortcutTooltip } from "./ShortcutTooltip"
 import { SidePanelSection } from "./SidePanelSection"
 
+/** 設問ごとの採点の進み具合 */
+interface QuestionProgressCounts {
+  totalAnswers: number
+  gradedAnswers: number
+  percentage: number
+}
+
+/** 設問ボタン右上の印の種類 */
+type QuestionBadgeKind = "none" | "inProgress" | "unreflectedAi" | "completed"
+
+/**
+ * 設問ボタン右上の印を決める。弱い順に 無印 < 緑の丸（採点中） < オレンジの丸（AI の判定が
+ * 未反映） < 緑のチェック（採点済み）で、強いほうを出す。
+ *
+ * 完了・着手は件数で見る（`percentage` は四捨五入なので、200件中199件で 100% になり、
+ * 1件で 0% になる）。
+ */
+function questionBadgeKindOf(
+  progress: QuestionProgressCounts | undefined,
+  hasUnreflectedAi: boolean
+): QuestionBadgeKind {
+  if (
+    progress &&
+    progress.totalAnswers > 0 &&
+    progress.gradedAnswers >= progress.totalAnswers
+  ) {
+    return "completed"
+  }
+  if (hasUnreflectedAi) return "unreflectedAi"
+  if (progress && progress.gradedAnswers > 0) return "inProgress"
+  return "none"
+}
+
 interface QuestionNavigatorProps {
   questionRegions: QuestionAnswerRegionRow[]
   currentCropRegion?: QuestionAnswerRegionRow | null
@@ -35,17 +68,18 @@ interface QuestionNavigatorProps {
   onPrevQuestion: () => void
   onNextQuestion: () => void
   questionProgress?: {
-    [questionId: string]: {
-      totalAnswers: number
-      gradedAnswers: number
-      percentage: number
-    }
+    [questionId: string]: QuestionProgressCounts
   }
   collapsible?: boolean
   isOpen?: boolean
   onToggle?: () => void
   /** 採点担当により設問が絞られている（見えない設問がある理由を伝える） */
   isFilteredByAssignment?: boolean
+  /**
+   * AI の判定があるのに自分がまだ採点していない答案のある設問。
+   * 右上の丸をオレンジにする（採点済みのチェックが優先）
+   */
+  unreflectedAiQuestionIds?: ReadonlySet<string>
 }
 
 export default function QuestionNavigator({
@@ -59,6 +93,7 @@ export default function QuestionNavigator({
   isOpen = true,
   onToggle,
   isFilteredByAssignment = false,
+  unreflectedAiQuestionIds,
 }: QuestionNavigatorProps) {
   const currentIndex = currentCropRegion
     ? questionRegions.findIndex(
@@ -184,6 +219,9 @@ export default function QuestionNavigator({
             {questionRegions.map((question, _index) => {
               const progress = questionProgress?.[question.id]
               const isActive = question.id === currentCropRegion?.id
+              const hasUnreflectedAi =
+                unreflectedAiQuestionIds?.has(question.id) ?? false
+              const badgeKind = questionBadgeKindOf(progress, hasUnreflectedAi)
               return (
                 <Tooltip key={question.id}>
                   <TooltipTrigger asChild>
@@ -198,12 +236,25 @@ export default function QuestionNavigator({
                       <span className="text-xs">
                         {question.label || question.orderIndex || 1}
                       </span>
-                      {progress && progress.percentage > 0 && (
-                        <div className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-green-500">
-                          {progress.percentage === 100 && (
-                            <CheckCircle className="h-2 w-2 text-white" />
-                          )}
+                      {badgeKind === "completed" && (
+                        <div
+                          className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-green-500"
+                          aria-label="採点済み"
+                        >
+                          <CheckCircle className="h-2 w-2 text-white" />
                         </div>
+                      )}
+                      {badgeKind === "unreflectedAi" && (
+                        <div
+                          className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-orange-500"
+                          aria-label="AI の判定が未反映"
+                        />
+                      )}
+                      {badgeKind === "inProgress" && (
+                        <div
+                          className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-500"
+                          aria-label="採点中"
+                        />
                       )}
                     </Button>
                   </TooltipTrigger>
@@ -221,6 +272,11 @@ export default function QuestionNavigator({
                       {progress && (
                         <div className="mt-1 text-xs text-gray-400">
                           進捗: {progress.percentage}%
+                        </div>
+                      )}
+                      {hasUnreflectedAi && (
+                        <div className="mt-1 text-xs text-orange-400">
+                          AI の判定が未反映の未採点あり
                         </div>
                       )}
                     </div>

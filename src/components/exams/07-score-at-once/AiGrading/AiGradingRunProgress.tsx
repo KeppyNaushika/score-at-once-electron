@@ -7,8 +7,10 @@ import { useEffect, useEffectEvent, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import {
+  aiGradingRunsOfExamQuery,
   aiGradingRunsQuery,
   cancelAiGradingRunMutation,
+  myAiGradingRunsQuery,
   subscribeAiGradingRunProgress,
 } from "@/queries/aiGrading"
 import type { AiGradingRunProgress as RunProgress } from "@/types/aiGrading.types"
@@ -53,6 +55,16 @@ export function AiGradingRunProgress({
       { queryKey: aiGradingRunsQuery(examId, cropRegionId, false).queryKey },
       { cancelRefetch: false }
     )
+    // 設問一覧の印（AI の判定の未反映）も取り直す
+    void queryClient.invalidateQueries(
+      { queryKey: aiGradingRunsOfExamQuery(examId).queryKey },
+      { cancelRefetch: false }
+    )
+    // AI の利用額の概算（試行ごとの使用量）も取り直す
+    void queryClient.invalidateQueries(
+      { queryKey: myAiGradingRunsQuery().queryKey },
+      { cancelRefetch: false }
+    )
   })
   useEffect(
     () => subscribeAiGradingRunProgress((progress) => handleProgress(progress)),
@@ -63,7 +75,7 @@ export function AiGradingRunProgress({
   if (activeRuns.length === 0) return null
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 border-b py-2">
       {activeRuns.map((run) => {
         const progress = progressByRunId.get(run.id)
         const total = progress?.total ?? run.attempts.length

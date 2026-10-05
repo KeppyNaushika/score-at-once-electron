@@ -96,7 +96,8 @@ export function AiAnnotationEditor({
 
   return (
     <div
-      className="relative h-80 overflow-hidden rounded border"
+      // 個別表示のパレット（左上に縦に並ぶ道具）が収まる高さ
+      className="relative h-112 overflow-hidden rounded border"
       data-testid="ai-annotation-editor"
       data-mode={draftAttemptId ? "draft" : "saved"}
     >

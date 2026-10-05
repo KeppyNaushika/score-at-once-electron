@@ -9,39 +9,52 @@ import {
 import NavigationControls from "@/components/exams/07-score-at-once/ScoringSidePanel/NavigationControls"
 import { ScoringStatusFilterButtons } from "@/components/exams/07-score-at-once/ScoringSidePanel/ScoringStatusFilterButtons"
 import { SidePanelSection } from "@/components/exams/07-score-at-once/ScoringSidePanel/SidePanelSection"
-import { Button } from "@/components/ui/button"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
+import { aiFilterCommandIdOf } from "@/lib/scoringKeybindings"
+import { ignoreDeselect } from "@/lib/toggleSelection"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
+import { AiConfidenceFilterButtons } from "./AiConfidenceFilterButtons"
 import type { AiGridDisplaySettings } from "./types"
 import {
-  FILTER_BASES,
-  FILTER_BASIS_LABELS,
-  type FilterBasis,
-  type StatusFilterSettings,
+  type AiGridFilterSettings,
+  type ConfidenceFilterLevel,
+  FILTER_SOURCE_LABELS,
+  FILTER_SOURCES,
+  type FilterSource,
 } from "./utils/aiGridFilter"
+import {
+  ANSWER_ORDER_LABELS,
+  ANSWER_ORDERS,
+  type AnswerOrder,
+} from "./utils/answerReview"
 
 interface AiGridDisplaySectionProps {
   display: AiGridDisplaySettings
-  filterBasis: FilterBasis
-  onFilterBasisChange: (basis: FilterBasis) => void
-  filterSettings: StatusFilterSettings
-  onToggleFilter: (status: ScoringStatus) => void
+  filterSettings: AiGridFilterSettings
+  onToggleFilter: (source: FilterSource, status: ScoringStatus) => void
+  onToggleConfidenceFilter: (level: ConfidenceFilterLevel) => void
+  answerOrder: AnswerOrder
+  onAnswerOrderChange: (answerOrder: AnswerOrder) => void
   selectedCount: number
   visibleCount: number
   totalCount: number
 }
 
 /**
- * 右パネルの「表示」節。絞り込みのボタンは一覧表示と同じ7色で、何の状態で絞るか
- * （AI の提案か自分の採点か）を選べる。並べ方・件数の設定も一覧表示と同じもの
+ * 右パネルの「表示」節。絞り込みのボタンは一覧表示と同じ7色を「自分の採点」と
+ * 「AI の採点」の2組並べ、AI の判定の「確信度」の組を足す（組の中は OR、組どうしは AND）。
+ * キーは自分の採点が一覧表示と同じもの、AI の採点はそれに Opt+Shift（確信度には無い）。
+ * 並べ方・件数の設定も一覧表示と同じもの
  */
 export function AiGridDisplaySection({
   display,
-  filterBasis,
-  onFilterBasisChange,
   filterSettings,
   onToggleFilter,
+  onToggleConfidenceFilter,
+  answerOrder,
+  onAnswerOrderChange,
   selectedCount,
   visibleCount,
   totalCount,
@@ -62,36 +75,45 @@ export function AiGridDisplaySection({
       }
     >
       <div className="space-y-3">
-        <div
-          role="radiogroup"
-          aria-label="絞り込みの基準"
-          className="flex items-center gap-1 text-xs"
-        >
-          <span className="text-muted-foreground">絞り込みの基準</span>
-          {FILTER_BASES.map((basis) => (
-            <Button
-              key={basis}
-              role="radio"
-              aria-checked={filterBasis === basis}
-              variant={filterBasis === basis ? "default" : "outline"}
-              size="sm"
-              className="h-6 px-2 text-xs"
-              onClick={() => onFilterBasisChange(basis)}
-            >
-              {FILTER_BASIS_LABELS[basis]}
-            </Button>
-          ))}
+        {FILTER_SOURCES.map((source) => (
+          <div key={source} className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              {FILTER_SOURCE_LABELS[source]}
+            </p>
+            <ScoringStatusFilterButtons
+              aria-label={`${FILTER_SOURCE_LABELS[source]}の絞り込み`}
+              filterSettings={filterSettings[source]}
+              onToggleFilter={(status) => onToggleFilter(source, status)}
+              commandIdOf={source === "ai" ? aiFilterCommandIdOf : undefined}
+            />
+          </div>
+        ))}
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">確信度</p>
+          <AiConfidenceFilterButtons
+            confidenceSettings={filterSettings.confidence}
+            onToggle={onToggleConfidenceFilter}
+          />
         </div>
-        <ScoringStatusFilterButtons
-          filterSettings={filterSettings}
-          onToggleFilter={onToggleFilter}
-        />
         <ProposalFillLegend />
-        {filterBasis === "ai" && (
-          <p className="text-[11px] text-muted-foreground">
-            AI の提案の状態で絞り込みます（成功した判定が無い答案は「未採点」）
-          </p>
-        )}
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">並べ方</p>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={answerOrder}
+            aria-label="並べ方"
+            onValueChange={ignoreDeselect(ANSWER_ORDERS, onAnswerOrderChange)}
+            className="w-full"
+          >
+            {ANSWER_ORDERS.map((orderOption) => (
+              <ToggleGroupItem key={orderOption} value={orderOption}>
+                {ANSWER_ORDER_LABELS[orderOption]}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
         <NavigationControls
           layoutDirection={display.layoutDirection}
           onLayoutDirectionChange={display.onLayoutDirectionChange}

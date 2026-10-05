@@ -3,7 +3,8 @@
  *
  * ここで固定すること:
  * - 答案の下の札は、採用の前か後かを1つの状態に分ける（提案・採用済み・採用後に変更・未判定・失敗…）
- * - 絞り込みの基準「AIの提案」では、成功した判定が無い答案は未採点として扱う
+ * - 絞り込みは「自分の採点」と「AI の採点」の2組で、組の中は OR、組どうしは AND
+ * - 採点種順は、マスに見えている状態（自分の採点、無ければ成功した AI の判定）で並べる
  * - 選んだ答案の採用は、成功した判定のあるものだけを、直した下書きがあればその形で書く
  */
 
@@ -18,20 +19,29 @@ import {
   draftAnnotationsFromPlacement,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/adoptionAnnotation"
 import {
-  ALL_STATUSES_VISIBLE,
-  filterStatusOf,
+  cellStatusOf,
+  confidenceLevelOf,
+  DEFAULT_AI_GRID_FILTER_SETTINGS,
   isShownByFilter,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/aiGridFilter"
-import { toAiGridItem } from "@/components/exams/07-score-at-once/AiGrading/utils/aiGridItems"
-import { reviewAnswer } from "@/components/exams/07-score-at-once/AiGrading/utils/answerReview"
+import {
+  toAiGridItem,
+  toStudentAnswerImageIds,
+} from "@/components/exams/07-score-at-once/AiGrading/utils/aiGridItems"
+import {
+  orderReviewedAnswers,
+  reviewAnswer,
+} from "@/components/exams/07-score-at-once/AiGrading/utils/answerReview"
 import { neighborAttemptId } from "@/components/exams/07-score-at-once/AiGrading/utils/attemptSelection"
 import { classifyProposalChip } from "@/components/exams/07-score-at-once/AiGrading/utils/proposalChip"
 import { planSelectionAdoption } from "@/components/exams/07-score-at-once/AiGrading/utils/selectionAdoption"
+import { selectQuestionsWithUnreflectedAiJudgements } from "@/components/exams/07-score-at-once/AiGrading/utils/unreflectedQuestions"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { newDrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 import {
   CROP_REGION_ID,
+  CURRENT_USER_ID,
   EXAM_PAGE_ID,
   makeAnswer,
   makeAttemptWithRun,
@@ -194,33 +204,136 @@ describe("絞り込み", () => {
     )
   )
 
-  it("AIの提案が基準なら、成功した判定の状態。無ければ未採点", () => {
-    expect(filterStatusOf(correctProposalUnscoredByMe, "ai")).toBe("correct")
-    expect(filterStatusOf(failedButScoredByMe, "ai")).toBe("unscored")
-    expect(filterStatusOf(reviewed(makeAnswer("s3")), "ai")).toBe("unscored")
+  it("自分が採点していればその判定、していなければ成功した AI の判定、どちらも無ければ未採点", () => {
+    expect(cellStatusOf(correctProposalUnscoredByMe)).toBe("correct")
+    expect(cellStatusOf(failedButScoredByMe)).toBe("incorrect")
+    expect(cellStatusOf(reviewed(makeAnswer("s3")))).toBe("unscored")
+    const scoredOverProposal = reviewed(
+      answerWithAttempt(
+        "s4",
+        { status: "correct" },
+        {
+          questionScore: makeQuestionScore({
+            examStudentId: "s4",
+            status: "partial",
+            partialScore: 1,
+          }),
+        }
+      )
+    )
+    expect(cellStatusOf(scoredOverProposal)).toBe("partial")
   })
 
-  it("自分の採点が基準なら、自分の採点の状態", () => {
-    expect(filterStatusOf(correctProposalUnscoredByMe, "mine")).toBe("unscored")
-    expect(filterStatusOf(failedButScoredByMe, "mine")).toBe("incorrect")
-  })
-
-  it("切った状態の答案は残らない", () => {
-    const onlyUnscored = {
-      ...ALL_STATUSES_VISIBLE,
-      correct: false,
-      incorrect: false,
+  it("組の中は OR、自分の採点と AI の採点は AND", () => {
+    const unscoredByMeAnyAi = {
+      mine: { ...DEFAULT_AI_GRID_FILTER_SETTINGS.mine },
+      ai: { ...DEFAULT_AI_GRID_FILTER_SETTINGS.ai, unscored: true },
+      confidence: { ...DEFAULT_AI_GRID_FILTER_SETTINGS.confidence },
     }
     expect(
-      isShownByFilter(correctProposalUnscoredByMe, onlyUnscored, "ai")
-    ).toBe(false)
-    expect(
-      isShownByFilter(correctProposalUnscoredByMe, onlyUnscored, "mine")
+      isShownByFilter(correctProposalUnscoredByMe, unscoredByMeAnyAi)
     ).toBe(true)
-    expect(isShownByFilter(failedButScoredByMe, onlyUnscored, "ai")).toBe(true)
-    expect(isShownByFilter(failedButScoredByMe, onlyUnscored, "mine")).toBe(
+    // 自分が誤答にしたので、自分の採点の組で落ちる
+    expect(isShownByFilter(failedButScoredByMe, unscoredByMeAnyAi)).toBe(false)
+    const withoutAiCorrect = {
+      mine: unscoredByMeAnyAi.mine,
+      ai: { ...unscoredByMeAnyAi.ai, correct: false },
+      confidence: unscoredByMeAnyAi.confidence,
+    }
+    expect(isShownByFilter(correctProposalUnscoredByMe, withoutAiCorrect)).toBe(
       false
     )
+  })
+
+  it("既定は、自分が未採点で AI の判定がある答案だけ", () => {
+    expect(
+      isShownByFilter(
+        correctProposalUnscoredByMe,
+        DEFAULT_AI_GRID_FILTER_SETTINGS
+      )
+    ).toBe(true)
+    expect(
+      isShownByFilter(
+        reviewed(makeAnswer("s3")),
+        DEFAULT_AI_GRID_FILTER_SETTINGS
+      )
+    ).toBe(false)
+    expect(
+      isShownByFilter(failedButScoredByMe, DEFAULT_AI_GRID_FILTER_SETTINGS)
+    ).toBe(false)
+  })
+
+  it("確信度の組: 表示中の成功した試行の確信度で分け、成功していなければ「判定なし」", () => {
+    const withConfidence = (examStudentId: string, confidence: string) =>
+      reviewed(
+        makeAnswer(examStudentId, {
+          attempts: [
+            makeAttemptWithRun({
+              examStudentId,
+              id: `attempt-${examStudentId}`,
+              status: "correct",
+              confidence,
+            }),
+          ],
+        })
+      )
+    const highAnswer = withConfidence("c1", "high")
+    const lowAnswer = withConfidence("c2", "low")
+    const failedAnswer = reviewed(
+      makeAnswer("c3", {
+        attempts: [
+          makeAttemptWithRun({
+            examStudentId: "c3",
+            id: "attempt-c3",
+            state: "errored",
+            status: "unscored",
+            confidence: "",
+          }),
+        ],
+      })
+    )
+    expect(confidenceLevelOf(highAnswer)).toBe("high")
+    expect(confidenceLevelOf(lowAnswer)).toBe("low")
+    expect(confidenceLevelOf(failedAnswer)).toBe("none")
+
+    const showEverything = {
+      mine: DEFAULT_AI_GRID_FILTER_SETTINGS.mine,
+      ai: { ...DEFAULT_AI_GRID_FILTER_SETTINGS.ai, unscored: true },
+      confidence: DEFAULT_AI_GRID_FILTER_SETTINGS.confidence,
+    }
+    // 既定（4つとも入）は、採点の状態の2組が通すものを全部通す
+    expect(isShownByFilter(highAnswer, showEverything)).toBe(true)
+    expect(isShownByFilter(lowAnswer, showEverything)).toBe(true)
+    expect(isShownByFilter(failedAnswer, showEverything)).toBe(true)
+
+    // 組の中は OR（高 または 判定なし）
+    const highOrNone = {
+      ...showEverything,
+      confidence: { high: true, medium: false, low: false, none: true },
+    }
+    expect(isShownByFilter(highAnswer, highOrNone)).toBe(true)
+    expect(isShownByFilter(lowAnswer, highOrNone)).toBe(false)
+    expect(isShownByFilter(failedAnswer, highOrNone)).toBe(true)
+
+    // 組どうしは AND（確信度が通しても、AI の採点の組で落ちる）
+    const highOrNoneWithoutAiUnscored = {
+      ...highOrNone,
+      ai: DEFAULT_AI_GRID_FILTER_SETTINGS.ai,
+    }
+    expect(isShownByFilter(failedAnswer, highOrNoneWithoutAiUnscored)).toBe(
+      false
+    )
+    expect(isShownByFilter(highAnswer, highOrNoneWithoutAiUnscored)).toBe(true)
+  })
+
+  it("採点種順は、マスの状態を絞り込みのボタンと同じ順に並べる", () => {
+    const unscored = reviewed(makeAnswer("s3"))
+    expect(
+      orderReviewedAnswers(
+        [failedButScoredByMe, unscored, correctProposalUnscoredByMe],
+        "status"
+      )
+    ).toEqual([unscored, correctProposalUnscoredByMe, failedButScoredByMe])
   })
 })
 
@@ -351,5 +464,120 @@ describe("一覧のマスと試行の見比べ", () => {
     expect(neighborAttemptId(attempts, "oldest", "older")).toBeNull()
     expect(neighborAttemptId(attempts, "newest", "newer")).toBeNull()
     expect(neighborAttemptId(attempts, null, "older")).toBeNull()
+  })
+})
+
+describe("設問一覧の印（AI の判定が未反映）", () => {
+  const otherCropRegionId = "crop-region-other"
+
+  it("自分の成功した判定があり、自分が未採点の答案がある設問だけを返す", () => {
+    const unscoredWithJudgement = makeAttemptWithRun({ examStudentId: "s1" })
+    const scoredWithJudgement = makeAttemptWithRun(
+      { examStudentId: "s2" },
+      { id: "run-2" }
+    )
+    const failedOnly = makeAttemptWithRun(
+      { examStudentId: "s3", state: "errored" },
+      { id: "run-3" }
+    )
+    const scoredRun = {
+      ...scoredWithJudgement.run,
+      prompt: {
+        ...scoredWithJudgement.run.prompt,
+        cropRegionId: otherCropRegionId,
+      },
+    }
+    const failedRun = {
+      ...failedOnly.run,
+      prompt: { ...failedOnly.run.prompt, cropRegionId: "crop-region-failed" },
+    }
+    const questionScoresByCropRegionId = new Map([
+      [
+        otherCropRegionId,
+        [
+          makeQuestionScore({
+            examStudentId: "s2",
+            cropRegionId: otherCropRegionId,
+            status: "correct",
+          }),
+        ],
+      ],
+    ])
+    expect(
+      selectQuestionsWithUnreflectedAiJudgements(
+        [unscoredWithJudgement.run, scoredRun, failedRun],
+        questionScoresByCropRegionId,
+        CURRENT_USER_ID
+      )
+    ).toEqual(new Set([CROP_REGION_ID]))
+  })
+
+  it("未採点の行・他の教員の採点は自分の採点に数えず、改訂の実行は見ない", () => {
+    const unscoredRow = makeAttemptWithRun({ examStudentId: "s1" })
+    const scoredByOtherUser = makeAttemptWithRun(
+      { examStudentId: "s2" },
+      { id: "run-other-user" }
+    )
+    const revision = makeAttemptWithRun(
+      { examStudentId: "s3" },
+      { id: "run-revise", purpose: "revise" }
+    )
+    const runOn = (
+      attemptWithRun: ReturnType<typeof makeAttemptWithRun>,
+      cropRegionId: string
+    ) => ({
+      ...attemptWithRun.run,
+      prompt: { ...attemptWithRun.run.prompt, cropRegionId },
+    })
+    const questionScoresByCropRegionId = new Map([
+      [
+        CROP_REGION_ID,
+        [makeQuestionScore({ examStudentId: "s1", status: "unscored" })],
+      ],
+      [
+        otherCropRegionId,
+        [
+          makeQuestionScore({
+            examStudentId: "s2",
+            cropRegionId: otherCropRegionId,
+            userId: "other-user",
+          }),
+        ],
+      ],
+    ])
+    expect(
+      selectQuestionsWithUnreflectedAiJudgements(
+        [
+          unscoredRow.run,
+          runOn(scoredByOtherUser, otherCropRegionId),
+          runOn(revision, "crop-region-revise"),
+        ],
+        questionScoresByCropRegionId,
+        CURRENT_USER_ID
+      )
+    ).toEqual(new Set([CROP_REGION_ID, otherCropRegionId]))
+  })
+})
+
+describe("自分の採点を書く答案の id", () => {
+  it("マスの id（examStudentId）ではなく、一覧表示の一括採点が受け取る答案画像の id にする", () => {
+    const gridItems = ["s1", "s2"].map((examStudentId) =>
+      toAiGridItem(
+        {
+          answer: makeAnswer(examStudentId),
+          review: reviewAnswer(makeAnswer(examStudentId), {
+            chosenAttemptIdByExamStudentId: new Map(),
+            selectedPromptId: "prompt-1",
+            points: POINTS,
+          }),
+        },
+        cropRegion
+      )
+    )
+    expect(gridItems.map((gridItem) => gridItem.id)).toEqual(["s1", "s2"])
+    expect(toStudentAnswerImageIds(gridItems)).toEqual([
+      "answer-image-s1",
+      "answer-image-s2",
+    ])
   })
 })

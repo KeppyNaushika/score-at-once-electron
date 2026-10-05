@@ -1,6 +1,9 @@
 import { queryOptions } from "@tanstack/react-query"
 
-import type { AiGradingSettings } from "@/electron-src/lib/aiGrading/providerCredentialStore"
+import type {
+  AiGradingSettings,
+  AiModelPrice,
+} from "@/electron-src/lib/aiGrading/providerCredentialStore"
 import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
 
 import { defineMutation } from "./defineMutation"
@@ -24,7 +27,7 @@ export const aiProviderStatusesQuery = () =>
     queryFn: () => window.electronAPI.aiProvider.getStatuses(),
   })
 
-/** 機密でない既定値（モデル・effort・同時実行数・予算の警告額） */
+/** 機密でない既定値（モデル・effort・同時実行数・送信1回の見積もりの警告額） */
 export const aiGradingSettingsQuery = () =>
   queryOptions({
     queryKey: ["aiProvider", "settings"] as const,
@@ -36,6 +39,13 @@ export const aiModelCatalogsQuery = () =>
   queryOptions({
     queryKey: ["aiProvider", "modelCatalogs"] as const,
     queryFn: () => window.electronAPI.aiProvider.getModelCatalogs(),
+  })
+
+/** 利用者が入れた単価（費用の計算はすべてこれで行う。入れていなければ空） */
+export const aiPricingQuery = () =>
+  queryOptions({
+    queryKey: ["aiProvider", "pricing"] as const,
+    queryFn: () => window.electronAPI.aiProvider.getPricing(),
   })
 
 // =====================================================================
@@ -133,5 +143,60 @@ export const openAiProviderTermsLinkMutation = () =>
     meta: {
       writesDatabase: false,
       errorMessage: "規約のページを開けませんでした",
+    },
+  })
+
+/** モデルの単価を入れる（端末の設定ファイルへ。1行でも正しくなければ何も変えない） */
+export const setAiModelPricesMutation = () =>
+  defineMutation({
+    mutationFn: (modelPrices: AiModelPrice[]) =>
+      window.electronAPI.aiProvider.setModelPrices(modelPrices),
+    meta: {
+      invalidates: [aiPricingQuery().queryKey],
+      errorMessage: "単価を保存できませんでした",
+    },
+  })
+
+/** モデル1つの単価を消す */
+export const removeAiModelPriceMutation = () =>
+  defineMutation({
+    mutationFn: (input: { provider: GradingProviderId; model: string }) =>
+      window.electronAPI.aiProvider.removeModelPrice(
+        input.provider,
+        input.model
+      ),
+    meta: {
+      invalidates: [aiPricingQuery().queryKey],
+      errorMessage: "単価を消せませんでした",
+    },
+  })
+
+/** 事業者のバッチの単価が通常の何 % かを入れる（null で未設定） */
+export const setAiBatchPricePercentMutation = () =>
+  defineMutation({
+    mutationFn: (input: {
+      provider: GradingProviderId
+      percent: number | null
+    }) =>
+      window.electronAPI.aiProvider.setBatchPricePercent(
+        input.provider,
+        input.percent
+      ),
+    meta: {
+      invalidates: [aiPricingQuery().queryKey],
+      errorMessage: "バッチの割合を保存できませんでした",
+    },
+  })
+
+/**
+ * 設定にある料金のページを取ってくる（本文をそのまま返す。何も書かない）。
+ * 読めなかったときも投げずに種類で返る
+ */
+export const fetchAiPricingPageMutation = () =>
+  defineMutation({
+    mutationFn: () => window.electronAPI.aiProvider.fetchPricingPage(),
+    meta: {
+      writesDatabase: false,
+      errorMessage: "料金のページを読み込めませんでした",
     },
   })

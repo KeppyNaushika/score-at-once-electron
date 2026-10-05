@@ -13,7 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useSlidingValue } from "@/hooks/useSlidingValue"
+import { ignoreDeselect } from "@/lib/toggleSelection"
+import { ANSWER_SORT_ORDERS } from "@/lib/userPreferences"
 
 interface NavigationControlsProps {
   layoutDirection: LayoutDirection
@@ -25,7 +28,7 @@ interface NavigationControlsProps {
   onExpandMarginChange?: (value: number) => void
   answerSortOrder?: AnswerSortOrder
   onAnswerSortOrderChange?: (order: AnswerSortOrder) => void
-  /** 白さの算出が完了しているか（未完了なら白さ順を選べない） */
+  /** 白さの算出が完了しているか（未完了なら白さ順・黒さ順を選べない） */
   isWhitenessReady?: boolean
 }
 
@@ -36,11 +39,20 @@ const LAYOUT_OPTIONS = [
   { value: "down-left", label: "下→左", description: "下に進んでから左へ" },
 ]
 
-const SORT_OPTIONS = [
-  { value: "custom", label: "表示順", needsWhiteness: false },
-  { value: "whiteness", label: "白さ順", needsWhiteness: true },
-  { value: "darkness", label: "濃さ順", needsWhiteness: true },
-]
+const SORT_ORDER_LABELS: Record<AnswerSortOrder, string> = {
+  custom: "生徒順",
+  whiteness: "白さ順",
+  darkness: "黒さ順",
+}
+
+/** 白さ・黒さで並べる順は、白さの算出が済むまで選べない */
+const NEEDS_WHITENESS: Record<AnswerSortOrder, boolean> = {
+  custom: false,
+  whiteness: true,
+  darkness: true,
+}
+
+const SORT_ORDER_LABEL_ID = "answer-sort-order-label"
 
 export default function NavigationControls({
   layoutDirection,
@@ -114,34 +126,40 @@ export default function NavigationControls({
         </div>
       )}
 
-      {/* 並び順 */}
+      {/* 並び順（単一選択の切り替え。選んでいるものをもう一度押しても外れない） */}
       {answerSortOrder && onAnswerSortOrderChange && (
-        <div className="flex items-center gap-2">
-          <span className="shrink-0 text-xs text-gray-500">並び順</span>
-          <Select
+        <div className="space-y-1">
+          <span id={SORT_ORDER_LABEL_ID} className="text-xs text-gray-500">
+            並び順
+          </span>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
             value={answerSortOrder}
-            onValueChange={(value) =>
-              onAnswerSortOrderChange(value as AnswerSortOrder)
-            }
+            aria-labelledby={SORT_ORDER_LABEL_ID}
+            onValueChange={ignoreDeselect(
+              ANSWER_SORT_ORDERS,
+              onAnswerSortOrderChange
+            )}
+            className="w-full"
           >
-            <SelectTrigger className="h-7 flex-1 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((option) => {
-                const isPending = option.needsWhiteness && !isWhitenessReady
-                return (
-                  <SelectItem
-                    key={option.value}
-                    value={option.value}
-                    disabled={isPending}
-                  >
-                    {isPending ? `${option.label}（解析中…）` : option.label}
-                  </SelectItem>
-                )
-              })}
-            </SelectContent>
-          </Select>
+            {ANSWER_SORT_ORDERS.map((sortOrder) => (
+              <ToggleGroupItem
+                key={sortOrder}
+                value={sortOrder}
+                disabled={NEEDS_WHITENESS[sortOrder] && !isWhitenessReady}
+                className="text-xs"
+              >
+                {SORT_ORDER_LABELS[sortOrder]}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          {!isWhitenessReady && (
+            <p className="text-[10px] text-muted-foreground">
+              白さを解析中のため、白さ順・黒さ順はまだ選べません
+            </p>
+          )}
         </div>
       )}
 

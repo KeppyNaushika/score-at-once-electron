@@ -25,18 +25,22 @@ interface AiAnswerDetailPanelProps extends EditorProps {
   onNextAttempt: () => void
   /** 表示中の判定を採用する（I）。採点済みなら上書きの確認は呼び出し側が出す */
   onAdopt: () => void
+  /** 採用ボタンの文言（開いているタブで、点か朱書きか） */
+  adoptActionLabel: string
   isAdopting: boolean
 }
 
 /**
- * 選んだ答案1件の詳細（右パネル）。答案と朱書きを個別表示と同じ部品で直し、
- * `<` `>` でこの答案の試行（全実行・新しい順）を見比べ、表示中の試行を採用する（I）
+ * 選んだ答案1件の詳細（左パネルのアノテーション反映のタブ）。答案と朱書きを個別表示と同じ部品で直し、
+ * `<` `>` でこの答案の試行（全実行・新しい順）を見比べ、表示中の試行の点か朱書きを
+ * （開いているタブのものを）採用する（I）
  */
 export function AiAnswerDetailPanel({
   promptNumberById,
   onPrevAttempt,
   onNextAttempt,
   onAdopt,
+  adoptActionLabel,
   isAdopting,
   ...editorProps
 }: AiAnswerDetailPanelProps) {
@@ -142,7 +146,7 @@ export function AiAnswerDetailPanel({
           />
           <Button className="w-full" onClick={onAdopt} disabled={!canAdopt}>
             <Check className="h-4 w-4" />
-            自分の採点として採用
+            {adoptActionLabel}
             <Kbd variant="tiny">I</Kbd>
           </Button>
         </>

@@ -93,8 +93,10 @@ export function AiBulkAnnotationSection({
     .join("・")
 
   return (
-    <div className="space-y-1.5 rounded-md border p-2">
-      <p className="text-xs font-medium">朱書きの反映（点とは別）</p>
+    <div className="space-y-1.5">
+      <p className="text-xs text-muted-foreground">
+        まとめて反映する答案（AI の判定の状態）
+      </p>
       <div
         className="flex flex-wrap gap-1"
         role="group"

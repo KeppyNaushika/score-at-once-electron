@@ -52,19 +52,26 @@ export function groupAttemptsByExamStudent(
 }
 
 /**
- * 表示する試行。教員が `<` `>` で選んだものがあればそれ、無ければ最新の成功したもの、
+ * 表示する試行。教員が `<` `>` で選んだものがあればそれ、無ければ実行の履歴で選んだ
+ * 実行の試行（失敗も「失敗した」と見せる）、それも無ければ最新の成功したもの、
  * それも無ければ最新のもの（失敗も「失敗した」と見せる）
  *
  * @param attempts 新しい順
+ * @param chosenRunId 実行の履歴で選んだ実行（null は最新）
  */
 export function resolveDisplayedAttempt(
   attempts: readonly AttemptWithRun[],
-  chosenAttemptId: string | undefined
+  chosenAttemptId: string | undefined,
+  chosenRunId: string | null = null
 ): AttemptWithRun | null {
   const chosenAttempt = attempts.find(
     (attemptWithRun) => attemptWithRun.attempt.id === chosenAttemptId
   )
   if (chosenAttempt) return chosenAttempt
+  const attemptOfChosenRun = attempts.find(
+    (attemptWithRun) => attemptWithRun.run.id === chosenRunId
+  )
+  if (attemptOfChosenRun) return attemptOfChosenRun
   return (
     attempts.find(
       (attemptWithRun) => attemptWithRun.attempt.state === "succeeded"

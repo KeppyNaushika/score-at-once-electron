@@ -10,17 +10,10 @@ import {
   setQuestionScoreMutation,
   updateQuestionScoreMutation,
 } from "@/queries/scoring"
-import type { ScoringStatus } from "@/types/scoringStatus.types"
-
-/** 採点状態の綴り。旧い呼び出し形式（第1引数が状態）かどうかの判定に使う */
-const SCORING_STATUSES: readonly string[] = [
-  "unscored",
-  "correct",
-  "incorrect",
-  "partial",
-  "pending",
-  "no_answer",
-]
+import {
+  isScoringStatus,
+  type ScoringStatus,
+} from "@/types/scoringStatus.types"
 
 interface UseBatchScoringProps {
   examId: string
@@ -72,12 +65,15 @@ export function useBatchScoring({
       let status: ScoringStatus
       let inputPartialScore: number | null
 
+      // 旧い呼び出し形式（第1引数が状態）かどうかは、状態の綴りの一覧
+      // （SCORING_STATUSES）で見分ける。手で書き写すと Wマークが漏れて、
+      // u の採点が答案 id の取り違えとして黙って捨てられた
       if (
         typeof statusOrAnswerIds === "string" &&
-        SCORING_STATUSES.includes(statusOrAnswerIds)
+        isScoringStatus(statusOrAnswerIds)
       ) {
         // 新形式: handleBatchScore(status, partialScore?)
-        status = statusOrAnswerIds as ScoringStatus
+        status = statusOrAnswerIds
         answerIds = Array.from(selectedAnswers)
         inputPartialScore =
           typeof statusOrPartialScore === "number" ? statusOrPartialScore : null

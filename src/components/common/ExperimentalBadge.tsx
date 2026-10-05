@@ -9,14 +9,34 @@ import { FlaskConical } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
-export function ExperimentalBadge({ className }: { className?: string }) {
+interface ExperimentalBadgeProps {
+  className?: string
+  /** 印の文字。既定は「実験的機能」（サイドバーなど狭いところでは「実験的」） */
+  label?: string
+  /**
+   * 色の強さ。既定は橙。サイドバーでは、その項目を開いていないあいだ灰色で目立たせない
+   * （開いているときだけ橙）
+   */
+  tone?: "default" | "muted"
+}
+
+export function ExperimentalBadge({
+  className,
+  label = "実験的機能",
+  tone = "default",
+}: ExperimentalBadgeProps) {
   return (
     <Badge
       variant="outline"
-      className={cn("border-amber-400 text-amber-700", className)}
+      className={cn(
+        tone === "muted"
+          ? "border-muted-foreground/40 text-muted-foreground"
+          : "border-amber-400 text-amber-700",
+        className
+      )}
     >
       <FlaskConical />
-      実験的機能
+      {label}
     </Badge>
   )
 }

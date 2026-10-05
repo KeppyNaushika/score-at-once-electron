@@ -98,6 +98,29 @@ const CALL_EVERY_CHANNEL: Record<ChannelName, () => Promise<unknown>> = {
     aiProviderHandlers["aiProvider:clearApiKey"]("openai"),
   "aiProvider:revokeConsent": () =>
     aiProviderHandlers["aiProvider:revokeConsent"]("openai"),
+  "aiProvider:getPricing": () => aiProviderHandlers["aiProvider:getPricing"](),
+  "aiProvider:setModelPrices": () =>
+    aiProviderHandlers["aiProvider:setModelPrices"]([
+      {
+        provider: "anthropic",
+        model: "claude-test-model",
+        inputPerMillionUsd: 1,
+        outputPerMillionUsd: 2,
+        cacheReadPerMillionUsd: 0,
+        cacheWrite5mPerMillionUsd: 0,
+        cacheWrite1hPerMillionUsd: 0,
+      },
+    ]),
+  "aiProvider:removeModelPrice": () =>
+    aiProviderHandlers["aiProvider:removeModelPrice"](
+      "anthropic",
+      "claude-test-model"
+    ),
+  "aiProvider:setBatchPricePercent": () =>
+    aiProviderHandlers["aiProvider:setBatchPricePercent"]("anthropic", 50),
+  // 偽の net.fetch は投げるので、つながらなかったとして種類で返る
+  "aiProvider:fetchPricingPage": () =>
+    aiProviderHandlers["aiProvider:fetchPricingPage"](),
 }
 
 describe("aiProviderHandlers", () => {

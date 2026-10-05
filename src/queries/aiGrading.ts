@@ -31,6 +31,27 @@ export const aiPromptsQuery = (examId: string, cropRegionId: string) =>
 const aiGradingRunsScope = (examId: string, cropRegionId: string) =>
   [...scopeKeys.exam(examId), "aiGradingRuns", cropRegionId] as const
 
+/** 試験の全設問の、自分の実行と試行（設問一覧の印に使う） */
+const aiGradingRunsOfExamScope = (examId: string) =>
+  [...scopeKeys.exam(examId), "aiGradingRunsOfExam"] as const
+
+export const aiGradingRunsOfExamQuery = (examId: string) =>
+  queryOptions({
+    queryKey: aiGradingRunsOfExamScope(examId),
+    queryFn: () => window.electronAPI.aiGrading.listRunsByExam(examId),
+  })
+
+/**
+ * すべての試験の、自分の実行と試行（試験・設問付き。「AI採点」の画面の
+ * 使用トークンに使う）。
+ * 試験をまたぐので試験のまとまりの外に置き、実行を書く口がそれぞれ取り直す
+ */
+export const myAiGradingRunsQuery = () =>
+  queryOptions({
+    queryKey: ["myAiGradingRuns"] as const,
+    queryFn: () => window.electronAPI.aiGrading.listMyRuns(),
+  })
+
 /**
  * 設問の実行と試行（古い順）。
  *
@@ -139,6 +160,7 @@ export const reviseAiPromptMutation = (examId: string, cropRegionId: string) =>
       invalidates: [
         aiPromptsQuery(examId, cropRegionId).queryKey,
         aiGradingRunsScope(examId, cropRegionId),
+        myAiGradingRunsQuery().queryKey,
       ],
       errorMessage: "プロンプトを改訂できませんでした",
     },
@@ -157,7 +179,11 @@ export const startAiGradingRunMutation = (
       input: Parameters<typeof window.electronAPI.aiGrading.startRun>[0]
     ) => window.electronAPI.aiGrading.startRun(input),
     meta: {
-      invalidates: [aiGradingRunsScope(examId, cropRegionId)],
+      invalidates: [
+        aiGradingRunsScope(examId, cropRegionId),
+        aiGradingRunsOfExamScope(examId),
+        myAiGradingRunsQuery().queryKey,
+      ],
       errorMessage: "AI 採点を始められませんでした",
     },
   })
@@ -171,7 +197,11 @@ export const cancelAiGradingRunMutation = (
     mutationFn: (runId: string) =>
       window.electronAPI.aiGrading.cancelRun(runId),
     meta: {
-      invalidates: [aiGradingRunsScope(examId, cropRegionId)],
+      invalidates: [
+        aiGradingRunsScope(examId, cropRegionId),
+        aiGradingRunsOfExamScope(examId),
+        myAiGradingRunsQuery().queryKey,
+      ],
       errorMessage: "AI 採点を中止できませんでした",
     },
   })
@@ -186,7 +216,11 @@ export const deleteAiGradingAttemptsMutation = (
       window.electronAPI.aiGrading.deleteAttempts(attemptIds),
     scope: { id: `exam:${examId}:aiGradingRuns:${cropRegionId}` },
     meta: {
-      invalidates: [aiGradingRunsScope(examId, cropRegionId)],
+      invalidates: [
+        aiGradingRunsScope(examId, cropRegionId),
+        aiGradingRunsOfExamScope(examId),
+        myAiGradingRunsQuery().queryKey,
+      ],
       errorMessage: "AI の判定を消せませんでした",
     },
   })
@@ -207,6 +241,8 @@ export const adoptAiGradingAttemptsMutation = (
     meta: {
       invalidates: [
         aiGradingRunsScope(examId, cropRegionId),
+        aiGradingRunsOfExamScope(examId),
+        myAiGradingRunsQuery().queryKey,
         questionScoresQuery(examId, cropRegionId).queryKey,
         scopeKeys.annotation(),
       ],

@@ -29,6 +29,7 @@ import {
 import {
   deleteAiGradingAttempts,
   listAiGradingRunsByCropRegion,
+  listAiGradingRunsByExam,
 } from "@/electron-src/lib/prisma/aiGradingRun"
 import { setQuestionScore } from "@/electron-src/lib/prisma/questionScoreWrite"
 
@@ -462,5 +463,31 @@ describe("listAiGradingRunsByCropRegion", () => {
     expect(ownRuns[0].attempts[0].state).toBe("succeeded")
     expect("passcode" in ownRuns[0].user).toBe(false)
     expect(allRuns).toHaveLength(2)
+  })
+})
+
+describe("listAiGradingRunsByExam", () => {
+  it("試験の設問をたどって、その教員の実行だけを試行とプロンプト付きで返す", async () => {
+    await gradeAll()
+    await gradeAll(fixture.otherUser.id)
+
+    const ownRuns = await listAiGradingRunsByExam(
+      fixture.exam.exam.id,
+      fixture.exam.user.id
+    )
+    const otherExamRuns = await listAiGradingRunsByExam(
+      "exam-not-exists",
+      fixture.exam.user.id
+    )
+
+    expect(ownRuns).toHaveLength(1)
+    expect(ownRuns[0].purpose).toBe("grade")
+    expect(ownRuns[0].prompt.cropRegionId).toBe(fixture.cropRegion.id)
+    expect(ownRuns[0].attempts.map((attempt) => attempt.state)).toEqual([
+      "succeeded",
+      "succeeded",
+      "succeeded",
+    ])
+    expect(otherExamRuns).toHaveLength(0)
   })
 })

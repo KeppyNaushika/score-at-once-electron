@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query"
 import { type KeyboardEvent } from "react"
 import { toast } from "sonner"
 
-import type { useAiGradingSettings } from "@/app/(app)/settings/hooks/useAiGradingSettings"
+import type { useAiGradingSettings } from "@/app/(app)/ai-grading/hooks/useAiGradingSettings"
 import { AiRunOptionToggles } from "@/components/common/AiRunOptionToggles"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -101,7 +101,7 @@ export function AiGradingDefaultsSection({
     }
     const budgetWarningUsd = Number(trimmedValue)
     if (!Number.isFinite(budgetWarningUsd) || budgetWarningUsd < 0) {
-      toast.error("予算の警告額は 0 以上の数にしてください（空欄で警告しない）")
+      toast.error("警告額は 0 以上の数にしてください（空欄で警告しない）")
       input.value =
         settings.budgetWarningUsd === null
           ? ""
@@ -197,7 +197,7 @@ export function AiGradingDefaultsSection({
       </div>
       <p className="text-xs text-muted-foreground">
         Effort と処理は、既定の送信先の既定のモデルで選べるものを示しています。
-        バッチは費用が半額ほどですが、結果まで最大1日かかります。拡大率は原寸を推奨します（拡大しても情報は増えず、費用が増えるだけです）。
+        バッチは費用が下がることがありますが（割合は「料金」タブで入れます）、結果まで最大1日かかります。拡大率は原寸を推奨します（拡大しても情報は増えず、費用が増えるだけです）。
       </p>
 
       <div className="space-y-2">
@@ -222,7 +222,9 @@ export function AiGradingDefaultsSection({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="ai-budget-warning">予算の警告額（米ドル・任意）</Label>
+        <Label htmlFor="ai-budget-warning">
+          送信1回の見積もりの警告額（米ドル・任意）
+        </Label>
         <Input
           key={settings.budgetWarningUsd ?? "none"}
           id="ai-budget-warning"
@@ -236,7 +238,7 @@ export function AiGradingDefaultsSection({
           className="w-32"
         />
         <p className="text-xs text-muted-foreground">
-          送信前の見積もりがこの額を超えるときに警告します。空欄なら警告しません。
+          送信の前に、その1回の見積もりがこの額を超えるときに警告します（月の予算ではありません）。空欄なら警告しません。
         </p>
       </div>
     </section>

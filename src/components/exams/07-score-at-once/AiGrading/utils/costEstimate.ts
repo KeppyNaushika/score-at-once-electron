@@ -3,30 +3,17 @@
  *
  * main は送る画像の大きさ（画素）だけを返し、トークン数と金額はここで求める。
  * 実際の請求は事業者の計算（思考のトークン・キャッシュの効き）で決まるので、
- * 画面には必ず「概算」と添える。単価はこのファイルにだけ置く。
+ * 画面には必ず「概算」と添える。単価はアプリが持たず、利用者が入れた単価
+ * （`AiPricing`）で `src/lib/aiUsageCost.ts` が金額にする。
  */
 
-import type { GradingEffort } from "@/electron-src/lib/aiGrading/providers/types"
+import type { AiPricing } from "@/electron-src/lib/aiGrading/providerCredentialStore"
+import type {
+  GradingEffort,
+  GradingProviderId,
+} from "@/electron-src/lib/aiGrading/providers/types"
+import { computeUsageCost, type UsageCost } from "@/lib/aiUsageCost"
 import type { AiGradingRunMode } from "@/types/aiGrading.types"
-
-/** モデルの単価（100万トークンあたりの米ドル） */
-interface ModelPrice {
-  inputPerMillionUsd: number
-  outputPerMillionUsd: number
-}
-
-/**
- * 単価の分かっているモデル。ここに無いモデル（取得した一覧から選んだ新しいモデル・OpenAI 等）は
- * 金額を出さず「単価不明」と出す（トークン数だけ）
- */
-export const AI_MODEL_PRICES: Record<string, ModelPrice> = {
-  "claude-opus-5-5": { inputPerMillionUsd: 4, outputPerMillionUsd: 20 },
-  "claude-sonnet-5-5": { inputPerMillionUsd: 2, outputPerMillionUsd: 10 },
-  "claude-haiku-4-5": { inputPerMillionUsd: 1, outputPerMillionUsd: 5 },
-}
-
-/** バッチで送ったときの割引（単価に掛ける） */
-export const BATCH_PRICE_RATIO = 0.5
 
 /** 画像1枚のトークン数 ≈ 幅 × 高さ ÷ この値 */
 const IMAGE_PIXELS_PER_TOKEN = 750
@@ -50,6 +37,7 @@ interface ImageSize {
 }
 
 export interface RunCostEstimateInput {
+  provider: GradingProviderId
   model: string
   effort: GradingEffort
   mode: AiGradingRunMode
@@ -65,8 +53,8 @@ export interface RunCostEstimate {
   requestCount: number
   inputTokens: number
   outputTokens: number
-  /** 単価の分からないモデルでは null */
-  costUsd: number | null
+  /** 利用者が入れた単価での金額。単価が無ければ金額を出さない */
+  cost: UsageCost
 }
 
 /** 画像1枚のトークン数の目安 */
@@ -78,7 +66,10 @@ export function estimateImageTokens(image: ImageSize): number {
  * 実行1回の概算。答案1件ごとに「プロンプト＋固定の画像＋答案の画像」を1回送るとして数える
  * （キャッシュの割引は見込まない。見込まないぶん多めに出る）
  */
-export function estimateRunCost(input: RunCostEstimateInput): RunCostEstimate {
+export function estimateRunCost(
+  input: RunCostEstimateInput,
+  pricing: AiPricing
+): RunCostEstimate {
   const requestCount = input.answerImages.length
   const fixedTokensPerRequest =
     Math.ceil(
@@ -96,16 +87,10 @@ export function estimateRunCost(input: RunCostEstimateInput): RunCostEstimate {
       0
     )
   const outputTokens = OUTPUT_TOKENS_PER_ANSWER[input.effort] * requestCount
-
-  const price = AI_MODEL_PRICES[input.model]
-  if (!price) {
-    return { requestCount, inputTokens, outputTokens, costUsd: null }
-  }
-  const priceRatio = input.mode === "batch" ? BATCH_PRICE_RATIO : 1
-  const costUsd =
-    ((inputTokens * price.inputPerMillionUsd +
-      outputTokens * price.outputPerMillionUsd) /
-      1_000_000) *
-    priceRatio
-  return { requestCount, inputTokens, outputTokens, costUsd }
+  const cost = computeUsageCost(
+    pricing,
+    { provider: input.provider, model: input.model, mode: input.mode },
+    { inputTokens, outputTokens, cacheReadTokens: 0, cacheWriteTokens: 0 }
+  )
+  return { requestCount, inputTokens, outputTokens, cost }
 }

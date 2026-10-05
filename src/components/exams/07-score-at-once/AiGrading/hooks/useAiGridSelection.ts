@@ -6,10 +6,11 @@ import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import {
-  ALL_STATUSES_VISIBLE,
-  type FilterBasis,
+  type AiGridFilterSettings,
+  type ConfidenceFilterLevel,
+  DEFAULT_AI_GRID_FILTER_SETTINGS,
+  type FilterSource,
   isShownByFilter,
-  type StatusFilterSettings,
 } from "../utils/aiGridFilter"
 import { toAiGridItem } from "../utils/aiGridItems"
 import type { ReviewedAiGradingAnswer } from "../utils/answerReview"
@@ -35,9 +36,9 @@ export function useAiGridSelection({
   layoutDirection,
   itemsPerLine,
 }: UseAiGridSelectionOptions) {
-  const [filterSettings, setFilterSettings] =
-    useState<StatusFilterSettings>(ALL_STATUSES_VISIBLE)
-  const [filterBasis, setFilterBasis] = useState<FilterBasis>("ai")
+  const [filterSettings, setFilterSettings] = useState<AiGridFilterSettings>(
+    DEFAULT_AI_GRID_FILTER_SETTINGS
+  )
   /**
    * 採用したばかりの答案。絞り込みから外れても、R（更新）か絞り込みを変えるまでは
    * 一覧に残す（一覧表示の「採点したばかりの答案」と同じ。押した答案が目の前から
@@ -60,9 +61,9 @@ export function useAiGridSelection({
       gridItems.filter(
         (gridItem) =>
           recentlyAdoptedIds.has(gridItem.id) ||
-          isShownByFilter(gridItem.reviewedAnswer, filterSettings, filterBasis)
+          isShownByFilter(gridItem.reviewedAnswer, filterSettings)
       ),
-    [gridItems, recentlyAdoptedIds, filterSettings, filterBasis]
+    [gridItems, recentlyAdoptedIds, filterSettings]
   )
   const visibleIds = useMemo(
     () => visibleItems.map((gridItem) => gridItem.id),
@@ -100,12 +101,21 @@ export function useAiGridSelection({
     setChosenIds(new Set(visibleIds))
   }, [visibleIds])
 
-  const toggleFilter = useCallback((status: ScoringStatus) => {
-    setFilterSettings((prev) => ({ ...prev, [status]: !prev[status] }))
-    setRecentlyAdoptedIds(new Set())
-  }, [])
-  const changeFilterBasis = useCallback((basis: FilterBasis) => {
-    setFilterBasis(basis)
+  const toggleFilter = useCallback(
+    (source: FilterSource, status: ScoringStatus) => {
+      setFilterSettings((prev) => ({
+        ...prev,
+        [source]: { ...prev[source], [status]: !prev[source][status] },
+      }))
+      setRecentlyAdoptedIds(new Set())
+    },
+    []
+  )
+  const toggleConfidenceFilter = useCallback((level: ConfidenceFilterLevel) => {
+    setFilterSettings((prev) => ({
+      ...prev,
+      confidence: { ...prev.confidence, [level]: !prev.confidence[level] },
+    }))
     setRecentlyAdoptedIds(new Set())
   }, [])
   const refresh = useCallback(() => {
@@ -153,8 +163,7 @@ export function useAiGridSelection({
     handleSelectAnswer,
     filterSettings,
     toggleFilter,
-    filterBasis,
-    changeFilterBasis,
+    toggleConfidenceFilter,
     markAdopted,
   }
 }

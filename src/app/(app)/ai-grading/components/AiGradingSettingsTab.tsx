@@ -1,6 +1,6 @@
 "use client"
 
-import { useAiGradingSettings } from "@/app/(app)/settings/hooks/useAiGradingSettings"
+import { useAiGradingSettings } from "@/app/(app)/ai-grading/hooks/useAiGradingSettings"
 import { ExperimentalBadge } from "@/components/common/ExperimentalBadge"
 import { Spinner } from "@/components/ui/spinner"
 
@@ -8,7 +8,7 @@ import { AiGradingDefaultsSection } from "./AiGradingDefaultsSection"
 import { AiProviderSection } from "./AiProviderSection"
 
 /**
- * 「実験的機能：AI採点」タブ（設計 §9）。
+ * 「AI採点」の画面の「設定」タブ（設計 §9）。
  *
  * 機能は同意するまで存在しないものとして扱う。このタブには入口と説明だけを置き、
  * 事業者ごとに同意した後で、キーの入力欄・接続テスト・既定値を出す。

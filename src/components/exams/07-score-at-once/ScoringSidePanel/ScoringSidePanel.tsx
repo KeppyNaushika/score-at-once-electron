@@ -50,6 +50,8 @@ interface ScoringSidePanelProps {
   onPrevQuestion: () => void
   onNextQuestion: () => void
   questionProgress: QuestionProgress
+  /** AI の判定が未反映の設問（設問一覧の印をオレンジにする） */
+  unreflectedAiQuestionIds: ReadonlySet<string>
   /** 採点担当による絞り込みと「すべて表示」 */
   assignmentScope: AssignmentScope
   // Scoring Toolbar props
@@ -144,6 +146,7 @@ export function ScoringSidePanel({
   onPrevQuestion,
   onNextQuestion,
   questionProgress,
+  unreflectedAiQuestionIds,
   assignmentScope,
   selectedAnswersCount,
   filterSettings,
@@ -262,6 +265,7 @@ export function ScoringSidePanel({
             onPrevQuestion={onPrevQuestion}
             onNextQuestion={onNextQuestion}
             questionProgress={questionProgress}
+            unreflectedAiQuestionIds={unreflectedAiQuestionIds}
             collapsible
             isOpen={isSectionOpen("question")}
             onToggle={() => toggleSection("question")}

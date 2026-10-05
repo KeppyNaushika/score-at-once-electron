@@ -5,6 +5,7 @@ import Head from "next/head"
 import { useCallback, useMemo, useState } from "react"
 
 import { AiGradingMode } from "@/components/exams/07-score-at-once/AiGrading/AiGradingMode"
+import { useUnreflectedAiQuestionIds } from "@/components/exams/07-score-at-once/AiGrading/hooks/useUnreflectedAiQuestionIds"
 import { OMRAutoScoringModal } from "@/components/exams/07-score-at-once/OMRRecognition/OMRAutoScoringModal"
 import {
   ShortcutProvider,
@@ -129,6 +130,13 @@ function ScoringMainViewContent() {
   })
   const { keyBindings } = useShortcutContext()
   const queryClient = useQueryClient()
+  /** 設問一覧のオレンジの印（AI の判定が未反映）。どの採点モードでも出す */
+  const unreflectedAiQuestionIds = useUnreflectedAiQuestionIds({
+    examId,
+    currentUserId: currentUser.id,
+    questionScoresByCropRegionId,
+    isAiGradingAvailable: unlockedProviders.length > 0,
+  })
 
   /** モーダル用のキーバインディング */
   const modalKeyBindings = useMemo(
@@ -235,6 +243,7 @@ function ScoringMainViewContent() {
             questionScoresByCropRegionId={questionScoresByCropRegionId}
             pageSize={pageSize}
             unlockedProviders={unlockedProviders}
+            unreflectedAiQuestionIds={unreflectedAiQuestionIds}
             display={{
               layoutDirection,
               onLayoutDirectionChange: setLayoutDirection,
@@ -311,6 +320,7 @@ function ScoringMainViewContent() {
                 onPrevQuestion={handlePrevQuestion}
                 onNextQuestion={handleNextQuestion}
                 questionProgress={questionProgress}
+                unreflectedAiQuestionIds={unreflectedAiQuestionIds}
                 assignmentScope={assignmentScope}
                 selectedStudentAnswerImageIds={selectedStudentAnswerImageIds}
                 selectedAnswersCount={selectedStudentAnswerImageIds.size}

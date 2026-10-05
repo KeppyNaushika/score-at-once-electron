@@ -33,6 +33,18 @@ export function toAiGridItem(
   }
 }
 
+/**
+ * マスの答案画像の id（一覧表示の一括採点が受け取る形）。マスの id は examStudentId で、
+ * 一覧表示の答案の id（StudentAnswerImage.id）とは違う
+ */
+export function toStudentAnswerImageIds(
+  gridItems: readonly AiGridItem[]
+): string[] {
+  return gridItems.map(
+    (gridItem) => gridItem.reviewedAnswer.answer.studentAnswerImage.id
+  )
+}
+
 /** 先頭に置く模範解答のマス（一覧表示の `useQuestionScoringData` と同じ形） */
 export function toMasterGridItem(
   cropRegion: QuestionAnswerRegionRow

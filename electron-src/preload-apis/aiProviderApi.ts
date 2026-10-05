@@ -30,6 +30,16 @@ export function createAiProviderApi() {
       fetchModels: bind("aiProvider:fetchModels"),
 
       openTermsLink: bind("aiProvider:openTermsLink"),
+
+      getPricing: bind("aiProvider:getPricing"),
+
+      setModelPrices: bind("aiProvider:setModelPrices"),
+
+      fetchPricingPage: bind("aiProvider:fetchPricingPage"),
+
+      removeModelPrice: bind("aiProvider:removeModelPrice"),
+
+      setBatchPricePercent: bind("aiProvider:setBatchPricePercent"),
     },
   }
 }
