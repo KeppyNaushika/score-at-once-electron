@@ -486,34 +486,36 @@ model ReturnSnapshot {
 /// （他の教員のプロンプトもそのまま選んで使える）。「今の基準」という1つの状態は持たず、
 /// 実行のたびにどれを使うかを選ぶ。
 model AiPrompt {
-  id                   String         @id @default(uuid())
-  cropRegionId         String
+  id                    String         @id @default(uuid())
+  cropRegionId          String
   /// 直す元になったプロンプト。最初の1行は null。行の文面は自己完結しているので、
   /// 元が消えても SetNull で残す
-  parentPromptId       String?
+  parentPromptId        String?
   /// 作った教員。利用者を消してもプロンプトは他の教員が使うので残し、ここだけ null にする
-  createdByUserId      String?
+  createdByUserId       String?
   /// 問題文（テキスト）。省略できるので、空文字を「書いていない」とする（QuestionScore.comment と同じ形）
-  questionText         String         @default("")
+  questionText          String         @default("")
   /// 問題用紙の画像（data ディレクトリからの相対パス）。無ければ null
-  questionImagePath    String?
-  modelAnswerText      String         @default("")
+  questionImagePath     String?
+  modelAnswerText       String         @default("")
   /// 模範解答画像（模範解答のページから設問枠を切り出したもの）も送るか
-  sendModelAnswerImage Boolean        @default(false)
+  sendModelAnswerImage  Boolean        @default(false)
   /// 採点基準（文章）
-  rubricText           String         @default("")
+  rubricText            String         @default("")
+  /// 朱書き（生徒向けの注釈）の指示。量・書き方・どんな答案に入れるか。空ならアプリ共通の決まりだけ
+  annotationInstruction String         @default("")
   /// VLM に改訂させたときの教員の指示文。教員が直接書いた行は ""
-  revisionInstruction  String         @default("")
+  revisionInstruction   String         @default("")
   /// 改訂した VLM から教員への説明。教員が直接書いた行は ""
-  revisionMessage      String         @default("")
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @default(now()) @updatedAt
-  cropRegion           CropRegion     @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
-  parentPrompt         AiPrompt?      @relation("AiPromptRevision", fields: [parentPromptId], references: [id], onDelete: SetNull)
-  childPrompts         AiPrompt[]     @relation("AiPromptRevision")
-  createdBy            User?          @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
-  gradingRuns          AiGradingRun[] @relation("AiGradingRunPrompt")
-  revisionResultRuns   AiGradingRun[] @relation("AiGradingRunResultPrompt")
+  revisionMessage       String         @default("")
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @default(now()) @updatedAt
+  cropRegion            CropRegion     @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
+  parentPrompt          AiPrompt?      @relation("AiPromptRevision", fields: [parentPromptId], references: [id], onDelete: SetNull)
+  childPrompts          AiPrompt[]     @relation("AiPromptRevision")
+  createdBy             User?          @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  gradingRuns           AiGradingRun[] @relation("AiGradingRunPrompt")
+  revisionResultRuns    AiGradingRun[] @relation("AiGradingRunResultPrompt")
 
   @@index([cropRegionId])
 }

@@ -8,6 +8,8 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  estimateAnnotationCharacterLimit,
+  MINIMUM_FONT_SIZE_MM,
   placeAnnotation,
   sanitizeAnnotationText,
   wrapAnnotationText,
@@ -179,5 +181,91 @@ describe("wrapAnnotationText", () => {
 describe("sanitizeAnnotationText", () => {
   it("$ と改行を取り除き、前後の空白を落とす", () => {
     expect(sanitizeAnnotationText(" $a$ と\r\n$b$ ")).toBe("a とb")
+  })
+})
+
+describe("placeAnnotation の文字の縮小と、枠からのはみ出し", () => {
+  /** 縦長の小さな解答欄（30mm × 30mm）の、指定した行より下だけが空いたグリッド */
+  function createSmallInkGrid(firstEmptyRow: number): AnswerInkGrid {
+    const columnCount = 30
+    const rowCount = 30
+    return {
+      originX: 0.1,
+      originY: 0.2,
+      cellWidth: 1 / PAPER_DIMENSIONS_A4.width,
+      cellHeight: 1 / PAPER_DIMENSIONS_A4.height,
+      columnCount,
+      rowCount,
+      occupiedCells: Array.from(
+        { length: columnCount * rowCount },
+        (_, cellIndex) => Math.floor(cellIndex / columnCount) < firstEmptyRow
+      ),
+    }
+  }
+
+  const LONG_ANNOTATION =
+    "「比例」という言葉は書けています。ただし、時間と速さが比例しているという関係までは書かれていません。"
+
+  it("5mm では収まらない注釈を、文字を縮めて空きに収める", () => {
+    // 下の 14mm だけが空き（膨らませた1セル分を除くと 13mm）
+    const inkGrid = createSmallInkGrid(16)
+    const placement = place("関係が書かれていません。", inkGrid)
+
+    expect(placement).not.toBeNull()
+    expect(placement?.fontSize).toBeLessThan(FONT_SIZE_MM)
+    expect(placement?.fontSize).toBeGreaterThanOrEqual(MINIMUM_FONT_SIZE_MM)
+    expect(placement?.overlapsInk).toBe(false)
+    expect(placement?.exceedsRegion).toBe(false)
+  })
+
+  it("収まる中でいちばん大きい文字を採る（空いていれば縮めない）", () => {
+    const inkGrid = createSmallInkGrid(0)
+    const placement = place("よい", inkGrid)
+    expect(placement?.fontSize).toBe(FONT_SIZE_MM)
+  })
+
+  it("空きに収まらなくても、枠に入る箱なら枠の外へははみ出さない", () => {
+    // 全面が手書き。最小の文字なら枠には入る長さ
+    const inkGrid = createSmallInkGrid(30)
+    const placement = place("関係が書かれていません。", inkGrid)
+
+    expect(placement?.overlapsInk).toBe(true)
+    expect(placement?.exceedsRegion).toBe(false)
+    expect(placement?.fontSize).toBe(MINIMUM_FONT_SIZE_MM)
+    const lineCount = placement?.lineCount ?? 0
+    const boxHeightMm = lineCount * MINIMUM_FONT_SIZE_MM * 1.4
+    const topRow = Math.round(
+      ((placement?.y ?? 0) - inkGrid.originY) / inkGrid.cellHeight
+    )
+    expect(topRow + boxHeightMm).toBeLessThanOrEqual(inkGrid.rowCount + 1e-9)
+  })
+
+  it("最小の文字でも枠に入らない長い注釈は、枠の左上に置いて exceedsRegion を返す", () => {
+    const tinyInkGrid: AnswerInkGrid = {
+      ...createSmallInkGrid(0),
+      columnCount: 10,
+      rowCount: 6,
+      occupiedCells: new Array<boolean>(60).fill(false),
+    }
+    const placement = place(LONG_ANNOTATION, tinyInkGrid)
+
+    expect(placement?.exceedsRegion).toBe(true)
+    expect(placement?.fontSize).toBe(MINIMUM_FONT_SIZE_MM)
+    expect(placement?.x).toBeCloseTo(tinyInkGrid.originX)
+    expect(placement?.y).toBeCloseTo(tinyInkGrid.originY)
+  })
+})
+
+describe("estimateAnnotationCharacterLimit", () => {
+  it("解答欄の面積に比例し、下限・上限に収める", () => {
+    expect(estimateAnnotationCharacterLimit(50, 50)).toBe(39)
+    expect(estimateAnnotationCharacterLimit(10, 5)).toBe(10)
+    expect(estimateAnnotationCharacterLimit(200, 100)).toBe(80)
+  })
+
+  it("縦横を入れ替えても同じ（用紙の向きによらない）", () => {
+    expect(estimateAnnotationCharacterLimit(60, 40)).toBe(
+      estimateAnnotationCharacterLimit(40, 60)
+    )
   })
 })

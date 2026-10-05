@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => ({
     throw new Error("テストでネットワークへ出てはならない")
   }),
   testConnection: vi.fn(async () => undefined),
+  listModels: vi.fn(async (): Promise<unknown[]> => []),
   createGradingProvider: vi.fn(),
 }))
 
@@ -84,6 +85,10 @@ const CALL_EVERY_CHANNEL: Record<ChannelName, () => Promise<unknown>> = {
     aiProviderHandlers["aiProvider:updateSettings"]({ concurrency: 2 }),
   "aiProvider:testConnection": () =>
     aiProviderHandlers["aiProvider:testConnection"]("anthropic"),
+  "aiProvider:getModelCatalogs": () =>
+    aiProviderHandlers["aiProvider:getModelCatalogs"](),
+  "aiProvider:fetchModels": () =>
+    aiProviderHandlers["aiProvider:fetchModels"]("anthropic"),
   "aiProvider:openTermsLink": () =>
     aiProviderHandlers["aiProvider:openTermsLink"](
       "anthropic",
@@ -105,8 +110,11 @@ describe("aiProviderHandlers", () => {
     mocks.testConnection.mockReset()
     mocks.testConnection.mockResolvedValue(undefined)
     mocks.createGradingProvider.mockReset()
+    mocks.listModels.mockReset()
+    mocks.listModels.mockResolvedValue([])
     mocks.createGradingProvider.mockImplementation(() => ({
       testConnection: mocks.testConnection,
+      listModels: mocks.listModels,
     }))
   })
 
@@ -128,6 +136,10 @@ describe("aiProviderHandlers", () => {
         `invalid x-api-key: ${TEST_API_KEY}`
       )
     )
+    // モデルの一覧の取得の失敗文にキーが混ざっても、伏せて返す
+    mocks.listModels.mockRejectedValue(
+      new GradingProviderError("authentication", `bad key ${TEST_API_KEY}`)
+    )
     const outputs: unknown[] = []
     for (const callChannel of Object.values(CALL_EVERY_CHANNEL)) {
       outputs.push(await callChannel())
@@ -135,6 +147,19 @@ describe("aiProviderHandlers", () => {
     // 呼んだ後にもう一度、状態と既定値を読む（保存済みのキーがある状態で）
     outputs.push(await aiProviderHandlers["aiProvider:getStatuses"]())
     outputs.push(await aiProviderHandlers["aiProvider:getSettings"]())
+    // 一覧を取得できた後の戻り値と、保存した一覧にもキーは現れない
+    mocks.listModels.mockResolvedValue([
+      {
+        id: "claude-opus-5-5",
+        displayName: "Claude Opus 5.5",
+        createdAt: null,
+        supportsAdaptiveThinking: true,
+      },
+    ])
+    outputs.push(
+      await aiProviderHandlers["aiProvider:fetchModels"]("anthropic")
+    )
+    outputs.push(await aiProviderHandlers["aiProvider:getModelCatalogs"]())
 
     outputs.forEach((output) => {
       expect(JSON.stringify(output) ?? "").not.toContain(TEST_API_KEY)
@@ -297,5 +322,85 @@ describe("aiProviderHandlers", () => {
       // @ts-expect-error 型の外の値を渡す
       aiProviderHandlers["aiProvider:recordConsent"]("gemini")
     ).rejects.toThrow()
+  })
+
+  it("モデルの一覧は今の同意とキーで取得し、保存して返す。ファイルにもキーは残らない", async () => {
+    await aiProviderHandlers["aiProvider:recordConsent"]("anthropic")
+    await aiProviderHandlers["aiProvider:setApiKey"]("anthropic", TEST_API_KEY)
+    mocks.listModels.mockResolvedValue([
+      {
+        id: "claude-opus-5-5",
+        displayName: "Claude Opus 5.5",
+        createdAt: "2026-09-01T00:00:00.000Z",
+        supportsAdaptiveThinking: true,
+      },
+    ])
+
+    const result =
+      await aiProviderHandlers["aiProvider:fetchModels"]("anthropic")
+
+    expect(result.outcome).toBe("ok")
+    expect(result.catalog?.models.map((model) => model.id)).toEqual([
+      "claude-opus-5-5",
+    ])
+    expect(mocks.createGradingProvider).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: "anthropic", apiKey: TEST_API_KEY })
+    )
+    const catalogs = await aiProviderHandlers["aiProvider:getModelCatalogs"]()
+    expect(catalogs.anthropic).toEqual(result.catalog)
+    expect(catalogs.openai).toBeNull()
+    const fileText = fs.readFileSync(configFilePath, "utf-8")
+    expect(fileText).toContain('"modelCatalogs"')
+    expect(fileText).not.toContain(TEST_API_KEY)
+  })
+
+  it("モデルの一覧の取得の失敗は種類で返し、前に保存した一覧は残す", async () => {
+    await aiProviderHandlers["aiProvider:recordConsent"]("anthropic")
+    await aiProviderHandlers["aiProvider:setApiKey"]("anthropic", TEST_API_KEY)
+    await aiProviderHandlers["aiProvider:fetchModels"]("anthropic")
+    const savedCatalog = (
+      await aiProviderHandlers["aiProvider:getModelCatalogs"]()
+    ).anthropic
+
+    mocks.listModels.mockRejectedValueOnce(
+      new GradingProviderError("connection", "つながりません")
+    )
+    const result =
+      await aiProviderHandlers["aiProvider:fetchModels"]("anthropic")
+    expect(result).toEqual({
+      outcome: "connection",
+      message: "つながりません",
+      catalog: null,
+    })
+    expect(
+      (await aiProviderHandlers["aiProvider:getModelCatalogs"]()).anthropic
+    ).toEqual(savedCatalog)
+  })
+
+  it("今の利用者の同意が無ければ、事業者を作らずに consent_required を返す", async () => {
+    await aiProviderHandlers["aiProvider:recordConsent"]("anthropic")
+    await aiProviderHandlers["aiProvider:setApiKey"]("anthropic", TEST_API_KEY)
+
+    // 別の利用者がログインしている
+    mocks.actorUserId.current = "user-other"
+    const otherUserResult =
+      await aiProviderHandlers["aiProvider:fetchModels"]("anthropic")
+    expect(otherUserResult.outcome).toBe("consent_required")
+
+    // 同意していない事業者
+    mocks.actorUserId.current = "user-a"
+    const openaiResult =
+      await aiProviderHandlers["aiProvider:fetchModels"]("openai")
+    expect(openaiResult.outcome).toBe("consent_required")
+
+    expect(mocks.createGradingProvider).not.toHaveBeenCalled()
+    expect(mocks.netFetch).not.toHaveBeenCalled()
+  })
+
+  it("同意していてもキーが無ければ、事業者を作らずに認証の失敗として返す", async () => {
+    await aiProviderHandlers["aiProvider:recordConsent"]("openai")
+    const result = await aiProviderHandlers["aiProvider:fetchModels"]("openai")
+    expect(result.outcome).toBe("authentication")
+    expect(mocks.createGradingProvider).not.toHaveBeenCalled()
   })
 })

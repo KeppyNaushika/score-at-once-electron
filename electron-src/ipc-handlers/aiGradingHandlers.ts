@@ -24,6 +24,7 @@ import {
   adoptAiGradingAttempts,
   adoptBlankAnswers,
   type AiGradingAdoption,
+  type AiGradingAdoptionParts,
 } from "../lib/prisma/aiGradingAdoption"
 import {
   deleteAiGradingAttempts,
@@ -133,10 +134,14 @@ export const aiGradingHandlers = {
     deleteAiGradingAttempts(attemptIds, requireActorUserId()),
 
   // ── 採用 ───────────────────────────────────────────────────
-  /** 選んだ試行を自分の採点として書く。採点済みのマスは overwrite でなければ飛ばす */
+  /**
+   * 選んだ試行を自分の採点として書く。点と朱書きは `parts` で別に確定できる（省略は両方）。
+   * 採点済みのマス・反映済みの朱書きは overwrite でなければ飛ばす
+   */
   "aiGrading:adoptAttempts": async (input: {
     adoptions: AiGradingAdoption[]
     overwrite: boolean
+    parts?: AiGradingAdoptionParts
   }) => adoptAiGradingAttempts(input, requireActorUserId()),
 
   /** 白紙の答案を無答として書く（白紙の判断は renderer のインク率） */

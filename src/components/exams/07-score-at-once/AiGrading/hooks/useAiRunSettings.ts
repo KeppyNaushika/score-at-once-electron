@@ -6,7 +6,8 @@ import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/t
 import type { AiRunSettings } from "../types"
 
 /**
- * 実行の設定。既定値は設定画面の既定値（事業者だけは作業場で選んでいるもの）で、
+ * 実行の設定。既定値は設定画面の既定値（モデル・effort・送り方・拡大率。事業者だけは
+ * 作業場で選んでいるもの。作業場も選んでいなければ既定の送信先）で、
  * 利用者が変えたところだけを手元に持つ。事業者を変えたら、モデルはその事業者の既定へ戻す
  */
 export function useAiRunSettings(
@@ -19,8 +20,7 @@ export function useAiRunSettings(
     provider,
     model: overrides.model ?? settings.defaultModels[provider],
     effort: overrides.effort ?? settings.defaultEffort,
-    mode: overrides.mode ?? "realtime",
-    imageScale: overrides.imageScale ?? 1,
+    mode: overrides.mode ?? settings.defaultMode,
   }
   const updateRunSettings = (update: Partial<AiRunSettings>) => {
     setOverrides((prev) =>

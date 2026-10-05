@@ -12,6 +12,10 @@ import {
   placeAnnotation,
 } from "@/lib/shared/aiGrading/annotationPlacement"
 import type { AnswerInkGrid } from "@/lib/shared/aiGrading/answerInkGrid"
+import {
+  type DrawingAnnotation,
+  newDrawingAnnotation,
+} from "@/types/drawingAnnotation.types"
 
 /** 占有グリッドのセルの一辺（mm）。main の既定（`answerImage.ts`）と同じ */
 const INK_GRID_CELL_SIZE_MM = 1
@@ -92,7 +96,7 @@ export interface AdoptionAnnotationInput {
 }
 
 /** 注釈の大きさの換算に使う用紙の寸法（mm）。グリッドが無ければ縦とみなす */
-export function resolveAnnotationPaperDimensions(
+function resolveAnnotationPaperDimensions(
   pageSize: string,
   inkGrid: AnswerInkGrid | null
 ): { width: number; height: number } {
@@ -135,4 +139,49 @@ export function buildAdoption(
         }
       : null,
   }
+}
+
+/** main が採用の注釈に付ける色（`aiGradingAdoption.ts` と同じ。見本と採用後を揃える） */
+const ADOPTION_ANNOTATION_COLOR = "#ef4444"
+
+/**
+ * 採用前の朱書きの下書き（個別表示の編集の部品に渡す、まだ保存しない注釈）。
+ * 置き場所が無ければ空。id は呼ぶたびに変わるので、呼び出し側で置き場所ごとに1回だけ作る
+ */
+export function draftAnnotationsFromPlacement(
+  placement: AnnotationPlacement | null
+): DrawingAnnotation[] {
+  if (!placement) return []
+  return [
+    newDrawingAnnotation({
+      type: "text",
+      x: placement.x,
+      y: placement.y,
+      text: placement.text,
+      fontSize: placement.fontSize,
+      color: ADOPTION_ANNOTATION_COLOR,
+      anchorDirection: "top-left",
+    }),
+  ]
+}
+
+/**
+ * 教員が直した下書きから、採用で書く注釈を取る。文字のある最初のテキスト注釈を使い、
+ * 消されていれば（文字のある注釈が無ければ）注釈なしで採用する
+ */
+export function adoptionAnnotationFromDraft(
+  draftAnnotations: readonly DrawingAnnotation[]
+): AiGradingAdoption["annotation"] {
+  const textAnnotation = draftAnnotations.find(
+    (drawingAnnotation) =>
+      drawingAnnotation.type === "text" && drawingAnnotation.text.trim() !== ""
+  )
+  return textAnnotation
+    ? {
+        x: textAnnotation.x,
+        y: textAnnotation.y,
+        text: textAnnotation.text,
+        fontSize: textAnnotation.fontSize,
+      }
+    : null
 }

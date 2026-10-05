@@ -46,9 +46,23 @@ const SENDING_PADDING = 0.008
 const INNER_INSET = 0.014
 
 /**
- * はみ出し検知の帯の外側の寄せ幅（用紙比）。ここより外は印刷された枠線そのものなので数えない
+ * はみ出し検知の帯（解答欄の外側、用紙比）。解答欄の辺から NEAR〜FAR 外へ離れた帯を見る。
+ *
+ * 枠を越えて書いた答案は、インクが枠の外まで続く。内側の帯を見る作りでは、枠際に印刷された
+ * 設問番号や、スキャンのずれで入り込んだ枠線そのものまで「はみ出し」と数えていた
+ * （はみ出していない答案の大半に印が付いた）。外側を見れば、枠の内側の印刷物は数えない
  */
-const EDGE_BAND_OUTER_INSET = 0.004
+const EDGE_BAND_NEAR_OUTSET = 0.002
+const EDGE_BAND_FAR_OUTSET = 0.01
+
+/**
+ * 帯の長さ方向にこの割合以上インクが続く行（左右の帯では列）は罫線とみなして数えない。
+ * 自分の枠線・隣の解答欄の枠線は帯を横切る長い線になり、手書きのはみ出しは短い
+ */
+const RULED_LINE_RUN_RATIO = 0.5
+
+/** 罫線とみなした行・列の前後で、あわせて除く幅（画素）。線の傾きやにじみの分 */
+const RULED_LINE_MARGIN_PIXELS = 2
 
 /** インクとみなす輝度の上限（これ未満がインク） */
 const INK_LUMINANCE_THRESHOLD = 100
@@ -63,8 +77,8 @@ export const BLANK_INK_RATIO_THRESHOLD = 0.0005
 /** インク率がこれ未満（かつ白紙の閾値以上）なら境界帯。人かモデルに判断を回す */
 export const BORDERLINE_INK_RATIO_THRESHOLD = 0.003
 
-/** 枠際の帯のインク密度がこれ以上なら、その辺で答案が枠に触れている（はみ出している）とみなす */
-export const EDGE_TOUCH_DENSITY_THRESHOLD = 0.003
+/** 外側の帯の（罫線を除いた）インク密度がこれ以上なら、その辺で答案が枠からはみ出しているとみなす */
+export const EDGE_TOUCH_DENSITY_THRESHOLD = 0.01
 
 /** 占有グリッドのセルで、インクの画素がこの割合以上なら「インクあり」とする */
 const GRID_CELL_INK_RATIO_THRESHOLD = 0.02
@@ -366,33 +380,88 @@ function inkDensity(
 }
 
 /**
- * 枠の辺ごとに、枠線のすぐ内側の帯（0.004〜0.014 寄せ）を用紙比で返す。
- * 帯の長さ方向は 0.004 寄せの範囲にとどめ、隣の辺の枠線を含めない。
+ * 枠の辺ごとに、解答欄のすぐ外側の帯（NEAR〜FAR 外）を用紙比で返す。
+ * 帯の長さ方向は解答欄の幅・高さにとどめ、角で隣の辺の線を拾わない
  */
 function edgeBands(region: NormalizedRect): EdgeSides<NormalizedRect> {
-  const outer = insetRect(region, EDGE_BAND_OUTER_INSET)
-  const bandThickness = INNER_INSET - EDGE_BAND_OUTER_INSET
+  const bandThickness = EDGE_BAND_FAR_OUTSET - EDGE_BAND_NEAR_OUTSET
   return {
-    top: { x: outer.x, y: outer.y, width: outer.width, height: bandThickness },
+    top: {
+      x: region.x,
+      y: region.y - EDGE_BAND_FAR_OUTSET,
+      width: region.width,
+      height: bandThickness,
+    },
     bottom: {
-      x: outer.x,
-      y: outer.y + outer.height - bandThickness,
-      width: outer.width,
+      x: region.x,
+      y: region.y + region.height + EDGE_BAND_NEAR_OUTSET,
+      width: region.width,
       height: bandThickness,
     },
     left: {
-      x: outer.x,
-      y: outer.y,
+      x: region.x - EDGE_BAND_FAR_OUTSET,
+      y: region.y,
       width: bandThickness,
-      height: outer.height,
+      height: region.height,
     },
     right: {
-      x: outer.x + outer.width - bandThickness,
-      y: outer.y,
+      x: region.x + region.width + EDGE_BAND_NEAR_OUTSET,
+      y: region.y,
       width: bandThickness,
-      height: outer.height,
+      height: region.height,
     },
   }
+}
+
+/**
+ * 帯のインク密度を、罫線とみなした行・列（と前後 RULED_LINE_MARGIN_PIXELS）を除いて測る。
+ * `along` は帯の長さの向き（上下の帯は "horizontal"、左右の帯は "vertical"）
+ */
+function bandInkDensityExcludingRuledLines(
+  inkMask: Uint8Array,
+  maskRect: PixelRect,
+  band: PixelRect,
+  along: "horizontal" | "vertical"
+): number {
+  const area = pixelArea(band)
+  if (area === 0) return 0
+  const lineCount =
+    along === "horizontal" ? band.bottom - band.top : band.right - band.left
+  const lineLength =
+    along === "horizontal" ? band.right - band.left : band.bottom - band.top
+  const inkCountByLine = Array.from({ length: lineCount }, (_, lineIndex) =>
+    countInk(
+      inkMask,
+      maskRect,
+      along === "horizontal"
+        ? {
+            left: band.left,
+            right: band.right,
+            top: band.top + lineIndex,
+            bottom: band.top + lineIndex + 1,
+          }
+        : {
+            left: band.left + lineIndex,
+            right: band.left + lineIndex + 1,
+            top: band.top,
+            bottom: band.bottom,
+          }
+    )
+  )
+  const isRuledLine = inkCountByLine.map(
+    (inkCount) => inkCount >= lineLength * RULED_LINE_RUN_RATIO
+  )
+  const isNearRuledLine = (lineIndex: number): boolean =>
+    isRuledLine.some(
+      (ruled, ruledIndex) =>
+        ruled && Math.abs(ruledIndex - lineIndex) <= RULED_LINE_MARGIN_PIXELS
+    )
+  const keptInkCount = inkCountByLine.reduce(
+    (acc, inkCount, lineIndex) =>
+      isNearRuledLine(lineIndex) ? acc : acc + inkCount,
+    0
+  )
+  return keptInkCount / area
 }
 
 /**
@@ -465,9 +534,9 @@ function measureRegionInk(
   const innerRect = toPixelRect(inner, page.width, page.height)
   if (pixelArea(innerRect) === 0) return null
 
-  // 帯は内側より外（0.004 寄せ）まで広がるので、印はその範囲で作る
+  // はみ出し検知の帯は解答欄の外側まで広がるので、印はその範囲で作る
   const maskRect = toPixelRect(
-    insetRect(region, EDGE_BAND_OUTER_INSET),
+    insetRect(region, -EDGE_BAND_FAR_OUTSET),
     page.width,
     page.height
   )
@@ -479,13 +548,21 @@ function measureRegionInk(
   const inkRatio = inkDensity(inkMask, maskRect, innerRect)
 
   const bands = edgeBands(region)
-  const densityOf = (band: NormalizedRect): number =>
-    inkDensity(inkMask, maskRect, toPixelRect(band, page.width, page.height))
+  const densityOf = (
+    band: NormalizedRect,
+    along: "horizontal" | "vertical"
+  ): number =>
+    bandInkDensityExcludingRuledLines(
+      inkMask,
+      maskRect,
+      toPixelRect(band, page.width, page.height),
+      along
+    )
   const edgeInkDensities: EdgeSides<number> = {
-    top: densityOf(bands.top),
-    right: densityOf(bands.right),
-    bottom: densityOf(bands.bottom),
-    left: densityOf(bands.left),
+    top: densityOf(bands.top, "horizontal"),
+    right: densityOf(bands.right, "vertical"),
+    bottom: densityOf(bands.bottom, "horizontal"),
+    left: densityOf(bands.left, "vertical"),
   }
   const edgeTouches: EdgeSides<boolean> = {
     top: edgeInkDensities.top >= EDGE_TOUCH_DENSITY_THRESHOLD,

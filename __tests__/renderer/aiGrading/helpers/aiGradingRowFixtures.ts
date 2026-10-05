@@ -47,6 +47,7 @@ export function makePrompt(overrides: Partial<AiPromptRow> = {}): AiPromptRow {
     modelAnswerText: "x = 2",
     sendModelAnswerImage: false,
     rubricText: "",
+    annotationInstruction: "",
     revisionInstruction: "",
     revisionMessage: "",
     createdAt: FIXED_DATE,

@@ -215,7 +215,7 @@ function ScoringMainViewContent() {
         />
       </div>
 
-      {/* 採点エリア（AI採点モードは設問・答案・詳細の3列を自前で持つ） */}
+      {/* 採点エリア（AI採点モードは設問・一覧・右パネルの3列を自前で持つ。一覧と表示の設定は一覧表示と同じ） */}
       {gradingMode === "ai" ? (
         <div className="relative flex h-full min-h-0 flex-1 overflow-hidden">
           <AiGradingMode
@@ -234,6 +234,18 @@ function ScoringMainViewContent() {
             questionScoresByCropRegionId={questionScoresByCropRegionId}
             pageSize={pageSize}
             unlockedProviders={unlockedProviders}
+            display={{
+              layoutDirection,
+              onLayoutDirectionChange: setLayoutDirection,
+              itemsPerLine,
+              onItemsPerLineChange: handleItemsPerLineChange,
+              expandMargin,
+              onExpandMarginChange: setExpandMargin,
+              autoScroll,
+              showStudentNames,
+              annotationRefreshKey: annotationVersionForGrid,
+              onAnnotationChanged: handleCanvasAnnotationChanged,
+            }}
           />
         </div>
       ) : (

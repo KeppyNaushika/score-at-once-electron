@@ -145,6 +145,9 @@ export function createFakeProvider(options: {
     cancelBatch,
     cleanupBatch,
     async testConnection() {},
+    async listModels() {
+      return []
+    },
   }
   return {
     provider,

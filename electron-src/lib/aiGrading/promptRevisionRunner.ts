@@ -234,6 +234,7 @@ export async function runPromptRevision(
       modelAnswerText: revision.value.modelAnswerText,
       sendModelAnswerImage: prompt.sendModelAnswerImage,
       rubricText: revision.value.rubricText,
+      annotationInstruction: revision.value.annotationInstruction,
     },
     actorUserId,
     {

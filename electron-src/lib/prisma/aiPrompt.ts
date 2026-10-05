@@ -48,6 +48,7 @@ export type CreateAiPromptData = Pick<
   | "modelAnswerText"
   | "sendModelAnswerImage"
   | "rubricText"
+  | "annotationInstruction"
 >
 
 /** VLM に改訂させてできた行だけが持つ2欄 */
@@ -86,8 +87,9 @@ export async function createAiPrompt(
       questionText: data.questionText ?? "",
       questionImagePath: data.questionImagePath ?? null,
       modelAnswerText: data.modelAnswerText ?? "",
-      sendModelAnswerImage: data.sendModelAnswerImage ?? false,
+      sendModelAnswerImage: data.sendModelAnswerImage ?? true,
       rubricText: data.rubricText ?? "",
+      annotationInstruction: data.annotationInstruction ?? "",
       revisionInstruction: revision?.revisionInstruction ?? "",
       revisionMessage: revision?.revisionMessage ?? "",
     },

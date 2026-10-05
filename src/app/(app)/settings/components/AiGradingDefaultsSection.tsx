@@ -4,6 +4,8 @@ import { useMutation } from "@tanstack/react-query"
 import { type KeyboardEvent } from "react"
 import { toast } from "sonner"
 
+import type { useAiGradingSettings } from "@/app/(app)/settings/hooks/useAiGradingSettings"
+import { AiRunOptionToggles } from "@/components/common/AiRunOptionToggles"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -14,32 +16,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { AiGradingSettings } from "@/electron-src/lib/aiGrading/providerCredentialStore"
-import type {
-  GradingEffort,
-  GradingProviderId,
-} from "@/electron-src/lib/aiGrading/providers/types"
+import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
 import { AI_GRADING_PROVIDER_TERMS } from "@/lib/shared/aiGrading/consentText"
+import {
+  acceptsEffort,
+  PROVIDER_SUPPORTS_BATCH,
+} from "@/lib/shared/aiGrading/modelFeatures"
 import { updateAiGradingSettingsMutation } from "@/queries/aiProvider"
 
-/** Anthropic で選べるモデル（設計 §3-3）。先頭が既定 */
-const ANTHROPIC_MODEL_OPTIONS = [
-  "claude-opus-5-5",
-  "claude-sonnet-5-5",
-  "claude-haiku-4-5",
-]
-
-/** 選べる手間（main の `GRADING_EFFORTS` と同じ並び。renderer は main を値で引けない） */
-const EFFORT_OPTIONS = [
-  "low",
-  "medium",
-  "high",
-] as const satisfies readonly GradingEffort[]
-
-const EFFORT_LABELS: Record<GradingEffort, string> = {
-  low: "低（速い・安い）",
-  medium: "中",
-  high: "高（丁寧・高い）",
-}
+import { AiProviderModelDefaults } from "./AiProviderModelDefaults"
 
 const CONCURRENCY_MIN = 1
 const CONCURRENCY_MAX = 16
@@ -51,16 +36,31 @@ function blurOnEnter(event: KeyboardEvent<HTMLInputElement>) {
 
 interface AiGradingDefaultsSectionProps {
   settings: AiGradingSettings
-  /** 今の利用者が今の同意をしている事業者（その事業者のモデルだけを出す） */
-  consentedProviders: GradingProviderId[]
+  /** 今の利用者が今の同意をしている事業者の状態（その事業者のモデルだけを出す） */
+  consentedProviderStates: ReturnType<
+    typeof useAiGradingSettings
+  >["providerStates"]
 }
 
-/** AI 採点の既定値。同意した事業者が1つでもあるときだけ出す */
+/**
+ * AI 採点の既定値。同意した事業者が1つでもあるときだけ出す。
+ * 07 の実行のダイアログは、開いたときにここの値を選んだ状態から始まる
+ */
 export function AiGradingDefaultsSection({
   settings,
-  consentedProviders,
+  consentedProviderStates,
 }: AiGradingDefaultsSectionProps) {
   const updateSettings = useMutation(updateAiGradingSettingsMutation())
+  /** 送信先に選べる事業者（今の同意があり、キーも保存されている） */
+  const unlockedProviders = consentedProviderStates
+    .filter((providerState) => providerState.isUnlocked)
+    .map((providerState) => providerState.status.provider)
+  /** 既定の送信先の、取得しておいたモデルの一覧（Effort を選べるかの判断に使う） */
+  const defaultProviderCatalog =
+    consentedProviderStates.find(
+      (providerState) =>
+        providerState.status.provider === settings.defaultProvider
+    )?.modelCatalog ?? null
 
   const saveModel = (provider: GradingProviderId, model: string) => {
     const trimmedModel = model.trim()
@@ -119,75 +119,86 @@ export function AiGradingDefaultsSection({
     >
       <h3 className="text-base font-semibold">既定値</h3>
 
-      {consentedProviders.map((provider) => {
-        const inputId = `ai-default-model-${provider}`
-        const providerName = AI_GRADING_PROVIDER_TERMS[provider].providerName
-        const currentModel = settings.defaultModels[provider]
-        if (provider === "anthropic") {
-          const modelOptions = ANTHROPIC_MODEL_OPTIONS.includes(currentModel)
-            ? ANTHROPIC_MODEL_OPTIONS
-            : [currentModel, ...ANTHROPIC_MODEL_OPTIONS]
-          return (
-            <div key={provider} className="space-y-2">
-              <Label htmlFor={inputId}>既定のモデル（{providerName}）</Label>
-              <Select
-                value={currentModel}
-                onValueChange={(value) => saveModel(provider, value)}
-              >
-                <SelectTrigger id={inputId} className="w-64 font-mono">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {modelOptions.map((model) => (
-                    <SelectItem key={model} value={model} className="font-mono">
-                      {model}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )
-        }
-        return (
-          <div key={provider} className="space-y-2">
-            <Label htmlFor={inputId}>既定のモデル（{providerName}）</Label>
-            <Input
-              // 保存した値が変わったら入力欄を作り直す（他の画面での変更に追いつく）
-              key={currentModel}
-              id={inputId}
-              defaultValue={currentModel}
-              placeholder={currentModel}
-              onBlur={(event) => saveModel(provider, event.target.value)}
-              onKeyDown={blurOnEnter}
-              className="w-64 font-mono"
-            />
-          </div>
-        )
-      })}
-
       <div className="space-y-2">
-        <Label htmlFor="ai-default-effort">既定の推論の手間（effort）</Label>
-        <Select
-          value={settings.defaultEffort}
-          onValueChange={(value) => {
-            const effort = EFFORT_OPTIONS.find(
-              (effortOption) => effortOption === value
-            )
-            if (effort) updateSettings.mutate({ defaultEffort: effort })
-          }}
-        >
-          <SelectTrigger id="ai-default-effort" className="w-64">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {EFFORT_OPTIONS.map((effort) => (
-              <SelectItem key={effort} value={effort}>
-                {EFFORT_LABELS[effort]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label htmlFor="ai-default-provider">既定の送信先</Label>
+        {unlockedProviders.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            API キーを保存した事業者がまだありません。
+          </p>
+        ) : (
+          <Select
+            value={
+              unlockedProviders.includes(settings.defaultProvider)
+                ? settings.defaultProvider
+                : ""
+            }
+            onValueChange={(value) => {
+              const provider = unlockedProviders.find(
+                (unlockedProvider) => unlockedProvider === value
+              )
+              if (provider && provider !== settings.defaultProvider) {
+                updateSettings.mutate({ defaultProvider: provider })
+              }
+            }}
+          >
+            <SelectTrigger id="ai-default-provider" className="w-64">
+              <SelectValue placeholder="送信先を選ぶ" />
+            </SelectTrigger>
+            <SelectContent>
+              {unlockedProviders.map((provider) => (
+                <SelectItem key={provider} value={provider}>
+                  {AI_GRADING_PROVIDER_TERMS[provider].providerName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
+
+      {consentedProviderStates.map((providerState) => (
+        <AiProviderModelDefaults
+          key={providerState.status.provider}
+          provider={providerState.status.provider}
+          hasApiKey={providerState.status.hasApiKey}
+          modelCatalog={providerState.modelCatalog}
+          defaultModel={settings.defaultModels[providerState.status.provider]}
+          onDefaultModelChange={(model) =>
+            saveModel(providerState.status.provider, model)
+          }
+        />
+      ))}
+
+      <div className="max-w-xl">
+        <AiRunOptionToggles
+          idPrefix="ai-default"
+          effort={settings.defaultEffort}
+          onEffortChange={(effort) => {
+            if (effort !== settings.defaultEffort) {
+              updateSettings.mutate({ defaultEffort: effort })
+            }
+          }}
+          isEffortDisabled={
+            !acceptsEffort(
+              settings.defaultProvider,
+              settings.defaultModels[settings.defaultProvider],
+              defaultProviderCatalog?.models ?? []
+            )
+          }
+          sendingOptions={{
+            mode: settings.defaultMode,
+            onModeChange: (mode) => {
+              if (mode !== settings.defaultMode) {
+                updateSettings.mutate({ defaultMode: mode })
+              }
+            },
+            isBatchAvailable: PROVIDER_SUPPORTS_BATCH[settings.defaultProvider],
+          }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Effort と処理は、既定の送信先の既定のモデルで選べるものを示しています。
+        バッチは費用が半額ほどですが、結果まで最大1日かかります。拡大率は原寸を推奨します（拡大しても情報は増えず、費用が増えるだけです）。
+      </p>
 
       <div className="space-y-2">
         <Label htmlFor="ai-concurrency">
@@ -206,7 +217,7 @@ export function AiGradingDefaultsSection({
           className="w-32"
         />
         <p className="text-xs text-muted-foreground">
-          その場の採点で、同時に事業者へ送る数です。
+          「すぐに」の処理で、同時に事業者へ送る数です。
         </p>
       </div>
 

@@ -132,6 +132,24 @@ export interface ProviderBatchResult {
   response: ProviderGradingResponse
 }
 
+/**
+ * 事業者が返したモデルの一覧の1件（事業者に依存しない形）。
+ * 分からない項目は null にする（推測で埋めない）
+ */
+export interface ProviderModelInfo {
+  /** API へ送るモデルの id */
+  id: string
+  /** 人が読む名前。事業者が名前を返さなければ id と同じ */
+  displayName: string
+  /** 事業者が公開した日時（ISO 8601）。分からなければ null */
+  createdAt: string | null
+  /**
+   * adaptive thinking と effort を送ってよいか。事業者が能力を返さない
+   * （OpenAI・Anthropic で capabilities が null）なら null
+   */
+  supportsAdaptiveThinking: boolean | null
+}
+
 /** 事業者ができること */
 export interface GradingProviderCapabilities {
   batch: boolean
@@ -172,4 +190,9 @@ export interface GradingProvider {
   cleanupBatch?(externalBatchId: string): Promise<void>
   /** キーと接続先を確かめる（トークンを消費しない呼び出しを使う）。失敗は投げる */
   testConnection(): Promise<void>
+  /**
+   * そのキーで使えるモデルの一覧（新しい順）。トークンを消費しない。
+   * 一覧が複数ページに分かれていれば全ページを読む。失敗は `GradingProviderError` を投げる
+   */
+  listModels(): Promise<ProviderModelInfo[]>
 }

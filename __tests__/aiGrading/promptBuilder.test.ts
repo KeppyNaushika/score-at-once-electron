@@ -25,9 +25,15 @@ const FULL_PROMPT = {
   questionText: "x^2 - 5x + 6 = 0 を解け。",
   modelAnswerText: "(x-2)(x-3)=0 より x = 2, 3",
   rubricText: "因数分解が正しければ2点。解が両方そろって満点。",
+  annotationInstruction: "",
 }
 
-const EMPTY_PROMPT = { questionText: "", modelAnswerText: "", rubricText: "" }
+const EMPTY_PROMPT = {
+  questionText: "",
+  modelAnswerText: "",
+  rubricText: "",
+  annotationInstruction: "",
+}
 
 const QUESTION_IMAGE = {
   mediaType: "image/png" as const,
@@ -44,11 +50,13 @@ describe("buildGradingRequestParts", () => {
       prompt: FULL_PROMPT,
       points: 4,
       questionImage: QUESTION_IMAGE,
+      annotationCharacterLimit: 40,
     })
     const second = buildGradingRequestParts({
       prompt: { ...FULL_PROMPT },
       points: 4,
       questionImage: { ...QUESTION_IMAGE },
+      annotationCharacterLimit: 40,
     })
 
     expect(JSON.stringify(second)).toBe(JSON.stringify(first))
@@ -58,6 +66,7 @@ describe("buildGradingRequestParts", () => {
     const { systemText, fixedParts } = buildGradingRequestParts({
       prompt: FULL_PROMPT,
       points: 4,
+      annotationCharacterLimit: 40,
     })
     const serialized = JSON.stringify({ systemText, fixedParts })
 
@@ -70,10 +79,12 @@ describe("buildGradingRequestParts", () => {
     const withPoints = buildGradingRequestParts({
       prompt: FULL_PROMPT,
       points: 4,
+      annotationCharacterLimit: 40,
     })
     const withoutPoints = buildGradingRequestParts({
       prompt: FULL_PROMPT,
       points: null,
+      annotationCharacterLimit: 40,
     })
 
     expect(JSON.stringify(withPoints.fixedParts)).toContain("## 配点\\n4点")
@@ -86,6 +97,7 @@ describe("buildGradingRequestParts", () => {
     const { fixedParts } = buildGradingRequestParts({
       prompt: { ...EMPTY_PROMPT, rubricText: "  採点基準だけ  " },
       points: 2,
+      annotationCharacterLimit: 40,
     })
     const fixedText = JSON.stringify(fixedParts)
     expect(fixedText).not.toContain("## 問題文")
@@ -93,9 +105,33 @@ describe("buildGradingRequestParts", () => {
     expect(fixedText).toContain("## 採点基準\\n採点基準だけ")
 
     const empty = JSON.stringify(
-      buildGradingRequestParts({ prompt: EMPTY_PROMPT, points: 2 }).fixedParts
+      buildGradingRequestParts({
+        prompt: EMPTY_PROMPT,
+        points: 2,
+        annotationCharacterLimit: 40,
+      }).fixedParts
     )
     expect(empty).toContain("答案と配点から判断してください")
+  })
+
+  it("朱書きの指示があれば、固定部に節として入る", () => {
+    const { fixedParts } = buildGradingRequestParts({
+      prompt: { ...FULL_PROMPT, annotationInstruction: "誤答には入れない" },
+      points: 4,
+      annotationCharacterLimit: 40,
+    })
+    expect(JSON.stringify(fixedParts)).toContain(
+      "## 朱書きの指示\\n誤答には入れない"
+    )
+  })
+
+  it("朱書きの字数の上限を固定部で伝える", () => {
+    const { fixedParts } = buildGradingRequestParts({
+      prompt: FULL_PROMPT,
+      points: 4,
+      annotationCharacterLimit: 25,
+    })
+    expect(JSON.stringify(fixedParts)).toContain("全角25字以内")
   })
 
   it("画像は見出しの直後に片として入り、隣り合う文は1片にまとまる", () => {
@@ -103,6 +139,7 @@ describe("buildGradingRequestParts", () => {
       prompt: FULL_PROMPT,
       points: 4,
       questionImage: QUESTION_IMAGE,
+      annotationCharacterLimit: 40,
     })
 
     expect(fixedParts.map((part) => part.kind)).toEqual([
@@ -219,12 +256,13 @@ describe("buildRevisionRequest", () => {
 })
 
 describe("parseRevisionResponse", () => {
-  it("4欄がそろえば読む", () => {
+  it("5欄がそろえば読む", () => {
     expect(
       parseRevisionResponse({
         questionText: "問",
         modelAnswerText: "答",
         rubricText: "基準",
+        annotationInstruction: "部分点の答案にだけ、20字以内で",
         message: "直しました",
       })
     ).toEqual({
@@ -233,6 +271,7 @@ describe("parseRevisionResponse", () => {
         questionText: "問",
         modelAnswerText: "答",
         rubricText: "基準",
+        annotationInstruction: "部分点の答案にだけ、20字以内で",
         message: "直しました",
       },
     })
@@ -248,6 +287,7 @@ describe("parseRevisionResponse", () => {
     if (!parsed.ok) {
       expect(parsed.reasons).toEqual([
         "modelAnswerText が文字列ではありません",
+        "annotationInstruction が文字列ではありません",
         "message が文字列ではありません",
       ])
     }

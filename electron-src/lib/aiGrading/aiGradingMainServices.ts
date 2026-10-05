@@ -32,11 +32,12 @@ const electronNetFetch: ProviderFetch = (input, init) =>
 
 /**
  * 事業者の実装を作る。同意していない・キーが無いときは投げる。
- * **復号したキーはここから外へ出さない**（事業者のクライアントの中にだけ渡る）
+ * **復号したキーはここから外へ出さない**（事業者のクライアントの中にだけ渡る）。
+ * 取得しておいたモデルの一覧も渡す（Anthropic が adaptive thinking を送るかの判断に使う）
  */
 function resolveProvider(providerId: GradingProviderId) {
-  const apiKey =
-    getProviderCredentialStore().readApiKeyForMainProcessOnly(providerId)
+  const store = getProviderCredentialStore()
+  const apiKey = store.readApiKeyForMainProcessOnly(providerId)
   if (apiKey === null) {
     throw new Error(
       "この事業者には同意していないか、API キーが設定されていません（設定の「実験的機能：AI採点」）"
@@ -46,6 +47,7 @@ function resolveProvider(providerId: GradingProviderId) {
     provider: providerId,
     apiKey,
     fetch: electronNetFetch,
+    catalogModels: store.getModelCatalogs()[providerId]?.models ?? [],
   })
 }
 

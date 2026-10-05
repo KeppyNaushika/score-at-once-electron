@@ -80,32 +80,37 @@ export async function processRealtimeAttempts(
   // 閉包の中で書き換えるので、箱に入れて持つ（素の let だと型が null に絞られたままになる）
   const fatal: { error: GradingProviderError | null } = { error: null }
 
+  const processAttempt = async (attempt: (typeof attempts)[number]) => {
+    if (controller.signal.aborted) return
+    let result
+    try {
+      const request = await buildRequest(attempt)
+      // 画像を切り出している間に中止されたら送らない
+      if (controller.signal.aborted) return
+      const response = await provider.grade(request, controller.signal)
+      result = toAttemptResult(response, maxPoints)
+    } catch (error) {
+      if (isFatalProviderError(error)) {
+        fatal.error = error
+        controller.abort()
+        return
+      }
+      // 中止で打ち切られた件は、後でまとめて「中止」として閉じる
+      if (controller.signal.aborted) return
+      result = toFailedAttemptResult("errored", errorMessageOf(error))
+    }
+    if (await recordAiGradingAttemptResult(attempt.id, result)) {
+      tracker.record(result.state)
+    }
+  }
+
+  // 最初の1件だけ先に送り、設問ごとの前置き（問題文・模範解答・採点基準）のキャッシュを
+  // 作ってから残りを並行させる。最初から並行すると、キャッシュができる前に届いた数件が
+  // それぞれ前置きを書き込みとして払う（模範解答の画像を含むので重い）
+  const [firstAttempt, ...restAttempts] = attempts
+  if (firstAttempt) await processAttempt(firstAttempt)
   await Promise.all(
-    attempts.map((attempt) =>
-      runLimited(async () => {
-        if (controller.signal.aborted) return
-        let result
-        try {
-          const request = await buildRequest(attempt)
-          // 画像を切り出している間に中止されたら送らない
-          if (controller.signal.aborted) return
-          const response = await provider.grade(request, controller.signal)
-          result = toAttemptResult(response, maxPoints)
-        } catch (error) {
-          if (isFatalProviderError(error)) {
-            fatal.error = error
-            controller.abort()
-            return
-          }
-          // 中止で打ち切られた件は、後でまとめて「中止」として閉じる
-          if (controller.signal.aborted) return
-          result = toFailedAttemptResult("errored", errorMessageOf(error))
-        }
-        if (await recordAiGradingAttemptResult(attempt.id, result)) {
-          tracker.record(result.state)
-        }
-      })
-    )
+    restAttempts.map((attempt) => runLimited(() => processAttempt(attempt)))
   )
 
   const fatalError = fatal.error

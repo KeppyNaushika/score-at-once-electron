@@ -160,6 +160,9 @@ describe("measureAnswerInk", () => {
   let frameOnlyPath: string
   let writtenPath: string
   let touchingPath: string
+  let labelNearEdgePath: string
+  let shiftedFramePath: string
+  let neighborFramePath: string
   let noisyBlankPath: string
   let normalisedNoisyBlankPath: string
 
@@ -177,15 +180,69 @@ describe("measureAnswerInk", () => {
     fillBox(writtenPage, { left: 250, top: 250, right: 330, bottom: 300 }, 20)
     writtenPath = await savePage(writtenPage, "written.png")
 
-    // 右の枠線まで届く記入（スキャンのずれで枠からはみ出した答案）
+    // 右の枠線を越えて外まで続く記入（スキャンのずれで枠からはみ出した答案）
     const touchingPage = createWhitePage()
     drawFrame(touchingPage)
     fillBox(
       touchingPage,
-      { left: 440, top: 250, right: REGION_RIGHT, bottom: 300 },
+      { left: 440, top: 250, right: REGION_RIGHT + 20, bottom: 300 },
       20
     )
     touchingPath = await savePage(touchingPage, "touching.png")
+
+    // 枠のすぐ内側に印刷された設問番号（はみ出しではない）
+    const labelNearEdgePage = createWhitePage()
+    drawFrame(labelNearEdgePage)
+    fillBox(
+      labelNearEdgePage,
+      {
+        left: REGION_LEFT + FRAME_THICKNESS + 2,
+        top: 200,
+        right: REGION_LEFT + FRAME_THICKNESS + 12,
+        bottom: 215,
+      },
+      20
+    )
+    labelNearEdgePath = await savePage(labelNearEdgePage, "label-near-edge.png")
+
+    // スキャンのずれで、枠線が解答欄の外側の帯に入り込んだ答案（はみ出しではない）
+    const shiftedFramePage = createWhitePage()
+    fillBox(
+      shiftedFramePage,
+      {
+        left: REGION_LEFT - 8,
+        top: REGION_TOP - 8,
+        right: REGION_RIGHT + 8,
+        bottom: REGION_TOP - 8 + FRAME_THICKNESS,
+      },
+      0
+    )
+    fillBox(
+      shiftedFramePage,
+      {
+        left: REGION_RIGHT + 5,
+        top: REGION_TOP - 8,
+        right: REGION_RIGHT + 5 + FRAME_THICKNESS,
+        bottom: REGION_BOTTOM + 8,
+      },
+      0
+    )
+    shiftedFramePath = await savePage(shiftedFramePage, "shifted-frame.png")
+
+    // 隣の解答欄の枠線が、外側の帯を縦に横切る（はみ出しではない）
+    const neighborFramePage = createWhitePage()
+    drawFrame(neighborFramePage)
+    fillBox(
+      neighborFramePage,
+      {
+        left: REGION_RIGHT + 6,
+        top: REGION_TOP - 20,
+        right: REGION_RIGHT + 6 + FRAME_THICKNESS,
+        bottom: REGION_BOTTOM + 20,
+      },
+      0
+    )
+    neighborFramePath = await savePage(neighborFramePage, "neighbor-frame.png")
 
     noisyBlankPath = await savePage(createNoisyBlankPage(), "noisy-blank.png")
     normalisedNoisyBlankPath = path.join(
@@ -239,7 +296,22 @@ describe("measureAnswerInk", () => {
     expect(measurement.blankness).not.toBe("blank")
   })
 
-  it("枠際の帯まで届く記入は、その辺だけはみ出しとして検知する", async () => {
+  it("枠際に印刷された設問番号は、はみ出しとして数えない", async () => {
+    const measurement = await measureSingleRegion(labelNearEdgePath)
+    expect(measurement.overflowsFrame).toBe(false)
+  })
+
+  it("スキャンのずれで外側の帯に入った枠線は、罫線として除く", async () => {
+    const measurement = await measureSingleRegion(shiftedFramePath)
+    expect(measurement.overflowsFrame).toBe(false)
+  })
+
+  it("隣の解答欄の枠線は、罫線として除く", async () => {
+    const measurement = await measureSingleRegion(neighborFramePath)
+    expect(measurement.overflowsFrame).toBe(false)
+  })
+
+  it("枠を越えて外まで続く記入は、その辺だけはみ出しとして検知する", async () => {
     const measurement = await measureSingleRegion(touchingPath)
 
     expect(measurement.edgeTouches).toEqual({

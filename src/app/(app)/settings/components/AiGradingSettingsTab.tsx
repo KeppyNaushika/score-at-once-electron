@@ -54,9 +54,9 @@ export function AiGradingSettingsTab() {
       {hasAnyCurrentConsent && (
         <AiGradingDefaultsSection
           settings={settings}
-          consentedProviders={providerStates
-            .filter((providerState) => providerState.isConsentCurrent)
-            .map((providerState) => providerState.status.provider)}
+          consentedProviderStates={providerStates.filter(
+            (providerState) => providerState.isConsentCurrent
+          )}
         />
       )}
     </div>

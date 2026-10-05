@@ -1,8 +1,12 @@
 /**
  * Anthropic（Claude）の事業者実装（設計 §6-3）。
  *
- * - `thinking: { type: "adaptive" }` と `output_config: { effort, format }` を必ず送る
- *   （claude-opus-5-5 は思考を止められず、effort の既定が medium なので明示する）
+ * - adaptive thinking と effort は、対応するモデルにだけ送る（`decideAdaptiveThinking`。
+ *   `src/lib/shared/aiGrading/modelFeatures.ts`）。取得したモデルの一覧が能力を言っていれば
+ *   それに従い、言っていなければ許可リストで決める。画面の「手間」も同じ判断で選べる・選べないが決まる。
+ *   claude-opus-5-5 は思考を止められず、effort の既定が medium なので明示する。
+ *   claude-haiku-4-5 はどちらも受け付けない（送ると 400）
+ * - `output_config.format`（構造化出力）はどのモデルにも送る
  * - 固定部の最後の1片に `cache_control` を置き、答案の画像はその後ろに置く
  * - バッチは `messages.batches.*`。結果は届いた順に読み、custom_id で依頼へ戻す
  *
@@ -36,7 +40,10 @@ import type {
   TextBlockParam,
   Usage,
 } from "@anthropic-ai/sdk/resources/messages/messages"
+import type { ModelInfo } from "@anthropic-ai/sdk/resources/models"
 import type { ErrorObject } from "@anthropic-ai/sdk/resources/shared"
+
+import { decideAdaptiveThinking } from "@/lib/shared/aiGrading/modelFeatures"
 
 import {
   assertValidBatchRequests,
@@ -51,6 +58,7 @@ import type {
   ProviderBatchStatus,
   ProviderErrorKind,
   ProviderGradingResponse,
+  ProviderModelInfo,
   ProviderUsage,
 } from "./types"
 
@@ -71,12 +79,28 @@ export interface AnthropicGradingClient {
         messageBatchId: string
       ): PromiseLike<AsyncIterable<MessageBatchIndividualResponse>>
       cancel(messageBatchId: string): PromiseLike<MessageBatch>
+      delete(messageBatchId: string): PromiseLike<unknown>
     }
   }
   models: {
-    list(params: { limit: number }): PromiseLike<unknown>
+    /** 待てば最初のページ、for await で回せば全ページのモデルが順に来る（SDK の PagePromise） */
+    list(params: {
+      limit: number
+    }): PromiseLike<unknown> & AsyncIterable<ModelInfo>
   }
 }
+
+/** 事業者の実装を作るときの選択 */
+export interface AnthropicProviderOptions {
+  /**
+   * 取得しておいたモデルの一覧（`listModels` の結果）。adaptive thinking を送るかの判断に使う。
+   * 無ければ許可リストだけで決める
+   */
+  catalogModels?: readonly ProviderModelInfo[]
+}
+
+/** モデルの一覧を1ページで読む件数（SDK の上限） */
+const MODEL_LIST_PAGE_SIZE = 1000
 
 /** プロンプトキャッシュの寿命。バッチは処理に時間がかかるので 1h にする */
 type CacheTtl = "5m" | "1h"
@@ -102,7 +126,8 @@ function toContentBlock(part: PromptPart): TextBlockParam | ImageBlockParam {
  */
 function buildAnthropicMessageParams(
   request: GradingRequest,
-  cacheTtl: CacheTtl
+  cacheTtl: CacheTtl,
+  useAdaptiveThinking: boolean
 ): MessageCreateParamsNonStreaming {
   const cacheControl: CacheControlEphemeral =
     cacheTtl === "1h" ? { type: "ephemeral", ttl: "1h" } : { type: "ephemeral" }
@@ -126,11 +151,47 @@ function buildAnthropicMessageParams(
         content: [...fixedBlocks, ...request.variableParts.map(toContentBlock)],
       },
     ],
-    thinking: { type: "adaptive" },
-    output_config: {
-      effort: request.effort,
-      format: { type: "json_schema", schema: request.outputSchema },
-    },
+    ...(useAdaptiveThinking
+      ? {
+          thinking: { type: "adaptive" },
+          output_config: {
+            effort: request.effort,
+            format: { type: "json_schema", schema: request.outputSchema },
+          },
+        }
+      : {
+          output_config: {
+            format: { type: "json_schema", schema: request.outputSchema },
+          },
+        }),
+  }
+}
+
+/** 公開日時を ISO 8601 にする。分からない（読めない・エポックの値）なら null */
+function toCreatedAt(createdAt: string): string | null {
+  const createdTime = Date.parse(createdAt)
+  if (!Number.isFinite(createdTime) || createdTime <= 0) return null
+  return new Date(createdTime).toISOString()
+}
+
+/**
+ * SDK のモデルの情報を、事業者に依存しない形にする。
+ * adaptive thinking と effort は一緒に送るので、両方に対応しているときだけ true にする
+ */
+export function toAnthropicModelInfo(modelInfo: ModelInfo): ProviderModelInfo {
+  const capabilities = modelInfo.capabilities
+  return {
+    id: modelInfo.id,
+    displayName:
+      modelInfo.display_name.trim() === ""
+        ? modelInfo.id
+        : modelInfo.display_name,
+    createdAt: toCreatedAt(modelInfo.created_at),
+    supportsAdaptiveThinking:
+      capabilities === null
+        ? null
+        : capabilities.thinking.types.adaptive.supported &&
+          capabilities.effort.supported,
   }
 }
 
@@ -279,8 +340,16 @@ async function callAnthropic<T>(call: () => PromiseLike<T>): Promise<T> {
  * @param client - `new Anthropic({ apiKey, fetch })` で作ったクライアント（テストでは偽物）
  */
 export function createAnthropicProvider(
-  client: AnthropicGradingClient
+  client: AnthropicGradingClient,
+  options: AnthropicProviderOptions = {}
 ): GradingProvider {
+  const catalogModels = options.catalogModels ?? []
+  const buildParams = (request: GradingRequest, cacheTtl: CacheTtl) =>
+    buildAnthropicMessageParams(
+      request,
+      cacheTtl,
+      decideAdaptiveThinking(request.model, catalogModels)
+    )
   return {
     id: "anthropic",
     capabilities: {
@@ -291,7 +360,7 @@ export function createAnthropicProvider(
 
     async grade(request, signal) {
       const message = await callAnthropic(() =>
-        client.messages.create(buildAnthropicMessageParams(request, "5m"), {
+        client.messages.create(buildParams(request, "5m"), {
           signal,
         })
       )
@@ -304,7 +373,7 @@ export function createAnthropicProvider(
         client.messages.batches.create({
           requests: requests.map((request) => ({
             custom_id: request.customId,
-            params: buildAnthropicMessageParams(request, "1h"),
+            params: buildParams(request, "1h"),
           })),
         })
       )
@@ -336,8 +405,31 @@ export function createAnthropicProvider(
       await callAnthropic(() => client.messages.batches.cancel(externalBatchId))
     },
 
+    /**
+     * 取り込み終えたバッチを消す。結果（答案への判定）は消さなければ事業者側で読み出せる
+     * 状態のまま残るので、取り込んだらすぐ消す。処理が終わったバッチだけが消せる
+     */
+    async cleanupBatch(externalBatchId) {
+      await callAnthropic(() => client.messages.batches.delete(externalBatchId))
+    },
+
     async testConnection() {
       await callAnthropic(() => client.models.list({ limit: 1 }))
+    },
+
+    async listModels() {
+      try {
+        const models: ProviderModelInfo[] = []
+        // 新しい順に返ってくる。ページをまたいで SDK が続きを読む
+        for await (const modelInfo of client.models.list({
+          limit: MODEL_LIST_PAGE_SIZE,
+        })) {
+          models.push(toAnthropicModelInfo(modelInfo))
+        }
+        return models
+      } catch (error) {
+        throw toAnthropicProviderError(error)
+      }
     },
   }
 }

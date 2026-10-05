@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 
 import { Spinner } from "@/components/ui/spinner"
 import { aiRunEstimateQuery } from "@/queries/aiGrading"
+import { AI_GRADING_SENDING_IMAGE_SCALE } from "@/types/aiGrading.types"
 
 import type { AiPromptRow, AiRunSettings } from "./types"
 import { estimateRunCost } from "./utils/costEstimate"
@@ -25,7 +26,7 @@ export function AiRunCostEstimate({
     ...aiRunEstimateQuery({
       promptId: prompt.id,
       examStudentIds,
-      imageScale: runSettings.imageScale,
+      imageScale: AI_GRADING_SENDING_IMAGE_SCALE,
     }),
     enabled: examStudentIds.length > 0,
   })
@@ -61,27 +62,28 @@ export function AiRunCostEstimate({
     promptCharacterCount:
       prompt.questionText.length +
       prompt.modelAnswerText.length +
-      prompt.rubricText.length,
+      prompt.rubricText.length +
+      prompt.annotationInstruction.length,
   })
 
   return (
     <div className="rounded-md border bg-muted/40 p-3 text-sm">
       <div className="flex justify-between">
         <span>送る件数</span>
-        <span className="font-mono" data-testid="ai-run-request-count">
+        <span className="tabular-nums" data-testid="ai-run-request-count">
           {estimate.requestCount}件
         </span>
       </div>
       <div className="flex justify-between text-muted-foreground">
         <span>トークン（入力 / 出力）</span>
-        <span className="font-mono">
+        <span className="tabular-nums">
           {estimate.inputTokens.toLocaleString()} /{" "}
           {estimate.outputTokens.toLocaleString()}
         </span>
       </div>
       <div className="flex justify-between font-medium">
         <span>費用（概算）</span>
-        <span className="font-mono">
+        <span className="tabular-nums">
           {estimate.costUsd === null ? "単価不明" : formatUsd(estimate.costUsd)}
         </span>
       </div>

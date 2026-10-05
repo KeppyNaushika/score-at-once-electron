@@ -8,6 +8,7 @@ const PROMPT_DIFF_FIELDS = [
   { field: "questionText", label: "問題文" },
   { field: "modelAnswerText", label: "模範解答" },
   { field: "rubricText", label: "採点基準" },
+  { field: "annotationInstruction", label: "朱書きの指示" },
 ] as const
 
 interface AiPromptDiffViewProps {

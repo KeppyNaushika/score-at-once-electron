@@ -118,3 +118,22 @@ export function selectDeletableOldAttemptIds(
       .map((attemptWithRun) => attemptWithRun.attempt.id)
   )
 }
+
+/**
+ * `<` `>` で隣の試行へ移るときの試行 id。端なら null。
+ *
+ * @param attempts 新しい順（`<` は古い方＝添字が増える、`>` は新しい方）
+ */
+export function neighborAttemptId(
+  attempts: readonly AttemptWithRun[],
+  displayedAttemptId: string | null,
+  direction: "older" | "newer"
+): string | null {
+  const displayedIndex = attempts.findIndex(
+    (attemptWithRun) => attemptWithRun.attempt.id === displayedAttemptId
+  )
+  if (displayedIndex === -1) return null
+  const neighbor =
+    attempts[direction === "older" ? displayedIndex + 1 : displayedIndex - 1]
+  return neighbor?.attempt.id ?? null
+}

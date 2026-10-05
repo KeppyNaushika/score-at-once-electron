@@ -31,6 +31,13 @@ export const aiGradingSettingsQuery = () =>
     queryFn: () => window.electronAPI.aiProvider.getSettings(),
   })
 
+/** 事業者ごとの、取得しておいたモデルの一覧（まだ取得していなければ null） */
+export const aiModelCatalogsQuery = () =>
+  queryOptions({
+    queryKey: ["aiProvider", "modelCatalogs"] as const,
+    queryFn: () => window.electronAPI.aiProvider.getModelCatalogs(),
+  })
+
 // =====================================================================
 // 書き込み
 // =====================================================================
@@ -98,6 +105,20 @@ export const testAiProviderConnectionMutation = () =>
     meta: {
       writesDatabase: false,
       errorMessage: "接続テストを実行できませんでした",
+    },
+  })
+
+/**
+ * 保存したキーで事業者からモデルの一覧を取得し、端末の設定ファイルへ保存する（DB は書かない）。
+ * つながらないなどの失敗は投げずに種類で返る
+ */
+export const fetchAiProviderModelsMutation = () =>
+  defineMutation({
+    mutationFn: (provider: GradingProviderId) =>
+      window.electronAPI.aiProvider.fetchModels(provider),
+    meta: {
+      invalidates: [aiModelCatalogsQuery().queryKey],
+      errorMessage: "モデルの一覧を取得できませんでした",
     },
   })
 

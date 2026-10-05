@@ -6,10 +6,7 @@
  * 画面には必ず「概算」と添える。単価はこのファイルにだけ置く。
  */
 
-import type {
-  GradingEffort,
-  GradingProviderId,
-} from "@/electron-src/lib/aiGrading/providers/types"
+import type { GradingEffort } from "@/electron-src/lib/aiGrading/providers/types"
 import type { AiGradingRunMode } from "@/types/aiGrading.types"
 
 /** モデルの単価（100万トークンあたりの米ドル） */
@@ -18,16 +15,14 @@ interface ModelPrice {
   outputPerMillionUsd: number
 }
 
-/** 単価の分かっているモデル。ここに無いモデルは金額を出さない（トークン数だけ） */
+/**
+ * 単価の分かっているモデル。ここに無いモデル（取得した一覧から選んだ新しいモデル・OpenAI 等）は
+ * 金額を出さず「単価不明」と出す（トークン数だけ）
+ */
 export const AI_MODEL_PRICES: Record<string, ModelPrice> = {
   "claude-opus-5-5": { inputPerMillionUsd: 4, outputPerMillionUsd: 20 },
   "claude-sonnet-5-5": { inputPerMillionUsd: 2, outputPerMillionUsd: 10 },
   "claude-haiku-4-5": { inputPerMillionUsd: 1, outputPerMillionUsd: 5 },
-}
-
-/** 事業者ごとに、選択肢として並べるモデル（先頭が推奨）。無い事業者は自由入力 */
-export const AI_MODEL_OPTIONS: Partial<Record<GradingProviderId, string[]>> = {
-  anthropic: ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-4-5"],
 }
 
 /** バッチで送ったときの割引（単価に掛ける） */

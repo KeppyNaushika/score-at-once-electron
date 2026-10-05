@@ -28,7 +28,7 @@ export interface PromptImage {
 /** プロンプトのうち、送る文面になる欄 */
 export type PromptTextFields = Pick<
   AiPrompt,
-  "questionText" | "modelAnswerText" | "rubricText"
+  "questionText" | "modelAnswerText" | "rubricText" | "annotationInstruction"
 >
 
 /**
@@ -57,7 +57,7 @@ export const GRADING_SYSTEM_TEXT = [
   "- status: correct（正答）/ partial（部分点）/ incorrect（誤答）/ no_answer（無答）/ pending（保留）のいずれかです。",
   "- partialScore: partial と pending のときだけ、0 から配点までの点を 0.01 単位で書いてください。それ以外は null にしてください。",
   "- comment: 教員向けの、その点にした理由です。",
-  "- annotation: 生徒向けの朱書き（答案に赤で書き添える短い文）です。満点のときは null にしてください。書かれている事実を述べ、「〜と思われる」のような解釈的な表現を避け、体言止めの断片にせず文として書いてください。番号を振らず、改行を入れないでください。",
+  "- annotation: 生徒向けの朱書き（答案に赤で書き添える短い文）です。満点のときは null にしてください。書かれている事実を述べ、「〜と思われる」のような解釈的な表現を避け、体言止めの断片にせず文として書いてください。番号を振らず、改行を入れないでください。「朱書きの指示」があれば、朱書きの量・書き方・どの答案に入れるかはその指示に従ってください（この項目の決まりより優先します）。指示で朱書きを入れないとされた答案では null にしてください。",
   "- confidence: 判定の確信度（high / medium / low）です。",
 ].join("\n")
 
@@ -126,6 +126,10 @@ export function buildPromptContentSegments(
   const questionTextSection = textSection("問題文", prompt.questionText)
   const modelAnswerTextSection = textSection("模範解答", prompt.modelAnswerText)
   const rubricSection = textSection("採点基準", prompt.rubricText)
+  const annotationInstructionSection = textSection(
+    "朱書きの指示",
+    prompt.annotationInstruction
+  )
   const hasNoContent =
     questionTextSection === null &&
     !questionImage &&
@@ -142,6 +146,7 @@ export function buildPromptContentSegments(
     modelAnswerImage ? "## 模範解答（画像）" : null,
     modelAnswerImage ?? null,
     rubricSection,
+    annotationInstructionSection,
     hasNoContent
       ? "問題文・模範解答・採点基準はありません。答案と配点から判断してください。"
       : null,
@@ -161,12 +166,19 @@ export interface GradingRequestParts {
  * 空の欄は節ごと省く。答案の画像（可変部）は含めない。
  */
 export function buildGradingRequestParts(
-  input: PromptContentInput
+  input: PromptContentInput & {
+    /**
+     * 朱書きの字数の上限（全角）。解答欄の大きさから決まる（`estimateAnnotationCharacterLimit`）。
+     * 設問ごとに決まる値なので、固定部に入れてもキャッシュは崩れない
+     */
+    annotationCharacterLimit: number
+  }
 ): GradingRequestParts {
   return {
     systemText: GRADING_SYSTEM_TEXT,
     fixedParts: joinPromptSegments([
       ...buildPromptContentSegments(input),
+      `## 朱書きの長さ\n解答欄が限られているので、朱書き（annotation）は全角${input.annotationCharacterLimit}字以内で書いてください。`,
       "## 採点する答案\nこの後に示す画像が、採点する答案（この設問の解答欄の切り出し）です。",
     ]),
   }
