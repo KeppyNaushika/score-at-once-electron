@@ -18,6 +18,10 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
+import type {
+  AuditFilterState,
+  AuditFilterToken,
+} from "@/lib/auditLogFilterQuery"
 import { matchesSearchTerm } from "@/lib/searchText"
 import { auditLogScopesQuery } from "@/queries/auditLog"
 import type { PublicUser } from "@/queries/user"
@@ -28,8 +32,6 @@ import {
   type AuditFilterCandidate,
   auditFilterFieldByKeyword,
   auditFilterFieldOf,
-  type AuditFilterState,
-  type AuditFilterToken,
 } from "../filterFields"
 
 /** 打った文字列が `student:…` の形なら、欄の名前とその後ろ */

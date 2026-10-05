@@ -430,3 +430,88 @@ describe("applyStudentAnswerPlacements", () => {
     expect(imgAfter.examPageId).toBe(page1.id)
   })
 })
+
+describe("applyStudentAnswerPlacements の操作履歴", () => {
+  beforeEach(async () => {
+    await cleanupTestDatabase()
+  })
+
+  const assignLogs = () =>
+    testPrisma.auditLog.findMany({
+      where: { action: "exam.answer.assign" },
+      include: { targets: true },
+    })
+
+  it("1回の適用を1行に、試験の作業領域と動いた生徒つきで残す", async () => {
+    const { exam, examStudentA, examStudentB, page1, image } =
+      await buildSimpleExam()
+
+    await applyStudentAnswerPlacements([
+      {
+        fileId: image(page1.id, examStudentA.id).id,
+        finalExamStudentId: examStudentB.id,
+        finalExamPageId: page1.id,
+        scorePolicy: "carry",
+      },
+      {
+        fileId: image(page1.id, examStudentB.id).id,
+        finalExamStudentId: examStudentA.id,
+        finalExamPageId: page1.id,
+        scorePolicy: "carry",
+      },
+    ])
+
+    const logs = await assignLogs()
+    expect(logs).toHaveLength(1)
+    expect(logs[0].scopeId).toBe(exam.exam.id)
+    expect(logs[0].scopeLabel).toBe(exam.exam.examName)
+    expect(logs[0].summary).toBe("生徒答案の配置を変更（2 件）")
+    expect(
+      logs[0].targets.map((target) => [target.targetType, target.targetId])
+    ).toEqual(
+      expect.arrayContaining([
+        ["Student", examStudentA.studentId],
+        ["Student", examStudentB.studentId],
+      ])
+    )
+  })
+
+  it("採点を破棄したときは消えた行数を要約に書く", async () => {
+    const { examStudentA, examStudentB, page1, image } = await buildSimpleExam()
+
+    await applyStudentAnswerPlacements([
+      {
+        fileId: image(page1.id, examStudentA.id).id,
+        finalExamStudentId: examStudentB.id,
+        finalExamPageId: page1.id,
+        scorePolicy: "discard",
+      },
+      {
+        fileId: image(page1.id, examStudentB.id).id,
+        finalExamStudentId: examStudentA.id,
+        finalExamPageId: page1.id,
+        scorePolicy: "discard",
+      },
+    ])
+
+    const logs = await assignLogs()
+    expect(logs).toHaveLength(1)
+    expect(logs[0].summary).toContain("採点を破棄: QuestionScore 2 行")
+  })
+
+  it("適用に失敗したら記録しない", async () => {
+    const { examStudentA, page1, page2, image } = await buildSimpleExam()
+
+    await expect(
+      applyStudentAnswerPlacements([
+        {
+          fileId: image(page1.id, examStudentA.id).id,
+          finalExamStudentId: examStudentA.id,
+          finalExamPageId: page2.id,
+          scorePolicy: "carry",
+        },
+      ])
+    ).rejects.toThrow()
+    expect(await assignLogs()).toHaveLength(0)
+  })
+})

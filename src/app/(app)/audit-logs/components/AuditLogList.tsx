@@ -13,6 +13,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
+import type { AuditFilterState } from "@/lib/auditLogFilterQuery"
 import { type PublicUser, userListQuery } from "@/queries/user"
 
 import { useAuditLogs } from "../hooks/useAuditLogs"
@@ -22,7 +23,12 @@ import { AuditLogItem } from "./AuditLogItem"
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_USERS: PublicUser[] = []
 
-export function AuditLogList() {
+export function AuditLogList({
+  initialFilter,
+}: {
+  /** 最初の絞り込み（URL から読んだもの。詳細ページの「操作履歴」から来たとき） */
+  initialFilter: AuditFilterState
+}) {
   const {
     logs,
     total,
@@ -37,7 +43,7 @@ export function AuditLogList() {
     setPageNumber,
     setPageSizeChoice,
     viewportRef,
-  } = useAuditLogs()
+  } = useAuditLogs(initialFilter)
 
   // 操作者の名前と、操作者の絞り込みの候補（ログイン画面と同じ利用者一覧のキャッシュを共有する）
   const { data: users = EMPTY_USERS } = useQuery(userListQuery())

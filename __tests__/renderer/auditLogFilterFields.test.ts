@@ -8,9 +8,9 @@ import { describe, expect, it } from "vitest"
 
 import {
   addAuditFilterTokens,
-  type AuditFilterToken,
   toAuditLogFilter,
 } from "@/app/(app)/audit-logs/filterFields"
+import type { AuditFilterToken } from "@/lib/auditLogFilterQuery"
 import { auditActionKeysOfVerb } from "@/lib/shared/auditActions"
 
 const token = (

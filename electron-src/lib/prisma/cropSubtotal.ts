@@ -1,5 +1,7 @@
-import type { Prisma } from "@prisma/client"
+import type { CropRegion, Exam, Prisma, Subtotal } from "@prisma/client"
 
+import { recordAuditLog } from "./auditLog"
+import { cropRegionAuditTarget } from "./auditTargets"
 import prisma from "./client"
 
 /**
@@ -46,6 +48,37 @@ const cropSubtotalForScoringInclude = {
 } satisfies Prisma.CropSubtotalInclude
 
 /**
+ * 紐付けの付け外しを操作履歴へ残す。
+ *
+ * 04-question-group の表でマスを続けて付け外しするので、**試験ごとに1行へまとめる**
+ * （`coalesceKey`）。変更内容は紐付けごとに「最初の状態 → 最後の状態」になる。
+ */
+async function recordCropSubtotalAudit(
+  cropRegion: CropRegion,
+  exam: Exam,
+  subtotal: Subtotal,
+  linked: boolean
+): Promise<void> {
+  await recordAuditLog({
+    action: "exam.subtotal_assignment.update",
+    entityType: "CropSubtotal",
+    entityId: exam.id,
+    scopeId: exam.id,
+    scopeLabel: exam.examName,
+    targets: [cropRegionAuditTarget(cropRegion)],
+    changes: [
+      {
+        field: `${cropRegion.id}:${subtotal.id}`,
+        label: `${cropRegion.label || "（名前なし）"} → 小計「${subtotal.name}」`,
+        before: linked ? "対応なし" : "対応あり",
+        after: linked ? "対応あり" : "対応なし",
+      },
+    ],
+    coalesceKey: `subtotal_assignment:${exam.id}`,
+  })
+}
+
+/**
  * 設問-小計の紐付けを1件作る（データ整合性を検証する）。
  *
  * かつては「その領域の紐付けを全消し → 作り直し」の2本で1マスの変更を表して
@@ -62,7 +95,7 @@ export const createCropSubtotal = async (
 ) => {
   const cropRegion = await prisma.cropRegion.findUnique({
     where: { id: data.cropRegionId },
-    include: { examPage: true },
+    include: { examPage: { include: { exam: true } } },
   })
 
   if (!cropRegion) {
@@ -98,17 +131,29 @@ export const createCropSubtotal = async (
     )
   }
 
-  return prisma.cropSubtotal.upsert({
-    where: {
-      cropRegionId_subtotalId_assignmentType: {
-        cropRegionId: data.cropRegionId,
-        subtotalId: data.subtotalId,
-        assignmentType: data.assignmentType,
-      },
+  const uniqueKey = {
+    cropRegionId_subtotalId_assignmentType: {
+      cropRegionId: data.cropRegionId,
+      subtotalId: data.subtotalId,
+      assignmentType: data.assignmentType,
     },
+  }
+  // 既に在れば何も変わらないので記録しない
+  const existing = await prisma.cropSubtotal.findUnique({ where: uniqueKey })
+  const cropSubtotal = await prisma.cropSubtotal.upsert({
+    where: uniqueKey,
     create: data,
     update: {},
   })
+  if (!existing) {
+    await recordCropSubtotalAudit(
+      cropRegion,
+      cropRegion.examPage.exam,
+      subtotal,
+      true
+    )
+  }
+  return cropSubtotal
 }
 
 /**
@@ -119,9 +164,26 @@ export const createCropSubtotal = async (
  * 成立しているので、そこで「解除できませんでした」と言うのは誤りである。
  */
 export const deleteCropSubtotal = async (cropSubtotalId: string) => {
-  return prisma.cropSubtotal.deleteMany({
+  const before = await prisma.cropSubtotal.findUnique({
+    where: { id: cropSubtotalId },
+    include: {
+      cropRegion: { include: { examPage: { include: { exam: true } } } },
+      subtotal: true,
+    },
+  })
+  const result = await prisma.cropSubtotal.deleteMany({
     where: { id: cropSubtotalId },
   })
+  // 既に消えていた（何も消していない）ときは記録しない
+  if (before && result.count > 0) {
+    await recordCropSubtotalAudit(
+      before.cropRegion,
+      before.cropRegion.examPage.exam,
+      before.subtotal,
+      false
+    )
+  }
+  return result
 }
 
 /** 小計点領域に紐づく小計を、設問割り当てまで含めて取得する（得点算出用） */

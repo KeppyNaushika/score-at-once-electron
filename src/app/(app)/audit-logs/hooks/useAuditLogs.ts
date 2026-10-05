@@ -12,6 +12,7 @@ import {
   useState,
 } from "react"
 
+import type { AuditFilterState } from "@/lib/auditLogFilterQuery"
 import {
   AUTO_PAGE_SIZE,
   FALLBACK_PAGE_SIZE,
@@ -21,7 +22,7 @@ import { auditLogListQuery } from "@/queries/auditLog"
 import type { AuditLogRow } from "@/types/auditLog.types"
 
 import { AUDIT_LOG_ROW_HEIGHT } from "../constants"
-import { type AuditFilterState, toAuditLogFilter } from "../filterFields"
+import { toAuditLogFilter } from "../filterFields"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_LOGS: AuditLogRow[] = []
@@ -53,12 +54,14 @@ interface UseAuditLogsResult {
 /**
  * 監査ログの取得フック。
  *
- * ページは画面の状態として持つ（URL には載せない）。載せると未保存の確認
+ * ページと絞り込みは画面の状態として持つ（URL には載せない）。載せると未保存の確認
  * （`NavigationGuardContext`）を通る遷移になり、ページを送るたびに離脱確認が
- * 割り込みうる。
+ * 割り込みうる。URL から読むのは最初の絞り込み（詳細ページからのリンク）だけ。
  */
-export function useAuditLogs(): UseAuditLogsResult {
-  const [filter, setFilterState] = useState<AuditFilterState>({ tokens: [] })
+export function useAuditLogs(
+  initialFilter: AuditFilterState
+): UseAuditLogsResult {
+  const [filter, setFilterState] = useState<AuditFilterState>(initialFilter)
   /**
    * 覚えているのは**ページ番号ではなく先頭の行**（0始まり）。
    *
