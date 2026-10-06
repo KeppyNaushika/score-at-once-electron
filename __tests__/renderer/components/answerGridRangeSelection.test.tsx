@@ -23,6 +23,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AiGradingGrid } from "@/components/exams/07-score-at-once/AiGrading/AiGradingGrid"
 import { useAiGridSelection } from "@/components/exams/07-score-at-once/AiGrading/hooks/useAiGridSelection"
+import { useAiGridViewSettings } from "@/components/exams/07-score-at-once/AiGrading/hooks/useAiGridViewSettings"
 import type { AiGridDisplaySettings } from "@/components/exams/07-score-at-once/AiGrading/types"
 import { reviewAnswer } from "@/components/exams/07-score-at-once/AiGrading/utils/answerReview"
 import AnswerGridView from "@/components/exams/07-score-at-once/ScoringGrid/AnswerGridView"
@@ -317,11 +318,13 @@ const reviewedAnswers = AI_EXAM_STUDENT_IDS.map((examStudentId) => {
 
 /** AI採点の作業場と同じつなぎ方（選択は useAiGridSelection が持つ） */
 function AiGridHarness() {
+  const viewSettings = useAiGridViewSettings()
   const grid = useAiGridSelection({
     cropRegion,
     reviewedAnswers,
     layoutDirection: display.layoutDirection,
     itemsPerLine: display.itemsPerLine,
+    viewSettings,
   })
   return (
     <>

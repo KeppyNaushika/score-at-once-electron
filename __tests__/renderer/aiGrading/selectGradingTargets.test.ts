@@ -1,7 +1,7 @@
 /**
  * 採点する答案の選び方（docs/vlm-grading-design.md §3-2）。選び方ごとに1本ずつ固定する。
  *
- * - 白紙は常に除外し、境界帯はチェックしたときだけ送る
+ * - 白紙と境界帯は、それぞれチェックしたときだけ送る（白紙も送るかは aiIncludeBlankTargets.test.tsx）
  * - 測れなかった答案は白紙とみなさない
  * - 設問の id が空なら投げる（全員が未採点に見えた試行の失敗の再発防止）
  */
@@ -84,6 +84,7 @@ function buildInput(
     displayedAttemptByExamStudentId,
     selectedExamStudentIds: new Set(["s-err", "s-blank"]),
     includeBorderline: false,
+    includeBlank: false,
     ...overrides,
   }
 }

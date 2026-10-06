@@ -2,7 +2,8 @@
  * 採点する答案の選び方（docs/vlm-grading-design.md §3-2）。
  *
  * どの選び方も「選んだ答案の examStudentId を並べる」だけで、仕組みは同じ。
- * **白紙は常に除外する**（インク率で判定）。境界帯は送るかどうかを選べる。
+ * 白紙（インク率で判定）と境界帯は既定では送らず、それぞれ送るかどうかを選べる
+ * （白紙の判定が外れて書いてある答案が落ちることがあるため、白紙も送れるようにしている）。
  * **測れなかった答案は白紙とみなさない**（白紙として落とすと、採点されないまま黙って残る）。
  *
  * 「採点結果が正しいかの判定」は新しい仕組みにしない。採点済みの答案を普通に採点し、
@@ -47,7 +48,7 @@ export const GRADING_TARGET_MODE_DESCRIPTIONS: Record<
   scoredCheck: "自分が採点済みの答案（採点結果が正しいかの確認）",
   disagreeing: "表示中の AI の判定と自分の採点が違う答案",
   selected: "一覧で選んでいる答案",
-  all: "白紙を除くすべての答案",
+  all: "すべての答案",
 }
 
 /** 選び方に要る答案の形（行のまま） */
@@ -78,12 +79,16 @@ export interface GradingTargetSelectionInput {
   selectedExamStudentIds: ReadonlySet<string>
   /** 境界帯（白紙かどうか際どい答案）も送るか */
   includeBorderline: boolean
+  /** 白紙と判定した答案も送るか（判定が外れて書いてある答案を拾うため） */
+  includeBlank: boolean
 }
 
 export interface GradingTargetSelection {
   /** 送る答案（答案の並び順のまま） */
   examStudentIds: string[]
-  /** 選び方に当てはまったが、白紙なので送らない答案の数 */
+  /** 選び方に当てはまった答案のうち、白紙と判定した答案の数（送るかどうかによらない） */
+  blankCount: number
+  /** 選び方に当てはまったが、白紙なので送らない答案の数（白紙も送るなら 0） */
   excludedBlankCount: number
   /** 選び方に当てはまったが、境界帯なので送らない答案の数 */
   excludedBorderlineCount: number
@@ -142,18 +147,20 @@ export function selectGradingTargets(
   )
   const blankness = (answer: GradingTargetAnswer) =>
     answer.inkMeasurement?.blankness ?? null
+  const blankCount = matchedAnswers.filter(
+    (answer) => blankness(answer) === "blank"
+  ).length
 
   return {
     examStudentIds: matchedAnswers
-      .filter((answer) => blankness(answer) !== "blank")
+      .filter((answer) => input.includeBlank || blankness(answer) !== "blank")
       .filter(
         (answer) =>
           input.includeBorderline || blankness(answer) !== "borderline"
       )
       .map((answer) => answer.studentAnswerImage.examStudentId),
-    excludedBlankCount: matchedAnswers.filter(
-      (answer) => blankness(answer) === "blank"
-    ).length,
+    blankCount,
+    excludedBlankCount: input.includeBlank ? 0 : blankCount,
     excludedBorderlineCount: input.includeBorderline
       ? 0
       : matchedAnswers.filter((answer) => blankness(answer) === "borderline")

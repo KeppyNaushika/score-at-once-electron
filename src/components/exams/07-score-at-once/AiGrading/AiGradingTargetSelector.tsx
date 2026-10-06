@@ -33,9 +33,11 @@ interface AiGradingTargetSelectorProps {
   selectionByMode: Record<GradingTargetMode, GradingTargetSelection>
   includeBorderline: boolean
   onIncludeBorderlineChange: (includeBorderline: boolean) => void
+  includeBlank: boolean
+  onIncludeBlankChange: (includeBlank: boolean) => void
 }
 
-/** カードの下に添える、除く答案の1行 */
+/** カードの下に添える、除く答案（と、含めた白紙）の1行 */
 function exclusionText(selection: GradingTargetSelection): string {
   const exclusions = [
     selection.excludedBlankCount > 0
@@ -45,9 +47,27 @@ function exclusionText(selection: GradingTargetSelection): string {
       ? `境界帯 ${selection.excludedBorderlineCount}件`
       : null,
   ].filter((exclusion) => exclusion !== null)
-  return exclusions.length === 0
-    ? "除く答案なし"
-    : `${exclusions.join("・")}を除く`
+  const includedBlankCount = selection.blankCount - selection.excludedBlankCount
+  const inclusionText =
+    includedBlankCount > 0 ? `白紙 ${includedBlankCount}件を含む` : null
+  const exclusionPart =
+    exclusions.length === 0 ? null : `${exclusions.join("・")}を除く`
+  if (inclusionText === null && exclusionPart === null) return "除く答案なし"
+  return [inclusionText, exclusionPart]
+    .filter((part) => part !== null)
+    .join("・")
+}
+
+/** 白紙も送るかの選択の下に添える、選んだ選び方での白紙の件数 */
+function blankSummaryText(
+  selection: GradingTargetSelection,
+  includeBlank: boolean
+): string {
+  if (selection.blankCount === 0)
+    return "この選び方に白紙と判定した答案はありません"
+  return includeBlank
+    ? `白紙と判定した ${selection.blankCount}件も送ります（その分の費用がかかります）`
+    : `白紙として外した ${selection.blankCount}件。判定が外れて書いてある答案があれば、上で含められます`
 }
 
 /**
@@ -65,6 +85,8 @@ export function AiGradingTargetSelector({
   selectionByMode,
   includeBorderline,
   onIncludeBorderlineChange,
+  includeBlank,
+  onIncludeBlankChange,
 }: AiGradingTargetSelectorProps) {
   const cardRefs = useRef<Map<GradingTargetMode, HTMLButtonElement>>(new Map())
   const selectableModes = GRADING_TARGET_MODES.filter(
@@ -186,8 +208,29 @@ export function AiGradingTargetSelector({
           白紙か際どい答案（境界帯）も送る
         </Label>
       </div>
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="ai-grading-include-blank"
+          checked={includeBlank}
+          onCheckedChange={(checked) => onIncludeBlankChange(checked === true)}
+        />
+        <Label
+          htmlFor="ai-grading-include-blank"
+          className="text-sm font-normal"
+        >
+          白紙と判定した答案も送る
+        </Label>
+      </div>
+      {targetMode !== null && (
+        <p
+          className="text-xs text-muted-foreground"
+          data-testid="ai-grading-target-blank-summary"
+        >
+          {blankSummaryText(selectionByMode[targetMode], includeBlank)}
+        </p>
+      )}
       <p className="text-xs text-muted-foreground">
-        白紙の答案は送りません。インクを測れなかった答案は白紙とみなさずに送ります。
+        白紙と判定した答案は、既定では送りません（判定はインク率によるので、薄い字などで外れることがあります）。インクを測れなかった答案は白紙とみなさずに送ります。
       </p>
     </div>
   )

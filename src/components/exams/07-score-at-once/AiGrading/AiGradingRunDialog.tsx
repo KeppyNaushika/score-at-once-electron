@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import type { AiGradingSettings } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
+import { useInFlightGuard } from "@/hooks/useInFlightGuard"
 import { startAiGradingRunMutation } from "@/queries/aiGrading"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
@@ -80,12 +81,16 @@ function AiGradingRunForm({
   // （閉じるとこのフォームごと捨てられる）
   const [targetMode, setTargetMode] = useState<GradingTargetMode | null>(null)
   const [includeBorderline, setIncludeBorderline] = useState(false)
+  // 白紙も送るかは、この実行の間だけの選択（設定に残さない）。既定は送らない（費用が増えるため）
+  const [includeBlank, setIncludeBlank] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
   const { runSettings, updateRunSettings } = useAiRunSettings(
     settings,
     initialProvider
   )
   const startRun = useMutation(startAiGradingRunMutation(examId, cropRegion.id))
+  // 送信は外部へ送り費用が掛かるので、ダブルクリックでも1回に限る（isPending は次の描画まで変わらない）
+  const sendGuard = useInFlightGuard()
 
   const selectionByMode = useMemo(
     () =>
@@ -104,6 +109,7 @@ function AiGradingRunForm({
         ),
         selectedExamStudentIds,
         includeBorderline,
+        includeBlank,
       }),
     [
       cropRegion.id,
@@ -114,6 +120,7 @@ function AiGradingRunForm({
       questionScores,
       selectedExamStudentIds,
       includeBorderline,
+      includeBlank,
     ]
   )
   const targetExamStudentIds =
@@ -121,6 +128,7 @@ function AiGradingRunForm({
   const providerName = providerDisplayName(runSettings.provider)
 
   const handleSend = () => {
+    if (!sendGuard.tryAcquire()) return
     startRun.mutate(
       {
         promptId: prompt.id,
@@ -138,6 +146,8 @@ function AiGradingRunForm({
           )
           onOpenChange(false)
         },
+        // 失敗したら再び押せるようにする（成功ならダイアログごと閉じる）
+        onSettled: sendGuard.release,
       }
     )
   }
@@ -182,6 +192,8 @@ function AiGradingRunForm({
             selectionByMode={selectionByMode}
             includeBorderline={includeBorderline}
             onIncludeBorderlineChange={setIncludeBorderline}
+            includeBlank={includeBlank}
+            onIncludeBlankChange={setIncludeBlank}
           />
           <AiRunSettingsFields
             runSettings={runSettings}
@@ -211,12 +223,16 @@ function AiGradingRunForm({
       <DialogFooter>
         {isConfirming ? (
           <>
-            <Button variant="outline" onClick={() => setIsConfirming(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsConfirming(false)}
+              disabled={startRun.isPending}
+            >
               戻る
             </Button>
             <Button onClick={handleSend} disabled={startRun.isPending}>
               <Send className="h-4 w-4" />
-              {providerName} へ送信する
+              {startRun.isPending ? "送信中…" : `${providerName} へ送信する`}
             </Button>
           </>
         ) : (

@@ -14,6 +14,7 @@ import type {
   AiPricing,
 } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
+import { useInFlightGuard } from "@/hooks/useInFlightGuard"
 import {
   fetchAiPricingPageMutation,
   updateAiGradingSettingsMutation,
@@ -90,6 +91,8 @@ export function AiPricingPageImport({
 }: AiPricingPageImportProps) {
   const updateSettings = useMutation(updateAiGradingSettingsMutation())
   const fetchPage = useMutation(fetchAiPricingPageMutation())
+  // ダブルクリックでも外部への取得を1回に限る
+  const fetchGuard = useInFlightGuard()
   const [draft, setDraft] = useState<PricingImportDraft | null>(null)
   const [failureReason, setFailureReason] = useState<string | null>(null)
   const pricingPageSource = PRICING_PAGE_SOURCES[provider]
@@ -108,6 +111,7 @@ export function AiPricingPageImport({
   }
 
   const handleFetch = () => {
+    if (!fetchGuard.tryAcquire()) return
     setDraft(null)
     setFailureReason(null)
     fetchPage.mutate(provider, {
@@ -136,6 +140,7 @@ export function AiPricingPageImport({
         })
       },
       onError: (error) => setFailureReason(error.message),
+      onSettled: fetchGuard.release,
     })
   }
 

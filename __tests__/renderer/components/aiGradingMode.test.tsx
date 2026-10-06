@@ -902,6 +902,8 @@ function BulkActionsHarness({
         cropRegion={cropRegion}
         reviewedAnswers={visibleAnswers.map(reviewed)}
         visibleCount={visibleItems.length}
+        visibleIds={visibleItems.map((gridItem) => gridItem.id)}
+        onSelectBlankTargets={vi.fn()}
         onAdoptVisible={() => adoption.requestAdoptVisible(visibleItems)}
         isAdopting={adoption.isAdopting}
       />

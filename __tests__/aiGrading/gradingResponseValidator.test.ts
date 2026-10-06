@@ -38,6 +38,8 @@ describe("validateGradingResponse: 通るもの", () => {
       5,
     ],
     ["保留（点つき）", withFields({ status: "pending", partialScore: 3 }), 5],
+    ["点の無い保留", withFields({ status: "pending" }), 5],
+    ["配点の無い設問の点の無い保留", withFields({ status: "pending" }), null],
     [
       "満点の保留は保留のまま",
       withFields({ status: "pending", partialScore: 5 }),
@@ -59,6 +61,18 @@ describe("validateGradingResponse: 直して受け取るもの", () => {
     )
     expect(result.ok).toBe(true)
     if (!result.ok) return
+    expect(result.value.partialScore).toBe(2.46)
+    expect(result.notes).toHaveLength(1)
+  })
+
+  it("保留の点も 0.01 単位に丸める", () => {
+    const result = validateGradingResponse(
+      withFields({ status: "pending", partialScore: 2.456 }),
+      { maxPoints: 5 }
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.status).toBe("pending")
     expect(result.value.partialScore).toBe(2.46)
     expect(result.notes).toHaveLength(1)
   })
@@ -107,7 +121,17 @@ describe("validateGradingResponse: 拒むもの", () => {
     ["status が知らない値", withFields({ status: "maru" }), 5],
     ["status が文字列でない", withFields({ status: 1 }), 5],
     ["partial なのに点が null", withFields({ status: "partial" }), 5],
-    ["pending なのに点が null", withFields({ status: "pending" }), 5],
+    [
+      "保留の点が配点を超える",
+      withFields({ status: "pending", partialScore: 5.5 }),
+      5,
+    ],
+    ["保留の点が負", withFields({ status: "pending", partialScore: -1 }), 5],
+    [
+      "配点の無い設問に点つきの保留",
+      withFields({ status: "pending", partialScore: 1 }),
+      null,
+    ],
     ["correct に点がある", withFields({ partialScore: 5 }), 5],
     [
       "incorrect に 0 点がある",

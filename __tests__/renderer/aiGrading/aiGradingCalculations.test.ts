@@ -1,5 +1,6 @@
 /**
- * AI採点モードの計算（費用の概算・実行の履歴と一致率・プロンプトの差分・注釈の用紙の向き）。
+ * AI採点モードの計算（実行の履歴と一致率・プロンプトの差分・注釈の用紙の向き）。
+ * 費用の概算は `costEstimate.test.ts`。
  */
 
 import { describe, expect, it } from "vitest"
@@ -9,16 +10,11 @@ import {
   placeAdoptionAnnotation,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/adoptionAnnotation"
 import { resolveDisplayedAttempt } from "@/components/exams/07-score-at-once/AiGrading/utils/attemptSelection"
-import {
-  estimateImageTokens,
-  estimateRunCost,
-} from "@/components/exams/07-score-at-once/AiGrading/utils/costEstimate"
 import { diffPromptLines } from "@/components/exams/07-score-at-once/AiGrading/utils/promptDiff"
 import {
   resolveChosenRunId,
   summarizeRunHistory,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/runHistory"
-import type { AiPricing } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 
 import {
   CROP_REGION_ID,
@@ -28,61 +24,6 @@ import {
   makeQuestionScore,
   makeRun,
 } from "./helpers/aiGradingRowFixtures"
-
-describe("費用の概算", () => {
-  // 単価は作り物（アプリは単価を持たず、利用者が入れた値で計算する）
-  const pricing: AiPricing = {
-    modelPrices: [
-      {
-        provider: "anthropic",
-        model: "test-model",
-        inputPerMillionUsd: 3,
-        outputPerMillionUsd: 7,
-        cacheReadPerMillionUsd: 0.3,
-        cacheWrite5mPerMillionUsd: 3.5,
-        cacheWrite1hPerMillionUsd: 6,
-      },
-    ],
-    batchPricePercents: { anthropic: 40, openai: null },
-  }
-  const baseInput = {
-    provider: "anthropic" as const,
-    model: "test-model",
-    effort: "medium" as const,
-    mode: "realtime" as const,
-    // 750画素 × 1000画素 → 1000トークン
-    answerImages: [{ width: 750, height: 1000 }],
-    fixedImages: [],
-    promptCharacterCount: 500,
-  }
-
-  it("画像は 幅×高さ÷750 トークン", () => {
-    expect(estimateImageTokens({ width: 750, height: 1000 })).toBe(1000)
-  })
-
-  it("入れた単価で金額にする（100万トークンあたり）", () => {
-    const estimate = estimateRunCost(baseInput, pricing)
-    // 入力 = 文字 (500 + 1500) + 画像 1000 = 3000、出力 = 1500
-    expect(estimate.inputTokens).toBe(3000)
-    expect(estimate.outputTokens).toBe(1500)
-    expect(estimate.cost).toEqual({
-      isPriced: true,
-      costUsd: expect.closeTo((3000 * 3 + 1500 * 7) / 1_000_000),
-    })
-  })
-
-  it("バッチは入れた割合を掛け、単価の無いモデルは金額を出さない", () => {
-    const realtime = estimateRunCost(baseInput, pricing).cost
-    const batch = estimateRunCost({ ...baseInput, mode: "batch" }, pricing).cost
-    expect(realtime.isPriced && batch.isPriced).toBe(true)
-    if (realtime.isPriced && batch.isPriced) {
-      expect(batch.costUsd).toBeCloseTo(realtime.costUsd * 0.4)
-    }
-    expect(
-      estimateRunCost({ ...baseInput, model: "unknown-model" }, pricing).cost
-    ).toEqual({ isPriced: false, missing: "model_price" })
-  })
-})
 
 describe("実行の履歴", () => {
   it("自分の採点の実行を新しい順に並べ、実行ごとに判定の数と一致を数える（採用した試行は数えない）", () => {

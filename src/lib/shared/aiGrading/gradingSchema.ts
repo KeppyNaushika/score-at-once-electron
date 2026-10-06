@@ -47,7 +47,7 @@ export const AI_GRADING_OUTPUT_STATUSES = [
 ] as const satisfies readonly ScoringStatus[]
 export type AiGradingOutputStatus = (typeof AI_GRADING_OUTPUT_STATUSES)[number]
 
-/** 部分点（partialScore）を持つ判定 */
+/** 部分点（partialScore）を持ちうる判定（partial は必ず持ち、pending は任意） */
 export const AI_GRADING_SCORED_STATUSES = [
   "partial",
   "pending",
@@ -79,7 +79,7 @@ export function buildGradingOutputSchema(): GradingJsonSchema {
     partialScore: {
       type: ["number", "null"],
       description:
-        "partial と pending のときだけ、0 から配点までの点（0.01 単位）。それ以外は null",
+        "partial のときは 0 から配点までの点（0.01 単位）。pending のときは最も有力な読みでの仮の点（決められなければ null）。それ以外は null",
     },
     comment: {
       type: "string",

@@ -30,6 +30,8 @@ interface AiAdoptTabContentProps {
   visibleItems: readonly AiGridItem[]
   /** 表示中の答案すべての AI の点を採用する */
   onAdoptVisible: (visibleItems: readonly AiGridItem[]) => void
+  /** 渡した答案を一覧で選ぶ（絞り込みで隠れていても一覧に出す）。白紙を無答にする対象を確かめる */
+  onRevealAndSelect: (examStudentIds: readonly string[]) => void
   isAdopting: boolean
 }
 
@@ -49,6 +51,7 @@ export function AiAdoptTabContent({
   onAdoptSelected,
   visibleItems,
   onAdoptVisible,
+  onRevealAndSelect,
   isAdopting,
 }: AiAdoptTabContentProps) {
   return (
@@ -69,6 +72,8 @@ export function AiAdoptTabContent({
           cropRegion={cropRegion}
           reviewedAnswers={reviewedAnswers}
           visibleCount={visibleItems.length}
+          visibleIds={visibleItems.map((gridItem) => gridItem.id)}
+          onSelectBlankTargets={onRevealAndSelect}
           onAdoptVisible={() => onAdoptVisible(visibleItems)}
           isAdopting={isAdopting}
         />

@@ -11,6 +11,7 @@ import type {
   ProviderConnectionTestResult,
 } from "@/electron-src/lib/aiGrading/providerConnectionTest"
 import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
+import { useInFlightGuard } from "@/hooks/useInFlightGuard"
 import { testAiProviderConnectionMutation } from "@/queries/aiProvider"
 
 /** 結果の種類ごとの見出し。次に何を確かめればよいかを言う */
@@ -36,12 +37,18 @@ export function AiProviderConnectionTest({
   hasApiKey,
 }: AiProviderConnectionTestProps) {
   const testConnection = useMutation(testAiProviderConnectionMutation())
+  // ダブルクリックでも外部への取得を1回に限る
+  const testGuard = useInFlightGuard()
   const [testResult, setTestResult] =
     useState<ProviderConnectionTestResult | null>(null)
 
   const handleTest = () => {
+    if (!testGuard.tryAcquire()) return
     setTestResult(null)
-    testConnection.mutate(provider, { onSuccess: setTestResult })
+    testConnection.mutate(provider, {
+      onSuccess: setTestResult,
+      onSettled: testGuard.release,
+    })
   }
 
   return (

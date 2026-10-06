@@ -96,22 +96,66 @@ function assertValidStartInput(input: StartGradingRunInput): void {
   }
 }
 
+/**
+ * 開始の処理中の実行を見分けるキー。同じ教員が、同じプロンプト（＝同じ設問）で、
+ * 同じ答案の組を送ろうとしているか（答案の並び順は問わない）
+ */
+function startingRunKeyOf(
+  input: StartGradingRunInput,
+  actorUserId: string
+): string {
+  return JSON.stringify([
+    actorUserId,
+    input.promptId,
+    [...input.examStudentIds].sort(),
+  ])
+}
+
 /** 採点の実行を作る口。アプリでは1つだけ作る（`aiGradingMainServices.ts`） */
 export function createGradingJobRunner(dependencies: AiGradingJobDependencies) {
   /** 走っているその場の採点の run と、その中止の口 */
   const activeControllers = new Map<string, AbortController>()
+  /**
+   * 開始の処理中（受け付けてから run を返すまで。バッチは預け終えるまで）の実行のキー。
+   * ダブルクリックなどで同じ実行が2重に始まり、外部へ2回送って費用が2倍になるのを防ぐ
+   */
+  const startingRunKeys = new Set<string>()
 
   /**
    * 採点を始める。run と試行（pending）を作って返す。
    *
    * その場の採点は送信を裏で続け、`finished` で終わりを待てる（IPC は待たずに run を返す）。
    * バッチは事業者へ預け終わるまで待つ（預けられなければ投げる）。
+   *
+   * 同じ教員・同じプロンプト・同じ答案の組の実行が開始の処理中なら、2つ目は拒む
+   * （同じ run を返すと、画面は2回送ったように見えるうえ、2つ目の呼び出しの設定が黙って
+   * 捨てられる）。開始の処理が終われば（成功でも失敗でも）、同じ組でも再び始められる。
    */
   async function startGradingRun(
     input: StartGradingRunInput,
     actorUserId: string
   ) {
     assertValidStartInput(input)
+    // 最初の await より前に、同期的に印を付ける（2つ目の呼び出しがここを通る前に閉じる）
+    const startingRunKey = startingRunKeyOf(input, actorUserId)
+    if (startingRunKeys.has(startingRunKey)) {
+      throw new Error(
+        "同じ答案の AI 採点を始めているところです。2重に送らないよう、この実行は受け付けませんでした"
+      )
+    }
+    startingRunKeys.add(startingRunKey)
+    try {
+      return await launchGradingRun(input, actorUserId)
+    } finally {
+      startingRunKeys.delete(startingRunKey)
+    }
+  }
+
+  /** 採点の run を作って送り始める（入力の検証と2重の防止は `startGradingRun`） */
+  async function launchGradingRun(
+    input: StartGradingRunInput,
+    actorUserId: string
+  ) {
     const prompt = await getAiPrompt(input.promptId)
     if (!prompt) throw new Error("プロンプトが見つかりません")
     const cropRegion = await getCropRegionWithAnswerImages(

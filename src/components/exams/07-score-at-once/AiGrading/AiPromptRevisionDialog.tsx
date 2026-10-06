@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import type { AiGradingSettings } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
+import { useInFlightGuard } from "@/hooks/useInFlightGuard"
 import { reviseAiPromptMutation } from "@/queries/aiGrading"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
@@ -97,26 +98,34 @@ function AiPromptRevisionForm({
     provider
   )
   const revise = useMutation(reviseAiPromptMutation(examId, cropRegion.id))
+  // 改訂は外部へ送り費用が掛かるので、ダブルクリックでも1回に限る
+  const reviseGuard = useInFlightGuard()
   const revisedPrompt = revise.data ?? null
 
   const handleRevise = () => {
-    revise.mutate({
-      promptId: basePrompt.id,
-      instruction,
-      samples: reviewedAnswers
-        .filter((reviewedAnswer) =>
-          sampleExamStudentIds.has(
-            reviewedAnswer.answer.studentAnswerImage.examStudentId
+    if (!reviseGuard.tryAcquire()) return
+    revise.mutate(
+      {
+        promptId: basePrompt.id,
+        instruction,
+        samples: reviewedAnswers
+          .filter((reviewedAnswer) =>
+            sampleExamStudentIds.has(
+              reviewedAnswer.answer.studentAnswerImage.examStudentId
+            )
           )
-        )
-        .map((reviewedAnswer) => ({
-          examStudentId: reviewedAnswer.answer.studentAnswerImage.examStudentId,
-          attemptId: reviewedAnswer.review.displayedAttempt?.attempt.id ?? null,
-        })),
-      provider: runSettings.provider,
-      model: runSettings.model.trim(),
-      effort: runSettings.effort,
-    })
+          .map((reviewedAnswer) => ({
+            examStudentId:
+              reviewedAnswer.answer.studentAnswerImage.examStudentId,
+            attemptId:
+              reviewedAnswer.review.displayedAttempt?.attempt.id ?? null,
+          })),
+        provider: runSettings.provider,
+        model: runSettings.model.trim(),
+        effort: runSettings.effort,
+      },
+      { onSettled: reviseGuard.release }
+    )
   }
 
   return (
@@ -200,7 +209,7 @@ function AiPromptRevisionForm({
             }
           >
             <Sparkles className="h-4 w-4" />
-            修正を頼む
+            {revise.isPending ? "修正を頼んでいます…" : "修正を頼む"}
           </Button>
         )}
       </DialogFooter>

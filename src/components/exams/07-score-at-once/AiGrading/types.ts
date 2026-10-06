@@ -5,6 +5,8 @@
  * `serializePrisma` を掛けたもの）から推論で取る。手で書き写さない。
  */
 
+import type { Dispatch, SetStateAction } from "react"
+
 import type {
   LayoutDirection,
   ScoringData,
@@ -29,7 +31,8 @@ import type {
   StudentAnswerImageWithExamPageAndStudent,
 } from "@/types/prismaExtensions"
 
-import type { ReviewedAiGradingAnswer } from "./utils/answerReview"
+import type { AiGridFilterSettings } from "./utils/aiGridFilter"
+import type { AnswerOrder, ReviewedAiGradingAnswer } from "./utils/answerReview"
 
 /** 設問のプロンプト1行（作成者付き） */
 export type AiPromptRow = Serialized<
@@ -111,4 +114,15 @@ export interface AiGridDisplaySettings {
   annotationRefreshKey: number
   /** 詳細で保存した注釈を変えた */
   onAnnotationChanged: () => void
+}
+
+/**
+ * 一覧の絞り込みと並べ方。設問を切り替えても変えないので、設問ごとに作り直す作業場ではなく
+ * AI採点モードの根が持つ（`useAiGridViewSettings`）
+ */
+export interface AiGridViewSettings {
+  filterSettings: AiGridFilterSettings
+  setFilterSettings: Dispatch<SetStateAction<AiGridFilterSettings>>
+  answerOrder: AnswerOrder
+  setAnswerOrder: (answerOrder: AnswerOrder) => void
 }

@@ -7,7 +7,8 @@
  *
  * - 形: `buildGradingOutputSchema()` の6項目がそろい、余分な項目が無く、型が合う
  * - status は correct / partial / incorrect / no_answer / pending のいずれか
- * - partialScore は partial と pending のときだけあり、0〜配点に収まる
+ * - partialScore は partial では必ずあり、pending では任意（点の無い保留）。それ以外では無い。
+ *   あるときは 0〜配点に収まる
  * - 0.01 より細かい点は 0.01 単位に丸めて受け取り、丸めたことを notes に残す
  * - 満点の partial は correct に寄せる（部分点が満点なら正答と同じ）
  *
@@ -152,8 +153,9 @@ export function validateGradingResponse(
   if (isScoredStatus(status)) {
     const { maxPoints } = context
     if (partialScore === null) {
+      // pending は点の無い保留を許す（仮の点を決められないことがある）。
       // 項目が無い・数でないときは形の検査が理由を足している
-      if (response.partialScore === null) {
+      if (status === "partial" && response.partialScore === null) {
         reasons.push(`${status} なのに partialScore が null です`)
       }
     } else if (maxPoints === null) {
