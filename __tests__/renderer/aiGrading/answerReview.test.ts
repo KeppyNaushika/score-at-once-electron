@@ -5,7 +5,9 @@
 
 import { describe, expect, it } from "vitest"
 
+import { describeJudgement } from "@/components/exams/07-score-at-once/AiGrading/utils/answerDisplay"
 import {
+  type AnswerOrder,
   orderReviewedAnswers,
   reviewAnswer,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/answerReview"
@@ -19,7 +21,9 @@ import {
   findOwnQuestionScore,
   isDisagreeing,
   isWithinOnePoint,
+  scoreOfJudgement,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/scoreComparison"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import {
   makeAnswer,
@@ -57,6 +61,35 @@ describe("食い違いの判断", () => {
       isWithinOnePoint(
         { status: "partial", partialScore: 3 },
         { status: "correct", partialScore: null },
+        POINTS
+      )
+    ).toBe(true)
+  })
+
+  it("点の無い保留は点を持たない（0点にしない）", () => {
+    const aiPendingWithoutScore = {
+      status: "pending",
+      partialScore: null,
+    } satisfies Parameters<typeof scoreOfJudgement>[0]
+    expect(scoreOfJudgement(aiPendingWithoutScore, POINTS)).toBeNull()
+    expect(describeJudgement("pending", null)).toBe("保留")
+    expect(describeJudgement("pending", 2)).toBe("保留 2点")
+    // 自分も点の無い保留なら一致、自分が保留 0点なら食い違い
+    expect(
+      isDisagreeing(
+        aiPendingWithoutScore,
+        makeQuestionScore({ examStudentId: "s", status: "pending" }),
+        POINTS
+      )
+    ).toBe(false)
+    expect(
+      isDisagreeing(
+        aiPendingWithoutScore,
+        makeQuestionScore({
+          examStudentId: "s",
+          status: "pending",
+          partialScore: 0,
+        }),
         POINTS
       )
     ).toBe(true)
@@ -153,23 +186,44 @@ describe("表示する試行と印", () => {
     expect(review.isChangedAfterAdoption).toBe(true)
   })
 
-  it("確信度順は高い順で、判定の無い答案は最後。同じ確信度の中は生徒順のまま", () => {
-    const withConfidence = (name: string, confidence: string) =>
+  describe("並べ方（2段の並べ替え。最後は生徒順）", () => {
+    const withJudgement = (
+      name: string,
+      judgement: { confidence: string; status: ScoringStatus }
+    ) =>
       makeAnswer(name, {
         attempts: [
           makeAttemptWithRun({
             examStudentId: name,
             id: `attempt-${name}`,
-            confidence,
+            ...judgement,
           }),
         ],
       })
     const reviewed = [
       makeAnswer("none"),
-      withConfidence("low", "low"),
-      withConfidence("high1", "high"),
-      withConfidence("medium", "medium"),
-      withConfidence("high2", "high"),
+      withJudgement("lowCorrect", { confidence: "low", status: "correct" }),
+      withJudgement("highIncorrect", {
+        confidence: "high",
+        status: "incorrect",
+      }),
+      withJudgement("highCorrect1", { confidence: "high", status: "correct" }),
+      withJudgement("mediumPartial", {
+        confidence: "medium",
+        status: "partial",
+      }),
+      makeAnswer("errored", {
+        attempts: [
+          makeAttemptWithRun({
+            examStudentId: "errored",
+            id: "attempt-errored",
+            state: "errored",
+          }),
+        ],
+      }),
+      withJudgement("highPending", { confidence: "high", status: "pending" }),
+      withJudgement("lowIncorrect", { confidence: "low", status: "incorrect" }),
+      withJudgement("highCorrect2", { confidence: "high", status: "correct" }),
     ].map((answer) => ({
       answer,
       review: reviewAnswer(answer, {
@@ -178,12 +232,39 @@ describe("表示する試行と印", () => {
         points: POINTS,
       }),
     }))
-    expect(
-      orderReviewedAnswers(reviewed, "confidence").map(
+    const orderedNames = (answerOrder: AnswerOrder) =>
+      orderReviewedAnswers(reviewed, answerOrder).map(
         (reviewedAnswer) =>
           reviewedAnswer.answer.studentAnswerImage.examStudentId
       )
-    ).toEqual(["high1", "high2", "medium", "low", "none"])
+
+    it("確信度順: 確信度の高い順 → 同じ確信度の中は採点種の順。判定の無い答案は最後", () => {
+      expect(orderedNames("confidence")).toEqual([
+        "highCorrect1",
+        "highCorrect2",
+        "highPending",
+        "highIncorrect",
+        "mediumPartial",
+        "lowCorrect",
+        "lowIncorrect",
+        "none",
+        "errored",
+      ])
+    })
+
+    it("採点種順: 採点種の順 → 同じ採点種の中は確信度の高い順。判定の無い答案は未採点として先頭", () => {
+      expect(orderedNames("status")).toEqual([
+        "none",
+        "errored",
+        "highCorrect1",
+        "highCorrect2",
+        "lowCorrect",
+        "mediumPartial",
+        "highPending",
+        "highIncorrect",
+        "lowIncorrect",
+      ])
+    })
   })
 
   it("古い試行: 最新・採用済み・結果待ちは消さない", () => {

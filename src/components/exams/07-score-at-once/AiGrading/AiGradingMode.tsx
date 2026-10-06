@@ -9,6 +9,7 @@ import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
 
 import { AiGradingWorkspace } from "./AiGradingWorkspace"
+import { useAiGridViewSettings } from "./hooks/useAiGridViewSettings"
 import type { AiGridDisplaySettings } from "./types"
 
 /** 採点画面の設問ナビゲーターに渡すものと同じ */
@@ -44,7 +45,8 @@ const NO_QUESTION_SCORES: QuestionScoreRow[] = []
  * 07 の「AI採点」モード（実験的機能。docs/vlm-grading-design.md §10）。
  *
  * 設問ごとの作業場（左にプロンプト、中央に一覧表示と同じ一覧、右端に設問・表示・採用の操作）。設問を変えたら
- * 作業場を作り直す（選んでいるプロンプト・答案・試行は設問ごとのもの）。
+ * 作業場を作り直す（選んでいるプロンプト・答案・試行は設問ごとのもの）。一覧の絞り込みと並べ方は
+ * 設問をまたいで残すので、作業場ではなくここで持つ。
  */
 export function AiGradingMode({
   examId,
@@ -63,6 +65,7 @@ export function AiGradingMode({
   display,
   unreflectedAiQuestionIds,
 }: AiGradingModeProps) {
+  const viewSettings = useAiGridViewSettings()
   return (
     // 外枠を採点エリアいっぱいに広げる（縮むと右パネルが一覧の幅に引きずられて動く）
     <div className="flex h-full min-h-0 min-w-0 flex-1">
@@ -80,6 +83,7 @@ export function AiGradingMode({
           pageSize={pageSize}
           unlockedProviders={unlockedProviders}
           display={display}
+          viewSettings={viewSettings}
           questionNavigator={
             <QuestionNavigator
               questionRegions={cropRegions}

@@ -52,6 +52,7 @@ export function isScored(questionScore: QuestionScoreRow | undefined): boolean {
 
 /**
  * 判定の点。配点が無い設問では正答の点を決められないので null。
+ * 部分点・保留で点が無い（点の無い保留）ときも null（成績の扱い `actualScore` と同じく欠測）。
  * 未採点・Wマークは点を持たないものとして 0 にする
  */
 export function scoreOfJudgement(
@@ -63,7 +64,7 @@ export function scoreOfJudgement(
       return points
     case "partial":
     case "pending":
-      return judgement.partialScore ?? 0
+      return judgement.partialScore
     case "incorrect":
     case "no_answer":
     case "double_mark":

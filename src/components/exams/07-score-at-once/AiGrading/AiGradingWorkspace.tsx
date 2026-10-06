@@ -41,6 +41,7 @@ import {
 import type {
   AiGradingRunRow,
   AiGridDisplaySettings,
+  AiGridViewSettings,
   AiPromptRow,
 } from "./types"
 import { resolveDefaultPromptId } from "./utils/attemptSelection"
@@ -74,6 +75,8 @@ interface AiGradingWorkspaceProps {
   unlockedProviders: GradingProviderId[]
   /** 一覧の表示の設定（一覧表示と同じもの） */
   display: AiGridDisplaySettings
+  /** 一覧の絞り込みと並べ方（設問をまたいで残すので、AI採点モードの根が持つ） */
+  viewSettings: AiGridViewSettings
   /** 右パネルの先頭に置く設問ナビゲーター */
   questionNavigator: ReactNode
 }
@@ -96,6 +99,7 @@ export function AiGradingWorkspace({
   pageSize,
   unlockedProviders,
   display,
+  viewSettings,
   questionNavigator,
 }: AiGradingWorkspaceProps) {
   const promptsQuery = useQuery(aiPromptsQuery(examId, cropRegion.id))
@@ -159,25 +163,21 @@ export function AiGradingWorkspace({
       ),
     [prompts]
   )
-  const {
-    reviewedAnswers,
-    chooseAttempt,
-    chosenRunId,
-    chooseRun,
-    answerOrder,
-    setAnswerOrder,
-  } = useAiAnswerReviewState({
-    answers,
-    selectedPromptId,
-    points,
-    runs,
-    currentUserId,
-  })
+  const { reviewedAnswers, chooseAttempt, chosenRunId, chooseRun } =
+    useAiAnswerReviewState({
+      answers,
+      selectedPromptId,
+      points,
+      runs,
+      currentUserId,
+      answerOrder: viewSettings.answerOrder,
+    })
   const grid = useAiGridSelection({
     cropRegion,
     reviewedAnswers,
     layoutDirection: display.layoutDirection,
     itemsPerLine: display.itemsPerLine,
+    viewSettings,
   })
   const { draftAnnotationsByAttemptId, updateDraft } = useAiAnnotationDrafts()
   const [leftTab, setLeftTab] = useState<LeftTab>("prompt")
@@ -279,6 +279,7 @@ export function AiGradingWorkspace({
                 onAdoptSelected={adoption.requestAdopt}
                 visibleItems={grid.visibleItems}
                 onAdoptVisible={adoption.requestAdoptVisible}
+                onRevealAndSelect={grid.revealAndSelect}
                 isAdopting={adoption.isAdopting}
               />
               {kind === "score" && (
@@ -358,8 +359,8 @@ export function AiGradingWorkspace({
             onToggleConfidenceFilter: grid.toggleConfidenceFilter,
             selectedCount: grid.selectedIds.size,
             visibleCount: grid.visibleItems.length,
-            answerOrder,
-            onAnswerOrderChange: setAnswerOrder,
+            answerOrder: viewSettings.answerOrder,
+            onAnswerOrderChange: viewSettings.setAnswerOrder,
             totalCount: reviewedAnswers.length,
           }}
         />

@@ -69,9 +69,12 @@ const examStudentIds = () =>
   fixture.exam.examStudents.map((examStudent) => examStudent.id)
 
 /** 全答案を採点し、試行を答案の順で返す */
-async function gradeAll(actorUserId: string = fixture.exam.user.id) {
+async function gradeAll(
+  actorUserId: string = fixture.exam.user.id,
+  judgement: object = PARTIAL_JUDGEMENT
+) {
   const { provider } = createFakeProvider({
-    respond: async () => completedResponse(PARTIAL_JUDGEMENT),
+    respond: async () => completedResponse(judgement),
   })
   const runner = createGradingJobRunner(
     createTestDependencies(provider, fixture.dataDirectory)
@@ -152,6 +155,34 @@ describe("adoptAiGradingAttempts", () => {
       where: { action: "exam.ai_grading.adopt" },
     })
     expect(auditLog?.entityId).toBe(fixture.cropRegion.id)
+  })
+
+  it("点の無い保留は、点を null のまま保留として書く", async () => {
+    const [attempt] = await gradeAll(fixture.exam.user.id, {
+      ...PARTIAL_JUDGEMENT,
+      status: "pending",
+      partialScore: null,
+    })
+    expect(attempt).toMatchObject({
+      state: "succeeded",
+      status: "pending",
+      partialScore: null,
+    })
+
+    const results = await adoptAiGradingAttempts(
+      {
+        adoptions: [{ attemptId: attempt.id, annotation: null }],
+        overwrite: false,
+        parts: { score: true, annotation: false },
+      },
+      fixture.exam.user.id
+    )
+
+    expect(results).toEqual([{ targetId: attempt.id, outcome: "adopted" }])
+    expect(await ownScore(attempt.examStudentId)).toMatchObject({
+      status: "pending",
+      partialScore: null,
+    })
   })
 
   it("自分の採点が既にあるマスは飛ばし、overwrite なら上書きする", async () => {

@@ -99,10 +99,37 @@ function displayedConfidenceRank({ review }: ReviewedAiGradingAnswer): number {
   return attempt?.state === "succeeded" ? confidenceRank(attempt.confidence) : 0
 }
 
+/** 2つの答案の前後（負なら reviewedA が先） */
+type ReviewedAnswerComparator = (
+  reviewedA: ReviewedAiGradingAnswer,
+  reviewedB: ReviewedAiGradingAnswer
+) => number
+
+/** 表示中の AI の判定の確信度が高い順（判定の無い答案は最後） */
+const byConfidence: ReviewedAnswerComparator = (reviewedA, reviewedB) =>
+  displayedConfidenceRank(reviewedB) - displayedConfidenceRank(reviewedA)
+
+/** マスに見えている状態（自分の採点、無ければ AI の提案）の、絞り込みのボタンと同じ順 */
+const byScoringStatus: ReviewedAnswerComparator = (reviewedA, reviewedB) =>
+  SCORING_STATUS_ORDER.indexOf(cellStatusOf(reviewedA)) -
+  SCORING_STATUS_ORDER.indexOf(cellStatusOf(reviewedB))
+
+/** 前のキーで同順のときだけ次のキーで比べる */
+function compareInTurn(
+  ...comparators: ReviewedAnswerComparator[]
+): ReviewedAnswerComparator {
+  return (reviewedA, reviewedB) =>
+    comparators.reduce(
+      (comparison, comparator) =>
+        comparison !== 0 ? comparison : comparator(reviewedA, reviewedB),
+      0
+    )
+}
+
 /**
- * 並べる（どれも安定な並べ替えで、同じ組の中は生徒順を保つ）。
- * - confidence: 表示中の AI の判定の確信度が高い順（判定の無い答案は最後）
- * - status: マスに見えている状態（自分の採点、無ければ AI の提案）の、絞り込みのボタンと同じ順
+ * 並べる（どれも安定な並べ替えで、どのキーでも同順の答案は生徒順を保つ）。
+ * - confidence: 確信度の高い順 → 同じ確信度の中は採点種の順
+ * - status: 採点種の順 → 同じ採点種の中は確信度の高い順
  */
 export function orderReviewedAnswers<Reviewed extends ReviewedAiGradingAnswer>(
   reviewedAnswers: readonly Reviewed[],
@@ -113,15 +140,11 @@ export function orderReviewedAnswers<Reviewed extends ReviewedAiGradingAnswer>(
       return [...reviewedAnswers]
     case "confidence":
       return reviewedAnswers.toSorted(
-        (reviewedA, reviewedB) =>
-          displayedConfidenceRank(reviewedB) -
-          displayedConfidenceRank(reviewedA)
+        compareInTurn(byConfidence, byScoringStatus)
       )
     case "status":
       return reviewedAnswers.toSorted(
-        (reviewedA, reviewedB) =>
-          SCORING_STATUS_ORDER.indexOf(cellStatusOf(reviewedA)) -
-          SCORING_STATUS_ORDER.indexOf(cellStatusOf(reviewedB))
+        compareInTurn(byScoringStatus, byConfidence)
       )
   }
 }

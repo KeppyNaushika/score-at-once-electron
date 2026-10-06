@@ -21,6 +21,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AiOwnScoringSection } from "@/components/exams/07-score-at-once/AiGrading/AiOwnScoringSection"
 import { useAiGridSelection } from "@/components/exams/07-score-at-once/AiGrading/hooks/useAiGridSelection"
+import { useAiGridViewSettings } from "@/components/exams/07-score-at-once/AiGrading/hooks/useAiGridViewSettings"
 import { useAiOwnScoring } from "@/components/exams/07-score-at-once/AiGrading/hooks/useAiOwnScoring"
 import type { AiGradingAnswer } from "@/components/exams/07-score-at-once/AiGrading/types"
 import { reviewAnswer } from "@/components/exams/07-score-at-once/AiGrading/utils/answerReview"
@@ -147,11 +148,13 @@ function AiOwnScoringHarness({
     ReadonlySet<string>
   >(new Set())
   const answers = buildAnswers(scoredExamStudentIds)
+  const viewSettings = useAiGridViewSettings()
   const grid = useAiGridSelection({
     cropRegion,
     reviewedAnswers: answers.map(reviewed),
     layoutDirection: "right-down",
     itemsPerLine: [4],
+    viewSettings,
   })
   const [isInitialized, setIsInitialized] = useState(false)
   if (!isInitialized) {

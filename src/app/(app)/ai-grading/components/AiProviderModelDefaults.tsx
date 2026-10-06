@@ -14,6 +14,7 @@ import type {
 } from "@/electron-src/lib/aiGrading/providerConnectionTest"
 import type { ProviderModelCatalog } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
+import { useInFlightGuard } from "@/hooks/useInFlightGuard"
 import { AI_GRADING_PROVIDER_TERMS } from "@/lib/shared/aiGrading/consentText"
 import { fetchAiProviderModelsMutation } from "@/queries/aiProvider"
 
@@ -64,14 +65,20 @@ export function AiProviderModelDefaults({
   onDefaultModelChange,
 }: AiProviderModelDefaultsProps) {
   const fetchModels = useMutation(fetchAiProviderModelsMutation())
+  // ダブルクリックでも外部への取得を1回に限る
+  const fetchGuard = useInFlightGuard()
   const [fetchResult, setFetchResult] =
     useState<ProviderModelFetchResult | null>(null)
   const providerName = AI_GRADING_PROVIDER_TERMS[provider].providerName
   const modelInputId = `ai-default-model-${provider}`
 
   const handleFetch = () => {
+    if (!fetchGuard.tryAcquire()) return
     setFetchResult(null)
-    fetchModels.mutate(provider, { onSuccess: setFetchResult })
+    fetchModels.mutate(provider, {
+      onSuccess: setFetchResult,
+      onSettled: fetchGuard.release,
+    })
   }
 
   return (

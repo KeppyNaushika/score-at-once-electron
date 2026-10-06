@@ -7,10 +7,9 @@ import type { LayoutDirection } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
+import type { AiGridViewSettings } from "../types"
 import {
-  type AiGridFilterSettings,
   type ConfidenceFilterLevel,
-  DEFAULT_AI_GRID_FILTER_SETTINGS,
   type FilterSource,
   isShownByFilter,
 } from "../utils/aiGridFilter"
@@ -23,6 +22,8 @@ interface UseAiGridSelectionOptions {
   reviewedAnswers: ReviewedAiGradingAnswer[]
   layoutDirection: LayoutDirection
   itemsPerLine: number[]
+  /** 絞り込み（設問をまたいで残すので、AI採点モードの根から受け取る） */
+  viewSettings: Pick<AiGridViewSettings, "filterSettings" | "setFilterSettings">
 }
 
 /**
@@ -30,25 +31,25 @@ interface UseAiGridSelectionOptions {
  *
  * 選択は利用者が選んだ答案だけを持ち、表示に残っているものに絞って使う。
  * 何も残らなければ先頭の答案を選んでいるものとする（一覧表示と同じ）。
- * 作業場は設問ごとに作り直されるので、ここの状態は設問1つぶん
+ * 作業場は設問ごとに作り直されるので、ここの状態（選択・残して表示する答案）は設問1つぶん。
+ * 絞り込みは設問をまたいで残すので、ここでは持たずに受け取る
  */
 export function useAiGridSelection({
   cropRegion,
   reviewedAnswers,
   layoutDirection,
   itemsPerLine,
+  viewSettings: { filterSettings, setFilterSettings },
 }: UseAiGridSelectionOptions) {
-  const [filterSettings, setFilterSettings] = useState<AiGridFilterSettings>(
-    DEFAULT_AI_GRID_FILTER_SETTINGS
-  )
   /**
-   * 採用したばかりの答案。絞り込みから外れても、R（更新）か絞り込みを変えるまでは
-   * 一覧に残す（一覧表示の「採点したばかりの答案」と同じ。押した答案が目の前から
-   * 消えると、何を採用したかを確かめられない）
+   * 絞り込みによらず一覧に残す答案。R（更新）か絞り込みを変えるまで残す。
+   * - 採用・採点したばかりの答案（一覧表示の「採点したばかりの答案」と同じ。押した答案が
+   *   目の前から消えると、何を採用したかを確かめられない）
+   * - まとめての操作の「対象を選ぶ」で選んだ答案（絞り込みで隠れていても、確かめられるように出す）
    */
-  const [recentlyAdoptedIds, setRecentlyAdoptedIds] = useState<
-    ReadonlySet<string>
-  >(new Set())
+  const [keptVisibleIds, setKeptVisibleIds] = useState<ReadonlySet<string>>(
+    new Set()
+  )
   const [chosenIds, setChosenIds] = useState<ReadonlySet<string>>(new Set())
 
   const gridItems = useMemo(
@@ -62,10 +63,10 @@ export function useAiGridSelection({
     () =>
       gridItems.filter(
         (gridItem) =>
-          recentlyAdoptedIds.has(gridItem.id) ||
+          keptVisibleIds.has(gridItem.id) ||
           isShownByFilter(gridItem.reviewedAnswer, filterSettings)
       ),
-    [gridItems, recentlyAdoptedIds, filterSettings]
+    [gridItems, keptVisibleIds, filterSettings]
   )
   const visibleIds = useMemo(
     () => visibleItems.map((gridItem) => gridItem.id),
@@ -112,22 +113,33 @@ export function useAiGridSelection({
         ...prev,
         [source]: { ...prev[source], [status]: !prev[source][status] },
       }))
-      setRecentlyAdoptedIds(new Set())
+      setKeptVisibleIds(new Set())
     },
-    []
+    [setFilterSettings]
   )
-  const toggleConfidenceFilter = useCallback((level: ConfidenceFilterLevel) => {
-    setFilterSettings((prev) => ({
-      ...prev,
-      confidence: { ...prev.confidence, [level]: !prev.confidence[level] },
-    }))
-    setRecentlyAdoptedIds(new Set())
-  }, [])
+  const toggleConfidenceFilter = useCallback(
+    (level: ConfidenceFilterLevel) => {
+      setFilterSettings((prev) => ({
+        ...prev,
+        confidence: { ...prev.confidence, [level]: !prev.confidence[level] },
+      }))
+      setKeptVisibleIds(new Set())
+    },
+    [setFilterSettings]
+  )
   const refresh = useCallback(() => {
-    setRecentlyAdoptedIds(new Set())
+    setKeptVisibleIds(new Set())
   }, [])
   const markAdopted = useCallback((ids: readonly string[]) => {
-    setRecentlyAdoptedIds((prev) => new Set([...prev, ...ids]))
+    setKeptVisibleIds((prev) => new Set([...prev, ...ids]))
+  }, [])
+  /**
+   * 渡した答案だけを選ぶ。絞り込みで隠れている答案も一覧に出して選ぶ
+   * （まとめての操作の対象を、書く前に目で確かめるため。R か絞り込みを変えるまで残す）
+   */
+  const revealAndSelect = useCallback((ids: readonly string[]) => {
+    setKeptVisibleIds((prev) => new Set([...prev, ...ids]))
+    setChosenIds(new Set(ids))
   }, [])
   /**
    * 自分で採点した答案を残し、選択を次の答案へ移す（一覧表示の採点と同じ規則。
@@ -186,5 +198,6 @@ export function useAiGridSelection({
     toggleConfidenceFilter,
     markAdopted,
     markScored,
+    revealAndSelect,
   }
 }

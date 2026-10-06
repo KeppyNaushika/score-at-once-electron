@@ -6,6 +6,7 @@ import AnswerGridView from "@/components/exams/07-score-at-once/ScoringGrid/Answ
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
+import { AiBlanknessBadge } from "./AiBlanknessBadge"
 import { AiProposalChips } from "./AiProposalChips"
 import type { AiGridDisplaySettings, AiGridItem } from "./types"
 import { toMasterGridItem } from "./utils/aiGridItems"
@@ -31,7 +32,8 @@ interface AiGradingGridProps {
 /**
  * AI採点モードの中央。**一覧表示と同じ部品・同じ表示の設定**で答案を並べ
  * （先頭に模範解答、色は自分の採点、採用した朱書きもそのまま描く。未反映の AI の朱書きも重ねる）、
- * 答案の下に AI の提案を出す（8. 採点確定が採点者ごとの結果を出すのと同じ口）
+ * 答案の下に AI の提案を出す（8. 採点確定が採点者ごとの結果を出すのと同じ口）。
+ * インク率で白紙・境界帯と測った答案には、提案の札の左に「白紙」の印を出す
  */
 export function AiGradingGrid({
   cropRegion,
@@ -108,10 +110,15 @@ export function AiGradingGrid({
           renderBeforeStatusMark={(gridAnswer) => {
             const gridItem = gridItemById.get(gridAnswer.id)
             return gridItem ? (
-              <AiProposalChips
-                reviewedAnswer={gridItem.reviewedAnswer}
-                points={cropRegion.points}
-              />
+              <>
+                <AiBlanknessBadge
+                  inkMeasurement={gridItem.reviewedAnswer.answer.inkMeasurement}
+                />
+                <AiProposalChips
+                  reviewedAnswer={gridItem.reviewedAnswer}
+                  points={cropRegion.points}
+                />
+              </>
             ) : null
           }}
           className="p-4"
