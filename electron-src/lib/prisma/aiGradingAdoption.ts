@@ -5,7 +5,8 @@
  * 採点の書き込み口だけで、新しい書き方は作らない。
  *
  * - 判定と部分点 → `setQuestionScore`（受験者×設問×採点者の1行）
- * - 教員向けの理由 → `setQuestionScoreComment`
+ * - 教員向けの理由 → `setQuestionScoreComment`。1段目は理由（comment）を返さず所見（observation）を
+ *   返すので、所見を理由として書く（comment を持つ過去の試行は comment）
  *
  * **朱書きは書かない。** AI が答案ごとに書く朱書きの文案（`AiGradingAttempt.annotationText`）は
  * 採用しない。AI が関わる朱書きは、ルーブリック項目の助言から作る経路（§4-7・§9）だけにした。
@@ -93,7 +94,10 @@ async function adoptOne(
     partialScore:
       attempt.partialScore === null ? null : attempt.partialScore.toNumber(),
   })
-  await setQuestionScoreComment({ ...target, comment: attempt.comment })
+  await setQuestionScoreComment({
+    ...target,
+    comment: attempt.comment || attempt.observation,
+  })
 
   await prisma.aiGradingAttempt.update({
     where: { id: attempt.id },

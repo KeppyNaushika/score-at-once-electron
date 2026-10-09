@@ -57,6 +57,7 @@ function createGradingRequest(customId: string): GradingRequest {
       { kind: "image", mediaType: "image/png", base64Data: "QU5TV0VS" },
     ],
     outputSchema: OUTPUT_SCHEMA,
+    outputSchemaName: "stage1_grading",
   }
 }
 

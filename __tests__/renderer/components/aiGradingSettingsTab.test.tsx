@@ -9,7 +9,7 @@
  * - 保存したキーは画面のどこにも出ない（「設定済み」と「削除」だけ）
  * - 同意文の版が変わった同意は、今の同意として扱わない
  * - 「無効にする」の確認で、キーを消すこと・同意からやり直すこと・送信済みのデータは取り消せないこと（8項目目）を示す
- * - 既定値（送信先・モデル・Effort・処理・朱書きの指示の文言）は「既定値」タブ、同時実行数と警告額は「設定」タブ
+ * - 既定値（送信先・モデル・Effort・処理・助言の文案の指示の文言）は「既定値」タブ、同時実行数と警告額は「設定」タブ
  *
  * window.electronAPI は偽物で、ネットワークにも実際のキーにも触れない。
  */
@@ -311,7 +311,7 @@ describe("AiGradingSettingsTab", () => {
     ).toBeTruthy()
     expect(screen.queryByRole("region", { name: "AI採点の既定値" })).toBeNull()
     expect(
-      screen.queryByRole("region", { name: "朱書きの指示の既定の文言" })
+      screen.queryByRole("region", { name: "助言の文案の指示の既定の文言" })
     ).toBeNull()
   })
 
@@ -521,16 +521,16 @@ describe("AiGradingDefaultsTab（既定値）", () => {
     Element.prototype.scrollIntoView = () => {}
   })
 
-  it("朱書きの指示の既定の文言: 未設定なら空欄で、入力欄から離れると保存する（変えていなければ保存しない）", async () => {
+  it("助言の文案の指示の既定の文言: 未設定なら空欄で、入力欄から離れると保存する（変えていなければ保存しない）", async () => {
     const user = userEvent.setup()
     const aiProvider = installFakeAiProviderApi({ anthropic: CURRENT_CONSENT })
     renderDefaultsTab()
 
     const instructionSection = await screen.findByRole("region", {
-      name: "朱書きの指示の既定の文言",
+      name: "助言の文案の指示の既定の文言",
     })
     const instructionInput =
-      within(instructionSection).getByLabelText("朱書きの指示の既定の文言")
+      within(instructionSection).getByLabelText("助言の文案の指示の既定の文言")
     // アプリは文言を決め打ちしない
     expect(instructionInput).toHaveValue("")
 
@@ -549,7 +549,9 @@ describe("AiGradingDefaultsTab（既定値）", () => {
     })
     await waitFor(() =>
       expect(
-        within(instructionSection).getByLabelText("朱書きの指示の既定の文言")
+        within(instructionSection).getByLabelText(
+          "助言の文案の指示の既定の文言"
+        )
       ).toHaveValue("部分点の答案にだけ書く\n20字以内で")
     )
   })
@@ -586,7 +588,9 @@ describe("AiGradingTabs（AI採点の画面）", () => {
     ])
     // クエリで「既定値」を頼まれれば、既定値のタブを開く
     expect(
-      await screen.findByRole("region", { name: "朱書きの指示の既定の文言" })
+      await screen.findByRole("region", {
+        name: "助言の文案の指示の既定の文言",
+      })
     ).toBeTruthy()
   })
 

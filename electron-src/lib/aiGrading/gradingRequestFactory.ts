@@ -1,5 +1,5 @@
 /**
- * 実行1回ぶんの送信の材料（画像・固定部・出力スキーマ）をそろえ、事業者の応答を
+ * 実行1回ぶんの送信の材料（画像・固定部・出力スキーマ）をそろえ、事業者の応答（1段目）を
  * 試行に書く形へ直す。Electron に依存しない（テストは偽の事業者で走らせる）。
  */
 
@@ -7,9 +7,12 @@ import type { AiPrompt, CropRegion, ExamPage } from "@prisma/client"
 import * as fsPromises from "fs/promises"
 import * as path from "path"
 
-import { validateGradingResponse } from "@/lib/shared/aiGrading/gradingResponseValidator"
 import type { GradingJsonSchema } from "@/lib/shared/aiGrading/gradingSchema"
 import type { PromptImage } from "@/lib/shared/aiGrading/promptBuilder"
+import {
+  type Stage1ValidationContext,
+  validateStage1Response,
+} from "@/lib/shared/aiGrading/stage1ResponseValidator"
 
 import type { AiGradingAttemptResult } from "../prisma/aiGradingRun"
 import { cropRegionForSending } from "./answerImage"
@@ -19,8 +22,15 @@ import type {
   ProviderUsage,
 } from "./providers/types"
 
-/** 採点の出力の上限（思考を含む。Anthropic は思考トークンも出力として数える） */
+/** 1段目の出力の上限（思考を含む。Anthropic は思考トークンも出力として数える） */
 export const GRADING_MAX_OUTPUT_TOKENS = 16000
+
+/** 2段目の出力の上限（全員分の案を1回で返すので、1段目より大きく取る） */
+export const GROUPING_MAX_OUTPUT_TOKENS = 32000
+
+/** 出力の形の名前（OpenAI の json_schema の name）。段ごとに分ける */
+export const STAGE1_OUTPUT_SCHEMA_NAME = "stage1_grading"
+export const STAGE2_OUTPUT_SCHEMA_NAME = "stage2_grouping"
 
 /** データディレクトリからの相対パスを絶対パスにする口（テストでは一時ディレクトリへ） */
 export type ResolveDataPath = (relativePath: string) => string
@@ -113,9 +123,9 @@ export function toFailedAttemptResult(
     state,
     status: "unscored",
     partialScore: null,
-    comment: "",
-    annotationText: "",
     transcription: "",
+    observation: "",
+    matchedRubricItemIds: [],
     confidence: "",
     errorMessage,
     inputTokens: usage?.inputTokens ?? 0,
@@ -126,14 +136,14 @@ export function toFailedAttemptResult(
 }
 
 /**
- * 事業者の応答を、試行に書く結果にする。判定は必ず検証を通す（設計 §5）。
+ * 事業者の応答（1段目）を、試行に書く結果にする。判定は必ず検証を通す（設計 §6-1）。
  *
- * 検証で直したこと（丸め・correct への寄せ）は errorMessage に残す。succeeded の行の
- * errorMessage は「受け取るときに直したこと」を表す（空なら直していない）
+ * 検証で直したこと（丸め・correct への寄せ・重なった項目の id）は errorMessage に残す。
+ * succeeded の行の errorMessage は「受け取るときに直したこと」を表す（空なら直していない）
  */
 export function toAttemptResult(
   response: ProviderGradingResponse,
-  maxPoints: number | null
+  context: Stage1ValidationContext
 ): AiGradingAttemptResult {
   const { usage } = response
   switch (response.stop) {
@@ -151,9 +161,7 @@ export function toAttemptResult(
       break
   }
 
-  const validation = validateGradingResponse(response.parsedJson, {
-    maxPoints,
-  })
+  const validation = validateStage1Response(response.parsedJson, context)
   if (!validation.ok) {
     return toFailedAttemptResult(
       "errored",
@@ -166,9 +174,9 @@ export function toAttemptResult(
     state: "succeeded",
     status: value.status,
     partialScore: value.partialScore,
-    comment: value.comment,
-    annotationText: value.annotation ?? "",
     transcription: value.transcription,
+    observation: value.observation,
+    matchedRubricItemIds: value.matchedRubricItemIds,
     confidence: value.confidence,
     errorMessage: notes.join(" / "),
     inputTokens: usage.inputTokens,

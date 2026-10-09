@@ -140,8 +140,11 @@ export const rubricAnswerInkQuery = (
 // 書き込み
 // =====================================================================
 
-/** 項目の作り・直し・消しが古くする先（その設問の項目と適用、試験の全設問の項目） */
-const rubricItemInvalidations = (examId: string, cropRegionId: string) =>
+/**
+ * 項目の作り・直し・消しが古くする先（その設問の項目と適用、試験の全設問の項目）。
+ * AI の項目の案への答え（`answerAiRubricProposalMutation`）も項目を作るので使う
+ */
+export const rubricItemInvalidations = (examId: string, cropRegionId: string) =>
   [rubricScope(examId, cropRegionId), rubricItemsOfExamScope(examId)] as const
 
 /** 項目を1つ作る（作成者は main が操作者から決める） */

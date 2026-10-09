@@ -5,6 +5,7 @@
  * - 選べば、書き出す試験の設問のプロンプト・実行・判定が入る
  * - 採点と答案を外せば判定が外れる（判定は受験生を必須で参照する）
  * - 本人分だけにすれば、他の教員の実行とその判定が外れる（プロンプトは共有なので残る）
+ * - 1段目の当てはまりと2段目の項目の案（選択肢・答案・答え）は、試行・実行に従う
  * - 「別で追加」で試験を振り直せば、AI 採点の記録も振り直る
  *
  * DB を使わず、範囲の判定に要る列だけを持った合成の行で確かめる。
@@ -57,6 +58,30 @@ const SYNTHETIC_ROWS: Readonly<
     },
     colleagueAttempt: { runId: "colleagueRun", examStudentId: "examStudent" },
   },
+  // 教員の層の項目（設問に従うので、試験を選べば入る）
+  RubricItem: { item: { cropRegionId: "region" } },
+  AiAttemptRubricMatch: {
+    teacherMatch: { attemptId: "teacherAttempt", rubricItemId: "item" },
+    colleagueMatch: { attemptId: "colleagueAttempt", rubricItemId: "item" },
+  },
+  AiRubricProposal: {
+    teacherProposal: { runId: "teacherRun", matchedRubricItemId: "item" },
+    colleagueProposal: { runId: "colleagueRun" },
+  },
+  AiRubricProposalOption: { teacherOption: { proposalId: "teacherProposal" } },
+  AiRubricProposalMember: {
+    teacherMember: {
+      proposalId: "teacherProposal",
+      attemptId: "teacherAttempt",
+    },
+  },
+  AiRubricProposalResponse: {
+    teacherResponse: {
+      proposalId: "teacherProposal",
+      optionId: "teacherOption",
+      resultRubricItemId: "item",
+    },
+  },
 }
 
 const tableRows = new Map(
@@ -83,6 +108,13 @@ const tableRows = new Map(
 )
 
 const AI_TABLES = ["AiPrompt", "AiGradingRun", "AiGradingAttempt"]
+const PROPOSAL_TABLES = [
+  "AiAttemptRubricMatch",
+  "AiRubricProposal",
+  "AiRubricProposalOption",
+  "AiRubricProposalMember",
+  "AiRubricProposalResponse",
+]
 
 const includedIds = (selection: ArchiveSelection) => {
   const scope = resolveArchiveScope(tableRows, selection)
@@ -156,6 +188,68 @@ describe("AI 採点の記録の範囲", () => {
   })
 })
 
+const includedProposalIds = (selection: ArchiveSelection) => {
+  const scope = resolveArchiveScope(tableRows, selection)
+  return Object.fromEntries(
+    PROPOSAL_TABLES.map((table) => [
+      table,
+      [...(scope.rows.get(table) ?? [])].sort(),
+    ])
+  )
+}
+
+describe("1段目の当てはまりと2段目の項目の案の範囲", () => {
+  it("選ばなければ入らず、選べば全員分が入る", () => {
+    expect(
+      Object.values(includedProposalIds({ roots: { Exam: ["exam"] } })).flat()
+    ).toEqual([])
+    expect(
+      includedProposalIds({
+        roots: { Exam: ["exam"] },
+        optionalItems: ["aiGradingRecords"],
+      })
+    ).toEqual({
+      AiAttemptRubricMatch: ["colleagueMatch", "teacherMatch"],
+      AiRubricProposal: ["colleagueProposal", "teacherProposal"],
+      AiRubricProposalOption: ["teacherOption"],
+      AiRubricProposalMember: ["teacherMember"],
+      AiRubricProposalResponse: ["teacherResponse"],
+    })
+  })
+
+  it("採点と答案を外すと、試行を指す当てはまりと案の答案だけが外れる", () => {
+    expect(
+      includedProposalIds({
+        roots: { Exam: ["exam"] },
+        includeAnswers: false,
+        optionalItems: ["aiGradingRecords"],
+      })
+    ).toEqual({
+      AiAttemptRubricMatch: [],
+      AiRubricProposal: ["colleagueProposal", "teacherProposal"],
+      AiRubricProposalOption: ["teacherOption"],
+      AiRubricProposalMember: [],
+      AiRubricProposalResponse: ["teacherResponse"],
+    })
+  })
+
+  it("本人分だけにすると、他の教員の実行に従う案と当てはまりが外れる", () => {
+    expect(
+      includedProposalIds({
+        roots: { Exam: ["exam"] },
+        scoring: { kind: "self", userId: "teacher" },
+        optionalItems: ["aiGradingRecords"],
+      })
+    ).toEqual({
+      AiAttemptRubricMatch: ["teacherMatch"],
+      AiRubricProposal: ["teacherProposal"],
+      AiRubricProposalOption: ["teacherOption"],
+      AiRubricProposalMember: ["teacherMember"],
+      AiRubricProposalResponse: ["teacherResponse"],
+    })
+  })
+})
+
 describe("AI 採点の記録の「別で追加」での振り直し", () => {
   it("試験を振り直すと、プロンプト・実行・判定も振り直る（利用者と生徒は振り直さない）", () => {
     const idMap = renumberSeparateRows(
@@ -165,7 +259,7 @@ describe("AI 採点の記録の「別で追加」での振り直し", () => {
         rows: [...rowsById.values()],
       }))
     )
-    for (const table of AI_TABLES) {
+    for (const table of [...AI_TABLES, ...PROPOSAL_TABLES]) {
       expect(Object.keys(idMap[table] ?? {}).sort(), table).toEqual(
         Object.keys(SYNTHETIC_ROWS[table]).sort()
       )

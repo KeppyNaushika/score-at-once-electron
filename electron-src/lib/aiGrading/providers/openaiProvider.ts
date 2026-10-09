@@ -111,9 +111,6 @@ function compareByCreatedAtDescending(
   return left.id.localeCompare(right.id)
 }
 
-/** 構造化出力のスキーマ名（OpenAI は名前を必須にする） */
-const OUTPUT_SCHEMA_NAME = "grading_result"
-
 /** バッチの1行が叩く API */
 const BATCH_ENDPOINT = "/v1/responses"
 
@@ -166,7 +163,8 @@ function buildOpenAiResponseParams(
     text: {
       format: {
         type: "json_schema",
-        name: OUTPUT_SCHEMA_NAME,
+        // 構造化出力のスキーマ名（OpenAI は名前を必須にする）。段ごとに違う
+        name: request.outputSchemaName,
         schema: request.outputSchema,
         strict: true,
       },

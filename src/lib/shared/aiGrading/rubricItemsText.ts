@@ -8,23 +8,34 @@
  * （`sortOrder` の順）のまま変えない。同じ入力からは同じ文になる。
  */
 
+import {
+  isRubricSetStatus,
+  type RubricItemForPrompt,
+  toRubricEffectKind,
+} from "@/types/rubric.types"
+
 import type { AiGradingOutputStatus } from "./gradingSchema"
 
-/** 項目の種類。adjust は点の加減、set は判定と点を決める（設計 §4-2） */
-export const RUBRIC_EFFECT_KINDS = ["adjust", "set"] as const
-export type RubricEffectKind = (typeof RUBRIC_EFFECT_KINDS)[number]
-
-/** 送る文に要る、ルーブリック項目の値 */
-export interface RubricItemForPrompt {
-  readonly id: string
-  readonly label: string
-  readonly effectKind: RubricEffectKind
-  /** adjust のときの加減（減点は負） */
-  readonly pointDelta: number | null
-  /** set のときの判定 */
-  readonly setStatus: AiGradingOutputStatus | null
-  /** set のときの点（partial・pending のときだけ） */
-  readonly setScore: number | null
+/** 項目の行（境界を越えたもの、または main で Decimal を数にしたもの）から、送る値へ */
+export function toRubricItemForPrompt(rubricItem: {
+  id: string
+  label: string
+  effectKind: string
+  pointDelta: number | null
+  setStatus: string | null
+  setScore: number | null
+}): RubricItemForPrompt {
+  return {
+    id: rubricItem.id,
+    label: rubricItem.label,
+    effectKind: toRubricEffectKind(rubricItem.effectKind),
+    pointDelta: rubricItem.pointDelta,
+    setStatus:
+      rubricItem.setStatus !== null && isRubricSetStatus(rubricItem.setStatus)
+        ? rubricItem.setStatus
+        : null,
+    setScore: rubricItem.setScore,
+  }
 }
 
 /** 判定の日本語の呼び名（プロンプトの中で使う） */
@@ -70,4 +81,19 @@ export function formatRubricItemsSection(
       `- id: ${rubricItem.id} ／ ${formatEffect(rubricItem)} ／ ${rubricItem.label.trim()}`
   )
   return ["## ルーブリック項目", ...lines].join("\n")
+}
+
+/** 項目の行の頭（`- id: <uuid> ／`）。送った文から id を読み戻すのに使う */
+const RUBRIC_ITEM_LINE_PATTERN = /^- id: ([0-9a-f-]{36}) ／ /gm
+
+/**
+ * 送った項目の一覧の文（`AiPrompt.renderedRubricItems`）から、項目の id を送った順に読み戻す。
+ *
+ * バッチの結果は送ってから時間を置いて届くので、1段目の当てはまりを検証するときは、
+ * そのとき生きている項目ではなく、送った一覧に載っていた id と照らす
+ */
+export function parseRubricItemIds(renderedRubricItems: string): string[] {
+  return [...renderedRubricItems.matchAll(RUBRIC_ITEM_LINE_PATTERN)].map(
+    (match) => match[1]
+  )
 }

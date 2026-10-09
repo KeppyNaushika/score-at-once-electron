@@ -6,16 +6,19 @@
  * - 選択肢は 1〜`STAGE2_MAX_OPTIONS` 個、推奨はちょうど1つ
  */
 
+import {
+  RUBRIC_EFFECT_KINDS,
+  type RubricEffectKind,
+} from "@/types/rubric.types"
 import { isOneOf } from "@/types/stringUnion"
 
+import type { AiGradingOutputStatus } from "./gradingSchema"
 import {
   applyStatusScoreRules,
   isAiGradingOutputStatus,
   isRecord,
   readBoundedString,
-} from "./gradingResponseValidator"
-import type { AiGradingOutputStatus } from "./gradingSchema"
-import { RUBRIC_EFFECT_KINDS, type RubricEffectKind } from "./rubricItemsText"
+} from "./responseRules"
 import {
   buildStage2OutputSchema,
   STAGE2_MAX_OPTIONS,

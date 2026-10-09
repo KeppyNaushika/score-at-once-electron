@@ -533,6 +533,9 @@ model RubricItem {
   applications           RubricApplication[]
   primaryInCombinations  RubricAdviceCombination[]     @relation("RubricAdviceCombinationPrimary")
   adviceCombinationItems RubricAdviceCombinationItem[]
+  aiAttemptMatches       AiAttemptRubricMatch[]
+  aiMatchedProposals     AiRubricProposal[]
+  aiProposalResponses    AiRubricProposalResponse[]
 
   @@index([cropRegionId])
 }
@@ -639,8 +642,13 @@ model AiPrompt {
   sendModelAnswerImage  Boolean        @default(false)
   /// 採点基準（文章）
   rubricText            String         @default("")
-  /// 朱書き（生徒向けの注釈）の指示。量・書き方・どんな答案に入れるか。空ならアプリ共通の決まりだけ
+  /// 項目の助言の文案の指示（2段目に渡す。docs/vlm-grading-design.md §3-1・§14）。
+  /// R3 までは答案ごとの朱書きの指示だった。空ならアプリ共通の決まりだけ
   annotationInstruction String         @default("")
+  /// 送った時点のルーブリック項目の一覧をアプリが文にしたもの（項目が無ければ ""）。
+  /// 項目は生きた状態で書き換わるので、送った文面を再現できるようここに写す。
+  /// 今の項目と違っていれば、送るときに新しい行を作る（§3-1）
+  renderedRubricItems   String         @default("")
   /// VLM に改訂させたときの教員の指示文。教員が直接書いた行は ""
   revisionInstruction   String         @default("")
   /// 改訂した VLM から教員への説明。教員が直接書いた行は ""
@@ -675,7 +683,7 @@ model AiGradingRun {
   userId            String
   /// 使ったプロンプト（revise では改訂の元）
   promptId          String
-  /// "grade"（採点）| "revise"（プロンプトの改訂）
+  /// "grade"（1段目：答案ごとの判定）| "group"（2段目：項目の案）| "revise"（廃止したプロンプトの改訂。過去の行だけ）
   purpose           String
   /// アプリ共通の指示（出力の形・答案内の指示に従わない等）の版
   templateVersion   String
@@ -700,7 +708,9 @@ model AiGradingRun {
   points            Decimal?
   /// revise のとき、できたプロンプト。grade では null
   resultPromptId    String?
-  /// 使用量（revise 用。grade は試行ごとに持つ）
+  /// 2段目（group）が返した、教員への気づいた点。それ以外は ""
+  notes             String             @default("")
+  /// 使用量（group・revise 用。grade は試行ごとに持つ）
   inputTokens       Int                @default(0)
   outputTokens      Int                @default(0)
   cacheReadTokens   Int                @default(0)
@@ -713,6 +723,7 @@ model AiGradingRun {
   prompt            AiPrompt           @relation("AiGradingRunPrompt", fields: [promptId], references: [id], onDelete: Cascade)
   resultPrompt      AiPrompt?          @relation("AiGradingRunResultPrompt", fields: [resultPromptId], references: [id], onDelete: SetNull)
   attempts          AiGradingAttempt[]
+  rubricProposals   AiRubricProposal[]
 
   @@index([userId])
   @@index([promptId])
@@ -732,44 +743,146 @@ model AiGradingRun {
 /// 新しい run の新しい行。`state` は送信の成否、`status` は採点の判定で、別のもの。
 /// `partialScore` は Decimal なので、IPC へ返す経路は必ず serializePrisma を通す。
 model AiGradingAttempt {
-  id                         String             @id @default(uuid())
+  id                         String                   @id @default(uuid())
   runId                      String
   examStudentId              String
   /// pending / succeeded / errored / refused / expired
-  state                      String             @default("pending")
+  state                      String                   @default("pending")
   /// AI の判定（ScoringStatus）。succeeded 以外は "unscored" のまま
-  status                     String             @default("unscored")
+  status                     String                   @default("unscored")
   /// partial / pending のときの点。0〜run の points、0.01 単位（検証を通った値だけを書く）
   partialScore               Decimal?
   /// 教員向けの配点理由
-  comment                    String             @default("")
+  comment                    String                   @default("")
   /// 生徒向けの朱書き（注釈の文言）。無ければ ""
-  annotationText             String             @default("")
+  annotationText             String                   @default("")
   /// 答案から読み取った内容
-  transcription              String             @default("")
+  transcription              String                   @default("")
+  /// 所見（模範解答・採点基準・項目と比べて、どこが同じでどこが違うか）。2段目は画像を見ないので、ここを読む
+  observation                String                   @default("")
   /// "high" | "medium" | "low"。succeeded 以外は ""
-  confidence                 String             @default("")
+  confidence                 String                   @default("")
   /// errored / refused / expired の理由（検証で外れた理由を含む）
-  errorMessage               String             @default("")
-  inputTokens                Int                @default(0)
-  outputTokens               Int                @default(0)
-  cacheReadTokens            Int                @default(0)
-  cacheWriteTokens           Int                @default(0)
+  errorMessage               String                   @default("")
+  inputTokens                Int                      @default(0)
+  outputTokens               Int                      @default(0)
+  cacheReadTokens            Int                      @default(0)
+  cacheWriteTokens           Int                      @default(0)
   /// 採用して書いた QuestionScore。採用先が消えたら null（試行の記録は残す）
   adoptedQuestionScoreId     String?
   /// 採用して書いた注釈。採用先が消えたら null
   adoptedDrawingAnnotationId String?
   /// 採用した日時。採用するのは実行した教員なので、採用者の列は持たない
   adoptedAt                  DateTime?
-  createdAt                  DateTime           @default(now())
-  updatedAt                  DateTime           @default(now()) @updatedAt
-  run                        AiGradingRun       @relation(fields: [runId], references: [id], onDelete: Cascade)
-  examStudent                ExamStudent        @relation(fields: [examStudentId], references: [id], onDelete: Cascade)
-  adoptedQuestionScore       QuestionScore?     @relation(fields: [adoptedQuestionScoreId], references: [id], onDelete: SetNull)
-  adoptedDrawingAnnotation   DrawingAnnotation? @relation(fields: [adoptedDrawingAnnotationId], references: [id], onDelete: SetNull)
+  createdAt                  DateTime                 @default(now())
+  updatedAt                  DateTime                 @default(now()) @updatedAt
+  run                        AiGradingRun             @relation(fields: [runId], references: [id], onDelete: Cascade)
+  examStudent                ExamStudent              @relation(fields: [examStudentId], references: [id], onDelete: Cascade)
+  adoptedQuestionScore       QuestionScore?           @relation(fields: [adoptedQuestionScoreId], references: [id], onDelete: SetNull)
+  adoptedDrawingAnnotation   DrawingAnnotation?       @relation(fields: [adoptedDrawingAnnotationId], references: [id], onDelete: SetNull)
+  rubricMatches              AiAttemptRubricMatch[]
+  proposalMemberships        AiRubricProposalMember[]
 
   @@index([runId])
   @@index([examStudentId])
+}
+
+/// 1段目が「この答案に既存の項目が当てはまる」と返したもの（docs/vlm-grading-design.md §5-3）。
+/// AI の層の記録で、教員の適用（RubricApplication）とは別。試行とともに消え、項目が消えても消える
+model AiAttemptRubricMatch {
+  id           String           @id @default(uuid())
+  attemptId    String
+  rubricItemId String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @default(now()) @updatedAt
+  attempt      AiGradingAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  rubricItem   RubricItem       @relation(fields: [rubricItemId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId])
+  @@index([rubricItemId])
+}
+
+/// 2段目が返した項目の案（§3-4・§5-3）。書き換えない
+model AiRubricProposal {
+  id                  String                     @id @default(uuid())
+  /// 2段目の実行（purpose: group）
+  runId               String
+  /// 教員向けの特徴の名前（判断理由）
+  label               String                     @default("")
+  description         String                     @default("")
+  /// 生徒向けの助言の文案（一文）。要らない案は ""
+  adviceDraft         String                     @default("")
+  /// 既存の項目に当たる特徴のとき、その項目。新しい特徴なら null。項目が消えたら null
+  matchedRubricItemId String?
+  /// 返ってきた順
+  sortOrder           Int                        @default(0)
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @default(now()) @updatedAt
+  run                 AiGradingRun               @relation(fields: [runId], references: [id], onDelete: Cascade)
+  matchedRubricItem   RubricItem?                @relation(fields: [matchedRubricItemId], references: [id], onDelete: SetNull)
+  options             AiRubricProposalOption[]
+  members             AiRubricProposalMember[]
+  responses           AiRubricProposalResponse[]
+
+  @@index([runId])
+  @@index([matchedRubricItemId])
+}
+
+/// 案の選択肢。効き方は RubricItem と同じ形（adjust は pointDelta、set は setStatus・setScore）
+model AiRubricProposalOption {
+  id          String                     @id @default(uuid())
+  proposalId  String
+  /// "adjust" | "set"
+  effectKind  String
+  pointDelta  Decimal?
+  setStatus   String?
+  setScore    Decimal?
+  /// 教員向けの一言の理由
+  rationale   String                     @default("")
+  /// 推奨の選択肢か（案ごとにちょうど1つ）
+  recommended Boolean                    @default(false)
+  sortOrder   Int                        @default(0)
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @default(now()) @updatedAt
+  proposal    AiRubricProposal           @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  responses   AiRubricProposalResponse[]
+
+  @@index([proposalId])
+}
+
+/// 案に入る答案（1段目の試行）。1つの答案が複数の案に入ってよい
+model AiRubricProposalMember {
+  id         String           @id @default(uuid())
+  proposalId String
+  attemptId  String
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @default(now()) @updatedAt
+  proposal   AiRubricProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  attempt    AiGradingAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+  @@index([attemptId])
+}
+
+/// 問いかけへの教員の答え。答え直しは新しい行（最新が効く）。答えた教員は run の userId
+model AiRubricProposalResponse {
+  id                 String                  @id @default(uuid())
+  proposalId         String
+  /// 選んだ選択肢。「その他」なら null。選択肢が消えたら null
+  optionId           String?
+  /// 「その他」に書いた指示（次の往復の1段目・2段目に教員の指示として添える）。選択肢を選んだときは ""
+  freeText           String                  @default("")
+  /// できた・結び付けた項目。「その他」なら null。項目が消えたら null
+  resultRubricItemId String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @default(now()) @updatedAt
+  proposal           AiRubricProposal        @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  option             AiRubricProposalOption? @relation(fields: [optionId], references: [id], onDelete: SetNull)
+  resultRubricItem   RubricItem?             @relation(fields: [resultRubricItemId], references: [id], onDelete: SetNull)
+
+  @@index([proposalId])
+  @@index([optionId])
+  @@index([resultRubricItemId])
 }
 
 /// 監査ログ（Discord風の操作履歴）。

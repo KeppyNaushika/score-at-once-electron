@@ -12,7 +12,7 @@ interface AiAnnotationInstructionDefaultSectionProps {
 }
 
 /**
- * 新しく作るプロンプトの「朱書きの指示」に最初から入れる文言（設計 §3-1）。
+ * 新しく作るプロンプトの「助言の文案の指示」に最初から入れる文言（設計 §3-1）。
  *
  * 入力欄から離れたときに保存する（同じタブの他の入力欄と同じ）。複数行なので Enter は改行のまま。
  * 既存のプロンプトは変わらず、元の版を写して作る版も元の版の値を引き継ぐ
@@ -29,17 +29,17 @@ export function AiAnnotationInstructionDefaultSection({
 
   return (
     <section
-      aria-label="朱書きの指示の既定の文言"
+      aria-label="助言の文案の指示の既定の文言"
       className="space-y-2 rounded-lg border p-4"
     >
       <h3 className="text-base font-semibold">
         <Label htmlFor="ai-default-annotation-instruction">
-          朱書きの指示の既定の文言
+          助言の文案の指示の既定の文言
         </Label>
       </h3>
       <p className="text-xs text-muted-foreground">
         07
-        でプロンプトを新規追加するとき、「朱書きの指示」の欄に最初から入れておく文言です。作ったプロンプトの中で書き換えられます。すでにあるプロンプトは変わりません。空欄なら、欄は空欄から始まります。
+        でプロンプトを新規追加するとき、「助言の文案の指示」の欄に最初から入れておく文言です。作ったプロンプトの中で書き換えられます。すでにあるプロンプトは変わりません。空欄なら、欄は空欄から始まります。
       </p>
       <Textarea
         key={settings.defaultAnnotationInstruction}
@@ -47,7 +47,7 @@ export function AiAnnotationInstructionDefaultSection({
         defaultValue={settings.defaultAnnotationInstruction}
         onBlur={(event) => saveInstruction(event.target.value)}
         rows={4}
-        placeholder="例: 部分点の答案にだけ、足りない根拠を20字以内で。正答と誤答には書かない。「です・ます」で"
+        placeholder="例: 20字以内で、何を直せばよいかを書く。「です・ます」で"
         className="max-w-2xl"
       />
     </section>

@@ -13,15 +13,15 @@ import {
 } from "@/types/aiGrading.types"
 
 import {
+  AI_GRADING_OUTPUT_STATUSES,
+  type AiGradingOutputStatus,
+} from "./gradingSchema"
+import {
   applyStatusScoreRules,
   isAiGradingOutputStatus,
   isRecord,
   readBoundedString,
-} from "./gradingResponseValidator"
-import {
-  AI_GRADING_OUTPUT_STATUSES,
-  type AiGradingOutputStatus,
-} from "./gradingSchema"
+} from "./responseRules"
 import {
   buildStage1OutputSchema,
   STAGE1_OBSERVATION_MAX_LENGTH,

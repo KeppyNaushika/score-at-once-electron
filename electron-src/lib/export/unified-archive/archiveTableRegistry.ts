@@ -563,6 +563,51 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
       nullable("adoptedDrawingAnnotationId", "DrawingAnnotation"),
     ],
   },
+  // 1段目の当てはまりと2段目の項目の案（§5-3）。試行・実行・案に従う。項目（教員の層）は
+  // 試験の設問の配下なので入っている。選択肢・答案（試行）が外れれば、それを指す行も外れる
+  AiAttemptRubricMatch: {
+    role: "optional",
+    option: "aiGradingRecords",
+    owner: ["attemptId"],
+    references: [
+      required("attemptId", "AiGradingAttempt"),
+      required("rubricItemId", "RubricItem"),
+    ],
+  },
+  AiRubricProposal: {
+    role: "optional",
+    option: "aiGradingRecords",
+    owner: ["runId"],
+    references: [
+      required("runId", "AiGradingRun"),
+      nullable("matchedRubricItemId", "RubricItem"),
+    ],
+  },
+  AiRubricProposalOption: {
+    role: "optional",
+    option: "aiGradingRecords",
+    owner: ["proposalId"],
+    references: [required("proposalId", "AiRubricProposal")],
+  },
+  AiRubricProposalMember: {
+    role: "optional",
+    option: "aiGradingRecords",
+    owner: ["proposalId"],
+    references: [
+      required("proposalId", "AiRubricProposal"),
+      required("attemptId", "AiGradingAttempt"),
+    ],
+  },
+  AiRubricProposalResponse: {
+    role: "optional",
+    option: "aiGradingRecords",
+    owner: ["proposalId"],
+    references: [
+      required("proposalId", "AiRubricProposal"),
+      nullable("optionId", "AiRubricProposalOption"),
+      nullable("resultRubricItemId", "RubricItem"),
+    ],
+  },
   // 監査ログの対象。ログに従う（対象側の targetId は外部キーではない多態参照）
   AuditLogTarget: {
     role: "owned",

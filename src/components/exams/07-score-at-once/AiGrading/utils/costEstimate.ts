@@ -78,7 +78,7 @@ export interface RunCostEstimateInput {
   answerImages: readonly ImageSize[]
   /** 毎回いっしょに送る画像（問題用紙・模範解答の切り出し） */
   fixedImages: readonly ImageSize[]
-  /** プロンプトの各欄（問題文・模範解答・採点基準・朱書きの指示）の字数の合計 */
+  /** プロンプトの各欄（問題文・模範解答・採点基準・助言の文案の指示）の字数の合計 */
   promptCharacterCount: number
   /** 自分の過去の実行（実測の根拠）。無ければ空 */
   measuredRuns: readonly MeasuredRun[]

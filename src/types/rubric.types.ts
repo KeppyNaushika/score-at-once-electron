@@ -7,6 +7,9 @@
  * 段階評価（§4-8）を足すときは、採点方式に `scale` を足す。
  */
 
+import type { RubricItem } from "@prisma/client"
+
+import type { Serialized } from "./prismaExtensions"
 import { defineStringUnion } from "./stringUnion"
 
 /**
@@ -60,3 +63,20 @@ export const {
   is: isRubricAdviceCombinationMode,
   to: toRubricAdviceCombinationMode,
 } = defineStringUnion(RUBRIC_ADVICE_COMBINATION_MODES, "all")
+
+/**
+ * AI へ送る文（`rubricItemsText.ts`）と1段目・2段目が読む、ルーブリック項目の値。
+ * 境界を越えた RubricItem（Decimal は数）の列から、種類と判定を値の集合へ絞ったもの
+ */
+export type RubricItemForPrompt = Readonly<
+  Omit<
+    Pick<
+      Serialized<RubricItem>,
+      "id" | "label" | "effectKind" | "pointDelta" | "setStatus" | "setScore"
+    >,
+    "effectKind" | "setStatus"
+  > & {
+    effectKind: RubricEffectKind
+    setStatus: RubricSetStatus | null
+  }
+>

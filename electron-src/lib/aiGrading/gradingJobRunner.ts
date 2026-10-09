@@ -1,22 +1,24 @@
 /**
- * AI 採点の実行（採点の run）を走らせる（docs/vlm-grading-design.md §10 jobRunner）。
+ * AI 採点の実行（1段目の run）を走らせる（docs/vlm-grading-design.md §3-3・§11 jobRunner）。
  *
  * - 対象の答案（examStudentId）は renderer が選んで明示的に渡す。選び方はここに無い
+ * - 1段目は答案ごとに、判定・読み取り・所見・当てはまる項目・確信度を返させる。
+ *   その設問のルーブリック項目を文にしてプロンプトに入れ、送った文をプロンプトの行に写す
+ *   （今の項目と違えば新しい行を作る。§3-1）。教員が問いかけの「その他」に書いた指示も添える
  * - その場の採点（realtime）: 同時実行数を絞って1件ずつ送り、結果が届くたびに試行へ書いて
- *   進み具合を押し出す。run ごとに AbortController を持ち、中止できる
- * - バッチ（batch）: まとめて事業者へ預け、回収は `batchPoller.ts` が行う
+ *   進み具合を押し出す。run ごとに AbortController を持ち、中止できる。最後まで送れたら
+ *   **そのまま2段目（項目の案）を続ける**（`groupingRunner.ts`）
+ * - バッチ（batch）: まとめて事業者へ預け、回収は `batchPoller.ts` が行う（回収したら2段目を続ける）
  *
  * 認証・権限の失敗は、どの答案でも同じ結果になるので run 全体を止める。
  */
 
-import { getOrientedPaperDimensions } from "@/lib/paperSize"
-import { estimateAnnotationCharacterLimit } from "@/lib/shared/aiGrading/annotationPlacement"
-import { buildGradingOutputSchema } from "@/lib/shared/aiGrading/gradingSchema"
+import { buildGradingVariableParts } from "@/lib/shared/aiGrading/promptBuilder"
 import {
-  AI_GRADING_TEMPLATE_VERSION,
-  buildGradingRequestParts,
-  buildGradingVariableParts,
-} from "@/lib/shared/aiGrading/promptBuilder"
+  buildStage1OutputSchema,
+  buildStage1RequestParts,
+  STAGE1_TEMPLATE_VERSION,
+} from "@/lib/shared/aiGrading/stage1Grading"
 import type { AiGradingRunMode } from "@/types/aiGrading.types"
 import { isAiGradingRunMode } from "@/types/aiGrading.types"
 
@@ -28,11 +30,17 @@ import {
   updateAiGradingRun,
 } from "../prisma/aiGradingRun"
 import { getCropRegionWithAnswerImages } from "../prisma/aiGradingSource"
-import { getAiPrompt } from "../prisma/aiPrompt"
+import {
+  ensurePromptRendersRubricItems,
+  getAiPrompt,
+  readRubricItemsForPrompt,
+} from "../prisma/aiPrompt"
+import { listTeacherInstructions } from "../prisma/aiRubricProposal"
 import { cropRegionForSending } from "./answerImage"
 import {
   GRADING_MAX_OUTPUT_TOKENS,
   loadPromptImages,
+  STAGE1_OUTPUT_SCHEMA_NAME,
   toJsonSchemaObject,
   toPngPromptImage,
 } from "./gradingRequestFactory"
@@ -41,6 +49,7 @@ import {
   processRealtimeAttempts,
   submitBatchAttempts,
 } from "./gradingRunExecution"
+import { createGroupingRunner } from "./groupingRunner"
 import type { AiGradingJobDependencies } from "./jobDependencies"
 import type {
   GradingEffort,
@@ -111,8 +120,16 @@ function startingRunKeyOf(
   ])
 }
 
-/** 採点の実行を作る口。アプリでは1つだけ作る（`aiGradingMainServices.ts`） */
-export function createGradingJobRunner(dependencies: AiGradingJobDependencies) {
+/**
+ * 採点の実行を作る口。アプリでは1つだけ作る（`aiGradingMainServices.ts`）。
+ * 2段目の口はバッチの回収と共有する（同じ1段目から2段目を2つ同時に作らないため）
+ */
+export function createGradingJobRunner(
+  dependencies: AiGradingJobDependencies,
+  groupingRunner: ReturnType<
+    typeof createGroupingRunner
+  > = createGroupingRunner(dependencies)
+) {
   /** 走っているその場の採点の run と、その中止の口 */
   const activeControllers = new Map<string, AbortController>()
   /**
@@ -190,29 +207,38 @@ export function createGradingJobRunner(dependencies: AiGradingJobDependencies) {
       imageScale: input.imageScale,
       resolveDataPath: dependencies.resolveDataPath,
     })
-    // 朱書きの字数の目安は面積から出すので、用紙の向きは問わない（縦として換算する）
-    const paperDimensions = getOrientedPaperDimensions(
-      cropRegion.examPage.pageSize,
-      false
+    const { rubricItems, renderedRubricItems } = await readRubricItemsForPrompt(
+      cropRegion.id
     )
-    const { systemText, fixedParts } = buildGradingRequestParts({
+    const rubricItemIds = rubricItems.map((rubricItem) => rubricItem.id)
+    const teacherInstructions = await listTeacherInstructions(
+      cropRegion.id,
+      actorUserId
+    )
+    const { systemText, fixedParts } = buildStage1RequestParts({
       prompt,
       points,
       questionImage,
       modelAnswerImage,
-      annotationCharacterLimit: estimateAnnotationCharacterLimit(
-        cropRegion.width * paperDimensions.width,
-        cropRegion.height * paperDimensions.height
-      ),
+      rubricItems,
+      teacherInstructions,
     })
-    const outputSchema = toJsonSchemaObject(buildGradingOutputSchema())
+    const outputSchema = toJsonSchemaObject(
+      buildStage1OutputSchema(rubricItemIds)
+    )
+    // 送る項目の一覧の文をプロンプトの行に写す（違えば新しい行。送った文面を再現できるように）
+    const sendingPrompt = await ensurePromptRendersRubricItems(
+      prompt,
+      renderedRubricItems,
+      actorUserId
+    )
 
     const run = await createAiGradingRun(
       {
         userId: actorUserId,
-        promptId: prompt.id,
+        promptId: sendingPrompt.id,
         purpose: "grade",
-        templateVersion: AI_GRADING_TEMPLATE_VERSION,
+        templateVersion: STAGE1_TEMPLATE_VERSION,
         provider: input.provider,
         model: input.model,
         effort: input.effort,
@@ -248,6 +274,7 @@ export function createGradingJobRunner(dependencies: AiGradingJobDependencies) {
         fixedParts,
         variableParts: buildGradingVariableParts(toPngPromptImage(crop.png)),
         outputSchema,
+        outputSchemaName: STAGE1_OUTPUT_SCHEMA_NAME,
       }
     }
 
@@ -279,8 +306,15 @@ export function createGradingJobRunner(dependencies: AiGradingJobDependencies) {
       tracker,
       controller,
       concurrency: dependencies.getConcurrency(),
-      maxPoints: points,
+      validationContext: { maxPoints: points, rubricItemIds },
     })
+      .then(async (status) => {
+        activeControllers.delete(run.id)
+        // 最後まで送れたら、そのまま2段目（項目の案）を続ける。中止・失敗では続けない
+        if (status === "ended") {
+          await groupingRunner.runGroupingAfterGrading(run.id, actorUserId)
+        }
+      })
       .catch(async (error: unknown) => {
         console.error("[aiGrading] 採点の実行が途中で失敗しました:", error)
         await closePendingAiGradingAttempts(
@@ -311,6 +345,7 @@ export function createGradingJobRunner(dependencies: AiGradingJobDependencies) {
     if (run.userId !== actorUserId) {
       throw new Error("中止できるのは実行した教員だけです")
     }
+    if (groupingRunner.cancelGrouping(run.id)) return
     const controller = activeControllers.get(run.id)
     if (controller) {
       controller.abort()
@@ -326,5 +361,13 @@ export function createGradingJobRunner(dependencies: AiGradingJobDependencies) {
     }
   }
 
-  return { startGradingRun, cancelRun }
+  /**
+   * 1段目の実行から2段目（項目の案）を作り直す（自動で続けた2段目が失敗したとき）。
+   * 終わるまで待って、2段目の run を返す（送れる判定が無ければ null）
+   */
+  async function startGroupingRun(gradeRunId: string, actorUserId: string) {
+    return groupingRunner.runGrouping(gradeRunId, actorUserId)
+  }
+
+  return { startGradingRun, cancelRun, startGroupingRun }
 }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * 07 のプロンプトの「朱書きの指示」の初期値（docs/vlm-grading-design.md §3-1）。
+ * 07 のプロンプトの「助言の文案の指示」の初期値（docs/vlm-grading-design.md §3-1）。
  *
  * ここで固定すること:
  * - 新規追加では、「AI採点」の画面の「既定値」タブで決めた文言が最初から入り、そのまま保存される
@@ -111,7 +111,7 @@ function renderPanel(options: {
   )
 }
 
-describe("プロンプトの朱書きの指示の初期値", () => {
+describe("プロンプトの助言の文案の指示の初期値", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -123,7 +123,7 @@ describe("プロンプトの朱書きの指示の初期値", () => {
 
     await user.click(screen.getByRole("button", { name: "新規追加" }))
     const dialog = await screen.findByRole("dialog")
-    expect(within(dialog).getByLabelText("朱書きの指示")).toHaveValue(
+    expect(within(dialog).getByLabelText("助言の文案の指示")).toHaveValue(
       DEFAULT_ANNOTATION_INSTRUCTION
     )
 
@@ -145,7 +145,7 @@ describe("プロンプトの朱書きの指示の初期値", () => {
 
     await user.click(screen.getByRole("button", { name: "新規追加" }))
     const dialog = await screen.findByRole("dialog")
-    expect(within(dialog).getByLabelText("朱書きの指示")).toHaveValue("")
+    expect(within(dialog).getByLabelText("助言の文案の指示")).toHaveValue("")
   })
 
   it("元の版を写して作る版は、既定の文言ではなく元の版の値を引き継ぐ（空でも上書きしない）", async () => {
@@ -160,7 +160,7 @@ describe("プロンプトの朱書きの指示の初期値", () => {
 
     await user.click(screen.getByRole("button", { name: "編集" }))
     const dialog = await screen.findByRole("dialog")
-    expect(within(dialog).getByLabelText("朱書きの指示")).toHaveValue("")
+    expect(within(dialog).getByLabelText("助言の文案の指示")).toHaveValue("")
 
     await user.click(
       within(dialog).getByRole("button", { name: "新しい版として保存" })

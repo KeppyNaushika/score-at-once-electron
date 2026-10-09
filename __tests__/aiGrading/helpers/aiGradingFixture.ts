@@ -12,6 +12,7 @@ import * as path from "path"
 import sharp from "sharp"
 import { vi } from "vitest"
 
+import { STAGE2_OUTPUT_SCHEMA_NAME } from "@/electron-src/lib/aiGrading/gradingRequestFactory"
 import type { AiGradingJobDependencies } from "@/electron-src/lib/aiGrading/jobDependencies"
 import { ZERO_USAGE } from "@/electron-src/lib/aiGrading/providers/providerShared"
 import type {
@@ -105,9 +106,18 @@ export async function createAiGradingFixture(
   return { exam, cropRegion, prompt, otherUser, dataDirectory }
 }
 
-/** 偽の事業者。呼ばれた依頼を記録し、応答は渡した関数が決める */
+/**
+ * 偽の事業者。呼ばれた依頼を記録し、応答は渡した関数が決める。
+ *
+ * 1段目の依頼は `respond`、2段目（項目の案）の依頼は `respondGrouping` へ回す
+ * （省けば案の無い応答を返す）。記録も段ごとに分ける
+ */
 export function createFakeProvider(options: {
   respond?: (
+    request: GradingRequest,
+    signal: AbortSignal
+  ) => Promise<ProviderGradingResponse>
+  respondGrouping?: (
     request: GradingRequest,
     signal: AbortSignal
   ) => Promise<ProviderGradingResponse>
@@ -115,6 +125,7 @@ export function createFakeProvider(options: {
   batchResults?: () => ProviderBatchResult[]
 }) {
   const gradeRequests: GradingRequest[] = []
+  const groupingRequests: GradingRequest[] = []
   const submittedBatches: GradingRequest[][] = []
   const cleanupBatch = vi.fn(async (_externalBatchId: string) => {})
   const cancelBatch = vi.fn(async (_externalBatchId: string) => {})
@@ -126,6 +137,12 @@ export function createFakeProvider(options: {
       structuredOutput: "json_schema",
     },
     async grade(request, signal) {
+      if (request.outputSchemaName === STAGE2_OUTPUT_SCHEMA_NAME) {
+        groupingRequests.push(request)
+        return options.respondGrouping
+          ? options.respondGrouping(request, signal)
+          : completedResponse({ proposals: [], notes: "" })
+      }
       gradeRequests.push(request)
       if (!options.respond) throw new Error("respond がありません")
       return options.respond(request, signal)
@@ -152,6 +169,7 @@ export function createFakeProvider(options: {
   return {
     provider,
     gradeRequests,
+    groupingRequests,
     submittedBatches,
     cleanupBatch,
     cancelBatch,
@@ -171,13 +189,13 @@ export function completedResponse(json: object): ProviderGradingResponse {
   }
 }
 
-/** 検証を通る判定（部分点 3 / 配点 5） */
+/** 検証を通る1段目の判定（部分点 3 / 配点 5） */
 export const PARTIAL_JUDGEMENT = {
   transcription: "(x-2)(x-3)=0",
+  observation: "模範解答は x = 2, 3。答案は因数分解までで解が無い。",
   status: "partial",
   partialScore: 3,
-  comment: "因数分解は正しいが解が書かれていない",
-  annotation: "解を書きましょう",
+  matchedRubricItemIds: [],
   confidence: "high",
 }
 

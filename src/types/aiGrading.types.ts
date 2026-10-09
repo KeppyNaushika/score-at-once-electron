@@ -11,8 +11,11 @@
 
 import { defineStringUnion } from "./stringUnion"
 
-/** 実行の目的。採点か、プロンプトの改訂か */
-export const AI_GRADING_RUN_PURPOSES = ["grade", "revise"] as const
+/**
+ * 実行の目的。grade は1段目（答案ごとの判定）、group は2段目（1段目の結果から項目の案を作る）。
+ * revise は廃止したプロンプトの改訂で、過去の行（費用の集計に残る）を読むためだけに残す
+ */
+export const AI_GRADING_RUN_PURPOSES = ["grade", "group", "revise"] as const
 export type AiGradingRunPurpose = (typeof AI_GRADING_RUN_PURPOSES)[number]
 export const { is: isAiGradingRunPurpose, to: toAiGradingRunPurpose } =
   defineStringUnion(AI_GRADING_RUN_PURPOSES, "grade")

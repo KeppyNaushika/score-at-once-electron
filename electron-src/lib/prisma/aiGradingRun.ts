@@ -2,8 +2,8 @@
  * AI 採点の実行（AiGradingRun）と試行（AiGradingAttempt）の読み書き。
  *
  * 試行は書き換えない（結果を受け取って state を決めるまでと、採用の記録を除く）。
- * やり直しは新しい run の新しい行（docs/vlm-grading-design.md §4-2）。採用は
- * `aiGradingAdoption.ts` にある。
+ * やり直しは新しい run の新しい行（docs/vlm-grading-design.md §5-3）。採用は
+ * `aiGradingAdoption.ts`、2段目の項目の案と教員の答えは `aiRubricProposal.ts` にある。
  *
  * `points` / `partialScore` は Decimal なので、ここから返した行を IPC へ渡すときは
  * 境界の serializePrisma が number へ倒す。文字列の列は `narrowAiGradingRun` で union へ
@@ -46,17 +46,18 @@ export function narrowAiGradingAttempt<Attempt extends AiGradingAttempt>(
   }
 }
 
-/** 実行の文字列の列（と、持っていれば試行の列）を union へ絞る */
+/** 実行の文字列の列（と、試行の列）を union へ絞る。試行に同梱したもの（当てはまり等）は保つ */
 export function narrowAiGradingRun<
-  Run extends AiGradingRun & { attempts: AiGradingAttempt[] },
->(run: Run) {
+  Run extends AiGradingRun,
+  Attempt extends AiGradingAttempt,
+>(run: Run & { attempts: Attempt[] }) {
   return {
     ...run,
     purpose: toAiGradingRunPurpose(run.purpose),
     provider: toAiGradingProvider(run.provider),
     mode: toAiGradingRunMode(run.mode),
     status: toAiGradingRunStatus(run.status),
-    attempts: run.attempts.map(narrowAiGradingAttempt),
+    attempts: run.attempts.map((attempt) => narrowAiGradingAttempt(attempt)),
   }
 }
 
@@ -105,6 +106,7 @@ export async function createAiGradingRun(
     scopeLabel: scope.scopeLabel,
     // 送り先は記録する（どの事業者へ答案を送ったかは後から辿れるべき）。キーは持たない
     extra: {
+      purpose: data.purpose,
       provider: data.provider,
       model: data.model,
       mode: data.mode,
@@ -122,6 +124,8 @@ export async function updateAiGradingRun(
     status?: AiGradingRunStatus
     externalBatchId?: string
     endedAt?: Date
+    /** 2段目の気づいた点 */
+    notes?: string
     inputTokens?: number
     outputTokens?: number
     cacheReadTokens?: number
@@ -131,25 +135,37 @@ export async function updateAiGradingRun(
   return prisma.aiGradingRun.update({ where: { id: runId }, data: update })
 }
 
-/** 実行1件（プロンプトと設問・ページの木、試行付き）。無ければ null */
+/**
+ * 実行1件（プロンプトと設問・ページの木、試行と1段目の当てはまり付き）。無ければ null。
+ * 試行は作った順（2段目へ送る並び）
+ */
 export async function getAiGradingRunForProcessing(runId: string) {
   return prisma.aiGradingRun.findUnique({
     where: { id: runId },
     include: {
-      attempts: true,
+      attempts: {
+        include: { rubricMatches: true },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      },
       prompt: { include: { cropRegion: { include: { examPage: true } } } },
     },
   })
 }
 
-/** 試行に書く結果（送信の成否・判定・使用量） */
+/**
+ * 試行に書く結果（送信の成否・1段目の判定・使用量）。
+ *
+ * 1段目は教員向けのコメントと朱書きの文案を返さない（§3-3）ので、`comment`・
+ * `annotationText` の列は書かない（既定の "" のまま。過去の行の値は残る）
+ */
 export interface AiGradingAttemptResult {
   state: Exclude<AiGradingAttemptState, "pending">
   status: ScoringStatus
   partialScore: number | null
-  comment: string
-  annotationText: string
   transcription: string
+  observation: string
+  /** 1段目が当てはまると返した項目（送った項目の id だけ。検証済み） */
+  matchedRubricItemIds: readonly string[]
   confidence: string
   errorMessage: string
   inputTokens: number
@@ -162,23 +178,41 @@ export interface AiGradingAttemptResult {
  * 試行に結果を書く。**まだ pending の行にだけ書く**（同じバッチの結果を2度取り込んでも、
  * 先に書いた結果を上書きしない）。
  *
+ * 当てはまる項目は `AiAttemptRubricMatch` に書く。送ったあとに消された項目は、記録できる
+ * 行が無いので飛ばす（送った一覧は `AiPrompt.renderedRubricItems` に残っている）。
+ *
  * @returns 書いたら true
  */
 export async function recordAiGradingAttemptResult(
   attemptId: string,
   result: AiGradingAttemptResult
 ): Promise<boolean> {
-  const { count } = await prisma.aiGradingAttempt.updateMany({
-    where: { id: attemptId, state: "pending" },
-    data: {
-      ...result,
-      partialScore:
-        result.partialScore === null
-          ? null
-          : new Prisma.Decimal(result.partialScore),
-    },
+  const { matchedRubricItemIds, ...columns } = result
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.aiGradingAttempt.updateMany({
+      where: { id: attemptId, state: "pending" },
+      data: {
+        ...columns,
+        partialScore:
+          columns.partialScore === null
+            ? null
+            : new Prisma.Decimal(columns.partialScore),
+      },
+    })
+    if (count === 0) return false
+    if (matchedRubricItemIds.length > 0) {
+      const livingItems = await tx.rubricItem.findMany({
+        where: { id: { in: [...matchedRubricItemIds] } },
+      })
+      const livingIds = new Set(livingItems.map((rubricItem) => rubricItem.id))
+      await tx.aiAttemptRubricMatch.createMany({
+        data: matchedRubricItemIds
+          .filter((rubricItemId) => livingIds.has(rubricItemId))
+          .map((rubricItemId) => ({ attemptId, rubricItemId })),
+      })
+    }
+    return true
   })
-  return count > 0
 }
 
 /** 実行のうち、まだ pending の試行をまとめて終わらせる（中止・失敗・期限切れ） */
@@ -193,9 +227,12 @@ export async function closePendingAiGradingAttempts(
   })
 }
 
-/** 一覧で返す木。実行者は秘密を落として連れてくる */
+/** 一覧で返す木。実行者は秘密を落として連れてくる。試行には1段目の当てはまりを同梱する */
 const aiGradingRunListInclude = {
-  attempts: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
+  attempts: {
+    include: { rubricMatches: true },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  },
   prompt: true,
   user: { omit: PUBLIC_USER_OMIT },
 } satisfies Prisma.AiGradingRunInclude
@@ -237,7 +274,7 @@ export async function listAiGradingRunsByExam(examId: string, userId: string) {
 /**
  * その教員の実行（試行と、どの試験のどの設問か）を、すべての試験について。
  * 「AI採点」の画面の使用トークンに使う
- * （使用量は revise なら実行の列、grade なら試行の列にある。足し算・金額・集計は画面側）
+ * （使用量は group・revise なら実行の列、grade なら試行の列にある。足し算・金額・集計は画面側）
  */
 export async function listAiGradingRunsByUser(userId: string) {
   return prisma.aiGradingRun.findMany({

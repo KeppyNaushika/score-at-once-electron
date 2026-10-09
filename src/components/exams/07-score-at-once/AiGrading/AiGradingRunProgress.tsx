@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress"
 import {
   aiGradingRunsOfExamQuery,
   aiGradingRunsQuery,
+  aiRubricProposalsQuery,
   cancelAiGradingRunMutation,
   myAiGradingRunsQuery,
   subscribeAiGradingRunProgress,
@@ -65,6 +66,11 @@ export function AiGradingRunProgress({
       { queryKey: myAiGradingRunsQuery().queryKey },
       { cancelRefetch: false }
     )
+    // 2段目の項目の案（1段目のあとに自動で続く）も取り直す
+    void queryClient.invalidateQueries(
+      { queryKey: aiRubricProposalsQuery(examId, cropRegionId).queryKey },
+      { cancelRefetch: false }
+    )
   })
   useEffect(
     () => subscribeAiGradingRunProgress((progress) => handleProgress(progress)),
@@ -78,10 +84,17 @@ export function AiGradingRunProgress({
     <div className="flex flex-col gap-1 border-b py-2">
       {activeRuns.map((run) => {
         const progress = progressByRunId.get(run.id)
-        const total = progress?.total ?? run.attempts.length
+        // 2段目（項目の案）は試行を持たない1回の依頼なので、1件として数える
+        const isGrouping = run.purpose === "group"
+        const total = progress?.total ?? (isGrouping ? 1 : run.attempts.length)
         const completed =
           progress?.completed ??
           run.attempts.filter((attempt) => attempt.state !== "pending").length
+        const runLabel = isGrouping
+          ? "項目の案を作成中"
+          : run.mode === "batch"
+            ? "バッチ"
+            : "採点中"
         return (
           <div
             key={run.id}
@@ -89,7 +102,7 @@ export function AiGradingRunProgress({
             aria-label="AI 採点の進み具合"
           >
             <span className="shrink-0">
-              {run.mode === "batch" ? "バッチ" : "採点中"} {completed}/{total}
+              {runLabel} {completed}/{total}
             </span>
             <Progress
               value={total > 0 ? (completed / total) * 100 : 0}

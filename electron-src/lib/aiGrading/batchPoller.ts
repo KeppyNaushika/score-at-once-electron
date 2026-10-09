@@ -6,9 +6,12 @@
  * - 結果は custom_id（＝試行の id）で試行へ対応付け、まだ pending の試行にだけ書く
  * - 結果が返らなかった試行は期限切れ（expired）で閉じる（再送は画面から提案する）
  * - 取り込み終えたら、事業者側に残る預け物を消す（OpenAI のファイル。答案の画像を含む）
+ * - 判定が1件でも出たら、そのまま2段目（項目の案）を続ける（`groupingRunner.ts`）
  *
  * 起動時と一定間隔で `pollOnce` を呼ぶのは `startBatchPolling`。
  */
+
+import { parseRubricItemIds } from "@/lib/shared/aiGrading/rubricItemsText"
 
 import {
   closePendingAiGradingAttempts,
@@ -18,6 +21,7 @@ import {
   updateAiGradingRun,
 } from "../prisma/aiGradingRun"
 import { toAttemptResult } from "./gradingRequestFactory"
+import { createGroupingRunner } from "./groupingRunner"
 import type { AiGradingJobDependencies } from "./jobDependencies"
 import { isGradingProviderId } from "./providers/types"
 import { createRunProgressTracker } from "./runProgressTracker"
@@ -25,7 +29,12 @@ import { createRunProgressTracker } from "./runProgressTracker"
 /** 回収を確かめる間隔の既定 */
 const DEFAULT_POLL_INTERVAL_MS = 60_000
 
-export function createBatchCollector(dependencies: AiGradingJobDependencies) {
+export function createBatchCollector(
+  dependencies: AiGradingJobDependencies,
+  groupingRunner: ReturnType<
+    typeof createGroupingRunner
+  > = createGroupingRunner(dependencies)
+) {
   /** 前の回収が終わる前に次を始めない */
   let isPolling = false
 
@@ -67,7 +76,11 @@ export function createBatchCollector(dependencies: AiGradingJobDependencies) {
         .filter((attempt) => attempt.state === "pending")
         .map((attempt) => attempt.id)
     )
-    const maxPoints = run.points === null ? null : run.points.toNumber()
+    // 当てはまる項目は、送った一覧に載っていた id と照らす（回収までに項目が変わりうる）
+    const validationContext = {
+      maxPoints: run.points === null ? null : run.points.toNumber(),
+      rubricItemIds: parseRubricItemIds(run.prompt.renderedRubricItems),
+    }
     let succeededCount = run.attempts.filter(
       (attempt) => attempt.state === "succeeded"
     ).length
@@ -75,7 +88,10 @@ export function createBatchCollector(dependencies: AiGradingJobDependencies) {
       externalBatchId
     )) {
       if (!pendingAttemptIds.has(batchResult.customId)) continue
-      const attemptResult = toAttemptResult(batchResult.response, maxPoints)
+      const attemptResult = toAttemptResult(
+        batchResult.response,
+        validationContext
+      )
       if (
         await recordAiGradingAttemptResult(batchResult.customId, attemptResult)
       ) {
@@ -94,6 +110,9 @@ export function createBatchCollector(dependencies: AiGradingJobDependencies) {
     await updateAiGradingRun(run.id, { status, endedAt: new Date() })
     tracker.finish(status)
     await cleanup()
+    if (status === "ended" && run.purpose === "grade") {
+      await groupingRunner.runGroupingAfterGrading(run.id, run.userId)
+    }
 
     /** 事業者側の預け物を消す。失敗しても取り込みは済んでいるので記録だけ残す */
     async function cleanup(): Promise<void> {
