@@ -10,7 +10,7 @@
  * 注釈は変更有無のフラグを返す（手描き図形の幾何差分は表示しない）。
  */
 
-import { Decimal } from "@prisma/client/runtime/client"
+import { Prisma } from "@prisma/client"
 
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
@@ -287,7 +287,7 @@ export const captureReturnSnapshot = async (options: {
     const content = buildContent(effective, annotations)
     const scoresJson = serializeContent(content)
     const total = computeTotal(effective, state.regions)
-    const totalScore = total !== null ? new Decimal(total) : null
+    const totalScore = total !== null ? new Prisma.Decimal(total) : null
 
     await prisma.returnSnapshot.upsert({
       where: { examStudentId },

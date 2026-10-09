@@ -9,6 +9,7 @@ import type {
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
+import { toAppImageUrl } from "@/lib/appImageUrl"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
 import type { ExamWithPages } from "@/types/prismaExtensions"
@@ -80,7 +81,7 @@ export function useQuestionScoringData({
           examStudentId: pageImage.examStudentId,
           studentName: `${student.lastName} ${student.firstName}`,
           imageUrl: pageImage.imagePath
-            ? `appimg:///${pageImage.imagePath}`
+            ? toAppImageUrl(pageImage.imagePath)
             : "",
           currentScore:
             score?.partialScore !== undefined && score?.partialScore !== null
@@ -149,7 +150,7 @@ export function useQuestionScoringData({
       id: `master-${currentCropRegion.id}`,
       examStudentId: "MASTER",
       studentName: "模範解答",
-      imageUrl: masterImagePath ? `appimg:///${masterImagePath}` : "",
+      imageUrl: masterImagePath ? toAppImageUrl(masterImagePath) : "",
       maxScore: currentCropRegion.points || 0,
       status: "master",
       questionRegion: currentCropRegion,

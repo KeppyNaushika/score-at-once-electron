@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client"
 import { dialog } from "electron"
 import * as ExcelJS from "exceljs"
+import * as fs from "fs"
 
 import type { ConfirmedDeletionCount } from "@/types/deletionConfirmation.types"
 import type { ExamStudentStatus } from "@/types/examStudentStatus.types"
@@ -212,7 +213,8 @@ export const studentHandlers = {
     }
 
     autoFitColumns(worksheet)
-    await workbook.xlsx.writeFile(result.filePath)
+    const workbookBuffer = await workbook.xlsx.writeBuffer()
+    await fs.promises.writeFile(result.filePath, new Uint8Array(workbookBuffer))
 
     return { canceled: false as const, outputPath: result.filePath }
   },
@@ -301,7 +303,8 @@ export const studentHandlers = {
       autoFitColumns(worksheet)
     }
 
-    await workbook.xlsx.writeFile(result.filePath)
+    const workbookBuffer = await workbook.xlsx.writeBuffer()
+    await fs.promises.writeFile(result.filePath, new Uint8Array(workbookBuffer))
 
     return { canceled: false as const, outputPath: result.filePath }
   },

@@ -10,8 +10,8 @@
  * 絞る（境界で1回だけ）。
  */
 
-import type { AiGradingAttempt, AiGradingRun, Prisma } from "@prisma/client"
-import { Decimal } from "@prisma/client/runtime/client"
+import type { AiGradingAttempt, AiGradingRun } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 
 import {
   type AiGradingAttemptState,
@@ -87,7 +87,7 @@ export async function createAiGradingRun(
   const created = await prisma.aiGradingRun.create({
     data: {
       ...data,
-      points: data.points === null ? null : new Decimal(data.points),
+      points: data.points === null ? null : new Prisma.Decimal(data.points),
       attempts: {
         create: examStudentIds.map((examStudentId) => ({ examStudentId })),
       },
@@ -173,7 +173,9 @@ export async function recordAiGradingAttemptResult(
     data: {
       ...result,
       partialScore:
-        result.partialScore === null ? null : new Decimal(result.partialScore),
+        result.partialScore === null
+          ? null
+          : new Prisma.Decimal(result.partialScore),
     },
   })
   return count > 0

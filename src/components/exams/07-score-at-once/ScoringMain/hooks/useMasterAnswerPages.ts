@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 
+import { toAppImageUrl } from "@/lib/appImageUrl"
 import { resolveExamPaperSize } from "@/lib/shared/examPaperSize"
 
 /** 模範解答のページ（並べる順の画像 URL と、注釈の mm→px の基準になる用紙サイズ） */
@@ -15,7 +16,7 @@ export function useMasterAnswerPages(
     return examPages
       .slice()
       .sort((pageA, pageB) => pageA.pageNumber - pageB.pageNumber)
-      .map((page) => (page.imagePath ? `appimg:///${page.imagePath}` : null))
+      .map((page) => (page.imagePath ? toAppImageUrl(page.imagePath) : null))
       .filter((url): url is string => url !== null)
   }, [examPages])
 

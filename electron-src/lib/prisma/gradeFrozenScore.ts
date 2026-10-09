@@ -9,7 +9,7 @@
  * 最優先で返すため、そのまま読むと「再確定」が確定値自身を焼き直すだけになってしまう。
  */
 
-import { Decimal } from "@prisma/client/runtime/client"
+import { Prisma } from "@prisma/client"
 
 import type { GradeCellTarget } from "../../../src/types/grade.types"
 import { calculateGrades } from "../shared/calculations/gradeCalculator"
@@ -53,9 +53,9 @@ export async function freezeGradeScores(options: {
   const rows: {
     gradeStudentId: string
     gradeItemId: string
-    weightedScore: Decimal | null
-    weightedMaxScore: Decimal
-    percentage: Decimal | null
+    weightedScore: Prisma.Decimal | null
+    weightedMaxScore: Prisma.Decimal
+    percentage: Prisma.Decimal | null
     gradeLabel: string | null
     frozenByUserId: string | null
     frozenAt: Date
@@ -79,12 +79,12 @@ export async function freezeGradeScores(options: {
         gradeItemId: target.gradeItemId,
         weightedScore:
           gradeItemResult.weightedScore !== null
-            ? new Decimal(gradeItemResult.weightedScore)
+            ? new Prisma.Decimal(gradeItemResult.weightedScore)
             : null,
-        weightedMaxScore: new Decimal(gradeItemResult.weightedMaxScore),
+        weightedMaxScore: new Prisma.Decimal(gradeItemResult.weightedMaxScore),
         percentage:
           gradeItemResult.percentage !== null
-            ? new Decimal(gradeItemResult.percentage)
+            ? new Prisma.Decimal(gradeItemResult.percentage)
             : null,
         gradeLabel: gradeItemResult.gradeLabel,
         frozenByUserId,

@@ -1,5 +1,5 @@
-import type { Prisma, ScoreDecision } from "@prisma/client"
-import { Decimal } from "@prisma/client/runtime/client"
+import type { ScoreDecision } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 
 import type { Serialized } from "@/types/prismaExtensions"
 import {
@@ -134,7 +134,7 @@ export const upsertScoreDecision = async (
   }
 
   const score =
-    decisionData.score !== null ? new Decimal(decisionData.score) : null
+    decisionData.score !== null ? new Prisma.Decimal(decisionData.score) : null
 
   // 採点領域と受験者が同じ試験のものであること（FK は片方ずつしか見ない）
   await assertCropRegionsInSameExam([
