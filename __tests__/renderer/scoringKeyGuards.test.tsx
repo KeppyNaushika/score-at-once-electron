@@ -387,6 +387,7 @@ describe("when 句が読むコンテキストには書き手が居る", () => {
       "sidePanelVisible",
       "hasSelectedAnswers",
       "scoringOperationMode",
+      "choiceSceneOpen",
     ]
 
     const readWithoutWriter = contextKeys

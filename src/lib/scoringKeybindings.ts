@@ -35,6 +35,30 @@ const PARTIAL_INPUT_KEYBINDINGS: KeyBinding = {
 }
 
 /**
+ * 選択の場面（docs/vlm-grading-design.md §11-4）の間だけ効くコマンドの既定。
+ *
+ * 採点中は英字26字と数字がすべて埋まっているので、Space（`choice.open`）で場面を
+ * 切り替えて数字・Enter・↑↓・Esc を使う。ルーブリック採点では項目を当てる・外す、
+ * AI の問いかけでは選択肢を選ぶのに使う（どちらも同じ場面）。
+ */
+const CHOICE_SCENE_KEYBINDINGS: KeyBinding = {
+  "choice.select1": "1",
+  "choice.select2": "2",
+  "choice.select3": "3",
+  "choice.select4": "4",
+  "choice.select5": "5",
+  "choice.select6": "6",
+  "choice.select7": "7",
+  "choice.select8": "8",
+  "choice.select9": "9",
+  "choice.other": "0",
+  "choice.confirm": "Enter",
+  "choice.prev": "ArrowUp",
+  "choice.next": "ArrowDown",
+  "choice.exit": "Escape",
+}
+
+/**
  * 入力欄の中でも外でも効くコマンド。部分点・保留は、入力欄の外では採点、
  * 中では入力した部分点の確定キーになる。
  */
@@ -165,6 +189,13 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   "aiGrading.filterDoubleMark": "Alt+Shift+u",
 
   // ============================================
+  // 選択の場面 (Choice)
+  // 採点中に Space で入り、数字で選ぶ（ルーブリックの項目・AI の問いかけ）
+  // ============================================
+  "choice.open": "Space",
+  ...CHOICE_SCENE_KEYBINDINGS,
+
+  // ============================================
   // モーダル (Modal)
   // 部分点入力モーダル内の操作
   // ============================================
@@ -175,13 +206,14 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
  * コマンドが効く場面。
  *
  * - `partialInput`: 部分点の入力欄（モーダル）を開いている間だけ
- * - `scoring`: 入力欄を開いていない採点中だけ（文字の入力中・書き込み中も除く）
+ * - `scoring`: 入力欄を開いていない採点中だけ（文字の入力中・書き込み中・選択の場面も除く）
  * - `both`: どちらでも（`BOTH_SCENE_COMMANDS`）
+ * - `choice`: 選択の場面の間だけ（`CHOICE_SCENE_KEYBINDINGS`）
  *
  * 採点画面の when 句（`sceneWhen`）と、設定画面の重なりの判定（`canShareKey`）は
  * どちらもここから導く。場面を変えるときは、既定の置き場所を変える。
  */
-export type KeyScene = "partialInput" | "scoring" | "both"
+export type KeyScene = "partialInput" | "scoring" | "both" | "choice"
 
 /** 1回の登録が効く場面（`both` のコマンドは、登録ごとにどちらかを選ぶ） */
 type RegistrationScene = Exclude<KeyScene, "both">
@@ -189,13 +221,28 @@ type RegistrationScene = Exclude<KeyScene, "both">
 /** そのコマンドが効く場面 */
 export function keySceneOf(commandId: string): KeyScene {
   if (BOTH_SCENE_COMMANDS.has(commandId)) return "both"
+  if (commandId in CHOICE_SCENE_KEYBINDINGS) return "choice"
   return commandId in PARTIAL_INPUT_KEYBINDINGS ? "partialInput" : "scoring"
 }
 
-/** 場面ごとの when 句の土台 */
+/**
+ * 場面ごとの when 句の土台。
+ *
+ * 採点中と選択の場面は `choiceSceneOpen` で分ける（同じ数字・矢印を使うため）。
+ * 部分点の入力欄は `modalOpen` を立てるので、選択の場面とも重ならない
+ */
 const SCENE_WHEN: Record<RegistrationScene, string> = {
-  scoring: "!inputFocus && !modalOpen && !textEditorActive",
+  scoring: "!inputFocus && !modalOpen && !textEditorActive && !choiceSceneOpen",
   partialInput: "partialScoreModalOpen",
+  choice: "choiceSceneOpen && !inputFocus && !modalOpen && !textEditorActive",
+}
+
+/** 場面が実際に効く範囲（`both` は入力欄の中と外の両方） */
+const SCENE_EXTENT: Record<KeyScene, readonly RegistrationScene[]> = {
+  scoring: ["scoring"],
+  partialInput: ["partialInput"],
+  both: ["scoring", "partialInput"],
+  choice: ["choice"],
 }
 
 /**
@@ -229,17 +276,15 @@ export function sceneWhen(
 /**
  * 2つのコマンドに同じキーを割り当ててよいか。
  *
- * 効く場面が重ならない組（部分点の入力欄の中だけ／外だけ）なら同じキーでよい
- * （既定でも modal.input1 と scoring.openPartialWith1 は同じ 1）。
+ * 効く場面が重ならない組（部分点の入力欄の中だけ／外だけ／選択の場面だけ）なら同じキーでよい
+ * （既定でも modal.input1・scoring.openPartialWith1・choice.select1 は同じ 1）。
  * それ以外は、同じ場面で when 句の && の数と登録順で片方だけが勝ち、
  * もう片方が黙って効かなくなるので重ねない。
  */
 export function canShareKey(commandIdA: string, commandIdB: string): boolean {
-  const sceneA = keySceneOf(commandIdA)
-  const sceneB = keySceneOf(commandIdB)
-  return (
-    (sceneA === "partialInput" && sceneB === "scoring") ||
-    (sceneA === "scoring" && sceneB === "partialInput")
+  const extentB = SCENE_EXTENT[keySceneOf(commandIdB)]
+  return SCENE_EXTENT[keySceneOf(commandIdA)].every(
+    (scene) => !extentB.includes(scene)
   )
 }
 

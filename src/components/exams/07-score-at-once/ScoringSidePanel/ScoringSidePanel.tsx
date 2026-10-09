@@ -3,6 +3,7 @@
 import { BarChart3, Eye, User } from "lucide-react"
 import { useCallback } from "react"
 
+import { ScoringMethodSection } from "@/components/exams/07-score-at-once/Rubric/ScoringMethodSection"
 import type { QuestionProgress } from "@/components/exams/07-score-at-once/ScoringData/types"
 import { IndividualModePanel } from "@/components/exams/07-score-at-once/ScoringIndividual/IndividualModePanel"
 import ExamProgressCard from "@/components/exams/07-score-at-once/ScoringSidePanel/ExamProgressCard"
@@ -270,6 +271,18 @@ export function ScoringSidePanel({
             isOpen={isSectionOpen("question")}
             onToggle={() => toggleSection("question")}
           />
+
+          {/* 採点方式（直接採点・減点方式・加点方式） */}
+          {currentCropRegion && (
+            <ScoringMethodSection
+              key={currentCropRegion.id}
+              examId={examId}
+              cropRegion={currentCropRegion}
+              currentUserId={currentUserId}
+              isOpen={isSectionOpen("scoringMethod")}
+              onToggle={() => toggleSection("scoringMethod")}
+            />
+          )}
 
           {/* 表示 */}
           <DisplaySection

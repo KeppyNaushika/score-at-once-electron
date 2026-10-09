@@ -63,6 +63,23 @@ export const SHORTCUT_LABELS: Record<string, string> = {
   "view.questionView": "設問表示",
   "view.toggleMasterAnswer": "模範解答の表示",
 
+  // 選択の場面（ルーブリックの項目・AI の問いかけ）
+  "choice.open": "選択の場面に入る",
+  "choice.select1": "1 番目を選ぶ",
+  "choice.select2": "2 番目を選ぶ",
+  "choice.select3": "3 番目を選ぶ",
+  "choice.select4": "4 番目を選ぶ",
+  "choice.select5": "5 番目を選ぶ",
+  "choice.select6": "6 番目を選ぶ",
+  "choice.select7": "7 番目を選ぶ",
+  "choice.select8": "8 番目を選ぶ",
+  "choice.select9": "9 番目を選ぶ",
+  "choice.other": "その他",
+  "choice.confirm": "確定して次へ",
+  "choice.prev": "前へ移る",
+  "choice.next": "次へ移る",
+  "choice.exit": "抜けて採点に戻る",
+
   // 部分点の入力欄
   "modal.cancel": "閉じる（入力を捨てる）",
   "modal.backspace": "1文字消す",
@@ -121,7 +138,7 @@ export function getShortcutLabel(commandId: string): string {
 
 /**
  * 設定画面で変えられるコマンドの分類
- * 順序: 採点操作 → 部分点の入力 → フィルタ → ナビゲーション → 表示制御 → 描画ツール
+ * 順序: 採点操作 → 部分点の入力 → 選択の場面 → フィルタ → ナビゲーション → 表示制御 → 描画ツール
  */
 export const SHORTCUT_CATEGORIES = {
   scoring: {
@@ -157,6 +174,28 @@ export const SHORTCUT_CATEGORIES = {
     ],
     description:
       "部分点の入力欄を開いている間の操作（確定キーは採点操作と共通）",
+  },
+  choice: {
+    label: "選択の場面",
+    keys: [
+      "choice.open",
+      "choice.select1",
+      "choice.select2",
+      "choice.select3",
+      "choice.select4",
+      "choice.select5",
+      "choice.select6",
+      "choice.select7",
+      "choice.select8",
+      "choice.select9",
+      "choice.other",
+      "choice.confirm",
+      "choice.prev",
+      "choice.next",
+      "choice.exit",
+    ],
+    description:
+      "ルーブリックの項目を当てる・外す場面の操作（入る キー以外は、場面の中だけで効く）",
   },
   filter: {
     label: "フィルタ",

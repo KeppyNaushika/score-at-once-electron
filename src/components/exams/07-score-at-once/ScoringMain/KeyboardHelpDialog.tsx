@@ -59,6 +59,15 @@ export function KeyboardHelpDialog({
                     </code>
                   </div>
                 ))}
+                {section.showChoiceSelect && (
+                  <div className="flex justify-between gap-2">
+                    <span>番号の項目を当てる・外す</span>
+                    <code className="rounded bg-gray-100 px-2 py-1">
+                      {displayKey("choice.select1")}〜
+                      {displayKey("choice.select9")}
+                    </code>
+                  </div>
+                )}
                 {section.showPartialScoreStart && (
                   <div className="flex justify-between gap-2">
                     <span>部分点の入力を始める</span>

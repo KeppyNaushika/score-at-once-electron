@@ -82,6 +82,7 @@ function evaluateWhenClause(
       "sidePanelVisible",
       "hasSelectedAnswers",
       "scoringOperationMode",
+      "choiceSceneOpen",
       `return ${when}`
     )
 
@@ -93,7 +94,8 @@ function evaluateWhenClause(
       context.partialScoreModalOpen,
       context.sidePanelVisible,
       context.hasSelectedAnswers,
-      context.scoringOperationMode
+      context.scoringOperationMode,
+      context.choiceSceneOpen
     )
   } catch (error) {
     console.error("Failed to evaluate when clause:", when, error)
@@ -127,6 +129,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
     sidePanelVisible: true,
     hasSelectedAnswers: false,
     scoringOperationMode: "keyboard",
+    choiceSceneOpen: false,
   })
 
   // コマンドレジストリ（commandId -> CommandHandler[]）

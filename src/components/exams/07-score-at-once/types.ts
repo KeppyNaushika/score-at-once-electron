@@ -226,6 +226,12 @@ export interface ScoringContextState {
 
   /** 採点操作モード */
   scoringOperationMode: ScoringOperationMode
+
+  /**
+   * 選択の場面（docs/vlm-grading-design.md §11-4）に入っている状態。
+   * 立っている間は採点中のキーが止まり、数字・Enter・↑↓・Esc が選択に使われる
+   */
+  choiceSceneOpen: boolean
 }
 
 /**

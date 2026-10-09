@@ -11,6 +11,7 @@ import { useGuardedScoring } from "@/components/exams/07-score-at-once/ScoringMa
 import { useIndividualNavigation } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useIndividualNavigation"
 import { useMasterAnswerPages } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useMasterAnswerPages"
 import { useMasterAnswerVisibility } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useMasterAnswerVisibility"
+import { useRubricAnswerFlow } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useRubricAnswerFlow"
 import { useScoringActions } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringActions"
 import { useScoringDataLoader } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringDataLoader"
 import { useScoringEffects } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringEffects"
@@ -487,6 +488,17 @@ export function useScoringScreen({
 
   const questionProgress = calculateQuestionProgress()
 
+  /** ルーブリック項目のパネルと選択のつなぎ（減点・加点方式の設問だけで使う） */
+  const rubricAnswerFlow = useRubricAnswerFlow({
+    gradingMode,
+    studentAnswerImages,
+    selectedStudentAnswerImageIds,
+    setSelectedPageImageIds,
+    setRecentlyScoredAnswers,
+    getGridAnswerData,
+    handleIndividualNextStudent,
+  })
+
   return {
     allMasterImageUrls,
     assignmentScope,
@@ -553,6 +565,7 @@ export function useScoringScreen({
     pendingDecisionCount,
     questionProgress,
     questionScoresByCropRegionId,
+    rubricAnswerFlow,
     scoringBehavior,
     selectMode,
     selectableCropRegions,
