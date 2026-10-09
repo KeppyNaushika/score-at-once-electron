@@ -7,8 +7,9 @@
 import { mmToPixels } from "@/lib/paperSize"
 import { getTextPositionFromAnchor } from "@/lib/textbox-canvas/canvasUtils"
 import { convertTextToSvg } from "@/lib/textbox-canvas/textConversionUtils"
-import { convertSvgToPng } from "@/queries/export"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
+
+import { rasterizeAnnotationSvg } from "./annotationSvgRasterizer"
 
 /**
  * 単一の描画要素をCanvas上に描画
@@ -78,47 +79,22 @@ export async function drawElement(
           )
 
           if (svgElement) {
-            let svgData = new XMLSerializer().serializeToString(svgElement)
+            const rasterized = await rasterizeAnnotationSvg(svgElement)
 
-            // MathJax defsを埋め込み
-            const hasMathJaxElements =
-              svgData.includes("mjx-container") || svgData.includes("<use")
-            if (hasMathJaxElements) {
-              const globalDefs = document.querySelector(
-                "#MJX-SVG-global-cache defs"
-              )
-              if (globalDefs && globalDefs.innerHTML.length > 10) {
-                const defsContent = globalDefs.outerHTML
-                svgData = svgData.replace(/(<svg[^>]*>)/, `$1${defsContent}`)
-              }
-            }
-
-            // SVG→PNG変換（Canvas taint問題を回避するためmainプロセスで実行）
-            const result = await convertSvgToPng({ svgString: svgData })
-
-            const img = new Image()
-            await new Promise<void>((resolve, reject) => {
-              img.onload = () => resolve()
-              img.onerror = () =>
-                reject(new Error("Failed to load converted PNG"))
-              img.src = result.dataUrl
-            })
-
-            // 論理サイズで描画（Retinaではimg.width/heightが2倍になるため）
             const textPosition = getTextPositionFromAnchor(
               currentX,
               currentY,
-              result.width,
-              result.height,
+              rasterized.width,
+              rasterized.height,
               anchorDir
             )
 
             ctx.drawImage(
-              img,
+              rasterized.canvas,
               textPosition.x,
               textPosition.y,
-              result.width,
-              result.height
+              rasterized.width,
+              rasterized.height
             )
           } else {
             throw new Error("Failed to generate SVG")

@@ -249,13 +249,3 @@ export const cancelStreamingSession = (sessionId: string) =>
 export const selectPdfSavePath = (
   input: Parameters<typeof window.electronAPI.export.selectPdfSavePath>[0]
 ) => window.electronAPI.export.selectPdfSavePath(input)
-
-/**
- * SVG を PNG へ変換する。
- *
- * Canvas が汚染される（taint）のを避けるため main で描く。呼び出し元は PDF の
- * 描画エンジン（フックではないモジュール関数）なので、そのまま関数で出す。
- */
-export const convertSvgToPng = (
-  input: Parameters<typeof window.electronAPI.export.convertSvgToPng>[0]
-) => window.electronAPI.export.convertSvgToPng(input)

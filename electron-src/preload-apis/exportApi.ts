@@ -8,7 +8,6 @@ export function createExportApi() {
       validateScoringData: bind("export:validateScoringData"),
       recordUnresolvedConflicts: bind("export:recordUnresolvedConflicts"),
       getPdfExportData: bind("export:getPdfExportData"),
-      convertSvgToPng: bind("export:convertSvgToPng"),
       selectPdfSavePath: bind("export:selectPdfSavePath"),
       // ストリーミングPDF生成API
       createPdfStreamingSession: bind("export:createPdfStreamingSession"),

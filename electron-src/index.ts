@@ -4,7 +4,6 @@ import { pathToFileURL } from "url"
 
 import { initializeApp } from "./appInitializer"
 import { setupAllIPCHandlers } from "./ipc-handlers"
-import { destroySharedSvgWindow } from "./ipc-handlers/exportHandlers"
 import { stopUnifiedArchiveExportWorker } from "./ipc-handlers/unifiedArchiveHandlers"
 import { startAiGradingBatchPolling } from "./lib/aiGrading/aiGradingMainServices"
 import { getAbsolutePathFromSharedFiles } from "./lib/dataManager"
@@ -181,13 +180,6 @@ process.on("unhandledRejection", (reason, promise) => {
 
 // アプリが異常終了する前にログを出力とクリーンアップ
 app.on("before-quit", async (_event) => {
-  // SVG→PNG変換用の共有オフスクリーンウィンドウを破棄
-  try {
-    destroySharedSvgWindow()
-  } catch (error) {
-    console.warn("Failed to destroy shared SVG window:", error)
-  }
-
   // 統合アーカイブの取り込みで開いたまま残った作業ディレクトリを消す
   try {
     closeAllUnifiedArchiveImportSessions()
