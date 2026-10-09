@@ -251,6 +251,17 @@ export default [
       "@typescript-eslint/no-restricted-imports": [
         "error",
         {
+          // 動的ルートの param は URL のパスから読む。静的書き出し（web 版）では
+          // 動的ルートが仮の値 "__" の殻1枚に畳まれ、useParams はその仮の値を返す。
+          // ルールは1つの設定にまとめないと後の files 指定で上書きされるので、ここに置く。
+          paths: [
+            {
+              name: "next/navigation",
+              importNames: ["useParams"],
+              message:
+                'useParams は使わず、`import { useRouteParams } from "@/hooks/useRouteParams"` を使ってください（静的書き出しでは useParams が実際の URL でなく仮の値 "__" を返すため）。',
+            },
+          ],
           patterns: [
             {
               group: ["@/electron-src/**", "**/electron-src/**"],

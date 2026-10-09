@@ -1,12 +1,11 @@
 "use client"
 
-import { useParams } from "next/navigation"
-
 import { BoundariesContainer } from "@/components/grades/03-boundaries/BoundariesContainer"
+import { useRouteParams } from "@/hooks/useRouteParams"
 
 export default function BoundariesPage() {
-  const params = useParams()
-  const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
+  const params = useRouteParams()
+  const gradeId = params.gradeId ?? ""
 
   return <BoundariesContainer gradeId={gradeId} />
 }

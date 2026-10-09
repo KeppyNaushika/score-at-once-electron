@@ -2,7 +2,6 @@
 
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query"
 import Image from "next/image"
-import { useParams } from "next/navigation"
 import { useMemo, useState } from "react"
 
 import { useGradeLock } from "@/components/common/grade-lock/GradeLockProvider"
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { ExamPageWithContent } from "@/electron-src/lib/prisma/examPage"
+import { useRouteParams } from "@/hooks/useRouteParams"
 import { type CropRegionRow, cropRegionsQuery } from "@/queries/cropRegion"
 import { examPagesQuery } from "@/queries/exam"
 import { scopeKeys } from "@/queries/keys"
@@ -25,8 +25,8 @@ const EMPTY_EXAM_PAGES: ExamPageWithContent[] = []
 const EMPTY_CROP_REGIONS: CropRegionRow[] = []
 
 export default function RegionInfoPage() {
-  const params = useParams()
-  const examId = typeof params.examId === "string" ? params.examId : ""
+  const params = useRouteParams()
+  const examId = params.examId ?? ""
 
   /**
    * 選択中の採点領域。**添字ではなく id で持つ。**

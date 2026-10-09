@@ -58,7 +58,6 @@ vi.mock("next/navigation", () => ({
     back: vi.fn(),
     refresh: vi.fn(),
   }),
-  useParams: () => ({}),
   usePathname: () => "/",
   useSearchParams: () => new URLSearchParams(),
 }))

@@ -2,7 +2,6 @@
 
 import { CheckCircle2 } from "lucide-react"
 import Head from "next/head"
-import { useParams } from "next/navigation"
 import { useCallback, useMemo } from "react"
 
 import AnswerGridView from "@/components/exams/07-score-at-once/ScoringGrid/AnswerGridView"
@@ -15,6 +14,7 @@ import { useFinalizeScreen } from "@/components/exams/08-finalize/hooks/useFinal
 import { useFinalizeShortcuts } from "@/components/exams/08-finalize/hooks/useFinalizeShortcuts"
 import { ProposalChips } from "@/components/exams/08-finalize/ProposalChips"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import { useRouteParams } from "@/hooks/useRouteParams"
 
 /**
  * 「8. 採点確定」の画面。**07 の採点と同じ手触りで、食い違いを裁く。**
@@ -27,8 +27,8 @@ import { useCurrentUser } from "@/contexts/CurrentUserContext"
  * 「誰の採点を突き合わせているか」と「その人がどこまで採点したか」を読むためだけに出す。
  */
 function ScoreFinalizeContent() {
-  const params = useParams()
-  const examId = typeof params.examId === "string" ? params.examId : ""
+  const params = useRouteParams()
+  const examId = params.examId ?? ""
   const currentUser = useCurrentUser()
   const { keyBindings } = useShortcutContext()
   const screen = useFinalizeScreen(examId)

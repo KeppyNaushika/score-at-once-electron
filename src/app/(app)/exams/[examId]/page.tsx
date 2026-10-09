@@ -2,7 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query"
 import { FileArchive, MoreVertical, Trash2, Users } from "lucide-react"
-import { useParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { AuditLogMenuItem } from "@/components/common/AuditLogMenuItem"
@@ -28,14 +28,15 @@ import {
 import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { useExamDetail } from "@/hooks/useExamDetail"
+import { useRouteParams } from "@/hooks/useRouteParams"
 import { getExamProgress } from "@/lib/examStatus"
 import { setExamTagsMutation } from "@/queries/tag"
 
 export default function ExamDetailPage() {
-  const params = useParams()
+  const params = useRouteParams()
   const router = useRouter()
   const currentUser = useCurrentUser()
-  const examId = typeof params.examId === "string" ? params.examId : ""
+  const examId = params.examId ?? ""
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showUnifiedExportDialog, setShowUnifiedExportDialog] = useState(false)

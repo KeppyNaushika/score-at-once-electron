@@ -1,13 +1,11 @@
 "use client"
 
-import { useParams } from "next/navigation"
-
 import { CourseworkStudentsContainer } from "@/components/coursework/02-students/CourseworkStudentsContainer"
+import { useRouteParams } from "@/hooks/useRouteParams"
 
 export default function CourseworkStudentsPage() {
-  const params = useParams()
-  const courseworkId =
-    typeof params.courseworkId === "string" ? params.courseworkId : ""
+  const params = useRouteParams()
+  const courseworkId = params.courseworkId ?? ""
 
   return <CourseworkStudentsContainer courseworkId={courseworkId} />
 }

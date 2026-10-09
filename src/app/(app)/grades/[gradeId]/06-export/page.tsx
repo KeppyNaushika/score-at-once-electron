@@ -1,12 +1,11 @@
 "use client"
 
-import { useParams } from "next/navigation"
-
 import { ExportContainer } from "@/components/grades/06-export/ExportContainer"
+import { useRouteParams } from "@/hooks/useRouteParams"
 
 export default function GradeExportPage() {
-  const params = useParams()
-  const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
+  const params = useRouteParams()
+  const gradeId = params.gradeId ?? ""
 
   return <ExportContainer gradeId={gradeId} />
 }

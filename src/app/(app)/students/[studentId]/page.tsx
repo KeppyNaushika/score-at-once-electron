@@ -2,7 +2,7 @@
 
 import type { StudentClassroomMembership } from "@prisma/client"
 import { BarChart3, Edit, Trash2, Users } from "lucide-react"
-import { useParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { ExamResultsCard } from "@/app/(app)/students/[studentId]/components/ExamResultsCard"
@@ -30,12 +30,13 @@ import StudentModal from "@/components/student/StudentModal"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useRouteParams } from "@/hooks/useRouteParams"
 import type { StudentClassroomMembershipWithStudentAndClassroom } from "@/types/prismaExtensions"
 
 export default function StudentDetailPage() {
-  const params = useParams()
+  const params = useRouteParams()
   const router = useRouter()
-  const studentId = typeof params.studentId === "string" ? params.studentId : ""
+  const studentId = params.studentId ?? ""
 
   const {
     student,

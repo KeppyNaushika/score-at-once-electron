@@ -1,13 +1,12 @@
 "use client"
 
-import { useParams } from "next/navigation"
-
 import { ScoringAnonymityProvider } from "@/components/exams/07-score-at-once/anonymity/ScoringAnonymityContext"
 import ScoringMainView from "@/components/exams/07-score-at-once/ScoringMain/ScoringMainView"
+import { useRouteParams } from "@/hooks/useRouteParams"
 
 export default function GradingPage() {
-  const params = useParams()
-  const examId = typeof params.examId === "string" ? params.examId : ""
+  const params = useRouteParams()
+  const examId = params.examId ?? ""
 
   // 採点は利用者ごとに別々に保存する。誰が採点しているか分からないまま
   // 書かせない（操作者が居なければログインへ戻す）。

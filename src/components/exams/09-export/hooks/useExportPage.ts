@@ -1,7 +1,6 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useParams } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 
 import { useStudentSelection } from "@/components/exams/09-export/hooks/useStudentSelection"
@@ -11,6 +10,7 @@ import {
   answerOverlayChanges,
   individualReportChanges,
 } from "@/components/exams/09-export/utils/exportSettingChanges"
+import { useRouteParams } from "@/hooks/useRouteParams"
 import { matchesSearchTerm } from "@/lib/searchText"
 import { examDetailQuery, examStudentsQuery } from "@/queries/exam"
 import {
@@ -57,8 +57,8 @@ const EMPTY_STUDENTS: Student[] = []
  * 値（＝楽観更新）が取り直しと競り合っていた。1つの操作で1レコード書く。
  */
 export function useExportPage() {
-  const params = useParams()
-  const examId = params.examId as string
+  const params = useRouteParams()
+  const examId = params.examId ?? ""
 
   // フィルタ・検索状態
   const [searchTerm, setSearchTerm] = useState("")

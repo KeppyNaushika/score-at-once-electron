@@ -1,10 +1,10 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { useParams } from "next/navigation"
 import React from "react"
 
 import { WorkflowTabHeader } from "@/components/common/WorkflowTabHeader"
+import { useRouteParams } from "@/hooks/useRouteParams"
 import { answerSheetBuilderWorkflowTabs } from "@/lib/workflowTabs"
 import { answerSheetDefinitionQuery } from "@/queries/answerSheetBuilder"
 
@@ -20,8 +20,8 @@ export default function AnswerSheetBuilderDefinitionLayout({
 }: {
   children: React.ReactNode
 }) {
-  const params = useParams<{ definitionId: string }>()
-  const definitionId = params.definitionId
+  const params = useRouteParams()
+  const definitionId = params.definitionId ?? ""
   // ヘッダーが要るのは定義名だけ。定義そのもののキャッシュを各ページと共有する
   const { data: definitionName = "" } = useQuery({
     ...answerSheetDefinitionQuery(definitionId),

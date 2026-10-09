@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { FileArchive, MoreVertical, Trash2 } from "lucide-react"
-import { useParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { AuditLogMenuItem } from "@/components/common/AuditLogMenuItem"
@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { UnifiedArchiveExportDialog } from "@/components/unified-archive/export/UnifiedArchiveExportDialog"
+import { useRouteParams } from "@/hooks/useRouteParams"
 import { getGradeCompletion } from "@/lib/gradeStatus"
 import { gradeWorkflowPhases, gradeWorkflowTabs } from "@/lib/workflowTabs"
 import {
@@ -34,9 +35,9 @@ import {
 } from "@/queries/grade"
 
 export default function GradeDetailPage() {
-  const params = useParams()
+  const params = useRouteParams()
   const router = useRouter()
-  const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
+  const gradeId = params.gradeId ?? ""
 
   const {
     data: grade = null,
