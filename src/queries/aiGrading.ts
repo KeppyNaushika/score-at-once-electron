@@ -2,10 +2,12 @@ import { queryOptions } from "@tanstack/react-query"
 
 import { defineMutation } from "./defineMutation"
 import { scopeKeys } from "./keys"
+import { rubricItemInvalidations } from "./rubric"
 import { questionScoresQuery } from "./scoring"
 
 /**
- * AI 採点（VLM 採点）のプロンプト・測定・実行・採用（docs/vlm-grading-design.md §10）。
+ * AI 採点（VLM 採点）のプロンプト・測定・実行（1段目・2段目）・採用・問いかけ
+ * （docs/vlm-grading-design.md §3・§11）。
  *
  * **実行と試行は設問ごとに1本のキーへ載せる。** 採点も採用も「その設問」に書くので、
  * 古くなるのもその設問だけである（採点行と同じ粒度。`scoring.ts`）。
@@ -70,6 +72,24 @@ export const aiGradingRunsQuery = (
     ] as const,
     queryFn: () =>
       window.electronAPI.aiGrading.listRuns(cropRegionId, includeOtherUsers),
+  })
+
+/** 設問の自分の2段目の実行1件（項目の案・選択肢・答案（試行付き）・答えの木） */
+export type AiRubricProposalRunRow = Awaited<
+  ReturnType<typeof window.electronAPI.aiGrading.listProposals>
+>[number]
+
+/**
+ * 設問の、自分の2段目の実行と項目の案（古い順）。問いかけは実行した教員にだけ出すので、
+ * 自分の分だけを読む。2段目は1段目のあとに自動で続くので、進み具合の通知でも取り直す
+ */
+export const aiRubricProposalsQuery = (examId: string, cropRegionId: string) =>
+  queryOptions({
+    queryKey: [
+      ...aiGradingRunsScope(examId, cropRegionId),
+      "proposals",
+    ] as const,
+    queryFn: () => window.electronAPI.aiGrading.listProposals(cropRegionId),
   })
 
 /**
@@ -156,6 +176,27 @@ export const startAiGradingRunMutation = (
     },
   })
 
+/**
+ * 1段目の実行から2段目（項目の案）を作り直す（外部へ送る）。自動で続いた2段目が失敗した
+ * ときの送り直し。終わるまで待つ
+ */
+export const startAiGroupingRunMutation = (
+  examId: string,
+  cropRegionId: string
+) =>
+  defineMutation({
+    mutationFn: (gradeRunId: string) =>
+      window.electronAPI.aiGrading.startGroupingRun(gradeRunId),
+    meta: {
+      invalidates: [
+        aiGradingRunsScope(examId, cropRegionId),
+        aiGradingRunsOfExamScope(examId),
+        myAiGradingRunsQuery().queryKey,
+      ],
+      errorMessage: "項目の案を作れませんでした",
+    },
+  })
+
 /** 実行を中止する（実行した教員だけ） */
 export const cancelAiGradingRunMutation = (
   examId: string,
@@ -214,6 +255,34 @@ export const adoptAiGradingAttemptsMutation = (
         questionScoresQuery(examId, cropRegionId).queryKey,
       ],
       errorMessage: "AI の判定を採用できませんでした",
+    },
+  })
+
+/** 問いかけへの答えの引数（main の口の形） */
+export type AnswerAiRubricProposalInput = Parameters<
+  typeof window.electronAPI.aiGrading.answerProposal
+>[0]
+
+/**
+ * 問いかけに答える（§3-5）。選択肢なら項目を作り（既存の項目に当たる案なら作らない）、渡した
+ * 答案の自分の採点行に当てる。当て外ししたマスの採点行（適用付き）が返るので、続けて点を計算して
+ * `writeRubricScoresMutation` で書き、朱書きを合わせる。項目・適用・採点行が変わるので取り直す
+ */
+export const answerAiRubricProposalMutation = (
+  examId: string,
+  cropRegionId: string
+) =>
+  defineMutation({
+    mutationFn: (input: AnswerAiRubricProposalInput) =>
+      window.electronAPI.aiGrading.answerProposal(input),
+    scope: { id: `exam:${examId}:questionScores` },
+    meta: {
+      invalidates: [
+        aiRubricProposalsQuery(examId, cropRegionId).queryKey,
+        ...rubricItemInvalidations(examId, cropRegionId),
+        questionScoresQuery(examId, cropRegionId).queryKey,
+      ],
+      errorMessage: "AI の項目の案への答えを保存できませんでした",
     },
   })
 

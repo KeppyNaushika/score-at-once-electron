@@ -9,26 +9,22 @@
  * 当てる・外したマスは、項目の助言から作る朱書きも合わせる（§4-7。`useRubricAdviceSync`）。
  */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
 import { toast } from "sonner"
 
 import { useGradeLock } from "@/components/common/grade-lock/GradeLockProvider"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
-import {
-  rubricItemsQuery,
-  setRubricApplicationsMutation,
-  writeRubricScoresMutation,
-} from "@/queries/rubric"
+import { setRubricApplicationsMutation } from "@/queries/rubric"
 
-import type { RubricScoredRow } from "../types"
 import {
   type OwnRubricCell,
   shouldApplyToSelection,
   toRubricScoredRow,
 } from "../utils/rubricApplicationState"
-import { computeRubricScore, isSameRubricScore } from "../utils/rubricScore"
+import { computeRubricScore } from "../utils/rubricScore"
 import type { useRubricAdviceSync } from "./useRubricAdviceSync"
+import { useRubricScoreWriting } from "./useRubricScoreWriting"
 
 /** 選んだ答案1つ（受験者と、自分の採点行と当たっている項目） */
 export interface SelectedRubricCell extends OwnRubricCell {
@@ -52,60 +48,12 @@ export function useRubricApplying({
   onScored,
   syncAdviceRows,
 }: UseRubricApplyingOptions) {
-  const queryClient = useQueryClient()
-  /**
-   * 計算に使う項目は、その時点のものを読む。「その他」で作った直後の項目は、
-   * 画面が持っている一覧にまだ載っていない（作成で古くなった一覧は読み直される）
-   */
-  const readRubricItems = useCallback(
-    () => queryClient.fetchQuery(rubricItemsQuery(examId, cropRegion.id)),
-    [queryClient, examId, cropRegion.id]
-  )
+  const { readRubricItems, writeScores, writeComputedScores } =
+    useRubricScoreWriting(examId, cropRegion)
   // 採点の口と同じく、成績算出のロック中は当てない（main も書き込みを止める）
   const { guard } = useGradeLock()
   const { mutateAsync: setApplications } = useMutation(
     setRubricApplicationsMutation(examId, cropRegion.id)
-  )
-  const { mutateAsync: writeScores } = useMutation(
-    writeRubricScoresMutation(examId)
-  )
-
-  /** 付け外ししたマスの点を計算し、保存されている点と違うものだけを書く */
-  const writeComputedScores = useCallback(
-    async (rows: readonly RubricScoredRow[]) => {
-      const rubricItems = await readRubricItems()
-      const outcomes = rows.map((row) => ({
-        row,
-        outcome: computeRubricScore(cropRegion, rubricItems, row),
-      }))
-      const writes = outcomes.flatMap(({ row, outcome }) =>
-        outcome.kind === "computed" &&
-        !isSameRubricScore(
-          { status: row.status, partialScore: row.partialScore },
-          outcome.result
-        )
-          ? [
-              {
-                questionScoreId: row.id,
-                status: outcome.result.status,
-                partialScore: outcome.result.partialScore,
-                clearsOverride: false,
-              },
-            ]
-          : []
-      )
-      const shadowedCount = outcomes.filter(
-        ({ outcome }) =>
-          outcome.kind === "computed" && outcome.shadowedSetItemIds.length > 0
-      ).length
-      if (shadowedCount > 0) {
-        toast.info(
-          `判定を決める項目が重なった答案が${shadowedCount}件あります。並びが先の項目を採りました`
-        )
-      }
-      if (writes.length > 0) await writeScores(writes)
-    },
-    [cropRegion, readRubricItems, writeScores]
   )
 
   const toggleItem = useCallback(

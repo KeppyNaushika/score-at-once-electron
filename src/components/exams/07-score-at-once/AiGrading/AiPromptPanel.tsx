@@ -54,7 +54,7 @@ export function AiPromptPanel({
           variant="outline"
           size="sm"
           onClick={() => setEditorTarget({ basePrompt: null })}
-          // 既定値（朱書きの指示の初期値）を読む前に開くと、空欄で始まってしまう
+          // 既定値（助言の文案の指示の初期値）を読む前に開くと、空欄で始まってしまう
           disabled={!settings}
         >
           <Plus className="h-4 w-4" />
@@ -157,7 +157,7 @@ function PromptContentPreview({ prompt }: { prompt: AiPromptRow }) {
     { key: "rubricText", label: "採点基準", text: prompt.rubricText },
     {
       key: "annotationInstruction",
-      label: "朱書きの指示",
+      label: "助言の文案の指示",
       text: prompt.annotationInstruction,
     },
   ] as const

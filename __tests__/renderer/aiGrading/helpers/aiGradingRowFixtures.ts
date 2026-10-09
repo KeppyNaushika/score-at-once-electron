@@ -48,6 +48,7 @@ export function makePrompt(overrides: Partial<AiPromptRow> = {}): AiPromptRow {
     sendModelAnswerImage: false,
     rubricText: "",
     annotationInstruction: "",
+    renderedRubricItems: "",
     revisionInstruction: "",
     revisionMessage: "",
     createdAt: FIXED_DATE,
@@ -69,6 +70,7 @@ export function makeAttempt(
     comment: "",
     annotationText: "",
     transcription: "",
+    observation: "",
     confidence: "high",
     errorMessage: "",
     inputTokens: 0,
@@ -80,6 +82,7 @@ export function makeAttempt(
     adoptedAt: null,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
+    rubricMatches: [],
     ...overrides,
   }
 }
@@ -104,6 +107,7 @@ export function makeRun(
     imageScale: 1,
     points: 4,
     resultPromptId: null,
+    notes: "",
     inputTokens: 0,
     outputTokens: 0,
     cacheReadTokens: 0,

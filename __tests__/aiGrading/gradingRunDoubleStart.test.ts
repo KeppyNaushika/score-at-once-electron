@@ -96,7 +96,9 @@ describe("2重の開始", () => {
     const { finished } = await firstStart
     await finished
 
-    expect(await testPrisma.aiGradingRun.count()).toBe(1)
+    expect(
+      await testPrisma.aiGradingRun.count({ where: { purpose: "grade" } })
+    ).toBe(1)
     expect(gradeRequests).toHaveLength(3)
   })
 
@@ -118,7 +120,9 @@ describe("2重の開始", () => {
     await expect(secondStart).rejects.toThrow(DOUBLE_START_MESSAGE)
     await firstStart
     expect(submittedBatches).toHaveLength(1)
-    expect(await testPrisma.aiGradingRun.count()).toBe(1)
+    expect(
+      await testPrisma.aiGradingRun.count({ where: { purpose: "grade" } })
+    ).toBe(1)
   })
 
   it("前の開始が終わってからの同じ組の再実行は受け付ける", async () => {
@@ -141,7 +145,9 @@ describe("2重の開始", () => {
     await secondRun.finished
 
     expect(secondRun.run.id).not.toBe(firstRun.run.id)
-    expect(await testPrisma.aiGradingRun.count()).toBe(2)
+    expect(
+      await testPrisma.aiGradingRun.count({ where: { purpose: "grade" } })
+    ).toBe(2)
   })
 
   it("開始が失敗したら、同じ組で再び始められる", async () => {
@@ -169,7 +175,9 @@ describe("2重の開始", () => {
     )
     await finished
 
-    expect(await testPrisma.aiGradingRun.count()).toBe(1)
+    expect(
+      await testPrisma.aiGradingRun.count({ where: { purpose: "grade" } })
+    ).toBe(1)
   })
 
   it("別の答案の組や別の教員の実行は、同時でも妨げない", async () => {
@@ -194,7 +202,9 @@ describe("2重の開始", () => {
     ])
     await Promise.all(startedRuns.map((startedRun) => startedRun.finished))
 
-    expect(await testPrisma.aiGradingRun.count()).toBe(3)
+    expect(
+      await testPrisma.aiGradingRun.count({ where: { purpose: "grade" } })
+    ).toBe(3)
     expect(gradeRequests).toHaveLength(6)
   })
 })

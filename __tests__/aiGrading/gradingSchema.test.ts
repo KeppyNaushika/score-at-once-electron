@@ -8,10 +8,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import {
-  buildGradingOutputSchema,
-  type GradingJsonSchema,
-} from "@/lib/shared/aiGrading/gradingSchema"
+import type { GradingJsonSchema } from "@/lib/shared/aiGrading/gradingSchema"
 import { buildStage1OutputSchema } from "@/lib/shared/aiGrading/stage1Grading"
 import { buildStage2OutputSchema } from "@/lib/shared/aiGrading/stage2Grouping"
 
@@ -71,7 +68,6 @@ const typesOf = (node: GradingJsonSchema): readonly string[] =>
 const RUBRIC_ITEM_ID = "8d3f2a4e-1b2c-4d5e-8f90-123456789abc"
 
 describe.each([
-  ["採点の出力", buildGradingOutputSchema()],
   ["1段目の出力（項目なし）", buildStage1OutputSchema([])],
   ["1段目の出力（項目あり）", buildStage1OutputSchema([RUBRIC_ITEM_ID])],
   ["2段目の出力", buildStage2OutputSchema(["A1", "A2"])],
@@ -114,22 +110,21 @@ describe.each([
   })
 })
 
-describe("採点の出力のスキーマの中身", () => {
-  const schema = buildGradingOutputSchema()
+describe("1段目の出力のスキーマの中身", () => {
+  const schema = buildStage1OutputSchema([RUBRIC_ITEM_ID])
 
   it("6項目を持ち、null を取る項目は型の union で表す", () => {
     expect(Object.keys(schema.properties ?? {}).sort()).toEqual(
       [
-        "annotation",
-        "comment",
         "confidence",
+        "matchedRubricItemIds",
+        "observation",
         "partialScore",
         "status",
         "transcription",
       ].sort()
     )
     expect(schema.properties?.partialScore.type).toEqual(["number", "null"])
-    expect(schema.properties?.annotation.type).toEqual(["string", "null"])
   })
 
   it("status は unscored と double_mark を返させない", () => {
@@ -143,7 +138,7 @@ describe("採点の出力のスキーマの中身", () => {
   })
 
   it("呼ぶたびに同じ内容を返す（送る固定部がバイト単位で変わらない）", () => {
-    expect(JSON.stringify(buildGradingOutputSchema())).toBe(
+    expect(JSON.stringify(buildStage1OutputSchema([RUBRIC_ITEM_ID]))).toBe(
       JSON.stringify(schema)
     )
   })

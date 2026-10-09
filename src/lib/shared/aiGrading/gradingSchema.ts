@@ -11,13 +11,12 @@
  * - null は型の union（`["number", "null"]`）で表す
  *
  * 範囲（0〜配点）や刻み（0.01）はスキーマで縛れないので、受け取った JSON は必ず
- * `gradingResponseValidator.ts` の検証を通す。規約は `__tests__/aiGrading/gradingSchema.test.ts`
+ * 各段の検証（`stage1ResponseValidator.ts`・`stage2ResponseValidator.ts`）を通す。規約は `__tests__/aiGrading/gradingSchema.test.ts`
  * が再帰的に検査する。
  *
  * main（事業者への送信）と renderer（画面の説明）の両方から引くので `src/lib/shared/` に置く。
  */
 
-import { AI_GRADING_CONFIDENCES } from "@/types/aiGrading.types"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 type JsonSchemaPrimitiveType =
@@ -62,38 +61,3 @@ export const strictObject = (
   required: Object.keys(properties),
   additionalProperties: false,
 })
-
-/** 採点の出力（答案1件への判定） */
-export function buildGradingOutputSchema(): GradingJsonSchema {
-  return strictObject({
-    transcription: {
-      type: "string",
-      description: "答案に書かれている内容の読み取り",
-    },
-    status: {
-      type: "string",
-      enum: AI_GRADING_OUTPUT_STATUSES,
-      description:
-        "判定。correct=正答 / partial=部分点 / incorrect=誤答 / no_answer=無答 / pending=保留",
-    },
-    partialScore: {
-      type: ["number", "null"],
-      description:
-        "partial のときは 0 から配点までの点（0.01 単位）。pending のときは、部分点の点数を決めきれないなら最も有力な仮の点、正答か誤答かを判断できないなら null。それ以外は null",
-    },
-    comment: {
-      type: "string",
-      description:
-        "教員向けの、その点にした理由だけ（不自然な記述があったときは、その報告も）",
-    },
-    annotation: {
-      type: ["string", "null"],
-      description: "生徒向けの朱書き（改行を入れない）。書かないときは null",
-    },
-    confidence: {
-      type: "string",
-      enum: AI_GRADING_CONFIDENCES,
-      description: "判定の確信度",
-    },
-  })
-}

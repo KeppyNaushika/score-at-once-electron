@@ -5,7 +5,10 @@
 
 import { describe, expect, it } from "vitest"
 
-import type { RubricItemForPrompt } from "@/lib/shared/aiGrading/rubricItemsText"
+import {
+  parseRubricItemIds,
+  toRubricItemForPrompt,
+} from "@/lib/shared/aiGrading/rubricItemsText"
 import {
   buildStage1OutputSchema,
   buildStage1RequestParts,
@@ -13,6 +16,7 @@ import {
   STAGE1_SYSTEM_TEXT,
 } from "@/lib/shared/aiGrading/stage1Grading"
 import { validateStage1Response } from "@/lib/shared/aiGrading/stage1ResponseValidator"
+import type { RubricItemForPrompt } from "@/types/rubric.types"
 
 const PROMPT = {
   questionText: "x + 3 = 5 を解け。",
@@ -46,7 +50,12 @@ const textOf = (parts: ReturnType<typeof buildStage1RequestParts>) =>
 
 describe("1段目の文面", () => {
   it("同じ入力からは同じ固定部になる", () => {
-    const input = { prompt: PROMPT, points: 3, rubricItems: RUBRIC_ITEMS }
+    const input = {
+      prompt: PROMPT,
+      points: 3,
+      rubricItems: RUBRIC_ITEMS,
+      teacherInstructions: ["途中式が無ければ誤答"],
+    }
     expect(JSON.stringify(buildStage1RequestParts(input))).toBe(
       JSON.stringify(buildStage1RequestParts(input))
     )
@@ -64,6 +73,7 @@ describe("1段目の文面", () => {
         prompt: PROMPT,
         points: 3,
         rubricItems: RUBRIC_ITEMS,
+        teacherInstructions: [],
       })
     )
     expect(withItems).toContain("## ルーブリック項目")
@@ -73,7 +83,12 @@ describe("1段目の文面", () => {
     expect(withItems).toContain("判定を部分点（1点）にする")
 
     const withoutItems = textOf(
-      buildStage1RequestParts({ prompt: PROMPT, points: 3, rubricItems: [] })
+      buildStage1RequestParts({
+        prompt: PROMPT,
+        points: 3,
+        rubricItems: [],
+        teacherInstructions: [],
+      })
     )
     expect(withoutItems).not.toContain("ルーブリック項目")
   })
@@ -83,6 +98,7 @@ describe("1段目の文面", () => {
       prompt: PROMPT,
       points: 3,
       rubricItems: [],
+      teacherInstructions: [],
       modelAnswerImage: { mediaType: "image/png", base64Data: "bW9kZWw=" },
     })
     expect(parts.fixedParts.map((part) => part.kind)).toEqual([
@@ -90,6 +106,60 @@ describe("1段目の文面", () => {
       "image",
       "text",
     ])
+  })
+})
+
+describe("教員の指示と、送った項目の一覧", () => {
+  it("「その他」に書いた指示は「教員の指示」の節として入り、無ければ節ごと省く", () => {
+    const withInstructions = textOf(
+      buildStage1RequestParts({
+        prompt: PROMPT,
+        points: 3,
+        rubricItems: [],
+        teacherInstructions: ["単位が無ければ誤答", " 途中式は問わない "],
+      })
+    )
+    expect(withInstructions).toContain(
+      "## 教員の指示\n- 単位が無ければ誤答\n- 途中式は問わない"
+    )
+    expect(STAGE1_SYSTEM_TEXT).toContain("「教員の指示」の節")
+    const withoutInstructions = textOf(
+      buildStage1RequestParts({
+        prompt: PROMPT,
+        points: 3,
+        rubricItems: [],
+        teacherInstructions: [],
+      })
+    )
+    expect(withoutInstructions).not.toContain("教員の指示")
+  })
+
+  it("送った項目の一覧の文から、項目の id を送った順に読み戻せる", () => {
+    const rendered = textOf(
+      buildStage1RequestParts({
+        prompt: PROMPT,
+        points: 3,
+        rubricItems: RUBRIC_ITEMS,
+        teacherInstructions: [],
+      })
+    )
+    expect(parseRubricItemIds(rendered)).toEqual(
+      RUBRIC_ITEMS.map((rubricItem) => rubricItem.id)
+    )
+    expect(parseRubricItemIds("")).toEqual([])
+  })
+
+  it("項目の行の種類・判定を値の集合へ絞る（知らない判定は null）", () => {
+    expect(
+      toRubricItemForPrompt({
+        id: "item",
+        label: "x",
+        effectKind: "set",
+        pointDelta: null,
+        setStatus: "double_mark",
+        setScore: null,
+      })
+    ).toMatchObject({ effectKind: "set", setStatus: null })
   })
 })
 

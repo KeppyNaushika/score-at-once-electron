@@ -292,6 +292,11 @@ const AUDIT_ACTIONS = {
     verb: "delete",
     label: "AI の古い判定を消しました",
   },
+  "exam.ai_proposal.answer": {
+    category: "exam",
+    verb: "update",
+    label: "AI の項目の案に答えました",
+  },
 
   // ── ルーブリック採点（docs/vlm-grading-design.md §4）。項目は設問ごとに採点者の間で共有する
   "exam.rubric_item.create": {

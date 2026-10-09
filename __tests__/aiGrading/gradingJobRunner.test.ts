@@ -22,7 +22,7 @@ import { createBatchCollector } from "@/electron-src/lib/aiGrading/batchPoller"
 import { createGradingJobRunner } from "@/electron-src/lib/aiGrading/gradingJobRunner"
 import { GradingProviderError } from "@/electron-src/lib/aiGrading/providers/providerShared"
 import type { ProviderGradingResponse } from "@/electron-src/lib/aiGrading/providers/types"
-import { AI_GRADING_TEMPLATE_VERSION } from "@/lib/shared/aiGrading/promptBuilder"
+import { STAGE1_TEMPLATE_VERSION } from "@/lib/shared/aiGrading/stage1Grading"
 
 import {
   cleanupTestDatabase,
@@ -96,7 +96,7 @@ describe("その場の採点", () => {
     expect(storedRun).toMatchObject({
       status: "ended",
       purpose: "grade",
-      templateVersion: AI_GRADING_TEMPLATE_VERSION,
+      templateVersion: STAGE1_TEMPLATE_VERSION,
       submittedClientId: "client-this-machine",
       userId: fixture.exam.user.id,
     })
@@ -109,9 +109,10 @@ describe("その場の採点", () => {
       expect(attempt).toMatchObject({
         state: "succeeded",
         status: "partial",
-        comment: PARTIAL_JUDGEMENT.comment,
-        annotationText: PARTIAL_JUDGEMENT.annotation,
+        comment: "",
+        annotationText: "",
         transcription: PARTIAL_JUDGEMENT.transcription,
+        observation: PARTIAL_JUDGEMENT.observation,
         confidence: "high",
         inputTokens: 100,
         outputTokens: 20,
@@ -135,8 +136,12 @@ describe("その場の採点", () => {
       "## 配点\\n5点"
     )
 
+    // 進み具合の最後の通知（1段目のあとに2段目の通知が続くので、1段目の run の分を見る）
     const notifyProgress = vi.mocked(dependencies.notifyProgress)
-    expect(notifyProgress.mock.calls.at(-1)?.[0]).toMatchObject({
+    const gradeRunProgress = notifyProgress.mock.calls
+      .map(([progress]) => progress)
+      .filter((progress) => progress.runId === run.id)
+    expect(gradeRunProgress.at(-1)).toMatchObject({
       runId: run.id,
       status: "ended",
       total: 3,
@@ -386,7 +391,6 @@ describe("バッチ", () => {
           ...PARTIAL_JUDGEMENT,
           status: "correct",
           partialScore: null,
-          annotation: null,
         }),
       },
       // この run のものでない custom_id は無視する
@@ -412,7 +416,7 @@ describe("バッチ", () => {
     expect(attemptById.get(secondAttempt.id)).toMatchObject({
       state: "succeeded",
       status: "correct",
-      annotationText: "",
+      observation: PARTIAL_JUDGEMENT.observation,
     })
     expect(attemptById.get(thirdAttempt.id)?.state).toBe("expired")
     const collectedRun = await testPrisma.aiGradingRun.findUniqueOrThrow({
@@ -420,6 +424,11 @@ describe("バッチ", () => {
     })
     expect(collectedRun.status).toBe("ended")
     expect(endedFake.cleanupBatch).toHaveBeenCalledWith("batch_fake_1")
+    // 回収したら、そのまま2段目（項目の案）を続ける
+    expect(endedFake.groupingRequests).toHaveLength(1)
+    expect(
+      await testPrisma.aiGradingRun.count({ where: { purpose: "group" } })
+    ).toBe(1)
 
     // 取り込み済みの run は2度取り込まない
     await endedCollector.pollOnce()

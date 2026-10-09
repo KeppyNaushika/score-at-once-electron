@@ -45,6 +45,7 @@ function createGradingRequest(
       { kind: "image", mediaType: "image/png", base64Data: answerImage },
     ],
     outputSchema: OUTPUT_SCHEMA,
+    outputSchemaName: "stage1_grading",
   }
 }
 
@@ -187,7 +188,7 @@ describe("openaiProvider", () => {
       expect(params.text).toEqual({
         format: {
           type: "json_schema",
-          name: "grading_result",
+          name: "stage1_grading",
           schema: OUTPUT_SCHEMA,
           strict: true,
         },

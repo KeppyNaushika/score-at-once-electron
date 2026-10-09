@@ -11,6 +11,7 @@ import { AI_GRADING_SENDING_IMAGE_SCALE } from "@/types/aiGrading.types"
 
 import type { AiPromptRow, AiRunSettings } from "./types"
 import { estimateRunCost, type RunCostEstimate } from "./utils/costEstimate"
+import { estimateGroupingCost } from "./utils/groupingCostEstimate"
 
 interface AiRunCostEstimateProps {
   prompt: AiPromptRow
@@ -47,7 +48,8 @@ function describeEstimateBasis(basis: RunCostEstimate["basis"]): string[] {
 
 /**
  * 件数と費用の概算（送る画像の大きさと過去の実行は main が返し、トークン数と金額は
- * 利用者が入れた単価でここで求める）。概算が警告額を超えるときは警告する（送信は止めない）
+ * 利用者が入れた単価でここで求める）。1段目のあとに自動で続く2段目（項目の案・文字だけ1回）の
+ * 概算も足す。概算が警告額を超えるときは警告する（送信は止めない）
  */
 export function AiRunCostEstimate({
   prompt,
@@ -87,6 +89,11 @@ export function AiRunCostEstimate({
   }
 
   const { answerImages, questionImage, modelAnswerImage } = estimateQuery.data
+  const promptCharacterCount =
+    prompt.questionText.length +
+    prompt.modelAnswerText.length +
+    prompt.rubricText.length +
+    prompt.annotationInstruction.length
   const estimate = estimateRunCost(
     {
       provider: runSettings.provider,
@@ -99,20 +106,32 @@ export function AiRunCostEstimate({
       fixedImages: [questionImage, modelAnswerImage].flatMap((image) =>
         image ? [image] : []
       ),
-      promptCharacterCount:
-        prompt.questionText.length +
-        prompt.modelAnswerText.length +
-        prompt.rubricText.length +
-        prompt.annotationInstruction.length,
+      promptCharacterCount,
       measuredRuns: measuredRunsQuery.data ?? [],
     },
     pricing
   )
   const { cost, usage } = estimate
+  const grouping = estimateGroupingCost(
+    {
+      provider: runSettings.provider,
+      model: runSettings.model,
+      effort: runSettings.effort,
+      answerCount: answerImages.length,
+      promptCharacterCount:
+        promptCharacterCount + prompt.renderedRubricItems.length,
+      measuredRuns: measuredRunsQuery.data ?? [],
+    },
+    pricing
+  )
+  const totalCostUsd =
+    cost.isPriced && grouping.cost.isPriced
+      ? cost.costUsd + grouping.cost.costUsd
+      : null
   const isOverBudget =
-    cost.isPriced &&
+    totalCostUsd !== null &&
     budgetWarningUsd !== null &&
-    cost.costUsd > budgetWarningUsd
+    totalCostUsd > budgetWarningUsd
 
   return (
     <div className="rounded-md border bg-muted/40 p-3 text-sm">
@@ -131,12 +150,42 @@ export function AiRunCostEstimate({
           {usage.outputTokens.toLocaleString()}
         </span>
       </div>
-      <div className="flex justify-between font-medium">
-        <span>費用（概算）</span>
+      <div className="flex justify-between">
+        <span>答案ごとの判定（概算）</span>
         <span className="tabular-nums" data-testid="ai-run-estimated-cost">
           {cost.isPriced
             ? formatUsd(cost.costUsd)
             : MISSING_PRICE_LABELS[cost.missing]}
+        </span>
+      </div>
+      <div className="flex justify-between text-muted-foreground">
+        <span>
+          続けて作る項目の案（文字だけ1回
+          {grouping.outputBasis.kind === "measured"
+            ? `・過去 ${grouping.outputBasis.sampleCount} 回の実測から`
+            : "・目安"}
+          ）
+        </span>
+        <span
+          className="tabular-nums"
+          data-testid="ai-run-estimated-grouping-cost"
+        >
+          {grouping.cost.isPriced
+            ? formatUsd(grouping.cost.costUsd)
+            : MISSING_PRICE_LABELS[grouping.cost.missing]}
+        </span>
+      </div>
+      <div className="flex justify-between font-medium">
+        <span>費用（概算）</span>
+        <span
+          className="tabular-nums"
+          data-testid="ai-run-estimated-total-cost"
+        >
+          {totalCostUsd !== null
+            ? formatUsd(totalCostUsd)
+            : MISSING_PRICE_LABELS[
+                cost.isPriced ? "model_price" : cost.missing
+              ]}
         </span>
       </div>
       {!cost.isPriced && (

@@ -123,7 +123,7 @@ describe("adoptAiGradingAttempts", () => {
     const questionScore = await ownScore(attempt.examStudentId)
     expect(questionScore).toMatchObject({
       status: "partial",
-      comment: PARTIAL_JUDGEMENT.comment,
+      comment: PARTIAL_JUDGEMENT.observation,
     })
     expect(questionScore?.partialScore?.toNumber()).toBe(3)
     expect(questionScore?.drawingAnnotations).toHaveLength(0)
@@ -305,14 +305,16 @@ describe("listAiGradingRunsByCropRegion", () => {
     await gradeAll()
     await gradeAll(fixture.otherUser.id)
 
-    const ownRuns = await listAiGradingRunsByCropRegion(
-      fixture.cropRegion.id,
-      fixture.exam.user.id
-    )
-    const allRuns = await listAiGradingRunsByCropRegion(
-      fixture.cropRegion.id,
-      null
-    )
+    // 1段目のあとに自動で続いた2段目（項目の案）の実行も並ぶので、1段目だけを見る
+    const ownRuns = (
+      await listAiGradingRunsByCropRegion(
+        fixture.cropRegion.id,
+        fixture.exam.user.id
+      )
+    ).filter((run) => run.purpose === "grade")
+    const allRuns = (
+      await listAiGradingRunsByCropRegion(fixture.cropRegion.id, null)
+    ).filter((run) => run.purpose === "grade")
 
     expect(ownRuns).toHaveLength(1)
     expect(ownRuns[0].attempts).toHaveLength(3)
@@ -328,10 +330,9 @@ describe("listAiGradingRunsByExam", () => {
     await gradeAll()
     await gradeAll(fixture.otherUser.id)
 
-    const ownRuns = await listAiGradingRunsByExam(
-      fixture.exam.exam.id,
-      fixture.exam.user.id
-    )
+    const ownRuns = (
+      await listAiGradingRunsByExam(fixture.exam.exam.id, fixture.exam.user.id)
+    ).filter((run) => run.purpose === "grade")
     const otherExamRuns = await listAiGradingRunsByExam(
       "exam-not-exists",
       fixture.exam.user.id

@@ -511,7 +511,7 @@ describe("providerCredentialStore", () => {
       })
     })
 
-    it("朱書きの指示の既定の文言は、未設定なら空で、入れた文言（複数行も）をそのまま残す", () => {
+    it("助言の文案の指示の既定の文言は、未設定なら空で、入れた文言（複数行も）をそのまま残す", () => {
       const store = createStore()
       // アプリは文言を決め打ちしない
       expect(store.getSettings().defaultAnnotationInstruction).toBe("")
@@ -531,7 +531,7 @@ describe("providerCredentialStore", () => {
       expect(createStore().getSettings().defaultAnnotationInstruction).toBe("")
     })
 
-    it("朱書きの指示の既定の文言が文字列でなければ、変更を拒否し、読むときは空として扱う", () => {
+    it("助言の文案の指示の既定の文言が文字列でなければ、変更を拒否し、読むときは空として扱う", () => {
       const store = createStore()
       expect(
         getErrorCode(() =>

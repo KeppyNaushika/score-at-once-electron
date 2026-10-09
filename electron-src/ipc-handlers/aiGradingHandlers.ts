@@ -1,7 +1,7 @@
 /**
  * AI 採点（VLM 採点）の IPC（docs/vlm-grading-design.md §10）。
  *
- * プロンプト・画像の測定・実行・採用の口。事業者の同意とキーの口（`aiProvider:*`）は
+ * プロンプト・画像の測定・実行（1段目・2段目）・採用・問いかけ（項目の案と答え）の口。事業者の同意とキーの口（`aiProvider:*`）は
  * 別のファイルにある。**API キーを返すチャンネルはここにも作らない**（キーは
  * `aiGradingMainServices.ts` の中で復号され、事業者のクライアントへ渡るだけ）。
  *
@@ -31,6 +31,11 @@ import {
   getAsbModelAnswerSource,
   listAiPromptsByCropRegion,
 } from "../lib/prisma/aiPrompt"
+import {
+  answerAiRubricProposal,
+  type AnswerAiRubricProposalInput,
+  listAiRubricProposalRunsByCropRegion,
+} from "../lib/prisma/aiRubricProposal"
 import { getCurrentActorUserId } from "../lib/prisma/auditActor"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
@@ -92,7 +97,17 @@ export const aiGradingHandlers = {
     return run
   },
 
-  /** 中止する（実行した教員だけ） */
+  /**
+   * 1段目の実行から2段目（項目の案）を作り直す（外部へ送る）。1段目のあとは自動で続くので、
+   * これは自動の2段目が失敗したときの送り直し。終わるまで待って2段目の run を返す
+   */
+  "aiGrading:startGroupingRun": async (gradeRunId: string) =>
+    getAiGradingServices().jobRunner.startGroupingRun(
+      gradeRunId,
+      requireActorUserId()
+    ),
+
+  /** 中止する（実行した教員だけ。2段目も止められる） */
   "aiGrading:cancelRun": async (runId: string) =>
     getAiGradingServices().jobRunner.cancelRun(runId, requireActorUserId()),
 
@@ -130,4 +145,20 @@ export const aiGradingHandlers = {
     adoptions: AiGradingAdoption[]
     overwrite: boolean
   }) => adoptAiGradingAttempts(input, requireActorUserId()),
+
+  // ── 問いかけ（§3-5） ────────────────────────────────────────
+  /**
+   * 設問の、自分の2段目の実行と項目の案（選択肢・答案（試行付き）・答えの木）。
+   * 問いかけは実行した教員にだけ出すので、自分の分だけを返す
+   */
+  "aiGrading:listProposals": async (cropRegionId: string) =>
+    listAiRubricProposalRunsByCropRegion(cropRegionId, requireActorUserId()),
+
+  /**
+   * 問いかけに答える。選択肢なら項目を作り（既存の項目に当たる案なら作らない）、渡した答案の
+   * 自分の採点行に当てる。「その他」なら指示を記録する。当て外ししたマスの採点行を返すので、
+   * 点の計算と朱書きの合わせは renderer が続けて行う
+   */
+  "aiGrading:answerProposal": async (input: AnswerAiRubricProposalInput) =>
+    answerAiRubricProposal(input, requireActorUserId()),
 } satisfies HandlerMap

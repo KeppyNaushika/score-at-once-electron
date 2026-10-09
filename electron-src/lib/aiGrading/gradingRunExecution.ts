@@ -5,6 +5,8 @@
  * 結果を試行へ書いて run の状態を進める。run を作るのと中止の口は `gradingJobRunner.ts`。
  */
 
+import type { Stage1ValidationContext } from "@/lib/shared/aiGrading/stage1ResponseValidator"
+
 import {
   closePendingAiGradingAttempts,
   recordAiGradingAttemptResult,
@@ -71,11 +73,12 @@ export async function processRealtimeAttempts(
   input: RunExecutionInput & {
     controller: AbortController
     concurrency: number
-    maxPoints: number | null
+    /** 応答の検証に使う、送ったときの配点と項目の id */
+    validationContext: Stage1ValidationContext
   }
-): Promise<void> {
+): Promise<"ended" | "canceled" | "failed"> {
   const { runId, attempts, provider, buildRequest, tracker, controller } = input
-  const { maxPoints } = input
+  const { validationContext } = input
   const runLimited = createConcurrencyLimiter(Math.max(1, input.concurrency))
   // 閉包の中で書き換えるので、箱に入れて持つ（素の let だと型が null に絞られたままになる）
   const fatal: { error: GradingProviderError | null } = { error: null }
@@ -88,7 +91,7 @@ export async function processRealtimeAttempts(
       // 画像を切り出している間に中止されたら送らない
       if (controller.signal.aborted) return
       const response = await provider.grade(request, controller.signal)
-      result = toAttemptResult(response, maxPoints)
+      result = toAttemptResult(response, validationContext)
     } catch (error) {
       if (isFatalProviderError(error)) {
         fatal.error = error
@@ -130,6 +133,7 @@ export async function processRealtimeAttempts(
   }
   await updateAiGradingRun(runId, { status, endedAt: new Date() })
   tracker.finish(status)
+  return status
 }
 
 /** バッチを預ける。画像を用意できなかった試行はその場で失敗にする。預けられなければ投げる */

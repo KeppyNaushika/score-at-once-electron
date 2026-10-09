@@ -1,18 +1,24 @@
 /**
- * VLM が返した採点の JSON の検証（docs/vlm-grading-design.md §5）
+ * 1段目の応答の、判定と点の規則と形の検証（docs/vlm-grading-design.md §6-1）。
+ * 判定と点の規則（`responseRules.ts`）は2段目の選択肢の点とも共有する
  */
 
 import { describe, expect, it } from "vitest"
 
-import { validateGradingResponse } from "@/lib/shared/aiGrading/gradingResponseValidator"
+import { validateStage1Response } from "@/lib/shared/aiGrading/stage1ResponseValidator"
+
+const validateGradingResponse = (
+  response: unknown,
+  context: { maxPoints: number | null }
+) => validateStage1Response(response, { ...context, rubricItemIds: [] })
 
 /** 検証を通る応答（各ケースはここから1点だけ変える） */
 const validResponse = {
   transcription: "x = 3",
+  observation: "模範解答と同じ。",
   status: "correct",
   partialScore: null,
-  comment: "式と答えが合っている",
-  annotation: null,
+  matchedRubricItemIds: [],
   confidence: "high",
 }
 
@@ -26,7 +32,7 @@ const withoutField = (field: string) =>
     Object.entries(validResponse).filter(([key]) => key !== field)
   )
 
-describe("validateGradingResponse: 通るもの", () => {
+describe("1段目の応答: 通るもの", () => {
   it.each([
     ["正答", withFields({}), 5],
     ["誤答", withFields({ status: "incorrect" }), 5],
@@ -45,7 +51,6 @@ describe("validateGradingResponse: 通るもの", () => {
       withFields({ status: "pending", partialScore: 5 }),
       5,
     ],
-    ["注釈つき", withFields({ annotation: "符号の誤り" }), 5],
     ["配点の無い設問の正答", withFields({}), null],
   ])("%s", (_label, response, maxPoints) => {
     const result = validateGradingResponse(response, { maxPoints })
@@ -53,7 +58,7 @@ describe("validateGradingResponse: 通るもの", () => {
   })
 })
 
-describe("validateGradingResponse: 直して受け取るもの", () => {
+describe("1段目の応答: 直して受け取るもの", () => {
   it("0.01 より細かい点は 0.01 単位に丸め、notes に残す", () => {
     const result = validateGradingResponse(
       withFields({ status: "partial", partialScore: 2.456 }),
@@ -109,7 +114,7 @@ describe("validateGradingResponse: 直して受け取るもの", () => {
   })
 })
 
-describe("validateGradingResponse: 配点の無い設問の保留", () => {
+describe("1段目の応答: 配点の無い設問の保留", () => {
   it("点の無い保留は、そのまま点の無い保留として受け取る", () => {
     const result = validateGradingResponse(
       withFields({ status: "pending", partialScore: null }),
@@ -123,7 +128,7 @@ describe("validateGradingResponse: 配点の無い設問の保留", () => {
   })
 })
 
-describe("validateGradingResponse: 拒むもの", () => {
+describe("1段目の応答: 拒むもの", () => {
   it.each([
     ["オブジェクトでない（配列）", [validResponse], 5],
     ["オブジェクトでない（文字列）", "correct", 5],
@@ -175,8 +180,8 @@ describe("validateGradingResponse: 拒むもの", () => {
     ],
     ["配点の無い設問に点の無い部分点", withFields({ status: "partial" }), null],
     ["transcription が文字列でない", withFields({ transcription: null }), 5],
-    ["comment が文字列でない", withFields({ comment: 3 }), 5],
-    ["annotation が文字列でも null でもない", withFields({ annotation: 3 }), 5],
+    ["observation が文字列でない", withFields({ observation: 3 }), 5],
+    ["朱書きを返した", withFields({ annotation: "符号の誤り" }), 5],
     ["confidence が知らない値", withFields({ confidence: "certain" }), 5],
   ])("%s", (_label, response, maxPoints) => {
     const result = validateGradingResponse(response, { maxPoints })
@@ -187,7 +192,7 @@ describe("validateGradingResponse: 拒むもの", () => {
 
   it("外れた理由をすべて返す（1つ目で止めない）", () => {
     const result = validateGradingResponse(
-      withFields({ comment: 3, confidence: "certain", extra: true }),
+      withFields({ observation: 3, confidence: "certain", extra: true }),
       { maxPoints: 5 }
     )
     expect(result.ok).toBe(false)

@@ -46,7 +46,7 @@ export type PromptPart =
     }
 
 /**
- * 1件の答案（1マス）を採点させる依頼。
+ * 事業者への依頼1件。1段目は答案1件（1マス）、2段目は設問1つ（画像なし）。
  *
  * `fixedParts` はキャッシュさせる前置き（問題文・模範解答・採点基準・配点など）で、
  * 同じ入力からバイト単位で同じ内容になるように組む（時刻・id・氏名を入れない）。
@@ -64,8 +64,10 @@ export interface GradingRequest {
   systemText: string
   fixedParts: PromptPart[]
   variableParts: PromptPart[]
-  /** 出力の JSON スキーマ（全事業者が受け付ける共通の書き方だけを使う。設計 §6-2） */
+  /** 出力の JSON スキーマ（全事業者が受け付ける共通の書き方だけを使う。設計 §7-2） */
   outputSchema: JsonObject
+  /** 出力の形の名前（英数字と `_`。OpenAI の json_schema の name に使う。段ごとに違う） */
+  outputSchemaName: string
 }
 
 /**

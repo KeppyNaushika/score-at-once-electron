@@ -10,7 +10,7 @@
  * `uncoveredAnswerKeys` に返す（外れではなく「判断できない」として残す。§6-2）。
  */
 
-import { isRecord, readBoundedString } from "./gradingResponseValidator"
+import { isRecord, readBoundedString } from "./responseRules"
 import {
   buildStage2OutputSchema,
   STAGE2_ADVICE_MAX_LENGTH,

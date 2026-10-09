@@ -30,7 +30,7 @@ interface AiPromptEditorDialogProps {
   /** 写す元の版（「編集」から開いたとき）。新規追加なら null で、白紙から書く */
   basePrompt: AiPromptRow | null
   /**
-   * 新規追加のとき「朱書きの指示」に最初から入れる文言（「AI採点」の画面の「既定値」タブで決める）。
+   * 新規追加のとき「助言の文案の指示」に最初から入れる文言（「AI採点」の画面の「既定値」タブで決める）。
    * 元の版を写すときは使わず、元の版の値を引き継ぐ
    */
   defaultAnnotationInstruction: string
@@ -165,16 +165,19 @@ function AiPromptEditorForm({
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="ai-prompt-annotation-instruction">朱書きの指示</Label>
+          <Label htmlFor="ai-prompt-annotation-instruction">
+            助言の文案の指示
+          </Label>
           <Textarea
             id="ai-prompt-annotation-instruction"
             value={annotationInstruction}
             onChange={(event) => setAnnotationInstruction(event.target.value)}
             rows={3}
-            placeholder="例: 部分点の答案にだけ、足りない根拠を20字以内で。正答と誤答には書かない。「です・ます」で"
+            placeholder="例: 20字以内で、何を直せばよいかを書く。「です・ます」で"
           />
           <p className="text-xs text-muted-foreground">
-            朱書き（生徒向けの注釈）の量・書き方・どの答案に入れるか。空ならアプリ共通の決まりだけで書きます。解答欄の大きさから決まる字数の上限は、指示があっても上限として伝えます
+            AI
+            が項目の案に添える、生徒向けの助言の文案の書き方（長さ・言い回しなど）。空ならアプリ共通の決まり（一文で、何をすればよいかを書く）だけで書きます
           </p>
         </div>
       </div>

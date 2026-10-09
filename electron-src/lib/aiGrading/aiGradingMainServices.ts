@@ -18,6 +18,7 @@ import { getAbsolutePathFromSharedFiles } from "../dataManager"
 import { loadSyncConfig } from "../sync/syncConfig"
 import { createBatchCollector, startBatchPolling } from "./batchPoller"
 import { createGradingJobRunner } from "./gradingJobRunner"
+import { createGroupingRunner } from "./groupingRunner"
 import type { AiGradingJobDependencies } from "./jobDependencies"
 import { getProviderCredentialStore } from "./providerCredentialStore"
 import { createGradingProvider } from "./providers/createGradingProvider"
@@ -88,9 +89,11 @@ let services: {
 /** アプリで1つだけ使うジョブの口（走っている run の中止の口を持つので1つに限る） */
 export function getAiGradingServices() {
   if (!services) {
+    // 2段目の口は1つにして、その場の採点とバッチの回収で共有する
+    const groupingRunner = createGroupingRunner(dependencies)
     services = {
-      jobRunner: createGradingJobRunner(dependencies),
-      batchCollector: createBatchCollector(dependencies),
+      jobRunner: createGradingJobRunner(dependencies, groupingRunner),
+      batchCollector: createBatchCollector(dependencies, groupingRunner),
     }
   }
   return { ...services, dependencies }

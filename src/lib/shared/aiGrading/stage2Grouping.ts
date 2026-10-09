@@ -9,6 +9,10 @@
  */
 
 import type { AiGradingConfidence } from "@/types/aiGrading.types"
+import {
+  RUBRIC_EFFECT_KINDS,
+  type RubricItemForPrompt,
+} from "@/types/rubric.types"
 
 import {
   AI_GRADING_OUTPUT_STATUSES,
@@ -26,9 +30,8 @@ import {
 import {
   formatRubricItemsSection,
   OUTPUT_STATUS_LABELS,
-  RUBRIC_EFFECT_KINDS,
-  type RubricItemForPrompt,
 } from "./rubricItemsText"
+import { formatTeacherInstructionsSection } from "./stage1Grading"
 import { STAGE2_SYSTEM_TEXT } from "./stage2SystemText"
 
 /** 2段目の指示の版 */
@@ -96,9 +99,6 @@ export function buildStage2RequestParts(
   input: Stage2RequestInput
 ): GradingRequestParts & { answerKeys: string[] } {
   const { prompt, answers } = input
-  const instructionsText = input.teacherInstructions
-    .map((instruction) => `- ${instruction.trim()}`)
-    .join("\n")
   return {
     systemText: STAGE2_SYSTEM_TEXT,
     fixedParts: joinPromptSegments([
@@ -108,7 +108,7 @@ export function buildStage2RequestParts(
       textSection("採点基準", prompt.rubricText),
       textSection("助言の文案の指示", prompt.annotationInstruction),
       formatRubricItemsSection(input.rubricItems),
-      textSection("教員の指示", instructionsText),
+      formatTeacherInstructionsSection(input.teacherInstructions),
       `## 答案の一覧（${answers.length}件）\n${answers.map(formatAnswer).join("\n\n")}`,
     ]),
     answerKeys: answers.map((_answer, answerIndex) =>
