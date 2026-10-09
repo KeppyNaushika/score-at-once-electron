@@ -54,7 +54,7 @@ export const AI_GRADING_SCORED_STATUSES = [
 ] as const satisfies readonly AiGradingOutputStatus[]
 
 /** 全項目を required にし、余分な項目を許さないオブジェクトの節を作る */
-const strictObject = (
+export const strictObject = (
   properties: Readonly<Record<string, GradingJsonSchema>>
 ): GradingJsonSchema => ({
   type: "object",

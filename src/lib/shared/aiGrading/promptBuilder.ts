@@ -72,7 +72,7 @@ export function formatPointsSection(points: number | null): string {
 }
 
 /** 1つの節（見出しと本文）。本文が空なら null（節ごと省く） */
-function textSection(heading: string, body: string): string | null {
+export function textSection(heading: string, body: string): string | null {
   const trimmedBody = body.trim()
   return trimmedBody === "" ? null : `## ${heading}\n${trimmedBody}`
 }
