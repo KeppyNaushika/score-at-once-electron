@@ -7,6 +7,8 @@ import { useCallback, useMemo, useState } from "react"
 import { AiGradingMode } from "@/components/exams/07-score-at-once/AiGrading/AiGradingMode"
 import { useUnreflectedAiQuestionIds } from "@/components/exams/07-score-at-once/AiGrading/hooks/useUnreflectedAiQuestionIds"
 import { OMRAutoScoringModal } from "@/components/exams/07-score-at-once/OMRRecognition/OMRAutoScoringModal"
+import { useRubricScreen } from "@/components/exams/07-score-at-once/Rubric/hooks/useRubricScreen"
+import { RubricPanel } from "@/components/exams/07-score-at-once/Rubric/RubricPanel"
 import {
   ShortcutProvider,
   useShortcutContext,
@@ -96,6 +98,7 @@ function ScoringMainViewContent() {
     pendingDecisionCount,
     questionProgress,
     questionScoresByCropRegionId,
+    rubricAnswerFlow,
     scoringBehavior,
     selectMode,
     selectableCropRegions,
@@ -129,6 +132,18 @@ function ScoringMainViewContent() {
     isAiGradingAvailable: unlockedProviders.length > 0,
   })
   const { keyBindings } = useShortcutContext()
+  /** 今の設問がルーブリック採点（減点・加点方式）なら、左の項目のパネルとマスの印を出す */
+  const {
+    rubricCropRegion,
+    questionScores: currentQuestionScores,
+    renderRubricCellMark,
+  } = useRubricScreen({
+    examId,
+    currentUserId: currentUser.id,
+    gradingMode,
+    currentCropRegion,
+    questionScoresByCropRegionId,
+  })
   const queryClient = useQueryClient()
   /** 設問一覧のオレンジの印（AI の判定が未反映）。どの採点モードでも出す */
   const unreflectedAiQuestionIds = useUnreflectedAiQuestionIds({
@@ -260,6 +275,19 @@ function ScoringMainViewContent() {
         </div>
       ) : (
         <div className="relative flex h-full min-h-0 flex-1 overflow-hidden">
+          {/* 左のルーブリック項目（減点・加点方式の設問だけ。直接採点の設問では出さない） */}
+          {rubricCropRegion && (
+            <RubricPanel
+              key={rubricCropRegion.id}
+              examId={examId}
+              cropRegion={rubricCropRegion}
+              currentUserId={currentUser.id}
+              questionScores={currentQuestionScores}
+              selectedExamStudentIds={rubricAnswerFlow.selectedExamStudentIds}
+              onAdvance={rubricAnswerFlow.advanceToNextAnswer}
+              onScored={rubricAnswerFlow.markExamStudentsScored}
+            />
+          )}
           <div className="min-w-0 flex-1">
             <ScoringContentArea
               gradingMode={gradingMode}
@@ -296,6 +324,7 @@ function ScoringMainViewContent() {
               scoringOperationMode={effectiveMode}
               mouseBrush={mouseBrush}
               onMouseScoring={handleMouseScoring}
+              renderBeforeStatusMark={renderRubricCellMark}
             />
           </div>
 
@@ -309,11 +338,7 @@ function ScoringMainViewContent() {
                 examId={examId}
                 cropRegions={selectableCropRegions}
                 currentCropRegion={currentCropRegion}
-                currentQuestionScores={
-                  currentCropRegion
-                    ? questionScoresByCropRegionId.get(currentCropRegion.id)
-                    : undefined
-                }
+                currentQuestionScores={currentQuestionScores}
                 onCropRegionChange={(cropRegion) => {
                   setCurrentCropRegionId(cropRegion?.id || null)
                 }}

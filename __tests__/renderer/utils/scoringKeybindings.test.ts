@@ -49,6 +49,22 @@ describe("既定のキー割り当て", () => {
     ).toBe(false)
   })
 
+  it("選択の場面のキーは、採点中・部分点の入力欄のキーと重ねられる", () => {
+    // 数字は採点中は部分点の入力、入力欄の中は数字の入力、選択の場面は項目の番号
+    expect(canShareKey("choice.select1", "scoring.openPartialWith1")).toBe(true)
+    expect(canShareKey("choice.select1", "modal.input1")).toBe(true)
+    // ↑↓ は採点中は生徒の移動、選択の場面は項目の移動
+    expect(canShareKey("choice.prev", "navigation.prevStudentArrow")).toBe(true)
+    // Esc は入力欄を閉じる・選択の場面を抜ける
+    expect(canShareKey("choice.exit", "modal.cancel")).toBe(true)
+    // 部分点・保留は入力欄の中と外の両方で効くが、選択の場面では効かない
+    expect(canShareKey("choice.select1", "scoring.partial")).toBe(true)
+    // 場面に入るキーは採点中のキーなので、採点中のキーとは重ねない
+    expect(canShareKey("choice.open", "scoring.correct")).toBe(false)
+    expect(keySceneOf("choice.open")).toBe("scoring")
+    expect(keySceneOf("choice.confirm")).toBe("choice")
+  })
+
   it("効く場面は既定の置き場所で決まり、名前の付け方からは推し量らない", () => {
     expect(keySceneOf("modal.input0")).toBe("partialInput")
     expect(keySceneOf("modal.cancel")).toBe("partialInput")
@@ -62,7 +78,10 @@ describe("既定のキー割り当て", () => {
     expect(
       sceneWhen("scoring.correct", { condition: "hasSelectedAnswers" })
     ).toBe(
-      "!inputFocus && !modalOpen && !textEditorActive && hasSelectedAnswers"
+      "!inputFocus && !modalOpen && !textEditorActive && !choiceSceneOpen && hasSelectedAnswers"
+    )
+    expect(sceneWhen("choice.select1")).toBe(
+      "choiceSceneOpen && !inputFocus && !modalOpen && !textEditorActive"
     )
     expect(sceneWhen("modal.input1")).toBe("partialScoreModalOpen")
     expect(sceneWhen("scoring.partial", { scene: "partialInput" })).toBe(

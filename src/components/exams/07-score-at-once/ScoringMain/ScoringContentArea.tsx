@@ -1,6 +1,12 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  type ComponentProps,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 import AnswerGridView from "@/components/exams/07-score-at-once/ScoringGrid/AnswerGridView"
 import AnswerIndividualView from "@/components/exams/07-score-at-once/ScoringIndividual/AnswerIndividualView"
@@ -56,6 +62,10 @@ interface ScoringContentAreaProps {
     status: MouseBrushAction,
     isToggle: boolean
   ) => void
+  /** 一覧のマスの採点マークの左に置くもの（ルーブリック採点の設問の印） */
+  renderBeforeStatusMark?: ComponentProps<
+    typeof AnswerGridView
+  >["renderBeforeStatusMark"]
 }
 
 export function ScoringContentArea({
@@ -91,6 +101,7 @@ export function ScoringContentArea({
   scoringOperationMode,
   mouseBrush,
   onMouseScoring,
+  renderBeforeStatusMark,
 }: ScoringContentAreaProps) {
   const currentScoringDataId =
     gradingMode === "individual"
@@ -240,6 +251,7 @@ export function ScoringContentArea({
         scoringOperationMode={scoringOperationMode}
         mouseBrush={mouseBrush}
         onMouseScoring={onMouseScoring}
+        renderBeforeStatusMark={renderBeforeStatusMark}
         className="p-4"
       />
     )

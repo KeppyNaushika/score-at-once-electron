@@ -12,6 +12,8 @@ export const KEYBOARD_HELP_SECTIONS: readonly {
   commandIds: readonly string[]
   /** 数字キーで部分点の入力を始めることを1行にまとめて添える */
   showPartialScoreStart?: boolean
+  /** 選択の場面の数字キー（1〜9）を1行にまとめて添える */
+  showChoiceSelect?: boolean
 }[] = [
   {
     title: SHORTCUT_CATEGORIES.scoring.label,
@@ -32,6 +34,19 @@ export const KEYBOARD_HELP_SECTIONS: readonly {
   {
     title: SHORTCUT_CATEGORIES.tool.label,
     commandIds: SHORTCUT_CATEGORIES.tool.keys,
+  },
+  // 選択の場面（ルーブリック採点の設問で Space から入る）。数字は1行にまとめる
+  {
+    title: SHORTCUT_CATEGORIES.choice.label,
+    commandIds: [
+      "choice.open",
+      "choice.other",
+      "choice.confirm",
+      "choice.prev",
+      "choice.next",
+      "choice.exit",
+    ],
+    showChoiceSelect: true,
   },
   // 数字の1つずつは並べても読まれないので、入力欄の出入りと、
   // 数字キーで入力を始めること（1行にまとめる）だけを出す
