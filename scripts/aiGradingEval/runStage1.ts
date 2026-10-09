@@ -5,9 +5,10 @@
  * 使い方:
  *   npx tsx scripts/aiGradingEval/runStage1.ts \
  *     --db <写しの database.db> --data-dir <写しのフォルダ> --exam <examId> \
- *     --out <scratchpad の出力先> --variant baseline|stage1 --model haiku|sonnet \
+ *     --out <scratchpad の出力先> --tag <出力の名前> --model haiku|sonnet \
  *     [--effort low] [--questions 1-1,2-3] [--students 9] [--concurrency 3] \
- *     [--system-file <指示の差し替え>] [--tag <出力の名前>] [--rerun-failed]
+ *     [--system-file <指示の差し替え>] [--rerun-failed]
+ *     [--rubric-file <buildRubricFromStage2.ts の出力>]（項目を送る次の往復の測定）
  *     [--image-scale 1]（送る画像の拡大率。アプリの既定は 1）
  *
  * 出力（すべて --out の下）:
@@ -33,9 +34,8 @@ import {
 import { ensureCrops } from "./evalCrops"
 import { resolveReferenceScore } from "./referenceScore"
 import { computeStage1Metrics, type Stage1EvalRecord } from "./stage1Metrics"
-import { buildStage1EvalRequest, STAGE1_VARIANTS } from "./stage1Variants"
-
-import { isOneOf } from "../../src/types/stringUnion"
+import { readRubricFile } from "./rubricFile"
+import { buildStage1EvalRequest } from "./stage1Variants"
 
 async function main() {
   const args = readArgs(process.argv.slice(2))
@@ -46,15 +46,13 @@ async function main() {
   )
   const outDir = resolveOutsideRepository(requireArg(args, "out"), "--out ")
   const examId = requireArg(args, "exam")
-  const variant = requireArg(args, "variant")
-  if (!isOneOf(STAGE1_VARIANTS, variant)) {
-    throw new Error(
-      `--variant は ${STAGE1_VARIANTS.join(" / ")} のいずれかです`
-    )
-  }
   const model = requireArg(args, "model")
   const effort = args.get("effort") ?? "low"
-  const tag = args.get("tag") ?? variant
+  const tag = requireArg(args, "tag")
+  const rubricFile = args.get("rubric-file")
+  const rubricByQuestion = rubricFile
+    ? readRubricFile(resolveOutsideRepository(rubricFile, "--rubric-file "))
+    : null
   const concurrency = Math.min(3, readIntegerArg(args, "concurrency", 3))
   const timeoutMs = readIntegerArg(args, "timeout-ms", 240000)
   const systemFile = args.get("system-file")
@@ -127,9 +125,8 @@ async function main() {
     const question = questionById.get(cell.cropRegionId)
     if (!question) return
     const request = buildStage1EvalRequest({
-      variant,
       question,
-      pageSize: args.get("page-size") ?? "A4",
+      rubricItems: rubricByQuestion?.[cell.cropRegionId]?.items ?? [],
       modelAnswerImage: crops.masterImage(cell.cropRegionId),
       answerImage: crops.answerImage(cell.cropRegionId, cell.examStudentId),
       systemTextOverride,

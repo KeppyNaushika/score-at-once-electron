@@ -2,7 +2,7 @@
  * プロンプトの評価の仕組み（scripts/aiGradingEval）の純粋な部分。入力はすべて合成データ。
  *
  * - 比べる相手の決め方（確定 > 合意 > 割れ）
- * - 1段目・2段目の指標
+ * - 1段目・2段目の指標と、項目を送った1段目の当てはまりの指標
  * - CLI の stream-json の出力の読み取り
  */
 
@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest"
 
 import { parseStreamJsonOutput } from "../../scripts/aiGradingEval/claudeCli"
 import { resolveReferenceScore } from "../../scripts/aiGradingEval/referenceScore"
+import { computeRubricMatchMetrics } from "../../scripts/aiGradingEval/rubricMatchMetrics"
 import {
   computeStage1Metrics,
   type Stage1EvalRecord,
@@ -234,5 +235,88 @@ describe("CLI の出力の読み取り", () => {
         JSON.stringify({ type: "result", is_error: false, result: "text" })
       ).ok
     ).toBe(false)
+  })
+})
+
+describe("項目を送った1段目の当てはまりの指標", () => {
+  const items = [
+    {
+      id: "item-correct",
+      label: "模範解答どおり",
+      effectKind: "set" as const,
+      pointDelta: null,
+      setStatus: "correct" as const,
+      setScore: null,
+    },
+    {
+      id: "item-unit",
+      label: "単位が無い",
+      effectKind: "adjust" as const,
+      pointDelta: -1,
+      setStatus: null,
+      setScore: null,
+    },
+    {
+      id: "item-wrong",
+      label: "別の語",
+      effectKind: "set" as const,
+      pointDelta: null,
+      setStatus: "incorrect" as const,
+      setScore: null,
+    },
+  ]
+
+  it("2段目との一致・適合率・再現率と、項目から計算した判定の教員との一致を数える", () => {
+    const metrics = computeRubricMatchMetrics([
+      {
+        points: 2,
+        items,
+        cells: [
+          // 一致。正答
+          {
+            matchedItemIds: ["item-correct"],
+            expectedItemIds: ["item-correct"],
+            aiStatus: "correct",
+            referenceStatus: "correct",
+          },
+          // 2段目は単位なしのみ、1段目は単位なし＋別の語（判定は誤答。教員は部分点）
+          {
+            matchedItemIds: ["item-unit", "item-wrong"],
+            expectedItemIds: ["item-unit"],
+            aiStatus: "incorrect",
+            referenceStatus: "partial",
+          },
+          // 1段目が何も返さない（未採点。教員は誤答）
+          {
+            matchedItemIds: [],
+            expectedItemIds: ["item-wrong"],
+            aiStatus: "incorrect",
+            referenceStatus: "incorrect",
+          },
+          // 判定を決める項目が2つ。教員の判定が割れたマスは判定の比較から外す
+          {
+            matchedItemIds: ["item-correct", "item-wrong"],
+            expectedItemIds: ["item-correct"],
+            aiStatus: "correct",
+            referenceStatus: null,
+          },
+        ],
+      },
+    ])
+    expect(metrics.cells).toBe(4)
+    expect(metrics.exactMatch).toEqual({ n: 4, matched: 1, rate: 0.25 })
+    expect(metrics.precision).toEqual({ n: 5, matched: 3, rate: 0.6 })
+    expect(metrics.recall).toEqual({ n: 4, matched: 3, rate: 0.75 })
+    expect(metrics.noMatchCount).toBe(1)
+    expect(metrics.multipleSetCount).toBe(1)
+    // 項目からの判定: 正答○ / 誤答×（教員は部分点）/ 未採点×
+    expect(metrics.statusFromMatched).toEqual({
+      n: 3,
+      matched: 1,
+      rate: 1 / 3,
+    })
+    // 2段目の案のまま: 正答○ / 単位なしで 2−1=1点の部分点○ / 誤答○
+    expect(metrics.statusFromExpected).toEqual({ n: 3, matched: 3, rate: 1 })
+    expect(metrics.statusFromAi).toEqual({ n: 3, matched: 2, rate: 2 / 3 })
   })
 })

@@ -23,6 +23,8 @@ export type Stage1EvalVerdict =
       confidence: "high" | "medium" | "low"
       transcription: string
       observation: string
+      /** 当てはまると返した項目（項目を送ったときだけ意味がある） */
+      matchedRubricItemIds?: readonly string[]
     }
   | { ok: false; reasons: readonly string[] }
 
