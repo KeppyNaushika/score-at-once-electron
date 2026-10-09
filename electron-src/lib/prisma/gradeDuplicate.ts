@@ -28,7 +28,8 @@ function buildCopyName(base: string, existingNames: Set<string>): string {
  *
  * Grade を頂点に、GradeItem / GradeDataSource / GradeItemBoundary /
  * GradeOverride / GradeItemExclusion / GradeClassroom / GradeStudent /
- * GradeConstraint / GradeExportSettings をすべて新IDで再作成する。
+ * GradeConstraint / GradeIndividualReportSettings / GradeComparison /
+ * GradeExportComparison をすべて新IDで再作成する。
  *
  * 外部参照（examId・studentId・classroomId・cropRegionId・courseworkId 等）は
  * 同一DB内でそのまま流用する（アーカイブ取込と違い名前照合は不要）。
@@ -61,7 +62,10 @@ export async function duplicateGrade(id: string) {
                 orderBy: { order: "asc" },
               },
               boundaries: { orderBy: { order: "asc" } },
-              comparisons: { orderBy: { order: "asc" } },
+              comparisons: {
+                include: { exportSelections: true },
+                orderBy: { order: "asc" },
+              },
             },
             orderBy: { order: "asc" },
           },
@@ -297,17 +301,32 @@ export async function duplicateGrade(id: string) {
       // 10. 比較。自分側は新しい評価項目へ付け替える。相手は、同じ成績算出の
       //   項目なら複製先の項目へ、他の成績算出の項目ならそのまま指す
       //   （複製しても「前学期と比べる」の前学期は同じ成績算出のまま）。
-      const comparisonRows = source.gradeItems.flatMap((sourceGradeItem) =>
-        sourceGradeItem.comparisons.map((comparison) => ({
-          gradeItemId: remapItemId(sourceGradeItem.id),
-          comparedGradeItemId:
-            itemIdMap.get(comparison.comparedGradeItemId) ??
-            comparison.comparedGradeItemId,
-          order: comparison.order,
-        }))
-      )
-      if (comparisonRows.length > 0) {
-        await tx.gradeComparison.createMany({ data: comparisonRows })
+      //   出力で使う比較の選択（この成績算出の行だけ）は新しい比較の子として写すので、
+      //   比較は1件ずつ作って新しい id を得る。
+      for (const sourceGradeItem of source.gradeItems) {
+        for (const comparison of sourceGradeItem.comparisons) {
+          const newComparison = await tx.gradeComparison.create({
+            data: {
+              gradeItemId: remapItemId(sourceGradeItem.id),
+              comparedGradeItemId:
+                itemIdMap.get(comparison.comparedGradeItemId) ??
+                comparison.comparedGradeItemId,
+              order: comparison.order,
+            },
+          })
+          const exportSelectionRows = comparison.exportSelections
+            .filter((exportSelection) => exportSelection.gradeId === id)
+            .map((exportSelection) => ({
+              gradeId: grade.id,
+              gradeComparisonId: newComparison.id,
+              enabled: exportSelection.enabled,
+            }))
+          if (exportSelectionRows.length > 0) {
+            await tx.gradeExportComparison.createMany({
+              data: exportSelectionRows,
+            })
+          }
+        }
       }
 
       return { gradeId: grade.id, name: copyName }

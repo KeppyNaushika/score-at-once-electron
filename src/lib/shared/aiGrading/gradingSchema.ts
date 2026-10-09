@@ -79,7 +79,7 @@ export function buildGradingOutputSchema(): GradingJsonSchema {
     partialScore: {
       type: ["number", "null"],
       description:
-        "partial のときは 0 から配点までの点（0.01 単位）。pending のときは最も有力な読みでの仮の点（決められなければ null）。それ以外は null",
+        "partial のときは 0 から配点までの点（0.01 単位）。pending のときは、部分点の点数を決めきれないなら最も有力な仮の点、正答か誤答かを判断できないなら null。それ以外は null",
     },
     comment: {
       type: "string",

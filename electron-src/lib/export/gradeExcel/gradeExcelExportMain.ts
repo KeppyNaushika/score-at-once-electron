@@ -4,6 +4,7 @@
 
 import * as ExcelJS from "exceljs"
 
+import type { GradeExcelComparisonColumn } from "../../../../src/types/gradeExport.types"
 import type { FileExportResult } from "../../shared/types"
 import { saveWorkbook } from "../excel/fileSaver"
 import { fetchGradeExportData } from "./gradeDataFetcher"
@@ -11,7 +12,12 @@ import { createDetailSheet, createGradeResultSheet } from "./gradeSheetCreator"
 
 export async function exportGradeExcel(
   gradeId: string,
-  options?: { outputPath?: string; studentIds?: string[] }
+  options?: {
+    outputPath?: string
+    studentIds?: string[]
+    /** 成績一覧に足す比較の列（renderer が算出した値。ここは書くだけ） */
+    comparisonColumns?: GradeExcelComparisonColumn[]
+  }
 ): Promise<FileExportResult> {
   const { result, examName } = await fetchGradeExportData(gradeId)
 
@@ -28,7 +34,11 @@ export async function exportGradeExcel(
 
   const workbook = new ExcelJS.Workbook()
 
-  createGradeResultSheet(workbook, filteredResult)
+  createGradeResultSheet(
+    workbook,
+    filteredResult,
+    options?.comparisonColumns ?? []
+  )
   createDetailSheet(workbook, filteredResult)
 
   return saveWorkbook(workbook, options?.outputPath, `成績_${examName}`)

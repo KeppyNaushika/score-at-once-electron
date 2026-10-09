@@ -59,6 +59,7 @@ const ARCHIVE_TABLE_LABELS: Readonly<Record<string, string>> = {
   GradeConstraintExclusionLabel: "制約の除外評価",
   GradeItem: "評価項目",
   GradeComparison: "比較",
+  GradeExportComparison: "出力に載せる比較",
   GradeClassroom: "成績算出の学級",
   GradeStudent: "成績算出の生徒",
   GradeDataSource: "データソース",

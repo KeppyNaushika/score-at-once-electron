@@ -31,6 +31,7 @@ const REPORT_SETTINGS_FIELD_LABELS: Record<keyof GradeReportSettings, string> =
     itemGradeColumnScore: "項目別評価：得点",
     itemGradeColumnPercentage: "項目別評価：得点率",
     itemGradeColumnGradeLabel: "項目別評価：評価",
+    itemGradeComparisonMarks: "項目別評価：比較の記号",
     itemGradeFontSize: "項目別評価：文字",
     itemGradeTableColumns: "項目別評価：列数",
     showSourceBreakdown: "資料の内訳",

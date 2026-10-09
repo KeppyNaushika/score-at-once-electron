@@ -69,6 +69,8 @@ export function createGradeApi() {
 
       getReportSettings: bind("grade:getReportSettings"),
       updateReportSettings: bind("grade:updateReportSettings"),
+      getExportComparisons: bind("grade:getExportComparisons"),
+      setExportComparison: bind("grade:setExportComparison"),
       analyzeArchive: bind("grade:analyzeArchive"),
       executeImport: bind("grade:executeImport"),
     },

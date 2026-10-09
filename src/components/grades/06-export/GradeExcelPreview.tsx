@@ -1,16 +1,22 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { Fragment, useMemo, useState } from "react"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type {
   GradeCalculationResult,
   StudentGradeResult,
 } from "@/types/grade.types"
+import type {
+  GradeExcelComparisonCell,
+  GradeExcelComparisonColumn,
+} from "@/types/gradeExport.types"
 
 interface GradeExcelPreviewProps {
   result: GradeCalculationResult
   selectedStudentIds: string[]
+  /** 成績一覧に足す比較の列（Excel へ渡すものと同じ値） */
+  comparisonColumns: GradeExcelComparisonColumn[]
 }
 
 /** gradeSheetCreator と同じ丸め（成績一覧: 小数1桁） */
@@ -28,10 +34,12 @@ function round2(value: number | null): number | null {
  *
  * gradeSheetCreator.ts が生成する2シート（成績一覧 / 詳細）を、
  * 試験のExcelプレビューと同じスタイルでReactのテーブルとして描画する。
+ * 成績一覧には、評価項目ごとに比較の列（「{比較先} 成績」「変化」）も並べる。
  */
 export function GradeExcelPreview({
   result,
   selectedStudentIds,
+  comparisonColumns,
 }: GradeExcelPreviewProps) {
   const [sheetTab, setSheetTab] = useState<"result" | "detail">("result")
 
@@ -43,6 +51,28 @@ export function GradeExcelPreview({
     () =>
       result.students.filter((student) => selectedSet.has(student.studentId)),
     [result.students, selectedSet]
+  )
+
+  // 評価項目ごとの比較の列と、生徒の値の引き方（対象者 id で引く。並びに依存しない）
+  const itemColumns = useMemo(
+    () =>
+      result.gradeItems.map((gradeItem) => ({
+        gradeItem,
+        comparisonColumns: comparisonColumns
+          .filter(
+            (comparisonColumn) => comparisonColumn.gradeItemId === gradeItem.id
+          )
+          .map((comparisonColumn) => ({
+            comparisonColumn,
+            cellsByGradeStudentId: new Map(
+              comparisonColumn.cells.map((comparisonCell) => [
+                comparisonCell.gradeStudentId,
+                comparisonCell,
+              ])
+            ),
+          })),
+      })),
+    [result.gradeItems, comparisonColumns]
   )
 
   const studentName = (student: StudentGradeResult) =>
@@ -71,22 +101,31 @@ export function GradeExcelPreview({
               <tr>
                 <th className="border px-1 py-0.5 text-left">番号</th>
                 <th className="border px-1 py-0.5 text-left">氏名</th>
-                {result.gradeItems.map((gradeItem) => (
-                  <th
-                    key={gradeItem.id}
-                    colSpan={2}
-                    className="border px-1 py-0.5 text-center"
-                  >
-                    {gradeItem.name}
-                  </th>
-                ))}
+                {itemColumns.map(
+                  ({ gradeItem, comparisonColumns: itemComparisons }) => (
+                    <th
+                      key={gradeItem.id}
+                      colSpan={2 + itemComparisons.length * 2}
+                      className="border px-1 py-0.5 text-center"
+                    >
+                      {gradeItem.name}
+                    </th>
+                  )
+                )}
               </tr>
               <tr>
                 <th className="border px-1 py-0.5" />
                 <th className="border px-1 py-0.5" />
-                {result.gradeItems.map((gradeItem) => (
-                  <ResultSubHeader key={gradeItem.id} />
-                ))}
+                {itemColumns.map(
+                  ({ gradeItem, comparisonColumns: itemComparisons }) => (
+                    <ResultSubHeader
+                      key={gradeItem.id}
+                      comparisonColumns={itemComparisons.map(
+                        ({ comparisonColumn }) => comparisonColumn
+                      )}
+                    />
+                  )
+                )}
               </tr>
             </thead>
             <tbody>
@@ -98,26 +137,45 @@ export function GradeExcelPreview({
                   <td className="border px-1 py-0.5 whitespace-nowrap">
                     {studentName(student)}
                   </td>
-                  {result.gradeItems.map((gradeItem) => {
-                    const itemResult = student.gradeItemResults.find(
-                      (gradeItemResult) =>
-                        gradeItemResult.gradeItemId === gradeItem.id
-                    )
-                    if (itemResult?.isExcluded) {
-                      return <ExcludedCells key={gradeItem.id} count={2} />
+                  {itemColumns.map(
+                    ({ gradeItem, comparisonColumns: itemComparisons }) => {
+                      const itemResult = student.gradeItemResults.find(
+                        (gradeItemResult) =>
+                          gradeItemResult.gradeItemId === gradeItem.id
+                      )
+                      const comparisonCells = itemComparisons.map(
+                        ({ comparisonColumn, cellsByGradeStudentId }) => (
+                          <ComparisonCells
+                            key={comparisonColumn.comparisonId}
+                            comparisonCell={cellsByGradeStudentId.get(
+                              student.gradeStudentId
+                            )}
+                          />
+                        )
+                      )
+                      if (itemResult?.isExcluded) {
+                        return (
+                          <Fragment key={gradeItem.id}>
+                            <ExcludedCells count={2} />
+                            {comparisonCells}
+                          </Fragment>
+                        )
+                      }
+                      const percentage = round1(itemResult?.percentage ?? null)
+                      const allMissing = itemResult?.isAllMissing ?? false
+                      const colorClass = allMissing ? "text-red-500" : ""
+                      return (
+                        <Fragment key={gradeItem.id}>
+                          <ResultCells
+                            percentage={percentage}
+                            label={itemResult?.gradeLabel ?? null}
+                            className={colorClass}
+                          />
+                          {comparisonCells}
+                        </Fragment>
+                      )
                     }
-                    const percentage = round1(itemResult?.percentage ?? null)
-                    const allMissing = itemResult?.isAllMissing ?? false
-                    const colorClass = allMissing ? "text-red-500" : ""
-                    return (
-                      <ResultCells
-                        key={gradeItem.id}
-                        percentage={percentage}
-                        label={itemResult?.gradeLabel ?? null}
-                        className={colorClass}
-                      />
-                    )
-                  })}
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -192,11 +250,41 @@ export function GradeExcelPreview({
   )
 }
 
-function ResultSubHeader() {
+function ResultSubHeader({
+  comparisonColumns,
+}: {
+  comparisonColumns: GradeExcelComparisonColumn[]
+}) {
   return (
     <>
-      <th className="border px-1 py-0.5 text-right font-normal">%</th>
+      <th className="border px-1 py-0.5 text-right font-normal">(%)</th>
       <th className="border px-1 py-0.5 text-right font-normal">成績</th>
+      {comparisonColumns.map((comparisonColumn) => (
+        <Fragment key={comparisonColumn.comparisonId}>
+          <th className="border px-1 py-0.5 text-right font-normal whitespace-nowrap">
+            {comparisonColumn.comparedTargetName} 成績
+          </th>
+          <th className="border px-1 py-0.5 text-center font-normal">変化</th>
+        </Fragment>
+      ))}
+    </>
+  )
+}
+
+/** 比較1件分の2マス（比較先の成績・変化の記号） */
+function ComparisonCells({
+  comparisonCell,
+}: {
+  comparisonCell: GradeExcelComparisonCell | undefined
+}) {
+  return (
+    <>
+      <td className="border px-1 py-0.5 text-right">
+        {comparisonCell?.comparedGradeLabel ?? "-"}
+      </td>
+      <td className="border px-1 py-0.5 text-center">
+        {comparisonCell?.symbol ?? ""}
+      </td>
     </>
   )
 }

@@ -38,6 +38,10 @@ import {
   upsertGradeOverrideMutation,
 } from "@/queries/gradeAdjustment"
 import {
+  type GradeComparisonRow,
+  gradeComparisonsQuery,
+} from "@/queries/gradeStructure"
+import {
   setUserPreferenceMutation,
   userPreferenceQuery,
 } from "@/queries/settings"
@@ -47,14 +51,15 @@ import type {
   GradeOverrideInput,
 } from "@/types/grade.types"
 
+import { useComparisonMarks } from "../comparison-marks/useComparisonMarks"
 import { ComparisonDisplayToggle } from "./ComparisonDisplayToggle"
 import { GradeDistributionChart } from "./GradeDistributionChart"
-import { useComparisonMarks } from "./hooks/useComparisonMarks"
 import { ResultsTable } from "./ResultsTable"
 import type { ComparisonDisplay } from "./types"
 
 /** 未取得のときに毎回新しい配列を作らないための空値 */
 const EMPTY_CONSTRAINTS: GradeConstraintData[] = []
+const EMPTY_COMPARISONS: GradeComparisonRow[] = []
 
 interface ResultsContainerProps {
   gradeId: string
@@ -71,7 +76,10 @@ export function ResultsContainer({ gradeId }: ResultsContainerProps) {
   const { data: constraints = EMPTY_CONSTRAINTS } = useQuery(
     gradeConstraintsQuery(gradeId)
   )
-  const { comparisonMarks } = useComparisonMarks(gradeId, result)
+  const { data: comparisons = EMPTY_COMPARISONS } = useQuery(
+    gradeComparisonsQuery(gradeId)
+  )
+  const { comparisonMarks } = useComparisonMarks(gradeId, result, comparisons)
   // 変化の表示（比較の記号の出し方）。利用者の設定に保存する。
   // 「表示しない」にすると今までどおりの表に戻る。
   // 選んだ段は画面にも持つ。取り直しは待たずに走るので、書いた直後に設定の値へ

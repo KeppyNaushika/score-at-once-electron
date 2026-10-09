@@ -64,6 +64,7 @@ const SYNC_TABLE_LABELS: Record<string, string> = {
   GradeOverride: "成績の上書き",
   GradeFrozenScore: "確定した成績値",
   GradeItemExclusion: "評価項目の除外",
+  GradeExportComparison: "出力に載せる比較",
   GradeConstraint: "観点間制約",
   GradeConstraintViewpoint: "観点間制約の観点",
   GradeConstraintLabelValue: "観点間制約の評語の値",

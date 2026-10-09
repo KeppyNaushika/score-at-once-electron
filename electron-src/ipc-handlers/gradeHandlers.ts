@@ -7,6 +7,7 @@
  * `gradeAdjustmentHandlers.ts`。チャンネル名はすべて `grade:` のまま。
  */
 
+import type { GradeExcelComparisonColumn } from "../../src/types/gradeExport.types"
 import type { GradeReportSettings } from "../../src/types/gradeReport.types"
 import { exportGradeExcel } from "../lib/export/gradeExcel/gradeExcelExportMain"
 import { extractGradeArchive } from "../lib/import/grade-archive/gradeArchiveExtractor"
@@ -24,6 +25,10 @@ import {
   updateGrade,
 } from "../lib/prisma/grade"
 import { duplicateGrade } from "../lib/prisma/gradeDuplicate"
+import {
+  getGradeExportComparisons,
+  setGradeExportComparison,
+} from "../lib/prisma/gradeExportComparison"
 import {
   getGradeIndividualReportSettings,
   updateGradeIndividualReportSettings,
@@ -96,6 +101,19 @@ export const gradeHandlers = {
     await updateGradeIndividualReportSettings(gradeId, values)
   },
 
+  // 出力（Excel・個人成績通知書）に載せる比較の選択。行が無い比較は出す
+  "grade:getExportComparisons": async (gradeId: string) => {
+    return getGradeExportComparisons(gradeId)
+  },
+
+  "grade:setExportComparison": async (selectionInput: {
+    gradeId: string
+    gradeComparisonId: string
+    enabled: boolean
+  }) => {
+    return setGradeExportComparison(selectionInput)
+  },
+
   // =====================================================================
   // 成績算出
   // =====================================================================
@@ -112,12 +130,17 @@ export const gradeHandlers = {
   // Excel出力
   // =====================================================================
 
+  // 比較の列（比較先の評定・変化の記号）は renderer が算出して渡す。main は書くだけ
   "grade:exportExcel": async (
     gradeId: string,
-    options?: { studentIds?: string[] }
+    options?: {
+      studentIds?: string[]
+      comparisonColumns?: GradeExcelComparisonColumn[]
+    }
   ) => {
     return exportGradeExcel(gradeId, {
       studentIds: options?.studentIds,
+      comparisonColumns: options?.comparisonColumns,
     })
   },
 

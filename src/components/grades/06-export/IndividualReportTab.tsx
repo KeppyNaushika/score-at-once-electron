@@ -13,11 +13,16 @@ import { openPrintDialogMutation } from "@/queries/export"
 import type { GradeCalculationResult } from "@/types/grade.types"
 import type { GradeReportSettings } from "@/types/gradeReport.types"
 
+import type { ComparisonMarksByCell } from "../comparison-marks/types"
 import { generateGradeReportBatchHtml } from "./generateGradeReportHtml"
 
 interface IndividualReportTabProps {
   result: GradeCalculationResult
   selectedStudentIds: string[]
+  /** 出力で使う比較の記号（Excel と同じ選択）。比較が無ければ null */
+  comparisonMarks: ComparisonMarksByCell | null
+  /** 比較の選択か比較先の結果をまだ読み込み中 */
+  comparisonsPending: boolean
   options: GradeReportSettings
   /** 変えた列だけを渡す（まるごと渡すと、続けて2つ変えたときに先の1つが消える） */
   onOptionsChange: (values: Partial<GradeReportSettings>) => void
@@ -29,6 +34,8 @@ const OPTIONS_ROW = "reportOptions"
 export function IndividualReportTab({
   result,
   selectedStudentIds,
+  comparisonMarks,
+  comparisonsPending,
   options,
   onOptionsChange,
 }: IndividualReportTabProps) {
@@ -68,12 +75,23 @@ export function IndividualReportTab({
   const handlePrint = () => {
     if (selectedStudentIds.length === 0) return
     openPrintDialog.mutate({
-      html: generateGradeReportBatchHtml(result, selectedStudentIds, options),
+      html: generateGradeReportBatchHtml(
+        result,
+        selectedStudentIds,
+        options,
+        comparisonMarks
+      ),
       title: options.title,
     })
   }
 
   const sourceLabel = options.dataSourceLabel || "成績資料"
+  // 記号を出すときだけ、比較先が読み込めるまで待つ（待たないと「・」で印刷される）
+  const waitsForComparisons =
+    options.showItemGrades &&
+    options.itemGradeColumnGradeLabel &&
+    options.itemGradeComparisonMarks &&
+    comparisonsPending
 
   return (
     <div className="space-y-6">
@@ -126,6 +144,16 @@ export function IndividualReportTab({
                     }
                     variant="sub"
                   />
+                  {options.itemGradeColumnGradeLabel && (
+                    <OptionCard
+                      label="評価に比較の記号（例 1↑）"
+                      checked={options.itemGradeComparisonMarks}
+                      onChange={(checked) =>
+                        updateOption("itemGradeComparisonMarks", checked)
+                      }
+                      variant="sub"
+                    />
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
@@ -321,7 +349,9 @@ export function IndividualReportTab({
         <Button
           onClick={handlePrint}
           disabled={
-            openPrintDialog.isPending || selectedStudentIds.length === 0
+            openPrintDialog.isPending ||
+            waitsForComparisons ||
+            selectedStudentIds.length === 0
           }
           className="w-full"
           size="sm"
@@ -329,7 +359,9 @@ export function IndividualReportTab({
           <Printer className="mr-2 h-4 w-4" />
           {openPrintDialog.isPending
             ? "準備中..."
-            : `印刷 (${selectedStudentIds.length}名)`}
+            : waitsForComparisons
+              ? "比較先を読み込み中..."
+              : `印刷 (${selectedStudentIds.length}名)`}
         </Button>
         {/* 印刷ダイアログは出ない。main が PDF を作り、既定のアプリで開く（export:openPrintDialog） */}
         <p className="text-center text-[10px] text-muted-foreground">

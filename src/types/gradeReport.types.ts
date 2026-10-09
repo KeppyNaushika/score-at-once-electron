@@ -29,6 +29,7 @@ export const DEFAULT_GRADE_REPORT_SETTINGS: GradeReportSettings = {
   itemGradeColumnScore: true,
   itemGradeColumnPercentage: true,
   itemGradeColumnGradeLabel: true,
+  itemGradeComparisonMarks: false,
   itemGradeFontSize: 11,
   itemGradeTableColumns: 1,
 
