@@ -3,7 +3,6 @@ import { useCallback, useState } from "react"
 import { DEFAULT_DRAWING_SETTINGS } from "@/components/exams/07-score-at-once/ScoringIndividual/constants/drawingConstants"
 import type {
   CanvasTool,
-  DraftAnnotationsSource,
   DrawingActions,
   DrawingState,
   LineEditMode,
@@ -24,14 +23,11 @@ import { usePersistedDrawingElements } from "./usePersistedDrawingElements"
  *
  * `annotationTarget` は注釈の行き先（答案＋設問＋採点者）。**置き場所の採点行は
  * 持たない。** 保存のときに main が用意するので、キャンバスは描くことだけを担う。
- *
- * `draftAnnotations` を渡すと、注釈は呼び出し側の状態（保存しない下書き）になる。
  */
 export function useDrawingState(
   annotationTarget?: AnnotationTarget | null,
   enablePersistence: boolean = true,
-  onAnnotationChanged?: () => void,
-  draftAnnotations?: DraftAnnotationsSource
+  onAnnotationChanged?: () => void
 ): DrawingState &
   DrawingActions & {
     // データベース統合機能
@@ -108,7 +104,6 @@ export function useDrawingState(
     enablePersistence,
     onAnnotationChanged,
     setSelectedElementIds,
-    draftAnnotations,
   })
 
   // 複数選択操作

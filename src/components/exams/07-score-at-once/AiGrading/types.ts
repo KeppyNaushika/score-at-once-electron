@@ -15,7 +15,6 @@ import type {
   GradingEffort,
   GradingProviderId,
 } from "@/electron-src/lib/aiGrading/providers/types"
-import type { measureCropRegionInk } from "@/electron-src/lib/aiGrading/sendingImageInspection"
 import type {
   listAiGradingRunsByCropRegion,
   listAiGradingRunsByExam,
@@ -53,11 +52,6 @@ export type AiGradingRunOfExamRow = Serialized<
 /** 試行（答案1件への1回の判定） */
 export type AiGradingAttemptRow = AiGradingRunRow["attempts"][number]
 
-/** 答案画像1枚の、この設問の枠1つぶんのインクの測定 */
-export type RegionInkMeasurementRow = Serialized<
-  Awaited<ReturnType<typeof measureCropRegionInk>>
->[number]["regions"][number]
-
 /** 模範解答の下書きの元（解答用紙の小問・枝問とテキスト要素の木） */
 export type AsbModelAnswerSource = NonNullable<
   Serialized<Awaited<ReturnType<typeof getAsbModelAnswerSource>>>
@@ -70,7 +64,7 @@ export interface AttemptWithRun {
 }
 
 /**
- * 設問の答案1件。答案・自分の採点・自分の試行・インクの測定を、行のまま束ねたもの
+ * 設問の答案1件。答案・自分の採点・自分の試行・白さを、行のまま束ねたもの
  * （行を射影しない。表示の値は描くときに求める）
  */
 export interface AiGradingAnswer {
@@ -79,8 +73,6 @@ export interface AiGradingAnswer {
   questionScore: QuestionScoreRow | undefined
   /** この答案への試行（採点の実行のものだけ。新しい順） */
   attempts: AttemptWithRun[]
-  /** その場で測ったインク（朱書きの配置に使う占有グリッド）。測れなかった答案は null */
-  inkMeasurement: RegionInkMeasurementRow | null
   /** この設問の枠の白さ（白さ順に使う。一覧表示と同じ測定）。まだ測れていなければ null */
   whiteness: RegionWhiteness | null
 }
@@ -113,10 +105,8 @@ export interface AiGridDisplaySettings {
   onExpandMarginChange: (expandMargin: number) => void
   autoScroll: boolean
   showStudentNames: boolean
-  /** 一覧の注釈を取り直す合図（詳細で注釈を直したら増える） */
+  /** 一覧の注釈を取り直す合図（採点画面で注釈を直したら増える） */
   annotationRefreshKey: number
-  /** 詳細で保存した注釈を変えた */
-  onAnnotationChanged: () => void
 }
 
 /**

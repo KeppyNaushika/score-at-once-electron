@@ -86,21 +86,6 @@ export const asbModelAnswerSourceQuery = (asbDefinitionId: string) =>
       window.electronAPI.aiGrading.getAsbModelAnswerSource(asbDefinitionId),
   })
 
-/**
- * 設問のある答案すべての占有グリッド（朱書きを手書きに重ねない配置に使う）。
- *
- * キーの `measurementSignature` は測るもの全部（答案の id と画像パス、設問の矩形）を
- * 表す文字列で、呼び出し側が作る。画像を読み直すので重く、採点を書いても測り直さない
- */
-export const aiAnswerInkQuery = (
-  cropRegionId: string,
-  measurementSignature: string
-) =>
-  queryOptions({
-    queryKey: ["aiAnswerInk", cropRegionId, measurementSignature] as const,
-    queryFn: () => window.electronAPI.aiGrading.measureInk(cropRegionId),
-  })
-
 /** 答案1件について、送る画像そのもの（PNG の data URL） */
 export const aiSendingCropPreviewQuery = (
   input: Parameters<typeof window.electronAPI.aiGrading.previewCrop>[0]
@@ -227,7 +212,6 @@ export const adoptAiGradingAttemptsMutation = (
         aiGradingRunsOfExamScope(examId),
         myAiGradingRunsQuery().queryKey,
         questionScoresQuery(examId, cropRegionId).queryKey,
-        scopeKeys.annotation(),
       ],
       errorMessage: "AI の判定を採用できませんでした",
     },

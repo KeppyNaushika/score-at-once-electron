@@ -5,10 +5,8 @@
  * ここで固定すること:
  * - 同意して API キーを保存した事業者が無ければ「AI採点」は採点モードの選択肢に出ない
  * - 実行ダイアログは選び方ごとの件数を出し、白紙の答案は数えない（送らない）
- * - 「採用」は選んだ答案すべての表示中の試行を、開いているタブのもの（採点なら点だけ、
- *   アノテーションなら求めた／教員が直した朱書きだけ）として書き込みへ渡す。
- *   点を書くときに採点済みが混じれば件数を示して1回だけ確かめる
- * - 採用前の朱書きは保存しない下書きとして個別表示の編集の部品に渡し、採用後は保存済みを直す
+ * - 「採用」は選んだ答案すべての表示中の試行の点を書き込みへ渡す（AI の朱書きの文案は渡さない）。
+ *   採点済みが混じれば件数を示して1回だけ確かめる
  *
  * window.electronAPI は偽物で、ネットワークにも実際のキーにも実データにも触れない。
  */
@@ -25,14 +23,10 @@ import { AiBulkActionsBar } from "@/components/exams/07-score-at-once/AiGrading/
 import { AiGradingRunDialog } from "@/components/exams/07-score-at-once/AiGrading/AiGradingRunDialog"
 import { AiOwnScoringSection } from "@/components/exams/07-score-at-once/AiGrading/AiOwnScoringSection"
 import { AiRunHistorySection } from "@/components/exams/07-score-at-once/AiGrading/AiRunHistorySection"
-import { AiSelectedAnswerSection } from "@/components/exams/07-score-at-once/AiGrading/AiSelectedAnswerSection"
-import { useAiAnnotationDrafts } from "@/components/exams/07-score-at-once/AiGrading/hooks/useAiAnnotationDrafts"
+import { AiSelectedJudgementSection } from "@/components/exams/07-score-at-once/AiGrading/AiSelectedJudgementSection"
 import { useAiAttemptNavigation } from "@/components/exams/07-score-at-once/AiGrading/hooks/useAiAttemptNavigation"
 import { useAiOwnScoring } from "@/components/exams/07-score-at-once/AiGrading/hooks/useAiOwnScoring"
-import {
-  type AdoptKind,
-  useAiSelectionAdoption,
-} from "@/components/exams/07-score-at-once/AiGrading/hooks/useAiSelectionAdoption"
+import { useAiSelectionAdoption } from "@/components/exams/07-score-at-once/AiGrading/hooks/useAiSelectionAdoption"
 import type {
   AiGradingAnswer,
   AiGradingRunRow,
@@ -40,7 +34,6 @@ import type {
 import { toAiGridItem } from "@/components/exams/07-score-at-once/AiGrading/utils/aiGridItems"
 import { reviewAnswer } from "@/components/exams/07-score-at-once/AiGrading/utils/answerReview"
 import { useContextValue } from "@/components/exams/07-score-at-once/hooks/useContextValue"
-import type { AnswerIndividualViewProps } from "@/components/exams/07-score-at-once/ScoringIndividual/types"
 import { ShortcutProvider } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import GradingModeToggle from "@/components/exams/07-score-at-once/ScoringMain/GradingModeToggle"
 import { ScoringStatusFilterButtons } from "@/components/exams/07-score-at-once/ScoringSidePanel/ScoringStatusFilterButtons"
@@ -298,52 +291,17 @@ describe("実行ダイアログ", () => {
   })
 })
 
-/** 個別表示の編集の部品の代わり。下書きを描き、「動かした」ことにできる */
-vi.mock(
-  "@/components/exams/07-score-at-once/ScoringIndividual/AnswerIndividualView",
-  () => ({
-    default: ({ draftAnnotations }: AnswerIndividualViewProps) => (
-      <div data-testid="fake-answer-individual-view">
-        {draftAnnotations?.elements.map((drawingAnnotation) => (
-          <span key={drawingAnnotation.id}>{drawingAnnotation.text}</span>
-        ))}
-        {draftAnnotations && (
-          <button
-            type="button"
-            onClick={() =>
-              draftAnnotations.setElements((prev) =>
-                prev.map((drawingAnnotation) => ({
-                  ...drawingAnnotation,
-                  x: 0.3,
-                  y: 0.25,
-                  text: "直した朱書き",
-                }))
-              )
-            }
-          >
-            下書きを動かす
-          </button>
-        )}
-      </div>
-    ),
-  })
-)
-
 /**
- * 「選んだ答案」の節を、作業場と同じく下書きと採用の状態を持つ親の下で描く。
- * 反映するもの（点か朱書きか）は、作業場では左パネルの反映のタブで決まる。
+ * 「選んだ答案の判定」の節を、作業場と同じく採用の状態を持つ親の下で描く。
  * `<` `>` と I のキーも作業場と同じく節の外（`useAiAttemptNavigation`）で付ける
  */
 function SelectedAnswerHarness({
   answers,
   selectedExamStudentIds,
-  adoptKind = "score",
 }: {
   answers: AiGradingAnswer[]
   selectedExamStudentIds: string[]
-  adoptKind?: AdoptKind
 }) {
-  const { draftAnnotationsByAttemptId, updateDraft } = useAiAnnotationDrafts()
   // 採点画面が AI採点モードのときに立てる文脈（キーの効く条件）
   useContextValue("gradingMode", "ai")
   const gridItems = answers.map((answer) =>
@@ -357,10 +315,7 @@ function SelectedAnswerHarness({
   const adoption = useAiSelectionAdoption({
     examId: "exam-1",
     cropRegion,
-    pageSize: "A4",
     selectedItems,
-    adoptKind,
-    draftAnnotationsByAttemptId,
     onAdopted: vi.fn(),
   })
   const { showOlderAttempt, showNewerAttempt } = useAiAttemptNavigation({
@@ -370,21 +325,11 @@ function SelectedAnswerHarness({
   })
   return (
     <>
-      <AiSelectedAnswerSection
+      <AiSelectedJudgementSection
         singleSelectedItem={singleSelectedItem}
-        cropRegion={cropRegion}
-        pageSize="A4"
-        currentUserId={CURRENT_USER_ID}
-        studentAnswerImages={answers.map((answer) => answer.studentAnswerImage)}
         promptNumberById={new Map([["prompt-1", 1]])}
-        draftAnnotationsByAttemptId={draftAnnotationsByAttemptId}
-        onDraftChange={updateDraft}
         onPrevAttempt={showOlderAttempt}
         onNextAttempt={showNewerAttempt}
-        onAdopt={adoption.requestAdopt}
-        adoptActionLabel={adoption.adoptActionLabel}
-        isAdopting={adoption.isAdopting}
-        onAnnotationChanged={vi.fn()}
       />
       <AiAdoptOverwriteDialog {...adoption.overwriteDialog} />
     </>
@@ -467,128 +412,27 @@ describe("実行ダイアログの既定値", () => {
 describe("採用", () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it("答案1つなら、AI の朱書きを下書きとして編集の部品に渡し、直さず採用すれば求めた置き場所で書く", async () => {
-    const aiGrading = installFakeElectronApi({ isUnlocked: true })
-    const answer = makeAnswer("s1", {
-      attempts: [
-        makeAttemptWithRun({
-          examStudentId: "s1",
-          id: "attempt-s1",
-          status: "partial",
-          partialScore: 2,
-          annotationText: "途中式が足りない",
-        }),
-      ],
-    })
-    renderWithProviders(
-      <SelectedAnswerHarness
-        answers={[answer]}
-        selectedExamStudentIds={["s1"]}
-        adoptKind="annotation"
-      />
-    )
-    const editor = screen.getByTestId("ai-annotation-editor")
-    expect(editor).toHaveAttribute("data-mode", "draft")
-    expect(within(editor).getByText(/途中式/)).toBeInTheDocument()
-    // 模範解答は一覧の先頭のマスに出すので、詳細には出さない
-    expect(screen.queryByRole("region", { name: "模範解答" })).toBeNull()
-
-    await userEvent.click(
-      within(screen.getByLabelText("答案の詳細")).getByRole("button", {
-        name: /^朱書きを反映/,
-      })
-    )
-    await waitFor(() =>
-      expect(aiGrading.adoptAttempts).toHaveBeenCalledTimes(1)
-    )
-    expect(aiGrading.adoptAttempts).toHaveBeenCalledWith({
-      adoptions: [
-        {
-          attemptId: "attempt-s1",
-          annotation: {
-            x: expect.any(Number),
-            y: expect.any(Number),
-            text: expect.stringContaining("途中式"),
-            fontSize: 5,
-          },
-        },
-      ],
-      overwrite: false,
-      // アノテーション反映のタブでは朱書きだけを書く
-      parts: { score: false, annotation: true },
-    })
-  })
-
-  it("下書きを直してから採用すると、直した位置と文言で書く", async () => {
-    const aiGrading = installFakeElectronApi({ isUnlocked: true })
-    const answer = makeAnswer("s1", {
-      attempts: [
-        makeAttemptWithRun({
-          examStudentId: "s1",
-          id: "attempt-s1",
-          annotationText: "途中式が足りない",
-        }),
-      ],
-    })
-    renderWithProviders(
-      <SelectedAnswerHarness
-        answers={[answer]}
-        selectedExamStudentIds={["s1"]}
-        adoptKind="annotation"
-      />
-    )
-    await userEvent.click(
-      screen.getByRole("button", { name: "下書きを動かす" })
-    )
-    expect(await screen.findByText("直した朱書き")).toBeInTheDocument()
-
-    await userEvent.click(
-      within(screen.getByLabelText("答案の詳細")).getByRole("button", {
-        name: /^朱書きを反映/,
-      })
-    )
-    await waitFor(() =>
-      expect(aiGrading.adoptAttempts).toHaveBeenCalledWith({
-        adoptions: [
-          {
-            attemptId: "attempt-s1",
-            annotation: { x: 0.3, y: 0.25, text: "直した朱書き", fontSize: 5 },
-          },
-        ],
-        overwrite: false,
-        // アノテーション反映のタブでは朱書きだけを書く
-        parts: { score: false, annotation: true },
-      })
-    )
-  })
-
-  it("採用済みの判定なら、編集の部品は保存済みの注釈を直す（下書きにしない）", () => {
+  it("選んだ答案の判定には、AI が書いた朱書きの文案を出さない（朱書きは項目の助言から作る）", () => {
     installFakeElectronApi({ isUnlocked: true })
-    const answer = makeAnswer("s1", {
-      questionScore: makeQuestionScore({
-        examStudentId: "s1",
-        status: "correct",
-      }),
-      attempts: [
-        makeAttemptWithRun({
-          examStudentId: "s1",
-          id: "attempt-s1",
-          status: "correct",
-          adoptedAt: new Date("2026-10-02T00:00:00.000Z"),
-        }),
-      ],
-    })
     renderWithProviders(
       <SelectedAnswerHarness
-        answers={[answer]}
+        answers={[
+          makeAnswer("s1", {
+            attempts: [
+              makeAttemptWithRun({
+                examStudentId: "s1",
+                id: "attempt-s1",
+                annotationText: "途中式が足りない",
+              }),
+            ],
+          }),
+        ]}
         selectedExamStudentIds={["s1"]}
       />
     )
-    expect(screen.getByTestId("ai-annotation-editor")).toHaveAttribute(
-      "data-mode",
-      "saved"
-    )
-    expect(screen.queryByRole("button", { name: "下書きを動かす" })).toBeNull()
+    expect(screen.getByLabelText("選んだ答案の AI の判定")).toBeInTheDocument()
+    expect(screen.queryByText("途中式が足りない")).not.toBeInTheDocument()
+    expect(screen.queryByText("朱書き")).not.toBeInTheDocument()
   })
 
   it("採点反映では、選んだ答案すべての点を I で採用し、採点済みがあれば件数を示して1回だけ上書きを確かめる", async () => {
@@ -624,8 +468,10 @@ describe("採用", () => {
         selectedExamStudentIds={["s1", "s2", "s3"]}
       />
     )
-    // 複数選んでいるときは詳細を出さない
-    expect(screen.queryByTestId("ai-annotation-editor")).toBeNull()
+    // 複数選んでいるときは判定の中身を出さない
+    expect(
+      screen.queryByLabelText("選んだ答案の AI の判定")
+    ).not.toBeInTheDocument()
 
     await userEvent.keyboard("i")
     expect(aiGrading.adoptAttempts).not.toHaveBeenCalled()
@@ -637,13 +483,8 @@ describe("採用", () => {
     )
     await waitFor(() =>
       expect(aiGrading.adoptAttempts).toHaveBeenCalledWith({
-        adoptions: [
-          { attemptId: "attempt-s1", annotation: null },
-          { attemptId: "attempt-s2", annotation: null },
-        ],
+        adoptions: [{ attemptId: "attempt-s1" }, { attemptId: "attempt-s2" }],
         overwrite: true,
-        // 既定は採点反映で、点だけを書く
-        parts: { score: true, annotation: false },
       })
     )
     expect(aiGrading.adoptAttempts).toHaveBeenCalledTimes(1)
@@ -824,10 +665,7 @@ function BulkActionsHarness({
   const adoption = useAiSelectionAdoption({
     examId: "exam-1",
     cropRegion,
-    pageSize: "A4",
     selectedItems: [],
-    adoptKind: "annotation",
-    draftAnnotationsByAttemptId: new Map(),
     onAdopted: vi.fn(),
   })
   return (
@@ -889,13 +727,9 @@ describe("表示答案を全て採用", () => {
     )
     await waitFor(() =>
       expect(aiGrading.adoptAttempts).toHaveBeenCalledWith({
-        adoptions: [
-          { attemptId: "attempt-s1", annotation: expect.anything() },
-          { attemptId: "attempt-s2", annotation: null },
-        ],
+        // AI の朱書きの文案があっても、点だけを書く
+        adoptions: [{ attemptId: "attempt-s1" }, { attemptId: "attempt-s2" }],
         overwrite: true,
-        // 開いているタブによらず、点だけを書く
-        parts: { score: true, annotation: false },
       })
     )
     expect(aiGrading.adoptAttempts).toHaveBeenCalledTimes(1)

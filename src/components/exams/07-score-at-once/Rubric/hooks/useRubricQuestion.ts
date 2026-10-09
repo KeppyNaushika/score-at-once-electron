@@ -24,6 +24,7 @@ import {
 /** 取得が終わるまでの空の並び（毎回作り直さない） */
 const NO_RUBRIC_ITEMS: RubricItemRow[] = []
 const NO_RUBRIC_APPLICATIONS: RubricApplicationRow[] = []
+const NO_APPLIED_ITEM_IDS: ReadonlySet<string> = new Set()
 
 interface UseRubricQuestionOptions {
   examId: string
@@ -66,5 +67,19 @@ export function useRubricQuestion({
     [questionScores, appliedItemIdsByQuestionScoreId, currentUserId]
   )
 
-  return { rubricItems, ownCellOf }
+  /** 自分の採点行がある答案の、当たっている項目（重なった助言の洗い出しに使う） */
+  const ownAppliedCells = useMemo(
+    () =>
+      questionScores
+        .filter((questionScore) => questionScore.userId === currentUserId)
+        .map((questionScore) => ({
+          examStudentId: questionScore.examStudentId,
+          appliedItemIds:
+            appliedItemIdsByQuestionScoreId.get(questionScore.id) ??
+            NO_APPLIED_ITEM_IDS,
+        })),
+    [questionScores, currentUserId, appliedItemIdsByQuestionScoreId]
+  )
+
+  return { rubricItems, ownCellOf, ownAppliedCells }
 }

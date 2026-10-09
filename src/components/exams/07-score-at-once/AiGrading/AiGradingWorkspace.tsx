@@ -7,11 +7,7 @@ import { useAnswerWhiteness } from "@/components/exams/07-score-at-once/ScoringM
 import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-score-at-once/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
-import {
-  aiAnswerInkQuery,
-  aiGradingRunsQuery,
-  aiPromptsQuery,
-} from "@/queries/aiGrading"
+import { aiGradingRunsQuery, aiPromptsQuery } from "@/queries/aiGrading"
 import { aiGradingSettingsQuery } from "@/queries/aiProvider"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
@@ -26,19 +22,13 @@ import { AiGradingSidePanel } from "./AiGradingSidePanel"
 import { AiOwnScoringSection } from "./AiOwnScoringSection"
 import { AiPromptPanel } from "./AiPromptPanel"
 import { AiRunHistorySection } from "./AiRunHistorySection"
-import { AiSelectedAnswerSection } from "./AiSelectedAnswerSection"
 import { AiSelectedJudgementSection } from "./AiSelectedJudgementSection"
-import { useAiAnnotationDrafts } from "./hooks/useAiAnnotationDrafts"
 import { useAiAnswerReviewState } from "./hooks/useAiAnswerReviewState"
 import { useAiAttemptNavigation } from "./hooks/useAiAttemptNavigation"
 import { useAiGradingAnswers } from "./hooks/useAiGradingAnswers"
 import { useAiGridSelection } from "./hooks/useAiGridSelection"
 import { useAiOwnScoring } from "./hooks/useAiOwnScoring"
-import {
-  ADOPT_KINDS,
-  type AdoptKind,
-  useAiSelectionAdoption,
-} from "./hooks/useAiSelectionAdoption"
+import { useAiSelectionAdoption } from "./hooks/useAiSelectionAdoption"
 import type {
   AiGradingRunRow,
   AiGridDisplaySettings,
@@ -46,19 +36,14 @@ import type {
   AiPromptRow,
 } from "./types"
 import { resolveDefaultPromptId } from "./utils/attemptSelection"
-import {
-  buildInkMeasurementSignature,
-  indexInkMeasurements,
-} from "./utils/inkMeasurement"
 
-/** 左パネルのタブ（点と朱書きは別のタブで、別に反映する） */
-const LEFT_TABS = ["prompt", ...ADOPT_KINDS] as const
+/** 左パネルのタブ */
+const LEFT_TABS = ["prompt", "score"] as const
 type LeftTab = (typeof LEFT_TABS)[number]
 
 const LEFT_TAB_LABELS: Record<LeftTab, string> = {
   prompt: "プロンプト",
   score: "採点反映",
-  annotation: "アノテーション反映",
 }
 
 /** まだ届いていないときの空（毎回作り直さない） */
@@ -83,10 +68,12 @@ interface AiGradingWorkspaceProps {
 }
 
 /**
- * 設問1つぶんの AI 採点の作業場。左にプロンプト・採点反映・アノテーション反映のタブ
- * （選んだ答案の AI の判定は採点反映のタブでも見え、朱書きを直す詳細はアノテーション反映のタブ）、
- * 中央に**一覧表示と同じ答案の一覧**
- * （色は自分の採点、斜線と札と朱書きで AI の提案）、右端に設問・絞り込み。
+ * 設問1つぶんの AI 採点の作業場。左にプロンプト・採点反映のタブ
+ * （選んだ答案の AI の判定は採点反映のタブで見る）、中央に**一覧表示と同じ答案の一覧**
+ * （色は自分の採点、斜線と札で AI の提案）、右端に設問・絞り込み。
+ *
+ * AI が答案ごとに書く朱書きの文案は採用しない（朱書きはルーブリック項目の助言から作る。
+ * docs/vlm-grading-design.md §4-7）。
  *
  * 表示する試行・選んでいるプロンプト・答案の選択は、ここが持つ利用者の選択だけで、
  * 表示はそこから毎回導く（消えた選択を状態へ書き戻さない）。
@@ -117,17 +104,6 @@ export function AiGradingWorkspace({
       ),
     [studentAnswerImages, cropRegion.examPageId]
   )
-  const inkQuery = useQuery(
-    aiAnswerInkQuery(
-      cropRegion.id,
-      buildInkMeasurementSignature(cropRegion, pageAnswerImages)
-    )
-  )
-  const inkMeasurementByAnswerImageId = useMemo(
-    () => indexInkMeasurements(inkQuery.data ?? [], cropRegion.id),
-    [inkQuery.data, cropRegion.id]
-  )
-
   // 白さ順のため、一覧表示と同じ測定で枠の白さを測る（白紙はアプリが判定しない）
   const { whitenessByAnswerId, isWhitenessReady } = useAnswerWhiteness({
     studentAnswerImages,
@@ -142,7 +118,6 @@ export function AiGradingWorkspace({
     studentAnswerImages: pageAnswerImages,
     questionScores,
     runs,
-    inkMeasurementByAnswerImageId,
     whitenessByAnswerImageId: whitenessByAnswerId,
   })
 
@@ -189,17 +164,11 @@ export function AiGradingWorkspace({
     itemsPerLine: display.itemsPerLine,
     viewSettings,
   })
-  const { draftAnnotationsByAttemptId, updateDraft } = useAiAnnotationDrafts()
   const [leftTab, setLeftTab] = useState<LeftTab>("prompt")
-  // I・詳細のボタンが反映するもの（最後に開いた反映のタブ。プロンプトを開いていても変えない）
-  const [adoptKind, setAdoptKind] = useState<AdoptKind>("score")
   const adoption = useAiSelectionAdoption({
     examId,
     cropRegion,
-    pageSize,
     selectedItems: grid.selectedItems,
-    adoptKind,
-    draftAnnotationsByAttemptId,
     onAdopted: grid.markAdopted,
   })
   const { showOlderAttempt, showNewerAttempt } = useAiAttemptNavigation({
@@ -222,7 +191,7 @@ export function AiGradingWorkspace({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
-      {/* 左: 実行の進み具合と、プロンプト・採点反映・アノテーション反映のタブ */}
+      {/* 左: 実行の進み具合と、プロンプト・採点反映のタブ */}
       <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-r px-3">
         <AiGradingRunProgress
           examId={examId}
@@ -233,10 +202,7 @@ export function AiGradingWorkspace({
           value={leftTab}
           onValueChange={(value) => {
             const chosen = LEFT_TABS.find((tab) => tab === value)
-            if (!chosen) return
-            setLeftTab(chosen)
-            const chosenAdoptKind = ADOPT_KINDS.find((kind) => kind === chosen)
-            if (chosenAdoptKind) setAdoptKind(chosenAdoptKind)
+            if (chosen) setLeftTab(chosen)
           }}
           className="pt-2"
         >
@@ -273,57 +239,30 @@ export function AiGradingWorkspace({
             />
             <AiExamCostSection examId={examId} />
           </TabsContent>
-          {ADOPT_KINDS.map((kind) => (
-            <TabsContent key={kind} value={kind}>
-              <AiAdoptTabContent
-                adoptKind={kind}
-                examId={examId}
-                cropRegion={cropRegion}
-                pageSize={pageSize}
-                reviewedAnswers={reviewedAnswers}
-                draftAnnotationsByAttemptId={draftAnnotationsByAttemptId}
-                selectedCount={grid.selectedItems.length}
-                onAdoptSelected={adoption.requestAdopt}
-                visibleItems={grid.visibleItems}
-                onAdoptVisible={adoption.requestAdoptVisible}
-                isAdopting={adoption.isAdopting}
-              />
-              {kind === "score" && (
-                <>
-                  <AiSelectedJudgementSection
-                    singleSelectedItem={grid.singleSelectedItem}
-                    promptNumberById={promptNumberById}
-                    onPrevAttempt={showOlderAttempt}
-                    onNextAttempt={showNewerAttempt}
-                  />
-                  <AiOwnScoringSection
-                    cropRegion={cropRegion}
-                    selectedCount={grid.selectedItems.length}
-                    onScore={scoreSelected}
-                    partialScore={partialScore}
-                  />
-                </>
-              )}
-              {kind === "annotation" && (
-                <AiSelectedAnswerSection
-                  singleSelectedItem={grid.singleSelectedItem}
-                  cropRegion={cropRegion}
-                  currentUserId={currentUserId}
-                  studentAnswerImages={studentAnswerImages}
-                  pageSize={pageSize}
-                  draftAnnotationsByAttemptId={draftAnnotationsByAttemptId}
-                  onDraftChange={updateDraft}
-                  onAnnotationChanged={display.onAnnotationChanged}
-                  promptNumberById={promptNumberById}
-                  onPrevAttempt={showOlderAttempt}
-                  onNextAttempt={showNewerAttempt}
-                  onAdopt={adoption.requestAdopt}
-                  adoptActionLabel={adoption.adoptActionLabel}
-                  isAdopting={adoption.isAdopting}
-                />
-              )}
-            </TabsContent>
-          ))}
+          <TabsContent value="score">
+            <AiAdoptTabContent
+              examId={examId}
+              cropRegion={cropRegion}
+              reviewedAnswers={reviewedAnswers}
+              selectedCount={grid.selectedItems.length}
+              onAdoptSelected={adoption.requestAdopt}
+              visibleItems={grid.visibleItems}
+              onAdoptVisible={adoption.requestAdoptVisible}
+              isAdopting={adoption.isAdopting}
+            />
+            <AiSelectedJudgementSection
+              singleSelectedItem={grid.singleSelectedItem}
+              promptNumberById={promptNumberById}
+              onPrevAttempt={showOlderAttempt}
+              onNextAttempt={showNewerAttempt}
+            />
+            <AiOwnScoringSection
+              cropRegion={cropRegion}
+              selectedCount={grid.selectedItems.length}
+              onScore={scoreSelected}
+              partialScore={partialScore}
+            />
+          </TabsContent>
         </Tabs>
       </aside>
 
@@ -332,11 +271,6 @@ export function AiGradingWorkspace({
         aria-label="答案と AI の判定"
         className="flex min-w-0 flex-1 flex-col"
       >
-        {inkQuery.error && (
-          <p className="border-b bg-amber-50 px-3 py-1 text-xs text-amber-800">
-            答案のインクを測れませんでした。注釈の自動配置は使えません
-          </p>
-        )}
         <div className="min-h-0 flex-1">
           <AiGradingGrid
             cropRegion={cropRegion}
@@ -349,7 +283,6 @@ export function AiGradingWorkspace({
             onSelect={grid.handleSelectAnswer}
             onReplaceSelection={(ids) => grid.setSelection(new Set(ids))}
             totalCount={reviewedAnswers.length}
-            draftAnnotationsByAttemptId={draftAnnotationsByAttemptId}
           />
         </div>
       </section>

@@ -80,8 +80,11 @@ interface AnswerGridViewProps {
   proposalStatusOf?: (answer: GridAnswerItem) => ScoreStatusKey | null
   /** 採点マークの左隣に置くもの（AI採点モードの AI の判定の札） */
   renderBeforeStatusMark?: (answer: GridAnswerItem) => ReactNode
-  /** 保存した注釈に重ねて描く、まだ保存していない注釈（AI採点モードの未反映の朱書き） */
-  pendingAnnotationsOf?: (
+  /**
+   * 助言の朱書きの下見（重なった助言の決まりを選ぶとき）。渡すと、保存した助言の朱書き
+   * （`isRubricAdvice`）の代わりにこれを描く。手で書いた注釈はそのまま描く
+   */
+  previewRubricAdviceOf?: (
     answer: GridAnswerItem
   ) => readonly DrawingAnnotation[]
   className?: string
@@ -111,7 +114,7 @@ export default function AnswerGridView({
   renderCellDetail,
   proposalStatusOf,
   renderBeforeStatusMark,
-  pendingAnnotationsOf,
+  previewRubricAdviceOf,
   className = "",
 }: AnswerGridViewProps) {
   const isMouseMode = scoringOperationMode === "mouse"
@@ -393,9 +396,9 @@ export default function AnswerGridView({
               selectionBorderColor={selectionBorderColor}
               scoringColors={scoringColors}
               expandMargin={expandMargin}
-              annotations={withPendingAnnotations(
+              annotations={withPreviewRubricAdvice(
                 annotationsByExamStudent.get(answer.examStudentId),
-                pendingAnnotationsOf?.(answer)
+                previewRubricAdviceOf?.(answer)
               )}
               pageSize={pageSize}
               onMouseDown={onCellMouseDown}
@@ -420,13 +423,19 @@ export default function AnswerGridView({
   )
 }
 
-/** 保存した注釈に、まだ保存していない注釈を重ねる（無ければ保存したものをそのまま渡す） */
-function withPendingAnnotations(
+/**
+ * 保存した注釈の助言の朱書きを、下見の朱書きに差し替える（下見が無ければ保存したものを
+ * そのまま渡す）
+ */
+function withPreviewRubricAdvice(
   savedAnnotations: DrawingAnnotation[] | undefined,
-  pendingAnnotations: readonly DrawingAnnotation[] | undefined
+  previewAnnotations: readonly DrawingAnnotation[] | undefined
 ): DrawingAnnotation[] | undefined {
-  if (!pendingAnnotations || pendingAnnotations.length === 0) {
-    return savedAnnotations
-  }
-  return [...(savedAnnotations ?? []), ...pendingAnnotations]
+  if (!previewAnnotations) return savedAnnotations
+  return [
+    ...(savedAnnotations ?? []).filter(
+      (drawingAnnotation) => !drawingAnnotation.isRubricAdvice
+    ),
+    ...previewAnnotations,
+  ]
 }

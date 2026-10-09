@@ -3,21 +3,29 @@
 import { ListChecks, Plus, Undo2 } from "lucide-react"
 import { useMemo, useState } from "react"
 
-import { useChoiceScene } from "@/components/exams/07-score-at-once/hooks/useChoiceScene"
+import type {
+  ScoringData,
+  StudentAnswerImageWithExamStudents,
+} from "@/components/exams/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { RubricItemRow } from "@/queries/rubric"
 import type { QuestionScoreRow } from "@/queries/scoring"
 import { toScoringMethod } from "@/types/rubric.types"
 
+import { useRubricAdviceChoice } from "./hooks/useRubricAdviceChoice"
+import { useRubricAdviceSync } from "./hooks/useRubricAdviceSync"
 import {
   type SelectedRubricCell,
   useRubricApplying,
 } from "./hooks/useRubricApplying"
 import { useRubricItemEditing } from "./hooks/useRubricItemEditing"
+import { useRubricPanelChoiceScene } from "./hooks/useRubricPanelChoiceScene"
 import { useRubricQuestion } from "./hooks/useRubricQuestion"
 import { useRubricRecalculation } from "./hooks/useRubricRecalculation"
 import { useScoringKeysPausedWhile } from "./hooks/useScoringKeysPausedWhile"
+import { RubricAdviceChoiceView } from "./RubricAdviceChoiceView"
+import { RubricAdviceSection } from "./RubricAdviceSection"
 import { RubricItemEditorDialog } from "./RubricItemEditorDialog"
 import { RubricItemEntry } from "./RubricItemEntry"
 import { RubricRecalculationDialog } from "./RubricRecalculationDialog"
@@ -36,6 +44,13 @@ interface RubricPanelProps {
   onAdvance: () => void
   /** 点を書いた答案を「いま採点した」にする */
   onScored?: (examStudentIds: string[]) => void
+  /** 試験の答案（朱書きの置き場所を探す占有グリッドの答案と受験者を引く） */
+  studentAnswerImages: readonly StudentAnswerImageWithExamStudents[]
+  /** 今の設問の答案のマス（重なった助言の下見に使う） */
+  scoringDatas: readonly ScoringData[]
+  pageSize: string
+  /** 助言の朱書きを書いた（一覧・個別表示の注釈を取り直す合図） */
+  onAnnotationsChanged?: () => void
 }
 
 /** 編集画面の開き方。null は閉じている */
@@ -47,8 +62,11 @@ type EditorTarget =
  * 左のルーブリック項目のパネル（docs/vlm-grading-design.md §4・§11）。
  *
  * 項目を押す（または選択の場面で番号を押す）と、選んだ答案に当てる・外す。
- * 当てた答案の点は項目から計算して書く。採点キーで付けた点は「手での上書き」になり、
- * ここから項目の点へ戻せる
+ * 当てた答案の点は項目から計算して書き、助言のある項目からは朱書きを作る（§4-7）。
+ * 採点キーで付けた点は「手での上書き」になり、ここから項目の点へ戻せる。
+ *
+ * 助言のある項目が2つ以上当たった答案の組み合わせは「重なった助言」に出し、決まりが無ければ
+ * 未決定として問いかける（開くと、選択肢と下見に切り替わる）
  */
 export function RubricPanel({
   examId,
@@ -58,9 +76,13 @@ export function RubricPanel({
   selectedExamStudentIds,
   onAdvance,
   onScored,
+  studentAnswerImages,
+  scoringDatas,
+  pageSize,
+  onAnnotationsChanged,
 }: RubricPanelProps) {
   const scoringMethod = toScoringMethod(cropRegion.scoringMethod)
-  const { rubricItems, ownCellOf } = useRubricQuestion({
+  const { rubricItems, ownCellOf, ownAppliedCells } = useRubricQuestion({
     examId,
     cropRegionId: cropRegion.id,
     currentUserId,
@@ -78,11 +100,26 @@ export function RubricPanel({
     (cell) => cell.overridesRubric
   ).length
 
+  const adviceSync = useRubricAdviceSync({
+    examId,
+    cropRegion,
+    pageSize,
+    studentAnswerImages,
+    onAnnotationsChanged,
+  })
+  const adviceChoice = useRubricAdviceChoice({
+    examId,
+    cropRegionId: cropRegion.id,
+    rubricItems,
+    ownAppliedCells,
+    syncRowsWithAdviceSet: adviceSync.syncRowsWithAdviceSet,
+  })
   const { toggleItem, clearOverrides } = useRubricApplying({
     examId,
     cropRegion,
     selectedCells,
     onScored,
+    syncAdviceRows: adviceSync.syncRows,
   })
   const { runWithRecalculation, pending, cancel } = useRubricRecalculation({
     examId,
@@ -94,20 +131,24 @@ export function RubricPanel({
     cropRegion,
     rubricItems,
     runWithRecalculation,
+    adviceSync,
   })
 
   const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null)
   useScoringKeysPausedWhile(editorTarget !== null || pending !== null)
 
-  const choiceScene = useChoiceScene({
-    entryCount: rubricItems.length,
-    onSelect: (entryIndex) => toggleItem(rubricItems[entryIndex].id),
-    onOther: () => {
-      choiceScene.close()
-      setEditorTarget({ kind: "create", appliesAfterCreate: true })
-    },
-    onConfirm: onAdvance,
+  const panelChoice = useRubricPanelChoiceScene({
+    rubricItems,
+    adviceChoice,
+    onToggleItem: toggleItem,
+    onCreateItem: () =>
+      setEditorTarget({ kind: "create", appliesAfterCreate: true }),
+    onAdvance,
   })
+  const { choiceScene, isChoosingAdvice } = panelChoice
+  const activeScoringDatas = scoringDatas.filter((scoringData) =>
+    adviceChoice.activeExamStudentIds.includes(scoringData.examStudentId)
+  )
 
   const handleSubmit = async (
     target: EditorTarget,
@@ -125,7 +166,11 @@ export function RubricPanel({
   }
 
   return (
-    <div className="flex h-full w-72 shrink-0 flex-col border-r border-gray-200 bg-white">
+    <div
+      className={`flex h-full shrink-0 flex-col border-r border-gray-200 bg-white ${
+        isChoosingAdvice ? "w-[44rem]" : "w-72"
+      }`}
+    >
       <div className="border-b px-3 py-2">
         <div className="flex items-center gap-1.5">
           <ListChecks className="h-3.5 w-3.5 text-gray-500" />
@@ -140,9 +185,11 @@ export function RubricPanel({
         <p
           className={`mt-1 text-[11px] ${choiceScene.isOpen ? "text-amber-700" : "text-gray-500"}`}
         >
-          {choiceScene.isOpen
-            ? "数字で当てる・外す／0 で項目を追加／Enter で次の答案／Esc で戻る"
-            : "Space で選択の場面に入り、数字で項目を当てます"}
+          {isChoosingAdvice
+            ? "重なった助言の朱書きの扱いを決めます"
+            : choiceScene.isOpen
+              ? "数字で当てる・外す／0 で項目を追加／Enter で次の答案／Esc で戻る"
+              : "Space で選択の場面に入り、数字で項目を当てます"}
         </p>
         <p className="mt-0.5 text-[11px] text-gray-500">
           {selectedCells.length > 0
@@ -151,67 +198,102 @@ export function RubricPanel({
         </p>
       </div>
 
-      {overriddenCount > 0 && (
-        <div className="flex items-center gap-2 border-b bg-orange-50 px-3 py-1.5 text-[11px] text-orange-800">
-          <span className="flex-1">
-            {overriddenCount}
-            件は採点キーで付けた点が項目より優先しています（手での上書き）
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-6 shrink-0 px-2 text-[11px]"
-            onClick={clearOverrides}
-          >
-            <Undo2 className="h-3 w-3" />
-            項目の点に戻す
-          </Button>
-        </div>
-      )}
+      {adviceChoice.activeCombination ? (
+        <RubricAdviceChoiceView
+          rubricItems={rubricItems}
+          activeCombination={adviceChoice.activeCombination}
+          options={adviceChoice.options}
+          focusedIndex={choiceScene.focusedIndex}
+          numberOf={choiceScene.numberOf}
+          isChoiceSceneOpen={choiceScene.isOpen}
+          mergedText={adviceChoice.mergedText}
+          onMergedTextChange={adviceChoice.setMergedText}
+          mergedTextRef={panelChoice.mergedTextRef}
+          onFocusOption={choiceScene.setFocusedIndex}
+          onDecide={(optionIndex) => void panelChoice.decideAdvice(optionIndex)}
+          onBack={panelChoice.closeAdvice}
+          onClearRule={() => void adviceChoice.clearRule()}
+          isWriting={adviceChoice.isWriting}
+          preview={{
+            cropRegion,
+            currentUserId,
+            pageSize,
+            studentAnswerImages,
+            scoringDatas: activeScoringDatas,
+          }}
+        />
+      ) : (
+        <>
+          {overriddenCount > 0 && (
+            <div className="flex items-center gap-2 border-b bg-orange-50 px-3 py-1.5 text-[11px] text-orange-800">
+              <span className="flex-1">
+                {overriddenCount}
+                件は採点キーで付けた点が項目より優先しています（手での上書き）
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 shrink-0 px-2 text-[11px]"
+                onClick={clearOverrides}
+              >
+                <Undo2 className="h-3 w-3" />
+                項目の点に戻す
+              </Button>
+            </div>
+          )}
 
-      <ol className="flex-1 space-y-1 overflow-y-auto p-2">
-        {rubricItems.map((rubricItem, index) => (
-          <RubricItemEntry
-            key={rubricItem.id}
-            rubricItem={rubricItem}
-            choiceNumber={
-              choiceScene.isOpen ? choiceScene.numberOf(index) : null
-            }
-            isFocused={choiceScene.isOpen && choiceScene.focusedIndex === index}
-            appliedCount={
-              selectedCells.filter((cell) =>
-                cell.appliedItemIds.has(rubricItem.id)
-              ).length
-            }
-            selectedCount={selectedCells.length}
-            isFirst={index === 0}
-            isLast={index === rubricItems.length - 1}
-            onToggle={() => toggleItem(rubricItem.id)}
-            onEdit={() => setEditorTarget({ kind: "edit", rubricItem })}
-            onDelete={() => void editing.remove(rubricItem)}
-            onMove={(step) => void editing.move(rubricItem, step)}
+          <ol className="flex-1 space-y-1 overflow-y-auto p-2">
+            {rubricItems.map((rubricItem, index) => (
+              <RubricItemEntry
+                key={rubricItem.id}
+                rubricItem={rubricItem}
+                choiceNumber={panelChoice.numberOfItem(index)}
+                isFocused={panelChoice.isItemFocused(index)}
+                appliedCount={
+                  selectedCells.filter((cell) =>
+                    cell.appliedItemIds.has(rubricItem.id)
+                  ).length
+                }
+                selectedCount={selectedCells.length}
+                isFirst={index === 0}
+                isLast={index === rubricItems.length - 1}
+                onToggle={() => toggleItem(rubricItem.id)}
+                onEdit={() => setEditorTarget({ kind: "edit", rubricItem })}
+                onDelete={() => void editing.remove(rubricItem)}
+                onMove={(step) => void editing.move(rubricItem, step)}
+              />
+            ))}
+            {rubricItems.length === 0 && (
+              <li className="px-1 py-2 text-[11px] text-gray-500">
+                まだ項目がありません。「項目を追加」で作ります
+              </li>
+            )}
+          </ol>
+
+          <RubricAdviceSection
+            rubricItems={rubricItems}
+            undecided={adviceChoice.undecided}
+            decided={adviceChoice.decided}
+            numberOfUndecided={panelChoice.numberOfUndecided}
+            focusedUndecidedIndex={panelChoice.focusedUndecidedIndex}
+            onOpen={panelChoice.openAdvice}
           />
-        ))}
-        {rubricItems.length === 0 && (
-          <li className="px-1 py-2 text-[11px] text-gray-500">
-            まだ項目がありません。「項目を追加」で作ります
-          </li>
-        )}
-      </ol>
 
-      <div className="border-t p-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={() =>
-            setEditorTarget({ kind: "create", appliesAfterCreate: false })
-          }
-        >
-          <Plus className="h-4 w-4" />
-          項目を追加
-        </Button>
-      </div>
+          <div className="border-t p-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() =>
+                setEditorTarget({ kind: "create", appliesAfterCreate: false })
+              }
+            >
+              <Plus className="h-4 w-4" />
+              項目を追加
+            </Button>
+          </div>
+        </>
+      )}
 
       <RubricItemEditorDialog
         open={editorTarget !== null}

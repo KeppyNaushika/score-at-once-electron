@@ -115,7 +115,6 @@ const display: AiGridDisplaySettings = {
   autoScroll: false,
   showStudentNames: true,
   annotationRefreshKey: 0,
-  onAnnotationChanged: () => undefined,
 }
 
 const NO_QUESTION_SCORES = new Map<string, QuestionScoreRow[]>()
@@ -128,7 +127,6 @@ function installFakeElectronApi() {
         listPrompts: vi.fn(async () => []),
         listRuns: vi.fn(async () => []),
         listRunsByExam: vi.fn(async () => []),
-        measureInk: vi.fn(async () => []),
         onRunProgress: vi.fn(() => () => undefined),
       },
       aiProvider: {

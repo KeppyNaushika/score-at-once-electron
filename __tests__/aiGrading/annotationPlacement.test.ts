@@ -1,5 +1,5 @@
 /**
- * AI採点の注釈の配置 テスト
+ * 朱書き（ルーブリック項目の助言）の配置 テスト
  *
  * 1mm角のセル 80列 × 30行（80mm × 30mm の解答欄の内側）の占有グリッドを手で組み、
  * 空き方ごとに置き場所・折り返し・重なりの判定を確かめる。
@@ -130,13 +130,27 @@ describe("placeAnnotation", () => {
     )
   })
 
-  it("注釈文の $ と改行を取り除く", () => {
+  it("注釈文の $ を取り除き、改行は段落の区切りとして残す（空の段落は落とす）", () => {
     const placement = place(
-      "$x^2$ の係数\nが違う",
+      "$x^2$ の係数\n\nが違う",
       createInkGrid(() => false)
     )
 
-    expect(placement?.text).toBe("x^2 の係数が違う")
+    expect(placement?.text).toBe("x^2 の係数\nが違う")
+    expect(placement?.lineCount).toBe(2)
+  })
+
+  it("段落ごとに折り返す（段落の途中の行と、段落の区切りを分けて数える）", () => {
+    // 内幅 80mm・5mm の文字で1行16字。1段落目は 20 字で2行、2段落目は1行
+    const placement = place(
+      `${"あ".repeat(20)}\nいう`,
+      createInkGrid(() => false)
+    )
+    expect(placement?.text.split("\n")).toEqual([
+      "あ".repeat(16),
+      "あ".repeat(4),
+      "いう",
+    ])
   })
 
   it("$ を除いて何も残らなければ null", () => {

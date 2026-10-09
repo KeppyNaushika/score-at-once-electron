@@ -30,6 +30,16 @@ export function rubricEffectLabel(
     : `${statusLabel} ${rubricItem.setScore}点`
 }
 
+/** 項目の呼び名（判断理由が空なら効き方） */
+export function rubricItemName(
+  rubricItem: Pick<
+    RubricScoringItem,
+    "effectKind" | "pointDelta" | "setStatus" | "setScore"
+  > & { label: string }
+): string {
+  return rubricItem.label || rubricEffectLabel(rubricItem)
+}
+
 /** 採点方式の名前（画面の選択肢と見出し） */
 export const SCORING_METHOD_LABELS: Record<ScoringMethod, string> = {
   points: "直接採点",

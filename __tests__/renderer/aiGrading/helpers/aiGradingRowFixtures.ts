@@ -10,7 +10,6 @@ import type {
   AiGradingRunRow,
   AiPromptRow,
   AttemptWithRun,
-  RegionInkMeasurementRow,
 } from "@/components/exams/07-score-at-once/AiGrading/types"
 import type { QuestionScoreRow } from "@/queries/scoring"
 import type { StudentAnswerImageWithExamPageAndStudent } from "@/types/prismaExtensions"
@@ -136,24 +135,6 @@ export function makeAttemptWithRun(
   return { attempt, run: makeRun({ ...runOverrides, attempts: [attempt] }) }
 }
 
-export function makeInk(
-  overrides: Partial<RegionInkMeasurementRow> = {}
-): RegionInkMeasurementRow {
-  return {
-    cropRegionId: CROP_REGION_ID,
-    inkGrid: {
-      originX: 0.1,
-      originY: 0.1,
-      cellWidth: 1 / 210,
-      cellHeight: 1 / 297,
-      columnCount: 42,
-      rowCount: 30,
-      occupiedCells: new Array<boolean>(42 * 30).fill(false),
-    },
-    ...overrides,
-  }
-}
-
 export function makeStudentAnswerImage(
   examStudentId: string,
   lastName = "生徒",
@@ -206,7 +187,6 @@ export function makeAnswer(
     studentAnswerImage: makeStudentAnswerImage(examStudentId),
     questionScore: undefined,
     attempts: [],
-    inkMeasurement: makeInk(),
     whiteness: null,
     ...overrides,
   }

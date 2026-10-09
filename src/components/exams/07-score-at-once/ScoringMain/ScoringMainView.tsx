@@ -170,6 +170,7 @@ function ScoringMainViewContent() {
     annotationVersionForGrid,
     handleCanvasAnnotationChanged,
     handleBrowserAnnotationAdded,
+    handleAnnotationsChangedElsewhere,
   } = useAnnotationVersions()
 
   /** OMR自動採点モーダル */
@@ -269,7 +270,6 @@ function ScoringMainViewContent() {
               autoScroll,
               showStudentNames,
               annotationRefreshKey: annotationVersionForGrid,
-              onAnnotationChanged: handleCanvasAnnotationChanged,
             }}
           />
         </div>
@@ -286,6 +286,10 @@ function ScoringMainViewContent() {
               selectedExamStudentIds={rubricAnswerFlow.selectedExamStudentIds}
               onAdvance={rubricAnswerFlow.advanceToNextAnswer}
               onScored={rubricAnswerFlow.markExamStudentsScored}
+              studentAnswerImages={studentAnswerImages}
+              scoringDatas={allScoringData}
+              pageSize={pageSize}
+              onAnnotationsChanged={handleAnnotationsChangedElsewhere}
             />
           )}
           <div className="min-w-0 flex-1">

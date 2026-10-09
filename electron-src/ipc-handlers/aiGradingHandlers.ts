@@ -12,14 +12,12 @@
 import { getAiGradingServices } from "../lib/aiGrading/aiGradingMainServices"
 import type { StartGradingRunInput } from "../lib/aiGrading/gradingJobRunner"
 import {
-  measureCropRegionInk,
   measureRunImageSizes,
   previewSendingCrop,
 } from "../lib/aiGrading/sendingImageInspection"
 import {
   adoptAiGradingAttempts,
   type AiGradingAdoption,
-  type AiGradingAdoptionParts,
 } from "../lib/prisma/aiGradingAdoption"
 import {
   deleteAiGradingAttempts,
@@ -59,13 +57,6 @@ export const aiGradingHandlers = {
     getAsbModelAnswerSource(asbDefinitionId),
 
   // ── 画像（外部へは送らない） ─────────────────────────────────
-  /** 設問のある答案すべての占有グリッド（朱書きの配置に使う） */
-  "aiGrading:measureInk": async (cropRegionId: string) =>
-    measureCropRegionInk(
-      cropRegionId,
-      getAiGradingServices().dependencies.resolveDataPath
-    ),
-
   /** 答案1件について、送る画像そのもの（PNG の data URL） */
   "aiGrading:previewCrop": async (input: {
     cropRegionId: string
@@ -138,6 +129,5 @@ export const aiGradingHandlers = {
   "aiGrading:adoptAttempts": async (input: {
     adoptions: AiGradingAdoption[]
     overwrite: boolean
-    parts?: AiGradingAdoptionParts
   }) => adoptAiGradingAttempts(input, requireActorUserId()),
 } satisfies HandlerMap

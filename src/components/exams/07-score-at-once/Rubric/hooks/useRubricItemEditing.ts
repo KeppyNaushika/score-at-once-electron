@@ -4,6 +4,8 @@
  * 効き方は保存の前に `validateRubricItemEffect`（main が書く前に通すものと同じ規則）で
  * 確かめ、通らなければトーストで知らせて書かない。変更・削除・並べ替えは、点の変わる
  * 行を洗い出してから書く（`useRubricRecalculation`）。
+ *
+ * 助言の文の変更・削除・並べ替えのあとは、項目の助言から作る朱書きも合わせる（§4-7）。
  */
 
 import { useMutation } from "@tanstack/react-query"
@@ -27,6 +29,7 @@ import {
   withEditedRubricItem,
   withoutRubricItem,
 } from "../utils/rubricRecalculation"
+import type { useRubricAdviceSync } from "./useRubricAdviceSync"
 import type { useRubricRecalculation } from "./useRubricRecalculation"
 
 /** 編集画面で書く項目の中身 */
@@ -46,6 +49,13 @@ interface UseRubricItemEditingOptions {
   runWithRecalculation: ReturnType<
     typeof useRubricRecalculation
   >["runWithRecalculation"]
+  adviceSync: Pick<
+    ReturnType<typeof useRubricAdviceSync>,
+    | "syncRowsWithItem"
+    | "syncRows"
+    | "syncRowsWithCombinedAdvice"
+    | "readRowIdsWithItem"
+  >
 }
 
 export function useRubricItemEditing({
@@ -53,6 +63,7 @@ export function useRubricItemEditing({
   cropRegion,
   rubricItems,
   runWithRecalculation,
+  adviceSync,
 }: UseRubricItemEditingOptions) {
   const { mutateAsync: createItem } = useMutation(
     createRubricItemMutation(examId, cropRegion.id)
@@ -124,19 +135,24 @@ export function useRubricItemEditing({
         title: "項目を変更しますか",
         description: `項目${itemName(rubricItem)}は採点者の間で共有しています。`,
         confirmLabel: "変更する",
-        change: () =>
-          updateItem({
+        change: async () => {
+          await updateItem({
             rubricItemId: rubricItem.id,
             data: {
               label: draft.label,
               adviceText: draft.adviceText,
               effect,
             },
-          }),
+          })
+          // 助言の文が変わったときだけ合わせる（教員が直した朱書きの文を、関係の無い変更で巻き戻さない）
+          if (draft.adviceText.trim() !== rubricItem.adviceText.trim()) {
+            await adviceSync.syncRowsWithItem(rubricItem.id)
+          }
+        },
       })
       return true
     },
-    [validate, runWithRecalculation, updateItem]
+    [validate, runWithRecalculation, updateItem, adviceSync]
   )
 
   /** 項目を消す。当たっている答案の件数を示して、いつも確認する */
@@ -152,9 +168,16 @@ export function useRubricItemEditing({
         title: "項目を削除しますか",
         description: `項目${itemName(rubricItem)}を削除し、当てていた答案からも外します。`,
         confirmLabel: "削除する",
-        change: () => deleteItem(rubricItem.id),
+        change: async () => {
+          // 消すと適用が消えるので、当たっていた行を先に読んでおく
+          const questionScoreIds = await adviceSync.readRowIdsWithItem(
+            rubricItem.id
+          )
+          await deleteItem(rubricItem.id)
+          await adviceSync.syncRows(questionScoreIds)
+        },
       }),
-    [runWithRecalculation, deleteItem]
+    [runWithRecalculation, deleteItem, adviceSync]
   )
 
   /**
@@ -199,10 +222,12 @@ export function useRubricItemEditing({
               data: { sortOrder: sortOrderById.get(movedItem.id) },
             })
           }
+          // 並べる助言の順が変わる
+          await adviceSync.syncRowsWithCombinedAdvice()
         },
       })
     },
-    [rubricItems, runWithRecalculation, updateItem]
+    [rubricItems, runWithRecalculation, updateItem, adviceSync]
   )
 
   return { create, update, remove, move }

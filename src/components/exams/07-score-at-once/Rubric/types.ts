@@ -4,6 +4,7 @@ import type {
   RubricItem,
 } from "@prisma/client"
 
+import type { measureCropRegionInk } from "@/electron-src/lib/aiGrading/sendingImageInspection"
 import type { Serialized } from "@/types/prismaExtensions"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -46,3 +47,8 @@ export interface RubricScoreResult {
   /** 部分点。判定そのものが点を決めるときは null */
   partialScore: number | null
 }
+
+/** 答案画像1枚の、この設問の枠1つぶんのインクの測定（朱書きの配置に使う占有グリッド） */
+export type RegionInkMeasurementRow = Serialized<
+  Awaited<ReturnType<typeof measureCropRegionInk>>
+>[number]["regions"][number]

@@ -326,6 +326,23 @@ const AUDIT_ACTIONS = {
     verb: "update",
     label: "ルーブリック項目から採点を反映しました",
   },
+  /** 重なった助言の決まり（§4-7）。項目の集合ごとに、朱書きの扱いを決める */
+  "exam.rubric_advice.save": {
+    category: "exam",
+    verb: "update",
+    label: "重なった助言の決まりを保存しました",
+  },
+  "exam.rubric_advice.delete": {
+    category: "exam",
+    verb: "delete",
+    label: "重なった助言の決まりを削除しました",
+  },
+  /** 項目の助言から作る朱書きの作成・書き換え・削除。1回の書き込みを1件にまとめる */
+  "exam.rubric_advice.sync": {
+    category: "exam",
+    verb: "update",
+    label: "ルーブリック項目の助言から朱書きを作りました",
+  },
   /** 共有の項目を変えたことによる、他の採点者の点の計算し直し（§4-6） */
   "exam.rubric.recalculate_others": {
     category: "exam",

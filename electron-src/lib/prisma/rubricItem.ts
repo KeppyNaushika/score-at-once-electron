@@ -207,7 +207,12 @@ export async function updateRubricItem(
 
 /**
  * 項目を消す。**適用はカスケードで一緒に消える**（「要再採点」の印は持たない。#836）。
- * 消えた適用の点の計算し直しは renderer が、消す前に読んだ材料で行う。消した行を返す
+ * 消えた適用の点の計算し直しは renderer が、消す前に読んだ材料で行う。消した行を返す。
+ *
+ * **その項目を含む重なった助言の決まりも消す**（残る項目が2つ以上でも）。決まりは項目の
+ * 集合ごとの判断で、まとめた一文は消えた項目の助言も含めて書かれている。項目を除いた残りの
+ * 集合へ決まりを持ち越すと、別の集合の決まりと重なったり、文が実際の助言と合わなくなる。
+ * 消したあとの集合は、決まりが無ければ「未決定」として問い直す
  */
 export async function deleteRubricItem(
   rubricItemId: string,
@@ -220,8 +225,11 @@ export async function deleteRubricItem(
   if (!before) throw new Error("ルーブリック項目が見つかりません")
 
   const scope = await resolveExamScopeByCropRegion(before.cropRegionId)
-  const deleted = await prisma.rubricItem.delete({
-    where: { id: rubricItemId },
+  const deleted = await prisma.$transaction(async (tx) => {
+    await tx.rubricAdviceCombination.deleteMany({
+      where: { items: { some: { rubricItemId } } },
+    })
+    return tx.rubricItem.delete({ where: { id: rubricItemId } })
   })
 
   await recordAuditLog({

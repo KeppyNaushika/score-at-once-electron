@@ -5,7 +5,7 @@
  * - 答案の下の札は、採用の前か後かを1つの状態に分ける（提案・採用済み・採用後に変更・未判定・失敗…）
  * - 絞り込みは「自分の採点」と「AI の採点」の2組で、組の中は OR、組どうしは AND
  * - 採点種順は、マスに見えている状態（自分の採点、無ければ成功した AI の判定）で並べる
- * - 選んだ答案の採用は、成功した判定のあるものだけを、直した下書きがあればその形で書く
+ * - 選んだ答案の採用は、成功した判定のあるものだけを、点だけ書く（AI の朱書きの文案は採用しない）
  */
 
 import { describe, expect, it } from "vitest"
@@ -14,10 +14,6 @@ import type {
   AiGradingAnswer,
   AiGradingAttemptRow,
 } from "@/components/exams/07-score-at-once/AiGrading/types"
-import {
-  adoptionAnnotationFromDraft,
-  draftAnnotationsFromPlacement,
-} from "@/components/exams/07-score-at-once/AiGrading/utils/adoptionAnnotation"
 import {
   cellStatusOf,
   DEFAULT_AI_GRID_FILTER_SETTINGS,
@@ -36,7 +32,6 @@ import { classifyProposalChip } from "@/components/exams/07-score-at-once/AiGrad
 import { planSelectionAdoption } from "@/components/exams/07-score-at-once/AiGrading/utils/selectionAdoption"
 import { selectQuestionsWithUnreflectedAiJudgements } from "@/components/exams/07-score-at-once/AiGrading/utils/unreflectedQuestions"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
-import { newDrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 import {
   CROP_REGION_ID,
@@ -273,91 +268,30 @@ describe("絞り込み", () => {
 })
 
 describe("選んだ答案の採用", () => {
-  const context = {
-    cropRegion,
-    pageSize: "A4",
-    draftAnnotationsByAttemptId: new Map(),
-  }
-
-  it("成功した判定のあるものだけを採用し、採点済みと採用できないものを数える", () => {
-    const plan = planSelectionAdoption(
-      [
-        reviewed(answerWithAttempt("s1", { annotationText: "式を書こう" })),
-        reviewed(
-          answerWithAttempt(
-            "s2",
-            { annotationText: "" },
-            {
-              questionScore: makeQuestionScore({
-                examStudentId: "s2",
-                status: "incorrect",
-              }),
-            }
-          )
-        ),
-        reviewed(answerWithAttempt("s3", { state: "errored" })),
-        reviewed(makeAnswer("s4")),
-      ],
-      context
-    )
-    expect(plan.adoptions.map((adoption) => adoption.attemptId)).toEqual([
-      "attempt-s1",
-      "attempt-s2",
+  it("成功した判定のあるものだけを採用し（点だけ。AI の朱書きの文案は運ばない）、採点済みと採用できないものを数える", () => {
+    const plan = planSelectionAdoption([
+      reviewed(answerWithAttempt("s1", { annotationText: "式を書こう" })),
+      reviewed(
+        answerWithAttempt(
+          "s2",
+          {},
+          {
+            questionScore: makeQuestionScore({
+              examStudentId: "s2",
+              status: "incorrect",
+            }),
+          }
+        )
+      ),
+      reviewed(answerWithAttempt("s3", { state: "errored" })),
+      reviewed(makeAnswer("s4")),
     ])
-    // 注釈文が空なら注釈は無い。あれば答案ごとに置き場所を求める
-    expect(plan.adoptions[0].annotation).toMatchObject({
-      text: expect.stringContaining("式を書こう"),
-      fontSize: 5,
-    })
-    expect(plan.adoptions[1].annotation).toBeNull()
+    expect(plan.adoptions).toEqual([
+      { attemptId: "attempt-s1" },
+      { attemptId: "attempt-s2" },
+    ])
     expect(plan.overwriteCount).toBe(1)
     expect(plan.skippedCount).toBe(2)
-  })
-
-  it("直した下書きがあれば、求めた置き場所ではなくその形で書く。消していれば注釈なし", () => {
-    const edited = newDrawingAnnotation({
-      type: "text",
-      x: 0.42,
-      y: 0.24,
-      text: "直した朱書き",
-      fontSize: 3.5,
-    })
-    const plan = planSelectionAdoption(
-      [
-        reviewed(answerWithAttempt("s1", { annotationText: "元の朱書き" })),
-        reviewed(answerWithAttempt("s2", { annotationText: "消す朱書き" })),
-      ],
-      {
-        ...context,
-        draftAnnotationsByAttemptId: new Map([
-          ["attempt-s1", [edited]],
-          ["attempt-s2", []],
-        ]),
-      }
-    )
-    expect(plan.adoptions).toEqual([
-      {
-        attemptId: "attempt-s1",
-        annotation: { x: 0.42, y: 0.24, text: "直した朱書き", fontSize: 3.5 },
-      },
-      { attemptId: "attempt-s2", annotation: null },
-    ])
-  })
-
-  it("下書きの初めの形は置き場所そのもの（直さずに採用すれば同じものを書く）", () => {
-    const placement = {
-      x: 0.2,
-      y: 0.15,
-      text: "途中式",
-      fontSize: 5,
-      lineCount: 1,
-      overlapsInk: false,
-      exceedsRegion: false,
-    }
-    expect(
-      adoptionAnnotationFromDraft(draftAnnotationsFromPlacement(placement))
-    ).toEqual({ x: 0.2, y: 0.15, text: "途中式", fontSize: 5 })
-    expect(draftAnnotationsFromPlacement(null)).toEqual([])
   })
 })
 

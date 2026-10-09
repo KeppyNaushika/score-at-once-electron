@@ -1,14 +1,10 @@
 /**
- * AI採点モードの計算（実行の履歴と一致率・注釈の用紙の向き）。
+ * AI採点モードの計算（実行の履歴と一致率）。
  * 費用の概算は `costEstimate.test.ts`。
  */
 
 import { describe, expect, it } from "vitest"
 
-import {
-  inferPaperDimensionsFromInkGrid,
-  placeAdoptionAnnotation,
-} from "@/components/exams/07-score-at-once/AiGrading/utils/adoptionAnnotation"
 import { resolveDisplayedAttempt } from "@/components/exams/07-score-at-once/AiGrading/utils/attemptSelection"
 import {
   resolveChosenRunId,
@@ -19,7 +15,6 @@ import {
   CROP_REGION_ID,
   CURRENT_USER_ID,
   makeAttempt,
-  makeInk,
   makeQuestionScore,
   makeRun,
 } from "./helpers/aiGradingRowFixtures"
@@ -121,47 +116,5 @@ describe("実行の履歴", () => {
     expect(
       resolveDisplayedAttempt(attempts, undefined, "run-elsewhere")?.attempt.id
     ).toBe("attempt-newer")
-  })
-})
-
-describe("注釈の用紙の向き", () => {
-  it("占有グリッドの列数・行数から、縦か横かを決める", () => {
-    const portraitGrid = makeInk().inkGrid
-    expect(inferPaperDimensionsFromInkGrid("A4", portraitGrid)).toEqual({
-      width: 210,
-      height: 297,
-    })
-    const landscapeGrid = {
-      ...portraitGrid,
-      cellWidth: 1 / 297,
-      cellHeight: 1 / 210,
-    }
-    expect(inferPaperDimensionsFromInkGrid("A4", landscapeGrid)).toEqual({
-      width: 297,
-      height: 210,
-    })
-  })
-
-  it("測れなかった答案でも、枠の中に置ける。注釈文が空なら置かない", () => {
-    const region = { x: 0.1, y: 0.1, width: 0.5, height: 0.2 }
-    const placement = placeAdoptionAnnotation({
-      annotationText: "符号の誤り",
-      inkGrid: null,
-      region,
-      pageSize: "A4",
-      fontSizeMm: 5,
-    })
-    expect(placement).not.toBeNull()
-    expect(placement?.x).toBeGreaterThanOrEqual(region.x)
-    expect(placement?.y).toBeGreaterThanOrEqual(region.y)
-    expect(
-      placeAdoptionAnnotation({
-        annotationText: "  ",
-        inkGrid: null,
-        region,
-        pageSize: "A4",
-        fontSizeMm: 5,
-      })
-    ).toBeNull()
   })
 })
