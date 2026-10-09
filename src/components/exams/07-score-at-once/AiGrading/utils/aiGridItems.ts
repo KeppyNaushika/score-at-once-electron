@@ -3,6 +3,7 @@
  */
 
 import type { MasterGridItem } from "@/components/exams/07-score-at-once/types"
+import { toAppImageUrl } from "@/lib/appImageUrl"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import { toScoringStatus } from "@/types/scoringStatus.types"
 
@@ -54,7 +55,7 @@ export function toMasterGridItem(
     id: `master-${cropRegion.id}`,
     examStudentId: "MASTER",
     studentName: "模範解答",
-    imageUrl: masterImagePath ? `appimg:///${masterImagePath}` : "",
+    imageUrl: masterImagePath ? toAppImageUrl(masterImagePath) : "",
     maxScore: cropRegion.points || 0,
     status: "master",
     questionRegion: cropRegion,

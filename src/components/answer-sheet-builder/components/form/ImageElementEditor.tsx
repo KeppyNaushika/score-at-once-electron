@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
+import { toAppImageUrl } from "@/lib/appImageUrl"
 import {
   deleteAnswerSheetImageMutation,
   uploadAnswerSheetImageMutation,
@@ -133,7 +134,7 @@ export function ImageElementEditor({
           {/* Row 1: サムネイル + ファイル名 + 削除 */}
           <div className="flex items-center gap-1.5">
             <Image
-              src={`appimg:///${imageElement.imagePath}`}
+              src={toAppImageUrl(imageElement.imagePath)}
               alt={imageElement.originalName}
               width={32}
               height={32}

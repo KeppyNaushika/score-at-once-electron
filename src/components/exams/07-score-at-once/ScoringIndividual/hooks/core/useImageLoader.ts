@@ -10,6 +10,7 @@ import type {
   ScoringData,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
+import { fromAppImageUrl, toAppImageUrl } from "@/lib/appImageUrl"
 import { checkFileExists } from "@/queries/misc"
 
 import type { ImageLoaderReturn } from "./types"
@@ -73,11 +74,7 @@ export function useImageLoader({
         }))
       } else {
         // 単一ページ表示：ScoringDataのimageUrlを使用（Grid Viewと同じ）
-        // appimg:// または appimg:/// の両方に対応
-        const imagePath = currentScoringData.imageUrl.replace(
-          /^appimg:\/\/\/?/,
-          ""
-        )
+        const imagePath = fromAppImageUrl(currentScoringData.imageUrl)
         // 設問の載っているページの答案なので、ページは設問の採点領域のページ
         imagesToLoad = [
           {
@@ -106,9 +103,8 @@ export function useImageLoader({
           checkFileExists(imageInfo.path)
             .then((result) => {
               if (result.exists) {
-                // 相対パスを使用（appimg:// プロトコルハンドラー内で絶対パスに変換される）
-                // 絶対パスを使うと appimg:////Users/... となりURL正規化でパスが壊れる
-                image.src = `appimg:///${imageInfo.path}`
+                // 相対パスを渡す（絶対パスにしない理由は toAppImageUrl の説明）
+                image.src = toAppImageUrl(imageInfo.path)
               } else {
                 console.warn(`File does not exist: ${imageInfo.path}`)
                 reject(new Error(`File not found: ${imageInfo.path}`))
@@ -116,7 +112,7 @@ export function useImageLoader({
             })
             .catch((error) => {
               console.error("Error checking file existence:", error)
-              image.src = `appimg:///${imageInfo.path}` // フォールバック
+              image.src = toAppImageUrl(imageInfo.path) // フォールバック
             })
         })
       })

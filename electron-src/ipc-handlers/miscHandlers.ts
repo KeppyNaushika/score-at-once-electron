@@ -196,6 +196,7 @@ export const miscHandlers = {
   "resolve-file-protocol-path": async (relativePath: string) => {
     // パスを適切にエンコード
     // appimg:/// (スラッシュ3つ) にすることで、URLパース時にpathname全体が取得できる
+    // renderer 側の同じ規則は src/lib/appImageUrl.ts（あちらはエンコードしない）
     const encodedPath = encodeURI(relativePath)
     const result = `appimg:///${encodedPath}`
 

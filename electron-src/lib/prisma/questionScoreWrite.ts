@@ -6,8 +6,8 @@
  * 読み取りは `questionScore.ts`、覚え書きは `questionScoreComment.ts` にある。
  */
 
-import type { CropRegion, Prisma, Student } from "@prisma/client"
-import { Decimal } from "@prisma/client/runtime/client"
+import type { CropRegion, Student } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -138,8 +138,10 @@ export type SetQuestionScoreData = Omit<
   QuestionScoreResult
 
 /** 部分点を Decimal 列の値へ。`null` はそのまま NULL を書く */
-const toPartialScoreColumn = (partialScore: number | null): Decimal | null =>
-  partialScore !== null ? new Decimal(partialScore) : null
+const toPartialScoreColumn = (
+  partialScore: number | null
+): Prisma.Decimal | null =>
+  partialScore !== null ? new Prisma.Decimal(partialScore) : null
 
 /** `ensureQuestionScore` の引数。判定を持たない（採点する関数ではないので） */
 export interface EnsureQuestionScoreData {

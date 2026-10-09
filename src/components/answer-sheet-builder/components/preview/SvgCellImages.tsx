@@ -1,5 +1,6 @@
 "use client"
 
+import { toAppImageUrl } from "@/lib/appImageUrl"
 import type { RenderMode } from "@/types/answerSheetDefinition.types"
 import type { ComputedCell } from "@/types/answerSheetLayout.types"
 
@@ -51,7 +52,7 @@ export function SvgCellImages({
               const href =
                 forPrint && imageDataUris?.has(imageElement.imagePath)
                   ? imageDataUris.get(imageElement.imagePath)!
-                  : `appimg:///${imageElement.imagePath}`
+                  : toAppImageUrl(imageElement.imagePath)
               return (
                 <image
                   key={`img-${cellIdx}-${cell.label}-${ii}`}

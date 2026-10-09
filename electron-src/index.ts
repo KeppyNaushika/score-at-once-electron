@@ -78,6 +78,7 @@ app.on("ready", async () => {
   try {
     // appimg:// プロトコルハンドラを登録
     // appimg:///path/to/file → file:///path/to/file としてローカルファイルを読み込む
+    // renderer はこの規則で URL を組み立てる（src/lib/appImageUrl.ts）。変えるときは揃えること
     protocol.handle("appimg", async (request) => {
       try {
         // new URL() を使わず文字列操作でパスを抽出

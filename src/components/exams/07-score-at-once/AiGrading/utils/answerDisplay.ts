@@ -2,6 +2,7 @@
  * 答案・判定を画面に出すときの文字列（表示のときだけ求める）。
  */
 
+import { toAppImageUrl } from "@/lib/appImageUrl"
 import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -12,7 +13,7 @@ export function answerImageUrl(
   studentAnswerImage: AiGradingAnswer["studentAnswerImage"]
 ): string {
   return studentAnswerImage.imagePath
-    ? `appimg:///${studentAnswerImage.imagePath}`
+    ? toAppImageUrl(studentAnswerImage.imagePath)
     : ""
 }
 

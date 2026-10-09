@@ -6,6 +6,7 @@ import type {
   ScoringData,
 } from "@/components/exams/07-score-at-once/types"
 import { useExamDecisionSummary } from "@/hooks/useExamDecisionSummary"
+import { toAppImageUrl } from "@/lib/appImageUrl"
 import { questionAnswerRegionsQuery } from "@/queries/cropRegion"
 import { examWithPagesQuery, studentAnswerImagesQuery } from "@/queries/exam"
 import type {
@@ -113,7 +114,7 @@ export function useFinalizeData(
         examStudentId: cell.examStudentId,
         studentName: cell.studentName,
         imageUrl: answerImage?.imagePath
-          ? `appimg:///${answerImage.imagePath}`
+          ? toAppImageUrl(answerImage.imagePath)
           : "",
         // 枠の色は「いま出力される結果」。未解決の食い違いは出力でも未採点になる
         status: cell.decision?.verdict ?? "unscored",
@@ -137,7 +138,7 @@ export function useFinalizeData(
       id: `master-${currentCropRegion.id}`,
       examStudentId: "MASTER",
       studentName: "模範解答",
-      imageUrl: examPage.imagePath ? `appimg:///${examPage.imagePath}` : "",
+      imageUrl: examPage.imagePath ? toAppImageUrl(examPage.imagePath) : "",
       maxScore: currentCropRegion.points || 0,
       status: "master",
       questionRegion: currentCropRegion,
