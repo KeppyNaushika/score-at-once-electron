@@ -36,6 +36,8 @@ interface AiGradingModeProps {
   display: AiGridDisplaySettings
   /** AI の判定が未反映の設問（設問一覧の印。一覧表示・個別表示と同じもの） */
   unreflectedAiQuestionIds: ReadonlySet<string>
+  /** 助言の朱書きを書いた（一覧の注釈を取り直す合図） */
+  onAnnotationsChanged?: () => void
 }
 
 /** 採点行がまだ届いていない設問の空の配列（毎回作り直さない） */
@@ -64,6 +66,7 @@ export function AiGradingMode({
   unlockedProviders,
   display,
   unreflectedAiQuestionIds,
+  onAnnotationsChanged,
 }: AiGradingModeProps) {
   const viewSettings = useAiGridViewSettings()
   return (
@@ -84,6 +87,7 @@ export function AiGradingMode({
           unlockedProviders={unlockedProviders}
           display={display}
           viewSettings={viewSettings}
+          onAnnotationsChanged={onAnnotationsChanged}
           questionNavigator={
             <QuestionNavigator
               questionRegions={cropRegions}

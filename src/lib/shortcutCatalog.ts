@@ -195,7 +195,7 @@ export const SHORTCUT_CATEGORIES = {
       "choice.exit",
     ],
     description:
-      "ルーブリックの項目を当てる・外す場面の操作（入る キー以外は、場面の中だけで効く）",
+      "ルーブリックの項目を当てる・外す場面と、AI 採点の問いかけで選択肢を選ぶ場面の操作（入る キー以外は、場面の中だけで効く）",
   },
   filter: {
     label: "フィルタ",

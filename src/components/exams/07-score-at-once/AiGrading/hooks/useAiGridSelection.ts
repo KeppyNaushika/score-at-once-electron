@@ -20,6 +20,11 @@ interface UseAiGridSelectionOptions {
   itemsPerLine: number[]
   /** 絞り込み（設問をまたいで残すので、AI採点モードの根から受け取る） */
   viewSettings: Pick<AiGridViewSettings, "filterSettings" | "setFilterSettings">
+  /**
+   * 一覧をこの答案（受験者）だけに、この順で絞る（問いかけている案の答案を確信度の低い順に
+   * 見せるとき）。絞り込みと並べ方より優先する。絞らないなら null
+   */
+  pinnedExamStudentIds?: readonly string[] | null
 }
 
 /**
@@ -36,6 +41,7 @@ export function useAiGridSelection({
   layoutDirection,
   itemsPerLine,
   viewSettings: { filterSettings, setFilterSettings },
+  pinnedExamStudentIds = null,
 }: UseAiGridSelectionOptions) {
   /**
    * 絞り込みによらず一覧に残す答案。R（更新）か絞り込みを変えるまで残す。
@@ -54,15 +60,22 @@ export function useAiGridSelection({
       ),
     [reviewedAnswers, cropRegion]
   )
-  const visibleItems = useMemo(
-    () =>
-      gridItems.filter(
-        (gridItem) =>
-          keptVisibleIds.has(gridItem.id) ||
-          isShownByFilter(gridItem.reviewedAnswer, filterSettings)
-      ),
-    [gridItems, keptVisibleIds, filterSettings]
-  )
+  const visibleItems = useMemo(() => {
+    if (pinnedExamStudentIds) {
+      const gridItemById = new Map(
+        gridItems.map((gridItem) => [gridItem.id, gridItem])
+      )
+      return pinnedExamStudentIds.flatMap((examStudentId) => {
+        const gridItem = gridItemById.get(examStudentId)
+        return gridItem ? [gridItem] : []
+      })
+    }
+    return gridItems.filter(
+      (gridItem) =>
+        keptVisibleIds.has(gridItem.id) ||
+        isShownByFilter(gridItem.reviewedAnswer, filterSettings)
+    )
+  }, [gridItems, keptVisibleIds, filterSettings, pinnedExamStudentIds])
   const visibleIds = useMemo(
     () => visibleItems.map((gridItem) => gridItem.id),
     [visibleItems]
