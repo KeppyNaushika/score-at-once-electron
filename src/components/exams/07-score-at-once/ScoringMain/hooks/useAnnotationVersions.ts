@@ -23,11 +23,19 @@ export function useAnnotationVersions() {
     setAnnotationVersionForGrid((prev) => prev + 1)
   }, [])
 
+  // 画面の外（ルーブリック項目の助言から作る朱書き）で注釈が変わった → 全部をリロード
+  const handleAnnotationsChangedElsewhere = useCallback(() => {
+    setAnnotationVersionForBrowser((prev) => prev + 1)
+    setAnnotationVersionForCanvas((prev) => prev + 1)
+    setAnnotationVersionForGrid((prev) => prev + 1)
+  }, [])
+
   return {
     annotationVersionForBrowser,
     annotationVersionForCanvas,
     annotationVersionForGrid,
     handleCanvasAnnotationChanged,
     handleBrowserAnnotationAdded,
+    handleAnnotationsChangedElsewhere,
   }
 }

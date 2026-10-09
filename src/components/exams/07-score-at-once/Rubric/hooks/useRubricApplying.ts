@@ -5,6 +5,8 @@
  * 計算して書く（計算は renderer、main は書くだけ）。付け外ししたマスは上書きの印が外れる。
  *
  * 上書きの解除は、上書きしている自分の採点行を項目から計算した点で書き直す。
+ *
+ * 当てる・外したマスは、項目の助言から作る朱書きも合わせる（§4-7。`useRubricAdviceSync`）。
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -26,6 +28,7 @@ import {
   toRubricScoredRow,
 } from "../utils/rubricApplicationState"
 import { computeRubricScore, isSameRubricScore } from "../utils/rubricScore"
+import type { useRubricAdviceSync } from "./useRubricAdviceSync"
 
 /** 選んだ答案1つ（受験者と、自分の採点行と当たっている項目） */
 export interface SelectedRubricCell extends OwnRubricCell {
@@ -38,6 +41,8 @@ interface UseRubricApplyingOptions {
   selectedCells: readonly SelectedRubricCell[]
   /** 点を書いた答案を「いま採点した」にする（絞り込みから急に消えないように） */
   onScored?: (examStudentIds: string[]) => void
+  /** 当てる・外したマスの助言の朱書きを合わせる */
+  syncAdviceRows: ReturnType<typeof useRubricAdviceSync>["syncRows"]
 }
 
 export function useRubricApplying({
@@ -45,6 +50,7 @@ export function useRubricApplying({
   cropRegion,
   selectedCells,
   onScored,
+  syncAdviceRows,
 }: UseRubricApplyingOptions) {
   const queryClient = useQueryClient()
   /**
@@ -118,6 +124,7 @@ export function useRubricApplying({
         })
         onScored?.(examStudentIds)
         await writeComputedScores(touchedRows)
+        await syncAdviceRows(touchedRows.map((row) => row.id))
       } catch {
         // 失敗の通知と取り直しは MutationCache の後始末が担う
       }
@@ -128,6 +135,7 @@ export function useRubricApplying({
       cropRegion.id,
       onScored,
       writeComputedScores,
+      syncAdviceRows,
     ]
   )
 

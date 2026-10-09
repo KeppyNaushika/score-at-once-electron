@@ -2,14 +2,25 @@
  * ルーブリック採点（教員の層）の IPC（docs/vlm-grading-design.md §4・§11）。
  *
  * 項目の作成・変更・削除、採点方式の変更、適用の付け外し（まとめて）、項目から計算した点の
- * 書き込み、点を計算し直す材料の取得。**点の計算は renderer** で、main は元データを返して
+ * 書き込み、点を計算し直す材料の取得、重なった助言の決まりと助言の朱書きの読み書き。**点の計算は renderer** で、main は元データを返して
  * 受け取った結果を書くだけ。
  *
  * 操作者は認証ストアから決める（renderer から利用者 id を受け取らない）。
  */
 
 import type { ScoringMethod } from "../../src/types/rubric.types"
+import { measureCropRegionInk } from "../lib/aiGrading/sendingImageInspection"
+import { getAbsolutePathFromSharedFiles } from "../lib/dataManager"
 import { getCurrentActorUserId } from "../lib/prisma/auditActor"
+import {
+  deleteRubricAdviceCombination,
+  getRubricAdviceSource,
+  listRubricAdviceCombinations,
+  type RubricAdviceSyncInput,
+  saveRubricAdviceCombination,
+  type SaveRubricAdviceCombinationInput,
+  syncRubricAdviceAnnotations,
+} from "../lib/prisma/rubricAdvice"
 import {
   getRubricRecalculationSource,
   listRubricApplicationsByCropRegion,
@@ -90,4 +101,33 @@ export const rubricHandlers = {
   /** 項目から計算した点をまとめて書く（他の採点者の行も。上書きの印は外す） */
   "rubric:writeScores": async (writes: RubricScoreWrite[]) =>
     writeRubricScores(writes, requireActorUserId()),
+
+  // ── 助言と朱書き（§4-7・§9） ─────────────────────────────────
+  /** 設問の重なった助言の決まり（項目付き） */
+  "rubric:listAdviceCombinations": async (cropRegionId: string) =>
+    listRubricAdviceCombinations(cropRegionId),
+
+  /** 重なった助言の決まりを保存する（同じ項目の集合の決まりがあれば書き換える） */
+  "rubric:saveAdviceCombination": async (
+    input: SaveRubricAdviceCombinationInput
+  ) => saveRubricAdviceCombination(input, requireActorUserId()),
+
+  /** 重なった助言の決まりを消す（未決定に戻す） */
+  "rubric:deleteAdviceCombination": async (combinationId: string) =>
+    deleteRubricAdviceCombination(combinationId, requireActorUserId()),
+
+  /** 助言の朱書きを作り直す材料（項目・決まり・適用か助言の朱書きのある全採点者の採点行） */
+  "rubric:getAdviceSource": async (cropRegionId: string) =>
+    getRubricAdviceSource(cropRegionId),
+
+  /** 助言の朱書きの差分を書く（印の付いた朱書きにしか触らない） */
+  "rubric:syncAdviceAnnotations": async (input: RubricAdviceSyncInput) =>
+    syncRubricAdviceAnnotations(input, requireActorUserId()),
+
+  /**
+   * 設問のある答案すべての占有グリッド（朱書きを手書きに重ねない位置を探すのに使う。§8・§9）。
+   * 画像は外へ送らない。答案画像1枚につき、この設問の枠1つぶんの結果が返る
+   */
+  "rubric:measureInk": async (cropRegionId: string) =>
+    measureCropRegionInk(cropRegionId, getAbsolutePathFromSharedFiles),
 } satisfies HandlerMap

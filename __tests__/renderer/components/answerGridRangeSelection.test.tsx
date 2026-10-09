@@ -297,7 +297,6 @@ const display: AiGridDisplaySettings = {
   autoScroll: false,
   showStudentNames: true,
   annotationRefreshKey: 0,
-  onAnnotationChanged: () => undefined,
 }
 
 const reviewedAnswers = AI_EXAM_STUDENT_IDS.map((examStudentId) => {
@@ -345,7 +344,6 @@ function AiGridHarness() {
         onSelect={grid.handleSelectAnswer}
         onReplaceSelection={(ids) => grid.setSelection(new Set(ids))}
         totalCount={grid.gridItems.length}
-        draftAnnotationsByAttemptId={new Map()}
       />
     </>
   )

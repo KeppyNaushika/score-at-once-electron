@@ -1,5 +1,3 @@
-import type { Dispatch, SetStateAction } from "react"
-
 import type {
   ScoringData,
   StudentAnswerImageWithExamStudents,
@@ -65,19 +63,6 @@ export interface AnswerIndividualViewProps {
   onImageSizeChanged?: (size: { width: number; heights: number[] }) => void
   /** 模範解答の用紙サイズ（mm→px変換基準、デフォルト: "A4"） */
   pageSize?: string
-  /**
-   * 保存しない注釈（AI採点の採用前の朱書きの下書き）。渡すと DB を読まず書かず、
-   * ここにある注釈を描いて編集する（動かす・大きさを変える・文字を直すのは同じ操作）
-   */
-  draftAnnotations?: DraftAnnotationsSource
-  /** 画像を読み込んだら設問に合わせて拡大する（狭い枠に埋め込むとき用） */
-  fitQuestionOnLoad?: boolean
-}
-
-/** 保存しない注釈の出どころ。状態は呼び出し側が持つ（制御コンポーネント） */
-export interface DraftAnnotationsSource {
-  elements: DrawingAnnotation[]
-  setElements: Dispatch<SetStateAction<DrawingAnnotation[]>>
 }
 
 // 選択範囲矩形の型定義

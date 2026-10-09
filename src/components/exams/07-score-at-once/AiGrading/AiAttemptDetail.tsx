@@ -15,7 +15,7 @@ interface AiAttemptDetailProps {
   isFromOtherPrompt: boolean
 }
 
-/** 表示中の試行の中身（判定・読み取り・理由・注釈文と、出した実行の設定） */
+/** 表示中の試行の中身（判定・読み取り・理由と、出した実行の設定） */
 export function AiAttemptDetail({
   attemptWithRun,
   promptNumber,
@@ -40,10 +40,6 @@ export function AiAttemptDetail({
       <dd className="whitespace-pre-wrap">{attempt.transcription || "—"}</dd>
       <dt className="text-muted-foreground">理由</dt>
       <dd className="whitespace-pre-wrap">{attempt.comment || "—"}</dd>
-      <dt className="text-muted-foreground">朱書き</dt>
-      <dd className="whitespace-pre-wrap text-red-600">
-        {attempt.annotationText || "—"}
-      </dd>
       <dt className="text-muted-foreground">プロンプト</dt>
       <dd>
         {promptNumber === null ? "（不明）" : `版 ${promptNumber}`}

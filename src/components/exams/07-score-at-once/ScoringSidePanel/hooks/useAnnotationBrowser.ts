@@ -318,8 +318,14 @@ export function useAnnotationBrowser(
         ...sourceAppearance
       } = sourceRow
 
-      // コピー後の見た目。重複判定も作成もこの1つから導く
-      const targetAppearance = { ...sourceAppearance, ...positionOverride }
+      // コピー後の見た目。重複判定も作成もこの1つから導く。
+      // 助言の朱書きの印は引き継がない（コピーは教員が手で置く注釈。印が残ると、
+      // コピー先の項目の助言に合わせて書き換えられたり消されたりする）
+      const targetAppearance = {
+        ...sourceAppearance,
+        ...positionOverride,
+        isRubricAdvice: false,
+      }
 
       // フロントエンド側重複チェック: allAnnotationsを使ってローカルで判定。
       // 既に同じ見た目のアノテーションを持つ行き先を除外する。突き合わせは親の実体

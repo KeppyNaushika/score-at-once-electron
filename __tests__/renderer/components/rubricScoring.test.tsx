@@ -154,6 +154,12 @@ const fakeRubricApi = {
   createItem: vi.fn(),
   updateItem: vi.fn(),
   deleteItem: vi.fn(),
+  listAdviceCombinations: vi.fn(async () => []),
+  getAdviceSource: vi.fn(async () => null),
+  syncAdviceAnnotations: vi.fn(),
+  saveAdviceCombination: vi.fn(),
+  deleteAdviceCombination: vi.fn(),
+  measureInk: vi.fn(async () => []),
 }
 
 function installFakeElectronApi() {
@@ -208,6 +214,9 @@ function RubricPanelHarness({
       questionScores={questionScores}
       selectedExamStudentIds={selectedExamStudentIds}
       onAdvance={onAdvance}
+      studentAnswerImages={[]}
+      scoringDatas={[]}
+      pageSize="A4"
     />
   )
 }

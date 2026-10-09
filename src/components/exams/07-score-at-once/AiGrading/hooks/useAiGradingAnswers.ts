@@ -5,11 +5,7 @@ import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
 import type { StudentAnswerImageWithExamPageAndStudent } from "@/types/prismaExtensions"
 
-import type {
-  AiGradingAnswer,
-  AiGradingRunRow,
-  RegionInkMeasurementRow,
-} from "../types"
+import type { AiGradingAnswer, AiGradingRunRow } from "../types"
 import { groupAttemptsByExamStudent } from "../utils/attemptSelection"
 import { findOwnQuestionScore } from "../utils/scoreComparison"
 
@@ -22,14 +18,12 @@ interface UseAiGradingAnswersOptions {
   questionScores: readonly QuestionScoreRow[]
   /** 設問の自分の実行（試行付き） */
   runs: readonly AiGradingRunRow[]
-  /** 答案画像 id → この設問のインクの測定。まだ届いていなければ空 */
-  inkMeasurementByAnswerImageId: ReadonlyMap<string, RegionInkMeasurementRow>
   /** 答案画像 id → 設問 id → 白さ（一覧表示と同じ測定）。まだ届いていなければ空 */
   whitenessByAnswerImageId: WhitenessByAnswerId
 }
 
 /**
- * 設問の答案を、自分の採点・自分の試行・インクの測定・白さと束ねる（表示順）。
+ * 設問の答案を、自分の採点・自分の試行・白さと束ねる（表示順）。
  *
  * 行は射影せずそのまま持つ。束ねるだけなので、表示の値は描くときに求める。
  */
@@ -39,7 +33,6 @@ export function useAiGradingAnswers({
   studentAnswerImages,
   questionScores,
   runs,
-  inkMeasurementByAnswerImageId,
   whitenessByAnswerImageId,
 }: UseAiGradingAnswersOptions): AiGradingAnswer[] {
   return useMemo(() => {
@@ -65,8 +58,6 @@ export function useAiGradingAnswers({
         ),
         attempts:
           attemptsByExamStudentId.get(studentAnswerImage.examStudentId) ?? [],
-        inkMeasurement:
-          inkMeasurementByAnswerImageId.get(studentAnswerImage.id) ?? null,
         whiteness:
           whitenessByAnswerImageId
             .get(studentAnswerImage.id)
@@ -79,7 +70,6 @@ export function useAiGradingAnswers({
     studentAnswerImages,
     questionScores,
     runs,
-    inkMeasurementByAnswerImageId,
     whitenessByAnswerImageId,
   ])
 }

@@ -5,8 +5,8 @@ import { scopeKeys } from "./keys"
 import { questionScoresQuery, questionScoresScope } from "./scoring"
 
 /**
- * ルーブリック採点（教員の層）の項目・採点方式・適用・項目から計算した点
- * （docs/vlm-grading-design.md §4・§11）。
+ * ルーブリック採点（教員の層）の項目・採点方式・適用・項目から計算した点・
+ * 重なった助言の決まり・助言の朱書き（docs/vlm-grading-design.md §4・§9・§11）。
  *
  * **項目と適用は設問ごとに1本のキーへ載せる。** 採点行（`scoring.ts`）と同じ粒度で、
  * 当てる・外すで古くなるのもその設問だけである。
@@ -82,6 +82,58 @@ export const rubricRecalculationSourceQuery = (
     queryFn: () =>
       window.electronAPI.rubric.getRecalculationSource(cropRegionId),
     staleTime: 0,
+  })
+
+/** 設問の重なった助言の決まり1件（組み合わせを作る項目付き） */
+export type RubricAdviceCombinationRow = Awaited<
+  ReturnType<typeof window.electronAPI.rubric.listAdviceCombinations>
+>[number]
+
+/** 設問の重なった助言の決まり（左のパネルの「重なった助言」が読む） */
+export const rubricAdviceCombinationsQuery = (
+  examId: string,
+  cropRegionId: string
+) =>
+  queryOptions({
+    queryKey: [
+      ...rubricScope(examId, cropRegionId),
+      "adviceCombinations",
+    ] as const,
+    queryFn: () =>
+      window.electronAPI.rubric.listAdviceCombinations(cropRegionId),
+  })
+
+/** 助言の朱書きを作り直す材料（設問が無ければ null） */
+export type RubricAdviceSource = Awaited<
+  ReturnType<typeof window.electronAPI.rubric.getAdviceSource>
+>
+
+/**
+ * 助言の朱書きを作り直す材料（項目・決まり・適用か助言の朱書きのある全採点者の採点行）。
+ * 当てる・外す・助言の変更・決まりの変更のたびに、書く直前に読み直す（`staleTime: 0`）
+ */
+export const rubricAdviceSourceQuery = (examId: string, cropRegionId: string) =>
+  queryOptions({
+    queryKey: [...rubricScope(examId, cropRegionId), "adviceSource"] as const,
+    queryFn: () => window.electronAPI.rubric.getAdviceSource(cropRegionId),
+    staleTime: 0,
+  })
+
+/**
+ * 設問のある答案すべての占有グリッド（朱書きを手書きに重ねない位置を探すのに使う）。
+ *
+ * キーの `measurementSignature` は測るもの全部（答案の id と画像パス、設問の矩形）を
+ * 表す文字列で、呼び出し側が作る。画像を読み直すので重く、同じものは測り直さない
+ * （`staleTime: Infinity`。測るものが変わればキーが変わる）
+ */
+export const rubricAnswerInkQuery = (
+  cropRegionId: string,
+  measurementSignature: string
+) =>
+  queryOptions({
+    queryKey: ["rubricAnswerInk", cropRegionId, measurementSignature] as const,
+    queryFn: () => window.electronAPI.rubric.measureInk(cropRegionId),
+    staleTime: Infinity,
   })
 
 // =====================================================================
@@ -213,5 +265,62 @@ export const writeRubricScoresMutation = (examId: string) =>
         [...scopeKeys.exam(examId), "rubric"],
       ],
       errorMessage: "ルーブリック項目からの採点を保存できませんでした",
+    },
+  })
+
+/**
+ * 重なった助言の決まりを保存する（同じ項目の集合の決まりがあれば書き換える）。
+ * 朱書きの作り直しは、続けて `syncRubricAdviceAnnotationsMutation` で書く
+ */
+export const saveRubricAdviceCombinationMutation = (
+  examId: string,
+  cropRegionId: string
+) =>
+  defineMutation({
+    mutationFn: (
+      input: Parameters<
+        typeof window.electronAPI.rubric.saveAdviceCombination
+      >[0]
+    ) => window.electronAPI.rubric.saveAdviceCombination(input),
+    scope: { id: `exam:${examId}:rubric:${cropRegionId}` },
+    meta: {
+      invalidates: [rubricScope(examId, cropRegionId)],
+      errorMessage: "重なった助言の決まりを保存できませんでした",
+    },
+  })
+
+/** 重なった助言の決まりを消す（未決定に戻す） */
+export const deleteRubricAdviceCombinationMutation = (
+  examId: string,
+  cropRegionId: string
+) =>
+  defineMutation({
+    mutationFn: (combinationId: string) =>
+      window.electronAPI.rubric.deleteAdviceCombination(combinationId),
+    scope: { id: `exam:${examId}:rubric:${cropRegionId}` },
+    meta: {
+      invalidates: [rubricScope(examId, cropRegionId)],
+      errorMessage: "重なった助言の決まりを削除できませんでした",
+    },
+  })
+
+/**
+ * 助言の朱書きの差分を書く（印の付いた朱書きにしか触らない）。手書きの注釈と同じく、
+ * 注釈の取り出し方すべて（`scopeKeys.annotation()`）を取り直す
+ */
+export const syncRubricAdviceAnnotationsMutation = (
+  examId: string,
+  cropRegionId: string
+) =>
+  defineMutation({
+    mutationFn: (
+      input: Parameters<
+        typeof window.electronAPI.rubric.syncAdviceAnnotations
+      >[0]
+    ) => window.electronAPI.rubric.syncAdviceAnnotations(input),
+    scope: { id: "annotation" },
+    meta: {
+      invalidates: [scopeKeys.annotation(), rubricScope(examId, cropRegionId)],
+      errorMessage: "助言の朱書きを保存できませんでした",
     },
   })

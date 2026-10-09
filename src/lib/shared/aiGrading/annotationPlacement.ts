@@ -1,9 +1,11 @@
 /**
- * AI採点の注釈（生徒向けの朱書き）を、解答欄の中で手書きに重ならない位置へ置く
+ * 朱書き（ルーブリック項目の助言から作る生徒向けの注釈）を、解答欄の中で手書きに重ならない
+ * 位置へ置く（docs/vlm-grading-design.md §9）
  *
  * renderer で計算する純粋関数。占有グリッド（`AnswerInkGrid`）は main が答案画像から作る。
  *
- * 1. 注釈文を折り返す（表示幅は全角1・半角0.55、禁則あり、`$` は取り除く）
+ * 1. 注釈文を折り返す（表示幅は全角1・半角0.55、禁則あり、`$` は取り除く）。
+ *    文の中の改行は段落の区切りとして残し、段落ごとに折り返す（助言を並べるとき）
  * 2. 解答欄の内幅の 100・85・70・55・40% で折り返した箱を候補にする
  * 3. 占有グリッドを1セル膨らませ、累積和の表で各候補を全位置について O(1) で判定する
  * 4. 置ける位置のうち、いちばん下 → 左寄り → 行数の少ないもの を選ぶ
@@ -59,7 +61,7 @@ interface PaperDimensionsMm {
 }
 
 interface AnnotationPlacementInput {
-  /** 注釈文（改行なし。含まれていても取り除く） */
+  /** 注釈文。改行は段落の区切り（段落ごとに折り返す） */
   annotationText: string
   /** 文字の大きさ（mm）。収まらなければ `MINIMUM_FONT_SIZE_MM` まで縮める */
   fontSizeMm: number
@@ -142,6 +144,27 @@ export function sanitizeAnnotationText(annotationText: string): string {
     .replace(/[\r\n]+/g, "")
     .replace(/\$/g, "")
     .trim()
+}
+
+/**
+ * 注釈文を段落に分ける（改行が段落の区切り）。段落ごとに `sanitizeAnnotationText` を通し、
+ * 空になった段落は落とす
+ */
+export function toAnnotationParagraphs(annotationText: string): string[] {
+  return annotationText
+    .split(/\r?\n/)
+    .map(sanitizeAnnotationText)
+    .filter((paragraph) => paragraph !== "")
+}
+
+/** 段落ごとに折り返し、行を1つの並びにする */
+export function wrapAnnotationParagraphs(
+  paragraphs: readonly string[],
+  charactersPerLine: number
+): string[] {
+  return paragraphs.flatMap((paragraph) =>
+    wrapAnnotationText(paragraph, charactersPerLine)
+  )
 }
 
 /**
@@ -256,7 +279,7 @@ function countOccupiedCells(
 
 /** 内幅の各割合で折り返した候補を作る。同じ折り返しになるものは1つにまとめる */
 function buildWrappedCandidates(
-  text: string,
+  paragraphs: readonly string[],
   fontSizeMm: number,
   paperDimensions: PaperDimensionsMm,
   inkGrid: AnswerInkGrid
@@ -272,7 +295,7 @@ function buildWrappedCandidates(
     const charactersPerLine = floorIgnoringRoundingError(
       (innerWidthMm * widthRatio) / fontSizeMm
     )
-    const lines = wrapAnnotationText(text, charactersPerLine)
+    const lines = wrapAnnotationParagraphs(paragraphs, charactersPerLine)
     const wrappedText = lines.join("\n")
     if (candidatesByText.has(wrappedText)) return
 
@@ -429,15 +452,15 @@ export function placeAnnotation(
   input: AnnotationPlacementInput
 ): AnnotationPlacement | null {
   const { paperDimensions, inkGrid } = input
-  const text = sanitizeAnnotationText(input.annotationText)
-  if (text === "") return null
+  const paragraphs = toAnnotationParagraphs(input.annotationText)
+  if (paragraphs.length === 0) return null
 
   const summedAreaTable = buildDilatedSummedAreaTable(inkGrid)
   const fontSizes = listFontSizesToTry(input.fontSizeMm)
 
   for (const fontSizeMm of fontSizes) {
     const candidates = buildWrappedCandidates(
-      text,
+      paragraphs,
       fontSizeMm,
       paperDimensions,
       inkGrid
@@ -458,7 +481,7 @@ export function placeAnnotation(
   // 最小の文字でも空きに収まらない。枠に入る箱のうち重なり最少の位置に置く
   const smallestFontSizeMm = fontSizes[fontSizes.length - 1]
   const smallestCandidates = buildWrappedCandidates(
-    text,
+    paragraphs,
     smallestFontSizeMm,
     paperDimensions,
     inkGrid

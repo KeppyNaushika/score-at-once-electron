@@ -1,8 +1,8 @@
 /**
- * インクの測定の受け取り方（docs/vlm-grading-design.md §7）。
+ * インクの測定（朱書きの配置に使う占有グリッド）の受け取り方（docs/vlm-grading-design.md §8・§9）。
  *
  * main は答案画像ごとに、測れた枠だけを返す（読めない画像・枠が画像の外の答案は
- * 現れない）。現れなかった答案は「測れなかった」として扱い、白紙とはみなさない。
+ * 現れない）。現れなかった答案は「測れなかった」として扱い、枠全体を空きとして置く。
  */
 
 import type { CropRegion, StudentAnswerImage } from "@prisma/client"
@@ -33,7 +33,7 @@ export function buildInkMeasurementSignature(
 }
 
 /** 答案画像 id → この設問の測定 */
-export function indexInkMeasurements(
+function indexInkMeasurements(
   measurements: readonly AnswerInkMeasurement[],
   cropRegionId: string
 ): Map<string, RegionInkMeasurementRow> {
@@ -53,4 +53,29 @@ export function indexInkMeasurements(
     }
   }
   return inkMeasurementByAnswerImageId
+}
+
+/** 受験者 → この設問の占有グリッド（測れた答案だけ） */
+export function indexInkGridsByExamStudent(
+  measurements: readonly AnswerInkMeasurement[],
+  cropRegionId: string,
+  studentAnswerImages: readonly Pick<
+    StudentAnswerImage,
+    "id" | "examStudentId"
+  >[]
+): Map<string, RegionInkMeasurementRow["inkGrid"]> {
+  const inkMeasurementByAnswerImageId = indexInkMeasurements(
+    measurements,
+    cropRegionId
+  )
+  return new Map(
+    studentAnswerImages.flatMap((studentAnswerImage) => {
+      const inkMeasurement = inkMeasurementByAnswerImageId.get(
+        studentAnswerImage.id
+      )
+      return inkMeasurement
+        ? [[studentAnswerImage.examStudentId, inkMeasurement.inkGrid] as const]
+        : []
+    })
+  )
 }

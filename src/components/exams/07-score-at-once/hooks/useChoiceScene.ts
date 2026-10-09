@@ -32,6 +32,11 @@ interface UseChoiceSceneOptions {
   onOther?: () => void
   /** Enter（確定して次へ）。焦点のある位置を渡す */
   onConfirm?: (focusedIndex: number) => void
+  /**
+   * Esc。渡すと場面からは抜けず、これを呼ぶ（入れ子の選択から元の並びへ戻るとき）。
+   * 渡さなければ場面から抜ける
+   */
+  onExit?: () => void
 }
 
 /** 焦点のある位置から、番号を振る組の先頭 */
@@ -61,6 +66,7 @@ export function useChoiceScene({
   onSelect,
   onOther,
   onConfirm,
+  onExit,
 }: UseChoiceSceneOptions) {
   const { setContextValue } = useShortcutContext()
   const [isOpen, setIsOpen] = useState(false)
@@ -125,7 +131,7 @@ export function useChoiceScene({
   useSceneCommand("choice.next", () => moveFocus(1), {
     metadata: { title: "次へ移る", category: "選択の場面" },
   })
-  useSceneCommand("choice.exit", close, {
+  useSceneCommand("choice.exit", () => (onExit ? onExit() : close()), {
     metadata: { title: "抜けて採点に戻る", category: "選択の場面" },
   })
 
