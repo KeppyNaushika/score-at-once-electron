@@ -6,7 +6,7 @@
  * 採点中のキーは止まる（`sceneWhen` の土台が分けている）。
  *
  * 何を選ぶかは使う側が決める。ルーブリック採点では項目を当てる・外す、AI の問いかけ
- * （R5）では選択肢を選ぶ。どちらも「並んだものに焦点があり、番号で選ぶ」形なので、
+ * （`AiGrading/hooks/useAiQuestioningPanel.ts`）では選択肢を選ぶ。どちらも「並んだものに焦点があり、番号で選ぶ」形なので、
  * 並びの長さと、選んだとき・その他・確定のときの動きだけを受け取る。
  *
  * 番号は9つずつ振る。焦点が10番目より後ろへ移ると、焦点のある9つの組に 1〜9 を
@@ -107,7 +107,7 @@ export function useChoiceScene({
     metadata: {
       title: "選択の場面に入る",
       category: "選択の場面",
-      description: "数字で項目を選ぶ場面に入ります",
+      description: "数字で項目・選択肢を選ぶ場面に入ります",
     },
   })
   useChoiceSelectCommand(1, selectNumber)

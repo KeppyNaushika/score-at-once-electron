@@ -21,6 +21,7 @@ import { AiGradingRunProgress } from "./AiGradingRunProgress"
 import { AiGradingSidePanel } from "./AiGradingSidePanel"
 import { AiOwnScoringSection } from "./AiOwnScoringSection"
 import { AiPromptPanel } from "./AiPromptPanel"
+import { AiQuestioningPanel } from "./AiQuestioningPanel"
 import { AiRunHistorySection } from "./AiRunHistorySection"
 import { AiSelectedJudgementSection } from "./AiSelectedJudgementSection"
 import { useAiAnswerReviewState } from "./hooks/useAiAnswerReviewState"
@@ -28,6 +29,7 @@ import { useAiAttemptNavigation } from "./hooks/useAiAttemptNavigation"
 import { useAiGradingAnswers } from "./hooks/useAiGradingAnswers"
 import { useAiGridSelection } from "./hooks/useAiGridSelection"
 import { useAiOwnScoring } from "./hooks/useAiOwnScoring"
+import { useAiQuestioningState } from "./hooks/useAiQuestioningState"
 import { useAiSelectionAdoption } from "./hooks/useAiSelectionAdoption"
 import type {
   AiGradingRunRow,
@@ -38,11 +40,12 @@ import type {
 import { resolveDefaultPromptId } from "./utils/attemptSelection"
 
 /** 左パネルのタブ */
-const LEFT_TABS = ["prompt", "score"] as const
+const LEFT_TABS = ["prompt", "question", "score"] as const
 type LeftTab = (typeof LEFT_TABS)[number]
 
 const LEFT_TAB_LABELS: Record<LeftTab, string> = {
   prompt: "プロンプト",
+  question: "問いかけ",
   score: "採点反映",
 }
 
@@ -65,6 +68,8 @@ interface AiGradingWorkspaceProps {
   viewSettings: AiGridViewSettings
   /** 右パネルの先頭に置く設問ナビゲーター */
   questionNavigator: ReactNode
+  /** 助言の朱書きを書いた（一覧の注釈を取り直す合図） */
+  onAnnotationsChanged?: () => void
 }
 
 /**
@@ -89,6 +94,7 @@ export function AiGradingWorkspace({
   display,
   viewSettings,
   questionNavigator,
+  onAnnotationsChanged,
 }: AiGradingWorkspaceProps) {
   const promptsQuery = useQuery(aiPromptsQuery(examId, cropRegion.id))
   const runsQuery = useQuery(aiGradingRunsQuery(examId, cropRegion.id, false))
@@ -157,14 +163,29 @@ export function AiGradingWorkspace({
       currentUserId,
       answerOrder: viewSettings.answerOrder,
     })
+  const questioning = useAiQuestioningState({
+    examId,
+    cropRegionId: cropRegion.id,
+    runs,
+    answers,
+  })
+  // タブを選んでいなければ、AI 採点を実行した設問（案がある・作っている）では問いかけを開く
+  const [chosenLeftTab, setChosenLeftTab] = useState<LeftTab | null>(null)
+  const leftTab: LeftTab =
+    chosenLeftTab ??
+    (questioning.proposalRun !== null || questioning.status.kind !== "idle"
+      ? "question"
+      : "prompt")
   const grid = useAiGridSelection({
     cropRegion,
     reviewedAnswers,
     layoutDirection: display.layoutDirection,
     itemsPerLine: display.itemsPerLine,
     viewSettings,
+    // 問いかけている案の答案を、選ぶ前に目で確かめられるよう一覧に出す
+    pinnedExamStudentIds:
+      leftTab === "question" ? questioning.gridExamStudentIds : null,
   })
-  const [leftTab, setLeftTab] = useState<LeftTab>("prompt")
   const adoption = useAiSelectionAdoption({
     examId,
     cropRegion,
@@ -176,7 +197,8 @@ export function AiGradingWorkspace({
     onChooseAttempt: chooseAttempt,
     onAdopt: adoption.requestAdopt,
   })
-  // 採点反映のタブでは、一覧表示と同じキーで自分の採点を直接書ける
+  // 採点反映・問いかけのタブでは、一覧表示と同じキーで自分の採点を直接書ける
+  // （問いかけでは、案に答えずに例外の答案を直す。項目が当たっていれば手での上書きになる）
   const { scoreSelected, partialScore } = useAiOwnScoring({
     examId,
     currentUserId,
@@ -184,7 +206,7 @@ export function AiGradingWorkspace({
     studentAnswerImages,
     questionScores,
     selectedItems: grid.selectedItems,
-    isShortcutEnabled: leftTab === "score",
+    isShortcutEnabled: leftTab === "score" || leftTab === "question",
     onScored: grid.markScored,
   })
   if (!provider) return null
@@ -202,7 +224,7 @@ export function AiGradingWorkspace({
           value={leftTab}
           onValueChange={(value) => {
             const chosen = LEFT_TABS.find((tab) => tab === value)
-            if (chosen) setLeftTab(chosen)
+            if (chosen) setChosenLeftTab(chosen)
           }}
           className="pt-2"
         >
@@ -238,6 +260,29 @@ export function AiGradingWorkspace({
               onChooseRun={chooseRun}
             />
             <AiExamCostSection examId={examId} />
+          </TabsContent>
+          <TabsContent value="question">
+            <AiQuestioningPanel
+              examId={examId}
+              cropRegion={cropRegion}
+              currentUserId={currentUserId}
+              questionScores={questionScores}
+              studentAnswerImages={studentAnswerImages}
+              pageSize={pageSize}
+              questioning={questioning}
+              onScored={grid.markAdopted}
+              onAnnotationsChanged={onAnnotationsChanged}
+              onStartNextRound={() => setIsRunDialogOpen(true)}
+              onShowAdoption={() => setChosenLeftTab("score")}
+              selectedJudgement={
+                <AiSelectedJudgementSection
+                  singleSelectedItem={grid.singleSelectedItem}
+                  promptNumberById={promptNumberById}
+                  onPrevAttempt={showOlderAttempt}
+                  onNextAttempt={showNewerAttempt}
+                />
+              }
+            />
           </TabsContent>
           <TabsContent value="score">
             <AiAdoptTabContent

@@ -260,6 +260,7 @@ function ScoringMainViewContent() {
             pageSize={pageSize}
             unlockedProviders={unlockedProviders}
             unreflectedAiQuestionIds={unreflectedAiQuestionIds}
+            onAnnotationsChanged={handleAnnotationsChangedElsewhere}
             display={{
               layoutDirection,
               onLayoutDirectionChange: setLayoutDirection,

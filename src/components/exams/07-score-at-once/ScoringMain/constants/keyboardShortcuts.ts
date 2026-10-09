@@ -35,7 +35,7 @@ export const KEYBOARD_HELP_SECTIONS: readonly {
     title: SHORTCUT_CATEGORIES.tool.label,
     commandIds: SHORTCUT_CATEGORIES.tool.keys,
   },
-  // 選択の場面（ルーブリック採点の設問で Space から入る）。数字は1行にまとめる
+  // 選択の場面（ルーブリック採点の設問と AI 採点の問いかけで Space から入る）。数字は1行にまとめる
   {
     title: SHORTCUT_CATEGORIES.choice.label,
     commandIds: [
