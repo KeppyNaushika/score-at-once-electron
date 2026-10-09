@@ -6,6 +6,7 @@ import {
   type SetStateAction,
   useCallback,
   useEffect,
+  useEffectEvent,
   useRef,
   useState,
 } from "react"
@@ -364,41 +365,50 @@ export function useScoredAnswerPdfExport({
     [abortExport]
   )
 
+  // 保存の完了を親へ知らせる。親はその場で書いた矢印関数を渡すので、描画のたびに
+  // 別物になる。effect の依存に入れると、確定の await 中の再描画で effect が走り直す
+  const notifyExportCompleted = useEffectEvent(() => {
+    onExportCompleted?.()
+  })
+
   /**
    * Canvas描画完了 + PDF埋め込み完了時にPDF保存を実行
+   *
+   * **セッションと保存先は await の前に引き取って ref を空にする。** 確定の await 中に
+   * 進捗の更新で再描画が起き、effect が走り直すことがある。ref を await の後で空に
+   * していると2回目も確認を通り、同じセッションを2回確定しに行く（2回目は main で
+   * 「セッションが見つかりません」になり、完了の表示をエラーで上書きする）。
    */
   useEffect(() => {
-    const finalizePdf = async () => {
-      if (!canvasRenderingComplete) return
-      if (embeddedPagesCount < totalPagesCount) return
-      if (!streamingSessionIdRef.current) return
-      if (!savePathResultRef.current) return
+    if (!canvasRenderingComplete) return
+    if (embeddedPagesCount < totalPagesCount) return
+    const sessionId = streamingSessionIdRef.current
+    const savePathResult = savePathResultRef.current
+    if (!sessionId || !savePathResult) return
+    streamingSessionIdRef.current = null
+    savePathResultRef.current = null
 
+    const finalizePdf = async () => {
       try {
         setExportProgress(95)
         setCurrentStep("PDFを保存中...")
 
         await finalizeStreamingSession({
-          sessionId: streamingSessionIdRef.current,
-          outputPath: savePathResultRef.current.filePath,
+          sessionId,
+          outputPath: savePathResult.filePath,
         })
 
-        streamingSessionIdRef.current = null
-        savePathResultRef.current = null
         setCanvasRenderingComplete(false)
 
         setExportProgress(100)
         setExportStatus("completed")
         setCurrentStep("完了しました")
-        onExportCompleted?.()
+        notifyExportCompleted()
       } catch (error) {
         console.error("PDF finalization error:", error)
         setExportStatus("error")
         setCurrentStep("PDF保存中にエラーが発生しました")
-        if (streamingSessionIdRef.current) {
-          cancelStreamingSession(streamingSessionIdRef.current)
-          streamingSessionIdRef.current = null
-        }
+        cancelStreamingSession(sessionId)
       } finally {
         setIsExporting(false)
       }
@@ -412,7 +422,6 @@ export function useScoredAnswerPdfExport({
     setExportProgress,
     setCurrentStep,
     setExportStatus,
-    onExportCompleted,
     setIsExporting,
   ])
 
