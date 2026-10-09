@@ -203,6 +203,7 @@ export function newDrawingAnnotation(
     displayX: 0.0,
     displayY: 0.0,
     isFavorite: false,
+    isRubricAdvice: false,
     createdAt: now,
     updatedAt: now,
     ...seed,

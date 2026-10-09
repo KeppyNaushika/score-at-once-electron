@@ -121,6 +121,11 @@ const AUDIT_ACTIONS = {
     verb: "delete",
     label: "採点領域を削除しました",
   },
+  "exam.region.scoring_method_update": {
+    category: "exam",
+    verb: "update",
+    label: "採点方式を変更しました",
+  },
 
   /**
    * **過去の記録専用（create / update / delete の3つ）。** 設問グループは小計グループ
@@ -286,6 +291,46 @@ const AUDIT_ACTIONS = {
     category: "exam",
     verb: "delete",
     label: "AI の古い判定を消しました",
+  },
+
+  // ── ルーブリック採点（docs/vlm-grading-design.md §4）。項目は設問ごとに採点者の間で共有する
+  "exam.rubric_item.create": {
+    category: "exam",
+    verb: "create",
+    label: "ルーブリック項目を作成しました",
+  },
+  "exam.rubric_item.update": {
+    category: "exam",
+    verb: "update",
+    label: "ルーブリック項目を変更しました",
+  },
+  "exam.rubric_item.delete": {
+    category: "exam",
+    verb: "delete",
+    label: "ルーブリック項目を削除しました",
+  },
+  /** 適用の付け外しは、1回の操作（選んだ答案にまとめて）を1件にまとめる */
+  "exam.rubric.apply": {
+    category: "exam",
+    verb: "update",
+    label: "ルーブリック項目を答案に当てました",
+  },
+  "exam.rubric.unapply": {
+    category: "exam",
+    verb: "update",
+    label: "ルーブリック項目を答案から外しました",
+  },
+  /** 自分の採点行へ、項目から計算した点を書いた。1回の書き込みを1件にまとめる */
+  "exam.score.rubric": {
+    category: "exam",
+    verb: "update",
+    label: "ルーブリック項目から採点を反映しました",
+  },
+  /** 共有の項目を変えたことによる、他の採点者の点の計算し直し（§4-6） */
+  "exam.rubric.recalculate_others": {
+    category: "exam",
+    verb: "update",
+    label: "他の採点者の点を計算し直しました",
   },
 
   "exam.return.capture": {

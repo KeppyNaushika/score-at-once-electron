@@ -30,6 +30,7 @@ export function makeQuestionScore(
     status: "correct",
     comment: "",
     userId: CURRENT_USER_ID,
+    overridesRubric: false,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
     ...overrides,

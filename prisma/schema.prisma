@@ -43,6 +43,7 @@ model User {
   returnSnapshots        ReturnSnapshot[]
   aiPrompts              AiPrompt[]
   aiGradingRuns          AiGradingRun[]
+  rubricItems            RubricItem[]
 }
 
 /// `name` に `@unique` は置かない（2026-08-22 に外した。理由は User.username と同じ）。
@@ -216,27 +217,33 @@ model StudentAnswerImage {
 }
 
 model CropRegion {
-  id                 String                 @id @default(uuid())
-  examPageId         String
-  label              String
-  type               String
-  x                  Float
-  y                  Float
-  width              Float
-  height             Float
-  points             Int?
-  orderIndex         Int?
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @default(now()) @updatedAt
-  examPage           ExamPage               @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  cropSubtotals      CropSubtotal[]
-  questionScores     QuestionScore[]
-  gradeDataSources   GradeDataSource[]
-  omrConfig          CropRegionOmrConfig?
-  compoundMembership CompoundAnswerMember?
-  scoreDecisions     ScoreDecision[]
-  assignments        CropRegionAssignment[]
-  aiPrompts          AiPrompt[]
+  id                       String                    @id @default(uuid())
+  examPageId               String
+  label                    String
+  type                     String
+  x                        Float
+  y                        Float
+  width                    Float
+  height                   Float
+  points                   Int?
+  orderIndex               Int?
+  /// 採点方式（docs/vlm-grading-design.md §4-1）。値の集合は `src/types/rubric.types.ts`。
+  /// "points"（採点キー・部分点で直接付ける。既定）| "deduction"（配点から項目の減点を引く）|
+  /// "addition"（0点から項目の加点を足す）。段階評価（scale）は後の段で値を足す
+  scoringMethod            String                    @default("points")
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @default(now()) @updatedAt
+  examPage                 ExamPage                  @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  cropSubtotals            CropSubtotal[]
+  questionScores           QuestionScore[]
+  gradeDataSources         GradeDataSource[]
+  omrConfig                CropRegionOmrConfig?
+  compoundMembership       CompoundAnswerMember?
+  scoreDecisions           ScoreDecision[]
+  assignments              CropRegionAssignment[]
+  aiPrompts                AiPrompt[]
+  rubricItems              RubricItem[]
+  rubricAdviceCombinations RubricAdviceCombination[]
 }
 
 /// 設問（採点領域）ごとの採点担当。1設問に複数担当を許す（ダブルチェック）。
@@ -403,9 +410,14 @@ model QuestionScore {
   /// 「空で書いた」を区別する必要が無く、区別すると読む側が毎回2通りを相手にする。
   comment            String              @default("")
   userId             String
+  /// 採点キーで付けた点が、ルーブリック項目から計算した点より優先している（手での上書き。
+  /// docs/vlm-grading-design.md §4-5）。計算し直しはこの印の行を飛ばす。
+  /// 印は、そのマスの適用を付け外ししたとき・項目から計算した点を書いたときに外れる
+  overridesRubric    Boolean             @default(false)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @default(now()) @updatedAt
   drawingAnnotations DrawingAnnotation[]
+  rubricApplications RubricApplication[]
   cropRegion         CropRegion          @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   examStudent        ExamStudent         @relation(fields: [examStudentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -471,6 +483,9 @@ model DrawingAnnotation {
   displayX          Float              @default(0.0)
   displayY          Float              @default(0.0)
   isFavorite        Boolean            @default(false)
+  /// ルーブリック項目の助言から作った朱書き（docs/vlm-grading-design.md §4-7）。
+  /// 助言の文が変わったら、この印の付いた朱書きの文だけを書き換える。手で書いた注釈は false
+  isRubricAdvice    Boolean            @default(false)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   questionScore     QuestionScore      @relation(fields: [questionScoreId], references: [id], onDelete: Cascade)
@@ -480,6 +495,97 @@ model DrawingAnnotation {
   @@index([type])
   @@index([createdAt])
   @@index([isFavorite])
+}
+
+/// ルーブリック項目（docs/vlm-grading-design.md §4-2・§5-2）。設問ごとに、その試験の協働採点者の
+/// 間で共有する教員の層の実体。AI の有無に関係なく使う。作成者は記録するが持ち主ではない。
+///
+/// `effectKind` によって使う列が変わる。adjust（点の加減）は `pointDelta`、set（判定と点を決める）は
+/// `setStatus`・`setScore`。種類によって本当に存在しない値なので nullable にし、どちらの組を使うかは
+/// 書き込みの検証（`electron-src/lib/prisma/rubricItem.ts`）で縛る。値の集合は `src/types/rubric.types.ts`。
+///
+/// 段階評価（後の段）は、`effectKind` に値を足すか、段階の表（ScoreScaleLevel）への任意の
+/// 外部キーを足して表す。今の列はそのまま使える。
+/// `pointDelta`・`setScore` は Decimal なので、IPC へ返す経路は必ず serializePrisma を通す。
+model RubricItem {
+  id                     String                        @id @default(uuid())
+  cropRegionId           String
+  /// 教員向けの判断理由（印刷しない）
+  label                  String                        @default("")
+  /// "adjust"（点を加減する）| "set"（判定と点を決める）
+  effectKind             String
+  /// adjust のときの加減（減点は負）。set では null
+  pointDelta             Decimal?
+  /// set のときの判定（ScoringStatus のうち correct / partial / incorrect / no_answer / pending）。adjust では null
+  setStatus              String?
+  /// set のときの点（partial・pending で使う）。判定そのものが点を決めるときと adjust では null
+  setScore               Decimal?
+  /// 生徒向けの助言。空なら朱書きを作らない
+  adviceText             String                        @default("")
+  /// 並び順。set が複数当たったときは小さいものを採る
+  sortOrder              Int                           @default(0)
+  /// 作った教員。利用者を消しても項目は他の教員が使うので残し、ここだけ null にする
+  createdByUserId        String?
+  createdAt              DateTime                      @default(now())
+  updatedAt              DateTime                      @default(now()) @updatedAt
+  cropRegion             CropRegion                    @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
+  createdBy              User?                         @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  applications           RubricApplication[]
+  primaryInCombinations  RubricAdviceCombination[]     @relation("RubricAdviceCombinationPrimary")
+  adviceCombinationItems RubricAdviceCombinationItem[]
+
+  @@index([cropRegionId])
+}
+
+/// 適用（「この答案にこの項目が当たっている」。docs/vlm-grading-design.md §4-3）。
+/// 採点者ごとに持つので、採点者・答案・設問は親の QuestionScore から決まる。
+/// 同じ (questionScoreId, rubricItemId) の行が同期で2つできても、アプリが集合として扱う
+/// （一意制約は置かない）。
+model RubricApplication {
+  id              String        @id @default(uuid())
+  questionScoreId String
+  rubricItemId    String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @default(now()) @updatedAt
+  questionScore   QuestionScore @relation(fields: [questionScoreId], references: [id], onDelete: Cascade)
+  rubricItem      RubricItem    @relation(fields: [rubricItemId], references: [id], onDelete: Cascade)
+
+  @@index([questionScoreId])
+  @@index([rubricItemId])
+}
+
+/// 助言を持つ項目が2つ以上当たったときの決まり（docs/vlm-grading-design.md §4-7）。
+/// 組み合わせの同定は、当たっている助言のある項目の集合と `items` の集合の一致で行う（一意制約にはしない）。
+model RubricAdviceCombination {
+  id                  String                        @id @default(uuid())
+  cropRegionId        String
+  /// "merged"（まとめた一文）| "single"（1つの項目の助言だけ）| "all"（並べる）| "none"（朱書きなし）
+  mode                String
+  /// merged のときの一文。それ以外は ""
+  mergedText          String                        @default("")
+  /// single のときに採る項目。それ以外は null。項目が消えたら null にする
+  primaryRubricItemId String?
+  createdAt           DateTime                      @default(now())
+  updatedAt           DateTime                      @default(now()) @updatedAt
+  cropRegion          CropRegion                    @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
+  primaryRubricItem   RubricItem?                   @relation("RubricAdviceCombinationPrimary", fields: [primaryRubricItemId], references: [id], onDelete: SetNull)
+  items               RubricAdviceCombinationItem[]
+
+  @@index([cropRegionId])
+}
+
+/// 組み合わせを作る項目（2つ以上）
+model RubricAdviceCombinationItem {
+  id            String                  @id @default(uuid())
+  combinationId String
+  rubricItemId  String
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @default(now()) @updatedAt
+  combination   RubricAdviceCombination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+  rubricItem    RubricItem              @relation(fields: [rubricItemId], references: [id], onDelete: Cascade)
+
+  @@index([combinationId])
+  @@index([rubricItemId])
 }
 
 /// 答案返却（公式出力）時点の有効スコア＋手書き注釈のスナップショット。

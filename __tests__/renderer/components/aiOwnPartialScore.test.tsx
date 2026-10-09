@@ -65,6 +65,7 @@ const cropRegion: QuestionAnswerRegionRow = {
   height: 0.2,
   points: 4,
   orderIndex: 0,
+  scoringMethod: "points",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   examPage: {

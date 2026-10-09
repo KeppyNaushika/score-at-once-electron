@@ -51,6 +51,10 @@ const SYNC_TABLE_LABELS: Record<string, string> = {
   AiPrompt: "AI採点のプロンプト",
   AiGradingRun: "AI採点の実行",
   AiGradingAttempt: "AI採点の判定",
+  RubricItem: "ルーブリック項目",
+  RubricApplication: "ルーブリック項目の適用",
+  RubricAdviceCombination: "重なった助言の決まり",
+  RubricAdviceCombinationItem: "重なった助言の決まりの項目",
 
   // 成績算出
   Grade: "成績算出",

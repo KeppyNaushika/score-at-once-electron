@@ -36,6 +36,7 @@ function score(
     partialScore: null,
     comment: "",
     userId: "user-1",
+    overridesRubric: false,
     createdAt: new Date("2026-06-01T10:00:00Z"),
     updatedAt: new Date("2026-06-01T10:00:00Z"),
     ...overrides,

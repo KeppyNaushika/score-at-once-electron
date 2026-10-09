@@ -90,6 +90,10 @@ const ARCHIVE_TABLE_LABELS: Readonly<Record<string, string>> = {
   AiPrompt: "AI採点のプロンプト",
   AiGradingRun: "AI採点の実行",
   AiGradingAttempt: "AI採点の判定",
+  RubricItem: "ルーブリック項目",
+  RubricApplication: "ルーブリック項目の適用",
+  RubricAdviceCombination: "重なった助言の決まり",
+  RubricAdviceCombinationItem: "重なった助言の決まりの項目",
 }
 
 /** 表名の日本語ラベル。載っていなければ表名のまま */

@@ -33,6 +33,7 @@ import { navigationHandlers } from "./navigationHandlers"
 import { omrConfigHandlers } from "./omrConfigHandlers"
 import { omrHandlers } from "./omrHandlers"
 import { pdfToolsHandlers } from "./pdfToolsHandlers"
+import { rubricHandlers } from "./rubricHandlers"
 import { scoringHandlers } from "./scoringHandlers"
 import { settingsHandlers } from "./settingsHandlers"
 import { studentArchiveHandlers } from "./studentArchiveHandlers"
@@ -68,6 +69,7 @@ const handlerGroups = [
   omrConfigHandlers,
   omrHandlers,
   pdfToolsHandlers,
+  rubricHandlers,
   scoringHandlers,
   settingsHandlers,
   studentArchiveHandlers,
@@ -110,6 +112,7 @@ const handlers = {
   ...omrConfigHandlers,
   ...omrHandlers,
   ...pdfToolsHandlers,
+  ...rubricHandlers,
   ...scoringHandlers,
   ...settingsHandlers,
   ...studentArchiveHandlers,
