@@ -1,7 +1,6 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { useParams } from "next/navigation"
 import { useCallback, useState } from "react"
 
 import CropRegionEditor from "@/components/exams/02-template/components/CropRegionEditor"
@@ -10,6 +9,7 @@ import { TemplateStatus } from "@/components/exams/02-template/components/Templa
 import { useTemplateData } from "@/components/exams/02-template/hooks/useTemplateData"
 import type { RegionCoordinates } from "@/components/exams/02-template/types"
 import { buildNewCropRegionLabel } from "@/components/exams/02-template/utils/templateActions"
+import { useRouteParams } from "@/hooks/useRouteParams"
 import {
   createCropRegionMutation,
   updateCropRegionMutation,
@@ -17,8 +17,8 @@ import {
 import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
 
 export default function TemplateStepPage() {
-  const params = useParams()
-  const examId = typeof params.examId === "string" ? params.examId : ""
+  const params = useRouteParams()
+  const examId = params.examId ?? ""
 
   const [defaultPoints, setDefaultPoints] = useState(10)
 

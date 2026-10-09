@@ -11,7 +11,7 @@ import {
   Upload,
   Users,
 } from "lucide-react"
-import { useParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { ClassroomScoreTrendChart } from "@/app/(app)/classrooms/[classroomId]/components/ClassroomScoreTrendChart"
@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useNavigationGuardContext } from "@/contexts/NavigationGuardContext"
+import { useRouteParams } from "@/hooks/useRouteParams"
 import { auditLogsHrefOfScope } from "@/lib/auditLogFilterQuery"
 import type { MembershipStatusFilter } from "@/lib/membership"
 import {
@@ -57,11 +58,10 @@ const EMPTY_CLASSROOMS: ClassroomWithMemberships[] = []
 const EMPTY_STUDENTS: StudentWithMemberships[] = []
 
 export default function ClassroomDetailPage() {
-  const params = useParams()
+  const params = useRouteParams()
   const router = useRouter()
   const { guardedNavigate } = useNavigationGuardContext()
-  const classroomId =
-    typeof params.classroomId === "string" ? params.classroomId : ""
+  const classroomId = params.classroomId ?? ""
 
   const { data: classrooms = EMPTY_CLASSROOMS, isPending: loading } =
     useQuery(classroomListQuery())

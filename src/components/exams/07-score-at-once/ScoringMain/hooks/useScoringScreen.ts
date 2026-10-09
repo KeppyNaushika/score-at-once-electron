@@ -1,4 +1,3 @@
-import { useParams } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
@@ -25,6 +24,7 @@ import { useStudentAnswerManagement } from "@/components/exams/07-score-at-once/
 import type { AssignmentScope } from "@/components/exams/07-score-at-once/ScoringSidePanel/AssignmentScopeNotice"
 import { useAssignedExamStudents } from "@/components/exams/shared/useAssignedExamStudents"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import { useRouteParams } from "@/hooks/useRouteParams"
 
 interface UseScoringScreenOptions {
   /**
@@ -41,8 +41,8 @@ interface UseScoringScreenOptions {
 export function useScoringScreen({
   isAiGradingAvailable,
 }: UseScoringScreenOptions) {
-  const params = useParams()
-  const examId = params.examId as string
+  const params = useRouteParams()
+  const examId = params.examId ?? ""
   const currentUser = useCurrentUser()
 
   /** 操作モード管理 */

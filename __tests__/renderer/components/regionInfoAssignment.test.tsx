@@ -30,8 +30,8 @@ import { createQueryWrapper } from "../../helpers/queryWrapper"
 
 /*
  * 共通のレンダラ用セットアップ（`__tests__/renderer/setup.ts`）は読み込まない。
- * あちらの `next/navigation` モックは `useParams()` が空を返すので、段のページが
- * 試験を引けない。`vi.mock` は後から登録したほうが勝ち、共通セットアップは
+ * あちらの `next/navigation` モックは `usePathname()` が `/` を返すので、段のページが
+ * （URL から試験を読む `useRouteParams` を通して）試験を引けない。`vi.mock` は後から登録したほうが勝ち、共通セットアップは
  * （テスト本体の hoist された `vi.mock` より後に）import で実行されるため、
  * こちらで上書きできない。よって必要なぶんだけ自分で用意する。
  */
@@ -42,7 +42,6 @@ vi.mock("next/navigation", () => ({
     back: vi.fn(),
     refresh: vi.fn(),
   }),
-  useParams: () => ({ examId: "exam-1" }),
   usePathname: () => "/exams/exam-1/03-region-info",
   useSearchParams: () => new URLSearchParams(),
 }))

@@ -2,7 +2,6 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Calculator } from "lucide-react"
-import { useParams } from "next/navigation"
 import { useCallback, useMemo } from "react"
 
 import { QuestionAssignmentTableWithFillHandle } from "@/components/exams/04-question-group/components/QuestionAssignmentTableWithFillHandle"
@@ -10,6 +9,7 @@ import { SubtotalAssignmentTableWithFillHandle } from "@/components/exams/04-que
 import { SubtotalGroupSelector } from "@/components/exams/04-question-group/components/SubtotalGroupSelector"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import { useRouteParams } from "@/hooks/useRouteParams"
 import { type CropRegionRow, cropRegionsQuery } from "@/queries/cropRegion"
 import { scopeKeys } from "@/queries/keys"
 import {
@@ -22,8 +22,8 @@ const EMPTY_REGIONS: CropRegionRow[] = []
 const EMPTY_EXAM_SUBTOTAL_GROUPS: ExamSubtotalGroupRow[] = []
 
 export default function SubtotalGroupPage() {
-  const params = useParams()
-  const examId = typeof params.examId === "string" ? params.examId : ""
+  const params = useRouteParams()
+  const examId = params.examId ?? ""
 
   const queryClient = useQueryClient()
 

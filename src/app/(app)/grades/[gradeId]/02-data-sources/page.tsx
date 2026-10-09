@@ -1,12 +1,11 @@
 "use client"
 
-import { useParams } from "next/navigation"
-
 import { DataSourcesContainer } from "@/components/grades/02-data-sources/DataSourcesContainer"
+import { useRouteParams } from "@/hooks/useRouteParams"
 
 export default function DataSourcesPage() {
-  const params = useParams()
-  const gradeId = typeof params.gradeId === "string" ? params.gradeId : ""
+  const params = useRouteParams()
+  const gradeId = params.gradeId ?? ""
 
   return <DataSourcesContainer gradeId={gradeId} />
 }

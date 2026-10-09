@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus, Users } from "lucide-react"
-import { useParams } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 
 import { ClassroomExamManager } from "@/components/exams/05-students/components/ClassroomExamManager"
@@ -17,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import { useRouteParams } from "@/hooks/useRouteParams"
 import {
   type ExamClassroomRow,
   examClassroomsQuery,
@@ -35,8 +35,8 @@ const EMPTY_EXAM_CLASSROOMS: ExamClassroomRow[] = []
 export default function StudentsPage() {
   const queryClient = useQueryClient()
   const currentUser = useCurrentUser()
-  const params = useParams()
-  const examId = typeof params.examId === "string" ? params.examId : ""
+  const params = useRouteParams()
+  const examId = params.examId ?? ""
 
   const [activeTab, setActiveTab] = useState("students")
   const [showAddClassroomDialog, setShowAddClassroomDialog] = useState(false)

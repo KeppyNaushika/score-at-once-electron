@@ -1,9 +1,9 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { useParams } from "next/navigation"
 
 import { MasterAnswerManager } from "@/components/exams/01-upload/components/MasterAnswerManager"
+import { useRouteParams } from "@/hooks/useRouteParams"
 import { examPagesQuery } from "@/queries/exam"
 
 /**
@@ -21,8 +21,8 @@ import { examPagesQuery } from "@/queries/exam"
  * @returns 模範解答アップロードページコンポーネント
  */
 export default function MasterAnswerStepPage() {
-  const params = useParams()
-  const examId = typeof params.examId === "string" ? params.examId : ""
+  const params = useRouteParams()
+  const examId = params.examId ?? ""
 
   // 読み込み中の表示だけがここの仕事。一覧そのものは MasterAnswerManager が同じキーで読む
   const { isPending: isLoading } = useQuery(examPagesQuery(examId))

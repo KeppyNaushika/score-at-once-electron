@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query"
 import Head from "next/head"
-import { useParams } from "next/navigation"
 import React from "react"
 
 import { GradeLockBar } from "@/components/common/grade-lock/GradeLockBar"
@@ -10,6 +9,7 @@ import { GradeLockProvider } from "@/components/common/grade-lock/GradeLockProvi
 import { WorkflowTabHeader } from "@/components/common/WorkflowTabHeader"
 import { ExamStepGuard } from "@/components/exams/shared/ExamStepGuard"
 import { useExamAccess } from "@/components/exams/shared/useExamAccess"
+import { useRouteParams } from "@/hooks/useRouteParams"
 import { examDetailQuery } from "@/queries/exam"
 
 /** ヘッダーに出すのは試験名だけ（select の同一性を保つため外に置く） */
@@ -21,8 +21,8 @@ export default function ExamWorkflowLayout({
 }: {
   children: React.ReactNode
 }) {
-  const params = useParams()
-  const examId = typeof params.examId === "string" ? params.examId : ""
+  const params = useRouteParams()
+  const examId = params.examId ?? ""
 
   // ヘッダーが要るのは試験名だけ
   const { data: examName = "" } = useQuery({

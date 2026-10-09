@@ -1,7 +1,6 @@
 "use client"
 
 import { FileEdit } from "lucide-react"
-import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useAssignedExamStudents } from "@/components/exams/shared/useAssignedExamStudents"
@@ -10,6 +9,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import type { DirtyDetail } from "@/contexts/NavigationGuardContext"
 import { useNavigationGuard } from "@/hooks/useNavigationGuard"
+import { useRouteParams } from "@/hooks/useRouteParams"
 
 import {
   StudentAnswersTabContent,
@@ -31,8 +31,8 @@ import { usePendingChanges, useStudentAnswersData } from "./hooks"
  */
 
 export default function StudentAnswersPage() {
-  const params = useParams()
-  const examId = typeof params.examId === "string" ? params.examId : ""
+  const params = useRouteParams()
+  const examId = params.examId ?? ""
   const currentUser = useCurrentUser()
 
   const [activeTab, setActiveTab] = useState<StudentAnswerTab>("new-grid")

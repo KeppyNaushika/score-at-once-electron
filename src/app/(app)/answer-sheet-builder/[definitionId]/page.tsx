@@ -1,10 +1,11 @@
 "use client"
 
-import { useParams } from "next/navigation"
-
 import { AnswerSheetDefinitionDetail } from "@/components/answer-sheet-builder/AnswerSheetDefinitionDetail"
+import { useRouteParams } from "@/hooks/useRouteParams"
 
 export default function AnswerSheetBuilderDetailPage() {
-  const params = useParams<{ definitionId: string }>()
-  return <AnswerSheetDefinitionDetail definitionId={params.definitionId} />
+  const params = useRouteParams()
+  return (
+    <AnswerSheetDefinitionDetail definitionId={params.definitionId ?? ""} />
+  )
 }

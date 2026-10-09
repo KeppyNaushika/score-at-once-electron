@@ -1,12 +1,12 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { useParams } from "next/navigation"
 import React from "react"
 
 import { GradeLockBar } from "@/components/common/grade-lock/GradeLockBar"
 import { GradeLockProvider } from "@/components/common/grade-lock/GradeLockProvider"
 import { WorkflowTabHeader } from "@/components/common/WorkflowTabHeader"
+import { useRouteParams } from "@/hooks/useRouteParams"
 import { courseworkWorkflowTabs } from "@/lib/workflowTabs"
 import { courseworkDetailQuery } from "@/queries/coursework"
 
@@ -18,9 +18,8 @@ export default function CourseworkWorkflowLayout({
 }: {
   children: React.ReactNode
 }) {
-  const params = useParams()
-  const courseworkId =
-    typeof params.courseworkId === "string" ? params.courseworkId : ""
+  const params = useRouteParams()
+  const courseworkId = params.courseworkId ?? ""
   // ヘッダーが要るのは名前だけ。資料そのもののキャッシュを概要画面と共有する
   const { data: courseworkName = "" } = useQuery({
     ...courseworkDetailQuery(courseworkId),

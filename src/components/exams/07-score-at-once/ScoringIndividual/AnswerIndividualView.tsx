@@ -1,10 +1,10 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { useParams } from "next/navigation"
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef } from "react"
 
 import { Spinner } from "@/components/ui/spinner"
+import { useRouteParams } from "@/hooks/useRouteParams"
 import { examExportSettingsQuery } from "@/queries/settings"
 import type {
   AnnotationTarget,
@@ -74,8 +74,8 @@ export default function AnswerIndividualView({
   )
 
   // 印字設定（採点マーク・点数表示のプレビュー用）をDBからロード
-  const params = useParams()
-  const examId = params?.examId as string | undefined
+  const params = useRouteParams()
+  const examId = params.examId
   const { data: exportSettings } = useQuery({
     ...examExportSettingsQuery(examId ?? ""),
     enabled: Boolean(examId),
