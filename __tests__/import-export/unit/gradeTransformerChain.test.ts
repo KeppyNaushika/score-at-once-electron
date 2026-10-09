@@ -1081,6 +1081,17 @@ function buildV1_14_0Archive(settingsJson: string): GradeArchiveDataV1_14_0 {
   }
 }
 
+/**
+ * 旧形式（凍結）の通知書の設定の行が持つ列の既定。
+ *
+ * 旧形式は形を凍結しているので、凍結の後に足した列（`itemGradeComparisonMarks`）は行に無い。
+ * 取り込みでは DB の既定が入る（`gradeArchiveImporter` は行の値だけを渡して作る）。
+ */
+const {
+  itemGradeComparisonMarks: _addedAfterFreeze,
+  ...LEGACY_REPORT_SETTINGS_DEFAULTS
+} = DEFAULT_GRADE_REPORT_SETTINGS
+
 describe("transformGradeToLatest: 1.14.0 → 1.15.0（出力設定を列へ割る）", () => {
   it("通知書の設定が JSON から列へ移る", () => {
     const archive = buildV1_14_0Archive(
@@ -1140,7 +1151,7 @@ describe("transformGradeToLatest: 1.14.0 → 1.15.0（出力設定を列へ割�
     const [reportSettings] = data.gradeIndividualReportSettings
     expect(reportSettings.title).toBe("古い設定")
     const { title: _title, ...defaultsWithoutTitle } =
-      DEFAULT_GRADE_REPORT_SETTINGS
+      LEGACY_REPORT_SETTINGS_DEFAULTS
     expect(reportSettings).toMatchObject(defaultsWithoutTitle)
   })
 
@@ -1150,7 +1161,7 @@ describe("transformGradeToLatest: 1.14.0 → 1.15.0（出力設定を列へ割�
     const { data } = transformGradeToLatest(archive)
 
     const [reportSettings] = data.gradeIndividualReportSettings
-    expect(reportSettings).toMatchObject(DEFAULT_GRADE_REPORT_SETTINGS)
+    expect(reportSettings).toMatchObject(LEGACY_REPORT_SETTINGS_DEFAULTS)
   })
 
   it("現行形式のアーカイブには当たらない（二重適用しない）", () => {

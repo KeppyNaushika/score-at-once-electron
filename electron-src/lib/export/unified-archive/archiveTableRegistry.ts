@@ -358,6 +358,15 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
       required("comparedGradeItemId", "GradeItem"),
     ],
   },
+  // 出力で使う比較の選択。比較に従う（比較が外れれば一緒に外れる）
+  GradeExportComparison: {
+    role: "owned",
+    owner: ["gradeComparisonId"],
+    references: [
+      required("gradeId", "Grade"),
+      required("gradeComparisonId", "GradeComparison"),
+    ],
+  },
   // 成績算出が使う試験・資料・小計・採点枠は外せない（docs §5.2）
   GradeDataSource: {
     role: "owned",

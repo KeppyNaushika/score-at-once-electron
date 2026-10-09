@@ -18,12 +18,13 @@ import type {
   GradeOverrideInput,
 } from "@/types/grade.types"
 
+import type { ComparisonMarksByCell } from "../comparison-marks/types"
 import { ComparisonMarks } from "./ComparisonMarks"
 import { ConstraintLegend } from "./ConstraintLegend"
 import { EditableGradeLabel } from "./EditableGradeLabel"
 import { FrozenCellControl } from "./FrozenCellControl"
 import { GradeItemBreakdownPopover } from "./GradeItemBreakdownPopover"
-import type { ComparisonDisplay, ComparisonMarksByCell } from "./types"
+import type { ComparisonDisplay } from "./types"
 
 interface ResultsTableProps {
   result: GradeCalculationResult

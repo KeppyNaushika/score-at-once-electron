@@ -109,6 +109,20 @@ describe("validateGradingResponse: 直して受け取るもの", () => {
   })
 })
 
+describe("validateGradingResponse: 配点の無い設問の保留", () => {
+  it("点の無い保留は、そのまま点の無い保留として受け取る", () => {
+    const result = validateGradingResponse(
+      withFields({ status: "pending", partialScore: null }),
+      { maxPoints: null }
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.status).toBe("pending")
+    expect(result.value.partialScore).toBeNull()
+    expect(result.notes).toEqual([])
+  })
+})
+
 describe("validateGradingResponse: 拒むもの", () => {
   it.each([
     ["オブジェクトでない（配列）", [validResponse], 5],
@@ -159,6 +173,7 @@ describe("validateGradingResponse: 拒むもの", () => {
       withFields({ status: "partial", partialScore: 1 }),
       null,
     ],
+    ["配点の無い設問に点の無い部分点", withFields({ status: "partial" }), null],
     ["transcription が文字列でない", withFields({ transcription: null }), 5],
     ["comment が文字列でない", withFields({ comment: 3 }), 5],
     ["annotation が文字列でも null でもない", withFields({ annotation: 3 }), 5],

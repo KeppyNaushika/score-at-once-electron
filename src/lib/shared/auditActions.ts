@@ -552,6 +552,12 @@ const AUDIT_ACTIONS = {
     verb: "update",
     label: "個人成績通知書の設定を更新しました",
   },
+  /** 出力に載せる比較の選択。出力画面で続けて触るので成績算出ごとに1行へまとめる */
+  "grade.export_comparison.update": {
+    category: "grade",
+    verb: "update",
+    label: "出力に載せる比較を変更しました",
+  },
 
   // ── 試験外成績資料（coursework） ─────────────────────────────
   "coursework.create": {

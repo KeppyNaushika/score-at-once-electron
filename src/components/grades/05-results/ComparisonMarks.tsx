@@ -6,63 +6,46 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
+import { formatComparedTargetName } from "@/lib/shared/gradeComparisonNames"
 
-import type { ComparisonDisplay, ComparisonMark } from "./types"
+import { COMPARISON_SYMBOLS } from "../comparison-marks/comparisonSymbols"
+import type {
+  ComparisonDirection,
+  ComparisonMark,
+} from "../comparison-marks/types"
+import type { ComparisonDisplay } from "./types"
 
 /** 記号の出し方（"none" は記号ごと出さないので、ここには来ない） */
 type VisibleDisplay = Exclude<ComparisonDisplay, "none">
 
 /**
- * 記号と出し方ごとの見た目。→ と ・ はどの出し方でも薄いまま、動いたもの（↑↓）と
- * 上下を決められないもの（*）だけが「強調」で背景を塗って目立つ。
+ * 出し方ごとの見た目。→ と ・ はどの出し方でも薄いまま、動いたもの（↑↓）と
+ * 上下を決められないもの（*）だけが「強調」で背景を塗って目立つ。記号と意味は
+ * 出力と共通（`COMPARISON_SYMBOLS`）。
  */
-const MARK_STYLES: Record<
-  ComparisonMark["direction"],
-  {
-    symbol: string
-    classNameByDisplay: Record<VisibleDisplay, string>
-    description: string
-  }
+const MARK_CLASS_NAMES: Record<
+  ComparisonDirection,
+  Record<VisibleDisplay, string>
 > = {
   up: {
-    symbol: "↑",
-    classNameByDisplay: {
-      symbol: "text-emerald-600 dark:text-emerald-400",
-      highlight: "bg-emerald-600 text-white",
-    },
-    description: "上がった",
+    symbol: "text-emerald-600 dark:text-emerald-400",
+    highlight: "bg-emerald-600 text-white",
   },
   down: {
-    symbol: "↓",
-    classNameByDisplay: {
-      symbol: "text-rose-600 dark:text-rose-400",
-      highlight: "bg-rose-600 text-white",
-    },
-    description: "下がった",
+    symbol: "text-rose-600 dark:text-rose-400",
+    highlight: "bg-rose-600 text-white",
   },
   same: {
-    symbol: "→",
-    classNameByDisplay: {
-      symbol: "text-muted-foreground/50",
-      highlight: "text-muted-foreground/50",
-    },
-    description: "同じ",
+    symbol: "text-muted-foreground/50",
+    highlight: "text-muted-foreground/50",
   },
   unknown: {
-    symbol: "*",
-    classNameByDisplay: {
-      symbol: "text-amber-600 dark:text-amber-400",
-      highlight: "bg-amber-500 text-white",
-    },
-    description: "成績境界に無い評定なので上下を決められない",
+    symbol: "text-amber-600 dark:text-amber-400",
+    highlight: "bg-amber-500 text-white",
   },
   missing: {
-    symbol: "・",
-    classNameByDisplay: {
-      symbol: "text-muted-foreground/40",
-      highlight: "text-muted-foreground/40",
-    },
-    description: "比較先に評定が無い",
+    symbol: "text-muted-foreground/40",
+    highlight: "text-muted-foreground/40",
   },
 }
 
@@ -74,16 +57,16 @@ function MarkSymbol({
   direction,
   display,
 }: {
-  direction: ComparisonMark["direction"]
+  direction: ComparisonDirection
   display: VisibleDisplay
 }) {
-  const style = MARK_STYLES[direction]
+  const { symbol, description } = COMPARISON_SYMBOLS[direction]
   return (
     <span
-      className={`inline-block w-4 rounded-sm text-center ${style.classNameByDisplay[display]}`}
-      title={style.description}
+      className={`inline-block w-4 rounded-sm text-center ${MARK_CLASS_NAMES[direction][display]}`}
+      title={description}
     >
-      {style.symbol}
+      {symbol}
     </span>
   )
 }
@@ -150,9 +133,10 @@ export function ComparisonMarks({
                   <MarkSymbol direction={mark.direction} display={display} />
                 </TableCell>
                 <TableCell className="py-1 pr-3 pl-0 whitespace-normal">
-                  {mark.comparedGradeName === null
-                    ? mark.comparedGradeItemName
-                    : `${mark.comparedGradeName} > ${mark.comparedGradeItemName}`}
+                  {formatComparedTargetName(
+                    mark.comparedGradeName,
+                    mark.comparedGradeItemName
+                  )}
                 </TableCell>
                 <TableCell className="py-1 pr-3 pl-0 text-right tabular-nums">
                   {formatPercentage(mark.comparedPercentage)}

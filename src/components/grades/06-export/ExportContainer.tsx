@@ -38,6 +38,7 @@ import { DEFAULT_GRADE_REPORT_SETTINGS } from "@/types/gradeReport.types"
 import { ExcelExportTab } from "./ExcelExportTab"
 import { generateGradeReportBatchHtml } from "./generateGradeReportHtml"
 import { GradeExcelPreview } from "./GradeExcelPreview"
+import { useExportComparisons } from "./hooks/useExportComparisons"
 import { IndividualReportTab } from "./IndividualReportTab"
 import { PreviewPane } from "./PreviewPane"
 import type { GradeExportTabType } from "./types"
@@ -59,6 +60,16 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
   const { mutate: updateReportSettings } = useMutation(
     updateGradeReportSettingsMutation(gradeId)
   )
+
+  // 出力に載せる比較（Excel の列と通知書の記号が同じ選択を使う）
+  const {
+    comparisons,
+    isComparisonExported,
+    setComparisonExported,
+    comparisonMarks,
+    excelComparisonColumns,
+    isPending: comparisonsPending,
+  } = useExportComparisons(gradeId, result)
 
   const error = queryError?.message ?? null
   const recalculate = () => {
@@ -174,9 +185,10 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
     return generateGradeReportBatchHtml(
       result,
       [previewStudentId],
-      reportSettings
+      reportSettings,
+      comparisonMarks
     )
-  }, [result, previewStudentId, reportSettings, exportTab])
+  }, [result, previewStudentId, reportSettings, exportTab, comparisonMarks])
 
   // ─── ローディング / エラー ───────────────────────────────────────
   if (loading) {
@@ -372,6 +384,7 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
                       <GradeExcelPreview
                         result={result}
                         selectedStudentIds={selectedStudentIds}
+                        comparisonColumns={excelComparisonColumns}
                       />
                     </div>
                   )
@@ -437,6 +450,12 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
                   <ExcelExportTab
                     gradeId={gradeId}
                     selectedStudentIds={selectedStudentIds}
+                    gradeItems={result.gradeItems}
+                    comparisons={comparisons}
+                    isComparisonExported={isComparisonExported}
+                    onComparisonExportedChange={setComparisonExported}
+                    comparisonColumns={excelComparisonColumns}
+                    comparisonsPending={comparisonsPending}
                   />
                 </TabsContent>
 
@@ -447,6 +466,8 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
                   <IndividualReportTab
                     result={result}
                     selectedStudentIds={selectedStudentIds}
+                    comparisonMarks={comparisonMarks}
+                    comparisonsPending={comparisonsPending}
                     options={reportSettings}
                     onOptionsChange={changeReportSettings}
                   />

@@ -89,7 +89,8 @@ function AiGradingRunForm({
     initialProvider
   )
   const startRun = useMutation(startAiGradingRunMutation(examId, cropRegion.id))
-  // 送信は外部へ送り費用が掛かるので、ダブルクリックでも1回に限る（isPending は次の描画まで変わらない）
+  // 送信は外部へ送り費用が掛かるので、ダブルクリックでも1回に限る（isPending は次の描画まで変わらない）。
+  // 押したらダイアログを閉じるので、このフォームごと捨てられ、開き直せば新しいガードで押せる
   const sendGuard = useInFlightGuard()
 
   const selectionByMode = useMemo(
@@ -127,10 +128,16 @@ function AiGradingRunForm({
     targetMode === null ? [] : selectionByMode[targetMode].examStudentIds
   const providerName = providerDisplayName(runSettings.provider)
 
+  /**
+   * 押したらすぐ閉じる。結果は閉じた後に知らせる: 成功はここのトースト、失敗は
+   * MutationCache のトースト（`meta.errorMessage`）、その後の進み具合は実行の一覧。
+   * `mutate` に渡す onSuccess は閉じて外れた後には呼ばれないので、`mutateAsync` の約束で受ける
+   */
   const handleSend = () => {
     if (!sendGuard.tryAcquire()) return
-    startRun.mutate(
-      {
+    const sentCount = targetExamStudentIds.length
+    startRun
+      .mutateAsync({
         promptId: prompt.id,
         examStudentIds: targetExamStudentIds,
         provider: runSettings.provider,
@@ -138,18 +145,15 @@ function AiGradingRunForm({
         effort: runSettings.effort,
         mode: runSettings.mode,
         imageScale: AI_GRADING_SENDING_IMAGE_SCALE,
-      },
-      {
-        onSuccess: () => {
-          toast.success(
-            `${targetExamStudentIds.length}件の答案を ${providerName} へ送りました`
-          )
-          onOpenChange(false)
+      })
+      .then(
+        () => {
+          toast.success(`${sentCount}件の答案を ${providerName} へ送りました`)
         },
-        // 失敗したら再び押せるようにする（成功ならダイアログごと閉じる）
-        onSettled: sendGuard.release,
-      }
-    )
+        // 失敗の知らせは MutationCache のトーストが出す
+        () => {}
+      )
+    onOpenChange(false)
   }
 
   return (
@@ -223,16 +227,12 @@ function AiGradingRunForm({
       <DialogFooter>
         {isConfirming ? (
           <>
-            <Button
-              variant="outline"
-              onClick={() => setIsConfirming(false)}
-              disabled={startRun.isPending}
-            >
+            <Button variant="outline" onClick={() => setIsConfirming(false)}>
               戻る
             </Button>
             <Button onClick={handleSend} disabled={startRun.isPending}>
               <Send className="h-4 w-4" />
-              {startRun.isPending ? "送信中…" : `${providerName} へ送信する`}
+              {providerName} へ送信する
             </Button>
           </>
         ) : (

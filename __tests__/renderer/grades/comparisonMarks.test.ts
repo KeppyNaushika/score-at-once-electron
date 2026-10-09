@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from "vitest"
 
-import { buildComparisonMarks } from "@/components/grades/05-results/buildComparisonMarks"
+import { buildComparisonMarks } from "@/components/grades/comparison-marks/buildComparisonMarks"
 import type { GradeComparisonRow } from "@/queries/gradeStructure"
 import type {
   GradeCalculationResult,

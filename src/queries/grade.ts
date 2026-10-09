@@ -55,6 +55,18 @@ export const gradeReportSettingsQuery = (gradeId: string) =>
   })
 
 /**
+ * 出力（Excel・個人成績通知書）で使う比較の選択（成績算出 × 比較 の行）。
+ *
+ * **行をそのまま載せる。** 行が無い比較は既定（`DEFAULT_EXPORT_COMPARISON_ENABLED`）で
+ * 決めるのは表示側。
+ */
+export const gradeExportComparisonsQuery = (gradeId: string) =>
+  queryOptions({
+    queryKey: [...scopeKeys.grade(gradeId), "exportComparisons"] as const,
+    queryFn: () => window.electronAPI.grade.getExportComparisons(gradeId),
+  })
+
+/**
  * その成績に紐づくもの全部。
  *
  * 評価項目・データソース・境界・除外はどれも算出結果に効くので、1つ書けば
@@ -158,6 +170,18 @@ export const updateGradeReportSettingsMutation = (gradeId: string) =>
     meta: {
       invalidates: [gradeReportSettingsQuery(gradeId).queryKey],
       errorMessage: "出力設定を保存できませんでした",
+    },
+  })
+
+/** 比較を出力に載せるかを書く（比較1件ずつ） */
+export const setGradeExportComparisonMutation = (gradeId: string) =>
+  defineMutation({
+    mutationFn: (selection: { gradeComparisonId: string; enabled: boolean }) =>
+      window.electronAPI.grade.setExportComparison({ gradeId, ...selection }),
+    scope: { id: `grade:${gradeId}:exportComparisons` },
+    meta: {
+      invalidates: [gradeExportComparisonsQuery(gradeId).queryKey],
+      errorMessage: "出力に載せる比較を保存できませんでした",
     },
   })
 

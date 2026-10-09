@@ -8,13 +8,23 @@ import type {
 } from "@/types/grade.types"
 import type { GradeReportSettings } from "@/types/gradeReport.types"
 
+import { joinComparisonSymbols } from "../comparison-marks/comparisonSymbols"
+import type {
+  ComparisonMark,
+  ComparisonMarksByCell,
+} from "../comparison-marks/types"
+
 /**
  * 複数生徒分の個人成績通知書HTMLをページ区切りで結合
+ *
+ * @param comparisonMarks 出力で使う比較の記号。「評価」の評定に続けて出すのは
+ *   `itemGradeComparisonMarks` が ON のときだけ。比較が無ければ null
  */
 export function generateGradeReportBatchHtml(
   result: GradeCalculationResult,
   studentIds: string[],
-  options: GradeReportSettings
+  options: GradeReportSettings,
+  comparisonMarks: ComparisonMarksByCell | null
 ): string {
   const reportsHtml = studentIds
     .map((studentId, index) => {
@@ -24,7 +34,7 @@ export function generateGradeReportBatchHtml(
       if (!student) return ""
       const isLast = index === studentIds.length - 1
       const pageBreak = isLast ? "" : ' style="page-break-after: always;"'
-      return `<div class="student-report"${pageBreak}>${renderStudentReport(result, student, options)}</div>`
+      return `<div class="student-report"${pageBreak}>${renderStudentReport(result, student, options, comparisonMarks)}</div>`
     })
     .join("")
 
@@ -156,7 +166,8 @@ export function generateGradeReportBatchHtml(
 function renderStudentReport(
   _result: GradeCalculationResult,
   student: StudentGradeResult,
-  options: GradeReportSettings
+  options: GradeReportSettings,
+  comparisonMarks: ComparisonMarksByCell | null
 ): string {
   const sections: string[] = []
 
@@ -172,7 +183,10 @@ function renderStudentReport(
 
   // 項目別評価
   if (options.showItemGrades && student.gradeItemResults.length > 0) {
-    sections.push(renderItemGradesSection(student, options))
+    const marksByGradeItemId = options.itemGradeComparisonMarks
+      ? comparisonMarks?.get(student.gradeStudentId)
+      : undefined
+    sections.push(renderItemGradesSection(student, options, marksByGradeItemId))
   }
 
   // データソース内訳
@@ -218,10 +232,14 @@ function renderStudentReport(
 
 /**
  * 項目別評価セクションを生成
+ *
+ * @param marksByGradeItemId 「評価」の評定に続けて出す比較の記号（評価項目 id ごと、
+ *   登録順）。出さないなら undefined
  */
 function renderItemGradesSection(
   student: StudentGradeResult,
-  options: GradeReportSettings
+  options: GradeReportSettings,
+  marksByGradeItemId: ReadonlyMap<string, ComparisonMark[]> | undefined
 ): string {
   const cols = {
     score: options.itemGradeColumnScore,
@@ -254,7 +272,14 @@ function renderItemGradesSection(
       cells.push(`<td>${pct}</td>`)
     }
     if (cols.gradeLabel) {
-      const label = item.gradeLabel ?? "-"
+      // 評定が無ければ記号も付けない（比べる相手が無く、どの比較も「・」になる）
+      const symbols =
+        item.gradeLabel !== null
+          ? joinComparisonSymbols(
+              marksByGradeItemId?.get(item.gradeItemId) ?? []
+            )
+          : ""
+      const label = `${item.gradeLabel ?? "-"}${symbols}`
       cells.push(`<td><strong>${escapeHtml(label)}</strong></td>`)
     }
     return `<tr>${cells.join("")}</tr>`

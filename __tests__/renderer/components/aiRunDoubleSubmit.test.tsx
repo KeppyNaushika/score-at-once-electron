@@ -4,9 +4,12 @@
  *
  * ここで固定すること:
  * - 実行ダイアログの「送信」を2回続けて押しても、startRun は1回しか呼ばれない
- *   （`isPending` が画面に反映される前の2回目の押下も止める）。送信中は「送信中…」で押せない
- * - 送信に失敗したら、再び押せる（押せば送り直す）
- * - プロンプト修正の「修正を頼む」も同じく1回に限る
+ *   （`isPending` が画面に反映される前の2回目の押下も止める）
+ * - 押したら、結果を待たずにダイアログを閉じる。成功・失敗はトーストで知らせる
+ * - 閉じて開き直せば、また押せる
+ * - プロンプト修正の「修正を頼む」も2回続けて押して1回だけ。こちらは閉じずに
+ *   「修正を頼んでいます…」で押せなくし、届いたら差分と「この版を使う」を出す。
+ *   失敗したら再び押せる
  *
  * window.electronAPI は偽物で、ネットワークにも実際のキーにも実データにも触れない。
  */
@@ -15,12 +18,16 @@ import "../setup"
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { ReactNode } from "react"
+import { type ReactNode, useState } from "react"
+import { toast } from "sonner"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AiGradingRunDialog } from "@/components/exams/07-score-at-once/AiGrading/AiGradingRunDialog"
 import { AiPromptRevisionDialog } from "@/components/exams/07-score-at-once/AiGrading/AiPromptRevisionDialog"
-import type { AiGradingAnswer } from "@/components/exams/07-score-at-once/AiGrading/types"
+import type {
+  AiGradingAnswer,
+  AiPromptRow,
+} from "@/components/exams/07-score-at-once/AiGrading/types"
 import { reviewAnswer } from "@/components/exams/07-score-at-once/AiGrading/utils/answerReview"
 import type { AiGradingSettings } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 import { AI_GRADING_CONSENT_VERSION } from "@/lib/shared/aiGrading/consentText"
@@ -150,24 +157,44 @@ function reviewed(answer: AiGradingAnswer) {
   }
 }
 
-/** 実行ダイアログを開き、答案を選んで送信の確認まで進める */
-async function openRunConfirmation(onOpenChange: (open: boolean) => void) {
-  renderWithProviders(
-    <AiGradingRunDialog
-      open
-      onOpenChange={onOpenChange}
-      examId="exam-1"
-      cropRegion={cropRegion}
-      settings={SETTINGS}
-      initialProvider="anthropic"
-      unlockedProviders={["anthropic"]}
-      prompt={makePrompt()}
-      reviewedAnswers={[reviewed(makeAnswer("s1")), reviewed(makeAnswer("s2"))]}
-      questionScores={[]}
-      currentUserId={CURRENT_USER_ID}
-      selectedExamStudentIds={new Set()}
-    />
+interface DialogHarnessProps {
+  onOpenChange: (open: boolean) => void
+}
+
+/** 閉じたら外れ、ボタンで開き直せる実行ダイアログ（呼び出し側と同じ持ち方） */
+function RunDialogHarness({ onOpenChange }: DialogHarnessProps) {
+  const [isOpen, setIsOpen] = useState(true)
+  return (
+    <>
+      <button type="button" onClick={() => setIsOpen(true)}>
+        実行ダイアログを開く
+      </button>
+      <AiGradingRunDialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          onOpenChange(open)
+          setIsOpen(open)
+        }}
+        examId="exam-1"
+        cropRegion={cropRegion}
+        settings={SETTINGS}
+        initialProvider="anthropic"
+        unlockedProviders={["anthropic"]}
+        prompt={makePrompt()}
+        reviewedAnswers={[
+          reviewed(makeAnswer("s1")),
+          reviewed(makeAnswer("s2")),
+        ]}
+        questionScores={[]}
+        currentUserId={CURRENT_USER_ID}
+        selectedExamStudentIds={new Set()}
+      />
+    </>
   )
+}
+
+/** 答案を選んで送信の確認まで進め、送信のボタンを返す */
+async function advanceToRunConfirmation() {
   await userEvent.click(screen.getByRole("radio", { name: "未採点のみ 2件" }))
   await userEvent.click(screen.getByRole("button", { name: "送信の確認へ" }))
   return screen.getByRole("button", { name: "Anthropic へ送信する" })
@@ -176,83 +203,169 @@ async function openRunConfirmation(onOpenChange: (open: boolean) => void) {
 describe("実行ダイアログの送信", () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it("ダブルクリックしても startRun は1回だけ。送信中は「送信中…」で押せず、成功したら閉じる", async () => {
+  it("ダブルクリックしても startRun は1回だけ。押したら結果を待たずに閉じ、成功はトーストで知らせる", async () => {
     const aiGrading = installFakeElectronApi()
     const deferredRun = createDeferred<{ id: string }>()
     aiGrading.startRun.mockImplementationOnce(() => deferredRun.promise)
     const onOpenChange = vi.fn()
-    const sendButton = await openRunConfirmation(onOpenChange)
+    renderWithProviders(<RunDialogHarness onOpenChange={onOpenChange} />)
+    const sendButton = await advanceToRunConfirmation()
 
     // 描画を挟まずに2回押す（ダブルクリック）
     fireEvent.click(sendButton)
     fireEvent.click(sendButton)
 
+    expect(onOpenChange).toHaveBeenCalledTimes(1)
+    expect(onOpenChange).toHaveBeenCalledWith(false)
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "送信中…" })).toBeDisabled()
+      expect(
+        screen.queryByRole("button", { name: "Anthropic へ送信する" })
+      ).toBeNull()
     )
     expect(aiGrading.startRun).toHaveBeenCalledTimes(1)
+    expect(toast.success).not.toHaveBeenCalled()
 
     deferredRun.resolve({ id: "run-new" })
-    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(
+        "2件の答案を Anthropic へ送りました"
+      )
+    )
     expect(aiGrading.startRun).toHaveBeenCalledTimes(1)
   })
 
-  it("失敗したら再び押せ、押せば送り直す", async () => {
+  it("失敗したら、閉じた後でもトーストで分かる", async () => {
     const aiGrading = installFakeElectronApi()
     aiGrading.startRun.mockRejectedValueOnce(new Error("つながりません"))
     const onOpenChange = vi.fn()
-    const sendButton = await openRunConfirmation(onOpenChange)
+    renderWithProviders(<RunDialogHarness onOpenChange={onOpenChange} />)
+    const sendButton = await advanceToRunConfirmation()
 
     fireEvent.click(sendButton)
-    fireEvent.click(sendButton)
+
+    expect(onOpenChange).toHaveBeenCalledWith(false)
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Anthropic へ送信する" })
-      ).toBeEnabled()
+      expect(toast.error).toHaveBeenCalledWith(
+        "AI 採点を始められませんでした",
+        { description: "つながりません" }
+      )
     )
-    expect(aiGrading.startRun).toHaveBeenCalledTimes(1)
-    expect(onOpenChange).not.toHaveBeenCalledWith(false)
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it("閉じて開き直せば、また押せる", async () => {
+    const aiGrading = installFakeElectronApi()
+    aiGrading.startRun.mockRejectedValueOnce(new Error("つながりません"))
+    renderWithProviders(<RunDialogHarness onOpenChange={vi.fn()} />)
+
+    fireEvent.click(await advanceToRunConfirmation())
+    await waitFor(() => expect(toast.error).toHaveBeenCalled())
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Anthropic へ送信する" })
+      screen.getByRole("button", { name: "実行ダイアログを開く" })
     )
-    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
-    expect(aiGrading.startRun).toHaveBeenCalledTimes(2)
+    const sendButtonAgain = await advanceToRunConfirmation()
+    expect(sendButtonAgain).toBeEnabled()
+    fireEvent.click(sendButtonAgain)
+
+    await waitFor(() => expect(aiGrading.startRun).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1))
   })
 })
+
+interface RevisionDialogProps {
+  onOpenChange: (open: boolean) => void
+  onSelectPrompt: (promptId: string) => void
+}
+
+/** 修正ダイアログを開いたまま描き、指示を書いて修正を頼むボタンを返す */
+async function openRevisionDialog({
+  onOpenChange,
+  onSelectPrompt,
+}: RevisionDialogProps) {
+  renderWithProviders(
+    <AiPromptRevisionDialog
+      open
+      onOpenChange={onOpenChange}
+      examId="exam-1"
+      cropRegion={cropRegion}
+      basePrompt={makePrompt()}
+      promptNumberById={new Map([["prompt-1", 1]])}
+      provider="anthropic"
+      settings={SETTINGS}
+      reviewedAnswers={[]}
+      selectedExamStudentIds={new Set()}
+      onSelectPrompt={onSelectPrompt}
+    />
+  )
+  await userEvent.type(
+    screen.getByLabelText("指示"),
+    "≡ と ＝ の区別で減点しないで"
+  )
+  return screen.getByRole("button", { name: "修正を頼む" })
+}
 
 describe("プロンプト修正の送信", () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it("ダブルクリックしても revisePrompt は1回だけ", async () => {
+  it("ダブルクリックしても revisePrompt は1回だけ。頼んでいる間は押せず、届いたら差分と「この版を使う」を出す", async () => {
     const aiGrading = installFakeElectronApi()
-    renderWithProviders(
-      <AiPromptRevisionDialog
-        open
-        onOpenChange={vi.fn()}
-        examId="exam-1"
-        cropRegion={cropRegion}
-        basePrompt={makePrompt()}
-        promptNumberById={new Map([["prompt-1", 1]])}
-        provider="anthropic"
-        settings={SETTINGS}
-        reviewedAnswers={[]}
-        selectedExamStudentIds={new Set()}
-        onSelectPrompt={vi.fn()}
-      />
+    const deferredRevision = createDeferred<AiPromptRow>()
+    aiGrading.revisePrompt.mockImplementationOnce(
+      () => deferredRevision.promise
     )
-    await userEvent.type(
-      screen.getByLabelText("指示"),
-      "≡ と ＝ の区別で減点しないで"
-    )
-    const reviseButton = screen.getByRole("button", { name: "修正を頼む" })
+    const onOpenChange = vi.fn()
+    const onSelectPrompt = vi.fn()
+    const reviseButton = await openRevisionDialog({
+      onOpenChange,
+      onSelectPrompt,
+    })
 
+    // 描画を挟まずに2回押す（ダブルクリック）
     fireEvent.click(reviseButton)
     fireEvent.click(reviseButton)
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "この版を使う" })).toBeTruthy()
+      expect(
+        screen.getByRole("button", { name: "修正を頼んでいます…" })
+      ).toBeDisabled()
     )
     expect(aiGrading.revisePrompt).toHaveBeenCalledTimes(1)
+    expect(onOpenChange).not.toHaveBeenCalled()
+
+    deferredRevision.resolve(
+      makePrompt({ id: "prompt-revised", revisionMessage: "区別を緩めました" })
+    )
+    const useButton = await screen.findByRole("button", {
+      name: "この版を使う",
+    })
+    expect(screen.getByText("区別を緩めました")).toBeTruthy()
+    expect(aiGrading.revisePrompt).toHaveBeenCalledTimes(1)
+
+    await userEvent.click(useButton)
+    expect(onSelectPrompt).toHaveBeenCalledWith("prompt-revised")
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it("失敗したら再び押せ、押せば頼み直す", async () => {
+    const aiGrading = installFakeElectronApi()
+    aiGrading.revisePrompt.mockRejectedValueOnce(new Error("つながりません"))
+    const onOpenChange = vi.fn()
+    const reviseButton = await openRevisionDialog({
+      onOpenChange,
+      onSelectPrompt: vi.fn(),
+    })
+
+    fireEvent.click(reviseButton)
+    fireEvent.click(reviseButton)
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "修正を頼む" })).toBeEnabled()
+    )
+    expect(aiGrading.revisePrompt).toHaveBeenCalledTimes(1)
+    expect(onOpenChange).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole("button", { name: "修正を頼む" }))
+    await screen.findByRole("button", { name: "この版を使う" })
+    expect(aiGrading.revisePrompt).toHaveBeenCalledTimes(2)
   })
 })

@@ -1154,12 +1154,14 @@ model Grade {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  gradeItems       GradeItem[]
-  gradeClassrooms  GradeClassroom[]
-  gradeStudents    GradeStudent[]
-  gradeConstraints GradeConstraint[]
-  gradeTags        GradeTag[]
-  reportSettings   GradeIndividualReportSettings?
+  gradeItems        GradeItem[]
+  gradeClassrooms   GradeClassroom[]
+  gradeStudents     GradeStudent[]
+  gradeConstraints  GradeConstraint[]
+  gradeTags         GradeTag[]
+  reportSettings    GradeIndividualReportSettings?
+  /// 出力（Excel・個人成績通知書）に載せる比較の選択
+  exportComparisons GradeExportComparison[]
 }
 
 /// 成績算出のタグ（既存 Tag と多対多）。試験・資料・解答用紙は既にタグを持っていて、
@@ -1320,12 +1322,34 @@ model GradeComparison {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  gradeItem         GradeItem @relation("GradeComparisonSubject", fields: [gradeItemId], references: [id], onDelete: Cascade)
-  comparedGradeItem GradeItem @relation("GradeComparisonCompared", fields: [comparedGradeItemId], references: [id], onDelete: Cascade)
+  gradeItem         GradeItem               @relation("GradeComparisonSubject", fields: [gradeItemId], references: [id], onDelete: Cascade)
+  comparedGradeItem GradeItem               @relation("GradeComparisonCompared", fields: [comparedGradeItemId], references: [id], onDelete: Cascade)
+  exportSelections  GradeExportComparison[]
 
   @@unique([gradeItemId, comparedGradeItemId])
   @@index([gradeItemId])
   @@index([comparedGradeItemId])
+}
+
+/// 成績算出の出力で使う比較の選択（成績算出 × 比較）。Excel「成績一覧」の列と、
+/// 個人成績通知書の「評価」に添える記号の両方がこの選択に従う。
+///
+/// **行が無い比較は出す**（`DEFAULT_EXPORT_COMPARISON_ENABLED`）。04 で比較を足せば、
+/// 何もしなくても出力に載る。外したときだけ `enabled = false` の行ができる。
+/// 書き込みは `@@unique` を鍵にする（id は uuidv4 で端末ごとに異なる）。
+model GradeExportComparison {
+  id                String   @id @default(uuid())
+  gradeId           String
+  gradeComparisonId String
+  enabled           Boolean
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  grade           Grade           @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  gradeComparison GradeComparison @relation(fields: [gradeComparisonId], references: [id], onDelete: Cascade)
+
+  @@unique([gradeId, gradeComparisonId])
+  @@index([gradeComparisonId])
 }
 
 /// 成績算出プロジェクトの対象学級
@@ -1563,6 +1587,8 @@ model GradeIndividualReportSettings {
   itemGradeColumnScore      Boolean @default(true)
   itemGradeColumnPercentage Boolean @default(true)
   itemGradeColumnGradeLabel Boolean @default(true)
+  /// 「評価」の評定に、出力で使う比較の記号を続けて出す（例「1↑」）
+  itemGradeComparisonMarks  Boolean @default(false)
   itemGradeFontSize         Int     @default(11)
   itemGradeTableColumns     Int     @default(1)
 

@@ -64,6 +64,9 @@ describe("成績算出のロックが止めるテーブル", () => {
       "ReturnSnapshot",
       "ExamAnswerOverlayStyle",
       "ExamIndividualReportSettings",
+      // 成績算出の出力設定（通知書の設定・出力に載せる比較の選択）
+      "GradeIndividualReportSettings",
+      "GradeExportComparison",
       "UserPreference",
       "UserKeyboardShortcut",
     ]) {

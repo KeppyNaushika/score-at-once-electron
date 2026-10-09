@@ -124,6 +124,31 @@ describe("統合アーカイブの範囲", () => {
     })
   })
 
+  it("出力に載せる比較の選択は比較に従う（成績算出と一緒に入り、比較が外れれば外れる）", async () => {
+    const exportSelection = await prisma.gradeExportComparison.create({
+      data: {
+        gradeId: fixture.gradeId,
+        gradeComparisonId: fixture.comparisonId,
+        enabled: false,
+      },
+    })
+
+    const included = resolve({ roots: { Grade: [fixture.gradeId] } })
+    expect(idsOf(included, "GradeExportComparison")).toEqual(
+      new Set([exportSelection.id])
+    )
+
+    const excluded = resolve({
+      roots: { Grade: [fixture.gradeId] },
+      exclusions: { Grade: [fixture.comparedGradeId] },
+    })
+    expect(idsOf(excluded, "GradeExportComparison").size).toBe(0)
+    expect(excluded.excludedRowCounts).toMatchObject({
+      GradeComparison: 1,
+      GradeExportComparison: 1,
+    })
+  })
+
   it("成績算出が使う試験は外せない", () => {
     expect(() =>
       resolve({

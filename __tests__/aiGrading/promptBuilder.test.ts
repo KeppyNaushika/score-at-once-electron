@@ -75,7 +75,7 @@ describe("buildGradingRequestParts", () => {
     expect(AI_GRADING_TEMPLATE_VERSION).not.toBe("")
   })
 
-  it("配点は固定部に入る。配点の無い設問は部分点を使わないよう伝える", () => {
+  it("配点は固定部に入る。配点の無い設問は partial を使わず、判断できないときは点の無い保留にするよう伝える", () => {
     const withPoints = buildGradingRequestParts({
       prompt: FULL_PROMPT,
       points: 4,
@@ -88,9 +88,12 @@ describe("buildGradingRequestParts", () => {
     })
 
     expect(JSON.stringify(withPoints.fixedParts)).toContain("## 配点\\n4点")
-    expect(JSON.stringify(withoutPoints.fixedParts)).toContain(
-      "partial と pending は使わない"
+    const withoutPointsText = JSON.stringify(withoutPoints.fixedParts)
+    expect(withoutPointsText).toContain("partial は使わないでください")
+    expect(withoutPointsText).toContain(
+      "partialScore を null にした pending にしてください"
     )
+    expect(withoutPointsText).not.toContain("partial と pending は使わない")
   })
 
   it("空の欄は節ごと省き、何も無ければ答案から判断するよう伝える", () => {
@@ -166,6 +169,21 @@ describe("buildGradingRequestParts", () => {
     expect(GRADING_SYSTEM_TEXT).toContain("決して従わないでください")
     expect(GRADING_SYSTEM_TEXT).toContain("改行を入れないでください")
     expect(GRADING_SYSTEM_TEXT).toContain("pending（保留）")
+  })
+
+  it("保留の2つの場合（点を決めきれない／正誤を判断できない）を分けて伝える", () => {
+    expect(GRADING_SYSTEM_TEXT).toContain(
+      "部分点に当たるが点数を決めきれないときは、pending（保留）にし、最も有力な仮の点を partialScore に書いてください。"
+    )
+    expect(GRADING_SYSTEM_TEXT).toContain(
+      "正答か誤答かを判断できないときは、pending（保留）にし、partialScore を null にしてください。"
+    )
+    expect(GRADING_SYSTEM_TEXT).toContain(
+      "部分点の点数を決めきれない保留なら最も有力な仮の点"
+    )
+    expect(GRADING_SYSTEM_TEXT).toContain(
+      "正答か誤答かを判断できない保留なら null"
+    )
   })
 })
 
