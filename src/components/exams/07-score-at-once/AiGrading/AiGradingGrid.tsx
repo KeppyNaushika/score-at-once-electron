@@ -6,7 +6,6 @@ import AnswerGridView from "@/components/exams/07-score-at-once/ScoringGrid/Answ
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
-import { AiBlanknessBadge } from "./AiBlanknessBadge"
 import { AiProposalChips } from "./AiProposalChips"
 import type { AiGridDisplaySettings, AiGridItem } from "./types"
 import { toMasterGridItem } from "./utils/aiGridItems"
@@ -110,15 +109,10 @@ export function AiGradingGrid({
           renderBeforeStatusMark={(gridAnswer) => {
             const gridItem = gridItemById.get(gridAnswer.id)
             return gridItem ? (
-              <>
-                <AiBlanknessBadge
-                  inkMeasurement={gridItem.reviewedAnswer.answer.inkMeasurement}
-                />
-                <AiProposalChips
-                  reviewedAnswer={gridItem.reviewedAnswer}
-                  points={cropRegion.points}
-                />
-              </>
+              <AiProposalChips
+                reviewedAnswer={gridItem.reviewedAnswer}
+                points={cropRegion.points}
+              />
             ) : null
           }}
           className="p-4"

@@ -20,7 +20,6 @@ import {
 } from "@/components/exams/07-score-at-once/AiGrading/utils/adoptionAnnotation"
 import {
   cellStatusOf,
-  confidenceLevelOf,
   DEFAULT_AI_GRID_FILTER_SETTINGS,
   isShownByFilter,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/aiGridFilter"
@@ -228,7 +227,6 @@ describe("絞り込み", () => {
     const unscoredByMeAnyAi = {
       mine: { ...DEFAULT_AI_GRID_FILTER_SETTINGS.mine },
       ai: { ...DEFAULT_AI_GRID_FILTER_SETTINGS.ai, unscored: true },
-      confidence: { ...DEFAULT_AI_GRID_FILTER_SETTINGS.confidence },
     }
     expect(
       isShownByFilter(correctProposalUnscoredByMe, unscoredByMeAnyAi)
@@ -238,7 +236,6 @@ describe("絞り込み", () => {
     const withoutAiCorrect = {
       mine: unscoredByMeAnyAi.mine,
       ai: { ...unscoredByMeAnyAi.ai, correct: false },
-      confidence: unscoredByMeAnyAi.confidence,
     }
     expect(isShownByFilter(correctProposalUnscoredByMe, withoutAiCorrect)).toBe(
       false
@@ -261,69 +258,6 @@ describe("絞り込み", () => {
     expect(
       isShownByFilter(failedButScoredByMe, DEFAULT_AI_GRID_FILTER_SETTINGS)
     ).toBe(false)
-  })
-
-  it("確信度の組: 表示中の成功した試行の確信度で分け、成功していなければ「判定なし」", () => {
-    const withConfidence = (examStudentId: string, confidence: string) =>
-      reviewed(
-        makeAnswer(examStudentId, {
-          attempts: [
-            makeAttemptWithRun({
-              examStudentId,
-              id: `attempt-${examStudentId}`,
-              status: "correct",
-              confidence,
-            }),
-          ],
-        })
-      )
-    const highAnswer = withConfidence("c1", "high")
-    const lowAnswer = withConfidence("c2", "low")
-    const failedAnswer = reviewed(
-      makeAnswer("c3", {
-        attempts: [
-          makeAttemptWithRun({
-            examStudentId: "c3",
-            id: "attempt-c3",
-            state: "errored",
-            status: "unscored",
-            confidence: "",
-          }),
-        ],
-      })
-    )
-    expect(confidenceLevelOf(highAnswer)).toBe("high")
-    expect(confidenceLevelOf(lowAnswer)).toBe("low")
-    expect(confidenceLevelOf(failedAnswer)).toBe("none")
-
-    const showEverything = {
-      mine: DEFAULT_AI_GRID_FILTER_SETTINGS.mine,
-      ai: { ...DEFAULT_AI_GRID_FILTER_SETTINGS.ai, unscored: true },
-      confidence: DEFAULT_AI_GRID_FILTER_SETTINGS.confidence,
-    }
-    // 既定（4つとも入）は、採点の状態の2組が通すものを全部通す
-    expect(isShownByFilter(highAnswer, showEverything)).toBe(true)
-    expect(isShownByFilter(lowAnswer, showEverything)).toBe(true)
-    expect(isShownByFilter(failedAnswer, showEverything)).toBe(true)
-
-    // 組の中は OR（高 または 判定なし）
-    const highOrNone = {
-      ...showEverything,
-      confidence: { high: true, medium: false, low: false, none: true },
-    }
-    expect(isShownByFilter(highAnswer, highOrNone)).toBe(true)
-    expect(isShownByFilter(lowAnswer, highOrNone)).toBe(false)
-    expect(isShownByFilter(failedAnswer, highOrNone)).toBe(true)
-
-    // 組どうしは AND（確信度が通しても、AI の採点の組で落ちる）
-    const highOrNoneWithoutAiUnscored = {
-      ...highOrNone,
-      ai: DEFAULT_AI_GRID_FILTER_SETTINGS.ai,
-    }
-    expect(isShownByFilter(failedAnswer, highOrNoneWithoutAiUnscored)).toBe(
-      false
-    )
-    expect(isShownByFilter(highAnswer, highOrNoneWithoutAiUnscored)).toBe(true)
   })
 
   it("採点種順は、マスの状態を絞り込みのボタンと同じ順に並べる", () => {

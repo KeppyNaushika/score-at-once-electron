@@ -4,7 +4,6 @@
  * - 同じ入力からはバイト単位で同じ固定部になる（事業者のキャッシュが効く前提）
  * - 固定部に時刻・id が混ざらない
  * - 空の欄は節ごと省く
- * - 改訂に添える食い違いの文の形
  */
 
 import { describe, expect, it } from "vitest"
@@ -15,11 +14,6 @@ import {
   buildGradingVariableParts,
   GRADING_SYSTEM_TEXT,
 } from "@/lib/shared/aiGrading/promptBuilder"
-import {
-  buildRevisionRequest,
-  describeScoreDiscrepancy,
-  parseRevisionResponse,
-} from "@/lib/shared/aiGrading/revisionPromptBuilder"
 
 const FULL_PROMPT = {
   questionText: "x^2 - 5x + 6 = 0 を解け。",
@@ -184,130 +178,5 @@ describe("buildGradingRequestParts", () => {
     expect(GRADING_SYSTEM_TEXT).toContain(
       "正答か誤答かを判断できない保留なら null"
     )
-  })
-})
-
-describe("describeScoreDiscrepancy", () => {
-  it("AI と教員の点、教員のコメントを1文にする", () => {
-    expect(
-      describeScoreDiscrepancy({
-        aiJudgement: { status: "partial", partialScore: 3, comment: "" },
-        teacherScore: {
-          status: "partial",
-          partialScore: 4,
-          comment: "途中式が正しい",
-        },
-        points: 5,
-      })
-    ).toBe("この答案は AI 3点・教員4点、教員のコメント：途中式が正しい。")
-  })
-
-  it("正答は満点、誤答・無答は0点、保留は点を添えて書く", () => {
-    expect(
-      describeScoreDiscrepancy({
-        aiJudgement: { status: "correct", partialScore: null, comment: "" },
-        teacherScore: {
-          status: "incorrect",
-          partialScore: null,
-          comment: "",
-        },
-        points: 5,
-      })
-    ).toBe("この答案は AI 5点・教員0点。")
-    expect(
-      describeScoreDiscrepancy({
-        aiJudgement: { status: "pending", partialScore: 2, comment: "" },
-        teacherScore: { status: "no_answer", partialScore: null, comment: "" },
-        points: 5,
-      })
-    ).toBe("この答案は AI 保留（2点）・教員0点（無答）。")
-  })
-
-  it("AI の判定が無い・教員が未採点のときもその旨を書く", () => {
-    expect(
-      describeScoreDiscrepancy({
-        aiJudgement: null,
-        teacherScore: { status: "unscored", partialScore: null, comment: "" },
-        points: 5,
-      })
-    ).toBe("この答案は AI 判定なし・教員未採点。")
-  })
-
-  it("AI のコメントも添える", () => {
-    expect(
-      describeScoreDiscrepancy({
-        aiJudgement: {
-          status: "incorrect",
-          partialScore: null,
-          comment: "符号の誤り",
-        },
-        teacherScore: null,
-        points: 5,
-      })
-    ).toBe("この答案は AI 0点・教員未採点、AI のコメント：符号の誤り。")
-  })
-})
-
-describe("buildRevisionRequest", () => {
-  it("いまのプロンプトは固定部、指示と答案は可変部に入る", () => {
-    const answerImage = {
-      mediaType: "image/png" as const,
-      base64Data: "YW5zd2Vy",
-    }
-    const { fixedParts, variableParts } = buildRevisionRequest({
-      prompt: FULL_PROMPT,
-      points: 5,
-      instruction: "≡ と ＝ の区別で減点しないで",
-      samples: [
-        { answerImage, discrepancyText: "この答案は AI 3点・教員5点。" },
-      ],
-    })
-
-    expect(JSON.stringify(fixedParts)).toContain(FULL_PROMPT.rubricText)
-    expect(JSON.stringify(fixedParts)).not.toContain("減点しないで")
-    expect(variableParts.map((part) => part.kind)).toEqual(["text", "image"])
-    const variableText =
-      variableParts[0].kind === "text" ? variableParts[0].text : ""
-    expect(variableText).toContain("≡ と ＝ の区別で減点しないで")
-    expect(variableText).toContain("## 答案 1\nこの答案は AI 3点・教員5点。")
-  })
-})
-
-describe("parseRevisionResponse", () => {
-  it("5欄がそろえば読む", () => {
-    expect(
-      parseRevisionResponse({
-        questionText: "問",
-        modelAnswerText: "答",
-        rubricText: "基準",
-        annotationInstruction: "部分点の答案にだけ、20字以内で",
-        message: "直しました",
-      })
-    ).toEqual({
-      ok: true,
-      value: {
-        questionText: "問",
-        modelAnswerText: "答",
-        rubricText: "基準",
-        annotationInstruction: "部分点の答案にだけ、20字以内で",
-        message: "直しました",
-      },
-    })
-  })
-
-  it("欠けた欄・文字列でない欄があれば理由を返す", () => {
-    const parsed = parseRevisionResponse({
-      questionText: "問",
-      modelAnswerText: 3,
-      rubricText: "基準",
-    })
-    expect(parsed.ok).toBe(false)
-    if (!parsed.ok) {
-      expect(parsed.reasons).toEqual([
-        "modelAnswerText が文字列ではありません",
-        "annotationInstruction が文字列ではありません",
-        "message が文字列ではありません",
-      ])
-    }
   })
 })

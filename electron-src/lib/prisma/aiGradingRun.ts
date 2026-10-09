@@ -79,7 +79,6 @@ export interface CreateAiGradingRunData {
 
 /**
  * 実行と、対象の答案ごとの試行（state: pending）を1回の書き込みで作る。
- * revise の実行は試行を持たないので、`examStudentIds` を空で渡す
  */
 export async function createAiGradingRun(
   data: CreateAiGradingRunData,
@@ -98,10 +97,7 @@ export async function createAiGradingRun(
 
   const scope = await resolveExamScopeByCropRegion(created.prompt.cropRegionId)
   await recordAuditLog({
-    action:
-      data.purpose === "revise"
-        ? "exam.ai_prompt.revise"
-        : "exam.ai_grading.run",
+    action: "exam.ai_grading.run",
     userId: data.userId,
     entityType: "AiGradingRun",
     entityId: created.id,
@@ -119,14 +115,13 @@ export async function createAiGradingRun(
   return created
 }
 
-/** 実行の状態などを書き換える（バッチの id・終わった日時・改訂の結果・使用量） */
+/** 実行の状態などを書き換える（バッチの id・終わった日時・使用量） */
 export async function updateAiGradingRun(
   runId: string,
   update: {
     status?: AiGradingRunStatus
     externalBatchId?: string
     endedAt?: Date
-    resultPromptId?: string
     inputTokens?: number
     outputTokens?: number
     cacheReadTokens?: number
@@ -200,7 +195,6 @@ export async function closePendingAiGradingAttempts(
 const aiGradingRunListInclude = {
   attempts: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
   prompt: true,
-  resultPrompt: true,
   user: { omit: PUBLIC_USER_OMIT },
 } satisfies Prisma.AiGradingRunInclude
 

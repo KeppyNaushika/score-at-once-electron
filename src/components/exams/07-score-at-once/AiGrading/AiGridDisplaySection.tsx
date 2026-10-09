@@ -15,11 +15,9 @@ import { aiFilterCommandIdOf } from "@/lib/scoringKeybindings"
 import { ignoreDeselect } from "@/lib/toggleSelection"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
-import { AiConfidenceFilterButtons } from "./AiConfidenceFilterButtons"
 import type { AiGridDisplaySettings } from "./types"
 import {
   type AiGridFilterSettings,
-  type ConfidenceFilterLevel,
   FILTER_SOURCE_LABELS,
   FILTER_SOURCES,
   type FilterSource,
@@ -34,9 +32,10 @@ interface AiGridDisplaySectionProps {
   display: AiGridDisplaySettings
   filterSettings: AiGridFilterSettings
   onToggleFilter: (source: FilterSource, status: ScoringStatus) => void
-  onToggleConfidenceFilter: (level: ConfidenceFilterLevel) => void
   answerOrder: AnswerOrder
   onAnswerOrderChange: (answerOrder: AnswerOrder) => void
+  /** 白さが測れているか（測れるまで白さ順を選べない） */
+  isWhitenessReady: boolean
   selectedCount: number
   visibleCount: number
   totalCount: number
@@ -44,17 +43,17 @@ interface AiGridDisplaySectionProps {
 
 /**
  * 右パネルの「表示」節。絞り込みのボタンは一覧表示と同じ7色を「自分の採点」と
- * 「AI の採点」の2組並べ、AI の判定の「確信度」の組を足す（組の中は OR、組どうしは AND）。
- * キーは自分の採点が一覧表示と同じもの、AI の採点はそれに Opt+Shift（確信度には無い）。
- * 並べ方・件数の設定も一覧表示と同じもの
+ * 「AI の採点」の2組並べる（組の中は OR、組どうしは AND）。
+ * キーは自分の採点が一覧表示と同じもの、AI の採点はそれに Opt+Shift。
+ * 件数の設定も一覧表示と同じもの。並べ方には白さ順と確信度の低い順がある
  */
 export function AiGridDisplaySection({
   display,
   filterSettings,
   onToggleFilter,
-  onToggleConfidenceFilter,
   answerOrder,
   onAnswerOrderChange,
+  isWhitenessReady,
   selectedCount,
   visibleCount,
   totalCount,
@@ -88,13 +87,6 @@ export function AiGridDisplaySection({
             />
           </div>
         ))}
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">確信度</p>
-          <AiConfidenceFilterButtons
-            confidenceSettings={filterSettings.confidence}
-            onToggle={onToggleConfidenceFilter}
-          />
-        </div>
         <ProposalFillLegend />
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">並べ方</p>
@@ -108,7 +100,11 @@ export function AiGridDisplaySection({
             className="w-full"
           >
             {ANSWER_ORDERS.map((orderOption) => (
-              <ToggleGroupItem key={orderOption} value={orderOption}>
+              <ToggleGroupItem
+                key={orderOption}
+                value={orderOption}
+                disabled={orderOption === "whiteness" && !isWhitenessReady}
+              >
                 {ANSWER_ORDER_LABELS[orderOption]}
               </ToggleGroupItem>
             ))}

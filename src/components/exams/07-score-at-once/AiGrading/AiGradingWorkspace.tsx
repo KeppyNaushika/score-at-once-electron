@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { type ReactNode, useMemo, useState } from "react"
 
+import { useAnswerWhiteness } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useAnswerWhiteness"
 import type { StudentAnswerImageWithExamStudents } from "@/components/exams/07-score-at-once/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
@@ -127,6 +128,14 @@ export function AiGradingWorkspace({
     [inkQuery.data, cropRegion.id]
   )
 
+  // 白さ順のため、一覧表示と同じ測定で枠の白さを測る（白紙はアプリが判定しない）
+  const { whitenessByAnswerId, isWhitenessReady } = useAnswerWhiteness({
+    studentAnswerImages,
+    cropRegions: [cropRegion],
+    currentExamPageId: cropRegion.examPageId,
+    enabled: true,
+  })
+
   const answers = useAiGradingAnswers({
     cropRegion,
     currentUserId,
@@ -134,6 +143,7 @@ export function AiGradingWorkspace({
     questionScores,
     runs,
     inkMeasurementByAnswerImageId,
+    whitenessByAnswerImageId: whitenessByAnswerId,
   })
 
   // ── 利用者の選択（表示はここから導く） ───────────────────────
@@ -249,10 +259,7 @@ export function AiGradingWorkspace({
                 setChosenPromptId(promptId)
                 setIsRunDialogOpen(true)
               }}
-              provider={provider}
               settings={settings}
-              reviewedAnswers={reviewedAnswers}
-              selectedExamStudentIds={grid.selectedIds}
             />
             <AiRunHistorySection
               runs={runs}
@@ -279,7 +286,6 @@ export function AiGradingWorkspace({
                 onAdoptSelected={adoption.requestAdopt}
                 visibleItems={grid.visibleItems}
                 onAdoptVisible={adoption.requestAdoptVisible}
-                onRevealAndSelect={grid.revealAndSelect}
                 isAdopting={adoption.isAdopting}
               />
               {kind === "score" && (
@@ -328,7 +334,7 @@ export function AiGradingWorkspace({
       >
         {inkQuery.error && (
           <p className="border-b bg-amber-50 px-3 py-1 text-xs text-amber-800">
-            答案のインクを測れませんでした。白紙の除外と注釈の自動配置は使えません
+            答案のインクを測れませんでした。注釈の自動配置は使えません
           </p>
         )}
         <div className="min-h-0 flex-1">
@@ -356,11 +362,11 @@ export function AiGradingWorkspace({
             display,
             filterSettings: grid.filterSettings,
             onToggleFilter: grid.toggleFilter,
-            onToggleConfidenceFilter: grid.toggleConfidenceFilter,
             selectedCount: grid.selectedIds.size,
             visibleCount: grid.visibleItems.length,
             answerOrder: viewSettings.answerOrder,
             onAnswerOrderChange: viewSettings.setAnswerOrder,
+            isWhitenessReady,
             totalCount: reviewedAnswers.length,
           }}
         />
@@ -381,7 +387,6 @@ export function AiGradingWorkspace({
           reviewedAnswers={reviewedAnswers}
           questionScores={questionScores}
           currentUserId={currentUserId}
-          selectedExamStudentIds={grid.selectedIds}
         />
       )}
     </div>

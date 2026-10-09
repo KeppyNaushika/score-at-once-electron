@@ -44,7 +44,7 @@ function makeMyRun(options: {
   model?: string
   outputTokens: number
 }): MyAiGradingRunRow {
-  const { user, resultPrompt, prompt, ...runFields } = makeRun({
+  const { user, prompt, ...runFields } = makeRun({
     id: options.id,
     model: options.model ?? "test-model",
     createdAt: options.createdAt,

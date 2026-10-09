@@ -1,12 +1,12 @@
 /**
  * 答案ごとの「要確認」の理由（docs/vlm-grading-design.md §3）。
  *
- * 理由はどれも、行（試行・採点行・インクの測定）から導く。列には持たない（§4-3）。
+ * 理由はどれも、行（試行・採点行）から導く。列には持たない（§4-3）。
  */
 
 import type { QuestionScoreRow } from "@/queries/scoring"
 
-import type { AttemptWithRun, RegionInkMeasurementRow } from "../types"
+import type { AttemptWithRun } from "../types"
 import { isDisagreeing } from "./scoreComparison"
 
 /** 要確認の理由（並び＝画面に出す順） */
@@ -17,9 +17,7 @@ export const REVIEW_REASONS = [
   "aiHold",
   "lowConfidence",
   "mediumConfidence",
-  "overflow",
   "disagreement",
-  "borderline",
 ] as const
 export type ReviewReason = (typeof REVIEW_REASONS)[number]
 
@@ -30,19 +28,15 @@ export const REVIEW_REASON_LABELS: Record<ReviewReason, string> = {
   aiHold: "AI が保留",
   lowConfidence: "確信度 低",
   mediumConfidence: "確信度 中",
-  overflow: "枠からはみ出し",
   disagreement: "AI≠自分",
-  borderline: "白紙か際どい",
 }
 
 /**
- * 理由の出どころ。画面では出どころごとに分けて示す（AI の判断と、アプリが画像から
- * 測ったものを同じ並びに置くと、どれが AI の判断か読み分けられないため）
+ * 理由の出どころ。画面では出どころごとに分けて示す
  * - ai: AI の判定そのもの（結果・確信度）
  * - comparison: AI の判定と自分の採点との比べ合わせ
- * - image: アプリが答案画像から測ったもの（AI は関わらない）
  */
-export type ReviewReasonSource = "ai" | "comparison" | "image"
+export type ReviewReasonSource = "ai" | "comparison"
 
 export const REVIEW_REASON_SOURCES: Record<ReviewReason, ReviewReasonSource> = {
   awaitingResult: "ai",
@@ -51,9 +45,7 @@ export const REVIEW_REASON_SOURCES: Record<ReviewReason, ReviewReasonSource> = {
   aiHold: "ai",
   lowConfidence: "ai",
   mediumConfidence: "ai",
-  overflow: "image",
   disagreement: "comparison",
-  borderline: "image",
 }
 
 /** 出どころが source の理由だけを、画面に出す順で返す */
@@ -70,7 +62,6 @@ export function reviewReasonsFrom(
 export interface ReviewReasonInput {
   displayedAttempt: AttemptWithRun | null
   questionScore: QuestionScoreRow | undefined
-  inkMeasurement: RegionInkMeasurementRow | null
   points: number | null
 }
 
@@ -78,7 +69,6 @@ export interface ReviewReasonInput {
 export function classifyReviewReasons({
   displayedAttempt,
   questionScore,
-  inkMeasurement,
   points,
 }: ReviewReasonInput): ReviewReason[] {
   const reasons = new Set<ReviewReason>()
@@ -105,8 +95,6 @@ export function classifyReviewReasons({
         break
     }
   }
-  if (inkMeasurement?.overflowsFrame) reasons.add("overflow")
-  if (inkMeasurement?.blankness === "borderline") reasons.add("borderline")
   return REVIEW_REASONS.filter((reason) => reasons.has(reason))
 }
 

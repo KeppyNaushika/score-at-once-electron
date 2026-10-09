@@ -10,7 +10,6 @@ import { describe, expect, it } from "vitest"
 
 import {
   buildGradingOutputSchema,
-  buildRevisionOutputSchema,
   type GradingJsonSchema,
 } from "@/lib/shared/aiGrading/gradingSchema"
 
@@ -67,46 +66,48 @@ function collectNodes(node: GradingJsonSchema, path = "$"): SchemaNodeAtPath[] {
 const typesOf = (node: GradingJsonSchema): readonly string[] =>
   typeof node.type === "string" ? [node.type] : node.type
 
-describe.each([
-  ["採点の出力", buildGradingOutputSchema()],
-  ["プロンプトの改訂の出力", buildRevisionOutputSchema()],
-])("%s のスキーマ", (_label, schema) => {
-  const nodes = collectNodes(schema)
+describe.each([["採点の出力", buildGradingOutputSchema()]])(
+  "%s のスキーマ",
+  (_label, schema) => {
+    const nodes = collectNodes(schema)
 
-  it("共通の書き方の語だけを使い、禁じた語を含まない", () => {
-    for (const { path, node } of nodes) {
-      for (const keyword of Object.keys(node)) {
-        expect(ALLOWED_KEYWORDS.has(keyword), `${path}.${keyword}`).toBe(true)
-        expect(FORBIDDEN_KEYWORDS, `${path}.${keyword}`).not.toContain(keyword)
+    it("共通の書き方の語だけを使い、禁じた語を含まない", () => {
+      for (const { path, node } of nodes) {
+        for (const keyword of Object.keys(node)) {
+          expect(ALLOWED_KEYWORDS.has(keyword), `${path}.${keyword}`).toBe(true)
+          expect(FORBIDDEN_KEYWORDS, `${path}.${keyword}`).not.toContain(
+            keyword
+          )
+        }
       }
-    }
-  })
+    })
 
-  it("オブジェクトはすべて additionalProperties: false で、全項目が required", () => {
-    const objectNodes = nodes.filter(({ node }) =>
-      typesOf(node).includes("object")
-    )
-    expect(objectNodes.length).toBeGreaterThan(0)
-    for (const { path, node } of objectNodes) {
-      expect(node.additionalProperties, path).toBe(false)
-      expect([...(node.required ?? [])].sort(), path).toEqual(
-        Object.keys(node.properties ?? {}).sort()
+    it("オブジェクトはすべて additionalProperties: false で、全項目が required", () => {
+      const objectNodes = nodes.filter(({ node }) =>
+        typesOf(node).includes("object")
       )
-    }
-  })
+      expect(objectNodes.length).toBeGreaterThan(0)
+      for (const { path, node } of objectNodes) {
+        expect(node.additionalProperties, path).toBe(false)
+        expect([...(node.required ?? [])].sort(), path).toEqual(
+          Object.keys(node.properties ?? {}).sort()
+        )
+      }
+    })
 
-  it("enum は文字列型の節にだけ付き、空でない", () => {
-    for (const { path, node } of nodes) {
-      if (!node.enum) continue
-      expect(typesOf(node), path).toEqual(["string"])
-      expect(node.enum.length, path).toBeGreaterThan(0)
-    }
-  })
+    it("enum は文字列型の節にだけ付き、空でない", () => {
+      for (const { path, node } of nodes) {
+        if (!node.enum) continue
+        expect(typesOf(node), path).toEqual(["string"])
+        expect(node.enum.length, path).toBeGreaterThan(0)
+      }
+    })
 
-  it("JSON として書き出して読み戻しても同じ（関数や undefined を含まない）", () => {
-    expect(JSON.parse(JSON.stringify(schema))).toEqual(schema)
-  })
-})
+    it("JSON として書き出して読み戻しても同じ（関数や undefined を含まない）", () => {
+      expect(JSON.parse(JSON.stringify(schema))).toEqual(schema)
+    })
+  }
+)
 
 describe("採点の出力のスキーマの中身", () => {
   const schema = buildGradingOutputSchema()

@@ -26,6 +26,7 @@ import type {
 } from "@/electron-src/lib/prisma/aiPrompt"
 import type { QuestionScoreRow } from "@/queries/scoring"
 import type { AiGradingRunMode } from "@/types/aiGrading.types"
+import type { RegionWhiteness } from "@/types/answerWhiteness.types"
 import type {
   Serialized,
   StudentAnswerImageWithExamPageAndStudent,
@@ -39,7 +40,7 @@ export type AiPromptRow = Serialized<
   Awaited<ReturnType<typeof listAiPromptsByCropRegion>>
 >[number]
 
-/** 設問の実行1件（試行・プロンプト・改訂の結果・実行者付き） */
+/** 設問の実行1件（試行・プロンプト・実行者付き） */
 export type AiGradingRunRow = Serialized<
   Awaited<ReturnType<typeof listAiGradingRunsByCropRegion>>
 >[number]
@@ -78,8 +79,10 @@ export interface AiGradingAnswer {
   questionScore: QuestionScoreRow | undefined
   /** この答案への試行（採点の実行のものだけ。新しい順） */
   attempts: AttemptWithRun[]
-  /** その場で測ったインク。測れなかった答案は null（白紙とはみなさない） */
+  /** その場で測ったインク（朱書きの配置に使う占有グリッド）。測れなかった答案は null */
   inkMeasurement: RegionInkMeasurementRow | null
+  /** この設問の枠の白さ（白さ順に使う。一覧表示と同じ測定）。まだ測れていなければ null */
+  whiteness: RegionWhiteness | null
 }
 
 /** 実行の設定（実行ダイアログで選ぶもの。DB には run の列として残る） */

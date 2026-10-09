@@ -26,9 +26,9 @@ import {
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import {
+  CROP_REGION_ID,
   makeAnswer,
   makeAttemptWithRun,
-  makeInk,
   makePrompt,
   makeQuestionScore,
   makeRun,
@@ -101,7 +101,7 @@ describe("食い違いの判断", () => {
 })
 
 describe("要確認の理由", () => {
-  it("失敗・拒否・保留・確信度・はみ出し・境界帯・食い違いを拾う", () => {
+  it("失敗・拒否・保留・確信度・食い違いを拾う", () => {
     expect(
       classifyReviewReasons({
         displayedAttempt: makeAttemptWithRun({
@@ -111,19 +111,9 @@ describe("要確認の理由", () => {
           confidence: "low",
         }),
         questionScore: makeQuestionScore({ examStudentId: "s" }),
-        inkMeasurement: makeInk({
-          overflowsFrame: true,
-          blankness: "borderline",
-        }),
         points: POINTS,
       })
-    ).toEqual([
-      "aiHold",
-      "lowConfidence",
-      "overflow",
-      "disagreement",
-      "borderline",
-    ])
+    ).toEqual(["aiHold", "lowConfidence", "disagreement"])
     expect(
       classifyReviewReasons({
         displayedAttempt: makeAttemptWithRun({
@@ -131,7 +121,6 @@ describe("要確認の理由", () => {
           state: "refused",
         }),
         questionScore: undefined,
-        inkMeasurement: null,
         points: POINTS,
       })
     ).toEqual(["refused"])
@@ -238,32 +227,65 @@ describe("表示する試行と印", () => {
           reviewedAnswer.answer.studentAnswerImage.examStudentId
       )
 
-    it("確信度順: 確信度の高い順 → 同じ確信度の中は採点種の順。判定の無い答案は最後", () => {
+    it("確信度の低い順: 確信度の低い順 → 同じ確信度の中は採点種の順。判定の無い答案は最後", () => {
       expect(orderedNames("confidence")).toEqual([
+        "lowCorrect",
+        "lowIncorrect",
+        "mediumPartial",
         "highCorrect1",
         "highCorrect2",
         "highPending",
         "highIncorrect",
-        "mediumPartial",
-        "lowCorrect",
-        "lowIncorrect",
         "none",
         "errored",
       ])
     })
 
-    it("採点種順: 採点種の順 → 同じ採点種の中は確信度の高い順。判定の無い答案は未採点として先頭", () => {
+    it("採点種順: 採点種の順 → 同じ採点種の中は確信度の低い順。判定の無い答案は未採点として先頭", () => {
       expect(orderedNames("status")).toEqual([
         "none",
         "errored",
+        "lowCorrect",
         "highCorrect1",
         "highCorrect2",
-        "lowCorrect",
         "mediumPartial",
         "highPending",
-        "highIncorrect",
         "lowIncorrect",
+        "highIncorrect",
       ])
+    })
+
+    it("白さ順: 枠の白い順。白さを測れていない答案は最後", () => {
+      const withWhiteness = (name: string, meanLuminance: number | null) => {
+        const answer = makeAnswer(name, {
+          whiteness:
+            meanLuminance === null
+              ? null
+              : { cropRegionId: CROP_REGION_ID, meanLuminance },
+        })
+        return {
+          answer,
+          review: reviewAnswer(answer, {
+            chosenAttemptIdByExamStudentId: new Map(),
+            selectedPromptId: null,
+            points: POINTS,
+          }),
+        }
+      }
+      expect(
+        orderReviewedAnswers(
+          [
+            withWhiteness("written", 200),
+            withWhiteness("unmeasured", null),
+            withWhiteness("blank", 254),
+            withWhiteness("light", 240),
+          ],
+          "whiteness"
+        ).map(
+          (reviewedAnswer) =>
+            reviewedAnswer.answer.studentAnswerImage.examStudentId
+        )
+      ).toEqual(["blank", "light", "written", "unmeasured"])
     })
   })
 

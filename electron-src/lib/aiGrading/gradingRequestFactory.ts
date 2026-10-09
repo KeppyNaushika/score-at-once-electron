@@ -22,9 +22,6 @@ import type {
 /** 採点の出力の上限（思考を含む。Anthropic は思考トークンも出力として数える） */
 export const GRADING_MAX_OUTPUT_TOKENS = 16000
 
-/** 改訂の出力の上限（プロンプトの全文を書き直して返すので採点より長い） */
-export const REVISION_MAX_OUTPUT_TOKENS = 32000
-
 /** データディレクトリからの相対パスを絶対パスにする口（テストでは一時ディレクトリへ） */
 export type ResolveDataPath = (relativePath: string) => string
 

@@ -23,17 +23,13 @@ import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
 import { AI_GRADING_SENDING_IMAGE_SCALE } from "@/types/aiGrading.types"
 
-import { AiGradingTargetSelector } from "./AiGradingTargetSelector"
 import { AiRunCostEstimate } from "./AiRunCostEstimate"
 import { AiRunSettingsFields } from "./AiRunSettingsFields"
 import { useAiRunSettings } from "./hooks/useAiRunSettings"
 import type { AiPromptRow } from "./types"
 import type { ReviewedAiGradingAnswer } from "./utils/answerReview"
 import { providerDisplayName } from "./utils/runOptions"
-import {
-  type GradingTargetMode,
-  selectGradingTargetsByMode,
-} from "./utils/selectGradingTargets"
+import { selectGradingTargets } from "./utils/selectGradingTargets"
 
 interface AiGradingRunDialogProps {
   open: boolean
@@ -47,12 +43,11 @@ interface AiGradingRunDialogProps {
   reviewedAnswers: ReviewedAiGradingAnswer[]
   questionScores: QuestionScoreRow[]
   currentUserId: string
-  selectedExamStudentIds: ReadonlySet<string>
 }
 
 /**
- * 採点の実行（設計 §3-2・§9-1）。対象を選び、件数と費用の概算を見て、送り先と
- * 実験的機能であることを確かめてから送る。閉じている間は中身を持たない（開くたびに初期化）
+ * 採点の実行（設計 §3-2・§10-1）。送るのは自分が未採点の答案だけ。件数と費用の概算を見て、
+ * 送り先と実験的機能であることを確かめてから送る。閉じている間は中身を持たない（開くたびに初期化）
  */
 export function AiGradingRunDialog(props: AiGradingRunDialogProps) {
   return (
@@ -75,14 +70,7 @@ function AiGradingRunForm({
   reviewedAnswers,
   questionScores,
   currentUserId,
-  selectedExamStudentIds,
 }: AiGradingRunDialogProps) {
-  // 選び方は前もって選ばない。開くたびに未選択から始め、前回の選択も覚えない
-  // （閉じるとこのフォームごと捨てられる）
-  const [targetMode, setTargetMode] = useState<GradingTargetMode | null>(null)
-  const [includeBorderline, setIncludeBorderline] = useState(false)
-  // 白紙も送るかは、この実行の間だけの選択（設定に残さない）。既定は送らない（費用が増えるため）
-  const [includeBlank, setIncludeBlank] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
   const { runSettings, updateRunSettings } = useAiRunSettings(
     settings,
@@ -93,39 +81,16 @@ function AiGradingRunForm({
   // 押したらダイアログを閉じるので、このフォームごと捨てられ、開き直せば新しいガードで押せる
   const sendGuard = useInFlightGuard()
 
-  const selectionByMode = useMemo(
+  const targetExamStudentIds = useMemo(
     () =>
-      selectGradingTargetsByMode({
+      selectGradingTargets({
         cropRegionId: cropRegion.id,
         currentUserId,
-        selectedPromptId: prompt.id,
-        points: cropRegion.points,
         answers: reviewedAnswers.map((reviewedAnswer) => reviewedAnswer.answer),
         questionScores,
-        displayedAttemptByExamStudentId: new Map(
-          reviewedAnswers.map((reviewedAnswer) => [
-            reviewedAnswer.answer.studentAnswerImage.examStudentId,
-            reviewedAnswer.review.displayedAttempt,
-          ])
-        ),
-        selectedExamStudentIds,
-        includeBorderline,
-        includeBlank,
       }),
-    [
-      cropRegion.id,
-      cropRegion.points,
-      currentUserId,
-      prompt.id,
-      reviewedAnswers,
-      questionScores,
-      selectedExamStudentIds,
-      includeBorderline,
-      includeBlank,
-    ]
+    [cropRegion.id, currentUserId, reviewedAnswers, questionScores]
   )
-  const targetExamStudentIds =
-    targetMode === null ? [] : selectionByMode[targetMode].examStudentIds
   const providerName = providerDisplayName(runSettings.provider)
 
   /**
@@ -190,37 +155,28 @@ function AiGradingRunForm({
         </div>
       ) : (
         <div className="space-y-4">
-          <AiGradingTargetSelector
-            targetMode={targetMode}
-            onTargetModeChange={setTargetMode}
-            selectionByMode={selectionByMode}
-            includeBorderline={includeBorderline}
-            onIncludeBorderlineChange={setIncludeBorderline}
-            includeBlank={includeBlank}
-            onIncludeBlankChange={setIncludeBlank}
-          />
+          <div
+            className="rounded-md border p-3 text-sm"
+            data-testid="ai-run-target-summary"
+          >
+            <p className="font-medium">
+              自分が未採点の答案 {targetExamStudentIds.length} 件を送ります
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              採点済みの答案（無答を付けた白紙を含む）は送りません。白紙は白さ順に並べて、先に無答を付けておけます。
+            </p>
+          </div>
           <AiRunSettingsFields
             runSettings={runSettings}
             onRunSettingsChange={updateRunSettings}
             unlockedProviders={unlockedProviders}
-            showSendingOptions
           />
-          {targetMode === null ? (
-            <div
-              className="flex justify-between rounded-md border bg-muted/40 p-3 text-sm font-medium"
-              data-testid="ai-run-cost-unselected"
-            >
-              <span>費用（概算）</span>
-              <span>—</span>
-            </div>
-          ) : (
-            <AiRunCostEstimate
-              prompt={prompt}
-              examStudentIds={targetExamStudentIds}
-              runSettings={runSettings}
-              budgetWarningUsd={settings.budgetWarningUsd}
-            />
-          )}
+          <AiRunCostEstimate
+            prompt={prompt}
+            examStudentIds={targetExamStudentIds}
+            runSettings={runSettings}
+            budgetWarningUsd={settings.budgetWarningUsd}
+          />
         </div>
       )}
 
@@ -237,18 +193,12 @@ function AiGradingRunForm({
           </>
         ) : (
           <>
-            {targetMode === null && (
-              <span className="mr-auto self-center text-xs text-muted-foreground">
-                先に採点する答案を選んでください
-              </span>
-            )}
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               やめる
             </Button>
             <Button
               onClick={() => setIsConfirming(true)}
               disabled={
-                targetMode === null ||
                 targetExamStudentIds.length === 0 ||
                 runSettings.model.trim() === ""
               }

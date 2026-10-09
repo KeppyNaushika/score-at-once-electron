@@ -26,19 +26,16 @@ interface AiRunSettingsFieldsProps {
   runSettings: AiRunSettings
   onRunSettingsChange: (update: Partial<AiRunSettings>) => void
   unlockedProviders: GradingProviderId[]
-  /** 送り方と拡大率も選ばせるか（改訂は1往復・原寸なので選ばせない） */
-  showSendingOptions: boolean
 }
 
 /**
- * 事業者・モデル・手間（と送り方・拡大率）の選択。既定値は「AI採点」の画面の既定値。
+ * 事業者・モデル・手間・送り方の選択。既定値は「AI採点」の画面の既定値。
  * 手間はモデルが受け付けないとき、バッチは事業者が送れないときに選ばせない
  */
 export function AiRunSettingsFields({
   runSettings,
   onRunSettingsChange,
   unlockedProviders,
-  showSendingOptions,
 }: AiRunSettingsFieldsProps) {
   // 取得しておいた一覧が無ければ（読めなくても）組み込みの一覧・自由入力で選ばせる
   const { data: modelCatalogs } = useQuery(aiModelCatalogsQuery())
@@ -104,15 +101,11 @@ export function AiRunSettingsFields({
             catalog?.models ?? []
           )
         }
-        sendingOptions={
-          showSendingOptions
-            ? {
-                mode: runSettings.mode,
-                onModeChange: (mode) => onRunSettingsChange({ mode }),
-                isBatchAvailable,
-              }
-            : null
-        }
+        sendingOptions={{
+          mode: runSettings.mode,
+          onModeChange: (mode) => onRunSettingsChange({ mode }),
+          isBatchAvailable,
+        }}
       />
     </div>
   )

@@ -56,7 +56,6 @@ export function reviewAnswer(
   const reviewInput = {
     displayedAttempt,
     questionScore: answer.questionScore,
-    inkMeasurement: answer.inkMeasurement,
     points: context.points,
   }
   const isAdopted = displayedAttempt
@@ -84,12 +83,18 @@ export function reviewAnswer(
 }
 
 /** 一覧の並べ方 */
-export const ANSWER_ORDERS = ["display", "confidence", "status"] as const
+export const ANSWER_ORDERS = [
+  "display",
+  "whiteness",
+  "confidence",
+  "status",
+] as const
 export type AnswerOrder = (typeof ANSWER_ORDERS)[number]
 
 export const ANSWER_ORDER_LABELS: Record<AnswerOrder, string> = {
   display: "生徒順",
-  confidence: "確信度順",
+  whiteness: "白さ順",
+  confidence: "確信度の低い順",
   status: "採点種順",
 }
 
@@ -105,9 +110,23 @@ type ReviewedAnswerComparator = (
   reviewedB: ReviewedAiGradingAnswer
 ) => number
 
-/** 表示中の AI の判定の確信度が高い順（判定の無い答案は最後） */
+/** 判定の無い答案を最後にするための順位 */
+const NO_JUDGEMENT_RANK = Number.MAX_SAFE_INTEGER
+
+/** 確かめる順の確信度（低いほど先。判定の無い答案は最後） */
+function confidenceSortKey(reviewedAnswer: ReviewedAiGradingAnswer): number {
+  const rank = displayedConfidenceRank(reviewedAnswer)
+  return rank === 0 ? NO_JUDGEMENT_RANK : rank
+}
+
+/** 表示中の AI の判定の確信度が低い順（判定の無い答案は最後。確かめるべきものから見る） */
 const byConfidence: ReviewedAnswerComparator = (reviewedA, reviewedB) =>
-  displayedConfidenceRank(reviewedB) - displayedConfidenceRank(reviewedA)
+  confidenceSortKey(reviewedA) - confidenceSortKey(reviewedB)
+
+/** この設問の枠が白い順（白紙らしいものから。測れていない答案は最後） */
+const byWhiteness: ReviewedAnswerComparator = (reviewedA, reviewedB) =>
+  (reviewedB.answer.whiteness?.meanLuminance ?? -1) -
+  (reviewedA.answer.whiteness?.meanLuminance ?? -1)
 
 /** マスに見えている状態（自分の採点、無ければ AI の提案）の、絞り込みのボタンと同じ順 */
 const byScoringStatus: ReviewedAnswerComparator = (reviewedA, reviewedB) =>
@@ -128,8 +147,9 @@ function compareInTurn(
 
 /**
  * 並べる（どれも安定な並べ替えで、どのキーでも同順の答案は生徒順を保つ）。
- * - confidence: 確信度の高い順 → 同じ確信度の中は採点種の順
- * - status: 採点種の順 → 同じ採点種の中は確信度の高い順
+ * - whiteness: 白い順（白紙に無答を付けていくため。白紙はアプリが判定しない）
+ * - confidence: 確信度の低い順 → 同じ確信度の中は採点種の順
+ * - status: 採点種の順 → 同じ採点種の中は確信度の低い順
  */
 export function orderReviewedAnswers<Reviewed extends ReviewedAiGradingAnswer>(
   reviewedAnswers: readonly Reviewed[],
@@ -138,6 +158,8 @@ export function orderReviewedAnswers<Reviewed extends ReviewedAiGradingAnswer>(
   switch (answerOrder) {
     case "display":
       return [...reviewedAnswers]
+    case "whiteness":
+      return reviewedAnswers.toSorted(byWhiteness)
     case "confidence":
       return reviewedAnswers.toSorted(
         compareInTurn(byConfidence, byScoringStatus)
