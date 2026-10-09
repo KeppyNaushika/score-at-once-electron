@@ -56,6 +56,7 @@ function cropRegionRow(id: string, label: string): CropRegionRow {
     height: 0.1,
     points: 10,
     orderIndex: 0,
+    scoringMethod: "points",
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,
     examPage: {

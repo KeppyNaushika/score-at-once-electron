@@ -158,6 +158,7 @@ function questionRegion(id: string): QuestionAnswerRegionRow {
     height: 0.2,
     points: 4,
     orderIndex: 0,
+    scoringMethod: "points",
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,
     examPage: {

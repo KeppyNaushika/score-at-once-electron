@@ -14,10 +14,19 @@ import type { CropRegionAreaType } from "@/types/cropRegionAreaType.types"
  */
 export type CropRegionArea = Omit<
   CropRegion,
-  "examPageId" | "orderIndex" | "createdAt" | "updatedAt" | "type" | "points"
+  | "examPageId"
+  | "orderIndex"
+  | "createdAt"
+  | "updatedAt"
+  | "type"
+  | "points"
+  | "scoringMethod"
 > &
   Partial<
-    Pick<CropRegion, "examPageId" | "orderIndex" | "createdAt" | "updatedAt">
+    Pick<
+      CropRegion,
+      "examPageId" | "orderIndex" | "createdAt" | "updatedAt" | "scoringMethod"
+    >
   > & {
     type: CropRegionAreaType
     points?: number | string | null

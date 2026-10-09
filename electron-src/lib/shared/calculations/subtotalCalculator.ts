@@ -30,6 +30,8 @@ export type QuestionScoreForSubtotal = Omit<
   // 覚え書き（その採点者がその点にした理由）は点にならない。
   // 小計は誰が何点にしたかだけで決まる
   | "comment"
+  // 手での上書きの印は、点が項目から来たか採点キーから来たかだけで、点そのものではない
+  | "overridesRubric"
 > & {
   partialScore?: number | null
   // SQLite は enum を持てないので Prisma の型は `string`。判定の集合はここで注入する

@@ -29,6 +29,7 @@ function makeCropRegion(id: string, label: string): QuestionAnswerRegionRow {
     height: 0.2,
     points: 2,
     orderIndex: 0,
+    scoringMethod: "points",
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
     examPage: {

@@ -80,6 +80,7 @@ function makeCropRegion(
     height: 0.2,
     points: 4,
     orderIndex,
+    scoringMethod: "points",
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
     examPage: {

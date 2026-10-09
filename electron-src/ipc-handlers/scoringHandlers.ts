@@ -52,6 +52,7 @@ function serializeScore(score: {
   status: string
   comment: string
   userId: string
+  overridesRubric: boolean
   createdAt: Date
   updatedAt: Date
 }): SerializedQuestionScore {
@@ -63,6 +64,7 @@ function serializeScore(score: {
     status: toScoringStatus(score.status),
     comment: score.comment,
     userId: score.userId,
+    overridesRubric: score.overridesRubric,
     createdAt: score.createdAt,
     updatedAt: score.updatedAt,
   }

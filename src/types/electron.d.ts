@@ -30,6 +30,7 @@ import type { createMiscApi } from "@/electron-src/preload-apis/miscApi"
 import type { createNavigationApi } from "@/electron-src/preload-apis/navigationApi"
 import type { createOmrApi } from "@/electron-src/preload-apis/omrApi"
 import type { createPdfToolsApi } from "@/electron-src/preload-apis/pdfToolsApi"
+import type { createRubricApi } from "@/electron-src/preload-apis/rubricApi"
 import type { createScoringApi } from "@/electron-src/preload-apis/scoringApi"
 import type { createSettingsApi } from "@/electron-src/preload-apis/settingsApi"
 import type { createStudentApi } from "@/electron-src/preload-apis/studentApi"
@@ -108,7 +109,8 @@ export type MyAPI = ReturnType<typeof createExamApi> &
   ReturnType<typeof createAuditLogApi> &
   ReturnType<typeof createUnifiedArchiveApi> &
   ReturnType<typeof createAiGradingApi> &
-  ReturnType<typeof createAiProviderApi>
+  ReturnType<typeof createAiProviderApi> &
+  ReturnType<typeof createRubricApi>
 
 // ---------------------------------------------------------------------------
 // Global Window declarations

@@ -239,6 +239,40 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
     owner: ["questionScoreId"],
     references: [required("questionScoreId", "QuestionScore")],
   },
+  // ルーブリック採点（教員の層。docs/vlm-grading-design.md §5-2）。項目と重なった助言の決まりは
+  // 設問に従い（採点者の間で共有）、適用は採点行に従う（本人分だけにすると他の教員の適用も外れる）
+  RubricItem: {
+    role: "owned",
+    owner: ["cropRegionId"],
+    references: [
+      required("cropRegionId", "CropRegion"),
+      nullable("createdByUserId", "User"),
+    ],
+  },
+  RubricApplication: {
+    role: "owned",
+    owner: ["questionScoreId"],
+    references: [
+      required("questionScoreId", "QuestionScore"),
+      required("rubricItemId", "RubricItem"),
+    ],
+  },
+  RubricAdviceCombination: {
+    role: "owned",
+    owner: ["cropRegionId"],
+    references: [
+      required("cropRegionId", "CropRegion"),
+      nullable("primaryRubricItemId", "RubricItem"),
+    ],
+  },
+  RubricAdviceCombinationItem: {
+    role: "owned",
+    owner: ["combinationId"],
+    references: [
+      required("combinationId", "RubricAdviceCombination"),
+      required("rubricItemId", "RubricItem"),
+    ],
+  },
   CompoundAnswerScore: {
     role: "owned",
     owner: ["examStudentId"],

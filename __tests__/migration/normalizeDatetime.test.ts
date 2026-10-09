@@ -251,6 +251,11 @@ describe("DateTime正規化マイグレーション", () => {
     "GradeIndividualReportSettings",
     "GradeTag", // 20260823000000 で追加。normalize migration より後で ISO text 生成
     "ReturnSnapshot",
+    // 20261010100000 で追加（ルーブリック採点）。normalize migration より後で ISO text 生成
+    "RubricAdviceCombination",
+    "RubricAdviceCombinationItem",
+    "RubricApplication",
+    "RubricItem",
     // 20260819140000 で追加（利用者の設定JSONを行へ割る）。
     // normalize migration より後で ISO text 生成
     "UserClickScoringAction",

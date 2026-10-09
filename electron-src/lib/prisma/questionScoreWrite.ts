@@ -125,6 +125,9 @@ export interface QuestionScoreResult {
  * 土台は Prisma の入力型で、**DB が決める列（id / createdAt / updatedAt）と、
  * ここでは書かない子（drawingAnnotations）を外し、Decimal と union だけを注入する**。
  * 列を手写しすると、渡しても何も起きない引数（かつての comment / version）が紛れ込む。
+ *
+ * 手での上書きの印（`overridesRubric`）は受けない。そのマスにルーブリックの適用があるかで
+ * main が決める（`rubricOverrideFor`）。
  */
 export type SetQuestionScoreData = Omit<
   Prisma.QuestionScoreUncheckedCreateInput,
@@ -132,10 +135,20 @@ export type SetQuestionScoreData = Omit<
   | "createdAt"
   | "updatedAt"
   | "drawingAnnotations"
+  | "rubricApplications"
+  | "overridesRubric"
   | "status"
   | "partialScore"
 > &
   QuestionScoreResult
+
+/**
+ * 採点キーで付けた点が、ルーブリック項目から計算した点より優先するか（手での上書き。
+ * docs/vlm-grading-design.md §4-5）。そのマスに適用が1つでもあれば上書きになる。
+ * 適用の無いマス（採点方式が points の設問は常にそう）では印を立てない
+ */
+const rubricOverrideFor = (row: { rubricApplications: unknown[] }) =>
+  row.rubricApplications.length > 0
 
 /** 部分点を Decimal 列の値へ。`null` はそのまま NULL を書く */
 const toPartialScoreColumn = (
@@ -245,15 +258,17 @@ export const setQuestionScore = async (questionScore: SetQuestionScoreData) => {
         cropRegionId: questionScore.cropRegionId,
         userId: questionScore.userId,
       },
+      include: { rubricApplications: true },
     })
 
     if (existing) {
-      // 既存レコードを更新。決定した2列だけを書く（行の同定に使った列は触らない）
+      // 既存レコードを更新。決定した2列と上書きの印だけを書く（行の同定に使った列は触らない）
       const updated = await prisma.questionScore.update({
         where: { id: existing.id },
         data: {
           partialScore: toPartialScoreColumn(questionScore.partialScore),
           status: questionScore.status,
+          overridesRubric: rubricOverrideFor(existing),
         },
         include: {
           examStudent: { include: { student: true } },
@@ -342,6 +357,7 @@ export const updateQuestionScore = async (
     // 生の Prisma エラーではなく「削除済み」として返す（協調採点で他教員が削除した場合）。
     const before = await prisma.questionScore.findUnique({
       where: { id },
+      include: { rubricApplications: true },
     })
 
     if (!before) {
@@ -353,6 +369,7 @@ export const updateQuestionScore = async (
       data: {
         partialScore: toPartialScoreColumn(result.partialScore),
         status: result.status,
+        overridesRubric: rubricOverrideFor(before),
       },
       include: {
         examStudent: { include: { student: true } },
