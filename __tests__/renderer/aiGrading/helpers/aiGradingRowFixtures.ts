@@ -113,7 +113,6 @@ export function makeRun(
     updatedAt: FIXED_DATE,
     attempts: [],
     prompt,
-    resultPrompt: null,
     user: {
       id: CURRENT_USER_ID,
       username: "teacher",
@@ -141,11 +140,6 @@ export function makeInk(
 ): RegionInkMeasurementRow {
   return {
     cropRegionId: CROP_REGION_ID,
-    inkRatio: 0.05,
-    blankness: "written",
-    edgeInkDensities: { top: 0, right: 0, bottom: 0, left: 0 },
-    edgeTouches: { top: false, right: false, bottom: false, left: false },
-    overflowsFrame: false,
     inkGrid: {
       originX: 0.1,
       originY: 0.1,
@@ -212,6 +206,7 @@ export function makeAnswer(
     questionScore: undefined,
     attempts: [],
     inkMeasurement: makeInk(),
+    whiteness: null,
     ...overrides,
   }
 }

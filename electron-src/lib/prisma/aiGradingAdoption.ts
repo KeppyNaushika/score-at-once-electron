@@ -204,23 +204,19 @@ async function adoptOne(
 
 /** 採用した件数を、設問ごとに1行の監査ログにまとめる */
 async function recordAdoptionAudit(
-  action: "exam.ai_grading.adopt" | "exam.ai_grading.adopt_blank",
   actorUserId: string,
   adoptedCountByCropRegion: Map<string, number>
 ): Promise<void> {
   for (const [cropRegionId, adoptedCount] of adoptedCountByCropRegion) {
     const scope = await resolveExamScopeByCropRegion(cropRegionId)
     await recordAuditLog({
-      action,
+      action: "exam.ai_grading.adopt",
       userId: actorUserId,
       entityType: "CropRegion",
       entityId: cropRegionId,
       scopeId: scope.scopeId,
       scopeLabel: scope.scopeLabel,
-      summary:
-        action === "exam.ai_grading.adopt"
-          ? `AI の判定を${adoptedCount}件、採点に採用しました`
-          : `白紙の答案${adoptedCount}件を無答にしました`,
+      summary: `AI の判定を${adoptedCount}件、採点に採用しました`,
     })
   }
 }
@@ -259,62 +255,7 @@ export async function adoptAiGradingAttempts(
       }
     }
   } finally {
-    await recordAdoptionAudit(
-      "exam.ai_grading.adopt",
-      actorUserId,
-      adoptedCountByCropRegion
-    )
-  }
-  return results
-}
-
-/**
- * 白紙の答案を無答（no_answer）として書き込む。
- *
- * 白紙は送らないので試行が無い。白紙かどうかは renderer がその場で測ったインク率から
- * 決め、ここへは答案（examStudentId）だけを渡す。採点済みのマスは試行の採用と同じく
- * 既定で飛ばす。
- */
-export async function adoptBlankAnswers(
-  input: {
-    cropRegionId: string
-    examStudentIds: readonly string[]
-    overwrite: boolean
-  },
-  actorUserId: string
-): Promise<AiGradingAdoptionResult[]> {
-  const results: AiGradingAdoptionResult[] = []
-  let adoptedCount = 0
-  try {
-    for (const examStudentId of input.examStudentIds) {
-      if (
-        !input.overwrite &&
-        (await hasOwnScore(examStudentId, input.cropRegionId, actorUserId))
-      ) {
-        results.push({
-          targetId: examStudentId,
-          outcome: "skipped_already_scored",
-        })
-        continue
-      }
-      await setQuestionScore({
-        examStudentId,
-        cropRegionId: input.cropRegionId,
-        userId: actorUserId,
-        status: "no_answer",
-        partialScore: null,
-      })
-      adoptedCount += 1
-      results.push({ targetId: examStudentId, outcome: "adopted" })
-    }
-  } finally {
-    await recordAdoptionAudit(
-      "exam.ai_grading.adopt_blank",
-      actorUserId,
-      adoptedCount > 0
-        ? new Map([[input.cropRegionId, adoptedCount]])
-        : new Map()
-    )
+    await recordAdoptionAudit(actorUserId, adoptedCountByCropRegion)
   }
   return results
 }

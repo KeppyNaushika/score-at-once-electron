@@ -97,20 +97,3 @@ export function buildGradingOutputSchema(): GradingJsonSchema {
     },
   })
 }
-
-/** プロンプトの改訂の出力（直したプロンプトの各欄と、教員への説明） */
-export function buildRevisionOutputSchema(): GradingJsonSchema {
-  return strictObject({
-    questionText: { type: "string", description: "問題文" },
-    modelAnswerText: { type: "string", description: "模範解答" },
-    rubricText: { type: "string", description: "採点基準" },
-    annotationInstruction: {
-      type: "string",
-      description: "朱書きの指示（量・書き方・どの答案に入れるか）",
-    },
-    message: {
-      type: "string",
-      description: "何をどう直したかの、教員への短い説明",
-    },
-  })
-}

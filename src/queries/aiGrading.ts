@@ -87,7 +87,7 @@ export const asbModelAnswerSourceQuery = (asbDefinitionId: string) =>
   })
 
 /**
- * 設問のある答案すべてのインク率・はみ出し・占有グリッド（白紙の除外と注釈の配置に使う）。
+ * 設問のある答案すべての占有グリッド（朱書きを手書きに重ねない配置に使う）。
  *
  * キーの `measurementSignature` は測るもの全部（答案の id と画像パス、設問の矩形）を
  * 表す文字列で、呼び出し側が作る。画像を読み直すので重く、採点を書いても測り直さない
@@ -146,23 +146,6 @@ export const createAiPromptMutation = (examId: string, cropRegionId: string) =>
     meta: {
       invalidates: [aiPromptsQuery(examId, cropRegionId).queryKey],
       errorMessage: "プロンプトを保存できませんでした",
-    },
-  })
-
-/** VLM にプロンプトを改訂させる（外部へ送る）。できたプロンプトの行が返る */
-export const reviseAiPromptMutation = (examId: string, cropRegionId: string) =>
-  defineMutation({
-    mutationFn: (
-      input: Parameters<typeof window.electronAPI.aiGrading.revisePrompt>[0]
-    ) => window.electronAPI.aiGrading.revisePrompt(input),
-    scope: { id: `exam:${examId}:aiPrompts:${cropRegionId}` },
-    meta: {
-      invalidates: [
-        aiPromptsQuery(examId, cropRegionId).queryKey,
-        aiGradingRunsScope(examId, cropRegionId),
-        myAiGradingRunsQuery().queryKey,
-      ],
-      errorMessage: "プロンプトを改訂できませんでした",
     },
   })
 
@@ -247,24 +230,6 @@ export const adoptAiGradingAttemptsMutation = (
         scopeKeys.annotation(),
       ],
       errorMessage: "AI の判定を採用できませんでした",
-    },
-  })
-
-/** 白紙の答案を無答として書く（白紙の判断は画面のインク率） */
-export const adoptBlankAnswersMutation = (
-  examId: string,
-  cropRegionId: string
-) =>
-  defineMutation({
-    mutationFn: (
-      input: Parameters<
-        typeof window.electronAPI.aiGrading.adoptBlankAnswers
-      >[0]
-    ) => window.electronAPI.aiGrading.adoptBlankAnswers(input),
-    scope: { id: `exam:${examId}:questionScores` },
-    meta: {
-      invalidates: [questionScoresQuery(examId, cropRegionId).queryKey],
-      errorMessage: "白紙の答案を無答にできませんでした",
     },
   })
 

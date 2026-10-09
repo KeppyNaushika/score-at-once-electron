@@ -2,10 +2,7 @@
  * AI採点のための答案画像の処理 テスト
  *
  * 合成した答案画像（白い用紙に枠線と黒い記入を描いたもの）だけを使う。
- * - 白紙判定: 枠線だけの解答欄・むらのある白紙は白紙、記入があれば記入あり
- * - normalise() を入れると、むらのある白紙が記入ありに化けることを固定する
- * - はみ出し検知: 枠際の帯だけを数え、印刷された枠線そのものは数えない
- * - 占有グリッド: 約1mm角のセルで、記入のある位置だけが埋まる
+ * - 占有グリッド: 約1mm角のセルで、記入のある位置だけが埋まる（枠線・孤立した黒点は数えない）
  * - 送信用の切り出し: 余白 0.008 を足し、画像の範囲でクランプし、拡大率に従う
  */
 
@@ -16,8 +13,6 @@ import sharp from "sharp"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import {
-  BLANK_INK_RATIO_THRESHOLD,
-  classifyAnswerBlankness,
   cropRegionForSending,
   type InkTargetRegion,
   measureAnswerInk,
@@ -159,12 +154,7 @@ async function measureSingleRegion(
 describe("measureAnswerInk", () => {
   let frameOnlyPath: string
   let writtenPath: string
-  let touchingPath: string
-  let labelNearEdgePath: string
-  let shiftedFramePath: string
-  let neighborFramePath: string
   let noisyBlankPath: string
-  let normalisedNoisyBlankPath: string
 
   beforeAll(async () => {
     workDirectory = fs.mkdtempSync(
@@ -180,147 +170,21 @@ describe("measureAnswerInk", () => {
     fillBox(writtenPage, { left: 250, top: 250, right: 330, bottom: 300 }, 20)
     writtenPath = await savePage(writtenPage, "written.png")
 
-    // 右の枠線を越えて外まで続く記入（スキャンのずれで枠からはみ出した答案）
-    const touchingPage = createWhitePage()
-    drawFrame(touchingPage)
-    fillBox(
-      touchingPage,
-      { left: 440, top: 250, right: REGION_RIGHT + 20, bottom: 300 },
-      20
-    )
-    touchingPath = await savePage(touchingPage, "touching.png")
-
-    // 枠のすぐ内側に印刷された設問番号（はみ出しではない）
-    const labelNearEdgePage = createWhitePage()
-    drawFrame(labelNearEdgePage)
-    fillBox(
-      labelNearEdgePage,
-      {
-        left: REGION_LEFT + FRAME_THICKNESS + 2,
-        top: 200,
-        right: REGION_LEFT + FRAME_THICKNESS + 12,
-        bottom: 215,
-      },
-      20
-    )
-    labelNearEdgePath = await savePage(labelNearEdgePage, "label-near-edge.png")
-
-    // スキャンのずれで、枠線が解答欄の外側の帯に入り込んだ答案（はみ出しではない）
-    const shiftedFramePage = createWhitePage()
-    fillBox(
-      shiftedFramePage,
-      {
-        left: REGION_LEFT - 8,
-        top: REGION_TOP - 8,
-        right: REGION_RIGHT + 8,
-        bottom: REGION_TOP - 8 + FRAME_THICKNESS,
-      },
-      0
-    )
-    fillBox(
-      shiftedFramePage,
-      {
-        left: REGION_RIGHT + 5,
-        top: REGION_TOP - 8,
-        right: REGION_RIGHT + 5 + FRAME_THICKNESS,
-        bottom: REGION_BOTTOM + 8,
-      },
-      0
-    )
-    shiftedFramePath = await savePage(shiftedFramePage, "shifted-frame.png")
-
-    // 隣の解答欄の枠線が、外側の帯を縦に横切る（はみ出しではない）
-    const neighborFramePage = createWhitePage()
-    drawFrame(neighborFramePage)
-    fillBox(
-      neighborFramePage,
-      {
-        left: REGION_RIGHT + 6,
-        top: REGION_TOP - 20,
-        right: REGION_RIGHT + 6 + FRAME_THICKNESS,
-        bottom: REGION_BOTTOM + 20,
-      },
-      0
-    )
-    neighborFramePath = await savePage(neighborFramePage, "neighbor-frame.png")
-
     noisyBlankPath = await savePage(createNoisyBlankPage(), "noisy-blank.png")
-    normalisedNoisyBlankPath = path.join(
-      workDirectory,
-      "noisy-blank-normalised.png"
-    )
-    await sharp(noisyBlankPath)
-      .normalise()
-      .png()
-      .toFile(normalisedNoisyBlankPath)
   })
 
   afterAll(() => {
     fs.rmSync(workDirectory, { recursive: true, force: true })
   })
 
-  it("枠線だけの解答欄は白紙で、枠線ははみ出しとして数えない", async () => {
-    const measurement = await measureSingleRegion(frameOnlyPath)
-
-    expect(measurement.inkRatio).toBe(0)
-    expect(measurement.blankness).toBe("blank")
-    expect(measurement.overflowsFrame).toBe(false)
-    expect(measurement.edgeInkDensities).toEqual({
-      top: 0,
-      right: 0,
-      bottom: 0,
-      left: 0,
-    })
+  it("枠線だけの解答欄では、どのセルも埋まらない（枠線は内側の寄せで除く）", async () => {
+    const { inkGrid } = await measureSingleRegion(frameOnlyPath)
+    expect(inkGrid.occupiedCells.some(Boolean)).toBe(false)
   })
 
-  it("記入のある解答欄は記入ありになる", async () => {
-    const measurement = await measureSingleRegion(writtenPath)
-
-    expect(measurement.inkRatio).toBeGreaterThan(0.03)
-    expect(measurement.blankness).toBe("written")
-    expect(measurement.overflowsFrame).toBe(false)
-  })
-
-  it("むらと孤立した黒点だけの白紙は、median(3) で黒点が消えて白紙になる", async () => {
-    const measurement = await measureSingleRegion(noisyBlankPath)
-
-    expect(measurement.inkRatio).toBeLessThan(BLANK_INK_RATIO_THRESHOLD)
-    expect(measurement.blankness).toBe("blank")
-  })
-
-  it("むらのある白紙に normalise() を掛けると記入ありに化ける（測定に normalise を入れてはならない根拠）", async () => {
-    // この合成画像が normalise の混入を検出できること自体を確かめる。
-    // 測定側に normalise() が入ると、上のテストがこの結果と同じになって落ちる
-    const measurement = await measureSingleRegion(normalisedNoisyBlankPath)
-
-    expect(measurement.blankness).not.toBe("blank")
-  })
-
-  it("枠際に印刷された設問番号は、はみ出しとして数えない", async () => {
-    const measurement = await measureSingleRegion(labelNearEdgePath)
-    expect(measurement.overflowsFrame).toBe(false)
-  })
-
-  it("スキャンのずれで外側の帯に入った枠線は、罫線として除く", async () => {
-    const measurement = await measureSingleRegion(shiftedFramePath)
-    expect(measurement.overflowsFrame).toBe(false)
-  })
-
-  it("隣の解答欄の枠線は、罫線として除く", async () => {
-    const measurement = await measureSingleRegion(neighborFramePath)
-    expect(measurement.overflowsFrame).toBe(false)
-  })
-
-  it("枠を越えて外まで続く記入は、その辺だけはみ出しとして検知する", async () => {
-    const measurement = await measureSingleRegion(touchingPath)
-
-    expect(measurement.edgeTouches).toEqual({
-      top: false,
-      right: true,
-      bottom: false,
-      left: false,
-    })
-    expect(measurement.overflowsFrame).toBe(true)
+  it("むらと孤立した黒点だけの白紙は、median(3) で黒点が消えてどのセルも埋まらない", async () => {
+    const { inkGrid } = await measureSingleRegion(noisyBlankPath)
+    expect(inkGrid.occupiedCells.some(Boolean)).toBe(false)
   })
 
   it("占有グリッドは内側を約1mm角に区切り、記入のある位置のセルだけが埋まる", async () => {
@@ -397,16 +261,6 @@ describe("measureAnswerInk", () => {
     expect(answers[0].regions.map((region) => region.cropRegionId)).toEqual([
       ANSWER_REGION.cropRegionId,
     ])
-  })
-})
-
-describe("classifyAnswerBlankness", () => {
-  it("白紙・境界帯・記入ありを閾値で分ける", () => {
-    expect(classifyAnswerBlankness(0)).toBe("blank")
-    expect(classifyAnswerBlankness(0.0004)).toBe("blank")
-    expect(classifyAnswerBlankness(0.0005)).toBe("borderline")
-    expect(classifyAnswerBlankness(0.0029)).toBe("borderline")
-    expect(classifyAnswerBlankness(0.003)).toBe("written")
   })
 })
 

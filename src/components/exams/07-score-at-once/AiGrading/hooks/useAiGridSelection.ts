@@ -8,11 +8,7 @@ import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import type { AiGridViewSettings } from "../types"
-import {
-  type ConfidenceFilterLevel,
-  type FilterSource,
-  isShownByFilter,
-} from "../utils/aiGridFilter"
+import { type FilterSource, isShownByFilter } from "../utils/aiGridFilter"
 import { toAiGridItem } from "../utils/aiGridItems"
 import type { ReviewedAiGradingAnswer } from "../utils/answerReview"
 import { useAiGridShortcuts } from "./useAiGradingShortcuts"
@@ -43,9 +39,8 @@ export function useAiGridSelection({
 }: UseAiGridSelectionOptions) {
   /**
    * 絞り込みによらず一覧に残す答案。R（更新）か絞り込みを変えるまで残す。
-   * - 採用・採点したばかりの答案（一覧表示の「採点したばかりの答案」と同じ。押した答案が
-   *   目の前から消えると、何を採用したかを確かめられない）
-   * - まとめての操作の「対象を選ぶ」で選んだ答案（絞り込みで隠れていても、確かめられるように出す）
+   * 採用・採点したばかりの答案（一覧表示の「採点したばかりの答案」と同じ。押した答案が
+   * 目の前から消えると、何を採用したかを確かめられない）
    */
   const [keptVisibleIds, setKeptVisibleIds] = useState<ReadonlySet<string>>(
     new Set()
@@ -117,29 +112,11 @@ export function useAiGridSelection({
     },
     [setFilterSettings]
   )
-  const toggleConfidenceFilter = useCallback(
-    (level: ConfidenceFilterLevel) => {
-      setFilterSettings((prev) => ({
-        ...prev,
-        confidence: { ...prev.confidence, [level]: !prev.confidence[level] },
-      }))
-      setKeptVisibleIds(new Set())
-    },
-    [setFilterSettings]
-  )
   const refresh = useCallback(() => {
     setKeptVisibleIds(new Set())
   }, [])
   const markAdopted = useCallback((ids: readonly string[]) => {
     setKeptVisibleIds((prev) => new Set([...prev, ...ids]))
-  }, [])
-  /**
-   * 渡した答案だけを選ぶ。絞り込みで隠れている答案も一覧に出して選ぶ
-   * （まとめての操作の対象を、書く前に目で確かめるため。R か絞り込みを変えるまで残す）
-   */
-  const revealAndSelect = useCallback((ids: readonly string[]) => {
-    setKeptVisibleIds((prev) => new Set([...prev, ...ids]))
-    setChosenIds(new Set(ids))
   }, [])
   /**
    * 自分で採点した答案を残し、選択を次の答案へ移す（一覧表示の採点と同じ規則。
@@ -195,9 +172,7 @@ export function useAiGridSelection({
     handleSelectAnswer,
     filterSettings,
     toggleFilter,
-    toggleConfidenceFilter,
     markAdopted,
     markScored,
-    revealAndSelect,
   }
 }

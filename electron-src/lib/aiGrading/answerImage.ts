@@ -2,8 +2,6 @@
  * AI採点のための答案画像の処理
  *
  * - 送信用の切り出し: 解答欄に余白を足して切り出し、PNG にする
- * - 白紙判定: 解答欄の内側のインク率を測る（外部通信も費用も要らない前段の除外）
- * - はみ出し検知: 枠線のすぐ内側の帯で、辺ごとのインク密度を測る
  * - 注釈用の占有グリッド: 約1mm角のセルごとのインクの有無（renderer が注釈の位置探しに使う）
  *
  * 測定は `regionWhiteness.ts` と同じく、ページ画像1枚につきデコードを1回だけ行い、
@@ -13,6 +11,9 @@
  *
  * 座標はすべて用紙比（0〜1）。x は画像の幅、y は画像の高さに対する比で、
  * 「0.014 寄せ」のような余白も軸ごとにその軸の長さに対する比として扱う。
+ *
+ * インク率による白紙判定と、はみ出し検知は持たない（当てにならなかったので廃止した。
+ * 白紙は教員が白さ順の一覧で無答を付ける。docs/vlm-grading-design.md §3-2）。
  */
 
 import sharp from "sharp"
@@ -45,40 +46,8 @@ const SENDING_PADDING = 0.008
 /** インク率を測る内側の寄せ幅（用紙比、各辺）。枠線と枠際のかすれを除く */
 const INNER_INSET = 0.014
 
-/**
- * はみ出し検知の帯（解答欄の外側、用紙比）。解答欄の辺から NEAR〜FAR 外へ離れた帯を見る。
- *
- * 枠を越えて書いた答案は、インクが枠の外まで続く。内側の帯を見る作りでは、枠際に印刷された
- * 設問番号や、スキャンのずれで入り込んだ枠線そのものまで「はみ出し」と数えていた
- * （はみ出していない答案の大半に印が付いた）。外側を見れば、枠の内側の印刷物は数えない
- */
-const EDGE_BAND_NEAR_OUTSET = 0.002
-const EDGE_BAND_FAR_OUTSET = 0.01
-
-/**
- * 帯の長さ方向にこの割合以上インクが続く行（左右の帯では列）は罫線とみなして数えない。
- * 自分の枠線・隣の解答欄の枠線は帯を横切る長い線になり、手書きのはみ出しは短い
- */
-const RULED_LINE_RUN_RATIO = 0.5
-
-/** 罫線とみなした行・列の前後で、あわせて除く幅（画素）。線の傾きやにじみの分 */
-const RULED_LINE_MARGIN_PIXELS = 2
-
 /** インクとみなす輝度の上限（これ未満がインク） */
 const INK_LUMINANCE_THRESHOLD = 100
-
-/*
- * 以下の閾値はいずれも初期値で、実際の答案で検証し直す前提の値。
- */
-
-/** インク率がこれ未満なら白紙 */
-export const BLANK_INK_RATIO_THRESHOLD = 0.0005
-
-/** インク率がこれ未満（かつ白紙の閾値以上）なら境界帯。人かモデルに判断を回す */
-export const BORDERLINE_INK_RATIO_THRESHOLD = 0.003
-
-/** 外側の帯の（罫線を除いた）インク密度がこれ以上なら、その辺で答案が枠からはみ出しているとみなす */
-export const EDGE_TOUCH_DENSITY_THRESHOLD = 0.01
 
 /** 占有グリッドのセルで、インクの画素がこの割合以上なら「インクあり」とする */
 const GRID_CELL_INK_RATIO_THRESHOLD = 0.02
@@ -86,29 +55,9 @@ const GRID_CELL_INK_RATIO_THRESHOLD = 0.02
 /** 占有グリッドのセルの一辺（mm）の既定値 */
 const DEFAULT_GRID_CELL_SIZE_MM = 1
 
-/** 白紙判定の結果 */
-export type AnswerBlankness = "blank" | "borderline" | "written"
-
-/** 枠の辺ごとの値 */
-interface EdgeSides<T> {
-  top: T
-  right: T
-  bottom: T
-  left: T
-}
-
 /** 1つの解答欄の測定結果 */
 export interface RegionInkMeasurement {
   cropRegionId: string
-  /** 内側（0.014 寄せ）の、ノイズ除去後のインク画素の割合 */
-  inkRatio: number
-  blankness: AnswerBlankness
-  /** 枠線のすぐ内側の帯（0.004〜0.014 寄せ）のインク密度 */
-  edgeInkDensities: EdgeSides<number>
-  /** 辺ごとに、答案が枠に触れているか */
-  edgeTouches: EdgeSides<boolean>
-  /** いずれかの辺で枠に触れている（スキャンのずれ等で枠からはみ出している疑い） */
-  overflowsFrame: boolean
   inkGrid: AnswerInkGrid
 }
 
@@ -151,12 +100,6 @@ interface PixelRect {
   top: number
   right: number
   bottom: number
-}
-
-export function classifyAnswerBlankness(inkRatio: number): AnswerBlankness {
-  if (inkRatio < BLANK_INK_RATIO_THRESHOLD) return "blank"
-  if (inkRatio < BORDERLINE_INK_RATIO_THRESHOLD) return "borderline"
-  return "written"
 }
 
 /**
@@ -369,101 +312,6 @@ function countInk(
   return inkCount
 }
 
-function inkDensity(
-  inkMask: Uint8Array,
-  maskRect: PixelRect,
-  targetRect: PixelRect
-): number {
-  const area = pixelArea(targetRect)
-  if (area === 0) return 0
-  return countInk(inkMask, maskRect, targetRect) / area
-}
-
-/**
- * 枠の辺ごとに、解答欄のすぐ外側の帯（NEAR〜FAR 外）を用紙比で返す。
- * 帯の長さ方向は解答欄の幅・高さにとどめ、角で隣の辺の線を拾わない
- */
-function edgeBands(region: NormalizedRect): EdgeSides<NormalizedRect> {
-  const bandThickness = EDGE_BAND_FAR_OUTSET - EDGE_BAND_NEAR_OUTSET
-  return {
-    top: {
-      x: region.x,
-      y: region.y - EDGE_BAND_FAR_OUTSET,
-      width: region.width,
-      height: bandThickness,
-    },
-    bottom: {
-      x: region.x,
-      y: region.y + region.height + EDGE_BAND_NEAR_OUTSET,
-      width: region.width,
-      height: bandThickness,
-    },
-    left: {
-      x: region.x - EDGE_BAND_FAR_OUTSET,
-      y: region.y,
-      width: bandThickness,
-      height: region.height,
-    },
-    right: {
-      x: region.x + region.width + EDGE_BAND_NEAR_OUTSET,
-      y: region.y,
-      width: bandThickness,
-      height: region.height,
-    },
-  }
-}
-
-/**
- * 帯のインク密度を、罫線とみなした行・列（と前後 RULED_LINE_MARGIN_PIXELS）を除いて測る。
- * `along` は帯の長さの向き（上下の帯は "horizontal"、左右の帯は "vertical"）
- */
-function bandInkDensityExcludingRuledLines(
-  inkMask: Uint8Array,
-  maskRect: PixelRect,
-  band: PixelRect,
-  along: "horizontal" | "vertical"
-): number {
-  const area = pixelArea(band)
-  if (area === 0) return 0
-  const lineCount =
-    along === "horizontal" ? band.bottom - band.top : band.right - band.left
-  const lineLength =
-    along === "horizontal" ? band.right - band.left : band.bottom - band.top
-  const inkCountByLine = Array.from({ length: lineCount }, (_, lineIndex) =>
-    countInk(
-      inkMask,
-      maskRect,
-      along === "horizontal"
-        ? {
-            left: band.left,
-            right: band.right,
-            top: band.top + lineIndex,
-            bottom: band.top + lineIndex + 1,
-          }
-        : {
-            left: band.left + lineIndex,
-            right: band.left + lineIndex + 1,
-            top: band.top,
-            bottom: band.bottom,
-          }
-    )
-  )
-  const isRuledLine = inkCountByLine.map(
-    (inkCount) => inkCount >= lineLength * RULED_LINE_RUN_RATIO
-  )
-  const isNearRuledLine = (lineIndex: number): boolean =>
-    isRuledLine.some(
-      (ruled, ruledIndex) =>
-        ruled && Math.abs(ruledIndex - lineIndex) <= RULED_LINE_MARGIN_PIXELS
-    )
-  const keptInkCount = inkCountByLine.reduce(
-    (acc, inkCount, lineIndex) =>
-      isNearRuledLine(lineIndex) ? acc : acc + inkCount,
-    0
-  )
-  return keptInkCount / area
-}
-
 /**
  * 内側の範囲を約 cellSizeMm 角のセルに区切った占有グリッドを作る。
  * セルの数は内側の寸法（mm）÷ セルの一辺を丸めた整数にし、内側をちょうど敷き詰める。
@@ -534,58 +382,17 @@ function measureRegionInk(
   const innerRect = toPixelRect(inner, page.width, page.height)
   if (pixelArea(innerRect) === 0) return null
 
-  // はみ出し検知の帯は解答欄の外側まで広がるので、印はその範囲で作る
-  const maskRect = toPixelRect(
-    insetRect(region, -EDGE_BAND_FAR_OUTSET),
-    page.width,
-    page.height
-  )
-  const inkMask = buildDenoisedInkMask(page, maskRect)
+  const inkMask = buildDenoisedInkMask(page, innerRect)
 
   // 輝度を引き伸ばす正規化（sharp の normalise() 等）は入れない。白紙のスキャンでは
-  // 薄い紙のむらやノイズしか無く、それを 0〜255 へ引き伸ばすとむらが濃い「インク」に
-  // 化けて、白紙が記入ありに判定される。閾値は生の輝度に対して掛ける。
-  const inkRatio = inkDensity(inkMask, maskRect, innerRect)
-
-  const bands = edgeBands(region)
-  const densityOf = (
-    band: NormalizedRect,
-    along: "horizontal" | "vertical"
-  ): number =>
-    bandInkDensityExcludingRuledLines(
-      inkMask,
-      maskRect,
-      toPixelRect(band, page.width, page.height),
-      along
-    )
-  const edgeInkDensities: EdgeSides<number> = {
-    top: densityOf(bands.top, "horizontal"),
-    right: densityOf(bands.right, "vertical"),
-    bottom: densityOf(bands.bottom, "horizontal"),
-    left: densityOf(bands.left, "vertical"),
-  }
-  const edgeTouches: EdgeSides<boolean> = {
-    top: edgeInkDensities.top >= EDGE_TOUCH_DENSITY_THRESHOLD,
-    right: edgeInkDensities.right >= EDGE_TOUCH_DENSITY_THRESHOLD,
-    bottom: edgeInkDensities.bottom >= EDGE_TOUCH_DENSITY_THRESHOLD,
-    left: edgeInkDensities.left >= EDGE_TOUCH_DENSITY_THRESHOLD,
-  }
-
+  // 薄い紙のむらやノイズしか無く、それを 0〜255 へ引き伸ばすとむらが濃い「インク」に化ける。
+  // 閾値は生の輝度に対して掛ける。
   return {
     cropRegionId: region.cropRegionId,
-    inkRatio,
-    blankness: classifyAnswerBlankness(inkRatio),
-    edgeInkDensities,
-    edgeTouches,
-    overflowsFrame:
-      edgeTouches.top ||
-      edgeTouches.right ||
-      edgeTouches.bottom ||
-      edgeTouches.left,
     inkGrid: buildInkGrid(
       page,
       inkMask,
-      maskRect,
+      innerRect,
       inner,
       paperDimensions,
       cellSizeMm
@@ -594,11 +401,10 @@ function measureRegionInk(
 }
 
 /**
- * 答案画像ごとに、指定された全解答欄のインク（白紙判定・はみ出し・占有グリッド）を測る。
+ * 答案画像ごとに、指定された全解答欄のインク（注釈用の占有グリッド）を測る。
  *
  * 読み込めない画像はスキップする（結果に含めない）。解答欄の内側が画像の外にあって
- * 測れない解答欄も結果に含めない。呼び出し側はどちらも「測定不能」として扱い、
- * 白紙とはみなさないこと（白紙は採点対象から外れるため）。
+ * 測れない解答欄も結果に含めない。呼び出し側はどちらも「測定不能」として扱う。
  * メモリ上に載るのは常に1枚分のRAWバッファのみになるよう逐次処理する。
  */
 export async function measureAnswerInk(

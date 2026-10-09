@@ -20,10 +20,8 @@ vi.mock("../../electron-src/lib/prisma/client", async () => {
 
 import { createBatchCollector } from "@/electron-src/lib/aiGrading/batchPoller"
 import { createGradingJobRunner } from "@/electron-src/lib/aiGrading/gradingJobRunner"
-import { runPromptRevision } from "@/electron-src/lib/aiGrading/promptRevisionRunner"
 import { GradingProviderError } from "@/electron-src/lib/aiGrading/providers/providerShared"
 import type { ProviderGradingResponse } from "@/electron-src/lib/aiGrading/providers/types"
-import { setQuestionScore } from "@/electron-src/lib/prisma/questionScoreWrite"
 import { AI_GRADING_TEMPLATE_VERSION } from "@/lib/shared/aiGrading/promptBuilder"
 
 import {
@@ -426,119 +424,5 @@ describe("バッチ", () => {
     // 取り込み済みの run は2度取り込まない
     await endedCollector.pollOnce()
     expect(endedFake.cleanupBatch).toHaveBeenCalledTimes(1)
-  })
-})
-
-describe("プロンプトの改訂", () => {
-  it("食い違いを添えて頼み、元を親とする新しいプロンプトを作る", async () => {
-    // 1件目の答案を AI が採点し、教員は別の点を付けている
-    const gradingFake = createFakeProvider({
-      respond: async () => completedResponse(PARTIAL_JUDGEMENT),
-    })
-    const runner = createGradingJobRunner(
-      createTestDependencies(gradingFake.provider, fixture.dataDirectory)
-    )
-    const { run, finished } = await runner.startGradingRun(
-      { ...startInput(), examStudentIds: [examStudentIds()[0]] },
-      fixture.exam.user.id
-    )
-    await finished
-    const [attempt] = await attemptsOf(run.id)
-    await setQuestionScore({
-      examStudentId: examStudentIds()[0],
-      cropRegionId: fixture.cropRegion.id,
-      userId: fixture.exam.user.id,
-      status: "partial",
-      partialScore: 4,
-    })
-    await testPrisma.questionScore.updateMany({
-      where: { examStudentId: examStudentIds()[0] },
-      data: { comment: "途中式があれば4点" },
-    })
-
-    const revisionFake = createFakeProvider({
-      respond: async () =>
-        completedResponse({
-          questionText: "x^2 - 5x + 6 = 0 を解け。",
-          modelAnswerText: "x = 2, 3",
-          rubricText: "因数分解で2点、途中式があれば4点、解がそろって満点。",
-          annotationInstruction: "部分点の答案にだけ入れる",
-          message: "途中式の配点を足しました",
-        }),
-    })
-    const revisedPrompt = await runPromptRevision(
-      {
-        promptId: fixture.prompt.id,
-        instruction: "途中式も評価して",
-        samples: [
-          { examStudentId: examStudentIds()[0], attemptId: attempt.id },
-        ],
-        provider: "anthropic",
-        model: "claude-test",
-        effort: "high",
-      },
-      fixture.exam.user.id,
-      createTestDependencies(revisionFake.provider, fixture.dataDirectory)
-    )
-
-    expect(revisedPrompt).toMatchObject({
-      parentPromptId: fixture.prompt.id,
-      cropRegionId: fixture.cropRegion.id,
-      createdByUserId: fixture.exam.user.id,
-      rubricText: "因数分解で2点、途中式があれば4点、解がそろって満点。",
-      revisionInstruction: "途中式も評価して",
-      revisionMessage: "途中式の配点を足しました",
-    })
-    const [revisionRequest] = revisionFake.gradeRequests
-    const variableText = JSON.stringify(revisionRequest.variableParts)
-    expect(variableText).toContain("途中式も評価して")
-    expect(variableText).toContain(
-      "この答案は AI 3点・教員4点、教員のコメント：途中式があれば4点"
-    )
-    expect(revisionRequest.variableParts.map((part) => part.kind)).toEqual([
-      "text",
-      "image",
-    ])
-
-    const revisionRun = await testPrisma.aiGradingRun.findFirstOrThrow({
-      where: { purpose: "revise" },
-    })
-    expect(revisionRun).toMatchObject({
-      status: "ended",
-      resultPromptId: revisedPrompt.id,
-      promptId: fixture.prompt.id,
-      inputTokens: 100,
-    })
-    // 元のプロンプトは書き換えない
-    const originalPrompt = await testPrisma.aiPrompt.findUniqueOrThrow({
-      where: { id: fixture.prompt.id },
-    })
-    expect(originalPrompt.rubricText).toBe(fixture.prompt.rubricText)
-  })
-
-  it("応答を読めなければ run を failed にし、プロンプトを作らない", async () => {
-    const revisionFake = createFakeProvider({
-      respond: async () => completedResponse({ questionText: "だけ" }),
-    })
-    await expect(
-      runPromptRevision(
-        {
-          promptId: fixture.prompt.id,
-          instruction: "直して",
-          samples: [],
-          provider: "anthropic",
-          model: "claude-test",
-          effort: "high",
-        },
-        fixture.exam.user.id,
-        createTestDependencies(revisionFake.provider, fixture.dataDirectory)
-      )
-    ).rejects.toThrow("改訂の応答を読めませんでした")
-
-    expect(await testPrisma.aiPrompt.count()).toBe(1)
-    const revisionRun = await testPrisma.aiGradingRun.findFirstOrThrow({
-      where: { purpose: "revise" },
-    })
-    expect(revisionRun.status).toBe("failed")
   })
 })

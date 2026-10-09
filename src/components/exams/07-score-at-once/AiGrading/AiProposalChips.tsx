@@ -66,7 +66,7 @@ export function AiProposalChips({
   points,
 }: AiProposalChipsProps) {
   const statusConfig = getDynamicScoreStatusConfig(useScoringStatusColors())
-  const { answer, review } = reviewedAnswer
+  const { review } = reviewedAnswer
   const kind = classifyProposalChip(reviewedAnswer)
   const attempt = review.displayedAttempt?.attempt ?? null
   const judgement =
@@ -87,18 +87,8 @@ export function AiProposalChips({
     .filter((reviewReason) => !REASONS_SHOWN_IN_CHIP.has(reviewReason))
     .map((reviewReason) => REVIEW_REASON_LABELS[reviewReason])
     .concat(review.isFromOtherPrompt ? ["別のプロンプトの判定"] : [])
-  const imageNotes = [
-    ...(answer.inkMeasurement === null ? ["未測定"] : []),
-    ...(answer.inkMeasurement?.blankness === "blank" ? ["白紙"] : []),
-    ...reviewReasonsFrom(review.reviewReasons, "image").map(
-      (reviewReason) => REVIEW_REASON_LABELS[reviewReason]
-    ),
-  ]
   const noteLines = [
     ...(aiNotes.length > 0 ? [`AI: ${aiNotes.join("・")}`] : []),
-    ...(imageNotes.length > 0
-      ? [`画像（アプリが測ったもの）: ${imageNotes.join("・")}`]
-      : []),
   ]
 
   const chipTitle = judgement

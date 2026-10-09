@@ -22,10 +22,7 @@ vi.mock("../../electron-src/lib/prisma/client", async () => {
 })
 
 import { createGradingJobRunner } from "@/electron-src/lib/aiGrading/gradingJobRunner"
-import {
-  adoptAiGradingAttempts,
-  adoptBlankAnswers,
-} from "@/electron-src/lib/prisma/aiGradingAdoption"
+import { adoptAiGradingAttempts } from "@/electron-src/lib/prisma/aiGradingAdoption"
 import {
   deleteAiGradingAttempts,
   listAiGradingRunsByCropRegion,
@@ -401,35 +398,6 @@ describe("adoptAiGradingAttempts", () => {
       "skipped_not_succeeded",
       "skipped_not_found",
     ])
-  })
-})
-
-describe("adoptBlankAnswers", () => {
-  it("白紙の答案を無答として書き、採点済みのマスは飛ばす", async () => {
-    const [firstExamStudentId, secondExamStudentId] = examStudentIds()
-    await setQuestionScore({
-      examStudentId: secondExamStudentId,
-      cropRegionId: fixture.cropRegion.id,
-      userId: fixture.exam.user.id,
-      status: "correct",
-      partialScore: null,
-    })
-
-    const results = await adoptBlankAnswers(
-      {
-        cropRegionId: fixture.cropRegion.id,
-        examStudentIds: [firstExamStudentId, secondExamStudentId],
-        overwrite: false,
-      },
-      fixture.exam.user.id
-    )
-
-    expect(results).toEqual([
-      { targetId: firstExamStudentId, outcome: "adopted" },
-      { targetId: secondExamStudentId, outcome: "skipped_already_scored" },
-    ])
-    expect((await ownScore(firstExamStudentId))?.status).toBe("no_answer")
-    expect((await ownScore(secondExamStudentId))?.status).toBe("correct")
   })
 })
 

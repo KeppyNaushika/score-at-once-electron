@@ -22,7 +22,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AiAdoptOverwriteDialog } from "@/components/exams/07-score-at-once/AiGrading/AiAdoptOverwriteDialog"
 import { AiBulkActionsBar } from "@/components/exams/07-score-at-once/AiGrading/AiBulkActionsBar"
-import { AiConfidenceFilterButtons } from "@/components/exams/07-score-at-once/AiGrading/AiConfidenceFilterButtons"
 import { AiGradingRunDialog } from "@/components/exams/07-score-at-once/AiGrading/AiGradingRunDialog"
 import { AiOwnScoringSection } from "@/components/exams/07-score-at-once/AiGrading/AiOwnScoringSection"
 import { AiRunHistorySection } from "@/components/exams/07-score-at-once/AiGrading/AiRunHistorySection"
@@ -58,7 +57,6 @@ import {
   EXAM_PAGE_ID,
   makeAnswer,
   makeAttemptWithRun,
-  makeInk,
   makePrompt,
   makeQuestionScore,
   makeRun,
@@ -237,16 +235,12 @@ describe("採点モードの選択肢", () => {
 describe("実行ダイアログ", () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it("選び方ごとの件数を出し、白紙は数えず、確認に件数と送信先を出す", async () => {
+  it("自分が未採点の答案の件数を出し、確認に件数と送信先を出す（採点済み・無答の答案は送らない）", async () => {
     const aiGrading = installFakeElectronApi({ isUnlocked: true })
     const reviewedAnswers = [
       reviewed(makeAnswer("s1")),
       reviewed(makeAnswer("s2")),
-      reviewed(
-        makeAnswer("s-blank", {
-          inkMeasurement: makeInk({ blankness: "blank" }),
-        })
-      ),
+      reviewed(makeAnswer("s-no-answer")),
       reviewed(makeAnswer("s-scored")),
     ]
     renderWithProviders(
@@ -260,47 +254,20 @@ describe("実行ダイアログ", () => {
         unlockedProviders={["anthropic"]}
         prompt={makePrompt()}
         reviewedAnswers={reviewedAnswers}
-        questionScores={[makeQuestionScore({ examStudentId: "s-scored" })]}
+        questionScores={[
+          makeQuestionScore({ examStudentId: "s-scored" }),
+          makeQuestionScore({
+            examStudentId: "s-no-answer",
+            status: "no_answer",
+          }),
+        ]}
         currentUserId={CURRENT_USER_ID}
-        selectedExamStudentIds={new Set()}
       />
     )
 
-    expect(
-      screen.getByTestId("ai-grading-target-count-unscored").textContent
-    ).toBe("2")
-    expect(screen.getByTestId("ai-grading-target-count-all").textContent).toBe(
-      "3"
+    expect(screen.getByTestId("ai-run-target-summary")).toHaveTextContent(
+      "自分が未採点の答案 2 件を送ります"
     )
-    expect(
-      screen.getByTestId("ai-grading-target-count-scoredCheck").textContent
-    ).toBe("1")
-    expect(
-      screen.getByTestId("ai-grading-target-excluded-unscored")
-    ).toHaveTextContent("白紙 1件を除く")
-
-    // 開いた時点では選び方を選んでいない。選ぶまで送信の確認へ進めず、費用も出さない
-    const targetCards = screen.getAllByRole("radio", {
-      name: /件$/,
-    })
-    expect(targetCards).toHaveLength(6)
-    targetCards.forEach((targetCard) =>
-      expect(targetCard).toHaveAttribute("aria-checked", "false")
-    )
-    expect(screen.getByText("採点する答案を選んでください")).toBeTruthy()
-    expect(screen.getByText("先に採点する答案を選んでください")).toBeTruthy()
-    expect(screen.getByTestId("ai-run-cost-unselected")).toHaveTextContent("—")
-    expect(screen.getByRole("button", { name: "送信の確認へ" })).toBeDisabled()
-    // 送る答案が0件の選び方は見せるが選ばせない
-    expect(
-      screen.getByRole("radio", { name: "選択中の答案 0件" })
-    ).toBeDisabled()
-    expect(aiGrading.estimateRun).not.toHaveBeenCalled()
-
-    await userEvent.click(screen.getByRole("radio", { name: "未採点のみ 2件" }))
-    expect(
-      screen.getByRole("radio", { name: "未採点のみ 2件" })
-    ).toHaveAttribute("aria-checked", "true")
     expect(screen.getByRole("button", { name: "送信の確認へ" })).toBeEnabled()
     expect(await screen.findByTestId("ai-run-request-count")).toHaveTextContent(
       "2件"
@@ -441,7 +408,6 @@ describe("実行ダイアログの既定値", () => {
         reviewedAnswers={[reviewed(makeAnswer("s1"))]}
         questionScores={[]}
         currentUserId={CURRENT_USER_ID}
-        selectedExamStudentIds={new Set()}
       />
     )
   }
@@ -717,38 +683,6 @@ describe("絞り込みのボタン（一覧表示と共通）", () => {
     await userEvent.click(screen.getByRole("button", { name: "無答" }))
     expect(onToggleFilter).toHaveBeenCalledWith("no_answer")
   })
-
-  it("確信度の組も同じ形のボタンで、入っている確信度を押された形で出す", async () => {
-    installFakeElectronApi({ isUnlocked: true })
-    const onToggle = vi.fn()
-    renderWithProviders(
-      <AiConfidenceFilterButtons
-        confidenceSettings={{
-          high: true,
-          medium: true,
-          low: false,
-          none: true,
-        }}
-        onToggle={onToggle}
-      />
-    )
-    const group = screen.getByRole("group", { name: "確信度の絞り込み" })
-    expect(
-      within(group)
-        .getAllByRole("button")
-        .map((button) => button.textContent)
-    ).toEqual(["高", "中", "低", "判定なし"])
-    expect(screen.getByRole("button", { name: "低" })).toHaveAttribute(
-      "aria-pressed",
-      "false"
-    )
-    expect(screen.getByRole("button", { name: "高" })).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    )
-    await userEvent.click(screen.getByRole("button", { name: "判定なし" }))
-    expect(onToggle).toHaveBeenCalledWith("none")
-  })
 })
 
 /**
@@ -902,8 +836,6 @@ function BulkActionsHarness({
         cropRegion={cropRegion}
         reviewedAnswers={visibleAnswers.map(reviewed)}
         visibleCount={visibleItems.length}
-        visibleIds={visibleItems.map((gridItem) => gridItem.id)}
-        onSelectBlankTargets={vi.fn()}
         onAdoptVisible={() => adoption.requestAdoptVisible(visibleItems)}
         isAdopting={adoption.isAdopting}
       />

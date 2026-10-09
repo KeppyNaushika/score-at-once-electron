@@ -3,7 +3,7 @@
  * 07 の AI採点モードで、設問を切り替えても一覧の絞り込みと並べ方を変えない。
  *
  * ここで固定すること:
- * - 自分の採点・AI の採点の絞り込み、確信度、並べ方は、設問を切り替えても残る
+ * - 自分の採点・AI の採点の絞り込みと並べ方は、設問を切り替えても残る
  *   （作業場は設問ごとに作り直すので、これらは AI採点モードの根が持つ）
  * - 答案の選択は設問ごとのもので、設問を切り替えたら既定（先頭の答案）に戻る
  *
@@ -248,17 +248,16 @@ describe("AI採点モード: 設問を切り替えても絞り込みと並べ方
     installFakeElectronApi()
   })
 
-  it("自分の採点・AI の採点・確信度の絞り込みと並べ方が残る", async () => {
+  it("自分の採点・AI の採点の絞り込みと並べ方が残る", async () => {
     const user = userEvent.setup()
     renderMode()
     await screen.findByRole("group", { name: "AI の採点の絞り込み" })
 
     // 既定から変える: AI の採点の「未採点」を入、自分の採点の「正答」を入、
-    // 確信度の「低」を切、並べ方を確信度順
+    // 並べ方を確信度の低い順
     await user.click(filterButton("AI の採点の絞り込み", "未採点"))
     await user.click(filterButton("自分の採点の絞り込み", "正答"))
-    await user.click(filterButton("確信度の絞り込み", "低"))
-    await user.click(answerOrderButton("確信度順"))
+    await user.click(answerOrderButton("確信度の低い順"))
 
     const expectChangedSettings = () => {
       expect(filterButton("AI の採点の絞り込み", "未採点")).toHaveAttribute(
@@ -269,11 +268,7 @@ describe("AI採点モード: 設問を切り替えても絞り込みと並べ方
         "aria-pressed",
         "true"
       )
-      expect(filterButton("確信度の絞り込み", "低")).toHaveAttribute(
-        "aria-pressed",
-        "false"
-      )
-      expect(answerOrderButton("確信度順")).toHaveAttribute(
+      expect(answerOrderButton("確信度の低い順")).toHaveAttribute(
         "aria-checked",
         "true"
       )

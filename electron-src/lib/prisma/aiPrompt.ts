@@ -37,7 +37,7 @@ export async function getAiPrompt(promptId: string) {
 
 /**
  * 教員が書いたプロンプトの中身。作成者と、改訂のときだけ埋まる2欄は含めない
- * （作成者は main が操作者から決め、改訂の欄は VLM の改訂だけが書く）
+ * （作成者は main が操作者から決める。改訂の欄は廃止したプロンプトの改訂の名残で、もう書かない）
  */
 export type CreateAiPromptData = Pick<
   Prisma.AiPromptUncheckedCreateInput,
@@ -51,24 +51,15 @@ export type CreateAiPromptData = Pick<
   | "annotationInstruction"
 >
 
-/** VLM に改訂させてできた行だけが持つ2欄 */
-interface AiPromptRevisionRecord {
-  revisionInstruction: string
-  revisionMessage: string
-}
-
 /**
  * プロンプトを1行作る。
  *
  * 親を指定するなら、親は同じ設問のプロンプトでなければならない（別の設問の行を親に
  * すると、履歴を辿ったときに設問をまたいでしまう）。
- *
- * @param revision VLM の改訂でできた行のとき、指示文と説明。教員が直接書いた行は省く
  */
 export async function createAiPrompt(
   data: CreateAiPromptData,
-  actorUserId: string,
-  revision?: AiPromptRevisionRecord
+  actorUserId: string
 ) {
   if (data.parentPromptId) {
     const parentPrompt = await prisma.aiPrompt.findUnique({
@@ -90,8 +81,6 @@ export async function createAiPrompt(
       sendModelAnswerImage: data.sendModelAnswerImage ?? true,
       rubricText: data.rubricText ?? "",
       annotationInstruction: data.annotationInstruction ?? "",
-      revisionInstruction: revision?.revisionInstruction ?? "",
-      revisionMessage: revision?.revisionMessage ?? "",
     },
     include: aiPromptInclude,
   })
@@ -104,7 +93,6 @@ export async function createAiPrompt(
     entityId: created.id,
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
-    extra: { revisedByAi: revision !== undefined },
   })
 
   return created

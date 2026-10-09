@@ -1,5 +1,5 @@
 /**
- * AI採点モードの計算（実行の履歴と一致率・プロンプトの差分・注釈の用紙の向き）。
+ * AI採点モードの計算（実行の履歴と一致率・注釈の用紙の向き）。
  * 費用の概算は `costEstimate.test.ts`。
  */
 
@@ -10,7 +10,6 @@ import {
   placeAdoptionAnnotation,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/adoptionAnnotation"
 import { resolveDisplayedAttempt } from "@/components/exams/07-score-at-once/AiGrading/utils/attemptSelection"
-import { diffPromptLines } from "@/components/exams/07-score-at-once/AiGrading/utils/promptDiff"
 import {
   resolveChosenRunId,
   summarizeRunHistory,
@@ -122,23 +121,6 @@ describe("実行の履歴", () => {
     expect(
       resolveDisplayedAttempt(attempts, undefined, "run-elsewhere")?.attempt.id
     ).toBe("attempt-newer")
-  })
-})
-
-describe("プロンプトの差分", () => {
-  it("同じ行・消えた行・足した行を順に並べる", () => {
-    expect(
-      diffPromptLines("a\nb\nc", "a\nB\nc\nd").map(
-        (diffLine) => `${diffLine.kind}:${diffLine.text}`
-      )
-    ).toEqual(["same:a", "removed:b", "added:B", "same:c", "added:d"])
-  })
-
-  it("行の目印は差分の中で重ならない（同じ文面の行が何度あっても）", () => {
-    const lineKeys = diffPromptLines("x\nx", "x\nx\nx").map(
-      (diffLine) => diffLine.lineKey
-    )
-    expect(new Set(lineKeys).size).toBe(lineKeys.length)
   })
 })
 

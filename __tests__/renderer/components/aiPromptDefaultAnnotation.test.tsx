@@ -104,10 +104,7 @@ function renderPanel(options: {
       selectedPromptId={options.selectedPromptId ?? null}
       onSelectPrompt={vi.fn()}
       onRunWithPrompt={vi.fn()}
-      provider="anthropic"
       settings={options.settings}
-      reviewedAnswers={[]}
-      selectedExamStudentIds={new Set()}
     />,
     { wrapper: createQueryWrapper() }
   )

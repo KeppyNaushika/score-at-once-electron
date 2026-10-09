@@ -1,19 +1,16 @@
 "use client"
 
-import { FileText, PenLine, Play, Plus, Sparkles } from "lucide-react"
+import { FileText, PenLine, Play, Plus } from "lucide-react"
 import { useState } from "react"
 
 import { SidePanelSection } from "@/components/exams/07-score-at-once/ScoringSidePanel/SidePanelSection"
 import { Button } from "@/components/ui/button"
 import type { AiGradingSettings } from "@/electron-src/lib/aiGrading/providerCredentialStore"
-import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 import { AiPromptEditorDialog } from "./AiPromptEditorDialog"
-import { AiPromptRevisionDialog } from "./AiPromptRevisionDialog"
 import type { AiPromptRow } from "./types"
 import { formatShortDateTime } from "./utils/answerDisplay"
-import type { ReviewedAiGradingAnswer } from "./utils/answerReview"
 
 interface AiPromptPanelProps {
   examId: string
@@ -25,10 +22,7 @@ interface AiPromptPanelProps {
   onSelectPrompt: (promptId: string) => void
   /** そのプロンプトを選んで、送信ダイアログを開く */
   onRunWithPrompt: (promptId: string) => void
-  provider: GradingProviderId
   settings: AiGradingSettings | undefined
-  reviewedAnswers: ReviewedAiGradingAnswer[]
-  selectedExamStudentIds: ReadonlySet<string>
 }
 
 /** 編集画面の開き方。新規追加は写す元が無い */
@@ -38,8 +32,8 @@ type EditorTarget = { basePrompt: AiPromptRow | null }
  * 設問のプロンプト（設計 §3-1）。
  *
  * 上の「新規追加」は白紙から書く。履歴の版をクリックすると、その版が選ばれ、中身と
- * 「採点実行」「編集」「プロンプト修正」（AI に直させる）が出る。編集も修正も、保存すると
- * その版を親にした新しい版になり、元の版は書き換えない
+ * 「採点実行」「編集」が出る。編集して保存すると、その版を親にした新しい版になり、
+ * 元の版は書き換えない
  */
 export function AiPromptPanel({
   examId,
@@ -49,14 +43,9 @@ export function AiPromptPanel({
   selectedPromptId,
   onSelectPrompt,
   onRunWithPrompt,
-  provider,
   settings,
-  reviewedAnswers,
-  selectedExamStudentIds,
 }: AiPromptPanelProps) {
   const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null)
-  const [revisionBasePrompt, setRevisionBasePrompt] =
-    useState<AiPromptRow | null>(null)
 
   return (
     <SidePanelSection icon={FileText} title="プロンプト">
@@ -134,15 +123,6 @@ export function AiPromptPanel({
                         <PenLine className="h-3 w-3" />
                         編集
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setRevisionBasePrompt(prompt)}
-                        disabled={!settings}
-                      >
-                        <Sparkles className="h-3 w-3" />
-                        プロンプト修正
-                      </Button>
                     </div>
                   </div>
                 )}
@@ -165,23 +145,6 @@ export function AiPromptPanel({
         }
         onCreated={onSelectPrompt}
       />
-      {revisionBasePrompt && settings && (
-        <AiPromptRevisionDialog
-          open
-          onOpenChange={(open) => {
-            if (!open) setRevisionBasePrompt(null)
-          }}
-          examId={examId}
-          cropRegion={cropRegion}
-          basePrompt={revisionBasePrompt}
-          promptNumberById={promptNumberById}
-          provider={provider}
-          settings={settings}
-          reviewedAnswers={reviewedAnswers}
-          selectedExamStudentIds={selectedExamStudentIds}
-          onSelectPrompt={onSelectPrompt}
-        />
-      )}
     </SidePanelSection>
   )
 }

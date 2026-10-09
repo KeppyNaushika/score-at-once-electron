@@ -12,17 +12,12 @@
 import { getAiGradingServices } from "../lib/aiGrading/aiGradingMainServices"
 import type { StartGradingRunInput } from "../lib/aiGrading/gradingJobRunner"
 import {
-  type RevisePromptInput,
-  runPromptRevision,
-} from "../lib/aiGrading/promptRevisionRunner"
-import {
   measureCropRegionInk,
   measureRunImageSizes,
   previewSendingCrop,
 } from "../lib/aiGrading/sendingImageInspection"
 import {
   adoptAiGradingAttempts,
-  adoptBlankAnswers,
   type AiGradingAdoption,
   type AiGradingAdoptionParts,
 } from "../lib/prisma/aiGradingAdoption"
@@ -63,16 +58,8 @@ export const aiGradingHandlers = {
   "aiGrading:getAsbModelAnswerSource": async (asbDefinitionId: string) =>
     getAsbModelAnswerSource(asbDefinitionId),
 
-  /** VLM にプロンプトを改訂させ、できたプロンプトを返す（外部へ送る） */
-  "aiGrading:revisePrompt": async (input: RevisePromptInput) =>
-    runPromptRevision(
-      input,
-      requireActorUserId(),
-      getAiGradingServices().dependencies
-    ),
-
   // ── 画像（外部へは送らない） ─────────────────────────────────
-  /** 設問のある答案すべてのインク率・はみ出し・占有グリッド */
+  /** 設問のある答案すべての占有グリッド（朱書きの配置に使う） */
   "aiGrading:measureInk": async (cropRegionId: string) =>
     measureCropRegionInk(
       cropRegionId,
@@ -153,11 +140,4 @@ export const aiGradingHandlers = {
     overwrite: boolean
     parts?: AiGradingAdoptionParts
   }) => adoptAiGradingAttempts(input, requireActorUserId()),
-
-  /** 白紙の答案を無答として書く（白紙の判断は renderer のインク率） */
-  "aiGrading:adoptBlankAnswers": async (input: {
-    cropRegionId: string
-    examStudentIds: string[]
-    overwrite: boolean
-  }) => adoptBlankAnswers(input, requireActorUserId()),
 } satisfies HandlerMap

@@ -1,5 +1,5 @@
 /**
- * AI 採点のジョブ（採点・バッチの回収・改訂）が外から受け取るもの。
+ * AI 採点のジョブ（採点・バッチの回収）が外から受け取るもの。
  *
  * Electron（`net.fetch`・`BrowserWindow`・`safeStorage`）に触れるものはすべてここを通して
  * 渡す。アプリでは `aiGradingMainServices.ts` が本物をつなぎ、テストは偽の事業者と
