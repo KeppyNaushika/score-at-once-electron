@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, FileArchive, Upload } from "lucide-react"
+import { FileArchive, TriangleAlert, Upload } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -58,7 +58,7 @@ export function ArchiveFileSelectStep({
           className="mt-10 w-full max-w-lg border-destructive/20 bg-destructive/10"
         >
           <CardContent className="flex items-start gap-3 p-4">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+            <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
             <div className="space-y-2">
               <p className="text-sm font-medium text-destructive">
                 このファイルは開けません

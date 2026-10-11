@@ -1,19 +1,20 @@
 import {
-  BarChart3,
-  Calculator,
+  ChartColumn,
+  CheckCheck,
   Database,
-  Edit,
   FileImage,
   FileOutput,
   Gavel,
   GitCompareArrows,
+  Group,
   LayoutDashboard,
   LayoutTemplate,
   ListChecks,
   type LucideIcon,
   PencilLine,
-  Settings,
   SlidersHorizontal,
+  SquareDashedMousePointer,
+  TableProperties,
   Upload,
   Users,
 } from "lucide-react"
@@ -41,12 +42,12 @@ function withIcons<StepId extends string>(
 export const examWorkflowTabs = withIcons(examWorkflowSteps, {
   detail: LayoutDashboard,
   "01-upload": FileImage,
-  "02-template": Settings,
-  "03-region-info": Edit,
-  "04-question-group": Calculator,
+  "02-template": SquareDashedMousePointer,
+  "03-region-info": TableProperties,
+  "04-question-group": Group,
   "05-students": Users,
   "06-student-answers": Upload,
-  "07-score-at-once": BarChart3,
+  "07-score-at-once": CheckCheck,
   "08-finalize": Gavel,
   "09-export": FileOutput,
 })
@@ -57,7 +58,7 @@ export const gradeWorkflowTabs = withIcons(gradeWorkflowSteps, {
   "02-data-sources": Database,
   "03-boundaries": SlidersHorizontal,
   "04-comparisons": GitCompareArrows,
-  "05-results": BarChart3,
+  "05-results": ChartColumn,
   "06-export": FileOutput,
 })
 
@@ -66,7 +67,7 @@ export const courseworkWorkflowTabs = withIcons(courseworkWorkflowSteps, {
   "02-students": Users,
   "03-items": ListChecks,
   "04-scores": PencilLine,
-  "05-results": BarChart3,
+  "05-results": ChartColumn,
 })
 
 export const answerSheetBuilderWorkflowTabs = withIcons(

@@ -2,7 +2,13 @@
 
 import type { Prisma } from "@prisma/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Download, FileArchive, PlusCircle, Upload, Users } from "lucide-react"
+import {
+  ClipboardPaste,
+  Download,
+  FileArchive,
+  Plus,
+  Users,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -292,14 +298,14 @@ export default function StudentTable() {
     toolbarButtonAction({
       id: "create",
       priority: 80,
-      icon: PlusCircle,
+      icon: Plus,
       label: "生徒追加",
       onClick: handleAddNewStudent,
     }),
     toolbarButtonAction({
       id: "spreadsheet-import",
       priority: 70,
-      icon: Upload,
+      icon: ClipboardPaste,
       label: "Excel 貼付一括追加",
       onClick: () => setIsSpreadsheetImportModalOpen(true),
     }),

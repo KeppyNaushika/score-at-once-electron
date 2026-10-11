@@ -5,7 +5,7 @@ import {
   ChevronRight,
   FileText,
   RotateCcw,
-  Trash2,
+  Trash,
 } from "lucide-react"
 import Image from "next/image"
 import { useMemo, useState } from "react"
@@ -133,7 +133,7 @@ export default function ImportedFileItem({
               }}
               disabled={isProcessing}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash className="h-4 w-4" />
             </TooltipButton>
           </div>
         </CollapsibleTrigger>

@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle, FileImage, XCircle } from "lucide-react"
+import { CircleCheck, CircleX, FileImage } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 
@@ -223,13 +223,13 @@ export function FilePreviewCell({
       case "loaded":
         return (
           <div className="absolute top-1 right-1">
-            <CheckCircle className="h-3 w-3 text-green-500" />
+            <CircleCheck className="h-3 w-3 text-green-500" />
           </div>
         )
       case "error":
         return (
           <div className="bg-opacity-75 absolute inset-0 flex items-center justify-center bg-white">
-            <XCircle className="h-4 w-4 text-red-500" />
+            <CircleX className="h-4 w-4 text-red-500" />
           </div>
         )
       default:

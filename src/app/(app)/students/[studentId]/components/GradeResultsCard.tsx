@@ -1,6 +1,6 @@
 "use client"
 
-import { BarChart3, ChevronRight, Lock } from "lucide-react"
+import { ChartColumn, ChevronRight, Lock } from "lucide-react"
 
 import type { useStudentGradeResults } from "@/app/(app)/students/[studentId]/hooks/useStudentGradeResults"
 import { GuardedLink } from "@/components/common/GuardedLink"
@@ -62,7 +62,7 @@ export function GradeResultsCard({
     <Card className="mb-8 border-border/50 shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5" />
+          <ChartColumn className="h-5 w-5" />
           成績算出
           <span className="ml-1 text-lg font-normal text-muted-foreground tabular-nums">
             ({gradeResults.length}件)

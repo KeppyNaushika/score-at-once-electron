@@ -1,10 +1,10 @@
 import {
-  AlertTriangle,
-  CheckCircle,
-  Circle,
+  CircleCheckBig,
+  CircleDashed,
   Clock,
   CopyX,
   Minus,
+  Triangle,
   X,
 } from "lucide-react"
 
@@ -19,7 +19,7 @@ import type { ScoringStatusColors } from "@/lib/scoringStatusColors"
 export function getDynamicScoreStatusConfig(colors: ScoringStatusColors) {
   return {
     unscored: {
-      icon: Circle,
+      icon: CircleDashed,
       bgStyle: { backgroundColor: colors.unscored.bg },
       selectedBgStyle: { backgroundColor: colors.unscored.bg, opacity: 0.8 },
       textStyle: { color: colors.unscored.text },
@@ -27,7 +27,7 @@ export function getDynamicScoreStatusConfig(colors: ScoringStatusColors) {
       key: "q",
     },
     correct: {
-      icon: CheckCircle,
+      icon: CircleCheckBig,
       bgStyle: { backgroundColor: colors.correct.bg },
       selectedBgStyle: { backgroundColor: colors.correct.bg, opacity: 0.8 },
       textStyle: { color: colors.correct.text },
@@ -35,7 +35,7 @@ export function getDynamicScoreStatusConfig(colors: ScoringStatusColors) {
       key: "e",
     },
     partial: {
-      icon: AlertTriangle,
+      icon: Triangle,
       bgStyle: { backgroundColor: colors.partial.bg },
       selectedBgStyle: { backgroundColor: colors.partial.bg, opacity: 0.8 },
       textStyle: { color: colors.partial.text },
@@ -75,7 +75,7 @@ export function getDynamicScoreStatusConfig(colors: ScoringStatusColors) {
       key: "t",
     },
     master: {
-      icon: CheckCircle,
+      icon: CircleCheckBig,
       bgStyle: { backgroundColor: "#EFF6FF" }, // blue-50 固定
       selectedBgStyle: { backgroundColor: "#DBEAFE" }, // blue-100 固定
       textStyle: { color: "#1E40AF" }, // blue-800 固定

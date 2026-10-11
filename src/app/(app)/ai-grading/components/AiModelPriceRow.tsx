@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { Trash2 } from "lucide-react"
+import { Trash } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -114,7 +114,7 @@ export function AiModelPriceRow({
               disabled={removePrice.isPending}
               onClick={() => removePrice.mutate({ provider, model })}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash className="h-4 w-4" />
             </Button>
           )}
         </div>

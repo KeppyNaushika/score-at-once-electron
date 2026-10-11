@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertCircle, CheckCircle2, RefreshCw, RotateCw } from "lucide-react"
+import { CircleAlert, CircleCheck, RefreshCw, RotateCw } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -36,7 +36,7 @@ function StateIndicator({ state }: { state: string }) {
     case "idle":
       return (
         <span className="flex items-center gap-1.5 text-sm text-green-600">
-          <CheckCircle2 className="h-4 w-4" />
+          <CircleCheck className="h-4 w-4" />
           待機中
         </span>
       )
@@ -50,7 +50,7 @@ function StateIndicator({ state }: { state: string }) {
     case "error":
       return (
         <span className="flex items-center gap-1.5 text-sm text-red-600">
-          <AlertCircle className="h-4 w-4" />
+          <CircleAlert className="h-4 w-4" />
           エラー
         </span>
       )
@@ -309,7 +309,7 @@ export function SyncSettingsTab() {
       {(status.versionMismatches ?? []).length > 0 && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
           <div className="flex items-start gap-2">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
             <div className="space-y-1 text-sm text-amber-800">
               {status.versionMismatches.some(
                 (mismatch) => mismatch.remoteIsNewer

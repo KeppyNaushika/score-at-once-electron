@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { ArrowLeft, ArrowRight, ImageUp, Trash2 } from "lucide-react"
+import { ArrowLeft, ArrowRight, ImageUp, Trash } from "lucide-react"
 import Image from "next/image"
 import React, { useRef, useState } from "react"
 
@@ -234,7 +234,7 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
               }}
               disabled={isBusy}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash className="h-4 w-4" />
             </TooltipButton>
             <TooltipButton
               label="右へ移動"

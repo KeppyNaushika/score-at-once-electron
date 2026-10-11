@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { Trash2 } from "lucide-react"
+import { Trash } from "lucide-react"
 import Link from "next/link"
 import { useMemo } from "react"
 
@@ -118,7 +118,7 @@ export function BoundariesContainer({ gradeId }: BoundariesContainerProps) {
                     className="text-destructive"
                     onClick={() => boundaryDeletion.openWith(gradeItem)}
                   >
-                    <Trash2 className="mr-1 h-3.5 w-3.5" />
+                    <Trash className="mr-1 h-3.5 w-3.5" />
                     境界設定を削除
                   </Button>
                 )}

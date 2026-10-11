@@ -2,7 +2,7 @@
 
 import type { DragEndEvent } from "@dnd-kit/core"
 import { skipToken, useQuery } from "@tanstack/react-query"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 
 import {
@@ -141,7 +141,7 @@ function ClassroomRowCells({
           size="icon"
           onClick={() => onRemove(entry)}
         >
-          <Trash2 className="h-4 w-4 text-destructive" />
+          <Trash className="h-4 w-4 text-destructive" />
         </TooltipButton>
       </TableCell>
     </>

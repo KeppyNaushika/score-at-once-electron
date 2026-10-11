@@ -1,7 +1,7 @@
 "use client"
 
 import { useQueries, useQuery } from "@tanstack/react-query"
-import { AlertTriangle } from "lucide-react"
+import { TriangleAlert } from "lucide-react"
 import { useMemo } from "react"
 
 import {
@@ -151,7 +151,7 @@ export function CourseworkResultsContainer({
 
       {itemsWithDuplicateLabels.length > 0 && (
         <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
           <div>
             <p className="font-medium">
               同じ評価記号が2つある評価項目があります

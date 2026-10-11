@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertCircle, Check, ChevronLeft, X } from "lucide-react"
+import { Check, ChevronLeft, CircleAlert, X } from "lucide-react"
 import { useEffect } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -139,7 +139,7 @@ export function ImportWizardModal({
           {state.error && (
             <div className="mx-6 mt-4 rounded-lg border border-destructive/20 bg-destructive/10 p-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+                <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-destructive">エラー</p>
                   <p className="mt-1 text-sm text-destructive/80">

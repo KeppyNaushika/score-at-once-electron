@@ -1,11 +1,11 @@
 "use client"
 
 import {
-  AlignCenter,
-  AlignLeft,
-  AlignRight,
   ArrowDownToLine,
   ArrowUpToLine,
+  TextAlignCenter,
+  TextAlignEnd,
+  TextAlignStart,
   UnfoldVertical,
 } from "lucide-react"
 import { useCallback } from "react"
@@ -82,7 +82,7 @@ export function AnchorAlignControls({
               onClick={() => setHorizontalAlign("left")}
               aria-label="左寄せ"
             >
-              <AlignLeft className="h-4 w-4" />
+              <TextAlignStart className="h-4 w-4" />
             </Button>
           </WithTooltip>
           <WithTooltip content="左右中央寄せ">
@@ -96,7 +96,7 @@ export function AnchorAlignControls({
               onClick={() => setHorizontalAlign("center")}
               aria-label="左右中央寄せ"
             >
-              <AlignCenter className="h-4 w-4" />
+              <TextAlignCenter className="h-4 w-4" />
             </Button>
           </WithTooltip>
           <WithTooltip content="右寄せ">
@@ -110,7 +110,7 @@ export function AnchorAlignControls({
               onClick={() => setHorizontalAlign("right")}
               aria-label="右寄せ"
             >
-              <AlignRight className="h-4 w-4" />
+              <TextAlignEnd className="h-4 w-4" />
             </Button>
           </WithTooltip>
         </div>

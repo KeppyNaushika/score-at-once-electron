@@ -1,6 +1,6 @@
 "use client"
 
-import { Bot, Grid, type LucideIcon, User } from "lucide-react"
+import { Bot, Grid3x3, type LucideIcon, User } from "lucide-react"
 
 import type { GradingMode } from "@/components/exams/07-score-at-once/types"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -14,7 +14,7 @@ interface GradingModeOption {
 }
 
 const MANUAL_GRADING_MODE_OPTIONS: GradingModeOption[] = [
-  { mode: "grid", label: "一覧表示", Icon: Grid },
+  { mode: "grid", label: "一覧表示", Icon: Grid3x3 },
   { mode: "individual", label: "個別表示", Icon: User },
 ]
 

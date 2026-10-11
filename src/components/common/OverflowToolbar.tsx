@@ -1,6 +1,6 @@
 "use client"
 
-import { type LucideIcon, MoreHorizontal } from "lucide-react"
+import { Ellipsis, type LucideIcon } from "lucide-react"
 import type { ComponentProps, ReactNode } from "react"
 import { useEffect, useEffectEvent, useState } from "react"
 
@@ -180,7 +180,7 @@ function OverflowTriggerButton({
       {...props}
       className={cn("size-8 shrink-0 rounded-lg", className)}
     >
-      <MoreHorizontal className="h-4 w-4" />
+      <Ellipsis className="h-4 w-4" />
     </Button>
   )
 }

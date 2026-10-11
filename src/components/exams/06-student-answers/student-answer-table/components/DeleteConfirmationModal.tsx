@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { AlertTriangle } from "lucide-react"
+import { TriangleAlert } from "lucide-react"
 
 import {
   AlertDialog,
@@ -76,7 +76,7 @@ function DeleteConfirmationBody({
     <>
       <AlertDialogHeader>
         <AlertDialogTitle className="flex items-center gap-2 text-red-600">
-          <AlertTriangle className="h-5 w-5" />
+          <TriangleAlert className="h-5 w-5" />
           答案画像の削除確認
         </AlertDialogTitle>
         <AlertDialogDescription>

@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash } from "lucide-react"
 
 import { TooltipButton } from "@/components/common/TooltipButton"
 import { Button } from "@/components/ui/button"
@@ -324,7 +324,7 @@ export function ManuscriptPaperSettings({
                   className="h-6 w-6 text-destructive"
                   onClick={() => onDeleteCharGuide(charGuide.id)}
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash className="h-3 w-3" />
                 </TooltipButton>
               </div>
               <div className="flex items-center gap-2">

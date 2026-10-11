@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle } from "lucide-react"
+import { TriangleAlert } from "lucide-react"
 
 import type { MouseBrushAction } from "@/components/exams/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
@@ -107,7 +107,7 @@ export function MouseBrushControls({
             </Button>
             {hiddenUnscoredCount > 0 && (
               <div className="flex items-center gap-1 text-[10px] text-amber-600">
-                <AlertTriangle className="h-3 w-3" />
+                <TriangleAlert className="h-3 w-3" />
                 非表示の未採点が{hiddenUnscoredCount}件あります
               </div>
             )}

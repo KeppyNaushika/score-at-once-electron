@@ -2,13 +2,13 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query"
 import {
-  CheckSquare,
   Eye,
   FileSpreadsheet,
   FileText,
   RefreshCw,
   Search,
   Square,
+  SquareCheckBig,
   Users,
 } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
@@ -301,7 +301,7 @@ export function ExportContainer({ gradeId }: ExportContainerProps) {
                       className="h-8 text-xs"
                       onClick={selectAllFiltered}
                     >
-                      <CheckSquare className="mr-1 h-3 w-3" />
+                      <SquareCheckBig className="mr-1 h-3 w-3" />
                       全選択
                     </Button>
                     <Button

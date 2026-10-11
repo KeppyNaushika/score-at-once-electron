@@ -3,12 +3,12 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import {
   ArrowLeft,
-  BarChart3,
-  Edit,
-  History,
+  ChartColumn,
+  ClipboardPaste,
   Plus,
-  Trash2,
-  Upload,
+  RotateCcwClock,
+  SquarePen,
+  Trash,
   Users,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -247,21 +247,21 @@ export default function ClassroomDetailPage() {
     toolbarButtonAction({
       id: "spreadsheet-import",
       priority: 70,
-      icon: Upload,
+      icon: ClipboardPaste,
       label: "Excel 貼付一括追加",
       onClick: () => setIsStudentImportModalOpen(true),
     }),
     toolbarButtonAction({
       id: "edit",
       priority: 60,
-      icon: Edit,
+      icon: SquarePen,
       label: "編集",
       onClick: () => setIsClassroomModalOpen(true),
     }),
     toolbarButtonAction({
       id: "audit-log",
       priority: 20,
-      icon: History,
+      icon: RotateCcwClock,
       label: "操作履歴",
       onClick: () =>
         guardedNavigate(auditLogsHrefOfScope(classroomId, classroomData.name)),
@@ -276,7 +276,7 @@ export default function ClassroomDetailPage() {
           className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           onClick={() => setIsDeleteClassroomConfirmOpen(true)}
         >
-          <Trash2 className="mr-2 h-4 w-4" />
+          <Trash className="mr-2 h-4 w-4" />
           削除
         </Button>
       ),
@@ -287,7 +287,7 @@ export default function ClassroomDetailPage() {
           className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
           onClick={() => setIsDeleteClassroomConfirmOpen(true)}
         >
-          <Trash2 className="mr-2 h-4 w-4" />
+          <Trash className="mr-2 h-4 w-4" />
           削除
         </Button>
       ),
@@ -328,7 +328,7 @@ export default function ClassroomDetailPage() {
             <div className="mb-6 flex items-center gap-4">
               <TabsList className="flex-1">
                 <TabsTrigger value="analytics" className="flex-1">
-                  <BarChart3 className="mr-1.5 h-4 w-4" />
+                  <ChartColumn className="mr-1.5 h-4 w-4" />
                   成績分析
                 </TabsTrigger>
                 <TabsTrigger value="membership" className="flex-1">

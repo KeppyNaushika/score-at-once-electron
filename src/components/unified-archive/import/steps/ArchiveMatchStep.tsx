@@ -1,6 +1,6 @@
 "use client"
 
-import { Layers, School, Settings, UserCog, Users } from "lucide-react"
+import { Link2, ListTree, School, UserCog, Users } from "lucide-react"
 import { type ReactNode, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -23,7 +23,7 @@ const MATCH_TABS: {
   {
     table: "SubtotalGroup",
     label: "小計グループ",
-    icon: <Layers className="h-4 w-4" />,
+    icon: <ListTree className="h-4 w-4" />,
   },
   { table: "User", label: "利用者", icon: <UserCog className="h-4 w-4" /> },
 ]
@@ -71,7 +71,7 @@ export function ArchiveMatchStep({
     return (
       <div className="flex h-full flex-col items-center justify-center">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-green-100 dark:bg-green-900/20">
-          <Settings className="h-10 w-10 text-green-600 dark:text-green-400" />
+          <Link2 className="h-10 w-10 text-green-600 dark:text-green-400" />
         </div>
         <h3 className="mb-2 text-xl font-semibold">
           すべてのデータが自動で紐づきました
@@ -89,7 +89,7 @@ export function ArchiveMatchStep({
     <div className="flex h-full flex-col">
       <div className="mb-6 text-center">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
-          <Settings className="h-10 w-10 text-primary" />
+          <Link2 className="h-10 w-10 text-primary" />
         </div>
         <h3 className="mb-2 text-xl font-semibold">データの紐づけ</h3>
         <p className="mx-auto max-w-lg text-muted-foreground">

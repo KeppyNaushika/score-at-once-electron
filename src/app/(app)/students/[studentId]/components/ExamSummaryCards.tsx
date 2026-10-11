@@ -1,6 +1,6 @@
 "use client"
 
-import { BarChart3, FileCheck, TrendingUp } from "lucide-react"
+import { ChartColumn, FileCheck, TrendingUp } from "lucide-react"
 import { useMemo } from "react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -55,7 +55,7 @@ export function ExamSummaryCards({ results }: ExamSummaryCardsProps) {
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <BarChart3 className="h-4 w-4" />
+            <ChartColumn className="h-4 w-4" />
             平均得点率
           </CardTitle>
         </CardHeader>

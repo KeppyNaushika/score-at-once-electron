@@ -2,10 +2,10 @@
 
 import {
   Copy,
+  Ellipsis,
   FileArchive,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
+  SquarePen,
+  Trash,
   UserRoundCog,
 } from "lucide-react"
 
@@ -50,13 +50,13 @@ export function DefinitionRowMenu({
           className="h-8 w-8"
           aria-label={`${definition.name}の操作`}
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <Ellipsis className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {isOwner && (
           <DropdownMenuItem onClick={onEdit}>
-            <Pencil />
+            <SquarePen />
             編集
           </DropdownMenuItem>
         )}
@@ -76,7 +76,7 @@ export function DefinitionRowMenu({
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onClick={onDelete}>
-              <Trash2 />
+              <Trash />
               削除
             </DropdownMenuItem>
           </>

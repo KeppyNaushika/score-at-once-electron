@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, ArrowLeftRight, ArrowRight } from "lucide-react"
+import { ArrowLeftRight, ArrowRight, TriangleAlert } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 
 import type { PendingChange } from "@/components/exams/06-student-answers/types"
@@ -206,7 +206,7 @@ export function ConfirmChangesModal({
                     </label>
                   ) : (
                     <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-red-600">
-                      <AlertTriangle className="h-3.5 w-3.5" />
+                      <TriangleAlert className="h-3.5 w-3.5" />
                       ページ変更→破棄
                     </span>
                   )}

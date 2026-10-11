@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { Calculator, Plus, Search, Trash2 } from "lucide-react"
+import { ListTree, Plus, Search, Trash } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 
@@ -82,7 +82,7 @@ export function SubtotalGroupSelector({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-blue-600" />
+            <ListTree className="h-5 w-5 text-blue-600" />
             小計点グループ
           </CardTitle>
           <Button onClick={() => setShowSelector(true)} variant="outline">
@@ -94,7 +94,7 @@ export function SubtotalGroupSelector({
       <CardContent>
         {activeSubtotalGroups.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">
-            <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
+            <ListTree className="mx-auto mb-4 h-12 w-12 opacity-50" />
             <p>有効化された小計点グループがありません</p>
             <p className="mt-2 text-sm">
               「グループを追加」ボタンで既存のグループを有効化するか、新しいグループを作成できます
@@ -128,7 +128,7 @@ export function SubtotalGroupSelector({
                     onClick={() => groupRemoval.openWith(group)}
                     className="text-destructive hover:text-destructive"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash className="h-4 w-4" />
                   </Button>
                 </div>
               )
@@ -211,7 +211,7 @@ export function SubtotalGroupSelector({
               </div>
             ) : filteredGroups.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground">
-                <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                <ListTree className="mx-auto mb-4 h-12 w-12 opacity-50" />
                 <p>
                   {searchTerm
                     ? "検索結果が見つかりません"

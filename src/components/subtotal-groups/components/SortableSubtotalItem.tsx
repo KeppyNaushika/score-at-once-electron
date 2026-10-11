@@ -2,7 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, Trash2 } from "lucide-react"
+import { GripVertical, Trash } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -80,7 +80,7 @@ export function SortableSubtotalItem({
         onClick={() => onDelete(subtotal.key)}
         className="text-destructive hover:text-destructive"
       >
-        <Trash2 className="h-4 w-4" />
+        <Trash className="h-4 w-4" />
       </Button>
     </div>
   )

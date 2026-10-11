@@ -1,6 +1,6 @@
 "use client"
 
-import { History } from "lucide-react"
+import { RotateCcwClock } from "lucide-react"
 
 import { GuardedLink } from "@/components/common/GuardedLink"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
@@ -21,7 +21,7 @@ export function AuditLogMenuItem({
   return (
     <DropdownMenuItem asChild>
       <GuardedLink href={auditLogsHrefOfScope(scopeId, scopeLabel)}>
-        <History />
+        <RotateCcwClock />
         操作履歴
       </GuardedLink>
     </DropdownMenuItem>

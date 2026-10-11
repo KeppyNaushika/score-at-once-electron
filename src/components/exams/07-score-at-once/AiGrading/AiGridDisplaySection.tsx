@@ -1,6 +1,6 @@
 "use client"
 
-import { Layout } from "lucide-react"
+import { PanelsTopLeft } from "lucide-react"
 
 import {
   hatchedFill,
@@ -60,7 +60,7 @@ export function AiGridDisplaySection({
 }: AiGridDisplaySectionProps) {
   return (
     <SidePanelSection
-      icon={Layout}
+      icon={PanelsTopLeft}
       title="表示"
       rightElement={
         <span className="text-[10px] text-gray-500">

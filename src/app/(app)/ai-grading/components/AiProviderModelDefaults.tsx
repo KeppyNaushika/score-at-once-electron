@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { AlertCircle, ListRestart } from "lucide-react"
+import { CircleAlert, ListRestart } from "lucide-react"
 import { useState } from "react"
 
 import { AiModelPicker } from "@/components/common/AiModelPicker"
@@ -121,7 +121,7 @@ export function AiProviderModelDefaults({
           role="status"
           className="flex items-start gap-2 text-sm text-red-700"
         >
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <div className="space-y-0.5">
             <p>{FAILURE_HEADLINES[fetchResult.outcome]}</p>
             {fetchResult.message !== "" && (

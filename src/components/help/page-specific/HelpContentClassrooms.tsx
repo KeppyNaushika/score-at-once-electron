@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle, Eye, Lightbulb, School, Users } from "lucide-react"
+import { Eye, LifeBuoy, Lightbulb, School, Users } from "lucide-react"
 
 import {
   Badge,
@@ -102,7 +102,7 @@ export function HelpContentClassrooms() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <HelpSection
-          icon={<Lightbulb className="h-5 w-5 text-yellow-600" />}
+          icon={<LifeBuoy className="h-5 w-5 text-yellow-600" />}
           title="困ったときは"
         >
           <div className="space-y-3">
@@ -124,7 +124,7 @@ export function HelpContentClassrooms() {
         </HelpSection>
 
         <HelpSection
-          icon={<CheckCircle className="h-5 w-5 text-green-600" />}
+          icon={<Lightbulb className="h-5 w-5 text-green-600" />}
           title="操作のコツ"
         >
           <div className="space-y-3">

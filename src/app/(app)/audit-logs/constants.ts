@@ -1,9 +1,9 @@
 import {
   Download,
-  FilePlus2,
-  FileX2,
-  History,
+  FilePlusCorner,
+  FileXCorner,
   Pencil,
+  RotateCcwClock,
   Upload,
 } from "lucide-react"
 
@@ -34,12 +34,20 @@ export const VERB_META: Record<
   AuditVerb,
   { label: string; className: string; Icon: typeof Pencil }
 > = {
-  create: { label: "作成", className: "text-emerald-600", Icon: FilePlus2 },
+  create: {
+    label: "作成",
+    className: "text-emerald-600",
+    Icon: FilePlusCorner,
+  },
   update: { label: "更新", className: "text-blue-600", Icon: Pencil },
-  delete: { label: "削除", className: "text-red-600", Icon: FileX2 },
+  delete: { label: "削除", className: "text-red-600", Icon: FileXCorner },
   export: { label: "出力", className: "text-violet-600", Icon: Download },
   import: { label: "取込", className: "text-amber-600", Icon: Upload },
-  other: { label: "操作", className: "text-muted-foreground", Icon: History },
+  other: {
+    label: "操作",
+    className: "text-muted-foreground",
+    Icon: RotateCcwClock,
+  },
 }
 
 /**

@@ -6,8 +6,8 @@ import {
   Hash,
   ListOrdered,
   MessageSquare,
-  Palette,
   Pencil,
+  SquareDashedMousePointer,
   Trophy,
   User,
 } from "lucide-react"
@@ -66,7 +66,7 @@ const CropRegionList = ({
       <div className="scrollbar-overlay flex-1 overflow-auto p-4">
         {areas.length === 0 ? (
           <div className="rounded-lg border-2 border-dashed border-muted-foreground/25 py-8 text-center text-muted-foreground">
-            <Palette className="mx-auto mb-3 h-10 w-10 text-muted-foreground/70" />
+            <SquareDashedMousePointer className="mx-auto mb-3 h-10 w-10 text-muted-foreground/70" />
             <p className="text-base font-medium">領域を作成してください</p>
             <p className="mt-2 text-sm">
               左の模範解答上でマウスをドラッグして領域を作成できます

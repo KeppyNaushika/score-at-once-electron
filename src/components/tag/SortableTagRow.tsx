@@ -1,4 +1,4 @@
-import { Calculator, Edit2, Trash2 } from "lucide-react"
+import { ListTree, SquarePen, Trash } from "lucide-react"
 
 import { DragHandle } from "@/components/common/sortable-table/DragHandle"
 import { useSortableRow } from "@/components/common/sortable-table/useSortableRow"
@@ -83,7 +83,7 @@ export function SortableTagRow({
             className={`h-7 w-7 p-0 ${expanded ? "text-primary" : ""}`}
             onClick={() => onToggleSubtotalGroups(tag)}
           >
-            <Calculator className="h-3.5 w-3.5" />
+            <ListTree className="h-3.5 w-3.5" />
           </Button>
         </WithTooltip>
         <Button
@@ -92,7 +92,7 @@ export function SortableTagRow({
           className="h-7 w-7 p-0"
           onClick={() => onEdit(tag)}
         >
-          <Edit2 className="h-3.5 w-3.5" />
+          <SquarePen className="h-3.5 w-3.5" />
         </Button>
         <Button
           variant="ghost"
@@ -100,7 +100,7 @@ export function SortableTagRow({
           className="h-7 w-7 p-0 text-destructive hover:text-destructive"
           onClick={() => onDelete(tag)}
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash className="h-3.5 w-3.5" />
         </Button>
       </div>
       {expanded && (

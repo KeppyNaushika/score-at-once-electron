@@ -1,6 +1,6 @@
 "use client"
 
-import { Layers, School, Settings, UserCog, Users } from "lucide-react"
+import { Link2, ListTree, School, UserCog, Users } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -75,7 +75,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
     return (
       <div className="flex h-full flex-col items-center justify-center">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-green-100 dark:bg-green-900/20">
-          <Settings className="h-10 w-10 text-green-600 dark:text-green-400" />
+          <Link2 className="h-10 w-10 text-green-600 dark:text-green-400" />
         </div>
         <h3 className="mb-2 text-xl font-semibold">
           すべてのデータが自動で紐づきました
@@ -102,7 +102,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
       {/* ヘッダー */}
       <div className="mb-6 text-center">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
-          <Settings className="h-10 w-10 text-primary" />
+          <Link2 className="h-10 w-10 text-primary" />
         </div>
         <h3 className="mb-2 text-xl font-semibold">データの紐づけ</h3>
         <p className="max-w-lg text-muted-foreground">
@@ -136,7 +136,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
             )}
           </TabsTrigger>
           <TabsTrigger value="subtotalGroup" className="gap-2">
-            <Layers className="h-4 w-4" />
+            <ListTree className="h-4 w-4" />
             小計グループ
             {hasSubtotalGroupDecisions && (
               <span className="ml-1 rounded-full bg-amber-500 px-1.5 text-xs text-white">

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { FileArchive, MoreVertical, Trash2 } from "lucide-react"
+import { EllipsisVertical, FileArchive, Trash } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -145,7 +145,7 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" aria-label="その他の操作">
-                <MoreVertical className="h-4 w-4" />
+                <EllipsisVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -164,7 +164,7 @@ export function CourseworkDetail({ courseworkId }: CourseworkDetailProps) {
                 onClick={() => setIsDeleteModalOpen(true)}
                 variant="destructive"
               >
-                <Trash2 />
+                <Trash />
                 資料を削除
               </DropdownMenuItem>
             </DropdownMenuContent>

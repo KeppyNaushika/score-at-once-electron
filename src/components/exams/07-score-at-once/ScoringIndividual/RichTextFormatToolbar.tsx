@@ -1,6 +1,6 @@
 "use client"
 
-import { Bold, Italic, Minus, Plus, Underline } from "lucide-react"
+import { AArrowDown, AArrowUp, Bold, Italic, Underline } from "lucide-react"
 
 import { TooltipButton } from "@/components/common/TooltipButton"
 import { WithTooltip } from "@/components/common/WithTooltip"
@@ -73,7 +73,7 @@ export function RichTextFormatToolbar({
           variant="ghost"
           onClick={onFontSizeDecrease}
         >
-          <Minus className="h-4 w-4" />
+          <AArrowDown className="h-4 w-4" />
         </TooltipButton>
         <span className="min-w-8 text-center text-sm">{fontSize}</span>
         <TooltipButton
@@ -82,7 +82,7 @@ export function RichTextFormatToolbar({
           variant="ghost"
           onClick={onFontSizeIncrease}
         >
-          <Plus className="h-4 w-4" />
+          <AArrowUp className="h-4 w-4" />
         </TooltipButton>
       </div>
 

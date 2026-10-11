@@ -1,19 +1,19 @@
 "use client"
 
 import {
-  BarChart3,
-  Calculator,
-  ChevronsLeft,
-  ChevronsRight,
+  Bot,
+  ChartColumn,
   ClipboardList,
   FileArchive,
-  FileEdit,
+  FilePen,
   FileStack,
-  FlaskConical,
-  History,
+  ListTree,
   LogIn,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
   PencilSparkles,
+  RotateCcwClock,
   School,
   Settings,
   Tag,
@@ -53,16 +53,16 @@ function navItemAccessibleName(navItem: NavItem): string {
 
 const navGroups: NavItem[][] = [
   [
-    { href: "/answer-sheet-builder", label: "解答用紙作成", icon: FileEdit },
+    { href: "/answer-sheet-builder", label: "解答用紙作成", icon: FilePen },
     { href: "/exams", label: "試験一覧", icon: PencilSparkles },
     { href: "/coursework", label: "試験外成績資料", icon: ClipboardList },
-    { href: "/grades", label: "成績算出", icon: BarChart3 },
+    { href: "/grades", label: "成績算出", icon: ChartColumn },
   ],
   [{ href: "/pdf-tools", label: "PDF加工", icon: FileStack }],
   [
     { href: "/students", label: "生徒管理", icon: Users },
     { href: "/classrooms", label: "学級管理", icon: School },
-    { href: "/subtotal-groups", label: "小計点管理", icon: Calculator },
+    { href: "/subtotal-groups", label: "小計点管理", icon: ListTree },
     { href: "/tags", label: "タグ管理", icon: Tag },
   ],
   [{ href: "/data-export", label: "データ書き出し", icon: FileArchive }],
@@ -71,10 +71,10 @@ const navGroups: NavItem[][] = [
     {
       href: "/ai-grading",
       label: "AI採点",
-      icon: FlaskConical,
+      icon: Bot,
       isExperimental: true,
     },
-    { href: "/audit-logs", label: "操作履歴", icon: History },
+    { href: "/audit-logs", label: "操作履歴", icon: RotateCcwClock },
   ],
 ]
 
@@ -118,9 +118,9 @@ export default function Navigation({
           className={cn(isSidebarMinimized ? "mx-auto" : "")}
         >
           {isSidebarMinimized ? (
-            <ChevronsRight className="h-5 w-5" />
+            <PanelLeftOpen className="h-5 w-5" />
           ) : (
-            <ChevronsLeft className="h-5 w-5" />
+            <PanelLeftClose className="h-5 w-5" />
           )}
           <span className="sr-only">
             {isSidebarMinimized ? "サイドバーを開く" : "サイドバーを閉じる"}

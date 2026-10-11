@@ -1,7 +1,7 @@
 "use client"
 
 import type { StudentClassroomMembership } from "@prisma/client"
-import { BarChart3, Edit, Trash2, Users } from "lucide-react"
+import { ChartColumn, SquarePen, Trash, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -111,7 +111,7 @@ export default function StudentDetailPage() {
     toolbarButtonAction({
       id: "edit",
       priority: 60,
-      icon: Edit,
+      icon: SquarePen,
       label: "編集",
       onClick: handleEditStudentClick,
     }),
@@ -125,7 +125,7 @@ export default function StudentDetailPage() {
           className="rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           onClick={() => setIsDeleteModalOpen(true)}
         >
-          <Trash2 className="mr-2 h-4 w-4" />
+          <Trash className="mr-2 h-4 w-4" />
           削除
         </Button>
       ),
@@ -136,7 +136,7 @@ export default function StudentDetailPage() {
           className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
           onClick={() => setIsDeleteModalOpen(true)}
         >
-          <Trash2 className="mr-2 h-4 w-4" />
+          <Trash className="mr-2 h-4 w-4" />
           削除
         </Button>
       ),
@@ -171,7 +171,7 @@ export default function StudentDetailPage() {
           <Tabs defaultValue="analytics">
             <TabsList className="mb-6 w-full">
               <TabsTrigger value="analytics" className="flex-1">
-                <BarChart3 className="mr-1.5 h-4 w-4" />
+                <ChartColumn className="mr-1.5 h-4 w-4" />
                 成績分析
               </TabsTrigger>
               <TabsTrigger value="membership" className="flex-1">

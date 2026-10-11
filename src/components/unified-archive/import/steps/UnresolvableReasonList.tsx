@@ -1,6 +1,6 @@
 "use client"
 
-import { XCircle } from "lucide-react"
+import { CircleX } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
 
@@ -29,7 +29,7 @@ export function UnresolvableReasonList({
     <Card role="alert" className="border-destructive/20 bg-destructive/10">
       <CardContent className="space-y-3 p-4">
         <div className="flex items-start gap-3">
-          <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+          <CircleX className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
           <p className="text-sm font-medium text-destructive">
             このままでは取り込めません。紐づけか採用する id
             を選び直してください。

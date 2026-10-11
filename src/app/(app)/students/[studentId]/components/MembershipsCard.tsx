@@ -1,6 +1,6 @@
 "use client"
 
-import { Clock, Edit, PlusCircle, Users } from "lucide-react"
+import { Clock, Plus, SquarePen, Users } from "lucide-react"
 import { useMemo } from "react"
 
 import { TooltipButton } from "@/components/common/TooltipButton"
@@ -74,7 +74,7 @@ export function MembershipsCard({
             variant="outline"
             className="rounded-lg"
           >
-            <PlusCircle className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 h-4 w-4" />
             所属追加
           </Button>
         </div>
@@ -174,7 +174,7 @@ export function MembershipsCard({
                               } as StudentClassroomMembershipWithStudentAndClassroom)
                             }
                           >
-                            <Edit className="h-4 w-4" />
+                            <SquarePen className="h-4 w-4" />
                           </TooltipButton>
                           {/* 明日も在籍している所属だけ終了できる（今日で終了させる）。終了日は当日を
                               含むので、今日終了した所属は今日いっぱい在籍中のまま — 今日の在籍だけで

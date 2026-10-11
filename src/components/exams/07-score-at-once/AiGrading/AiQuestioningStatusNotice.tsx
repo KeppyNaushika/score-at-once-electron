@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { Loader2, RotateCcw } from "lucide-react"
+import { LoaderCircle, RotateCcw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { startAiGroupingRunMutation } from "@/queries/aiGrading"
@@ -30,14 +30,14 @@ export function AiQuestioningStatusNotice({
     case "grading":
       return (
         <p className="flex items-center gap-1 rounded bg-sky-50 px-2 py-1.5 text-[11px] text-sky-800">
-          <Loader2 className="h-3 w-3 animate-spin" />
+          <LoaderCircle className="h-3 w-3 animate-spin" />
           答案ごとの判定を実行しています。終わると、続けて項目の案を作ります
         </p>
       )
     case "grouping":
       return (
         <p className="flex items-center gap-1 rounded bg-sky-50 px-2 py-1.5 text-[11px] text-sky-800">
-          <Loader2 className="h-3 w-3 animate-spin" />
+          <LoaderCircle className="h-3 w-3 animate-spin" />
           判定から項目の案を作っています
         </p>
       )
@@ -59,7 +59,7 @@ export function AiQuestioningStatusNotice({
             onClick={() => grouping.mutate(status.gradeRunId)}
           >
             {grouping.isPending ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
+              <LoaderCircle className="h-3 w-3 animate-spin" />
             ) : (
               <RotateCcw className="h-3 w-3" />
             )}

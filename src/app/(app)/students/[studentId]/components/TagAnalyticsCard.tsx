@@ -1,6 +1,6 @@
 "use client"
 
-import { BarChart3, ChevronDown, Plus, X } from "lucide-react"
+import { ChartColumn, ChevronDown, Plus, X } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import {
   Bar,
@@ -290,7 +290,7 @@ export function TagAnalyticsCard({ results }: TagAnalyticsCardProps) {
       <CardHeader className="space-y-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
+            <ChartColumn className="h-5 w-5" />
             平均得点率の比較
           </CardTitle>
           <Button

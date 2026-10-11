@@ -1,6 +1,6 @@
 "use client"
 
-import { History } from "lucide-react"
+import { RotateCcwClock } from "lucide-react"
 import { useMemo } from "react"
 
 import {
@@ -77,7 +77,7 @@ export function AiRunHistorySection({
     )
 
   return (
-    <SidePanelSection icon={History} title="実行の履歴">
+    <SidePanelSection icon={RotateCcwClock} title="実行の履歴">
       <p className="mb-1 text-[10px] text-muted-foreground">
         押すと、その実行の判定を一覧に出します（判定の無い答案は最新のまま。&lt;
         &gt;

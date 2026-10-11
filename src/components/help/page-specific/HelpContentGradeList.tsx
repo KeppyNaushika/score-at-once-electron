@@ -1,7 +1,7 @@
 "use client"
 
 import {
-  BarChart3,
+  ChartColumn,
   FolderInput,
   Lightbulb,
   MousePointerClick,
@@ -26,7 +26,7 @@ export function HelpContentGradeList() {
     <div className="space-y-6">
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
-          <BarChart3 className="h-6 w-6 text-blue-600" />
+          <ChartColumn className="h-6 w-6 text-blue-600" />
           成績算出
         </h2>
         <p className="text-muted-foreground">

@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle } from "lucide-react"
+import { TriangleAlert } from "lucide-react"
 
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -25,7 +25,7 @@ export function OverwriteToggle({
         htmlFor="overwrite-toggle"
         className="flex items-center gap-1 text-sm"
       >
-        <AlertTriangle
+        <TriangleAlert
           className={`h-3 w-3 transition-opacity ${
             allowOverwrite
               ? "text-orange-500 opacity-100"

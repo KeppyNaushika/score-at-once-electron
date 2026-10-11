@@ -2,7 +2,7 @@
  * Components for 06-student-answers page - quick inline version
  */
 
-import { Eye, Grid3X3 } from "lucide-react"
+import { Eye, Grid3x3 } from "lucide-react"
 
 import { StudentAnswerUpload } from "@/components/exams/06-student-answers/student-answer-management/components/StudentAnswerUpload"
 import { ConfirmChangesModal } from "@/components/exams/06-student-answers/student-answer-table/components/ConfirmChangesModal"
@@ -38,7 +38,7 @@ export function StudentAnswersTabsNavigation({
     >
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="new-grid" className="flex items-center gap-2">
-          <Grid3X3 className="h-4 w-4" />
+          <Grid3x3 className="h-4 w-4" />
           新規追加
         </TabsTrigger>
         <TabsTrigger value="current" className="flex items-center gap-2">

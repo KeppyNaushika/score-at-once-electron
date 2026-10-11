@@ -1,6 +1,6 @@
 "use client"
 
-import { BarChart3, Eye, User } from "lucide-react"
+import { ChartColumn, Eye, User } from "lucide-react"
 import { useCallback } from "react"
 
 import { ScoringMethodSection } from "@/components/exams/07-score-at-once/Rubric/ScoringMethodSection"
@@ -246,7 +246,7 @@ export function ScoringSidePanel({
         <TabsContent value="scoring" className="flex-1 overflow-y-auto px-3">
           {/* 進捗 */}
           <SidePanelSection
-            icon={BarChart3}
+            icon={ChartColumn}
             title="進捗"
             collapsible
             isOpen={isSectionOpen("progress")}

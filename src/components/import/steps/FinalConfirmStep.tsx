@@ -1,14 +1,14 @@
 "use client"
 
 import {
-  AlertTriangle,
   ArrowLeft,
   ClipboardCheck,
   ClipboardList,
-  Download,
-  GraduationCap,
-  Layers,
+  Import,
+  ListTree,
   Pencil,
+  School,
+  TriangleAlert,
   Users,
 } from "lucide-react"
 
@@ -377,7 +377,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
         {/* 学級 */}
         {classroomSummary && (
           <SummaryCard
-            icon={<GraduationCap className="h-5 w-5" />}
+            icon={<School className="h-5 w-5" />}
             title="学級"
             unit="クラス"
             summary={classroomSummary}
@@ -387,7 +387,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
         {/* 小計グループ */}
         {subtotalGroupSummary && (
           <SummaryCard
-            icon={<Layers className="h-5 w-5" />}
+            icon={<ListTree className="h-5 w-5" />}
             title="小計グループ"
             unit="グループ"
             summary={subtotalGroupSummary}
@@ -433,7 +433,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
       {/* 警告 */}
       <Card className="mb-8 w-full max-w-lg border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
         <CardContent className="flex items-start gap-3 p-4">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
           <p className="text-sm text-amber-700 dark:text-amber-300">
             注意: インポート後は元に戻せません
           </p>
@@ -447,7 +447,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
           戻って確認
         </Button>
         <Button onClick={onExecute} size="lg" className="gap-2 px-8">
-          <Download className="h-5 w-5" />
+          <Import className="h-5 w-5" />
           インポート実行
         </Button>
       </div>

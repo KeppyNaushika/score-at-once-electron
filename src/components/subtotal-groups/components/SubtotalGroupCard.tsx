@@ -1,6 +1,6 @@
 "use client"
 
-import { Calculator, Edit, Trash2 } from "lucide-react"
+import { ListTree, SquarePen, Trash } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,7 +23,7 @@ export function SubtotalGroupCard({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-blue-600" />
+            <ListTree className="h-5 w-5 text-blue-600" />
             <CardTitle className="text-lg">{group.name}</CardTitle>
           </div>
           <div className="flex gap-1">
@@ -33,7 +33,7 @@ export function SubtotalGroupCard({
               onClick={onEdit}
               className="h-8 w-8 p-0"
             >
-              <Edit className="h-4 w-4" />
+              <SquarePen className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
@@ -41,7 +41,7 @@ export function SubtotalGroupCard({
               onClick={onDelete}
               className="h-8 w-8 p-0 text-destructive hover:text-destructive"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash className="h-4 w-4" />
             </Button>
           </div>
         </div>

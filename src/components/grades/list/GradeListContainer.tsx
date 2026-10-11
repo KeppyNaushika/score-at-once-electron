@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { BarChart3, Plus } from "lucide-react"
+import { ChartColumn, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -289,7 +289,7 @@ export function GradeListContainer() {
         onToggleSelectAll={toggleSelectAll}
         allSelected={allSelected}
         empty={{
-          icon: BarChart3,
+          icon: ChartColumn,
           message: "成績算出がありません",
           action: (
             <Button variant="outline" onClick={() => void handleCreate()}>

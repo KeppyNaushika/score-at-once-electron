@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle2, GitMerge } from "lucide-react"
+import { CircleCheck, GitMerge } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -118,7 +118,7 @@ export function ArchiveConflictStep({
       {lastAnalysis?.kind === "ok" && conflicts.length === 0 ? (
         <Card className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20">
           <CardContent className="flex items-center justify-center gap-2 p-4 text-green-700 dark:text-green-300">
-            <CheckCircle2 className="h-5 w-5" />
+            <CircleCheck className="h-5 w-5" />
             衝突はありません
           </CardContent>
         </Card>

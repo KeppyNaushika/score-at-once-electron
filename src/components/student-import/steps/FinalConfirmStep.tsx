@@ -1,10 +1,10 @@
 "use client"
 
 import {
-  AlertTriangle,
-  CheckCircle2,
-  PlusCircle,
+  CircleCheck,
+  CirclePlus,
   SkipForward,
+  TriangleAlert,
 } from "lucide-react"
 import { useMemo } from "react"
 
@@ -97,13 +97,13 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
           <div className="space-y-2 text-sm">
             {summary.student.merge > 0 && (
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <CircleCheck className="h-4 w-4 text-green-500" />
                 <span>既存データと紐づけ: {summary.student.merge}名</span>
               </div>
             )}
             {summary.student.new > 0 && (
               <div className="flex items-center gap-2">
-                <PlusCircle className="h-4 w-4 text-blue-500" />
+                <CirclePlus className="h-4 w-4 text-blue-500" />
                 <span>新規登録: {summary.student.new}名</span>
               </div>
             )}
@@ -122,13 +122,13 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
           <div className="space-y-2 text-sm">
             {summary.classroom.merge > 0 && (
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <CircleCheck className="h-4 w-4 text-green-500" />
                 <span>既存データと紐づけ: {summary.classroom.merge}件</span>
               </div>
             )}
             {summary.classroom.new > 0 && (
               <div className="flex items-center gap-2">
-                <PlusCircle className="h-4 w-4 text-blue-500" />
+                <CirclePlus className="h-4 w-4 text-blue-500" />
                 <span>新規登録: {summary.classroom.new}件</span>
               </div>
             )}
@@ -145,7 +145,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
       {/* 警告 */}
       <div className="mx-auto max-w-lg rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20">
         <div className="flex items-start gap-2">
-          <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-500" />
+          <TriangleAlert className="mt-0.5 h-5 w-5 text-amber-500" />
           <p className="text-sm text-amber-700 dark:text-amber-300">
             この操作は元に戻せません。インポート前にバックアップを取ることをお勧めします。
           </p>

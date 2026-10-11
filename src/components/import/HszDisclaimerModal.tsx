@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, FileArchive } from "lucide-react"
+import { FileArchive, TriangleAlert } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -59,7 +59,7 @@ function HszDisclaimerBody({
     <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5 text-amber-500" />
+          <TriangleAlert className="h-5 w-5 text-amber-500" />
           他社フォーマットの変換
         </DialogTitle>
         <DialogDescription>

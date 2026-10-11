@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { Crown, Search, Trash2, UserPlus } from "lucide-react"
+import { Crown, Search, Trash, UserPlus } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { TooltipButton } from "@/components/common/TooltipButton"
@@ -416,7 +416,7 @@ export function MemberInviteDialog({
                                   onClick={() => handleRemove(member.user.id)}
                                   disabled={removingUserId === member.user.id}
                                 >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                  <Trash className="h-4 w-4 text-destructive" />
                                 </TooltipButton>
                               )}
                             </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { AlertTriangle } from "lucide-react"
+import { TriangleAlert } from "lucide-react"
 
 import {
   AlertDialog,
@@ -65,7 +65,7 @@ export const CropRegionDeleteConfirmModal = ({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center space-x-2">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <TriangleAlert className="h-5 w-5 text-orange-500" />
             <span>領域の削除確認</span>
           </AlertDialogTitle>
           <AlertDialogDescription>

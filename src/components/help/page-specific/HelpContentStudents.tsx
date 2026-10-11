@@ -1,13 +1,6 @@
 "use client"
 
-import {
-  CheckCircle,
-  Filter,
-  Lightbulb,
-  Trash2,
-  UploadCloud,
-  Users,
-} from "lucide-react"
+import { Funnel, LifeBuoy, Lightbulb, Trash, Upload, Users } from "lucide-react"
 
 import {
   Badge,
@@ -62,7 +55,7 @@ export function HelpContentStudents() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <HelpSection
-          icon={<UploadCloud className="h-5 w-5 text-purple-600" />}
+          icon={<Upload className="h-5 w-5 text-purple-600" />}
           title="追加・読み込みの方法"
         >
           <div className="space-y-3">
@@ -82,7 +75,7 @@ export function HelpContentStudents() {
         </HelpSection>
 
         <HelpSection
-          icon={<Filter className="h-5 w-5 text-blue-600" />}
+          icon={<Funnel className="h-5 w-5 text-blue-600" />}
           title="絞り込みと検索"
         >
           <div className="space-y-3">
@@ -108,7 +101,7 @@ export function HelpContentStudents() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <HelpSection
-          icon={<Lightbulb className="h-5 w-5 text-yellow-600" />}
+          icon={<LifeBuoy className="h-5 w-5 text-yellow-600" />}
           title="困ったときは"
         >
           <div className="space-y-3">
@@ -122,7 +115,7 @@ export function HelpContentStudents() {
               <strong>生徒を削除したい：</strong>
               <span className="inline-flex items-center gap-1">
                 各行の
-                <Trash2 className="inline h-3 w-3" />
+                <Trash className="inline h-3 w-3" />
                 アイコン
               </span>
               で削除できます。試験の採点データがある生徒は、削除すると関連データにも影響するため注意してください。
@@ -131,7 +124,7 @@ export function HelpContentStudents() {
         </HelpSection>
 
         <HelpSection
-          icon={<CheckCircle className="h-5 w-5 text-green-600" />}
+          icon={<Lightbulb className="h-5 w-5 text-green-600" />}
           title="操作のコツ"
         >
           <div className="space-y-3">

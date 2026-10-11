@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle, Circle, XCircle } from "lucide-react"
+import { Circle, CircleCheck, CircleX } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -158,9 +158,9 @@ export default function ExportProgressModal({
               <Spinner className="size-5 text-blue-600" />
             )}
             {status === "completed" && (
-              <CheckCircle className="h-5 w-5 text-green-600" />
+              <CircleCheck className="h-5 w-5 text-green-600" />
             )}
-            {status === "error" && <XCircle className="h-5 w-5 text-red-600" />}
+            {status === "error" && <CircleX className="h-5 w-5 text-red-600" />}
             PDF出力
           </DialogTitle>
         </DialogHeader>
@@ -195,7 +195,7 @@ export default function ExportProgressModal({
                               : "bg-gray-100 text-gray-400"
                         }`}
                       >
-                        {isCompleted && <CheckCircle className="h-3 w-3" />}
+                        {isCompleted && <CircleCheck className="h-3 w-3" />}
                         {isCurrent && <Spinner className="size-3" />}
                         {isPending && <Circle className="h-3 w-3" />}
                         <span>{phase.label}</span>
@@ -248,7 +248,7 @@ export default function ExportProgressModal({
                     embeddedPagesCount < totalPagesCount && (
                       <div className="rounded-lg border border-blue-200 bg-blue-50 p-2">
                         <div className="flex items-center gap-2 text-sm text-blue-700">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <CircleCheck className="h-4 w-4 text-green-600" />
                           <span>Canvas描画完了</span>
                           <span className="text-blue-500">→</span>
                           <Spinner />
@@ -356,7 +356,7 @@ export default function ExportProgressModal({
           {status === "completed" && (
             <div className="space-y-4">
               <div className="text-center">
-                <CheckCircle className="mx-auto mb-2 h-12 w-12 text-green-600" />
+                <CircleCheck className="mx-auto mb-2 h-12 w-12 text-green-600" />
                 <p className="font-medium">PDF出力が完了しました</p>
                 {outputPath && (
                   <p className="mt-1 text-sm break-all text-muted-foreground">
@@ -370,7 +370,7 @@ export default function ExportProgressModal({
           {status === "error" && (
             <div className="space-y-4">
               <div className="text-center">
-                <XCircle className="mx-auto mb-2 h-12 w-12 text-red-600" />
+                <CircleX className="mx-auto mb-2 h-12 w-12 text-red-600" />
                 <p className="font-medium">PDF出力に失敗しました</p>
               </div>
               <div className="rounded-lg bg-red-50 p-3">

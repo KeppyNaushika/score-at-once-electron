@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertCircle, CheckCircle2 } from "lucide-react"
+import { CircleAlert, CircleCheck } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -37,7 +37,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
     return (
       <div className="flex flex-col items-center justify-center gap-6 py-16">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-          <AlertCircle className="h-8 w-8 text-red-600" />
+          <CircleAlert className="h-8 w-8 text-red-600" />
         </div>
         <div className="text-center">
           <h3 className="text-lg font-semibold">インポートに失敗しました</h3>
@@ -74,7 +74,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
   return (
     <div className="flex flex-col items-center justify-center gap-6 py-12">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-        <CheckCircle2 className="h-8 w-8 text-green-600" />
+        <CircleCheck className="h-8 w-8 text-green-600" />
       </div>
 
       <div className="text-center">

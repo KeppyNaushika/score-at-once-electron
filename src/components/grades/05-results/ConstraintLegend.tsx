@@ -1,4 +1,4 @@
-import { AlertTriangle } from "lucide-react"
+import { TriangleAlert } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import type { GradeConstraintData } from "@/types/grade.types"
@@ -39,7 +39,7 @@ export function ConstraintLegend({
 
       {brokenConstraints.length > 0 && (
         <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
+          <TriangleAlert className="h-4 w-4" />
           <AlertTitle>
             評価できない制約ルールが{brokenConstraints.length}件あります
           </AlertTitle>

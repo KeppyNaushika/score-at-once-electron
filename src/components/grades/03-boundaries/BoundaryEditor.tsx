@@ -3,7 +3,7 @@
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useMutation } from "@tanstack/react-query"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash } from "lucide-react"
 import { useMemo } from "react"
 
 import {
@@ -260,7 +260,7 @@ function BoundaryRow({
         className="h-8 w-8 text-destructive"
         onClick={() => onRemove(boundary)}
       >
-        <Trash2 className="h-3 w-3" />
+        <Trash className="h-3 w-3" />
       </TooltipButton>
     </div>
   )

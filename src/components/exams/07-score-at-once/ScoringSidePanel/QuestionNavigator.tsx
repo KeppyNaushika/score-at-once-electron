@@ -1,10 +1,10 @@
 "use client"
 
 import {
-  AlertCircle,
-  CheckCircle,
   ChevronLeft,
   ChevronRight,
+  CircleAlert,
+  CircleCheckBig,
   FileText,
 } from "lucide-react"
 
@@ -180,9 +180,9 @@ export default function QuestionNavigator({
                     {progress && (
                       <div className="ml-auto flex items-center gap-1">
                         {progress.percentage === 100 ? (
-                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          <CircleCheckBig className="h-3 w-3 text-green-500" />
                         ) : progress.percentage > 0 ? (
-                          <AlertCircle className="h-3 w-3 text-yellow-500" />
+                          <CircleAlert className="h-3 w-3 text-yellow-500" />
                         ) : null}
                         <span className="text-xs text-gray-500">
                           {progress.gradedAnswers}/{progress.totalAnswers}
@@ -241,7 +241,7 @@ export default function QuestionNavigator({
                           className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-green-500"
                           aria-label="採点済み"
                         >
-                          <CheckCircle className="h-2 w-2 text-white" />
+                          <CircleCheckBig className="h-2 w-2 text-white" />
                         </div>
                       )}
                       {badgeKind === "unreflectedAi" && (

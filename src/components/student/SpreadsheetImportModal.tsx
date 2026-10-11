@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertCircle, Upload } from "lucide-react"
+import { CircleAlert, ClipboardPaste, TriangleAlert } from "lucide-react"
 
 import StudentImportTable from "@/components/student/StudentImportTable"
 import { Button } from "@/components/ui/button"
@@ -25,7 +25,7 @@ function ValidationMessages({
       {validation.errors.length > 0 && (
         <div className="rounded-md bg-red-50 p-3">
           <div className="flex">
-            <AlertCircle className="h-5 w-5 text-red-400" />
+            <CircleAlert className="h-5 w-5 text-red-400" />
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">エラー</h3>
               <div className="mt-2 text-sm text-red-700">
@@ -43,7 +43,7 @@ function ValidationMessages({
       {validation.warnings.length > 0 && (
         <div className="rounded-md bg-yellow-50 p-3">
           <div className="flex">
-            <AlertCircle className="h-5 w-5 text-yellow-400" />
+            <TriangleAlert className="h-5 w-5 text-yellow-400" />
             <div className="ml-3">
               <h3 className="text-sm font-medium text-yellow-800">警告</h3>
               <div className="mt-2 text-sm text-yellow-700">
@@ -108,7 +108,7 @@ export default function SpreadsheetImportModal({
       <DialogContent className="flex max-h-[90vh] min-w-[95%] flex-col overflow-hidden">
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
+            <ClipboardPaste className="h-5 w-5" />
             生徒データのインポート
           </DialogTitle>
           <DialogDescription>

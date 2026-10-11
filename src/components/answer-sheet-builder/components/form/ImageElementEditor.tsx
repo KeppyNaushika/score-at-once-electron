@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { ImagePlus, Trash2 } from "lucide-react"
+import { ImagePlus, Trash } from "lucide-react"
 import Image from "next/image"
 import { useCallback } from "react"
 
@@ -152,7 +152,7 @@ export function ImageElementEditor({
               className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
               onClick={() => handleRemove(imageElement)}
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash className="h-3 w-3" />
             </TooltipButton>
           </div>
 
