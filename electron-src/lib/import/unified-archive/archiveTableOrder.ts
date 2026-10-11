@@ -13,7 +13,7 @@
 
 import { ARCHIVE_TABLES } from "../../export/unified-archive/archiveTableRegistry"
 
-export interface ArchiveTableOrder {
+interface ArchiveTableOrder {
   /** 親が先の順に並べた表名 */
   readonly tables: readonly string[]
   /** 自己参照か循環があり、外部キーの検査を遅らせなければ書けない */

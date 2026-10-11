@@ -98,7 +98,7 @@ const COMPARISON_OPERATORS: Record<string, BinaryOperator> = {
 
 const STRING_QUOTES: Record<string, string> = { '"': '"', "「": "」" }
 
-export class ExpressionError extends Error {}
+class ExpressionError extends Error {}
 
 function describePosition(position: number): string {
   return `${position + 1}文字目`

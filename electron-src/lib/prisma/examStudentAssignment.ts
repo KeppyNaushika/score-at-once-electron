@@ -17,6 +17,7 @@ import {
 } from "./auditScope"
 import prisma from "./client"
 import { canManageAssignments } from "./cropRegionAssignment"
+import { PUBLIC_USER_OMIT } from "./publicUser"
 
 /**
  * 試験の受験生徒の担当割当を取得する。
@@ -32,7 +33,7 @@ export const getExamStudentAssignmentsForExam = async (examId: string) =>
       user: { userExams: { some: { examId } } },
     },
     // 担当者はパスコードだけを落として渡す（機密除去。縮小射影ではない）
-    include: { user: { omit: { passcode: true } } },
+    include: { user: { omit: PUBLIC_USER_OMIT } },
   })
 
 interface SetExamStudentAssignmentsInput {

@@ -14,15 +14,8 @@ import type {
 } from "../../../src/types/drawingAnnotation.types"
 import { narrowDrawableAnnotations } from "../../../src/types/drawingAnnotation.types"
 import prisma from "./client"
+import { PUBLIC_USER_OMIT } from "./publicUser"
 import { serializePrisma } from "./serializePrisma"
-
-/**
- * アノテーションの作成者。パスコードだけを落とす。
- *
- * これは機密除去であって、表示のために列を削る縮小射影ではない
- * （規約: Prisma include の出力は射影せずそのまま持つ）。
- */
-const authorOmit = { passcode: true } satisfies Prisma.UserOmit
 
 /**
  * 一覧取得の共通後処理。描けない種別の行を落としてから union を絞る。
@@ -58,7 +51,7 @@ function toDrawableAnnotations<
 export const annotationWithContextInclude = {
   questionScore: {
     include: {
-      user: { omit: authorOmit },
+      user: { omit: PUBLIC_USER_OMIT },
       cropRegion: true,
       examStudent: { include: { student: true } },
     },

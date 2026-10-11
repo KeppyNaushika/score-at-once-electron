@@ -1,16 +1,37 @@
 /**
  * CropRegionOmrConfig CRUD 統合テスト
  *
- * テスト用SQLite DBに対して直接 Prisma 操作を行い、
- * CropRegionOmrConfig / CropRegionOmrChoiceOption の
+ * 本番の `upsertOmrConfig` / `deleteOmrConfig` / `getOmrConfigsByExamId`
+ * （`electron-src/lib/prisma/cropRegionOmrConfig.ts`）をテスト用 DB へ向けて通し、
  * 作成・更新・削除・取得の正確性を検証する。
  *
- * electron-src/lib/prisma/client.ts は Electron依存のため、
- * テスト用PrismaClientを直接使用する。
+ * かつてはここに upsert の写しを置いて写しを検査していたが、写しには
+ * しきい値とバブル位置の列が無く、本番の書き込みを壊しても緑のままだった。
  */
 
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
+vi.mock("../../../electron-src/lib/prisma/client", async () => {
+  const { getTestPrismaClient } = await import("../../helpers/testPrismaClient")
+  return {
+    default: getTestPrismaClient(),
+    getPrismaClient: () => getTestPrismaClient(),
+  }
+})
+
+import {
+  deleteOmrConfig,
+  getOmrConfigsByExamId,
+  upsertOmrConfig,
+} from "../../../electron-src/lib/prisma/cropRegionOmrConfig"
 import {
   cleanupTestDatabase,
   createTestUser,
@@ -44,21 +65,7 @@ beforeAll(async () => {
   })
   examPageId = page.id
 
-  const cropRegion1 = await prisma.cropRegion.create({
-    data: {
-      examPageId: page.id,
-      label: "問1",
-      type: "QUESTION_ANSWER",
-      x: 0.1,
-      y: 0.1,
-      width: 0.3,
-      height: 0.05,
-      points: 5,
-      orderIndex: 0,
-    },
-  })
-  cropRegionId1 = cropRegion1.id
-
+  // 取得順を確かめるため、作成順と orderIndex の順を逆にする
   const cropRegion2 = await prisma.cropRegion.create({
     data: {
       examPageId: page.id,
@@ -73,6 +80,21 @@ beforeAll(async () => {
     },
   })
   cropRegionId2 = cropRegion2.id
+
+  const cropRegion1 = await prisma.cropRegion.create({
+    data: {
+      examPageId: page.id,
+      label: "問1",
+      type: "QUESTION_ANSWER",
+      x: 0.1,
+      y: 0.1,
+      width: 0.3,
+      height: 0.05,
+      points: 5,
+      orderIndex: 0,
+    },
+  })
+  cropRegionId1 = cropRegion1.id
 })
 
 afterEach(async () => {
@@ -85,99 +107,76 @@ afterAll(async () => {
   await disconnectTestPrisma()
 })
 
-// ヘルパー: upsertをPrisma直接操作で実装
-async function upsertOmrConfig(data: {
-  cropRegionId: string
-  type: string
-  numChoices?: number | null
-  choiceLayout?: string | null
-  choiceOptions?: Array<{
-    choiceIndex: number
-    label: string
-    isCorrect: boolean
-  }>
-}) {
-  return prisma.$transaction(async (tx) => {
-    const existing = await tx.cropRegionOmrConfig.findUnique({
-      where: { cropRegionId: data.cropRegionId },
-    })
+/** ○×の2択（○が正解）の選択肢 */
+const MARU_BATSU = [
+  { choiceIndex: 0, label: "○", isCorrect: true },
+  { choiceIndex: 1, label: "×", isCorrect: false },
+]
 
-    let configId: string
-
-    if (existing) {
-      await tx.cropRegionOmrConfig.update({
-        where: { id: existing.id },
-        data: {
-          type: data.type,
-          numChoices: data.numChoices ?? null,
-          choiceLayout: data.choiceLayout ?? null,
-        },
-      })
-      await tx.cropRegionOmrChoiceOption.deleteMany({
-        where: { omrConfigId: existing.id },
-      })
-      configId = existing.id
-    } else {
-      const config = await tx.cropRegionOmrConfig.create({
-        data: {
-          cropRegionId: data.cropRegionId,
-          type: data.type,
-          numChoices: data.numChoices ?? null,
-          choiceLayout: data.choiceLayout ?? null,
-        },
-      })
-      configId = config.id
-    }
-
-    if (data.choiceOptions?.length) {
-      await tx.cropRegionOmrChoiceOption.createMany({
-        data: data.choiceOptions.map((choiceOption) => ({
-          omrConfigId: configId,
-          choiceIndex: choiceOption.choiceIndex,
-          label: choiceOption.label,
-          isCorrect: choiceOption.isCorrect,
-        })),
-      })
-    }
-
-    return tx.cropRegionOmrConfig.findUniqueOrThrow({
-      where: { id: configId },
-      include: { choiceOptions: { orderBy: { choiceIndex: "asc" } } },
-    })
-  })
-}
-
-describe("CropRegionOmrConfig upsert", () => {
-  it("choice タイプの新規作成", async () => {
+describe("upsertOmrConfig", () => {
+  it("choice タイプを、しきい値とバブル位置ごと新規作成する", async () => {
     const config = await upsertOmrConfig({
       cropRegionId: cropRegionId1,
       type: "choice",
       numChoices: 4,
       choiceLayout: "horizontal",
-      choiceOptions: [
-        { choiceIndex: 0, label: "ア", isCorrect: true },
-        { choiceIndex: 1, label: "イ", isCorrect: false },
-        { choiceIndex: 2, label: "ウ", isCorrect: false },
-        { choiceIndex: 3, label: "エ", isCorrect: false },
-      ],
+      colorThreshold: 140,
+      areaThreshold: 0.35,
+      choiceOptions: ["ア", "イ", "ウ", "エ"].map((label, choiceIndex) => ({
+        choiceIndex,
+        label,
+        isCorrect: choiceIndex === 0,
+        // 既定の "ellipse" と区別できる値にする（書き損じても既定値で通らないように）
+        shape: "rectangle",
+        normalizedCx: [0.2, 0.4, 0.6, 0.8][choiceIndex],
+        normalizedCy: 0.5,
+        normalizedWidth: 0.05,
+        normalizedHeight: 0.08,
+      })),
     })
 
-    expect(config.id).toBeDefined()
     expect(config.cropRegionId).toBe(cropRegionId1)
     expect(config.type).toBe("choice")
     expect(config.numChoices).toBe(4)
     expect(config.choiceLayout).toBe("horizontal")
-    expect(config.choiceOptions).toHaveLength(4)
-    expect(config.choiceOptions[0].label).toBe("ア")
-    expect(config.choiceOptions[0].isCorrect).toBe(true)
-    expect(config.choiceOptions[1].isCorrect).toBe(false)
+    expect(config.colorThreshold).toBe(140)
+    expect(config.areaThreshold).toBe(0.35)
+    expect(config.choiceOptions.map((option) => option.label)).toEqual([
+      "ア",
+      "イ",
+      "ウ",
+      "エ",
+    ])
+    expect(config.choiceOptions.map((option) => option.isCorrect)).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ])
+    expect(config.choiceOptions[2]).toMatchObject({
+      shape: "rectangle",
+      normalizedCx: 0.6,
+      normalizedCy: 0.5,
+      normalizedWidth: 0.05,
+      normalizedHeight: 0.08,
+    })
+
+    // 返り値だけでなく DB に書かれていること
+    const stored = await prisma.cropRegionOmrConfig.findUniqueOrThrow({
+      where: { cropRegionId: cropRegionId1 },
+      include: { choiceOptions: { orderBy: { choiceIndex: "asc" } } },
+    })
+    expect(stored.areaThreshold).toBe(0.35)
+    expect(stored.choiceOptions[3].normalizedCx).toBe(0.8)
   })
 
-  it("既存のchoice設定を更新（choiceOptionsが再作成される）", async () => {
+  it("既存の設定を更新すると、同じ行のまま列が書き換わり、選択肢は作り直される", async () => {
     const first = await upsertOmrConfig({
       cropRegionId: cropRegionId1,
       type: "choice",
       numChoices: 3,
+      colorThreshold: 128,
+      areaThreshold: 0.4,
       choiceOptions: [
         { choiceIndex: 0, label: "A", isCorrect: false },
         { choiceIndex: 1, label: "B", isCorrect: true },
@@ -190,6 +189,8 @@ describe("CropRegionOmrConfig upsert", () => {
       type: "choice",
       numChoices: 4,
       choiceLayout: "vertical",
+      colorThreshold: null,
+      areaThreshold: 0.5,
       choiceOptions: [
         { choiceIndex: 0, label: "A", isCorrect: true },
         { choiceIndex: 1, label: "B", isCorrect: true },
@@ -201,79 +202,106 @@ describe("CropRegionOmrConfig upsert", () => {
     expect(updated.id).toBe(first.id)
     expect(updated.numChoices).toBe(4)
     expect(updated.choiceLayout).toBe("vertical")
-    expect(updated.choiceOptions).toHaveLength(4)
-    expect(updated.choiceOptions[0].isCorrect).toBe(true)
-    expect(updated.choiceOptions[1].isCorrect).toBe(true)
+    expect(updated.colorThreshold).toBeNull()
+    expect(updated.areaThreshold).toBe(0.5)
+    expect(updated.choiceOptions.map((option) => option.isCorrect)).toEqual([
+      true,
+      true,
+      false,
+      false,
+    ])
+
+    // 古い選択肢が残って重複していない
+    const options = await prisma.cropRegionOmrChoiceOption.findMany({
+      where: { omrConfigId: first.id },
+    })
+    expect(options).toHaveLength(4)
   })
 })
 
-describe("CropRegionOmrConfig 削除", () => {
-  it("OMR設定を削除するとchoiceOptionsもカスケード削除される", async () => {
-    const config = await upsertOmrConfig({
+describe("deleteOmrConfig", () => {
+  it("OMR設定を消すと、選択肢もカスケードで消え、別の設問の設定は残る", async () => {
+    const deleted = await upsertOmrConfig({
       cropRegionId: cropRegionId1,
       type: "choice",
       numChoices: 2,
-      choiceOptions: [
-        { choiceIndex: 0, label: "○", isCorrect: true },
-        { choiceIndex: 1, label: "×", isCorrect: false },
-      ],
-    })
-
-    await prisma.cropRegionOmrConfig.deleteMany({
-      where: { cropRegionId: cropRegionId1 },
-    })
-
-    const deleted = await prisma.cropRegionOmrConfig.findUnique({
-      where: { cropRegionId: cropRegionId1 },
-    })
-    expect(deleted).toBeNull()
-
-    const orphanOptions = await prisma.cropRegionOmrChoiceOption.findMany({
-      where: { omrConfigId: config.id },
-    })
-    expect(orphanOptions).toHaveLength(0)
-  })
-})
-
-describe("試験IDによる取得", () => {
-  it("examIdで全OMR設定をchoiceOptions付きで取得", async () => {
-    await upsertOmrConfig({
-      cropRegionId: cropRegionId1,
-      type: "choice",
-      numChoices: 4,
-      choiceOptions: [
-        { choiceIndex: 0, label: "ア", isCorrect: true },
-        { choiceIndex: 1, label: "イ", isCorrect: false },
-        { choiceIndex: 2, label: "ウ", isCorrect: false },
-        { choiceIndex: 3, label: "エ", isCorrect: false },
-      ],
+      choiceOptions: MARU_BATSU,
     })
     await upsertOmrConfig({
       cropRegionId: cropRegionId2,
       type: "choice",
       numChoices: 2,
+      choiceOptions: MARU_BATSU,
+    })
+
+    await deleteOmrConfig(cropRegionId1)
+
+    expect(
+      await prisma.cropRegionOmrConfig.findUnique({
+        where: { cropRegionId: cropRegionId1 },
+      })
+    ).toBeNull()
+    expect(
+      await prisma.cropRegionOmrChoiceOption.findMany({
+        where: { omrConfigId: deleted.id },
+      })
+    ).toHaveLength(0)
+    expect(
+      await prisma.cropRegionOmrConfig.findUnique({
+        where: { cropRegionId: cropRegionId2 },
+      })
+    ).not.toBeNull()
+  })
+})
+
+describe("getOmrConfigsByExamId", () => {
+  it("試験の全OMR設定を、設問の並び順・選択肢付きで返す", async () => {
+    // 並び順が作成順に引きずられないよう、後ろの設問から作る
+    await upsertOmrConfig({
+      cropRegionId: cropRegionId2,
+      type: "choice",
+      numChoices: 2,
+      choiceOptions: MARU_BATSU,
+    })
+    await upsertOmrConfig({
+      cropRegionId: cropRegionId1,
+      type: "choice",
+      numChoices: 4,
       choiceOptions: [
-        { choiceIndex: 0, label: "○", isCorrect: true },
-        { choiceIndex: 1, label: "×", isCorrect: false },
+        { choiceIndex: 3, label: "エ", isCorrect: false },
+        { choiceIndex: 0, label: "ア", isCorrect: true },
+        { choiceIndex: 2, label: "ウ", isCorrect: false },
+        { choiceIndex: 1, label: "イ", isCorrect: false },
       ],
     })
 
-    const configs = await prisma.cropRegionOmrConfig.findMany({
-      where: { cropRegion: { examPage: { examId } } },
-      include: { choiceOptions: { orderBy: { choiceIndex: "asc" } } },
-      orderBy: { cropRegion: { orderIndex: "asc" } },
-    })
+    const configs = await getOmrConfigsByExamId(examId)
 
-    expect(configs).toHaveLength(2)
-    expect(configs[0].choiceOptions).toHaveLength(4)
+    expect(configs.map((config) => config.cropRegionId)).toEqual([
+      cropRegionId1,
+      cropRegionId2,
+    ])
+    expect(configs[0].choiceOptions.map((option) => option.label)).toEqual([
+      "ア",
+      "イ",
+      "ウ",
+      "エ",
+    ])
     expect(configs[1].choiceOptions).toHaveLength(2)
   })
 
-  it("OMR設定がない試験IDでは空配列", async () => {
-    const configs = await prisma.cropRegionOmrConfig.findMany({
-      where: { cropRegion: { examPage: { examId: "non-existent" } } },
+  it("別の試験の設定は返さない", async () => {
+    await upsertOmrConfig({
+      cropRegionId: cropRegionId1,
+      type: "choice",
+      numChoices: 2,
+      choiceOptions: MARU_BATSU,
     })
-    expect(configs).toHaveLength(0)
+    const otherExam = await prisma.exam.create({
+      data: { examName: "OMR設定の無い試験" },
+    })
+
+    expect(await getOmrConfigsByExamId(otherExam.id)).toEqual([])
   })
 })
 
@@ -293,21 +321,24 @@ describe("CropRegion削除時のカスケード", () => {
       },
     })
 
-    await upsertOmrConfig({
+    const config = await upsertOmrConfig({
       cropRegionId: tempRegion.id,
       type: "choice",
       numChoices: 2,
-      choiceOptions: [
-        { choiceIndex: 0, label: "○", isCorrect: true },
-        { choiceIndex: 1, label: "×", isCorrect: false },
-      ],
+      choiceOptions: MARU_BATSU,
     })
 
     await prisma.cropRegion.delete({ where: { id: tempRegion.id } })
 
-    const config = await prisma.cropRegionOmrConfig.findUnique({
-      where: { cropRegionId: tempRegion.id },
-    })
-    expect(config).toBeNull()
+    expect(
+      await prisma.cropRegionOmrConfig.findUnique({
+        where: { cropRegionId: tempRegion.id },
+      })
+    ).toBeNull()
+    expect(
+      await prisma.cropRegionOmrChoiceOption.findMany({
+        where: { omrConfigId: config.id },
+      })
+    ).toHaveLength(0)
   })
 })

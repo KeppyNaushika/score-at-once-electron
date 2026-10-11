@@ -37,7 +37,7 @@ const CONTENT_TYPES: Record<string, string> = {
 
 const DEFAULT_CONTENT_TYPE = "application/octet-stream"
 
-export interface RendererFile {
+interface RendererFile {
   filePath: string
   statusCode: 200 | 404
   contentType: string

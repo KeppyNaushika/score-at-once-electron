@@ -194,6 +194,14 @@ describe("Coursework CRUD", () => {
     ).toHaveLength(1)
 
     await deleteCourseworkItem(itemRes.id)
+    const afterItemDelete = await getCourseworkById(courseworkResult.id)
+    expect(afterItemDelete.items).toEqual([])
+    // 評価項目の変換表も一緒に消える
+    expect(
+      await testPrisma.courseworkLetterScale.count({
+        where: { courseworkItemId: itemRes.id },
+      })
+    ).toBe(0)
   })
 
   it("点数を一括 upsert・部分更新・取得できる", async () => {

@@ -164,13 +164,7 @@ describe("transformGradeToLatest: 1.9.0 → 1.10.0（総合の撤去）", () => 
     })
   })
 
-  it("manifest.version が現行へ更新される", () => {
-    const { data } = transformGradeToLatest(buildV1_9_0Archive())
-
-    expect(data.manifest.version).toBe(GRADE_CURRENT_VERSION)
-  })
-
-  it("総合の名残が無い現行アーカイブは変換されず warning も出ない", () => {
+  it("総合の名残が無い射影形式のアーカイブには 1.9.0→1.10.0 が当たらず、その warning も出ない", () => {
     const archive = buildV1_9_0Archive()
     // 現行形式＝targetType 無し・gradeItemName は必ず非null
     archive.boundariesData.boundarySets = [
@@ -919,7 +913,7 @@ describe("transformGradeToLatest: 1.13.0 → 1.14.0（境界セットを畳む�
     expect(warnings.some((warning) => warning.includes("2件"))).toBe(true)
   })
 
-  it("現行形式のアーカイブには当たらない（二重適用しない）", () => {
+  it("変換後の現行形式には、どの段も二度当たらない（冪等。1.13.0 から通すので後ろの段も全て含む）", () => {
     const current = transformGradeToLatest(buildV1_13_0Archive()).data
 
     const { appliedTransformations, originalVersion } =
@@ -992,16 +986,6 @@ describe("transformGradeToLatest: 1.16.0 → 1.17.0（比較）", () => {
     expect(data.gradeComparisons).toEqual([])
     expect(data.comparedGradeItemRefs).toEqual([])
     expect(data.manifest.version).toBe(GRADE_CURRENT_VERSION)
-  })
-
-  it("1.17.0 の形には当たらない（冪等）", () => {
-    const current = transformGradeToLatest(buildV1_16_0Archive()).data
-
-    const { appliedTransformations, originalVersion } =
-      transformGradeToLatest(current)
-
-    expect(appliedTransformations).toEqual([])
-    expect(originalVersion).toBe("1.17.0")
   })
 })
 
@@ -1162,17 +1146,5 @@ describe("transformGradeToLatest: 1.14.0 → 1.15.0（出力設定を列へ割�
 
     const [reportSettings] = data.gradeIndividualReportSettings
     expect(reportSettings).toMatchObject(LEGACY_REPORT_SETTINGS_DEFAULTS)
-  })
-
-  it("現行形式のアーカイブには当たらない（二重適用しない）", () => {
-    const current = transformGradeToLatest(
-      buildV1_14_0Archive(JSON.stringify({ reportOptions: {} }))
-    ).data
-
-    const { appliedTransformations, originalVersion } =
-      transformGradeToLatest(current)
-
-    expect(appliedTransformations).toEqual([])
-    expect(originalVersion).toBe(GRADE_CURRENT_VERSION)
   })
 })

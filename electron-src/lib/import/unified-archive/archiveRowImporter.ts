@@ -164,7 +164,7 @@ export interface ArchiveTargetConnection {
  * `handle` は実装が渡すトランザクションそのもの（Prisma なら interactive transaction の
  * クライアント）。試し取り込みが、ロールバックする前に include で読むのに使う
  */
-export type ArchiveTransactionRunner<Handle = unknown> = <Result>(
+type ArchiveTransactionRunner<Handle = unknown> = <Result>(
   work: (target: ArchiveTargetConnection, handle: Handle) => Promise<Result>
 ) => Promise<Result>
 
@@ -338,7 +338,7 @@ async function writeUnifiedArchiveRows(
 }
 
 /** 試し取り込みの結果 */
-export interface UnifiedArchiveAnalysis<Inspection> {
+interface UnifiedArchiveAnalysis<Inspection> {
   /** 本番と同じ計算の結果 */
   readonly result: UnifiedArchiveImportResult
   /** 成績算出が読む表へ書いた行の、書く前と書いた後（差分は取らない。docs §7.5） */

@@ -21,10 +21,7 @@ import type { ModelInfo } from "@anthropic-ai/sdk/resources/models"
 import { describe, expect, it, vi } from "vitest"
 
 import type { AnthropicGradingClient } from "../../electron-src/lib/aiGrading/providers/anthropicProvider"
-import {
-  createAnthropicProvider,
-  toAnthropicModelInfo,
-} from "../../electron-src/lib/aiGrading/providers/anthropicProvider"
+import { createAnthropicProvider } from "../../electron-src/lib/aiGrading/providers/anthropicProvider"
 import { GradingProviderError } from "../../electron-src/lib/aiGrading/providers/providerShared"
 import type {
   GradingRequest,
@@ -643,13 +640,6 @@ describe("Anthropic の取り込み後の片付け", () => {
           supportsAdaptiveThinking: null,
         },
       ])
-    })
-
-    it("SDK の能力の形をそのまま写す（toAnthropicModelInfo）", () => {
-      expect(
-        toAnthropicModelInfo(createModelInfo("claude-x"))
-          .supportsAdaptiveThinking
-      ).toBe(true)
     })
 
     it("一覧の取得の失敗は種類を付けて投げる", async () => {

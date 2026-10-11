@@ -32,7 +32,6 @@ import {
   type CreateRubricItemData,
   deleteRubricItem,
   listRubricItemsByCropRegion,
-  listRubricItemsByExam,
   setCropRegionScoringMethod,
   updateRubricItem,
   type UpdateRubricItemData,
@@ -56,10 +55,6 @@ export const rubricHandlers = {
   /** 設問の項目を並び順に全部（どの教員が作ったものも。作成者付き） */
   "rubric:listItems": async (cropRegionId: string) =>
     listRubricItemsByCropRegion(cropRegionId),
-
-  /** 試験の全設問の項目 */
-  "rubric:listItemsByExam": async (examId: string) =>
-    listRubricItemsByExam(examId),
 
   "rubric:createItem": async (data: CreateRubricItemData) =>
     createRubricItem(data, requireActorUserId()),

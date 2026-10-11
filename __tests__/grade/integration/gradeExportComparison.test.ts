@@ -89,7 +89,6 @@ describe("出力で使う比較の選択", () => {
   it("行が無い比較は既定で出す（何も書かれていない）", async () => {
     const { secondTerm } = await createComparedGrades()
 
-    expect(DEFAULT_EXPORT_COMPARISON_ENABLED).toBe(true)
     expect(await getExportComparisons(secondTerm.id)).toEqual([])
   })
 

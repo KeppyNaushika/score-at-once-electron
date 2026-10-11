@@ -17,7 +17,7 @@ import {
   type UnifiedArchiveScoringScope,
 } from "../../../../src/types/unifiedArchive.types"
 
-export type UnifiedArchiveManifestParseResult =
+type UnifiedArchiveManifestParseResult =
   | { readonly kind: "parsed"; readonly manifest: UnifiedArchiveManifest }
   | {
       readonly kind: "unsupportedFormat" | "invalidManifest"

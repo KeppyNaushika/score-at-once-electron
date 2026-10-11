@@ -409,7 +409,7 @@ export const searchUsersForInvitation = async (
         OR: [{ username: { contains: query } }, { name: { contains: query } }],
       },
       // パスコードだけを落とす（機密除去。縮小射影ではない）
-      omit: { passcode: true },
+      omit: PUBLIC_USER_OMIT,
       take: 10,
     })
   } catch (error) {

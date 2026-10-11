@@ -31,7 +31,7 @@ const PAGE_WIDTH = 400
 const PAGE_HEIGHT = 560
 
 /** 設問の矩形（用紙比） */
-export const TEST_REGION = { x: 0.1, y: 0.1, width: 0.5, height: 0.2 }
+const TEST_REGION = { x: 0.1, y: 0.1, width: 0.5, height: 0.2 }
 
 /** 解答欄の中に黒い四角（手書きの代わり）を置いた答案画像を作る */
 async function writeAnswerImage(absolutePath: string): Promise<void> {

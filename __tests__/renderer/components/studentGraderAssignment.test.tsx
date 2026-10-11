@@ -216,10 +216,12 @@ describe("生徒の絞り込み（useAssignedExamStudents）", () => {
         }),
       { wrapper: createQueryWrapper() }
     )
-    await waitFor(() => expect(result.current.hasStudentAssignments).toBe(true))
+    // 届く前は担当0人＝全員が出るので、他の人の担当が消えたことで届いたと分かる
+    await waitFor(() =>
+      expect(result.current.isVisibleExamStudent("exam-student-b")).toBe(false)
+    )
 
     expect(result.current.isVisibleExamStudent("exam-student-a")).toBe(true)
-    expect(result.current.isVisibleExamStudent("exam-student-b")).toBe(false)
     // 担当0人は全員担当（学級に属さない生徒・割り当て忘れが消えない）
     expect(result.current.isVisibleExamStudent("exam-student-c")).toBe(true)
   })
@@ -237,11 +239,13 @@ describe("生徒の絞り込み（useAssignedExamStudents）", () => {
         }),
       { wrapper: createQueryWrapper() }
     )
-    await waitFor(() => expect(result.current.hasStudentAssignments).toBe(true))
+    // 担当かどうかは「すべて表示」に関わらず答える（範囲の人数を数えるため）。
+    // 届く前は担当0人＝自分の担当扱いなので、false になったことで届いたと分かる
+    await waitFor(() =>
+      expect(result.current.isAssignedToMe("exam-student-b")).toBe(false)
+    )
 
     expect(result.current.isVisibleExamStudent("exam-student-b")).toBe(true)
-    // 担当かどうかは「すべて表示」に関わらず答える（範囲の人数を数えるため）
-    expect(result.current.isAssignedToMe("exam-student-b")).toBe(false)
   })
 })
 

@@ -161,21 +161,19 @@ describe("resolveEffectiveScores - 提案のみ", () => {
     expect(result2.resolved[0].annotationQuestionScoreIds).toEqual(["id-zzz"])
   })
 
-  // 旧値 final / proposed の流入口は無い（DB は起動時 migration が、アーカイブは
-  // トランスフォーマーが掃海し、同期は schemaVersion 不一致のリモートを丸ごと
-  // 捨てる）。それでも境界で倒れないことだけは固定しておく — 行を作る側の
-  // `toSerializedQuestionScore` が使う `toScoringStatus` が未採点へ倒すので、
-  // 例外にはならず欠測として扱われる。
-  it("旧データの final 行が来ても落ちず、未採点として扱われる", () => {
-    const legacyRow = score({
-      status: toScoringStatus("final"),
+  // 行を作る側（`toSerializedQuestionScore`）は、DB の判定の文字列を `toScoringStatus` で
+  // 7値へ絞る。判定を `string` で受けていた頃は、得点化が想定外の値を黙って0点にしており、
+  // 欠測であるべきものが成績に0点として算入されていた。想定外の値は未採点に倒し、
+  // 欠測（null）として扱うことを固定する
+  it("想定外の判定の文字列は未採点に倒し、0点ではなく欠測として扱う", () => {
+    const unknownStatusRow = score({
+      status: toScoringStatus("not-a-scoring-status"),
       partialScore: 5,
     })
-    const { resolved, conflicts } = resolveEffectiveScores([legacyRow])
+    const { resolved, conflicts } = resolveEffectiveScores([unknownStatusRow])
     expect(resolved).toHaveLength(1)
     expect(resolved[0].status).toBe("unscored")
     expect(conflicts).toEqual([])
-    // 未採点なので0点ではなく欠測（null）として算入される
     expect(calculateEffectiveScoreValue(resolved[0], 10)).toBeNull()
   })
 })
@@ -304,19 +302,5 @@ describe("calculateEffectiveScoreValue", () => {
     expect(
       calculateEffectiveScoreValue({ status: "pending", partialScore: 6 }, 10)
     ).toBe(6)
-  })
-})
-
-describe("判定の集合を型で守る", () => {
-  // `status: string` で受けていた頃は、得点化の switch が `default: return 0` で
-  // 黙って通り、**未知の判定が「未採点（欠測）」ではなく0点として成績に算入されて
-  // いた**。いまは網羅していない値がコンパイルエラーになる。
-  it("未採点は0ではなく欠測（null）", () => {
-    expect(
-      calculateEffectiveScoreValue(
-        { status: "unscored", partialScore: null },
-        10
-      )
-    ).toBeNull()
   })
 })

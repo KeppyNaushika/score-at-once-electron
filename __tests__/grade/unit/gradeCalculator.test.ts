@@ -8,8 +8,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 // === モック定義 ===
 //
-// subtotalCalculator はDBに触れない純粋関数になったのでモックしない。
-// 小計の算出は本物を通し、割り当ての取得（prisma.cropSubtotal）だけをモックする。
+// subtotalCalculator はDBに触れない純粋関数なのでモックしない。
+// 小計の設問割り当ても満点の元データも Grade の取得に同梱されるので、
+// モックするのは成績算出が立てる問い合わせ（gradeCalculationReads の4つ）だけ。
 
 // actualScore
 const mockCalculateActualScore = vi.fn()
@@ -23,9 +24,6 @@ const mockFindUnique = vi.fn()
 const mockFindMany = vi.fn()
 const mockExamPageFindMany = vi.fn()
 const mockExamStudentFindMany = vi.fn()
-// 小計の設問割り当ても満点の元データも Grade の取得に同梱されるので、
-// このモックは「別クエリが立っていないこと」を見張るためだけに置く。
-const mockCropSubtotalFindMany = vi.fn().mockResolvedValue([])
 vi.mock("@/electron-src/lib/prisma/client", () => ({
   default: {
     grade: {
@@ -34,15 +32,11 @@ vi.mock("@/electron-src/lib/prisma/client", () => ({
     gradeStudent: {
       findMany: (...args: unknown[]) => mockFindMany(...args),
     },
-    questionScore: { findMany: vi.fn().mockResolvedValue([]) },
     examPage: {
       findMany: (...args: unknown[]) => mockExamPageFindMany(...args),
     },
     examStudent: {
       findMany: (...args: unknown[]) => mockExamStudentFindMany(...args),
-    },
-    cropSubtotal: {
-      findMany: (...args: unknown[]) => mockCropSubtotalFindMany(...args),
     },
   },
 }))
@@ -58,6 +52,52 @@ import { RawScoreMatrix } from "@/electron-src/lib/shared/calculations/rawScoreM
 
 // === ヘルパー ===
 
+/**
+ * テストケースが書くデータソース1本。
+ *
+ * coursework 型は、参照先の評価項目（満点・入力方式・変換表・点数）をデータソースの
+ * 欄に平たく書く。`buildGrade` がそれを `courseworkItem` の include の形へ組み直す。
+ * 参照先の欄（examId / exam など）は省けば null になる。
+ */
+interface DataSourceCase {
+  id: string
+  type: string
+  name: string
+  maxScore: unknown
+  weight: unknown
+  order: number
+  examId?: string | null
+  subtotalId?: string | null
+  cropRegionId?: string | null
+  exam?: unknown
+  subtotal?: unknown
+  cropRegion?: unknown
+  /** coursework 型の点数。生徒 id で書く（対象者は `buildGrade` が挟む） */
+  scores?: {
+    studentId: string
+    score?: unknown
+    letterValue?: string | null
+    adjustment?: unknown
+    adjustmentReason?: string | null
+    comment?: string | null
+  }[]
+  /** coursework 型の入力方式（省けば numeric） */
+  inputMode?: string
+  /** coursework 型の変換表。id を省けば並び順から作る */
+  letterScales?: {
+    id?: string
+    label: string
+    score: number
+    order: number
+  }[]
+  absentMethod?: string
+  absentRatio?: number
+  absentOffset?: number
+  treatExpectedAsMissing?: boolean
+  estimationMode?: string
+  estimationSourceIds?: string[]
+}
+
 function buildGrade(
   overrides: {
     id?: string
@@ -66,114 +106,71 @@ function buildGrade(
       id: string
       name: string
       order: number
-      dataSources: {
-        id: string
-        type: string
-        name: string
-        maxScore: unknown
-        weight: unknown
-        examId?: string | null
-        subtotalId?: string | null
-        cropRegionId?: string | null
-        exam?: unknown
-        subtotal?: unknown
-        cropRegion?: unknown
-        manualScores?: {
-          studentId: string
-          score?: unknown
-          letterValue?: string | null
-          adjustment?: unknown
-          adjustmentReason?: string | null
-          comment?: string | null
-        }[]
-        order: number
-        absentMethod?: string
-        absentRatio?: number
-        absentOffset?: number
-        treatExpectedAsMissing?: boolean
-        estimationMode?: string
-        estimationSourceIds?: string[]
-        inputMode?: string
-        letterScales?: {
-          id?: string
-          label: string
-          score: number
-          order: number
-        }[]
-      }[]
+      dataSources: DataSourceCase[]
       boundaries?: {
         label: string
         minPercentage: unknown
         order: number
       }[]
     }[]
-    gradeClassrooms?: {
-      classroomId: string
-      class: { id: string; name: string }
-    }[]
   } = {}
 ) {
-  // 旧 manual 形式（manualScores/inputMode/letterScales をトップレベルに持つ）を、
-  // 新スキーマの coursework 形式（courseworkItem に内包）へ変換する。
-  // これによりテストケース本体は旧シグネチャのまま、calculator の新ロジックを検証できる。
   const gradeItems = (overrides.gradeItems ?? []).map((gradeItem) => ({
     ...gradeItem,
     boundaries: gradeItem.boundaries ?? [],
-    dataSources: gradeItem.dataSources.map((rawDataSource) => {
-      // 推定に使う他データソースは中間テーブル（gradeDataSourceInclude 同梱）。
-      // テストケースは id 配列で書けるようにし、ここで行の形へ寄せる。
-      const dataSource = {
-        ...rawDataSource,
-        estimationSources: (rawDataSource.estimationSourceIds ?? []).map(
-          (sourceDataSourceId, index) => ({
-            id: `${rawDataSource.id}:${sourceDataSourceId}`,
-            dataSourceId: rawDataSource.id,
-            sourceDataSourceId,
-            order: index,
-          })
-        ),
-      }
-      const isCoursework =
-        dataSource.type === "manual" ||
-        dataSource.type === "coursework" ||
-        dataSource.manualScores !== undefined ||
-        dataSource.inputMode !== undefined ||
-        dataSource.letterScales !== undefined
-      if (!isCoursework) {
-        return { ...dataSource, courseworkItem: null }
-      }
-      const courseworkItemId = `${dataSource.id}-item`
-      return {
-        ...dataSource,
-        type: "coursework",
-        courseworkItemId,
-        courseworkItem: {
-          maxScore: dataSource.maxScore,
-          inputMode: dataSource.inputMode ?? "numeric",
-          // 点数は資料の対象者（CourseworkStudent）にぶら下がる。テストケースは
-          // 生徒idで書けるようにし、ここで対象者を1段かませた形へ寄せる。
-          scores: (dataSource.manualScores ?? []).map((manualScore) => ({
-            ...manualScore,
-            courseworkStudent: { studentId: manualScore.studentId },
-          })),
-          // 変換表の行は id を持つ（同じ評語が2つあるときの決着に使う）。
-          // ケース側で id を書かなければ並び順から作る
-          letterScales: (dataSource.letterScales ?? []).map(
-            (letterScale, index) => ({
-              ...letterScale,
-              id: letterScale.id ?? `${dataSource.id}-scale-${index}`,
+    dataSources: gradeItem.dataSources.map(
+      ({ scores, inputMode, letterScales, ...dataSourceCase }) => {
+        const dataSource = {
+          examId: null,
+          subtotalId: null,
+          cropRegionId: null,
+          exam: null,
+          subtotal: null,
+          cropRegion: null,
+          ...dataSourceCase,
+          // 推定に使う他データソースは中間テーブル（gradeDataSourceInclude 同梱）。
+          // テストケースは id 配列で書けるようにし、ここで行の形へ寄せる。
+          estimationSources: (dataSourceCase.estimationSourceIds ?? []).map(
+            (sourceDataSourceId, index) => ({
+              id: `${dataSourceCase.id}:${sourceDataSourceId}`,
+              dataSourceId: dataSourceCase.id,
+              sourceDataSourceId,
+              order: index,
             })
           ),
-        },
+        }
+        if (dataSource.type !== "coursework") {
+          return { ...dataSource, courseworkItem: null }
+        }
+        return {
+          ...dataSource,
+          courseworkItemId: `${dataSource.id}-item`,
+          courseworkItem: {
+            maxScore: dataSource.maxScore,
+            inputMode: inputMode ?? "numeric",
+            // 点数は資料の対象者（CourseworkStudent）にぶら下がる。テストケースは
+            // 生徒idで書けるようにし、ここで対象者を1段かませた形へ寄せる。
+            scores: (scores ?? []).map((score) => ({
+              ...score,
+              courseworkStudent: { studentId: score.studentId },
+            })),
+            // 変換表の行は id を持つ（同じ評語が2つあるときの決着に使う）。
+            // ケース側で id を書かなければ並び順から作る
+            letterScales: (letterScales ?? []).map((letterScale, index) => ({
+              ...letterScale,
+              id: letterScale.id ?? `${dataSource.id}-scale-${index}`,
+            })),
+          },
+        }
       }
-    }),
+    ),
   }))
 
   return {
     id: overrides.id ?? "gp1",
     name: overrides.name ?? "テストPJ",
     gradeItems,
-    gradeClassrooms: overrides.gradeClassrooms ?? [],
+    gradeClassrooms: [],
   }
 }
 
@@ -240,7 +237,6 @@ describe("calculateGrades", () => {
     // 試験データを使わないケースの既定値（小計テストだけが上書きする）
     mockExamPageFindMany.mockResolvedValue([])
     mockExamStudentFindMany.mockResolvedValue([])
-    mockCropSubtotalFindMany.mockResolvedValue([])
   })
 
   it("試験が見つからない場合はエラー", async () => {
@@ -271,7 +267,7 @@ describe("calculateGrades", () => {
     expect(result.gradeItems[0].name).toBe("知識")
   })
 
-  it("manualタイプのDataSourceでスコアを正しく算出する", async () => {
+  it("coursework 型のDataSourceでスコアを正しく算出する", async () => {
     const grade = buildGrade({
       gradeItems: [
         {
@@ -281,17 +277,11 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "レポート",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [{ studentId: "s1", score: 85 }],
+              scores: [{ studentId: "s1", score: 85 }],
               order: 0,
             },
           ],
@@ -309,7 +299,7 @@ describe("calculateGrades", () => {
     const result = await calculateGrades("gp1")
     const student = result.students[0]
 
-    // manualスコア: 85/100 → 85%
+    // 素点 85/100 → 85%
     expect(student.gradeItemResults).toHaveLength(1)
     const gradeItemResult = student.gradeItemResults[0]
     expect(gradeItemResult.gradeItemId).toBe("gi1")
@@ -330,17 +320,11 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "テスト",
               maxScore: 100,
               weight: 50,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [{ studentId: "s1", score: 80 }],
+              scores: [{ studentId: "s1", score: 80 }],
               order: 0,
             },
           ],
@@ -352,17 +336,11 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds2",
-              type: "manual",
+              type: "coursework",
               name: "レポート",
               maxScore: 50,
               weight: 50,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [{ studentId: "s1", score: 40 }],
+              scores: [{ studentId: "s1", score: 40 }],
               order: 0,
             },
           ],
@@ -384,7 +362,7 @@ describe("calculateGrades", () => {
     expect(student.gradeItemResults[1].percentage).toBeCloseTo(80)
   })
 
-  it("manualScoreがnullの場合は換算合計0点として成績算出する", async () => {
+  it("点数が無い場合は換算合計0点として成績算出する", async () => {
     const grade = buildGrade({
       gradeItems: [
         {
@@ -394,17 +372,11 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "外部",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [], // スコアなし
+              scores: [], // スコアなし
               order: 0,
             },
           ],
@@ -434,17 +406,11 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "テスト",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [{ studentId: "s1", score: 65 }],
+              scores: [{ studentId: "s1", score: 65 }],
               order: 0,
             },
           ],
@@ -477,32 +443,20 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "テスト1",
               maxScore: 100,
               weight: 60,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [{ studentId: "s1", score: 90 }],
+              scores: [{ studentId: "s1", score: 90 }],
               order: 0,
             },
             {
               id: "ds2",
-              type: "manual",
+              type: "coursework",
               name: "テスト2",
               maxScore: 50,
               weight: 40,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [{ studentId: "s1", score: 30 }],
+              scores: [{ studentId: "s1", score: 30 }],
               order: 1,
             },
           ],
@@ -539,17 +493,11 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "テスト",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [],
+              scores: [],
               order: 0,
               absentMethod: "null",
               absentRatio: 1,
@@ -578,17 +526,11 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "テスト",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [],
+              scores: [],
               order: 0,
               absentMethod: "zero",
               absentRatio: 1,
@@ -621,17 +563,11 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "テスト",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [{ studentId: "s1", score: 85 }],
+              scores: [{ studentId: "s1", score: 85 }],
               order: 0,
             },
           ],
@@ -643,17 +579,11 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds2",
-              type: "manual",
+              type: "coursework",
               name: "レポート",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [{ studentId: "s1", score: 70 }],
+              scores: [{ studentId: "s1", score: 70 }],
               order: 0,
             },
           ],
@@ -681,7 +611,6 @@ describe("calculateGrades", () => {
 
     // 除外されていない gi1 は通常どおり算出される（100点満点で85%）
     expect(student.gradeItemResults[0].weightedMaxScore).toBe(100)
-    expect(student.gradeItemResults[0].weightedScore).toBeCloseTo(85)
     expect(student.gradeItemResults[0].percentage).toBeCloseTo(85)
   })
 
@@ -695,17 +624,11 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "テスト",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [{ studentId: "s1", score: 85 }],
+              scores: [{ studentId: "s1", score: 85 }],
               order: 0,
             },
           ],
@@ -727,44 +650,6 @@ describe("calculateGrades", () => {
     expect(student.gradeItemResults[0].percentage).toBeNull()
   })
 
-  it("除外なしの既存動作維持（isExcluded: false）", async () => {
-    const grade = buildGrade({
-      gradeItems: [
-        {
-          id: "gi1",
-          name: "知識",
-          order: 0,
-          dataSources: [
-            {
-              id: "ds1",
-              type: "manual",
-              name: "テスト",
-              maxScore: 100,
-              weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [{ studentId: "s1", score: 80 }],
-              order: 0,
-            },
-          ],
-        },
-      ],
-    })
-    mockFindUnique.mockResolvedValue(grade)
-    mockFindMany.mockResolvedValue([buildStudent({ id: "s1" })])
-
-    const result = await calculateGrades("gp1")
-    const student = result.students[0]
-
-    expect(student.gradeItemResults[0].isExcluded).toBe(false)
-    expect(student.gradeItemResults[0].weightedScore).toBeCloseTo(80)
-    expect(student.gradeItemResults[0].percentage).toBeCloseTo(80)
-  })
-
   // ===========================================================================
   // 文字評価（letterモード）+ 加減点テスト
   // ===========================================================================
@@ -779,23 +664,17 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "授業態度",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
               inputMode: "letter",
               letterScales: [
                 { label: "A", score: 100, order: 0 },
                 { label: "B", score: 80, order: 1 },
                 { label: "C", score: 60, order: 2 },
               ],
-              manualScores: [{ studentId: "s1", letterValue: "B" }],
+              scores: [{ studentId: "s1", letterValue: "B" }],
               order: 0,
             },
           ],
@@ -848,19 +727,13 @@ describe("calculateGrades", () => {
             dataSources: [
               {
                 id: "ds1",
-                type: "manual",
+                type: "coursework",
                 name: "授業態度",
                 maxScore: 100,
                 weight: 100,
-                examId: null,
-                subtotalId: null,
-                cropRegionId: null,
-                exam: null,
-                subtotal: null,
-                cropRegion: null,
                 inputMode: "letter",
                 letterScales,
-                manualScores: [{ studentId: "s1", letterValue: "A" }],
+                scores: [{ studentId: "s1", letterValue: "A" }],
                 order: 0,
               },
             ],
@@ -890,19 +763,13 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "授業態度",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
               inputMode: "letter",
               letterScales: [{ label: "A", score: 100, order: 0 }],
-              manualScores: [{ studentId: "s1", letterValue: "Z" }],
+              scores: [{ studentId: "s1", letterValue: "Z" }],
               order: 0,
             },
           ],
@@ -917,7 +784,7 @@ describe("calculateGrades", () => {
     expect(sourceScore.rawScore).toBeNull()
   })
 
-  it("加減点: 数値スコアに加算しクランプする", async () => {
+  it("加減点: 数値スコアに加算し、加減点と理由も添える", async () => {
     const grade = buildGrade({
       gradeItems: [
         {
@@ -927,18 +794,12 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "レポート",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
               inputMode: "numeric",
-              manualScores: [
+              scores: [
                 {
                   studentId: "s1",
                   score: 85,
@@ -974,21 +835,13 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "授業態度",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
               inputMode: "letter",
               letterScales: [{ label: "A", score: 100, order: 0 }],
-              manualScores: [
-                { studentId: "s1", letterValue: "A", adjustment: 20 },
-              ],
+              scores: [{ studentId: "s1", letterValue: "A", adjustment: 20 }],
               order: 0,
             },
           ],
@@ -1017,18 +870,12 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "レポート",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
               inputMode: "numeric",
-              manualScores: [{ studentId: "s1", score: 10, adjustment: -30 }],
+              scores: [{ studentId: "s1", score: 10, adjustment: -30 }],
               order: 0,
             },
           ],
@@ -1056,17 +903,11 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "レポート",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [
+              scores: [
                 {
                   studentId: "s1",
                   score: 90,
@@ -1097,17 +938,11 @@ describe("calculateGrades", () => {
           dataSources: [
             {
               id: "ds1",
-              type: "manual",
+              type: "coursework",
               name: "テスト",
               maxScore: 100,
               weight: 100,
-              examId: null,
-              subtotalId: null,
-              cropRegionId: null,
-              exam: null,
-              subtotal: null,
-              cropRegion: null,
-              manualScores: [{ studentId: "s1", score: 75 }],
+              scores: [{ studentId: "s1", score: 75 }],
               order: 0,
               absentMethod: "zero",
               absentRatio: 0.8,
@@ -1424,16 +1259,17 @@ describe("estimateAbsentScore", () => {
       matrix,
       allDataSources
     )
-    // 結果はOLS回帰の予測値で、0-100の範囲内であること
+    // 手計算: x̄=50, ȳ=220/3, Sxx=1400, Sxy=800 → 傾き 4/7、切片 940/21。
+    // s1 の ds2=60 を入れて 940/21 + 4/7×60 = 1660/21 ≈ 79.05
     expect(result).not.toBeNull()
-    expect(result!.value).toBeGreaterThanOrEqual(0)
-    expect(result!.value).toBeLessThanOrEqual(100)
     expect(result!.effectiveMethod).toBe("regression")
-    expect(result!.intercept).not.toBeUndefined()
+    expect(result!.value).toBeCloseTo(1660 / 21, 6)
+    expect(result!.intercept).toBeCloseTo(940 / 21, 6)
     // 説明変数は ds2 の1つ
     expect(result!.regressionTerms).toHaveLength(1)
     expect(result!.regressionTerms![0].name).toBe("ds2")
     expect(result!.regressionTerms![0].value).toBe(60)
+    expect(result!.regressionTerms![0].coefficient).toBeCloseTo(4 / 7, 6)
   })
 
   it("method='regression' → サンプル不足は平均比率法にフォールバック", () => {
@@ -1678,9 +1514,9 @@ describe("applyAdjustmentAndClamp", () => {
 /**
  * 小計型データソースの経路。
  *
- * 設問割り当て（CropSubtotal）は素点収集の前に1回だけ引き、生徒×ソースのループでは
- * 引かない。ここが壊れると全生徒の小計列が無言で null になるので、prefetch した
- * マップのキーと参照が噛み合っていることを固定する。
+ * 設問割り当て（CropSubtotal）は Grade の取得に同梱され、別の問い合わせは立てない
+ * （問い合わせ口の制限は gradeWriteLockTables.test.ts が縛る）。同梱した割り当てと
+ * 採点行が噛み合わないと全生徒の小計列が無言で null になるので、その対応を固定する。
  */
 describe("calculateGrades - subtotal 型データソース", () => {
   const EXAM_ID = "exam1"
@@ -1763,10 +1599,8 @@ describe("calculateGrades - subtotal 型データソース", () => {
               weight: 100,
               examId: EXAM_ID,
               subtotalId: SUBTOTAL_ID,
-              cropRegionId: null,
               exam: { id: EXAM_ID },
               subtotal: { id: SUBTOTAL_ID, cropSubtotals },
-              cropRegion: null,
               order: 0,
             },
           ],
@@ -1777,8 +1611,8 @@ describe("calculateGrades - subtotal 型データソース", () => {
   }
 
   beforeEach(() => {
-    // この describe は外側の calculateGrades ブロックとは別なので、呼び出し回数の
-    // 検証が前のケースを引きずらないよう自前でクリアする
+    // この describe は外側の calculateGrades ブロックとは別なので、前のケースの
+    // モックの戻り値を引きずらないよう自前でクリアする
     vi.clearAllMocks()
     mockExamData()
   })
@@ -1799,21 +1633,6 @@ describe("calculateGrades - subtotal 型データソース", () => {
     expect(sourceScore.rawScore).toBe(10)
     // 満点も同じ割り当て行から出る（q1・q2 の配点合計 = 20）
     expect(sourceScore.maxScore).toBe(20)
-  })
-
-  it("割り当てのために別クエリを立てない（生徒数に比例させない）", async () => {
-    mockFindUnique.mockResolvedValue(
-      buildSubtotalGrade([questionAssignment("q1", EXAM_ID)])
-    )
-    mockFindMany.mockResolvedValue([
-      buildStudent({ id: "s1" }),
-      buildStudent({ id: "s2" }),
-      buildStudent({ id: "s3" }),
-    ])
-
-    await calculateGrades("gp1")
-
-    expect(mockCropSubtotalFindMany).not.toHaveBeenCalled()
   })
 
   it("当該試験に割り当てが無ければ素点は null", async () => {

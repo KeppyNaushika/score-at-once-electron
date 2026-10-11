@@ -8,21 +8,8 @@ import prisma from "./client"
 import {
   gradeItemWithDataSourcesInclude,
   hydrateGradeItem,
-  hydrateGradeItems,
 } from "./gradeDataSource"
 import { serializePrisma } from "./serializePrisma"
-
-/**
- * GradeItem一覧を取得（dataSources含む）
- */
-export async function getGradeItemsByExamId(gradeId: string) {
-  const gradeItems = await prisma.gradeItem.findMany({
-    where: { gradeId },
-    include: gradeItemWithDataSourcesInclude,
-    orderBy: { order: "asc" },
-  })
-  return hydrateGradeItems(serializePrisma(gradeItems))
-}
 
 /**
  * GradeItemを作成（order自動計算）

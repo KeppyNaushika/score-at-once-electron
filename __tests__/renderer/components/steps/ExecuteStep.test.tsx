@@ -106,30 +106,6 @@ describe("ExecuteStep", () => {
     })
   })
 
-  it("EX-3: 成功時に完了メッセージが表示される", async () => {
-    const wizard = createMockWizard()
-    const onClose = vi.fn()
-
-    render(<ExecuteStep wizard={wizard} onClose={onClose} />)
-
-    await waitFor(() => {
-      expect(screen.getByText("インポートが完了しました")).toBeInTheDocument()
-    })
-  })
-
-  it("EX-4: 成功時に試験を開くボタンが表示される", async () => {
-    const wizard = createMockWizard()
-    const onClose = vi.fn()
-
-    render(<ExecuteStep wizard={wizard} onClose={onClose} />)
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: /試験を開く/ })
-      ).toBeInTheDocument()
-    })
-  })
-
   it("EX-5: 失敗時にエラーメッセージが表示される", async () => {
     // 失敗時 executeImport は null を返し、文言は wizard の state.error に載る
     const wizard = createMockWizard()

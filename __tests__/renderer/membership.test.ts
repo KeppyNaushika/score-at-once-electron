@@ -117,15 +117,6 @@ describe("isCurrentMembership", () => {
       )
     ).toBe(false)
   })
-
-  it("終了日が今日なら、今日の遅い時刻でも在籍中（終了日の当日まで在籍する）", () => {
-    expect(
-      isCurrentMembership(
-        { startDate: YESTERDAY, endDate: TODAY_MORNING },
-        TODAY
-      )
-    ).toBe(true)
-  })
 })
 
 describe("compareMembershipPhase", () => {

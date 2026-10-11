@@ -31,7 +31,7 @@ import type { AnswerInkGrid } from "./answerInkGrid"
  * 実際の描画は「1行の高さ＋固定 5px」で用紙の大きさにより比が変わるので、
  * 描画結果と照らして校正する（定数はこの1つだけにしておく）
  */
-export const LINE_PITCH_RATIO = 1.4
+const LINE_PITCH_RATIO = 1.4
 
 /** 文字を縮めるときの下限（mm）。これより小さいと印刷して読めない */
 export const MINIMUM_FONT_SIZE_MM = 2.5
@@ -75,7 +75,7 @@ interface AnnotationPlacementInput {
 }
 
 /** 注釈の置き場所（anchorDirection は "top-left"） */
-export interface AnnotationPlacement {
+interface AnnotationPlacement {
   /** 左上の x（用紙比） */
   x: number
   /** 左上の y（用紙比） */
@@ -660,39 +660,4 @@ export function withOccupiedRectangles(
     }
   })
   return { ...inkGrid, occupiedCells }
-}
-
-/** 字数の目安を出すときに想定する文字の大きさ（mm） */
-const CHARACTER_LIMIT_FONT_SIZE_MM = 4
-
-/**
- * 解答欄の面積のうち、朱書きに使えるとみなす割合。手書きが占める分と、箱が長方形で
- * 隙間に詰められない分を見込む
- */
-const ANNOTATION_USABLE_AREA_RATIO = 0.35
-
-/** 字数の目安の下限・上限（全角） */
-const ANNOTATION_CHARACTER_LIMIT_RANGE = { minimum: 10, maximum: 80 } as const
-
-/**
- * 解答欄の大きさから、朱書きの字数の目安（全角）を出す。VLM に「◯字以内」と伝えるのに使う。
- *
- * 面積（mm²）から求めるので、用紙の向きによらない（縦横を入れ替えても面積は同じ）。
- */
-export function estimateAnnotationCharacterLimit(
-  regionWidthMm: number,
-  regionHeightMm: number
-): number {
-  const characterArea =
-    CHARACTER_LIMIT_FONT_SIZE_MM *
-    CHARACTER_LIMIT_FONT_SIZE_MM *
-    LINE_PITCH_RATIO
-  const estimated = Math.floor(
-    (regionWidthMm * regionHeightMm * ANNOTATION_USABLE_AREA_RATIO) /
-      characterArea
-  )
-  return Math.min(
-    ANNOTATION_CHARACTER_LIMIT_RANGE.maximum,
-    Math.max(ANNOTATION_CHARACTER_LIMIT_RANGE.minimum, estimated)
-  )
 }

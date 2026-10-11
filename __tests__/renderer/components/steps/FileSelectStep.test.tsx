@@ -38,18 +38,11 @@ describe("FileSelectStep", () => {
     expect(wizard.selectFile).toHaveBeenCalledOnce()
   })
 
-  it("FS-3: 処理中にローディング表示になる", () => {
+  it("FS-3: 処理中はボタンが「読み込み中...」になり、押せない", () => {
     const wizard = createMockWizard({ isProcessing: true })
     render(<FileSelectStep wizard={wizard} />)
 
-    expect(screen.getByText("読み込み中...")).toBeInTheDocument()
-  })
-
-  it("FS-4: 処理中にボタンが無効化される", () => {
-    const wizard = createMockWizard({ isProcessing: true })
-    render(<FileSelectStep wizard={wizard} />)
-
-    const button = screen.getByRole("button", { name: /読み込み中/ })
+    const button = screen.getByRole("button", { name: /読み込み中\.\.\./ })
     expect(button).toBeDisabled()
   })
 })

@@ -23,7 +23,10 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
   }
 })
 
-import { removeStudentsFromExam } from "@/electron-src/lib/prisma/examStudent"
+import {
+  addStudentsToExam,
+  removeStudentsFromExam,
+} from "@/electron-src/lib/prisma/examStudent"
 import { getExamStudentDeletionCounts } from "@/electron-src/lib/prisma/gradingData"
 
 import { SAW_ALL_DELETION_COUNTS } from "../../helpers/deletionCounts"
@@ -229,16 +232,49 @@ describe("removeStudentsFromExam", () => {
       SAW_ALL_DELETION_COUNTS
     )
 
-    const readded = await testPrisma.examStudent.create({
-      data: {
-        id: crypto.randomUUID(),
-        examId: exam.exam.id,
-        studentId: examStudentA.studentId,
-        status: "participating",
-      },
+    // アプリの追加口で同じ生徒を受験者に戻す
+    await addStudentsToExam(exam.exam.id, [examStudentA.studentId])
+    const readded = await testPrisma.examStudent.findFirstOrThrow({
+      where: { examId: exam.exam.id, studentId: examStudentA.studentId },
     })
+    // 受験者の行は作り直しで、外す前の id を引き継がない
+    expect(readded.id).not.toBe(examStudentA.id)
 
-    expect(await countScoringRows(readded.id)).toEqual({
+    // 「この試験のこの生徒」に辿れる採点層を、id ではなく関係で数える。
+    // 外した時の行が残っていたり、追加口が古い行を復元したりすると 0 にならない
+    const examStudentOfPerson = {
+      examId: exam.exam.id,
+      studentId: examStudentA.studentId,
+    }
+    expect({
+      studentAnswerImages: await testPrisma.studentAnswerImage.count({
+        where: { examStudent: examStudentOfPerson },
+      }),
+      questionScores: await testPrisma.questionScore.count({
+        where: { examStudent: examStudentOfPerson },
+      }),
+      scoreDecisions: await testPrisma.scoreDecision.count({
+        where: { examStudent: examStudentOfPerson },
+      }),
+      compoundAnswerScores: await testPrisma.compoundAnswerScore.count({
+        where: { examStudent: examStudentOfPerson },
+      }),
+      returnSnapshots: await testPrisma.returnSnapshot.count({
+        where: { examStudent: examStudentOfPerson },
+      }),
+      drawingAnnotations: await testPrisma.drawingAnnotation.count({
+        where: { questionScore: { examStudent: examStudentOfPerson } },
+      }),
+    }).toEqual({
+      studentAnswerImages: 0,
+      questionScores: 0,
+      scoreDecisions: 0,
+      compoundAnswerScores: 0,
+      returnSnapshots: 0,
+      drawingAnnotations: 0,
+    })
+    // 外す前の id にぶら下がる行も残っていない
+    expect(await countScoringRows(examStudentA.id)).toEqual({
       studentAnswerImages: 0,
       questionScores: 0,
       scoreDecisions: 0,

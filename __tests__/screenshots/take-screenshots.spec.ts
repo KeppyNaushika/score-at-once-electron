@@ -267,23 +267,31 @@ async function showAllScoredAnswers(page: Page) {
 }
 
 /**
- * 同期フォルダ欄の表示を、配布版で見える形の見本パスへ置き換える
+ * 「いま使っているデータの置き場」欄の表示を、配布版で見える形の見本パスへ置き換える
  *
- * この欄はデータディレクトリの実パスを出す。撮影ではそれが撮影機のリポジトリ配下
- * （ホームディレクトリの下）になり、撮影機の持ち主が写る。配布版（Windows）の
- * データディレクトリは実行ファイルの隣の `data`（`electron-src/lib/dataManager.ts`）
- * なので、その形の見本を見せる。**画面の表示だけ**を書き換え、設定には触れない。
+ * この欄は起動時に決まった DB と画像の置き場の実パスを出す（上が DB、下が画像。
+ * `SyncSettingsTab.tsx`）。撮影ではそれが撮影機のリポジトリ配下（ホームディレクトリの
+ * 下）になり、撮影機の持ち主が写る。配布版（Windows）のローカルモードの置き場は
+ * 実行ファイルの隣の `data`（`electron-src/lib/dataManager.ts`）で、DB はその中、
+ * 画像の根は `data` そのものなので、その形の見本を見せる。**画面の表示だけ**を
+ * 書き換え、設定には触れない。
  */
-async function showExampleSyncPath(page: Page) {
-  // 見出しの直後の入力欄。読み取り専用の入力欄はクライアントIDにもあるので、
+async function showExampleStoragePaths(page: Page) {
+  // 見出しの直後の2つの入力欄。読み取り専用の入力欄はクライアントIDにもあるので、
   // 見出しから辿って取り違えないようにする
-  const syncFolderField = page
-    .getByText("同期フォルダ", { exact: true })
-    .locator("xpath=following-sibling::input[1]")
-  await expect(syncFolderField).toBeVisible()
-  await syncFolderField.evaluate((field: HTMLInputElement) => {
-    field.value = "C:\\一括採点\\data\\sync"
+  const heading = page.getByText("いま使っているデータの置き場", {
+    exact: true,
   })
+  const examplePaths = ["C:\\一括採点\\data\\database.db", "C:\\一括採点\\data"]
+  for (const [index, examplePath] of examplePaths.entries()) {
+    const field = heading.locator(
+      `xpath=following-sibling::input[${index + 1}]`
+    )
+    await expect(field).toBeVisible()
+    await field.evaluate((input: HTMLInputElement, value) => {
+      input.value = value
+    }, examplePath)
+  }
 }
 
 /** 押せる状態になってから押す（描き直しの途中を掴まない） */
@@ -1452,7 +1460,7 @@ test.describe.serial("第4章: 成績算出・その他", () => {
       await captureOptional(relativePath, async () => {
         await clickWhenReady(page.getByRole("tab", { name: tabName }))
         await page.waitForTimeout(600)
-        if (tabName === "同期設定") await showExampleSyncPath(page)
+        if (tabName === "同期設定") await showExampleStoragePaths(page)
         await ss(page, relativePath)
       })
     }

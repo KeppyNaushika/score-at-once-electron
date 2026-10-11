@@ -37,7 +37,7 @@ function scoreOfRow(row: AttemptResponseRow): QuestioningScore | null {
 }
 
 /** 答案ごとの答えの行から読んだ、問いの答え */
-export interface AttemptResponseDecision {
+interface AttemptResponseDecision {
   decision: QuestioningDecision | null
   isCommitted: boolean
   draftAttemptResponseIds: string[]

@@ -12,6 +12,7 @@
  * vitest 側（__tests__/renderer, __tests__/exam ほか）に置くこと。
  */
 import { expect, test } from "@playwright/test"
+import * as fs from "fs"
 
 import {
   createCoursework,
@@ -27,43 +28,48 @@ test.afterEach(async () => {
   if (launched) await launched.close()
 })
 
-test("未ログインで採点画面を開くとログイン画面へ送られる", async () => {
+test("未ログインなら、どの画面もログイン画面へ送られる", async () => {
   // 採点は利用者ごとに結果を分けて保存する。誰が採点しているか分からないまま
-  // 書かせない（以前は "default-user-id" という存在しない利用者で書いていた）
+  // 書かせない（以前は "default-user-id" という存在しない利用者で書いていた）。
+  // 関門はかつてページごとに置いていたので 40ページ中16ページにしか付いておらず、
+  // 試験のワークフローでは 06・07 と試験詳細だけが守られていた。今はレイアウトに
+  // 1つだけ置いてあり、守られていた画面（07）と守られていなかった画面（02）の
+  // 両方で効くことを見る
   launched = await launchApp()
   const { page } = launched
 
-  await page.goto(`${E2E_BASE_URL}/exams/does-not-exist/07-score-at-once`, {
-    waitUntil: "domcontentloaded",
-  })
-
-  await expect(page).toHaveURL(`${E2E_BASE_URL}/login`, { timeout: 15_000 })
-})
-
-test("未ログインなら、関門の無かった画面もログイン画面へ送られる", async () => {
-  // 関門はページごとに置いていたので 40ページ中16ページにしか付いておらず、
-  // 試験のワークフローでは 06・07 と試験詳細だけが守られていた
-  launched = await launchApp()
-  const { page } = launched
-
-  await page.goto(`${E2E_BASE_URL}/exams/does-not-exist/02-template`, {
-    waitUntil: "domcontentloaded",
-  })
-
-  await expect(page).toHaveURL(`${E2E_BASE_URL}/login`, { timeout: 15_000 })
+  for (const step of ["07-score-at-once", "02-template"]) {
+    await page.goto(`${E2E_BASE_URL}/exams/does-not-exist/${step}`, {
+      waitUntil: "domcontentloaded",
+    })
+    await expect(page).toHaveURL(`${E2E_BASE_URL}/login`, { timeout: 15_000 })
+  }
 })
 
 test("解答用紙を編集して概要へ移り、作成へ戻っても編集が残る", async () => {
   // 以前は、作成タブの編集状態を共有キャッシュから作り、保存側がそのキーを
   // 更新していなかった。戻ってきた瞬間に古い内容が入り、自動保存がそれを
   // DB へ書き戻していた（＝セッション中の編集が消える）
+  //
+  // 空のデータディレクトリ（＝新規インストール）から始めるので、「新規インストールで
+  // 『新規作成』が無反応」の回帰もここで見る。原因は2つあった:
+  //   1. DB初期化がファイル有無判定の競合でクラッシュ（bootstrapSchema で解消）
+  //   2. AsbDefinition の原稿用紙罫線4列が migration 取りこぼしで欠落し
+  //      保存が ColumnNotFound で失敗（20260725000000 migration で復元）
   launched = await launchApp()
-  const { page } = launched
+  const { page, dataDir } = launched
+
+  // DB初期化が成功し DBファイルが作成されている（クラッシュしていない）
+  await expect
+    .poll(() => fs.existsSync(`${dataDir}/database.db`), { timeout: 30_000 })
+    .toBe(true)
+
   await loginAsAdmin(page)
 
   await page.goto(`${E2E_BASE_URL}/answer-sheet-builder`, {
     waitUntil: "domcontentloaded",
   })
+  // 「新規作成」→ 作成に成功するとエディタ（/01-edit）へ遷移する
   await page.getByRole("button", { name: "新規作成" }).click()
   await expect(page).toHaveURL(/\/answer-sheet-builder\/[^/]+\/01-edit/, {
     timeout: 15_000,

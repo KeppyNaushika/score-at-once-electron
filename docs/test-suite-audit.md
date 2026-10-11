@@ -1,209 +1,224 @@
-# テストの全数調査 ── どれが本番を守っていないか
+# テストとデッドコードの全数調査
 
-調査日: 2026-08-23。テストは**実行していない**（全て通っている状態からの静的調査）。
-
-**§3〜§7 の指摘は 2026-09-09 時点でそのまま生きている**（§9 の4項目はどれも未着手で、
-対象ファイルの行数・本数も当時と同じ）。§8 だけ現況へ直した。
-
----
-
-## 1. 背景と目的
-
-`__tests__` には vitest 対象（`__tests__/**/*.test.ts` / `*.test.tsx`）が **196 ファイル・
-1,837 本・62,860 行**ある。加えて Playwright の `*.spec.ts` が 3 本ある。
-
-全部が緑である。本書が問うのは緑かどうかではなく、**その緑が本番コードの正しさを
-言っているか**である。テストは次のどれかに落ちると、緑でありながら何も守らない。
-
-- 本番コードを1行も通らない（テストヘルパーや言語仕様を検証している）
-- 本番の実装をテスト側に**書き写して**、その写しを検証している
-- 呼ぶだけで表明が無い（例外が出ないことしか見ていない）
-
-3 つ目は無害だが、1・2 つ目は**緑が嘘をつく**ので有害である。実際に 1 件、写しが本番から
-乖離したまま緑になっている箇所があった。
+調査と対処: 2026-10-12。前回の調査（2026-08-23）で挙げた項目のうち未着手だったもの
+（`cropRegionOmrConfig` の写し・`omrArchiveRoundTrip` の自作往復・表明の無い II-8/II-9/EC-7・
+`idMappings.test.ts`）は、今回の対処に含めて片付けた。
 
 ---
 
-## 2. 調査方法
+## 1. 何を問うたか
 
-`__tests__` 配下の全ファイルに対して機械的な走査を掛け、引っ掛かったものを個別に読んだ。
+テストは全部緑だった。問うたのは次の2つである。
 
-| 走査                                                                             | 目的                                         | 結果                                         |
-| -------------------------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
-| `it.skip` / `it.todo` / `it.only` / `xit`                                        | 無効化されたテスト                           | **0 件**                                     |
-| `vi.mock` の対象 = 自身の import 元                                              | 被テストモジュールを自分でモックしていないか | **0 件**                                     |
-| `from "…/src/…"` / `…/electron-src/…"` を1つも持たないファイル                   | 本番コードに触れていないテスト               | 13 件（うち 9 件は正当）                     |
-| 上記から型 import のみを除外                                                     | 実装を1つも呼んでいないテスト                | 13 件（同上）                                |
-| `it`/`test` ブロック内に `expect(` が無い                                        | 表明の無いテスト                             | 4 件（ヘルパー内 `expect` の誤検出を除く）   |
-| 表明が `toBeDefined` / `toBeTruthy` / `not.toBeNull` / `toBeGreaterThan(0)` だけ | 弱い表明のみのテスト                         | 13 件                                        |
-| `readFileSync` / `readdirSync` を使うファイル                                    | ソース本文を検証する規約テスト               | 31 件（うち走査の空振り防止が無いもの 0 件） |
-
-本番コードに触れていないファイルのうち、以下 9 件は**正当**である。`migration/*` は
-`migration.sql` を空 DB へ実際に適用して検証しており、`renderer/*Conventions` は
-TypeScript の AST でソースを走査しており、`sync/*` は本物の `sqlite-nas-sync` と本物の
-`schema.prisma` を繋いでいる。`deployPendingMigrations` と `omrArchiveRoundTrip` は
-`await import()` で本番を読んでいる。
+- **その緑は本番の正しさを言っているか。** 本番を通らないテスト、どんな実装でも通るテスト、
+  前提が古くなったテストは、緑のまま何も守らない
+- **本番に、誰も使わないコードが残っていないか。** 特に「テストからしか使われないコード」は、
+  テストを走査の起点に含める限り見つからない
 
 ---
 
-## 3. 有害 ── 緑が本番の正しさを保証していない
+## 2. 調べ方
 
-### 3.1 `__tests__/omr/integration/cropRegionOmrConfig.test.ts`（313 行 / 6 本）
+| 手段                                            | 見つけるもの                                                                  |
+| ----------------------------------------------- | ----------------------------------------------------------------------------- |
+| knip（テストを起点に含める）                    | どこからも使われないファイル・export・依存                                    |
+| knip（テストを起点から外し、vitest 連携も切る） | **テストからしか使われない本番コード**（上との差分）                          |
+| `npm run check:hooks`                           | フックの返り値で、どの呼び出し元も使わないもの                                |
+| 参照の grep                                     | `public/`・`scripts/`・フィクスチャで、どこからも参照されないファイル         |
+| テスト 415 ファイルを全部読む                   | 本番を通らない・必ず通る・重複・名前と中身の食い違い・規約一覧の空振り        |
+| 実在の確認                                      | 規約テストの一覧に載る名前が schema・ソースに実在し、例外が実際に効いているか |
 
-**本番の `upsertOmrConfig` をテストファイル内に丸ごと書き写し、その写しを検証している。**
-本番コード（`electron-src/lib/prisma/cropRegionOmrConfig.ts`）は1行も通らない。
-
-写しは `:89` の「ヘルパー: upsertをPrisma直接操作で実装」から始まる。**この写しは既に本番から
-乖離している。**
-
-| 本番が書く列                                                                                     | 写しが書く列 |
-| ------------------------------------------------------------------------------------------------ | ------------ |
-| `type` / `numChoices` / `choiceLayout`                                                           | 同じ         |
-| `colorThreshold` / `areaThreshold`                                                               | **無い**     |
-| `shape` / `normalizedCx` / `normalizedCy` / `normalizedWidth` / `normalizedHeight`（バブル位置） | **無い**     |
-
-つまり本番のしきい値とバブル位置の書き込みを壊しても、このテストは緑のままである。
-6 本のうち「CropRegion を削除するとカスケードする」2 本は Prisma のスキーマを見ているので
-写しとは無関係に意味があるが、残る 4 本（upsert 2 本・取得 2 本）は写しを見ている。
-
-写経が選ばれた理由は、本番 `upsertOmrConfig` が `../client` の既定 Prisma を直に使うため
-テスト DB へ向けられないことだと思われる。**その手立ては既にある** ── 他の 64 ファイルが
-`vi.mock("…/electron-src/lib/prisma/client")` でテスト用クライアントへ差し替えている。
-
-### 3.2 `__tests__/omr/integration/omrArchiveRoundTrip.test.ts`（332 行 / 3 本）のうち 2 本
-
-- **「全OMR設定をchoiceOptions付きで取得できる」** ── `prisma.cropRegionOmrConfig.findMany({ include })`
-  を直接叩いて結果を見るだけ。本番のクエリ関数を通らない。Prisma のテストである。
-- **「アーカイブデータ形式にシリアライズ → DBにリストアできる」**（`:161`）── `dataCollector.ts` も
-  `idIntegrationImporter.ts` も通さず、**export 相当の `map` と import 相当の `create` を
-  テスト内で手書き**し、その自作往復を検証している。ファイル名が言う「アーカイブ往復」は
-  起きていない。本番の収集・投入が壊れてもこのテストは緑である。
-- 3 本目のトランスフォーマー検証（`:296`、`V1_6_0_to_V1_7_0`）だけが本物を通している。
+knip の設定はリポジトリに置いていない。§8 の手順で毎回書く。
 
 ---
 
-## 4. 無意味 ── 本番を1つも触っていない
+## 3. 本番の不具合（調査の途中で見つかったもの）
 
-### 4.1 `__tests__/import-export/unit/dataCollector.test.ts`（237 行 / 16 本）
+**採点確定の行を返す経路が、確定者の User を全列で返していた。**
+`scoreDecision.ts` の `include: { decidedBy: true }`（2か所）は、パスコードのハッシュを含む
+User の全列を renderer へ渡していた。
 
-冒頭に「テスト対象: `electron-src/lib/export/exam-archive/dataCollector.ts` の出力形式」と
-書いてあるが、import しているのは `__tests__/helpers/testDataFactory.ts` の
-`createArchiveStudentsData` などのファクトリだけである。**16 本すべてが、テストデータ
-ファクトリが自分の引数を返すことを確認している。**
+これを捕まえるはずの `publicUserOmit.test.ts` は、User を指す関連名を手で書いた一覧で
+走査しており、その一覧に schema に無い名前（`owner`, `decider`）が入り、実在する
+`decidedBy`・`createdBy`・`frozenBy`・`capturedBy` が抜けていた。**規約テストが緑のまま
+空振りしていた。**
 
-ファイル自身が「collectExamData 自体は Prisma 依存のため統合テストで扱う」と認めており、
-実際 `import-export/integration/collectExamData.test.ts` が本物を見ている。
+対処:
 
-### 4.2 `__tests__/import-export/unit/idMappings.test.ts`（167 行 / 9 本）
-
-本番からの import は `merge/types.ts` の `createEmptyCounts` 1 つだけ。それを使う 1 本
-（「全カウンタがゼロで初期化される」）以外の **8 本は JavaScript の言語仕様のテスト**である。
-
-```ts
-mappings.student[importId] = existingId
-expect(mappings.student[importId]).toBe(existingId) // オブジェクトへの代入
-
-importCounts.skipped.scores += 5
-expect(importCounts.skipped.scores).toBe(5) // += 演算子
-
-Object.entries(mappings.student).find(([, id]) => id === existingId)?.[0]
-// Object.entries と find
-```
-
-`createEmptyIdMappings` / `createEmptyImportCounts` は本番に存在せず、`testDataFactory.ts`
-だけが持つテストヘルパーである（`grep` で確認済み）。
+- `decidedBy` を `{ omit: PUBLIC_USER_OMIT }` にした。手書きの `omit: { passcode: true }`
+  （`scoreDecisionSummary.ts`・`cropRegionAssignment.ts`・`examStudentAssignment.ts`・
+  `userExam.ts`・`drawingAnnotation.ts`）も `PUBLIC_USER_OMIT` へ寄せた
+- `publicUserOmit.test.ts` は関連名を `schema.prisma` から引くようにし、手書きの omit も禁じた
 
 ---
 
-## 5. 表明が無い ── 名前が約束を果たしていない
+## 4. デッドコード
 
-いずれも本番関数を `await` するだけで終わり、**例外が出ないこと以外何も見ていない**。
+### 4.1 テストからしか使われていなかったもの（削除）
 
-| 箇所                                                          | テスト名                                                                  |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `import-export/integration/idIntegrationImporter.test.ts:743` | II-8: by_student_number戦略で学籍番号マッチした生徒が**マッピングされる** |
-| `import-export/integration/idIntegrationImporter.test.ts:811` | II-9: by_name戦略で氏名マッチした生徒が**マッピングされる**               |
-| `import-export/scenarios/edgeCases.test.ts:587`               | EC-7: マニフェストの互換バージョンが**正しく処理される**                  |
+テストを起点に含めた knip には一切出ない。テストを外して初めて見える。
 
-EC-7 は自身のコメントで「バージョン変換は archiveExtractor の後、importer の前で行われる」と
-書いている。つまり `executeIdIntegrationImport` を呼ぶこの経路では、互換性を**原理的に**
-検証できない。マニフェストの `version` を `1.0.0` に書き換えても何も起きないのが正しい挙動で、
-テストはそれを確認していない。
+- ファイル: `electron-src/lib/omr/autoScorer.ts`、`electron-src/lib/prisma/compoundAnswer.ts`
+  （連鎖して `assertCompoundAnswersInSameExam`）
+- 関数: `getGradeItemsByExamId`、`getDataSourcesByGradeItemId`、`normalizedRectToPixelRect`、
+  `computeCircularFillRatio`、`stripMarkup`、`estimateAnnotationCharacterLimit`
 
----
+OMR の自動採点は本番では renderer の `reevaluateWithThreshold` が担っている。
+`autoScorer.ts` のテストにだけあった部分点・複数正解のケースは、本番の
+`reevaluateWithThreshold` を通るテストへ移した（この分岐を見るテストはそれまで無かった）。
 
-## 6. 意味はあるが弱い ── 名前が中身より大きい
+### 4.2 どこからも使われていなかったもの（削除）
 
-削除するほどではないが、名前が保証しているものと表明の間に開きがある。
+- `aiGradingSource.ts` の `listOwnQuestionScores` / `listAiGradingAttemptsByIds`
+- `aiSendingCropPreviewQuery` から preload の `previewCrop`、ハンドラ、lib 関数まで一式
+- `rubricItemsOfExamQuery` から preload の `listItemsByExam`、ハンドラ、lib 関数まで一式
+- フックの返り値 `useAssignedExamStudents().hasStudentAssignments`、
+  `useAiGradingAvailability().isUnlocked`
+- コンテキストキー `sidePanelVisible`（書くだけで、読む when 句が無かった）
 
-- **`idIntegrationImporter.test.ts:190/242/287`（II-1〜3）** ── 同一の 30 行のセットアップを
-  3 回書き、それぞれ `exam` が `not.toBeNull()`、`created.scores > 0`、`summary` が
-  `toBeDefined()` を見るだけ。II-1 の「**全**エンティティが作成される」は確認していない。
-- **`exportImportRoundTrip.test.ts:316`（E2E-5）** ── 「v1.4.0 の**全**新規フィールドが
-  保持される」だが、表明はすべて `length > 0`。値の一致は見ず、`tagSubtotalGroups` は
-  インポート後の確認すら無い（値の忠実さは `roundTripFieldFidelity.test.ts` が別に見ている）。
-- **`renderer/hooks/useImportWizard.test.ts:60`（IW-1）** ──
-  `expect(result.current.state).toEqual(initialState)`。フックが `useState(initialState)` を
-  返すことの確認である。続く IW-2〜4 はその部分集合を個別に見ている。
-- **`examMergeOrSeparate.test.ts:610-635`** ── `importExamCore.ts` を**文字列として読み**、
-  `applyExamColumns` の `data: {` ブロックに列名が現れるかを正規表現で確認する。守りたい事故
-  （Exam に列を足して LWW の対象から漏らす）は実在するので意図は正しいが、
-  `description: exam.description` の左右を取り違えても通る。同じ検査は「全列を変えた
-  アーカイブを取り込んで全列が上書きされたか」で振る舞いとして書ける。
-- **`renderer/components/entityOverviewPageAdoption.test.ts`** ──
-  `expect(source).toContain("const handleCreate = useCallback(async () => {")` は整形 1 回で
-  落ちる。`expect(source).not.toContain("setup")` は `?setup=1` を狙った検査だが語が広すぎ、
-  無関係な `setup` にも当たる。
+**後ろの2つの IPC 一式は、`ipcBoundaryConventions.test.ts` を素通りしていた。** この検査は
+「preload メソッドが renderer のどこかで `.メソッド名` として呼ばれているか」を見るが、
+呼んでいたのが使われていない query 定義の本体だったため、生きていると数えられた。
+いまは `src/queries/` の定義が src のどこかから使われていることも確かめ、使われていない
+定義の中の呼び出しは数えない（§7）。
 
----
+### 4.3 export だけ余計だったもの
 
-## 7. 良質だと確認した仕組み
+同じファイルの中でしか使わない export を約100件外した。完全に未参照だった型4件は削除した。
+`export const { is, to } = defineStringUnion(...)` は、使われていない側だけを分割代入から外した。
 
-対処対象と取り違えないよう記録しておく。
+### 4.4 不要なファイル（削除）
 
-- **`renderer/ipcBoundaryConventions.test.ts`** ── TypeScript の AST で走査し、
-  「登録したが preload から呼ばれないチャンネル」「preload にあるが renderer が触らない
-  メソッド」「`src` → `electron-src` の値 import」を検出する。**型検査が見ない向きだけ**を
-  狙っており、例外は判断基準でなく名指しの一覧（`UNCALLED_PRELOAD_METHODS`）で管理されている。
-  「走査そのものが機能している」という自己検査（`registered.size > 200`）も持つ。
-- **`sync/twoClientSync.test.ts` / `sync/studentAnswerPlacementSync.test.ts`** ── 本物の
-  `sqlite-nas-sync` と本物の `schema.prisma` で 2 端末を再現する。作り物を挟んでいない。
-- **`migration/*`** ── `migration.sql` を空 DB へ実際に適用し、`sqlite_master` や
-  `foreign_key_check` まで見る。
-- **`calculations/*`・`renderer/utils/dragDropUtils.test.ts`・
-  `answer-sheet-builder/verticalTransform.test.ts`** ── 期待値が定数で、コメントに
-  「これが壊れたとき何が起きるか」が書かれている。
+| ファイル                                   | 理由                                                                             |
+| ------------------------------------------ | -------------------------------------------------------------------------------- |
+| `scripts/bulk-rename.mjs`                  | Project→Exam の改名に1回使った道具                                               |
+| `scripts/create-test-user.js`              | 既に動かなかった（User に `passwordHash` 列が無く、adapter 無しの Prisma 7）     |
+| `public/score-assets/0.png`〜`9.png`       | 採点マークの読み込みは `correct`/`incorrect`/`partial`/`pending`/`unscored` だけ |
+| `scripts/importTempSaiten.ts` とその設定例 | 旧版のデータの取り込みは scoring_at_once 側の変換へ移った                        |
+| ルートの `playwright.config.ts`            | 存在しない `./tests` を指し、素で叩くと0件で緑になっていた                       |
 
-規約走査系 31 ファイルは全て、走査が空振りしたときに気付ける形（件数の下限か、
-ファイルパスの名指し）になっており、**空振りで緑になるものは無かった**。
+依存では、`forge.config.js` とテストが直に使う `@electron/asar` を devDependencies に書いた。
+`forge.config.js` の `FORBIDDEN_IN_PACKAGE` に `.next-screenshot` を足し、`.next-e2e` と並べた。
 
 ---
 
-## 8. 副次的な発見（テストの意味とは別件）
+## 5. テストの指摘 ── どう「緑なのに守っていない」か
 
-- **ルートの `playwright.config.ts` は `testDir: "./tests"` を指しているが、そのディレクトリは
-  存在しない**（2026-09-09 時点でもそのまま）。実体は `__tests__/tests/electron/` で、
-  `__tests__/playwrightElectron.config.ts` が `--config` 経由で拾っている（`npm run test:e2e`）。
-  素で `npx playwright test` を叩くと 0 件で緑になる。残作業は
-  [remaining-work.md](./remaining-work.md) の段階71 へ入れた。
-- **`__tests__/screenshots/take-screenshots.spec.ts` は画像生成スクリプト**であり、
-  `npm run screenshot:test`（`__tests__/playwright.screenshot.config.ts`）から呼ぶ。
-  `test()` で書かれているぶん、レポート上はテストとして数えられる。
-  **調査時は 942 行・`expect` 0 件だったが、`c930d6f9` の書き直しで 1,157 行・21 件になった**
-  （撮る前に画面が出ていることを確かめるようになったため。**画像の正しさは見ていない**という
-  性質は変わらない）。
+415 ファイルのうち、丸ごと不要だったのは `import-export/unit/idMappings.test.ts`
+（テストヘルパーとオブジェクトへの代入を確かめていた）と `omr/unit/autoScorerDb.test.ts`
+（§4.1）、それに写しを検査していた `omr/integration/omrArchiveRoundTrip.test.ts` だけだった。
+残りは個々の it の問題で、約100件を直した。類型と代表例を残す。
+
+### 5.1 どんな実装でも通る
+
+- **表明が無い・恒真の表明**: `idIntegrationImporter` II-8/II-9（expect 無し）、
+  II-4/II-5/II-10（`>= 0`）、`edgeCases` EC-7（経路上、検証のしようが無かった）
+- **読み込みが終わる前に「無い」を確かめる**: 既定値と期待値が同じなので、データが届く前に
+  通る。`scoringAnonymity`・`aiGradingMode`・`aiExamCostBadge`・`gradeLabelOverride`・
+  `useGridAnnotations`・`useAllStudentAnnotations`。届いたことを待ってから確かめる形にした
+- **構造的に必ず0件になる条件で数える**: `gradeFrozenScore`（カスケードで消える関係を条件に
+  数えていた）、`examStudentRemoval`（新しい uuid で数えていた）、`freshInstallChain`
+  （行の無い DB で `foreign_key_check`）
+- **if/else のどちらの枝でも通る**: `markRecognizer` のダブルマーク判定、
+  `cornerMarkerDetector` の罫線接触
+
+### 5.2 偶然通っていた ── LWW を確かめていなかった
+
+`idIntegrationImporter` II-5/II-7 と `edgeCases` EC-8 は、取り込みの後勝ち（LWW）を確かめる
+名前だったが、アーカイブ側と DB 側の `updatedAt` が同じ値で、後勝ちが一度も働いていなかった。
+テストは `createScoringConflict` で時刻を渡していたが、**事前照合の `scoringConflicts` は表示用で、
+本番の取り込み（`importScoring.ts`）は判断に使わない。** 時刻はアーカイブの行そのものに
+持たせる必要がある。直した後は、後勝ちを壊すと落ちる。
+
+### 5.3 本番ではなく写しを検査していた
+
+- `cropRegionOmrConfig.test.ts` は本番の `upsertOmrConfig` をテスト内に書き写し、写しを
+  検査していた。写しはしきい値2列とバブル位置5列を書かず、本番から乖離していた。
+  `vi.mock(".../prisma/client")` でテスト DB へ向け、本番の3関数を通す形にした
+- `omrArchiveRoundTrip.test.ts` の往復は、書き出しと取り込みをテスト内で手書きしていた。
+  生きていた変換器のテストだけを `omrArchiveTransformer.test.ts` へ移し、ファイルは削除した
+- `schemaBootstrap` のトランザクションの検査は、テスト内で `db.transaction` を自作して
+  SQLite の振る舞いを確かめていた。本物の `bootstrapSchema` を通す形にした
+
+### 5.4 前提が古くなっていた
+
+- **sqlite-nas-sync 0.19 までの方式を前提にした検査とコメント**: 削除の順序の鍵は 0.20 から
+  `_tombstone._sns_ts` で、`deletedAt` ではない。`deletePropagation` の時刻の検査を書き直し、
+  ライブラリを通っていなかった検査を削除した。「途中で UNIQUE 違反になると同期が止まる」という
+  コメントは、根拠を手元の SQLite の UNIQUE に改めた（置換の計画が衝突を避ける必要は今もある）
+- **migration を `;` で分割して当てる前提**: deployer は `db.exec` で当てる。分割の健全性を
+  確かめる検査を削除し、`promoteCoursework` も本番と同じ当て方にした
+- **撤去済みの `"manual"` 型のデータソース**: `gradeItemCrud` と `gradeCalculator` のテスト内の
+  互換層を片付けた
+- **撤去済みの API のモック**: `mockElectronAPI` の `exportExam`
+- **古い `{ success, data }` の封筒を返すモック**: `useImportWizard` の一部
+- **撮影の spec が掴む文言**: 共有のプロファイル化で消えた「同期フォルダ」を掴んでいた
+
+### 5.5 規約テストの一覧が空振り・陳腐化していた
+
+- `publicUserOmit`（§3）
+- `ipcBoundaryConventions` の `UNCALLED_PRELOAD_METHODS` に、既に呼ばれている `getScopes`
+- `rowTypeConventions` の解答用紙作成の例外2件が、外しても違反0件
+- `scoringKeyGuards` の when 句の走査が、when を組み立てる `scoringKeybindings.ts` を
+  見ておらず、6つの文脈のうち3つを検出できていなかった
+- `uuidIdCoverage` の正規表現が `@default` の無い id しか拾わず、`cuid()` 等を見逃していた
+
+### 5.6 重複・名前と中身の食い違い
+
+同じ振る舞いを同じ粒度で見ている it は片方に寄せ、名前が言う性質を確かめていない it は
+表明を足すか名前を直した。例: `ImportWizardModal` IM-8、`buildGridLayout`、
+`stage1Grading` の it.each（`stage1ResponseRules` と重複）、`syncServiceFoldIntegration`
+（`twoClientSync` と重複）、`grade/integration/manualScoreCrud.test.ts`（中身は境界と並べ替え
+だったので `gradeItemCrud` へ統合）。
 
 ---
 
-## 9. 対処の順
+## 6. 残したもの
 
-1. **`cropRegionOmrConfig.test.ts` を本番 `upsertOmrConfig` へ繋ぎ直す** ──
-   乖離が既に起きているため最優先。`vi.mock("…/electron-src/lib/prisma/client")` で
-   テスト DB へ向ける（既存 64 ファイルと同じ手口）。写しは消す。
-2. **`omrArchiveRoundTrip.test.ts` の往復 2 本** ── 本番の `collectExamData` /
-   `executeIdIntegrationImport` を通す。通せないなら、往復を騙る名前を捨てる。
-3. **表明の無い 3 本（II-8 / II-9 / EC-7）** ── II-8・II-9 は `idMappings.student` の
-   写り先を見る。EC-7 は経路そのものが検証できないので、`archiveExtractor` を通す形に
-   書き換えるか消す。
-4. **`dataCollector.test.ts` と `idMappings.test.ts` を消す** ── 前者は
-   `collectExamData.test.ts` が、後者は `idChangeExecutor.test.ts` が本物を見ている。
+| 対象                                                         | 理由                                                                                         |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| devDependency の `shadcn`                                    | UI 部品を足す CLI。コードからは参照しないので knip には未使用と出る                          |
+| `unifiedArchiveExportWorker.ts`                              | `scripts/buildMain.js` の別エントリ。knip の誤検知                                           |
+| `check:hooks` が挙げる `useExamAccess` の返り値              | `access.tabs` の形で使われている。スクリプトが分割代入しか見ない誤検知                       |
+| `editorActions.test.ts` の「触っていない大問が参照ごと残る」 | `definitionTree.ts`・`definitionReducer.ts` が掲げる設計上の約束を、フックの返り値で見ている |
+| 定数の既定値を固定するテスト（`answerOverlayLength` 等）     | 仕様として決めた値を固定する意味がある                                                       |
+
+### 別件として残る課題
+
+- **複数正解の設問で、正解をすべて正しく塗った答案が「保留」になる。** `choiceEvaluation.ts` は
+  2つ以上塗られたセルの信頼度を正解の数にかかわらず一律 0.3 にしており、既定のしきい値
+  （0.7）を下回る。部分点の答案（塗りが1つ）は保留にならないので、満点の答案だけが人の確認へ
+  回る。`reevaluateResults.test.ts` が現状の挙動を名指しで固定している。#1444
+- **`cornerMarkerDetector` は、罫線が隅のマーカーに接していると「マーカー＋罫線」の横長の
+  成分を左上として採る。** 中心は大きくずれるが、`success: true` で4隅を返す。テストは
+  信頼度が低い（0.5 未満）ことを固定した。下流は信頼度を見ていないので、ずれた隅のまま読み取る。#1445
+
+---
+
+## 7. 今回足した、空振りを防ぐ仕組み
+
+- `ipcBoundaryConventions`: `src/queries/` の定義が src のどこかから使われていることを確かめる。
+  使われていない定義の本体にある preload 呼び出しは「呼ばれている」と数えない
+- `publicUserOmit`: User を指す関連名を schema から引く。拾えていることも確かめる
+- `rowTypeConventions`: 例外のそれぞれについて、外すとその場所に違反が出る（＝効いている）
+  ことを確かめる
+- `scoringKeyGuards`: when 句を AST で集め、走査が当該の文脈を拾えていることを確かめる
+
+---
+
+## 8. 次に調べるときの手順
+
+1. knip を2回走らせる。設定はリポジトリに置かないので、毎回一時ファイルに書く
+   - 起点: `src/app/**/{page,layout,error,…}.{ts,tsx}`、`electron-src/index.ts`、
+     `electron-src/preload.ts`、`scripts/**`、各 config、`prisma/seed.js`、
+     `__tests__/**/*.{test,spec}.{ts,tsx}` と各 globalSetup
+   - `ignore`: `generated/**` `main/**` `**/*.d.ts`
+   - 2回目は `__tests__` を起点からも project からも外し、`"vitest": false, "playwright": false`
+     を付ける（付けないと vitest 連携がテストを起点に戻す）。1回目との差分が
+     「テストからしか使われないもの」
+2. 未使用の export は「同じファイル内で使われている（export だけ余計）」と「完全に未参照」に
+   分けてから扱う。前者を消すと機能が壊れる
+3. `npm run check:hooks`。`result.current.x` や `access.x` の形は拾えない
+4. 規約テストの一覧（ホワイトリスト・例外）に載る名前が実在し、例外が実際に効いているかを見る
+5. 「読み込み前に既定値を見ていないか」「時刻やデータの都合で分岐に入っていないか」は、
+   機械的な走査では見つからない。読む

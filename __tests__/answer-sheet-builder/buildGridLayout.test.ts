@@ -764,23 +764,12 @@ describe("buildGridLayout: エッジケース", () => {
     expect(simplified[2].y).toBe(2)
   })
 
-  it("goUp なし + nextPlacement なし → 全て inline", () => {
+  it("自動改行後の goUp は、戻った先の行に入りきらなければ新しい行へ置く", () => {
     const cells = buildGridLayout([
-      item({ layoutWidth: "1/4" }),
-      item({ layoutWidth: "1/4" }),
-      item({ layoutWidth: "1/4" }),
-      item({ layoutWidth: "1/4" }),
-    ])
-    const simplified = simplify(cells)
-    expect(simplified.every((cell) => cell.y === 0)).toBe(true)
-  })
-
-  it("自動改行後に goUp で戻れる", () => {
-    const cells = buildGridLayout([
+      item({ layoutWidth: "1/2" }),
       item({ layoutWidth: "1/2" }),
       item({ layoutWidth: "1/2" }), // 自動改行
-      item({ layoutWidth: "1/2" }),
-      item({ layoutWidth: "1/2", goUp: 1 }), // row0 に戻る... が rightX=1 なので収まらない
+      item({ layoutWidth: "1/2", goUp: 1 }), // row0 に戻るが rightX=1 なので収まらない
     ])
     const simplified = simplify(cells)
     // row0: ① ② → rightX=1

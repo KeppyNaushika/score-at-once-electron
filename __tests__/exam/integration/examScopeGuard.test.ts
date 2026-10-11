@@ -1,7 +1,7 @@
 /**
  * 採点対象と受験者が別々の試験に属する書き込みを弾くことの検証（#962）。
  *
- * 採点層は「採点対象（採点領域・複合回答・ページ）」と「受験者（ExamStudent）」の
+ * 採点層は「採点対象（採点領域・ページ）」と「受験者（ExamStudent）」の
  * 2つを参照する。FK が保証するのはそれぞれが実在することだけで、両者が同じ試験に
  * 属することは強制されない。どちらの id も string なので取り違えてもコンパイルは通り、
  * 書けてしまうと「試験Aの受験者一覧に居ない生徒の得点」が成績算出に算入される
@@ -20,7 +20,6 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
   }
 })
 
-import { upsertCompoundAnswerScore } from "@/electron-src/lib/prisma/compoundAnswer"
 import {
   batchUpdateQuestionScores,
   setQuestionScore,
@@ -152,32 +151,5 @@ describe("採点対象と受験者の試験スコープ", () => {
     ).rejects.toThrow()
 
     expect(await testPrisma.scoreDecision.count()).toBe(0)
-  })
-
-  it("複合回答の採点でも別の試験の受験者は拒否される", async () => {
-    const { examA, examStudentB } = await buildTwoExams()
-
-    const examPageA = await testPrisma.examPage.findFirstOrThrow({
-      where: { examId: examA.exam.id },
-    })
-    const compoundAnswerA = await testPrisma.compoundAnswer.create({
-      data: {
-        examPageId: examPageA.id,
-        label: "アイ",
-        answerFormat: "multi-digit",
-        correctAnswer: "42",
-        points: 5,
-      },
-    })
-
-    await expect(
-      upsertCompoundAnswerScore({
-        compoundAnswerId: compoundAnswerA.id,
-        examStudentId: examStudentB.id,
-        userId: examA.user.id,
-        status: "correct",
-      })
-    ).rejects.toThrow(/別の試験/)
-    expect(await testPrisma.compoundAnswerScore.count()).toBe(0)
   })
 })

@@ -115,16 +115,17 @@ describe("ImportWizardModal", () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it("IM-8: 処理中にキャンセルボタンクリックでonCloseが呼ばれない", async () => {
-    userEvent.setup()
+  it("IM-8: 処理中は Esc でも閉じない（onClose を呼ばない）", async () => {
+    const user = userEvent.setup()
     const onClose = vi.fn()
     mockWizard = createMockWizard({ isProcessing: true })
     mockUseImportWizard.mockReturnValue(mockWizard)
 
     render(<ImportWizardModal isOpen={true} onClose={onClose} />)
 
-    const cancelButton = screen.getByRole("button", { name: /キャンセル/ })
-    // disabled なのでクリックしても何も起きない
-    expect(cancelButton).toBeDisabled()
+    // キャンセルのボタンは IM-3 が見る。ここは窓そのものを閉じる経路
+    await user.keyboard("{Escape}")
+
+    expect(onClose).not.toHaveBeenCalled()
   })
 })

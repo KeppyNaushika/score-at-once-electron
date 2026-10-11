@@ -6,11 +6,7 @@
  * 0-1正規化座標 → 実画像ピクセル座標に変換する。
  */
 
-import type {
-  BoundingBox,
-  CoordinateTransform,
-  Point,
-} from "../../../src/types/omr.types"
+import type { CoordinateTransform, Point } from "../../../src/types/omr.types"
 
 /**
  * CoordinateTransform を構築する
@@ -74,37 +70,6 @@ export function normalizedToPixel(
     u * v * dBR.y
 
   return { x: px, y: py }
-}
-
-/**
- * 0-1正規化矩形 → ピクセル矩形へ変換
- *
- * 矩形の4隅を個別に変換し、それらを包含するバウンディングボックスを返す。
- */
-export function normalizedRectToPixelRect(
-  nx: number,
-  ny: number,
-  nw: number,
-  nh: number,
-  transform: CoordinateTransform
-): BoundingBox {
-  // 4隅を変換
-  const tl = normalizedToPixel(nx, ny, transform)
-  const tr = normalizedToPixel(nx + nw, ny, transform)
-  const bl = normalizedToPixel(nx, ny + nh, transform)
-  const br = normalizedToPixel(nx + nw, ny + nh, transform)
-
-  const minX = Math.min(tl.x, tr.x, bl.x, br.x)
-  const minY = Math.min(tl.y, tr.y, bl.y, br.y)
-  const maxX = Math.max(tl.x, tr.x, bl.x, br.x)
-  const maxY = Math.max(tl.y, tr.y, bl.y, br.y)
-
-  return {
-    x: minX,
-    y: minY,
-    width: maxX - minX,
-    height: maxY - minY,
-  }
 }
 
 /**

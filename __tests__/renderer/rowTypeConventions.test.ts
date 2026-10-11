@@ -62,15 +62,6 @@ const EXCEPTIONS: { pattern: RegExp; reason: string }[] = [
     reason:
       "旧バージョンのアーカイブの形。上と同じ理由で、現在のスキーマへ追随させてはいけない",
   },
-  {
-    pattern: /^src\/types\/answerSheetDefinition\.types\.ts$/,
-    reason:
-      "解答用紙作成（ASB）の定義ツリー。段階24 で実体そのものを RDB へ出すので、いま型だけ直すと二度手間になる",
-  },
-  {
-    pattern: /^src\/components\/answer-sheet-builder\//,
-    reason: "同上（段階24 の対象）",
-  },
 ]
 
 /** Prisma のモデル名 → 列・リレーション名の集合 */
@@ -212,12 +203,13 @@ interface Scan {
   violations: string[]
 }
 
-function scan(): Scan {
+/** @param exceptions 走査から外すファイル（既定は名指しの例外の一覧） */
+function scan(exceptions: readonly { pattern: RegExp }[] = EXCEPTIONS): Scan {
   const models = prismaModelFields()
   const parsed = sourceFiles()
     .filter(
       (relativePath) =>
-        !EXCEPTIONS.some(({ pattern }) => pattern.test(relativePath))
+        !exceptions.some(({ pattern }) => pattern.test(relativePath))
     )
     .map((relativePath) => {
       const fullPath = path.join(REPO_ROOT, relativePath)
@@ -333,5 +325,18 @@ describe("DB の行の型は Prisma から導く", () => {
     ).map(({ pattern }) => pattern.source)
 
     expect(stale).toEqual([])
+  })
+
+  it("例外はどれも実際に効いている（外すと、その場所に違反が出る）", () => {
+    // ファイルが残っていても、中の型を直し終えたら例外は要らない。残しておくと、
+    // その場所に新しい手写しが生えたときに黙って見逃す（解答用紙作成の2件がそうだった）
+    const idle = EXCEPTIONS.filter((exception) => {
+      const withoutThis = EXCEPTIONS.filter((other) => other !== exception)
+      return !scan(withoutThis).violations.some((violation) =>
+        exception.pattern.test(violation.split(":")[0])
+      )
+    }).map(({ pattern }) => pattern.source)
+
+    expect(idle).toEqual([])
   })
 })

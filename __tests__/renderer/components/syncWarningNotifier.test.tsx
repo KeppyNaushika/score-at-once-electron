@@ -13,8 +13,9 @@
  * - **消えない置き場へ案内する。** これ1枚で完結すると読ませると、閉じた時点で終わる
  * - **言い換えられない注意も出す。** 知らないものを握りつぶさない
  *
- * main は直近の同期の注意の全文を状態に載せて押し出すだけなので、**新しく出たものだけ
- * 知らせる**見分けもここで確かめる。
+ * 言い換え・件数のまとめ・新しく出たものの見分けそのものは純粋関数として
+ * `__tests__/renderer/syncWarningMessages.test.ts` が見る。ここで見るのは配線
+ * （トーストの種類・本文の案内、前回の注意を持ち回して新しく出たものだけ知らせること）。
  */
 
 import { render } from "@testing-library/react"
@@ -114,12 +115,6 @@ describe("SyncWarningNotifier", () => {
     expect(description).toContain("試験の受験生徒")
   })
 
-  it("同じ種類が並んだら件数にまとめる", () => {
-    emit(["Unplaceable Exam:a: 理由", "Unplaceable Exam:b: 理由"])
-
-    expect(descriptionOf(toastWarning)).toContain("（2件）")
-  })
-
   it("報告だけの知らせは、警告ではなく情報として出す", () => {
     emit(["Rebuild deferred: 書き込み中（見送り 1 回目）"])
 
@@ -135,21 +130,6 @@ describe("SyncWarningNotifier", () => {
 
     expect(toastWarning).toHaveBeenCalledTimes(1)
     expect(toastInfo).not.toHaveBeenCalled()
-  })
-
-  it("言い換えられない注意も、原文のまま出して黙らない", () => {
-    emit(["Some future warning the app has never seen"])
-
-    expect(descriptionOf(toastWarning)).toContain(
-      "Some future warning the app has never seen"
-    )
-  })
-
-  it("同じ注意が続くあいだは、2回目から知らせない", () => {
-    emit(["Failed to open remote database: other-pc"])
-    pushWarnings(["Failed to open remote database: other-pc"])
-
-    expect(toastWarning).toHaveBeenCalledTimes(1)
   })
 
   it("前回に無かった注意だけを知らせる", () => {

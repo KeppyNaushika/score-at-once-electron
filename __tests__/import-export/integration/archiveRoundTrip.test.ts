@@ -62,8 +62,8 @@ describe("archiveRoundTrip", () => {
     }
   })
 
-  // RT-1: CollectedDataからアーカイブ作成→抽出→全JSONファイル一致
-  it("RT-1: アーカイブ作成→抽出で全JSONデータが一致する", async () => {
+  // RT-1: 現行版の形で手組みしたアーカイブを抽出できる（全 JSON の一致は RT-F が固定ファイルで見る）
+  it("RT-1: 手組みしたアーカイブを抽出すると、試験・生徒・マニフェストが読める", async () => {
     const archiveContents = createMinimalArchiveContents({
       examId: "rt-exam-1",
       examName: "RT試験",
@@ -209,19 +209,6 @@ describe("archiveRoundTrip", () => {
     expect(result.success).toBe(true)
     expect(result.data!.masterImagePaths).toHaveLength(0)
     expect(result.data!.answerSheetPaths).toHaveLength(0)
-
-    cleanupTempDir(result.data!.tempDir)
-  })
-
-  // RT-6: 存在しないファイルパスでも成功（画像なしの場合）
-  it("RT-6: アーカイブの抽出自体は成功する（画像ディレクトリなし）", async () => {
-    const archiveContents = createMinimalArchiveContents()
-
-    const archivePath = path.join(testDir, "sparse.score")
-    createTestArchive(archiveContents, archivePath, "sparse-exam", "疎テスト")
-
-    const result = await extractArchive(archivePath)
-    expect(result.success).toBe(true)
 
     cleanupTempDir(result.data!.tempDir)
   })

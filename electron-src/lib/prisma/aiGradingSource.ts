@@ -1,5 +1,5 @@
 /**
- * AI 採点で送るもの・添えるものの読み取り（答案画像の行、改訂に添える採点）。
+ * AI 採点で送るものの読み取り（答案画像の行）。
  *
  * 画像そのものは試験のフォルダにあり、ここで返すのは行（パス）だけ。切り出しは
  * `aiGrading/answerImage.ts` が行う。
@@ -30,30 +30,5 @@ export async function getCropRegionWithAnswerImages(
         },
       },
     },
-  })
-}
-
-/** 改訂に添える、教員自身のその設問の採点行 */
-export async function listOwnQuestionScores(
-  cropRegionId: string,
-  userId: string,
-  examStudentIds: readonly string[]
-) {
-  return prisma.questionScore.findMany({
-    where: {
-      cropRegionId,
-      userId,
-      examStudentId: { in: [...examStudentIds] },
-    },
-  })
-}
-
-/** 試行（実行とプロンプト付き）を id で */
-export async function listAiGradingAttemptsByIds(
-  attemptIds: readonly string[]
-) {
-  return prisma.aiGradingAttempt.findMany({
-    where: { id: { in: [...attemptIds] } },
-    include: { run: { include: { prompt: true } } },
   })
 }

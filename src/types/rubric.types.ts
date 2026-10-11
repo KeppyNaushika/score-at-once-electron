@@ -59,10 +59,10 @@ export const RUBRIC_ADVICE_COMBINATION_MODES = [
 ] as const
 export type RubricAdviceCombinationMode =
   (typeof RUBRIC_ADVICE_COMBINATION_MODES)[number]
-export const {
-  is: isRubricAdviceCombinationMode,
-  to: toRubricAdviceCombinationMode,
-} = defineStringUnion(RUBRIC_ADVICE_COMBINATION_MODES, "all")
+export const { is: isRubricAdviceCombinationMode } = defineStringUnion(
+  RUBRIC_ADVICE_COMBINATION_MODES,
+  "all"
+)
 
 /**
  * AI へ送る文（`rubricItemsText.ts`）と1段目・2段目が読む、ルーブリック項目の値。

@@ -25,10 +25,6 @@ import { questionScoresQuery, questionScoresScope } from "./scoring"
 const rubricScope = (examId: string, cropRegionId: string) =>
   [...scopeKeys.exam(examId), "rubric", cropRegionId] as const
 
-/** 試験の全設問の項目を指すキー */
-const rubricItemsOfExamScope = (examId: string) =>
-  [...scopeKeys.exam(examId), "rubricItemsOfExam"] as const
-
 /** 設問の項目1件（作成者付き） */
 export type RubricItemRow = Awaited<
   ReturnType<typeof window.electronAPI.rubric.listItems>
@@ -39,13 +35,6 @@ export const rubricItemsQuery = (examId: string, cropRegionId: string) =>
   queryOptions({
     queryKey: [...rubricScope(examId, cropRegionId), "items"] as const,
     queryFn: () => window.electronAPI.rubric.listItems(cropRegionId),
-  })
-
-/** 試験の全設問の項目（設問一覧の印など、設問をまたぐ表示に使う） */
-export const rubricItemsOfExamQuery = (examId: string) =>
-  queryOptions({
-    queryKey: rubricItemsOfExamScope(examId),
-    queryFn: () => window.electronAPI.rubric.listItemsByExam(examId),
   })
 
 /** 設問の適用1件 */
@@ -141,11 +130,11 @@ export const rubricAnswerInkQuery = (
 // =====================================================================
 
 /**
- * 項目の作り・直し・消しが古くする先（その設問の項目と適用、試験の全設問の項目）。
+ * 項目の作り・直し・消しが古くする先（その設問の項目と適用）。
  * AI の項目の案への答え（`answerAiRubricProposalMutation`）も項目を作るので使う
  */
 export const rubricItemInvalidations = (examId: string, cropRegionId: string) =>
-  [rubricScope(examId, cropRegionId), rubricItemsOfExamScope(examId)] as const
+  [rubricScope(examId, cropRegionId)] as const
 
 /** 項目を1つ作る（作成者は main が操作者から決める） */
 export const createRubricItemMutation = (

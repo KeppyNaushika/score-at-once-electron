@@ -757,21 +757,32 @@ describe("統合アーカイブの書き出しダイアログ", () => {
         })
       )
 
-      // 在籍予定だけ: 1年1組に在籍予定の生徒はいない
-      await togglePhases(user, dialog, ["過去在籍", "在籍予定"])
-      expect(phaseButton(dialog)).toHaveTextContent("在籍予定")
+      // 何も選ばない: 佐藤も外れて学級だけが残る（生徒の入った姿から移るので、
+      // 下見を引き直さなければここで落ちる）
+      await togglePhases(user, dialog, ["過去在籍"])
+      expect(phaseButton(dialog)).toHaveTextContent("生徒を選ばない")
       await waitFor(() =>
         expect(lastPreviewSelection()?.shared).toEqual({
           Classroom: ["classroom-1"],
         })
       )
 
-      // 何も選ばない
-      await togglePhases(user, dialog, ["在籍予定"])
-      expect(phaseButton(dialog)).toHaveTextContent("生徒を選ばない")
-      expect(lastPreviewSelection()?.shared).toEqual({
-        Classroom: ["classroom-1"],
-      })
+      // 在籍中だけ: 山田が戻る
+      await togglePhases(user, dialog, ["在籍中"])
+      await waitFor(() =>
+        expect(lastPreviewSelection()).toMatchObject({
+          shared: { Classroom: ["classroom-1"], Student: ["student-1"] },
+        })
+      )
+
+      // 在籍予定だけ: 1年1組に在籍予定の生徒はいない（山田の入った姿から移る）
+      await togglePhases(user, dialog, ["在籍中", "在籍予定"])
+      expect(phaseButton(dialog)).toHaveTextContent("在籍予定")
+      await waitFor(() =>
+        expect(lastPreviewSelection()?.shared).toEqual({
+          Classroom: ["classroom-1"],
+        })
+      )
     })
 
     /** 下見: 選んだ生徒と学級がそのまま入る（main の範囲の規則の写し。学級は生徒を引き上げない） */

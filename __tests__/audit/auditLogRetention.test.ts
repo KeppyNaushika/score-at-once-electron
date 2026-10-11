@@ -26,7 +26,6 @@ import {
 } from "@/electron-src/lib/prisma/appPreference"
 import {
   AUDIT_LOG_RETENTION_DAYS_KEY,
-  DEFAULT_AUDIT_LOG_RETENTION_DAYS,
   formatAuditLogRetentionDays,
   parseAuditLogRetentionDays,
 } from "@/lib/shared/auditLogRetention"
@@ -41,7 +40,6 @@ const prisma = getTestPrismaClient()
 
 describe("parseAuditLogRetentionDays", () => {
   it("設定が無ければ既定の365日", () => {
-    expect(DEFAULT_AUDIT_LOG_RETENTION_DAYS).toBe(365)
     expect(parseAuditLogRetentionDays(null)).toBe(365)
   })
 

@@ -124,11 +124,6 @@ describe("archiveExtractorDefaults", () => {
     expect(data.tagsData.tagSubtotalGroups).toEqual([])
     expect(data.tagsData.examTags).toEqual([])
 
-    // 既定を入れても for...of が落ちないことを、実際に回して確かめる
-    for (const cropSubtotal of data.subtotalsData.cropSubtotals) {
-      expect(cropSubtotal).toBeDefined()
-    }
-
     cleanupTempDir(data.tempDir)
   })
 })

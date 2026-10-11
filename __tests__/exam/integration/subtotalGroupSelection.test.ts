@@ -123,18 +123,4 @@ describe("試験への小計グループ追加", () => {
       })
     ).toBe(1)
   })
-
-  it("既存の組み合わせを追加し直しても行が増えない（upsertの鍵は@@unique）", async () => {
-    const exam = await testPrisma.exam.create({
-      data: { examName: "小計グループ追加テスト" },
-    })
-    const group = await testPrisma.subtotalGroup.create({
-      data: { name: "数学" },
-    })
-
-    const result = await addSubtotalGroupToExam(exam.id, group.id)
-
-    expect(result.examId).toBe(exam.id)
-    expect(result.subtotalGroupId).toBe(group.id)
-  })
 })

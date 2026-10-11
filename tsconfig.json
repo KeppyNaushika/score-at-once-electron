@@ -44,7 +44,6 @@
   "exclude": [
     "node_modules",
     "renderer",
-    "playwright.config.ts",
     "playwrightElectron.config.ts",
     "tests/**/*",
     "e2e/**/*"

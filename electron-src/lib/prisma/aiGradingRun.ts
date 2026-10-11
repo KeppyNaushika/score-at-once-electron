@@ -36,7 +36,7 @@ import prisma from "./client"
 import { PUBLIC_USER_OMIT } from "./publicUser"
 
 /** 試行の文字列の列を union へ絞る（行のほかの列はそのまま） */
-export function narrowAiGradingAttempt<Attempt extends AiGradingAttempt>(
+function narrowAiGradingAttempt<Attempt extends AiGradingAttempt>(
   attempt: Attempt
 ) {
   return {
@@ -62,7 +62,7 @@ export function narrowAiGradingRun<
 }
 
 /** 実行を作るときの列。id・時刻・後から決まる列は DB と後の書き込みが決める */
-export interface CreateAiGradingRunData {
+interface CreateAiGradingRunData {
   userId: string
   promptId: string
   purpose: AiGradingRunPurpose

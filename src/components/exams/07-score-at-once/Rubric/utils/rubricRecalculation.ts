@@ -37,7 +37,7 @@ export interface RubricRecalculationOptions {
 }
 
 /** 点が変わる1行 */
-export interface RubricRecalculationChange {
+interface RubricRecalculationChange {
   questionScoreId: string
   userId: string
   before: RubricScoreResult

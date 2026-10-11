@@ -160,7 +160,7 @@ const DEFAULT_SETTINGS: AiGradingSettings = {
 }
 
 /** 保存・読み出しの失敗の種類 */
-export type ProviderCredentialErrorCode =
+type ProviderCredentialErrorCode =
   | "encryption_unavailable"
   | "consent_required"
   | "invalid_api_key"

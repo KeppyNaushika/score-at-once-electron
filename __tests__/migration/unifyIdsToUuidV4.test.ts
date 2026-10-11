@@ -180,7 +180,7 @@ describe("20260803110000_unify_ids_to_uuidv4", () => {
     fs.rmSync(TEST_ROOT, { recursive: true, force: true })
   })
 
-  it("合成id・借用id・uuidv5 を uuidv4 へ振り直し、既に v4 の行は触らない", () => {
+  it("合成id・借用id を uuidv4 へ振り直し、既に v4 の行は触らない", () => {
     withDatabase((db) => {
       seedLegacyRows(db)
       // 既に v4 の行（触られないことの確認用）。@@unique を避けて別の組にする

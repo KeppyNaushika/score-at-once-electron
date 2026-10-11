@@ -60,7 +60,12 @@ describe("Grade CRUD", () => {
         referenceDate: "2026-03-01",
       })
       expect(result.description).toBe("テスト用の成績試験")
-      expect(result.referenceDate).toBeTruthy()
+      const stored = await testPrisma.grade.findUniqueOrThrow({
+        where: { id: result.id },
+      })
+      expect(stored.referenceDate?.toISOString()).toBe(
+        new Date("2026-03-01").toISOString()
+      )
     })
 
     it("referenceDateがnullの場合はnullで作成される", async () => {
@@ -84,22 +89,6 @@ describe("Grade CRUD", () => {
     it("試験が0件のとき空配列を返す", async () => {
       const result = await getAllGrades()
       expect(result).toHaveLength(0)
-    })
-
-    it("gradeItems数とgradeStudents数のカウントが含まれる", async () => {
-      const created = await createGrade({ name: "PJ" })
-      await testPrisma.gradeItem.create({
-        data: {
-          gradeId: created.id,
-          name: "知識",
-          order: 0,
-        },
-      })
-
-      const result = await getAllGrades()
-
-      expect(result[0].gradeItems.length).toBe(1)
-      expect(result[0].gradeStudents.length).toBe(0)
     })
   })
 
@@ -126,40 +115,45 @@ describe("Grade CRUD", () => {
           order: 0,
         },
       })
+      const classroom = await testPrisma.classroom.create({
+        data: { name: "1年A組" },
+      })
+      await testPrisma.gradeClassroom.create({
+        data: { gradeId: created.id, classroomId: classroom.id, order: 0 },
+      })
 
       const result = await getGradeById(created.id)
 
       expect(result.gradeItems).toHaveLength(1)
       expect(result.gradeItems[0].name).toBe("思考")
+      expect(
+        result.gradeClassrooms.map(
+          (gradeClassroom) => gradeClassroom.classroom.name
+        )
+      ).toEqual(["1年A組"])
     })
   })
 
   describe("updateGrade", () => {
-    it("名前を更新できる", async () => {
-      const created = await createGrade({ name: "旧名" })
-
-      const result = await updateGrade(created.id, {
-        name: "新名",
-      })
-      expect(result.name).toBe("新名")
-    })
-
-    it("descriptionを更新できる", async () => {
-      const created = await createGrade({ name: "PJ" })
-
-      const result = await updateGrade(created.id, {
-        description: "更新された説明",
-      })
-      expect(result.description).toBe("更新された説明")
-    })
-
-    it("referenceDateを更新できる", async () => {
-      const created = await createGrade({ name: "PJ" })
-
-      const result = await updateGrade(created.id, {
+    // 名前・日付・説明をまとめて書く経路は overviewInPlaceEdit.test.ts が見る。
+    // ここでは渡さなかった項目に触れないことを固定する
+    it("渡した項目だけを更新し、渡さなかった項目は変えない", async () => {
+      const created = await createGrade({
+        name: "旧名",
+        description: "説明",
         referenceDate: "2026-04-01",
       })
-      expect(result.referenceDate).toBeTruthy()
+
+      const result = await updateGrade(created.id, { name: "新名" })
+      expect(result.name).toBe("新名")
+
+      const stored = await testPrisma.grade.findUniqueOrThrow({
+        where: { id: created.id },
+      })
+      expect(stored.description).toBe("説明")
+      expect(stored.referenceDate?.toISOString()).toBe(
+        new Date("2026-04-01").toISOString()
+      )
     })
 
     it("referenceDateをnullにリセットできる", async () => {

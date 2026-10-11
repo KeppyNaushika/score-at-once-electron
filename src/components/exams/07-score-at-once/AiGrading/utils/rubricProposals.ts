@@ -17,8 +17,7 @@ export type AiRubricProposalRow =
 /** 案の選択肢1つ */
 type AiRubricProposalOptionRow = AiRubricProposalRow["options"][number]
 /** 問いかけへの答え1つ */
-export type AiRubricProposalResponseRow =
-  AiRubricProposalRow["responses"][number]
+type AiRubricProposalResponseRow = AiRubricProposalRow["responses"][number]
 
 /** 最新の答え（答え直しは新しい行で、最新が効く）。まだ答えていなければ null */
 export function latestProposalResponse(
@@ -32,7 +31,7 @@ export function latestProposalResponse(
  * manual は自分で採点した（答案ごとの点は答えの `scores`。前の版の「選ばずに進んだ」答えも、
  * 点の無い自分で採点として読む）。答えの行に種類の列は持たず、選択肢と指示の有無から導く
  */
-export type AiRubricProposalAnswerKind = "option" | "instruction" | "manual"
+type AiRubricProposalAnswerKind = "option" | "instruction" | "manual"
 
 export function proposalAnswerKindOf(
   response: Pick<AiRubricProposalResponseRow, "optionId" | "freeText">
@@ -45,7 +44,7 @@ export function proposalAnswerKindOf(
  * 案の種類。matched は既存の項目に当たる案（その項目を当てる案だけを示す）、
  * set は推奨の選択肢が判定を決める案、adjust は点を加減する案
  */
-export type AiRubricProposalKind = "matched" | "set" | "adjust"
+type AiRubricProposalKind = "matched" | "set" | "adjust"
 
 export function proposalKindOf(
   proposal: Pick<AiRubricProposalRow, "matchedRubricItemId" | "options">
@@ -149,7 +148,7 @@ export function optionEffectOf(
  * - create: 新しい項目を作る
  * - unapply: 「その他」か自分で採点。前に確定した答えで当てた項目があれば外す
  */
-export type AiRubricProposalAnswerPlan =
+type AiRubricProposalAnswerPlan =
   | { kind: "link" | "update"; rubricItemId: string }
   | { kind: "create" }
   | { kind: "unapply"; unappliedRubricItemId: string | null }

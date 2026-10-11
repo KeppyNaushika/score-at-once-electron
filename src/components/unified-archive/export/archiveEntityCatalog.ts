@@ -25,7 +25,7 @@ interface NamedEntitySource {
 }
 
 /** 一覧 query の結果。まだ届いていない一覧は空で渡す */
-export interface ArchiveEntitySources {
+interface ArchiveEntitySources {
   exams: readonly {
     id: string
     examName: string

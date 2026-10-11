@@ -3,7 +3,7 @@
  *
  * 受験日スナップショット絞り込みは main の getAdministeredClassrooms が担うため、ここでは
  * 純関数としての「order 昇順の first-match-wins」と lean な出力を検証する
- * （受験日絞り込みとの結合は examStudentClass.test.ts の統合テストで担保）。
+ * （受験日絞り込みとの結合は examStudentClassroom.test.ts の統合テストで担保）。
  */
 
 import { describe, expect, it } from "vitest"

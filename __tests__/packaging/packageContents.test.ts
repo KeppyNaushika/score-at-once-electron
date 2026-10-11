@@ -192,11 +192,22 @@ describe("できあがりを見る関門", () => {
     )
   })
 
-  it("`data/` 以外にも、入ってはいけないものを見ている", () => {
-    expect(forgeConfig.FORBIDDEN_IN_PACKAGE).toContain("data")
-    expect(forgeConfig.FORBIDDEN_IN_PACKAGE).toContain("__tests__")
-    expect(forgeConfig.FORBIDDEN_IN_PACKAGE).toContain(".git")
-  })
+  it.each([
+    ["__tests__", "検査一式（撮影用の DB も入っている）"],
+    [".git", "履歴"],
+    [".next", "ビルドの途中の置き場"],
+  ])(
+    "`data/` 以外にも止める: asar に %s が入っていたら（%s）",
+    async (forbidden) => {
+      const resources = await buildResources({
+        asarEntries: ["main", forbidden],
+      })
+
+      expect(() => forgeConfig.assertPackageIsClean(resources)).toThrow(
+        `app.asar/${forbidden}`
+      )
+    }
+  )
 })
 
 describe("asar の外へ出すもの", () => {

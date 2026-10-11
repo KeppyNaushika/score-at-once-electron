@@ -6,13 +6,13 @@
  *
  * 1. `src/lib/routeShell.ts` の `ROUTE_PARAM_NAMES` に、その段と param 名がある
  *    （配る側の書き換え `toRouteShellPath`・開発用サーバーの `rewrites`・`useRouteParams` は
- *    どれもこの表から作られる）
+ *    どれもこの表から作られる。`useRouteParams` は `hooks/useRouteParams.test.tsx` が見る）
  * 2. その段の `layout.tsx` が殻を作り、殻以外を描かない（`generateStaticParams` と
  *    `dynamicParams = false`）
  */
 import * as fs from "fs"
 import * as path from "path"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import {
   isRouteSection,
@@ -22,13 +22,6 @@ import {
 } from "@/lib/routeShell"
 
 import { routeShellRewrites } from "../../next.config"
-
-const currentPathname = vi.hoisted(() => ({ value: "/" }))
-vi.mock("next/navigation", () => ({
-  usePathname: () => currentPathname.value,
-}))
-
-const { useRouteParams } = await import("@/hooks/useRouteParams")
 
 const APP_DIRECTORY = path.resolve(__dirname, "../../src/app/(app)")
 
@@ -103,13 +96,8 @@ describe("動的ルートの殻", () => {
     }
   )
 
-  it.each(dynamicRoutes)(
-    "$section/[$param] の URL から param を読める",
-    ({ section, param }) => {
-      currentPathname.value = `/${section}/an-id/01-step`
-      expect(useRouteParams()).toEqual({ [param]: "an-id" })
-    }
-  )
+  // URL から param を読める（`useRouteParams`）ことは `hooks/useRouteParams.test.tsx` が
+  // src/app の全段について検査している
   it("動的ルートの外のパスは書き換えない", () => {
     expect(isRouteSection("login")).toBe(false)
     expect(toRouteShellPath("/")).toBe("/")

@@ -7,7 +7,7 @@
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 
 /** ポインターの下にあったハンドル（distance はハンドルの中心までの距離） */
-export type HandleHit =
+type HandleHit =
   | {
       type: "line-endpoint"
       element: DrawingAnnotation

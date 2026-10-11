@@ -479,7 +479,9 @@ describe("providerCredentialStore", () => {
         batchPricePercents: { anthropic: null, openai: 30 },
       })
     })
+  })
 
+  describe("設定の値（料金のページ・助言の文案の指示）", () => {
     it("料金のページの読み込み元は https だけ", () => {
       const store = createStore()
       expect(

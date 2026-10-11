@@ -1,5 +1,5 @@
 /**
- * 答案画像の測定（朱書きの配置に使う占有グリッド・送る画像の見本・大きさ）。
+ * 答案画像の測定（朱書きの配置に使う占有グリッド・送る画像の大きさ）。
  *
  * どれも外部へは何も送らない。金額や件数の計算・白紙の判断は renderer が行うので、
  * ここが返すのは測った値と画像そのものだけ。
@@ -8,11 +8,7 @@
 import { readImageHeader } from "../imageOps"
 import { getCropRegionWithAnswerImages } from "../prisma/aiGradingSource"
 import { getAiPrompt } from "../prisma/aiPrompt"
-import {
-  cropRegionForSending,
-  measureAnswerInk,
-  measureSendingCropSize,
-} from "./answerImage"
+import { measureAnswerInk, measureSendingCropSize } from "./answerImage"
 import type { ResolveDataPath } from "./gradingRequestFactory"
 
 /**
@@ -42,30 +38,6 @@ export async function measureCropRegionInk(
     ],
     { paperSize: cropRegion.examPage.pageSize }
   )
-}
-
-/** 答案1件について、送る画像そのもの（PNG の data URL）を返す */
-export async function previewSendingCrop(
-  input: { cropRegionId: string; examStudentId: string; imageScale: number },
-  resolveDataPath: ResolveDataPath
-) {
-  const cropRegion = await getCropRegionWithAnswerImages(input.cropRegionId, [
-    input.examStudentId,
-  ])
-  const studentAnswerImage = cropRegion?.examPage.studentAnswerImages[0]
-  if (!cropRegion || !studentAnswerImage) {
-    throw new Error("答案画像が見つかりません")
-  }
-  const crop = await cropRegionForSending(
-    resolveDataPath(studentAnswerImage.imagePath),
-    cropRegion,
-    { imageScale: input.imageScale }
-  )
-  return {
-    dataUrl: `data:image/png;base64,${crop.png.toString("base64")}`,
-    width: crop.width,
-    height: crop.height,
-  }
 }
 
 /**

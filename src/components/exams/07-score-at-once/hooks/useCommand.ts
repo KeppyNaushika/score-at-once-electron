@@ -55,7 +55,6 @@ interface UseCommandOptions {
    * - gradingMode: "grid" | "individual" | "ai"
    * - modalOpen: 何らかのモーダルが開いている
    * - partialScoreModalOpen: 部分点入力モーダルが開いている
-   * - sidePanelVisible: サイドパネルが表示されている
    * - hasSelectedAnswers: 答案が選択されている
    *
    * 例:

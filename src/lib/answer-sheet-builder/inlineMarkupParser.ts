@@ -163,15 +163,3 @@ export function parseInlineMarkup(input: string): InlineSegment[] {
 
   return segments
 }
-
-/** マークアップ記法を除去してプレーンテキストを返す */
-export function stripMarkup(text: string): string {
-  return text
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    .replace(/__([^_]+)__/g, "$1")
-    .replace(/~~([^~]+)~~/g, "$1")
-    .replace(/\$\$([^$]+)\$\$/g, "$1")
-    .replace(/\$([^$]+)\$/g, "$1")
-    .replace(/\|\|([^|]+)\|\|/g, "$1")
-}

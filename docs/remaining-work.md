@@ -47,12 +47,11 @@ issue とコミットに残るので、ここへ記録を積み上げない。**
 
 ### 残っているもの
 
-|                                              |                                                                                                                                                   |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `waitForTimeout` が57箇所                    | 条件ではなく秒数で待っている。遅いうえ、機械が重い日は途中の絵が撮れる。**画面が増えて件数も増えた**                                              |
-| **なぜ 1440 なのかが書かれていない**         | 一覧の操作は幅で「…」へ畳まれるので、**この数字が図に写るものを決めている**。残さないと、誰かが軽い気持ちで変えて図から操作が消える               |
-| 1倍で撮っている                              | 資料に貼ると粗い。`--force-device-scale-factor=2` で2倍にできる                                                                                   |
-| ルートの `playwright.config.ts` が死んでいる | `testDir: "./tests"` を指すがそのディレクトリは無い。素で `npx playwright test` を叩くと**0件で緑になる**。実体は `__tests__/` 配下の2つの config |
+|                                      |                                                                                                                                     |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `waitForTimeout` が57箇所            | 条件ではなく秒数で待っている。遅いうえ、機械が重い日は途中の絵が撮れる。**画面が増えて件数も増えた**                                |
+| **なぜ 1440 なのかが書かれていない** | 一覧の操作は幅で「…」へ畳まれるので、**この数字が図に写るものを決めている**。残さないと、誰かが軽い気持ちで変えて図から操作が消える |
+| 1倍で撮っている                      | 資料に貼ると粗い。`--force-device-scale-factor=2` で2倍にできる                                                                     |
 
 画面サイズ `1440×900` 自体は明示されており効いている（出力の PNG で確認済み）。
 
@@ -364,7 +363,7 @@ SQLite の Session 拡張には `sqlite3changeset_invert()` があり、changese
 | [ownership-and-sharing-design.md](./ownership-and-sharing-design.md)                 | 所有と共有（3ロール）。発端の #1127 は閉じた             |
 | [audit-log-redesign.md](./audit-log-redesign.md)                                     | 監査ログの拡充。#1102                                    |
 | [renderer-side-calculation-plan.md](./renderer-side-calculation-plan.md)             | main 側の計算専用 IPC 撤去の残り                         |
-| [test-suite-audit.md](./test-suite-audit.md)                                         | 本番を守っていないテストの全数調査                       |
+| [test-suite-audit.md](./test-suite-audit.md)                                         | テストとデッドコードの全数調査（2026-10-12 対処済み）    |
 | [type-assertion-audit.md](./type-assertion-audit.md)                                 | `as` の全数調査と処方                                    |
 | [schema-relation-audit.md](./schema-relation-audit.md)                               | スキーマのリレーション監査                               |
 | [internationalization-plan.md](./internationalization-plan.md)                       | 国際化。**段階表に載せない一計画**（着手時期未定）       |

@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils"
 
 /** プルダウンに並べる選択肢1つ */
-export interface CheckboxDropdownOption<Value extends string> {
+interface CheckboxDropdownOption<Value extends string> {
   value: Value
   label: string
 }

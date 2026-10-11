@@ -25,6 +25,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest"
 import { ARCHIVE_FILE_COLUMNS } from "../../../electron-src/lib/export/unified-archive/archiveFileCollector"
 import { createUnifiedArchive } from "../../../electron-src/lib/export/unified-archive/unifiedArchiveCreator"
 import { importUnifiedArchiveFiles } from "../../../electron-src/lib/import/unified-archive/archiveFileImporter"
+import { ARCHIVE_MATCH_KEYS } from "../../../electron-src/lib/import/unified-archive/archiveMatchCandidates"
 import {
   type UnifiedArchiveImportResult,
   UnifiedArchiveUnresolvableConflictError,
@@ -68,8 +69,8 @@ const DATA_DIR = path.join(WORK_DIR, "data")
 const OUTPUT_PATH = path.join(WORK_DIR, "export.sao")
 const IMPORTED_AT = new Date("2026-10-05T09:00:00.000Z")
 
-/** 照合で付け替えうる表（archiveMatchCandidates の対象） */
-const MATCHED_TABLES = ["Student", "Classroom", "SubtotalGroup", "User"]
+/** 照合で付け替えうる表（archiveMatchCandidates の対象。宣言から取るので食い違わない） */
+const MATCHED_TABLES: readonly string[] = Object.keys(ARCHIVE_MATCH_KEYS)
 
 const importRows = (
   archive: OpenedUnifiedArchive,

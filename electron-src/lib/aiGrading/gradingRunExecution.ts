@@ -33,7 +33,7 @@ interface RunExecutionInput {
 }
 
 /** 同時に走らせる数を絞る（空きが出たら待っている次の1件へ枠をそのまま渡す） */
-export function createConcurrencyLimiter(limit: number) {
+function createConcurrencyLimiter(limit: number) {
   let activeCount = 0
   const waitingStarts: (() => void)[] = []
   return async function runLimited(task: () => Promise<void>): Promise<void> {

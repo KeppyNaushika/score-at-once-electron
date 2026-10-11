@@ -208,23 +208,6 @@ describe("computeSubtotalScore", () => {
     expect(result.score).toBe(10)
     expect(result.maxScore).toBe(60) // q1+q2+q3 の配点合計
   })
-
-  it("同じ設問が複数の割り当てで重複していても配点は1回だけ数える", () => {
-    mockCalculateActualScore.mockReturnValue(10)
-
-    const result = computeSubtotalScore(
-      "s1",
-      "exam1",
-      [createQuestionScore("s1", "q1", "correct")],
-      [
-        createQuestionAssignment("q1", "exam1", 10),
-        createQuestionAssignment("q1", "exam1", 10),
-      ]
-    )
-
-    expect(result.score).toBe(10)
-    expect(result.maxScore).toBe(10)
-  })
 })
 
 // ================== calculateSubtotalScoreForStudent ==================

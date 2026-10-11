@@ -1,5 +1,5 @@
 /**
- * GradeItem / GradeDataSource / GradeBoundary CRUD 統合テスト
+ * GradeItem / GradeDataSource / GradeItemBoundary CRUD 統合テスト
  *
  * テスト用SQLiteに直接接続してDB操作を検証
  * Electronの`app`依存を回避するため、prisma/clientをモックしてテスト用クライアントを注入
@@ -19,21 +19,22 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
   }
 })
 
+import { getGradeById } from "@/electron-src/lib/prisma/grade"
 import {
   createDataSource,
   deleteDataSource,
-  getDataSourcesByGradeItemId,
+  reorderDataSources,
   updateDataSource,
 } from "@/electron-src/lib/prisma/gradeDataSource"
 import {
   createGradeItem,
   deleteGradeItem,
-  getGradeItemsByExamId,
   reorderGradeItems,
   updateGradeItem,
 } from "@/electron-src/lib/prisma/gradeItem"
 import {
   createGradeItemBoundary,
+  deleteGradeItemBoundaries,
   deleteGradeItemBoundary,
   updateGradeItemBoundary,
 } from "@/electron-src/lib/prisma/gradeItemBoundary"
@@ -53,17 +54,44 @@ async function createTestGrade(name = "テスト成績PJ") {
   })
 }
 
+/** 評価項目の名前を order 昇順で読む */
+async function readGradeItemNames(gradeId: string): Promise<string[]> {
+  const gradeItems = await testPrisma.gradeItem.findMany({
+    where: { gradeId },
+    orderBy: { order: "asc" },
+  })
+  return gradeItems.map((gradeItem) => gradeItem.name)
+}
+
+/** データソースの名前を order 昇順で読む */
+async function readDataSourceNames(gradeItemId: string): Promise<string[]> {
+  const dataSources = await testPrisma.gradeDataSource.findMany({
+    where: { gradeItemId },
+    orderBy: { order: "asc" },
+  })
+  return dataSources.map((dataSource) => dataSource.name)
+}
+
+/** 境界のラベルを order 昇順で読む */
+async function readBoundaryLabels(gradeItemId: string): Promise<string[]> {
+  const boundaries = await testPrisma.gradeItemBoundary.findMany({
+    where: { gradeItemId },
+    orderBy: { order: "asc" },
+  })
+  return boundaries.map((boundary) => boundary.label)
+}
+
+beforeEach(async () => {
+  await cleanupTestDatabase()
+})
+
+afterAll(async () => {
+  await cleanupTestDatabase()
+  await testPrisma.$disconnect()
+  await disconnectTestPrisma()
+})
+
 describe("GradeItem CRUD", () => {
-  beforeEach(async () => {
-    await cleanupTestDatabase()
-  })
-
-  afterAll(async () => {
-    await cleanupTestDatabase()
-    await testPrisma.$disconnect()
-    await disconnectTestPrisma()
-  })
-
   describe("createGradeItem", () => {
     it("GradeItemを作成できる", async () => {
       const grade = await createTestGrade()
@@ -71,7 +99,6 @@ describe("GradeItem CRUD", () => {
         gradeId: grade.id,
         name: "知識・技能",
       })
-      expect(result).toBeDefined()
       expect(result.name).toBe("知識・技能")
       expect(result.order).toBe(0)
       expect(result.gradeId).toBe(grade.id)
@@ -99,38 +126,6 @@ describe("GradeItem CRUD", () => {
     })
   })
 
-  describe("getGradeItemsByExamId", () => {
-    it("試験のGradeItem一覧を取得できる", async () => {
-      const grade = await createTestGrade()
-      await createGradeItem({ gradeId: grade.id, name: "項目A" })
-      await createGradeItem({ gradeId: grade.id, name: "項目B" })
-
-      const result = await getGradeItemsByExamId(grade.id)
-      expect(result).toHaveLength(2)
-      expect(result[0].name).toBe("項目A")
-      expect(result[1].name).toBe("項目B")
-    })
-
-    it("dataSourcesも含めて取得できる", async () => {
-      const grade = await createTestGrade()
-      const gradeItemResult = await createGradeItem({
-        gradeId: grade.id,
-        name: "項目A",
-      })
-      await createDataSource({
-        gradeItemId: gradeItemResult.id,
-        type: "manual",
-        name: "レポート",
-        weight: 50,
-      })
-
-      const result = await getGradeItemsByExamId(grade.id)
-
-      expect(result[0].dataSources).toHaveLength(1)
-      expect(result[0].dataSources[0].name).toBe("レポート")
-    })
-  })
-
   describe("updateGradeItem", () => {
     it("名前を更新できる", async () => {
       const grade = await createTestGrade()
@@ -147,7 +142,7 @@ describe("GradeItem CRUD", () => {
   })
 
   describe("deleteGradeItem", () => {
-    it("GradeItemを削除できる（Cascade）", async () => {
+    it("GradeItemを削除すると、配下のデータソースと境界も消える", async () => {
       const grade = await createTestGrade()
       const gradeItemResult = await createGradeItem({
         gradeId: grade.id,
@@ -155,18 +150,22 @@ describe("GradeItem CRUD", () => {
       })
       await createDataSource({
         gradeItemId: gradeItemResult.id,
-        type: "manual",
+        type: "exam_total",
         name: "ソース",
         weight: 10,
+      })
+      await createGradeItemBoundary({
+        gradeItemId: gradeItemResult.id,
+        label: "A",
+        minPercentage: 80,
+        order: 0,
       })
 
       await deleteGradeItem(gradeItemResult.id)
 
-      // GradeItem配下のDataSourceも削除されている
-      const dataSourceResult = await getDataSourcesByGradeItemId(
-        gradeItemResult.id
-      )
-      expect(dataSourceResult ?? []).toHaveLength(0)
+      expect(await readGradeItemNames(grade.id)).toEqual([])
+      expect(await readDataSourceNames(gradeItemResult.id)).toEqual([])
+      expect(await readBoundaryLabels(gradeItemResult.id)).toEqual([])
     })
   })
 
@@ -188,45 +187,43 @@ describe("GradeItem CRUD", () => {
         { id: gradeItemResult2.id, order: 0 },
       ])
 
-      const items = await getGradeItemsByExamId(grade.id)
-      expect(items[0].name).toBe("B")
-      expect(items[1].name).toBe("A")
+      expect(await readGradeItemNames(grade.id)).toEqual(["B", "A"])
     })
   })
 })
 
 describe("GradeDataSource CRUD", () => {
-  beforeEach(async () => {
-    await cleanupTestDatabase()
-  })
-
-  afterAll(async () => {
-    await cleanupTestDatabase()
-  })
-
-  it("DataSourceを作成・取得できる", async () => {
+  it("DataSourceを作成でき、満点は参照先の元データから算出される", async () => {
     const grade = await createTestGrade()
     const gradeItemResult = await createGradeItem({
       gradeId: grade.id,
       name: "項目",
     })
+    const coursework = await testPrisma.coursework.create({
+      data: { name: "提出物" },
+    })
+    const courseworkItem = await testPrisma.courseworkItem.create({
+      data: { courseworkId: coursework.id, name: "レポート", maxScore: 20 },
+    })
 
     const dataSourceResult = await createDataSource({
       gradeItemId: gradeItemResult.id,
-      type: "manual",
-      name: "手動入力",
+      type: "coursework",
+      courseworkItemId: courseworkItem.id,
+      name: "提出物(レポート)",
       weight: 30,
     })
-    expect(dataSourceResult.type).toBe("manual")
-    // 満点は元データからライブ算出（manual型は対応ソースなしのため0）
-    expect(Number(dataSourceResult.maxScore)).toBe(0)
+    expect(dataSourceResult.type).toBe("coursework")
+    // 満点は列ではなく、参照先の評価項目の満点から算出される
+    expect(Number(dataSourceResult.maxScore)).toBe(20)
     expect(Number(dataSourceResult.weight)).toBe(30)
 
-    const list = await getDataSourcesByGradeItemId(gradeItemResult.id)
-    expect(list).toHaveLength(1)
+    expect(await readDataSourceNames(gradeItemResult.id)).toEqual([
+      "提出物(レポート)",
+    ])
   })
 
-  it("DataSourceの名前・換算満点を更新できる（満点は元データ追従で編集不可）", async () => {
+  it("DataSourceの名前・換算満点を更新できる", async () => {
     const grade = await createTestGrade()
     const gradeItemResult = await createGradeItem({
       gradeId: grade.id,
@@ -234,7 +231,7 @@ describe("GradeDataSource CRUD", () => {
     })
     const dataSourceResult = await createDataSource({
       gradeItemId: gradeItemResult.id,
-      type: "manual",
+      type: "exam_total",
       name: "旧",
       weight: 10,
     })
@@ -255,15 +252,14 @@ describe("GradeDataSource CRUD", () => {
     })
     const dataSourceResult = await createDataSource({
       gradeItemId: gradeItemResult.id,
-      type: "manual",
+      type: "exam_total",
       name: "削除対象",
       weight: 10,
     })
 
     await deleteDataSource(dataSourceResult.id)
 
-    const list = await getDataSourcesByGradeItemId(gradeItemResult.id)
-    expect(list).toHaveLength(0)
+    expect(await readDataSourceNames(gradeItemResult.id)).toEqual([])
   })
 
   it("同一GradeItem内でorderが自動インクリメントされる", async () => {
@@ -275,13 +271,13 @@ describe("GradeDataSource CRUD", () => {
 
     const dataSource1 = await createDataSource({
       gradeItemId: gradeItemResult.id,
-      type: "manual",
+      type: "exam_total",
       name: "A",
       weight: 10,
     })
     const dataSource2 = await createDataSource({
       gradeItemId: gradeItemResult.id,
-      type: "manual",
+      type: "exam_total",
       name: "B",
       weight: 20,
     })
@@ -289,26 +285,38 @@ describe("GradeDataSource CRUD", () => {
     expect(dataSource1.order).toBe(0)
     expect(dataSource2.order).toBe(1)
   })
+
+  it("データソースの並び順を変更できる", async () => {
+    const grade = await createTestGrade()
+    const gradeItemResult = await createGradeItem({
+      gradeId: grade.id,
+      name: "項目",
+    })
+
+    const dataSource1 = await createDataSource({
+      gradeItemId: gradeItemResult.id,
+      type: "exam_total",
+      name: "A",
+      weight: 10,
+    })
+    const dataSource2 = await createDataSource({
+      gradeItemId: gradeItemResult.id,
+      type: "exam_total",
+      name: "B",
+      weight: 20,
+    })
+
+    // 順序を入れ替え
+    await reorderDataSources([
+      { id: dataSource1.id, order: 1 },
+      { id: dataSource2.id, order: 0 },
+    ])
+
+    expect(await readDataSourceNames(gradeItemResult.id)).toEqual(["B", "A"])
+  })
 })
 
 describe("GradeItemBoundary CRUD", () => {
-  beforeEach(async () => {
-    await cleanupTestDatabase()
-  })
-
-  afterAll(async () => {
-    await cleanupTestDatabase()
-  })
-
-  /** 境界のラベルを order 昇順で読む */
-  async function readBoundaryLabels(gradeItemId: string): Promise<string[]> {
-    const boundaries = await testPrisma.gradeItemBoundary.findMany({
-      where: { gradeItemId },
-      orderBy: { order: "asc" },
-    })
-    return boundaries.map((boundary) => boundary.label)
-  }
-
   it("評価項目に境界を引ける", async () => {
     const grade = await createTestGrade()
     const gradeItemResult = await createGradeItem({
@@ -392,9 +400,40 @@ describe("GradeItemBoundary CRUD", () => {
     expect(await readBoundaryLabels(gradeItemResult.id)).toEqual(["B"])
   })
 
+  it("評価項目の境界を全て削除できる（他の評価項目の境界は残る）", async () => {
+    const grade = await createTestGrade()
+    const targetItem = await createGradeItem({
+      gradeId: grade.id,
+      name: "知識・技能",
+    })
+    const otherItem = await createGradeItem({
+      gradeId: grade.id,
+      name: "思考・判断・表現",
+    })
+    for (const gradeItemId of [targetItem.id, otherItem.id]) {
+      await createGradeItemBoundary({
+        gradeItemId,
+        label: "A",
+        minPercentage: 80,
+        order: 0,
+      })
+      await createGradeItemBoundary({
+        gradeItemId,
+        label: "B",
+        minPercentage: 60,
+        order: 1,
+      })
+    }
+
+    await deleteGradeItemBoundaries(targetItem.id)
+
+    expect(await readBoundaryLabels(targetItem.id)).toEqual([])
+    expect(await readBoundaryLabels(otherItem.id)).toEqual(["A", "B"])
+  })
+
   // 境界は専用APIでなく評価項目の子として降ってくる。境界0本の項目も
   // 「境界の無い評価項目」として必ず並ぶ（設定画面が全項目の編集欄を出せる）
-  it("評価項目一覧が境界を同梱して返す（0本の項目も落とさない）", async () => {
+  it("成績算出の詳細が、評価項目ごとに境界を同梱して返す（0本の項目も落とさない）", async () => {
     const grade = await createTestGrade()
     const firstItem = await createGradeItem({
       gradeId: grade.id,
@@ -419,23 +458,21 @@ describe("GradeItemBoundary CRUD", () => {
       order: 0,
     })
 
-    const result = await getGradeItemsByExamId(grade.id)
-    expect(result).toHaveLength(3)
-    expect(result.map((gradeItem) => gradeItem.boundaries.length)).toEqual([
-      1, 1, 0,
+    const { gradeItems } = await getGradeById(grade.id)
+    expect(
+      gradeItems.map((gradeItem) => [
+        gradeItem.name,
+        gradeItem.boundaries.map((boundary) => boundary.label),
+      ])
+    ).toEqual([
+      ["項目1", ["A"]],
+      ["項目2", ["B"]],
+      ["項目3", []],
     ])
   })
 })
 
 describe("評価項目の削除と制約ルール（issue #1063）", () => {
-  beforeEach(async () => {
-    await cleanupTestDatabase()
-  })
-
-  afterAll(async () => {
-    await disconnectTestPrisma()
-  })
-
   /** 比較先＝評定、集計対象＝渡した項目 の整合ルールを作る */
   async function createConsistencyConstraint(
     gradeId: string,

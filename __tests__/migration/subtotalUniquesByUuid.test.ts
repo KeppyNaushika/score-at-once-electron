@@ -22,6 +22,7 @@ import * as path from "path"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 import { createBaseline } from "../../electron-src/lib/prisma/schema/baselineMigrations"
+import { applyMigrationSql } from "../../electron-src/lib/prisma/schema/migrationApplier"
 import { deployPendingMigrations } from "../../electron-src/lib/prisma/schema/migrationDeployer"
 import { bootstrapSchema } from "../../electron-src/lib/prisma/schema/schemaBootstrap"
 import { createPrismaClientForPath } from "../helpers/testPrismaClient"
@@ -259,9 +260,9 @@ describe("小計まわりの UNIQUE を uuid の組だけにする", () => {
     ).toBe(2)
   })
 
-  it("Subtotal の作り直しで子を落としていない", async () => {
-    // migration は Subtotal を DROP TABLE して作り直す。foreign_keys=ON のままだと
-    // 子の ON DELETE CASCADE が発火して割り当てとデータソースが消える
+  it("作り直した Subtotal へ子の外部キーが張られ、カスケードの向きも保たれている", async () => {
+    // migration より前から在った子が消えないことは、下の
+    // 「適用前から在った子は、Subtotal の作り直しで消えない」が見る
     const prisma = chainPrisma.current
     const { subtotal } = await createSubtotalGroupWithSubtotal("作文")
     const cropRegion = await createCropRegion()
@@ -286,11 +287,85 @@ describe("小計まわりの UNIQUE を uuid の組だけにする", () => {
       await prisma.cropSubtotal.findUnique({ where: { id: cropSubtotal.id } })
     ).toBeNull()
   })
+})
 
-  it("外部キーの参照先が1つも壊れていない", () => {
-    const violations = withDatabase((db) =>
-      db.prepare("PRAGMA foreign_key_check").all()
-    )
-    expect(violations).toEqual([])
+/**
+ * 子を持つ Subtotal がある DB に、この migration だけを当てる。
+ *
+ * 上の検査は全 migration を当てた後に行を作るので、作り直しの瞬間に子がまだ無く、
+ * DROP TABLE が子を巻き添えにしても見えない。ここでは1つ手前までの DB に子を入れてから当てる。
+ */
+describe("適用前から在った子は、Subtotal の作り直しで消えない", () => {
+  const TARGET_MIGRATION = "20260823120000_subtotal_uniques_by_uuid"
+  const MIGRATIONS_DIR = path.resolve(__dirname, "../../prisma/migrations")
+  const PRE_TARGET_DB_PATH = path.join(TEST_ROOT, "pre-target", "database.db")
+  const UPDATED_AT = "2026-08-01T00:00:00.000+00:00"
+
+  const readMigrationSql = (name: string): string =>
+    fs.readFileSync(path.join(MIGRATIONS_DIR, name, "migration.sql"), "utf-8")
+
+  it("割り当て（CropSubtotal）とデータソース（GradeDataSource）が残り、Subtotal を指したまま", () => {
+    // init → この migration の1つ手前まで（本番の deployer と同じ当て方）
+    bootstrapSchema(PRE_TARGET_DB_PATH)
+    const db = new Database(PRE_TARGET_DB_PATH)
+    try {
+      const migrationNames = fs
+        .readdirSync(MIGRATIONS_DIR, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort()
+      const targetIndex = migrationNames.indexOf(TARGET_MIGRATION)
+      expect(targetIndex).toBeGreaterThan(0)
+      for (const name of migrationNames.slice(0, targetIndex)) {
+        if (name === "20260322232329_init") continue
+        applyMigrationSql(db, readMigrationSql(name))
+      }
+
+      // 子を持つ小計を入れる
+      db.pragma("foreign_keys = ON")
+      db.exec(`
+        INSERT INTO "SubtotalGroup" ("id", "name") VALUES ('group-1', '国語');
+        INSERT INTO "Subtotal" ("id", "name", "subtotalGroupId", "order")
+          VALUES ('subtotal-1', '漢字', 'group-1', 0);
+        INSERT INTO "Exam" ("id", "examName") VALUES ('exam-1', '期末考査');
+        INSERT INTO "ExamPage" ("id", "examId", "pageNumber") VALUES ('page-1', 'exam-1', 1);
+        INSERT INTO "CropRegion" ("id", "examPageId", "label", "type", "x", "y", "width", "height")
+          VALUES ('region-1', 'page-1', '大問1', 'QUESTION_ANSWER', 0, 0, 1, 1);
+        INSERT INTO "CropSubtotal" ("id", "cropRegionId", "subtotalId", "assignmentType")
+          VALUES ('crop-subtotal-1', 'region-1', 'subtotal-1', 'QUESTION_ASSIGNMENT');
+        INSERT INTO "Grade" ("id", "name", "updatedAt") VALUES ('grade-1', '1学期', '${UPDATED_AT}');
+        INSERT INTO "GradeItem" ("id", "gradeId", "name", "updatedAt")
+          VALUES ('item-1', 'grade-1', '知識・技能', '${UPDATED_AT}');
+        INSERT INTO "GradeDataSource" ("id", "gradeItemId", "type", "subtotalId", "name", "weight", "updatedAt")
+          VALUES ('source-1', 'item-1', 'subtotal', 'subtotal-1', '国語/漢字', 1, '${UPDATED_AT}');
+      `)
+
+      // 外部キーを ON のまま流す（deployer は OFF に戻してから流すので、それより厳しい）。
+      // migration が自分で OFF を敷かずに DROP TABLE すると、ここで子がカスケードで消える
+      db.exec(readMigrationSql(TARGET_MIGRATION))
+
+      expect(
+        db.prepare(`SELECT "id", "subtotalId" FROM "CropSubtotal"`).all()
+      ).toEqual([{ id: "crop-subtotal-1", subtotalId: "subtotal-1" }])
+      expect(
+        db.prepare(`SELECT "id", "subtotalId" FROM "GradeDataSource"`).all()
+      ).toEqual([{ id: "source-1", subtotalId: "subtotal-1" }])
+
+      // 子の定義文は作り直した "Subtotal" を指したまま（RENAME TO で書き換わっていない）
+      const childDefinitions = db
+        .prepare<[], { sql: string }>(
+          `SELECT "sql" FROM sqlite_master
+            WHERE type = 'table' AND name IN ('CropSubtotal', 'GradeDataSource')`
+        )
+        .all()
+      expect(childDefinitions).toHaveLength(2)
+      for (const definition of childDefinitions) {
+        expect(definition.sql).toContain('REFERENCES "Subtotal"')
+        expect(definition.sql).not.toContain('"new_Subtotal"')
+      }
+      expect(db.pragma("foreign_key_check")).toEqual([])
+    } finally {
+      db.close()
+    }
   })
 })

@@ -130,7 +130,8 @@ describe("入れない段のガード", () => {
         examId="exam-1"
         isPending={false}
         role={null}
-        allowedTabs={examWorkflowTabs}
+        // 入れる段を絞った一覧を渡しても、ロールが無ければ絞らない
+        allowedTabs={tabsFor("EDITOR", true)}
       >
         <p>領域情報の中身</p>
       </ExamStepGuard>

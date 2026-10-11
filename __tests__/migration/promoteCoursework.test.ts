@@ -11,6 +11,8 @@ import * as fs from "fs"
 import * as path from "path"
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest"
 
+import { applyMigrationSql } from "../../electron-src/lib/prisma/schema/migrationApplier"
+import { openAppDatabase } from "../../electron-src/lib/prisma/sqliteConnection"
 import { createPrismaClientForPath } from "../helpers/testPrismaClient"
 
 const TEST_DB_DIR = path.resolve(__dirname, "../../data")
@@ -33,22 +35,17 @@ const resetDb = async () => {
   await prisma.$connect()
 }
 
-/** migrationDeployer と同じ ';' 分割ロジックで migration.sql を全文適用する */
+/**
+ * 本番の起動時と同じ当て方（`applyMigrationSql` ＝ 外部キーを OFF に戻して `db.exec`）で
+ * migration.sql を全文適用する。Prisma の接続は一度閉じ、次の問い合わせで張り直させる
+ */
 const applyMigration = async () => {
-  const sql = fs.readFileSync(MIGRATION_SQL, "utf-8")
-  const statements = sql
-    .split(";")
-    .map((statement) => statement.trim())
-    .filter((statement) => {
-      if (statement.length === 0) return false
-      const stripped = statement
-        .replace(/\/\*[\s\S]*?\*\//g, "")
-        .replace(/--[^\n]*/g, "")
-        .trim()
-      return stripped.length > 0
-    })
-  for (const statement of statements) {
-    await prisma.$executeRawUnsafe(statement)
+  await prisma.$disconnect()
+  const db = openAppDatabase(TEST_DB_PATH)
+  try {
+    applyMigrationSql(db, fs.readFileSync(MIGRATION_SQL, "utf-8"))
+  } finally {
+    db.close()
   }
 }
 

@@ -2,9 +2,10 @@
  * スロット置換の分解（`planSlotPermutation`）
  *
  * 見るのは1点だけ ——「途中で2行が同じスロットに乗らないか」。
- * 乗ると、その形は NAS 同期の相手側で unique 違反になり、その相手からの取り込みが
- * 丸ごと巻き戻って以後永久に届かなくなる（実測:
- * `__tests__/sync/studentAnswerPlacementSync.test.ts`）。
+ * 手元の SQLite は UNIQUE を1文ごとに即時検査するので、乗った時点で手元の書き込みが落ちる。
+ * （旧方式の sqlite-nas-sync 0.19 までは、相手側の取り込みも止めていた。0.20.0 からは
+ * 相手は版の集合から表を組み直すので、途中の状態は相手では再生されない。同期を越えた
+ * 結末は `__tests__/sync/studentAnswerPlacementSync.test.ts` が本物のライブラリで見る）
  * 結合テストは2つの輪と鎖しか通らないので、3つの輪や輪の途中の空きはここで押さえる。
  */
 import { describe, expect, it } from "vitest"

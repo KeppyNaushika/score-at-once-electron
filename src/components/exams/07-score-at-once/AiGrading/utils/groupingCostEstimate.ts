@@ -51,7 +51,7 @@ interface MeasuredGroupingRun extends RecordedTokenUsage {
   effort: string
 }
 
-export interface GroupingCostEstimateInput {
+interface GroupingCostEstimateInput {
   provider: GradingProviderId
   model: string
   effort: GradingEffort
@@ -66,7 +66,7 @@ export interface GroupingCostEstimateInput {
 type GroupingOutputBasis =
   { kind: "measured"; sampleCount: number } | { kind: "guideline" }
 
-export interface GroupingCostEstimate {
+interface GroupingCostEstimate {
   usage: RecordedTokenUsage
   cost: UsageCost
   outputBasis: GroupingOutputBasis

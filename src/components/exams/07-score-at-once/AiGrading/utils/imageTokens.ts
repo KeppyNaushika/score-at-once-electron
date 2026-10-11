@@ -41,7 +41,7 @@ const ANTHROPIC_HIGH_RESOLUTION_FROM_VERSION = 4.7
  * Claude のモデル名から版（4.5 なら 4.5）を読む。読めなければ null。
  * `claude-opus-5-5` → 5.5、`claude-opus-5` → 5、`claude-haiku-4-5-20251001` → 4.5
  */
-export function parseClaudeVersion(model: string): number | null {
+function parseClaudeVersion(model: string): number | null {
   const matched = /^claude-[a-z]+-(\d+)(?:-(\d))?$/.exec(
     stripModelSnapshotDate(model)
   )

@@ -18,7 +18,7 @@ import { AiPricingTab } from "./AiPricingTab"
 import { AiTokenUsageTab } from "./AiTokenUsageTab"
 
 const AI_GRADING_TABS = ["settings", "defaults", "pricing", "usage"] as const
-export type AiGradingTab = (typeof AI_GRADING_TABS)[number]
+type AiGradingTab = (typeof AI_GRADING_TABS)[number]
 
 /** URL のクエリの値をタブにする。知らない値なら「設定」 */
 export function parseAiGradingTab(tabQuery: string | null): AiGradingTab {

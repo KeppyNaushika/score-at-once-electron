@@ -36,7 +36,7 @@ export interface RubricScoreWrite {
   clearsOverride: boolean
 }
 
-export interface WriteRubricScoresResult {
+interface WriteRubricScoresResult {
   writtenQuestionScoreIds: string[]
   deletedQuestionScoreIds: string[]
   skippedOverriddenIds: string[]

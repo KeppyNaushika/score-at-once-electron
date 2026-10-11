@@ -18,6 +18,7 @@ import type {
 import { calculateActualScore } from "../shared/calculations/actualScore"
 import { resolveEffectiveScores } from "../shared/calculations/scoreResolution"
 import prisma from "./client"
+import { PUBLIC_USER_OMIT } from "./publicUser"
 import { toSerializedQuestionScore } from "./questionScore"
 import { canDecideExamScores, toSerializedScoreDecision } from "./scoreDecision"
 
@@ -53,7 +54,7 @@ export const getExamDecisionSummary = async (
       where: {
         cropRegion: { examPage: { examId }, type: "QUESTION_ANSWER" },
       },
-      include: { decidedBy: { omit: { passcode: true } } },
+      include: { decidedBy: { omit: PUBLIC_USER_OMIT } },
     }),
     prisma.examStudent.findMany({
       where: { examId },
@@ -67,11 +68,11 @@ export const getExamDecisionSummary = async (
         cropRegion: { examPage: { examId }, type: "QUESTION_ANSWER" },
         user: { userExams: { some: { examId } } },
       },
-      include: { user: { omit: { passcode: true } } },
+      include: { user: { omit: PUBLIC_USER_OMIT } },
     }),
     prisma.userExam.findMany({
       where: { examId },
-      include: { user: { omit: { passcode: true } } },
+      include: { user: { omit: PUBLIC_USER_OMIT } },
     }),
     // 設問の分母は「答案画像がある受験者数」（getExamProgress と同じ数え方）
     prisma.studentAnswerImage.findMany({
@@ -212,7 +213,7 @@ export const getExamDecisionSummary = async (
       include: { student: true },
     }),
     targetExamStudentIds.length > 0
-      ? prisma.user.findMany({ omit: { passcode: true } })
+      ? prisma.user.findMany({ omit: PUBLIC_USER_OMIT })
       : Promise.resolve([]),
   ])
   const studentByExamStudentId = new Map(

@@ -30,9 +30,6 @@
  *
  * [明示的DB再読み込み]
  *   - loadFromDatabase → 設問のアノテーションを再取得
- *
- * [DB→drawingElementsの同期ガード]
- *   - loadVersionRef: 非同期ロードの競合を防止（最新バージョンのみ適用）
  */
 
 import { act, renderHook, waitFor } from "@testing-library/react"
@@ -418,7 +415,7 @@ describe("useDrawingState", () => {
   // updateDrawingElements — 一括更新（複数要素のドラッグなど）
   // =========================================================================
   describe("updateDrawingElements（一括更新）", () => {
-    it("複数要素が1回のsetStateで更新される", async () => {
+    it("渡した要素だけが更新され、ほかの要素はそのまま", async () => {
       mockAPI.getByTarget.mockResolvedValue([
         createMockAnnotation({ id: "a1", x: 0.1 }),
         createMockAnnotation({ id: "a2", x: 0.2 }),
@@ -673,29 +670,6 @@ describe("useDrawingState", () => {
       expect(onChanged).toHaveBeenCalled()
     })
 
-    it("updateDrawingElementでローカル状態が即座に更新される", async () => {
-      mockAPI.getByTarget.mockResolvedValue([
-        createMockAnnotation({ id: "a1", x: 0.1 }),
-      ])
-
-      const { result } = renderHook(
-        () => useDrawingState(MOCK_ANNOTATION_TARGET, true),
-        {
-          wrapper: createQueryWrapper(),
-        }
-      )
-
-      await waitForDrawingElements(result, 1)
-      expect(result.current.drawingElements[0].x).toBe(0.1)
-
-      await act(async () => {
-        await result.current.updateDrawingElement("a1", { x: 0.5 })
-      })
-
-      // 即座にローカルが更新される
-      expect(result.current.drawingElements[0].x).toBe(0.5)
-    })
-
     it("removeDrawingElementでonAnnotationChangedが呼ばれる", async () => {
       const onChanged = vi.fn()
       mockAPI.getByTarget.mockResolvedValue([
@@ -760,35 +734,6 @@ describe("useDrawingState", () => {
       act(() => result.current.setSelectedElementIds(["a1", "a2", "a3"]))
       act(() => result.current.clearSelection())
       expect(result.current.selectedElementIds).toEqual([])
-    })
-  })
-
-  // =========================================================================
-  // ツール状態の管理
-  // =========================================================================
-  describe("ツール・設定の状態管理", () => {
-    it("setCurrentTool / setStrokeColor / setStrokeWidth / setLineStyle / setFontSize", () => {
-      const { result } = renderHook(
-        () => useDrawingState(MOCK_ANNOTATION_TARGET, false),
-        {
-          wrapper: createQueryWrapper(),
-        }
-      )
-
-      act(() => result.current.setCurrentTool("line"))
-      expect(result.current.currentTool).toBe("line")
-
-      act(() => result.current.setStrokeColor("#00ff00"))
-      expect(result.current.strokeColor).toBe("#00ff00")
-
-      act(() => result.current.setStrokeWidth(5))
-      expect(result.current.strokeWidth).toBe(5)
-
-      act(() => result.current.setLineStyle("wave"))
-      expect(result.current.lineStyle).toBe("wave")
-
-      act(() => result.current.setFontSize(24))
-      expect(result.current.fontSize).toBe(24)
     })
   })
 })

@@ -72,7 +72,5 @@ export function useAssignedExamStudents({
   return {
     isVisibleExamStudent,
     isAssignedToMe,
-    /** 生徒の担当が1件でもあるか（無ければ絞り込みも「すべて表示」も要らない） */
-    hasStudentAssignments: assignments.length > 0,
   }
 }

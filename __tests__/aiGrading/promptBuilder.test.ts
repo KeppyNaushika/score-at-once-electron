@@ -133,7 +133,7 @@ describe("固定部の組み立て", () => {
     expect(fixedParts[0].kind).toBe("text")
   })
 
-  it("答案の画像は可変部にだけ入る", () => {
+  it("答案の画像は可変部の画像の片として組む（固定部に入らないことは送信の側で見る）", () => {
     const answerImage = {
       mediaType: "image/png" as const,
       base64Data: "YW5zd2Vy",

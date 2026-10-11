@@ -351,12 +351,19 @@ describe("成績値の確定（凍結）", () => {
   it("Grade を削除すると確定行もカスケード削除される", async () => {
     const fixture = await buildFixture()
     await freezeGradeScores({ gradeId: fixture.gradeId })
+    // 対象者を経由した絞り込みは、対象者ごと消えると残った行も拾えない。
+    // 消す前に確定行の id を控え、その id で数える
+    const frozenRows = await testPrisma.gradeFrozenScore.findMany({
+      where: { gradeStudentId: fixture.gradeStudentId },
+    })
+    expect(frozenRows).toHaveLength(1)
 
     await testPrisma.grade.delete({ where: { id: fixture.gradeId } })
 
-    const rows = await testPrisma.gradeFrozenScore.findMany({
-      where: { gradeStudent: { gradeId: fixture.gradeId } },
-    })
-    expect(rows).toHaveLength(0)
+    expect(
+      await testPrisma.gradeFrozenScore.count({
+        where: { id: { in: frozenRows.map((frozenRow) => frozenRow.id) } },
+      })
+    ).toBe(0)
   })
 })

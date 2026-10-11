@@ -22,14 +22,14 @@ import {
 } from "./archiveOpener"
 import type { OpenedUnifiedArchive } from "./types"
 
-export interface UnifiedArchiveImportSession {
+interface UnifiedArchiveImportSession {
   /** 開いた .sao のパス（監査ログの表示に使う） */
   readonly archivePath: string
   readonly workDirectory: string
   readonly opened: OpenedUnifiedArchive
 }
 
-export type UnifiedArchiveImportSessionOpenResult =
+type UnifiedArchiveImportSessionOpenResult =
   | {
       readonly kind: "opened"
       readonly sessionId: string
@@ -41,7 +41,7 @@ export type UnifiedArchiveImportSessionOpenResult =
       readonly details: readonly string[]
     }
 
-export interface OpenUnifiedArchiveImportSessionOptions {
+interface OpenUnifiedArchiveImportSessionOptions {
   archivePath: string
   /** 表・列を比べる相手（取り込み先のライブ DB） */
   referenceDatabasePath: string

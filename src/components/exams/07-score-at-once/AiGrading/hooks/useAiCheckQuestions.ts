@@ -27,7 +27,7 @@ const ACTIVE_RUN_STATUSES: ReadonlySet<string> = new Set([
 ])
 
 /** running: チェックを実行中、idle: まだ実行していない、ready: 問いを出せる */
-export type CheckStatus = "running" | "idle" | "ready"
+type CheckStatus = "running" | "idle" | "ready"
 
 /** 自分の今の採点（未採点・行が無ければ null） */
 function ownScoreOfAnswers(

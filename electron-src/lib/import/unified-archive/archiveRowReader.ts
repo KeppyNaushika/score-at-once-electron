@@ -30,7 +30,7 @@ export interface ArchiveTableRows {
   readonly rows: readonly ArchiveRow[]
 }
 
-export interface ArchiveRows {
+interface ArchiveRows {
   /** 行のある表だけを、外部キーの親が先の順に並べたもの */
   readonly tables: readonly ArchiveTableRows[]
   readonly needsDeferredForeignKeys: boolean

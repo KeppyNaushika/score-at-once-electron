@@ -81,10 +81,18 @@ function callArgument(text: string, openParenIndex: number): string {
 
 describe("idはuuidv4で作る", () => {
   it("全モデルの id が @default(uuid()) を持つ", () => {
-    const missing = schemaModels()
-      .filter(({ body }) => /^\s+id\s+String\s+@id\s*$/m.test(body))
+    const models = schemaModels()
+    // id 列の行（`id  String  @id @default(uuid())` など）。@default が無い・cuid()・
+    // autoincrement() のどれも、uuid() でなければ違反として拾う
+    const idLineOf = (body: string): string | undefined =>
+      /^\s+id\s+\S+\s+@id\b.*$/m.exec(body)?.[0]
+    const missing = models
+      .filter(({ body }) => !/@default\(uuid\(\)\)/.test(idLineOf(body) ?? ""))
       .map(({ name }) => name)
 
+    // 解析が壊れて全モデルが「id 行なし」になると、全部が違反として出て気づける。
+    // 逆に、id 行を1つも拾えていないのに空で通ることもない
+    expect(models.length).toBeGreaterThan(0)
     expect(missing).toEqual([])
   })
 

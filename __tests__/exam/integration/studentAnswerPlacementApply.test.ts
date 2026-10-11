@@ -125,9 +125,8 @@ describe("applyStudentAnswerPlacements", () => {
     //
     // **行はマスに留まり、中身（imagePath）が動く。** `StudentAnswerImage` は
     // `@@unique([examPageId, examStudentId])` を持つので、入れ替えを「行の unique キーの
-    // 書き換え」で表すと途中で必ず2行が同じマスに乗る。相手の端末は変更を1件ずつ当てるため、
-    // その途中の状態が unique 違反になって取り込みが丸ごと巻き戻り、その相手からの同期が
-    // 永久に止まる（実測: `__tests__/sync/studentAnswerPlacementSync.test.ts`）。
+    // 書き換え」で表すと途中で必ず2行が同じマスに乗り、手元の SQLite が unique 違反で落とす
+    // （同期を越えた結末は `__tests__/sync/studentAnswerPlacementSync.test.ts` が見る）。
     // だから見るのは「どのマスにどの画像が入ったか」で、行のidの居場所ではない。
     const imageAtStudentB =
       await testPrisma.studentAnswerImage.findFirstOrThrow({

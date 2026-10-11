@@ -40,7 +40,7 @@ import {
 /** 採点方式の問いの id（行の id ではない） */
 export const SCORING_METHOD_STEP_ID = "scoringMethod"
 /** どの案にも入らない答案の問いの id */
-export const OUTSIDE_STEP_ID = "outside"
+const OUTSIDE_STEP_ID = "outside"
 
 /** 採点方式の問いの選択肢（この順） */
 export const QUESTIONING_SCORING_METHODS = ["deduction", "addition"] as const
@@ -109,7 +109,7 @@ export function proposalAdviceOf(
  * 「その他」の欄に書いてある文。同じ案・同じ教員の行が複数あれば（一意制約を置かないので、端末をまたぐと
  * 起こりうる）updatedAt の新しい方（同じ時刻なら id の大きい方）。行が無ければ null
  */
-export function latestInstructionDraftText(
+function latestInstructionDraftText(
   instructionDrafts: readonly Pick<
     AiRubricProposalRow["instructionDrafts"][number],
     "id" | "instructionText" | "updatedAt"
@@ -131,7 +131,7 @@ export function latestInstructionDraftText(
 }
 
 /** 案1つの問い */
-export function proposalStepOf(
+function proposalStepOf(
   proposal: AiRubricProposalRow,
   points: number | null
 ): QuestioningStep {
@@ -170,7 +170,7 @@ export function proposalStepOf(
 }
 
 /** 案への最新の答え（下書きか確定済み）から、決めたことを読む */
-export function proposalDecisionOf(
+function proposalDecisionOf(
   proposal: AiRubricProposalRow,
   step: Pick<QuestioningStep, "members">
 ): Omit<QuestioningStepState, "step"> {

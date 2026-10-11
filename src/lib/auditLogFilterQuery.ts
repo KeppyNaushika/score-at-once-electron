@@ -46,7 +46,7 @@ export interface AuditFilterState {
 const SEARCH_PARAM = "q"
 
 /** 操作履歴の一覧のパス */
-export const AUDIT_LOGS_PATH = "/audit-logs"
+const AUDIT_LOGS_PATH = "/audit-logs"
 
 const isAuditFilterFieldKey = (key: string): key is AuditFilterFieldKey =>
   AUDIT_FILTER_FIELD_KEYS.some((fieldKey) => fieldKey === key)

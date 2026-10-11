@@ -21,7 +21,7 @@ import {
 } from "./scoreComparison"
 
 /** 実行1件の集計（行は持ったまま、数だけを足す） */
-export interface RunHistoryEntry {
+interface RunHistoryEntry {
   run: AiGradingRunRow
   attemptCount: number
   /** 判定が出た試行の数 */
@@ -34,7 +34,7 @@ export interface RunHistoryEntry {
   withinOnePointCount: number
 }
 
-export interface RunHistoryInput {
+interface RunHistoryInput {
   runs: readonly AiGradingRunRow[]
   questionScores: readonly QuestionScoreRow[]
   cropRegionId: string

@@ -218,9 +218,6 @@ export interface ScoringContextState {
   /** 部分点入力モーダルが開いている状態 */
   partialScoreModalOpen: boolean
 
-  /** サイドパネルが表示されている状態 */
-  sidePanelVisible: boolean
-
   /** 答案が選択されている状態 */
   hasSelectedAnswers: boolean
 

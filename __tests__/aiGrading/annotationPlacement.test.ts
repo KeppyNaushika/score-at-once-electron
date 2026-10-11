@@ -8,7 +8,6 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  estimateAnnotationCharacterLimit,
   MINIMUM_FONT_SIZE_MM,
   placeAnnotation,
   sanitizeAnnotationText,
@@ -267,19 +266,5 @@ describe("placeAnnotation の文字の縮小と、枠からのはみ出し", () 
     expect(placement?.fontSize).toBe(MINIMUM_FONT_SIZE_MM)
     expect(placement?.x).toBeCloseTo(tinyInkGrid.originX)
     expect(placement?.y).toBeCloseTo(tinyInkGrid.originY)
-  })
-})
-
-describe("estimateAnnotationCharacterLimit", () => {
-  it("解答欄の面積に比例し、下限・上限に収める", () => {
-    expect(estimateAnnotationCharacterLimit(50, 50)).toBe(39)
-    expect(estimateAnnotationCharacterLimit(10, 5)).toBe(10)
-    expect(estimateAnnotationCharacterLimit(200, 100)).toBe(80)
-  })
-
-  it("縦横を入れ替えても同じ（用紙の向きによらない）", () => {
-    expect(estimateAnnotationCharacterLimit(60, 40)).toBe(
-      estimateAnnotationCharacterLimit(40, 60)
-    )
   })
 })

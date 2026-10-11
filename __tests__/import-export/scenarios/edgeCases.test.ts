@@ -242,115 +242,7 @@ describe("edgeCases", () => {
     expect(scores[0].partialScore).toBeNull()
   })
 
-  // EC-4: DrawingAnnotation付きインポート
-  it("EC-4: DrawingAnnotation付きスコアが正常にインポートされる", async () => {
-    const examId = generateId()
-    const studentId = generateId()
-    const studentNumber = `DA_${Date.now()}`
-    const scoreId = generateId()
-
-    const examData = createArchiveExamData({
-      examId,
-      pageCount: 1,
-      cropRegionsPerPage: 1,
-    })
-
-    const examStudentId = generateId()
-    examData.examStudents = [
-      {
-        id: examStudentId,
-        examId,
-        studentId,
-        status: "PARTICIPATING",
-        customOrder: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ]
-
-    const regionId = examData.cropRegions[0].id
-
-    const data = createExtractedArchiveData({
-      examData,
-      studentsData: createArchiveStudentsData([
-        { id: studentId, studentNumber },
-      ]),
-      scoresData: {
-        questionScores: [
-          {
-            id: scoreId,
-            cropRegionId: regionId,
-            examStudentId,
-            status: "correct",
-            partialScore: "10",
-            comment: "",
-            userId: currentUser.id,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ],
-        drawingAnnotations: [
-          {
-            id: generateId(),
-            questionScoreId: scoreId,
-            type: "circle",
-            x: 10,
-            y: 20,
-            color: "#ff0000",
-            strokeWidth: 3,
-            width: 30,
-            height: 30,
-            endX: 0,
-            endY: 0,
-            lineStyle: "solid",
-            text: "",
-            fontSize: 16,
-            textBoxWidth: 0,
-            textBoxHeight: 0,
-            horizontalAlign: "left",
-            verticalAlign: "top",
-            anchorDirection: "top-left",
-            displayX: 0,
-            displayY: 0,
-            isFavorite: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ],
-      },
-    })
-
-    const preMatch = createFileOverviewData({
-      student: createPreMatchingResult({
-        noMatch: [
-          { importId: studentId, importData: {}, displayLabel: "DA生徒" },
-        ],
-      }),
-      exam: {
-        isIdMatch: false,
-        importExamId: examId,
-        importData: {},
-        displayLabel: "テスト",
-      },
-    })
-
-    const result = await executeIdIntegrationImport(
-      data,
-      preMatch,
-      createIdIntegrationConfig(),
-      currentUser.id
-    )
-
-    const annotations = await prisma.drawingAnnotation.findMany({
-      where: {
-        questionScore: {
-          cropRegion: { examPage: { examId: result.examId! } },
-        },
-      },
-    })
-    expect(annotations.length).toBe(1)
-    expect(annotations[0].type).toBe("circle")
-  })
+  // EC-4（注釈の取り込み）は idIntegrationImporter.test.ts の II-26 へ統合したので欠番
 
   // EC-5: CropSubtotalsの正しいリンク
   it("EC-5: CropSubtotalsが正しくリンクされる", async () => {
@@ -425,194 +317,8 @@ describe("edgeCases", () => {
     expect(cropSubtotals.length).toBe(2)
   })
 
-  // EC-6: 同一アーカイブの2回インポート（冪等性）
-  it("EC-6: 同一アーカイブの2回インポートが冪等に動作する", async () => {
-    const examId = generateId()
-    const studentId = generateId()
-    const studentNumber = `IDEMP_${Date.now()}`
-    const classroomId = generateId()
-    const className = `Idemp_${Date.now()}`
-    const groupId = generateId()
-    const groupName = `IdempG_${Date.now()}`
-
-    const examData = createArchiveExamData({
-      examId,
-      pageCount: 1,
-      cropRegionsPerPage: 1,
-    })
-
-    const examStudentId = generateId()
-    examData.examStudents = [
-      {
-        id: examStudentId,
-        examId,
-        studentId,
-        status: "PARTICIPATING",
-        customOrder: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ]
-
-    examData.examClassrooms = [
-      {
-        id: generateId(),
-        examId,
-        classroomId,
-        administered: true,
-        statistics: true,
-        order: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ]
-
-    examData.examSubtotalGroups = [
-      {
-        id: generateId(),
-        examId,
-        subtotalGroupId: groupId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ]
-
-    const regionId = examData.cropRegions[0].id
-
-    const data = createExtractedArchiveData({
-      examData,
-      studentsData: createArchiveStudentsData([
-        { id: studentId, studentNumber },
-      ]),
-      classesData: createArchiveClassesData(
-        [{ id: classroomId, name: className }],
-        [{ studentId, classroomId, attendanceNumber: 1 }]
-      ),
-      subtotalsData: createArchiveSubtotalsData([
-        { id: groupId, name: groupName },
-      ]),
-      scoresData: createArchiveScoresData([
-        {
-          cropRegionId: regionId,
-          examStudentId,
-          status: "correct",
-          partialScore: "10",
-          userId: currentUser.id,
-        },
-      ]),
-    })
-
-    // 1回目インポート
-    const preMatch1 = createFileOverviewData({
-      student: createPreMatchingResult({
-        noMatch: [
-          { importId: studentId, importData: {}, displayLabel: "テスト" },
-        ],
-      }),
-      classroom: createPreMatchingResult({
-        noMatch: [
-          { importId: classroomId, importData: {}, displayLabel: className },
-        ],
-      }),
-      subtotalGroup: createPreMatchingResult({
-        noMatch: [
-          { importId: groupId, importData: {}, displayLabel: groupName },
-        ],
-      }),
-      exam: {
-        isIdMatch: false,
-        importExamId: examId,
-        importData: {},
-        displayLabel: "テスト",
-      },
-    })
-
-    await executeIdIntegrationImport(
-      data,
-      preMatch1,
-      createIdIntegrationConfig(),
-      currentUser.id
-    )
-
-    // 2回目インポート（同一データ）
-    const preMatch2 = createFileOverviewData({
-      student: createPreMatchingResult({
-        byId: [
-          createMatchedItem({ importId: studentId, existingId: studentId }),
-        ],
-      }),
-      classroom: createPreMatchingResult({
-        byId: [
-          createMatchedItem({ importId: classroomId, existingId: classroomId }),
-        ],
-      }),
-      subtotalGroup: createPreMatchingResult({
-        byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
-      }),
-      exam: {
-        isIdMatch: true,
-        importExamId: examId,
-        existingExamId: examId,
-        importData: {},
-        existingData: {},
-        displayLabel: "テスト",
-      },
-    })
-
-    await executeIdIntegrationImport(
-      data,
-      preMatch2,
-      createIdIntegrationConfig(),
-      currentUser.id
-    )
-
-    // データが重複していないことを確認
-    const studentCount = await prisma.student.count({
-      where: { id: studentId },
-    })
-    expect(studentCount).toBe(1)
-
-    const examCount = await prisma.exam.count({
-      where: { id: examId },
-    })
-    expect(examCount).toBe(1)
-
-    const scoreCount = await prisma.questionScore.count({
-      where: { cropRegionId: regionId, examStudent: { studentId } },
-    })
-    expect(scoreCount).toBe(1)
-  })
-
-  // EC-7: 古いバージョン(1.0.0)アーカイブ変換確認
-  it("EC-7: マニフェストの互換バージョンが正しく処理される", async () => {
-    // このテストは manifestValidator で検証済みだが、
-    // インポートパイプライン全体での互換性を確認
-    const examId = generateId()
-
-    const data = createExtractedArchiveData({
-      examData: createArchiveExamData({ examId }),
-    })
-    // 古いバージョンのマニフェストに変更
-    data.manifest.version = "1.0.0"
-
-    const preMatch = createFileOverviewData({
-      exam: {
-        isIdMatch: false,
-        importExamId: examId,
-        importData: {},
-        displayLabel: "旧バージョン",
-      },
-    })
-
-    // 古いバージョンでもインポート自体は成功する
-    // (バージョン変換はarchiveExtractorの後、importerの前で行われる)
-    await executeIdIntegrationImport(
-      data,
-      preMatch,
-      createIdIntegrationConfig(),
-      currentUser.id
-    )
-  })
+  // EC-6（2回目の取り込みの冪等）は idIntegrationImporter.test.ts の II-16 / II-17 へ統合、
+  // EC-7（展開後に manifest.version を書き換えても変換は走らず、何も検査していなかった）は削除したので欠番
 
   // EC-8: 上書きは採点の時刻を見ない
   it("EC-8: 上書きを選ぶと、ファイルの採点が古くてもファイルの採点になる", async () => {
@@ -735,6 +441,13 @@ describe("edgeCases", () => {
       ]),
     })
 
+    // ファイルの採点を、このPCの採点より前に書かれたものにする。
+    // 統合なら負ける側なので、置き換わるのは「上書きする」が時刻を見ないときだけ
+    data.scoresData.questionScores[0].updatedAt = new Date(
+      "2000-01-01T00:00:00.000Z"
+    ).toISOString()
+
+    // 事前照合の競合一覧は確認画面に件数を見せるためのもので、取り込みの判断には使われない
     const conflict = createScoringConflict({
       importScoreId: scoreId,
       existingScoreId: existingScore.id,
@@ -743,8 +456,7 @@ describe("edgeCases", () => {
       importScore: {
         status: "incorrect",
         partialScore: 0,
-        // ファイルの採点の方が古い。それでも「上書きする」は時刻を見ない
-        updatedAt: new Date("2025-06-01").toISOString(),
+        updatedAt: new Date("2000-01-01").toISOString(),
       },
       existingScore: {
         status: "correct",
@@ -791,5 +503,9 @@ describe("edgeCases", () => {
     })
     expect(score!.status).toBe("incorrect")
     expect(Number(score!.partialScore)).toBe(0)
+    // 置き換えた行の updatedAt は取り込み時刻（アーカイブの古い時刻ではない）
+    expect(score!.updatedAt.getTime()).toBeGreaterThan(
+      new Date("2000-01-01T00:00:00.000Z").getTime()
+    )
   })
 })

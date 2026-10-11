@@ -15,7 +15,6 @@ export function createAiGradingApi() {
       createPrompt: bind("aiGrading:createPrompt"),
       importQuestionImage: bind("aiGrading:importQuestionImage"),
       getAsbModelAnswerSource: bind("aiGrading:getAsbModelAnswerSource"),
-      previewCrop: bind("aiGrading:previewCrop"),
       estimateRun: bind("aiGrading:estimateRun"),
       startRun: bind("aiGrading:startRun"),
       startGroupingRun: bind("aiGrading:startGroupingRun"),

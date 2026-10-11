@@ -18,7 +18,7 @@ type AsbSubQuestion = AsbMajorQuestion["subQuestions"][number]
 type AsbTextElement = AsbSubQuestion["textElements"][number]
 
 /** ラベルが当たった解答欄と、そこから抜き出した模範解答 */
-export interface AsbModelAnswerDraft {
+interface AsbModelAnswerDraft {
   /** 当たったラベル */
   matchedLabel: string
   /** `||…||` を抜き出したもの（複数あれば改行でつなぐ）。無ければ空文字 */

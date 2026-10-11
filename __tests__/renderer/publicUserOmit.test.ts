@@ -17,15 +17,28 @@ import { describe, expect, it } from "vitest"
 
 const REPO_ROOT = path.resolve(__dirname, "../..")
 const MAIN_ROOT = path.join(REPO_ROOT, "electron-src")
+const SCHEMA_PATH = path.join(REPO_ROOT, "prisma/schema.prisma")
 
-/** `User` を指す関連の名前（`prisma/schema.prisma` の `... User @relation` の左辺） */
-const USER_RELATION_FIELDS = [
-  "user",
-  "inviter",
-  "assigner",
-  "owner",
-  "decider",
-] as const
+/**
+ * `User` を指す関連の名前（`prisma/schema.prisma` のモデルの中の `名前 User` の左辺）。
+ *
+ * **手で書き並べない。** 手書きの一覧は関連の改名・追加に追随せず、`decidedBy` が
+ * 一覧に無い（`decider` と書かれていた）まま素通りしていた。スキーマから引けば、
+ * 関連を足した時点で検査の対象に入る。
+ */
+function userRelationFields(): Set<string> {
+  const schema = fs.readFileSync(SCHEMA_PATH, "utf8")
+  const fields = new Set<string>()
+  for (const [, body] of schema.matchAll(/model\s+\w+\s*\{([\s\S]*?)\n\}/g)) {
+    for (const line of body.split("\n")) {
+      const field = /^\s*(\w+)\s+User(?:\?|\[\])?(?:\s|$)/.exec(line)
+      if (field) fields.add(field[1])
+    }
+  }
+  return fields
+}
+
+const USER_RELATION_FIELDS = userRelationFields()
 
 /** `.ts` を再帰的に集める */
 function collectSourceFiles(directory: string): string[] {
@@ -37,6 +50,12 @@ function collectSourceFiles(directory: string): string[] {
 }
 
 describe("ユーザーの行を関連から引くときは passcode を落とす", () => {
+  it("User を指す関連をスキーマから拾えている（走査の空振りを止める）", () => {
+    expect([...USER_RELATION_FIELDS]).toEqual(
+      expect.arrayContaining(["user", "inviter", "assigner", "decidedBy"])
+    )
+  })
+
   it("main 側に素の `user: true` が残っていない", () => {
     // `include: { user: true }` は User の**全列**を連れてくる。落とすには
     // `{ omit: PUBLIC_USER_OMIT }` を書く（Prisma は include の中でも omit を受ける）
@@ -46,10 +65,7 @@ describe("ユーザーの行を関連から引くときは passcode を落とす
         const match = /^\s*(\w+): true,?\s*$/.exec(line)
         if (!match) return []
         const relationField = match[1]
-        const isUserRelation = USER_RELATION_FIELDS.some(
-          (userRelationField) => userRelationField === relationField
-        )
-        if (!isUserRelation) return []
+        if (!USER_RELATION_FIELDS.has(relationField)) return []
         return [
           `${path.relative(REPO_ROOT, filePath)}:${lineIndex + 1} ${line.trim()}`,
         ]
@@ -57,6 +73,24 @@ describe("ユーザーの行を関連から引くときは passcode を落とす
     })
 
     expect(bareIncludes).toEqual([])
+  })
+
+  it("落とす列をその場で書かない（PUBLIC_USER_OMIT を使う）", () => {
+    // `omit: { passcode: true }` の手書きは、User に秘密の列が増えたときに追随しない
+    const inlineOmits = collectSourceFiles(MAIN_ROOT).flatMap((filePath) =>
+      fs
+        .readFileSync(filePath, "utf8")
+        .split("\n")
+        .flatMap((line, lineIndex) =>
+          /omit:\s*\{[^}]*\bpasscode\s*:/.test(line)
+            ? [
+                `${path.relative(REPO_ROOT, filePath)}:${lineIndex + 1} ${line.trim()}`,
+              ]
+            : []
+        )
+    )
+
+    expect(inlineOmits).toEqual([])
   })
 
   it("落とすものの宣言は1か所（写しを増やさない）", () => {

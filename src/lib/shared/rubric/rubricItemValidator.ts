@@ -40,7 +40,7 @@ export type ValidatedRubricItemEffect =
       readonly setScore: number | null
     }
 
-export type RubricItemEffectValidation =
+type RubricItemEffectValidation =
   | { readonly ok: true; readonly value: ValidatedRubricItemEffect }
   | { readonly ok: false; readonly reasons: readonly string[] }
 

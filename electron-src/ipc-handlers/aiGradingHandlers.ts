@@ -15,10 +15,7 @@ import {
   importAiQuestionImage,
   type ImportAiQuestionImageInput,
 } from "../lib/aiGrading/questionImageImport"
-import {
-  measureRunImageSizes,
-  previewSendingCrop,
-} from "../lib/aiGrading/sendingImageInspection"
+import { measureRunImageSizes } from "../lib/aiGrading/sendingImageInspection"
 import { getSharedFilesDirectory } from "../lib/dataManager"
 import {
   type AiAttemptResponseInput,
@@ -93,17 +90,6 @@ export const aiGradingHandlers = {
     getAsbModelAnswerSource(asbDefinitionId),
 
   // ── 画像（外部へは送らない） ─────────────────────────────────
-  /** 答案1件について、送る画像そのもの（PNG の data URL） */
-  "aiGrading:previewCrop": async (input: {
-    cropRegionId: string
-    examStudentId: string
-    imageScale: number
-  }) =>
-    previewSendingCrop(
-      input,
-      getAiGradingServices().dependencies.resolveDataPath
-    ),
-
   // ── 実行 ───────────────────────────────────────────────────
   /** 見積もりの材料（送る画像の大きさ）。金額は renderer が計算する */
   "aiGrading:estimateRun": async (input: {

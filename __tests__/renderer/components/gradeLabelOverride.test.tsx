@@ -10,13 +10,14 @@
  *
  * 1. **基準に無い評定のマスは赤い。** ただし境界が1本以上あるときだけで、
  *    引く前の段階で全マスが赤くても直しようがない。
- * 2. **境界設定（05）に、入力されたが基準に無い評定を件数つきで並べる。**
+ * 2. **境界設定（03）に、入力されたが基準に無い評定を件数つきで並べる。**
  *    基準を決めるときに気づくべきであって、評価するときではない。
  * 3. **「／」がそのまま保存される。** 入力に制限はかかっていない。
  */
 
 import "../setup"
 
+import { useQuery } from "@tanstack/react-query"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
@@ -26,6 +27,7 @@ import { BoundariesContainer } from "@/components/grades/03-boundaries/Boundarie
 import { ResultsContainer } from "@/components/grades/05-results/ResultsContainer"
 import { ResultsTable } from "@/components/grades/05-results/ResultsTable"
 import { CurrentUserProvider } from "@/contexts/CurrentUserContext"
+import { gradeResultsQuery } from "@/queries/grade"
 import type { PublicUser } from "@/queries/user"
 import type {
   GradeCalculationResult,
@@ -189,15 +191,12 @@ function calculationResult(
 
 const noop = () => {}
 
-/** 結果の表だけを載せる（上書きの保存先はテストが受け取る） */
-function renderResultsTable(
-  result: GradeCalculationResult,
-  onGradeOverride: (params: { overrideLabel: string | null }) => void = noop
-) {
+/** 結果の表だけを載せる（マスの見た目を見る。上書きの保存は ResultsContainer で IPC まで通す） */
+function renderResultsTable(result: GradeCalculationResult) {
   render(
     <ResultsTable
       result={result}
-      onGradeOverride={onGradeOverride}
+      onGradeOverride={noop}
       onRefreezeCell={noop}
       onUnfreezeCell={noop}
     />
@@ -261,7 +260,7 @@ afterEach(() => {
   Reflect.deleteProperty(window, "electronAPI")
 })
 
-describe("結果(06): 基準に無い評定のマス", () => {
+describe("結果(05): 基準に無い評定のマス", () => {
   it("境界が1本以上あるとき、基準に無い評定のマスは赤い", () => {
     renderResultsTable(calculationResult("／", true))
 
@@ -294,22 +293,7 @@ describe("結果(06): 基準に無い評定のマス", () => {
   })
 })
 
-describe("結果(06): 上書きは制限しない", () => {
-  it("「／」を入力すると、そのまま上書きとして渡る", async () => {
-    const user = userEvent.setup()
-    const onGradeOverride = vi.fn()
-    renderResultsTable(calculationResult("A", true), onGradeOverride)
-
-    await user.click(screen.getByTitle(/手動: A/))
-    await user.type(screen.getByPlaceholderText("A"), "／{Enter}")
-
-    expect(onGradeOverride).toHaveBeenCalledWith({
-      gradeStudentId: "gs-1",
-      gradeItemId: GRADE_ITEM_ID,
-      overrideLabel: "／",
-    })
-  })
-
+describe("結果(05): 上書きは制限しない", () => {
   it("「／」がそのまま保存される（IPC まで文字が変わらない）", async () => {
     const user = userEvent.setup()
     mockGradeApi(calculationResult("A", true), [
@@ -337,7 +321,7 @@ describe("結果(06): 上書きは制限しない", () => {
   })
 })
 
-describe("境界設定(05): 基準に無い評定の列挙", () => {
+describe("境界設定(03): 基準に無い評定の列挙", () => {
   /** 評価項目2つ（1つ目には基準に無い評定があり、2つ目には無い）の算出結果 */
   function resultWithTwoGradeItems(): GradeCalculationResult {
     const base = calculationResult("／", true)
@@ -365,11 +349,23 @@ describe("境界設定(05): 基準に無い評定の列挙", () => {
     }
   }
 
+  /**
+   * 算出結果が届いたかの印。注意が無いのは届く前の姿と同じなので、
+   * 「出さない」を見るときは届いたことを待つ（画面と同じキーなので取得は増えない）
+   */
+  function GradeResultsLoadedProbe() {
+    const { isSuccess } = useQuery(gradeResultsQuery(GRADE_ID))
+    return (
+      <output data-testid="grade-results-loaded">{String(isSuccess)}</output>
+    )
+  }
+
   function renderBoundaries() {
     const QueryWrapper = createQueryWrapper()
     render(
       <QueryWrapper>
         <BoundariesContainer gradeId={GRADE_ID} />
+        <GradeResultsLoadedProbe />
       </QueryWrapper>
     )
   }
@@ -410,7 +406,11 @@ describe("境界設定(05): 基準に無い評定の列挙", () => {
         "境界が設定されていません。プリセットを選択するか手動で追加してください。"
       )
     ).toBeInTheDocument()
-    await waitFor(() => expect(calculateGrades).toHaveBeenCalled())
+    await waitFor(() =>
+      expect(screen.getByTestId("grade-results-loaded")).toHaveTextContent(
+        "true"
+      )
+    )
     expect(screen.queryByText(/基準にない評定が入力されています/)).toBeNull()
   })
 })

@@ -11,7 +11,7 @@
  */
 
 /** 取り込み先への読み取り（`ArchiveTargetConnection.query` の形） */
-export type ArchiveTargetQuery = (
+type ArchiveTargetQuery = (
   sql: string,
   params: readonly unknown[]
 ) => Promise<unknown[]>
@@ -22,14 +22,14 @@ export interface ArchiveUniqueIndex {
 }
 
 /** 1つの索引で引く、書こうとしている行の値 */
-export interface ArchiveUniqueProbe {
+interface ArchiveUniqueProbe {
   /** 呼び出し側が行を見分ける番号 */
   readonly probeIndex: number
   /** 索引の列の順に並べた値（NULL を含まないこと。NULL は一意制約にかからない） */
   readonly values: readonly unknown[]
 }
 
-export interface ArchiveUniqueMatch {
+interface ArchiveUniqueMatch {
   readonly probeIndex: number
   readonly existingId: string
 }

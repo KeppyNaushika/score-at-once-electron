@@ -211,12 +211,26 @@ describe("採点指示の助言の文案の指示の初期値", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
 
     const editTarget = screen.getByRole("button", { name: "指示 1 を編集" })
+    const expectEditorOpened = async () => {
+      const editor = await screen.findByRole("dialog")
+      expect(
+        within(editor).getByRole("heading", { name: /^指示 1 を編集/ })
+      ).toBeInTheDocument()
+      await user.keyboard("{Escape}")
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    }
+
+    // 中身の文字（見出し）を押しても開く
+    await user.click(within(editTarget).getByText("採点基準"))
+    await expectEditorOpened()
+
+    // 焦点を当てて Enter・Space でも開く
     editTarget.focus()
     await user.keyboard("{Enter}")
-    const editor = await screen.findByRole("dialog")
-    expect(
-      within(editor).getByRole("heading", { name: /^指示 1 を編集/ })
-    ).toBeInTheDocument()
+    await expectEditorOpened()
+    editTarget.focus()
+    await user.keyboard(" ")
+    await expectEditorOpened()
   })
 })
 

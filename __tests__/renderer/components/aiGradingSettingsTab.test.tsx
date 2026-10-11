@@ -421,8 +421,15 @@ describe("AiGradingSettingsTab", () => {
       })
     ).toBeTruthy()
   })
+})
 
-  it("既定値: 一覧を取得して既定のモデルを選び、Effort・処理は切り替えボタンで保存する（拡大率は選ばせない）", async () => {
+describe("AiGradingDefaultsTab（既定値）", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    Element.prototype.scrollIntoView = () => {}
+  })
+
+  it("一覧を取得して既定のモデルを選び、Effort・処理は切り替えボタンで保存する（拡大率は選ばせない）", async () => {
     const user = userEvent.setup()
     const consent: ProviderConsent = {
       userId: CURRENT_USER_ID,
@@ -512,13 +519,6 @@ describe("AiGradingSettingsTab", () => {
     expect(
       within(defaultsSection).getByText(/このモデルは Effort を受け付けません/)
     ).toBeTruthy()
-  })
-})
-
-describe("AiGradingDefaultsTab（既定値）", () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    Element.prototype.scrollIntoView = () => {}
   })
 
   it("助言の文案の指示の既定の文言: 未設定なら空欄で、入力欄から離れると保存する（変えていなければ保存しない）", async () => {

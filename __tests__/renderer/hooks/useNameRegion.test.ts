@@ -29,15 +29,14 @@ interface MockCropRegion {
 /** window.electronAPI に必要なメソッドだけを差し込む */
 function installElectronAPI(cropRegions: MockCropRegion[]) {
   const getCropRegionsByExamId = vi.fn().mockResolvedValue(cropRegions)
-  const getExamPagesByExamId = vi.fn().mockResolvedValue([])
 
   Object.defineProperty(window, "electronAPI", {
-    value: { getCropRegionsByExamId, getExamPagesByExamId },
+    value: { getCropRegionsByExamId },
     writable: true,
     configurable: true,
   })
 
-  return { getCropRegionsByExamId, getExamPagesByExamId }
+  return { getCropRegionsByExamId }
 }
 
 /** 取得は TanStack Query が持つので、フックの検証にも provider が要る */
@@ -78,9 +77,9 @@ describe("useNameRegion", () => {
     expect(result.current.nameRegionExamPageIds.has(PAGE_B)).toBe(false)
   })
 
-  it("pageNumber が重複するページがあっても両方の設定が独立して残る", async () => {
-    // PAGE_A・PAGE_B が同じ pageNumber を持ちうる状況の再現。
-    // 序数キーだと後勝ちで片方が消えるが、id キーなら両方が独立して残る。
+  it("氏名欄を持つページが複数あれば、どれも ExamPage.id で残る", async () => {
+    // 採点領域は pageNumber を持たずに渡している。序数で引く実装に戻ると、
+    // ここで両ページの区別が付かず片方が消える
     installElectronAPI([
       { id: "region-a", examPageId: PAGE_A, type: "STUDENT_NAME" },
       { id: "region-b", examPageId: PAGE_B, type: "STUDENT_NAME" },
@@ -93,24 +92,6 @@ describe("useNameRegion", () => {
     })
     expect(result.current.nameRegionExamPageIds.has(PAGE_A)).toBe(true)
     expect(result.current.nameRegionExamPageIds.has(PAGE_B)).toBe(true)
-  })
-
-  it("氏名欄の解決に ExamPage 一覧（序数の供給元）を参照しない", async () => {
-    const { getCropRegionsByExamId, getExamPagesByExamId } = installElectronAPI(
-      [{ id: "region-a", examPageId: PAGE_A, type: "STUDENT_NAME" }]
-    )
-
-    const { result } = renderUseNameRegion()
-
-    // 実 canvas を与えないと描画前に打ち切られ、以降の解決経路を検証できない
-    result.current.canvasRef.current = document.createElement("canvas")
-    // 画像デコードは jsdom で完了しないため、解決経路の呼び出しだけを待つ
-    void result.current.drawNameRegionCanvas("data:image/png;base64,", PAGE_A)
-
-    await waitFor(() => {
-      expect(getCropRegionsByExamId).toHaveBeenCalledWith(EXAM_ID)
-    })
-    expect(getExamPagesByExamId).not.toHaveBeenCalled()
   })
 
   it("列に対応する ExamPage が無い孤立答案（examPageId が null）はクリップしない", async () => {

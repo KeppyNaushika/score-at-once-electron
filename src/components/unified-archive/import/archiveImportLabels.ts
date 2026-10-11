@@ -46,7 +46,7 @@ export const ARCHIVE_UNRESOLVABLE_MESSAGES: Record<
 }
 
 /** 生の行の1列を文字にする（文字でも数でもなければ空） */
-export function rowText(
+function rowText(
   row: Readonly<Record<string, unknown>>,
   column: string
 ): string {

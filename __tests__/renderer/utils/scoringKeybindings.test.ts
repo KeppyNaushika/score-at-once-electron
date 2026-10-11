@@ -61,7 +61,6 @@ describe("既定のキー割り当て", () => {
     expect(canShareKey("choice.select1", "scoring.partial")).toBe(false)
     expect(canShareKey("choice.nextQuestion", "scoring.correct")).toBe(false)
     // 数字は、ルーブリックでは項目の番号、AI の問いかけでは部分点（画面が分かれている）
-    expect(canShareKey("choice.select1", "scoring.openPartialWith1")).toBe(true)
     expect(canShareKey("choice.other", "scoring.openPartialWith0")).toBe(true)
     // 場面に入るキーは採点中のキーなので、採点中のキーとは重ねない
     expect(canShareKey("choice.open", "scoring.correct")).toBe(false)

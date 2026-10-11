@@ -40,10 +40,9 @@ import {
 import { adviceItemIdsOf, isSameItemSet } from "../utils/rubricAdviceText"
 
 /** 材料（設問が見つかったもの） */
-export type LoadedRubricAdviceSource = NonNullable<RubricAdviceSource>
+type LoadedRubricAdviceSource = NonNullable<RubricAdviceSource>
 /** 材料の採点行1つ */
-export type RubricAdviceSourceRow =
-  LoadedRubricAdviceSource["questionScores"][number]
+type RubricAdviceSourceRow = LoadedRubricAdviceSource["questionScores"][number]
 
 interface UseRubricAdviceSyncOptions {
   examId: string

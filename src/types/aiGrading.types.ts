@@ -24,8 +24,10 @@ export const AI_GRADING_RUN_PURPOSES = [
   "revise",
 ] as const
 export type AiGradingRunPurpose = (typeof AI_GRADING_RUN_PURPOSES)[number]
-export const { is: isAiGradingRunPurpose, to: toAiGradingRunPurpose } =
-  defineStringUnion(AI_GRADING_RUN_PURPOSES, "grade")
+export const { to: toAiGradingRunPurpose } = defineStringUnion(
+  AI_GRADING_RUN_PURPOSES,
+  "grade"
+)
 
 /** 答案ごとに画像を送って判定させる（1段目の）実行の目的。採点（grade）とAI チェック（check） */
 export const AI_GRADING_STAGE1_PURPOSES = ["grade", "check"] as const
@@ -43,13 +45,7 @@ export function isStage1RunPurpose(
  * rescore はその判定に直す、keep はこのままにする、manual は自分で採点する。
  * 外れ値は keep に倒す（教員の採点を勝手に変えない側）
  */
-export const AI_ATTEMPT_RESPONSE_CHOICES = [
-  "rescore",
-  "keep",
-  "manual",
-] as const
-export type AiAttemptResponseChoice =
-  (typeof AI_ATTEMPT_RESPONSE_CHOICES)[number]
+const AI_ATTEMPT_RESPONSE_CHOICES = ["rescore", "keep", "manual"] as const
 export const { is: isAiAttemptResponseChoice, to: toAiAttemptResponseChoice } =
   defineStringUnion(AI_ATTEMPT_RESPONSE_CHOICES, "keep")
 
@@ -81,8 +77,10 @@ export const AI_GRADING_RUN_STATUSES = [
   "expired",
 ] as const
 export type AiGradingRunStatus = (typeof AI_GRADING_RUN_STATUSES)[number]
-export const { is: isAiGradingRunStatus, to: toAiGradingRunStatus } =
-  defineStringUnion(AI_GRADING_RUN_STATUSES, "failed")
+export const { to: toAiGradingRunStatus } = defineStringUnion(
+  AI_GRADING_RUN_STATUSES,
+  "failed"
+)
 
 /**
  * 試行（答案1件への1回の判定）の送信の成否。採点の判定（ScoringStatus）とは別のもの。
@@ -96,8 +94,10 @@ export const AI_GRADING_ATTEMPT_STATES = [
   "expired",
 ] as const
 export type AiGradingAttemptState = (typeof AI_GRADING_ATTEMPT_STATES)[number]
-export const { is: isAiGradingAttemptState, to: toAiGradingAttemptState } =
-  defineStringUnion(AI_GRADING_ATTEMPT_STATES, "errored")
+export const { to: toAiGradingAttemptState } = defineStringUnion(
+  AI_GRADING_ATTEMPT_STATES,
+  "errored"
+)
 
 /** AI が自分の判定に付ける確信度。外れ値は low に倒す（要確認を優先表示する側） */
 export const AI_GRADING_CONFIDENCES = ["high", "medium", "low"] as const
@@ -113,8 +113,10 @@ export const AI_GRADING_PROVIDERS = [
   "openai_compatible",
 ] as const
 export type AiGradingProvider = (typeof AI_GRADING_PROVIDERS)[number]
-export const { is: isAiGradingProvider, to: toAiGradingProvider } =
-  defineStringUnion(AI_GRADING_PROVIDERS, "anthropic")
+export const { to: toAiGradingProvider } = defineStringUnion(
+  AI_GRADING_PROVIDERS,
+  "anthropic"
+)
 
 /**
  * 実行の進み具合。main が試行を1件書くたびに `aiGrading:run-progress` で全ウィンドウへ
