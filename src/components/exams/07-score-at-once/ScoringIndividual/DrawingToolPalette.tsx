@@ -15,6 +15,7 @@ import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKey
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 import { cn } from "@/lib/utils"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
@@ -139,7 +140,9 @@ export function DrawingToolPalette({
 
             <PaletteTooltip
               label="全体表示"
-              shortcutKey={(keyBindings["view.fullView"] || "M").toUpperCase()}
+              shortcutKey={formatKeyForDisplay(
+                keyBindings["view.fullView"] || "M"
+              )}
             >
               <Button size="sm" variant="ghost" onClick={onMaximizeView}>
                 <Maximize className="h-4 w-4" />
@@ -148,9 +151,9 @@ export function DrawingToolPalette({
 
             <PaletteTooltip
               label="設問表示"
-              shortcutKey={(
+              shortcutKey={formatKeyForDisplay(
                 keyBindings["view.questionView"] || "C"
-              ).toUpperCase()}
+              )}
             >
               <Button
                 size="sm"
@@ -169,7 +172,7 @@ export function DrawingToolPalette({
             <PaletteTooltip
               label="ハンドツール"
               note="ドラッグで移動"
-              shortcutKey={(keyBindings["tool.hand"] || "H").toUpperCase()}
+              shortcutKey={formatKeyForDisplay(keyBindings["tool.hand"] || "H")}
             >
               <Button
                 size="sm"
@@ -183,7 +186,9 @@ export function DrawingToolPalette({
             <PaletteTooltip
               label="選択ツール"
               note="図形を選択・移動・削除"
-              shortcutKey={(keyBindings["tool.select"] || "G").toUpperCase()}
+              shortcutKey={formatKeyForDisplay(
+                keyBindings["tool.select"] || "G"
+              )}
             >
               <Button
                 size="sm"

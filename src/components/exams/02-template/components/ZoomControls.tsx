@@ -12,6 +12,8 @@
  * @returns JSX component for zoom controls
  */
 
+import { getModifierKeyLabels } from "@/lib/platformUtils"
+
 interface ZoomControlsProps {
   zoom: number
   showZoomHelp: boolean
@@ -23,6 +25,7 @@ export function ZoomControls({
   showZoomHelp,
   onToggleHelp,
 }: ZoomControlsProps) {
+  const primaryKeyLabel = getModifierKeyLabels().primary
   return (
     <>
       {/* ズーム操作のヘルプ表示 */}
@@ -39,9 +42,9 @@ export function ZoomControls({
             </button>
           </div>
           <div>スクロール: 標準ブラウザスクロール</div>
-          <div>Ctrl + ホイール: ズーム</div>
-          <div>Ctrl + +/-: ズーム</div>
-          <div>Ctrl + 0: リセット</div>
+          <div>{primaryKeyLabel} + ホイール: ズーム</div>
+          <div>{primaryKeyLabel} + +/-: ズーム</div>
+          <div>{primaryKeyLabel} + 0: リセット</div>
           <div>ズーム: {Math.round(zoom * 100)}%</div>
         </div>
       )}

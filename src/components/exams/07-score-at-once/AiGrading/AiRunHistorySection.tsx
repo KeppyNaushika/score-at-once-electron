@@ -10,9 +10,14 @@ import {
 import { SidePanelSection } from "@/components/exams/07-score-at-once/ScoringSidePanel/SidePanelSection"
 import { cn } from "@/lib/utils"
 import type { QuestionScoreRow } from "@/queries/scoring"
+import { isStage1RunPurpose } from "@/types/aiGrading.types"
 
 import type { AiGradingRunRow } from "./types"
-import { summarizeRunHistory } from "./utils/runHistory"
+import {
+  numberRunsByPurpose,
+  RUN_PURPOSE_LABELS,
+  summarizeRunHistory,
+} from "./utils/runHistory"
 
 interface AiRunHistorySectionProps {
   runs: AiGradingRunRow[]
@@ -20,7 +25,7 @@ interface AiRunHistorySectionProps {
   cropRegionId: string
   currentUserId: string
   points: number | null
-  /** プロンプトの id → 版の番号 */
+  /** プロンプトの id → プロンプトの番号 */
   promptNumberById: ReadonlyMap<string, number>
   /** 一覧に出している実行（null は最新） */
   chosenRunId: string | null
@@ -66,6 +71,10 @@ export function AiRunHistorySection({
       }),
     [runs, questionScores, cropRegionId, currentUserId, points]
   )
+  const runNumberById = useMemo(
+    () => numberRunsByPurpose(runHistory),
+    [runHistory]
+  )
   if (runHistory.length === 0) return null
 
   const rowClassName = (isChosen: boolean) =>
@@ -77,11 +86,9 @@ export function AiRunHistorySection({
     )
 
   return (
-    <SidePanelSection icon={RotateCcwClock} title="実行の履歴">
+    <SidePanelSection icon={RotateCcwClock} title="採点の履歴">
       <p className="mb-1 text-[10px] text-muted-foreground">
-        押すと、その実行の判定を一覧に出します（判定の無い答案は最新のまま。&lt;
-        &gt;
-        で答案ごとに選び直せます）。一致率は自分の採点と同じ判定だった割合です
+        押すと、その判定を一覧に出します。一致は自分の採点との一致率です
       </p>
       <div className="space-y-0.5" role="group" aria-label="一覧に出す実行">
         <button
@@ -90,12 +97,15 @@ export function AiRunHistorySection({
           className={rowClassName(chosenRunId === null)}
           onClick={() => onChooseRun(null)}
         >
-          最新（答案ごとに最新の判定）
+          答案ごとに最新の判定
         </button>
         {runHistory.map((entry) => {
           const { run } = entry
           const isChosen = run.id === chosenRunId
           const promptNumber = promptNumberById.get(run.promptId)
+          const purposeLabel = isStage1RunPurpose(run.purpose)
+            ? RUN_PURPOSE_LABELS[run.purpose]
+            : run.purpose
           return (
             <button
               key={run.id}
@@ -106,8 +116,13 @@ export function AiRunHistorySection({
             >
               <span className="flex items-baseline justify-between gap-2">
                 <span className="tabular-nums">
-                  {formatRunTime(run.createdAt)}
-                  {promptNumber !== undefined && ` ・版 ${promptNumber}`}
+                  <span className="font-medium">
+                    {purposeLabel} {runNumberById.get(run.id)}
+                  </span>
+                  {promptNumber !== undefined && `・プロンプト ${promptNumber}`}
+                  <span className="ml-1 text-muted-foreground">
+                    {formatRunTime(run.createdAt)}
+                  </span>
                 </span>
                 <span className="tabular-nums">
                   一致 {formatRate(entry.exactMatchCount, entry.comparedCount)}

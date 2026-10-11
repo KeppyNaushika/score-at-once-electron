@@ -17,7 +17,7 @@ import type {
   NavKeys,
   ToolKeys,
 } from "./07-scoring/types"
-import { formatKey, formatModKey } from "./07-scoring/utils"
+import { formatKey } from "./07-scoring/utils"
 
 /** スクロール可能な最寄りの祖先を返す（IntersectionObserver の root 用） */
 function getScrollParent(el: HTMLElement | null): HTMLElement | null {
@@ -46,8 +46,8 @@ export function HelpContent07Scoring() {
     pending: formatKey(keyBindings["scoring.pending"]),
     nextQuestion: formatKey(keyBindings["navigation.nextQuestion"]),
     prevQuestion: formatKey(keyBindings["navigation.prevQuestion"]),
-    filterCorrect: formatModKey(keyBindings["filter.toggleCorrect"]),
-    filterIncorrect: formatModKey(keyBindings["filter.toggleIncorrect"]),
+    filterCorrect: formatKey(keyBindings["filter.toggleCorrect"]),
+    filterIncorrect: formatKey(keyBindings["filter.toggleIncorrect"]),
     toggleView: formatKey(keyBindings["view.toggleViewMode"]),
     toggleMaster: formatKey(keyBindings["view.toggleMasterAnswer"]),
   }

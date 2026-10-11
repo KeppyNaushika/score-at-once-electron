@@ -91,7 +91,6 @@ function ScoringMainViewContent() {
     masterAnswerKeyBehavior,
     masterAnswerOpacity,
     masterAnswerVisible,
-    modifierKeyLabel,
     mouseBrush,
     openPartialScoreModal,
     pageSize,
@@ -230,7 +229,6 @@ function ScoringMainViewContent() {
           onShowKeyboardHelpChange={setShowKeyboardHelp}
           showSidePanel={showSidePanel}
           onShowSidePanelChange={setShowSidePanel}
-          modifierKeyLabel={modifierKeyLabel}
           onOmrRecognitionClick={guardScoring(() => setShowOmrModal(true))}
           scoreDecisionHref={
             showDecisionEntry

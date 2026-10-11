@@ -20,11 +20,8 @@ interface UseAiAnswerReviewStateOptions {
 }
 
 /**
- * 利用者の選択（実行の履歴で選んだ実行・答案ごとに `<` `>` で選んだ試行）と、
- * そこから導く印。持つのは利用者が選んだものだけで、表示は毎回導く。
- *
- * 表示する試行は「`<` `>` の選択 → 選んだ実行の試行 → 最新」の順で決まる。実行を選び直すと
- * `<` `>` の選択は捨てる（選んだ実行が全員に効いて見えるように）
+ * 利用者の選択（実行の履歴で選んだ実行）と、そこから導く印。持つのは利用者が選んだものだけで、
+ * 表示は毎回導く。表示する試行は「選んだ実行の試行 → 最新」の順で決まる
  */
 export function useAiAnswerReviewState({
   answers,
@@ -34,8 +31,6 @@ export function useAiAnswerReviewState({
   currentUserId,
   answerOrder,
 }: UseAiAnswerReviewStateOptions) {
-  const [chosenAttemptIdByExamStudentId, setChosenAttemptIdByExamStudentId] =
-    useState<ReadonlyMap<string, string>>(new Map())
   const [chosenRunIdState, setChosenRunIdState] = useState<string | null>(null)
   // 選んだ実行が消えたら最新に戻して見せる（選択は書き戻さない）
   const chosenRunId = resolveChosenRunId(chosenRunIdState, runs, currentUserId)
@@ -46,7 +41,6 @@ export function useAiAnswerReviewState({
         answers.map((answer) => ({
           answer,
           review: reviewAnswer(answer, {
-            chosenAttemptIdByExamStudentId,
             chosenRunId,
             selectedPromptId,
             points,
@@ -54,31 +48,14 @@ export function useAiAnswerReviewState({
         })),
         answerOrder
       ),
-    [
-      answers,
-      chosenAttemptIdByExamStudentId,
-      chosenRunId,
-      selectedPromptId,
-      points,
-      answerOrder,
-    ]
+    [answers, chosenRunId, selectedPromptId, points, answerOrder]
   )
 
-  const chooseAttempt = (examStudentId: string, attemptId: string) => {
-    setChosenAttemptIdByExamStudentId((prev) =>
-      new Map(prev).set(examStudentId, attemptId)
-    )
-  }
-
-  /** 一覧に出す実行を選ぶ（null は最新）。答案ごとの `<` `>` の選択は捨てる */
-  const chooseRun = (runId: string | null) => {
-    setChosenRunIdState(runId)
-    setChosenAttemptIdByExamStudentId(new Map())
-  }
+  /** 一覧に出す実行を選ぶ（null は最新） */
+  const chooseRun = (runId: string | null) => setChosenRunIdState(runId)
 
   return {
     reviewedAnswers,
-    chooseAttempt,
     chosenRunId,
     chooseRun,
   }

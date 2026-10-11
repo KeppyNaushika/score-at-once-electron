@@ -31,14 +31,14 @@ export function AiQuestioningStatusNotice({
       return (
         <p className="flex items-center gap-1 rounded bg-sky-50 px-2 py-1.5 text-[11px] text-sky-800">
           <LoaderCircle className="h-3 w-3 animate-spin" />
-          答案ごとの判定を実行しています。終わると、続けて項目の案を作ります
+          判定しています…
         </p>
       )
     case "grouping":
       return (
         <p className="flex items-center gap-1 rounded bg-sky-50 px-2 py-1.5 text-[11px] text-sky-800">
           <LoaderCircle className="h-3 w-3 animate-spin" />
-          判定から項目の案を作っています
+          項目の案を作っています…
         </p>
       )
     case "failed":
@@ -48,8 +48,8 @@ export function AiQuestioningStatusNotice({
           <p>
             {status.kind === "failed"
               ? "項目の案を作れませんでした。"
-              : "最後の判定から、項目の案がまだ作られていません。"}
-            判定の文字だけを送って作り直せます（答案の画像は送りません）。
+              : "項目の案がまだありません。"}
+            画像は送らずに作り直せます。
           </p>
           <Button
             variant="outline"

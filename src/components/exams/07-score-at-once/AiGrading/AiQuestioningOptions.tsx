@@ -81,9 +81,7 @@ export function AiQuestioningOptions({
               <span />
               {flow.isManualActive && (
                 <span className="col-start-2 col-end-4 text-[10px] text-amber-700">
-                  中央の一覧で
-                  ←→（またはクリック）で答案を移り、採点キー（数字は部分点）で採点。Enter
-                  か「次へ」で終えて次へ
+                  ←→ で答案を移り、採点キーかボタンで採点
                 </span>
               )}
             </li>

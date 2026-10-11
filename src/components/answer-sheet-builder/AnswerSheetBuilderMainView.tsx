@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import { getModifierKeyLabels } from "@/lib/platformUtils"
 import { parsePreference } from "@/lib/userPreferences"
 import {
   answerSheetDefinitionQuery,
@@ -255,7 +256,7 @@ export function AnswerSheetBuilderMainView({
           {/* アクションバー */}
           <div className="flex gap-1 border-b p-2">
             <TooltipButton
-              label="元に戻す (Ctrl+Z)"
+              label={`元に戻す (${getModifierKeyLabels().primary}+Z)`}
 
               variant="ghost"
               size="icon"
@@ -266,7 +267,7 @@ export function AnswerSheetBuilderMainView({
               <Undo2 className="h-3.5 w-3.5" />
             </TooltipButton>
             <TooltipButton
-              label="やり直し (Ctrl+Shift+Z)"
+              label={`やり直し (${getModifierKeyLabels().primary}+Shift+Z)`}
 
               variant="ghost"
               size="icon"

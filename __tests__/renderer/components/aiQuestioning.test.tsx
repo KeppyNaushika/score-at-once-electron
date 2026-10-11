@@ -14,13 +14,13 @@
  * - 選択肢のクリックは選ぶだけ（ダブルクリックでも決めない）。カードの「次へ」「戻る」と、問いかけのタブを
  *   開いている間いつでも効く Ctrl/⌘+Enter・Ctrl/⌘+Shift+Enter（選択の場面の外・欄の中・1件ずつ採点の中でも。
  *   変換中・部分点の入力欄を開いている間・タブを閉じているあいだは効かない）
- * - 「1件ずつ自分で採点する」は一覧の答案を ←→ で移り（クリックでも移れる）、採点キー（数字は部分点）で
- *   点を付ける（下書き。一覧に斜線で出る）
+ * - 「1件ずつ自分で採点する」は一覧の答案を ←→ で移り（クリックでも移れる）、採点キー（数字は部分点）か
+ *   「自分で採点」のボタン（1件ずつ採点の最中だけ押せる）で点を付ける（下書き。一覧に斜線で出る）
  * - 「その他」の欄は ↓ で入り、1行目の ↑ で戻る（2行目の ↑ は戻らない）。素の Enter・変換中の
  *   Enter では送らず、Ctrl/⌘+Enter で決める。中身は問いを移っても残り、確定のとき「その他」を
  *   選んでいない問いの中身は捨てる
  * - 直接採点の設問に点を加減する案があれば、最初に採点方式を問い、方式は確定のときに変える
- * - AI 採点チェックでは「同じ答えに違う点」と「先生と AI の食い違い」を同じ形で出し、
+ * - AI チェックでは「同じ答えに違う点」と「先生と AI の食い違い」を同じ形で出し、
  *   直すと決めた答案だけを確定で書く
  *
  * window.electronAPI は偽物で、実データにもネットワークにも触れない。
@@ -492,7 +492,7 @@ function QuestioningHarness({
   answers: AiGradingAnswer[]
 }) {
   useContextValue("gradingMode", "ai")
-  // 左パネルのタブを問いかけ以外（プロンプト・採点反映）へ移したときの代わり
+  // 左パネルのタブを問いかけ以外（プロンプト）へ移したときの代わり
   const [isTabOpen, setIsTabOpen] = useState(true)
   const { data: loadedRuns = [] } = useQuery(
     aiGradingRunsQuery("exam-1", cropRegion.id, false)
@@ -527,7 +527,6 @@ function QuestioningHarness({
       answers.map((answer) => ({
         answer,
         review: reviewAnswer(answer, {
-          chosenAttemptIdByExamStudentId: new Map(),
           selectedPromptId: "prompt-1",
           points: cropRegion.points,
         }),
@@ -816,7 +815,7 @@ describe("AI 採点の問いかけ", () => {
       expect(review).toHaveTextContent("4件の採点を確定します")
     )
     expect(within(review).getByRole("note")).toHaveTextContent(
-      "このうち 1件は採点済みの答案です。確定すると、ここで決めた点に置き換わります。"
+      "うち 1 件は採点済みで、置き換わります。"
     )
     expectNoTeacherLayerWrites()
 
@@ -884,6 +883,49 @@ describe("AI 採点の問いかけ", () => {
       })
     )
     await card("単位まで正しい（1件）")
+    expectNoTeacherLayerWrites()
+  })
+
+  it("「自分で採点」のボタンは1件ずつ採点の最中だけ押せ、採点キーと同じく焦点の答案に下書きを付ける", async () => {
+    renderView()
+    await card("移項で符号を誤った（3件）")
+    await waitFor(() => expect(gridAnswerIds()).toEqual(["s-c", "s-b", "s-a"]))
+    const scoringSection = () =>
+      screen.getByRole("region", { name: "自分で採点" })
+    const scoringButton = (name: RegExp) =>
+      within(scoringSection()).getByRole("button", { name })
+    // 始める前は押せない
+    expect(scoringButton(/^誤答$/)).toBeDisabled()
+    expect(scoringButton(/^部分点入力/)).toBeDisabled()
+
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}")
+    await waitFor(() => expect(selectedIdsShown()).toBe("s-c"))
+    expect(scoringButton(/^誤答$/)).toBeEnabled()
+
+    // 誤答のボタンで付けると、一覧に斜線で出て次の答案へ（o と同じ）
+    await userEvent.click(scoringButton(/^誤答$/))
+    expect(draftStatusOf("s-c")).toBe("incorrect")
+    expect(selectedIdsShown()).toBe("s-b")
+    // 部分点入力のボタンで入力欄を開き、点を入れて f で付ける
+    await userEvent.click(scoringButton(/^部分点入力/))
+    await screen.findByRole("dialog", { name: /部分点入力/ })
+    await userEvent.keyboard("3")
+    await userEvent.keyboard("f")
+    await waitFor(() => expect(draftStatusOf("s-b")).toBe("partial"))
+    expectNoTeacherLayerWrites()
+
+    await userEvent.keyboard("{Enter}")
+    await waitFor(() =>
+      expect(fakeAiGradingApi.recordProposalDraft).toHaveBeenCalledWith({
+        proposalId: "proposal-sign",
+        optionId: null,
+        freeText: "",
+        manualScores: [
+          { attemptId: attemptC.id, status: "incorrect", partialScore: null },
+          { attemptId: attemptB.id, status: "partial", partialScore: 3 },
+        ],
+      })
+    )
     expectNoTeacherLayerWrites()
   })
 
@@ -997,12 +1039,10 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
   const UNIT = "単位まで正しい（1件）"
   const OUTSIDE = "どの案にも入らない答案（1件）"
   const nextKeyLabel = formatKeyForDisplay(
-    DEFAULT_KEYBINDINGS["choice.nextQuestion"],
-    "Alt"
+    DEFAULT_KEYBINDINGS["choice.nextQuestion"]
   )
   const prevKeyLabel = formatKeyForDisplay(
-    DEFAULT_KEYBINDINGS["choice.prevQuestion"],
-    "Alt"
+    DEFAULT_KEYBINDINGS["choice.prevQuestion"]
   )
   const nextButton = async (title: string) =>
     within(await card(title)).getByRole("button", { name: /^次へ/ })
@@ -1266,7 +1306,7 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
   })
 })
 
-describe("AI 採点チェックの問いかけ", () => {
+describe("AI チェックの問いかけ", () => {
   /** 同じ答え「緑葉体」に正答と誤答、s-d は先生が正答・AI が誤答 */
   function setUpCheckRun() {
     const checkAttempt = (

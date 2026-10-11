@@ -4,7 +4,7 @@ import { bind } from "./invoke"
 import { subscribe } from "./subscribe"
 
 /**
- * AI 採点（VLM 採点）の IPC API（プロンプト・画像の測定・実行・採用・問いかけ）。
+ * AI 採点（VLM 採点）の IPC API（プロンプト・画像の測定・実行・問いかけ）。
  *
  * 事業者の同意とキーの口は別の API にある。API キーを返すメソッドは無い。
  */
@@ -23,8 +23,6 @@ export function createAiGradingApi() {
       listRuns: bind("aiGrading:listRuns"),
       listRunsByExam: bind("aiGrading:listRunsByExam"),
       listMyRuns: bind("aiGrading:listMyRuns"),
-      deleteAttempts: bind("aiGrading:deleteAttempts"),
-      adoptAttempts: bind("aiGrading:adoptAttempts"),
       listProposals: bind("aiGrading:listProposals"),
       recordProposalDraft: bind("aiGrading:recordProposalDraft"),
       recordAttemptResponses: bind("aiGrading:recordAttemptResponses"),

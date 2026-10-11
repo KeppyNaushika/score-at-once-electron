@@ -5,7 +5,7 @@
  * ここで固定すること:
  * - ファイルを選ぶと切り出しの画面が開き、取り込むと末尾に足される（全体なら元のバイト列を送る）
  * - 外す・前へ・後へのボタンと、サムネイルの上のキー（Alt＋← →・Delete）で並びが変わる
- * - 編集で開くと元の版の画像を並び順のまま引き継ぎ、保存で並べた順のパスを渡す
+ * - 編集で開くと元のプロンプトの画像を並び順のまま引き継ぎ、保存で並べた順のパスを渡す
  *
  * window.electronAPI は偽物で、ファイルにも実データにも触れない。画像は合成したバイト列。
  */
@@ -208,7 +208,7 @@ const questionImageRow = (imagePath: string, sortOrder: number) => ({
 })
 
 describe("プロンプトの編集", () => {
-  it("元の版の画像を並び順のまま引き継ぎ、並べ替えて保存すると、その順のパスを渡す", async () => {
+  it("元のプロンプトの画像を並び順のまま引き継ぎ、並べ替えて保存すると、その順のパスを渡す", async () => {
     const aiGrading = installFakeElectronApi()
     const user = userEvent.setup()
     renderWithProviders(
@@ -217,6 +217,7 @@ describe("プロンプトの編集", () => {
         onOpenChange={vi.fn()}
         examId="exam-1"
         cropRegion={cropRegion}
+        basePromptNumber={1}
         basePrompt={makePrompt({
           questionImages: [
             questionImageRow(FIRST_PATH, 0),
@@ -229,7 +230,9 @@ describe("プロンプトの編集", () => {
     )
 
     await user.click(screen.getByRole("button", { name: "2枚目を前へ" }))
-    await user.click(screen.getByRole("button", { name: "新しい版として保存" }))
+    await user.click(
+      screen.getByRole("button", { name: "新しいプロンプトとして保存" })
+    )
 
     await waitFor(() => expect(aiGrading.createPrompt).toHaveBeenCalled())
     expect(aiGrading.createPrompt).toHaveBeenCalledWith(

@@ -8,37 +8,14 @@ import {
   isGradingTargetScope,
 } from "./utils/selectGradingTargets"
 
-/** 選び方の見出しと説明 */
-const GRADING_TARGET_SCOPE_TEXTS: Record<
-  GradingTargetScope,
-  { title: string; description: string }
-> = {
-  unscored: {
-    title: "未採点の答案",
-    description: "自分がまだ採点していない答案を送ります。",
-  },
-  non_blank: {
-    title: "無答以外の全ての答案",
-    description: "自分が無答を付けた答案を除いて、全て送ります。",
-  },
-  all: {
-    title: "全ての答案",
-    description: "自分が無答を付けた答案も含めて、全て送ります。",
-  },
-  selected: {
-    title: "選択した答案",
-    description: "中央の一覧で選んでいる答案を送ります。",
-  },
-  scored: {
-    title: "無答以外の採点済みの答案",
-    description:
-      "自分が無答を付けた答案を除いて、採点済みの答案を全て送ります。",
-  },
-  scored_all: {
-    title: "採点済みの全ての答案",
-    description:
-      "自分が無答を付けた答案も含めて、採点済みの答案を全て送ります。",
-  },
+/** 選び方の見出し */
+const GRADING_TARGET_SCOPE_TITLES: Record<GradingTargetScope, string> = {
+  unscored: "未採点の答案",
+  non_blank: "無答以外の全ての答案",
+  all: "全ての答案",
+  selected: "選択した答案",
+  scored: "無答以外の採点済みの答案",
+  scored_all: "採点済みの全ての答案",
 }
 
 interface AiRunTargetChoiceProps {
@@ -73,26 +50,20 @@ export function AiRunTargetChoice({
       >
         {scopes.map((targetScope) => {
           const isDisabled = targetScope === "selected" && isSelectionEmpty
-          const scopeText = GRADING_TARGET_SCOPE_TEXTS[targetScope]
           return (
-            <div key={targetScope} className="flex items-start gap-3">
+            <div key={targetScope} className="flex items-center gap-3">
               <RadioGroupItem
                 value={targetScope}
                 id={`ai-run-target-${targetScope}`}
                 disabled={isDisabled}
-                className="mt-0.5"
               />
               <Label
                 htmlFor={`ai-run-target-${targetScope}`}
                 className="flex flex-col items-start gap-1 font-normal"
               >
                 <span className="font-medium">
-                  {scopeText.title}（{targetCountByScope[targetScope] ?? 0} 件）
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {isDisabled
-                    ? "中央の一覧に選んでいる答案が無いので選べません。"
-                    : scopeText.description}
+                  {GRADING_TARGET_SCOPE_TITLES[targetScope]}（
+                  {targetCountByScope[targetScope] ?? 0} 件）
                 </span>
               </Label>
             </div>

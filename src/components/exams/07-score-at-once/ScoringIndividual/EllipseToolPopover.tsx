@@ -11,6 +11,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
+import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 
 import { COLOR_PALETTE } from "./constants/drawingConstants"
 import { PaletteTooltip } from "./PaletteTooltip"
@@ -73,7 +74,7 @@ export function EllipseToolPopover({
       <PaletteTooltip
         label="楕円ツール"
         note="Shift+ドラッグで正円"
-        shortcutKey={shortcutKey?.toUpperCase()}
+        shortcutKey={shortcutKey && formatKeyForDisplay(shortcutKey)}
         open={isOpen ? false : undefined}
       >
         <PopoverTrigger asChild>

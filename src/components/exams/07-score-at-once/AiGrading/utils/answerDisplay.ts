@@ -6,7 +6,7 @@ import { toAppImageUrl } from "@/lib/appImageUrl"
 import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
-import type { AiGradingAnswer, AiGradingAttemptRow } from "../types"
+import type { AiGradingAnswer } from "../types"
 
 /** 答案画像の URL（採点画面と同じ `appimg://`） */
 export function answerImageUrl(
@@ -34,18 +34,6 @@ export function describeJudgement(
   return (status === "partial" || status === "pending") && partialScore !== null
     ? `${label} ${partialScore}点`
     : label
-}
-
-/** 試行の送信の成否 */
-export const ATTEMPT_STATE_LABELS: Record<
-  AiGradingAttemptRow["state"],
-  string
-> = {
-  pending: "結果待ち",
-  succeeded: "判定あり",
-  errored: "失敗",
-  refused: "拒否",
-  expired: "期限切れ",
 }
 
 /** 確信度 */

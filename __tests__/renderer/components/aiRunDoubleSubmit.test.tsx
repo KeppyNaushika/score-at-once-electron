@@ -143,7 +143,6 @@ function reviewed(answer: AiGradingAnswer) {
   return {
     answer,
     review: reviewAnswer(answer, {
-      chosenAttemptIdByExamStudentId: new Map(),
       selectedPromptId: "prompt-1",
       points: 4,
     }),
@@ -175,6 +174,7 @@ function RunDialogHarness({ onOpenChange }: DialogHarnessProps) {
         initialProvider="anthropic"
         unlockedProviders={["anthropic"]}
         prompt={makePrompt()}
+        promptNumber={1}
         reviewedAnswers={[
           reviewed(makeAnswer("s1")),
           reviewed(makeAnswer("s2")),

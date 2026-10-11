@@ -12,6 +12,7 @@ import {
   KeyCap,
   Pill,
 } from "@/components/help/common/DocComponents"
+import { getModifierKeyLabels } from "@/lib/platformUtils"
 
 // ============================================================================
 // このページ専用の図解アニメーション（CSS）
@@ -202,6 +203,7 @@ function AutoDetectFigure() {
 }
 
 export function HelpContent02Template() {
+  const primaryKeyLabel = getModifierKeyLabels().primary
   return (
     <HelpDoc>
       <style>{HELP02_KEYFRAMES}</style>
@@ -302,13 +304,14 @@ export function HelpContent02Template() {
       <FocusSection title="⑦ 画面を拡大・縮小する">
         <p>
           細かい場所を正確に囲みたいときは、画像を拡大すると作業がしやすくなります。{" "}
-          <KeyCap>Ctrl</KeyCap>{" "}
+          <KeyCap>{primaryKeyLabel}</KeyCap>{" "}
           キーを押しながらマウスのホイールを回すと、拡大・縮小ができます。
         </p>
         <p>
           キーボードでも操作できます。画像をクリックして選んでから、{" "}
-          <KeyCap>Ctrl</KeyCap>+<KeyCap>+</KeyCap> で拡大、<KeyCap>Ctrl</KeyCap>
-          +<KeyCap>-</KeyCap> で縮小、<KeyCap>Ctrl</KeyCap>+<KeyCap>0</KeyCap>{" "}
+          <KeyCap>{primaryKeyLabel}</KeyCap>+<KeyCap>+</KeyCap> で拡大、
+          <KeyCap>{primaryKeyLabel}</KeyCap>+<KeyCap>-</KeyCap> で縮小、
+          <KeyCap>{primaryKeyLabel}</KeyCap>+<KeyCap>0</KeyCap>{" "}
           でもとの大きさに戻ります。拡大して画面からはみ出した部分は、通常どおりスクロールで見られます。画面右上の{" "}
           <KeyCap>?</KeyCap>{" "}
           ボタンを押すと、これらの操作の一覧をいつでも確認できます。

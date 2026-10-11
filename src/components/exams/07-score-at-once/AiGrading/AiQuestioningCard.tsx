@@ -29,7 +29,7 @@ export function AiQuestioningCard({
   const { step } = state
   const { keyBindings } = useKeyBindings()
   const keyOf = (commandId: string) =>
-    formatKeyForDisplay(keyBindings[commandId], "Alt")
+    formatKeyForDisplay(keyBindings[commandId])
 
   return (
     <section

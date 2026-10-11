@@ -4,7 +4,7 @@
  *
  * ここで固定すること:
  * - 新規追加では、「AI採点」の画面の「既定値」タブで決めた文言が最初から入り、そのまま保存される
- * - 元の版を写して作る版（「編集」）は、既定の文言ではなく元の版の値を引き継ぐ
+ * - 元のプロンプトを写して作るもの（「編集」）は、既定の文言ではなく元の値を引き継ぐ
  * - 既定値を読む前は新規追加を押せない（空欄で始まってしまうため）
  *
  * window.electronAPI は偽物で、実データには触れない。
@@ -127,9 +127,7 @@ describe("プロンプトの助言の文案の指示の初期値", () => {
       DEFAULT_ANNOTATION_INSTRUCTION
     )
 
-    await user.click(
-      within(dialog).getByRole("button", { name: "新しい版として保存" })
-    )
+    await user.click(within(dialog).getByRole("button", { name: "保存" }))
     expect(aiGrading.createPrompt).toHaveBeenCalledWith(
       expect.objectContaining({
         parentPromptId: null,
@@ -148,7 +146,7 @@ describe("プロンプトの助言の文案の指示の初期値", () => {
     expect(within(dialog).getByLabelText("助言の文案の指示")).toHaveValue("")
   })
 
-  it("元の版を写して作る版は、既定の文言ではなく元の版の値を引き継ぐ（空でも上書きしない）", async () => {
+  it("元のプロンプトを写して作るものは、既定の文言ではなく元の値を引き継ぐ（空でも上書きしない）", async () => {
     const user = userEvent.setup()
     const aiGrading = installFakeElectronApi()
     const basePrompt = makePrompt({ annotationInstruction: "" })
@@ -163,7 +161,7 @@ describe("プロンプトの助言の文案の指示の初期値", () => {
     expect(within(dialog).getByLabelText("助言の文案の指示")).toHaveValue("")
 
     await user.click(
-      within(dialog).getByRole("button", { name: "新しい版として保存" })
+      within(dialog).getByRole("button", { name: "新しいプロンプトとして保存" })
     )
     expect(aiGrading.createPrompt).toHaveBeenCalledWith(
       expect.objectContaining({

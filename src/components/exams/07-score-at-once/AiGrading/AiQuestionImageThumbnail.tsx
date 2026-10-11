@@ -5,6 +5,7 @@ import Image from "next/image"
 import type { KeyboardEvent, Ref } from "react"
 
 import { Button } from "@/components/ui/button"
+import { getModifierKeyLabels } from "@/lib/platformUtils"
 
 /** 並びの中の動き（キーとボタンの両方から） */
 export type QuestionImageAction =
@@ -51,7 +52,7 @@ export function AiQuestionImageThumbnail({
       <button
         ref={buttonRef}
         type="button"
-        aria-label={`問題の画像 ${ordinal}（Enter で拡大、Alt＋← → で並べ替え、Delete で外す）`}
+        aria-label={`問題の画像 ${ordinal}（Enter で拡大、${getModifierKeyLabels().alt}＋← → で並べ替え、Delete で外す）`}
         onClick={() => onAction("zoom")}
         onKeyDown={handleKeyDown}
         className="flex h-24 w-full items-center justify-center overflow-hidden rounded bg-muted/40 outline-none focus-visible:ring-2 focus-visible:ring-ring"

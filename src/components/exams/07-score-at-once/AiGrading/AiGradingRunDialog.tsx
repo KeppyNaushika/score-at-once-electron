@@ -41,7 +41,7 @@ import {
 } from "./utils/selectGradingTargets"
 
 interface AiGradingRunDialogProps {
-  /** AI 採点（grade）か、AI 採点チェック（check。1段目だけで、2段目は続けない） */
+  /** AI 採点（grade）か、AI チェック（check。1段目だけで、2段目は続けない） */
   purpose: AiGradingStage1Purpose
   /** 開いたときの送る答案の選び方（省けば、AI 採点は未採点・チェックは採点済み） */
   initialScope?: GradingTargetScope
@@ -53,6 +53,8 @@ interface AiGradingRunDialogProps {
   initialProvider: GradingProviderId
   unlockedProviders: GradingProviderId[]
   prompt: AiPromptRow
+  /** 送るプロンプトの番号（表示のためだけのもの） */
+  promptNumber: number | undefined
   reviewedAnswers: ReviewedAiGradingAnswer[]
   questionScores: QuestionScoreRow[]
   currentUserId: string
@@ -85,6 +87,7 @@ function AiGradingRunForm({
   initialProvider,
   unlockedProviders,
   prompt,
+  promptNumber,
   reviewedAnswers,
   questionScores,
   currentUserId,
@@ -166,14 +169,14 @@ function AiGradingRunForm({
     <>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          {purpose === "check" ? "AI 採点チェック" : "AI で採点する"}（
-          {cropRegion.label}）
+          {purpose === "check" ? "AI チェック" : "AI 採点"}（{cropRegion.label}
+          ・プロンプト {promptNumber ?? "?"}）
           <ExperimentalBadge />
         </DialogTitle>
         <DialogDescription>
           {purpose === "check"
-            ? "採点済みの答案の切り出し画像とプロンプトを送り、AI の判定を手元であなたの採点と比べます。あなたの点は送りません。判定は記録されるだけで、問いかけで確定するまで採点は変わりません。"
-            : "選んだ答案の切り出し画像とプロンプトを、送信先の事業者へ送ります。判定から項目の案を作って問いかけ、確定するまで採点には入りません。"}
+            ? "あなたの点は送りません。確定するまで採点は変わりません。"
+            : "確定するまで採点は変わりません。"}
         </DialogDescription>
       </DialogHeader>
 

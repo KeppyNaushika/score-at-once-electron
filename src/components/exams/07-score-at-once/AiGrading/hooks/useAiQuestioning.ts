@@ -1,7 +1,7 @@
 /**
  * 問いかけ（docs/vlm-grading-design.md §3-5・§3-10）を、左パネルと中央の一覧で分け持つための束ね。
  *
- * 問い・選択肢・記録・見直しは左パネル（AI 採点／AI 採点チェックのタブ）に出し、中央は
+ * 問い・選択肢・記録・見直しは左パネル（AI 採点／AI チェックのタブ）に出し、中央は
  * いつもの答案の一覧のまま。ここは両方が読むものを作業場に1つだけ持つ:
  * - 流れ（`useQuestioningFlow`）・確定（`useQuestioningCommit`）・1件ずつ採点のキー
  * - 一覧を、いまの問いの答案に絞る（確信度の低い順。スイッチで外せる）
@@ -127,7 +127,7 @@ export function useAiQuestioning({
     isManualActive && currentState && manualDraft
       ? (currentState.step.members[manualDraft.cursor] ?? null)
       : null
-  const partialScore = useQuestioningManualKeys({
+  const { partialScore, scoreCursor } = useQuestioningManualKeys({
     isActive: isManualActive,
     cropRegion,
     cursorExamStudentId: cursorMember?.examStudentId ?? null,
@@ -216,6 +216,9 @@ export function useAiQuestioning({
     recalculation,
     hasJustCommitted,
     partialScore,
+    /** 1件ずつ自分で採点している最中か（採点ボタンを押せるか） */
+    isManualActive: cursorMember !== null,
+    scoreCursor,
     summary,
     isMethodUnanswered,
     committedInstructionMembers,

@@ -13,7 +13,7 @@ import {
   type QuestioningStepState,
 } from "./questioningSteps"
 
-/** AI 採点か、AI 採点チェックか */
+/** AI 採点か、AI チェックか */
 export type QuestioningMode = "grade" | "check"
 
 export interface QuestioningReviewSummary {

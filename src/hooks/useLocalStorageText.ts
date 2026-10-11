@@ -8,7 +8,7 @@ import { useCallback, useSyncExternalStore } from "react"
  * **事前描画（Next.js）のサーバ側に localStorage は無い。** 初期値として直接読むと
  * ハイドレーションがずれるので、サーバのスナップショットは常に `null`（呼び手は既定値で
  * 描く）とし、マウント後に実際の値へ差し替える。`useKeyboardSettings` の
- * `modifierKeyLabel` と同じ型。
+ * `modifierKeyLabels` と同じ型。
  *
  * **`storage` イベントは購読しない。** あのイベントは書いた document では発火せず、
  * 同一オリジンの**別の** document へ伝えるためのものである。この画面は

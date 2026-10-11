@@ -104,17 +104,12 @@ describe("実行の履歴", () => {
       { attempt: olderAttempt, run: makeRun({ id: "run-older" }) },
     ]
     // 選んだ実行の試行は、失敗でもそれを出す
-    expect(
-      resolveDisplayedAttempt(attempts, undefined, "run-older")?.attempt.id
-    ).toBe("attempt-older")
-    // 答案ごとの選択が優先する
-    expect(
-      resolveDisplayedAttempt(attempts, "attempt-newer", "run-older")?.attempt
-        .id
-    ).toBe("attempt-newer")
+    expect(resolveDisplayedAttempt(attempts, "run-older")?.attempt.id).toBe(
+      "attempt-older"
+    )
     // 選んだ実行にこの答案の試行が無ければ最新の成功
-    expect(
-      resolveDisplayedAttempt(attempts, undefined, "run-elsewhere")?.attempt.id
-    ).toBe("attempt-newer")
+    expect(resolveDisplayedAttempt(attempts, "run-elsewhere")?.attempt.id).toBe(
+      "attempt-newer"
+    )
   })
 })

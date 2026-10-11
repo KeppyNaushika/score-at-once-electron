@@ -16,7 +16,6 @@ interface ScoringHeaderControlsProps {
   onShowKeyboardHelpChange: (show: boolean) => void
   showSidePanel: boolean
   onShowSidePanelChange: (show: boolean) => void
-  modifierKeyLabel: string
   onOmrRecognitionClick?: () => void
   /**
    * 「8. 採点確定」の段へのリンク先。単独採点（裁定対象なし）では undefined で出さない。
@@ -34,7 +33,6 @@ export function ScoringHeaderControls({
   onShowKeyboardHelpChange,
   showSidePanel,
   onShowSidePanelChange,
-  modifierKeyLabel,
   onOmrRecognitionClick,
   scoreDecisionHref,
   pendingDecisionCount = 0,
@@ -82,7 +80,6 @@ export function ScoringHeaderControls({
       <KeyboardHelpDialog
         showKeyboardHelp={showKeyboardHelp}
         onShowKeyboardHelpChange={onShowKeyboardHelpChange}
-        modifierKeyLabel={modifierKeyLabel}
       />
 
       {/* サイドパネル表示切り替え */}

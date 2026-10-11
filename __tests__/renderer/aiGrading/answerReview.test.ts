@@ -14,7 +14,6 @@ import {
 import {
   resolveDefaultPromptId,
   resolveDisplayedAttempt,
-  selectDeletableOldAttemptIds,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/attemptSelection"
 import { classifyReviewReasons } from "@/components/exams/07-score-at-once/AiGrading/utils/reviewReasons"
 import {
@@ -148,11 +147,8 @@ describe("表示する試行と印", () => {
   )
   const attempts = [newestErrored, olderSucceeded]
 
-  it("既定は最新の成功したもの。選んだものがあればそれ", () => {
-    expect(resolveDisplayedAttempt(attempts, undefined)?.attempt.id).toBe(
-      "a-old"
-    )
-    expect(resolveDisplayedAttempt(attempts, "a-new")?.attempt.id).toBe("a-new")
+  it("既定は最新の成功したもの", () => {
+    expect(resolveDisplayedAttempt(attempts)?.attempt.id).toBe("a-old")
   })
 
   it("別のプロンプト・採用済み・採用後の変更を印にする", () => {
@@ -165,7 +161,6 @@ describe("表示する試行と印", () => {
         }),
       }),
       {
-        chosenAttemptIdByExamStudentId: new Map(),
         selectedPromptId: "prompt-2",
         points: POINTS,
       }
@@ -216,7 +211,6 @@ describe("表示する試行と印", () => {
     ].map((answer) => ({
       answer,
       review: reviewAnswer(answer, {
-        chosenAttemptIdByExamStudentId: new Map(),
         selectedPromptId: null,
         points: POINTS,
       }),
@@ -266,7 +260,6 @@ describe("表示する試行と印", () => {
         return {
           answer,
           review: reviewAnswer(answer, {
-            chosenAttemptIdByExamStudentId: new Map(),
             selectedPromptId: null,
             points: POINTS,
           }),
@@ -287,23 +280,6 @@ describe("表示する試行と印", () => {
         )
       ).toEqual(["blank", "light", "written", "unmeasured"])
     })
-  })
-
-  it("古い試行: 最新・採用済み・結果待ちは消さない", () => {
-    const pendingOld = makeAttemptWithRun({
-      examStudentId: "s",
-      id: "a-pending",
-      state: "pending",
-    })
-    expect(
-      selectDeletableOldAttemptIds([
-        [newestErrored, olderSucceeded, pendingOld],
-        [
-          makeAttemptWithRun({ examStudentId: "t", id: "t-new" }),
-          makeAttemptWithRun({ examStudentId: "t", id: "t-old" }),
-        ],
-      ])
-    ).toEqual(["t-old"])
   })
 
   it("既定のプロンプトは自分が最後に採点に使ったもの、無ければ最新", () => {

@@ -232,49 +232,6 @@ export const cancelAiGradingRunMutation = (
     },
   })
 
-/** 古い試行を消す（採用済み・結果待ち・他の教員の試行は main が残す）。消した件数が返る */
-export const deleteAiGradingAttemptsMutation = (
-  examId: string,
-  cropRegionId: string
-) =>
-  defineMutation({
-    mutationFn: (attemptIds: string[]) =>
-      window.electronAPI.aiGrading.deleteAttempts(attemptIds),
-    scope: { id: `exam:${examId}:aiGradingRuns:${cropRegionId}` },
-    meta: {
-      invalidates: [
-        aiGradingRunsScope(examId, cropRegionId),
-        aiGradingRunsOfExamScope(examId),
-        myAiGradingRunsQuery().queryKey,
-      ],
-      errorMessage: "AI の判定を消せませんでした",
-    },
-  })
-
-/**
- * 選んだ試行を自分の採点として書く（判定・理由・朱書き）。
- * 採点行と注釈も変わるので、その設問の採点行と注釈も取り直す
- */
-export const adoptAiGradingAttemptsMutation = (
-  examId: string,
-  cropRegionId: string
-) =>
-  defineMutation({
-    mutationFn: (
-      input: Parameters<typeof window.electronAPI.aiGrading.adoptAttempts>[0]
-    ) => window.electronAPI.aiGrading.adoptAttempts(input),
-    scope: { id: `exam:${examId}:questionScores` },
-    meta: {
-      invalidates: [
-        aiGradingRunsScope(examId, cropRegionId),
-        aiGradingRunsOfExamScope(examId),
-        myAiGradingRunsQuery().queryKey,
-        questionScoresQuery(examId, cropRegionId).queryKey,
-      ],
-      errorMessage: "AI の判定を採用できませんでした",
-    },
-  })
-
 /** 案への答え（下書き）の引数（main の口の形） */
 export type RecordAiRubricProposalDraftInput = Parameters<
   typeof window.electronAPI.aiGrading.recordProposalDraft
@@ -304,7 +261,7 @@ export type RecordAiAttemptResponsesInput = Parameters<
 >[0]
 
 /**
- * 案の外の問いかけ（採点チェック・どの案にも入らない答案）に答える（下書き）。答案ごとの行を書く。
+ * 案の外の問いかけ（AI チェック・どの案にも入らない答案）に答える（下書き）。答案ごとの行を書く。
  * 答えは実行の一覧の試行に同梱されているので、実行のまとまりを取り直す
  */
 export const recordAiAttemptResponsesMutation = (
@@ -365,7 +322,7 @@ export const commitAiRubricProposalResponseMutation = (
     },
   })
 
-/** 問いかけで教員が直接決めた点（1件ずつ採点・採点チェックで直す点）を自分の採点として書く */
+/** 問いかけで教員が直接決めた点（1件ずつ採点・AI チェックで直す点）を自分の採点として書く */
 export const writeAiQuestioningScoresMutation = (
   examId: string,
   cropRegionId: string

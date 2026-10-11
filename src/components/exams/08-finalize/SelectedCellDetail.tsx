@@ -12,6 +12,7 @@ import { groupProposalsByResult } from "@/components/exams/08-finalize/utils/pro
 import { Textarea } from "@/components/ui/textarea"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
+import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 
 interface SelectedCellDetailProps {
   /** 選んでいる答案（1つだけ選んでいるとき） */
@@ -174,7 +175,7 @@ export function SelectedCellDetail({
           placeholder="裁定の理由など（任意）"
         />
         <p className="mt-1 text-[10px] leading-relaxed text-gray-500">
-          {keyBindings["scoring.comment"]?.toUpperCase()} で入る・Esc
+          {formatKeyForDisplay(keyBindings["scoring.comment"])} で入る・Esc
           で捨てて戻る・⌘/Ctrl+Enter で残して戻る
         </p>
       </SidePanelSection>

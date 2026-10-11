@@ -21,7 +21,7 @@ export const GRADING_TARGET_SCOPES = [
   "selected",
 ] as const
 /**
- * AI 採点チェックで送る答案の選び方（docs/vlm-grading-design.md §3-10）。scored は採点済みの答案
+ * AI チェックで送る答案の選び方（docs/vlm-grading-design.md §3-10）。scored は採点済みの答案
  * （自分が無答を付けたものを除く。既定）、scored_all は採点済みの全て
  */
 export const CHECK_TARGET_SCOPES = ["scored", "scored_all", "selected"] as const

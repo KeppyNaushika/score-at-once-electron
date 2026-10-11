@@ -45,15 +45,14 @@ export function AiQuestioningReview({
           role="note"
           className="rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-800"
         >
-          このうち {overwrittenExamStudentIds.length}
-          件は採点済みの答案です。確定すると、ここで決めた点に置き換わります。
+          うち {overwrittenExamStudentIds.length}{" "}
+          件は採点済みで、置き換わります。
         </p>
       )}
       {summary.instructionCount > 0 && (
         <p className="flex items-start gap-1 text-[11px] text-muted-foreground">
           <RotateCcw className="mt-0.5 h-3 w-3 shrink-0" />
-          「再採点を指示」した {summary.instructionCount}
-          問の答案は、確定のあとに指示を添えてもう一度 AI に送れます。
+          再採点の指示 {summary.instructionCount} 問は、確定のあとに送れます。
         </p>
       )}
       {blockedReason && (
@@ -68,7 +67,7 @@ export function AiQuestioningReview({
         >
           戻る
           <Kbd variant="tiny">
-            {formatKeyForDisplay(keyBindings["choice.prevQuestion"], "Alt")}
+            {formatKeyForDisplay(keyBindings["choice.prevQuestion"])}
           </Kbd>
         </Button>
         <Button

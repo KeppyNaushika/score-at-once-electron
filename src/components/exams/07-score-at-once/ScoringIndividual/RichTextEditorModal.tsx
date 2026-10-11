@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { getModifierKeyLabels } from "@/lib/platformUtils"
 // テキストボックスCanvas機能をインポート
 import type { TextBox } from "@/lib/textbox-canvas/types"
 import type { AnchorDirection } from "@/types/drawingAnnotation.types"
@@ -327,7 +328,9 @@ export function RichTextEditorModal({
           <Button variant="outline" onClick={onCancel}>
             キャンセル
           </Button>
-          <Button onClick={onSubmit}>確定 (Ctrl+Enter)</Button>
+          <Button onClick={onSubmit}>
+            確定 ({getModifierKeyLabels().primary}+Enter)
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

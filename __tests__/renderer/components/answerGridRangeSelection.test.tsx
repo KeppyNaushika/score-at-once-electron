@@ -309,7 +309,6 @@ const reviewedAnswers = AI_EXAM_STUDENT_IDS.map((examStudentId) => {
   return {
     answer,
     review: reviewAnswer(answer, {
-      chosenAttemptIdByExamStudentId: new Map(),
       selectedPromptId: "prompt-1",
       points: 4,
     }),

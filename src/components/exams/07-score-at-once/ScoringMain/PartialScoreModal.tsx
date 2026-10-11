@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Kbd } from "@/components/ui/kbd"
 import { useDialogAutoFocus } from "@/hooks/useDialogAutoFocus"
+import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 
 /** キーバインディングの型 */
 interface KeyBindings {
@@ -21,14 +22,10 @@ interface KeyBindings {
   cancelKey?: string
 }
 
-/** キー表示を整形する */
+/** キー表示を整形する（未設定なら空） */
 function formatKeyDisplay(key: string | undefined): string {
   if (!key) return ""
-  // 小文字キーは大文字に変換して表示
-  if (key.length === 1) {
-    return key.toUpperCase()
-  }
-  return key
+  return formatKeyForDisplay(key)
 }
 
 interface PartialScoreModalProps {

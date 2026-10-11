@@ -1,9 +1,9 @@
 /**
  * AI 採点の実行（AiGradingRun）と試行（AiGradingAttempt）の読み書き。
  *
- * 試行は書き換えない（結果を受け取って state を決めるまでと、採用の記録を除く）。
- * やり直しは新しい run の新しい行（docs/vlm-grading-design.md §5-3）。採用は
- * `aiGradingAdoption.ts`、2段目の項目の案と教員の答えは `aiRubricProposal.ts` にある。
+ * 試行は書き換えない（結果を受け取って state を決めるまでを除く）。
+ * やり直しは新しい run の新しい行（docs/vlm-grading-design.md §5-3）。
+ * 2段目の項目の案と教員の答えは `aiRubricProposal.ts` にある。
  *
  * `points` / `partialScore` は Decimal なので、ここから返した行を IPC へ渡すときは
  * 境界の serializePrisma が number へ倒す。文字列の列は `narrowAiGradingRun` で union へ
@@ -262,7 +262,7 @@ export async function closePendingAiGradingAttempts(
 
 /**
  * 一覧で返す木。実行者は秘密を落として連れてくる。試行には1段目の当てはまりと、案の外の
- * 問いかけ（採点チェック・どの案にも入らない答案）への教員の答え（古い順）を同梱する
+ * 問いかけ（AI チェック・どの案にも入らない答案）への教員の答え（古い順）を同梱する
  */
 const aiGradingRunListInclude = {
   attempts: {
@@ -341,53 +341,4 @@ export async function listBatchRunsToCollect(submittedClientId: string) {
     },
     orderBy: { createdAt: "asc" },
   })
-}
-
-/**
- * 古い試行を消す（設計 §4-4）。
- *
- * 「最新でない」の判定は renderer の計算なので、消す試行は id で受け取る。ここで守るのは
- * 消してはいけないもの —— **採用した試行・結果待ちの試行・他の教員の試行** —— を
- * 消さないことだけで、条件に合わないものは黙って残す。
- *
- * @returns 実際に消した件数
- */
-export async function deleteAiGradingAttempts(
-  attemptIds: readonly string[],
-  actorUserId: string
-): Promise<number> {
-  if (attemptIds.length === 0) return 0
-  const deletableAttempts = await prisma.aiGradingAttempt.findMany({
-    where: {
-      id: { in: [...attemptIds] },
-      adoptedAt: null,
-      adoptedQuestionScoreId: null,
-      adoptedDrawingAnnotationId: null,
-      state: { not: "pending" },
-      run: { userId: actorUserId },
-    },
-    include: { run: { include: { prompt: true } } },
-  })
-  if (deletableAttempts.length === 0) return 0
-
-  const { count } = await prisma.aiGradingAttempt.deleteMany({
-    where: {
-      id: { in: deletableAttempts.map((attempt) => attempt.id) },
-      adoptedAt: null,
-    },
-  })
-
-  const cropRegionId = deletableAttempts[0].run.prompt.cropRegionId
-  const scope = await resolveExamScopeByCropRegion(cropRegionId)
-  await recordAuditLog({
-    action: "exam.ai_grading.delete_attempts",
-    userId: actorUserId,
-    entityType: "CropRegion",
-    entityId: cropRegionId,
-    scopeId: scope.scopeId,
-    scopeLabel: scope.scopeLabel,
-    summary: `AI の古い判定を${count}件消しました`,
-  })
-
-  return count
 }

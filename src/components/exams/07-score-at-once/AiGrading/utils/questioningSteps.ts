@@ -1,7 +1,7 @@
 /**
  * 問いかけ（docs/vlm-grading-design.md §3-5・§3-10）の共通の形。
  *
- * AI 採点（2段目の項目の案）と AI 採点チェック（同じ答えに違う点・先生と AI の食い違い）は、
+ * AI 採点（2段目の項目の案）と AI チェック（同じ答えに違う点・先生と AI の食い違い）は、
  * どちらも「1問ずつのカード → 決めたことの記録 → 見直して確定」の同じ流れで出す。
  * 問い（`QuestioningStep`）は届いた行から画面が毎回組み立て、教員が決めたこと
  * （`QuestioningDecision`）は AI の層の答えの行から導く（列には持たない）。
@@ -32,7 +32,7 @@ export interface QuestioningOption {
   description: string
   recommended: boolean
   /**
-   * 確定で答案に直接書く点（採点チェックで直す点・判定を決める案の点）。点を変えない
+   * 確定で答案に直接書く点（AI チェックで直す点・判定を決める案の点）。点を変えない
    * （このままにする）・項目の計算で決まる（点を加減する案）なら null
    */
   score: QuestioningScore | null

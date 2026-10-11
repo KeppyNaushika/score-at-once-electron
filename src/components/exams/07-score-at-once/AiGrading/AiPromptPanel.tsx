@@ -1,7 +1,7 @@
 "use client"
 
 import { FileText, PenLine, Play, Plus } from "lucide-react"
-import { useState } from "react"
+import { Fragment, useState } from "react"
 
 import { SidePanelSection } from "@/components/exams/07-score-at-once/ScoringSidePanel/SidePanelSection"
 import { Button } from "@/components/ui/button"
@@ -32,9 +32,9 @@ type EditorTarget = { basePrompt: AiPromptRow | null }
 /**
  * 設問のプロンプト（設計 §3-1）。
  *
- * 上の「新規追加」は白紙から書く。履歴の版をクリックすると、その版が選ばれ、中身と
- * 「採点実行」「編集」が出る。編集して保存すると、その版を親にした新しい版になり、
- * 元の版は書き換えない
+ * 上の「新規追加」は白紙から書く。履歴のプロンプトをクリックすると選ばれ、中身と
+ * 「採点実行」「編集」が出る。編集して保存すると、それを親にした新しいプロンプトになり、
+ * 元のプロンプトは書き換えない
  */
 export function AiPromptPanel({
   examId,
@@ -64,9 +64,7 @@ export function AiPromptPanel({
       </div>
 
       {prompts.length === 0 ? (
-        <p className="text-xs text-muted-foreground">
-          プロンプトがまだありません。問題文・模範解答・採点基準（いずれも省略可）を書いてください
-        </p>
+        <p className="text-xs text-muted-foreground">まだありません</p>
       ) : (
         <ul className="space-y-1" aria-label="プロンプトの履歴">
           {prompts.toReversed().map((prompt) => {
@@ -88,12 +86,11 @@ export function AiPromptPanel({
                   className="w-full px-2 py-1 text-left hover:bg-gray-50"
                 >
                   <span className="font-medium">
-                    版 {promptNumberById.get(prompt.id)}
+                    プロンプト {promptNumberById.get(prompt.id)}
                   </span>
                   {parentNumber !== undefined && (
                     <span className="text-muted-foreground">
-                      {" "}
-                      ← 版 {parentNumber}
+                      （{parentNumber} を編集）
                     </span>
                   )}
                   {prompt.revisionMessage !== "" && (
@@ -141,6 +138,11 @@ export function AiPromptPanel({
         examId={examId}
         cropRegion={cropRegion}
         basePrompt={editorTarget?.basePrompt ?? null}
+        basePromptNumber={
+          editorTarget?.basePrompt
+            ? promptNumberById.get(editorTarget.basePrompt.id)
+            : undefined
+        }
         defaultAnnotationInstruction={
           settings?.defaultAnnotationInstruction ?? ""
         }
@@ -150,46 +152,56 @@ export function AiPromptPanel({
   )
 }
 
-/** 版の中身（問題文・問題の画像・模範解答・採点基準）。空の欄は「なし」と出す */
+/** プロンプトの中身（問題文・問題の画像・模範解答・採点基準）を、見出しと値の2列で。空の欄は「なし」と出す */
 function PromptContentPreview({ prompt }: { prompt: AiPromptRow }) {
   const fields = [
-    { key: "questionText", label: "問題文", text: prompt.questionText },
     { key: "modelAnswerText", label: "模範解答", text: prompt.modelAnswerText },
     { key: "rubricText", label: "採点基準", text: prompt.rubricText },
     {
       key: "annotationInstruction",
-      label: "助言の文案の指示",
+      label: "助言の指示",
       text: prompt.annotationInstruction,
     },
   ] as const
+  const labelClassName = "whitespace-nowrap text-muted-foreground"
   return (
-    <dl className="space-y-1">
+    <dl
+      aria-label="プロンプトの中身"
+      className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1"
+    >
+      <dt className={labelClassName}>問題文</dt>
+      <PromptFieldValue text={prompt.questionText} />
       {prompt.questionImages.length > 0 && (
-        <div>
-          <dt className="font-medium text-muted-foreground">
-            問題の画像（{prompt.questionImages.length}枚）
-          </dt>
-          <dd>
+        <>
+          <dt className={labelClassName}>問題の画像</dt>
+          <dd className="min-w-0">
             <AiQuestionImageStrip
               imagePaths={prompt.questionImages.map(
                 (questionImage) => questionImage.imagePath
               )}
             />
           </dd>
-        </div>
+        </>
       )}
       {fields.map((field) => (
-        <div key={field.key}>
-          <dt className="font-medium text-muted-foreground">{field.label}</dt>
-          <dd className="line-clamp-4 whitespace-pre-wrap">
-            {field.text.trim() === "" ? (
-              <span className="text-muted-foreground">なし</span>
-            ) : (
-              field.text
-            )}
-          </dd>
-        </div>
+        <Fragment key={field.key}>
+          <dt className={labelClassName}>{field.label}</dt>
+          <PromptFieldValue text={field.text} />
+        </Fragment>
       ))}
     </dl>
+  )
+}
+
+/** 欄の値（長い文は4行で切る）。空なら「なし」 */
+function PromptFieldValue({ text }: { text: string }) {
+  return (
+    <dd className="line-clamp-4 min-w-0 whitespace-pre-wrap">
+      {text.trim() === "" ? (
+        <span className="text-muted-foreground">なし</span>
+      ) : (
+        text
+      )}
+    </dd>
   )
 }

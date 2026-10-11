@@ -9,7 +9,10 @@
  */
 
 import type { QuestionScoreRow } from "@/queries/scoring"
-import { isStage1RunPurpose } from "@/types/aiGrading.types"
+import {
+  type AiGradingStage1Purpose,
+  isStage1RunPurpose,
+} from "@/types/aiGrading.types"
 
 import type { AiGradingRunRow } from "../types"
 import { isAdoptedAttempt } from "./attemptSelection"
@@ -106,7 +109,7 @@ export function summarizeRunHistory({
 }
 
 /**
- * 一覧に出す実行として効いているもの。選んだ実行が消えた（古い判定を消した等）・
+ * 一覧に出す実行として効いているもの。選んだ実行が消えた・
  * 自分の採点の実行でなければ null（＝最新）。選択を書き戻さず、毎回ここで導く
  */
 export function resolveChosenRunId(
@@ -119,4 +122,28 @@ export function resolveChosenRunId(
   )
     ? chosenRunId
     : null
+}
+
+/** 履歴の行の呼び名（「採点 3」「チェック 1」） */
+export const RUN_PURPOSE_LABELS: Record<AiGradingStage1Purpose, string> = {
+  grade: "採点",
+  check: "チェック",
+}
+
+/**
+ * 実行の番号（目的ごとに古い順に 1 から。表示のためだけのもの）
+ *
+ * @param entries 新しい順
+ */
+export function numberRunsByPurpose(
+  entries: readonly RunHistoryEntry[]
+): Map<string, number> {
+  const countByPurpose = new Map<string, number>()
+  return new Map(
+    entries.toReversed().map((entry) => {
+      const runNumber = (countByPurpose.get(entry.run.purpose) ?? 0) + 1
+      countByPurpose.set(entry.run.purpose, runNumber)
+      return [entry.run.id, runNumber]
+    })
+  )
 }

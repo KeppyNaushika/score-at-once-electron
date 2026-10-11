@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react"
 
-import { getModifierKeyLabel } from "@/lib/platformUtils"
+import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 
 import { MAX_SCORE } from "./constants"
 import type { DemoCell } from "./types"
@@ -25,18 +25,13 @@ export function withHelp07Variables(
   return style
 }
 
-/** キー文字列を表示用に整形（"e"→"E", "Shift+d"→"Shift+D"） */
+/**
+ * キー文字列を表示用に整形（"e"→"E", "Shift+d"→"Shift+D", "Alt+e"→ Mac: "Option+E"）。
+ * 採点画面と同じ `formatKeyForDisplay` を通す（未設定なら空）
+ */
 export function formatKey(key?: string): string {
   if (!key) return ""
-  return key
-    .split("+")
-    .map((part) => (part.length === 1 ? part.toUpperCase() : part))
-    .join("+")
-}
-
-/** 修飾キーを実行環境のラベルに合わせて整形（"Alt+e"→ Mac: "Option+E"） */
-export function formatModKey(key?: string): string {
-  return formatKey(key).replace(/Alt/gi, getModifierKeyLabel())
+  return formatKeyForDisplay(key)
 }
 
 /** デモセルの採点状態に応じた点数表示（未採点は null） */

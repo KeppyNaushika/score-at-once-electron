@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 import { RubricRecalculationDialog } from "../Rubric/RubricRecalculationDialog"
+import { AiManualScoringButtons } from "./AiManualScoringButtons"
 import { AiQuestioningCard } from "./AiQuestioningCard"
 import { AiQuestioningLog } from "./AiQuestioningLog"
 import { AiQuestioningReview } from "./AiQuestioningReview"
@@ -34,8 +35,8 @@ interface AiQuestioningPanelProps {
 }
 
 /**
- * 左パネルの「AI 採点」「AI 採点チェック」のタブ（docs/vlm-grading-design.md §3-5・§3-10）。
- * 実行の入口と、問いかけ（決めたことの記録 → いまの問いと選択肢 → 全部答えたら見直しと確定）。
+ * 左パネルの「AI 採点」「AI チェック」のタブ（docs/vlm-grading-design.md §3-5・§3-10）。
+ * 実行の入口と、問いかけ（決めたことの記録 → いまの問いと選択肢・自分で採点するボタン → 全部答えたら見直しと確定）。
  * 問いに入る答案は中央の一覧で見る（絞り込みのスイッチ・付く予定の点の斜線）。
  * **確定するまで教員の採点は何も変わらない**（決めたことは AI の層の下書き）
  */
@@ -80,7 +81,7 @@ export function AiQuestioningPanel({
               : "すべて確定しています"}
           </p>
           <p className="text-muted-foreground">
-            決めたことは採点に入っています。上の一覧の行を押すと選び直せます（選び直しも確定で入ります）。
+            上の記録を押すと選び直せます。
           </p>
           {onRegrade && instructionMembers.length > 0 && (
             <Button
@@ -125,11 +126,11 @@ export function AiQuestioningPanel({
         disabled={onRun === null}
       >
         <Send className="h-3.5 w-3.5" />
-        {mode === "grade" ? "AI 採点を実行…" : "AI 採点チェックを実行…"}
+        {mode === "grade" ? "AI 採点を実行…" : "AI チェックを実行…"}
       </Button>
       {onRun === null && (
         <p className="text-muted-foreground">
-          先に「プロンプト」のタブでプロンプトを作ってください。
+          先に「プロンプト」のタブで作ってください。
         </p>
       )}
       {statusNotice}
@@ -140,6 +141,13 @@ export function AiQuestioningPanel({
         onOpen={flow.openStep}
       />
       {content}
+      {currentState && (
+        <AiManualScoringButtons
+          isEnabled={questioning.isManualActive}
+          onScore={questioning.scoreCursor}
+          onOpenPartialScore={() => partialScore.openPartialScoreModal()}
+        />
+      )}
 
       {currentState && currentState.step.members.length > 0 && (
         <label className="flex items-center gap-2 text-gray-700">
@@ -148,14 +156,12 @@ export function AiQuestioningPanel({
             onCheckedChange={questioning.setIsGridNarrowed}
             aria-label="一覧を絞る"
           />
-          一覧を、この問いの答案に絞る（確信度の低い順）
+          この問いの答案に絞る
         </label>
       )}
       {states.length > 0 && (
         <p className="text-[10px] text-muted-foreground">
-          {mode === "grade"
-            ? "一覧の斜線は、確定すると付く点です。最後に見直して「確定する」を押すまで、採点は何も変わりません。採点済みの答案を送っていても、ここで決めた点に置き換えます。"
-            : "AI には先生の採点を見せずに判定させ、手元で比べています。一覧の斜線は、確定すると付く点です。最後に見直して「確定する」を押すまで、採点は何も変わりません。"}
+          斜線は確定すると付く点です。「確定する」まで採点は変わりません。
         </p>
       )}
 

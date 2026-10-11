@@ -204,10 +204,8 @@ export function buildGradingQuestioning({
         id: SCORING_METHOD_STEP_ID,
         kind: "scoringMethod",
         title: "採点方式",
-        question:
-          "点を加減する案があります。この設問の採点方式をどうしますか？（確定のときに変えます）",
-        detail:
-          "直接採点のまま AI の判定をそのまま点にするときは「採点反映」のタブで採用します。",
+        question: "点を加減する案があります。採点方式を選んでください。",
+        detail: "",
         members: [],
         options: QUESTIONING_SCORING_METHODS.map((method) => ({
           key: method,
@@ -246,8 +244,7 @@ export function buildGradingQuestioning({
       id: OUTSIDE_STEP_ID,
       kind: "outside",
       title: `どの案にも入らない答案（${members.length}件）`,
-      question:
-        "AI はこの答案を、どの案にも入れられず、既存の項目にも当てられませんでした。",
+      question: "AI がどの案にも項目にも当てられなかった答案です。",
       detail: "",
       members,
       options: [

@@ -1,5 +1,5 @@
 /**
- * 表示する試行・既定のプロンプト・消してよい古い試行の決め方（docs/vlm-grading-design.md §4-3・§4-4）。
+ * 表示する試行・既定のプロンプトの決め方（docs/vlm-grading-design.md §4-3）。
  */
 
 import { isStage1RunPurpose } from "@/types/aiGrading.types"
@@ -54,22 +54,16 @@ export function groupAttemptsByExamStudent(
 }
 
 /**
- * 表示する試行。教員が `<` `>` で選んだものがあればそれ、無ければ実行の履歴で選んだ
- * 実行の試行（失敗も「失敗した」と見せる）、それも無ければ最新の成功したもの、
- * それも無ければ最新のもの（失敗も「失敗した」と見せる）
+ * 表示する試行。実行の履歴で選んだ実行の試行（失敗も「失敗した」と見せる）、
+ * 無ければ最新の成功したもの、それも無ければ最新のもの（失敗も「失敗した」と見せる）
  *
  * @param attempts 新しい順
  * @param chosenRunId 実行の履歴で選んだ実行（null は最新）
  */
 export function resolveDisplayedAttempt(
   attempts: readonly AttemptWithRun[],
-  chosenAttemptId: string | undefined,
   chosenRunId: string | null = null
 ): AttemptWithRun | null {
-  const chosenAttempt = attempts.find(
-    (attemptWithRun) => attemptWithRun.attempt.id === chosenAttemptId
-  )
-  if (chosenAttempt) return chosenAttempt
   const attemptOfChosenRun = attempts.find(
     (attemptWithRun) => attemptWithRun.run.id === chosenRunId
   )
@@ -107,44 +101,4 @@ export function resolveDefaultPromptId(
         : latest
     }, null)?.promptId
   return lastUsedPromptId ?? prompts.at(-1)?.id ?? null
-}
-
-/**
- * 消してよい古い試行（設計 §4-4）。答案ごとの最新・採用した試行・結果待ちは残す。
- * 他の教員の試行は main が残す（ここへは自分の試行だけが来る）
- *
- * @param attemptsPerAnswer 答案ごとの試行（新しい順）
- */
-export function selectDeletableOldAttemptIds(
-  attemptsPerAnswer: readonly (readonly AttemptWithRun[])[]
-): string[] {
-  return attemptsPerAnswer.flatMap((attempts) =>
-    attempts
-      .slice(1)
-      .filter(
-        (attemptWithRun) =>
-          !isAdoptedAttempt(attemptWithRun) &&
-          attemptWithRun.attempt.state !== "pending"
-      )
-      .map((attemptWithRun) => attemptWithRun.attempt.id)
-  )
-}
-
-/**
- * `<` `>` で隣の試行へ移るときの試行 id。端なら null。
- *
- * @param attempts 新しい順（`<` は古い方＝添字が増える、`>` は新しい方）
- */
-export function neighborAttemptId(
-  attempts: readonly AttemptWithRun[],
-  displayedAttemptId: string | null,
-  direction: "older" | "newer"
-): string | null {
-  const displayedIndex = attempts.findIndex(
-    (attemptWithRun) => attemptWithRun.attempt.id === displayedAttemptId
-  )
-  if (displayedIndex === -1) return null
-  const neighbor =
-    attempts[direction === "older" ? displayedIndex + 1 : displayedIndex - 1]
-  return neighbor?.attempt.id ?? null
 }

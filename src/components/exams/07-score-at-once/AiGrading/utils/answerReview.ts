@@ -1,7 +1,7 @@
 /**
  * 答案ごとに、表示中の試行から導く印（docs/vlm-grading-design.md §4-3）。
  *
- * 一覧・詳細・まとめての操作が同じものを見るよう、導き方をここに集める。
+ * 一覧と札が同じものを見るよう、導き方をここに集める。
  */
 
 import { SCORING_STATUS_ORDER } from "@/lib/scoringStatusColors"
@@ -33,9 +33,7 @@ export interface AnswerReview {
 }
 
 export interface AnswerReviewContext {
-  /** 答案ごとに `<` `>` で選んだ試行 */
-  chosenAttemptIdByExamStudentId: ReadonlyMap<string, string>
-  /** 実行の履歴で選んだ実行（null は最新）。`<` `>` の選択が優先する */
+  /** 実行の履歴で選んだ実行（null は最新） */
   chosenRunId?: string | null
   selectedPromptId: string | null
   points: number | null
@@ -48,9 +46,6 @@ export function reviewAnswer(
 ): AnswerReview {
   const displayedAttempt = resolveDisplayedAttempt(
     answer.attempts,
-    context.chosenAttemptIdByExamStudentId.get(
-      answer.studentAnswerImage.examStudentId
-    ),
     context.chosenRunId ?? null
   )
   const reviewInput = {

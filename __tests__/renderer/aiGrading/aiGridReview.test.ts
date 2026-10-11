@@ -5,7 +5,6 @@
  * - 答案の下の札は、採用の前か後かを1つの状態に分ける（提案・採用済み・採用後に変更・未判定・失敗…）
  * - 絞り込みは「自分の採点」と「AI の採点」の2組で、組の中は OR、組どうしは AND
  * - 採点種順は、マスに見えている状態（自分の採点、無ければ成功した AI の判定）で並べる
- * - 選んだ答案の採用は、成功した判定のあるものだけを、点だけ書く（AI の朱書きの文案は採用しない）
  */
 
 import { describe, expect, it } from "vitest"
@@ -19,17 +18,12 @@ import {
   DEFAULT_AI_GRID_FILTER_SETTINGS,
   isShownByFilter,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/aiGridFilter"
-import {
-  toAiGridItem,
-  toStudentAnswerImageIds,
-} from "@/components/exams/07-score-at-once/AiGrading/utils/aiGridItems"
+import { toAiGridItem } from "@/components/exams/07-score-at-once/AiGrading/utils/aiGridItems"
 import {
   orderReviewedAnswers,
   reviewAnswer,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/answerReview"
-import { neighborAttemptId } from "@/components/exams/07-score-at-once/AiGrading/utils/attemptSelection"
 import { classifyProposalChip } from "@/components/exams/07-score-at-once/AiGrading/utils/proposalChip"
-import { planSelectionAdoption } from "@/components/exams/07-score-at-once/AiGrading/utils/selectionAdoption"
 import { selectQuestionsWithUnreflectedAiJudgements } from "@/components/exams/07-score-at-once/AiGrading/utils/unreflectedQuestions"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
@@ -75,7 +69,6 @@ function reviewed(answer: AiGradingAnswer) {
   return {
     answer,
     review: reviewAnswer(answer, {
-      chosenAttemptIdByExamStudentId: new Map(),
       selectedPromptId: "prompt-1",
       points: POINTS,
     }),
@@ -268,35 +261,7 @@ describe("絞り込み", () => {
   })
 })
 
-describe("選んだ答案の採用", () => {
-  it("成功した判定のあるものだけを採用し（点だけ。AI の朱書きの文案は運ばない）、採点済みと採用できないものを数える", () => {
-    const plan = planSelectionAdoption([
-      reviewed(answerWithAttempt("s1", { annotationText: "式を書こう" })),
-      reviewed(
-        answerWithAttempt(
-          "s2",
-          {},
-          {
-            questionScore: makeQuestionScore({
-              examStudentId: "s2",
-              status: "incorrect",
-            }),
-          }
-        )
-      ),
-      reviewed(answerWithAttempt("s3", { state: "errored" })),
-      reviewed(makeAnswer("s4")),
-    ])
-    expect(plan.adoptions).toEqual([
-      { attemptId: "attempt-s1" },
-      { attemptId: "attempt-s2" },
-    ])
-    expect(plan.overwriteCount).toBe(1)
-    expect(plan.skippedCount).toBe(2)
-  })
-})
-
-describe("一覧のマスと試行の見比べ", () => {
+describe("一覧のマス", () => {
   it("マスの id は受験者の id、色と点は自分の採点", () => {
     const gridItem = toAiGridItem(
       reviewed(
@@ -321,19 +286,6 @@ describe("一覧のマスと試行の見比べ", () => {
       currentScore: 1,
       maxScore: POINTS,
     })
-  })
-
-  it("`<` は古い判定、`>` は新しい判定。端なら動かない", () => {
-    const attempts = [
-      makeAttemptWithRun({ examStudentId: "s1", id: "newest" }),
-      makeAttemptWithRun({ examStudentId: "s1", id: "middle" }),
-      makeAttemptWithRun({ examStudentId: "s1", id: "oldest" }),
-    ]
-    expect(neighborAttemptId(attempts, "middle", "older")).toBe("oldest")
-    expect(neighborAttemptId(attempts, "middle", "newer")).toBe("newest")
-    expect(neighborAttemptId(attempts, "oldest", "older")).toBeNull()
-    expect(neighborAttemptId(attempts, "newest", "newer")).toBeNull()
-    expect(neighborAttemptId(attempts, null, "older")).toBeNull()
   })
 })
 
@@ -426,28 +378,5 @@ describe("設問一覧の印（AI の判定が未反映）", () => {
         CURRENT_USER_ID
       )
     ).toEqual(new Set([CROP_REGION_ID, otherCropRegionId]))
-  })
-})
-
-describe("自分の採点を書く答案の id", () => {
-  it("マスの id（examStudentId）ではなく、一覧表示の一括採点が受け取る答案画像の id にする", () => {
-    const gridItems = ["s1", "s2"].map((examStudentId) =>
-      toAiGridItem(
-        {
-          answer: makeAnswer(examStudentId),
-          review: reviewAnswer(makeAnswer(examStudentId), {
-            chosenAttemptIdByExamStudentId: new Map(),
-            selectedPromptId: "prompt-1",
-            points: POINTS,
-          }),
-        },
-        cropRegion
-      )
-    )
-    expect(gridItems.map((gridItem) => gridItem.id)).toEqual(["s1", "s2"])
-    expect(toStudentAnswerImageIds(gridItems)).toEqual([
-      "answer-image-s1",
-      "answer-image-s2",
-    ])
   })
 })

@@ -7,7 +7,7 @@
  *   20261002120000 が DB の側で1回だけ行った。`dropDefaultKeyboardShortcuts.test.ts`）
  * - 設定画面・キーボード一覧・キーが重なったときの案内に、内部の名前が出ない
  */
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
   canShareKey,
@@ -188,12 +188,39 @@ describe("resolveKeyBindings", () => {
 })
 
 describe("formatKeyForDisplay", () => {
-  it("修飾キーは環境の呼び名に、1文字は大文字に、矢印は記号にする", () => {
-    expect(formatKeyForDisplay("Alt+u", "Option")).toBe("Option+U")
-    expect(formatKeyForDisplay("Shift+d", "Alt")).toBe("Shift+D")
-    expect(formatKeyForDisplay("ArrowUp", "Alt")).toBe("↑")
-    expect(formatKeyForDisplay("Escape", "Alt")).toBe("Esc")
-    expect(formatKeyForDisplay("Shift++", "Alt")).toBe("Shift++")
-    expect(formatKeyForDisplay(undefined, "Alt")).toBe("未設定")
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+  /** navigator.platform だけを差し替えた window を置く（node 環境で動かす） */
+  const stubPlatform = (platform: string) =>
+    vi.stubGlobal("window", { navigator: { platform } })
+
+  it("1文字は大文字に、矢印は記号にする", () => {
+    stubPlatform("Win32")
+    expect(formatKeyForDisplay("Shift+d")).toBe("Shift+D")
+    expect(formatKeyForDisplay("ArrowUp")).toBe("↑")
+    expect(formatKeyForDisplay("Escape")).toBe("Esc")
+    expect(formatKeyForDisplay("Shift++")).toBe("Shift++")
+    expect(formatKeyForDisplay(undefined)).toBe("未設定")
+  })
+
+  it("macOS では Ctrl を ⌘、Alt を Option と呼ぶ", () => {
+    stubPlatform("MacIntel")
+    expect(formatKeyForDisplay("Ctrl+Enter")).toBe("⌘+Enter")
+    expect(formatKeyForDisplay("Ctrl+Shift+Enter")).toBe("⌘+Shift+Enter")
+    expect(formatKeyForDisplay("Alt+u")).toBe("Option+U")
+  })
+
+  it("macOS 以外では Ctrl・Alt のまま", () => {
+    stubPlatform("Win32")
+    expect(formatKeyForDisplay("Ctrl+Enter")).toBe("Ctrl+Enter")
+    expect(formatKeyForDisplay("Alt+u")).toBe("Alt+U")
+  })
+
+  it("呼び名を渡せばそれを使う（事前描画のサーバのスナップショット）", () => {
+    stubPlatform("MacIntel")
+    expect(
+      formatKeyForDisplay("Ctrl+Alt+q", { primary: "Ctrl", alt: "Alt" })
+    ).toBe("Ctrl+Alt+Q")
   })
 })
