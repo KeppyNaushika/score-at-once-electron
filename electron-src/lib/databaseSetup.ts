@@ -65,7 +65,7 @@ export class DatabaseSetup {
    */
   private async runDeployPendingMigrations(): Promise<void> {
     await this.prisma.$disconnect()
-    deployPendingMigrations()
+    await deployPendingMigrations()
   }
 
   /**
@@ -76,7 +76,7 @@ export class DatabaseSetup {
       let setupPerformed = false
 
       // DBファイルの作成とスキーマ適用（判定はテーブルの有無に基づく）
-      const result = initializeDatabase()
+      const result = await initializeDatabase()
 
       if (result === "created") {
         // --- 新規DB ---
@@ -147,7 +147,7 @@ export class DatabaseSetup {
     }
 
     // ブリッジマイグレーション実行（S3〜S9）
-    const backupPath = createBackup()
+    const backupPath = await createBackup()
     try {
       await runBridgeMigration(this.prisma, version)
 
@@ -166,7 +166,7 @@ export class DatabaseSetup {
       console.error(`Bridge migration from ${version} failed:`, error)
       if (backupPath) {
         console.info("Restoring database from backup...")
-        restoreBackup(backupPath)
+        await restoreBackup(backupPath)
       }
       throw error
     }

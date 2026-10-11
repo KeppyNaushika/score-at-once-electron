@@ -68,11 +68,11 @@ const localDatabasePath = (dataDirectory: string): string =>
 /** 新規インストールと同じ経路で DB を作り、見本を入れる */
 async function createSeededDatabase(databasePath: string): Promise<void> {
   fs.mkdirSync(path.dirname(databasePath), { recursive: true })
-  bootstrapSchema(databasePath)
+  await bootstrapSchema(databasePath)
   const prisma = createPrismaClientForPath(databasePath)
   try {
     await createBaseline(prisma)
-    deployPendingMigrations({
+    await deployPendingMigrations({
       dbPath: databasePath,
     })
     await seedSampleData(prisma)

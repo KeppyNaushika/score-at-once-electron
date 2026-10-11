@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client"
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
 
 import { getDatabasePath } from "../databaseInitializer"
@@ -24,19 +24,18 @@ const BACKUP_SUFFIX = ".pre-migration-backup"
 const BACKUP_KEEP_COUNT = 5
 
 /** 古いバックアップを削除し、直近のBACKUP_KEEP_COUNT世代のみ保持する */
-const pruneOldBackups = (absolutePath: string): void => {
+const pruneOldBackups = async (absolutePath: string): Promise<void> => {
   try {
     const dir = path.dirname(absolutePath)
     const prefix = `${path.basename(absolutePath)}${BACKUP_SUFFIX}`
-    const backups = fs
-      .readdirSync(dir)
+    const backups = (await fsPromises.readdir(dir))
       .filter((f) => f.startsWith(prefix))
       .sort()
     for (const f of backups.slice(
       0,
       Math.max(0, backups.length - BACKUP_KEEP_COUNT)
     )) {
-      fs.unlinkSync(path.join(dir, f))
+      await fsPromises.unlink(path.join(dir, f))
     }
   } catch (error) {
     console.warn("Failed to prune old migration backups:", error)
@@ -47,19 +46,23 @@ const pruneOldBackups = (absolutePath: string): void => {
  * マイグレーション前にDBファイルをバックアップする。
  * NAS共有時に他クライアントのバックアップを上書きしないようタイムスタンプを付与する。
  */
-export const createBackup = (
+export const createBackup = async (
   dbPath: string = getDatabasePath()
-): string | null => {
+): Promise<string | null> => {
+  const absolutePath = path.resolve(dbPath)
   try {
-    const absolutePath = path.resolve(dbPath)
-    if (!fs.existsSync(absolutePath)) return null
+    await fsPromises.access(absolutePath)
+  } catch {
+    return null
+  }
+  try {
     const timestamp = new Date()
       .toISOString()
       .replace(/[-:T]/g, "")
       .slice(0, 14)
     const backupPath = `${absolutePath}${BACKUP_SUFFIX}-${timestamp}`
-    fs.copyFileSync(absolutePath, backupPath)
-    pruneOldBackups(absolutePath)
+    await fsPromises.copyFile(absolutePath, backupPath)
+    await pruneOldBackups(absolutePath)
     console.info(`Migration backup created: ${backupPath}`)
     return backupPath
   } catch (error) {
@@ -69,12 +72,12 @@ export const createBackup = (
 }
 
 /** バックアップからDBを復元する */
-export const restoreBackup = (
+export const restoreBackup = async (
   backupPath: string,
   dbPath: string = getDatabasePath()
-): void => {
+): Promise<void> => {
   try {
-    fs.copyFileSync(backupPath, path.resolve(dbPath))
+    await fsPromises.copyFile(backupPath, path.resolve(dbPath))
     console.info("Database restored from backup")
   } catch (error) {
     console.error("Failed to restore database from backup:", error)

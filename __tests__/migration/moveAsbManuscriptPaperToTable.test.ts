@@ -59,7 +59,7 @@ const applyMigration = (db: SqliteDatabase, name: string): void => {
 
 /** init ＋ 本マイグレーションの1つ手前までを適用した DB を用意する */
 async function buildDatabaseBeforeTargetMigration(): Promise<void> {
-  bootstrapSchema(DB_PATH)
+  await bootstrapSchema(DB_PATH)
   const prisma = createPrismaClientForPath(DB_PATH)
   try {
     await createBaseline(prisma)

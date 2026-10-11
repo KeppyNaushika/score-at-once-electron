@@ -2,7 +2,7 @@
  * PDF結合ユーティリティ
  * 複数PDFから選択ページを1つのPDFに結合
  */
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import { degrees, PDFDocument } from "pdf-lib"
 
 import type { PdfPageInput } from "@/types/pdfTools.types"
@@ -61,7 +61,7 @@ export async function mergePdfs(
 
   // PDFを保存
   const pdfBytes = await mergedPdf.save()
-  fs.writeFileSync(outputPath, pdfBytes)
+  await fsPromises.writeFile(outputPath, pdfBytes)
 
   return outputPath
 }

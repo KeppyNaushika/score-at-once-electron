@@ -3,7 +3,7 @@
  */
 
 import { dialog } from "electron"
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
 
 import type {
@@ -24,6 +24,7 @@ import {
 } from "../lib/dataManager"
 import { encodePng } from "../lib/imageOps"
 import { importAsbDefinition } from "../lib/import/asb-archive"
+import { pathExists } from "../lib/pathExists"
 import {
   deleteAsbDefinition,
   getAsbDefinition,
@@ -85,9 +86,7 @@ export const answerSheetBuilderHandlers = {
       try {
         // ディレクトリの親（definitionId ディレクトリ）ごと削除
         const definitionDir = path.dirname(imagesDir)
-        if (fs.existsSync(definitionDir)) {
-          fs.rmSync(definitionDir, { recursive: true, force: true })
-        }
+        await fsPromises.rm(definitionDir, { recursive: true, force: true })
       } catch (cleanupError) {
         console.warn(
           "asb:delete-definition image cleanup warning:",
@@ -103,9 +102,7 @@ export const answerSheetBuilderHandlers = {
   // 画像アップロード
   "asb:upload-image": async (args: ASBUploadImageArgs) => {
     const imagesDir = getAsbImagesDirectory(args.definitionId)
-    if (!fs.existsSync(imagesDir)) {
-      fs.mkdirSync(imagesDir, { recursive: true })
-    }
+    await fsPromises.mkdir(imagesDir, { recursive: true })
 
     // ユニークなファイル名を生成
     const ext = path.extname(args.originalName)
@@ -114,7 +111,7 @@ export const answerSheetBuilderHandlers = {
     const destPath = path.join(imagesDir, uniqueName)
 
     // ファイルコピー
-    fs.copyFileSync(args.filePath, destPath)
+    await fsPromises.copyFile(args.filePath, destPath)
 
     // data/ からの相対パスを返す
     const relativePath = getRelativePathFromSharedFiles(destPath)
@@ -124,26 +121,28 @@ export const answerSheetBuilderHandlers = {
   // 画像削除
   "asb:delete-image": async (args: ASBDeleteImageArgs) => {
     const absolutePath = getAbsolutePathFromSharedFiles(args.imagePath)
-    if (fs.existsSync(absolutePath)) {
-      fs.unlinkSync(absolutePath)
-    }
+    await fsPromises.rm(absolutePath, { force: true })
   },
 
   // PNG出力: renderer で描いたページの PNG を、sharp で符号化し直して書く
   // （2ページ以上なら -1, -2… を付ける）
   "asb:export-png": async (args: ASBExportPngArgs) => {
     const outputDir = path.dirname(args.outputPath)
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true })
-    }
+    await fsPromises.mkdir(outputDir, { recursive: true })
 
     if (args.pngPages.length === 1) {
-      fs.writeFileSync(args.outputPath, await encodePng(args.pngPages[0]))
+      await fsPromises.writeFile(
+        args.outputPath,
+        await encodePng(args.pngPages[0])
+      )
     } else {
       const ext = path.extname(args.outputPath)
       const base = args.outputPath.slice(0, -ext.length)
       for (const [index, pngPage] of args.pngPages.entries()) {
-        fs.writeFileSync(`${base}-${index + 1}${ext}`, await encodePng(pngPage))
+        await fsPromises.writeFile(
+          `${base}-${index + 1}${ext}`,
+          await encodePng(pngPage)
+        )
       }
     }
 
@@ -204,30 +203,40 @@ export const answerSheetBuilderHandlers = {
 
     // 新定義の画像ディレクトリを作成
     const newImagesDir = getAsbImagesDirectory(newId)
-    fs.mkdirSync(newImagesDir, { recursive: true })
+    await fsPromises.mkdir(newImagesDir, { recursive: true })
 
-    // 画像コピーとパス更新を行うヘルパー
+    // 画像は先にまとめて新定義の画像ディレクトリへ写し、元のパス → 写したパスの表を作る
+    // （ファイルの無い画像は元のパスのまま）
+    const sourceImagePaths = new Set(
+      definition.majorQuestions
+        .flatMap((majorQuestion) => majorQuestion.subQuestions)
+        .flatMap((subQuestion) => [
+          ...(subQuestion.imageElements ?? []),
+          ...subQuestion.branchQuestions.flatMap(
+            (branchQuestion) => branchQuestion.imageElements ?? []
+          ),
+        ])
+        .map((imageElement) => imageElement.imagePath)
+        .filter((imagePath) => imagePath !== "")
+    )
+    const copiedImagePaths = new Map<string, string>()
+    for (const imagePath of sourceImagePaths) {
+      const absoluteSrc = getAbsolutePathFromSharedFiles(imagePath)
+      if (!(await pathExists(absoluteSrc))) continue
+      const destPath = path.join(newImagesDir, path.basename(imagePath))
+      await fsPromises.copyFile(absoluteSrc, destPath)
+      copiedImagePaths.set(imagePath, getRelativePathFromSharedFiles(destPath))
+    }
+
+    // 画像要素の id を振り直し、パスを写した先へ替える
     const copyImageElement = <T extends { id: string; imagePath: string }>(
       imageElement: T
-    ): T => {
-      let newImagePath = imageElement.imagePath
-      if (imageElement.imagePath) {
-        const absoluteSrc = getAbsolutePathFromSharedFiles(
-          imageElement.imagePath
-        )
-        if (fs.existsSync(absoluteSrc)) {
-          const filename = path.basename(imageElement.imagePath)
-          const destPath = path.join(newImagesDir, filename)
-          fs.copyFileSync(absoluteSrc, destPath)
-          newImagePath = getRelativePathFromSharedFiles(destPath)
-        }
-      }
-      return {
-        ...imageElement,
-        id: crypto.randomUUID(),
-        imagePath: newImagePath,
-      }
-    }
+    ): T => ({
+      ...imageElement,
+      id: crypto.randomUUID(),
+      imagePath:
+        copiedImagePaths.get(imageElement.imagePath) ?? imageElement.imagePath,
+    })
 
     // 原稿用紙と文字位置マーカーは別テーブルの行なので、ここで id を振り直さないと
     // 元の id を引き継いだまま作成しようとして主キーが衝突する。画像ディレクトリの

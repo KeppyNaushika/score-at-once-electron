@@ -2,7 +2,7 @@
  * PDF分割ユーティリティ
  * 出力ページを1ページ1ファイルのPDFとして書き出す
  */
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
 import { PDFDocument } from "pdf-lib"
 
@@ -26,9 +26,7 @@ export async function splitPdf(
   outputDir: string,
   prefix?: string
 ): Promise<string[]> {
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true })
-  }
+  await fsPromises.mkdir(outputDir, { recursive: true })
 
   const baseName = prefix || "page"
   // 元ファイルの読み込みは全ページで共有する
@@ -43,7 +41,7 @@ export async function splitPdf(
 
     const paddedIndex = String(index + 1).padStart(3, "0")
     const outputPath = path.join(outputDir, `${baseName}_${paddedIndex}.pdf`)
-    fs.writeFileSync(outputPath, await singlePagePdf.save())
+    await fsPromises.writeFile(outputPath, await singlePagePdf.save())
     outputPaths.push(outputPath)
   }
 

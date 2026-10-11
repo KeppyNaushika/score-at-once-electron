@@ -12,7 +12,7 @@
  * - 既にテーブルを持つDBには一切書き込まない（データ破壊・スキーマ上書きをしない）
  */
 
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
 
 import { openAppDatabase } from "../sqliteConnection"
@@ -39,14 +39,21 @@ const applySchema = (db: SqliteDatabase): void => {
  *   失った既存DBの可能性があるため**再初期化しない**（"existing" を返す）。ここで init を
  *   適用・seed すると喪失を隠蔽してしまうため、上位でエラーとして顕在化させる。
  */
-export const bootstrapSchema = (dbPath: string): SchemaBootstrapResult => {
+export const bootstrapSchema = async (
+  dbPath: string
+): Promise<SchemaBootstrapResult> => {
   const absolutePath = path.resolve(dbPath)
-  fs.mkdirSync(path.dirname(absolutePath), { recursive: true, mode: 0o755 })
+  await fsPromises.mkdir(path.dirname(absolutePath), {
+    recursive: true,
+    mode: 0o755,
+  })
 
   // 開く前に「既にデータを持ちうるファイルか」を判定する。
   // new Database() は 0 バイトのファイルにもヘッダを書くため、判定は必ず open 前に行う。
-  const preexistingNonEmpty =
-    fs.existsSync(absolutePath) && fs.statSync(absolutePath).size > 0
+  const preexistingNonEmpty = await fsPromises
+    .stat(absolutePath)
+    .then((stats) => stats.size > 0)
+    .catch(() => false)
 
   // ファイルが存在しない場合はSQLiteが作成する。
   // -wal/-shm が残っていれば、この接続で自動的にリプレイされ既存テーブルが見える。

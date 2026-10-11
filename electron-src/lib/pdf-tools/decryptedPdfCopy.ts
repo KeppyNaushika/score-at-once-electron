@@ -7,7 +7,7 @@
  */
 import * as crypto from "crypto"
 import { app } from "electron"
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
 import { PDFDocument } from "pdf-lib"
 
@@ -23,8 +23,8 @@ function decryptedCopyDir(): string {
  * 代わりにアプリ起動時に呼び、前回セッション（やクラッシュ）で残った複製を一括回収する。
  * この時点では現セッションの複製はまだ存在しないため、使用中ファイルを消す心配がない。
  */
-export function cleanupDecryptedPdfCopies(): void {
-  fs.rmSync(decryptedCopyDir(), { recursive: true, force: true })
+export async function cleanupDecryptedPdfCopies(): Promise<void> {
+  await fsPromises.rm(decryptedCopyDir(), { recursive: true, force: true })
 }
 
 /**
@@ -54,11 +54,11 @@ export async function writeDecryptedPdfCopy(
   }
 
   const outputDir = decryptedCopyDir()
-  fs.mkdirSync(outputDir, { recursive: true })
+  await fsPromises.mkdir(outputDir, { recursive: true })
   const outputPath = path.join(
     outputDir,
     `decrypted-${crypto.randomUUID()}.pdf`
   )
-  fs.writeFileSync(outputPath, await pdfDoc.save())
+  await fsPromises.writeFile(outputPath, await pdfDoc.save())
   return outputPath
 }

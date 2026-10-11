@@ -54,6 +54,6 @@ export const createSharedPrismaClient = (): PrismaClient =>
  * 空のDBに初期スキーマを適用する。既にテーブルを持つDBは "existing" を返す。
  * 実処理は bootstrapSchema に委譲する（呼び出し側で例外はハンドリングされる）。
  */
-export const initializeDatabase = (): SchemaBootstrapResult => {
+export const initializeDatabase = (): Promise<SchemaBootstrapResult> => {
   return bootstrapSchema(getDatabasePath())
 }

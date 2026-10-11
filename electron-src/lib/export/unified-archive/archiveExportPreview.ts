@@ -9,7 +9,7 @@
  */
 
 import Database from "better-sqlite3"
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 
 import type { UnifiedArchiveMissingFile } from "../../../../src/types/unifiedArchive.types"
 import {
@@ -97,9 +97,16 @@ const closePreviewSource = (): void => {
   previewSource = null
 }
 
-/** 今の DB の行。前の下見から DB が変わっていなければ、前に読んだものを返す */
-const previewSourceOf = (databasePath: string): PreviewSource => {
-  const inode = fs.statSync(databasePath).ino
+/**
+ * 今の DB の行。前の下見から DB が変わっていなければ、前に読んだものを返す。
+ *
+ * 待つのは最初の stat だけ。そのあと `previewSource` を読み書きする間は待たないので、
+ * 下見が2つ重なっても、片方の途中にもう片方が割り込むことはない
+ */
+const previewSourceOf = async (
+  databasePath: string
+): Promise<PreviewSource> => {
+  const inode = (await fsPromises.stat(databasePath)).ino
   if (
     previewSource !== null &&
     (previewSource.databasePath !== databasePath ||
@@ -207,11 +214,11 @@ const collectForcedBy = (
 }
 
 /** 範囲内の行が指すファイルのうち、同梱できないもの（書き出しと同じ規則） */
-const collectMissingFiles = (
+const collectMissingFiles = async (
   source: PreviewSource,
   scope: ArchiveScope,
   dataDirectory: string
-): UnifiedArchiveMissingFile[] => {
+): Promise<UnifiedArchiveMissingFile[]> => {
   const fileProblems =
     source.fileProblems.get(dataDirectory) ?? new Map<string, FileProblem>()
   source.fileProblems.set(dataDirectory, fileProblems)
@@ -229,35 +236,35 @@ const collectMissingFiles = (
       if (scopedIds.has(record.id)) filePaths.add(record.filePath)
     }
   }
-  return [...filePaths]
-    .sort()
-    .flatMap((filePath): UnifiedArchiveMissingFile[] => {
-      let problem = fileProblems.get(filePath)
-      if (problem === undefined) {
-        problem = fileProblemOf(dataDirectory, filePath)
-        fileProblems.set(filePath, problem)
-      }
-      return problem === null ? [] : [{ path: filePath, reason: problem }]
-    })
+  const missingFiles: UnifiedArchiveMissingFile[] = []
+  for (const filePath of [...filePaths].sort()) {
+    let problem = fileProblems.get(filePath)
+    if (problem === undefined) {
+      problem = await fileProblemOf(dataDirectory, filePath)
+      fileProblems.set(filePath, problem)
+    }
+    if (problem !== null) missingFiles.push({ path: filePath, reason: problem })
+  }
+  return missingFiles
 }
 
-const fileProblemOf = (
+const fileProblemOf = async (
   dataDirectory: string,
   filePath: string
-): FileProblem => {
+): Promise<FileProblem> => {
   const resolved = resolveArchiveFile(dataDirectory, filePath)
   if (resolved.kind === "outsideDataDirectory") return "outsideDataDirectory"
-  const fileStat = fs.statSync(resolved.absolutePath, {
-    throwIfNoEntry: false,
-  })
+  const fileStat = await fsPromises
+    .stat(resolved.absolutePath)
+    .catch(() => null)
   return fileStat?.isFile() ? null : "notFound"
 }
 
 /** 選択から、書き出す範囲の件数・実体の id・外せない理由・欠けたファイルを返す */
-export function previewUnifiedArchiveExport(
+export async function previewUnifiedArchiveExport(
   options: PreviewUnifiedArchiveExportOptions
-): UnifiedArchiveExportPreview {
-  const source = previewSourceOf(options.sourceDatabasePath)
+): Promise<UnifiedArchiveExportPreview> {
+  const source = await previewSourceOf(options.sourceDatabasePath)
   const { tableRows } = source
   let scope: ArchiveScope
   try {
@@ -293,6 +300,10 @@ export function previewUnifiedArchiveExport(
     excludedRowCounts: { ...scope.excludedRowCounts },
     entityIds,
     forcedBy: collectForcedBy(tableRows, scope),
-    missingFiles: collectMissingFiles(source, scope, options.dataDirectory),
+    missingFiles: await collectMissingFiles(
+      source,
+      scope,
+      options.dataDirectory
+    ),
   }
 }

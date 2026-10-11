@@ -152,7 +152,7 @@ describe("統合アーカイブの往復（書き出す → 開く → 取り込
       appVersion: "0.0.0-test",
     })
 
-    const archive = openUnifiedArchive({
+    const archive = await openUnifiedArchive({
       archivePath: OUTPUT_PATH,
       workDirectory: OPENED_DIR,
       referenceDatabasePath: TEST_DB_PATH,
@@ -181,7 +181,7 @@ describe("統合アーカイブの往復（書き出す → 開く → 取り込
     }
 
     const plan = await importArchiveRows(prisma, archive, "merge", IMPORTED_AT)
-    const files = importUnifiedArchiveFiles(archive, DATA_DIR, plan)
+    const files = await importUnifiedArchiveFiles(archive, DATA_DIR, plan)
 
     expect(plan.uniqueConflicts).toEqual([])
     expect(plan.warnings).toEqual([])

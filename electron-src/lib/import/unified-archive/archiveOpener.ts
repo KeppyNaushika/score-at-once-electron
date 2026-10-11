@@ -11,7 +11,7 @@
 
 import AdmZip from "adm-zip"
 import Database from "better-sqlite3"
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
 
 import {
@@ -130,7 +130,10 @@ const isExpectedEntry = (segments: readonly string[], isDirectory: boolean) => {
 }
 
 /** ZIP の項目を確かめてから展開する。展開先から外へ出るものは1つも書かない */
-const extractArchive = (archivePath: string, workDirectory: string): void => {
+const extractArchive = async (
+  archivePath: string,
+  workDirectory: string
+): Promise<void> => {
   let entries: AdmZip.IZipEntry[]
   try {
     entries = new AdmZip(archivePath).getEntries()
@@ -188,17 +191,19 @@ const extractArchive = (archivePath: string, workDirectory: string): void => {
         `${entry.entryName}: ${errorMessageOf(error)}`,
       ])
     }
-    fs.mkdirSync(path.dirname(targetPath), { recursive: true })
-    fs.writeFileSync(targetPath, content, { flag: "wx" })
+    await fsPromises.mkdir(path.dirname(targetPath), { recursive: true })
+    await fsPromises.writeFile(targetPath, content, { flag: "wx" })
   }
 }
 
 // ── 2. manifest ───────────────────────────────────────────
 
-const readManifest = (manifestPath: string): UnifiedArchiveManifest => {
+const readManifest = async (
+  manifestPath: string
+): Promise<UnifiedArchiveManifest> => {
   let parsedJson: unknown
   try {
-    parsedJson = JSON.parse(fs.readFileSync(manifestPath, "utf-8"))
+    parsedJson = JSON.parse(await fsPromises.readFile(manifestPath, "utf-8"))
   } catch (error) {
     throw new UnifiedArchiveOpenError("invalidManifest", [
       `JSON として読めない: ${errorMessageOf(error)}`,
@@ -423,22 +428,22 @@ const describeForeignKeyViolations = (db: SqliteDatabase): string[] => {
  * 統合アーカイブを `workDirectory` へ展開し、守り（§4.1）を通して中の DB を現行化する。
  * 守りに掛かれば `UnifiedArchiveOpenError` を投げる（展開したものは呼び出し側が消す）
  */
-export function openUnifiedArchive(
+export async function openUnifiedArchive(
   options: OpenUnifiedArchiveOptions
-): OpenedUnifiedArchive {
+): Promise<OpenedUnifiedArchive> {
   const { workDirectory } = options
   const migrations = options.migrations ?? BUNDLED_MIGRATIONS
-  fs.mkdirSync(workDirectory, { recursive: true })
-  if (fs.readdirSync(workDirectory).length > 0) {
+  await fsPromises.mkdir(workDirectory, { recursive: true })
+  if ((await fsPromises.readdir(workDirectory)).length > 0) {
     throw new Error(`展開先が空ではありません: ${workDirectory}`)
   }
 
-  extractArchive(options.archivePath, workDirectory)
-  const manifest = readManifest(
+  await extractArchive(options.archivePath, workDirectory)
+  const manifest = await readManifest(
     path.join(workDirectory, UNIFIED_ARCHIVE_MANIFEST_NAME)
   )
   const filesDirectory = path.join(workDirectory, UNIFIED_ARCHIVE_FILES_DIR)
-  fs.mkdirSync(filesDirectory, { recursive: true })
+  await fsPromises.mkdir(filesDirectory, { recursive: true })
 
   const databasePath = path.join(workDirectory, UNIFIED_ARCHIVE_DATABASE_NAME)
   const localNames = listLocalMigrationNames(migrations)

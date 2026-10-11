@@ -74,33 +74,33 @@ afterEach(() => {
 })
 
 describe("bootstrapSchema", () => {
-  it("ファイルが存在しない場合はディレクトリごと作成してスキーマを適用する", () => {
+  it("ファイルが存在しない場合はディレクトリごと作成してスキーマを適用する", async () => {
     const dbPath = dbPathFor("missing")
 
-    expect(bootstrapSchema(dbPath)).toBe("created")
+    expect(await bootstrapSchema(dbPath)).toBe("created")
     expect(fs.existsSync(dbPath)).toBe(true)
     expect(countTables(dbPath)).toBe(SCHEMA_TABLE_COUNT)
   })
 
-  it("0バイトのファイルにもスキーマを適用する", () => {
+  it("0バイトのファイルにもスキーマを適用する", async () => {
     const dbPath = dbPathFor("empty-file")
     fs.mkdirSync(path.dirname(dbPath), { recursive: true })
     fs.writeFileSync(dbPath, "")
 
-    expect(bootstrapSchema(dbPath)).toBe("created")
+    expect(await bootstrapSchema(dbPath)).toBe("created")
     expect(countTables(dbPath)).toBe(SCHEMA_TABLE_COUNT)
   })
 
-  it("スキーマが揃っていれば existing を返し、データを保持する", () => {
+  it("スキーマが揃っていれば existing を返し、データを保持する", async () => {
     const dbPath = dbPathFor("complete")
-    bootstrapSchema(dbPath)
+    await bootstrapSchema(dbPath)
     withDatabase(dbPath, (db) => {
       db.prepare(
         `INSERT INTO "User" (id, username, name, createdAt, updatedAt) VALUES ('u1','admin','管理者','2026-07-23','2026-07-23')`
       ).run()
     })
 
-    expect(bootstrapSchema(dbPath)).toBe("existing")
+    expect(await bootstrapSchema(dbPath)).toBe("existing")
 
     const userCount = withDatabase(
       dbPath,
@@ -114,22 +114,22 @@ describe("bootstrapSchema", () => {
     expect(Number(userCount)).toBe(1)
   })
 
-  it("連続実行しても状態が変わらない（冪等）", () => {
+  it("連続実行しても状態が変わらない（冪等）", async () => {
     const dbPath = dbPathFor("idempotent")
 
-    expect(bootstrapSchema(dbPath)).toBe("created")
-    expect(bootstrapSchema(dbPath)).toBe("existing")
-    expect(bootstrapSchema(dbPath)).toBe("existing")
+    expect(await bootstrapSchema(dbPath)).toBe("created")
+    expect(await bootstrapSchema(dbPath)).toBe("existing")
+    expect(await bootstrapSchema(dbPath)).toBe("existing")
     expect(countTables(dbPath)).toBe(SCHEMA_TABLE_COUNT)
   })
 
-  it("initと異なるテーブル名でも、テーブルが在れば existing として一切変更しない", () => {
+  it("initと異なるテーブル名でも、テーブルが在れば existing として一切変更しない", async () => {
     // マイグレーションで進化したDBは init 時のテーブル名（classes/Subject等）を持たない。
     // それらを「不完全」と誤判定して作り直す/例外を投げると既存ユーザーが起動不能になる
     const dbPath = dbPathFor("migrated")
     createNonInitDatabase(dbPath, true)
 
-    expect(bootstrapSchema(dbPath)).toBe("existing")
+    expect(await bootstrapSchema(dbPath)).toBe("existing")
 
     // 元のテーブル・データがそのまま残っている（init スキーマで上書きされない）
     const state = withDatabase(dbPath, (db) => ({
@@ -149,16 +149,16 @@ describe("bootstrapSchema", () => {
     expect(state.keep).toBe("keep-me")
   })
 
-  it("テーブルが在ればデータが無くても existing（作り直さない）", () => {
+  it("テーブルが在ればデータが無くても existing（作り直さない）", async () => {
     const dbPath = dbPathFor("nonempty-no-data")
     createNonInitDatabase(dbPath, false)
 
-    expect(bootstrapSchema(dbPath)).toBe("existing")
+    expect(await bootstrapSchema(dbPath)).toBe("existing")
     // init スキーマは適用されない（Classroom/Tag の2テーブルのまま）
     expect(countTables(dbPath)).toBe(2)
   })
 
-  it("ヘッダを持つ非空ファイルでテーブル0なら再初期化しない（desyncデータ喪失の隠蔽防止）", () => {
+  it("ヘッダを持つ非空ファイルでテーブル0なら再初期化しない（desyncデータ喪失の隠蔽防止）", async () => {
     // -wal を失い main .db だけ残ったような「ヘッダはあるがテーブル0」の既存DBを模す。
     // ここで init を適用・seed すると喪失を隠蔽するため、bootstrapSchema は
     // 手を触れず existing を返し、上位でエラーを顕在化させる。
@@ -170,7 +170,7 @@ describe("bootstrapSchema", () => {
     })
     expect(fs.statSync(dbPath).size).toBeGreaterThan(0)
 
-    expect(bootstrapSchema(dbPath)).toBe("existing")
+    expect(await bootstrapSchema(dbPath)).toBe("existing")
     // init スキーマは適用されない（テーブル0のまま＝勝手に作り直さない）
     expect(countTables(dbPath)).toBe(0)
   })
@@ -193,7 +193,7 @@ describe("bootstrapSchema", () => {
       const { bootstrapSchema: bootstrapWithBrokenIndexes } =
         await import("../../electron-src/lib/prisma/schema/schemaBootstrap")
 
-      expect(() => bootstrapWithBrokenIndexes(dbPath)).toThrow()
+      await expect(bootstrapWithBrokenIndexes(dbPath)).rejects.toThrow()
       expect(countTables(dbPath)).toBe(0)
     } finally {
       vi.doUnmock("../../electron-src/lib/prisma/schema/migrationSql")
@@ -235,7 +235,7 @@ const readSchemaShape = (dbPath: string) =>
   })
 
 describe("初期スキーマSQL", () => {
-  it("init マイグレーションと同じテーブル・インデックス構成を作成する", () => {
+  it("init マイグレーションと同じテーブル・インデックス構成を作成する", async () => {
     const initSqlPath = path.resolve(
       __dirname,
       "../../prisma/migrations/20260322232329_init/migration.sql"
@@ -254,7 +254,7 @@ describe("初期スキーマSQL", () => {
         '"Subtotal_subtotalGroupId_name_key"'
       )
 
-    bootstrapSchema(bootstrapPath)
+    await bootstrapSchema(bootstrapPath)
     withDatabase(initPath, (db) => {
       db.exec(initSql)
     })

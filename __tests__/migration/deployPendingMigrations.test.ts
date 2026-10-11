@@ -84,7 +84,9 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(1)
+    expect(
+      await deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })
+    ).toBe(1)
 
     const tables = withDatabase(
       (db) =>
@@ -116,7 +118,9 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(1)
+    expect(
+      await deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })
+    ).toBe(1)
 
     const body = withDatabase(
       (db) =>
@@ -141,7 +145,9 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(1)
+    expect(
+      await deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })
+    ).toBe(1)
 
     withDatabase((db) => {
       db.prepare(`INSERT INTO "Log" (id, note) VALUES ('l1', 'hello')`).run()
@@ -159,9 +165,13 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(1)
+    expect(
+      await deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })
+    ).toBe(1)
     // 2回目は未適用ゼロ
-    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(0)
+    expect(
+      await deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })
+    ).toBe(0)
   })
 
   it("複数マイグレーションを名前順に適用する", async () => {
@@ -175,7 +185,9 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(2)
+    expect(
+      await deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })
+    ).toBe(2)
 
     const columns = withDatabase((db) =>
       (db.prepare(`PRAGMA table_info("T1")`).all() as { name: string }[]).map(
@@ -199,9 +211,9 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(() =>
+    await expect(
       deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })
-    ).toThrow(/20260101000000_broken/)
+    ).rejects.toThrow(/20260101000000_broken/)
 
     // 復元後: 壊れかけの Half は存在せず、_prisma_migrations に記録も無い
     const state = withDatabase((db) => ({
@@ -247,7 +259,9 @@ describe("deployPendingMigrations", () => {
     writeMigration("20260101000001_drops_parent", `DROP TABLE "Parent";`)
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(2)
+    expect(
+      await deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })
+    ).toBe(2)
 
     const parentTables = withDatabase((db) =>
       db
@@ -274,7 +288,9 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(2)
+    expect(
+      await deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })
+    ).toBe(2)
 
     // 子の定義文の参照先が新しい名前へ書き換わっている（旧名のまま残ると dangling FK）
     const childReferencingGuardian = withDatabase((db) =>
@@ -296,7 +312,9 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(1)
+    expect(
+      await deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })
+    ).toBe(1)
 
     const probe = withDatabase((db) =>
       db.prepare<[], { flag: number }>(`SELECT flag FROM "Probe"`).get()
@@ -315,6 +333,8 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(0)
+    expect(
+      await deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })
+    ).toBe(0)
   })
 })

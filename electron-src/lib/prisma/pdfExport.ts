@@ -1,5 +1,5 @@
 import * as crypto from "crypto"
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
 import { PageSizes, PDFDocument } from "pdf-lib"
 
@@ -7,6 +7,7 @@ import { resolveExamPaperSize } from "@/lib/shared/examPaperSize"
 
 import type { DrawingAnnotation } from "../../../src/types/drawingAnnotation.types"
 import { getAbsolutePathFromSharedFiles } from "../dataManager"
+import { pathExists } from "../pathExists"
 import { calculateActualScore } from "../shared/calculations/actualScore"
 import { resolveEffectiveScores } from "../shared/calculations/scoreResolution"
 import { calculateSubtotalScoreForStudent } from "../shared/calculations/subtotalCalculator"
@@ -147,7 +148,7 @@ export async function getPdfExportData(options: {
     for (const studentAnswer of studentAnswerList) {
       const imagePath = getAbsolutePathFromSharedFiles(studentAnswer.imagePath)
 
-      if (!imagePath || !fs.existsSync(imagePath)) continue
+      if (!imagePath || !(await pathExists(imagePath))) continue
 
       // このページの採点領域を取得。ページの同定は examPageId で行う
       // （pageNumber は序数。端末をまたいで独立に同じ値が振られるので、値が一致しても
@@ -206,7 +207,7 @@ export async function getPdfExportData(options: {
       // 画像をbase64データURLに変換（Canvasのtainted問題を回避）
       let imageUrl: string
       try {
-        const imageBuffer = fs.readFileSync(imagePath)
+        const imageBuffer = await fsPromises.readFile(imagePath)
         const ext = path.extname(imagePath).toLowerCase()
         const mimeType =
           ext === ".png"
@@ -467,7 +468,7 @@ export async function finalizeStreamingSession(options: {
   try {
     // PDFを保存
     const pdfBytes = await session.pdfDoc.save()
-    fs.writeFileSync(outputPath, pdfBytes)
+    await fsPromises.writeFile(outputPath, pdfBytes)
   } finally {
     // 保存の成否によらずセッションを解放する（失敗したセッションを抱え続けない）
     streamingSessions.delete(sessionId)

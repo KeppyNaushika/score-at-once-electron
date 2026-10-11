@@ -52,7 +52,7 @@ const applyMigration = (db: SqliteDatabase, name: string): void => {
 }
 
 async function buildDatabaseBeforeTargetMigration(): Promise<void> {
-  bootstrapSchema(DB_PATH)
+  await bootstrapSchema(DB_PATH)
   const prisma = createPrismaClientForPath(DB_PATH)
   try {
     await createBaseline(prisma)

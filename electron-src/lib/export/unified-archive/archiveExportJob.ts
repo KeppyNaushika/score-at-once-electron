@@ -112,7 +112,7 @@ export async function runArchiveExportJob(
       })
       post({ requestId, kind: "exported", result })
     } else {
-      const preview = previewUnifiedArchiveExport(job.options)
+      const preview = await previewUnifiedArchiveExport(job.options)
       post({ requestId, kind: "previewed", preview })
     }
   } catch (error) {

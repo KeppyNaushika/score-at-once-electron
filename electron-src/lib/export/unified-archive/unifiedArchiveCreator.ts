@@ -12,6 +12,7 @@
 import { ZipArchive, type ZipEntryData } from "archiver"
 import Database from "better-sqlite3"
 import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as os from "os"
 import * as path from "path"
 
@@ -23,6 +24,7 @@ import {
   type UnifiedArchiveManifest,
   type UnifiedArchiveMissingFile,
 } from "../../../../src/types/unifiedArchive.types"
+import { pathExists } from "../../pathExists"
 import { hasTable, type SqliteDatabase } from "../../prisma/sqliteSchemaUtils"
 import { writeArchiveDatabase } from "./archiveDatabaseWriter"
 import {
@@ -152,10 +154,10 @@ const readArchiveDatabase = (databasePath: string): ArchiveDatabaseContents => {
  * DB が指すファイルを、同梱するものと欠けているものに分ける。欠けていても書き出しは続け、
  * 結果と manifest で知らせる（今の5種と同じ）。別の書き方で同じファイルを指すパスは1つにまとめる
  */
-const resolveFiles = (
+const resolveFiles = async (
   dataDirectory: string,
   filePaths: readonly string[]
-): { packed: PackedFile[]; missing: UnifiedArchiveMissingFile[] } => {
+): Promise<{ packed: PackedFile[]; missing: UnifiedArchiveMissingFile[] }> => {
   const packedByZipPath = new Map<string, PackedFile>()
   const missing: UnifiedArchiveMissingFile[] = []
   for (const filePath of filePaths) {
@@ -164,9 +166,9 @@ const resolveFiles = (
       missing.push({ path: filePath, reason: "outsideDataDirectory" })
       continue
     }
-    const fileStat = fs.statSync(resolved.absolutePath, {
-      throwIfNoEntry: false,
-    })
+    const fileStat = await fsPromises
+      .stat(resolved.absolutePath)
+      .catch(() => null)
     if (!fileStat?.isFile()) {
       missing.push({ path: filePath, reason: "notFound" })
       continue
@@ -252,8 +254,15 @@ const packArchive = (
         resolve()
         return
       }
-      if (opened) fs.rmSync(outputPath, { force: true })
-      reject(failure)
+      if (!opened) {
+        reject(failure)
+        return
+      }
+      const failed = failure
+      fsPromises.rm(outputPath, { force: true }).then(
+        () => reject(failed),
+        () => reject(failed)
+      )
     })
     output.on("error", fail)
     archive.on("error", fail)
@@ -284,12 +293,12 @@ export async function createUnifiedArchive(
   options: CreateUnifiedArchiveOptions
 ): Promise<UnifiedArchiveExportResult> {
   const { outputPath, onProgress } = options
-  if (fs.existsSync(outputPath)) {
+  if (await pathExists(outputPath)) {
     throw new Error(`書き出し先が既にあります: ${outputPath}`)
   }
-  fs.mkdirSync(path.dirname(outputPath), { recursive: true })
+  await fsPromises.mkdir(path.dirname(outputPath), { recursive: true })
 
-  const workDirectory = fs.mkdtempSync(
+  const workDirectory = await fsPromises.mkdtemp(
     path.join(options.temporaryDirectory ?? os.tmpdir(), "sao-export-")
   )
   try {
@@ -301,9 +310,9 @@ export async function createUnifiedArchive(
 
     onProgress?.("writingDatabase")
     const databasePath = path.join(workDirectory, UNIFIED_ARCHIVE_DATABASE_NAME)
-    writeArchiveDatabase(options.sourceDatabasePath, databasePath, scope)
+    await writeArchiveDatabase(options.sourceDatabasePath, databasePath, scope)
     const contents = readArchiveDatabase(databasePath)
-    const files = resolveFiles(options.dataDirectory, contents.filePaths)
+    const files = await resolveFiles(options.dataDirectory, contents.filePaths)
     const exportedAt = (options.now ?? (() => new Date()))()
     const manifest = buildManifest(options, scope, contents, files, exportedAt)
 
@@ -311,6 +320,6 @@ export async function createUnifiedArchive(
     await packArchive(outputPath, manifest, databasePath, files.packed)
     return { outputPath, manifest }
   } finally {
-    fs.rmSync(workDirectory, { recursive: true, force: true })
+    await fsPromises.rm(workDirectory, { recursive: true, force: true })
   }
 }

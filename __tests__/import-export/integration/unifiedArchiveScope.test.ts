@@ -69,7 +69,7 @@ describe("統合アーカイブの範囲", () => {
     await disconnectTestPrisma()
   })
 
-  it("試験を選ぶと、配下・受験生・全期間の在籍と学級・全員分の採点が入り、無関係な試験は入らない", () => {
+  it("試験を選ぶと、配下・受験生・全期間の在籍と学級・全員分の採点が入り、無関係な試験は入らない", async () => {
     const scope = resolve({ roots: { Exam: [fixture.examA.exam.id] } })
 
     expect(idsOf(scope, "Exam")).toEqual(new Set([fixture.examA.exam.id]))
@@ -95,7 +95,7 @@ describe("統合アーカイブの範囲", () => {
     expect(scope.excludedRowCounts).toEqual({})
   })
 
-  it("成績算出を選ぶと、使う試験・資料と比較先の成績算出が配下ごと入る", () => {
+  it("成績算出を選ぶと、使う試験・資料と比較先の成績算出が配下ごと入る", async () => {
     const scope = resolve({ roots: { Grade: [fixture.gradeId] } })
 
     expect(idsOf(scope, "Grade")).toEqual(
@@ -109,7 +109,7 @@ describe("統合アーカイブの範囲", () => {
     expect(idsOf(scope, "GradeComparison").has(fixture.comparisonId)).toBe(true)
   })
 
-  it("比較先の成績算出を外すと、比較が外れ、外した件数が分かる", () => {
+  it("比較先の成績算出を外すと、比較が外れ、外した件数が分かる", async () => {
     const scope = resolve({
       roots: { Grade: [fixture.gradeId] },
       exclusions: { Grade: [fixture.comparedGradeId] },
@@ -149,7 +149,7 @@ describe("統合アーカイブの範囲", () => {
     })
   })
 
-  it("成績算出が使う試験は外せない", () => {
+  it("成績算出が使う試験は外せない", async () => {
     expect(() =>
       resolve({
         roots: { Grade: [fixture.gradeId] },
@@ -158,7 +158,7 @@ describe("統合アーカイブの範囲", () => {
     ).toThrow(ArchiveScopeError)
   })
 
-  it("本人分にすると、他の教員の採点・確定が外れる", () => {
+  it("本人分にすると、他の教員の採点・確定が外れる", async () => {
     const scope = resolve({
       roots: { Exam: [fixture.examA.exam.id] },
       scoring: { kind: "self", userId: fixture.examA.user.id },
@@ -177,7 +177,7 @@ describe("統合アーカイブの範囲", () => {
     })
   })
 
-  it("採点と答案を外すと、受験生とその配下が外れ、試験の形は残る", () => {
+  it("採点と答案を外すと、受験生とその配下が外れ、試験の形は残る", async () => {
     const scope = resolve({
       roots: { Exam: [fixture.examA.exam.id] },
       includeAnswers: false,
@@ -191,7 +191,7 @@ describe("統合アーカイブの範囲", () => {
     )
   })
 
-  it("利用者個人の設定は、選んだときだけ、書き出しに入った利用者の分だけ入る", () => {
+  it("利用者個人の設定は、選んだときだけ、書き出しに入った利用者の分だけ入る", async () => {
     const withoutSettings = resolve({
       roots: { Exam: [fixture.examA.exam.id] },
     })
@@ -206,14 +206,14 @@ describe("統合アーカイブの範囲", () => {
     )
   })
 
-  it("書き出した DB は範囲の行だけを持ち、外部キーが閉じている", () => {
+  it("書き出した DB は範囲の行だけを持ち、外部キーが閉じている", async () => {
     const scope = resolve({
       roots: { Grade: [fixture.gradeId] },
       exclusions: { Grade: [fixture.comparedGradeId] },
       scoring: { kind: "self", userId: fixture.examA.user.id },
     })
     const outputPath = path.join(OUTPUT_DIR, "archive.db")
-    writeArchiveDatabase(TEST_DB_PATH, outputPath, scope)
+    await writeArchiveDatabase(TEST_DB_PATH, outputPath, scope)
 
     const archive = new Database(outputPath, { readonly: true })
     try {
@@ -235,7 +235,7 @@ describe("統合アーカイブの範囲", () => {
     }
   })
 
-  it("同期のトリガー・内部表は書き出しに入らない", () => {
+  it("同期のトリガー・内部表は書き出しに入らない", async () => {
     const sourcePath = path.join(OUTPUT_DIR, "source.db")
     const seed = new Database(TEST_DB_PATH, { readonly: true })
     seed.prepare<[string]>("VACUUM INTO ?").run(sourcePath)
@@ -249,7 +249,7 @@ describe("統合アーカイブの範囲", () => {
 
     const scope = resolve({ roots: { Exam: [fixture.examA.exam.id] } })
     const outputPath = path.join(OUTPUT_DIR, "archive.db")
-    writeArchiveDatabase(sourcePath, outputPath, scope)
+    await writeArchiveDatabase(sourcePath, outputPath, scope)
 
     const archive = new Database(outputPath, { readonly: true })
     try {

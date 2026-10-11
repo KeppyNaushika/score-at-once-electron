@@ -350,7 +350,7 @@ describe("統合アーカイブの取り込み: 衝突と照合", () => {
       const archiveAnswerImagePath = archiveRowsOf("StudentAnswerImage").find(
         (row) => row.id === archiveAnswerImageId
       )?.imagePath
-      const files = importUnifiedArchiveFiles(archive, DATA_DIR, result)
+      const files = await importUnifiedArchiveFiles(archive, DATA_DIR, result)
       expect(files.unreferenced).toEqual([archiveAnswerImagePath])
       expect(files.copied).toEqual([])
       expect(files.failed).toEqual([])
@@ -830,7 +830,7 @@ describe("統合アーカイブの取り込み: 衝突と照合", () => {
 
       // 取り込まなかった受験生の答案画像は写さない（写すとどの行からも参照されない）
       emptyDataDirectory()
-      const files = importUnifiedArchiveFiles(archive, DATA_DIR, result)
+      const files = await importUnifiedArchiveFiles(archive, DATA_DIR, result)
       const skippedImagePaths = fileFixture.studentAnswerImagePaths.filter(
         (imagePath) => imagePath.includes(`/${examStudentId}_`)
       )
@@ -889,7 +889,7 @@ describe("統合アーカイブの取り込み: 衝突と照合", () => {
       expect.arrayContaining(fileFixture.examPageImagePaths)
     )
     expect(result.filePaths.written).toEqual([])
-    const files = importUnifiedArchiveFiles(archive, DATA_DIR, result)
+    const files = await importUnifiedArchiveFiles(archive, DATA_DIR, result)
 
     expect(files.copied).toEqual([missingPath])
     expect(files.replaced).toEqual([])

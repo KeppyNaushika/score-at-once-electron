@@ -14,7 +14,7 @@
 
 import * as crypto from "crypto"
 import { app, BrowserWindow, dialog, utilityProcess } from "electron"
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as os from "os"
 import * as path from "path"
 
@@ -192,7 +192,7 @@ export const unifiedArchiveHandlers = {
     outputPath: string
   }) => {
     const partialPath = `${input.outputPath}.${crypto.randomUUID()}.partial`
-    const temporaryDirectory = fs.mkdtempSync(
+    const temporaryDirectory = await fsPromises.mkdtemp(
       path.join(os.tmpdir(), "sao-export-job-")
     )
     let exported: UnifiedArchiveExportResult
@@ -209,10 +209,10 @@ export const unifiedArchiveHandlers = {
         },
         broadcastExportProgress
       )
-      fs.renameSync(partialPath, input.outputPath)
+      await fsPromises.rename(partialPath, input.outputPath)
     } finally {
-      fs.rmSync(partialPath, { force: true })
-      fs.rmSync(temporaryDirectory, { recursive: true, force: true })
+      await fsPromises.rm(partialPath, { force: true })
+      await fsPromises.rm(temporaryDirectory, { recursive: true, force: true })
     }
     const { manifest } = exported
 
@@ -296,7 +296,7 @@ export const unifiedArchiveHandlers = {
         suggestedDecisions: suggestedMatchDecisions(matchCandidates),
       }
     } catch (error) {
-      closeUnifiedArchiveImportSession(sessionId)
+      await closeUnifiedArchiveImportSession(sessionId)
       throw error
     }
   },
@@ -360,7 +360,7 @@ export const unifiedArchiveHandlers = {
       throw error
     }
 
-    const files = importUnifiedArchiveFiles(
+    const files = await importUnifiedArchiveFiles(
       session.opened,
       getSharedFilesDirectory(),
       result
@@ -396,12 +396,12 @@ export const unifiedArchiveHandlers = {
       },
     })
 
-    closeUnifiedArchiveImportSession(input.sessionId)
+    await closeUnifiedArchiveImportSession(input.sessionId)
     return { kind: "ok" as const, result, files }
   },
 
   /** 作業を閉じ、作業ディレクトリを消す（取り込まずにウィザードを閉じたとき） */
   "unifiedArchive:close": async (input: { sessionId: string }) => {
-    closeUnifiedArchiveImportSession(input.sessionId)
+    await closeUnifiedArchiveImportSession(input.sessionId)
   },
 } satisfies HandlerMap

@@ -61,17 +61,14 @@ export const aiProviderHandlers = {
         "ログインしている利用者が分からないため、同意を記録できません"
       )
     }
-    const store = getProviderCredentialStore()
-    // 別の利用者が同意し直すときは、前の利用者のキーを引き継がない
-    // （キーは利用者が自分で事業者と契約して用意するもの。費用はその契約に掛かる）
-    const previousConsent = store.getProviderStatus(providerId).consent
-    if (previousConsent !== null && previousConsent.userId !== userId) {
-      store.clearApiKey(providerId)
-    }
-    const consent = store.recordConsent(providerId, {
-      userId,
-      consentVersion: AI_GRADING_CONSENT_VERSION,
-    })
+    // 別の利用者が同意し直すときは、前の利用者のキーは消える（recordConsent）
+    const consent = await getProviderCredentialStore().recordConsent(
+      providerId,
+      {
+        userId,
+        consentVersion: AI_GRADING_CONSENT_VERSION,
+      }
+    )
     // 同意文の本文やキーは残さない。版だけを残す
     await recordAuditLog({
       action: "ai_grading.consent",
@@ -87,7 +84,7 @@ export const aiProviderHandlers = {
   /** 同意を取り消す。保存した API キーも消える（送信済みのものは戻らない） */
   "aiProvider:revokeConsent": async (provider: GradingProviderId) => {
     const providerId = assertProviderId(provider)
-    getProviderCredentialStore().revokeConsent(providerId)
+    await getProviderCredentialStore().revokeConsent(providerId)
     await recordAuditLog({
       action: "ai_grading.consent_revoked",
       entityType: "AiProvider",
@@ -101,12 +98,15 @@ export const aiProviderHandlers = {
     provider: GradingProviderId,
     apiKey: string
   ) => {
-    getProviderCredentialStore().setApiKey(assertProviderId(provider), apiKey)
+    await getProviderCredentialStore().setApiKey(
+      assertProviderId(provider),
+      apiKey
+    )
   },
 
   /** 保存した API キーを消す */
   "aiProvider:clearApiKey": async (provider: GradingProviderId) => {
-    getProviderCredentialStore().clearApiKey(assertProviderId(provider))
+    await getProviderCredentialStore().clearApiKey(assertProviderId(provider))
   },
 
   /** 機密でない既定値（モデル・effort・同時実行数・送信1回の見積もりの警告額） */

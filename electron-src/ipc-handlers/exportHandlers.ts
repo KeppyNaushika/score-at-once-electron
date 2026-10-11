@@ -299,7 +299,7 @@ export const exportHandlers = {
 
     try {
       // MathJaxパスを解決してHTMLを一時ファイルに書き込み
-      const html = resolveMathJaxSrc(options.html)
+      const html = await resolveMathJaxSrc(options.html)
       await fs.writeFile(tempHtmlPath, html, "utf-8")
 
       // 一時HTMLファイルをロード
@@ -382,7 +382,7 @@ export const exportHandlers = {
 
     try {
       // MathJaxパスを解決してHTMLを一時ファイルに書き込み
-      const html = resolveMathJaxSrc(options.html)
+      const html = await resolveMathJaxSrc(options.html)
       await fs.writeFile(tempHtmlPath, html, "utf-8")
 
       // 一時HTMLファイルをロード

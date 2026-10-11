@@ -137,14 +137,14 @@ beforeAll(async () => {
   fs.rmSync(TEST_ROOT, { recursive: true, force: true })
   fs.mkdirSync(TEST_ROOT, { recursive: true })
 
-  bootstrapSchema(DB_PATH)
+  await bootstrapSchema(DB_PATH)
   const baselinePrisma = createPrismaClientForPath(DB_PATH)
   try {
     await createBaseline(baselinePrisma)
   } finally {
     await baselinePrisma.$disconnect()
   }
-  deployPendingMigrations()
+  await deployPendingMigrations()
 
   chainPrisma.current = createPrismaClientForPath(DB_PATH)
 })
@@ -304,9 +304,9 @@ describe("適用前から在った子は、Subtotal の作り直しで消えな�
   const readMigrationSql = (name: string): string =>
     fs.readFileSync(path.join(MIGRATIONS_DIR, name, "migration.sql"), "utf-8")
 
-  it("割り当て（CropSubtotal）とデータソース（GradeDataSource）が残り、Subtotal を指したまま", () => {
+  it("割り当て（CropSubtotal）とデータソース（GradeDataSource）が残り、Subtotal を指したまま", async () => {
     // init → この migration の1つ手前まで（本番の deployer と同じ当て方）
-    bootstrapSchema(PRE_TARGET_DB_PATH)
+    await bootstrapSchema(PRE_TARGET_DB_PATH)
     const db = new Database(PRE_TARGET_DB_PATH)
     try {
       const migrationNames = fs

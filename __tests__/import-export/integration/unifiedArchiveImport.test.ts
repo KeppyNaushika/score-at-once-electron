@@ -274,7 +274,7 @@ describe("統合アーカイブの取り込み", () => {
     }
 
     const plan = await importRows(archive, "merge")
-    const files = importUnifiedArchiveFiles(archive, DATA_DIR, plan)
+    const files = await importUnifiedArchiveFiles(archive, DATA_DIR, plan)
 
     for (const [table, ids] of archiveIds) {
       expect(plan.counts[table], table).toEqual({
@@ -321,7 +321,7 @@ describe("統合アーカイブの取り込み", () => {
     const countsBefore = countTestDatabaseRows()
 
     const plan = await importRows(archive, "merge")
-    const files = importUnifiedArchiveFiles(archive, DATA_DIR, plan)
+    const files = await importUnifiedArchiveFiles(archive, DATA_DIR, plan)
 
     for (const [table, ids] of archiveIds) {
       expect(plan.counts[table], table).toEqual({
@@ -349,7 +349,7 @@ describe("統合アーカイブの取り込み", () => {
     fs.writeFileSync(dataFilePath(changedImagePath), "取り込み先で変えた画像")
 
     const plan = await importRows(archive, "overwrite")
-    const files = importUnifiedArchiveFiles(archive, DATA_DIR, plan)
+    const files = await importUnifiedArchiveFiles(archive, DATA_DIR, plan)
 
     for (const [table, ids] of archiveIds) {
       // 監査ログ（とその対象）は3択に関わらず書き換えない
@@ -440,7 +440,7 @@ describe("統合アーカイブの取り込み", () => {
     const countsBefore = countTestDatabaseRows()
 
     const plan = await importRows(archive, "separate")
-    const files = importUnifiedArchiveFiles(archive, DATA_DIR, plan)
+    const files = await importUnifiedArchiveFiles(archive, DATA_DIR, plan)
 
     const sharedTables = new Set([
       "User",

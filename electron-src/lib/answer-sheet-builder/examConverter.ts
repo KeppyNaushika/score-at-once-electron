@@ -5,7 +5,7 @@
  * → PNG保存（sharp で符号化し直す） + Exam + ExamPage + CropRegion 作成
  */
 
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
 
 import type { AnswerSheetDefinition } from "../../../src/types/answerSheetDefinition.types"
@@ -63,9 +63,7 @@ export async function convertToExam(
 
     // 2. 画像ファイル保存 + DB作成（ページごと）
     const masterDir = getMasterAnswersDirectory(exam.id)
-    if (!fs.existsSync(masterDir)) {
-      fs.mkdirSync(masterDir, { recursive: true })
-    }
+    await fsPromises.mkdir(masterDir, { recursive: true })
 
     let globalOrderIndex = 0
 
@@ -76,7 +74,7 @@ export async function convertToExam(
       // 模範解答PNG保存
       const masterImageFileName = `master-${timestamp}.png`
       const masterImagePath = path.join(masterDir, masterImageFileName)
-      fs.writeFileSync(
+      await fsPromises.writeFile(
         masterImagePath,
         await encodePng(modelAnswerPngPages[pi])
       )
@@ -85,7 +83,10 @@ export async function convertToExam(
       // 答案テンプレートPNG保存
       const templateFileName = `template-${timestamp}.png`
       const templatePath = path.join(masterDir, templateFileName)
-      fs.writeFileSync(templatePath, await encodePng(answerSheetPngPages[pi]))
+      await fsPromises.writeFile(
+        templatePath,
+        await encodePng(answerSheetPngPages[pi])
+      )
 
       // ExamPage作成（模範解答画像はページ自身が持つ）
       const examPage = await createExamPage({

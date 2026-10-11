@@ -18,10 +18,11 @@
  * 出るものと、普通のファイルでないもの（シンボリックリンクなど）は写さない。
  */
 
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
 
 import { resolveArchiveFile } from "../../export/unified-archive/archiveFileCollector"
+import { pathExists } from "../../pathExists"
 import type { UnifiedArchiveImportResult } from "./archiveRowImporter"
 import type { OpenedUnifiedArchive } from "./types"
 
@@ -67,18 +68,21 @@ export function remapArchiveFilePath(
 }
 
 /** `directory` の下の普通のファイルとそれ以外を、"/" 区切りの相対パスで集める */
-const listArchiveFiles = (
+const listArchiveFiles = async (
   directory: string
-): { files: string[]; irregular: string[] } => {
+): Promise<{ files: string[]; irregular: string[] }> => {
   const files: string[] = []
   const irregular: string[] = []
-  const walk = (absoluteDirectory: string, relativeSegments: string[]) => {
-    for (const entry of fs.readdirSync(absoluteDirectory, {
+  const walk = async (
+    absoluteDirectory: string,
+    relativeSegments: string[]
+  ): Promise<void> => {
+    for (const entry of await fsPromises.readdir(absoluteDirectory, {
       withFileTypes: true,
     })) {
       const segments = [...relativeSegments, entry.name]
       if (entry.isDirectory()) {
-        walk(path.join(absoluteDirectory, entry.name), segments)
+        await walk(path.join(absoluteDirectory, entry.name), segments)
       } else if (entry.isFile()) {
         files.push(segments.join("/"))
       } else {
@@ -86,7 +90,7 @@ const listArchiveFiles = (
       }
     }
   }
-  if (fs.existsSync(directory)) walk(directory, [])
+  if (await pathExists(directory)) await walk(directory, [])
   return { files: files.sort(), irregular: irregular.sort() }
 }
 
@@ -98,11 +102,11 @@ const errorMessage = (error: unknown): string =>
  * 写すのは、行の取り込みが決めたファイル（`imported.filePaths`）だけ。結果のパスは、写した先の
  * （書き換えた後の）相対パス
  */
-export function importUnifiedArchiveFiles(
+export async function importUnifiedArchiveFiles(
   archive: OpenedUnifiedArchive,
   dataDirectory: string,
   imported: Pick<UnifiedArchiveImportResult, "action" | "idMap" | "filePaths">
-): UnifiedArchiveFileImportResult {
+): Promise<UnifiedArchiveFileImportResult> {
   const result: UnifiedArchiveFileImportResult = {
     copied: [],
     replaced: [],
@@ -114,7 +118,7 @@ export function importUnifiedArchiveFiles(
   const writtenPaths = new Set(imported.filePaths.written)
   const keptPaths = new Set(imported.filePaths.kept)
 
-  const { files, irregular } = listArchiveFiles(archive.filesDirectory)
+  const { files, irregular } = await listArchiveFiles(archive.filesDirectory)
   for (const irregularPath of irregular) {
     result.failed.push({
       path: irregularPath,
@@ -139,14 +143,16 @@ export function importUnifiedArchiveFiles(
       continue
     }
     try {
-      const exists = fs.existsSync(resolved.absolutePath)
+      const exists = await pathExists(resolved.absolutePath)
       // 既存のファイルを置き換えるのは、上書きで作った・置き換えた行のものだけ
       if (exists && !(written && imported.action === "overwrite")) {
         result.skipped.push(targetPath)
         continue
       }
-      fs.mkdirSync(path.dirname(resolved.absolutePath), { recursive: true })
-      fs.copyFileSync(
+      await fsPromises.mkdir(path.dirname(resolved.absolutePath), {
+        recursive: true,
+      })
+      await fsPromises.copyFile(
         path.join(archive.filesDirectory, ...archivePath.split("/")),
         resolved.absolutePath
       )

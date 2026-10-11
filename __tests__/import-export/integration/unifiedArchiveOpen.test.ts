@@ -220,15 +220,15 @@ const open = (
     referenceDatabasePath: overrides.referenceDatabasePath ?? CURRENT_DB_PATH,
   })
 
-const openErrorOf = (
+const openErrorOf = async (
   archivePath: string,
   overrides: {
     migrations?: readonly MigrationScript[]
     referenceDatabasePath?: string
   } = {}
-): UnifiedArchiveOpenError => {
+): Promise<UnifiedArchiveOpenError> => {
   try {
-    open(archivePath, overrides)
+    await open(archivePath, overrides)
   } catch (error) {
     if (error instanceof UnifiedArchiveOpenError) return error
     throw error
@@ -236,15 +236,15 @@ const openErrorOf = (
   throw new Error("開けてしまった")
 }
 
-const expectOpenError = (
+const expectOpenError = async (
   archivePath: string,
   kind: UnifiedArchiveOpenErrorKind,
   overrides: {
     migrations?: readonly MigrationScript[]
     referenceDatabasePath?: string
   } = {}
-): UnifiedArchiveOpenError => {
-  const error = openErrorOf(archivePath, overrides)
+): Promise<UnifiedArchiveOpenError> => {
+  const error = await openErrorOf(archivePath, overrides)
   expect(error.kind).toBe(kind)
   return error
 }
@@ -281,13 +281,13 @@ beforeEach((context) => {
 })
 
 describe("現行化", () => {
-  it("古い版の archive.db に不足の migration を当て、現行化で生まれた行を控える", () => {
+  it("古い版の archive.db に不足の migration を当て、現行化で生まれた行を控える", async () => {
     const archivePath = buildArchive({
       manifest: validManifest(),
       databasePath: OLD_DB_PATH,
       files: { "exams/e1/master-answers/page-1.png": "png-bytes" },
     })
-    const opened = open(archivePath, {
+    const opened = await open(archivePath, {
       migrations: readMigrationScripts(SYNTHETIC_MIGRATIONS_DIR),
       referenceDatabasePath: SYNTHETIC_CURRENT_DB_PATH,
     })
@@ -326,8 +326,8 @@ describe("現行化", () => {
     ).toBe("png-bytes")
   })
 
-  it("アプリの migration だけなら、行は生まれない", () => {
-    const opened = open(
+  it("アプリの migration だけなら、行は生まれない", async () => {
+    const opened = await open(
       buildArchive({ manifest: validManifest(), databasePath: OLD_DB_PATH })
     )
     const oldApplied = new Set(appliedNamesOf(OLD_DB_PATH))
@@ -337,8 +337,8 @@ describe("現行化", () => {
     expect(opened.migratedRowIds).toEqual({})
   })
 
-  it("現行の archive.db なら何も当てない。files/ が無くても空のディレクトリを返す", () => {
-    const opened = open(
+  it("現行の archive.db なら何も当てない。files/ が無くても空のディレクトリを返す", async () => {
+    const opened = await open(
       buildArchive({ manifest: validManifest(), databasePath: CURRENT_DB_PATH })
     )
     expect(opened.appliedMigrations).toEqual([])
@@ -348,19 +348,19 @@ describe("現行化", () => {
 })
 
 describe("ZIP の守り", () => {
-  it("ZIP でないファイルは notArchive", () => {
+  it("ZIP でないファイルは notArchive", async () => {
     const archivePath = path.join(caseDir, "not-zip.sao")
     fs.writeFileSync(archivePath, "これは ZIP ではない")
-    expectOpenError(archivePath, "notArchive")
+    await expectOpenError(archivePath, "notArchive")
   })
 
-  it("ZIP の外へ出る名前（zip slip）は notArchive で、何も書かない", () => {
+  it("ZIP の外へ出る名前（zip slip）は notArchive で、何も書かない", async () => {
     const archivePath = buildArchive({
       manifest: validManifest(),
       databasePath: CURRENT_DB_PATH,
       rawEntries: { "files/../../escaped.txt": "x" },
     })
-    const error = expectOpenError(archivePath, "notArchive")
+    const error = await expectOpenError(archivePath, "notArchive")
     expect(error.details.join()).toContain("escaped.txt")
     expect(fs.existsSync(path.join(caseDir, "escaped.txt"))).toBe(false)
     expect(fs.readdirSync(workDirectoryOf())).toEqual([])
@@ -370,32 +370,32 @@ describe("ZIP の守り", () => {
     ["絶対パス", "/files/absolute.txt"],
     ["「\\」を含む名前", "files\\backslash.txt"],
     ["想定外の項目", "extra.txt"],
-  ])("%s は notArchive", (_label, entryName) => {
+  ])("%s は notArchive", async (_label, entryName) => {
     const archivePath = buildArchive({
       manifest: validManifest(),
       databasePath: CURRENT_DB_PATH,
       rawEntries: { [entryName]: "x" },
     })
-    expectOpenError(archivePath, "notArchive")
+    await expectOpenError(archivePath, "notArchive")
   })
 
-  it("manifest.json が無ければ notArchive", () => {
+  it("manifest.json が無ければ notArchive", async () => {
     const archivePath = buildArchive({ databasePath: CURRENT_DB_PATH })
-    const error = expectOpenError(archivePath, "notArchive")
+    const error = await expectOpenError(archivePath, "notArchive")
     expect(error.details).toContain("manifest.json が無い")
   })
 
-  it("archive.db が無ければ notArchive", () => {
+  it("archive.db が無ければ notArchive", async () => {
     const archivePath = buildArchive({ manifest: validManifest() })
-    const error = expectOpenError(archivePath, "notArchive")
+    const error = await expectOpenError(archivePath, "notArchive")
     expect(error.details).toContain("archive.db が無い")
   })
 
-  it("_prisma_migrations が無ければ notArchive", () => {
+  it("_prisma_migrations が無ければ notArchive", async () => {
     const databasePath = databaseCopy(CURRENT_DB_PATH, (db) => {
       db.exec(`DROP TABLE "_prisma_migrations"`)
     })
-    expectOpenError(
+    await expectOpenError(
       buildArchive({ manifest: validManifest(), databasePath }),
       "notArchive"
     )
@@ -403,20 +403,20 @@ describe("ZIP の守り", () => {
 })
 
 describe("manifest の守り", () => {
-  it("JSON として読めなければ invalidManifest", () => {
-    expectOpenError(
+  it("JSON として読めなければ invalidManifest", async () => {
+    await expectOpenError(
       buildArchive({ manifestText: "{", databasePath: CURRENT_DB_PATH }),
       "invalidManifest"
     )
   })
 
-  it("型の違う項目は invalidManifest で、どこが違うかを返す", () => {
+  it("型の違う項目は invalidManifest で、どこが違うかを返す", async () => {
     const manifest = {
       ...validManifest(),
       selection: { ...validManifest().selection, includeAnswers: "yes" },
       rowCounts: { Exam: -1 },
     }
-    const error = expectOpenError(
+    const error = await expectOpenError(
       buildArchive({ manifest, databasePath: CURRENT_DB_PATH }),
       "invalidManifest"
     )
@@ -426,8 +426,8 @@ describe("manifest の守り", () => {
     ])
   })
 
-  it("format が違えば unsupportedFormat", () => {
-    expectOpenError(
+  it("format が違えば unsupportedFormat", async () => {
+    await expectOpenError(
       buildArchive({
         manifest: { ...validManifest(), format: "something-else" },
         databasePath: CURRENT_DB_PATH,
@@ -436,8 +436,8 @@ describe("manifest の守り", () => {
     )
   })
 
-  it("formatVersion がアプリの知る版より新しければ、形が違っても unsupportedFormat", () => {
-    expectOpenError(
+  it("formatVersion がアプリの知る版より新しければ、形が違っても unsupportedFormat", async () => {
+    await expectOpenError(
       buildArchive({
         manifest: {
           format: UNIFIED_ARCHIVE_FORMAT,
@@ -451,7 +451,7 @@ describe("manifest の守り", () => {
 })
 
 describe("DB の守り", () => {
-  it("アプリの知らない migration が当たっていれば newerSchema", () => {
+  it("アプリの知らない migration が当たっていれば newerSchema", async () => {
     const databasePath = databaseCopy(CURRENT_DB_PATH, (db) => {
       recordAppliedMigration(
         db,
@@ -460,14 +460,14 @@ describe("DB の守り", () => {
         new Date().toISOString()
       )
     })
-    const error = expectOpenError(
+    const error = await expectOpenError(
       buildArchive({ manifest: validManifest(), databasePath }),
       "newerSchema"
     )
     expect(error.details).toEqual(["99999999999999_from_the_future"])
   })
 
-  it("アプリの最新より古い未知の名前（改名前の migration の適用記録）は通す", () => {
+  it("アプリの最新より古い未知の名前（改名前の migration の適用記録）は通す", async () => {
     const databasePath = databaseCopy(CURRENT_DB_PATH, (db) => {
       recordAppliedMigration(
         db,
@@ -476,36 +476,36 @@ describe("DB の守り", () => {
         new Date().toISOString()
       )
     })
-    const opened = open(
+    const opened = await open(
       buildArchive({ manifest: validManifest(), databasePath })
     )
     expect(opened.appliedMigrations).toEqual([])
   })
 
-  it("トリガー入りは unsafeSchema", () => {
+  it("トリガー入りは unsafeSchema", async () => {
     const databasePath = databaseCopy(CURRENT_DB_PATH, (db) => {
       db.exec(`CREATE TRIGGER "evil" AFTER INSERT ON "Exam" BEGIN
         DELETE FROM "Student"; END`)
     })
-    const error = expectOpenError(
+    const error = await expectOpenError(
       buildArchive({ manifest: validManifest(), databasePath }),
       "unsafeSchema"
     )
     expect(error.details).toEqual(["trigger evil"])
   })
 
-  it("ビュー入りは unsafeSchema", () => {
+  it("ビュー入りは unsafeSchema", async () => {
     const databasePath = databaseCopy(CURRENT_DB_PATH, (db) => {
       db.exec(`CREATE VIEW "peek" AS SELECT id FROM "Exam"`)
     })
-    const error = expectOpenError(
+    const error = await expectOpenError(
       buildArchive({ manifest: validManifest(), databasePath }),
       "unsafeSchema"
     )
     expect(error.details).toEqual(["view peek"])
   })
 
-  it("ファイルの途中を書き換えた DB は corrupt", () => {
+  it("ファイルの途中を書き換えた DB は corrupt", async () => {
     const databasePath = databaseCopy(CURRENT_DB_PATH)
     const bytes = fs.readFileSync(databasePath)
     const pageSize = bytes.readUInt16BE(16)
@@ -513,17 +513,17 @@ describe("DB の守り", () => {
     // ヘッダー（1ページ目）は残し、中ほどの数ページを壊す
     bytes.fill(0xa5, middlePage * pageSize, (middlePage + 4) * pageSize)
     fs.writeFileSync(databasePath, bytes)
-    expectOpenError(
+    await expectOpenError(
       buildArchive({ manifest: validManifest(), databasePath }),
       "corrupt"
     )
   })
 
-  it("取り込み先と列が違えば schemaMismatch", () => {
+  it("取り込み先と列が違えば schemaMismatch", async () => {
     const referenceDatabasePath = databaseCopy(CURRENT_DB_PATH, (db) => {
       db.exec(`ALTER TABLE "Exam" ADD COLUMN "futureColumn" TEXT`)
     })
-    const error = expectOpenError(
+    const error = await expectOpenError(
       buildArchive({
         manifest: validManifest(),
         databasePath: CURRENT_DB_PATH,
@@ -534,7 +534,7 @@ describe("DB の守り", () => {
     expect(error.details).toEqual(["列 Exam.futureColumn がアーカイブに無い"])
   })
 
-  it("外部キーが閉じていなければ schemaMismatch", () => {
+  it("外部キーが閉じていなければ schemaMismatch", async () => {
     const databasePath = databaseCopy(CURRENT_DB_PATH, (db) => {
       // better-sqlite3 は既定で外部キーを検査するので、壊れた行を作るために切る
       db.pragma("foreign_keys = OFF")
@@ -542,7 +542,7 @@ describe("DB の守り", () => {
         ("id", "examId", "status", "showMark", "showScore", "createdAt", "updatedAt")
         VALUES ('orphan', 'no-such-exam', 'x', 1, 1, '2026-10-04T00:00:00.000Z', '2026-10-04T00:00:00.000Z')`)
     })
-    const error = expectOpenError(
+    const error = await expectOpenError(
       buildArchive({ manifest: validManifest(), databasePath }),
       "schemaMismatch"
     )

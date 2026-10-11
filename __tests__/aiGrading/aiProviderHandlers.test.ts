@@ -59,11 +59,20 @@ vi.mock(
   () => ({ createGradingProvider: mocks.createGradingProvider })
 )
 
-import { aiProviderHandlers } from "../../electron-src/ipc-handlers/aiProviderHandlers"
-import { GradingProviderError } from "../../electron-src/lib/aiGrading/providers/providerShared"
+import type * as AiProviderHandlersModule from "../../electron-src/ipc-handlers/aiProviderHandlers"
+import type * as ProviderSharedModule from "../../electron-src/lib/aiGrading/providers/providerShared"
 import { AI_GRADING_CONSENT_VERSION } from "../../src/lib/shared/aiGrading/consentText"
 
-type ChannelName = keyof typeof aiProviderHandlers
+type AiProviderHandlers = typeof AiProviderHandlersModule.aiProviderHandlers
+type ChannelName = keyof AiProviderHandlers
+
+/**
+ * 設定ファイルは起動時に1回だけ読み、以後はメモリの写しを正とする（`jsonFileStore.ts`）。
+ * テストごとにファイルを消してモジュールを読み直し、何も保存していない状態から始める
+ */
+let aiProviderHandlers: AiProviderHandlers
+/** 読み直したモジュールと同じクラス（別に読んだクラスでは instanceof が通らない） */
+let GradingProviderError: typeof ProviderSharedModule.GradingProviderError
 
 const temporaryDirectory = fs.mkdtempSync(
   path.join(os.tmpdir(), "ai-provider-handlers-test-")
@@ -124,8 +133,16 @@ const CALL_EVERY_CHANNEL: Record<ChannelName, () => Promise<unknown>> = {
 }
 
 describe("aiProviderHandlers", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     fs.rmSync(configFilePath, { force: true })
+    vi.resetModules()
+    ;({ aiProviderHandlers } =
+      await import("../../electron-src/ipc-handlers/aiProviderHandlers"))
+    ;({ GradingProviderError } =
+      await import("../../electron-src/lib/aiGrading/providers/providerShared"))
+    const { getProviderCredentialStore } =
+      await import("../../electron-src/lib/aiGrading/providerCredentialStore")
+    await getProviderCredentialStore().load()
     mocks.actorUserId.current = "user-a"
     mocks.recordAuditLog.mockClear()
     mocks.openExternal.mockClear()

@@ -190,6 +190,6 @@ export async function fetchProviderModels(
   return {
     outcome: "ok",
     message: "",
-    catalog: dependencies.store.saveModelCatalog(provider, result.value),
+    catalog: await dependencies.store.saveModelCatalog(provider, result.value),
   }
 }
