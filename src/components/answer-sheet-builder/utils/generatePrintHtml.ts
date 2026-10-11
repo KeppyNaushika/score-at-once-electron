@@ -19,9 +19,10 @@ import { AnswerSheetSVGRenderer } from "../components/preview/AnswerSheetSVGRend
 import { resolveImageDataUris } from "./renderSvgStrings"
 
 /**
- * ページごとのSVG HTML文字列と MathJax defs を生成する内部ヘルパー
+ * ページごとのSVG HTML文字列と MathJax defs を生成する。
+ * 印刷用 HTML（このファイル）と PNG 化（`rasterizeAnswerSheetPages.ts`）が共有する
  */
-async function renderPageSvgHtmls(
+export async function renderPageSvgHtmls(
   definition: AnswerSheetDefinition,
   multiLayout: ComputedMultiPageLayout,
   renderMode: RenderMode
@@ -165,35 +166,4 @@ ${mathJaxDefs}
 ${pagesHtml}
 </body>
 </html>`
-}
-
-/** 解答用紙の各ページを個別のHTML文書として生成する（PNG出力用） */
-export async function generateAnswerSheetPageHtmls(
-  definition: AnswerSheetDefinition,
-  multiLayout: ComputedMultiPageLayout,
-  renderMode: RenderMode
-): Promise<string[]> {
-  const { pageWidthMm, pageHeightMm } = multiLayout
-  const { pageSvgHtmls, mathJaxDefs } = await renderPageSvgHtmls(
-    definition,
-    multiLayout,
-    renderMode
-  )
-
-  const css = generatePageCss(pageWidthMm, pageHeightMm)
-
-  return pageSvgHtmls.map(
-    (svgHtml) => `<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="utf-8">
-<style>${css}
-</style>
-</head>
-<body>
-${mathJaxDefs}
-<div class="page">${svgHtml}</div>
-</body>
-</html>`
-  )
 }

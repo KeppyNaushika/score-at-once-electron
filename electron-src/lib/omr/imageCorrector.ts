@@ -322,11 +322,10 @@ export async function correctImage(
       const scaledW = Math.round(W * scale)
       const scaledH = Math.round(H * scale)
 
-      const scaled = await resizeToPng(
-        translated,
-        { width: scaledW, height: scaledH },
-        "cover"
-      )
+      const scaled = await resizeToPng(translated, {
+        width: scaledW,
+        height: scaledH,
+      })
 
       // 中央からW×Hを切り出す
       const cropLeft = Math.round((scaledW - W) / 2)

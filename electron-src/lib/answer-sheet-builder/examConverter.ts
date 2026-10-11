@@ -1,8 +1,8 @@
 /**
  * 解答用紙定義 → 採点試験変換
  *
- * renderer側から受け取った multiPageLayout + HTML文字列 → BrowserWindow + capturePage でPNG化
- * → Exam + ExamPage + CropRegion 作成
+ * renderer側から受け取った multiPageLayout + ページのPNG（renderer の Canvas で描いたもの）
+ * → PNG保存（sharp で符号化し直す） + Exam + ExamPage + CropRegion 作成
  */
 
 import * as fs from "fs"
@@ -18,7 +18,7 @@ import {
   getMasterAnswersDirectory,
   getRelativePathFromSharedFiles,
 } from "../dataManager"
-import { htmlToPngBuffer } from "../printUtils"
+import { encodePng } from "../imageOps"
 import prisma from "../prisma/client"
 import { upsertOmrConfig } from "../prisma/cropRegionOmrConfig"
 import { createExam } from "../prisma/exam"
@@ -26,14 +26,14 @@ import { createExamPage } from "../prisma/examPage"
 
 /**
  * 解答用紙定義を採点試験に変換
- * renderer側からmultiPageLayout + HTML文字列を受け取り、PNGバッファ生成→DB作成
+ * renderer側からmultiPageLayout + ページのPNGを受け取り、PNG保存→DB作成
  */
 export async function convertToExam(
   definition: AnswerSheetDefinition,
   userId: string,
   multiPageLayout: ComputedMultiPageLayout,
-  answerSheetHtmlPages: string[],
-  modelAnswerHtmlPages: string[]
+  answerSheetPngPages: Uint8Array[],
+  modelAnswerPngPages: Uint8Array[]
 ): Promise<string> {
   try {
     // 0. OMR設定を問題定義から抽出
@@ -61,23 +61,7 @@ export async function convertToExam(
       userId
     )
 
-    // 2. HTML → PNG Buffer 生成（BrowserWindow + capturePage）
-    const dpi = 300
-    const { pageWidthMm, pageHeightMm } = multiPageLayout
-
-    const templateBuffers: Buffer[] = []
-    for (const html of answerSheetHtmlPages) {
-      const buf = await htmlToPngBuffer(html, pageWidthMm, pageHeightMm, dpi)
-      templateBuffers.push(buf)
-    }
-
-    const modelBuffers: Buffer[] = []
-    for (const html of modelAnswerHtmlPages) {
-      const buf = await htmlToPngBuffer(html, pageWidthMm, pageHeightMm, dpi)
-      modelBuffers.push(buf)
-    }
-
-    // 3. 画像ファイル保存 + DB作成（ページごと）
+    // 2. 画像ファイル保存 + DB作成（ページごと）
     const masterDir = getMasterAnswersDirectory(exam.id)
     if (!fs.existsSync(masterDir)) {
       fs.mkdirSync(masterDir, { recursive: true })
@@ -92,13 +76,16 @@ export async function convertToExam(
       // 模範解答PNG保存
       const masterImageFileName = `master-${timestamp}.png`
       const masterImagePath = path.join(masterDir, masterImageFileName)
-      fs.writeFileSync(masterImagePath, modelBuffers[pi])
+      fs.writeFileSync(
+        masterImagePath,
+        await encodePng(modelAnswerPngPages[pi])
+      )
       const relativeMasterPath = getRelativePathFromSharedFiles(masterImagePath)
 
       // 答案テンプレートPNG保存
       const templateFileName = `template-${timestamp}.png`
       const templatePath = path.join(masterDir, templateFileName)
-      fs.writeFileSync(templatePath, templateBuffers[pi])
+      fs.writeFileSync(templatePath, await encodePng(answerSheetPngPages[pi]))
 
       // ExamPage作成（模範解答画像はページ自身が持つ）
       const examPage = await createExamPage({

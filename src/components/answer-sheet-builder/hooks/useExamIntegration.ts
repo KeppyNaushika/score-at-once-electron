@@ -1,7 +1,7 @@
 /**
  * 試験変換hook
  *
- * renderer側でlayout計算→HTML生成→main側にデータを渡す。
+ * renderer側でlayout計算→ページのPNG化→main側にデータを渡す。
  */
 
 import { useMutation } from "@tanstack/react-query"
@@ -13,8 +13,11 @@ import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { convertAnswerSheetToExamMutation } from "@/queries/answerSheetBuilder"
 import type { AnswerSheetDefinition } from "@/types/answerSheetDefinition.types"
 
-import { generateAnswerSheetPageHtmls } from "../utils/generatePrintHtml"
+import { rasterizeAnswerSheetPages } from "../utils/rasterizeAnswerSheetPages"
 import { computeMultiPageLayoutFromDefinition } from "./layout/computeMultiPageLayout"
+
+/** 試験の模範解答・答案の雛形の画像の解像度 */
+const EXAM_IMAGE_DPI = 300
 
 /** 解答用紙を試験データに変換して登録するフック */
 export function useExamIntegration() {
@@ -32,23 +35,25 @@ export function useExamIntegration() {
 
         const multiPageLayout = computeMultiPageLayoutFromDefinition(definition)
 
-        const answerSheetHtmlPages = await generateAnswerSheetPageHtmls(
+        const answerSheetPngPages = await rasterizeAnswerSheetPages(
           definition,
           multiPageLayout,
-          "answer-sheet"
+          "answer-sheet",
+          EXAM_IMAGE_DPI
         )
-        const modelAnswerHtmlPages = await generateAnswerSheetPageHtmls(
+        const modelAnswerPngPages = await rasterizeAnswerSheetPages(
           definition,
           multiPageLayout,
-          "model-answer"
+          "model-answer",
+          EXAM_IMAGE_DPI
         )
 
         const examId = await convertToExamMutate({
           definition,
           userId: currentUser.id,
           multiPageLayout,
-          answerSheetHtmlPages,
-          modelAnswerHtmlPages,
+          answerSheetPngPages,
+          modelAnswerPngPages,
         })
 
         toast.success("試験に変換しました")
