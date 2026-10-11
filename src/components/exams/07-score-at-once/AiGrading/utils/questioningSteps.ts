@@ -47,10 +47,11 @@ export interface QuestioningAdvice {
   /** 直していないときの文（当たる項目の助言。項目が無ければ AI の文案） */
   baseText: string
   /**
-   * 当たる項目（既存の項目に当たる案はその項目、前に確定してできた・結び付けた項目があればそれ）の今の助言。
-   * 項目が無ければ null。答案の助言の朱書きがこの文そのものなら、それはこの案の項目から作った朱書き
+   * 当たる項目（既存の項目に当たる案はその項目、前に確定してできた・結び付けた項目があればそれ）。
+   * 項目が無ければ null。答案の助言の朱書きのうち、この項目から作ったもの（`DrawingAnnotation.rubricItemId`）を
+   * 下見で欄の文に差し替える
    */
-  rubricItemAdviceText: string | null
+  rubricItemId: string | null
   /** いま効いている文（下書きで直した文。直していなければ baseText） */
   text: string
 }

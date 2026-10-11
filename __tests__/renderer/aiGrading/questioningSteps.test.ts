@@ -423,7 +423,7 @@ describe("問いの一覧の行", () => {
       step: makeStep({
         advice: {
           baseText: "単位を書こう。",
-          rubricItemAdviceText: null,
+          rubricItemId: null,
           text,
         },
       }),

@@ -25,9 +25,9 @@ import { serializePrisma } from "./serializePrisma"
 /**
  * 行から「見た目を決める列」だけを取り出す。
  *
- * 外すのは4種類だけ。同定用の `id`、DB が管理する時刻、独立した書き込み経路を
- * 持つ `isFavorite`（`toggleDrawingAnnotationFavorite`）、そして置き場所の
- * `questionScoreId`。
+ * 外すのは5種類だけ。同定用の `id`、DB が管理する時刻、独立した書き込み経路を
+ * 持つ `isFavorite`（`toggleDrawingAnnotationFavorite`）と `rubricItemId`（助言の朱書きを
+ * 合わせる `syncRubricAdviceAnnotations`）、そして置き場所の `questionScoreId`。
  *
  * 置き場所は型の上では `DrawingAnnotation` に無いが、DB から読んだ行が renderer を
  * 一周して戻ってくるので実体には載っている。既存の注釈の親は動かない（更新も削除も
@@ -51,6 +51,7 @@ function toAppearance(
     createdAt: _createdAt,
     updatedAt: _updatedAt,
     isFavorite: _isFavorite,
+    rubricItemId: _rubricItemId,
     ...appearance
   } = annotation
   return appearance

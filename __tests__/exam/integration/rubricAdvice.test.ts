@@ -309,7 +309,7 @@ describe("助言の朱書き", () => {
     expect(source?.questionScores[0].drawingAnnotations).toHaveLength(2)
   })
 
-  it("作るときは印を立て、もう助言の朱書きがある行には重ねて作らない", async () => {
+  it("作るときは印と作った項目を書き、もう助言の朱書きがある行には重ねて作らない", async () => {
     const { unit } = await createThreeItems()
     const row = await applyItem(unit.id)
     const create = () =>
@@ -326,6 +326,7 @@ describe("助言の朱書き", () => {
                 y: 0.3,
                 text: "単位を書こう",
                 fontSize: 4.5,
+                rubricItemId: unit.id,
               }),
             },
           ],
@@ -347,6 +348,7 @@ describe("助言の朱書き", () => {
     expect(annotations).toHaveLength(1)
     expect(annotations[0]).toMatchObject({
       isRubricAdvice: true,
+      rubricItemId: unit.id,
       text: "単位を書こう",
       fontSize: 4.5,
     })
@@ -381,6 +383,7 @@ describe("助言の朱書き", () => {
         updates: [
           {
             drawingAnnotationId: advice.id,
+            rubricItemId: unit.id,
             text: "単位を\n忘れずに",
             x: 0.45,
             y: 0.3,
@@ -388,6 +391,7 @@ describe("助言の朱書き", () => {
           },
           {
             drawingAnnotationId: handWritten.id,
+            rubricItemId: unit.id,
             text: "書き換えてはいけない",
             x: 0.1,
             y: 0.1,
@@ -407,12 +411,22 @@ describe("助言の朱書き", () => {
       await testPrisma.drawingAnnotation.findUniqueOrThrow({
         where: { id: advice.id },
       })
-    ).toMatchObject({ text: "単位を\n忘れずに", x: 0.45, y: 0.3, fontSize: 3 })
+    ).toMatchObject({
+      text: "単位を\n忘れずに",
+      rubricItemId: unit.id,
+      x: 0.45,
+      y: 0.3,
+      fontSize: 3,
+    })
     expect(
       await testPrisma.drawingAnnotation.findUniqueOrThrow({
         where: { id: handWritten.id },
       })
-    ).toMatchObject({ text: "手で書いた注釈", isRubricAdvice: false })
+    ).toMatchObject({
+      text: "手で書いた注釈",
+      isRubricAdvice: false,
+      rubricItemId: null,
+    })
 
     const deleted = await syncRubricAdviceAnnotations(
       {
@@ -431,6 +445,36 @@ describe("助言の朱書き", () => {
         })
       ).map((drawingAnnotation) => drawingAnnotation.id)
     ).toEqual([handWritten.id])
+  })
+
+  it("作った項目は、その設問の項目のときだけ書く（ほかは null）", async () => {
+    const { unit } = await createThreeItems()
+    const row = await applyItem(unit.id)
+    await syncRubricAdviceAnnotations(
+      {
+        cropRegionId: cropRegionId(),
+        creates: [
+          {
+            questionScoreId: row.id,
+            annotation: newDrawingAnnotation({
+              type: "text",
+              x: 0.3,
+              y: 0.3,
+              text: "単位を書こう",
+              isRubricAdvice: true,
+              rubricItemId: crypto.randomUUID(),
+            }),
+          },
+        ],
+        updates: [],
+        deletes: [],
+      },
+      ownerId()
+    )
+    const [advice] = await testPrisma.drawingAnnotation.findMany({
+      where: { questionScoreId: row.id },
+    })
+    expect(advice).toMatchObject({ isRubricAdvice: true, rubricItemId: null })
   })
 
   it("書くものが無ければ監査ログを残さない", async () => {

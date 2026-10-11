@@ -237,7 +237,10 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
   DrawingAnnotation: {
     role: "owned",
     owner: ["questionScoreId"],
-    references: [required("questionScoreId", "QuestionScore")],
+    references: [
+      required("questionScoreId", "QuestionScore"),
+      nullable("rubricItemId", "RubricItem"),
+    ],
   },
   // ルーブリック採点（教員の層。docs/vlm-grading-design.md §5-2）。項目と重なった助言の決まりは
   // 設問に従い（採点者の間で共有）、適用は採点行に従う（本人分だけにすると他の教員の適用も外れる）

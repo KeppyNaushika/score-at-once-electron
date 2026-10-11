@@ -204,6 +204,7 @@ export function newDrawingAnnotation(
     displayY: 0.0,
     isFavorite: false,
     isRubricAdvice: false,
+    rubricItemId: null,
     createdAt: now,
     updatedAt: now,
     ...seed,

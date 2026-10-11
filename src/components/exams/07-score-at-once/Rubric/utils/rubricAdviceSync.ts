@@ -8,7 +8,7 @@
  *
  * - 文が無い（助言のある項目が無い・朱書きなし・未決定）: 助言の朱書きを消す
  * - 文があり、朱書きが無い: 占有グリッドで空いている場所に作る（その行のほかの文字の注釈も避ける）
- * - 文があり、朱書きがある: 文が違えば書き換える。今の位置・文字の大きさで枠に収まり手書きに重ならなければ
+ * - 文があり、朱書きがある: 文か作った項目（`rubricItemId`）が違えば書き換える。今の位置・文字の大きさで枠に収まり手書きに重ならなければ
  *   位置と大きさを保ち、収まらなければ置き直す（`replaceAdviceAnnotationText`）。
  *   同期で2つ以上できていれば、古いものを残して残りを消す
  */
@@ -63,7 +63,10 @@ interface PlanRubricAdviceSyncInput<Row extends AdviceSyncRow> {
 /** 助言の朱書きの差分（main の `syncRubricAdviceAnnotations` に渡す形） */
 export interface RubricAdviceSyncPlan {
   creates: { questionScoreId: string; annotation: DrawingAnnotation }[]
-  updates: ({ drawingAnnotationId: string } & ReplacedAdviceAnnotation)[]
+  updates: ({
+    drawingAnnotationId: string
+    rubricItemId: string | null
+  } & ReplacedAdviceAnnotation)[]
   deletes: string[]
 }
 
@@ -102,17 +105,25 @@ export function planRubricAdviceSync<Row extends AdviceSyncRow>({
     )
     if (!kept) {
       const annotation = place(row, resolution.text, occupyingAnnotations)
-      if (annotation) plan.creates.push({ questionScoreId: row.id, annotation })
+      if (annotation) {
+        plan.creates.push({
+          questionScoreId: row.id,
+          annotation: { ...annotation, rubricItemId: resolution.rubricItemId },
+        })
+      }
       return
     }
-    if (
-      normalizeAdviceText(kept.text) !== normalizeAdviceText(resolution.text)
-    ) {
-      plan.updates.push({
-        drawingAnnotationId: kept.id,
-        ...replace(row, kept, resolution.text, occupyingAnnotations),
-      })
-    }
+    const isSameText =
+      normalizeAdviceText(kept.text) === normalizeAdviceText(resolution.text)
+    if (isSameText && kept.rubricItemId === resolution.rubricItemId) return
+    plan.updates.push({
+      drawingAnnotationId: kept.id,
+      rubricItemId: resolution.rubricItemId,
+      // 文が同じで作った項目だけが違えば、位置も文も今のまま
+      ...(isSameText
+        ? { text: kept.text, x: kept.x, y: kept.y, fontSize: kept.fontSize }
+        : replace(row, kept, resolution.text, occupyingAnnotations)),
+    })
   })
   return plan
 }

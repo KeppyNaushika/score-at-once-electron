@@ -369,6 +369,8 @@ renderer で計算し、`QuestionScore` の status / partialScore に書く。
 - 項目を消すと、その項目を含む決まりも消す（残りの項目が2つ以上でも残さない）。残った項目の組み合わせは未決定として問い直す
 - 朱書きは `DrawingAnnotation` として書き、`isRubricAdvice` を立てる。位置は §9 の配置で決め、教員が動かした位置は保つ。
   助言の文が変わったら、この印の付いた朱書きを書き換える（今の位置・文字の大きさで収まれば保ち、収まらなければ置き直す。§9）
+  文がその項目1つの助言そのもの（当たっている助言の項目が1つ、または決まりで1つの項目の助言を採った）なら、その項目を `rubricItemId` に持つ（まとめた一文・並べた文は null）。
+  問いかけで助言の欄を直しているあいだの下見は、この列で書き換える朱書きを見分ける（§3-5）
 - 個別に書きたい答案には、これまでどおり 07 の注釈編集で手書きする（`isRubricAdvice` は立たない）
 
 ### 4-8. 段階評価（後の段）
@@ -402,7 +404,7 @@ A/B/C のような段階評価（#836 の `SCALE`）は、採点方式に `scale
 | `RubricAdviceCombination`（重なった助言の決まり） | `cropRegionId`、`mode`（`merged` / `single` / `all` / `none`）、`mergedText` @default("")（merged のとき）、`primaryRubricItemId?`（single のとき）                                                                                             | CropRegion とともに消える。primary の項目が消えたら SetNull |
 | `RubricAdviceCombinationItem`                     | `combinationId`、`rubricItemId`（組み合わせを作る項目。2つ以上）                                                                                                                                                                                | 組み合わせ・項目とともに消える                              |
 | `QuestionScore`（列を足す）                       | `overridesRubric` Boolean @default(false)                                                                                                                                                                                                       | —                                                           |
-| `DrawingAnnotation`（列を足す）                   | `isRubricAdvice` Boolean @default(false)                                                                                                                                                                                                        | —                                                           |
+| `DrawingAnnotation`（列を足す）                   | `isRubricAdvice` Boolean @default(false)、`rubricItemId`（文を作った項目。nullable）                                                                                                                                                            | 項目を消すと null                                           |
 
 - `effectKind` によって使う列が変わる（adjust は `pointDelta`、set は `setStatus`・`setScore`）。種類によって本当に存在しない値なので nullable にし、
   どちらの組を使うかは検証（§6-4）で縛る
