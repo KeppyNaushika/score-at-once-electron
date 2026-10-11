@@ -25,8 +25,6 @@ import { createPrismaClientForPath } from "../helpers/testPrismaClient"
 
 const TEST_ROOT = path.join(os.tmpdir(), "drop-human-name-uniques")
 const DB_PATH = path.join(TEST_ROOT, "database.db")
-const REAL_MIGRATIONS = path.resolve(__dirname, "../../prisma/migrations")
-
 // シードはローカルモードでだけ入る（共有モードの控えには入れない）
 fixLocalStorageRootsForTest(TEST_ROOT)
 
@@ -96,7 +94,7 @@ beforeAll(async () => {
   } finally {
     await baselinePrisma.$disconnect()
   }
-  deployPendingMigrations({ migrationsDir: REAL_MIGRATIONS })
+  deployPendingMigrations()
 
   chainPrisma.current = createPrismaClientForPath(DB_PATH)
 })

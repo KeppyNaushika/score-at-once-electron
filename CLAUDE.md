@@ -128,8 +128,9 @@ npx vitest                 # ウォッチモード
 
 1. `prisma/schema.prisma` を変更
 2. `npx prisma migrate dev --name descriptive_name` を実行（マイグレーションSQL自動生成）
-3. 生成された `prisma/migrations/<timestamp>_<name>/migration.sql` をコミット
-4. アプリ起動時に自前ランナー（`migrationDeployer.ts`）が未適用マイグレーションを自動検出・適用
+3. `node scripts/bundleMigrations.mjs` を実行（migration をアプリのコードへ束ねた `bundledMigrations.ts` を作り直す。忘れると規約テスト `bundledMigrations` が落ちる）
+4. 生成された `prisma/migrations/<timestamp>_<name>/migration.sql` と `bundledMigrations.ts` をコミット
+5. アプリ起動時に自前ランナー（`migrationDeployer.ts`）が未適用マイグレーションを自動検出・適用
 
 **禁止事項**:
 
@@ -144,7 +145,7 @@ npx vitest                 # ウォッチモード
 - `versionDetector.ts`: 既存DBのスキーマバージョン検出（S3〜S9）
 - `bridgeMigrations.ts`: v0.2.x〜v0.9.xの全バージョンからの自動アップグレード
 - `baselineMigrations.ts`: `_prisma_migrations`テーブルのベースライン作成
-- `migrationDeployer.ts`: 将来のマイグレーション自動適用（`prisma/migrations/`から読み取り）
+- `migrationDeployer.ts`: 将来のマイグレーション自動適用（`bundledMigrations.ts` から読む。実行中に `prisma/migrations/` のフォルダは読まない — web 版にはフォルダを読む手段が無いため）
 
 #### 📦 スキーマ変更時のImport/Export対応ルール（重要）
 

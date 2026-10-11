@@ -50,7 +50,6 @@ import {
 
 const prisma = getTestPrismaClient()
 const TEST_DB_PATH = path.resolve(__dirname, "../../../data/test-database.db")
-const APP_MIGRATIONS_DIR = path.resolve(__dirname, "../../../prisma/migrations")
 const WORK_DIR = path.join(os.tmpdir(), "unified-archive-round-trip")
 const DATA_DIR = path.join(WORK_DIR, "data")
 const SOURCE_PATH = path.join(WORK_DIR, "source.db")
@@ -88,7 +87,7 @@ const createSourceWithMigrations = (): void => {
       `INSERT INTO "_prisma_migrations" (id, checksum, migration_name, finished_at, applied_steps_count)
        VALUES (?, 'checksum', ?, '2026-10-04T00:00:00.000Z', 1)`
     )
-    for (const migrationName of listLocalMigrationNames(APP_MIGRATIONS_DIR)) {
+    for (const migrationName of listLocalMigrationNames()) {
       insertMigration.run(crypto.randomUUID(), migrationName)
     }
   } finally {
@@ -156,7 +155,6 @@ describe("統合アーカイブの往復（書き出す → 開く → 取り込
     const archive = openUnifiedArchive({
       archivePath: OUTPUT_PATH,
       workDirectory: OPENED_DIR,
-      migrationsDir: APP_MIGRATIONS_DIR,
       referenceDatabasePath: TEST_DB_PATH,
     })
     // 書き出し元は現行のスキーマなので、開く側が当てる migration は無い

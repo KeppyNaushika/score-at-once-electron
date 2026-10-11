@@ -28,6 +28,7 @@ import type { SyncResult } from "sqlite-nas-sync"
 import { createPrismaClientForPath } from "../prisma/databaseInitializer"
 import { seedSampleData } from "../prisma/sampleSeed"
 import { createBaseline } from "../prisma/schema/baselineMigrations"
+import type { MigrationScript } from "../prisma/schema/migrationApplier"
 import { deployPendingMigrations } from "../prisma/schema/migrationDeployer"
 import { bootstrapSchema } from "../prisma/schema/schemaBootstrap"
 import { openAppDatabase } from "../prisma/sqliteConnection"
@@ -58,8 +59,8 @@ export interface SharedFolderSetupContext {
   sharedFolderPath: string
   /** このPCの clientId（同期の写しの名前になる） */
   clientId: string
-  /** 同梱マイグレーションの場所（省略するとアプリの既定） */
-  migrationsDir?: string
+  /** 当てるマイグレーション（省略するとアプリに束ねた一覧） */
+  migrations?: readonly MigrationScript[]
 }
 
 /** 作ったものの片づけ。逆順に消す。消せなくても例外にしない（元の失敗を隠さない） */
@@ -125,7 +126,7 @@ function assertSharedFolderEmpty(sharedFolderPath: string): void {
  */
 async function createSchemaOnlyDatabase(
   databasePath: string,
-  migrationsDir: string | undefined
+  migrations: readonly MigrationScript[] | undefined
 ): Promise<void> {
   if (bootstrapSchema(databasePath) !== "created") {
     throw new Error(`DB が既にあります: ${databasePath}`)
@@ -136,7 +137,7 @@ async function createSchemaOnlyDatabase(
   } finally {
     await prisma.$disconnect()
   }
-  deployPendingMigrations({ migrationsDir, dbPath: databasePath })
+  deployPendingMigrations({ migrations, dbPath: databasePath })
 }
 
 /**
@@ -218,7 +219,7 @@ export async function createEmptySharedProfile(
       context.localDataDirectory,
       sharedFolderId
     )
-    await createSchemaOnlyDatabase(replicaPath, context.migrationsDir)
+    await createSchemaOnlyDatabase(replicaPath, context.migrations)
     const prisma = createPrismaClientForPath(replicaPath)
     try {
       await seedSampleData(prisma)
@@ -375,7 +376,7 @@ export async function joinSharedFolder(
         created,
         "tree"
       )
-      await createSchemaOnlyDatabase(replicaPath, context.migrationsDir)
+      await createSchemaOnlyDatabase(replicaPath, context.migrations)
     }
     // 1回だけ同期する。インスタンスは定期実行を始めない（`start()` を呼ばない）
     const instance = await createAppSyncInstance({

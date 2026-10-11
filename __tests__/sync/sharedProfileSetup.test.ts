@@ -51,8 +51,6 @@ const DATA_C = path.join(TEST_ROOT, "pc-c", "data")
 const SHARED = path.join(TEST_ROOT, "shared")
 const SHARED_EMPTY = path.join(TEST_ROOT, "shared-empty")
 const SHARED_NO_COPIES = path.join(TEST_ROOT, "shared-no-copies")
-const REAL_MIGRATIONS = path.resolve(__dirname, "../../prisma/migrations")
-
 const CLIENT_A = crypto.randomUUID()
 const CLIENT_B = crypto.randomUUID()
 
@@ -75,7 +73,6 @@ async function createSeededDatabase(databasePath: string): Promise<void> {
   try {
     await createBaseline(prisma)
     deployPendingMigrations({
-      migrationsDir: REAL_MIGRATIONS,
       dbPath: databasePath,
     })
     await seedSampleData(prisma)

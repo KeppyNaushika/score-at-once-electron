@@ -10,6 +10,8 @@ import * as os from "os"
 import * as path from "path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { readMigrationScripts } from "../helpers/migrationScripts"
+
 const TEST_ROOT = path.join(os.tmpdir(), "deploy-migrations-test")
 const DB_PATH = path.join(TEST_ROOT, "database.db")
 const MIGRATIONS_DIR = path.join(TEST_ROOT, "migrations")
@@ -50,7 +52,7 @@ const writeMigration = (name: string, sql: string) => {
   fs.writeFileSync(path.join(dir, "migration.sql"), sql)
 }
 
-// getDatabasePath と getMigrationsDir をテスト用のパスへ向ける
+// getDatabasePath をテスト用のパスへ向ける
 vi.mock("../../electron-src/lib/prisma/databaseInitializer", () => ({
   getDatabasePath: () => DB_PATH,
 }))
@@ -82,7 +84,7 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrationsDir: MIGRATIONS_DIR })).toBe(1)
+    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(1)
 
     const tables = withDatabase(
       (db) =>
@@ -114,7 +116,7 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrationsDir: MIGRATIONS_DIR })).toBe(1)
+    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(1)
 
     const body = withDatabase(
       (db) =>
@@ -139,7 +141,7 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrationsDir: MIGRATIONS_DIR })).toBe(1)
+    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(1)
 
     withDatabase((db) => {
       db.prepare(`INSERT INTO "Log" (id, note) VALUES ('l1', 'hello')`).run()
@@ -157,9 +159,9 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrationsDir: MIGRATIONS_DIR })).toBe(1)
+    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(1)
     // 2回目は未適用ゼロ
-    expect(deploy({ migrationsDir: MIGRATIONS_DIR })).toBe(0)
+    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(0)
   })
 
   it("複数マイグレーションを名前順に適用する", async () => {
@@ -173,7 +175,7 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrationsDir: MIGRATIONS_DIR })).toBe(2)
+    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(2)
 
     const columns = withDatabase((db) =>
       (db.prepare(`PRAGMA table_info("T1")`).all() as { name: string }[]).map(
@@ -197,9 +199,9 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(() => deploy({ migrationsDir: MIGRATIONS_DIR })).toThrow(
-      /20260101000000_broken/
-    )
+    expect(() =>
+      deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })
+    ).toThrow(/20260101000000_broken/)
 
     // 復元後: 壊れかけの Half は存在せず、_prisma_migrations に記録も無い
     const state = withDatabase((db) => ({
@@ -245,7 +247,7 @@ describe("deployPendingMigrations", () => {
     writeMigration("20260101000001_drops_parent", `DROP TABLE "Parent";`)
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrationsDir: MIGRATIONS_DIR })).toBe(2)
+    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(2)
 
     const parentTables = withDatabase((db) =>
       db
@@ -272,7 +274,7 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrationsDir: MIGRATIONS_DIR })).toBe(2)
+    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(2)
 
     // 子の定義文の参照先が新しい名前へ書き換わっている（旧名のまま残ると dangling FK）
     const childReferencingGuardian = withDatabase((db) =>
@@ -294,7 +296,7 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrationsDir: MIGRATIONS_DIR })).toBe(1)
+    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(1)
 
     const probe = withDatabase((db) =>
       db.prepare<[], { flag: number }>(`SELECT flag FROM "Probe"`).get()
@@ -313,6 +315,6 @@ describe("deployPendingMigrations", () => {
     )
     const deploy = await loadDeployer()
 
-    expect(deploy({ migrationsDir: MIGRATIONS_DIR })).toBe(0)
+    expect(deploy({ migrations: readMigrationScripts(MIGRATIONS_DIR) })).toBe(0)
   })
 })

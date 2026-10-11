@@ -59,7 +59,6 @@ import { getCurrentActorUserId } from "../lib/prisma/auditActor"
 import { recordAuditLog } from "../lib/prisma/auditLog"
 import prisma from "../lib/prisma/client"
 import { getDatabasePath } from "../lib/prisma/databaseInitializer"
-import { getMigrationsDir } from "../lib/prisma/schema/migrationApplier"
 import { type HandlerMap } from "./ipcHandlerUtils"
 
 /** 試し取り込み・取り込みのトランザクションの時間切れ（Prisma の既定の5秒では足りない） */
@@ -102,14 +101,6 @@ const getAppVersion = (): string => {
   } catch {
     return "0.0.0"
   }
-}
-
-const requireMigrationsDir = (): string => {
-  const migrationsDir = getMigrationsDir()
-  if (!migrationsDir) {
-    throw new Error("アプリに同梱の migration が見つかりません")
-  }
-  return migrationsDir
 }
 
 /**
@@ -279,7 +270,6 @@ export const unifiedArchiveHandlers = {
   "unifiedArchive:open": async (input: { archivePath: string }) => {
     const openResult = await openUnifiedArchiveImportSession({
       archivePath: input.archivePath,
-      migrationsDir: requireMigrationsDir(),
       referenceDatabasePath: getDatabasePath(),
     })
     if (openResult.kind === "rejected") {

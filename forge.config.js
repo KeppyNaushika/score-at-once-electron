@@ -13,10 +13,11 @@
  * - `package.json` —— packager が `main` を読む
  * - `main` —— ビルド済みの main / preload と、その下の Prisma クライアント
  * - `node_modules` —— 実行時の依存（packager が devDependencies を落とす）
- * - `prisma` —— 起動時に当てる migration。`getMigrationsDir` が
- *   `app.getAppPath()`（＝asar）の下を見る（`migrationDeployer.ts:148`）
  * - `public` —— 窓のアイコン。`windowManager.ts:19` が
  *   `resourcesPath/app.asar/public/icons/` を読む（`extraResource` の写しではない）
+ *
+ * **`prisma` はここに無い。** 起動時に当てる migration は main の束に入っている
+ * （`electron-src/lib/prisma/schema/bundledMigrations.ts`）ので、フォルダは読まない。
  *
  * **`.next` はここに無い。** 実行時に読むのは `extraResource` で置かれる
  * `Resources/.next` の方で（`nextServerEmbedded.ts:68` が `dir: process.resourcesPath`）、
@@ -26,7 +27,6 @@ const PACKAGED_TOP_LEVEL = new Set([
   "package.json",
   "main",
   "node_modules",
-  "prisma",
   "public",
 ])
 

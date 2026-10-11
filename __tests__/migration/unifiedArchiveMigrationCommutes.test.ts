@@ -108,7 +108,7 @@ describe("migration は一部だけの DB でも全体と同じ結果になる",
       const prisma = createPrismaClientForPath(DB_PATH)
       try {
         await createBaseline(prisma)
-        deployPendingMigrations({ migrationsDir: MIGRATIONS_DIR })
+        deployPendingMigrations()
         await createUnifiedArchiveFixture(prisma)
       } finally {
         await prisma.$disconnect()

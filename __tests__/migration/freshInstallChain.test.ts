@@ -58,7 +58,7 @@ const buildFreshChain = async (): Promise<void> => {
   } finally {
     await prisma.$disconnect()
   }
-  deployPendingMigrations({ migrationsDir: REAL_MIGRATIONS })
+  deployPendingMigrations()
 }
 
 const localMigrationNames = (): string[] =>
@@ -91,7 +91,7 @@ describe("新規インストールの初期化連鎖", () => {
     }
 
     // 3. init 以降の実マイグレーションを全適用
-    const applied = deployPendingMigrations({ migrationsDir: REAL_MIGRATIONS })
+    const applied = deployPendingMigrations()
     const expectedPending = localMigrationNames().filter(
       (name) => name !== "20260322232329_init"
     ).length
@@ -111,7 +111,7 @@ describe("新規インストールの初期化連鎖", () => {
     expect(fs.readFileSync(DB_PATH).equals(before)).toBe(true)
 
     // 6. 冪等: 再デプロイは0件
-    expect(deployPendingMigrations({ migrationsDir: REAL_MIGRATIONS })).toBe(0)
+    expect(deployPendingMigrations()).toBe(0)
   })
 
   it("全マイグレーション適用後に外部キーの不整合が残らない", async () => {

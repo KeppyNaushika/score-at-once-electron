@@ -1,7 +1,7 @@
 /**
  * 同期ゲートが参照するスキーマバージョン
  *
- * prisma/migrationsから最新マイグレーション名を取得し、schemaVersionとして返す。
+ * アプリに束ねたマイグレーション（`bundledMigrations.ts`）の最新の名前を、schemaVersionとして返す。
  * マイグレーションガード（migrationGuard）と同じ解決ロジックを使い、
  * 起動時チェックと同期ゲートが必ず同じバージョン文字列を参照するようにする。
  *
@@ -15,12 +15,8 @@
 import { listLocalMigrationNames } from "../prisma/schema/migrationApplier"
 
 export function getSchemaVersion(): string {
-  try {
-    const entries = listLocalMigrationNames().filter((migrationName) =>
-      /^\d{14}_/.test(migrationName)
-    )
-    return entries.length > 0 ? entries[entries.length - 1] : "unknown"
-  } catch {
-    return "unknown"
-  }
+  const entries = listLocalMigrationNames().filter((migrationName) =>
+    /^\d{14}_/.test(migrationName)
+  )
+  return entries.length > 0 ? entries[entries.length - 1] : "unknown"
 }

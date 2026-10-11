@@ -19,6 +19,7 @@ import {
   UnifiedArchiveOpenError,
   type UnifiedArchiveOpenErrorKind,
 } from "../../../electron-src/lib/import/unified-archive/archiveOpener"
+import type { MigrationScript } from "../../../electron-src/lib/prisma/schema/migrationApplier"
 import {
   applyMigrationSql,
   recordAppliedMigration,
@@ -32,6 +33,7 @@ import {
   createDatabaseFromDump,
   pendingMigrations,
 } from "../../helpers/migrationCommutation"
+import { readMigrationScripts } from "../../helpers/migrationScripts"
 
 const ROOT_DIR = path.join(os.tmpdir(), "unified-archive-open-test")
 const BASELINE_SQL = fs.readFileSync(
@@ -206,18 +208,24 @@ const workDirectoryOf = () => path.join(caseDir, "work")
 
 const open = (
   archivePath: string,
-  overrides: { migrationsDir?: string; referenceDatabasePath?: string } = {}
+  overrides: {
+    migrations?: readonly MigrationScript[]
+    referenceDatabasePath?: string
+  } = {}
 ) =>
   openUnifiedArchive({
     archivePath,
     workDirectory: workDirectoryOf(),
-    migrationsDir: overrides.migrationsDir ?? APP_MIGRATIONS_DIR,
+    migrations: overrides.migrations,
     referenceDatabasePath: overrides.referenceDatabasePath ?? CURRENT_DB_PATH,
   })
 
 const openErrorOf = (
   archivePath: string,
-  overrides: { migrationsDir?: string; referenceDatabasePath?: string } = {}
+  overrides: {
+    migrations?: readonly MigrationScript[]
+    referenceDatabasePath?: string
+  } = {}
 ): UnifiedArchiveOpenError => {
   try {
     open(archivePath, overrides)
@@ -231,7 +239,10 @@ const openErrorOf = (
 const expectOpenError = (
   archivePath: string,
   kind: UnifiedArchiveOpenErrorKind,
-  overrides: { migrationsDir?: string; referenceDatabasePath?: string } = {}
+  overrides: {
+    migrations?: readonly MigrationScript[]
+    referenceDatabasePath?: string
+  } = {}
 ): UnifiedArchiveOpenError => {
   const error = openErrorOf(archivePath, overrides)
   expect(error.kind).toBe(kind)
@@ -277,7 +288,7 @@ describe("現行化", () => {
       files: { "exams/e1/master-answers/page-1.png": "png-bytes" },
     })
     const opened = open(archivePath, {
-      migrationsDir: SYNTHETIC_MIGRATIONS_DIR,
+      migrations: readMigrationScripts(SYNTHETIC_MIGRATIONS_DIR),
       referenceDatabasePath: SYNTHETIC_CURRENT_DB_PATH,
     })
 
