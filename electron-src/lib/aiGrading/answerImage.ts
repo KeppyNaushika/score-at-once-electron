@@ -16,10 +16,9 @@
  * 白紙は教員が白さ順の一覧で無答を付ける。docs/vlm-grading-design.md §3-2）。
  */
 
-import sharp from "sharp"
-
 import { getOrientedPaperDimensions } from "../../../src/lib/paperSize"
 import type { AnswerInkGrid } from "../../../src/lib/shared/aiGrading/answerInkGrid"
+import { cropToPng, decodeGreyscaleOnWhite, readImageHeader } from "../imageOps"
 
 /** 用紙比（0〜1）の矩形 */
 interface NormalizedRect {
@@ -146,9 +145,9 @@ function pixelArea(rect: PixelRect): number {
 async function readImageSize(
   imagePath: string
 ): Promise<{ imageWidth: number; imageHeight: number }> {
-  const metadata = await sharp(imagePath).metadata()
-  const imageWidth = metadata.width
-  const imageHeight = metadata.height
+  const header = await readImageHeader(imagePath)
+  const imageWidth = header.width
+  const imageHeight = header.height
   if (!imageWidth || !imageHeight) {
     throw new Error(`画像の大きさを読み取れません: ${imagePath}`)
   }
@@ -225,23 +224,21 @@ export async function cropRegionForSending(
   const cropWidth = cropRect.right - cropRect.left
   const cropHeight = cropRect.bottom - cropRect.top
 
-  let pipeline = sharp(imagePath).extract({
-    left: cropRect.left,
-    top: cropRect.top,
-    width: cropWidth,
-    height: cropHeight,
-  })
-  if (imageScale !== 1) {
-    pipeline = pipeline.resize(
-      scaledLength(cropWidth, imageScale),
-      scaledLength(cropHeight, imageScale)
-    )
-  }
-
-  const { data, info } = await pipeline
-    .png()
-    .toBuffer({ resolveWithObject: true })
-  return { png: data, width: info.width, height: info.height }
+  return cropToPng(
+    imagePath,
+    {
+      left: cropRect.left,
+      top: cropRect.top,
+      width: cropWidth,
+      height: cropHeight,
+    },
+    imageScale !== 1
+      ? {
+          width: scaledLength(cropWidth, imageScale),
+          height: scaledLength(cropHeight, imageScale),
+        }
+      : undefined
+  )
 }
 
 /**
@@ -420,22 +417,20 @@ export async function measureAnswerInk(
   for (const answerImage of answerImages) {
     try {
       // 透過は白の上に重ねて落とし、1ch のバッファにする（透明部分を黒＝インクにしない）
-      const { data, info } = await sharp(answerImage.imagePath)
-        .flatten({ background: "#ffffff" })
-        .greyscale()
-        .raw()
-        .toBuffer({ resolveWithObject: true })
-      if (info.channels !== 1) {
-        throw new Error(`グレースケール1chに変換できません: ${info.channels}ch`)
+      const greyscale = await decodeGreyscaleOnWhite(answerImage.imagePath)
+      if (greyscale.channels !== 1) {
+        throw new Error(
+          `グレースケール1chに変換できません: ${greyscale.channels}ch`
+        )
       }
       const page: GreyscalePage = {
-        pixels: data,
-        width: info.width,
-        height: info.height,
+        pixels: greyscale.data,
+        width: greyscale.width,
+        height: greyscale.height,
       }
       const paperDimensions = getOrientedPaperDimensions(
         options.paperSize,
-        info.width > info.height
+        greyscale.width > greyscale.height
       )
 
       results.push({

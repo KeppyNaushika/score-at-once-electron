@@ -3,10 +3,12 @@
  * PDFページをPNG画像として出力
  */
 import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
-import sharp from "sharp"
 
 import type { RotationDegree } from "@/types/pdfTools.types"
+
+import { encodePng, rotateToPng } from "../imageOps"
 
 /**
  * PDFページをPNGとして出力
@@ -25,15 +27,13 @@ export async function exportPagesToPng(
   const outputPaths: string[] = []
 
   for (const { buffer, name, rotation } of imageBuffers) {
-    let image = sharp(buffer)
-
     // 回転を適用
-    if (rotation) {
-      image = image.rotate(rotation)
-    }
+    const png = rotation
+      ? await rotateToPng(buffer, rotation)
+      : await encodePng(buffer)
 
     const outputPath = path.join(outputDir, name)
-    await image.png().toFile(outputPath)
+    await fsPromises.writeFile(outputPath, png)
     outputPaths.push(outputPath)
   }
 

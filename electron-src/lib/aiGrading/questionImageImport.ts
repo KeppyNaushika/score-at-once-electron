@@ -12,7 +12,6 @@
 import * as crypto from "crypto"
 import * as fsPromises from "fs/promises"
 import * as path from "path"
-import sharp, { type Metadata } from "sharp"
 
 import {
   AI_QUESTION_IMAGE_MAX_SAVED_BYTES,
@@ -20,6 +19,12 @@ import {
   AI_QUESTION_IMAGE_MAX_SOURCE_BYTES,
 } from "@/lib/shared/aiGrading/questionImageLimits"
 
+import {
+  flattenOnWhiteToJpeg,
+  type ImageHeader,
+  orientAndFitInside,
+  readImageHeader,
+} from "../imageOps"
 import { AI_QUESTION_IMAGES_DIRECTORY_NAME } from "../prisma/aiPrompt"
 import prisma from "../prisma/client"
 
@@ -47,52 +52,59 @@ interface EncodedQuestionImage {
 async function encodeQuestionImage(
   source: Buffer
 ): Promise<EncodedQuestionImage> {
-  let metadata: Metadata
+  let header: ImageHeader
   try {
-    metadata = await sharp(source).metadata()
+    header = await readImageHeader(source)
   } catch {
     throw new Error("画像として読めませんでした")
   }
-  const format = metadata.format ?? ""
+  const format = header.format
   if (!ACCEPTED_FORMATS.has(format)) {
     throw new Error("PNG・JPEG・WebP の画像か、PDF を選んでください")
   }
-  const width = metadata.width ?? 0
-  const height = metadata.height ?? 0
+  const width = header.width
+  const height = header.height
   if (width === 0 || height === 0) {
     throw new Error("画像の大きさが読めませんでした")
   }
 
   const isOriented =
-    metadata.orientation !== undefined && metadata.orientation !== 1
+    header.orientation !== undefined && header.orientation !== 1
   const isTooLarge =
     width > AI_QUESTION_IMAGE_MAX_SIDE || height > AI_QUESTION_IMAGE_MAX_SIDE
   let encoded: EncodedQuestionImage
   if ((format === "png" || format === "jpeg") && !isOriented && !isTooLarge) {
     encoded = { bytes: source, extension: format === "png" ? ".png" : ".jpg" }
   } else {
-    const pipeline = sharp(source).rotate().resize({
-      width: AI_QUESTION_IMAGE_MAX_SIDE,
-      height: AI_QUESTION_IMAGE_MAX_SIDE,
-      fit: "inside",
-      withoutEnlargement: true,
-    })
     encoded =
       format === "jpeg"
         ? {
-            bytes: await pipeline.jpeg({ quality: 92 }).toBuffer(),
+            bytes: await orientAndFitInside(
+              source,
+              AI_QUESTION_IMAGE_MAX_SIDE,
+              {
+                format: "jpeg",
+                jpegQuality: 92,
+              }
+            ),
             extension: ".jpg",
           }
-        : { bytes: await pipeline.png().toBuffer(), extension: ".png" }
+        : {
+            bytes: await orientAndFitInside(
+              source,
+              AI_QUESTION_IMAGE_MAX_SIDE,
+              {
+                format: "png",
+              }
+            ),
+            extension: ".png",
+          }
   }
 
   if (encoded.bytes.byteLength <= AI_QUESTION_IMAGE_MAX_SAVED_BYTES) {
     return encoded
   }
-  const shrunk = await sharp(encoded.bytes)
-    .flatten({ background: "#ffffff" })
-    .jpeg({ quality: 85 })
-    .toBuffer()
+  const shrunk = await flattenOnWhiteToJpeg(encoded.bytes, 85)
   if (shrunk.byteLength > AI_QUESTION_IMAGE_MAX_SAVED_BYTES) {
     throw new Error(
       "画像が大きすぎます。範囲を切り出すか、小さい画像にしてください"

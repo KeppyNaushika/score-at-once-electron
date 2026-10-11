@@ -5,12 +5,11 @@
  * OMR認識パイプラインの基盤。
  */
 
-import sharp from "sharp"
-
 import type {
   EllipticalInkStats,
   RawImageData,
 } from "../../../src/types/omr.types"
+import { decodeRgb } from "../imageOps"
 
 /**
  * 画像をRAWピクセルバッファとして読み込む
@@ -18,17 +17,7 @@ import type {
  * @returns RawImageData (RGB 3チャンネル)
  */
 export async function loadImageRaw(imagePath: string): Promise<RawImageData> {
-  const { data, info } = await sharp(imagePath)
-    .removeAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true })
-
-  return {
-    data,
-    width: info.width,
-    height: info.height,
-    channels: info.channels,
-  }
+  return decodeRgb(imagePath)
 }
 
 /**
@@ -37,17 +26,7 @@ export async function loadImageRaw(imagePath: string): Promise<RawImageData> {
 export async function loadImageRawFromBuffer(
   buffer: Buffer
 ): Promise<RawImageData> {
-  const { data, info } = await sharp(buffer)
-    .removeAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true })
-
-  return {
-    data,
-    width: info.width,
-    height: info.height,
-    channels: info.channels,
-  }
+  return decodeRgb(buffer)
 }
 
 /**

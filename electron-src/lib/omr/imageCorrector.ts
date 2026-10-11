@@ -10,13 +10,19 @@
  * 3. スケール補正（画像中心を基点にresizeしてから中央をクロップ）
  */
 
-import sharp from "sharp"
-
 import type {
   DetectedCornerMarker,
   MarkerDetectionResult,
   Point,
 } from "../../../src/types/omr.types"
+import {
+  cropToPng,
+  encodePng,
+  extendWithWhiteToPng,
+  readImageHeader,
+  resizeToPng,
+  rotateToPng,
+} from "../imageOps"
 import { detectCornerMarkersFromRaw } from "./cornerMarkerDetector"
 import { loadImageRawFromBuffer } from "./imageProcessor"
 
@@ -150,22 +156,21 @@ async function safeExtract(
   // extend と extract を分けて実行（チェーン実行で失敗するケースを回避）
   let currentBuf = buf
   if (padLeft > 0 || padTop > 0 || padRight > 0 || padBottom > 0) {
-    currentBuf = await sharp(currentBuf)
-      .extend({
-        top: padTop,
-        bottom: padBottom,
-        left: padLeft,
-        right: padRight,
-        background: { r: 255, g: 255, b: 255 },
-      })
-      .png()
-      .toBuffer()
+    currentBuf = await extendWithWhiteToPng(currentBuf, {
+      top: padTop,
+      bottom: padBottom,
+      left: padLeft,
+      right: padRight,
+    })
   }
 
-  return sharp(currentBuf)
-    .extract({ left: extractLeft, top: extractTop, width, height })
-    .png()
-    .toBuffer()
+  const { png } = await cropToPng(currentBuf, {
+    left: extractLeft,
+    top: extractTop,
+    width,
+    height,
+  })
+  return png
 }
 
 /**
@@ -278,14 +283,11 @@ export async function correctImage(
 
     // sharp.rotate(angle): 正の値で反時計回り
     // 我々の回転角: srcをdstに合わせるための回転
-    const rotated = await sharp(imageBuffer)
-      .rotate(rotationDeg, { background: "#FFFFFF" })
-      .png()
-      .toBuffer()
+    const rotated = await rotateToPng(imageBuffer, rotationDeg)
 
-    const rotMeta = await sharp(rotated).metadata()
-    const rotW = rotMeta.width!
-    const rotH = rotMeta.height!
+    const rotHeader = await readImageHeader(rotated)
+    const rotW = rotHeader.width
+    const rotH = rotHeader.height
 
     // ================================================================
     // Step B: 平行移動補正（回転後画像からextract）
@@ -320,10 +322,11 @@ export async function correctImage(
       const scaledW = Math.round(W * scale)
       const scaledH = Math.round(H * scale)
 
-      const scaled = await sharp(translated)
-        .resize(scaledW, scaledH, { kernel: sharp.kernel.lanczos3 })
-        .png()
-        .toBuffer()
+      const scaled = await resizeToPng(
+        translated,
+        { width: scaledW, height: scaledH },
+        "cover"
+      )
 
       // 中央からW×Hを切り出す
       const cropLeft = Math.round((scaledW - W) / 2)
@@ -343,7 +346,7 @@ export async function correctImage(
     }
 
     // PNG形式で出力
-    correctedBuffer = await sharp(correctedBuffer).png().toBuffer()
+    correctedBuffer = await encodePng(correctedBuffer)
 
     return {
       success: true,

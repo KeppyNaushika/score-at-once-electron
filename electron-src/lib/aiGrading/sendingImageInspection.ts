@@ -5,8 +5,7 @@
  * ここが返すのは測った値と画像そのものだけ。
  */
 
-import sharp from "sharp"
-
+import { readImageHeader } from "../imageOps"
 import { getCropRegionWithAnswerImages } from "../prisma/aiGradingSource"
 import { getAiPrompt } from "../prisma/aiPrompt"
 import {
@@ -102,13 +101,10 @@ export async function measureRunImageSizes(
   // 問題の画像は並び順に全部（送るときと同じ順）
   const questionImages: { width: number; height: number }[] = []
   for (const questionImage of prompt.questionImages) {
-    const metadata = await sharp(
+    const header = await readImageHeader(
       resolveDataPath(questionImage.imagePath)
-    ).metadata()
-    questionImages.push({
-      width: metadata.width ?? 0,
-      height: metadata.height ?? 0,
-    })
+    )
+    questionImages.push({ width: header.width, height: header.height })
   }
   const masterImagePath = cropRegion.examPage.imagePath
   const modelAnswerImage =

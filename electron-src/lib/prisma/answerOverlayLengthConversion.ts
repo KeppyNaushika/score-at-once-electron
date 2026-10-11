@@ -32,7 +32,6 @@
  */
 
 import type { PrismaClient } from "@prisma/client"
-import sharp from "sharp"
 
 import {
   convertPixelLengthsToMm,
@@ -45,6 +44,7 @@ import {
   toOverlayKind,
 } from "../../../src/types/scoringOverlay.types"
 import { resolveArchiveFile } from "../export/unified-archive/archiveFileCollector"
+import { readImageHeader } from "../imageOps"
 import type { SqliteDatabase } from "./sqliteSchemaUtils"
 
 /** 画像の metadata を同時に読む数（NAS の往復待ちを重ねるため） */
@@ -82,8 +82,8 @@ interface ImageSize {
 /** 画像の大きさ（画素）。ブラウザの naturalWidth と同じく EXIF の向きを当てた後の値 */
 async function readImageSize(imagePath: string): Promise<ImageSize | null> {
   try {
-    const metadata = await sharp(imagePath).metadata()
-    const { width, height } = metadata.autoOrient
+    const { orientedWidth: width, orientedHeight: height } =
+      await readImageHeader(imagePath)
     return width > 0 && height > 0 ? { width, height } : null
   } catch {
     return null
