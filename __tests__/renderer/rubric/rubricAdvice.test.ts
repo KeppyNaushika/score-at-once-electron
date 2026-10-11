@@ -90,7 +90,7 @@ describe("朱書きの文の決まり方", () => {
     })
     expect(
       resolveRubricAdvice(["item-exemplary", "item-unit"], rubricItems, [])
-    ).toEqual({ kind: "text", text: "単位を書こう" })
+    ).toEqual({ kind: "text", text: "単位を書こう", rubricItemId: "item-unit" })
   })
 
   it("2つ以上で決まりが無ければ未決定", () => {
@@ -111,7 +111,11 @@ describe("朱書きの文の決まり方", () => {
           mergedText: "符号と単位を見直そう",
         })
       )
-    ).toEqual({ kind: "text", text: "符号と単位を見直そう" })
+    ).toEqual({
+      kind: "text",
+      text: "符号と単位を見直そう",
+      rubricItemId: null,
+    })
     expect(
       resolveWith(
         makeRule({
@@ -120,12 +124,20 @@ describe("朱書きの文の決まり方", () => {
           primaryRubricItemId: "item-sign",
         })
       )
-    ).toEqual({ kind: "text", text: "移項の符号を見直そう" })
+    ).toEqual({
+      kind: "text",
+      text: "移項の符号を見直そう",
+      rubricItemId: "item-sign",
+    })
     expect(
       resolveWith(
         makeRule({ itemIds: ["item-unit", "item-sign"], mode: "all" })
       )
-    ).toEqual({ kind: "text", text: "単位を書こう\n移項の符号を見直そう" })
+    ).toEqual({
+      kind: "text",
+      text: "単位を書こう\n移項の符号を見直そう",
+      rubricItemId: null,
+    })
     expect(
       resolveWith(
         makeRule({ itemIds: ["item-unit", "item-sign"], mode: "none" })
@@ -270,6 +282,7 @@ describe("朱書きの差分", () => {
       y: 0.3,
       text,
       isRubricAdvice: true,
+      rubricItemId: "item-unit",
     }),
     id,
     ...overrides,
@@ -329,7 +342,10 @@ describe("朱書きの差分", () => {
     ])
     expect(placed).toEqual([{ rowId: "score-1", text: "単位を書こう" }])
     expect(result.creates).toEqual([
-      { questionScoreId: "score-1", annotation: expect.anything() },
+      {
+        questionScoreId: "score-1",
+        annotation: expect.objectContaining({ rubricItemId: "item-unit" }),
+      },
     ])
     expect(result.updates).toEqual([])
     expect(result.deletes).toEqual([])
@@ -352,6 +368,7 @@ describe("朱書きの差分", () => {
     expect(result.updates).toEqual([
       {
         drawingAnnotationId: "advice-2",
+        rubricItemId: "item-unit",
         text: "【単位を書こう】",
         x: expect.any(Number),
         y: expect.any(Number),
@@ -400,6 +417,52 @@ describe("朱書きの差分", () => {
     ])
     expect(result.deletes).toEqual(["advice-dup"])
     expect(result.updates).toEqual([])
+  })
+
+  it("文が同じでも作った項目が違えば、項目だけを書き換える（位置と文は今のまま）", () => {
+    const result = plan(
+      [
+        // 列を足す前に作った朱書き（項目を持たない）
+        makeRow(
+          "score-1",
+          ["item-unit"],
+          [adviceAnnotation("advice-1", "単位を書こう", { rubricItemId: null })]
+        ),
+        // 1つの項目から作った朱書きが、決まりでまとめた一文と同じ文になった
+        makeRow(
+          "score-2",
+          ["item-unit", "item-sign"],
+          [adviceAnnotation("advice-2", "単位を書こう")]
+        ),
+      ],
+      [
+        makeRule({
+          itemIds: ["item-unit", "item-sign"],
+          mode: "merged",
+          mergedText: "単位を書こう",
+        }),
+      ]
+    )
+    expect(result.updates).toEqual([
+      {
+        drawingAnnotationId: "advice-1",
+        rubricItemId: "item-unit",
+        text: "単位を書こう",
+        x: 0.4,
+        y: 0.3,
+        fontSize: 4,
+      },
+      {
+        drawingAnnotationId: "advice-2",
+        rubricItemId: null,
+        text: "単位を書こう",
+        x: 0.4,
+        y: 0.3,
+        fontSize: 4,
+      },
+    ])
+    expect(result.creates).toEqual([])
+    expect(result.deletes).toEqual([])
   })
 
   it("印の無い注釈（手で書いたもの）は、渡されても比べず消さない", () => {

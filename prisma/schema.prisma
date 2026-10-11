@@ -487,11 +487,16 @@ model DrawingAnnotation {
   /// ルーブリック項目の助言から作った朱書き（docs/vlm-grading-design.md §4-7）。
   /// 助言の文が変わったら、この印の付いた朱書きの文だけを書き換える。手で書いた注釈は false
   isRubricAdvice  Boolean       @default(false)
+  /// 助言の朱書きの文を作った項目。文がその項目1つの助言そのもの（当たっている助言の項目が1つ、または
+  /// 重なった助言の決まりでその項目を採った）なら、その項目。まとめた一文・並べた文と、手で書いた注釈は null
+  rubricItemId    String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   questionScore   QuestionScore @relation(fields: [questionScoreId], references: [id], onDelete: Cascade)
+  rubricItem      RubricItem?   @relation(fields: [rubricItemId], references: [id], onDelete: SetNull)
 
   @@index([questionScoreId])
+  @@index([rubricItemId])
   @@index([type])
   @@index([createdAt])
   @@index([isFavorite])
@@ -536,6 +541,7 @@ model RubricItem {
   aiAttemptMatches       AiAttemptRubricMatch[]
   aiMatchedProposals     AiRubricProposal[]
   aiProposalResponses    AiRubricProposalResponse[]
+  adviceAnnotations      DrawingAnnotation[]
 
   @@index([cropRegionId])
 }

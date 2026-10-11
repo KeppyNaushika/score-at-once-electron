@@ -10,9 +10,8 @@
  * - それ以外の答案: 欄の文の朱書きを新しく足す（`placeAdviceAnnotation`）。欄が空なら何も足さない
  *
  * 「この案が書き換える朱書き」は、案に当たる項目（既存の項目に当たる案・前に確定してできた項目）があり、
- * 答案の助言の朱書きの文がその項目の今の助言と同じもの。助言の朱書きは採点行ごとに1つで、当たっている
- * 項目の助言から作る（§4-7）ので、文が項目の助言そのものなら、その項目だけから作った朱書きである
- * （重なった助言をまとめた文や、教員が手で直した文は、この案の文を直しても書き換わらないので残す）。
+ * 答案の助言の朱書きがその項目から作ったもの（`DrawingAnnotation.rubricItemId`）。`rubricItemId` は文が
+ * その項目1つの助言そのもののときだけ入る（§4-7）ので、重なった助言をまとめた文・並べた文は残す。
  *
  * 置く・置き直す場所は、手書きに加えて、その答案のほかの文字の注釈も避ける（差し替える朱書きそのものは除く）。
  * ほかの項目の助言と並べる・重なった助言の決まりは下見では効かせず、確定のときに効く。
@@ -25,7 +24,6 @@ import {
 } from "@/types/drawingAnnotation.types"
 
 import {
-  normalizeAdviceText,
   placeAdviceAnnotation,
   replaceAdviceAnnotationText,
 } from "../../Rubric/utils/adviceAnnotationPlacement"
@@ -36,10 +34,10 @@ export interface AdviceTextPreviewRequest {
   stepId: string
   adviceText: string
   /**
-   * 案に当たる項目の今の助言（`QuestioningAdvice.rubricItemAdviceText`）。この文そのものの助言の朱書きを
-   * 欄の文に差し替える。項目が無ければ null（差し替えず、足すだけ）
+   * 案に当たる項目（`QuestioningAdvice.rubricItemId`）。この項目から作った助言の朱書きを欄の文に
+   * 差し替える。項目が無ければ null（差し替えず、足すだけ）
    */
-  rubricItemAdviceText: string | null
+  rubricItemId: string | null
   examStudentIds: readonly string[]
 }
 
@@ -59,15 +57,12 @@ interface BuildAdviceTextPreviewInput {
 /** 答案の助言の朱書きのうち、この案が書き換えるもの（無ければ undefined） */
 function findRewrittenAdvice(
   savedAnnotations: readonly DrawingAnnotation[],
-  rubricItemAdviceText: string | null
+  rubricItemId: string | null
 ): DrawingAnnotation | undefined {
-  if (rubricItemAdviceText === null) return undefined
-  const itemAdvice = normalizeAdviceText(rubricItemAdviceText)
-  if (itemAdvice === "") return undefined
+  if (rubricItemId === null) return undefined
   return savedAnnotations.find(
     (annotation) =>
-      annotation.isRubricAdvice &&
-      normalizeAdviceText(annotation.text) === itemAdvice
+      annotation.isRubricAdvice && annotation.rubricItemId === rubricItemId
   )
 }
 
@@ -91,7 +86,7 @@ export function buildAdviceTextPreview({
           savedAnnotationsByExamStudentId.get(examStudentId) ?? []
         const rewritten = findRewrittenAdvice(
           savedAnnotations,
-          request.rubricItemAdviceText
+          request.rubricItemId
         )
         const keptAdvice = savedAnnotations.filter(
           (annotation) => annotation.isRubricAdvice && annotation !== rewritten
@@ -126,6 +121,7 @@ export function buildAdviceTextPreview({
               strokeWidth: rewritten.strokeWidth,
               anchorDirection: rewritten.anchorDirection,
               isRubricAdvice: true,
+              rubricItemId: rewritten.rubricItemId,
             }),
           ],
         ]

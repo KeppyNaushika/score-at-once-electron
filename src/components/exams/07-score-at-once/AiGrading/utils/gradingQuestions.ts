@@ -92,14 +92,17 @@ export function proposalAdviceOf(
     (response) =>
       response.committedAt !== null && response.resultRubricItem !== null
   )?.resultRubricItem
-  const rubricItemAdviceText =
-    (proposal.matchedRubricItem ?? committedItem)?.adviceText ?? null
-  const baseText = rubricItemAdviceText ?? proposal.adviceDraft
+  const rubricItem = proposal.matchedRubricItem ?? committedItem ?? null
+  const baseText = rubricItem?.adviceText ?? proposal.adviceDraft
   const editedText = effectiveProposalAdviceDraftText(
     proposal.adviceDrafts,
     proposal.responses
   )
-  return { baseText, rubricItemAdviceText, text: editedText ?? baseText }
+  return {
+    baseText,
+    rubricItemId: rubricItem?.id ?? null,
+    text: editedText ?? baseText,
+  }
 }
 
 /**

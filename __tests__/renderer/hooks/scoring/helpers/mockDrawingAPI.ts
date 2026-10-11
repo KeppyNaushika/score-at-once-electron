@@ -50,6 +50,7 @@ export function createMockAnnotation(
     displayY: 0,
     isFavorite: false,
     isRubricAdvice: false,
+    rubricItemId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

@@ -349,7 +349,7 @@ describe("案の助言（助言の欄の文）", () => {
   it("直していなければ AI の文案。当たる既存の項目があればその項目の今の助言", () => {
     expect(proposalAdviceOf(makeProposal())).toEqual({
       baseText: "単位を書こう。",
-      rubricItemAdviceText: null,
+      rubricItemId: null,
       text: "単位を書こう。",
     })
     expect(
@@ -361,7 +361,7 @@ describe("案の助言（助言の欄の文）", () => {
       )
     ).toEqual({
       baseText: "単位に気をつけよう。",
-      rubricItemAdviceText: "単位に気をつけよう。",
+      rubricItemId: "item-1",
       text: "単位に気をつけよう。",
     })
   })
@@ -376,7 +376,7 @@ describe("案の助言（助言の欄の文）", () => {
     })
     expect(proposalAdviceOf(proposal)).toEqual({
       baseText: "項目で直した文",
-      rubricItemAdviceText: "項目で直した文",
+      rubricItemId: "item-1",
       text: "項目で直した文",
     })
   })
@@ -416,7 +416,7 @@ describe("案の助言（助言の欄の文）", () => {
     })
     expect(proposalAdviceOf(proposal)).toEqual({
       baseText: "確定した文",
-      rubricItemAdviceText: "確定した文",
+      rubricItemId: "item-1",
       text: "確定した文",
     })
   })

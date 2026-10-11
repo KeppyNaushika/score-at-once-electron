@@ -250,6 +250,8 @@ export interface RubricAdviceSyncInput {
    */
   updates: {
     drawingAnnotationId: string
+    /** 文を作った項目（`resolveRubricAdvice` の `rubricItemId`）。その設問の項目でなければ null で書く */
+    rubricItemId: string | null
     text: string
     x: number
     y: number
@@ -270,6 +272,7 @@ export interface RubricAdviceSyncResult {
  *
  * - 作る: その設問の採点行で、まだ助言の朱書きが無い行にだけ作る（重ねて作らない）。
  *   印は必ず立てる
+ * - 文を作った項目（`rubricItemId`）は、その設問の項目のときだけ書く（ほかは null）
  * - 書き換える・消す: 印の付いた、その設問の朱書きだけ。手で書いた注釈の id が混じっても飛ばす
  *
  * 1回の書き込みを監査ログ1件にまとめる
@@ -279,6 +282,17 @@ export async function syncRubricAdviceAnnotations(
   actorUserId: string
 ): Promise<RubricAdviceSyncResult> {
   const result = await prisma.$transaction(async (tx) => {
+    const regionRubricItems = await tx.rubricItem.findMany({
+      where: { cropRegionId: input.cropRegionId },
+    })
+    const regionRubricItemIds = new Set(
+      regionRubricItems.map((rubricItem) => rubricItem.id)
+    )
+    const rubricItemIdInRegion = (rubricItemId: string | null) =>
+      rubricItemId !== null && regionRubricItemIds.has(rubricItemId)
+        ? rubricItemId
+        : null
+
     let createdCount = 0
     for (const create of input.creates) {
       const questionScore = await tx.questionScore.findUnique({
@@ -296,6 +310,7 @@ export async function syncRubricAdviceAnnotations(
         data: {
           ...create.annotation,
           isRubricAdvice: true,
+          rubricItemId: rubricItemIdInRegion(create.annotation.rubricItemId),
           questionScoreId: questionScore.id,
         },
       })
@@ -312,6 +327,7 @@ export async function syncRubricAdviceAnnotations(
         },
         data: {
           text: update.text,
+          rubricItemId: rubricItemIdInRegion(update.rubricItemId),
           x: update.x,
           y: update.y,
           fontSize: update.fontSize,

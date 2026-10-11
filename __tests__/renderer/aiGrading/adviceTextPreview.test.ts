@@ -5,8 +5,9 @@
  * - 下見はいまの問いの答案だけに作る（ほかの答案は保存したまま）
  * - ほかの注釈は変えない。ほかの項目の助言の朱書きは保存したまま返し（手で書いた注釈は一覧がそのまま描く）、
  *   欄の文の朱書きを足す
- * - 答案の助言の朱書きの文が、案に当たる項目の今の助言と同じときだけ、その朱書きを欄の文に差し替える
- *   （今の位置・大きさで収まればそのまま、収まらなければ置き直す）。項目の無い案は差し替えない
+ * - 答案の助言の朱書きが、案に当たる項目から作ったもの（`rubricItemId`）のときだけ、その朱書きを欄の文に
+ *   差し替える（今の位置・大きさで収まればそのまま、収まらなければ置き直す）。文が同じでも、ほかの項目から
+ *   作った朱書き・項目を持たない朱書きは差し替えない。項目の無い案は差し替えない
  * - 足す・置き直す場所は、手で書いた文字の注釈とほかの助言の朱書きを避ける
  * - 欄が空なら、差し替える朱書きだけを隠し、ほかの助言の朱書きは残す
  *
@@ -35,6 +36,7 @@ const itemAdvice = newDrawingAnnotation({
   text: "単位を書こう",
   fontSize: 5,
   isRubricAdvice: true,
+  rubricItemId: "item-unit",
 })
 /** ほかの項目の助言から作った朱書き（枠の左下。ふだん新しい朱書きを置くところ） */
 const otherAdvice = newDrawingAnnotation({
@@ -42,6 +44,16 @@ const otherAdvice = newDrawingAnnotation({
   x: region.x,
   y: region.y + 48 / 297,
   text: "途中式を書こう",
+  fontSize: 5,
+  isRubricAdvice: true,
+  rubricItemId: "item-steps",
+})
+/** 重なった助言をまとめた朱書き（項目を持たない）。文はこの案の項目の助言と同じ */
+const mergedAdvice = newDrawingAnnotation({
+  type: "text",
+  x: region.x + 30 / 210,
+  y: region.y + 20 / 297,
+  text: "単位を書こう",
   fontSize: 5,
   isRubricAdvice: true,
 })
@@ -54,16 +66,13 @@ const handWritten = newDrawingAnnotation({
   fontSize: 5,
 })
 
-const build = (
-  adviceText: string,
-  rubricItemAdviceText: string | null = "単位を書こう"
-) =>
+const build = (adviceText: string, rubricItemId: string | null = "item-unit") =>
   buildAdviceTextPreview({
     request: {
       stepId: "proposal-1",
       adviceText,
-      rubricItemAdviceText,
-      examStudentIds: ["s-item", "s-other", "s-hand", "s-new"],
+      rubricItemId,
+      examStudentIds: ["s-item", "s-other", "s-hand", "s-new", "s-merged"],
     },
     inkGridByExamStudentId: new Map(),
     savedAnnotationsByExamStudentId: new Map<string, DrawingAnnotation[]>([
@@ -71,6 +80,7 @@ const build = (
       ["s-other", [otherAdvice]],
       ["s-hand", [handWritten]],
       ["s-outside", [itemAdvice]],
+      ["s-merged", [mergedAdvice]],
     ]),
     region,
     pageSize: "A4",
@@ -92,7 +102,10 @@ const rectangleOf = (annotation: DrawingAnnotation) =>
 /** 下見で足した（保存したものでない）朱書き */
 const addedOf = (annotations: readonly DrawingAnnotation[] | undefined) =>
   (annotations ?? []).filter(
-    (annotation) => annotation !== itemAdvice && annotation !== otherAdvice
+    (annotation) =>
+      annotation !== itemAdvice &&
+      annotation !== otherAdvice &&
+      annotation !== mergedAdvice
   )
 
 describe("助言の欄の下見", () => {
@@ -103,6 +116,7 @@ describe("助言の欄の下見", () => {
       "s-other",
       "s-hand",
       "s-new",
+      "s-merged",
     ])
     expect(preview.get("s-item")).toEqual([
       expect.objectContaining({
@@ -111,6 +125,7 @@ describe("助言の欄の下見", () => {
         y: itemAdvice.y,
         fontSize: 5,
         isRubricAdvice: true,
+        rubricItemId: "item-unit",
       }),
     ])
     expect(preview.get("s-new")).toEqual([
@@ -143,7 +158,17 @@ describe("助言の欄の下見", () => {
     )
   })
 
-  it("案に項目が無ければ、同じ文の朱書きがあっても差し替えず、足す", () => {
+  it("文が同じでも、項目を持たない朱書き（重なった助言をまとめたもの）は差し替えず、足す", () => {
+    const annotations = build("単位まで書こう").get("s-merged") ?? []
+    expect(annotations[0]).toBe(mergedAdvice)
+    const added = addedOf(annotations)
+    expect(added).toHaveLength(1)
+    expect(intersects(rectangleOf(added[0]), rectangleOf(mergedAdvice))).toBe(
+      false
+    )
+  })
+
+  it("案に項目が無ければ、その項目から作った朱書きがあっても差し替えず、足す", () => {
     const annotations = build("単位まで書こう", null).get("s-item") ?? []
     expect(annotations[0]).toBe(itemAdvice)
     const added = addedOf(annotations)
@@ -174,5 +199,6 @@ describe("助言の欄の下見", () => {
     expect(preview.get("s-other")).toEqual([otherAdvice])
     expect(preview.get("s-hand")).toEqual([])
     expect(preview.get("s-new")).toEqual([])
+    expect(preview.get("s-merged")).toEqual([mergedAdvice])
   })
 })

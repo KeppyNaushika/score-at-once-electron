@@ -179,8 +179,7 @@ export function useAiQuestioning({
     currentStepId !== null && currentAdvice
       ? flow.adviceTextOf(currentStepId)
       : null
-  const currentRubricItemAdviceText =
-    currentAdvice?.rubricItemAdviceText ?? null
+  const currentRubricItemId = currentAdvice?.rubricItemId ?? null
   const advicePreview = useMemo((): AdviceTextPreviewRequest | null => {
     if (
       currentStepId === null ||
@@ -192,15 +191,10 @@ export function useAiQuestioning({
     return {
       stepId: currentStepId,
       adviceText: currentAdviceText,
-      rubricItemAdviceText: currentRubricItemAdviceText,
+      rubricItemId: currentRubricItemId,
       examStudentIds: currentMembers.map((member) => member.examStudentId),
     }
-  }, [
-    currentStepId,
-    currentAdviceText,
-    currentRubricItemAdviceText,
-    currentMembers,
-  ])
+  }, [currentStepId, currentAdviceText, currentRubricItemId, currentMembers])
 
   const pointDeltaByOptionId = useMemo(
     () =>

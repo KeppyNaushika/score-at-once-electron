@@ -39,7 +39,11 @@ export type AdviceChoice =
 /** 答案の朱書きの決まり方 */
 export type RubricAdviceResolution =
   | { kind: "none" }
-  | { kind: "text"; text: string }
+  /**
+   * `rubricItemId` は、文がその項目1つの助言そのもの（当たっている助言の項目が1つ、または決まりで
+   * その項目を採った）ならその項目。まとめた一文・並べた文は null
+   */
+  | { kind: "text"; text: string; rubricItemId: string | null }
   /** 助言のある項目が2つ以上当たっていて、その集合の決まりが無い */
   | { kind: "undecided"; itemIds: string[] }
 
@@ -160,13 +164,22 @@ export function resolveRubricAdvice(
   if (itemIds.length === 0) return { kind: "none" }
   if (itemIds.length === 1) {
     const text = adviceTextOfChoice({ mode: "all" }, itemIds, rubricItems)
-    return text === null ? { kind: "none" } : { kind: "text", text }
+    return text === null
+      ? { kind: "none" }
+      : { kind: "text", text, rubricItemId: itemIds[0] }
   }
   const rule = findAdviceCombination(itemIds, combinations)
   const choice = rule ? toAdviceChoice(rule) : null
   if (!choice) return { kind: "undecided", itemIds }
   const text = adviceTextOfChoice(choice, itemIds, rubricItems)
-  return text === null ? { kind: "none" } : { kind: "text", text }
+  return text === null
+    ? { kind: "none" }
+    : {
+        kind: "text",
+        text,
+        rubricItemId:
+          choice.mode === "single" ? choice.primaryRubricItemId : null,
+      }
 }
 
 /** 未決定の組み合わせ1つと、それに当たる答案 */
