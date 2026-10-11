@@ -1,5 +1,5 @@
 /**
- * 表示する試行・既定のプロンプトの決め方（docs/vlm-grading-design.md §4-3）。
+ * 表示する試行・既定の採点指示の決め方（docs/vlm-grading-design.md §4-3）。
  */
 
 import { isStage1RunPurpose } from "@/types/aiGrading.types"
@@ -78,7 +78,7 @@ export function resolveDisplayedAttempt(
 }
 
 /**
- * 既定で選ぶプロンプト。自分が最後に採点に使ったもの、無ければいちばん新しいもの
+ * 既定で選ぶ採点指示。自分が最後に採点に使ったもの、無ければいちばん新しいもの
  *
  * @param prompts 古い順
  * @param runs 自分の実行

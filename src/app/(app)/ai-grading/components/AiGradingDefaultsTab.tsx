@@ -9,7 +9,7 @@ import { AiGradingDefaultsSection } from "./AiGradingDefaultsSection"
 /**
  * 「AI採点」の画面の「既定値」タブ（設計 §9）。
  *
- * 新しい実行やプロンプトに最初から入る値だけを置く（実行の送信先・モデル・Effort・処理と、
+ * 新しい実行や採点指示に最初から入る値だけを置く（実行の送信先・モデル・Effort・処理と、
  * 助言の文案の指示の既定の文言）。毎回そのまま効く設定（同時実行数・警告額など）は「設定」タブ。
  * 同意した事業者が1つでもあるときだけ開ける
  */
@@ -27,7 +27,7 @@ export function AiGradingDefaultsTab() {
   return (
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground">
-        新しく始める実行や、新しく作るプロンプトに最初から入る値です。実行やプロンプトの中で変えられます。
+        新しく始める実行や、新しく作る採点指示に最初から入る値です。実行や採点指示の中で変えられます。
       </p>
       <AiGradingDefaultsSection
         settings={settings}

@@ -34,17 +34,17 @@ import type {
 import type { AiGridFilterSettings } from "./utils/aiGridFilter"
 import type { AnswerOrder, ReviewedAiGradingAnswer } from "./utils/answerReview"
 
-/** 設問のプロンプト1行（作成者付き） */
+/** 設問の指示1行（作成者付き） */
 export type AiPromptRow = Serialized<
   Awaited<ReturnType<typeof listAiPromptsByCropRegion>>
 >[number]
 
-/** 設問の実行1件（試行・プロンプト・実行者付き） */
+/** 設問の実行1件（試行・採点指示・実行者付き） */
 export type AiGradingRunRow = Serialized<
   Awaited<ReturnType<typeof listAiGradingRunsByCropRegion>>
 >[number]
 
-/** 試験の全設問の実行1件（試行・プロンプト付き。設問一覧の印と、試験の費用に使う） */
+/** 試験の全設問の実行1件（試行・採点指示付き。設問一覧の印と、試験の費用に使う） */
 export type AiGradingRunOfExamRow = Serialized<
   Awaited<ReturnType<typeof listAiGradingRunsByExam>>
 >[number]

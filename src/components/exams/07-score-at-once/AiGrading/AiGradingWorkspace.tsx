@@ -46,7 +46,7 @@ const LEFT_TABS = ["prompt", "grade", "check"] as const
 type LeftTab = (typeof LEFT_TABS)[number]
 
 const LEFT_TAB_LABELS: Record<LeftTab, string> = {
-  prompt: "プロンプト",
+  prompt: "採点指示",
   grade: "AI 採点",
   check: "AI チェック",
 }
@@ -84,7 +84,7 @@ interface AiGradingWorkspaceProps {
 }
 
 /**
- * 設問1つぶんの AI 採点の作業場。左にプロンプト・AI 採点・AI チェックのタブ
+ * 設問1つぶんの AI 採点の作業場。左に採点指示・AI 採点・AI チェックのタブ
  * （問いかけと自分で採点するボタンは AI 採点・AI チェックのタブの中）、
  * 中央はどのタブでも**一覧表示と同じ答案の一覧**（色は自分の採点、斜線と札で AI の提案。
  * 問いかけのタブでは、いまの問いの答案に絞り、確定すると付く点を斜線で重ねる）、右端に設問・絞り込み。
@@ -92,7 +92,7 @@ interface AiGradingWorkspaceProps {
  * AI が答案ごとに書く朱書きの文案は採用しない（朱書きはルーブリック項目の助言から作る。
  * docs/vlm-grading-design.md §4-7）。
  *
- * 表示する実行・選んでいるプロンプト・答案の選択は、ここが持つ利用者の選択だけで、
+ * 表示する実行・選んでいる採点指示・答案の選択は、ここが持つ利用者の選択だけで、
  * 表示はそこから毎回導く（消えた選択を状態へ書き戻さない）。
  */
 export function AiGradingWorkspace({
@@ -160,7 +160,7 @@ export function AiGradingWorkspace({
       : unlockedProviders[0]
 
   const points = cropRegion.points
-  /** プロンプトの番号（古い順に 1 から。表示のためだけのもの） */
+  /** 採点指示の番号（古い順に 1 から。表示のためだけのもの） */
   const promptNumberById = useMemo(
     () =>
       new Map(
@@ -223,13 +223,13 @@ export function AiGradingWorkspace({
     // 問いかけている問いの答案を、選ぶ前に目で確かめられるよう一覧に出す
     pinnedExamStudentIds: questioning.pinnedExamStudentIds,
   })
-  // 1件ずつ自分で採点している間は、一覧の選択の代わりに焦点の答案を出す
+  // 自分で採点している間は、一覧の選択の代わりに焦点の答案を出す
   const selectionOverride = questioning.gridSelectionOverride
   if (!provider) return null
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
-      {/* 左: 実行の進み具合と、プロンプト・AI 採点・AI チェックのタブ */}
+      {/* 左: 実行の進み具合と、採点指示・AI 採点・AI チェックのタブ */}
       <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-r px-3">
         <AiGradingRunProgress
           examId={examId}

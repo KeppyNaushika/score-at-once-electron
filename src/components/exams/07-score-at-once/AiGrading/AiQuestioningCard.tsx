@@ -5,9 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
 import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 
+import { AiQuestioningAdviceField } from "./AiQuestioningAdviceField"
 import { AiQuestioningOptions } from "./AiQuestioningOptions"
 import type { QuestioningFlow } from "./hooks/useQuestioningFlow"
-import type { QuestioningStepState } from "./utils/questioningSteps"
+import {
+  memberCountLabelOf,
+  type QuestioningStepState,
+} from "./utils/questioningSteps"
 
 interface AiQuestioningCardProps {
   state: QuestioningStepState
@@ -18,7 +22,7 @@ interface AiQuestioningCardProps {
 
 /**
  * いまの問い1つ（docs/vlm-grading-design.md §3-5）。左パネルに、見出し・問い・選択肢・「戻る」「次へ」を
- * 縦に並べる。問いに入る答案は中央の一覧で見る（一覧をこの問いの答案に絞り、付く予定の点を斜線で重ねる）
+ * 縦に並べる。案の問いには助言（朱書き）の欄を添える（空なら朱書きしない）。問いに入る答案は中央の一覧で見る（一覧をこの問いの答案に絞り、付く予定の点を斜線で重ねる）
  */
 export function AiQuestioningCard({
   state,
@@ -30,14 +34,22 @@ export function AiQuestioningCard({
   const { keyBindings } = useKeyBindings()
   const keyOf = (commandId: string) =>
     formatKeyForDisplay(keyBindings[commandId])
+  const countLabel = memberCountLabelOf(step)
 
   return (
     <section
       aria-label={`問いかけ: ${step.title}`}
       className="space-y-2 rounded border border-gray-200 p-2"
     >
-      <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-xs font-medium text-gray-800">{step.title}</h3>
+      <div className="flex items-baseline gap-2">
+        <h3 className="min-w-0 flex-1 truncate text-xs font-medium text-gray-800">
+          {step.title}
+        </h3>
+        {countLabel && (
+          <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">
+            {countLabel}
+          </span>
+        )}
         <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">
           {position} / {total}
         </span>
@@ -45,6 +57,14 @@ export function AiQuestioningCard({
       <p className="text-gray-700">{step.question}</p>
       {step.detail && <p className="text-gray-500">{step.detail}</p>}
       <AiQuestioningOptions state={state} flow={flow} />
+      {step.advice && (
+        <AiQuestioningAdviceField
+          textareaRef={flow.adviceTextRef}
+          value={flow.adviceTextOf(step.id)}
+          onChange={(text) => flow.setAdviceText(step.id, text)}
+          onLeave={() => flow.saveAdviceText(step.id)}
+        />
+      )}
       {flow.nextBlockedReason && (
         <p className="text-orange-800">{flow.nextBlockedReason}</p>
       )}
@@ -65,7 +85,7 @@ export function AiQuestioningCard({
           onClick={flow.goToNext}
           disabled={flow.nextBlockedReason !== null}
         >
-          {flow.startsManualOnNext ? "1件ずつ採点を始める" : "次へ"}
+          {flow.startsManualOnNext ? "自分で採点を始める" : "次へ"}
           <Kbd variant="tiny" className="bg-white/20">
             {keyOf("choice.nextQuestion")}
           </Kbd>

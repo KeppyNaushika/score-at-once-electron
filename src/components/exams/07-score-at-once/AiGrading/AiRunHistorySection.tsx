@@ -25,7 +25,7 @@ interface AiRunHistorySectionProps {
   cropRegionId: string
   currentUserId: string
   points: number | null
-  /** プロンプトの id → プロンプトの番号 */
+  /** 採点指示の id → 採点指示の番号 */
   promptNumberById: ReadonlyMap<string, number>
   /** 一覧に出している実行（null は最新） */
   chosenRunId: string | null
@@ -119,7 +119,7 @@ export function AiRunHistorySection({
                   <span className="font-medium">
                     {purposeLabel} {runNumberById.get(run.id)}
                   </span>
-                  {promptNumber !== undefined && `・プロンプト ${promptNumber}`}
+                  {promptNumber !== undefined && `・指示 ${promptNumber}`}
                   <span className="ml-1 text-muted-foreground">
                     {formatRunTime(run.createdAt)}
                   </span>

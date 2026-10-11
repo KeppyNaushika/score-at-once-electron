@@ -41,6 +41,16 @@ export interface QuestioningOption {
 }
 
 /**
+ * 問いの助言（AI 採点の案だけ。確定で項目の助言になり、朱書きになる）。"" は助言なし
+ */
+export interface QuestioningAdvice {
+  /** 直していないときの文（当たる項目の助言。項目が無ければ AI の文案） */
+  baseText: string
+  /** いま効いている文（下書きで直した文。直していなければ baseText） */
+  text: string
+}
+
+/**
  * 問いの種類。scoringMethod は直接採点の設問で最初に聞く採点方式、proposal は2段目の項目の案、
  * outside はどの案にも入らない答案、sameAnswer は同じ答えに違う点、disagreement は先生と AI の食い違い
  */
@@ -56,11 +66,13 @@ export interface QuestioningStep {
   title: string
   /** 選択肢の上に出す問い */
   question: string
-  /** 問いに添える補足（助言の文案・AI の所見）。無ければ "" */
+  /** 問いに添える補足（案の説明・AI の所見）。無ければ "" */
   detail: string
+  /** 助言（AI 採点の案だけ）。助言を持たない問いは null */
+  advice: QuestioningAdvice | null
   members: QuestioningMember[]
   options: QuestioningOption[]
-  /** 「1件ずつ自分で採点する」を出すか */
+  /** 「自分で採点する」を出すか */
   allowsManual: boolean
   /** 「その他：再採点を指示する」を出すか（AI 採点の案だけ） */
   allowsInstruction: boolean
@@ -69,7 +81,7 @@ export interface QuestioningStep {
 /** 教員が決めたこと */
 export type QuestioningDecision =
   | { kind: "option"; optionKey: string }
-  /** 1件ずつ自分で採点した（受験者 → 付けた点。付けていない答案は入らない） */
+  /** 自分で採点した（受験者 → 付けた点。付けていない答案は入らない） */
   | { kind: "manual"; scores: ReadonlyMap<string, QuestioningScore> }
   /** 再採点への指示 */
   | { kind: "instruction"; text: string }
@@ -141,22 +153,55 @@ export function isSameQuestioningScore(
   )
 }
 
-/** 記録の1行の「→ 〇〇」に出す、決めたことの言葉 */
-export function describeDecision(
+/** 問いの一覧の行の札（決めたこと）。答案に点を付ける選択肢は、その判定の色で出す */
+export interface QuestioningDecisionBadge {
+  label: string
+  /** 判定の色で出すときの判定。色を持たない札（自分で採点・再採点・このまま・採点方式）は null */
+  status: ScoringStatus | null
+}
+
+/** 札に出す点（正答・誤答・無答は判定だけ。部分点・保留は点を添える） */
+function badgeLabelOf(score: QuestioningScore): string {
+  const label = SCORING_STATUS_LABELS[score.status]
+  const keepsScore = score.status === "partial" || score.status === "pending"
+  return keepsScore && score.partialScore !== null
+    ? `${label} ${score.partialScore}点`
+    : label
+}
+
+/** 決めたことの札 */
+export function decisionBadgeOf(
   step: Pick<QuestioningStep, "options">,
   decision: QuestioningDecision
-): string {
+): QuestioningDecisionBadge {
   switch (decision.kind) {
-    case "option":
-      return optionOfDecision(step, decision)?.label ?? "（選択肢が消えました）"
+    case "option": {
+      const option = optionOfDecision(step, decision)
+      if (!option) return { label: "選択肢が消えました", status: null }
+      return option.score
+        ? { label: badgeLabelOf(option.score), status: option.score.status }
+        : { label: option.label, status: null }
+    }
     case "manual":
-      return decision.scores.size > 0
-        ? `1件ずつ採点（${decision.scores.size}件）`
-        : "1件ずつ採点（未入力）"
+      return {
+        label:
+          decision.scores.size > 0
+            ? `自分で採点 ${decision.scores.size}件`
+            : "自分で採点（未入力）",
+        status: null,
+      }
     case "instruction":
-      return "再採点を指示"
+      return { label: "再採点を指示", status: null }
   }
 }
+
+/** 問いの見出しに添える件数（案・どの案にも入らない答案だけ）。添えないなら null */
+export const memberCountLabelOf = (
+  step: Pick<QuestioningStep, "kind" | "members">
+): string | null =>
+  step.kind === "proposal" || step.kind === "outside"
+    ? `${step.members.length}件`
+    : null
 
 /** 2つの決めたことが同じか（同じなら答え直しの行を書かない） */
 export function isSameDecision(

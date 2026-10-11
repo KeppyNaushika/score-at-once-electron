@@ -10,7 +10,7 @@ import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 interface AiManualScoringButtonsProps {
-  /** 1件ずつ自分で採点している最中か（焦点の答案があるときだけ押せる） */
+  /** 自分で採点している最中か（焦点の答案があるときだけ押せる） */
   isEnabled: boolean
   /** 焦点の答案に点を付ける（採点キーと同じ。下書き） */
   onScore: (status: ScoringStatus) => void
@@ -26,7 +26,7 @@ function releaseButtonFocus() {
 }
 
 /**
- * 問いかけの「1件ずつ自分で採点する」の採点ボタン（docs/vlm-grading-design.md §3-5）。
+ * 問いかけの「自分で採点する」の採点ボタン（docs/vlm-grading-design.md §3-5）。
  * 採点キーと同じく焦点の答案に**下書き**の点を付け、見直しの「確定する」で入る
  */
 export function AiManualScoringButtons({
@@ -64,7 +64,7 @@ export function AiManualScoringButtons({
       />
       {!isEnabled && (
         <p className="text-[10px] text-muted-foreground">
-          「1件ずつ自分で採点する」で使えます
+          「自分で採点する」で使えます
         </p>
       )}
     </section>

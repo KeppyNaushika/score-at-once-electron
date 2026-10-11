@@ -15,7 +15,7 @@ import { defineStringUnion } from "./stringUnion"
  * 実行の目的。grade は1段目（答案ごとの判定）、group は2段目（1段目の結果から項目の案を作る）。
  * check はAI チェック（採点済みの答案を1段目だけで判定し、教員の採点と手元で比べる。
  * 2段目は続けない。教員の点は送らない）。
- * revise は廃止したプロンプトの改訂で、過去の行（費用の集計に残る）を読むためだけに残す
+ * revise は廃止した採点指示の改訂で、過去の行（費用の集計に残る）を読むためだけに残す
  */
 export const AI_GRADING_RUN_PURPOSES = [
   "grade",
@@ -40,7 +40,7 @@ export function isStage1RunPurpose(
 
 /**
  * 案の外の問いかけ（AI チェック・どの案にも入らない答案）への答えの種類（`AiAttemptResponse.choice`）。
- * rescore はその判定に直す、keep はこのままにする、manual は1件ずつ自分で採点する。
+ * rescore はその判定に直す、keep はこのままにする、manual は自分で採点する。
  * 外れ値は keep に倒す（教員の採点を勝手に変えない側）
  */
 export const AI_ATTEMPT_RESPONSE_CHOICES = [

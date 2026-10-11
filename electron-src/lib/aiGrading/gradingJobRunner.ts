@@ -187,7 +187,7 @@ export function createGradingJobRunner(
     actorUserId: string
   ) {
     const prompt = await getAiPrompt(input.promptId)
-    if (!prompt) throw new Error("プロンプトが見つかりません")
+    if (!prompt) throw new Error("採点指示が見つかりません")
     const cropRegion = await getCropRegionWithAnswerImages(
       prompt.cropRegionId,
       input.examStudentIds

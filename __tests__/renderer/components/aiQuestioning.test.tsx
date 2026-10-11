@@ -12,10 +12,10 @@
  * - 問いの一覧はすべての問いを常に出し（未回答も）、行のどこを押しても（Enter・Space でも）その問いを開く。
  *   見直しに件数と、採点済みの答案を置き換える知らせが出る（問いごとの内訳の表は出さない）
  * - 選択肢のクリックは選ぶだけ（ダブルクリックでも決めない）。カードの「次へ」「戻る」と、問いかけのタブを
- *   開いている間いつでも効く Ctrl/⌘+Enter・Ctrl/⌘+Shift+Enter（選択の場面の外・欄の中・1件ずつ採点の中でも。
+ *   開いている間いつでも効く Ctrl/⌘+Enter・Ctrl/⌘+Shift+Enter（選択の場面の外・欄の中・自分で採点の中でも。
  *   変換中・部分点の入力欄を開いている間・タブを閉じているあいだは効かない）
- * - 「1件ずつ自分で採点する」は一覧の答案を ←→ で移り（クリックでも移れる）、採点キー（数字は部分点）か
- *   「自分で採点」のボタン（1件ずつ採点の最中だけ押せる）で点を付ける（下書き。一覧に斜線で出る）
+ * - 「自分で採点する」は一覧の答案を ←→ で移り（クリックでも移れる）、採点キー（数字は部分点）か
+ *   「自分で採点」のボタン（自分で採点の最中だけ押せる）で点を付ける（下書き。一覧に斜線で出る）
  * - 「その他」の欄は ↓ で入り、1行目の ↑ で戻る（2行目の ↑ は戻らない）。素の Enter・変換中の
  *   Enter では送らず、Ctrl/⌘+Enter で決める。中身は問いを移っても残り、確定のとき「その他」を
  *   選んでいない問いの中身は捨てる
@@ -192,6 +192,7 @@ function makeSignProposal(adjust = false): AiRubricProposalRow {
     description: "−5 を移項したとき符号を変えていない",
     adviceDraft: "移項の符号を見直そう",
     matchedRubricItemId: null,
+    matchedRubricItem: null,
     sortOrder: 0,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
@@ -239,6 +240,7 @@ function makeUnitProposal(): AiRubricProposalRow {
     description: "",
     adviceDraft: "",
     matchedRubricItemId: null,
+    matchedRubricItem: null,
     sortOrder: 1,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
@@ -318,6 +320,7 @@ const fakeAiGradingApi = {
         status: string
         partialScore: number | null
       }[]
+      adviceText: string | null
     }) => {
       responseCount += 1
       const responseId = `response-${responseCount}`
@@ -326,7 +329,9 @@ const fakeAiGradingApi = {
         proposalId: input.proposalId,
         optionId: input.optionId,
         freeText: input.freeText,
+        adviceText: input.adviceText,
         resultRubricItemId: null,
+        resultRubricItem: null,
         committedAt: null,
         createdAt: LATER_DATE,
         updatedAt: LATER_DATE,
@@ -406,7 +411,11 @@ const fakeAiGradingApi = {
           ),
         })),
       }))
-      return { response: {}, touchedRows: [] }
+      return {
+        response: {},
+        touchedRows: [],
+        adviceChangedRubricItemId: null,
+      }
     }
   ),
   writeQuestioningScores: vi.fn(async () => 0),
@@ -492,7 +501,7 @@ function QuestioningHarness({
   answers: AiGradingAnswer[]
 }) {
   useContextValue("gradingMode", "ai")
-  // 左パネルのタブを問いかけ以外（プロンプト）へ移したときの代わり
+  // 左パネルのタブを問いかけ以外（採点指示）へ移したときの代わり
   const [isTabOpen, setIsTabOpen] = useState(true)
   const { data: loadedRuns = [] } = useQuery(
     aiGradingRunsQuery("exam-1", cropRegion.id, false)
@@ -547,7 +556,7 @@ function QuestioningHarness({
   return (
     <div>
       <button type="button" onClick={() => setIsTabOpen(!isTabOpen)}>
-        {isTabOpen ? "プロンプトのタブへ" : "問いかけのタブへ"}
+        {isTabOpen ? "採点指示のタブへ" : "問いかけのタブへ"}
       </button>
       <aside aria-label="左パネル">
         {isTabOpen && (
@@ -688,13 +697,11 @@ beforeEach(() => {
 describe("AI 採点の問いかけ", () => {
   it("問いと推奨の選択肢は左パネルに出し、中央は答案の一覧のまま（問いの答案に確信度の低い順で絞る）", async () => {
     renderView()
-    const question = await card("移項で符号を誤った（3件）")
+    const question = await card("移項で符号を誤った")
     const options = within(question).getByRole("listbox", { name: "選択肢" })
     expect(within(options).getByText("部分点 2点")).toBeInTheDocument()
     expect(within(options).getByText("推奨")).toBeInTheDocument()
-    expect(
-      within(options).getByText("1件ずつ自分で採点する")
-    ).toBeInTheDocument()
+    expect(within(options).getByText("自分で採点する")).toBeInTheDocument()
     expect(
       within(options).getByText("その他：再採点を指示する")
     ).toBeInTheDocument()
@@ -710,7 +717,7 @@ describe("AI 採点の問いかけ", () => {
 
   it("↑↓ で移した選択肢で付く点を、問いの答案のマスに斜線で出す。決めても残り、確定すると消える", async () => {
     renderView()
-    await card("移項で符号を誤った（3件）")
+    await card("移項で符号を誤った")
     // 推奨（部分点 2点）に焦点がある
     await waitFor(() => expect(draftStatusOf("s-c")).toBe("partial"))
     expect(draftStatusOf("s-b")).toBe("partial")
@@ -719,13 +726,13 @@ describe("AI 採点の問いかけ", () => {
 
     await userEvent.keyboard("{ArrowDown}")
     expect(draftStatusOf("s-c")).toBe("incorrect")
-    // 「1件ずつ自分で採点する」はまだ点を付けていないので斜線なし
+    // 「自分で採点する」はまだ点を付けていないので斜線なし
     await userEvent.keyboard("{ArrowDown}")
     expect(draftStatusOf("s-c")).toBeNull()
     await userEvent.keyboard("{ArrowUp}{Enter}")
 
     // 次の問い（答案は s-a だけ）。絞り込みを外すと、決めた問いの答案にも斜線が残っている
-    await card("単位まで正しい（1件）")
+    await card("単位まで正しい")
     await waitFor(() => expect(gridAnswerIds()).toEqual(["s-a"]))
     expect(draftStatusOf("s-a")).toBe("correct")
     await userEvent.click(screen.getByRole("switch", { name: "一覧を絞る" }))
@@ -734,7 +741,7 @@ describe("AI 採点の問いかけ", () => {
     expectNoTeacherLayerWrites()
 
     await userEvent.keyboard("{Enter}")
-    await card("どの案にも入らない答案（1件）")
+    await card("どの案にも入らない答案")
     // 「このままにする」は点を付けない
     expect(draftStatusOf("s-d")).toBeNull()
     await userEvent.keyboard("{Enter}")
@@ -752,7 +759,7 @@ describe("AI 採点の問いかけ", () => {
 
   it("一覧の絞り込みはスイッチで外せ、外すといつもの絞り込みに戻る", async () => {
     renderView()
-    await card("移項で符号を誤った（3件）")
+    await card("移項で符号を誤った")
     await waitFor(() => expect(gridAnswerIds()).toEqual(["s-c", "s-b", "s-a"]))
     const narrowSwitch = screen.getByRole("switch", { name: "一覧を絞る" })
     expect(narrowSwitch).toBeChecked()
@@ -766,7 +773,7 @@ describe("AI 採点の問いかけ", () => {
 
   it("Enter で決めると下書きだけを書き、記録に残って次の問いへ。教員の層には何も書かない", async () => {
     renderView()
-    await card("移項で符号を誤った（3件）")
+    await card("移項で符号を誤った")
     await userEvent.keyboard("{ArrowDown}{Enter}")
 
     await waitFor(() =>
@@ -775,37 +782,36 @@ describe("AI 採点の問いかけ", () => {
         optionId: "option-sign-incorrect",
         freeText: "",
         manualScores: [],
+        adviceText: null,
       })
     )
-    await card("単位まで正しい（1件）")
+    await card("単位まで正しい")
     const log = await screen.findByRole("list", { name: "問いの一覧" })
-    expect(
-      await within(log).findByText("→ 誤答 0点", { exact: false })
-    ).toBeInTheDocument()
+    expect(await within(log).findByText("誤答")).toBeInTheDocument()
     expectNoTeacherLayerWrites()
   })
 
   it("問いの一覧の行を押すと戻れ、いまの答えに焦点がある", async () => {
     renderView()
-    await card("移項で符号を誤った（3件）")
+    await card("移項で符号を誤った")
     await userEvent.keyboard("{ArrowDown}{Enter}")
-    await card("単位まで正しい（1件）")
-    await userEvent.click(await logRow("移項で符号を誤った（3件）"))
-    await card("移項で符号を誤った（3件）")
+    await card("単位まで正しい")
+    await userEvent.click(await logRow("移項で符号を誤った"))
+    await card("移項で符号を誤った")
     expect(focusedOption()).toHaveTextContent("誤答 0点")
     // Ctrl/⌘+Shift+Enter でも前へ戻れる（先頭なら動かない）
     await userEvent.keyboard("{Control>}{Shift>}{Enter}{/Shift}{/Control}")
-    expect(await card("移項で符号を誤った（3件）")).toBeInTheDocument()
+    expect(await card("移項で符号を誤った")).toBeInTheDocument()
   })
 
   it("全部答えると見直しに件数と置き換えの知らせが出て、確定で初めて全部書く", async () => {
     renderView()
-    await card("移項で符号を誤った（3件）")
+    await card("移項で符号を誤った")
     await userEvent.keyboard("{Enter}")
-    await card("単位まで正しい（1件）")
+    await card("単位まで正しい")
     await userEvent.keyboard("{Enter}")
-    // どの案にも入らない答案は、1件ずつ自分で採点する（e で正答）
-    await card("どの案にも入らない答案（1件）")
+    // どの案にも入らない答案は、自分で採点する（e で正答）
+    await card("どの案にも入らない答案")
     await userEvent.keyboard("{ArrowDown}{Enter}")
     await userEvent.keyboard("e")
     await userEvent.keyboard("{Enter}")
@@ -840,9 +846,9 @@ describe("AI 採点の問いかけ", () => {
     })
   })
 
-  it("「1件ずつ自分で採点する」は一覧の答案を ←→・クリックで移り、採点キーと数字の部分点で付けて、Enter で下書きにする", async () => {
+  it("「自分で採点する」は一覧の答案を ←→・クリックで移り、採点キーと数字の部分点で付けて、Enter で下書きにする", async () => {
     renderView()
-    await card("移項で符号を誤った（3件）")
+    await card("移項で符号を誤った")
     await waitFor(() => expect(gridAnswerIds()).toEqual(["s-c", "s-b", "s-a"]))
     await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}")
     // 一覧では焦点の答案を選んでいるものとして出す
@@ -880,15 +886,16 @@ describe("AI 採点の問いかけ", () => {
           { attemptId: attemptC.id, status: "incorrect", partialScore: null },
           { attemptId: attemptB.id, status: "partial", partialScore: 3 },
         ],
+        adviceText: null,
       })
     )
-    await card("単位まで正しい（1件）")
+    await card("単位まで正しい")
     expectNoTeacherLayerWrites()
   })
 
-  it("「自分で採点」のボタンは1件ずつ採点の最中だけ押せ、採点キーと同じく焦点の答案に下書きを付ける", async () => {
+  it("「自分で採点」のボタンは自分で採点の最中だけ押せ、採点キーと同じく焦点の答案に下書きを付ける", async () => {
     renderView()
-    await card("移項で符号を誤った（3件）")
+    await card("移項で符号を誤った")
     await waitFor(() => expect(gridAnswerIds()).toEqual(["s-c", "s-b", "s-a"]))
     const scoringSection = () =>
       screen.getByRole("region", { name: "自分で採点" })
@@ -924,6 +931,7 @@ describe("AI 採点の問いかけ", () => {
           { attemptId: attemptC.id, status: "incorrect", partialScore: null },
           { attemptId: attemptB.id, status: "partial", partialScore: 3 },
         ],
+        adviceText: null,
       })
     )
     expectNoTeacherLayerWrites()
@@ -931,7 +939,7 @@ describe("AI 採点の問いかけ", () => {
 
   it("「その他」の欄: ↓ で入り、1行目の ↑ で戻り、2行目の ↑ では戻らない。中身は問いを移っても残る", async () => {
     renderView()
-    await card("移項で符号を誤った（3件）")
+    await card("移項で符号を誤った")
     await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}")
     const textbox = screen.getByRole("textbox", { name: "再採点への指示" })
     await waitFor(() => expect(textbox).toHaveFocus())
@@ -942,11 +950,11 @@ describe("AI 採点の問いかけ", () => {
     // 2行目の ↑ は普通の行の移動（欄に残る）
     fireEvent.keyDown(textbox, { key: "ArrowUp" })
     expect(textbox).toHaveFocus()
-    // 1行目の ↑ で上の選択肢（1件ずつ自分で採点する）へ戻る
+    // 1行目の ↑ で上の選択肢（自分で採点する）へ戻る
     ;(textbox as HTMLTextAreaElement).setSelectionRange(2, 2)
     fireEvent.keyDown(textbox, { key: "ArrowUp" })
     expect(textbox).not.toHaveFocus()
-    expect(focusedOption()).toHaveTextContent("1件ずつ自分で採点する")
+    expect(focusedOption()).toHaveTextContent("自分で採点する")
     // もう一度 ↓ で入ると、中身は残っている
     await userEvent.keyboard("{ArrowDown}")
     await waitFor(() =>
@@ -959,7 +967,7 @@ describe("AI 採点の問いかけ", () => {
 
   it("「その他」の欄: 変換中の Enter では送らず、Ctrl+Enter で再採点への指示として決める", async () => {
     renderView()
-    await card("移項で符号を誤った（3件）")
+    await card("移項で符号を誤った")
     await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}")
     const textbox = screen.getByRole("textbox", { name: "再採点への指示" })
     await waitFor(() => expect(textbox).toHaveFocus())
@@ -980,14 +988,15 @@ describe("AI 採点の問いかけ", () => {
         optionId: null,
         freeText: "単位は問わない",
         manualScores: [],
+        adviceText: null,
       })
     )
-    expect(await card("単位まで正しい（1件）")).toBeInTheDocument()
+    expect(await card("単位まで正しい")).toBeInTheDocument()
   })
 
   it("確定のとき、「その他」を選んでいない問いの欄の中身は捨てる", async () => {
     renderView()
-    await card("移項で符号を誤った（3件）")
+    await card("移項で符号を誤った")
     // 欄に書いたが、選択肢で決める
     await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}")
     const textbox = screen.getByRole("textbox", { name: "再採点への指示" })
@@ -996,9 +1005,9 @@ describe("AI 採点の問いかけ", () => {
     ;(textbox as HTMLTextAreaElement).setSelectionRange(0, 0)
     fireEvent.keyDown(textbox, { key: "ArrowUp" })
     await userEvent.keyboard("{ArrowUp}{ArrowUp}{Enter}")
-    await card("単位まで正しい（1件）")
+    await card("単位まで正しい")
     await userEvent.keyboard("{Enter}")
-    await card("どの案にも入らない答案（1件）")
+    await card("どの案にも入らない答案")
     await userEvent.keyboard("{Enter}")
 
     const review = await screen.findByRole("region", { name: "見直し" })
@@ -1009,8 +1018,8 @@ describe("AI 採点の問いかけ", () => {
       expect(fakeAiGradingApi.commitProposalResponse).toHaveBeenCalled()
     )
 
-    await userEvent.click(await logRow("移項で符号を誤った（3件）"))
-    await card("移項で符号を誤った（3件）")
+    await userEvent.click(await logRow("移項で符号を誤った"))
+    await card("移項で符号を誤った")
     await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}")
     await waitFor(() =>
       expect(
@@ -1029,15 +1038,15 @@ describe("AI 採点の問いかけ", () => {
         { runId: "group-run-1", scoringMethod: "deduction" }
       )
     )
-    await card("移項で符号を誤った（3件）")
+    await card("移項で符号を誤った")
     expectNoTeacherLayerWrites()
   })
 })
 
 describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
-  const SIGN = "移項で符号を誤った（3件）"
-  const UNIT = "単位まで正しい（1件）"
-  const OUTSIDE = "どの案にも入らない答案（1件）"
+  const SIGN = "移項で符号を誤った"
+  const UNIT = "単位まで正しい"
+  const OUTSIDE = "どの案にも入らない答案"
   const nextKeyLabel = formatKeyForDisplay(
     DEFAULT_KEYBINDINGS["choice.nextQuestion"]
   )
@@ -1053,6 +1062,7 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
     optionId,
     freeText: "",
     manualScores: [],
+    adviceText: null,
   })
 
   it("選択肢はクリックでもダブルクリックでも決めず、焦点を移すだけ", async () => {
@@ -1105,19 +1115,20 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
         optionId: null,
         freeText: "途中式を見て",
         manualScores: [],
+        adviceText: null,
       })
     )
     expect(await card(UNIT)).toBeInTheDocument()
   })
 
-  it("「1件ずつ自分で採点する」では、ボタンで始めて、付けた下書きで「次へ」決める", async () => {
+  it("「自分で採点する」では、ボタンで始めて、付けた下書きで「次へ」決める", async () => {
     renderView()
     await card(SIGN)
     await waitFor(() => expect(gridAnswerIds()).toEqual(["s-c", "s-b", "s-a"]))
     await userEvent.keyboard("{ArrowDown}{ArrowDown}")
     await userEvent.click(
       within(await card(SIGN)).getByRole("button", {
-        name: /^1件ずつ採点を始める/,
+        name: /^自分で採点を始める/,
       })
     )
     await waitFor(() => expect(selectedIdsShown()).toBe("s-c"))
@@ -1131,6 +1142,7 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
         manualScores: [
           { attemptId: attemptC.id, status: "incorrect", partialScore: null },
         ],
+        adviceText: null,
       })
     )
     expect(await card(UNIT)).toBeInTheDocument()
@@ -1186,6 +1198,7 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
         optionId: null,
         freeText: "単位は問わない",
         manualScores: [],
+        adviceText: null,
       })
     )
     await card(UNIT)
@@ -1202,7 +1215,7 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
     expect(await card(SIGN)).toBeInTheDocument()
   })
 
-  it("1件ずつ採点の最中も Ctrl+Enter で下書きを決めて次へ。部分点の入力欄を開いている間は効かない", async () => {
+  it("自分で採点の最中も Ctrl+Enter で下書きを決めて次へ。部分点の入力欄を開いている間は効かない", async () => {
     renderView()
     await card(SIGN)
     await waitFor(() => expect(gridAnswerIds()).toEqual(["s-c", "s-b", "s-a"]))
@@ -1225,6 +1238,7 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
         manualScores: [
           { attemptId: attemptC.id, status: "incorrect", partialScore: null },
         ],
+        adviceText: null,
       })
     )
     expect(await card(UNIT)).toBeInTheDocument()
@@ -1258,7 +1272,7 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
     renderView()
     await card(SIGN)
     await userEvent.click(
-      screen.getByRole("button", { name: "プロンプトのタブへ" })
+      screen.getByRole("button", { name: "採点指示のタブへ" })
     )
     await userEvent.keyboard("{Control>}{Enter}{/Control}")
     await userEvent.keyboard("{Control>}{Shift>}{Enter}{/Shift}{/Control}")
@@ -1277,12 +1291,12 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
     expect(rows).toHaveLength(3)
     expect(rows[0]).toHaveTextContent(SIGN)
     expect(rows[0]).toHaveAttribute("aria-current", "step")
-    expect(rows[1]).toHaveTextContent(`${UNIT}→ 未回答`)
-    expect(rows[2]).toHaveTextContent(`${OUTSIDE}→ 未回答`)
+    expect(rows[1]).toHaveTextContent(`${UNIT}1件未回答`)
+    expect(rows[2]).toHaveTextContent(`${OUTSIDE}1件未回答`)
     expect(within(log).queryByRole("button", { name: /変える/ })).toBeNull()
 
     // 決めたことの部分を押しても開く
-    await userEvent.click(within(rows[2]).getByText("→ 未回答"))
+    await userEvent.click(within(rows[2]).getByText("未回答"))
     await card(OUTSIDE)
     expect(await logRow(OUTSIDE)).toHaveAttribute("aria-current", "step")
     expect(await logRow(SIGN)).not.toHaveAttribute("aria-current")
@@ -1300,9 +1314,95 @@ describe("問いかけの「戻る」「次へ」と問いの一覧", () => {
     await userEvent.keyboard("{Enter}")
     await card(UNIT)
     await waitFor(async () =>
-      expect(await logRow(SIGN)).toHaveTextContent("→ 部分点 2点")
+      expect(await logRow(SIGN)).toHaveTextContent("部分点 2点")
     )
     expect(within(log).getAllByRole("button")).toHaveLength(3)
+  })
+})
+
+describe("助言（朱書き）の欄", () => {
+  const SIGN = "移項で符号を誤った"
+  const UNIT = "単位まで正しい"
+  const adviceField = async (title: string) =>
+    within(await card(title)).getByRole("textbox", { name: "助言（朱書き）" })
+
+  it("案の文案を入れて出し、欄の中のキーは採点にも選択にも使わない。Ctrl+Enter で直した文と一緒に決める", async () => {
+    renderView()
+    const field = await adviceField(SIGN)
+    expect(field).toHaveValue("移項の符号を見直そう")
+    expect(within(await card(SIGN)).queryByText(/助言：/)).toBeNull()
+
+    await userEvent.click(field)
+    await userEvent.clear(field)
+    // 採点キー（e）・Enter・↓ は欄の中では文字・改行・カーソルの移動のまま
+    await userEvent.type(field, "符号を変えてe{Enter}{ArrowDown}")
+    expect(field).toHaveValue("符号を変えてe\n")
+    expect(focusedOption()).toHaveTextContent("部分点 2点")
+    expect(fakeAiGradingApi.recordProposalDraft).not.toHaveBeenCalled()
+
+    await userEvent.keyboard("{Control>}{Enter}{/Control}")
+    await waitFor(() =>
+      expect(fakeAiGradingApi.recordProposalDraft).toHaveBeenCalledWith({
+        proposalId: "proposal-sign",
+        optionId: "option-sign-partial",
+        freeText: "",
+        manualScores: [],
+        adviceText: "符号を変えてe",
+      })
+    )
+    await card(UNIT)
+    // 一覧の行の2行目に、直した助言が出る
+    expect(await logRow(SIGN)).toHaveTextContent("符号を変えてe")
+    expectNoTeacherLayerWrites()
+  })
+
+  it("答える前に直した文は問いを移っても残り、答えたあとに直すと欄を抜けたときに答え直す", async () => {
+    renderView()
+    const field = await adviceField(SIGN)
+    await userEvent.click(field)
+    await userEvent.type(field, "ね")
+    // 答える前は欄を抜けても書かない（画面に持つだけ）
+    await userEvent.keyboard("{Escape}")
+    expect(field).not.toHaveFocus()
+    expect(fakeAiGradingApi.recordProposalDraft).not.toHaveBeenCalled()
+    await userEvent.click(await logRow(UNIT))
+    // 助言の無い案は空の欄
+    expect(await adviceField(UNIT)).toHaveValue("")
+    await userEvent.click(await logRow(SIGN))
+    expect(await adviceField(SIGN)).toHaveValue("移項の符号を見直そうね")
+
+    // 決めると直した文が一緒に書かれる
+    await userEvent.keyboard("{Enter}")
+    await waitFor(() =>
+      expect(fakeAiGradingApi.recordProposalDraft).toHaveBeenCalledWith(
+        expect.objectContaining({ adviceText: "移項の符号を見直そうね" })
+      )
+    )
+    await card(UNIT)
+
+    // 戻って空にし、欄を抜けると、同じ選択肢で答え直す（"" は助言なし）
+    await userEvent.click(await logRow(SIGN))
+    const reopened = await adviceField(SIGN)
+    await userEvent.clear(reopened)
+    await userEvent.keyboard("{Escape}")
+    await waitFor(() =>
+      expect(fakeAiGradingApi.recordProposalDraft).toHaveBeenLastCalledWith({
+        proposalId: "proposal-sign",
+        optionId: "option-sign-partial",
+        freeText: "",
+        manualScores: [],
+        adviceText: "",
+      })
+    )
+    expect(fakeAiGradingApi.recordProposalDraft).toHaveBeenCalledTimes(2)
+    // 文案に戻すと、直していない（null）として書く
+    await userEvent.type(reopened, "移項の符号を見直そう")
+    await userEvent.keyboard("{Escape}")
+    await waitFor(() =>
+      expect(fakeAiGradingApi.recordProposalDraft).toHaveBeenLastCalledWith(
+        expect.objectContaining({ adviceText: null })
+      )
+    )
   })
 })
 

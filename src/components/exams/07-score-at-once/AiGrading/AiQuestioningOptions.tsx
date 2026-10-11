@@ -12,7 +12,7 @@ interface AiQuestioningOptionsProps {
 }
 
 /**
- * 問いの選択肢の並び（問いの選択肢 →「1件ずつ自分で採点する」→「その他：再採点を指示する」）。
+ * 問いの選択肢の並び（問いの選択肢 →「自分で採点する」→「その他：再採点を指示する」）。
  * ↑↓ かクリックで焦点を移し（選ぶだけで決めない）、Enter かカードの「次へ」で決める
  */
 export function AiQuestioningOptions({
@@ -77,7 +77,7 @@ export function AiQuestioningOptions({
               onClick={() => pick(entryIndex)}
             >
               {cursor}
-              <span>1件ずつ自分で採点する</span>
+              <span>自分で採点する</span>
               <span />
               {flow.isManualActive && (
                 <span className="col-start-2 col-end-4 text-[10px] text-amber-700">

@@ -1,13 +1,13 @@
 /**
  * 20261011120000_add_ai_prompt_question_images のテスト
  *
- * プロンプトの問題の画像を何枚でも持てる表（AiPromptQuestionImage）を足し、旧列
+ * 採点指示の問題の画像を何枚でも持てる表（AiPromptQuestionImage）を足し、旧列
  * AiPrompt.questionImagePath に値がある行を、新しい表へ1行として写す。次を確かめる。
  *
- * - 旧列に値のあるプロンプトだけ、sortOrder 0 の行が1つできる（NULL・空文字は写さない）
- * - 新しい行の id は uuidv4、時刻は元のプロンプトの行を写す
+ * - 旧列に値のある採点指示だけ、sortOrder 0 の行が1つできる（NULL・空文字は写さない）
+ * - 新しい行の id は uuidv4、時刻は元の採点指示の行を写す
  * - 既存の行（AiPrompt）の id・時刻・旧列の値は変えない（docs/unified-archive-design.md §8 の1）
- * - プロンプトを消すと画像の行も消える
+ * - 採点指示を消すと画像の行も消える
  */
 import Database from "better-sqlite3"
 import * as fs from "fs"
@@ -73,7 +73,7 @@ describe("20261011120000_add_ai_prompt_question_images", () => {
     db.close()
   })
 
-  it("旧列に値のあるプロンプトだけ、sortOrder 0 の行が1つできる", () => {
+  it("旧列に値のある採点指示だけ、sortOrder 0 の行が1つできる", () => {
     const rows = questionImageRows()
     expect(
       rows.map((row) => ({
@@ -90,14 +90,14 @@ describe("20261011120000_add_ai_prompt_question_images", () => {
     ])
   })
 
-  it("新しい行の id は uuidv4、時刻は元のプロンプトの行を写す", () => {
+  it("新しい行の id は uuidv4、時刻は元の採点指示の行を写す", () => {
     const [row] = questionImageRows()
     expect(row.id).toMatch(UUID_V4_PATTERN)
     expect(row.createdAt).toBe(CREATED_AT)
     expect(row.updatedAt).toBe(UPDATED_AT)
   })
 
-  it("既存のプロンプトの行は変えない（旧列の値も残す）", () => {
+  it("既存の採点指示の行は変えない（旧列の値も残す）", () => {
     expect(db.prepare(`SELECT * FROM "AiPrompt" ORDER BY "id"`).all()).toEqual([
       {
         id: "empty-image",
@@ -120,7 +120,7 @@ describe("20261011120000_add_ai_prompt_question_images", () => {
     ])
   })
 
-  it("プロンプトを消すと画像の行も消える", () => {
+  it("採点指示を消すと画像の行も消える", () => {
     db.exec(`DELETE FROM "AiPrompt" WHERE "id" = 'with-image'`)
     expect(questionImageRows()).toEqual([])
   })

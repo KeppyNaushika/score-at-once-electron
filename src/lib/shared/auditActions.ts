@@ -265,12 +265,12 @@ const AUDIT_ACTIONS = {
   "exam.ai_prompt.create": {
     category: "exam",
     verb: "create",
-    label: "AI 採点のプロンプトを作成しました",
+    label: "AI採点の採点指示を作成しました",
   },
   "exam.ai_prompt.revise": {
     category: "exam",
     verb: "other",
-    label: "AI にプロンプトの改訂を依頼しました",
+    label: "AI に採点指示の改訂を依頼しました",
   },
   "exam.ai_grading.run": {
     category: "exam",

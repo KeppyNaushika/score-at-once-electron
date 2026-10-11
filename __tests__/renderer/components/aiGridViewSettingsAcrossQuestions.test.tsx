@@ -119,7 +119,7 @@ const display: AiGridDisplaySettings = {
 
 const NO_QUESTION_SCORES = new Map<string, QuestionScoreRow[]>()
 
-/** main の代わり。AI の実行もプロンプトも無い設問として返す */
+/** main の代わり。AI の実行も採点指示も無い設問として返す */
 function installFakeElectronApi() {
   Object.defineProperty(window, "electronAPI", {
     value: {

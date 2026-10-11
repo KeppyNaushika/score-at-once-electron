@@ -896,15 +896,18 @@ model AiRubricProposalMember {
 /// **答えは下書きで、確定するまで教員の層へは書かない**（docs/vlm-grading-design.md §3-5）。
 /// 確定したら `committedAt` を入れ、できた・結び付けた項目を `resultRubricItemId` に書く。
 /// 答えの種類は列に持たず導く: 選択肢（`optionId`）／再採点への指示（`freeText`）／
-/// 1件ずつ自分で採点する（どちらも無い。答案ごとの点は `scores`）
+/// 自分で採点する（どちらも無い。答案ごとの点は `scores`）
 model AiRubricProposalResponse {
   id                 String                          @id @default(uuid())
   proposalId         String
-  /// 選んだ選択肢。「その他」・1件ずつ採点なら null。選択肢が消えたら null
+  /// 選んだ選択肢。「その他」・自分で採点なら null。選択肢が消えたら null
   optionId           String?
   /// 「その他」に書いた再採点への指示（次の往復の1段目に教員の指示として添える）。それ以外は ""
   freeText           String                          @default("")
-  /// できた・結び付けた項目（確定したときに書く）。下書き・「その他」・1件ずつ採点なら null。項目が消えたら null
+  /// 教員が直した助言の文（確定で項目の助言にする）。null は直していない（既存の項目に当たる案はその項目の助言、
+  /// ほかは AI の文案 `adviceDraft` のまま）。"" は助言なし（朱書きを作らない）
+  adviceText         String?
+  /// できた・結び付けた項目（確定したときに書く）。下書き・「その他」・自分で採点なら null。項目が消えたら null
   resultRubricItemId String?
   /// 確定した日時。下書き（まだ教員の層へ書いていない答え）は null
   committedAt        DateTime?
@@ -920,7 +923,7 @@ model AiRubricProposalResponse {
   @@index([resultRubricItemId])
 }
 
-/// 「1件ずつ自分で採点する」と答えたときに、案の答案ごとに付けた点（答えの一部。書き換えない）。
+/// 「自分で採点する」と答えたときに、案の答案ごとに付けた点（答えの一部。書き換えない）。
 /// 付けていない答案の行は無い。確定すると、手での上書き（§4-5）として教員の採点に書く。
 /// `partialScore` は Decimal なので、IPC へ返す経路は必ず serializePrisma を通す
 model AiRubricProposalResponseScore {
@@ -949,7 +952,7 @@ model AiRubricProposalResponseScore {
 model AiAttemptResponse {
   id           String           @id @default(uuid())
   attemptId    String
-  /// "rescore"（この判定に直す）| "keep"（このままにする）| "manual"（1件ずつ自分で採点する）
+  /// "rescore"（この判定に直す）| "keep"（このままにする）| "manual"（自分で採点する）
   choice       String
   /// rescore・manual で付ける判定（ScoringStatus）。keep と、manual で付けていない答案は null
   status       String?

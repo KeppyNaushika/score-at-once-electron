@@ -1,5 +1,5 @@
 /**
- * 問いかけの「1件ずつ自分で採点する」のキー（docs/vlm-grading-design.md §3-5・§11-4）。
+ * 問いかけの「自分で採点する」のキー（docs/vlm-grading-design.md §3-5・§11-4）。
  *
  * カードの答案を ←→ で移り、いつもの採点キー（英字の採点状態・数字で部分点の入力欄）か
  * パネルの採点ボタンで、焦点のある答案に点を付ける。**付けた点は下書き**で（ここでは書かない）、
@@ -25,7 +25,7 @@ import {
 } from "./useAiScoringKeyCommands"
 
 interface UseQuestioningManualKeysOptions {
-  /** 1件ずつ採点している最中か（キーを効かせるか） */
+  /** 自分で採点している最中か（キーを効かせるか） */
   isActive: boolean
   cropRegion: QuestionAnswerRegionRow
   /** 焦点のある答案（受験者）。無ければ null */
@@ -61,11 +61,11 @@ export function useQuestioningManualKeys({
 
   useSceneCommand("choice.prevAnswer", () => onMove(-1), {
     condition,
-    metadata: { title: "前の答案へ（1件ずつ採点）", category: "選択の場面" },
+    metadata: { title: "前の答案へ（自分で採点）", category: "選択の場面" },
   })
   useSceneCommand("choice.nextAnswer", () => onMove(1), {
     condition,
-    metadata: { title: "次の答案へ（1件ずつ採点）", category: "選択の場面" },
+    metadata: { title: "次の答案へ（自分で採点）", category: "選択の場面" },
   })
   useStatusScoringCommands(scoreWithKey, (title) => ({
     condition,

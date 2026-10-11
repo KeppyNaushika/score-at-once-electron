@@ -166,6 +166,7 @@ export function buildCheckQuestioning({
       question:
         distinct.size > 2 ? "どれに揃えますか？" : "どちらに揃えますか？",
       detail: "",
+      advice: null,
       members: groupAttempts.map((attempt) => ({
         examStudentId: attempt.examStudentId,
         attemptId: attempt.id,
@@ -204,6 +205,7 @@ export function buildCheckQuestioning({
           ? `AI は「${finding}」と見ています。`
           : "AI の所見はありません。",
         detail: "",
+        advice: null,
         members: [
           { examStudentId: attempt.examStudentId, attemptId: attempt.id },
         ],

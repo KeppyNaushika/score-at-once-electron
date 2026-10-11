@@ -34,7 +34,7 @@ const imageFilesOf = (files: readonly File[]) =>
   files.filter((file) => file.type.startsWith("image/"))
 
 /**
- * プロンプトの問題の画像（何枚でも。docs/vlm-grading-design.md §3-1）。1段目で、この並び順に
+ * 採点指示の問題の画像（何枚でも。docs/vlm-grading-design.md §3-1）。1段目で、この並び順に
  * 全部送る。ファイル（画像・PDF）を選ぶか、画像を貼り付け（Ctrl/⌘+V）て、範囲を切り出して取り込む
  */
 export function AiQuestionImagesField({

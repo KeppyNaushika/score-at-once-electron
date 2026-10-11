@@ -2,10 +2,10 @@
  * 統合アーカイブ（.sao）での AI 採点の記録（選べる項目 `aiGradingRecords`）の範囲と振り直し
  *
  * - 選ばなければ入らない（関連データではなく実験の記録。docs/vlm-grading-design.md §4-2）
- * - 選べば、書き出す試験の設問のプロンプト・実行・判定が入る
+ * - 選べば、書き出す試験の設問の採点指示・実行・判定が入る
  * - 採点と答案を外せば判定が外れる（判定は受験生を必須で参照する）
- * - 本人分だけにすれば、他の教員の実行とその判定が外れる（プロンプトは共有なので残る）
- * - プロンプトの問題の画像は、プロンプトに従う
+ * - 本人分だけにすれば、他の教員の実行とその判定が外れる（採点指示は共有なので残る）
+ * - 採点指示の問題の画像は、採点指示に従う
  * - 1段目の当てはまりと2段目の項目の案（選択肢・答案・答え）は、試行・実行に従う
  * - 「別で追加」で試験を振り直せば、AI 採点の記録も振り直る
  *
@@ -38,7 +38,7 @@ const SYNTHETIC_ROWS: Readonly<
       userId: "teacher",
     },
   },
-  // 同僚が最初に書き、教員が直したプロンプト
+  // 同僚が最初に書き、教員が直した採点指示
   AiPrompt: {
     firstPrompt: { cropRegionId: "region", createdByUserId: "colleague" },
     revisedPrompt: {
@@ -138,7 +138,7 @@ describe("AI 採点の記録の範囲", () => {
     })
   })
 
-  it("選べば、試験の設問のプロンプト・実行・判定が全員分入る", () => {
+  it("選べば、試験の設問の採点指示・実行・判定が全員分入る", () => {
     expect(
       includedIds({
         roots: { Exam: ["exam"] },
@@ -165,7 +165,7 @@ describe("AI 採点の記録の範囲", () => {
     })
   })
 
-  it("本人分だけにすると、他の教員の実行と判定が外れ、プロンプトは残る", () => {
+  it("本人分だけにすると、他の教員の実行と判定が外れ、採点指示は残る", () => {
     expect(
       includedIds({
         roots: { Exam: ["exam"] },
@@ -194,14 +194,14 @@ describe("AI 採点の記録の範囲", () => {
   })
 })
 
-describe("プロンプトの問題の画像の範囲", () => {
+describe("採点指示の問題の画像の範囲", () => {
   const includedImageIds = (selection: ArchiveSelection) => [
     ...(resolveArchiveScope(tableRows, selection).rows.get(
       "AiPromptQuestionImage"
     ) ?? []),
   ]
 
-  it("選ばなければ入らず、選べばプロンプトとともに入る（本人分だけでもプロンプトは共有なので残る）", () => {
+  it("選ばなければ入らず、選べば採点指示とともに入る（本人分だけでも採点指示は共有なので残る）", () => {
     expect(includedImageIds({ roots: { Exam: ["exam"] } })).toEqual([])
     expect(
       includedImageIds({
@@ -282,7 +282,7 @@ describe("1段目の当てはまりと2段目の項目の案の範囲", () => {
 })
 
 describe("AI 採点の記録の「別で追加」での振り直し", () => {
-  it("試験を振り直すと、プロンプト・実行・判定も振り直る（利用者と生徒は振り直さない）", () => {
+  it("試験を振り直すと、採点指示・実行・判定も振り直る（利用者と生徒は振り直さない）", () => {
     const idMap = renumberSeparateRows(
       [...tableRows].map(([table, rowsById]) => ({
         table,

@@ -27,7 +27,7 @@ interface AiRunCostEstimateProps {
 function describeEstimateBasis(basis: RunCostEstimate["basis"]): string[] {
   const inputLine =
     basis.input.kind === "measured_prompt"
-      ? `前置き: このプロンプトの過去 ${basis.input.sampleCount} 件の実測から`
+      ? `前置き: この採点指示の過去 ${basis.input.sampleCount} 件の実測から`
       : "前置き: 文面と画像から計算（目安）"
   const outputLine =
     basis.output.kind === "measured_question"

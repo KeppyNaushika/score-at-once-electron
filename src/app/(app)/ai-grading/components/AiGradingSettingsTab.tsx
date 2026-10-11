@@ -12,7 +12,7 @@ import { AiProviderSection } from "./AiProviderSection"
  *
  * 機能は同意するまで存在しないものとして扱う。このタブには入口と説明だけを置き、
  * 事業者ごとに同意した後で、キーの入力欄・接続テスト・送信の設定を出す。
- * 新しい実行やプロンプトに最初から入る値は「既定値」タブ（`AiGradingDefaultsTab`）。
+ * 新しい実行や採点指示に最初から入る値は「既定値」タブ（`AiGradingDefaultsTab`）。
  * 同意は端末・利用者・同意文の版ごと（`ai-providers.json`）で、組織単位のスイッチは無い。
  */
 export function AiGradingSettingsTab() {

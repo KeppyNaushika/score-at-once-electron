@@ -151,7 +151,7 @@ describe("表示する試行と印", () => {
     expect(resolveDisplayedAttempt(attempts)?.attempt.id).toBe("a-old")
   })
 
-  it("別のプロンプト・採用済み・採用後の変更を印にする", () => {
+  it("別の採点指示・採用済み・採用後の変更を印にする", () => {
     const review = reviewAnswer(
       makeAnswer("s", {
         attempts,
@@ -282,7 +282,7 @@ describe("表示する試行と印", () => {
     })
   })
 
-  it("既定のプロンプトは自分が最後に採点に使ったもの、無ければ最新", () => {
+  it("既定の採点指示は自分が最後に採点に使ったもの、無ければ最新", () => {
     const prompts = [makePrompt({ id: "p1" }), makePrompt({ id: "p2" })]
     expect(resolveDefaultPromptId(prompts, [], "user-1")).toBe("p2")
     expect(

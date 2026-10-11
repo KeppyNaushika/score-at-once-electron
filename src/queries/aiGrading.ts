@@ -6,7 +6,7 @@ import { rubricItemInvalidations } from "./rubric"
 import { questionScoresQuery } from "./scoring"
 
 /**
- * AI 採点（VLM 採点）のプロンプト・測定・実行（1段目・2段目）・採用・問いかけ
+ * AI 採点（VLM 採点）の採点指示・測定・実行（1段目・2段目）・採用・問いかけ
  * （docs/vlm-grading-design.md §3・§11）。
  *
  * **実行と試行は設問ごとに1本のキーへ載せる。** 採点も採用も「その設問」に書くので、
@@ -22,7 +22,7 @@ import { questionScoresQuery } from "./scoring"
 // 取得
 // =====================================================================
 
-/** 設問のプロンプト（どの教員が作ったものも。作成者付き。古い順） */
+/** 設問の採点指示（どの教員が作ったものも。作成者付き。古い順） */
 export const aiPromptsQuery = (examId: string, cropRegionId: string) =>
   queryOptions({
     queryKey: [...scopeKeys.exam(examId), "aiPrompts", cropRegionId] as const,
@@ -141,7 +141,7 @@ export const aiRunEstimateQuery = (
 // 書き込み
 // =====================================================================
 
-/** プロンプトを1行作る（直すときも新しい行。書き換え・削除の口は無い） */
+/** 採点指示を1行作る（直すときも新しい行。書き換え・削除の口は無い） */
 export const createAiPromptMutation = (examId: string, cropRegionId: string) =>
   defineMutation({
     mutationFn: (
@@ -150,13 +150,13 @@ export const createAiPromptMutation = (examId: string, cropRegionId: string) =>
     scope: { id: `exam:${examId}:aiPrompts:${cropRegionId}` },
     meta: {
       invalidates: [aiPromptsQuery(examId, cropRegionId).queryKey],
-      errorMessage: "プロンプトを保存できませんでした",
+      errorMessage: "採点指示を保存できませんでした",
     },
   })
 
 /**
  * 問題の画像を試験フォルダへ取り込む（DB には書かないので取り直すものは無い）。
- * 返ったパスを、プロンプトを保存するときに渡す
+ * 返ったパスを、採点指示を保存するときに渡す
  */
 export const importAiQuestionImageMutation = () =>
   defineMutation({
@@ -322,7 +322,7 @@ export const commitAiRubricProposalResponseMutation = (
     },
   })
 
-/** 問いかけで教員が直接決めた点（1件ずつ採点・AI チェックで直す点）を自分の採点として書く */
+/** 問いかけで教員が直接決めた点（自分で採点・AI チェックで直す点）を自分の採点として書く */
 export const writeAiQuestioningScoresMutation = (
   examId: string,
   cropRegionId: string

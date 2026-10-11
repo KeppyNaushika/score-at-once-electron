@@ -23,6 +23,8 @@ export interface QuestioningReviewSummary {
   overwrittenExamStudentIds: string[]
   /** 下書きで「その他：再採点を指示」と答えた問いの数 */
   instructionCount: number
+  /** 下書きで助言を直した問いの数（確定で項目の助言と朱書きが変わる） */
+  adviceEditCount: number
   /** 答えていない問いの数 */
   unansweredCount: number
   /** 下書きのある問いの数（0 なら確定するものが無い） */
@@ -84,6 +86,12 @@ export function summarizeQuestioningReview(
     instructionCount: states.filter(
       (state) => hasDraft(state) && state.decision?.kind === "instruction"
     ).length,
+    adviceEditCount: states.filter(
+      (state) =>
+        hasDraft(state) &&
+        state.step.advice !== null &&
+        state.step.advice.text.trim() !== state.step.advice.baseText.trim()
+    ).length,
     unansweredCount: states.filter((state) => state.decision === null).length,
     draftCount: states.filter(hasDraft).length,
   }
@@ -107,25 +115,17 @@ export function resolveOpenedStepId(
 }
 
 /**
- * 答えたあとに開く問い。並びの中で答えた問いより後ろの、答えていない問い。無ければ先頭からの
- * 答えていない問い（答えた問いは除く）。全部答えていれば null（見直しへ）
+ * 次の問い（答えたあと・「次へ」）。並びの中の1つ後ろ（答えてあっても、確定済みでも飛ばさない）。
+ * 最後の問いなら null（見直しへ）
  */
-export function nextUndecidedStepId(
+export function nextStepId(
   states: readonly QuestioningStepState[],
-  decidedStepId: string
+  currentStepId: string
 ): string | null {
-  const decidedIndex = states.findIndex(
-    (state) => state.step.id === decidedStepId
+  const currentIndex = states.findIndex(
+    (state) => state.step.id === currentStepId
   )
-  const rotated = [
-    ...states.slice(decidedIndex + 1),
-    ...states.slice(0, Math.max(decidedIndex, 0)),
-  ]
-  return (
-    rotated.find(
-      (state) => state.step.id !== decidedStepId && state.decision === null
-    )?.step.id ?? null
-  )
+  return currentIndex >= 0 ? (states[currentIndex + 1]?.step.id ?? null) : null
 }
 
 /**

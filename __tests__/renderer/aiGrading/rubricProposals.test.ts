@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from "vitest"
 
+import { proposalAdviceOf } from "@/components/exams/07-score-at-once/AiGrading/utils/gradingQuestions"
 import { estimateGroupingCost } from "@/components/exams/07-score-at-once/AiGrading/utils/groupingCostEstimate"
 import {
   type AiRubricProposalRow,
@@ -26,6 +27,24 @@ const FIXED_DATE = new Date("2026-10-01T00:00:00.000Z")
 
 type OptionRow = AiRubricProposalRow["options"][number]
 type ResponseRow = AiRubricProposalRow["responses"][number]
+type RubricItemRow = NonNullable<AiRubricProposalRow["matchedRubricItem"]>
+
+function makeRubricItem(adviceText: string, id = "item-1"): RubricItemRow {
+  return {
+    id,
+    cropRegionId: "region-1",
+    label: "単位の欠け",
+    effectKind: "adjust",
+    pointDelta: -1,
+    setStatus: null,
+    setScore: null,
+    adviceText,
+    sortOrder: 0,
+    createdByUserId: null,
+    createdAt: FIXED_DATE,
+    updatedAt: FIXED_DATE,
+  }
+}
 
 function makeOption(overrides: Partial<OptionRow> = {}): OptionRow {
   return {
@@ -50,7 +69,9 @@ function makeResponse(overrides: Partial<ResponseRow> = {}): ResponseRow {
     proposalId: "proposal-1",
     optionId: "option-1",
     freeText: "",
+    adviceText: null,
     resultRubricItemId: "item-1",
+    resultRubricItem: null,
     committedAt: FIXED_DATE,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
@@ -81,6 +102,7 @@ function makeProposal(
     description: "",
     adviceDraft: "単位を書こう。",
     matchedRubricItemId: null,
+    matchedRubricItem: null,
     sortOrder: 0,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
@@ -303,5 +325,54 @@ describe("2段目の費用の概算", () => {
       cacheReadTokens: 0,
       cacheWriteTokens: 0,
     })
+  })
+})
+
+describe("案の助言（助言の欄の文）", () => {
+  it("直していなければ AI の文案。当たる既存の項目があればその項目の今の助言", () => {
+    expect(proposalAdviceOf(makeProposal())).toEqual({
+      baseText: "単位を書こう。",
+      text: "単位を書こう。",
+    })
+    expect(
+      proposalAdviceOf(
+        makeProposal({
+          matchedRubricItemId: "item-1",
+          matchedRubricItem: makeRubricItem("単位に気をつけよう。"),
+        })
+      )
+    ).toEqual({
+      baseText: "単位に気をつけよう。",
+      text: "単位に気をつけよう。",
+    })
+  })
+
+  it("前に確定してできた項目があれば、その項目の今の助言を土台にする", () => {
+    const proposal = makeProposal({
+      responses: [
+        makeResponse({
+          adviceText: "確定した文",
+          resultRubricItem: makeRubricItem("項目で直した文"),
+        }),
+      ],
+    })
+    expect(proposalAdviceOf(proposal)).toEqual({
+      baseText: "項目で直した文",
+      text: "項目で直した文",
+    })
+  })
+
+  it("最新の答えが下書きで助言を直していれば、その文が効く（空は助言なし）", () => {
+    const draftOf = (adviceText: string | null) =>
+      makeProposal({
+        responses: [
+          makeResponse({ id: "draft", committedAt: null, adviceText }),
+        ],
+      })
+    expect(proposalAdviceOf(draftOf("cm まで書こう。")).text).toBe(
+      "cm まで書こう。"
+    )
+    expect(proposalAdviceOf(draftOf("")).text).toBe("")
+    expect(proposalAdviceOf(draftOf(null)).text).toBe("単位を書こう。")
   })
 })

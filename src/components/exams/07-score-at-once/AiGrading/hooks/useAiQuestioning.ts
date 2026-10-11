@@ -3,9 +3,9 @@
  *
  * 問い・選択肢・記録・見直しは左パネル（AI 採点／AI チェックのタブ）に出し、中央は
  * いつもの答案の一覧のまま。ここは両方が読むものを作業場に1つだけ持つ:
- * - 流れ（`useQuestioningFlow`）・確定（`useQuestioningCommit`）・1件ずつ採点のキー
+ * - 流れ（`useQuestioningFlow`）・確定（`useQuestioningCommit`）・自分で採点のキー
  * - 一覧を、いまの問いの答案に絞る（確信度の低い順。スイッチで外せる）
- * - 確定すると付く予定の点（一覧のマスに斜線で出す）と、1件ずつ採点の焦点の答案
+ * - 確定すると付く予定の点（一覧のマスに斜線で出す）と、自分で採点の焦点の答案
  *
  * タブを閉じているあいだ（mode が null）は、キーも絞り込みも斜線も効かせない。
  */
@@ -45,9 +45,11 @@ interface UseAiQuestioningOptions {
   studentAnswerImages: readonly StudentAnswerImageWithExamStudents[]
   /** 開いているタブの問いと、いまの答え */
   states: readonly QuestioningStepState[]
+  /** 決めたことを下書きとして書く（adviceText は直した助言。直していなければ null） */
   persistDecision: (
     step: QuestioningStep,
-    decision: QuestioningDecision
+    decision: QuestioningDecision,
+    adviceText: string | null
   ) => Promise<unknown>
   ownScoreOf: (examStudentId: string) => QuestioningScore | null
   /** AI 採点の案（選び直しの洗い出しと、点を加減する選択肢の点に使う）。チェックでは空 */
@@ -98,9 +100,13 @@ export function useAiQuestioning({
     setHasJustCommitted(false)
   }
   const persistAndReopen = useCallback(
-    (step: QuestioningStep, decision: QuestioningDecision) => {
+    (
+      step: QuestioningStep,
+      decision: QuestioningDecision,
+      adviceText: string | null
+    ) => {
       setHasJustCommitted(false)
-      return persistDecision(step, decision)
+      return persistDecision(step, decision, adviceText)
     },
     [persistDecision]
   )
@@ -216,7 +222,7 @@ export function useAiQuestioning({
     recalculation,
     hasJustCommitted,
     partialScore,
-    /** 1件ずつ自分で採点している最中か（採点ボタンを押せるか） */
+    /** 自分で採点している最中か（採点ボタンを押せるか） */
     isManualActive: cursorMember !== null,
     scoreCursor,
     summary,
@@ -233,7 +239,7 @@ export function useAiQuestioning({
       ])
     ),
     /**
-     * 1件ずつ自分で採点しているあいだ、一覧の選択の代わりに使うもの: 焦点の答案を選んでいる
+     * 自分で採点しているあいだ、一覧の選択の代わりに使うもの: 焦点の答案を選んでいる
      * ものとして出し、マスを選ぶと焦点をその答案へ移す（問いの外の答案へは移らない）。それ以外は null
      */
     gridSelectionOverride: cursorMember

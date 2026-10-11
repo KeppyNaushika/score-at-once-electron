@@ -1,5 +1,5 @@
 /**
- * AI 採点のテスト用の土台。試験・設問・答案画像（合成した PNG）・プロンプトを用意し、
+ * AI 採点のテスト用の土台。試験・設問・答案画像（合成した PNG）・採点指示を用意し、
  * 偽の事業者をつないだジョブの依存を返す。
  *
  * 答案画像は一時ディレクトリに合成する（実データは使わない）。
@@ -65,7 +65,7 @@ async function writeAnswerImage(absolutePath: string): Promise<void> {
     .toFile(absolutePath)
 }
 
-/** 試験1つ（1ページ・1設問・配点5・受験者 studentCount 人）と、答案画像・プロンプト */
+/** 試験1つ（1ページ・1設問・配点5・受験者 studentCount 人）と、答案画像・採点指示 */
 export async function createAiGradingFixture(
   testPrisma: PrismaClient,
   options: { studentCount?: number } = {}
