@@ -36,9 +36,8 @@ export interface DirtyDetail {
  * 押す・戻る・進むを同じダイアログに載せるために、保留するものを行き先から行為へ
  * 広げている。
  *
- * 行き来の中身をここに書かず関数で受け取るのは、`router.back()` なのか Electron の
- * セッション履歴への `goToIndex` なのか、Navigation API の `traverseTo` なのかを、
- * このコンテキストが知らずに済ませるため。
+ * 行き来の中身をここに書かず関数で受け取るのは、`router.back()` なのか
+ * Navigation API の `traverseTo` なのかを、このコンテキストが知らずに済ませるため。
  */
 type NavigationIntent =
   { kind: "push"; href: string } | { kind: "traverse"; traverse: () => void }
@@ -208,7 +207,7 @@ export function NavigationGuardProvider({
    *    を呼んでも例外は出ず、黙って遷移する**ので、呼ぶ前に見る。false になるのは
    *    (a) 別の文書への行き来（履歴の先頭＝ログイン前まで戻る場合だけ。
    *    アプリ内の遷移はすべて同じ文書なので通常は起こらない）と、(b) 画面に
-   *    触っていない状態で main 側から `goBack()` を呼んだとき。後者はアプリの
+   *    触っていない状態でスクリプトから行き来したとき。後者はアプリの
    *    履歴ボタン経由だが、そちらは `guardedTraverse` が先に確認を出している
    * 3. 書きかけが無いとき
    *

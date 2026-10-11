@@ -1,9 +1,10 @@
 "use client"
 
 import type { QueryClient } from "@tanstack/react-query"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { usePathname, useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 
 import { useNavigationGuardContext } from "@/contexts/NavigationGuardContext"
 import {
@@ -16,14 +17,13 @@ import { answerSheetDefinitionQuery } from "@/queries/answerSheetBuilder"
 import { courseworkDetailQuery } from "@/queries/coursework"
 import { examDetailQuery } from "@/queries/exam"
 import { gradeDetailQuery } from "@/queries/grade"
-import {
-  goToHistoryIndexMutation,
-  navigationStateQuery,
-} from "@/queries/navigation"
 
 /** 履歴メニューに表示する1エントリ（ラベル解決済み） */
 export interface NavigationMenuEntry {
+  /** 履歴の中の位置（戻る側・進む側を分けるのに使う） */
   index: number
+  /** 履歴のエントリの識別子（`navigation.traverseTo` の行き先。React の key にも使う） */
+  key: string
   label: string
   /** URL先頭セグメント（AppShellと同じセクションアイコンの選択に使う） */
   section: string
@@ -162,54 +162,67 @@ async function buildEntry(
 interface UseNavigationHistoryResult {
   canGoBack: boolean
   canGoForward: boolean
-  /** activeIndex を含む全履歴エントリ（新しい順に反転済み） */
+  /** 今いるエントリを含む全履歴エントリ（新しい順に反転済み） */
   entries: NavigationMenuEntry[]
   goBack: () => void
   goForward: () => void
-  goToIndex: (index: number) => void
+  /** 履歴のエントリ（`NavigationMenuEntry.key`）へ移る */
+  goToEntry: (key: string) => void
 }
 
 /**
- * Electron のセッション履歴を用いてブラウザ的な戻る/進む・履歴一覧を提供するフック。
- * 履歴状態は遷移（pathname 変化）ごとに再取得し、各エントリのラベルを非同期解決する。
+ * 窓のセッション履歴を Navigation API（`window.navigation`）で読み、ブラウザ的な
+ * 戻る/進む・履歴一覧を提供するフック。Electron の renderer もブラウザも Chromium なので、
+ * main に訊かずに同じコードで読める。Navigation API が無い環境（Chromium 以外のブラウザ・
+ * テスト環境）では、戻れない・進めない・一覧は空として扱う。
+ *
+ * 履歴状態は今いるエントリが変わるたび（`currententrychange`）に読み直し、各エントリの
+ * ラベルを非同期解決する。Alt+← やマウスの第4ボタンのようにアプリを通さない行き来でも、
+ * 履歴そのものを読むのでずれない。
  *
  * **移動は必ず未保存のガードを通す。** ここで `router.back()` を直に呼ぶと書きかけを
  * 黙って捨てる。包んでおけば、このフックを使う画面はどれも確認を通る。
  *
  * ガードは Navigation API の `navigate` でマウスの第4/第5ボタンも止めるが、
- * そちらは main 側から呼ぶ移動を取り消せないことがある（画面に触っていない状態で
- * `goBack()` を呼ぶと `cancelable` が false になる）。押す前に訊けるこちらを通す。
+ * そちらはスクリプトから起こした移動を取り消せないことがある（画面に触っていない状態で
+ * 行き来すると `cancelable` が false になる）。押す前に訊けるこちらを通す。
  */
 export function useNavigationHistory(): UseNavigationHistoryResult {
   const router = useRouter()
-  const pathname = usePathname()
   const queryClient = useQueryClient()
   const { guardedTraverse } = useNavigationGuardContext()
-  const { mutate: goToHistoryIndex } = useMutation(goToHistoryIndexMutation())
   const [canGoBack, setCanGoBack] = useState(false)
   const [canGoForward, setCanGoForward] = useState(false)
   const [entries, setEntries] = useState<NavigationMenuEntry[]>([])
 
-  const refresh = useCallback(() => {
+  useEffect(() => {
+    // Chromium 以外（`next dev` を素のブラウザで開いたとき）とテスト環境には無い
+    if (typeof window.navigation === "undefined") return
+    const navigation = window.navigation
     let cancelled = false
 
-    const run = async () => {
-      const state = await queryClient.fetchQuery(navigationStateQuery())
-      if (cancelled) return
+    const refresh = async () => {
+      setCanGoBack(navigation.canGoBack)
+      setCanGoForward(navigation.canGoForward)
 
-      setCanGoBack(state.canGoBack)
-      setCanGoForward(state.canGoForward)
-
+      const activeKey = navigation.currentEntry?.key
       const labeled = await Promise.all(
-        state.entries.map(async (entry) => {
-          const { label, section } = await buildEntry(queryClient, entry.url)
-          return {
-            index: entry.index,
-            label,
-            section,
-            isActive: entry.index === state.activeIndex,
-          }
-        })
+        navigation
+          .entries()
+          .filter((entry) => entry.url !== null)
+          .map(async (entry) => {
+            const { label, section } = await buildEntry(
+              queryClient,
+              entry.url ?? ""
+            )
+            return {
+              index: entry.index,
+              key: entry.key,
+              label,
+              section,
+              isActive: entry.key === activeKey,
+            }
+          })
       )
       if (cancelled) return
 
@@ -217,26 +230,31 @@ export function useNavigationHistory(): UseNavigationHistoryResult {
       setEntries(labeled.reverse())
     }
 
-    // 履歴が引けないとき（起動直後・テスト環境）はメニューを出さないだけ
-    void run().catch(() => undefined)
-
+    const handleCurrentEntryChange = () => {
+      void refresh()
+    }
+    void refresh()
+    navigation.addEventListener("currententrychange", handleCurrentEntryChange)
     return () => {
       cancelled = true
+      navigation.removeEventListener(
+        "currententrychange",
+        handleCurrentEntryChange
+      )
     }
   }, [queryClient])
 
-  // 遷移ごとに履歴状態を再取得する
-  useEffect(() => {
-    const cleanup = refresh()
-    return cleanup
-  }, [pathname, refresh])
-
-  const goToIndex = useCallback(
-    (index: number) =>
+  const goToEntry = useCallback(
+    (key: string) =>
       guardedTraverse(() => {
-        goToHistoryIndex(index)
+        // 一覧は Navigation API があるときしか作らないので、ここに来るなら在る
+        if (typeof window.navigation === "undefined") return
+        // 行き先が既に履歴から消えていれば拒否される。押したのに何も起きない画面にしない
+        void window.navigation.traverseTo(key).committed?.catch(() => {
+          toast.error("履歴を移動できませんでした")
+        })
       }),
-    [guardedTraverse, goToHistoryIndex]
+    [guardedTraverse]
   )
 
   const goBack = useCallback(
@@ -255,6 +273,6 @@ export function useNavigationHistory(): UseNavigationHistoryResult {
     entries,
     goBack,
     goForward,
-    goToIndex,
+    goToEntry,
   }
 }
