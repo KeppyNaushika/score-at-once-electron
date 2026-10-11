@@ -28,7 +28,8 @@ export const FILTER_SOURCE_LABELS: Record<FilterSource, string> = {
 export type AiGridFilterSettings = Record<FilterSource, StatusFilterSettings>
 
 /**
- * 既定。自分がまだ採点しておらず、AI の判定がある答案（これから確かめるもの）だけを出す
+ * 既定。自分がまだ採点していない答案を、AI の判定の有無によらず全て出す
+ * （AI の判定があるものはこれから確かめるもの、無いものはこれから AI に送るか自分で採点するもの）
  */
 export const DEFAULT_AI_GRID_FILTER_SETTINGS: AiGridFilterSettings = {
   mine: {
@@ -41,7 +42,7 @@ export const DEFAULT_AI_GRID_FILTER_SETTINGS: AiGridFilterSettings = {
     double_mark: false,
   },
   ai: {
-    unscored: false,
+    unscored: true,
     correct: true,
     partial: true,
     pending: true,

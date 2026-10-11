@@ -88,6 +88,7 @@ const ARCHIVE_TABLE_LABELS: Readonly<Record<string, string>> = {
   AsbManuscriptPaper: "解答用紙の原稿用紙",
   AsbCharGuide: "解答用紙の字数ガイド",
   AiPrompt: "AI採点のプロンプト",
+  AiPromptQuestionImage: "AI採点のプロンプトの問題の画像",
   AiGradingRun: "AI採点の実行",
   AiGradingAttempt: "AI採点の判定",
   AiAttemptRubricMatch: "AI採点の項目の当てはまり",

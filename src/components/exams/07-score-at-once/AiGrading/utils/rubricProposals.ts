@@ -6,13 +6,9 @@
  */
 
 import type { RubricItemEffect } from "@/lib/shared/rubric/rubricItemValidator"
-import type {
-  AiRubricProposalRunRow,
-  AnswerAiRubricProposalInput,
-} from "@/queries/aiGrading"
+import type { AiRubricProposalRunRow } from "@/queries/aiGrading"
 import { toAiGradingConfidence } from "@/types/aiGrading.types"
 
-import type { OwnRubricCell } from "../../Rubric/utils/rubricApplicationState"
 import type { AiGradingAttemptRow } from "../types"
 
 /** 項目の案1つ（選択肢・答案（試行付き）・答え付き） */
@@ -31,11 +27,18 @@ export function latestProposalResponse(
   return proposal.responses.at(-1) ?? null
 }
 
-/** 問いかけがまだ答えられていないか（案に答えの行が無い） */
-export function isProposalUnanswered(
-  proposal: Pick<AiRubricProposalRow, "responses">
-): boolean {
-  return proposal.responses.length === 0
+/**
+ * 答えの種類。option は選択肢を選んだ、instruction は「その他」に再採点への指示を書いた、
+ * manual は1件ずつ自分で採点した（答案ごとの点は答えの `scores`。前の版の「選ばずに進んだ」答えも、
+ * 点の無い1件ずつ採点として読む）。答えの行に種類の列は持たず、選択肢と指示の有無から導く
+ */
+export type AiRubricProposalAnswerKind = "option" | "instruction" | "manual"
+
+export function proposalAnswerKindOf(
+  response: Pick<AiRubricProposalResponseRow, "optionId" | "freeText">
+): AiRubricProposalAnswerKind {
+  if (response.optionId !== null) return "option"
+  return response.freeText.trim() === "" ? "manual" : "instruction"
 }
 
 /**
@@ -137,93 +140,35 @@ export function optionEffectOf(
   }
 }
 
-/** 教員の答え方。選択肢を選ぶか、「その他」に指示を書く */
-export type AiRubricProposalChoice =
-  | {
-      kind: "option"
-      optionId: string
-      /** 新しく作る項目の判断理由を直したとき（省けば案の名前） */
-      label?: string
-      /** 新しく作る項目の助言を直したとき（省けば案の助言の文案） */
-      adviceText?: string
-    }
-  | { kind: "other"; freeText: string }
-
 /**
- * 項目を当てる答案（受験者）。案の答案から、教員が自分で決めた答案を外す:
- * 手での上書きのある答案と、項目を当てずに採点キーで点を付けた答案（§3-5 の「例外」）
- */
-function proposalTargetExamStudentIds(
-  proposal: Pick<AiRubricProposalRow, "members">,
-  ownCellOf: (examStudentId: string) => OwnRubricCell
-): string[] {
-  const examStudentIds = [
-    ...new Set(proposal.members.map((member) => member.attempt.examStudentId)),
-  ]
-  return examStudentIds.filter((examStudentId) => {
-    const cell = ownCellOf(examStudentId)
-    if (cell.overridesRubric) return false
-    const scoredByKeys =
-      cell.questionScore !== undefined &&
-      cell.questionScore.status !== "unscored" &&
-      cell.appliedItemIds.size === 0
-    return !scoredByKeys
-  })
-}
-
-/** 答えから、main の口へ渡す引数を作る */
-export function buildProposalAnswerInput(
-  proposal: Pick<AiRubricProposalRow, "id" | "members">,
-  choice: AiRubricProposalChoice,
-  ownCellOf: (examStudentId: string) => OwnRubricCell
-): AnswerAiRubricProposalInput {
-  const examStudentIds = proposalTargetExamStudentIds(proposal, ownCellOf)
-  if (choice.kind === "other") {
-    return {
-      proposalId: proposal.id,
-      optionId: null,
-      freeText: choice.freeText,
-      examStudentIds,
-    }
-  }
-  return {
-    proposalId: proposal.id,
-    optionId: choice.optionId,
-    freeText: "",
-    examStudentIds,
-    ...(choice.label === undefined ? {} : { label: choice.label }),
-    ...(choice.adviceText === undefined
-      ? {}
-      : { adviceText: choice.adviceText }),
-  }
-}
-
-/**
- * 答えると、ルーブリック項目に何が起こるか（main の `answerAiRubricProposal` と同じ決め方）。
+ * 確定すると、ルーブリック項目に何が起こるか（main の `commitAiRubricProposalResponse` と同じ決め方）。
  *
  * - link: 既存の項目に当たる案。その項目を当てるだけで、値は変えない
- * - update: 前の答えで作った項目がある。その項目の効き方を選んだ選択肢に変える（選び直し。
+ * - update: 前に確定した答えで作った項目がある。その項目の効き方を選んだ選択肢に変える（選び直し。
  *   他の採点者の点も変わるので、確認と計算し直しが要る）
  * - create: 新しい項目を作る
- * - instruction: 「その他」。指示を記録し、前の答えで当てた項目があれば外す
+ * - unapply: 「その他」か1件ずつ採点。前に確定した答えで当てた項目があれば外す
  */
 export type AiRubricProposalAnswerPlan =
   | { kind: "link" | "update"; rubricItemId: string }
   | { kind: "create" }
-  | { kind: "instruction"; unappliedRubricItemId: string | null }
+  | { kind: "unapply"; unappliedRubricItemId: string | null }
 
 export function planProposalAnswer(
   proposal: Pick<AiRubricProposalRow, "matchedRubricItemId" | "responses">,
-  choice: AiRubricProposalChoice,
+  choosesOption: boolean,
   livingRubricItemIds: ReadonlySet<string>
 ): AiRubricProposalAnswerPlan {
-  const previousItemId = latestProposalResponse(proposal)?.resultRubricItemId
+  const previousItemId = proposal.responses.findLast(
+    (response) =>
+      response.committedAt !== null && response.resultRubricItemId !== null
+  )?.resultRubricItemId
   const livingPreviousItemId =
     previousItemId && livingRubricItemIds.has(previousItemId)
       ? previousItemId
       : null
-  if (choice.kind === "other") {
-    return { kind: "instruction", unappliedRubricItemId: livingPreviousItemId }
+  if (!choosesOption) {
+    return { kind: "unapply", unappliedRubricItemId: livingPreviousItemId }
   }
   if (
     proposal.matchedRubricItemId !== null &&

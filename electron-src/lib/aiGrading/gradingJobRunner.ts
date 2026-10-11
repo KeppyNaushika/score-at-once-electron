@@ -9,6 +9,8 @@
  *   進み具合を押し出す。run ごとに AbortController を持ち、中止できる。最後まで送れたら
  *   **そのまま2段目（項目の案）を続ける**（`groupingRunner.ts`）
  * - バッチ（batch）: まとめて事業者へ預け、回収は `batchPoller.ts` が行う（回収したら2段目を続ける）
+ * - 採点チェック（purpose: check）: 採点済みの答案を1段目だけで判定させる。**教員の点は送らない**
+ *   （送るのは採点のときと同じプロンプトと答案の画像だけ）。比べるのは画面の側で、2段目は続けない
  *
  * 認証・権限の失敗は、どの答案でも同じ結果になるので run 全体を止める。
  */
@@ -19,8 +21,11 @@ import {
   buildStage1RequestParts,
   STAGE1_TEMPLATE_VERSION,
 } from "@/lib/shared/aiGrading/stage1Grading"
-import type { AiGradingRunMode } from "@/types/aiGrading.types"
-import { isAiGradingRunMode } from "@/types/aiGrading.types"
+import type {
+  AiGradingRunMode,
+  AiGradingStage1Purpose,
+} from "@/types/aiGrading.types"
+import { isAiGradingRunMode, isStage1RunPurpose } from "@/types/aiGrading.types"
 
 import {
   closePendingAiGradingAttempts,
@@ -65,6 +70,8 @@ const IMAGE_SCALE_MAX = 4
 
 /** 採点を始めるときに渡すもの */
 export interface StartGradingRunInput {
+  /** 採点（grade。終われば2段目が続く）か、採点チェック（check。1段目だけ） */
+  purpose: AiGradingStage1Purpose
   promptId: string
   /** 送る答案。renderer が選び方（§3-2）に従って選んだもの */
   examStudentIds: string[]
@@ -78,6 +85,11 @@ export interface StartGradingRunInput {
 
 /** 入力を確かめる。正しくなければ投げる（何も作らない） */
 function assertValidStartInput(input: StartGradingRunInput): void {
+  if (!isStage1RunPurpose(input.purpose)) {
+    throw new Error(
+      `実行の目的の値が正しくありません: ${String(input.purpose)}`
+    )
+  }
   if (input.examStudentIds.length === 0) {
     throw new Error("採点する答案がありません")
   }
@@ -115,6 +127,7 @@ function startingRunKeyOf(
 ): string {
   return JSON.stringify([
     actorUserId,
+    input.purpose,
     input.promptId,
     [...input.examStudentIds].sort(),
   ])
@@ -200,7 +213,7 @@ export function createGradingJobRunner(
     }
 
     const points = cropRegion.points
-    const { questionImage, modelAnswerImage } = await loadPromptImages({
+    const { questionImages, modelAnswerImage } = await loadPromptImages({
       prompt,
       cropRegion,
       examPage: cropRegion.examPage,
@@ -218,7 +231,7 @@ export function createGradingJobRunner(
     const { systemText, fixedParts } = buildStage1RequestParts({
       prompt,
       points,
-      questionImage,
+      questionImages,
       modelAnswerImage,
       rubricItems,
       teacherInstructions,
@@ -237,7 +250,7 @@ export function createGradingJobRunner(
       {
         userId: actorUserId,
         promptId: sendingPrompt.id,
-        purpose: "grade",
+        purpose: input.purpose,
         templateVersion: STAGE1_TEMPLATE_VERSION,
         provider: input.provider,
         model: input.model,
@@ -310,8 +323,8 @@ export function createGradingJobRunner(
     })
       .then(async (status) => {
         activeControllers.delete(run.id)
-        // 最後まで送れたら、そのまま2段目（項目の案）を続ける。中止・失敗では続けない
-        if (status === "ended") {
+        // 最後まで送れたら、そのまま2段目（項目の案）を続ける。中止・失敗と、採点チェックでは続けない
+        if (status === "ended" && input.purpose === "grade") {
           await groupingRunner.runGroupingAfterGrading(run.id, actorUserId)
         }
       })

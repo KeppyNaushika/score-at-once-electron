@@ -61,6 +61,7 @@ const examStudentIds = () =>
   fixture.exam.examStudents.map((examStudent) => examStudent.id)
 
 const startInput = (mode: "realtime" | "batch" = "realtime") => ({
+  purpose: "grade" as const,
   promptId: fixture.prompt.id,
   examStudentIds: examStudentIds(),
   provider: "anthropic" as const,
@@ -75,6 +76,56 @@ const attemptsOf = (runId: string) =>
     where: { runId },
     orderBy: { examStudentId: "asc" },
   })
+
+describe("採点チェック", () => {
+  it("教員の採点は送らず、1段目だけを走らせて2段目を続けない", async () => {
+    const teacherComment = "先生だけが知っている採点の理由"
+    for (const examStudent of fixture.exam.examStudents) {
+      await testPrisma.questionScore.create({
+        data: {
+          examStudentId: examStudent.id,
+          cropRegionId: fixture.cropRegion.id,
+          userId: fixture.exam.user.id,
+          status: "partial",
+          partialScore: 4.25,
+          comment: teacherComment,
+        },
+      })
+    }
+    const { provider, gradeRequests, groupingRequests } = createFakeProvider({
+      respond: async () => completedResponse(PARTIAL_JUDGEMENT),
+    })
+    const runner = createGradingJobRunner(
+      createTestDependencies(provider, fixture.dataDirectory)
+    )
+    const { run, finished } = await runner.startGradingRun(
+      { ...startInput(), purpose: "check" },
+      fixture.exam.user.id
+    )
+    await finished
+
+    const storedRun = await testPrisma.aiGradingRun.findUniqueOrThrow({
+      where: { id: run.id },
+    })
+    expect(storedRun).toMatchObject({ purpose: "check", status: "ended" })
+    expect(gradeRequests).toHaveLength(3)
+    // 送った文面に教員の判定・点・理由が入っていない
+    gradeRequests.forEach((request) => {
+      const sentText = JSON.stringify([
+        request.systemText,
+        request.fixedParts,
+        request.variableParts.filter((part) => part.kind !== "image"),
+      ])
+      expect(sentText).not.toContain(teacherComment)
+      expect(sentText).not.toContain("4.25")
+    })
+    // 2段目は続けない
+    expect(groupingRequests).toHaveLength(0)
+    expect(
+      await testPrisma.aiGradingRun.count({ where: { purpose: "group" } })
+    ).toBe(0)
+  })
+})
 
 describe("その場の採点", () => {
   it("答案ごとに試行を作り、検証を通った判定を書く", async () => {

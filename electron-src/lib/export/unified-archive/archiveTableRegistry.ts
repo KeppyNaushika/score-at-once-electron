@@ -542,6 +542,12 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
       nullable("createdByUserId", "User"),
     ],
   },
+  AiPromptQuestionImage: {
+    role: "optional",
+    option: "aiGradingRecords",
+    owner: ["promptId"],
+    references: [required("promptId", "AiPrompt")],
+  },
   AiGradingRun: {
     role: "optional",
     option: "aiGradingRecords",
@@ -607,6 +613,22 @@ export const ARCHIVE_TABLES: Readonly<Record<string, ArchiveTableSpec>> = {
       nullable("optionId", "AiRubricProposalOption"),
       nullable("resultRubricItemId", "RubricItem"),
     ],
+  },
+  // 問いかけの答えの下書きと確定（§3-5）。答え・試行に従う
+  AiRubricProposalResponseScore: {
+    role: "optional",
+    option: "aiGradingRecords",
+    owner: ["responseId"],
+    references: [
+      required("responseId", "AiRubricProposalResponse"),
+      required("attemptId", "AiGradingAttempt"),
+    ],
+  },
+  AiAttemptResponse: {
+    role: "optional",
+    option: "aiGradingRecords",
+    owner: ["attemptId"],
+    references: [required("attemptId", "AiGradingAttempt")],
   },
   // 監査ログの対象。ログに従う（対象側の targetId は外部キーではない多態参照）
   AuditLogTarget: {

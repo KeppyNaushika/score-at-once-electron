@@ -4,15 +4,20 @@
  *
  * AI の層は追記だけ。案は書き換えず、答え直しは新しい答えの行（最新が効く）。
  *
- * **教員の層へ書くのは、答えを反映するとき（`answerAiRubricProposal`）だけ。** 選んだ
- * 選択肢からルーブリック項目を作り（既存の項目に当たる案なら作らない）、案の答案の
- * 操作者自身の採点行に当てる。点の計算と朱書きの合わせは renderer が、返した採点行から行う。
+ * **答えは下書き（`recordAiRubricProposalDraft`）で、教員の層へ書くのは確定のとき
+ * （`commitAiRubricProposalResponse`）だけ。** 選んだ選択肢からルーブリック項目を作り（既存の項目に
+ * 当たる案なら作らない）、案の答案の操作者自身の採点行に当てる。点の計算と朱書きの合わせは
+ * renderer が、返した採点行から行う。
  */
 
 import { Prisma } from "@prisma/client"
 
 import type { ValidatedStage2Proposal } from "@/lib/shared/aiGrading/stage2ResponseValidator"
 
+import {
+  assertQuestioningScores,
+  type QuestioningScoreInput,
+} from "./aiQuestioningScore"
 import { recordAuditLog } from "./auditLog"
 import { resolveExamScopeByCropRegion } from "./auditScope"
 import { cropRegionAuditTarget } from "./auditTargets"
@@ -83,8 +88,10 @@ async function listLivingRubricItemIds(
 }
 
 /**
- * 教員が問いかけの「その他」に書いた指示のうち、今も効いているもの（案ごとの最新の答えが
- * 「その他」のもの）を、答えた順に。次の往復の1段目・2段目に「教員の指示」として添える。
+ * 教員が問いかけの「その他」に書いた再採点への指示のうち、今も効いているもの（案ごとの最新の
+ * **確定した**答えが「その他」のもの）を、答えた順に。次の往復の1段目（答案ごとの採点のやり直し）に
+ * だけ「教員の指示」として添える（2段目の案の作り直しへの指示ではない）。下書きの答えと、
+ * 1件ずつ採点した答え（指示が空）は入れない。
  *
  * 問いかけは run を実行した教員にだけ出すので、その教員の2段目の実行の案から引く。
  * 同じ文は1つにまとめる
@@ -96,7 +103,10 @@ export async function listTeacherInstructions(
   const proposals = await prisma.aiRubricProposal.findMany({
     where: { run: { userId, purpose: "group", prompt: { cropRegionId } } },
     include: {
-      responses: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
+      responses: {
+        where: { committedAt: { not: null } },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      },
     },
   })
   const latestResponses = proposals.flatMap((proposal) => {
@@ -119,7 +129,7 @@ export async function listTeacherInstructions(
 
 /**
  * 設問の、その教員の2段目の実行を古い順に、案（選択肢・答案・答えの木）付きで。
- * 答案は試行（判定・確信度・受験者）を同梱する。氏名は画面が受験者から引く
+ * 答案は試行（判定・確信度・受験者）を、答えは1件ずつ採点した点を同梱する。氏名は画面が受験者から引く
  */
 export async function listAiRubricProposalRunsByCropRegion(
   cropRegionId: string,
@@ -132,31 +142,16 @@ export async function listAiRubricProposalRunsByCropRegion(
         include: {
           options: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
           members: { include: { attempt: true }, orderBy: { id: "asc" } },
-          responses: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
+          responses: {
+            include: { scores: { orderBy: { id: "asc" } } },
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          },
         },
         orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
       },
     },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   })
-}
-
-/** 問いかけへの答えの引数 */
-export interface AnswerAiRubricProposalInput {
-  proposalId: string
-  /** 選んだ選択肢。「その他」なら null */
-  optionId: string | null
-  /** 「その他」に書いた指示（選択肢を選んだときは ""） */
-  freeText: string
-  /**
-   * 項目を当てる答案（受験者）。案の答案のうち、renderer が選んだもの
-   * （採点キーで付けた点・手での上書きのある答案は外す）。「その他」では外す答案
-   */
-  examStudentIds: string[]
-  /** 新しく作る項目の判断理由（省けば案の名前） */
-  label?: string
-  /** 新しく作る項目の助言（省けば案の助言の文案。教員が直せる） */
-  adviceText?: string
 }
 
 /** 答える案の木（実行・設問・選択肢・答案・答え） */
@@ -174,29 +169,120 @@ async function findProposalForAnswer(proposalId: string) {
   return proposal
 }
 
+/** 問いかけへの答え（下書き）の引数 */
+export interface RecordAiRubricProposalDraftInput {
+  proposalId: string
+  /** 選んだ選択肢。「その他」・1件ずつ採点なら null */
+  optionId: string | null
+  /** 「その他」に書いた再採点への指示（それ以外は ""） */
+  freeText: string
+  /**
+   * 1件ずつ自分で採点したときの点（案の答案の試行ごと。付けていない答案は入れない）。
+   * 選択肢・「その他」のときは空
+   */
+  manualScores: QuestioningScoreInput[]
+}
+
 /**
- * 問いかけに答える（§3-5）。
+ * 問いかけに答える（下書き。§3-5）。答えの行（と、1件ずつ採点した点）を書くだけで、
+ * 教員の層（項目・適用・採点）には触らない。答え直しは新しい行（最新が効く）。
  *
- * - 選択肢を選んだとき: 項目を決め（既存の項目に当たる案はその項目。前の答えで作った項目が
- *   あれば、その項目の効き方を選んだ選択肢に変える。どちらも無ければ新しく作る）、答えを
- *   記録してから、渡した答案の操作者自身の採点行に当てる
- * - 「その他」のとき: 指示を記録する。前の答えで当てた項目があれば、渡した答案から外す
- *   （その案の答案は未採点に戻り、次の往復に回る）
- *
- * 答えられるのは、その案を出した実行の教員だけ。答えの記録を当てるより先にするのは、当てる
- * 途中で失敗して答え直したときに、同じ案から項目を2つ作らないため。
- *
- * 答えの行（できた・結び付けた項目は `resultRubricItemId`）と、当て外ししたマスの採点行
- * （適用付き）を返す。renderer はこれで点を計算して書き、朱書きを合わせる
+ * 答えの種類は3つで、混ぜない: 選択肢（`optionId`）／「その他」（`freeText`）／1件ずつ採点
+ * （どちらも無く、`manualScores` だけ。点を1件も付けずに答えてもよい）。
+ * 答えられるのは、その案を出した実行の教員だけ
  */
-export async function answerAiRubricProposal(
-  input: AnswerAiRubricProposalInput,
+export async function recordAiRubricProposalDraft(
+  input: RecordAiRubricProposalDraftInput,
   actorUserId: string
 ) {
   const proposal = await findProposalForAnswer(input.proposalId)
   if (proposal.run.userId !== actorUserId) {
     throw new Error("問いかけに答えられるのは、AI 採点を実行した教員だけです")
   }
+  const freeText = input.freeText.trim()
+  if (input.optionId !== null) {
+    if (freeText !== "" || input.manualScores.length > 0) {
+      throw new Error("選択肢を選んだ答えに、指示や点は付けません")
+    }
+    if (!proposal.options.some((option) => option.id === input.optionId)) {
+      throw new Error("選んだ選択肢が、この案のものではありません")
+    }
+  } else if (freeText !== "" && input.manualScores.length > 0) {
+    throw new Error("「その他」の指示と、1件ずつ採点した点は一緒に答えません")
+  }
+  const memberAttemptIds = new Set(
+    proposal.members.map((member) => member.attemptId)
+  )
+  if (
+    input.manualScores.some((score) => !memberAttemptIds.has(score.attemptId))
+  ) {
+    throw new Error("案に入っていない答案の点が含まれています")
+  }
+  const points = proposal.run.prompt.cropRegion.points
+  assertQuestioningScores(input.manualScores, points)
+
+  return prisma.aiRubricProposalResponse.create({
+    data: {
+      proposalId: proposal.id,
+      optionId: input.optionId,
+      freeText,
+      scores: {
+        create: input.manualScores.map((score) => ({
+          attemptId: score.attemptId,
+          status: score.status,
+          partialScore:
+            score.partialScore === null
+              ? null
+              : new Prisma.Decimal(score.partialScore),
+        })),
+      },
+    },
+    include: { scores: true },
+  })
+}
+
+/** 答えの確定の引数 */
+export interface CommitAiRubricProposalResponseInput {
+  /** 確定する答え（下書き） */
+  responseId: string
+  /**
+   * 項目を当てる（「その他」・1件ずつ採点なら外す）答案（受験者）。案の答案のうち renderer が
+   * 選んだもの（AI 採点では、採点済みの答案も案に入れて置き換えるので、ふつうは案の答案すべて）
+   */
+  examStudentIds: string[]
+}
+
+/**
+ * 問いかけの答え（下書き）を、教員の層へ書いて確定する（§3-5）。
+ *
+ * - 選択肢: 項目を決め（既存の項目に当たる案はその項目。前に確定した答えで作った項目があれば、
+ *   その項目の効き方を選んだ選択肢に変える。どちらも無ければ新しく作る）、渡した答案の
+ *   操作者自身の採点行に当て、答えを確定済みにする
+ * - 「その他」: 前に確定した答えで当てた項目があれば渡した答案から外し、答えを確定済みにする
+ *   （その案の答案は次の往復の1段目に回せる）
+ * - 1件ずつ採点: 前に確定した答えで当てた項目があれば外す。**確定済みにはしない** — 点は
+ *   renderer が項目の点のあとに書き（`writeAiQuestioningScores`）、書き終えてから
+ *   `markAiQuestioningCommitted` で確定済みにする（点を書く前に失敗しても、下書きが残って確定し直せる）
+ *
+ * 項目を決めたら、当てる前に答えの行へ `resultRubricItemId` を書く。当てる途中で失敗して確定し直したとき、
+ * 同じ案から項目を2つ作らないため。確定済みの答えを渡したら、何もせずに返す。
+ *
+ * 答えの行と、当て外ししたマスの採点行（適用付き）を返す。renderer はこれで点を計算して書き、朱書きを合わせる
+ */
+export async function commitAiRubricProposalResponse(
+  input: CommitAiRubricProposalResponseInput,
+  actorUserId: string
+) {
+  const draft = await prisma.aiRubricProposalResponse.findUnique({
+    where: { id: input.responseId },
+  })
+  if (!draft) throw new Error("問いかけの答えが見つかりません")
+  const proposal = await findProposalForAnswer(draft.proposalId)
+  if (proposal.run.userId !== actorUserId) {
+    throw new Error("問いかけに答えられるのは、AI 採点を実行した教員だけです")
+  }
+  if (draft.committedAt !== null) return { response: draft, touchedRows: [] }
+
   const { cropRegion } = proposal.run.prompt
   const memberExamStudentIds = new Set(
     proposal.members.map((member) => member.attempt.examStudentId)
@@ -208,25 +294,37 @@ export async function answerAiRubricProposal(
   ) {
     throw new Error("案に入っていない答案が含まれています")
   }
-  const previousResultItemId = proposal.responses.at(-1)?.resultRubricItemId
+  // 前に確定した答えで作った・結び付けた項目（「その他」で外したあとも、選び直しで使い回す）
+  const previousResultItemId = [...proposal.responses]
+    .reverse()
+    .find(
+      (response) =>
+        response.committedAt !== null &&
+        response.id !== draft.id &&
+        response.resultRubricItemId !== null
+    )?.resultRubricItemId
   const livingIds = await listLivingRubricItemIds(
-    [proposal.matchedRubricItemId, previousResultItemId].flatMap(
-      (rubricItemId) => (rubricItemId ? [rubricItemId] : [])
-    )
+    [
+      proposal.matchedRubricItemId,
+      previousResultItemId,
+      draft.resultRubricItemId,
+    ].flatMap((rubricItemId) => (rubricItemId ? [rubricItemId] : []))
   )
 
-  if (input.optionId === null) {
-    if (input.freeText.trim() === "") {
-      throw new Error("「その他」には指示を書いてください")
-    }
-    const response = await prisma.aiRubricProposalResponse.create({
-      data: {
-        proposalId: proposal.id,
-        optionId: null,
-        freeText: input.freeText.trim(),
-      },
-    })
-    await recordAnswerAudit(proposal.label, cropRegion, actorUserId, "その他")
+  if (draft.optionId === null) {
+    const isInstruction = draft.freeText.trim() !== ""
+    const response = isInstruction
+      ? await prisma.aiRubricProposalResponse.update({
+          where: { id: draft.id },
+          data: { committedAt: new Date() },
+        })
+      : draft
+    await recordAnswerAudit(
+      proposal.label,
+      cropRegion,
+      actorUserId,
+      isInstruction ? "その他" : "1件ずつ採点"
+    )
     const touchedRows =
       previousResultItemId && livingIds.has(previousResultItemId)
         ? await setRubricApplications(
@@ -243,7 +341,7 @@ export async function answerAiRubricProposal(
   }
 
   const option = proposal.options.find(
-    (candidate) => candidate.id === input.optionId
+    (candidate) => candidate.id === draft.optionId
   )
   if (!option) throw new Error("選んだ選択肢が、この案のものではありません")
   const effect = {
@@ -262,10 +360,15 @@ export async function answerAiRubricProposal(
       // 既存の項目に当たる案は、項目の値を変えない（その項目を当てる案だけを示す。§3-4）
       return proposal.matchedRubricItemId
     }
-    if (previousResultItemId && livingIds.has(previousResultItemId)) {
+    // 前の確定の途中で作った項目（この答えに書いてある）か、前に確定した答えで作った項目
+    const reusableItemId = [
+      draft.resultRubricItemId,
+      previousResultItemId,
+    ].find((rubricItemId) => rubricItemId && livingIds.has(rubricItemId))
+    if (reusableItemId) {
       // 選び直しは項目の値を変えるだけ（当たっている答案すべての点が変わる。§3-5）
-      await updateRubricItem(previousResultItemId, { effect }, actorUserId)
-      return previousResultItemId
+      await updateRubricItem(reusableItemId, { effect }, actorUserId)
+      return reusableItemId
     }
     const lastItem = await prisma.rubricItem.findFirst({
       where: { cropRegionId: cropRegion.id },
@@ -274,8 +377,8 @@ export async function answerAiRubricProposal(
     const created = await createRubricItem(
       {
         cropRegionId: cropRegion.id,
-        label: input.label ?? proposal.label,
-        adviceText: input.adviceText ?? proposal.adviceDraft,
+        label: proposal.label,
+        adviceText: proposal.adviceDraft,
         sortOrder: (lastItem?.sortOrder ?? -1) + 1,
         ...effect,
       },
@@ -284,20 +387,12 @@ export async function answerAiRubricProposal(
     return created.id
   })()
 
-  const response = await prisma.aiRubricProposalResponse.create({
-    data: {
-      proposalId: proposal.id,
-      optionId: option.id,
-      freeText: "",
-      resultRubricItemId: rubricItemId,
-    },
-  })
-  await recordAnswerAudit(
-    proposal.label,
-    cropRegion,
-    actorUserId,
-    option.rationale || "選択肢"
-  )
+  if (draft.resultRubricItemId !== rubricItemId) {
+    await prisma.aiRubricProposalResponse.update({
+      where: { id: draft.id },
+      data: { resultRubricItemId: rubricItemId },
+    })
+  }
   const touchedRows =
     input.examStudentIds.length === 0
       ? []
@@ -310,10 +405,20 @@ export async function answerAiRubricProposal(
           },
           actorUserId
         )
+  const response = await prisma.aiRubricProposalResponse.update({
+    where: { id: draft.id },
+    data: { committedAt: new Date() },
+  })
+  await recordAnswerAudit(
+    proposal.label,
+    cropRegion,
+    actorUserId,
+    option.rationale || "選択肢"
+  )
   return { response, touchedRows }
 }
 
-/** 答えたことを監査ログに残す（何を選んだかは一言で） */
+/** 確定したことを監査ログに残す（何を選んだかは一言で） */
 async function recordAnswerAudit(
   proposalLabel: string,
   cropRegion: Parameters<typeof cropRegionAuditTarget>[0],
@@ -329,7 +434,7 @@ async function recordAnswerAudit(
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
     target: proposalLabel || null,
-    summary: `AI の項目の案「${proposalLabel}」に答えました（${choice}）`,
+    summary: `AI の項目の案「${proposalLabel}」への答えを確定しました（${choice}）`,
     targets: [cropRegionAuditTarget(cropRegion)],
   })
 }

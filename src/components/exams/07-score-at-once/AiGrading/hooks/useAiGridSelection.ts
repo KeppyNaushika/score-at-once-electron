@@ -21,7 +21,7 @@ interface UseAiGridSelectionOptions {
   /** 絞り込み（設問をまたいで残すので、AI採点モードの根から受け取る） */
   viewSettings: Pick<AiGridViewSettings, "filterSettings" | "setFilterSettings">
   /**
-   * 一覧をこの答案（受験者）だけに、この順で絞る（問いかけている案の答案を確信度の低い順に
+   * 一覧をこの答案（受験者）だけに、この順で絞る（問いかけている問いの答案を確信度の低い順に
    * 見せるとき）。絞り込みと並べ方より優先する。絞らないなら null
    */
   pinnedExamStudentIds?: readonly string[] | null

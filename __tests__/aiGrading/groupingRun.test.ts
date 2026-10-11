@@ -61,6 +61,7 @@ const examStudentIds = () =>
   fixture.exam.examStudents.map((examStudent) => examStudent.id)
 
 const startInput = () => ({
+  purpose: "grade" as const,
   promptId: fixture.prompt.id,
   examStudentIds: examStudentIds(),
   provider: "anthropic" as const,
@@ -304,7 +305,7 @@ describe("1段目のルーブリック項目", () => {
     expect(secondRun.promptId).toBe(sendingPrompt.id)
   })
 
-  it("問いかけの「その他」に書いた指示を、次の往復の1段目と2段目に添える", async () => {
+  it("問いかけの「その他」に書いた再採点への指示を、次の往復の1段目にだけ添える（2段目には添えない）", async () => {
     const first = createFakeProvider({
       respond: async () => completedResponse(PARTIAL_JUDGEMENT),
       respondGrouping: async () => completedResponse(GROUPING_RESPONSE),
@@ -316,6 +317,8 @@ describe("1段目のルーブリック項目", () => {
         proposalId: proposal.id,
         optionId: null,
         freeText: "途中式が無ければ誤答にする",
+        // 確定した指示だけが次の往復に添えられる（下書きは添えない）
+        committedAt: new Date(),
       },
     })
 
@@ -325,7 +328,8 @@ describe("1段目のルーブリック項目", () => {
     await gradeAndGroup(second)
     const instructionSection = "## 教員の指示\n- 途中式が無ければ誤答にする"
     expect(textOf(second.gradeRequests[0])).toContain(instructionSection)
-    expect(textOf(second.groupingRequests[0])).toContain(instructionSection)
+    expect(second.groupingRequests).toHaveLength(1)
+    expect(textOf(second.groupingRequests[0])).not.toContain("教員の指示")
 
     // 別の教員の往復には添えない
     const colleague = createFakeProvider({

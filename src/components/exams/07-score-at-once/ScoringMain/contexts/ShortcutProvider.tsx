@@ -60,6 +60,18 @@ export function useShortcutContext() {
 // ユーティリティ関数
 // ============================================
 
+/** 素の Enter・Space を、焦点のある「押すことを選んだボタン」（`data-native-activation`）へ渡すか */
+function isNativeActivation(event: KeyboardEvent): boolean {
+  const hasModifier =
+    event.shiftKey || event.ctrlKey || event.metaKey || event.altKey
+  return (
+    !hasModifier &&
+    (event.key === "Enter" || event.key === " ") &&
+    event.target instanceof HTMLElement &&
+    event.target.closest("[data-native-activation]") !== null
+  )
+}
+
 /**
  * when句を評価する
  * JavaScript式として安全に評価
@@ -83,6 +95,7 @@ function evaluateWhenClause(
       "hasSelectedAnswers",
       "scoringOperationMode",
       "choiceSceneOpen",
+      "aiQuestioningManual",
       `return ${when}`
     )
 
@@ -95,7 +108,8 @@ function evaluateWhenClause(
       context.sidePanelVisible,
       context.hasSelectedAnswers,
       context.scoringOperationMode,
-      context.choiceSceneOpen
+      context.choiceSceneOpen,
+      context.aiQuestioningManual
     )
   } catch (error) {
     console.error("Failed to evaluate when clause:", when, error)
@@ -130,6 +144,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
     hasSelectedAnswers: false,
     scoringOperationMode: "keyboard",
     choiceSceneOpen: false,
+    aiQuestioningManual: false,
   })
 
   // コマンドレジストリ（commandId -> CommandHandler[]）
@@ -265,6 +280,12 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // 日本語入力の変換中のキーは拾わない（変換の確定の Enter 等をコマンドにしない）
+      if (event.isComposing || event.keyCode === 229) return
+      // 素の Enter・Space で押すことを選んだボタン（`data-native-activation`）に焦点があれば、
+      // コマンドにせずボタンへ渡す（AI 採点の問いの一覧の行。行の全体がボタン）
+      if (isNativeActivation(event)) return
+
       // キーを正規化（macOSデッドキー対応含む）
       const key = normalizeKey(event)
 

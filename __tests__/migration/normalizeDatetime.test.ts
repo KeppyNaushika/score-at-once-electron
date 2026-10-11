@@ -196,6 +196,10 @@ describe("DateTime正規化マイグレーション", () => {
   // の混在が発生しない。よって正規化 UPDATE の対象外（網羅チェックから除外する）。
   // 歴史migrationは編集禁止のため、ここで明示的にホワイトリスト管理する。
   const POST_MIGRATION_TABLES = new Set([
+    // 20261011120000 で追加（AI 採点のプロンプトの問題の画像）。normalize migration より後で ISO text 生成
+    "AiPromptQuestionImage",
+    // 20261011100000 で追加（AI 採点の問いかけの答え）。normalize migration より後で ISO text 生成
+    "AiAttemptResponse",
     // 20261010120000 で追加（AI 採点の項目の案）。normalize migration より後で ISO text 生成
     "AiAttemptRubricMatch",
     // 20261005100000 で追加（AI 採点の記録）。normalize migration より後で ISO text 生成
@@ -207,6 +211,8 @@ describe("DateTime正規化マイグレーション", () => {
     "AiRubricProposalMember",
     "AiRubricProposalOption",
     "AiRubricProposalResponse",
+    // 20261011100000 で追加（AI 採点の問いかけの答え）。normalize migration より後で ISO text 生成
+    "AiRubricProposalResponseScore",
     // 20260824120000 で追加（アプリ全体の設定）。
     // normalize migration より後で ISO text 生成
     "AppPreference",

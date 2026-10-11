@@ -46,6 +46,11 @@ interface GridCellProps {
    * その状態の色の斜線で塗る（斜線 = 提案、塗り = 確定）。採点済みのマスは確定の塗りのまま
    */
   proposalStatus?: ScoreStatusKey | null
+  /**
+   * 確定すると付く予定の状態（AI採点モードの問いかけの下書き）。採点済みのマスでも、
+   * その状態の色の斜線を重ねる（確定すれば塗りになる）。提案の斜線より優先する
+   */
+  draftStatus?: ScoreStatusKey | null
   /** 採点マーク（状態のアイコン）の左隣に置くもの（AI採点モードの AI の判定の札）。模範解答には出さない */
   beforeStatusMark?: ReactNode
 }
@@ -64,6 +69,7 @@ export function GridCell({
   onMouseDown,
   detail,
   proposalStatus,
+  draftStatus,
   beforeStatusMark,
 }: GridCellProps) {
   const statusConfig = getDynamicScoreStatusConfig(scoringColors)
@@ -121,19 +127,21 @@ export function GridCell({
   const isColumnLayout =
     layoutDirection === "down-right" || layoutDirection === "down-left"
 
-  // 未採点のマスに未確定の提案があれば、その状態の色の斜線を重ねる
-  if (
-    !isMaster &&
-    statusKey === "unscored" &&
-    proposalStatus &&
-    proposalStatus !== "unscored" &&
-    proposalStatus !== "master"
-  ) {
+  // 確定すると付く予定の点（問いかけの下書き）があれば、採点済みでもその状態の色の斜線を重ねる。
+  // 無ければ、未採点のマスに未確定の提案があるとき、その状態の色の斜線を重ねる
+  const hatchStatus =
+    draftStatus && draftStatus !== "unscored" && draftStatus !== "master"
+      ? draftStatus
+      : statusKey === "unscored" &&
+          proposalStatus &&
+          proposalStatus !== "unscored" &&
+          proposalStatus !== "master"
+        ? proposalStatus
+        : null
+  if (!isMaster && hatchStatus) {
     cellBgStyle = {
       ...cellBgStyle,
-      backgroundImage: hatchedFill(
-        statusConfig[proposalStatus].iconStyle.color
-      ),
+      backgroundImage: hatchedFill(statusConfig[hatchStatus].iconStyle.color),
     }
   }
 
@@ -153,6 +161,11 @@ export function GridCell({
   return (
     <div
       data-answer-id={answer.id}
+      data-draft-status={
+        !isMaster && draftStatus && draftStatus === hatchStatus
+          ? draftStatus
+          : undefined
+      }
       className={cellClasses.join(" ")}
       style={cellStyle}
       onMouseDown={(e) => onMouseDown(e, answer.id)}

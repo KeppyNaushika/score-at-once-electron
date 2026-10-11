@@ -98,7 +98,7 @@ function installFakeElectronApi() {
         width: 750,
         height: 1000,
       })),
-      questionImage: null,
+      questionImages: [],
       modelAnswerImage: null,
     })),
     startRun: vi.fn(async (): Promise<{ id: string }> => ({ id: "run-new" })),
@@ -163,6 +163,7 @@ function RunDialogHarness({ onOpenChange }: DialogHarnessProps) {
         実行ダイアログを開く
       </button>
       <AiGradingRunDialog
+        purpose="grade"
         open={isOpen}
         onOpenChange={(open) => {
           onOpenChange(open)
@@ -180,6 +181,7 @@ function RunDialogHarness({ onOpenChange }: DialogHarnessProps) {
         ]}
         questionScores={[]}
         currentUserId={CURRENT_USER_ID}
+        selectedExamStudentIds={new Set()}
       />
     </>
   )

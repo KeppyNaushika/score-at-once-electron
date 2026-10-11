@@ -57,12 +57,59 @@ describe("既定のキー割り当て", () => {
     expect(canShareKey("choice.prev", "navigation.prevStudentArrow")).toBe(true)
     // Esc は入力欄を閉じる・選択の場面を抜ける
     expect(canShareKey("choice.exit", "modal.cancel")).toBe(true)
-    // 部分点・保留は入力欄の中と外の両方で効くが、選択の場面では効かない
-    expect(canShareKey("choice.select1", "scoring.partial")).toBe(true)
+    // 英字の採点キーは AI の問いかけの選択の場面でも効くので、場面のキーとは重ねない
+    expect(canShareKey("choice.select1", "scoring.partial")).toBe(false)
+    expect(canShareKey("choice.nextQuestion", "scoring.correct")).toBe(false)
+    // 数字は、ルーブリックでは項目の番号、AI の問いかけでは部分点（画面が分かれている）
+    expect(canShareKey("choice.select1", "scoring.openPartialWith1")).toBe(true)
+    expect(canShareKey("choice.other", "scoring.openPartialWith0")).toBe(true)
     // 場面に入るキーは採点中のキーなので、採点中のキーとは重ねない
     expect(canShareKey("choice.open", "scoring.correct")).toBe(false)
     expect(keySceneOf("choice.open")).toBe("scoring")
     expect(keySceneOf("choice.confirm")).toBe("choice")
+  })
+
+  it("問いかけの移りは Ctrl/⌘+Enter（次へ）と Ctrl/⌘+Shift+Enter（前へ）で、素の Enter とは別", () => {
+    expect(DEFAULT_KEYBINDINGS["choice.confirm"]).toBe("Enter")
+    expect(DEFAULT_KEYBINDINGS["choice.nextQuestion"]).toBe("Ctrl+Enter")
+    expect(DEFAULT_KEYBINDINGS["choice.prevQuestion"]).toBe("Ctrl+Shift+Enter")
+    expect(keySceneOf("choice.nextQuestion")).toBe("choice")
+  })
+
+  it("問いかけの移りだけは、問いかけの場面（選択の場面の外・入力欄の中でも。ダイアログを除く）にも登録できる", () => {
+    expect(sceneWhen("choice.nextQuestion", { scene: "questioning" })).toBe(
+      "!modalOpen && !textEditorActive"
+    )
+    expect(sceneWhen("choice.prevQuestion", { scene: "questioning" })).toBe(
+      "!modalOpen && !textEditorActive"
+    )
+    expect(() =>
+      sceneWhen("choice.confirm", { scene: "questioning" })
+    ).toThrow()
+    expect(() =>
+      sceneWhen("scoring.correct", { scene: "questioning" })
+    ).toThrow()
+    // 採点中にも選択の場面にもまたがって効くので、どちらの場面のキーとも重ねない
+    expect(canShareKey("choice.nextQuestion", "navigation.nextQuestion")).toBe(
+      false
+    )
+    expect(canShareKey("choice.prevQuestion", "choice.confirm")).toBe(false)
+    expect(
+      canShareKey("navigation.prevStudentArrow", "choice.nextQuestion")
+    ).toBe(false)
+    // 部分点の入力欄の中だけのキーとは重ねてよい（入力欄を開いている間は効かない）
+    expect(canShareKey("choice.nextQuestion", "modal.input1")).toBe(true)
+  })
+
+  it("選択の場面にも登録できるのは、そう決めた採点キーだけ", () => {
+    expect(sceneWhen("scoring.correct", { scene: "choice" })).toContain(
+      "choiceSceneOpen &&"
+    )
+    expect(
+      sceneWhen("scoring.openPartialWith1", { scene: "choice" })
+    ).toContain("choiceSceneOpen &&")
+    expect(() => sceneWhen("scoring.comment", { scene: "choice" })).toThrow()
+    expect(() => sceneWhen("filter.refresh", { scene: "choice" })).toThrow()
   })
 
   it("効く場面は既定の置き場所で決まり、名前の付け方からは推し量らない", () => {

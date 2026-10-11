@@ -155,6 +155,23 @@ export const createAiPromptMutation = (examId: string, cropRegionId: string) =>
   })
 
 /**
+ * 問題の画像を試験フォルダへ取り込む（DB には書かないので取り直すものは無い）。
+ * 返ったパスを、プロンプトを保存するときに渡す
+ */
+export const importAiQuestionImageMutation = () =>
+  defineMutation({
+    mutationFn: (
+      input: Parameters<
+        typeof window.electronAPI.aiGrading.importQuestionImage
+      >[0]
+    ) => window.electronAPI.aiGrading.importQuestionImage(input),
+    meta: {
+      writesDatabase: false,
+      errorMessage: "問題の画像を取り込めませんでした",
+    },
+  })
+
+/**
  * 採点を始める（外部へ送る）。run と試行が返り、その場の採点は裏で続く。
  * 進み具合は `subscribeAiGradingRunProgress` で届くので、届いたら実行の一覧を取り直す
  */
@@ -258,31 +275,132 @@ export const adoptAiGradingAttemptsMutation = (
     },
   })
 
-/** 問いかけへの答えの引数（main の口の形） */
-export type AnswerAiRubricProposalInput = Parameters<
-  typeof window.electronAPI.aiGrading.answerProposal
+/** 案への答え（下書き）の引数（main の口の形） */
+export type RecordAiRubricProposalDraftInput = Parameters<
+  typeof window.electronAPI.aiGrading.recordProposalDraft
 >[0]
 
 /**
- * 問いかけに答える（§3-5）。選択肢なら項目を作り（既存の項目に当たる案なら作らない）、渡した
- * 答案の自分の採点行に当てる。当て外ししたマスの採点行（適用付き）が返るので、続けて点を計算して
- * `writeRubricScoresMutation` で書き、朱書きを合わせる。項目・適用・採点行が変わるので取り直す
+ * 問いかけ（案）に答える（下書き。§3-5）。AI の層の答えの行だけを書き、教員の採点は変えない。
+ * 実行のまとまり（案も入っている）を取り直す
  */
-export const answerAiRubricProposalMutation = (
+export const recordAiRubricProposalDraftMutation = (
   examId: string,
   cropRegionId: string
 ) =>
   defineMutation({
-    mutationFn: (input: AnswerAiRubricProposalInput) =>
-      window.electronAPI.aiGrading.answerProposal(input),
+    mutationFn: (input: RecordAiRubricProposalDraftInput) =>
+      window.electronAPI.aiGrading.recordProposalDraft(input),
+    scope: { id: `exam:${examId}:aiQuestioning:${cropRegionId}` },
+    meta: {
+      invalidates: [aiGradingRunsScope(examId, cropRegionId)],
+      errorMessage: "問いかけへの答えを保存できませんでした",
+    },
+  })
+
+/** 案の外の問いかけへの答え（下書き）の引数 */
+export type RecordAiAttemptResponsesInput = Parameters<
+  typeof window.electronAPI.aiGrading.recordAttemptResponses
+>[0]
+
+/**
+ * 案の外の問いかけ（採点チェック・どの案にも入らない答案）に答える（下書き）。答案ごとの行を書く。
+ * 答えは実行の一覧の試行に同梱されているので、実行のまとまりを取り直す
+ */
+export const recordAiAttemptResponsesMutation = (
+  examId: string,
+  cropRegionId: string
+) =>
+  defineMutation({
+    mutationFn: (input: RecordAiAttemptResponsesInput) =>
+      window.electronAPI.aiGrading.recordAttemptResponses(input),
+    scope: { id: `exam:${examId}:aiQuestioning:${cropRegionId}` },
+    meta: {
+      invalidates: [aiGradingRunsScope(examId, cropRegionId)],
+      errorMessage: "問いかけへの答えを保存できませんでした",
+    },
+  })
+
+/** 問いかけの前に決めた採点方式の下書きを書く（設問の採点方式は確定のときに変える） */
+export const setAiQuestioningScoringMethodMutation = (
+  examId: string,
+  cropRegionId: string
+) =>
+  defineMutation({
+    mutationFn: (
+      input: Parameters<
+        typeof window.electronAPI.aiGrading.setQuestioningScoringMethod
+      >[0]
+    ) => window.electronAPI.aiGrading.setQuestioningScoringMethod(input),
+    scope: { id: `exam:${examId}:aiQuestioning:${cropRegionId}` },
+    meta: {
+      invalidates: [aiGradingRunsScope(examId, cropRegionId)],
+      errorMessage: "採点方式の答えを保存できませんでした",
+    },
+  })
+
+/**
+ * 案への答え（下書き）を確定する（§3-5）。選択肢なら項目を作り（既存の項目に当たる案なら作らない）、
+ * 渡した答案の自分の採点行に当てる。当て外ししたマスの採点行（適用付き）が返るので、続けて点を
+ * 計算して `writeRubricScoresMutation` で書き、朱書きを合わせる。項目・適用・採点行が変わるので取り直す
+ */
+export const commitAiRubricProposalResponseMutation = (
+  examId: string,
+  cropRegionId: string
+) =>
+  defineMutation({
+    mutationFn: (
+      input: Parameters<
+        typeof window.electronAPI.aiGrading.commitProposalResponse
+      >[0]
+    ) => window.electronAPI.aiGrading.commitProposalResponse(input),
     scope: { id: `exam:${examId}:questionScores` },
     meta: {
       invalidates: [
-        aiRubricProposalsQuery(examId, cropRegionId).queryKey,
+        aiGradingRunsScope(examId, cropRegionId),
         ...rubricItemInvalidations(examId, cropRegionId),
         questionScoresQuery(examId, cropRegionId).queryKey,
       ],
-      errorMessage: "AI の項目の案への答えを保存できませんでした",
+      errorMessage: "AI の項目の案への答えを確定できませんでした",
+    },
+  })
+
+/** 問いかけで教員が直接決めた点（1件ずつ採点・採点チェックで直す点）を自分の採点として書く */
+export const writeAiQuestioningScoresMutation = (
+  examId: string,
+  cropRegionId: string
+) =>
+  defineMutation({
+    mutationFn: (
+      input: Parameters<
+        typeof window.electronAPI.aiGrading.writeQuestioningScores
+      >[0]
+    ) => window.electronAPI.aiGrading.writeQuestioningScores(input),
+    scope: { id: `exam:${examId}:questionScores` },
+    meta: {
+      invalidates: [
+        questionScoresQuery(examId, cropRegionId).queryKey,
+        ...rubricItemInvalidations(examId, cropRegionId),
+      ],
+      errorMessage: "問いかけで決めた点を書けませんでした",
+    },
+  })
+
+/** 教員の層へ書き終えた答えを確定済みにする */
+export const markAiQuestioningCommittedMutation = (
+  examId: string,
+  cropRegionId: string
+) =>
+  defineMutation({
+    mutationFn: (
+      input: Parameters<
+        typeof window.electronAPI.aiGrading.markQuestioningCommitted
+      >[0]
+    ) => window.electronAPI.aiGrading.markQuestioningCommitted(input),
+    scope: { id: `exam:${examId}:aiQuestioning:${cropRegionId}` },
+    meta: {
+      invalidates: [aiGradingRunsScope(examId, cropRegionId)],
+      errorMessage: "問いかけの答えを確定済みにできませんでした",
     },
   })
 

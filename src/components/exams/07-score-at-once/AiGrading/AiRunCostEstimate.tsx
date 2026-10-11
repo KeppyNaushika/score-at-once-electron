@@ -19,6 +19,8 @@ interface AiRunCostEstimateProps {
   runSettings: AiRunSettings
   /** 送信1回の見積もりの警告額（米ドル）。null なら警告しない */
   budgetWarningUsd: number | null
+  /** 1段目のあとに2段目（項目の案）が続くか。AI 採点チェックは1段目だけ */
+  includesGrouping?: boolean
 }
 
 /** 見積もりの根拠を、画面に添える短い文にする */
@@ -48,14 +50,15 @@ function describeEstimateBasis(basis: RunCostEstimate["basis"]): string[] {
 
 /**
  * 件数と費用の概算（送る画像の大きさと過去の実行は main が返し、トークン数と金額は
- * 利用者が入れた単価でここで求める）。1段目のあとに自動で続く2段目（項目の案・文字だけ1回）の
- * 概算も足す。概算が警告額を超えるときは警告する（送信は止めない）
+ * 利用者が入れた単価でここで求める）。AI 採点では1段目のあとに自動で続く2段目（項目の案・文字だけ1回）の
+ * 概算も足す（AI 採点チェックは1段目だけ）。概算が警告額を超えるときは警告する（送信は止めない）
  */
 export function AiRunCostEstimate({
   prompt,
   examStudentIds,
   runSettings,
   budgetWarningUsd,
+  includesGrouping = true,
 }: AiRunCostEstimateProps) {
   const { data: pricing } = useQuery(aiPricingQuery())
   // 実測の根拠。読めなければ実測なし（目安）として見積もる
@@ -88,7 +91,7 @@ export function AiRunCostEstimate({
     )
   }
 
-  const { answerImages, questionImage, modelAnswerImage } = estimateQuery.data
+  const { answerImages, questionImages, modelAnswerImage } = estimateQuery.data
   const promptCharacterCount =
     prompt.questionText.length +
     prompt.modelAnswerText.length +
@@ -103,9 +106,9 @@ export function AiRunCostEstimate({
       promptId: prompt.id,
       cropRegionId: prompt.cropRegionId,
       answerImages,
-      fixedImages: [questionImage, modelAnswerImage].flatMap((image) =>
-        image ? [image] : []
-      ),
+      fixedImages: modelAnswerImage
+        ? [...questionImages, modelAnswerImage]
+        : questionImages,
       promptCharacterCount,
       measuredRuns: measuredRunsQuery.data ?? [],
     },
@@ -124,10 +127,13 @@ export function AiRunCostEstimate({
     },
     pricing
   )
-  const totalCostUsd =
-    cost.isPriced && grouping.cost.isPriced
-      ? cost.costUsd + grouping.cost.costUsd
-      : null
+  const totalCostUsd = !cost.isPriced
+    ? null
+    : !includesGrouping
+      ? cost.costUsd
+      : grouping.cost.isPriced
+        ? cost.costUsd + grouping.cost.costUsd
+        : null
   const isOverBudget =
     totalCostUsd !== null &&
     budgetWarningUsd !== null &&
@@ -139,6 +145,13 @@ export function AiRunCostEstimate({
         <span>送る件数</span>
         <span className="tabular-nums" data-testid="ai-run-request-count">
           {estimate.requestCount}件
+        </span>
+      </div>
+      <div className="flex justify-between text-muted-foreground">
+        <span>答案ごとに一緒に送る画像</span>
+        <span className="tabular-nums" data-testid="ai-run-fixed-images">
+          問題の画像 {questionImages.length}枚・模範解答の画像{" "}
+          {modelAnswerImage ? "あり" : "なし"}
         </span>
       </div>
       <div className="flex justify-between text-muted-foreground">
@@ -158,23 +171,25 @@ export function AiRunCostEstimate({
             : MISSING_PRICE_LABELS[cost.missing]}
         </span>
       </div>
-      <div className="flex justify-between text-muted-foreground">
-        <span>
-          続けて作る項目の案（文字だけ1回
-          {grouping.outputBasis.kind === "measured"
-            ? `・過去 ${grouping.outputBasis.sampleCount} 回の実測から`
-            : "・目安"}
-          ）
-        </span>
-        <span
-          className="tabular-nums"
-          data-testid="ai-run-estimated-grouping-cost"
-        >
-          {grouping.cost.isPriced
-            ? formatUsd(grouping.cost.costUsd)
-            : MISSING_PRICE_LABELS[grouping.cost.missing]}
-        </span>
-      </div>
+      {includesGrouping && (
+        <div className="flex justify-between text-muted-foreground">
+          <span>
+            続けて作る項目の案（文字だけ1回
+            {grouping.outputBasis.kind === "measured"
+              ? `・過去 ${grouping.outputBasis.sampleCount} 回の実測から`
+              : "・目安"}
+            ）
+          </span>
+          <span
+            className="tabular-nums"
+            data-testid="ai-run-estimated-grouping-cost"
+          >
+            {grouping.cost.isPriced
+              ? formatUsd(grouping.cost.costUsd)
+              : MISSING_PRICE_LABELS[grouping.cost.missing]}
+          </span>
+        </div>
+      )}
       <div className="flex justify-between font-medium">
         <span>費用（概算）</span>
         <span

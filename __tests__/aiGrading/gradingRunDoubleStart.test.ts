@@ -62,6 +62,7 @@ const examStudentIds = () =>
 const startInput = (
   overrides: { mode?: "realtime" | "batch"; examStudentIds?: string[] } = {}
 ) => ({
+  purpose: "grade" as const,
   promptId: fixture.prompt.id,
   examStudentIds: overrides.examStudentIds ?? examStudentIds(),
   provider: "anthropic" as const,

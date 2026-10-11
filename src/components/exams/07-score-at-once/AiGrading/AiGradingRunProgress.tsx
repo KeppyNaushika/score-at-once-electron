@@ -94,7 +94,9 @@ export function AiGradingRunProgress({
           ? "項目の案を作成中"
           : run.mode === "batch"
             ? "バッチ"
-            : "採点中"
+            : run.purpose === "check"
+              ? "採点チェック中"
+              : "採点中"
         return (
           <div
             key={run.id}

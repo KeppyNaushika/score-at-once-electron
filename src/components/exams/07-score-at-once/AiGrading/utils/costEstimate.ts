@@ -76,7 +76,7 @@ export interface RunCostEstimateInput {
   cropRegionId: string
   /** 送る答案画像の大きさ（答案1件に1枚） */
   answerImages: readonly ImageSize[]
-  /** 毎回いっしょに送る画像（問題用紙・模範解答の切り出し） */
+  /** 毎回いっしょに送る画像（問題の画像（何枚でも）・模範解答の切り出し） */
   fixedImages: readonly ImageSize[]
   /** プロンプトの各欄（問題文・模範解答・採点基準・助言の文案の指示）の字数の合計 */
   promptCharacterCount: number

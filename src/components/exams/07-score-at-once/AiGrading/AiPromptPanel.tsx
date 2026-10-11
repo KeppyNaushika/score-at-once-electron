@@ -9,6 +9,7 @@ import type { AiGradingSettings } from "@/electron-src/lib/aiGrading/providerCre
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
 import { AiPromptEditorDialog } from "./AiPromptEditorDialog"
+import { AiQuestionImageStrip } from "./AiQuestionImageStrip"
 import type { AiPromptRow } from "./types"
 import { formatShortDateTime } from "./utils/answerDisplay"
 
@@ -149,7 +150,7 @@ export function AiPromptPanel({
   )
 }
 
-/** 版の中身（問題文・模範解答・採点基準）。空の欄は「なし」と出す */
+/** 版の中身（問題文・問題の画像・模範解答・採点基準）。空の欄は「なし」と出す */
 function PromptContentPreview({ prompt }: { prompt: AiPromptRow }) {
   const fields = [
     { key: "questionText", label: "問題文", text: prompt.questionText },
@@ -163,6 +164,20 @@ function PromptContentPreview({ prompt }: { prompt: AiPromptRow }) {
   ] as const
   return (
     <dl className="space-y-1">
+      {prompt.questionImages.length > 0 && (
+        <div>
+          <dt className="font-medium text-muted-foreground">
+            問題の画像（{prompt.questionImages.length}枚）
+          </dt>
+          <dd>
+            <AiQuestionImageStrip
+              imagePaths={prompt.questionImages.map(
+                (questionImage) => questionImage.imagePath
+              )}
+            />
+          </dd>
+        </div>
+      )}
       {fields.map((field) => (
         <div key={field.key}>
           <dt className="font-medium text-muted-foreground">{field.label}</dt>

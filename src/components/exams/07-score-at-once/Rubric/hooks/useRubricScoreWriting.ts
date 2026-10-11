@@ -2,7 +2,7 @@
  * 当て外ししたマスの点を項目から計算して書く（docs/vlm-grading-design.md §4-4）。
  *
  * main が当て外ししたマスの採点行（適用付き）を返したあとに呼ぶ。計算は renderer、main は書くだけ。
- * 手で当てる（`useRubricApplying`）と、AI の項目の案に答える（`useAiProposalAnswering`）が使う。
+ * 手で当てる（`useRubricApplying`）が使う（AI の問いかけの確定は `useQuestioningCommit` が同じ計算で書く）。
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"

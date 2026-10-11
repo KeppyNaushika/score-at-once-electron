@@ -28,10 +28,7 @@ import {
   updateAiGradingRun,
 } from "../prisma/aiGradingRun"
 import { readRubricItemsForPrompt } from "../prisma/aiPrompt"
-import {
-  listTeacherInstructions,
-  recordAiRubricProposals,
-} from "../prisma/aiRubricProposal"
+import { recordAiRubricProposals } from "../prisma/aiRubricProposal"
 import {
   GROUPING_MAX_OUTPUT_TOKENS,
   STAGE2_OUTPUT_SCHEMA_NAME,
@@ -120,16 +117,11 @@ export function createGroupingRunner(dependencies: AiGradingJobDependencies) {
     const provider = dependencies.resolveProvider(gradeRun.provider)
     const points = gradeRun.points === null ? null : gradeRun.points.toNumber()
     const answers = usable.map(({ answer }) => answer)
-    const teacherInstructions = await listTeacherInstructions(
-      prompt.cropRegionId,
-      actorUserId
-    )
     const { systemText, fixedParts, answerKeys } = buildStage2RequestParts({
       prompt,
       points,
       rubricItems,
       answers,
-      teacherInstructions,
     })
     const attemptIdByAnswerKey = new Map(
       answerKeys.map((answerKey, answerIndex) => [

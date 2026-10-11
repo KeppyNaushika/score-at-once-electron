@@ -77,7 +77,6 @@ export async function runStage2Question(input: {
     points,
     rubricItems: [],
     answers,
-    teacherInstructions: [],
   })
   const result = await input.runCli({
     systemText: input.systemTextOverride ?? systemText,

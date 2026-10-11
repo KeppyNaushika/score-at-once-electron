@@ -12,6 +12,7 @@ import {
   type Stage2AnswerInput,
 } from "@/lib/shared/aiGrading/stage2Grouping"
 import { validateStage2Response } from "@/lib/shared/aiGrading/stage2ResponseValidator"
+import { STAGE2_SYSTEM_TEXT } from "@/lib/shared/aiGrading/stage2SystemText"
 
 const RUBRIC_ITEM_ID = "5c2d7e10-3b4a-4f6e-9d8c-7b6a5f4e3d21"
 
@@ -63,7 +64,6 @@ describe("2段目の文面", () => {
     points: 4,
     rubricItems: [],
     answers: ANSWERS,
-    teacherInstructions: ["単位の無い答案は誤答にしない"],
   })
   const text = parts.fixedParts
     .map((part) => (part.kind === "text" ? part.text : ""))
@@ -77,9 +77,10 @@ describe("2段目の文面", () => {
     expect(text).toContain(`当てはまる既存の項目: ${RUBRIC_ITEM_ID}`)
   })
 
-  it("助言の文案の指示と教員の指示を節として載せる", () => {
+  it("助言の文案の指示を節として載せ、教員の「その他」の指示（再採点への指示）は載せない", () => {
     expect(text).toContain("## 助言の文案の指示")
-    expect(text).toContain("## 教員の指示\n- 単位の無い答案は誤答にしない")
+    expect(text).not.toContain("教員の指示")
+    expect(STAGE2_SYSTEM_TEXT).not.toContain("教員の指示")
   })
 
   it("出力の形は、答案の番号を送った番号の enum で縛る", () => {

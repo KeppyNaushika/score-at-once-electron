@@ -3,6 +3,7 @@
  */
 
 import type { QuestionScoreRow } from "@/queries/scoring"
+import { isStage1RunPurpose } from "@/types/aiGrading.types"
 
 import type { AiGradingRunOfExamRow } from "../types"
 import { findOwnQuestionScore, isScored } from "./scoreComparison"
@@ -21,7 +22,7 @@ export function selectQuestionsWithUnreflectedAiJudgements(
   return new Set(
     runs
       .filter((run) => {
-        if (run.purpose !== "grade") return false
+        if (!isStage1RunPurpose(run.purpose)) return false
         const cropRegionId = run.prompt.cropRegionId
         const questionScores =
           questionScoresByCropRegionId.get(cropRegionId) ?? []

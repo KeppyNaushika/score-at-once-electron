@@ -4,7 +4,8 @@
  *
  * ここで固定すること:
  * - 同意して API キーを保存した事業者が無ければ「AI採点」は採点モードの選択肢に出ない
- * - 実行ダイアログは選び方ごとの件数を出し、白紙の答案は数えない（送らない）
+ * - 実行ダイアログは送る答案の4つの選び方（未採点・無答以外・全て・選択）ごとに件数を出し、
+ *   既定は未採点。切り替えると件数と送る答案が変わる。選んでいなければ「選択」は選べない
  * - 「採用」は選んだ答案すべての表示中の試行の点を書き込みへ渡す（AI の朱書きの文案は渡さない）。
  *   採点済みが混じれば件数を示して1回だけ確かめる
  *
@@ -123,7 +124,7 @@ function installFakeElectronApi(options: { isUnlocked: boolean }) {
         width: 750,
         height: 1000,
       })),
-      questionImage: null,
+      questionImages: [],
       modelAnswerImage: null,
     })),
     startRun: vi.fn(async () => ({ id: "run-new" })),
@@ -229,7 +230,7 @@ describe("採点モードの選択肢", () => {
 describe("実行ダイアログ", () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it("自分が未採点の答案の件数を出し、確認に件数と送信先を出す（採点済み・無答の答案は送らない）", async () => {
+  it("既定は未採点の答案。件数を出し、確認に件数と送信先を出す（採点済み・無答の答案は送らない）", async () => {
     const aiGrading = installFakeElectronApi({ isUnlocked: true })
     const reviewedAnswers = [
       reviewed(makeAnswer("s1")),
@@ -239,6 +240,7 @@ describe("実行ダイアログ", () => {
     ]
     renderWithProviders(
       <AiGradingRunDialog
+        purpose="grade"
         open
         onOpenChange={vi.fn()}
         examId="exam-1"
@@ -256,12 +258,13 @@ describe("実行ダイアログ", () => {
           }),
         ]}
         currentUserId={CURRENT_USER_ID}
+        selectedExamStudentIds={new Set()}
       />
     )
 
-    expect(screen.getByTestId("ai-run-target-summary")).toHaveTextContent(
-      "自分が未採点の答案 2 件を送ります"
-    )
+    expect(
+      screen.getByRole("radio", { name: /未採点の答案（2 件）/ })
+    ).toHaveAttribute("aria-checked", "true")
     expect(screen.getByRole("button", { name: "送信の確認へ" })).toBeEnabled()
     expect(await screen.findByTestId("ai-run-request-count")).toHaveTextContent(
       "2件"
@@ -288,6 +291,137 @@ describe("実行ダイアログ", () => {
         imageScale: 1,
       })
     )
+  })
+
+  function renderScopeDialog(selectedExamStudentIds: ReadonlySet<string>) {
+    const aiGrading = installFakeElectronApi({ isUnlocked: true })
+    renderWithProviders(
+      <AiGradingRunDialog
+        purpose="grade"
+        open
+        onOpenChange={vi.fn()}
+        examId="exam-1"
+        cropRegion={cropRegion}
+        settings={SETTINGS}
+        initialProvider="anthropic"
+        unlockedProviders={["anthropic"]}
+        prompt={makePrompt()}
+        reviewedAnswers={[
+          reviewed(makeAnswer("s1")),
+          reviewed(makeAnswer("s-no-answer")),
+          reviewed(makeAnswer("s-scored")),
+          reviewed(makeAnswer("s4")),
+        ]}
+        questionScores={[
+          makeQuestionScore({ examStudentId: "s-scored" }),
+          makeQuestionScore({
+            examStudentId: "s-no-answer",
+            status: "no_answer",
+          }),
+        ]}
+        currentUserId={CURRENT_USER_ID}
+        selectedExamStudentIds={selectedExamStudentIds}
+      />
+    )
+    return aiGrading
+  }
+
+  it("選び方ごとに件数を出し、切り替えると件数と送る答案が変わる", async () => {
+    const aiGrading = renderScopeDialog(new Set(["s-scored"]))
+    expect(
+      screen.getByRole("radio", { name: /未採点の答案（2 件）/ })
+    ).toBeTruthy()
+    expect(
+      screen.getByRole("radio", { name: /無答以外の全ての答案（3 件）/ })
+    ).toBeTruthy()
+    expect(
+      screen.getByRole("radio", { name: /^全ての答案（4 件）/ })
+    ).toBeTruthy()
+    const selectedChoice = screen.getByRole("radio", {
+      name: /選択した答案（1 件）/,
+    })
+    expect(selectedChoice).toBeEnabled()
+
+    await userEvent.click(
+      screen.getByRole("radio", { name: /無答以外の全ての答案/ })
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId("ai-run-request-count")).toHaveTextContent(
+        "3件"
+      )
+    )
+
+    await userEvent.click(selectedChoice)
+    await waitFor(() =>
+      expect(screen.getByTestId("ai-run-request-count")).toHaveTextContent(
+        "1件"
+      )
+    )
+    await userEvent.click(screen.getByRole("button", { name: "送信の確認へ" }))
+    expect(screen.getByTestId("ai-run-confirmation")).toHaveTextContent(
+      "1件の答案を Anthropic"
+    )
+    await userEvent.click(
+      screen.getByRole("button", { name: "Anthropic へ送信する" })
+    )
+    await waitFor(() => expect(aiGrading.startRun).toHaveBeenCalledTimes(1))
+    expect(aiGrading.startRun).toHaveBeenCalledWith(
+      expect.objectContaining({ examStudentIds: ["s-scored"] })
+    )
+  })
+
+  it("無答以外: 自分が無答を付けた答案だけを外して送る", async () => {
+    const aiGrading = renderScopeDialog(new Set())
+    await userEvent.click(
+      screen.getByRole("radio", { name: /無答以外の全ての答案/ })
+    )
+    await userEvent.click(screen.getByRole("button", { name: "送信の確認へ" }))
+    await userEvent.click(
+      screen.getByRole("button", { name: "Anthropic へ送信する" })
+    )
+    await waitFor(() => expect(aiGrading.startRun).toHaveBeenCalledTimes(1))
+    expect(aiGrading.startRun).toHaveBeenCalledWith(
+      expect.objectContaining({ examStudentIds: ["s1", "s-scored", "s4"] })
+    )
+  })
+
+  it("答案を選んでいなければ「選択した答案」は選べず、理由を出す", () => {
+    renderScopeDialog(new Set())
+    expect(
+      screen.getByRole("radio", { name: /選択した答案（0 件）/ })
+    ).toBeDisabled()
+    expect(
+      screen.getByText("中央の一覧に選んでいる答案が無いので選べません。")
+    ).toBeTruthy()
+  })
+
+  it("選んだ選び方の件数が 0 件なら送信の確認へ進めない", async () => {
+    installFakeElectronApi({ isUnlocked: true })
+    renderWithProviders(
+      <AiGradingRunDialog
+        purpose="grade"
+        open
+        onOpenChange={vi.fn()}
+        examId="exam-1"
+        cropRegion={cropRegion}
+        settings={SETTINGS}
+        initialProvider="anthropic"
+        unlockedProviders={["anthropic"]}
+        prompt={makePrompt()}
+        reviewedAnswers={[reviewed(makeAnswer("s-scored"))]}
+        questionScores={[makeQuestionScore({ examStudentId: "s-scored" })]}
+        currentUserId={CURRENT_USER_ID}
+        selectedExamStudentIds={new Set()}
+      />
+    )
+    expect(
+      screen.getByRole("radio", { name: /未採点の答案（0 件）/ })
+    ).toHaveAttribute("aria-checked", "true")
+    expect(screen.getByRole("button", { name: "送信の確認へ" })).toBeDisabled()
+    await userEvent.click(
+      screen.getByRole("radio", { name: /^全ての答案（1 件）/ })
+    )
+    expect(screen.getByRole("button", { name: "送信の確認へ" })).toBeEnabled()
   })
 })
 
@@ -343,6 +477,7 @@ describe("実行ダイアログの既定値", () => {
     installFakeElectronApi({ isUnlocked: true })
     renderWithProviders(
       <AiGradingRunDialog
+        purpose="grade"
         open
         onOpenChange={vi.fn()}
         examId="exam-1"
@@ -354,6 +489,7 @@ describe("実行ダイアログの既定値", () => {
         reviewedAnswers={[reviewed(makeAnswer("s1"))]}
         questionScores={[]}
         currentUserId={CURRENT_USER_ID}
+        selectedExamStudentIds={new Set()}
       />
     )
   }

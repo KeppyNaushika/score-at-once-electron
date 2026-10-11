@@ -5,6 +5,7 @@
  * - 選べば、書き出す試験の設問のプロンプト・実行・判定が入る
  * - 採点と答案を外せば判定が外れる（判定は受験生を必須で参照する）
  * - 本人分だけにすれば、他の教員の実行とその判定が外れる（プロンプトは共有なので残る）
+ * - プロンプトの問題の画像は、プロンプトに従う
  * - 1段目の当てはまりと2段目の項目の案（選択肢・答案・答え）は、試行・実行に従う
  * - 「別で追加」で試験を振り直せば、AI 採点の記録も振り直る
  *
@@ -45,6 +46,11 @@ const SYNTHETIC_ROWS: Readonly<
       parentPromptId: "firstPrompt",
       createdByUserId: "teacher",
     },
+  },
+  // 問題の画像（直した版は元の版の画像を引き継いで、別の行を持つ）
+  AiPromptQuestionImage: {
+    firstImage: { promptId: "firstPrompt" },
+    revisedImage: { promptId: "revisedPrompt" },
   },
   AiGradingRun: {
     teacherRun: { userId: "teacher", promptId: "revisedPrompt" },
@@ -185,6 +191,31 @@ describe("AI 採点の記録の範囲", () => {
       id: "teacherAttempt",
       column: "adoptedQuestionScoreId",
     })
+  })
+})
+
+describe("プロンプトの問題の画像の範囲", () => {
+  const includedImageIds = (selection: ArchiveSelection) => [
+    ...(resolveArchiveScope(tableRows, selection).rows.get(
+      "AiPromptQuestionImage"
+    ) ?? []),
+  ]
+
+  it("選ばなければ入らず、選べばプロンプトとともに入る（本人分だけでもプロンプトは共有なので残る）", () => {
+    expect(includedImageIds({ roots: { Exam: ["exam"] } })).toEqual([])
+    expect(
+      includedImageIds({
+        roots: { Exam: ["exam"] },
+        optionalItems: ["aiGradingRecords"],
+      }).sort()
+    ).toEqual(["firstImage", "revisedImage"])
+    expect(
+      includedImageIds({
+        roots: { Exam: ["exam"] },
+        scoring: { kind: "self", userId: "teacher" },
+        optionalItems: ["aiGradingRecords"],
+      }).sort()
+    ).toEqual(["firstImage", "revisedImage"])
   })
 })
 

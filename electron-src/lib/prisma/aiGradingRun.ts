@@ -135,6 +135,39 @@ export async function updateAiGradingRun(
   return prisma.aiGradingRun.update({ where: { id: runId }, data: update })
 }
 
+/** 問いかけの前に決める採点方式の下書き（"" は決めていない） */
+const QUESTIONING_SCORING_METHODS: ReadonlySet<string> = new Set([
+  "",
+  "deduction",
+  "addition",
+])
+
+/**
+ * 2段目の実行に、問いかけの前に決めた採点方式の下書きを書く（docs/vlm-grading-design.md §3-5）。
+ * 設問の採点方式は確定のときに変える。書けるのは実行した教員だけ
+ */
+export async function setAiQuestioningScoringMethod(
+  input: { runId: string; scoringMethod: string },
+  actorUserId: string
+) {
+  if (!QUESTIONING_SCORING_METHODS.has(input.scoringMethod)) {
+    throw new Error(`採点方式「${input.scoringMethod}」は選べません`)
+  }
+  const run = await prisma.aiGradingRun.findUnique({
+    where: { id: input.runId },
+  })
+  if (!run || run.purpose !== "group") {
+    throw new Error("問いかけの実行が見つかりません")
+  }
+  if (run.userId !== actorUserId) {
+    throw new Error("問いかけに答えられるのは、AI 採点を実行した教員だけです")
+  }
+  return prisma.aiGradingRun.update({
+    where: { id: run.id },
+    data: { questioningScoringMethod: input.scoringMethod },
+  })
+}
+
 /**
  * 実行1件（プロンプトと設問・ページの木、試行と1段目の当てはまり付き）。無ければ null。
  * 試行は作った順（2段目へ送る並び）
@@ -227,10 +260,16 @@ export async function closePendingAiGradingAttempts(
   })
 }
 
-/** 一覧で返す木。実行者は秘密を落として連れてくる。試行には1段目の当てはまりを同梱する */
+/**
+ * 一覧で返す木。実行者は秘密を落として連れてくる。試行には1段目の当てはまりと、案の外の
+ * 問いかけ（採点チェック・どの案にも入らない答案）への教員の答え（古い順）を同梱する
+ */
 const aiGradingRunListInclude = {
   attempts: {
-    include: { rubricMatches: true },
+    include: {
+      rubricMatches: true,
+      responses: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
+    },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   },
   prompt: true,
