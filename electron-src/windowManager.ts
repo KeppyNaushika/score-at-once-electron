@@ -8,7 +8,7 @@ import { rendererOrigin } from "./rendererPort"
 // Electron公式推奨の環境判定方法
 const isDev = !app.isPackaged
 
-/** メインウィンドウを作成し、Next.jsサーバーの準備完了後にURLを読み込んで表示する */
+/** メインウィンドウを作成し、画面のサーバーの準備完了後にURLを読み込んで表示する */
 export function createMainWindow(): BrowserWindow {
   // アイコンのパスを設定（プラットフォーム別）
   const getIconPath = () => {
@@ -74,7 +74,7 @@ export function createMainWindow(): BrowserWindow {
     }, 2000)
   }
 
-  // Next.jsサーバーが起動するまで待機してからURLを読み込み
+  // 画面のサーバー（開発時は next dev、パッケージ版は rendererStaticServer）が起動するまで待機してからURLを読み込み
   const loadWhenReady = async () => {
     const maxAttempts = 30 // 30秒間試行
     let attempts = 0
@@ -130,7 +130,7 @@ export function createMainWindow(): BrowserWindow {
         await new Promise((resolve) => setTimeout(resolve, 1000))
       }
 
-      console.error("Next.js server failed to start within 30 seconds")
+      console.error("Renderer server failed to start within 30 seconds")
       // サーバーが起動しない場合でもウィンドウを表示
       mainWindow.show()
     }

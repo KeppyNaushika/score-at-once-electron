@@ -6,6 +6,7 @@ node_modules/
 .next-e2e/
 .next-screenshot/
 out/
+renderer/
 main/
 dist/
 
