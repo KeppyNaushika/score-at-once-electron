@@ -3,11 +3,13 @@
  *
  * 配置はすべて AnswerOverlayStyle（position / anchor / offset / size）で決まる。
  * 画像も文字も同じアンカー点計算を通し、文字は anchor を textAlign / textBaseline へ写す。
+ * 長さは行の単位（lengthUnit）どおりに、描く答案画像の画素へ換算してから使う。
  */
 
 import {
   resolveAnchorPoint,
   resolveImageOrigin,
+  resolveOverlayPixelLengths,
   resolveTextAnchor,
 } from "@/lib/answerOverlayPlacement"
 import type {
@@ -50,20 +52,22 @@ function drawStyledText(
   region: NormalizedRegion,
   style: AnswerOverlayStyle,
   imageWidth: number,
-  imageHeight: number
+  imageHeight: number,
+  pixelsPerMm: number
 ): void {
   const pixelRegion = toPixelRegion(region, imageWidth, imageHeight)
+  const lengths = resolveOverlayPixelLengths(style, pixelsPerMm)
   const { x, y } = resolveAnchorPoint(
     pixelRegion,
     style.position,
-    style.offsetX,
-    style.offsetY
+    lengths.offsetX,
+    lengths.offsetY
   )
   const { textAlign, textBaseline } = resolveTextAnchor(style.anchor)
 
   ctx.save()
   ctx.globalAlpha = style.opacity / 100
-  ctx.font = `bold ${style.size}px sans-serif`
+  ctx.font = `bold ${lengths.size}px sans-serif`
   ctx.fillStyle = style.color
   ctx.textAlign = textAlign
   ctx.textBaseline = textBaseline
@@ -80,18 +84,20 @@ export function drawScoringMark(
   region: ScoringDataForPdf["cropRegion"],
   config: AnswerOverlaySettings,
   imageWidth: number,
-  imageHeight: number
+  imageHeight: number,
+  pixelsPerMm: number
 ): void {
   const style = config.styles.mark
   const pixelRegion = toPixelRegion(region, imageWidth, imageHeight)
+  const lengths = resolveOverlayPixelLengths(style, pixelsPerMm)
   const anchorPoint = resolveAnchorPoint(
     pixelRegion,
     style.position,
-    style.offsetX,
-    style.offsetY,
-    true
+    lengths.offsetX,
+    lengths.offsetY,
+    lengths.imageEdgePadding
   )
-  const { x, y } = resolveImageOrigin(anchorPoint, style.anchor, style.size)
+  const { x, y } = resolveImageOrigin(anchorPoint, style.anchor, lengths.size)
 
   ctx.save()
   ctx.globalAlpha = style.opacity / 100
@@ -99,8 +105,8 @@ export function drawScoringMark(
     getTintedMark(markImage, style.color),
     x,
     y,
-    style.size,
-    style.size
+    lengths.size,
+    lengths.size
   )
   ctx.restore()
 }
@@ -114,7 +120,8 @@ export function drawScoreText(
   region: ScoringDataForPdf["cropRegion"],
   config: AnswerOverlaySettings,
   imageWidth: number,
-  imageHeight: number
+  imageHeight: number,
+  pixelsPerMm: number
 ): void {
   drawStyledText(
     ctx,
@@ -122,7 +129,8 @@ export function drawScoreText(
     region,
     config.styles.partial,
     imageWidth,
-    imageHeight
+    imageHeight,
+    pixelsPerMm
   )
 }
 
@@ -134,7 +142,8 @@ export function drawSubtotalScoreText(
   subtotalData: SubtotalDataForPdf,
   config: AnswerOverlaySettings,
   imageWidth: number,
-  imageHeight: number
+  imageHeight: number,
+  pixelsPerMm: number
 ): void {
   drawStyledText(
     ctx,
@@ -142,7 +151,8 @@ export function drawSubtotalScoreText(
     subtotalData,
     config.styles.subtotal,
     imageWidth,
-    imageHeight
+    imageHeight,
+    pixelsPerMm
   )
 }
 
@@ -154,7 +164,8 @@ export function drawTotalScoreText(
   totalScoreData: TotalScoreDataForPdf,
   config: AnswerOverlaySettings,
   imageWidth: number,
-  imageHeight: number
+  imageHeight: number,
+  pixelsPerMm: number
 ): void {
   drawStyledText(
     ctx,
@@ -162,6 +173,7 @@ export function drawTotalScoreText(
     totalScoreData,
     config.styles.total,
     imageWidth,
-    imageHeight
+    imageHeight,
+    pixelsPerMm
   )
 }

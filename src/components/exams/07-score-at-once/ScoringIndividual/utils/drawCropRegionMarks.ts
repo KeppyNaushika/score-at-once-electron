@@ -3,8 +3,10 @@
  */
 import type { ScoringData } from "@/components/exams/07-score-at-once/types"
 import {
+  overlayPixelsPerMm,
   resolveAnchorPoint,
   resolveImageOrigin,
+  resolveOverlayPixelLengths,
   resolveTextAnchor,
 } from "@/lib/answerOverlayPlacement"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
@@ -26,6 +28,8 @@ interface CropRegionMarksParams {
   canvasWidth: number
   pageSpacing: number
   zoom: number
+  /** 試験の用紙サイズ。重ねる要素の mm を画素へ換算する基準（注釈と同じもの） */
+  pageSize: string
   scoringMarkConfig: AnswerOverlaySettings | null | undefined
   scoringMarkImages: Map<string, HTMLImageElement>
 }
@@ -77,6 +81,7 @@ function drawCropRegionMark(
     canvasWidth,
     pageSpacing,
     zoom,
+    pageSize,
     scoringMarkConfig,
     scoringMarkImages,
   }: CropRegionMarksParams,
@@ -104,6 +109,11 @@ function drawCropRegionMark(
   }
 
   const opacity = isCurrent ? CURRENT_OPACITY : OTHER_OPACITY
+  const pixelsPerMm = overlayPixelsPerMm(
+    pageSize,
+    image.naturalWidth,
+    image.naturalHeight
+  )
 
   // 枠とラベルの描画
   if (isCurrent) {
@@ -140,16 +150,17 @@ function drawCropRegionMark(
       const markStyle =
         scoringMarkConfig?.styles.mark ??
         DEFAULT_ANSWER_OVERLAY_SETTINGS.styles.mark
+      const markLengths = resolveOverlayPixelLengths(markStyle, pixelsPerMm)
       const markPos = resolveImageOrigin(
         resolveAnchorPoint(
           regionRect,
           markStyle.position,
-          markStyle.offsetX,
-          markStyle.offsetY,
-          true
+          markLengths.offsetX,
+          markLengths.offsetY,
+          markLengths.imageEdgePadding
         ),
         markStyle.anchor,
-        markStyle.size
+        markLengths.size
       )
 
       ctx.globalAlpha = opacity
@@ -157,8 +168,8 @@ function drawCropRegionMark(
         markImage,
         markPos.x,
         markPos.y,
-        markStyle.size,
-        markStyle.size
+        markLengths.size,
+        markLengths.size
       )
     }
   }
@@ -174,8 +185,9 @@ function drawCropRegionMark(
       scoringMarkConfig?.styles.partial ??
       DEFAULT_ANSWER_OVERLAY_SETTINGS.styles.partial
     const { textAlign, textBaseline } = resolveTextAnchor(scoreStyle.anchor)
+    const scoreLengths = resolveOverlayPixelLengths(scoreStyle, pixelsPerMm)
 
-    ctx.font = `bold ${scoreStyle.size}px sans-serif`
+    ctx.font = `bold ${scoreLengths.size}px sans-serif`
     ctx.fillStyle = scoreStyle.color
     ctx.globalAlpha = opacity
     ctx.textAlign = textAlign
@@ -184,8 +196,8 @@ function drawCropRegionMark(
     const scorePos = resolveAnchorPoint(
       regionRect,
       scoreStyle.position,
-      scoreStyle.offsetX,
-      scoreStyle.offsetY
+      scoreLengths.offsetX,
+      scoreLengths.offsetY
     )
     ctx.fillText(String(actualScore), scorePos.x, scorePos.y)
     ctx.restore()

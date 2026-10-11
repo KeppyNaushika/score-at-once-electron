@@ -52,7 +52,6 @@ const exportOptions: ExportOptions = {
   includeGradingData: false,
   format: "pdf",
   markPosition: "center",
-  markSize: 1,
   showMarks: true,
   pdfOrientation: "portrait",
   parallelCount: 1,

@@ -1,10 +1,12 @@
 import { app, dialog } from "electron"
 
 import {
+  getAbsolutePathFromSharedFiles,
   getLocalDataDirectory,
   initializeDataDirectory,
   migrateProjectsToExams,
 } from "./lib/dataManager"
+import { convertPendingAnswerOverlayLengths } from "./lib/prisma/answerOverlayLengthConversion"
 import { getPrismaClient } from "./lib/prisma/client"
 import {
   checkDatabaseHealth,
@@ -41,6 +43,28 @@ async function migrateImagePathsInDatabase(): Promise<void> {
     }
   } catch (error) {
     console.error("Failed to migrate imagePath in database:", error)
+  }
+}
+
+/**
+ * 答案に重ねる要素の長さを、答案画像の画素から mm へ変換する（migration の続き）。
+ * 答案画像を読めない試験は画素のまま残り、次の起動で再試行する。失敗しても起動は止めない
+ * （描画は画素の行をそのまま描くので見た目は変わらない）
+ */
+async function convertAnswerOverlayLengthsInDatabase(): Promise<void> {
+  try {
+    const { convertedExamIds, pendingExamIds } =
+      await convertPendingAnswerOverlayLengths(
+        getPrismaClient(),
+        getAbsolutePathFromSharedFiles
+      )
+    if (convertedExamIds.length > 0 || pendingExamIds.length > 0) {
+      console.log(
+        `Converted answer overlay lengths to mm: exams=${convertedExamIds.length}, pending (unreadable answer images)=${pendingExamIds.length}`
+      )
+    }
+  } catch (error) {
+    console.error("Failed to convert answer overlay lengths to mm:", error)
   }
 }
 
@@ -127,6 +151,9 @@ export async function initializeApp(): Promise<void> {
 
     // DB内の imagePath を projects/ → exams/ に更新（v0.6.x リネーム対応）
     await migrateImagePathsInDatabase()
+
+    // 答案に重ねる要素の長さを画素から mm へ（答案画像を読むので SQL の migration の外で行う）
+    await convertAnswerOverlayLengthsInDatabase()
 
     // 共有ドライブ用の最適化
     await optimizeDatabaseForSharedDrive()

@@ -20,6 +20,7 @@ import type {
   FileOverviewData,
   IdIntegrationConfig,
 } from "../../../../src/types/examArchive.types"
+import { legacyArchivePixelsPerMm } from "../../prisma/answerOverlayLengthConversion"
 import { recordAuditLog } from "../../prisma/auditLog"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
@@ -158,6 +159,16 @@ export async function executeIdIntegrationImport(
     user: {},
   }
 
+  // 重ね描きのスタイルの長さを画素から mm へ直す係数。答案画像を読むので、
+  // トランザクションを開く前に決めておく
+  const overlayPixelsPerMm =
+    (data.examData.answerOverlayStyles ?? []).length > 0
+      ? await legacyArchivePixelsPerMm(
+          data.answerSheetPaths,
+          data.examData.examPages
+        )
+      : null
+
   // ID変更が必要なもの（Stage 2で処理）
   const idChangeTargets: IdChangeTarget[] = []
 
@@ -283,7 +294,13 @@ export async function executeIdIntegrationImport(
         // 10a. ExamMarkingFormat (v1.4.0+)
 
         // 10b. ExamExportSettings (v1.4.0+)
-        await processExamExportSettings(data, newExamId, policy, tx)
+        await processExamExportSettings(
+          data,
+          newExamId,
+          overlayPixelsPerMm,
+          policy,
+          tx
+        )
 
         // 10c. Tag & TagSubtotalGroup & ExamTag (v1.10.0+, 旧Subject)
         await processTags(data, idMappings, warnings, policy, tx)

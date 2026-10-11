@@ -15,6 +15,7 @@
  * 出力設定やOMRの閾値が、取り込んでも黙って古いままだった。
  */
 
+import { convertOverlayRowToMm } from "../../prisma/answerOverlayLengthConversion"
 import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import type { ImportValuePolicy } from "./importValuePolicy"
 import { replacementUpdatedAt } from "./importValuePolicy"
@@ -22,22 +23,38 @@ import type { IdMappings, PrismaTransaction } from "./types"
 
 /**
  * 出力設定（重ね描きのスタイル・可視性・個人成績表）を復元する。
+ *
+ * 旧アーカイブの重ね描きのスタイルは長さを答案画像の画素で持つ（形式は凍結しているので
+ * 変換器は足さない）。`overlayPixelsPerMm`（`legacyArchivePixelsPerMm` で同梱の答案画像から
+ * 決めたもの）があれば mm へ直して書き、無ければ（答案画像を読めなかった）"px" のまま書いて
+ * 起動時の変換に任せる。
  */
 export async function processExamExportSettings(
   data: ExtractedArchiveData,
   newExamId: string,
+  overlayPixelsPerMm: number | null,
   policy: ImportValuePolicy,
   tx: PrismaTransaction
 ): Promise<void> {
   const examData = data.examData
 
   for (const style of examData.answerOverlayStyles ?? []) {
+    const lengths =
+      overlayPixelsPerMm === null
+        ? {
+            lengthUnit: "px",
+            offsetX: style.offsetX,
+            offsetY: style.offsetY,
+            size: style.size,
+          }
+        : {
+            lengthUnit: "mm",
+            ...convertOverlayRowToMm(style, overlayPixelsPerMm),
+          }
     const values = {
       position: style.position,
       anchor: style.anchor,
-      offsetX: style.offsetX,
-      offsetY: style.offsetY,
-      size: style.size,
+      ...lengths,
       color: style.color,
       opacity: style.opacity,
     }

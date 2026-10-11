@@ -277,7 +277,7 @@ export const unifiedArchiveHandlers = {
    * 開いたものは閉じるか取り込むまで main が持つ
    */
   "unifiedArchive:open": async (input: { archivePath: string }) => {
-    const openResult = openUnifiedArchiveImportSession({
+    const openResult = await openUnifiedArchiveImportSession({
       archivePath: input.archivePath,
       migrationsDir: requireMigrationsDir(),
       referenceDatabasePath: getDatabasePath(),

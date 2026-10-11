@@ -4,6 +4,7 @@
  * 答案画像・採点マーク・点数テキスト・アノテーションを1枚のCanvasに合成する。
  */
 
+import { overlayPixelsPerMm } from "@/lib/answerOverlayPlacement"
 import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 import type { AnswerOverlaySettings } from "@/types/scoringOverlay.types"
 import { toScoringStatus } from "@/types/scoringStatus.types"
@@ -58,6 +59,8 @@ export async function renderAnswerSheetToCanvas(
 
   const imageWidth = image.naturalWidth
   const imageHeight = image.naturalHeight
+  // 重ねる要素の mm を画素へ換算する係数（注釈と同じ用紙サイズを基準にする）
+  const pixelsPerMm = overlayPixelsPerMm(pageSize, imageWidth, imageHeight)
 
   // Canvasサイズを画像サイズに設定
   canvas.width = imageWidth
@@ -100,7 +103,8 @@ export async function renderAnswerSheetToCanvas(
           scoringData.cropRegion,
           config,
           imageWidth,
-          imageHeight
+          imageHeight,
+          pixelsPerMm
         )
       }
     }
@@ -134,7 +138,8 @@ export async function renderAnswerSheetToCanvas(
           scoringData.cropRegion,
           config,
           imageWidth,
-          imageHeight
+          imageHeight,
+          pixelsPerMm
         )
       }
     }
@@ -142,12 +147,26 @@ export async function renderAnswerSheetToCanvas(
 
   // 3. 小計点を描画（青色）
   for (const subtotalData of subtotalDataList) {
-    drawSubtotalScoreText(ctx, subtotalData, config, imageWidth, imageHeight)
+    drawSubtotalScoreText(
+      ctx,
+      subtotalData,
+      config,
+      imageWidth,
+      imageHeight,
+      pixelsPerMm
+    )
   }
 
   // 4. 合計点を描画（青色）
   for (const totalScoreData of totalScoreDataList) {
-    drawTotalScoreText(ctx, totalScoreData, config, imageWidth, imageHeight)
+    drawTotalScoreText(
+      ctx,
+      totalScoreData,
+      config,
+      imageWidth,
+      imageHeight,
+      pixelsPerMm
+    )
   }
 
   // 5. 全アノテーションを描画
