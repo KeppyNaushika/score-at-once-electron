@@ -86,8 +86,8 @@ export const SHORTCUT_LABELS: Record<string, string> = {
     "問いかけの「次へ」（問いかけのタブを開いている間いつでも。欄の中でも）",
   "choice.prevQuestion":
     "問いかけの「戻る」（問いかけのタブを開いている間いつでも。欄の中でも）",
-  "choice.prevAnswer": "前の答案へ（1件ずつ採点）",
-  "choice.nextAnswer": "次の答案へ（1件ずつ採点）",
+  "choice.prevAnswer": "前の答案へ（自分で採点）",
+  "choice.nextAnswer": "次の答案へ（自分で採点）",
   "choice.exit": "抜けて採点に戻る",
 
   // 部分点の入力欄

@@ -20,6 +20,7 @@ import {
 import { recommendedScoringMethodOf } from "./questioningFlow"
 import {
   describeScore,
+  type QuestioningAdvice,
   type QuestioningDecision,
   type QuestioningMember,
   type QuestioningStep,
@@ -75,6 +76,30 @@ function membersOf(
 const hasAdjustOption = (proposal: Pick<AiRubricProposalRow, "options">) =>
   proposal.options.some((option) => option.effectKind === "adjust")
 
+/**
+ * 案の助言。直していないときの文は、当たる項目（既存の項目に当たる案はその項目、前に確定して
+ * できた・結び付けた項目があればそれ）の今の助言、どちらも無ければ AI の文案。
+ * 最新の答えが下書きで、助言を直していればその文が効く
+ */
+export function proposalAdviceOf(
+  proposal: Pick<
+    AiRubricProposalRow,
+    "adviceDraft" | "matchedRubricItem" | "responses"
+  >
+): QuestioningAdvice {
+  const committedItem = proposal.responses.findLast(
+    (response) =>
+      response.committedAt !== null && response.resultRubricItem !== null
+  )?.resultRubricItem
+  const baseText =
+    (proposal.matchedRubricItem ?? committedItem)?.adviceText ??
+    proposal.adviceDraft
+  const latest = latestProposalResponse(proposal)
+  const editedText =
+    latest && latest.committedAt === null ? latest.adviceText : null
+  return { baseText, text: editedText ?? baseText }
+}
+
 /** 案1つの問い */
 export function proposalStepOf(
   proposal: AiRubricProposalRow,
@@ -84,14 +109,10 @@ export function proposalStepOf(
   return {
     id: proposal.id,
     kind: "proposal",
-    title: `${proposal.label}（${members.length}件）`,
+    title: proposal.label,
     question: "この答案をどう採点しますか？",
-    detail: [
-      proposal.description,
-      proposal.adviceDraft ? `助言：「${proposal.adviceDraft}」` : "",
-    ]
-      .filter((text) => text !== "")
-      .join("　"),
+    detail: proposal.description,
+    advice: proposalAdviceOf(proposal),
     members,
     options: proposal.options.map((option) => {
       const setStatus =
@@ -206,6 +227,7 @@ export function buildGradingQuestioning({
         title: "採点方式",
         question: "点を加減する案があります。採点方式を選んでください。",
         detail: "",
+        advice: null,
         members: [],
         options: QUESTIONING_SCORING_METHODS.map((method) => ({
           key: method,
@@ -243,9 +265,10 @@ export function buildGradingQuestioning({
     const step: QuestioningStep = {
       id: OUTSIDE_STEP_ID,
       kind: "outside",
-      title: `どの案にも入らない答案（${members.length}件）`,
+      title: "どの案にも入らない答案",
       question: "AI がどの案にも項目にも当てられなかった答案です。",
       detail: "",
+      advice: null,
       members,
       options: [
         {

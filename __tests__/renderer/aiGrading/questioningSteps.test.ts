@@ -16,15 +16,17 @@ import {
 } from "@/components/exams/07-score-at-once/AiGrading/utils/checkQuestions"
 import { planQuestioningCommit } from "@/components/exams/07-score-at-once/AiGrading/utils/questioningCommitPlan"
 import {
-  nextUndecidedStepId,
+  nextStepId,
   previousStepId,
   scoredExamStudentIdsOf,
   summarizeQuestioningReview,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/questioningReview"
-import type {
-  QuestioningScore,
-  QuestioningStep,
-  QuestioningStepState,
+import {
+  decisionBadgeOf,
+  memberCountLabelOf,
+  type QuestioningScore,
+  type QuestioningStep,
+  type QuestioningStepState,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/questioningSteps"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
@@ -203,6 +205,7 @@ function makeStep(overrides: Partial<QuestioningStep>): QuestioningStep {
     title: "問い",
     question: "",
     detail: "",
+    advice: null,
     members: [],
     options: [],
     allowsManual: true,
@@ -302,7 +305,7 @@ describe("見直しと確定", () => {
     ).toEqual([])
   })
 
-  it("確定で書くことを決める。1件ずつ採点の点は直接書き、書き終えてから確定済みにする", () => {
+  it("確定で書くことを決める。自分で採点の点は直接書き、書き終えてから確定済みにする", () => {
     const plan = planQuestioningCommit(states, "grade", ownScores({}))
     expect(plan).toEqual({
       scoringMethod: null,
@@ -343,7 +346,7 @@ describe("見直しと確定", () => {
     ).toBe(0)
   })
 
-  it("答えたあとは後ろの答えていない問いへ、無ければ先頭から。前の問いは並びの1つ前", () => {
+  it("次へは並びの1つ後ろ（答えてあっても飛ばさない。最後からは見直し）。戻るは並びの1つ前", () => {
     const undecided = (id: string): QuestioningStepState => ({
       step: makeStep({ id }),
       decision: null,
@@ -352,12 +355,82 @@ describe("見直しと確定", () => {
       draftAttemptResponseIds: [],
     })
     const ordered = [undecided("a"), states[0], undecided("c")]
-    expect(nextUndecidedStepId(ordered, "proposal-1")).toBe("c")
-    expect(nextUndecidedStepId(ordered, "c")).toBe("a")
-    expect(nextUndecidedStepId([states[0], undecided("x")], "x")).toBeNull()
+    expect(nextStepId(ordered, "a")).toBe("proposal-1")
+    expect(nextStepId(ordered, "proposal-1")).toBe("c")
+    expect(nextStepId(ordered, "c")).toBeNull()
     expect(previousStepId(ordered, "c")).toBe("proposal-1")
     expect(previousStepId(ordered, "a")).toBeNull()
     // 見直しからは最後の問い
     expect(previousStepId(ordered, null)).toBe("c")
+  })
+})
+
+describe("問いの一覧の行", () => {
+  const scoredStep = makeStep({
+    members: members("a", "b"),
+    options: [
+      score("correct", null),
+      score("partial", 4),
+      score("incorrect", null),
+    ].map((optionScore) => ({
+      key: `option-${optionScore.status}`,
+      label: "",
+      description: "",
+      recommended: false,
+      score: optionScore,
+      writesScore: true,
+    })),
+  })
+
+  it("点を付ける選択肢は判定の札（正答・誤答は点なし、部分点は点を添える）", () => {
+    const badgeOf = (optionKey: string) =>
+      decisionBadgeOf(scoredStep, { kind: "option", optionKey })
+    expect(badgeOf("option-correct")).toEqual({
+      label: "正答",
+      status: "correct",
+    })
+    expect(badgeOf("option-partial")).toEqual({
+      label: "部分点 4点",
+      status: "partial",
+    })
+    expect(badgeOf("option-incorrect")).toEqual({
+      label: "誤答",
+      status: "incorrect",
+    })
+  })
+
+  it("自分で採点・再採点の指示は色の無い札。件数は案と案の外の問いだけに添える", () => {
+    expect(
+      decisionBadgeOf(scoredStep, {
+        kind: "manual",
+        scores: new Map([["a", score("correct", null)]]),
+      })
+    ).toEqual({ label: "自分で採点 1件", status: null })
+    expect(
+      decisionBadgeOf(scoredStep, { kind: "instruction", text: "指示" })
+    ).toEqual({ label: "再採点を指示", status: null })
+    expect(memberCountLabelOf(scoredStep)).toBe("2件")
+    expect(
+      memberCountLabelOf(
+        makeStep({ kind: "disagreement", members: members("a") })
+      )
+    ).toBeNull()
+  })
+
+  it("見直しは、下書きで助言を直した問いを数える", () => {
+    const withAdvice = (text: string): QuestioningStepState => ({
+      step: makeStep({ advice: { baseText: "単位を書こう。", text } }),
+      decision: { kind: "instruction", text: "指示" },
+      isCommitted: false,
+      draftProposalResponseId: "draft",
+      draftAttemptResponseIds: [],
+    })
+    expect(
+      summarizeQuestioningReview(
+        [withAdvice("cm まで書こう。"), withAdvice("単位を書こう。")],
+        "grade",
+        ownScores({})
+      ).adviceEditCount
+    ).toBe(1)
   })
 })

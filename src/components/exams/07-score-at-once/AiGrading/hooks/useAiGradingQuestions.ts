@@ -75,7 +75,11 @@ export function useAiGradingQuestions({
 
   const proposalRunId = proposalRun?.id ?? null
   const persistDecision = useCallback(
-    async (step: QuestioningStep, decision: QuestioningDecision) => {
+    async (
+      step: QuestioningStep,
+      decision: QuestioningDecision,
+      adviceText: string | null
+    ) => {
       switch (step.kind) {
         case "scoringMethod":
           if (proposalRunId === null || decision.kind !== "option") return
@@ -101,6 +105,7 @@ export function useAiGradingQuestions({
                     return attemptId ? [{ attemptId, ...score }] : []
                   })
                 : [],
+            adviceText,
           })
         }
         default:

@@ -53,7 +53,7 @@ interface AiGradingRunDialogProps {
   initialProvider: GradingProviderId
   unlockedProviders: GradingProviderId[]
   prompt: AiPromptRow
-  /** 送るプロンプトの番号（表示のためだけのもの） */
+  /** 送る採点指示の番号（表示のためだけのもの） */
   promptNumber: number | undefined
   reviewedAnswers: ReviewedAiGradingAnswer[]
   questionScores: QuestionScoreRow[]
@@ -170,7 +170,7 @@ function AiGradingRunForm({
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           {purpose === "check" ? "AI チェック" : "AI 採点"}（{cropRegion.label}
-          ・プロンプト {promptNumber ?? "?"}）
+          ・指示 {promptNumber ?? "?"}）
           <ExperimentalBadge />
         </DialogTitle>
         <DialogDescription>

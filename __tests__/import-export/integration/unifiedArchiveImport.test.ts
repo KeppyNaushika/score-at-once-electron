@@ -144,7 +144,7 @@ describe("表を書く順番", () => {
         ).toBeLessThan(positionByTable.get(table) ?? -1)
       }
     }
-    // AiPrompt.parentPromptId（直す元のプロンプト）は同じ表の行を指すので、表の順では
+    // AiPrompt.parentPromptId（直す元の採点指示）は同じ表の行を指すので、表の順では
     // 親を先に書けない
     expect(order.needsDeferredForeignKeys).toBe(true)
     expect(

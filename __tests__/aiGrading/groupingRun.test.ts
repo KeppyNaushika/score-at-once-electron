@@ -238,7 +238,7 @@ describe("1段目のあとに続く2段目", () => {
 })
 
 describe("1段目のルーブリック項目", () => {
-  it("項目の一覧を送り、送った文をプロンプトの新しい行に写し、当てはまりを書く", async () => {
+  it("項目の一覧を送り、送った文を採点指示の新しい行に写し、当てはまりを書く", async () => {
     const rubricItem = await createRubricItem(
       {
         cropRegionId: fixture.cropRegion.id,
@@ -268,7 +268,7 @@ describe("1段目のルーブリック項目", () => {
     expect(stage1Request.outputSchemaName).toBe("stage1_grading")
     expect(JSON.stringify(stage1Request.outputSchema)).toContain(rubricItem.id)
 
-    // 項目を作る前に作ったプロンプトは一覧が空なので、新しい行を作って送る
+    // 項目を作る前に作った採点指示は一覧が空なので、新しい行を作って送る
     const sendingPrompt = await testPrisma.aiPrompt.findUniqueOrThrow({
       where: { id: gradeRun.promptId },
     })

@@ -2,18 +2,21 @@
  * 問いかけの流れ（docs/vlm-grading-design.md §3-5・§11-4）: 1問ずつのカードで答え、決めたことを
  * 上に積み、最後に見直して確定する。AI 採点と AI チェックで同じもの。
  *
- * - ↑↓ で選び、Enter で決めて次の答えていない問いへ。選択肢のクリックは焦点を移すだけ（決めない）
+ * - ↑↓ で選び、Enter で決めて並びの次の問いへ（答えてある問いも飛ばさない。最後の問いからは見直しへ）。
+ *   選択肢のクリックは焦点を移すだけ（決めない）
  * - 「次へ」（Ctrl/⌘+Enter）は Enter と同じく決めて次へ、「戻る」（Ctrl/⌘+Shift+Enter）で前の問いへ。
  *   このふたつのキーは、問いかけのタブを開いている間いつでも効く（選択の場面を Esc で抜けていても、
- *   「その他」の欄の中でも、1件ずつ採点の最中でも。ダイアログ・部分点の入力欄を開いている間は効かない）
- * - 選択肢の並びは、問いの選択肢 →「1件ずつ自分で採点する」→「その他：再採点を指示する」
- * - 「1件ずつ自分で採点する」の上の Enter で、問いの答案を ←→ で移りながら（中央の一覧のマスを
+ *   「その他」の欄の中でも、自分で採点の最中でも。ダイアログ・部分点の入力欄を開いている間は効かない）
+ * - 選択肢の並びは、問いの選択肢 →「自分で採点する」→「その他：再採点を指示する」
+ * - 「自分で採点する」の上の Enter で、問いの答案を ←→ で移りながら（中央の一覧のマスを
  *   クリックしても移れる）採点キーで点を付ける。
  *   もう一度 Enter で決めて次へ。↑↓ で別の選択肢へ移ると抜ける（付けた点はその問いの間は残る）
  * - 「その他」へ移ると欄に入る。欄の中は `useOtherInstructionKeys`
+ * - 案の問いには助言の欄がある（クリックで入る。Esc で抜ける）。直した文は決めた答えと一緒に下書きへ書き、
+ *   答えたあとに直したら欄を抜けたときに書き直す（答え直しの行。答える前は画面に持つだけ）
  *
  * 決めたことは下書きとして AI の層へすぐ書く（読み込み直しても消えない）。教員の採点はここでは書かない。
- * 持つのは利用者の選択（開いている問い・焦点・1件ずつ採点の途中・欄の文）だけで、問いと答えは届いた行から導く。
+ * 持つのは利用者の選択（開いている問い・焦点・自分で採点の途中・欄の文・助言の文）だけで、問いと答えは届いた行から導く。
  */
 
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -22,7 +25,7 @@ import { useChoiceScene } from "@/components/exams/07-score-at-once/hooks/useCho
 import { useSceneCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
 
 import {
-  nextUndecidedStepId,
+  nextStepId,
   previousStepId,
   resolveOpenedStepId,
 } from "../utils/questioningReview"
@@ -33,11 +36,12 @@ import {
   type QuestioningStep,
   type QuestioningStepState,
 } from "../utils/questioningSteps"
+import { useQuestioningAdvice } from "./useQuestioningAdvice"
 
 /** 開いているもの。null は自動（答えていない最初の問い。無ければ見直し） */
 type OpenedEntry = { kind: "step"; stepId: string } | { kind: "review" }
 
-/** 1件ずつ採点の途中 */
+/** 自分で採点の途中 */
 interface ManualDraft {
   stepId: string
   cursor: number
@@ -87,15 +91,18 @@ function initialFocusOf(state: QuestioningStepState): number {
 
 interface UseQuestioningFlowOptions {
   states: readonly QuestioningStepState[]
-  /** 決めたことを下書きとして書く */
+  /**
+   * 決めたことを下書きとして書く。adviceText は直した助言（直していない・助言の無い問いは null。"" は助言なし）
+   */
   persistDecision: (
     step: QuestioningStep,
-    decision: QuestioningDecision
+    decision: QuestioningDecision,
+    adviceText: string | null
   ) => Promise<unknown>
   /** キーを効かせるか（問いかけのタブを開いているあいだだけ） */
   isEnabled: boolean
   /**
-   * 問いかけの組（AI 採点か AI チェックか）。変わったら、開いている問い・1件ずつ採点の途中・
+   * 問いかけの組（AI 採点か AI チェックか）。変わったら、開いている問い・自分で採点の途中・
    * 欄の文を捨てて、答えていない最初の問いから始める
    */
   scopeKey: string
@@ -111,6 +118,8 @@ export function useQuestioningFlow({
   const [manual, setManual] = useState<ManualDraft | null>(null)
   const [otherTexts, setOtherTexts] = useState<Record<string, string>>({})
   const otherTextRef = useRef<HTMLTextAreaElement | null>(null)
+  const advice = useQuestioningAdvice({ states, scopeKey })
+  const { adviceTextRef, adviceToSend } = advice
   const [openedScope, setOpenedScope] = useState(scopeKey)
   if (openedScope !== scopeKey) {
     setOpenedScope(scopeKey)
@@ -134,6 +143,7 @@ export function useQuestioningFlow({
 
   const open = (entry: OpenedEntry) => {
     leaveOtherText()
+    adviceTextRef.current?.blur()
     setOpened(entry)
   }
   const openStep = (stepId: string) => open({ kind: "step", stepId })
@@ -148,20 +158,38 @@ export function useQuestioningFlow({
   const setOtherText = (stepId: string, text: string) =>
     setOtherTexts((prev) => ({ ...prev, [stepId]: text }))
 
-  /** 決めて、次の答えていない問いへ（無ければ見直しへ） */
+  const persist = (
+    state: QuestioningStepState,
+    decision: QuestioningDecision,
+    adviceText: string | null
+  ) => {
+    advice.markAdviceSent(state.step, adviceText)
+    void persistDecision(state.step, decision, adviceText).catch(() => {
+      // 失敗の通知は MutationCache のトーストが出す
+    })
+  }
+
+  /** 決めて、並びの次の問いへ（最後の問いなら見直しへ） */
   const decideWith = (
     state: QuestioningStepState,
     decision: QuestioningDecision
   ) => {
-    if (!isSameDecision(state.decision, decision)) {
-      void persistDecision(state.step, decision).catch(() => {
-        // 失敗の通知は MutationCache のトーストが出す
-      })
+    const { adviceText, changed } = adviceToSend(state.step)
+    if (changed || !isSameDecision(state.decision, decision)) {
+      persist(state, decision, adviceText)
     }
     setManual(null)
-    const nextId = nextUndecidedStepId(states, state.step.id)
+    const nextId = nextStepId(states, state.step.id)
     if (nextId) openStep(nextId)
     else openReview()
+  }
+
+  /** 助言の欄を抜けたとき: 答えてある問いなら、直した助言で答えを書き直す（答える前は画面に持つだけ） */
+  const saveAdviceText = (stepId: string) => {
+    const state = states.find((candidate) => candidate.step.id === stepId)
+    if (!state?.decision) return
+    const { adviceText, changed } = adviceToSend(state.step)
+    if (changed) persist(state, state.decision, adviceText)
   }
 
   const manualOf = (state: QuestioningStepState): ManualDraft => {
@@ -262,7 +290,7 @@ export function useQuestioningFlow({
     if (isOtherFocused) otherTextRef.current?.focus()
   }, [isOtherFocused, currentStepId])
 
-  /** 1件ずつ採点している最中か（焦点が「1件ずつ」にあり、始めている） */
+  /** 自分で採点している最中か（焦点が「自分で採点する」にあり、始めている） */
   const isManualActive =
     currentState !== null &&
     manual?.stepId === currentState.step.id &&
@@ -287,7 +315,7 @@ export function useQuestioningFlow({
       ),
     [currentState]
   )
-  /** 1件ずつ採点の焦点を、その答案（受験者）へ（中央の一覧のマスを選んだとき）。問いの外の答案なら動かない */
+  /** 自分で採点の焦点を、その答案（受験者）へ（中央の一覧のマスを選んだとき）。問いの外の答案なら動かない */
   const placeManualCursor = (examStudentId: string) => {
     if (!currentState || !manual) return
     const memberIndex = currentState.step.members.findIndex(
@@ -315,7 +343,7 @@ export function useQuestioningFlow({
     otherTextOf(currentState.step.id).trim() === ""
       ? "「その他」を選んでいるときは、指示を書くと次へ進めます。"
       : null
-  /** 「次へ」で 1件ずつ採点を始める（焦点が「1件ずつ」にあり、まだ始めていない）か */
+  /** 「次へ」で自分で採点を始める（焦点が「自分で採点する」にあり、まだ始めていない）か */
   const startsManualOnNext = focusedEntry?.kind === "manual" && !isManualActive
   const canGoToPrevious = previousStepId(states, currentStepId) !== null
 
@@ -357,6 +385,10 @@ export function useQuestioningFlow({
     scoreManualCursor,
     otherTextRef,
     otherTextOf,
+    adviceTextRef,
+    adviceTextOf: advice.adviceTextOf,
+    setAdviceText: advice.setAdviceText,
+    saveAdviceText,
     setOtherText,
     leaveOtherTextUpward,
     discardUnusedOtherTexts,

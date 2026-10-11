@@ -6,7 +6,7 @@
  * - 同意して API キーを保存した事業者が無ければ「AI採点」は採点モードの選択肢に出ない
  * - 実行ダイアログは送る答案の4つの選び方（未採点・無答以外・全て・選択）ごとに件数を出し、
  *   既定は未採点。切り替えると件数と送る答案が変わる。選んでいなければ「選択」は選べない
- * - 採点の履歴は目的ごとに古い順の番号（採点 1・チェック 1）とプロンプトの番号で呼ぶ
+ * - 採点の履歴は目的ごとに古い順の番号（採点 1・チェック 1）と採点指示の番号で呼ぶ
  *
  * window.electronAPI は偽物で、ネットワークにも実際のキーにも実データにも触れない。
  */
@@ -535,7 +535,7 @@ function RunHistoryHarness({ runs }: { runs: AiGradingRunRow[] }) {
 }
 
 describe("採点の履歴", () => {
-  it("新しい順に並べ、目的ごとの番号とプロンプトの番号で呼び、押した実行を選んだ形で出し、「答案ごとに最新の判定」で戻せる", async () => {
+  it("新しい順に並べ、目的ごとの番号と採点指示の番号で呼び、押した実行を選んだ形で出し、「答案ごとに最新の判定」で戻せる", async () => {
     installFakeElectronApi({ isUnlocked: true })
     renderWithProviders(
       <RunHistoryHarness
@@ -564,9 +564,9 @@ describe("採点の履歴", () => {
     expect(rows[0]).toHaveTextContent("答案ごとに最新の判定")
     expect(rows[0]).toHaveAttribute("aria-pressed", "true")
     expect(rows[1]).toHaveTextContent("claude-haiku-4-5 / 中 / バッチ")
-    expect(rows[1]).toHaveTextContent("採点 2・プロンプト 1")
-    expect(rows[2]).toHaveTextContent("チェック 1・プロンプト 1")
-    expect(rows[3]).toHaveTextContent("採点 1・プロンプト 1")
+    expect(rows[1]).toHaveTextContent("採点 2・指示 1")
+    expect(rows[2]).toHaveTextContent("チェック 1・指示 1")
+    expect(rows[3]).toHaveTextContent("採点 1・指示 1")
 
     await userEvent.click(rows[3])
     expect(rows[3]).toHaveAttribute("aria-pressed", "true")

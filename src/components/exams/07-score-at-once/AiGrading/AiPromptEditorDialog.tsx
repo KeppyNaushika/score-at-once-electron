@@ -28,21 +28,21 @@ interface AiPromptEditorDialogProps {
   onOpenChange: (open: boolean) => void
   examId: string
   cropRegion: QuestionAnswerRegionRow
-  /** 写す元のプロンプト（「編集」から開いたとき）。新規追加なら null で、白紙から書く */
+  /** 写す元の採点指示（「編集」から開いたとき）。新規追加なら null で、白紙から書く */
   basePrompt: AiPromptRow | null
-  /** 写す元のプロンプトの番号（表示のためだけのもの） */
+  /** 写す元の採点指示の番号（表示のためだけのもの） */
   basePromptNumber: number | undefined
   /**
    * 新規追加のとき「助言の文案の指示」に最初から入れる文言（「AI採点」の画面の「既定値」タブで決める）。
-   * 元のプロンプトを写すときは使わず、元の値を引き継ぐ
+   * 元の採点指示を写すときは使わず、元の値を引き継ぐ
    */
   defaultAnnotationInstruction: string
-  /** 保存したプロンプトを選ぶ */
+  /** 保存した採点指示を選ぶ */
   onCreated: (promptId: string) => void
 }
 
 /**
- * プロンプトを書く。保存すると**新しい行**になる（元があれば、それを親にする）。
+ * 採点指示を書く。保存すると**新しい行**になる（元があれば、それを親にする）。
  * 配点とアプリ共通の指示はアプリが加えるので、ここでは書かない（設計 §3-1）
  */
 export function AiPromptEditorDialog(props: AiPromptEditorDialogProps) {
@@ -67,7 +67,7 @@ function AiPromptEditorForm({
   const [questionText, setQuestionText] = useState(
     basePrompt?.questionText ?? ""
   )
-  // 問題の画像は元のプロンプトから並び順のまま引き継ぐ（保存すると新しいプロンプトに画像の行も作る）
+  // 問題の画像は元の採点指示から並び順のまま引き継ぐ（保存すると新しい採点指示に画像の行も作る）
   const [questionImagePaths, setQuestionImagePaths] = useState<string[]>(
     () =>
       basePrompt?.questionImages.map(
@@ -103,7 +103,7 @@ function AiPromptEditorForm({
       },
       {
         onSuccess: (createdPrompt) => {
-          toast.success("プロンプトを保存しました")
+          toast.success("採点指示を保存しました")
           onCreated(createdPrompt.id)
           onOpenChange(false)
         },
@@ -116,13 +116,13 @@ function AiPromptEditorForm({
       <DialogHeader>
         <DialogTitle>
           {basePrompt
-            ? `プロンプト ${basePromptNumber ?? ""} を編集`
-            : "プロンプトを新規追加"}
+            ? `指示 ${basePromptNumber ?? ""} を編集`
+            : "採点指示を新規追加"}
           （{cropRegion.label}）
         </DialogTitle>
         <DialogDescription>
           {basePrompt
-            ? "保存すると新しいプロンプトになり、元は残ります。"
+            ? "保存すると新しい採点指示になり、元は残ります。"
             : "どの欄も省略できます。"}
           配点（{cropRegion.points ?? "未設定"}）はアプリが加えます。
         </DialogDescription>
@@ -203,7 +203,7 @@ function AiPromptEditorForm({
           やめる
         </Button>
         <Button onClick={handleSave} disabled={createPrompt.isPending}>
-          {basePrompt ? "新しいプロンプトとして保存" : "保存"}
+          {basePrompt ? "新しい採点指示として保存" : "保存"}
         </Button>
       </DialogFooter>
     </>

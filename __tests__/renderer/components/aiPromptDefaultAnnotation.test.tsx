@@ -1,18 +1,19 @@
 // @vitest-environment jsdom
 /**
- * 07 のプロンプトの「助言の文案の指示」の初期値（docs/vlm-grading-design.md §3-1）。
+ * 07 の採点指示の「助言の文案の指示」の初期値（docs/vlm-grading-design.md §3-1）。
  *
  * ここで固定すること:
  * - 新規追加では、「AI採点」の画面の「既定値」タブで決めた文言が最初から入り、そのまま保存される
- * - 元のプロンプトを写して作るもの（「編集」）は、既定の文言ではなく元の値を引き継ぐ
+ * - 元の採点指示を写して作るもの（「編集」）は、既定の文言ではなく元の値を引き継ぐ
  * - 既定値を読む前は新規追加を押せない（空欄で始まってしまうため）
+ * - 選んだ採点指示は中身のどこを押しても（Enter・Space でも）編集が開く。問題の画像のサムネイルは拡大のまま
  *
  * window.electronAPI は偽物で、実データには触れない。
  */
 
 import "../setup"
 
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -73,7 +74,7 @@ const cropRegion: QuestionAnswerRegionRow = {
   cropSubtotals: [],
 }
 
-/** main の代わり。作ったプロンプトは id だけ返す */
+/** main の代わり。作った採点指示は id だけ返す */
 function installFakeElectronApi() {
   const aiGrading = {
     createPrompt: vi.fn(async () => ({ id: "prompt-created" })),
@@ -111,7 +112,7 @@ function renderPanel(options: {
   )
 }
 
-describe("プロンプトの助言の文案の指示の初期値", () => {
+describe("採点指示の助言の文案の指示の初期値", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -146,7 +147,7 @@ describe("プロンプトの助言の文案の指示の初期値", () => {
     expect(within(dialog).getByLabelText("助言の文案の指示")).toHaveValue("")
   })
 
-  it("元のプロンプトを写して作るものは、既定の文言ではなく元の値を引き継ぐ（空でも上書きしない）", async () => {
+  it("元の採点指示を写して作るものは、既定の文言ではなく元の値を引き継ぐ（空でも上書きしない）", async () => {
     const user = userEvent.setup()
     const aiGrading = installFakeElectronApi()
     const basePrompt = makePrompt({ annotationInstruction: "" })
@@ -156,12 +157,12 @@ describe("プロンプトの助言の文案の指示の初期値", () => {
       selectedPromptId: basePrompt.id,
     })
 
-    await user.click(screen.getByRole("button", { name: "編集" }))
+    await user.click(screen.getByRole("button", { name: "指示 1 を編集" }))
     const dialog = await screen.findByRole("dialog")
     expect(within(dialog).getByLabelText("助言の文案の指示")).toHaveValue("")
 
     await user.click(
-      within(dialog).getByRole("button", { name: "新しいプロンプトとして保存" })
+      within(dialog).getByRole("button", { name: "新しい採点指示として保存" })
     )
     expect(aiGrading.createPrompt).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -176,5 +177,44 @@ describe("プロンプトの助言の文案の指示の初期値", () => {
     renderPanel({ settings: undefined })
 
     expect(screen.getByRole("button", { name: "新規追加" })).toBeDisabled()
+  })
+
+  it("選んだ採点指示は中身のどこを押しても編集が開き、問題の画像のサムネイルは拡大だけ開く", async () => {
+    const user = userEvent.setup()
+    installFakeElectronApi()
+    const prompt = makePrompt({
+      questionImages: [
+        {
+          id: "question-image-1",
+          promptId: "prompt-1",
+          imagePath: "ai-question-images/1.png",
+          sortOrder: 0,
+          createdAt: new Date("2026-01-01T00:00:00.000Z"),
+          updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        },
+      ],
+    })
+    renderPanel({
+      settings: SETTINGS,
+      prompts: [prompt],
+      selectedPromptId: prompt.id,
+    })
+    expect(screen.queryByRole("button", { name: "編集" })).toBeNull()
+
+    await user.click(
+      screen.getByRole("button", { name: "問題の画像 1枚目を拡大" })
+    )
+    const zoom = await screen.findByRole("dialog")
+    expect(within(zoom).queryByRole("heading", { name: /を編集/ })).toBeNull()
+    await user.keyboard("{Escape}")
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+
+    const editTarget = screen.getByRole("button", { name: "指示 1 を編集" })
+    editTarget.focus()
+    await user.keyboard("{Enter}")
+    const editor = await screen.findByRole("dialog")
+    expect(
+      within(editor).getByRole("heading", { name: /^指示 1 を編集/ })
+    ).toBeInTheDocument()
   })
 })

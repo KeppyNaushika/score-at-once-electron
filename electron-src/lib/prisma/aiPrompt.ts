@@ -138,7 +138,7 @@ export async function createAiPrompt(
     data.parentPromptId &&
     (!parentPrompt || parentPrompt.cropRegionId !== data.cropRegionId)
   ) {
-    throw new Error("直す元のプロンプトが、この設問のものではありません")
+    throw new Error("直す元の採点指示が、この設問のものではありません")
   }
 
   const questionImagePaths = data.questionImagePaths ?? []
@@ -235,7 +235,7 @@ export async function ensurePromptRendersRubricItems(
     scopeId: scope.scopeId,
     scopeLabel: scope.scopeLabel,
     summary:
-      "ルーブリック項目の一覧が変わったので、プロンプトの新しい版を作りました",
+      "ルーブリック項目の一覧が変わったので、採点指示の新しい版を作りました",
   })
   return created
 }

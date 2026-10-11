@@ -24,7 +24,7 @@ import {
 export interface AnswerReview {
   displayedAttempt: AttemptWithRun | null
   reviewReasons: ReviewReason[]
-  /** 表示中の試行が、選んでいるプロンプトとは別のプロンプトのもの */
+  /** 表示中の試行が、選んでいる採点指示とは別の採点指示のもの */
   isFromOtherPrompt: boolean
   /** 表示中の試行を採用した */
   isAdopted: boolean

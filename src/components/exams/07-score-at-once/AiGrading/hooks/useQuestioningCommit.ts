@@ -113,12 +113,18 @@ export function useQuestioningCommit({
       }
       // 案への答え（項目を作って当てる・外す）。同じ行は後から返ったもの（適用がそろっている）を使う
       const touchedById = new Map<string, RubricScoredRow>()
+      // 助言を書き換えた既存の項目（その項目の当たる行すべての朱書きを合わせる）
+      const adviceChangedItemIds = new Set<string>()
       for (const proposalCommit of plan.proposalCommits) {
-        const { touchedRows } = await commitProposalResponse({
-          responseId: proposalCommit.responseId,
-          examStudentIds: proposalCommit.examStudentIds,
-        })
+        const { touchedRows, adviceChangedRubricItemId } =
+          await commitProposalResponse({
+            responseId: proposalCommit.responseId,
+            examStudentIds: proposalCommit.examStudentIds,
+          })
         touchedRows.forEach((row) => touchedById.set(row.id, row))
+        if (adviceChangedRubricItemId) {
+          adviceChangedItemIds.add(adviceChangedRubricItemId)
+        }
       }
       // 項目から点を計算して書く（直接採点では、判定を決める項目の判定をそのまま点にする）
       const touchedRows = [...touchedById.values()]
@@ -155,7 +161,7 @@ export function useQuestioningCommit({
         })
         if (writes.length > 0) await writeRubricScores(writes)
       }
-      // 教員が直接決めた点（1件ずつ採点・チェックで直す点）
+      // 教員が直接決めた点（自分で採点・チェックで直す点）
       if (plan.directScores.length > 0) {
         await writeQuestioningScores({
           cropRegionId: cropRegion.id,
@@ -164,6 +170,9 @@ export function useQuestioningCommit({
       }
       if (touchedRows.length > 0) {
         await adviceSync.syncRows(touchedRows.map((row) => row.id))
+      }
+      for (const rubricItemId of adviceChangedItemIds) {
+        await adviceSync.syncRowsWithItem(rubricItemId)
       }
       if (
         plan.proposalResponseIdsToMark.length > 0 ||

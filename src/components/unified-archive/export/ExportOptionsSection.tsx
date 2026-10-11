@@ -38,7 +38,7 @@ const OPTIONAL_ITEMS: readonly {
     value: "aiGradingRecords",
     label: "AI採点の記録",
     description:
-      "書き出す試験の設問のプロンプトと、AI採点の実行・判定（採点の範囲に従う）",
+      "書き出す試験の設問の採点指示と、AI採点の実行・判定（採点の範囲に従う）",
   },
 ]
 

@@ -21,7 +21,7 @@ export interface PromptImage {
   base64Data: string
 }
 
-/** プロンプトのうち、送る文面になる欄 */
+/** 採点指示のうち、送る文面になる欄 */
 export type PromptTextFields = Pick<
   AiPrompt,
   "questionText" | "modelAnswerText" | "rubricText" | "annotationInstruction"
@@ -101,7 +101,7 @@ function questionImageSegments(
 }
 
 /**
- * プロンプトの中身（配点・問題文・模範解答・採点基準）の節を並べる（1段目の固定部の頭）
+ * 採点指示の中身（配点・問題文・模範解答・採点基準）の節を並べる（1段目の固定部の頭）
  */
 export function buildPromptContentSegments(
   input: PromptContentInput

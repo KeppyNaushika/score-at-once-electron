@@ -1,7 +1,7 @@
 /**
  * AI採点モードの採点キーの登録。
  *
- * 問いかけの「1件ずつ自分で採点する」で、選択の場面に（`useQuestioningManualKeys`。下書き）
+ * 問いかけの「自分で採点する」で、選択の場面に（`useQuestioningManualKeys`。下書き）
  * 採点キーを登録する（docs/vlm-grading-design.md §3-5・§11-4）。問いかけの選択肢は ↑↓ で選ぶので、
  * 選択の場面でも数字は部分点の入力を始める
  */

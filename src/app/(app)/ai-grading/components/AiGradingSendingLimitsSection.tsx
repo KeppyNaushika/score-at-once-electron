@@ -23,7 +23,7 @@ interface AiGradingSendingLimitsSectionProps {
 
 /**
  * 送信の同時実行数と、送信1回の見積もりの警告額。「設定」タブに置く。
- * どちらも実行やプロンプトに最初から入る値（既定値）ではなく、毎回そのまま効く設定
+ * どちらも実行や採点指示に最初から入る値（既定値）ではなく、毎回そのまま効く設定
  */
 export function AiGradingSendingLimitsSection({
   settings,

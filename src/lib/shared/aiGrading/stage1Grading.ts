@@ -69,7 +69,7 @@ export const STAGE1_SYSTEM_TEXT = [
 ].join("\n")
 
 interface Stage1RequestInput {
-  /** プロンプトの欄。朱書き（助言）の指示は1段目では使わない */
+  /** 採点指示の欄。朱書き（助言）の指示は1段目では使わない */
   prompt: Omit<PromptTextFields, "annotationInstruction">
   points: number | null
   /** 問題の画像（並び順）。無ければ省くか空 */

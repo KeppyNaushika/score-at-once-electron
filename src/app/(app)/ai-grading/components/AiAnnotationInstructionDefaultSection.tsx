@@ -12,10 +12,10 @@ interface AiAnnotationInstructionDefaultSectionProps {
 }
 
 /**
- * 新しく作るプロンプトの「助言の文案の指示」に最初から入れる文言（設計 §3-1）。
+ * 新しく作る採点指示の「助言の文案の指示」に最初から入れる文言（設計 §3-1）。
  *
  * 入力欄から離れたときに保存する（同じタブの他の入力欄と同じ）。複数行なので Enter は改行のまま。
- * 既存のプロンプトは変わらず、元の版を写して作る版も元の版の値を引き継ぐ
+ * 既存の採点指示は変わらず、元の版を写して作る版も元の版の値を引き継ぐ
  */
 export function AiAnnotationInstructionDefaultSection({
   settings,
@@ -39,7 +39,7 @@ export function AiAnnotationInstructionDefaultSection({
       </h3>
       <p className="text-xs text-muted-foreground">
         07
-        でプロンプトを新規追加するとき、「助言の文案の指示」の欄に最初から入れておく文言です。作ったプロンプトの中で書き換えられます。すでにあるプロンプトは変わりません。空欄なら、欄は空欄から始まります。
+        で採点指示を新規追加するとき、「助言の文案の指示」の欄に最初から入れておく文言です。作った採点指示の中で書き換えられます。すでにある採点指示は変わりません。空欄なら、欄は空欄から始まります。
       </p>
       <Textarea
         key={settings.defaultAnnotationInstruction}

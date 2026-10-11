@@ -6,7 +6,7 @@
  *
  * 1件の依頼は「固定部（アプリ共通の指示・出力の形・問題文・模範解答・固定の画像）＋答案の画像」。
  * - 答案の画像は、事業者・モデルごとの数え方で画素から数える（`imageTokens.ts`）
- * - 固定部は、同じプロンプトで送った実測があればそこから割り出し、無ければ目安で数える
+ * - 固定部は、同じ採点指示で送った実測があればそこから割り出し、無ければ目安で数える
  * - 出力は、同じ設問 → 同じモデル・手間の実測の順に探し、無ければ目安に戻る
  * - キャッシュは固定部だけに効く。読み出し・書き込みの件数の分け方は `promptCachePlan.ts`
  *
@@ -43,12 +43,12 @@ import {
 } from "./promptCachePlan"
 
 /**
- * 固定部のうち、プロンプトの欄以外（アプリ共通の指示・出力の形・節の見出し）のトークン数。
+ * 固定部のうち、採点指示の欄以外（アプリ共通の指示・出力の形・節の見出し）のトークン数。
  * 集計に基づく目安
  */
 const APP_FIXED_TOKENS = 2100
 
-/** プロンプトの欄の文字1字あたりのトークン数の目安（日本語は1字1トークン前後） */
+/** 採点指示の欄の文字1字あたりのトークン数の目安（日本語は1字1トークン前後） */
 const TEXT_TOKENS_PER_CHARACTER = 1
 
 /** 答案1件ごとに画像のほかにかかる入力（区切りなど）。集計に基づく目安 */
@@ -78,7 +78,7 @@ export interface RunCostEstimateInput {
   answerImages: readonly ImageSize[]
   /** 毎回いっしょに送る画像（問題の画像（何枚でも）・模範解答の切り出し） */
   fixedImages: readonly ImageSize[]
-  /** プロンプトの各欄（問題文・模範解答・採点基準・助言の文案の指示）の字数の合計 */
+  /** 採点指示の各欄（問題文・模範解答・採点基準・助言の文案の指示）の字数の合計 */
   promptCharacterCount: number
   /** 自分の過去の実行（実測の根拠）。無ければ空 */
   measuredRuns: readonly MeasuredRun[]
@@ -115,7 +115,7 @@ function estimateFixedTokens(
   if (measuredInput !== null) {
     return {
       fixedTokens: Math.max(0, Math.round(measuredInput - variableMean)),
-      // 同じプロンプトなら固定部は同じなので、実際にキャッシュされたかで決まる
+      // 同じ採点指示なら固定部は同じなので、実際にキャッシュされたかで決まる
       measuredCached: samples.some(
         (sample) => sample.cacheReadTokens + sample.cacheWriteTokens > 0
       ),

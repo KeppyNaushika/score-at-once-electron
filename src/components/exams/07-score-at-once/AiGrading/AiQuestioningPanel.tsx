@@ -22,7 +22,7 @@ interface AiQuestioningPanelProps {
   mode: QuestioningMode
   questioning: AiQuestioning
   cropRegion: QuestionAnswerRegionRow
-  /** 実行ダイアログを開く（プロンプトが無ければ null で、押せない） */
+  /** 実行ダイアログを開く（採点指示が無ければ null で、押せない） */
   onRun: (() => void) | null
   /** 実行の状態（走っている・失敗した）。無ければ null */
   statusNotice: ReactNode
@@ -130,7 +130,7 @@ export function AiQuestioningPanel({
       </Button>
       {onRun === null && (
         <p className="text-muted-foreground">
-          先に「プロンプト」のタブで作ってください。
+          先に「採点指示」のタブで作ってください。
         </p>
       )}
       {statusNotice}
@@ -139,6 +139,7 @@ export function AiQuestioningPanel({
         states={states}
         currentStepId={currentState?.step.id ?? null}
         onOpen={flow.openStep}
+        adviceTextOf={flow.adviceTextOf}
       />
       {content}
       {currentState && (

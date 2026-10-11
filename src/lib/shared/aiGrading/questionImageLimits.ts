@@ -1,5 +1,5 @@
 /**
- * プロンプトの問題の画像（docs/vlm-grading-design.md §3-1）の受け付けの決まり。
+ * 採点指示の問題の画像（docs/vlm-grading-design.md §3-1）の受け付けの決まり。
  *
  * 画面（選ぶ前の絞り込みと案内）と main（保存の前の検証）の両方から引くので `src/lib/shared/` に置く。
  */

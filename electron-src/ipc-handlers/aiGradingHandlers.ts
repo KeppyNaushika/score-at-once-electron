@@ -192,7 +192,7 @@ export const aiGradingHandlers = {
     input: CommitAiRubricProposalResponseInput
   ) => commitAiRubricProposalResponse(input, requireActorUserId()),
 
-  /** 問いかけで教員が直接決めた点（1件ずつ採点・AI チェックで直す点）を自分の採点として書く */
+  /** 問いかけで教員が直接決めた点（自分で採点・AI チェックで直す点）を自分の採点として書く */
   "aiGrading:writeQuestioningScores": async (input: {
     cropRegionId: string
     scores: AiQuestioningScoreWrite[]

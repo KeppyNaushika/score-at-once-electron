@@ -86,7 +86,7 @@ export function AiProposalChips({
   ]
     .filter((reviewReason) => !REASONS_SHOWN_IN_CHIP.has(reviewReason))
     .map((reviewReason) => REVIEW_REASON_LABELS[reviewReason])
-    .concat(review.isFromOtherPrompt ? ["別のプロンプトの判定"] : [])
+    .concat(review.isFromOtherPrompt ? ["別の採点指示の判定"] : [])
   const noteLines = [
     ...(aiNotes.length > 0 ? [`AI: ${aiNotes.join("・")}`] : []),
   ]

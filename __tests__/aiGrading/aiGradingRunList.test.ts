@@ -107,7 +107,7 @@ describe("listAiGradingRunsByCropRegion", () => {
 })
 
 describe("listAiGradingRunsByExam", () => {
-  it("試験の設問をたどって、その教員の実行だけを試行とプロンプト付きで返す", async () => {
+  it("試験の設問をたどって、その教員の実行だけを試行と採点指示付きで返す", async () => {
     await gradeAll()
     await gradeAll(fixture.otherUser.id)
 

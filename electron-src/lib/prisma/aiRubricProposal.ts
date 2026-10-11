@@ -74,24 +74,22 @@ export async function recordAiRubricProposals(
 }
 
 /**
- * 案が既存の項目に当たると返したとき、その項目がまだあるか。2段目は送った時点の項目と
+ * 案が既存の項目に当たると返したとき、その項目がまだあるか（id → 項目）。2段目は送った時点の項目と
  * 照らすので、書く前に消された項目は結び付けずに新しい特徴として扱う
  */
-async function listLivingRubricItemIds(
-  rubricItemIds: readonly string[]
-): Promise<Set<string>> {
-  if (rubricItemIds.length === 0) return new Set()
+async function findLivingRubricItems(rubricItemIds: readonly string[]) {
+  if (rubricItemIds.length === 0) return new Map()
   const living = await prisma.rubricItem.findMany({
     where: { id: { in: [...rubricItemIds] } },
   })
-  return new Set(living.map((rubricItem) => rubricItem.id))
+  return new Map(living.map((rubricItem) => [rubricItem.id, rubricItem]))
 }
 
 /**
  * 教員が問いかけの「その他」に書いた再採点への指示のうち、今も効いているもの（案ごとの最新の
  * **確定した**答えが「その他」のもの）を、答えた順に。次の往復の1段目（答案ごとの採点のやり直し）に
  * だけ「教員の指示」として添える（2段目の案の作り直しへの指示ではない）。下書きの答えと、
- * 1件ずつ採点した答え（指示が空）は入れない。
+ * 自分で採点した答え（指示が空）は入れない。
  *
  * 問いかけは run を実行した教員にだけ出すので、その教員の2段目の実行の案から引く。
  * 同じ文は1つにまとめる
@@ -129,7 +127,8 @@ export async function listTeacherInstructions(
 
 /**
  * 設問の、その教員の2段目の実行を古い順に、案（選択肢・答案・答えの木）付きで。
- * 答案は試行（判定・確信度・受験者）を、答えは1件ずつ採点した点を同梱する。氏名は画面が受験者から引く
+ * 答案は試行（判定・確信度・受験者）を、答えは自分で採点した点を同梱する。氏名は画面が受験者から引く。
+ * 当たる既存の項目と、答えでできた・結び付けた項目も同梱する（助言の欄に出す文を画面が選ぶ）
  */
 export async function listAiRubricProposalRunsByCropRegion(
   cropRegionId: string,
@@ -140,10 +139,14 @@ export async function listAiRubricProposalRunsByCropRegion(
     include: {
       rubricProposals: {
         include: {
+          matchedRubricItem: true,
           options: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
           members: { include: { attempt: true }, orderBy: { id: "asc" } },
           responses: {
-            include: { scores: { orderBy: { id: "asc" } } },
+            include: {
+              scores: { orderBy: { id: "asc" } },
+              resultRubricItem: true,
+            },
             orderBy: [{ createdAt: "asc" }, { id: "asc" }],
           },
         },
@@ -172,22 +175,27 @@ async function findProposalForAnswer(proposalId: string) {
 /** 問いかけへの答え（下書き）の引数 */
 export interface RecordAiRubricProposalDraftInput {
   proposalId: string
-  /** 選んだ選択肢。「その他」・1件ずつ採点なら null */
+  /** 選んだ選択肢。「その他」・自分で採点なら null */
   optionId: string | null
   /** 「その他」に書いた再採点への指示（それ以外は ""） */
   freeText: string
   /**
-   * 1件ずつ自分で採点したときの点（案の答案の試行ごと。付けていない答案は入れない）。
+   * 自分で採点したときの点（案の答案の試行ごと。付けていない答案は入れない）。
    * 選択肢・「その他」のときは空
    */
   manualScores: QuestioningScoreInput[]
+  /**
+   * 教員が直した助言の文。null は直していない（確定で、既存の項目に当たる案はその項目の助言を
+   * そのまま、ほかは AI の文案を使う）。"" は助言なし
+   */
+  adviceText: string | null
 }
 
 /**
- * 問いかけに答える（下書き。§3-5）。答えの行（と、1件ずつ採点した点）を書くだけで、
+ * 問いかけに答える（下書き。§3-5）。答えの行（と、自分で採点した点）を書くだけで、
  * 教員の層（項目・適用・採点）には触らない。答え直しは新しい行（最新が効く）。
  *
- * 答えの種類は3つで、混ぜない: 選択肢（`optionId`）／「その他」（`freeText`）／1件ずつ採点
+ * 答えの種類は3つで、混ぜない: 選択肢（`optionId`）／「その他」（`freeText`）／自分で採点
  * （どちらも無く、`manualScores` だけ。点を1件も付けずに答えてもよい）。
  * 答えられるのは、その案を出した実行の教員だけ
  */
@@ -208,7 +216,7 @@ export async function recordAiRubricProposalDraft(
       throw new Error("選んだ選択肢が、この案のものではありません")
     }
   } else if (freeText !== "" && input.manualScores.length > 0) {
-    throw new Error("「その他」の指示と、1件ずつ採点した点は一緒に答えません")
+    throw new Error("「その他」の指示と、自分で採点した点は一緒に答えません")
   }
   const memberAttemptIds = new Set(
     proposal.members.map((member) => member.attemptId)
@@ -226,6 +234,7 @@ export async function recordAiRubricProposalDraft(
       proposalId: proposal.id,
       optionId: input.optionId,
       freeText,
+      adviceText: input.adviceText === null ? null : input.adviceText.trim(),
       scores: {
         create: input.manualScores.map((score) => ({
           attemptId: score.attemptId,
@@ -246,7 +255,7 @@ export interface CommitAiRubricProposalResponseInput {
   /** 確定する答え（下書き） */
   responseId: string
   /**
-   * 項目を当てる（「その他」・1件ずつ採点なら外す）答案（受験者）。案の答案のうち renderer が
+   * 項目を当てる（「その他」・自分で採点なら外す）答案（受験者）。案の答案のうち renderer が
    * 選んだもの（AI 採点では、採点済みの答案も案に入れて置き換えるので、ふつうは案の答案すべて）
    */
   examStudentIds: string[]
@@ -260,9 +269,13 @@ export interface CommitAiRubricProposalResponseInput {
  *   操作者自身の採点行に当て、答えを確定済みにする
  * - 「その他」: 前に確定した答えで当てた項目があれば渡した答案から外し、答えを確定済みにする
  *   （その案の答案は次の往復の1段目に回せる）
- * - 1件ずつ採点: 前に確定した答えで当てた項目があれば外す。**確定済みにはしない** — 点は
+ * - 自分で採点: 前に確定した答えで当てた項目があれば外す。**確定済みにはしない** — 点は
  *   renderer が項目の点のあとに書き（`writeAiQuestioningScores`）、書き終えてから
  *   `markAiQuestioningCommitted` で確定済みにする（点を書く前に失敗しても、下書きが残って確定し直せる）
+ *
+ * 助言は、教員が直していれば（答えの `adviceText` が null でなければ）その文を項目の助言にする
+ * （新しく作る項目・選び直しで使い回す項目・既存の項目に当たる案の項目のどれでも）。直していなければ、
+ * 新しく作る項目は AI の文案、それ以外は項目の助言のまま。既存の項目の助言を書き換えたら、その項目を返す。
  *
  * 項目を決めたら、当てる前に答えの行へ `resultRubricItemId` を書く。当てる途中で失敗して確定し直したとき、
  * 同じ案から項目を2つ作らないため。確定済みの答えを渡したら、何もせずに返す。
@@ -281,7 +294,9 @@ export async function commitAiRubricProposalResponse(
   if (proposal.run.userId !== actorUserId) {
     throw new Error("問いかけに答えられるのは、AI 採点を実行した教員だけです")
   }
-  if (draft.committedAt !== null) return { response: draft, touchedRows: [] }
+  if (draft.committedAt !== null) {
+    return { response: draft, touchedRows: [], adviceChangedRubricItemId: null }
+  }
 
   const { cropRegion } = proposal.run.prompt
   const memberExamStudentIds = new Set(
@@ -303,7 +318,7 @@ export async function commitAiRubricProposalResponse(
         response.id !== draft.id &&
         response.resultRubricItemId !== null
     )?.resultRubricItemId
-  const livingIds = await listLivingRubricItemIds(
+  const livingItems = await findLivingRubricItems(
     [
       proposal.matchedRubricItemId,
       previousResultItemId,
@@ -323,10 +338,10 @@ export async function commitAiRubricProposalResponse(
       proposal.label,
       cropRegion,
       actorUserId,
-      isInstruction ? "その他" : "1件ずつ採点"
+      isInstruction ? "その他" : "自分で採点"
     )
     const touchedRows =
-      previousResultItemId && livingIds.has(previousResultItemId)
+      previousResultItemId && livingItems.has(previousResultItemId)
         ? await setRubricApplications(
             {
               cropRegionId: cropRegion.id,
@@ -337,7 +352,7 @@ export async function commitAiRubricProposalResponse(
             actorUserId
           )
         : []
-    return { response, touchedRows }
+    return { response, touchedRows, adviceChangedRubricItemId: null }
   }
 
   const option = proposal.options.find(
@@ -352,22 +367,48 @@ export async function commitAiRubricProposalResponse(
     setScore: option.setScore === null ? null : option.setScore.toNumber(),
   }
 
+  // 教員が直した助言（null は直していない）。項目の助言と同じなら書かない
+  const editedAdviceFor = (rubricItemId: string): string | undefined => {
+    const adviceText = draft.adviceText?.trim()
+    if (adviceText === undefined) return undefined
+    return livingItems.get(rubricItemId)?.adviceText.trim() === adviceText
+      ? undefined
+      : adviceText
+  }
+  /** 助言を書き換えた既存の項目（renderer が、その項目の当たる行の朱書きを合わせる） */
+  let adviceChangedRubricItemId: string | null = null
   const rubricItemId = await (async (): Promise<string> => {
     if (
       proposal.matchedRubricItemId &&
-      livingIds.has(proposal.matchedRubricItemId)
+      livingItems.has(proposal.matchedRubricItemId)
     ) {
-      // 既存の項目に当たる案は、項目の値を変えない（その項目を当てる案だけを示す。§3-4）
+      // 既存の項目に当たる案は、効き方を変えない（その項目を当てる案だけを示す。§3-4）。
+      // 教員が助言を直したときだけ、助言を書き換える
+      const adviceText = editedAdviceFor(proposal.matchedRubricItemId)
+      if (adviceText !== undefined) {
+        await updateRubricItem(
+          proposal.matchedRubricItemId,
+          { adviceText },
+          actorUserId
+        )
+        adviceChangedRubricItemId = proposal.matchedRubricItemId
+      }
       return proposal.matchedRubricItemId
     }
     // 前の確定の途中で作った項目（この答えに書いてある）か、前に確定した答えで作った項目
     const reusableItemId = [
       draft.resultRubricItemId,
       previousResultItemId,
-    ].find((rubricItemId) => rubricItemId && livingIds.has(rubricItemId))
+    ].find((rubricItemId) => rubricItemId && livingItems.has(rubricItemId))
     if (reusableItemId) {
       // 選び直しは項目の値を変えるだけ（当たっている答案すべての点が変わる。§3-5）
-      await updateRubricItem(reusableItemId, { effect }, actorUserId)
+      const adviceText = editedAdviceFor(reusableItemId)
+      await updateRubricItem(
+        reusableItemId,
+        { effect, ...(adviceText === undefined ? {} : { adviceText }) },
+        actorUserId
+      )
+      if (adviceText !== undefined) adviceChangedRubricItemId = reusableItemId
       return reusableItemId
     }
     const lastItem = await prisma.rubricItem.findFirst({
@@ -378,7 +419,7 @@ export async function commitAiRubricProposalResponse(
       {
         cropRegionId: cropRegion.id,
         label: proposal.label,
-        adviceText: proposal.adviceDraft,
+        adviceText: draft.adviceText?.trim() ?? proposal.adviceDraft,
         sortOrder: (lastItem?.sortOrder ?? -1) + 1,
         ...effect,
       },
@@ -415,7 +456,7 @@ export async function commitAiRubricProposalResponse(
     actorUserId,
     option.rationale || "選択肢"
   )
-  return { response, touchedRows }
+  return { response, touchedRows, adviceChangedRubricItemId }
 }
 
 /** 確定したことを監査ログに残す（何を選んだかは一言で） */

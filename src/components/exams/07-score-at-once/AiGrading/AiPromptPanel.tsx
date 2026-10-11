@@ -1,7 +1,7 @@
 "use client"
 
-import { FileText, PenLine, Play, Plus } from "lucide-react"
-import { Fragment, useState } from "react"
+import { FileText, Pencil, Play, Plus } from "lucide-react"
+import { Fragment, type MouseEvent, type ReactNode, useState } from "react"
 
 import { SidePanelSection } from "@/components/exams/07-score-at-once/ScoringSidePanel/SidePanelSection"
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,7 @@ interface AiPromptPanelProps {
   promptNumberById: ReadonlyMap<string, number>
   selectedPromptId: string | null
   onSelectPrompt: (promptId: string) => void
-  /** そのプロンプトを選んで、送信ダイアログを開く */
+  /** その採点指示を選んで、送信ダイアログを開く */
   onRunWithPrompt: (promptId: string) => void
   settings: AiGradingSettings | undefined
 }
@@ -30,11 +30,12 @@ interface AiPromptPanelProps {
 type EditorTarget = { basePrompt: AiPromptRow | null }
 
 /**
- * 設問のプロンプト（設計 §3-1）。
+ * 設問の採点指示（設計 §3-1）。
  *
- * 上の「新規追加」は白紙から書く。履歴のプロンプトをクリックすると選ばれ、中身と
- * 「採点実行」「編集」が出る。編集して保存すると、それを親にした新しいプロンプトになり、
- * 元のプロンプトは書き換えない
+ * 上の「新規追加」は白紙から書く。履歴の採点指示をクリックすると選ばれ、中身と
+ * 「採点実行」が出る。中身のどこを押しても（右上の鉛筆が目印。Enter・Space でも）編集が開く。
+ * 中の問題の画像のサムネイルは押すと拡大のまま（編集は開かない）。編集して保存すると、それを親にした新しい採点指示になり、
+ * 元の採点指示は書き換えない
  */
 export function AiPromptPanel({
   examId,
@@ -49,7 +50,7 @@ export function AiPromptPanel({
   const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null)
 
   return (
-    <SidePanelSection icon={FileText} title="プロンプト">
+    <SidePanelSection icon={FileText} title="採点指示">
       <div className="mb-2">
         <Button
           variant="outline"
@@ -66,7 +67,7 @@ export function AiPromptPanel({
       {prompts.length === 0 ? (
         <p className="text-xs text-muted-foreground">まだありません</p>
       ) : (
-        <ul className="space-y-1" aria-label="プロンプトの履歴">
+        <ul className="space-y-1" aria-label="採点指示の履歴">
           {prompts.toReversed().map((prompt) => {
             const isSelected = prompt.id === selectedPromptId
             const parentNumber = prompt.parentPromptId
@@ -86,7 +87,7 @@ export function AiPromptPanel({
                   className="w-full px-2 py-1 text-left hover:bg-gray-50"
                 >
                   <span className="font-medium">
-                    プロンプト {promptNumberById.get(prompt.id)}
+                    指示 {promptNumberById.get(prompt.id)}
                   </span>
                   {parentNumber !== undefined && (
                     <span className="text-muted-foreground">
@@ -103,25 +104,21 @@ export function AiPromptPanel({
                 </button>
                 {isSelected && (
                   <div className="space-y-2 border-t px-2 py-2">
-                    <PromptContentPreview prompt={prompt} />
-                    <div className="flex flex-wrap gap-1">
-                      <Button
-                        size="sm"
-                        onClick={() => onRunWithPrompt(prompt.id)}
-                        disabled={!settings}
-                      >
-                        <Play className="h-3 w-3" />
-                        採点実行
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setEditorTarget({ basePrompt: prompt })}
-                      >
-                        <PenLine className="h-3 w-3" />
-                        編集
-                      </Button>
-                    </div>
+                    <PromptContentEditTarget
+                      label={`指示 ${promptNumberById.get(prompt.id)} を編集`}
+                      onEdit={() => setEditorTarget({ basePrompt: prompt })}
+                    >
+                      <PromptContentPreview prompt={prompt} />
+                    </PromptContentEditTarget>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => onRunWithPrompt(prompt.id)}
+                      disabled={!settings}
+                    >
+                      <Play className="h-3 w-3" />
+                      採点実行
+                    </Button>
                   </div>
                 )}
               </li>
@@ -152,7 +149,54 @@ export function AiPromptPanel({
   )
 }
 
-/** プロンプトの中身（問題文・問題の画像・模範解答・採点基準）を、見出しと値の2列で。空の欄は「なし」と出す */
+/**
+ * 中身の全体を、編集を開く押し場所にする（右上の鉛筆が目印）。中に問題の画像のボタンがあるので
+ * button は入れ子にできず、role="button" で Enter・Space も受ける。中のボタン（画像の拡大）と、
+ * そこから開いた拡大のダイアログ（portal。React の事件はここまで伝わる）の操作では開かない
+ */
+function PromptContentEditTarget({
+  label,
+  onEdit,
+  children,
+}: {
+  label: string
+  onEdit: () => void
+  children: ReactNode
+}) {
+  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    const { target } = event
+    if (!(target instanceof Element) || !event.currentTarget.contains(target)) {
+      return
+    }
+    if (target.closest("button")) return
+    onEdit()
+  }
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+      // 素の Enter・Space は採点画面のキーに取らせず、ここで受ける（ShortcutProvider）
+      data-native-activation=""
+      onClick={handleClick}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return
+        if (event.key !== "Enter" && event.key !== " ") return
+        event.preventDefault()
+        onEdit()
+      }}
+      className="group relative cursor-pointer rounded p-1 pr-5 hover:bg-white/70 focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none"
+    >
+      <Pencil
+        aria-hidden
+        className="absolute top-1 right-1 h-3 w-3 text-muted-foreground group-hover:text-foreground"
+      />
+      {children}
+    </div>
+  )
+}
+
+/** 採点指示の中身（問題文・問題の画像・模範解答・採点基準）を、見出しと値の2列で。空の欄は「なし」と出す */
 function PromptContentPreview({ prompt }: { prompt: AiPromptRow }) {
   const fields = [
     { key: "modelAnswerText", label: "模範解答", text: prompt.modelAnswerText },
@@ -166,7 +210,7 @@ function PromptContentPreview({ prompt }: { prompt: AiPromptRow }) {
   const labelClassName = "whitespace-nowrap text-muted-foreground"
   return (
     <dl
-      aria-label="プロンプトの中身"
+      aria-label="採点指示の中身"
       className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1"
     >
       <dt className={labelClassName}>問題文</dt>

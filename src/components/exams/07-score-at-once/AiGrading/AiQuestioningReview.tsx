@@ -49,6 +49,11 @@ export function AiQuestioningReview({
           件は採点済みで、置き換わります。
         </p>
       )}
+      {summary.adviceEditCount > 0 && (
+        <p className="text-[11px] text-muted-foreground">
+          助言を直した問い {summary.adviceEditCount} 問
+        </p>
+      )}
       {summary.instructionCount > 0 && (
         <p className="flex items-start gap-1 text-[11px] text-muted-foreground">
           <RotateCcw className="mt-0.5 h-3 w-3 shrink-0" />

@@ -2,7 +2,7 @@
  * ルーブリック項目の一覧を、AI へ送る文にする（docs/vlm-grading-design.md §3-1・§3-3・§3-4）
  *
  * 1段目（答案ごと）と2段目（全員分）の両方に同じ書き方で載せる。送った時点の一覧を
- * プロンプトの行（`renderedRubricItems`）へ写すときも、この文をそのまま使う。
+ * 採点指示の行（`renderedRubricItems`）へ写すときも、この文をそのまま使う。
  *
  * 項目の id は uuid なので送ってよい（生徒の情報を含まない）。並びは呼び出し側が渡した順
  * （`sortOrder` の順）のまま変えない。同じ入力からは同じ文になる。
@@ -38,7 +38,7 @@ export function toRubricItemForPrompt(rubricItem: {
   }
 }
 
-/** 判定の日本語の呼び名（プロンプトの中で使う） */
+/** 判定の日本語の呼び名（採点指示の中で使う） */
 export const OUTPUT_STATUS_LABELS: Readonly<
   Record<AiGradingOutputStatus, string>
 > = {

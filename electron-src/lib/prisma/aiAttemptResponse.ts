@@ -21,7 +21,7 @@ import prisma from "./client"
 /** 答案1件への答え */
 export interface AiAttemptResponseInput {
   attemptId: string
-  /** "rescore"（この判定に直す）| "keep"（このままにする）| "manual"（1件ずつ自分で採点する） */
+  /** "rescore"（この判定に直す）| "keep"（このままにする）| "manual"（自分で採点する） */
   choice: string
   /** rescore・manual で付ける判定。keep と、manual で付けていない答案は null */
   status: string | null

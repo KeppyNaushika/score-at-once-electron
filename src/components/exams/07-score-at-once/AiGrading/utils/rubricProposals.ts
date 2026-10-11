@@ -29,8 +29,8 @@ export function latestProposalResponse(
 
 /**
  * 答えの種類。option は選択肢を選んだ、instruction は「その他」に再採点への指示を書いた、
- * manual は1件ずつ自分で採点した（答案ごとの点は答えの `scores`。前の版の「選ばずに進んだ」答えも、
- * 点の無い1件ずつ採点として読む）。答えの行に種類の列は持たず、選択肢と指示の有無から導く
+ * manual は自分で採点した（答案ごとの点は答えの `scores`。前の版の「選ばずに進んだ」答えも、
+ * 点の無い自分で採点として読む）。答えの行に種類の列は持たず、選択肢と指示の有無から導く
  */
 export type AiRubricProposalAnswerKind = "option" | "instruction" | "manual"
 
@@ -147,7 +147,7 @@ export function optionEffectOf(
  * - update: 前に確定した答えで作った項目がある。その項目の効き方を選んだ選択肢に変える（選び直し。
  *   他の採点者の点も変わるので、確認と計算し直しが要る）
  * - create: 新しい項目を作る
- * - unapply: 「その他」か1件ずつ採点。前に確定した答えで当てた項目があれば外す
+ * - unapply: 「その他」か自分で採点。前に確定した答えで当てた項目があれば外す
  */
 export type AiRubricProposalAnswerPlan =
   | { kind: "link" | "update"; rubricItemId: string }

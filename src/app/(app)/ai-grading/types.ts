@@ -7,7 +7,7 @@
 import type { listAiGradingRunsByUser } from "@/electron-src/lib/prisma/aiGradingRun"
 import type { Serialized } from "@/types/prismaExtensions"
 
-/** すべての試験の、自分の実行1件（試行と、プロンプト→設問→ページ→試験付き） */
+/** すべての試験の、自分の実行1件（試行と、採点指示→設問→ページ→試験付き） */
 export type MyAiGradingRunRow = Serialized<
   Awaited<ReturnType<typeof listAiGradingRunsByUser>>
 >[number]

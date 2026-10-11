@@ -6,7 +6,8 @@
  * - 選び直し（確定済みの案に答え直して確定）は同じ項目の効き方を変える（項目を2つ作らない）
  * - 既存の項目に当たる案は、その項目を当てるだけで値を変えない
  * - 「その他」は確定で前に当てた項目を外す。確定した指示だけを次の往復に添える
- * - 1件ずつ採点の答えは答案ごとの点を持ち、点を書き終えてから確定済みにする
+ * - 直した助言は答え（下書き）に持ち、確定で項目の助言にする（新しい項目・既存の項目に当たる案・選び直し）
+ * - 自分で採点の答えは答案ごとの点を持ち、点を書き終えてから確定済みにする
  * - 案の外の問いかけの答え（答案ごと）と、問いかけで決めた点の書き込み
  * - 答えられるのは実行した教員だけ。案に入っていない答案には当てない
  *
@@ -173,6 +174,7 @@ async function draftAndCommit(
     optionId: string | null
     freeText: string
     examStudentIds: string[]
+    adviceText?: string | null
   },
   actorUserId = ownerId()
 ) {
@@ -182,6 +184,7 @@ async function draftAndCommit(
       optionId: input.optionId,
       freeText: input.freeText,
       manualScores: [],
+      adviceText: input.adviceText ?? null,
     },
     actorUserId
   )
@@ -208,6 +211,7 @@ describe("下書き", () => {
         optionId: proposal.options[0].id,
         freeText: "",
         manualScores: [],
+        adviceText: null,
       },
       ownerId()
     )
@@ -234,6 +238,7 @@ describe("下書き", () => {
           optionId: proposal.options[0].id,
           freeText: "指示",
           manualScores: [],
+          adviceText: null,
         },
         ownerId()
       )
@@ -245,6 +250,7 @@ describe("下書き", () => {
           optionId: null,
           freeText: "",
           manualScores: [{ attemptId, status: "partial", partialScore: 9 }],
+          adviceText: null,
         },
         ownerId()
       )
@@ -367,6 +373,151 @@ describe("選択肢を選んで確定する", () => {
   })
 })
 
+describe("直した助言", () => {
+  it("答え（下書き）に持つだけで、項目には確定まで書かない。直していなければ null", async () => {
+    const proposal = await createProposal()
+    const edited = await recordAiRubricProposalDraft(
+      {
+        proposalId: proposal.id,
+        optionId: proposal.options[0].id,
+        freeText: "",
+        manualScores: [],
+        adviceText: " 単位まで書こう。 ",
+      },
+      ownerId()
+    )
+    expect(edited.adviceText).toBe("単位まで書こう。")
+    const untouched = await recordAiRubricProposalDraft(
+      {
+        proposalId: proposal.id,
+        optionId: proposal.options[0].id,
+        freeText: "",
+        manualScores: [],
+        adviceText: null,
+      },
+      ownerId()
+    )
+    expect(untouched.adviceText).toBeNull()
+    expect(await testPrisma.rubricItem.count()).toBe(0)
+  })
+
+  it("新しく作る項目の助言は、直した文（空なら助言なし）。直していなければ AI の文案", async () => {
+    const editedProposal = await createProposal()
+    await draftAndCommit({
+      proposalId: editedProposal.id,
+      optionId: editedProposal.options[0].id,
+      freeText: "",
+      examStudentIds: [examStudentId(0)],
+      adviceText: "cm を付けよう。",
+    })
+    const emptiedProposal = await createProposal()
+    await draftAndCommit({
+      proposalId: emptiedProposal.id,
+      optionId: emptiedProposal.options[0].id,
+      freeText: "",
+      examStudentIds: [examStudentId(1)],
+      adviceText: "",
+    })
+    const untouchedProposal = await createProposal()
+    await draftAndCommit({
+      proposalId: untouchedProposal.id,
+      optionId: untouchedProposal.options[0].id,
+      freeText: "",
+      examStudentIds: [],
+    })
+    const items = await testPrisma.rubricItem.findMany({
+      orderBy: { sortOrder: "asc" },
+    })
+    expect(items.map((item) => item.adviceText)).toEqual([
+      "cm を付けよう。",
+      "",
+      "単位を書こう。",
+    ])
+  })
+
+  it("既存の項目に当たる案は、直したときだけ項目の助言を書き換えて、その項目を返す", async () => {
+    const existing = await createRubricItem(
+      {
+        cropRegionId: cropRegionId(),
+        label: "単位の欠け",
+        adviceText: "単位に気をつけよう。",
+        effectKind: "adjust",
+        pointDelta: -1,
+        setStatus: null,
+        setScore: null,
+        sortOrder: 0,
+      },
+      ownerId()
+    )
+    const proposal = await createProposal(existing.id)
+    const untouched = await draftAndCommit({
+      proposalId: proposal.id,
+      optionId: proposal.options[0].id,
+      freeText: "",
+      examStudentIds: [examStudentId(0)],
+    })
+    expect(untouched.adviceChangedRubricItemId).toBeNull()
+    const same = await draftAndCommit({
+      proposalId: proposal.id,
+      optionId: proposal.options[0].id,
+      freeText: "",
+      examStudentIds: [examStudentId(0)],
+      adviceText: "単位に気をつけよう。",
+    })
+    expect(same.adviceChangedRubricItemId).toBeNull()
+
+    const edited = await draftAndCommit({
+      proposalId: proposal.id,
+      optionId: proposal.options[0].id,
+      freeText: "",
+      examStudentIds: [examStudentId(0)],
+      adviceText: "単位を忘れずに。",
+    })
+    expect(edited.adviceChangedRubricItemId).toBe(existing.id)
+    const item = await testPrisma.rubricItem.findUniqueOrThrow({
+      where: { id: existing.id },
+    })
+    expect(item).toMatchObject({
+      adviceText: "単位を忘れずに。",
+      label: "単位の欠け",
+    })
+    expect(item.pointDelta?.toNumber()).toBe(-1)
+
+    // 一覧には当たる項目と、答えで結び付けた項目が同梱される（助言の欄の文を画面が選ぶ）
+    const [proposalRun] = await listAiRubricProposalRunsByCropRegion(
+      cropRegionId(),
+      ownerId()
+    )
+    const [listed] = proposalRun.rubricProposals
+    expect(listed.matchedRubricItem?.adviceText).toBe("単位を忘れずに。")
+    expect(listed.responses.at(-1)?.resultRubricItem?.id).toBe(existing.id)
+  })
+
+  it("選び直しで使い回す項目も、直した助言にする", async () => {
+    const proposal = await createProposal()
+    await draftAndCommit({
+      proposalId: proposal.id,
+      optionId: proposal.options[0].id,
+      freeText: "",
+      examStudentIds: [examStudentId(0)],
+    })
+    const reselected = await draftAndCommit({
+      proposalId: proposal.id,
+      optionId: proposal.options[1].id,
+      freeText: "",
+      examStudentIds: [examStudentId(0)],
+      adviceText: "答えを見直そう。",
+    })
+    const items = await testPrisma.rubricItem.findMany()
+    expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({
+      adviceText: "答えを見直そう。",
+      effectKind: "set",
+    })
+    expect(reselected.adviceChangedRubricItemId).toBe(items[0].id)
+  })
+})
+
 describe("「その他」", () => {
   it("確定で前に当てた項目を外し、確定した指示だけを次の往復に添える", async () => {
     const proposal = await createProposal()
@@ -384,6 +535,7 @@ describe("「その他」", () => {
         optionId: null,
         freeText: " 単位が無くても cm が明らかなら減点しない ",
         manualScores: [],
+        adviceText: null,
       },
       ownerId()
     )
@@ -425,7 +577,7 @@ describe("「その他」", () => {
   })
 })
 
-describe("1件ずつ自分で採点する", () => {
+describe("自分で採点する", () => {
   it("答案ごとの点を答えに持ち、確定では前の項目を外すだけで確定済みにはしない", async () => {
     const proposal = await createProposal()
     await draftAndCommit({
@@ -441,6 +593,7 @@ describe("1件ずつ自分で採点する", () => {
         optionId: null,
         freeText: "",
         manualScores: [{ attemptId, status: "partial", partialScore: 2.5 }],
+        adviceText: null,
       },
       ownerId()
     )
@@ -562,6 +715,7 @@ describe("答えられないもの", () => {
       optionId: proposal.options[0].id,
       freeText: "",
       manualScores: [],
+      adviceText: null,
     }
     await expect(
       recordAiRubricProposalDraft(base, otherUserId)
