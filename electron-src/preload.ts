@@ -17,7 +17,6 @@ import { createExportApi } from "./preload-apis/exportApi"
 import { createGradeApi } from "./preload-apis/gradeApi"
 import { createGradeLockApi } from "./preload-apis/gradeLockApi"
 import { createMiscApi } from "./preload-apis/miscApi"
-import { createNavigationApi } from "./preload-apis/navigationApi"
 import { createOmrApi } from "./preload-apis/omrApi"
 import { createPdfToolsApi } from "./preload-apis/pdfToolsApi"
 import { createRubricApi } from "./preload-apis/rubricApi"
@@ -61,7 +60,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ...createOmrApi(),
   ...createAnswerSheetBuilderApi(),
   ...createMiscApi(),
-  ...createNavigationApi(),
   ...createSyncApi(),
   ...createAuditLogApi(),
   ...createUnifiedArchiveApi(),

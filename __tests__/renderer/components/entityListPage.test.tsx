@@ -42,8 +42,8 @@ const { pushSpy } = vi.hoisted(() => ({ pushSpy: vi.fn() }))
 /**
  * ヘッダー左のクイックアクセス（戻る／進む）は差し替える。
  *
- * 中身は Electron のセッション履歴を引く `useNavigationHistory` で、
- * `QueryClientProvider` と `window.electronAPI` が要る。ここで見たいのは一覧の
+ * 中身は窓のセッション履歴を Navigation API で読む `useNavigationHistory` で、
+ * `QueryClientProvider` と `window.navigation` が要る。ここで見たいのは一覧の
  * 列と当たり判定なので、その2つを持ち込まずに済ませる（履歴の側の検査は
  * 呼ばれ方ではなく `useNavigationHistory` 自身が持つべきもの）。
  */

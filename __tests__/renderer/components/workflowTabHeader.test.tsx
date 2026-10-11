@@ -74,27 +74,37 @@ vi.mock("next/link", () => ({
 }))
 
 /**
- * 戻る／進むが押せるかは Electron のセッション履歴が決める
- * （`useNavigationHistory` → `navigation:get-state`）。窓の履歴そのものなので、
- * ここではその返事を差し替えて「履歴の端に居るか」を作る。
+ * 戻る／進むが押せるかは窓のセッション履歴が決める
+ * （`useNavigationHistory` が Navigation API の `window.navigation` を読む）。
+ * jsdom には無いので、ここで偽物を置いて「履歴の端に居るか」を作る。
  */
-const getNavigationState = vi.fn()
+const navigationHistory = { canGoBack: false, canGoForward: false }
 
-Object.defineProperty(window, "electronAPI", {
+Object.defineProperty(window, "navigation", {
   value: {
-    navigation: { getState: getNavigationState, goToIndex: vi.fn() },
+    get canGoBack() {
+      return navigationHistory.canGoBack
+    },
+    get canGoForward() {
+      return navigationHistory.canGoForward
+    },
+    currentEntry: null,
+    entries: () => [],
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    traverseTo: vi.fn(),
   },
   configurable: true,
 })
 
+/** 履歴の位置を決める（描く前に呼ぶ） */
+function setHistory(position: { canGoBack: boolean; canGoForward: boolean }) {
+  Object.assign(navigationHistory, position)
+}
+
 /** 履歴の端（開いた直後で、戻り先も進み先も無い） */
 function atHistoryEdge() {
-  getNavigationState.mockResolvedValue({
-    canGoBack: false,
-    canGoForward: false,
-    activeIndex: 0,
-    entries: [],
-  })
+  setHistory({ canGoBack: false, canGoForward: false })
 }
 
 beforeEach(() => {
@@ -107,7 +117,7 @@ afterEach(() => {
 })
 
 /**
- * 本物と同じ入れ子で包む。ヘッダーは履歴の状態を IPC で引き（QueryClient）、
+ * 本物と同じ入れ子で包む。ヘッダーは履歴の項目の名前を画面と同じキャッシュから引き（QueryClient）、
  * 移動を未保存のガードへ通す（NavigationGuardProvider）。
  */
 function TestProviders({ children }: { children: ReactNode }) {
@@ -387,12 +397,7 @@ describe("WorkflowTabHeader の戻る・進むが押せるか", () => {
   })
 
   it("戻り先ができれば押せるようになる", async () => {
-    getNavigationState.mockResolvedValue({
-      canGoBack: true,
-      canGoForward: false,
-      activeIndex: 1,
-      entries: [],
-    })
+    setHistory({ canGoBack: true, canGoForward: false })
 
     renderHeaderAt(examHref)
 
@@ -405,13 +410,8 @@ describe("WorkflowTabHeader の戻る・進むが押せるか", () => {
 
   it("アプリを通さず外から履歴を動かされても、押せるかどうかがずれない", async () => {
     // Alt+← やマウスの第4ボタンはアプリを経由しないので、アプリ側で行き来を
-    // 数えているとずれる。窓のセッション履歴に訊いているのでずれない
-    getNavigationState.mockResolvedValue({
-      canGoBack: false,
-      canGoForward: true,
-      activeIndex: 0,
-      entries: [],
-    })
+    // 数えているとずれる。窓のセッション履歴を読んでいるのでずれない
+    setHistory({ canGoBack: false, canGoForward: true })
 
     renderHeaderAt(examHref)
 
@@ -432,12 +432,7 @@ function DirtyPage() {
 
 /** 書きかけがある状態で、戻れる位置にヘッダーを描く */
 async function renderDirtyHeader() {
-  getNavigationState.mockResolvedValue({
-    canGoBack: true,
-    canGoForward: false,
-    activeIndex: 1,
-    entries: [],
-  })
+  setHistory({ canGoBack: true, canGoForward: false })
   navigation.pathname = examHref
   render(
     <>
@@ -464,7 +459,7 @@ describe("WorkflowTabHeader の戻るが未保存を捨てないこと", () => {
 
     expect(screen.getByText("未保存のデータがあります")).toBeInTheDocument()
     // 確認する前に履歴を動かさない。ここで router.back() を直に呼ぶと、
-    // Navigation API の取り消しに頼ることになるが、main 側から起こす移動は
+    // Navigation API の取り消しに頼ることになるが、スクリプトから起こす移動は
     // 取り消せないことがある（画面に触っていなければ `cancelable` が false）
     expect(router.back).not.toHaveBeenCalled()
   })

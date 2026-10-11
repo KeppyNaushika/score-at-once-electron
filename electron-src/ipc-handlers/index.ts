@@ -29,7 +29,6 @@ import { gradeRosterHandlers } from "./gradeRosterHandlers"
 import { gradeStructureHandlers } from "./gradeStructureHandlers"
 import { registerChannel } from "./ipcHandlerUtils"
 import { miscHandlers } from "./miscHandlers"
-import { navigationHandlers } from "./navigationHandlers"
 import { omrConfigHandlers } from "./omrConfigHandlers"
 import { omrHandlers } from "./omrHandlers"
 import { pdfToolsHandlers } from "./pdfToolsHandlers"
@@ -65,7 +64,6 @@ const handlerGroups = [
   gradeRosterHandlers,
   gradeStructureHandlers,
   miscHandlers,
-  navigationHandlers,
   omrConfigHandlers,
   omrHandlers,
   pdfToolsHandlers,
@@ -108,7 +106,6 @@ const handlers = {
   ...gradeRosterHandlers,
   ...gradeStructureHandlers,
   ...miscHandlers,
-  ...navigationHandlers,
   ...omrConfigHandlers,
   ...omrHandlers,
   ...pdfToolsHandlers,

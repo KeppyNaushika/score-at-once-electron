@@ -57,7 +57,7 @@ interface HistoryNavButtonProps {
   disabled: boolean
   entries: NavigationMenuEntry[]
   onNavigate: () => void
-  onSelectIndex: (index: number) => void
+  onSelectEntry: (key: string) => void
 }
 
 function HistoryNavButton({
@@ -65,7 +65,7 @@ function HistoryNavButton({
   disabled,
   entries,
   onNavigate,
-  onSelectIndex,
+  onSelectEntry,
 }: HistoryNavButtonProps) {
   const activeIndex = entries.find((entry) => entry.isActive)?.index ?? -1
   // 戻る＝現在より過去（index小）、進む＝現在より未来（index大）。いずれも現在地に近い順。
@@ -102,8 +102,8 @@ function HistoryNavButton({
             const SectionIcon = SECTION_ICONS[entry.section]
             return (
               <ContextMenuItem
-                key={entry.index}
-                onSelect={() => onSelectIndex(entry.index)}
+                key={entry.key}
+                onSelect={() => onSelectEntry(entry.key)}
               >
                 {SectionIcon && <SectionIcon />}
                 <span className="min-w-0 flex-1 truncate">{entry.label}</span>
@@ -118,7 +118,7 @@ function HistoryNavButton({
 
 /** ヘッダーに置くブラウザ的な「戻る/進む」ボタン。左クリックで1手移動、右クリックで履歴一覧。 */
 export function HistoryNavButtons({ className }: { className?: string }) {
-  const { canGoBack, canGoForward, entries, goBack, goForward, goToIndex } =
+  const { canGoBack, canGoForward, entries, goBack, goForward, goToEntry } =
     useNavigationHistory()
 
   return (
@@ -128,14 +128,14 @@ export function HistoryNavButtons({ className }: { className?: string }) {
         disabled={!canGoBack}
         entries={entries}
         onNavigate={goBack}
-        onSelectIndex={goToIndex}
+        onSelectEntry={goToEntry}
       />
       <HistoryNavButton
         direction="forward"
         disabled={!canGoForward}
         entries={entries}
         onNavigate={goForward}
-        onSelectIndex={goToIndex}
+        onSelectEntry={goToEntry}
       />
     </div>
   )
