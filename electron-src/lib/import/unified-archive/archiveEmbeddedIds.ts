@@ -72,7 +72,7 @@ const replaceIdsInJson = (
   return { replaced: jsonValue, changed: false }
 }
 
-export type EmbeddedIdRemapResult =
+type EmbeddedIdRemapResult =
   | { readonly kind: "ok"; readonly text: string }
   | { readonly kind: "unparsable" }
 

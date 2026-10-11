@@ -24,7 +24,7 @@ import type {
   RubricScoringRegion,
 } from "../types"
 
-export type RubricScoreOutcome =
+type RubricScoreOutcome =
   /** 採点方式が points（採点キー・部分点で直接付ける）。項目から点を決めない */
   | { kind: "directScoring" }
   /** 採点キーで付けた点が項目より優先している。計算し直しはこの行を飛ばす */

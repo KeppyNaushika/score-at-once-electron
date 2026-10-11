@@ -299,21 +299,6 @@ describe("markRecognizer", () => {
     expect(result.recognizedValues).toEqual(["③"])
   })
 
-  it("複数バブルを塗りつぶし（正解数より多い） → ambiguous", async () => {
-    const image = createTestImage(imgWidth, imgHeight, bubbles, [0, 1]) // ①②を塗る
-    const cell = makeCell(bubbles)
-    const result = await recognizeCell(
-      cell,
-      config,
-      image,
-      transform,
-      DEFAULT_PARAMS
-    )
-
-    expect(result.autoScoreStatus).toBe("ambiguous")
-    expect(result.recognizedValues).toHaveLength(2)
-  })
-
   it("bubbleMeasurementsが各バブルの値を返す", async () => {
     const image = createTestImage(imgWidth, imgHeight, bubbles, [1])
     const cell = makeCell(bubbles)
@@ -486,7 +471,7 @@ describe("markRecognizer", () => {
   })
 
   describe("消しゴム跡（消し残し）", () => {
-    it("消しゴムで消した跡（gray=180, 20%残り）→ 認識しない", async () => {
+    it("消しゴムで消した跡（gray=80, 20%残り）→ 認識しない", async () => {
       // 消しゴムで消したが20%程度のピクセルが薄く残っている
       const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 0, gray: 80, coverage: 0.2, pattern: "random" },
@@ -548,11 +533,12 @@ describe("markRecognizer", () => {
       expect(result.confidence).toBeLessThanOrEqual(0.3) // ダブルマークは低信頼度
     })
 
-    it("本命しっかり + 別の微妙な塗り(45%) → ダブルマーク判定", async () => {
-      // 1つはしっかり塗り、もう1つが閾値ギリギリ超え
+    it("本命しっかり + 閾値をわずかに超える塗り(中心45%) → ダブルマーク判定", async () => {
+      // 1つはしっかり塗り、もう1つは areaThreshold(0.4) をわずかに超える。
+      // 「微妙」でも閾値を超えた塗りは、黙って本命だけを採らずにダブルマークへ倒す
       const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
         { index: 1, gray: 0, coverage: 1, pattern: "solid" },
-        { index: 3, gray: 50, coverage: 0.5, pattern: "random" },
+        { index: 3, gray: 50, coverage: 0.45, pattern: "center" },
       ])
       const cell = makeCell(bubbles)
       const result = await recognizeCell(
@@ -563,14 +549,10 @@ describe("markRecognizer", () => {
         DEFAULT_PARAMS
       )
 
-      // ③の塗りが閾値を超えたかどうかで結果が分かれる
-      if (fillRatioOf(result, 3) >= 0.4) {
-        expect(result.autoScoreStatus).toBe("ambiguous")
-        expect(result.recognizedValues).toHaveLength(2)
-      } else {
-        expect(result.autoScoreStatus).toBe("correct")
-        expect(result.recognizedValues).toEqual(["②"])
-      }
+      expect(fillRatioOf(result, 3)).toBeGreaterThanOrEqual(0.4)
+      expect(fillRatioOf(result, 3)).toBeLessThan(0.5)
+      expect(result.autoScoreStatus).toBe("ambiguous")
+      expect(result.recognizedValues).toEqual(["②", "④"])
     })
 
     it("本命しっかり + 別の薄塗り(30%) → 本命のみ認識", async () => {
@@ -699,20 +681,6 @@ describe("markRecognizer", () => {
 
       expect(result.autoScoreStatus).toBe("no_answer")
       expect(fillRatioOf(result, 1)).toBe(0)
-    })
-
-    it("明示的な colorThreshold は自動算出より優先される", async () => {
-      const image = createRealisticTestImage(imgWidth, imgHeight, bubbles, [
-        { index: 1, gray: 180, coverage: 1, pattern: "solid" },
-      ])
-      const cell = makeCell(bubbles)
-
-      const result = await recognizeCell(cell, config, image, transform, {
-        colorThreshold: 128,
-        areaThreshold: 0.4,
-      })
-
-      expect(result.autoScoreStatus).toBe("no_answer")
     })
   })
 

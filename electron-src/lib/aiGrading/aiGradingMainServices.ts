@@ -25,7 +25,7 @@ import { createGradingProvider } from "./providers/createGradingProvider"
 import type { GradingProviderId, ProviderFetch } from "./providers/types"
 
 /** 進み具合を押し出すチャンネル */
-export const AI_GRADING_RUN_PROGRESS_CHANNEL = "aiGrading:run-progress"
+const AI_GRADING_RUN_PROGRESS_CHANNEL = "aiGrading:run-progress"
 
 /** 事業者の SDK へ渡す fetch（`net.fetch` は URL オブジェクトを受けないので文字列にする） */
 const electronNetFetch: ProviderFetch = (input, init) =>

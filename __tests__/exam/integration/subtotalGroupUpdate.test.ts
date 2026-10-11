@@ -287,30 +287,6 @@ describe("小計点グループの更新", () => {
     ])
   })
 
-  it("同じグループの中に同じ名前の項目を2つ作れる", async () => {
-    // 名前の unique は外した。2端末が別々の小計を同じ名前にしたとき、同期が
-    // 「別のものが偶然ぶつかった」行を1つへ畳んで割り当てを移すのを止めるため
-    const subtotalGroup = await createTestSubtotalGroup()
-
-    const sameNameSubtotal = await testPrisma.subtotal.create({
-      data: {
-        subtotalGroupId: subtotalGroup.id,
-        name: subtotalGroup.subtotals[0].name,
-        order: 3,
-      },
-    })
-
-    expect(sameNameSubtotal.id).not.toBe(subtotalGroup.subtotals[0].id)
-    expect(
-      await testPrisma.subtotal.count({
-        where: {
-          subtotalGroupId: subtotalGroup.id,
-          name: subtotalGroup.subtotals[0].name,
-        },
-      })
-    ).toBe(2)
-  })
-
   it("何も変えずに保存すると、1行も書き換わらない", async () => {
     const subtotalGroup = await createTestSubtotalGroup()
 

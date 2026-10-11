@@ -114,18 +114,6 @@ describe("新規インストールの初期化連鎖", () => {
     expect(deployPendingMigrations()).toBe(0)
   })
 
-  it("全マイグレーション適用後に外部キーの不整合が残らない", async () => {
-    await buildFreshChain()
-
-    // 各マイグレーションは自分の中で foreign_keys を落として作り直すため、
-    // 通しで適用した結果に dangling な参照が残っていないかは別に見る必要がある
-    // （PRAGMA は接続の状態なので、1本の適用が通ることは整合の証明にならない）
-    const violations = withDatabase((db) =>
-      db.prepare(`PRAGMA foreign_key_check`).all()
-    )
-    expect(violations).toEqual([])
-  })
-
   it("適用後のスキーマが db push 基準（schema.prisma）と全テーブルで列一致する", async () => {
     await buildFreshChain()
 
@@ -202,6 +190,8 @@ describe("新規インストールの初期化連鎖", () => {
   it("適用後の外部キー制約が db push 基準（schema.prisma）と全テーブルで一致する", async () => {
     await buildFreshChain()
 
+    // 参照先の取り違え（RENAME TO で旧名のまま残る dangling な参照など）もここで見る。
+    // 行の無い DB の PRAGMA foreign_key_check は参照先が無くても素通りするので当てにしない。
     // 列が揃っていても、ALTER TABLE ... ADD COLUMN で足した列には制約が付かない。
     // GradeDataSource の courseworkItemId / courseworkId がそうだった（20261004130000 で直した）。
     // 本番だけ親を消しても子が宙に浮き、テストは db push の DB で走るので気づけない

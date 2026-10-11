@@ -36,7 +36,7 @@ import {
   createIdIntegrationConfig,
   createMatchedItem,
   createPreMatchingResult,
-  createScoringConflict,
+  createUserPreMatchingResult,
   generateId,
 } from "../../helpers/testDataFactory"
 import {
@@ -202,11 +202,14 @@ describe("executeIdIntegrationImport", () => {
     }
   }
 
-  // II-1: 新規インポート: 全エンティティ作成
-  it("II-1: 新規インポートで全エンティティが作成される", async () => {
-    const { data, examId } = createBasicTestData()
-
-    const preMatch = createFileOverviewData({
+  /**
+   * 全件noMatchのpreMatchを作るヘルパー（新規インポート用）
+   */
+  function buildNoMatchPreMatch(
+    data: ReturnType<typeof createBasicTestData>["data"],
+    examId: string
+  ) {
+    return createFileOverviewData({
       student: createPreMatchingResult({
         noMatch: data.studentsData.students.map((student) => ({
           importId: student.id,
@@ -235,524 +238,175 @@ describe("executeIdIntegrationImport", () => {
         displayLabel: "テスト",
       },
     })
+  }
 
-    const config = createIdIntegrationConfig()
-
-    const result = await executeIdIntegrationImport(
-      data,
-      preMatch,
-      config,
-      currentUser.id
-    )
-
-    expect(result.examId).toBeDefined()
-
-    // DBに試験が存在
-    const exam = await prisma.exam.findUnique({
-      where: { id: result.examId! },
-    })
-    expect(exam).not.toBeNull()
-  })
-
-  // II-2: 新規インポート: 全IDマッピング確認（summaryで確認）
-  it("II-2: 新規インポートでエンティティが作成される", async () => {
-    const { data, examId } = createBasicTestData()
-
-    const preMatch = createFileOverviewData({
-      student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((student) => ({
-          importId: student.id,
-          importData: { ...student },
-          displayLabel: student.lastName,
-        })),
-      }),
-      classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((classroom) => ({
-          importId: classroom.id,
-          importData: { ...classroom },
-          displayLabel: classroom.name,
-        })),
-      }),
-      subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
-          importId: subtotalGroup.id,
-          importData: { ...subtotalGroup },
-          displayLabel: subtotalGroup.name,
-        })),
-      }),
-      exam: {
-        isIdMatch: false,
-        importExamId: examId,
-        importData: {},
-        displayLabel: "テスト",
-      },
-    })
-
-    const result = await executeIdIntegrationImport(
-      data,
-      preMatch,
-      createIdIntegrationConfig(),
-      currentUser.id
-    )
-
-    expect(result.summary).toBeDefined()
-    expect(result.summary!.created.scores).toBeGreaterThan(0)
-  })
-
-  // II-3: 新規インポート: countsの正確性
-  it("II-3: countsがcreated > 0を示す", async () => {
-    const { data, examId } = createBasicTestData()
-
-    const preMatch = createFileOverviewData({
-      student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((student) => ({
-          importId: student.id,
-          importData: { ...student },
-          displayLabel: student.lastName,
-        })),
-      }),
-      classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((classroom) => ({
-          importId: classroom.id,
-          importData: { ...classroom },
-          displayLabel: classroom.name,
-        })),
-      }),
-      subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
-          importId: subtotalGroup.id,
-          importData: { ...subtotalGroup },
-          displayLabel: subtotalGroup.name,
-        })),
-      }),
-      exam: {
-        isIdMatch: false,
-        importExamId: examId,
-        importData: {},
-        displayLabel: "テスト",
-      },
-    })
-
-    const result = await executeIdIntegrationImport(
-      data,
-      preMatch,
-      createIdIntegrationConfig(),
-      currentUser.id
-    )
-
-    expect(result.summary!.created.pages).toBeGreaterThan(0)
-    expect(result.summary!.created.regions).toBeGreaterThan(0)
-    expect(result.summary!.created.scores).toBeGreaterThan(0)
-  })
-
-  // II-4: 同一PCリインポート: スコアunchanged
-  it("II-4: 同一試験再インポートでスコアがunchangedとなる", async () => {
-    const { data, examId, studentId, classroomId, groupId } =
+  // II-1: 新規インポート: 全エンティティ作成（件数は DB と summary の両方で見る）
+  it("II-1: 新規インポートで全エンティティが作成され、summary の件数と一致する", async () => {
+    const { data, examId, studentId, classroomId, groupId, regionId } =
       createBasicTestData()
 
-    // 先に全データをDBに作成しておく
-    const preMatch1 = createFileOverviewData({
-      student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((student) => ({
-          importId: student.id,
-          importData: { ...student },
-          displayLabel: student.lastName,
-        })),
-      }),
-      classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((classroom) => ({
-          importId: classroom.id,
-          importData: { ...classroom },
-          displayLabel: classroom.name,
-        })),
-      }),
-      subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
-          importId: subtotalGroup.id,
-          importData: { ...subtotalGroup },
-          displayLabel: subtotalGroup.name,
-        })),
-      }),
-      exam: {
-        isIdMatch: false,
-        importExamId: examId,
-        importData: {},
-        displayLabel: "テスト",
-      },
-    })
-
-    await executeIdIntegrationImport(
+    const result = await executeIdIntegrationImport(
       data,
-      preMatch1,
+      buildNoMatchPreMatch(data, examId),
       createIdIntegrationConfig(),
       currentUser.id
     )
 
-    // 2回目: 同一試験としてリインポート
-    const preMatch2 = createFileOverviewData({
+    expect(result.examId).toBe(examId)
+    expect(await prisma.exam.count({ where: { id: examId } })).toBe(1)
+    expect(await prisma.examPage.count({ where: { examId } })).toBe(1)
+    expect(
+      await prisma.cropRegion.count({ where: { examPage: { examId } } })
+    ).toBe(1)
+    expect(await prisma.student.count({ where: { id: studentId } })).toBe(1)
+    expect(await prisma.classroom.count({ where: { id: classroomId } })).toBe(1)
+    expect(await prisma.subtotalGroup.count({ where: { id: groupId } })).toBe(1)
+    expect(
+      await prisma.questionScore.count({ where: { cropRegionId: regionId } })
+    ).toBe(1)
+
+    expect(result.summary.created.pages).toBe(1)
+    expect(result.summary.created.regions).toBe(1)
+    expect(result.summary.created.scores).toBe(1)
+  })
+
+  /** 同じ試験・同じ生徒・学級・小計グループへ重ねて取り込むときの事前照合（全て id 一致） */
+  function buildIdMatchPreMatch(ids: {
+    examId: string
+    studentId: string
+    classroomId: string
+    groupId: string
+  }) {
+    return createFileOverviewData({
       student: createPreMatchingResult({
         byId: [
-          createMatchedItem({ importId: studentId, existingId: studentId }),
+          createMatchedItem({
+            importId: ids.studentId,
+            existingId: ids.studentId,
+          }),
         ],
       }),
       classroom: createPreMatchingResult({
         byId: [
-          createMatchedItem({ importId: classroomId, existingId: classroomId }),
+          createMatchedItem({
+            importId: ids.classroomId,
+            existingId: ids.classroomId,
+          }),
         ],
       }),
       subtotalGroup: createPreMatchingResult({
-        byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
+        byId: [
+          createMatchedItem({ importId: ids.groupId, existingId: ids.groupId }),
+        ],
       }),
       exam: {
         isIdMatch: true,
-        importExamId: examId,
-        existingExamId: examId,
+        importExamId: ids.examId,
+        existingExamId: ids.examId,
         importData: {},
         existingData: {},
         displayLabel: "テスト",
       },
     })
+  }
 
-    const result2 = await executeIdIntegrationImport(
+  // II-4: 同一PCリインポート: スコアunchanged
+  it("II-4: 同一試験再インポートでスコアがunchangedとなる", async () => {
+    const basic = createBasicTestData()
+    const { data, examId } = basic
+
+    await executeIdIntegrationImport(
       data,
-      preMatch2,
+      buildNoMatchPreMatch(data, examId),
       createIdIntegrationConfig(),
       currentUser.id
     )
 
-    // スコアは既存と同じなので unchanged か existing composite match
-    expect(result2.summary!.unchanged.scores).toBeGreaterThanOrEqual(0)
-    expect(result2.summary!.created.scores).toBe(0)
+    // 2回目: 同一試験としてリインポート（中身は1回目と同じ）
+    const result2 = await executeIdIntegrationImport(
+      data,
+      buildIdMatchPreMatch(basic),
+      createIdIntegrationConfig(),
+      currentUser.id
+    )
+
+    expect(result2.summary.unchanged.scores).toBe(1)
+    expect(result2.summary.created.scores).toBe(0)
+    expect(result2.summary.updated.scores).toBe(0)
   })
 
   // II-5: 同一PCリインポート+スコア更新: 統合（LWW）
   it("II-5: 統合を選ぶと、後に書かれた採点が採られる", async () => {
-    const { data, examId, studentId, scoreId, regionId, classroomId, groupId } =
-      createBasicTestData()
-
-    // まず初回インポート
-    const preMatch1 = createFileOverviewData({
-      student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((student) => ({
-          importId: student.id,
-          importData: { ...student },
-          displayLabel: student.lastName,
-        })),
-      }),
-      classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((classroom) => ({
-          importId: classroom.id,
-          importData: { ...classroom },
-          displayLabel: classroom.name,
-        })),
-      }),
-      subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
-          importId: subtotalGroup.id,
-          importData: { ...subtotalGroup },
-          displayLabel: subtotalGroup.name,
-        })),
-      }),
-      exam: {
-        isIdMatch: false,
-        importExamId: examId,
-        importData: {},
-        displayLabel: "テスト",
-      },
-    })
+    const basic = createBasicTestData()
+    const { data, examId, studentId, regionId } = basic
 
     await executeIdIntegrationImport(
       data,
-      preMatch1,
+      buildNoMatchPreMatch(data, examId),
       createIdIntegrationConfig(),
       currentUser.id
     )
 
-    // スコアを変更して2回目インポート
-    const existingScore = await prisma.questionScore.findFirst({
-      where: { cropRegionId: regionId, examStudent: { studentId } },
-    })
-    expect(existingScore).not.toBeNull()
-
-    // インポートデータのスコアを変更
+    // アーカイブの採点を、取り込み先より後に書かれた別の判定にする
     data.scoresData.questionScores[0].status = "incorrect"
     data.scoresData.questionScores[0].partialScore = "0"
-
-    const conflict = createScoringConflict({
-      importScoreId: scoreId,
-      existingScoreId: existingScore!.id,
-      cropRegionId: regionId,
-      studentId,
-      importScore: {
-        status: "incorrect",
-        partialScore: 0,
-        updatedAt: new Date("2025-12-01").toISOString(),
-      },
-      existingScore: {
-        status: "correct",
-        partialScore: 10,
-        updatedAt: new Date("2025-06-01").toISOString(),
-      },
-    })
-
-    const preMatch2 = createFileOverviewData({
-      student: createPreMatchingResult({
-        byId: [
-          createMatchedItem({ importId: studentId, existingId: studentId }),
-        ],
-      }),
-      classroom: createPreMatchingResult({
-        byId: [
-          createMatchedItem({ importId: classroomId, existingId: classroomId }),
-        ],
-      }),
-      subtotalGroup: createPreMatchingResult({
-        byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
-      }),
-      exam: {
-        isIdMatch: true,
-        importExamId: examId,
-        existingExamId: examId,
-        importData: {},
-        existingData: {},
-        displayLabel: "テスト",
-      },
-      scoringConflicts: {
-        conflicts: [conflict],
-        conflictCount: 1,
-        newCount: 0,
-        unchangedCount: 0,
-      },
-    })
+    data.scoresData.questionScores[0].updatedAt = new Date(
+      "2099-01-01T00:00:00.000Z"
+    ).toISOString()
 
     const result2 = await executeIdIntegrationImport(
       data,
-      preMatch2,
+      buildIdMatchPreMatch(basic),
       createIdIntegrationConfig({ exam: "merge" }),
       currentUser.id
     )
 
-    // import is newer, so it should be updated
-    expect(result2.summary!.updated.scores).toBeGreaterThanOrEqual(0)
-  })
-
-  // II-6: 上書きする
-  it("II-6: 上書きを選ぶと、時刻を見ずにファイルの採点になる", async () => {
-    // この戦略のテストは II-5 と同様の構造
-    const { data, examId, studentId, scoreId, regionId, classroomId, groupId } =
-      createBasicTestData()
-
-    const preMatch1 = createFileOverviewData({
-      student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((student) => ({
-          importId: student.id,
-          importData: { ...student },
-          displayLabel: student.lastName,
-        })),
-      }),
-      classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((classroom) => ({
-          importId: classroom.id,
-          importData: { ...classroom },
-          displayLabel: classroom.name,
-        })),
-      }),
-      subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
-          importId: subtotalGroup.id,
-          importData: { ...subtotalGroup },
-          displayLabel: subtotalGroup.name,
-        })),
-      }),
-      exam: {
-        isIdMatch: false,
-        importExamId: examId,
-        importData: {},
-        displayLabel: "テスト",
-      },
-    })
-
-    await executeIdIntegrationImport(
-      data,
-      preMatch1,
-      createIdIntegrationConfig(),
-      currentUser.id
-    )
-
-    const existingScore = await prisma.questionScore.findFirst({
+    expect(result2.summary.updated.scores).toBe(1)
+    const scores = await prisma.questionScore.findMany({
       where: { cropRegionId: regionId, examStudent: { studentId } },
     })
-
-    data.scoresData.questionScores[0].status = "partial"
-    data.scoresData.questionScores[0].partialScore = "5"
-
-    const conflict = createScoringConflict({
-      importScoreId: scoreId,
-      existingScoreId: existingScore!.id,
-      cropRegionId: regionId,
-      studentId,
-      importScore: {
-        status: "partial",
-        partialScore: 5,
-        updatedAt: new Date().toISOString(),
-      },
-      existingScore: {
-        status: "correct",
-        partialScore: 10,
-        updatedAt: new Date().toISOString(),
-      },
-    })
-
-    const preMatch2 = createFileOverviewData({
-      student: createPreMatchingResult({
-        byId: [
-          createMatchedItem({ importId: studentId, existingId: studentId }),
-        ],
-      }),
-      classroom: createPreMatchingResult({
-        byId: [
-          createMatchedItem({ importId: classroomId, existingId: classroomId }),
-        ],
-      }),
-      subtotalGroup: createPreMatchingResult({
-        byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
-      }),
-      exam: {
-        isIdMatch: true,
-        importExamId: examId,
-        existingExamId: examId,
-        importData: {},
-        existingData: {},
-        displayLabel: "テスト",
-      },
-      scoringConflicts: {
-        conflicts: [conflict],
-        conflictCount: 1,
-        newCount: 0,
-        unchangedCount: 0,
-      },
-    })
-
-    const result = await executeIdIntegrationImport(
-      data,
-      preMatch2,
-      createIdIntegrationConfig({ exam: "overwrite" }),
-      currentUser.id
-    )
-
-    expect(result.summary!.updated.scores).toBeGreaterThanOrEqual(1)
+    expect(scores).toHaveLength(1)
+    expect(scores[0].status).toBe("incorrect")
+    expect(Number(scores[0].partialScore)).toBe(0)
+    // 勝ったときの updatedAt はアーカイブの値（取り込み時刻ではない）
+    expect(scores[0].updatedAt.toISOString()).toBe("2099-01-01T00:00:00.000Z")
   })
+
+  // II-6（上書きは時刻を見ない）は edgeCases.test.ts の EC-8 が DB の値まで見るので欠番
 
   // II-7: 統合＋アーカイブの方が古い
   it("II-7: 統合を選び、ファイルの採点が古ければこのPCの採点が残る", async () => {
-    const { data, examId, studentId, scoreId, regionId, classroomId, groupId } =
-      createBasicTestData()
-
-    const preMatch1 = createFileOverviewData({
-      student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((student) => ({
-          importId: student.id,
-          importData: { ...student },
-          displayLabel: student.lastName,
-        })),
-      }),
-      classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((classroom) => ({
-          importId: classroom.id,
-          importData: { ...classroom },
-          displayLabel: classroom.name,
-        })),
-      }),
-      subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
-          importId: subtotalGroup.id,
-          importData: { ...subtotalGroup },
-          displayLabel: subtotalGroup.name,
-        })),
-      }),
-      exam: {
-        isIdMatch: false,
-        importExamId: examId,
-        importData: {},
-        displayLabel: "テスト",
-      },
-    })
+    const basic = createBasicTestData()
+    const { data, examId, studentId, regionId } = basic
 
     await executeIdIntegrationImport(
       data,
-      preMatch1,
+      buildNoMatchPreMatch(data, examId),
       createIdIntegrationConfig(),
       currentUser.id
     )
 
-    const existingScore = await prisma.questionScore.findFirst({
-      where: { cropRegionId: regionId, examStudent: { studentId } },
-    })
-
+    // アーカイブの採点を、取り込み先より前に書かれた別の判定にする
     data.scoresData.questionScores[0].status = "incorrect"
     data.scoresData.questionScores[0].partialScore = "0"
-
-    const conflict = createScoringConflict({
-      importScoreId: scoreId,
-      existingScoreId: existingScore!.id,
-      cropRegionId: regionId,
-      studentId,
-      importScore: {
-        status: "incorrect",
-        partialScore: 0,
-        updatedAt: new Date("2025-06-01").toISOString(),
-      },
-      existingScore: {
-        status: "correct",
-        partialScore: 10,
-        updatedAt: new Date("2025-07-01").toISOString(),
-      },
-    })
-
-    const preMatch2 = createFileOverviewData({
-      student: createPreMatchingResult({
-        byId: [
-          createMatchedItem({ importId: studentId, existingId: studentId }),
-        ],
-      }),
-      classroom: createPreMatchingResult({
-        byId: [
-          createMatchedItem({ importId: classroomId, existingId: classroomId }),
-        ],
-      }),
-      subtotalGroup: createPreMatchingResult({
-        byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
-      }),
-      exam: {
-        isIdMatch: true,
-        importExamId: examId,
-        existingExamId: examId,
-        importData: {},
-        existingData: {},
-        displayLabel: "テスト",
-      },
-      scoringConflicts: {
-        conflicts: [conflict],
-        conflictCount: 1,
-        newCount: 0,
-        unchangedCount: 0,
-      },
-    })
+    data.scoresData.questionScores[0].updatedAt = new Date(
+      "2000-01-01T00:00:00.000Z"
+    ).toISOString()
 
     const result = await executeIdIntegrationImport(
       data,
-      preMatch2,
+      buildIdMatchPreMatch(basic),
       createIdIntegrationConfig({ exam: "merge" }),
       currentUser.id
     )
 
-    expect(result.summary!.skipped.scores).toBeGreaterThanOrEqual(1)
-
-    // 既存スコアが変更されていないことを確認
-    const score = await prisma.questionScore.findUnique({
-      where: { id: existingScore!.id },
+    expect(result.summary.skipped.scores).toBe(1)
+    expect(result.summary.updated.scores).toBe(0)
+    const scores = await prisma.questionScore.findMany({
+      where: { cropRegionId: regionId, examStudent: { studentId } },
     })
-    expect(score!.status).toBe("correct")
+    expect(scores).toHaveLength(1)
+    expect(scores[0].status).toBe("correct")
   })
 
   // II-8: 別PCインポート: by_student_numberマッチング
@@ -820,7 +474,24 @@ describe("executeIdIntegrationImport", () => {
       },
     })
 
-    await executeIdIntegrationImport(data, preMatch, config, currentUser.id)
+    const result = await executeIdIntegrationImport(
+      data,
+      preMatch,
+      config,
+      currentUser.id
+    )
+
+    // 受験者は既存の生徒を指し、アーカイブの生徒は作られない
+    const examStudents = await prisma.examStudent.findMany({
+      where: { examId: result.examId },
+    })
+    expect(examStudents.map((examStudent) => examStudent.studentId)).toEqual([
+      existingStudentId,
+    ])
+    expect(
+      await prisma.student.findUnique({ where: { id: studentId } })
+    ).toBeNull()
+    expect(await prisma.student.count({ where: { studentNumber } })).toBe(1)
   })
 
   // II-9: 別PCインポート: by_nameマッチング
@@ -887,7 +558,23 @@ describe("executeIdIntegrationImport", () => {
       },
     })
 
-    await executeIdIntegrationImport(data, preMatch, config, currentUser.id)
+    const result = await executeIdIntegrationImport(
+      data,
+      preMatch,
+      config,
+      currentUser.id
+    )
+
+    // 受験者は既存の生徒を指し、アーカイブの生徒は作られない
+    const examStudents = await prisma.examStudent.findMany({
+      where: { examId: result.examId },
+    })
+    expect(examStudents.map((examStudent) => examStudent.studentId)).toEqual([
+      existingStudentId,
+    ])
+    expect(
+      await prisma.student.findUnique({ where: { id: studentId } })
+    ).toBeNull()
   })
 
   // II-10: 別PCインポート: create_new決定
@@ -948,7 +635,18 @@ describe("executeIdIntegrationImport", () => {
       currentUser.id
     )
 
-    expect(result.summary!.created.students).toBeGreaterThanOrEqual(0) // studentProcessor creates via separate count
+    expect(result.summary.created.students).toBe(1)
+    const createdStudent = await prisma.student.findUnique({
+      where: { id: studentId },
+    })
+    expect(createdStudent).not.toBeNull()
+    expect(createdStudent!.lastName).toBe("テスト")
+    const examStudents = await prisma.examStudent.findMany({
+      where: { examId: result.examId },
+    })
+    expect(examStudents.map((examStudent) => examStudent.studentId)).toEqual([
+      studentId,
+    ])
   })
 
   // II-13: 出力設定（正規化済み）の作成
@@ -1249,6 +947,9 @@ describe("executeIdIntegrationImport", () => {
       where: { cropRegionId: regionId, examStudent: { studentId } },
     })
     expect(scores.length).toBe(1)
+    // 試験・生徒も重複しない（同じアーカイブの2回目は冪等）
+    expect(await prisma.exam.count({ where: { id: examId } })).toBe(1)
+    expect(await prisma.student.count({ where: { id: studentId } })).toBe(1)
   })
 
   // II-17: メンバーシップの冪等性
@@ -1452,207 +1153,6 @@ describe("executeIdIntegrationImport", () => {
     const afterExams = await prisma.exam.count()
     expect(afterStudents).toBe(beforeStudents)
     expect(afterExams).toBe(beforeExams)
-  })
-
-  /**
-   * 全件noMatchのpreMatchを作るヘルパー（新規インポート用）
-   */
-  function buildNoMatchPreMatch(
-    data: ReturnType<typeof createBasicTestData>["data"],
-    examId: string
-  ) {
-    return createFileOverviewData({
-      student: createPreMatchingResult({
-        noMatch: data.studentsData.students.map((student) => ({
-          importId: student.id,
-          importData: { ...student },
-          displayLabel: student.lastName,
-        })),
-      }),
-      classroom: createPreMatchingResult({
-        noMatch: data.classesData.classrooms.map((classroom) => ({
-          importId: classroom.id,
-          importData: { ...classroom },
-          displayLabel: classroom.name,
-        })),
-      }),
-      subtotalGroup: createPreMatchingResult({
-        noMatch: data.subtotalsData.subtotalGroups.map((subtotalGroup) => ({
-          importId: subtotalGroup.id,
-          importData: { ...subtotalGroup },
-          displayLabel: subtotalGroup.name,
-        })),
-      }),
-      exam: {
-        isIdMatch: false,
-        importExamId: examId,
-        importData: {},
-        displayLabel: "テスト",
-      },
-    })
-  }
-
-  // II-20: v1.7.0: OMR設定（Config/ChoiceOption）が作成される
-  it("II-20: OMR設定一式がmerge経路で作成される", async () => {
-    const { data, examId, regionId } = createBasicTestData()
-
-    const omrConfigId = generateId()
-    const now = new Date().toISOString()
-    data.examData.omrConfigs = [
-      {
-        id: omrConfigId,
-        cropRegionId: regionId,
-        type: "choice",
-        numChoices: 4,
-        choiceLayout: "horizontal",
-        colorThreshold: null,
-        areaThreshold: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]
-    data.examData.omrChoiceOptions = [
-      {
-        id: generateId(),
-        omrConfigId: omrConfigId,
-        choiceIndex: 0,
-        label: "1",
-        isCorrect: true,
-        shape: "circle",
-        normalizedCx: 0.5,
-        normalizedCy: 0.5,
-        normalizedWidth: 0.1,
-        normalizedHeight: 0.1,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]
-
-    await executeIdIntegrationImport(
-      data,
-      buildNoMatchPreMatch(data, examId),
-      createIdIntegrationConfig(),
-      currentUser.id
-    )
-
-    const configs = await prisma.cropRegionOmrConfig.findMany({
-      where: { cropRegionId: regionId },
-    })
-    expect(configs.length).toBe(1)
-    const options = await prisma.cropRegionOmrChoiceOption.findMany({
-      where: { omrConfigId: configs[0].id },
-    })
-    expect(options.length).toBe(1)
-    expect(options[0].shape).toBe("circle")
-  })
-
-  // II-21: v1.11.0: 複合解答（CompoundAnswer/Member/Score）が作成される
-  it("II-21: 複合解答一式がmerge経路で作成される", async () => {
-    const { data, examId, regionId, studentId, examStudentId } =
-      createBasicTestData()
-
-    const pageId = data.examData.examPages[0].id
-    const compoundAnswerId = generateId()
-    const now = new Date().toISOString()
-    data.examData.compoundAnswers = [
-      {
-        id: compoundAnswerId,
-        examPageId: pageId,
-        label: "複合1",
-        answerFormat: "fraction",
-        correctAnswer: "1/2",
-        points: 5,
-        orderIndex: 0,
-        alternativeAnswers: null,
-        requireReduced: false,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]
-    data.examData.compoundAnswerMembers = [
-      {
-        id: generateId(),
-        compoundAnswerId: compoundAnswerId,
-        cropRegionId: regionId,
-        order: 0,
-        roleLabel: "分子",
-        separator: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]
-    data.examData.compoundAnswerScores = [
-      {
-        id: generateId(),
-        compoundAnswerId: compoundAnswerId,
-        examStudentId,
-        userId: currentUser.id,
-        recognizedAnswer: "1/2",
-        status: "correct",
-        partialScore: "5",
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]
-
-    await executeIdIntegrationImport(
-      data,
-      buildNoMatchPreMatch(data, examId),
-      createIdIntegrationConfig(),
-      currentUser.id
-    )
-
-    const compoundAnswers = await prisma.compoundAnswer.findMany({
-      where: { id: compoundAnswerId },
-    })
-    expect(compoundAnswers.length).toBe(1)
-    const members = await prisma.compoundAnswerMember.findMany({
-      where: { compoundAnswerId: compoundAnswerId },
-    })
-    expect(members.length).toBe(1)
-    const scores = await prisma.compoundAnswerScore.findMany({
-      where: { compoundAnswerId: compoundAnswerId, examStudent: { studentId } },
-    })
-    expect(scores.length).toBe(1)
-    // userIdは現在のユーザーで上書きされる
-    expect(scores[0].userId).toBe(currentUser.id)
-  })
-
-  // II-22: v1.13.0: ScoreDecisionが作成される
-  it("II-22: ScoreDecisionがmerge経路で作成される", async () => {
-    const { data, examId, regionId, studentId, examStudentId } =
-      createBasicTestData()
-
-    const scoreDecisionId = generateId()
-    const now = new Date().toISOString()
-    data.scoresData.scoreDecisions = [
-      {
-        id: scoreDecisionId,
-        cropRegionId: regionId,
-        examStudentId,
-        verdict: "correct",
-        score: "10",
-        comment: null,
-        decidedByUserId: currentUser.id,
-        decidedAt: now,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]
-
-    await executeIdIntegrationImport(
-      data,
-      buildNoMatchPreMatch(data, examId),
-      createIdIntegrationConfig(),
-      currentUser.id
-    )
-
-    const decisions = await prisma.scoreDecision.findMany({
-      where: { cropRegionId: regionId, examStudent: { studentId } },
-    })
-    expect(decisions.length).toBe(1)
-    expect(decisions[0].verdict).toBe("correct")
-    expect(decisions[0].decidedByUserId).toBe(currentUser.id)
   })
 
   // II-22b: v1.20.0: 採点担当（CropRegionAssignment）が merge 経路でも復元される
@@ -1925,10 +1425,12 @@ describe("executeIdIntegrationImport", () => {
   })
 
   // II-25: 新しめモデル全部入りのアーカイブが1回のmergeで全て復元される
-  // （merge経路が将来モデルをサイレントに取りこぼさないことの網羅regression）
-  it("II-25: OMR・複合解答・確定スコアを含む全モデルがmergeで復元される", async () => {
+  // （merge経路が将来モデルをサイレントに取りこぼさないことの網羅regression）。
+  // 採点者は取り込む人とは別の教員にする（取り込む人へ倒す実装を落とすため）
+  it("II-25: OMR・複合解答・確定スコアを含む全モデルがmergeで復元され、採点者・確定者はアーカイブの人のまま", async () => {
     const { data, examId, regionId, studentId, examStudentId } =
       createBasicTestData()
+    const colleague = await createTestUser({ username: "colleague" })
     const now = new Date().toISOString()
     const pageId = data.examData.examPages[0].id
 
@@ -1998,7 +1500,7 @@ describe("executeIdIntegrationImport", () => {
         id: generateId(),
         compoundAnswerId: compoundAnswerId,
         examStudentId,
-        userId: currentUser.id,
+        userId: colleague.id,
         recognizedAnswer: "1/2",
         status: "correct",
         partialScore: "5",
@@ -2016,7 +1518,7 @@ describe("executeIdIntegrationImport", () => {
         verdict: "correct",
         score: "10",
         comment: null,
-        decidedByUserId: currentUser.id,
+        decidedByUserId: colleague.id,
         decidedAt: now,
         createdAt: now,
         updatedAt: now,
@@ -2025,25 +1527,26 @@ describe("executeIdIntegrationImport", () => {
 
     await executeIdIntegrationImport(
       data,
-      buildNoMatchPreMatch(data, examId),
+      createFileOverviewData({
+        ...buildNoMatchPreMatch(data, examId),
+        user: createUserPreMatchingResult([currentUser.id, colleague.id]),
+      }),
       createIdIntegrationConfig(),
       currentUser.id
     )
 
-    // 全6モデルが復元されていること
-    expect(
-      await prisma.cropRegionOmrConfig.count({
-        where: { cropRegionId: regionId },
-      })
-    ).toBe(1)
-    const omrConfig = await prisma.cropRegionOmrConfig.findFirst({
+    // OMR
+    const omrConfigs = await prisma.cropRegionOmrConfig.findMany({
       where: { cropRegionId: regionId },
     })
-    expect(
-      await prisma.cropRegionOmrChoiceOption.count({
-        where: { omrConfigId: omrConfig!.id },
-      })
-    ).toBe(1)
+    expect(omrConfigs).toHaveLength(1)
+    const choiceOptions = await prisma.cropRegionOmrChoiceOption.findMany({
+      where: { omrConfigId: omrConfigs[0].id },
+    })
+    expect(choiceOptions).toHaveLength(1)
+    expect(choiceOptions[0].shape).toBe("circle")
+
+    // 複合解答
     expect(
       await prisma.compoundAnswer.count({ where: { id: compoundAnswerId } })
     ).toBe(1)
@@ -2052,19 +1555,20 @@ describe("executeIdIntegrationImport", () => {
         where: { compoundAnswerId: compoundAnswerId },
       })
     ).toBe(1)
-    expect(
-      await prisma.compoundAnswerScore.count({
-        where: {
-          compoundAnswerId: compoundAnswerId,
-          examStudent: { studentId },
-        },
-      })
-    ).toBe(1)
-    expect(
-      await prisma.scoreDecision.count({
-        where: { cropRegionId: regionId, examStudent: { studentId } },
-      })
-    ).toBe(1)
+    const compoundAnswerScores = await prisma.compoundAnswerScore.findMany({
+      where: { compoundAnswerId: compoundAnswerId, examStudent: { studentId } },
+    })
+    expect(compoundAnswerScores).toHaveLength(1)
+    // 採点者はアーカイブに書かれた人のまま（取り込んだ人ではない）
+    expect(compoundAnswerScores[0].userId).toBe(colleague.id)
+
+    // 確定
+    const decisions = await prisma.scoreDecision.findMany({
+      where: { cropRegionId: regionId, examStudent: { studentId } },
+    })
+    expect(decisions).toHaveLength(1)
+    expect(decisions[0].verdict).toBe("correct")
+    expect(decisions[0].decidedByUserId).toBe(colleague.id)
   })
 
   // II-26: アーカイブは正本。存在については忠実に復元する（issue #918）
@@ -2110,9 +1614,12 @@ describe("executeIdIntegrationImport", () => {
     )
 
     // アーカイブに在るものは作る。削除記録による復活防止は行わない
-    expect(
-      await prisma.drawingAnnotation.findUnique({ where: { id: annotationId } })
-    ).not.toBeNull()
-    expect(result.summary?.skipped.annotations).toBe(0)
+    const annotation = await prisma.drawingAnnotation.findUnique({
+      where: { id: annotationId },
+    })
+    expect(annotation).not.toBeNull()
+    expect(annotation!.type).toBe("circle")
+    expect(annotation!.questionScoreId).toBe(scoreId)
+    expect(result.summary.skipped.annotations).toBe(0)
   })
 })

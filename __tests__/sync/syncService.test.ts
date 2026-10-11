@@ -34,7 +34,11 @@ const mockSyncNow = vi.fn().mockResolvedValue({
   skippedRemotes: [],
 })
 const mockStop = vi.fn()
-const mockClose = vi.fn().mockResolvedValue(undefined)
+/** インスタンスを作った・閉じた順（作り直しの前後関係を見る） */
+const lifecycleEvents: Array<"setup" | "close"> = []
+const mockClose = vi.fn(async () => {
+  lifecycleEvents.push("close")
+})
 const setupSyncCalls: Array<{
   dbPath: string
   nasPath: string
@@ -45,6 +49,7 @@ vi.mock("sqlite-nas-sync", () => ({
   setupSync: vi.fn(
     (config: { dbPath: string; nasPath: string; intervalMs: number }) => {
       setupSyncCalls.push(config)
+      lifecycleEvents.push("setup")
       return {
         syncNow: mockSyncNow,
         start: vi.fn(),
@@ -89,6 +94,7 @@ beforeEach(() => {
   fs.mkdirSync(SHARED_FOLDER, { recursive: true })
   saveSyncConfig({ ...DEFAULT_SYNC_CONFIG, clientId: "client-this-pc" })
   setupSyncCalls.length = 0
+  lifecycleEvents.length = 0
   mockSyncNow.mockClear()
   mockStop.mockClear()
   mockClose.mockClear()
@@ -154,7 +160,7 @@ describe("共有モードで起動したとき", () => {
   it("間隔を変えて始め直すときは、前のインスタンスを閉じてから作る", async () => {
     await initializeSync()
     await updateSyncTiming({ intervalMs: 45_000 })
-    expect(mockClose).toHaveBeenCalledTimes(1)
+    expect(lifecycleEvents).toEqual(["setup", "close", "setup"])
   })
 
   it("止めたら手動の同期はできない", async () => {

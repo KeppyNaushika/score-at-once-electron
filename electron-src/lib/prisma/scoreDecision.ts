@@ -14,6 +14,7 @@ import {
 } from "./auditScope"
 import prisma from "./client"
 import { assertCropRegionsInSameExam } from "./examScopeGuard"
+import { PUBLIC_USER_OMIT } from "./publicUser"
 import { serializePrisma } from "./serializePrisma"
 
 /**
@@ -178,7 +179,7 @@ export const upsertScoreDecision = async (
     },
     update: decidedColumns,
     include: {
-      decidedBy: true,
+      decidedBy: { omit: PUBLIC_USER_OMIT },
     },
   })
 
@@ -232,7 +233,7 @@ export const getScoreDecisionsForExam = async (examId: string) => {
       },
     },
     include: {
-      decidedBy: true,
+      decidedBy: { omit: PUBLIC_USER_OMIT },
     },
   })
   return decisions.map(toSerializedScoreDecision)

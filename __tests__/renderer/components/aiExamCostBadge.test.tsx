@@ -8,6 +8,7 @@
  */
 import "../setup"
 
+import { useQuery } from "@tanstack/react-query"
 import { render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
@@ -16,6 +17,8 @@ import type { AiGradingRunRow } from "@/components/exams/07-score-at-once/AiGrad
 import { CurrentUserProvider } from "@/contexts/CurrentUserContext"
 import type { AiModelPrice } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 import { AI_GRADING_CONSENT_VERSION } from "@/lib/shared/aiGrading/consentText"
+import { aiGradingRunsOfExamQuery } from "@/queries/aiGrading"
+import { aiPricingQuery, aiProviderStatusesQuery } from "@/queries/aiProvider"
 import type { PublicUser } from "@/queries/user"
 
 import { createQueryWrapper } from "../../helpers/queryWrapper"
@@ -78,12 +81,30 @@ function setupElectronApi(options: {
   })
 }
 
-function renderBadge() {
+/**
+ * 事業者の状態・実行・単価が届いたかの印。バッジが無いのは届く前の姿と同じなので、
+ * 「出さない」を見るときは届いたことを待つ（同じキャッシュを読むので取得は増えない）
+ */
+function RunsAndPricingLoadedProbe() {
+  const { isSuccess: isStatusesLoaded } = useQuery(aiProviderStatusesQuery())
+  const { isSuccess: isRunsLoaded } = useQuery(
+    aiGradingRunsOfExamQuery("exam-1")
+  )
+  const { isSuccess: isPricingLoaded } = useQuery(aiPricingQuery())
+  return (
+    <output data-testid="runs-and-pricing-loaded">
+      {String(isStatusesLoaded && isRunsLoaded && isPricingLoaded)}
+    </output>
+  )
+}
+
+function renderBadge(options: { withLoadProbe?: boolean } = {}) {
   const QueryWrapper = createQueryWrapper()
   return render(
     <QueryWrapper>
       <CurrentUserProvider user={currentUser}>
         <AiExamCostBadge examId="exam-1" />
+        {options.withLoadProbe && <RunsAndPricingLoadedProbe />}
       </CurrentUserProvider>
     </QueryWrapper>
   )
@@ -117,9 +138,11 @@ describe("AiExamCostBadge", () => {
 
   it("実行が無ければ何も出さない", async () => {
     setupElectronApi({ runs: [], modelPrices: [OPUS_PRICE], hasConsent: true })
-    renderBadge()
+    renderBadge({ withLoadProbe: true })
     await waitFor(() =>
-      expect(window.electronAPI.aiGrading.listRunsByExam).toHaveBeenCalled()
+      expect(screen.getByTestId("runs-and-pricing-loaded")).toHaveTextContent(
+        "true"
+      )
     )
     expect(screen.queryByTestId("ai-exam-cost-badge")).toBeNull()
   })

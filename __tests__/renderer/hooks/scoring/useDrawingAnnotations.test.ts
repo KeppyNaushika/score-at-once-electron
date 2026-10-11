@@ -198,22 +198,23 @@ describe("useDrawingAnnotations", () => {
   // 3. updateElement — 既存アノテーション更新
   // =========================================================================
   describe("updateElement（既存アノテーション更新）", () => {
-    it("更新すると更新後のアノテーションを返す", async () => {
-      const updated = createMockAnnotation({ id: "a1", x: 0.9 })
-      mockAPI.update.mockResolvedValue(updated)
+    it("行をそのまま送り、main が返した行を返す（送った行を返すのではない）", async () => {
+      const element = makeElement({ id: "a1", x: 0.9 })
+      // main は更新時刻を進めた行を返す。送った行とは別物
+      const savedByMain = { ...element, updatedAt: new Date("2026-10-02") }
+      mockAPI.update.mockResolvedValue(savedByMain)
 
       const { result } = renderHook(() => useDrawingAnnotations(), {
         wrapper: createQueryWrapper(),
       })
 
+      let returned: DrawingAnnotation | undefined
       await act(async () => {
-        const returned = await result.current.updateElement(
-          makeElement({ id: "a1", x: 0.9 })
-        )
-        expect(returned?.x).toBe(0.9)
+        returned = await result.current.updateElement(element)
       })
 
-      expect(mockAPI.update).toHaveBeenCalledTimes(1)
+      expect(mockAPI.update).toHaveBeenCalledExactlyOnceWith(element)
+      expect(returned).toBe(savedByMain)
     })
 
     it("コールバックonAnnotationUpdatedが呼ばれる", async () => {
@@ -279,47 +280,48 @@ describe("useDrawingAnnotations", () => {
   // 5. syncElements — 全要素同期（clearDrawingから呼ばれる）
   // =========================================================================
   describe("syncElements（全要素同期）", () => {
-    it("空配列で同期するとannotationsがクリアされる", async () => {
-      mockAPI.getByTarget.mockResolvedValue([
-        createMockAnnotation({ id: "a1" }),
-      ])
-      mockAPI.batchCreate.mockResolvedValue([])
-
+    it("空配列で同期すると、その行き先の注釈を消すだけで何も作らない", async () => {
       const { result } = renderHook(() => useDrawingAnnotations(), {
         wrapper: createQueryWrapper(),
       })
+
+      let synced: DrawingAnnotation[] | undefined
       await act(async () => {
-        await result.current.loadAnnotations(MOCK_ANNOTATION_TARGET)
-      })
-      await act(async () => {
-        await result.current.syncElements([], MOCK_ANNOTATION_TARGET)
+        synced = await result.current.syncElements([], MOCK_ANNOTATION_TARGET)
       })
 
-      expect(mockAPI.deleteByTarget).toHaveBeenCalled()
+      expect(mockAPI.deleteByTarget).toHaveBeenCalledExactlyOnceWith(
+        MOCK_ANNOTATION_TARGET
+      )
+      expect(mockAPI.batchCreate).not.toHaveBeenCalled()
+      expect(synced).toEqual([])
     })
 
-    it("新しい要素で同期すると作成されたアノテーション配列を返す", async () => {
-      const newAnnotations = [
-        createMockAnnotation({ id: "new-1" }),
-        createMockAnnotation({ id: "new-2" }),
-      ]
-      mockAPI.batchCreate.mockResolvedValue(newAnnotations)
+    it("要素があれば、消してから行き先付きで一括作成する", async () => {
+      const elements = [makeElement({ id: "new-1" }), makeElement({ id: "new-2" })]
 
       const { result } = renderHook(() => useDrawingAnnotations(), {
         wrapper: createQueryWrapper(),
       })
       await act(async () => {
-        const synced = await result.current.syncElements(
-          [makeElement({ id: "new-1" }), makeElement({ id: "new-2" })],
-          MOCK_ANNOTATION_TARGET
-        )
-        expect(synced).toHaveLength(2)
+        await result.current.syncElements(elements, MOCK_ANNOTATION_TARGET)
       })
+
+      expect(mockAPI.batchCreate).toHaveBeenCalledExactlyOnceWith(
+        elements.map((annotation) => ({
+          target: MOCK_ANNOTATION_TARGET,
+          annotation,
+        }))
+      )
+      // 作ってから消すと、作ったばかりの注釈まで消える
+      expect(mockAPI.deleteByTarget.mock.invocationCallOrder[0]).toBeLessThan(
+        mockAPI.batchCreate.mock.invocationCallOrder[0]
+      )
     })
   })
 
   // =========================================================================
-  // 7. isLoading状態の遷移
+  // 6. isLoading状態の遷移
   // =========================================================================
   describe("isLoading状態", () => {
     it("読み込み中にisLoadingがtrueになる", async () => {

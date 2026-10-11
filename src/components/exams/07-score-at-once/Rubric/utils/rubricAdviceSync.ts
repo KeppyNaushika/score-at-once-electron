@@ -61,7 +61,7 @@ interface PlanRubricAdviceSyncInput<Row extends AdviceSyncRow> {
 }
 
 /** 助言の朱書きの差分（main の `syncRubricAdviceAnnotations` に渡す形） */
-export interface RubricAdviceSyncPlan {
+interface RubricAdviceSyncPlan {
   creates: { questionScoreId: string; annotation: DrawingAnnotation }[]
   updates: ({
     drawingAnnotationId: string

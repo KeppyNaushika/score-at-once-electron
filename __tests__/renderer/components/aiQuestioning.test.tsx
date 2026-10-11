@@ -1154,6 +1154,22 @@ describe("AI 採点の問いかけ", () => {
     )
     await card("移項で符号を誤った")
     expectNoTeacherLayerWrites()
+
+    // 残りの問いに答えて確定すると、そのときに初めて方式を変える
+    await userEvent.keyboard("{Enter}")
+    await card("どの案にも入らない答案")
+    await userEvent.keyboard("{Enter}")
+    const review = await screen.findByRole("region", { name: "見直し" })
+    expect(fakeRubricApi.setScoringMethod).not.toHaveBeenCalled()
+    await userEvent.click(
+      within(review).getByRole("button", { name: "確定する" })
+    )
+    await waitFor(() =>
+      expect(fakeRubricApi.setScoringMethod).toHaveBeenCalledWith(
+        CROP_REGION_ID,
+        "deduction"
+      )
+    )
   })
 })
 

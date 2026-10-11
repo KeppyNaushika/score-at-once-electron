@@ -36,9 +36,9 @@ export const REVIEW_REASON_LABELS: Record<ReviewReason, string> = {
  * - ai: AI の判定そのもの（結果・確信度）
  * - comparison: AI の判定と自分の採点との比べ合わせ
  */
-export type ReviewReasonSource = "ai" | "comparison"
+type ReviewReasonSource = "ai" | "comparison"
 
-export const REVIEW_REASON_SOURCES: Record<ReviewReason, ReviewReasonSource> = {
+const REVIEW_REASON_SOURCES: Record<ReviewReason, ReviewReasonSource> = {
   awaitingResult: "ai",
   errored: "ai",
   refused: "ai",
@@ -59,7 +59,7 @@ export function reviewReasonsFrom(
 }
 
 /** 理由を求めるのに要るもの */
-export interface ReviewReasonInput {
+interface ReviewReasonInput {
   displayedAttempt: AttemptWithRun | null
   questionScore: QuestionScoreRow | undefined
   points: number | null

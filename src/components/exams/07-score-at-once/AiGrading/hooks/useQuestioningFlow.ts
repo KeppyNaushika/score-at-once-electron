@@ -59,7 +59,7 @@ export type QuestioningEntry =
   | { kind: "other" }
 
 /** 問いの選択肢の並び */
-export function entriesOf(step: QuestioningStep): QuestioningEntry[] {
+function entriesOf(step: QuestioningStep): QuestioningEntry[] {
   return [
     ...step.options.map((_option, optionIndex) => ({
       kind: "option" as const,

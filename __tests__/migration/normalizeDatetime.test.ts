@@ -42,9 +42,10 @@ const resetDb = async () => {
 }
 
 /**
- * migration.sql を migrationDeployer と同じ ';' 分割ロジックで読み、
- * 指定テーブルへの UPDATE 文のみを適用する
- * (テストDBには全テーブルを作らないため対象を絞る)
+ * migration.sql を文に分け、指定テーブルへの UPDATE 文のみを適用する
+ * (テストDBには全テーブルを作らないため対象を絞る)。
+ * 本番は分割せず `db.exec` で全文を流す（`migrationApplier.ts`）。ここで ';' 分割して
+ * よいのは、この migration が UPDATE 文だけでできているから
  */
 const applyMigrationFor = async (tables: string[]) => {
   const sql = fs.readFileSync(MIGRATION_SQL, "utf-8")
@@ -345,32 +346,5 @@ describe("DateTime正規化マイグレーション", () => {
         !migrationText.includes(`UPDATE "${table}" SET "${column}"`)
     )
     expect(missing).toEqual([])
-  })
-
-  it("分割健全性: migrationDeployer分割で全片がUPDATE文になる(コメント内セミコロン混入防止)", () => {
-    // migrationDeployer は SQL を ';' で単純分割するため、コメント内にセミコロンがあると
-    // 未閉じコメント片が実行対象に混入し "no statements" で落ちる。それを検出する。
-    const sql = fs.readFileSync(MIGRATION_SQL, "utf-8")
-    const statements = sql
-      .split(";")
-      .map((statement) => statement.trim())
-      .filter((statement) => {
-        if (statement.length === 0) return false
-        const stripped = statement
-          .replace(/\/\*[\s\S]*?\*\//g, "")
-          .replace(/--[^\n]*/g, "")
-          .trim()
-        return stripped.length > 0
-      })
-
-    // filterを通過した全片は実行可能なUPDATE文であるべき
-    const nonExecutable = statements.filter((statement) => {
-      const stripped = statement
-        .replace(/\/\*[\s\S]*?\*\//g, "")
-        .replace(/--[^\n]*/g, "")
-        .trim()
-      return !/^UPDATE\s+"/.test(stripped)
-    })
-    expect(nonExecutable).toEqual([])
   })
 })

@@ -58,7 +58,7 @@ export function fieldsFromPrice(
 }
 
 /** 入力欄を確かめた結果 */
-export type ModelPriceParseResult =
+type ModelPriceParseResult =
   | { isValid: true; modelPrice: AiModelPrice }
   | { isValid: false; message: string }
 

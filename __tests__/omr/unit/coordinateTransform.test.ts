@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 
 import {
   createTransform,
-  normalizedRectToPixelRect,
   normalizedToPixel,
 } from "../../../electron-src/lib/omr/coordinateTransform"
 import type { Point } from "../../../src/types/omr.types"
@@ -114,37 +113,6 @@ describe("coordinateTransform", () => {
       expect(center.x).toBeLessThan(imageWidth * 0.6)
       expect(center.y).toBeGreaterThan(imageHeight * 0.4)
       expect(center.y).toBeLessThan(imageHeight * 0.6)
-    })
-  })
-
-  describe("normalizedRectToPixelRect", () => {
-    const detectedCorners: [Point, Point, Point, Point] = expectedCorners.map(
-      (corner) => ({
-        x: corner.x * imageWidth,
-        y: corner.y * imageHeight,
-      })
-    ) as [Point, Point, Point, Point]
-
-    const transform = createTransform(
-      detectedCorners,
-      expectedCorners,
-      imageWidth,
-      imageHeight
-    )
-
-    it("矩形を正しくピクセル座標に変換できる", () => {
-      const rect = normalizedRectToPixelRect(0.1, 0.2, 0.3, 0.15, transform)
-
-      expect(Math.abs(rect.x - imageWidth * 0.1)).toBeLessThan(2)
-      expect(Math.abs(rect.y - imageHeight * 0.2)).toBeLessThan(2)
-      expect(Math.abs(rect.width - imageWidth * 0.3)).toBeLessThan(4)
-      expect(Math.abs(rect.height - imageHeight * 0.15)).toBeLessThan(4)
-    })
-
-    it("矩形の幅と高さが正の値を返す", () => {
-      const rect = normalizedRectToPixelRect(0.5, 0.5, 0.2, 0.1, transform)
-      expect(rect.width).toBeGreaterThan(0)
-      expect(rect.height).toBeGreaterThan(0)
     })
   })
 })

@@ -44,15 +44,6 @@ export async function listRubricItemsByCropRegion(cropRegionId: string) {
   })
 }
 
-/** 試験の全設問の項目（設問一覧の印や、設問をまたぐ表示に使う） */
-export async function listRubricItemsByExam(examId: string) {
-  return prisma.rubricItem.findMany({
-    where: { cropRegion: { examPage: { examId } } },
-    include: rubricItemInclude,
-    orderBy: [{ cropRegionId: "asc" }, ...rubricItemOrder],
-  })
-}
-
 /** 項目の効き方を書く列の値へ（検証を通ったものだけを受ける） */
 const toEffectColumns = (
   effect: RubricItemEffect,

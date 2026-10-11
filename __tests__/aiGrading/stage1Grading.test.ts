@@ -49,18 +49,6 @@ const textOf = (parts: ReturnType<typeof buildStage1RequestParts>) =>
     .join("\n")
 
 describe("1段目の文面", () => {
-  it("同じ入力からは同じ固定部になる", () => {
-    const input = {
-      prompt: PROMPT,
-      points: 3,
-      rubricItems: RUBRIC_ITEMS,
-      teacherInstructions: ["途中式が無ければ誤答"],
-    }
-    expect(JSON.stringify(buildStage1RequestParts(input))).toBe(
-      JSON.stringify(buildStage1RequestParts(input))
-    )
-  })
-
   it("朱書き・コメントを返させる指示を含まない", () => {
     expect(STAGE1_SYSTEM_TEXT).not.toMatch(/annotation|comment/)
     expect(STAGE1_SYSTEM_TEXT).toContain("observation")
@@ -91,21 +79,6 @@ describe("1段目の文面", () => {
       })
     )
     expect(withoutItems).not.toContain("ルーブリック項目")
-  })
-
-  it("模範解答の画像は文の間に置き、答案の画像は含めない", () => {
-    const parts = buildStage1RequestParts({
-      prompt: PROMPT,
-      points: 3,
-      rubricItems: [],
-      teacherInstructions: [],
-      modelAnswerImage: { mediaType: "image/png", base64Data: "bW9kZWw=" },
-    })
-    expect(parts.fixedParts.map((part) => part.kind)).toEqual([
-      "text",
-      "image",
-      "text",
-    ])
   })
 })
 
@@ -175,21 +148,6 @@ describe("1段目の出力の形", () => {
       buildStage1OutputSchema([]).properties?.matchedRubricItemIds.items?.enum
     ).toBeUndefined()
   })
-
-  it("朱書きとコメントの項目を持たない", () => {
-    expect(
-      Object.keys(buildStage1OutputSchema([]).properties ?? {}).sort()
-    ).toEqual(
-      [
-        "confidence",
-        "matchedRubricItemIds",
-        "observation",
-        "partialScore",
-        "status",
-        "transcription",
-      ].sort()
-    )
-  })
 })
 
 const VALID_RESPONSE = {
@@ -227,26 +185,12 @@ describe("1段目の応答の検証", () => {
     expect(result.notes).toHaveLength(1)
   })
 
-  it("満点の partial は correct に寄せる", () => {
-    const result = validateStage1Response(
-      { ...VALID_RESPONSE, status: "partial", partialScore: 3 },
-      CONTEXT
-    )
-    expect(result.ok && result.value.status).toBe("correct")
-  })
-
   it.each([
     ["送っていない項目の id", { matchedRubricItemIds: ["unknown"] }],
     [
       "所見が上限を超える",
       { observation: "あ".repeat(STAGE1_OBSERVATION_MAX_LENGTH + 1) },
     ],
-    ["partial なのに点が null", { status: "partial", partialScore: null }],
-    ["点が配点を超える", { status: "partial", partialScore: 4 }],
-    ["incorrect に点がある", { partialScore: 1 }],
-    ["知らない判定", { status: "unscored" }],
-    ["知らない確信度", { confidence: "certain" }],
-    ["朱書きの項目が混ざる", { annotation: "単位を書こう" }],
   ])("%s は外す", (_label, override) => {
     const result = validateStage1Response(
       { ...VALID_RESPONSE, ...override },

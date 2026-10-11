@@ -101,6 +101,8 @@ describe("編集操作は id で指した実体だけを変える", () => {
   })
 
   it("触っていない大問は、参照ごと残る（作り直さない）", () => {
+    // `definitionTree.ts` の約束（変わらなかった枝は参照ごと残す）。フックが返す
+    // 定義の性質であって内部状態ではない。作り直すと、受け取る側の参照比較が全部外れる
     const { result } = renderEditor(twoMajorsWithTwoSubs())
     const untouched = result.current.definition.majorQuestions[1]
 

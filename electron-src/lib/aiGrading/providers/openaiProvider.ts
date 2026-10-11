@@ -86,7 +86,7 @@ export interface OpenAiGradingClient {
  * SDK のモデルの情報を、事業者に依存しない形にする。
  * OpenAI の一覧は名前も能力も返さないので、名前は id、能力は null にする
  */
-export function toOpenAiModelInfo(model: Model): ProviderModelInfo {
+function toOpenAiModelInfo(model: Model): ProviderModelInfo {
   return {
     id: model.id,
     displayName: model.id,

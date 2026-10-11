@@ -83,7 +83,7 @@ describe("満点と得点が同じ割り当て集合を見る", () => {
     expect(maxScore).toBe(20)
   })
 
-  it("満点と得点側の maxScore が一致する", () => {
+  it("得点側も重複割り当てを1回だけ数え、満点は満点側と一致する", () => {
     const maxScoreFromPayload = computeMaxScoreFromPayload({
       type: "subtotal",
       examId: EXAM_ID,
@@ -92,10 +92,19 @@ describe("満点と得点が同じ割り当て集合を見る", () => {
     const scoreResult = computeSubtotalScore(
       "es1",
       EXAM_ID,
-      [],
+      [
+        {
+          examStudentId: "es1",
+          cropRegionId: "q1",
+          status: "correct",
+          partialScore: null,
+        },
+      ],
       duplicatedAssignments
     )
 
+    // q1 が2回数えられると 20 点になる
+    expect(scoreResult.score).toBe(10)
     expect(scoreResult.maxScore).toBe(maxScoreFromPayload)
   })
 

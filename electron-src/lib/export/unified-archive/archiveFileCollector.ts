@@ -43,7 +43,7 @@ export function collectArchiveFilePaths(db: SqliteDatabase): string[] {
   return [...filePaths].sort()
 }
 
-export type ResolvedArchiveFile =
+type ResolvedArchiveFile =
   | {
       readonly kind: "ok"
       /** 読み出すファイルの絶対パス */

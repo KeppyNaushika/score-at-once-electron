@@ -261,7 +261,7 @@ export interface RubricAdviceSyncInput {
   deletes: string[]
 }
 
-export interface RubricAdviceSyncResult {
+interface RubricAdviceSyncResult {
   createdCount: number
   updatedCount: number
   deletedCount: number

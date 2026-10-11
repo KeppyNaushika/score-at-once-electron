@@ -9,7 +9,6 @@ export function createRubricApi() {
   return {
     rubric: {
       listItems: bind("rubric:listItems"),
-      listItemsByExam: bind("rubric:listItemsByExam"),
       createItem: bind("rubric:createItem"),
       updateItem: bind("rubric:updateItem"),
       deleteItem: bind("rubric:deleteItem"),

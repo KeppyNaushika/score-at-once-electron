@@ -30,7 +30,7 @@ export const ZERO_TOKEN_USAGE: RecordedTokenUsage = {
 }
 
 /** 費用を求める相手（実行の列のうち、単価を引くのに要るもの） */
-export interface UsageCostTarget {
+interface UsageCostTarget {
   provider: string
   model: string
   /** "realtime" | "batch" */
@@ -51,7 +51,7 @@ interface RunWithAttemptUsage extends RecordedTokenUsage {
 }
 
 /** 2つの使用量を足す */
-export function addTokenUsage(
+function addTokenUsage(
   usageA: RecordedTokenUsage,
   usageB: RecordedTokenUsage
 ): RecordedTokenUsage {
@@ -157,7 +157,7 @@ export interface RunCostSummary {
 }
 
 /** 実行の行のうち、費用をまとめるのに要るもの */
-export type CostedRun = UsageCostTarget & RunWithAttemptUsage
+type CostedRun = UsageCostTarget & RunWithAttemptUsage
 
 /** 実行の金額を足す。単価の無い実行は金額に入れず、事業者・モデル・送り方ごとに分けて返す */
 export function summarizeRunCosts(

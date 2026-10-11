@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import {
-  parseInlineMarkup,
-  stripMarkup,
-} from "@/lib/answer-sheet-builder/inlineMarkupParser"
+import { parseInlineMarkup } from "@/lib/answer-sheet-builder/inlineMarkupParser"
 
 describe("parseInlineMarkup", () => {
   it("空文字列で空配列を返す", () => {
@@ -135,25 +132,5 @@ describe("parseInlineMarkup", () => {
     expect(result).toEqual([
       { text: "x = 5", math: true, displayMath: true, modelAnswer: true },
     ])
-  })
-})
-
-describe("stripMarkup", () => {
-  it("全てのマークアップを除去する", () => {
-    expect(
-      stripMarkup("**太字** *斜体* __下線__ ~~打消~~ $数式$ ||解答||")
-    ).toBe("太字 斜体 下線 打消 数式 解答")
-  })
-
-  it("マークアップなしのテキストはそのまま返す", () => {
-    expect(stripMarkup("プレーンテキスト")).toBe("プレーンテキスト")
-  })
-
-  it("$$...$$ を除去する", () => {
-    expect(stripMarkup("前 $$x^2$$ 後")).toBe("前 x^2 後")
-  })
-
-  it("$...$ と $$...$$ が混在する場合に正しく除去する", () => {
-    expect(stripMarkup("$a$ と $$b$$")).toBe("a と b")
   })
 })

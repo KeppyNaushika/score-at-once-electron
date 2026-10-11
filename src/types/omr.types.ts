@@ -225,10 +225,3 @@ export interface RawImageData {
   height: number
   channels: number
 }
-
-export interface BoundingBox {
-  x: number
-  y: number
-  width: number
-  height: number
-}

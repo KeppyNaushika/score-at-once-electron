@@ -28,10 +28,7 @@ const joinTagNames = (tags: Tag[]): string =>
  *
  * 比べるのはタグの id（名前は表示用）。並び順の違いは変化に数えない。
  */
-export function tagLinkChanges(
-  beforeTags: Tag[],
-  afterTags: Tag[]
-): AuditChange[] {
+function tagLinkChanges(beforeTags: Tag[], afterTags: Tag[]): AuditChange[] {
   const beforeTagIds = new Set(beforeTags.map((tag) => tag.id))
   const afterTagIds = new Set(afterTags.map((tag) => tag.id))
   const unchanged =

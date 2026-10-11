@@ -14,6 +14,7 @@
 
 import "../setup"
 
+import { useQuery } from "@tanstack/react-query"
 import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { type ReactNode, useState } from "react"
@@ -32,6 +33,7 @@ import { ScoringStatusFilterButtons } from "@/components/exams/07-score-at-once/
 import { CurrentUserProvider } from "@/contexts/CurrentUserContext"
 import type { AiGradingSettings } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 import { AI_GRADING_CONSENT_VERSION } from "@/lib/shared/aiGrading/consentText"
+import { aiProviderStatusesQuery } from "@/queries/aiProvider"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { PublicUser } from "@/queries/user"
 
@@ -185,16 +187,30 @@ function reviewed(answer: AiGradingAnswer) {
   }
 }
 
+/**
+ * 採点モードの選択肢と、事業者の状態が届いたかの印を並べる。
+ * 「AI採点」が無いのは届く前の姿と同じなので、届いたことを待ってから見る
+ */
+function GradingModeToggleWithStatusProbe() {
+  const { isSuccess } = useQuery(aiProviderStatusesQuery())
+  return (
+    <>
+      <output data-testid="provider-statuses-loaded">{String(isSuccess)}</output>
+      <GradingModeToggle mode="grid" onModeChange={vi.fn()} />
+    </>
+  )
+}
+
 describe("採点モードの選択肢", () => {
   beforeEach(() => vi.clearAllMocks())
 
   it("解放されていなければ「AI採点」を出さない", async () => {
     installFakeElectronApi({ isUnlocked: false })
-    renderWithProviders(
-      <GradingModeToggle mode="grid" onModeChange={vi.fn()} />
-    )
+    renderWithProviders(<GradingModeToggleWithStatusProbe />)
     await waitFor(() =>
-      expect(window.electronAPI.aiProvider.getStatuses).toHaveBeenCalled()
+      expect(screen.getByTestId("provider-statuses-loaded")).toHaveTextContent(
+        "true"
+      )
     )
     expect(screen.getByRole("radio", { name: /一覧表示/ })).toBeTruthy()
     expect(screen.queryByRole("radio", { name: /AI採点/ })).toBeNull()

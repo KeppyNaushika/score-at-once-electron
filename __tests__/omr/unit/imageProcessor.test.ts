@@ -1,16 +1,13 @@
 /**
  * 画像処理ユーティリティ テスト
  *
- * computeCircularFillRatio / computeEllipticalInkStats の
+ * computeEllipticalInkStats の
  * 塗りつぶし判定と、消し跡切り分け用の特徴量を検証する。
  */
 
 import { describe, expect, it } from "vitest"
 
-import {
-  computeCircularFillRatio,
-  computeEllipticalInkStats,
-} from "../../../electron-src/lib/omr/imageProcessor"
+import { computeEllipticalInkStats } from "../../../electron-src/lib/omr/imageProcessor"
 import type { RawImageData } from "../../../src/types/omr.types"
 
 /** 白背景のRawImageDataを作成 */
@@ -47,72 +44,6 @@ function createImageWithFilledEllipse(
 
   return { data, width: imgWidth, height: imgHeight, channels }
 }
-
-/** 円領域を黒く塗った画像を作成 */
-function createImageWithFilledCircle(
-  imgWidth: number,
-  imgHeight: number,
-  cx: number,
-  cy: number,
-  radius: number
-): RawImageData {
-  return createImageWithFilledEllipse(
-    imgWidth,
-    imgHeight,
-    cx,
-    cy,
-    radius,
-    radius
-  )
-}
-
-describe("computeCircularFillRatio", () => {
-  it("完全に白い画像では塗りつぶし率が0", () => {
-    const image = createWhiteImage(100, 100)
-    const ratio = computeCircularFillRatio(image, 50, 50, 20, 128)
-    expect(ratio).toBe(0)
-  })
-
-  it("円を完全に塗りつぶした画像では塗りつぶし率が1に近い", () => {
-    const image = createImageWithFilledCircle(200, 200, 100, 100, 30)
-    const ratio = computeCircularFillRatio(image, 100, 100, 30, 128)
-    expect(ratio).toBeGreaterThan(0.95)
-  })
-
-  it("半分だけ塗った場合は0.5付近", () => {
-    const imgWidth = 200
-    const imgHeight = 200
-    const channels = 3
-    const data = Buffer.alloc(imgWidth * imgHeight * channels, 255)
-
-    // 円の上半分だけ黒く塗る
-    const cx = 100
-    const cy = 100
-    const radius = 30
-    for (let py = 0; py < imgHeight; py++) {
-      for (let px = 0; px < imgWidth; px++) {
-        const dx = px - cx
-        const dy = py - cy
-        if (dx * dx + dy * dy <= radius * radius && py <= cy) {
-          const idx = (py * imgWidth + px) * channels
-          data[idx] = 0
-          data[idx + 1] = 0
-          data[idx + 2] = 0
-        }
-      }
-    }
-    const image: RawImageData = {
-      data,
-      width: imgWidth,
-      height: imgHeight,
-      channels,
-    }
-
-    const ratio = computeCircularFillRatio(image, cx, cy, radius, 128)
-    expect(ratio).toBeGreaterThan(0.4)
-    expect(ratio).toBeLessThan(0.6)
-  })
-})
 
 describe("computeEllipticalInkStats", () => {
   it("完全に白い画像では塗りつぶし率が0", () => {

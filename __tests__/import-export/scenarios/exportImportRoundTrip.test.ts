@@ -153,32 +153,8 @@ describe("exportImportRoundTrip", () => {
     cleanupTempDir(extracted.tempDir)
   })
 
-  // E2E-2: 同一試験が存在するDBへの取り込み: マージ動作
-  it("E2E-2: 同一試験が存在する場合にマージされる", async () => {
-    const exporterId = await seedExamFromLegacyArchive(EXAM_FIXTURE)
-    const extracted = await extractLegacyExamArchive(EXAM_FIXTURE)
-    const examId = extracted.examData.exam.id
-
-    // プレマッチング（同じ固定ファイルから作ったDBなので全てID一致）
-    const preMatch = await performPreMatching(extracted)
-    expect(preMatch.exam!.isIdMatch).toBe(true)
-
-    // インポート（マージ）
-    const importResult = await executeIdIntegrationImport(
-      extracted,
-      preMatch,
-      createIdIntegrationConfig(),
-      exporterId
-    )
-
-    expect(importResult.examId).toBe(examId)
-
-    // 試験が重複していないことを確認
-    expect(await prisma.exam.count()).toBe(1)
-
-    cleanupTempDir(extracted.tempDir)
-  })
-
+  // E2E-2（同じ試験へのマージで試験が増えない）は examMergeOrSeparate.test.ts の統合のテストが
+  // 列の値まで見ているので欠番
   it("E2E-2b: 模範解答を失ったページはマージ取り込みで復旧する", async () => {
     // 模範解答画像はページが持つようになったが、ページ作成時にしか書かないと
     // 「既にあるページの画像を取り込みで補う」経路が消える。画像ファイルだけが

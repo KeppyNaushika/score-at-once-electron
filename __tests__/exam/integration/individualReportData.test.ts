@@ -98,26 +98,49 @@ describe("個人成績表のデータ取得", () => {
     expect(allStudents.reports).toHaveLength(fixture.examStudents.length)
   })
 
-  it("母集団の合計点は受験者IDと得点で構成される", async () => {
+  it("母集団の合計点は生徒ごとに、その生徒の得点の合計になる", async () => {
     const fixture = await createFullTestExam(testPrisma, {
       includeScores: true,
     })
+    // 1人目だけ問1を誤答にして、生徒ごとに合計点を違える
+    const [firstExamStudent] = fixture.examStudents
+    const [firstCropRegion] = fixture.cropRegions
+    await testPrisma.questionScore.updateMany({
+      where: {
+        examStudentId: firstExamStudent.id,
+        cropRegionId: firstCropRegion.id,
+      },
+      data: { status: "incorrect", partialScore: null },
+    })
+    const fullScore = fixture.cropRegions.reduce(
+      (sum, cropRegion) => sum + cropRegion.points,
+      0
+    )
 
     const result = await fetchReport(
       fixture.exam.id,
       fixture.examStudents.map((examStudent) => examStudent.id)
     )
 
-    const rawTotalScores = result.population.rawTotalScores
-    for (const examStudent of fixture.examStudents) {
-      const entry = rawTotalScores.find(
-        (rawTotalScore) => rawTotalScore.studentId === examStudent.studentId
-      )
-      expect(entry).toBeDefined()
-      expect(
-        typeof entry!.totalScore === "number" || entry!.totalScore === null
-      ).toBe(true)
-    }
+    // 母集団の生徒は Student.id で並ぶ（受験者IDではない）
+    expect(
+      result.population.rawTotalScores
+        .map((rawTotalScore) => ({
+          studentId: rawTotalScore.studentId,
+          totalScore: rawTotalScore.totalScore,
+        }))
+        .sort((left, right) => left.studentId.localeCompare(right.studentId))
+    ).toEqual(
+      fixture.examStudents
+        .map((examStudent) => ({
+          studentId: examStudent.studentId,
+          totalScore:
+            examStudent.id === firstExamStudent.id
+              ? fullScore - firstCropRegion.points
+              : fullScore,
+        }))
+        .sort((left, right) => left.studentId.localeCompare(right.studentId))
+    )
   })
 
   it("小計点は QUESTION_ASSIGNMENT の割り当てから算出される", async () => {
@@ -230,6 +253,10 @@ describe("個人成績表のデータ取得", () => {
       includeScores: true,
       includeV140Data: true,
     })
+    // ビルダーはタグを作るだけで試験へ付けないので、ここで付ける
+    await testPrisma.examTag.create({
+      data: { examId: fixture.exam.id, tagId: fixture.tag!.id },
+    })
 
     const result = await fetchReport(
       fixture.exam.id,
@@ -237,7 +264,7 @@ describe("個人成績表のデータ取得", () => {
     )
 
     expect(result.examInfo.examName).toBe(fixture.exam.examName)
-    expect(Array.isArray(result.examInfo.tags)).toBe(true)
+    expect(result.examInfo.tags).toEqual([fixture.tag!.name])
   })
 
   it("存在しない試験では例外を投げる", async () => {

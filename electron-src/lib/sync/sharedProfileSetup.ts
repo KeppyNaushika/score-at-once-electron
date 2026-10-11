@@ -52,7 +52,7 @@ import {
 import type { SharedProfile } from "./types"
 
 /** 共有フォルダを扱う操作に共通の入力 */
-export interface SharedFolderSetupContext {
+interface SharedFolderSetupContext {
   /** 実行ファイルの隣の data */
   localDataDirectory: string
   /** 利用者が選んだ共有フォルダ */

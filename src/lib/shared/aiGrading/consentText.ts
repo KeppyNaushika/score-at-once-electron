@@ -19,7 +19,7 @@ import type { GradingProviderId } from "@/electron-src/lib/aiGrading/providers/t
 export const AI_GRADING_CONSENT_VERSION = "2026-10-06-draft"
 
 /** 同意の1項目。利用者は項目ごとに確かめる（読み飛ばせない形にする） */
-export interface AiGradingConsentItem {
+interface AiGradingConsentItem {
   /** 画面の key・テストの手がかりに使う安定した名前 */
   key: string
   title: string
@@ -74,7 +74,7 @@ export const AI_GRADING_CONSENT_ITEMS: readonly AiGradingConsentItem[] = [
 ]
 
 /** 事業者の規約へのリンク */
-export interface AiGradingTermsLink {
+interface AiGradingTermsLink {
   /** 開く操作の指定に使う名前（main はこの名前から URL を引き、任意の URL は開かない） */
   key: string
   label: string
@@ -82,7 +82,7 @@ export interface AiGradingTermsLink {
 }
 
 /** 事業者ごとの表示名と規約 */
-export interface AiGradingProviderTerms {
+interface AiGradingProviderTerms {
   providerName: string
   links: readonly AiGradingTermsLink[]
 }

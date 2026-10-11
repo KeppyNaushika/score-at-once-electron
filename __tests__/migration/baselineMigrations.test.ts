@@ -38,7 +38,7 @@ afterAll(async () => {
 })
 
 describe("createBaseline", () => {
-  it("_prisma_migrationsテーブルを作成し20件のレコードを挿入する", async () => {
+  it("_prisma_migrationsテーブルを作成し init の1件だけを記録する", async () => {
     await resetDb()
     await createBaseline(prisma)
 

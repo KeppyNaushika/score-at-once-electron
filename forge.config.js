@@ -47,6 +47,7 @@ const FORBIDDEN_IN_PACKAGE = [
   ".git",
   ".next",
   ".next-e2e",
+  ".next-screenshot",
   "out",
 ]
 

@@ -100,36 +100,3 @@ export async function assertCropRegionsInSameExam(
     "採点領域"
   )
 }
-
-/** 複合回答（CompoundAnswer）と受験者が同じ試験のものか検査する */
-export async function assertCompoundAnswersInSameExam(
-  pairs: { compoundAnswerId: string; examStudentId: string }[],
-  client: PrismaLike = prisma
-): Promise<void> {
-  if (pairs.length === 0) return
-  const [compoundAnswers, examIdByExamStudent] = await Promise.all([
-    client.compoundAnswer.findMany({
-      where: {
-        id: { in: [...new Set(pairs.map((pair) => pair.compoundAnswerId))] },
-      },
-      include: { examPage: true },
-    }),
-    resolveExamIdByExamStudent(client, [
-      ...new Set(pairs.map((pair) => pair.examStudentId)),
-    ]),
-  ])
-  assertPairs(
-    pairs.map((pair) => ({
-      targetId: pair.compoundAnswerId,
-      examStudentId: pair.examStudentId,
-    })),
-    new Map(
-      compoundAnswers.map((compoundAnswer) => [
-        compoundAnswer.id,
-        compoundAnswer.examPage.examId,
-      ])
-    ),
-    examIdByExamStudent,
-    "複合回答"
-  )
-}

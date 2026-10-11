@@ -8,8 +8,9 @@
 import Database from "better-sqlite3"
 import * as fs from "fs"
 import * as path from "path"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import type * as MigrationSqlModule from "../../electron-src/lib/prisma/schema/migrationSql"
 import {
   INDEX_SQL,
   MIGRATION_SQL,
@@ -174,20 +175,30 @@ describe("bootstrapSchema", () => {
     expect(countTables(dbPath)).toBe(0)
   })
 
-  it("スキーマ適用はトランザクションで囲まれ、失敗時にテーブルを残さない", () => {
+  it("スキーマ適用はトランザクションで囲まれ、失敗時にテーブルを残さない", async () => {
     const dbPath = dbPathFor("rollback")
-    fs.mkdirSync(path.dirname(dbPath), { recursive: true })
 
-    withDatabase(dbPath, (db) => {
-      expect(() =>
-        db.transaction(() => {
-          db.exec(MIGRATION_SQL)
-          db.exec(`THIS IS NOT SQL`)
-        })()
-      ).toThrow()
-    })
+    // テーブルを作り終えた後（索引の段）で落ちる初期スキーマに差し替えて、
+    // bootstrapSchema そのものを通す。適用がトランザクションで囲まれていなければ、
+    // 先に作ったテーブルが残る
+    vi.resetModules()
+    vi.doMock(
+      "../../electron-src/lib/prisma/schema/migrationSql",
+      async (importOriginal) => {
+        const actual = await importOriginal<typeof MigrationSqlModule>()
+        return { ...actual, INDEX_SQL: `${actual.INDEX_SQL}\nTHIS IS NOT SQL;` }
+      }
+    )
+    try {
+      const { bootstrapSchema: bootstrapWithBrokenIndexes } =
+        await import("../../electron-src/lib/prisma/schema/schemaBootstrap")
 
-    expect(countTables(dbPath)).toBe(0)
+      expect(() => bootstrapWithBrokenIndexes(dbPath)).toThrow()
+      expect(countTables(dbPath)).toBe(0)
+    } finally {
+      vi.doUnmock("../../electron-src/lib/prisma/schema/migrationSql")
+      vi.resetModules()
+    }
   })
 })
 

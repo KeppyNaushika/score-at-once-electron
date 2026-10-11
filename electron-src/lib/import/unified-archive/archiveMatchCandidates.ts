@@ -23,7 +23,7 @@ import { archiveRowKey } from "./types"
 export type ArchiveMatchTable =
   "Student" | "Classroom" | "SubtotalGroup" | "User"
 
-export interface ArchiveMatchKey {
+interface ArchiveMatchKey {
   /** 鍵の識別子（renderer が文言に写す） */
   readonly key: string
   /** 鍵を成す列。全ての列の値が一致したら当たり */

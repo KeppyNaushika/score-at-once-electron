@@ -675,37 +675,27 @@ describe("cornerMarkerDetector", () => {
 
       const result = await detectCornerMarkers(tmpPath, 128)
 
-      // アルゴリズムは最大スコアのコンポーネントを選択するため、
-      // マーカー+罫線の連結成分が選ばれる可能性がある。
-      // その場合、バウンディングボックスが横長になるため信頼度が低下する。
-      // 他の3マーカーは正常に検出されるべき。
+      // 探索領域の中で黒い連結成分はマーカー+罫線の1つしか無いので、それが TL として
+      // 選ばれる（選び方: 正方形性 × 充填率 × √面積 が最大の成分）。バウンディング
+      // ボックスが横長になるので、信頼度（＝縦横比）で異常に気づけることを固定する
       const tlMarker = result.markers.find((marker) => marker.corner === "TL")
       const otherMarkers = result.markers.filter(
         (marker) => marker.corner !== "TL"
       )
 
-      // 他の3マーカーは必ず検出される
-      expect(otherMarkers).toHaveLength(3)
-      const otherCorners = otherMarkers.map((marker) => marker.corner).sort()
-      expect(otherCorners).toEqual(["BL", "BR", "TR"])
-
-      // 他の3マーカーは高信頼度
+      // 他の3マーカーは正常に、高信頼度で検出される
+      expect(otherMarkers.map((marker) => marker.corner).sort()).toEqual([
+        "BL",
+        "BR",
+        "TR",
+      ])
       for (const marker of otherMarkers) {
         expect(marker.confidence).toBeGreaterThanOrEqual(0.9)
       }
 
-      if (tlMarker) {
-        // TLが検出された場合、信頼度が他のマーカーより低いことを確認
-        // （バウンディングボックスが正方形から外れるため）
-        const minOtherConfidence = Math.min(
-          ...otherMarkers.map((marker) => marker.confidence)
-        )
-        expect(tlMarker.confidence).toBeLessThan(minOtherConfidence)
-      } else {
-        // TLが検出されない場合、success=falseで3マーカーのみ
-        expect(result.success).toBe(false)
-        expect(result.markers).toHaveLength(3)
-      }
+      // TL は検出されるが、信頼度は正方形のマーカーよりはっきり低い
+      expect(tlMarker).toBeDefined()
+      expect(tlMarker!.confidence).toBeLessThan(0.5)
     })
   })
 

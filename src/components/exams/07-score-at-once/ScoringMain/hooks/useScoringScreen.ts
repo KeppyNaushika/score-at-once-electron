@@ -443,7 +443,6 @@ export function useScoringScreen({
     // AI採点モードでは一覧の選択は見えていない。見えない選択に採点キーを効かせない
     hasSelectedAnswers:
       gradingMode !== "ai" && selectedStudentAnswerImageIds.size > 0,
-    sidePanelVisible: showSidePanel,
     partialScoreModalOpen: showPartialScoreModal,
     scoringOperationMode: effectiveMode,
     currentCropRegionId,

@@ -30,50 +30,6 @@ export async function loadImageRawFromBuffer(
 }
 
 /**
- * 円形領域のピクセルの塗りつぶし率を計算
- *
- * 指定された中心と半径の円内のピクセルのみを対象とする。
- */
-export function computeCircularFillRatio(
-  rawData: RawImageData,
-  centerX: number,
-  centerY: number,
-  radius: number,
-  threshold: number
-): number {
-  const { data, width, height, channels } = rawData
-  const radiusSquared = radius * radius
-
-  let totalPixels = 0
-  let darkCount = 0
-
-  const x0 = Math.max(0, Math.floor(centerX - radius))
-  const x1 = Math.min(width - 1, Math.ceil(centerX + radius))
-  const y0 = Math.max(0, Math.floor(centerY - radius))
-  const y1 = Math.min(height - 1, Math.ceil(centerY + radius))
-
-  for (let py = y0; py <= y1; py++) {
-    for (let px = x0; px <= x1; px++) {
-      const dx = px - centerX
-      const dy = py - centerY
-      if (dx * dx + dy * dy <= radiusSquared) {
-        totalPixels++
-        const idx = (py * width + px) * channels
-        const luminance =
-          channels >= 3
-            ? 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]
-            : data[idx]
-        if (luminance < threshold) {
-          darkCount++
-        }
-      }
-    }
-  }
-
-  return totalPixels === 0 ? 0 : darkCount / totalPixels
-}
-
-/**
  * 楕円形領域のピクセル輝度を度数分布に積む
  *
  * 大津法で暗さ閾値を自動決定するための母集団収集。

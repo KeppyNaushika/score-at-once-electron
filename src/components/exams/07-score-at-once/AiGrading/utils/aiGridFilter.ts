@@ -53,12 +53,12 @@ export const DEFAULT_AI_GRID_FILTER_SETTINGS: AiGridFilterSettings = {
 }
 
 /** 自分の採点の状態（行が無ければ未採点） */
-export function myStatusOf({ answer }: ReviewedAiGradingAnswer): ScoringStatus {
+function myStatusOf({ answer }: ReviewedAiGradingAnswer): ScoringStatus {
   return toScoringStatus(answer.questionScore?.status)
 }
 
 /** AI の採点の状態（表示中の試行が成功していればその判定、無ければ未採点） */
-export function aiStatusOf({ review }: ReviewedAiGradingAnswer): ScoringStatus {
+function aiStatusOf({ review }: ReviewedAiGradingAnswer): ScoringStatus {
   const attempt = review.displayedAttempt?.attempt
   return attempt?.state === "succeeded" ? attempt.status : "unscored"
 }

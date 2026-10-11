@@ -131,25 +131,39 @@ describe("採点マークの供給形", () => {
     expect("passcode" in author).toBe(false)
   })
 
-  it("union 列は境界で literal へ絞られる", async () => {
+  it("union 列の想定外の値は、境界で既定の literal へ倒れる", async () => {
     const fixture = await createFullTestExam(testPrisma, {
       includeScores: true,
       includeAnnotations: true,
     })
+    const [known] = fixture.drawingAnnotations
 
+    // DB 上は String なので、旧データ・取り込み・DB 直編集で想定外の値が入りうる
+    await testPrisma.drawingAnnotation.update({
+      where: { id: known.id },
+      data: {
+        lineStyle: "dotted",
+        horizontalAlign: "justify",
+        verticalAlign: "middle",
+        anchorDirection: "north",
+      },
+    })
+
+    const byQuestionScore = await getDrawingAnnotationsByQuestionScore(
+      known.questionScoreId
+    )
     const forBrowse = await getAnnotationsForBrowse(fixture.exam.id)
-    const target = forBrowse[0]
 
-    // DB 上は String。線種・揃えは既定へ倒して literal union にする
-    expect(["text", "line", "rectangle", "ellipse"]).toContain(target.type)
-    expect([
-      "solid",
-      "wave",
-      "zigzag",
-      "double",
-      "arrow",
-      "both_arrow",
-    ]).toContain(target.lineStyle)
+    for (const rows of [byQuestionScore, forBrowse]) {
+      const target = rows.find((row) => row.id === known.id)
+      expect(target).toMatchObject({
+        type: "line",
+        lineStyle: "solid",
+        horizontalAlign: "left",
+        verticalAlign: "top",
+        anchorDirection: "top-left",
+      })
+    }
   })
 
   it("描けない種別の行は読み取りの境界で除外される", async () => {

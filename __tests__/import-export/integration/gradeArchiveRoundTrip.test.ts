@@ -440,7 +440,7 @@ describe("grade-archive 取り込み", () => {
     ).toBe(true)
   })
 
-  it("試験外成績資料(Coursework)の項目・点数・コメント・名簿・タグが取り込みで保持される (v1.4.0)", async () => {
+  it("内包資料を参照するデータソースは、書き出したパソコンにある資料の項目へ uuid で結ばれ、資料は重複しない", async () => {
     // 固定ファイル: 学級「学級_資料内包」・生徒「CW_101」・タグ「タグ_資料内包」を持つ資料
     // 「第2回レポート」（数値の「提出物」85点・調整-5、文字評価の「授業態度」A/B/C で B）と、
     // その2項目を参照する coursework 型データソース2つを持つ成績「成績_資料内包」
@@ -493,125 +493,6 @@ describe("grade-archive 取り込み", () => {
       where: { name: "第2回レポート" },
     })
     expect(courseworkCount).toBe(1)
-  })
-
-  it("v1.4.0 で新規 Coursework が埋め込みから復元される（名前を変えて衝突回避）", async () => {
-    const suffix = Date.now()
-    await prisma.student.create({
-      data: {
-        studentNumber: `CW2_${suffix}`,
-        lastName: "佐藤",
-        firstName: "花子",
-        lastNameKana: "サトウ",
-        firstNameKana: "ハナコ",
-      },
-    })
-
-    // アーカイブを手組み（DBには Coursework を作らず、埋め込みのみ）
-    const archive: LegacyGradeArchiveData = {
-      manifest: {
-        version: "1.4.0",
-        appVersion: "test",
-        exportedAt: new Date().toISOString(),
-        gradeId: "src",
-        gradeName: `成績_embed_${suffix}`,
-        counts: {
-          gradeItems: 1,
-          dataSources: 1,
-          manualScores: 1,
-          boundaries: 0,
-          classrooms: 0,
-          students: 1,
-        },
-      },
-      gradeData: {
-        grade: { name: `成績_embed_${suffix}`, description: null },
-        gradeItems: [
-          {
-            name: "観点A",
-            order: 0,
-            dataSources: [
-              {
-                type: "coursework",
-                name: "資料参照",
-                maxScore: 100,
-                weight: 100,
-                order: 0,
-                examName: null,
-                subtotalName: null,
-                cropRegionLabel: null,
-                courseworkName: `埋込資料_${suffix}`,
-                courseworkItemName: "課題1",
-              },
-            ],
-          },
-        ],
-        classroomRefs: [],
-        examRefs: [],
-        studentRefs: [
-          {
-            studentNumber: `CW2_${suffix}`,
-            classroomName: null,
-            customOrder: 0,
-          },
-        ],
-      },
-      courseworks: [
-        {
-          id: `cw_embed_${suffix}`,
-          name: `埋込資料_${suffix}`,
-          description: "埋め込みテスト",
-          date: null,
-          classrooms: [],
-          tags: [],
-          students: [{ studentNumber: `CW2_${suffix}`, customOrder: 0 }],
-          items: [
-            {
-              id: `cwi_embed_${suffix}`,
-              name: "課題1",
-              order: 0,
-              maxScore: 100,
-              inputMode: "numeric",
-              letterScales: [],
-              scores: [
-                {
-                  studentNumber: `CW2_${suffix}`,
-                  score: 72,
-                  letterValue: null,
-                  adjustment: null,
-                  adjustmentReason: null,
-                  comment: "良好",
-                },
-              ],
-            },
-          ],
-        },
-      ],
-      boundariesData: { boundarySets: [] },
-    }
-
-    const result = await importGradeArchive(archive)
-
-    const importedItem = await prisma.courseworkItem.findFirst({
-      where: { coursework: { name: `埋込資料_${suffix}` }, name: "課題1" },
-      include: {
-        scores: {
-          include: { courseworkStudent: { include: { student: true } } },
-        },
-      },
-    })
-    expect(importedItem).not.toBeNull()
-    expect(importedItem!.scores).toHaveLength(1)
-    expect(Number(importedItem!.scores[0].score)).toBe(72)
-    expect(
-      importedItem!.scores[0].courseworkStudent.student.studentNumber
-    ).toBe(`CW2_${suffix}`)
-
-    const dataSource = await prisma.gradeDataSource.findFirst({
-      where: { gradeItem: { gradeId: result.gradeId! }, name: "資料参照" },
-    })
-    expect(dataSource!.courseworkItemId).toBe(importedItem!.id)
-    expect(dataSource!.type).toBe("coursework")
   })
 
   it("旧 v1.3.0 形式（manual + inputMode + letterScales）が Coursework へ変換される（後方互換）", async () => {
@@ -884,12 +765,14 @@ describe("grade-archive 取り込み", () => {
     expect(dataSource!.courseworkItemId).not.toBeNull()
   })
 
-  it("referenceDate/通知書の設定が無いGradeも問題なく取り込める（後方互換）", async () => {
+  it("referenceDate・通知書の設定・確定値・制約ルールが無いGradeも問題なく取り込める（後方互換）", async () => {
     // 固定ファイル: 名前「成績_空」だけの成績算出（評価項目も名簿も無い）
     const archive = await readLegacyGradeArchive("grade-empty.grade")
     expect(archive.grades[0].referenceDate).toBeNull()
     expect(archive.gradeIndividualReportSettings).toHaveLength(0)
     expect(archive.courseworkArchive.courseworks).toHaveLength(0)
+    expect(archive.gradeFrozenScores).toHaveLength(0)
+    expect(archive.gradeConstraints).toHaveLength(0)
 
     const result = await importGradeArchive(archive)
 
@@ -903,6 +786,16 @@ describe("grade-archive 取り込み", () => {
         where: { gradeId: result.gradeId! },
       })
     expect(importedSettings).toBeNull()
+    expect(
+      await prisma.gradeFrozenScore.count({
+        where: { gradeStudent: { gradeId: result.gradeId! } },
+      })
+    ).toBe(0)
+    expect(
+      await prisma.gradeConstraint.count({
+        where: { gradeId: result.gradeId! },
+      })
+    ).toBe(0)
   })
 
   it("v1.4.0: uuid一次照合で再インポートは冪等、明示的newで複製（ユーザー判断）", async () => {
@@ -1492,18 +1385,6 @@ describe("grade-archive 取り込み", () => {
     expect(legacySources[0].subtotalId).not.toBe(otherSubtotal.id)
   })
 
-  it("gradeFrozenScores が無いGradeも問題なく取り込める（後方互換）", async () => {
-    // 固定ファイル: 名前「成績_空」だけの成績算出
-    const archive = await readLegacyGradeArchive("grade-empty.grade")
-    expect(archive.gradeFrozenScores).toHaveLength(0)
-
-    const result = await importGradeArchive(archive)
-    const imported = await prisma.gradeFrozenScore.findMany({
-      where: { gradeStudent: { gradeId: result.gradeId! } },
-    })
-    expect(imported).toHaveLength(0)
-  })
-
   it("アーカイブの名簿に無い対象者を指すセルは取り込まず警告する（#962 Phase C）", async () => {
     // セルは対象者（GradeStudent）を uuid で指す。その uuid が名簿セクションに
     // 無ければ、取り込み先で対象者を作れないのでセルも作ってはいけない
@@ -1727,18 +1608,6 @@ describe("grade-archive 取り込み", () => {
     expect(created.id).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     )
-  })
-
-  it("gradeConstraints が無いGradeも問題なく取り込める（後方互換）", async () => {
-    // 固定ファイル: 名前「成績_空」だけの成績算出
-    const archive = await readLegacyGradeArchive("grade-empty.grade")
-    expect(archive.gradeConstraints).toHaveLength(0)
-
-    const result = await importGradeArchive(archive)
-    const imported = await prisma.gradeConstraint.findMany({
-      where: { gradeId: result.gradeId! },
-    })
-    expect(imported).toHaveLength(0)
   })
 
   it("旧 v1.4.0（名前ベース courseworks 埋め込み）を後方互換で読み込める", async () => {

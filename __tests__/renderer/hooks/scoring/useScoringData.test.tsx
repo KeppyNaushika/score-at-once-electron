@@ -5,8 +5,8 @@
  * 段階70 で、採点行を設問ごとの束として渡す形にした（採点領域の木から外した）。
  * ここで固定するのは**このフックの出力**なので、渡し方が変わってもこの網は生き残る。
  *
- * 07 が出すのは**自分の採点だけ**。他の教員の採点も同じ束で届いているが、画面には
- * 出さない（食い違いを裁くのは採点する場ではない）。
+ * 数え方（自分の採点だけ・同じマスに行が2つあれば最後の行）は、このフックが渡すだけの
+ * `calculateQuestionProgress` の検査（`utils/questionProgress.test.ts`）が固定している。
  */
 
 import { renderHook } from "@testing-library/react"
@@ -25,7 +25,6 @@ const CROP_REGION_ID = "region-1"
 const EXAM_STUDENT_A = "es-a"
 const EXAM_STUDENT_B = "es-b"
 const SELF_USER_ID = "user-self"
-const OTHER_USER_ID = "user-other"
 
 interface QuestionScoreSeed {
   id: string
@@ -85,6 +84,22 @@ function renderScoringData(
 
 describe("useScoringData の進捗", () => {
   it("渡された束だけで数える（採点行を自分で取りに行かない）", () => {
+    // 境界に触れたら記録する。採点行を自分で取りに行く実装に戻れば、ここに名前が残る
+    const touchedApis: string[] = []
+    Object.defineProperty(window, "electronAPI", {
+      value: new Proxy(
+        {},
+        {
+          get: (_target, property) => {
+            touchedApis.push(String(property))
+            return () => Promise.resolve([])
+          },
+        }
+      ),
+      writable: true,
+      configurable: true,
+    })
+
     const { result } = renderScoringData(
       buildQuestionScores([
         {
@@ -100,55 +115,7 @@ describe("useScoringData の進捗", () => {
 
     expect(progress.totalAnswers).toBe(2)
     expect(progress.gradedAnswers).toBe(1)
-  })
-
-  it("他の教員の採点は混ざらない", () => {
-    const { result } = renderScoringData(
-      buildQuestionScores([
-        {
-          id: "qs-a",
-          examStudentId: EXAM_STUDENT_A,
-          status: "correct",
-          userId: SELF_USER_ID,
-        },
-        {
-          id: "qs-b",
-          examStudentId: EXAM_STUDENT_B,
-          status: "correct",
-          userId: OTHER_USER_ID,
-        },
-      ])
-    )
-
-    const progress = result.current.calculateQuestionProgress()[CROP_REGION_ID]
-
-    // 他の教員が B を採点済みでも、自分から見た進捗は 1/2 のまま
-    expect(progress.gradedAnswers).toBe(1)
-    expect(progress.percentage).toBe(50)
-  })
-
-  it("同じマスに自分の行が2つあっても、最後に書かれた行で数える", () => {
-    const { result } = renderScoringData(
-      buildQuestionScores([
-        {
-          id: "qs-old",
-          examStudentId: EXAM_STUDENT_A,
-          status: "unscored",
-          userId: SELF_USER_ID,
-          updatedAt: "2026-08-17T00:00:00.000Z",
-        },
-        {
-          id: "qs-new",
-          examStudentId: EXAM_STUDENT_A,
-          status: "correct",
-          userId: SELF_USER_ID,
-          updatedAt: "2026-08-18T00:00:00.000Z",
-        },
-      ])
-    )
-
-    const progress = result.current.calculateQuestionProgress()[CROP_REGION_ID]
-
-    expect(progress.gradedAnswers).toBe(1)
+    expect(touchedApis).toEqual([])
+    Reflect.deleteProperty(window, "electronAPI")
   })
 })

@@ -296,3 +296,133 @@ describe("消し跡を退けたセルの下流での扱い", () => {
     expect(entry.score).toBe(5)
   })
 })
+
+describe("複数正解の設問の部分点", () => {
+  const CROP_REGION_ID = "crop-region-0"
+
+  /** 4択で、correctChoiceIndices が正解の設問のOMR設定を作る */
+  function createMultiCorrectConfig(
+    correctChoiceIndices: number[]
+  ): CropRegionOmrConfigWithOptions {
+    const timestamp = new Date("2026-07-26T00:00:00.000Z")
+    const choiceOptions: CropRegionOmrChoiceOption[] = [0, 1, 2, 3].map(
+      (choiceIndex) => ({
+        id: `option-${choiceIndex}`,
+        omrConfigId: "omr-config-uuid",
+        choiceIndex,
+        label: String(choiceIndex),
+        isCorrect: correctChoiceIndices.includes(choiceIndex),
+        shape: "ellipse",
+        normalizedCx: 0.1 + choiceIndex * 0.1,
+        normalizedCy: 0.5,
+        normalizedWidth: 0.03,
+        normalizedHeight: 0.02,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      })
+    )
+    const config: CropRegionOmrConfig = {
+      id: "omr-config-uuid",
+      cropRegionId: CROP_REGION_ID,
+      type: "choice",
+      numChoices: 4,
+      choiceLayout: "horizontal",
+      colorThreshold: null,
+      areaThreshold: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }
+    return { ...config, choiceOptions }
+  }
+
+  /** markedChoiceIndices を塗った1セルの答案を再評価し、採点エントリと集計を返す */
+  function evaluateMarks(
+    correctChoiceIndices: number[],
+    markedChoiceIndices: number[],
+    points: number,
+    confidenceThreshold = 0.7
+  ) {
+    const sheet = createSheet("student-1", [
+      [0, 1, 2, 3].map((choiceIndex) =>
+        measurement(
+          choiceIndex,
+          markedChoiceIndices.includes(choiceIndex) ? 0.92 : 0.02
+        )
+      ),
+    ])
+    const { scoreEntries, summary } = reevaluateWithThreshold({
+      sheetResults: [sheet],
+      omrConfigs: [createMultiCorrectConfig(correctChoiceIndices)],
+      pointsMap: { [CROP_REGION_ID]: points },
+      areaThreshold: AREA_THRESHOLD,
+      confidenceThreshold,
+      minInkDarkness: null,
+    })
+    return { entry: scoreEntries.get("student-1")![0], summary }
+  }
+
+  it("正解2つのうち1つだけ選ぶと、配点の半分の部分点になる", () => {
+    const { entry, summary } = evaluateMarks([0, 2], [0], 10)
+
+    expect(entry.status).toBe("partial")
+    expect(entry.score).toBe(5)
+    expect(entry.maxPoints).toBe(10)
+    expect(summary.partial).toBe(1)
+  })
+
+  it("部分点は切り捨てる（正解3つのうち1つ・配点10 → 3点）", () => {
+    const { entry } = evaluateMarks([0, 1, 2], [1], 10)
+
+    expect(entry.status).toBe("partial")
+    expect(entry.score).toBe(3)
+  })
+
+  it("複数正解の設問で正解を1つも選んでいなければ不正解のまま", () => {
+    const { entry } = evaluateMarks([0, 2], [1], 10)
+
+    expect(entry.status).toBe("incorrect")
+    expect(entry.score).toBe(0)
+  })
+
+  it("複数正解を全て選べば満点（信頼度のしきい値を外したとき）", () => {
+    const { entry } = evaluateMarks([0, 2], [0, 2], 10, 0)
+
+    expect(entry.status).toBe("correct")
+    expect(entry.score).toBe(10)
+  })
+
+  it("複数正解を全て選んでも、既定のしきい値では保留になる（現状の挙動）", () => {
+    // 2つ以上塗られたセルの信頼度は、正解の数にかかわらず一律 0.3（choiceEvaluation.ts）。
+    // 正しく塗った答案も人の確認へ回る。直す予定（#1444）。直したらこのテストも書き換える
+    const { entry } = evaluateMarks([0, 2], [0, 2], 10)
+
+    expect(entry.status).toBe("pending")
+    expect(entry.score).toBe(0)
+  })
+
+  it("正解が1つの設問では、外しても部分点にしない", () => {
+    const { entry } = evaluateMarks([0], [1], 10)
+
+    expect(entry.status).toBe("incorrect")
+    expect(entry.score).toBe(0)
+  })
+
+  it("配点の無い設問は満点でも0点", () => {
+    const sheet = createSheet("student-1", [
+      [measurement(0, 0.92), measurement(1, 0.02)],
+    ])
+    const { scoreEntries } = reevaluateWithThreshold({
+      sheetResults: [sheet],
+      omrConfigs: [createMultiCorrectConfig([0])],
+      pointsMap: {},
+      areaThreshold: AREA_THRESHOLD,
+      confidenceThreshold: 0.7,
+      minInkDarkness: null,
+    })
+    const entry = scoreEntries.get("student-1")![0]
+
+    expect(entry.status).toBe("correct")
+    expect(entry.score).toBe(0)
+    expect(entry.maxPoints).toBe(0)
+  })
+})

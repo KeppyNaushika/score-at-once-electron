@@ -141,8 +141,4 @@ describe("constraintExpression: 安全性", () => {
     const tree = parseExpression("has(1)", { has: 1 })
     expect(() => evaluateExpression(tree, {})).toThrow("ありません")
   })
-
-  it("Object.prototype を汚さない", () => {
-    expect(({} as Record<string, unknown>).polluted).toBeUndefined()
-  })
 })

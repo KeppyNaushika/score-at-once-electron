@@ -41,15 +41,11 @@ export function isAiProviderUnlocked(
  */
 export function useAiGradingAvailability(): {
   unlockedProviders: GradingProviderId[]
-  isUnlocked: (provider: GradingProviderId) => boolean
 } {
   const currentUser = useCurrentUser()
   const { data: providerStatuses } = useQuery(aiProviderStatusesQuery())
   const unlockedProviders = (providerStatuses ?? [])
     .filter((status) => isAiProviderUnlocked(status, currentUser.id))
     .map((status) => status.provider)
-  return {
-    unlockedProviders,
-    isUnlocked: (provider) => unlockedProviders.includes(provider),
-  }
+  return { unlockedProviders }
 }

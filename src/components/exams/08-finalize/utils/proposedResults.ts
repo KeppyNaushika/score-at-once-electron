@@ -8,7 +8,7 @@ import type { ScoringStatus } from "@/types/scoringStatus.types"
  * 付けていたら、どちらを採用したのかは決められないし、決める意味も無い。
  * よって表示の単位は判定＋点で、その結果を出した人は横に並ぶだけにする。
  */
-export interface ProposedResult {
+interface ProposedResult {
   /** 判定＋点（行の同一性そのもの。React の key に使う） */
   key: string
   status: ScoringStatus

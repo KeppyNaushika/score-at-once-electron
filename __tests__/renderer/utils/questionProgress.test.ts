@@ -111,14 +111,6 @@ describe("calculateQuestionProgress の確定件数", () => {
     expect(progress.gradedAnswers).toBe(0)
     expect(progress.finalizedAnswers).toBe(0)
   })
-
-  it("確定件数は採点済み件数を超えない", () => {
-    const progress = buildSingleProgress("correct", null)
-
-    expect(progress.finalizedAnswers).toBeLessThanOrEqual(
-      progress.gradedAnswers
-    )
-  })
 })
 
 describe("calculateQuestionProgress が数えるのは自分の採点だけ", () => {

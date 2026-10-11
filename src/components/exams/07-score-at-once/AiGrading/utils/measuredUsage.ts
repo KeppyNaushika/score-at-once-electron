@@ -24,7 +24,7 @@ export interface MeasuredRun {
 }
 
 /** 実測を絞る条件。省いた項目では絞らない */
-export interface MeasuredRunCondition {
+interface MeasuredRunCondition {
   provider: string
   model: string
   promptId?: string

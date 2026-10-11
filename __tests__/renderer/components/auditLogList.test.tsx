@@ -221,6 +221,24 @@ describe("監査ログ一覧", () => {
     for (const call of getLogs.mock.calls) {
       expect(call[2]).toBe(0)
     }
+
+    // 最後のページで「次のページ」を押しても、その先を要求しない
+    const lastPageNumber = Math.ceil(TOTAL_ROWS / PAGE_SIZE)
+    const lastPageOffset = (lastPageNumber - 1) * PAGE_SIZE
+    await user.click(
+      screen.getByRole("link", { name: `${lastPageNumber}ページ目` })
+    )
+    await waitFor(() => {
+      expect(
+        screen.getByText(`が テスト操作 ${TOTAL_ROWS}`)
+      ).toBeInTheDocument()
+    })
+    await user.click(screen.getByRole("link", { name: "次のページ" }))
+    await act(async () => {})
+    expect(screen.getByText(`が テスト操作 ${TOTAL_ROWS}`)).toBeInTheDocument()
+    for (const call of getLogs.mock.calls) {
+      expect(call[2]).toBeLessThanOrEqual(lastPageOffset)
+    }
   })
 
   it("開いた直後にページを送っても、検索の待機に引き戻されない", async () => {

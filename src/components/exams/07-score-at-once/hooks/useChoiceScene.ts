@@ -30,7 +30,7 @@ import { useShortcutContext } from "../ScoringMain/contexts/ShortcutProvider"
 import { useSceneCommand } from "./useCommand"
 
 /** 1つの組に振る番号の数（1〜9） */
-export const CHOICE_NUMBERS_PER_PAGE = 9
+const CHOICE_NUMBERS_PER_PAGE = 9
 
 interface UseChoiceSceneOptions {
   /** 並んでいるものの数 */

@@ -238,7 +238,9 @@ describe("extractArchive（旧バージョンアーカイブ）", () => {
     cleanupTempDir(data.tempDir)
   })
 
-  test("現行形式のアーカイブは無変換（transformWarnings が空）", async () => {
+  // 1.18.0 を名乗るが、キーはすべて現行の名前。1.18.0→1.27.0 の各段は走るが、
+  // 失うものが無いので警告は出ない（無変換の素通しは examTransformerChain.test.ts が見る）
+  test("現行のキーだけを持つ 1.18.0 アーカイブは、警告なしで最新形式になる", async () => {
     const archivePath = writeArchive({
       "manifest.json": createManifest("1.18.0"),
       "exam.json": {

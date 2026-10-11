@@ -48,7 +48,7 @@ export interface AuditFilterCandidate {
 }
 
 /** 候補を作るための材料 */
-export interface AuditFilterSources {
+interface AuditFilterSources {
   scopes: AuditScopeFacet[]
   targets: AuditTargetFacet[]
   users: PublicUser[]

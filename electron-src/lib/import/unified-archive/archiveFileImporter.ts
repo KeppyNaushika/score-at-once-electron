@@ -30,7 +30,7 @@ export type ArchiveIdMap = Readonly<
   Record<string, Readonly<Record<string, string>>>
 >
 
-export interface UnifiedArchiveFileImportResult {
+interface UnifiedArchiveFileImportResult {
   copied: string[]
   replaced: string[]
   /** 取り込み先に既にあるので写さなかった */
@@ -41,9 +41,7 @@ export interface UnifiedArchiveFileImportResult {
 }
 
 /** 表ごとの対応を、旧 id → 新 id の1つの表にする（id は uuid で、表をまたいで重ならない） */
-export function flattenArchiveIdMap(
-  idMap: ArchiveIdMap
-): ReadonlyMap<string, string> {
+function flattenArchiveIdMap(idMap: ArchiveIdMap): ReadonlyMap<string, string> {
   const newIdByOldId = new Map<string, string>()
   for (const tableIdMap of Object.values(idMap)) {
     for (const [oldId, newId] of Object.entries(tableIdMap)) {

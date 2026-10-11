@@ -83,7 +83,7 @@ export function isWholeImage(selection: CropSelection): boolean {
 }
 
 /** 範囲を画素の矩形にする（少なくとも1画素） */
-export function selectionToPixels(
+function selectionToPixels(
   selection: CropSelection,
   naturalWidth: number,
   naturalHeight: number

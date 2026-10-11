@@ -19,7 +19,7 @@ export const AUDIT_LOG_RETENTION_DAYS_KEY = "auditLogRetentionDays"
 export const AUDIT_LOG_RETENTION_DAYS_CHOICES = [90, 180, 365, 730] as const
 
 /** 設定が無いときの日数 */
-export const DEFAULT_AUDIT_LOG_RETENTION_DAYS = 365
+const DEFAULT_AUDIT_LOG_RETENTION_DAYS = 365
 
 /**
  * 保存されている JSON 文字列を読む。**壊れていれば既定として扱う。**

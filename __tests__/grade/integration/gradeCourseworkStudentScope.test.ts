@@ -36,7 +36,6 @@ interface Fixture {
   gradeId: string
   courseworkId: string
   studentId: string
-  courseworkStudentId: string
 }
 
 /**
@@ -99,7 +98,6 @@ async function buildFixture(): Promise<Fixture> {
     gradeId: grade.id,
     courseworkId: coursework.id,
     studentId: student.id,
-    courseworkStudentId: courseworkStudent.id,
   }
 }
 
@@ -137,18 +135,5 @@ describe("成績算出の資料対象者スコープ", () => {
 
     const source = await readSourceScore(fixture.gradeId)
     expect(source.rawScore).toBeNull()
-  })
-
-  it("資料から外しても、点数そのものが DB から消えている", async () => {
-    const fixture = await buildFixture()
-
-    await removeStudentsFromCoursework(fixture.courseworkId, [
-      fixture.studentId,
-    ])
-
-    const remaining = await testPrisma.courseworkScore.count({
-      where: { courseworkStudentId: fixture.courseworkStudentId },
-    })
-    expect(remaining).toBe(0)
   })
 })

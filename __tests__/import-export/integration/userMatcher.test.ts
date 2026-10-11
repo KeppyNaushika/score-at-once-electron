@@ -153,5 +153,10 @@ describe("preMatchUsers", () => {
         name: "山田",
       }),
     ])
+    // 行は DB の User の列（passcode を除く）そのままで、組み立てた欄（表示名など）を足さない
+    const { passcode: _passcode, ...userColumns } = existingUser
+    expect(Object.keys(userPreMatch.allExistingUsers[0]).sort()).toEqual(
+      Object.keys(userColumns).sort()
+    )
   })
 })

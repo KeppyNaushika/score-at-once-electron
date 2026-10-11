@@ -15,6 +15,7 @@ import { useImportWizard } from "@/hooks/import/useImportWizard"
 import { createQueryWrapper } from "../../helpers/queryWrapper"
 import {
   createMockFileOverviewData,
+  createMockImportSummary,
   createMockScoringConflictData,
 } from "../helpers/mockData"
 import {
@@ -63,20 +64,6 @@ describe("useImportWizard", () => {
         wrapper: createQueryWrapper(),
       })
       expect(result.current.state).toEqual(initialState)
-    })
-
-    it("IW-2: currentStepがfile_selectで初期化される", () => {
-      const { result } = renderHook(() => useImportWizard(), {
-        wrapper: createQueryWrapper(),
-      })
-      expect(result.current.state.currentStep).toBe("file_select")
-    })
-
-    it("IW-3: isProcessingがfalseで初期化される", () => {
-      const { result } = renderHook(() => useImportWizard(), {
-        wrapper: createQueryWrapper(),
-      })
-      expect(result.current.state.isProcessing).toBe(false)
     })
 
     it("IW-4: idIntegrationConfigがデフォルト値で初期化される", () => {
@@ -244,23 +231,6 @@ describe("useImportWizard", () => {
       expect(result.current.state.currentStep).toBe("file_select")
     })
 
-    it("IW-19: 例外発生時にerrorが設定される", async () => {
-      mockArchive.selectImportFile.mockRejectedValue(
-        new Error("ネットワークエラー")
-      )
-
-      const { result } = renderHook(() => useImportWizard(), {
-        wrapper: createQueryWrapper(),
-      })
-
-      await act(async () => {
-        const success = await result.current.selectFile()
-        expect(success).toBe(false)
-      })
-
-      expect(result.current.state.error).toBe("ネットワークエラー")
-    })
-
     it("IW-20: selectFile完了後にisProcessingがfalseに戻る", async () => {
       const { result } = renderHook(() => useImportWizard(), {
         wrapper: createQueryWrapper(),
@@ -346,22 +316,12 @@ describe("useImportWizard", () => {
 
     it("IW-28: 事前照合中にisProcessingがtrueになる", async () => {
       let resolvePreMatch: (value: unknown) => void
-      mockArchive.preMatch.mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            resolvePreMatch = resolve
-          })
-      )
 
       const { result } = renderHook(() => useImportWizard(), {
         wrapper: createQueryWrapper(),
       })
 
-      // archivePathを先に設定（別のpreMatch応答で）
-      mockArchive.preMatch.mockResolvedValueOnce({
-        success: true,
-        data: createMockFileOverviewData(),
-      })
+      // archivePath を先に設定する（selectFile の事前照合は既定のモックがすぐ返す）
       await act(async () => {
         await result.current.selectFile()
       })
@@ -381,10 +341,7 @@ describe("useImportWizard", () => {
       expect(result.current.state.isProcessing).toBe(true)
 
       await act(async () => {
-        resolvePreMatch!({
-          success: true,
-          data: createMockFileOverviewData(),
-        })
+        resolvePreMatch!(createMockFileOverviewData())
       })
 
       expect(result.current.state.isProcessing).toBe(false)
@@ -547,30 +504,10 @@ describe("useImportWizard", () => {
   // =========================================================================
 
   describe("goToNextStep / goBack - ステップ遷移", () => {
-    it("IW-45: file_overviewからid_integrationに遷移する", async () => {
-      const { result } = renderHook(() => useImportWizard(), {
-        wrapper: createQueryWrapper(),
-      })
-
-      // file_overviewに移動
-      await act(async () => {
-        await result.current.selectFile()
-      })
-      expect(result.current.state.currentStep).toBe("file_overview")
-
-      act(() => {
-        result.current.goToNextStep()
-      })
-
-      expect(result.current.state.currentStep).toBe("id_integration")
-    })
-
     it("IW-46: id_integrationから採点の重なりを数えてfinal_confirmに遷移する", async () => {
       const conflictData = createMockScoringConflictData({ conflictCount: 1 })
-      mockArchive.detectScoringConflicts.mockResolvedValue({
-        success: true,
-        data: conflictData,
-      })
+      // main は数えた結果をそのまま返す（成否の封筒は無い。失敗は例外で戻る）
+      mockArchive.detectScoringConflicts.mockResolvedValue(conflictData)
 
       const { result } = renderHook(() => useImportWizard(), {
         wrapper: createQueryWrapper(),
@@ -592,30 +529,10 @@ describe("useImportWizard", () => {
 
       expect(mockArchive.detectScoringConflicts).toHaveBeenCalled()
       expect(result.current.state.currentStep).toBe("final_confirm")
-    })
-
-    it("IW-47: final_confirmからexecuteに遷移する", async () => {
-      const { result } = renderHook(() => useImportWizard(), {
-        wrapper: createQueryWrapper(),
-      })
-
-      // final_confirmまで進める
-      await act(async () => {
-        await result.current.selectFile()
-      })
-      act(() => {
-        result.current.goToNextStep()
-      })
-      await act(async () => {
-        result.current.goToNextStep()
-      })
-      expect(result.current.state.currentStep).toBe("final_confirm")
-
-      act(() => {
-        result.current.goToNextStep()
-      })
-
-      expect(result.current.state.currentStep).toBe("execute")
+      // 数えた重なりは最終確認が読む所（fileOverviewData）に載る
+      expect(result.current.state.fileOverviewData?.scoringConflicts).toEqual(
+        conflictData
+      )
     })
 
     it("IW-48: 段は5つで、更新の段は通らない", async () => {
@@ -829,9 +746,9 @@ describe("useImportWizard", () => {
 
       await act(async () => {
         resolveImport!({
-          success: true,
           examId: "test",
-          summary: {},
+          summary: createMockImportSummary(),
+          warnings: [],
         })
       })
 

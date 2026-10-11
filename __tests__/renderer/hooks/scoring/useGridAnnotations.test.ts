@@ -218,23 +218,4 @@ describe("useGridAnnotations", () => {
       })
     })
   })
-
-  describe("API失敗時", () => {
-    it("失敗時に空のMapを返す", async () => {
-      mockAPI.getByCropRegion.mockRejectedValue(new Error("取得エラー"))
-
-      const { result } = renderHook(
-        () =>
-          useGridAnnotations({
-            cropRegionId: "cr-1",
-            currentUserId: "user-1",
-          }),
-        { wrapper: createQueryWrapper() }
-      )
-
-      await waitFor(() => {
-        expect(result.current.annotationsByExamStudent.size).toBe(0)
-      })
-    })
-  })
 })

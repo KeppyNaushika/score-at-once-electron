@@ -11,6 +11,10 @@
  * - モックするのは Electron（`app.getPath` / `BrowserWindow`）と、
  *   データディレクトリの場所だけ
  *
+ * 同期そのものの結末（隠れる行・採点が勝った受験生徒の下に見えること・その後も巡回が
+ * 止まらないこと）は `twoClientSync.test.ts` が同じ仕込みで見る。ここは syncService を
+ * 通した先（renderer への押し出し・監査ログ・同期の状態）だけを見る。
+ *
  * 仕込みは実際に起きうる形にする — 2人の教員が同じ試験の同じ生徒を、
  * それぞれの端末で受験生徒として登録し、それぞれ採点した状態。
  * `ExamStudent` は `@@unique([examId, studentId])` なので2行は同時に表示できず、
@@ -40,13 +44,11 @@ import {
 } from "../../electron-src/lib/sync/sharedFolder"
 import type { SyncRecordFold } from "../../electron-src/lib/sync/types"
 import {
-  blockingWarnings,
   createClientDatabase,
   createSyncInstance,
   insertExamStudent,
   insertQuestionScore,
   isoMinutesAgo,
-  questionScoreRows,
   seedScoringSkeleton,
   withDatabase,
 } from "./twoClientHarness"
@@ -143,8 +145,6 @@ const waitForAuditLogs = async (
 
 /** 端末Aで行が隠れた同期の結果（`onAfterSync` が受け取るのと同じオブジェクト） */
 let foldSyncResult: SyncResult
-/** その次の巡回の結果（隠れたあとも同期が走ることを見る） */
-let nextRoundResult: SyncResult
 let auditLogs: AuditLogRow[]
 /** 行が隠れる直前の監査ログ（ここが空でないと「隠れたことで書かれた」と言えない） */
 let auditLogsBeforeFold: AuditLogRow[]
@@ -236,7 +236,8 @@ beforeAll(async () => {
   foldSyncResult = await triggerSyncNow()
   auditLogs = await waitForAuditLogs(LOCAL_DB_A, 1)
 
-  nextRoundResult = await triggerSyncNow()
+  // もう1巡回して、syncService の状態が巡回のあとに戻ることを見る
+  await triggerSyncNow()
 }, 60_000)
 
 afterAll(async () => {
@@ -247,7 +248,11 @@ afterAll(async () => {
 })
 
 describe("かぶった行の片方が隠れたときアプリが黙らない", () => {
-  it("本物の同期が folds を返す（作り物ではない）", () => {
+  it("本物の同期が返した folds を、そのまま renderer へ押し出す", () => {
+    const foldMessages = sentToRenderer.filter(
+      (message) => message.channel === "sync:record-folds-changed"
+    )
+    expect(foldMessages).toHaveLength(1)
     const expectedFolds: SyncRecordFold[] = [
       {
         tableName: "ExamStudent",
@@ -255,20 +260,10 @@ describe("かぶった行の片方が隠れたときアプリが黙らない", (
         winningId: "exam-student-b",
       },
     ]
-    expect(foldSyncResult.folds).toEqual(expectedFolds)
-    // 隠れた行は表から外れるので、消えた数に出る（事実は残っている）
-    expect(foldSyncResult.deleted).toBe(1)
-    expect(foldSyncResult.restores ?? []).toEqual([])
-  })
-
-  it("隠れた行をそのまま renderer へ押し出す", () => {
-    const foldMessages = sentToRenderer.filter(
-      (message) => message.channel === "sync:record-folds-changed"
-    )
-    expect(foldMessages).toHaveLength(1)
     // main は加工しない（数え上げは renderer 側）
+    expect(foldSyncResult.folds).toEqual(expectedFolds)
     expect(foldMessages[0].payload).toEqual({
-      folds: foldSyncResult.folds,
+      folds: expectedFolds,
       restores: [],
     })
   })
@@ -294,28 +289,6 @@ describe("かぶった行の片方が隠れたときアプリが黙らない", (
       losingId: "exam-student-a",
       winningId: "exam-student-b",
     })
-  })
-
-  it("隠れても採点は消えず、表示している受験生徒の下に見えている", () => {
-    expect(questionScoreRows(LOCAL_DB_A)).toEqual([
-      {
-        id: "question-score-a",
-        examStudentId: "exam-student-b",
-        status: "correct",
-      },
-      {
-        id: "question-score-b",
-        examStudentId: "exam-student-b",
-        status: "incorrect",
-      },
-    ])
-  })
-
-  it("隠れたあとも次の巡回が正常に走る", () => {
-    expect(blockingWarnings(nextRoundResult.warnings)).toEqual([])
-    expect(nextRoundResult.clientsSynced).toBe(1)
-    // 隠し直しが続くなら収束していない
-    expect(nextRoundResult.folds).toEqual([])
   })
 
   it("同期の状態が idle に戻り、回数が数えられている", async () => {

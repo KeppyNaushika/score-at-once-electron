@@ -23,7 +23,7 @@ export interface AnswerReview {
   isFromOtherPrompt: boolean
 }
 
-export interface AnswerReviewContext {
+interface AnswerReviewContext {
   /** 実行の履歴で選んだ実行（null は最新） */
   chosenRunId?: string | null
   selectedPromptId: string | null

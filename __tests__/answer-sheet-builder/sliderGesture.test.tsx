@@ -75,7 +75,7 @@ describe("つまみのジェスチャ", () => {
     expect(written).toHaveLength(1)
   })
 
-  it("押し下げでジェスチャが始まる（離すまで待たされる）", () => {
+  it("押し下げでジェスチャが始まり、離すまで書き込みは待たされる", () => {
     const written: AnswerSheetEditAction[] = []
     render(<Harness written={written} />)
     const thumb = screen.getByRole("slider")
@@ -83,7 +83,23 @@ describe("つまみのジェスチャ", () => {
     // 押し下げただけでは何も書かない。Radix は制御コンポーネントだと打鍵で
     // `onValueCommit`（＝ジェスチャの終わり）を先に呼ぶので、ここで打鍵は混ぜない
     fireEvent.pointerDown(thumb)
+
+    // 押している間に値を変える（数値欄から。jsdom ではつまみを引きずれない）。
+    // ジェスチャが始まっていなければ、これはその場で書かれてしまう
+    fireEvent.doubleClick(screen.getByTitle("ダブルクリックで直接入力"))
+    fireEvent.change(screen.getByRole("spinbutton", { name: "高さ" }), {
+      target: { value: "12" },
+    })
     expect(written).toHaveLength(0)
+
+    // 離すと、溜めた最後の1つだけが書かれる
+    act(() => {
+      fireEvent.pointerUp(window)
+    })
+    expect(written).toHaveLength(1)
+    const [edit] = written
+    if (edit.type !== "UPDATE_SUB_QUESTION") throw new Error("種類が違う")
+    expect(edit.payload.attributes.heightMultiplier).toBe(12)
   })
 })
 

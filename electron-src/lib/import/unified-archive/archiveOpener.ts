@@ -79,7 +79,7 @@ export class UnifiedArchiveOpenError extends Error {
   }
 }
 
-export interface OpenUnifiedArchiveOptions {
+interface OpenUnifiedArchiveOptions {
   archivePath: string
   /** 展開先。空か無いこと。呼び出し側が用意し、呼び出し側が消す */
   workDirectory: string

@@ -70,20 +70,6 @@ describe("getExamProgress の受験者スコープ", () => {
     expect(progress.actualScoringCount).toBe(1)
   })
 
-  it("欠席でも答案があれば分母に入る（在籍の状態では絞らない）", () => {
-    // 採点できるかは**答案画像があるか**で決まる。07 は在籍の状態で絞らずに答案を
-    // 並べるので、欠席の生徒でも画像があれば採点できる。ここで外すと「採点できる
-    // のに数えない」マスが生まれ、概要と 08 の画面が違うことを言い出す
-    const progress = getExamProgress(
-      buildExam([
-        { id: EXAM_STUDENT_A, status: "participating" },
-        { id: EXAM_STUDENT_B, status: "absent" },
-      ])
-    )
-
-    expect(progress.answerSheetCount).toBe(2)
-  })
-
   it("受験者IDでない値を渡すと何も突き合わない（取り違えの検知）", () => {
     // 答案と採点は `ExamStudent.id` で結ぶ。`Student.id` を渡すと突き合わない。
     // 在籍の一覧はもう突き合わせに使わないので、ここで見るのは
@@ -214,6 +200,8 @@ describe("getExamProgress の採点確定", () => {
   })
 
   it("2人の判定が割れたら裁定が要る", () => {
+    // 採点行は誰が入れたかを持たずに渡す（判定の一致だけを見る）。1マス1採点者1行が
+    // 崩れた行（同期の取りこぼし等）も、割れていれば裁定対象になる
     const progress = buildCell([
       questionScore({
         examStudentId: EXAM_STUDENT_A,
@@ -292,17 +280,6 @@ describe("getExamProgress の採点確定", () => {
     )
 
     expect(progress.pendingDecisionCount).toBe(1)
-    expect(progress.hasFinalizedScores).toBe(false)
-  })
-
-  it("判定の一致だけを見る（誰が入れたかで例外を作らない）", () => {
-    // 1マス1採点者1行が崩れた行（同期の取りこぼし等）も、割れていれば裁定対象。
-    // 出力側のリゾルバがそう扱うので、概要と 08 の画面が食い違わないようにする
-    const progress = buildCell([
-      questionScore({ examStudentId: EXAM_STUDENT_A, status: "correct" }),
-      questionScore({ examStudentId: EXAM_STUDENT_A, status: "incorrect" }),
-    ])
-
     expect(progress.hasFinalizedScores).toBe(false)
   })
 
@@ -385,7 +362,10 @@ describe("getExamProgress の採点確定", () => {
     expect(progress.hasFinalizedScores).toBe(false)
   })
 
-  it("欠席でも答案画像があれば、採点の分母に入る", () => {
+  it("欠席でも答案画像があれば、採点の分母に入る（在籍の状態では絞らない）", () => {
+    // 採点できるかは**答案画像があるか**で決まる。07 は在籍の状態で絞らずに答案を
+    // 並べるので、欠席の生徒でも画像があれば採点できる。ここで外すと「採点できる
+    // のに数えない」マスが生まれ、概要と 08 の画面が違うことを言い出す
     const progress = getExamProgress({
       examPages: [{ id: "page-1" }],
       answerImages: [
@@ -412,6 +392,7 @@ describe("getExamProgress の採点確定", () => {
     })
 
     // 設問1つ × 答案のある2人。欠席の B も採点できるので分母に入る
+    expect(progress.answerSheetCount).toBe(2)
     expect(progress.expectedScoringCount).toBe(2)
     expect(progress.actualScoringCount).toBe(1)
   })

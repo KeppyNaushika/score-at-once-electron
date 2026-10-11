@@ -222,31 +222,6 @@ describe("deleteStudentAnswer", () => {
     ).not.toBeNull()
   })
 
-  it("削除した DrawingAnnotation は親 QuestionScore の cascade で消える", async () => {
-    const { examStudentA, page1, region1, image, score } =
-      await buildSimpleExam()
-
-    const annotation = await testPrisma.drawingAnnotation.create({
-      data: {
-        id: crypto.randomUUID(),
-        questionScoreId: score(region1.id, examStudentA.id).id,
-        type: "circle",
-        x: 5,
-        y: 5,
-      },
-    })
-
-    await deleteAnswerAsSeen(image(page1.id, examStudentA.id).id)
-
-    // 削除の伝搬は sqlite-nas-sync の `_tombstone` が担うため、
-    // アプリ側で削除記録を持つ必要はない（issue #918）
-    expect(
-      await testPrisma.drawingAnnotation.findUnique({
-        where: { id: annotation.id },
-      })
-    ).toBeNull()
-  })
-
   it("削除直前の採点実績を返す（モーダルと同じ定義）", async () => {
     const { examStudentA, page1, image } = await buildSimpleExam()
 

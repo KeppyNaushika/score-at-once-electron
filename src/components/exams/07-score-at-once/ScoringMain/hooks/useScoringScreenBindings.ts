@@ -11,7 +11,6 @@ import { useScoringShortcuts } from "./useScoringShortcuts"
 interface UseScoringScreenBindingsOptions {
   gradingMode: GradingMode
   hasSelectedAnswers: boolean
-  sidePanelVisible: boolean
   partialScoreModalOpen: boolean
   scoringOperationMode: ScoringOperationMode
   currentCropRegionId: string | null
@@ -27,7 +26,6 @@ interface UseScoringScreenBindingsOptions {
 export function useScoringScreenBindings({
   gradingMode,
   hasSelectedAnswers,
-  sidePanelVisible,
   partialScoreModalOpen,
   scoringOperationMode,
   currentCropRegionId,
@@ -37,7 +35,6 @@ export function useScoringScreenBindings({
 }: UseScoringScreenBindingsOptions) {
   useContextValue("gradingMode", gradingMode)
   useContextValue("hasSelectedAnswers", hasSelectedAnswers)
-  useContextValue("sidePanelVisible", sidePanelVisible)
   useContextValue("partialScoreModalOpen", partialScoreModalOpen)
   // 確定は「8. 採点確定」の段へ出たので、ここで殺すのは部分点モーダルだけ。
   // 別ページなら 07 のキー操作はそもそも載っていない（ガードが要らなくなった）

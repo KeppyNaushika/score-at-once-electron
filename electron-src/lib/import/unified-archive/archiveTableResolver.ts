@@ -71,7 +71,7 @@ export interface ArchiveImportContext {
   readonly warnings: string[]
 }
 
-export interface ResolvedArchiveTable {
+interface ResolvedArchiveTable {
   readonly plans: readonly PlannedRow[]
   /** 照合で skip にした行と、取り込まない行を必須で参照するため落とした行の数 */
   readonly skipped: number

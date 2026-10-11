@@ -160,18 +160,6 @@ export function hydrateGrade<
 }
 
 /**
- * GradeItem配下のデータソース一覧を取得
- */
-export async function getDataSourcesByGradeItemId(gradeItemId: string) {
-  const dataSources = await prisma.gradeDataSource.findMany({
-    where: { gradeItemId },
-    include: gradeDataSourceInclude,
-    orderBy: { order: "asc" },
-  })
-  return serializePrisma(dataSources).map(hydrateGradeDataSource)
-}
-
-/**
  * データソースを作成
  */
 export async function createDataSource(data: {

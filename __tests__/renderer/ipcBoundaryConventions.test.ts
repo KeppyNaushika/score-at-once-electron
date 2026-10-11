@@ -150,21 +150,148 @@ function collectPreloadMethods(): Map<string, string> {
   return methods
 }
 
-/** `src/` の中で `.なにか` として触れられている名前 */
-function collectPropertyAccesses(): Set<string> {
+/** 文の外側（ファイル直下の文）まで登る */
+function topLevelStatementOf(node: ts.Node): ts.Node {
+  let current = node
+  while (current.parent && !ts.isSourceFile(current.parent)) {
+    current = current.parent
+  }
+  return current
+}
+
+/** ファイル直下の文が宣言している名前（`export const x = …` / `export function x`） */
+function declaredNameOf(statement: ts.Node): string | null {
+  if (ts.isVariableStatement(statement)) {
+    const [declaration] = statement.declarationList.declarations
+    return declaration && ts.isIdentifier(declaration.name)
+      ? declaration.name.text
+      : null
+  }
+  if (ts.isFunctionDeclaration(statement) && statement.name) {
+    return statement.name.text
+  }
+  return null
+}
+
+function isExported(statement: ts.Statement): boolean {
+  return (
+    ts.canHaveModifiers(statement) &&
+    (ts.getModifiers(statement) ?? []).some(
+      (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword
+    )
+  )
+}
+
+/**
+ * `src/queries/` が export する取得・書き込みの定義（値だけ。型は数えない）のうち、
+ * `src/` のどこからも使われていないもの（`ファイル: 名前`）。
+ *
+ * 使われているとは、`src/queries/` の外から参照されているか、使われている定義の
+ * 中から参照されていること（`xxxQuery` を別の定義が包む形があるので、使われている
+ * ものから辿って広げる）。
+ *
+ * これを見ないと、使われていない定義の中に書いた `window.electronAPI.x.y(…)` が
+ * 「preload のメソッドは呼ばれている」の検査で生きて見える（実際に
+ * `aiSendingCropPreviewQuery` の中の `previewCrop` がこれで素通りした）。
+ */
+function findUnusedQueryExports(): string[] {
+  const sourceFiles = listFiles("'src/**/*.ts' 'src/**/*.tsx'")
+    .filter((relativePath) => !relativePath.endsWith(".d.ts"))
+    .map((relativePath) => ({
+      relativePath,
+      source: parseFile(relativePath, ts.ScriptKind.TSX),
+    }))
+  const isQueryFile = (relativePath: string) =>
+    relativePath.startsWith("src/queries/")
+
+  const fileByExport = new Map<string, string>()
+  for (const { relativePath, source } of sourceFiles) {
+    if (!isQueryFile(relativePath)) continue
+    for (const statement of source.statements) {
+      if (!isExported(statement)) continue
+      const name = declaredNameOf(statement)
+      if (name) fileByExport.set(name, relativePath)
+    }
+  }
+
+  const used = new Set<string>()
+  /** 定義 → その定義の中から参照している定義 */
+  const referencedBy = new Map<string, Set<string>>()
+  for (const { relativePath, source } of sourceFiles) {
+    const visit = (node: ts.Node) => {
+      if (
+        ts.isIdentifier(node) &&
+        fileByExport.has(node.text) &&
+        !ts.isImportSpecifier(node.parent) &&
+        !ts.isExportSpecifier(node.parent) &&
+        !(
+          (ts.isVariableDeclaration(node.parent) ||
+            ts.isFunctionDeclaration(node.parent)) &&
+          node.parent.name === node
+        )
+      ) {
+        const owner = declaredNameOf(topLevelStatementOf(node))
+        const isInsideQueryExport =
+          isQueryFile(relativePath) &&
+          owner !== null &&
+          fileByExport.get(owner) === relativePath
+        if (!isInsideQueryExport) {
+          used.add(node.text)
+        } else if (owner !== node.text) {
+          referencedBy.set(
+            owner,
+            (referencedBy.get(owner) ?? new Set()).add(node.text)
+          )
+        }
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(source)
+  }
+
+  // 使われている定義から参照されているものも使われている。広がらなくなるまで回す
+  let grew = true
+  while (grew) {
+    grew = false
+    for (const [owner, referencedNames] of referencedBy) {
+      if (!used.has(owner)) continue
+      for (const referencedName of referencedNames) {
+        if (used.has(referencedName)) continue
+        used.add(referencedName)
+        grew = true
+      }
+    }
+  }
+
+  return [...fileByExport.entries()]
+    .filter(([name]) => !used.has(name))
+    .map(([name, relativePath]) => `${relativePath}: ${name}`)
+}
+
+/**
+ * `src/` の中で `.なにか` として触れられている名前。
+ *
+ * 使われていない `src/queries/` の定義の中の触れ方は数えない（その中の
+ * `window.electronAPI.x.y(…)` は誰からも呼ばれない）。
+ */
+function collectPropertyAccesses(unusedQueryExports: Set<string>): Set<string> {
   const accessed = new Set<string>()
 
   for (const relativePath of listFiles("'src/**/*.ts' 'src/**/*.tsx'")) {
     // 型宣言は「宣言しているだけ」で呼び出しではない。数えると全部生きて見える
     if (relativePath.endsWith(".d.ts")) continue
     const source = parseFile(relativePath, ts.ScriptKind.TSX)
-    const visit = (node: ts.Node) => {
-      if (ts.isPropertyAccessExpression(node)) {
-        accessed.add(node.name.text)
+    for (const statement of source.statements) {
+      const name = declaredNameOf(statement)
+      if (name && unusedQueryExports.has(`${relativePath}: ${name}`)) continue
+      const visit = (node: ts.Node) => {
+        if (ts.isPropertyAccessExpression(node)) {
+          accessed.add(node.name.text)
+        }
+        ts.forEachChild(node, visit)
       }
-      ts.forEachChild(node, visit)
+      visit(statement)
     }
-    visit(source)
   }
 
   return accessed
@@ -175,11 +302,7 @@ function collectPropertyAccesses(): Set<string> {
  *
  * 「使う予定がある」で残すのはここに書いたものだけ。判断基準は書かない。
  */
-const UNCALLED_PRELOAD_METHODS = new Set([
-  // 監査ログのスコープ絞り込み（#1102）。UI がまだ無い。
-  // 操作履歴のフィルタ次元（scopeId）で使う
-  "getScopes",
-])
+const UNCALLED_PRELOAD_METHODS = new Set<string>([])
 
 /** `src/` から `electron-src/` を値として引いている箇所 */
 function collectValueImports(): string[] {
@@ -267,7 +390,7 @@ describe("IPC 境界の規約", () => {
     // 呼んでいなければ、ハンドラごと死んでいる。**型では捕まらない**
     // （`src/types/electron/*.d.ts` は宣言しているだけで呼び出しではない）
     const methods = collectPreloadMethods()
-    const accessed = collectPropertyAccesses()
+    const accessed = collectPropertyAccesses(new Set(findUnusedQueryExports()))
     expect(methods.size).toBeGreaterThan(200)
 
     const uncalled = [...methods.entries()]
@@ -276,6 +399,10 @@ describe("IPC 境界の規約", () => {
       .map(([name, file]) => `${name} (${file})`)
 
     expect(uncalled).toEqual([])
+  })
+
+  it("src/queries/ の定義は src のどこかから使われている", () => {
+    expect(findUnusedQueryExports()).toEqual([])
   })
 
   it("src から electron-src を値で引かない（例外なし）", () => {

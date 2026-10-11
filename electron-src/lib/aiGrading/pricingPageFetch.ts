@@ -25,11 +25,11 @@ const PRICING_PAGE_TIMEOUT_MS = 20_000
 const PRICING_PAGE_MAX_BYTES = 3 * 1024 * 1024
 
 /** 読み込めなかった理由 */
-export type PricingPageFetchFailure =
+type PricingPageFetchFailure =
   "invalid_url" | "http_error" | "too_large" | "timeout" | "connection"
 
 /** 取得の結果。失敗は投げずに種類で返す */
-export type PricingPageFetchResult =
+type PricingPageFetchResult =
   | {
       outcome: "ok"
       url: string

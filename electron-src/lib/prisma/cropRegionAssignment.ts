@@ -14,6 +14,7 @@ import {
 } from "./auditScope"
 import prisma from "./client"
 import { isRecordNotFoundError } from "./prismaErrors"
+import { PUBLIC_USER_OMIT } from "./publicUser"
 import { canDecideExamScores } from "./scoreDecision"
 
 /**
@@ -46,7 +47,7 @@ export const getAssignmentsForExam = async (examId: string) => {
       user: { userExams: { some: { examId } } },
     },
     // 作成者はパスコードだけを落として渡す（機密除去。縮小射影ではない）
-    include: { user: { omit: { passcode: true } } },
+    include: { user: { omit: PUBLIC_USER_OMIT } },
   })
   return assignments
 }
@@ -83,7 +84,7 @@ export const assignCropRegion = async (
       assignedBy: assignedByUserId,
     },
     update: { assignedBy: assignedByUserId },
-    include: { user: { omit: { passcode: true } } },
+    include: { user: { omit: PUBLIC_USER_OMIT } },
   })
 
   const userLabel = await resolveUserLabel(userId)

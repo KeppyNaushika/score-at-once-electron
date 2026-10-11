@@ -27,6 +27,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import ts from "typescript"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
@@ -349,54 +350,139 @@ describe("模範解答を離すキーは割当に従う", () => {
 // when 句のコンテキストに書き手が居ること
 // =====================================================================
 
-const SCORING_DIRECTORY = path.join(
-  process.cwd(),
-  "src/components/exams/07-score-at-once"
-)
+/**
+ * when 句を書く場所。07 の画面に加えて、場面ごとの土台（`sceneWhen` の `SCENE_WHEN`）を
+ * 持つ `scoringKeybindings.ts` を読む。土台を外すと `textEditorActive`・`choiceSceneOpen`・
+ * `partialScoreModalOpen` を読んでいることが見えず、検査が空回りする（以前は 07 の
+ * `when:` 行だけを読んでいて、拾えていたのは `useCommand.ts` の**註釈**だけだった）
+ */
+const WHEN_SOURCE_ROOTS = [
+  path.join(process.cwd(), "src/components/exams/07-score-at-once"),
+  path.join(process.cwd(), "src/lib/scoringKeybindings.ts"),
+]
 
-/** 07 配下の .ts / .tsx を全部読む */
-function readScoringSources(directory: string): string[] {
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const entryPath = path.join(directory, entry.name)
-    if (entry.isDirectory()) return readScoringSources(entryPath)
-    if (!entry.name.endsWith(".ts") && !entry.name.endsWith(".tsx")) return []
-    return [fs.readFileSync(entryPath, "utf-8")]
-  })
+/** .ts / .tsx を全部集める（ファイルを渡せばそれだけ） */
+function collectWhenSourceFiles(entryPath: string): string[] {
+  if (!fs.statSync(entryPath).isDirectory()) return [entryPath]
+  return fs
+    .readdirSync(entryPath, { withFileTypes: true })
+    .flatMap((entry) => {
+      const childPath = path.join(entryPath, entry.name)
+      if (entry.isDirectory()) return collectWhenSourceFiles(childPath)
+      return /\.tsx?$/.test(entry.name) ? [childPath] : []
+    })
+}
+
+/** 演算子を含む文字列は、どこに書いてあっても when 句の式とみなす */
+const WHEN_OPERATOR = /&&|\|\||[!=]=|^\s*!/
+/** when 句の式に現れる文字だけでできている（文言や id を拾わない） */
+const WHEN_EXPRESSION = /^[\sA-Za-z0-9_!&|=()']*$/
+
+/**
+ * 演算子の無い文字列（`"partialScoreModalOpen"` のような単独のキー）を when 句と
+ * みなす置き場所: `when:` / `condition:` の値、名前が when / condition で終わる変数、
+ * 名前が when で終わる変数の表（`SCENE_WHEN`）の値。三項演算子の枝も含む
+ */
+function isInWhenSlot(node: ts.Node): boolean {
+  let current = node
+  while (
+    current.parent &&
+    (ts.isConditionalExpression(current.parent) ||
+      ts.isParenthesizedExpression(current.parent))
+  ) {
+    current = current.parent
+  }
+  const parent = current.parent
+  if (!parent) return false
+  if (ts.isPropertyAssignment(parent)) {
+    if (/^(when|condition)$/.test(parent.name.getText())) return true
+    const table = parent.parent.parent
+    return (
+      ts.isObjectLiteralExpression(parent.parent) &&
+      ts.isVariableDeclaration(table) &&
+      /when$/i.test(table.name.getText())
+    )
+  }
+  return (
+    ts.isVariableDeclaration(parent) &&
+    /(when|condition)$/i.test(parent.name.getText())
+  )
+}
+
+/** when 句が読むキーと、`setContextValue` / `useContextValue` で書くキー */
+function scanContextKeys() {
+  const readKeys = new Set<string>()
+  const writtenKeys = new Set<string>()
+  const sourceFiles = WHEN_SOURCE_ROOTS.flatMap(collectWhenSourceFiles)
+
+  for (const filePath of sourceFiles) {
+    const source = ts.createSourceFile(
+      filePath,
+      fs.readFileSync(filePath, "utf-8"),
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX
+    )
+    const visit = (node: ts.Node) => {
+      const texts =
+        ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)
+          ? [node.text]
+          : ts.isTemplateExpression(node)
+            ? [
+                node.head.text,
+                ...node.templateSpans.map((span) => span.literal.text),
+              ]
+            : []
+      if (texts.length > 0) {
+        const inWhenSlot = isInWhenSlot(node)
+        for (const text of texts) {
+          if (!WHEN_EXPRESSION.test(text)) continue
+          if (!inWhenSlot && !WHEN_OPERATOR.test(text)) continue
+          // `gradingMode == 'grid'` の比較対象（引用符の中）はキーではない
+          const unquoted = text.replace(/'[^']*'/g, "")
+          for (const identifier of unquoted.matchAll(/[A-Za-z_]\w*/g)) {
+            if (identifier[0] === "true" || identifier[0] === "false") continue
+            readKeys.add(identifier[0])
+          }
+        }
+      }
+      if (
+        ts.isCallExpression(node) &&
+        /(^|\.)(set|use)ContextValue$/.test(node.expression.getText()) &&
+        node.arguments.length > 0 &&
+        ts.isStringLiteral(node.arguments[0])
+      ) {
+        writtenKeys.add(node.arguments[0].text)
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(source)
+  }
+
+  return { readKeys, writtenKeys }
 }
 
 describe("when 句が読むコンテキストには書き手が居る", () => {
+  const { readKeys, writtenKeys } = scanContextKeys()
+
+  it("走査そのものが機能している（場面の土台が読むキーを拾えている）", () => {
+    expect([...readKeys]).toEqual(
+      expect.arrayContaining([
+        "inputFocus",
+        "modalOpen",
+        "textEditorActive",
+        "choiceSceneOpen",
+        "partialScoreModalOpen",
+        "hasSelectedAnswers",
+        "gradingMode",
+      ])
+    )
+  })
+
   it("読み手だけで書き手が居ないキーがない", () => {
-    const sources = readScoringSources(SCORING_DIRECTORY)
-    const allSource = sources.join("\n")
-
-    // `when:` の行に現れる語を集める。式が `'grid'` のような文字列リテラルや
-    // `${kbOnly}` の差し込みを含むので、括りを解かず行ごと拾って語に割る
-    const readKeys = new Set<string>()
-    for (const match of allSource.matchAll(/when:\s*(.+)$/gm)) {
-      for (const identifier of match[1].matchAll(/[A-Za-z_][A-Za-z0-9_]*/g)) {
-        readKeys.add(identifier[0])
-      }
-    }
-    // 集めた語には `true` や比較対象の値も混ざるので、状態のキーだけに絞る
-    const contextKeys = [
-      "inputFocus",
-      "textEditorActive",
-      "gradingMode",
-      "modalOpen",
-      "partialScoreModalOpen",
-      "sidePanelVisible",
-      "hasSelectedAnswers",
-      "scoringOperationMode",
-      "choiceSceneOpen",
-    ]
-
-    const readWithoutWriter = contextKeys
-      .filter((key) => readKeys.has(key))
-      .filter(
-        (key) =>
-          !allSource.includes(`setContextValue("${key}"`) &&
-          !allSource.includes(`useContextValue("${key}"`)
-      )
+    const readWithoutWriter = [...readKeys].filter(
+      (key) => !writtenKeys.has(key)
+    )
 
     expect(readWithoutWriter).toEqual([])
   })

@@ -37,7 +37,7 @@ export type AdviceChoice =
   | { mode: Extract<RubricAdviceCombinationMode, "all" | "none"> }
 
 /** 答案の朱書きの決まり方 */
-export type RubricAdviceResolution =
+type RubricAdviceResolution =
   | { kind: "none" }
   /**
    * `rubricItemId` は、文がその項目1つの助言そのもの（当たっている助言の項目が1つ、または決まりで

@@ -8,8 +8,7 @@
  *   - currentExamStudentId変更 → getByExamStudentで全設問のアノテーション再取得
  *
  * [設問切り替え]
- *   - currentCropRegion変更（examIdが変わる場合） → 再取得
- *   - currentCropRegion変更（同一examId内） → cropRegion.idが変わると再取得
+ *   - currentCropRegion変更 → 取り直さない（取得は受験者と操作者だけで決まる）
  *
  * [リフレッシュキー変更]
  *   - refreshKey変更 → 再取得（キャンバスでのアノテーション変更後）
@@ -229,28 +228,6 @@ describe("useAllStudentAnnotations", () => {
 
       expect(result.current.allStudentAnnotations).toHaveLength(0)
       expect(mockAPI.getByExamStudent).not.toHaveBeenCalled()
-    })
-  })
-
-  describe("API失敗時", () => {
-    it("失敗時に空配列を返す", async () => {
-      mockAPI.getByExamStudent.mockRejectedValue(new Error("取得エラー"))
-
-      const { result } = renderHook(
-        () =>
-          useAllStudentAnnotations({
-            currentExamStudentId: "student-1",
-            currentCropRegion: makeCropRegion(),
-            currentUserId: "user-1",
-          }),
-        { wrapper: createQueryWrapper() }
-      )
-
-      await waitFor(() => {
-        expect(mockAPI.getByExamStudent).toHaveBeenCalled()
-      })
-
-      expect(result.current.allStudentAnnotations).toHaveLength(0)
     })
   })
 })

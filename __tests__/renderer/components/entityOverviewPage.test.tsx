@@ -406,11 +406,6 @@ describe("段カード", () => {
 })
 
 describe("概要ページが持たないもの", () => {
-  it("全体の進捗バーを置かない", () => {
-    renderOverview()
-    expect(screen.queryByText("試験進捗")).toBeNull()
-  })
-
   it("実体の名前を大きな題として出さない（ヘッダーが1回だけ出す）", () => {
     renderOverview()
     expect(screen.queryByRole("heading", { name: "期末考査" })).toBeNull()

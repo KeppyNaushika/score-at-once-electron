@@ -40,10 +40,7 @@ const quote = (identifier: string): string =>
   `"${identifier.replaceAll('"', '""')}"`
 
 /** アプリと同じ当て方（migrationApplier.ts の applyMigrationSql）で当てて記録する */
-export function applyMigration(
-  db: SqliteDatabase,
-  migration: MigrationSource
-): void {
+function applyMigration(db: SqliteDatabase, migration: MigrationSource): void {
   db.pragma("foreign_keys = OFF")
   db.exec(migration.sql)
   db.prepare<[string, string]>(

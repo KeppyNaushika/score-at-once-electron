@@ -41,7 +41,7 @@ const IMPORT_TRANSACTION_TIMEOUT_MS = 60_000
 const quote = (identifier: string): string =>
   `"${identifier.replaceAll('"', '""')}"`
 
-export const withDatabase = <Result>(
+const withDatabase = <Result>(
   databasePath: string,
   read: (db: Database.Database) => Result
 ): Result => {

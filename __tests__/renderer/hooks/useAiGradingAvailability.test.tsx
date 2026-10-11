@@ -66,8 +66,6 @@ describe("useAiGradingAvailability", () => {
     await waitFor(() =>
       expect(result.current.unlockedProviders).toEqual(["anthropic"])
     )
-    expect(result.current.isUnlocked("anthropic")).toBe(true)
-    expect(result.current.isUnlocked("openai")).toBe(false)
   })
 
   it("版の古い同意・別の利用者の同意では、キーがあっても解放しない", async () => {

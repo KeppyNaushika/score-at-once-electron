@@ -8,6 +8,7 @@
  * 4. **隠す欄は氏名欄と番号欄だけ**で、ページごとに引ける
  */
 
+import { useQuery } from "@tanstack/react-query"
 import { renderHook, waitFor } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -16,8 +17,11 @@ import {
   ScoringAnonymityProvider,
   useScoringAnonymity,
 } from "@/components/exams/07-score-at-once/anonymity/ScoringAnonymityContext"
+import { useExamAccess } from "@/components/exams/shared/useExamAccess"
 import { CurrentUserProvider } from "@/contexts/CurrentUserContext"
 import { serializePreference } from "@/lib/userPreferences"
+import { examDetailQuery } from "@/queries/exam"
+import { userPreferenceQuery } from "@/queries/settings"
 
 import { createQueryWrapper } from "../../helpers/queryWrapper"
 
@@ -108,7 +112,23 @@ function renderAnonymity({
   getMembers.mockResolvedValue(myMembership(role))
   getUserPreference.mockResolvedValue(storedShowStudentNames(showStudentNames))
   const QueryWrapper = createQueryWrapper()
-  return renderHook(() => useScoringAnonymity(), {
+  return renderHook(
+    () => {
+      const anonymity = useScoringAnonymity()
+      // 判定の材料（参加者・試験・自分の設定）が届いたかを、同じキャッシュから見る。
+      // 匿名でない（false）は届く前の既定値と同じなので、届いたことを待たずに
+      // assert すると、判定を壊しても通ってしまう
+      const { isPending: isMembersPending } = useExamAccess(EXAM_ID)
+      const { isSuccess: isExamLoaded } = useQuery(examDetailQuery(EXAM_ID))
+      const { isSuccess: isPreferenceLoaded } = useQuery(
+        userPreferenceQuery(ME.id, "showStudentNames")
+      )
+      return {
+        ...anonymity,
+        isLoaded: !isMembersPending && isExamLoaded && isPreferenceLoaded,
+      }
+    },
+    {
     wrapper: ({ children }: { children: ReactNode }) => (
       <QueryWrapper>
         <CurrentUserProvider user={ME}>
@@ -118,7 +138,8 @@ function renderAnonymity({
         </CurrentUserProvider>
       </QueryWrapper>
     ),
-  })
+    }
+  )
 }
 
 describe("匿名採点の判定", () => {
@@ -140,8 +161,7 @@ describe("匿名採点の判定", () => {
       showStudentNames: true,
     })
 
-    await waitFor(() => expect(getMembers).toHaveBeenCalled())
-    await waitFor(() => expect(getExam).toHaveBeenCalled())
+    await waitFor(() => expect(result.current.isLoaded).toBe(true))
     expect(result.current.isAnonymous).toBe(false)
     expect(result.current.isEnforcedForMe).toBe(false)
   })
@@ -164,7 +184,7 @@ describe("匿名採点の判定", () => {
       showStudentNames: null,
     })
 
-    await waitFor(() => expect(getUserPreference).toHaveBeenCalled())
+    await waitFor(() => expect(result.current.isLoaded).toBe(true))
     expect(result.current.isAnonymous).toBe(false)
     expect(result.current.nameRegionsByExamPageId.size).toBe(0)
   })

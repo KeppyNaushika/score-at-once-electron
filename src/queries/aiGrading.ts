@@ -106,20 +106,6 @@ export const asbModelAnswerSourceQuery = (asbDefinitionId: string) =>
       window.electronAPI.aiGrading.getAsbModelAnswerSource(asbDefinitionId),
   })
 
-/** 答案1件について、送る画像そのもの（PNG の data URL） */
-export const aiSendingCropPreviewQuery = (
-  input: Parameters<typeof window.electronAPI.aiGrading.previewCrop>[0]
-) =>
-  queryOptions({
-    queryKey: [
-      "aiSendingCropPreview",
-      input.cropRegionId,
-      input.examStudentId,
-      input.imageScale,
-    ] as const,
-    queryFn: () => window.electronAPI.aiGrading.previewCrop(input),
-  })
-
 /**
  * 見積もりの材料（送る画像の大きさ）。トークン数と金額は画面が事業者ごとの式で求める。
  * 対象の答案は並びを問わないので、キーには並べ替えた id を入れる
@@ -233,7 +219,7 @@ export const cancelAiGradingRunMutation = (
   })
 
 /** 案への答え（下書き）の引数（main の口の形） */
-export type RecordAiRubricProposalDraftInput = Parameters<
+type RecordAiRubricProposalDraftInput = Parameters<
   typeof window.electronAPI.aiGrading.recordProposalDraft
 >[0]
 
@@ -316,7 +302,7 @@ export const discardAiRubricProposalInstructionDraftsMutation = (
   })
 
 /** 案の外の問いかけへの答え（下書き）の引数 */
-export type RecordAiAttemptResponsesInput = Parameters<
+type RecordAiAttemptResponsesInput = Parameters<
   typeof window.electronAPI.aiGrading.recordAttemptResponses
 >[0]
 

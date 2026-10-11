@@ -6,7 +6,7 @@ import type { ComponentProps } from "react"
 import { Button } from "@/components/ui/button"
 
 /** 絞り込みのボタン1つの色（入のときは塗り、切のときは線と文字だけ） */
-export interface FilterToggleColors {
+interface FilterToggleColors {
   bg: string
   text: string
   icon: string

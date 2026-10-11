@@ -26,7 +26,7 @@ export interface ImageHeader {
 }
 
 /** デコードした画素（行優先、1画素 channels バイト） */
-export interface RawPixels {
+interface RawPixels {
   data: Buffer
   width: number
   height: number
@@ -34,7 +34,7 @@ export interface RawPixels {
 }
 
 /** 画素の矩形 */
-export interface PixelRegion {
+interface PixelRegion {
   left: number
   top: number
   width: number
@@ -42,13 +42,13 @@ export interface PixelRegion {
 }
 
 /** 画素の大きさ */
-export interface PixelSize {
+interface PixelSize {
   width: number
   height: number
 }
 
 /** PNG と、その画素の大きさ */
-export interface EncodedPng extends PixelSize {
+interface EncodedPng extends PixelSize {
   png: Buffer
 }
 

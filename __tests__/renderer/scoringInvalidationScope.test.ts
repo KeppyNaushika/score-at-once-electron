@@ -174,14 +174,8 @@ describe("採点の書き込みが取り直す範囲", () => {
   })
 })
 
-describe("採点行のキーは設問ごとに分かれている", () => {
-  it("設問が違えば別のキーになる", () => {
-    expect(questionScoresQuery(EXAM_ID, SCORED_REGION_ID).queryKey).not.toEqual(
-      questionScoresQuery(EXAM_ID, OTHER_REGION_ID).queryKey
-    )
-  })
-
-  it("どちらも試験のまとまりの下にある（試験を消せば一緒に消える）", () => {
+describe("採点行のキーの置き場所", () => {
+  it("試験のまとまりの下にある（試験を消せば一緒に消える）", () => {
     const key = questionScoresQuery(EXAM_ID, SCORED_REGION_ID).queryKey
 
     expect(key.slice(0, 2)).toEqual(["exam", EXAM_ID])

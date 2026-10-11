@@ -29,7 +29,7 @@ import {
 } from "./stage1Grading"
 
 /** 検証を通った1段目の判定 */
-export interface ValidatedStage1Response {
+interface ValidatedStage1Response {
   readonly transcription: string
   readonly observation: string
   readonly status: AiGradingOutputStatus
@@ -38,7 +38,7 @@ export interface ValidatedStage1Response {
   readonly confidence: AiGradingConfidence
 }
 
-export type Stage1ResponseValidation =
+type Stage1ResponseValidation =
   | {
       readonly ok: true
       readonly value: ValidatedStage1Response

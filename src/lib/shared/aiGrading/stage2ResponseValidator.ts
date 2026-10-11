@@ -35,7 +35,7 @@ export interface ValidatedStage2Proposal {
   readonly options: readonly ValidatedStage2Option[]
 }
 
-export type Stage2ResponseValidation =
+type Stage2ResponseValidation =
   | {
       readonly ok: true
       readonly proposals: readonly ValidatedStage2Proposal[]
@@ -47,7 +47,7 @@ export type Stage2ResponseValidation =
     }
   | { readonly ok: false; readonly reasons: readonly string[] }
 
-export interface Stage2ValidationContext {
+interface Stage2ValidationContext {
   readonly maxPoints: number | null
   readonly rubricItemIds: readonly string[]
   /** 送った答案（この並びが仮の番号 A1, A2, … になる） */

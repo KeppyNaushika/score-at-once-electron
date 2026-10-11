@@ -96,7 +96,7 @@ export interface AnthropicGradingClient {
 }
 
 /** 事業者の実装を作るときの選択 */
-export interface AnthropicProviderOptions {
+interface AnthropicProviderOptions {
   /**
    * 取得しておいたモデルの一覧（`listModels` の結果）。adaptive thinking を送るかの判断に使う。
    * 無ければ許可リストだけで決める
@@ -183,7 +183,7 @@ function toCreatedAt(createdAt: string): string | null {
  * SDK のモデルの情報を、事業者に依存しない形にする。
  * adaptive thinking と effort は一緒に送るので、両方に対応しているときだけ true にする
  */
-export function toAnthropicModelInfo(modelInfo: ModelInfo): ProviderModelInfo {
+function toAnthropicModelInfo(modelInfo: ModelInfo): ProviderModelInfo {
   const capabilities = modelInfo.capabilities
   return {
     id: modelInfo.id,

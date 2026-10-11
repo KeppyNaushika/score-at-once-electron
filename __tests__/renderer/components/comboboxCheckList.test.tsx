@@ -3,7 +3,7 @@
  * ComboboxCheckList（開いたままの、複数を選ぶチェック一覧）のテスト
  *
  * - 行そのものを選ぶ（クリック・↑↓ と Enter・空欄での Space）とチェックが入れ替わる
- * - 絞り込みは Combobox と同じ規則（label と keywords・ひらがな・空白を詰めても当たる）
+ * - 絞り込みは Combobox と同じもの（規則そのものは combobox.test.tsx が見る）
  * - 日本語入力の変換中の Enter・Space では入れ替えない
  * - 今いる行（マウスを当てた・↑↓ で来た）を知らせ、一覧から離れたら null を知らせる
  * - 外せない行は選んでも入れ替わらない
@@ -181,7 +181,9 @@ describe("ComboboxCheckList", () => {
     expect(visibleOptionNames()).toEqual(["山田 太郎 (1001)選択中"])
   })
 
-  it("Combobox と同じ規則で絞り込める（keywords・ひらがな・空白を詰めても当たる、id では当たらない）", async () => {
+  it("Combobox と同じ絞り込み（comboboxSearch）を通し、当たらなければ空の文言を出す", async () => {
+    // 規則そのもの（ひらがな・空白を詰める・id では当たらない）は combobox.test.tsx が見る。
+    // ここは同じ絞り込みにつながっていることだけを見る
     const user = userEvent.setup()
     renderCheckList()
     const searchInput = screen.getByPlaceholderText("氏名で検索")
@@ -192,11 +194,7 @@ describe("ComboboxCheckList", () => {
     ])
 
     await user.clear(searchInput)
-    await user.type(searchInput, "佐藤花子")
-    expect(visibleOptionNames()).toEqual(["佐藤 花子 (1002)"])
-
-    await user.clear(searchInput)
-    await user.type(searchInput, "a1b2c3d4")
+    await user.type(searchInput, "該当なし")
     expect(visibleOptionNames()).toEqual([])
     expect(screen.getByText("該当する生徒がいません")).toBeInTheDocument()
   })

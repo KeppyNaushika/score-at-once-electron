@@ -61,7 +61,7 @@ export interface RegionInkMeasurement {
 }
 
 /** 1枚の答案画像について、対象の全解答欄の測定結果 */
-export interface AnswerInkMeasurement {
+interface AnswerInkMeasurement {
   studentAnswerImageId: string
   regions: RegionInkMeasurement[]
 }
@@ -79,7 +79,7 @@ interface SendingCropOptions {
 }
 
 /** 送信用に切り出した画像 */
-export interface SendingCrop {
+interface SendingCrop {
   png: Buffer
   /** 画素数（拡大後） */
   width: number

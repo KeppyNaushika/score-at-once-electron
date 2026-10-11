@@ -33,7 +33,7 @@ const aiPromptInclude = {
 } satisfies Prisma.AiPromptInclude
 
 /** プロンプト1行（作成者・問題の画像付き） */
-export type AiPromptWithImages = Prisma.AiPromptGetPayload<{
+type AiPromptWithImages = Prisma.AiPromptGetPayload<{
   include: typeof aiPromptInclude
 }>
 

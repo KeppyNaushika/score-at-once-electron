@@ -20,7 +20,7 @@ import * as fs from "fs"
 import * as path from "path"
 
 /** 識別ファイルの名前 */
-export const SHARED_FOLDER_MARKER_FILE_NAME = "score-at-once-shared-folder.json"
+const SHARED_FOLDER_MARKER_FILE_NAME = "score-at-once-shared-folder.json"
 
 const UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -36,7 +36,7 @@ export const getSharedFolderFilesDirectory = (
 ): string => path.join(sharedFolderPath, "files")
 
 /** 識別ファイルのパス */
-export const getSharedFolderMarkerPath = (sharedFolderPath: string): string =>
+const getSharedFolderMarkerPath = (sharedFolderPath: string): string =>
   path.join(sharedFolderPath, SHARED_FOLDER_MARKER_FILE_NAME)
 
 /** 共有プロファイルの手元の控えのディレクトリ */
