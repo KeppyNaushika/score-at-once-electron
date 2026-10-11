@@ -21,11 +21,14 @@ import {
   type UnifiedArchiveManifest,
 } from "../../../../src/types/unifiedArchive.types"
 import { ARCHIVE_TABLES } from "../../export/unified-archive/archiveTableRegistry"
+import { BUNDLED_MIGRATIONS } from "../../prisma/schema/bundledMigrations"
 import {
   applyMigrationSql,
   listAppliedMigrationNames,
   listLocalMigrationNames,
+  type MigrationScript,
   recordAppliedMigration,
+  sortMigrationsByName,
 } from "../../prisma/schema/migrationApplier"
 import { hasTable, type SqliteDatabase } from "../../prisma/sqliteSchemaUtils"
 import { parseUnifiedArchiveManifest } from "./archiveManifestParser"
@@ -80,8 +83,8 @@ export interface OpenUnifiedArchiveOptions {
   archivePath: string
   /** 展開先。空か無いこと。呼び出し側が用意し、呼び出し側が消す */
   workDirectory: string
-  /** アプリ同梱の prisma/migrations */
-  migrationsDir: string
+  /** 当てるマイグレーション。省略するとアプリに束ねた一覧（テストは合成したものを渡す） */
+  migrations?: readonly MigrationScript[]
   /** 表・列を比べる相手（本番は取り込み先のライブ DB）。読み取り専用で開く */
   referenceDatabasePath: string
 }
@@ -311,20 +314,13 @@ const diffRegisteredIds = (
 /** 不足ぶんの migration を名前順に、アプリ起動時と同じ当て方で当てる */
 const applyPendingMigrations = (
   db: SqliteDatabase,
-  migrationsDir: string,
-  localNames: readonly string[],
+  migrations: readonly MigrationScript[],
   appliedNames: ReadonlySet<string>
 ): string[] => {
-  const pendingNames = localNames.filter(
-    (name) =>
-      !appliedNames.has(name) &&
-      fs.existsSync(path.join(migrationsDir, name, "migration.sql"))
+  const pendingMigrations = sortMigrationsByName(migrations).filter(
+    (migration) => !appliedNames.has(migration.name)
   )
-  for (const name of pendingNames) {
-    const sql = fs.readFileSync(
-      path.join(migrationsDir, name, "migration.sql"),
-      "utf-8"
-    )
+  for (const { name, sql } of pendingMigrations) {
     const startedAt = new Date().toISOString()
     try {
       applyMigrationSql(db, sql)
@@ -335,7 +331,7 @@ const applyPendingMigrations = (
       ])
     }
   }
-  return pendingNames
+  return pendingMigrations.map((migration) => migration.name)
 }
 
 // ── 7. 参照 DB との一致 ──────────────────────────────────
@@ -430,7 +426,8 @@ const describeForeignKeyViolations = (db: SqliteDatabase): string[] => {
 export function openUnifiedArchive(
   options: OpenUnifiedArchiveOptions
 ): OpenedUnifiedArchive {
-  const { workDirectory, migrationsDir } = options
+  const { workDirectory } = options
+  const migrations = options.migrations ?? BUNDLED_MIGRATIONS
   fs.mkdirSync(workDirectory, { recursive: true })
   if (fs.readdirSync(workDirectory).length > 0) {
     throw new Error(`展開先が空ではありません: ${workDirectory}`)
@@ -444,7 +441,7 @@ export function openUnifiedArchive(
   fs.mkdirSync(filesDirectory, { recursive: true })
 
   const databasePath = path.join(workDirectory, UNIFIED_ARCHIVE_DATABASE_NAME)
-  const localNames = listLocalMigrationNames(migrationsDir)
+  const localNames = listLocalMigrationNames(migrations)
   const db = new Database(databasePath, { fileMustExist: true })
   try {
     let appliedNames: Set<string>
@@ -462,8 +459,7 @@ export function openUnifiedArchive(
 
     const appliedMigrations = applyPendingMigrations(
       db,
-      migrationsDir,
-      localNames,
+      migrations,
       appliedNames
     )
     const migratedRowIds = diffRegisteredIds(idsBefore, readRegisteredIds(db))

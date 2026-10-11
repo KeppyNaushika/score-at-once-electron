@@ -32,11 +32,8 @@ import {
 // ---------------------------------------------------------------------------
 // パス設定
 // ---------------------------------------------------------------------------
-const PROJECT_ROOT = path.resolve(__dirname, "../..")
 const TEST_DATA_DIR = path.join(__dirname, "data")
 const DB_PATH = path.join(TEST_DATA_DIR, "database.db")
-const MIGRATIONS_DIR = path.join(PROJECT_ROOT, "prisma/migrations")
-
 /**
  * 撮影用ディレクトリのうち、手で置いた素材かどうか
  *
@@ -95,7 +92,6 @@ async function createSchemaLikeFreshInstall(): Promise<void> {
     await baselineClient.$disconnect()
   }
   const appliedCount = deployPendingMigrations({
-    migrationsDir: MIGRATIONS_DIR,
     dbPath: DB_PATH,
   })
   console.log(`  -> init + マイグレーション ${appliedCount} 本を適用`)

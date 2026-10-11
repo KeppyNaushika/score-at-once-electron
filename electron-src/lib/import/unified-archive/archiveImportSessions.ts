@@ -43,8 +43,6 @@ export type UnifiedArchiveImportSessionOpenResult =
 
 export interface OpenUnifiedArchiveImportSessionOptions {
   archivePath: string
-  /** アプリ同梱の prisma/migrations */
-  migrationsDir: string
   /** 表・列を比べる相手（取り込み先のライブ DB） */
   referenceDatabasePath: string
 }
@@ -88,7 +86,6 @@ export async function openUnifiedArchiveImportSession(
       archivePath: options.archivePath,
       // 展開先は空であること（mkdtemp の直下に作る）
       workDirectory: path.join(workDirectory, "archive"),
-      migrationsDir: options.migrationsDir,
       referenceDatabasePath: options.referenceDatabasePath,
     })
     await finishOpenedArchiveMigration(opened)

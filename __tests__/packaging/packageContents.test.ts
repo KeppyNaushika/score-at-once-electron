@@ -58,6 +58,7 @@ describe("配布物に入ってはいけないもの", () => {
     ["/.git", "履歴"],
     ["/out", "自分自身"],
     ["/generated", "main の下に変換済みのものが入る"],
+    ["/prisma", "migration は main の束に入っている（bundledMigrations.ts）"],
   ])("%s は落とす（%s）", (filePath) => {
     expect(isDropped(filePath)).toBe(true)
   })
@@ -73,10 +74,6 @@ describe("配布物から落としてはいけないもの", () => {
     ["/main/electron-src/index.js", "ビルド済みの main"],
     ["/main/generated/prisma/client.js", "Prisma クライアント"],
     ["/node_modules/better-sqlite3/package.json", "実行時の依存"],
-    [
-      "/prisma/migrations/20260823140000_index_question_score_crop_region/migration.sql",
-      "起動時に当てる migration（asar の中を見る）",
-    ],
     ["/public/icons/icon.icns", "窓のアイコン（asar の中を読む）"],
   ])("%s は残す（%s）", (filePath) => {
     expect(isDropped(filePath)).toBe(false)
@@ -153,7 +150,7 @@ describe("できあがりを見る関門", () => {
   it("綺麗なら止めない（締めすぎて配布できなくなっていないこと）", async () => {
     const resources = await buildResources({
       resourcesEntries: ["public"],
-      asarEntries: ["main", "prisma", "public"],
+      asarEntries: ["main", "public"],
       unpackedEntries: ["node_modules"],
     })
 

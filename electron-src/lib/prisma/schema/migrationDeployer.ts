@@ -1,20 +1,20 @@
-import * as fs from "fs"
 import * as path from "path"
 
 import { getDatabasePath } from "../databaseInitializer"
 import { openAppDatabase } from "../sqliteConnection"
 import { hasTable } from "../sqliteSchemaUtils"
 import { createBackup, restoreBackup } from "./bridgeMigrations"
+import { BUNDLED_MIGRATIONS } from "./bundledMigrations"
 import {
   applyMigrationSql,
-  getMigrationsDir,
   listAppliedMigrationNames,
-  listLocalMigrationNames,
+  type MigrationScript,
   recordAppliedMigration,
+  sortMigrationsByName,
 } from "./migrationApplier"
 
 /**
- * prisma/migrations/ ディレクトリから未適用のマイグレーションを検出し、順番に適用する。
+ * アプリに束ねたマイグレーション（`bundledMigrations.ts`）のうち未適用のものを、名前の順に適用する。
  * _prisma_migrationsテーブルを参照・更新して適用状態を管理する。
  * 適用前にDBファイルをバックアップし、失敗時は復元する。
  *
@@ -30,18 +30,15 @@ import {
  * 追随させる `ALTER TABLE … RENAME TO` 等）は自分で `ON` を敷くので、これで壊れない。
  */
 export const deployPendingMigrations = (options?: {
-  migrationsDir?: string
+  /** 当てるマイグレーション。省略するとアプリに束ねた一覧（テストは合成したものを渡す） */
+  migrations?: readonly MigrationScript[]
   /**
    * 当てる DB。省略すると起動時に決まった DB（`getDatabasePath()`）。
    * 共有プロファイルの手元の控えを、動いている DB とは別に作るときに渡す
    */
   dbPath?: string
 }): number => {
-  const migrationsDir = options?.migrationsDir ?? getMigrationsDir()
-  if (!migrationsDir || !fs.existsSync(migrationsDir)) {
-    console.warn(`Migrations directory not found: ${migrationsDir}`)
-    return 0
-  }
+  const migrations = options?.migrations ?? BUNDLED_MIGRATIONS
 
   // マイグレーションもアプリの表を書くので、同期のトリガーが取りこぼさない接続で開く
   const dbPath = path.resolve(options?.dbPath ?? getDatabasePath())
@@ -57,15 +54,12 @@ export const deployPendingMigrations = (options?: {
 
     const appliedNames = listAppliedMigrationNames(db)
 
-    // 未適用のマイグレーションを抽出
-    const pendingDirs = listLocalMigrationNames(migrationsDir).filter(
-      (dirName) => {
-        if (appliedNames.has(dirName)) return false
-        return fs.existsSync(path.join(migrationsDir, dirName, "migration.sql"))
-      }
+    // 未適用のマイグレーションを名前の順に
+    const pendingMigrations = sortMigrationsByName(migrations).filter(
+      (migration) => !appliedNames.has(migration.name)
     )
 
-    if (pendingDirs.length === 0) return 0
+    if (pendingMigrations.length === 0) return 0
 
     // 適用前にバックアップを作成（PRAGMAを含むSQLはトランザクション化できないため、
     // 失敗時はファイルレベルで復元する）
@@ -73,20 +67,17 @@ export const deployPendingMigrations = (options?: {
 
     let appliedCount = 0
 
-    for (const dirName of pendingDirs) {
-      const sqlPath = path.join(migrationsDir, dirName, "migration.sql")
-      const sql = fs.readFileSync(sqlPath, "utf-8")
-
-      console.info(`Applying migration: ${dirName}`)
+    for (const { name: migrationName, sql } of pendingMigrations) {
+      console.info(`Applying migration: ${migrationName}`)
       const startedAt = new Date().toISOString()
 
       try {
         applyMigrationSql(db, sql)
-        recordAppliedMigration(db, dirName, sql, startedAt)
+        recordAppliedMigration(db, migrationName, sql, startedAt)
         appliedCount++
-        console.info(`Migration applied: ${dirName}`)
+        console.info(`Migration applied: ${migrationName}`)
       } catch (error) {
-        console.error(`Migration failed: ${dirName}`, error)
+        console.error(`Migration failed: ${migrationName}`, error)
         // restore はファイル上書きのため、先に接続を閉じる（Windowsでのロック回避）
         db.close()
         if (backupPath) {
@@ -94,7 +85,7 @@ export const deployPendingMigrations = (options?: {
           restoreBackup(backupPath, dbPath)
         }
         throw new Error(
-          `Migration ${dirName} failed: ${error instanceof Error ? error.message : error}`,
+          `Migration ${migrationName} failed: ${error instanceof Error ? error.message : error}`,
           { cause: error }
         )
       }

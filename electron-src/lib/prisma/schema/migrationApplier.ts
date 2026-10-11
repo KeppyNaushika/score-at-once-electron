@@ -6,15 +6,20 @@
  * （docs/unified-archive-design.md §4.1 の5）。
  *
  * electron・`databaseInitializer` は import しない（アーカイブの現行化は取り込み先の DB の場所に
- * 依存しない）。同梱マイグレーションの場所の解決だけが、パッケージ化環境で electron を
- * 遅延で読む（`getMigrationsDir`。electron 未ロードなら諦める）。
+ * 依存しない）。当てるマイグレーションは、実行中にフォルダを読まず、コードに束ねた一覧
+ * （`bundledMigrations.ts`、`scripts/bundleMigrations.mjs` が作る）から取る。
  */
 
 import * as crypto from "crypto"
-import * as fs from "fs"
-import * as path from "path"
 
 import type { SqliteDatabase } from "../sqliteSchemaUtils"
+import { BUNDLED_MIGRATIONS } from "./bundledMigrations"
+
+/** 1本のマイグレーション（`prisma/migrations/<name>/migration.sql` の名前と本文） */
+export interface MigrationScript {
+  readonly name: string
+  readonly sql: string
+}
 
 /**
  * 1本のマイグレーションSQLを、外部キー制約を既知の状態（OFF）へ戻してから流す。
@@ -62,38 +67,22 @@ export const recordAppliedMigration = (
   )
 }
 
-/** prisma/migrations/ に同梱されているマイグレーション名を昇順で返す */
-export const listLocalMigrationNames = (dir?: string | null): string[] => {
-  const migrationsDir = dir ?? getMigrationsDir()
-  if (!migrationsDir || !fs.existsSync(migrationsDir)) return []
-  return fs
-    .readdirSync(migrationsDir, { withFileTypes: true })
-    .filter((dirent) => dirent.isDirectory())
-    .map((dirent) => dirent.name)
-    .sort()
-}
+/**
+ * マイグレーションを名前の昇順に並べる（文字コード順。名前は時刻の接頭辞を持つので、
+ * 作った順になる）
+ */
+export const sortMigrationsByName = (
+  migrations: readonly MigrationScript[]
+): MigrationScript[] =>
+  [...migrations].sort((left, right) =>
+    left.name < right.name ? -1 : left.name > right.name ? 1 : 0
+  )
 
-/** prisma/migrations/ ディレクトリのパスを解決する */
-export const getMigrationsDir = (): string | null => {
-  // 開発環境: プロジェクトルートの prisma/migrations/
-  const devPath = path.join(process.cwd(), "prisma", "migrations")
-  if (fs.existsSync(devPath)) return devPath
-
-  // パッケージ化環境: app.asar の隣
-  try {
-    const { app } = require("electron")
-    const appPath = app.getAppPath()
-    const candidates = [
-      path.join(appPath, "prisma", "migrations"),
-      path.join(appPath, "..", "prisma", "migrations"),
-      path.join(path.dirname(appPath), "prisma", "migrations"),
-    ]
-    for (const candidate of candidates) {
-      if (fs.existsSync(candidate)) return candidate
-    }
-  } catch {
-    // electron未ロード時
-  }
-
-  return null
-}
+/**
+ * マイグレーション名を昇順で返す。既定はアプリに束ねた一覧
+ * （テストは合成したマイグレーションを渡す）
+ */
+export const listLocalMigrationNames = (
+  migrations: readonly MigrationScript[] = BUNDLED_MIGRATIONS
+): string[] =>
+  sortMigrationsByName(migrations).map((migration) => migration.name)

@@ -124,8 +124,6 @@ import {
 
 const prisma = getTestPrismaClient()
 const TEST_DB_PATH = path.resolve(__dirname, "../../../data/test-database.db")
-const APP_MIGRATIONS_DIR = path.resolve(__dirname, "../../../prisma/migrations")
-
 /** テスト DB を複製し、アプリの全 migration を適用済みとして記録する */
 const createSourceWithMigrations = (): void => {
   fs.rmSync(SOURCE_PATH, { force: true })
@@ -157,7 +155,7 @@ const createSourceWithMigrations = (): void => {
       `INSERT INTO "_prisma_migrations" (id, checksum, migration_name, finished_at, applied_steps_count)
        VALUES (?, 'checksum', ?, '2026-10-04T00:00:00.000Z', 1)`
     )
-    for (const migrationName of listLocalMigrationNames(APP_MIGRATIONS_DIR)) {
+    for (const migrationName of listLocalMigrationNames()) {
       insertMigration.run(crypto.randomUUID(), migrationName)
     }
   } finally {
