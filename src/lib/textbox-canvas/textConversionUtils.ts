@@ -3,7 +3,7 @@
  * @description Discord Markdownスタイル記法とMathJaxを使用したテキスト→SVG変換機能を提供
  */
 
-import { FONT_SETTINGS } from "./constants"
+import { FONT_SETTINGS, SVG_SETTINGS } from "./constants"
 import {
   cleanupElementStyles,
   createMathJaxSVG,
@@ -446,6 +446,7 @@ function combineLineSvgs(
           flex-direction: column;
           justify-content: ${alignItems};
           align-items: ${justifyContent};
+          font-family: ${FONT_SETTINGS.DEFAULT_FAMILY};
           gap: 5px;
           padding: 0;
           margin: 0;
@@ -471,6 +472,7 @@ function combineLineSvgs(
               <style>
                 mjx-container[jax="SVG"] > svg { overflow: visible !important; }
                 mjx-container svg { overflow: visible !important; }
+                mjx-container[jax="SVG"] mjx-break { white-space: nowrap !important; }
               </style>
               ${content}
             </div>
@@ -484,5 +486,39 @@ function combineLineSvgs(
 
   const parser = new DOMParser()
   const svgDoc = parser.parseFromString(combinedSvgContent, "image/svg+xml")
-  return svgDoc.documentElement as unknown as SVGSVGElement
+  const combinedSvg = svgDoc.documentElement as unknown as SVGSVGElement
+  embedMathJaxStyles(combinedSvg)
+  return combinedSvg
+}
+
+/** MathJax が文書の head に置く、SVG 出力用のスタイルの要素の id */
+const MATHJAX_SVG_STYLES_ELEMENT_ID = "MJX-SVG-styles"
+
+/**
+ * MathJax のスタイル（`#MJX-SVG-styles`）を SVG の先頭へ写す。
+ *
+ * 長い数式には行の折り返し位置の `mjx-break`（中身は空白1つ）が入る。文書の中では
+ * このスタイルが幅0のフォント MJX-ZERO と負の字間を当てて幅を0にするので、幅もそれで
+ * 測られる。SVG は `<img>` で画像として描かれ、文書のスタイルを継がないので、写さないと
+ * 折り返し位置ごとに空白1つ分ずつ広く描かれ、測った幅からはみ出して右端が切れる。
+ *
+ * このスタイルは `mjx-break` を `white-space: normal` にして折り返せるようにもするが、
+ * 幅は折り返さない1行（`width: max-content`）で測っているので、各行の div の
+ * `<style>` で `nowrap` に戻している。戻さないと、測った幅に端数の分だけ収まらない行が
+ * 折り返し位置で2行目へ送られ、行の div の `overflow: hidden` で消える。
+ */
+function embedMathJaxStyles(svgElement: SVGSVGElement): void {
+  if (svgElement.querySelector("mjx-container") === null) return
+
+  const mathJaxStyles = document.getElementById(
+    MATHJAX_SVG_STYLES_ELEMENT_ID
+  )?.textContent
+  if (!mathJaxStyles) return
+
+  const styleElement = svgElement.ownerDocument.createElementNS(
+    SVG_SETTINGS.NAMESPACE,
+    "style"
+  )
+  styleElement.textContent = mathJaxStyles
+  svgElement.insertBefore(styleElement, svgElement.firstChild)
 }

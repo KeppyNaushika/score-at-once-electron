@@ -181,6 +181,7 @@ async function measureMathJaxContentSize(
     position: absolute;
     left: -9999px;
     top: -9999px;
+    font-family: ${FONT_SETTINGS.DEFAULT_FAMILY};
     font-size: ${fontSize}px;
     line-height: ${FONT_SETTINGS.DEFAULT_LINE_HEIGHT};
     color: ${FONT_SETTINGS.DEFAULT_COLOR};
@@ -283,7 +284,8 @@ async function createOptimizedSVG(
                      height="${measuredSize.height}"
                      overflow="${SVG_SETTINGS.DEFAULT_OVERFLOW}">
         <div xmlns="${SVG_SETTINGS.XHTML_NAMESPACE}">
-          <div style="font-size: ${fontSize}px;
+          <div style="font-family: ${FONT_SETTINGS.DEFAULT_FAMILY};
+                     font-size: ${fontSize}px;
                      line-height: ${FONT_SETTINGS.DEFAULT_LINE_HEIGHT};
                      color: ${FONT_SETTINGS.DEFAULT_COLOR};
                      overflow: visible;

@@ -11,9 +11,15 @@ export const FONT_SETTINGS = {
   DEFAULT_SIZE: 24,
   /** デフォルト行の高さ */
   DEFAULT_LINE_HEIGHT: 1,
-  /** デフォルトフォントファミリー */
+  /**
+   * デフォルトフォントファミリー。注釈の幅を測る一時の要素と、描く SVG の中の要素の両方に
+   * 指定する。SVG は `<img>` で画像として描かれ、文書のフォント（body の Inter など）を
+   * 継がないので、両方に同じものを書かないと測った幅と描いた幅がずれて右端が切れる。
+   * 画像の中でも使えるよう、システムに入っているフォントだけを並べる（Web フォントは不可）。
+   * SVG の文字列の `style="…"` に埋め込むので、フォント名の引用符は一重引用符にする。
+   */
   DEFAULT_FAMILY:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", "Hiragino Kaku Gothic ProN", "ヒラギノ角ゴ ProN W3", Arial, sans-serif',
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'ヒラギノ角ゴ ProN W3', Arial, sans-serif",
   /** デフォルトテキスト色 */
   DEFAULT_COLOR: "#000000",
 } as const
