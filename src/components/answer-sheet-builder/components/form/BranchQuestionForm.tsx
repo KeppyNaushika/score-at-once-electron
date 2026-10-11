@@ -1,6 +1,6 @@
 "use client"
 
-import { Trash2 } from "lucide-react"
+import { Trash } from "lucide-react"
 import { useState } from "react"
 
 import { TooltipButton } from "@/components/common/TooltipButton"
@@ -127,7 +127,7 @@ export function BranchQuestionForm({
             className="h-7 w-7 text-muted-foreground hover:text-destructive"
             onClick={() => actions.deleteBranchQuestion(branchQuestion.id)}
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash className="h-3.5 w-3.5" />
           </TooltipButton>
         </div>
       </div>

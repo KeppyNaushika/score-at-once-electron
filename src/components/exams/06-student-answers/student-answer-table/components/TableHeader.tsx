@@ -1,7 +1,7 @@
 "use client"
 
 import { useDroppable } from "@dnd-kit/core"
-import { FileText, Trash2, Upload } from "lucide-react"
+import { FileText, Trash, Upload } from "lucide-react"
 import { useState } from "react"
 
 import type { TableHeaderProps } from "@/components/exams/06-student-answers/student-answer-table/types"
@@ -114,7 +114,7 @@ export function TableHeader({
                 className="relative flex items-center gap-2"
                 id="trash-popover-trigger"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash className="h-4 w-4" />
                 無効化済み ({trashFiles.length})
                 {trashFiles.length > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">

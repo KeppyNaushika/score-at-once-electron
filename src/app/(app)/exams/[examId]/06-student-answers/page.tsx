@@ -1,6 +1,6 @@
 "use client"
 
-import { FileEdit } from "lucide-react"
+import { FilePen } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useAssignedExamStudents } from "@/components/exams/shared/useAssignedExamStudents"
@@ -195,7 +195,7 @@ export default function StudentAnswersPage() {
             onClick={openConfirmModal}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
           >
-            <FileEdit className="h-4 w-4" />
+            <FilePen className="h-4 w-4" />
             {pendingChanges.length}件の変更を反映
           </Button>
         </div>

@@ -1,6 +1,10 @@
 "use client"
 
-import { FileBarChart, FileCheck, FileSpreadsheet } from "lucide-react"
+import {
+  FileChartColumnIncreasing,
+  FileCheck,
+  FileSpreadsheet,
+} from "lucide-react"
 
 import {
   Callout,
@@ -95,7 +99,7 @@ function OutputFormatsFigure() {
         delay={3}
       />
       <OutputFormatCard
-        icon={<FileBarChart className="h-7 w-7" />}
+        icon={<FileChartColumnIncreasing className="h-7 w-7" />}
         label="個人成績表PDF"
         sub="一人ずつ配る"
         delay={6}

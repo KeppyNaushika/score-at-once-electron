@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { AlertCircle, CheckCircle2, KeyRound } from "lucide-react"
+import { CircleAlert, CircleCheck, KeyRound } from "lucide-react"
 import { type FormEvent, useState } from "react"
 import { toast } from "sonner"
 
@@ -33,7 +33,7 @@ export function AiProviderApiKeyForm({ status }: AiProviderApiKeyFormProps) {
   if (!status.isEncryptionAvailable) {
     return (
       <p className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+        <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
         この環境では API
         キーを暗号化して保存できないため、キーを保存できません。
       </p>
@@ -46,7 +46,7 @@ export function AiProviderApiKeyForm({ status }: AiProviderApiKeyFormProps) {
         <div className="space-y-0.5">
           <Label>API キー</Label>
           <p className="flex items-center gap-1.5 text-sm text-green-700">
-            <CheckCircle2 className="h-4 w-4" />
+            <CircleCheck className="h-4 w-4" />
             設定済み
           </p>
         </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { AlertCircle, CheckCircle2, PlugZap } from "lucide-react"
+import { CircleAlert, CircleCheck, PlugZap } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -83,9 +83,9 @@ export function AiProviderConnectionTest({
           }
         >
           {testResult.outcome === "ok" ? (
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+            <CircleCheck className="mt-0.5 h-4 w-4 shrink-0" />
           ) : (
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           )}
           <div className="space-y-0.5">
             <p>{OUTCOME_HEADLINES[testResult.outcome]}</p>

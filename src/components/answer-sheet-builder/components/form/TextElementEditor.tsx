@@ -2,13 +2,13 @@
 
 import type { LucideIcon } from "lucide-react"
 import {
-  AlignCenter,
-  AlignLeft,
-  AlignRight,
   ArrowDownToLine,
   ArrowUpToLine,
   Plus,
-  Trash2,
+  TextAlignCenter,
+  TextAlignEnd,
+  TextAlignStart,
+  Trash,
   UnfoldVertical,
 } from "lucide-react"
 
@@ -27,9 +27,9 @@ const H_ALIGNS: HorizontalAlign[] = ["left", "center", "right"]
 const V_ALIGNS: VerticalAlign[] = ["top", "middle", "bottom"]
 
 const H_ALIGN_ICON: Record<HorizontalAlign, LucideIcon> = {
-  left: AlignLeft,
-  center: AlignCenter,
-  right: AlignRight,
+  left: TextAlignStart,
+  center: TextAlignCenter,
+  right: TextAlignEnd,
 }
 const H_ALIGN_TITLE: Record<HorizontalAlign, string> = {
   left: "左揃え",
@@ -120,7 +120,7 @@ export function TextElementEditor({
               className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
               onClick={() => onDelete(textElement.id)}
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash className="h-3 w-3" />
             </TooltipButton>
           </div>
 

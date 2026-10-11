@@ -1,6 +1,6 @@
 "use client"
 
-import { RotateCw } from "lucide-react"
+import { RotateCwSquare } from "lucide-react"
 
 import {
   Select,
@@ -59,7 +59,7 @@ export default function FileLayoutSettings({
       >
         {/* 回転は幅を決め打ちしない（決め打ちでは角度の桁数しだいで「0°」が切れた） */}
         <SelectTrigger size="sm" aria-label="ページの回転">
-          <RotateCw className="mr-1 h-3 w-3" />
+          <RotateCwSquare className="mr-1 h-3 w-3" />
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

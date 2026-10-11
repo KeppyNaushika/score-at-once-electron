@@ -1,11 +1,11 @@
 "use client"
 
 import {
-  CheckCircle,
   ChevronDown,
+  CircleCheck,
+  CircleQuestionMark,
   FileText,
-  HelpCircle,
-  Layers,
+  ListTree,
   School,
   User,
   Users,
@@ -149,7 +149,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
 
             {/* 小計グループ */}
             <CategoryOverviewCard
-              icon={<Layers className="h-5 w-5" />}
+              icon={<ListTree className="h-5 w-5" />}
               label="小計グループ"
               total={state.manifest?.counts.subtotalGroups ?? 0}
               autoMatched={subtotalGroupStats?.autoMatched ?? 0}
@@ -162,7 +162,7 @@ export function FileOverviewStep({ wizard }: FileOverviewStepProps) {
         ) : (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <HelpCircle className="mb-4 h-8 w-8 text-muted-foreground" />
+              <CircleQuestionMark className="mb-4 h-8 w-8 text-muted-foreground" />
               <p className="text-muted-foreground">
                 「次へ」を押して照合を開始してください
               </p>
@@ -243,14 +243,14 @@ function CategoryOverviewCard({
             <div className="mt-1 flex flex-wrap gap-4 text-sm">
               {autoMatched > 0 && (
                 <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                  <CheckCircle className="h-4 w-4" />
+                  <CircleCheck className="h-4 w-4" />
                   自動で紐づく: {autoMatched}
                   {unit}
                 </span>
               )}
               {needsDecision > 0 && (
                 <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                  <HelpCircle className="h-4 w-4" />
+                  <CircleQuestionMark className="h-4 w-4" />
                   判断が必要: {needsDecision}
                   {unit}
                 </span>

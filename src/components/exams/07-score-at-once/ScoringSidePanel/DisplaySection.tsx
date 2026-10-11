@@ -1,6 +1,6 @@
 "use client"
 
-import { Layout } from "lucide-react"
+import { PanelsTopLeft } from "lucide-react"
 
 import NavigationControls from "@/components/exams/07-score-at-once/ScoringSidePanel/NavigationControls"
 import type {
@@ -54,7 +54,7 @@ export function DisplaySection({
 }: DisplaySectionProps) {
   return (
     <SidePanelSection
-      icon={Layout}
+      icon={PanelsTopLeft}
       title="表示"
       collapsible
       isOpen={isOpen}

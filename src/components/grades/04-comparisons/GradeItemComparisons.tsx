@@ -3,7 +3,7 @@
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useMutation } from "@tanstack/react-query"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash } from "lucide-react"
 import { useState } from "react"
 
 import { Combobox } from "@/components/common/Combobox"
@@ -83,7 +83,7 @@ function ComparisonRow({
         onClick={() => deleteComparison.mutate(comparison.id)}
         aria-label={`比較「${comparedLabel(comparison, gradeId)}」を削除`}
       >
-        <Trash2 className="h-3 w-3" />
+        <Trash className="h-3 w-3" />
       </Button>
     </div>
   )

@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react"
+import { CircleCheck, CircleX, TriangleAlert } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -59,7 +59,7 @@ export function ArchiveExecuteStep({
       <div className="flex h-full flex-col items-center justify-center py-8">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-green-100 dark:bg-green-900/30">
-            <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
+            <CircleCheck className="h-10 w-10 text-green-600 dark:text-green-400" />
           </div>
           <h3 className="mb-2 text-xl font-semibold">取り込みが完了しました</h3>
         </div>
@@ -82,7 +82,7 @@ export function ArchiveExecuteStep({
         {files.failed.length > 0 && (
           <Card className="mb-6 w-full max-w-md border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
             <CardContent className="flex items-start gap-3 p-5">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+              <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
               <div className="min-w-0">
                 <h4 className="mb-2 text-sm font-medium text-amber-800 dark:text-amber-200">
                   写せなかった画像
@@ -110,7 +110,7 @@ export function ArchiveExecuteStep({
     <div className="flex h-full flex-col items-center justify-center py-8">
       <div className="mb-8 text-center">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-destructive/10">
-          <XCircle className="h-10 w-10 text-destructive" />
+          <CircleX className="h-10 w-10 text-destructive" />
         </div>
         <h3 className="mb-2 text-xl font-semibold">取り込みに失敗しました</h3>
         <p className="max-w-md text-destructive">{error ?? "詳細は不明です"}</p>

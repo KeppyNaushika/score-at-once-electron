@@ -1,4 +1,4 @@
-import { FileArchive, MoreHorizontal } from "lucide-react"
+import { Ellipsis, FileArchive } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -26,7 +26,7 @@ export function ExamRowMenu({ exam, onUnifiedExport }: ExamRowMenuProps) {
           className="h-8 w-8"
           aria-label={`${exam.examName}の操作`}
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <Ellipsis className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

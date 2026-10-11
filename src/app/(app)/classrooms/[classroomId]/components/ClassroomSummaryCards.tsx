@@ -1,6 +1,6 @@
 "use client"
 
-import { BarChart3, TrendingUp, Users } from "lucide-react"
+import { ChartColumn, TrendingUp, Users } from "lucide-react"
 import { useMemo } from "react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -73,7 +73,7 @@ export function ClassroomSummaryCards({
       <Card className="border-border/50 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <BarChart3 className="h-4 w-4" />
+            <ChartColumn className="h-4 w-4" />
             学級平均得点率
           </CardTitle>
         </CardHeader>

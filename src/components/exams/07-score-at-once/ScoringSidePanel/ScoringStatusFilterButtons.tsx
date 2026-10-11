@@ -1,12 +1,12 @@
 "use client"
 
 import {
-  AlertTriangle,
-  CheckCircle,
-  Circle,
+  CircleCheckBig,
+  CircleDashed,
   Clock,
   CopyX,
   Minus,
+  Triangle,
   X,
 } from "lucide-react"
 
@@ -21,9 +21,9 @@ import { GRID_4_3_STYLE } from "./scoringToolbarButtons"
 import { ShortcutTooltip } from "./ShortcutTooltip"
 
 const FILTER_BUTTONS = [
-  { status: "unscored", label: "未採点", icon: Circle },
-  { status: "correct", label: "正答", icon: CheckCircle },
-  { status: "partial", label: "部分点", icon: AlertTriangle },
+  { status: "unscored", label: "未採点", icon: CircleDashed },
+  { status: "correct", label: "正答", icon: CircleCheckBig },
+  { status: "partial", label: "部分点", icon: Triangle },
   { status: "pending", label: "保留", icon: Clock },
   { status: "incorrect", label: "誤答", icon: X },
   { status: "no_answer", label: "無答", icon: Minus },

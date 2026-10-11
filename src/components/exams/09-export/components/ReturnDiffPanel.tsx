@@ -2,9 +2,9 @@
 
 import {
   ArrowRight,
+  CircleQuestionMark,
   FileCheck,
-  Filter,
-  HelpCircle,
+  Funnel,
   PencilLine,
 } from "lucide-react"
 import { useState } from "react"
@@ -126,7 +126,7 @@ export function ReturnDiffPanel({
             onClick={selectChangedOnly}
             disabled={changedExamStudentIds.size === 0}
           >
-            <Filter className="mr-1 h-4 w-4" />
+            <Funnel className="mr-1 h-4 w-4" />
             変更があった生徒のみ選択（{changedExamStudentIds.size}名）
           </Button>
         )}
@@ -140,7 +140,7 @@ export function ReturnDiffPanel({
               className="h-8 w-8 text-muted-foreground"
               aria-label="答案返却・差分の説明"
             >
-              <HelpCircle className="h-4 w-4" />
+              <CircleQuestionMark className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80 text-sm">

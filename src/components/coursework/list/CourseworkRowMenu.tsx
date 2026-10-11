@@ -1,4 +1,4 @@
-import { FileArchive, MoreHorizontal, Trash2 } from "lucide-react"
+import { Ellipsis, FileArchive, Trash } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -32,7 +32,7 @@ export function CourseworkRowMenu({
           className="h-8 w-8"
           aria-label={`${coursework.name}の操作`}
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <Ellipsis className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -41,7 +41,7 @@ export function CourseworkRowMenu({
           .sao 書き出し
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" onClick={onRequestDelete}>
-          <Trash2 />
+          <Trash />
           削除
         </DropdownMenuItem>
       </DropdownMenuContent>

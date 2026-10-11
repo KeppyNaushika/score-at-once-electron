@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle, Lightbulb, Settings, Users, Workflow } from "lucide-react"
+import { LifeBuoy, Lightbulb, ListTree, Users, Workflow } from "lucide-react"
 
 import {
   HelpSection,
@@ -13,7 +13,7 @@ export function HelpContentSubtotalGroups() {
     <div className="space-y-6">
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
-          <Settings className="h-6 w-6 text-blue-600" />
+          <ListTree className="h-6 w-6 text-blue-600" />
           小計点グループ管理
         </h2>
         <p className="text-muted-foreground">
@@ -22,7 +22,7 @@ export function HelpContentSubtotalGroups() {
       </div>
 
       <HelpSection
-        icon={<Settings className="h-5 w-5 text-green-600" />}
+        icon={<ListTree className="h-5 w-5 text-green-600" />}
         title="基本の使い方"
       >
         <div className="space-y-3">
@@ -124,7 +124,7 @@ export function HelpContentSubtotalGroups() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <HelpSection
-          icon={<Lightbulb className="h-5 w-5 text-yellow-600" />}
+          icon={<LifeBuoy className="h-5 w-5 text-yellow-600" />}
           title="困ったときは"
         >
           <div className="space-y-3">
@@ -146,7 +146,7 @@ export function HelpContentSubtotalGroups() {
         </HelpSection>
 
         <HelpSection
-          icon={<CheckCircle className="h-5 w-5 text-green-600" />}
+          icon={<Lightbulb className="h-5 w-5 text-green-600" />}
           title="操作のコツ"
         >
           <div className="space-y-3">

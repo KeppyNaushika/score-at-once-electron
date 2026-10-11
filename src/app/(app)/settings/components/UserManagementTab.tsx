@@ -1,6 +1,6 @@
 "use client"
 
-import { Edit3, Trash2, UserPen } from "lucide-react"
+import { SquarePen, Trash, UserPen } from "lucide-react"
 
 import { WithTooltip } from "@/components/common/WithTooltip"
 import { Button } from "@/components/ui/button"
@@ -65,7 +65,7 @@ export function UserManagementTab({
                 size="sm"
                 onClick={() => onEditUser(user)}
               >
-                <Edit3 className="mr-2 h-4 w-4" />
+                <SquarePen className="mr-2 h-4 w-4" />
                 ユーザー情報編集
               </Button>
               <Button
@@ -82,7 +82,7 @@ export function UserManagementTab({
                 <WithTooltip content="ログイン中の利用者は削除できません">
                   <span tabIndex={0} className="inline-flex">
                     <Button variant="outline" size="sm" disabled>
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash className="mr-2 h-4 w-4" />
                       削除
                     </Button>
                   </span>
@@ -94,7 +94,7 @@ export function UserManagementTab({
                   className="text-destructive hover:text-destructive"
                   onClick={() => onDeleteUser(user)}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash className="mr-2 h-4 w-4" />
                   削除
                 </Button>
               )}

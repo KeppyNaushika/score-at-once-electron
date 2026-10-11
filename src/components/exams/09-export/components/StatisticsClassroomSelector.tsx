@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { BarChart3, GraduationCap, Users } from "lucide-react"
+import { ChartColumn, GraduationCap, Users } from "lucide-react"
 import { useState } from "react"
 
 import { Checkbox } from "@/components/ui/checkbox"
@@ -133,7 +133,7 @@ export function StatisticsClassroomSelector({
               <TableHead className="text-center">生徒数</TableHead>
               <TableHead className="text-center">
                 <div className="flex items-center justify-center gap-1">
-                  <BarChart3 className="h-4 w-4" />
+                  <ChartColumn className="h-4 w-4" />
                   <span>教員集計</span>
                 </div>
               </TableHead>

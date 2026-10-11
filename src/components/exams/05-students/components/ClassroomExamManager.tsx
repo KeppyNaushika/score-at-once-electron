@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { UserPlus } from "lucide-react"
+import { ArrowDown01 } from "lucide-react"
 import { useMemo } from "react"
 
 import {
@@ -89,7 +89,7 @@ export function ClassroomExamManager({
         key: "administered",
         header: (
           <div className="flex items-center justify-center gap-1">
-            <UserPlus className="h-4 w-4" />
+            <ArrowDown01 className="h-4 w-4" />
             <span>再採番</span>
           </div>
         ),

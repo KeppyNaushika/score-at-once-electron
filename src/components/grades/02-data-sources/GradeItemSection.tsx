@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -121,7 +121,7 @@ export function GradeItemSection({
             onClick={() => setIsDeleteConfirmOpen(true)}
             aria-label={`評価項目「${gradeItem.name}」を削除`}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash className="h-4 w-4" />
           </Button>
         </div>
 

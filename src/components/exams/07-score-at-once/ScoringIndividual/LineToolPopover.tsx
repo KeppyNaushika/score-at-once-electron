@@ -1,6 +1,6 @@
 "use client"
 
-import { Ruler } from "lucide-react"
+import { Slash } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -105,7 +105,7 @@ export function LineToolPopover({
               borderColor: isActive ? strokeColor : undefined,
             }}
           >
-            <Ruler
+            <Slash
               className="h-4 w-4"
               style={{ color: isActive ? "white" : undefined }}
             />

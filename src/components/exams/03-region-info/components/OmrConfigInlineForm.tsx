@@ -1,6 +1,6 @@
 "use client"
 
-import { Trash2 } from "lucide-react"
+import { Trash } from "lucide-react"
 import { useCallback, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -137,7 +137,7 @@ export function OmrConfigInlineForm({
             onClick={handleDelete}
             className="h-7 text-destructive hover:text-destructive"
           >
-            <Trash2 className="mr-1 h-3 w-3" />
+            <Trash className="mr-1 h-3 w-3" />
             削除
           </Button>
         )}

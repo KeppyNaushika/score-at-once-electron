@@ -1,11 +1,11 @@
 "use client"
 
 import {
-  AlertTriangle,
+  CircleQuestionMark,
   FileX,
-  HelpCircle,
   Info,
-  Trash2,
+  Trash,
+  TriangleAlert,
   Users,
 } from "lucide-react"
 
@@ -55,12 +55,12 @@ interface ConfirmationModalProps {
 }
 
 const icons = {
-  trash: Trash2,
-  alert: AlertTriangle,
+  trash: Trash,
+  alert: TriangleAlert,
   file: FileX,
   users: Users,
   info: Info,
-  help: HelpCircle,
+  help: CircleQuestionMark,
 }
 
 const variantStyles = {

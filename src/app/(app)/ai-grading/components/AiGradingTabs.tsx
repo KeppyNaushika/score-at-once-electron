@@ -1,8 +1,8 @@
 "use client"
 
 import {
-  BarChart3,
   CircleDollarSign,
+  Coins,
   Settings,
   SlidersHorizontal,
 } from "lucide-react"
@@ -84,7 +84,7 @@ export function AiGradingTabs({ initialTab }: AiGradingTabsProps) {
           className="gap-2"
           disabled={!hasAnyCurrentConsent}
         >
-          <BarChart3 className="h-4 w-4" />
+          <Coins className="h-4 w-4" />
           使用トークン
         </TabsTrigger>
       </TabsList>

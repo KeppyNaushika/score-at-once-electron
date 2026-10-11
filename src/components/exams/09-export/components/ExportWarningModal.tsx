@@ -1,11 +1,11 @@
 "use client"
 
 import {
-  AlertTriangle,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
+  CircleCheck,
   Gavel,
+  TriangleAlert,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -143,7 +143,7 @@ export default function ExportWarningModal({
       <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <TriangleAlert className="h-5 w-5 text-orange-500" />
             警告
           </DialogTitle>
         </DialogHeader>
@@ -152,7 +152,7 @@ export default function ExportWarningModal({
           {/* 食い違いを確認できなかった場合。「食い違いなし」と誤読させない */}
           {conflictCheckError !== undefined && (
             <Alert className="border-red-300 bg-red-50">
-              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <TriangleAlert className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800">
                 <div className="mb-1 font-medium">
                   採点者間の食い違いを確認できませんでした
@@ -170,7 +170,7 @@ export default function ExportWarningModal({
           {/* 対処が必要: 採点者間の食い違い（値が出ない・OWNERしか直せない） */}
           {conflicted.length > 0 && (
             <Alert className="border-purple-300 bg-purple-50">
-              <AlertTriangle className="h-4 w-4 text-purple-600" />
+              <TriangleAlert className="h-4 w-4 text-purple-600" />
               <AlertDescription className="text-purple-800">
                 <div className="mb-1 font-medium">
                   採点者間で結果が食い違っています {conflicted.length}件
@@ -225,7 +225,7 @@ export default function ExportWarningModal({
 
           {!hasWarnings && (
             <Alert className="border-green-200 bg-green-50">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <CircleCheck className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-800">
                 採点データに問題は見つかりませんでした。
               </AlertDescription>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Calculator } from "lucide-react"
+import { Group } from "lucide-react"
 import { useCallback, useMemo } from "react"
 
 import { QuestionAssignmentTableWithFillHandle } from "@/components/exams/04-question-group/components/QuestionAssignmentTableWithFillHandle"
@@ -111,7 +111,7 @@ export default function SubtotalGroupPage() {
           {activeSubtotalGroups.length > 0 && questionRegions.length > 0 && (
             <div className="rounded-lg border p-6">
               <div className="mb-4 flex items-center gap-2">
-                <Calculator className="h-5 w-5" />
+                <Group className="h-5 w-5" />
                 <h2 className="text-lg font-semibold">
                   設問と小計項目の関連付け
                 </h2>
@@ -129,7 +129,7 @@ export default function SubtotalGroupPage() {
           {activeSubtotalGroups.length > 0 && subtotalRegions.length > 0 && (
             <div className="rounded-lg border p-6">
               <div className="mb-4 flex items-center gap-2">
-                <Calculator className="h-5 w-5" />
+                <Group className="h-5 w-5" />
                 <h2 className="text-lg font-semibold">
                   小計点領域との関連付け
                 </h2>

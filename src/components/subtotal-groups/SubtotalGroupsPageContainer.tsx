@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Calculator, Plus } from "lucide-react"
+import { ListTree, Plus } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
 import {
@@ -205,7 +205,7 @@ export function SubtotalGroupsPageContainer() {
           <Empty className="h-full rounded-lg border border-dashed">
             <EmptyHeader>
               <EmptyMedia variant="icon">
-                <Calculator />
+                <ListTree />
               </EmptyMedia>
               <EmptyTitle>
                 {subtotalGroups.length > 0

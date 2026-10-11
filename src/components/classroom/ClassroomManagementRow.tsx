@@ -1,6 +1,6 @@
 "use client"
 
-import { Edit, Trash2 } from "lucide-react"
+import { SquarePen, Trash } from "lucide-react"
 
 import { TooltipButton } from "@/components/common/TooltipButton"
 import { Badge } from "@/components/ui/badge"
@@ -94,7 +94,7 @@ export function ClassroomManagementRow({
               onEdit()
             }}
           >
-            <Edit className="h-4 w-4" />
+            <SquarePen className="h-4 w-4" />
           </TooltipButton>
           <TooltipButton
             label="学級を削除"
@@ -107,7 +107,7 @@ export function ClassroomManagementRow({
               onDelete()
             }}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash className="h-4 w-4" />
           </TooltipButton>
         </div>
       </TableCell>

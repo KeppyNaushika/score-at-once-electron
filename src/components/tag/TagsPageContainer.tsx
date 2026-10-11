@@ -3,7 +3,7 @@
 import type { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { PlusCircle, Tag } from "lucide-react"
+import { Plus, Tag } from "lucide-react"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
@@ -144,7 +144,7 @@ export function TagsPageContainer() {
     toolbarButtonAction({
       id: "create",
       priority: 80,
-      icon: PlusCircle,
+      icon: Plus,
       label: "新規タグ作成",
       onClick: handleCreate,
     }),

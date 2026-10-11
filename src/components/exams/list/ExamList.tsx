@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { FileArchive, PencilSparkles, PlusCircle } from "lucide-react"
+import { FileArchive, PencilSparkles, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -147,7 +147,7 @@ const ExamList = () => {
       toolbarButtonAction({
         id: "create",
         priority: 80,
-        icon: PlusCircle,
+        icon: Plus,
         label: "新規試験作成",
         onClick: () => void handleCreate(),
       }),
@@ -249,7 +249,7 @@ const ExamList = () => {
           message: "まだ試験がありません",
           action: (
             <Button variant="outline" onClick={() => void handleCreate()}>
-              <PlusCircle className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 h-4 w-4" />
               最初の試験を作成
             </Button>
           ),

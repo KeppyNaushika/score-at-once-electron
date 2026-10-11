@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowDown, ArrowUp, Sparkles } from "lucide-react"
+import { ArrowDown, ArrowUp, TrendingUpDown } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 
@@ -223,7 +223,7 @@ export function StudentInsightsCard({
       <CardHeader className="space-y-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
+            <TrendingUpDown className="h-5 w-5" />
             生徒の様子
           </CardTitle>
           <div className="flex gap-3">

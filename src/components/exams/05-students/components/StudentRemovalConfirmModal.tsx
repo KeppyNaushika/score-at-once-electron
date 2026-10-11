@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { AlertTriangle, Trash2 } from "lucide-react"
+import { Trash, TriangleAlert } from "lucide-react"
 
 import { CautionNotice } from "@/components/common/CautionNotice"
 import { Badge } from "@/components/ui/badge"
@@ -69,7 +69,7 @@ export default function StudentRemovalConfirmModal({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <TriangleAlert className="h-5 w-5 text-destructive" />
             生徒の削除確認
           </DialogTitle>
           <DialogDescription>
@@ -105,7 +105,7 @@ export default function StudentRemovalConfirmModal({
           {deletionCounts !== null && deletionCounts.length > 0 && (
             <div className="rounded-md border border-destructive/20 bg-destructive/10 p-4">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+                <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
                 <div className="space-y-2">
                   <h4 className="font-medium text-destructive">
                     採点データが存在します
@@ -141,7 +141,7 @@ export default function StudentRemovalConfirmModal({
           {deletionCounts !== null && deletionCounts.length === 0 && (
             <div className="rounded-md border bg-muted/50 p-4">
               <div className="flex items-start gap-3">
-                <Trash2 className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+                <Trash className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
                 <div className="space-y-1">
                   <h4 className="font-medium">試験から削除</h4>
                   <p className="text-sm text-muted-foreground">
@@ -182,7 +182,7 @@ export default function StudentRemovalConfirmModal({
             disabled={!canConfirm || examDetail.isPending}
             className="gap-2"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash className="h-4 w-4" />
             削除する
           </Button>
         </DialogFooter>

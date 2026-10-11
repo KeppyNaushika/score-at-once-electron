@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle } from "lucide-react"
+import { TriangleAlert } from "lucide-react"
 
 import {
   AlertDialog,
@@ -53,7 +53,7 @@ export function UnplacedAnswersModal({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2 text-amber-700">
-            <AlertTriangle className="h-5 w-5" />
+            <TriangleAlert className="h-5 w-5" />
             置き場のない答案があります
           </AlertDialogTitle>
           <AlertDialogDescription>

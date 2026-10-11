@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, CheckCircle2, Lock } from "lucide-react"
+import { CircleCheck, Lock, TriangleAlert } from "lucide-react"
 
 import {
   archiveGradeItemImpactBadge,
@@ -26,7 +26,7 @@ export function ArchiveGradeImpactSection({
         aria-label="成績算出への影響"
         className="flex items-center gap-2 rounded-lg border px-4 py-3 text-sm text-muted-foreground"
       >
-        <CheckCircle2 className="h-4 w-4 shrink-0" />
+        <CircleCheck className="h-4 w-4 shrink-0" />
         {message.lead}
       </section>
     )
@@ -38,7 +38,7 @@ export function ArchiveGradeImpactSection({
       className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-900 dark:bg-amber-950/20"
     >
       <h4 className="flex items-center gap-2 text-sm font-medium text-amber-900 dark:text-amber-200">
-        <AlertTriangle className="h-4 w-4 shrink-0" />
+        <TriangleAlert className="h-4 w-4 shrink-0" />
         この取り込みで値が変わる成績算出
       </h4>
       <p className="text-sm text-amber-800 dark:text-amber-300">

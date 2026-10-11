@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertCircle, ChevronDown, ChevronRight } from "lucide-react"
+import { ChevronDown, ChevronRight, CircleAlert } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -23,7 +23,7 @@ export function SyncWarningList({ warnings }: { warnings: string[] }) {
   return (
     <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
       <h3 className="mb-2 flex items-center gap-2 text-sm font-medium text-amber-900">
-        <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+        <CircleAlert className="h-4 w-4 shrink-0 text-amber-600" />
         直近の同期で出た注意
       </h3>
       <ul className="space-y-2 text-sm text-amber-800">

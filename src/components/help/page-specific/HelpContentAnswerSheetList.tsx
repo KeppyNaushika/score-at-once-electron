@@ -1,7 +1,7 @@
 "use client"
 
 import {
-  FileEdit,
+  FilePen,
   FolderInput,
   Lightbulb,
   MousePointerClick,
@@ -27,7 +27,7 @@ export function HelpContentAnswerSheetList() {
     <div className="space-y-6">
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
-          <FileEdit className="h-6 w-6 text-blue-600" />
+          <FilePen className="h-6 w-6 text-blue-600" />
           解答用紙作成
         </h2>
         <p className="text-muted-foreground">

@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { History } from "lucide-react"
+import { RotateCcwClock } from "lucide-react"
 import { useMemo } from "react"
 
 import { ListPaginationFooter } from "@/components/common/ListPaginationFooter"
@@ -95,7 +95,7 @@ export function AuditLogList({
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
-                <History />
+                <RotateCcwClock />
               </EmptyMedia>
               <EmptyTitle>記録された操作はありません</EmptyTitle>
             </EmptyHeader>

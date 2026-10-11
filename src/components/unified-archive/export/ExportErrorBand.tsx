@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertCircle } from "lucide-react"
+import { CircleAlert } from "lucide-react"
 
 interface ExportErrorBandProps {
   title: string
@@ -15,7 +15,7 @@ export function ExportErrorBand({ title, message }: ExportErrorBandProps) {
       className="rounded-lg border border-destructive/20 bg-destructive/10 p-4"
     >
       <div className="flex items-start gap-3">
-        <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
+        <CircleAlert className="mt-0.5 size-5 shrink-0 text-destructive" />
         <div className="flex-1">
           <p className="text-sm font-medium text-destructive">{title}</p>
           <p className="mt-1 text-sm break-all text-destructive/80">

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { Download, PlusCircle, School } from "lucide-react"
+import { Download, Plus, School } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -294,7 +294,7 @@ export default function ClassroomManagementTable() {
     toolbarButtonAction({
       id: "create",
       priority: 80,
-      icon: PlusCircle,
+      icon: Plus,
       label: "学級追加",
       onClick: handleAddNewClassroom,
     }),

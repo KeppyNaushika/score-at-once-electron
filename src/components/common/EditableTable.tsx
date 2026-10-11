@@ -10,7 +10,7 @@ import {
   tableFeatures,
   useTable,
 } from "@tanstack/react-table"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash } from "lucide-react"
 import React, { useCallback, useMemo } from "react"
 import { toast } from "sonner"
 
@@ -185,7 +185,7 @@ export function EditableTable<T extends RowData>({
                   onClick={() => deleteRow(row.index)}
                   className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash className="h-3 w-3" />
                 </Button>
               ),
               size: 40,

@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertCircle } from "lucide-react"
+import { CircleAlert } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 
@@ -37,7 +37,7 @@ export function ForcedExclusionAlert({
       className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm"
     >
       <div className="flex items-start gap-3">
-        <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
+        <CircleAlert className="mt-0.5 size-5 shrink-0 text-destructive" />
         <div className="flex-1 space-y-2">
           <p className="font-medium text-destructive">
             成績算出が使うものを「含めない」にしているため、書き出せません

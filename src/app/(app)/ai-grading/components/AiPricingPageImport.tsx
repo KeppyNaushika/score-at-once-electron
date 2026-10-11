@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { AlertCircle, Download } from "lucide-react"
+import { CircleAlert, Download } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -190,7 +190,7 @@ export function AiPricingPageImport({
           role="alert"
           className="flex items-start gap-2 text-sm text-red-700"
         >
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
           <div className="space-y-0.5">
             <p>読み込めませんでした（手入力してください）</p>
             <p className="text-xs break-all opacity-80">{failureReason}</p>

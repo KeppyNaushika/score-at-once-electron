@@ -1,6 +1,6 @@
 "use client"
 
-import { Gavel, Layout, RefreshCw, SquarePen } from "lucide-react"
+import { Gavel, PanelsTopLeft, RefreshCw, SquarePen } from "lucide-react"
 
 import { GuardedLink } from "@/components/common/GuardedLink"
 import NavigationControls from "@/components/exams/07-score-at-once/ScoringSidePanel/NavigationControls"
@@ -214,7 +214,7 @@ export function FinalizeSidePanel({
       )}
 
       {/* 表示（絞り込み・並べ方・件数） */}
-      <SidePanelSection icon={Layout} title="表示">
+      <SidePanelSection icon={PanelsTopLeft} title="表示">
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-1">
             {FILTER_BUTTONS.map((button) => (

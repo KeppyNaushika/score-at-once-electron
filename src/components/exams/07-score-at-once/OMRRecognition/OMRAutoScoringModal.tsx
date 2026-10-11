@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle, ScanLine, Sparkles, XCircle } from "lucide-react"
+import { CircleCheck, CircleX, Lightbulb, ScanLine } from "lucide-react"
 import { useCallback } from "react"
 
 import { useOmrAutoScoring } from "@/components/exams/07-score-at-once/OMRRecognition/hooks/useOmrAutoScoring"
@@ -75,7 +75,7 @@ export function OMRAutoScoringModal({
           {/* エラー表示 */}
           {error && (
             <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <CircleX className="mt-0.5 h-4 w-4 shrink-0" />
               {error}
             </div>
           )}
@@ -104,7 +104,7 @@ export function OMRAutoScoringModal({
           {summary && !isRecognizing && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <CircleCheck className="h-4 w-4 text-green-600" />
                 認識完了
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
@@ -201,7 +201,7 @@ export function OMRAutoScoringModal({
                     className="w-full"
                     onClick={applyRecommendedThreshold}
                   >
-                    <Sparkles className="mr-1 h-3.5 w-3.5" />
+                    <Lightbulb className="mr-1 h-3.5 w-3.5" />
                     推奨塗りつぶし閾値を適用（
                     {Math.round(recommendedAreaThreshold * 100)}%）
                   </Button>

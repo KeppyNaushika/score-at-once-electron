@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle2, FileArchive, Info, Upload } from "lucide-react"
+import { CircleCheck, FileArchive, Info, Upload } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -67,15 +67,15 @@ export function FileSelectStep({ wizard }: FileSelectStepProps) {
           </div>
           <ul className="space-y-2">
             <li className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <CircleCheck className="h-4 w-4 text-green-500" />
               一括採点試験データ (.score)
             </li>
             <li className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <CircleCheck className="h-4 w-4 text-green-500" />
               百問繚乱&trade;データ（採点情報のみ）(.hsz)
             </li>
             <li className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <CircleCheck className="h-4 w-4 text-green-500" />
               リアテンダント&trade;データ（採点情報のみ）(.dat)
             </li>
           </ul>

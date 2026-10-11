@@ -1,6 +1,11 @@
 "use client"
 
-import { CheckCircle2, ChevronRight, HelpCircle, Users } from "lucide-react"
+import {
+  ChevronRight,
+  CircleCheck,
+  CircleQuestionMark,
+  Users,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type { StudentImportWizard } from "@/hooks/student-import/useStudentImportWizard"
@@ -38,13 +43,13 @@ function CategoryOverviewCard({
       <div className="space-y-2 text-sm">
         {autoMatched > 0 && (
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <CircleCheck className="h-4 w-4 text-green-500" />
             <span>自動で紐づく: {autoMatched}件</span>
           </div>
         )}
         {secondaryMatched > 0 && (
           <div className="flex items-center gap-2">
-            <HelpCircle className="h-4 w-4 text-amber-500" />
+            <CircleQuestionMark className="h-4 w-4 text-amber-500" />
             <span>確認が必要: {secondaryMatched}件</span>
           </div>
         )}

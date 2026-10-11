@@ -1,12 +1,12 @@
 import {
-  AlertTriangle,
   Calculator,
-  CheckCircle,
-  Circle,
+  CircleCheckBig,
+  CircleDashed,
   Clock,
   CopyX,
   Minus,
   MousePointerClick,
+  Triangle,
   X,
 } from "lucide-react"
 
@@ -28,19 +28,19 @@ export const SCORING_BUTTONS = [
   {
     status: "unscored",
     label: "未採点",
-    icon: Circle,
+    icon: CircleDashed,
     description: "未採点にする",
   },
   {
     status: "correct",
     label: "正答",
-    icon: CheckCircle,
+    icon: CircleCheckBig,
     description: "正答にする",
   },
   {
     status: "partial",
     label: "部分点",
-    icon: AlertTriangle,
+    icon: Triangle,
     description: "部分点にする",
   },
   {
@@ -83,7 +83,7 @@ export const BRUSH_BUTTONS = SCORING_BUTTONS.filter(
 const SPECIAL_BRUSH_BUTTONS: Array<{
   status: MouseBrushAction
   label: string
-  icon: typeof CheckCircle
+  icon: typeof CircleCheckBig
   description: string
 }> = [
   {

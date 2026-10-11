@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { Trash2 } from "lucide-react"
+import { Trash } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import { GestureColorInput } from "@/components/common/GestureColorInput"
@@ -271,7 +271,7 @@ function ConstraintCard({
           onClick={onDelete}
           aria-label="削除"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash className="h-4 w-4" />
         </Button>
       </div>
 

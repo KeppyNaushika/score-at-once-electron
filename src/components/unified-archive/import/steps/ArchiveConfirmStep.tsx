@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, ClipboardCheck, Download } from "lucide-react"
+import { ClipboardCheck, Import, TriangleAlert } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -137,7 +137,7 @@ export function ArchiveConfirmStep({
           {result.warnings.length > 0 && (
             <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
               <CardContent className="flex items-start gap-3 p-4">
-                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
                 <div>
                   <h4 className="mb-2 text-sm font-medium text-amber-800 dark:text-amber-200">
                     注意事項
@@ -165,7 +165,7 @@ export function ArchiveConfirmStep({
         disabled={lastAnalysis.kind !== "ok" || !isAnalysisCurrent}
         processingLabel="取り込んでいます..."
       >
-        <Download className="h-5 w-5" />
+        <Import className="h-5 w-5" />
         取り込む
       </StepNextButton>
     </div>

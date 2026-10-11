@@ -1,12 +1,12 @@
 "use client"
 
 import {
-  BarChart3,
+  ChartColumn,
   Check,
-  CheckSquare,
   Eye,
   Search,
   Square,
+  SquareCheckBig,
   UserCheck,
   Users,
   UserX,
@@ -175,7 +175,7 @@ export function StudentSelectionCard({
       {/* タブヘッダー */}
       <TabsList className="mb-2 grid w-full grid-cols-3">
         <TabsTrigger value="class-stats" className="gap-1">
-          <BarChart3 className="h-4 w-4" />
+          <ChartColumn className="h-4 w-4" />
           統計対象学級
         </TabsTrigger>
         <TabsTrigger value="selection" className="gap-1">
@@ -292,7 +292,7 @@ export function StudentSelectionCard({
               className="h-8 text-xs"
               onClick={selectAllFiltered}
             >
-              <CheckSquare className="mr-1 h-3 w-3" />
+              <SquareCheckBig className="mr-1 h-3 w-3" />
               全選択
             </Button>
             <Button

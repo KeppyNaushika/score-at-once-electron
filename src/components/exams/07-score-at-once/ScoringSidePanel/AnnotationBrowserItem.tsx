@@ -3,9 +3,9 @@
 import {
   Circle,
   Eye,
-  Minus,
   Plus,
   RectangleHorizontal,
+  Slash,
   Star,
   Type,
 } from "lucide-react"
@@ -35,7 +35,7 @@ function TypeIcon({ type }: { type: string }) {
     case "text":
       return <Type className="h-3.5 w-3.5" />
     case "line":
-      return <Minus className="h-3.5 w-3.5" />
+      return <Slash className="h-3.5 w-3.5" />
     case "rectangle":
       return <RectangleHorizontal className="h-3.5 w-3.5" />
     case "ellipse":

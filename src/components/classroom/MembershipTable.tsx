@@ -1,6 +1,6 @@
 "use client"
 
-import { Calendar, Edit, Trash2, User } from "lucide-react"
+import { Calendar, SquarePen, Trash, User } from "lucide-react"
 import { useMemo, useState } from "react"
 
 import ConfirmationModal from "@/components/common/ConfirmationModal"
@@ -165,7 +165,7 @@ export default function ClassroomMembershipTable({
                   className="rounded-lg"
                   onClick={handleBulkDelete}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash className="mr-2 h-4 w-4" />
                   選択した{selectedIds.size}件を削除
                 </Button>
               )}
@@ -319,7 +319,7 @@ export default function ClassroomMembershipTable({
                             className="h-8 w-8 rounded-lg transition-colors hover:bg-muted"
                             onClick={() => onEdit(membership)}
                           >
-                            <Edit className="h-4 w-4" />
+                            <SquarePen className="h-4 w-4" />
                           </TooltipButton>
                           <TooltipButton
                             label="所属を削除"
@@ -329,7 +329,7 @@ export default function ClassroomMembershipTable({
                             className="h-8 w-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => onDelete(membership.id)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash className="h-4 w-4" />
                           </TooltipButton>
                         </div>
                       </TableCell>

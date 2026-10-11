@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { Palette } from "lucide-react"
+import { SquareDashedMousePointer } from "lucide-react"
 import { useCallback } from "react"
 
 import { RegionTableRow } from "@/components/exams/03-region-info/components/RegionTableRow"
@@ -143,7 +143,7 @@ const RegionDetailsTable = ({
   if (regions.length === 0) {
     return (
       <div className="p-8 text-center">
-        <Palette className="mx-auto mb-4 h-12 w-12 text-muted-foreground/70" />
+        <SquareDashedMousePointer className="mx-auto mb-4 h-12 w-12 text-muted-foreground/70" />
         {/*
           表はページで絞らないので「このページに領域がありません」は嘘になる
           （出るのは試験ぜんぶで領域が0件のときだけ）。1つの言い方に寄せる

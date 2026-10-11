@@ -2,7 +2,7 @@
 
 import { useDraggable, useDroppable } from "@dnd-kit/core"
 import type { ExamPage } from "@prisma/client"
-import { Trash2 } from "lucide-react"
+import { Trash } from "lucide-react"
 import { useState } from "react"
 
 import { DeleteConfirmationModal } from "@/components/exams/06-student-answers/student-answer-table/components/DeleteConfirmationModal"
@@ -82,7 +82,7 @@ export function DraggableAnswerCell({
             onClick={() => setShowDeleteModal(true)}
             variant="destructive"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash className="h-4 w-4" />
             答案画像を削除
           </ContextMenuItem>
         </ContextMenuContent>

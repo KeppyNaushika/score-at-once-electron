@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle2 } from "lucide-react"
+import { CircleCheck } from "lucide-react"
 import Head from "next/head"
 import { useCallback, useMemo } from "react"
 
@@ -90,7 +90,7 @@ function ScoreFinalizeContent() {
     if (!currentQuestion || !currentCropRegion) {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-gray-500">
-          <CheckCircle2 className="h-6 w-6 text-green-600" />
+          <CircleCheck className="h-6 w-6 text-green-600" />
           <p>裁定が必要な採点はありません。</p>
           <p className="text-xs">
             採点者の結果が一致している答案は、確定しなくてもそのまま出力されます。
@@ -101,7 +101,7 @@ function ScoreFinalizeContent() {
     if (visibleItems.length === 0) {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-gray-500">
-          <CheckCircle2 className="h-6 w-6 text-green-600" />
+          <CircleCheck className="h-6 w-6 text-green-600" />
           <p>この設問で表示する答案はありません。</p>
           <p className="text-xs">
             右の「表示」で絞り込みを変えると、ほかの答案を表示できます。

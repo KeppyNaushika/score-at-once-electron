@@ -1,6 +1,6 @@
 "use client"
 
-import { RotateCcw, RotateCw, Trash2 } from "lucide-react"
+import { RotateCcwSquare, RotateCwSquare, Trash } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -60,7 +60,7 @@ export default function PageCardActions({
         disabled={disabled}
         title="左に90°回転（Shift+R）"
       >
-        <RotateCcw className={ICON_CLASS} />
+        <RotateCcwSquare className={ICON_CLASS} />
       </button>
       <button
         type="button"
@@ -76,7 +76,7 @@ export default function PageCardActions({
         disabled={disabled}
         title="右に90°回転（R）"
       >
-        <RotateCw className={ICON_CLASS} />
+        <RotateCwSquare className={ICON_CLASS} />
       </button>
       <button
         type="button"
@@ -89,7 +89,7 @@ export default function PageCardActions({
         disabled={disabled}
         title="除外（Delete）"
       >
-        <Trash2 className={ICON_CLASS} />
+        <Trash className={ICON_CLASS} />
       </button>
     </div>
   )

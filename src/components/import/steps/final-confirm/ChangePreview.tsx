@@ -1,6 +1,6 @@
 "use client"
 
-import { GraduationCap, Layers, Users } from "lucide-react"
+import { ListTree, School, Users } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
 import type {
@@ -200,7 +200,7 @@ export function ChangePreview({
     },
     {
       category: "classroom" as const,
-      icon: <GraduationCap className="h-5 w-5" />,
+      icon: <School className="h-5 w-5" />,
       title: "学級",
       rows: collectChangedRows(
         fileOverviewData.classroom,
@@ -211,7 +211,7 @@ export function ChangePreview({
     },
     {
       category: "subtotalGroup" as const,
-      icon: <Layers className="h-5 w-5" />,
+      icon: <ListTree className="h-5 w-5" />,
       title: "小計グループ",
       rows: collectChangedRows(
         fileOverviewData.subtotalGroup,

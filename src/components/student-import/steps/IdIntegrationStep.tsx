@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle2, ChevronRight } from "lucide-react"
+import { ChevronRight, CircleCheck } from "lucide-react"
 import { useState } from "react"
 
 import { ClassroomIntegrationPanel } from "@/components/import/steps/id-integration/ClassroomIntegrationPanel"
@@ -37,7 +37,7 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
     return (
       <div className="flex flex-col items-center justify-center gap-6 py-12">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
-          <CheckCircle2 className="h-10 w-10 text-green-600" />
+          <CircleCheck className="h-10 w-10 text-green-600" />
         </div>
         <div className="text-center">
           <h3 className="text-lg font-semibold">

@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertCircle, Lock } from "lucide-react"
+import { CircleAlert, Lock } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -135,7 +135,7 @@ export function PasswordDialog({
 
           {error && !isFirstAttempt && (
             <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm text-red-600">
-              <AlertCircle className="h-4 w-4" />
+              <CircleAlert className="h-4 w-4" />
               パスワードが間違っている可能性があります
             </div>
           )}

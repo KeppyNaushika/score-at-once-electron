@@ -1,6 +1,6 @@
 "use client"
 
-import { Trash2 } from "lucide-react"
+import { Trash } from "lucide-react"
 
 import { DragHandle, useSortableRow } from "@/components/common/sortable-table"
 import { TooltipButton } from "@/components/common/TooltipButton"
@@ -131,7 +131,7 @@ export function CourseworkItemRow({
           className="mt-5 h-7 w-7 text-destructive"
           onClick={() => onDelete(item)}
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash className="h-4 w-4" />
         </TooltipButton>
       </div>
     </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
-import { Check, ExternalLink, Pencil, Trash2, X } from "lucide-react"
+import { Check, ExternalLink, Pencil, Trash, X } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 
@@ -238,7 +238,7 @@ export function DataSourceRow({
           onClick={() => setIsDeleteConfirmOpen(true)}
           aria-label={`データソース「${dataSource.name}」を削除`}
         >
-          <Trash2 className="h-3 w-3" />
+          <Trash className="h-3 w-3" />
         </Button>
       </div>
 

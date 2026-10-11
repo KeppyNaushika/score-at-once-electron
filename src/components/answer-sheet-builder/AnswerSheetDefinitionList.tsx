@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { FileEdit } from "lucide-react"
+import { FilePen } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -350,7 +350,7 @@ export function AnswerSheetDefinitionList() {
         onToggleSelectAll={toggleSelectAll}
         allSelected={allSelected}
         empty={{
-          icon: FileEdit,
+          icon: FilePen,
           message: showAllOwners
             ? "解答用紙がありません"
             : "担当している解答用紙がありません",

@@ -1,4 +1,4 @@
-import { AlertCircle } from "lucide-react"
+import { CircleAlert } from "lucide-react"
 
 import { BetaBadge } from "@/components/common/BetaBadge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -62,7 +62,7 @@ const SYNC_NOTICE_SECTIONS: { heading: string; items: string[] }[] = [
 export function SyncNotes() {
   return (
     <Alert>
-      <AlertCircle className="h-4 w-4" />
+      <CircleAlert className="h-4 w-4" />
       <AlertTitle className="flex items-center gap-2">
         同期についてのご注意
         <BetaBadge />

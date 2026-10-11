@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowDown, ArrowUp, Pencil, Trash2 } from "lucide-react"
+import { ArrowDown, ArrowUp, Pencil, Trash } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type { RubricItemRow } from "@/queries/rubric"
@@ -132,7 +132,7 @@ export function RubricItemEntry({
             aria-label="削除"
             onClick={onDelete}
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash className="h-3 w-3" />
           </Button>
         </div>
       </div>

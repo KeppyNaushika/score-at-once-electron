@@ -11,7 +11,7 @@ import {
   MessageSquare,
   Pencil,
   ScanLine,
-  Trash2,
+  Trash,
   Trophy,
   User,
 } from "lucide-react"
@@ -287,7 +287,7 @@ export const RegionTableRow = ({
             }}
             className="text-destructive hover:text-destructive"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash className="h-4 w-4" />
           </Button>
         </td>
       </tr>

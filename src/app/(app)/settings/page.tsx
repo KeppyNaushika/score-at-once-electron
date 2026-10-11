@@ -4,10 +4,10 @@ import { useQuery } from "@tanstack/react-query"
 import {
   CalendarRange,
   FolderSync,
-  History,
   Keyboard,
   Monitor,
   Palette,
+  RotateCcwClock,
   Users,
 } from "lucide-react"
 import { useState } from "react"
@@ -90,7 +90,7 @@ export default function SettingsPage() {
                 年度
               </TabsTrigger>
               <TabsTrigger value="audit-log" className="gap-2">
-                <History className="h-4 w-4" />
+                <RotateCcwClock className="h-4 w-4" />
                 操作履歴
               </TabsTrigger>
               <TabsTrigger value="user" className="gap-2">

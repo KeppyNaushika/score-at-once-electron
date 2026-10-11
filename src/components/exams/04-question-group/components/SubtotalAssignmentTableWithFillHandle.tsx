@@ -1,7 +1,7 @@
 "use client"
 
 import type { Subtotal } from "@prisma/client"
-import { Calculator, RotateCcw } from "lucide-react"
+import { Group, ListOrdered, ListTree, RotateCcw } from "lucide-react"
 import { useState } from "react"
 
 import { CheckboxCellWithFillHandle } from "@/components/exams/shared/CheckboxCellWithFillHandle"
@@ -74,7 +74,7 @@ export function SubtotalAssignmentTableWithFillHandle({
   if (subtotalGroups.length === 0) {
     return (
       <div className="py-8 text-center text-muted-foreground">
-        <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
+        <ListTree className="mx-auto mb-4 h-12 w-12 opacity-50" />
         <p>小計点がありません</p>
         <p className="text-sm">まず小計点と項目を作成してください</p>
       </div>
@@ -84,7 +84,7 @@ export function SubtotalAssignmentTableWithFillHandle({
   if (subtotalRegions.length === 0) {
     return (
       <div className="py-8 text-center text-muted-foreground">
-        <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
+        <ListOrdered className="mx-auto mb-4 h-12 w-12 opacity-50" />
         <p>小計点領域がありません</p>
         <p className="text-sm">採点領域から小計点領域を作成してください</p>
       </div>
@@ -96,7 +96,7 @@ export function SubtotalAssignmentTableWithFillHandle({
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Calculator className="h-5 w-5" />
+          <Group className="h-5 w-5" />
           <span className="font-medium">
             小計点領域とグループ項目の関連付け
           </span>
