@@ -8,8 +8,8 @@
  */
 import sharp, { type OutputInfo } from "sharp"
 
-/** ファイルの絶対パス、または符号化された画像のバイト列 */
-type ImageInput = string | Buffer
+/** ファイルの絶対パス、または符号化された画像のバイト列（Buffer も Uint8Array の一種） */
+type ImageInput = string | Uint8Array
 
 /** 画像の見出し（デコードしないで読める値） */
 export interface ImageHeader {
@@ -107,7 +107,10 @@ export async function decodeGreyscaleOnWhite(
   )
 }
 
-/** PNG にし直す */
+/**
+ * PNG にし直す。Chromium の Canvas が符号化した PNG は sharp の約2〜3倍の大きさになるので、
+ * renderer で描いた画像を保存する前にもここを通す
+ */
 export async function encodePng(input: ImageInput): Promise<Buffer> {
   return sharp(input).png().toBuffer()
 }
@@ -155,16 +158,18 @@ export async function rotateToPng(
 }
 
 /**
- * 指定の大きさへ変えて PNG にする（lanczos3）。
- * `fit: "cover"` は同じ倍率で覆ってから中央を切る、`fit: "fill"` は縦横を別々に伸ばす
+ * 指定の大きさへ変えて PNG にする（lanczos3）。縦横比が違えば同じ倍率で覆ってから
+ * 中央を切る（sharp の fit "cover"）
  */
 export async function resizeToPng(
   input: ImageInput,
-  size: PixelSize,
-  fit: "cover" | "fill"
+  size: PixelSize
 ): Promise<Buffer> {
   return sharp(input)
-    .resize(size.width, size.height, { fit, kernel: sharp.kernel.lanczos3 })
+    .resize(size.width, size.height, {
+      fit: "cover",
+      kernel: sharp.kernel.lanczos3,
+    })
     .png()
     .toBuffer()
 }

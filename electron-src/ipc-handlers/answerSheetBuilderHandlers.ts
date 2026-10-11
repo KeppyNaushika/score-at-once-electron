@@ -22,8 +22,8 @@ import {
   getAsbImagesDirectory,
   getRelativePathFromSharedFiles,
 } from "../lib/dataManager"
+import { encodePng } from "../lib/imageOps"
 import { importAsbDefinition } from "../lib/import/asb-archive"
-import { htmlToPngBuffer } from "../lib/printUtils"
 import {
   deleteAsbDefinition,
   getAsbDefinition,
@@ -129,33 +129,21 @@ export const answerSheetBuilderHandlers = {
     }
   },
 
-  // PNG出力: HTML文字列を受け取り → BrowserWindow + capturePage でラスタライズ
+  // PNG出力: renderer で描いたページの PNG を、sharp で符号化し直して書く
+  // （2ページ以上なら -1, -2… を付ける）
   "asb:export-png": async (args: ASBExportPngArgs) => {
     const outputDir = path.dirname(args.outputPath)
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true })
     }
 
-    if (args.htmlPages.length === 1) {
-      const buf = await htmlToPngBuffer(
-        args.htmlPages[0],
-        args.pageWidthMm,
-        args.pageHeightMm,
-        args.dpi
-      )
-      fs.writeFileSync(args.outputPath, buf)
+    if (args.pngPages.length === 1) {
+      fs.writeFileSync(args.outputPath, await encodePng(args.pngPages[0]))
     } else {
       const ext = path.extname(args.outputPath)
       const base = args.outputPath.slice(0, -ext.length)
-      for (let i = 0; i < args.htmlPages.length; i++) {
-        const pagePath = `${base}-${i + 1}${ext}`
-        const buf = await htmlToPngBuffer(
-          args.htmlPages[i],
-          args.pageWidthMm,
-          args.pageHeightMm,
-          args.dpi
-        )
-        fs.writeFileSync(pagePath, buf)
+      for (const [index, pngPage] of args.pngPages.entries()) {
+        fs.writeFileSync(`${base}-${index + 1}${ext}`, await encodePng(pngPage))
       }
     }
 
@@ -189,8 +177,8 @@ export const answerSheetBuilderHandlers = {
       args.definition,
       args.userId,
       args.multiPageLayout,
-      args.answerSheetHtmlPages,
-      args.modelAnswerHtmlPages
+      args.answerSheetPngPages,
+      args.modelAnswerPngPages
     )
     return result
   },

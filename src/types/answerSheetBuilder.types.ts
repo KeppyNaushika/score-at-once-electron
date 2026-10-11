@@ -11,19 +11,18 @@ import type { AnswerSheetDefinition } from "./answerSheetDefinition.types"
 import type { ComputedMultiPageLayout } from "./answerSheetLayout.types"
 
 export interface ASBExportPngArgs {
-  htmlPages: string[]
+  /** ページの PNG（renderer で描いたもの）。2ページ以上なら `-1` `-2`… を付けて別のファイルにする */
+  pngPages: Uint8Array[]
   outputPath: string
-  dpi: number
-  pageWidthMm: number
-  pageHeightMm: number
 }
 
 export interface ASBConvertToExamArgs {
   definition: AnswerSheetDefinition
   userId: string
   multiPageLayout: ComputedMultiPageLayout
-  answerSheetHtmlPages: string[]
-  modelAnswerHtmlPages: string[]
+  /** 答案の雛形・模範解答のページの PNG（renderer で描いたもの、ページ順） */
+  answerSheetPngPages: Uint8Array[]
+  modelAnswerPngPages: Uint8Array[]
 }
 
 export interface ASBUploadImageArgs {
