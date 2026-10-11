@@ -4,6 +4,12 @@ import typescriptParser from "@typescript-eslint/parser"
 import reactHooksPlugin from "eslint-plugin-react-hooks"
 import nextPlugin from "@next/eslint-plugin-next"
 import simpleImportSort from "eslint-plugin-simple-import-sort"
+import * as fs from "fs"
+
+/** fs の同期版の関数名（下の「main のファイル操作は非同期で書く」で使う） */
+const SYNC_FS_FUNCTION_NAMES = Object.keys(fs).filter((name) =>
+  name.endsWith("Sync")
+)
 
 export default [
   {
@@ -293,6 +299,39 @@ export default [
             },
           ],
         },
+      ],
+    },
+  },
+  {
+    // main のファイル操作は非同期で書く（`fs/promises`）。web 版は main のコードを
+    // ブラウザの Worker で動かし、保存先の OPFS にはファイルを同期で開く手段が無いため、
+    // 同期の fs を呼ぶ経路は web 版で動かない（型検査では捕まらない）。
+    // 例外は web 版に載せないものだけで、判断基準ではなく対象の名指しで管理する。
+    // 増やすときは OWNER の指定を受けてこの ignores に足す。
+    files: ["electron-src/**/*.ts"],
+    ignores: [
+      // デスクトップの入口と、画面の静的書き出しの配信
+      "electron-src/index.ts",
+      "electron-src/rendererStaticServer.ts",
+      "electron-src/lib/rendererFiles.ts",
+      // NAS 同期（web 版は1人で使うので同期を持たない）
+      "electron-src/lib/sync/**",
+      // 旧形式5種と外部形式の取り込み（web 版へはデスクトップ版で .sao にして持ち込む）
+      "electron-src/lib/import/asb-archive/**",
+      "electron-src/lib/import/coursework-archive/**",
+      "electron-src/lib/import/exam-archive/**",
+      "electron-src/lib/import/student-archive/**",
+      "electron-src/lib/import/merge/**",
+      "electron-src/lib/import/external-formats/**",
+    ],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        ...SYNC_FS_FUNCTION_NAMES.map((property) => ({
+          object: "fs",
+          property,
+          message: `fs.${property} は使わず、fs/promises の非同期版を使ってください（web 版の保存先 OPFS にはファイルを同期で開く手段が無いため）。有無の確認は electron-src/lib/pathExists.ts。`,
+        })),
       ],
     },
   },

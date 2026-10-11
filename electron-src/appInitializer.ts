@@ -1,5 +1,7 @@
 import { app, dialog } from "electron"
 
+import { getProviderCredentialStore } from "./lib/aiGrading/providerCredentialStore"
+import { AuthStoreManager } from "./lib/authStore"
 import {
   getAbsolutePathFromSharedFiles,
   getLocalDataDirectory,
@@ -117,6 +119,12 @@ async function decideStorageRoots(): Promise<void> {
 
 export async function initializeApp(): Promise<void> {
   try {
+    // 端末ごとの設定ファイルを読む（以後はメモリの写しを正とする。jsonFileStore.ts）
+    await Promise.all([
+      AuthStoreManager.load(),
+      getProviderCredentialStore().load(),
+    ])
+
     // データの根を決める（DB・画像の置き場はこれより前に参照しない）
     await decideStorageRoots()
 

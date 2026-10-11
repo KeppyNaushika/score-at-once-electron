@@ -1,94 +1,57 @@
 import { app } from "electron"
-import * as fs from "fs"
 import * as path from "path"
+
+import { createJsonFileStore, type JsonFileStore } from "./jsonFileStore"
 
 interface AuthData {
   authToken: string | null
 }
 
-// 認証データファイルのパス
-const getAuthFilePath = (): string => {
-  return path.join(app.getPath("userData"), "auth.json")
+const toAuthData = (parsed: unknown): AuthData => ({
+  authToken:
+    typeof parsed === "object" &&
+    parsed !== null &&
+    "authToken" in parsed &&
+    typeof parsed.authToken === "string"
+      ? parsed.authToken
+      : null,
+})
+
+let authStore: JsonFileStore<AuthData> | null = null
+
+/** `userData/auth.json`。起動時に `AuthStoreManager.load()` で読む */
+const getAuthStore = (): JsonFileStore<AuthData> => {
+  authStore ??= createJsonFileStore({
+    filePath: path.join(app.getPath("userData"), "auth.json"),
+    parse: toAuthData,
+    createDefault: () => ({ authToken: null }),
+  })
+  return authStore
 }
 
+/**
+ * ログイン中の利用者（認証トークン）。トークンは起動時に1回だけ読み、以後はメモリの写しを
+ * 正とする（`jsonFileStore.ts`）。取得は同期のまま（監査ログの操作者の取得が同期の関数の
+ * 奥にあるため）
+ */
 export class AuthStoreManager {
-  /**
-   * 認証データを読み込み
-   */
-  private static readAuthData(): AuthData {
-    try {
-      const filePath = getAuthFilePath()
-      if (fs.existsSync(filePath)) {
-        const data = fs.readFileSync(filePath, "utf8")
-        return JSON.parse(data)
-      }
-    } catch (error) {
-      console.error("Failed to read auth data:", error)
-    }
-    return { authToken: null }
+  /** 起動時に1回呼ぶ（IPC を受け付ける前） */
+  static load(): Promise<void> {
+    return getAuthStore().load()
   }
 
-  /**
-   * 認証データを保存
-   */
-  private static writeAuthData(data: AuthData): void {
-    try {
-      const filePath = getAuthFilePath()
-      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8")
-    } catch (error) {
-      console.error("Failed to write auth data:", error)
-      throw error
-    }
+  /** 認証トークンを保存 */
+  static async saveAuthToken(token: string): Promise<void> {
+    await getAuthStore().update((data) => ({ ...data, authToken: token }))
   }
 
-  /**
-   * 認証トークンを保存
-   */
-  static saveAuthToken(token: string): void {
-    const data = this.readAuthData()
-    data.authToken = token
-    this.writeAuthData(data)
-  }
-
-  /**
-   * 認証トークンを取得
-   */
+  /** 認証トークンを取得 */
   static getAuthToken(): string | null {
-    const data = this.readAuthData()
-    return data.authToken
+    return getAuthStore().read().authToken
   }
 
-  /**
-   * 認証トークンを削除
-   */
-  static clearAuthToken(): void {
-    const data = this.readAuthData()
-    data.authToken = null
-    this.writeAuthData(data)
-  }
-
-  /**
-   * 全認証データをクリア
-   */
-  static clearAll(): void {
-    try {
-      const filePath = getAuthFilePath()
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath)
-      }
-    } catch (error) {
-      console.error("Failed to clear auth data:", error)
-    }
-  }
-
-  /**
-   * ストアの状態を確認（デバッグ用）
-   */
-  static getStoreStatus(): { hasToken: boolean; storePath: string } {
-    const data = this.readAuthData()
-    return {
-      hasToken: !!data.authToken,
-      storePath: getAuthFilePath(),
-    }
+  /** 認証トークンを削除 */
+  static async clearAuthToken(): Promise<void> {
+    await getAuthStore().update((data) => ({ ...data, authToken: null }))
   }
 }

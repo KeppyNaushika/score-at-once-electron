@@ -51,14 +51,14 @@ const tableNames = (): string[] =>
 
 /** 空DBに init → ベースライン → 全マイグレーションを通す */
 const buildFreshChain = async (): Promise<void> => {
-  bootstrapSchema(DB_PATH)
+  await bootstrapSchema(DB_PATH)
   const prisma = createPrismaClientForPath(DB_PATH)
   try {
     await createBaseline(prisma)
   } finally {
     await prisma.$disconnect()
   }
-  deployPendingMigrations()
+  await deployPendingMigrations()
 }
 
 const localMigrationNames = (): string[] =>
@@ -80,7 +80,7 @@ afterEach(() => {
 describe("新規インストールの初期化連鎖", () => {
   it("空DBにinit＋全マイグレーションを適用でき、以後 bootstrapSchema は existing を返す", async () => {
     // 1. init スキーマ適用
-    expect(bootstrapSchema(DB_PATH)).toBe("created")
+    expect(await bootstrapSchema(DB_PATH)).toBe("created")
 
     // 2. ベースライン（init を適用済みとして記録）
     const prisma = createPrismaClientForPath(DB_PATH)
@@ -91,7 +91,7 @@ describe("新規インストールの初期化連鎖", () => {
     }
 
     // 3. init 以降の実マイグレーションを全適用
-    const applied = deployPendingMigrations()
+    const applied = await deployPendingMigrations()
     const expectedPending = localMigrationNames().filter(
       (name) => name !== "20260322232329_init"
     ).length
@@ -107,11 +107,11 @@ describe("新規インストールの初期化連鎖", () => {
 
     // 5. 起動不能回帰の防止: 進化済みDBを bootstrapSchema が existing 扱いで不変にする
     const before = fs.readFileSync(DB_PATH)
-    expect(bootstrapSchema(DB_PATH)).toBe("existing")
+    expect(await bootstrapSchema(DB_PATH)).toBe("existing")
     expect(fs.readFileSync(DB_PATH).equals(before)).toBe(true)
 
     // 6. 冪等: 再デプロイは0件
-    expect(deployPendingMigrations()).toBe(0)
+    expect(await deployPendingMigrations()).toBe(0)
   })
 
   it("適用後のスキーマが db push 基準（schema.prisma）と全テーブルで列一致する", async () => {

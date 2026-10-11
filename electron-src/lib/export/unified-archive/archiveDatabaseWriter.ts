@@ -10,8 +10,9 @@
  */
 
 import Database from "better-sqlite3"
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 
+import { pathExists } from "../../pathExists"
 import type { SqliteDatabase } from "../../prisma/sqliteSchemaUtils"
 import type { ArchiveScope } from "./archiveScopeResolver"
 import { ARCHIVE_TABLES } from "./archiveTableRegistry"
@@ -135,12 +136,12 @@ const assertReferencesClosed = (db: SqliteDatabase): void => {
  * `sourcePath` の DB から、`scope` に入る行だけを持つ DB を `outputPath` に書く。
  * `outputPath` が既にあれば失敗する（上書きしない）。
  */
-export function writeArchiveDatabase(
+export async function writeArchiveDatabase(
   sourcePath: string,
   outputPath: string,
   scope: ArchiveScope
-): void {
-  if (fs.existsSync(outputPath)) {
+): Promise<void> {
+  if (await pathExists(outputPath)) {
     throw new Error(`書き出し先が既にあります: ${outputPath}`)
   }
   const source = new Database(sourcePath, {
@@ -167,7 +168,7 @@ export function writeArchiveDatabase(
     archive.exec("VACUUM")
   } catch (error) {
     archive.close()
-    fs.rmSync(outputPath, { force: true })
+    await fsPromises.rm(outputPath, { force: true })
     throw error
   }
   archive.close()

@@ -2,7 +2,6 @@
  * PDF→PNG変換ユーティリティ
  * PDFページをPNG画像として出力
  */
-import * as fs from "fs"
 import * as fsPromises from "fs/promises"
 import * as path from "path"
 
@@ -20,9 +19,7 @@ export async function exportPagesToPng(
   outputDir: string
 ): Promise<string[]> {
   // 出力ディレクトリを作成
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true })
-  }
+  await fsPromises.mkdir(outputDir, { recursive: true })
 
   const outputPaths: string[] = []
 

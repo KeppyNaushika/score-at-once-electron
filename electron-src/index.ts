@@ -1,4 +1,5 @@
 import { app, dialog, net, protocol } from "electron"
+import * as fs from "fs"
 import * as path from "path"
 import { pathToFileURL } from "url"
 
@@ -7,7 +8,7 @@ import { setupAllIPCHandlers } from "./ipc-handlers"
 import { stopUnifiedArchiveExportWorker } from "./ipc-handlers/unifiedArchiveHandlers"
 import { startAiGradingBatchPolling } from "./lib/aiGrading/aiGradingMainServices"
 import { getAbsolutePathFromSharedFiles } from "./lib/dataManager"
-import { closeAllUnifiedArchiveImportSessions } from "./lib/import/unified-archive/archiveImportSessions"
+import { takeAllUnifiedArchiveImportWorkDirectories } from "./lib/import/unified-archive/archiveImportSessions"
 import { cleanupDecryptedPdfCopies } from "./lib/pdf-tools/decryptedPdfCopy"
 import { getPrismaClient } from "./lib/prisma/client"
 import { DB_NEWER_THAN_APP_MARKER } from "./lib/prisma/schema/migrationGuard"
@@ -118,7 +119,7 @@ app.on("ready", async () => {
 
     // 前回セッションで残ったパスワード保護PDFの復号済み複製を掃除する
     try {
-      cleanupDecryptedPdfCopies()
+      await cleanupDecryptedPdfCopies()
     } catch (error) {
       console.warn("Failed to clean up decrypted PDF copies:", error)
     }
@@ -180,11 +181,14 @@ process.on("unhandledRejection", (reason, promise) => {
 
 // アプリが異常終了する前にログを出力とクリーンアップ
 app.on("before-quit", async (_event) => {
-  // 統合アーカイブの取り込みで開いたまま残った作業ディレクトリを消す
-  try {
-    closeAllUnifiedArchiveImportSessions()
-  } catch (error) {
-    console.warn("Failed to close unified archive import sessions:", error)
+  // 統合アーカイブの取り込みで開いたまま残った作業ディレクトリを消す。終了の直前は
+  // 非同期の処理を待ってもらえないので、ここだけは同期で消す
+  for (const workDirectory of takeAllUnifiedArchiveImportWorkDirectories()) {
+    try {
+      fs.rmSync(workDirectory, { recursive: true, force: true })
+    } catch (error) {
+      console.warn("Failed to remove unified archive work directory:", error)
+    }
   }
 
   // 統合アーカイブの書き出しの作業者を終わらせる

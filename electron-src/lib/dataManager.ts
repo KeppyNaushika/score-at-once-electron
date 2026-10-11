@@ -1,5 +1,4 @@
 import { app } from "electron"
-import * as fs from "fs"
 import * as fsPromises from "fs/promises"
 import * as path from "path"
 
@@ -22,15 +21,10 @@ const getAppRootPath = (): string => {
     // Windows等その他のプラットフォーム
     const rootPath = path.dirname(exePath)
 
-    // Windowsでファイルパスが適切に解決されるかチェック
-    try {
-      const exists = fs.existsSync(rootPath)
-      if (!exists) {
-        console.error(`Windows root path does not exist: ${rootPath}`)
-      }
-    } catch (error) {
-      console.error(`Error checking Windows root path:`, error)
-    }
+    // Windowsでファイルパスが適切に解決されるかチェック（記録するだけで、待たない）
+    fsPromises.access(rootPath).catch((error: unknown) => {
+      console.error(`Windows root path does not exist: ${rootPath}`, error)
+    })
 
     return rootPath
   } else {

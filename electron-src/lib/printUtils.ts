@@ -7,18 +7,18 @@
 
 import type { BrowserWindow } from "electron"
 import { app } from "electron"
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
 
 let mathjaxCache: string | null = null
 
 /** MathJax tex-svg.js の内容を読み込む（キャッシュ付き） */
-function getMathJaxSource(): string {
+async function getMathJaxSource(): Promise<string> {
   if (mathjaxCache) return mathjaxCache
   const mathjaxPath = app.isPackaged
     ? path.join(process.resourcesPath, "public/js/mathjax/tex-svg.js")
     : path.join(__dirname, "../../../public/js/mathjax/tex-svg.js")
-  mathjaxCache = fs.readFileSync(mathjaxPath, "utf-8")
+  mathjaxCache = await fsPromises.readFile(mathjaxPath, "utf-8")
   return mathjaxCache
 }
 
@@ -27,10 +27,10 @@ function getMathJaxSource(): string {
  * MathJaxソースのインライン埋め込みに置換する。
  * file:// のクロスオリジン制限を回避するため、外部参照ではなくインライン化。
  */
-export function resolveMathJaxSrc(html: string): string {
+export async function resolveMathJaxSrc(html: string): Promise<string> {
   if (!html.includes("__MATHJAX_SRC__")) return html
   try {
-    const source = getMathJaxSource()
+    const source = await getMathJaxSource()
     return html.replace(
       '<script src="__MATHJAX_SRC__"></script>',
       `<script>${source}</script>`

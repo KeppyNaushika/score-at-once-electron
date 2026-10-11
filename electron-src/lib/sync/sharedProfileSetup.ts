@@ -128,7 +128,7 @@ async function createSchemaOnlyDatabase(
   databasePath: string,
   migrations: readonly MigrationScript[] | undefined
 ): Promise<void> {
-  if (bootstrapSchema(databasePath) !== "created") {
+  if ((await bootstrapSchema(databasePath)) !== "created") {
     throw new Error(`DB が既にあります: ${databasePath}`)
   }
   const prisma = createPrismaClientForPath(databasePath)
@@ -137,7 +137,7 @@ async function createSchemaOnlyDatabase(
   } finally {
     await prisma.$disconnect()
   }
-  deployPendingMigrations({ migrations, dbPath: databasePath })
+  await deployPendingMigrations({ migrations, dbPath: databasePath })
 }
 
 /**

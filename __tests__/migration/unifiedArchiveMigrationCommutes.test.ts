@@ -104,11 +104,11 @@ describe("migration は一部だけの DB でも全体と同じ結果になる",
   it.skipIf(!process.env.UPDATE_UNIFIED_ARCHIVE_BASELINE)(
     "固定データを作り直す",
     async () => {
-      bootstrapSchema(DB_PATH)
+      await bootstrapSchema(DB_PATH)
       const prisma = createPrismaClientForPath(DB_PATH)
       try {
         await createBaseline(prisma)
-        deployPendingMigrations()
+        await deployPendingMigrations()
         await createUnifiedArchiveFixture(prisma)
       } finally {
         await prisma.$disconnect()

@@ -3,7 +3,7 @@
  */
 
 import { BrowserWindow } from "electron"
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
 
 import type { ComputedCell } from "../../src/types/answerSheetLayout.types"
@@ -43,9 +43,9 @@ function markerCacheKey(examPageId: string, colorThreshold?: number): string {
 }
 
 /** 画像のmtimeを取得（取得できない場合はnull＝キャッシュ不使用） */
-function getMtimeMs(imagePath: string): number | null {
+async function getMtimeMs(imagePath: string): Promise<number | null> {
   try {
-    return fs.statSync(imagePath).mtimeMs
+    return (await fsPromises.stat(imagePath)).mtimeMs
   } catch {
     return null
   }
@@ -236,7 +236,7 @@ export const omrHandlers = {
       const pageNumber = examPage.pageNumber
       const cacheKey = markerCacheKey(examPageId, colorThreshold)
       const imagePath = path.join(dataDir, examPage.imagePath)
-      const mtimeMs = getMtimeMs(imagePath)
+      const mtimeMs = await getMtimeMs(imagePath)
 
       // キャッシュチェック（ファイル差し替えを検知したら再検出）
       const cached = getCachedMarkerResult(cacheKey, mtimeMs)
@@ -284,7 +284,7 @@ export const omrHandlers = {
     }
     const dataDir = getSharedFilesDirectory()
     const imagePath = path.join(dataDir, examPage.imagePath)
-    const mtimeMs = getMtimeMs(imagePath)
+    const mtimeMs = await getMtimeMs(imagePath)
 
     let masterResult = getCachedMarkerResult(cacheKey, mtimeMs)
     if (!masterResult) {

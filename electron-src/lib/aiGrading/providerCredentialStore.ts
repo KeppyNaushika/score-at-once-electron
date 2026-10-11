@@ -17,7 +17,6 @@
  */
 
 import { app, safeStorage } from "electron"
-import * as fs from "fs"
 import * as path from "path"
 
 import {
@@ -25,6 +24,7 @@ import {
   isAiGradingRunMode,
 } from "@/types/aiGrading.types"
 
+import { createJsonFileStore } from "../jsonFileStore"
 import type {
   GradingEffort,
   GradingProviderId,
@@ -552,46 +552,30 @@ export function createProviderCredentialStore(
   const { configFilePath, encryption } = dependencies
   const now = dependencies.now ?? (() => new Date())
 
-  function loadFile(): AiProvidersFile {
-    try {
-      if (fs.existsSync(configFilePath)) {
-        const parsed: unknown = JSON.parse(
-          fs.readFileSync(configFilePath, "utf-8")
-        )
-        return toAiProvidersFile(parsed)
-      }
-    } catch (error) {
-      console.error("Failed to load AI provider config:", error)
-    }
-    return createDefaultFile()
-  }
+  /**
+   * ファイルは起動時に1回だけ読み（`load`）、以後はメモリの写しを正とする。書き込みは
+   * 1件ずつ「読んで、直して、書く」（`jsonFileStore.ts`）。API キーを含むので、他の
+   * 利用者に読ませない権限で書く
+   */
+  const fileStore = createJsonFileStore<AiProvidersFile>({
+    filePath: configFilePath,
+    parse: toAiProvidersFile,
+    createDefault: createDefaultFile,
+    fileMode: 0o600,
+  })
+  const loadFile = fileStore.read
 
-  /** 書きかけのファイルが残らないよう、一時ファイルに書いてから置き換える */
-  function saveFile(file: AiProvidersFile): void {
-    const directory = path.dirname(configFilePath)
-    if (!fs.existsSync(directory)) {
-      fs.mkdirSync(directory, { recursive: true })
-    }
-    const temporaryPath = `${configFilePath}.tmp`
-    fs.writeFileSync(temporaryPath, JSON.stringify(file, null, 2), {
-      encoding: "utf-8",
-      mode: 0o600,
-    })
-    fs.renameSync(temporaryPath, configFilePath)
-  }
-
-  function updateProviderEntry(
+  async function updateProviderEntry(
     provider: GradingProviderId,
     update: (entry: StoredProviderEntry) => StoredProviderEntry
-  ): void {
-    const file = loadFile()
-    saveFile({
+  ): Promise<void> {
+    await fileStore.update((file) => ({
       ...file,
       providers: {
         ...file.providers,
         [provider]: update(file.providers[provider]),
       },
-    })
+    }))
   }
 
   /** 事業者の状態（キーがあるか・同意）。キーそのものは返さない */
@@ -615,7 +599,10 @@ export function createProviderCredentialStore(
    *
    * @throws {ProviderCredentialError}
    */
-  function setApiKey(provider: GradingProviderId, apiKey: string): void {
+  async function setApiKey(
+    provider: GradingProviderId,
+    apiKey: string
+  ): Promise<void> {
     const trimmedApiKey = apiKey.trim()
     if (trimmedApiKey === "") {
       throw new ProviderCredentialError("invalid_api_key", "API キーが空です")
@@ -626,31 +613,37 @@ export function createProviderCredentialStore(
         "この環境では API キーを暗号化して保存できないため、保存しません"
       )
     }
-    if (loadFile().providers[provider].consent === null) {
-      throw new ProviderCredentialError(
-        "consent_required",
-        "同意していない事業者のキーは保存できません"
-      )
-    }
     const encryptedApiKey = encryption
       .encryptString(trimmedApiKey)
       .toString("base64")
-    updateProviderEntry(provider, (entry) => ({ ...entry, encryptedApiKey }))
+    // 同意の確認は書き込みの列の中で行う（確かめてから書くまでの間に取り消されない）
+    await updateProviderEntry(provider, (entry) => {
+      if (entry.consent === null) {
+        throw new ProviderCredentialError(
+          "consent_required",
+          "同意していない事業者のキーは保存できません"
+        )
+      }
+      return { ...entry, encryptedApiKey }
+    })
   }
 
   /** 保存した API キーを消す */
-  function clearApiKey(provider: GradingProviderId): void {
-    updateProviderEntry(provider, (entry) => ({
+  async function clearApiKey(provider: GradingProviderId): Promise<void> {
+    await updateProviderEntry(provider, (entry) => ({
       ...entry,
       encryptedApiKey: null,
     }))
   }
 
-  /** 同意を記録する（日時はここで付ける） */
-  function recordConsent(
+  /**
+   * 同意を記録する（日時はここで付ける）。別の利用者が同意し直すときは、前の利用者の
+   * キーを消す
+   */
+  async function recordConsent(
     provider: GradingProviderId,
     consent: Omit<ProviderConsent, "consentedAt">
-  ): ProviderConsent {
+  ): Promise<ProviderConsent> {
     if (
       !isNonEmptyString(consent.userId) ||
       !isNonEmptyString(consent.consentVersion)
@@ -665,16 +658,24 @@ export function createProviderCredentialStore(
       consentVersion: consent.consentVersion,
       consentedAt: now().toISOString(),
     }
-    updateProviderEntry(provider, (entry) => ({
-      ...entry,
-      consent: recordedConsent,
-    }))
+    await updateProviderEntry(provider, (entry) => {
+      // 別の利用者が同意し直すときは、前の利用者のキーを引き継がない
+      // （キーは利用者が自分で事業者と契約して用意するもの。費用はその契約に掛かる）
+      const isAnotherUser =
+        entry.consent !== null &&
+        entry.consent.userId !== recordedConsent.userId
+      return {
+        ...entry,
+        encryptedApiKey: isAnotherUser ? null : entry.encryptedApiKey,
+        consent: recordedConsent,
+      }
+    })
     return recordedConsent
   }
 
   /** 同意を取り消す。保存した API キーも一緒に消す（設計 §9-1 の 8） */
-  function revokeConsent(provider: GradingProviderId): void {
-    updateProviderEntry(provider, () => createEmptyEntry())
+  async function revokeConsent(provider: GradingProviderId): Promise<void> {
+    await updateProviderEntry(provider, () => createEmptyEntry())
   }
 
   /**
@@ -718,12 +719,22 @@ export function createProviderCredentialStore(
    *
    * @throws {ProviderCredentialError} 値が正しくないとき（何も変えない）
    */
-  function updateSettings(
+  async function updateSettings(
+    update: Partial<AiGradingSettings>
+  ): Promise<AiGradingSettings> {
+    assertValidSettingsUpdate(update)
+    const file = await fileStore.update((currentFile) => ({
+      ...currentFile,
+      settings: mergeSettings(currentFile.settings, update),
+    }))
+    return file.settings
+  }
+
+  /** 既定値に、渡した項目だけを重ねる */
+  function mergeSettings(
+    current: AiGradingSettings,
     update: Partial<AiGradingSettings>
   ): AiGradingSettings {
-    assertValidSettingsUpdate(update)
-    const file = loadFile()
-    const current = file.settings
     // 項目を名指しで組む（undefined を渡された項目で上書きしない・知らない項目を保存しない）
     const settings: AiGradingSettings = {
       defaultProvider: update.defaultProvider ?? current.defaultProvider,
@@ -752,7 +763,6 @@ export function createProviderCredentialStore(
         update.defaultAnnotationInstruction ??
         current.defaultAnnotationInstruction,
     }
-    saveFile({ ...file, settings })
     return settings
   }
 
@@ -765,10 +775,10 @@ export function createProviderCredentialStore(
    * 事業者から取得したモデルの一覧を保存する（前の一覧は置き換える）。日時はここで付ける。
    * 形の崩れた項目は保存しない（読むときに一覧ごと捨てられるため）
    */
-  function saveModelCatalog(
+  async function saveModelCatalog(
     provider: GradingProviderId,
     models: readonly ProviderModelInfo[]
-  ): ProviderModelCatalog {
+  ): Promise<ProviderModelCatalog> {
     const catalog: ProviderModelCatalog = {
       fetchedAt: now().toISOString(),
       // 項目を名指しで組む（事業者の SDK が返した余計な項目を書き込まない）
@@ -777,11 +787,10 @@ export function createProviderCredentialStore(
         return modelInfo ? [modelInfo] : []
       }),
     }
-    const file = loadFile()
-    saveFile({
+    await fileStore.update((file) => ({
       ...file,
       modelCatalogs: { ...file.modelCatalogs, [provider]: catalog },
-    })
+    }))
     return catalog
   }
 
@@ -790,9 +799,15 @@ export function createProviderCredentialStore(
     return loadFile().pricing
   }
 
-  function savePricing(pricing: AiPricing): AiPricing {
-    saveFile({ ...loadFile(), pricing })
-    return pricing
+  /** 今の単価から次の単価を作って書く */
+  async function updatePricing(
+    change: (pricing: AiPricing) => AiPricing
+  ): Promise<AiPricing> {
+    const file = await fileStore.update((currentFile) => ({
+      ...currentFile,
+      pricing: change(currentFile.pricing),
+    }))
+    return file.pricing
   }
 
   /**
@@ -801,7 +816,9 @@ export function createProviderCredentialStore(
    *
    * @throws {ProviderCredentialError} 1行でも値が正しくないとき（何も変えない）
    */
-  function setModelPrices(modelPrices: readonly AiModelPrice[]): AiPricing {
+  async function setModelPrices(
+    modelPrices: readonly AiModelPrice[]
+  ): Promise<AiPricing> {
     const validPrices = modelPrices.map(toModelPrice)
     if (validPrices.some((validPrice) => validPrice === null)) {
       throw new ProviderCredentialError(
@@ -809,38 +826,38 @@ export function createProviderCredentialStore(
         "単価の値が正しくありません（モデルの id と、0 以上の数が5つ要ります）"
       )
     }
-    const pricing = getPricing()
-    const priceByKey = new Map(
-      pricing.modelPrices.map((storedPrice) => [
-        modelPriceKey(storedPrice.provider, storedPrice.model),
-        storedPrice,
-      ])
-    )
-    validPrices.forEach((validPrice) => {
-      if (validPrice) {
-        priceByKey.set(
-          modelPriceKey(validPrice.provider, validPrice.model),
-          validPrice
-        )
-      }
+    return updatePricing((pricing) => {
+      const priceByKey = new Map(
+        pricing.modelPrices.map((storedPrice) => [
+          modelPriceKey(storedPrice.provider, storedPrice.model),
+          storedPrice,
+        ])
+      )
+      validPrices.forEach((validPrice) => {
+        if (validPrice) {
+          priceByKey.set(
+            modelPriceKey(validPrice.provider, validPrice.model),
+            validPrice
+          )
+        }
+      })
+      return { ...pricing, modelPrices: [...priceByKey.values()] }
     })
-    return savePricing({ ...pricing, modelPrices: [...priceByKey.values()] })
   }
 
   /** モデル1つの単価を消す（無ければ何もしない） */
-  function removeModelPrice(
+  async function removeModelPrice(
     provider: GradingProviderId,
     model: string
-  ): AiPricing {
-    const pricing = getPricing()
+  ): Promise<AiPricing> {
     const key = modelPriceKey(provider, model)
-    return savePricing({
+    return updatePricing((pricing) => ({
       ...pricing,
       modelPrices: pricing.modelPrices.filter(
         (storedPrice) =>
           modelPriceKey(storedPrice.provider, storedPrice.model) !== key
       ),
-    })
+    }))
   }
 
   /**
@@ -848,27 +865,28 @@ export function createProviderCredentialStore(
    *
    * @throws {ProviderCredentialError} 0〜100 の数でないとき（何も変えない）
    */
-  function setBatchPricePercent(
+  async function setBatchPricePercent(
     provider: GradingProviderId,
     percent: number | null
-  ): AiPricing {
+  ): Promise<AiPricing> {
     if (!isGradingProviderId(provider) || !isValidBatchPricePercent(percent)) {
       throw new ProviderCredentialError(
         "invalid_settings",
         "バッチの割合は 0〜100 の数にしてください"
       )
     }
-    const pricing = getPricing()
-    return savePricing({
+    return updatePricing((pricing) => ({
       ...pricing,
       batchPricePercents: {
         ...pricing.batchPricePercents,
         [provider]: percent,
       },
-    })
+    }))
   }
 
   return {
+    /** 起動時に1回呼ぶ（IPC を受け付ける前） */
+    load: fileStore.load,
     getProviderStatus,
     getProviderStatuses,
     setApiKey,

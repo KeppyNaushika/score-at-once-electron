@@ -2,12 +2,13 @@
  * PDF Tools IPC ハンドラー
  */
 import { BrowserWindow, dialog } from "electron"
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as path from "path"
 import { PDFDocument } from "pdf-lib"
 
 import type { PdfPageInput, RotationDegree } from "@/types/pdfTools.types"
 
+import { pathExists } from "../lib/pathExists"
 import { writeDecryptedPdfCopy } from "../lib/pdf-tools/decryptedPdfCopy"
 import { mergePdfs } from "../lib/pdf-tools/pdfMerger"
 import { splitPdf } from "../lib/pdf-tools/pdfSplitter"
@@ -72,10 +73,10 @@ export const pdfToolsHandlers = {
   "pdf-tools:read-file": async (
     filePath: string
   ): Promise<Uint8Array<ArrayBuffer>> => {
-    if (!fs.existsSync(filePath)) {
+    if (!(await pathExists(filePath))) {
       throw new Error(`ファイルが見つかりません: ${filePath}`)
     }
-    const fileBuffer = fs.readFileSync(filePath)
+    const fileBuffer = await fsPromises.readFile(filePath)
     return new Uint8Array(
       fileBuffer.buffer.slice(
         fileBuffer.byteOffset,
@@ -94,11 +95,11 @@ export const pdfToolsHandlers = {
     pageHeight: number
     isEncrypted: boolean
   }> => {
-    if (!fs.existsSync(filePath)) {
+    if (!(await pathExists(filePath))) {
       throw new Error(`ファイルが見つかりません: ${filePath}`)
     }
 
-    const fileBuffer = fs.readFileSync(filePath)
+    const fileBuffer = await fsPromises.readFile(filePath)
     // owner-password のみの暗号化PDFでもページ数を取得できるよう ignoreEncryption を付ける
     const pdfDoc = await PDFDocument.load(fileBuffer, {
       ignoreEncryption: true,

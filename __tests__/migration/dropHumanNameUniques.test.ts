@@ -87,14 +87,14 @@ beforeAll(async () => {
   fs.rmSync(TEST_ROOT, { recursive: true, force: true })
   fs.mkdirSync(TEST_ROOT, { recursive: true })
 
-  bootstrapSchema(DB_PATH)
+  await bootstrapSchema(DB_PATH)
   const baselinePrisma = createPrismaClientForPath(DB_PATH)
   try {
     await createBaseline(baselinePrisma)
   } finally {
     await baselinePrisma.$disconnect()
   }
-  deployPendingMigrations()
+  await deployPendingMigrations()
 
   chainPrisma.current = createPrismaClientForPath(DB_PATH)
 })

@@ -10,7 +10,7 @@
 
 import Database from "better-sqlite3"
 import * as crypto from "crypto"
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 import * as os from "os"
 import * as path from "path"
 
@@ -65,9 +65,9 @@ const finishOpenedArchiveMigration = async (
 
 const sessions = new Map<string, UnifiedArchiveImportSession>()
 
-const removeDirectory = (directory: string): void => {
+const removeDirectory = async (directory: string): Promise<void> => {
   try {
-    fs.rmSync(directory, { recursive: true, force: true })
+    await fsPromises.rm(directory, { recursive: true, force: true })
   } catch (error) {
     console.warn("統合アーカイブの作業ディレクトリを消せませんでした:", error)
   }
@@ -80,9 +80,11 @@ const removeDirectory = (directory: string): void => {
 export async function openUnifiedArchiveImportSession(
   options: OpenUnifiedArchiveImportSessionOptions
 ): Promise<UnifiedArchiveImportSessionOpenResult> {
-  const workDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "sao-import-"))
+  const workDirectory = await fsPromises.mkdtemp(
+    path.join(os.tmpdir(), "sao-import-")
+  )
   try {
-    const opened = openUnifiedArchive({
+    const opened = await openUnifiedArchive({
       archivePath: options.archivePath,
       // 展開先は空であること（mkdtemp の直下に作る）
       workDirectory: path.join(workDirectory, "archive"),
@@ -98,7 +100,7 @@ export async function openUnifiedArchiveImportSession(
     sessions.set(sessionId, session)
     return { kind: "opened", sessionId, session }
   } catch (error) {
-    removeDirectory(workDirectory)
+    await removeDirectory(workDirectory)
     if (error instanceof UnifiedArchiveOpenError) {
       return { kind: "rejected", reason: error.kind, details: error.details }
     }
@@ -120,16 +122,25 @@ export function getUnifiedArchiveImportSession(
 }
 
 /** 作業を閉じ、作業ディレクトリを消す。既に閉じていれば何もしない */
-export function closeUnifiedArchiveImportSession(sessionId: string): void {
+export async function closeUnifiedArchiveImportSession(
+  sessionId: string
+): Promise<void> {
   const session = sessions.get(sessionId)
   if (!session) return
   sessions.delete(sessionId)
-  removeDirectory(session.workDirectory)
+  await removeDirectory(session.workDirectory)
 }
 
-/** 残っている作業を全て閉じる（アプリを終えるとき） */
-export function closeAllUnifiedArchiveImportSessions(): void {
-  for (const sessionId of [...sessions.keys()]) {
-    closeUnifiedArchiveImportSession(sessionId)
-  }
+/**
+ * 残っている作業を全て閉じ、消すべき作業ディレクトリを返す（アプリを終えるとき）。
+ *
+ * 消すのは呼び出し側（デスクトップ版の `index.ts`）。終了の直前は非同期の処理を
+ * 待ってもらえないので、そこで同期で消す
+ */
+export function takeAllUnifiedArchiveImportWorkDirectories(): string[] {
+  const workDirectories = [...sessions.values()].map(
+    (session) => session.workDirectory
+  )
+  sessions.clear()
+  return workDirectories
 }

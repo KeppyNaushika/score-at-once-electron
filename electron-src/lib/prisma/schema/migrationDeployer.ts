@@ -29,7 +29,7 @@ import {
  * 流す（`applyMigrationSql`）。`ON` を要求するマイグレーション（子の外部キー参照を
  * 追随させる `ALTER TABLE … RENAME TO` 等）は自分で `ON` を敷くので、これで壊れない。
  */
-export const deployPendingMigrations = (options?: {
+export const deployPendingMigrations = async (options?: {
   /** 当てるマイグレーション。省略するとアプリに束ねた一覧（テストは合成したものを渡す） */
   migrations?: readonly MigrationScript[]
   /**
@@ -37,7 +37,7 @@ export const deployPendingMigrations = (options?: {
    * 共有プロファイルの手元の控えを、動いている DB とは別に作るときに渡す
    */
   dbPath?: string
-}): number => {
+}): Promise<number> => {
   const migrations = options?.migrations ?? BUNDLED_MIGRATIONS
 
   // マイグレーションもアプリの表を書くので、同期のトリガーが取りこぼさない接続で開く
@@ -63,7 +63,7 @@ export const deployPendingMigrations = (options?: {
 
     // 適用前にバックアップを作成（PRAGMAを含むSQLはトランザクション化できないため、
     // 失敗時はファイルレベルで復元する）
-    const backupPath = createBackup(dbPath)
+    const backupPath = await createBackup(dbPath)
 
     let appliedCount = 0
 
@@ -82,7 +82,7 @@ export const deployPendingMigrations = (options?: {
         db.close()
         if (backupPath) {
           console.info("Restoring database from pre-migration backup...")
-          restoreBackup(backupPath, dbPath)
+          await restoreBackup(backupPath, dbPath)
         }
         throw new Error(
           `Migration ${migrationName} failed: ${error instanceof Error ? error.message : error}`,

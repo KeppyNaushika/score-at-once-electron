@@ -84,14 +84,14 @@ async function createSchemaLikeFreshInstall(): Promise<void> {
   const { deployPendingMigrations } =
     await import("../../electron-src/lib/prisma/schema/migrationDeployer")
 
-  bootstrapSchema(DB_PATH)
+  await bootstrapSchema(DB_PATH)
   const baselineClient = createPrismaClientForPath(DB_PATH)
   try {
     await createBaseline(baselineClient)
   } finally {
     await baselineClient.$disconnect()
   }
-  const appliedCount = deployPendingMigrations({
+  const appliedCount = await deployPendingMigrations({
     dbPath: DB_PATH,
   })
   console.log(`  -> init + マイグレーション ${appliedCount} 本を適用`)

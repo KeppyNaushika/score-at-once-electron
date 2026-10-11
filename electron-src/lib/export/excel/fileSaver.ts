@@ -1,6 +1,6 @@
 import { dialog } from "electron"
 import type * as ExcelJS from "exceljs"
-import * as fs from "fs"
+import * as fsPromises from "fs/promises"
 
 import type { FileExportResult } from "../../shared/types"
 
@@ -49,6 +49,6 @@ export async function saveWorkbook(
   }
 
   const workbookBuffer = await workbook.xlsx.writeBuffer()
-  await fs.promises.writeFile(finalOutputPath, new Uint8Array(workbookBuffer))
+  await fsPromises.writeFile(finalOutputPath, new Uint8Array(workbookBuffer))
   return { canceled: false, outputPath: finalOutputPath }
 }
