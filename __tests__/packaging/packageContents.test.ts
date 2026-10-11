@@ -49,7 +49,7 @@ describe("配布物に入ってはいけないもの", () => {
     ["/data/exams/abc/student-answers/1-0.png", "答案画像"],
     ["/__tests__", "検査一式"],
     ["/__tests__/screenshots/data/database.db", "撮影用のデータ"],
-    ["/.next", "実行時に読むのは Resources 側の写しの方"],
+    ["/.next", "ビルドの途中の置き場（画面は Resources/renderer の書き出し）"],
     ["/.next/dev/x", "開発サーバの取り置き（実測 8GB）"],
     ["/.next-e2e", "e2e 用のビルド"],
     ["/src", "変換前の renderer"],

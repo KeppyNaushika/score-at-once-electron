@@ -61,7 +61,7 @@ export default defineConfig({
     timeout: 180 * 1000,
     env: {
       NEXT_DIST_DIR: ".next-screenshot",
-      // 図に開発中の印（左下の「N」）を写さない（next.config.js）
+      // 図に開発中の印（左下の「N」）を写さない（next.config.ts）
       SCORE_AT_ONCE_HIDE_DEV_INDICATOR: "1",
     },
   },

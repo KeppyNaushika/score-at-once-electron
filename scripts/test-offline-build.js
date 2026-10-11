@@ -164,13 +164,13 @@ function runDryBuild() {
       `⚙️  Forge Config: extraResource items = ${forgeConfig.packagerConfig.extraResource.length}`
     )
 
-    // Next.js出力を確認
-    const nextOutputPath = path.join(__dirname, "..", ".next")
-    if (fs.existsSync(nextOutputPath)) {
-      console.log("✅ Next.js build output found")
+    // 画面の静的書き出し（next.config.ts の RENDERER_EXPORT_DIR）を確認
+    const rendererExportPath = path.join(__dirname, "..", "renderer")
+    if (fs.existsSync(rendererExportPath)) {
+      console.log("✅ Renderer export found")
     } else {
       console.warn(
-        "⚠️  Next.js build output not found - running npm run build first"
+        "⚠️  Renderer export not found - running npm run build first"
       )
       execSync("npm run build", {
         cwd: path.join(__dirname, ".."),

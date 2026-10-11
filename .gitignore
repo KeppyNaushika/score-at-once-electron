@@ -11,6 +11,8 @@ coverage/
 .next-e2e/
 .next-screenshot/
 out/
+# 画面の静的書き出し（next.config.ts の RENDERER_EXPORT_DIR）
+renderer/
 
 # production
 build/

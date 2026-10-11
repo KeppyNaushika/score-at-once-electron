@@ -15,6 +15,7 @@ export default [
       "**/.next-e2e/**",
       "**/.next-screenshot/**",
       "**/out/**",
+      "renderer/**",
       "**/public/**",
       "**/scripts/**",
       "**/generated/**",

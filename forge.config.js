@@ -19,9 +19,9 @@
  * **`prisma` はここに無い。** 起動時に当てる migration は main の束に入っている
  * （`electron-src/lib/prisma/schema/bundledMigrations.ts`）ので、フォルダは読まない。
  *
- * **`.next` はここに無い。** 実行時に読むのは `extraResource` で置かれる
- * `Resources/.next` の方で（`nextServerEmbedded.ts:68` が `dir: process.resourcesPath`）、
- * asar の中の写しは一度も読まれない。
+ * **画面（`renderer`・`.next`）はここに無い。** 画面は静的書き出し `renderer/` を
+ * `extraResource` で `Resources/renderer` に置き、main がそれを配る
+ * （`rendererStaticServer.ts`）。`.next` はビルドの途中の置き場で、配布物には入れない。
  */
 const PACKAGED_TOP_LEVEL = new Set([
   "package.json",
@@ -45,6 +45,7 @@ const FORBIDDEN_IN_PACKAGE = [
   "data", // アプリのデータ置き場（DB・答案画像）。開発中はリポジトリ直下に作られる
   "__tests__",
   ".git",
+  ".next",
   ".next-e2e",
   "out",
 ]
@@ -225,7 +226,9 @@ module.exports = {
       const topLevel = filePath.split("/")[1]
       return !PACKAGED_TOP_LEVEL.has(topLevel)
     },
-    extraResource: [".next", "public"],
+    // `renderer` は画面の静的書き出し（`next.config.ts` の `RENDERER_EXPORT_DIR`）。
+    // `public` は main が直接読むもの（`printUtils.ts` の MathJax）のため
+    extraResource: ["renderer", "public"],
   },
   rebuildConfig: {
     // **版を書かない。** 書くと、入っている electron と食い違ったまま
@@ -281,24 +284,11 @@ module.exports = {
       // main/ が型検査の出力などで上書きされていないか（されていれば投げる）
       assertMainIsBundled(__dirname)
 
-      // Remove .next/node_modules which contains broken symlinks
-      const nextNodeModules = path.join(__dirname, ".next", "node_modules")
-      if (fs.existsSync(nextNodeModules)) {
-        console.log("🧹 Removing .next/node_modules (broken symlinks)...")
-        fs.rmSync(nextNodeModules, { recursive: true, force: true })
-        console.log("✓ Removed .next/node_modules")
-      }
-
-      // `.next` は `extraResource` で丸ごと配られる。開発サーバの取り置きは
-      // 製品に要らないので落とす（実測で `.next/dev` が 8GB あった）。
-      // **`cache` だけを見ていると取り逃す** —— Next の版で置き場が変わる
-      for (const throwaway of ["cache", "dev"]) {
-        const throwawayDir = path.join(__dirname, ".next", throwaway)
-        if (fs.existsSync(throwawayDir)) {
-          console.log(`🧹 Removing .next/${throwaway}...`)
-          fs.rmSync(throwawayDir, { recursive: true, force: true })
-          console.log(`✓ Removed .next/${throwaway}`)
-        }
+      // 画面の静的書き出しが無ければ作らない（窓が真っ白のまま開く配布物になる）
+      if (!fs.existsSync(path.join(__dirname, "renderer", "index.html"))) {
+        throw new Error(
+          "renderer/index.html が無い。先に npm run build を実行すること。"
+        )
       }
     },
     postPackage: async (forgeConfig, options) => {

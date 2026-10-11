@@ -5,7 +5,8 @@
  * 開発用サーバーと別のポートで走らせる（同じ 3000 番を使うと、隣で動いている
  * 開発用サーバーのコードに対してテストしてしまう）。
  *
- * 開発時は外部の `next dev`、パッケージ化時は同梱サーバーが同じポートを使う。
+ * 開発時は外部の `next dev`、パッケージ化時は画面の静的書き出しを配る同梱サーバー
+ * （`rendererStaticServer.ts`）が同じポートを使う。
  */
 export const rendererPort = Number(
   process.env.SCORE_AT_ONCE_RENDERER_PORT ?? 3000

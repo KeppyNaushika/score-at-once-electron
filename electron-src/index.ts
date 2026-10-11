@@ -12,7 +12,7 @@ import { cleanupDecryptedPdfCopies } from "./lib/pdf-tools/decryptedPdfCopy"
 import { getPrismaClient } from "./lib/prisma/client"
 import { DB_NEWER_THAN_APP_MARKER } from "./lib/prisma/schema/migrationGuard"
 import { stopSync } from "./lib/sync/syncService"
-import { startEmbeddedNextServer } from "./nextServerEmbedded"
+import { startRendererStaticServer } from "./rendererStaticServer"
 import { createMainWindow, setupWindowEvents } from "./windowManager"
 
 /** AI 採点のバッチ回収を止める口（起動に成功したときだけ入る） */
@@ -126,11 +126,11 @@ app.on("ready", async () => {
     // アプリケーションの初期化
     await initializeApp()
 
-    // Next.jsサーバーの起動（プロダクションのみ）
+    // 画面を配るサーバーの起動（プロダクションのみ）
     try {
-      await startEmbeddedNextServer()
+      await startRendererStaticServer()
     } catch (error) {
-      console.error("Failed to start Next.js server:", error)
+      console.error("Failed to start renderer server:", error)
       throw error
     }
 

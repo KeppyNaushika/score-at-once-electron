@@ -1,38 +1,17 @@
-"use client"
+import type { ReactNode } from "react"
 
-import { useQuery } from "@tanstack/react-query"
-import React from "react"
+import { routeShellParams } from "@/lib/routeShell"
 
-import { WorkflowTabHeader } from "@/components/common/WorkflowTabHeader"
-import { useRouteParams } from "@/hooks/useRouteParams"
-import { gradeWorkflowTabs } from "@/lib/workflowTabs"
-import { gradeDetailQuery } from "@/queries/grade"
+import GradeWorkflowLayout from "./GradeWorkflowLayout"
 
-/** ヘッダーに出すのは名前だけ（select の同一性を保つため外に置く） */
-const selectGradeName = (grade: { name: string }) => grade.name
+/**
+ * 殻を1枚だけ作り、殻以外の値は描かない（実際の id の URL は書き換えで殻へ来る。
+ * `src/lib/routeShell.ts`）。`generateStaticParams` はサーバー側のファイルにしか置けない
+ * ので、中身（クライアント側）は別のファイルに置く
+ */
+export const generateStaticParams = () => routeShellParams("gradeId")
+export const dynamicParams = false
 
-export default function GradeWorkflowLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const params = useRouteParams()
-  const gradeId = params.gradeId ?? ""
-  // ヘッダーが要るのは名前だけ。成績本体のキャッシュを各段階と共有する
-  const { data: gradeName = "" } = useQuery({
-    ...gradeDetailQuery(gradeId),
-    select: selectGradeName,
-  })
-
-  return (
-    <div className="flex h-full flex-col">
-      <WorkflowTabHeader
-        listHref="/grades"
-        entityName={gradeName || "成績"}
-        entityHref={`/grades/${gradeId}`}
-        tabs={gradeWorkflowTabs}
-      />
-      <main className="min-h-0 flex-1 overflow-auto">{children}</main>
-    </div>
-  )
+export default function Layout({ children }: { children: ReactNode }) {
+  return <GradeWorkflowLayout>{children}</GradeWorkflowLayout>
 }
