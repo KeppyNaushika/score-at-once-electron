@@ -25,13 +25,12 @@
  * 模範解答との差分など、別の系統が必要になる。
  */
 
-import sharp from "sharp"
-
 import type {
   AnswerWhiteness,
   RegionWhiteness,
   WhitenessTargetRegion,
 } from "../../../src/types/answerWhiteness.types"
+import { decodeGreyscale } from "../imageOps"
 
 /** 測定対象の答案画像（imagePathは解決済みの絶対パス） */
 interface WhitenessTargetImage {
@@ -99,10 +98,7 @@ export async function measureAnswerWhiteness(
 
   for (const answerImage of answerImages) {
     try {
-      const { data, info } = await sharp(answerImage.imagePath)
-        .greyscale()
-        .raw()
-        .toBuffer({ resolveWithObject: true })
+      const { data, ...info } = await decodeGreyscale(answerImage.imagePath)
 
       results.push({
         studentAnswerImageId: answerImage.studentAnswerImageId,

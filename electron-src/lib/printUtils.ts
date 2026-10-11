@@ -9,7 +9,8 @@ import { app, BrowserWindow } from "electron"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
-import sharp from "sharp"
+
+import { readImageHeader, resizeToPng } from "./imageOps"
 
 let mathjaxCache: string | null = null
 
@@ -160,14 +161,11 @@ export async function htmlToPngBuffer(
 
     // 出力を必ず目標ピクセルサイズに正規化する
     // （クランプ時の拡大と、Retina環境でcapturePageが2倍解像度を返すケースの両方を吸収）
-    const metadata = await sharp(buffer).metadata()
-    if (metadata.width === widthPx && metadata.height === heightPx) {
+    const header = await readImageHeader(buffer)
+    if (header.width === widthPx && header.height === heightPx) {
       return buffer
     }
-    return sharp(buffer)
-      .resize(widthPx, heightPx, { fit: "fill", kernel: sharp.kernel.lanczos3 })
-      .png()
-      .toBuffer()
+    return resizeToPng(buffer, { width: widthPx, height: heightPx }, "fill")
   } finally {
     win?.destroy()
     if (tempHtmlPath) {

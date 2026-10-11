@@ -275,6 +275,27 @@ export default [
     },
   },
   {
+    // main の画像処理は imageOps.ts の窓口だけを通す。web 版はこの1ファイルの中身を
+    // wasm-vips に差し替えるので、窓口の外で sharp を直接呼ぶと web 版だけが動かなくなる
+    // （型検査では捕まらない）。sharp を import してよいのは窓口の1ファイルだけ。
+    files: ["electron-src/**/*.ts"],
+    ignores: ["electron-src/lib/imageOps.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "sharp",
+              message:
+                "sharp は直接使わず、electron-src/lib/imageOps.ts の関数を通してください（web 版はこの窓口の中身だけを wasm-vips に差し替えるため）。",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // canvas 描画のために生の HTMLImageElement を ref で掴む必要があるファイル。
     // data 配下の画像を DB のパス（appimg:///）で読み、canvas へ描き込む経路に限る。
     // 表示するだけの画像は next/image を使うこと（ここへ足さない）。
