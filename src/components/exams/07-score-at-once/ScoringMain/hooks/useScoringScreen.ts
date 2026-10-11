@@ -169,7 +169,6 @@ export function useScoringScreen({
     currentCropRegionId,
     showKeyboardHelp,
     showSidePanel,
-    modifierKeyLabel,
     /** アクション関数 */
     setGradingMode,
     setSelectedPageImageIds,
@@ -557,7 +556,6 @@ export function useScoringScreen({
     masterAnswerKeyBehavior,
     masterAnswerOpacity,
     masterAnswerVisible,
-    modifierKeyLabel,
     mouseBrush,
     openPartialScoreModal,
     pageSize,

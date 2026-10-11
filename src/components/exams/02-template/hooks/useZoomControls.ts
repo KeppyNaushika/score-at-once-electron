@@ -2,8 +2,8 @@
  * Custom hook for managing zoom functionality
  *
  * Features:
- * - Keyboard zoom controls (Ctrl + +/-, Ctrl + 0)
- * - Mouse wheel zoom with Ctrl key
+ * - Keyboard zoom controls (Ctrl/⌘ + +/-, Ctrl/⌘ + 0)
+ * - Mouse wheel zoom with Ctrl/⌘ key（macOS のトラックパッドのピンチは ctrlKey 付きの wheel で届く）
  * - Zoom level management (0.1 to 5.0 range)
  *
  * @returns Object containing zoom state and handlers, and refs for the
@@ -34,21 +34,21 @@ export function useZoomControls() {
         switch (e.key) {
           case "+":
           case "=":
-            if (e.ctrlKey) {
+            if (e.ctrlKey || e.metaKey) {
               e.preventDefault()
               e.stopPropagation()
               setZoom((prev) => Math.min(5, prev + 0.1))
             }
             break
           case "-":
-            if (e.ctrlKey) {
+            if (e.ctrlKey || e.metaKey) {
               e.preventDefault()
               e.stopPropagation()
               setZoom((prev) => Math.max(0.1, prev - 0.1))
             }
             break
           case "0":
-            if (e.ctrlKey) {
+            if (e.ctrlKey || e.metaKey) {
               e.preventDefault()
               e.stopPropagation()
               setZoom(1)
@@ -67,7 +67,7 @@ export function useZoomControls() {
    */
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey) {
+      if (e.ctrlKey || e.metaKey) {
         e.preventDefault()
         const zoomSpeed = 0.005
         const newZoom = zoom - e.deltaY * zoomSpeed

@@ -28,11 +28,13 @@ interface AiPromptEditorDialogProps {
   onOpenChange: (open: boolean) => void
   examId: string
   cropRegion: QuestionAnswerRegionRow
-  /** 写す元の版（「編集」から開いたとき）。新規追加なら null で、白紙から書く */
+  /** 写す元のプロンプト（「編集」から開いたとき）。新規追加なら null で、白紙から書く */
   basePrompt: AiPromptRow | null
+  /** 写す元のプロンプトの番号（表示のためだけのもの） */
+  basePromptNumber: number | undefined
   /**
    * 新規追加のとき「助言の文案の指示」に最初から入れる文言（「AI採点」の画面の「既定値」タブで決める）。
-   * 元の版を写すときは使わず、元の版の値を引き継ぐ
+   * 元のプロンプトを写すときは使わず、元の値を引き継ぐ
    */
   defaultAnnotationInstruction: string
   /** 保存したプロンプトを選ぶ */
@@ -58,13 +60,14 @@ function AiPromptEditorForm({
   examId,
   cropRegion,
   basePrompt,
+  basePromptNumber,
   defaultAnnotationInstruction,
   onCreated,
 }: AiPromptEditorDialogProps) {
   const [questionText, setQuestionText] = useState(
     basePrompt?.questionText ?? ""
   )
-  // 問題の画像は元の版から並び順のまま引き継ぐ（保存すると新しい版に画像の行も作る）
+  // 問題の画像は元のプロンプトから並び順のまま引き継ぐ（保存すると新しいプロンプトに画像の行も作る）
   const [questionImagePaths, setQuestionImagePaths] = useState<string[]>(
     () =>
       basePrompt?.questionImages.map(
@@ -113,14 +116,15 @@ function AiPromptEditorForm({
       <DialogHeader>
         <DialogTitle>
           {basePrompt
-            ? "元の版を写して、新しい版を作る"
+            ? `プロンプト ${basePromptNumber ?? ""} を編集`
             : "プロンプトを新規追加"}
           （{cropRegion.label}）
         </DialogTitle>
         <DialogDescription>
-          どの欄も省略できます。保存すると新しい版になり、元の版は残ります。
-          配点（{cropRegion.points ?? "未設定"}
-          ）と出力の形の指示はアプリが加えます。
+          {basePrompt
+            ? "保存すると新しいプロンプトになり、元は残ります。"
+            : "どの欄も省略できます。"}
+          配点（{cropRegion.points ?? "未設定"}）はアプリが加えます。
         </DialogDescription>
       </DialogHeader>
 
@@ -189,8 +193,7 @@ function AiPromptEditorForm({
             placeholder="例: 20字以内で、何を直せばよいかを書く。「です・ます」で"
           />
           <p className="text-xs text-muted-foreground">
-            AI
-            が項目の案に添える、生徒向けの助言の文案の書き方（長さ・言い回しなど）。空ならアプリ共通の決まり（一文で、何をすればよいかを書く）だけで書きます
+            生徒向けの助言の書き方（長さ・言い回し）。空なら一文で書きます
           </p>
         </div>
       </div>
@@ -200,7 +203,7 @@ function AiPromptEditorForm({
           やめる
         </Button>
         <Button onClick={handleSave} disabled={createPrompt.isPending}>
-          新しい版として保存
+          {basePrompt ? "新しいプロンプトとして保存" : "保存"}
         </Button>
       </DialogFooter>
     </>

@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { getModifierKeyLabels } from "@/lib/platformUtils"
 
 import type { QuestionImageSource } from "./hooks/useQuestionImageIntake"
 import {
@@ -149,7 +150,8 @@ function CropForm({
       <DialogHeader>
         <DialogTitle>問題の画像を切り出す（{source.label}）</DialogTitle>
         <DialogDescription>
-          ドラッグで送る範囲を選びます（はじめは全体）。矢印キーで範囲を動かし、Alt＋矢印で広げ・狭めます（Shift
+          ドラッグで送る範囲を選びます（はじめは全体）。矢印キーで範囲を動かし、
+          {getModifierKeyLabels().alt}＋矢印で広げ・狭めます（Shift
           で大きく）。Enter で取り込みます。
           {remainingCount > 0 && `このあと ${remainingCount} 枚あります。`}
         </DialogDescription>

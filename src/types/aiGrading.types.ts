@@ -13,7 +13,7 @@ import { defineStringUnion } from "./stringUnion"
 
 /**
  * 実行の目的。grade は1段目（答案ごとの判定）、group は2段目（1段目の結果から項目の案を作る）。
- * check は採点チェック（採点済みの答案を1段目だけで判定し、教員の採点と手元で比べる。
+ * check はAI チェック（採点済みの答案を1段目だけで判定し、教員の採点と手元で比べる。
  * 2段目は続けない。教員の点は送らない）。
  * revise は廃止したプロンプトの改訂で、過去の行（費用の集計に残る）を読むためだけに残す
  */
@@ -27,11 +27,11 @@ export type AiGradingRunPurpose = (typeof AI_GRADING_RUN_PURPOSES)[number]
 export const { is: isAiGradingRunPurpose, to: toAiGradingRunPurpose } =
   defineStringUnion(AI_GRADING_RUN_PURPOSES, "grade")
 
-/** 答案ごとに画像を送って判定させる（1段目の）実行の目的。採点（grade）と採点チェック（check） */
+/** 答案ごとに画像を送って判定させる（1段目の）実行の目的。採点（grade）とAI チェック（check） */
 export const AI_GRADING_STAGE1_PURPOSES = ["grade", "check"] as const
 export type AiGradingStage1Purpose = (typeof AI_GRADING_STAGE1_PURPOSES)[number]
 
-/** 答案ごとの判定（試行）を持つ実行か（採点・採点チェック） */
+/** 答案ごとの判定（試行）を持つ実行か（採点・AI チェック） */
 export function isStage1RunPurpose(
   purpose: string
 ): purpose is AiGradingStage1Purpose {
@@ -39,7 +39,7 @@ export function isStage1RunPurpose(
 }
 
 /**
- * 案の外の問いかけ（採点チェック・どの案にも入らない答案）への答えの種類（`AiAttemptResponse.choice`）。
+ * 案の外の問いかけ（AI チェック・どの案にも入らない答案）への答えの種類（`AiAttemptResponse.choice`）。
  * rescore はその判定に直す、keep はこのままにする、manual は1件ずつ自分で採点する。
  * 外れ値は keep に倒す（教員の採点を勝手に変えない側）
  */

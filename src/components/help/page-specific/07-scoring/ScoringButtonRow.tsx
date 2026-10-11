@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { SCORING_STATUS_LABELS } from "@/lib/scoringStatusColors"
+import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 
 import type { DemoStatus } from "./types"
 
@@ -31,7 +32,7 @@ export function ScoringButtonRow({
         {markOrder.map((status) => {
           const statusColor = colors[status]
           const Icon = statusConfigMap[status].icon
-          const keyLabel = (rawKeys[status] || "?").toUpperCase()
+          const keyLabel = formatKeyForDisplay(rawKeys[status] || "?")
           return (
             <ShortcutTooltip
               key={status}

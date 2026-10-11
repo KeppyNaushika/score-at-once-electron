@@ -6,6 +6,10 @@
  */
 
 import { baseKeyOfBinding } from "@/lib/normalizeKey"
+import {
+  getModifierKeyLabels,
+  type ModifierKeyLabels,
+} from "@/lib/platformUtils"
 
 /**
  * コマンドの表示名。`DEFAULT_KEYBINDINGS` の**全コマンド**を載せる
@@ -123,9 +127,6 @@ export const SHORTCUT_LABELS: Record<string, string> = {
   "tool.ellipse": "楕円ツール",
 
   // AI採点（実験的機能。同意するまで設定画面にも出さないので、分類には載せない）
-  "aiGrading.adopt": "AI の判定を採用",
-  "aiGrading.prevAttempt": "前の AI の判定",
-  "aiGrading.nextAttempt": "次の AI の判定",
   "aiGrading.filterUnscored": "AI の判定: 未採点フィルタ",
   "aiGrading.filterCorrect": "AI の判定: 正答フィルタ",
   "aiGrading.filterPartial": "AI の判定: 部分点フィルタ",
@@ -281,11 +282,14 @@ const KEY_DISPLAY_NAMES: Record<string, string> = {
 
 /**
  * 割り当て文字列（`"Alt+q"` / `"Shift+d"` / `"ArrowUp"`）を画面に出す形へ直す。
- * `Alt` はプラットフォームの呼び名（macOS では Option）に置き換える。
+ * `Ctrl` と `Alt` はプラットフォームの呼び名（macOS では ⌘ と Option）に置き換える。
+ *
+ * @param modifierKeyLabels 呼び名（省けば実行中のプラットフォームのもの。事前描画される画面は
+ *   `useSyncExternalStore` で得たものを渡す）
  */
 export function formatKeyForDisplay(
   binding: string | undefined,
-  modifierKeyLabel: string
+  modifierKeyLabels: ModifierKeyLabels = getModifierKeyLabels()
 ): string {
   if (!binding) return "未設定"
 
@@ -294,7 +298,13 @@ export function formatKeyForDisplay(
     .slice(0, binding.length - body.length)
     .split("+")
     .filter(Boolean)
-    .map((modifier) => (modifier === "Alt" ? modifierKeyLabel : modifier))
+    .map((modifier) =>
+      modifier === "Ctrl"
+        ? modifierKeyLabels.primary
+        : modifier === "Alt"
+          ? modifierKeyLabels.alt
+          : modifier
+    )
 
   const bodyLabel =
     KEY_DISPLAY_NAMES[body] ?? (body.length === 1 ? body.toUpperCase() : body)

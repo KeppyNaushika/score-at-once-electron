@@ -12,20 +12,17 @@ interface UseAiGridShortcutsOptions {
   onSelectAll: () => void
   /** 絞り込みの切り替え（自分の採点は一覧表示と同じキー、AI の採点は Opt+Shift） */
   onToggleFilter: (source: FilterSource, status: ScoringStatus) => void
-  /** 採用したばかりで残している答案を、絞り込みに合わせて外す */
-  onRefresh: () => void
 }
 
 /**
  * AI採点モードの一覧の操作。**一覧表示と同じキー**で同じことが起きる
- * （WASD で移動、全選択、絞り込みの切り替え、R で更新）。
+ * （WASD で移動、全選択、絞り込みの切り替え）。
  * 設問の移動（← → と Shift+A/D）と表示件数（= - 0）は採点画面のものがそのまま効く
  */
 export function useAiGridShortcuts({
   onGridNavigation,
   onSelectAll,
   onToggleFilter,
-  onRefresh,
 }: UseAiGridShortcutsOptions): void {
   const options = (title: string, category = "AI採点") => ({
     condition: AI_GRADING_MODE_CONDITION,
@@ -63,7 +60,6 @@ export function useAiGridShortcuts({
     options("次の答案（↓）")
   )
   useSceneCommand("selection.selectAll", onSelectAll, options("全選択"))
-  useSceneCommand("filter.refresh", onRefresh, options("一覧を更新"))
 
   useSceneCommand(
     "filter.toggleUnscored",
@@ -135,30 +131,4 @@ export function useAiGridShortcuts({
     () => onToggleFilter("ai", "double_mark"),
     options("AI の採点: Wマークの表示を切り替え", "フィルタ")
   )
-}
-
-interface UseAiAttemptShortcutsOptions {
-  onPrevAttempt: () => void
-  onNextAttempt: () => void
-  onAdopt: () => void
-}
-
-/** 選んだ答案の試行の見比べ（`<` `>`）と採用（I） */
-export function useAiAttemptShortcuts({
-  onPrevAttempt,
-  onNextAttempt,
-  onAdopt,
-}: UseAiAttemptShortcutsOptions): void {
-  useSceneCommand("aiGrading.prevAttempt", onPrevAttempt, {
-    condition: AI_GRADING_MODE_CONDITION,
-    metadata: { title: "前の AI の判定", category: "AI採点" },
-  })
-  useSceneCommand("aiGrading.nextAttempt", onNextAttempt, {
-    condition: AI_GRADING_MODE_CONDITION,
-    metadata: { title: "次の AI の判定", category: "AI採点" },
-  })
-  useSceneCommand("aiGrading.adopt", onAdopt, {
-    condition: AI_GRADING_MODE_CONDITION,
-    metadata: { title: "選んだ答案の AI の判定を採用", category: "AI採点" },
-  })
 }

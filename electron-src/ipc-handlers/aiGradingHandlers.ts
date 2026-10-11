@@ -1,12 +1,12 @@
 /**
  * AI 採点（VLM 採点）の IPC（docs/vlm-grading-design.md §10）。
  *
- * プロンプト・画像の測定・実行（1段目・2段目）・採用・問いかけ（項目の案と答え）の口。事業者の同意とキーの口（`aiProvider:*`）は
+ * プロンプト・画像の測定・実行（1段目・2段目）・問いかけ（項目の案と答え）の口。事業者の同意とキーの口（`aiProvider:*`）は
  * 別のファイルにある。**API キーを返すチャンネルはここにも作らない**（キーは
  * `aiGradingMainServices.ts` の中で復号され、事業者のクライアントへ渡るだけ）。
  *
  * 操作者は認証ストアから決める（renderer から利用者 id を受け取らない）。AI の判定は
- * 実行した教員のもので、採用もその教員自身の採点として書く。
+ * 実行した教員のもので、問いかけの確定もその教員自身の採点として書く。
  */
 
 import { getAiGradingServices } from "../lib/aiGrading/aiGradingMainServices"
@@ -25,11 +25,6 @@ import {
   recordAiAttemptResponses,
 } from "../lib/prisma/aiAttemptResponse"
 import {
-  adoptAiGradingAttempts,
-  type AiGradingAdoption,
-} from "../lib/prisma/aiGradingAdoption"
-import {
-  deleteAiGradingAttempts,
   listAiGradingRunsByCropRegion,
   listAiGradingRunsByExam,
   listAiGradingRunsByUser,
@@ -63,7 +58,7 @@ function requireActorUserId(): string {
   return actorUserId
 }
 
-/** AI 採点のプロンプト・測定・実行・採用の IPC チャンネル */
+/** AI 採点のプロンプト・測定・実行・問いかけの IPC チャンネル */
 export const aiGradingHandlers = {
   // ── プロンプト（書き換え・削除の口は作らない） ──────────────────
   /** 設問のプロンプトを全部（どの教員が作ったものも）。作成者付き */
@@ -160,20 +155,6 @@ export const aiGradingHandlers = {
   "aiGrading:listMyRuns": async () =>
     listAiGradingRunsByUser(requireActorUserId()),
 
-  /** 古い試行を消す（採用済み・結果待ち・他の教員の試行は消さない）。消した件数を返す */
-  "aiGrading:deleteAttempts": async (attemptIds: string[]) =>
-    deleteAiGradingAttempts(attemptIds, requireActorUserId()),
-
-  // ── 採用 ───────────────────────────────────────────────────
-  /**
-   * 選んだ試行を自分の採点として書く。点と朱書きは `parts` で別に確定できる（省略は両方）。
-   * 採点済みのマス・反映済みの朱書きは overwrite でなければ飛ばす
-   */
-  "aiGrading:adoptAttempts": async (input: {
-    adoptions: AiGradingAdoption[]
-    overwrite: boolean
-  }) => adoptAiGradingAttempts(input, requireActorUserId()),
-
   // ── 問いかけ（§3-5） ────────────────────────────────────────
   /**
    * 設問の、自分の2段目の実行と項目の案（選択肢・答案（試行付き）・答えの木）。
@@ -190,7 +171,7 @@ export const aiGradingHandlers = {
   ) => recordAiRubricProposalDraft(input, requireActorUserId()),
 
   /**
-   * 案の外の問いかけ（採点チェック・どの案にも入らない答案）に答える（下書き）。答案ごとの行を書くだけ
+   * 案の外の問いかけ（AI チェック・どの案にも入らない答案）に答える（下書き）。答案ごとの行を書くだけ
    */
   "aiGrading:recordAttemptResponses": async (input: {
     responses: AiAttemptResponseInput[]
@@ -211,7 +192,7 @@ export const aiGradingHandlers = {
     input: CommitAiRubricProposalResponseInput
   ) => commitAiRubricProposalResponse(input, requireActorUserId()),
 
-  /** 問いかけで教員が直接決めた点（1件ずつ採点・採点チェックで直す点）を自分の採点として書く */
+  /** 問いかけで教員が直接決めた点（1件ずつ採点・AI チェックで直す点）を自分の採点として書く */
   "aiGrading:writeQuestioningScores": async (input: {
     cropRegionId: string
     scores: AiQuestioningScoreWrite[]

@@ -6,6 +6,7 @@ import { TooltipButton } from "@/components/common/TooltipButton"
 import { WithTooltip } from "@/components/common/WithTooltip"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { getModifierKeyLabels } from "@/lib/platformUtils"
 
 /** 文字の窓の書式ツールバー（太字・斜体・下線・文字サイズ・数式） */
 export function RichTextFormatToolbar({
@@ -33,12 +34,13 @@ export function RichTextFormatToolbar({
   onMathInline: () => void
   onMathBlock: () => void
 }) {
+  const primaryKeyLabel = getModifierKeyLabels().primary
   return (
     <div className="flex items-center gap-2 rounded-md border bg-gray-50 p-2">
       {/* 基本書式 */}
       <div className="flex items-center gap-1">
         <TooltipButton
-          label="太字 (Ctrl+B)"
+          label={`太字 (${primaryKeyLabel}+B)`}
           size="sm"
           variant={isBold ? "default" : "ghost"}
           onClick={onBold}
@@ -46,7 +48,7 @@ export function RichTextFormatToolbar({
           <Bold className="h-4 w-4" />
         </TooltipButton>
         <TooltipButton
-          label="斜体 (Ctrl+I)"
+          label={`斜体 (${primaryKeyLabel}+I)`}
           size="sm"
           variant={isItalic ? "default" : "ghost"}
           onClick={onItalic}
@@ -54,7 +56,7 @@ export function RichTextFormatToolbar({
           <Italic className="h-4 w-4" />
         </TooltipButton>
         <TooltipButton
-          label="下線 (Ctrl+U)"
+          label={`下線 (${primaryKeyLabel}+U)`}
           size="sm"
           variant={isUnderline ? "default" : "ghost"}
           onClick={onUnderline}

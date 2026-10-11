@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { getModifierKeyLabels } from "@/lib/platformUtils"
 import { cn } from "@/lib/utils"
 
 import { EditableCell } from "./editable-table/EditableCell"
@@ -390,8 +391,8 @@ export function EditableTable<T extends RowData>({
       )}
 
       <div className="text-sm text-muted-foreground">
-        💡 ヒント: Excelからデータをコピーして、テーブル上で貼り付け (Ctrl+V)
-        できます
+        💡 ヒント: Excelからデータをコピーして、テーブル上で貼り付け (
+        {getModifierKeyLabels().primary}+V) できます
       </div>
     </div>
   )

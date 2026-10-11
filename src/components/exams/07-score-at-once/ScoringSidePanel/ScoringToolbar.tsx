@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { getModifierKeyLabel } from "@/lib/platformUtils"
+import { getModifierKeyLabels } from "@/lib/platformUtils"
 import { ignoreDeselect } from "@/lib/toggleSelection"
 import { SCORING_OPERATION_MODES } from "@/lib/userPreferences"
 import type {
@@ -87,8 +87,7 @@ export default function ScoringToolbar({
   hiddenUnscoredCount = 0,
   onBatchScoreVisibleUnscored,
 }: ScoringToolbarProps) {
-  const [modifierKeyLabel] = useState(() => getModifierKeyLabel() || "Alt")
-  const ctrlLabel = modifierKeyLabel === "Option" ? "⌘" : "Ctrl"
+  const [{ primary: ctrlLabel }] = useState(getModifierKeyLabels)
 
   return (
     <TooltipProvider delayDuration={300}>

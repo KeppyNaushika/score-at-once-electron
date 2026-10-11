@@ -4,6 +4,7 @@ import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKey
 import { Button } from "@/components/ui/button"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { scoringCommandIdOf } from "@/lib/scoringKeybindings"
+import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import {
@@ -34,7 +35,7 @@ export function KeyboardScoringButtons({
           <ShortcutTooltip
             key={button.status}
             description={button.description}
-            keys={[keyBinding.toUpperCase()]}
+            keys={[formatKeyForDisplay(keyBinding)]}
           >
             <Button
               variant="outline"

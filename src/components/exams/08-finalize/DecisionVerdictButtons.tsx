@@ -9,6 +9,7 @@ import { ShortcutTooltip } from "@/components/exams/07-score-at-once/ScoringSide
 import { Button } from "@/components/ui/button"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { scoringCommandIdOf } from "@/lib/scoringKeybindings"
+import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 interface DecisionVerdictButtonsProps {
@@ -37,7 +38,7 @@ export function DecisionVerdictButtons({
           <ShortcutTooltip
             key={button.status}
             description={`${button.label}で確定`}
-            keys={[keyBinding.toUpperCase()]}
+            keys={[formatKeyForDisplay(keyBinding)]}
           >
             <Button
               variant="outline"

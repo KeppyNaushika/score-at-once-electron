@@ -8,6 +8,7 @@ import { useSceneCommand } from "@/components/exams/07-score-at-once/hooks/useCo
 import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKeyBindings"
 import { findQuestionScore } from "@/components/exams/07-score-at-once/types"
 import { Textarea } from "@/components/ui/textarea"
+import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
 import { setQuestionScoreCommentMutation } from "@/queries/scoring"
@@ -188,8 +189,8 @@ export function ScoreCommentSection({
         }
       />
       <p className="mt-1 text-[10px] leading-relaxed text-gray-500">
-        {keyBindings["scoring.comment"]} で入る・Esc で捨てて戻る・⌘/Ctrl+Enter
-        で残して戻る
+        {formatKeyForDisplay(keyBindings["scoring.comment"])} で入る・Esc
+        で捨てて戻る・⌘/Ctrl+Enter で残して戻る
       </p>
     </SidePanelSection>
   )

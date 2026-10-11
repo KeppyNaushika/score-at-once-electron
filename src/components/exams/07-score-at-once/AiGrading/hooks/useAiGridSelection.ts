@@ -2,7 +2,6 @@ import { useCallback, useMemo, useState } from "react"
 
 import { useScoringNavigation } from "@/components/exams/07-score-at-once/ScoringMain/hooks/useScoringNavigation"
 import { effectiveSelection } from "@/components/exams/07-score-at-once/ScoringMain/utils/effectiveSelection"
-import { findNextAnswerIdAfterScoring } from "@/components/exams/07-score-at-once/ScoringMain/utils/nextAnswerAfterScoring"
 import type { LayoutDirection } from "@/components/exams/07-score-at-once/types"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
@@ -32,7 +31,7 @@ interface UseAiGridSelectionOptions {
  *
  * 選択は利用者が選んだ答案だけを持ち、表示に残っているものに絞って使う。
  * 何も残らなければ先頭の答案を選んでいるものとする（一覧表示と同じ）。
- * 作業場は設問ごとに作り直されるので、ここの状態（選択・残して表示する答案）は設問1つぶん。
+ * 作業場は設問ごとに作り直されるので、ここの状態（選択）は設問1つぶん。
  * 絞り込みは設問をまたいで残すので、ここでは持たずに受け取る
  */
 export function useAiGridSelection({
@@ -43,14 +42,6 @@ export function useAiGridSelection({
   viewSettings: { filterSettings, setFilterSettings },
   pinnedExamStudentIds = null,
 }: UseAiGridSelectionOptions) {
-  /**
-   * 絞り込みによらず一覧に残す答案。R（更新）か絞り込みを変えるまで残す。
-   * 採用・採点したばかりの答案（一覧表示の「採点したばかりの答案」と同じ。押した答案が
-   * 目の前から消えると、何を採用したかを確かめられない）
-   */
-  const [keptVisibleIds, setKeptVisibleIds] = useState<ReadonlySet<string>>(
-    new Set()
-  )
   const [chosenIds, setChosenIds] = useState<ReadonlySet<string>>(new Set())
 
   const gridItems = useMemo(
@@ -70,12 +61,10 @@ export function useAiGridSelection({
         return gridItem ? [gridItem] : []
       })
     }
-    return gridItems.filter(
-      (gridItem) =>
-        keptVisibleIds.has(gridItem.id) ||
-        isShownByFilter(gridItem.reviewedAnswer, filterSettings)
+    return gridItems.filter((gridItem) =>
+      isShownByFilter(gridItem.reviewedAnswer, filterSettings)
     )
-  }, [gridItems, keptVisibleIds, filterSettings, pinnedExamStudentIds])
+  }, [gridItems, filterSettings, pinnedExamStudentIds])
   const visibleIds = useMemo(
     () => visibleItems.map((gridItem) => gridItem.id),
     [visibleItems]
@@ -85,12 +74,6 @@ export function useAiGridSelection({
     () => effectiveSelection(chosenIds, visibleIds),
     [chosenIds, visibleIds]
   )
-  const selectedItems = useMemo(
-    () => visibleItems.filter((gridItem) => selectedIds.has(gridItem.id)),
-    [visibleItems, selectedIds]
-  )
-  const singleSelectedItem =
-    selectedItems.length === 1 ? selectedItems[0] : null
 
   const setSelection = useCallback((ids: Set<string>) => {
     setChosenIds(ids)
@@ -121,32 +104,9 @@ export function useAiGridSelection({
         ...prev,
         [source]: { ...prev[source], [status]: !prev[source][status] },
       }))
-      setKeptVisibleIds(new Set())
     },
     [setFilterSettings]
   )
-  const refresh = useCallback(() => {
-    setKeptVisibleIds(new Set())
-  }, [])
-  const markAdopted = useCallback((ids: readonly string[]) => {
-    setKeptVisibleIds((prev) => new Set([...prev, ...ids]))
-  }, [])
-  /**
-   * 自分で採点した答案を残し、選択を次の答案へ移す（一覧表示の採点と同じ規則。
-   * 末尾まで来ていれば選択はそのまま）。
-   *
-   * 次の答案は、この描画の並び＝**書き込む前の並び**で決める。採点した答案が絞り込みから
-   * 外れて並びが詰まっても、決めた答案を id で選んでいるのでずれない
-   */
-  const markScored = useCallback(
-    (ids: readonly string[]) => {
-      markAdopted(ids)
-      const nextId = findNextAnswerIdAfterScoring(visibleIds, new Set(ids))
-      if (nextId) setChosenIds(new Set([nextId]))
-    },
-    [markAdopted, visibleIds]
-  )
-
   const getGridAnswerData = useCallback(
     () =>
       visibleItems.map((gridItem) => ({
@@ -171,7 +131,6 @@ export function useAiGridSelection({
     onGridNavigation: handleGridNavigation,
     onSelectAll: handleSelectAll,
     onToggleFilter: toggleFilter,
-    onRefresh: refresh,
   })
 
   return {
@@ -179,13 +138,9 @@ export function useAiGridSelection({
     visibleItems,
     visibleIds,
     selectedIds,
-    selectedItems,
-    singleSelectedItem,
     setSelection,
     handleSelectAnswer,
     filterSettings,
     toggleFilter,
-    markAdopted,
-    markScored,
   }
 }

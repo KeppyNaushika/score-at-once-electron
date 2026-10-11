@@ -59,7 +59,7 @@ function checkAttempt(
   })
 }
 
-describe("AI 採点チェックの問い", () => {
+describe("AI チェックの問い", () => {
   it("書き起こしは全角半角と空白の揺れを除いて比べる", () => {
     expect(normalizeTranscription(" 緑 葉体　")).toBe("緑葉体")
     expect(normalizeTranscription("ｘ＝３")).toBe("x=3")

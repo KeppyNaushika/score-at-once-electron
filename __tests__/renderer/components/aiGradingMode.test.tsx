@@ -6,8 +6,7 @@
  * - 同意して API キーを保存した事業者が無ければ「AI採点」は採点モードの選択肢に出ない
  * - 実行ダイアログは送る答案の4つの選び方（未採点・無答以外・全て・選択）ごとに件数を出し、
  *   既定は未採点。切り替えると件数と送る答案が変わる。選んでいなければ「選択」は選べない
- * - 「採用」は選んだ答案すべての表示中の試行の点を書き込みへ渡す（AI の朱書きの文案は渡さない）。
- *   採点済みが混じれば件数を示して1回だけ確かめる
+ * - 採点の履歴は目的ごとに古い順の番号（採点 1・チェック 1）とプロンプトの番号で呼ぶ
  *
  * window.electronAPI は偽物で、ネットワークにも実際のキーにも実データにも触れない。
  */
@@ -19,22 +18,13 @@ import userEvent from "@testing-library/user-event"
 import { type ReactNode, useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AiAdoptOverwriteDialog } from "@/components/exams/07-score-at-once/AiGrading/AiAdoptOverwriteDialog"
-import { AiBulkActionsBar } from "@/components/exams/07-score-at-once/AiGrading/AiBulkActionsBar"
 import { AiGradingRunDialog } from "@/components/exams/07-score-at-once/AiGrading/AiGradingRunDialog"
-import { AiOwnScoringSection } from "@/components/exams/07-score-at-once/AiGrading/AiOwnScoringSection"
 import { AiRunHistorySection } from "@/components/exams/07-score-at-once/AiGrading/AiRunHistorySection"
-import { AiSelectedJudgementSection } from "@/components/exams/07-score-at-once/AiGrading/AiSelectedJudgementSection"
-import { useAiAttemptNavigation } from "@/components/exams/07-score-at-once/AiGrading/hooks/useAiAttemptNavigation"
-import { useAiOwnScoring } from "@/components/exams/07-score-at-once/AiGrading/hooks/useAiOwnScoring"
-import { useAiSelectionAdoption } from "@/components/exams/07-score-at-once/AiGrading/hooks/useAiSelectionAdoption"
 import type {
   AiGradingAnswer,
   AiGradingRunRow,
 } from "@/components/exams/07-score-at-once/AiGrading/types"
-import { toAiGridItem } from "@/components/exams/07-score-at-once/AiGrading/utils/aiGridItems"
 import { reviewAnswer } from "@/components/exams/07-score-at-once/AiGrading/utils/answerReview"
-import { useContextValue } from "@/components/exams/07-score-at-once/hooks/useContextValue"
 import { ShortcutProvider } from "@/components/exams/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import GradingModeToggle from "@/components/exams/07-score-at-once/ScoringMain/GradingModeToggle"
 import { ScoringStatusFilterButtons } from "@/components/exams/07-score-at-once/ScoringSidePanel/ScoringStatusFilterButtons"
@@ -50,7 +40,6 @@ import {
   CURRENT_USER_ID,
   EXAM_PAGE_ID,
   makeAnswer,
-  makeAttemptWithRun,
   makePrompt,
   makeQuestionScore,
   makeRun,
@@ -128,13 +117,6 @@ function installFakeElectronApi(options: { isUnlocked: boolean }) {
       modelAnswerImage: null,
     })),
     startRun: vi.fn(async () => ({ id: "run-new" })),
-    adoptAttempts: vi.fn(
-      async (input: { adoptions: { attemptId: string }[] }) =>
-        input.adoptions.map((adoption) => ({
-          targetId: adoption.attemptId,
-          outcome: "adopted",
-        }))
-    ),
     listRuns: vi.fn(async () => []),
     listRunsByExam: vi.fn(async () => []),
   }
@@ -196,7 +178,6 @@ function reviewed(answer: AiGradingAnswer) {
   return {
     answer,
     review: reviewAnswer(answer, {
-      chosenAttemptIdByExamStudentId: new Map(),
       selectedPromptId: "prompt-1",
       points: 4,
     }),
@@ -249,6 +230,7 @@ describe("実行ダイアログ", () => {
         initialProvider="anthropic"
         unlockedProviders={["anthropic"]}
         prompt={makePrompt()}
+        promptNumber={1}
         reviewedAnswers={reviewedAnswers}
         questionScores={[
           makeQuestionScore({ examStudentId: "s-scored" }),
@@ -306,6 +288,7 @@ describe("実行ダイアログ", () => {
         initialProvider="anthropic"
         unlockedProviders={["anthropic"]}
         prompt={makePrompt()}
+        promptNumber={1}
         reviewedAnswers={[
           reviewed(makeAnswer("s1")),
           reviewed(makeAnswer("s-no-answer")),
@@ -385,14 +368,11 @@ describe("実行ダイアログ", () => {
     )
   })
 
-  it("答案を選んでいなければ「選択した答案」は選べず、理由を出す", () => {
+  it("答案を選んでいなければ「選択した答案」は選べない", () => {
     renderScopeDialog(new Set())
     expect(
       screen.getByRole("radio", { name: /選択した答案（0 件）/ })
     ).toBeDisabled()
-    expect(
-      screen.getByText("中央の一覧に選んでいる答案が無いので選べません。")
-    ).toBeTruthy()
   })
 
   it("選んだ選び方の件数が 0 件なら送信の確認へ進めない", async () => {
@@ -408,6 +388,7 @@ describe("実行ダイアログ", () => {
         initialProvider="anthropic"
         unlockedProviders={["anthropic"]}
         prompt={makePrompt()}
+        promptNumber={1}
         reviewedAnswers={[reviewed(makeAnswer("s-scored"))]}
         questionScores={[makeQuestionScore({ examStudentId: "s-scored" })]}
         currentUserId={CURRENT_USER_ID}
@@ -425,51 +406,6 @@ describe("実行ダイアログ", () => {
   })
 })
 
-/**
- * 「選んだ答案の判定」の節を、作業場と同じく採用の状態を持つ親の下で描く。
- * `<` `>` と I のキーも作業場と同じく節の外（`useAiAttemptNavigation`）で付ける
- */
-function SelectedAnswerHarness({
-  answers,
-  selectedExamStudentIds,
-}: {
-  answers: AiGradingAnswer[]
-  selectedExamStudentIds: string[]
-}) {
-  // 採点画面が AI採点モードのときに立てる文脈（キーの効く条件）
-  useContextValue("gradingMode", "ai")
-  const gridItems = answers.map((answer) =>
-    toAiGridItem(reviewed(answer), cropRegion)
-  )
-  const selectedItems = gridItems.filter((gridItem) =>
-    selectedExamStudentIds.includes(gridItem.id)
-  )
-  const singleSelectedItem =
-    selectedItems.length === 1 ? selectedItems[0] : null
-  const adoption = useAiSelectionAdoption({
-    examId: "exam-1",
-    cropRegion,
-    selectedItems,
-    onAdopted: vi.fn(),
-  })
-  const { showOlderAttempt, showNewerAttempt } = useAiAttemptNavigation({
-    singleSelectedItem,
-    onChooseAttempt: vi.fn(),
-    onAdopt: adoption.requestAdopt,
-  })
-  return (
-    <>
-      <AiSelectedJudgementSection
-        singleSelectedItem={singleSelectedItem}
-        promptNumberById={new Map([["prompt-1", 1]])}
-        onPrevAttempt={showOlderAttempt}
-        onNextAttempt={showNewerAttempt}
-      />
-      <AiAdoptOverwriteDialog {...adoption.overwriteDialog} />
-    </>
-  )
-}
-
 describe("実行ダイアログの既定値", () => {
   beforeEach(() => vi.clearAllMocks())
 
@@ -486,6 +422,7 @@ describe("実行ダイアログの既定値", () => {
         initialProvider="anthropic"
         unlockedProviders={["anthropic"]}
         prompt={makePrompt()}
+        promptNumber={1}
         reviewedAnswers={[reviewed(makeAnswer("s1"))]}
         questionScores={[]}
         currentUserId={CURRENT_USER_ID}
@@ -545,88 +482,6 @@ describe("実行ダイアログの既定値", () => {
   })
 })
 
-describe("採用", () => {
-  beforeEach(() => vi.clearAllMocks())
-
-  it("選んだ答案の判定には、AI が書いた朱書きの文案を出さない（朱書きは項目の助言から作る）", () => {
-    installFakeElectronApi({ isUnlocked: true })
-    renderWithProviders(
-      <SelectedAnswerHarness
-        answers={[
-          makeAnswer("s1", {
-            attempts: [
-              makeAttemptWithRun({
-                examStudentId: "s1",
-                id: "attempt-s1",
-                annotationText: "途中式が足りない",
-              }),
-            ],
-          }),
-        ]}
-        selectedExamStudentIds={["s1"]}
-      />
-    )
-    expect(screen.getByLabelText("選んだ答案の AI の判定")).toBeInTheDocument()
-    expect(screen.queryByText("途中式が足りない")).not.toBeInTheDocument()
-    expect(screen.queryByText("朱書き")).not.toBeInTheDocument()
-  })
-
-  it("採点反映では、選んだ答案すべての点を I で採用し、採点済みがあれば件数を示して1回だけ上書きを確かめる", async () => {
-    const aiGrading = installFakeElectronApi({ isUnlocked: true })
-    const answers = [
-      makeAnswer("s1", {
-        attempts: [
-          makeAttemptWithRun({
-            examStudentId: "s1",
-            id: "attempt-s1",
-            annotationText: "",
-          }),
-        ],
-      }),
-      makeAnswer("s2", {
-        questionScore: makeQuestionScore({
-          examStudentId: "s2",
-          status: "incorrect",
-        }),
-        attempts: [
-          makeAttemptWithRun({
-            examStudentId: "s2",
-            id: "attempt-s2",
-            annotationText: "",
-          }),
-        ],
-      }),
-      makeAnswer("s3"),
-    ]
-    renderWithProviders(
-      <SelectedAnswerHarness
-        answers={answers}
-        selectedExamStudentIds={["s1", "s2", "s3"]}
-      />
-    )
-    // 複数選んでいるときは判定の中身を出さない
-    expect(
-      screen.queryByLabelText("選んだ答案の AI の判定")
-    ).not.toBeInTheDocument()
-
-    await userEvent.keyboard("i")
-    expect(aiGrading.adoptAttempts).not.toHaveBeenCalled()
-    const dialog = await screen.findByRole("alertdialog")
-    expect(dialog).toHaveTextContent("採用する 2 件のうち 1 件は採点済みです")
-
-    await userEvent.click(
-      within(dialog).getByRole("button", { name: "上書きして採用" })
-    )
-    await waitFor(() =>
-      expect(aiGrading.adoptAttempts).toHaveBeenCalledWith({
-        adoptions: [{ attemptId: "attempt-s1" }, { attemptId: "attempt-s2" }],
-        overwrite: true,
-      })
-    )
-    expect(aiGrading.adoptAttempts).toHaveBeenCalledTimes(1)
-  })
-})
-
 describe("絞り込みのボタン（一覧表示と共通）", () => {
   beforeEach(() => vi.clearAllMocks())
 
@@ -663,215 +518,6 @@ describe("絞り込みのボタン（一覧表示と共通）", () => {
   })
 })
 
-/**
- * 採点反映のタブの「自分で採点」を、作業場と同じくキーの登録ごと描く
- */
-function OwnScoringHarness({
-  answers,
-  selectedExamStudentIds,
-  isShortcutEnabled,
-  onScored,
-}: {
-  answers: AiGradingAnswer[]
-  selectedExamStudentIds: string[]
-  isShortcutEnabled: boolean
-  onScored: (examStudentIds: string[]) => void
-}) {
-  useContextValue("gradingMode", "ai")
-  const selectedItems = answers
-    .map((answer) => toAiGridItem(reviewed(answer), cropRegion))
-    .filter((gridItem) => selectedExamStudentIds.includes(gridItem.id))
-  const { scoreSelected, partialScore } = useAiOwnScoring({
-    examId: "exam-1",
-    currentUserId: CURRENT_USER_ID,
-    cropRegion,
-    studentAnswerImages: answers.map((answer) => answer.studentAnswerImage),
-    questionScores: answers.flatMap((answer) =>
-      answer.questionScore ? [answer.questionScore] : []
-    ),
-    selectedItems,
-    isShortcutEnabled,
-    onScored,
-  })
-  return (
-    <AiOwnScoringSection
-      cropRegion={cropRegion}
-      selectedCount={selectedItems.length}
-      onScore={scoreSelected}
-      partialScore={partialScore}
-    />
-  )
-}
-
-describe("採点反映のタブでの自分の採点（一覧表示と同じキー）", () => {
-  beforeEach(() => vi.clearAllMocks())
-
-  const answers = () => [
-    makeAnswer("s1"),
-    makeAnswer("s2", {
-      questionScore: makeQuestionScore({
-        examStudentId: "s2",
-        status: "incorrect",
-      }),
-    }),
-  ]
-
-  it("E で選んだ答案すべてを自分の正答として書き、書いた答案を知らせる", async () => {
-    installFakeElectronApi({ isUnlocked: true })
-    const onScored = vi.fn()
-    renderWithProviders(
-      <OwnScoringHarness
-        answers={answers()}
-        selectedExamStudentIds={["s1", "s2"]}
-        isShortcutEnabled
-        onScored={onScored}
-      />
-    )
-    await userEvent.keyboard("e")
-    await waitFor(() =>
-      expect(fakeScoringApi.setQuestionScore).toHaveBeenCalledWith({
-        examStudentId: "s1",
-        cropRegionId: CROP_REGION_ID,
-        partialScore: null,
-        status: "correct",
-        userId: CURRENT_USER_ID,
-      })
-    )
-    // 採点済みの答案は自分の行を書き換える
-    await waitFor(() =>
-      expect(fakeScoringApi.updateQuestionScore).toHaveBeenCalledWith(
-        "score-s2",
-        { partialScore: null, status: "correct" }
-      )
-    )
-    expect(onScored).toHaveBeenCalledWith(["s1", "s2"])
-  })
-
-  it("U は Wマークとして書く", async () => {
-    installFakeElectronApi({ isUnlocked: true })
-    renderWithProviders(
-      <OwnScoringHarness
-        answers={answers()}
-        selectedExamStudentIds={["s1"]}
-        isShortcutEnabled
-        onScored={vi.fn()}
-      />
-    )
-    await userEvent.keyboard("u")
-    await waitFor(() =>
-      expect(fakeScoringApi.setQuestionScore).toHaveBeenCalledWith(
-        expect.objectContaining({ examStudentId: "s1", status: "double_mark" })
-      )
-    )
-  })
-
-  it("採点反映のタブを開いていなければ、キーでは書かない（ボタンでは書ける）", async () => {
-    installFakeElectronApi({ isUnlocked: true })
-    const onScored = vi.fn()
-    renderWithProviders(
-      <OwnScoringHarness
-        answers={answers()}
-        selectedExamStudentIds={["s1"]}
-        isShortcutEnabled={false}
-        onScored={onScored}
-      />
-    )
-    await userEvent.keyboard("e")
-    expect(fakeScoringApi.setQuestionScore).not.toHaveBeenCalled()
-    expect(onScored).not.toHaveBeenCalled()
-
-    await userEvent.click(screen.getByRole("button", { name: /正答/ }))
-    await waitFor(() =>
-      expect(fakeScoringApi.setQuestionScore).toHaveBeenCalledWith(
-        expect.objectContaining({ examStudentId: "s1", status: "correct" })
-      )
-    )
-  })
-})
-
-/** 採点反映のタブのまとめての操作を、作業場と同じく採用の状態を持つ親の下で描く */
-function BulkActionsHarness({
-  visibleAnswers,
-}: {
-  visibleAnswers: AiGradingAnswer[]
-}) {
-  const visibleItems = visibleAnswers.map((answer) =>
-    toAiGridItem(reviewed(answer), cropRegion)
-  )
-  const adoption = useAiSelectionAdoption({
-    examId: "exam-1",
-    cropRegion,
-    selectedItems: [],
-    onAdopted: vi.fn(),
-  })
-  return (
-    <>
-      <AiBulkActionsBar
-        examId="exam-1"
-        cropRegion={cropRegion}
-        reviewedAnswers={visibleAnswers.map(reviewed)}
-        visibleCount={visibleItems.length}
-        onAdoptVisible={() => adoption.requestAdoptVisible(visibleItems)}
-        isAdopting={adoption.isAdopting}
-      />
-      <AiAdoptOverwriteDialog {...adoption.overwriteDialog} />
-    </>
-  )
-}
-
-describe("表示答案を全て採用", () => {
-  beforeEach(() => vi.clearAllMocks())
-
-  it("表示中の答案の件数を出し、判定の無い答案は飛ばし、採点済みがあれば1回だけ上書きを確かめて点だけを書く", async () => {
-    const aiGrading = installFakeElectronApi({ isUnlocked: true })
-    const visibleAnswers = [
-      makeAnswer("s1", {
-        attempts: [
-          makeAttemptWithRun({
-            examStudentId: "s1",
-            id: "attempt-s1",
-            annotationText: "途中式が足りない",
-          }),
-        ],
-      }),
-      makeAnswer("s2", {
-        questionScore: makeQuestionScore({
-          examStudentId: "s2",
-          status: "incorrect",
-        }),
-        attempts: [
-          makeAttemptWithRun({
-            examStudentId: "s2",
-            id: "attempt-s2",
-            annotationText: "",
-          }),
-        ],
-      }),
-      makeAnswer("s3"),
-    ]
-    renderWithProviders(<BulkActionsHarness visibleAnswers={visibleAnswers} />)
-
-    await userEvent.click(
-      screen.getByRole("button", { name: /表示答案（3件）を全て採用/ })
-    )
-    expect(aiGrading.adoptAttempts).not.toHaveBeenCalled()
-    const dialog = await screen.findByRole("alertdialog")
-    expect(dialog).toHaveTextContent("採用する 2 件のうち 1 件は採点済みです")
-
-    await userEvent.click(
-      within(dialog).getByRole("button", { name: "上書きして採用" })
-    )
-    await waitFor(() =>
-      expect(aiGrading.adoptAttempts).toHaveBeenCalledWith({
-        // AI の朱書きの文案があっても、点だけを書く
-        adoptions: [{ attemptId: "attempt-s1" }, { attemptId: "attempt-s2" }],
-        overwrite: true,
-      })
-    )
-    expect(aiGrading.adoptAttempts).toHaveBeenCalledTimes(1)
-  })
-})
-
 function RunHistoryHarness({ runs }: { runs: AiGradingRunRow[] }) {
   const [chosenRunId, setChosenRunId] = useState<string | null>(null)
   return (
@@ -888,8 +534,8 @@ function RunHistoryHarness({ runs }: { runs: AiGradingRunRow[] }) {
   )
 }
 
-describe("実行の履歴", () => {
-  it("新しい順に並べ、押した実行を選んだ形で出し、「最新」で戻せる", async () => {
+describe("採点の履歴", () => {
+  it("新しい順に並べ、目的ごとの番号とプロンプトの番号で呼び、押した実行を選んだ形で出し、「答案ごとに最新の判定」で戻せる", async () => {
     installFakeElectronApi({ isUnlocked: true })
     renderWithProviders(
       <RunHistoryHarness
@@ -897,6 +543,11 @@ describe("実行の履歴", () => {
           makeRun({
             id: "run-older",
             createdAt: new Date("2026-10-01T00:00:00.000Z"),
+          }),
+          makeRun({
+            id: "run-check",
+            purpose: "check",
+            createdAt: new Date("2026-10-01T12:00:00.000Z"),
           }),
           makeRun({
             id: "run-newer",
@@ -909,14 +560,16 @@ describe("実行の履歴", () => {
     )
     const group = screen.getByRole("group", { name: "一覧に出す実行" })
     const rows = within(group).getAllByRole("button")
-    expect(rows).toHaveLength(3)
-    expect(rows[0]).toHaveTextContent("最新")
+    expect(rows).toHaveLength(4)
+    expect(rows[0]).toHaveTextContent("答案ごとに最新の判定")
     expect(rows[0]).toHaveAttribute("aria-pressed", "true")
     expect(rows[1]).toHaveTextContent("claude-haiku-4-5 / 中 / バッチ")
-    expect(rows[1]).toHaveTextContent("版 1")
+    expect(rows[1]).toHaveTextContent("採点 2・プロンプト 1")
+    expect(rows[2]).toHaveTextContent("チェック 1・プロンプト 1")
+    expect(rows[3]).toHaveTextContent("採点 1・プロンプト 1")
 
-    await userEvent.click(rows[2])
-    expect(rows[2]).toHaveAttribute("aria-pressed", "true")
+    await userEvent.click(rows[3])
+    expect(rows[3]).toHaveAttribute("aria-pressed", "true")
     expect(rows[0]).toHaveAttribute("aria-pressed", "false")
     await userEvent.click(rows[0])
     expect(rows[0]).toHaveAttribute("aria-pressed", "true")

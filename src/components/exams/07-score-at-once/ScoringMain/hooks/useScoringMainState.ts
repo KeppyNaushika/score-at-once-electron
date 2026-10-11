@@ -4,7 +4,6 @@ import type {
   GradingMode,
   StudentAnswerImageWithExamStudents,
 } from "@/components/exams/07-score-at-once/types"
-import { getModifierKeyLabel } from "@/lib/platformUtils"
 
 /** 採点メイン画面のUI状態（モード・選択・パネル表示等）を一括管理するフック */
 export function useScoringMainState() {
@@ -25,8 +24,6 @@ export function useScoringMainState() {
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   /** サイドパネル表示状態 */
   const [showSidePanel, setShowSidePanel] = useState(true)
-  /** ショートカットで利用する修飾キー表示ラベル */
-  const [modifierKeyLabel] = useState(() => getModifierKeyLabel() || "Alt")
 
   /**
    * 単一クリック・ショートカットによる選択更新
@@ -83,7 +80,6 @@ export function useScoringMainState() {
     currentCropRegionId,
     showKeyboardHelp,
     showSidePanel,
-    modifierKeyLabel,
     manualSelectionVersion,
     /** アクション関数 */
     setGradingMode,

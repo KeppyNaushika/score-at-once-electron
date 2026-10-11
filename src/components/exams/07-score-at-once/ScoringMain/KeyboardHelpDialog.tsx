@@ -18,18 +18,16 @@ import { formatKeyForDisplay, getShortcutLabel } from "@/lib/shortcutCatalog"
 interface KeyboardHelpDialogProps {
   showKeyboardHelp: boolean
   onShowKeyboardHelpChange: (show: boolean) => void
-  modifierKeyLabel: string
 }
 
 export function KeyboardHelpDialog({
   showKeyboardHelp,
   onShowKeyboardHelpChange,
-  modifierKeyLabel,
 }: KeyboardHelpDialogProps) {
   // 一覧は実際に効く割り当て（利用者の設定を反映したもの）から作る
   const { keyBindings } = useKeyBindings()
   const displayKey = (commandId: string) =>
-    formatKeyForDisplay(keyBindings[commandId], modifierKeyLabel)
+    formatKeyForDisplay(keyBindings[commandId])
 
   return (
     <Dialog open={showKeyboardHelp} onOpenChange={onShowKeyboardHelpChange}>

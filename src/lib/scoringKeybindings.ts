@@ -246,11 +246,6 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   // ============================================
   // AI採点 (AI Grading) — 実験的機能。同意した利用者の「AI採点」モードでだけ効く
   // ============================================
-  // 表示中の AI の判定を自分の採点として採用する（Import の i）
-  "aiGrading.adopt": "i",
-  // 同じ答案の試行を見比べる（< と > を押したときの割り当て文字列）
-  "aiGrading.prevAttempt": "Shift+<",
-  "aiGrading.nextAttempt": "Shift+>",
   // AI の判定の絞り込み（自分の採点の絞り込みと同じ文字に Opt+Shift）
   "aiGrading.filterUnscored": "Alt+Shift+q",
   "aiGrading.filterCorrect": "Alt+Shift+e",

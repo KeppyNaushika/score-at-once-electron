@@ -13,7 +13,7 @@ interface AiQuestionImageStripProps {
   imagePaths: readonly string[]
 }
 
-/** プロンプトの版の問題の画像を、送る順に小さく並べる。押すと拡大する */
+/** プロンプトの問題の画像を、送る順に小さく並べる。押すと拡大する */
 export function AiQuestionImageStrip({
   imagePaths,
 }: AiQuestionImageStripProps) {

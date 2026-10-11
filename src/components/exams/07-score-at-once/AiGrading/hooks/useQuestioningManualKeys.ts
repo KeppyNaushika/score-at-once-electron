@@ -1,12 +1,11 @@
 /**
  * 問いかけの「1件ずつ自分で採点する」のキー（docs/vlm-grading-design.md §3-5・§11-4）。
  *
- * カードの答案を ←→ で移り、いつもの採点キー（英字の採点状態・数字で部分点の入力欄）で、
- * 焦点のある答案に点を付ける。**付けた点は下書き**で（ここでは書かない）、問いの答えとして残し、
- * 見直しの「確定する」で入る。問いかけの外（普段の採点の画面）の採点キーはその場で確定のまま。
+ * カードの答案を ←→ で移り、いつもの採点キー（英字の採点状態・数字で部分点の入力欄）か
+ * パネルの採点ボタンで、焦点のある答案に点を付ける。**付けた点は下書き**で（ここでは書かない）、
+ * 問いの答えとして残し、見直しの「確定する」で入る。
  *
  * 部分点の入力欄は一覧表示と同じもの（`usePartialScore`）を、焦点のある答案1件を選んだものとして使う。
- * 入力欄の中のキーは、AI採点モードの「自分で採点」の登録より具体的な条件で先に効かせる。
  */
 
 import { useMemo } from "react"
@@ -68,7 +67,7 @@ export function useQuestioningManualKeys({
     condition,
     metadata: { title: "次の答案へ（1件ずつ採点）", category: "選択の場面" },
   })
-  useStatusScoringCommands(scoreWithKey, "choice", (title) => ({
+  useStatusScoringCommands(scoreWithKey, (title) => ({
     condition,
     metadata: { title: `${title}（問いかけの下書き）`, category: "AI採点" },
   }))
@@ -107,5 +106,9 @@ export function useQuestioningManualKeys({
     },
     { openCondition: "false", inputCondition: MANUAL_CONDITION }
   )
-  return partialScore
+  return {
+    partialScore,
+    /** 焦点のある答案に点を付ける（採点キー・採点ボタン。下書き） */
+    scoreCursor: scoreWithKey,
+  }
 }

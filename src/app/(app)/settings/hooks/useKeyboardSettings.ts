@@ -10,7 +10,10 @@ import { toast } from "sonner"
 
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
 import { normalizeKey } from "@/lib/normalizeKey"
-import { getModifierKeyLabel } from "@/lib/platformUtils"
+import {
+  getModifierKeyLabels,
+  getServerModifierKeyLabels,
+} from "@/lib/platformUtils"
 import {
   findConflictingCommand,
   resolveKeyBindings,
@@ -24,7 +27,6 @@ import {
 
 /** プラットフォームは変わらないので購読するものが無い */
 const subscribeToNothing = () => () => {}
-const getServerModifierKeyLabel = () => "Alt"
 
 export function useKeyboardSettings() {
   const userId = useCurrentUser().id
@@ -33,11 +35,11 @@ export function useKeyboardSettings() {
   const [pendingKey, setPendingKey] = useState<string>("")
 
   // 修飾キーの表示名はプラットフォーム依存。サーバ側では読めないので、
-  // 事前描画では "Alt"、マウント後に実際の値へ差し替える
-  const modifierKeyLabel = useSyncExternalStore(
+  // 事前描画では macOS 以外の呼び名、マウント後に実際の値へ差し替える
+  const modifierKeyLabels = useSyncExternalStore(
     subscribeToNothing,
-    getModifierKeyLabel,
-    getServerModifierKeyLabel
+    getModifierKeyLabels,
+    getServerModifierKeyLabels
   )
 
   // 採点画面（ShortcutProvider）と同じキャッシュを共有する
@@ -98,7 +100,7 @@ export function useKeyboardSettings() {
 
     if (conflictingCommand) {
       toast.error(
-        `${formatKeyForDisplay(pendingKey, modifierKeyLabel)} キーは「${getShortcutLabel(conflictingCommand)}」で使っています`
+        `${formatKeyForDisplay(pendingKey, modifierKeyLabels)} キーは「${getShortcutLabel(conflictingCommand)}」で使っています`
       )
       return
     }
@@ -118,7 +120,13 @@ export function useKeyboardSettings() {
       { action: editedAction, key: editedKey },
       { onSuccess: () => toast.success("ショートカットキーを更新しました") }
     )
-  }, [editingKey, pendingKey, shortcuts, setKeyboardShortcut, modifierKeyLabel])
+  }, [
+    editingKey,
+    pendingKey,
+    shortcuts,
+    setKeyboardShortcut,
+    modifierKeyLabels,
+  ])
 
   const handleKeyCancel = () => {
     setEditingKey(null)
@@ -136,13 +144,13 @@ export function useKeyboardSettings() {
   }, [resetKeyboardShortcuts])
 
   const getKeyDisplayName = (key: string) =>
-    formatKeyForDisplay(key, modifierKeyLabel)
+    formatKeyForDisplay(key, modifierKeyLabels)
 
   return {
     shortcuts,
     editingKey,
     pendingKey,
-    modifierKeyLabel,
+    modifierKeyLabel: modifierKeyLabels.alt,
     handleKeyEdit,
     handleKeySave,
     handleKeyCancel,

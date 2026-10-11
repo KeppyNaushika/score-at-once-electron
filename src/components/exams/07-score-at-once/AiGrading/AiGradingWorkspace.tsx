@@ -14,27 +14,20 @@ import type { QuestionScoreRow } from "@/queries/scoring"
 import type { AiGradingStage1Purpose } from "@/types/aiGrading.types"
 
 import { useScoringKeysPausedWhile } from "../Rubric/hooks/useScoringKeysPausedWhile"
-import { AiAdoptOverwriteDialog } from "./AiAdoptOverwriteDialog"
-import { AiAdoptTabContent } from "./AiAdoptTabContent"
 import { AiGradingGrid } from "./AiGradingGrid"
 import { AiGradingRunDialog } from "./AiGradingRunDialog"
 import { AiGradingRunProgress } from "./AiGradingRunProgress"
 import { AiGradingSidePanel } from "./AiGradingSidePanel"
-import { AiOwnScoringSection } from "./AiOwnScoringSection"
 import { AiPromptPanel } from "./AiPromptPanel"
 import { AiQuestioningPanel } from "./AiQuestioningPanel"
 import { AiQuestioningStatusNotice } from "./AiQuestioningStatusNotice"
 import { AiRunHistorySection } from "./AiRunHistorySection"
-import { AiSelectedJudgementSection } from "./AiSelectedJudgementSection"
 import { useAiAnswerReviewState } from "./hooks/useAiAnswerReviewState"
-import { useAiAttemptNavigation } from "./hooks/useAiAttemptNavigation"
 import { useAiCheckQuestions } from "./hooks/useAiCheckQuestions"
 import { useAiGradingAnswers } from "./hooks/useAiGradingAnswers"
 import { useAiGradingQuestions } from "./hooks/useAiGradingQuestions"
 import { useAiGridSelection } from "./hooks/useAiGridSelection"
-import { useAiOwnScoring } from "./hooks/useAiOwnScoring"
 import { useAiQuestioning } from "./hooks/useAiQuestioning"
-import { useAiSelectionAdoption } from "./hooks/useAiSelectionAdoption"
 import type {
   AiGradingRunRow,
   AiGridDisplaySettings,
@@ -46,17 +39,16 @@ import type { AiRubricProposalRow } from "./utils/rubricProposals"
 import type { GradingTargetScope } from "./utils/selectGradingTargets"
 
 /**
- * 左パネルのタブ。AI 採点と AI 採点チェックは、タブの中に問いかけ（問い・選択肢・記録・見直し）を出す
- * （中央はどのタブでも答案の一覧）。採点反映（直接採点のまま AI の判定を採用する）は2つの機能の後ろに残す
+ * 左パネルのタブ。AI 採点と AI チェックは、タブの中に問いかけ（問い・選択肢・記録・見直し）を出す
+ * （中央はどのタブでも答案の一覧）
  */
-const LEFT_TABS = ["prompt", "grade", "check", "score"] as const
+const LEFT_TABS = ["prompt", "grade", "check"] as const
 type LeftTab = (typeof LEFT_TABS)[number]
 
 const LEFT_TAB_LABELS: Record<LeftTab, string> = {
   prompt: "プロンプト",
   grade: "AI 採点",
-  check: "AI 採点チェック",
-  score: "採点反映",
+  check: "AI チェック",
 }
 
 /** 実行ダイアログを開くときの目的と、初めの送る答案の選び方 */
@@ -92,15 +84,15 @@ interface AiGradingWorkspaceProps {
 }
 
 /**
- * 設問1つぶんの AI 採点の作業場。左にプロンプト・AI 採点・AI 採点チェック・採点反映のタブ
- * （問いかけはAI 採点・AI 採点チェックのタブの中、選んだ答案の AI の判定は採点反映のタブで見る）、
+ * 設問1つぶんの AI 採点の作業場。左にプロンプト・AI 採点・AI チェックのタブ
+ * （問いかけと自分で採点するボタンは AI 採点・AI チェックのタブの中）、
  * 中央はどのタブでも**一覧表示と同じ答案の一覧**（色は自分の採点、斜線と札で AI の提案。
  * 問いかけのタブでは、いまの問いの答案に絞り、確定すると付く点を斜線で重ねる）、右端に設問・絞り込み。
  *
  * AI が答案ごとに書く朱書きの文案は採用しない（朱書きはルーブリック項目の助言から作る。
  * docs/vlm-grading-design.md §4-7）。
  *
- * 表示する試行・選んでいるプロンプト・答案の選択は、ここが持つ利用者の選択だけで、
+ * 表示する実行・選んでいるプロンプト・答案の選択は、ここが持つ利用者の選択だけで、
  * 表示はそこから毎回導く（消えた選択を状態へ書き戻さない）。
  */
 export function AiGradingWorkspace({
@@ -168,7 +160,7 @@ export function AiGradingWorkspace({
       : unlockedProviders[0]
 
   const points = cropRegion.points
-  /** プロンプトの版の番号（古い順に 1 から。表示のためだけのもの） */
+  /** プロンプトの番号（古い順に 1 から。表示のためだけのもの） */
   const promptNumberById = useMemo(
     () =>
       new Map(
@@ -176,15 +168,14 @@ export function AiGradingWorkspace({
       ),
     [prompts]
   )
-  const { reviewedAnswers, chooseAttempt, chosenRunId, chooseRun } =
-    useAiAnswerReviewState({
-      answers,
-      selectedPromptId,
-      points,
-      runs,
-      currentUserId,
-      answerOrder: viewSettings.answerOrder,
-    })
+  const { reviewedAnswers, chosenRunId, chooseRun } = useAiAnswerReviewState({
+    answers,
+    selectedPromptId,
+    points,
+    runs,
+    currentUserId,
+    answerOrder: viewSettings.answerOrder,
+  })
   const gradingQuestions = useAiGradingQuestions({ examId, cropRegion, runs })
   const checkQuestions = useAiCheckQuestions({
     examId,
@@ -234,44 +225,11 @@ export function AiGradingWorkspace({
   })
   // 1件ずつ自分で採点している間は、一覧の選択の代わりに焦点の答案を出す
   const selectionOverride = questioning.gridSelectionOverride
-  const adoption = useAiSelectionAdoption({
-    examId,
-    cropRegion,
-    selectedItems: grid.selectedItems,
-    onAdopted: grid.markAdopted,
-  })
-  const { showOlderAttempt, showNewerAttempt } = useAiAttemptNavigation({
-    singleSelectedItem: grid.singleSelectedItem,
-    onChooseAttempt: chooseAttempt,
-    onAdopt: adoption.requestAdopt,
-  })
-  // 採点反映のタブでは、一覧表示と同じキーで自分の採点を直接書ける（その場で確定）。
-  // 問いかけ（AI 採点・チェック）の中の採点キーは「1件ずつ自分で採点する」の下書きで、確定で入る
-  const { scoreSelected, partialScore } = useAiOwnScoring({
-    examId,
-    currentUserId,
-    cropRegion,
-    studentAnswerImages,
-    questionScores,
-    selectedItems: grid.selectedItems,
-    isShortcutEnabled: leftTab === "score",
-    onScored: grid.markScored,
-  })
-
   if (!provider) return null
-
-  const ownScoringSection = (
-    <AiOwnScoringSection
-      cropRegion={cropRegion}
-      selectedCount={grid.selectedItems.length}
-      onScore={scoreSelected}
-      partialScore={partialScore}
-    />
-  )
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
-      {/* 左: 実行の進み具合と、プロンプト・AI 採点・AI 採点チェック・採点反映のタブ */}
+      {/* 左: 実行の進み具合と、プロンプト・AI 採点・AI チェックのタブ */}
       <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-r px-3">
         <AiGradingRunProgress
           examId={examId}
@@ -286,7 +244,7 @@ export function AiGradingWorkspace({
           }}
           className="pt-2"
         >
-          <TabsList className="grid h-auto w-full grid-cols-4">
+          <TabsList className="grid h-auto w-full grid-cols-3">
             {LEFT_TABS.map((tab) => (
               <TabsTrigger
                 key={tab}
@@ -340,7 +298,7 @@ export function AiGradingWorkspace({
               emptyMessage={
                 gradingQuestions.status.kind === "ready"
                   ? "AI は項目の案を返しませんでした。"
-                  : "答案を AI に送り、判定から作った項目の案を、ここで1問ずつ問いかけます。決めたことは下書きで、最後に見直して「確定する」を押すと採点に入ります。"
+                  : "AI の判定から作った項目の案を、ここで1問ずつ問いかけます。"
               }
               notes={gradingQuestions.proposalRun?.notes ?? ""}
               onRegrade={(examStudentIds) =>
@@ -363,32 +321,13 @@ export function AiGradingWorkspace({
               statusNotice={null}
               emptyMessage={
                 checkQuestions.status === "running"
-                  ? "採点済みの答案を AI が判定しています。終わると、ここで食い違いを問いかけます。"
+                  ? "AI が判定しています…"
                   : checkQuestions.status === "idle"
-                    ? "採点済みの答案を AI に見せて、見落としや揺れを探します（あなたの点は送りません）。同じ答えに違う点が付いている組と、あなたと AI の判定が違う答案を、ここで1問ずつ問いかけます。"
-                    : "食い違いは見つかりませんでした。同じ答えに違う点が付いた組も、AI と判定の違う答案もありません。"
+                    ? "採点済みの答案の食い違いを AI が探し、ここで1問ずつ問いかけます（あなたの点は送りません）。"
+                    : "食い違いは見つかりませんでした。"
               }
               notes=""
             />
-          </TabsContent>
-          <TabsContent value="score">
-            <AiAdoptTabContent
-              examId={examId}
-              cropRegion={cropRegion}
-              reviewedAnswers={reviewedAnswers}
-              selectedCount={grid.selectedItems.length}
-              onAdoptSelected={adoption.requestAdopt}
-              visibleItems={grid.visibleItems}
-              onAdoptVisible={adoption.requestAdoptVisible}
-              isAdopting={adoption.isAdopting}
-            />
-            <AiSelectedJudgementSection
-              singleSelectedItem={grid.singleSelectedItem}
-              promptNumberById={promptNumberById}
-              onPrevAttempt={showOlderAttempt}
-              onNextAttempt={showNewerAttempt}
-            />
-            {ownScoringSection}
           </TabsContent>
         </Tabs>
       </aside>
@@ -445,8 +384,6 @@ export function AiGradingWorkspace({
         />
       </div>
 
-      <AiAdoptOverwriteDialog {...adoption.overwriteDialog} />
-
       {selectedPrompt && settings && (
         <AiGradingRunDialog
           purpose={runDialog?.purpose ?? "grade"}
@@ -461,6 +398,7 @@ export function AiGradingWorkspace({
           initialProvider={provider}
           unlockedProviders={unlockedProviders}
           prompt={selectedPrompt}
+          promptNumber={promptNumberById.get(selectedPrompt.id)}
           reviewedAnswers={reviewedAnswers}
           questionScores={questionScores}
           currentUserId={currentUserId}

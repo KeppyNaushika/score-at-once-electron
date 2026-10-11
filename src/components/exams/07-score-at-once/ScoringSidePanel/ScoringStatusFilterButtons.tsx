@@ -14,6 +14,7 @@ import { useKeyBindings } from "@/components/exams/07-score-at-once/hooks/useKey
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { filterCommandIdOf } from "@/lib/scoringKeybindings"
+import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { FilterToggleButton } from "./FilterToggleButton"
@@ -64,7 +65,7 @@ export function ScoringStatusFilterButtons({
             <ShortcutTooltip
               key={button.status}
               description={`${button.label}を${isActive ? "非表示" : "表示"}`}
-              keys={[keyBinding.toUpperCase()]}
+              keys={[formatKeyForDisplay(keyBinding)]}
             >
               <FilterToggleButton
                 label={button.label}

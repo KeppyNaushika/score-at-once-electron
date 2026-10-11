@@ -12,6 +12,7 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useCurrentUser } from "@/contexts/CurrentUserContext"
+import { getModifierKeyLabels } from "@/lib/platformUtils"
 import { parsePreference } from "@/lib/userPreferences"
 import {
   projectorModeQuery,
@@ -123,7 +124,7 @@ export function ScreenControlTab() {
           <p className="text-sm text-muted-foreground">
             スクリーンセーバーの無効化や、一定時間後の画面消灯を設定できます。
             <KbdGroup className="mx-1">
-              <Kbd>{navigator.platform?.includes("Mac") ? "⌘" : "Ctrl"}</Kbd>
+              <Kbd>{getModifierKeyLabels().primary}</Kbd>
               <span>+</span>
               <Kbd>L</Kbd>
             </KbdGroup>

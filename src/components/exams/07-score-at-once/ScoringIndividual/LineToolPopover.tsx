@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 import { ignoreDeselect } from "@/lib/toggleSelection"
 import { LINE_STYLES, type LineStyle } from "@/types/drawingAnnotation.types"
 
@@ -91,7 +92,7 @@ export function LineToolPopover({
       <PaletteTooltip
         label="線ツール"
         note="Shift+ドラッグで鉛直・水平線"
-        shortcutKey={shortcutKey?.toUpperCase()}
+        shortcutKey={shortcutKey && formatKeyForDisplay(shortcutKey)}
         open={isOpen ? false : undefined}
       >
         <PopoverTrigger asChild>

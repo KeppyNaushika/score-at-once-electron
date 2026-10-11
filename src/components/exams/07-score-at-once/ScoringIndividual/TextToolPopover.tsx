@@ -10,6 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 
 import { COLOR_PALETTE } from "./constants/drawingConstants"
 import { PaletteTooltip } from "./PaletteTooltip"
@@ -68,7 +69,7 @@ export function TextToolPopover({
       <PaletteTooltip
         label="テキストツール"
         note="クリックでテキスト配置"
-        shortcutKey={shortcutKey?.toUpperCase()}
+        shortcutKey={shortcutKey && formatKeyForDisplay(shortcutKey)}
         open={isOpen ? false : undefined}
       >
         <PopoverTrigger asChild>

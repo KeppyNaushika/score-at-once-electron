@@ -1,50 +1,48 @@
 /**
  * AI採点モードの採点キーの登録。
  *
- * 採点反映のタブでは採点中の場面に（`useAiOwnScoring`。その場で確定）、問いかけの
- * 「1件ずつ自分で採点する」では選択の場面に（`useQuestioningManualKeys`。下書き）同じキーを登録する
- * （docs/vlm-grading-design.md §3-5・§11-4）。問いかけの選択肢は ↑↓ で選ぶので、選択の場面でも
- * 数字は部分点の入力を始める
+ * 問いかけの「1件ずつ自分で採点する」で、選択の場面に（`useQuestioningManualKeys`。下書き）
+ * 採点キーを登録する（docs/vlm-grading-design.md §3-5・§11-4）。問いかけの選択肢は ↑↓ で選ぶので、
+ * 選択の場面でも数字は部分点の入力を始める
  */
 
 import { useSceneCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
 import type { ScoringStatus } from "@/types/scoringStatus.types"
 
-/** 採点状態ごとの採点キー（q e f j o p u）を、1つの場面に登録する */
+/** 採点状態ごとの採点キー（q e f j o p u）を、選択の場面に登録する */
 export function useStatusScoringCommands(
   scoreSelected: (status: ScoringStatus) => void,
-  scene: "scoring" | "choice",
   options: (title: string) => {
     condition: string
     metadata: { title: string; category: string }
   }
 ) {
   useSceneCommand("scoring.unscored", () => scoreSelected("unscored"), {
-    scene,
+    scene: "choice",
     ...options("選んだ答案を自分の採点で未採点に"),
   })
   useSceneCommand("scoring.correct", () => scoreSelected("correct"), {
-    scene,
+    scene: "choice",
     ...options("選んだ答案を自分の採点で正答に"),
   })
   useSceneCommand("scoring.partial", () => scoreSelected("partial"), {
-    scene,
+    scene: "choice",
     ...options("選んだ答案を自分の採点で部分点に"),
   })
   useSceneCommand("scoring.pending", () => scoreSelected("pending"), {
-    scene,
+    scene: "choice",
     ...options("選んだ答案を自分の採点で保留に"),
   })
   useSceneCommand("scoring.incorrect", () => scoreSelected("incorrect"), {
-    scene,
+    scene: "choice",
     ...options("選んだ答案を自分の採点で誤答に"),
   })
   useSceneCommand("scoring.noAnswer", () => scoreSelected("no_answer"), {
-    scene,
+    scene: "choice",
     ...options("選んだ答案を自分の採点で無答に"),
   })
   useSceneCommand("scoring.doubleMark", () => scoreSelected("double_mark"), {
-    scene,
+    scene: "choice",
     ...options("選んだ答案を自分の採点で Wマークに"),
   })
 }

@@ -21,6 +21,7 @@ import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { useSlidingValue } from "@/hooks/useSlidingValue"
+import { formatKeyForDisplay } from "@/lib/shortcutCatalog"
 
 import { ShortcutTooltip } from "./ShortcutTooltip"
 import { SidePanelSection } from "./SidePanelSection"
@@ -61,7 +62,9 @@ export function MasterAnswerControls({
   onMasterAnswerHide,
 }: MasterAnswerControlsProps) {
   const { keyBindings } = useKeyBindings()
-  const toggleKey = keyBindings["view.toggleMasterAnswer"]?.toUpperCase() || "X"
+  const toggleKey = formatKeyForDisplay(
+    keyBindings["view.toggleMasterAnswer"] || "X"
+  )
 
   // つまみを動かしている間は書かず、離したときに1回だけ書く
   const opacitySlider = useSlidingValue(opacity, onOpacityChange)
