@@ -7,9 +7,12 @@
  *
  * 行には、その時点のルーブリック項目の一覧を文にしたもの（`renderedRubricItems`）を写す。
  * 送るときに今の項目と違っていれば、アプリが新しい行を作って送る（`ensurePromptRendersRubricItems`）。
+ *
+ * 問題の画像（`AiPromptQuestionImage`）もプロンプトの一部で、プロンプトの行を作るときに一緒に作る。
+ * 新しい行を作るたびに、画像の行も並び順のまま作り直す（ファイルは同じものを指す）。
  */
 
-import type { AiPrompt, Prisma } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 
 import {
   formatRubricItemsSection,
@@ -26,7 +29,13 @@ import { listRubricItemsByCropRegion } from "./rubricItem"
 /** プロンプトを画面へ返すときの木。作成者は秘密（passcode）を落として連れてくる */
 const aiPromptInclude = {
   createdBy: { omit: PUBLIC_USER_OMIT },
+  questionImages: { orderBy: [{ sortOrder: "asc" }, { id: "asc" }] },
 } satisfies Prisma.AiPromptInclude
+
+/** プロンプト1行（作成者・問題の画像付き） */
+export type AiPromptWithImages = Prisma.AiPromptGetPayload<{
+  include: typeof aiPromptInclude
+}>
 
 /** 設問のプロンプトを古い順に全部（どの採点者が作ったものも。設計 §4-5 G） */
 export async function listAiPromptsByCropRegion(cropRegionId: string) {
@@ -70,19 +79,44 @@ export async function readRubricItemsForPrompt(cropRegionId: string): Promise<{
 /**
  * 教員が書いたプロンプトの中身。作成者・項目の一覧の文・改訂のときだけ埋まる2欄は含めない
  * （作成者は main が操作者から決め、項目の一覧の文はアプリが写す。改訂の欄は廃止した
- * プロンプトの改訂の名残で、もう書かない）
+ * プロンプトの改訂の名残で、もう書かない）。旧列 `questionImagePath` も書かない
  */
 export type CreateAiPromptData = Pick<
   Prisma.AiPromptUncheckedCreateInput,
   | "cropRegionId"
   | "parentPromptId"
   | "questionText"
-  | "questionImagePath"
   | "modelAnswerText"
   | "sendModelAnswerImage"
   | "rubricText"
   | "annotationInstruction"
->
+> & {
+  /**
+   * 問題の画像（data ディレクトリからの相対パス）を送る順に。取り込んだ画像
+   * （`aiGrading:importQuestionImage` が返したパス）か、直す元のプロンプトの画像だけを指せる
+   */
+  questionImagePaths?: string[]
+}
+
+/** 問題の画像を置く、試験フォルダの中のディレクトリ名 */
+export const AI_QUESTION_IMAGES_DIRECTORY_NAME = "ai-question-images"
+
+/** 問題の画像のパスが、この試験の取り込み先の中か（`..` で外へ出るものは外す） */
+function isInQuestionImagesDirectory(imagePath: string, examId: string) {
+  const segments = imagePath.split("/")
+  return (
+    imagePath.startsWith(
+      `exams/${examId}/${AI_QUESTION_IMAGES_DIRECTORY_NAME}/`
+    ) &&
+    segments.every((segment) => segment !== ".." && segment !== "") &&
+    !imagePath.includes("\\")
+  )
+}
+
+/** 問題の画像の行を、送る順のまま作る形にする */
+function toQuestionImageCreates(imagePaths: readonly string[]) {
+  return imagePaths.map((imagePath, sortOrder) => ({ imagePath, sortOrder }))
+}
 
 /**
  * プロンプトを1行作る。
@@ -94,12 +128,38 @@ export async function createAiPrompt(
   data: CreateAiPromptData,
   actorUserId: string
 ) {
-  if (data.parentPromptId) {
-    const parentPrompt = await prisma.aiPrompt.findUnique({
-      where: { id: data.parentPromptId },
+  const parentPrompt = data.parentPromptId
+    ? await prisma.aiPrompt.findUnique({
+        where: { id: data.parentPromptId },
+        include: { questionImages: true },
+      })
+    : null
+  if (
+    data.parentPromptId &&
+    (!parentPrompt || parentPrompt.cropRegionId !== data.cropRegionId)
+  ) {
+    throw new Error("直す元のプロンプトが、この設問のものではありません")
+  }
+
+  const questionImagePaths = data.questionImagePaths ?? []
+  if (questionImagePaths.length > 0) {
+    const cropRegion = await prisma.cropRegion.findUnique({
+      where: { id: data.cropRegionId },
+      include: { examPage: true },
     })
-    if (!parentPrompt || parentPrompt.cropRegionId !== data.cropRegionId) {
-      throw new Error("直す元のプロンプトが、この設問のものではありません")
+    if (!cropRegion) throw new Error("設問が見つかりません")
+    const inheritedPaths = new Set(
+      (parentPrompt?.questionImages ?? []).map(
+        (questionImage) => questionImage.imagePath
+      )
+    )
+    const unknownPath = questionImagePaths.find(
+      (imagePath) =>
+        !inheritedPaths.has(imagePath) &&
+        !isInQuestionImagesDirectory(imagePath, cropRegion.examPage.examId)
+    )
+    if (unknownPath !== undefined) {
+      throw new Error("問題の画像に、この試験で取り込んでいない画像があります")
     }
   }
 
@@ -112,12 +172,14 @@ export async function createAiPrompt(
       parentPromptId: data.parentPromptId ?? null,
       createdByUserId: actorUserId,
       questionText: data.questionText ?? "",
-      questionImagePath: data.questionImagePath ?? null,
       modelAnswerText: data.modelAnswerText ?? "",
       sendModelAnswerImage: data.sendModelAnswerImage ?? true,
       rubricText: data.rubricText ?? "",
       annotationInstruction: data.annotationInstruction ?? "",
       renderedRubricItems,
+      questionImages: {
+        create: toQuestionImageCreates(questionImagePaths),
+      },
     },
     include: aiPromptInclude,
   })
@@ -140,10 +202,10 @@ export async function createAiPrompt(
  * 文だけを今のものにした新しい行を作って返す（§3-1。送った文面を行から再現できるように）
  */
 export async function ensurePromptRendersRubricItems(
-  prompt: AiPrompt,
+  prompt: AiPromptWithImages,
   renderedRubricItems: string,
   actorUserId: string
-): Promise<AiPrompt> {
+): Promise<AiPromptWithImages> {
   if (prompt.renderedRubricItems === renderedRubricItems) return prompt
   const created = await prisma.aiPrompt.create({
     data: {
@@ -151,13 +213,18 @@ export async function ensurePromptRendersRubricItems(
       parentPromptId: prompt.id,
       createdByUserId: actorUserId,
       questionText: prompt.questionText,
-      questionImagePath: prompt.questionImagePath,
       modelAnswerText: prompt.modelAnswerText,
       sendModelAnswerImage: prompt.sendModelAnswerImage,
       rubricText: prompt.rubricText,
       annotationInstruction: prompt.annotationInstruction,
       renderedRubricItems,
+      questionImages: {
+        create: toQuestionImageCreates(
+          prompt.questionImages.map((questionImage) => questionImage.imagePath)
+        ),
+      },
     },
+    include: aiPromptInclude,
   })
   const scope = await resolveExamScopeByCropRegion(prompt.cropRegionId)
   await recordAuditLog({

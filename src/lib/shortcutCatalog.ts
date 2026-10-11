@@ -78,6 +78,12 @@ export const SHORTCUT_LABELS: Record<string, string> = {
   "choice.confirm": "確定して次へ",
   "choice.prev": "前へ移る",
   "choice.next": "次へ移る",
+  "choice.nextQuestion":
+    "問いかけの「次へ」（問いかけのタブを開いている間いつでも。欄の中でも）",
+  "choice.prevQuestion":
+    "問いかけの「戻る」（問いかけのタブを開いている間いつでも。欄の中でも）",
+  "choice.prevAnswer": "前の答案へ（1件ずつ採点）",
+  "choice.nextAnswer": "次の答案へ（1件ずつ採点）",
   "choice.exit": "抜けて採点に戻る",
 
   // 部分点の入力欄
@@ -192,10 +198,14 @@ export const SHORTCUT_CATEGORIES = {
       "choice.confirm",
       "choice.prev",
       "choice.next",
+      "choice.nextQuestion",
+      "choice.prevQuestion",
+      "choice.prevAnswer",
+      "choice.nextAnswer",
       "choice.exit",
     ],
     description:
-      "ルーブリックの項目を当てる・外す場面と、AI 採点の問いかけで選択肢を選ぶ場面の操作（入る キー以外は、場面の中だけで効く）",
+      "ルーブリックの項目を当てる・外す場面と、AI 採点の問いかけで選択肢を選ぶ場面の操作（入る キーと問いかけの 次へ・戻る 以外は、場面の中だけで効く）",
   },
   filter: {
     label: "フィルタ",

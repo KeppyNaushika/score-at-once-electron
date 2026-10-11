@@ -37,6 +37,7 @@ import type {
   ImageBlockParam,
   Message,
   MessageCreateParamsNonStreaming,
+  MessageStreamParams,
   TextBlockParam,
   Usage,
 } from "@anthropic-ai/sdk/resources/messages/messages"
@@ -68,10 +69,14 @@ import type {
  */
 export interface AnthropicGradingClient {
   messages: {
-    create(
-      params: MessageCreateParamsNonStreaming,
+    /**
+     * すぐ返す送り方はストリーミングで受ける。出力の上限が大きい依頼（2段目）は、
+     * ストリーミングでないと SDK が「10分を超えうる」として送る前に止めるため
+     */
+    stream(
+      params: MessageStreamParams,
       options?: { signal?: AbortSignal }
-    ): PromiseLike<Message>
+    ): { finalMessage(): Promise<Message> }
     batches: {
       create(params: BatchCreateParams): PromiseLike<MessageBatch>
       retrieve(messageBatchId: string): PromiseLike<MessageBatch>
@@ -360,9 +365,9 @@ export function createAnthropicProvider(
 
     async grade(request, signal) {
       const message = await callAnthropic(() =>
-        client.messages.create(buildParams(request, "5m"), {
-          signal,
-        })
+        client.messages
+          .stream(buildParams(request, "5m"), { signal })
+          .finalMessage()
       )
       return toAnthropicGradingResponse(message)
     },

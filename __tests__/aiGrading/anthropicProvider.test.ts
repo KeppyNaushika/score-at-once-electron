@@ -2,7 +2,10 @@
  * Anthropic の事業者実装のテスト。SDK のクライアントは偽物を渡し、通信はしない
  */
 
-import { AuthenticationError, RateLimitError } from "@anthropic-ai/sdk"
+import Anthropic, {
+  AuthenticationError,
+  RateLimitError,
+} from "@anthropic-ai/sdk"
 import type {
   BatchCreateParams,
   MessageBatch,
@@ -11,7 +14,7 @@ import type {
 import type {
   ContentBlock,
   Message,
-  MessageCreateParamsNonStreaming,
+  MessageStreamParams,
   StopReason,
 } from "@anthropic-ai/sdk/resources/messages/messages"
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models"
@@ -186,7 +189,7 @@ function createFakeClient(options: {
 }) {
   const createMessageCall = vi.fn(
     async (
-      _params: MessageCreateParamsNonStreaming,
+      _params: MessageStreamParams,
       _options?: { signal?: AbortSignal }
     ) => {
       if (options.createError) throw options.createError
@@ -202,7 +205,9 @@ function createFakeClient(options: {
   )
   const client: AnthropicGradingClient = {
     messages: {
-      create: createMessageCall,
+      stream: (params, requestOptions) => ({
+        finalMessage: () => createMessageCall(params, requestOptions),
+      }),
       batches: {
         create: createBatchCall,
         retrieve: async () => createMessageBatch("ended"),
@@ -670,6 +675,84 @@ describe("Anthropic の取り込み後の片付け", () => {
       expect(createAnthropicProvider(client).capabilities.batch).toBe(
         PROVIDER_SUPPORTS_BATCH.anthropic
       )
+    })
+  })
+
+  describe("実物の SDK での送信", () => {
+    function toServerSentEvents(events: { event: string; data: object }[]) {
+      return events
+        .map(
+          ({ event, data }) =>
+            `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
+        )
+        .join("")
+    }
+
+    it("出力の上限が大きい依頼（2段目）も、10分を超えうるとして止められずに送れる", async () => {
+      const responseText = '{"status":"correct"}'
+      const sentBodies: string[] = []
+      const fakeFetch = async (_url: RequestInfo | URL, init?: RequestInit) => {
+        sentBodies.push(String(init?.body))
+        return new Response(
+          toServerSentEvents([
+            {
+              event: "message_start",
+              data: {
+                type: "message_start",
+                message: {
+                  ...createMessage([], "end_turn"),
+                  stop_reason: null,
+                },
+              },
+            },
+            {
+              event: "content_block_start",
+              data: {
+                type: "content_block_start",
+                index: 0,
+                content_block: { type: "text", text: "", citations: null },
+              },
+            },
+            {
+              event: "content_block_delta",
+              data: {
+                type: "content_block_delta",
+                index: 0,
+                delta: { type: "text_delta", text: responseText },
+              },
+            },
+            {
+              event: "content_block_stop",
+              data: { type: "content_block_stop", index: 0 },
+            },
+            {
+              event: "message_delta",
+              data: {
+                type: "message_delta",
+                delta: { stop_reason: "end_turn", stop_sequence: null },
+                usage: { output_tokens: 10 },
+              },
+            },
+            { event: "message_stop", data: { type: "message_stop" } },
+          ]),
+          { status: 200, headers: { "content-type": "text/event-stream" } }
+        )
+      }
+      const provider = createAnthropicProvider(
+        new Anthropic({ apiKey: "test-key", fetch: fakeFetch, maxRetries: 0 })
+      )
+
+      const response = await provider.grade(
+        { ...createGradingRequest("grouping"), maxOutputTokens: 32000 },
+        new AbortController().signal
+      )
+
+      expect(response.stop).toBe("completed")
+      expect(response.parsedJson).toEqual({ status: "correct" })
+      expect(JSON.parse(sentBodies[0])).toMatchObject({
+        max_tokens: 32000,
+        stream: true,
+      })
     })
   })
 })

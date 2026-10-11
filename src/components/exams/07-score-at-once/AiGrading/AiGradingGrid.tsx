@@ -4,6 +4,7 @@ import { useMemo } from "react"
 
 import AnswerGridView from "@/components/exams/07-score-at-once/ScoringGrid/AnswerGridView"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
+import type { ScoringStatus } from "@/types/scoringStatus.types"
 
 import { AiProposalChips } from "./AiProposalChips"
 import type { AiGridDisplaySettings, AiGridItem } from "./types"
@@ -22,12 +23,18 @@ interface AiGradingGridProps {
   onReplaceSelection: (ids: string[]) => void
   /** 設問の答案の数（絞り込む前） */
   totalCount: number
+  /**
+   * 確定すると付く予定の状態（問いかけの下書き。受験者 → 状態）。そのマスに斜線を重ねる。
+   * 問いかけのタブでなければ渡さない
+   */
+  draftStatusByExamStudentId?: ReadonlyMap<string, ScoringStatus>
 }
 
 /**
  * AI採点モードの中央。**一覧表示と同じ部品・同じ表示の設定**で答案を並べ
  * （先頭に模範解答、色は自分の採点、保存した注釈もそのまま描く）、
- * 答案の下に AI の提案を出す（8. 採点確定が採点者ごとの結果を出すのと同じ口）
+ * 答案の下に AI の提案を出す（8. 採点確定が採点者ごとの結果を出すのと同じ口）。
+ * 問いかけのタブでは、確定すると付く予定の点を同じ斜線で重ねる（新しい印は足さない）
  */
 export function AiGradingGrid({
   cropRegion,
@@ -40,6 +47,7 @@ export function AiGradingGrid({
   onSelect,
   onReplaceSelection,
   totalCount,
+  draftStatusByExamStudentId,
 }: AiGradingGridProps) {
   const masterAnswerData = useMemo(
     () => toMasterGridItem(cropRegion),
@@ -80,6 +88,9 @@ export function AiGradingGrid({
               .review.displayedAttempt?.attempt
             return attempt?.state === "succeeded" ? attempt.status : null
           }}
+          draftStatusOf={(gridAnswer) =>
+            draftStatusByExamStudentId?.get(gridAnswer.examStudentId) ?? null
+          }
           renderBeforeStatusMark={(gridAnswer) => {
             const gridItem = gridItemById.get(gridAnswer.id)
             return gridItem ? (

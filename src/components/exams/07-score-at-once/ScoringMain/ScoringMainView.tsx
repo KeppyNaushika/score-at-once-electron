@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import Head from "next/head"
 import { useCallback, useMemo, useState } from "react"
 
+import { AiExamCostBadge } from "@/components/exams/07-score-at-once/AiGrading/AiExamCostBadge"
 import { AiGradingMode } from "@/components/exams/07-score-at-once/AiGrading/AiGradingMode"
 import { useUnreflectedAiQuestionIds } from "@/components/exams/07-score-at-once/AiGrading/hooks/useUnreflectedAiQuestionIds"
 import { OMRAutoScoringModal } from "@/components/exams/07-score-at-once/OMRRecognition/OMRAutoScoringModal"
@@ -218,6 +219,10 @@ function ScoringMainViewContent() {
         `WorkflowTabHeader`）が出すので、ここでは持たない
       */}
       <div className="flex shrink-0 items-center justify-end gap-2 border-b px-3 py-2">
+        {/* この試験の AI の費用の概算は左に寄せる */}
+        <div className="mr-auto">
+          <AiExamCostBadge examId={examId} />
+        </div>
         <ScoringHeaderControls
           gradingMode={gradingMode}
           onGradingModeChange={setGradingMode}

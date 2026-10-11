@@ -238,19 +238,20 @@ describe("絞り込み", () => {
     )
   })
 
-  it("既定は、自分が未採点で AI の判定がある答案だけ", () => {
+  it("既定は、自分が未採点の答案を AI の判定の有無によらず全て出す", () => {
     expect(
       isShownByFilter(
         correctProposalUnscoredByMe,
         DEFAULT_AI_GRID_FILTER_SETTINGS
       )
     ).toBe(true)
+    // AI の判定が無い答案も出す
     expect(
       isShownByFilter(
         reviewed(makeAnswer("s3")),
         DEFAULT_AI_GRID_FILTER_SETTINGS
       )
-    ).toBe(false)
+    ).toBe(true)
     expect(
       isShownByFilter(failedButScoredByMe, DEFAULT_AI_GRID_FILTER_SETTINGS)
     ).toBe(false)

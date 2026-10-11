@@ -15,7 +15,7 @@ import type { AiPrompt } from "@prisma/client"
 
 import type { PromptPart } from "@/electron-src/lib/aiGrading/providers/types"
 
-/** 送る画像（問題用紙・模範解答の切り出し・答案） */
+/** 送る画像（問題の画像・模範解答の切り出し・答案） */
 export interface PromptImage {
   mediaType: "image/png" | "image/jpeg"
   base64Data: string
@@ -76,10 +76,28 @@ interface PromptContentInput {
   /** 助言の文案の指示は2段目だけが使うので、ここでは読まない */
   prompt: Omit<PromptTextFields, "annotationInstruction">
   points: number | null
-  /** 問題用紙の画像。無ければ省く */
-  questionImage?: PromptImage | null
+  /** 問題の画像（並び順）。無ければ省く */
+  questionImages?: readonly PromptImage[]
   /** 模範解答のページから設問枠を切り出した画像。無ければ省く */
   modelAnswerImage?: PromptImage | null
+}
+
+/**
+ * 問題の画像の節。1枚なら見出しと画像、2枚以上なら見出しに枚数を書き、画像ごとに何枚目かを添える
+ */
+function questionImageSegments(
+  questionImages: readonly PromptImage[]
+): (string | PromptImage)[] {
+  if (questionImages.length === 0) return []
+  if (questionImages.length === 1)
+    return ["## 問題文（画像）", questionImages[0]]
+  return [
+    `## 問題文（画像 ${questionImages.length}枚。この順に読んでください）`,
+    ...questionImages.flatMap((questionImage, index) => [
+      `（${index + 1}枚目）`,
+      questionImage,
+    ]),
+  ]
 }
 
 /**
@@ -88,13 +106,14 @@ interface PromptContentInput {
 export function buildPromptContentSegments(
   input: PromptContentInput
 ): (string | PromptImage | null)[] {
-  const { prompt, points, questionImage, modelAnswerImage } = input
+  const { prompt, points, modelAnswerImage } = input
+  const questionImages = input.questionImages ?? []
   const questionTextSection = textSection("問題文", prompt.questionText)
   const modelAnswerTextSection = textSection("模範解答", prompt.modelAnswerText)
   const rubricSection = textSection("採点基準", prompt.rubricText)
   const hasNoContent =
     questionTextSection === null &&
-    !questionImage &&
+    questionImages.length === 0 &&
     modelAnswerTextSection === null &&
     !modelAnswerImage &&
     rubricSection === null
@@ -102,8 +121,7 @@ export function buildPromptContentSegments(
   return [
     formatPointsSection(points),
     questionTextSection,
-    questionImage ? "## 問題文（画像）" : null,
-    questionImage ?? null,
+    ...questionImageSegments(questionImages),
     modelAnswerTextSection,
     modelAnswerImage ? "## 模範解答（画像）" : null,
     modelAnswerImage ?? null,

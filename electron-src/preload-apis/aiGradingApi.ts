@@ -13,6 +13,7 @@ export function createAiGradingApi() {
     aiGrading: {
       listPrompts: bind("aiGrading:listPrompts"),
       createPrompt: bind("aiGrading:createPrompt"),
+      importQuestionImage: bind("aiGrading:importQuestionImage"),
       getAsbModelAnswerSource: bind("aiGrading:getAsbModelAnswerSource"),
       previewCrop: bind("aiGrading:previewCrop"),
       estimateRun: bind("aiGrading:estimateRun"),
@@ -25,7 +26,14 @@ export function createAiGradingApi() {
       deleteAttempts: bind("aiGrading:deleteAttempts"),
       adoptAttempts: bind("aiGrading:adoptAttempts"),
       listProposals: bind("aiGrading:listProposals"),
-      answerProposal: bind("aiGrading:answerProposal"),
+      recordProposalDraft: bind("aiGrading:recordProposalDraft"),
+      recordAttemptResponses: bind("aiGrading:recordAttemptResponses"),
+      setQuestioningScoringMethod: bind(
+        "aiGrading:setQuestioningScoringMethod"
+      ),
+      commitProposalResponse: bind("aiGrading:commitProposalResponse"),
+      writeQuestioningScores: bind("aiGrading:writeQuestioningScores"),
+      markQuestioningCommitted: bind("aiGrading:markQuestioningCommitted"),
 
       /** 実行の進み具合（試行を1件書くたび）を購読する。外すのは戻り値を呼ぶ */
       onRunProgress: (callback: (progress: AiGradingRunProgress) => void) =>

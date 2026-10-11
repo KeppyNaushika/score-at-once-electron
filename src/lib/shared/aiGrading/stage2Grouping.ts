@@ -31,11 +31,10 @@ import {
   formatRubricItemsSection,
   OUTPUT_STATUS_LABELS,
 } from "./rubricItemsText"
-import { formatTeacherInstructionsSection } from "./stage1Grading"
 import { STAGE2_SYSTEM_TEXT } from "./stage2SystemText"
 
 /** 2段目の指示の版 */
-export const STAGE2_TEMPLATE_VERSION = "stage2-3"
+export const STAGE2_TEMPLATE_VERSION = "stage2-4"
 
 /** 案の名前・説明・助言の文案・選択肢の理由の字数の上限 */
 export const STAGE2_LABEL_MAX_LENGTH = 30
@@ -60,10 +59,11 @@ interface Stage2RequestInput {
   prompt: PromptTextFields
   points: number | null
   rubricItems: readonly RubricItemForPrompt[]
-  /** 送る答案（この並びで A1, A2, … を振る） */
+  /**
+   * 送る答案（この並びで A1, A2, … を振る）。教員の「その他」の指示は再採点（1段目）への
+   * 指示なので、ここには送らない
+   */
   answers: readonly Stage2AnswerInput[]
-  /** 前の往復の問いかけで教員が「その他」に書いた指示。無ければ空 */
-  teacherInstructions: readonly string[]
 }
 
 /** 送信用の仮の番号（1始まり）。並びが同じなら同じ番号になる */
@@ -108,7 +108,6 @@ export function buildStage2RequestParts(
       textSection("採点基準", prompt.rubricText),
       textSection("助言の文案の指示", prompt.annotationInstruction),
       formatRubricItemsSection(input.rubricItems),
-      formatTeacherInstructionsSection(input.teacherInstructions),
       `## 答案の一覧（${answers.length}件）\n${answers.map(formatAnswer).join("\n\n")}`,
     ]),
     answerKeys: answers.map((_answer, answerIndex) =>

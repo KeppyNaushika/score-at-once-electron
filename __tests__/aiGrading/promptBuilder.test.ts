@@ -48,10 +48,10 @@ const partsOf = (
 
 describe("固定部の組み立て", () => {
   it("同じ入力からはバイト単位で同じ文面になる", () => {
-    const first = partsOf({ questionImage: QUESTION_IMAGE })
+    const first = partsOf({ questionImages: [QUESTION_IMAGE] })
     const second = partsOf({
       prompt: { ...FULL_PROMPT },
-      questionImage: { ...QUESTION_IMAGE },
+      questionImages: [{ ...QUESTION_IMAGE }],
     })
     expect(JSON.stringify(second)).toBe(JSON.stringify(first))
   })
@@ -87,7 +87,7 @@ describe("固定部の組み立て", () => {
   })
 
   it("画像は見出しの直後に片として入り、隣り合う文は1片にまとまる", () => {
-    const { fixedParts } = partsOf({ questionImage: QUESTION_IMAGE })
+    const { fixedParts } = partsOf({ questionImages: [QUESTION_IMAGE] })
     expect(fixedParts.map((part) => part.kind)).toEqual([
       "text",
       "image",
@@ -95,6 +95,42 @@ describe("固定部の組み立て", () => {
     ])
     const firstText = fixedParts[0].kind === "text" ? fixedParts[0].text : ""
     expect(firstText.endsWith("## 問題文（画像）")).toBe(true)
+  })
+
+  it("問題の画像が複数なら、並び順のまま何枚目かを添えて固定部に入り、模範解答の画像より前に来る", () => {
+    const secondImage = {
+      mediaType: "image/jpeg" as const,
+      base64Data: "c2Vjb25k",
+    }
+    const thirdImage = {
+      mediaType: "image/png" as const,
+      base64Data: "dGhpcmQ=",
+    }
+    const modelAnswerImage = {
+      mediaType: "image/png" as const,
+      base64Data: "bW9kZWw=",
+    }
+    const { fixedParts } = partsOf({
+      questionImages: [QUESTION_IMAGE, secondImage, thirdImage],
+      modelAnswerImage,
+    })
+    const images = fixedParts.flatMap((part) =>
+      part.kind === "image" ? [part.base64Data] : []
+    )
+    expect(images).toEqual([
+      QUESTION_IMAGE.base64Data,
+      secondImage.base64Data,
+      thirdImage.base64Data,
+      modelAnswerImage.base64Data,
+    ])
+    const texts = fixedParts.flatMap((part) =>
+      part.kind === "text" ? [part.text] : []
+    )
+    expect(texts[0]).toContain("## 問題文（画像 3枚。この順に読んでください）")
+    expect(texts[0].endsWith("（1枚目）")).toBe(true)
+    expect(texts[1]).toBe("（2枚目）")
+    expect(texts[2]).toBe("（3枚目）")
+    expect(fixedParts[0].kind).toBe("text")
   })
 
   it("答案の画像は可変部にだけ入る", () => {

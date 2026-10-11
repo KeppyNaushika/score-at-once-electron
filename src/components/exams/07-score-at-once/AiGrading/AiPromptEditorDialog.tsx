@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { createAiPromptMutation } from "@/queries/aiGrading"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 
+import { AiQuestionImagesField } from "./AiQuestionImagesField"
 import { AsbModelAnswerDraftPicker } from "./AsbModelAnswerDraftPicker"
 import type { AiPromptRow } from "./types"
 
@@ -63,6 +64,13 @@ function AiPromptEditorForm({
   const [questionText, setQuestionText] = useState(
     basePrompt?.questionText ?? ""
   )
+  // 問題の画像は元の版から並び順のまま引き継ぐ（保存すると新しい版に画像の行も作る）
+  const [questionImagePaths, setQuestionImagePaths] = useState<string[]>(
+    () =>
+      basePrompt?.questionImages.map(
+        (questionImage) => questionImage.imagePath
+      ) ?? []
+  )
   const [modelAnswerText, setModelAnswerText] = useState(
     basePrompt?.modelAnswerText ?? ""
   )
@@ -84,7 +92,7 @@ function AiPromptEditorForm({
         cropRegionId: cropRegion.id,
         parentPromptId: basePrompt?.id ?? null,
         questionText,
-        questionImagePath: basePrompt?.questionImagePath ?? null,
+        questionImagePaths,
         modelAnswerText,
         sendModelAnswerImage,
         rubricText,
@@ -126,6 +134,11 @@ function AiPromptEditorForm({
             rows={3}
           />
         </div>
+        <AiQuestionImagesField
+          cropRegionId={cropRegion.id}
+          imagePaths={questionImagePaths}
+          onImagePathsChange={setQuestionImagePaths}
+        />
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <Label htmlFor="ai-prompt-model-answer">模範解答</Label>

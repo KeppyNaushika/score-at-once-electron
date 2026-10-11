@@ -40,6 +40,13 @@ const PARTIAL_INPUT_KEYBINDINGS: KeyBinding = {
  * 採点中は英字26字と数字がすべて埋まっているので、Space（`choice.open`）で場面を
  * 切り替えて数字・Enter・↑↓・Esc を使う。ルーブリック採点では項目を当てる・外す、
  * AI の問いかけでは選択肢を選ぶのに使う（どちらも同じ場面）。
+ *
+ * AI の問いかけでは数字を番号に使わず、↑↓ で選択肢を選ぶ（数字は部分点。
+ * `CHOICE_SCENE_SCORING_COMMANDS`）。Enter は焦点のある選択肢で確定する。問いかけの移り（次へ・戻る）は Ctrl/⌘ を
+ * 足した Enter にする。「その他」の欄の中では素の Enter を日本語入力の変換の確定に
+ * 残すので、欄の中でも外でも同じ Ctrl/⌘+Enter で次へ進めるようにしてある
+ * （⌘ は `normalizeKey` が Ctrl と同じ綴りにする）。問いかけの移りは場面の外でも効く
+ * （`QUESTIONING_MOVE_COMMANDS`）。
  */
 const CHOICE_SCENE_KEYBINDINGS: KeyBinding = {
   "choice.select1": "1",
@@ -55,6 +62,10 @@ const CHOICE_SCENE_KEYBINDINGS: KeyBinding = {
   "choice.confirm": "Enter",
   "choice.prev": "ArrowUp",
   "choice.next": "ArrowDown",
+  "choice.nextQuestion": "Ctrl+Enter",
+  "choice.prevQuestion": "Ctrl+Shift+Enter",
+  "choice.prevAnswer": "ArrowLeft",
+  "choice.nextAnswer": "ArrowRight",
   "choice.exit": "Escape",
 }
 
@@ -66,6 +77,67 @@ const BOTH_SCENE_COMMANDS: ReadonlySet<string> = new Set([
   "scoring.partial",
   "scoring.pending",
 ])
+
+/**
+ * 選択の場面の中でも効かせてよい採点キー（英字の採点状態と、数字で部分点の入力を始めるキー）。
+ *
+ * AI の問いかけでは、提案に無い扱いの答案を、選択肢を選ばずに採点キーで採点する
+ * （docs/vlm-grading-design.md §3-5・§11-4）。選択肢は ↑↓ で選ぶので、数字は部分点に使う。
+ * 選択の場面で効かせるかは、登録ごとに `scene: "choice"` で選ぶ
+ */
+const CHOICE_SCENE_SCORING_COMMANDS: ReadonlySet<string> = new Set([
+  "scoring.unscored",
+  "scoring.correct",
+  "scoring.partial",
+  "scoring.pending",
+  "scoring.incorrect",
+  "scoring.noAnswer",
+  "scoring.doubleMark",
+  "scoring.openPartialWith0",
+  "scoring.openPartialWith1",
+  "scoring.openPartialWith2",
+  "scoring.openPartialWith3",
+  "scoring.openPartialWith4",
+  "scoring.openPartialWith5",
+  "scoring.openPartialWith6",
+  "scoring.openPartialWith7",
+  "scoring.openPartialWith8",
+  "scoring.openPartialWith9",
+  "scoring.openPartialWithDot",
+])
+
+/**
+ * 選択の場面で数字を選択肢の番号に使うコマンド（ルーブリックの項目の当て外し・重なった助言の
+ * 問いかけ）と、数字で部分点の入力を始めるコマンド（AI の問いかけ）。
+ *
+ * どちらも選択の場面で効くが、数字を番号に使う画面（一覧表示・個別表示のルーブリックのパネル）と
+ * 部分点に使う画面（AI採点モードの問いかけ）は同時に開かず、AI の問いかけは番号のコマンドを
+ * 効かせない（`useChoiceScene` の `usesNumberKeys: false`）ので、同じキーでよい
+ */
+const CHOICE_NUMBER_COMMANDS: ReadonlySet<string> = new Set([
+  "choice.select1",
+  "choice.select2",
+  "choice.select3",
+  "choice.select4",
+  "choice.select5",
+  "choice.select6",
+  "choice.select7",
+  "choice.select8",
+  "choice.select9",
+  "choice.other",
+])
+/**
+ * 問いかけの「次へ」「戻る」（docs/vlm-grading-design.md §3-5・§11-4）。AI 採点の問いかけのタブを
+ * 開いている間は、選択の場面に入っていなくても（Esc で抜けていても）、「その他」の欄の中でも、
+ * 1件ずつ採点の最中でも効かせる。そのための登録は `scene: "questioning"` で選ぶ
+ * （ダイアログ・部分点の入力欄を開いている間は効かない）
+ */
+const QUESTIONING_MOVE_COMMANDS: ReadonlySet<string> = new Set([
+  "choice.nextQuestion",
+  "choice.prevQuestion",
+])
+const isPartialStartCommand = (commandId: string) =>
+  commandId.startsWith("scoring.openPartialWith")
 
 export const DEFAULT_KEYBINDINGS: KeyBinding = {
   // ============================================
@@ -209,11 +281,15 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
  * - `scoring`: 入力欄を開いていない採点中だけ（文字の入力中・書き込み中・選択の場面も除く）
  * - `both`: どちらでも（`BOTH_SCENE_COMMANDS`）
  * - `choice`: 選択の場面の間だけ（`CHOICE_SCENE_KEYBINDINGS`）
+ * - `questioning`: 問いかけのタブを開いている間、入力欄の中でも外でも、選択の場面の中でも外でも
+ *   （ダイアログ・部分点の入力欄を除く）。問いかけの移りの登録だけが選ぶ（`QUESTIONING_MOVE_COMMANDS`）。
+ *   どのコマンドもこれを既定の場面には持たない
  *
  * 採点画面の when 句（`sceneWhen`）と、設定画面の重なりの判定（`canShareKey`）は
  * どちらもここから導く。場面を変えるときは、既定の置き場所を変える。
  */
-export type KeyScene = "partialInput" | "scoring" | "both" | "choice"
+export type KeyScene =
+  "partialInput" | "scoring" | "both" | "choice" | "questioning"
 
 /** 1回の登録が効く場面（`both` のコマンドは、登録ごとにどちらかを選ぶ） */
 type RegistrationScene = Exclude<KeyScene, "both">
@@ -235,6 +311,7 @@ const SCENE_WHEN: Record<RegistrationScene, string> = {
   scoring: "!inputFocus && !modalOpen && !textEditorActive && !choiceSceneOpen",
   partialInput: "partialScoreModalOpen",
   choice: "choiceSceneOpen && !inputFocus && !modalOpen && !textEditorActive",
+  questioning: "!modalOpen && !textEditorActive",
 }
 
 /** 場面が実際に効く範囲（`both` は入力欄の中と外の両方） */
@@ -243,12 +320,38 @@ const SCENE_EXTENT: Record<KeyScene, readonly RegistrationScene[]> = {
   partialInput: ["partialInput"],
   both: ["scoring", "partialInput"],
   choice: ["choice"],
+  questioning: ["questioning"],
+}
+
+/**
+ * そのコマンドを登録できる場面。効く場面（`keySceneOf`）に、選択の場面でも効かせてよい
+ * 採点キー（`CHOICE_SCENE_SCORING_COMMANDS`）なら選択の場面を、問いかけの移り
+ * （`QUESTIONING_MOVE_COMMANDS`）なら問いかけの場面を足す
+ */
+function registrableScenesOf(commandId: string): readonly RegistrationScene[] {
+  const extent = SCENE_EXTENT[keySceneOf(commandId)]
+  if (CHOICE_SCENE_SCORING_COMMANDS.has(commandId)) return [...extent, "choice"]
+  if (QUESTIONING_MOVE_COMMANDS.has(commandId)) {
+    return [...extent, "questioning"]
+  }
+  return extent
+}
+
+/**
+ * 重なりの判定で見る場面。問いかけの場面は、採点中・選択の場面の両方にまたがって効くので、
+ * その2つとも重なるものとして数える
+ */
+function overlappingScenesOf(commandId: string): readonly RegistrationScene[] {
+  return registrableScenesOf(commandId).flatMap((scene): RegistrationScene[] =>
+    scene === "questioning" ? ["questioning", "scoring", "choice"] : [scene]
+  )
 }
 
 /**
  * コマンドの when 句。効く場面の土台に、登録ごとの条件を `&&` でつなぐ。
  *
  * `both` のコマンドは同じ id を2回登録するので、登録ごとに `scene` を渡す。
+ * 選択の場面でも効かせてよい採点キーは、選択の場面の登録だけ `scene: "choice"` を渡す。
  * 場面の違う登録（入力欄の中だけのコマンドを採点中に登録する等）は誤りとして投げる。
  *
  * @param condition 場面に加える条件（例: `hasSelectedAnswers`）
@@ -264,7 +367,7 @@ export function sceneWhen(
       `${commandId} は入力欄の中でも外でも効くので、登録ごとに場面を渡してください`
     )
   }
-  if (commandScene !== "both" && commandScene !== registrationScene) {
+  if (!registrableScenesOf(commandId).includes(registrationScene)) {
     throw new Error(
       `${commandId} は ${commandScene} の場面のコマンドで、${registrationScene} には登録できません`
     )
@@ -278,12 +381,22 @@ export function sceneWhen(
  *
  * 効く場面が重ならない組（部分点の入力欄の中だけ／外だけ／選択の場面だけ）なら同じキーでよい
  * （既定でも modal.input1・scoring.openPartialWith1・choice.select1 は同じ 1）。
+ * 選択の場面でも効かせてよい採点キーは、選択の場面のキーとも重ねない（ただし数字の番号と
+ * 部分点の入力の開始は、使う画面が分かれているので重ねてよい。`CHOICE_NUMBER_COMMANDS`）。
  * それ以外は、同じ場面で when 句の && の数と登録順で片方だけが勝ち、
  * もう片方が黙って効かなくなるので重ねない。
  */
 export function canShareKey(commandIdA: string, commandIdB: string): boolean {
-  const extentB = SCENE_EXTENT[keySceneOf(commandIdB)]
-  return SCENE_EXTENT[keySceneOf(commandIdA)].every(
+  if (
+    (CHOICE_NUMBER_COMMANDS.has(commandIdA) &&
+      isPartialStartCommand(commandIdB)) ||
+    (CHOICE_NUMBER_COMMANDS.has(commandIdB) &&
+      isPartialStartCommand(commandIdA))
+  ) {
+    return true
+  }
+  const extentB = overlappingScenesOf(commandIdB)
+  return overlappingScenesOf(commandIdA).every(
     (scene) => !extentB.includes(scene)
   )
 }

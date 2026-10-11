@@ -78,6 +78,7 @@ async function gradeAll(
   )
   const { run, finished } = await runner.startGradingRun(
     {
+      purpose: "grade" as const,
       promptId: fixture.prompt.id,
       examStudentIds: examStudentIds(),
       provider: "anthropic",

@@ -21,17 +21,30 @@ import { useInFlightGuard } from "@/hooks/useInFlightGuard"
 import { startAiGradingRunMutation } from "@/queries/aiGrading"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
-import { AI_GRADING_SENDING_IMAGE_SCALE } from "@/types/aiGrading.types"
+import {
+  AI_GRADING_SENDING_IMAGE_SCALE,
+  type AiGradingStage1Purpose,
+} from "@/types/aiGrading.types"
 
 import { AiRunCostEstimate } from "./AiRunCostEstimate"
 import { AiRunSettingsFields } from "./AiRunSettingsFields"
+import { AiRunTargetChoice } from "./AiRunTargetChoice"
 import { useAiRunSettings } from "./hooks/useAiRunSettings"
 import type { AiPromptRow } from "./types"
 import type { ReviewedAiGradingAnswer } from "./utils/answerReview"
 import { providerDisplayName } from "./utils/runOptions"
-import { selectGradingTargets } from "./utils/selectGradingTargets"
+import {
+  CHECK_TARGET_SCOPES,
+  GRADING_TARGET_SCOPES,
+  type GradingTargetScope,
+  selectGradingTargets,
+} from "./utils/selectGradingTargets"
 
 interface AiGradingRunDialogProps {
+  /** AI 採点（grade）か、AI 採点チェック（check。1段目だけで、2段目は続けない） */
+  purpose: AiGradingStage1Purpose
+  /** 開いたときの送る答案の選び方（省けば、AI 採点は未採点・チェックは採点済み） */
+  initialScope?: GradingTargetScope
   open: boolean
   onOpenChange: (open: boolean) => void
   examId: string
@@ -43,11 +56,14 @@ interface AiGradingRunDialogProps {
   reviewedAnswers: ReviewedAiGradingAnswer[]
   questionScores: QuestionScoreRow[]
   currentUserId: string
+  /** 中央の一覧で選んでいる答案の examStudentId（「選択した答案」で送る） */
+  selectedExamStudentIds: ReadonlySet<string>
 }
 
 /**
- * 採点の実行（設計 §3-2・§10-1）。送るのは自分が未採点の答案だけ。件数と費用の概算を見て、
- * 送り先と実験的機能であることを確かめてから送る。閉じている間は中身を持たない（開くたびに初期化）
+ * 採点の実行（設計 §3-2・§3-10・§10-1）。送る答案を選び（AI 採点は4通りで既定は自分が未採点の答案、
+ * チェックは3通りで既定は採点済みの答案）、件数と費用の概算を見て、送り先と実験的機能であることを
+ * 確かめてから送る。閉じている間は中身を持たない（開くたびに初期化）
  */
 export function AiGradingRunDialog(props: AiGradingRunDialogProps) {
   return (
@@ -60,6 +76,8 @@ export function AiGradingRunDialog(props: AiGradingRunDialogProps) {
 }
 
 function AiGradingRunForm({
+  purpose,
+  initialScope,
   onOpenChange,
   examId,
   cropRegion,
@@ -70,8 +88,14 @@ function AiGradingRunForm({
   reviewedAnswers,
   questionScores,
   currentUserId,
+  selectedExamStudentIds,
 }: AiGradingRunDialogProps) {
   const [isConfirming, setIsConfirming] = useState(false)
+  const scopes: readonly GradingTargetScope[] =
+    purpose === "check" ? CHECK_TARGET_SCOPES : GRADING_TARGET_SCOPES
+  const [targetScope, setTargetScope] = useState<GradingTargetScope>(
+    initialScope ?? scopes[0]
+  )
   const { runSettings, updateRunSettings } = useAiRunSettings(
     settings,
     initialProvider
@@ -81,15 +105,31 @@ function AiGradingRunForm({
   // 押したらダイアログを閉じるので、このフォームごと捨てられ、開き直せば新しいガードで押せる
   const sendGuard = useInFlightGuard()
 
-  const targetExamStudentIds = useMemo(
-    () =>
-      selectGradingTargets({
-        cropRegionId: cropRegion.id,
-        currentUserId,
-        answers: reviewedAnswers.map((reviewedAnswer) => reviewedAnswer.answer),
-        questionScores,
-      }),
-    [cropRegion.id, currentUserId, reviewedAnswers, questionScores]
+  const targetIdsByScope = useMemo(() => {
+    const selectionInput = {
+      cropRegionId: cropRegion.id,
+      currentUserId,
+      answers: reviewedAnswers.map((reviewedAnswer) => reviewedAnswer.answer),
+      questionScores,
+      selectedExamStudentIds,
+    }
+    return new Map(
+      scopes.map((scope) => [
+        scope,
+        selectGradingTargets(selectionInput, scope),
+      ])
+    )
+  }, [
+    cropRegion.id,
+    currentUserId,
+    reviewedAnswers,
+    questionScores,
+    selectedExamStudentIds,
+    scopes,
+  ])
+  const targetExamStudentIds = targetIdsByScope.get(targetScope) ?? []
+  const targetCountByScope = Object.fromEntries(
+    [...targetIdsByScope].map(([scope, ids]) => [scope, ids.length])
   )
   const providerName = providerDisplayName(runSettings.provider)
 
@@ -103,6 +143,7 @@ function AiGradingRunForm({
     const sentCount = targetExamStudentIds.length
     startRun
       .mutateAsync({
+        purpose,
         promptId: prompt.id,
         examStudentIds: targetExamStudentIds,
         provider: runSettings.provider,
@@ -125,12 +166,14 @@ function AiGradingRunForm({
     <>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          AI で採点する（{cropRegion.label}）
+          {purpose === "check" ? "AI 採点チェック" : "AI で採点する"}（
+          {cropRegion.label}）
           <ExperimentalBadge />
         </DialogTitle>
         <DialogDescription>
-          選んだ答案の切り出し画像とプロンプトを、送信先の事業者へ送ります。
-          判定は候補として記録され、採用するまで採点には入りません。
+          {purpose === "check"
+            ? "採点済みの答案の切り出し画像とプロンプトを送り、AI の判定を手元であなたの採点と比べます。あなたの点は送りません。判定は記録されるだけで、問いかけで確定するまで採点は変わりません。"
+            : "選んだ答案の切り出し画像とプロンプトを、送信先の事業者へ送ります。判定から項目の案を作って問いかけ、確定するまで採点には入りません。"}
         </DialogDescription>
       </DialogHeader>
 
@@ -155,17 +198,12 @@ function AiGradingRunForm({
         </div>
       ) : (
         <div className="space-y-4">
-          <div
-            className="rounded-md border p-3 text-sm"
-            data-testid="ai-run-target-summary"
-          >
-            <p className="font-medium">
-              自分が未採点の答案 {targetExamStudentIds.length} 件を送ります
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              採点済みの答案（無答を付けた白紙を含む）は送りません。白紙は白さ順に並べて、先に無答を付けておけます。
-            </p>
-          </div>
+          <AiRunTargetChoice
+            scopes={scopes}
+            scope={targetScope}
+            onScopeChange={setTargetScope}
+            targetCountByScope={targetCountByScope}
+          />
           <AiRunSettingsFields
             runSettings={runSettings}
             onRunSettingsChange={updateRunSettings}
@@ -176,6 +214,7 @@ function AiGradingRunForm({
             examStudentIds={targetExamStudentIds}
             runSettings={runSettings}
             budgetWarningUsd={settings.budgetWarningUsd}
+            includesGrouping={purpose === "grade"}
           />
         </div>
       )}

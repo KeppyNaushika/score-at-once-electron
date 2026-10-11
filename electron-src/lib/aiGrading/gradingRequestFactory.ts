@@ -3,7 +3,12 @@
  * 試行に書く形へ直す。Electron に依存しない（テストは偽の事業者で走らせる）。
  */
 
-import type { AiPrompt, CropRegion, ExamPage } from "@prisma/client"
+import type {
+  AiPrompt,
+  AiPromptQuestionImage,
+  CropRegion,
+  ExamPage,
+} from "@prisma/client"
 import * as fsPromises from "fs/promises"
 import * as path from "path"
 
@@ -65,7 +70,7 @@ export function toJsonSchemaObject(schema: GradingJsonSchema): JsonObject {
   return schemaObject
 }
 
-/** 問題用紙の画像（プロンプトに付けたもの）を読む。拡張子で形式を決める */
+/** 問題の画像（プロンプトに付けたもの）を1枚読む。拡張子で形式を決める */
 async function readQuestionImage(
   questionImagePath: string,
   resolveDataPath: ResolveDataPath
@@ -83,21 +88,29 @@ async function readQuestionImage(
   }
 }
 
-/** プロンプトに付く画像（問題用紙・模範解答の切り出し）。無いものは null */
+/**
+ * プロンプトに付く画像。問題の画像は並び順（呼び出し側が sortOrder の順に渡す）の全部、
+ * 模範解答の切り出しは送る設定のときだけ（無ければ null）
+ */
 export async function loadPromptImages(input: {
-  prompt: AiPrompt
+  prompt: Pick<AiPrompt, "sendModelAnswerImage"> & {
+    questionImages: readonly Pick<AiPromptQuestionImage, "imagePath">[]
+  }
   cropRegion: CropRegion
   examPage: ExamPage
   imageScale: number
   resolveDataPath: ResolveDataPath
 }): Promise<{
-  questionImage: PromptImage | null
+  questionImages: PromptImage[]
   modelAnswerImage: PromptImage | null
 }> {
   const { prompt, cropRegion, examPage, imageScale, resolveDataPath } = input
-  const questionImage = prompt.questionImagePath
-    ? await readQuestionImage(prompt.questionImagePath, resolveDataPath)
-    : null
+  const questionImages: PromptImage[] = []
+  for (const questionImage of prompt.questionImages) {
+    questionImages.push(
+      await readQuestionImage(questionImage.imagePath, resolveDataPath)
+    )
+  }
   const modelAnswerImage =
     prompt.sendModelAnswerImage && examPage.imagePath
       ? toPngPromptImage(
@@ -110,7 +123,7 @@ export async function loadPromptImages(input: {
           ).png
         )
       : null
-  return { questionImage, modelAnswerImage }
+  return { questionImages, modelAnswerImage }
 }
 
 /** 試行を、失敗として終わらせる結果 */

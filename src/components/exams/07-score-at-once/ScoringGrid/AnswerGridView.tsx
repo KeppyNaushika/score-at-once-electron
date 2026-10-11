@@ -78,6 +78,8 @@ interface AnswerGridViewProps {
   renderCellDetail?: (answer: GridAnswerItem) => ReactNode
   /** マスの未確定の提案の状態（AI採点モード）。未採点のマスをその色の斜線で塗る */
   proposalStatusOf?: (answer: GridAnswerItem) => ScoreStatusKey | null
+  /** 確定すると付く予定の状態（AI採点モードの問いかけの下書き）。採点済みのマスにも斜線を重ねる */
+  draftStatusOf?: (answer: GridAnswerItem) => ScoreStatusKey | null
   /** 採点マークの左隣に置くもの（AI採点モードの AI の判定の札） */
   renderBeforeStatusMark?: (answer: GridAnswerItem) => ReactNode
   /**
@@ -113,6 +115,7 @@ export default function AnswerGridView({
   onMouseScoring,
   renderCellDetail,
   proposalStatusOf,
+  draftStatusOf,
   renderBeforeStatusMark,
   previewRubricAdviceOf,
   className = "",
@@ -404,6 +407,7 @@ export default function AnswerGridView({
               onMouseDown={onCellMouseDown}
               detail={renderCellDetail?.(answer)}
               proposalStatus={proposalStatusOf?.(answer) ?? null}
+              draftStatus={draftStatusOf?.(answer) ?? null}
               beforeStatusMark={renderBeforeStatusMark?.(answer)}
             />
           )

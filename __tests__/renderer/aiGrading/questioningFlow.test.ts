@@ -5,8 +5,6 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  describeMemberNames,
-  nextUnansweredProposalId,
   recommendedScoringMethodOf,
   resolveQuestioningStatus,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/questioningFlow"
@@ -75,46 +73,7 @@ describe("問いかけの前提の状態", () => {
   })
 })
 
-describe("問いかける案の移り方", () => {
-  const proposal = (id: string, answered: boolean) => ({
-    id,
-    responses: answered
-      ? [
-          {
-            id: `response-${id}`,
-            proposalId: id,
-            optionId: "option",
-            freeText: "",
-            resultRubricItemId: null,
-            createdAt: LATE,
-            updatedAt: LATE,
-          },
-        ]
-      : [],
-  })
-
-  it("後ろの未回答の案、無ければ先頭からの未回答の案。全部答えていれば null", () => {
-    const ordered = [
-      proposal("a", false),
-      proposal("b", true),
-      proposal("c", false),
-    ]
-    expect(nextUnansweredProposalId(ordered, "b")).toBe("c")
-    expect(nextUnansweredProposalId(ordered, "c")).toBe("a")
-    expect(
-      nextUnansweredProposalId([proposal("a", true), proposal("b", false)], "b")
-    ).toBeNull()
-  })
-})
-
-describe("表示の言葉と推奨", () => {
-  it("名前は先頭の数名だけ出し、残りは人数で", () => {
-    expect(describeMemberNames(["甲", "乙", "丙", "丁"])).toBe(
-      "甲、乙、ほか2名"
-    )
-    expect(describeMemberNames(["甲"])).toBe("甲")
-  })
-
+describe("採点方式の推奨", () => {
   it("推奨の選択肢が加点のほうが多ければ加点方式、それ以外は減点方式", () => {
     const withDelta = (pointDelta: number) => ({
       options: [

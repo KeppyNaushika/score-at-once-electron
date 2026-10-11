@@ -232,6 +232,12 @@ export interface ScoringContextState {
    * 立っている間は採点中のキーが止まり、数字・Enter・↑↓・Esc が選択に使われる
    */
   choiceSceneOpen: boolean
+
+  /**
+   * AI 採点の問いかけで「1件ずつ自分で採点する」を選び、カードの答案を ←→ で移りながら
+   * 採点キーで点を付けている状態（付けた点は下書きで、確定で入る）
+   */
+  aiQuestioningManual: boolean
 }
 
 /**

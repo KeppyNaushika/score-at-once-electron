@@ -1,7 +1,6 @@
 import { useMemo } from "react"
 
 import { useGradeLock } from "@/components/common/grade-lock/GradeLockProvider"
-import { useSceneCommand } from "@/components/exams/07-score-at-once/hooks/useCommand"
 import { useBatchScoring } from "@/components/exams/07-score-at-once/ScoringData/hooks/useBatchScoring"
 import { KEYBOARD_ONLY_CONDITION } from "@/components/exams/07-score-at-once/ScoringMain/hooks/shortcuts/scoringShortcutConditions"
 import { usePartialScoreShortcuts } from "@/components/exams/07-score-at-once/ScoringMain/hooks/shortcuts/usePartialScoreShortcuts"
@@ -14,6 +13,7 @@ import type { ScoringStatus } from "@/types/scoringStatus.types"
 import type { AiGridItem } from "../types"
 import { toStudentAnswerImageIds } from "../utils/aiGridItems"
 import { AI_GRADING_MODE_CONDITION } from "./useAiGradingShortcuts"
+import { useStatusScoringCommands } from "./useAiScoringKeyCommands"
 
 interface UseAiOwnScoringOptions {
   examId: string
@@ -24,7 +24,10 @@ interface UseAiOwnScoringOptions {
   /** この設問の採点行（誰の分も。自分の行を探すのは一括採点） */
   questionScores: QuestionScoreRow[]
   selectedItems: readonly AiGridItem[]
-  /** 採点のキーを効かせるか（左パネルで採点反映のタブを開いているときだけ） */
+  /**
+   * 採点のキーを効かせるか（左パネルで採点反映のタブを開いているときだけ。問いかけの中の採点キーは
+   * 「1件ずつ自分で採点する」の下書きで、`useQuestioningManualKeys` が受ける）
+   */
   isShortcutEnabled: boolean
   /**
    * 採点した答案（一覧の id ＝ examStudentId）。絞り込みからすぐ消さないことと、
@@ -111,40 +114,7 @@ export function useAiOwnScoring({
     condition,
     metadata: { title, category: "AI採点" },
   })
-  useSceneCommand(
-    "scoring.unscored",
-    () => scoreSelected("unscored"),
-    options("選んだ答案を自分の採点で未採点に")
-  )
-  useSceneCommand(
-    "scoring.correct",
-    () => scoreSelected("correct"),
-    options("選んだ答案を自分の採点で正答に")
-  )
-  useSceneCommand("scoring.partial", () => scoreSelected("partial"), {
-    scene: "scoring",
-    ...options("選んだ答案を自分の採点で部分点に"),
-  })
-  useSceneCommand("scoring.pending", () => scoreSelected("pending"), {
-    scene: "scoring",
-    ...options("選んだ答案を自分の採点で保留に"),
-  })
-  useSceneCommand(
-    "scoring.incorrect",
-    () => scoreSelected("incorrect"),
-    options("選んだ答案を自分の採点で誤答に")
-  )
-  useSceneCommand(
-    "scoring.noAnswer",
-    () => scoreSelected("no_answer"),
-    options("選んだ答案を自分の採点で無答に")
-  )
-  useSceneCommand(
-    "scoring.doubleMark",
-    () => scoreSelected("double_mark"),
-    options("選んだ答案を自分の採点で Wマークに")
-  )
-
+  useStatusScoringCommands(scoreSelected, "scoring", options)
   usePartialScoreShortcuts(
     {
       handlePartialScoreInput: partialScore.handlePartialScoreInput,

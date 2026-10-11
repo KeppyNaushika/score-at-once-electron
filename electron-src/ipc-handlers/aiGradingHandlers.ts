@@ -12,9 +12,18 @@
 import { getAiGradingServices } from "../lib/aiGrading/aiGradingMainServices"
 import type { StartGradingRunInput } from "../lib/aiGrading/gradingJobRunner"
 import {
+  importAiQuestionImage,
+  type ImportAiQuestionImageInput,
+} from "../lib/aiGrading/questionImageImport"
+import {
   measureRunImageSizes,
   previewSendingCrop,
 } from "../lib/aiGrading/sendingImageInspection"
+import { getSharedFilesDirectory } from "../lib/dataManager"
+import {
+  type AiAttemptResponseInput,
+  recordAiAttemptResponses,
+} from "../lib/prisma/aiAttemptResponse"
 import {
   adoptAiGradingAttempts,
   type AiGradingAdoption,
@@ -24,6 +33,7 @@ import {
   listAiGradingRunsByCropRegion,
   listAiGradingRunsByExam,
   listAiGradingRunsByUser,
+  setAiQuestioningScoringMethod,
 } from "../lib/prisma/aiGradingRun"
 import {
   createAiPrompt,
@@ -32,9 +42,16 @@ import {
   listAiPromptsByCropRegion,
 } from "../lib/prisma/aiPrompt"
 import {
-  answerAiRubricProposal,
-  type AnswerAiRubricProposalInput,
+  type AiQuestioningScoreWrite,
+  markAiQuestioningCommitted,
+  writeAiQuestioningScores,
+} from "../lib/prisma/aiQuestioningScore"
+import {
+  commitAiRubricProposalResponse,
+  type CommitAiRubricProposalResponseInput,
   listAiRubricProposalRunsByCropRegion,
+  recordAiRubricProposalDraft,
+  type RecordAiRubricProposalDraftInput,
 } from "../lib/prisma/aiRubricProposal"
 import { getCurrentActorUserId } from "../lib/prisma/auditActor"
 import { type HandlerMap } from "./ipcHandlerUtils"
@@ -56,6 +73,17 @@ export const aiGradingHandlers = {
   /** プロンプトを1行作る（直すときは parentPromptId に元の行を指定する） */
   "aiGrading:createPrompt": async (data: CreateAiPromptData) =>
     createAiPrompt(data, requireActorUserId()),
+
+  /**
+   * 問題の画像を試験フォルダへ取り込み、data ディレクトリからの相対パスを返す（DB には書かない。
+   * 行はプロンプトを保存するときに作る）。切り出し・PDF のページの画像化は画面で済ませてある
+   */
+  "aiGrading:importQuestionImage": async (
+    input: ImportAiQuestionImageInput
+  ) => {
+    requireActorUserId()
+    return importAiQuestionImage(input, getSharedFilesDirectory())
+  },
 
   /** 模範解答の下書きの元（ASB の小問・枝問とテキスト要素の木）。照合は renderer */
   "aiGrading:getAsbModelAnswerSource": async (asbDefinitionId: string) =>
@@ -155,10 +183,43 @@ export const aiGradingHandlers = {
     listAiRubricProposalRunsByCropRegion(cropRegionId, requireActorUserId()),
 
   /**
-   * 問いかけに答える。選択肢なら項目を作り（既存の項目に当たる案なら作らない）、渡した答案の
-   * 自分の採点行に当てる。「その他」なら指示を記録する。当て外ししたマスの採点行を返すので、
-   * 点の計算と朱書きの合わせは renderer が続けて行う
+   * 問いかけ（案）に答える（下書き）。答えの行を書くだけで、教員の採点には触らない
    */
-  "aiGrading:answerProposal": async (input: AnswerAiRubricProposalInput) =>
-    answerAiRubricProposal(input, requireActorUserId()),
+  "aiGrading:recordProposalDraft": async (
+    input: RecordAiRubricProposalDraftInput
+  ) => recordAiRubricProposalDraft(input, requireActorUserId()),
+
+  /**
+   * 案の外の問いかけ（採点チェック・どの案にも入らない答案）に答える（下書き）。答案ごとの行を書くだけ
+   */
+  "aiGrading:recordAttemptResponses": async (input: {
+    responses: AiAttemptResponseInput[]
+  }) => recordAiAttemptResponses(input, requireActorUserId()),
+
+  /** 問いかけの前に決めた採点方式の下書きを書く（設問の採点方式は確定のときに変える） */
+  "aiGrading:setQuestioningScoringMethod": async (input: {
+    runId: string
+    scoringMethod: string
+  }) => setAiQuestioningScoringMethod(input, requireActorUserId()),
+
+  /**
+   * 案への答え（下書き）を確定する。選択肢なら項目を作り（既存の項目に当たる案なら作らない）、
+   * 渡した答案の自分の採点行に当てる。当て外ししたマスの採点行を返すので、点の計算と朱書きの
+   * 合わせは renderer が続けて行う
+   */
+  "aiGrading:commitProposalResponse": async (
+    input: CommitAiRubricProposalResponseInput
+  ) => commitAiRubricProposalResponse(input, requireActorUserId()),
+
+  /** 問いかけで教員が直接決めた点（1件ずつ採点・採点チェックで直す点）を自分の採点として書く */
+  "aiGrading:writeQuestioningScores": async (input: {
+    cropRegionId: string
+    scores: AiQuestioningScoreWrite[]
+  }) => writeAiQuestioningScores(input, requireActorUserId()),
+
+  /** 教員の層へ書き終えた答えを確定済みにする */
+  "aiGrading:markQuestioningCommitted": async (input: {
+    proposalResponseIds: string[]
+    attemptResponseIds: string[]
+  }) => markAiQuestioningCommitted(input, requireActorUserId()),
 } satisfies HandlerMap

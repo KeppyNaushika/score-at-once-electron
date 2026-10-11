@@ -252,7 +252,7 @@ describe("AI採点モード: 設問を切り替えても絞り込みと並べ方
     renderMode()
     await screen.findByRole("group", { name: "AI の採点の絞り込み" })
 
-    // 既定から変える: AI の採点の「未採点」を入、自分の採点の「正答」を入、
+    // 既定から変える: AI の採点の「未採点」を切、自分の採点の「正答」を入、
     // 並べ方を確信度の低い順
     await user.click(filterButton("AI の採点の絞り込み", "未採点"))
     await user.click(filterButton("自分の採点の絞り込み", "正答"))
@@ -261,7 +261,7 @@ describe("AI採点モード: 設問を切り替えても絞り込みと並べ方
     const expectChangedSettings = () => {
       expect(filterButton("AI の採点の絞り込み", "未採点")).toHaveAttribute(
         "aria-pressed",
-        "true"
+        "false"
       )
       expect(filterButton("自分の採点の絞り込み", "正答")).toHaveAttribute(
         "aria-pressed",
@@ -283,8 +283,11 @@ describe("AI採点モード: 設問を切り替えても絞り込みと並べ方
     renderMode()
     await screen.findByRole("group", { name: "AI の採点の絞り込み" })
 
-    // AI の判定が無い答案も出す（3件とも見える）
-    await user.click(filterButton("AI の採点の絞り込み", "未採点"))
+    // 既定で AI の判定が無い答案も出る（3件とも見える）
+    expect(filterButton("AI の採点の絞り込み", "未採点")).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    )
     await waitFor(() => expect(shownCounts()).toContain("表示 3"))
 
     await user.keyboard("{Meta>}")

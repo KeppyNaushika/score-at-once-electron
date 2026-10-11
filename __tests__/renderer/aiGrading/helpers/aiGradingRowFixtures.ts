@@ -54,6 +54,7 @@ export function makePrompt(overrides: Partial<AiPromptRow> = {}): AiPromptRow {
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
     createdBy: null,
+    questionImages: [],
     ...overrides,
   }
 }
@@ -83,6 +84,7 @@ export function makeAttempt(
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
     rubricMatches: [],
+    responses: [],
     ...overrides,
   }
 }
@@ -108,6 +110,7 @@ export function makeRun(
     points: 4,
     resultPromptId: null,
     notes: "",
+    questioningScoringMethod: "",
     inputTokens: 0,
     outputTokens: 0,
     cacheReadTokens: 0,

@@ -7,6 +7,7 @@
  */
 
 import { type RecordedTokenUsage, totalTokenCount } from "@/lib/aiUsageCost"
+import { isStage1RunPurpose } from "@/types/aiGrading.types"
 
 import { stripModelSnapshotDate } from "./imageTokens"
 
@@ -45,7 +46,7 @@ export function collectMeasuredAttempts(
   return runs
     .filter(
       (run) =>
-        run.purpose === "grade" &&
+        isStage1RunPurpose(run.purpose) &&
         run.provider === condition.provider &&
         stripModelSnapshotDate(run.model) === model &&
         (condition.promptId === undefined ||

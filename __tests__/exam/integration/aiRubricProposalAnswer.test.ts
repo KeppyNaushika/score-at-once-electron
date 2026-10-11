@@ -1,10 +1,13 @@
 /**
- * 問いかけ（AI の項目の案）への答えの反映（docs/vlm-grading-design.md §3-5・§5-3）。
+ * 問いかけ（AI の項目の案）への答えの下書きと確定（docs/vlm-grading-design.md §3-5・§5-3）。
  *
- * - 選択肢を選ぶと項目を作り、答えを記録し、渡した答案の自分の採点行に当てる
- * - 選び直しは同じ項目の効き方を変える（項目を2つ作らない）
+ * - 答え（下書き）は AI の層の行だけを書き、教員の層（項目・適用・採点）には何も書かない
+ * - 確定すると、選択肢なら項目を作り、渡した答案の自分の採点行に当て、答えを確定済みにする
+ * - 選び直し（確定済みの案に答え直して確定）は同じ項目の効き方を変える（項目を2つ作らない）
  * - 既存の項目に当たる案は、その項目を当てるだけで値を変えない
- * - 「その他」は指示を記録し、前の答えで当てた項目を外す。指示は次の往復に添える
+ * - 「その他」は確定で前に当てた項目を外す。確定した指示だけを次の往復に添える
+ * - 1件ずつ採点の答えは答案ごとの点を持ち、点を書き終えてから確定済みにする
+ * - 案の外の問いかけの答え（答案ごと）と、問いかけで決めた点の書き込み
  * - 答えられるのは実行した教員だけ。案に入っていない答案には当てない
  *
  * 実行・試行・案は合成した行（外部へは送らない）。
@@ -23,10 +26,16 @@ vi.mock("../../../electron-src/lib/prisma/client", async () => {
   }
 })
 
+import { recordAiAttemptResponses } from "@/electron-src/lib/prisma/aiAttemptResponse"
 import {
-  answerAiRubricProposal,
+  markAiQuestioningCommitted,
+  writeAiQuestioningScores,
+} from "@/electron-src/lib/prisma/aiQuestioningScore"
+import {
+  commitAiRubricProposalResponse,
   listAiRubricProposalRunsByCropRegion,
   listTeacherInstructions,
+  recordAiRubricProposalDraft,
 } from "@/electron-src/lib/prisma/aiRubricProposal"
 import { createRubricItem } from "@/electron-src/lib/prisma/rubricItem"
 
@@ -157,21 +166,104 @@ const ownRowsWithApplications = () =>
     include: { rubricApplications: true },
   })
 
-describe("選択肢を選ぶ", () => {
-  it("項目を作って答えを記録し、渡した答案の自分の採点行に当てる", async () => {
-    const proposal = await createProposal()
-    const [recommended] = proposal.options
+/** 答える（下書き）→ 確定する */
+async function draftAndCommit(
+  input: {
+    proposalId: string
+    optionId: string | null
+    freeText: string
+    examStudentIds: string[]
+  },
+  actorUserId = ownerId()
+) {
+  const draft = await recordAiRubricProposalDraft(
+    {
+      proposalId: input.proposalId,
+      optionId: input.optionId,
+      freeText: input.freeText,
+      manualScores: [],
+    },
+    actorUserId
+  )
+  return commitAiRubricProposalResponse(
+    { responseId: draft.id, examStudentIds: input.examStudentIds },
+    actorUserId
+  )
+}
 
-    const { response, touchedRows } = await answerAiRubricProposal(
+/** 案の答案の試行の id（受験者の番号から） */
+async function attemptIdOf(proposalId: string, index: number) {
+  const member = await testPrisma.aiRubricProposalMember.findFirstOrThrow({
+    where: { proposalId, attempt: { examStudentId: examStudentId(index) } },
+  })
+  return member.attemptId
+}
+
+describe("下書き", () => {
+  it("答えても教員の層には何も書かず、確定するまで下書きのまま", async () => {
+    const proposal = await createProposal()
+    const draft = await recordAiRubricProposalDraft(
       {
         proposalId: proposal.id,
-        optionId: recommended.id,
+        optionId: proposal.options[0].id,
         freeText: "",
-        examStudentIds: [examStudentId(0), examStudentId(1)],
-        adviceText: "単位 cm を書こう。",
+        manualScores: [],
       },
       ownerId()
     )
+    expect(draft).toMatchObject({ committedAt: null, resultRubricItemId: null })
+    expect(await testPrisma.rubricItem.count()).toBe(0)
+    expect(await testPrisma.rubricApplication.count()).toBe(0)
+    expect(await testPrisma.questionScore.count()).toBe(0)
+
+    const [proposalRun] = await listAiRubricProposalRunsByCropRegion(
+      cropRegionId(),
+      ownerId()
+    )
+    expect(proposalRun.rubricProposals[0].responses).toHaveLength(1)
+    expect(proposalRun.rubricProposals[0].responses[0].committedAt).toBeNull()
+  })
+
+  it("答えの種類を混ぜた答えと、配点を超える点は拒む", async () => {
+    const proposal = await createProposal()
+    const attemptId = await attemptIdOf(proposal.id, 0)
+    await expect(
+      recordAiRubricProposalDraft(
+        {
+          proposalId: proposal.id,
+          optionId: proposal.options[0].id,
+          freeText: "指示",
+          manualScores: [],
+        },
+        ownerId()
+      )
+    ).rejects.toThrow("指示や点は付けません")
+    await expect(
+      recordAiRubricProposalDraft(
+        {
+          proposalId: proposal.id,
+          optionId: null,
+          freeText: "",
+          manualScores: [{ attemptId, status: "partial", partialScore: 9 }],
+        },
+        ownerId()
+      )
+    ).rejects.toThrow("配点まで")
+    expect(await testPrisma.aiRubricProposalResponse.count()).toBe(0)
+  })
+})
+
+describe("選択肢を選んで確定する", () => {
+  it("項目を作って答えを確定済みにし、渡した答案の自分の採点行に当てる", async () => {
+    const proposal = await createProposal()
+    const [recommended] = proposal.options
+
+    const { response, touchedRows } = await draftAndCommit({
+      proposalId: proposal.id,
+      optionId: recommended.id,
+      freeText: "",
+      examStudentIds: [examStudentId(0), examStudentId(1)],
+    })
 
     const items = await testPrisma.rubricItem.findMany({
       where: { cropRegionId: cropRegionId() },
@@ -179,7 +271,7 @@ describe("選択肢を選ぶ", () => {
     expect(items).toHaveLength(1)
     expect(items[0]).toMatchObject({
       label: "単位が無い",
-      adviceText: "単位 cm を書こう。",
+      adviceText: "単位を書こう。",
       effectKind: "adjust",
       createdByUserId: ownerId(),
     })
@@ -189,6 +281,7 @@ describe("選択肢を選ぶ", () => {
       resultRubricItemId: items[0].id,
       freeText: "",
     })
+    expect(response.committedAt).not.toBeNull()
     expect(touchedRows.map((row) => row.examStudentId).sort()).toEqual(
       [examStudentId(0), examStudentId(1)].sort()
     )
@@ -201,14 +294,13 @@ describe("選択肢を選ぶ", () => {
     // AI の層からは点を書かない（点の計算と書き込みは renderer が続けて行う）
     expect(touchedRows.every((row) => row.status === "unscored")).toBe(true)
 
-    const [proposalRun] = await listAiRubricProposalRunsByCropRegion(
-      cropRegionId(),
+    // 確定済みの答えをもう一度確定しても、何もしない
+    const again = await commitAiRubricProposalResponse(
+      { responseId: response.id, examStudentIds: [examStudentId(0)] },
       ownerId()
     )
-    expect(proposalRun.rubricProposals[0].responses).toHaveLength(1)
-    expect(proposalRun.rubricProposals[0].members[0].attempt.state).toBe(
-      "succeeded"
-    )
+    expect(again.touchedRows).toEqual([])
+    expect(await testPrisma.rubricItem.count()).toBe(1)
   })
 
   it("選び直しは同じ項目の効き方を変え、項目を2つ作らない", async () => {
@@ -219,14 +311,11 @@ describe("選択肢を選ぶ", () => {
       freeText: "",
       examStudentIds: [examStudentId(0)],
     }
-    await answerAiRubricProposal(
-      { ...input, optionId: recommended.id },
-      ownerId()
-    )
-    const { response } = await answerAiRubricProposal(
-      { ...input, optionId: incorrect.id },
-      ownerId()
-    )
+    await draftAndCommit({ ...input, optionId: recommended.id })
+    const { response } = await draftAndCommit({
+      ...input,
+      optionId: incorrect.id,
+    })
 
     const items = await testPrisma.rubricItem.findMany({
       where: { cropRegionId: cropRegionId() },
@@ -261,15 +350,12 @@ describe("選択肢を選ぶ", () => {
     )
     const proposal = await createProposal(existing.id)
 
-    const { response, touchedRows } = await answerAiRubricProposal(
-      {
-        proposalId: proposal.id,
-        optionId: proposal.options[0].id,
-        freeText: "",
-        examStudentIds: [examStudentId(1)],
-      },
-      ownerId()
-    )
+    const { response, touchedRows } = await draftAndCommit({
+      proposalId: proposal.id,
+      optionId: proposal.options[0].id,
+      freeText: "",
+      examStudentIds: [examStudentId(1)],
+    })
 
     expect(response.resultRubricItemId).toBe(existing.id)
     const items = await testPrisma.rubricItem.findMany({
@@ -282,23 +368,30 @@ describe("選択肢を選ぶ", () => {
 })
 
 describe("「その他」", () => {
-  it("指示を記録して次の往復に添え、前の答えで当てた項目を外す", async () => {
+  it("確定で前に当てた項目を外し、確定した指示だけを次の往復に添える", async () => {
     const proposal = await createProposal()
-    await answerAiRubricProposal(
-      {
-        proposalId: proposal.id,
-        optionId: proposal.options[0].id,
-        freeText: "",
-        examStudentIds: [examStudentId(0), examStudentId(1)],
-      },
-      ownerId()
-    )
+    await draftAndCommit({
+      proposalId: proposal.id,
+      optionId: proposal.options[0].id,
+      freeText: "",
+      examStudentIds: [examStudentId(0), examStudentId(1)],
+    })
 
-    const { response, touchedRows } = await answerAiRubricProposal(
+    // 下書きのうちは添えない
+    const draft = await recordAiRubricProposalDraft(
       {
         proposalId: proposal.id,
         optionId: null,
         freeText: " 単位が無くても cm が明らかなら減点しない ",
+        manualScores: [],
+      },
+      ownerId()
+    )
+    expect(await listTeacherInstructions(cropRegionId(), ownerId())).toEqual([])
+
+    const { response, touchedRows } = await commitAiRubricProposalResponse(
+      {
+        responseId: draft.id,
         examStudentIds: [examStudentId(0), examStudentId(1)],
       },
       ownerId()
@@ -320,32 +413,143 @@ describe("「その他」", () => {
       []
     )
 
-    // 選択肢で答え直すと、その指示は効かなくなる
-    await answerAiRubricProposal(
+    // 選択肢で答え直して確定すると、その指示は効かなくなる。前に作った項目を使い回す
+    await draftAndCommit({
+      proposalId: proposal.id,
+      optionId: proposal.options[0].id,
+      freeText: "",
+      examStudentIds: [],
+    })
+    expect(await listTeacherInstructions(cropRegionId(), ownerId())).toEqual([])
+    expect(await testPrisma.rubricItem.count()).toBe(1)
+  })
+})
+
+describe("1件ずつ自分で採点する", () => {
+  it("答案ごとの点を答えに持ち、確定では前の項目を外すだけで確定済みにはしない", async () => {
+    const proposal = await createProposal()
+    await draftAndCommit({
+      proposalId: proposal.id,
+      optionId: proposal.options[0].id,
+      freeText: "",
+      examStudentIds: [examStudentId(0), examStudentId(1)],
+    })
+    const attemptId = await attemptIdOf(proposal.id, 0)
+    const draft = await recordAiRubricProposalDraft(
       {
         proposalId: proposal.id,
-        optionId: proposal.options[0].id,
+        optionId: null,
         freeText: "",
-        examStudentIds: [],
+        manualScores: [{ attemptId, status: "partial", partialScore: 2.5 }],
       },
       ownerId()
     )
-    expect(await listTeacherInstructions(cropRegionId(), ownerId())).toEqual([])
-  })
+    expect(draft.scores).toHaveLength(1)
+    expect(draft.scores[0].partialScore?.toNumber()).toBe(2.5)
 
-  it("指示が空なら記録しない", async () => {
+    const { response, touchedRows } = await commitAiRubricProposalResponse(
+      {
+        responseId: draft.id,
+        examStudentIds: [examStudentId(0), examStudentId(1)],
+      },
+      ownerId()
+    )
+    expect(response.committedAt).toBeNull()
+    expect(touchedRows).toHaveLength(2)
+    expect(await listTeacherInstructions(cropRegionId(), ownerId())).toEqual([])
+
+    // 点を書いてから確定済みにする（採点キーと同じ書き方）
+    await writeAiQuestioningScores(
+      {
+        cropRegionId: cropRegionId(),
+        scores: [
+          {
+            examStudentId: examStudentId(0),
+            status: "partial",
+            partialScore: 2.5,
+          },
+        ],
+      },
+      ownerId()
+    )
+    await markAiQuestioningCommitted(
+      { proposalResponseIds: [draft.id], attemptResponseIds: [] },
+      ownerId()
+    )
+    const written = await testPrisma.questionScore.findFirstOrThrow({
+      where: {
+        cropRegionId: cropRegionId(),
+        userId: ownerId(),
+        examStudentId: examStudentId(0),
+      },
+    })
+    expect(written.status).toBe("partial")
+    expect(written.partialScore?.toNumber()).toBe(2.5)
+    const marked = await testPrisma.aiRubricProposalResponse.findUniqueOrThrow({
+      where: { id: draft.id },
+    })
+    expect(marked.committedAt).not.toBeNull()
+  })
+})
+
+describe("案の外の問いかけ（答案ごとの答え）", () => {
+  it("答案ごとに下書きを書き、教員の採点は変えない。他の教員の答えとしては書けない", async () => {
     const proposal = await createProposal()
+    const attemptId = await attemptIdOf(proposal.id, 0)
+    const [written] = await recordAiAttemptResponses(
+      {
+        responses: [
+          {
+            attemptId,
+            choice: "rescore",
+            status: "incorrect",
+            partialScore: null,
+          },
+        ],
+      },
+      ownerId()
+    )
+    expect(written).toMatchObject({ choice: "rescore", committedAt: null })
+    expect(await testPrisma.questionScore.count()).toBe(0)
+
     await expect(
-      answerAiRubricProposal(
+      recordAiAttemptResponses(
         {
-          proposalId: proposal.id,
-          optionId: null,
-          freeText: "  ",
-          examStudentIds: [],
+          responses: [
+            {
+              attemptId,
+              choice: "keep",
+              status: "correct",
+              partialScore: null,
+            },
+          ],
         },
         ownerId()
       )
-    ).rejects.toThrow("指示を書いてください")
+    ).rejects.toThrow("点を持ちません")
+    await expect(
+      recordAiAttemptResponses(
+        {
+          responses: [
+            { attemptId, choice: "keep", status: null, partialScore: null },
+          ],
+        },
+        otherUserId
+      )
+    ).rejects.toThrow("実行した教員だけ")
+
+    // 他の教員は確定済みにできない
+    await markAiQuestioningCommitted(
+      { proposalResponseIds: [], attemptResponseIds: [written.id] },
+      otherUserId
+    )
+    expect(
+      (
+        await testPrisma.aiAttemptResponse.findUniqueOrThrow({
+          where: { id: written.id },
+        })
+      ).committedAt
+    ).toBeNull()
   })
 })
 
@@ -357,24 +561,30 @@ describe("答えられないもの", () => {
       proposalId: proposal.id,
       optionId: proposal.options[0].id,
       freeText: "",
-      examStudentIds: [examStudentId(0)],
+      manualScores: [],
     }
-    await expect(answerAiRubricProposal(base, otherUserId)).rejects.toThrow(
-      "実行した教員だけ"
-    )
     await expect(
-      answerAiRubricProposal(
-        { ...base, examStudentIds: [examStudentId(2)] },
-        ownerId()
-      )
-    ).rejects.toThrow("案に入っていない答案")
+      recordAiRubricProposalDraft(base, otherUserId)
+    ).rejects.toThrow("実行した教員だけ")
     await expect(
-      answerAiRubricProposal(
+      recordAiRubricProposalDraft(
         { ...base, optionId: otherProposal.options[0].id },
         ownerId()
       )
     ).rejects.toThrow("この案のものではありません")
+    const draft = await recordAiRubricProposalDraft(base, ownerId())
+    await expect(
+      commitAiRubricProposalResponse(
+        { responseId: draft.id, examStudentIds: [examStudentId(2)] },
+        ownerId()
+      )
+    ).rejects.toThrow("案に入っていない答案")
+    await expect(
+      commitAiRubricProposalResponse(
+        { responseId: draft.id, examStudentIds: [examStudentId(0)] },
+        otherUserId
+      )
+    ).rejects.toThrow("実行した教員だけ")
     expect(await testPrisma.rubricItem.count()).toBe(0)
-    expect(await testPrisma.aiRubricProposalResponse.count()).toBe(0)
   })
 })

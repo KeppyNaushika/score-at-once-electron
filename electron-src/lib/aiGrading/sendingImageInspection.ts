@@ -99,12 +99,16 @@ export async function measureRunImageSizes(
     })
   }
 
-  let questionImage: { width: number; height: number } | null = null
-  if (prompt.questionImagePath) {
+  // 問題の画像は並び順に全部（送るときと同じ順）
+  const questionImages: { width: number; height: number }[] = []
+  for (const questionImage of prompt.questionImages) {
     const metadata = await sharp(
-      resolveDataPath(prompt.questionImagePath)
+      resolveDataPath(questionImage.imagePath)
     ).metadata()
-    questionImage = { width: metadata.width ?? 0, height: metadata.height ?? 0 }
+    questionImages.push({
+      width: metadata.width ?? 0,
+      height: metadata.height ?? 0,
+    })
   }
   const masterImagePath = cropRegion.examPage.imagePath
   const modelAnswerImage =
@@ -116,5 +120,5 @@ export async function measureRunImageSizes(
         )
       : null
 
-  return { answerImages, questionImage, modelAnswerImage }
+  return { answerImages, questionImages, modelAnswerImage }
 }

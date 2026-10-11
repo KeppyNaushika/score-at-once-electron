@@ -11,8 +11,6 @@ import { estimateGroupingCost } from "@/components/exams/07-score-at-once/AiGrad
 import {
   type AiRubricProposalRow,
   attemptsOutsideProposals,
-  buildProposalAnswerInput,
-  isProposalUnanswered,
   latestEndedProposalRun,
   latestProposalResponse,
   orderMembersByConfidence,
@@ -20,10 +18,9 @@ import {
   planProposalAnswer,
   proposalKindOf,
 } from "@/components/exams/07-score-at-once/AiGrading/utils/rubricProposals"
-import type { OwnRubricCell } from "@/components/exams/07-score-at-once/Rubric/utils/rubricApplicationState"
 import type { AiPricing } from "@/electron-src/lib/aiGrading/providerCredentialStore"
 
-import { makeAttempt, makeQuestionScore } from "./helpers/aiGradingRowFixtures"
+import { makeAttempt } from "./helpers/aiGradingRowFixtures"
 
 const FIXED_DATE = new Date("2026-10-01T00:00:00.000Z")
 
@@ -54,8 +51,10 @@ function makeResponse(overrides: Partial<ResponseRow> = {}): ResponseRow {
     optionId: "option-1",
     freeText: "",
     resultRubricItemId: "item-1",
+    committedAt: FIXED_DATE,
     createdAt: FIXED_DATE,
     updatedAt: FIXED_DATE,
+    scores: [],
     ...overrides,
   }
 }
@@ -92,22 +91,15 @@ function makeProposal(
   }
 }
 
-const EMPTY_CELL: OwnRubricCell = {
-  questionScore: undefined,
-  appliedItemIds: new Set(),
-  overridesRubric: false,
-}
-
 describe("案の状態と並び", () => {
-  it("答えの行が無ければ未回答。最新の答えが効く", () => {
-    expect(isProposalUnanswered(makeProposal())).toBe(true)
+  it("最新の答えが効く（答え直しは新しい行）", () => {
+    expect(latestProposalResponse(makeProposal())).toBeNull()
     const answered = makeProposal({
       responses: [
         makeResponse({ id: "first" }),
         makeResponse({ id: "second", optionId: null, freeText: "指示" }),
       ],
     })
-    expect(isProposalUnanswered(answered)).toBe(false)
     expect(latestProposalResponse(answered)?.id).toBe("second")
   })
 
@@ -180,88 +172,41 @@ describe("案の状態と並び", () => {
   })
 })
 
-describe("答えの引数", () => {
-  it("手での上書きと、項目を当てずに採点キーで付けた点の答案は、当てる答案から外す", () => {
-    const proposal = makeProposal({
-      members: ["unscored", "overridden", "keyed", "applied", "none"].map(
-        (examStudentId) => makeMember(examStudentId)
-      ),
-    })
-    const cells: Record<string, OwnRubricCell> = {
-      unscored: {
-        ...EMPTY_CELL,
-        questionScore: makeQuestionScore({
-          examStudentId: "unscored",
-          status: "unscored",
-        }),
-      },
-      overridden: {
-        questionScore: makeQuestionScore({ examStudentId: "overridden" }),
-        appliedItemIds: new Set(["item-1"]),
-        overridesRubric: true,
-      },
-      keyed: {
-        ...EMPTY_CELL,
-        questionScore: makeQuestionScore({ examStudentId: "keyed" }),
-      },
-      applied: {
-        ...EMPTY_CELL,
-        questionScore: makeQuestionScore({ examStudentId: "applied" }),
-        appliedItemIds: new Set(["item-2"]),
-      },
-    }
-    const input = buildProposalAnswerInput(
-      proposal,
-      { kind: "option", optionId: "option-1", adviceText: "直した助言" },
-      (examStudentId) => cells[examStudentId] ?? EMPTY_CELL
-    )
-    expect(input).toEqual({
-      proposalId: "proposal-1",
-      optionId: "option-1",
-      freeText: "",
-      examStudentIds: ["unscored", "applied", "none"],
-      adviceText: "直した助言",
-    })
-
-    expect(
-      buildProposalAnswerInput(
-        makeProposal(),
-        { kind: "other", freeText: "途中式を見る" },
-        () => EMPTY_CELL
-      )
-    ).toEqual({
-      proposalId: "proposal-1",
-      optionId: null,
-      freeText: "途中式を見る",
-      examStudentIds: ["student-a", "student-b"],
-    })
-  })
-
-  it("答えると項目に何が起こるかを、main と同じ決め方で返す", () => {
-    const option = { kind: "option", optionId: "option-1" } as const
+describe("確定で項目に何が起こるか", () => {
+  it("main と同じ決め方で返す。前の項目は確定した答えだけから引く", () => {
     const living = new Set(["item-1", "existing"])
-    expect(planProposalAnswer(makeProposal(), option, living)).toEqual({
+    expect(planProposalAnswer(makeProposal(), true, living)).toEqual({
       kind: "create",
     })
     expect(
       planProposalAnswer(
         makeProposal({ matchedRubricItemId: "existing" }),
-        option,
+        true,
         living
       )
     ).toEqual({ kind: "link", rubricItemId: "existing" })
     const answered = makeProposal({ responses: [makeResponse()] })
-    expect(planProposalAnswer(answered, option, living)).toEqual({
+    expect(planProposalAnswer(answered, true, living)).toEqual({
       kind: "update",
       rubricItemId: "item-1",
     })
     // 前の答えで作った項目が消えていれば、作り直す
-    expect(planProposalAnswer(answered, option, new Set())).toEqual({
+    expect(planProposalAnswer(answered, true, new Set())).toEqual({
       kind: "create",
     })
-    expect(
-      planProposalAnswer(answered, { kind: "other", freeText: "x" }, living)
-    ).toEqual({ kind: "instruction", unappliedRubricItemId: "item-1" })
+    expect(planProposalAnswer(answered, false, living)).toEqual({
+      kind: "unapply",
+      unappliedRubricItemId: "item-1",
+    })
+    // 下書きの答え（まだ確定していない）は項目を持たないので、前の項目にならない
+    const drafted = makeProposal({
+      responses: [
+        makeResponse({ committedAt: null, resultRubricItemId: null }),
+      ],
+    })
+    expect(planProposalAnswer(drafted, true, living)).toEqual({
+      kind: "create",
+    })
   })
 })
 

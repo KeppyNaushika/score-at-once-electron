@@ -2,6 +2,8 @@
  * 表示する試行・既定のプロンプト・消してよい古い試行の決め方（docs/vlm-grading-design.md §4-3・§4-4）。
  */
 
+import { isStage1RunPurpose } from "@/types/aiGrading.types"
+
 import type { AiGradingRunRow, AiPromptRow, AttemptWithRun } from "../types"
 
 /** 試行に採用の記録があるか */
@@ -35,7 +37,7 @@ export function groupAttemptsByExamStudent(
 ): Map<string, AttemptWithRun[]> {
   const attemptsByExamStudentId = new Map<string, AttemptWithRun[]>()
   for (const run of runs) {
-    if (run.purpose !== "grade") continue
+    if (!isStage1RunPurpose(run.purpose)) continue
     for (const attempt of run.attempts) {
       const attempts = attemptsByExamStudentId.get(attempt.examStudentId)
       if (attempts) {
@@ -93,7 +95,9 @@ export function resolveDefaultPromptId(
   currentUserId: string
 ): string | null {
   const lastUsedPromptId = runs
-    .filter((run) => run.purpose === "grade" && run.userId === currentUserId)
+    .filter(
+      (run) => isStage1RunPurpose(run.purpose) && run.userId === currentUserId
+    )
     .filter((run) => prompts.some((prompt) => prompt.id === run.promptId))
     .reduce<AiGradingRunRow | null>((latest, run) => {
       if (!latest) return run

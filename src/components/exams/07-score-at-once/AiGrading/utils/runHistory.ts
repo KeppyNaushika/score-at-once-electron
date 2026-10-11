@@ -9,6 +9,7 @@
  */
 
 import type { QuestionScoreRow } from "@/queries/scoring"
+import { isStage1RunPurpose } from "@/types/aiGrading.types"
 
 import type { AiGradingRunRow } from "../types"
 import { isAdoptedAttempt } from "./attemptSelection"
@@ -48,7 +49,9 @@ function gradeRunsNewestFirst(
   currentUserId: string
 ): AiGradingRunRow[] {
   return runs
-    .filter((run) => run.purpose === "grade" && run.userId === currentUserId)
+    .filter(
+      (run) => isStage1RunPurpose(run.purpose) && run.userId === currentUserId
+    )
     .toSorted((runA, runB) => {
       const timeDifference =
         new Date(runB.createdAt).getTime() - new Date(runA.createdAt).getTime()

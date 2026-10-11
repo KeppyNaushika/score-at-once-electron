@@ -11,10 +11,11 @@ import { aiGradingRunsQuery, aiPromptsQuery } from "@/queries/aiGrading"
 import { aiGradingSettingsQuery } from "@/queries/aiProvider"
 import type { QuestionAnswerRegionRow } from "@/queries/cropRegion"
 import type { QuestionScoreRow } from "@/queries/scoring"
+import type { AiGradingStage1Purpose } from "@/types/aiGrading.types"
 
+import { useScoringKeysPausedWhile } from "../Rubric/hooks/useScoringKeysPausedWhile"
 import { AiAdoptOverwriteDialog } from "./AiAdoptOverwriteDialog"
 import { AiAdoptTabContent } from "./AiAdoptTabContent"
-import { AiExamCostSection } from "./AiExamCostSection"
 import { AiGradingGrid } from "./AiGradingGrid"
 import { AiGradingRunDialog } from "./AiGradingRunDialog"
 import { AiGradingRunProgress } from "./AiGradingRunProgress"
@@ -22,14 +23,17 @@ import { AiGradingSidePanel } from "./AiGradingSidePanel"
 import { AiOwnScoringSection } from "./AiOwnScoringSection"
 import { AiPromptPanel } from "./AiPromptPanel"
 import { AiQuestioningPanel } from "./AiQuestioningPanel"
+import { AiQuestioningStatusNotice } from "./AiQuestioningStatusNotice"
 import { AiRunHistorySection } from "./AiRunHistorySection"
 import { AiSelectedJudgementSection } from "./AiSelectedJudgementSection"
 import { useAiAnswerReviewState } from "./hooks/useAiAnswerReviewState"
 import { useAiAttemptNavigation } from "./hooks/useAiAttemptNavigation"
+import { useAiCheckQuestions } from "./hooks/useAiCheckQuestions"
 import { useAiGradingAnswers } from "./hooks/useAiGradingAnswers"
+import { useAiGradingQuestions } from "./hooks/useAiGradingQuestions"
 import { useAiGridSelection } from "./hooks/useAiGridSelection"
 import { useAiOwnScoring } from "./hooks/useAiOwnScoring"
-import { useAiQuestioningState } from "./hooks/useAiQuestioningState"
+import { useAiQuestioning } from "./hooks/useAiQuestioning"
 import { useAiSelectionAdoption } from "./hooks/useAiSelectionAdoption"
 import type {
   AiGradingRunRow,
@@ -38,20 +42,35 @@ import type {
   AiPromptRow,
 } from "./types"
 import { resolveDefaultPromptId } from "./utils/attemptSelection"
+import type { AiRubricProposalRow } from "./utils/rubricProposals"
+import type { GradingTargetScope } from "./utils/selectGradingTargets"
 
-/** 左パネルのタブ */
-const LEFT_TABS = ["prompt", "question", "score"] as const
+/**
+ * 左パネルのタブ。AI 採点と AI 採点チェックは、タブの中に問いかけ（問い・選択肢・記録・見直し）を出す
+ * （中央はどのタブでも答案の一覧）。採点反映（直接採点のまま AI の判定を採用する）は2つの機能の後ろに残す
+ */
+const LEFT_TABS = ["prompt", "grade", "check", "score"] as const
 type LeftTab = (typeof LEFT_TABS)[number]
 
 const LEFT_TAB_LABELS: Record<LeftTab, string> = {
   prompt: "プロンプト",
-  question: "問いかけ",
+  grade: "AI 採点",
+  check: "AI 採点チェック",
   score: "採点反映",
+}
+
+/** 実行ダイアログを開くときの目的と、初めの送る答案の選び方 */
+interface RunDialogRequest {
+  purpose: AiGradingStage1Purpose
+  initialScope?: GradingTargetScope
+  /** 「選択した答案」で送る答案（省けば中央の一覧の選択） */
+  selectedExamStudentIds?: ReadonlySet<string>
 }
 
 /** まだ届いていないときの空（毎回作り直さない） */
 const NO_PROMPTS: AiPromptRow[] = []
 const NO_RUNS: AiGradingRunRow[] = []
+const NO_PROPOSALS: AiRubricProposalRow[] = []
 
 interface AiGradingWorkspaceProps {
   examId: string
@@ -73,9 +92,10 @@ interface AiGradingWorkspaceProps {
 }
 
 /**
- * 設問1つぶんの AI 採点の作業場。左にプロンプト・採点反映のタブ
- * （選んだ答案の AI の判定は採点反映のタブで見る）、中央に**一覧表示と同じ答案の一覧**
- * （色は自分の採点、斜線と札で AI の提案）、右端に設問・絞り込み。
+ * 設問1つぶんの AI 採点の作業場。左にプロンプト・AI 採点・AI 採点チェック・採点反映のタブ
+ * （問いかけはAI 採点・AI 採点チェックのタブの中、選んだ答案の AI の判定は採点反映のタブで見る）、
+ * 中央はどのタブでも**一覧表示と同じ答案の一覧**（色は自分の採点、斜線と札で AI の提案。
+ * 問いかけのタブでは、いまの問いの答案に絞り、確定すると付く点を斜線で重ねる）、右端に設問・絞り込み。
  *
  * AI が答案ごとに書く朱書きの文案は採用しない（朱書きはルーブリック項目の助言から作る。
  * docs/vlm-grading-design.md §4-7）。
@@ -129,7 +149,9 @@ export function AiGradingWorkspace({
 
   // ── 利用者の選択（表示はここから導く） ───────────────────────
   const [chosenPromptId, setChosenPromptId] = useState<string | null>(null)
-  const [isRunDialogOpen, setIsRunDialogOpen] = useState(false)
+  const [runDialog, setRunDialog] = useState<RunDialogRequest | null>(null)
+  // 実行ダイアログを開いている間は、採点のキーも問いかけの 次へ・戻る も止める
+  useScoringKeysPausedWhile(runDialog !== null)
 
   const selectedPromptId = prompts.some(
     (prompt) => prompt.id === chosenPromptId
@@ -163,29 +185,55 @@ export function AiGradingWorkspace({
       currentUserId,
       answerOrder: viewSettings.answerOrder,
     })
-  const questioning = useAiQuestioningState({
+  const gradingQuestions = useAiGradingQuestions({ examId, cropRegion, runs })
+  const checkQuestions = useAiCheckQuestions({
     examId,
-    cropRegionId: cropRegion.id,
+    cropRegion,
     runs,
     answers,
   })
-  // タブを選んでいなければ、AI 採点を実行した設問（案がある・作っている）では問いかけを開く
+  // タブを選んでいなければ、AI 採点を実行した設問（案がある・作っている）では AI 採点を開く
   const [chosenLeftTab, setChosenLeftTab] = useState<LeftTab | null>(null)
   const leftTab: LeftTab =
     chosenLeftTab ??
-    (questioning.proposalRun !== null || questioning.status.kind !== "idle"
-      ? "question"
+    (gradingQuestions.proposalRun !== null ||
+    gradingQuestions.status.kind !== "idle"
+      ? "grade"
       : "prompt")
+  const questioningMode =
+    leftTab === "grade" || leftTab === "check" ? leftTab : null
+  const proposals =
+    gradingQuestions.proposalRun?.rubricProposals ?? NO_PROPOSALS
+  const questioning = useAiQuestioning({
+    mode: questioningMode,
+    examId,
+    cropRegion,
+    currentUserId,
+    pageSize,
+    studentAnswerImages,
+    states:
+      questioningMode === "check"
+        ? checkQuestions.states
+        : gradingQuestions.states,
+    persistDecision:
+      questioningMode === "check"
+        ? checkQuestions.persistDecision
+        : gradingQuestions.persistDecision,
+    ownScoreOf: checkQuestions.ownScoreOf,
+    proposals: questioningMode === "grade" ? proposals : NO_PROPOSALS,
+    onAnnotationsChanged,
+  })
   const grid = useAiGridSelection({
     cropRegion,
     reviewedAnswers,
     layoutDirection: display.layoutDirection,
     itemsPerLine: display.itemsPerLine,
     viewSettings,
-    // 問いかけている案の答案を、選ぶ前に目で確かめられるよう一覧に出す
-    pinnedExamStudentIds:
-      leftTab === "question" ? questioning.gridExamStudentIds : null,
+    // 問いかけている問いの答案を、選ぶ前に目で確かめられるよう一覧に出す
+    pinnedExamStudentIds: questioning.pinnedExamStudentIds,
   })
+  // 1件ずつ自分で採点している間は、一覧の選択の代わりに焦点の答案を出す
+  const selectionOverride = questioning.gridSelectionOverride
   const adoption = useAiSelectionAdoption({
     examId,
     cropRegion,
@@ -197,8 +245,8 @@ export function AiGradingWorkspace({
     onChooseAttempt: chooseAttempt,
     onAdopt: adoption.requestAdopt,
   })
-  // 採点反映・問いかけのタブでは、一覧表示と同じキーで自分の採点を直接書ける
-  // （問いかけでは、案に答えずに例外の答案を直す。項目が当たっていれば手での上書きになる）
+  // 採点反映のタブでは、一覧表示と同じキーで自分の採点を直接書ける（その場で確定）。
+  // 問いかけ（AI 採点・チェック）の中の採点キーは「1件ずつ自分で採点する」の下書きで、確定で入る
   const { scoreSelected, partialScore } = useAiOwnScoring({
     examId,
     currentUserId,
@@ -206,14 +254,24 @@ export function AiGradingWorkspace({
     studentAnswerImages,
     questionScores,
     selectedItems: grid.selectedItems,
-    isShortcutEnabled: leftTab === "score" || leftTab === "question",
+    isShortcutEnabled: leftTab === "score",
     onScored: grid.markScored,
   })
+
   if (!provider) return null
+
+  const ownScoringSection = (
+    <AiOwnScoringSection
+      cropRegion={cropRegion}
+      selectedCount={grid.selectedItems.length}
+      onScore={scoreSelected}
+      partialScore={partialScore}
+    />
+  )
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
-      {/* 左: 実行の進み具合と、プロンプト・採点反映のタブ */}
+      {/* 左: 実行の進み具合と、プロンプト・AI 採点・AI 採点チェック・採点反映のタブ */}
       <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-r px-3">
         <AiGradingRunProgress
           examId={examId}
@@ -228,9 +286,13 @@ export function AiGradingWorkspace({
           }}
           className="pt-2"
         >
-          <TabsList className="w-full">
+          <TabsList className="grid h-auto w-full grid-cols-4">
             {LEFT_TABS.map((tab) => (
-              <TabsTrigger key={tab} value={tab} className="px-1 text-xs">
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className="h-auto px-1 py-1 text-[11px] leading-tight whitespace-normal"
+              >
                 {LEFT_TAB_LABELS[tab]}
               </TabsTrigger>
             ))}
@@ -245,7 +307,7 @@ export function AiGradingWorkspace({
               onSelectPrompt={setChosenPromptId}
               onRunWithPrompt={(promptId) => {
                 setChosenPromptId(promptId)
-                setIsRunDialogOpen(true)
+                setRunDialog({ purpose: "grade" })
               }}
               settings={settings}
             />
@@ -259,29 +321,54 @@ export function AiGradingWorkspace({
               chosenRunId={chosenRunId}
               onChooseRun={chooseRun}
             />
-            <AiExamCostSection examId={examId} />
           </TabsContent>
-          <TabsContent value="question">
+          <TabsContent value="grade">
             <AiQuestioningPanel
-              examId={examId}
-              cropRegion={cropRegion}
-              currentUserId={currentUserId}
-              questionScores={questionScores}
-              studentAnswerImages={studentAnswerImages}
-              pageSize={pageSize}
+              mode="grade"
               questioning={questioning}
-              onScored={grid.markAdopted}
-              onAnnotationsChanged={onAnnotationsChanged}
-              onStartNextRound={() => setIsRunDialogOpen(true)}
-              onShowAdoption={() => setChosenLeftTab("score")}
-              selectedJudgement={
-                <AiSelectedJudgementSection
-                  singleSelectedItem={grid.singleSelectedItem}
-                  promptNumberById={promptNumberById}
-                  onPrevAttempt={showOlderAttempt}
-                  onNextAttempt={showNewerAttempt}
+              cropRegion={cropRegion}
+              onRun={
+                selectedPrompt ? () => setRunDialog({ purpose: "grade" }) : null
+              }
+              statusNotice={
+                <AiQuestioningStatusNotice
+                  examId={examId}
+                  cropRegionId={cropRegion.id}
+                  status={gradingQuestions.status}
                 />
               }
+              emptyMessage={
+                gradingQuestions.status.kind === "ready"
+                  ? "AI は項目の案を返しませんでした。"
+                  : "答案を AI に送り、判定から作った項目の案を、ここで1問ずつ問いかけます。決めたことは下書きで、最後に見直して「確定する」を押すと採点に入ります。"
+              }
+              notes={gradingQuestions.proposalRun?.notes ?? ""}
+              onRegrade={(examStudentIds) =>
+                setRunDialog({
+                  purpose: "grade",
+                  initialScope: "selected",
+                  selectedExamStudentIds: new Set(examStudentIds),
+                })
+              }
+            />
+          </TabsContent>
+          <TabsContent value="check">
+            <AiQuestioningPanel
+              mode="check"
+              questioning={questioning}
+              cropRegion={cropRegion}
+              onRun={
+                selectedPrompt ? () => setRunDialog({ purpose: "check" }) : null
+              }
+              statusNotice={null}
+              emptyMessage={
+                checkQuestions.status === "running"
+                  ? "採点済みの答案を AI が判定しています。終わると、ここで食い違いを問いかけます。"
+                  : checkQuestions.status === "idle"
+                    ? "採点済みの答案を AI に見せて、見落としや揺れを探します（あなたの点は送りません）。同じ答えに違う点が付いている組と、あなたと AI の判定が違う答案を、ここで1問ずつ問いかけます。"
+                    : "食い違いは見つかりませんでした。同じ答えに違う点が付いた組も、AI と判定の違う答案もありません。"
+              }
+              notes=""
             />
           </TabsContent>
           <TabsContent value="score">
@@ -301,17 +388,12 @@ export function AiGradingWorkspace({
               onPrevAttempt={showOlderAttempt}
               onNextAttempt={showNewerAttempt}
             />
-            <AiOwnScoringSection
-              cropRegion={cropRegion}
-              selectedCount={grid.selectedItems.length}
-              onScore={scoreSelected}
-              partialScore={partialScore}
-            />
+            {ownScoringSection}
           </TabsContent>
         </Tabs>
       </aside>
 
-      {/* 中央: 一覧表示と同じ答案の一覧（答案の下に AI の提案） */}
+      {/* 中央: どのタブでも、一覧表示と同じ答案の一覧（答案の下に AI の提案） */}
       <section
         aria-label="答案と AI の判定"
         className="flex min-w-0 flex-1 flex-col"
@@ -324,10 +406,23 @@ export function AiGradingWorkspace({
             display={display}
             visibleItems={grid.visibleItems}
             visibleIds={grid.visibleIds}
-            selectedIds={grid.selectedIds}
-            onSelect={grid.handleSelectAnswer}
-            onReplaceSelection={(ids) => grid.setSelection(new Set(ids))}
+            selectedIds={selectionOverride?.selectedIds ?? grid.selectedIds}
+            onSelect={
+              selectionOverride
+                ? (id) => selectionOverride.select(id)
+                : grid.handleSelectAnswer
+            }
+            onReplaceSelection={(ids) =>
+              selectionOverride
+                ? ids.forEach(selectionOverride.select)
+                : grid.setSelection(new Set(ids))
+            }
             totalCount={reviewedAnswers.length}
+            draftStatusByExamStudentId={
+              questioningMode !== null
+                ? questioning.draftStatusByExamStudentId
+                : undefined
+            }
           />
         </div>
       </section>
@@ -354,8 +449,12 @@ export function AiGradingWorkspace({
 
       {selectedPrompt && settings && (
         <AiGradingRunDialog
-          open={isRunDialogOpen}
-          onOpenChange={setIsRunDialogOpen}
+          purpose={runDialog?.purpose ?? "grade"}
+          initialScope={runDialog?.initialScope}
+          open={runDialog !== null}
+          onOpenChange={(open) => {
+            if (!open) setRunDialog(null)
+          }}
           examId={examId}
           cropRegion={cropRegion}
           settings={settings}
@@ -365,6 +464,9 @@ export function AiGradingWorkspace({
           reviewedAnswers={reviewedAnswers}
           questionScores={questionScores}
           currentUserId={currentUserId}
+          selectedExamStudentIds={
+            runDialog?.selectedExamStudentIds ?? grid.selectedIds
+          }
         />
       )}
     </div>

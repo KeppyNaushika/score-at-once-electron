@@ -110,7 +110,7 @@ describe("1段目の文面", () => {
 })
 
 describe("教員の指示と、送った項目の一覧", () => {
-  it("「その他」に書いた指示は「教員の指示」の節として入り、無ければ節ごと省く", () => {
+  it("「その他」に書いた再採点への指示は「教員の指示」の節として1段目に入り、無ければ節ごと省く", () => {
     const withInstructions = textOf(
       buildStage1RequestParts({
         prompt: PROMPT,
@@ -122,7 +122,9 @@ describe("教員の指示と、送った項目の一覧", () => {
     expect(withInstructions).toContain(
       "## 教員の指示\n- 単位が無ければ誤答\n- 途中式は問わない"
     )
-    expect(STAGE1_SYSTEM_TEXT).toContain("「教員の指示」の節")
+    expect(STAGE1_SYSTEM_TEXT).toContain(
+      "「教員の指示」の節は、前の採点の結果を見た教員からの、採点のやり直しへの指示です"
+    )
     const withoutInstructions = textOf(
       buildStage1RequestParts({
         prompt: PROMPT,
